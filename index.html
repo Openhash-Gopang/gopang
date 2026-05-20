@@ -179,6 +179,29 @@ input.settings-input{background:transparent;border:none;outline:none;
   border:2px solid rgba(255,255,255,.35);border-top-color:#fff;
   border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
 @keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── 파일 업로드 ── */
+.upload-row{display:flex;align-items:center;gap:10px;margin:0 16px 8px;flex-wrap:wrap;}
+.upload-btn{display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:20px;background:var(--fill2);
+  color:var(--label2);font-size:14px;font-weight:600;
+  border:1px dashed var(--sep);cursor:pointer;transition:all .15s;flex-shrink:0;}
+.upload-btn:hover{background:var(--fill);border-color:var(--blue);color:var(--blue);}
+.hwp-warn{display:inline-flex;align-items:center;gap:4px;
+  font-size:12px;color:var(--orange);font-weight:500;}
+.hwp-warn svg{width:13px;height:13px;flex-shrink:0;}
+.file-status{font-size:13px;color:var(--label2);display:none;
+  align-items:center;gap:6px;max-width:100%;}
+.file-status.show{display:flex;}
+.file-status-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  max-width:160px;font-weight:600;color:var(--blue);}
+.file-status-size{color:var(--label3);flex-shrink:0;}
+.file-remove{width:18px;height:18px;border-radius:50%;background:var(--fill2);
+  border:none;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;color:var(--label3);flex-shrink:0;font-size:11px;}
+.extract-progress{font-size:13px;color:var(--blue);
+  padding:0 16px 6px;display:none;}
+.extract-progress.show{display:block;}
 </style>
 </head>
 <body>
@@ -207,6 +230,40 @@ input.settings-input{background:transparent;border:none;outline:none;
         <div class="court-row" id="court-badges"></div>
         <div class="court-notice" id="court-notice"></div>
       </div>
+
+
+      <!-- 파일 업로드 -->
+      <div class="upload-row">
+        <label class="upload-btn" for="file-input">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          파일에서 불러오기
+        </label>
+        <input type="file" id="file-input" style="display:none"
+          accept=".txt,.pdf,.docx,.doc,.rtf,.md,.csv,.json,.xml,.html,.htm"
+          onchange="handleFileUpload(this)">
+        <span class="hwp-warn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          HWP 불가 — PDF로 변환 후 업로드
+        </span>
+        <div class="file-status" id="file-status">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="var(--green)" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span class="file-status-name" id="file-name"></span>
+          <span class="file-status-size" id="file-size"></span>
+          <button class="file-remove" onclick="clearFile()" title="파일 제거">✕</button>
+        </div>
+      </div>
+      <div class="extract-progress" id="extract-progress"></div>
 
       <div class="section" style="padding-top:14px;">
         <div class="section-header">사건 개요 입력</div>
@@ -736,6 +793,107 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(ak)$('ak').value=ak;
   renderCourtInfo('solo', null);
 });
+
+/* ══ 파일 업로드 처리 ══ */
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    if(document.querySelector('script[src="'+src+'"]')){res();return;}
+    const s=document.createElement('script');
+    s.src=src; s.onload=res; s.onerror=rej;
+    document.head.appendChild(s);
+  });
+}
+
+async function handleFileUpload(input){
+  const file=input.files[0];
+  if(!file) return;
+  const name=file.name.toLowerCase();
+  if(name.endsWith('.hwp')||name.endsWith('.hwpx')){
+    alert('HWP 파일은 지원하지 않습니다.\nPDF 또는 TXT로 변환 후 업로드해주세요.');
+    input.value=''; return;
+  }
+  $('file-name').textContent=file.name;
+  $('file-size').textContent='('+
+    (file.size<1024*1024
+      ? Math.round(file.size/1024)+' KB'
+      : (file.size/1024/1024).toFixed(1)+' MB')+')';
+  $('file-status').classList.add('show');
+  setExtractMsg('show','⏳ 텍스트 추출 중...',false);
+  $('analyze-btn').disabled=true;
+  try{
+    let text='';
+    if(name.endsWith('.pdf')) text=await extractPDF(file);
+    else if(name.endsWith('.docx')||name.endsWith('.doc')) text=await extractDOCX(file);
+    else text=await readAsText(file);
+    text=text.trim();
+    if(text.length<10) throw new Error('텍스트를 추출할 수 없습니다.');
+    setExtractMsg('show','⏳ AI가 사건 개요 추출 중...',false);
+    const extracted=await extractCaseOverview(text);
+    $('f-overview').value=extracted;
+    checkReady();
+    setExtractMsg('show','✅ 추출 완료 — 내용을 확인 후 분석하세요.',false);
+    setTimeout(()=>setExtractMsg('hide','',false),3000);
+  }catch(e){
+    setExtractMsg('show','❌ '+e.message,true);
+    setTimeout(()=>setExtractMsg('hide','',false),4000);
+  }
+  input.value='';
+}
+
+function setExtractMsg(state,msg,isErr){
+  const el=$('extract-progress');
+  el.textContent=msg;
+  el.style.color=isErr?'var(--red)':'var(--blue)';
+  state==='show' ? el.classList.add('show') : el.classList.remove('show');
+}
+
+function clearFile(){
+  $('file-status').classList.remove('show');
+  $('file-name').textContent='';
+  $('file-size').textContent='';
+  setExtractMsg('hide','',false);
+}
+
+function readAsText(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>res(e.target.result);
+    r.onerror=()=>rej(new Error('파일 읽기 실패'));
+    r.readAsText(file,'UTF-8');
+  });
+}
+
+async function extractPDF(file){
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+  const pdfjsLib=window['pdfjs-dist/build/pdf'];
+  pdfjsLib.GlobalWorkerOptions.workerSrc=
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const ab=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+  let text='';
+  const max=Math.min(pdf.numPages,30);
+  for(let i=1;i<=max;i++){
+    const page=await pdf.getPage(i);
+    const c=await page.getTextContent();
+    text+=c.items.map(s=>s.str).join(' ')+'\n';
+  }
+  return text;
+}
+
+async function extractDOCX(file){
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+  const ab=await file.arrayBuffer();
+  const result=await mammoth.extractRawText({arrayBuffer:ab});
+  return result.value;
+}
+
+async function extractCaseOverview(rawText){
+  const truncated=rawText.length>8000 ? rawText.slice(0,8000)+'\n...(이하 생략)' : rawText;
+  const sys='당신은 한국 법원 판결문/소장/법률문서 분석 AI입니다.\n'
+    +'주어진 문서에서 사건의 배경, 경위, 당사자 정보(원고/피고), 핵심 쟁점을 추출하여\n'
+    +'5~10문장의 서술형 한국어 문단으로 요약하세요.\n'
+    +'법원 판결문 스타일로 객관적이고 간결하게 작성하고, 판결 결론은 포함하지 마세요.';
+  return await callDS(sys,'【문서 내용】\n'+truncated,1000);
+}
+
 </script>
-</body>
-</html>
