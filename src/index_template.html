@@ -23,14 +23,30 @@
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--label);
   font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
   font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;}
-#app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
-#nav{background:var(--bg2);border-bottom:.5px solid var(--sep);
-  padding:env(safe-area-inset-top,0) 0 0;
-  display:flex;flex-direction:column;align-items:center;}
-#nav-title{font-size:17px;font-weight:600;padding:14px 0 6px;}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;}
+#app{padding-top:env(safe-area-inset-top,0);}
 #content{flex:1;overflow:hidden;position:relative;}
+/* 핸들 공간 확보 */
+.view{padding-bottom:28px;}
 .view{position:absolute;inset:0;overflow-y:auto;display:none;}
 .view.active{display:block;}
+/* ── 슬라이드 탭바 ── */
+#tabbar-wrap{position:fixed;bottom:0;left:0;right:0;z-index:100;
+  display:flex;flex-direction:column;align-items:stretch;
+  transform:translateY(calc(100% - 28px));
+  transition:transform .32s cubic-bezier(.4,0,.2,1);}
+#tabbar-wrap.open{transform:translateY(0);}
+#tab-handle{height:28px;background:var(--bg2);border-top:.5px solid var(--sep);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;cursor:pointer;user-select:none;
+  border-radius:14px 14px 0 0;box-shadow:0 -2px 12px rgba(0,0,0,.08);}
+.tab-handle-pill{width:36px;height:4px;border-radius:2px;
+  background:var(--sep);flex-shrink:0;}
+.tab-handle-cur{display:flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:600;color:var(--label2);}
+.tab-handle-cur svg{width:14px;height:14px;}
+.tab-handle-arrow{font-size:11px;color:var(--label3);transition:transform .3s;}
+#tabbar-wrap.open .tab-handle-arrow{transform:rotate(180deg);}
 #tabbar{background:var(--bg2);border-top:.5px solid var(--sep);display:flex;
   align-items:stretch;padding-bottom:var(--safe-b);height:calc(49px + var(--safe-b));}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -41,8 +57,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--label);
 .tab-label{font-size:10px;font-weight:500;}
 
 /* ── 심급 선택 바 ── */
-.instance-bar{display:flex;gap:6px;padding:10px 16px 6px;overflow-x:auto;
-  scrollbar-width:none;background:var(--bg2);border-bottom:.5px solid var(--sep);}
+.instance-bar{display:flex;gap:6px;padding:8px 16px 6px;overflow-x:auto;
+  scrollbar-width:none;background:var(--bg2);border-bottom:.5px solid var(--sep);
+  margin-bottom:0;}
 .instance-bar::-webkit-scrollbar{display:none;}
 .inst-btn{flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;
   font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;
@@ -78,6 +95,29 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--label);
 .field-ta{width:100%;min-height:120px;background:transparent;border:none;
   outline:none;resize:none;font-size:15px;line-height:1.6;
   color:var(--label);font-family:inherit;}
+/* ── 파일 업로드 ── */
+.field-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.upload-btn{display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:14px;background:var(--fill2);
+  color:var(--label2);font-size:12px;font-weight:600;
+  border:1px solid var(--sep);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.upload-btn:hover{background:var(--fill);border-color:var(--blue);color:var(--blue);}
+.upload-btn svg{width:12px;height:12px;flex-shrink:0;}
+.hwp-warn{display:inline-flex;align-items:center;gap:3px;
+  font-size:11px;color:var(--orange);font-weight:500;white-space:nowrap;}
+.hwp-warn svg{width:11px;height:11px;flex-shrink:0;}
+.upload-row{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;}
+.file-status{font-size:12px;color:var(--label2);display:none;
+  align-items:center;gap:5px;overflow:hidden;}
+.file-status.show{display:flex;}
+.file-status-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  max-width:120px;font-weight:600;color:var(--blue);}
+.file-status-size{color:var(--label3);flex-shrink:0;font-size:11px;}
+.file-remove{width:16px;height:16px;border-radius:50%;background:var(--fill2);
+  border:none;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;color:var(--label3);flex-shrink:0;font-size:10px;}
+.extract-progress{font-size:13px;padding:4px 16px 0;display:none;}
+.extract-progress.show{display:block;}
 
 /* ── Progress ── */
 .progress-wrap{display:none;margin:0 16px 12px;background:var(--bg2);
@@ -180,101 +220,100 @@ input.settings-input{background:transparent;border:none;outline:none;
   border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
-/* ── 파일 업로드 ── */
-.upload-row{display:flex;align-items:center;gap:10px;margin:0 16px 8px;flex-wrap:wrap;}
-.upload-btn{display:inline-flex;align-items:center;gap:6px;
-  padding:8px 14px;border-radius:20px;background:var(--fill2);
-  color:var(--label2);font-size:14px;font-weight:600;
-  border:1px dashed var(--sep);cursor:pointer;transition:all .15s;flex-shrink:0;}
-.upload-btn:hover{background:var(--fill);border-color:var(--blue);color:var(--blue);}
-.hwp-warn{display:inline-flex;align-items:center;gap:4px;
-  font-size:12px;color:var(--orange);font-weight:500;}
-.hwp-warn svg{width:13px;height:13px;flex-shrink:0;}
-.file-status{font-size:13px;color:var(--label2);display:none;
-  align-items:center;gap:6px;max-width:100%;}
-.file-status.show{display:flex;}
-.file-status-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  max-width:160px;font-weight:600;color:var(--blue);}
-.file-status-size{color:var(--label3);flex-shrink:0;}
-.file-remove{width:18px;height:18px;border-radius:50%;background:var(--fill2);
-  border:none;cursor:pointer;display:flex;align-items:center;
-  justify-content:center;color:var(--label3);flex-shrink:0;font-size:11px;}
-.extract-progress{font-size:13px;color:var(--blue);
-  padding:0 16px 6px;display:none;}
-.extract-progress.show{display:block;}
+/* ── 채팅 미디어 버튼 ── */
+.chat-media-btn{width:30px;height:30px;border-radius:50%;background:transparent;
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:var(--label3);flex-shrink:0;transition:all .15s;padding:0;}
+.chat-media-btn:hover{color:var(--blue);background:var(--fill2);}
+.chat-media-btn svg{width:18px;height:18px;}
+.chat-media-btn.listening{color:#fff;background:var(--red);animation:pulse .8s infinite;}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.chat-file-status{font-size:12px;color:var(--blue);padding:0 12px 4px;display:none;}
+.chat-file-status.show{display:block;}
+/* ── 카메라 모달 ── */
+.camera-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.camera-modal.show{display:flex;}
+.camera-preview{width:min(90vw,480px);border-radius:12px;background:#000;}
+.camera-actions{display:flex;gap:16px;}
+.cam-btn{padding:12px 28px;border-radius:24px;border:none;cursor:pointer;
+  font-size:15px;font-weight:700;}
+.cam-btn.capture{background:var(--blue);color:#fff;}
+.cam-btn.cancel{background:rgba(255,255,255,.15);color:#fff;}
+
+/* ── AI 호출 버튼 ── */
+.ai-toggle-btn{width:32px;height:32px;border-radius:50%;
+  background:var(--blue);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .2s;box-shadow:0 1px 4px rgba(0,122,255,.3);}
+.ai-toggle-btn.off{background:var(--fill2);box-shadow:none;}
+.ai-toggle-btn span{font-size:11px;font-weight:800;color:#fff;letter-spacing:-.5px;}
+.ai-toggle-btn.off span{color:var(--label3);}
+.ai-mode-bar{height:2px;margin:0 12px;border-radius:1px;
+  background:var(--blue);display:none;transition:opacity .2s;}
+.ai-mode-bar.show{display:block;}
 </style>
 </head>
 <body>
-<script id="klaw-data" type="application/json">{{KLAW_JSON}}</script>
+{{KLAW_SCRIPT}}
 
 <div id="app">
-  <div id="nav">
-    <div id="nav-title">고팡</div>
-    <!-- 심급 선택 바 -->
-    <div class="instance-bar" id="instance-bar">
-      <button class="inst-btn active" id="ib-solo"    onclick="selectInstance('solo')">1심 단독</button>
-      <button class="inst-btn disabled-coming" disabled title="준비 중">1심 합의</button>
-      <button class="inst-btn disabled-coming" disabled title="준비 중">2심 합의</button>
-      <button class="inst-btn disabled-coming" disabled title="준비 중">3심 소부</button>
-      <button class="inst-btn disabled-coming" disabled title="준비 중">3심 전원</button>
-      <button class="inst-btn disabled-coming" disabled title="준비 중">헌법재판</button>
-    </div>
-  </div>
-
   <div id="content">
     <!-- K-Law 탭 -->
-    <div id="klv" class="view active">
-
-      <!-- 재판부 정보 -->
-      <div class="court-info show" id="court-info">
-        <div class="court-row" id="court-badges"></div>
-        <div class="court-notice" id="court-notice"></div>
+    <div id="klv" class="view">
+      <!-- 심급 선택 바 (K-Law 전용) -->
+      <div class="instance-bar" id="instance-bar">
+        <button class="inst-btn active" id="ib-solo" onclick="selectInstance('solo')">1심 단독</button>
+        <button class="inst-btn disabled-coming" disabled title="준비 중">1심 합의</button>
+        <button class="inst-btn disabled-coming" disabled title="준비 중">2심 합의</button>
+        <button class="inst-btn disabled-coming" disabled title="준비 중">3심 소부</button>
+        <button class="inst-btn disabled-coming" disabled title="준비 중">3심 전원</button>
+        <button class="inst-btn disabled-coming" disabled title="준비 중">헌법재판</button>
       </div>
 
 
-      <!-- 파일 업로드 -->
-      <div class="upload-row">
-        <label class="upload-btn" for="file-input">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          파일에서 불러오기
-        </label>
-        <input type="file" id="file-input" style="display:none"
-          accept=".txt,.pdf,.docx,.doc,.rtf,.md,.csv,.json,.xml,.html,.htm"
-          onchange="handleFileUpload(this)">
-        <span class="hwp-warn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-          HWP 불가 — PDF로 변환 후 업로드
-        </span>
-        <div class="file-status" id="file-status">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="var(--green)" stroke-width="2.5">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          <span class="file-status-name" id="file-name"></span>
-          <span class="file-status-size" id="file-size"></span>
-          <button class="file-remove" onclick="clearFile()" title="파일 제거">✕</button>
+      <!-- ① 사건 개요 입력 (최상단) -->
+      <div class="section" style="padding-top:14px;">
+        <div class="card">
+          <div class="card-inner">
+            <div class="field-header">
+              <span class="field-label" style="margin-bottom:0;">사건의 개요를 적어주세요. 파일을 첨부하셔도 좋습니다.</span>
+              <div class="upload-row">
+                <label class="upload-btn" for="file-input">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  파일 첨부
+                </label>
+                <input type="file" id="file-input" style="display:none"
+                  accept=".txt,.pdf,.docx,.doc,.rtf,.md,.csv,.json,.xml,.html,.htm"
+                  onchange="handleFileUpload(this)">
+                <span class="hwp-warn">⚠ HWP 불가</span>
+                <div class="file-status" id="file-status">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke="var(--green)" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  <span class="file-status-name" id="file-name"></span>
+                  <span class="file-status-size" id="file-size"></span>
+                  <button class="file-remove" onclick="clearFile()" title="파일 제거">✕</button>
+                </div>
+              </div>
+            </div>
+            <textarea id="f-overview" class="field-ta"
+              placeholder="사건 배경, 당사자 관계, 주요 경위를 입력하세요.&#10;&#10;예) 원고 A는 2024년 3월 피고 B로부터 아파트를 임차하여 보증금 3억원을 지급하였으나...&#10;&#10;※ 사건의 개요를 작성하면 시스템이 1심 단독 등 심급을 파악하므로 귀하가 지정할 필요는 없습니다."
+              oninput="checkReady()"></textarea>
+          </div>
         </div>
       </div>
       <div class="extract-progress" id="extract-progress"></div>
 
-      <div class="section" style="padding-top:14px;">
-        <div class="section-header">사건 개요 입력</div>
-        <div class="card">
-          <div class="card-inner">
-            <div class="field-label">사건의 개요</div>
-            <textarea id="f-overview" class="field-ta"
-              placeholder="사건 배경, 당사자 관계, 주요 경위를 입력하세요.&#10;&#10;예) 원고 A는 2024년 3월 피고 B로부터 아파트를 임차하여 보증금 3억원을 지급하였으나..."
-              oninput="checkReady()"></textarea>
-          </div>
-        </div>
+      <!-- ② 재판부 정보 (입력 후 표시) -->
+      <div class="court-info show" id="court-info">
+        <div class="court-row" id="court-badges"></div>
+        <div class="court-notice" id="court-notice"></div>
       </div>
 
       <!-- Progress -->
@@ -291,7 +330,7 @@ input.settings-input{background:transparent;border:none;outline:none;
           stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
-        AI로 사건 분석하기
+        분석 시작
       </button>
 
       <!-- 결과 카드들 -->
@@ -361,19 +400,53 @@ input.settings-input{background:transparent;border:none;outline:none;
     </div><!-- /klv -->
 
     <!-- 채팅 탭 -->
-    <div id="cv" class="view">
+    <div id="cv" class="view active">
       <div class="msg-list" id="msg-list">
         <div class="msg-row">
           <div class="msg-av">AI</div>
           <div class="msg-mc">
-            <div class="msg-bubble">안녕하세요! K-Law AI 법률 비서입니다.<br>법률 관련 질문을 자유롭게 해주세요.</div>
+            <div class="msg-bubble">귀하의 AI 비서입니다. 지시 바랍니다.</div>
           </div>
         </div>
       </div>
+      <div id="chat-file-status" class="chat-file-status"></div>
+      <div class="ai-mode-bar" id="ai-mode-bar"></div>
       <div class="chat-input-wrap">
+        <!-- AI 호출 토글 -->
+        <button class="ai-toggle-btn" id="ai-toggle-btn"
+          onclick="toggleAIMode()" title="AI 비서 ON/OFF">
+          <span>AI</span>
+        </button>
+        <!-- 파일 첨부 -->
+        <label class="chat-media-btn" for="chat-file-input" title="파일 첨부">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+          </svg>
+        </label>
+        <input type="file" id="chat-file-input" style="display:none"
+          accept=".txt,.pdf,.docx,.doc,.md,.csv,.json,.xml,.html,.htm,.png,.jpg,.jpeg,.gif,.webp"
+          onchange="handleChatFile(this)">
+        <!-- 카메라 -->
+        <button class="chat-media-btn" id="camera-btn" onclick="openCamera()" title="카메라">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </button>
+        <!-- textarea -->
         <textarea id="chat-input" class="chat-input" rows="1"
           placeholder="메시지 입력..."
           oninput="autoResize(this)" onkeydown="onChatKey(event)"></textarea>
+        <!-- 음성 입력 -->
+        <button class="chat-media-btn" id="voice-btn" onclick="toggleVoice()" title="음성 입력">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
+        <!-- 전송 -->
         <button class="chat-send" id="chat-send-btn" onclick="sendChat()" disabled>
           <svg viewBox="0 0 16 16"><path d="M2 8l12-6-5 6 5 6z"/></svg>
         </button>
@@ -450,32 +523,43 @@ input.settings-input{background:transparent;border:none;outline:none;
 
   </div><!-- /content -->
 
-  <div id="tabbar">
-    <button class="tab active" onclick="switchTab('klaw')" id="tab-klaw">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-      </svg>
-      <span class="tab-label">K-Law</span>
-    </button>
-    <button class="tab" onclick="switchTab('chat')" id="tab-chat">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      <span class="tab-label">AI 비서</span>
-    </button>
-    <button class="tab" onclick="switchTab('settings')" id="tab-settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-      <span class="tab-label">설정</span>
-    </button>
+  <!-- 슬라이드 탭바 -->
+  <div id="tabbar-wrap">
+    <div id="tab-handle"
+      onclick="toggleTabbar()"
+      onmousedown="onHandleMouseDown(event)"
+      ontouchstart="onHandleTouchStart(event)"
+      ontouchend="onHandleTouchEnd(event)">
+      <div class="tab-handle-cur" id="tab-handle-cur"></div>
+      <div class="tab-handle-pill"></div>
+      <span class="tab-handle-arrow">▲</span>
+    </div>
+    <div id="tabbar">
+      <button class="tab" onclick="switchTab('klaw');closeTabbar();" id="tab-klaw">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span class="tab-label">K-Law</span>
+      </button>
+      <button class="tab active" onclick="switchTab('chat');closeTabbar();" id="tab-chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span class="tab-label">AI 비서</span>
+      </button>
+      <button class="tab" onclick="switchTab('settings');closeTabbar();" id="tab-settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <span class="tab-label">설정</span>
+      </button>
+    </div>
   </div>
 </div>
 
 <script>
-const _kd = JSON.parse(document.getElementById('klaw-data').textContent);
-const KLAW_PROMPT = _kd.klaw;
+const KLAW_PROMPT = window.__KLAW || '';
 const PROXY = 'https://gopang-proxy.tensor-city.workers.dev';
 const TABS  = { klaw:'klv', chat:'cv', settings:'stv' };
 let busy = false;
@@ -550,13 +634,15 @@ function resetResults(){
 }
 
 function switchTab(name){
+  currentTab = name;
   Object.keys(TABS).forEach(k => {
     $('tab-'+k).classList.toggle('active', k===name);
     $(TABS[k]).classList.toggle('active', k===name);
   });
-  $('nav-title').textContent =
-    name==='klaw' ? 'K-Law {{VERSION}}' :
-    name==='chat' ? 'AI 비서' : '설정';
+
+  const bar = $('instance-bar');
+  if(bar) bar.style.display = name==='klaw' ? 'flex' : 'none';
+  updateHandle(name);
 }
 
 function checkReady(){
@@ -895,5 +981,311 @@ async function extractCaseOverview(rawText){
     +'법원 판결문 스타일로 객관적이고 간결하게 작성하고, 판결 결론은 포함하지 마세요.';
   return await callDS(sys,'【문서 내용】\n'+truncated,1000);
 }
+
+
+/* ══ 채팅 미디어 입력 (파일·카메라·음성) ══ */
+
+/* ── 파일 첨부 (채팅용) ── */
+async function handleChatFile(input){
+  const file = input.files[0];
+  if(!file) return;
+  const name = file.name.toLowerCase();
+
+  if(name.endsWith('.hwp') || name.endsWith('.hwpx')){
+    appendMsg('system','⚠ HWP 불가 — PDF로 변환 후 첨부해주세요.');
+    input.value=''; return;
+  }
+
+  const isImage = file.type.startsWith('image/');
+  const list = $('msg-list');
+
+  if(isImage){
+    // 이미지 → base64 → AI에게 설명 요청
+    const b64 = await fileToBase64(file);
+    const imgHTML = '<img src="'+b64+'" style="max-width:200px;border-radius:10px;display:block;">';
+    list.innerHTML += '<div class="msg-row me"><div class="msg-mc"><div class="msg-bubble">'+imgHTML+'</div></div></div>';
+    list.scrollTop = list.scrollHeight;
+    const tid = 'tmp'+Date.now();
+    list.innerHTML += '<div class="msg-row" id="'+tid+'"><div class="msg-av">AI</div>'
+      +'<div class="msg-mc"><div class="msg-bubble">'
+      +'<span class="spinner" style="border-color:rgba(0,0,0,.15);border-top-color:var(--blue)"></span>'
+      +'</div></div></div>';
+    list.scrollTop = list.scrollHeight;
+    busy = true; $('chat-send-btn').disabled = true;
+    try{
+      const res = await callDS(
+        '당신은 한국 법률 AI 비서입니다. 이미지에 포함된 텍스트나 내용을 분석하고 법률적으로 관련된 내용이 있으면 설명해주세요. 한국어로 답하세요.',
+        '[이미지 첨부: '+file.name+'] 이 이미지를 분석해주세요. (참고: 현재 텍스트 기반 분석만 가능합니다.)', 600);
+      const el=$(tid);
+      if(el) el.querySelector('.msg-bubble').innerHTML = esc(res).replace(/\n/g,'<br>');
+    }catch(e){
+      const el=$(tid);
+      if(el) el.querySelector('.msg-bubble').innerHTML = '<span style="color:var(--red)">'+esc(e.message)+'</span>';
+    }finally{ busy=false; $('chat-send-btn').disabled=false; list.scrollTop=list.scrollHeight; }
+  } else {
+    // 문서 → 텍스트 추출 → 채팅으로 전송
+    setChatFileStatus('show','⏳ 파일 읽는 중...');
+    try{
+      let text='';
+      if(name.endsWith('.pdf'))        text = await extractPDF(file);
+      else if(name.endsWith('.docx')||name.endsWith('.doc')) text = await extractDOCX(file);
+      else                             text = await readAsText(file);
+      text = text.trim().slice(0,4000);
+      $('chat-input').value = '다음 문서를 분석해주세요:\n\n'+text;
+      autoResize($('chat-input'));
+      $('chat-send-btn').disabled = false;
+      setChatFileStatus('show','✅ '+file.name+' 로드됨 — 전송 버튼을 누르세요.');
+      setTimeout(()=>setChatFileStatus('hide',''), 3000);
+    }catch(e){
+      setChatFileStatus('show','❌ '+e.message);
+      setTimeout(()=>setChatFileStatus('hide',''), 3000);
+    }
+  }
+  input.value='';
+}
+
+function setChatFileStatus(state, msg){
+  const el = $('chat-file-status');
+  if(!el) return;
+  el.textContent = msg;
+  state==='show' ? el.classList.add('show') : el.classList.remove('show');
+}
+
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>res(e.target.result);
+    r.onerror=()=>rej(new Error('파일 읽기 실패'));
+    r.readAsDataURL(file);
+  });
+}
+
+/* ── 카메라 ── */
+let cameraStream = null;
+
+function openCamera(){
+  const modal = $('camera-modal');
+  if(!modal) return;
+  modal.classList.add('show');
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+    .then(stream=>{
+      cameraStream = stream;
+      $('camera-preview').srcObject = stream;
+      $('camera-preview').play();
+    })
+    .catch(e=>{
+      appendMsg('system','⚠ 카메라 접근 불가: '+e.message);
+      closeCamera();
+    });
+}
+
+function closeCamera(){
+  if(cameraStream) cameraStream.getTracks().forEach(t=>t.stop());
+  cameraStream = null;
+  const modal = $('camera-modal');
+  if(modal) modal.classList.remove('show');
+}
+
+function capturePhoto(){
+  const video = $('camera-preview');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video,0,0);
+  const dataURL = canvas.toDataURL('image/jpeg',0.85);
+  closeCamera();
+
+  const list = $('msg-list');
+  list.innerHTML += '<div class="msg-row me"><div class="msg-mc"><div class="msg-bubble">'
+    +'<img src="'+dataURL+'" style="max-width:200px;border-radius:10px;display:block;">'
+    +'</div></div></div>';
+
+  const tid='tmp'+Date.now();
+  list.innerHTML += '<div class="msg-row" id="'+tid+'"><div class="msg-av">AI</div>'
+    +'<div class="msg-mc"><div class="msg-bubble">'
+    +'<span class="spinner" style="border-color:rgba(0,0,0,.15);border-top-color:var(--blue)"></span>'
+    +'</div></div></div>';
+  list.scrollTop = list.scrollHeight;
+  busy=true; $('chat-send-btn').disabled=true;
+
+  callDS(
+    '당신은 한국 법률 AI 비서입니다. 촬영된 이미지의 내용을 설명하고 법률적으로 관련된 내용이 있으면 분석해주세요. 한국어로 답하세요.',
+    '[카메라 촬영 이미지] 이 이미지를 분석해주세요.', 600)
+  .then(res=>{
+    const el=$(tid);
+    if(el) el.querySelector('.msg-bubble').innerHTML=esc(res).replace(/\n/g,'<br>');
+  }).catch(e=>{
+    const el=$(tid);
+    if(el) el.querySelector('.msg-bubble').innerHTML='<span style="color:var(--red)">'+esc(e.message)+'</span>';
+  }).finally(()=>{
+    busy=false; $('chat-send-btn').disabled=false;
+    list.scrollTop=list.scrollHeight;
+  });
+}
+
+/* ── 음성 입력 ── */
+let recognition = null;
+let isListening = false;
+
+function toggleVoice(){
+  if(isListening){ stopVoice(); return; }
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    appendMsg('system','⚠ 이 브라우저는 음성 입력을 지원하지 않습니다. Chrome을 사용해주세요.');
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = 'ko-KR';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  recognition.onstart = ()=>{
+    isListening = true;
+    $('voice-btn').classList.add('listening');
+    $('voice-btn').title = '음성 입력 중... (클릭하여 중지)';
+  };
+  recognition.onresult = e=>{
+    let transcript = '';
+    for(let i=e.resultIndex; i<e.results.length; i++){
+      transcript += e.results[i][0].transcript;
+    }
+    $('chat-input').value = transcript;
+    autoResize($('chat-input'));
+    $('chat-send-btn').disabled = transcript.trim().length===0;
+  };
+  recognition.onend = ()=>{ stopVoice(); };
+  recognition.onerror = e=>{
+    stopVoice();
+    if(e.error!=='aborted')
+      appendMsg('system','⚠ 음성 인식 오류: '+e.error);
+  };
+  recognition.start();
+}
+
+function stopVoice(){
+  isListening = false;
+  const btn = $('voice-btn');
+  if(btn){ btn.classList.remove('listening'); btn.title='음성 입력'; }
+  if(recognition){ try{ recognition.stop(); }catch(e){} recognition=null; }
+}
+
+function appendMsg(type, text){
+  const list = $('msg-list');
+  if(type==='system'){
+    list.innerHTML += '<div style="text-align:center;font-size:12px;color:var(--label3);padding:4px 0;">'+esc(text)+'</div>';
+  }
+  list.scrollTop = list.scrollHeight;
+}
+
+
+
+/* ══ 탭바 슬라이드 ══ */
+const TAB_ICONS = {
+  klaw:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',
+  chat:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+};
+const TAB_NAMES = { klaw:'K-Law', chat:'AI 비서', settings:'설정' };
+let tabbarOpen = false;
+let touchStartY = 0;
+let currentTab = 'chat';
+
+function updateHandle(name){
+  const el = $('tab-handle-cur');
+  if(!el) return;
+  el.innerHTML = TAB_ICONS[name] + '<span>' + TAB_NAMES[name] + '</span>';
+}
+
+function toggleTabbar(){
+  tabbarOpen ? closeTabbar() : openTabbar();
+}
+function openTabbar(){
+  tabbarOpen = true;
+  $('tabbar-wrap').classList.add('open');
+}
+function closeTabbar(){
+  tabbarOpen = false;
+  $('tabbar-wrap').classList.remove('open');
+}
+
+/* 핸들 스와이프 */
+function onHandleTouchStart(e){
+  touchStartY = e.touches[0].clientY;
+}
+function onHandleTouchEnd(e){
+  const dy = touchStartY - e.changedTouches[0].clientY;
+  if(dy > 20) openTabbar();
+  else if(dy < -20) closeTabbar();
+}
+
+/* 화면 하단 스와이프 업 감지 (콘텐츠 영역) */
+let swipeTouchStartY = 0;
+document.addEventListener('touchstart', e=>{
+  swipeTouchStartY = e.touches[0].clientY;
+}, {passive:true});
+document.addEventListener('touchend', e=>{
+  const dy = swipeTouchStartY - e.changedTouches[0].clientY;
+  const fromBottom = window.innerHeight - swipeTouchStartY;
+  // 화면 하단 80px 안에서 40px 이상 위로 스와이프
+  if(fromBottom < 80 && dy > 40) openTabbar();
+  // 탭바 열려있을 때 아무 곳에서나 아래로 스와이프
+  if(tabbarOpen && dy < -40) closeTabbar();
+}, {passive:true});
+
+/* 탭바 외부 터치 시 닫기 */
+document.addEventListener('touchstart', e=>{
+  if(tabbarOpen && !$('tabbar-wrap').contains(e.target)){
+    closeTabbar();
+  }
+}, {passive:true});
+
+
+
+/* ══ AI 모드 토글 ══ */
+let aiMode = true; // 기본: AI ON
+
+function toggleAIMode(){
+  aiMode = !aiMode;
+  const btn = $('ai-toggle-btn');
+  const bar = $('ai-mode-bar');
+  if(aiMode){
+    btn.classList.remove('off');
+    btn.title = 'AI 비서 ON — 클릭하여 끄기';
+    if(bar) bar.classList.add('show');
+  } else {
+    btn.classList.add('off');
+    btn.title = 'AI 비서 OFF — 클릭하여 켜기';
+    if(bar) bar.classList.remove('show');
+  }
+}
+
+// sendChat에서 aiMode 체크하여 AI 호출 여부 결정
+// 기존 sendChat을 래핑
+const _origSendChat = sendChat;
+
+
+
+/* ── 탭바 마우스 드래그 (데스크탑) ── */
+let mouseStartY = 0;
+let isDragging = false;
+
+function onHandleMouseDown(e){
+  mouseStartY = e.clientY;
+  isDragging = true;
+  document.addEventListener('mouseup', onMouseUp, {once:true});
+}
+function onMouseUp(e){
+  if(!isDragging) return;
+  isDragging = false;
+  const dy = mouseStartY - e.clientY;
+  if(dy > 15) openTabbar();
+  else if(dy < -15) closeTabbar();
+}
+/* 마우스 외부 클릭 시 닫기 */
+document.addEventListener('mousedown', e=>{
+  if(tabbarOpen && !$('tabbar-wrap').contains(e.target)){
+    closeTabbar();
+  }
+});
 
 </script>
