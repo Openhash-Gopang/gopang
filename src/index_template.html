@@ -1,0 +1,461 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>고팡 — K-Law {{VERSION}}</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root {
+  --bg:        #f2f2f7;
+  --bg2:       #ffffff;
+  --bg3:       #f2f2f7;
+  --label:     #000000;
+  --label2:    #3c3c43cc;
+  --label3:    #3c3c4399;
+  --sep:       #3c3c4349;
+  --blue:      #007aff;
+  --green:     #34c759;
+  --red:       #ff3b30;
+  --orange:    #ff9500;
+  --purple:    #af52de;
+  --fill:      #78788014;
+  --fill2:     #78788029;
+  --radius:    13px;
+  --tab-h:     83px;
+  --safe-b:    env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:    #000000;
+    --bg2:   #1c1c1e;
+    --bg3:   #2c2c2e;
+    --label: #ffffff;
+    --label2:#ebebf599;
+    --label3:#ebebf54c;
+    --sep:   #54545899;
+    --fill:  #7878801f;
+    --fill2: #78788029;
+  }
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; overflow:hidden; background:var(--bg); color:var(--label);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
+  font-size:17px; line-height:1.47; -webkit-font-smoothing:antialiased; }
+
+/* ── App shell ── */
+#app { display:flex; flex-direction:column; height:100vh; height:100dvh; }
+
+/* ── Nav bar ── */
+#nav { background:var(--bg2); border-bottom:0.5px solid var(--sep);
+  padding:env(safe-area-inset-top,0) 0 0;
+  display:flex; flex-direction:column; align-items:center; }
+#nav-title { font-size:17px; font-weight:600; padding:14px 0 10px; letter-spacing:-0.4px; }
+
+/* ── Content area ── */
+#content { flex:1; overflow:hidden; position:relative; }
+.view { position:absolute; inset:0; overflow-y:auto; display:none; }
+.view.active { display:block; }
+
+/* ── Tab bar ── */
+#tabbar { background:var(--bg2); border-top:0.5px solid var(--sep);
+  display:flex; align-items:stretch;
+  padding-bottom:var(--safe-b);
+  height:calc(49px + var(--safe-b)); }
+.tab { flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:3px; cursor:pointer; color:var(--label3);
+  transition:color .15s; padding:8px 0 4px; border:none; background:none; }
+.tab.active { color:var(--blue); }
+.tab svg { width:24px; height:24px; }
+.tab-label { font-size:10px; font-weight:500; }
+
+/* ── Cards / sections ── */
+.section { padding:20px 16px 0; }
+.section-header { font-size:13px; font-weight:600; color:var(--label2);
+  text-transform:uppercase; letter-spacing:.5px; padding:0 4px 8px; }
+.card { background:var(--bg2); border-radius:var(--radius);
+  overflow:hidden; margin-bottom:8px; }
+.card-row { display:flex; align-items:center; padding:12px 16px;
+  border-bottom:0.5px solid var(--sep); gap:12px; }
+.card-row:last-child { border-bottom:none; }
+
+/* ── K-Law view ── */
+#klv { padding-bottom:20px; }
+.kl-textarea { width:100%; min-height:120px; padding:12px;
+  background:transparent; border:none; outline:none; resize:none;
+  font-size:15px; line-height:1.5; color:var(--label); font-family:inherit; }
+.kl-analyze-btn { display:flex; align-items:center; justify-content:center;
+  gap:8px; width:calc(100% - 32px); margin:12px 16px;
+  padding:14px; border-radius:var(--radius);
+  background:var(--blue); color:#fff; font-size:17px; font-weight:600;
+  border:none; cursor:pointer; transition:opacity .15s; }
+.kl-analyze-btn:disabled { opacity:.4; cursor:default; }
+.kl-analyze-btn svg { width:20px; height:20px; }
+
+/* ── Parsed result ── */
+.parsed-section { margin:0 16px 16px; }
+.hid { display:none; }
+.type-card { background:var(--bg2); border-radius:var(--radius); padding:14px 16px; margin-bottom:8px; }
+.type-card h4 { font-size:13px; color:var(--label2); margin-bottom:6px; }
+.type-card p  { font-size:15px; }
+.verdict-box  { background:var(--bg2); border-radius:var(--radius); padding:16px;
+  margin:0 16px 16px; border-left:4px solid var(--blue); }
+.verdict-box pre { white-space:pre-wrap; font-size:14px; line-height:1.6;
+  font-family:inherit; color:var(--label); }
+.confidence-bar { height:6px; border-radius:3px; background:var(--fill2); overflow:hidden; margin-top:6px; }
+.confidence-fill { height:100%; border-radius:3px; background:var(--green); transition:width .4s; }
+.spinner { display:inline-block; width:18px; height:18px; border:2.5px solid rgba(255,255,255,.4);
+  border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── Chat view ── */
+#cv { display:flex; flex-direction:column; }
+#cv.active { display:flex; }
+.msg-list { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
+.msg-row { display:flex; gap:8px; align-items:flex-end; }
+.msg-row.me { flex-direction:row-reverse; }
+.msg-av { width:28px; height:28px; border-radius:50%; background:var(--blue);
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:700; color:#fff; flex-shrink:0; }
+.msg-mc { max-width:72%; }
+.msg-bubble { padding:10px 14px; border-radius:18px; font-size:15px; line-height:1.45;
+  background:var(--fill2); color:var(--label); }
+.msg-row.me .msg-bubble { background:var(--blue); color:#fff; }
+.chat-input-wrap { padding:8px 12px; border-top:0.5px solid var(--sep);
+  padding-bottom:calc(8px + var(--safe-b));
+  display:flex; align-items:center; gap:8px; background:var(--bg2); }
+.chat-input { flex:1; background:var(--fill); border:none; outline:none;
+  border-radius:20px; padding:10px 16px; font-size:15px; color:var(--label);
+  font-family:inherit; resize:none; max-height:120px; line-height:1.4; }
+.chat-send { width:32px; height:32px; border-radius:50%; background:var(--blue);
+  border:none; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; transition:opacity .15s; }
+.chat-send:disabled { opacity:.35; cursor:default; }
+.chat-send svg { width:16px; height:16px; fill:#fff; }
+
+/* ── Settings view ── */
+#stv { padding-bottom:40px; }
+.settings-footer { padding:24px 16px; font-size:13px; color:var(--label3);
+  text-align:center; line-height:1.6; }
+input.settings-input { background:transparent; border:none; outline:none;
+  font-size:15px; color:var(--label); flex:1; text-align:right;
+  font-family:inherit; }
+
+/* ── Fade animation ── */
+.fade-in { animation:fadeIn .25s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+</style>
+</head>
+<body>
+<!-- ── K-Law prompt data (JS-parser-safe JSON tag) ── -->
+<script id="klaw-data" type="application/json">{{KLAW_JSON}}</script>
+
+<div id="app">
+  <!-- Nav bar -->
+  <div id="nav">
+    <div id="nav-title">고팡</div>
+  </div>
+
+  <!-- Content -->
+  <div id="content">
+
+    <!-- K-Law tab -->
+    <div id="klv" class="view active">
+      <div class="section">
+        <div class="section-header">사건 개요</div>
+        <div class="card">
+          <textarea id="kl-summary" class="kl-textarea"
+            placeholder="예: 임대인 A는 2024년 3월 임차인 B에게 보증금 5,000만 원에 주택을 임대하였으나, 계약 종료 후 보증금 반환을 거부하고 있습니다..."
+            oninput="onSummaryInput(this)"></textarea>
+        </div>
+      </div>
+
+      <button class="kl-analyze-btn" id="kl-analyze-btn" onclick="parseSummary()" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        AI로 사건 분석하기
+      </button>
+
+      <!-- 분석 결과 -->
+      <div id="parsed-section" class="parsed-section hid">
+        <div class="section-header" style="padding:0 4px 8px;">사건 유형
+          <span style="color:var(--blue);font-style:normal;font-weight:400" id="type-badge"></span>
+        </div>
+        <div class="type-card fade-in" id="type-card">
+          <h4>AI 자동 판단</h4>
+          <p id="type-text"></p>
+        </div>
+
+        <div class="section-header" style="padding:8px 4px;">판결 예측</div>
+        <div class="verdict-box fade-in">
+          <pre id="verdict-text"></pre>
+          <div style="margin-top:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--label2);">
+              <span>확신도</span><span id="conf-label">-</span>
+            </div>
+            <div class="confidence-bar"><div class="confidence-fill" id="conf-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /klv -->
+
+    <!-- Chat tab -->
+    <div id="cv" class="view">
+      <div class="msg-list" id="msg-list">
+        <div class="msg-row">
+          <div class="msg-av">AI</div>
+          <div class="msg-mc">
+            <div class="msg-bubble">안녕하세요! 법률 AI 비서 고팡입니다. 궁금한 법률 문제를 자유롭게 질문해 주세요.</div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-wrap">
+        <textarea id="chat-input" class="chat-input" rows="1"
+          placeholder="메시지를 입력하세요..."
+          oninput="autoResize(this)" onkeydown="onChatKey(event)"></textarea>
+        <button class="chat-send" id="chat-send-btn" onclick="sendChat()" disabled>
+          <svg viewBox="0 0 16 16"><path d="M2 8l12-6-5 6 5 6z"/></svg>
+        </button>
+      </div>
+    </div><!-- /cv -->
+
+    <!-- Settings tab -->
+    <div id="stv" class="view">
+      <div class="section" style="padding-top:24px;">
+        <div class="section-header">DeepSeek API</div>
+        <div class="card">
+          <div class="card-row">
+            <span style="font-size:15px;color:var(--label2);">API 키</span>
+            <input id="ak" type="password" class="settings-input"
+              placeholder="sk-..." oninput="saveAK(this.value)">
+          </div>
+        </div>
+        <p style="font-size:13px;color:var(--label3);padding:8px 4px;">
+          DeepSeek API 키는 기기에만 저장되며 서버로 전송되지 않습니다.
+        </p>
+      </div>
+
+      <div class="section" style="padding-top:20px;">
+        <div class="section-header">K-Law 정보</div>
+        <div class="card">
+          <div class="card-row">
+            <span style="font-size:15px;">버전</span>
+            <span style="font-size:15px;color:var(--label2);">{{VERSION}}</span>
+          </div>
+          <div class="card-row">
+            <span style="font-size:15px;">언어</span>
+            <span style="font-size:15px;color:var(--label2);">영문 (English)</span>
+          </div>
+          <div class="card-row">
+            <span style="font-size:15px;">프록시</span>
+            <span style="font-size:13px;color:var(--label2);">gopang-proxy.tensor-city.workers.dev</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-footer">
+        고팡 — AI 법률 비서<br>
+        K-Law {{VERSION}} · AI City Inc. · Jeju, Korea<br>
+        © 2026 All rights reserved
+      </div>
+    </div><!-- /stv -->
+
+  </div><!-- /content -->
+
+  <!-- Tab bar -->
+  <div id="tabbar">
+    <button class="tab active" onclick="switchTab('klaw')" id="tab-klaw">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+      <span class="tab-label">K-Law</span>
+    </button>
+    <button class="tab" onclick="switchTab('chat')" id="tab-chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span class="tab-label">AI 비서</span>
+    </button>
+    <button class="tab" onclick="switchTab('settings')" id="tab-settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      <span class="tab-label">설정</span>
+    </button>
+  </div>
+</div>
+
+<script>
+/* ── Load K-Law prompt ── */
+const _kd = JSON.parse(document.getElementById('klaw-data').textContent);
+const KLAW_PROMPT = _kd.klaw;
+
+const PROXY = 'https://gopang-proxy.tensor-city.workers.dev';
+const TABS  = { klaw:'klv', chat:'cv', settings:'stv' };
+let busy = false;
+
+/* ── Utils ── */
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const $   = id => document.getElementById(id);
+
+function getAK() { return $('ak')?.value || localStorage.getItem('gopang_ak') || ''; }
+function saveAK(v) { localStorage.setItem('gopang_ak', v); }
+
+/* ── Tab switching ── */
+function switchTab(name) {
+  Object.keys(TABS).forEach(k => {
+    $('tab-'+k)?.classList.toggle('active', k === name);
+    $(TABS[k])?.classList.toggle('active', k === name);
+  });
+  $('nav-title').textContent =
+    name === 'klaw' ? 'K-Law {{VERSION}}' :
+    name === 'chat' ? 'AI 비서' : '설정';
+}
+
+/* ── DeepSeek API call ── */
+async function callDS(system, user, maxTok = 3000) {
+  const ak = getAK();
+  const body = {
+    model: 'deepseek-chat',
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user',   content: user   }
+    ],
+    max_tokens: maxTok,
+    temperature: 0.2
+  };
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (ak) headers['Authorization'] = 'Bearer ' + ak;
+
+  const r = await fetch(PROXY, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+  const d = await r.json();
+  return d.choices?.[0]?.message?.content ?? '(응답 없음)';
+}
+
+/* ── K-Law: Summary input ── */
+function onSummaryInput(el) {
+  autoResize(el);
+  $('kl-analyze-btn').disabled = el.value.trim().length < 10;
+}
+
+/* ── K-Law: Parse & analyze ── */
+async function parseSummary() {
+  if (busy) return;
+  const summary = $('kl-summary').value.trim();
+  if (!summary) return;
+
+  busy = true;
+  const btn = $('kl-analyze-btn');
+  btn.innerHTML = '<span class="spinner"></span> 분석 중...';
+  btn.disabled = true;
+  $('parsed-section').classList.add('hid');
+
+  try {
+    const res = await callDS(KLAW_PROMPT, summary, 4000);
+    displayVerdict(res);
+  } catch(e) {
+    $('verdict-text').textContent = '오류: ' + e.message;
+    $('parsed-section').classList.remove('hid');
+  } finally {
+    busy = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> AI로 사건 분석하기`;
+    btn.disabled = false;
+  }
+}
+
+function displayVerdict(text) {
+  $('verdict-text').textContent = text;
+
+  // 사건 유형 추출
+  const typeM = text.match(/사건 유형[:\s]+([^\n]+)/i) ||
+                text.match(/Case Type[:\s]+([^\n]+)/i);
+  $('type-text').textContent = typeM ? typeM[1].trim() : '분석 완료';
+  $('type-badge').textContent = '';
+
+  // 확신도 추출
+  const confM = text.match(/확신도.*?(\d+(?:\.\d+)?)\s*\/\s*10/i) ||
+                text.match(/[Cc]onfidence.*?(\d+(?:\.\d+)?)\s*\/\s*10/);
+  if (confM) {
+    const score = parseFloat(confM[1]);
+    const pct   = Math.round(score * 10);
+    $('conf-label').textContent = `${score}/10`;
+    $('conf-bar').style.width   = pct + '%';
+    $('conf-bar').style.background =
+      score >= 7 ? 'var(--green)' : score >= 5 ? 'var(--orange)' : 'var(--red)';
+  }
+
+  $('parsed-section').classList.remove('hid');
+}
+
+/* ── Chat ── */
+$('chat-input').addEventListener('input', () => {
+  $('chat-send-btn').disabled = $('chat-input').value.trim().length === 0;
+});
+
+function onChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (!$('chat-send-btn').disabled) sendChat();
+  }
+}
+
+async function sendChat() {
+  if (busy) return;
+  const input = $('chat-input');
+  const text  = input.value.trim();
+  if (!text) return;
+
+  const list = $('msg-list');
+  list.innerHTML += `<div class="msg-row me gap">
+    <div class="msg-mc"><div class="msg-bubble">${esc(text)}</div></div>
+  </div>`;
+
+  const tid = 'tmp' + Date.now();
+  list.innerHTML += `<div class="msg-row gap" id="${tid}">
+    <div class="msg-av">AI</div>
+    <div class="msg-mc"><div class="msg-bubble"><span class="spinner" style="border-color:rgba(0,0,0,.2);border-top-color:var(--blue)"></span></div></div>
+  </div>`;
+  list.scrollTop = list.scrollHeight;
+
+  input.value = '';
+  input.style.height = '';
+  $('chat-send-btn').disabled = true;
+  busy = true;
+
+  try {
+    const res = await callDS('당신은 한국 법률 AI 비서입니다. 친절하고 전문적으로 답하세요.', text, 800);
+    $(tid)?.querySelector('.msg-bubble').innerHTML = esc(res).replace(/\n/g,'<br>');
+  } catch(e) {
+    $(tid)?.querySelector('.msg-bubble').innerHTML =
+      `<span style="color:var(--red)">${esc(e.message)}</span>`;
+  } finally {
+    busy = false;
+    list.scrollTop = list.scrollHeight;
+  }
+}
+
+/* ── Utils ── */
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+}
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', () => {
+  const ak = localStorage.getItem('gopang_ak');
+  if (ak) $('ak').value = ak;
+});
+</script>
+</body>
+</html>
