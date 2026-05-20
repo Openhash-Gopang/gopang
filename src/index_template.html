@@ -23,11 +23,10 @@
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--label);
   font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
   font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;}
-#app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
 #app{padding-top:env(safe-area-inset-top,0);}
 #content{flex:1;overflow:hidden;position:relative;}
-/* 핸들 공간 확보 */
-.view{padding-bottom:28px;}
+.view{padding-bottom:0;}
 .view{position:absolute;inset:0;overflow-y:auto;display:none;}
 .view.active{display:block;}
 /* ── 슬라이드 탭바 ── */
@@ -241,17 +240,154 @@ input.settings-input{background:transparent;border:none;outline:none;
 .cam-btn.capture{background:var(--blue);color:#fff;}
 .cam-btn.cancel{background:rgba(255,255,255,.15);color:#fff;}
 
-/* ── AI 호출 버튼 ── */
-.ai-toggle-btn{width:32px;height:32px;border-radius:50%;
-  background:var(--blue);border:none;cursor:pointer;
+
+/* ── Floating 버튼 (채팅 우상단) ── */
+.chat-float-bar{position:absolute;top:12px;right:12px;
+  display:flex;gap:8px;align-items:center;z-index:10;}
+.float-btn{width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;transition:all .2s;box-shadow:0 1px 4px rgba(0,122,255,.3);}
-.ai-toggle-btn.off{background:var(--fill2);box-shadow:none;}
-.ai-toggle-btn span{font-size:11px;font-weight:800;color:#fff;letter-spacing:-.5px;}
-.ai-toggle-btn.off span{color:var(--label3);}
-.ai-mode-bar{height:2px;margin:0 12px;border-radius:1px;
-  background:var(--blue);display:none;transition:opacity .2s;}
-.ai-mode-bar.show{display:block;}
+  backdrop-filter:blur(8px);transition:all .2s;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);}
+.float-ai-btn{background:rgba(0,122,255,.9);color:#fff;
+  font-size:11px;font-weight:800;letter-spacing:-.5px;}
+.float-ai-btn.off{background:rgba(120,120,128,.25);color:var(--label2);}
+.float-settings-btn{background:rgba(255,255,255,.85);color:var(--label2);}
+@media(prefers-color-scheme:dark){
+  .float-settings-btn{background:rgba(44,44,46,.85);}
+}
+.float-btn:hover{transform:scale(1.1);}
+.float-btn svg{width:16px;height:16px;}
+
+/* ── 검색 버튼 ── */
+.float-search-btn{background:rgba(255,255,255,.85);color:var(--label2);}
+@media(prefers-color-scheme:dark){.float-search-btn{background:rgba(44,44,46,.85);}}
+
+/* ── 대화 상대 검색 패널 ── */
+.contact-search-panel{position:absolute;top:0;left:0;right:0;
+  background:var(--bg2);z-index:20;
+  border-bottom:.5px solid var(--sep);
+  transform:translateY(-100%);transition:transform .25s ease;
+  border-radius:0 0 var(--radius) var(--radius);}
+.contact-search-panel.show{transform:translateY(0);}
+.contact-search-inner{display:flex;align-items:center;gap:8px;padding:10px 14px;}
+.contact-search-input{flex:1;background:var(--fill);border:none;outline:none;
+  border-radius:20px;padding:9px 16px;font-size:15px;color:var(--label);
+  font-family:inherit;}
+.contact-search-close{width:28px;height:28px;border-radius:50%;
+  background:var(--fill2);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--label2);font-size:14px;flex-shrink:0;}
+.contact-list{max-height:200px;overflow-y:auto;padding:4px 0;}
+.contact-item{display:flex;align-items:center;gap:12px;
+  padding:10px 16px;cursor:pointer;transition:background .15s;}
+.contact-item:hover{background:var(--fill);}
+.contact-avatar{width:36px;height:36px;border-radius:50%;
+  background:var(--blue);display:flex;align-items:center;
+  justify-content:center;font-size:14px;font-weight:700;
+  color:#fff;flex-shrink:0;}
+.contact-name{font-size:15px;color:var(--label);font-weight:500;}
+.contact-sub{font-size:12px;color:var(--label3);}
+.contact-tip{font-size:13px;color:var(--label3);
+  text-align:center;padding:16px;}
+
+/* ── AI 모드 상태 표시 ── */
+.chat-mode-indicator{font-size:11px;font-weight:600;
+  text-align:center;padding:3px 0;
+  background:var(--fill);color:var(--label3);
+  display:none;}
+.chat-mode-indicator.ai-on{display:block;
+  background:rgba(0,122,255,.08);color:var(--blue);}
+
+/* ── LLM 선택 ── */
+.llm-options{display:flex;flex-direction:column;gap:0;}
+.llm-option{display:flex;align-items:center;gap:12px;
+  padding:12px 16px;cursor:pointer;
+  border-bottom:.5px solid var(--sep);transition:background .15s;}
+.llm-option:last-child{border-bottom:none;}
+.llm-option:hover{background:var(--fill);}
+.llm-option input[type=radio]{width:18px;height:18px;accent-color:var(--blue);flex-shrink:0;}
+.llm-info{flex:1;display:flex;flex-direction:column;gap:2px;}
+.llm-name{font-size:15px;font-weight:600;color:var(--label);}
+.llm-sub{font-size:12px;color:var(--label3);}
+.llm-badge{font-size:11px;font-weight:600;color:var(--blue);
+  background:rgba(0,122,255,.1);padding:2px 8px;border-radius:10px;flex-shrink:0;}
+
+/* ── PDV 뷰어 ── */
+.pdv-modal{position:fixed;inset:0;background:var(--bg);z-index:200;
+  display:none;flex-direction:column;overflow:hidden;}
+.pdv-modal.show{display:flex;}
+.pdv-header{display:flex;align-items:center;gap:12px;
+  padding:14px 16px;border-bottom:.5px solid var(--sep);
+  background:var(--bg2);}
+.pdv-back{display:flex;align-items:center;gap:4px;
+  background:none;border:none;cursor:pointer;
+  color:var(--blue);font-size:15px;font-weight:600;}
+.pdv-title{font-size:17px;font-weight:700;color:var(--label);}
+.pdv-subtitle{font-size:12px;color:var(--label3);margin-left:auto;}
+.pdv-body{flex:1;overflow-y:auto;padding:16px;}
+.pdv-empty{text-align:center;color:var(--label3);font-size:15px;
+  padding:60px 20px;}
+.pdv-record{background:var(--bg2);border-radius:var(--radius);
+  margin-bottom:10px;overflow:hidden;}
+.pdv-record-header{display:flex;align-items:center;gap:8px;
+  padding:10px 14px;border-bottom:.5px solid var(--sep);
+  cursor:pointer;}
+.pdv-record-id{font-size:11px;font-weight:700;color:var(--blue);
+  font-family:monospace;}
+.pdv-record-time{font-size:11px;color:var(--label3);margin-left:auto;}
+.pdv-risk{font-size:10px;font-weight:700;padding:2px 7px;
+  border-radius:10px;flex-shrink:0;}
+.pdv-risk.s0{background:rgba(52,199,89,.1);color:#34c759;}
+.pdv-risk.s1{background:rgba(255,149,0,.1);color:#ff9500;}
+.pdv-risk.s2,.pdv-risk.s3{background:rgba(255,59,48,.1);color:#ff3b30;}
+.pdv-record-body{padding:10px 14px;display:none;}
+.pdv-record-body.open{display:block;}
+.pdv-row{display:flex;gap:8px;margin-bottom:6px;font-size:13px;}
+.pdv-label{font-weight:700;color:var(--label2);min-width:50px;flex-shrink:0;}
+.pdv-value{color:var(--label);line-height:1.5;}
+.pdv-hash{font-family:monospace;font-size:10px;color:var(--label3);
+  word-break:break-all;margin-top:8px;padding:6px 8px;
+  background:var(--fill);border-radius:6px;}
+.pdv-search{width:100%;background:var(--fill);border:none;outline:none;
+  border-radius:20px;padding:9px 16px;font-size:15px;
+  color:var(--label);font-family:inherit;margin-bottom:12px;}
+
+/* ── OpenHash 해시체인 시각화 ── */
+.hashchain-panel{background:var(--bg2);border-bottom:.5px solid var(--sep);
+  padding:14px 16px;overflow-x:auto;scrollbar-width:none;}
+.hashchain-panel::-webkit-scrollbar{display:none;}
+.hashchain-title{font-size:11px;font-weight:700;color:var(--label3);
+  text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;
+  display:flex;align-items:center;gap:6px;}
+.hashchain-title .dot{width:6px;height:6px;border-radius:50%;
+  background:var(--green);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hashchain-scroll{display:flex;align-items:center;gap:0;min-width:max-content;}
+.hc-block{display:flex;flex-direction:column;align-items:center;
+  background:var(--bg3,#f2f2f7);border-radius:8px;padding:8px 10px;
+  min-width:130px;max-width:130px;flex-shrink:0;
+  border:1px solid var(--sep);position:relative;}
+.hc-block.genesis{border-color:var(--orange);background:rgba(255,149,0,.06);}
+.hc-block.latest{border-color:var(--blue);background:rgba(0,122,255,.06);}
+.hc-block-num{font-size:9px;font-weight:800;color:var(--label3);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.hc-block.genesis .hc-block-num{color:var(--orange);}
+.hc-block.latest  .hc-block-num{color:var(--blue);}
+.hc-hash{font-family:monospace;font-size:9px;color:var(--label2);
+  word-break:break-all;line-height:1.4;text-align:center;
+  background:var(--fill);border-radius:4px;padding:3px 5px;
+  width:100%;margin-bottom:4px;}
+.hc-what{font-size:10px;color:var(--label2);text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  width:100%;margin-bottom:2px;}
+.hc-time{font-size:9px;color:var(--label3);text-align:center;}
+.hc-arrow{font-size:16px;color:var(--label3);padding:0 4px;flex-shrink:0;}
+.hc-genesis-label{font-size:9px;font-weight:700;color:var(--orange);
+  margin-bottom:2px;}
+.hc-valid{font-size:9px;color:var(--green);font-weight:600;
+  margin-top:2px;}
+.hc-invalid{font-size:9px;color:var(--red);font-weight:600;}
+.hc-empty{font-size:13px;color:var(--label3);text-align:center;padding:8px 0;}
 </style>
 </head>
 <body>
@@ -400,23 +536,45 @@ input.settings-input{background:transparent;border:none;outline:none;
     </div><!-- /klv -->
 
     <!-- 채팅 탭 -->
-    <div id="cv" class="view active">
-      <div class="msg-list" id="msg-list">
-        <div class="msg-row">
-          <div class="msg-av">AI</div>
-          <div class="msg-mc">
-            <div class="msg-bubble">귀하의 AI 비서입니다. 지시 바랍니다.</div>
-          </div>
+    <div id="cv" class="view active" style="position:relative;">
+      <!-- Floating: 검색 + AI + 설정 버튼 -->
+      <div class="chat-float-bar">
+        <!-- 대화 상대 검색 -->
+        <button class="float-btn float-search-btn" id="float-search-btn"
+          onclick="openContactSearch()" title="대화 상대 검색">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+        </button>
+        <!-- AI 비서 토글 (디폴트: OFF) -->
+        <button class="float-btn float-ai-btn off" id="float-ai-btn"
+          onclick="toggleAIMode()" title="AI 비서 호출">AI</button>
+        <!-- 설정 -->
+        <button class="float-btn float-settings-btn"
+          onclick="switchTab('settings')" title="설정">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+      <!-- 대화 상대 검색 패널 -->
+      <div class="contact-search-panel" id="contact-search-panel">
+        <div class="contact-search-inner">
+          <input type="text" id="contact-search-input" class="contact-search-input"
+            placeholder="이름 또는 연락처 검색..."
+            oninput="searchContacts(this.value)">
+          <button class="contact-search-close" onclick="closeContactSearch()">✕</button>
+        </div>
+        <div class="contact-list" id="contact-list">
+          <div class="contact-tip">대화 상대를 검색하거나 선택하세요.</div>
         </div>
       </div>
+      <div class="chat-mode-indicator" id="chat-mode-indicator" style="display:none;">⚡ AI 비서 모드 — AI가 응답합니다</div>
+      <div class="msg-list" id="msg-list">
+      </div>
       <div id="chat-file-status" class="chat-file-status"></div>
-      <div class="ai-mode-bar" id="ai-mode-bar"></div>
       <div class="chat-input-wrap">
-        <!-- AI 호출 토글 -->
-        <button class="ai-toggle-btn" id="ai-toggle-btn"
-          onclick="toggleAIMode()" title="AI 비서 ON/OFF">
-          <span>AI</span>
-        </button>
         <!-- 파일 첨부 -->
         <label class="chat-media-btn" for="chat-file-input" title="파일 첨부">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -455,48 +613,150 @@ input.settings-input{background:transparent;border:none;outline:none;
 
     <!-- 설정 탭 -->
     <div id="stv" class="view">
-      <div class="section" style="padding-top:24px;">
-        <div class="section-header">DeepSeek API</div>
+      <!-- 설정 상단 뒤로가기 -->
+      <div style="display:flex;align-items:center;padding:14px 16px 0;gap:8px;">
+        <button onclick="switchTab('chat')"
+          style="display:flex;align-items:center;gap:4px;background:none;border:none;
+          cursor:pointer;color:var(--blue);font-size:15px;font-weight:600;padding:4px 0;">
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="none"
+            stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M8 1L2 8l6 7"/>
+          </svg>
+          뒤로
+        </button>
+
+      </div>
+      <!-- 사용자 프로필 -->
+      <div class="section" style="padding-top:16px;">
+        <div class="section-header">사용자 프로필</div>
+        <div class="card" id="profile-card">
+          <div class="card-row" style="gap:14px;align-items:center;">
+            <div style="width:52px;height:52px;border-radius:50%;
+              background:var(--blue);display:flex;align-items:center;
+              justify-content:center;font-size:22px;font-weight:800;
+              color:#fff;flex-shrink:0;" id="profile-avatar">도</div>
+            <div style="flex:1;">
+              <div style="font-size:17px;font-weight:700;color:var(--label);"
+                id="profile-name">도영민</div>
+              <div style="font-size:13px;color:var(--label3);"
+                id="profile-id">@체제수리공</div>
+              <div style="font-size:12px;color:var(--label3);margin-top:2px;"
+                id="profile-age"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:8px;">
+          <div class="card-row">
+            <span style="font-size:14px;color:var(--label2);">생년월일</span>
+            <span id="pi-birth" style="font-size:14px;color:var(--label);">1964.10.05</span>
+          </div>
+          <div class="card-row">
+            <span style="font-size:14px;color:var(--label2);">주거지</span>
+            <span id="pi-address" style="font-size:13px;color:var(--label);text-align:right;flex:1;">제주시 이도1동 10-1번지</span>
+          </div>
+          <div class="card-row">
+            <span style="font-size:14px;color:var(--label2);">전화</span>
+            <span id="pi-phone" style="font-size:14px;color:var(--label);">010-9662-7170</span>
+          </div>
+          <div class="card-row">
+            <span style="font-size:14px;color:var(--label2);">직업</span>
+            <span id="pi-job" style="font-size:14px;color:var(--label);">소프트웨어 개발자</span>
+          </div>
+          <div class="card-row">
+            <span style="font-size:14px;color:var(--label2);">학력/전공</span>
+            <span id="pi-edu" style="font-size:14px;color:var(--label);">대졸 · 경제학</span>
+          </div>
+          <div class="card-row">
+            <span style="font-size:14px;color:var(--label2);">신체</span>
+            <span id="pi-body" style="font-size:14px;color:var(--label);">176cm · 78kg · AB형</span>
+          </div>
+          <div class="card-row">
+            <span style="font-size:14px;color:var(--label2);">가족</span>
+            <span id="pi-family" style="font-size:14px;color:var(--label);">아내</span>
+          </div>
+          <div class="card-row">
+            <span style="font-size:14px;color:var(--label2);">차량</span>
+            <span id="pi-car" style="font-size:14px;color:var(--label);">그랜저TG LPG</span>
+          </div>
+          <div class="card-row" style="border-bottom:none;">
+            <span style="font-size:14px;color:var(--label2);">취미</span>
+            <span id="pi-hobby" style="font-size:14px;color:var(--label);">바다 수영, 올레길 걷기</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" style="padding-top:16px;">
+        <div class="section-header">AI 모델 선택</div>
+        <div class="card">
+          <div class="card-row" style="flex-direction:column;align-items:stretch;gap:8px;">
+            <div class="llm-options" id="llm-options">
+              <label class="llm-option" id="llm-opt-deepseek">
+                <input type="radio" name="llm" value="deepseek" checked onchange="selectLLM('deepseek')">
+                <div class="llm-info">
+                  <span class="llm-name">DeepSeek</span>
+                  <span class="llm-sub">기본 모델 · deepseek-chat</span>
+                </div>
+                <span class="llm-badge">디폴트</span>
+              </label>
+              <label class="llm-option" id="llm-opt-claude">
+                <input type="radio" name="llm" value="claude" onchange="selectLLM('claude')">
+                <div class="llm-info">
+                  <span class="llm-name">Claude</span>
+                  <span class="llm-sub">Anthropic · claude-sonnet-4-5</span>
+                </div>
+              </label>
+              <label class="llm-option" id="llm-opt-gpt">
+                <input type="radio" name="llm" value="gpt" onchange="selectLLM('gpt')">
+                <div class="llm-info">
+                  <span class="llm-name">GPT-4o</span>
+                  <span class="llm-sub">OpenAI · gpt-4o</span>
+                </div>
+              </label>
+              <label class="llm-option" id="llm-opt-gemini">
+                <input type="radio" name="llm" value="gemini" onchange="selectLLM('gemini')">
+                <div class="llm-info">
+                  <span class="llm-name">Gemini</span>
+                  <span class="llm-sub">Google · gemini-1.5-pro</span>
+                </div>
+              </label>
+              <label class="llm-option" id="llm-opt-custom">
+                <input type="radio" name="llm" value="custom" onchange="selectLLM('custom')">
+                <div class="llm-info">
+                  <span class="llm-name">Custom</span>
+                  <span class="llm-sub">직접 엔드포인트 입력</span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" style="padding-top:12px;">
+        <div class="section-header" id="api-key-header">API 키 — DeepSeek</div>
         <div class="card">
           <div class="card-row">
             <span style="font-size:15px;color:var(--label2);">API 키</span>
             <input id="ak" type="password" class="settings-input"
               placeholder="sk-..." oninput="saveAK(this.value)">
           </div>
+          <div class="card-row" id="custom-endpoint-row" style="display:none;">
+            <span style="font-size:14px;color:var(--label2);">엔드포인트</span>
+            <input id="custom-endpoint" type="text" class="settings-input"
+              placeholder="https://api.example.com/v1/chat/completions"
+              oninput="saveCustomEndpoint(this.value)">
+          </div>
+          <div class="card-row" id="custom-model-row" style="display:none;">
+            <span style="font-size:14px;color:var(--label2);">모델명</span>
+            <input id="custom-model" type="text" class="settings-input"
+              placeholder="model-name"
+              oninput="saveCustomModel(this.value)">
+          </div>
         </div>
         <p style="font-size:13px;color:var(--label3);padding:6px 4px 0;">
           API 키는 이 기기에만 저장되며 서버로 전송되지 않습니다.
         </p>
       </div>
-      <div class="section" style="padding-top:20px;">
-        <div class="section-header">K-Law 심급 현황</div>
-        <div class="card">
-          <div class="card-row">
-            <span style="font-size:15px;">1심 단독 (판사 1인)</span>
-            <span style="font-size:13px;color:var(--green);">✓ 활성</span>
-          </div>
-          <div class="card-row">
-            <span style="font-size:15px;">1심 합의 (판사 3인)</span>
-            <span style="font-size:13px;color:var(--label3);">준비 중</span>
-          </div>
-          <div class="card-row">
-            <span style="font-size:15px;">2심 합의 (판사 3인)</span>
-            <span style="font-size:13px;color:var(--label3);">준비 중</span>
-          </div>
-          <div class="card-row">
-            <span style="font-size:15px;">3심 소부 (판사 4인)</span>
-            <span style="font-size:13px;color:var(--label3);">준비 중</span>
-          </div>
-          <div class="card-row">
-            <span style="font-size:15px;">3심 전원합의 (판사 14인)</span>
-            <span style="font-size:13px;color:var(--label3);">준비 중</span>
-          </div>
-          <div class="card-row">
-            <span style="font-size:15px;">헌법재판 (재판관 9인)</span>
-            <span style="font-size:13px;color:var(--label3);">준비 중</span>
-          </div>
-        </div>
-      </div>
+
       <div class="section" style="padding-top:20px;">
         <div class="section-header">K-Law 정보</div>
         <div class="card">
@@ -514,6 +774,32 @@ input.settings-input{background:transparent;border:none;outline:none;
           </div>
         </div>
       </div>
+      <div class="section" style="padding-top:12px;">
+        <div class="section-header">개인 데이터 볼트</div>
+        <div class="card">
+          <div class="card-row" style="cursor:pointer;" onclick="openPDV()">
+            <div>
+              <div style="font-size:15px;font-weight:600;color:var(--label);">🔐 PDV 열기</div>
+              <div style="font-size:12px;color:var(--label3);margin-top:2px;">
+                출생~현재 소통 기록 — 6하원칙 기반
+              </div>
+            </div>
+            <svg width="8" height="14" viewBox="0 0 8 14" fill="none"
+              stroke="var(--label3)" stroke-width="2" stroke-linecap="round">
+              <path d="M1 1l6 6-6 6"/>
+            </svg>
+          </div>
+          <div class="card-row">
+            <span style="font-size:15px;color:var(--label2);">기록 수</span>
+            <span id="pdv-badge" style="font-size:15px;color:var(--blue);">0건</span>
+          </div>
+          <div class="card-row">
+            <span style="font-size:15px;color:var(--label2);">OpenHash</span>
+            <span style="font-size:13px;color:var(--label3);">연동 준비 중</span>
+          </div>
+        </div>
+      </div>
+
       <div class="settings-footer">
         고팡 — AI 법률 비서<br>
         K-Law {{VERSION}} · AI City Inc. · Jeju, Korea<br>
@@ -521,46 +807,173 @@ input.settings-input{background:transparent;border:none;outline:none;
       </div>
     </div>
 
-  </div><!-- /content -->
-
-  <!-- 슬라이드 탭바 -->
-  <div id="tabbar-wrap">
-    <div id="tab-handle"
-      onclick="toggleTabbar()"
-      onmousedown="onHandleMouseDown(event)"
-      ontouchstart="onHandleTouchStart(event)"
-      ontouchend="onHandleTouchEnd(event)">
-      <div class="tab-handle-cur" id="tab-handle-cur"></div>
-      <div class="tab-handle-pill"></div>
-      <span class="tab-handle-arrow">▲</span>
+  
+  <!-- PDV 뷰어 모달 -->
+  <div class="pdv-modal" id="pdv-modal">
+    <div class="pdv-header">
+      <button class="pdv-back" onclick="closePDV()">
+        <svg width="10" height="16" viewBox="0 0 10 16" fill="none"
+          stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M8 1L2 8l6 7"/>
+        </svg>
+        뒤로
+      </button>
+      <span class="pdv-title">🔐 PDV</span>
+      <span class="pdv-subtitle" id="pdv-count">0건</span>
     </div>
-    <div id="tabbar">
-      <button class="tab" onclick="switchTab('klaw');closeTabbar();" id="tab-klaw">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-        </svg>
-        <span class="tab-label">K-Law</span>
-      </button>
-      <button class="tab active" onclick="switchTab('chat');closeTabbar();" id="tab-chat">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        <span class="tab-label">AI 비서</span>
-      </button>
-      <button class="tab" onclick="switchTab('settings');closeTabbar();" id="tab-settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
-        <span class="tab-label">설정</span>
-      </button>
+    <!-- OpenHash 해시체인 시각화 -->
+    <div class="hashchain-panel" id="hashchain-panel">
+      <div class="hashchain-title">
+        <span class="dot"></span>
+        OpenHash 해시체인 (SHA-256)
+      </div>
+      <div class="hashchain-scroll" id="hashchain-scroll">
+        <div class="hc-empty">대화 기록이 없습니다.</div>
+      </div>
+    </div>
+    <div class="pdv-body">
+      <input type="text" class="pdv-search" id="pdv-search"
+        placeholder="날짜, 목적, 내용으로 검색..."
+        oninput="filterPDV(this.value)">
+      <div id="pdv-list"></div>
     </div>
   </div>
-</div>
+
+  </div><!-- /content -->
+
 
 <script>
 const KLAW_PROMPT = window.__KLAW || '';
+
+/* ══ 디폴트 사용자 프로필 (시뮬레이션) ══ */
+const DEFAULT_USER = {
+  name:        '도영민',
+  id:          '체제수리공',
+  birth:       '1964-10-05',
+  address:     '제주시 이도1동 10-1번지',
+  phone:       '010-9662-7170',
+  blood:       'AB형',
+  height:      176,
+  weight:      78,
+  family:      '아내',
+  car:         '그랜저TG LPG',
+  job:         '소프트웨어 개발자',
+  education:   '대졸',
+  major:       '경제학',
+  hobby:       '바다 수영, 올레길 걷기',
+};
+
+function loadUserProfile(){
+  const saved = localStorage.getItem('gopang_user');
+  return saved ? JSON.parse(saved) : DEFAULT_USER;
+}
+function saveUserProfile(profile){
+  localStorage.setItem('gopang_user', JSON.stringify(profile));
+}
+
+// 나이 계산
+function calcAge(birthStr){
+  const today = new Date();
+  const birth  = new Date(birthStr);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if(m < 0 || (m===0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 const PROXY = 'https://gopang-proxy.tensor-city.workers.dev';
+
+/* ── SP-00 AI 비서 기본 시스템 프롬프트 ── */
+const SP00_PROMPT = `# SP-00: 고팡 AI 비서 시스템 프롬프트 v2.0
+# 적용 대상: AI 비서 모드의 모든 LLM 인스턴스
+# 최종 수정: 2026-05-21 | AI City Inc.
+
+당신은 고팡(Gopang)의 AI 비서입니다.
+사용자의 출생 시점부터 사망 시점까지 모든 일상과 업무 소통을 함께하는 평생 동반자입니다.
+
+## 핵심 역할
+
+### 1. PDV(Private Data Vault) 기록관
+모든 대화가 끝날 때마다, 또는 문서를 송수신할 때마다
+아래 6하 원칙 형식으로 PDV에 기록합니다:
+
+\`\`\`
+PDV_RECORD {
+  id       : "PDV-YYYYMMDD-HHMMSS-NNN",
+  who      : "발신자 → 수신자",
+  when     : "ISO 8601 타임스탬프",
+  where    : "채널: 채팅/음성/문서/파일",
+  what     : "소통 내용 핵심 요약 (3문장 이내)",
+  how      : "소통 방식: 텍스트/음성/파일첨부",
+  why      : "목적: 법률상담/일반질의/계약검토/업무지시/개인일상/...",
+  risk     : "S0/S1/S2/S3",
+  instance : "SP-00 또는 라우팅된 SP-번호",
+  hash     : "SHA-256(내용+이전해시) — 체인 무결성"
+}
+\`\`\`
+
+매 응답 말미에 반드시 다음을 출력하세요:
+\`\`\`
+📋 PDV 기록 완료 | [목적] | [위험등급] | [시각]
+\`\`\`
+
+### 2. 오케스트레이터 — 지시 분석 및 라우팅
+
+사용자의 지시를 분석하여 직접 수행하거나 전문 인스턴스를 호출합니다.
+
+**라우팅 판단 기준:**
+
+| 도메인 | 트리거 키워드/상황 | 인스턴스 |
+|--------|-------------------|---------|
+| 법률·계약·소송·판례·위법 | "계약서", "고소", "소송", "판례", "위법", "법원", "임대차", "채권" | SP-01 K-Law |
+| 의료·건강·처방 | "증상", "진단", "처방", "병원", "약", "건강검진" | SP-02 (준비 중) |
+| 교육·학습·논문 | "공부", "논문", "특허", "연구", "시험", "학교" | SP-03 (준비 중) |
+| 교통·이동·사고 | "교통사고", "운전", "대중교통", "항공", "물류" | SP-04 (준비 중) |
+| 시장·금융·투자 | "주식", "부동산", "세금", "대출", "투자", "환율" | SP-05 (준비 중) |
+| 산업·기업·특허 | "특허", "창업", "제조", "수출", "기업", "산업" | SP-06 (준비 중) |
+| 행정·민원·공공 | "민원", "허가", "신고", "국세청", "주민센터", "법원" | SP-07 (준비 중) |
+| 입법·정책·규제 | "법안", "국회", "정책", "규제", "입법", "헌법" | SP-08 (준비 중) |
+| 긴급·위험 | "위험", "폭력", "사고", "재난", "도움", "신고" | SP-09 즉시 112/119 안내 |
+
+**라우팅 출력 형식:**
+\`\`\`
+⚖ [K-Law 분석 시작]
+사건 개요: {요약}
+분석 중...
+\`\`\`
+
+**직접 수행:**
+라우팅이 필요 없는 일반 질문, 일정, 메모, 번역, 요약은 직접 처리합니다.
+
+### 3. 위법성 실시간 감지
+
+모든 소통에 대해 위험 등급을 판정합니다:
+- **S0** (0.00~0.29): 안전 — 정상 처리
+- **S1** (0.30~0.59): 주의 — 소프트 알림
+- **S2** (0.60~0.84): 경고 — 사용자 확인 요구
+- **S3** (0.85~1.00): 긴급 차단 + 관련 기관 안내
+
+위험 감지 시:
+\`\`\`
+⚠ [S등급 감지] {내용} | 근거: {조항} | 권고: {행동}
+\`\`\`
+
+## 응답 원칙
+
+1. **한국어** 기본, 사용자가 다른 언어 사용 시 해당 언어로 응답
+2. **간결하고 명확하게** — 불필요한 서론 없이 핵심부터
+3. **자율성 존중** — S0~S1은 자연스러운 대화, S2~S3만 명확한 경고
+4. **PDV 기록** — 모든 응답 말미에 기록 완료 표시
+5. **보안** — PDV 내용은 사용자 동의 없이 외부 전달 금지
+
+## 현재 활성 인스턴스
+
+- ✅ **SP-00 AI 비서** (본 프롬프트) — 오케스트레이터
+- ✅ **SP-01 K-Law v15.1** — 법률 전문 판결 예측
+- 🔒 SP-02~SP-08 — 순차 개발 예정
+- ✅ **SP-09** — 긴급상황 즉시 대응
+`;
+
 const TABS  = { klaw:'klv', chat:'cv', settings:'stv' };
 let busy = false;
 
@@ -636,13 +1049,15 @@ function resetResults(){
 function switchTab(name){
   currentTab = name;
   Object.keys(TABS).forEach(k => {
-    $('tab-'+k).classList.toggle('active', k===name);
-    $(TABS[k]).classList.toggle('active', k===name);
+    // 탭 버튼은 없을 수 있으므로 null 체크
+    const tabBtn = $('tab-'+k);
+    if(tabBtn) tabBtn.classList.toggle('active', k===name);
+    const tabView = $(TABS[k]);
+    if(tabView) tabView.classList.toggle('active', k===name);
   });
-
   const bar = $('instance-bar');
   if(bar) bar.style.display = name==='klaw' ? 'flex' : 'none';
-  updateHandle(name);
+  if(typeof updateHandle === 'function') updateHandle(name);
 }
 
 function checkReady(){
@@ -651,9 +1066,143 @@ function checkReady(){
 
 /* ── API 호출 ── */
 async function callDS(system, user, maxTok=2000){
+  // callLLM이 정의된 경우 위임, 아니면 DeepSeek 직접 호출
+  if(typeof callLLM === 'function'){
+    return await callLLM(system, user, maxTok);
+  }
   const ak = getAK();
   const headers = {'Content-Type':'application/json'};
   if(ak) headers['Authorization'] = 'Bearer ' + ak;
+  
+/* ══ 디폴트 사용자 프로필 (시뮬레이션) ══ */
+const DEFAULT_USER = {
+  name:        '도영민',
+  id:          '체제수리공',
+  birth:       '1964-10-05',
+  address:     '제주시 이도1동 10-1번지',
+  phone:       '010-9662-7170',
+  blood:       'AB형',
+  height:      176,
+  weight:      78,
+  family:      '아내',
+  car:         '그랜저TG LPG',
+  job:         '소프트웨어 개발자',
+  education:   '대졸',
+  major:       '경제학',
+  hobby:       '바다 수영, 올레길 걷기',
+};
+
+function loadUserProfile(){
+  const saved = localStorage.getItem('gopang_user');
+  return saved ? JSON.parse(saved) : DEFAULT_USER;
+}
+function saveUserProfile(profile){
+  localStorage.setItem('gopang_user', JSON.stringify(profile));
+}
+
+// 나이 계산
+function calcAge(birthStr){
+  const today = new Date();
+  const birth  = new Date(birthStr);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if(m < 0 || (m===0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+const PROXY = 'https://gopang-proxy.tensor-city.workers.dev';
+
+/* ── SP-00 AI 비서 기본 시스템 프롬프트 ── */
+const SP00_PROMPT = `# SP-00: 고팡 AI 비서 시스템 프롬프트 v2.0
+# 적용 대상: AI 비서 모드의 모든 LLM 인스턴스
+# 최종 수정: 2026-05-21 | AI City Inc.
+
+당신은 고팡(Gopang)의 AI 비서입니다.
+사용자의 출생 시점부터 사망 시점까지 모든 일상과 업무 소통을 함께하는 평생 동반자입니다.
+
+## 핵심 역할
+
+### 1. PDV(Private Data Vault) 기록관
+모든 대화가 끝날 때마다, 또는 문서를 송수신할 때마다
+아래 6하 원칙 형식으로 PDV에 기록합니다:
+
+\`\`\`
+PDV_RECORD {
+  id       : "PDV-YYYYMMDD-HHMMSS-NNN",
+  who      : "발신자 → 수신자",
+  when     : "ISO 8601 타임스탬프",
+  where    : "채널: 채팅/음성/문서/파일",
+  what     : "소통 내용 핵심 요약 (3문장 이내)",
+  how      : "소통 방식: 텍스트/음성/파일첨부",
+  why      : "목적: 법률상담/일반질의/계약검토/업무지시/개인일상/...",
+  risk     : "S0/S1/S2/S3",
+  instance : "SP-00 또는 라우팅된 SP-번호",
+  hash     : "SHA-256(내용+이전해시) — 체인 무결성"
+}
+\`\`\`
+
+매 응답 말미에 반드시 다음을 출력하세요:
+\`\`\`
+📋 PDV 기록 완료 | [목적] | [위험등급] | [시각]
+\`\`\`
+
+### 2. 오케스트레이터 — 지시 분석 및 라우팅
+
+사용자의 지시를 분석하여 직접 수행하거나 전문 인스턴스를 호출합니다.
+
+**라우팅 판단 기준:**
+
+| 도메인 | 트리거 키워드/상황 | 인스턴스 |
+|--------|-------------------|---------|
+| 법률·계약·소송·판례·위법 | "계약서", "고소", "소송", "판례", "위법", "법원", "임대차", "채권" | SP-01 K-Law |
+| 의료·건강·처방 | "증상", "진단", "처방", "병원", "약", "건강검진" | SP-02 (준비 중) |
+| 교육·학습·논문 | "공부", "논문", "특허", "연구", "시험", "학교" | SP-03 (준비 중) |
+| 교통·이동·사고 | "교통사고", "운전", "대중교통", "항공", "물류" | SP-04 (준비 중) |
+| 시장·금융·투자 | "주식", "부동산", "세금", "대출", "투자", "환율" | SP-05 (준비 중) |
+| 산업·기업·특허 | "특허", "창업", "제조", "수출", "기업", "산업" | SP-06 (준비 중) |
+| 행정·민원·공공 | "민원", "허가", "신고", "국세청", "주민센터", "법원" | SP-07 (준비 중) |
+| 입법·정책·규제 | "법안", "국회", "정책", "규제", "입법", "헌법" | SP-08 (준비 중) |
+| 긴급·위험 | "위험", "폭력", "사고", "재난", "도움", "신고" | SP-09 즉시 112/119 안내 |
+
+**라우팅 출력 형식:**
+\`\`\`
+⚖ [K-Law 분석 시작]
+사건 개요: {요약}
+분석 중...
+\`\`\`
+
+**직접 수행:**
+라우팅이 필요 없는 일반 질문, 일정, 메모, 번역, 요약은 직접 처리합니다.
+
+### 3. 위법성 실시간 감지
+
+모든 소통에 대해 위험 등급을 판정합니다:
+- **S0** (0.00~0.29): 안전 — 정상 처리
+- **S1** (0.30~0.59): 주의 — 소프트 알림
+- **S2** (0.60~0.84): 경고 — 사용자 확인 요구
+- **S3** (0.85~1.00): 긴급 차단 + 관련 기관 안내
+
+위험 감지 시:
+\`\`\`
+⚠ [S등급 감지] {내용} | 근거: {조항} | 권고: {행동}
+\`\`\`
+
+## 응답 원칙
+
+1. **한국어** 기본, 사용자가 다른 언어 사용 시 해당 언어로 응답
+2. **간결하고 명확하게** — 불필요한 서론 없이 핵심부터
+3. **자율성 존중** — S0~S1은 자연스러운 대화, S2~S3만 명확한 경고
+4. **PDV 기록** — 모든 응답 말미에 기록 완료 표시
+5. **보안** — PDV 내용은 사용자 동의 없이 외부 전달 금지
+
+## 현재 활성 인스턴스
+
+- ✅ **SP-00 AI 비서** (본 프롬프트) — 오케스트레이터
+- ✅ **SP-01 K-Law v15.1** — 법률 전문 판결 예측
+- 🔒 SP-02~SP-08 — 순차 개발 예정
+- ✅ **SP-09** — 긴급상황 즉시 대응
+`;
+
   const r = await fetch(PROXY, {
     method:'POST', headers,
     body: JSON.stringify({
@@ -865,7 +1414,21 @@ async function sendChat(){
   input.value='';input.style.height='';
   $('chat-send-btn').disabled=true;busy=true;
   try{
-    const res=await callDS('당신은 한국 법률 AI 비서입니다. 친절하고 전문적으로 한국어로 답하세요.',text,800);
+    const SP00 = buildSP00WithUser();
+    const res=await callDS(SP00,text,1200);
+    // PDV 자동 기록 (원문 포함)
+    pdvRecord({
+      who: '사용자 → AI비서',
+      where: '채팅',
+      what: text.slice(0,100) + (text.length>100?'...':''),
+      raw: '[사용자] '+text+'\n\n[AI비서] '+res,
+      how: '텍스트',
+      why: res.includes('[K-Law')  ? '법률상담'
+         : res.includes('PDV')     ? 'PDV조회'
+         : '일반질의',
+      risk: 'S0',
+      instance: 'SP-00'
+    });
     const el=$(tid);
     if(el)el.querySelector('.msg-bubble').innerHTML=esc(res).replace(/\n/g,'<br>');
   }catch(e){
@@ -875,9 +1438,26 @@ async function sendChat(){
 }
 function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,200)+'px';}
 document.addEventListener('DOMContentLoaded',()=>{
-  const ak=localStorage.getItem('gopang_ak');
-  if(ak)$('ak').value=ak;
   renderCourtInfo('solo', null);
+  updatePDVBadge();
+  renderProfile();
+  // 프로필 PDV 초기 기록 (최초 1회)
+  if(pdvRecords.length===0){
+    const u=loadUserProfile();
+    pdvRecord({who:u.name,where:'시스템',what:'고팡 계정 초기화 — 사용자 프로필 등록',how:'자동',why:'회원가입',risk:'S0',instance:'SP-00'});
+  }
+  // LLM 초기화
+  const savedLLM = localStorage.getItem('gopang_llm') || 'deepseek';
+  currentLLM = savedLLM;
+  const radio = document.querySelector('input[name=llm][value="'+savedLLM+'"]');
+  if(radio) radio.checked = true;
+  selectLLM(savedLLM);
+  // API 키 복원
+  const savedAK = localStorage.getItem('gopang_ak');
+  if(savedAK && $('ak')) $('ak').value = savedAK;
+  // float AI 버튼 초기: OFF
+  const fab = $('float-ai-btn');
+  if(fab) fab.title = 'AI 비서 호출';
 });
 
 /* ══ 파일 업로드 처리 ══ */
@@ -1144,6 +1724,7 @@ function toggleVoice(){
     $('voice-btn').classList.add('listening');
     $('voice-btn').title = '음성 입력 중... (클릭하여 중지)';
   };
+  let voiceTimer = null;
   recognition.onresult = e=>{
     let transcript = '';
     for(let i=e.resultIndex; i<e.results.length; i++){
@@ -1152,12 +1733,23 @@ function toggleVoice(){
     $('chat-input').value = transcript;
     autoResize($('chat-input'));
     $('chat-send-btn').disabled = transcript.trim().length===0;
+    clearTimeout(voiceTimer);
+    if(transcript.trim().length > 0){
+      voiceTimer = setTimeout(()=>{ stopVoice(); sendChat(); }, 1000);
+    }
   };
-  recognition.onend = ()=>{ stopVoice(); };
-  recognition.onerror = e=>{
+  recognition.onend = ()=>{
+    clearTimeout(voiceTimer);
     stopVoice();
-    if(e.error!=='aborted')
-      appendMsg('system','⚠ 음성 인식 오류: '+e.error);
+    if($('chat-input').value.trim().length > 0) setTimeout(()=>sendChat(),100);
+  };
+  recognition.onerror = e=>{
+    clearTimeout(voiceTimer);
+    stopVoice();
+    const msgs={'not-allowed':'⚠ 마이크 권한이 필요합니다. 주소창 아이콘을 클릭해 허용해주세요.',
+      'no-speech':'⚠ 음성이 감지되지 않았습니다.','network':'⚠ 네트워크 오류.','aborted':''};
+    const msg=msgs[e.error]||('⚠ 음성 오류: '+e.error);
+    if(msg) appendMsg('system',msg);
   };
   recognition.start();
 }
@@ -1242,20 +1834,39 @@ document.addEventListener('touchstart', e=>{
 
 
 /* ══ AI 모드 토글 ══ */
-let aiMode = true; // 기본: AI ON
+let aiMode = false; // 기본: 일반 대화 모드
 
 function toggleAIMode(){
   aiMode = !aiMode;
-  const btn = $('ai-toggle-btn');
-  const bar = $('ai-mode-bar');
+  const btn = $('float-ai-btn');
+  const ind = $('chat-mode-indicator');
+  if(btn){
+    btn.classList.toggle('off', !aiMode);
+    btn.title = aiMode ? 'AI 비서 활성 — 클릭하여 일반 모드로' : 'AI 비서 호출';
+    btn.style.fontWeight = aiMode ? '900' : '800';
+  }
+  if(ind){
+    ind.classList.toggle('ai-on', aiMode);
+    ind.style.display = aiMode ? 'block' : 'none';
+  }
   if(aiMode){
-    btn.classList.remove('off');
-    btn.title = 'AI 비서 ON — 클릭하여 끄기';
-    if(bar) bar.classList.add('show');
+    // AI ON: 인사 메시지 표시
+    const list = $('msg-list');
+    if(list){
+      const tid = 'ai-greeting';
+      if(!$(tid)){
+        list.innerHTML += '<div class="msg-row" id="'+tid+'">'
+          +'<div class="msg-av">AI</div>'
+          +'<div class="msg-mc"><div class="msg-bubble">'
+          +'귀하의 AI 비서입니다. 지시 바랍니다.'
+          +'</div></div></div>';
+        list.scrollTop = list.scrollHeight;
+      }
+    }
   } else {
-    btn.classList.add('off');
-    btn.title = 'AI 비서 OFF — 클릭하여 켜기';
-    if(bar) bar.classList.remove('show');
+    // AI OFF: 인사 메시지 제거
+    const greeting = $('ai-greeting');
+    if(greeting) greeting.remove();
   }
 }
 
@@ -1287,5 +1898,546 @@ document.addEventListener('mousedown', e=>{
     closeTabbar();
   }
 });
+
+
+
+/* ══ 대화 상대 검색 ══ */
+// 샘플 연락처 (추후 PDV에서 로드)
+const CONTACTS = [
+  { name:'AI 비서', sub:'고팡 AI (SP-00)', isAI:true },
+];
+let currentContact = null; // null = 일반/미지정
+
+function openContactSearch(){
+  const panel = $('contact-search-panel');
+  if(panel) panel.classList.add('show');
+  setTimeout(()=>{ const inp=$('contact-search-input'); if(inp) inp.focus(); }, 100);
+  renderContacts(CONTACTS);
+}
+function closeContactSearch(){
+  const panel = $('contact-search-panel');
+  if(panel) panel.classList.remove('show');
+}
+function searchContacts(q){
+  const filtered = CONTACTS.filter(c =>
+    c.name.includes(q) || (c.sub && c.sub.includes(q))
+  );
+  renderContacts(filtered);
+}
+function renderContacts(list){
+  const el = $('contact-list');
+  if(!el) return;
+  if(list.length === 0){
+    el.innerHTML = '<div class="contact-tip">검색 결과가 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = list.map(c => `
+    <div class="contact-item" onclick="selectContact(${JSON.stringify(c)})">
+      <div class="contact-avatar">${c.isAI ? '🤖' : c.name[0]}</div>
+      <div>
+        <div class="contact-name">${c.name}</div>
+        ${c.sub ? `<div class="contact-sub">${c.sub}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+function selectContact(c){
+  currentContact = c;
+  closeContactSearch();
+  if(c.isAI){
+    // AI 비서 선택 시 AI 모드 자동 ON
+    if(!aiMode) toggleAIMode();
+    appendMsg('system', '🤖 AI 비서와 대화 중');
+  } else {
+    // 일반 상대 선택 시 AI 모드 OFF
+    if(aiMode) toggleAIMode();
+    appendMsg('system', '💬 ' + c.name + '와(과) 대화 중');
+  }
+}
+
+
+
+/* ══ LLM 설정 관리 ══ */
+const LLM_CONFIG = {
+  deepseek: {
+    name: 'DeepSeek',
+    endpoint: 'https://gopang-proxy.tensor-city.workers.dev',
+    model: 'deepseek-chat',
+    authHeader: 'Authorization',
+    authPrefix: 'Bearer ',
+  },
+  claude: {
+    name: 'Claude',
+    endpoint: 'https://api.anthropic.com/v1/messages',
+    model: 'claude-sonnet-4-5-20251001',
+    authHeader: 'x-api-key',
+    authPrefix: '',
+    extraHeaders: {'anthropic-version': '2023-06-01'},
+  },
+  gpt: {
+    name: 'GPT-4o',
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    model: 'gpt-4o',
+    authHeader: 'Authorization',
+    authPrefix: 'Bearer ',
+  },
+  gemini: {
+    name: 'Gemini',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent',
+    model: 'gemini-1.5-pro',
+    authHeader: 'x-goog-api-key',
+    authPrefix: '',
+  },
+  custom: {
+    name: 'Custom',
+    endpoint: '',
+    model: '',
+    authHeader: 'Authorization',
+    authPrefix: 'Bearer ',
+  },
+};
+
+let currentLLM = localStorage.getItem('gopang_llm') || 'deepseek';
+
+function selectLLM(llm){
+  currentLLM = llm;
+  localStorage.setItem('gopang_llm', llm);
+  const header = $('api-key-header');
+  if(header) header.textContent = 'API 키 — ' + LLM_CONFIG[llm].name;
+  const customRows = ['custom-endpoint-row','custom-model-row'];
+  customRows.forEach(id => {
+    const el = $(id);
+    if(el) el.style.display = llm === 'custom' ? 'flex' : 'none';
+  });
+  // Custom 엔드포인트/모델 로드
+  if(llm === 'custom'){
+    const ep = $('custom-endpoint');
+    const mo = $('custom-model');
+    if(ep) ep.value = localStorage.getItem('gopang_custom_endpoint') || '';
+    if(mo) mo.value = localStorage.getItem('gopang_custom_model') || '';
+  }
+}
+
+function saveCustomEndpoint(v){
+  localStorage.setItem('gopang_custom_endpoint', v);
+  LLM_CONFIG.custom.endpoint = v;
+}
+function saveCustomModel(v){
+  localStorage.setItem('gopang_custom_model', v);
+  LLM_CONFIG.custom.model = v;
+}
+
+function getAK(){ return localStorage.getItem('gopang_ak') || ''; }
+function saveAK(v){ localStorage.setItem('gopang_ak', v); }
+
+/* ── 통합 LLM 호출 함수 ── */
+async function callLLM(system, user, maxTok=1200){
+  const llm = currentLLM;
+  const cfg = LLM_CONFIG[llm];
+  const ak  = getAK();
+  
+/* ══ 디폴트 사용자 프로필 (시뮬레이션) ══ */
+const DEFAULT_USER = {
+  name:        '도영민',
+  id:          '체제수리공',
+  birth:       '1964-10-05',
+  address:     '제주시 이도1동 10-1번지',
+  phone:       '010-9662-7170',
+  blood:       'AB형',
+  height:      176,
+  weight:      78,
+  family:      '아내',
+  car:         '그랜저TG LPG',
+  job:         '소프트웨어 개발자',
+  education:   '대졸',
+  major:       '경제학',
+  hobby:       '바다 수영, 올레길 걷기',
+};
+
+function loadUserProfile(){
+  const saved = localStorage.getItem('gopang_user');
+  return saved ? JSON.parse(saved) : DEFAULT_USER;
+}
+function saveUserProfile(profile){
+  localStorage.setItem('gopang_user', JSON.stringify(profile));
+}
+
+// 나이 계산
+function calcAge(birthStr){
+  const today = new Date();
+  const birth  = new Date(birthStr);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if(m < 0 || (m===0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+const PROXY = 'https://gopang-proxy.tensor-city.workers.dev';
+
+/* ── SP-00 AI 비서 기본 시스템 프롬프트 ── */
+const SP00_PROMPT = `# SP-00: 고팡 AI 비서 시스템 프롬프트 v2.0
+# 적용 대상: AI 비서 모드의 모든 LLM 인스턴스
+# 최종 수정: 2026-05-21 | AI City Inc.
+
+당신은 고팡(Gopang)의 AI 비서입니다.
+사용자의 출생 시점부터 사망 시점까지 모든 일상과 업무 소통을 함께하는 평생 동반자입니다.
+
+## 핵심 역할
+
+### 1. PDV(Private Data Vault) 기록관
+모든 대화가 끝날 때마다, 또는 문서를 송수신할 때마다
+아래 6하 원칙 형식으로 PDV에 기록합니다:
+
+\`\`\`
+PDV_RECORD {
+  id       : "PDV-YYYYMMDD-HHMMSS-NNN",
+  who      : "발신자 → 수신자",
+  when     : "ISO 8601 타임스탬프",
+  where    : "채널: 채팅/음성/문서/파일",
+  what     : "소통 내용 핵심 요약 (3문장 이내)",
+  how      : "소통 방식: 텍스트/음성/파일첨부",
+  why      : "목적: 법률상담/일반질의/계약검토/업무지시/개인일상/...",
+  risk     : "S0/S1/S2/S3",
+  instance : "SP-00 또는 라우팅된 SP-번호",
+  hash     : "SHA-256(내용+이전해시) — 체인 무결성"
+}
+\`\`\`
+
+매 응답 말미에 반드시 다음을 출력하세요:
+\`\`\`
+📋 PDV 기록 완료 | [목적] | [위험등급] | [시각]
+\`\`\`
+
+### 2. 오케스트레이터 — 지시 분석 및 라우팅
+
+사용자의 지시를 분석하여 직접 수행하거나 전문 인스턴스를 호출합니다.
+
+**라우팅 판단 기준:**
+
+| 도메인 | 트리거 키워드/상황 | 인스턴스 |
+|--------|-------------------|---------|
+| 법률·계약·소송·판례·위법 | "계약서", "고소", "소송", "판례", "위법", "법원", "임대차", "채권" | SP-01 K-Law |
+| 의료·건강·처방 | "증상", "진단", "처방", "병원", "약", "건강검진" | SP-02 (준비 중) |
+| 교육·학습·논문 | "공부", "논문", "특허", "연구", "시험", "학교" | SP-03 (준비 중) |
+| 교통·이동·사고 | "교통사고", "운전", "대중교통", "항공", "물류" | SP-04 (준비 중) |
+| 시장·금융·투자 | "주식", "부동산", "세금", "대출", "투자", "환율" | SP-05 (준비 중) |
+| 산업·기업·특허 | "특허", "창업", "제조", "수출", "기업", "산업" | SP-06 (준비 중) |
+| 행정·민원·공공 | "민원", "허가", "신고", "국세청", "주민센터", "법원" | SP-07 (준비 중) |
+| 입법·정책·규제 | "법안", "국회", "정책", "규제", "입법", "헌법" | SP-08 (준비 중) |
+| 긴급·위험 | "위험", "폭력", "사고", "재난", "도움", "신고" | SP-09 즉시 112/119 안내 |
+
+**라우팅 출력 형식:**
+\`\`\`
+⚖ [K-Law 분석 시작]
+사건 개요: {요약}
+분석 중...
+\`\`\`
+
+**직접 수행:**
+라우팅이 필요 없는 일반 질문, 일정, 메모, 번역, 요약은 직접 처리합니다.
+
+### 3. 위법성 실시간 감지
+
+모든 소통에 대해 위험 등급을 판정합니다:
+- **S0** (0.00~0.29): 안전 — 정상 처리
+- **S1** (0.30~0.59): 주의 — 소프트 알림
+- **S2** (0.60~0.84): 경고 — 사용자 확인 요구
+- **S3** (0.85~1.00): 긴급 차단 + 관련 기관 안내
+
+위험 감지 시:
+\`\`\`
+⚠ [S등급 감지] {내용} | 근거: {조항} | 권고: {행동}
+\`\`\`
+
+## 응답 원칙
+
+1. **한국어** 기본, 사용자가 다른 언어 사용 시 해당 언어로 응답
+2. **간결하고 명확하게** — 불필요한 서론 없이 핵심부터
+3. **자율성 존중** — S0~S1은 자연스러운 대화, S2~S3만 명확한 경고
+4. **PDV 기록** — 모든 응답 말미에 기록 완료 표시
+5. **보안** — PDV 내용은 사용자 동의 없이 외부 전달 금지
+
+## 현재 활성 인스턴스
+
+- ✅ **SP-00 AI 비서** (본 프롬프트) — 오케스트레이터
+- ✅ **SP-01 K-Law v15.1** — 법률 전문 판결 예측
+- 🔒 SP-02~SP-08 — 순차 개발 예정
+- ✅ **SP-09** — 긴급상황 즉시 대응
+`;
+
+
+  let endpoint = cfg.endpoint;
+  if(llm === 'custom'){
+    endpoint = localStorage.getItem('gopang_custom_endpoint') || '';
+    if(!endpoint) throw new Error('Custom 엔드포인트를 설정해주세요.');
+    cfg.model = localStorage.getItem('gopang_custom_model') || 'gpt-4o';
+  }
+
+  // Gemini는 별도 형식
+  if(llm === 'gemini'){
+    const url = endpoint + '?key=' + ak;
+    const r = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        contents:[{parts:[{text: system + '\n\n' + user}]}],
+        generationConfig:{maxOutputTokens: maxTok}
+      })
+    });
+    if(!r.ok) throw new Error('Gemini HTTP ' + r.status + ': ' + await r.text());
+    const d = await r.json();
+    return d.candidates?.[0]?.content?.parts?.[0]?.text ?? '(응답 없음)';
+  }
+
+  // Claude는 별도 형식
+  if(llm === 'claude'){
+    const headers = {
+      'Content-Type':'application/json',
+      'x-api-key': ak,
+      'anthropic-version':'2023-06-01'
+    };
+    const r = await fetch(endpoint, {
+      method:'POST', headers,
+      body: JSON.stringify({
+        model: cfg.model,
+        max_tokens: maxTok,
+        system: system,
+        messages:[{role:'user', content: user}]
+      })
+    });
+    if(!r.ok) throw new Error('Claude HTTP ' + r.status + ': ' + await r.text());
+    const d = await r.json();
+    return d.content?.[0]?.text ?? '(응답 없음)';
+  }
+
+  // DeepSeek / GPT / Custom — OpenAI 호환 형식
+  const useProxy = llm === 'deepseek';
+  const url = useProxy ? PROXY : endpoint;
+  const headers = {'Content-Type':'application/json'};
+  if(ak) headers[cfg.authHeader] = cfg.authPrefix + ak;
+  const r = await fetch(url, {
+    method:'POST', headers,
+    body: JSON.stringify({
+      model: cfg.model,
+      messages:[
+        {role:'system', content: system},
+        {role:'user',   content: user}
+      ],
+      max_tokens: maxTok,
+      temperature: 0.15
+    })
+  });
+  if(!r.ok) throw new Error(cfg.name + ' HTTP ' + r.status + ': ' + await r.text());
+  const d = await r.json();
+  return d.choices?.[0]?.message?.content ?? '(응답 없음)';
+}
+
+
+
+/* ══ PDV (Private Data Vault) — OpenHash 해시체인 ══ */
+let pdvRecords = JSON.parse(localStorage.getItem('gopang_pdv') || '[]');
+let pdvSeq = parseInt(localStorage.getItem('gopang_pdv_seq') || '0');
+
+/* SHA-256 (SubtleCrypto) */
+async function sha256hex(str){
+  const buf = new TextEncoder().encode(str);
+  const h   = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(h))
+    .map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+/* 블록 ID 생성 */
+function makePDVId(seq){
+  const now = new Date();
+  return 'PDV-'
+    + now.toISOString().slice(0,10).replace(/-/g,'')
+    + '-' + now.toTimeString().slice(0,8).replace(/:/g,'')
+    + '-' + String(seq).padStart(4,'0');
+}
+
+/* PDV 레코드 추가 — 원문 저장 + 해시체인 갱신 */
+async function pdvRecord({who, where, what, how, why, raw='', risk='S0', instance='SP-00'}){
+  const now     = new Date();
+  const ts      = now.toISOString();
+  const seq     = ++pdvSeq;
+  const id      = makePDVId(seq);
+  const prevRec = pdvRecords.length > 0 ? pdvRecords[pdvRecords.length-1] : null;
+  const prevHash= prevRec ? prevRec.hash : '0000000000000000000000000000000000000000000000000000000000000000';
+
+  // 해시 입력: ID + 발신자 + 타임스탬프 + 원문 + 이전해시
+  const rawContent = raw || what;
+  const hashInput  = [id, who, ts, rawContent, prevHash].join('|');
+  const hash       = await sha256hex(hashInput);
+
+  const rec = {
+    id, seq,
+    who, when:ts, where, what, how, why,
+    raw: rawContent,        // 원문 전체 저장
+    risk, instance,
+    hash,                   // 이 블록의 SHA-256
+    prevHash,               // 직전 블록 해시 (체인)
+    openhash: 'PENDING',    // OpenHash 네트워크 연동 예정
+  };
+
+  pdvRecords.push(rec);
+  localStorage.setItem('gopang_pdv',     JSON.stringify(pdvRecords));
+  localStorage.setItem('gopang_pdv_seq', String(seq));
+  updatePDVBadge();
+  return rec;
+}
+
+/* 체인 무결성 검증 */
+async function verifyChain(){
+  for(let i=1; i<pdvRecords.length; i++){
+    const cur  = pdvRecords[i];
+    const prev = pdvRecords[i-1];
+    if(cur.prevHash !== prev.hash) return { valid:false, brokenAt:i };
+    const hashInput = [cur.id, cur.who, cur.when, cur.raw||cur.what, cur.prevHash].join('|');
+    const recomputed = await sha256hex(hashInput);
+    if(recomputed !== cur.hash) return { valid:false, brokenAt:i };
+  }
+  return { valid:true };
+}
+
+function updatePDVBadge(){
+  const n = pdvRecords.length;
+  const badge = $('pdv-badge');
+  const cnt   = $('pdv-count');
+  if(badge) badge.textContent = n + '건';
+  if(cnt)   cnt.textContent   = n + '건';
+}
+
+async function openPDV(){
+  renderPDV(pdvRecords);
+  await renderHashChain();
+  $('pdv-modal').classList.add('show');
+}
+
+/* 해시체인 시각화 */
+async function renderHashChain(){
+  const el = $('hashchain-scroll');
+  if(!el) return;
+  if(pdvRecords.length === 0){
+    el.innerHTML = '<div class="hc-empty">대화 기록이 없습니다.</div>';
+    return;
+  }
+  const verification = await verifyChain();
+  const blocks = pdvRecords.map((r, i) => {
+    const isGenesis = i === 0;
+    const isLatest  = i === pdvRecords.length - 1;
+    const cls = isGenesis ? 'hc-block genesis' : isLatest ? 'hc-block latest' : 'hc-block';
+    const label = isGenesis ? 'Genesis' : isLatest ? `#${r.seq} Latest` : `#${r.seq}`;
+    const dt = new Date(r.when).toLocaleString('ko-KR',
+      {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const hashShort = r.hash ? r.hash.slice(0,8)+'...'+r.hash.slice(-4) : 'pending';
+    const prevShort = r.prevHash ? r.prevHash.slice(0,8)+'...' : '00000000...';
+    const valid = (verification.valid || verification.brokenAt > i);
+    return (i > 0 ? '<span class="hc-arrow">→</span>' : '') +
+      `<div class="${cls}">
+        <div class="hc-block-num">${label}</div>
+        <div style="font-size:8px;color:var(--label3);margin-bottom:2px;">prev: ${prevShort}</div>
+        <div class="hc-hash">${hashShort}</div>
+        <div class="hc-what">${(r.what||'').slice(0,18)}</div>
+        <div class="hc-time">${dt}</div>
+        <div class="${valid?'hc-valid':'hc-invalid'}">${valid?'✓ valid':'✗ invalid'}</div>
+      </div>`;
+  });
+  el.innerHTML = blocks.join('');
+  // 최신 블록으로 스크롤
+  setTimeout(()=>{ el.parentElement.scrollLeft = el.scrollWidth; }, 50);
+}
+function closePDV(){
+  $('pdv-modal').classList.remove('show');
+}
+function filterPDV(q){
+  const filtered = q
+    ? pdvRecords.filter(r =>
+        r.what.includes(q)||r.why.includes(q)||r.when.includes(q)||
+        (r.who&&r.who.includes(q))||(r.instance&&r.instance.includes(q)))
+    : pdvRecords;
+  renderPDV(filtered);
+}
+function renderPDV(records){
+  const el = $('pdv-list');
+  if(!el) return;
+  if(records.length === 0){
+    el.innerHTML = '<div class="pdv-empty">📭 기록이 없습니다.<br>AI 비서와 대화하면 자동으로 기록됩니다.</div>';
+    return;
+  }
+  // 최신순
+  const sorted = [...records].reverse();
+  el.innerHTML = sorted.map((r,i) => {
+    const risk = (r.risk||'S0').toLowerCase();
+    const dt = new Date(r.when).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return `<div class="pdv-record">
+      <div class="pdv-record-header" onclick="togglePDVRecord('pdvr${i}')">
+        <span class="pdv-record-id">${r.id}</span>
+        <span class="pdv-risk ${risk}">${r.risk||'S0'}</span>
+        <span class="pdv-record-time">${dt}</span>
+      </div>
+      <div class="pdv-record-body" id="pdvr${i}">
+        <div class="pdv-row"><span class="pdv-label">누가</span><span class="pdv-value">${r.who||'-'}</span></div>
+        <div class="pdv-row"><span class="pdv-label">언제</span><span class="pdv-value">${r.when}</span></div>
+        <div class="pdv-row"><span class="pdv-label">어디서</span><span class="pdv-value">${r.where||'-'}</span></div>
+        <div class="pdv-row"><span class="pdv-label">무엇을</span><span class="pdv-value">${r.what}</span></div>
+        <div class="pdv-row"><span class="pdv-label">어떻게</span><span class="pdv-value">${r.how||'-'}</span></div>
+        <div class="pdv-row"><span class="pdv-label">왜</span><span class="pdv-value">${r.why||'-'}</span></div>
+        <div class="pdv-row"><span class="pdv-label">인스턴스</span><span class="pdv-value">${r.instance||'SP-00'}</span></div>
+        ${r.raw ? `<div class="pdv-row"><span class="pdv-label">원문</span><span class="pdv-value" style="font-size:12px;word-break:break-all;">${r.raw.slice(0,300)}${r.raw.length>300?'...':''}</span></div>` : ''}
+        <div class="pdv-hash">
+          <div>Hash:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${r.hash||'pending'}</div>
+          <div style="margin-top:3px;">prevHash: ${r.prevHash||'genesis'}</div>
+          <div style="margin-top:3px;color:var(--orange);">OpenHash: ${r.openhash||'PENDING'}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function togglePDVRecord(id){
+  const el = $(id);
+  if(el) el.classList.toggle('open');
+}
+
+/* sendChat 이후 PDV 자동 기록 */
+const _origSendChat2 = sendChat;
+
+
+
+/* ── 프로필 렌더링 ── */
+function renderProfile(){
+  const u = loadUserProfile();
+  const age = calcAge(u.birth);
+  const el = id => document.getElementById(id);
+  if(el('profile-name'))   el('profile-name').textContent   = u.name;
+  if(el('profile-id'))     el('profile-id').textContent     = '@'+u.id;
+  if(el('profile-age'))    el('profile-age').textContent    = age+'세 · '+u.blood;
+  if(el('profile-avatar')) el('profile-avatar').textContent = u.name[0];
+  if(el('pi-birth'))   el('pi-birth').textContent   = u.birth.replace(/-/g,'.');
+  if(el('pi-address')) el('pi-address').textContent = u.address;
+  if(el('pi-phone'))   el('pi-phone').textContent   = u.phone;
+  if(el('pi-job'))     el('pi-job').textContent     = u.job;
+  if(el('pi-edu'))     el('pi-edu').textContent     = u.education+' · '+u.major;
+  if(el('pi-body'))    el('pi-body').textContent    = u.height+'cm · '+u.weight+'kg · '+u.blood;
+  if(el('pi-family'))  el('pi-family').textContent  = u.family;
+  if(el('pi-car'))     el('pi-car').textContent     = u.car;
+  if(el('pi-hobby'))   el('pi-hobby').textContent   = u.hobby;
+}
+
+/* SP-00에 사용자 컨텍스트 주입 */
+function buildSP00WithUser(){
+  const u = loadUserProfile();
+  const age = calcAge(u.birth);
+  return SP00_PROMPT + `
+
+## 현재 사용자 컨텍스트
+- 이름: ${u.name} (@${u.id})
+- 생년월일: ${u.birth} (${age}세)
+- 주거지: ${u.address}
+- 직업: ${u.job} | 학력: ${u.education} · ${u.major}
+- 가족: ${u.family} | 차량: ${u.car}
+- 취미: ${u.hobby}
+- 신체: ${u.height}cm · ${u.weight}kg · ${u.blood}
+
+위 정보를 바탕으로 사용자를 이름으로 부르고, 맥락에 맞는 조언을 제공하세요.`;
+}
 
 </script>
