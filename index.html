@@ -242,9 +242,14 @@ input.settings-input{background:transparent;border:none;outline:none;
 .cam-btn.cancel{background:rgba(255,255,255,.15);color:#fff;}
 
 
-/* ── Floating 버튼 (채팅 우상단) ── */
-.chat-float-bar{position:absolute;top:12px;right:12px;
-  display:flex;gap:8px;align-items:center;z-index:10;}
+/* ── 채팅 헤더 바 (상단 고정) ── */
+.chat-float-bar{
+  display:flex;gap:8px;align-items:center;justify-content:flex-end;
+  padding:8px 12px;
+  background:var(--bg);
+  border-bottom:.5px solid var(--sep);
+  flex-shrink:0;
+  position:relative;z-index:10;}
 .float-btn{width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   backdrop-filter:blur(8px);transition:all .2s;
@@ -2887,7 +2892,7 @@ Date of writing: May 18, 2026.`;</script>
     </div><!-- /klv -->
 
     <!-- 채팅 탭 -->
-    <div id="cv" class="view active" style="position:relative;">
+    <div id="cv" class="view active">
       <!-- Floating: 검색 + AI + 설정 버튼 -->
       <div class="chat-float-bar">
         <!-- 대화 상대 검색 -->
