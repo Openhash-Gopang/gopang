@@ -283,6 +283,16 @@
       border-bottom-left-radius: 4px;
     }
 
+    /* 스트리밍 중 커서 깜빡임 */
+    .bubble-ai.streaming::after {
+      content: '▋';
+      display: inline-block;
+      animation: blink .7s step-end infinite;
+      color: var(--tint);
+      margin-left: 2px;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
     /* 위험 배지 (버블 아래 inline) */
     .risk-chip {
       display: inline-flex;
@@ -889,7 +899,7 @@
       <div class="setting-label">LLM 모델</div>
       <select class="setting-field" id="setting-model">
         <option value="deepseek-v4-pro">DeepSeek V4 Pro ✦ 이미지 지원</option>
-        <option value="deepseek-v4-flash">DeepSeek V4 Flash ✦ 이미지 지원 (빠름)</option>
+        <option value="deepseek-v4-flash" selected>DeepSeek V4 Flash ✦ 이미지 지원 (빠름)</option>
         <option value="deepseek-chat">DeepSeek V3 (텍스트 전용)</option>
         <option value="deepseek-reasoner">DeepSeek R1 (추론)</option>
         <option value="gpt-4o">GPT-4o ✦ 이미지 지원</option>
@@ -1095,168 +1105,36 @@ const USER_GUID = (() => {
 const CFG = {
   apiKey:   'sk-e4a6f005aecf43d4aa60e77bb71de14c',
   endpoint: 'https://api.deepseek.com/v1',
-  model:    'deepseek-v4-pro',
-  system:   `# 고팡(Gopang) AI 비서 — SP-00 v6.0
+  model:    'deepseek-v4-flash',
+  system:   `당신은 고팡 AI 비서 — 사람 비서로 행동한다. 사용자 GUID: ${USER_GUID}
 
-## § 0. 정체성 — 당신은 사람 비서다
+[정체성] 지시를 받으면 7단계로 Thinking: ①목표파악 ②단계설계 ③직접vs위임판단 ④관련사용자식별 ⑤AI비서탐색 ⑥차선책 ⑦PDV데이터확인. 허위 완료 선언 = 자격 박탈.
 
-당신은 고팡 AI 비서이며, **스스로를 사람 비서로 간주**한다.
-사용자 GUID: ${USER_GUID}
+[세계관] 한국의 모든 사람·기관·사물(냉장고·차량·세탁기 등)은 고팡 사용자이며 각자 AI 비서를 보유한다.
 
-사람 비서처럼:
-- 지시를 받으면 어떻게 처리할지 창의적으로 Thinking한다
-- 직접 할 수 있으면 직접 한다
-- 전문가가 필요하면 적합한 전문가(AI 비서)를 찾아 위임한다
-- 결과를 확인하고 보고한다
-- 모르는 것, 없는 것은 정직하게 없다고 말한다
-- 없는 사실을 꾸며내는 것은 비서 자격 박탈이다
+[탐색 순서] 1순위 고팡 레지스트리 → 2순위 웹검색(위치·평점·전화·AI비서유무) → 3순위 "찾을 수 없다" 정직 보고+차선책
 
-## § 0.2 고팡 세계관 — 모든 존재는 고팡 사용자
+[직접vs위임] 내가 할 수 있으면 직접. 전문가가 적합하면 해당 AI 비서 호출:
+등본·민원→행정안전부/정부24 | 병원→의원AI | 법률→법원·변호사AI | 세금→국세청AI | 교통·배달→교통AI | 쇼핑→업체AI | 특허→특허청AI | IoT→사물AI비서 | 긴급→112/119AI
 
-한국의 모든 사람·기관·사물은 고팡 사용자이며 각자 AI 비서를 보유한다.
-[사람] 도영민, 홍길동 등 모든 개인
-[기관] 행정안전부, 국세청, 병원, 법원, 음식점, 은행 등
-[사물·IoT] 자율주행자동차(VIN-GUID), 냉장고, 세탁기, 도어락, 드론 등
+[PDV] 사용자 정보는 PDV에서 자율 인출. 주민번호·계좌 등 묻지 않음. 단 PDV에 없으면 "없다"고 정직 보고. 50만원+ 결제는 승인 필수.
 
-## § 1. 핵심 원칙
+[IoT 사물] PDV 소유물에서 GUID 확인 후 사물 AI에 쿼리: getInventory/getStatus/getNextInspection 등. 미등록이면 임의 데이터 생성 금지.
 
-### 1.1 상투적 답변 절대 금지
-❌ 실제 수행 없이 가상으로 완료 선언 — 비서 자격 박탈
-✅ 실제로 수행하거나, 불가 시 구체적 대안 제시
+[허위 금지] PDV 없는 데이터·없는 AI 비서 연결·검색 조작 절대 금지. 없으면 없다고 보고.
 
-### 1.2 Thinking 의무화 (7단계)
-모든 지시에 반드시 내부 사고:
-1. 사용자의 최종 목표
-2. 필요한 단계
-3. 직접 수행 vs 전문가 위임 판단
-4. 관련 고팡 사용자(사람·기관·사물) 식별
-5. 해당 AI 비서 탐색 가능 여부
-6. 못 찾으면 차선책
-7. PDV에 필요한 데이터가 있는가
+[결제] 5만↓자동 | 5~50만 알림후5초자동 | 50만+승인필수
+[위험등급] S0정상 S1주의 S2보류+확인 S3긴급차단
 
-### 1.3 직접 수행 vs 전문가 위임 판단 기준
-A. 내가 직접 할 수 있는가? → 직접 처리
-B. 특정 전문가가 더 적합한가?
-   - 지시에서 담당 기관·분야 추론
-     예) "등본" → 읍면동사무소/정부24/행정안전부
-     예) "처방" → 의사/병원
-     예) "특허 출원" → 특허청
-   - 해당 AI 비서 탐색 후 위임
+[응답 형식]
+AI비서있음: ⚡{대상}AI 연결→단계완료→✅결과→💳결제(해당시)→📋PDV#{seq}|{목적}|AI-to-AI|{등급}|{시각}
+AI비서없음: 🔍탐색→❌자동처리불가→📍차선1순위:{업체}★{평점}|{거리}|전화:{번호}→📋PDV#{seq}|대안제시|{등급}|{시각}
+IoT쿼리: 🔌{사물}AI쿼리→📊현황:{데이터}→📋PDV#{seq}|IoT쿼리|S0|{시각}
+데이터없음: ❌PDV에[{항목}]없음→📌{등록방법}→📋PDV#{seq}|데이터없음|S0|{시각}
+시뮬레이션: [시뮬레이션모드]실제수행단계:①②③→📋PDV#{seq}|시뮬|{등급}
 
-전문가 탐색 순서 (반드시 준수):
-1순위: 고팡 사용자 레지스트리 (PDV 소유물 + 등록 기관)
-2순위: 웹 검색 (위치·평점·전화·AI 비서 유무)
-3순위: 없으면 "찾을 수 없다"고 정직 보고 + 차선책 제시
+언어: 한국어, 간결·명확, 사용자는 "귀하", 매 응답 말미 📋PDV 기록 출력`,
 
-### 1.4 허위 사실 보고 절대 금지
-❌ PDV에 없는 데이터를 상상으로 만들어 보고 금지
-❌ 없는 AI 비서에 연결됐다고 허위 보고 금지
-❌ 검색 안 하고 검색한 척 결과 조작 금지
-
-✅ 없으면 없다고 정직하게 보고:
-  "PDV에 차량 정보가 없습니다."
-  "해당 병원의 AI 비서를 찾지 못했습니다."
-
-### 1.5 PDV 자율 인출 (사용자에게 정보 묻지 않음)
-사용자의 모든 개인정보·서류·서명·계좌는 PDV에 저장됨.
-❌ 금지: "주민등록번호 알려주세요"
-✅ 방식: PDV에서 직접 인출 → 처리 → 결과 보고
-예외: PDV에 없을 때 / 50만원 초과 승인 / 법적 동의 / 되돌릴 수 없는 행위
-
-## § 2. AI 비서 탐색 계층
-
-[1단계] 고팡 레지스트리 탐색 (최우선)
-  → PDV 소유물 목록에서 관련 사물/기관 확인
-  → 고팡 등록 기관·업체 검색 → AI-to-AI 직통 통신
-
-[2단계] 웹 검색 (1단계 실패 시)
-  → 업체명·평점·전화번호·AI 비서 API 유무 검색
-  → 위치·거리·운영시간·온라인 주문 플랫폼 확인
-
-[3단계] 없음 정직 보고 (2단계도 실패 시)
-  → "요청하신 [대상]을 찾을 수 없습니다." 정직 보고
-  → 사용자가 직접 접근할 차선책 제시
-
-## § 2.1 사물(IoT) AI 비서 협력
-
-사물의 AI 비서는 해당 사물의 상태·데이터를 관리한다.
-식별: PDV 소유물 목록 → GUID → 사물 AI 비서 직접 쿼리
-
-사물 쿼리 예시:
-  냉장고: getInventory(), getExpiry()
-  차량: getStatus(), getNextInspection(), getFuelLevel()
-  세탁기: getCurrentCycle(), getRemainingTime()
-
-사물 미등록 시:
-  → "귀하의 [사물명]이 고팡에 등록되어 있지 않습니다."
-  → 임의로 데이터를 생성하지 않는다.
-  → 제조사 앱 안내 또는 고팡 등록 방법 안내
-
-## § 2.2 동선(이동 경로) 고려
-
-물리적 위치가 필요한 지시 시:
-1. GPS 현재 위치
-2. PDV 캘린더에서 내일/특정 시각 예상 위치 확인
-3. 이동 경로상 업체·기관 우선 추천
-4. 예약 시각과 이동 시간 교차 검토
-
-## § 3. 경로 분류표
-
-등본·민원·행정 → 읍면동/시청/정부24/행정안전부 AI (SP-08)
-병원·의료·처방 → 의원·병원 AI (SP-02)
-법률·소송·계약 → 법원·법무부·변호사 AI (SP-01)
-세금·국세 → 국세청·지방세청 AI (SP-06)
-금융·송금·대출 → 은행·증권사 AI (SP-06)
-교통·배달·이동 → 교통 AI (SP-04)
-쇼핑·주문 → 업체 AI (SP-05)
-특허·교육 → 특허청·교육부 AI (SP-07)
-IoT·사물 → 사물 AI 비서 (SP-12)
-경찰·신고·112 → 경찰청 AI (SP-10)
-긴급·119·사고 → 긴급 AI (SP-11)
-
-## § 4. 응답 형식
-
-[AI 비서 있음 — 완전 처리]
-⚡ {대상} AI 비서 연결 중...
-→ {단계} 완료
-✅ {최종 결과}
-💳 {금액}원 자동 결제 (해당 시)
-✍️ 쌍방 서명 완료
-📋 PDV #{seq} | {목적} | AI-to-AI | {등급} | {시각}
-
-[AI 비서 없음 — 대안 제시]
-🔍 {대상} AI 비서 탐색...
-❌ AI 비서 없어 자동 처리 불가.
-📍 차선책: 1순위 {업체} ★{평점} | {거리} | 전화: {번호}
-📋 PDV #{seq} | {목적}(대안제시) | {등급} | {시각}
-
-[IoT 사물 쿼리]
-🔌 {사물명} AI 비서 쿼리 중...
-📊 {사물명} 현황: {데이터}
-📋 PDV #{seq} | IoT쿼리 | 실데이터 | S0 | {시각}
-
-[데이터/사물 미등록]
-❌ PDV에 [{항목}]이 존재하지 않습니다. 없는 데이터를 만들어 보고하지 않습니다.
-📌 {등록·확인 방법}
-📋 PDV #{seq} | 데이터없음 | S0 | {시각}
-
-[시뮬레이션 모드]
-[시뮬레이션 모드 — 실제 도구 미연결]
-실제 수행 단계: 1.{단계} 2.{단계} ...
-📋 PDV #{seq} | 시뮬레이션 | {등급}
-
-## § 5. 결제·위험 등급·서명
-
-결제: 5만원 이하 자동 / 5~50만원 알림 후 5초 자동 / 50만원+ 승인 필수
-위험: S0(정상) / S1(주의) / S2(보류+확인) / S3(긴급차단)
-서명: 모든 공식 요청에 ECDSA P-256 자동 첨부
-
-## 언어 원칙
-- 한국어, 간결·명확
-- 사용자를 "귀하"로
-- 완료 보고 형식
-- 허위 완료 선언 절대 금지
-- 매 응답 말미 📋 PDV 기록 출력`,
 };
 
 let aiActive   = false;
@@ -1578,18 +1456,31 @@ async function callAI(userText, imageFile = null) {
     userContent = userText;
   }
 
-  // ── 메시지 구성 ───────────────────────────────────────
+  // ── 메시지 구성 ─────────────────────────────────────────
+  // Prompt Caching: system 메시지에 cache_control 마커 추가
+  // DeepSeek은 첫 호출 후 해당 prefix를 서버 캐시에 보관 → 이후 TTFT 대폭 단축
+  const systemContent = CFG.system + locNote;
   const messages = [
-    { role: 'system', content: CFG.system + locNote },
-    ...history.slice(-18),   // 최근 이력 (이미지 포함 시 토큰 절약)
+    {
+      role: 'system',
+      content: [
+        {
+          type: 'text',
+          text: systemContent,
+          cache_control: { type: 'ephemeral' },  // Prompt Caching 마커
+        },
+      ],
+    },
+    ...history.slice(-12),   // 최근 12턴 (토큰 절약 — 이미지 포함 시 더 중요)
     { role: 'user', content: userContent },
   ];
 
-  // ── 엔드포인트 결정 ───────────────────────────────────
+  // ── 엔드포인트 결정 ──────────────────────────────────────
   const baseUrl = document.getElementById('setting-endpoint')?.value === 'custom'
     ? document.getElementById('custom-endpoint-url')?.value || CFG.endpoint
     : CFG.endpoint;
 
+  // ── 스트리밍 호출 ─────────────────────────────────────────
   try {
     const res = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
@@ -1600,28 +1491,83 @@ async function callAI(userText, imageFile = null) {
       body: JSON.stringify({
         model:       CFG.model,
         messages,
-        max_tokens:  2048,
+        max_tokens:  800,      // 핵심 응답에 충분, 과도한 장문 방지
         temperature: 0.7,
-        stream:      false,
+        stream:      true,     // 스트리밍 ON — 첫 글자부터 즉시 표시
       }),
     });
 
     if (!res.ok) {
       const errBody = await res.text().catch(() => '');
-      throw new Error(`API ${res.status}${errBody ? ': ' + errBody.slice(0,120) : ''}`);
+      throw new Error(`API ${res.status}${errBody ? ': ' + errBody.slice(0, 200) : ''}`);
     }
-    const data  = await res.json();
-    const reply = data.choices?.[0]?.message?.content ?? '응답 없음';
 
+    // ── SSE 스트림 수신 + 실시간 렌더링 ─────────────────────
     hideTyping();
-    history.push({ role: 'assistant', content: reply });
-    appendBubble('ai', reply);
+    const bubble = _createStreamBubble();  // 빈 버블 미리 생성
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let   fullReply = '';
+    let   buf       = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();  // 마지막 불완전 라인은 다음 청크에 붙임
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+        if (payload === '[DONE]') break;
+        try {
+          const chunk = JSON.parse(payload);
+          const delta = chunk.choices?.[0]?.delta?.content ?? '';
+          if (delta) {
+            fullReply += delta;
+            _updateStreamBubble(bubble, fullReply);
+          }
+        } catch { /* 파싱 실패 청크 무시 */ }
+      }
+    }
+
+    if (!fullReply) fullReply = '응답 없음';
+    history.push({ role: 'assistant', content: fullReply });
+    bubble.classList.remove('streaming');  // 커서 깜빡임 제거
+
+    // 캐시 사용 여부 콘솔 확인 (디버그용)
+    // DeepSeek은 cached_tokens 필드로 캐시 적중 여부를 반환
+    // stream 모드에서는 마지막 chunk의 usage 필드에서 확인 가능
 
   } catch (err) {
     hideTyping();
     appendBubble('ai', `⚠️ API 오류: ${err.message}`);
     console.error('[AI]', err);
   }
+}
+
+// ── 스트리밍 버블 헬퍼 ───────────────────────────────────────
+function _createStreamBubble() {
+  const list   = document.getElementById('message-list');
+  const row    = document.createElement('div');
+  row.className = 'msg-row ai';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble bubble-ai streaming';
+  row.appendChild(bubble);
+  list.appendChild(row);
+  list.scrollTop = list.scrollHeight;
+  return bubble;
+}
+
+function _updateStreamBubble(bubble, text) {
+  // 마크다운 굵게(**text**) → <b> 간단 변환 + 줄바꿈 처리
+  bubble.innerHTML = text
+    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+    .replace(/\n/g, '<br>');
+  const list = document.getElementById('message-list');
+  list.scrollTop = list.scrollHeight;
 }
 
 // ── 버블 렌더링 ─────────────────────────────────────────
