@@ -78,21 +78,20 @@ describe('Phase 7 — 부트스트랩 + Shell UI', () => {
 
   // ── B-04: bootstrap() 부트 순서 (코어→레이어→플러그인→AI→네트워크→UI) ──
   it('B-04: bootstrap() 부트 순서가 올바르다', () => {
+    // BUG-011 수정 후 실제 구조 반영:
+    //   PDV/OpenHash/Network/GDC/Privacy는 개별 함수 export → init() 없음
+    //   AIPipeline → runPipeline 함수 → init() 없음
+    //   순서 검증: registry.init → registry.register → ShellUI.render
     const content = readFileSync(join(ROOT, 'src/app.js'), 'utf8');
-    const coreIdx     = content.indexOf('EventBus.init');
     const registryIdx = content.indexOf('registry.init');
-    const pdvIdx      = content.indexOf('PDVLayer.init');
     const pluginIdx   = content.indexOf('registry.register');
-    const aiIdx       = content.indexOf('AIPipeline.init');
-    const netIdx      = content.indexOf('NetworkLayer.init');
     const uiIdx       = content.indexOf('ShellUI.render');
 
-    assert.ok(coreIdx     < registryIdx, '코어 init이 registry init보다 앞이어야 함');
-    assert.ok(registryIdx < pdvIdx,      'registry init이 PDV init보다 앞이어야 함');
-    assert.ok(pdvIdx      < pluginIdx,   'PDV init이 플러그인 등록보다 앞이어야 함');
-    assert.ok(pluginIdx   < aiIdx,       '플러그인 등록이 AI init보다 앞이어야 함');
-    assert.ok(aiIdx       < netIdx,      'AI init이 Network init보다 앞이어야 함');
-    assert.ok(netIdx      < uiIdx,       'Network init이 UI render보다 앞이어야 함');
+    assert.ok(registryIdx > -1,          'registry.init 호출이 있어야 함');
+    assert.ok(pluginIdx   > -1,          'registry.register 호출이 있어야 함');
+    assert.ok(uiIdx       > -1,          'ShellUI.render 호출이 있어야 함');
+    assert.ok(registryIdx < pluginIdx,   'registry.init이 플러그인 등록보다 앞이어야 함');
+    assert.ok(pluginIdx   < uiIdx,       '플러그인 등록이 UI render보다 앞이어야 함');
   });
 
   // ── B-05: bootstrap() 중복 호출 방지 ─────────────────────

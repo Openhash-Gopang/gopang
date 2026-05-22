@@ -1,110 +1,102 @@
 /**
- * app.js — 고팡 v2 부트스트랩 진입점
- * 의존성 순서: core → pdv/openhash → domains → ai-secretary → network/gdc/privacy → UI
+ * app.js — 고팡 v2 부트스트랩 진입점 v3
+ *
+ * BUG-011 수정: 실제 repo export 이름과 완전히 일치하도록 재작성
+ *
+ * 확인된 실제 export 패턴:
+ *   core/plugin-registry.js  → { registry }           싱글톤, init() 있음
+ *   core/event-bus.js        → { EventBus, EVENTS }
+ *   ai-secretary/pipeline.js → { runPipeline }         함수, init() 없음
+ *   domains/k-law/index.js   → export default KLawPlugin
+ *   domains/k-health/index.js→ export default KHealthPlugin
+ *   pdv/vault.js             → { storeMessage, ... }  개별 함수, init() 없음
+ *   openhash/hashChain.js    → { anchor, getEntry, ...} 개별 함수, init() 없음
+ *   network/layerClient.js   → { submitToLayer, ... }  개별 함수, init() 없음
+ *   gdc/tokenomics.js        → { calcInflationRate, burn, ...} 개별 함수, init() 없음
+ *   privacy/mixnet.js        → { registerMixnode, ... } 개별 함수, init() 없음
  */
 
-import { EventBus } from './core/event-bus.js';
-import { PluginRegistry } from './core/plugin-registry.js';
-import { EVENTS } from './core/constants.js';
+import { registry }            from './core/plugin-registry.js'
+import { EventBus, EVENTS }    from './core/event-bus.js'
+import { runPipeline }         from './ai-secretary/pipeline.js'
+import KLawPlugin              from './domains/k-law/index.js'
+import KHealthPlugin           from './domains/k-health/index.js'
+import { ShellUI }             from './shell-ui.js'
 
-// 레이어 진입점 (각 모듈의 init() 팩토리)
-import { PDVLayer }     from './pdv/vault.js';
-import { OpenHashLayer} from './openhash/hashChain.js';
-import { AIPipeline }  from './ai-secretary/pipeline.js';
-import { NetworkLayer } from './network/layerClient.js';
-import { GDCLayer }     from './gdc/tokenomics.js';
-import { PrivacyLayer } from './privacy/mixnet.js';
+// vault, hashChain, layerClient, tokenomics, mixnet 은
+// 개별 함수 export이므로 별도 init() 없이 사용됨.
+// 각 모듈은 pipeline.js, phase6.js 등 내부에서 직접 import해 사용.
 
-// 도메인 플러그인
-import { KLawPlugin }   from './domains/k-law/index.js';
-import { KHealthPlugin }from './domains/k-health/index.js';
+// ── 부트스트랩 상태 ──────────────────────────────────────────
+const BootState = { IDLE:'IDLE', BOOTING:'BOOTING', READY:'READY', ERROR:'ERROR' }
+let _state = BootState.IDLE
 
-// Shell UI
-import { ShellUI }      from './shell-ui.js';
-
-/** 부트스트랩 상태 */
-const BootState = {
-  IDLE: 'IDLE',
-  BOOTING: 'BOOTING',
-  READY: 'READY',
-  ERROR: 'ERROR',
-};
-
-let _state = BootState.IDLE;
-let _registry = null;
-
-/**
- * 플랫폼 부트스트랩
- * @returns {Promise<{registry, pipeline, ui}>}
- */
 export async function bootstrap() {
-  if (_state === BootState.BOOTING) {
-    throw new Error('bootstrap() already in progress');
-  }
-  if (_state === BootState.READY) {
-    return { registry: _registry };
-  }
+  if (_state === BootState.BOOTING) throw new Error('bootstrap() already in progress')
+  if (_state === BootState.READY)   return { registry }
 
-  _state = BootState.BOOTING;
-  const log = (msg) => console.log(`[BOOT] ${msg}`);
+  _state = BootState.BOOTING
+  const log = (msg) => console.log(`[BOOT] ${msg}`)
 
   try {
     // ── 1. 코어 초기화 ─────────────────────────────────────
-    log('1/6 코어 초기화...');
-    EventBus.init();
-    _registry = new PluginRegistry(EventBus);
-    await _registry.init();
+    log('1/6 코어 초기화...')
+    await registry.init()
 
-    // ── 2. 코어 레이어 초기화 ──────────────────────────────
-    log('2/6 PDV + OpenHash 초기화...');
-    await PDVLayer.init();
-    await OpenHashLayer.init();
+    // ── 2. PDV + OpenHash ──────────────────────────────────
+    // 개별 함수 export 모듈 — 별도 init 불필요
+    // (IndexedDB는 vault.js 내부에서 최초 접근 시 자동 초기화)
+    log('2/6 PDV + OpenHash 준비...')
 
-    // ── 3. 도메인 플러그인 등록 (순서 무관) ───────────────
-    log('3/6 도메인 플러그인 등록...');
-    await _registry.register(new KLawPlugin());
-    await _registry.register(new KHealthPlugin());
-    // 추후: await _registry.register(new KMarketPlugin());
+    // ── 3. 도메인 플러그인 등록 ────────────────────────────
+    log('3/6 도메인 플러그인 등록...')
+    await registry.register(new KLawPlugin())
+    await registry.register(new KHealthPlugin())
 
-    // ── 4. AI 비서 파이프라인 초기화 ──────────────────────
-    log('4/6 AI 비서 파이프라인 초기화...');
-    await AIPipeline.init({ registry: _registry, eventBus: EventBus });
+    // ── 4. AI 비서 파이프라인 ─────────────────────────────
+    // runPipeline은 함수이므로 init() 불필요
+    // EventBus를 통해 pipeline.js 내부에서 이벤트 구독 설정됨
+    log('4/6 AI 비서 파이프라인 준비...')
 
-    // ── 5. 경제·네트워크·프라이버시 레이어 초기화 ─────────
-    log('5/6 Network + GDC + Privacy 초기화...');
-    await NetworkLayer.init();
-    await GDCLayer.init();
-    await PrivacyLayer.init();
+    // ── 5. Network + GDC + Privacy ────────────────────────
+    // 개별 함수 export 모듈 — 별도 init 불필요
+    log('5/6 Network + GDC + Privacy 준비...')
 
-    // ── 6. Shell UI 렌더링 ─────────────────────────────────
-    log('6/6 Shell UI 렌더링...');
-    const plugins = _registry.list();
-    await ShellUI.render(plugins);
+    // ── 6. Shell UI 렌더링 ───────────────────────────────
+    log('6/6 Shell UI 렌더링...')
+    const plugins = registry.list()
+    await ShellUI.render(plugins)
 
-    _state = BootState.READY;
-    EventBus.emit(EVENTS.PLATFORM_READY, { plugins: plugins.map(p => p.name) });
-    log(`부트스트랩 완료 — 플러그인 ${plugins.length}개 활성화`);
+    // 메시지 수신 시 파이프라인 연결
+    EventBus.on(EVENTS.MSG_RECEIVED, async (data) => {
+      try {
+        await runPipeline(
+          { content: data.text, senderId: 'user', attachment: data.file ?? null },
+          { activePlugin: data.activePlugin }
+        )
+      } catch (err) {
+        console.error('[BOOT] 파이프라인 오류:', err)
+      }
+    }, 'app')
 
-    return { registry: _registry, pipeline: AIPipeline, ui: ShellUI };
+    _state = BootState.READY
+    EventBus.emit(EVENTS.PLATFORM_READY ?? 'platform:ready',
+      { plugins: plugins.map(p => p.name) }, 'app')
+    log(`부트스트랩 완료 — 플러그인 ${plugins.length}개 활성화`)
+
+    return { registry, runPipeline, ui: ShellUI }
 
   } catch (err) {
-    _state = BootState.ERROR;
-    console.error('[BOOT] 부트스트랩 실패:', err);
-    EventBus.emit(EVENTS.PLATFORM_ERROR, { error: err.message });
-    throw err;
+    _state = BootState.ERROR
+    console.error('[BOOT] 부트스트랩 실패:', err)
+    throw err
   }
 }
 
-/** 현재 부트 상태 조회 */
-export function getBootState() { return _state; }
+export function getBootState()  { return _state }
+export function _resetForTest() { _state = BootState.IDLE }
 
-/** 테스트·재시작용 리셋 */
-export function _resetForTest() {
-  _state = BootState.IDLE;
-  _registry = null;
-}
-
-// 브라우저 환경에서 자동 실행
+// 브라우저 자동 실행
 if (typeof window !== 'undefined') {
-  window.addEventListener('DOMContentLoaded', () => bootstrap());
+  window.addEventListener('DOMContentLoaded', () => bootstrap())
 }
