@@ -88,12 +88,11 @@ export class PluginValidator {
       )
     }
 
-    // 7. classify() 최소 동작 확인 (테스트 메시지)
-    try {
-      await plugin.legalClassifier.classify([])
-    } catch (err) {
+    // 7. classify()가 함수인지 확인 (실행 오류는 격리됨 — BUG-003 수정)
+    // 실제 분류기 오류는 Phase 2에서 플러그인별로 격리 처리
+    if (typeof plugin.legalClassifier.classify !== 'function') {
       throw new Error(
-        `[Validator] 플러그인 "${name}": legalClassifier.classify() 실행 오류 — ${err.message}`
+        `[Validator] 플러그인 "${name}": legalClassifier.classify는 함수여야 합니다`
       )
     }
 
