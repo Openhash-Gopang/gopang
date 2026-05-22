@@ -942,6 +942,14 @@
     </div>
 
     <button class="sheet-save" onclick="saveSettings()">저장</button>
+
+    <button onclick="clearSWCache()" style="
+      width:100%; margin-top:10px; padding:12px;
+      background:transparent; border:1px solid #3A3A3C;
+      border-radius:12px; color:#FF453A; font-size:14px;
+      font-family:-apple-system,sans-serif; cursor:pointer;">
+      🗑 앱 캐시 초기화 (구버전 고팡 제거)
+    </button>
   </div>
 </div>
 
@@ -1314,11 +1322,32 @@ function _loadLocationFromPDV() {
       _updateLocationInPrompt();
       console.log('[Location] PDV 주소 사용:', pdvAddr);
     } else {
-      // 위치 정보 없음 — 임의 추정 금지
-      _userLocation = { source: 'UNKNOWN', address: null, lat: null, lng: null };
-      console.warn('[Location] 위치 정보 없음 — GPS 권한을 허용하거나 PDV에 주소를 등록하세요.');
+      // PDV도 없으면 IP 기반 위치 시도 (무료 API, 정확도 낮음)
+      _loadLocationFromIP();
     }
   } catch {}
+}
+
+async function _loadLocationFromIP() {
+  try {
+    const res  = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(4000) });
+    const data = await res.json();
+    if (data.latitude && data.city) {
+      _userLocation = {
+        source:  'IP',
+        address: `${data.country_name} ${data.region} ${data.city}`,
+        lat:     data.latitude,
+        lng:     data.longitude,
+      };
+      _updateLocationInPrompt();
+      console.log('[Location] IP 위치 사용 (정확도 낮음):', _userLocation.address);
+    } else {
+      _userLocation = { source: 'UNKNOWN', address: null, lat: null, lng: null };
+    }
+  } catch {
+    _userLocation = { source: 'UNKNOWN', address: null, lat: null, lng: null };
+    console.warn('[Location] IP 위치도 실패 — GPS 권한을 허용하거나 PDV에 주소를 등록하세요.');
+  }
 }
 
 // 위치 확인 후 시스템 프롬프트에 실제 좌표/주소 주입
@@ -1329,10 +1358,11 @@ function _updateLocationInPrompt() {
     locStr = `GPS좌표(${_userLocation.lat.toFixed(5)},${_userLocation.lng.toFixed(5)}) 정확도±${Math.round(_userLocation.accuracy)}m`;
   } else if (_userLocation.source === 'PDV' && _userLocation.address) {
     locStr = `PDV주소:${_userLocation.address}`;
+  } else if (_userLocation.source === 'IP' && _userLocation.address) {
+    locStr = `IP기반위치(정확도낮음):${_userLocation.address}`;
   } else {
     locStr = '위치정보없음(GPS권한허용또는PDV주소등록필요)';
   }
-  // 프롬프트에 현재 위치 주입 (AI가 임의 추정하지 않도록)
   CFG.locationStr = locStr;
 }
 
@@ -1533,10 +1563,20 @@ async function callAI(userText, imageFile = null) {
     { role: 'user', content: userContent },
   ];
 
-  // ── 엔드포인트 결정 ──────────────────────────────────────
-  const baseUrl = document.getElementById('setting-endpoint')?.value === 'custom'
-    ? document.getElementById('custom-endpoint-url')?.value || CFG.endpoint
-    : CFG.endpoint;
+  // ── 엔드포인트 + API Key 결정 ────────────────────────────
+  const epSel   = document.getElementById('setting-endpoint');
+  const savedKey = document.getElementById('setting-apikey')?.value?.trim();
+  const apiKey  = (savedKey && savedKey.startsWith('sk-')) ? savedKey : CFG.apiKey;
+
+  let baseUrl = CFG.endpoint;  // 기본값
+  if (epSel && epSel.value === 'custom') {
+    const customUrl = document.getElementById('custom-endpoint-url')?.value?.trim();
+    if (customUrl) baseUrl = customUrl;
+  }
+  // 끝 슬래시 제거
+  baseUrl = baseUrl.replace(/\/+$/, '');
+
+  console.log(`[AI] 호출 → ${baseUrl}/chat/completions | 모델: ${CFG.model} | Key: ${apiKey.slice(0,8)}...`);
 
   // ── 스트리밍 호출 ─────────────────────────────────────────
   try {
@@ -1544,20 +1584,20 @@ async function callAI(userText, imageFile = null) {
       method: 'POST',
       headers: {
         'Content-Type':  'application/json',
-        'Authorization': `Bearer ${CFG.apiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model:       CFG.model,
         messages,
-        max_tokens:  800,      // 핵심 응답에 충분, 과도한 장문 방지
+        max_tokens:  800,
         temperature: 0.7,
-        stream:      true,     // 스트리밍 ON — 첫 글자부터 즉시 표시
+        stream:      true,
       }),
     });
 
     if (!res.ok) {
       const errBody = await res.text().catch(() => '');
-      throw new Error(`API ${res.status}${errBody ? ': ' + errBody.slice(0, 200) : ''}`);
+      throw new Error(`API ${res.status}: ${errBody.slice(0, 300) || '응답없음'}`);
     }
 
     // ── SSE 스트림 수신 + 실시간 렌더링 ─────────────────────
@@ -1716,6 +1756,22 @@ function handleOverlayClick(e) {
 }
 function closeSettings() {
   document.getElementById('settings-overlay').classList.remove('open');
+}
+
+// ── 캐시 강제 초기화 (구버전 PWA 제거) ──────────────────────
+async function clearSWCache() {
+  try {
+    // 1. 모든 SW 해제
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map(r => r.unregister()));
+    // 2. 모든 캐시 삭제
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+    alert('캐시 초기화 완료. 페이지를 새로고침합니다.');
+    location.reload(true);
+  } catch (e) {
+    alert('초기화 실패: ' + e.message);
+  }
 }
 function saveSettings() {
   const model = document.getElementById('setting-model').value;
