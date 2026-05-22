@@ -1282,8 +1282,8 @@ function _scheduleLocation() {
   }
 
   // PWA beforeinstallprompt가 없는 환경(iOS, 이미 설치 등)은
-  // 5초 후 GPS 요청 (iOS 배너는 3초 후 표시되므로 여유 확보)
-  setTimeout(tryInit, 5000);
+  // 1초 후 첫 시도, 이후 500ms 폴링 (최대 6초 대기)
+  setTimeout(tryInit, 1000);
 }
 
 // PWA 배너 가시성 상태 추적
@@ -1294,9 +1294,10 @@ function _initLocation() {
   _locationPending = true;
 
   if (!navigator.geolocation) {
-    _loadLocationFromPDV();
-    _locationPending = false;
-    _locationReady   = true;
+    _loadLocationFromPDV().finally(() => {
+      _locationPending = false;
+      _locationReady   = true;
+    });
     return;
   }
   navigator.geolocation.getCurrentPosition(
@@ -1316,14 +1317,14 @@ function _initLocation() {
     (err) => {
       console.warn('[Location] GPS 실패:', err.message);
       _locationPending = false;
-      _locationReady   = true;
-      _loadLocationFromPDV();
+      // PDV/IP 폴백이 async이므로 완료 후 ready 표시
+      _loadLocationFromPDV().finally(() => { _locationReady = true; });
     },
     { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
   );
 }
 
-function _loadLocationFromPDV() {
+async function _loadLocationFromPDV() {
   try {
     const pdvAddr = localStorage.getItem('gopang_profile_address');
     if (pdvAddr) {
@@ -1332,7 +1333,7 @@ function _loadLocationFromPDV() {
       console.log('[Location] PDV 주소 사용:', pdvAddr);
     } else {
       // PDV도 없으면 IP 기반 위치 시도 (무료 API, 정확도 낮음)
-      _loadLocationFromIP();
+      await _loadLocationFromIP();
     }
   } catch {}
 }
@@ -1502,6 +1503,18 @@ function _fileToBase64(file) {
 
 async function callAI(userText, imageFile = null) {
   showTyping();
+
+  // ── 위치 준비 대기 (최대 6초, race condition 방지) ──────
+  if (_locationPending) {
+    await new Promise(resolve => {
+      const deadline = Date.now() + 6000;
+      const poll = () => {
+        if (_locationReady || Date.now() >= deadline) resolve();
+        else setTimeout(poll, 200);
+      };
+      poll();
+    });
+  }
 
   // ── 위치 주입 ─────────────────────────────────────────
   const locNote = _userLocation
