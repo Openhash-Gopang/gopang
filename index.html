@@ -113,7 +113,12 @@
     .btn-ai .ai-dot {
       width: 6px; height: 6px;
       border-radius: 50%;
-      background: var(--tint);
+      background: var(--label-3);   /* 초기: 비활성 회색 */
+      transition: background 0.3s, transform 0.3s;
+    }
+    /* 활성 상태 — .btn-ai.active 일 때 dot도 초록 + 애니메이션 */
+    .btn-ai.active .ai-dot {
+      background: var(--green);
       animation: pulse-dot 2s ease-in-out infinite;
     }
     .btn-ai.active { background: var(--tint-dim); color: var(--tint); }
@@ -694,7 +699,7 @@
       DeepSeek v3을 AI 대화 상대로 연결합니다.<br>
       고팡 법률·의료 분석과 함께 동작합니다.
     </div>
-    <button class="ai-card-btn ai-card-btn-primary" onclick="activateAI()">
+    <button class="ai-card-btn ai-card-btn-primary" onclick="activateAI(false); closeAI()">
       AI 비서 시작
     </button>
     <button class="ai-card-btn ai-card-btn-secondary" onclick="closeAI()">
@@ -892,6 +897,12 @@ function autoResize(el) {
 function updateSendBtn() {
   const v = document.getElementById('msg-input').value.trim();
   document.getElementById('send-btn').disabled = !v;
+
+  // 입력 시작 시 AI 자동 활성화
+  // (대화 상대 미지정 상태 = aiActive가 false인 상태)
+  if (v && !aiActive) {
+    activateAI(true);  // silent=true: 활성화 메시지 미표시
+  }
 }
 function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -1054,20 +1065,30 @@ function hideTyping() {
 
 // ── AI 비서 토글 ────────────────────────────────────────
 function toggleAI() {
+  if (aiActive) {
+    // 이미 활성 → 카드 열지 않고 비활성화
+    aiActive = false;
+    document.getElementById('btn-ai').classList.remove('active');
+    return;
+  }
+  // 미활성 → 카드 열기
   document.getElementById('ai-overlay').classList.toggle('open');
 }
 function closeAI() {
   document.getElementById('ai-overlay').classList.remove('open');
 }
-function activateAI() {
+// silent=true : 버튼 클릭이 아닌 자동 활성화 (메시지 미표시)
+// silent=false: 버튼 클릭으로 활성화 (안내 메시지 표시)
+function activateAI(silent = false) {
+  if (aiActive) return;   // 이미 활성 상태면 무시
   aiActive = true;
-  closeAI();
-  const btn = document.getElementById('btn-ai');
-  btn.classList.add('active');
-  document.getElementById('ai-dot').style.background = 'var(--green)';
-  document.getElementById('ai-card-sub').textContent =
-    `${CFG.model} 연결됨`;
-  appendBubble('ai', '귀하의 AI 비서입니다. 지시하십시오.');
+  document.getElementById('btn-ai').classList.add('active');
+  // dot 색상은 CSS .btn-ai.active .ai-dot 으로 자동 처리
+  document.getElementById('ai-card-sub').textContent = `${CFG.model} 연결됨`;
+
+  if (!silent) {
+    appendBubble('ai', '귀하의 AI 비서입니다. 지시하십시오.');
+  }
 }
 
 // ── 설정 패널 ───────────────────────────────────────────
