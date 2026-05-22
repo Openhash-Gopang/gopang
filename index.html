@@ -1230,6 +1230,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.warn('[UI] 고팡 백엔드 없이 AI 전용 모드:', e.message);
   }
   loadSettings();
+  // localStorage에 남은 구버전 모델명을 즉시 교정
+  if (MODEL_MIGRATION[CFG.model]) {
+    CFG.model = MODEL_MIGRATION[CFG.model];
+    try {
+      const cfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
+      cfg.model = CFG.model;
+      localStorage.setItem('gopang_cfg', JSON.stringify(cfg));
+    } catch {}
+  }
   showGUID();
   _scheduleLocation();  // GPS — PWA 배너 충돌 방지 지연 실행
 });
@@ -1779,7 +1788,8 @@ function saveSettings() {
   const key   = document.getElementById('setting-apikey').value.trim();
   const sys   = document.getElementById('setting-system').value.trim();
 
-  if (model) CFG.model    = model;
+  // 구버전 모델명 교정 후 저장
+  if (model) CFG.model = MODEL_MIGRATION[model] ?? model;
   if (key)   CFG.apiKey   = key;
   if (sys)   CFG.system   = sys;
 
@@ -1800,10 +1810,20 @@ function saveSettings() {
   closeSettings();
   appendBubble('ai', `⚙️ 설정 저장: ${CFG.model}`);
 }
+// 구버전 모델명 → 현재 유효한 이름으로 교정 매핑
+const MODEL_MIGRATION = {
+  'deepseek-v4':        'deepseek-v4-flash',
+  'deepseek-v3':        'deepseek-chat',
+  'deepseek-r1':        'deepseek-reasoner',
+};
+
 function loadSettings() {
   try {
     const saved = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
-    if (saved.model)    CFG.model    = saved.model;
+    if (saved.model) {
+      // 구버전 모델명이면 자동 교정
+      CFG.model = MODEL_MIGRATION[saved.model] ?? saved.model;
+    }
     if (saved.endpoint) CFG.endpoint = saved.endpoint;
     if (saved.system)   CFG.system   = saved.system;
   } catch {}
