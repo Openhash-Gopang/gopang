@@ -997,6 +997,7 @@ function _shouldShowInstallBanner() {
 
 // ── 배너 표시 ────────────────────────────────────────────
 function _showInstallBanner(type) {
+  _installBannerVisible = true;   // 배너 활성 → GPS 요청 대기
   if (type === 'ios') {
     document.getElementById('ios-install-banner')?.classList.add('show');
   } else {
@@ -1004,6 +1005,7 @@ function _showInstallBanner(type) {
   }
 }
 function _hideInstallBanner() {
+  _installBannerVisible = false;  // 배너 해소 → GPS 요청 허용
   document.getElementById('install-banner')?.classList.remove('show');
   document.getElementById('ios-install-banner')?.classList.remove('show');
 }
@@ -1019,16 +1021,21 @@ async function installPWA() {
     localStorage.setItem(_INSTALL_DONE_KEY, Date.now());
   }
   _deferredInstallPrompt = null;
+  // PWA 처리 완료 → GPS 즉시 요청 (배너 사라진 뒤이므로 충돌 없음)
+  if (!_locationReady && !_locationPending) _initLocation();
 }
 
 // ── 나중에 버튼 ──────────────────────────────────────────
 function dismissInstall() {
   _hideInstallBanner();
   localStorage.setItem(_INSTALL_DISMISSED_KEY, Date.now());
+  // 거절 후 → GPS 즉시 요청
+  if (!_locationReady && !_locationPending) _initLocation();
 }
 function dismissIOSInstall() {
   _hideInstallBanner();
   localStorage.setItem(_INSTALL_DISMISSED_KEY, Date.now());
+  if (!_locationReady && !_locationPending) _initLocation();
 }
 
 // ── 사용자가 직접 설치 요청 (홈 화면 추가 버튼 등) ─────────
@@ -1270,7 +1277,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   loadSettings();
   showGUID();
-  _initLocation();   // GPS 위치 초기화
+  _scheduleLocation();  // GPS — PWA 배너 충돌 방지 지연 실행
 });
 
 // ── 위치 획득 (GPS 실제 좌표 우선) ──────────────────────────
@@ -1278,11 +1285,55 @@ window.addEventListener('DOMContentLoaded', async () => {
 //   1순위: GPS 실제 좌표 (navigator.geolocation)
 //   2순위: PDV 프로필에 저장된 주소
 //   절대 금지: 임의로 도시 추정 ("서울" "역삼동" 등 가정 금지)
-let _userLocation = null;   // { lat, lng, address, source }
+//
+// 충돌 방지 원칙:
+//   - PWA 설치 배너(beforeinstallprompt)와 GPS 권한 요청이 동시에 뜨면
+//     Android Chrome이 두 번째 다이얼로그를 차단함
+//   - 해결: GPS 요청을 PWA 배너 해소 후 OR 첫 메시지 전송 시로 지연
+let _userLocation    = null;   // { lat, lng, address, source }
+let _locationReady   = false;  // GPS 요청이 완료됐는지 여부
+let _locationPending = false;  // GPS 요청이 진행 중인지 여부
+
+// ── GPS 지연 스케줄러 (PWA 배너와 충돌 방지) ────────────────
+function _scheduleLocation() {
+  // 이미 설치된 앱(standalone)이거나 PWA 배너가 불필요한 경우
+  // → 즉시 실행해도 충돌 없음
+  if (_isInStandaloneMode() || localStorage.getItem(_INSTALL_DONE_KEY)) {
+    _initLocation();
+    return;
+  }
+
+  // beforeinstallprompt가 발생하면 배너가 표시될 수 있으므로
+  // 배너 처리(설치 or 거절) 완료 신호를 기다림
+  // 최대 대기: 6초 (배너가 뜨지 않는 환경 대비)
+  const MAX_WAIT = 6000;
+  const start = Date.now();
+
+  function tryInit() {
+    // PWA 배너 진행 중이 아니거나 대기 시간 초과 → GPS 요청
+    if (!_installBannerVisible || Date.now() - start > MAX_WAIT) {
+      _initLocation();
+    } else {
+      setTimeout(tryInit, 500);
+    }
+  }
+
+  // PWA beforeinstallprompt가 없는 환경(iOS, 이미 설치 등)은
+  // 5초 후 GPS 요청 (iOS 배너는 3초 후 표시되므로 여유 확보)
+  setTimeout(tryInit, 5000);
+}
+
+// PWA 배너 가시성 상태 추적
+let _installBannerVisible = false;
 
 function _initLocation() {
+  if (_locationPending || _locationReady) return;  // 중복 실행 방지
+  _locationPending = true;
+
   if (!navigator.geolocation) {
     _loadLocationFromPDV();
+    _locationPending = false;
+    _locationReady   = true;
     return;
   }
   navigator.geolocation.getCurrentPosition(
@@ -1292,14 +1343,17 @@ function _initLocation() {
         lng:     pos.coords.longitude,
         accuracy: pos.coords.accuracy,
         source:  'GPS',
-        address: null,  // 역지오코딩은 AI가 필요 시 수행
+        address: null,
       };
-      // CFG.system의 위치 플레이스홀더 갱신
+      _locationPending = false;
+      _locationReady   = true;
       _updateLocationInPrompt();
       console.log(`[Location] GPS 획득: ${_userLocation.lat.toFixed(4)}, ${_userLocation.lng.toFixed(4)}`);
     },
     (err) => {
       console.warn('[Location] GPS 실패:', err.message);
+      _locationPending = false;
+      _locationReady   = true;
       _loadLocationFromPDV();
     },
     { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
@@ -1363,6 +1417,9 @@ async function sendMessage() {
   const inp  = document.getElementById('msg-input');
   const text = inp.value.trim();
   if (!text && !attachFile) return;
+
+  // 첫 메시지 전송 시 GPS 요청 — PWA 배너가 이미 처리된 후이므로 충돌 없음
+  if (!_locationReady && !_locationPending) _initLocation();
 
   const capturedFile = attachFile;   // 전송 전에 캡처 (removeAttach 전)
 
