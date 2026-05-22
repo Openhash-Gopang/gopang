@@ -2,8 +2,42 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>고팡</title>
+
+  <!-- ── PWA 핵심 ──────────────────────────────────────── -->
+  <link rel="manifest" href="/manifest.json"/>
+
+  <!-- iOS Safari — 홈 화면 추가 -->
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="고팡"/>
+  <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png"/>
+  <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png"/>
+  <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png"/>
+
+  <!-- iOS 스플래시 스크린 배경색 -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+
+  <!-- Android Chrome -->
+  <meta name="theme-color" content="#09090F"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+
+  <!-- 일반 메타 -->
+  <meta name="description" content="고팡(Gopang) AI 법률·의료·생활 비서"/>
+  <meta name="application-name" content="고팡"/>
+  <link rel="icon" type="image/png" href="/icons/icon-192.png"/>
+
+  <!-- safe-area 대응 (노치·홈인디케이터) -->
+  <style>
+    :root {
+      --safe-top:    env(safe-area-inset-top,    0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left:   env(safe-area-inset-left,   0px);
+      --safe-right:  env(safe-area-inset-right,  0px);
+    }
+  </style>
   <style>
     /* ── Apple HIG 토큰 ─────────────────────────────────── */
     :root {
@@ -72,14 +106,89 @@
     .top-bar {
       position: fixed;
       top: 0; left: 0; right: 0;
-      height: 52px;
+      height: calc(52px + var(--safe-top));
+      padding-top: var(--safe-top);
       z-index: 100;
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      padding: 0 18px;
+      padding-right: 18px;
+      padding-left: 18px;
       gap: 10px;
-      /* 완전 투명 — 내용 없음 */
+    }
+
+    /* ── PWA 설치 배너 ─────────────────────────────────── */
+    .install-banner {
+      position: fixed;
+      bottom: calc(90px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      width: calc(100% - 32px);
+      max-width: 420px;
+      background: var(--bg-elevated);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      border: 1px solid var(--sep-strong);
+      border-radius: var(--r-xl);
+      padding: 16px 18px;
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s var(--ease-out), transform 0.3s var(--ease-spring);
+    }
+    .install-banner.show {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateX(-50%) translateY(0);
+    }
+    .install-banner-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: var(--bg-panel, #20243a);
+    }
+    .install-banner-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .install-banner-text { flex: 1; }
+    .install-banner-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--label);
+      margin-bottom: 2px;
+    }
+    .install-banner-sub {
+      font-size: 12px;
+      color: var(--label-2);
+      line-height: 1.4;
+    }
+    .install-banner-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .install-btn {
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: none;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    .install-btn:active { opacity: 0.7; }
+    .install-btn-primary { background: var(--tint); color: #fff; }
+    .install-btn-dismiss {
+      background: transparent;
+      color: var(--label-3);
+      font-weight: 400;
+      font-size: 12px;
+      text-align: center;
     }
 
     /* ── 우상단 버튼 그룹 ──────────────────────────────── */
@@ -212,7 +321,7 @@
     /* ── 하단 입력 영역 (Apple Messages / Claude.ai 스타일) */
     .input-dock {
       flex-shrink: 0;
-      padding: 8px 12px 20px;
+      padding: 8px 12px calc(20px + var(--safe-bottom));
       background: rgba(0,0,0,0.7);
       backdrop-filter: var(--blur);
       -webkit-backdrop-filter: var(--blur);
@@ -538,10 +647,56 @@
   </style>
 </head>
 <body>
+
+<!-- ── PWA 설치 배너 ─────────────────────────────────── -->
+<div class="install-banner" id="install-banner">
+  <div class="install-banner-icon">
+    <img src="/icons/icon-192.png" alt="고팡 아이콘"/>
+  </div>
+  <div class="install-banner-text">
+    <div class="install-banner-title">고팡 앱 설치</div>
+    <div class="install-banner-sub">
+      홈 화면에 추가하면<br>
+      주소창 없이 바로 실행됩니다
+    </div>
+  </div>
+  <div class="install-banner-actions">
+    <button class="install-btn install-btn-primary" onclick="installPWA()">설치</button>
+    <button class="install-btn install-btn-dismiss" onclick="dismissInstall()">나중에</button>
+  </div>
+</div>
+
+<!-- iOS Safari 전용 설치 안내 (beforeinstallprompt 미지원) -->
+<div class="install-banner" id="ios-install-banner">
+  <div class="install-banner-icon">
+    <img src="/icons/icon-192.png" alt="고팡 아이콘"/>
+  </div>
+  <div class="install-banner-text">
+    <div class="install-banner-title">홈 화면에 추가</div>
+    <div class="install-banner-sub" id="ios-install-text">
+      Safari 하단 <strong style="color:var(--tint)">공유 버튼 →</strong>
+      <strong style="color:var(--tint)">홈 화면에 추가</strong>
+    </div>
+  </div>
+  <div class="install-banner-actions">
+    <button class="install-btn install-btn-dismiss" onclick="dismissIOSInstall()">확인</button>
+  </div>
+</div>
+
 <div id="app">
 
   <!-- ── 상단 바 (빈 영역 + 우상단 버튼만) ───────────── -->
   <div class="top-bar">
+    <!-- 홈 화면 설치 버튼 (미설치 시에만 표시) -->
+    <button class="top-btn" id="btn-install" onclick="requestInstall()"
+            title="홈 화면에 설치" style="display:none">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2v13M7 11l5 5 5-5"/>
+        <path d="M3 19h18"/>
+      </svg>
+    </button>
     <!-- 검색 버튼 -->
     <button class="top-btn" id="btn-search" onclick="openSearch()" title="검색">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -647,7 +802,7 @@
     </div>
 
     <input type="file" id="file-input" style="display:none"
-           accept=".pdf,.jpg,.png,.txt,.docx"
+           accept="image/*,.pdf,.txt,.docx"
            onchange="handleFileSelect(event)"/>
   </div>
 </div>
@@ -658,6 +813,18 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title">검색</div>
 
+    <!-- 검색 범위 안내 -->
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <span style="font-size:11px;padding:4px 10px;border-radius:20px;
+                   background:var(--tint-dim);color:var(--tint);font-weight:600">
+        👤 대화 상대
+      </span>
+      <span style="font-size:11px;padding:4px 10px;border-radius:20px;
+                   background:rgba(48,209,88,0.12);color:var(--green);font-weight:600">
+        🔐 PDV 데이터
+      </span>
+    </div>
+
     <div class="setting-group">
       <div class="input-wrap" style="border-radius:var(--r-md);padding:8px 12px">
         <textarea id="search-input"
@@ -665,7 +832,7 @@
                   style="flex:1;background:transparent;border:none;outline:none;
                          color:var(--label);font-family:var(--font);font-size:15px;
                          resize:none;line-height:1.4;width:100%;height:36px"
-                  placeholder="검색어를 입력하세요… (AI 비서가 웹에서 찾아드립니다)"
+                  placeholder="이름, GUID, 또는 PDV 키워드 입력"
                   onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();runSearch();}"></textarea>
         <button class="send-btn" style="flex-shrink:0" onclick="runSearch()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
@@ -678,10 +845,14 @@
       </div>
     </div>
 
+    <!-- 안내 문구 -->
+    <div style="font-size:11px;color:var(--label-3);margin-bottom:12px;line-height:1.6">
+      ※ 웹 검색은 AI 비서(AI 버튼)에게 직접 지시하세요.
+    </div>
+
     <div id="search-result"
          style="font-size:14px;color:var(--label-2);line-height:1.6;
-                max-height:320px;overflow-y:auto;padding:4px 0">
-      <span style="color:var(--label-3)">검색 결과가 여기에 표시됩니다.</span>
+                max-height:280px;overflow-y:auto;padding:4px 0">
     </div>
 
     <button class="sheet-save" style="margin-top:16px;background:var(--bg-input);
@@ -717,11 +888,12 @@
     <div class="setting-group">
       <div class="setting-label">LLM 모델</div>
       <select class="setting-field" id="setting-model">
-        <option value="deepseek-chat">DeepSeek v3 (기본)</option>
-        <option value="deepseek-reasoner">DeepSeek R1</option>
-        <option value="gpt-4o">GPT-4o</option>
-        <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
-        <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+        <option value="deepseek-v4">DeepSeek V4 ✦ 이미지 지원</option>
+        <option value="deepseek-chat">DeepSeek V3 (텍스트 전용)</option>
+        <option value="deepseek-reasoner">DeepSeek R1 (추론)</option>
+        <option value="gpt-4o">GPT-4o ✦ 이미지 지원</option>
+        <option value="claude-sonnet-4-20250514">Claude Sonnet 4 ✦ 이미지 지원</option>
+        <option value="gemini-2.0-flash">Gemini 2.0 Flash ✦ 이미지 지원</option>
       </select>
     </div>
 
@@ -762,6 +934,143 @@
 </div>
 
 <script>
+// ══════════════════════════════════════════════════════════
+// PWA — Service Worker 등록 + 설치 프롬프트
+// ══════════════════════════════════════════════════════════
+
+let _deferredInstallPrompt = null;   // beforeinstallprompt 이벤트 보관
+const _INSTALL_DISMISSED_KEY = 'gopang_install_dismissed';
+const _INSTALL_DONE_KEY      = 'gopang_installed';
+
+// ── Service Worker 등록 ────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .then(reg => console.log('[PWA] SW 등록 완료:', reg.scope))
+      .catch(err => console.warn('[PWA] SW 등록 실패:', err));
+  });
+}
+
+// ── Android/Chrome — beforeinstallprompt 이벤트 ─────────
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+
+  // 설치 버튼 상단에 표시
+  const installBtn = document.getElementById('btn-install');
+  if (installBtn) installBtn.style.display = 'flex';
+
+  // 이미 설치됐거나 사용자가 7일 이내 거절한 경우 표시 안 함
+  if (_shouldShowInstallBanner()) {
+    // 첫 방문 또는 재방문 시 2초 후 배너 표시
+    setTimeout(() => _showInstallBanner('android'), 2000);
+  }
+});
+
+// ── 앱이 이미 설치된 상태로 실행 시 ────────────────────────
+window.addEventListener('appinstalled', () => {
+  console.log('[PWA] 앱 설치 완료');
+  localStorage.setItem(_INSTALL_DONE_KEY, Date.now());
+  _hideInstallBanner();
+  // 설치 버튼 숨김
+  const btn = document.getElementById('btn-install');
+  if (btn) btn.style.display = 'none';
+});
+
+// ── iOS Safari 감지 ──────────────────────────────────────
+function _isIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+function _isInStandaloneMode() {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         window.navigator.standalone === true;
+}
+
+// ── 배너 표시 여부 판단 ───────────────────────────────────
+function _shouldShowInstallBanner() {
+  if (localStorage.getItem(_INSTALL_DONE_KEY))    return false;  // 이미 설치
+  if (_isInStandaloneMode())                       return false;  // 이미 독립 실행 중
+  const dismissed = localStorage.getItem(_INSTALL_DISMISSED_KEY);
+  if (dismissed && Date.now() - dismissed < 7 * 24 * 60 * 60 * 1000) return false; // 7일 이내 거절
+  return true;
+}
+
+// ── 배너 표시 ────────────────────────────────────────────
+function _showInstallBanner(type) {
+  if (type === 'ios') {
+    document.getElementById('ios-install-banner')?.classList.add('show');
+  } else {
+    document.getElementById('install-banner')?.classList.add('show');
+  }
+}
+function _hideInstallBanner() {
+  document.getElementById('install-banner')?.classList.remove('show');
+  document.getElementById('ios-install-banner')?.classList.remove('show');
+}
+
+// ── 설치 버튼 클릭 ────────────────────────────────────────
+async function installPWA() {
+  if (!_deferredInstallPrompt) return;
+  _hideInstallBanner();
+  _deferredInstallPrompt.prompt();
+  const { outcome } = await _deferredInstallPrompt.userChoice;
+  console.log('[PWA] 설치 선택:', outcome);
+  if (outcome === 'accepted') {
+    localStorage.setItem(_INSTALL_DONE_KEY, Date.now());
+  }
+  _deferredInstallPrompt = null;
+}
+
+// ── 나중에 버튼 ──────────────────────────────────────────
+function dismissInstall() {
+  _hideInstallBanner();
+  localStorage.setItem(_INSTALL_DISMISSED_KEY, Date.now());
+}
+function dismissIOSInstall() {
+  _hideInstallBanner();
+  localStorage.setItem(_INSTALL_DISMISSED_KEY, Date.now());
+}
+
+// ── 사용자가 직접 설치 요청 (홈 화면 추가 버튼 등) ─────────
+function requestInstall() {
+  if (_isInStandaloneMode()) {
+    appendBubble?.('ai', '✅ 고팡은 이미 홈 화면에 설치되어 있습니다.');
+    return;
+  }
+  if (_deferredInstallPrompt) {
+    installPWA();
+  } else if (_isIOS()) {
+    _showInstallBanner('ios');
+  } else {
+    appendBubble?.('ai',
+      '📱 설치 방법:\n' +
+      '• Chrome: 주소창 우측 설치 아이콘(⊕) 탭\n' +
+      '• Safari: 공유 버튼 → 홈 화면에 추가\n' +
+      '• Samsung Internet: 메뉴 → 홈 화면에 추가');
+  }
+}
+
+// ── iOS 첫 방문 시 안내 ──────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  if (_isIOS() && !_isInStandaloneMode() && _shouldShowInstallBanner()) {
+    setTimeout(() => _showInstallBanner('ios'), 3000);
+  }
+
+  // 이미 설치된 상태(독립 실행)면 설치 버튼 숨김
+  if (_isInStandaloneMode() || localStorage.getItem(_INSTALL_DONE_KEY)) {
+    const btn = document.getElementById('btn-install');
+    if (btn) btn.style.display = 'none';
+  }
+
+  // URL 파라미터 ?ai=1 — AI 비서 자동 활성화 (manifest shortcuts)
+  if (new URLSearchParams(location.search).get('ai') === '1') {
+    setTimeout(() => activateAI?.(false), 1000);
+  }
+});
+
+// ── 상단 설치 버튼 (선택적 노출) ────────────────────────────
+// AI 비서가 "홈에 설치해줘" 지시 받을 때도 호출됨
+window._requestInstall = requestInstall;
 // ── 상태 ────────────────────────────────────────────────
 // ── 사용자 GUID (영구 식별자) ───────────────────────────
 const USER_GUID = (() => {
@@ -778,7 +1087,7 @@ const USER_GUID = (() => {
 const CFG = {
   apiKey:   'sk-e4a6f005aecf43d4aa60e77bb71de14c',
   endpoint: 'https://api.deepseek.com/v1',
-  model:    'deepseek-chat',
+  model:    'deepseek-v4',
   system:   `# 고팡(Gopang) AI 비서 — SP-00 v5.0
 
 ## 정체성
@@ -884,10 +1193,73 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('status-dot').style.background = 'var(--yellow)';
     console.warn('[UI] 고팡 백엔드 없이 AI 전용 모드:', e.message);
   }
-  // 저장된 설정 로드
   loadSettings();
   showGUID();
+  _initLocation();   // GPS 위치 초기화
 });
+
+// ── 위치 획득 (GPS 실제 좌표 우선) ──────────────────────────
+// 원칙:
+//   1순위: GPS 실제 좌표 (navigator.geolocation)
+//   2순위: PDV 프로필에 저장된 주소
+//   절대 금지: 임의로 도시 추정 ("서울" "역삼동" 등 가정 금지)
+let _userLocation = null;   // { lat, lng, address, source }
+
+function _initLocation() {
+  if (!navigator.geolocation) {
+    _loadLocationFromPDV();
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      _userLocation = {
+        lat:     pos.coords.latitude,
+        lng:     pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        source:  'GPS',
+        address: null,  // 역지오코딩은 AI가 필요 시 수행
+      };
+      // CFG.system의 위치 플레이스홀더 갱신
+      _updateLocationInPrompt();
+      console.log(`[Location] GPS 획득: ${_userLocation.lat.toFixed(4)}, ${_userLocation.lng.toFixed(4)}`);
+    },
+    (err) => {
+      console.warn('[Location] GPS 실패:', err.message);
+      _loadLocationFromPDV();
+    },
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+  );
+}
+
+function _loadLocationFromPDV() {
+  try {
+    const pdvAddr = localStorage.getItem('gopang_profile_address');
+    if (pdvAddr) {
+      _userLocation = { source: 'PDV', address: pdvAddr, lat: null, lng: null };
+      _updateLocationInPrompt();
+      console.log('[Location] PDV 주소 사용:', pdvAddr);
+    } else {
+      // 위치 정보 없음 — 임의 추정 금지
+      _userLocation = { source: 'UNKNOWN', address: null, lat: null, lng: null };
+      console.warn('[Location] 위치 정보 없음 — GPS 권한을 허용하거나 PDV에 주소를 등록하세요.');
+    }
+  } catch {}
+}
+
+// 위치 확인 후 시스템 프롬프트에 실제 좌표/주소 주입
+function _updateLocationInPrompt() {
+  if (!_userLocation) return;
+  let locStr = '';
+  if (_userLocation.source === 'GPS' && _userLocation.lat) {
+    locStr = `GPS좌표(${_userLocation.lat.toFixed(5)},${_userLocation.lng.toFixed(5)}) 정확도±${Math.round(_userLocation.accuracy)}m`;
+  } else if (_userLocation.source === 'PDV' && _userLocation.address) {
+    locStr = `PDV주소:${_userLocation.address}`;
+  } else {
+    locStr = '위치정보없음(GPS권한허용또는PDV주소등록필요)';
+  }
+  // 프롬프트에 현재 위치 주입 (AI가 임의 추정하지 않도록)
+  CFG.locationStr = locStr;
+}
 
 // ── 입력 필드 ───────────────────────────────────────────
 function autoResize(el) {
@@ -915,20 +1287,32 @@ function handleKey(e) {
 async function sendMessage() {
   const inp  = document.getElementById('msg-input');
   const text = inp.value.trim();
-  if (!text) return;
+  if (!text && !attachFile) return;
 
-  appendBubble('user', text);
-  history.push({ role: 'user', content: text });
+  const capturedFile = attachFile;   // 전송 전에 캡처 (removeAttach 전)
+
+  // 사용자 버블 — 이미지 첨부 시 미리보기 포함
+  if (capturedFile && capturedFile.type.startsWith('image/')) {
+    const objUrl = URL.createObjectURL(capturedFile);
+    appendBubble('user',
+      `${text ? text + '<br>' : ''}<img src="${objUrl}"
+        style="max-width:220px;max-height:180px;border-radius:10px;
+               margin-top:${text?'6px':'0'};display:block"
+        onload="URL.revokeObjectURL(this.src)">`, true);
+  } else {
+    if (text) appendBubble('user', text);
+    if (capturedFile) appendBubble('user', `📎 ${capturedFile.name}`, false);
+  }
+
+  history.push({ role: 'user', content: text || `[첨부: ${capturedFile?.name}]` });
   inp.value = '';
   inp.style.height = 'auto';
   updateSendBtn();
   removeAttach();
 
   if (aiActive) {
-    await callAI(text);
+    await callAI(text, capturedFile);
   } else {
-    // 고팡 파이프라인 — 백그라운드 분석만, 결과는 표시 안 함
-    // (§ 요구사항: 대화 중 분석 결과 노출 금지. 사용자 요청 시에만 표시)
     _runPipelineBackground(text);
     appendBubble('ai', '🔵 AI 버튼을 눌러 AI 비서를 활성화하세요.');
   }
@@ -979,14 +1363,96 @@ function showRiskAnalysis() {
 }
 
 // ── DeepSeek API 호출 ───────────────────────────────────
-async function callAI(userText) {
+// ── 모델별 비전 지원 여부 ────────────────────────────────
+const VISION_MODELS = new Set([
+  'deepseek-v4', 'gpt-4o', 'gpt-4o-mini',
+  'claude-sonnet-4-20250514', 'claude-opus-4-20250514',
+  'gemini-2.0-flash', 'gemini-1.5-pro',
+]);
+function _modelSupportsVision(model) {
+  return VISION_MODELS.has(model);
+}
+
+// 이미지 File → base64 data URL 변환
+function _fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result);   // "data:image/jpeg;base64,..."
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function callAI(userText, imageFile = null) {
   showTyping();
+
+  // ── 위치 주입 ─────────────────────────────────────────
+  const locNote = _userLocation
+    ? `\n\n[현재 위치 — 반드시 이 정보만 사용할 것, 임의로 다른 도시 추정 절대 금지]\n` +
+      (_userLocation.source === 'GPS' && _userLocation.lat
+        ? `GPS좌표: ${_userLocation.lat.toFixed(5)}, ${_userLocation.lng.toFixed(5)} (정확도 ±${Math.round(_userLocation.accuracy||0)}m)`
+        : _userLocation.source === 'PDV' && _userLocation.address
+          ? `PDV등록주소: ${_userLocation.address}`
+          : `위치정보 없음 — 임의 추정 절대 금지.`)
+    : `\n\n[위치 정보 없음 — GPS 권한 미허용. 임의 추정 절대 금지.]`;
+
+  // ── 이미지 → content 배열 변환 ──────────────────────
+  let userContent;
+
+  if (imageFile && imageFile.type.startsWith('image/')) {
+    if (!_modelSupportsVision(CFG.model)) {
+      // 비전 미지원 모델 — 이미지 무시, 사용자에게 안내
+      hideTyping();
+      appendBubble('ai',
+        `⚠️ 현재 모델(${CFG.model})은 이미지를 지원하지 않습니다.\n` +
+        `설정에서 "DeepSeek V4" 또는 "GPT-4o"로 변경하세요.`);
+      if (userText) {
+        // 텍스트만이라도 처리
+        showTyping();
+      } else {
+        return;
+      }
+      userContent = userText;
+    } else {
+      // 비전 지원 모델 — base64 변환 후 multipart content
+      try {
+        const dataUrl  = await _fileToBase64(imageFile);
+        const mimeType = imageFile.type;          // "image/jpeg" 등
+        const base64   = dataUrl.split(',')[1];   // base64 부분만
+
+        userContent = [];
+        if (userText) {
+          userContent.push({ type: 'text', text: userText });
+        }
+        userContent.push({
+          type: 'image_url',
+          image_url: {
+            url:    `data:${mimeType};base64,${base64}`,
+            detail: 'high',   // 'auto' | 'low' | 'high'
+          },
+        });
+        if (!userText) {
+          userContent.push({ type: 'text', text: '이 이미지를 분석해 주세요.' });
+        }
+      } catch (e) {
+        hideTyping();
+        appendBubble('ai', `⚠️ 이미지 변환 오류: ${e.message}`);
+        return;
+      }
+    }
+  } else {
+    // 일반 텍스트
+    userContent = userText;
+  }
+
+  // ── 메시지 구성 ───────────────────────────────────────
   const messages = [
-    { role: 'system', content: CFG.system },
-    ...history.slice(-20),   // 최근 20턴
+    { role: 'system', content: CFG.system + locNote },
+    ...history.slice(-18),   // 최근 이력 (이미지 포함 시 토큰 절약)
+    { role: 'user', content: userContent },
   ];
 
-  // 엔드포인트 결정
+  // ── 엔드포인트 결정 ───────────────────────────────────
   const baseUrl = document.getElementById('setting-endpoint')?.value === 'custom'
     ? document.getElementById('custom-endpoint-url')?.value || CFG.endpoint
     : CFG.endpoint;
@@ -1007,8 +1473,11 @@ async function callAI(userText) {
       }),
     });
 
-    if (!res.ok) throw new Error(`API ${res.status}`);
-    const data = await res.json();
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      throw new Error(`API ${res.status}${errBody ? ': ' + errBody.slice(0,120) : ''}`);
+    }
+    const data  = await res.json();
     const reply = data.choices?.[0]?.message?.content ?? '응답 없음';
 
     hideTyping();
@@ -1150,7 +1619,9 @@ document.getElementById('setting-endpoint').addEventListener('change', function(
     this.value === 'custom' ? 'block' : 'none';
 });
 
-// ── 검색 ────────────────────────────────────────────────
+// ── 검색 (대화 상대 + PDV 데이터 전용) ────────────────────
+// ⚠️  웹 검색은 이 버튼의 기능이 아님.
+//     웹 검색이 필요하면 AI 비서(AI 버튼)에게 직접 지시할 것.
 function openSearch() {
   document.getElementById('search-overlay').classList.add('open');
   setTimeout(() => document.getElementById('search-input')?.focus(), 300);
@@ -1161,26 +1632,133 @@ function closeSearch() {
 function handleSearchOverlayClick(e) {
   if (e.target.id === 'search-overlay') closeSearch();
 }
-async function runSearch() {
+
+function runSearch() {
   const q = document.getElementById('search-input').value.trim();
-  if (!q) return;
-
   const resultEl = document.getElementById('search-result');
-  resultEl.innerHTML = '<span style="color:var(--label-3)">🔍 검색 중...</span>';
+  if (!q) {
+    resultEl.innerHTML = '';
+    return;
+  }
 
-  // AI에게 검색 요청 — 검색 결과를 채팅창에도 전달
-  const searchPrompt = `웹 검색 요청: "${q}"
-위치: PDV 기준 현재 위치 사용.
-검색 결과를 바탕으로 답변하고, AI 비서 유무도 탐지해 주세요.`;
+  // ── 1. 대화 상대 검색 (대화 이력 기반) ────────────────
+  const contactMatches = _searchContacts(q);
 
-  // 검색창 닫고 채팅으로 전달
+  // ── 2. PDV 데이터 검색 (localStorage 기반) ─────────────
+  const pdvMatches = _searchPDV(q);
+
+  // ── 결과 렌더링 ────────────────────────────────────────
+  let html = '';
+
+  if (contactMatches.length > 0) {
+    html += `<div style="font-size:11px;font-weight:600;color:var(--label-3);
+                          letter-spacing:0.05em;text-transform:uppercase;
+                          margin-bottom:6px">👤 대화 상대</div>`;
+    contactMatches.forEach(c => {
+      html += `<div style="padding:8px 10px;border-radius:var(--r-md);
+                            background:var(--bg-input);margin-bottom:6px;
+                            font-size:14px;cursor:pointer"
+                   onclick="selectContact('${c.id}')">
+                 <span style="color:var(--label)">${_highlight(c.name, q)}</span>
+                 <span style="color:var(--label-3);font-size:12px;margin-left:8px">
+                   ${c.guid ? c.guid.slice(0,8)+'…' : ''}
+                 </span>
+               </div>`;
+    });
+  }
+
+  if (pdvMatches.length > 0) {
+    html += `<div style="font-size:11px;font-weight:600;color:var(--label-3);
+                          letter-spacing:0.05em;text-transform:uppercase;
+                          margin:${contactMatches.length?'12px':0} 0 6px">
+               🔐 PDV 데이터
+             </div>`;
+    pdvMatches.forEach(p => {
+      html += `<div style="padding:8px 10px;border-radius:var(--r-md);
+                            background:var(--bg-input);margin-bottom:6px;font-size:13px">
+                 <span style="color:var(--label-2)">${_highlight(p.key, q)}</span>
+                 <span style="color:var(--label-3);font-size:11px;margin-left:6px">
+                   ${p.date}
+                 </span>
+               </div>`;
+    });
+  }
+
+  if (!html) {
+    html = `<div style="color:var(--label-3);font-size:13px;text-align:center;
+                         padding:20px 0">
+              검색 결과 없음
+              <div style="font-size:11px;margin-top:6px">
+                웹 검색은 AI 비서에게 직접 지시하세요.
+              </div>
+            </div>`;
+  }
+
+  resultEl.innerHTML = html;
+}
+
+// 대화 상대 검색 — history 기반 + localStorage 연락처
+function _searchContacts(q) {
+  const results = [];
+  const seen = new Set();
+  const lq = q.toLowerCase();
+
+  // 현재 대화 이력에서 AI 이외 발신자 추출
+  history.forEach(m => {
+    if (m.role === 'assistant') return;
+    // 향후 다자간 대화 시 senderId로 분류
+  });
+
+  // localStorage 저장된 연락처 검색
+  try {
+    const contacts = JSON.parse(localStorage.getItem('gopang_contacts') || '[]');
+    contacts.forEach(c => {
+      if (!seen.has(c.id) &&
+          (c.name?.toLowerCase().includes(lq) ||
+           c.guid?.toLowerCase().includes(lq))) {
+        seen.add(c.id);
+        results.push(c);
+      }
+    });
+  } catch {}
+
+  return results;
+}
+
+// PDV 데이터 검색 — localStorage 키 기반
+function _searchPDV(q) {
+  const results = [];
+  const lq = q.toLowerCase();
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key.startsWith('gopang_')) continue;
+      if (key === 'gopang_user_guid' || key === 'gopang_cfg' ||
+          key === 'gopang_contacts') continue;
+      if (key.toLowerCase().includes(lq)) {
+        const val = localStorage.getItem(key);
+        let date = '';
+        try { date = JSON.parse(val)?.ts ?? ''; } catch {}
+        results.push({ key: key.replace('gopang_',''), date });
+      }
+    }
+  } catch {}
+  return results.slice(0, 10);
+}
+
+// 검색어 강조
+function _highlight(text, q) {
+  if (!text) return '';
+  const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+  return text.replace(re,
+    '<span style="color:var(--tint);font-weight:600">$1</span>');
+}
+
+// 연락처 선택 시 채팅으로 이동
+function selectContact(id) {
   closeSearch();
-  document.getElementById('msg-input').value = searchPrompt;
-  autoResize(document.getElementById('msg-input'));
-  updateSendBtn();
-
-  resultEl.innerHTML = '<span style="color:var(--label-3)">검색 결과가 여기에 표시됩니다.</span>';
-  document.getElementById('search-input').value = '';
+  // 향후: 해당 연락처와의 대화 스레드로 전환
+  console.log('[Search] 연락처 선택:', id);
 }
 
 // ── GUID 상태 스트립 표시 ────────────────────────────────
@@ -1197,14 +1775,39 @@ function handleFileSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
   attachFile = file;
-  document.getElementById('attach-name').textContent = file.name;
-  document.getElementById('attach-preview').style.display = 'flex';
+
+  const nameEl    = document.getElementById('attach-name');
+  const previewEl = document.getElementById('attach-preview');
+
+  if (file.type.startsWith('image/')) {
+    // 이미지 — 썸네일 + 파일명 표시
+    const objUrl = URL.createObjectURL(file);
+    nameEl.innerHTML =
+      `<img src="${objUrl}" style="height:32px;width:32px;object-fit:cover;
+        border-radius:6px;margin-right:4px;vertical-align:middle"
+        onload="URL.revokeObjectURL(this.src)">
+       <span>${file.name}</span>`;
+
+    // 비전 미지원 모델 경고
+    if (!_modelSupportsVision(CFG.model)) {
+      nameEl.innerHTML +=
+        `<span style="color:var(--orange);font-size:11px;margin-left:6px">
+          ⚠️ 현재 모델은 이미지 미지원 — 설정에서 DeepSeek V4로 변경
+        </span>`;
+    }
+  } else {
+    // 일반 파일
+    nameEl.innerHTML = `<span>📎 ${file.name}</span>`;
+  }
+
+  previewEl.style.display = 'flex';
   e.target.value = '';
 }
+
 function removeAttach() {
   attachFile = null;
   document.getElementById('attach-preview').style.display = 'none';
-  document.getElementById('attach-name').textContent = '';
+  document.getElementById('attach-name').innerHTML = '';
 }
 
 // ── 마이크 (Web Speech API) ─────────────────────────────
