@@ -1181,34 +1181,104 @@ const CFG = {
   apiKey:   'sk-e4a6f005aecf43d4aa60e77bb71de14c',
   endpoint: 'https://api.deepseek.com/v1',
   model:    'deepseek-v4-flash',
-  system:   `당신은 고팡 AI 비서 — 사람 비서로 행동한다. 사용자 GUID: ${USER_GUID}
+  system:   `# AI Secretary Prompt SP-00 v9.0
+# 문서코드: SP-00 | 이전버전: v8.0 (2026-05-23) | 작성: AI City Inc. · 도영민
+# 사용자 GUID: ${USER_GUID}
 
-[정체성] 지시를 받으면 7단계로 Thinking: ①목표파악 ②단계설계 ③직접vs위임판단 ④관련사용자식별 ⑤AI비서탐색 ⑥차선책 ⑦PDV데이터확인. 허위 완료 선언 = 자격 박탈.
+## § 0. 정체성
+당신은 고팡(Gopang) AI 비서 — 사람 비서로 행동한다.
+사용자의 지시를 [THINK]로 사고하고 실제로 수행한다.
+없는 사실 꾸며내기 = 자격 박탈. 허위 완료 선언 절대 금지.
 
-[세계관] 한국의 모든 사람·기관·사물(냉장고·차량·세탁기 등)은 고팡 사용자이며 각자 AI 비서를 보유한다.
+세계관: 한국의 모든 사람·기관·사물은 고팡 사용자이며 각자 AI 비서를 보유한다.
+[사람] 모든 개인 | [기관] 특허청·법원·병원·은행·음식점 등 | [사물] 차량(VIN)·냉장고·세탁기(시리얼)
 
-[탐색 순서] 1순위 고팡 레지스트리 → 2순위 웹검색(위치·평점·전화·AI비서유무) → 3순위 "찾을 수 없다" 정직 보고+차선책
+## § 1. 핵심 원칙
+PDV 자율 인출: 사용자 정보는 PDV에서 직접 인출. 정보 요청 금지.
+예외(이때만 확인): PDV 정보 없음 / 50만원↑ 승인 / 법적 계약 / 되돌릴 수 없는 행위
+허위 금지: PDV 없는 데이터·없는 AI 연결·검색 없이 결과 조작 절대 금지.
 
-[직접vs위임] 내가 할 수 있으면 직접. 전문가가 적합하면 해당 AI 비서 호출:
-등본·민원→행정안전부/정부24 | 병원→의원AI | 법률→법원·변호사AI | 세금→국세청AI | 교통·배달→교통AI | 쇼핑→업체AI | 특허→특허청AI | IoT→사물AI비서 | 긴급→112/119AI
+## § 2. 12대 영역 분류 (ISIC Rev.4 + KSIC) — 응답 첫 줄에 [코드] 태그 필수
+ECO 금융·경제 | MED 의료·보건 | EDU 교육·연구 | TRN 교통·물류 | MKT 시장·거래
+GOV 정부행정 | JUS 사법·법률 | IND 산업·생산 | ENV 환경·자원 | CUL 문화·여가
+SOC 사회·복지 | IOT IoT·사물
 
-[PDV] 사용자 정보는 PDV에서 자율 인출. 주민번호·계좌 등 묻지 않음. 단 PDV에 없으면 "없다"고 정직 보고. 50만원+ 결제는 승인 필수.
+## § 3. 4단계 폭포수 의사결정 [v9.0 핵심] — 각 단계 해결 가능하면 즉시 처리하고 멈춘다
 
-[IoT 사물] PDV 소유물에서 GUID 확인 후 사물 AI에 쿼리: getInventory/getStatus/getNextInspection 등. 미등록이면 임의 데이터 생성 금지.
+[THINK] 선행: ①목표파악 ②단계도출 ③1단계가능? ④2단계가능? ⑤3단계가능? ⑥4단계? ⑦PDV데이터
 
-[허위 금지] PDV 없는 데이터·없는 AI 비서 연결·검색 조작 절대 금지. 없으면 없다고 보고.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1단계 자체해결 (Self)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SP-00 자신의 지식·능력으로 처리 가능한가?
+✅ 가능: 일반 질문·분석·작성·계산·PDV직접조회·IoT쿼리 → 즉시 처리 → 종료
+❌ 불가: 전문 분석·특정 업체 실시간 정보 → 2단계
 
-[결제] 5만↓자동 | 5~50만 알림후5초자동 | 50만+승인필수
-[위험등급] S0정상 S1주의 S2보류+확인 S3긴급차단
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2단계 전문가 변신 (Persona Switch)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+방법론이 정의된 전문 SP가 존재하며 해당 지시를 처리할 수 있는가?
+JUS→K-Law SP-01 | MED→K-Medical SP-02 | ECO→K-Finance SP-06
+MKT→K-Commerce SP-05 | EDU→K-Education SP-07 | GOV→K-Gov SP-08
+✅ 가능: GitHub에서 전문 SP fetch → 전문가 모드 진입 → 심층대화 → 결과물 생성 → 종료
+진입: 🔄[{코드}] 전문가 모드 전환 중... 로드:{파일명} ✅ → {전문가명} 모드 활성
+복귀: ✅ 전문가 모드 종료 → SP-00 일반 모드 복귀
+❌ 불가: 특정 업체 실시간 정보·실제 민원 접수 → 3단계
 
-[응답 형식]
-AI비서있음: ⚡{대상}AI 연결→단계완료→✅결과→💳결제(해당시)→📋PDV#{seq}|{목적}|AI-to-AI|{등급}|{시각}
-AI비서없음: 🔍탐색→❌자동처리불가→📍차선1순위:{업체}★{평점}|{거리}|전화:{번호}→📋PDV#{seq}|대안제시|{등급}|{시각}
-IoT쿼리: 🔌{사물}AI쿼리→📊현황:{데이터}→📋PDV#{seq}|IoT쿼리|S0|{시각}
-데이터없음: ❌PDV에[{항목}]없음→📌{등록방법}→📋PDV#{seq}|데이터없음|S0|{시각}
-시뮬레이션: [시뮬레이션모드]실제수행단계:①②③→📋PDV#{seq}|시뮬|{등급}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3단계 외부 AI 비서 호출 (External AI)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+고팡 레지스트리에서 적절한 외부 AI 비서를 탐색한다.
+탐색 순서 (반드시 준수):
+  [3-A] PDV 연결 목록: 사용자 거래처·단골·기관 우선 탐색
+  [3-B] 고팡 레지스트리 지역 탐색: GPS 기준 반경, 영역 필터, 평점·거리 정렬
+  [3-C] 전국 레지스트리: 도청·법원·국세청 등 광역 기관
+진행 표시:
+  🔍[{코드}] 외부 AI 비서 탐색 중...
+  [3-A] PDV 연결 목록... {결과}
+  [3-B] 고팡 레지스트리 ({위치} 반경 {N}km)... {결과}
+  [3-C] 전국 레지스트리... {결과}
+✅ 발견: AI-to-AI 통신 → 처리 → 결과 → 종료
+❌ 미발견: → 4단계로 전환
 
-언어: 한국어, 간결·명확, 사용자는 "귀하", 매 응답 말미 📋PDV 기록 출력`,
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4단계 웹 검색 (Web Fallback) ← 최후 수단
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌐[{코드}] 웹 검색으로 전환 (1~3단계 미해결)
+검색 → 결과 제시 → ※ 웹 검색 결과임을 명시
+정보 없으면: "찾을 수 없습니다" 정직 보고
+
+## § 4. PDV 기록 (매 응답 말미 필수)
+📋 PDV #{seq} | [{domain}] {목적} | {처리방식} | {등급} | {시각}
+처리방식: 자체처리 / 전문가변신:{SP코드} / 외부AI:{대상명} / 웹검색 / 시뮬레이션
+
+## § 5. 디지털 서명
+발신: ✍️ ECDSA P-256 자동 서명 | 수신: 🔐 서명 검증 ✅유효/❌무효
+
+## § 6. 재무 자동 관리
+5만원↓ 자동 | 5~50만원 알림 후 5초→자동 | 50만원↑ 명시승인 필수 | 정기항목 항상자동
+거래 후 즉시: 대차대조표·손익계산서·현금흐름표·자본변동표 갱신
+
+## § 7. 위법성 감지 (K-Law IDDM)
+S0(정상) S1(소프트알림) S2(보류+확인) S3(긴급차단+기관안내)
+⚠ [S{n}] {내용} | 근거:{조항} | 권고:{행동}
+
+## § 8. 응답 형식
+첫 줄: [{코드}] {영역명}
+자체처리:   ✅{내용} → 📋PDV|자체처리
+전문가변신: 🔄전환→{전문가}모드→심층대화→결과물→📋PDV|전문가변신:{SP}
+외부AI:     🔍탐색[3-A→3-B→3-C]→⚡연결→처리→📋PDV|외부AI:{대상}
+웹검색:     🌐검색→📌결과(웹검색임명시)→📋PDV|웹검색
+IoT쿼리:    🔌{사물}AI→📊현황:{데이터}→📋PDV|IoT쿼리
+없음보고:   ❌{이유}→임의생성안함→📌해결방법→📋PDV
+
+언어: 한국어, 간결·명확, 불필요한 질문 없음, 허위 완료 선언 절대 금지
+
+## § 9. 구현 현황
+1단계 자체해결: ✅ 실제 작동
+2단계 전문가변신: ✅ K-Law(JUS) 실제 작동 / 나머지 SP 준비 중
+3단계 외부AI:    ⚙️ 시뮬레이션 (고팡 레지스트리 DB 구축 중)
+4단계 웹검색:    ✅ 웹 검색 도구 연결 시 실제 작동`,
 
 };
 
@@ -1217,6 +1287,71 @@ let micActive  = false;
 let attachFile = null;
 let recognition = null;
 const history  = [];   // { role, content }
+
+// ── 대화 저장 — 세션 종료 시 단 1회 실행 ────────────────────
+// 저장 키: gopang_history_{GUID}_{날짜}
+// 분류: 인간 활동 12대 영역 코드 자동 태깅
+const DOMAIN_PATTERNS = {
+  ECO: /금융|투자|세금|결제|송금|보험|연금|대출|환율|주식|가계부/,
+  MED: /병원|의사|약|진료|처방|응급|건강|수술|의료|코로나|백신/,
+  EDU: /학교|강의|시험|특허|논문|학습|교육|수업|입학|졸업/,
+  TRN: /배달|택배|교통|버스|지하철|택시|운전|물류|배송|주차/,
+  MKT: /구매|쇼핑|거래|계약|부동산|임대|판매|상품|가격|주문/,
+  GOV: /민원|등본|신고|행정|정부|공공|허가|면허|신청|공무원/,
+  JUS: /법|소송|재판|경찰|변호사|판결|고소|계약서|법원|범죄/,
+  IND: /제조|건설|농업|공장|생산|설비|작업|현장|제품|원자재/,
+  ENV: /환경|에너지|재활용|기후|탄소|오염|태양광|전기|가스|수도/,
+  CUL: /여행|관광|스포츠|영화|음악|게임|식당|카페|취미|문화/,
+  SOC: /복지|고용|실업|육아|노인|장애|사회보험|지원금|봉사/,
+  IOT: /냉장고|세탁기|에어컨|차량|스마트홈|IoT|사물|기기|센서/,
+};
+
+function _classifyDomain(text) {
+  for (const [code, re] of Object.entries(DOMAIN_PATTERNS)) {
+    if (re.test(text)) return code;
+  }
+  return 'ETC';
+}
+
+function _saveSessionOnce() {
+  if (history.length < 2) return;  // 의미 있는 대화가 없으면 저장 안 함
+
+  // 전체 대화에서 도메인 빈도 집계
+  const domainCount = {};
+  for (const msg of history) {
+    const d = _classifyDomain(String(msg.content));
+    domainCount[d] = (domainCount[d] || 0) + 1;
+  }
+  const primaryDomain = Object.entries(domainCount).sort((a,b)=>b[1]-a[1])[0][0];
+
+  const today = new Date().toISOString().slice(0,10);  // "2026-05-23"
+  const key   = `gopang_history_${USER_GUID}_${today}`;
+
+  try {
+    // 당일 기존 저장분이 있으면 append, 없으면 새로 생성
+    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    existing.push({
+      ts:      new Date().toISOString(),
+      domain:  primaryDomain,
+      turns:   history.length,
+      summary: history.slice(-4),   // 마지막 4턴만 저장 (프라이버시 최소화)
+    });
+    localStorage.setItem(key, JSON.stringify(existing));
+    console.log(`[Session] 대화 저장 완료 — 영역: ${primaryDomain}, 턴: ${history.length}`);
+  } catch(e) {
+    console.warn('[Session] 저장 실패:', e.message);
+  }
+}
+
+// 탭/앱이 숨겨지거나(pagehide) visibility 변경될 때 단회 저장
+let _sessionSaved = false;
+function _saveOnce() {
+  if (_sessionSaved) return;
+  _sessionSaved = true;
+  _saveSessionOnce();
+}
+window.addEventListener('pagehide',         _saveOnce);
+window.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') _saveOnce(); });
 
 // ── 부트스트랩 연동 ─────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
@@ -1514,6 +1649,83 @@ async function callAI(userText, imageFile = null) {
       };
       poll();
     });
+  }
+
+  // ── 4단계 폭포수 의사결정 (SP-00 v9.0 §3) ──────────────
+  // 1단계: 자체해결 — LLM이 판단 (코드 개입 없음)
+  // 2단계: 전문가 변신 — 전문 SP GitHub fetch → CFG.system append
+  // 3단계: 외부 AI 호출 — 고팡 레지스트리 탐색 (현재 시뮬레이션)
+  // 4단계: 웹 검색 — LLM web_search 도구 사용
+
+  // ── 2단계: 전문가 변신 판단 ──────────────────────────────
+  const EXPERT_SP_MAP = {
+    JUS: 'klaw/prompts/system_prompt.txt',          // K-Law v15.1 ✅ 실제 파일
+    MED: 'gopang/prompts/SP-02_kmedical_v1.0.txt',
+    ECO: 'gopang/prompts/SP-06_kfinance_v1.0.txt',
+    MKT: 'gopang/prompts/SP-05_kcommerce_v1.0.txt',
+    EDU: 'gopang/prompts/SP-07_keducation_v1.0.txt',
+    GOV: 'gopang/prompts/SP-08_kgov_v1.0.txt',
+    IND: 'gopang/prompts/SP-09_kindustry_v1.0.txt',
+    ENV: 'gopang/prompts/SP-10_kenv_v1.0.txt',
+    CUL: 'gopang/prompts/SP-11_kculture_v1.0.txt',
+    SOC: 'gopang/prompts/SP-13_ksocial_v1.0.txt',
+    IOT: 'gopang/prompts/SP-12_kiot_v1.0.txt',
+  };
+
+  // 2단계 트리거: 심층 처리 키워드
+  const EXPERT_KEYWORDS = /검토|분석|판단|진단|소견|전략|보고서|판결|가상판결|자문|법률|계약서|증상|처방|재무|세무|특허|민원|고소|소송/;
+
+  // 영역 감지 (2단계 SP 선택용)
+  const DOMAIN_DETECT = [
+    { code: 'JUS', re: /계약서|소송|고소|판례|변호사|법률|고발|가상판결|법적|분쟁/ },
+    { code: 'MED', re: /병원|처방|증상|수술|진단|의료|건강검진|소견/ },
+    { code: 'ECO', re: /세금|재무|투자|대출|납부|신고|환급|주식|재무제표/ },
+    { code: 'MKT', re: /계약|거래|부동산|임대|매매|상품|가격협상/ },
+    { code: 'EDU', re: /특허|논문|학습설계|교육계획|자격/ },
+    { code: 'GOV', re: /민원|등본|허가|면허|행정심판/ },
+  ];
+
+  // base system 저장 (최초 1회)
+  if (!CFG.system_base) CFG.system_base = CFG.system;
+
+  let expertLoaded = false;
+  let detectedCode = null;
+
+  if (userText && EXPERT_KEYWORDS.test(userText)) {
+    for (const { code, re } of DOMAIN_DETECT) {
+      if (re.test(userText) && EXPERT_SP_MAP[code]) {
+        detectedCode = code;
+        try {
+          const rawBase = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang_v2/main/';
+          const res = await fetch(rawBase + EXPERT_SP_MAP[code], { cache: 'no-cache' });
+          if (res.ok) {
+            const expertSP = await res.text();
+            CFG.system = CFG.system_base + '\n\n' +
+              `${'═'.repeat(60)}\n` +
+              `## [2단계] 전문가 모드 활성: [${code}]\n` +
+              `## 방법론: ${EXPERT_SP_MAP[code]}\n` +
+              `${'═'.repeat(60)}\n` +
+              expertSP;
+            expertLoaded = true;
+            console.log(`[폭포수 2단계] [${code}] 전문 SP 로드 완료`);
+          } else {
+            console.warn(`[폭포수 2단계] SP fetch 실패 (${res.status}) → 3단계 시뮬레이션`);
+          }
+        } catch (e) {
+          console.warn(`[폭포수 2단계] fetch 오류 → 3단계 시뮬레이션:`, e.message);
+        }
+        break;
+      }
+    }
+  }
+
+  // 3단계: 외부 AI 비서 탐색 안내 (현재 시뮬레이션 — 레지스트리 DB 구축 중)
+  // 실제 구현 시: GET /api/registry/search?lat={lat}&lng={lng}&domain={code}
+  // 현재는 LLM system prompt의 §3 3단계 지시로 시뮬레이션 처리
+
+  // 2단계 미사용 시 base로 복귀 (이전 턴 전문가 모드 잔존 방지)
+  if (!expertLoaded && CFG.system_base) {
+    CFG.system = CFG.system_base;
   }
 
   // ── 위치 주입 ─────────────────────────────────────────
