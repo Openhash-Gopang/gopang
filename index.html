@@ -1654,11 +1654,16 @@ async function sendMessage() {
   // 사용자 버블 — 이미지 첨부 시 미리보기 포함
   if (capturedFile && capturedFile.type.startsWith('image/')) {
     const objUrl = URL.createObjectURL(capturedFile);
+    const imgId  = 'img-' + Date.now();
     appendBubble('user',
-      `${text ? text + '<br>' : ''}<img src="${objUrl}"
+      `${text ? text + '<br>' : ''}<img id="${imgId}" src="${objUrl}"
         style="max-width:220px;max-height:180px;border-radius:10px;
-               margin-top:${text?'6px':'0'};display:block"
-        onload="URL.revokeObjectURL(this.src)">`, true);
+               margin-top:${text?'6px':'0'};display:block">`, true);
+    // CSP 친화적: 인라인 onload 대신 JS 이벤트 리스너
+    requestAnimationFrame(() => {
+      const imgEl = document.getElementById(imgId);
+      if (imgEl) imgEl.addEventListener('load', () => URL.revokeObjectURL(objUrl), { once: true });
+    });
   } else {
     if (text) appendBubble('user', text);
     if (capturedFile) appendBubble('user', `📎 ${capturedFile.name}`, false);
@@ -2199,10 +2204,10 @@ async function callAI(userText, imageFile = null) {
   // ── 엔드포인트 + API Key 결정 ────────────────────────────
   const epSel   = document.getElementById('setting-endpoint');
   const savedKey = document.getElementById('setting-apikey')?.value?.trim();
-  // Worker 프록시 사용 시: API 키 불필요 (Worker가 환경변수로 관리)
-  // 직접 API 사용 시: 설정에서 입력한 키 또는 CFG.apiKey 사용
-  const isProxy  = CFG.endpoint.includes('workers.dev');
-  const apiKey   = isProxy ? 'proxy' : ((savedKey && savedKey.startsWith('sk-')) ? savedKey : CFG.apiKey);
+  // Worker 프록시 사용 시: API 키 불필요 (Worker 환경변수에서 관리)
+  // 직접 API 사용 시: 설정 키 또는 CFG.apiKey 사용
+  const isProxy = CFG.endpoint.includes('workers.dev');
+  const apiKey  = isProxy ? '' : ((savedKey && savedKey.startsWith('sk-')) ? savedKey : CFG.apiKey);
 
   let baseUrl = CFG.endpoint;
   if (document.getElementById('setting-endpoint')?.value === 'custom') {
@@ -2220,7 +2225,9 @@ async function callAI(userText, imageFile = null) {
       method: 'POST',
       headers: {
         'Content-Type':  'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        // 프록시 사용 시: Authorization 헤더 미전송 (Worker가 자체 키 사용)
+        // 직접 API 사용 시: Bearer 키 전송
+        ...(isProxy ? {} : { 'Authorization': `Bearer ${apiKey}` }),
       },
       body: JSON.stringify({
         model:       CFG.model,
@@ -2639,12 +2646,16 @@ function handleFileSelect(e) {
 
   if (file.type.startsWith('image/')) {
     // 이미지 — 썸네일 + 파일명 표시
-    const objUrl = URL.createObjectURL(file);
+    const objUrl  = URL.createObjectURL(file);
+    const thumbId = 'thumb-' + Date.now();
     nameEl.innerHTML =
-      `<img src="${objUrl}" style="height:32px;width:32px;object-fit:cover;
-        border-radius:6px;margin-right:4px;vertical-align:middle"
-        onload="URL.revokeObjectURL(this.src)">
+      `<img id="${thumbId}" src="${objUrl}" style="height:32px;width:32px;object-fit:cover;
+        border-radius:6px;margin-right:4px;vertical-align:middle">
        <span>${file.name}</span>`;
+    requestAnimationFrame(() => {
+      const t = document.getElementById(thumbId);
+      if (t) t.addEventListener('load', () => URL.revokeObjectURL(objUrl), { once: true });
+    });
 
     // 비전 미지원 모델 경고
     if (!_modelSupportsVision(CFG.model)) {
