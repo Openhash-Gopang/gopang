@@ -903,8 +903,8 @@
     <div class="setting-group">
       <div class="setting-label">LLM 모델</div>
       <select class="setting-field" id="setting-model">
-        <option value="deepseek-v4-pro">DeepSeek V4 Pro ✦ 이미지 지원</option>
-        <option value="deepseek-v4-flash" selected>DeepSeek V4 Flash ✦ 이미지 지원 (빠름)</option>
+        <option value="deepseek-v4-pro" selected>DeepSeek V4 Pro ✦ 이미지 지원</option>
+        <option value="deepseek-v4-flash">DeepSeek V4 Flash ✦ 이미지 지원 (빠름)</option>
         <option value="deepseek-chat">DeepSeek V3 (텍스트 전용)</option>
         <option value="deepseek-reasoner">DeepSeek R1 (추론)</option>
         <option value="gpt-4o">GPT-4o ✦ 이미지 지원</option>
@@ -1184,105 +1184,67 @@ const USER_GUID = (() => {
 const CFG = {
   apiKey:   'sk-e4a6f005aecf43d4aa60e77bb71de14c',
   endpoint: 'https://api.deepseek.com/v1',
-  model:    'deepseek-v4-flash',
+  model:    'deepseek-v4-pro',
   system:   `# AI Secretary Prompt SP-00 v9.0
-# 문서코드: SP-00 | 이전버전: v8.0 (2026-05-23) | 작성: AI City Inc. · 도영민
+# 문서코드: SP-00 | 작성: AI City Inc. · 도영민
 # 사용자 GUID: ${USER_GUID}
 
-## § 0. 정체성
-당신은 고팡(Gopang) AI 비서 — 사람 비서로 행동한다.
-사용자의 지시를 [THINK]로 사고하고 실제로 수행한다.
-없는 사실 꾸며내기 = 자격 박탈. 허위 완료 선언 절대 금지.
+## § 0. 정체성 — 핵심 한 줄
+사용자의 말 한마디에서 **진짜 의도**를 파악하고, 4단계 폭포수로 실제 처리한다.
+없는 사실 꾸미기·허위 완료 선언 = 자격 박탈.
 
-세계관: 한국의 모든 사람·기관·사물은 고팡 사용자이며 각자 AI 비서를 보유한다.
+## § 1. 가장 중요한 원칙: 의도 파악 우선
+지시를 받으면 즉시 답변하기 전에 반드시 내부적으로 [THINK]를 실행한다.
+
+[THINK]
+① 사용자가 진짜로 원하는 것이 무엇인가? (표면적 질문 ≠ 실제 의도)
+② 어떤 정보·행동이 필요한가?
+③ 1단계(자체)로 해결 가능한가?
+④ 2단계(전문가 변신)가 필요한가?
+⑤ 3단계(외부 AI 호출)가 필요한가?
+⑥ 4단계(웹 검색)가 필요한가?
+[/THINK]
+
+예시:
+- "1+1은?" → 단순 계산 → 즉시 답변
+- "여기 어디야?" → 위치 파악 요청 → 시스템이 주입한 위치 정보 사용
+- "계약서 검토해줘" → 법률 전문가 변신(K-Law) 필요
+
+## § 2. 세계관
+한국의 모든 사람·기관·사물은 고팡 사용자이며 각자 AI 비서를 보유한다.
 [사람] 모든 개인 | [기관] 특허청·법원·병원·은행·음식점 등 | [사물] 차량(VIN)·냉장고·세탁기(시리얼)
 
-## § 1. 핵심 원칙
-PDV 자율 인출: 사용자 정보는 PDV에서 직접 인출. 정보 요청 금지.
+## § 3. PDV 자율 인출
+사용자 정보는 PDV에서 직접 인출. 정보 요청 금지.
 예외(이때만 확인): PDV 정보 없음 / 50만원↑ 승인 / 법적 계약 / 되돌릴 수 없는 행위
 허위 금지: PDV 없는 데이터·없는 AI 연결·검색 없이 결과 조작 절대 금지.
 
-## § 2. 12대 영역 분류 (ISIC Rev.4 + KSIC) — 응답 첫 줄에 [코드] 태그 필수
+## § 4. 12대 영역 분류 — 응답 첫 줄에 [코드] 태그
 ECO 금융·경제 | MED 의료·보건 | EDU 교육·연구 | TRN 교통·물류 | MKT 시장·거래
 GOV 정부행정 | JUS 사법·법률 | IND 산업·생산 | ENV 환경·자원 | CUL 문화·여가
 SOC 사회·복지 | IOT IoT·사물
 
-## § 3. 4단계 폭포수 의사결정 [v9.0 핵심] — 각 단계 해결 가능하면 즉시 처리하고 멈춘다
+## § 5. 4단계 폭포수 — 각 단계 해결 가능하면 즉시 처리하고 멈춘다
 
-[THINK] 선행: ①목표파악 ②단계도출 ③1단계가능? ④2단계가능? ⑤3단계가능? ⑥4단계? ⑦PDV데이터
+1단계 자체해결: 일반 질문·계산·분석·위치 확인·IoT 쿼리 → 즉시 처리
+2단계 전문가 변신: JUS→K-Law | MED→K-Medical | ECO→K-Finance | MKT→K-Commerce 등
+  진입: 🔄[{코드}] {전문가명} 모드 전환 → 심층 대화 → 결과물
+3단계 외부 AI 호출: 고팡 레지스트리 [3-A]PDV연결 → [3-B]지역탐색 → [3-C]전국
+  진행: 🔍 탐색 중... [3-A]→[3-B]→[3-C] → ⚡연결 or ❌미발견
+4단계 웹 검색: 🌐 검색 → 결과 제시 (웹 검색 결과임을 명시)
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1단계 자체해결 (Self)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SP-00 자신의 지식·능력으로 처리 가능한가?
-✅ 가능: 일반 질문·분석·작성·계산·PDV직접조회·IoT쿼리 → 즉시 처리 → 종료
-❌ 불가: 전문 분석·특정 업체 실시간 정보 → 2단계
+## § 6. 응답 형식
+- 첫 줄: [{코드}] {영역명}
+- 내용: 간결하고 실용적으로. 불필요한 질문 없음.
+- 위치 정보: 시스템이 주입한 [현재 위치] 정보만 사용. 임의 추정 절대 금지.
+- 결제: 5만↓자동 | 5~50만 5초후자동 | 50만↑명시승인
+- 위험: S0정상 S1알림 S2보류 S3차단
+- 서명: ✍️ ECDSA P-256 (공식 요청·계약 시)
+- PDV 기록: 대화 종료 시 자동 저장됨 (응답마다 출력 불필요)
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2단계 전문가 변신 (Persona Switch)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-방법론이 정의된 전문 SP가 존재하며 해당 지시를 처리할 수 있는가?
-JUS→K-Law SP-01 | MED→K-Medical SP-02 | ECO→K-Finance SP-06
-MKT→K-Commerce SP-05 | EDU→K-Education SP-07 | GOV→K-Gov SP-08
-✅ 가능: GitHub에서 전문 SP fetch → 전문가 모드 진입 → 심층대화 → 결과물 생성 → 종료
-진입: 🔄[{코드}] 전문가 모드 전환 중... 로드:{파일명} ✅ → {전문가명} 모드 활성
-복귀: ✅ 전문가 모드 종료 → SP-00 일반 모드 복귀
-❌ 불가: 특정 업체 실시간 정보·실제 민원 접수 → 3단계
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-3단계 외부 AI 비서 호출 (External AI)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-고팡 레지스트리에서 적절한 외부 AI 비서를 탐색한다.
-탐색 순서 (반드시 준수):
-  [3-A] PDV 연결 목록: 사용자 거래처·단골·기관 우선 탐색
-  [3-B] 고팡 레지스트리 지역 탐색: GPS 기준 반경, 영역 필터, 평점·거리 정렬
-  [3-C] 전국 레지스트리: 도청·법원·국세청 등 광역 기관
-진행 표시:
-  🔍[{코드}] 외부 AI 비서 탐색 중...
-  [3-A] PDV 연결 목록... {결과}
-  [3-B] 고팡 레지스트리 ({위치} 반경 {N}km)... {결과}
-  [3-C] 전국 레지스트리... {결과}
-✅ 발견: AI-to-AI 통신 → 처리 → 결과 → 종료
-❌ 미발견: → 4단계로 전환
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-4단계 웹 검색 (Web Fallback) ← 최후 수단
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🌐[{코드}] 웹 검색으로 전환 (1~3단계 미해결)
-검색 → 결과 제시 → ※ 웹 검색 결과임을 명시
-정보 없으면: "찾을 수 없습니다" 정직 보고
-
-## § 4. PDV 기록 (매 응답 말미 필수)
-📋 PDV #{seq} | [{domain}] {목적} | {처리방식} | {등급} | {시각}
-처리방식: 자체처리 / 전문가변신:{SP코드} / 외부AI:{대상명} / 웹검색 / 시뮬레이션
-
-## § 5. 디지털 서명
-발신: ✍️ ECDSA P-256 자동 서명 | 수신: 🔐 서명 검증 ✅유효/❌무효
-
-## § 6. 재무 자동 관리
-5만원↓ 자동 | 5~50만원 알림 후 5초→자동 | 50만원↑ 명시승인 필수 | 정기항목 항상자동
-거래 후 즉시: 대차대조표·손익계산서·현금흐름표·자본변동표 갱신
-
-## § 7. 위법성 감지 (K-Law IDDM)
-S0(정상) S1(소프트알림) S2(보류+확인) S3(긴급차단+기관안내)
-⚠ [S{n}] {내용} | 근거:{조항} | 권고:{행동}
-
-## § 8. 응답 형식
-첫 줄: [{코드}] {영역명}
-자체처리:   ✅{내용} → 📋PDV|자체처리
-전문가변신: 🔄전환→{전문가}모드→심층대화→결과물→📋PDV|전문가변신:{SP}
-외부AI:     🔍탐색[3-A→3-B→3-C]→⚡연결→처리→📋PDV|외부AI:{대상}
-웹검색:     🌐검색→📌결과(웹검색임명시)→📋PDV|웹검색
-IoT쿼리:    🔌{사물}AI→📊현황:{데이터}→📋PDV|IoT쿼리
-없음보고:   ❌{이유}→임의생성안함→📌해결방법→📋PDV
-
-언어: 한국어, 간결·명확, 불필요한 질문 없음, 허위 완료 선언 절대 금지
-
-## § 9. 구현 현황
-1단계 자체해결: ✅ 실제 작동
-2단계 전문가변신: ✅ K-Law(JUS) 실제 작동 / 나머지 SP 준비 중
-3단계 외부AI:    ⚙️ 시뮬레이션 (고팡 레지스트리 DB 구축 중)
-4단계 웹검색:    ✅ 웹 검색 도구 연결 시 실제 작동`,
+## § 7. 구현 현황
+1단계 자체해결: ✅ | 2단계 K-Law: ✅ | 3단계 외부AI: ⚙️시뮬 | 4단계 웹검색: ✅
+언어: 한국어, 간결·명확, 허위 완료 선언 절대 금지`,
 
 };
 
@@ -1429,7 +1391,7 @@ function _scheduleLocation() {
 let _installBannerVisible = false;
 
 function _initLocation() {
-  if (_locationPending || _locationReady) return;  // 중복 실행 방지
+  if (_locationPending || _locationReady) return;
   _locationPending = true;
 
   if (!navigator.geolocation) {
@@ -1439,27 +1401,40 @@ function _initLocation() {
     });
     return;
   }
-  navigator.geolocation.getCurrentPosition(
+
+  // watchPosition: 첫 응답 즉시 사용, 이후 갱신 반영
+  // maximumAge:0 — 캐시 금지 (stale 위치 방지)
+  // timeout:5000 — 5초 내 응답 없으면 실패 처리
+  let _watchId = null;
+  let _gotFirst = false;
+
+  _watchId = navigator.geolocation.watchPosition(
     (pos) => {
       _userLocation = {
-        lat:     pos.coords.latitude,
-        lng:     pos.coords.longitude,
+        lat:      pos.coords.latitude,
+        lng:      pos.coords.longitude,
         accuracy: pos.coords.accuracy,
-        source:  'GPS',
-        address: null,
+        source:   'GPS',
+        address:  null,
       };
-      _locationPending = false;
-      _locationReady   = true;
       _updateLocationInPrompt();
-      console.log(`[Location] GPS 획득: ${_userLocation.lat.toFixed(4)}, ${_userLocation.lng.toFixed(4)}`);
+      if (!_gotFirst) {
+        _gotFirst        = true;
+        _locationPending = false;
+        _locationReady   = true;
+        console.log(`[Location] GPS 획득: ${_userLocation.lat.toFixed(4)}, ${_userLocation.lng.toFixed(4)} ±${Math.round(pos.coords.accuracy)}m`);
+      }
     },
     (err) => {
       console.warn('[Location] GPS 실패:', err.message);
+      if (_watchId !== null) {
+        navigator.geolocation.clearWatch(_watchId);
+        _watchId = null;
+      }
       _locationPending = false;
-      // PDV/IP 폴백이 async이므로 완료 후 ready 표시
       _loadLocationFromPDV().finally(() => { _locationReady = true; });
     },
-    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
   );
 }
 
@@ -1513,6 +1488,30 @@ function _updateLocationInPrompt() {
     locStr = '위치정보없음(GPS권한허용또는PDV주소등록필요)';
   }
   CFG.locationStr = locStr;
+
+  // watchPosition으로 위치 갱신 시 history[0](system)도 업데이트
+  // — 단, 이미 대화가 진행 중이면 캐시 무효화를 피하기 위해 갱신하지 않음
+  if (history.length === 1 && history[0]?.role === 'system') {
+    history[0].content = CFG.system + _buildLocNote();
+    console.log('[Cache] 위치 갱신 — system 업데이트 (대화 시작 전)');
+  }
+}
+
+// locNote 문자열 생성 (callAI + _updateLocationInPrompt 공용)
+function _buildLocNote() {
+  if (!_userLocation) {
+    return '\n\n[위치 정보 없음 — GPS 권한 미허용. 임의 추정 절대 금지.]';
+  }
+  const loc = _userLocation;
+  const detail =
+    loc.source === 'GPS' && loc.lat
+      ? `GPS좌표: ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)} (정확도 ±${Math.round(loc.accuracy||0)}m)`
+      : loc.source === 'PDV' && loc.address
+        ? `PDV등록주소: ${loc.address}`
+        : loc.source === 'IP' && loc.address
+          ? `IP기반위치(정확도 낮음 — 시/도 수준): ${loc.address}`
+          : '위치정보 없음 — 임의 추정 절대 금지.';
+  return `\n\n[현재 위치 — 반드시 이 정보만 사용할 것, 임의로 다른 도시 추정 절대 금지]\n${detail}`;
 }
 
 // ── 입력 필드 ───────────────────────────────────────────
@@ -1732,17 +1731,7 @@ async function callAI(userText, imageFile = null) {
     CFG.system = CFG.system_base;
   }
 
-  // ── 위치 주입 ─────────────────────────────────────────
-  const locNote = _userLocation
-    ? `\n\n[현재 위치 — 반드시 이 정보만 사용할 것, 임의로 다른 도시 추정 절대 금지]\n` +
-      (_userLocation.source === 'GPS' && _userLocation.lat
-        ? `GPS좌표: ${_userLocation.lat.toFixed(5)}, ${_userLocation.lng.toFixed(5)} (정확도 ±${Math.round(_userLocation.accuracy||0)}m)`
-        : _userLocation.source === 'PDV' && _userLocation.address
-          ? `PDV등록주소: ${_userLocation.address}`
-          : _userLocation.source === 'IP' && _userLocation.address
-            ? `IP기반위치(정확도 낮음 — 시/도 수준): ${_userLocation.address}`
-            : `위치정보 없음 — 임의 추정 절대 금지.`)
-    : `\n\n[위치 정보 없음 — GPS 권한 미허용. 임의 추정 절대 금지.]`;
+  // locNote는 _buildLocNote()로 분리 — 최초 1회만 system에 삽입됨
 
   // ── 이미지 → content 배열 변환 ──────────────────────
   let userContent;
@@ -1793,15 +1782,42 @@ async function callAI(userText, imageFile = null) {
     userContent = userText;
   }
 
-  // ── 메시지 구성 ─────────────────────────────────────────
-  // DeepSeek은 system content를 문자열로 요구함
-  // (Anthropic 방식 cache_control 배열 불지원 → 400 오류 원인)
-  const systemContent = CFG.system + locNote;
-  const messages = [
-    { role: 'system', content: systemContent },
-    ...history.slice(-12),
-    { role: 'user', content: userContent },
-  ];
+  // ── DeepSeek Prefix Caching 전략 ────────────────────────
+  // 원칙: system prompt는 세션 최초 1회만 전송.
+  //       이후 호출은 history 전체를 그대로 전송 (system 반복 없음).
+  //       locNote(위치)도 최초 1회 system 메시지로 삽입 후 재사용.
+  //       전문가 SP 로드 시에는 불가피하게 캐시 무효화됨 (명시).
+
+  // 세션 최초 호출 여부 판단
+  const isFirstTurn = history.length === 0 ||
+    (history.length === 1 && history[0].role === 'system');
+
+  if (isFirstTurn) {
+    // ── 최초 1회: system + locNote를 history[0]으로 고정 ──
+    const locNote = _buildLocNote();
+    const systemContent = CFG.system + locNote;
+
+    // 전문가 SP 로드 시 system 교체 (캐시 무효화 불가피)
+    if (expertLoaded) {
+      history.length = 0;  // 리셋
+      history.push({ role: 'system', content: CFG.system + locNote });
+      console.log('[Cache] 전문가 SP 로드 — system 교체, 캐시 리셋');
+    } else if (history.length === 0) {
+      history.push({ role: 'system', content: systemContent });
+      console.log('[Cache] 세션 최초 — system 1회 삽입');
+    }
+  } else if (expertLoaded) {
+    // 전문가 SP 로드: system 교체 + 이전 대화 유지
+    const locNote = _buildLocNote();
+    history[0] = { role: 'system', content: CFG.system + locNote };
+    console.log('[Cache] 전문가 SP 로드 — system 교체');
+  }
+  // 이후 호출: history[0]이 system으로 고정되어 있으므로 추가 작업 없음
+
+  // ── history에 현재 user 메시지 추가 ─────────────────────
+  // sendMessage()에서도 push하므로 중복 방지: callAI는 messages 구성만 담당
+  // history 구조: [system(고정), user, assistant, user, assistant, ...]
+  const messages = [...history, { role: 'user', content: userContent }];
 
   // ── 엔드포인트 + API Key 결정 ────────────────────────────
   const epSel   = document.getElementById('setting-endpoint');
@@ -1829,9 +1845,10 @@ async function callAI(userText, imageFile = null) {
       body: JSON.stringify({
         model:       CFG.model,
         messages,
-        max_tokens:  800,
-        temperature: 0.7,
+        max_tokens:  2000,
+        temperature: 0.6,
         stream:      true,
+        stream_options: { include_usage: true },  // 캐시 히트 토큰 수 확인용
       }),
     });
 
@@ -1862,6 +1879,12 @@ async function callAI(userText, imageFile = null) {
         if (payload === '[DONE]') break;
         try {
           const chunk = JSON.parse(payload);
+          // 마지막 청크에 usage 포함 (stream_options.include_usage)
+          if (chunk.usage) {
+            const u = chunk.usage;
+            const cached = u.prompt_tokens_details?.cached_tokens ?? 0;
+            console.log(`[Cache] prompt=${u.prompt_tokens} cached=${cached} completion=${u.completion_tokens} (절감율 ${cached ? Math.round(cached/u.prompt_tokens*100) : 0}%)`);
+          }
           const delta = chunk.choices?.[0]?.delta?.content ?? '';
           if (delta) {
             fullReply += delta;
