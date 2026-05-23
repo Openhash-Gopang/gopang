@@ -1730,8 +1730,11 @@ function showRiskAnalysis() {
 
 // ── DeepSeek API 호출 ───────────────────────────────────
 // ── 모델별 비전 지원 여부 ────────────────────────────────
+// DeepSeek Vision 지원: deepseek-chat(V3)만 이미지 지원
+// deepseek-v4-pro / deepseek-v4-flash 는 텍스트 전용 (이미지 불가)
 const VISION_MODELS = new Set([
-  'deepseek-v4-pro', 'deepseek-v4-flash', 'gpt-4o', 'gpt-4o-mini',
+  'deepseek-chat',        // DeepSeek V3 — Vision 지원 (유일)
+  'gpt-4o', 'gpt-4o-mini',
   'claude-sonnet-4-20250514', 'claude-opus-4-20250514',
   'gemini-2.0-flash', 'gemini-1.5-pro',
 ]);
@@ -2081,6 +2084,12 @@ async function callAI(userText, imageFile = null) {
 
   // ── CLN 활성 시 EXIF + 날씨 + 해양기상 자동 수집 ──────────
   if (expertLoaded && detectedCode === 'CLN' && imageFile) {
+    // 이미지 분석을 위해 Vision 지원 모델로 자동 전환
+    if (!_modelSupportsVision(CFG.model)) {
+      console.log(`[K-Cleaner] Vision 미지원 모델(${CFG.model}) → deepseek-chat으로 자동 전환`);
+      CFG._modelOverride = CFG.model;  // 원래 모델 백업
+      CFG.model = 'deepseek-chat';
+    }
     try {
       appendBubble('ai', '🌤️ 현장 기상 정보 수집 중...');
 
@@ -2143,6 +2152,7 @@ async function callAI(userText, imageFile = null) {
       userContent = userText;
     } else {
       // 비전 지원 모델 — base64 변환 후 multipart content
+      // DeepSeek Vision API: image_url 타입 + data URI 형식
       try {
         const dataUrl  = await _fileToBase64(imageFile);
         const mimeType = imageFile.type;          // "image/jpeg" 등
@@ -2152,11 +2162,11 @@ async function callAI(userText, imageFile = null) {
         if (userText) {
           userContent.push({ type: 'text', text: userText });
         }
+        // DeepSeek Vision: base64 data URI를 image_url.url에 직접 포함
         userContent.push({
           type: 'image_url',
           image_url: {
-            url:    `data:${mimeType};base64,${base64}`,
-            detail: 'high',   // 'auto' | 'low' | 'high'
+            url: `data:${mimeType};base64,${base64}`,
           },
         });
         if (!userText) {
@@ -2290,6 +2300,8 @@ async function callAI(userText, imageFile = null) {
 
     if (!fullReply) fullReply = '(응답 없음)';
     console.log(`[AI] 응답 완료 — ${fullReply.length}자`);
+    // K-Cleaner Vision 임시 모델 전환 복귀
+    if (CFG._modelOverride) { CFG.model = CFG._modelOverride; CFG._modelOverride = null; }
     history.push({ role: 'assistant', content: fullReply });
     bubble.classList.remove('streaming');
 
