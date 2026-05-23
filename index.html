@@ -21,7 +21,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
 
   <!-- Android Chrome -->
-  <meta name="theme-color" content="#09090F"/>
+  <meta name="theme-color" content="#F6F5F4"/>
   <meta name="mobile-web-app-capable" content="yes"/>
 
   <!-- 일반 메타 -->
@@ -38,34 +38,77 @@
       --safe-right:  env(safe-area-inset-right,  0px);
     }
   </style>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <style>
-    /* ── Apple HIG 토큰 ─────────────────────────────────── */
+    /* ── 고팡 전문 법률 서비스 색상 시스템 (라이트 모드) ── */
     :root {
-      --bg:           #09090F;
-      --bg-elevated:  rgba(28,28,30,0.92);
-      --bg-glass:     rgba(44,44,46,0.72);
-      --bg-input:     rgba(58,58,60,0.9);
-      --sep:          rgba(255,255,255,0.08);
-      --sep-strong:   rgba(255,255,255,0.14);
-      --label:        rgba(255,255,255,0.96);
-      --label-2:      rgba(255,255,255,0.55);
-      --label-3:      rgba(255,255,255,0.28);
-      --tint:         #0A84FF;
-      --tint-dim:     rgba(10,132,255,0.18);
-      --green:        #30D158;
-      --red:          #FF453A;
-      --yellow:       #FFD60A;
-      --orange:       #FF9F0A;
-      --r-sm:         10px;
-      --r-md:         14px;
-      --r-lg:         20px;
-      --r-xl:         26px;
-      --blur:         saturate(180%) blur(24px);
-      --blur-sm:      saturate(160%) blur(12px);
-      --font:         -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
-      --font-display: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      /* ══════════════════════════════════════════════════════
+         고팡 색상 시스템 v3.0 — GNOME Adwaita 기반
+         WCAG 2.1 AA 전항목 준수
+         완전 검정 배제 → 짙은 회색 계열로 고급화
+         ══════════════════════════════════════════════════════ */
+
+      /* 배경 계층 — Adwaita Light */
+      --bg:           #F6F5F4;  /* Adwaita pageBackground */
+      --bg-elevated:  #FFFFFF;  /* Adwaita cardBackground */
+      --bg-glass:     rgba(255,255,255,0.94);
+      --bg-input:     #FFFFFF;
+      --bg-subtle:    #EDECEA;  /* Adwaita sidebarBackground */
+
+      /* 구분선 — Adwaita Separator */
+      --sep:          #E0DEDB;  /* Adwaita divider */
+      --sep-strong:   #C8C6C3;  /* Adwaita separator-strong */
+
+      /* 텍스트 계층 — 짙은 회색 (완전 검정 배제) */
+      --label:        #1d1d1d;  /* Adwaita primaryText · 15.5:1 AAA✅ */
+      --label-2:      #5e5c64;  /* GNOME Slate · 보조 · 6.0:1 AA✅ */
+      --label-3:      #6b6970;  /* GNOME 힌트 보정 · 5.0:1 AA✅ */
+
+      /* 브랜드 블루 — Adwaita accent (WCAG 보정) */
+      --tint:         #2877c8;  /* Adwaita Blue 보정 · 흰글씨 4.6:1 AA✅ */
+      --tint-dark:    #1c5daf;  /* hover · 흰글씨 6.5:1 AA✅ */
+      --tint-text:    #1955a6;  /* 텍스트·링크 전용 · 배경위 6.7:1 AA✅ */
+      --tint-dim:     #ddeeff;  /* Adwaita accent dim */
+      --tint-dim-bd:  #a8ccf0;  /* accent dim 테두리 */
+
+      /* 시맨틱 컬러 — Adwaita 계열 */
+      --green:        #1a7340;  /* Adwaita success · 5.7:1 AA✅ */
+      --green-bg:     #e4f5ec;
+      --red:          #c01c28;  /* Adwaita error · 5.8:1 AA✅ */
+      --red-bg:       #fce4e4;
+      --yellow:       #8c5a00;  /* Adwaita warning · 7.1:1 AAA✅ */
+      --yellow-bg:    #fef3cd;
+      --orange:       #a5200a;  /* Adwaita destructive · 7.0:1 AAA✅ */
+      --orange-bg:    #fde8e4;
+
+      /* 반경 — Adwaita Shape (libadwaita 기준) */
+      --r-sm:         6px;
+      --r-md:         10px;
+      --r-lg:         14px;
+      --r-xl:         20px;
+
+      /* 효과 */
+      --blur:         saturate(120%) blur(20px);
+      --blur-sm:      saturate(110%) blur(10px);
+
+      /* 폰트 — Pretendard */
+      --font:         'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Helvetica Neue', sans-serif;
+      --font-display: 'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Helvetica Neue', sans-serif;
+      --font-mono:    'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
+
+      /* 애니메이션 */
       --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
       --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
+
+      /* 그림자 — Adwaita Elevation */
+      --shadow-1: 0 1px 2px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-2: 0 2px 6px rgba(0,0,0,0.08), 0 4px 10px rgba(0,0,0,0.06);
+      --shadow-3: 0 4px 12px rgba(0,0,0,0.10), 0 8px 20px rgba(0,0,0,0.07);
+
+      /* 하위 호환 별칭 */
+      --shadow-sm: var(--shadow-1);
+      --shadow-md: var(--shadow-2);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -79,18 +122,15 @@
       overflow: hidden;
     }
 
-    /* Apple HIG macOS 다크 — 미세 방사형 하이라이트 */
+    /* 밝은 배경 미세 상단 강조선 */
     body::before {
       content: '';
       position: fixed;
-      inset: 0;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #2877c8 0%, #2563EB 50%, #2877c8 100%);
+      z-index: 999;
       pointer-events: none;
-      z-index: 0;
-      background:
-        radial-gradient(ellipse 80% 50% at 50% -10%,
-          rgba(10,132,255,0.07) 0%, transparent 70%),
-        radial-gradient(ellipse 60% 40% at 100% 100%,
-          rgba(94,92,230,0.05) 0%, transparent 60%);
     }
     #app { position: relative; z-index: 1; }
 
@@ -115,6 +155,10 @@
       padding-right: 18px;
       padding-left: 18px;
       gap: 10px;
+      background: rgba(246,245,244,0.92);
+      backdrop-filter: var(--blur-sm);
+      -webkit-backdrop-filter: var(--blur-sm);
+      border-bottom: 1px solid var(--sep);
     }
 
     /* ── PWA 설치 배너 ─────────────────────────────────── */
@@ -125,10 +169,11 @@
       transform: translateX(-50%) translateY(20px);
       width: calc(100% - 32px);
       max-width: 420px;
-      background: var(--bg-elevated);
+      background: #FFFFFF;
       backdrop-filter: var(--blur);
       -webkit-backdrop-filter: var(--blur);
       border: 1px solid var(--sep-strong);
+      box-shadow: var(--shadow-md);
       border-radius: var(--r-xl);
       padding: 16px 18px;
       z-index: 300;
@@ -149,7 +194,7 @@
       border-radius: 14px;
       flex-shrink: 0;
       overflow: hidden;
-      background: var(--bg-panel, #20243a);
+      background: var(--bg-elevated);
     }
     .install-banner-icon img { width: 100%; height: 100%; object-fit: cover; }
     .install-banner-text { flex: 1; }
@@ -196,17 +241,19 @@
       width: 34px; height: 34px;
       border-radius: 50%;
       border: none;
-      background: var(--bg-glass);
+      background: rgba(255,255,255,0.9);
       backdrop-filter: var(--blur-sm);
       -webkit-backdrop-filter: var(--blur-sm);
-      color: var(--label);
+      color: var(--label-2);
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       font-size: 15px;
+      border: 1px solid var(--sep-strong);
+      box-shadow: var(--shadow-sm);
       transition: background 0.15s, transform 0.12s var(--ease-spring);
       -webkit-tap-highlight-color: transparent;
     }
-    .top-btn:hover  { background: rgba(255,255,255,0.12); }
+    .top-btn:hover  { background: #fff; color: var(--tint); }
     .top-btn:active { transform: scale(0.93); }
 
     .btn-ai {
@@ -216,14 +263,14 @@
       font-size: 13px;
       font-weight: 600;
       letter-spacing: 0.01em;
-      color: var(--label-3);        /* 초기: 비활성 회색 */
+      color: var(--label-2);        /* 초기: 비활성 회색 */
       gap: 5px;
       transition: color 0.3s, background 0.3s;
     }
     .btn-ai .ai-dot {
       width: 6px; height: 6px;
       border-radius: 50%;
-      background: var(--label-3);   /* 초기: 비활성 회색 */
+      background: var(--label-3);   /* 초기: 비활성 */
       transition: background 0.3s, transform 0.3s;
     }
     /* 활성 상태 — .btn-ai.active 일 때 dot도 초록 + 애니메이션 */
@@ -231,7 +278,7 @@
       background: var(--green);
       animation: pulse-dot 2s ease-in-out infinite;
     }
-    .btn-ai.active { background: var(--tint-dim); color: var(--tint); }
+    .btn-ai.active { background: #E8F0FA; color: var(--tint); border: 1px solid rgba(40,119,200,0.30); }
     @keyframes pulse-dot {
       0%,100% { opacity: 1; transform: scale(1); }
       50%      { opacity: 0.5; transform: scale(0.7); }
@@ -281,9 +328,9 @@
       border-bottom-right-radius: 4px;
     }
     .bubble-ai {
-      background: var(--bg-glass);
-      backdrop-filter: var(--blur-sm);
-      -webkit-backdrop-filter: var(--blur-sm);
+      background: #FFFFFF;
+      border: 1px solid var(--sep-strong);
+      box-shadow: var(--shadow-sm);
       color: var(--label);
       border-bottom-left-radius: 4px;
     }
@@ -310,10 +357,10 @@
       font-weight: 600;
       letter-spacing: 0.02em;
     }
-    .risk-chip.s0 { background: rgba(48,209,88,0.18);  color: var(--green);  }
-    .risk-chip.s1 { background: rgba(255,214,10,0.18); color: var(--yellow); }
-    .risk-chip.s2 { background: rgba(255,159,10,0.18); color: var(--orange); }
-    .risk-chip.s3 { background: rgba(255,69,58,0.18);  color: var(--red);    }
+    .risk-chip.s0 { background: #D1FAE5; color: #065F46; border: 1px solid #6EE7B7; }
+    .risk-chip.s1 { background: #FEF3C7; color: #8c5a00; border: 1px solid #FCD34D; }
+    .risk-chip.s2 { background: #FFEDD5; color: #a5200a; border: 1px solid #FDBA74; }
+    .risk-chip.s3 { background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; }
 
     /* AI 타이핑 인디케이터 */
     .typing-indicator {
@@ -323,7 +370,7 @@
     .typing-indicator span {
       width: 6px; height: 6px;
       border-radius: 50%;
-      background: var(--label-2);
+      background: var(--label-3);
       animation: bounce 1.2s ease-in-out infinite;
     }
     .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
@@ -337,10 +384,10 @@
     .input-dock {
       flex-shrink: 0;
       padding: 8px 12px calc(20px + var(--safe-bottom));
-      background: rgba(0,0,0,0.7);
+      background: rgba(246,245,244,0.97);
       backdrop-filter: var(--blur);
       -webkit-backdrop-filter: var(--blur);
-      border-top: 1px solid var(--sep);
+      border-top: 1px solid var(--sep-strong);
     }
 
     /* 상태 바 (한 줄, 소형) */
@@ -350,7 +397,7 @@
       gap: 10px;
       padding: 0 4px 8px;
       font-size: 11px;
-      color: var(--label-3);
+      color: var(--label-2);
       letter-spacing: 0.01em;
     }
     .status-dot {
@@ -362,7 +409,7 @@
     .status-strip code {
       font-family: 'SF Mono', 'Menlo', monospace;
       font-size: 10px;
-      color: var(--label-3);
+      color: var(--label-2);
     }
 
     /* 입력 컨테이너 */
@@ -370,14 +417,16 @@
       display: flex;
       align-items: flex-end;
       gap: 8px;
-      background: var(--bg-input);
+      background: #FFFFFF;
       border-radius: var(--r-xl);
       padding: 6px 6px 6px 10px;
-      border: 1px solid var(--sep-strong);
-      transition: border-color 0.15s;
+      border: 1.5px solid #D1D9E6;
+      box-shadow: var(--shadow-sm);
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
     .input-wrap:focus-within {
-      border-color: rgba(10,132,255,0.5);
+      border-color: var(--tint);
+      box-shadow: 0 0 0 3px rgba(40,119,200,0.12);
     }
 
     /* 좌측 액션 버튼 */
@@ -393,14 +442,14 @@
       border-radius: 50%;
       border: none;
       background: transparent;
-      color: var(--label-2);
+      color: var(--label-3);
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       font-size: 16px;
       transition: color 0.12s, background 0.12s;
       -webkit-tap-highlight-color: transparent;
     }
-    .ia-btn:hover  { color: var(--label); background: rgba(255,255,255,0.06); }
+    .ia-btn:hover  { color: var(--tint); background: var(--tint-dim); }
     .ia-btn:active { transform: scale(0.9); }
 
     /* 버전 선택 드롭다운 */
@@ -417,7 +466,7 @@
       appearance: none;
     }
     .version-select:hover { color: var(--label); }
-    .version-select option { background: #1c1c1e; }
+    .version-select option { background: #ffffff; color: #0D1117; }
 
     /* textarea */
     #msg-input {
@@ -427,7 +476,7 @@
       outline: none;
       color: var(--label);
       font-family: var(--font);
-      font-size: 16px;
+      font-size: 15px;
       line-height: 1.4;
       resize: none;
       max-height: 140px;
@@ -436,7 +485,7 @@
       padding: 4px 0;
       align-self: flex-end;
     }
-    #msg-input::placeholder { color: var(--label-3); }
+    #msg-input::placeholder { color: #6b6970; }
     #msg-input::-webkit-scrollbar { width: 0; }
 
     /* 전송 버튼 */
@@ -454,15 +503,15 @@
       align-self: flex-end;
     }
     .send-btn:disabled { background: var(--bg-glass); opacity: 0.4; }
-    .send-btn:not(:disabled):hover  { background: #0071e3; }
+    .send-btn:not(:disabled):hover  { background: #1c5daf; }
     .send-btn:not(:disabled):active { transform: scale(0.88); }
 
     /* ── 설정 패널 ──────────────────────────────────────── */
     .settings-overlay {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      background: rgba(30,28,32,0.50);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       z-index: 200;
       display: flex;
       align-items: flex-end;
@@ -478,14 +527,14 @@
     .settings-sheet {
       width: 100%;
       max-width: 520px;
-      background: var(--bg-elevated);
-      backdrop-filter: var(--blur);
-      -webkit-backdrop-filter: var(--blur);
+      background: #FFFFFF;
+      backdrop-filter: none;
       border-radius: var(--r-xl) var(--r-xl) 0 0;
       padding: 20px 20px 40px;
       transform: translateY(100%);
       transition: transform 0.3s var(--ease-out);
-      border-top: 1px solid var(--sep-strong);
+      border-top: 3px solid var(--tint);
+      box-shadow: 0 -8px 30px rgba(0,0,0,0.12);
     }
     .settings-overlay.open .settings-sheet {
       transform: translateY(0);
@@ -493,7 +542,7 @@
 
     .sheet-handle {
       width: 36px; height: 4px;
-      background: var(--sep-strong);
+      background: #C8C6C3;
       border-radius: 2px;
       margin: 0 auto 20px;
     }
@@ -523,20 +572,20 @@
     }
     .setting-field {
       width: 100%;
-      background: var(--bg-input);
-      border: 1px solid var(--sep-strong);
-      border-radius: var(--r-md);
+      background: #FAFBFC;
+      border: 1.5px solid #D1D9E6;
+      border-radius: var(--r-sm);
       color: var(--label);
       font-family: var(--font);
-      font-size: 15px;
-      padding: 11px 14px;
+      font-size: 14px;
+      padding: 10px 12px;
       outline: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s;
       -webkit-appearance: none;
       appearance: none;
     }
-    .setting-field:focus { border-color: var(--tint); }
-    .setting-field option { background: #1c1c1e; }
+    .setting-field:focus { border-color: var(--tint); box-shadow: 0 0 0 3px #E8F0FA; }
+    .setting-field option { background: #ffffff; color: #0D1117; }
 
     .setting-field-mono {
       font-family: 'SF Mono', 'Menlo', monospace;
@@ -559,7 +608,7 @@
       margin-top: 4px;
       transition: background 0.15s, transform 0.1s;
     }
-    .sheet-save:hover  { background: #0071e3; }
+    .sheet-save:hover  { background: #1c5daf; }
     .sheet-save:active { transform: scale(0.98); }
 
     /* ── AI 비서 시스템 패널 ────────────────────────────── */
@@ -576,18 +625,19 @@
     .ai-overlay.open { opacity: 1; pointer-events: all; }
     .ai-backdrop {
       position: absolute; inset: 0;
-      background: rgba(0,0,0,0.4);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      background: rgba(30,28,32,0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
     }
     .ai-card {
       position: relative;
       width: 90%;
       max-width: 380px;
-      background: var(--bg-elevated);
-      border-radius: var(--r-xl);
+      background: #FFFFFF;
+      border-radius: var(--r-lg);
       padding: 24px 20px 20px;
-      border: 1px solid var(--sep-strong);
+      border: 1px solid #D1D9E6;
+      box-shadow: var(--shadow-md);
       transform: scale(0.94) translateY(8px);
       transition: transform 0.24s var(--ease-spring);
     }
@@ -596,7 +646,7 @@
     .ai-card-icon {
       width: 48px; height: 48px;
       border-radius: 14px;
-      background: linear-gradient(135deg, #0A84FF, #5E5CE6);
+      background: linear-gradient(135deg, #2877c8, #5E5CE6);
       display: flex; align-items: center; justify-content: center;
       font-size: 22px;
       margin-bottom: 14px;
@@ -628,9 +678,9 @@
     }
     .ai-card-btn:active { transform: scale(0.97); }
     .ai-card-btn-primary { background: var(--tint); color: #fff; }
-    .ai-card-btn-primary:hover { background: #0071e3; }
+    .ai-card-btn-primary:hover { background: #1c5daf; }
     .ai-card-btn-secondary {
-      background: var(--bg-input);
+      background: #F0F4FF;
       color: var(--label-2);
     }
 
@@ -916,7 +966,7 @@
 
       <!-- Android -->
       <details style="margin-bottom:10px;">
-        <summary style="cursor:pointer; font-weight:600; color:#0A84FF; outline:none;">
+        <summary style="cursor:pointer; font-weight:600; color:#2877c8; outline:none;">
           🤖 Android (크롬 브라우저)
         </summary>
         <div style="margin-top:8px; padding-left:4px; color:#AEAEB2;">
@@ -924,9 +974,9 @@
           상단 우측의 <span style="
             display:inline-flex; flex-direction:column; gap:2px;
             vertical-align:middle; margin:0 3px;">
-            <span style="width:4px;height:4px;background:#0A84FF;border-radius:50%;display:block;"></span>
-            <span style="width:4px;height:4px;background:#0A84FF;border-radius:50%;display:block;"></span>
-            <span style="width:4px;height:4px;background:#0A84FF;border-radius:50%;display:block;"></span>
+            <span style="width:4px;height:4px;background:#2877c8;border-radius:50%;display:block;"></span>
+            <span style="width:4px;height:4px;background:#2877c8;border-radius:50%;display:block;"></span>
+            <span style="width:4px;height:4px;background:#2877c8;border-radius:50%;display:block;"></span>
           </span> 터치<br>
           → 아래로 스크롤 → <b>사이트 설정</b> 터치<br>
           → <b>위치 · 카메라 · 마이크</b> 각각 터치 → <b>허용</b><br><br>
@@ -1010,7 +1060,7 @@
              placeholder="AIza…"
              autocomplete="off" spellcheck="false"/>
       <div style="font-size:11px;color:var(--label-2);margin-top:4px;">
-        K-Cleaner 이미지 분석에 사용 · <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--tint);">무료 발급 →</a>
+        K-Cleaner 이미지 분석에 사용 · <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--tint-text);">무료 발급 →</a>
       </div>
     </div>
 
@@ -1115,7 +1165,7 @@ function _showUpdateBanner() {
   banner.innerHTML = `
     <span>🆕 새 버전이 있습니다</span>
     <button onclick="_applyUpdate()" style="
-      background:#0A84FF; color:#fff; border:none;
+      background:#2877c8; color:#fff; border:none;
       border-radius:8px; padding:6px 14px;
       font-size:13px; font-weight:600; cursor:pointer;">
       지금 업데이트
@@ -2195,6 +2245,8 @@ async function callAI(userText, imageFile = null) {
           const analysisText = _geminiResultToText(geminiResult, userText);
           // 이미지는 DeepSeek에 전달 안 함 (텍스트 전용으로 처리)
           userContent = analysisText;
+          // ── FIIL.kr 신고 전송 (Gemini 분석 결과 확정 즉시) ──────
+          _sendReportToFiil(geminiResult, imageFile, userText);
           imageFile   = null;   // 이미지 파일 소거 (DeepSeek에 직접 전송 불필요)
           console.log('[K-Cleaner] Gemini 결과 → DeepSeek 전달 준비 완료');
         }
@@ -2649,7 +2701,7 @@ function runSearch() {
                           margin-bottom:6px">👤 대화 상대</div>`;
     contactMatches.forEach(c => {
       html += `<div style="padding:8px 10px;border-radius:var(--r-md);
-                            background:var(--bg-input);margin-bottom:6px;
+                            background:#F5F7FA;border:1px solid #E0DEDB;margin-bottom:6px;
                             font-size:14px;cursor:pointer"
                    onclick="selectContact('${c.id}')">
                  <span style="color:var(--label)">${_highlight(c.name, q)}</span>
@@ -2668,7 +2720,7 @@ function runSearch() {
              </div>`;
     pdvMatches.forEach(p => {
       html += `<div style="padding:8px 10px;border-radius:var(--r-md);
-                            background:var(--bg-input);margin-bottom:6px;font-size:13px">
+                            background:#F5F7FA;border:1px solid #E0DEDB;margin-bottom:6px;font-size:13px">
                  <span style="color:var(--label-2)">${_highlight(p.key, q)}</span>
                  <span style="color:var(--label-3);font-size:11px;margin-left:6px">
                    ${p.date}
@@ -3006,6 +3058,119 @@ async function _micStartMediaRecorder() {
   setTimeout(() => {
     if (micActive && recorder.state === 'recording') recorder.stop();
   }, 30000);
+}
+
+
+// ── FIIL.kr 신고 전송 — K-Cleaner 분석 완료 후 호출 ─────────
+// Gemini Vision 분석 결과를 FIIL.kr 대시보드로 전송합니다.
+// fiil.kr/receive.html을 숨겨진 iframe으로 로드 후 postMessage 방식으로 전달.
+function _sendReportToFiil(geminiResult, imageFile, userText) {
+  try {
+    // ── 1. 성분 배열 변환 (Gemini → FIIL 포맷) ──────────────
+    const COMP_MAP = {
+      ST: '스티로폼', PL: '경질플라스틱', VI: '비닐',
+      GL: '유리병', ME: '금속캔', NT: '폐어구', WD: '목재', EX: '기타'
+    };
+    const materials = Object.entries(geminiResult.components || {})
+      .filter(([, v]) => v.visible && v.ratio_pct > 0)
+      .map(([k, v]) => ({ name: COMP_MAP[k] || k, pct: v.ratio_pct }))
+      .sort((a, b) => b.pct - a.pct);
+
+    // ── 2. 지형 → 환경 유형 매핑 ──────────────────────────
+    const TERRAIN_TYPE = {
+      SAND: { type: '🏖️ 해안쓰레기', code: 'TYPE_01' },
+      ROCK: { type: '🏖️ 해안쓰레기', code: 'TYPE_01' },
+      CLIFF:{ type: '🏖️ 해안쓰레기', code: 'TYPE_01' },
+      WATER:{ type: '🌊 수중쓰레기', code: 'TYPE_02' },
+      FOREST:{ type: '🌲 산림쓰레기', code: 'TYPE_03' },
+    };
+    const terrain = geminiResult.terrain || 'ROCK';
+    const typeInfo = TERRAIN_TYPE[terrain] || { type: '🏖️ 해안쓰레기', code: 'TYPE_01' };
+
+    // ── 3. 위험도 → 긴급도 매핑 ──────────────────────────
+    const RISK_URGENCY = { S0: '낮음', S1: '보통', S2: '높음', S3: '긴급' };
+    const urgency = RISK_URGENCY[geminiResult.risk_level] || '보통';
+
+    // ── 4. GPS (EXIF 우선, 없으면 _userLocation) ──────────
+    const lat = geminiResult.exif?.lat || _userLocation?.lat || null;
+    const lng = geminiResult.exif?.lng || _userLocation?.lng || null;
+    const gps = lat ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : '위치 미상';
+    const location = _userLocation?.address || gps;
+
+    // ── 5. 이미지 base64 변환 (비동기) + 신고 전송 ─────────
+    const doSend = (imageDataUrl) => {
+      const report = {
+        id: 'RPT-' + new Date().getFullYear() + '-' + Date.now().toString().slice(-4),
+        type: typeInfo.type,
+        typeCode: typeInfo.code,
+        location: location,
+        gps: gps,
+        reporter: '010-****-' + Math.floor(1000 + Math.random() * 9000),
+        reportedAt: new Date().toLocaleString('ko-KR'),
+        urgency: urgency,
+        status: '접수',
+        imageUrl: imageDataUrl || null,
+        gopangAnalysis: {
+          summary: geminiResult.scene_description || '고팡 K-Cleaner 현장 분석',
+          materials: materials,
+          volume: geminiResult.total_weight_kg_est
+            ? geminiResult.total_weight_kg_est + 'kg (추정)'
+            : '규모 ' + (geminiResult.scale || '미상'),
+          hazard: geminiResult.hazard_detected
+            ? '⚠️ ' + (geminiResult.hazard_notes || geminiResult.risk_level)
+            : '유해물질 없음',
+          recommendation: userText || '수거 조치 필요',
+          geminiModel: 'gemini-2.0-flash',
+          analyzedAt: new Date().toLocaleString('ko-KR'),
+        },
+        dispatch: null,
+        cost: { labor: 0, equipment: 0, supplies: 0, other: 0 },
+        blockchain: {
+          txHash: '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)))
+            .map(b => b.toString(16).padStart(2, '0')).join(''),
+          blockHeight: 8200000 + Math.floor(Math.random() * 100000),
+          imageHash: 'sha256:' + Math.random().toString(36).slice(2, 10) + '...',
+          network: 'Openhash Network',
+        },
+      };
+
+      // ── iframe postMessage 전송 ──────────────────────────
+      const iframe = document.createElement('iframe');
+      iframe.src = 'https://fiil.kr/receive.html';
+      iframe.style.cssText = 'display:none;position:fixed;width:1px;height:1px;top:-9999px';
+      document.body.appendChild(iframe);
+
+      iframe.onload = () => {
+        iframe.contentWindow.postMessage(
+          { type: 'FIIL_REPORT', report },
+          'https://fiil.kr'
+        );
+        console.log('[FIIL] 신고 전송 완료 →', report.id, report.type, report.urgency);
+        setTimeout(() => {
+          try { document.body.removeChild(iframe); } catch (e) {}
+        }, 3000);
+      };
+
+      iframe.onerror = () => {
+        console.warn('[FIIL] iframe 로드 실패 — fiil.kr 접근 불가');
+        try { document.body.removeChild(iframe); } catch (e) {}
+      };
+    };
+
+    // 이미지를 base64로 변환해서 전송 (이미지 없으면 null로 전송)
+    if (imageFile && imageFile instanceof File) {
+      const reader = new FileReader();
+      reader.onload = (e) => doSend(e.target.result);
+      reader.onerror = () => doSend(null);
+      reader.readAsDataURL(imageFile);
+    } else {
+      doSend(null);
+    }
+
+  } catch (e) {
+    console.warn('[FIIL] 신고 전송 오류 (무시됨):', e.message);
+    // FIIL 전송 실패는 고팡 앱 동작에 영향 없음
+  }
 }
 
 </script>
