@@ -981,7 +981,8 @@
     <div class="setting-group">
       <div class="setting-label">API 엔드포인트</div>
       <select class="setting-field" id="setting-endpoint">
-        <option value="https://api.deepseek.com/v1">DeepSeek API</option>
+        <option value="https://gopang-proxy.tensor-city.workers.dev" selected>고팡 프록시 (보안 권장)</option>
+        <option value="https://api.deepseek.com/v1">DeepSeek API (직접)</option>
         <option value="https://api.openai.com/v1">OpenAI API</option>
         <option value="https://api.anthropic.com/v1">Anthropic API</option>
         <option value="custom">직접 입력</option>
@@ -1052,8 +1053,29 @@ if ('serviceWorker' in navigator) {
 
       // ★ SW가 교체 완료(controllerchange) → 자동 새로고침
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('[PWA] 새 버전 감지 — 자동 새로고침');
+        console.log('[PWA] 새 버전 적용 — 자동 새로고침');
         window.location.reload();
+      });
+
+      // ★ 앱 시작 시 이미 waiting 중인 SW가 있으면 즉시 배너 표시
+      //    (앱을 껐다 켰을 때 이미 다운로드된 버전이 대기 중인 경우)
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        console.log('[PWA] 시작 시 대기 중인 새 버전 감지 → 배너 표시');
+        _showUpdateBanner();
+      }
+
+      // ★ 앱이 포그라운드로 돌아올 때마다 새 버전 즉시 확인
+      //    (웹앱은 24시간 캐시 주기를 기다리지 않고 강제 체크)
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          reg.update().then(() => {
+            console.log('[PWA] 포그라운드 복귀 — SW 업데이트 체크');
+            // update() 후 waiting 상태가 새로 생기면 배너 표시
+            if (reg.waiting && navigator.serviceWorker.controller) {
+              _showUpdateBanner();
+            }
+          }).catch(() => {});
+        }
       });
 
     } catch (err) {
@@ -1247,8 +1269,8 @@ const USER_GUID = (() => {
 
 // ── 설정 ────────────────────────────────────────────────
 const CFG = {
-  apiKey:   'sk-e4a6f005aecf43d4aa60e77bb71de14c',
-  endpoint: 'https://api.deepseek.com/v1',
+  apiKey:   '',   // ★ API 키는 Cloudflare Worker에서 관리 (보안)
+  endpoint: 'https://gopang-proxy.tensor-city.workers.dev',
   model:    'deepseek-v4-pro',
   system:   `# AI Secretary Prompt SP-00 v9.0
 # 문서코드: SP-00 | 작성: AI City Inc. · 도영민
@@ -2177,17 +2199,20 @@ async function callAI(userText, imageFile = null) {
   // ── 엔드포인트 + API Key 결정 ────────────────────────────
   const epSel   = document.getElementById('setting-endpoint');
   const savedKey = document.getElementById('setting-apikey')?.value?.trim();
-  const apiKey  = (savedKey && savedKey.startsWith('sk-')) ? savedKey : CFG.apiKey;
+  // Worker 프록시 사용 시: API 키 불필요 (Worker가 환경변수로 관리)
+  // 직접 API 사용 시: 설정에서 입력한 키 또는 CFG.apiKey 사용
+  const isProxy  = CFG.endpoint.includes('workers.dev');
+  const apiKey   = isProxy ? 'proxy' : ((savedKey && savedKey.startsWith('sk-')) ? savedKey : CFG.apiKey);
 
-  let baseUrl = CFG.endpoint;  // 기본값
-  if (epSel && epSel.value === 'custom') {
+  let baseUrl = CFG.endpoint;
+  if (document.getElementById('setting-endpoint')?.value === 'custom') {
     const customUrl = document.getElementById('custom-endpoint-url')?.value?.trim();
     if (customUrl) baseUrl = customUrl;
   }
   // 끝 슬래시 제거
   baseUrl = baseUrl.replace(/\/+$/, '');
 
-  console.log(`[AI] 호출 → ${baseUrl}/chat/completions | 모델: ${CFG.model} | Key: ${apiKey.slice(0,8)}...`);
+  console.log(`[AI] 호출 → ${baseUrl}/chat/completions | 모델: ${CFG.model} | ${isProxy ? '프록시(보안)' : 'Key: ' + apiKey.slice(0,8) + '...'}`);
 
   // ── 스트리밍 호출 ─────────────────────────────────────────
   try {
