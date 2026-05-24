@@ -3012,8 +3012,12 @@ async function _micStartMediaRecorder() {
 }
 
 
-// ── FIIL.kr 신고 전송 — K-Cleaner 분석 완료 후 호출 ─────────
-// geminiResult가 null이면 텍스트·GPS만으로 신고, null이 아니면 전체 분석 결과 포함
+// ── FIIL.kr 신고 전송 — Supabase 직접 저장 ─────────────────
+// localStorage/postMessage 방식 폐기 → Supabase REST API 사용
+// 어떤 브라우저에서도 동일한 DB에 저장/조회 가능
+const _SUPABASE_URL = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
+const _SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
+
 function _sendReportToFiil(geminiResult, imageFile, userText) {
   try {
     const COMP_MAP = {
@@ -3096,20 +3100,40 @@ function _sendReportToFiil(geminiResult, imageFile, userText) {
         },
       };
 
-      // ── iframe postMessage → fiil.kr/receive.html ─────────
-      const iframe = document.createElement('iframe');
-      iframe.src = 'https://fiil.kr/receive.html';
-      iframe.style.cssText = 'display:none;position:fixed;width:1px;height:1px;top:-9999px';
-      document.body.appendChild(iframe);
-      iframe.onload = () => {
-        iframe.contentWindow.postMessage({type:'FIIL_REPORT', report}, 'https://fiil.kr');
-        console.log('[FIIL] 신고 전송 →', report.id, report.type, report.urgency);
-        setTimeout(() => { try{document.body.removeChild(iframe);}catch(e){} }, 3000);
-      };
-      iframe.onerror = () => {
-        console.warn('[FIIL] iframe 로드 실패');
-        try{document.body.removeChild(iframe);}catch(e){}
-      };
+      // ── Supabase REST API 직접 저장 ──────────────────────────
+      fetch(_SUPABASE_URL + '/rest/v1/reports', {
+        method: 'POST',
+        headers: {
+          'apikey': _SUPABASE_KEY,
+          'Authorization': 'Bearer ' + _SUPABASE_KEY,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          id:          report.id,
+          type:        report.type,
+          type_code:   report.typeCode,
+          location:    report.location,
+          gps:         report.gps,
+          reporter:    report.reporter,
+          reported_at: report.reportedAt,
+          urgency:     report.urgency,
+          status:      report.status,
+          image_url:   report.imageUrl,
+          analysis:    report.gopangAnalysis,
+          dispatch:    report.dispatch,
+          cost:        report.cost,
+          blockchain:  report.blockchain
+        })
+      })
+      .then(res => {
+        if (res.ok || res.status === 201) {
+          console.log('[FIIL] ✅ Supabase 저장 완료 →', report.id, report.type, report.urgency);
+        } else {
+          res.text().then(t => console.warn('[FIIL] Supabase 오류:', res.status, t));
+        }
+      })
+      .catch(e => console.warn('[FIIL] 네트워크 오류:', e.message));
     };
 
     // 이미지 base64 변환 후 전송 (없으면 null)
