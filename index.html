@@ -140,15 +140,15 @@
     .top-bar {
       position: fixed;
       top: 0; left: 0; right: 0;
-      height: calc(52px + var(--safe-top));
+      height: calc(44px + var(--safe-top));
       padding-top: var(--safe-top);
       z-index: 100;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding-right: 18px;
-      padding-left: 18px;
-      gap: 10px;
+      padding-right: 14px;
+      padding-left: 14px;
+      gap: 8px;
       background: var(--header-mid);
       border-bottom: 1px solid rgba(255,255,255,0.06);
     }
@@ -371,33 +371,15 @@
     /* ── 하단 입력 영역 (Apple Messages / Claude.ai 스타일) */
     .input-dock {
       flex-shrink: 0;
-      padding: 8px 12px calc(20px + var(--safe-bottom));
+      padding: 6px 12px calc(16px + var(--safe-bottom));
       background: var(--header-bg);
       backdrop-filter: none;
       border-top: 1px solid rgba(255,255,255,0.08);
     }
 
-    /* 상태 바 (한 줄, 소형) */
-    .status-strip {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 0 4px 8px;
-      font-size: 11px;
-      color: rgba(255,255,255,0.55);
-      letter-spacing: 0.01em;
-    }
-    .status-dot {
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      background: var(--green);
-      flex-shrink: 0;
-    }
-    .status-strip code {
-      font-family: 'SF Mono', 'Menlo', monospace;
-      font-size: 10px;
-      color: var(--label-3);
-    }
+    /* 상태 바 — 숨김 처리 */
+    .status-strip { display: none; }
+    .status-dot   { display: none; }
 
     /* 입력 컨테이너 */
     .input-wrap {
@@ -426,22 +408,25 @@
     }
     .ia-btn {
       width: 30px; height: 30px;
-      border-radius: 50%;
+      border-radius: 6px;
       border: none;
       background: transparent;
-      color: rgba(255,255,255,0.55);
+      color: #718096;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       font-size: 16px;
       transition: color 0.12s, background 0.12s;
       -webkit-tap-highlight-color: transparent;
-      border-radius: 6px;
     }
-    .ia-btn:hover  { color: #fff; background: rgba(255,255,255,0.10); }
+    .ia-btn:hover  { color: var(--tint); background: var(--tint-dim); }
+    /* 흰 배경 입력창 안 아이콘 — 더 진하게 */
+    .input-wrap .ia-btn { color: #5A6778; }
+    .input-wrap .ia-btn:hover { color: var(--tint); background: var(--tint-dim); }
     .ia-btn:active { transform: scale(0.9); }
 
     /* 버전 선택 드롭다운 */
-    .version-select {
+    .version-select { display: none; }
+    ._version-select-orig {
       background: transparent;
       border: none;
       color: var(--label-2);
@@ -699,8 +684,8 @@
 
     /* ── 반응형 ─────────────────────────────────────────── */
     @media (min-width: 680px) {
-      .input-dock { padding: 8px 20% 28px; }
-      #message-list { padding: 60px 16% 16px; }
+      .input-dock { padding: 6px 20% calc(20px + var(--safe-bottom)); }
+      #message-list { padding: 52px 16% 16px; }
     }
   </style>
 </head>
@@ -745,6 +730,8 @@
 
   <!-- ── 상단 바 (빈 영역 + 우상단 버튼만) ───────────── -->
   <div class="top-bar">
+    <!-- 좌측 로고 -->
+    <div style="color:rgba(255,255,255,0.90);font-size:15px;font-weight:700;letter-spacing:-0.3px;flex:1">고팡</div>
     <!-- 홈 화면 설치 버튼 (미설치 시에만 표시) -->
     <button class="top-btn" id="btn-install" onclick="requestInstall()"
             title="홈 화면에 설치" style="display:none">
@@ -792,8 +779,8 @@
   <!-- ── 하단 입력 독 ───────────────────────────────── -->
   <div class="input-dock">
 
-    <!-- 상태 스트립 -->
-    <div class="status-strip">
+    <!-- 상태 스트립 (숨김) -->
+    <div class="status-strip" style="display:none">
       <div class="status-dot" id="status-dot"></div>
       <span id="status-text">PDV 암호화</span>
       <span>·</span>
@@ -2619,10 +2606,14 @@ function saveSettings() {
     CFG.endpoint = epVal;
   }
 
-  // 로컬 저장 (API key 제외)
+  // 로컬 저장 (API key 포함 — 강력 새로고침 후에도 유지)
   try {
     localStorage.setItem('gopang_cfg', JSON.stringify({
-      model: CFG.model, endpoint: CFG.endpoint, system: CFG.system
+      model:     CFG.model,
+      endpoint:  CFG.endpoint,
+      system:    CFG.system,
+      apiKey:    CFG.apiKey,
+      geminiKey: CFG.geminiKey,
     }));
   } catch {}
 
@@ -2640,11 +2631,12 @@ function loadSettings() {
   try {
     const saved = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
     if (saved.model) {
-      // 구버전 모델명이면 자동 교정
       CFG.model = MODEL_MIGRATION[saved.model] ?? saved.model;
     }
-    if (saved.endpoint) CFG.endpoint = saved.endpoint;
-    if (saved.system)   CFG.system   = saved.system;
+    if (saved.endpoint)  CFG.endpoint  = saved.endpoint;
+    if (saved.system)    CFG.system    = saved.system;
+    if (saved.apiKey)    CFG.apiKey    = saved.apiKey;    // API Key 복원
+    if (saved.geminiKey) CFG.geminiKey = saved.geminiKey; // Gemini Key 복원
   } catch {}
 }
 
