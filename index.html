@@ -2781,12 +2781,27 @@ async function callAI(userText, imageFile = null) {
         ? intentMatch[1].trim()
         : '환경 신고 지시로 이해했습니다.';
 
-      // 2. 위치 정보
-      const locStr = _userLocation?.address
-        || (_userLocation?.lat ? `${_userLocation.lat.toFixed(4)}°N, ${_userLocation.lng.toFixed(4)}°E` : null)
-        || '위치 미상';
+      // 2. 위치 정보 — 역지오코딩 우선, 없으면 좌표 사용
+      let locStr = _userLocation?.address || null;
 
-      // 3. 메시지 창에 간략 접수 확인만 표시
+      // 역지오코딩이 아직 없고 좌표가 있으면 즉시 시도
+      if (!locStr && _userLocation?.lat) {
+        try {
+          const geo = await _reverseGeocode(_userLocation.lat, _userLocation.lng);
+          if (geo?.jibunAddress) {
+            locStr = geo.jibunAddress;
+            _userLocation.address = locStr;
+          }
+        } catch(e) {}
+      }
+      // 그래도 없으면 좌표 표시
+      if (!locStr) {
+        locStr = _userLocation?.lat
+          ? `${_userLocation.lat.toFixed(4)}°N, ${_userLocation.lng.toFixed(4)}°E`
+          : '위치 미상';
+      }
+
+      // 3. 메시지 창에 간략 접수 확인 표시
       appendBubble('ai',
         `${intentSummary}\n\n` +
         `📍 ${locStr}\n` +
@@ -2797,10 +2812,34 @@ async function callAI(userText, imageFile = null) {
       // 4. 진행 상황 시작 (1단계: 접수)
       _progressStart(intentSummary, locStr, _lastFiilReportId);
 
-      // 5. 2단계(분석) → 3단계(기관전달) → 4단계(완료) 순차 진행
-      setTimeout(() => _progressNext(), 1500);   // 분석 중
-      setTimeout(() => _progressNext(), 4000);   // 기관 전달
-      setTimeout(() => _progressNext(), 7000);   // 완료
+      // 5. 진행 단계 + 순차 메시지 시뮬레이션 (10초 간격)
+      const _delay = (ms) => new Promise(r => setTimeout(r, ms));
+      (async () => {
+        // 1단계: 접수 완료 (즉시)
+        await _delay(10000);
+        appendBubble('ai', '🚁 드론이 현장 확인을 위해 비행 중입니다.');
+        _progressNext();  // 2단계: 현장 분석 중
+
+        await _delay(10000);
+        appendBubble('ai', '✅ 현장 확인 완료');
+
+        await _delay(10000);
+        appendBubble('ai', '🚨 대응팀 출동 준비');
+        _progressNext();  // 3단계: 관할 기관 전달
+
+        await _delay(10000);
+        appendBubble('ai', '🚐 대응팀 출동');
+
+        await _delay(10000);
+        appendBubble('ai', '🧹 처리 완료');
+
+        await _delay(10000);
+        appendBubble('ai', '📸 처리 완료 후 사진\n\n[ 현장 정리 완료 사진이 기록되었습니다. ]');
+        _progressNext();  // 4단계: 처리 완료
+
+        await _delay(10000);
+        appendBubble('ai', '🙏 감사합니다.\n더욱 깨끗한 제주를 만들어 가겠습니다.');
+      })();
     }
 
     // ── K-Cleaner 응답에서 성분·비용 파싱 후 Supabase 업데이트 ──
