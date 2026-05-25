@@ -730,8 +730,16 @@
 
   <!-- ── 상단 바 (빈 영역 + 우상단 버튼만) ───────────── -->
   <div class="top-bar">
-    <!-- 좌측 로고 -->
-    <div style="color:rgba(255,255,255,0.90);font-size:15px;font-weight:700;letter-spacing:-0.3px;flex:1">고팡</div>
+    <!-- 좌측 로고 / 진행 상황 버튼 -->
+    <div id="top-logo" onclick="_onLogoTap()"
+         style="color:rgba(255,255,255,0.90);font-size:15px;font-weight:700;
+                letter-spacing:-0.3px;flex:1;cursor:pointer;
+                display:flex;align-items:center;gap:6px;user-select:none;">
+      <span id="top-logo-text">고팡</span>
+      <span id="top-progress-dot" style="display:none;width:7px;height:7px;
+            border-radius:50%;background:var(--yellow);
+            animation:pulse-dot 1.5s ease-in-out infinite;flex-shrink:0;"></span>
+    </div>
     <!-- 홈 화면 설치 버튼 (미설치 시에만 표시) -->
     <button class="top-btn" id="btn-install" onclick="requestInstall()"
             title="홈 화면에 설치" style="display:none">
@@ -818,6 +826,17 @@
           </svg>
         </button>
 
+        <!-- 📷 카메라 -->
+        <button class="ia-btn" onclick="triggerCamera()" title="카메라 촬영">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8
+                     a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </button>
+
         <!-- 마이크 -->
         <button class="ia-btn" id="btn-mic" onclick="toggleMic()" title="음성 입력">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -849,6 +868,24 @@
     <input type="file" id="file-input" style="display:none"
            accept="image/*,.pdf,.txt,.docx"
            onchange="handleFileSelect(event)"/>
+    <input type="file" id="camera-input" style="display:none"
+           accept="image/*"
+           capture="environment"
+           onchange="handleFileSelect(event)"/>
+  </div>
+</div>
+
+<!-- ── 진행 상황 시트 ─────────────────────────────────────── -->
+<div class="settings-overlay" id="progress-overlay" onclick="_closeProgressSheet(event)">
+  <div class="settings-sheet" style="max-height:70vh;overflow-y:auto;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="progress-sheet-title">진행 상황</div>
+    <div id="progress-steps" style="margin-bottom:20px;"></div>
+    <button class="sheet-save"
+            style="background:var(--bg-subtle);color:var(--label-2);border:1px solid var(--sep-strong);"
+            onclick="document.getElementById('progress-overlay').classList.remove('open')">
+      닫기
+    </button>
   </div>
 </div>
 
@@ -1308,6 +1345,7 @@ const USER_GUID = (() => {
 const CFG = {
   apiKey:    '',   // ★ API 키는 Cloudflare Worker에서 관리 (보안)
   geminiKey: '',   // Gemini Vision API Key (이미지 분석용)
+  kakaoKey:  '66648ca49f126d8752b33d542789ac56',   // 카카오 REST API Key (역지오코딩 — GPS→주소 변환용)
   endpoint:  'https://gopang-proxy.tensor-city.workers.dev',
   model:     'deepseek-v4-pro',
   system:   `# AI Secretary Prompt SP-00 v9.0
@@ -1458,6 +1496,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.warn('[UI] 고팡 백엔드 없이 AI 전용 모드:', e.message);
   }
   loadSettings();
+
+  // ── 초기 AI 비서 메시지 ───────────────────────────────
+  _showWelcomeMessage();
   // localStorage에 남은 구버전 모델명을 즉시 교정
   if (MODEL_MIGRATION[CFG.model]) {
     CFG.model = MODEL_MIGRATION[CFG.model];
@@ -1622,6 +1663,20 @@ function _updateLocationInPrompt() {
   let locStr = '';
   if (_userLocation.source === 'GPS' && _userLocation.lat) {
     locStr = `GPS좌표(${_userLocation.lat.toFixed(5)},${_userLocation.lng.toFixed(5)}) 정확도±${Math.round(_userLocation.accuracy)}m`;
+    // ★ 카카오 역지오코딩 — GPS 좌표 → 행정구역 주소 (비동기, 완료 후 재주입)
+    if (CFG.kakaoKey && !_userLocation.address) {
+      _reverseGeocode(_userLocation.lat, _userLocation.lng).then(geo => {
+        if (geo?.jibunAddress) {
+          _userLocation.address = geo.jibunAddress;
+          _userLocation.region  = geo.region;
+          console.log('[GEO] GPS 역지오코딩 완료:', geo.jibunAddress);
+          // system 프롬프트에 주소 즉시 반영
+          if (history.length <= 1) {
+            history[0] && (history[0].content = CFG.system + _buildLocNote());
+          }
+        }
+      }).catch(() => {});
+    }
   } else if (_userLocation.source === 'PDV' && _userLocation.address) {
     locStr = `PDV주소:${_userLocation.address}`;
   } else if (_userLocation.source === 'IP' && _userLocation.address) {
@@ -1645,15 +1700,207 @@ function _buildLocNote() {
     return '\n\n[위치 정보 없음 — GPS 권한 미허용. 임의 추정 절대 금지.]';
   }
   const loc = _userLocation;
-  const detail =
-    loc.source === 'GPS' && loc.lat
-      ? `GPS좌표: ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)} (정확도 ±${Math.round(loc.accuracy||0)}m)`
-      : loc.source === 'PDV' && loc.address
-        ? `PDV등록주소: ${loc.address}`
-        : loc.source === 'IP' && loc.address
-          ? `IP기반위치(정확도 낮음 — 시/도 수준): ${loc.address}`
-          : '위치정보 없음 — 임의 추정 절대 금지.';
+  let detail;
+  if (loc.source === 'GPS' && loc.lat) {
+    detail = `GPS좌표: ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)} (정확도 ±${Math.round(loc.accuracy||0)}m)`;
+    // 역지오코딩 주소가 이미 있으면 함께 출력
+    if (loc.address) detail += `\n행정구역 주소: ${loc.address}`;
+    if (loc.region)  detail += `\n읍·면·동: ${loc.region.sido} ${loc.region.sigungu} ${loc.region.eupmyeon} ${loc.region.beonji}`;
+  } else if (loc.source === 'PDV' && loc.address) {
+    detail = `PDV등록주소: ${loc.address}`;
+  } else if (loc.source === 'IP' && loc.address) {
+    detail = `IP기반위치(정확도 낮음 — 시/도 수준): ${loc.address}`;
+  } else {
+    detail = '위치정보 없음 — 임의 추정 절대 금지.';
+  }
   return `\n\n[현재 위치 — 반드시 이 정보만 사용할 것, 임의로 다른 도시 추정 절대 금지]\n${detail}`;
+}
+
+// ══════════════════════════════════════════════════════════
+// 진행 상황 관리 시스템
+// ══════════════════════════════════════════════════════════
+
+// 단계 정의 (신고자 기준 — 내부 분석 단계 미표시)
+const PROGRESS_STEPS_CLN = [
+  { id: 'accept',   icon: '📥', label: '신고 접수' },
+  { id: 'analyze',  icon: '🔍', label: '현장 분석 중' },
+  { id: 'transfer', icon: '🏛️', label: '관할 기관 전달' },
+  { id: 'done',     icon: '✅', label: '처리 완료' },
+];
+
+// 현재 진행 중인 작업 상태
+let _progressJob = null;
+// {
+//   id: string,            // 신고 ID
+//   steps: [...],          // 단계 배열
+//   currentStep: number,   // 현재 단계 인덱스
+//   intent: string,        // 이해한 지시 내용
+//   location: string,      // 위치
+//   done: boolean,
+// }
+
+// 진행 상황 시작
+function _progressStart(intent, location, reportId) {
+  _progressJob = {
+    id:          reportId || ('RPT-' + Date.now()),
+    steps:       PROGRESS_STEPS_CLN,
+    currentStep: 0,
+    intent,
+    location,
+    done:        false,
+  };
+  _progressSetStep(0);
+  _topLogoSetProgress(true);
+}
+
+// 특정 단계로 진행
+function _progressSetStep(idx) {
+  if (!_progressJob) return;
+  _progressJob.currentStep = idx;
+  _progressJob.done = (idx >= _progressJob.steps.length - 1);
+  _renderProgressSteps();
+  if (_progressJob.done) {
+    setTimeout(() => _topLogoSetProgress(false), 3000);
+  }
+}
+
+// 다음 단계로 전진
+function _progressNext() {
+  if (!_progressJob || _progressJob.done) return;
+  _progressSetStep(_progressJob.currentStep + 1);
+}
+
+// 상단 로고 상태 전환
+function _topLogoSetProgress(active) {
+  const textEl = document.getElementById('top-logo-text');
+  const dotEl  = document.getElementById('top-progress-dot');
+  if (!textEl) return;
+  if (active) {
+    textEl.textContent = '⏳ 진행 상황';
+    textEl.style.color = 'rgba(255,255,255,0.95)';
+    if (dotEl) dotEl.style.display = 'inline-block';
+  } else {
+    textEl.textContent = '고팡';
+    textEl.style.color = 'rgba(255,255,255,0.90)';
+    if (dotEl) dotEl.style.display = 'none';
+    _progressJob = null;
+  }
+}
+
+// 로고 탭 핸들러
+function _onLogoTap() {
+  if (!_progressJob) return;   // 진행 중 없으면 무반응
+  _renderProgressSteps();
+  document.getElementById('progress-overlay').classList.add('open');
+}
+
+// 시트 닫기 (배경 탭)
+function _closeProgressSheet(e) {
+  if (e.target.id === 'progress-overlay')
+    document.getElementById('progress-overlay').classList.remove('open');
+}
+
+// 진행 단계 렌더링
+function _renderProgressSteps() {
+  if (!_progressJob) return;
+  const el = document.getElementById('progress-steps');
+  const titleEl = document.getElementById('progress-sheet-title');
+  if (!el) return;
+
+  if (titleEl) {
+    titleEl.textContent = _progressJob.intent || '진행 상황';
+  }
+
+  let html = '';
+
+  // 위치 표시
+  if (_progressJob.location) {
+    html += `<div style="font-size:12px;color:var(--label-3);
+                          margin-bottom:16px;padding:8px 12px;
+                          background:var(--bg-subtle);border-radius:10px;">
+               📍 ${_progressJob.location}
+             </div>`;
+  }
+
+  // 단계 목록
+  _progressJob.steps.forEach((step, i) => {
+    const current = i === _progressJob.currentStep;
+    const done    = i < _progressJob.currentStep;
+    const pending = i > _progressJob.currentStep;
+
+    const dotColor = done    ? 'var(--green)'
+                   : current ? 'var(--yellow)'
+                   :            'var(--sep-strong)';
+    const labelColor = pending ? 'var(--label-3)' : 'var(--label)';
+    const fontWeight = current ? '600' : '400';
+
+    html += `
+      <div style="display:flex;align-items:center;gap:14px;
+                  padding:12px 4px;position:relative;">
+        <!-- 연결선 (마지막 제외) -->
+        ${i < _progressJob.steps.length - 1 ? `
+          <div style="position:absolute;left:17px;top:36px;
+                      width:2px;height:calc(100% - 12px);
+                      background:${done ? 'var(--green)' : 'var(--sep-strong)'};
+                      border-radius:1px;"></div>` : ''}
+        <!-- 상태 원 -->
+        <div style="width:34px;height:34px;border-radius:50%;
+                    background:${dotColor};flex-shrink:0;
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:16px;z-index:1;
+                    ${current ? 'box-shadow:0 0 0 4px rgba(255,214,10,0.2);' : ''}">
+          ${done ? '✓' : step.icon}
+        </div>
+        <!-- 텍스트 -->
+        <div>
+          <div style="font-size:15px;font-weight:${fontWeight};
+                      color:${labelColor};">${step.label}</div>
+          ${current ? `<div style="font-size:12px;color:var(--yellow);
+                                    margin-top:2px;">진행 중…</div>` : ''}
+          ${done    ? `<div style="font-size:12px;color:var(--green);
+                                    margin-top:2px;">완료</div>` : ''}
+        </div>
+      </div>`;
+  });
+
+  // 신고 ID
+  html += `<div style="font-size:11px;color:var(--label-3);
+                        margin-top:16px;text-align:right;">
+             ${_progressJob.id}
+           </div>`;
+
+  el.innerHTML = html;
+}
+
+// ── 초기 AI 비서 환영 메시지 ────────────────────────────
+function _showWelcomeMessage() {
+  const list = document.getElementById('message-list');
+  if (!list) return;
+
+  // 발신자 레이블 (AI 비서)
+  const label = document.createElement('div');
+  label.style.cssText =
+    'font-size:11px;color:var(--label-3);margin:8px 16px 2px;' +
+    'letter-spacing:0.02em;font-weight:500;';
+  label.textContent = 'AI 비서';
+
+  // 메시지 버블 행
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble bubble-ai';
+  bubble.innerHTML =
+    '지시 바랍니다.<br><br>' +
+    '📎 <b>사진이나 파일</b>을 첨부하거나<br>' +
+    '✏️ <b>요청 메시지</b>를 입력하거나<br>' +
+    '🔍 <b>상단 검색 버튼</b>으로 다른 사용자<br>' +
+    '　　(사람·기관·사물 등)를 검색·호출하세요.<br><br>' +
+    '<span style="color:var(--label-3);font-size:13px;">지시 이행 상황은 상단에 표시됩니다.</span>';
+
+  row.appendChild(bubble);
+  list.appendChild(label);
+  list.appendChild(row);
 }
 
 // ── 입력 필드 ───────────────────────────────────────────
@@ -1663,11 +1910,12 @@ function autoResize(el) {
 }
 function updateSendBtn() {
   const v = document.getElementById('msg-input').value.trim();
-  document.getElementById('send-btn').disabled = !v;
+  const hasInput = !!(v || attachFile);
+  document.getElementById('send-btn').disabled = !hasInput;
 
   // 입력 시작 시 AI 자동 활성화
   // (대화 상대 미지정 상태 = aiActive가 false인 상태)
-  if (v && !aiActive) {
+  if (hasInput && !aiActive) {
     activateAI(true);  // silent=true: 활성화 메시지 미표시
   }
 }
@@ -1847,6 +2095,11 @@ function _geminiResultToText(result, userText) {
     .map(([k, v]) => `${k}(${v.ratio_pct}%·${v.weight_kg_est||'?'}kg)`)
     .join(', ');
 
+  // 사용자가 텍스트를 입력하지 않은 경우 — 이미지만으로 의도 자율 파악
+  const intentGuide = userText
+    ? `사용자원문: ${userText}\n위 Gemini 분석 결과를 바탕으로 K-Cleaner v1.2 방법론에 따라 수거견적서와 환경신고서를 작성하라.`
+    : `사용자원문: (없음 — 텍스트 없이 이미지만 전송됨)\n\n[자율 의도 파악 지시]\n사용자가 별도 설명 없이 이미지만 전송했다. 아래 순서로 처리하라:\n① 이미지 내용에서 사용자의 목적·요구를 스스로 판단한다.\n② 환경 오염·쓰레기 현장 사진이면 → K-Cleaner v1.2 신고·견적 절차를 자동 실행한다.\n③ 환경 외 사진(음식·문서·사람·사물 등)이면 → 사진에서 파악한 맥락에 맞는 적절한 도움을 제공한다.\n④ 불명확한 경우에만 한 가지 확인 질문을 한다. 단, 환경 신고 가능성이 조금이라도 있으면 먼저 신고·견적을 진행하고 추가 확인은 이후에 한다.`;
+
   return `[Gemini Vision 현장 분석 결과 — SP-14-IMG-v1.0]
 신뢰도: ${Math.round((result.confidence||0)*100)}% | 이미지품질: ${result.image_quality||'?'}
 규모: ${result.scale} | 지형: ${result.terrain} | 위험도: ${result.risk_level}
@@ -1857,8 +2110,7 @@ function _geminiResultToText(result, userText) {
 위험물감지: ${result.hazard_detected ? '⚠️ '+result.risk_level : '없음'}
 GPS(EXIF): ${result.exif?.lat ? result.exif.lat+', '+result.exif.lng : '없음'}
 ---
-사용자원문: ${userText||'(없음)'}
-위 Gemini 분석 결과를 바탕으로 K-Cleaner v1.2 방법론에 따라 수거견적서와 환경신고서를 작성하라.`;
+${intentGuide}`;
 }
 
 async function _extractExif(file) {
@@ -1958,6 +2210,50 @@ async function _extractExif(file) {
   });
 }
 
+// ── 카카오 역지오코딩 — GPS 좌표 → 행정구역 주소 변환 ──────────
+// API: https://dapi.kakao.com/v2/local/geo/coord2address.json
+// 반환: { roadAddress, jibunAddress, region } 또는 null
+async function _reverseGeocode(lat, lng) {
+  if (!CFG.kakaoKey || !lat || !lng) return null;
+  try {
+    const url = `https://dapi.kakao.com/v2/local/geo/coord2address.json` +
+                `?x=${lng}&y=${lat}&input_coord=WGS84`;
+    const res = await fetch(url, {
+      headers: { 'Authorization': `KakaoAK ${CFG.kakaoKey}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) {
+      console.warn('[GEO] 카카오 역지오코딩 오류:', res.status);
+      return null;
+    }
+    const data = await res.json();
+    const doc  = data.documents?.[0];
+    if (!doc) return null;
+
+    // 도로명 주소 (있으면 우선)
+    const road   = doc.road_address;
+    const jibun  = doc.address;
+
+    // 행정구역 상세 (읍·면·동·번지)
+    const region = jibun ? {
+      sido:     jibun.region_1depth_name,   // 시·도 (예: 제주특별자치도)
+      sigungu:  jibun.region_2depth_name,   // 시·군·구 (예: 서귀포시)
+      eupmyeon: jibun.region_3depth_name,   // 읍·면·동 (예: 대정읍)
+      beonji:   jibun.main_address_no + (jibun.sub_address_no ? '-' + jibun.sub_address_no : ''), // 번지
+      full:     jibun.address_name,         // 전체 지번 주소
+    } : null;
+
+    return {
+      roadAddress:  road  ? road.address_name  : null,
+      jibunAddress: jibun ? jibun.address_name : null,
+      region,
+    };
+  } catch (e) {
+    console.warn('[GEO] 역지오코딩 실패:', e.message);
+    return null;
+  }
+}
+
 // ── 날씨 정보 수집 (Open-Meteo 무료 API) ─────────────────────
 async function _fetchWeather(lat, lng) {
   try {
@@ -2031,9 +2327,10 @@ async function _fetchMarineWeather(lat, lng) {
 
 // ── 현장 기상 종합 보고서 생성 ────────────────────────────────
 async function _buildFieldReport(lat, lng, exif, isMarine = false) {
-  const [weather, marine] = await Promise.all([
+  const [weather, marine, geoAddr] = await Promise.all([
     _fetchWeather(lat, lng),
     isMarine ? _fetchMarineWeather(lat, lng) : Promise.resolve(null),
+    _reverseGeocode(lat, lng),   // ★ 역지오코딩 병렬 실행
   ]);
 
   const dirLabel = (deg) => {
@@ -2044,6 +2341,22 @@ async function _buildFieldReport(lat, lng, exif, isMarine = false) {
 
   let report = `\n\n[현장 기상 정보 — 수거 계획 반영 필수]\n`;
   report += `위치: ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E\n`;
+
+  // ── 역지오코딩 주소 출력 ──────────────────────────────────
+  if (geoAddr) {
+    if (geoAddr.roadAddress) {
+      report += `도로명: ${geoAddr.roadAddress}\n`;
+    }
+    if (geoAddr.jibunAddress) {
+      report += `지번: ${geoAddr.jibunAddress}\n`;
+    }
+    if (geoAddr.region) {
+      const r = geoAddr.region;
+      report += `행정구역: ${r.sido} ${r.sigungu} ${r.eupmyeon} ${r.beonji}\n`;
+      // _userLocation에도 주소 반영 (AI 위치 주입용)
+      if (_userLocation) _userLocation.address = geoAddr.jibunAddress || geoAddr.roadAddress;
+    }
+  }
 
   if (exif?.datetime) {
     const dt = exif.datetime.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
@@ -2146,16 +2459,19 @@ async function callAI(userText, imageFile = null) {
   // 조건 B: 이미지 첨부 + 명시적 쓰레기/환경 키워드 → CLN 자동 활성
   // ★ 모호한 지시어(여기/이거/현장 등)는 제외 — 쓰레기임을 명시해야 함
   const CLN_IMG_KEYWORDS = /쓰레기|폐기물|해양오염|투기|불법투기|폐어구|기름유출|오염물|환경오염|수거|정화|해양쓰레기|해안쓰레기/;
-  const shouldLoadExpert = userText && (
-    EXPERT_KEYWORDS.test(userText) ||
-    (imageFile && CLN_IMG_KEYWORDS.test(userText))
-  );
+  // 이미지만 전송(텍스트 없음)일 때도 expert(CLN) 판단 진입 — Gemini가 내용 파악
+  const shouldLoadExpert = imageFile
+    ? (userText ? (EXPERT_KEYWORDS.test(userText) || CLN_IMG_KEYWORDS.test(userText)) : true)
+    : (userText && EXPERT_KEYWORDS.test(userText));
 
   // 이미지 첨부 + CLN 관련 텍스트 → CLN 우선 처리
+  // 이미지만 전송(텍스트 없음) → CLN 기본 활성 (Gemini가 내용 판별)
   let forceCode = null;
-  if (imageFile && userText && CLN_IMG_KEYWORDS.test(userText)) {
-    forceCode = 'CLN';
-    console.log('[폭포수 2단계] 이미지+텍스트 → CLN K-Cleaner 자동 감지');
+  if (imageFile) {
+    if (!userText || CLN_IMG_KEYWORDS.test(userText)) {
+      forceCode = 'CLN';
+      console.log('[폭포수 2단계] 이미지 첨부 → CLN K-Cleaner 자동 감지');
+    }
   }
 
   if (shouldLoadExpert) {
@@ -2302,19 +2618,26 @@ async function callAI(userText, imageFile = null) {
             type: 'image_url',
             image_url: { url: `data:${mimeType};base64,${base64}` },
           });
+          // 텍스트 없이 이미지만 전송 시 — 의도 자율 파악 지시
+          if (!userText) {
+            userContent.push({
+              type: 'text',
+              text: '[텍스트 없이 이미지만 전송됨]\n사용자의 의도를 이미지에서 직접 파악하여 처리하라.\n환경 오염·쓰레기 현장이면 K-Cleaner v1.2 신고·견적을 자동 실행하고,\n그 외 이미지는 내용에 맞는 적절한 도움을 제공하라.\n불명확할 때만 한 가지 확인 질문을 한다.',
+            });
+          }
         } else {
           // DeepSeek 형식: base64를 텍스트로 포함
           // DeepSeek API는 image_url 미지원 → base64 데이터를 직접 전달
           userContent = [];
           if (userText) userContent.push({ type: 'text', text: userText });
+          // 텍스트 없이 이미지만 전송 시 — 의도 자율 파악 지시
+          const imgIntentNote = userText
+            ? ''
+            : '\n[텍스트 없이 이미지만 전송됨] 사용자 의도를 이미지에서 직접 파악하여 처리하라. 환경 오염·쓰레기 현장이면 K-Cleaner v1.2 신고·견적 자동 실행. 그 외는 내용에 맞는 도움 제공. 불명확할 때만 한 가지 확인 질문.';
           userContent.push({
             type: 'text',
-            text: `[이미지 첨부됨 — base64 데이터: data:${mimeType};base64,${base64.slice(0,100)}... (${Math.round(base64.length*0.75/1024)}KB)]\n이 이미지를 분석해 주세요.`,
+            text: `[이미지 첨부됨 — base64 데이터: data:${mimeType};base64,${base64.slice(0,100)}... (${Math.round(base64.length*0.75/1024)}KB)]\n이 이미지를 분석해 주세요.${imgIntentNote}`,
           });
-        }
-
-        if (!userText && userContent[userContent.length-1]?.text?.includes('분석') === false) {
-          userContent.push({ type: 'text', text: '이 이미지를 분석해 주세요.' });
         }
       } catch (e) {
         hideTyping();
@@ -2402,7 +2725,10 @@ async function callAI(userText, imageFile = null) {
 
     // ── SSE 스트림 수신 + 실시간 렌더링 ─────────────────────
     hideTyping();
-    const bubble = _createStreamBubble();  // 빈 버블 미리 생성
+
+    // CLN 신고: 스트리밍을 메시지 창에 표시하지 않고 백그라운드 수집
+    const isCLNReport = (expertLoaded && detectedCode === 'CLN');
+    const bubble = isCLNReport ? null : _createStreamBubble();
     const reader  = res.body.getReader();
     const decoder = new TextDecoder();
     let   fullReply = '';
@@ -2414,7 +2740,7 @@ async function callAI(userText, imageFile = null) {
 
       buf += decoder.decode(value, { stream: true });
       const lines = buf.split('\n');
-      buf = lines.pop();  // 마지막 불완전 라인은 다음 청크에 붙임
+      buf = lines.pop();
 
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
@@ -2422,7 +2748,6 @@ async function callAI(userText, imageFile = null) {
         if (payload === '[DONE]') break;
         try {
           const chunk = JSON.parse(payload);
-          // 마지막 청크에 usage 포함 (stream_options.include_usage)
           if (chunk.usage) {
             const u = chunk.usage;
             const cached = u.prompt_tokens_details?.cached_tokens ?? 0;
@@ -2431,10 +2756,10 @@ async function callAI(userText, imageFile = null) {
           const delta = chunk.choices?.[0]?.delta?.content ?? '';
           if (delta) {
             fullReply += delta;
-            _updateStreamBubble(bubble, fullReply);
+            // CLN 신고가 아닐 때만 실시간 렌더링
+            if (bubble) _updateStreamBubble(bubble, fullReply);
           }
         } catch (parseErr) {
-          // 파싱 실패 청크 — [DONE] 이후 빈 줄 등 정상적으로 발생할 수 있음
           if (payload && payload !== '[DONE]') {
             console.warn('[Stream] 파싱 실패:', payload.slice(0, 80));
           }
@@ -2444,10 +2769,39 @@ async function callAI(userText, imageFile = null) {
 
     if (!fullReply) fullReply = '(응답 없음)';
     console.log(`[AI] 응답 완료 — ${fullReply.length}자`);
-    // K-Cleaner Vision 임시 모델 전환 복귀
     if (CFG._modelOverride) { CFG.model = CFG._modelOverride; CFG._modelOverride = null; }
     history.push({ role: 'assistant', content: fullReply });
-    bubble.classList.remove('streaming');
+    if (bubble) bubble.classList.remove('streaming');
+
+    // ── CLN 신고: 간략 메시지 표시 + 진행 상황 시작 ────────────
+    if (isCLNReport) {
+      // 1. AI 응답에서 "이해한 지시" 추출 (첫 1~2문장)
+      const intentMatch = fullReply.match(/^([^\n.。]{10,80}[.。\n]?)/);
+      const intentSummary = intentMatch
+        ? intentMatch[1].trim()
+        : '환경 신고 지시로 이해했습니다.';
+
+      // 2. 위치 정보
+      const locStr = _userLocation?.address
+        || (_userLocation?.lat ? `${_userLocation.lat.toFixed(4)}°N, ${_userLocation.lng.toFixed(4)}°E` : null)
+        || '위치 미상';
+
+      // 3. 메시지 창에 간략 접수 확인만 표시
+      appendBubble('ai',
+        `${intentSummary}\n\n` +
+        `📍 ${locStr}\n` +
+        `신고가 접수되었습니다.`,
+        false
+      );
+
+      // 4. 진행 상황 시작 (1단계: 접수)
+      _progressStart(intentSummary, locStr, _lastFiilReportId);
+
+      // 5. 2단계(분석) → 3단계(기관전달) → 4단계(완료) 순차 진행
+      setTimeout(() => _progressNext(), 1500);   // 분석 중
+      setTimeout(() => _progressNext(), 4000);   // 기관 전달
+      setTimeout(() => _progressNext(), 7000);   // 완료
+    }
 
     // ── K-Cleaner 응답에서 성분·비용 파싱 후 Supabase 업데이트 ──
     if (_lastFiilReportId && /K-Cleaner|CLN|성분|수거비|처리비|합.*계/.test(fullReply)) {
@@ -2564,9 +2918,9 @@ function activateAI(silent = false) {
 
 // ── 설정 패널 ───────────────────────────────────────────
 function openSettings() {
-  document.getElementById('setting-apikey').value   = CFG.apiKey;
+  document.getElementById('setting-apikey').value     = CFG.apiKey;
   document.getElementById('setting-gemini-key').value = CFG.geminiKey;
-  document.getElementById('setting-system').value   = CFG.system;
+  document.getElementById('setting-system').value     = CFG.system;
   const modelSel = document.getElementById('setting-model');
   if (modelSel) modelSel.value = CFG.model;
   const epSel = document.getElementById('setting-endpoint');
@@ -2643,8 +2997,9 @@ function loadSettings() {
     }
     if (saved.endpoint)  CFG.endpoint  = saved.endpoint;
     if (saved.system)    CFG.system    = saved.system;
-    if (saved.apiKey)    CFG.apiKey    = saved.apiKey;    // API Key 복원
-    if (saved.geminiKey) CFG.geminiKey = saved.geminiKey; // Gemini Key 복원
+    if (saved.apiKey)    CFG.apiKey    = saved.apiKey;
+    if (saved.geminiKey) CFG.geminiKey = saved.geminiKey;
+    // kakaoKey는 CFG에 하드코딩 — localStorage 복원 불필요
   } catch {}
 }
 
@@ -2806,6 +3161,9 @@ function showGUID() {
 function triggerAttach() {
   document.getElementById('file-input').click();
 }
+function triggerCamera() {
+  document.getElementById('camera-input').click();
+}
 function handleFileSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -2841,12 +3199,14 @@ function handleFileSelect(e) {
 
   previewEl.style.display = 'flex';
   e.target.value = '';
+  updateSendBtn();   // ★ 파일 첨부만으로 전송 버튼 활성화
 }
 
 function removeAttach() {
   attachFile = null;
   document.getElementById('attach-preview').style.display = 'none';
   document.getElementById('attach-name').innerHTML = '';
+  updateSendBtn();   // ★ 첨부 제거 후 버튼 상태 재계산
 }
 
 
