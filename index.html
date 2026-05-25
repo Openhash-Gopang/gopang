@@ -1343,8 +1343,8 @@ const USER_GUID = (() => {
 
 // ── 설정 ────────────────────────────────────────────────
 const CFG = {
-  apiKey:    '',   // ★ API 키는 Cloudflare Worker에서 관리 (보안)
-  geminiKey: '',   // Gemini Vision API Key (이미지 분석용)
+  apiKey:    'sk-e4a6f005aecf43d4aa60e77bb71de14c',   // DeepSeek API Key (하드코딩)
+  geminiKey: 'AIzaSyDiytKUg_0MJVBM3gFYzTms7mO6Y2mhLT4',   // Gemini Vision API Key (하드코딩)
   kakaoKey:  '66648ca49f126d8752b33d542789ac56',   // 카카오 REST API Key (역지오코딩 — GPS→주소 변환용)
   endpoint:  'https://gopang-proxy.tensor-city.workers.dev',
   model:     'deepseek-v4-pro',
@@ -2918,8 +2918,9 @@ function activateAI(silent = false) {
 
 // ── 설정 패널 ───────────────────────────────────────────
 function openSettings() {
-  document.getElementById('setting-apikey').value     = CFG.apiKey;
-  document.getElementById('setting-gemini-key').value = CFG.geminiKey;
+  // API 키는 하드코딩 — 설정 화면에 별표로 마스킹 표시
+  document.getElementById('setting-apikey').value     = CFG.apiKey    ? '••••••••••••••••••••••••••••••••' : '';
+  document.getElementById('setting-gemini-key').value = CFG.geminiKey ? '••••••••••••••••••••••••••••••••' : '';
   document.getElementById('setting-system').value     = CFG.system;
   const modelSel = document.getElementById('setting-model');
   if (modelSel) modelSel.value = CFG.model;
@@ -2956,10 +2957,11 @@ function saveSettings() {
   const geminiKey = document.getElementById('setting-gemini-key').value.trim();
   const sys       = document.getElementById('setting-system').value.trim();
 
-  if (model)     CFG.model     = MODEL_MIGRATION[model] ?? model;
-  if (key)       CFG.apiKey    = key;
-  if (geminiKey) CFG.geminiKey = geminiKey;
-  if (sys)       CFG.system    = sys;
+  if (model) CFG.model = MODEL_MIGRATION[model] ?? model;
+  // 별표(마스킹) 그대로면 기존 키 유지, 실제 새 키 입력 시만 교체
+  if (key       && !key.startsWith('•'))       CFG.apiKey    = key;
+  if (geminiKey && !geminiKey.startsWith('•')) CFG.geminiKey = geminiKey;
+  if (sys) CFG.system = sys;
 
   if (epVal === 'custom') {
     const customUrl = document.getElementById('custom-endpoint-url').value.trim();
@@ -2997,8 +2999,9 @@ function loadSettings() {
     }
     if (saved.endpoint)  CFG.endpoint  = saved.endpoint;
     if (saved.system)    CFG.system    = saved.system;
-    if (saved.apiKey)    CFG.apiKey    = saved.apiKey;
-    if (saved.geminiKey) CFG.geminiKey = saved.geminiKey;
+    // 하드코딩 키가 있으면 localStorage 값으로 덮어쓰지 않음
+    if (saved.apiKey    && !CFG.apiKey)    CFG.apiKey    = saved.apiKey;
+    if (saved.geminiKey && !CFG.geminiKey) CFG.geminiKey = saved.geminiKey;
     // kakaoKey는 CFG에 하드코딩 — localStorage 복원 불필요
   } catch {}
 }
