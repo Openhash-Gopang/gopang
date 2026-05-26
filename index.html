@@ -2181,8 +2181,76 @@ async function _callGeminiVision(imageFile, geminiKey) {
   return JSON.parse(clean);
 }
 
+// ── SP-00-GEN: 전용 SP 없을 때 Gemini 범용 이미지 분석 ────
+async function _callGeminiGeneral(imageFile, geminiKey, userText) {
+  const systemPrompt =
+    `당신은 친절하고 유능한 AI 비서다. 사용자가 보낸 이미지를 분석하고 사용자의 요청을 파악하여 도움을 제공한다.\n` +
+    `반드시 아래 JSON 형식으로만 출력하라. JSON 외 텍스트 금지.\n` +
+    `{\n` +
+    `  "scene_type": "사진 유형",\n` +
+    `  "main_subject": "주요 피사체",\n` +
+    `  "objects_detected": ["감지된 물체 목록"],\n` +
+    `  "user_intent": "사용자 요청/의도 파악",\n` +
+    `  "response": "사용자 요청에 대한 친절한 답변 2~4문장",\n` +
+    `  "actions": ["권고 또는 안내 사항 1", "권고 또는 안내 사항 2"],\n` +
+    `  "urgency": "낮음|보통|높음|긴급",\n` +
+    `  "scene_description": "이미지 객관적 설명 2~3문장"\n` +
+    `}`;
+
+  const dataUrl  = await _fileToBase64(imageFile);
+  const mimeType = imageFile.type || 'image/jpeg';
+  const base64   = dataUrl.split(',')[1];
+
+  const url  = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+  const body = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents: [{
+      role: 'user',
+      parts: [
+        { inline_data: { mime_type: mimeType, data: base64 } },
+        { text: userText ? `사용자 메시지: "${userText}"\n이미지와 메시지를 함께 분석하여 JSON으로 응답하라.`
+                         : '이미지를 분석하여 사용자의 의도를 파악하고 JSON으로 응답하라.' }
+      ]
+    }],
+    generationConfig: { temperature: 0.2, maxOutputTokens: 1024 }
+  };
+
+  const res = await fetch(url, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(body),
+    signal:  AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`Gemini GEN API ${res.status}`);
+  const data  = await res.json();
+  const text  = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const clean = text.replace(/```json|```/g, '').trim();
+  const result = JSON.parse(clean);
+  result._sp_code   = 'SP-00-GEN';
+  result.risk_level = { '낮음':'S0','보통':'S1','높음':'S2','긴급':'S3' }[result.urgency] || 'S0';
+  return result;
+}
+
 // Gemini 분석 결과 → DeepSeek 전달용 요약 텍스트 변환
 function _geminiResultToText(result, userText) {
+  // SP-00-GEN: 범용 분석 결과 → 그대로 response 반환
+  if (result._sp_code === 'SP-00-GEN') {
+    const intentGuide = userText
+      ? `사용자원문: ${userText}`
+      : `(텍스트 없음 — 이미지만 전송)`;
+    return `[Gemini 범용 이미지 분석 결과 — SP-00-GEN]\n` +
+      `사진유형: ${result.scene_type||'미상'}\n` +
+      `주요피사체: ${result.main_subject||'미상'}\n` +
+      `감지물체: ${(result.objects_detected||[]).join(', ')||'없음'}\n` +
+      `사용자의도: ${result.user_intent||'미상'}\n` +
+      `AI응답: ${result.response||'없음'}\n` +
+      `권고사항: ${(result.actions||[]).join(' / ')||'없음'}\n` +
+      `설명: ${result.scene_description||''}\n` +
+      `---\n${intentGuide}\n` +
+      `위 분석을 바탕으로 사용자의 요청에 맞는 친절하고 실용적인 답변을 제공하라.`;
+  }
+
+  // SP-14-IMG: 해양쓰레기 분석 결과
   const c     = result.components || {};
   const parts = Object.entries(c)
     .filter(([, v]) => v.visible && v.ratio_pct > 0)
@@ -2658,6 +2726,25 @@ async function callAI(userText, imageFile = null) {
     } catch (e) {
       console.warn('[K-Cleaner] 파이프라인 오류:', e.message);
       document.querySelector('#message-list .bubble-ai:last-child')?.remove();
+    }
+  }
+
+  // ── SP 없는 이미지: Gemini 범용 분석 폴백 ─────────────────
+  // CLN이 아닌데 이미지가 있는 경우 → SP-00-GEN으로 Gemini 범용 분석
+  if (imageFile && CFG.geminiKey && !(expertLoaded && detectedCode === 'CLN')) {
+    try {
+      const _gpTimer = _showGeminiProgress();
+      console.log('[SP-00-GEN] Gemini 범용 이미지 분석 시작');
+      const genResult = await _callGeminiGeneral(imageFile, CFG.geminiKey, userText);
+      _hideGeminiProgress(_gpTimer);
+      if (genResult) {
+        const analysisText = _geminiResultToText(genResult, userText);
+        userContent = analysisText;
+        imageFile   = null;
+        console.log('[SP-00-GEN] Gemini 범용 분석 완료 → DeepSeek 전달');
+      }
+    } catch(e) {
+      console.warn('[SP-00-GEN] Gemini 범용 분석 실패:', e.message);
     }
   }
 
