@@ -479,6 +479,45 @@
     .send-btn:not(:disabled):hover  { background: var(--tint-hover); }
     .send-btn:not(:disabled):active { transform: scale(0.88); }
 
+    /* ── Gemini 분석 중 Progress Bar ───────────────────────── */
+    .gemini-progress-wrap {
+      width: 100%;
+      padding: 12px 14px;
+    }
+    .gemini-progress-label {
+      font-size: 13px;
+      color: var(--label-2);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .gemini-progress-label .gp-spinner {
+      width: 14px; height: 14px;
+      border: 2px solid var(--sep-strong);
+      border-top-color: var(--tint);
+      border-radius: 50%;
+      animation: gp-spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes gp-spin {
+      to { transform: rotate(360deg); }
+    }
+    .gemini-progress-bar-bg {
+      width: 100%;
+      height: 4px;
+      background: var(--sep-strong);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .gemini-progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--tint), #5E5CE6);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
     /* ── 설정 패널 ──────────────────────────────────────── */
     .settings-overlay {
       position: fixed; inset: 0;
@@ -2041,6 +2080,61 @@ function _fileToBase64(file) {
 // ── EXIF GPS·시간 추출 (순수 JS, 외부 라이브러리 불필요) ────
 // ── Gemini Vision 호출 — K-Cleaner 이미지 분석 전담 ─────────
 // SP-14-IMG v1.0 system prompt 기반으로 구조화된 JSON 반환
+// ── Gemini 분석 중 Progress Bar 헬퍼 ────────────────────────
+function _showGeminiProgress() {
+  const list = document.getElementById('message-list');
+  const row  = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.id = 'gemini-progress-row';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble bubble-ai gemini-progress-wrap';
+  bubble.innerHTML = `
+    <div class="gemini-progress-label">
+      <div class="gp-spinner"></div>
+      <span id="gemini-progress-text">📸 현장 이미지 분석 중…</span>
+    </div>
+    <div class="gemini-progress-bar-bg">
+      <div class="gemini-progress-bar-fill" id="gemini-progress-fill"></div>
+    </div>`;
+
+  row.appendChild(bubble);
+  list.appendChild(row);
+  list.scrollTop = list.scrollHeight;
+
+  // 15초 기준 자동 진행 (실제 완료 시 _hideGeminiProgress 호출)
+  let pct = 0;
+  const fill = document.getElementById('gemini-progress-fill');
+  const textEl = document.getElementById('gemini-progress-text');
+  const STEPS = [
+    { at: 10,  label: '📸 이미지 해상도 분석 중…' },
+    { at: 25,  label: '🔍 폐기물 성분 식별 중…' },
+    { at: 45,  label: '📊 규모 및 중량 추정 중…' },
+    { at: 65,  label: '📍 지형·위험도 판단 중…' },
+    { at: 80,  label: '✅ 분석 마무리 중…' },
+    { at: 92,  label: '✅ 분석 완료 직전…' },
+  ];
+
+  const timer = setInterval(() => {
+    pct = Math.min(pct + 1.2, 92);  // 최대 92%까지 (완료 시 100%)
+    if (fill) fill.style.width = pct + '%';
+    const step = STEPS.filter(s => pct >= s.at).pop();
+    if (step && textEl) textEl.textContent = step.label;
+    if (pct >= 92) clearInterval(timer);
+  }, 180);  // ~15초에 92% 도달
+
+  return timer;
+}
+
+function _hideGeminiProgress(timer) {
+  if (timer) clearInterval(timer);
+  const fill = document.getElementById('gemini-progress-fill');
+  if (fill) fill.style.width = '100%';
+  setTimeout(() => {
+    document.getElementById('gemini-progress-row')?.remove();
+  }, 400);  // 100% 도달 애니메이션 후 제거
+}
+
 async function _callGeminiVision(imageFile, geminiKey) {
   const GEMINI_VISION_SYSTEM = `당신은 환경 현장 사진을 분석하는 객관적 데이터 추출 전문가다.
 사진에서 보이는 사실만 수치로 추출한다. 판단·해석·견적·보고서 작성은 절대 하지 않는다.
@@ -2518,7 +2612,8 @@ async function callAI(userText, imageFile = null) {
     try {
       // ── Gemini Vision 호출 (이미지 분석 전담) ──────────────
       if (CFG.geminiKey) {
-        appendBubble('ai', '📸 Gemini Vision으로 현장 이미지 분석 중...');
+        // Progress Bar 표시 (기존 텍스트 버블 대신)
+        const _gpTimer = _showGeminiProgress();
         console.log('[K-Cleaner] Gemini Vision 호출 시작');
 
         let geminiResult = null;
@@ -2529,16 +2624,14 @@ async function callAI(userText, imageFile = null) {
           console.warn('[K-Cleaner] Gemini Vision 실패, 텍스트 전용 진행:', e.message);
         }
 
-        // 마지막 AI 버블(분석 중...) 제거
-        document.querySelector('#message-list .bubble-ai:last-child')?.remove();
+        // Progress Bar 완료 후 제거
+        _hideGeminiProgress(_gpTimer);
 
         if (geminiResult) {
-          // Gemini 결과를 userContent 텍스트로 변환 → DeepSeek에 전달
           const analysisText = _geminiResultToText(geminiResult, userText);
-          // ── FIIL.kr 신고 전송 (Gemini 분석 완료, 이미지 소거 전) ──
           _sendReportToFiil(geminiResult, imageFile, userText);
           userContent = analysisText;
-          imageFile   = null;   // 이미지 파일 소거 (DeepSeek에 직접 전송 불필요)
+          imageFile   = null;
           console.log('[K-Cleaner] Gemini 결과 → DeepSeek 전달 준비 완료');
         }
       } else {
@@ -2808,6 +2901,22 @@ async function callAI(userText, imageFile = null) {
         `신고가 접수되었습니다.`,
         false
       );
+
+      // 3-1. fiil.kr 신고 확인 링크 버튼
+      if (_lastFiilReportId) {
+        const fiilUrl = `https://fiil.kr/webapp.html?id=${encodeURIComponent(_lastFiilReportId)}`;
+        appendBubble('ai',
+          `<a href="${fiilUrl}" target="_blank" style="
+            display:inline-flex;align-items:center;gap:8px;
+            background:var(--tint);color:#fff;
+            padding:10px 18px;border-radius:20px;
+            font-size:14px;font-weight:600;
+            text-decoration:none;margin-top:4px;">
+            📋 신고 접수 확인하기
+          </a>`,
+          true
+        );
+      }
 
       // 4. 진행 상황 시작 (1단계: 접수)
       _progressStart(intentSummary, locStr, _lastFiilReportId);
