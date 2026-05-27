@@ -1,0 +1,11 @@
+{
+  "id":          "klaw",
+  "name":        "K-Law",
+  "icon":        "⚖️",
+  "version":     "15.1.0",
+  "url":         "https://gopang.net/klaw",
+  "category":    "JUS",
+  "sp_path":     "klaw/prompts/system_prompt.txt",
+  "triggers":    ["법률","계약서","분쟁","고소","소송","판결","법원","변호사","법적","고발","가상판결"],
+  "description": "대법원 판결 예측 및 법적 리스크 분석 서비스"
+}

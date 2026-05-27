@@ -1471,8 +1471,9 @@ async function sendMessage() {
 
   if (gwpActive) { gwpForwardInput(text,capturedFile); return; }
   if (text&&aiActive) { const svc=gwpMatch(text); if(svc){ gwpLaunch(svc,text); return; } }
-  if (aiActive) await callAI(text,capturedFile);
-  else appendBubble('ai','🔵 AI 버튼을 눌러 AI 비서를 활성화하세요.');
+  // AI 비활성 상태에서 메시지 입력 시 자동 활성화
+  if (!aiActive) activateAI(true);
+  await callAI(text, capturedFile);
 }
 
 // ── ④ init() ─────────────────────────────────────────────────────
@@ -1562,15 +1563,18 @@ ECO MED EDU TRN MKT GOV JUS IND ENV CUL SOC IOT
   // 5. 위치 스케줄링
   onLocationUpdate(() => {
     if (CFG.system_base) CFG.system = CFG.system_base + `\n\n[현재 위치] ${buildLocNote()}`;
+    const locEl = document.getElementById('welcome-loc');
+    if (locEl) locEl.textContent = buildLocNote();
   });
   scheduleLocation(_isInStandaloneMode(), _installBannerVisible);
 
   // 6. 설정 로드 + 환영 메시지
   loadSettings();
-  appendBubble('ai',
-    `안녕하세요! 저는 <b>고팡 AI 비서</b>입니다. 🐚<br><br>` +
-    `📍 현재 위치: ${buildLocNote()}<br><br>` +
-    `법률·의료·환경신고·생활 전반을 지원합니다.`, true);
+  const _wList = document.getElementById('message-list');
+  const _wRow  = document.createElement('div');
+  _wRow.className = 'msg-row ai';
+  _wRow.innerHTML = '<div class="bubble bubble-ai">안녕하세요! 저는 <b>고팡 AI 비서</b>입니다. 🐚<br><br>📍 현재 위치: <span id="welcome-loc">위치 확인 중…</span><br><br>법률·의료·환경신고·생활 전반을 지원합니다.</div>';
+  _wList.appendChild(_wRow);
 
   // 7. 세션 종료 시 PDV 저장
   const saveFn = () => saveSessionOnce(history, classifyDomain);

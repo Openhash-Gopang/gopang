@@ -46,7 +46,7 @@ export const EXPERT_SP_MAP = {
   GOV: 'gopang/prompts/SP-08_kgov_v1.0.txt',
   IND: 'gopang/prompts/SP-09_kindustry_v1.0.txt',
   ENV: 'gopang/prompts/SP-10_kenv_v1.0.txt',
-  CLN: 'klaw/prompts/SP-14_kcleaner_v1.2.txt',
+  CLN: 'prompts/SP-14_kcleaner_v1.2.txt',
   CUL: 'gopang/prompts/SP-11_kculture_v1.0.txt',
   SOC: 'gopang/prompts/SP-13_ksocial_v1.0.txt',
   IOT: 'gopang/prompts/SP-12_kiot_v1.0.txt',

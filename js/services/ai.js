@@ -148,7 +148,7 @@ export async function callAI(userText, imageFile = null) {
 // ── Gemini Vision (K-Cleaner) ────────────────────────────────────
 export async function callGeminiVision(imageFile, geminiKey) {
   const base64 = await fileToBase64(imageFile);
-  const prompt = await fetch('/klaw/prompts/SP-14-IMG_v1.0.txt').then(r => r.text())
+  const prompt = await fetch('/prompts/SP-14-IMG_kcleaner_vision_prompt_v1.0.txt').then(r => r.text())
     .catch(() => 'Analyze this image for waste detection.');
   const r = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
