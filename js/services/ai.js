@@ -1,4 +1,4 @@
-// ══════════════════════════════════════════════════════════════════
+﻿// ══════════════════════════════════════════════════════════════════
 // services/ai.js — AI 호출·Gemini 이미지 분석·도메인 감지
 // ══════════════════════════════════════════════════════════════════
 import { EXPERT_SP_MAP, DOMAIN_DETECT, EXPERT_KEYWORDS } from '../../config.js';
@@ -61,7 +61,7 @@ export async function callAI(userText, imageFile = null) {
     }
     if (detectedCode && EXPERT_SP_MAP[detectedCode]) {
       try {
-        const sp = await fetch('/' + EXPERT_SP_MAP[detectedCode]).then(r => r.text());
+        const sp = await Promise.race([fetch('/' + EXPERT_SP_MAP[detectedCode]).then(r => r.text()), new Promise((_,r) => setTimeout(() => r(new Error('timeout')), 2000))]);
         cfg.system = cfg.system_base + '\n\n---\n' + sp;
         expertLoaded = true;
       } catch {}
@@ -105,33 +105,16 @@ export async function callAI(userText, imageFile = null) {
         max_tokens: 2048,
         system:     cfg.system,
         messages:   [{ role:'user', content: userText || '[이미지]' }],
-        stream:     true,
+        stream:     false,
       }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     _hideTyping();
     const bubble = _createStreamBubble();
-    let fullText = '', buf = '';
-    const reader = res.body.getReader(), decoder = new TextDecoder();
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream:true });
-      const lines = buf.split('\n'); buf = lines.pop();
-      for (const line of lines) {
-        if (!line.startsWith('data:')) continue;
-        const data = line.slice(5).trim();
-        if (data === '[DONE]') break;
-        try {
-          const obj   = JSON.parse(data);
-          const delta = obj.choices?.[0]?.delta?.content || obj.delta?.text || '';
-          if (delta) { fullText += delta; _updateStreamBubble(bubble, fullText); }
-        } catch {}
-      }
-    }
-
+    const d = await res.json();
+    const fullText = d.choices?.[0]?.message?.content || '';
+    _updateStreamBubble(bubble, fullText);
     bubble.classList.remove('streaming');
     history.push({ role:'assistant', content: fullText });
 
@@ -210,3 +193,8 @@ export function classifyDomain(text) {
   for (const [code, re] of Object.entries(patterns)) { if (re.test(text)) return code; }
   return 'ETC';
 }
+
+
+
+
+
