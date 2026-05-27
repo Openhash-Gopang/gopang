@@ -4281,9 +4281,24 @@ window.addEventListener('message', (e) => {
     }
     case 'GWP_DONE': {
       if (msg.summary) appendBubble('ai', '✅ ' + msg.summary, false);
-      if (msg.pdvData) _recordPDV({ type:'service_task', serviceId:_gwpService?.id,
-        service:_gwpService?.name, summary:msg.summary, data:msg.pdvData,
-        ts:new Date().toISOString() });
+
+      // 6하 원칙 필드 추출 후 PDV 기록
+      const p = msg.pdvData || {};
+      _recordPDV({
+        type:      'service_task',
+        serviceId: _gwpService?.id   || null,
+        service:   _gwpService?.name || null,
+        summary:   msg.summary       || null,
+        // 6하 원칙 — 서비스가 보고한 값을 그대로 전달
+        who:       p.who   || null,
+        when:      p.when  || null,
+        where:     p.where || null,
+        what:      p.what  || msg.summary || null,
+        how:       p.how   || null,
+        why:       p.why   || null,
+        data:      p.data  || p,
+        ts:        p.when  || new Date().toISOString(),
+      });
       _gwpClose(false);
       break;
     }
@@ -4307,10 +4322,40 @@ function _gwpForwardInput(text, file) {
 // ── PDV 메타데이터 기록 ────────────────────────────────────────
 async function _recordPDV(record) {
   try {
+    // ── 로컬 PDV 캐시 (localStorage) ──────────────────────
     const log = JSON.parse(localStorage.getItem('gopang_pdv_log') || '[]');
     log.push(record);
     if (log.length > 1000) log.splice(0, log.length - 1000);
     localStorage.setItem('gopang_pdv_log', JSON.stringify(log));
+
+    // ── 6하 원칙 필드 구성 ─────────────────────────────────
+    // 누가 (Who)
+    const whoName = _USER.phone
+      ? _USER.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
+      : 'GUID:' + _USER.guid.slice(0, 8);
+
+    // 어디서 (Where) — GPS 우선, 주소 fallback
+    const locStr = _userLocation
+      ? (_userLocation.address ||
+         (_userLocation.lat
+           ? `${_userLocation.lat.toFixed(5)},${_userLocation.lng.toFixed(5)}`
+           : null))
+      : (record.data?.location || null);
+
+    // 어떻게 (How) — 입력 방식 추론
+    const howStr = record.how
+      || (record.data?.reportId  ? 'image'   // 서비스 신고 = 이미지
+        : record.type === 'klaw_monitor' ? 'auto'  // K-Law 자동 감시
+        : 'text');
+
+    // 왜 (Why) — 서비스명 또는 직접 기록된 의도
+    const whyStr = record.why
+      || (record.service ? record.service + ' 서비스 이용'
+        : record.type === 'klaw_monitor' ? '법적 리스크 자동 감시'
+        : record.type === 'service_task' ? '서비스 작업 완료'
+        : '대화');
+
+    // ── Supabase pdv_log 저장 ──────────────────────────────
     await fetch(_SUPABASE_URL + '/rest/v1/pdv_log', {
       method: 'POST',
       headers: {
@@ -4318,11 +4363,26 @@ async function _recordPDV(record) {
         'Content-Type': 'application/json', 'Prefer': 'return=minimal',
       },
       body: JSON.stringify({
-        user_guid: _USER.guid, device_fp: _USER.fp,
-        record_type: record.type, service_id: record.serviceId || null,
-        summary: record.summary || null, payload: record, created_at: record.ts,
+        // 누가
+        user_guid:   _USER.guid,
+        device_fp:   _USER.fp,
+        who_name:    whoName,
+        // 언제 (created_at은 DB 기본값 사용)
+        // 어디서
+        location:    locStr,
+        // 무엇을
+        record_type: record.type,
+        summary:     record.summary || null,
+        payload:     record,
+        // 어떻게
+        how:         howStr,
+        service_id:  record.serviceId || null,
+        // 왜
+        why:         whyStr,
       }),
     });
+
+    console.info('[PDV] 기록 완료:', record.type, '|', whyStr);
   } catch(e) { console.warn('[PDV] 기록 실패:', e.message); }
 
   // K-Law 백그라운드 감시 트리거 — 서비스 완료 결과 자동 검토

@@ -23,7 +23,7 @@
  *   GWP_READY   { placeholder, title, accept }
  *   GWP_MESSAGE { role, text, html, data }
  *   GWP_INPUT_CTRL { placeholder, accept, disabled }
- *   GWP_DONE    { summary, pdvData }
+ *   GWP_DONE    { summary, pdvData: { who, when, where, what, how, why, data } }
  *   GWP_ERROR   { message }
  */
 
@@ -108,9 +108,29 @@
     }
 
     // ── 작업 완료 — 고팡에 제어권 반환 ─────────────────────────
+    // pdvData는 6하 원칙을 따릅니다:
+    //   who:   사용자 식별자 (전화번호 마스킹 또는 토큰)
+    //   when:  ISO 8601 타임스탬프 (생략 시 자동 설정)
+    //   where: GPS 좌표 또는 주소 문자열
+    //   what:  처리 결과 요약 (summary와 동일하거나 상세)
+    //   how:   입력 방식 'text'|'image'|'voice'|'file'
+    //   why:   서비스 이용 목적
+    //   data:  서비스별 원본 데이터 (자유 형식)
     done({ summary = '', pdvData = null } = {}) {
       if (!this._isWidget) return;
-      this._postToGopang({ type: 'GWP_DONE', summary, pdvData });
+
+      // 6하 원칙 필드 자동 보완 — 서비스가 채우지 않은 항목을 기본값으로 채움
+      const enriched = pdvData ? {
+        who:   pdvData.who   || this._token || 'anonymous',
+        when:  pdvData.when  || new Date().toISOString(),
+        where: pdvData.where || null,
+        what:  pdvData.what  || summary,
+        how:   pdvData.how   || 'text',
+        why:   pdvData.why   || null,
+        data:  pdvData.data  || pdvData,   // 원본 데이터 보존
+      } : null;
+
+      this._postToGopang({ type: 'GWP_DONE', summary, pdvData: enriched });
     }
 
     // ── 오류 신호 ──────────────────────────────────────────────
