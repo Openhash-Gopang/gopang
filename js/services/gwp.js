@@ -14,9 +14,8 @@ export function initGWP({ getUser, appendBubble, recordPDV }) {
 }
 
 export let gwpActive = false;
-let _gwpService  = null;
-let _gwpTab      = null;
-let _gwpChannel  = null;
+let _gwpService    = null;
+let _gwpTab        = null;
 let _watchInterval = null;
 
 export function gwpMatch(text) {
@@ -71,7 +70,7 @@ export function gwpLaunch(service, context, extra = {}) {
 export function gwpClose(showReturn = true) {
   if (!gwpActive) return;
   if (_watchInterval) { clearInterval(_watchInterval); _watchInterval = null; }
-  if (_gwpChannel)    { _gwpChannel.close(); _gwpChannel = null; }
+  window.removeEventListener('message', _onGwpMessage);
   if (_gwpTab && !_gwpTab.closed) _gwpTab.close();
   _gwpTab = null;
   _removeBackButton();
@@ -84,21 +83,28 @@ export function gwpClose(showReturn = true) {
 
 export function gwpForwardInput() {}
 
+function _onGwpMessage(e) {
+  if (e.data?.type !== 'GWP_DONE') return;
+  // origin 검증: 등록된 서비스 URL과 일치하는지 확인
+  const expectedOrigin = _gwpService?.url ? new URL(_gwpService.url).origin : null;
+  if (expectedOrigin && e.origin !== expectedOrigin) {
+    console.warn('[GWP] origin 불일치 — 무시:', e.origin, '!=', expectedOrigin);
+    return;
+  }
+  const d = e.data.pdvData || {};
+  _recordPDV({
+    type:'service_task', serviceId:_gwpService?.id||'unknown',
+    summary:e.data.summary||'서비스 완료',
+    who:d.who, when:d.when, where:d.where,
+    what:d.what, how:d.how||'text', why:d.why, data:d.data,
+  });
+  _appendBubble('ai','<b>'+(_gwpService?.name||'서비스')+'</b> 완료: '+(e.data.summary||''),true);
+  gwpClose(false);
+}
+
 function _startChannel() {
-  if (_gwpChannel) _gwpChannel.close();
-  _gwpChannel = new BroadcastChannel('gopang_gwp');
-  _gwpChannel.onmessage = (e) => {
-    if (e.data?.type !== 'GWP_DONE') return;
-    const d = e.data.pdvData || {};
-    _recordPDV({
-      type:'service_task', serviceId:_gwpService?.id||'unknown',
-      summary:e.data.summary||'서비스 완료',
-      who:d.who, when:d.when, where:d.where,
-      what:d.what, how:d.how||'text', why:d.why, data:d.data,
-    });
-    _appendBubble('ai','✅ <b>'+(_gwpService?.name||'서비스')+'</b> 완료: '+(e.data.summary||''),true);
-    gwpClose(false);
-  };
+  // window.message 이벤트 사용 (cross-origin 새 탭, opener.postMessage 수신)
+  window.addEventListener('message', _onGwpMessage);
 }
 
 function _watchTabClose() {
@@ -112,19 +118,8 @@ function _watchTabClose() {
   }, 1500);
 }
 
-export function listenGWPDone() {
-  window.addEventListener('message', e => {
-    if (e.data?.type !== 'GWP_DONE') return;
-    const d = e.data.pdvData || {};
-    _recordPDV({
-      type:'service_task', serviceId:_gwpService?.id||'unknown',
-      summary:e.data.summary||'서비스 완료',
-      who:d.who, when:d.when, where:d.where,
-      what:d.what, how:d.how||'text', why:d.why, data:d.data,
-    });
-    gwpClose(true);
-  });
-}
+// listenGWPDone() — _startChannel()로 통합됨. index.html import 호환용으로 유지
+export function listenGWPDone() {}
 
 function _setTopTitle(text) {
   const el = document.getElementById('top-logo-text'); if (!el) return;
