@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>고팡</title>
+
+  <!-- ── PWA 핵심 ──────────────────────────────────────── -->
+  <link rel="manifest" href="/manifest.json"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+  <!-- iOS Safari — 홈 화면 추가 -->
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="고팡"/>
+  <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png"/>
+  <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png"/>
+  <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png"/>
+
+  <!-- iOS 스플래시 스크린 배경색 -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+
+  <!-- Android Chrome -->
+  <meta name="theme-color" content="#1A1F29"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+
+  <!-- 일반 메타 -->
+  <meta name="description" content="고팡(Gopang) AI 법률·의료·생활 비서"/>
+  <meta name="application-name" content="고팡"/>
+  <link rel="icon" type="image/png" href="/icons/icon-192.png"/>
+
+  <!-- safe-area 대응 (노치·홈인디케이터) -->
+  <style>
+    :root {
+      --safe-top:    env(safe-area-inset-top,    0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left:   env(safe-area-inset-left,   0px);
+      --safe-right:  env(safe-area-inset-right,  0px);
+    }
+  </style>
+  <style>
+    /* ── 고팡 디자인 시스템 v5.0 — Supabase 계열 전문가 UI ── */
+    :root {
+      /* ══════════════════════════════════════════════════
+         고팡 색상 시스템 v5.0
+         Supabase 대시보드 스타일 기반
+         간결·전문·사무적 / WCAG 2.1 AA 전항목 통과
+         ══════════════════════════════════════════════════ */
+
+      /* 기본 배경 */
+      --bg:           #F8F9FA;   /* 아주 연한 회색 — Supabase 메인 bg */
+      --bg-elevated:  #FFFFFF;   /* 카드·패널 */
+      --bg-glass:     rgba(255,255,255,0.96);
+      --bg-input:     #FFFFFF;
+      --bg-subtle:    #F1F3F5;   /* 호버, 구분 */
+      --bg-code:      #F4F4F5;
+
+      /* 구분선 */
+      --sep:          #E4E4E7;   /* 얇고 선명한 보더 */
+      --sep-strong:   #D1D5DB;
+
+      /* 텍스트 */
+      --label:        #111827;   /* 거의 검정 */
+      --label-2:      #374151;
+      --label-3:      #6B7280;
+      --label-4:      #9CA3AF;
+
+      /* 헤더/사이드바 전용 텍스트 */
+      --label-on-dark:   rgba(255,255,255,0.92);
+      --label-2-on-dark: rgba(255,255,255,0.55);
+
+      /* 브랜드 — Supabase 초록 계열 */
+      --tint:         #3ECF8E;   /* Supabase 시그니처 그린 */
+      --tint-dark:    #29A374;   /* 호버 */
+      --tint-dim:     #ECFDF5;   /* 연초록 배경 */
+      --tint-dim-bd:  #A7F3D0;
+
+      /* 사이드바/헤더 — Supabase 짙은 네이비 */
+      --header-bg:    #1A1F29;   /* Supabase 사이드바 */
+      --header-mid:   #1A1F29;   /* 탑바 동일 */
+      --header-top:   #FFFFFF;   /* 탑바를 흰색으로 — Supabase 스타일 */
+      --header-hover: rgba(255,255,255,0.07);
+
+      /* 내 메시지 버블 — 연한 초록 tint */
+      --bubble-out-bg:   #ECFDF5;
+      --bubble-out-text: #065F46;
+
+      /* AI 메시지 버블 — 순백 카드 */
+      --bubble-in-bg:    #FFFFFF;
+      --bubble-in-text:  #111827;
+
+      /* 시맨틱 */
+      --green:        #059669;
+      --red:          #DC2626;
+      --yellow:       #D97706;
+      --orange:       #EA580C;
+      --blue:         #2563EB;
+
+      /* 반경 — Supabase는 작은 반경 선호 */
+      --r-sm:         4px;
+      --r-md:         6px;
+      --r-lg:         8px;
+      --r-xl:         12px;
+
+      --blur:         saturate(180%) blur(20px);
+      --blur-sm:      saturate(160%) blur(10px);
+      --font:         'Noto Sans KR', -apple-system, 'Helvetica Neue', sans-serif;
+      --font-mono:    'IBM Plex Mono', 'SF Mono', monospace;
+      --font-display: 'Noto Sans KR', -apple-system, sans-serif;
+      --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+      --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--label);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    /* Apple HIG macOS 다크 — 미세 방사형 하이라이트 */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #29A374, #3ECF8E, #29A374);
+      z-index: 999;
+      pointer-events: none;
+    }
+    #app { position: relative; z-index: 1; }
+
+    /* ── 앱 레이아웃 ────────────────────────────────────── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      position: relative;
+    }
+
+    /* ── 상단 여백 (헤더 없음 — 요구사항) ─────────────── */
+    .top-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: calc(48px + var(--safe-top));
+      padding-top: var(--safe-top);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-right: 14px;
+      padding-left: 14px;
+      gap: 8px;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--sep);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    /* ── PWA 설치 배너 ─────────────────────────────────── */
+    .install-banner {
+      position: fixed;
+      bottom: calc(90px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      width: calc(100% - 32px);
+      max-width: 420px;
+      background: #FFFFFF;
+      border: 1px solid #D1D9E6;
+      border-radius: var(--r-xl);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+      padding: 16px 18px;
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s var(--ease-out), transform 0.3s var(--ease-spring);
+    }
+    .install-banner.show {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateX(-50%) translateY(0);
+    }
+    .install-banner-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: #F0F4F8;
+    }
+    .install-banner-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .install-banner-text { flex: 1; }
+    .install-banner-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--label);
+      margin-bottom: 2px;
+    }
+    .install-banner-sub {
+      font-size: 12px;
+      color: var(--label-2);
+      line-height: 1.4;
+    }
+    .install-banner-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .install-btn {
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: none;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    .install-btn:active { opacity: 0.7; }
+    .install-btn-primary { background: var(--tint); color: #fff; }
+    .install-btn-dismiss {
+      background: transparent;
+      color: var(--label-3);
+      font-weight: 400;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    /* ── 우상단 버튼 그룹 ──────────────────────────────── */
+    .top-btn {
+      width: 34px; height: 34px;
+      border-radius: var(--r-md);
+      border: none;
+      background: transparent;
+      color: var(--label-3);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      transition: background 0.15s, color 0.15s, transform 0.12s var(--ease-spring);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .top-btn:hover  { background: var(--bg-subtle); color: var(--label); }
+    .top-btn:active { transform: scale(0.93); }
+
+    .btn-ai {
+      width: auto;
+      padding: 0 12px;
+      border-radius: var(--r-md);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      color: var(--label-3);
+      gap: 5px;
+      border: 1px solid var(--sep);
+      transition: color 0.2s, background 0.2s, border-color 0.2s;
+    }
+    .btn-ai .ai-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--label-4);
+      transition: background 0.3s, transform 0.3s;
+    }
+    .btn-ai.active .ai-dot {
+      background: var(--tint);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    .btn-ai.active {
+      background: var(--tint-dim);
+      border-color: var(--tint-dim-bd);
+      color: var(--green);
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.5; transform: scale(0.7); }
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.4; }
+    }
+
+    /* ── 메시지 영역 ────────────────────────────────────── */
+    #message-list {
+      background: var(--bg);
+      flex: 1;
+      overflow-y: auto;
+      padding: 64px 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      scroll-behavior: smooth;
+    }
+    #message-list::-webkit-scrollbar { width: 0; }
+
+    .msg-row {
+      display: flex;
+      padding: 3px 16px;
+      animation: msg-in 0.28s var(--ease-out) both;
+    }
+    @keyframes msg-in {
+      from { opacity:0; transform: translateY(10px) scale(0.97); }
+      to   { opacity:1; transform: translateY(0) scale(1); }
+    }
+
+    .msg-row.user  { justify-content: flex-end; }
+    .msg-row.ai    { justify-content: flex-start; }
+
+    .bubble {
+      max-width: 72%;
+      padding: 10px 14px;
+      border-radius: var(--r-lg);
+      font-size: 15px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .bubble-user {
+      background: var(--bubble-out-bg);
+      color: var(--bubble-out-text);
+      border-bottom-right-radius: 4px;
+    }
+    .bubble-ai {
+      background: var(--bubble-in-bg);
+      color: var(--bubble-in-text);
+      border-bottom-left-radius: 4px;
+      border: 1px solid var(--sep);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    /* 스트리밍 중 커서 깜빡임 */
+    .bubble-ai.streaming::after {
+      content: '▋';
+      display: inline-block;
+      animation: blink .7s step-end infinite;
+      color: var(--tint);
+      margin-left: 2px;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* 위험 배지 (버블 아래 inline) */
+    .risk-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .risk-chip.s0 { background: #D1FAE5; color: #065F46; border:1px solid #6EE7B7; }
+    .risk-chip.s1 { background: #FEF3C7; color: #92400E; border:1px solid #FCD34D; }
+    .risk-chip.s2 { background: #FFEDD5; color: #9A3412; border:1px solid #FDBA74; }
+    .risk-chip.s3 { background: #FEE2E2; color: #991B1B; border:1px solid #FCA5A5; }
+
+    /* AI 타이핑 인디케이터 */
+    .typing-indicator {
+      display: flex; align-items: center; gap: 4px;
+      padding: 12px 16px;
+    }
+    .typing-indicator span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #9AA5B4;
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%,80%,100% { transform: translateY(0); }
+      40%          { transform: translateY(-5px); }
+    }
+
+    /* ── 하단 입력 영역 (Apple Messages / Claude.ai 스타일) */
+    .input-dock {
+      flex-shrink: 0;
+      padding: 8px 12px calc(12px + var(--safe-bottom));
+      background: var(--bg-elevated);
+      border-top: 1px solid var(--sep);
+    }
+
+    /* 상태 바 — 숨김 처리 */
+    .status-strip { display: none; }
+    .status-dot   { display: none; }
+
+    /* 입력 컨테이너 */
+    .input-wrap {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      background: var(--bg-elevated);
+      border-radius: var(--r-lg);
+      padding: 6px 6px 6px 10px;
+      border: 1px solid var(--sep);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .input-wrap:focus-within {
+      border-color: var(--tint);
+      box-shadow: 0 0 0 2px rgba(62,207,142,0.20);
+    }
+
+    /* 좌측 액션 버튼 */
+    .input-actions-left {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+      padding-bottom: 2px;
+    }
+    .ia-btn {
+      width: 30px; height: 30px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: #718096;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      transition: color 0.12s, background 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ia-btn:hover  { color: var(--tint); background: var(--tint-dim); }
+    /* 흰 배경 입력창 안 아이콘 — 더 진하게 */
+    .input-wrap .ia-btn { color: #5A6778; }
+    .input-wrap .ia-btn:hover { color: var(--tint); background: var(--tint-dim); }
+    .ia-btn:active { transform: scale(0.9); }
+
+    /* 버전 선택 드롭다운 */
+    .version-select { display: none; }
+    ._version-select-orig {
+      background: transparent;
+      border: none;
+      color: var(--label-2);
+      font-size: 12px;
+      font-family: var(--font);
+      cursor: pointer;
+      padding: 4px 2px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .version-select:hover { color: var(--label); }
+    .version-select option { background: #17212B; color: #fff; }
+
+    /* textarea */
+    #msg-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--label);
+      font-family: var(--font);
+      font-size: 16px;
+      line-height: 1.4;
+      resize: none;
+      max-height: 140px;
+      min-height: 22px;
+      overflow-y: auto;
+      padding: 4px 0;
+      align-self: flex-end;
+    }
+    #msg-input::placeholder { color: #9AA5B4; }
+    #msg-input::-webkit-scrollbar { width: 0; }
+
+    /* 전송 버튼 */
+    .send-btn {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: var(--tint);
+      color: #fff;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 15px;
+      transition: background 0.15s, transform 0.1s var(--ease-spring), opacity 0.15s;
+      align-self: flex-end;
+    }
+    .send-btn:disabled { background: var(--bg-glass); opacity: 0.4; }
+    .send-btn:not(:disabled):hover  { background: var(--tint-hover); }
+    .send-btn:not(:disabled):active { transform: scale(0.88); }
+
+    /* ── Gemini 분석 중 Progress Bar ───────────────────────── */
+    .gemini-progress-wrap {
+      width: 100%;
+      padding: 12px 14px;
+    }
+    .gemini-progress-label {
+      font-size: 13px;
+      color: var(--label-2);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .gemini-progress-label .gp-spinner {
+      width: 14px; height: 14px;
+      border: 2px solid var(--sep-strong);
+      border-top-color: var(--tint);
+      border-radius: 50%;
+      animation: gp-spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes gp-spin {
+      to { transform: rotate(360deg); }
+    }
+    .gemini-progress-bar-bg {
+      width: 100%;
+      height: 4px;
+      background: var(--sep-strong);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .gemini-progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--tint), #5E5CE6);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    /* ── 설정 패널 ──────────────────────────────────────── */
+    .settings-overlay {
+      position: fixed; inset: 0;
+      background: rgba(23,33,43,0.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 200;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s;
+    }
+    .settings-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .settings-sheet {
+      width: 100%;
+      max-width: 520px;
+      background: #FFFFFF;
+      backdrop-filter: none;
+      border-radius: var(--r-xl) var(--r-xl) 0 0;
+      padding: 20px 20px 40px;
+      transform: translateY(100%);
+      transition: transform 0.3s var(--ease-out);
+      border-top: 3px solid var(--tint);
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
+    }
+    .settings-overlay.open .settings-sheet {
+      transform: translateY(0);
+    }
+
+    .sheet-handle {
+      width: 36px; height: 4px;
+      background: var(--sep-strong);
+      border-radius: 2px;
+      margin: 0 auto 20px;
+    }
+    .sheet-title {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 600;
+      color: #1A202C;
+      margin-bottom: 20px;
+      letter-spacing: -0.01em;
+    }
+
+    .setting-group {
+      margin-bottom: 20px;
+    }
+    /* 권한 안내 details 스타일 */
+    #perm-guide details > summary { list-style: none; }
+    #perm-guide details > summary::-webkit-details-marker { display: none; }
+    #perm-guide details[open] > summary { margin-bottom: 2px; }
+    .setting-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--label-2);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .setting-field {
+      width: 100%;
+      background: #F7FAFC;
+      border: 1.5px solid #D1D9E6;
+      border-radius: var(--r-md);
+      color: #1A202C;
+      font-family: var(--font);
+      font-size: 14px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .setting-field:focus { border-color: var(--tint); box-shadow: 0 0 0 3px rgba(0,87,168,0.10); }
+    .setting-field option { background: #ffffff; color: #1A202C; }
+
+    .setting-field-mono {
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 13px;
+      letter-spacing: 0.01em;
+    }
+    .setting-field::placeholder { color: var(--label-3); }
+
+    .sheet-save {
+      width: 100%;
+      padding: 13px;
+      background: var(--tint);
+      border: none;
+      border-radius: var(--r-md);
+      color: #fff;
+      font-family: var(--font);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .sheet-save:hover  { background: var(--tint-hover); }
+    .sheet-save:active { transform: scale(0.98); }
+
+    /* ── AI 비서 시스템 패널 ────────────────────────────── */
+    .ai-overlay {
+      position: fixed; inset: 0;
+      z-index: 150;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .ai-overlay.open { opacity: 1; pointer-events: all; }
+    .ai-backdrop {
+      position: absolute; inset: 0;
+      background: rgba(23,33,43,0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .ai-card {
+      position: relative;
+      width: 90%;
+      max-width: 380px;
+      background: #FFFFFF;
+      border-radius: var(--r-xl);
+      padding: 24px 20px 20px;
+      border: 1px solid #D1D9E6;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+      transform: scale(0.94) translateY(8px);
+      transition: transform 0.24s var(--ease-spring);
+    }
+    .ai-overlay.open .ai-card { transform: scale(1) translateY(0); }
+
+    .ai-card-icon {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #0057A8, #5E5CE6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      margin-bottom: 14px;
+    }
+    .ai-card-title {
+      font-family: var(--font-display);
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+      color: #1A202C;
+    }
+    .ai-card-sub {
+      font-size: 13px;
+      color: #4A5568;
+      margin-bottom: 18px;
+      line-height: 1.4;
+    }
+    .ai-card-btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: var(--r-md);
+      border: none;
+      font-family: var(--font);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .ai-card-btn:active { transform: scale(0.97); }
+    .ai-card-btn-primary { background: var(--tint); color: #fff; }
+    .ai-card-btn-primary:hover { background: var(--tint-hover); }
+    .ai-card-btn-secondary {
+      background: #F0F4F8;
+      color: #4A5568;
+    }
+
+    /* ── 파일 첨부 미리보기 ─────────────────────────────── */
+    .attach-preview {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.15);
+      border-radius: var(--r-md);
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.80);
+    }
+    .attach-preview .remove-attach {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--label-3);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0;
+      width: auto; height: auto;
+      border-radius: 0;
+    }
+
+    /* ── 반응형 ─────────────────────────────────────────── */
+    @media (min-width: 680px) {
+      .input-dock { padding: 6px 20% calc(20px + var(--safe-bottom)); }
+      #message-list { padding: 52px 16% 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── PWA 설치 배너 ─────────────────────────────────── -->
+<div class="install-banner" id="install-banner">
+  <div class="install-banner-icon">
+    <img src="/icons/icon-192.png" alt="고팡 아이콘"/>
+  </div>
+  <div class="install-banner-text">
+    <div class="install-banner-title">고팡 앱 설치</div>
+    <div class="install-banner-sub">
+      홈 화면에 추가하면<br>
+      주소창 없이 바로 실행됩니다
+    </div>
+  </div>
+  <div class="install-banner-actions">
+    <button class="install-btn install-btn-primary" onclick="installPWA()">설치</button>
+    <button class="install-btn install-btn-dismiss" onclick="dismissInstall()">나중에</button>
+  </div>
+</div>
+
+<!-- iOS Safari 전용 설치 안내 (beforeinstallprompt 미지원) -->
+<div class="install-banner" id="ios-install-banner">
+  <div class="install-banner-icon">
+    <img src="/icons/icon-192.png" alt="고팡 아이콘"/>
+  </div>
+  <div class="install-banner-text">
+    <div class="install-banner-title">홈 화면에 추가</div>
+    <div class="install-banner-sub" id="ios-install-text">
+      Safari 하단 <strong style="color:var(--tint)">공유 버튼 →</strong>
+      <strong style="color:var(--tint)">홈 화면에 추가</strong>
+    </div>
+  </div>
+  <div class="install-banner-actions">
+    <button class="install-btn install-btn-dismiss" onclick="dismissIOSInstall()">확인</button>
+  </div>
+</div>
+
+<div id="app">
+
+  <!-- ── 상단 바 (빈 영역 + 우상단 버튼만) ───────────── -->
+  <div class="top-bar">
+    <!-- 좌측 로고 / 진행 상황 버튼 -->
+    <div id="top-logo" onclick="_onLogoTap()"
+         style="color:var(--label);font-size:15px;font-weight:700;
+                letter-spacing:-0.3px;flex:1;cursor:pointer;
+                display:flex;align-items:center;gap:6px;user-select:none;">
+      <span id="top-logo-text">고팡</span>
+      <span id="top-progress-dot" style="display:none;width:7px;height:7px;
+            border-radius:50%;background:var(--yellow);
+            animation:pulse-dot 1.5s ease-in-out infinite;flex-shrink:0;"></span>
+    </div>
+    <!-- 홈 화면 설치 버튼 (미설치 시에만 표시) -->
+    <button class="top-btn" id="btn-install" onclick="requestInstall()"
+            title="홈 화면에 설치" style="display:none">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2v13M7 11l5 5 5-5"/>
+        <path d="M3 19h18"/>
+      </svg>
+    </button>
+    <!-- 검색 버튼 -->
+    <button class="top-btn" id="btn-search" onclick="openSearch()" title="검색">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </button>
+    <!-- AI 비서 버튼 -->
+    <button class="top-btn btn-ai" id="btn-ai" onclick="toggleAI()" title="AI 비서">
+      <span class="ai-dot" id="ai-dot"></span>
+      AI
+    </button>
+    <!-- 설정 버튼 -->
+    <button class="top-btn" id="btn-settings" onclick="openSettings()" title="설정">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06
+                 a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09
+                 A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83
+                 l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09
+                 A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83
+                 l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09
+                 a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83
+                 l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09
+                 a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- ── 메시지 목록 ─────────────────────────────────── -->
+  <div id="message-list" style="background:var(--bg)"></div>
+
+  <!-- ── 하단 입력 독 ───────────────────────────────── -->
+  <div class="input-dock">
+
+    <!-- 상태 스트립 (숨김) -->
+    <div class="status-strip" style="display:none">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">PDV 암호화</span>
+      <span>·</span>
+      <span>OpenHash <code id="hash-ref">대기중</code></span>
+      <span id="layer-lbl">L1</span>
+      <span style="margin-left:auto">
+        <select class="version-select" id="version-select" title="고팡 버전"
+                style="color:var(--label-2);font-size:11px">
+          <option value="v2">고팡 v2</option>
+          <option value="v1">고팡 v1</option>
+        </select>
+      </span>
+    </div>
+
+    <!-- 첨부 미리보기 -->
+    <div id="attach-preview" style="display:none" class="attach-preview">
+      <span>📎</span>
+      <span id="attach-name"></span>
+      <button class="remove-attach" onclick="removeAttach()">✕</button>
+    </div>
+
+    <!-- 입력 래퍼 -->
+    <div class="input-wrap">
+
+      <!-- 좌측 버튼 그룹 -->
+      <div class="input-actions-left">
+        <!-- + 첨부 -->
+        <button class="ia-btn" onclick="triggerAttach()" title="파일 첨부">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+        </button>
+
+        <!-- 📷 카메라 -->
+        <button class="ia-btn" onclick="triggerCamera()" title="카메라 촬영">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8
+                     a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </button>
+
+        <!-- 마이크 -->
+        <button class="ia-btn" id="btn-mic" onclick="toggleMic()" title="음성 입력">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- 텍스트 입력 -->
+      <textarea id="msg-input"
+                placeholder="메시지를 입력하세요…"
+                rows="1"
+                oninput="autoResize(this); updateSendBtn()"
+                onkeydown="handleKey(event)"></textarea>
+
+      <!-- 전송 버튼 -->
+      <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+        </svg>
+      </button>
+    </div>
+
+    <input type="file" id="file-input" style="display:none"
+           accept="image/*,.pdf,.txt,.docx"
+           onchange="handleFileSelect(event)"/>
+    <input type="file" id="camera-input" style="display:none"
+           accept="image/*"
+           capture="environment"
+           onchange="handleFileSelect(event)"/>
+  </div>
+</div>
+
+<!-- ── 진행 상황 시트 ─────────────────────────────────────── -->
+<div class="settings-overlay" id="progress-overlay" onclick="_closeProgressSheet(event)">
+  <div class="settings-sheet" style="max-height:70vh;overflow-y:auto;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="progress-sheet-title">진행 상황</div>
+    <div id="progress-steps" style="margin-bottom:20px;"></div>
+    <button class="sheet-save"
+            style="background:var(--bg-subtle);color:var(--label-2);border:1px solid var(--sep-strong);"
+            onclick="document.getElementById('progress-overlay').classList.remove('open')">
+      닫기
+    </button>
+  </div>
+</div>
+
+<!-- ── 검색 오버레이 ──────────────────────────────────── -->
+<div class="settings-overlay" id="search-overlay" onclick="handleSearchOverlayClick(event)">
+  <div class="settings-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">검색</div>
+
+    <!-- 검색 범위 안내 -->
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <span style="font-size:11px;padding:4px 10px;border-radius:20px;
+                   background:var(--tint-dim);color:var(--tint);font-weight:600">
+        👤 대화 상대
+      </span>
+      <span style="font-size:11px;padding:4px 10px;border-radius:20px;
+                   background:rgba(48,209,88,0.12);color:var(--green);font-weight:600">
+        🔐 PDV 데이터
+      </span>
+    </div>
+
+    <div class="setting-group">
+      <div class="input-wrap" style="border-radius:var(--r-md);padding:8px 12px">
+        <textarea id="search-input"
+                  class="version-select"
+                  style="flex:1;background:transparent;border:none;outline:none;
+                         color:var(--label);font-family:var(--font);font-size:15px;
+                         resize:none;line-height:1.4;width:100%;height:36px"
+                  placeholder="이름, GUID, 또는 PDV 키워드 입력"
+                  onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();runSearch();}"></textarea>
+        <button class="send-btn" style="flex-shrink:0" onclick="runSearch()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 안내 문구 -->
+    <div style="font-size:11px;color:var(--label-3);margin-bottom:12px;line-height:1.6">
+      ※ 웹 검색은 AI 비서(AI 버튼)에게 직접 지시하세요.
+    </div>
+
+    <div id="search-result"
+         style="font-size:14px;color:var(--label-2);line-height:1.6;
+                max-height:280px;overflow-y:auto;padding:4px 0">
+    </div>
+
+    <button class="sheet-save" style="margin-top:16px;background:var(--bg-input);
+            color:var(--label-2)" onclick="closeSearch()">닫기</button>
+  </div>
+</div>
+
+<!-- ── AI 비서 카드 ────────────────────────────────────── -->
+<div class="ai-overlay" id="ai-overlay">
+  <div class="ai-backdrop" onclick="closeAI()"></div>
+  <div class="ai-card">
+    <div class="ai-card-icon">🤖</div>
+    <div class="ai-card-title">AI 비서</div>
+    <div class="ai-card-sub" id="ai-card-sub">
+      DeepSeek v3을 AI 대화 상대로 연결합니다.<br>
+      고팡 법률·의료 분석과 함께 동작합니다.
+    </div>
+    <button class="ai-card-btn ai-card-btn-primary" onclick="activateAI(false); closeAI()">
+      AI 비서 시작
+    </button>
+    <button class="ai-card-btn ai-card-btn-secondary" onclick="closeAI()">
+      취소
+    </button>
+  </div>
+</div>
+
+<!-- ── 설정 시트 ──────────────────────────────────────── -->
+<div class="settings-overlay" id="settings-overlay" onclick="handleOverlayClick(event)">
+  <div class="settings-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">설정</div>
+
+    <!-- ── 권한 설정 안내 ─────────────────────────────────── -->
+    <div id="perm-guide" style="
+      background:#1C1C1E; border:1px solid #3A3A3C;
+      border-radius:14px; padding:14px 16px; margin-bottom:16px;
+      font-size:13px; line-height:1.7; color:#EBEBF5;">
+
+      <div style="font-weight:600; font-size:14px; margin-bottom:10px;">
+        📱 스마트폰 권한 설정 안내
+      </div>
+
+      <!-- Android -->
+      <details style="margin-bottom:10px;">
+        <summary style="cursor:pointer; font-weight:600; color:#0057A8; outline:none;">
+          🤖 Android (크롬 브라우저)
+        </summary>
+        <div style="margin-top:8px; padding-left:4px; color:#AEAEB2;">
+          <b style="color:#EBEBF5;">① 크롬에서 접속 시</b><br>
+          상단 우측의 <span style="
+            display:inline-flex; flex-direction:column; gap:2px;
+            vertical-align:middle; margin:0 3px;">
+            <span style="width:4px;height:4px;background:#0057A8;border-radius:50%;display:block;"></span>
+            <span style="width:4px;height:4px;background:#0057A8;border-radius:50%;display:block;"></span>
+            <span style="width:4px;height:4px;background:#0057A8;border-radius:50%;display:block;"></span>
+          </span> 터치<br>
+          → 아래로 스크롤 → <b>사이트 설정</b> 터치<br>
+          → <b>위치 · 카메라 · 마이크</b> 각각 터치 → <b>허용</b><br><br>
+
+          <b style="color:#EBEBF5;">② 고팡 앱(홈 화면) 사용 시</b><br>
+          Android 설정 → 앱 → Chrome<br>
+          → 권한 → 위치: <b>앱 사용 중 허용</b><br>
+          → 권한 → 마이크: <b>허용</b>
+        </div>
+      </details>
+
+      <!-- iOS -->
+      <details>
+        <summary style="cursor:pointer; font-weight:600; color:#30D158; outline:none;">
+          🍎 iPhone / iPad (Safari)
+        </summary>
+        <div style="margin-top:8px; padding-left:4px; color:#AEAEB2;">
+          <b style="color:#EBEBF5;">① Safari에서 접속 시</b><br>
+          주소창 왼쪽 <b>AA 아이콘</b> 탭<br>
+          → 웹사이트 설정<br>
+          → 위치: <b>허용</b> / 마이크: <b>허용</b><br><br>
+
+          <b style="color:#EBEBF5;">② 위 방법이 안 될 경우</b><br>
+          iPhone 설정 → Safari<br>
+          → 위치: <b>물어보기 또는 허용</b><br>
+          → 마이크: <b>켬</b><br><br>
+
+          <b style="color:#EBEBF5;">③ 고팡 앱(홈 화면) 사용 시</b><br>
+          iPhone 설정 → Safari → 카메라·마이크·위치<br>
+          → <b>물어보기 또는 허용</b><br><br>
+
+          <b style="color:#FF9F0A;">⚠️ 음성 입력 안내</b><br>
+          iOS Safari는 Web Speech API 미지원.<br>
+          마이크 녹음 후 자동 텍스트 변환 방식으로 동작합니다.
+        </div>
+      </details>
+    </div>
+
+    <div class="setting-group">
+      <div class="setting-label">LLM 모델</div>
+      <select class="setting-field" id="setting-model">
+        <option value="deepseek-v4-pro" selected>DeepSeek V4 Pro ✦ 이미지 지원</option>
+        <option value="deepseek-v4-flash">DeepSeek V4 Flash ✦ 이미지 지원 (빠름)</option>
+        <option value="deepseek-chat">DeepSeek V3 (텍스트 전용)</option>
+        <option value="deepseek-reasoner">DeepSeek R1 (추론)</option>
+        <option value="gpt-4o">GPT-4o ✦ 이미지 지원</option>
+        <option value="claude-sonnet-4-20250514">Claude Sonnet 4 ✦ 이미지 지원</option>
+        <option value="gemini-2.0-flash">Gemini 2.0 Flash ✦ 이미지 지원</option>
+      </select>
+    </div>
+
+    <div class="setting-group">
+      <div class="setting-label">API 엔드포인트</div>
+      <select class="setting-field" id="setting-endpoint">
+        <option value="https://gopang-proxy.tensor-city.workers.dev" selected>고팡 프록시 (보안 권장)</option>
+        <option value="https://api.deepseek.com/v1">DeepSeek API (직접)</option>
+        <option value="https://api.openai.com/v1">OpenAI API</option>
+        <option value="https://api.anthropic.com/v1">Anthropic API</option>
+        <option value="custom">직접 입력</option>
+      </select>
+    </div>
+
+    <div class="setting-group" id="custom-endpoint-group" style="display:none">
+      <div class="setting-label">커스텀 엔드포인트 URL</div>
+      <input class="setting-field setting-field-mono" id="custom-endpoint-url"
+             type="text" placeholder="https://..."/>
+    </div>
+
+    <div class="setting-group">
+      <div class="setting-label">API Key (DeepSeek 직접 사용 시)</div>
+      <input class="setting-field setting-field-mono" id="setting-apikey"
+             type="password"
+             placeholder="sk-…"
+             autocomplete="off" spellcheck="false"/>
+    </div>
+
+    <div class="setting-group">
+      <div class="setting-label">Gemini API Key (이미지 분석용)</div>
+      <input class="setting-field setting-field-mono" id="setting-gemini-key"
+             type="password"
+             placeholder="AIza…"
+             autocomplete="off" spellcheck="false"/>
+      <div style="font-size:11px;color:var(--label-2);margin-top:4px;">
+        K-Cleaner 이미지 분석에 사용 · <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--tint);">무료 발급 →</a>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="setting-label">시스템 프롬프트</div>
+      <textarea class="setting-field" id="setting-system"
+                rows="4"
+                style="resize:vertical; font-size:13px; line-height:1.5"
+                placeholder="AI 비서의 역할과 동작 방식을 정의하세요…"></textarea>
+    </div>
+
+    <button class="sheet-save" onclick="saveSettings()">저장</button>
+
+    <button onclick="clearSWCache()" style="
+      width:100%; margin-top:10px; padding:12px;
+      background:transparent; border:1px solid #3A3A3C;
+      border-radius:12px; color:#FF453A; font-size:14px;
+      font-family:-apple-system,sans-serif; cursor:pointer;">
+      🗑 앱 캐시 초기화 (새로 시작하기)
+    </button>
+  </div>
+</div>
+
+<script type="module">
+// ══════════════════════════════════════════════════════════════════
+// index.html — 고팡 앱 진입점 (v2.1)
+// 역할: ① PWA  ② UI 헬퍼  ③ 입력 처리  ④ init()
+// 비즈니스 로직은 js/ 모듈에 위임
+// ══════════════════════════════════════════════════════════════════
+
+// ── 모듈 import ──────────────────────────────────────────────────
+import { CFG, GWP_REGISTRY }          from './config.js';
+import { initUser }                    from './js/core/auth.js';
+import { scheduleLocation, initLocation,
+         userLocation, locationReady, locationPending,
+         buildLocNote, onLocationUpdate }  from './js/core/location.js';
+import { initPDV, recordPDV, saveSessionOnce } from './js/services/pdv.js';
+import { initKlaw, klawReview }        from './js/services/klaw.js';
+import { initGWP, gwpMatch, gwpLaunch,
+         gwpClose, gwpForwardInput,
+         listenGWPDone, gwpActive }    from './js/services/gwp.js';
+import { initAI, callAI, history,
+         classifyDomain }              from './js/services/ai.js';
+import { initReporter, sendReportToFiil,
+         updateFiilReport }            from './js/fiil/reporter.js';
+
+// ── 전역 상태 (UI 전용) ──────────────────────────────────────────
+let _user        = null;
+let aiActive     = false;
+let micActive    = false;
+let attachFile   = null;
+let recognition  = null;
+let typingEl     = null;
+let _lastPipelineResult = null;
+let _progressSteps = [], _progressIdx = 0;
+
+const _INSTALL_DISMISSED_KEY = 'gopang_install_dismissed';
+const _INSTALL_DONE_KEY      = 'gopang_installed';
+let _deferredInstallPrompt   = null;
+let _installBannerVisible    = false;
+
+// ── ① PWA — Service Worker ───────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js', { scope:'/' });
+      console.log('[PWA] SW 등록:', reg.scope);
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) _showUpdateBanner();
+        });
+      });
+      setInterval(async () => {
+        await reg.update().catch(()=>{});
+        if (reg.waiting && navigator.serviceWorker.controller) _showUpdateBanner();
+      }, 60_000);
+    } catch(err) { console.warn('[PWA] SW 실패:', err); }
+  });
+}
+
+function _showUpdateBanner() {
+  if (document.getElementById('update-banner')) return;
+  const b = document.createElement('div');
+  b.id = 'update-banner';
+  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#3ECF8E;color:#1A1F29;text-align:center;padding:10px;font-weight:600;cursor:pointer;';
+  b.textContent = '🔄 새 버전이 있습니다. 탭하여 업데이트';
+  b.onclick = _applyUpdate;
+  document.body.prepend(b);
+}
+async function _applyUpdate() {
+  const reg = await navigator.serviceWorker.getRegistration();
+  if (reg?.waiting) {
+    reg.waiting.postMessage({ type:'SKIP_WAITING' });
+    navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
+  }
+}
+
+function _isIOS()             { return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+function _isInStandaloneMode(){ return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone; }
+function _shouldShowInstall() { return !_isInStandaloneMode() && !localStorage.getItem(_INSTALL_DONE_KEY) && !localStorage.getItem(_INSTALL_DISMISSED_KEY); }
+
+function _showInstallBanner(type) {
+  if (!_shouldShowInstall()) return;
+  _installBannerVisible = true;
+  const el = document.getElementById(type === 'ios' ? 'ios-install-banner' : 'install-banner');
+  if (el) el.style.display = 'flex';
+}
+function _hideInstallBanner() {
+  _installBannerVisible = false;
+  ['install-banner','ios-install-banner'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+}
+
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); _deferredInstallPrompt=e; _showInstallBanner('android'); });
+window.addEventListener('appinstalled', () => { localStorage.setItem(_INSTALL_DONE_KEY,'1'); _hideInstallBanner(); });
+if (_isIOS() && _shouldShowInstall()) setTimeout(() => _showInstallBanner('ios'), 2000);
+
+async function installPWA() {
+  if (!_deferredInstallPrompt) return;
+  _deferredInstallPrompt.prompt();
+  const { outcome } = await _deferredInstallPrompt.userChoice;
+  if (outcome === 'accepted') localStorage.setItem(_INSTALL_DONE_KEY,'1');
+  _deferredInstallPrompt = null; _hideInstallBanner();
+}
+function dismissInstall()    { localStorage.setItem(_INSTALL_DISMISSED_KEY,'1'); _hideInstallBanner(); }
+function dismissIOSInstall() { localStorage.setItem(_INSTALL_DISMISSED_KEY,'1'); _hideInstallBanner(); }
+function requestInstall()    { installPWA(); }
+
+// ── ② UI 헬퍼 ────────────────────────────────────────────────────
+
+// 버블
+function _createStreamBubble() {
+  const list=document.getElementById('message-list');
+  const row=document.createElement('div'); row.className='msg-row ai';
+  const bubble=document.createElement('div'); bubble.className='bubble bubble-ai streaming';
+  row.appendChild(bubble); list.appendChild(row); list.scrollTop=list.scrollHeight;
+  return bubble;
+}
+function _updateStreamBubble(bubble, text) {
+  bubble.innerHTML = text.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+  document.getElementById('message-list').scrollTop = document.getElementById('message-list').scrollHeight;
+}
+function appendBubble(role, text, isHTML=false) {
+  const list=document.getElementById('message-list');
+  const row=document.createElement('div'); row.className=`msg-row ${role}`;
+  const bubble=document.createElement('div'); bubble.className=`bubble bubble-${role}`;
+  if (isHTML) bubble.innerHTML=text; else bubble.textContent=text;
+  row.appendChild(bubble); list.appendChild(row); list.scrollTop=list.scrollHeight;
+}
+function riskChip(level, flags) {
+  const map={S0:'✅ 안전',S1:'⚠️ 주의',S2:'🚨 경고',S3:'🛑 차단'};
+  const flagStr=flags?.length?` · ${flags.slice(0,3).join(' ')}`:'';
+  return `<span class="risk-chip ${level.toLowerCase()}">${map[level]??'—'}${flagStr}</span>`;
+}
+function showTyping() {
+  const list=document.getElementById('message-list');
+  typingEl=document.createElement('div'); typingEl.className='msg-row ai'; typingEl.id='typing-row';
+  typingEl.innerHTML=`<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+  list.appendChild(typingEl); list.scrollTop=list.scrollHeight;
+}
+function hideTyping() { typingEl?.remove(); typingEl=null; }
+
+// Progress sheet
+function _progressStart(intent, loc, reportId) {
+  _progressSteps=[
+    {label:'현장 감지',     detail:intent||'환경 현장'},
+    {label:'위치 확인',     detail:loc||'위치 분석 중…'},
+    {label:'AI 분석',       detail:'K-Cleaner 분석 중…'},
+    {label:'신고서 생성',   detail:reportId||'생성 중…'},
+    {label:'OpenHash 등록', detail:'블록체인 기록 중…'},
+  ];
+  _progressIdx=0; _renderProgressSteps();
+  const sheet=document.getElementById('progress-sheet');
+  if (sheet) { sheet.style.display='flex'; sheet.classList.add('active'); }
+}
+function _progressNext() { _progressIdx++; _renderProgressSteps(); }
+function _renderProgressSteps() {
+  const c=document.getElementById('progress-steps'); if (!c||!_progressSteps.length) return;
+  c.innerHTML=_progressSteps.map((s,i)=>{
+    const done=i<_progressIdx, cur=i===_progressIdx;
+    return `<div class="progress-step ${done?'done':''} ${cur?'current':''}">
+      <span class="step-icon">${done?'✅':cur?'⏳':'⬜'}</span>
+      <span class="step-label">${s.label}</span><span class="step-detail">${s.detail}</span></div>`;
+  }).join('');
+}
+function _topLogoSetProgress(active) {
+  const el=document.getElementById('top-logo-text'); if (!el) return;
+  if (active) { el.style.color='#3ECF8E'; el.textContent='🌊 K-Cleaner 분석 중…'; }
+  else        { el.style.color=''; el.textContent=gwpActive?'':'고팡'; }
+}
+function _showGeminiProgress() {
+  const list=document.getElementById('message-list');
+  const el=document.createElement('div'); el.className='msg-row ai'; el.id='gemini-progress';
+  el.innerHTML=`<div class="bubble bubble-ai"><div style="display:flex;align-items:center;gap:8px">
+    <div class="typing-indicator"><span></span><span></span><span></span></div>
+    <span style="font-size:13px;color:#8E8E93">K-Cleaner 이미지 분석 중…</span></div></div>`;
+  list.appendChild(el); list.scrollTop=list.scrollHeight;
+  return setInterval(()=>{}, 500);
+}
+function _hideGeminiProgress(timer) { clearInterval(timer); document.getElementById('gemini-progress')?.remove(); }
+
+// AI 토글
+function toggleAI() { aiActive ? closeAI() : activateAI(); }
+function closeAI()  { aiActive=false; document.getElementById('ai-btn')?.classList.remove('active'); }
+function activateAI(silent=false) {
+  aiActive=true; document.getElementById('ai-btn')?.classList.add('active');
+  if (!silent) appendBubble('ai','🤖 AI 비서 활성화. 무엇을 도와드릴까요?');
+}
+function showRiskAnalysis() {
+  if (!_lastPipelineResult) { appendBubble('ai','아직 분석 결과가 없습니다.'); return; }
+  const r=_lastPipelineResult;
+  appendBubble('ai',`${riskChip(r.riskLevel||'S0',r.flags||[])}<br><b>위험 분석</b>: ${r.summary||'이상 없음'}`,true);
+}
+
+// 설정
+function openSettings()  { document.getElementById('settings-panel')?.classList.add('open'); }
+function closeSettings() { document.getElementById('settings-panel')?.classList.remove('open'); }
+function handleOverlayClick(e) { if (e.target===e.currentTarget) closeSettings(); }
+function saveSettings() {
+  const a=document.getElementById('api-key-input')?.value.trim();
+  const g=document.getElementById('gemini-key-input')?.value.trim();
+  if (a) CFG.apiKey=a; if (g) CFG.geminiKey=g;
+  closeSettings(); appendBubble('ai','⚙️ 설정이 저장되었습니다.');
+}
+function loadSettings() {
+  const a=document.getElementById('api-key-input'), g=document.getElementById('gemini-key-input');
+  if (a) a.value=CFG.apiKey||''; if (g) g.value=CFG.geminiKey||'';
+}
+async function clearSWCache() {
+  if ('caches' in window) { const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); }
+  const reg=await navigator.serviceWorker.getRegistration(); if (reg) await reg.unregister();
+  location.reload(true);
+}
+
+// 검색
+function openSearch()  { document.getElementById('search-panel')?.classList.add('open'); }
+function closeSearch() { document.getElementById('search-panel')?.classList.remove('open'); }
+function handleSearchOverlayClick(e) { if (e.target===e.currentTarget) closeSearch(); }
+function runSearch() {
+  const q=document.getElementById('search-input')?.value.trim(); if (!q) return;
+  const results=[
+    ...JSON.parse(localStorage.getItem('gopang_pdv_log')||'[]')
+      .filter(r=>JSON.stringify(r).includes(q)).slice(-10)
+      .map((r,i)=>({id:'pdv-'+i,title:r.summary||r.type||'PDV 기록'})),
+    ...JSON.parse(localStorage.getItem('gopang_contacts')||'[]')
+      .filter(c=>c.name?.includes(q)||c.phone?.includes(q))
+      .map(c=>({id:c.guid,title:c.name+' '+(c.phone||'')})),
+  ];
+  const c=document.getElementById('search-results'); if (!c) return;
+  c.innerHTML = results.length
+    ? results.map(r=>`<div class="search-result-item" onclick="selectContact('${r.id}')">${(r.title||'').replace(new RegExp(q,'gi'),m=>`<mark>${m}</mark>`)}</div>`).join('')
+    : '<div class="search-empty">검색 결과 없음</div>';
+}
+function selectContact(id) { closeSearch(); appendBubble('ai',`📇 ${id} 연락처를 선택했습니다.`); }
+function showGUID()        { alert('내 GUID: '+(_user?.guid||'초기화 중…')); }
+
+// 파일 첨부
+function triggerAttach() { document.getElementById('file-input')?.click(); }
+function triggerCamera() { document.getElementById('camera-input')?.click(); }
+function removeAttach()  { attachFile=null; document.getElementById('attach-preview')?.remove(); updateSendBtn(); }
+function handleFileSelect(e) {
+  const file=e.target.files?.[0]; if (!file) return;
+  attachFile=file; updateSendBtn();
+  document.getElementById('attach-preview')?.remove();
+  const div=document.createElement('div');
+  div.id='attach-preview';
+  div.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 12px;background:#1C1C1E;border-radius:8px;margin:4px 8px;';
+  if (file.type.startsWith('image/')) {
+    const img=document.createElement('img'); img.src=URL.createObjectURL(file);
+    img.style.cssText='width:40px;height:40px;object-fit:cover;border-radius:6px;'; div.appendChild(img);
+  }
+  const nm=document.createElement('span'); nm.textContent=file.name;
+  nm.style.cssText='font-size:13px;color:#8E8E93;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  const rm=document.createElement('button'); rm.textContent='✕';
+  rm.style.cssText='background:none;border:none;color:#8E8E93;cursor:pointer;font-size:16px;padding:0;';
+  rm.onclick=removeAttach; div.appendChild(nm); div.appendChild(rm);
+  document.getElementById('input-dock')?.prepend(div);
+}
+
+// 입력창
+function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+function updateSendBtn() {
+  const inp=document.getElementById('msg-input'), btn=document.getElementById('send-btn'); if (!btn) return;
+  const has=inp?.value.trim()||attachFile;
+  btn.style.background=has?'#3ECF8E':'#3A3A3C'; btn.style.color=has?'#1A1F29':'#8E8E93';
+}
+function handleKey(e) { if (e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMessage(); } }
+
+// 마이크
+function toggleMic() { micActive?_micStop():_micStart(); }
+function _micStop() {
+  micActive=false; document.getElementById('mic-btn')?.classList.remove('active');
+  if (recognition){ recognition.stop(); recognition=null; }
+  if (window._mediaRecorderInstance){ window._mediaRecorderInstance.stop(); window._mediaRecorderInstance=null; }
+}
+async function _micStart() {
+  micActive=true; document.getElementById('mic-btn')?.classList.add('active');
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if (SR) {
+    recognition=new SR(); recognition.lang='ko-KR'; recognition.continuous=false; recognition.interimResults=false;
+    recognition.onresult=e=>{ const t=e.results[0][0].transcript; const inp=document.getElementById('msg-input');
+      if(inp){inp.value=t;autoResize(inp);updateSendBtn();} _micStop(); setTimeout(()=>{if(inp?.value.trim())sendMessage();},500); };
+    recognition.onerror=()=>_micStop(); recognition.onend=()=>{if(micActive)_micStop();};
+    recognition.start();
+  } else {
+    try {
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      const recorder=new MediaRecorder(stream); const chunks=[];
+      recorder.ondataavailable=e=>chunks.push(e.data);
+      recorder.onstop=()=>{ stream.getTracks().forEach(t=>t.stop()); _micStop(); };
+      recorder.start(); window._mediaRecorderInstance=recorder;
+      setTimeout(()=>{ if(micActive) recorder.stop(); },10000);
+    } catch { _micStop(); }
+  }
+}
+
+// Progress sheet 토글 (로고 탭)
+function _onLogoTap() {
+  const sheet=document.getElementById('progress-sheet');
+  if (sheet?.classList.contains('active')) _closeProgressSheet();
+}
+function _closeProgressSheet(e) {
+  if (e&&e.target!==e.currentTarget) return;
+  const sheet=document.getElementById('progress-sheet');
+  if (sheet){ sheet.classList.remove('active'); setTimeout(()=>{sheet.style.display='none';},300); }
+}
+
+// ── ③ 메시지 전송 ────────────────────────────────────────────────
+async function sendMessage() {
+  const inp=document.getElementById('msg-input');
+  const text=inp.value.trim();
+  if (!text&&!attachFile) return;
+  if (!locationReady&&!locationPending) initLocation();
+  const capturedFile=attachFile;
+
+  // 사용자 버블
+  if (capturedFile?.type.startsWith('image/')) {
+    const objUrl=URL.createObjectURL(capturedFile), imgId='img-'+Date.now();
+    appendBubble('user',`${text?text+'<br>':''}<img id="${imgId}" src="${objUrl}" style="max-width:220px;max-height:180px;border-radius:10px;margin-top:${text?'6px':'0'};display:block">`,true);
+    requestAnimationFrame(()=>{ const el=document.getElementById(imgId); if(el) el.addEventListener('load',()=>URL.revokeObjectURL(objUrl),{once:true}); });
+  } else {
+    if (text) appendBubble('user',text);
+    if (capturedFile) appendBubble('user',`📎 ${capturedFile.name}`,false);
+  }
+  inp.value=''; inp.style.height='auto'; updateSendBtn(); removeAttach();
+
+  if (gwpActive) { gwpForwardInput(text,capturedFile); return; }
+  if (text&&aiActive) { const svc=gwpMatch(text); if(svc){ gwpLaunch(svc,text); return; } }
+  if (aiActive) await callAI(text,capturedFile);
+  else appendBubble('ai','🔵 AI 버튼을 눌러 AI 비서를 활성화하세요.');
+}
+
+// ── ④ init() ─────────────────────────────────────────────────────
+async function init() {
+
+  // 1. 사용자 초기화
+  _user = await initUser();
+  const USER_GUID = _user.guid;
+
+  // 2. 시스템 프롬프트 완성
+  CFG.system = `# AI Secretary Prompt SP-00 v9.0
+# GUID: ${USER_GUID}
+
+## § 0. 정체성
+진짜 의도 파악 → 4단계 폭포수 처리. 허위 완료 선언 = 자격 박탈.
+
+## § 1. 의도 파악
+[THINK] ①진짜 원하는 것? ②필요한 것? ③~⑥1~4단계? [/THINK]
+
+## § 2. 세계관
+한국의 모든 사람·기관·사물은 고팡 사용자, 각자 AI 비서 보유.
+
+## § 3. PDV 자율 인출
+정보 요청 금지. 예외: PDV 없음/50만↑/법적 계약/되돌릴 수 없는 행위
+
+## § 4. 12대 영역
+ECO MED EDU TRN MKT GOV JUS IND ENV CUL SOC IOT
+
+## § 5. 4단계 폭포수
+1단계 자체해결 → 2단계 전문가 변신 → 3단계 외부AI → 4단계 웹검색
+
+## § 6. 응답 형식
+1단계: 태그 없이 간결. 2단계↑: [{코드}] {영역명}.
+위치: 시스템 주입 [현재 위치]만 사용.
+
+## § 7. 구현 현황
+1단계:✅ K-Law:✅ 외부AI:⚙️시뮬 웹검색:✅`;
+  CFG.system_base = CFG.system;
+
+  // 3. 모듈 초기화 (의존성 주입)
+  initPDV({
+    getUser:       () => _user,
+    getLocation:   () => userLocation,
+    onAfterRecord: (rec) => klawReview('service', rec),
+  });
+
+  initKlaw({
+    getCFG:       () => CFG,
+    appendBubble,
+    recordPDV,
+  });
+
+  initGWP({
+    getUser:      () => _user,
+    appendBubble,
+    recordPDV,
+  });
+
+  initAI({
+    getCFG:             () => ({ ...CFG, _locationPending: locationPending, _locationReady: locationReady }),
+    getLocation:        () => userLocation,
+    appendBubble,
+    createStreamBubble: _createStreamBubble,
+    updateStreamBubble: _updateStreamBubble,
+    showTyping,
+    hideTyping,
+    showGeminiProgress: _showGeminiProgress,
+    hideGeminiProgress: _hideGeminiProgress,
+    progressStart:      _progressStart,
+    progressNext:       _progressNext,
+    topLogoSetProgress: _topLogoSetProgress,
+    onAIComplete: ({ type, geminiResult, imageFile, userText, aiText }) => {
+      if (type === 'gemini' && geminiResult) {
+        sendReportToFiil(geminiResult, imageFile, userText);
+      }
+      if (type === 'chat') {
+        klawReview('chat', { userText, aiText });
+      }
+    },
+  });
+
+  initReporter({ getLocation: () => userLocation });
+
+  // 4. GWP_DONE 리스너 등록
+  listenGWPDone();
+
+  // 5. 위치 스케줄링
+  onLocationUpdate(() => {
+    if (CFG.system_base) CFG.system = CFG.system_base + `\n\n[현재 위치] ${buildLocNote()}`;
+  });
+  scheduleLocation(_isInStandaloneMode(), _installBannerVisible);
+
+  // 6. 설정 로드 + 환영 메시지
+  loadSettings();
+  appendBubble('ai',
+    `안녕하세요! 저는 <b>고팡 AI 비서</b>입니다. 🐚<br><br>` +
+    `📍 현재 위치: ${buildLocNote()}<br><br>` +
+    `법률·의료·환경신고·생활 전반을 지원합니다.`, true);
+
+  // 7. 세션 종료 시 PDV 저장
+  const saveFn = () => saveSessionOnce(history, classifyDomain);
+  window.addEventListener('beforeunload', saveFn);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState==='hidden') saveFn(); });
+
+  console.info('[고팡] 초기화 완료 — GUID:', USER_GUID.slice(0,8) + '…');
+}
+
+// ── 전역 함수 노출 (HTML onclick 대응) ──────────────────────────
+Object.assign(window, {
+  // PWA
+  installPWA, dismissInstall, dismissIOSInstall, requestInstall,
+  // UI
+  autoResize, updateSendBtn, handleKey, sendMessage,
+  toggleAI, closeAI, activateAI, showRiskAnalysis,
+  toggleMic,
+  openSettings, closeSettings, handleOverlayClick, saveSettings, loadSettings, clearSWCache,
+  openSearch, closeSearch, handleSearchOverlayClick, runSearch, selectContact,
+  triggerAttach, triggerCamera, handleFileSelect, removeAttach,
+  showGUID, _onLogoTap, _closeProgressSheet,
+});
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
