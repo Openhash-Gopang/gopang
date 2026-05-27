@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>K-Cleaner</title>
+  <style>
+    /* 고팡 디자인 토큰과 동일 — 통일된 UI */
+    :root {
+      --bg:           #F0F4F8;
+      --bg-elevated:  #FFFFFF;
+      --label:        #1A202C;
+      --label-2:      #4A5568;
+      --label-3:      #718096;
+      --tint:         #0057A8;
+      --tint-dim:     #E8F0FA;
+      --green:        #1B6B3A;
+      --red:          #C01C28;
+      --sep:          rgba(0,0,0,0.07);
+      --r-md:         14px;
+      --r-lg:         20px;
+      --font:         -apple-system, 'Helvetica Neue', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--label);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      overflow-y: auto;
+    }
+
+    /* 위젯 모드: 패딩만, 헤더 없음 */
+    .widget-body {
+      padding: 16px 16px 24px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* 상태 카드 */
+    .status-card {
+      background: var(--bg-elevated);
+      border-radius: var(--r-lg);
+      padding: 18px;
+      margin-bottom: 12px;
+      border: 1px solid var(--sep);
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+    .status-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--label-3);
+      margin-bottom: 6px;
+    }
+    .status-value {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--label);
+    }
+    .status-sub {
+      font-size: 13px;
+      color: var(--label-2);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+
+    /* 단계 표시 */
+    .steps {
+      display: flex;
+      gap: 0;
+      margin-bottom: 16px;
+    }
+    .step {
+      flex: 1;
+      text-align: center;
+      font-size: 11px;
+      color: var(--label-3);
+      padding: 8px 4px;
+      border-bottom: 2px solid var(--sep);
+      transition: all 0.2s;
+    }
+    .step.active {
+      color: var(--tint);
+      border-bottom-color: var(--tint);
+      font-weight: 700;
+    }
+    .step.done {
+      color: var(--green);
+      border-bottom-color: var(--green);
+    }
+
+    /* 이미지 미리보기 */
+    .preview-img {
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      border-radius: var(--r-md);
+      margin-bottom: 12px;
+    }
+
+    /* 분석 결과 칩 */
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .chip {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--tint-dim);
+      color: var(--tint);
+    }
+    .chip.urgent { background: #FFF0F0; color: var(--red); }
+    .chip.ok     { background: #EDF7F1; color: var(--green); }
+
+    /* 로딩 스피너 */
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--sep);
+      border-top-color: var(--tint);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 24px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 완료 화면 */
+    .done-icon {
+      font-size: 48px;
+      text-align: center;
+      margin: 16px 0 8px;
+    }
+    .done-title {
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      color: var(--label);
+    }
+    .done-sub {
+      font-size: 14px;
+      color: var(--label-2);
+      text-align: center;
+      margin-top: 4px;
+    }
+    .report-id {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--tint);
+      text-align: center;
+      margin-top: 8px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+<div class="widget-body" id="widget-body">
+  <!-- 단계 표시 -->
+  <div class="steps">
+    <div class="step active" id="step-1">① 사진 전송</div>
+    <div class="step" id="step-2">② 분석 중</div>
+    <div class="step" id="step-3">③ 신고 완료</div>
+  </div>
+
+  <!-- 안내 카드 -->
+  <div class="status-card" id="guide-card">
+    <div class="status-label">K-Cleaner 환경 신고</div>
+    <div class="status-value">현장 사진을 전송해 주세요</div>
+    <div class="status-sub">
+      고팡 입력창에서 📷 카메라 버튼을 눌러<br>
+      현장 쓰레기 사진을 촬영하여 전송하세요.
+    </div>
+  </div>
+
+  <!-- 분석 중 영역 (숨김) -->
+  <div id="analyzing-area" style="display:none">
+    <div class="spinner"></div>
+    <div style="text-align:center;font-size:14px;color:var(--label-2)">AI 분석 중…</div>
+  </div>
+
+  <!-- 결과 영역 (숨김) -->
+  <div id="result-area" style="display:none"></div>
+</div>
+
+<!-- GWP SDK 로드 -->
+<script src="https://gopang.net/gwp-sdk.js"></script>
+
+<script>
+// ── Supabase 설정 (fiil.kr 전용) ────────────────────────────
+const SB_URL = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
+const GEMINI_KEY = 'AIzaSyDiytKUg_0MJVBM3gFYzTms7mO6Y2mhLT4';
+
+let _userToken   = null;
+let _reportId    = null;
+let _currentStep = 1;
+
+// ── GWP SDK 초기화 ───────────────────────────────────────────
+const gwp = new GopangWidget({
+
+  onInit({ token, user, context }) {
+    _userToken = token;
+    console.info('[K-Cleaner] 초기화. context:', context);
+  },
+
+  async onInput(text, file) {
+    // 사진이 있으면 분석 시작
+    if (file instanceof File && file.type.startsWith('image/')) {
+      await _handleImage(file, text);
+    } else if (text) {
+      // 텍스트만 있는 경우 — 위치나 추가 정보로 처리
+      gwp.message('📍 입력 수신: ' + text);
+    }
+  },
+});
+
+// 준비 완료 신호 — 고팡 입력창 설정
+gwp.ready({
+  title:       'K-Cleaner',
+  placeholder: '📷 카메라로 현장 사진을 찍어 전송하세요',
+  accept:      'image/*',
+  showCamera:  true,
+});
+
+// ── 이미지 처리 파이프라인 ────────────────────────────────────
+async function _handleImage(file, userText) {
+  _setStep(2);
+  document.getElementById('guide-card').style.display  = 'none';
+  document.getElementById('analyzing-area').style.display = '';
+
+  // 이미지 미리보기
+  const objUrl = URL.createObjectURL(file);
+  const imgEl  = document.createElement('img');
+  imgEl.src    = objUrl;
+  imgEl.className = 'preview-img';
+  document.getElementById('analyzing-area').prepend(imgEl);
+
+  gwp.message('📸 사진을 수신했습니다. AI 분석 중입니다…');
+  gwp.inputCtrl({ disabled: true, placeholder: '분석 중…' });
+
+  try {
+    // Gemini Vision 분석
+    const analysis = await _analyzeWithGemini(file, userText);
+
+    // 신고 저장
+    _reportId = 'RPT-' + new Date().getFullYear() + '-' + Date.now().toString().slice(-4);
+    await _saveReport(file, analysis, userText);
+
+    // 결과 표시
+    _showResult(analysis, _reportId);
+    _setStep(3);
+
+    // 고팡에 완료 신호
+    const summary = `${analysis?.typeLabel || '환경 현장'} 신고 완료 (${_reportId})`;
+    gwp.message(`✅ ${summary}<br>신고번호: <b>${_reportId}</b>`, { role: 'ai', html: true });
+
+    setTimeout(() => {
+      gwp.done({
+        summary: summary,
+        pdvData: {
+          reportId:  _reportId,
+          type:      analysis?.typeLabel,
+          urgency:   analysis?.urgency,
+          location:  analysis?.location,
+          analyzedAt: new Date().toISOString(),
+        },
+      });
+    }, 2000);
+
+  } catch (err) {
+    console.error('[K-Cleaner]', err);
+    gwp.error('분석 중 오류가 발생했습니다: ' + err.message);
+  }
+}
+
+// ── Gemini Vision 분석 ────────────────────────────────────────
+async function _analyzeWithGemini(file, userText) {
+  const base64 = await _toBase64(file);
+
+  const prompt = `
+당신은 해안/산림 쓰레기 현장을 분석하는 AI입니다.
+다음 이미지를 분석하고 반드시 JSON만 응답하세요 (마크다운 없이):
+{
+  "typeLabel": "🏖️ 해안쓰레기 | 🌊 수중쓰레기 | 🌲 산림쓰레기",
+  "urgency": "낮음 | 보통 | 높음 | 긴급",
+  "materials": ["스티로폼", "페트병"],
+  "volumeEst": "소량(1봉지 미만) | 중간(1~5봉지) | 대량(5봉지 이상)",
+  "hazard": true | false,
+  "scene": "현장 설명 1~2문장",
+  "recommendation": "조치 권고사항"
+}`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt + (userText ? '\n추가 컨텍스트: ' + userText : '') },
+            { inline_data: { mime_type: file.type, data: base64 } },
+          ]
+        }]
+      })
+    }
+  );
+
+  if (!res.ok) throw new Error('Gemini API 오류: ' + res.status);
+  const data = await res.json();
+  const raw  = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const clean = raw.replace(/```json|```/g, '').trim();
+
+  try { return JSON.parse(clean); }
+  catch { return { typeLabel: '환경 현장', urgency: '보통', scene: clean, materials: [] }; }
+}
+
+// ── Supabase 신고 저장 ────────────────────────────────────────
+async function _saveReport(file, analysis, userText) {
+  const imageData = await _toBase64(file);
+  await fetch(SB_URL + '/rest/v1/reports', {
+    method: 'POST',
+    headers: {
+      'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify({
+      id:          _reportId,
+      type:        analysis?.typeLabel || '환경 현장',
+      type_code:   'TYPE_01',
+      reporter:    _userToken || 'anonymous',
+      reported_at: new Date().toLocaleString('ko-KR'),
+      urgency:     analysis?.urgency || '보통',
+      status:      '접수',
+      image_url:   'data:' + file.type + ';base64,' + imageData,
+      analysis:    analysis,
+      created_at:  new Date().toISOString(),
+    }),
+  });
+}
+
+// ── 결과 UI 렌더링 ────────────────────────────────────────────
+function _showResult(analysis, reportId) {
+  document.getElementById('analyzing-area').style.display = 'none';
+  const area = document.getElementById('result-area');
+  area.style.display = '';
+
+  const urgencyClass = { '긴급': 'urgent', '높음': 'urgent', '보통': '', '낮음': 'ok' };
+
+  area.innerHTML = `
+    <div class="done-icon">✅</div>
+    <div class="done-title">신고 접수 완료</div>
+    <div class="report-id">${reportId}</div>
+
+    <div class="status-card" style="margin-top:16px">
+      <div class="status-label">분석 결과</div>
+      <div class="status-value">${analysis?.typeLabel || '환경 현장'}</div>
+      <div class="status-sub">${analysis?.scene || ''}</div>
+      <div class="chips">
+        <span class="chip ${urgencyClass[analysis?.urgency] || ''}">긴급도: ${analysis?.urgency || '보통'}</span>
+        <span class="chip">규모: ${analysis?.volumeEst || '미상'}</span>
+        ${analysis?.hazard ? '<span class="chip urgent">⚠️ 유해물질</span>' : ''}
+      </div>
+    </div>
+
+    ${analysis?.materials?.length ? `
+    <div class="status-card">
+      <div class="status-label">발견된 쓰레기 유형</div>
+      <div class="chips">
+        ${analysis.materials.map(m => `<span class="chip">${m}</span>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <div class="status-card">
+      <div class="status-label">조치 권고</div>
+      <div class="status-sub">${analysis?.recommendation || '담당 기관 수거 조치 필요'}</div>
+    </div>
+
+    <div class="done-sub" style="margin-top:8px;font-size:12px;color:var(--label-3)">
+      2초 후 고팡으로 자동 복귀합니다
+    </div>
+  `;
+}
+
+// ── 단계 전환 ────────────────────────────────────────────────
+function _setStep(n) {
+  _currentStep = n;
+  [1, 2, 3].forEach(i => {
+    const el = document.getElementById('step-' + i);
+    if (!el) return;
+    el.className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+  });
+}
+
+// ── 유틸: File → base64 ────────────────────────────────────
+function _toBase64(file) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload  = e => res(e.target.result.split(',')[1]);
+    reader.onerror = () => rej(new Error('파일 읽기 실패'));
+    reader.readAsDataURL(file);
+  });
+}
+</script>
+</body>
+</html>

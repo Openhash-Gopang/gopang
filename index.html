@@ -1368,17 +1368,128 @@ window.addEventListener('DOMContentLoaded', () => {
 // ── 상단 설치 버튼 (선택적 노출) ────────────────────────────
 // AI 비서가 "홈에 설치해줘" 지시 받을 때도 호출됨
 window._requestInstall = requestInstall;
-// ── 상태 ────────────────────────────────────────────────
-// ── 사용자 GUID (영구 식별자) ───────────────────────────
-const USER_GUID = (() => {
-  const key = 'gopang_user_guid';
-  let g = localStorage.getItem(key);
-  if (!g) {
-    g = crypto.randomUUID();
-    localStorage.setItem(key, g);
+// ══════════════════════════════════════════════════════════
+// 고팡 사용자 자동 인식 시스템 v1.0
+// 스마트폰 = 신원. 별도 로그인 없음.
+// 전화번호(WebOTP) + 기기 핑거프린트 → 자동 등록/식별
+// ══════════════════════════════════════════════════════════
+
+// ── 기기 핑거프린트 생성 ────────────────────────────────
+async function _buildDeviceFingerprint() {
+  const raw = [
+    navigator.userAgent,
+    navigator.language,
+    screen.width + 'x' + screen.height,
+    screen.colorDepth,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    navigator.hardwareConcurrency || '',
+    navigator.deviceMemory || '',
+  ].join('|');
+  // SHA-256 해시
+  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+  const hex  = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  return hex.slice(0, 32);   // 32자리 축약
+}
+
+// ── WebOTP: 최초 1회 전화번호 수신 ─────────────────────
+async function _tryWebOTP() {
+  if (!('OTPCredential' in window)) return null;
+  try {
+    const ac  = new AbortController();
+    setTimeout(() => ac.abort(), 60000);   // 60초 타임아웃
+    const cred = await navigator.credentials.get({
+      otp: { transport: ['sms'] },
+      signal: ac.signal,
+    });
+    return cred?.code || null;   // SMS에서 번호 자동 추출 (OTP 코드)
+  } catch { return null; }
+}
+
+// ── 사용자 자동 등록/식별 ───────────────────────────────
+const _USER = await (async () => {
+  const STORE_KEY = 'gopang_user_v2';
+  const stored    = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+  const fp        = await _buildDeviceFingerprint();
+
+  // 기존 사용자 — 기기 일치 확인
+  if (stored?.guid && stored?.fp === fp) {
+    console.info('[Auth] 자동 로그인 ✅ guid:', stored.guid.slice(0,8) + '…');
+    return stored;
   }
-  return g;
+
+  // 기기 변경 감지 — 동일 번호 다른 기기
+  if (stored?.guid && stored?.fp !== fp) {
+    console.warn('[Auth] 기기 변경 감지 — 번호 재확인 필요');
+    _showDeviceChangedBanner(stored);
+  }
+
+  // 신규 사용자 — 자동 등록
+  const guid = stored?.guid || crypto.randomUUID();
+  const user = {
+    guid,
+    fp,
+    phone:       stored?.phone || null,
+    registeredAt: stored?.registeredAt || new Date().toISOString(),
+    lastSeenAt:  new Date().toISOString(),
+  };
+  localStorage.setItem(STORE_KEY, JSON.stringify(user));
+
+  // Supabase users 테이블에 upsert (비동기, 실패해도 앱 동작 유지)
+  _upsertUserRecord(user);
+
+  // WebOTP 시도 — 전화번호 아직 없으면 백그라운드에서 시도
+  if (!user.phone) {
+    _tryWebOTP().then(otp => {
+      if (otp) {
+        // OTP에서 전화번호 추출은 서버측에서 처리해야 함
+        // 여기서는 OTP 코드를 기록만 함
+        console.info('[Auth] WebOTP 수신:', otp);
+      }
+    });
+  }
+
+  console.info('[Auth] 신규 등록 ✅ guid:', guid.slice(0,8) + '…');
+  return user;
 })();
+
+// 하위 호환성 유지 (기존 코드에서 USER_GUID 참조)
+const USER_GUID = _USER.guid;
+
+// ── Supabase users 테이블 upsert ────────────────────────
+async function _upsertUserRecord(user) {
+  try {
+    await fetch(_SUPABASE_URL + '/rest/v1/users', {
+      method: 'POST',
+      headers: {
+        'apikey':       _SUPABASE_KEY,
+        'Authorization':'Bearer ' + _SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer':       'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({
+        guid:          user.guid,
+        device_fp:     user.fp,
+        phone:         user.phone,
+        registered_at: user.registeredAt,
+        last_seen_at:  new Date().toISOString(),
+      }),
+    });
+  } catch (e) {
+    console.warn('[Auth] users upsert 실패 (무시):', e.message);
+  }
+}
+
+// ── 기기 변경 배너 ──────────────────────────────────────
+function _showDeviceChangedBanner(oldUser) {
+  // 앱 로드 후 채팅창에 안내 메시지 표시
+  setTimeout(() => {
+    appendBubble('ai',
+      '📱 새 기기에서 접속이 감지됐습니다.<br>' +
+      '이전 기록과 연결하려면 기존 기기에서 사용하던 <b>전화번호</b>를 입력해 주세요.',
+      true
+    );
+  }, 1500);
+}
 
 // ── 설정 ────────────────────────────────────────────────
 const CFG = {
@@ -1828,6 +1939,11 @@ function _topLogoSetProgress(active) {
 
 // 로고 탭 핸들러
 function _onLogoTap() {
+  // GWP 서비스 모드 중이면 → 고팡으로 복귀
+  if (_gwpActive) {
+    _gwpClose(true);
+    return;
+  }
   if (!_progressJob) return;   // 진행 중 없으면 무반응
   _renderProgressSteps();
   document.getElementById('progress-overlay').classList.add('open');
@@ -2000,6 +2116,21 @@ async function sendMessage() {
   inp.style.height = 'auto';
   updateSendBtn();
   removeAttach();
+
+  // ── GWP: 위젯 활성 중이면 서비스로 입력 전달 ──────────
+  if (_gwpActive) {
+    _gwpForwardInput(text, capturedFile);
+    return;
+  }
+
+  // ── GWP: 의도 분석 → 서비스 자동 실행 ─────────────────
+  if (text && aiActive) {
+    const matchedSvc = _gwpMatch(text);
+    if (matchedSvc) {
+      _gwpLaunch(matchedSvc, text);
+      return;
+    }
+  }
 
   if (aiActive) {
     await callAI(text, capturedFile);
@@ -3842,6 +3973,185 @@ async function _updateFiilReport(reportId, parsed) {
 
 
 let _lastFiilReportId = null;  // 가장 최근 FIIL 신고 ID (AI 응답 파싱 업데이트용)
+
+// ══════════════════════════════════════════════════════════════════════
+// Gopang Widget Protocol (GWP) 호스트 엔진 v1.0
+// 고팡이 개별 서비스 webapp을 iframe으로 호출하고 제어권을 관리합니다.
+// ══════════════════════════════════════════════════════════════════════
+
+// ── 서비스 레지스트리 ─────────────────────────────────────────────
+const GWP_REGISTRY = [
+  {
+    id:       'fiil-kcleaner',
+    name:     'K-Cleaner',
+    icon:     '🌊',
+    url:      'https://fiil.kr/webapp.html',
+    triggers: ['쓰레기','환경','해안','청소','수거','오염','해양','산림','침적'],
+  },
+  {
+    id:       'klaw',
+    name:     'K-Law',
+    icon:     '⚖️',
+    url:      'https://gopang.net/klaw',
+    triggers: ['법률','계약서','분쟁','고소','소송','판결','법원','변호사'],
+  },
+];
+
+// ── GWP 상태 ─────────────────────────────────────────────────────
+let _gwpActive           = false;
+let _gwpService          = null;
+let _gwpIframe           = null;
+let _gwpSavedPlaceholder = '메시지를 입력하세요…';
+
+// ── 의도 → 서비스 매칭 ─────────────────────────────────────────
+function _gwpMatch(text) {
+  if (!text) return null;
+  for (const svc of GWP_REGISTRY) {
+    if (svc.triggers.some(t => text.includes(t))) return svc;
+  }
+  return null;
+}
+
+// ── 서비스 실행 ─────────────────────────────────────────────────
+function _gwpLaunch(service, context) {
+  if (_gwpActive) _gwpClose(false);
+  _gwpActive  = true;
+  _gwpService = service;
+
+  // top-bar 타이틀 전환
+  const logoText = document.getElementById('top-logo-text');
+  if (logoText) {
+    logoText.style.transition = 'opacity 0.2s';
+    logoText.style.opacity    = '0';
+    setTimeout(() => {
+      logoText.textContent = service.icon + ' ' + service.name;
+      logoText.style.opacity = '1';
+    }, 200);
+  }
+
+  // iframe 삽입
+  const iframeUrl = new URL(service.url);
+  iframeUrl.searchParams.set('gwp',    '1');
+  iframeUrl.searchParams.set('token',  _USER.guid);
+  iframeUrl.searchParams.set('origin', location.origin);
+  iframeUrl.searchParams.set('ctx',    encodeURIComponent(context || ''));
+
+  const iframe = document.createElement('iframe');
+  iframe.id    = 'gwp-iframe';
+  iframe.src   = iframeUrl.toString();
+  iframe.style.cssText = 'width:100%;height:100%;border:none;background:var(--bg);opacity:0;transition:opacity 0.3s';
+  iframe.allow = 'camera; microphone; geolocation';
+  iframe.onload = () => { iframe.style.opacity = '1'; };
+  _gwpIframe = iframe;
+
+  document.getElementById('message-list').style.display = 'none';
+  const wrap = document.createElement('div');
+  wrap.id = 'gwp-wrap';
+  wrap.style.cssText = 'position:absolute;top:calc(44px + var(--safe-top));left:0;right:0;bottom:80px;overflow:hidden;';
+  wrap.appendChild(iframe);
+  document.getElementById('app').appendChild(wrap);
+
+  _gwpSavedPlaceholder = document.getElementById('msg-input').placeholder;
+  document.getElementById('msg-input').placeholder = '로딩 중…';
+
+  appendBubble('ai', service.icon + ' <b>' + service.name + '</b> 서비스를 시작합니다.', true);
+  console.info('[GWP] 실행:', service.id);
+}
+
+// ── 서비스 종료 → 고팡 복귀 ────────────────────────────────────
+function _gwpClose(showReturn = true) {
+  if (!_gwpActive) return;
+  const wrap = document.getElementById('gwp-wrap');
+  if (wrap) wrap.remove();
+  _gwpIframe = null;
+  document.getElementById('message-list').style.display = '';
+
+  const logoText = document.getElementById('top-logo-text');
+  if (logoText) {
+    logoText.style.opacity = '0';
+    setTimeout(() => { logoText.textContent = '고팡'; logoText.style.opacity = '1'; }, 200);
+  }
+  const inp = document.getElementById('msg-input');
+  if (inp) inp.placeholder = _gwpSavedPlaceholder;
+  if (showReturn) appendBubble('ai', '✅ 고팡으로 돌아왔습니다.', false);
+  _gwpActive  = false;
+  _gwpService = null;
+  console.info('[GWP] 종료, 고팡 복귀');
+}
+
+// ── postMessage 수신 (서비스 → 고팡) ───────────────────────────
+window.addEventListener('message', (e) => {
+  if (!_gwpActive || !_gwpIframe) return;
+  const svcOrigin = _gwpService ? new URL(_gwpService.url).origin : null;
+  if (svcOrigin && e.origin !== svcOrigin) return;
+  const msg = e.data;
+  if (!msg?.type?.startsWith('GWP_')) return;
+
+  switch (msg.type) {
+    case 'GWP_READY': {
+      const inp = document.getElementById('msg-input');
+      if (inp && msg.placeholder) inp.placeholder = msg.placeholder;
+      break;
+    }
+    case 'GWP_MESSAGE': {
+      appendBubble(msg.role === 'user' ? 'user' : 'ai', msg.html || msg.text || '', !!msg.html);
+      break;
+    }
+    case 'GWP_INPUT_CTRL': {
+      const inp = document.getElementById('msg-input');
+      if (inp) {
+        if (msg.placeholder !== undefined) inp.placeholder = msg.placeholder;
+        inp.disabled = !!msg.disabled;
+      }
+      break;
+    }
+    case 'GWP_DONE': {
+      if (msg.summary) appendBubble('ai', '✅ ' + msg.summary, false);
+      if (msg.pdvData) _recordPDV({ type:'service_task', serviceId:_gwpService?.id,
+        service:_gwpService?.name, summary:msg.summary, data:msg.pdvData,
+        ts:new Date().toISOString() });
+      _gwpClose(false);
+      break;
+    }
+    case 'GWP_ERROR': {
+      appendBubble('ai', '⚠️ ' + (_gwpService?.name||'서비스') + ' 오류: ' + msg.message, false);
+      _gwpClose(false);
+      break;
+    }
+  }
+});
+
+// ── 고팡 입력 → 위젯으로 전달 ──────────────────────────────────
+function _gwpForwardInput(text, file) {
+  if (!_gwpIframe || !_gwpService) return;
+  _gwpIframe.contentWindow.postMessage(
+    { type: 'GWP_INPUT', text: text || '', file: file || null },
+    new URL(_gwpService.url).origin
+  );
+}
+
+// ── PDV 메타데이터 기록 ────────────────────────────────────────
+async function _recordPDV(record) {
+  try {
+    const log = JSON.parse(localStorage.getItem('gopang_pdv_log') || '[]');
+    log.push(record);
+    if (log.length > 1000) log.splice(0, log.length - 1000);
+    localStorage.setItem('gopang_pdv_log', JSON.stringify(log));
+    await fetch(_SUPABASE_URL + '/rest/v1/pdv_log', {
+      method: 'POST',
+      headers: {
+        'apikey': _SUPABASE_KEY, 'Authorization': 'Bearer ' + _SUPABASE_KEY,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
+        user_guid: _USER.guid, device_fp: _USER.fp,
+        record_type: record.type, service_id: record.serviceId || null,
+        summary: record.summary || null, payload: record, created_at: record.ts,
+      }),
+    });
+  } catch(e) { console.warn('[PDV] 기록 실패:', e.message); }
+}
+
 const _SUPABASE_URL = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
 const _SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
 
