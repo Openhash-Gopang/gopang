@@ -1951,8 +1951,7 @@ async function exportPDV(format = 'json') {
       { type: 'application/json' }
     );
     _downloadBlob(blob, `${filename}.json`);
-    _showExportToast('📥 내 기록이 저장되었습니다.
-파일 앱(다운로드 폴더)에서 확인하세요.');
+    _showExportToast('📥 내 기록이 저장되었습니다.\n파일 앱(다운로드 폴더)에서 확인하세요.');
 
   } else if (format === 'csv') {
     // CSV 다운로드
@@ -1969,12 +1968,10 @@ async function exportPDV(format = 'json') {
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
 
     // BOM 추가 (Excel 한글 깨짐 방지)
-    const bom  = '﻿';
-    const blob = new Blob([bom + [headers.join(','), ...csvRows].join('
-')], { type: 'text/csv' });
+    const bom  = '\uFEFF';
+    const blob = new Blob([bom + [headers.join(','), ...csvRows].join('\n')], { type: 'text/csv' });
     _downloadBlob(blob, `${filename}.csv`);
-    _showExportToast('📊 Excel 파일이 저장되었습니다.
-파일 앱(다운로드 폴더)에서 확인하세요.');
+    _showExportToast('📊 Excel 파일이 저장되었습니다.\n파일 앱(다운로드 폴더)에서 확인하세요.');
   }
 }
 
