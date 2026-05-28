@@ -28,7 +28,7 @@ export const GWP_REGISTRY = [
     id:       'klaw',
     name:     'K-Law',
     icon:     '\u2696\uFE0F',
-    url:      'https://gopang.net/klaw',
+    url: location.hostname === 'localhost' ? 'http://localhost:8080/webapp.html' : 'https://klaw.openhash.kr/webapp.html',
     triggers: ['\uBC95\uB960','\uACC4\uC57D\uC11C','\uBD84\uC7C1','\uACE0\uC18C','\uC18C\uC1A1','\uD310\uACB0','\uBC95\uC6D0','\uBCC0\uD638\uC0AC'],
   },
 ];
