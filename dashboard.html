@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고팡 (Gopang)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ══ DESIGN TOKENS — Supabase 정밀 준용 ═══════════════════════════ */
+:root {
+  /* 배경 계층 */
+  --bg-0: #0f0f0f;   /* 앱 최외곽 */
+  --bg-1: #1c1c1c;   /* 메인 배경 */
+  --bg-2: #242424;   /* 카드·패널 */
+  --bg-3: #2e2e2e;   /* 입력·선택 */
+  --bg-4: #383838;   /* 호버 */
+
+  /* 테두리 */
+  --br-0: #2e2e2e;
+  --br-1: #3a3a3a;
+  --br-2: #4a4a4a;
+
+  /* 텍스트 */
+  --tx-0: #ededed;   /* 기본 */
+  --tx-1: #a0a0a0;   /* 보조 */
+  --tx-2: #666666;   /* 비활성 */
+
+  /* 브랜드 — Supabase 그린 계열 */
+  --gr-0: #3ecf8e;   /* 강조 */
+  --gr-1: #2eaf76;   /* 호버 */
+  --gr-2: rgba(62,207,142,0.12); /* 배경 틴트 */
+  --gr-3: rgba(62,207,142,0.06); /* 극연 틴트 */
+
+  /* 기능색 최소화 */
+  --amber: #e8a838;
+  --amber-bg: rgba(232,168,56,0.08);
+  --red: #e55353;
+  --red-bg: rgba(229,83,83,0.08);
+  --blue: #5c8af5;
+  --blue-bg: rgba(92,138,245,0.08);
+
+  /* 레이아웃 */
+  --sb: 48px;          /* 사이드바 기본 */
+  --sb-open: 220px;    /* 사이드바 확장 */
+  --top: 48px;         /* 상단 바 높이 */
+  --r: 4px;            /* 기본 radius */
+  --r2: 6px;
+
+  font-size: 13px;
+}
+
+/* ══ RESET ══════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg-0); color: var(--tx-0); font-family: 'Noto Sans KR', sans-serif; font-size: 13px; line-height: 1.5; }
+a { text-decoration: none; color: inherit; }
+button { font-family: inherit; cursor: pointer; }
+input, select { font-family: inherit; }
+
+/* ══ SHELL ══════════════════════════════════════════════════════ */
+#shell { display: flex; height: 100vh; overflow: hidden; }
+
+/* ══ SIDEBAR ════════════════════════════════════════════════════ */
+#sb {
+  width: var(--sb);
+  background: var(--bg-1);
+  border-right: 1px solid var(--br-0);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  z-index: 50;
+  position: relative;
+  transition: width 0.18s ease;
+}
+#sb:hover { width: var(--sb-open); }
+
+/* 로고 */
+.sb-logo {
+  height: var(--top);
+  border-bottom: 1px solid var(--br-0);
+  display: flex;
+  align-items: center;
+  padding: 0 13px;
+  gap: 9px;
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.sb-logo-mark {
+  width: 22px; height: 22px; flex-shrink: 0;
+  background: var(--gr-0);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+}
+.sb-logo-mark svg { width: 12px; height: 12px; fill: #000; }
+.sb-logo-name {
+  font-size: 13px; font-weight: 600; color: var(--tx-0);
+  opacity: 0; transition: opacity 0.12s 0.04s;
+}
+#sb:hover .sb-logo-name { opacity: 1; }
+
+/* 상태 뱃지 */
+.sb-status {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 13px;
+  height: 36px;
+  border-bottom: 1px solid var(--br-0);
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.sb-status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gr-0); flex-shrink: 0;
+}
+.sb-status-label {
+  font-size: 11px; color: var(--tx-2);
+  opacity: 0; transition: opacity 0.12s 0.04s;
+}
+#sb:hover .sb-status-label { opacity: 1; }
+
+/* 내비 */
+.sb-nav { flex: 1; padding: 4px 0; overflow: hidden; }
+.sb-grp { margin-bottom: 2px; }
+.sb-grp-label {
+  height: 0; overflow: hidden;
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--tx-2);
+  padding: 0 13px;
+  opacity: 0;
+  transition: height 0.18s, padding 0.18s, opacity 0.12s;
+  white-space: nowrap;
+}
+#sb:hover .sb-grp-label {
+  height: 26px; padding: 8px 13px 4px;
+  opacity: 1; display: flex; align-items: flex-end;
+}
+.sb-item {
+  height: 32px;
+  display: flex; align-items: center;
+  padding: 0 13px; gap: 9px;
+  color: var(--tx-1);
+  transition: background 0.08s, color 0.08s;
+  cursor: pointer;
+  white-space: nowrap; overflow: hidden;
+  position: relative;
+}
+.sb-item:hover { background: var(--bg-3); color: var(--tx-0); }
+.sb-item.on { color: var(--tx-0); background: var(--bg-2); }
+.sb-item.on::before {
+  content: ''; position: absolute; left: 0; top: 6px; bottom: 6px;
+  width: 2px; background: var(--gr-0); border-radius: 0 1px 1px 0;
+}
+.sb-ico {
+  width: 22px; height: 22px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.sb-ico svg {
+  width: 14px; height: 14px;
+  stroke: currentColor; fill: none;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+}
+.sb-lbl {
+  font-size: 12px; font-weight: 500;
+  opacity: 0; transition: opacity 0.12s 0.04s;
+}
+#sb:hover .sb-lbl { opacity: 1; }
+
+.sb-sep { height: 1px; background: var(--br-0); margin: 4px 0; }
+
+.sb-foot { border-top: 1px solid var(--br-0); padding: 4px 0; }
+
+/* ══ MAIN ════════════════════════════════════════════════════════ */
+#main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+/* ── 상단 바 ── */
+#topbar {
+  height: var(--top);
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--br-0);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  gap: 12px;
+}
+.tb-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tb-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+/* 브레드크럼 */
+.bc { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--tx-1); }
+.bc-sep { color: var(--tx-2); font-size: 12px; }
+.bc-cur { color: var(--tx-0); font-weight: 500; }
+
+/* 상태 표시 */
+.tb-status {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--tx-2);
+  background: var(--bg-2); border: 1px solid var(--br-0);
+  border-radius: 12px; padding: 2px 8px;
+}
+.tb-status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gr-0); }
+
+.tb-time { font-size: 11px; color: var(--tx-2); font-family: 'IBM Plex Mono', monospace; }
+
+/* ── 버튼 ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 0 10px; height: 28px;
+  border-radius: var(--r); font-size: 12px; font-weight: 500;
+  border: 1px solid transparent; transition: all 0.08s;
+  white-space: nowrap;
+}
+.btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.btn-default { background: var(--bg-3); border-color: var(--br-1); color: var(--tx-0); }
+.btn-default:hover { background: var(--bg-4); border-color: var(--br-2); }
+.btn-primary { background: var(--gr-0); color: #000; font-weight: 600; }
+.btn-primary:hover { background: var(--gr-1); }
+.btn-ghost { background: transparent; color: var(--tx-1); border-color: transparent; }
+.btn-ghost:hover { background: var(--bg-3); color: var(--tx-0); }
+.btn-label { /* 모바일에서 숨길 텍스트 */ }
+
+/* ══ 콘텐츠 ══════════════════════════════════════════════════════ */
+#content { flex: 1; overflow-y: auto; background: var(--bg-1); }
+.sec { display: none; }
+.sec.on { display: block; }
+
+/* ── 페이지 헤더 ── */
+.ph {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--br-0);
+  background: var(--bg-1);
+}
+.ph-title { font-size: 16px; font-weight: 600; color: var(--tx-0); margin-bottom: 3px; }
+.ph-sub   { font-size: 12px; color: var(--tx-1); }
+.ph-row   { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* ── 래퍼 ── */
+.wrap { padding: 16px 20px; }
+
+/* ══ STAT CARDS ════════════════════════════════════════════════ */
+.stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--br-0); border: 1px solid var(--br-0); border-radius: var(--r2); overflow: hidden; margin-bottom: 16px; }
+.stat-card { background: var(--bg-2); padding: 14px 16px; }
+.stat-lbl { font-size: 11px; color: var(--tx-2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+.stat-val { font-size: 22px; font-weight: 600; color: var(--tx-0); line-height: 1; font-family: 'IBM Plex Mono', monospace; }
+.stat-sub { font-size: 11px; color: var(--tx-2); margin-top: 4px; }
+.stat-card.hi .stat-val { color: var(--gr-0); }
+
+/* ══ TABLE PANEL ════════════════════════════════════════════════ */
+.panel { background: var(--bg-2); border: 1px solid var(--br-0); border-radius: var(--r2); overflow: hidden; }
+
+/* 툴바 */
+.tb {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--br-0);
+  background: var(--bg-2);
+  flex-wrap: wrap;
+}
+.tb-title { font-size: 12px; font-weight: 600; color: var(--tx-0); white-space: nowrap; margin-right: 4px; }
+
+/* 검색 */
+.srch {
+  position: relative; flex: 1; min-width: 140px; max-width: 260px;
+}
+.srch svg {
+  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  width: 12px; height: 12px; stroke: var(--tx-2); fill: none;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+  pointer-events: none;
+}
+.srch input {
+  width: 100%; height: 28px;
+  background: var(--bg-3); border: 1px solid var(--br-1);
+  border-radius: var(--r); padding: 0 8px 0 26px;
+  font-size: 12px; color: var(--tx-0); outline: none;
+  transition: border-color 0.1s;
+}
+.srch input::placeholder { color: var(--tx-2); }
+.srch input:focus { border-color: var(--gr-0); }
+
+/* 필터 셀렉트 */
+.fsel {
+  height: 28px; background: var(--bg-3); border: 1px solid var(--br-1);
+  border-radius: var(--r); padding: 0 8px; font-size: 12px;
+  color: var(--tx-0); outline: none; cursor: pointer;
+}
+.fsel:focus { border-color: var(--gr-0); }
+
+/* 카운트 */
+.cnt { font-size: 11px; color: var(--tx-2); font-family: 'IBM Plex Mono', monospace; white-space: nowrap; margin-left: auto; }
+
+/* 테이블 */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+
+thead th {
+  padding: 0 12px; height: 34px;
+  text-align: left; font-size: 11px; font-weight: 600;
+  color: var(--tx-2); text-transform: uppercase; letter-spacing: 0.5px;
+  background: var(--bg-2); border-bottom: 1px solid var(--br-0);
+  white-space: nowrap; user-select: none; cursor: pointer;
+}
+thead th:hover { color: var(--tx-1); }
+thead th.sorted { color: var(--gr-0); }
+.sort-ic { display: inline-block; margin-left: 3px; opacity: 0.5; font-style: normal; }
+thead th.sorted .sort-ic { opacity: 1; }
+
+tbody tr { border-bottom: 1px solid var(--br-0); transition: background 0.06s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--bg-3); cursor: pointer; }
+tbody tr.selected { background: var(--gr-3); }
+
+td { padding: 0 12px; height: 42px; font-size: 12px; vertical-align: middle; }
+.td-mono  { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--tx-1); }
+.td-muted { color: var(--tx-1); }
+.td-trunc { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.td-null  { color: var(--tx-2); font-style: italic; font-size: 11px; }
+
+/* 뱃지 */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 1px 6px; border-radius: 3px;
+  font-size: 11px; font-weight: 500; white-space: nowrap;
+}
+.badge-svc  { background: var(--gr-2);   color: var(--gr-0);   }
+.badge-sess { background: var(--bg-4);   color: var(--tx-1);   border: 1px solid var(--br-1); }
+.badge-klaw { background: var(--amber-bg); color: var(--amber); }
+.badge-mon  { background: var(--blue-bg);  color: var(--blue);  }
+
+/* 리포트 칩 */
+.rchip {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--bg-3); border: 1px solid var(--br-1);
+  border-radius: 3px; padding: 1px 6px;
+  font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+  color: var(--tx-1); transition: all 0.08s;
+}
+.rchip:hover { border-color: var(--gr-0); color: var(--gr-0); }
+.rchip svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+
+/* 빈 상태 */
+.empty { text-align: center; padding: 48px 20px; color: var(--tx-2); }
+.empty-title { font-size: 13px; font-weight: 500; color: var(--tx-1); margin-bottom: 4px; }
+.empty-sub   { font-size: 12px; }
+
+/* ══ 소개 페이지 ════════════════════════════════════════════════ */
+
+/* 상단 배너 */
+.intro-banner {
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--br-0);
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: start;
+}
+.intro-banner-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--tx-2); margin-bottom: 6px;
+}
+.intro-banner-title {
+  font-size: 20px; font-weight: 700; color: var(--tx-0);
+  margin-bottom: 8px; line-height: 1.3;
+}
+.intro-banner-title em { color: var(--gr-0); font-style: normal; }
+.intro-banner-desc {
+  font-size: 12px; color: var(--tx-1); line-height: 1.8; max-width: 560px;
+}
+.intro-kpi {
+  display: grid; grid-template-columns: repeat(2,1fr); gap: 1px;
+  background: var(--br-0); border: 1px solid var(--br-0);
+  border-radius: var(--r2); overflow: hidden; min-width: 220px;
+}
+.intro-kpi-item { background: var(--bg-3); padding: 10px 14px; }
+.intro-kpi-val { font-size: 18px; font-weight: 600; color: var(--gr-0); font-family: 'IBM Plex Mono', monospace; line-height: 1; }
+.intro-kpi-lbl { font-size: 10px; color: var(--tx-2); margin-top: 3px; }
+
+/* 섹션 그리드 */
+.intro-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
+
+/* 섹션 헤더 */
+.sec-hd {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.6px; color: var(--tx-2); margin-bottom: 8px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--br-0);
+}
+
+/* 2단 비교 */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cmp-panel {
+  background: var(--bg-2); border: 1px solid var(--br-0);
+  border-radius: var(--r2); overflow: hidden;
+}
+.cmp-header {
+  padding: 8px 12px; border-bottom: 1px solid var(--br-0);
+  font-size: 11px; font-weight: 600; color: var(--tx-2);
+  text-transform: uppercase; letter-spacing: 0.6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.cmp-header.brand { color: var(--gr-0); }
+.cmp-header svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+.cmp-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; border-bottom: 1px solid var(--br-0);
+}
+.cmp-row:last-child { border-bottom: none; }
+.cmp-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--br-2); flex-shrink: 0; margin-top: 5px;
+}
+.cmp-dot.gr { background: var(--gr-0); }
+.cmp-row-title { font-size: 12px; font-weight: 500; color: var(--tx-0); margin-bottom: 2px; }
+.cmp-row-desc  { font-size: 11px; color: var(--tx-1); line-height: 1.6; }
+
+/* 흐름도 */
+.flow-panel {
+  background: var(--bg-2); border: 1px solid var(--br-0);
+  border-radius: var(--r2); overflow: hidden;
+}
+.flow-header {
+  padding: 8px 12px; border-bottom: 1px solid var(--br-0);
+  font-size: 11px; font-weight: 600; color: var(--tx-2);
+  text-transform: uppercase; letter-spacing: 0.6px;
+}
+.flow-body {
+  padding: 14px 16px;
+  display: flex; align-items: stretch; gap: 0;
+  overflow-x: auto;
+}
+.flow-node {
+  flex: 1; min-width: 100px;
+  background: var(--bg-3); border: 1px solid var(--br-1);
+  border-radius: var(--r); padding: 10px 12px;
+  text-align: center;
+}
+.flow-node.brand {
+  background: var(--gr-3); border-color: rgba(62,207,142,0.25);
+}
+.flow-node-title { font-size: 11px; font-weight: 600; color: var(--tx-0); margin-bottom: 3px; }
+.flow-node.brand .flow-node-title { color: var(--gr-0); }
+.flow-node-desc  { font-size: 10px; color: var(--tx-2); line-height: 1.5; }
+.flow-arrow {
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 6px; color: var(--tx-2); font-size: 14px; flex-shrink: 0;
+}
+.flow-watch {
+  margin: 8px 16px 14px;
+  padding: 8px 12px;
+  background: var(--amber-bg); border: 1px solid rgba(232,168,56,0.2);
+  border-radius: var(--r); font-size: 11px; color: var(--tx-1); line-height: 1.6;
+}
+.flow-watch strong { color: var(--amber); }
+
+/* 3열 기술 그리드 */
+.tech-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--br-0); border: 1px solid var(--br-0); border-radius: var(--r2); overflow: hidden; }
+.tech-card { background: var(--bg-2); padding: 14px 16px; }
+.tech-name { font-size: 12px; font-weight: 600; color: var(--tx-0); margin-bottom: 6px; }
+.tech-desc { font-size: 11px; color: var(--tx-1); line-height: 1.7; }
+.tech-tag  {
+  display: inline-block; margin-top: 8px;
+  font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+  color: var(--tx-2); background: var(--bg-3);
+  border: 1px solid var(--br-0); border-radius: 3px; padding: 1px 5px;
+}
+
+/* 서비스 그리드 */
+.svc-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--br-0); border: 1px solid var(--br-0); border-radius: var(--r2); overflow: hidden; }
+.svc-card { background: var(--bg-2); padding: 12px 14px; cursor: pointer; transition: background 0.08s; }
+.svc-card:hover { background: var(--bg-3); }
+.svc-name   { font-size: 12px; font-weight: 600; color: var(--tx-0); margin-bottom: 4px; }
+.svc-desc   { font-size: 11px; color: var(--tx-1); line-height: 1.6; }
+.svc-status {
+  display: inline-block; margin-top: 6px;
+  font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 3px;
+}
+.svc-live   { background: var(--gr-2); color: var(--gr-0); }
+.svc-coming { background: var(--bg-4); color: var(--tx-2); }
+
+/* ══ 상세 슬라이드오버 ══════════════════════════════════════════ */
+.ov-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  z-index: 100; display: none;
+}
+.ov-bg.on { display: block; }
+.side-panel {
+  position: fixed; right: 0; top: 0; bottom: 0;
+  width: 460px; background: var(--bg-2);
+  border-left: 1px solid var(--br-0);
+  z-index: 101; display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform 0.2s ease;
+}
+.side-panel.on { transform: translateX(0); }
+
+.sp-head {
+  height: var(--top); border-bottom: 1px solid var(--br-0);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 14px; flex-shrink: 0;
+  background: var(--bg-2);
+}
+.sp-title { font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-close {
+  width: 26px; height: 26px; flex-shrink: 0;
+  background: transparent; border: 1px solid var(--br-1);
+  border-radius: var(--r); color: var(--tx-1);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.08s;
+}
+.sp-close:hover { background: var(--bg-3); color: var(--tx-0); }
+.sp-close svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+.sp-body { flex: 1; overflow-y: auto; }
+
+/* 6하원칙 그리드 */
+.sixw { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--br-0); margin: 12px; border: 1px solid var(--br-0); border-radius: var(--r); overflow: hidden; }
+.sixw-item { background: var(--bg-3); padding: 10px 12px; }
+.sixw-full { grid-column: span 2; }
+.sixw-lbl { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--tx-2); margin-bottom: 5px; }
+.sixw-val { font-size: 12px; color: var(--tx-0); line-height: 1.5; }
+
+.sp-section { padding: 10px 12px 0; }
+.sp-sec-hd { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--tx-2); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--br-0); }
+
+pre.json { background: var(--bg-3); border: 1px solid var(--br-0); border-radius: var(--r); padding: 10px; font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--tx-1); overflow-x: auto; line-height: 1.6; white-space: pre-wrap; margin: 0 12px 12px; }
+
+/* ══ 웹앱 모달 ══════════════════════════════════════════════════ */
+.app-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  z-index: 200; display: none; align-items: center; justify-content: center;
+  backdrop-filter: blur(3px);
+}
+.app-bg.on { display: flex; }
+.app-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.phone {
+  width: 390px; height: 778px;
+  background: #111; border-radius: 48px;
+  border: 2px solid #3a3a3a;
+  box-shadow: 0 0 0 6px #111, 0 0 0 7px #2a2a2a, 0 30px 60px rgba(0,0,0,0.7);
+  position: relative; overflow: hidden;
+}
+.phone-notch {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 110px; height: 32px; background: #111;
+  border-radius: 0 0 18px 18px; z-index: 2;
+}
+.phone iframe { width: 100%; height: 100%; border: none; border-radius: 46px; }
+.app-close {
+  background: var(--bg-3); border: 1px solid var(--br-2);
+  color: var(--tx-0); border-radius: 14px;
+  padding: 6px 16px; font-size: 12px; font-weight: 500;
+  display: flex; align-items: center; gap: 5px;
+}
+.app-close:hover { background: var(--bg-4); }
+.app-close svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
+.app-hint { font-size: 11px; color: var(--tx-2); }
+
+/* ══ TOAST ══════════════════════════════════════════════════════ */
+.toast {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  background: var(--bg-4); border: 1px solid var(--br-2);
+  border-radius: var(--r2); padding: 8px 14px; font-size: 12px; color: var(--tx-0);
+  z-index: 300; display: flex; align-items: center; gap: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4); white-space: pre-line; text-align: center;
+}
+.toast svg { width: 12px; height: 12px; stroke: var(--gr-0); fill: none; stroke-width: 2; }
+
+/* ══ RESPONSIVE ════════════════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .stat-row    { grid-template-columns: repeat(2,1fr); }
+  .compare-grid{ grid-template-columns: 1fr; }
+  .tech-grid   { grid-template-columns: repeat(2,1fr); }
+  .svc-grid    { grid-template-columns: repeat(2,1fr); }
+  .intro-banner{ grid-template-columns: 1fr; }
+  .intro-kpi   { grid-template-columns: repeat(4,1fr); }
+}
+@media (max-width: 800px) {
+  :root { --sb: 0px; }
+  #sb { position: fixed; left:0; top:0; bottom:0; width:0; z-index:200; }
+  #sb.open { width: var(--sb-open); box-shadow: 4px 0 20px rgba(0,0,0,0.5); }
+  #sb.open .sb-logo-name,#sb.open .sb-lbl,#sb.open .sb-grp-label { opacity:1; }
+  #sb.open .sb-grp-label { height:26px; padding:8px 13px 4px; display:flex; align-items:flex-end; }
+  #mob-ov { display:block; }
+  #mob-btn { display:flex; }
+  .stat-row { grid-template-columns: repeat(2,1fr); }
+  .svc-grid { grid-template-columns: repeat(2,1fr); }
+  .tech-grid{ grid-template-columns: 1fr; }
+  .side-panel { width:100%; }
+  .sixw { grid-template-columns: 1fr; }
+  .sixw-full { grid-column: span 1; }
+  thead th:nth-child(n+4):not(:last-child) { display:none; }
+  tbody td:nth-child(n+4):not(:last-child) { display:none; }
+  .btn-label { display:none; }
+}
+@media (max-width: 480px) {
+  .stat-row   { grid-template-columns: 1fr 1fr; }
+  .intro-kpi  { grid-template-columns: repeat(2,1fr); }
+  .wrap       { padding: 12px; }
+  .ph         { padding: 12px; }
+  .phone      { width:100vw; height:100dvh; border-radius:0; border:none; box-shadow:none; }
+  .phone-notch{ display:none; }
+  .app-wrap   { gap:0; }
+  .app-close  { position:fixed; top:10px; right:10px; z-index:10; }
+  .app-hint   { display:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- 모바일 오버레이 -->
+<div id="mob-ov" onclick="closeMob()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:199;"></div>
+
+<div id="shell">
+
+<!-- ══ SIDEBAR ══ -->
+<aside id="sb">
+  <div class="sb-logo">
+    <div class="sb-logo-mark">
+      <svg viewBox="0 0 12 12"><polygon points="6,1 1,10 6,7.5 11,10"/></svg>
+    </div>
+    <span class="sb-logo-name">고팡 Gopang</span>
+  </div>
+
+  <div class="sb-status">
+    <div class="sb-status-dot"></div>
+    <span class="sb-status-label">시스템 정상</span>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="sb-grp">
+      <div class="sb-grp-label">메인</div>
+      <div class="sb-item on" id="nav-intro" onclick="go('intro')">
+        <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+        <span class="sb-lbl">소개</span>
+      </div>
+      <div class="sb-item" id="nav-pdv" onclick="go('pdv')">
+        <div class="sb-ico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+        <span class="sb-lbl">내 PDV</span>
+      </div>
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <div class="sb-grp">
+      <div class="sb-grp-label">서비스</div>
+      <div class="sb-item" onclick="open_('https://fiil.kr')">
+        <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg></div>
+        <span class="sb-lbl">K-Cleaner</span>
+      </div>
+      <div class="sb-item" onclick="open_('https://openhash.kr/law')">
+        <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <span class="sb-lbl">K-Law</span>
+      </div>
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <div class="sb-grp">
+      <div class="sb-grp-label">기술</div>
+      <div class="sb-item" onclick="open_('https://openhash.kr')">
+        <div class="sb-ico"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+        <span class="sb-lbl">OpenHash</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="sb-foot">
+    <div class="sb-item" style="cursor:default;">
+      <div class="sb-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+      <span class="sb-lbl" style="font-size:11px;color:var(--tx-2);">v5.1 · AI City Inc.</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<div id="main">
+
+  <!-- 상단 바 -->
+  <div id="topbar">
+    <div class="tb-left">
+      <button id="mob-btn" onclick="toggleMob()" style="display:none;width:28px;height:28px;background:transparent;border:1px solid var(--br-1);border-radius:var(--r);color:var(--tx-1);align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="bc">
+        <span>gopang</span>
+        <span class="bc-sep">/</span>
+        <span class="bc-cur" id="bc-cur">소개</span>
+      </div>
+      <div class="tb-status">
+        <div class="tb-status-dot"></div>
+        <span>Healthy</span>
+      </div>
+    </div>
+    <div class="tb-right">
+      <span class="tb-time" id="clock"></span>
+      <button class="btn btn-ghost" onclick="openApp()">
+        <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        <span class="btn-label">고팡 앱</span>
+      </button>
+      <button class="btn btn-ghost" onclick="exportPDV('csv')">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span class="btn-label">Excel</span>
+      </button>
+      <button class="btn btn-primary" onclick="exportPDV('json')">
+        <svg viewBox="0 0 24 24"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>
+        <span class="btn-label">내 기록 저장</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 콘텐츠 -->
+  <div id="content">
+
+    <!-- ══ 소개 ══ -->
+    <div id="sec-intro" class="sec on">
+
+      <!-- 배너 -->
+      <div class="intro-banner">
+        <div>
+          <div class="intro-banner-label">Gopang Platform · AI City Inc. · Jeju</div>
+          <div class="intro-banner-title">현실 세계의 <em>AI 평행 세계</em></div>
+          <div class="intro-banner-desc">
+            고팡은 현실의 모든 기관·개인·사물을 AI 형태로 재현한 평행 세계입니다.
+            법원·병원·음식점·관공서 — 모든 존재가 각자의 AI 비서를 통해 소통합니다.<br>
+            사람은 자신의 AI 비서에게 "짜장면 두 그릇 주문"을 지시하면,
+            비서가 인근 음식점을 검색·비교하고 해당 음식점의 AI 비서를 통해 주문·결제를 완료한 뒤 보고합니다.
+            모든 소통의 위법·편법·갈등 소지를 사전에 탐지하고, OpenHash에 위변조 불가능하게 기록합니다.
+          </div>
+        </div>
+        <div class="intro-kpi">
+          <div class="intro-kpi-item">
+            <div class="intro-kpi-val">~99%</div>
+            <div class="intro-kpi-lbl">범죄 예방 비율</div>
+          </div>
+          <div class="intro-kpi-item">
+            <div class="intro-kpi-val">0.8ms</div>
+            <div class="intro-kpi-lbl">위법 감지 속도</div>
+          </div>
+          <div class="intro-kpi-item">
+            <div class="intro-kpi-val">100%</div>
+            <div class="intro-kpi-lbl">위변조 탐지율</div>
+          </div>
+          <div class="intro-kpi-item">
+            <div class="intro-kpi-val">14+</div>
+            <div class="intro-kpi-lbl">서비스 대분류</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="intro-body">
+
+        <!-- 현실 vs 고팡 -->
+        <div>
+          <div class="sec-hd">현실 세계 vs 고팡 세계</div>
+          <div class="compare-grid">
+            <!-- 현실 -->
+            <div class="cmp-panel">
+              <div class="cmp-header">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                현실 세계
+              </div>
+              <div class="cmp-row">
+                <div class="cmp-dot"></div>
+                <div>
+                  <div class="cmp-row-title">직접 전화·앱으로 주문</div>
+                  <div class="cmp-row-desc">음식점을 직접 검색하고 전화하거나 앱에서 메뉴를 선택해 주문·결제합니다. 기록이 남지 않고 분쟁 시 증명이 어렵습니다.</div>
+                </div>
+              </div>
+              <div class="cmp-row">
+                <div class="cmp-dot"></div>
+                <div>
+                  <div class="cmp-row-title">법원·병원 직접 방문</div>
+                  <div class="cmp-row-desc">소장 작성 후 법원 접수, 대기, 심리까지 평균 3년·수백만 원. 병원은 예약·대기·처방 순으로 수시간 소요됩니다.</div>
+                </div>
+              </div>
+              <div class="cmp-row">
+                <div class="cmp-dot"></div>
+                <div>
+                  <div class="cmp-row-title">분쟁 후 사후 처리</div>
+                  <div class="cmp-row-desc">피해 발생 → 신고 → 증거 수집 순. "그런 말을 한 적 없다"는 주장을 반박하기 어렵습니다.</div>
+                </div>
+              </div>
+            </div>
+            <!-- 고팡 -->
+            <div class="cmp-panel">
+              <div class="cmp-header brand">
+                <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                고팡 세계 (AI 평행 세계)
+              </div>
+              <div class="cmp-row">
+                <div class="cmp-dot gr"></div>
+                <div>
+                  <div class="cmp-row-title">AI 비서에게 한마디</div>
+                  <div class="cmp-row-desc">"짜장면 두 그릇 주문해줘" → AI가 인근 음식점 검색·평가 비교 → 음식점 AI 비서에 주문·결제 → "30분 후 도착 예정" 보고. 모든 과정이 PDV에 기록됩니다.</div>
+                </div>
+              </div>
+              <div class="cmp-row">
+                <div class="cmp-dot gr"></div>
+                <div>
+                  <div class="cmp-row-title">AI 법원 · AI 병원</div>
+                  <div class="cmp-row-desc">인간 1심·2심·3심을 AI로 재현. 의사·약사·판사를 AI로 재현. 24시간, 무료, 즉시 답변. K-Law가 법적 리스크를 사전 차단합니다.</div>
+                </div>
+              </div>
+              <div class="cmp-row">
+                <div class="cmp-dot gr"></div>
+                <div>
+                  <div class="cmp-row-title">사전 예방 · 위변조 불가 기록</div>
+                  <div class="cmp-row-desc">모든 AI 비서 간 소통을 실시간 위법성 감시. 분쟁 소지 사전 탐지·조치. OpenHash로 모든 기록을 영구 보존합니다.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 소통 흐름 -->
+        <div>
+          <div class="sec-hd">AI 비서 간 소통 흐름</div>
+          <div class="flow-panel">
+            <div class="flow-header">고팡 세계에서의 주문 예시 — 짜장면 두 그릇</div>
+            <div class="flow-body">
+              <div class="flow-node">
+                <div class="flow-node-title">사용자</div>
+                <div class="flow-node-desc">"짜장면 두 그릇 주문해줘"</div>
+              </div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-node brand">
+                <div class="flow-node-title">나의 AI 비서</div>
+                <div class="flow-node-desc">의도 파악 · 인근 검색 · 평가 비교 · 최적 선택</div>
+              </div>
+              <div class="flow-arrow">⇄</div>
+              <div class="flow-node brand">
+                <div class="flow-node-title">음식점 AI 비서</div>
+                <div class="flow-node-desc">주문 접수 · 재고 확인 · 결제 처리 · 배달 배정</div>
+              </div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-node">
+                <div class="flow-node-title">음식점 사장</div>
+                <div class="flow-node-desc">AI 비서로부터 주문 결과 보고 수신</div>
+              </div>
+            </div>
+            <div class="flow-watch">
+              <strong>K-Law 상시 감시</strong> — 모든 AI 비서 간 소통에서 위법·편법·갈등 소지를 실시간으로 탐지·차단합니다.
+              모든 기록은 <strong>OpenHash</strong>에 위변조 불가능하게 영구 보존되어, 분쟁 시 법적 증거로 활용됩니다.
+            </div>
+          </div>
+        </div>
+
+        <!-- 서비스 -->
+        <div>
+          <div class="sec-hd">서비스 앱</div>
+          <div class="svc-grid">
+            <div class="svc-card" onclick="open_('https://fiil.kr')">
+              <div class="svc-name">K-Cleaner</div>
+              <div class="svc-desc">해안·환경 쓰레기 신고 · AI 성분 분석 + 비용 산출 · fiil.kr</div>
+              <span class="svc-status svc-live">운영 중</span>
+            </div>
+            <div class="svc-card" onclick="open_('https://openhash.kr/law')">
+              <div class="svc-name">K-Law</div>
+              <div class="svc-desc">법률 리스크 자동 감시 · 판결 예측 AI v15.1 · 예방 법학</div>
+              <span class="svc-status svc-live">운영 중</span>
+            </div>
+            <div class="svc-card">
+              <div class="svc-name">K-Health</div>
+              <div class="svc-desc">의료·보건 상담 · 증상 분석 AI · AI 의사·약사 재현</div>
+              <span class="svc-status svc-coming">준비 중</span>
+            </div>
+            <div class="svc-card">
+              <div class="svc-name">K-Transit</div>
+              <div class="svc-desc">교통·물류 신고 · 도로 안전 AI · 대중교통 연계</div>
+              <span class="svc-status svc-coming">준비 중</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 기술 -->
+        <div>
+          <div class="sec-hd">핵심 기술</div>
+          <div class="tech-grid">
+            <div class="tech-card">
+              <div class="tech-name">OpenHash</div>
+              <div class="tech-desc">확률적 계층 선택 기반 분산 원장. 블록체인의 에너지 낭비·느린 속도를 해결. 고위험 거래는 강화 검증, 일반 거래는 경량 검증. 모든 소통 기록을 위변조 불가능하게 영구 보존합니다.</div>
+              <span class="tech-tag">IEEE TIFS 투고 준비 중</span>
+            </div>
+            <div class="tech-card">
+              <div class="tech-name">PDV — 개인 데이터 금고</div>
+              <div class="tech-desc">6하원칙(누가·언제·어디서·무엇을·어떻게·왜)으로 모든 활동을 기록. Supabase(클라우드) + IndexedDB(로컬) 이중 저장. 법적 분쟁 시 위변조 불가능한 증거로 활용됩니다.</div>
+              <span class="tech-tag">Supabase · IndexedDB · 6하원칙</span>
+            </div>
+            <div class="tech-card">
+              <div class="tech-name">GWP — 위젯 프로토콜</div>
+              <div class="tech-desc">고팡과 서비스 앱 간 표준 통신 규약. manifest.json 등록만으로 고팡에 연결. 사진·GPS·메시지를 서비스에 전달하고, 완료 결과를 PDV에 자동 기록합니다.</div>
+              <span class="tech-tag">window.opener.postMessage · Cross-Origin</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /intro-body -->
+    </div><!-- /sec-intro -->
+
+    <!-- ══ PDV ══ -->
+    <div id="sec-pdv" class="sec">
+      <div class="ph">
+        <div class="ph-row">
+          <div>
+            <div class="ph-title">pdv_log</div>
+            <div class="ph-sub">schema public · 개인 데이터 금고 · 6하원칙 기록</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-default" onclick="loadData()">
+              <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+              <span class="btn-label">새로고침</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="wrap">
+        <!-- 통계 -->
+        <div class="stat-row">
+          <div class="stat-card hi">
+            <div class="stat-lbl">전체 기록</div>
+            <div class="stat-val" id="s-total">—</div>
+            <div class="stat-sub">누적 활동 건수</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-lbl">서비스 이용</div>
+            <div class="stat-val" id="s-svc">—</div>
+            <div class="stat-sub">GWP 완료</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-lbl">신고서 연결</div>
+            <div class="stat-val" id="s-rpt">—</div>
+            <div class="stat-sub">reports 연결</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-lbl">최근 기록</div>
+            <div class="stat-val" id="s-last" style="font-size:15px;padding-top:3px;">—</div>
+            <div class="stat-sub">마지막 활동</div>
+          </div>
+        </div>
+
+        <!-- 테이블 -->
+        <div class="panel">
+          <div class="tb">
+            <span class="tb-title">pdv_log</span>
+            <div class="srch">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input id="q" placeholder="Filter by summary, location..." oninput="filt()">
+            </div>
+            <select class="fsel" id="ftype" onchange="filt()">
+              <option value="">모든 유형</option>
+              <option value="service_task">service_task</option>
+              <option value="session">session</option>
+              <option value="klaw_monitor">klaw_monitor</option>
+            </select>
+            <span class="cnt" id="cnt">—</span>
+            <div style="display:flex;gap:4px;margin-left:auto;">
+              <button class="btn btn-default" onclick="exportPDV('csv')">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span class="btn-label">CSV</span>
+              </button>
+              <button class="btn btn-primary" onclick="exportPDV('json')">
+                <svg viewBox="0 0 24 24"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span class="btn-label">JSON</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th onclick="srt('created_at')">created_at <i class="sort-ic" data-c="created_at">↕</i></th>
+                  <th onclick="srt('summary')">summary <i class="sort-ic" data-c="summary">↕</i></th>
+                  <th onclick="srt('location')">location <i class="sort-ic" data-c="location">↕</i></th>
+                  <th onclick="srt('how')">how <i class="sort-ic" data-c="how">↕</i></th>
+                  <th onclick="srt('why')">why <i class="sort-ic" data-c="why">↕</i></th>
+                  <th onclick="srt('record_type')">record_type <i class="sort-ic" data-c="record_type">↕</i></th>
+                  <th>report_id</th>
+                </tr>
+              </thead>
+              <tbody id="tbody">
+                <tr><td colspan="7"><div class="empty"><div class="empty-title">데이터를 불러오는 중…</div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div><!-- /sec-pdv -->
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ══ 상세 슬라이드오버 ══ -->
+<div class="ov-bg" id="ov-bg" onclick="closeSP()"></div>
+<div class="side-panel" id="side-panel">
+  <div class="sp-head">
+    <div class="sp-title" id="sp-title">—</div>
+    <button class="sp-close" onclick="closeSP()">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="sp-body" id="sp-body"></div>
+</div>
+
+<!-- ══ 웹앱 모달 ══ -->
+<div class="app-bg" id="app-bg" onclick="if(event.target===this)closeApp()">
+  <div class="app-wrap">
+    <div class="phone">
+      <div class="phone-notch"></div>
+      <iframe id="app-iframe" src="" allow="geolocation; camera; microphone" title="고팡 앱"></iframe>
+    </div>
+    <button class="app-close" onclick="closeApp()">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      닫기
+    </button>
+    <div class="app-hint">ESC 또는 배경 클릭으로 닫기</div>
+  </div>
+</div>
+
+<script>
+// ── 설정 ──
+const SB   = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
+const SBKY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
+
+// ── 상태 ──
+let _all=[], _shown=[], _sc='created_at', _sa=false, _guid=null;
+
+// ── 초기화 ──
+document.addEventListener('DOMContentLoaded',()=>{
+  setInterval(()=>{
+    document.getElementById('clock').textContent=new Date().toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  },1000);
+  const p=new URLSearchParams(location.search);
+  _guid=p.get('guid')||null;
+  if(!_guid){try{_guid=JSON.parse(localStorage.getItem('gopang_user_v2')||'null')?.guid;}catch(e){}}
+  loadData();
+});
+
+// ── 섹션 전환 ──
+function go(name){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.sb-item[id]').forEach(n=>n.classList.remove('on'));
+  document.getElementById('sec-'+name).classList.add('on');
+  document.getElementById('nav-'+name)?.classList.add('on');
+  document.getElementById('bc-cur').textContent={intro:'소개',pdv:'pdv_log'}[name]||name;
+  closeMob();
+  if(name==='pdv'&&!_all.length) loadData();
+}
+
+// ── 모바일 사이드바 ──
+function toggleMob(){
+  document.getElementById('sb').classList.toggle('open');
+  document.getElementById('mob-ov').style.display=
+    document.getElementById('sb').classList.contains('open')?'block':'none';
+}
+function closeMob(){
+  document.getElementById('sb').classList.remove('open');
+  document.getElementById('mob-ov').style.display='none';
+}
+window.addEventListener('resize',()=>{if(window.innerWidth>800)closeMob();});
+
+// ── 데이터 로드 ──
+async function loadData(){
+  const tb=document.getElementById('tbody');
+  tb.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-title">불러오는 중…</div></div></td></tr>';
+  if(!_guid){
+    tb.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-title">GUID 없음</div><div class="empty-sub">URL에 ?guid=YOUR_GUID 추가 또는 고팡 앱에서 접속하세요.</div></div></td></tr>';
+    document.getElementById('cnt').textContent='—';
+    return;
+  }
+  try{
+    const r=await fetch(`${SB}/rest/v1/pdv_log?user_guid=eq.${_guid}&order=created_at.desc&limit=500`,
+      {headers:{'apikey':SBKY,'Authorization':'Bearer '+SBKY}});
+    _all=await r.json();
+    filt(); updKPI(_all);
+  }catch(e){
+    tb.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-title">오류</div><div class="empty-sub">${e.message}</div></div></td></tr>`;
+  }
+}
+function updKPI(d){
+  document.getElementById('s-total').textContent=d.length;
+  document.getElementById('s-svc').textContent=d.filter(r=>r.record_type==='service_task').length;
+  document.getElementById('s-rpt').textContent=d.filter(r=>r.report_id).length;
+  const l=d[0]?.created_at;
+  document.getElementById('s-last').textContent=l?new Date(l).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit'}):'—';
+}
+
+// ── 필터·정렬 ──
+function filt(){
+  const q=document.getElementById('q').value.toLowerCase();
+  const t=document.getElementById('ftype').value;
+  let r=_all;
+  if(q) r=r.filter(x=>JSON.stringify(x).toLowerCase().includes(q));
+  if(t) r=r.filter(x=>x.record_type===t);
+  _shown=r; applySrt();
+}
+function srt(col){
+  if(_sc===col){_sa=!_sa;}else{_sc=col;_sa=false;}
+  document.querySelectorAll('thead th').forEach(th=>th.classList.remove('sorted'));
+  document.querySelectorAll('.sort-ic').forEach(ic=>{
+    ic.textContent=ic.dataset.c===col?(_sa?'↑':'↓'):'↕';
+  });
+  const ths=[...document.querySelectorAll('thead th')];
+  const map={created_at:0,summary:1,location:2,how:3,why:4,record_type:5};
+  if(map[col]!==undefined) ths[map[col]].classList.add('sorted');
+  applySrt();
+}
+function applySrt(){
+  const s=[..._shown].sort((a,b)=>{
+    const av=a[_sc]||'',bv=b[_sc]||'';
+    return _sa?av.localeCompare(bv,undefined,{numeric:true}):bv.localeCompare(av,undefined,{numeric:true});
+  });
+  render(s);
+}
+function render(rows){
+  document.getElementById('cnt').textContent=rows.length+'건';
+  const tb=document.getElementById('tbody');
+  if(!rows.length){
+    tb.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-title">검색 결과 없음</div></div></td></tr>';
+    tb._rows=[];return;
+  }
+  const bmap={service_task:['badge-svc','service_task'],session:['badge-sess','session'],klaw_monitor:['badge-mon','klaw_monitor']};
+  tb.innerHTML=rows.map((r,i)=>{
+    const dt=r.created_at?new Date(r.created_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+    const [bc,bl]=bmap[r.record_type]||['badge-sess',r.record_type||'—'];
+    const rpt=r.report_id
+      ?`<a class="rchip" href="https://fiil.kr/dashboard.html#${r.report_id}" target="_blank" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>${r.report_id.slice(-4)}</a>`
+      :'<span class="td-null">NULL</span>';
+    return`<tr onclick="openSP(${i})">
+      <td class="td-mono">${dt}</td>
+      <td><span class="td-trunc">${r.summary||'—'}</span></td>
+      <td class="td-muted td-trunc">${r.location?r.location.slice(0,20)+(r.location.length>20?'…':''):'<span class="td-null">NULL</span>'}</td>
+      <td class="td-muted">${r.how||'<span class="td-null">NULL</span>'}</td>
+      <td class="td-muted td-trunc">${r.why?r.why.slice(0,16)+'…':'<span class="td-null">NULL</span>'}</td>
+      <td><span class="badge ${bc}">${bl}</span></td>
+      <td>${rpt}</td>
+    </tr>`;
+  }).join('');
+  tb._rows=rows;
+}
+
+// ── 상세 패널 ──
+function openSP(i){
+  const rows=document.getElementById('tbody')._rows||_shown;
+  const r=rows[i]; if(!r)return;
+  const dt=r.created_at?new Date(r.created_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'—';
+  const rptSec=r.report_id?`
+    <div class="sp-section" style="margin-bottom:10px;">
+      <div class="sp-sec-hd">report_id</div>
+      <a class="rchip" href="https://fiil.kr/dashboard.html#${r.report_id}" target="_blank" style="font-size:12px;padding:4px 10px;">
+        <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        ${r.report_id}
+      </a>
+    </div>`:'';
+  const plSec=r.payload?`
+    <div class="sp-section">
+      <div class="sp-sec-hd">payload</div>
+    </div>
+    <pre class="json">${JSON.stringify(r.payload,null,2)}</pre>`:'';
+  document.getElementById('sp-title').textContent=r.summary||r.record_type||'PDV 상세';
+  document.getElementById('sp-body').innerHTML=`
+    <div style="padding:10px 12px 0;font-size:11px;color:var(--tx-2);font-family:'IBM Plex Mono',monospace;">${dt}</div>
+    <div class="sixw">
+      <div class="sixw-item"><div class="sixw-lbl">who</div><div class="sixw-val">${r.who_name||'<span class="td-null">NULL</span>'}</div></div>
+      <div class="sixw-item"><div class="sixw-lbl">when</div><div class="sixw-val" style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${dt}</div></div>
+      <div class="sixw-item sixw-full"><div class="sixw-lbl">where</div><div class="sixw-val">${r.location||'<span class="td-null">NULL</span>'}</div></div>
+      <div class="sixw-item sixw-full"><div class="sixw-lbl">what (summary)</div><div class="sixw-val">${r.summary||'<span class="td-null">NULL</span>'}</div></div>
+      <div class="sixw-item"><div class="sixw-lbl">how</div><div class="sixw-val">${r.how||'<span class="td-null">NULL</span>'}</div></div>
+      <div class="sixw-item"><div class="sixw-lbl">why</div><div class="sixw-val">${r.why||'<span class="td-null">NULL</span>'}</div></div>
+    </div>
+    ${rptSec}${plSec}`;
+  document.getElementById('ov-bg').classList.add('on');
+  document.getElementById('side-panel').classList.add('on');
+}
+function closeSP(){
+  document.getElementById('ov-bg').classList.remove('on');
+  document.getElementById('side-panel').classList.remove('on');
+}
+
+// ── 웹앱 모달 ──
+function openApp(){
+  const src='https://gopang.net?app=1'+(_guid?'&guid='+_guid:'');
+  const fr=document.getElementById('app-iframe');
+  if(fr.src!==src)fr.src=src;
+  document.getElementById('app-bg').classList.add('on');
+  document.body.style.overflow='hidden';
+}
+function closeApp(){
+  document.getElementById('app-bg').classList.remove('on');
+  document.body.style.overflow='';
+}
+
+// ── 내보내기 ──
+function exportPDV(fmt){
+  const rows=_all;
+  if(!rows.length){alert('저장된 기록이 없습니다.');return;}
+  const dt=new Date().toISOString().slice(0,10);
+  if(fmt==='json'){
+    _dl(new Blob([JSON.stringify({exported_at:new Date().toISOString(),user_guid:_guid,records:rows},null,2)],{type:'application/json'}),'gopang_pdv_'+dt+'.json');
+    _toast('내 기록이 저장되었습니다.');
+  }else{
+    const h=['created_at','who_name','location','summary','how','why','service_id','record_type','report_id'];
+    const r=rows.map(r=>h.map(k=>`"${String(r[k]||'').replace(/"/g,'""')}"`).join(','));
+    _dl(new Blob(['\uFEFF'+[h.join(','),...r].join('\n')],{type:'text/csv'}),'gopang_pdv_'+dt+'.csv');
+    _toast('CSV 파일이 저장되었습니다.');
+  }
+}
+function _dl(b,n){const u=URL.createObjectURL(b),a=Object.assign(document.createElement('a'),{href:u,download:n});a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
+function _toast(m){const t=Object.assign(document.createElement('div'),{className:'toast'});t.innerHTML=`<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>${m}`;document.body.appendChild(t);setTimeout(()=>t.remove(),3500);}
+
+// ── 유틸 ──
+function open_(u){window.open(u,'_blank');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSP();closeApp();}});
+</script>
+</body>
+</html>
