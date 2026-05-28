@@ -78,6 +78,8 @@ export async function recordPDV(record) {
       }),
     });
     console.info('[PDV] 기록 완료:', record.type, '/', record.summary?.slice(0, 30));
+    // IndexedDB 백업 (index.html의 _saveToIDB 함수 호출)
+    if (typeof _saveToIDB === 'function') _saveToIDB(record);
   } catch(e) {
     console.warn('[PDV] 기록 실패:', e.message);
   }
