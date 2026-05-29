@@ -924,6 +924,7 @@ input[type=checkbox]:checked::after {
       <button class="fs-tab-btn" onclick="switchFS('cf',this)">현금흐름표</button>
       <button class="fs-tab-btn" onclick="switchFS('eq',this)">지분표</button>
       <button class="fs-tab-btn" onclick="switchFS('fa',this)">재무분석 보고서</button>
+      <button class="fs-tab-btn" onclick="switchFS('tax',this)">세금 납부 내역</button>
     </div>
 
     <!-- 손익계산서 (IAS 1 – Function of Expense Method) -->
@@ -1183,6 +1184,91 @@ input[type=checkbox]:checked::after {
         <div class="fs-note">※ IFRS 기반 재무비율 · 수익성·유동성·안정성·활동성 분석 · 단독 재무제표 기준</div>
       </div>
     </div>
+
+    <!-- ── 세금 납부 내역 패널 ── -->
+    <div class="fs-panel" id="fs-tax">
+      <div class="fs-card">
+        <div class="fs-card-hd">
+          <div>
+            <div class="fs-entity-name" id="tax-entity">—</div>
+            <div class="fs-stmt-name">세금 납부 내역 (Tax Payment History)</div>
+            <div class="fs-currency">고팡 재무제표 기반 자동 계산 · 단위: ₮ (GDC) · 제주도 시범 서비스</div>
+          </div>
+          <div class="fs-period">
+            <a href="https://tax.gopang.net/webapp.html?guid=" id="tax-app-link"
+               target="_blank"
+               style="display:inline-block;background:#1B6B3A;color:#fff;font-size:11px;font-weight:600;padding:4px 12px;border-radius:4px;text-decoration:none">
+              납세 앱 열기 →
+            </a>
+          </div>
+        </div>
+
+        <!-- 현재 분기 세금 요약 -->
+        <div style="padding:16px 18px;border-bottom:1px solid var(--border);background:var(--surface2)">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">
+            현재 분기 세금 계산 (재무제표 기반 자동 산출)
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px" id="tax-calc-grid">
+            <div class="ratio-card">
+              <div class="ratio-label">2Q 매출</div>
+              <div class="ratio-val" id="tax-c-rev" style="font-size:16px">₮0</div>
+              <div class="ratio-sub">pl-revenue</div>
+            </div>
+            <div class="ratio-card">
+              <div class="ratio-label">부가가치세 (10%)</div>
+              <div class="ratio-val" id="tax-c-vat" style="font-size:16px;color:var(--red-text)">₮0</div>
+              <div class="ratio-sub">매출 × 10%</div>
+            </div>
+            <div class="ratio-card">
+              <div class="ratio-label">종합소득세 (6%)</div>
+              <div class="ratio-val" id="tax-c-it" style="font-size:16px;color:var(--red-text)">₮0</div>
+              <div class="ratio-sub">순소득 × 6%</div>
+            </div>
+            <div class="ratio-card">
+              <div class="ratio-label">지방소득세 (1%)</div>
+              <div class="ratio-val" id="tax-c-local" style="font-size:16px;color:var(--red-text)">₮0</div>
+              <div class="ratio-sub">소득세 × 10%</div>
+            </div>
+            <div class="ratio-card" style="border-color:var(--blue-bd);background:var(--blue-bg)">
+              <div class="ratio-label" style="color:var(--blue-text)">납부 총액</div>
+              <div class="ratio-val" id="tax-c-total" style="font-size:18px;color:var(--blue-text)">₮0</div>
+              <div class="ratio-sub" id="tax-c-status" style="font-weight:600">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 분기별 납세 내역 테이블 -->
+        <div style="padding:12px 18px 4px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted)">
+          분기별 납세 기록 (extra.fs.tax)
+        </div>
+        <table class="fs-table" id="tax-history-table">
+          <thead>
+            <tr style="background:var(--surface2)">
+              <th style="padding:8px 18px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);text-align:left">분기</th>
+              <th style="padding:8px 18px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);text-align:right">매출</th>
+              <th style="padding:8px 18px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);text-align:right">부가세</th>
+              <th style="padding:8px 18px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);text-align:right">소득세</th>
+              <th style="padding:8px 18px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);text-align:right">지방세</th>
+              <th style="padding:8px 18px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);text-align:right">납부액</th>
+              <th style="padding:8px 18px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);text-align:center">상태</th>
+              <th style="padding:8px 18px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);text-align:left">납부일시</th>
+              <th style="padding:8px 18px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);text-align:left">TX</th>
+            </tr>
+          </thead>
+          <tbody id="tax-history-tbody">
+            <tr><td colspan="9" class="pdv-empty">납세 내역이 없습니다.</td></tr>
+          </tbody>
+        </table>
+
+        <div class="fs-note" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <span>※ extra.fs.tax 저장 기반 · 납부는 tax.gopang.net에서 처리 · OpenHash 원장 연동</span>
+          <a href="https://tax.gopang.net/dashboard.html" target="_blank"
+             style="font-size:11px;color:var(--blue-text);border:1px solid var(--blue-bd);border-radius:4px;padding:3px 10px;white-space:nowrap;text-decoration:none">
+            관리자 대시보드 →
+          </a>
+        </div>
+      </div>
+    </div><!-- /fs-tax -->
 
   </div><!-- /tab-fs -->
 
@@ -2064,6 +2150,7 @@ function switchFS(id, btn) {
   document.querySelectorAll('.fs-panel').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('fs-'+id).classList.add('active');
+  if (id === 'tax') _loadTaxPanel();
 }
 
 function _num(id) { return parseFloat(document.getElementById(id)?.value)||0; }
@@ -2653,6 +2740,96 @@ async function _loadTxLog() {
         <span style="color:var(--text-dim);font-size:11px;white-space:nowrap;margin-left:8px">${_fmt(r.tx_at)}</span>
       </div>`).join('');
   } catch(e) { wrap.style.display='none'; }
+}
+
+// ── 세금 납부 내역 패널 로드 ─────────────────────────
+async function _loadTaxPanel() {
+  // 납세 앱 링크에 guid 주입
+  const appLink = document.getElementById('tax-app-link');
+  if (appLink) appLink.href = `https://tax.gopang.net/webapp.html?guid=${PAGE_GUID}`;
+
+  // extra 에서 재무제표 + tax 읽기
+  const extra = await _getFSProfile(PAGE_GUID);
+  const pl    = extra?.fs?.pl || {};
+  const bs    = extra?.fs?.bs || {};
+  const taxHistory = extra?.fs?.tax || {};
+
+  // 현재 분기 세금 계산
+  const rev    = parseFloat(pl['pl-revenue'] || '0') || 0;
+  const opex   = parseFloat(pl['pl-opex']    || '0') || 0;
+  const income = Math.max(0, rev - opex);
+  const vat    = Math.round(rev    * 0.10 * 100) / 100;
+  const it     = Math.round(income * 0.06 * 100) / 100;
+  const local  = Math.round(it     * 0.10 * 100) / 100;
+  const total  = Math.round((vat + it + local) * 100) / 100;
+  const cash   = parseFloat(bs['bs-cash'] || '0') || 0;
+
+  const fmtT = n => '₮' + (+(n||0)).toLocaleString('ko-KR', {maximumFractionDigits:0});
+
+  // 재무제표 기반 자동 계산 카드
+  const setEl = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  setEl('tax-entity', document.getElementById('pl-entity')?.textContent || '—');
+  setEl('tax-c-rev',  fmtT(rev));
+  setEl('tax-c-vat',  fmtT(vat));
+  setEl('tax-c-it',   fmtT(it));
+  setEl('tax-c-local',fmtT(local));
+  setEl('tax-c-total',fmtT(total));
+
+  // 납부 상태
+  const statusEl = document.getElementById('tax-c-status');
+  if (statusEl) {
+    const q = '2026-Q2';
+    if (taxHistory[q]?.status === 'paid') {
+      statusEl.textContent = '✓ 납부 완료';
+      statusEl.style.color = 'var(--green-text)';
+    } else if (total === 0) {
+      statusEl.textContent = '해당없음';
+      statusEl.style.color = 'var(--text-muted)';
+    } else if (cash >= total) {
+      statusEl.textContent = '납부 가능';
+      statusEl.style.color = 'var(--blue-text)';
+    } else {
+      statusEl.textContent = '⚠ 잔액 부족';
+      statusEl.style.color = 'var(--red-text)';
+    }
+  }
+
+  // 분기별 납세 기록 테이블
+  const tbody = document.getElementById('tax-history-tbody');
+  if (!tbody) return;
+
+  const entries = Object.entries(taxHistory);
+  if (!entries.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="pdv-empty">납세 내역이 없습니다. tax.gopang.net에서 납부하세요.</td></tr>';
+    return;
+  }
+
+  // 최신 분기 순 정렬
+  entries.sort((a, b) => b[0].localeCompare(a[0]));
+
+  tbody.innerHTML = entries.map(([quarter, t]) => {
+    const isPaid = t.status === 'paid';
+    const statusChip = isPaid
+      ? `<span style="background:var(--green-bg);color:var(--green-text);border:1px solid var(--green-bd);border-radius:10px;font-size:11px;font-weight:600;padding:2px 8px">✓ 납부</span>`
+      : `<span style="background:var(--red-bg);color:var(--red-text);border:1px solid var(--red-bd);border-radius:10px;font-size:11px;font-weight:600;padding:2px 8px">미납</span>`;
+    const paidAt = t.paid_at
+      ? new Date(t.paid_at).toLocaleString('ko-KR', {timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})
+      : '—';
+    const txShort = t.tx_id
+      ? `<span style="font-family:monospace;font-size:11px;color:var(--text-dim)">${t.tx_id.slice(0,8)}…</span>`
+      : '—';
+    return `<tr>
+      <td style="font-weight:600">${quarter}</td>
+      <td class="fs-row-num">${fmtT(t.revenue||0)}</td>
+      <td class="fs-row-num" style="color:var(--red-text)">${fmtT(t.vat||0)}</td>
+      <td class="fs-row-num" style="color:var(--red-text)">${fmtT(t.income_tax||0)}</td>
+      <td class="fs-row-num" style="color:var(--red-text)">${fmtT(t.local_tax||0)}</td>
+      <td class="fs-row-num" style="font-weight:700;color:var(--blue-text)">${fmtT(t.total||0)}</td>
+      <td style="text-align:center">${statusChip}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${paidAt}</td>
+      <td>${txShort}</td>
+    </tr>`;
+  }).join('');
 }
 
 init().catch(e=>console.error('[user_template]',e));
