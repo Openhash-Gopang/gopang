@@ -1,0 +1,2202 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>내 페이지 — 고팡</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #f4f5f7;
+  --surface:    #ffffff;
+  --surface2:   #f8f9fa;
+  --border:     #e5e7eb;
+  --border2:    #d1d5db;
+  --text:       #111827;
+  --text-sub:   #374151;
+  --text-muted: #6b7280;
+  --text-dim:   #9ca3af;
+  --green:      #3ecf8e;
+  --green-dark: #2db77a;
+  --green-bg:   #f0fdf4;
+  --green-bd:   #bbf7d0;
+  --green-text: #15803d;
+  --blue:       #3b82f6;
+  --blue-bg:    #eff6ff;
+  --blue-bd:    #bfdbfe;
+  --blue-text:  #1d4ed8;
+  --red:        #ef4444;
+  --red-bg:     #fef2f2;
+  --red-bd:     #fecaca;
+  --red-text:   #dc2626;
+  --yellow:     #f59e0b;
+  --yellow-bg:  #fffbeb;
+  --yellow-bd:  #fde68a;
+  --yellow-text:#b45309;
+  --purple:     #8b5cf6;
+  --purple-bg:  #f5f3ff;
+  --purple-bd:  #ddd6fe;
+  --purple-text:#6d28d9;
+  --teal:       #14b8a6;
+  --teal-bg:    #f0fdfa;
+  --teal-bd:    #99f6e4;
+  --teal-text:  #0f766e;
+  --orange:     #f97316;
+  --orange-bg:  #fff7ed;
+  --orange-bd:  #fed7aa;
+  --orange-text:#c2410c;
+  --font: 'Inter', -apple-system, sans-serif;
+  --r: 6px;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { background:var(--bg); }
+body { font-family:var(--font); font-size:13px; color:var(--text); background:var(--bg); min-height:100vh; }
+a { text-decoration:none; color:inherit; }
+button,input,select,textarea { font-family:var(--font); }
+
+/* ── 접근 거부 오버레이 ── */
+#access-overlay {
+  display:none; position:fixed; inset:0; z-index:9999;
+  background:rgba(0,0,0,.5); align-items:center; justify-content:center; padding:24px;
+}
+.access-box {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:12px; padding:32px 28px; width:min(400px,92vw); text-align:center;
+  box-shadow:0 20px 60px rgba(0,0,0,.15);
+}
+.access-icon { font-size:36px; margin-bottom:12px; }
+.access-title { font-size:18px; font-weight:600; margin-bottom:8px; }
+.access-desc  { font-size:13px; color:var(--text-muted); line-height:1.7; margin-bottom:16px; }
+.access-guid  { font-size:11px; font-family:monospace; background:var(--surface2); border:1px solid var(--border); border-radius:5px; padding:8px 12px; word-break:break-all; color:var(--text-muted); margin-bottom:16px; }
+.access-btn   { display:inline-block; background:var(--green); color:#fff; padding:9px 22px; border-radius:var(--r); font-size:13px; font-weight:600; cursor:pointer; }
+
+/* ── 상단 바 ── */
+.topbar {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:0 20px; height:48px; display:flex; align-items:center; gap:14px;
+  position:sticky; top:0; z-index:100;
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+}
+.topbar-logo { font-size:15px; font-weight:700; color:var(--text); }
+.topbar-logo em { color:var(--green); font-style:normal; }
+.topbar-sep  { width:1px; height:18px; background:var(--border); }
+.topbar-name { font-size:13px; font-weight:500; color:var(--text); }
+.topbar-tag  { font-size:11px; background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:2px 7px; color:var(--text-muted); }
+.topbar-right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+.owner-badge { background:var(--green-bg); color:var(--green-text); border:1px solid var(--green-bd); font-size:11px; font-weight:600; padding:2px 9px; border-radius:4px; }
+
+/* ── 페이지 본문 ── */
+.page-body { max-width:1100px; margin:0 auto; padding:20px 20px 60px; }
+
+/* ── 프로필 카드 ── */
+.profile-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r); padding:20px; margin-bottom:16px;
+  display:flex; align-items:center; gap:16px;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);
+}
+.profile-avatar {
+  width:52px; height:52px; border-radius:50%;
+  background:var(--green-bg); border:2px solid var(--green-bd);
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; font-weight:700; color:var(--green-text); flex-shrink:0;
+}
+.profile-name { font-size:18px; font-weight:600; color:var(--text); margin-bottom:4px; }
+.profile-meta { font-size:12px; color:var(--text-muted); display:flex; gap:14px; flex-wrap:wrap; }
+.profile-edit-btn {
+  margin-left:auto; background:var(--surface); color:var(--text-sub);
+  border:1px solid var(--border2); border-radius:var(--r);
+  padding:6px 14px; font-size:12px; font-weight:500; cursor:pointer;
+  transition:border-color .12s, color .12s;
+}
+.profile-edit-btn:hover { border-color:var(--green); color:var(--green-dark); }
+
+/* ── 탭 바 ── */
+.tabs { display:flex; gap:0; margin-bottom:16px; border-bottom:1px solid var(--border); }
+.tab-btn {
+  padding:8px 18px; font-size:13px; font-weight:500; color:var(--text-muted);
+  background:none; border:none; cursor:pointer;
+  border-bottom:2px solid transparent; margin-bottom:-1px;
+  transition:color .12s, border-color .12s;
+}
+.tab-btn.active { color:var(--text); border-bottom-color:var(--text); }
+.tab-btn:hover  { color:var(--text-sub); }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+
+/* ── 공개/비공개 정보 카드 ── */
+.info-section {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
+  box-shadow:0 1px 3px rgba(0,0,0,.05); overflow:hidden; margin-bottom:16px;
+}
+.info-section-hd {
+  padding:12px 16px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--surface2);
+}
+.info-section-title { font-size:12px; font-weight:600; color:var(--text-sub); letter-spacing:.2px; }
+.info-add-btn {
+  display:flex; align-items:center; gap:4px;
+  background:none; border:1px solid var(--border2); border-radius:var(--r);
+  color:var(--text-muted); font-size:12px; padding:4px 10px; cursor:pointer;
+  transition:border-color .12s, color .12s;
+}
+.info-add-btn:hover { border-color:var(--green); color:var(--green-dark); }
+
+/* 프로퍼티 테이블 */
+.prop-table { width:100%; border-collapse:collapse; }
+.prop-table tr { border-bottom:1px solid var(--border); }
+.prop-table tr:last-child { border-bottom:none; }
+.prop-table td { padding:9px 14px; font-size:13px; }
+.prop-key  { width:36%; color:var(--text-muted); font-size:12px; font-weight:500; }
+.prop-val  { color:var(--text); }
+.prop-val.null-val { color:var(--text-dim); font-style:italic; }
+.prop-actions { width:60px; text-align:right; }
+.prop-del {
+  background:none; border:none; cursor:pointer; color:var(--text-dim);
+  font-size:15px; padding:2px 6px; border-radius:4px;
+  transition:background .1s, color .1s;
+}
+.prop-del:hover { background:var(--red-bg); color:var(--red); }
+
+/* 인라인 편집 */
+.prop-input {
+  background:var(--surface); border:1.5px solid var(--green); border-radius:4px;
+  color:var(--text); font-size:13px; padding:4px 8px; outline:none; width:100%;
+}
+.prop-key-input {
+  background:var(--surface); border:1.5px solid var(--blue); border-radius:4px;
+  color:var(--text); font-size:12px; padding:3px 8px; outline:none; width:100%;
+}
+
+/* 추가 폼 */
+.add-row {
+  display:none; padding:10px 14px; border-top:1px solid var(--border);
+  gap:8px; align-items:center; background:var(--surface2); flex-wrap:wrap;
+}
+.add-row.open { display:flex; }
+.add-row input {
+  background:var(--surface); border:1px solid var(--border2); border-radius:var(--r);
+  color:var(--text); font-size:13px; padding:6px 10px; outline:none;
+}
+.add-row input:focus { border-color:var(--green); }
+.add-key-input { width:160px; }
+.add-val-input { flex:1; min-width:160px; }
+.add-save-btn {
+  background:var(--green); color:#fff; border:none; border-radius:var(--r);
+  padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;
+}
+.add-save-btn:hover { background:var(--green-dark); }
+.add-cancel-btn {
+  background:none; border:1px solid var(--border2); border-radius:var(--r);
+  color:var(--text-muted); padding:6px 12px; font-size:12px; cursor:pointer;
+}
+.add-cancel-btn:hover { border-color:var(--red); color:var(--red); }
+.preset-chips { display:flex; gap:5px; flex-wrap:wrap; padding:0 14px 10px; }
+.preset-chip {
+  font-size:11px; background:var(--surface2); border:1px solid var(--border);
+  border-radius:12px; padding:2px 9px; cursor:pointer; color:var(--text-muted);
+  transition:border-color .1s, color .1s;
+}
+.preset-chip:hover { border-color:var(--green); color:var(--green-dark); }
+
+/* ── PDV 툴바 ── */
+.table-toolbar {
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  padding:10px 14px; background:var(--surface);
+  border:1px solid var(--border); border-bottom:none;
+  border-radius:var(--r) var(--r) 0 0;
+  box-shadow:0 1px 3px rgba(0,0,0,.04);
+}
+.tb-search-wrap {
+  display:flex; align-items:center; gap:6px;
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:var(--r); padding:0 10px; flex:1; min-width:200px; max-width:340px;
+}
+.tb-search-ico { color:var(--text-dim); flex-shrink:0; }
+.tb-search {
+  background:none; border:none; outline:none; color:var(--text);
+  font-size:13px; padding:6px 0; width:100%;
+}
+.tb-search::placeholder { color:var(--text-dim); }
+.tb-btn {
+  display:flex; align-items:center; gap:5px;
+  background:var(--surface); color:var(--text-muted);
+  border:1px solid var(--border); border-radius:var(--r);
+  padding:6px 12px; font-size:12px; font-weight:500; cursor:pointer;
+  transition:color .12s, border-color .12s;
+}
+.tb-btn:hover { color:var(--text); border-color:var(--border2); }
+.tb-btn.active { color:var(--blue-text); border-color:var(--blue-bd); background:var(--blue-bg); }
+.tb-btn-green {
+  background:var(--green); color:#fff; border:none; border-radius:var(--r);
+  padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;
+}
+.tb-btn-green:hover { background:var(--green-dark); }
+.tb-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
+.tb-count { font-size:12px; color:var(--text-muted); white-space:nowrap; }
+
+/* ── 필터 패널 ── */
+.filter-panel {
+  display:none; background:var(--surface2);
+  border:1px solid var(--border); border-top:none; border-bottom:none;
+  padding:12px 14px; flex-direction:column; gap:8px;
+}
+.filter-panel.open { display:flex; }
+.filter-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.f-sel, .f-inp {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
+  color:var(--text); font-size:12px; padding:5px 8px; outline:none; cursor:pointer;
+}
+.f-sel:focus,.f-inp:focus { border-color:var(--green); }
+.f-inp { flex:1; min-width:140px; }
+.f-add-btn {
+  display:flex; align-items:center; gap:4px;
+  background:none; border:1px dashed var(--border2); border-radius:var(--r);
+  color:var(--text-muted); font-size:12px; padding:5px 12px; cursor:pointer;
+}
+.f-add-btn:hover { border-color:var(--green); color:var(--green-dark); }
+.f-del { background:none; border:none; color:var(--text-dim); font-size:16px; cursor:pointer; padding:0 2px; }
+.f-del:hover { color:var(--red); }
+
+/* ── 정렬 패널 ── */
+.sort-panel {
+  display:none; background:var(--surface2);
+  border:1px solid var(--border); border-top:none; border-bottom:none;
+  padding:10px 14px; flex-direction:column; gap:8px;
+}
+.sort-panel.open { display:flex; }
+.sort-row { display:flex; align-items:center; gap:8px; }
+.sort-lbl { font-size:12px; color:var(--text-muted); width:52px; flex-shrink:0; }
+
+/* ── PDV 테이블 ── */
+.pdv-table-wrap {
+  background:var(--surface); border:1px solid var(--border);
+  border-top:none; border-radius:0 0 var(--r) var(--r); overflow-x:auto;
+  box-shadow:0 1px 3px rgba(0,0,0,.04);
+}
+.pdv-table { width:100%; border-collapse:collapse; min-width:680px; }
+.pdv-table thead tr { background:var(--surface2); }
+.pdv-table th {
+  border-bottom:1px solid var(--border);
+  font-size:12px; font-weight:500; color:var(--text-muted);
+  white-space:nowrap; user-select:none; padding:0;
+}
+.th-inner {
+  display:flex; align-items:center; gap:4px;
+  padding:9px 12px; cursor:pointer;
+}
+.th-inner:hover { color:var(--text); }
+.th-inner.sorted { color:var(--blue); }
+.sort-ico { width:11px; height:11px; flex-shrink:0; opacity:.4; transition:opacity .1s; }
+.sort-ico.on { opacity:1; }
+.sort-ico.desc { transform:rotate(180deg); }
+
+.pdv-table td {
+  padding:9px 12px; font-size:13px; color:var(--text);
+  border-bottom:1px solid var(--border); vertical-align:middle;
+  max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.pdv-table tr:last-child td { border-bottom:none; }
+.pdv-table tbody tr:hover td { background:var(--surface2); }
+.null-val { color:var(--text-dim); font-style:italic; }
+.col-cb   { width:36px; text-align:center; }
+.col-when { width:108px; }
+.col-where{ width:150px; }
+.col-what { min-width:150px; }
+.col-how  { width:88px; }
+.col-why  { width:130px; }
+.col-cat  { width:68px; }
+.col-link { width:52px; text-align:center; }
+
+input[type=checkbox] {
+  appearance:none; -webkit-appearance:none;
+  width:14px; height:14px; border:1px solid var(--border2);
+  border-radius:3px; background:var(--surface); cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; vertical-align:middle;
+}
+input[type=checkbox]:checked { background:var(--green); border-color:var(--green); }
+input[type=checkbox]:checked::after {
+  content:''; display:block; width:8px; height:8px;
+  background:url("data:image/svg+xml,%3Csvg viewBox='0 0 10 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4l3 3 5-6' stroke='%23fff' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* ── 배지 ── */
+.svc-badge {
+  display:inline-flex; align-items:center; gap:3px;
+  font-size:11px; font-weight:500; padding:1px 7px; border-radius:12px;
+  border:1px solid transparent; white-space:nowrap;
+}
+.svc-fiil  { background:var(--teal-bg);   color:var(--teal-text);   border-color:var(--teal-bd); }
+.svc-klaw  { background:var(--purple-bg); color:var(--purple-text); border-color:var(--purple-bd); }
+.svc-chat  { background:var(--surface2);  color:var(--text-muted);  border-color:var(--border); }
+.svc-other { background:var(--orange-bg); color:var(--orange-text); border-color:var(--orange-bd); }
+.cat-badge {
+  display:inline-block; font-size:11px; font-weight:500;
+  padding:1px 7px; border-radius:12px; border:1px solid transparent; white-space:nowrap;
+}
+.cat-의료 { background:var(--red-bg);    color:var(--red-text);    border-color:var(--red-bd); }
+.cat-교육 { background:var(--purple-bg); color:var(--purple-text); border-color:var(--purple-bd); }
+.cat-교통 { background:var(--teal-bg);   color:var(--teal-text);   border-color:var(--teal-bd); }
+.cat-물류 { background:var(--orange-bg); color:var(--orange-text); border-color:var(--orange-bd); }
+.cat-시장 { background:var(--green-bg);  color:var(--green-text);  border-color:var(--green-bd); }
+.cat-산업 { background:var(--yellow-bg); color:var(--yellow-text); border-color:var(--yellow-bd); }
+.cat-행정 { background:var(--blue-bg);   color:var(--blue-text);   border-color:var(--blue-bd); }
+.cat-입법 { background:var(--purple-bg); color:var(--purple-text); border-color:var(--purple-bd); }
+.cat-사법 { background:var(--green-bg);  color:var(--green-text);  border-color:var(--green-bd); }
+.cat-사교 { background:var(--orange-bg); color:var(--orange-text); border-color:var(--orange-bd); }
+.cat-환경 { background:var(--teal-bg);   color:var(--teal-text);   border-color:var(--teal-bd); }
+.cat-기타 { background:var(--surface2);  color:var(--text-muted);  border-color:var(--border); }
+.ext-link {
+  font-size:11px; color:var(--green-text); font-weight:500;
+  border:1px solid var(--green-bd); border-radius:4px;
+  padding:2px 7px; display:inline-block; white-space:nowrap;
+}
+.ext-link:hover { background:var(--green-bg); }
+
+/* ── 페이지네이션 ── */
+.pager {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px; background:var(--surface);
+  border:1px solid var(--border); border-top:none;
+  border-radius:0 0 var(--r) var(--r);
+  font-size:12px; color:var(--text-muted);
+}
+.pager-btn {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
+  color:var(--text-muted); padding:4px 12px; font-size:12px; cursor:pointer;
+}
+.pager-btn:hover:not(:disabled) { border-color:var(--border2); color:var(--text); }
+.pager-btn:disabled { opacity:.35; cursor:default; }
+.pdv-empty { text-align:center; padding:40px; color:var(--text-dim); font-size:13px; }
+
+/* ── 저장 버튼 플로팅 ── */
+.save-fab {
+  display:none; position:fixed; bottom:24px; right:24px; z-index:200;
+  background:var(--green); color:#fff; border:none; border-radius:8px;
+  padding:10px 22px; font-size:13px; font-weight:600; cursor:pointer;
+  box-shadow:0 4px 14px rgba(62,207,142,.4);
+  transition:background .12s, box-shadow .12s;
+}
+.save-fab.visible { display:block; }
+.save-fab:hover { background:var(--green-dark); }
+
+/* ── 재무제표 ── */
+.fs-tabs {
+  display:flex; gap:0; margin-bottom:16px;
+  border-bottom:1px solid var(--border); margin-top:0;
+}
+.fs-tab-btn {
+  padding:6px 14px; font-size:12px; font-weight:500; color:var(--text-muted);
+  background:none; border:none; cursor:pointer;
+  border-bottom:2px solid transparent; margin-bottom:-1px;
+  transition:color .12s, border-color .12s;
+}
+.fs-tab-btn.active { color:var(--blue-text); border-bottom-color:var(--blue); }
+.fs-tab-btn:hover  { color:var(--text-sub); }
+.fs-panel { display:none; }
+.fs-panel.active { display:block; }
+
+/* 재무제표 공통 카드 */
+.fs-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r); overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,0,0,.05); margin-bottom:16px;
+}
+.fs-card-hd {
+  background:var(--surface2); border-bottom:1px solid var(--border);
+  padding:12px 18px; display:flex; justify-content:space-between; align-items:flex-start;
+}
+.fs-entity-name { font-size:13px; font-weight:600; color:var(--text); }
+.fs-stmt-name   { font-size:12px; font-weight:600; color:var(--text-sub); margin-top:1px; }
+.fs-period      { font-size:11px; color:var(--text-muted); text-align:right; }
+.fs-currency    { font-size:11px; color:var(--text-dim); }
+
+/* 재무제표 테이블 */
+.fs-table { width:100%; border-collapse:collapse; font-size:13px; }
+.fs-table td { padding:6px 18px; vertical-align:top; }
+.fs-section-hd td {
+  padding:10px 18px 4px; font-size:11px; font-weight:700;
+  letter-spacing:.5px; text-transform:uppercase;
+  color:var(--text-muted); border-top:1px solid var(--border);
+}
+.fs-section-hd:first-child td { border-top:none; }
+.fs-row-label { color:var(--text-sub); width:60%; }
+.fs-row-label.indent1 { padding-left:32px; }
+.fs-row-label.indent2 { padding-left:48px; }
+.fs-row-num   { text-align:right; color:var(--text); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.fs-row-num.neg { color:var(--red-text); }
+.fs-subtotal td { border-top:1px solid var(--border2); font-weight:600; color:var(--text); padding-top:7px; }
+.fs-total td {
+  border-top:2px solid var(--text); border-bottom:2px solid var(--text);
+  font-weight:700; color:var(--text); padding-top:8px; padding-bottom:8px;
+}
+.fs-spacer td { height:6px; }
+.fs-note { font-size:11px; color:var(--text-dim); padding:10px 18px; border-top:1px solid var(--border); }
+
+/* 입력 모드 */
+.fs-input {
+  background:var(--surface); border:1px solid var(--border); border-radius:4px;
+  color:var(--text); font-size:13px; font-variant-numeric:tabular-nums;
+  padding:3px 6px; text-align:right; width:120px; outline:none;
+}
+.fs-input:focus { border-color:var(--green); }
+.fs-edit-bar {
+  display:flex; align-items:center; gap:8px; padding:10px 18px;
+  border-top:1px solid var(--border); background:var(--surface2);
+}
+.fs-edit-hint { font-size:11px; color:var(--text-muted); flex:1; }
+
+/* 분석 보고서 */
+.ratio-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; padding:16px; }
+.ratio-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); padding:14px; }
+.ratio-label { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px; }
+.ratio-val   { font-size:22px; font-weight:700; color:var(--text); }
+.ratio-sub   { font-size:11px; color:var(--text-muted); margin-top:2px; }
+
+/* ── 재고 탭 ── */
+.inv-toolbar {
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  padding:10px 14px; background:var(--surface);
+  border:1px solid var(--border); border-bottom:none;
+  border-radius:var(--r) var(--r) 0 0;
+}
+.inv-table-wrap {
+  background:var(--surface); border:1px solid var(--border);
+  border-top:none; border-radius:0 0 var(--r) var(--r); overflow-x:auto;
+  box-shadow:0 1px 3px rgba(0,0,0,.04);
+}
+.inv-table { width:100%; border-collapse:collapse; min-width:700px; }
+.inv-table thead tr { background:var(--surface2); }
+.inv-table th {
+  padding:9px 12px; text-align:left; font-size:12px; font-weight:500;
+  color:var(--text-muted); border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.inv-table td {
+  padding:9px 12px; font-size:13px; color:var(--text);
+  border-bottom:1px solid var(--border); vertical-align:middle;
+}
+.inv-table tr:last-child td { border-bottom:none; }
+.inv-table tbody tr:hover td { background:var(--surface2); }
+.inv-input {
+  background:var(--surface); border:1px solid var(--border2); border-radius:4px;
+  color:var(--text); font-size:12px; padding:4px 8px; outline:none; width:100%;
+}
+.inv-input:focus { border-color:var(--green); }
+.gdc-badge {
+  display:inline-block; background:var(--green-bg); color:var(--green-text);
+  border:1px solid var(--green-bd); border-radius:12px;
+  font-size:11px; font-weight:600; padding:1px 8px; white-space:nowrap;
+}
+.qty-badge {
+  display:inline-block; font-size:12px; font-weight:600;
+  color:var(--text-sub); min-width:40px; text-align:right;
+}
+.qty-low { color:var(--red-text); }
+.buy-btn {
+  background:var(--green); color:#fff; border:none; border-radius:var(--r);
+  padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer;
+  white-space:nowrap; transition:background .12s;
+}
+.buy-btn:hover { background:var(--green-dark); }
+.buy-btn:disabled { background:var(--border2); color:var(--text-dim); cursor:default; }
+
+/* 구매 모달 */
+.buy-modal-bg {
+  display:none; position:fixed; inset:0; z-index:9000;
+  background:rgba(0,0,0,.45); align-items:center; justify-content:center;
+}
+.buy-modal-bg.open { display:flex; }
+.buy-modal {
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:10px; padding:24px; width:min(440px,92vw);
+  box-shadow:0 16px 48px rgba(0,0,0,.15);
+}
+.buy-modal-title { font-size:15px; font-weight:600; margin-bottom:16px; }
+.buy-field { margin-bottom:12px; }
+.buy-label { font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px; text-transform:uppercase; }
+.buy-field input, .buy-field select {
+  width:100%; padding:7px 10px; border:1px solid var(--border2); border-radius:var(--r);
+  font-size:13px; font-family:var(--font); color:var(--text); background:var(--surface); outline:none;
+}
+.buy-field input:focus, .buy-field select:focus { border-color:var(--green); }
+.buy-total {
+  background:var(--surface2); border:1px solid var(--border); border-radius:var(--r);
+  padding:12px 14px; margin:14px 0; font-size:13px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.buy-total-label { color:var(--text-muted); }
+.buy-total-val   { font-size:18px; font-weight:700; color:var(--green-text); }
+.buy-actions { display:flex; gap:8px; justify-content:flex-end; }
+.tx-log-wrap {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r); margin-top:16px; overflow:hidden;
+}
+.tx-log-hd {
+  background:var(--surface2); border-bottom:1px solid var(--border);
+  padding:10px 14px; font-size:12px; font-weight:600; color:var(--text-sub);
+}
+.tx-row {
+  padding:9px 14px; border-bottom:1px solid var(--border);
+  font-size:12px; display:flex; gap:10px; align-items:center;
+}
+.tx-row:last-child { border-bottom:none; }
+.tx-dir-in  { color:var(--green-text); font-weight:700; width:20px; }
+.tx-dir-out { color:var(--red-text);   font-weight:700; width:20px; }
+.ratio-good  { color:var(--green-text); }
+.ratio-warn  { color:var(--yellow-text); }
+.ratio-bad   { color:var(--red-text); }
+
+/* ── 비공개 배너 ── */
+.private-banner {
+  background:var(--yellow-bg); border:1px solid var(--yellow-bd);
+  border-radius:var(--r); padding:12px 14px; font-size:13px;
+  color:var(--yellow-text); margin-bottom:12px; display:flex; align-items:center; gap:8px;
+}
+@media(max-width:700px) {
+  .profile-card { flex-wrap:wrap; }
+  .topbar-tag   { display:none; }
+  .col-how,.col-why { display:none; }
+}
+</style>
+</head>
+<body>
+
+<div id="access-overlay">
+  <div class="access-box">
+    <div class="access-icon">🔒</div>
+    <div class="access-title">비공개 페이지</div>
+    <div class="access-desc">이 페이지는 소유자만 열람할 수 있습니다.<br>고팡 앱에서 접속하거나, 소유자가 공개 설정한 경우에만 확인 가능합니다.</div>
+    <div class="access-guid" id="access-page-guid">—</div>
+    <a href="https://gopang.net" class="access-btn">고팡으로 이동</a>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="topbar-logo">고<em>팡</em></div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-name" id="tb-name">로딩 중…</div>
+  <div class="topbar-tag" id="tb-entity">—</div>
+  <div class="topbar-right">
+    <span class="owner-badge" id="owner-badge" style="display:none">내 페이지</span>
+    <a href="https://gopang.net" style="font-size:12px;color:var(--text-muted)">← 고팡</a>
+  </div>
+</div>
+
+<div class="page-body" id="page-body" style="display:none">
+
+  <div class="profile-card">
+    <div class="profile-avatar" id="prof-avatar">?</div>
+    <div style="flex:1;min-width:0">
+      <div class="profile-name" id="prof-name">—</div>
+      <div class="profile-meta" id="prof-meta"></div>
+    </div>
+    <button class="profile-edit-btn" id="prof-edit-btn" style="display:none"
+            onclick="window.open('https://gopang.net','_blank')">프로필 수정</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('pub',this)">공개 정보</button>
+    <button class="tab-btn" onclick="switchTab('priv',this)">비공개 정보</button>
+    <button class="tab-btn" onclick="switchTab('fs',this)">재무제표</button>
+    <button class="tab-btn" id="tab-inv-btn" style="display:none" onclick="switchTab('inv',this)">재고</button>
+    <button class="tab-btn" onclick="switchTab('pdv',this)">PDV 기록</button>
+  </div>
+
+  <!-- ── 재고 탭 (기관/사물 전용) ── -->
+  <div class="tab-panel" id="tab-inv">
+
+    <!-- 구매 모달 -->
+    <div class="buy-modal-bg" id="buy-modal-bg">
+      <div class="buy-modal">
+        <div class="buy-modal-title">🛒 구매 확인</div>
+        <input type="hidden" id="bm-item-id">
+        <input type="hidden" id="bm-seller-guid">
+        <div class="buy-field">
+          <span class="buy-label">품목</span>
+          <div id="bm-item-name" style="font-size:14px;font-weight:600;padding:6px 0"></div>
+        </div>
+        <div class="buy-field">
+          <span class="buy-label">단가 (₮ GDC)</span>
+          <div id="bm-unit-price" style="font-size:13px;color:var(--text-muted)"></div>
+        </div>
+        <div class="buy-field">
+          <span class="buy-label">수량</span>
+          <input type="number" id="bm-qty" min="1" step="1" value="1" oninput="updateBuyTotal()">
+        </div>
+        <div class="buy-field">
+          <span class="buy-label">인도 방식</span>
+          <div id="bm-delivery" style="font-size:13px;color:var(--text-muted)"></div>
+        </div>
+        <div class="buy-field">
+          <span class="buy-label">구매 목적</span>
+          <input type="text" id="bm-purpose" placeholder="예: 업무용, 연구용, 개인소비…">
+        </div>
+        <div class="buy-total">
+          <span class="buy-total-label">합계 (₮ GDC)</span>
+          <span class="buy-total-val" id="bm-total">₮0.0000</span>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--text-muted)">
+            <span>구매자 지출</span><span id="bm-buyer-pays" style="font-weight:500">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--text-muted)">
+            <span>GDC 수수료 <span style="font-size:10px;background:var(--orange-bg);color:var(--orange-text);border-radius:3px;padding:1px 5px">0.20% · 판매자 부담</span></span>
+            <span id="bm-fee" style="color:var(--orange-text);font-weight:500">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:6px;margin-top:4px;font-weight:600">
+            <span>판매자 수령</span><span id="bm-seller-net" style="color:var(--green-text)">—</span>
+          </div>
+        </div>
+        <div id="bm-msg" style="font-size:12px;color:var(--red-text);margin-bottom:8px;min-height:16px"></div>
+        <div class="buy-actions">
+          <button class="add-cancel-btn" onclick="closeBuyModal()">취소</button>
+          <button class="buy-btn" id="bm-confirm-btn" onclick="confirmPurchase()">구매 확정</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 툴바 -->
+    <div class="inv-toolbar">
+      <div class="tb-search-wrap" style="max-width:280px">
+        <svg class="tb-search-ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3" stroke-linecap="round"/></svg>
+        <input class="tb-search" id="inv-search" placeholder="품목명, 분류 검색…" oninput="filterInv()">
+      </div>
+      <div class="tb-right">
+        <span class="tb-count" id="inv-count">0 품목</span>
+        <button class="tb-btn-green" id="inv-add-btn" style="display:none" onclick="openInvAddRow()">+ 품목 추가</button>
+      </div>
+    </div>
+
+    <!-- 재고 추가 폼 -->
+    <div class="add-row" id="inv-add-row" style="border:1px solid var(--border);border-top:none;border-bottom:none;gap:6px;align-items:flex-start;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:130px">
+        <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">품목명 *</span>
+        <input class="inv-input" id="inv-new-name" placeholder="예: 제주 감귤">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;width:80px">
+        <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">분류</span>
+        <select class="inv-input" id="inv-new-cat">
+          <option>농산물</option><option>공산품</option><option>서비스</option>
+          <option>디지털</option><option>의료</option><option>교육</option>
+          <option>운송</option><option>기타</option>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;width:90px">
+        <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">단가 (₮ GDC) *</span>
+        <input class="inv-input" id="inv-new-price" type="number" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;width:70px">
+        <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">수량</span>
+        <input class="inv-input" id="inv-new-qty" type="number" min="0" step="1" placeholder="0">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;width:60px">
+        <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">단위</span>
+        <input class="inv-input" id="inv-new-unit" placeholder="개">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px">
+        <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">인도 방식</span>
+        <input class="inv-input" id="inv-new-delivery" placeholder="예: 직접 수령, 택배…">
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:6px;padding-bottom:1px">
+        <button class="add-save-btn" onclick="saveInvItem()">추가</button>
+        <button class="add-cancel-btn" onclick="closeInvAddRow()">취소</button>
+      </div>
+    </div>
+
+    <!-- 재고 테이블 -->
+    <div class="inv-table-wrap">
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>품목명</th>
+            <th>분류</th>
+            <th style="text-align:right">단가 (₮ GDC)</th>
+            <th style="text-align:right">재고</th>
+            <th>단위</th>
+            <th>인도 방식</th>
+            <th style="text-align:center">구매</th>
+            <th id="inv-edit-col" style="display:none">관리</th>
+          </tr>
+        </thead>
+        <tbody id="inv-tbody"><tr><td colspan="8" class="pdv-empty">불러오는 중…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- 거래 내역 -->
+    <div class="tx-log-wrap" id="tx-log-wrap" style="display:none">
+      <div class="tx-log-hd">거래 내역 — GDC 원장 (fs_ledger)</div>
+      <div id="tx-log-body"></div>
+    </div>
+
+  </div>
+
+  <!-- ── 공개 정보 탭 ── -->
+  <div class="tab-panel active" id="tab-pub">
+    <div class="info-section">
+      <div class="info-section-hd">
+        <span class="info-section-title">공개 정보 — 고팡 네트워크 검색에 활용됩니다</span>
+        <button class="info-add-btn" id="pub-add-btn" style="display:none" onclick="openAddRow('pub')">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10" stroke-linecap="round"/></svg>
+          항목 추가
+        </button>
+      </div>
+      <table class="prop-table" id="pub-table"><tbody id="pub-tbody"></tbody></table>
+      <div class="preset-chips" id="pub-presets" style="display:none"></div>
+      <div class="add-row" id="pub-add-row">
+        <input class="add-key-input" id="pub-key" placeholder="항목명 (예: 혈액형)">
+        <input class="add-val-input" id="pub-val" placeholder="값 (예: A형)">
+        <button class="add-save-btn" onclick="saveAddRow('pub')">추가</button>
+        <button class="add-cancel-btn" onclick="closeAddRow('pub')">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 비공개 정보 탭 ── -->
+  <div class="tab-panel" id="tab-priv">
+    <div class="private-banner" id="priv-lock-banner" style="display:none">
+      🔒 비공개 정보는 본인만 열람할 수 있습니다.
+    </div>
+    <div class="info-section" id="priv-section">
+      <div class="info-section-hd">
+        <span class="info-section-title">비공개 정보 — 본인만 볼 수 있습니다</span>
+        <button class="info-add-btn" id="priv-add-btn" style="display:none" onclick="openAddRow('priv')">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10" stroke-linecap="round"/></svg>
+          항목 추가
+        </button>
+      </div>
+      <table class="prop-table"><tbody id="priv-tbody"></tbody></table>
+      <div class="preset-chips" id="priv-presets" style="display:none"></div>
+      <div class="add-row" id="priv-add-row">
+        <input class="add-key-input" id="priv-key" placeholder="항목명 (예: 신장)">
+        <input class="add-val-input" id="priv-val" placeholder="값 (예: 175cm)">
+        <button class="add-save-btn" onclick="saveAddRow('priv')">추가</button>
+        <button class="add-cancel-btn" onclick="closeAddRow('priv')">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 재무제표 탭 ── -->
+  <div class="tab-panel" id="tab-fs">
+
+    <!-- 하위 탭 -->
+    <div class="fs-tabs">
+      <button class="fs-tab-btn" onclick="switchFS('pl',this)">손익계산서</button>
+      <button class="fs-tab-btn active" onclick="switchFS('bs',this)">대차대조표</button>
+      <button class="fs-tab-btn" onclick="switchFS('cf',this)">현금흐름표</button>
+      <button class="fs-tab-btn" onclick="switchFS('eq',this)">지분표</button>
+      <button class="fs-tab-btn" onclick="switchFS('fa',this)">재무분석 보고서</button>
+    </div>
+
+    <!-- 손익계산서 (IAS 1 – Function of Expense Method) -->
+    <div class="fs-panel" id="fs-pl">
+      <div class="fs-card">
+        <div class="fs-card-hd">
+          <div>
+            <div class="fs-entity-name" id="pl-entity">—</div>
+            <div class="fs-stmt-name">포괄손익계산서 (Statement of Profit or Loss and Other Comprehensive Income)</div>
+            <div class="fs-currency">IAS 1 준거 · 기능별 분류법 · 단위: ₮ (GDC · Gopang Digital Currency)</div>
+          </div>
+          <div class="fs-period" id="pl-period">회계연도: <span id="pl-year">20XX</span>.01.01 – <span id="pl-year2">20XX</span>.12.31</div>
+        </div>
+        <table class="fs-table">
+          <tr class="fs-section-hd"><td colspan="2">영업수익 및 비용 (Operating)</td></tr>
+          <tr><td class="fs-row-label">매출액 (Revenue)</td><td class="fs-row-num" id="pl-revenue"><input class="fs-input" placeholder="0" oninput="calcPL()"></td></tr>
+          <tr><td class="fs-row-label indent1">매출원가 (Cost of Sales)</td><td class="fs-row-num" id="pl-cogs"><input class="fs-input" placeholder="0" oninput="calcPL()"></td></tr>
+          <tr class="fs-subtotal"><td class="fs-row-label">매출총이익 (Gross Profit)</td><td class="fs-row-num" id="pl-gross">0</td></tr>
+          <tr><td class="fs-row-label indent1">판매비와관리비 (Distribution &amp; Admin Expenses)</td><td class="fs-row-num"><input class="fs-input" id="pl-opex" placeholder="0" oninput="calcPL()"></td></tr>
+          <tr><td class="fs-row-label indent1">기타영업수익 (Other Operating Income)</td><td class="fs-row-num"><input class="fs-input" id="pl-other-inc" placeholder="0" oninput="calcPL()"></td></tr>
+          <tr class="fs-subtotal"><td class="fs-row-label">영업이익 (Operating Profit)</td><td class="fs-row-num" id="pl-ebit">0</td></tr>
+          <tr class="fs-spacer"><td colspan="2"></td></tr>
+          <tr class="fs-section-hd"><td colspan="2">영업외손익 (Non-operating)</td></tr>
+          <tr><td class="fs-row-label indent1">금융수익 (Finance Income)</td><td class="fs-row-num"><input class="fs-input" id="pl-fin-inc" placeholder="0" oninput="calcPL()"></td></tr>
+          <tr><td class="fs-row-label indent1">금융비용 (Finance Costs)</td><td class="fs-row-num"><input class="fs-input" id="pl-fin-cost" placeholder="0" oninput="calcPL()"></td></tr>
+          <tr><td class="fs-row-label indent1">지분법이익 (Share of Profit of Associates)</td><td class="fs-row-num"><input class="fs-input" id="pl-assoc" placeholder="0" oninput="calcPL()"></td></tr>
+          <tr class="fs-subtotal"><td class="fs-row-label">법인세비용차감전순이익 (Profit Before Tax)</td><td class="fs-row-num" id="pl-pbt">0</td></tr>
+          <tr><td class="fs-row-label indent1">법인세비용 (Income Tax Expense)</td><td class="fs-row-num"><input class="fs-input" id="pl-tax" placeholder="0" oninput="calcPL()"></td></tr>
+          <tr class="fs-total"><td class="fs-row-label">당기순이익 (Profit for the Period)</td><td class="fs-row-num" id="pl-net">0</td></tr>
+          <tr class="fs-spacer"><td colspan="2"></td></tr>
+          <tr class="fs-section-hd"><td colspan="2">기타포괄손익 (Other Comprehensive Income – OCI)</td></tr>
+          <tr><td class="fs-row-label indent1">유형자산재평가잉여금 (Revaluation Surplus)</td><td class="fs-row-num"><input class="fs-input" id="pl-reval" placeholder="0" oninput="calcPL()"></td></tr>
+          <tr><td class="fs-row-label indent1">확정급여제도 재측정손익 (Remeasurement of DB Plans)</td><td class="fs-row-num"><input class="fs-input" id="pl-remeas" placeholder="0" oninput="calcPL()"></td></tr>
+          <tr><td class="fs-row-label indent1">해외사업환산손익 (FX Translation Differences)</td><td class="fs-row-num"><input class="fs-input" id="pl-fx" placeholder="0" oninput="calcPL()"></td></tr>
+          <tr class="fs-subtotal"><td class="fs-row-label">기타포괄손익 합계 (Total OCI)</td><td class="fs-row-num" id="pl-oci">0</td></tr>
+          <tr class="fs-total"><td class="fs-row-label">총포괄이익 (Total Comprehensive Income)</td><td class="fs-row-num" id="pl-tci">0</td></tr>
+        </table>
+        <div class="fs-note">※ IAS 1.82-82A 기준 · 기능별 비용 분류법(Function of Expense) 적용 · 법인세효과는 IAS 12 참조</div>
+        <div class="fs-edit-bar">
+          <span class="fs-edit-hint">셀을 클릭하여 금액을 직접 입력하세요. 합계는 자동 계산됩니다.</span>
+          <select class="f-sel" id="pl-year-sel" onchange="updateYear()"><option>2024</option><option>2025</option><option>2026</option></select>
+          <button class="tb-btn-green" onclick="saveFS('pl')">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 대차대조표 (IAS 1 – Classified Statement of Financial Position) -->
+    <div class="fs-panel active" id="fs-bs">
+      <div class="fs-card">
+        <div class="fs-card-hd">
+          <div>
+            <div class="fs-entity-name" id="bs-entity">—</div>
+            <div class="fs-stmt-name">재무상태표 (Statement of Financial Position)</div>
+            <div class="fs-currency">IAS 1.54 준거 · 유동/비유동 분류 · 단위: ₮ (GDC · Gopang Digital Currency)</div>
+          </div>
+          <div class="fs-period">보고기준일: <span id="bs-date">20XX.12.31</span></div>
+        </div>
+        <table class="fs-table">
+          <!-- ASSETS -->
+          <tr class="fs-section-hd"><td colspan="2">자산 (ASSETS)</td></tr>
+          <tr class="fs-section-hd"><td colspan="2" style="padding-left:32px;border-top:none;padding-top:4px">유동자산 (Current Assets)</td></tr>
+          <tr><td class="fs-row-label indent1">현금및현금성자산 (Cash and Cash Equivalents)</td><td class="fs-row-num"><input class="fs-input" id="bs-cash" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">단기금융자산 (Short-term Financial Assets)</td><td class="fs-row-num"><input class="fs-input" id="bs-stfi" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">매출채권 및 기타채권 (Trade and Other Receivables)</td><td class="fs-row-num"><input class="fs-input" id="bs-ar" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">재고자산 (Inventories)</td><td class="fs-row-num"><input class="fs-input" id="bs-inv" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">기타유동자산 (Other Current Assets)</td><td class="fs-row-num"><input class="fs-input" id="bs-oca" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr class="fs-subtotal"><td class="fs-row-label indent1">유동자산 합계 (Total Current Assets)</td><td class="fs-row-num" id="bs-tca">0</td></tr>
+          <tr class="fs-spacer"><td colspan="2"></td></tr>
+          <tr class="fs-section-hd"><td colspan="2" style="padding-left:32px;border-top:none;padding-top:4px">비유동자산 (Non-current Assets)</td></tr>
+          <tr><td class="fs-row-label indent1">유형자산 (Property, Plant and Equipment)</td><td class="fs-row-num"><input class="fs-input" id="bs-ppe" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">사용권자산 (Right-of-use Assets)</td><td class="fs-row-num"><input class="fs-input" id="bs-rou" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">무형자산 (Intangible Assets)</td><td class="fs-row-num"><input class="fs-input" id="bs-ia" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">관계기업투자 (Investments in Associates)</td><td class="fs-row-num"><input class="fs-input" id="bs-assoc" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">이연법인세자산 (Deferred Tax Assets)</td><td class="fs-row-num"><input class="fs-input" id="bs-dta" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">기타비유동자산 (Other Non-current Assets)</td><td class="fs-row-num"><input class="fs-input" id="bs-onca" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr class="fs-subtotal"><td class="fs-row-label indent1">비유동자산 합계 (Total Non-current Assets)</td><td class="fs-row-num" id="bs-tnca">0</td></tr>
+          <tr class="fs-total"><td class="fs-row-label">자산총계 (Total Assets)</td><td class="fs-row-num" id="bs-ta">0</td></tr>
+          <tr class="fs-spacer"><td colspan="2"></td></tr>
+          <!-- LIABILITIES -->
+          <tr class="fs-section-hd"><td colspan="2">부채 (LIABILITIES)</td></tr>
+          <tr class="fs-section-hd"><td colspan="2" style="padding-left:32px;border-top:none;padding-top:4px">유동부채 (Current Liabilities)</td></tr>
+          <tr><td class="fs-row-label indent1">매입채무 및 기타채무 (Trade and Other Payables)</td><td class="fs-row-num"><input class="fs-input" id="bs-ap" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">단기차입금 (Short-term Borrowings)</td><td class="fs-row-num"><input class="fs-input" id="bs-stb" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">단기리스부채 (Current Lease Liabilities)</td><td class="fs-row-num"><input class="fs-input" id="bs-cll" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">당기법인세부채 (Current Tax Liabilities)</td><td class="fs-row-num"><input class="fs-input" id="bs-ctl" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">기타유동부채 (Other Current Liabilities)</td><td class="fs-row-num"><input class="fs-input" id="bs-ocl" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr class="fs-subtotal"><td class="fs-row-label indent1">유동부채 합계 (Total Current Liabilities)</td><td class="fs-row-num" id="bs-tcl">0</td></tr>
+          <tr class="fs-spacer"><td colspan="2"></td></tr>
+          <tr class="fs-section-hd"><td colspan="2" style="padding-left:32px;border-top:none;padding-top:4px">비유동부채 (Non-current Liabilities)</td></tr>
+          <tr><td class="fs-row-label indent1">장기차입금 (Long-term Borrowings)</td><td class="fs-row-num"><input class="fs-input" id="bs-ltb" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">장기리스부채 (Non-current Lease Liabilities)</td><td class="fs-row-num"><input class="fs-input" id="bs-nll" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">확정급여부채 (Defined Benefit Liabilities)</td><td class="fs-row-num"><input class="fs-input" id="bs-db" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">이연법인세부채 (Deferred Tax Liabilities)</td><td class="fs-row-num"><input class="fs-input" id="bs-dtl" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">기타비유동부채 (Other Non-current Liabilities)</td><td class="fs-row-num"><input class="fs-input" id="bs-oncl" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr class="fs-subtotal"><td class="fs-row-label indent1">비유동부채 합계 (Total Non-current Liabilities)</td><td class="fs-row-num" id="bs-tncl">0</td></tr>
+          <tr class="fs-total"><td class="fs-row-label">부채총계 (Total Liabilities)</td><td class="fs-row-num" id="bs-tl">0</td></tr>
+          <tr class="fs-spacer"><td colspan="2"></td></tr>
+          <!-- EQUITY -->
+          <tr class="fs-section-hd"><td colspan="2">자본 (EQUITY)</td></tr>
+          <tr><td class="fs-row-label indent1">납입자본 (Share Capital &amp; Share Premium)</td><td class="fs-row-num"><input class="fs-input" id="bs-sc" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">이익잉여금 (Retained Earnings)</td><td class="fs-row-num"><input class="fs-input" id="bs-re" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">기타자본구성요소 (Other Components of Equity)</td><td class="fs-row-num"><input class="fs-input" id="bs-oce" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr><td class="fs-row-label indent1">비지배지분 (Non-controlling Interests)</td><td class="fs-row-num"><input class="fs-input" id="bs-nci" placeholder="0" oninput="calcBS()"></td></tr>
+          <tr class="fs-total"><td class="fs-row-label">자본총계 (Total Equity)</td><td class="fs-row-num" id="bs-te">0</td></tr>
+          <tr class="fs-total"><td class="fs-row-label">부채및자본총계 (Total Liabilities and Equity)</td><td class="fs-row-num" id="bs-tle">0</td></tr>
+          <tr id="bs-check-row" style="display:none"><td colspan="2" style="padding:6px 18px;font-size:11px;color:var(--red-text)">⚠ 자산총계 ≠ 부채+자본총계 — 입력값을 확인하세요.</td></tr>
+        </table>
+        <div class="fs-note">※ IAS 1.54-60 기준 · 유동/비유동 분류법 · IFRS 16 리스 포함 · 이연법인세 IAS 12 적용</div>
+        <div class="fs-edit-bar">
+          <span class="fs-edit-hint">셀을 클릭하여 금액을 직접 입력하세요. 합계는 자동 계산됩니다.</span>
+          <input type="date" class="f-sel" id="bs-date-inp" onchange="document.getElementById('bs-date').textContent=this.value">
+          <button class="tb-btn-green" onclick="saveFS('bs')">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 현금흐름표 (IAS 7 – Indirect Method) -->
+    <div class="fs-panel" id="fs-cf">
+      <div class="fs-card">
+        <div class="fs-card-hd">
+          <div>
+            <div class="fs-entity-name" id="cf-entity">—</div>
+            <div class="fs-stmt-name">현금흐름표 (Statement of Cash Flows)</div>
+            <div class="fs-currency">IAS 7 준거 · 간접법(Indirect Method) · 단위: ₮ (GDC · Gopang Digital Currency)</div>
+          </div>
+          <div class="fs-period">회계연도: <span id="cf-year">20XX</span>.01.01 – <span id="cf-year2">20XX</span>.12.31</div>
+        </div>
+        <table class="fs-table">
+          <tr class="fs-section-hd"><td colspan="2">영업활동 현금흐름 (Operating Activities)</td></tr>
+          <tr><td class="fs-row-label indent1">당기순이익 (Profit for the Period)</td><td class="fs-row-num"><input class="fs-input" id="cf-net" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr class="fs-section-hd"><td colspan="2" style="border-top:none;padding-top:2px;padding-left:48px;font-size:10px">조정항목 (Adjustments)</td></tr>
+          <tr><td class="fs-row-label indent2">감가상각비 및 상각 (Depreciation &amp; Amortisation)</td><td class="fs-row-num"><input class="fs-input" id="cf-da" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent2">사용권자산상각 (ROU Depreciation)</td><td class="fs-row-num"><input class="fs-input" id="cf-rou" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent2">손상차손 (Impairment Losses)</td><td class="fs-row-num"><input class="fs-input" id="cf-imp" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent2">이자비용 (Interest Expense)</td><td class="fs-row-num"><input class="fs-input" id="cf-int" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent2">법인세비용 (Income Tax Expense)</td><td class="fs-row-num"><input class="fs-input" id="cf-tax" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr class="fs-section-hd"><td colspan="2" style="border-top:none;padding-top:2px;padding-left:48px;font-size:10px">운전자본 변동 (Changes in Working Capital)</td></tr>
+          <tr><td class="fs-row-label indent2">매출채권 감소(증가) (Decrease(Increase) in Receivables)</td><td class="fs-row-num"><input class="fs-input" id="cf-ar" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent2">재고자산 감소(증가) (Decrease(Increase) in Inventories)</td><td class="fs-row-num"><input class="fs-input" id="cf-inv" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent2">매입채무 증가(감소) (Increase(Decrease) in Payables)</td><td class="fs-row-num"><input class="fs-input" id="cf-ap" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent1">이자지급 (Interest Paid)</td><td class="fs-row-num"><input class="fs-input" id="cf-int-paid" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent1">법인세납부 (Income Tax Paid)</td><td class="fs-row-num"><input class="fs-input" id="cf-tax-paid" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr class="fs-subtotal"><td class="fs-row-label">영업활동 순현금흐름 (Net Cash from Operating)</td><td class="fs-row-num" id="cf-op-total">0</td></tr>
+          <tr class="fs-spacer"><td colspan="2"></td></tr>
+          <tr class="fs-section-hd"><td colspan="2">투자활동 현금흐름 (Investing Activities)</td></tr>
+          <tr><td class="fs-row-label indent1">유형자산 취득 (Purchase of PPE)</td><td class="fs-row-num"><input class="fs-input" id="cf-ppe-buy" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent1">유형자산 처분 (Proceeds from PPE Disposal)</td><td class="fs-row-num"><input class="fs-input" id="cf-ppe-sell" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent1">금융자산 취득 (Purchase of Financial Assets)</td><td class="fs-row-num"><input class="fs-input" id="cf-fa-buy" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent1">이자수취 (Interest Received)</td><td class="fs-row-num"><input class="fs-input" id="cf-int-rec" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent1">배당수취 (Dividends Received)</td><td class="fs-row-num"><input class="fs-input" id="cf-div-rec" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr class="fs-subtotal"><td class="fs-row-label">투자활동 순현금흐름 (Net Cash from Investing)</td><td class="fs-row-num" id="cf-inv-total">0</td></tr>
+          <tr class="fs-spacer"><td colspan="2"></td></tr>
+          <tr class="fs-section-hd"><td colspan="2">재무활동 현금흐름 (Financing Activities)</td></tr>
+          <tr><td class="fs-row-label indent1">차입금 조달 (Proceeds from Borrowings)</td><td class="fs-row-num"><input class="fs-input" id="cf-borrow" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent1">차입금 상환 (Repayment of Borrowings)</td><td class="fs-row-num"><input class="fs-input" id="cf-repay" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent1">리스부채 상환 (Payment of Lease Liabilities)</td><td class="fs-row-num"><input class="fs-input" id="cf-lease" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent1">배당지급 (Dividends Paid)</td><td class="fs-row-num"><input class="fs-input" id="cf-div-paid" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr><td class="fs-row-label indent1">자기주식 취득 (Purchase of Treasury Shares)</td><td class="fs-row-num"><input class="fs-input" id="cf-treasury" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr class="fs-subtotal"><td class="fs-row-label">재무활동 순현금흐름 (Net Cash from Financing)</td><td class="fs-row-num" id="cf-fin-total">0</td></tr>
+          <tr class="fs-spacer"><td colspan="2"></td></tr>
+          <tr class="fs-subtotal"><td class="fs-row-label">환율변동효과 (Effect of FX Rate Changes on Cash)</td><td class="fs-row-num"><input class="fs-input" id="cf-fx" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr class="fs-subtotal"><td class="fs-row-label">현금및현금성자산 순증감 (Net Change in Cash)</td><td class="fs-row-num" id="cf-net-change">0</td></tr>
+          <tr><td class="fs-row-label indent1">기초 현금및현금성자산 (Cash at Beginning)</td><td class="fs-row-num"><input class="fs-input" id="cf-open" placeholder="0" oninput="calcCF()"></td></tr>
+          <tr class="fs-total"><td class="fs-row-label">기말 현금및현금성자산 (Cash at End)</td><td class="fs-row-num" id="cf-close">0</td></tr>
+        </table>
+        <div class="fs-note">※ IAS 7 준거 · 간접법(Indirect Method) · 이자지급/수취 및 배당수취는 영업 또는 투자활동 선택 가능(IAS 7.31-34)</div>
+        <div class="fs-edit-bar">
+          <span class="fs-edit-hint">양(+)은 현금 유입, 음(−)은 현금 유출을 나타냅니다.</span>
+          <button class="tb-btn-green" onclick="saveFS('cf')">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 지분표 (IAS 1.106) -->
+    <div class="fs-panel" id="fs-eq">
+      <div class="fs-card">
+        <div class="fs-card-hd">
+          <div>
+            <div class="fs-entity-name" id="eq-entity">—</div>
+            <div class="fs-stmt-name">자본변동표 (Statement of Changes in Equity)</div>
+            <div class="fs-currency">IAS 1.106 준거 · 단위: ₮ (GDC · Gopang Digital Currency)</div>
+          </div>
+          <div class="fs-period">회계연도: <span id="eq-year">20XX</span>.01.01 – <span id="eq-year2">20XX</span>.12.31</div>
+        </div>
+        <div style="overflow-x:auto">
+        <table class="fs-table" style="min-width:750px">
+          <tr style="background:var(--surface2)">
+            <td class="fs-row-label" style="font-size:11px;font-weight:600;color:var(--text-muted)"></td>
+            <td class="fs-row-num" style="font-size:11px;font-weight:600;color:var(--text-muted)">납입자본</td>
+            <td class="fs-row-num" style="font-size:11px;font-weight:600;color:var(--text-muted)">이익잉여금</td>
+            <td class="fs-row-num" style="font-size:11px;font-weight:600;color:var(--text-muted)">기타자본</td>
+            <td class="fs-row-num" style="font-size:11px;font-weight:600;color:var(--text-muted)">비지배지분</td>
+            <td class="fs-row-num" style="font-size:11px;font-weight:700;color:var(--text)">합계</td>
+          </tr>
+          <tr><td class="fs-row-label">기초잔액 (Opening Balance)</td>
+            <td class="fs-row-num"><input class="fs-input" style="width:100px" id="eq-sc0" placeholder="0" oninput="calcEQ()"></td>
+            <td class="fs-row-num"><input class="fs-input" style="width:100px" id="eq-re0" placeholder="0" oninput="calcEQ()"></td>
+            <td class="fs-row-num"><input class="fs-input" style="width:100px" id="eq-oc0" placeholder="0" oninput="calcEQ()"></td>
+            <td class="fs-row-num"><input class="fs-input" style="width:100px" id="eq-nci0" placeholder="0" oninput="calcEQ()"></td>
+            <td class="fs-row-num" id="eq-tot0" style="font-weight:600">0</td></tr>
+          <tr><td class="fs-row-label indent1">당기순이익 (Profit for Period)</td>
+            <td class="fs-row-num">—</td>
+            <td class="fs-row-num"><input class="fs-input" style="width:100px" id="eq-net" placeholder="0" oninput="calcEQ()"></td>
+            <td class="fs-row-num">—</td>
+            <td class="fs-row-num"><input class="fs-input" style="width:100px" id="eq-nci-net" placeholder="0" oninput="calcEQ()"></td>
+            <td class="fs-row-num" id="eq-net-tot">0</td></tr>
+          <tr><td class="fs-row-label indent1">기타포괄손익 (OCI)</td>
+            <td class="fs-row-num">—</td>
+            <td class="fs-row-num"><input class="fs-input" style="width:100px" id="eq-oci-re" placeholder="0" oninput="calcEQ()"></td>
+            <td class="fs-row-num"><input class="fs-input" style="width:100px" id="eq-oci-oc" placeholder="0" oninput="calcEQ()"></td>
+            <td class="fs-row-num"><input class="fs-input" style="width:100px" id="eq-oci-nci" placeholder="0" oninput="calcEQ()"></td>
+            <td class="fs-row-num" id="eq-oci-tot">0</td></tr>
+          <tr><td class="fs-row-label indent1">배당금 지급 (Dividends Paid)</td>
+            <td class="fs-row-num">—</td>
+            <td class="fs-row-num"><input class="fs-input" style="width:100px" id="eq-div" placeholder="0" oninput="calcEQ()"></td>
+            <td class="fs-row-num">—</td>
+            <td class="fs-row-num">—</td>
+            <td class="fs-row-num" id="eq-div-tot">0</td></tr>
+          <tr><td class="fs-row-label indent1">유상증자 (Shares Issued)</td>
+            <td class="fs-row-num"><input class="fs-input" style="width:100px" id="eq-issue" placeholder="0" oninput="calcEQ()"></td>
+            <td class="fs-row-num">—</td>
+            <td class="fs-row-num">—</td>
+            <td class="fs-row-num">—</td>
+            <td class="fs-row-num" id="eq-issue-tot">0</td></tr>
+          <tr class="fs-total"><td class="fs-row-label">기말잔액 (Closing Balance)</td>
+            <td class="fs-row-num" id="eq-sc1">0</td>
+            <td class="fs-row-num" id="eq-re1">0</td>
+            <td class="fs-row-num" id="eq-oc1">0</td>
+            <td class="fs-row-num" id="eq-nci1">0</td>
+            <td class="fs-row-num" id="eq-tot1">0</td></tr>
+        </table>
+        </div>
+        <div class="fs-note">※ IAS 1.106-110 기준 · 자본의 각 구성요소별 기초~기말 조정내역 표시</div>
+        <div class="fs-edit-bar">
+          <span class="fs-edit-hint">배당금·자기주식 취득은 음(−)값으로 입력하세요.</span>
+          <button class="tb-btn-green" onclick="saveFS('eq')">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 재무분석 보고서 -->
+    <div class="fs-panel" id="fs-fa">
+      <div class="fs-card">
+        <div class="fs-card-hd">
+          <div>
+            <div class="fs-entity-name" id="fa-entity">—</div>
+            <div class="fs-stmt-name">재무분석 보고서 (Financial Analysis Report)</div>
+            <div class="fs-currency">대차대조표 · 손익계산서 입력값 기반 자동 산출</div>
+          </div>
+          <div class="fs-period"><button class="tb-btn-green" onclick="calcFA()" style="font-size:11px;padding:4px 12px">분석 실행</button></div>
+        </div>
+        <div class="ratio-grid" id="fa-grid">
+          <div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-dim);font-size:13px">
+            대차대조표와 손익계산서를 먼저 입력한 후 "분석 실행" 버튼을 클릭하세요.
+          </div>
+        </div>
+        <div class="fs-note">※ IFRS 기반 재무비율 · 수익성·유동성·안정성·활동성 분석 · 단독 재무제표 기준</div>
+      </div>
+    </div>
+
+  </div><!-- /tab-fs -->
+
+  <!-- ── PDV 기록 탭 ── -->
+  <div class="tab-panel" id="tab-pdv">
+    <div class="private-banner" id="pdv-private-banner" style="display:none">
+      🔒 PDV는 본인만 열람할 수 있습니다.
+    </div>
+
+    <div class="table-toolbar" id="pdv-toolbar" style="display:none">
+      <div class="tb-search-wrap">
+        <svg class="tb-search-ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3" stroke-linecap="round"/></svg>
+        <input class="tb-search" id="pdv-search" placeholder="Filter by 언제, 어디서, 무엇을... or ask AI" oninput="filterPDV()">
+      </div>
+      <button class="tb-btn" id="btn-filter" onclick="togglePanel('filter')">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 4h12M4 8h8M6 12h4" stroke-linecap="round"/></svg>
+        Filter
+        <span id="filter-count-badge" style="display:none;background:var(--blue);color:#fff;border-radius:8px;padding:0 5px;font-size:10px;margin-left:1px">0</span>
+      </button>
+      <button class="tb-btn" id="btn-sort" onclick="togglePanel('sort')">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 5h12M5 9h6M8 13h0" stroke-linecap="round"/></svg>
+        Sort
+      </button>
+      <div class="tb-right">
+        <span class="tb-count" id="pdv-count">0 rows</span>
+        <button class="tb-btn-green" onclick="_reloadPDV()">↺ 새로고침</button>
+      </div>
+    </div>
+
+    <div class="filter-panel" id="filter-panel">
+      <div id="filter-rows-wrap"></div>
+      <button class="f-add-btn" onclick="addFilterRow()">
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10" stroke-linecap="round"/></svg>
+        Add filter
+      </button>
+    </div>
+
+    <div class="sort-panel" id="sort-panel">
+      <div class="sort-row">
+        <span class="sort-lbl">Sort by</span>
+        <select class="f-sel" id="sort-col" onchange="_applySort()">
+          <option value="created_at">언제</option>
+          <option value="where">어디서</option>
+          <option value="summary">무엇을</option>
+          <option value="how">어떻게</option>
+          <option value="why">왜</option>
+          <option value="_cat">분류</option>
+        </select>
+        <select class="f-sel" id="sort-dir" onchange="_applySort()">
+          <option value="desc">내림차순</option>
+          <option value="asc">오름차순</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="pdv-table-wrap">
+      <table class="pdv-table">
+        <thead>
+          <tr>
+            <th class="col-cb"><div class="th-inner" style="cursor:default;justify-content:center"><input type="checkbox" id="cb-all" onchange="toggleAllCB(this)"></div></th>
+            <th class="col-when"  onclick="sortBy('created_at')"><div class="th-inner" id="th-created_at">언제<svg class="sort-ico on" viewBox="0 0 10 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 1v12M1 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg></div></th>
+            <th class="col-where" onclick="sortBy('where')"><div class="th-inner" id="th-where">어디서<svg class="sort-ico" viewBox="0 0 10 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 1v12M1 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg></div></th>
+            <th class="col-what"  onclick="sortBy('summary')"><div class="th-inner" id="th-summary">무엇을<svg class="sort-ico" viewBox="0 0 10 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 1v12M1 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg></div></th>
+            <th class="col-how"   onclick="sortBy('how')"><div class="th-inner" id="th-how">어떻게<svg class="sort-ico" viewBox="0 0 10 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 1v12M1 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg></div></th>
+            <th class="col-why"   onclick="sortBy('why')"><div class="th-inner" id="th-why">왜<svg class="sort-ico" viewBox="0 0 10 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 1v12M1 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg></div></th>
+            <th class="col-cat"   onclick="sortBy('_cat')"><div class="th-inner" id="th-_cat">분류<svg class="sort-ico" viewBox="0 0 10 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 1v12M1 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg></div></th>
+            <th class="col-link"><div class="th-inner" style="cursor:default">원본</div></th>
+          </tr>
+        </thead>
+        <tbody id="pdv-tbody"><tr><td colspan="8" class="pdv-empty">불러오는 중…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="pager" id="pdv-pager" style="display:none">
+      <span id="pager-info">—</span>
+      <div style="display:flex;gap:6px">
+        <button class="pager-btn" id="pager-prev" onclick="changePage(-1)" disabled>← 이전</button>
+        <button class="pager-btn" id="pager-next" onclick="changePage(1)">다음 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="save-fab" id="save-fab" onclick="saveProfile()">변경사항 저장</button>
+
+<script>
+const SUPA_URL  = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
+const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
+const HDR = { 'apikey': SUPA_ANON, 'Authorization': 'Bearer ' + SUPA_ANON };
+
+// SPA 리다이렉트
+const _red = sessionStorage.getItem('gopang_redirect');
+if (_red) { sessionStorage.removeItem('gopang_redirect'); history.replaceState(null,'',_red); }
+
+const PAGE_GUID = location.pathname.replace(/\/$/,'').split('/')[2]
+               || new URLSearchParams(location.search).get('guid') || '';
+
+let _isOwner = false;
+let _profile = null;
+
+// 공개/비공개 정보 상태 (key→val 객체)
+let _pubData  = {};  // extra.public
+let _privData = {};  // extra.private
+let _dirty    = false;
+
+// PDV 상태
+let _allPDV = [], _filteredPDV = [];
+let _page = 0; const PG = 50;
+let _sortCol = 'created_at', _sortDir = 'desc';
+let _filters = [];
+
+// ── 분류 맵 ─────────────────────────────────────────
+const _CAT = { fiil:'환경', klaw:'사법', medical:'의료', edu:'교육',
+               traffic:'교통', market:'시장', session:'사교' };
+function _cat(r) {
+  return r.category || r.domain
+    || _CAT[Object.keys(_CAT).find(k=>(r.service_id||'').includes(k))]
+    || _CAT[r.record_type] || '기타';
+}
+
+// ── 프리셋 항목 ─────────────────────────────────────
+const PUB_PRESETS  = ['이름','직업','업종','주소','전화번호','웹사이트','이메일','소속','자격증','소개'];
+const PRIV_PRESETS = ['혈액형','신장','체중','생년월일','건강상태','학력','병력','비상연락처','여권번호'];
+
+// ── 기기 지문 ─────────────────────────────────────────
+async function _fp() {
+  const r=[navigator.userAgent,navigator.language,screen.width+'x'+screen.height,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,navigator.hardwareConcurrency||''].join('|');
+  const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(r));
+  return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+async function _checkOwner() {
+  const t = new URLSearchParams(location.search).get('token');
+  if (t && t===PAGE_GUID) return true;
+  try {
+    const f=await _fp();
+    const res=await fetch(`${SUPA_URL}/rest/v1/users?guid=eq.${PAGE_GUID}&select=device_fp&limit=1`,{headers:HDR});
+    const [row]=await res.json();
+    if (row?.device_fp===f) return true;
+  } catch(e){}
+  return false;
+}
+
+async function _loadProfile() {
+  try {
+    const res=await fetch(`${SUPA_URL}/rest/v1/user_profiles?guid=eq.${PAGE_GUID}&select=*&limit=1`,{headers:HDR});
+    const [p]=await res.json(); return p||null;
+  } catch(e){ return null; }
+}
+
+async function _loadPDV(offset=0) {
+  const res=await fetch(
+    `${SUPA_URL}/rest/v1/pdv_log?user_guid=eq.${PAGE_GUID}&order=created_at.desc&limit=${PG}&offset=${offset}`,
+    {headers:HDR});
+  return await res.json();
+}
+
+// ── 유틸 ─────────────────────────────────────────────
+function _e(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _fmt(iso){
+  if(!iso) return '<span class="null-val">NULL</span>';
+  return new Date(iso).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function _cell(v){ return v?_e(v):'<span class="null-val">NULL</span>'; }
+
+function _svcBadge(r){
+  if ((r.service_id||'').includes('fiil')) return `<span class="svc-badge svc-fiil">🌊 fiil</span>`;
+  if ((r.service_id||'').includes('klaw')) return `<span class="svc-badge svc-klaw">⚖ K-Law</span>`;
+  if (r.record_type==='session')           return `<span class="svc-badge svc-chat">💬 채팅</span>`;
+  return `<span class="svc-badge svc-other">${_e(r.record_type||'—')}</span>`;
+}
+function _catBadge(r){
+  const c=_cat(r);
+  return `<span class="cat-badge cat-${c}">${c}</span>`;
+}
+
+// ── 공개/비공개 정보 렌더 ────────────────────────────
+function _renderProps(scope) {
+  const data  = scope==='pub' ? _pubData : _privData;
+  const tbody = document.getElementById(scope+'-tbody');
+  const presetWrap = document.getElementById(scope+'-presets');
+  const presets    = scope==='pub' ? PUB_PRESETS : PRIV_PRESETS;
+  const canEdit    = _isOwner;
+
+  const rows = Object.entries(data);
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="3" class="pdv-empty" style="padding:24px">
+      ${canEdit ? '항목이 없습니다. 위 "항목 추가" 버튼을 눌러 시작하세요.' : '정보가 없습니다.'}</td></tr>`;
+  } else {
+    tbody.innerHTML = rows.map(([k,v]) => `
+      <tr data-key="${_e(k)}" data-scope="${scope}">
+        <td class="prop-key"><span class="prop-key-txt">${_e(k)}</span></td>
+        <td class="prop-val">
+          ${canEdit
+            ? `<span class="prop-val-txt" onclick="editCell(this,'${scope}','${_e(k)}')">${_e(v)}</span>`
+            : _e(v)}
+        </td>
+        <td class="prop-actions">${canEdit
+          ? `<button class="prop-del" onclick="deleteProp('${scope}','${_e(k)}')" title="삭제">×</button>`
+          : ''}</td>
+      </tr>`).join('');
+  }
+
+  // 프리셋 칩
+  if (canEdit) {
+    const existing = Object.keys(data);
+    const available = presets.filter(p=>!existing.includes(p));
+    presetWrap.style.display = available.length ? '' : 'none';
+    presetWrap.innerHTML = available.map(p=>
+      `<span class="preset-chip" onclick="quickAdd('${scope}','${_e(p)}')">${p}</span>`
+    ).join('');
+  }
+}
+
+function editCell(el, scope, key) {
+  const cur = _pubData[key] || _privData[key] || '';
+  el.outerHTML = `<input class="prop-input" value="${_e(cur)}"
+    onblur="commitEdit(this,'${scope}','${_e(key)}')"
+    onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape')cancelEdit(this,'${_e(cur)}')">`;
+  el.parentElement?.querySelector('input')?.focus?.();
+  // querySelector won't work since we used outerHTML - find by context
+  const row = document.querySelector(`[data-key="${key}"][data-scope="${scope}"] .prop-val input`);
+  if (row) row.focus();
+}
+
+function commitEdit(inp, scope, key) {
+  const v = inp.value.trim();
+  if (scope==='pub')  _pubData[key]  = v;
+  else                _privData[key] = v;
+  _markDirty();
+  _renderProps(scope);
+}
+
+function cancelEdit(inp, orig) {
+  inp.outerHTML = `<span class="prop-val-txt">${_e(orig)}</span>`;
+}
+
+function deleteProp(scope, key) {
+  if (scope==='pub')  delete _pubData[key];
+  else                delete _privData[key];
+  _markDirty();
+  _renderProps(scope);
+}
+
+function quickAdd(scope, key) {
+  document.getElementById(scope+'-key').value = key;
+  document.getElementById(scope+'-val').focus();
+  openAddRow(scope);
+}
+
+function openAddRow(scope) {
+  document.getElementById(scope+'-add-row').classList.add('open');
+  document.getElementById(scope+'-key').focus();
+}
+
+function closeAddRow(scope) {
+  document.getElementById(scope+'-add-row').classList.remove('open');
+  document.getElementById(scope+'-key').value = '';
+  document.getElementById(scope+'-val').value = '';
+}
+
+function saveAddRow(scope) {
+  const k = document.getElementById(scope+'-key').value.trim();
+  const v = document.getElementById(scope+'-val').value.trim();
+  if (!k) { alert('항목명을 입력하세요.'); return; }
+  if (scope==='pub')  _pubData[k]  = v;
+  else                _privData[k] = v;
+  closeAddRow(scope);
+  _markDirty();
+  _renderProps(scope);
+}
+
+// ── 변경사항 저장 ─────────────────────────────────────
+function _markDirty() {
+  _dirty = true;
+  document.getElementById('save-fab').classList.add('visible');
+}
+
+async function saveProfile() {
+  const body = {
+    guid: PAGE_GUID,
+    extra: { public: _pubData, private: _privData },
+  };
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/user_profiles`, {
+      method:'POST',
+      headers: { ...HDR, 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    _dirty = false;
+    document.getElementById('save-fab').classList.remove('visible');
+    // 짧은 피드백
+    const fab = document.getElementById('save-fab');
+    fab.textContent = '✓ 저장됨';
+    fab.classList.add('visible');
+    setTimeout(()=>{ fab.classList.remove('visible'); fab.textContent='변경사항 저장'; }, 1500);
+  } catch(e) { alert('저장 실패: '+e.message); }
+}
+
+// ── PDV 렌더 ─────────────────────────────────────────
+function _pdvRow(r) {
+  const link = r.report_id
+    ? `<a class="ext-link" href="https://gopang.net/u/${PAGE_GUID}/fiil#${_e(r.report_id)}" target="_blank">↗</a>`
+    : '<span class="null-val">—</span>';
+  return `<tr>
+    <td class="col-cb"><input type="checkbox" class="row-cb"></td>
+    <td class="col-when">${_fmt(r.created_at)}</td>
+    <td class="col-where" title="${_e(r.where||r.location||'')}">${_cell(r.where||r.location)}</td>
+    <td class="col-what"  title="${_e(r.summary||r.what||'')}">${_cell(r.summary||r.what)}</td>
+    <td class="col-how">${_cell(r.how)}</td>
+    <td class="col-why"  title="${_e(r.why||'')}">${_cell(r.why)}</td>
+    <td class="col-cat">${_catBadge(r)}</td>
+    <td class="col-link">${link}</td>
+  </tr>`;
+}
+
+function _renderPDV(rows) {
+  const tb = document.getElementById('pdv-tbody');
+  if (!rows.length) { tb.innerHTML='<tr><td colspan="8" class="pdv-empty">No rows found</td></tr>'; _setPager(0,0); return; }
+  const s=_page*PG, slice=rows.slice(s,s+PG);
+  tb.innerHTML = slice.map(_pdvRow).join('');
+  _setPager(s, rows.length);
+  document.getElementById('pdv-count').textContent = rows.length+' rows';
+}
+
+function _setPager(from, total) {
+  const pg=document.getElementById('pdv-pager');
+  if (!total) { pg.style.display='none'; return; }
+  pg.style.display='';
+  document.getElementById('pager-info').textContent = `${from+1}–${Math.min(from+PG,total)} of ${total}`;
+  document.getElementById('pager-prev').disabled = _page===0;
+  document.getElementById('pager-next').disabled = from+PG>=total;
+}
+
+function changePage(d) {
+  _page=Math.max(0,_page+d);
+  _renderPDV(_filteredPDV);
+}
+
+function toggleAllCB(el) {
+  document.querySelectorAll('.row-cb').forEach(c=>{c.checked=el.checked;});
+}
+
+// ── Sort ─────────────────────────────────────────────
+function sortBy(col) {
+  _sortDir = (_sortCol===col) ? (_sortDir==='asc'?'desc':'asc') : 'asc';
+  _sortCol = col;
+  document.getElementById('sort-col').value = col;
+  document.getElementById('sort-dir').value = _sortDir;
+  _updateSortUI();
+  _applyFilterSort();
+}
+function _applySort() {
+  _sortCol = document.getElementById('sort-col').value;
+  _sortDir = document.getElementById('sort-dir').value;
+  _updateSortUI();
+  _applyFilterSort();
+}
+function _updateSortUI() {
+  ['created_at','where','summary','how','why','_cat'].forEach(c=>{
+    const th=document.getElementById('th-'+c); if(!th) return;
+    const ic=th.querySelector('.sort-ico');
+    th.classList.toggle('sorted', c===_sortCol);
+    ic.classList.toggle('on',   c===_sortCol);
+    ic.classList.toggle('desc', c===_sortCol && _sortDir==='desc');
+  });
+}
+
+// ── Filter ────────────────────────────────────────────
+const F_COLS = [{v:'created_at',l:'언제'},{v:'where',l:'어디서'},{v:'summary',l:'무엇을'},
+                {v:'how',l:'어떻게'},{v:'why',l:'왜'},{v:'_cat',l:'분류'},{v:'service_id',l:'서비스'}];
+const F_OPS  = [{v:'contains',l:'포함'},{v:'eq',l:'='},{v:'neq',l:'≠'},
+                {v:'starts',l:'시작'},{v:'empty',l:'비어 있음'},{v:'notempty',l:'값 있음'}];
+
+function addFilterRow(col='summary',op='contains',val='') {
+  _filters.push({id:Date.now(),col,op,val});
+  _renderFilters();
+}
+function removeFilter(id) { _filters=_filters.filter(f=>f.id!==id); _renderFilters(); _applyFilterSort(); }
+function updateFilter(id,key,v) {
+  const f=_filters.find(x=>x.id===id); if(!f) return;
+  f[key]=v;
+  if(key==='op') _renderFilters();
+  _applyFilterSort();
+}
+function _renderFilters() {
+  const w=document.getElementById('filter-rows-wrap');
+  w.innerHTML=_filters.map(f=>{
+    const co=F_COLS.map(c=>`<option value="${c.v}"${f.col===c.v?' selected':''}>${c.l}</option>`).join('');
+    const oo=F_OPS.map(o=>`<option value="${o.v}"${f.op===o.v?' selected':''}>${o.l}</option>`).join('');
+    const sv=f.op!=='empty'&&f.op!=='notempty';
+    return `<div class="filter-row" style="margin-bottom:6px">
+      <select class="f-sel" onchange="updateFilter(${f.id},'col',this.value)">${co}</select>
+      <select class="f-sel" onchange="updateFilter(${f.id},'op',this.value)">${oo}</select>
+      ${sv?`<input class="f-inp" value="${_e(f.val)}" placeholder="값…" oninput="updateFilter(${f.id},'val',this.value)">`:''}
+      <button class="f-del" onclick="removeFilter(${f.id})">×</button>
+    </div>`;
+  }).join('');
+  const b=document.getElementById('filter-count-badge');
+  b.style.display=_filters.length?'':'none';
+  b.textContent=_filters.length;
+  document.getElementById('btn-filter').classList.toggle('active',_filters.length>0);
+}
+
+function filterPDV() { _applyFilterSort(); }
+
+function _applyFilterSort() {
+  const q=document.getElementById('pdv-search').value.toLowerCase().trim();
+  _filteredPDV=_allPDV.filter(r=>{
+    if(q){
+      const t=[r.summary,r.what,r.where,r.how,r.why,r.location,r.service_id,r.category,r.created_at].join(' ').toLowerCase();
+      if(!t.includes(q)) return false;
+    }
+    for(const f of _filters){
+      const fv=String(f.col==='_cat'?_cat(r):(r[f.col]||'')).toLowerCase();
+      const tv=f.val.toLowerCase();
+      if(f.op==='contains' && !fv.includes(tv)) return false;
+      if(f.op==='eq'       && fv!==tv)          return false;
+      if(f.op==='neq'      && fv===tv)           return false;
+      if(f.op==='starts'   && !fv.startsWith(tv)) return false;
+      if(f.op==='empty'    && fv!=='')           return false;
+      if(f.op==='notempty' && fv==='')           return false;
+    }
+    return true;
+  });
+  _filteredPDV.sort((a,b)=>{
+    const av=String((_sortCol==='_cat'?_cat(a):(a[_sortCol]||'')));
+    const bv=String((_sortCol==='_cat'?_cat(b):(b[_sortCol]||'')));
+    const c=av<bv?-1:av>bv?1:0;
+    return _sortDir==='asc'?c:-c;
+  });
+  _page=0;
+  _renderPDV(_filteredPDV);
+}
+
+function togglePanel(w) {
+  const fp=document.getElementById('filter-panel'), sp=document.getElementById('sort-panel');
+  const bf=document.getElementById('btn-filter'),   bs=document.getElementById('btn-sort');
+  if(w==='filter'){ fp.classList.toggle('open'); sp.classList.remove('open'); bs.classList.remove('active'); bf.classList.toggle('active',fp.classList.contains('open')||_filters.length>0); }
+  else { sp.classList.toggle('open'); fp.classList.remove('open'); bs.classList.toggle('active',sp.classList.contains('open')); if(!_filters.length) bf.classList.remove('active'); }
+}
+
+async function _reloadPDV() {
+  document.getElementById('pdv-tbody').innerHTML='<tr><td colspan="8" class="pdv-empty">불러오는 중…</td></tr>';
+  const rows=await _loadPDV(0);
+  _allPDV=rows;
+  _applyFilterSort();
+}
+
+// ── 탭 전환 ──────────────────────────────────────────
+function switchTab(id,btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+// ── 초기화 ────────────────────────────────────────────
+async function init() {
+  if (!PAGE_GUID) {
+    document.getElementById('pdv-tbody').innerHTML='<tr><td colspan="8" class="pdv-empty">URL에 GUID가 없습니다. gopang.net/u/:guid 형식으로 접속하세요.</td></tr>';
+    document.getElementById('page-body').style.display='';
+    return;
+  }
+  document.getElementById('access-page-guid').textContent=PAGE_GUID;
+  _isOwner = await _checkOwner();
+  _profile = await _loadProfile();
+
+  if (!_profile?.is_public && !_isOwner) {
+    document.getElementById('access-overlay').style.display='flex';
+    return;
+  }
+
+  // 상단바 렌더
+  const name = _profile?.name || PAGE_GUID.slice(0,8)+'…';
+  const etab = {person:'개인',org:'기관',thing:'사물'};
+  document.title = name+' — 고팡';
+  document.getElementById('tb-name').textContent  = name;
+  document.getElementById('tb-entity').textContent = etab[_profile?.entity_type]||'사용자';
+  document.getElementById('prof-name').textContent = name;
+  document.getElementById('prof-avatar').textContent = name.slice(0,1).toUpperCase();
+  const meta=[];
+  if (_profile?.phone)   meta.push('📞 '+_profile.phone.replace(/(\d{3})\d{4}(\d{4})/,'$1****$2'));
+  if (_profile?.address) meta.push('📍 '+_profile.address);
+  if (_profile?.website) meta.push(`🌐 <a href="${_e(_profile.website)}" target="_blank" style="color:var(--green-text)">${_e(_profile.website)}</a>`);
+  document.getElementById('prof-meta').innerHTML = meta.map(m=>`<span>${m}</span>`).join('');
+
+  if (_isOwner) {
+    document.getElementById('owner-badge').style.display='';
+    document.getElementById('prof-edit-btn').style.display='';
+    document.getElementById('pub-add-btn').style.display='';
+    document.getElementById('priv-add-btn').style.display='';
+    document.getElementById('pub-presets').style.display='';
+    document.getElementById('priv-presets').style.display='';
+  }
+
+  // 공개/비공개 데이터 파싱
+  const extra = _profile?.extra || {};
+  _pubData  = { ...(_profile?.name?{이름:_profile.name}:{}), ...(extra.public  || {}) };
+  _privData = extra.private || {};
+
+  // 공개 정보에 기존 프로필 필드도 병합 표시
+  if (_profile?.phone)    _pubData['전화번호'] = _pubData['전화번호'] || _profile.phone;
+  if (_profile?.address)  _pubData['주소']     = _pubData['주소']     || _profile.address;
+  if (_profile?.occupation) _pubData['직업']   = _pubData['직업']     || _profile.occupation;
+  if (_profile?.website)  _pubData['웹사이트'] = _pubData['웹사이트'] || _profile.website;
+  if (Array.isArray(_profile?.services) && _profile.services.length)
+    _pubData['업종'] = _pubData['업종'] || _profile.services.join(', ');
+
+  _renderProps('pub');
+  _renderProps('priv');
+
+  // 재무제표 엔티티명 + 저장 데이터 로드
+  ['pl','bs','cf','eq','fa'].forEach(s=>{
+    const el=document.getElementById(s+'-entity'); if(el) el.textContent=name;
+  });
+  if (_profile?.extra?.fs) {
+    ['pl','bs','cf','eq'].forEach(s=>_loadFSData(_profile.extra.fs, s));
+  }
+
+  // 재고 탭: 기관(org) 또는 사물(thing)인 경우 표시
+  const isOrgOrThing = ['org','thing'].includes(_profile?.entity_type);
+  const invTabBtn = document.getElementById('tab-inv-btn');
+  if (invTabBtn && isOrgOrThing) {
+    invTabBtn.style.display = '';
+    await _loadInventory();
+    await _loadTxLog();
+    if (_isOwner) {
+      document.getElementById('inv-add-btn').style.display = '';
+      const editCol = document.getElementById('inv-edit-col');
+      if (editCol) editCol.style.display = '';
+    }
+  }
+  if (_isOwner) {
+    document.getElementById('pdv-toolbar').style.display='flex';
+    document.getElementById('pdv-private-banner').style.display='none';
+    try {
+      const rows=await _loadPDV(0);
+      _allPDV=rows;
+      _applyFilterSort();
+    } catch(e) {
+      document.getElementById('pdv-tbody').innerHTML=`<tr><td colspan="8" class="pdv-empty">오류: ${_e(e.message)}</td></tr>`;
+    }
+  } else {
+    document.getElementById('pdv-private-banner').style.display='flex';
+    document.getElementById('priv-lock-banner').style.display='flex';
+    document.getElementById('pdv-tbody').innerHTML='<tr><td colspan="8" class="pdv-empty">🔒 PDV는 소유자만 열람할 수 있습니다.</td></tr>';
+    document.getElementById('priv-tbody').innerHTML='<tr><td colspan="3" class="pdv-empty">🔒 비공개 정보는 소유자만 열람할 수 있습니다.</td></tr>';
+  }
+
+  document.getElementById('page-body').style.display='';
+}
+
+// ── 재무제표 ──────────────────────────────────────────
+function switchFS(id, btn) {
+  document.querySelectorAll('.fs-tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.fs-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('fs-'+id).classList.add('active');
+}
+
+function _num(id) { return parseFloat(document.getElementById(id)?.value)||0; }
+function _fmt_n(n) {
+  if (n===0) return '0';
+  const neg = n<0;
+  const s = Math.abs(Math.round(n)).toLocaleString('ko-KR');
+  return neg ? `(${s})` : s;
+}
+function _set(id, n) {
+  const el=document.getElementById(id);
+  if (!el) return;
+  el.textContent = _fmt_n(n);
+  el.classList.toggle('neg', n<0);
+}
+
+// 손익계산서 자동계산
+function calcPL() {
+  const rev   = _num('pl-revenue');
+  const cogs  = _num('pl-cogs');
+  const gross = rev - cogs;
+  _set('pl-gross', gross);
+  const opex    = _num('pl-opex');
+  const otherI  = _num('pl-other-inc');
+  const ebit    = gross - opex + otherI;
+  _set('pl-ebit', ebit);
+  const finI    = _num('pl-fin-inc');
+  const finC    = _num('pl-fin-cost');
+  const assoc   = _num('pl-assoc');
+  const pbt     = ebit + finI - finC + assoc;
+  _set('pl-pbt', pbt);
+  const tax     = _num('pl-tax');
+  const net     = pbt - tax;
+  _set('pl-net', net);
+  const reval   = _num('pl-reval');
+  const remeas  = _num('pl-remeas');
+  const fx      = _num('pl-fx');
+  const oci     = reval + remeas + fx;
+  _set('pl-oci', oci);
+  _set('pl-tci', net + oci);
+}
+
+// 대차대조표 자동계산
+function calcBS() {
+  const tca  = _num('bs-cash')+_num('bs-stfi')+_num('bs-ar')+_num('bs-inv')+_num('bs-oca');
+  const tnca = _num('bs-ppe')+_num('bs-rou')+_num('bs-ia')+_num('bs-assoc')+_num('bs-dta')+_num('bs-onca');
+  const ta   = tca+tnca;
+  _set('bs-tca', tca); _set('bs-tnca', tnca); _set('bs-ta', ta);
+  const tcl  = _num('bs-ap')+_num('bs-stb')+_num('bs-cll')+_num('bs-ctl')+_num('bs-ocl');
+  const tncl = _num('bs-ltb')+_num('bs-nll')+_num('bs-db')+_num('bs-dtl')+_num('bs-oncl');
+  const tl   = tcl+tncl;
+  _set('bs-tcl', tcl); _set('bs-tncl', tncl); _set('bs-tl', tl);
+  const te   = _num('bs-sc')+_num('bs-re')+_num('bs-oce')+_num('bs-nci');
+  const tle  = tl+te;
+  _set('bs-te', te); _set('bs-tle', tle);
+  // 대차 일치 검증
+  const diff = Math.abs(ta-tle);
+  document.getElementById('bs-check-row').style.display = (ta>0 && diff>1) ? '' : 'none';
+}
+
+// 현금흐름표 자동계산
+function calcCF() {
+  const op = _num('cf-net')+_num('cf-da')+_num('cf-rou')+_num('cf-imp')
+           +_num('cf-int')+_num('cf-tax')+_num('cf-ar')+_num('cf-inv')
+           +_num('cf-ap')+_num('cf-int-paid')+_num('cf-tax-paid');
+  _set('cf-op-total', op);
+  const inv = _num('cf-ppe-buy')+_num('cf-ppe-sell')+_num('cf-fa-buy')+_num('cf-int-rec')+_num('cf-div-rec');
+  _set('cf-inv-total', inv);
+  const fin = _num('cf-borrow')+_num('cf-repay')+_num('cf-lease')+_num('cf-div-paid')+_num('cf-treasury');
+  _set('cf-fin-total', fin);
+  const fx  = _num('cf-fx');
+  const net = op+inv+fin+fx;
+  _set('cf-net-change', net);
+  _set('cf-close', net+_num('cf-open'));
+}
+
+// 자본변동표 자동계산
+function calcEQ() {
+  const n  = v=>parseFloat(document.getElementById(v)?.value)||0;
+  const t0 = n('eq-sc0')+n('eq-re0')+n('eq-oc0')+n('eq-nci0');
+  _set('eq-tot0', t0);
+  const netT = n('eq-net')+n('eq-nci-net');
+  _set('eq-net-tot', netT);
+  const ociT = n('eq-oci-re')+n('eq-oci-oc')+n('eq-oci-nci');
+  _set('eq-oci-tot', ociT);
+  _set('eq-div-tot',   n('eq-div'));
+  _set('eq-issue-tot', n('eq-issue'));
+  const sc1  = n('eq-sc0')+n('eq-issue');
+  const re1  = n('eq-re0')+n('eq-net')+n('eq-oci-re')+n('eq-div');
+  const oc1  = n('eq-oc0')+n('eq-oci-oc');
+  const nci1 = n('eq-nci0')+n('eq-nci-net')+n('eq-oci-nci');
+  _set('eq-sc1',sc1); _set('eq-re1',re1); _set('eq-oc1',oc1); _set('eq-nci1',nci1);
+  _set('eq-tot1', sc1+re1+oc1+nci1);
+}
+
+// 재무분석 보고서
+function calcFA() {
+  const ta   = parseFloat(document.getElementById('bs-ta')?.textContent?.replace(/[,()]/g,''))||0;
+  const tl   = parseFloat(document.getElementById('bs-tl')?.textContent?.replace(/[,()]/g,''))||0;
+  const te   = parseFloat(document.getElementById('bs-te')?.textContent?.replace(/[,()]/g,''))||0;
+  const tca  = parseFloat(document.getElementById('bs-tca')?.textContent?.replace(/[,()]/g,''))||0;
+  const tcl  = parseFloat(document.getElementById('bs-tcl')?.textContent?.replace(/[,()]/g,''))||0;
+  const inv  = _num('bs-inv');
+  const cash = _num('bs-cash');
+  const rev  = _num('pl-revenue');
+  const net  = parseFloat(document.getElementById('pl-net')?.textContent?.replace(/[,()]/g,''))||0;
+  const ebit = parseFloat(document.getElementById('pl-ebit')?.textContent?.replace(/[,()]/g,''))||0;
+  const gross= parseFloat(document.getElementById('pl-gross')?.textContent?.replace(/[,()]/g,''))||0;
+  const ar   = _num('bs-ar');
+
+  function pct(n,d){ return d?((n/d)*100).toFixed(1)+'%':'—'; }
+  function rat(n,d){ return d?(n/d).toFixed(2):'—'; }
+  function days(n,d){ return d?Math.round((n/d)*365)+'일':'—'; }
+
+  const ratios = [
+    {cat:'수익성', label:'매출총이익률 (Gross Margin)',      val:pct(gross,rev),  sub:'= 매출총이익 / 매출액', color: gross/rev>0.3?'good':gross/rev>0.1?'warn':'bad'},
+    {cat:'수익성', label:'영업이익률 (Operating Margin)',    val:pct(ebit,rev),   sub:'= 영업이익 / 매출액',   color: ebit/rev>0.1?'good':ebit/rev>0?'warn':'bad'},
+    {cat:'수익성', label:'순이익률 (Net Profit Margin)',     val:pct(net,rev),    sub:'= 당기순이익 / 매출액', color: net/rev>0.05?'good':net/rev>0?'warn':'bad'},
+    {cat:'수익성', label:'자기자본이익률 ROE',               val:pct(net,te),     sub:'= 당기순이익 / 자본총계', color: net/te>0.1?'good':net/te>0?'warn':'bad'},
+    {cat:'수익성', label:'총자산이익률 ROA',                 val:pct(net,ta),     sub:'= 당기순이익 / 자산총계', color: net/ta>0.05?'good':net/ta>0?'warn':'bad'},
+    {cat:'유동성', label:'유동비율 (Current Ratio)',         val:rat(tca,tcl),    sub:'= 유동자산 / 유동부채 (>2 양호)', color: tca/tcl>2?'good':tca/tcl>1?'warn':'bad'},
+    {cat:'유동성', label:'당좌비율 (Quick Ratio)',           val:rat(tca-inv,tcl),sub:'= (유동자산-재고) / 유동부채 (>1)', color: (tca-inv)/tcl>1?'good':(tca-inv)/tcl>0.5?'warn':'bad'},
+    {cat:'유동성', label:'현금비율 (Cash Ratio)',            val:rat(cash,tcl),   sub:'= 현금 / 유동부채',     color: cash/tcl>0.2?'good':cash/tcl>0.1?'warn':'bad'},
+    {cat:'안정성', label:'부채비율 (Debt-to-Equity)',        val:rat(tl,te),      sub:'= 부채총계 / 자본총계 (<1 양호)', color: tl/te<1?'good':tl/te<2?'warn':'bad'},
+    {cat:'안정성', label:'자기자본비율 (Equity Ratio)',      val:pct(te,ta),      sub:'= 자본총계 / 자산총계 (>50% 양호)', color: te/ta>0.5?'good':te/ta>0.3?'warn':'bad'},
+    {cat:'활동성', label:'매출채권회전일수 (DSO)',           val:days(ar,rev),    sub:'= 매출채권×365/매출액 (짧을수록 양호)', color: ar/rev*365<45?'good':ar/rev*365<90?'warn':'bad'},
+    {cat:'활동성', label:'재고자산회전일수 (DIO)',           val:days(inv,rev),   sub:'= 재고×365/매출액 (짧을수록 양호)', color: inv/rev*365<60?'good':inv/rev*365<120?'warn':'bad'},
+  ];
+
+  const cats = [...new Set(ratios.map(r=>r.cat))];
+  document.getElementById('fa-grid').innerHTML = cats.map(cat=>{
+    const rs = ratios.filter(r=>r.cat===cat);
+    return `<div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:6px 0 2px;border-bottom:1px solid var(--border);margin-bottom:4px">${cat}</div>`+
+    rs.map(r=>`
+      <div class="ratio-card">
+        <div class="ratio-label">${r.label}</div>
+        <div class="ratio-val ratio-${r.color}">${r.val}</div>
+        <div class="ratio-sub">${r.sub}</div>
+      </div>`).join('');
+  }).join('');
+}
+
+// FS 저장 (Supabase user_profiles.extra.fs 에 저장)
+async function saveFS(scope) {
+  const fsData = {};
+  document.querySelectorAll(`#fs-${scope} .fs-input`).forEach(inp=>{
+    if(inp.id) fsData[inp.id]=inp.value;
+  });
+  try {
+    const existing = _profile?.extra||{};
+    const body = {
+      guid: PAGE_GUID,
+      extra: { ...existing, fs: { ...(existing.fs||{}), [scope]: fsData } }
+    };
+    const r=await fetch(`${SUPA_URL}/rest/v1/user_profiles`,{
+      method:'POST',
+      headers:{...HDR,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify(body),
+    });
+    if(!r.ok) throw new Error(await r.text());
+    // 피드백
+    const btn=event.target; btn.textContent='✓ 저장됨';
+    setTimeout(()=>{ btn.textContent='저장'; },1500);
+  } catch(e) { alert('저장 실패: '+e.message); }
+}
+
+function updateYear() {
+  const y=document.getElementById('pl-year-sel').value;
+  ['pl-year','pl-year2','cf-year','cf-year2','eq-year','eq-year2'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.textContent=y;
+  });
+}
+
+function _loadFSData(fsExtra, scope) {
+  if (!fsExtra?.[scope]) return;
+  Object.entries(fsExtra[scope]).forEach(([id,val])=>{
+    const el=document.getElementById(id);
+    if(el && el.tagName==='INPUT') { el.value=val; }
+  });
+  if(scope==='bs') calcBS();
+  if(scope==='pl') calcPL();
+  if(scope==='cf') calcCF();
+  if(scope==='eq') calcEQ();
+}
+
+// ══ 재고 & GDC 거래 로직 ═════════════════════════════
+
+let _allInv = [];      // 이 페이지 소유자의 재고
+let _filtInv = [];
+let _buyItem = null;   // 현재 구매 중인 품목
+
+// ── 재고 로드 ─────────────────────────────────────────
+async function _loadInventory() {
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/inventory?owner_guid=eq.${PAGE_GUID}&order=name.asc`,
+      { headers: HDR }
+    );
+    _allInv = await res.json();
+    _filtInv = _allInv;
+    _renderInv();
+    document.getElementById('inv-count').textContent = _allInv.length + ' 품목';
+  } catch(e) {
+    document.getElementById('inv-tbody').innerHTML =
+      `<tr><td colspan="8" class="pdv-empty">재고 로드 오류: ${_e(e.message)}</td></tr>`;
+  }
+}
+
+// ── 재고 테이블 렌더 ─────────────────────────────────
+function _renderInv() {
+  const tb = document.getElementById('inv-tbody');
+  const editCol = document.getElementById('inv-edit-col');
+  if (editCol) editCol.style.display = _isOwner ? '' : 'none';
+
+  if (!_filtInv.length) {
+    tb.innerHTML = '<tr><td colspan="8" class="pdv-empty">재고 품목이 없습니다.</td></tr>';
+    return;
+  }
+  tb.innerHTML = _filtInv.map(item => {
+    const lowStock = item.quantity <= item.min_qty;
+    const canBuy   = !_isOwner && item.quantity > 0;
+    return `<tr>
+      <td style="font-weight:500">${_e(item.name)}</td>
+      <td><span class="cat-badge cat-${_catFromInv(item.category)}">${_e(item.category||'기타')}</span></td>
+      <td style="text-align:right"><span class="gdc-badge">${_fmtGDC(item.unit_price)}</span></td>
+      <td style="text-align:right"><span class="qty-badge ${lowStock?'qty-low':''}">${_fmtNum(item.quantity)}</span></td>
+      <td style="color:var(--text-muted)">${_e(item.unit||'개')}</td>
+      <td style="color:var(--text-muted);font-size:12px">${_e(item.delivery||'—')}</td>
+      <td style="text-align:center">
+        ${_isOwner
+          ? '<span class="null-val" style="font-size:11px">본인</span>'
+          : `<button class="buy-btn" ${!canBuy?'disabled':''} onclick="openBuyModal(${JSON.stringify(item).replace(/"/g,'&quot;')})">구매</button>`}
+      </td>
+      <td style="display:${_isOwner?'':'none'}">
+        <button class="prop-del" onclick="deleteInvItem('${item.id}')" title="삭제">×</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function _catFromInv(cat) {
+  const map = { 농산물:'시장', 공산품:'산업', 서비스:'사교', 디지털:'산업',
+                의료:'의료', 교육:'교육', 운송:'교통' };
+  return map[cat] || '기타';
+}
+function _fmtGDC(n)  { return '₮'+(+(n||0)).toLocaleString('ko-KR',{minimumFractionDigits:2,maximumFractionDigits:4}); }
+function _fmtNum(n)  { return (+(n||0)).toLocaleString('ko-KR'); }
+
+function filterInv() {
+  const q = document.getElementById('inv-search').value.toLowerCase();
+  _filtInv = q ? _allInv.filter(i=>(i.name+i.category+i.description+i.delivery).toLowerCase().includes(q)) : _allInv;
+  _renderInv();
+  document.getElementById('inv-count').textContent = _filtInv.length + ' 품목';
+}
+
+// ── 재고 추가 (소유자) ───────────────────────────────
+function openInvAddRow()  { document.getElementById('inv-add-row').classList.add('open'); }
+function closeInvAddRow() { document.getElementById('inv-add-row').classList.remove('open'); }
+
+async function saveInvItem() {
+  const name  = document.getElementById('inv-new-name').value.trim();
+  const price = parseFloat(document.getElementById('inv-new-price').value)||0;
+  if (!name)  { alert('품목명을 입력하세요.'); return; }
+  if (price<0){ alert('단가는 0 이상이어야 합니다.'); return; }
+  const body = {
+    owner_guid: PAGE_GUID,
+    name,
+    category:  document.getElementById('inv-new-cat').value,
+    unit_price: price,
+    quantity:  parseFloat(document.getElementById('inv-new-qty').value)||0,
+    unit:      document.getElementById('inv-new-unit').value.trim()||'개',
+    delivery:  document.getElementById('inv-new-delivery').value.trim(),
+    is_public: true,
+  };
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/inventory`, {
+      method:'POST',
+      headers:{...HDR,'Content-Type':'application/json','Prefer':'return=representation'},
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    closeInvAddRow();
+    ['inv-new-name','inv-new-price','inv-new-qty','inv-new-unit','inv-new-delivery'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    await _loadInventory();
+  } catch(e) { alert('추가 실패: '+e.message); }
+}
+
+async function deleteInvItem(id) {
+  if (!confirm('이 품목을 삭제하시겠습니까?')) return;
+  try {
+    await fetch(`${SUPA_URL}/rest/v1/inventory?id=eq.${id}`,{method:'DELETE',headers:HDR});
+    await _loadInventory();
+  } catch(e) { alert('삭제 실패: '+e.message); }
+}
+
+// ── 구매 모달 ─────────────────────────────────────────
+function openBuyModal(item) {
+  _buyItem = item;
+  document.getElementById('bm-item-id').value    = item.id;
+  document.getElementById('bm-seller-guid').value= item.owner_guid;
+  document.getElementById('bm-item-name').textContent = item.name;
+  document.getElementById('bm-unit-price').textContent= _fmtGDC(item.unit_price);
+  document.getElementById('bm-delivery').textContent  = item.delivery||'—';
+  document.getElementById('bm-qty').value  = 1;
+  document.getElementById('bm-purpose').value = '';
+  document.getElementById('bm-msg').textContent = '';
+  updateBuyTotal();
+  document.getElementById('buy-modal-bg').classList.add('open');
+}
+
+function closeBuyModal() {
+  document.getElementById('buy-modal-bg').classList.remove('open');
+  _buyItem = null;
+}
+
+function updateBuyTotal() {
+  if (!_buyItem) return;
+  const qty       = Math.max(0, parseFloat(document.getElementById('bm-qty').value)||0);
+  const total     = qty * _buyItem.unit_price;
+  const fee       = Math.round(total * GDC_FEE_RATE * 10000) / 10000;
+  const sellerNet = total - fee;
+  document.getElementById('bm-total').textContent       = _fmtGDC(total);
+  document.getElementById('bm-buyer-pays').textContent  = _fmtGDC(total);
+  document.getElementById('bm-fee').textContent         = _fmtGDC(fee);
+  document.getElementById('bm-seller-net').textContent  = _fmtGDC(sellerNet);
+}
+
+// ══ GDC 거래 확정 — 핵심 로직 ════════════════════════
+// 수수료: Mastercard 평균(2.0%)의 10% = 0.20% — 판매자 부담
+// 구매자 지출: total (변동 없음)
+// 판매자 수령: total - fee
+// 고팡 플랫폼: fee 수취 (fs_ledger fs_account:'platform_fee')
+const GDC_FEE_RATE = 0.0020;  // 0.20%
+
+async function confirmPurchase() {
+  if (!_buyItem) return;
+  const qty     = parseFloat(document.getElementById('bm-qty').value)||0;
+  const purpose = document.getElementById('bm-purpose').value.trim();
+  const msg     = document.getElementById('bm-msg');
+  const btn     = document.getElementById('bm-confirm-btn');
+
+  if (qty <= 0)                  { msg.textContent='수량을 1 이상 입력하세요.'; return; }
+  if (qty > _buyItem.quantity)   { msg.textContent=`재고 부족 (현재 재고: ${_fmtNum(_buyItem.quantity)})`; return; }
+  if (!_user?.guid)              { msg.textContent='로그인이 필요합니다. 고팡 앱에서 접속하세요.'; return; }
+
+  btn.disabled = true; btn.textContent = '처리 중…';
+
+  const total       = qty * _buyItem.unit_price;
+  const fee         = Math.round(total * GDC_FEE_RATE * 10000) / 10000; // 0.20%, 소수점 4자리
+  const sellerNet   = total - fee;                                        // 판매자 실수령액
+  const txId        = crypto.randomUUID();
+  const now         = new Date().toISOString();
+  const sellerGuid  = _buyItem.owner_guid;
+  const buyerGuid   = _user.guid;
+
+  try {
+    // ── Step 1: 재고 차감 ────────────────────────────
+    const newQty = _buyItem.quantity - qty;
+    const invRes = await fetch(`${SUPA_URL}/rest/v1/inventory?id=eq.${_buyItem.id}`, {
+      method:'PATCH',
+      headers:{...HDR,'Content-Type':'application/json'},
+      body: JSON.stringify({ quantity: newQty }),
+    });
+    if (!invRes.ok) throw new Error('재고 차감 실패: ' + await invRes.text());
+
+    // ── Step 2: PDV 레코드 생성 (구매자) ─────────────
+    const pdvBuyer = {
+      user_guid:   buyerGuid,
+      service_id:  'gopang-market',
+      record_type: 'purchase',
+      summary:     `${_buyItem.name} ${_fmtNum(qty)}${_buyItem.unit||'개'} 구매`,
+      what:        _buyItem.name,
+      where:       _profile?.address || '',
+      how:         _buyItem.delivery || '직접 거래',
+      why:         purpose || '구매',
+      category:    '시장',
+      extra: {
+        tx_id: txId, item_id: _buyItem.id, qty,
+        unit_price: _buyItem.unit_price, total,
+        fee: 0, fee_rate: 0,             // 구매자는 수수료 없음
+        seller_guid: sellerGuid, currency: 'GDC',
+      },
+    };
+    const pdvBuyerRes = await fetch(`${SUPA_URL}/rest/v1/pdv_log`, {
+      method:'POST',
+      headers:{...HDR,'Content-Type':'application/json','Prefer':'return=representation'},
+      body: JSON.stringify(pdvBuyer),
+    });
+    if (!pdvBuyerRes.ok) throw new Error('구매자 PDV 실패: ' + await pdvBuyerRes.text());
+    const [pdvBuyerRow] = await pdvBuyerRes.json();
+
+    // ── Step 3: PDV 레코드 생성 (판매자) ─────────────
+    const pdvSeller = {
+      user_guid:   sellerGuid,
+      service_id:  'gopang-market',
+      record_type: 'sale',
+      summary:     `${_buyItem.name} ${_fmtNum(qty)}${_buyItem.unit||'개'} 판매 (수수료 ${_fmtGDC(fee)} 차감)`,
+      what:        _buyItem.name,
+      where:       '',
+      how:         _buyItem.delivery || '직접 거래',
+      why:         '판매',
+      category:    '시장',
+      extra: {
+        tx_id: txId, item_id: _buyItem.id, qty,
+        unit_price: _buyItem.unit_price, total,
+        fee, fee_rate: GDC_FEE_RATE,     // 판매자가 수수료 부담
+        seller_net: sellerNet,
+        buyer_guid: buyerGuid, currency: 'GDC',
+      },
+    };
+    await fetch(`${SUPA_URL}/rest/v1/pdv_log`, {
+      method:'POST',
+      headers:{...HDR,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify(pdvSeller),
+    });
+
+    // ── Step 4: fs_ledger — 구매자 debit (total 지출) ─
+    await fetch(`${SUPA_URL}/rest/v1/fs_ledger`, {
+      method:'POST',
+      headers:{...HDR,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({
+        tx_id: txId, guid: buyerGuid, counterpart: sellerGuid,
+        direction: 'debit', amount: total,
+        item_name: _buyItem.name, item_id: _buyItem.id, quantity: qty,
+        pdv_log_id: pdvBuyerRow?.id || null,
+        fs_account: 'cash',
+        memo: (purpose || _buyItem.name) + ' 구매',
+        tx_at: now,
+      }),
+    });
+
+    // ── Step 5: fs_ledger — 판매자 credit (sellerNet 수령) ─
+    await fetch(`${SUPA_URL}/rest/v1/fs_ledger`, {
+      method:'POST',
+      headers:{...HDR,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({
+        tx_id: txId, guid: sellerGuid, counterpart: buyerGuid,
+        direction: 'credit', amount: sellerNet,
+        item_name: _buyItem.name, item_id: _buyItem.id, quantity: qty,
+        pdv_log_id: null,
+        fs_account: 'revenue',
+        memo: _buyItem.name + ` 판매 (수수료 ${_fmtGDC(fee)} 차감)`,
+        tx_at: now,
+      }),
+    });
+
+    // ── Step 6: fs_ledger — 판매자 fee debit (수수료 지출) ─
+    await fetch(`${SUPA_URL}/rest/v1/fs_ledger`, {
+      method:'POST',
+      headers:{...HDR,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({
+        tx_id: txId, guid: sellerGuid, counterpart: 'gopang-platform',
+        direction: 'debit', amount: fee,
+        item_name: 'GDC 거래 수수료', item_id: null, quantity: 1,
+        pdv_log_id: null,
+        fs_account: 'platform_fee',  // 손익계산서: 판매비용(수수료)
+        memo: `GDC 수수료 ${(GDC_FEE_RATE*100).toFixed(2)}% — tx:${txId.slice(0,8)}`,
+        tx_at: now,
+      }),
+    });
+
+    // ── Step 7: 재무제표 현금 자동 반영 ──────────────
+    await _updateFSCash(buyerGuid, -total, 'buyer');              // 구매자: 현금 ↓ total
+    await _updateFSRevenueAndCash(sellerGuid, sellerNet,          // 판매자: 현금 ↑ sellerNet
+      _buyItem.unit_price * qty);                                 //         매출 ↑ total
+    await _updateFSOpex(sellerGuid, fee);                         // 판매자: 판관비 ↑ fee
+
+    closeBuyModal();
+    alert(
+      `✓ 구매 완료!\n` +
+      `품목: ${_buyItem.name}\n` +
+      `수량: ${_fmtNum(qty)}${_buyItem.unit||'개'}\n` +
+      `거래액: ${_fmtGDC(total)}\n` +
+      `─────────────────\n` +
+      `구매자 지출: ${_fmtGDC(total)}\n` +
+      `판매자 수령: ${_fmtGDC(sellerNet)}\n` +
+      `GDC 수수료:  ${_fmtGDC(fee)} (${(GDC_FEE_RATE*100).toFixed(2)}% · 판매자 부담)\n` +
+      `─────────────────\n` +
+      `양 당사자의 PDV와 재무제표에 자동 기록되었습니다.`
+    );
+    await _loadInventory();
+    await _loadTxLog();
+
+  } catch(e) {
+    msg.textContent = '거래 실패: '+e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '구매 확정';
+  }
+}
+
+// ── 재무제표 현금 자동 업데이트 ──────────────────────
+async function _getFSProfile(guid) {
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/user_profiles?guid=eq.${guid}&select=extra&limit=1`, {headers:HDR});
+    const [row] = await res.json();
+    return row?.extra || {};
+  } catch(e) { return {}; }
+}
+
+async function _updateFSCash(guid, delta, role) {
+  // 구매자: 현금 감소
+  try {
+    const extra = await _getFSProfile(guid);
+    const bs = extra?.fs?.bs || {};
+    const curCash = parseFloat(bs['bs-cash']||'0')||0;
+    bs['bs-cash'] = String(Math.max(0, curCash + delta));
+    extra.fs = { ...(extra.fs||{}), bs };
+    await fetch(`${SUPA_URL}/rest/v1/user_profiles?guid=eq.${guid}`, {
+      method:'PATCH',
+      headers:{...HDR,'Content-Type':'application/json'},
+      body: JSON.stringify({extra}),
+    });
+    // 자신의 페이지면 UI도 업데이트
+    if (guid === PAGE_GUID) {
+      const inp = document.getElementById('bs-cash');
+      if (inp) { inp.value = bs['bs-cash']; calcBS(); }
+    }
+  } catch(e) { console.warn('[FS cash update]', e.message); }
+}
+
+async function _updateFSRevenueAndCash(guid, cashDelta, revDelta) {
+  try {
+    const extra = await _getFSProfile(guid);
+    const bs = extra?.fs?.bs || {};
+    const pl = extra?.fs?.pl || {};
+    const curCash = parseFloat(bs['bs-cash']||'0')||0;
+    const curRev  = parseFloat(pl['pl-revenue']||'0')||0;
+    bs['bs-cash']    = String(curCash + cashDelta);
+    pl['pl-revenue'] = String(curRev  + revDelta);
+    extra.fs = { ...(extra.fs||{}), bs, pl };
+    await fetch(`${SUPA_URL}/rest/v1/user_profiles?guid=eq.${guid}`, {
+      method:'PATCH',
+      headers:{...HDR,'Content-Type':'application/json'},
+      body: JSON.stringify({extra}),
+    });
+    if (guid === PAGE_GUID) {
+      const cashInp = document.getElementById('bs-cash');
+      const revInp  = document.getElementById('pl-revenue');
+      if (cashInp) { cashInp.value = bs['bs-cash'];    calcBS(); }
+      if (revInp)  { revInp.value  = pl['pl-revenue']; calcPL(); }
+    }
+  } catch(e) { console.warn('[FS revenue+cash update]', e.message); }
+}
+
+async function _updateFSOpex(guid, feeDelta) {
+  // 판매자 손익계산서: 판매비와관리비(pl-opex) ↑ fee
+  try {
+    const extra = await _getFSProfile(guid);
+    const pl = extra?.fs?.pl || {};
+    const curOpex = parseFloat(pl['pl-opex']||'0')||0;
+    pl['pl-opex'] = String(curOpex + feeDelta);
+    extra.fs = { ...(extra.fs||{}), pl };
+    await fetch(`${SUPA_URL}/rest/v1/user_profiles?guid=eq.${guid}`, {
+      method:'PATCH',
+      headers:{...HDR,'Content-Type':'application/json'},
+      body: JSON.stringify({extra}),
+    });
+    if (guid === PAGE_GUID) {
+      const inp = document.getElementById('pl-opex');
+      if (inp) { inp.value = pl['pl-opex']; calcPL(); }
+    }
+  } catch(e) { console.warn('[FS opex update]', e.message); }
+}
+
+// ── 거래 내역 로드 ────────────────────────────────────
+async function _loadTxLog() {
+  const wrap = document.getElementById('tx-log-wrap');
+  const body = document.getElementById('tx-log-body');
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/fs_ledger?guid=eq.${PAGE_GUID}&order=tx_at.desc&limit=20`,
+      { headers: HDR }
+    );
+    const rows = await res.json();
+    if (!Array.isArray(rows) || !rows.length) { wrap.style.display='none'; return; }
+    wrap.style.display = '';
+    body.innerHTML = rows.map(r=>`
+      <div class="tx-row">
+        <span class="${r.direction==='credit'?'tx-dir-in':'tx-dir-out'}">${r.direction==='credit'?'↑':'↓'}</span>
+        <span style="flex:1;font-weight:500">${_e(r.item_name||r.memo||'—')}</span>
+        <span class="gdc-badge" style="${r.direction==='credit'?'':'background:var(--red-bg);color:var(--red-text);border-color:var(--red-bd)'}">
+          ${r.direction==='credit'?'+':'−'}${_fmtGDC(r.amount)}
+        </span>
+        <span style="color:var(--text-dim);font-size:11px;white-space:nowrap;margin-left:8px">${_fmt(r.tx_at)}</span>
+      </div>`).join('');
+  } catch(e) { wrap.style.display='none'; }
+}
+
+init().catch(e=>console.error('[user_template]',e));
+</script>
+</body>
+</html>
