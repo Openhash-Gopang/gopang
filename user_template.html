@@ -554,11 +554,67 @@ input[type=checkbox]:checked::after {
   border-radius:var(--r); padding:12px 14px; font-size:13px;
   color:var(--yellow-text); margin-bottom:12px; display:flex; align-items:center; gap:8px;
 }
-@media(max-width:700px) {
-  .profile-card { flex-wrap:wrap; }
-  .topbar-tag   { display:none; }
-  .col-how,.col-why { display:none; }
+/* ── 위치 관리 탭 ── */
+.loc-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r); overflow:hidden; margin-bottom:14px;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);
 }
+.loc-card-hd {
+  background:var(--surface2); border-bottom:1px solid var(--border);
+  padding:11px 16px; display:flex; justify-content:space-between; align-items:center;
+}
+.loc-card-title { font-size:12px;font-weight:700;color:var(--text-sub); }
+.loc-type-badge {
+  font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;border:1px solid;
+}
+.loc-fixed   { background:var(--blue-bg);   color:var(--blue-text);   border-color:var(--blue-bd); }
+.loc-dynamic { background:var(--green-bg);  color:var(--green-text);  border-color:var(--green-bd); }
+.loc-body { padding:16px; }
+.loc-map-wrap {
+  width:100%; height:220px; border-radius:var(--r); border:1px solid var(--border);
+  background:var(--surface2); overflow:hidden; margin-bottom:12px;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--text-muted); font-size:13px; position:relative;
+}
+.loc-map-wrap iframe { width:100%; height:100%; border:none; }
+.loc-coord {
+  font-family:monospace; font-size:12px; color:var(--text-muted);
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:4px; padding:6px 10px; margin-bottom:10px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.loc-coord-val { color:var(--text); font-weight:600; }
+.loc-status {
+  font-size:12px; padding:6px 10px; border-radius:var(--r);
+  margin-bottom:10px; display:flex; align-items:center; gap:6px;
+}
+.loc-status.tracking { background:var(--green-bg);color:var(--green-text); }
+.loc-status.fixed    { background:var(--blue-bg);color:var(--blue-text); }
+.loc-status.error    { background:var(--red-bg);color:var(--red-text); }
+.loc-dot { width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0; }
+.loc-dot.pulse { animation:pulse 1.5s infinite; }
+.loc-field-row { display:flex;gap:8px;margin-bottom:10px;align-items:flex-end; }
+.loc-input {
+  flex:1; padding:8px 10px; border:1px solid var(--border2); border-radius:var(--r);
+  font-size:13px; font-family:var(--font); color:var(--text); background:var(--surface); outline:none;
+}
+.loc-input:focus { border-color:var(--green); }
+.loc-btn {
+  padding:8px 14px; border-radius:var(--r); font-size:12px; font-weight:700;
+  font-family:var(--font); cursor:pointer; white-space:nowrap; border:none;
+  background:var(--green); color:#fff; transition:background .12s;
+}
+.loc-btn:hover { background:var(--green-dark); }
+.loc-btn-sec {
+  padding:7px 12px; border-radius:var(--r); font-size:12px; font-weight:600;
+  font-family:var(--font); cursor:pointer; border:1px solid var(--border2);
+  background:var(--surface); color:var(--text-sub);
+}
+.loc-history { font-size:11px;color:var(--text-muted);margin-top:8px; }
+.loc-history-row { display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border); }
+.loc-history-row:last-child { border-bottom:none; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
 </style>
 </head>
 <body>
@@ -599,6 +655,7 @@ input[type=checkbox]:checked::after {
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('pub',this)">공개 정보</button>
     <button class="tab-btn" onclick="switchTab('priv',this)">비공개 정보</button>
+    <button class="tab-btn" onclick="switchTab('loc',this)">위치</button>
     <button class="tab-btn" onclick="switchTab('fs',this)">재무제표</button>
     <button class="tab-btn" id="tab-inv-btn" style="display:none" onclick="switchTab('inv',this)">재고</button>
     <button class="tab-btn" onclick="switchTab('pdv',this)">PDV 기록</button>
@@ -776,6 +833,86 @@ input[type=checkbox]:checked::after {
       </div>
     </div>
   </div>
+
+  <!-- ── 위치 관리 탭 ── -->
+  <div class="tab-panel" id="tab-loc">
+
+    <!-- 현재 위치 카드 -->
+    <div class="loc-card" id="loc-current-card">
+      <div class="loc-card-hd">
+        <span class="loc-card-title">현재 위치</span>
+        <span class="loc-type-badge" id="loc-type-badge">—</span>
+      </div>
+      <div class="loc-body">
+        <!-- 지도 -->
+        <div class="loc-map-wrap" id="loc-map-wrap">
+          지도를 불러오는 중…
+        </div>
+        <!-- 좌표 표시 -->
+        <div class="loc-coord">
+          <span style="color:var(--text-muted)">좌표 (lat, lng)</span>
+          <span class="loc-coord-val" id="loc-coord-val">—</span>
+        </div>
+        <!-- 주소 표시 -->
+        <div class="loc-coord">
+          <span style="color:var(--text-muted)">주소</span>
+          <span class="loc-coord-val" id="loc-addr-val" style="font-family:var(--font);font-size:13px">—</span>
+        </div>
+        <!-- 상태 -->
+        <div class="loc-status" id="loc-status-bar" style="display:none">
+          <div class="loc-dot" id="loc-dot"></div>
+          <span id="loc-status-txt">—</span>
+        </div>
+
+        <!-- 고정 위치 입력 (org / 부동산 thing) -->
+        <div id="loc-fixed-section" style="display:none">
+          <div style="font-size:12px;font-weight:600;color:var(--text-sub);margin-bottom:8px">주소로 위치 설정</div>
+          <div class="loc-field-row">
+            <input class="loc-input" id="loc-addr-input" placeholder="도로명 주소 입력 (예: 제주시 한림읍 금능남로 3)">
+            <button class="loc-btn" onclick="geocodeAddress()">지오코딩</button>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">
+            Kakao REST API → 주소를 좌표로 변환하여 저장합니다.
+          </div>
+        </div>
+
+        <!-- 가변 위치 (person / vehicle thing) -->
+        <div id="loc-dynamic-section" style="display:none">
+          <div class="loc-field-row">
+            <button class="loc-btn" id="loc-track-btn" onclick="toggleTracking()">📡 실시간 추적 시작</button>
+            <button class="loc-btn-sec" onclick="captureCurrentPos()">📌 현재 위치 저장</button>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px">
+            실시간 추적: 50m 이상 이동 시 자동으로 Supabase에 위치가 업데이트됩니다.
+          </div>
+        </div>
+
+        <!-- 공개 여부 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <input type="checkbox" id="loc-public-chk" style="width:16px;height:16px;cursor:pointer">
+          <label for="loc-public-chk" style="font-size:12px;color:var(--text-muted);cursor:pointer">
+            위치 공개 (마켓 검색에서 거리 표시에 활용)
+          </label>
+          <button class="loc-btn" style="margin-left:auto;padding:6px 12px" onclick="saveLocation()">저장</button>
+        </div>
+        <div id="loc-save-msg" style="font-size:12px;text-align:center;margin-top:6px;min-height:14px;color:var(--green-text)"></div>
+      </div>
+    </div>
+
+    <!-- 위치 이력 카드 (가변 위치만) -->
+    <div class="loc-card" id="loc-history-card" style="display:none">
+      <div class="loc-card-hd">
+        <span class="loc-card-title">최근 위치 이력</span>
+        <span style="font-size:11px;color:var(--text-muted)">최근 10건</span>
+      </div>
+      <div class="loc-body">
+        <div class="loc-history" id="loc-history-body">
+          <div style="color:var(--text-muted);text-align:center;padding:12px">이력이 없습니다.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-loc -->
 
   <!-- ── 재무제표 탭 ── -->
   <div class="tab-panel" id="tab-fs">
@@ -1142,8 +1279,13 @@ if (_red) { sessionStorage.removeItem('gopang_redirect'); history.replaceState(n
 const PAGE_GUID = location.pathname.replace(/\/$/,'').split('/')[2]
                || new URLSearchParams(location.search).get('guid') || '';
 
+// ── 신원 체계 ─────────────────────────────────────────
+// PAGE_GUID   : 이 페이지의 주인 (URL guid=)
+// _viewer     : 현재 방문자 정보 { guid, name, source }
+// _isOwner    : 방문자 == 페이지 주인 여부
 let _isOwner = false;
 let _profile = null;
+let _viewer  = null;   // 방문자 (구매자로 사용)
 
 // 공개/비공개 정보 상태 (key→val 객체)
 let _pubData  = {};  // extra.public
@@ -1177,16 +1319,59 @@ async function _fp() {
   return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
-async function _checkOwner() {
-  const t = new URLSearchParams(location.search).get('token');
-  if (t && t===PAGE_GUID) return true;
+// ── 방문자 신원 확인 ──────────────────────────────────
+// 우선순위:
+//   1. URL ?viewer=guid (고팡 앱이 명시적으로 방문자 guid 전달)
+//   2. 기기 지문 → Supabase users 조회 → guid 획득
+//   3. 미등록 기기 → 익명 방문자 (구매 불가)
+async function _resolveViewer() {
+  const params     = new URLSearchParams(location.search);
+  const viewerParam= params.get('viewer');   // 고팡 앱 경유
+  const tokenParam = params.get('token');    // 레거시 호환
+
+  // 시나리오 A: ?viewer= 명시 (고팡 앱에서 링크 생성 시)
+  if (viewerParam) {
+    try {
+      const res = await fetch(
+        `${SUPA_URL}/rest/v1/users?guid=eq.${viewerParam}&select=guid,phone&limit=1`,
+        { headers: HDR }
+      );
+      const [row] = await res.json();
+      if (row?.guid) {
+        _viewer = { guid: row.guid, phone: row.phone||'', source: 'url_param' };
+        _isOwner = (row.guid === PAGE_GUID);
+        return;
+      }
+    } catch(e) { console.warn('[Viewer] url_param 조회 실패:', e.message); }
+  }
+
+  // 시나리오 B: 기기 지문으로 users 테이블에서 guid 조회
   try {
-    const f=await _fp();
-    const res=await fetch(`${SUPA_URL}/rest/v1/users?guid=eq.${PAGE_GUID}&select=device_fp&limit=1`,{headers:HDR});
-    const [row]=await res.json();
-    if (row?.device_fp===f) return true;
-  } catch(e){}
-  return false;
+    const fp  = await _fp();
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/users?device_fp=eq.${fp}&select=guid,phone&limit=1`,
+      { headers: HDR }
+    );
+    const [row] = await res.json();
+    if (row?.guid) {
+      _viewer  = { guid: row.guid, phone: row.phone||'', source: 'device_fp' };
+      _isOwner = (row.guid === PAGE_GUID);
+      console.info('[Viewer] 기기지문 인증:', row.guid.slice(0,8), _isOwner?'(본인)':'(방문자)');
+      return;
+    }
+  } catch(e) { console.warn('[Viewer] device_fp 조회 실패:', e.message); }
+
+  // 시나리오 C: 레거시 token 파라미터 (token == PAGE_GUID → 본인)
+  if (tokenParam && tokenParam === PAGE_GUID) {
+    _viewer  = { guid: PAGE_GUID, source: 'token_self' };
+    _isOwner = true;
+    return;
+  }
+
+  // 시나리오 D: 미등록 기기 → 익명 방문자
+  _viewer  = null;
+  _isOwner = false;
+  console.info('[Viewer] 미등록 기기 — 익명 방문자');
 }
 
 async function _loadProfile() {
@@ -1496,12 +1681,252 @@ async function _reloadPDV() {
   _applyFilterSort();
 }
 
-// ── 탭 전환 ──────────────────────────────────────────
+// ══ 위치 관리 ══════════════════════════════════════════
+const PROXY_URL = 'https://gopang-proxy.tensor-city.workers.dev';
+
+let _locCoords  = null;   // { lat, lng } 현재 좌표
+let _locAddr    = null;   // 현재 주소 문자열
+let _trackWatch = null;   // watchPosition ID
+let _isFixed    = false;  // 고정 위치 여부
+let _locHistory = [];     // 위치 이력
+
+// ── 위치 탭 초기화 ────────────────────────────────────
+async function initLocationTab() {
+  const et = _profile?.entity_type || 'person';
+  // 고정 위치: org, 또는 thing 중 부동산류
+  _isFixed = (et === 'org');
+
+  const typeBadge = document.getElementById('loc-type-badge');
+  typeBadge.textContent = _isFixed ? '고정 위치' : '가변 위치';
+  typeBadge.className   = 'loc-type-badge ' + (_isFixed ? 'loc-fixed' : 'loc-dynamic');
+
+  // 섹션 토글
+  document.getElementById('loc-fixed-section').style.display   = _isOwner && _isFixed  ? '' : 'none';
+  document.getElementById('loc-dynamic-section').style.display  = _isOwner && !_isFixed ? '' : 'none';
+  document.getElementById('loc-history-card').style.display     = !_isFixed ? '' : 'none';
+
+  // 공개 여부 초기값
+  const isPublic = !!_profile?.extra?.public?.gps || !!_profile?.location;
+  document.getElementById('loc-public-chk').checked = isPublic;
+
+  // 기존 저장된 위치 로드
+  const savedGps = _profile?.location || _profile?.extra?.public?.gps || _profile?.extra?.private?.gps;
+  if (savedGps) {
+    const parts = String(savedGps).split(',').map(s=>parseFloat(s.trim()));
+    if (parts.length === 2 && !isNaN(parts[0])) {
+      _locCoords = { lat: parts[0], lng: parts[1] };
+      _locAddr   = _profile?.address || _profile?.extra?.public?.주소 || null;
+      _renderLocUI();
+    }
+  }
+
+  // 위치 이력 로드 (가변 위치)
+  if (!_isFixed && _isOwner) await _loadLocHistory();
+}
+
+// ── UI 갱신 ───────────────────────────────────────────
+function _renderLocUI() {
+  if (!_locCoords) {
+    document.getElementById('loc-coord-val').textContent = '—';
+    document.getElementById('loc-addr-val').textContent  = '—';
+    _updateMap(null, null);
+    return;
+  }
+  const { lat, lng } = _locCoords;
+  document.getElementById('loc-coord-val').textContent = `${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}`;
+  document.getElementById('loc-addr-val').textContent  = _locAddr || '주소 변환 중…';
+  _updateMap(lat, lng);
+}
+
+function _updateMap(lat, lng) {
+  const wrap = document.getElementById('loc-map-wrap');
+  if (!lat || !lng) {
+    wrap.innerHTML = '<span style="color:var(--text-muted)">위치 정보가 없습니다.</span>';
+    return;
+  }
+  // OpenStreetMap iframe (Kakao 지도는 JS SDK 필요 — iframe 방식으로 대체)
+  const zoom = 15;
+  wrap.innerHTML = `<iframe
+    src="https://www.openstreetmap.org/export/embed.html?bbox=${lng-.005},${lat-.005},${lng+.005},${lat+.005}&layer=mapnik&marker=${lat},${lng}"
+    style="width:100%;height:100%;border:none;border-radius:4px"
+    loading="lazy"></iframe>`;
+}
+
+function _setStatus(type, msg) {
+  const bar = document.getElementById('loc-status-bar');
+  const dot = document.getElementById('loc-dot');
+  const txt = document.getElementById('loc-status-txt');
+  bar.style.display = '';
+  bar.className     = 'loc-status ' + type;
+  dot.className     = 'loc-dot' + (type==='tracking'?' pulse':'');
+  txt.textContent   = msg;
+}
+
+// ── 역지오코딩 (카카오 REST API → Worker 프록시) ──────
+async function _reverseGeocode(lat, lng) {
+  try {
+    const res  = await fetch(`${PROXY_URL}/geocode?lat=${lat}&lng=${lng}`);
+    const data = await res.json();
+    return data.documents?.[0]?.road_address?.address_name
+        || data.documents?.[0]?.address?.address_name
+        || null;
+  } catch(e) { return null; }
+}
+
+// ── 정방향 지오코딩 (주소 → 좌표, 카카오 REST API) ────
+async function geocodeAddress() {
+  const addr = document.getElementById('loc-addr-input').value.trim();
+  if (!addr) { alert('주소를 입력하세요.'); return; }
+  _setStatus('tracking', '주소 변환 중…');
+  try {
+    const res  = await fetch(`${PROXY_URL}/address2coord?address=${encodeURIComponent(addr)}`);
+    const data = await res.json();
+    const doc  = data.documents?.[0];
+    if (!doc) throw new Error('주소를 찾을 수 없습니다.');
+    _locCoords = { lat: parseFloat(doc.y), lng: parseFloat(doc.x) };
+    _locAddr   = doc.road_address?.address_name || doc.address?.address_name || addr;
+    document.getElementById('loc-addr-input').value = _locAddr;
+    _renderLocUI();
+    _setStatus('fixed', `✓ 좌표 변환 완료: ${_locAddr}`);
+  } catch(e) {
+    _setStatus('error', '주소 변환 실패: '+e.message);
+  }
+}
+
+// ── 실시간 추적 토글 (person / vehicle) ──────────────
+function toggleTracking() {
+  const btn = document.getElementById('loc-track-btn');
+  if (_trackWatch !== null) {
+    navigator.geolocation.clearWatch(_trackWatch);
+    _trackWatch = null;
+    btn.textContent = '📡 실시간 추적 시작';
+    _setStatus('fixed', '추적 중지됨');
+    return;
+  }
+  if (!navigator.geolocation) { alert('GPS를 지원하지 않는 기기입니다.'); return; }
+  _setStatus('tracking', '위치 수신 중…');
+  btn.textContent = '⏹ 추적 중지';
+
+  let prevLat = null, prevLng = null;
+  _trackWatch = navigator.geolocation.watchPosition(
+    async pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      // 50m 이상 이동 시만 업데이트
+      const moved = prevLat === null || _distM(prevLat, prevLng, lat, lng) > 50;
+      if (!moved) return;
+      prevLat = lat; prevLng = lng;
+      _locCoords = { lat, lng };
+      _locAddr   = await _reverseGeocode(lat, lng);
+      _renderLocUI();
+      _setStatus('tracking', `📡 실시간 추적 중 — ${_locAddr || lat.toFixed(5)+', '+lng.toFixed(5)}`);
+      // Supabase 자동 저장 (가변 위치)
+      await _saveLocToSupabase(lat, lng, _locAddr, false);
+      await _appendLocHistory(lat, lng, _locAddr);
+      _loadLocHistory();
+    },
+    err => { _setStatus('error', 'GPS 오류: '+err.message); },
+    { enableHighAccuracy: true, maximumAge: 15000 }
+  );
+}
+
+async function captureCurrentPos() {
+  if (!navigator.geolocation) { alert('GPS 미지원'); return; }
+  _setStatus('tracking', '현재 위치 수신 중…');
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    _locCoords = { lat, lng };
+    _locAddr   = await _reverseGeocode(lat, lng);
+    _renderLocUI();
+    _setStatus('fixed', `📌 위치 캡처 완료 — ${_locAddr || lat.toFixed(5)+', '+lng.toFixed(5)}`);
+  }, err => { _setStatus('error', 'GPS 오류: '+err.message); });
+}
+
+// ── 위치 저장 ────────────────────────────────────────
+async function saveLocation() {
+  if (!_locCoords) { alert('위치 정보가 없습니다. 먼저 위치를 확인하세요.'); return; }
+  const isPublic = document.getElementById('loc-public-chk').checked;
+  const msg = document.getElementById('loc-save-msg');
+  msg.style.color = 'var(--text-muted)'; msg.textContent = '저장 중…';
+  await _saveLocToSupabase(_locCoords.lat, _locCoords.lng, _locAddr, isPublic);
+  msg.style.color = 'var(--green-text)'; msg.textContent = '✓ 위치 저장 완료';
+  setTimeout(()=>{ msg.textContent=''; }, 2000);
+}
+
+async function _saveLocToSupabase(lat, lng, addr, isPublic) {
+  try {
+    const gpsStr = `${parseFloat(lat).toFixed(6)},${parseFloat(lng).toFixed(6)}`;
+    const extra  = _profile?.extra || {};
+    extra.public  = extra.public  || {};
+    extra.private = extra.private || {};
+    if (isPublic) {
+      extra.public.gps  = gpsStr;
+      extra.public.주소 = addr || extra.public.주소;
+    } else {
+      delete extra.public.gps;
+      extra.private.gps  = gpsStr;
+      extra.private.주소 = addr || extra.private.주소;
+    }
+    await fetch(`${SUPA_URL}/rest/v1/user_profiles?guid=eq.${PAGE_GUID}`, {
+      method:'PATCH',
+      headers:{...HDR,'Content-Type':'application/json'},
+      body: JSON.stringify({ location: gpsStr, address: addr||_profile?.address||null, extra }),
+    });
+    if (_profile) { _profile.location = gpsStr; _profile.extra = extra; }
+  } catch(e) { console.warn('[Loc save]', e.message); }
+}
+
+// ── 위치 이력 ────────────────────────────────────────
+async function _appendLocHistory(lat, lng, addr) {
+  try {
+    await fetch(`${SUPA_URL}/rest/v1/location_log`, {
+      method:'POST',
+      headers:{...HDR,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({
+        user_guid: PAGE_GUID,
+        lat: parseFloat(lat), lng: parseFloat(lng),
+        address: addr, recorded_at: new Date().toISOString()
+      }),
+    });
+  } catch(e) {}
+}
+
+async function _loadLocHistory() {
+  try {
+    const res  = await fetch(
+      `${SUPA_URL}/rest/v1/location_log?user_guid=eq.${PAGE_GUID}&order=recorded_at.desc&limit=10`,
+      { headers: HDR }
+    );
+    const rows = await res.json();
+    const body = document.getElementById('loc-history-body');
+    if (!Array.isArray(rows) || !rows.length) {
+      body.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:12px;font-size:12px">이력이 없습니다.</div>';
+      return;
+    }
+    body.innerHTML = rows.map(r => `
+      <div class="loc-history-row">
+        <span style="color:var(--text-muted);white-space:nowrap;font-size:11px">${_fmt(r.recorded_at)}</span>
+        <span style="flex:1;font-size:12px">${_e(r.address || `${r.lat?.toFixed(5)}, ${r.lng?.toFixed(5)}`)}</span>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+// ── 거리 계산 (미터) ─────────────────────────────────
+function _distM(lat1, lng1, lat2, lng2) {
+  const R=6371000, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// ── 탭 전환 시 위치 탭 초기화 ────────────────────────
+let _locTabInited = false;
 function switchTab(id,btn) {
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tab-'+id).classList.add('active');
+  if (id==='loc' && !_locTabInited) { _locTabInited=true; initLocationTab(); }
 }
 
 // ── 초기화 ────────────────────────────────────────────
@@ -1512,7 +1937,7 @@ async function init() {
     return;
   }
   document.getElementById('access-page-guid').textContent=PAGE_GUID;
-  _isOwner = await _checkOwner();
+  await _resolveViewer();   // _viewer, _isOwner 동시 결정
   _profile = await _loadProfile();
 
   if (!_profile?.is_public && !_isOwner) {
@@ -1541,6 +1966,16 @@ async function init() {
     document.getElementById('priv-add-btn').style.display='';
     document.getElementById('pub-presets').style.display='';
     document.getElementById('priv-presets').style.display='';
+  } else if (_viewer?.guid) {
+    // 방문자가 로그인된 경우 — 상단바 우측에 방문자 표시
+    const vBadge = document.getElementById('owner-badge');
+    if (vBadge) {
+      vBadge.style.display = '';
+      vBadge.style.background = 'var(--blue-bg)';
+      vBadge.style.color = 'var(--blue-text)';
+      vBadge.style.borderColor = 'var(--blue-bd)';
+      vBadge.textContent = '방문자: ' + _viewer.guid.slice(0,8) + '…';
+    }
   }
 
   // 공개/비공개 데이터 파싱
@@ -1951,17 +2386,18 @@ async function confirmPurchase() {
 
   if (qty <= 0)                  { msg.textContent='수량을 1 이상 입력하세요.'; return; }
   if (qty > _buyItem.quantity)   { msg.textContent=`재고 부족 (현재 재고: ${_fmtNum(_buyItem.quantity)})`; return; }
-  if (!_user?.guid)              { msg.textContent='로그인이 필요합니다. 고팡 앱에서 접속하세요.'; return; }
+  if (!_viewer?.guid)            { msg.textContent='로그인이 필요합니다. 먼저 본인 페이지에서 기기 지문을 등록하세요.'; return; }
+  if (_viewer.guid === PAGE_GUID){ msg.textContent='본인 재고는 구매할 수 없습니다.'; return; }
 
   btn.disabled = true; btn.textContent = '처리 중…';
 
   const total       = qty * _buyItem.unit_price;
-  const fee         = Math.round(total * GDC_FEE_RATE * 10000) / 10000; // 0.20%, 소수점 4자리
-  const sellerNet   = total - fee;                                        // 판매자 실수령액
+  const fee         = Math.round(total * GDC_FEE_RATE * 10000) / 10000;
+  const sellerNet   = total - fee;
   const txId        = crypto.randomUUID();
   const now         = new Date().toISOString();
   const sellerGuid  = _buyItem.owner_guid;
-  const buyerGuid   = _user.guid;
+  const buyerGuid   = _viewer.guid;   // _user → _viewer
 
   try {
     // ── Step 1: 재고 차감 ────────────────────────────
