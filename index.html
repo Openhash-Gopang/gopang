@@ -1,2015 +1,923 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <title>고팡</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>고팡(Gopang) — FPGA 가속 자율 시장 통합 플랫폼</title>
+<meta name="description" content="AI 비서·PDV·OpenHash·FPGA 기반 완전 자율 글로벌 시장 플랫폼"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#3ecf8e;--brand-hover:#2db87a;--brand-dim:rgba(62,207,142,.12);
+  --bg-base:#f8f8f8;--bg-100:#ffffff;--bg-200:#f3f4f5;--bg-300:#e9eaeb;
+  --border:#e4e4e7;--border-strong:#c4c4cc;
+  --text:#1c1c1e;--text-2:#4a4a55;--text-3:#9898a6;--text-brand:#18794e;
+  --font:'Noto Sans KR',-apple-system,sans-serif;--mono:'JetBrains Mono',monospace;--r:6px;
+  --rail-w:48px;--menu-w:240px;--header-h:64px;--nav-h:56px;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);font-size:15px;line-height:1.55;color:var(--text);background:var(--bg-base);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+.shell{display:flex;min-height:100vh}
 
-  <!-- ── PWA 핵심 ──────────────────────────────────────── -->
-  <link rel="manifest" href="/manifest.json"/>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+/* SIDEBAR */
+.sidebar-wrap{position:fixed;top:0;left:0;bottom:0;width:var(--rail-w);z-index:400}
+.rail{position:absolute;top:0;left:0;bottom:0;width:var(--rail-w);background:#f8f9fa;display:flex;flex-direction:column;align-items:center;z-index:2}
+.rail-logo{width:100%;height:var(--header-h);display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);flex-shrink:0}
+.rail-nav{flex:1;width:100%;padding:5px 0;display:flex;flex-direction:column;gap:1px;overflow:hidden}
+.rail-foot{width:100%;border-top:1px solid var(--border);padding:5px 0;display:flex;flex-direction:column;gap:1px}
+.ri{position:relative;width:100%;height:38px;display:flex;align-items:center;justify-content:center;border:none;background:none;cursor:pointer;color:#6b6b80;transition:color .12s,background .12s;outline:none}
+.ri:hover{color:var(--text);background:rgba(0,0,0,.04)}
+.ri.active{color:var(--text);background:rgba(0,0,0,.06)}
+.ri svg{width:18px;height:18px;flex-shrink:0;stroke-width:2.2}
+.ri-sep{width:100%;height:1px;background:var(--border);margin:4px 0;flex-shrink:0}
 
-  <!-- iOS Safari — 홈 화면 추가 -->
-  <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="apple-mobile-web-app-title" content="고팡"/>
-  <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
-  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png"/>
-  <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png"/>
-  <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png"/>
+/* MENU PANEL */
+.menu-panel{position:fixed;top:0;left:var(--rail-w);bottom:0;width:var(--menu-w);background:var(--bg-100);border-right:1px solid var(--border);box-shadow:4px 0 20px rgba(0,0,0,.08);transform:translateX(calc(-1 * var(--menu-w)));opacity:0;pointer-events:none;transition:transform .2s cubic-bezier(.4,0,.2,1),opacity .15s;display:flex;flex-direction:column;overflow-y:auto;z-index:401}
+.sidebar-wrap:hover .menu-panel{transform:translateX(0);opacity:1;pointer-events:auto}
+.mp-header{height:var(--header-h);display:flex;align-items:center;padding:0 14px;border-bottom:1px solid var(--border);flex-shrink:0;gap:8px}
+.mp-logo{width:22px;height:22px;border-radius:5px;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mp-title{font-size:15px;font-weight:700;color:var(--text)}
+.mp-badge{font-size:12px;color:var(--text-3);background:var(--bg-200);border:1px solid var(--border);border-radius:4px;padding:1px 6px;margin-left:auto}
+.mp-nav{flex:1;padding:var(--header-h) 6px 5px;display:flex;flex-direction:column;gap:1px}
+.mp-foot{padding:5px 6px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:1px}
+.mp-divider{height:1px;background:var(--border);margin:6px 10px}
+.mp-group-label{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;padding:8px 16px 4px;flex-shrink:0}
+.mi{display:flex;align-items:center;gap:9px;height:36px;padding:0 10px 0 16px;border-radius:var(--r);cursor:pointer;border:none;background:none;font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);transition:background .12s,color .12s;width:100%;text-align:left}
+.mi:hover{background:var(--bg-200);color:var(--text)}
+.mi.active{background:var(--bg-200);color:var(--text);font-weight:700}
+.mi-dot{width:5px;height:5px;border-radius:50%;background:transparent;flex-shrink:0;margin-left:auto;transition:background .12s}
+.mi.active .mi-dot{background:var(--brand)}
 
-  <!-- iOS 스플래시 스크린 배경색 -->
-  <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+/* MAIN */
+.main{margin-left:var(--rail-w);flex:1;display:flex;flex-direction:column;min-height:100vh;background:var(--bg-base)}
+.topbar{position:sticky;top:0;height:var(--header-h);background:rgba(255,255,255,.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:10px;z-index:100}
+.topbar-bc{display:flex;align-items:center;gap:5px;font-size:14px;color:var(--text-3)}
+.topbar-bc .active{color:var(--text);font-weight:600}
+.topbar-bc svg{width:11px;height:11px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.page{padding:28px 32px;max-width:1100px;width:100%;margin:0 auto;flex:1}
+.page-header{margin-bottom:22px}
+.page-header h1{font-size:20px;font-weight:700;letter-spacing:-.3px;color:var(--text);margin-bottom:3px}
+.page-header p{font-size:15px;color:var(--text-2);line-height:1.6}
+.intro-box{background:var(--bg-200);border:1px solid var(--border);border-left:3px solid var(--brand);border-radius:var(--r);padding:18px 20px;margin-bottom:20px;display:flex;flex-direction:column;gap:10px}
+.intro-box p{font-size:14px;color:var(--text-2);line-height:1.85;word-break:keep-all}
+.sh{margin-bottom:10px;margin-top:22px}
+.sh h2{font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.4px}
+.sh p{font-size:13px;color:var(--text-3);margin-top:2px}
 
-  <!-- Android Chrome -->
-  <meta name="theme-color" content="#1A1F29"/>
-  <meta name="mobile-web-app-capable" content="yes"/>
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--font);font-size:14px;font-weight:600;padding:6px 13px;border-radius:var(--r);border:1px solid transparent;cursor:pointer;transition:all .12s;white-space:nowrap;line-height:1.5}
+.btn svg{width:13px;height:13px}
+.btn-default{background:var(--bg-100);border-color:var(--border);color:var(--text-2)}
+.btn-default:hover{border-color:var(--border-strong);color:var(--text);background:var(--bg-200)}
+.btn-brand{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
+.btn-brand:hover{background:var(--brand-hover);border-color:var(--brand-hover)}
+.btn-sm{padding:4px 10px;font-size:13px}
 
-  <!-- 일반 메타 -->
-  <meta name="description" content="고팡(Gopang) AI 법률·의료·생활 비서"/>
-  <meta name="application-name" content="고팡"/>
-  <link rel="icon" type="image/png" href="/icons/icon-192.png"/>
+/* BADGES */
+.badge{display:inline-flex;align-items:center;font-size:12px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.3px;white-space:nowrap}
+.b-green{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+.b-yellow{background:#fef9c3;color:#854d0e;border:1px solid #fde047}
+.b-gray{background:var(--bg-200);color:var(--text-3);border:1px solid var(--border)}
+.b-red{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+.b-blue{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.b-purple{background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe}
+.mbadge{font-family:var(--mono);font-size:12px;font-weight:700;background:var(--brand-dim);color:var(--text-brand);padding:2px 6px;border-radius:4px;border:1px solid rgba(62,207,142,.3)}
 
-  <!-- safe-area 대응 (노치·홈인디케이터) -->
-  <style>
-    :root {
-      --safe-top:    env(safe-area-inset-top,    0px);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --safe-left:   env(safe-area-inset-left,   0px);
-      --safe-right:  env(safe-area-inset-right,  0px);
-    }
-  </style>
-  <style>
-    /* ── 고팡 디자인 시스템 v5.0 — Supabase 계열 전문가 UI ── */
-    :root {
-      /* ══════════════════════════════════════════════════
-         고팡 색상 시스템 v5.0
-         Supabase 대시보드 스타일 기반
-         간결·전문·사무적 / WCAG 2.1 AA 전항목 통과
-         ══════════════════════════════════════════════════ */
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat{background:var(--bg-100);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;transition:box-shadow .15s,border-color .15s}
+.stat:hover{border-color:var(--border-strong);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.stat-l{font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.stat-v{font-family:var(--mono);font-size:24px;font-weight:600;color:var(--text-brand);letter-spacing:-1px;line-height:1;margin-bottom:4px}
+.stat-s{font-size:13px;color:var(--text-3)}
 
-      /* 기본 배경 */
-      --bg:           #F8F9FA;   /* 아주 연한 회색 — Supabase 메인 bg */
-      --bg-elevated:  #FFFFFF;   /* 카드·패널 */
-      --bg-glass:     rgba(255,255,255,0.96);
-      --bg-input:     #FFFFFF;
-      --bg-subtle:    #F1F3F5;   /* 호버, 구분 */
-      --bg-code:      #F4F4F5;
+/* TABLE */
+.tw{background:var(--bg-100);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
+.ts{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:480px}
+thead th{padding:8px 13px;text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);border-bottom:1px solid var(--border);background:var(--bg-200);white-space:nowrap}
+tbody td{padding:9px 13px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--bg-200)}
+.td-m{font-family:var(--mono);font-size:13px;color:var(--text-2)}
 
-      /* 구분선 */
-      --sep:          #E4E4E7;   /* 얇고 선명한 보더 */
-      --sep-strong:   #D1D5DB;
+/* PIPELINE H */
+.pipe{display:flex;background:var(--bg-100);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
+.ps{flex:1;padding:14px 12px;position:relative;border-right:1px solid var(--border);transition:background .12s}
+.ps:last-child{border-right:none}
+.ps:hover{background:var(--bg-200)}
+.ps-n{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text-3);margin-bottom:5px}
+.ps-t{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+.ps-s{font-size:12px;color:var(--text-3)}
+.ps-arr{position:absolute;right:-9px;top:50%;transform:translateY(-50%);background:var(--bg-100);border:1px solid var(--border);border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;z-index:1}
+.ps-arr svg{width:9px;height:9px;color:var(--text-3)}
 
-      /* 텍스트 */
-      --label:        #111827;   /* 거의 검정 */
-      --label-2:      #374151;
-      --label-3:      #6B7280;
-      --label-4:      #9CA3AF;
+/* PIPELINE V */
+.pipev{background:var(--bg-100);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
+.psv{display:flex;gap:14px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);transition:background .12s}
+.psv:last-child{border-bottom:none}
+.psv:hover{background:var(--bg-200)}
+.psv-n{width:30px;height:30px;border-radius:50%;background:var(--bg-200);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text-3)}
+.psv-n.done{background:var(--brand-dim);border-color:rgba(62,207,142,.4);color:var(--text-brand)}
+.psv-t{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+.psv-s{font-size:13px;color:var(--text-3);margin-top:3px}
 
-      /* 헤더/사이드바 전용 텍스트 */
-      --label-on-dark:   rgba(255,255,255,0.92);
-      --label-2-on-dark: rgba(255,255,255,0.55);
+/* CARDS */
+.cg3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
+.cg4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
+.cg5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px}
+.mc{background:var(--bg-100);border:1px solid var(--border);border-radius:var(--r);padding:16px;transition:border-color .15s,box-shadow .15s}
+.mc:hover{border-color:var(--border-strong);box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.mc-icon{width:34px;height:34px;border-radius:8px;background:var(--brand-dim);border:1px solid rgba(62,207,142,.25);display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.mc-icon svg{width:15px;height:15px;color:var(--text-brand)}
+.mc-bl{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text-brand);margin-bottom:4px}
+.mc-t{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px}
+.mc-d{font-size:13px;color:var(--text-2);line-height:1.65}
+.mc-v{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text-brand);margin-bottom:3px}
 
-      /* 브랜드 — Supabase 초록 계열 */
-      --tint:         #3ECF8E;   /* Supabase 시그니처 그린 */
-      --tint-dark:    #29A374;   /* 호버 */
-      --tint-dim:     #ECFDF5;   /* 연초록 배경 */
-      --tint-dim-bd:  #A7F3D0;
+/* WEBAPP LAUNCH BANNER */
+.wl{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#1a2535 0%,#1e3a2e 100%);border:1px solid rgba(62,207,142,.35);border-radius:10px;padding:16px 20px;margin-bottom:20px;cursor:pointer;transition:border-color .15s,box-shadow .15s;text-decoration:none}
+.wl:hover{border-color:var(--brand);box-shadow:0 0 0 3px rgba(62,207,142,.15)}
+.wl-icon{width:44px;height:44px;border-radius:10px;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wl-t{font-size:15px;font-weight:700;color:#fff;margin-bottom:2px}
+.wl-s{font-size:13px;color:rgba(255,255,255,.55)}
+.wl-arr{color:var(--brand);font-size:20px;flex-shrink:0;margin-left:auto}
 
-      /* 사이드바/헤더 — Supabase 짙은 네이비 */
-      --header-bg:    #1A1F29;   /* Supabase 사이드바 */
-      --header-mid:   #1A1F29;   /* 탑바 동일 */
-      --header-top:   #FFFFFF;   /* 탑바를 흰색으로 — Supabase 스타일 */
-      --header-hover: rgba(255,255,255,0.07);
+/* PAPER */
+.paper{display:flex;gap:18px;align-items:flex-start;background:var(--bg-100);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:10px}
+.paper-icon{width:48px;height:60px;flex-shrink:0;background:var(--bg-200);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center}
+.paper-icon svg{width:20px;height:20px;color:var(--text-brand)}
+.paper-body{flex:1;min-width:0}
+.paper-body h3{font-size:15px;font-weight:600;color:var(--text);line-height:1.6;margin-bottom:5px}
+.paper-body>p{font-size:14px;color:var(--text-2);margin-bottom:9px}
+.paper-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.paper-actions{display:flex;gap:8px;flex-wrap:wrap}
 
-      /* 내 메시지 버블 — 연한 초록 tint */
-      --bubble-out-bg:   #ECFDF5;
-      --bubble-out-text: #065F46;
+/* FOOTER */
+.page-footer{margin-left:var(--rail-w);border-top:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;gap:16px;font-size:13px;color:var(--text-3);flex-wrap:wrap;background:var(--bg-100)}
+.footer-brand{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--text-2)}
+.footer-links{display:flex;gap:14px;flex:1}
+.footer-links a:hover{color:var(--text-brand)}
 
-      /* AI 메시지 버블 — 순백 카드 */
-      --bubble-in-bg:    #FFFFFF;
-      --bubble-in-text:  #111827;
-
-      /* 시맨틱 */
-      --green:        #059669;
-      --red:          #DC2626;
-      --yellow:       #D97706;
-      --orange:       #EA580C;
-      --blue:         #2563EB;
-
-      /* 반경 — Supabase는 작은 반경 선호 */
-      --r-sm:         4px;
-      --r-md:         6px;
-      --r-lg:         8px;
-      --r-xl:         12px;
-
-      --blur:         saturate(180%) blur(20px);
-      --blur-sm:      saturate(160%) blur(10px);
-      --font:         'Noto Sans KR', -apple-system, 'Helvetica Neue', sans-serif;
-      --font-mono:    'IBM Plex Mono', 'SF Mono', monospace;
-      --font-display: 'Noto Sans KR', -apple-system, sans-serif;
-      --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
-      --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--label);
-      font-family: var(--font);
-      -webkit-font-smoothing: antialiased;
-      overflow: hidden;
-    }
-
-    /* Apple HIG macOS 다크 — 미세 방사형 하이라이트 */
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, #29A374, #3ECF8E, #29A374);
-      z-index: 999;
-      pointer-events: none;
-    }
-    #app { position: relative; z-index: 1; }
-
-    /* ── 앱 레이아웃 ────────────────────────────────────── */
-    #app {
-      display: flex;
-      flex-direction: column;
-      height: 100dvh;
-      position: relative;
-    }
-
-    /* ── 상단 여백 (헤더 없음 — 요구사항) ─────────────── */
-    .top-bar {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: calc(48px + var(--safe-top));
-      padding-top: var(--safe-top);
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-right: 14px;
-      padding-left: 14px;
-      gap: 8px;
-      background: var(--bg-elevated);
-      border-bottom: 1px solid var(--sep);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-
-    /* ── PWA 설치 배너 ─────────────────────────────────── */
-    .install-banner {
-      position: fixed;
-      bottom: calc(90px + var(--safe-bottom));
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      width: calc(100% - 32px);
-      max-width: 420px;
-      background: #FFFFFF;
-      border: 1px solid #D1D9E6;
-      border-radius: var(--r-xl);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.10);
-      padding: 16px 18px;
-      z-index: 300;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s var(--ease-out), transform 0.3s var(--ease-spring);
-    }
-    .install-banner.show {
-      opacity: 1;
-      pointer-events: all;
-      transform: translateX(-50%) translateY(0);
-    }
-    .install-banner-icon {
-      width: 52px; height: 52px;
-      border-radius: 14px;
-      flex-shrink: 0;
-      overflow: hidden;
-      background: #F0F4F8;
-    }
-    .install-banner-icon img { width: 100%; height: 100%; object-fit: cover; }
-    .install-banner-text { flex: 1; }
-    .install-banner-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--label);
-      margin-bottom: 2px;
-    }
-    .install-banner-sub {
-      font-size: 12px;
-      color: var(--label-2);
-      line-height: 1.4;
-    }
-    .install-banner-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      flex-shrink: 0;
-    }
-    .install-btn {
-      padding: 7px 14px;
-      border-radius: 20px;
-      border: none;
-      font-family: var(--font);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: opacity 0.15s;
-    }
-    .install-btn:active { opacity: 0.7; }
-    .install-btn-primary { background: var(--tint); color: #fff; }
-    .install-btn-dismiss {
-      background: transparent;
-      color: var(--label-3);
-      font-weight: 400;
-      font-size: 12px;
-      text-align: center;
-    }
-
-    /* ── 우상단 버튼 그룹 ──────────────────────────────── */
-    .top-btn {
-      width: 34px; height: 34px;
-      border-radius: var(--r-md);
-      border: none;
-      background: transparent;
-      color: var(--label-3);
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px;
-      transition: background 0.15s, color 0.15s, transform 0.12s var(--ease-spring);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .top-btn:hover  { background: var(--bg-subtle); color: var(--label); }
-    .top-btn:active { transform: scale(0.93); }
-
-    .btn-ai {
-      width: auto;
-      padding: 0 12px;
-      border-radius: var(--r-md);
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.03em;
-      color: var(--label-3);
-      gap: 5px;
-      border: 1px solid var(--sep);
-      transition: color 0.2s, background 0.2s, border-color 0.2s;
-    }
-    .btn-ai .ai-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--label-4);
-      transition: background 0.3s, transform 0.3s;
-    }
-    .btn-ai.active .ai-dot {
-      background: var(--tint);
-      animation: pulse-dot 2s ease-in-out infinite;
-    }
-    .btn-ai.active {
-      background: var(--tint-dim);
-      border-color: var(--tint-dim-bd);
-      color: var(--green);
-    }
-    @keyframes pulse-dot {
-      0%,100% { opacity: 1; transform: scale(1); }
-      50%      { opacity: 0.5; transform: scale(0.7); }
-    }
-    @keyframes pulse {
-      0%,100% { opacity: 1; }
-      50%      { opacity: 0.4; }
-    }
-
-    /* ── 메시지 영역 ────────────────────────────────────── */
-    #message-list {
-      background: var(--bg);
-      flex: 1;
-      overflow-y: auto;
-      padding: 64px 0 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      scroll-behavior: smooth;
-    }
-    #message-list::-webkit-scrollbar { width: 0; }
-
-    .msg-row {
-      display: flex;
-      padding: 3px 16px;
-      animation: msg-in 0.28s var(--ease-out) both;
-    }
-    @keyframes msg-in {
-      from { opacity:0; transform: translateY(10px) scale(0.97); }
-      to   { opacity:1; transform: translateY(0) scale(1); }
-    }
-
-    .msg-row.user  { justify-content: flex-end; }
-    .msg-row.ai    { justify-content: flex-start; }
-
-    .bubble {
-      max-width: 72%;
-      padding: 10px 14px;
-      border-radius: var(--r-lg);
-      font-size: 15px;
-      line-height: 1.45;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .bubble-user {
-      background: var(--bubble-out-bg);
-      color: var(--bubble-out-text);
-      border-bottom-right-radius: 4px;
-    }
-    .bubble-ai {
-      background: var(--bubble-in-bg);
-      color: var(--bubble-in-text);
-      border-bottom-left-radius: 4px;
-      border: 1px solid var(--sep);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-
-    /* 스트리밍 중 커서 깜빡임 */
-    .bubble-ai.streaming::after {
-      content: '▋';
-      display: inline-block;
-      animation: blink .7s step-end infinite;
-      color: var(--tint);
-      margin-left: 2px;
-    }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-
-    /* 위험 배지 (버블 아래 inline) */
-    .risk-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      margin-top: 4px;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-    }
-    .risk-chip.s0 { background: #D1FAE5; color: #065F46; border:1px solid #6EE7B7; }
-    .risk-chip.s1 { background: #FEF3C7; color: #92400E; border:1px solid #FCD34D; }
-    .risk-chip.s2 { background: #FFEDD5; color: #9A3412; border:1px solid #FDBA74; }
-    .risk-chip.s3 { background: #FEE2E2; color: #991B1B; border:1px solid #FCA5A5; }
-
-    /* AI 타이핑 인디케이터 */
-    .typing-indicator {
-      display: flex; align-items: center; gap: 4px;
-      padding: 12px 16px;
-    }
-    .typing-indicator span {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: #9AA5B4;
-      animation: bounce 1.2s ease-in-out infinite;
-    }
-    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce {
-      0%,80%,100% { transform: translateY(0); }
-      40%          { transform: translateY(-5px); }
-    }
-
-    /* ── 하단 입력 영역 (Apple Messages / Claude.ai 스타일) */
-    .input-dock {
-      flex-shrink: 0;
-      padding: 8px 12px calc(12px + var(--safe-bottom));
-      background: var(--bg-elevated);
-      border-top: 1px solid var(--sep);
-    }
-
-    /* 상태 바 — 숨김 처리 */
-    .status-strip { display: none; }
-    .status-dot   { display: none; }
-
-    /* 입력 컨테이너 */
-    .input-wrap {
-      display: flex;
-      align-items: flex-end;
-      gap: 8px;
-      background: var(--bg-elevated);
-      border-radius: var(--r-lg);
-      padding: 6px 6px 6px 10px;
-      border: 1px solid var(--sep);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .input-wrap:focus-within {
-      border-color: var(--tint);
-      box-shadow: 0 0 0 2px rgba(62,207,142,0.20);
-    }
-
-    /* 좌측 액션 버튼 */
-    .input-actions-left {
-      display: flex;
-      align-items: center;
-      gap: 2px;
-      flex-shrink: 0;
-      padding-bottom: 2px;
-    }
-    .ia-btn {
-      width: 30px; height: 30px;
-      border-radius: 6px;
-      border: none;
-      background: transparent;
-      color: #718096;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
-      transition: color 0.12s, background 0.12s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .ia-btn:hover  { color: var(--tint); background: var(--tint-dim); }
-    /* 흰 배경 입력창 안 아이콘 — 더 진하게 */
-    .input-wrap .ia-btn { color: #5A6778; }
-    .input-wrap .ia-btn:hover { color: var(--tint); background: var(--tint-dim); }
-    .ia-btn:active { transform: scale(0.9); }
-
-    /* 버전 선택 드롭다운 */
-    .version-select { display: none; }
-    ._version-select-orig {
-      background: transparent;
-      border: none;
-      color: var(--label-2);
-      font-size: 12px;
-      font-family: var(--font);
-      cursor: pointer;
-      padding: 4px 2px;
-      outline: none;
-      -webkit-appearance: none;
-      appearance: none;
-    }
-    .version-select:hover { color: var(--label); }
-    .version-select option { background: #17212B; color: #fff; }
-
-    /* textarea */
-    #msg-input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      outline: none;
-      color: var(--label);
-      font-family: var(--font);
-      font-size: 16px;
-      line-height: 1.4;
-      resize: none;
-      max-height: 140px;
-      min-height: 22px;
-      overflow-y: auto;
-      padding: 4px 0;
-      align-self: flex-end;
-    }
-    #msg-input::placeholder { color: #9AA5B4; }
-    #msg-input::-webkit-scrollbar { width: 0; }
-
-    /* 전송 버튼 */
-    .send-btn {
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      border: none;
-      background: var(--tint);
-      color: #fff;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      font-size: 15px;
-      transition: background 0.15s, transform 0.1s var(--ease-spring), opacity 0.15s;
-      align-self: flex-end;
-    }
-    .send-btn:disabled { background: var(--bg-glass); opacity: 0.4; }
-    .send-btn:not(:disabled):hover  { background: var(--tint-hover); }
-    .send-btn:not(:disabled):active { transform: scale(0.88); }
-
-    /* ── Gemini 분석 중 Progress Bar ───────────────────────── */
-    .gemini-progress-wrap {
-      width: 100%;
-      padding: 12px 14px;
-    }
-    .gemini-progress-label {
-      font-size: 13px;
-      color: var(--label-2);
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .gemini-progress-label .gp-spinner {
-      width: 14px; height: 14px;
-      border: 2px solid var(--sep-strong);
-      border-top-color: var(--tint);
-      border-radius: 50%;
-      animation: gp-spin 0.8s linear infinite;
-      flex-shrink: 0;
-    }
-    @keyframes gp-spin {
-      to { transform: rotate(360deg); }
-    }
-    .gemini-progress-bar-bg {
-      width: 100%;
-      height: 4px;
-      background: var(--sep-strong);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    .gemini-progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--tint), #5E5CE6);
-      border-radius: 2px;
-      width: 0%;
-      transition: width 0.4s ease;
-    }
-
-    /* ── 설정 패널 ──────────────────────────────────────── */
-    .settings-overlay {
-      position: fixed; inset: 0;
-      background: rgba(23,33,43,0.65);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      z-index: 200;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.22s;
-    }
-    .settings-overlay.open {
-      opacity: 1;
-      pointer-events: all;
-    }
-    .settings-sheet {
-      width: 100%;
-      max-width: 520px;
-      background: #FFFFFF;
-      backdrop-filter: none;
-      border-radius: var(--r-xl) var(--r-xl) 0 0;
-      padding: 20px 20px 40px;
-      transform: translateY(100%);
-      transition: transform 0.3s var(--ease-out);
-      border-top: 3px solid var(--tint);
-      box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
-    }
-    .settings-overlay.open .settings-sheet {
-      transform: translateY(0);
-    }
-
-    .sheet-handle {
-      width: 36px; height: 4px;
-      background: var(--sep-strong);
-      border-radius: 2px;
-      margin: 0 auto 20px;
-    }
-    .sheet-title {
-      font-family: var(--font-display);
-      font-size: 17px;
-      font-weight: 600;
-      color: #1A202C;
-      margin-bottom: 20px;
-      letter-spacing: -0.01em;
-    }
-
-    .setting-group {
-      margin-bottom: 20px;
-    }
-    /* 권한 안내 details 스타일 */
-    #perm-guide details > summary { list-style: none; }
-    #perm-guide details > summary::-webkit-details-marker { display: none; }
-    #perm-guide details[open] > summary { margin-bottom: 2px; }
-    .setting-label {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--label-2);
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-    .setting-field {
-      width: 100%;
-      background: #F7FAFC;
-      border: 1.5px solid #D1D9E6;
-      border-radius: var(--r-md);
-      color: #1A202C;
-      font-family: var(--font);
-      font-size: 14px;
-      padding: 10px 12px;
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-      -webkit-appearance: none;
-      appearance: none;
-    }
-    .setting-field:focus { border-color: var(--tint); box-shadow: 0 0 0 3px rgba(0,87,168,0.10); }
-    .setting-field option { background: #ffffff; color: #1A202C; }
-
-    .setting-field-mono {
-      font-family: 'SF Mono', 'Menlo', monospace;
-      font-size: 13px;
-      letter-spacing: 0.01em;
-    }
-    .setting-field::placeholder { color: var(--label-3); }
-
-    .sheet-save {
-      width: 100%;
-      padding: 13px;
-      background: var(--tint);
-      border: none;
-      border-radius: var(--r-md);
-      color: #fff;
-      font-family: var(--font);
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 4px;
-      transition: background 0.15s, transform 0.1s;
-    }
-    .sheet-save:hover  { background: var(--tint-hover); }
-    .sheet-save:active { transform: scale(0.98); }
-
-    /* ── AI 비서 시스템 패널 ────────────────────────────── */
-    .ai-overlay {
-      position: fixed; inset: 0;
-      z-index: 150;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
-    }
-    .ai-overlay.open { opacity: 1; pointer-events: all; }
-    .ai-backdrop {
-      position: absolute; inset: 0;
-      background: rgba(23,33,43,0.55);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-    }
-    .ai-card {
-      position: relative;
-      width: 90%;
-      max-width: 380px;
-      background: #FFFFFF;
-      border-radius: var(--r-xl);
-      padding: 24px 20px 20px;
-      border: 1px solid #D1D9E6;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-      transform: scale(0.94) translateY(8px);
-      transition: transform 0.24s var(--ease-spring);
-    }
-    .ai-overlay.open .ai-card { transform: scale(1) translateY(0); }
-
-    .ai-card-icon {
-      width: 48px; height: 48px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #0057A8, #5E5CE6);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-      margin-bottom: 14px;
-    }
-    .ai-card-title {
-      font-family: var(--font-display);
-      font-size: 19px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 4px;
-      color: #1A202C;
-    }
-    .ai-card-sub {
-      font-size: 13px;
-      color: #4A5568;
-      margin-bottom: 18px;
-      line-height: 1.4;
-    }
-    .ai-card-btn {
-      width: 100%;
-      padding: 12px;
-      border-radius: var(--r-md);
-      border: none;
-      font-family: var(--font);
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-bottom: 8px;
-      transition: opacity 0.15s, transform 0.1s;
-    }
-    .ai-card-btn:active { transform: scale(0.97); }
-    .ai-card-btn-primary { background: var(--tint); color: #fff; }
-    .ai-card-btn-primary:hover { background: var(--tint-hover); }
-    .ai-card-btn-secondary {
-      background: #F0F4F8;
-      color: #4A5568;
-    }
-
-    /* ── 파일 첨부 미리보기 ─────────────────────────────── */
-    .attach-preview {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      background: rgba(255,255,255,0.15);
-      border-radius: var(--r-md);
-      margin-bottom: 8px;
-      font-size: 13px;
-      color: rgba(255,255,255,0.80);
-    }
-    .attach-preview .remove-attach {
-      margin-left: auto;
-      background: none;
-      border: none;
-      color: var(--label-3);
-      cursor: pointer;
-      font-size: 16px;
-      padding: 0;
-      width: auto; height: auto;
-      border-radius: 0;
-    }
-
-    /* ── 반응형 ─────────────────────────────────────────── */
-    @media (min-width: 680px) {
-      .input-dock { padding: 6px 20% calc(20px + var(--safe-bottom)); }
-      #message-list { padding: 52px 16% 16px; }
-    }
-  </style>
+/* MOBILE */
+.mobile-nav{display:none}
+@media(max-width:1024px){.stats{grid-template-columns:repeat(2,1fr)}.cg5{grid-template-columns:repeat(3,1fr)}.page{padding:22px 20px}}
+@media(max-width:768px){.sidebar-wrap{display:none}.main{margin-left:0}.page-footer{margin-left:0}.mobile-nav{display:block}.main{padding-bottom:calc(var(--nav-h) + var(--safe-bottom))}.page{padding:16px 14px 20px}.stats{grid-template-columns:1fr 1fr;gap:8px}.cg3,.cg4,.cg5{grid-template-columns:1fr;gap:8px}.pipe{flex-direction:column}.ps{border-right:none;border-bottom:1px solid var(--border)}.ps:last-child{border-bottom:none}.ps-arr{display:none}.topbar-bc{display:none}}
+@media(max-width:480px){.stat-v{font-size:18px}}
+.mobile-nav{position:fixed;bottom:0;left:0;right:0;height:calc(var(--nav-h) + var(--safe-bottom));background:rgba(255,255,255,.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--border);z-index:400;padding-bottom:var(--safe-bottom)}
+.mnav-inner{height:var(--nav-h);display:flex;align-items:stretch}
+.mnb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:none;cursor:pointer;color:var(--text-3);transition:color .12s;-webkit-tap-highlight-color:transparent}
+.mnb.active{color:var(--text-brand)}
+.mnb svg{width:18px;height:18px}
+.mnb-l{font-size:9px;font-weight:600;letter-spacing:.3px}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg-base)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-strong)}
+@keyframes gpblink{0%,100%{opacity:1}50%{opacity:.25}}
+</style>
 </head>
 <body>
+<div class="shell">
 
-<!-- ── PWA 설치 배너 ─────────────────────────────────── -->
-<div class="install-banner" id="install-banner">
-  <div class="install-banner-icon">
-    <img src="/icons/icon-192.png" alt="고팡 아이콘"/>
+<!-- SIDEBAR -->
+<div class="sidebar-wrap">
+<div class="rail">
+  <div class="rail-logo">
+    <svg viewBox="0 0 20 20" fill="none" width="22" height="22"><rect width="20" height="20" rx="4" fill="#3ecf8e"/><text x="4" y="14" font-family="sans-serif" font-size="11" font-weight="700" fill="#fff">G</text></svg>
   </div>
-  <div class="install-banner-text">
-    <div class="install-banner-title">고팡 앱 설치</div>
-    <div class="install-banner-sub">
-      홈 화면에 추가하면<br>
-      주소창 없이 바로 실행됩니다
-    </div>
+  <div class="rail-nav">
+    <button class="ri active" onclick="SS('overview')" title="개요"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></button>
+    <button class="ri" onclick="SS('core5')" title="5대 혁신"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+    <div class="ri-sep"></div>
+    <button class="ri" onclick="SS('fpga')" title="FPGA 하드웨어"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="2" x2="9" y2="4"/><line x1="15" y1="2" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="22"/><line x1="15" y1="20" x2="15" y2="22"/><line x1="2" y1="9" x2="4" y2="9"/><line x1="2" y1="15" x2="4" y2="15"/><line x1="20" y1="9" x2="22" y2="9"/><line x1="20" y1="15" x2="22" y2="15"/></svg></button>
+    <button class="ri" onclick="SS('distributed')" title="분산 신뢰 시스템"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></button>
+    <div class="ri-sep"></div>
+    <button class="ri" onclick="SS('ai_verify')" title="AI 검증 시스템"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 8v4l3 3"/></svg></button>
+    <button class="ri" onclick="SS('privacy')" title="프라이버시 보호"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button>
+    <div class="ri-sep"></div>
+    <button class="ri" onclick="SS('finance')" title="금융 통합 시스템"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></button>
+    <button class="ri" onclick="SS('digital_currency')" title="디지털 화폐"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M9 8h4a2 2 0 0 1 0 4H9v4h6"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg></button>
+    <div class="ri-sep"></div>
+    <button class="ri" onclick="SS('market_class')" title="글로벌 시장 분류"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></button>
+    <button class="ri" onclick="SS('supply_chain')" title="공급망 최적화"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></button>
+    <div class="ri-sep"></div>
+    <button class="ri" onclick="SS('governance')" title="자율 거버넌스"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></button>
+    <button class="ri" onclick="SS('security')" title="양자내성 보안"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>
+    <div class="ri-sep"></div>
+    <button class="ri" onclick="SS('performance')" title="성능 검증"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
+    <button class="ri" onclick="SS('paper')" title="특허 청구항"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></button>
   </div>
-  <div class="install-banner-actions">
-    <button class="install-btn install-btn-primary" onclick="installPWA()">설치</button>
-    <button class="install-btn install-btn-dismiss" onclick="dismissInstall()">나중에</button>
-  </div>
-</div>
-
-<!-- iOS Safari 전용 설치 안내 (beforeinstallprompt 미지원) -->
-<div class="install-banner" id="ios-install-banner">
-  <div class="install-banner-icon">
-    <img src="/icons/icon-192.png" alt="고팡 아이콘"/>
-  </div>
-  <div class="install-banner-text">
-    <div class="install-banner-title">홈 화면에 추가</div>
-    <div class="install-banner-sub" id="ios-install-text">
-      Safari 하단 <strong style="color:var(--tint)">공유 버튼 →</strong>
-      <strong style="color:var(--tint)">홈 화면에 추가</strong>
-    </div>
-  </div>
-  <div class="install-banner-actions">
-    <button class="install-btn install-btn-dismiss" onclick="dismissIOSInstall()">확인</button>
-  </div>
-</div>
-
-<div id="app">
-
-  <!-- ── 상단 바 (빈 영역 + 우상단 버튼만) ───────────── -->
-  <div class="top-bar">
-    <!-- 좌측 로고 / 진행 상황 버튼 -->
-    <div id="top-logo" onclick="_onLogoTap()"
-         style="color:var(--label);font-size:15px;font-weight:700;
-                letter-spacing:-0.3px;flex:1;cursor:pointer;
-                display:flex;align-items:center;gap:6px;user-select:none;">
-      <span id="top-logo-text">고팡</span>
-      <span id="top-progress-dot" style="display:none;width:7px;height:7px;
-            border-radius:50%;background:var(--yellow);
-            animation:pulse-dot 1.5s ease-in-out infinite;flex-shrink:0;"></span>
-    </div>
-    <!-- 홈 화면 설치 버튼 (미설치 시에만 표시) -->
-    <button class="top-btn" id="btn-install" onclick="requestInstall()"
-            title="홈 화면에 설치" style="display:none">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="2.2"
-           stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 2v13M7 11l5 5 5-5"/>
-        <path d="M3 19h18"/>
-      </svg>
-    </button>
-    <!-- 검색 버튼 -->
-    <button class="top-btn" id="btn-search" onclick="openSearch()" title="검색">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"/>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-    </button>
-    <!-- AI 비서 버튼 -->
-    <button class="top-btn btn-ai" id="btn-ai" onclick="toggleAI()" title="AI 비서">
-      <span class="ai-dot" id="ai-dot"></span>
-      AI
-    </button>
-    <!-- 설정 버튼 -->
-    <button class="top-btn" id="btn-settings" onclick="openSettings()" title="설정">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06
-                 a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09
-                 A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83
-                 l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09
-                 A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83
-                 l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09
-                 a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83
-                 l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09
-                 a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-    </button>
-  </div>
-
-  <!-- ── 메시지 목록 ─────────────────────────────────── -->
-  <div id="message-list" style="background:var(--bg)"></div>
-
-  <!-- ── 하단 입력 독 ───────────────────────────────── -->
-  <div class="input-dock">
-
-    <!-- 상태 스트립 (숨김) -->
-    <div class="status-strip" style="display:none">
-      <div class="status-dot" id="status-dot"></div>
-      <span id="status-text">PDV 암호화</span>
-      <span>·</span>
-      <span>OpenHash <code id="hash-ref">대기중</code></span>
-      <span id="layer-lbl">L1</span>
-      <span style="margin-left:auto">
-        <select class="version-select" id="version-select" title="고팡 버전"
-                style="color:var(--label-2);font-size:11px">
-          <option value="v2">고팡 v2</option>
-          <option value="v1">고팡 v1</option>
-        </select>
-      </span>
-    </div>
-
-    <!-- 첨부 미리보기 -->
-    <div id="attach-preview" style="display:none" class="attach-preview">
-      <span>📎</span>
-      <span id="attach-name"></span>
-      <button class="remove-attach" onclick="removeAttach()">✕</button>
-    </div>
-
-    <!-- 입력 래퍼 -->
-    <div class="input-wrap">
-
-      <!-- 좌측 버튼 그룹 -->
-      <div class="input-actions-left">
-        <!-- + 첨부 -->
-        <button class="ia-btn" onclick="triggerAttach()" title="파일 첨부">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="2.2"
-               stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="16"/>
-            <line x1="8" y1="12" x2="16" y2="12"/>
-          </svg>
-        </button>
-
-        <!-- 📷 카메라 -->
-        <button class="ia-btn" onclick="triggerCamera()" title="카메라 촬영">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="2.2"
-               stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8
-                     a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-          </svg>
-        </button>
-
-        <!-- 마이크 -->
-        <button class="ia-btn" id="btn-mic" onclick="toggleMic()" title="음성 입력">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="2.2"
-               stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-            <line x1="12" y1="19" x2="12" y2="23"/>
-            <line x1="8" y1="23" x2="16" y2="23"/>
-          </svg>
-        </button>
-      </div>
-
-      <!-- 텍스트 입력 -->
-      <textarea id="msg-input"
-                placeholder="메시지를 입력하세요…"
-                rows="1"
-                oninput="autoResize(this); updateSendBtn()"
-                onkeydown="handleKey(event)"></textarea>
-
-      <!-- 전송 버튼 -->
-      <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
-        </svg>
-      </button>
-    </div>
-
-    <input type="file" id="file-input" style="display:none"
-           accept="image/*,.pdf,.txt,.docx"
-           onchange="handleFileSelect(event)"/>
-    <input type="file" id="camera-input" style="display:none"
-           accept="image/*"
-           capture="environment"
-           onchange="handleFileSelect(event)"/>
+  <div class="rail-foot">
+    <a class="ri" href="https://gopang.net" title="고팡 웹앱">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#3ecf8e" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="M3 12h18M12 3a15 15 0 0 1 4 9 15 15 0 0 1-4 9 15 15 0 0 1-4-9 15 15 0 0 1 4-9"/></svg>
+    </a>
   </div>
 </div>
 
-<!-- ── 진행 상황 시트 ─────────────────────────────────────── -->
-<div class="settings-overlay" id="progress-overlay" onclick="_closeProgressSheet(event)">
-  <div class="settings-sheet" style="max-height:70vh;overflow-y:auto;">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title" id="progress-sheet-title">진행 상황</div>
-    <div id="progress-steps" style="margin-bottom:20px;"></div>
-    <button class="sheet-save"
-            style="background:var(--bg-subtle);color:var(--label-2);border:1px solid var(--sep-strong);"
-            onclick="document.getElementById('progress-overlay').classList.remove('open')">
-      닫기
-    </button>
+<!-- MENU PANEL -->
+<div class="menu-panel">
+  <div class="mp-header">
+    <div class="mp-logo"><svg viewBox="0 0 12 12" fill="none"><text x="1" y="10" font-family="sans-serif" font-size="9" font-weight="700" fill="#fff">G</text></svg></div>
+    <span class="mp-title">고팡 (Gopang)</span>
+    <span class="mp-badge">v3.4</span>
+  </div>
+  <nav class="mp-nav">
+    <div class="mp-group-label">플랫폼 개요</div>
+    <button class="mi active" id="mi-overview" onclick="SS('overview')">전체 시스템 개요 <span class="mi-dot"></span></button>
+    <button class="mi" id="mi-core5" onclick="SS('core5')">5대 핵심 혁신 <span class="mi-dot"></span></button>
+
+    <div class="mp-divider"></div>
+    <div class="mp-group-label">하드웨어 · 인프라</div>
+    <button class="mi" id="mi-fpga" onclick="SS('fpga')">FPGA 하드웨어 가속 <span class="mi-dot"></span></button>
+    <button class="mi" id="mi-distributed" onclick="SS('distributed')">분산 신뢰 시스템 <span class="mi-dot"></span></button>
+
+    <div class="mp-divider"></div>
+    <div class="mp-group-label">AI 검증 · 보안</div>
+    <button class="mi" id="mi-ai_verify" onclick="SS('ai_verify')">AI 자율 검증 시스템 <span class="mi-dot"></span></button>
+    <button class="mi" id="mi-privacy" onclick="SS('privacy')">프라이버시 보호 <span class="mi-dot"></span></button>
+
+    <div class="mp-divider"></div>
+    <div class="mp-group-label">금융 통합 시스템</div>
+    <button class="mi" id="mi-finance" onclick="SS('finance')">자율 금융 (은행·보험·증권) <span class="mi-dot"></span></button>
+    <button class="mi" id="mi-digital_currency" onclick="SS('digital_currency')">무위험 디지털 화폐 <span class="mi-dot"></span></button>
+
+    <div class="mp-divider"></div>
+    <div class="mp-group-label">시장 운영 시스템</div>
+    <button class="mi" id="mi-market_class" onclick="SS('market_class')">글로벌 상품 분류 · 재무제표 <span class="mi-dot"></span></button>
+    <button class="mi" id="mi-supply_chain" onclick="SS('supply_chain')">공급망 · 수요 예측 <span class="mi-dot"></span></button>
+
+    <div class="mp-divider"></div>
+    <div class="mp-group-label">거버넌스 · 확장</div>
+    <button class="mi" id="mi-governance" onclick="SS('governance')">자율 의사결정 거버넌스 <span class="mi-dot"></span></button>
+    <button class="mi" id="mi-security" onclick="SS('security')">양자내성 보안 전환 <span class="mi-dot"></span></button>
+
+    <div class="mp-divider"></div>
+    <div class="mp-group-label">검증 · 특허</div>
+    <button class="mi" id="mi-performance" onclick="SS('performance')">성능 검증 결과 <span class="mi-dot"></span></button>
+    <button class="mi" id="mi-paper" onclick="SS('paper')">특허 청구항 · 논문 <span class="mi-dot"></span></button>
+  </nav>
+  <div class="mp-foot">
+    <a class="mi" href="https://gopang.net" target="_blank">고팡 웹앱 열기</a>
+    <a class="mi" href="https://klaw.openhash.kr" target="_blank">K-Law</a>
+    <a class="mi" href="https://github.com/Openhash-Gopang" target="_blank">GitHub</a>
+  </div>
+</div>
+</div><!-- /sidebar -->
+
+<!-- MAIN -->
+<div class="main">
+<div class="topbar">
+  <div class="topbar-bc">
+    <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" fill="#3ecf8e"/><text x="7" y="16" font-family="sans-serif" font-size="10" font-weight="700" fill="#fff">G</text></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    <span class="active" id="bc-label">개요</span>
+  </div>
+  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;pointer-events:none">
+    <span style="font-size:22px;font-weight:700;color:var(--text)">고팡 자율 시장 플랫폼</span>
+    <span style="font-size:11px;color:var(--text-3);font-family:var(--mono)">v3.4 · KR Patent</span>
+  </div>
+  <div class="topbar-right">
+    <a href="https://gopang.net" target="_blank" class="btn btn-brand btn-sm">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="M3 12h18M12 3a15 15 0 0 1 4 9 15 15 0 0 1-4 9 15 15 0 0 1-4-9 15 15 0 0 1 4-9"/></svg>
+      고팡 웹앱
+    </a>
+    <a href="https://github.com/Openhash-Gopang" target="_blank" class="btn btn-default btn-sm">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.37.6.1.82-.26.82-.58l-.01-2.03c-3.34.72-4.04-1.6-4.04-1.6-.55-1.4-1.34-1.77-1.34-1.77-1.08-.74.08-.73.08-.73 1.2.08 1.83 1.23 1.83 1.23 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.63-5.48 5.92.43.37.81 1.1.81 2.22l-.01 3.29c0 .32.22.7.83.58C20.56 21.79 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      GitHub
+    </a>
   </div>
 </div>
 
-<!-- ── 검색 오버레이 ──────────────────────────────────── -->
-<div class="settings-overlay" id="search-overlay" onclick="handleSearchOverlayClick(event)">
-  <div class="settings-sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">검색</div>
+<!-- ===== OVERVIEW ===== -->
+<div class="page" id="section-overview">
+  <a href="https://gopang.net" target="_blank" class="wl">
+    <div class="wl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" width="22" height="22"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="M3 12h18M12 3a15 15 0 0 1 4 9 15 15 0 0 1-4 9 15 15 0 0 1-4-9 15 15 0 0 1 4-9"/></svg></div>
+    <div style="flex:1"><div class="wl-t">고팡 웹앱 열기 — gopang.net</div><div class="wl-s">PC · 스마트폰 · PWA 지원 · AI 비서 · PDV · 마켓 · K-Law 통합</div></div>
+    <div class="wl-arr">→</div>
+  </a>
 
-    <!-- 검색 범위 안내 -->
-    <div style="display:flex;gap:8px;margin-bottom:14px">
-      <span style="font-size:11px;padding:4px 10px;border-radius:20px;
-                   background:var(--tint-dim);color:var(--tint);font-weight:600">
-        👤 대화 상대
-      </span>
-      <span style="font-size:11px;padding:4px 10px;border-radius:20px;
-                   background:rgba(48,209,88,0.12);color:var(--green);font-weight:600">
-        🔐 PDV 데이터
-      </span>
-    </div>
-
-    <div class="setting-group">
-      <div class="input-wrap" style="border-radius:var(--r-md);padding:8px 12px">
-        <textarea id="search-input"
-                  class="version-select"
-                  style="flex:1;background:transparent;border:none;outline:none;
-                         color:var(--label);font-family:var(--font);font-size:15px;
-                         resize:none;line-height:1.4;width:100%;height:36px"
-                  placeholder="이름, GUID, 또는 PDV 키워드 입력"
-                  onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();runSearch();}"></textarea>
-        <button class="send-btn" style="flex-shrink:0" onclick="runSearch()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="2.5"
-               stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-
-    <!-- 안내 문구 -->
-    <div style="font-size:11px;color:var(--label-3);margin-bottom:12px;line-height:1.6">
-      ※ 웹 검색은 AI 비서(AI 버튼)에게 직접 지시하세요.
-    </div>
-
-    <div id="search-result"
-         style="font-size:14px;color:var(--label-2);line-height:1.6;
-                max-height:280px;overflow-y:auto;padding:4px 0">
-    </div>
-
-    <button class="sheet-save" style="margin-top:16px;background:var(--bg-input);
-            color:var(--label-2)" onclick="closeSearch()">닫기</button>
-  </div>
-</div>
-
-<!-- ── AI 비서 카드 ────────────────────────────────────── -->
-<div class="ai-overlay" id="ai-overlay">
-  <div class="ai-backdrop" onclick="closeAI()"></div>
-  <div class="ai-card">
-    <div class="ai-card-icon">🤖</div>
-    <div class="ai-card-title">AI 비서</div>
-    <div class="ai-card-sub" id="ai-card-sub">
-      DeepSeek v3을 AI 대화 상대로 연결합니다.<br>
-      고팡 법률·의료 분석과 함께 동작합니다.
-    </div>
-    <button class="ai-card-btn ai-card-btn-primary" onclick="activateAI(false); closeAI()">
-      AI 비서 시작
-    </button>
-    <button class="ai-card-btn ai-card-btn-secondary" onclick="closeAI()">
-      취소
-    </button>
-  </div>
-</div>
-
-<!-- ── 설정 시트 ──────────────────────────────────────── -->
-<div class="settings-overlay" id="settings-overlay" onclick="handleOverlayClick(event)">
-  <div class="settings-sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">설정</div>
-
-    <!-- ── 권한 설정 안내 ─────────────────────────────────── -->
-    <div id="perm-guide" style="
-      background:#1C1C1E; border:1px solid #3A3A3C;
-      border-radius:14px; padding:14px 16px; margin-bottom:16px;
-      font-size:13px; line-height:1.7; color:#EBEBF5;">
-
-      <div style="font-weight:600; font-size:14px; margin-bottom:10px;">
-        📱 스마트폰 권한 설정 안내
-      </div>
-
-      <!-- Android -->
-      <details style="margin-bottom:10px;">
-        <summary style="cursor:pointer; font-weight:600; color:#0057A8; outline:none;">
-          🤖 Android (크롬 브라우저)
-        </summary>
-        <div style="margin-top:8px; padding-left:4px; color:#AEAEB2;">
-          <b style="color:#EBEBF5;">① 크롬에서 접속 시</b><br>
-          상단 우측의 <span style="
-            display:inline-flex; flex-direction:column; gap:2px;
-            vertical-align:middle; margin:0 3px;">
-            <span style="width:4px;height:4px;background:#0057A8;border-radius:50%;display:block;"></span>
-            <span style="width:4px;height:4px;background:#0057A8;border-radius:50%;display:block;"></span>
-            <span style="width:4px;height:4px;background:#0057A8;border-radius:50%;display:block;"></span>
-          </span> 터치<br>
-          → 아래로 스크롤 → <b>사이트 설정</b> 터치<br>
-          → <b>위치 · 카메라 · 마이크</b> 각각 터치 → <b>허용</b><br><br>
-
-          <b style="color:#EBEBF5;">② 고팡 앱(홈 화면) 사용 시</b><br>
-          Android 설정 → 앱 → Chrome<br>
-          → 권한 → 위치: <b>앱 사용 중 허용</b><br>
-          → 권한 → 마이크: <b>허용</b>
+  <div style="display:grid;grid-template-columns:1fr 400px;gap:20px;align-items:stretch;margin-bottom:20px">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="intro-box">
+        <p>고팡(Gopang)은 <strong style="color:var(--text)">FPGA 기반 적응형 하드웨어 가속과 AI·OpenHash 분산원장을 결합한 완전 자율 글로벌 시장 통합 플랫폼</strong>입니다.</p>
+        <p>개별 소비자의 구매 이력을 일체 수집하지 않고 <strong style="color:var(--text)">판매자 이력만으로 생산·공급 계획을 수립</strong>하며, 사람의 개입 없이 시장이 스스로 작동합니다. 수익자 부담 원칙에 따라 운영비를 자동 분담하고, 전세계 모든 상품을 단일 시장으로 통합합니다.</p>
+        <div style="display:flex;gap:8px;align-items:flex-start;margin-top:6px">
+          <span style="color:#3ecf8e;font-size:14px;flex-shrink:0;margin-top:1px">✦</span>
+          <span style="font-size:14px;color:var(--text-2);line-height:1.75;word-break:keep-all">기존 시스템 대비 <strong style="color:var(--text)">토스 146배·알리페이 29배 처리 성능</strong>과 GPU 대비 <strong style="color:var(--text)">88.6% 전력 절감</strong> — AWS EC2 환경 실증</span>
         </div>
-      </details>
-
-      <!-- iOS -->
-      <details>
-        <summary style="cursor:pointer; font-weight:600; color:#30D158; outline:none;">
-          🍎 iPhone / iPad (Safari)
-        </summary>
-        <div style="margin-top:8px; padding-left:4px; color:#AEAEB2;">
-          <b style="color:#EBEBF5;">① Safari에서 접속 시</b><br>
-          주소창 왼쪽 <b>AA 아이콘</b> 탭<br>
-          → 웹사이트 설정<br>
-          → 위치: <b>허용</b> / 마이크: <b>허용</b><br><br>
-
-          <b style="color:#EBEBF5;">② 위 방법이 안 될 경우</b><br>
-          iPhone 설정 → Safari<br>
-          → 위치: <b>물어보기 또는 허용</b><br>
-          → 마이크: <b>켬</b><br><br>
-
-          <b style="color:#EBEBF5;">③ 고팡 앱(홈 화면) 사용 시</b><br>
-          iPhone 설정 → Safari → 카메라·마이크·위치<br>
-          → <b>물어보기 또는 허용</b><br><br>
-
-          <b style="color:#FF9F0A;">⚠️ 음성 입력 안내</b><br>
-          iOS Safari는 Web Speech API 미지원.<br>
-          마이크 녹음 후 자동 텍스트 변환 방식으로 동작합니다.
+        <div style="display:flex;gap:8px;align-items:flex-start;margin-top:6px">
+          <span style="color:#3ecf8e;font-size:14px;flex-shrink:0;margin-top:1px">✦</span>
+          <span style="font-size:14px;color:var(--text-2);line-height:1.75;word-break:keep-all">소비자 개인정보 <strong style="color:var(--text)">0% 노출</strong>·차분 프라이버시(ε≤0.1) 적용으로 GDPR·개인정보보호법 완벽 준수</span>
         </div>
-      </details>
-    </div>
-
-    <div class="setting-group">
-      <div class="setting-label">LLM 모델</div>
-      <select class="setting-field" id="setting-model">
-        <option value="deepseek-v4-pro" selected>DeepSeek V4 Pro ✦ 이미지 지원</option>
-        <option value="deepseek-v4-flash">DeepSeek V4 Flash ✦ 이미지 지원 (빠름)</option>
-        <option value="deepseek-chat">DeepSeek V3 (텍스트 전용)</option>
-        <option value="deepseek-reasoner">DeepSeek R1 (추론)</option>
-        <option value="gpt-4o">GPT-4o ✦ 이미지 지원</option>
-        <option value="claude-sonnet-4-20250514">Claude Sonnet 4 ✦ 이미지 지원</option>
-        <option value="gemini-2.0-flash">Gemini 2.0 Flash ✦ 이미지 지원</option>
-      </select>
-    </div>
-
-    <div class="setting-group">
-      <div class="setting-label">API 엔드포인트</div>
-      <select class="setting-field" id="setting-endpoint">
-        <option value="https://gopang-proxy.tensor-city.workers.dev" selected>고팡 프록시 (보안 권장)</option>
-        <option value="https://api.deepseek.com/v1">DeepSeek API (직접)</option>
-        <option value="https://api.openai.com/v1">OpenAI API</option>
-        <option value="https://api.anthropic.com/v1">Anthropic API</option>
-        <option value="custom">직접 입력</option>
-      </select>
-    </div>
-
-    <div class="setting-group" id="custom-endpoint-group" style="display:none">
-      <div class="setting-label">커스텀 엔드포인트 URL</div>
-      <input class="setting-field setting-field-mono" id="custom-endpoint-url"
-             type="text" placeholder="https://..."/>
-    </div>
-
-    <div class="setting-group">
-      <div class="setting-label">API Key (DeepSeek 직접 사용 시)</div>
-      <input class="setting-field setting-field-mono" id="setting-apikey"
-             type="password"
-             placeholder="sk-…"
-             autocomplete="off" spellcheck="false"/>
-    </div>
-
-
-
-    <div class="setting-group">
-      <div class="setting-label">시스템 프롬프트</div>
-      <textarea class="setting-field" id="setting-system"
-                rows="4"
-                style="resize:vertical; font-size:13px; line-height:1.5"
-                placeholder="AI 비서의 역할과 동작 방식을 정의하세요…"></textarea>
-    </div>
-
-    <button class="sheet-save" onclick="saveSettings()">저장</button>
-
-
-    <!-- ── PDV 내 기록 ─────────────────────────────────────── -->
-    <div class="setting-group" id="pdv-section">
-      <div class="setting-label" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>🔐 내 PDV (개인 데이터 금고)</span>
-        <button onclick="loadPDV()" style="
-          background:var(--tint,#3ECF8E);color:#000;border:none;
-          border-radius:8px;padding:4px 12px;font-size:12px;
-          font-weight:600;cursor:pointer;">새로고침</button>
-      </div>
-      <div id="pdv-list" style="margin-top:10px;max-height:320px;overflow-y:auto;">
-        <div style="text-align:center;color:var(--label-2);font-size:13px;padding:20px;">
-          새로고침을 눌러 기록을 불러오세요.
+        <div style="display:flex;gap:8px;align-items:flex-start;margin-top:6px">
+          <span style="color:#3ecf8e;font-size:14px;flex-shrink:0;margin-top:1px">✦</span>
+          <span style="font-size:14px;color:var(--text-2);line-height:1.75;word-break:keep-all">메트칼프 법칙 기반 네트워크 가치 분배로 <strong style="color:var(--text)">소비자 40% · 판매자 35% · 플랫폼 20% · 기술개발 5%</strong> 공정 분배</span>
         </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <button onclick="exportPDV('json')" style="
-          flex:1;background:transparent;border:1px solid var(--sep,#3A3A3C);
-          border-radius:10px;padding:10px;color:var(--tint,#3ECF8E);
-          font-size:13px;font-weight:600;cursor:pointer;">
-          📥 내 기록 저장하기
-        </button>
-        <button onclick="exportPDV('csv')" style="
-          flex:1;background:transparent;border:1px solid var(--sep,#3A3A3C);
-          border-radius:10px;padding:10px;color:var(--label-2);
-          font-size:13px;font-weight:600;cursor:pointer;">
-          📊 Excel로 열기
-        </button>
+      <div class="cg5">
+        <a href="https://klaw.openhash.kr" target="_blank" style="background:var(--bg-100);border:1px solid var(--border);border-radius:var(--r);padding:14px 6px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .15s" onmouseover="this.style.borderColor='#3ecf8e'" onmouseout="this.style.borderColor=''">
+          <div style="width:38px;height:38px;border-radius:9px;background:#e8f5ee;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#18794e" stroke-width="1.6"><line x1="12" y1="2" x2="12" y2="20"/><path d="M5 20h14"/><path d="M3 7l4 8H3l4-8z"/><path d="M17 7l4 8h-8l4-8z"/></svg></div>
+          <div style="font-size:12px;font-weight:600;color:var(--text)">K-Law</div>
+        </a>
+        <a href="https://market.openhash.kr" target="_blank" style="background:var(--bg-100);border:1px solid var(--border);border-radius:var(--r);padding:14px 6px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .15s" onmouseover="this.style.borderColor='#3ecf8e'" onmouseout="this.style.borderColor=''">
+          <div style="width:38px;height:38px;border-radius:9px;background:#fff4e6;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.6"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>
+          <div style="font-size:12px;font-weight:600;color:var(--text)">K-Market</div>
+        </a>
+        <a href="https://fiil.kr" target="_blank" style="background:var(--bg-100);border:1px solid var(--border);border-radius:var(--r);padding:14px 6px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .15s" onmouseover="this.style.borderColor='#3ecf8e'" onmouseout="this.style.borderColor=''">
+          <div style="width:38px;height:38px;border-radius:9px;background:#f0faf3;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6b3a" stroke-width="1.6"><path d="M12 2a9 9 0 0 1 9 9c0 5-4 9-9 11C8 20 3 16 3 11a9 9 0 0 1 9-9z"/><path d="M12 2c-2 3-3 6-3 9s1 6 3 9"/></svg></div>
+          <div style="font-size:12px;font-weight:600;color:var(--text)">K-Env</div>
+        </a>
+        <a href="https://openhash.kr" target="_blank" style="background:var(--bg-100);border:1px solid var(--border);border-radius:var(--r);padding:14px 6px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .15s" onmouseover="this.style.borderColor='#3ecf8e'" onmouseout="this.style.borderColor=''">
+          <div style="width:38px;height:38px;border-radius:9px;background:#eef2ff;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3d52c4" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg></div>
+          <div style="font-size:12px;font-weight:600;color:var(--text)">OpenHash</div>
+        </a>
+        <a href="https://gopang.net" target="_blank" style="background:#1a2535;border:1px solid rgba(62,207,142,.4);border-radius:var(--r);padding:14px 6px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .15s" onmouseover="this.style.borderColor='#3ecf8e'" onmouseout="this.style.borderColor='rgba(62,207,142,.4)'">
+          <div style="width:38px;height:38px;border-radius:9px;background:rgba(62,207,142,.2);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3ecf8e" stroke-width="1.6"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="M3 12h18M12 3a15 15 0 0 1 4 9 15 15 0 0 1-4 9 15 15 0 0 1-4-9 15 15 0 0 1 4-9"/></svg></div>
+          <div style="font-size:12px;font-weight:600;color:#3ecf8e">고팡 앱</div>
+        </a>
       </div>
     </div>
+    <div style="display:flex;flex-direction:column;justify-content:flex-end">
+      <div style="background:var(--bg-200);border:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;overflow:hidden">
+        <canvas id="gpCanvas" width="400" height="340" style="display:block;width:100%;height:auto"></canvas>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-100);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r)">
+        <div style="width:6px;height:6px;border-radius:50%;background:#3ecf8e;flex-shrink:0;animation:gpblink 1.4s infinite"></div>
+        <div id="gpStatus" style="font-size:12px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">초기화 중…</div>
+        <button onclick="gpToggle()" id="gpBtn" style="padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:var(--bg-200);color:var(--text);font-size:12px;cursor:pointer;font-family:var(--font)">⏸</button>
+        <button onclick="gpReset()" style="padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:var(--bg-200);color:var(--text);font-size:12px;cursor:pointer;font-family:var(--font)">↺</button>
+      </div>
+    </div>
+  </div>
 
-    <button onclick="clearSWCache()" style="
-      width:100%; margin-top:10px; padding:12px;
-      background:transparent; border:1px solid #3A3A3C;
-      border-radius:12px; color:#FF453A; font-size:14px;
-      font-family:-apple-system,sans-serif; cursor:pointer;">
-      🗑 앱 캐시 초기화 (새로 시작하기)
-    </button>
+  <div class="stats">
+    <div class="stat"><div class="stat-l">최대 처리 성능</div><div class="stat-v">7.3M TPS</div><div class="stat-s">AWS EC2 실증 · 알리페이 29배</div></div>
+    <div class="stat"><div class="stat-l">전력 절감</div><div class="stat-v">88.6%</div><div class="stat-s">18.2W vs GPU 160.3W</div></div>
+    <div class="stat"><div class="stat-l">소비자 데이터 노출</div><div class="stat-v">0%</div><div class="stat-s">차분 프라이버시 ε≤0.1</div></div>
+    <div class="stat"><div class="stat-l">재해 복구율</div><div class="stat-v">98.0%</div><div class="stat-s">글로벌 백업 센터 네트워크</div></div>
+  </div>
+
+  <div class="sh"><h2>기존 시스템 5대 핵심 한계와 해결</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>한계</th><th>기존 시스템</th><th>고팡 해결책</th><th>핵심 모듈</th></tr></thead>
+    <tbody>
+      <tr><td>소비자 프라이버시 침해</td><td style="font-size:13px;color:var(--text-3)">Amazon·쿠팡·알리바바: 개인 구매이력 수집</td><td style="font-size:13px"><span class="b-green">소비자 데이터 0% 수집</span></td><td><span class="mbadge">도 8</span></td></tr>
+      <tr><td>중앙화 수동 운영</td><td style="font-size:13px;color:var(--text-3)">토스 5만 TPS, 알리페이 25.6만 TPS (중앙 서버)</td><td style="font-size:13px"><span class="b-green">7.3M TPS 완전 자율화</span></td><td><span class="mbadge">도 2·12</span></td></tr>
+      <tr><td>불공정 비용 구조</td><td style="font-size:13px;color:var(--text-3)">아마존 8-15%, 쿠팡 5-10% 고정 수수료</td><td style="font-size:13px"><span class="b-green">수익 비례 자동 분담</span></td><td><span class="mbadge">도 9</span></td></tr>
+      <tr><td>분산된 시장 구조</td><td style="font-size:13px;color:var(--text-3)">의류·도서·전자 플랫폼 분리</td><td style="font-size:13px"><span class="b-green">GPID 글로벌 단일 시장</span></td><td><span class="mbadge">도 10</span></td></tr>
+      <tr><td>신용평가 한계</td><td style="font-size:13px;color:var(--text-3)">제한적 금융 데이터만 반영</td><td style="font-size:13px"><span class="b-green">실시간 재무제표 자동 생성</span></td><td><span class="mbadge">도 11</span></td></tr>
+    </tbody>
+  </table></div></div>
+
+  <style>@keyframes gpblink{0%,100%{opacity:1}50%{opacity:.25}}</style>
+  <script>
+  (function(){
+    var cv=document.getElementById('gpCanvas'); if(!cv)return;
+    var ctx=cv.getContext('2d');
+    var W=400,H=340,dpr=window.devicePixelRatio||1;
+    cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';ctx.scale(dpr,dpr);
+    var C={bg:'#f8f8f8',text:'#1c1c1e',muted:'#9898a6',nodeFill:'#f0f0f5',nodeStr:'#c0c0cc',nodeAct:'#3ecf8e',pdvFill:'#e8f5ee',pdvStr:'#3ecf8e',blue:'#2563eb',red:'#e5484d',green:'#18794e'};
+    var LYR=[{id:5,count:1,y:50},{id:4,count:2,y:94},{id:3,count:3,y:140},{id:2,count:4,y:188},{id:1,count:5,y:236}];
+    var NR=11,PX0=90,PW=220,NODES=[];
+    LYR.forEach(function(ld){for(var i=0;i<ld.count;i++){var x=PX0+(PW/(ld.count+1))*(i+1);NODES.push({lyr:ld.id,x:x,y:ld.y,active:false,pulse:0});}});
+    var PA={x:148,y:290},PB={x:222,y:290};
+    var PDVA={x:20,y:274,w:60,h:30},PDVB={x:320,y:274,w:60,h:30};
+    var particles=[],docs=[];
+    function addP(x0,y0,x1,y1,col,dur,onEnd,lbl){particles.push({x0:x0,y0:y0,x1:x1,y1:y1,t:0,dur:dur,col:col,onEnd:onEnd||null,lbl:lbl||''});}
+    function addDoc(x0,y0,x1,y1,dur,onEnd){docs.push({x:x0,y:y0,tx:x1,ty:y1,t:0,dur:dur,onEnd:onEnd,done:false});}
+    var phase=0,timer=0,gpRunning=true,pdvFull={A:false,B:false},hashOut={A:false,B:false},chainOk=false,bline=0;
+    var PS=['A-B 소통·거래 발생','AI 위법성 실시간 검증 (0.8mS)','PDV(개인 데이터 금고)에 저장','Hash 생성 → OpenHash 전송','Merkle Tree 상위 계층 전파','서버 → A·B Hash 회신','Hash Chain 갱신 완료'];
+    function sp(p){phase=p;timer=0;chainOk=false;bline=0;document.getElementById('gpStatus').textContent=PS[p]||'';
+      if(p===0){pdvFull={A:false,B:false};hashOut={A:false,B:false};bline=1.2;}
+      if(p===2){addDoc(PA.x,PA.y-8,PDVA.x+PDVA.w/2,PDVA.y+PDVA.h/2,1.2,function(){pdvFull.A=true;});addDoc(PB.x,PB.y-8,PDVB.x+PDVB.w/2,PDVB.y+PDVB.h/2,1.2,function(){pdvFull.B=true;});}
+      if(p===3){hashOut.A=true;hashOut.B=true;var r=NODES.find(function(n){return n.lyr===2&&n.x>180;})||NODES.find(function(n){return n.lyr===2;});window._gr=r;addP(PDVA.x+PDVA.w,PDVA.y+15,r.x,r.y+NR,C.blue,1.5,function(){r.active=true;r.pulse=1;},'Hash');addP(PDVB.x,PDVB.y+15,r.x,r.y+NR,C.blue,1.5,null,'Hash');}
+      if(p===4){var r=window._gr,m1=NODES.find(function(n){return n.lyr===3;});if(r&&m1){addP(r.x,r.y-NR,m1.x,m1.y+NR,C.green,1.2,function(){m1.active=true;m1.pulse=1;},'Merkle');setTimeout(function(){var m2=NODES.find(function(n){return n.lyr===4;});if(m2)addP(m1.x,m1.y-NR,m2.x,m2.y+NR,C.green,1.0,function(){m2.active=true;m2.pulse=1;},'');setTimeout(function(){var m3=NODES.find(function(n){return n.lyr===5;});var m2b=NODES.find(function(n){return n.lyr===4;});if(m3&&m2b)addP(m2b.x,m2b.y-NR,m3.x,m3.y+NR,C.green,0.9,function(){m3.active=true;m3.pulse=1;},'');},1000);},1200);}}
+      if(p===5){var r=window._gr;if(r){addP(r.x,r.y+NR,PDVA.x+PDVA.w,PDVA.y+15,C.red,1.4,function(){pdvFull.A=2;},'Hash');addP(r.x,r.y+NR,PDVB.x,PDVB.y+15,C.red,1.4,function(){pdvFull.B=2;},'Hash');}}
+      if(p===6){chainOk=true;}}
+    function nextPhase(){if(phase<PS.length-1){sp(phase+1);}else{setTimeout(function(){NODES.forEach(function(n){n.active=false;n.pulse=0;});particles=[];docs=[];window._gr=null;sp(0);},2000);}}
+    var last=0,ptimer=0;
+    var PD=[2.0,1.5,2.0,2.5,2.8,1.8,2.0];
+    function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);c.lineTo(x+r,y+h);c.quadraticCurveTo(x,y+h,x,y+h-r);c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.closePath();}
+    function draw(ts){
+      if(!gpRunning){requestAnimationFrame(draw);return;}
+      var dt=last?Math.min((ts-last)/1000,0.1):0;last=ts;timer+=dt;ptimer+=dt;
+      if(ptimer>(PD[phase]||2.0)){ptimer=0;nextPhase();}
+      ctx.clearRect(0,0,W,H);ctx.fillStyle=C.bg;ctx.fillRect(0,0,W,H);
+      var LBL=['L1 엣지','L2 구역','L3 도시','L4 국가','L5 글로벌'];
+      LYR.forEach(function(ld,li){ctx.fillStyle='#c8c8d8';ctx.font='10px sans-serif';ctx.textAlign='left';ctx.fillText(LBL[li],4,ld.y+4);});
+      ctx.strokeStyle='#e0e0e8';ctx.lineWidth=0.8;
+      NODES.forEach(function(n){NODES.filter(function(m){return m.lyr===n.lyr+1;}).forEach(function(m){ctx.beginPath();ctx.moveTo(n.x,n.y-NR);ctx.lineTo(m.x,m.y+NR);ctx.stroke();});});
+      NODES.forEach(function(n){var p=Math.max(0,n.pulse);if(p>0)n.pulse-=dt*1.5;ctx.beginPath();ctx.arc(n.x,n.y,NR,0,Math.PI*2);ctx.fillStyle=n.active?C.pdvFill:C.nodeFill;ctx.fill();ctx.strokeStyle=n.active?C.nodeAct:C.nodeStr;ctx.lineWidth=n.active?1.8:1;ctx.stroke();if(p>0.1){ctx.beginPath();ctx.arc(n.x,n.y,NR+6*p,0,Math.PI*2);ctx.strokeStyle='rgba(62,207,142,'+(p*0.5)+')';ctx.lineWidth=1.5;ctx.stroke();}ctx.fillStyle=n.active?C.green:C.muted;ctx.font='bold 9px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('L'+n.lyr,n.x,n.y);});
+      if(bline>0){ctx.save();ctx.strokeStyle='#3ecf8e';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.globalAlpha=Math.min(bline,1);ctx.beginPath();ctx.moveTo(PA.x,PA.y);ctx.lineTo(PB.x,PB.y);ctx.stroke();ctx.restore();bline-=dt*0.4;}
+      function dp(cx,cy,lbl,col){ctx.fillStyle=col||C.text;ctx.beginPath();ctx.arc(cx,cy-13,5.5,0,Math.PI*2);ctx.fill();ctx.fillRect(cx-6,cy-7,12,11);ctx.fillRect(cx-9,cy+4,7,9);ctx.fillRect(cx+2,cy+4,7,9);ctx.fillStyle=C.muted;ctx.font='10px sans-serif';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(lbl,cx,cy+15);}
+      dp(PA.x,PA.y,'A','#1c1c1e');dp(PB.x,PB.y,'B','#1c1c1e');
+      function dpdv(rx,ry,rw,rh,full,lbl){ctx.fillStyle=full?C.pdvFill:'#f3f4f5';ctx.strokeStyle=full?C.pdvStr:'#c4c4cc';ctx.lineWidth=full?1.8:1;rr(ctx,rx,ry,rw,rh,4);ctx.fill();ctx.stroke();if(full===2){ctx.fillStyle='#e0ffe8';rr(ctx,rx+2,ry+2,rw-4,rh-4,3);ctx.fill();}ctx.fillStyle=full?C.green:C.muted;ctx.font='bold 9px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(lbl,rx+rw/2,ry+rh/2);if(full){ctx.fillStyle=C.green;ctx.font='bold 8px monospace';ctx.fillText('Hash',rx+rw/2,ry-8);}}
+      dpdv(PDVA.x,PDVA.y,PDVA.w,PDVA.h,pdvFull.A,'PDV-A');dpdv(PDVB.x,PDVB.y,PDVB.w,PDVB.h,pdvFull.B,'PDV-B');
+      docs=docs.filter(function(d){d.t+=dt;var p=Math.min(d.t/d.dur,1);var x=d.x+(d.tx-d.x)*p,y=d.y+(d.ty-d.y)*p;ctx.fillStyle='#3ecf8e';ctx.fillRect(x-4,y-5,8,10);ctx.strokeStyle='#18794e';ctx.lineWidth=0.8;ctx.strokeRect(x-4,y-5,8,10);if(p>=1&&!d.done){d.done=true;if(d.onEnd)d.onEnd();}return p<1||!d.done;});
+      particles=particles.filter(function(pt){pt.t+=dt;var p=Math.min(pt.t/pt.dur,1);var x=pt.x0+(pt.x1-pt.x0)*p,y=pt.y0+(pt.y1-pt.y0)*p;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fillStyle=pt.col;ctx.globalAlpha=1-p*0.3;ctx.fill();ctx.globalAlpha=1;if(pt.lbl){ctx.fillStyle=pt.col;ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.fillText(pt.lbl,x,y-8);}if(p>=1&&pt.onEnd){pt.onEnd();pt.onEnd=null;}return p<1;});
+      if(chainOk){ctx.fillStyle='rgba(62,207,142,0.1)';rr(ctx,PDVA.x-2,PDVA.y-2,PDVA.w+4,PDVA.h+4,6);ctx.fill();rr(ctx,PDVB.x-2,PDVB.y-2,PDVB.w+4,PDVB.h+4,6);ctx.fill();}
+      requestAnimationFrame(draw);}
+    sp(0);requestAnimationFrame(draw);
+    window.gpToggle=function(){gpRunning=!gpRunning;document.getElementById('gpBtn').textContent=gpRunning?'⏸':'▶';};
+    window.gpReset=function(){NODES.forEach(function(n){n.active=false;n.pulse=0;});particles=[];docs=[];window._gr=null;ptimer=0;sp(0);};
+  })();
+  </script>
+</div>
+
+<!-- ===== CORE5 ===== -->
+<div class="page" id="section-core5" style="display:none">
+  <div class="page-header"><h1>5대 핵심 혁신</h1><p>FPGA 가속 자율 시장 통합 플랫폼의 핵심 기술 해결수단</p></div>
+  <div class="cg3">
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="mc-bl">해결수단 1 — 도 8</div><div class="mc-t">판매자 이력 전용 AI 예측</div><div class="mc-d">소비자 데이터 완전 차단 메커니즘(81)과 익명화 집계 분석부(82)로 개별 소비자 구매 이력을 원천 차단. 오직 판매자 판매량·재고 회전율·계절성 패턴만 차분 프라이버시(ε≤0.1)로 집계. 수요 예측 정확도 95% 달성(AWS 검증).</div></div>
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M9 8h4a2 2 0 0 1 0 4H9v4h6"/></svg></div><div class="mc-bl">해결수단 2 — 도 9</div><div class="mc-t">수익 비례 자동 비용 분담</div><div class="mc-d">실시간 수익 측정부(91)·투명한 비용 배분 공개부(92). 수익 비례 시스템 운영비 자동 분담. 신규 참여자 50% 할인, 중소 판매자 30% 할인, 대형 참여자 20% 할증. 고정 수수료 체계(아마존 8~15%) 완전 대체.</div></div>
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg></div><div class="mc-bl">해결수단 3 — 도 10</div><div class="mc-t">범용 상품 분류 (GPID)</div><div class="mc-d">GlobalProductID(GPID) = SHA-256(상품명+규격+제조사+원산지+타임스탬프). HS Code·UNSPSC·GPC·NAICS 자동 연동. 100개 언어 AI 번역. 미터법↔야드파운드 자동 변환. 전세계 상품 단일 시장 통합.</div></div>
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div><div class="mc-bl">해결수단 4 — 도 11</div><div class="mc-t">자동 재무제표 관리</div><div class="mc-d">실시간 재무제표 생성부(111)·통합 회계 처리부(112). 소비자·판매자 구분 없이 모든 참여자에게 실시간 재무제표 자동 할당. 500ms 이내 4차원 신용평가(소비 다양성·가격 합리성·거래 일관성·사회 신뢰도).</div></div>
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="mc-bl">해결수단 5 — 도 12</div><div class="mc-t">자율 의사결정 거버넌스</div><div class="mc-d">예외 상황 자동 처리부(121)·AI 중재 시스템(122). 인간 개입 없는 완전 무인 시장 운영. 분쟁 해결·규제 변경 대응·이상 거래 차단 자동화. 카이제곱 검정 기반 가격 담합 실시간 탐지(χ²&gt;7.815 시 알림).</div></div>
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg></div><div class="mc-bl">핵심 통합 — 도 1~7</div><div class="mc-t">통합 자율 생태계</div><div class="mc-d">FPGA 가속(도 2) + 하이브리드 분산 신뢰(도 3) + AI 검증(도 5) + 금융 통합(도 11) + 물리적 분산 저장(도 6) + 국제 연방 구조(도 7) + 7계층 통신(도 70) 유기적 결합. TRL 7~8 수준 실증.</div></div>
+  </div>
+
+  <div class="sh"><h2>7계층 물리적 계층 구조</h2><p>읍면동→시군구→광역시도→국가→지역→대륙→글로벌</p></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>계층</th><th>단위</th><th>노드 수 (국내)</th><th>거래 비율</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td><span class="mbadge">Layer 1</span></td><td style="font-size:13px">읍면동</td><td class="td-m">3,551개</td><td><span class="b-green">70%</span></td><td style="font-size:13px;color:var(--text-3)">지역 거래·일용품·신선식품</td></tr>
+      <tr><td><span class="mbadge">Layer 2</span></td><td style="font-size:13px">시군구</td><td class="td-m">226개</td><td><span class="b-yellow">20%</span></td><td style="font-size:13px;color:var(--text-3)">광역 거래·가전·의류</td></tr>
+      <tr><td><span class="mbadge">Layer 3</span></td><td style="font-size:13px">광역시도</td><td class="td-m">17개</td><td><span class="b-gray">8%</span></td><td style="font-size:13px;color:var(--text-3)">국가 거래·자동차·가구</td></tr>
+      <tr><td><span class="mbadge">Layer 4</span></td><td style="font-size:13px">국가</td><td class="td-m">1개</td><td><span class="b-gray">2%</span></td><td style="font-size:13px;color:var(--text-3)">국제 거래·명품·특수장비</td></tr>
+      <tr><td><span class="mbadge">Layer 5</span></td><td style="font-size:13px">동아시아 지역</td><td class="td-m">한·일·중 통합</td><td><span class="b-blue">확장</span></td><td style="font-size:13px;color:var(--text-3)">약 15억 인구 통합</td></tr>
+      <tr><td><span class="mbadge">Layer 6</span></td><td style="font-size:13px">아태 대륙</td><td class="td-m">아태 전체</td><td><span class="b-blue">확장</span></td><td style="font-size:13px;color:var(--text-3)">약 25억 인구</td></tr>
+      <tr><td><span class="mbadge">Layer 7</span></td><td style="font-size:13px">글로벌</td><td class="td-m">전 세계</td><td><span class="b-blue">확장</span></td><td style="font-size:13px;color:var(--text-3)">80억 전 인류 문서 해시 통합</td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<!-- ===== FPGA ===== -->
+<div class="page" id="section-fpga" style="display:none">
+  <div class="page-header"><h1>FPGA 하드웨어 가속 시스템</h1><p>도 2 — Xilinx Versal ACAP VCK190 기반 적응형 하드웨어 가속 (AWS EC2 환경 실증)</p></div>
+  <div class="stats">
+    <div class="stat"><div class="stat-l">최대 TPS</div><div class="stat-v">7.3M</div><div class="stat-s">AWS EC2 c7i-flex.large 실측</div></div>
+    <div class="stat"><div class="stat-l">전력 소모</div><div class="stat-v">18.2W</div><div class="stat-s">GPU 160.3W 대비 88.6% 절감</div></div>
+    <div class="stat"><div class="stat-l">해시 처리</div><div class="stat-v">254 클록</div><div class="stat-s">확률적 계층 선택 알고리즘</div></div>
+    <div class="stat"><div class="stat-l">동적 재할당</div><div class="stat-v">10ms</div><div class="stat-s">모듈 사용률 모니터링 주기</div></div>
+  </div>
+
+  <div class="sh"><h2>FPGA 리소스 분배 (899K 시스템 논리 셀)</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>모듈</th><th>LUT 할당</th><th>DSP</th><th>BRAM</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td>다중 신뢰 계층 검증</td><td class="td-m">269,700 (30%)</td><td class="td-m">590</td><td class="td-m">750</td><td style="font-size:13px;color:var(--text-3)">계층별 서명 검증</td></tr>
+      <tr><td>확률적 강제 배분</td><td class="td-m">134,850 (15%)</td><td class="td-m">295</td><td class="td-m">375</td><td style="font-size:13px;color:var(--text-3)">PLSM 계층 선택</td></tr>
+      <tr><td>AI 오염 탐지</td><td class="td-m">179,800 (20%)</td><td class="td-m">393</td><td class="td-m">500</td><td style="font-size:13px;color:var(--text-3)">CNN+LSTM 이상 탐지</td></tr>
+      <tr><td>포트폴리오 최적화</td><td class="td-m">134,850 (15%)</td><td class="td-m">295</td><td class="td-m">375</td><td style="font-size:13px;color:var(--text-3)">마코위츠 100×100 공분산</td></tr>
+      <tr><td>보험 계리</td><td class="td-m">179,800 (20%)</td><td class="td-m">393</td><td class="td-m">500</td><td style="font-size:13px;color:var(--text-3)">개인화 위험도 산정</td></tr>
+    </tbody>
+  </table></div></div>
+
+  <div class="sh"><h2>확률적 계층 선택 알고리즘 (도 4)</h2></div>
+  <div class="pipe">
+    <div class="ps"><div class="ps-n">STEP 01</div><div class="ps-t">입력 데이터 준비</div><div class="ps-s">H_doc=SHA256(document), T=Unix timestamp, R=region_id</div><div class="ps-arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+    <div class="ps"><div class="ps-n">STEP 02</div><div class="ps-t">결합 해시 생성</div><div class="ps-s">H_combined = SHA256(H_doc ‖ T ‖ R)</div><div class="ps-arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+    <div class="ps"><div class="ps-n">STEP 03</div><div class="ps-t">균등분포 난수 생성</div><div class="ps-s">random = (H_combined 상위 8바이트) mod 1000  →  0~999 균등분포</div><div class="ps-arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+    <div class="ps"><div class="ps-n">STEP 04</div><div class="ps-t">계층 결정</div><div class="ps-s">0~699: L1(70%)  700~899: L2(20%)  900~999: L3+(10%)</div></div>
+  </div>
+
+  <div class="sh"><h2>동적 리소스 재할당 메커니즘</h2></div>
+  <div class="pipev">
+    <div class="psv"><div class="psv-n done">01</div><div style="flex:1"><div class="psv-t">10ms 주기 사용률 모니터링</div><div class="psv-s">각 모듈의 CPU·메모리·DSP 사용률 실시간 측정</div></div><span class="badge b-green">10ms</span></div>
+    <div class="psv"><div class="psv-n">02</div><div style="flex:1"><div class="psv-t">임계값 95% 초과 시 → 1.2배 추가 할당</div><div class="psv-s">부하 집중 모듈에 인접 여유 리소스 동적 배분</div></div><span class="badge b-yellow">95%↑</span></div>
+    <div class="psv"><div class="psv-n">03</div><div style="flex:1"><div class="psv-t">사용률 60% 미만 시 → 0.8배 회수·재분배</div><div class="psv-s">유휴 리소스를 다른 모듈로 이전하여 전체 효율 극대화</div></div><span class="badge b-gray">60%↓</span></div>
+    <div class="psv"><div class="psv-n done">04</div><div style="flex:1"><div class="psv-t">성능 달성: 18.2W · 1~10ms 실시간 처리</div><div class="psv-s">GPU 160.3W 대비 88.6% 전력 절감 실증 완료</div></div><span class="badge b-green">완료</span></div>
   </div>
 </div>
 
-<script type="module">
-// ══════════════════════════════════════════════════════════════════
-// 고팡 index.js v4.0
-// ══════════════════════════════════════════════════════════════════
+<!-- ===== DISTRIBUTED ===== -->
+<div class="page" id="section-distributed" style="display:none">
+  <div class="page-header"><h1>하이브리드 분산 신뢰 시스템</h1><p>도 3 — OpenHash 기반 물리적 7계층 분산 구조 · 개인 데이터 주권 · 51% 공격 방어</p></div>
+  <div class="intro-box">
+    <p>도 6의 <strong style="color:var(--text)">개인 데이터 주권 기반 분산 저장부(51)</strong>는 각 소비자의 구매 이력을 해당 소비자의 개인 단말에만 저장합니다. 중앙 서버에서는 해시값만 보관하며 원본 거래 데이터는 절대 보유하지 않습니다. 소비자 해시체인(D)과 판매자 해시체인(E)이 <strong style="color:var(--text)">양방향 상호 참조 구조</strong>로 연결되어 일방적 조작을 불가능하게 합니다.</p>
+  </div>
 
-import { CFG, GWP_REGISTRY, SUPABASE_URL, SUPABASE_KEY,
-         DOMAIN_DETECT, EXPERT_SP_MAP, EXPERT_KEYWORDS,
-         KLAW_COOLDOWN_MS }              from './config.js';
-import { initUser }                      from './js/core/auth.js';
-import { scheduleLocation, initLocation,
-         userLocation, locationReady, locationPending,
-         buildLocNote, onLocationUpdate } from './js/core/location.js';
-import { initPDV, recordPDV, saveSessionOnce } from './js/services/pdv.js';
-import { initKlaw, klawReview }          from './js/services/klaw.js';
-import { initGWP, gwpMatch, gwpLaunch,
-         gwpClose, gwpForwardInput,
-         listenGWPDone, gwpActive }      from './js/services/gwp.js';
-import { initAI, callAI, history,
-         classifyDomain }                from './js/services/ai.js';
-import { initReporter, sendReportToFiil } from './js/fiil/reporter.js';
-import { uploadPhoto }                   from './js/services/storage.js';
+  <div class="sh"><h2>51% 공격 방어 메커니즘</h2></div>
+  <div class="cg4">
+    <div class="mc"><div class="mc-bl">분산 저장</div><div class="mc-t">2,500만 개 개인 단말</div><div class="mc-d">한국 5천만 인구 적용 시 필요 해킹 대상이 2,500만 개 장치. 개별 해킹 확률 10⁻⁷.</div></div>
+    <div class="mc"><div class="mc-bl">공격 확률</div><div class="mc-v">10⁻¹⁷⁵˒⁰⁰⁰˒⁰⁰⁰</div><div class="mc-d">물리적으로 불가능한 수준의 공격 난이도 달성</div></div>
+    <div class="mc"><div class="mc-bl">암호 보호</div><div class="mc-t">SHA-256 + ECDSA</div><div class="mc-d">이중 해시체인 구조로 단방향 조작 원천 차단</div></div>
+    <div class="mc"><div class="mc-bl">물리적 격리</div><div class="mc-t">중앙 서버 의존성 0%</div><div class="mc-d">중앙 서버 완전 제거로 단일 실패점 원천 제거</div></div>
+  </div>
 
-// ── 전역 상태 ─────────────────────────────────────────────────────
-let _user        = null;
-let aiActive     = false;
-let micActive    = false;
-let attachFile   = null;  // 현재 첨부 파일
-let recognition  = null;
-let typingEl     = null;
-let _progressSteps = [], _progressIdx = 0;
-let _lastLocNote = '';
+  <div class="sh"><h2>5단계 금융 재해 복구 시스템 (도 17)</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>등급</th><th>영향 범위</th><th>복구 목표 (RTO)</th><th>복구율</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge b-green">Level 1</span></td><td style="font-size:13px">단일 노드 장애</td><td class="td-m">3초</td><td class="td-m">99.5%</td></tr>
+      <tr><td><span class="badge b-yellow">Level 2</span></td><td style="font-size:13px">시군구 네트워크 장애</td><td class="td-m">1시간</td><td class="td-m">99.5%</td></tr>
+      <tr><td><span class="badge" style="background:#fff3e0;color:#e65100;border:1px solid #ffb74d">Level 3</span></td><td style="font-size:13px">국가 인프라 50% 이상 피해</td><td class="td-m">24시간</td><td class="td-m">98.2%</td></tr>
+      <tr><td><span class="badge b-red">Level 4</span></td><td style="font-size:13px">국가 기능 완전 마비</td><td class="td-m">72시간</td><td class="td-m">96.8%</td></tr>
+      <tr><td><span class="badge b-purple">Level 5</span></td><td style="font-size:13px">대륙급 재해 (다국가 동시)</td><td class="td-m">1주일</td><td class="td-m">94.5%</td></tr>
+      <tr><td style="font-weight:700">전체 평균</td><td></td><td></td><td class="td-m" style="font-weight:700;color:var(--text-brand)">98.0%</td></tr>
+    </tbody>
+  </table></div></div>
+</div>
 
-const _INSTALL_DISMISSED_KEY = 'gopang_install_dismissed';
-const _INSTALL_DONE_KEY      = 'gopang_installed';
-let _deferredInstallPrompt   = null;
-let _installBannerVisible    = false;
+<!-- ===== AI VERIFY ===== -->
+<div class="page" id="section-ai_verify" style="display:none">
+  <div class="page-header"><h1>AI 자율 검증 시스템</h1><p>도 5 — CNN+LSTM 이중 검증 · ViT 고도화 사기 탐지 · 중요도 기반 4등급 차등 검증</p></div>
 
-// ── PWA ──────────────────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', async () => {
-    try {
-      const reg = await navigator.serviceWorker.register('/sw.js', { scope:'/' });
-      console.log('[PWA] SW 등록:', reg.scope);
-    } catch(e) { console.warn('[PWA] SW 실패:', e); }
-  });
-}
+  <div class="sh"><h2>CNN + LSTM 이중 검증 구조 (도 5)</h2></div>
+  <div class="cg3">
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg></div><div class="mc-bl">CNN 해시 패턴 분석부 (31)</div><div class="mc-t">SHA-256 → 16×16 이미지 변환</div><div class="mc-d">Conv2D(32)→MaxPool→Conv2D(64)→Conv2D(128)→Dense(Sigmoid). 정확도 97.3%.</div></div>
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="mc-bl">LSTM 시계열 예측부 (32)</div><div class="mc-t">연속 50개 해시 변화량 분석</div><div class="mc-d">LSTM(128)→Dropout(0.2)→LSTM(64)→Dense(32,ReLU)→Dense(1,Linear). 이상 탐지.</div></div>
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="mc-bl">융합 판정 시스템 (33)</div><div class="mc-t">CNN 점수 &gt;0.8 OR LSTM 오차 &gt;3σ</div><div class="mc-d">두 모델 통합 판정. 오염 여부 최종 결정 후 백업 시스템(204)에 자동 기록.</div></div>
+  </div>
 
-function _isIOS()             { return /iphone|ipad|ipod/i.test(navigator.userAgent); }
-function _isStandalone()      { return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone; }
-function _shouldShowInstall() { return !_isStandalone() && !localStorage.getItem(_INSTALL_DONE_KEY) && !localStorage.getItem(_INSTALL_DISMISSED_KEY); }
+  <div class="sh"><h2>ViT 기반 고도화 사기 탐지부 (34) — 99.5% 정확도</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>항목</th><th>구조 / 수치</th></tr></thead>
+    <tbody>
+      <tr><td>입력</td><td style="font-size:13px">거래 패턴을 16×16 패치로 분할 → 768차원 벡터 임베딩</td></tr>
+      <tr><td>어텐션</td><td style="font-size:13px">12개 헤드 멀티헤드 어텐션 · 12층 트랜스포머 인코더</td></tr>
+      <tr><td>정확도</td><td class="td-m"><span class="b-green">99.5%</span> (정밀도 99.2% · 재현율 99.8% · F1 99.5%)</td></tr>
+      <tr><td>BERT 거래 서열</td><td style="font-size:13px">비정상 거래 흐름 문맥 분석 · 30% FPGA 리소스 할당</td></tr>
+      <tr><td>연합학습</td><td style="font-size:13px">차분 프라이버시 ε≤0.5 · 동형암호화 · 보안 다자 연산 글로벌 학습</td></tr>
+    </tbody>
+  </table></div></div>
 
-function _showInstallBanner(type) {
-  if (!_shouldShowInstall()) return;
-  _installBannerVisible = true;
-  const el = document.getElementById(type === 'ios' ? 'ios-install-banner' : 'install-banner');
-  if (el) el.style.display = 'flex';
-}
-function _hideInstallBanner() {
-  _installBannerVisible = false;
-  ['install-banner','ios-install-banner'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.style.display = 'none';
-  });
-}
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); _deferredInstallPrompt=e; _showInstallBanner('android'); });
-window.addEventListener('appinstalled', () => { localStorage.setItem(_INSTALL_DONE_KEY,'1'); _hideInstallBanner(); });
-if (_isIOS() && _shouldShowInstall()) setTimeout(() => _showInstallBanner('ios'), 2000);
+  <div class="sh"><h2>중요도 기반 4등급 차등 검증 (도 16)</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>등급</th><th>거래 금액</th><th>검증 방식</th><th>처리 시간</th><th>FPGA 할당</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge b-gray">Level 1</span></td><td style="font-size:13px">0 ~ 1만원 (마이크로)</td><td style="font-size:13px">2중 검증</td><td class="td-m">50ms</td><td class="td-m">10%</td></tr>
+      <tr><td><span class="badge b-yellow">Level 2</span></td><td style="font-size:13px">1만 ~ 100만원</td><td style="font-size:13px">3중 검증 (해시+CNN+이력)</td><td class="td-m">200ms</td><td class="td-m">30%</td></tr>
+      <tr><td><span class="badge" style="background:#fff3e0;color:#e65100;border:1px solid #ffb74d">Level 3</span></td><td style="font-size:13px">100만 ~ 5,000만원</td><td style="font-size:13px">4중 검증 (+LSTM+신용평가)</td><td class="td-m">500ms</td><td class="td-m">40%</td></tr>
+      <tr><td><span class="badge b-red">Level 4</span></td><td style="font-size:13px">5,000만원 이상</td><td style="font-size:13px">5중 검증 (+ViT+전문가+국제DB)</td><td class="td-m">2~5분</td><td class="td-m">20%</td></tr>
+    </tbody>
+  </table></div></div>
+</div>
 
-async function installPWA() {
-  if (!_deferredInstallPrompt) return;
-  _deferredInstallPrompt.prompt();
-  const { outcome } = await _deferredInstallPrompt.userChoice;
-  if (outcome === 'accepted') localStorage.setItem(_INSTALL_DONE_KEY,'1');
-  _deferredInstallPrompt = null; _hideInstallBanner();
-}
-function dismissInstall()    { localStorage.setItem(_INSTALL_DISMISSED_KEY,'1'); _hideInstallBanner(); }
-function dismissIOSInstall() { localStorage.setItem(_INSTALL_DISMISSED_KEY,'1'); _hideInstallBanner(); }
-function requestInstall()    { installPWA(); }
+<!-- ===== PRIVACY ===== -->
+<div class="page" id="section-privacy" style="display:none">
+  <div class="page-header"><h1>프라이버시 보호 · 동적 공정거래</h1><p>소비자 데이터 완전 차단 · 가격 담합 자동 탐지 · 시장점유율 25% 제한</p></div>
+  <div class="sh"><h2>소비자 데이터 3단계 완전 차단 (도 8)</h2></div>
+  <div class="pipev">
+    <div class="psv"><div class="psv-n done">1단계</div><div style="flex:1"><div class="psv-t">데이터 수집 원천 차단</div><div class="psv-s">소비자 구매이력·검색기록·클릭 패턴 수집 불가. 아키텍처 수준에서 물리적 접근 경로 제거. k-익명성(k=10) · l-다양성 기법 적용.</div></div><span class="badge b-green">0% 수집</span></div>
+    <div class="psv"><div class="psv-n done">2단계</div><div style="flex:1"><div class="psv-t">판매자 데이터 전용 익명 수집</div><div class="psv-s">판매자 판매량·재고수준·상품 회전율만 수집. 판매자 식별정보도 해시화 → 개별 추적 불가.</div></div><span class="badge b-yellow">익명화</span></div>
+    <div class="psv"><div class="psv-n done">3단계</div><div style="flex:1"><div class="psv-t">차분 프라이버시 ε≤0.1 적용</div><div class="psv-s">노이즈_추가 = 원본_집계 + Laplace(Δf/ε). 민감도(Δf) 대비 ε=0.1로 극도로 강한 프라이버시 보호.</div></div><span class="badge b-green">ε≤0.1</span></div>
+  </div>
 
-// ── UI 헬퍼 ──────────────────────────────────────────────────────
-function appendBubble(role, text, isHTML=false) {
-  const list = document.getElementById('message-list'); if (!list) return;
-  const row    = document.createElement('div'); row.className = `msg-row ${role}`;
-  const bubble = document.createElement('div'); bubble.className = `bubble bubble-${role}`;
-  if (isHTML) bubble.innerHTML = text; else bubble.textContent = text;
-  row.appendChild(bubble); list.appendChild(row); list.scrollTop = list.scrollHeight;
-}
-function _createStreamBubble() {
-  const list=document.getElementById('message-list');
-  const row=document.createElement('div'); row.className='msg-row ai';
-  const bubble=document.createElement('div'); bubble.className='bubble bubble-ai streaming';
-  row.appendChild(bubble); list.appendChild(row); list.scrollTop=list.scrollHeight;
-  return bubble;
-}
-function _updateStreamBubble(bubble, text) {
-  bubble.innerHTML = text.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
-  const list=document.getElementById('message-list'); if(list) list.scrollTop=list.scrollHeight;
-}
-function showTyping() {
-  const list=document.getElementById('message-list');
-  typingEl=document.createElement('div'); typingEl.className='msg-row ai'; typingEl.id='typing-row';
-  typingEl.innerHTML='<div class="typing-indicator"><span></span><span></span><span></span></div>';
-  list.appendChild(typingEl); list.scrollTop=list.scrollHeight;
-}
-function hideTyping() { typingEl?.remove(); typingEl=null; }
-function riskChip(level, flags) {
-  const map={S0:'✅ 안전',S1:'⚠️ 주의',S2:'🚨 경고',S3:'🛑 차단'};
-  return `<span class="risk-chip ${level.toLowerCase()}">${map[level]||'—'}${flags?.length?' · '+flags.slice(0,3).join(' '):''}</span>`;
-}
+  <div class="sh"><h2>동적 공정거래 모니터링</h2></div>
+  <div class="cg3">
+    <div class="mc"><div class="mc-bl">가격 담합 탐지</div><div class="mc-t">카이제곱 검정 (χ²&gt;7.815)</div><div class="mc-d">1분 간격 가격 수집 → 5분 간격 χ² 계산. 3개 이상 업체 1시간 내 동일 비율 인상 탐지. 자유도 3, 유의수준 0.05.</div></div>
+    <div class="mc"><div class="mc-bl">시장점유율 25% 제한</div><div class="mc-t">실시간 자동 제한 4단계</div><div class="mc-d">22~25%: 성장 제한·경고 / 25% 초과: 신규 고객 중단 / 30%: 분할 권고 / 35%: 참여 제한. 신규 업체 50% 재분배.</div></div>
+    <div class="mc"><div class="mc-bl">메트칼프 가치 분배</div><div class="mc-t">네트워크가치 = k × n²</div><div class="mc-d">참여자 100만→1,000만: 100배 가치 증가. 소비자 40% · 판매자 35% · 플랫폼 20% · 기술개발 5% 자동 분배.</div></div>
+  </div>
 
-// Progress
-function _progressStart(intent, loc) {
-  _progressSteps=[
-    {label:'현장 감지',detail:intent||'환경 현장'},
-    {label:'위치 확인',detail:loc||'위치 분석 중…'},
-    {label:'AI 분석',detail:'분석 중…'},
-    {label:'신고서 생성',detail:'생성 중…'},
-    {label:'OpenHash 등록',detail:'기록 중…'},
-  ];
-  _progressIdx=0; _renderProgress();
-  const s=document.getElementById('progress-sheet'); if(s){s.style.display='flex';s.classList.add('active');}
-}
-function _progressNext() { _progressIdx++; _renderProgress(); }
-function _renderProgress() {
-  const c=document.getElementById('progress-steps'); if(!c) return;
-  c.innerHTML=_progressSteps.map((s,i)=>{
-    const done=i<_progressIdx,cur=i===_progressIdx;
-    return `<div class="progress-step ${done?'done':''} ${cur?'current':''}"><span class="step-icon">${done?'✅':cur?'⏳':'⬜'}</span><span class="step-label">${s.label}</span><span class="step-detail">${s.detail}</span></div>`;
-  }).join('');
-}
-function _topLogoSetProgress(active) {
-  const el=document.getElementById('top-logo-text'); if(!el) return;
-  el.style.color=active?'#3ECF8E':'';
-  el.textContent=active?'🌊 분석 중…':(gwpActive?'':'고팡');
-}
-function _showGeminiProgress() {
-  const list=document.getElementById('message-list');
-  const el=document.createElement('div'); el.className='msg-row ai'; el.id='gemini-progress';
-  el.innerHTML='<div class="bubble bubble-ai"><div style="display:flex;align-items:center;gap:8px"><div class="typing-indicator"><span></span><span></span><span></span></div><span style="font-size:13px;color:#8E8E93">이미지 분석 중…</span></div></div>';
-  list.appendChild(el); list.scrollTop=list.scrollHeight;
-  return setInterval(()=>{},500);
-}
-function _hideGeminiProgress(timer) { clearInterval(timer); document.getElementById('gemini-progress')?.remove(); }
+  <div class="sh"><h2>동적 경제 모델 시스템 (도 18)</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>서비스 옵션</th><th>기본 요금</th><th>제공 내용</th></tr></thead>
+    <tbody>
+      <tr><td>기본 서비스</td><td class="td-m">$0.001</td><td style="font-size:13px;color:var(--text-3)">표준 해시체인 등록, Layer 1 처리 70% 확률, 24시간 내 처리</td></tr>
+      <tr><td>고속 처리 옵션</td><td class="td-m">+$0.0005</td><td style="font-size:13px;color:var(--text-3)">1시간 내 처리, 우선순위 큐, 전용 대역폭</td></tr>
+      <tr><td>고보안 옵션</td><td class="td-m">+$0.002</td><td style="font-size:13px;color:var(--text-3)">다중 계층 검증, AES-256 추가 암호화, 3개 지역 백업</td></tr>
+      <tr><td>법적 보증 옵션</td><td class="td-m">+$0.01</td><td style="font-size:13px;color:var(--text-3)">법정 증거능력, 공증 기능, 전문가 증언 지원</td></tr>
+    </tbody>
+  </table></div></div>
+  <div class="intro-box" style="margin-top:10px"><p>동적 가격 조정 제한: <strong style="color:var(--text)">시간당 10% · 일일 30% · 주간 50%</strong> 이내로 제한. 부하율 80% 초과 시 상향, 30% 미만 시 하향 자동 조정.</p></div>
+</div>
 
-// 설정
-function openSettings()  { document.getElementById('settings-panel')?.classList.add('open'); }
-function closeSettings() { document.getElementById('settings-panel')?.classList.remove('open'); }
-function handleOverlayClick(e) { if(e.target===e.currentTarget) closeSettings(); }
-function saveSettings() {
-  const a=document.getElementById('api-key-input')?.value.trim(); if(a) CFG.apiKey=a;
-  closeSettings(); appendBubble('ai','⚙️ 설정이 저장되었습니다.');
-}
-function loadSettings() {
-  const a=document.getElementById('api-key-input'); if(a) a.value=CFG.apiKey||'';
-}
-async function clearSWCache() {
-  if('caches' in window){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)));}
-  const reg=await navigator.serviceWorker.getRegistration(); if(reg) await reg.unregister();
-  location.reload(true);
-}
+<!-- ===== FINANCE ===== -->
+<div class="page" id="section-finance" style="display:none">
+  <div class="page-header"><h1>자율 금융 통합 시스템</h1><p>도 11 — 자율 은행·보험·증권 모듈 · 100-500ms 대출 승인 · 실시간 신용평가</p></div>
+  <div class="cg3">
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div><div class="mc-bl">자율 은행 모듈 (41)</div><div class="mc-t">100~500ms 대출 승인</div><div class="mc-d">소득 안정성(월별 판매 수익 변동성) · 지출 패턴(필수재 vs 사치재 비율) · 저축 행동 · 거래 신뢰도(분쟁 발생률)를 LSTM 모델로 상환능력 예측.</div></div>
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="mc-bl">자율 보험 모듈 (42)</div><div class="mc-t">개인화 위험도 실시간 산정</div><div class="mc-d">건강 위험도 40%(웨어러블+건강식품 구매이력) + 운전 위험도 40%(텔레매틱스) + 재산 위험도 20%(스마트홈 데이터). 개인화 보험료 = 기본보험료 × (1+위험도조정).</div></div>
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div><div class="mc-bl">자율 증권 모듈 (43)</div><div class="mc-t">마코위츠+블랙리터만 100자산</div><div class="mc-d">연령 30% + 소득 안정성 40% + 자산 규모 30% 가중 위험 성향 측정. 고위험: 주식 80%·채권 20% / 중간: 주식 60%·채권 40% / 저위험: 주식 30%·채권 70%.</div></div>
+  </div>
 
-// 검색
-function openSearch()  { document.getElementById('search-panel')?.classList.add('open'); }
-function closeSearch() { document.getElementById('search-panel')?.classList.remove('open'); }
-function handleSearchOverlayClick(e) { if(e.target===e.currentTarget) closeSearch(); }
-function runSearch() {
-  const q=document.getElementById('search-input')?.value.trim(); if(!q) return;
-  const log=JSON.parse(localStorage.getItem('gopang_pdv_log')||'[]');
-  const results=log.filter(r=>JSON.stringify(r).includes(q)).slice(-10).map((r,i)=>({id:'pdv-'+i,title:r.summary||'PDV'}));
-  const c=document.getElementById('search-results'); if(!c) return;
-  c.innerHTML=results.length?results.map(r=>`<div class="search-result-item">${r.title}</div>`).join(''):'<div class="search-empty">결과 없음</div>';
-}
-function selectContact(id) { closeSearch(); }
-function showGUID()        { alert('내 GUID: '+(_user?.guid||'초기화 중…')); }
-function showRiskAnalysis(){ appendBubble('ai','분석 결과가 없습니다.'); }
+  <div class="sh"><h2>다차원 4차원 신용평가 모델</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>평가 차원</th><th>가중치</th><th>산정 방식</th></tr></thead>
+    <tbody>
+      <tr><td>소비 다양성 지수</td><td class="td-m">30%</td><td style="font-size:13px;color:var(--text-3)">-Σ(카테고리_비율 × log(비율)). 의식주(+), 문화/교육(+), 사치재(-), 투기성(--)</td></tr>
+      <tr><td>가격 합리성 지수</td><td class="td-m">25%</td><td style="font-size:13px;color:var(--text-3)">1 - |개인 평균가격 - 시장 평균가격| / 시장 평균가격</td></tr>
+      <tr><td>거래 일관성 지수</td><td class="td-m">25%</td><td style="font-size:13px;color:var(--text-3)">월별 지출 변동성 · 계절성 패턴 일치도 · 경제 상황 대응 적절성</td></tr>
+      <tr><td>사회 신뢰도 지수</td><td class="td-m">20%</td><td style="font-size:13px;color:var(--text-3)">분쟁 발생률 및 해결 패턴 · 공동 구매 빈도 · 추천/리뷰 활동 질</td></tr>
+    </tbody>
+  </table></div></div>
+  <div class="intro-box" style="margin-top:10px"><p>전체 신용평가 처리: 거래이력 조회 50ms + 다차원 분석 200ms + ML 예측 150ms + 결과 검증 100ms = <strong style="color:var(--text)">총 500ms 이내</strong> 보장 (도 2 FPGA 가속).</p></div>
+</div>
 
-// 입력창
-function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
-function updateSendBtn() {
-  const inp=document.getElementById('msg-input');
-  const btn=document.getElementById('send-btn'); if(!btn) return;
-  const has=inp?.value.trim()||attachFile;
-  btn.style.background=has?'#3ECF8E':''; btn.style.color=has?'#1A1F29':'';
-  btn.disabled=false;
-}
-function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
+<!-- ===== DIGITAL CURRENCY ===== -->
+<div class="page" id="section-digital_currency" style="display:none">
+  <div class="page-header"><h1>무위험 자산 담보 디지털 화폐</h1><p>도 11 §4.4 — 판매자 실물 자산 기반 완전 헤징 · 국경 없는 글로벌 결제</p></div>
+  <div class="intro-box">
+    <p>각 판매자의 재무제표를 분석하여 발행한 증권으로 <strong style="color:var(--text)">자산 풀(Asset Pool)을 구성</strong>하고, 이 풀을 담보로 위험이 완전히 헤징된 <strong style="color:var(--text)">무위험 자산 담보 디지털 화폐</strong>를 발행합니다. 토큰 발행 공식: <code style="background:var(--bg-300);padding:1px 6px;border-radius:3px;font-family:var(--mono);font-size:13px">발행_토큰 = (자산_풀_총가치 × 0.8) / 토큰_기준가격</code> — 20% 안전 마진 확보.</p>
+  </div>
 
-// AI 토글
-function toggleAI()  { aiActive?closeAI():activateAI(); }
-function closeAI()   { aiActive=false; document.getElementById('ai-btn')?.classList.remove('active'); }
-function activateAI(silent=false) {
-  aiActive=true; document.getElementById('ai-btn')?.classList.add('active');
-  if(!silent) appendBubble('ai','🤖 AI 비서 활성화. 무엇을 도와드릴까요?');
-}
+  <div class="sh"><h2>4층 자산 풀 구조</h2></div>
+  <div class="cg4">
+    <div class="mc"><div class="mc-bl">1차 풀 60%</div><div class="mc-t">우량 기업 주식 + 국채</div><div class="mc-d">최고 등급 담보. 유동성 최우선.</div></div>
+    <div class="mc"><div class="mc-bl">2차 풀 25%</div><div class="mc-t">중견기업 증권 + 회사채</div><div class="mc-d">중간 등급 분산 투자.</div></div>
+    <div class="mc"><div class="mc-bl">3차 풀 10%</div><div class="mc-t">성장기업 주식 + 전환사채</div><div class="mc-d">성장성 포함 수익 강화.</div></div>
+    <div class="mc"><div class="mc-bl">4차 풀 5%</div><div class="mc-t">특수목적 증권 + 파생상품</div><div class="mc-d">헤징 전용 특수 자산.</div></div>
+  </div>
 
-// 마이크
-function toggleMic() { micActive?_micStop():_micStart(); }
-function _micStop() {
-  micActive=false; document.getElementById('btn-mic')?.classList.remove('active');
-  if(recognition){recognition.stop();recognition=null;}
-}
-async function _micStart() {
-  micActive=true; document.getElementById('btn-mic')?.classList.add('active');
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){_micStop();return;}
-  recognition=new SR(); recognition.lang='ko-KR'; recognition.continuous=false; recognition.interimResults=false;
-  recognition.onresult=e=>{
-    const t=e.results[0][0].transcript;
-    const inp=document.getElementById('msg-input');
-    if(inp){inp.value=t;autoResize(inp);updateSendBtn();}
-    _micStop(); setTimeout(()=>{if(inp?.value.trim())sendMessage();},500);
-  };
-  recognition.onerror=()=>_micStop(); recognition.onend=()=>{if(micActive)_micStop();};
-  recognition.start();
-}
+  <div class="sh"><h2>4중 헤징 메커니즘</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>위험 유형</th><th>헤징 수단</th><th>안전망</th></tr></thead>
+    <tbody>
+      <tr><td>시장 위험</td><td style="font-size:13px">파생상품 활용 가격 변동 위험 차단</td><td><span class="b-green">완전 헤징</span></td></tr>
+      <tr><td>신용 위험</td><td style="font-size:13px">신용보증보험 + CDS(Credit Default Swap)</td><td><span class="b-green">완전 헤징</span></td></tr>
+      <tr><td>유동성 위험</td><td style="font-size:13px">중앙은행 유동성 공급 약정</td><td><span class="b-green">완전 헤징</span></td></tr>
+      <tr><td>환율 위험</td><td style="font-size:13px">다중 통화 바스켓 환율 변동 상쇄</td><td><span class="b-green">완전 헤징</span></td></tr>
+    </tbody>
+  </table></div></div>
+  <div class="intro-box" style="margin-top:10px">
+    <p>3중 안전망: <strong style="color:var(--text)">① 자산 담보 125% 이상 유지</strong> · <strong style="color:var(--text)">② 자율 보험 모듈 종합 보험</strong> · <strong style="color:var(--text)">③ 참여국 정부 연대 보증</strong>. 담보 비율 120% 미만 시 추가 자산 확보 또는 토큰 회수 자동 실행.</p>
+  </div>
+</div>
 
-// ── 파일 첨부 ─────────────────────────────────────────────────────
-function triggerAttach() { document.getElementById('file-input')?.click(); }
-function triggerCamera() { document.getElementById('camera-input')?.click(); }
+<!-- ===== MARKET CLASS ===== -->
+<div class="page" id="section-market_class" style="display:none">
+  <div class="page-header"><h1>글로벌 상품 분류 · 자동 재무제표</h1><p>도 10·11 — GPID 전세계 단일 시장 · 100개 언어 자동 번역 · 실시간 재무제표 자동 생성</p></div>
 
-function removeAttach() {
-  attachFile = null;
-  // HTML의 attach-preview 숨기기
-  const prev = document.getElementById('attach-preview');
-  if (prev) { prev.style.display='none'; }
-  // 동적으로 추가한 미리보기 제거
-  document.getElementById('attach-preview-dynamic')?.remove();
-  updateSendBtn();
-}
+  <div class="sh"><h2>GlobalProductID (GPID) 생성 알고리즘</h2></div>
+  <div class="intro-box">
+    <p><code style="background:var(--bg-300);padding:2px 8px;border-radius:3px;font-family:var(--mono);font-size:13px">GPID = SHA-256(상품명 + 규격 + 제조사 + 원산지 + 타임스탬프)</code></p>
+    <p>위변조 방지 + 전세계 어디서나 동일한 상품 식별. HS Code·UNSPSC·GPC·NAICS 자동 매핑.</p>
+  </div>
 
-function handleFileSelect(e) {
-  const file = e.target.files?.[0];
-  if (!file) return;
+  <div class="sh"><h2>국제 표준 연동 (도 10)</h2></div>
+  <div class="cg4">
+    <div class="mc"><div class="mc-bl">HS Code</div><div class="mc-t">국제 관세 분류</div><div class="mc-d">국제 무역 표준. 196개국 관세 자동 계산.</div></div>
+    <div class="mc"><div class="mc-bl">UNSPSC</div><div class="mc-t">UN 표준 상품 분류</div><div class="mc-d">공공 조달·B2B 거래 글로벌 표준.</div></div>
+    <div class="mc"><div class="mc-bl">GPC</div><div class="mc-t">글로벌 상품 분류</div><div class="mc-d">소매·유통 산업 국제 표준.</div></div>
+    <div class="mc"><div class="mc-bl">NAICS</div><div class="mc-t">북미 산업 분류</div><div class="mc-d">미국·캐나다·멕시코 산업 표준.</div></div>
+  </div>
 
-  attachFile = file;
-  console.info('[첨부] 선택:', file.name, file.type, file.size);
+  <div class="sh"><h2>다국어 통합 · 규격 변환</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>분야</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td>언어 지원</td><td style="font-size:13px;color:var(--text-3)">100개 언어 자동 번역 · Transformer 기반 다국어 모델 · 상품명 특화 도메인 학습 · 현지 표현 차이 자동 처리</td></tr>
+      <tr><td>단위 변환</td><td style="font-size:13px;color:var(--text-3)">미터법↔야드파운드 · 섭씨↔화씨 · 220V/60Hz↔110V/50Hz · EU↔US↔아시아 사이즈</td></tr>
+      <tr><td>품질 표준</td><td style="font-size:13px;color:var(--text-3)">CE 마크↔FCC 승인↔KC 인증 · ISO 표준과 각국 고유 표준 연동 · 안전 기준 자동 확인</td></tr>
+      <tr><td>문화 적응</td><td style="font-size:13px;color:var(--text-3)">지역별 상품명 관습 반영 · 금기어 및 민감어 자동 회피</td></tr>
+    </tbody>
+  </table></div></div>
 
-  // 기존 동적 미리보기 제거
-  document.getElementById('attach-preview-dynamic')?.remove();
+  <div class="sh" style="margin-top:20px"><h2>자동 재무제표 생성 공식 (도 11)</h2></div>
+  <div class="intro-box">
+    <p><strong style="color:var(--text)">실시간 재무제표</strong> = { 매출: Σ(판매거래), 매입: Σ(구매거래), 자산: 현금+재고+고정자산, 부채: 미지급금+대출, 자본: 자산−부채 }</p>
+    <p><strong style="color:var(--text)">신용도</strong> = f(매출_성장률, 현금흐름, 부채비율, 거래_신뢰도) — 소비자·판매자 구분 없이 동일 회계 기준 적용.</p>
+  </div>
+</div>
 
-  // 이미지인 경우 채팅창 위에 미리보기 표시
-  if (file.type.startsWith('image/')) {
-    const objUrl = URL.createObjectURL(file);
-    const div = document.createElement('div');
-    div.id = 'attach-preview-dynamic';
-    div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg-glass,#1C1C1E);border-top:1px solid var(--sep,#3A3A3C);';
+<!-- ===== SUPPLY CHAIN ===== -->
+<div class="page" id="section-supply_chain" style="display:none">
+  <div class="page-header"><h1>AI 공급망 최적화 · 수요 예측</h1><p>섹션 9·22 — 판매자 이력 전용 예측 · 재고 최적화 · 물류 비용 최소화 · AWS 95% 검증</p></div>
+  <div class="stats">
+    <div class="stat"><div class="stat-l">수요 예측 정확도</div><div class="stat-v">95%</div><div class="stat-s">AWS EC2 환경 Claude AI 검증</div></div>
+    <div class="stat"><div class="stat-l">재고 비용 절감</div><div class="stat-v">25~30%</div><div class="stat-s">ABC 분류 + 기계학습 결합</div></div>
+    <div class="stat"><div class="stat-l">결품률 감소</div><div class="stat-v">80%</div><div class="stat-s">안전재고 동적 산정</div></div>
+    <div class="stat"><div class="stat-l">물류비 절감</div><div class="stat-v">25~35%</div><div class="stat-s">VRP 유전 알고리즘 최적화</div></div>
+  </div>
 
-    const img = document.createElement('img');
-    img.src = objUrl;
-    img.style.cssText = 'width:44px;height:44px;object-fit:cover;border-radius:8px;flex-shrink:0;';
-    img.onload = () => URL.revokeObjectURL(objUrl);
+  <div class="sh"><h2>판매자 이력 전용 예측 알고리즘 (도 8)</h2></div>
+  <div class="intro-box">
+    <p><code style="background:var(--bg-300);padding:2px 8px;border-radius:3px;font-family:var(--mono);font-size:13px">예측_수요(t+n) = Σ(판매자_i 과거판매량) × 계절성_보정 × 시장_성장률 × 지역_보정</code></p>
+    <p>소비자 개별 데이터 완전 배제. 판매자 집합의 과거 패턴 + 익명화된 집계 데이터만 활용. MAPE &lt; 8% 달성.</p>
+  </div>
 
-    const info = document.createElement('span');
-    info.textContent = file.name;
-    info.style.cssText = 'font-size:13px;color:var(--label-2,#8E8E93);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  <div class="sh"><h2>공급업체 평가 기준 (AHP + 기계학습)</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>평가 항목</th><th>가중치</th><th>세부 기준</th></tr></thead>
+    <tbody>
+      <tr><td>품질</td><td class="td-m">40%</td><td style="font-size:13px;color:var(--text-3)">불량률, 고객 만족도, 인증 현황</td></tr>
+      <tr><td>가격 경쟁력</td><td class="td-m">30%</td><td style="font-size:13px;color:var(--text-3)">단가, 할인율, 지불 조건</td></tr>
+      <tr><td>납기 신뢰성</td><td class="td-m">20%</td><td style="font-size:13px;color:var(--text-3)">준수율, 변동성, 커뮤니케이션</td></tr>
+      <tr><td>물류 효율성</td><td class="td-m">10%</td><td style="font-size:13px;color:var(--text-3)">거리, 운송비, 포장 품질</td></tr>
+    </tbody>
+  </table></div></div>
 
-    const rm = document.createElement('button');
-    rm.textContent = '✕';
-    rm.style.cssText = 'background:none;border:none;color:var(--label-2,#8E8E93);cursor:pointer;font-size:18px;padding:4px 8px;line-height:1;flex-shrink:0;';
-    rm.addEventListener('click', removeAttach);
+  <div class="sh"><h2>실시예 — 제주도 파일럿 (실시예 1)</h2></div>
+  <div class="cg3">
+    <div class="mc"><div class="mc-bl">참여 규모</div><div class="mc-t">50개 노드 · 사용자 1,000명</div><div class="mc-d">상주민 700명 + 관광객 300명. 상품 1,200개 품목. Layer 1: 32, Layer 2: 17, Layer 3: 1개.</div></div>
+    <div class="mc"><div class="mc-bl">수요 예측</div><div class="mc-t">관광객 소비 패턴 차별화</div><div class="mc-d">개별 관광객 12만원/일 · 단체 8만원/일 · 장기 체류 6만원/일. 성수기 15만명, 비수기 5만명 반영.</div></div>
+    <div class="mc"><div class="mc-bl">성공 기준</div><div class="mc-t">6개월 무중단 · 결품 3% 이하</div><div class="mc-d">수요 예측 정확도 92.3% · 제주시 2개소·서귀포시 1개소 창고 최적 배치 → 물류비 28% 절감.</div></div>
+  </div>
+</div>
 
-    div.appendChild(img); div.appendChild(info); div.appendChild(rm);
+<!-- ===== GOVERNANCE ===== -->
+<div class="page" id="section-governance" style="display:none">
+  <div class="page-header"><h1>자율 의사결정 거버넌스 · 글로벌 확장</h1><p>도 12·7 — 완전 무인 시장 운영 · 국제 확장 연방 구조 · 해시 전용 전송 99.1% 절약</p></div>
+  <div class="cg3">
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="mc-bl">예외 상황 자동 처리부 (121)</div><div class="mc-t">완전 무인 운영</div><div class="mc-d">분쟁 해결 · 규제 변경 대응 · 이상 거래 차단 자동화. AI 중재 시스템(122)으로 공정성·일관성 보장.</div></div>
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg></div><div class="mc-bl">느슨한 연방 구조 (도 7)</div><div class="mc-t">개방적 국제 진입</div><div class="mc-d">기존 Layer 1-4 해시체인을 복제하는 것만으로 신규 국가 진입 가능. G7 신뢰계수 0.95 · OECD 0.90 · UN 0.85.</div></div>
+    <div class="mc"><div class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9l20-7z"/></svg></div><div class="mc-bl">해시 전용 전송 (도 12)</div><div class="mc-t">137바이트 고정 패킷</div><div class="mc-d">기존 15KB → 137바이트. 대역폭 99.1% 절약. 거래해시(32) + 타임스탬프(8) + 메타해시(32) + ECDSA서명(64) + 제어(1).</div></div>
+  </div>
 
-    // input-dock 바로 위에 삽입
-    const dock = document.querySelector('.input-dock');
-    if (dock) dock.parentNode.insertBefore(div, dock);
-    else document.body.appendChild(div);
+  <div class="sh"><h2>산업별 특화 적용 (섹션 17)</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>산업</th><th>핵심 기능</th><th>효과</th></tr></thead>
+    <tbody>
+      <tr><td>전자상거래</td><td style="font-size:13px">실시간 가격 최적화 · AI 소비자 보호 85~91% 정확도</td><td class="td-m"><span class="b-green">매출→소비자보호 전환</span></td></tr>
+      <tr><td>핀테크</td><td style="font-size:13px">7.3M TPS · 크로스보더 결제 수수료 90% 절감</td><td class="td-m"><span class="b-green">글로벌 경쟁력</span></td></tr>
+      <tr><td>전통 금융</td><td style="font-size:13px">29~146배 처리 성능 · 88.6% 전력 절감</td><td class="td-m"><span class="b-green">운영비 대폭 절감</span></td></tr>
+      <tr><td>국제 무역</td><td style="font-size:13px">SWIFT 보완 · 스마트 계약 신용장 자동화 · AML 자동</td><td class="td-m"><span class="b-green">글로벌 컴플라이언스</span></td></tr>
+      <tr><td>제조·농업</td><td style="font-size:13px">AI 수요 예측 · 기상 데이터 연동 최적 수확 시기</td><td class="td-m"><span class="b-green">재고 30% 절감</span></td></tr>
+      <tr><td>IoT 순환경제</td><td style="font-size:13px">RFID·블루투스 사용빈도 추적 · 30일 미사용 자동 재판매</td><td class="td-m"><span class="b-green">73% 효율성 향상</span></td></tr>
+    </tbody>
+  </table></div></div>
+</div>
 
-  } else {
-    // 일반 파일
-    const div = document.createElement('div');
-    div.id = 'attach-preview-dynamic';
-    div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg-glass,#1C1C1E);border-top:1px solid var(--sep,#3A3A3C);';
+<!-- ===== SECURITY ===== -->
+<div class="page" id="section-security" style="display:none">
+  <div class="page-header"><h1>양자내성 보안 전환 시스템</h1><p>도 15 — CRYSTALS-Dilithium 하이브리드 · QKD 네트워크 통합 · 24시간 롤백</p></div>
+  <div class="sh"><h2>3단계 점진적 전환 계획</h2></div>
+  <div class="pipev">
+    <div class="psv"><div class="psv-n done">Phase 1</div><div style="flex:1"><div class="psv-t">2027~2029 — 하이브리드 이중 서명</div><div class="psv-s">신규 거래: ECDSA(64바이트) + CRYSTALS-Dilithium(최적화 후 1,200바이트) 이중 서명 필수. 기존 거래: ECDSA 유지 + Dilithium 추가 생성.</div></div><span class="badge b-yellow">진행 예정</span></div>
+    <div class="psv"><div class="psv-n">Phase 2</div><div style="flex:1"><div class="psv-t">2029~2030 — 선택적 전환</div><div class="psv-s">고액 거래: Dilithium 전용. 일반 거래: 하이브리드 유지. 마이크로페이먼트: ECDSA 임시 허용.</div></div><span class="badge b-gray">예정</span></div>
+    <div class="psv"><div class="psv-n">Phase 3</div><div style="flex:1"><div class="psv-t">2030~2032 — 완전 전환</div><div class="psv-s">모든 신규 거래: Dilithium 전용. 기존 거래: 순차적 재서명. ECDSA: 읽기 전용 제한.</div></div><span class="badge b-gray">예정</span></div>
+  </div>
 
-    const icon = document.createElement('span'); icon.textContent = '📎'; icon.style.fontSize='20px';
-    const info = document.createElement('span');
-    info.textContent = file.name;
-    info.style.cssText = 'font-size:13px;color:var(--label-2,#8E8E93);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-    const rm = document.createElement('button');
-    rm.textContent = '✕';
-    rm.style.cssText = 'background:none;border:none;color:var(--label-2,#8E8E93);cursor:pointer;font-size:18px;padding:4px 8px;line-height:1;flex-shrink:0;';
-    rm.addEventListener('click', removeAttach);
+  <div class="sh"><h2>QKD 네트워크 통합 파트너십</h2></div>
+  <div class="cg3">
+    <div class="mc"><div class="mc-t">SK텔레콤 양자암호통신</div><div class="mc-d">국내 최대 QKD 인프라와 직접 연결. 국가 보안 네트워크 활용.</div></div>
+    <div class="mc"><div class="mc-t">KT 양자인터넷 테스트베드</div><div class="mc-d">차세대 양자인터넷 표준 공동 연구 및 실증 참여.</div></div>
+    <div class="mc"><div class="mc-t">삼성SDS 양자보안 솔루션</div><div class="mc-d">엔터프라이즈 양자보안 솔루션 파트너십. 기업용 확장.</div></div>
+  </div>
 
-    div.appendChild(icon); div.appendChild(info); div.appendChild(rm);
-    const dock = document.querySelector('.input-dock');
-    if (dock) dock.parentNode.insertBefore(div, dock);
-    else document.body.appendChild(div);
-  }
+  <div class="sh"><h2>24시간 롤백 시나리오</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>트리거</th><th>감지</th><th>롤백 완료</th></tr></thead>
+    <tbody>
+      <tr><td>처리량 30% 이상 감소</td><td class="td-m">자동 감지 10분</td><td class="td-m">2시간</td></tr>
+      <tr><td>호환성 문제 발생</td><td class="td-m">즉시 감지</td><td class="td-m">30분</td></tr>
+      <tr><td>보안 취약점 발견</td><td class="td-m">긴급 중단 즉시</td><td class="td-m">24시간</td></tr>
+    </tbody>
+  </table></div></div>
+</div>
 
-  // 파일 input 초기화 (같은 파일 재선택 가능)
-  e.target.value = '';
-  updateSendBtn();
-}
+<!-- ===== PERFORMANCE ===== -->
+<div class="page" id="section-performance" style="display:none">
+  <div class="page-header"><h1>성능 검증 결과</h1><p>AWS EC2 c7i-flex.large 환경 실증 · Claude AI API 통합 검증 · TRL 7~8 수준</p></div>
 
-// Progress sheet
-function _onLogoTap() {
-  const s=document.getElementById('progress-sheet'); if(s?.classList.contains('active')) _closeProgressSheet();
-}
-function _closeProgressSheet(e) {
-  if(e&&e.target!==e.currentTarget) return;
-  const s=document.getElementById('progress-sheet');
-  if(s){s.classList.remove('active');setTimeout(()=>{s.style.display='none';},300);}
-}
+  <div class="sh"><h2>검증 환경 (2025년 9월 27일)</h2></div>
+  <div class="intro-box">
+    <p><strong style="color:var(--text)">인스턴스:</strong> AWS EC2 c7i-flex.large · Intel 4세대 Xeon Scalable (Ice Lake) · 2 vCPU · 3.73GB RAM · Ubuntu 24.04.3 LTS · Python 3.12.3 · NumPy 2.3.3 · SciPy 1.16.2 · Pandas 2.3.2 · Anthropic 0.68.0</p>
+  </div>
 
-// ── 메시지 전송 ───────────────────────────────────────────────────
-async function sendMessage() {
-  const inp  = document.getElementById('msg-input');
-  const text = inp?.value.trim() || '';
-  if (!text && !attachFile) return;
-  if (!locationReady && !locationPending) initLocation();
-  // PDV 채팅 명령 체크
-  if (text && await _handlePDVCommand(text)) {
-    attachFile = null; updateSendBtn();
-    document.getElementById('msg-input').value = '';
-    return;
-  }
-  const capturedFile = attachFile;
+  <div class="sh"><h2>정량적 성능 지표</h2></div>
+  <div class="stats">
+    <div class="stat"><div class="stat-l">TPS 성능</div><div class="stat-v">7,328,743</div><div class="stat-s">실측 · 알리페이 29배 · 토스 146배</div></div>
+    <div class="stat"><div class="stat-l">전력 절감</div><div class="stat-v">88.6%</div><div class="stat-s">18.2W vs GPU 160.3W</div></div>
+    <div class="stat"><div class="stat-l">신용평가 응답</div><div class="stat-v">0.115ms</div><div class="stat-s">FPGA 가속 실측</div></div>
+    <div class="stat"><div class="stat-l">대역폭 절약</div><div class="stat-v">99.1%</div><div class="stat-s">137바이트 패킷 vs 15KB</div></div>
+  </div>
 
-  // 사용자 버블
-  if (capturedFile?.type.startsWith('image/')) {
-    const objUrl=URL.createObjectURL(capturedFile), imgId='img-'+Date.now();
-    appendBubble('user',
-      `${text?text+'<br>':''}<img id="${imgId}" src="${objUrl}" style="max-width:220px;max-height:180px;border-radius:10px;display:block">`,
-      true);
-    setTimeout(()=>{
-      const el=document.getElementById(imgId);
-      if(el) el.addEventListener('load',()=>URL.revokeObjectURL(objUrl),{once:true});
-    },0);
-  } else {
-    if(text) appendBubble('user',text);
-    if(capturedFile) appendBubble('user','📎 '+capturedFile.name);
-  }
+  <div class="sh"><h2>AI 기능별 검증 결과</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>AI 기능</th><th>목표</th><th>달성</th><th>달성율</th></tr></thead>
+    <tbody>
+      <tr><td>충동구매 방지</td><td class="td-m">84% 이상</td><td class="td-m"><span class="b-green">100%</span></td><td class="td-m" style="color:var(--text-brand)">119%</td></tr>
+      <tr><td>사기 탐지</td><td class="td-m">91.2% 이상</td><td class="td-m"><span class="b-green">100%</span></td><td class="td-m" style="color:var(--text-brand)">110%</td></tr>
+      <tr><td>공정가격 분석</td><td class="td-m">85% 이상</td><td class="td-m"><span class="b-green">95%</span></td><td class="td-m" style="color:var(--text-brand)">112%</td></tr>
+      <tr><td>신용평가</td><td class="td-m">85% 이상</td><td class="td-m"><span class="b-green">95%</span></td><td class="td-m" style="color:var(--text-brand)">112%</td></tr>
+      <tr><td>공급망 최적화</td><td class="td-m">75% 이상</td><td class="td-m"><span class="b-green">95%</span></td><td class="td-m" style="color:var(--text-brand)">127%</td></tr>
+      <tr><td>재해 복구율</td><td class="td-m">98%</td><td class="td-m"><span class="b-green">98.0%</span></td><td class="td-m" style="color:var(--text-brand)">100%</td></tr>
+    </tbody>
+  </table></div></div>
 
-  if(inp) { inp.value=''; inp.style.height='auto'; }
-  removeAttach();
-  updateSendBtn();
+  <div class="sh"><h2>실시예 2 — 전국 대규모 배포 목표</h2></div>
+  <div class="cg4">
+    <div class="mc"><div class="mc-bl">규모</div><div class="mc-t">노드 3,794개</div><div class="mc-d">L1: 3,551 / L2: 226 / L3: 17 / L4: 1. 사용자 500만명 전국 완전 커버.</div></div>
+    <div class="mc"><div class="mc-bl">성능 목표</div><div class="mc-t">7.3M TPS · 99.9% 가용성</div><div class="mc-d">FPGA 동적 리소스 할당으로 전국 확장성 검증.</div></div>
+    <div class="mc"><div class="mc-bl">복구 보장</div><div class="mc-t">98% 재해 복구</div><div class="mc-d">글로벌 백업 센터 네트워크 (시카고·프랑크푸르트·도쿄·서울).</div></div>
+    <div class="mc"><div class="mc-bl">경제 효과</div><div class="mc-t">연간 1~2조원 초기 시장</div><div class="mc-d">K-핀테크 글로벌 경쟁력 강화 · TRL 7~8 실증 완료.</div></div>
+  </div>
+</div>
 
-  if(gwpActive){ gwpForwardInput(text,capturedFile); return; }
+<!-- ===== PAPER ===== -->
+<div class="page" id="section-paper" style="display:none">
+  <div class="page-header"><h1>특허 청구항 · 연구 논문</h1><p>22개 청구항 (독립항 2개·종속항 20개) · KL-S-01 · KL-M-02</p></div>
 
-  // GWP 매칭
-  if(text) {
-    const svc=gwpMatch(text);
-    if(svc) {
-      if(capturedFile?.type.startsWith('image/')) {
-        appendBubble('ai','📸 사진 업로드 중…');
-        const photoUrl=await uploadPhoto(capturedFile,_user?.guid||'anon');
-        gwpLaunch(svc,text,{photoUrl,desc:text});
-      } else {
-        gwpLaunch(svc,text);
-      }
-      return;
-    }
-  }
-
-  if(!aiActive){aiActive=true;document.getElementById('ai-btn')?.classList.add('active');}
-  await callAI(text,capturedFile);
-}
-
-// ── init() ───────────────────────────────────────────────────────
-async function init() {
-  _user = await initUser();
-  const USER_GUID = _user.guid;
-
-  CFG.system = `# 고팡 AI 비서 SP-00 v9.0\n# GUID: ${USER_GUID}\n\n## 정체성\n진짜 의도 파악 → 4단계 폭포수 처리.\n\n## 의도 파악\n[THINK] 진짜 원하는 것? 1~4단계? [/THINK]\n\n## 12대 영역\nECO MED EDU TRN MKT GOV JUS IND ENV CUL SOC IOT\n\n## 4단계 폭포수\n1단계 자체해결 → 2단계 전문가 변신 → 3단계 외부AI → 4단계 웹검색\n\n## 응답 형식\n1단계: 간결하게. 2단계↑: [{코드}] {영역명}.\n위치: 시스템 주입 [현재 위치]만 사용.`;
-  CFG.system_base = CFG.system;
-
-  initPDV({ getUser:()=>_user, getLocation:()=>userLocation, onAfterRecord:rec=>klawReview('service',rec) });
-  initKlaw({ getCFG:()=>CFG, appendBubble, recordPDV });
-  initGWP({ getUser:()=>_user, appendBubble, recordPDV });
-  initAI({
-    getCFG: ()=>({...CFG,_locationPending:locationPending,_locationReady:locationReady}),
-    getLocation: ()=>userLocation,
-    appendBubble, createStreamBubble:_createStreamBubble, updateStreamBubble:_updateStreamBubble,
-    showTyping, hideTyping, showGeminiProgress:_showGeminiProgress, hideGeminiProgress:_hideGeminiProgress,
-    progressStart:_progressStart, progressNext:_progressNext, topLogoSetProgress:_topLogoSetProgress,
-    onAIComplete:({type,geminiResult,imageFile,userText,aiText})=>{
-      if(type==='gemini'&&geminiResult) sendReportToFiil(geminiResult,imageFile,userText);
-      if(type==='chat') klawReview('chat',{userText,aiText});
-    },
-  });
-  initReporter({getLocation:()=>userLocation});
-  listenGWPDone();
-  _initPCDashboard();
-
-  // 위치 (중복 업데이트 방지)
-  onLocationUpdate(()=>{
-    const note=buildLocNote();
-    if(note===_lastLocNote) return;
-    _lastLocNote=note;
-    if(CFG.system_base) CFG.system=CFG.system_base+`\n\n[현재 위치] ${note}`;
-    const locEl=document.getElementById('welcome-loc'); if(locEl) locEl.textContent=note;
-  });
-  scheduleLocation(_isStandalone(),_installBannerVisible);
-
-  // 이벤트 등록 (type=module 타이밍 문제 해결)
-  const camInput  = document.getElementById('camera-input');
-  const fileInput = document.getElementById('file-input');
-  const sendBtn   = document.getElementById('send-btn');
-  const msgInput  = document.getElementById('msg-input');
-
-  if(camInput)  camInput.addEventListener('change',  handleFileSelect);
-  if(fileInput) fileInput.addEventListener('change', handleFileSelect);
-  if(sendBtn)   sendBtn.addEventListener('click',    sendMessage);
-  if(msgInput) {
-    msgInput.addEventListener('keydown', handleKey);
-    msgInput.addEventListener('input',   ()=>{ autoResize(msgInput); updateSendBtn(); });
-  }
-
-  // 버튼 onclick 교체
-  document.querySelectorAll('.ia-btn').forEach(btn=>{
-    const oc=btn.getAttribute('onclick')||'';
-    if(oc.includes('triggerCamera')){btn.removeAttribute('onclick');btn.addEventListener('click',triggerCamera);}
-    else if(oc.includes('triggerAttach')){btn.removeAttribute('onclick');btn.addEventListener('click',triggerAttach);}
-    else if(oc.includes('toggleMic')){btn.removeAttribute('onclick');btn.addEventListener('click',toggleMic);}
-  });
-  document.getElementById('ai-btn')?.addEventListener('click',toggleAI);
-
-  // 설정 + 환영 메시지
-  loadSettings();
-  const wList=document.getElementById('message-list');
-  if(wList){
-    const wRow=document.createElement('div'); wRow.className='msg-row ai';
-    wRow.innerHTML=`<div class="bubble bubble-ai">귀하의 AI 비서입니다. 지시나 질의 바랍니다.</div>`;
-    wList.appendChild(wRow);
-  }
-
-  // 세션 저장
-  const saveFn=()=>saveSessionOnce(history,classifyDomain);
-  window.addEventListener('beforeunload',saveFn);
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveFn();});
-
-  updateSendBtn();
-  console.info('[고팡] v4.0 초기화 완료 — GUID:', USER_GUID.slice(0,8)+'…');
-}
-
-
-// ══════════════════════════════════════════════════════════════════
-// PDV 열람 + PC/모바일 레이아웃 분기
-// ══════════════════════════════════════════════════════════════════
-
-// ── PC 감지 ──────────────────────────────────────────────────────
-const _isPC = () => window.innerWidth >= 900 && !navigator.maxTouchPoints;
-
-// ── PDV Supabase 조회 ────────────────────────────────────────────
-async function loadPDV() {
-  const user = _user;
-  if (!user?.guid) {
-    document.getElementById('pdv-list').innerHTML =
-      '<div style="text-align:center;color:var(--label-2);font-size:13px;padding:20px;">로그인 후 이용 가능합니다.</div>';
-    return;
-  }
-  const el = document.getElementById('pdv-list');
-  el.innerHTML = '<div style="text-align:center;color:var(--label-2);font-size:13px;padding:20px;">불러오는 중…</div>';
-
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/pdv_log?user_guid=eq.${user.guid}&order=created_at.desc&limit=20`,
-      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
-    );
-    const rows = await res.json();
-    if (!rows.length) {
-      el.innerHTML = '<div style="text-align:center;color:var(--label-2);font-size:13px;padding:20px;">기록이 없습니다.</div>';
-      return;
-    }
-    el.innerHTML = rows.map(r => _pdvCard(r)).join('');
-  } catch(e) {
-    el.innerHTML = `<div style="text-align:center;color:#FF453A;font-size:13px;padding:20px;">오류: ${e.message}</div>`;
-  }
-}
-
-function _pdvCard(r) {
-  const date = r.created_at
-    ? new Date(r.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul',
-        month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
-    : '';
-  const icon = r.service_id?.includes('fiil') ? '🌊'
-    : r.service_id?.includes('klaw') ? '⚖️'
-    : r.record_type === 'session' ? '💬' : '📋';
-  const reportLink = r.report_id
-    ? `<a href="https://fiil.kr/dashboard.html#${r.report_id}" target="_blank"
-         style="font-size:11px;color:var(--tint);text-decoration:none;">
-         신고서 보기 →</a>`
-    : '';
-  return `
-    <div style="background:var(--bg-glass,#1C1C1E);border:1px solid var(--sep,#3A3A3C);
-                border-radius:12px;padding:12px;margin-bottom:8px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
-        <span style="font-size:13px;font-weight:600;color:var(--label);">${icon} ${r.summary || r.record_type}</span>
-        <span style="font-size:11px;color:var(--label-2);">${date}</span>
+  <div class="paper">
+    <div class="paper-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+    <div class="paper-body">
+      <h3>FPGA 가속 자율 시장 통합 플랫폼 (FPGA-Accelerated Autonomous Market Integration Platform)</h3>
+      <p>K-OpenLaw 연구그룹, AI City Inc. · 2026 · 22개 청구항</p>
+      <div class="paper-tags">
+        <span class="badge b-gray">독립항 2개</span><span class="badge b-gray">종속항 20개</span><span class="badge b-green">TRL 7~8</span>
+        <span class="badge b-yellow">특허 출원 준비</span><span class="badge b-gray">AWS 환경 실증</span>
       </div>
-      <div style="font-size:12px;color:var(--label-2);line-height:1.6;">
-        ${r.location ? `📍 ${r.location}<br>` : ''}
-        ${r.how     ? `🔧 ${r.how}<br>` : ''}
-        ${r.why     ? `💡 ${r.why}` : ''}
+      <div class="paper-actions">
+        <a href="https://gopang.net" target="_blank" class="btn btn-brand">고팡 웹앱 열기</a>
+        <a href="https://klaw.openhash.kr" target="_blank" class="btn btn-default">K-Law</a>
       </div>
-      ${reportLink ? `<div style="margin-top:8px;">${reportLink}</div>` : ''}
-    </div>`;
-}
-
-// ── 채팅 PDV 명령 처리 ───────────────────────────────────────────
-async function _handlePDVCommand(text) {
-  const triggers = ['내 pdv', 'pdv 보여', '내 기록', '활동 내역', '데이터 금고', 'my pdv'];
-  if (!triggers.some(t => text.toLowerCase().includes(t))) return false;
-
-  const user = _user;
-  if (!user?.guid) {
-    appendBubble('ai', '🔐 PDV 조회는 로그인 후 이용 가능합니다.');
-    return true;
-  }
-  appendBubble('ai', '🔐 PDV 기록을 불러오는 중…', true);
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/pdv_log?user_guid=eq.${user.guid}&order=created_at.desc&limit=10`,
-      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
-    );
-    const rows = await res.json();
-    if (!rows.length) {
-      appendBubble('ai', '🔐 아직 PDV 기록이 없습니다.', true);
-      return true;
-    }
-    const html = rows.map(r => {
-      const date = r.created_at
-        ? new Date(r.created_at).toLocaleString('ko-KR', { timeZone:'Asia/Seoul',
-            month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
-        : '';
-      const icon = r.service_id?.includes('fiil') ? '🌊'
-        : r.service_id?.includes('klaw') ? '⚖️'
-        : r.record_type === 'session' ? '💬' : '📋';
-      const link = r.report_id
-        ? ` · <a href="https://fiil.kr/dashboard.html#${r.report_id}" target="_blank"
-               style="color:var(--tint);">신고서 →</a>` : '';
-      return `<div style="margin-bottom:8px;padding:8px;background:rgba(255,255,255,0.05);
-                          border-radius:8px;font-size:13px;line-height:1.6;">
-        <b>${icon} ${r.summary || r.record_type}</b>
-        <span style="float:right;color:var(--label-2);font-size:11px;">${date}${link}</span>
-        ${r.location ? `<br>📍 ${r.location}` : ''}
-      </div>`;
-    }).join('');
-    appendBubble('ai',
-      `<b>🔐 최근 PDV 기록 (${rows.length}건)</b><br><br>${html}`, true);
-  } catch(e) {
-    appendBubble('ai', `PDV 조회 오류: ${e.message}`, true);
-  }
-  return true;
-}
-
-// ── PC 대시보드 초기화 ───────────────────────────────────────────
-function _initPCDashboard() {
-  if (!_isPC()) return;
-
-  // body에 pc-mode 클래스 추가
-  document.body.classList.add('pc-mode');
-
-  // PC 전용 스타일 동적 추가
-  const style = document.createElement('style');
-  style.textContent = `
-    body.pc-mode #app {
-      display: grid;
-      grid-template-columns: 320px 1fr;
-      grid-template-rows: 100vh;
-      max-width: 100%;
-    }
-    body.pc-mode #chat-col {
-      border-right: 1px solid var(--sep, #3A3A3C);
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
-    }
-    body.pc-mode #pdv-col {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
-      background: var(--bg, #000);
-    }
-    body:not(.pc-mode) #pdv-col { display: none; }
-  `;
-  document.head.appendChild(style);
-
-  // 앱 구조 재배치
-  const app = document.getElementById('app');
-  if (!app) return;
-
-  // 기존 앱 내용을 chat-col로 감싸기
-  const chatCol = document.createElement('div');
-  chatCol.id = 'chat-col';
-  while (app.firstChild) chatCol.appendChild(app.firstChild);
-  app.appendChild(chatCol);
-
-  // PDV 패널 생성
-  const pdvCol = document.createElement('div');
-  pdvCol.id = 'pdv-col';
-  pdvCol.innerHTML = `
-    <div style="padding:20px 24px;border-bottom:1px solid var(--sep,#3A3A3C);
-                display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-size:18px;font-weight:700;color:var(--label);">🔐 PDV 데이터 금고</div>
-      <button onclick="loadPDVPanel()" style="
-        background:var(--tint,#3ECF8E);color:#000;border:none;
-        border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;">
-        새로고침
-      </button>
     </div>
-    <div style="padding:12px 16px;border-bottom:1px solid var(--sep,#3A3A3C);
-                display:flex;gap:8px;">
-      <button onclick="exportPDV('json')" style="
-        flex:1;background:transparent;border:1px solid var(--tint,#3ECF8E);
-        border-radius:8px;padding:8px;color:var(--tint,#3ECF8E);
-        font-size:12px;font-weight:600;cursor:pointer;">
-        📥 내 기록 저장하기
-      </button>
-      <button onclick="exportPDV('csv')" style="
-        flex:1;background:transparent;border:1px solid var(--sep,#3A3A3C);
-        border-radius:8px;padding:8px;color:var(--label-2);
-        font-size:12px;font-weight:600;cursor:pointer;">
-        📊 Excel로 열기
-      </button>
+  </div>
+
+  <div class="sh"><h2>독립항 주요 내용</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>청구항</th><th>핵심 내용</th><th>도면</th></tr></thead>
+    <tbody>
+      <tr><td><span class="mbadge">청구항 1</span></td><td style="font-size:13px">FPGA 기반 판매자 이력 전용 자율 시장 통합 플랫폼: FPGA 하드웨어 가속 + 7계층 분산 신뢰 + 판매자 이력 전용 AI + 수익 비례 분담 + GPID + 자동 재무제표 + 자율 거버넌스 7요소 통합</td><td><span class="mbadge">도 1~12</span></td></tr>
+      <tr><td><span class="mbadge">청구항 2</span></td><td style="font-size:13px">다계층 글로벌 시장 통합: Layer 5~7 국제 확장 연방 구조 + 국가간 신뢰도(G7 0.95, OECD 0.90) + 느슨한 연방 진입 + 메트칼프 법칙 가치 분배</td><td><span class="mbadge">도 7</span></td></tr>
+    </tbody>
+  </table></div></div>
+
+  <div class="sh"><h2>종속항 핵심 기술</h2></div>
+  <div class="tw"><div class="ts"><table>
+    <thead><tr><th>청구항</th><th>기술</th></tr></thead>
+    <tbody>
+      <tr><td><span class="mbadge">3</span></td><td style="font-size:13px;color:var(--text-2)">소비자 데이터 완전 차단 메커니즘 · 익명화 집계 분석부 (도 8)</td></tr>
+      <tr><td><span class="mbadge">4</span></td><td style="font-size:13px;color:var(--text-2)">수익 비례 공정성 조정 계수 · 해시체인 비용 배분 투명 공개 (도 9)</td></tr>
+      <tr><td><span class="mbadge">6~7</span></td><td style="font-size:13px;color:var(--text-2)">FPGA 899K 논리셀 · 254클록 해시 · 5차원 신뢰도 · 10ms 동적 재할당 (도 2)</td></tr>
+      <tr><td><span class="mbadge">8</span></td><td style="font-size:13px;color:var(--text-2)">Layer 70%/20%/8%/2% 분산 처리 · χ² 강제 배분 메커니즘 (도 3~4)</td></tr>
+      <tr><td><span class="mbadge">11~12</span></td><td style="font-size:13px;color:var(--text-2)">CNN 97.3% + ViT 99.5% 사기 탐지 · 연합학습 프레임워크 (도 5)</td></tr>
+      <tr><td><span class="mbadge">13</span></td><td style="font-size:13px;color:var(--text-2)">CRYSTALS-Dilithium 하이브리드 · 3단계 점진적 전환 · 24시간 롤백 (도 15)</td></tr>
+      <tr><td><span class="mbadge">14~15</span></td><td style="font-size:13px;color:var(--text-2)">4차원 신용평가 · 자산풀 토큰 발행 · 4중 헤징 · 500ms 실시간 평가 (도 11)</td></tr>
+      <tr><td><span class="mbadge">17</span></td><td style="font-size:13px;color:var(--text-2)">거래 4등급 자동 분류 · 2중~5중 차등 검증 (도 16)</td></tr>
+      <tr><td><span class="mbadge">18</span></td><td style="font-size:13px;color:var(--text-2)">5단계 재해 복구 · 3초~1주일 · 98% 성공률 (도 17)</td></tr>
+      <tr><td><span class="mbadge">19</span></td><td style="font-size:13px;color:var(--text-2)">동적 가격 조정 시간당 10%/일 30%/주 50% 제한 · 참여자 가치 분배 (도 18)</td></tr>
+      <tr><td><span class="mbadge">22</span></td><td style="font-size:13px;color:var(--text-2)">자산풀 80% 토큰 발행 · 20% 안전마진 · 담보비율 120% 미만 시 자동 회수 (도 11)</td></tr>
+    </tbody>
+  </table></div></div>
+
+  <div class="sh" style="margin-top:20px"><h2>관련 연구 논문</h2></div>
+  <div class="paper" style="margin-bottom:8px">
+    <div class="paper-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+    <div class="paper-body">
+      <h3>KL-S-01 — 고팡(Gopang): AI 비서·PDV·OpenHash 기반 실시간 예방 법학 시스템 설계·구현·정량 검증</h3>
+      <p>K-OpenLaw 연구그룹, AI City Inc. · 2026년 3월 (v2.1) · 예방 가능 비율 98.6% 정량 추정</p>
+      <div class="paper-tags"><span class="badge b-green">KL-S-01</span><span class="badge b-gray">v2.1</span><span class="badge b-yellow">IEEE 검토 준비</span></div>
     </div>
-    <div id="pdv-panel-body" style="flex:1;overflow-y:auto;padding:16px;">
-      <div style="text-align:center;color:var(--label-2);font-size:13px;padding:40px 0;">
-        새로고침을 눌러 PDV 기록을 불러오세요.
-      </div>
-    </div>`;
-  app.appendChild(pdvCol);
+  </div>
+  <div class="paper">
+    <div class="paper-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+    <div class="paper-body">
+      <h3>KL-M-02 — 고팡 소통 위법성 자동 감지 및 예방 방법론 v1.0 (Phase 0~6)</h3>
+      <p>K-OpenLaw 연구그룹 · 제정일 2026년 3월 22일 · 단문 0.8mS 판정 · S0~S3 위험 등급</p>
+      <div class="paper-tags"><span class="badge b-green">KL-M-02</span><span class="badge b-gray">v1.0</span></div>
+    </div>
+  </div>
+</div>
 
-  // PC에서는 설정 패널 열릴 때 PDV도 자동 로드
-  setTimeout(() => loadPDVPanel(), 1500);
-}
+</div><!-- /main -->
+</div><!-- /shell -->
 
-async function loadPDVPanel() {
-  const el = document.getElementById('pdv-panel-body');
-  if (!el) return;
-  const user = _user;
-  if (!user?.guid) {
-    el.innerHTML = '<div style="text-align:center;color:var(--label-2);padding:40px;">로그인 후 이용 가능합니다.</div>';
-    return;
-  }
-  el.innerHTML = '<div style="text-align:center;color:var(--label-2);padding:40px;">불러오는 중…</div>';
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/pdv_log?user_guid=eq.${user.guid}&order=created_at.desc&limit=50`,
-      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
-    );
-    const rows = await res.json();
-    if (!rows.length) {
-      el.innerHTML = '<div style="text-align:center;color:var(--label-2);padding:40px;">기록이 없습니다.</div>';
-      return;
-    }
-    el.innerHTML = rows.map(r => _pdvCardPC(r)).join('');
-  } catch(e) {
-    el.innerHTML = `<div style="color:#FF453A;padding:20px;">오류: ${e.message}</div>`;
-  }
-}
+<!-- FOOTER -->
+<footer class="page-footer">
+  <div class="footer-brand">
+    <svg viewBox="0 0 20 20" fill="none" style="width:16px;height:16px"><rect width="20" height="20" rx="4" fill="#3ecf8e"/><text x="4" y="14" font-family="sans-serif" font-size="10" font-weight="700" fill="#fff">G</text></svg>
+    gopang.net
+  </div>
+  <div class="footer-links">
+    <a href="#" onclick="SS('overview');return false">개요</a>
+    <a href="#" onclick="SS('core5');return false">5대 혁신</a>
+    <a href="#" onclick="SS('fpga');return false">FPGA</a>
+    <a href="#" onclick="SS('finance');return false">금융</a>
+    <a href="#" onclick="SS('supply_chain');return false">공급망</a>
+    <a href="#" onclick="SS('performance');return false">검증</a>
+    <a href="#" onclick="SS('paper');return false">특허</a>
+    <a href="https://klaw.openhash.kr" target="_blank">K-Law</a>
+    <a href="https://github.com/Openhash-Gopang" target="_blank">GitHub</a>
+  </div>
+  <span>© 2026 AI City Inc.</span>
+</footer>
 
-function _pdvCardPC(r) {
-  const date = r.created_at
-    ? new Date(r.created_at).toLocaleString('ko-KR', { timeZone:'Asia/Seoul' })
-    : '';
-  const icon = r.service_id?.includes('fiil') ? '🌊'
-    : r.service_id?.includes('klaw') ? '⚖️'
-    : r.record_type === 'session' ? '💬' : '📋';
-  const reportLink = r.report_id
-    ? `<a href="https://fiil.kr/dashboard.html#${r.report_id}" target="_blank"
-         style="display:inline-block;margin-top:8px;font-size:12px;color:var(--tint);
-                text-decoration:none;border:1px solid var(--tint);
-                border-radius:6px;padding:2px 10px;">
-         🔗 신고서 ${r.report_id}</a>`
-    : '';
-  return `
-    <div style="background:var(--bg-glass,#1C1C1E);border:1px solid var(--sep,#3A3A3C);
-                border-radius:14px;padding:16px;margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-size:14px;font-weight:600;color:var(--label);">${icon} ${r.summary || r.record_type}</span>
-        <span style="font-size:11px;color:var(--label-2);">${date}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;color:var(--label-2);">
-        ${r.location ? `<div>📍 <b>어디서</b><br>${r.location}</div>` : ''}
-        ${r.how      ? `<div>🔧 <b>어떻게</b><br>${r.how}</div>` : ''}
-        ${r.why      ? `<div>💡 <b>왜</b><br>${r.why}</div>` : ''}
-        ${r.who_name ? `<div>👤 <b>누가</b><br>${r.who_name}</div>` : ''}
-      </div>
-      ${reportLink}
-    </div>`;
-}
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav">
+  <div class="mnav-inner">
+    <button class="mnb active" id="mnav-overview" onclick="SS('overview')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span class="mnb-l">개요</span></button>
+    <button class="mnb" id="mnav-fpga" onclick="SS('fpga')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg><span class="mnb-l">FPGA</span></button>
+    <button class="mnb" id="mnav-finance" onclick="SS('finance')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg><span class="mnb-l">금융</span></button>
+    <button class="mnb" id="mnav-supply_chain" onclick="SS('supply_chain')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span class="mnb-l">공급망</span></button>
+    <button class="mnb" id="mnav-paper" onclick="SS('paper')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="mnb-l">특허</span></button>
+  </div>
+</nav>
 
+<script>
+var SECS=['overview','core5','fpga','distributed','ai_verify','privacy','finance','digital_currency','market_class','supply_chain','governance','security','performance','paper'];
+var LBLS={overview:'개요',core5:'5대 핵심 혁신',fpga:'FPGA 하드웨어',distributed:'분산 신뢰 시스템',ai_verify:'AI 자율 검증',privacy:'프라이버시 보호',finance:'금융 통합 시스템',digital_currency:'무위험 디지털 화폐',market_class:'글로벌 상품 분류',supply_chain:'공급망 최적화',governance:'자율 거버넌스',security:'양자내성 보안',performance:'성능 검증',paper:'특허 청구항'};
+var railBtns=document.querySelectorAll('.rail-nav .ri');
 
-// ══════════════════════════════════════════════════════════════════
-// PDV 백업 — IndexedDB 저장 + 파일 내보내기
-// ══════════════════════════════════════════════════════════════════
-
-// ── IndexedDB 초기화 ─────────────────────────────────────────────
-const _IDB_NAME    = 'gopang_pdv';
-const _IDB_VERSION = 1;
-const _IDB_STORE   = 'records';
-
-function _openIDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(_IDB_NAME, _IDB_VERSION);
-    req.onupgradeneeded = e => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(_IDB_STORE)) {
-        const store = db.createObjectStore(_IDB_STORE, { keyPath: 'idb_id', autoIncrement: true });
-        store.createIndex('ts', 'ts', { unique: false });
-        store.createIndex('type', 'record_type', { unique: false });
-      }
-    };
-    req.onsuccess = e => resolve(e.target.result);
-    req.onerror   = e => reject(e.target.error);
+function SS(id){
+  SECS.forEach(function(s){document.getElementById('section-'+s).style.display=(s===id)?'':'none';});
+  document.getElementById('bc-label').textContent=LBLS[id]||id;
+  railBtns.forEach(function(btn,i){btn.classList.toggle('active',SECS[i]===id);});
+  SECS.forEach(function(s){
+    var el=document.getElementById('mi-'+s);if(el)el.classList.toggle('active',s===id);
+    var mn=document.getElementById('mnav-'+s);if(mn)mn.classList.toggle('active',s===id);
   });
+  window.scrollTo({top:0,behavior:'smooth'});
 }
-
-// IndexedDB에 PDV 레코드 저장 (pdv.js recordPDV 완료 후 호출)
-async function _saveToIDB(record) {
-  try {
-    const db    = await _openIDB();
-    const tx    = db.transaction(_IDB_STORE, 'readwrite');
-    const store = tx.objectStore(_IDB_STORE);
-    store.add({ ...record, ts: Date.now(), saved_at: new Date().toISOString() });
-    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
-  } catch(e) {
-    console.warn('[IDB] 저장 실패:', e.message);
-  }
-}
-
-// IndexedDB 전체 조회
-async function _getAllFromIDB() {
-  try {
-    const db    = await _openIDB();
-    const tx    = db.transaction(_IDB_STORE, 'readonly');
-    const store = tx.objectStore(_IDB_STORE);
-    return await new Promise((res, rej) => {
-      const req = store.getAll();
-      req.onsuccess = () => res(req.result);
-      req.onerror   = () => rej(req.error);
-    });
-  } catch(e) {
-    console.warn('[IDB] 조회 실패:', e.message);
-    return [];
-  }
-}
-
-// ── 파일 내보내기 ────────────────────────────────────────────────
-async function exportPDV(format = 'json') {
-  const user = _user;
-
-  // Supabase에서 전체 데이터 가져오기
-  let rows = [];
-  if (user?.guid) {
-    try {
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/pdv_log?user_guid=eq.${user.guid}&order=created_at.desc`,
-        { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
-      );
-      rows = await res.json();
-    } catch(e) {
-      console.warn('[PDV] Supabase 조회 실패, IndexedDB 사용:', e.message);
-    }
-  }
-
-  // Supabase 실패 시 IndexedDB fallback
-  if (!rows.length) {
-    rows = await _getAllFromIDB();
-  }
-
-  // localStorage fallback
-  if (!rows.length) {
-    rows = JSON.parse(localStorage.getItem('gopang_pdv_log') || '[]');
-  }
-
-  if (!rows.length) {
-    alert('저장된 기록이 없습니다.');
-    return;
-  }
-
-  const now      = new Date().toISOString().slice(0, 10);
-  const filename = `gopang_pdv_${now}`;
-
-  if (format === 'json') {
-    // JSON 다운로드
-    const blob = new Blob(
-      [JSON.stringify({ exported_at: new Date().toISOString(), user_guid: user?.guid, records: rows }, null, 2)],
-      { type: 'application/json' }
-    );
-    _downloadBlob(blob, `${filename}.json`);
-    _showExportToast('📥 내 기록이 저장되었습니다.\n파일 앱(다운로드 폴더)에서 확인하세요.');
-
-  } else if (format === 'csv') {
-    // CSV 다운로드
-    const headers = ['날짜', '누가', '어디서', '무엇을', '어떻게', '왜', '서비스', '신고서번호'];
-    const csvRows = rows.map(r => [
-      r.created_at ? new Date(r.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : (r.saved_at || ''),
-      r.who_name   || '',
-      r.location   || '',
-      r.summary    || '',
-      r.how        || '',
-      r.why        || '',
-      r.service_id || '',
-      r.report_id  || '',
-    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
-
-    // BOM 추가 (Excel 한글 깨짐 방지)
-    const bom  = '\uFEFF';
-    const blob = new Blob([bom + [headers.join(','), ...csvRows].join('\n')], { type: 'text/csv' });
-    _downloadBlob(blob, `${filename}.csv`);
-    _showExportToast('📊 Excel 파일이 저장되었습니다.\n파일 앱(다운로드 폴더)에서 확인하세요.');
-  }
-}
-
-function _downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a   = document.createElement('a');
-  a.href     = url;
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function _showExportToast(msg) {
-  const t = document.createElement('div');
-  t.style.cssText = `
-    position:fixed;bottom:100px;left:50%;transform:translateX(-50%);
-    background:#1C1C1E;border:1px solid #3A3A3C;color:#EBEBF5;
-    padding:12px 20px;border-radius:14px;z-index:9999;
-    font-size:13px;line-height:1.6;text-align:center;white-space:pre-line;
-    box-shadow:0 4px 20px rgba(0,0,0,0.5);`;
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 4000);
-}
-
-// ── window 노출 (HTML onclick 대응) ──────────────────────────────
-Object.assign(window,{
-  installPWA,dismissInstall,dismissIOSInstall,requestInstall,
-  autoResize,updateSendBtn,handleKey,sendMessage,
-  toggleAI,closeAI,activateAI,showRiskAnalysis,toggleMic,
-  openSettings,closeSettings,handleOverlayClick,saveSettings,loadSettings,clearSWCache,
-  openSearch,closeSearch,handleSearchOverlayClick,runSearch,selectContact,
-  triggerAttach,triggerCamera,handleFileSelect,removeAttach,
-  showGUID,_onLogoTap,_closeProgressSheet,
-  loadPDV,loadPDVPanel,exportPDV,
-});
-
-document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
