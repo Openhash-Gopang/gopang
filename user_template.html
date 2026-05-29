@@ -1326,8 +1326,9 @@ async function _fp() {
 //   3. 미등록 기기 → 익명 방문자 (구매 불가)
 async function _resolveViewer() {
   const params     = new URLSearchParams(location.search);
-  const viewerParam= params.get('viewer');   // 고팡 앱 경유
-  const tokenParam = params.get('token');    // 레거시 호환
+  const viewerParam= params.get('viewer');
+  const tokenParam = params.get('token');
+  const sessionParam = params.get('session');  // gopang_sessions 토큰
 
   // 시나리오 A: ?viewer= 명시 (고팡 앱에서 링크 생성 시)
   if (viewerParam) {
@@ -1345,7 +1346,29 @@ async function _resolveViewer() {
     } catch(e) { console.warn('[Viewer] url_param 조회 실패:', e.message); }
   }
 
-  // 시나리오 B: 기기 지문으로 users 테이블에서 guid 조회
+  // 시나리오 B: ?session= 토큰 (gopang_sessions 테이블)
+  if (sessionParam) {
+    try {
+      const res = await fetch(
+        `${SUPA_URL}/rest/v1/gopang_sessions?token=eq.${sessionParam}&select=guid&limit=1`,
+        { headers: HDR }
+      );
+      const [row] = await res.json();
+      if (row?.guid) {
+        _viewer  = { guid: row.guid, source: 'session_token' };
+        _isOwner = (row.guid === PAGE_GUID);
+        // last_used 갱신
+        fetch(`${SUPA_URL}/rest/v1/gopang_sessions?token=eq.${sessionParam}`, {
+          method:'PATCH', headers:{...HDR,'Content-Type':'application/json'},
+          body: JSON.stringify({last_used: new Date().toISOString()})
+        }).catch(()=>{});
+        console.info('[Viewer] session_token 인증:', row.guid.slice(0,8), _isOwner?'(본인)':'(방문자)');
+        return;
+      }
+    } catch(e) { console.warn('[Viewer] session_token 조회 실패:', e.message); }
+  }
+
+  // 시나리오 C: 기기 지문으로 users 테이블에서 guid 조회
   try {
     const fp  = await _fp();
     const res = await fetch(
@@ -1361,14 +1384,14 @@ async function _resolveViewer() {
     }
   } catch(e) { console.warn('[Viewer] device_fp 조회 실패:', e.message); }
 
-  // 시나리오 C: 레거시 token 파라미터 (token == PAGE_GUID → 본인)
+  // 시나리오 D: 레거시 token 파라미터 (token == PAGE_GUID → 본인)
   if (tokenParam && tokenParam === PAGE_GUID) {
     _viewer  = { guid: PAGE_GUID, source: 'token_self' };
     _isOwner = true;
     return;
   }
 
-  // 시나리오 D: 미등록 기기 → 익명 방문자
+  // 시나리오 E: 미등록 기기 → 익명 방문자
   _viewer  = null;
   _isOwner = false;
   console.info('[Viewer] 미등록 기기 — 익명 방문자');
