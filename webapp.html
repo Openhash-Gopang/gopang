@@ -266,10 +266,11 @@
       width: 6px; height: 6px;
       border-radius: 50%;
       background: var(--label-4);
-      transition: background 0.3s, transform 0.3s;
+      transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
     }
     .btn-ai.active .ai-dot {
-      background: var(--tint);
+      background: #0A84FF;
+      box-shadow: 0 0 6px rgba(10,132,255,0.7);
       animation: pulse-dot 2s ease-in-out infinite;
     }
     .btn-ai.active {
@@ -1342,9 +1343,20 @@ function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send
 
 // AI 토글
 function toggleAI()  { aiActive?closeAI():activateAI(); }
-function closeAI()   { aiActive=false; document.getElementById('ai-btn')?.classList.remove('active'); }
+function closeAI()   {
+  aiActive=false;
+  document.getElementById('btn-ai')?.classList.remove('active');
+  _updateAIDot(false);
+}
+function _updateAIDot(on) {
+  const dot = document.getElementById('ai-dot');
+  if (!dot) return;
+  dot.style.background = on ? '#0A84FF' : '';
+  dot.style.boxShadow  = on ? '0 0 6px rgba(10,132,255,0.7)' : '';
+}
 function activateAI(silent=false) {
-  aiActive=true; document.getElementById('ai-btn')?.classList.add('active');
+  aiActive=true; document.getElementById('btn-ai')?.classList.add('active');
+  _updateAIDot(true);
   if(!silent) appendBubble('ai','🤖 AI 비서 활성화. 무엇을 도와드릴까요?');
 }
 
@@ -1507,7 +1519,7 @@ async function sendMessage() {
     }
   }
 
-  if(!aiActive){aiActive=true;document.getElementById('ai-btn')?.classList.add('active');}
+  if(!aiActive){aiActive=true;document.getElementById('btn-ai')?.classList.add('active');}
   await callAI(text,capturedFile);
 }
 
@@ -1568,14 +1580,19 @@ async function init() {
     else if(oc.includes('triggerAttach')){btn.removeAttribute('onclick');btn.addEventListener('click',triggerAttach);}
     else if(oc.includes('toggleMic')){btn.removeAttribute('onclick');btn.addEventListener('click',toggleMic);}
   });
-  document.getElementById('ai-btn')?.addEventListener('click',toggleAI);
+  document.getElementById('btn-ai')?.addEventListener('click',toggleAI);
 
   // 설정 + 환영 메시지
   loadSettings();
   const wList=document.getElementById('message-list');
   if(wList){
     const wRow=document.createElement('div'); wRow.className='msg-row ai';
-    wRow.innerHTML=`<div class="bubble bubble-ai">안녕하세요! 저는 <b>고팡 AI 비서</b>입니다. 🐚<br><br>📍 현재 위치: <span id="welcome-loc">${buildLocNote()}</span><br><br>법률·의료·환경신고·생활 전반을 지원합니다.</div>`;
+    wRow.innerHTML=`
+      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;max-width:80%;">
+        <span style="font-size:11px;font-weight:600;color:var(--label-3);
+                     padding:0 4px;letter-spacing:0.2px;">전용 AI 비서</span>
+        <div class="bubble bubble-ai">지시 대기 중.</div>
+      </div>`;
     wList.appendChild(wRow);
   }
 
