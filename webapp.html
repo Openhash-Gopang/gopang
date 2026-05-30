@@ -1513,24 +1513,36 @@ function _showFaceCaptureUI(onCapture) {
     'position:fixed;inset:0;z-index:9999',
     'background:#000;display:flex;flex-direction:column',
     'align-items:center;justify-content:center;gap:16px',
+    'padding:24px;box-sizing:border-box',
   ].join(';');
 
   overlay.innerHTML = `
-    <p style="color:#fff;font-size:14px;margin:0;letter-spacing:-0.3px;">
-      얼굴을 화면 중앙에 맞추세요
+    <p id="_face-guide" style="color:#fff;font-size:14px;margin:0;
+       letter-spacing:-0.3px;text-align:center;line-height:1.5;">
+      카메라를 시작하는 중…
     </p>
-    <div style="position:relative;width:280px;height:280px;">
+    <div style="position:relative;width:260px;height:260px;">
       <video id="_face-video"
-        style="width:280px;height:280px;border-radius:50%;object-fit:cover;
+        style="width:260px;height:260px;border-radius:50%;object-fit:cover;
                transform:scaleX(-1);background:#111;"
         autoplay playsinline muted></video>
-      <!-- 가이드 원 -->
       <div style="position:absolute;inset:0;border-radius:50%;
                   border:3px solid rgba(62,207,142,0.8);pointer-events:none;"></div>
     </div>
-    <button id="_face-snap-btn"
+    <div id="_face-error" style="display:none;background:rgba(239,68,68,0.15);
+         border:1px solid rgba(239,68,68,0.4);border-radius:10px;
+         padding:12px 16px;text-align:center;max-width:280px;">
+      <p style="color:#fca5a5;font-size:13px;margin:0 0 8px;line-height:1.5;"></p>
+      <button id="_face-retry-btn"
+        style="background:#3ecf8e;color:#fff;border:none;border-radius:6px;
+               padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;">
+        다시 시도
+      </button>
+    </div>
+    <button id="_face-snap-btn" disabled
       style="background:#3ecf8e;color:#fff;border:none;border-radius:8px;
-             padding:14px 40px;font-size:16px;font-weight:600;cursor:pointer;">
+             padding:14px 40px;font-size:16px;font-weight:600;cursor:pointer;
+             opacity:0.4;transition:opacity 0.3s;">
       촬영
     </button>
     <button id="_face-cancel-btn"
@@ -1541,33 +1553,79 @@ function _showFaceCaptureUI(onCapture) {
   `;
   document.body.appendChild(overlay);
 
-  // 전면 카메라 스트림 시작 (facingMode: user = 전면)
   let stream = null;
-  navigator.mediaDevices.getUserMedia({
-    video: { facingMode: 'user', width: 640, height: 640 },
-  }).then(s => {
-    stream  = s;
-    const v = document.getElementById('_face-video');
-    if (v) v.srcObject = s;
-  }).catch(() => {
-    overlay.remove();
-    onCapture(null);
-  });
 
   const _stop = () => {
     stream?.getTracks().forEach(t => t.stop());
+    stream = null;
     overlay.remove();
   };
 
-  // 촬영 버튼
+  const _showError = (msg) => {
+    const errBox  = document.getElementById('_face-error');
+    const errMsg  = errBox?.querySelector('p');
+    const snapBtn = document.getElementById('_face-snap-btn');
+    const guide   = document.getElementById('_face-guide');
+    if (errMsg)  errMsg.textContent  = msg;
+    if (errBox)  errBox.style.display = 'block';
+    if (snapBtn) { snapBtn.disabled = true; snapBtn.style.opacity = '0.4'; }
+    if (guide)   guide.textContent  = '카메라 권한이 필요합니다';
+  };
+
+  // ── 카메라 시작 (제약 조건 단순화) ──────────────────────
+  const _startCamera = (constraints) => {
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then(s => {
+        stream = s;
+        const v    = document.getElementById('_face-video');
+        const btn  = document.getElementById('_face-snap-btn');
+        const guide = document.getElementById('_face-guide');
+        if (v)     v.srcObject = s;
+        if (btn)   { btn.disabled = false; btn.style.opacity = '1'; }
+        if (guide) guide.textContent = '얼굴을 원 안에 맞추고 촬영하세요';
+      })
+      .catch(err => {
+        console.warn('[FaceCapture] 카메라 실패:', err.name, err.message);
+
+        // 제약 조건 완화 후 재시도
+        if (constraints.video?.width && err.name !== 'NotAllowedError') {
+          console.info('[FaceCapture] 제약 완화 후 재시도...');
+          _startCamera({ video: { facingMode: 'user' } });
+          return;
+        }
+
+        // 권한 거부 또는 기기 없음
+        if (err.name === 'NotAllowedError') {
+          _showError('카메라 권한이 거부됐습니다.\n설정 → Safari/Chrome → 카메라를 허용해 주세요.');
+        } else if (err.name === 'NotFoundError') {
+          _showError('전면 카메라를 찾을 수 없습니다.');
+        } else if (err.name === 'NotReadableError') {
+          _showError('카메라가 다른 앱에서 사용 중입니다.\n다른 앱을 닫고 다시 시도해 주세요.');
+        } else {
+          _showError(`카메라 오류: ${err.message}`);
+        }
+      });
+  };
+
+  // 처음엔 전면 + 해상도 지정으로 시도
+  _startCamera({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } } });
+
+  // ── 다시 시도 버튼 ────────────────────────────────────
+  document.getElementById('_face-retry-btn').onclick = () => {
+    const errBox = document.getElementById('_face-error');
+    if (errBox) errBox.style.display = 'none';
+    _startCamera({ video: { facingMode: 'user' } });
+  };
+
+  // ── 촬영 버튼 ────────────────────────────────────────
   document.getElementById('_face-snap-btn').onclick = () => {
     const v = document.getElementById('_face-video');
-    if (!v) { _stop(); onCapture(null); return; }
+    if (!v || !stream) { _stop(); onCapture(null); return; }
     const canvas = document.createElement('canvas');
     canvas.width  = v.videoWidth  || 640;
     canvas.height = v.videoHeight || 640;
-    // 좌우 반전 원복 (mirror 해제)
     const ctx = canvas.getContext('2d');
+    // 좌우 반전 원복
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(v, 0, 0);
@@ -1575,7 +1633,7 @@ function _showFaceCaptureUI(onCapture) {
     onCapture(canvas.toDataURL('image/jpeg', 0.85));
   };
 
-  // 취소 버튼
+  // ── 취소 버튼 ────────────────────────────────────────
   document.getElementById('_face-cancel-btn').onclick = () => {
     _stop(); onCapture(null);
   };
