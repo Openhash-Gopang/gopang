@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고팡 인증</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  /* ── 로딩 (silent iframe 모드) ── */
+  #loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: #6b7280;
+    font-size: 14px;
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2.5px solid #e5e7eb;
+    border-top-color: #3ecf8e;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── 등록/복원 UI (리다이렉트 모드) ── */
+  #auth-card {
+    display: none;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+  .auth-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .auth-logo-icon {
+    width: 32px; height: 32px;
+    background: #3ecf8e;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: white;
+    font-family: monospace;
+  }
+  .auth-logo-text {
+    font-size: 16px; font-weight: 600; color: #111827;
+    letter-spacing: -0.3px;
+  }
+  .auth-service {
+    font-size: 11px;
+    color: #6b7280;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 99px;
+    padding: 2px 10px;
+    font-family: monospace;
+  }
+  h2 {
+    font-size: 18px; font-weight: 600;
+    color: #111827; margin-bottom: 6px;
+    letter-spacing: -0.4px;
+  }
+  .auth-desc {
+    font-size: 13px; color: #6b7280;
+    line-height: 1.6; margin-bottom: 24px;
+  }
+
+  /* ── 4단어 입력 ── */
+  .input-group { margin-bottom: 16px; }
+  .input-group label {
+    display: block;
+    font-size: 12px; font-weight: 500;
+    color: #374151; margin-bottom: 6px;
+    letter-spacing: 0.2px;
+  }
+  .input-group input {
+    width: 100%; padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px; color: #111827;
+    background: #f9fafb;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .input-group input:focus {
+    border-color: #3ecf8e;
+    box-shadow: 0 0 0 3px rgba(62,207,142,0.12);
+    background: white;
+  }
+  .input-group input::placeholder { color: #9ca3af; }
+
+  /* ── 얼굴 인증 영역 ── */
+  #face-area {
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  #face-video-wrap {
+    display: none;
+    position: relative;
+    width: 200px; height: 200px;
+    margin: 0 auto 12px;
+  }
+  #face-video {
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    background: #111;
+  }
+  .face-ring {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 3px solid rgba(62,207,142,0.8);
+    pointer-events: none;
+  }
+  #face-status {
+    font-size: 12px; color: #6b7280;
+    margin-bottom: 8px;
+  }
+
+  /* ── 버튼 ── */
+  .btn-primary {
+    width: 100%; padding: 12px;
+    background: #3ecf8e; color: white;
+    border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    margin-bottom: 8px;
+  }
+  .btn-primary:hover { background: #29a374; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled {
+    background: #d1d5db; cursor: not-allowed;
+  }
+  .btn-secondary {
+    width: 100%; padding: 10px;
+    background: transparent;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover { border-color: #9ca3af; color: #374151; }
+
+  /* ── 에러/성공 메시지 ── */
+  .msg {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 14px;
+    display: none;
+  }
+  .msg.error   { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
+  .msg.success { background: #f0fdf8; color: #059669; border: 1px solid #a7f3d0; }
+
+  /* ── 기기 변경 안내 ── */
+  #device-change-notice {
+    display: none;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: #92400e;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<!-- 로딩 (silent 모드) -->
+<div id="loading">
+  <div class="spinner"></div>
+  <span>인증 확인 중…</span>
+</div>
+
+<!-- 인증 카드 (리다이렉트 모드) -->
+<div id="auth-card">
+  <div class="auth-logo">
+    <div class="auth-logo-icon">G</div>
+    <span class="auth-logo-text">고팡</span>
+    <span class="auth-service" id="svc-label"></span>
+  </div>
+
+  <h2 id="auth-title">고팡 로그인</h2>
+  <p class="auth-desc" id="auth-desc">
+    고팡 계정으로 로그인하면 모든 하위 서비스를 이용할 수 있습니다.
+  </p>
+
+  <div id="device-change-notice">
+    📱 새 기기 또는 앱 갱신이 감지됐습니다.<br>
+    4단어 시드로 이전 정체성을 복원해 주세요.
+  </div>
+
+  <div class="msg" id="msg-box"></div>
+
+  <!-- 4단어 시드 입력 -->
+  <div class="input-group">
+    <label>4단어 시드 <span style="color:#9ca3af;font-weight:400;">(기기 분실·변경 시)</span></label>
+    <input type="text" id="seed-input"
+           placeholder="등록 시 설정한 단어 4개"
+           autocomplete="off" autocorrect="off" spellcheck="false"/>
+  </div>
+
+  <!-- 얼굴 인증 (선택) -->
+  <div id="face-area">
+    <p id="face-status" style="display:none;"></p>
+    <div id="face-video-wrap">
+      <video id="face-video" autoplay playsinline muted></video>
+      <div class="face-ring"></div>
+    </div>
+    <button class="btn-secondary" id="face-btn" onclick="toggleFace()">
+      📷 얼굴 인증 추가 (선택)
+    </button>
+  </div>
+
+  <!-- 로그인 버튼 -->
+  <button class="btn-primary" id="login-btn" onclick="doLogin()">
+    로그인
+  </button>
+
+  <!-- 신규 등록 -->
+  <button class="btn-secondary" id="register-btn" onclick="goRegister()">
+    처음 오셨나요? 고팡 등록하기
+  </button>
+</div>
+
+<script type="module">
+// ══════════════════════════════════════════════════════════
+// silent-auth.html
+// 역할 1: Silent iframe → 고팡 로컬 토큰 발급 → postMessage
+// 역할 2: 리다이렉트 → 인증 UI → 토큰 발급 → return URL 복귀
+// ══════════════════════════════════════════════════════════
+
+import { gopangAuth, issueToken } from './gopang-sso.js';
+
+const params    = new URLSearchParams(location.search);
+const SERVICE   = params.get('svc')    || '*';
+const ORIGIN    = params.get('origin') || '*';
+const RETURN    = params.get('return') || null;
+const IS_SILENT = (window.parent !== window);   // iframe 여부
+
+// ── 모드 분기 ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('svc-label').textContent = SERVICE;
+
+  if (IS_SILENT) {
+    await _runSilentMode();
+  } else {
+    await _runRedirectMode();
+  }
+});
+
+// ── Silent 모드: 로컬 토큰 즉시 발급 → postMessage ──────
+async function _runSilentMode() {
+  try {
+    const user = _getLocalUser();
+
+    if (!user?.ipv6 || !user?.seedHex) {
+      // 미등록 → 실패 통보
+      _postToParent(null, 'NOT_REGISTERED');
+      return;
+    }
+
+    // 기기 일치 확인
+    const fpHex = await _buildDeviceFingerprint();
+    if (user.fpHex !== fpHex) {
+      // 기기 불일치 → 리다이렉트 요청
+      _postToParent(null, 'DEVICE_CHANGED');
+      return;
+    }
+
+    // ✅ 토큰 발급
+    const token = await issueToken(SERVICE, 'L0');
+    _postToParent(token, null);
+
+  } catch(e) {
+    _postToParent(null, e.message);
+  }
+}
+
+function _postToParent(token, error) {
+  const targetOrigin = ORIGIN !== '*'
+    ? ORIGIN
+    : (document.referrer ? new URL(document.referrer).origin : '*');
+
+  window.parent.postMessage({
+    type:  'GOPANG_SSO_TOKEN',
+    token: token || null,
+    error: error || null,
+  }, targetOrigin);
+}
+
+// ── 리다이렉트 모드: 인증 UI 표시 ───────────────────────
+async function _runRedirectMode() {
+  document.getElementById('loading').style.display    = 'none';
+  document.getElementById('auth-card').style.display  = 'block';
+
+  const user = _getLocalUser();
+
+  if (!user?.ipv6) {
+    // 신규 사용자
+    document.getElementById('auth-title').textContent = '고팡 등록';
+    document.getElementById('auth-desc').textContent  =
+      '고팡은 처음이신가요? 4단어 시드를 설정하면 모든 서비스를 이용할 수 있습니다.';
+  } else {
+    // 기기 변경 감지
+    const fpHex = await _buildDeviceFingerprint();
+    if (user.fpHex !== fpHex) {
+      document.getElementById('device-change-notice').style.display = 'block';
+      document.getElementById('auth-title').textContent = '정체성 복원';
+      document.getElementById('auth-desc').textContent  =
+        '기기 변경이 감지됐습니다. 4단어 시드로 이전 정체성을 복원하세요.';
+    }
+  }
+}
+
+// ── 로그인 / 복원 ────────────────────────────────────────
+window.doLogin = async function() {
+  const seedInput = document.getElementById('seed-input').value.trim();
+  const btn       = document.getElementById('login-btn');
+  btn.disabled    = true;
+  btn.textContent = '확인 중…';
+  _hideMsg();
+
+  if (seedInput.split(/\s+/).length < 4) {
+    _showMsg('단어 4개를 공백으로 구분하여 입력하세요.', 'error');
+    btn.disabled = false; btn.textContent = '로그인';
+    return;
+  }
+
+  try {
+    const stored  = _getLocalUser();
+    const fpHex   = await _buildDeviceFingerprint();
+    const ipv6    = await _buildIPv6Identity(fpHex);
+
+    // 시드 검증
+    const inputSeedHex = await _seedToHex(seedInput);
+
+    if (stored?.seedHex) {
+      // 기존 사용자 — 시드 일치 확인
+      if (inputSeedHex !== stored.seedHex) {
+        _showMsg('시드가 일치하지 않습니다. 다시 확인해 주세요.', 'error');
+        btn.disabled = false; btn.textContent = '로그인';
+        return;
+      }
+      // ✅ 기기 갱신
+      const updated = { ...stored, fpHex, lastSeenAt: new Date().toISOString() };
+      localStorage.setItem('gopang_user_v3', JSON.stringify(updated));
+      _showMsg('✅ 복원 완료!', 'success');
+
+    } else {
+      // 신규 등록
+      const user = {
+        ipv6, fpHex,
+        seedHex:     inputSeedHex,
+        faceVec:     null,
+        authLevel:   'L0',
+        registeredAt: new Date().toISOString(),
+        lastSeenAt:   new Date().toISOString(),
+      };
+      localStorage.setItem('gopang_user_v3', JSON.stringify(user));
+      _showMsg('✅ 등록 완료!', 'success');
+    }
+
+    // 토큰 발급
+    const token = await issueToken(SERVICE, 'L0');
+
+    await new Promise(r => setTimeout(r, 600));
+
+    if (RETURN) {
+      // 리다이렉트 복귀
+      const returnUrl = new URL(decodeURIComponent(RETURN));
+      returnUrl.searchParams.set('gopang_token', token);
+      location.href = returnUrl.toString();
+    } else {
+      location.href = 'https://gopang.net';
+    }
+
+  } catch(e) {
+    _showMsg('오류: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = '로그인';
+  }
+};
+
+// ── 신규 등록 → gopang.net으로 이동 ─────────────────────
+window.goRegister = function() {
+  const returnParam = RETURN
+    ? `&return=${encodeURIComponent(RETURN)}`
+    : '';
+  location.href = `https://gopang.net?register=1&svc=${SERVICE}${returnParam}`;
+};
+
+// ── 얼굴 인증 토글 ───────────────────────────────────────
+let _faceStream = null;
+let _faceVec    = null;
+
+window.toggleFace = async function() {
+  const wrap = document.getElementById('face-video-wrap');
+  const btn  = document.getElementById('face-btn');
+  const stat = document.getElementById('face-status');
+
+  if (_faceStream) {
+    // 카메라 끄기
+    _faceStream.getTracks().forEach(t => t.stop());
+    _faceStream = null;
+    wrap.style.display = 'none';
+    stat.style.display = 'none';
+    btn.textContent    = '📷 얼굴 인증 추가 (선택)';
+    return;
+  }
+
+  try {
+    stat.style.display = 'block';
+    stat.textContent   = '카메라 시작 중…';
+    _faceStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: 640, height: 640 }
+    });
+    const video = document.getElementById('face-video');
+    video.srcObject  = _faceStream;
+    wrap.style.display = 'block';
+    stat.textContent   = '얼굴을 원 안에 맞추고 촬영하세요.';
+    btn.textContent    = '📸 촬영';
+
+    // 두 번째 클릭: 촬영
+    btn.onclick = () => _snapFace();
+  } catch(e) {
+    stat.textContent = '카메라를 사용할 수 없습니다: ' + e.message;
+  }
+};
+
+async function _snapFace() {
+  const video  = document.getElementById('face-video');
+  const canvas = document.createElement('canvas');
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 640;
+  const ctx = canvas.getContext('2d');
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(video, 0, 0);
+
+  _faceStream?.getTracks().forEach(t => t.stop());
+  _faceStream = null;
+
+  document.getElementById('face-video-wrap').style.display = 'none';
+  document.getElementById('face-status').textContent = '✅ 얼굴 촬영 완료 (인증 시 사용됩니다)';
+  document.getElementById('face-btn').textContent    = '📷 얼굴 다시 촬영';
+  document.getElementById('face-btn').onclick        = window.toggleFace;
+}
+
+// ── 유틸 ─────────────────────────────────────────────────
+function _getLocalUser() {
+  try { return JSON.parse(localStorage.getItem('gopang_user_v3') || 'null'); }
+  catch { return null; }
+}
+
+async function _buildDeviceFingerprint() {
+  const raw = [
+    navigator.userAgent, navigator.language,
+    screen.width + 'x' + screen.height,
+    screen.colorDepth,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    navigator.hardwareConcurrency || '',
+    navigator.deviceMemory        || '',
+    screen.pixelDepth             || '',
+  ].join('|');
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function _buildIPv6Identity(fpHex) {
+  const groups = [];
+  for (let i = 0; i < 8; i++) groups.push(fpHex.slice(i*4, i*4+4));
+  groups[0] = '2601'; groups[1] = 'db80';
+  return groups.join(':');
+}
+
+async function _seedToHex(words) {
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(words.trim().toLowerCase()),
+    { name: 'PBKDF2' }, false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name:'PBKDF2', salt: new TextEncoder().encode('gopang-v2-salt'),
+      iterations: 100000, hash: 'SHA-256' },
+    key, 256
+  );
+  return Array.from(new Uint8Array(bits))
+    .map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function _showMsg(text, type) {
+  const el = document.getElementById('msg-box');
+  el.textContent    = text;
+  el.className      = `msg ${type}`;
+  el.style.display  = 'block';
+}
+function _hideMsg() {
+  document.getElementById('msg-box').style.display = 'none';
+}
+</script>
+</body>
+</html>
