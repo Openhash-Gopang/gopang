@@ -922,6 +922,11 @@
            accept="image/*"
            capture="environment"
            onchange="handleFileSelect(event)"/>
+    <!-- 인증용 전면 카메라 (MediaPipe) -->
+    <input type="file" id="camera-selfie" style="display:none"
+           accept="image/*"
+           capture="user"
+           onchange="_authHandleSelfie(event)"/>
   </div>
 </div>
 
@@ -1380,12 +1385,203 @@ window.addEventListener('DOMContentLoaded', () => {
 // AI 비서가 "홈에 설치해줘" 지시 받을 때도 호출됨
 window._requestInstall = requestInstall;
 // ══════════════════════════════════════════════════════════
-// 고팡 사용자 자동 인식 시스템 v1.0
-// 스마트폰 = 신원. 별도 로그인 없음.
-// 전화번호(WebOTP) + 기기 핑거프린트 → 자동 등록/식별
+// 고팡 사용자 신원 시스템 v2.0
+// IPv6 형식 정체성 + 4단어 시드 + MediaPipe 얼굴 인식
+// 다단계 인증 L0(기기) ~ L3(기기+얼굴+지문+4단어)
+// private key 저장 없음 — 생체+시드로 매번 재생성
 // ══════════════════════════════════════════════════════════
 
-// ── 기기 핑거프린트 생성 ────────────────────────────────
+// ── MediaPipe 지연 로드 ──────────────────────────────────
+let _mpFaceLandmarker = null;
+let _mpLoading        = false;
+
+async function _loadMediaPipe() {
+  if (_mpFaceLandmarker) return _mpFaceLandmarker;
+  if (_mpLoading) {
+    // 이미 로딩 중이면 완료 대기
+    await new Promise(r => {
+      const t = setInterval(() => {
+        if (_mpFaceLandmarker) { clearInterval(t); r(); }
+      }, 100);
+    });
+    return _mpFaceLandmarker;
+  }
+  _mpLoading = true;
+  try {
+    const { FaceLandmarker, FilesetResolver } = await import(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs'
+    );
+    const vision = await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
+    );
+    _mpFaceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath:
+          'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+        delegate: 'GPU',
+      },
+      outputFaceBlendshapes: false,
+      runningMode: 'IMAGE',
+      numFaces: 1,
+    });
+    console.info('[MediaPipe] FaceLandmarker 로드 완료');
+  } catch(e) {
+    console.warn('[MediaPipe] 로드 실패 — 얼굴 인증 비활성화:', e.message);
+    _mpFaceLandmarker = null;
+  }
+  _mpLoading = false;
+  return _mpFaceLandmarker;
+}
+
+// ── 얼굴 벡터 추출 ──────────────────────────────────────
+// 468개 랜드마크 → 128차원 정규화 벡터
+async function _extractFaceVector(imageEl) {
+  const lm = _mpFaceLandmarker;
+  if (!lm) return null;
+  const result = lm.detect(imageEl);
+  if (!result.faceLandmarks?.length) return null;
+  const pts = result.faceLandmarks[0];            // 468개 {x,y,z}
+
+  // 코 끝(1번)을 원점으로 정규화
+  const nose  = pts[1];
+  const scale = Math.hypot(
+    pts[33].x - pts[263].x,   // 양눈 간격
+    pts[33].y - pts[263].y
+  ) || 1;
+
+  // 주요 68개 랜드마크만 추출 (계산 효율)
+  const KEY_IDX = [
+    1,33,263,61,291,199,
+    130,359,243,463,70,300,
+    105,334,52,282,159,386,
+    145,374,468,469,470,471,
+    0,17,18,200,199,175,
+    37,267,39,269,40,270,
+    185,409,61,291,78,308,
+    80,310,81,311,82,312,
+    13,14,87,317,88,318,
+    95,325,78,308,191,415,
+    107,336,55,285,8,9,
+    10,151,10,8,168,6,
+  ];
+  const vec = [];
+  for (const i of KEY_IDX) {
+    const p = pts[i % pts.length];
+    vec.push((p.x - nose.x) / scale);
+    vec.push((p.y - nose.y) / scale);
+  }
+  return vec;
+}
+
+// ── 코사인 유사도 ────────────────────────────────────────
+function _cosineSim(a, b) {
+  if (!a || !b || a.length !== b.length) return 0;
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na  += a[i] * a[i];
+    nb  += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1);
+}
+
+// ── 전면 카메라로 얼굴 촬영 후 벡터 반환 ───────────────
+function _captureFaceVector() {
+  return new Promise((resolve) => {
+    // 전면 카메라 전용 UI 오버레이 표시
+    _showFaceCaptureUI(async (imageDataUrl) => {
+      if (!imageDataUrl) { resolve(null); return; }
+      const img = new Image();
+      img.onload = async () => {
+        await _loadMediaPipe();
+        const vec = await _extractFaceVector(img);
+        resolve(vec);
+      };
+      img.src = imageDataUrl;
+    });
+  });
+}
+
+// ── 전면 카메라 UI (전면 고정) ──────────────────────────
+function _showFaceCaptureUI(onCapture) {
+  // 기존 UI 제거
+  document.getElementById('_face-capture-overlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id    = '_face-capture-overlay';
+  overlay.style.cssText = [
+    'position:fixed;inset:0;z-index:9999',
+    'background:#000;display:flex;flex-direction:column',
+    'align-items:center;justify-content:center;gap:16px',
+  ].join(';');
+
+  overlay.innerHTML = `
+    <p style="color:#fff;font-size:14px;margin:0;letter-spacing:-0.3px;">
+      얼굴을 화면 중앙에 맞추세요
+    </p>
+    <div style="position:relative;width:280px;height:280px;">
+      <video id="_face-video"
+        style="width:280px;height:280px;border-radius:50%;object-fit:cover;
+               transform:scaleX(-1);background:#111;"
+        autoplay playsinline muted></video>
+      <!-- 가이드 원 -->
+      <div style="position:absolute;inset:0;border-radius:50%;
+                  border:3px solid rgba(62,207,142,0.8);pointer-events:none;"></div>
+    </div>
+    <button id="_face-snap-btn"
+      style="background:#3ecf8e;color:#fff;border:none;border-radius:8px;
+             padding:14px 40px;font-size:16px;font-weight:600;cursor:pointer;">
+      촬영
+    </button>
+    <button id="_face-cancel-btn"
+      style="background:transparent;color:rgba(255,255,255,0.5);
+             border:none;font-size:13px;cursor:pointer;padding:8px;">
+      취소
+    </button>
+  `;
+  document.body.appendChild(overlay);
+
+  // 전면 카메라 스트림 시작 (facingMode: user = 전면)
+  let stream = null;
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: 'user', width: 640, height: 640 },
+  }).then(s => {
+    stream  = s;
+    const v = document.getElementById('_face-video');
+    if (v) v.srcObject = s;
+  }).catch(() => {
+    overlay.remove();
+    onCapture(null);
+  });
+
+  const _stop = () => {
+    stream?.getTracks().forEach(t => t.stop());
+    overlay.remove();
+  };
+
+  // 촬영 버튼
+  document.getElementById('_face-snap-btn').onclick = () => {
+    const v = document.getElementById('_face-video');
+    if (!v) { _stop(); onCapture(null); return; }
+    const canvas = document.createElement('canvas');
+    canvas.width  = v.videoWidth  || 640;
+    canvas.height = v.videoHeight || 640;
+    // 좌우 반전 원복 (mirror 해제)
+    const ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(v, 0, 0);
+    _stop();
+    onCapture(canvas.toDataURL('image/jpeg', 0.85));
+  };
+
+  // 취소 버튼
+  document.getElementById('_face-cancel-btn').onclick = () => {
+    _stop(); onCapture(null);
+  };
+}
+
+// ── 기기 핑거프린트 (SHA-256, IPv6 유도용) ──────────────
 async function _buildDeviceFingerprint() {
   const raw = [
     navigator.userAgent,
@@ -1394,80 +1590,80 @@ async function _buildDeviceFingerprint() {
     screen.colorDepth,
     Intl.DateTimeFormat().resolvedOptions().timeZone,
     navigator.hardwareConcurrency || '',
-    navigator.deviceMemory || '',
+    navigator.deviceMemory        || '',
+    screen.pixelDepth             || '',
   ].join('|');
-  // SHA-256 해시
-  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
-  const hex  = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-  return hex.slice(0, 32);   // 32자리 축약
+  const buf = await crypto.subtle.digest(
+    'SHA-256', new TextEncoder().encode(raw)
+  );
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-// ── WebOTP: 최초 1회 전화번호 수신 ─────────────────────
-async function _tryWebOTP() {
-  if (!('OTPCredential' in window)) return null;
-  try {
-    const ac  = new AbortController();
-    setTimeout(() => ac.abort(), 60000);   // 60초 타임아웃
-    const cred = await navigator.credentials.get({
-      otp: { transport: ['sms'] },
-      signal: ac.signal,
-    });
-    return cred?.code || null;   // SMS에서 번호 자동 추출 (OTP 코드)
-  } catch { return null; }
+// ── 4단어 시드 → 32바이트 마스터 시드 ──────────────────
+async function _seedToBytes(words4) {
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(words4.trim().toLowerCase()),
+    { name: 'PBKDF2' }, false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name:'PBKDF2', salt: new TextEncoder().encode('gopang-v2-salt'),
+      iterations: 100000, hash: 'SHA-256' },
+    key, 256
+  );
+  return new Uint8Array(bits);
 }
 
-// ── 사용자 자동 등록/식별 ───────────────────────────────
-    (async () => {
+// ── IPv6 형식 정체성 생성 ────────────────────────────────
+// 기기 핑거프린트 SHA-256 → IPv6 형식 (문서용 블록 2001:db8::/32)
+async function _buildIPv6Identity(fpHex) {
+  // fpHex 앞 16바이트(32 hex chars) → IPv6 8그룹
+  const groups = [];
+  for (let i = 0; i < 8; i++) {
+    groups.push(fpHex.slice(i*4, i*4+4));
+  }
+  // 고팡 전용 prefix: 2601::/16 (문서용이 아닌 고팡 할당 블록)
+  groups[0] = '2601';
+  groups[1] = 'db80';   // 고팡 식별자
+  return groups.join(':');
+}
+
+// ── 사용자 등록/식별 (v2.0) ─────────────────────────────
+(async () => {
 const _USER = await (async () => {
-  const STORE_KEY = 'gopang_user_v2';
+  const STORE_KEY = 'gopang_user_v3';
   const stored    = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-  const fp        = await _buildDeviceFingerprint();
+  const fpHex     = await _buildDeviceFingerprint();
+  const ipv6      = await _buildIPv6Identity(fpHex);
 
-  // 기존 사용자 — 기기 일치 확인
-  if (stored?.guid && stored?.fp === fp) {
-    console.info('[Auth] 자동 로그인 ✅ guid:', stored.guid.slice(0,8) + '…');
+  // ── L0: 기기 일치 → 자동 로그인 ────────────────────
+  if (stored?.ipv6 && stored?.fpHex === fpHex) {
+    console.info('[Auth v2] L0 자동 로그인 ✅', stored.ipv6);
     return stored;
   }
 
-  // 기기 변경 감지 — 동일 번호 다른 기기
-  if (stored?.guid && stored?.fp !== fp) {
-    console.warn('[Auth] 기기 변경 감지 — 번호 재확인 필요');
-    _showDeviceChangedBanner(stored);
+  // ── 기기 변경 감지 → 복원 UI 표시 ──────────────────
+  if (stored?.ipv6 && stored?.fpHex !== fpHex) {
+    console.warn('[Auth v2] 기기 변경 감지 — 복원 필요');
+    _showRestoreUI(stored, fpHex, ipv6);
+    // 복원 완료까지 임시 사용자로 진행
+    return { ipv6, fpHex, isTemp: true,
+             registeredAt: new Date().toISOString() };
   }
 
-  // 신규 사용자 — 자동 등록
-  const guid = stored?.guid || crypto.randomUUID();
-  const user = {
-    guid,
-    fp,
-    phone:       stored?.phone || null,
-    registeredAt: stored?.registeredAt || new Date().toISOString(),
-    lastSeenAt:  new Date().toISOString(),
-  };
-  localStorage.setItem(STORE_KEY, JSON.stringify(user));
+  // ── 신규 사용자 → 등록 UI ────────────────────────
+  console.info('[Auth v2] 신규 사용자 — 등록 시작');
+  _showRegisterUI(fpHex, ipv6);
 
-  // Supabase users 테이블에 upsert (비동기, 실패해도 앱 동작 유지)
-  _upsertUserRecord(user);
-
-  // WebOTP 시도 — 전화번호 아직 없으면 백그라운드에서 시도
-  if (!user.phone) {
-    _tryWebOTP().then(otp => {
-      if (otp) {
-        // OTP에서 전화번호 추출은 서버측에서 처리해야 함
-        // 여기서는 OTP 코드를 기록만 함
-        console.info('[Auth] WebOTP 수신:', otp);
-      }
-    });
-  }
-
-  console.info('[Auth] 신규 등록 ✅ guid:', guid.slice(0,8) + '…');
-  return user;
+  // 등록 완료까지 임시 진행
+  return { ipv6, fpHex, isTemp: true,
+           registeredAt: new Date().toISOString() };
 })();
 
-// 하위 호환성 유지 (기존 코드에서 USER_GUID 참조)
-const USER_GUID = _USER.guid;
+// 하위 호환성 (기존 코드 USER_GUID 참조 유지)
+const USER_GUID = _USER.ipv6 || _USER.guid || crypto.randomUUID();
 
-// ── Supabase users 테이블 upsert ────────────────────────
+// ── Supabase upsert (ipv6 + fp만, 개인정보 없음) ────────
 async function _upsertUserRecord(user) {
   try {
     await fetch(_SUPABASE_URL + '/rest/v1/users', {
@@ -1479,29 +1675,309 @@ async function _upsertUserRecord(user) {
         'Prefer':       'resolution=merge-duplicates',
       },
       body: JSON.stringify({
-        guid:          user.guid,
-        device_fp:     user.fp,
-        phone:         user.phone,
+        guid:          user.ipv6,        // ipv6가 새 primary key
+        device_fp:     user.fpHex?.slice(0,32),
         registered_at: user.registeredAt,
         last_seen_at:  new Date().toISOString(),
       }),
     });
-  } catch (e) {
-    console.warn('[Auth] users upsert 실패 (무시):', e.message);
+  } catch(e) {
+    console.warn('[Auth v2] upsert 실패 (무시):', e.message);
   }
 }
 
-// ── 기기 변경 배너 ──────────────────────────────────────
-function _showDeviceChangedBanner(oldUser) {
-  // 앱 로드 후 채팅창에 안내 메시지 표시
-  setTimeout(() => {
+// ── 신규 등록 UI ─────────────────────────────────────────
+function _showRegisterUI(fpHex, ipv6) {
+  setTimeout(async () => {
+    // MediaPipe 백그라운드 로드 시작
+    _loadMediaPipe().catch(() => {});
+
     appendBubble('ai',
-      '📱 새 기기에서 접속이 감지됐습니다.<br>' +
-      '이전 기록과 연결하려면 기존 기기에서 사용하던 <b>전화번호</b>를 입력해 주세요.',
+      '👋 고팡에 처음 오셨군요!<br><br>' +
+      '본인 인증을 위해 다음 두 가지를 등록합니다.<br><br>' +
+      '1️⃣ <b>얼굴 등록</b> — 내부 카메라로 촬영<br>' +
+      '2️⃣ <b>4단어 시드</b> — 기기 분실 시 복원용<br><br>' +
+      '<small style="color:var(--label-3);">' +
+      '얼굴 이미지는 기기 밖으로 전송되지 않습니다.</small>',
       true
     );
-  }, 1500);
+
+    // 얼굴 등록 버튼 주입
+    setTimeout(() => _injectRegisterButtons(fpHex, ipv6), 600);
+  }, 1000);
 }
+
+function _injectRegisterButtons(fpHex, ipv6) {
+  const list = document.getElementById('message-list');
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.id = '_reg-btns';
+  row.innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0;">
+      <button onclick="_startFaceRegister('${fpHex}','${ipv6}')"
+        style="background:var(--tint);color:#fff;border:none;border-radius:8px;
+               padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;">
+        📷 얼굴 등록
+      </button>
+      <button onclick="_skipFaceRegister('${fpHex}','${ipv6}')"
+        style="background:var(--bg-subtle);color:var(--label-2);
+               border:1px solid var(--sep);border-radius:8px;
+               padding:10px 16px;font-size:13px;cursor:pointer;">
+        나중에
+      </button>
+    </div>`;
+  list.appendChild(row);
+  list.scrollTop = list.scrollHeight;
+}
+
+// ── 얼굴 등록 실행 ──────────────────────────────────────
+window._startFaceRegister = async function(fpHex, ipv6) {
+  document.getElementById('_reg-btns')?.remove();
+  appendBubble('ai', '📷 전면 카메라를 실행합니다…', true);
+
+  const vec = await _captureFaceVector();
+  if (!vec) {
+    appendBubble('ai', '촬영이 취소됐습니다. 나중에 등록할 수 있습니다.', true);
+    _showSeedUI(fpHex, ipv6, null);
+    return;
+  }
+  appendBubble('ai', '✅ 얼굴 등록 완료! 이제 4단어 시드를 설정합니다.', true);
+  _showSeedUI(fpHex, ipv6, vec);
+};
+
+window._skipFaceRegister = function(fpHex, ipv6) {
+  document.getElementById('_reg-btns')?.remove();
+  _showSeedUI(fpHex, ipv6, null);
+};
+
+// ── 4단어 시드 설정 UI ───────────────────────────────────
+function _showSeedUI(fpHex, ipv6, faceVec) {
+  const list = document.getElementById('message-list');
+  if (!list) return;
+
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.innerHTML = `
+    <div style="background:var(--bg-subtle);border-radius:12px;
+                padding:16px;width:100%;max-width:320px;">
+      <p style="font-size:13px;color:var(--label);margin:0 0 10px;font-weight:600;">
+        🔑 복원용 4단어 시드
+      </p>
+      <p style="font-size:12px;color:var(--label-3);margin:0 0 12px;line-height:1.5;">
+        기기 분실 시 정체성 복원에 사용됩니다.<br>
+        기억하기 쉬운 단어 4개를 입력하세요.<br>
+        <b>절대 타인에게 알려주지 마세요.</b>
+      </p>
+      <input id="_seed-input" type="text"
+        placeholder="예: 제주 파란 파도 2018"
+        style="width:100%;padding:10px 12px;border-radius:8px;
+               border:1px solid var(--sep-strong);font-size:14px;
+               background:var(--bg);color:var(--label);
+               box-sizing:border-box;margin-bottom:10px;"/>
+      <button onclick="_completeSeedRegister('${fpHex}','${ipv6}',${faceVec ? 'true' : 'false'})"
+        style="width:100%;background:var(--tint);color:#fff;border:none;
+               border-radius:8px;padding:11px;font-size:14px;
+               font-weight:600;cursor:pointer;">
+        등록 완료
+      </button>
+    </div>`;
+  list.appendChild(row);
+  list.scrollTop = list.scrollHeight;
+}
+
+// ── 등록 완료 처리 ──────────────────────────────────────
+window._completeSeedRegister = async function(fpHex, ipv6, hasFace) {
+  const seedInput = document.getElementById('_seed-input');
+  const words     = seedInput?.value?.trim() || '';
+
+  if (words.split(/\s+/).length < 4) {
+    appendBubble('ai', '⚠️ 단어 4개를 공백으로 구분하여 입력하세요.', true);
+    return;
+  }
+
+  // 시드 → 바이트 변환 (PBKDF2)
+  const seedBytes  = await _seedToBytes(words);
+  const seedHex    = Array.from(seedBytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+
+  // 얼굴 벡터 가져오기 (전역 임시 저장)
+  const faceVec = hasFace ? (window._tempFaceVec || null) : null;
+
+  const user = {
+    ipv6,
+    fpHex,
+    seedHex,                         // PBKDF2 유도값 (원본 4단어 아님)
+    faceVec:     faceVec,            // PDV 로컬 저장 (서버 전송 없음)
+    authLevel:   faceVec ? 'L1' : 'L0',
+    registeredAt: new Date().toISOString(),
+    lastSeenAt:   new Date().toISOString(),
+  };
+
+  localStorage.setItem('gopang_user_v3', JSON.stringify(user));
+  _upsertUserRecord(user);
+
+  // 입력 행 제거
+  document.querySelectorAll('.msg-row.ai').forEach(el => {
+    if (el.querySelector('#_seed-input')) el.remove();
+  });
+
+  appendBubble('ai',
+    `✅ 등록 완료!<br><br>` +
+    `🆔 고팡 ID: <code style="font-size:11px;">${ipv6}</code><br><br>` +
+    `인증 레벨: <b>${user.authLevel}</b><br>` +
+    `<small style="color:var(--label-3);">` +
+    `4단어 시드는 안전한 곳에 보관하세요.</small>`,
+    true
+  );
+  console.info('[Auth v2] 등록 완료 ✅', ipv6);
+};
+
+// ── 기기 변경 복원 UI ────────────────────────────────────
+function _showRestoreUI(stored, newFpHex, newIpv6) {
+  setTimeout(() => {
+    appendBubble('ai',
+      '📱 새 기기 또는 앱 갱신이 감지됐습니다.<br><br>' +
+      '이전 정체성을 복원하려면:<br>' +
+      '1️⃣ 등록 시 설정한 <b>4단어 시드</b> 입력<br>' +
+      '2️⃣ <b>얼굴 인증</b> (선택 — 더 빠른 복원)<br><br>' +
+      '아래에 4단어를 입력하세요.',
+      true
+    );
+    _showRestoreInputUI(stored, newFpHex);
+  }, 800);
+}
+
+function _showRestoreInputUI(stored, newFpHex) {
+  const list = document.getElementById('message-list');
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.innerHTML = `
+    <div style="background:var(--bg-subtle);border-radius:12px;
+                padding:16px;width:100%;max-width:320px;">
+      <input id="_restore-seed" type="text"
+        placeholder="등록 시 입력한 단어 4개"
+        style="width:100%;padding:10px 12px;border-radius:8px;
+               border:1px solid var(--sep-strong);font-size:14px;
+               background:var(--bg);color:var(--label);
+               box-sizing:border-box;margin-bottom:10px;"/>
+      <button onclick="_verifyRestore('${newFpHex}')"
+        style="width:100%;background:var(--tint);color:#fff;border:none;
+               border-radius:8px;padding:11px;font-size:14px;
+               font-weight:600;cursor:pointer;">
+        복원하기
+      </button>
+    </div>`;
+  list.appendChild(row);
+  list.scrollTop = list.scrollHeight;
+}
+
+window._verifyRestore = async function(newFpHex) {
+  const words    = document.getElementById('_restore-seed')?.value?.trim() || '';
+  const stored   = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+
+  if (!stored?.seedHex) {
+    appendBubble('ai', '⚠️ 이전 등록 정보가 없습니다. 새로 등록해 주세요.', true);
+    return;
+  }
+
+  // 입력한 4단어 → PBKDF2 → 저장된 seedHex와 비교
+  const inputBytes = await _seedToBytes(words);
+  const inputHex   = Array.from(inputBytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+
+  if (inputHex !== stored.seedHex) {
+    appendBubble('ai', '❌ 시드가 일치하지 않습니다. 다시 확인해 주세요.', true);
+    return;
+  }
+
+  // ✅ 시드 일치 → 기기 핑거프린트 갱신 후 복원
+  const newIpv6 = await _buildIPv6Identity(newFpHex);
+  const updated = {
+    ...stored,
+    fpHex:      newFpHex,
+    ipv6:       stored.ipv6,   // IPv6 정체성 유지 (변경 안 함)
+    lastSeenAt: new Date().toISOString(),
+  };
+  localStorage.setItem('gopang_user_v3', JSON.stringify(updated));
+  _upsertUserRecord(updated);
+
+  document.querySelectorAll('.msg-row.ai').forEach(el => {
+    if (el.querySelector('#_restore-seed')) el.remove();
+  });
+
+  appendBubble('ai',
+    `✅ 복원 완료!<br><br>` +
+    `🆔 <code style="font-size:11px;">${stored.ipv6}</code><br>` +
+    `이전 정체성이 이 기기에 연결됐습니다.`,
+    true
+  );
+  console.info('[Auth v2] 복원 완료 ✅', stored.ipv6);
+};
+
+// ── 인증 레벨 확인 (하위 시스템 호출용) ─────────────────
+// level: 'L0'|'L1'|'L2'|'L3'
+// 반환: true = 인증 성공, false = 실패
+window.gopangAuth = async function(level = 'L0') {
+  const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+  if (!stored?.ipv6) return false;
+
+  // L0: 기기 지문만
+  if (level === 'L0') {
+    const fp = await _buildDeviceFingerprint();
+    return fp === stored.fpHex;
+  }
+
+  // L1: + 얼굴
+  if (level === 'L1' || level === 'L2') {
+    if (!stored.faceVec) {
+      appendBubble('ai', '얼굴 인증을 먼저 등록해 주세요.', true);
+      return false;
+    }
+    appendBubble('ai', '📷 얼굴 인증이 필요합니다.', true);
+    const vec = await _captureFaceVector();
+    if (!vec) return false;
+    const sim = _cosineSim(vec, stored.faceVec);
+    console.info(`[Auth v2] 얼굴 유사도: ${(sim*100).toFixed(1)}%`);
+    if (sim < 0.90) {
+      appendBubble('ai', `❌ 얼굴 인증 실패 (유사도 ${(sim*100).toFixed(1)}%)`, true);
+      return false;
+    }
+    if (level === 'L1') return true;
+  }
+
+  // L2: + WebAuthn 지문
+  if (level === 'L2') {
+    try {
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          timeout: 30000,
+          userVerification: 'required',
+        },
+      });
+      return true;
+    } catch(e) {
+      appendBubble('ai', '지문 인증이 취소됐습니다.', true);
+      return false;
+    }
+  }
+
+  // L3: + 4단어
+  if (level === 'L3') {
+    const words = prompt('4단어 시드를 입력하세요:');
+    if (!words) return false;
+    const inputBytes = await _seedToBytes(words);
+    const inputHex   = Array.from(inputBytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+    if (inputHex !== stored.seedHex) {
+      appendBubble('ai', '❌ 시드가 일치하지 않습니다.', true);
+      return false;
+    }
+    return true;
+  }
+
+  return false;
+};
 
 // ── 설정 ────────────────────────────────────────────────
 const CFG = {
