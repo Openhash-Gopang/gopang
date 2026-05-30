@@ -1854,40 +1854,188 @@ window._completeSeedRegister = async function(fpHex, ipv6, hasFace) {
     return;
   }
 
-  // 시드 → 바이트 변환 (PBKDF2)
   const seedBytes  = await _seedToBytes(words);
   const seedHex    = Array.from(seedBytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+  const faceVec    = hasFace ? (window._tempFaceVec || null) : null;
 
-  // 얼굴 벡터 가져오기 (전역 임시 저장)
-  const faceVec = hasFace ? (window._tempFaceVec || null) : null;
-
+  // 기존 데이터 보존 + 새 필드 추가
+  const existing = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
   const user = {
+    ...existing,           // 기존 데이터 유지
     ipv6,
     fpHex,
-    seedHex,                         // PBKDF2 유도값 (원본 4단어 아님)
-    faceVec:     faceVec,            // PDV 로컬 저장 (서버 전송 없음)
+    seedHex,
+    faceVec,
     authLevel:   faceVec ? 'L1' : 'L0',
-    registeredAt: new Date().toISOString(),
+    registeredAt: existing?.registeredAt || new Date().toISOString(),
     lastSeenAt:   new Date().toISOString(),
   };
 
   localStorage.setItem('gopang_user_v3', JSON.stringify(user));
   _upsertUserRecord(user);
 
-  // 입력 행 제거
+  // 시드 입력 행 제거
   document.querySelectorAll('.msg-row.ai').forEach(el => {
     if (el.querySelector('#_seed-input')) el.remove();
   });
 
   appendBubble('ai',
-    `✅ 등록 완료!<br><br>` +
-    `🆔 고팡 ID: <code style="font-size:11px;">${ipv6}</code><br><br>` +
-    `인증 레벨: <b>${user.authLevel}</b><br>` +
-    `<small style="color:var(--label-3);">` +
-    `4단어 시드는 안전한 곳에 보관하세요.</small>`,
+    `✅ 얼굴·시드 등록 완료!<br><br>` +
+    `🆔 <code style="font-size:11px;">${ipv6}</code><br><br>` +
+    `마지막으로 <b>지문 등록</b>을 하면 인증 레벨이 L2로 높아집니다.`,
     true
   );
-  console.info('[Auth v2] 등록 완료 ✅', ipv6);
+
+  // 지문 등록 버튼 주입
+  setTimeout(() => _injectFingerprintButton(ipv6), 500);
+};
+
+// ── 지문 등록 버튼 주입 ─────────────────────────────────
+function _injectFingerprintButton(ipv6) {
+  const list = document.getElementById('message-list');
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.id = '_fp-btns';
+  row.innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0;">
+      <button onclick="_registerFingerprint('${ipv6}')"
+        style="background:var(--tint);color:#fff;border:none;border-radius:8px;
+               padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;">
+        🔐 지문 등록
+      </button>
+      <button onclick="_skipFingerprint()"
+        style="background:var(--bg-subtle);color:var(--label-2);
+               border:1px solid var(--sep);border-radius:8px;
+               padding:10px 16px;font-size:13px;cursor:pointer;">
+        나중에
+      </button>
+    </div>`;
+  list.appendChild(row);
+  list.scrollTop = list.scrollHeight;
+}
+
+// ── 지문 등록 실행 ──────────────────────────────────────
+window._registerFingerprint = async function(ipv6) {
+  document.getElementById('_fp-btns')?.remove();
+
+  // WebAuthn 지원 여부 확인
+  if (!window.PublicKeyCredential) {
+    appendBubble('ai', '⚠️ 이 브라우저는 지문 인증을 지원하지 않습니다.', true);
+    return;
+  }
+
+  appendBubble('ai', '🔐 지문 인증을 등록합니다. 기기의 지문 센서를 사용해 주세요.', true);
+
+  try {
+    // 1. Worker에서 챌린지 발급
+    const chalRes = await fetch(
+      'https://gopang-proxy.tensor-city.workers.dev/auth/webauthn/challenge',
+      { credentials: 'include' }
+    );
+    const { challenge, exp, sig: chalSig } = await chalRes.json();
+
+    // 2. WebAuthn 등록
+    const challengeBytes = Uint8Array.from(
+      atob(challenge.replace(/-/g,'+').replace(/_/g,'/')),
+      c => c.charCodeAt(0)
+    );
+
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge:              challengeBytes,
+        rp: {
+          id:   'gopang.net',
+          name: '고팡 (Gopang)',
+        },
+        user: {
+          id:          new TextEncoder().encode(ipv6),
+          name:        ipv6,
+          displayName: '고팡 사용자',
+        },
+        pubKeyCredParams: [
+          { alg: -7,   type: 'public-key' },   // ES256 (ECDSA)
+          { alg: -257, type: 'public-key' },   // RS256 (RSA)
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',  // 기기 내장 (지문/Face ID)
+          userVerification:        'required',  // 반드시 생체 확인
+          residentKey:             'preferred',
+        },
+        timeout: 60000,
+        attestation: 'none',   // 기기 모델 정보 불필요
+      },
+    });
+
+    // 3. 공개키 추출
+    const credId    = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)))
+      .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+    const publicKey = btoa(String.fromCharCode(
+      ...new Uint8Array(credential.response.getPublicKey
+        ? credential.response.getPublicKey()
+        : credential.response.attestationObject)
+    )).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+
+    // 4. Worker에 공개키 저장 (Supabase)
+    const regRes = await fetch(
+      'https://gopang-proxy.tensor-city.workers.dev/auth/webauthn/register',
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ipv6,
+          credentialId:  credId,
+          publicKey,
+          challenge,
+          challengeExp:  exp,
+          challengeSig:  chalSig,
+          deviceType:    'platform',
+        }),
+      }
+    );
+    const regData = await regRes.json();
+
+    if (!regData.ok) throw new Error(regData.error || '등록 실패');
+
+    // 5. localStorage에 credential ID 저장 (L2 승격)
+    const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || '{}');
+    const updated = {
+      ...stored,
+      authLevel: 'L2',
+      webauthn: {
+        credentialId: credId,
+        registeredAt: new Date().toISOString(),
+      },
+      lastSeenAt: new Date().toISOString(),
+    };
+    localStorage.setItem('gopang_user_v3', JSON.stringify(updated));
+
+    appendBubble('ai',
+      `✅ 지문 등록 완료! 인증 레벨 <b>L2</b> 달성.<br><br>` +
+      `이제 중요한 거래 시 지문으로 추가 인증합니다.<br>` +
+      `<small style="color:var(--label-3);">` +
+      `L0 기기인증 · L1 얼굴인증 · L2 지문인증 · L3 시드인증</small>`,
+      true
+    );
+
+  } catch(e) {
+    if (e.name === 'NotAllowedError') {
+      appendBubble('ai', '지문 인증이 취소됐습니다. 나중에 설정에서 등록할 수 있습니다.', true);
+    } else {
+      appendBubble('ai', `지문 등록 오류: ${e.message}`, true);
+    }
+    console.warn('[WebAuthn] 등록 실패:', e.name, e.message);
+  }
+};
+
+window._skipFingerprint = function() {
+  document.getElementById('_fp-btns')?.remove();
+  appendBubble('ai',
+    '지문 등록을 건너뛰었습니다.<br>' +
+    '설정 → 보안에서 나중에 등록할 수 있습니다.',
+    true
+  );
 };
 
 // ── 기기 변경 복원 UI ────────────────────────────────────
@@ -2274,20 +2422,36 @@ function _initLocation() {
 
     _watchId = navigator.geolocation.watchPosition(
       (pos) => {
+        const newLat = pos.coords.latitude;
+        const newLng = pos.coords.longitude;
+        const newAcc = pos.coords.accuracy;
+
+        // ── 좌표 변화량 계산 (50m 이상 변경 시에만 역지오코딩 재실행) ──
+        const GEOCODE_THRESHOLD = 0.0005;  // 약 50m
+        const coordChanged = !_userLocation?.lat ||
+          Math.abs(newLat - _userLocation.lat) > GEOCODE_THRESHOLD ||
+          Math.abs(newLng - _userLocation.lng) > GEOCODE_THRESHOLD;
+
+        // 기존 address 보존 (좌표만 갱신)
+        const prevAddress = _userLocation?.address || null;
+        const prevRegion  = _userLocation?.region  || null;
+
         _userLocation = {
-          lat:      pos.coords.latitude,
-          lng:      pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
+          lat:      newLat,
+          lng:      newLng,
+          accuracy: newAcc,
           source:   'GPS',
-          address:  null,
+          address:  prevAddress,   // ← 기존 주소 유지
+          region:   prevRegion,
         };
-        _updateLocationInPrompt();
+
+        _updateLocationInPrompt(coordChanged);  // 변경 여부 전달
+
         if (!_gotFirst) {
           _gotFirst        = true;
           _locationPending = false;
           _locationReady   = true;
-          console.log(`[Location] GPS 획득(${highAccuracy ? '고정밀' : '저정밀'}): ${_userLocation.lat.toFixed(4)}, ${_userLocation.lng.toFixed(4)} ±${Math.round(pos.coords.accuracy)}m`);
-          // 저정밀로 첫 위치 획득 후 고정밀로 업그레이드 시도
+          console.log(`[Location] GPS 획득(${highAccuracy ? '고정밀' : '저정밀'}): ${newLat.toFixed(4)}, ${newLng.toFixed(4)} ±${Math.round(newAcc)}m`);
           if (!highAccuracy) _startWatch(true);
         }
       },
@@ -2354,19 +2518,18 @@ async function _loadLocationFromIP() {
 }
 
 // 위치 확인 후 시스템 프롬프트에 실제 좌표/주소 주입
-function _updateLocationInPrompt() {
+function _updateLocationInPrompt(coordChanged = false) {
   if (!_userLocation) return;
   let locStr = '';
   if (_userLocation.source === 'GPS' && _userLocation.lat) {
     locStr = `GPS좌표(${_userLocation.lat.toFixed(5)},${_userLocation.lng.toFixed(5)}) 정확도±${Math.round(_userLocation.accuracy)}m`;
-    // ★ 카카오 역지오코딩 — GPS 좌표 → 행정구역 주소 (비동기, 완료 후 재주입)
-    if (CFG.kakaoKey && !_userLocation.address) {
+    // 역지오코딩: 주소 없거나 좌표가 유의미하게 변경된 경우만 실행
+    if (CFG.kakaoKey && (!_userLocation.address || coordChanged)) {
       _reverseGeocode(_userLocation.lat, _userLocation.lng).then(geo => {
         if (geo?.jibunAddress) {
           _userLocation.address = geo.jibunAddress;
           _userLocation.region  = geo.region;
           console.log('[GEO] GPS 역지오코딩 완료:', geo.jibunAddress);
-          // system 프롬프트에 주소 즉시 반영
           if (history.length <= 1) {
             history[0] && (history[0].content = CFG.system + _buildLocNote());
           }
@@ -2382,8 +2545,6 @@ function _updateLocationInPrompt() {
   }
   CFG.locationStr = locStr;
 
-  // watchPosition으로 위치 갱신 시 history[0](system)도 업데이트
-  // — 단, 이미 대화가 진행 중이면 캐시 무효화를 피하기 위해 갱신하지 않음
   if (history.length === 1 && history[0]?.role === 'system') {
     history[0].content = CFG.system + _buildLocNote();
     console.log('[Cache] 위치 갱신 — system 업데이트 (대화 시작 전)');
