@@ -94,6 +94,13 @@ export default {
     if (pathname === '/auth/webauthn/register')   return handleWARegister(request, env, corsHeaders);
     if (pathname === '/auth/webauthn/verify')     return handleWAVerify(request, env, corsHeaders);
 
+    // PDV 보고서 수신
+    if (pathname === '/pdv/report')              return handlePdvReport(request, env, corsHeaders);
+
+    // 하위 서비스 등록·확인
+    if (pathname === '/svc/register')            return handleSvcRegister(request, env, corsHeaders);
+    if (pathname === '/svc/verify')              return handleSvcVerify(request, env, corsHeaders);
+
     // 카카오 역지오코딩
     if (pathname.startsWith('/geocode')) {
       return handleGeocode(url, env, corsHeaders);
@@ -436,6 +443,233 @@ async function handleWAVerify(request, env, corsHeaders) {
   return new Response(
     JSON.stringify({ valid: true, ipv6: body.ipv6, level: 'L2' }),
     { status: 200, headers: { ...corsHeaders, 'Set-Cookie': cookie } }
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// 하위 서비스 등록 화이트리스트
+// ═══════════════════════════════════════════════════════════
+
+const REGISTERED_SERVICES = {
+  // Level 3 — 공식 파트너 (전체 기능)
+  'klaw':      { level: 3, domain: 'klaw.gopang.net',      minAuth: 'L0', pdv: true  },
+  'market':    { level: 3, domain: 'market.gopang.net',    minAuth: 'L0', pdv: true  },
+  'school':    { level: 3, domain: 'school.gopang.net',    minAuth: 'L0', pdv: true  },
+  'security':  { level: 3, domain: 'security.gopang.net',  minAuth: 'L1', pdv: true  },
+  'health':    { level: 3, domain: 'health.gopang.net',    minAuth: 'L1', pdv: true  },
+  'tax':       { level: 3, domain: 'tax.gopang.net',       minAuth: 'L0', pdv: true  },
+  'gdc':       { level: 3, domain: 'gdc.gopang.net',       minAuth: 'L1', pdv: true  },
+  'public':    { level: 3, domain: 'public.gopang.net',    minAuth: 'L0', pdv: true  },
+  'democracy': { level: 3, domain: 'democracy.gopang.net', minAuth: 'L1', pdv: true  },
+  '911':       { level: 3, domain: '911.gopang.net',       minAuth: 'L0', pdv: true  },
+  'police':    { level: 3, domain: 'police.gopang.net',    minAuth: 'L1', pdv: true  },
+  'insurance': { level: 3, domain: 'insurance.gopang.net', minAuth: 'L1', pdv: true  },
+  // Level 2 — 외부 도메인 파트너
+  'fiil':      { level: 2, domain: 'fiil.kr',              minAuth: 'L0', pdv: true  },
+  'klaw-ext':  { level: 2, domain: 'klaw.openhash.kr',     minAuth: 'L0', pdv: false },
+  // Level 1 — *.gopang.net 자동 허용 (동적 처리)
+};
+
+function _getSvcRegistration(origin, svcId) {
+  // Level 3/2: 명시적 등록 확인
+  const svc = REGISTERED_SERVICES[svcId];
+  if (svc && origin.includes(svc.domain)) return { ...svc, svcId };
+  // Level 1: *.gopang.net 자동
+  if (/^https:\/\/[a-z0-9-]+\.gopang\.net$/.test(origin)) {
+    return { level: 1, domain: origin, minAuth: 'L0', pdv: false, svcId };
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════
+// /pdv/report — PDV 보고서 수신·기록
+// ═══════════════════════════════════════════════════════════
+
+async function handlePdvReport(request, env, corsHeaders) {
+  if (request.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
+
+  const origin = request.headers.get('Origin') || '';
+  const report  = await request.json().catch(() => null);
+
+  if (!report?.report) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'SCHEMA_ERROR', detail: 'report.report 필드 필수' }),
+      { status: 400, headers: corsHeaders }
+    );
+  }
+
+  const r      = report.report;
+  const svcId  = r.svc || request.headers.get('X-Gopang-Svc') || 'unknown';
+  const ipv6   = r.who?.ipv6;
+
+  // ── 서비스 등록 확인 ──────────────────────────────────
+  const reg = _getSvcRegistration(origin, svcId);
+  if (!reg) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'SERVICE_NOT_REGISTERED',
+        detail: `${svcId} (${origin}) 은 등록된 서비스가 아닙니다.` }),
+      { status: 403, headers: corsHeaders }
+    );
+  }
+  if (reg.level < 2 && !reg.pdv) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'PDV_NOT_ALLOWED',
+        detail: 'Level 1 서비스는 PDV 보고서 전송 권한이 없습니다.' }),
+      { status: 403, headers: corsHeaders }
+    );
+  }
+
+  // ── 필수 필드 검증 ────────────────────────────────────
+  if (!ipv6) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'USER_NOT_FOUND', detail: 'who.ipv6 필수' }),
+      { status: 404, headers: corsHeaders }
+    );
+  }
+
+  const reportId = r.id || `RPT-${svcId}-${Date.now()}-auto`;
+
+  // ── 6하원칙 요약 생성 ────────────────────────────────
+  const summary6w = {
+    who:   `${r.who?.role || 'user'} (${ipv6.slice(0,20)}...)`,
+    when:  `${(r.when?.period_start||'').slice(0,10)} ~ ${(r.when?.period_end||'').slice(0,10)}`,
+    where: r.where?.svc_url || `https://${svcId}.gopang.net`,
+    what:  r.what?.summary  || '(요약 없음)',
+    how:   r.how?.method    || '자동 집계',
+    why:   r.why?.goal      || '(목표 미지정)',
+  };
+
+  // ── Supabase PDV 기록 ────────────────────────────────
+  const pdvId  = `PDV-${ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;
+  const pdvRes = await sbFetch(env, '/rest/v1/pdv_log', 'POST', {
+    id:            pdvId,
+    guid:          ipv6,
+    source:        svcId,
+    type:          r.type          || 'report',
+    report_id:     reportId,
+    summary:       r.what?.summary || '',
+    summary_6w:    JSON.stringify(summary6w),
+    risk_level:    r.analysis?.risk_level || 'low',
+    period:        r.period        || null,
+    raw_hash:      r.content_hash  || null,
+    created_at:    new Date().toISOString(),
+  });
+
+  if (!pdvRes) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'PDV_LOCKED', retry: true, retry_after: 60 }),
+      { status: 503, headers: corsHeaders }
+    );
+  }
+
+  // ── ACK 반환 ─────────────────────────────────────────
+  const recipients = (r.who?.recipients || []).filter(x => x !== 'gopang-pdv');
+  return new Response(
+    JSON.stringify({
+      ok:                   true,
+      report_id:            reportId,
+      pdv_entry:            pdvId,
+      recorded_at:          new Date().toISOString(),
+      recipients_notified:  recipients,
+      svc_level:            reg.level,
+      message:              `PDV 기록 완료. ${svcId} (Level ${reg.level})`,
+    }),
+    { status: 200, headers: corsHeaders }
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// /svc/register — 하위 서비스 등록 신청
+// ═══════════════════════════════════════════════════════════
+
+async function handleSvcRegister(request, env, corsHeaders) {
+  if (request.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body?.svc_id || !body?.domain || !body?.operator_ipv6) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'svc_id, domain, operator_ipv6 필수' }),
+      { status: 400, headers: corsHeaders }
+    );
+  }
+
+  const { svc_id, domain, description, min_auth, operator_ipv6 } = body;
+
+  // Level 1: *.gopang.net 자동 승인
+  const isGopangSub = /^[a-z0-9-]+\.gopang\.net$/.test(domain);
+  const auto_level  = isGopangSub ? 1 : 0;
+
+  // Supabase svc_registry 테이블에 저장
+  const saved = await sbFetch(env, '/rest/v1/svc_registry', 'POST', {
+    svc_id,
+    domain,
+    description:    description || '',
+    operator_ipv6:  operator_ipv6,
+    min_auth:       min_auth || 'L0',
+    trust_level:    auto_level,
+    status:         isGopangSub ? 'auto_approved' : 'pending',
+    registered_at:  new Date().toISOString(),
+  });
+
+  return new Response(
+    JSON.stringify({
+      ok:          true,
+      svc_id,
+      domain,
+      trust_level: auto_level,
+      status:      isGopangSub ? 'auto_approved' : 'pending_review',
+      message:     isGopangSub
+        ? `*.gopang.net 서브도메인으로 자동 승인됐습니다. (Level 1)`
+        : `등록 신청이 접수됐습니다. AI City Inc. 검토 후 승인됩니다.`,
+    }),
+    { status: 200, headers: corsHeaders }
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// /svc/verify — 서비스 등록 상태 확인
+// ═══════════════════════════════════════════════════════════
+
+async function handleSvcVerify(request, env, corsHeaders) {
+  const url    = new URL(request.url);
+  const svcId  = url.searchParams.get('svc_id');
+  const origin = request.headers.get('Origin') || '';
+
+  if (!svcId) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'svc_id 파라미터 필수' }),
+      { status: 400, headers: corsHeaders }
+    );
+  }
+
+  const reg = _getSvcRegistration(origin, svcId);
+  if (!reg) {
+    return new Response(
+      JSON.stringify({
+        ok:          false,
+        registered:  false,
+        svc_id:      svcId,
+        message:     '등록되지 않은 서비스입니다.',
+      }),
+      { status: 200, headers: corsHeaders }
+    );
+  }
+
+  return new Response(
+    JSON.stringify({
+      ok:          true,
+      registered:  true,
+      svc_id:      svcId,
+      trust_level: reg.level,
+      pdv_allowed: reg.pdv,
+      min_auth:    reg.minAuth,
+      message:     `등록된 서비스 (Level ${reg.level})`,
+    }),
+    { status: 200, headers: corsHeaders }
   );
 }
 

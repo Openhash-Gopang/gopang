@@ -1,178 +1,260 @@
-# 고팡 (Gopang)
+# 고팡 (Gopang) — AI 평행 세계 플랫폼
 
-## DAWN: Democracy is All We Need
-
-> **고팡은 기존 체제의 디지털 평행 세계다. 그 세계에는 주인이 없다.**
-> **GDC는 193개국 시민 모두의 신용이다.**
-> **그리고 그 세계의 헌법은 단 하나다 — DAWN: Democracy is All We Need.**
+> 현실 세계의 모든 기관·사물·전문직의 AI 쌍둥이로 구축한 평행 세계.
+> 하위 시스템 개발자를 위한 통합 진입점입니다.
 
 ---
 
-## 고팡이란 무엇인가
+## 빠른 시작 (하위 시스템 개발자)
 
-고팡은 비영리 글로벌 디지털 인프라다. 메시지를 전달하는 앱이 아니라, 현실 세계의 법원·중앙은행·행정기관 등 제반 사회 인프라의 AI 쌍둥이를 디지털 공간에 구축한 **평행 사회**다.
-
-현실의 법원에 가려면 변호사가 필요하고, 수개월의 시간과 수백만 원의 비용이 필요하다. 현실의 은행 계좌를 열려면 신분증과 주소지와 신용이 필요하다. 도청, 시청, 국세청, 특허청 등은 우리 삶의 불편과 부당을 해소하기 위한 사회적 장치이지만, 그 자체가 불편일 수 있으며, 세계 인구의 상당수는 이 장벽 앞에서 멈춘다.
-
-고팡은 이 장벽을 허문다.
-
-| 현실 기관 | 고팡 AI 쌍둥이 | 관계 |
-|---------|--------------|------|
-| 법원 | K-Law AI | 보완·보강, 접근성 현저히 향상 |
-| 중앙은행 | GDC 통화 시스템 | 국적 화폐의 글로벌 보완재 |
-| 국세청·세관 | K-Tax AI | 자동 보고, 투명성 확보 |
-| 금융감독원 | K-Law AML 모듈 | 실시간 이상 거래 감지 |
-| 상업 법원 | K-Law 분쟁 중재 | 당사자 합의 기반 자율 집행 |
-| **민주주의** | **DAWN** | **참여 시민의 투표로 모든 것을 결정** |
-
-고팡의 AI 쌍둥이는 현실 속의 인프라를 **대체하지 않는다.** 대체해서도 안 된다. 법원의 강제 집행력, 국가의 과세 권한, 중앙은행의 통화 발행권은 주권 국가의 고유 권한이다. 고팡은 그 기관들의 역할을 보완하고 보강하며, 그 접근성을 현저히 향상시킨다.
-
----
-
-## DAWN 철학
-
-고팡의 주인은 개인이나 기업이 아니다. 창업자도, 이사회도, 특정 국가도 고팡을 소유하지 않는다.
-
-고팡 생태계에 참여하는 모든 시민(GDC 보유자)의 민주적 투표에 의해 고팡의 운영 철학(헌법)과 구체적 운영 방안(법률)이 결정된다. 고팡의 제반 시스템은 그 결정을 이행하는 수단이다.
-
-이 모든 코드는 이 저장소에 공개된다. 누구나 검증하고, 오류를 수정하고, 개선안을 제시할 수 있다. 특정 개선안의 수용 여부도 시스템이 결정한다. 최종 의사결정권은 참여하는 시민들에게 있다.
-
-**고팡은 특정 기업이나 국가가 운영하는 플랫폼이 아니라, 참여하는 시민들이 스스로 통치하는 디지털 민주주의이다.**
-
----
-
-## 핵심 기술: PDV와 OpenHash
-
-고팡을 다른 모든 시스템과 구분하는 기술 토대는 두 가지다.
-
-### PDV (Personal Data Vault)
-
-모든 소통 데이터는 사용자 본인의 기기에 암호화되어 저장된다. 고팡 회사도, L1 중계 노드도, 정부 기관도 사용자의 동의 없이 내용에 접근할 수 없다. 데이터의 소유권은 온전히 사용자에게 있다.
-
-### OpenHash
-
-모든 소통이 발생하는 순간, 그 내용의 해시값이 물리적 계층 분산 네트워크에 즉시 등록된다. 한 번 등록된 해시는 변경이 수학적으로 불가능하다. 고팡의 모든 소통은 발생하는 순간 자동으로 법적 증거가 된다.
-
-이 두 기술의 결합이 만들어내는 것: **Legal Hold 없이도 완결되는 자기완결 증거 구조.**
-
-가해자가 자신의 기기에서 메시지를 삭제해도, 피해자의 기기에 원본이 있고, 발신자의 디지털 서명이 첨부되어 있으며, OpenHash가 시각과 내용을 불변으로 기록한다. 세 요소의 조합으로 증거는 사라지지 않는다.
-
----
-
-## GDC (Gopang Digital Currency)
-
-GDC는 암호화폐나 가상화폐가 아니다.
-
-193개국에서 GDC를 판매할 때 유입되는 각국 법정화폐는 다국적 통화 풀을 구성한다. 이 풀은 어떤 개인이나 법인의 소유도 아니다. GDC의 가치를 담보하는 실물 자산의 일부로 고팡 생태계 전체에 귀속된다. GDC는 고팡 그 자체의 가치에 의해 담보되는 실물 자산 기반 화폐(ABC, Assed Based/Backed Currency)이다.
-
-GDC 보유는:
-
-- **은행** — 스테이킹으로 연 3~8% 이자 수익
-- **보험** — Smart Vault를 통한 자산 다각화
-- **증권·거래소** — 글로벌 유동성 풀에서 즉시 거래
-- **금융 감독** — K-Law AI가 모든 거래를 실시간 감시
-- **중앙은행** — 알고리즘 통화 정책, DAO 거버넌스
-
-전통 금융에서 이 다섯 기능은 별개의 기관, 별개의 규제, 별개의 수수료로 분리되어 있다. GDC는 이 모든 것을 하나의 화폐 단위에 통합한다.
-
----
-
-## K-Law: 예방법학 엔진
-
-사람과 물자의 국경 이동을 막는 가장 큰 장벽은 교통이나 통신 인프라의 부족이 아니다. 국가 간 법과 제도의 차이, 그리고 범죄 피해의 두려움이다.
-
-K-Law는 이 장벽을 허물기 위해 설계되었다. 분쟁이 생긴 후 해결하는 것이 아니라, 분쟁이 생기지 않도록 사전에 차단하는 **예방법학(Preventive Law)** 엔진이다.
-
-**K-Law 실증 결과 (2026년 5월, 내부 측정):**
-
-| 비교 쌍 | 일치도 | 표본 |
-|--------|--------|------|
-| K-Law ↔ 대법원 | **73%** | 300건 |
-| 인간 원심(2심) ↔ 대법원 | 45% | 300건 |
-
-측정 대상은 대법원 선별 공개 판례(전체 소송의 0.01% 미만, 법리가 가장 어려운 사건군)다. 이 최고 난이도 기준에서 K-Law는 인간 원심 대비 28%p 높은 일치율을 달성했다. 이 수치는 독립적인 제3자 검증이 완료되지 않은 내부 측정값이다.
-
----
-
-## 193개국 동시 런칭
-
-고팡은 한국에서 개발되지만, 처음부터 글로벌 시스템으로 설계되었다. UN 193개 회원국 전체에 동시 런칭한다.
-
-K-Law는 각국의 헌법과 법률, 관습법에 보정된 현지화 버전으로 제공된다. GDC는 193개국 통화 풀 위에서 작동한다. 고팡의 주소 체계(GAS v1.6)는 모든 국가의 행정 구역을 수용한다.
-
-낯선 땅, 낯선 사람과 만나 두려움 없이 대화하고 거래할 수 있는 글로벌 경제 생태계. **K-Law는 그 발판이다. GDC는 그 수단이다.**
-
----
-
-## 이 저장소의 구성
+고팡의 하위 시스템(K-Law, K-Market, K-School 등)을 개발한다면
+**아래 순서대로** 읽으면 됩니다.
 
 ```
-gopang/
-├── README.md                              ← 이 문서
-├── whitepaper/
-│   └── GDC_Whitepaper_v1.5.md            ← GDC 백서 (DAWN 철학, 통화 설계, 거버넌스)
-├── technical/
-│   └── Gopang_Address_System_v1.6.md     ← GAS 기술 명세 (PDV, OpenHash, ZKP, GAS)
-└── legal/
-    └── Gopang_PR_LawFirm_v1.3.md         ← 법무법인용 소개서 (K-Law 성능, 증거 체계)
+1단계  인증 통합    → #1-고팡-인증-통합
+2단계  보고서 전송  → #2-pdv-보고서-전송
+3단계  서비스 등록  → #3-서비스-등록
+4단계  상세 문서    → docs/ 폴더
 ```
 
-### 각 문서 개요
+---
 
-**GDC Whitepaper v1.5**
-고팡의 정치·사회·경제적 비전, GDC의 화폐 설계, 다국적 통화 풀, 비영리 거버넌스, DAWN 철학을 담은 공개 백서. 투자자·파트너·일반 대중을 위한 문서.
+## 1. 고팡 인증 통합
 
-**Gopang Address System v1.6 (GAS)**
-고팡 네트워크의 기술 명세서. IPv6 기반 주소 체계, PDV, OpenHash, Stealth Address, ZKP 소유권 인증, DHT 라우팅, Mixnet, 스팸 방지, 법적 컴플라이언스 아키텍처를 상세히 기술. 개발자 및 기술 검토자를 위한 문서.
+모든 하위 시스템은 **독자 인증 없이** 고팡 SSO를 사용합니다.
 
-**Gopang PR LawFirm v1.3**
-법무법인 및 법률 전문가를 위한 소개서. K-Law 판결 예측 성능 실증 결과, PDV+OpenHash 자기완결 증거 구조, ZKP 소유권 인증, 법원 전용 Verification API, 각국 법률 체계와의 정합성 검토 현황을 담고 있다.
+### 필요한 파일
+
+| 파일 | 위치 | 역할 |
+|------|------|------|
+| `gopang-sso.js` | `https://gopang.net/auth/gopang-sso.js` | 인증 라이브러리 |
+| `silent-auth.html` | `https://gopang.net/auth/silent-auth.html` | 인증 엔드포인트 |
+
+### 3줄 통합
+
+```html
+<script type="module">
+import { gopangAuth } from 'https://gopang.net/auth/gopang-sso.js';
+
+const user = await gopangAuth.require('L0');  // 미인증 시 자동 처리
+if (!user) return;                            // 리다이렉트 중
+
+console.log(user.ipv6);   // 사용자 정체성
+console.log(user.level);  // L0 | L1 | L2 | L3
+</script>
+```
+
+### 인증 레벨
+
+| 레벨 | 수단 | 사용 시점 |
+|------|------|-----------|
+| L0 | 기기 자동 인식 | 일반 접속·조회 |
+| L1 | + 얼굴 (MediaPipe) | 개인정보 열람·소액 결제 |
+| L2 | + 지문 (WebAuthn) | 금융 거래·계약 서명 |
+| L3 | + 얼굴 + 지문 + 4단어 | 고액 거래·불가역 행위 |
+
+### 상세 문서
+
+📄 [`docs/gopang-auth-whitepaper.md`](docs/gopang-auth-whitepaper.md)
+— 인증 원리, 레벨 기준표, 보안 분석, 하위 시스템 구현 가이드(§12)
 
 ---
 
-## 현재 상태
+## 2. PDV 보고서 전송
 
-> **본 저장소의 모든 문서는 공개 초안이다.**
-> 실제 서비스 출시와 GDC 세일은 각국 규제 당국의 승인 및 법적 검토 완료 후 진행된다.
-> 어떠한 내용도 투자 권유로 해석되어서는 안 된다.
+하위 시스템은 사용자 활동을 주기적으로 고팡 PDV에 보고합니다.
+고팡은 이를 6하원칙(누가·언제·어디서·무엇을·어떻게·왜)으로 기록합니다.
 
-| 항목 | 상태 |
-|------|------|
-| GAS v1.6 기술 명세 | 설계 완료, 구현 중 |
-| PDV 발신자 서명 체계 | 개발 중 |
-| OpenHash 앵커링 파이프라인 | 개발 중 |
-| K-Law AI (한국 법률) | 내부 테스트 중 (대법원 일치율 73%) |
-| GDC 통화 정책 스마트 컨트랙트 | 설계 완료, 개발 예정 |
-| 법원 Verification API | 설계 완료, 개발 예정 |
-| 글로벌 결제 (다국적 통화 풀) | 설계 완료, 개발 예정 |
-| GDC 초기 세일 | 2026년 9월 예정 |
-| 고팡 메신저 베타 | 2027년 1분기 예정 |
-| 메인넷 출시 | 2027년 3분기 예정 |
+### 필요한 파일
+
+| 파일 | 위치 | 역할 |
+|------|------|------|
+| `gopang-report.js` | `https://gopang.net/report/gopang-report.js` | 보고서 전송 라이브러리 |
+
+### 3줄 전송
+
+```javascript
+import { buildReport, sendReportOnce }
+  from 'https://gopang.net/report/gopang-report.js';
+
+const report = buildReport({
+  svc:    'school',
+  type:   'weekly_progress',
+  ipv6:   user.ipv6,
+  what: { summary: '수학 2단원 완료, 영어 80% 진행', details: [...] },
+  how:  { method: 'AI 튜터 + 문제 풀이' },
+  why:  { goal: '1학기 선행 준비', triggered: 'weekly_schedule' },
+});
+
+const ack = await sendReportOnce(report);  // 중복 방지 자동 처리
+console.log(ack.pdv_entry);               // PDV 기록 ID
+```
+
+### API 엔드포인트
+
+```
+POST https://gopang-proxy.tensor-city.workers.dev/pdv/report
+GET  https://gopang-proxy.tensor-city.workers.dev/svc/verify?svc_id=school
+POST https://gopang-proxy.tensor-city.workers.dev/svc/register
+```
+
+### 상세 문서
+
+📄 [`docs/gopang-report-manual.md`](docs/gopang-report-manual.md)
+— 6하원칙 JSON 스키마, 보고서 유형, 전송 API, ACK, 오류 처리, school 예시
 
 ---
 
-## 참여 방법
+## 3. 서비스 등록
 
-고팡은 DAWN 철학 위에 서 있다. 이 저장소의 코드와 문서는 모두에게 열려 있다.
+고팡 인증·PDV를 사용하려면 **서비스 등록**이 필요합니다.
 
-- **오류 발견:** Issue를 통해 신고
-- **개선 제안:** Pull Request로 제출
-- **법률·기술 검토 협력:** legal@gopang.net
-- **개발 참여:** dev@gopang.net
-- **일반 문의:** hello@gopang.net
+### 등록 수준
 
-제출된 모든 개선안의 수용 여부는 커뮤니티와 시스템이 결정한다. 고팡의 방향은 특정 개인이 아니라, 참여하는 모든 시민의 민주적 합의로 결정된다.
+| 수준 | 조건 | 인증 | PDV 보고 |
+|------|------|------|----------|
+| Level 1 | `*.gopang.net` 서브도메인 | ✅ 자동 | ❌ |
+| Level 2 | 외부 도메인, 신원 확인 | ✅ | ✅ |
+| Level 3 | AI City Inc. 공식 파트너 | ✅ | ✅ |
+
+### 등록 방법
+
+**Level 1** — `*.gopang.net` 서브도메인이면 자동 승인:
+```
+하위 서비스 URL: https://myservice.gopang.net
+→ gopangAuth.require() 즉시 사용 가능
+```
+
+**Level 2 / 3** — 이 저장소에 Issue 등록:
+
+```
+제목: [서비스 등록] {서비스명}
+
+내용:
+- 서비스 ID:    myservice
+- 도메인:       https://myservice.example.com
+- 운영자 IPv6:  2601:db80:...
+- 서비스 설명:  (한 줄 설명)
+- 필요 기능:    인증만 / 인증 + PDV 보고
+```
+
+또는 API로 신청:
+```javascript
+await fetch('https://gopang-proxy.tensor-city.workers.dev/svc/register', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    svc_id:        'myservice',
+    domain:        'https://myservice.gopang.net',
+    operator_ipv6: user.ipv6,
+    description:   '서비스 설명',
+    min_auth:      'L0',
+  }),
+});
+```
 
 ---
 
-## 참조 문서
+## 4. 저장소 구조
 
-- KL-S-01: 고팡 AI 비서·PDV·OpenHash 기반 실시간 예방 법학 시스템 v2.1
-- KL-M-02: 고팡 소통 위법성 자동 감지 및 예방 방법론 v1.0
-- OpenHash SCI 논문 초안 v2.2
-- K-Law 방법론 실증 결과 보고서 v2.1
+```
+gopang_v2/
+│
+│  ← gopang.net 배포 파일
+├── index.html          기기 감지 라우터
+├── webapp.html         모바일 PWA (AI 비서)
+├── desktop.html        PC 랜딩 페이지
+├── worker.js           Cloudflare Worker (API 서버)
+├── manifest.json       PWA 설정
+│
+│  ← 인증 라이브러리 (gopang.net/auth/*)
+├── auth/
+│   ├── gopang-sso.js       하위 시스템 SSO 라이브러리
+│   └── silent-auth.html    인증 엔드포인트 (리다이렉트·iframe)
+│
+│  ← 보고서 라이브러리 (gopang.net/report/*)
+├── report/
+│   └── gopang-report.js    PDV 보고서 전송 라이브러리
+│
+│  ← 문서
+├── docs/
+│   ├── gopang-auth-whitepaper.md   인증 백서 (§12: 하위 시스템 구현 가이드)
+│   ├── gopang-report-manual.md     보고서 전송 매뉴얼
+│   ├── supabase_webauthn.sql       WebAuthn 테이블 SQL
+│   └── ...기타 설계 문서
+│
+│  ← 고팡 앱 빌드 소스
+├── src/
+│   ├── app.js              부트스트랩
+│   ├── ai-secretary/       AI 비서 파이프라인
+│   ├── domains/k-law/      K-Law 플러그인
+│   ├── domains/k-health/   K-Health 플러그인
+│   └── ...
+│
+│  ← 개발 도구
+└── tools/
+    ├── build.py            빌드 스크립트
+    └── serve.py            로컬 서버
+```
 
 ---
 
-*© 2026 AI City Inc. — 이 저장소의 문서와 코드는 DAWN 원칙에 따라 공개된다.*
-*고팡은 특정 기업이나 국가가 소유하는 시스템이 아니다.*
+## 5. 하위 시스템 도메인 요건
+
+```
+필수: *.gopang.net 서브도메인
+  klaw.gopang.net    ✅
+  school.gopang.net  ✅
+  myservice.gopang.net ✅
+
+  myservice.com      ❌ (WebAuthn L2 불가, 별도 신청 필요)
+
+필수: HTTPS
+  http:// 환경에서는 L2 이상 인증 불가
+```
+
+---
+
+## 6. Worker API 전체 목록
+
+`https://gopang-proxy.tensor-city.workers.dev`
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/auth/issue` | SSO 토큰 발급 |
+| GET  | `/auth/verify` | 토큰 검증 |
+| GET  | `/auth/refresh` | 토큰 갱신 |
+| POST | `/auth/webauthn/challenge` | WebAuthn 챌린지 발급 |
+| POST | `/auth/webauthn/register` | 지문 공개키 등록 |
+| POST | `/auth/webauthn/verify` | 지문 서명 검증 |
+| GET  | `/geocode` | 카카오 역지오코딩 |
+| POST | `/deepseek` | DeepSeek API 프록시 |
+| POST | `/gemini/*` | GPT-4o mini 프록시 |
+| POST | `/pdv/report` | **PDV 보고서 수신·기록** |
+| POST | `/svc/register` | **서비스 등록 신청** |
+| GET  | `/svc/verify` | **서비스 등록 상태 확인** |
+
+---
+
+## 7. 문의
+
+| 목적 | 연락처 |
+|------|--------|
+| 서비스 등록 신청 | GitHub Issue |
+| 기술 문의 | dev@gopang.net |
+| 법률·파트너십 | legal@gopang.net |
+| 일반 문의 | hello@gopang.net |
+
+---
+
+## 고팡이란
+
+고팡은 현실 세계의 모든 기관·사물·전문직의 AI 쌍둥이로 구축한 AI 평행 세계 플랫폼입니다.
+사용자는 단일 정체성(IPv6)으로 수백 개의 하위 시스템에 접근하며,
+전용 AI 비서가 각 기관과의 소통을 대행합니다.
+
+철학·비전·기술 상세: [`docs/GDC_Whitepaper_v1.5.md`](docs/GDC_Whitepaper_v1.5.md)
+
+---
+
+*© 2026 AI City Inc. — DAWN: Democracy is All We Need*
