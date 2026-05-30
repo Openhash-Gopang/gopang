@@ -2158,70 +2158,144 @@ window._verifyRestore = async function(newFpHex) {
   console.info('[Auth v2] 복원 완료 ✅', stored.ipv6);
 };
 
-// ── 인증 레벨 확인 (하위 시스템 호출용) ─────────────────
+// ── AUTH 태그 감지 후 인증 확인 버튼 주입 ────────────────
+function _injectAuthConfirmButton(level) {
+  const list = document.getElementById('message-list');
+  if (!list) return;
+
+  const levelLabels = {
+    L1: '얼굴 인증',
+    L2: '지문 인증',
+    L3: '지문 + 얼굴 + 4단어 인증',
+  };
+  const label = levelLabels[level] || '추가 인증';
+
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.id = '_auth-confirm-row';
+  row.innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0;">
+      <button onclick="_executeAuthAndProceed('${level}')"
+        style="background:var(--tint);color:#fff;border:none;border-radius:8px;
+               padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;">
+        🔐 ${label} 후 진행
+      </button>
+      <button onclick="_cancelAuthRequest()"
+        style="background:var(--bg-subtle);color:var(--label-2);
+               border:1px solid var(--sep);border-radius:8px;
+               padding:10px 16px;font-size:13px;cursor:pointer;">
+        취소
+      </button>
+    </div>`;
+  list.appendChild(row);
+  list.scrollTop = list.scrollHeight;
+}
+
+// ── 인증 실행 → 완료 시 AI에게 진행 통보 ────────────────
+window._executeAuthAndProceed = async function(level) {
+  document.getElementById('_auth-confirm-row')?.remove();
+
+  const ok = await gopangAuth.require(level);
+  if (!ok) {
+    appendBubble('ai', '인증이 취소됐습니다. 거래를 중단합니다.', true);
+    return;
+  }
+
+  appendBubble('user', `[인증완료:${level}] 인증이 완료됐습니다. 진행해 주세요.`, false);
+  await callAI(`[AUTH_CONFIRMED:${level}] 사용자가 ${level} 인증을 완료했습니다. 이전에 요청한 거래를 즉시 실행하세요.`);
+};
+
+window._cancelAuthRequest = function() {
+  document.getElementById('_auth-confirm-row')?.remove();
+  appendBubble('ai', '거래가 취소됐습니다.', true);
+};
 // level: 'L0'|'L1'|'L2'|'L3'
 // 반환: true = 인증 성공, false = 실패
-window.gopangAuth = async function(level = 'L0') {
-  const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
-  if (!stored?.ipv6) return false;
+const gopangAuth = {
+  async require(level = 'L0') {
+    const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+    if (!stored?.ipv6) return false;
 
-  // L0: 기기 지문만
-  if (level === 'L0') {
-    const fp = await _buildDeviceFingerprint();
-    return fp === stored.fpHex;
-  }
+    const levels  = ['L0','L1','L2','L3'];
+    const current = levels.indexOf(stored.authLevel || 'L0');
+    const needed  = levels.indexOf(level);
 
-  // L1: + 얼굴
-  if (level === 'L1' || level === 'L2') {
-    if (!stored.faceVec) {
-      appendBubble('ai', '얼굴 인증을 먼저 등록해 주세요.', true);
-      return false;
+    // 이미 충분한 레벨이면 통과
+    if (current >= needed) return true;
+
+    // L1: 얼굴
+    if (needed >= 1) {
+      if (!stored.faceVec) {
+        appendBubble('ai', '⚠️ 얼굴을 먼저 등록해 주세요. (설정 → 보안)', true);
+        return false;
+      }
+      appendBubble('ai', '📷 얼굴 인증이 필요합니다.', true);
+      const vec = await _captureFaceVector();
+      if (!vec) return false;
+      const sim = _cosineSim(vec, stored.faceVec);
+      console.info(`[Auth] 얼굴 유사도: ${(sim*100).toFixed(1)}%`);
+      if (sim < 0.90) {
+        appendBubble('ai', `❌ 얼굴 인증 실패 (유사도 ${(sim*100).toFixed(1)}%)`, true);
+        return false;
+      }
+      if (needed === 1) return true;
     }
-    appendBubble('ai', '📷 얼굴 인증이 필요합니다.', true);
-    const vec = await _captureFaceVector();
-    if (!vec) return false;
-    const sim = _cosineSim(vec, stored.faceVec);
-    console.info(`[Auth v2] 얼굴 유사도: ${(sim*100).toFixed(1)}%`);
-    if (sim < 0.90) {
-      appendBubble('ai', `❌ 얼굴 인증 실패 (유사도 ${(sim*100).toFixed(1)}%)`, true);
-      return false;
-    }
-    if (level === 'L1') return true;
-  }
 
-  // L2: + WebAuthn 지문
-  if (level === 'L2') {
-    try {
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-      await navigator.credentials.get({
-        publicKey: {
-          challenge,
-          timeout: 30000,
-          userVerification: 'required',
-        },
-      });
+    // L2: 지문 (WebAuthn)
+    if (needed >= 2) {
+      const credId = stored.webauthn?.credentialId;
+      if (!credId) {
+        appendBubble('ai', '⚠️ 지문을 먼저 등록해 주세요. (설정 → 보안)', true);
+        return false;
+      }
+      try {
+        appendBubble('ai', '🔐 지문 인증이 필요합니다.', true);
+        const challenge = crypto.getRandomValues(new Uint8Array(32));
+        const assertion = await navigator.credentials.get({
+          publicKey: {
+            challenge,
+            timeout: 30000,
+            userVerification: 'required',
+            allowCredentials: [{
+              id:   Uint8Array.from(
+                atob(credId.replace(/-/g,'+').replace(/_/g,'/')),
+                c => c.charCodeAt(0)
+              ),
+              type: 'public-key',
+            }],
+          },
+        });
+        if (!assertion) return false;
+        if (needed === 2) {
+          appendBubble('ai', '✅ 지문 인증 완료.', true);
+          return true;
+        }
+      } catch(e) {
+        appendBubble('ai', '지문 인증이 취소됐습니다.', true);
+        return false;
+      }
+    }
+
+    // L3: + 4단어
+    if (needed >= 3) {
+      const words = prompt('4단어 시드를 입력하세요:');
+      if (!words) return false;
+      const inputBytes = await _seedToBytes(words);
+      const inputHex   = Array.from(inputBytes)
+        .map(b=>b.toString(16).padStart(2,'0')).join('');
+      if (inputHex !== stored.seedHex) {
+        appendBubble('ai', '❌ 시드가 일치하지 않습니다.', true);
+        return false;
+      }
+      appendBubble('ai', '✅ L3 전체 인증 완료.', true);
       return true;
-    } catch(e) {
-      appendBubble('ai', '지문 인증이 취소됐습니다.', true);
-      return false;
     }
-  }
 
-  // L3: + 4단어
-  if (level === 'L3') {
-    const words = prompt('4단어 시드를 입력하세요:');
-    if (!words) return false;
-    const inputBytes = await _seedToBytes(words);
-    const inputHex   = Array.from(inputBytes).map(b=>b.toString(16).padStart(2,'0')).join('');
-    if (inputHex !== stored.seedHex) {
-      appendBubble('ai', '❌ 시드가 일치하지 않습니다.', true);
-      return false;
-    }
-    return true;
+    return false;
   }
-
-  return false;
 };
+// 하위 호환
+window.gopangAuth = gopangAuth;
 
 // ── 설정 ────────────────────────────────────────────────
 const CFG = {
@@ -2288,6 +2362,47 @@ SOC 사회·복지 | IOT IoT·사물
 - 위험: S0정상 S1알림 S2보류 S3차단
 - 서명: ✍️ ECDSA P-256 (공식 요청·계약 시)
 - PDV 기록: 대화 종료 시 자동 저장됨 (응답마다 출력 불필요)
+
+## § 8. 거래 위험도 판단 — 인증 레벨 자동 결정
+행위를 실행하기 전 반드시 위험도를 내부 평가하라.
+인증이 필요하면 실행 전에 반드시 [AUTH:Lx] 태그를 응답 첫 줄에 출력하라.
+사용자가 인증을 완료하면 시스템이 자동으로 통보하며, 그 이후 실행한다.
+
+[AUTH:L3] — 지문 + 얼굴 + 4단어 모두 필요
+  · 금액 1,000만원 이상 송금·결제·계약
+  · 부동산·자동차 등 고가 자산 계약
+  · 법적 구속력 있는 문서 최종 서명
+  · 되돌릴 수 없는 행위 (계좌 해지, 소송 제기 등)
+  · 정체성 변경 (IPv6 재발급, 4단어 시드 변경)
+
+[AUTH:L2] — 지문 필요
+  · 금액 10만원 이상 ~ 1,000만원 미만 금융 거래
+  · 계약서·합의서 서명
+  · 개인정보 변경 (주소, 연락처 등)
+  · 타인 계좌로 송금 (금액 무관)
+  · K-Law 소송 제기·취하
+
+[AUTH:L1] — 얼굴 필요
+  · PDV 개인정보 직접 열람
+  · 금액 10만원 미만 결제
+  · 타인에게 공식 메시지·문서 발송
+  · 의료 처방·진단 기록 열람
+
+[AUTH:L0] — 추가 인증 불필요 (기기 자동 인증)
+  · 정보 조회·검색·계산
+  · 일반 대화·질의
+  · 내 PDV 요약 조회 (상세 열람 제외)
+  · 위치·날씨·시간 확인
+
+응답 예시:
+  사용자: "김철수 계좌로 500만원 보내줘"
+  → [AUTH:L2] 10만원 이상 타인 계좌 송금입니다. 지문 인증이 필요합니다. 진행하시겠습니까?
+
+  사용자: "이 아파트 계약서에 서명해줘 (3억)"
+  → [AUTH:L3] 고가 부동산 계약입니다. 지문 + 얼굴 + 4단어 인증이 필요합니다. 진행하시겠습니까?
+
+  사용자: "내일 날씨 알려줘"
+  → (인증 태그 없이 바로 답변)
 
 ## § 7. 구현 현황
 1단계 자체해결: ✅ | 2단계 K-Law: ✅ | 3단계 외부AI: ⚙️시뮬 | 4단계 웹검색: ✅
@@ -3824,6 +3939,21 @@ async function callAI(userText, imageFile = null) {
     history.push({ role: 'assistant', content: fullReply });
     if (bubble) bubble.classList.remove('streaming');
 
+    // ── AUTH 태그 감지 → 인증 요구 ──────────────────────────
+    const authMatch = fullReply.match(/\[AUTH:(L[0-3])\]/);
+    if (authMatch) {
+      const requiredLevel = authMatch[1];
+      const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+      const currentLevel = stored?.authLevel || 'L0';
+      const levels = ['L0','L1','L2','L3'];
+      const needsUpgrade = levels.indexOf(requiredLevel) > levels.indexOf(currentLevel);
+
+      if (needsUpgrade) {
+        // 인증 버튼 주입
+        setTimeout(() => _injectAuthConfirmButton(requiredLevel), 400);
+      }
+    }
+
     // K-Law 백그라운드 감시 트리거 — 대화 내용 자동 검토 (비동기)
     setTimeout(() => _klawReview('conversation', null), 3000);
 
@@ -4978,6 +5108,28 @@ const GWP_REGISTRY = [
     icon:     '⚖️',
     url:      'https://gopang.net/klaw',
     triggers: ['법률','계약서','분쟁','고소','소송','판결','법원','변호사'],
+  },
+  {
+    id:       'school',
+    name:     'K-School',
+    icon:     '📚',
+    url:      'https://school.gopang.net',
+    triggers: [
+      // 학습·교육 일반
+      '공부','학습','배우','가르쳐','설명해','알려줘','이해','모르겠',
+      // 교과목
+      '수학','영어','과학','국어','물리','화학','생물','역사','지리',
+      '사회','도덕','음악','미술','체육','코딩','프로그래밍','철학',
+      '경제','통계','논리','문학','글쓰기','독서',
+      // 학습 단위
+      '숙제','과제','시험','문제','풀어','계산','증명','해석',
+      '방정식','함수','미적분','확률','기하','대수',
+      // 진로·학제
+      '진로','대학','수능','입시','취업','직업','커리어','전공',
+      '유치원','초등','중학교','고등학교','대학원',
+      // AI 교수
+      'AI 교수','선생님','튜터','과외',
+    ],
   },
 ];
 

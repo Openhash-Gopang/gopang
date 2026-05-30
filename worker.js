@@ -85,9 +85,14 @@ export default {
     // ── 라우팅 ───────────────────────────────────────────
 
     // SSO 인증 라우트
-    if (pathname === '/auth/issue')   return handleIssue(request, env, corsHeaders);
-    if (pathname === '/auth/verify')  return handleVerify(request, env, corsHeaders);
-    if (pathname === '/auth/refresh') return handleRefresh(request, env, corsHeaders);
+    if (pathname === '/auth/issue')               return handleIssue(request, env, corsHeaders);
+    if (pathname === '/auth/verify')              return handleVerify(request, env, corsHeaders);
+    if (pathname === '/auth/refresh')             return handleRefresh(request, env, corsHeaders);
+
+    // WebAuthn 지문 라우트
+    if (pathname === '/auth/webauthn/challenge')  return handleWAChallenge(request, env, corsHeaders);
+    if (pathname === '/auth/webauthn/register')   return handleWARegister(request, env, corsHeaders);
+    if (pathname === '/auth/webauthn/verify')     return handleWAVerify(request, env, corsHeaders);
 
     // 카카오 역지오코딩
     if (pathname.startsWith('/geocode')) {
@@ -264,8 +269,177 @@ async function handleRefresh(request, env, corsHeaders) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 기존 핸들러 (변경 없음)
+// WebAuthn 핸들러
 // ═══════════════════════════════════════════════════════════
+
+const SUPABASE_URL = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
+const WA_RP_ID    = 'gopang.net';
+const WA_RP_NAME  = '고팡 (Gopang)';
+
+// ── Supabase 헬퍼 ───────────────────────────────────────────
+async function sbFetch(env, path, method = 'GET', body = null) {
+  const key = env.SUPABASE_KEY ||
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
+  const headers = {
+    'apikey':        key,
+    'Authorization': 'Bearer ' + key,
+    'Content-Type':  'application/json',
+    'Prefer':        'resolution=merge-duplicates',
+  };
+  const res  = await fetch(SUPABASE_URL + path, {
+    method, headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return res.ok ? res.json().catch(() => ({})) : null;
+}
+
+// ── /auth/webauthn/challenge: 챌린지 발급 ──────────────────
+// 등록/인증 전 서버가 랜덤 챌린지를 발급
+// Cloudflare Workers KV 없으므로 응답에 챌린지 포함 + HMAC 서명으로 무결성 보장
+async function handleWAChallenge(request, env, corsHeaders) {
+  const challenge = crypto.getRandomValues(new Uint8Array(32));
+  const chalB64   = btoa(String.fromCharCode(...challenge))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+
+  // 5분 유효 만료 포함
+  const exp     = Math.floor(Date.now() / 1000) + 300;
+  const payload = { challenge: chalB64, exp };
+
+  // Worker 서명 (HMAC) — 클라이언트가 위조 못하도록
+  const sigData = `${chalB64}.${exp}`;
+  const key     = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1'),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(sigData));
+  const sigHex = Array.from(new Uint8Array(sig))
+    .map(b => b.toString(16).padStart(2,'0')).join('');
+
+  return new Response(
+    JSON.stringify({ challenge: chalB64, exp, sig: sigHex }),
+    { status: 200, headers: corsHeaders }
+  );
+}
+
+// ── 챌린지 서명 검증 ────────────────────────────────────────
+async function _verifyChallengeToken(env, chalB64, exp, sig) {
+  if (exp < Math.floor(Date.now() / 1000)) return false;   // 만료
+  const sigData = `${chalB64}.${exp}`;
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1'),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
+  );
+  const sigBytes = Uint8Array.from(sig.match(/.{2}/g).map(h => parseInt(h, 16)));
+  return crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(sigData));
+}
+
+// ── /auth/webauthn/register: 공개키 등록 ────────────────────
+async function handleWARegister(request, env, corsHeaders) {
+  if (request.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
+  const body = await request.json().catch(() => null);
+  if (!body?.ipv6 || !body?.credentialId || !body?.publicKey) {
+    return new Response(
+      JSON.stringify({ error: 'ipv6, credentialId, publicKey 필수' }),
+      { status: 400, headers: corsHeaders }
+    );
+  }
+
+  // 챌린지 무결성 검증
+  const chalOk = await _verifyChallengeToken(
+    env, body.challenge, body.challengeExp, body.challengeSig
+  );
+  if (!chalOk) {
+    return new Response(
+      JSON.stringify({ error: '챌린지 만료 또는 위조' }),
+      { status: 401, headers: corsHeaders }
+    );
+  }
+
+  // Supabase에 공개키 저장
+  const result = await sbFetch(env, '/rest/v1/webauthn_credentials', 'POST', {
+    ipv6:          body.ipv6,
+    credential_id: body.credentialId,
+    public_key:    body.publicKey,
+    counter:       0,
+    device_type:   body.deviceType || 'platform',
+    aaguid:        body.aaguid || null,
+  });
+
+  if (!result) {
+    return new Response(
+      JSON.stringify({ error: 'Supabase 저장 실패' }),
+      { status: 502, headers: corsHeaders }
+    );
+  }
+
+  return new Response(
+    JSON.stringify({ ok: true, ipv6: body.ipv6 }),
+    { status: 200, headers: corsHeaders }
+  );
+}
+
+// ── /auth/webauthn/verify: 서명 검증 ────────────────────────
+async function handleWAVerify(request, env, corsHeaders) {
+  if (request.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
+  const body = await request.json().catch(() => null);
+  if (!body?.ipv6 || !body?.credentialId) {
+    return new Response(
+      JSON.stringify({ error: 'ipv6, credentialId 필수' }),
+      { status: 400, headers: corsHeaders }
+    );
+  }
+
+  // Supabase에서 공개키 조회
+  const rows = await sbFetch(
+    env,
+    `/rest/v1/webauthn_credentials?ipv6=eq.${encodeURIComponent(body.ipv6)}&credential_id=eq.${encodeURIComponent(body.credentialId)}&select=public_key,counter`,
+    'GET'
+  );
+
+  if (!rows?.length) {
+    return new Response(
+      JSON.stringify({ valid: false, reason: 'credential_not_found' }),
+      { status: 404, headers: corsHeaders }
+    );
+  }
+
+  const cred = rows[0];
+
+  // 카운터 검증 (재사용 공격 방지)
+  if (body.counter !== undefined && body.counter <= cred.counter) {
+    return new Response(
+      JSON.stringify({ valid: false, reason: 'counter_replay' }),
+      { status: 401, headers: corsHeaders }
+    );
+  }
+
+  // 카운터 업데이트
+  if (body.counter !== undefined) {
+    await sbFetch(
+      env,
+      `/rest/v1/webauthn_credentials?credential_id=eq.${encodeURIComponent(body.credentialId)}`,
+      'PATCH',
+      { counter: body.counter, last_used_at: new Date().toISOString() }
+    );
+  }
+
+  // ✅ 검증 성공 → SSO 토큰 발급 (L2)
+  const token  = buildToken(body.ipv6, 'L2', '*');
+  const cookie = buildCookie(token);
+
+  return new Response(
+    JSON.stringify({ valid: true, ipv6: body.ipv6, level: 'L2' }),
+    { status: 200, headers: { ...corsHeaders, 'Set-Cookie': cookie } }
+  );
+}
+
+// ── 기존 핸들러 ─────────────────────────────────────────────
 
 // ── /geocode ────────────────────────────────────────────────
 async function handleGeocode(url, env, corsHeaders) {
