@@ -41,6 +41,21 @@ export async function signToken(payload, seedHex) {
   return _bytesToB64url(new Uint8Array(sig));
 }
 
+
+// ── issueToken: silent-auth.html 호환 alias ─────────────
+export async function issueToken(user, svcId) {
+  const payload = {
+    ver:   '1.0',
+    ipv6:  user.ipv6,
+    level: user.authLevel || user.level || 'L0',
+    svc:   svcId || (location.hostname.replace(/\.gopang\.net$/, '') || 'dev'),
+    iat:   Math.floor(Date.now() / 1000),
+    exp:   Math.floor(Date.now() / 1000) + 3600,
+  };
+  if (!user.seedHex) return { payload, sig: 'unsigned' };
+  const sig = await signToken(payload, user.seedHex);
+  return { payload, sig };
+}
 // ── 기기 핑거프린트 (gopang_v2와 동일 로직) ──────────────
 async function _buildDeviceFingerprint() {
   const raw = [
