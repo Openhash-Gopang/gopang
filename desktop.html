@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>고팡 (Gopang) — AI 자율 시장 플랫폼 v3.4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ── RESET ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -22,7 +22,7 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
   --border:    #e5e7eb;
   --border2:   #d1d5db;
 
-  --brand:     #3ecf8e;   /* Supabase green */
+  --brand:     #3ecf8e;
   --brand-dk:  #1a9e6a;
   --brand-lt:  #d1fae5;
   --brand-bg:  #f0fdf8;
@@ -34,10 +34,11 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
   --red:       #ef4444;
   --red-lt:    #fef2f2;
 
-  --text:      #111827;
-  --text2:     #374151;
-  --text3:     #6b7280;
-  --text4:     #9ca3af;
+  /* 텍스트 — Supabase 수준 대비율 */
+  --text:      #0f172a;   /* 본문 제목: 대비율 ~18:1 */
+  --text2:     #1e293b;   /* 본문 내용: 대비율 ~14:1 */
+  --text3:     #374151;   /* 보조 텍스트: 대비율 ~9:1 */
+  --text4:     #6b7280;   /* 힌트: 대비율 ~5:1 */
 
   --nav-h:     57px;
   --radius:    6px;
@@ -51,11 +52,13 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
-  font-weight: 300;
+  font-family: 'Inter', 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 400;
   font-size: 14px;
   line-height: 1.6;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ── DOTTED BG PATTERN (Supabase signature) ── */
@@ -142,9 +145,9 @@ nav {
 
 /* ── HERO ── */
 .hero {
-  min-height: calc(100vh - var(--nav-h) - 36px);
-  padding: calc(var(--nav-h) + 28px) 24px 60px;
-  display: flex; flex-direction: column; justify-content: center;
+  min-height: auto;
+  padding: calc(var(--nav-h) + 48px) 24px 52px;
+  display: flex; flex-direction: column; justify-content: flex-start;
   align-items: center; text-align: center;
   position: relative; overflow: hidden;
 }
@@ -176,12 +179,12 @@ nav {
 .hero h1 .brand { color: var(--brand); font-weight: 600; }
 .hero-sub {
   font-size: 18px; font-weight: 400;
-  color: var(--text2); letter-spacing: -0.3px;
+  color: var(--text); letter-spacing: -0.3px;
   margin-bottom: 20px;
   animation: fadeUp 0.5s 0.14s ease both;
 }
 .hero-desc {
-  max-width: 580px; font-size: 15px; font-weight: 300;
+  max-width: 580px; font-size: 15px; font-weight: 400;
   color: var(--text3); line-height: 1.75;
   margin: 0 auto 36px;
   animation: fadeUp 0.5s 0.2s ease both;
@@ -192,7 +195,7 @@ nav {
 /* ── HERO TAGLINE ── */
 .hero-tagline {
   font-size: 18px;
-  font-weight: 300;
+  font-weight: 400;
   color: var(--text2);
   letter-spacing: -0.3px;
   line-height: 1.5;
@@ -229,6 +232,13 @@ nav {
 /* ── SECTION ── */
 .section { padding: 88px 8%; }
 .section-inner { max-width: 860px; margin: 0 auto; }
+
+/* 섹션 배경: 순백 ↔ 연회색 교대로 대비 강화 */
+.agents-bg   { background: #ffffff; }
+.table-bg    { background: #ffffff; }
+.metrics-section { background: #ffffff; }
+.dist-section    { background: #ffffff; }
+.comparison-section { background: #ffffff; }
 .section-tag {
   display: inline-block;
   font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
@@ -245,8 +255,8 @@ nav {
 }
 .section-title strong { font-weight: 600; }
 .section-body {
-  font-size: 14px; font-weight: 300;
-  color: var(--text3); line-height: 1.75;
+  font-size: 14px; font-weight: 400;
+  color: var(--text2); line-height: 1.75;
   max-width: 100%;
 }
 .section-body p { margin-bottom: 8px; }
@@ -259,7 +269,7 @@ nav {
 }
 .overview-list li {
   display: flex; align-items: flex-start; gap: 8px;
-  font-size: 14px; font-weight: 300; color: var(--text3); line-height: 1.75;
+  font-size: 14px; font-weight: 400; color: var(--text2); line-height: 1.75;
 }
 .overview-list li::before {
   content: '—';
@@ -299,7 +309,7 @@ nav {
 }
 .step-num::before { content:''; width:20px; height:1px; background:var(--brand); }
 .step-card h3 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 8px; letter-spacing: -0.3px; }
-.step-card p { font-size: 13px; font-weight: 300; color: var(--text3); line-height: 1.65; }
+.step-card p { font-size: 13px; font-weight: 400; color: var(--text2); line-height: 1.65; }
 .step-tag {
   display: inline-block; margin-top: 14px;
   font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
@@ -344,8 +354,8 @@ nav {
   margin-bottom: 3px;
 }
 .agent-url {
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 300;
-  color: var(--text4); letter-spacing: 0.2px;
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  color: var(--text3); letter-spacing: 0.2px;
 }
 .badge {
   font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
@@ -356,11 +366,11 @@ nav {
 .badge-dev   { color: #d97706; background: #fffbeb; border-color: #fde68a; }
 .badge-soon  { color: var(--text4); background: var(--bg-subtle); border-color: var(--border); }
 .agent-desc {
-  font-size: 13px; font-weight: 300; color: var(--text3);
+  font-size: 13px; font-weight: 400; color: var(--text2);
   line-height: 1.65; margin-bottom: 16px;
 }
 .agent-inst {
-  font-size: 12px; font-weight: 400; color: var(--text4);
+  font-size: 12px; font-weight: 500; color: var(--text3);
   display: flex; align-items: center; gap: 5px;
   padding-top: 14px; border-top: 1px solid var(--border);
 }
@@ -393,7 +403,7 @@ nav {
 .metric-big.amber { color: var(--amber); }
 .metric-big.red   { color: var(--red); }
 .metric-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; letter-spacing: -0.3px; }
-.metric-sub { font-size: 13px; font-weight: 300; color: var(--text4); line-height: 1.55; }
+.metric-sub { font-size: 13px; font-weight: 400; color: var(--text3); line-height: 1.55; }
 
 /* ── TABLE ── */
 .table-bg { background: var(--bg-alt); }
@@ -403,21 +413,21 @@ nav {
   box-shadow: var(--shadow-sm);
 }
 table { width: 100%; border-collapse: collapse; background: white; }
-thead { background: var(--bg-subtle); border-bottom: 1px solid var(--border); }
+thead { background: #f8fafc; border-bottom: 1px solid var(--border); }
 th {
   padding: 11px 18px; text-align: left;
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
-  color: var(--text4); letter-spacing: 0.8px; text-transform: uppercase;
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+  color: var(--text3); letter-spacing: 0.8px; text-transform: uppercase;
 }
 tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
 tbody tr:last-child { border-bottom: none; }
-tbody tr:hover { background: var(--bg-subtle); }
-td { padding: 14px 18px; font-size: 13px; font-weight: 300; color: var(--text2); }
-td:first-child { font-weight: 500; color: var(--text); }
-.td-bad { color: var(--red); font-weight: 300; }
-.td-bad small { display: block; color: var(--text4); font-size: 12px; font-family: 'DM Mono', monospace; margin-top: 2px; }
-.td-good { color: #059669; font-weight: 500; }
-.td-mod { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--blue); }
+tbody tr:hover { background: #f8fafc; }
+td { padding: 14px 18px; font-size: 13px; font-weight: 400; color: var(--text2); }
+td:first-child { font-weight: 600; color: var(--text); }
+.td-bad { color: var(--red); font-weight: 400; }
+.td-bad small { display: block; color: var(--text3); font-size: 12px; font-family: 'DM Mono', monospace; margin-top: 2px; }
+.td-good { color: #059669; font-weight: 600; }
+.td-mod { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--blue); font-weight: 500; }
 
 /* ── DISTRIBUTION ── */
 .dist-grid {
@@ -437,7 +447,7 @@ td:first-child { font-weight: 500; color: var(--text); }
   line-height: 1; margin-bottom: 10px; letter-spacing: -1.5px;
 }
 .dist-role { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
-.dist-note { font-size: 12px; font-weight: 300; color: var(--text4); }
+.dist-note { font-size: 12px; font-weight: 400; color: var(--text3); }
 .dc-green  { color: var(--brand); }
 .dc-blue   { color: var(--blue); }
 .dc-amber  { color: var(--amber); }
@@ -478,17 +488,17 @@ footer {
 }
 .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
 .footer-links a {
-  color: var(--text4); text-decoration: none; font-size: 13px; font-weight: 300;
+  color: var(--text3); text-decoration: none; font-size: 13px; font-weight: 400;
   transition: color 0.15s;
 }
 .footer-links a:hover { color: var(--brand); }
-.footer-copy { font-size: 12px; font-weight: 300; color: var(--text4); font-family: 'DM Mono', monospace; }
+.footer-copy { font-size: 12px; font-weight: 400; color: var(--text3); font-family: 'DM Mono', monospace; }
 .footer-disclaimer {
   max-width: 860px;
   margin: 20px auto 0;
   padding-top: 20px;
   border-top: 1px solid var(--border);
-  font-size: 11px; font-weight: 300;
+  font-size: 11px; font-weight: 400;
   color: var(--text4);
   line-height: 1.7;
   text-align: center;
