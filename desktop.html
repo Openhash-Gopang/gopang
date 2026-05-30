@@ -1057,18 +1057,27 @@ if (sr) ioCount.observe(sr);
 
 /* ── WebApp Phone Modal ─────────────────────────────────────── */
 function openWebApp() {
-  document.getElementById('webapp-modal').classList.add('open');
+  const modal = document.getElementById('webapp-modal');
+  if (!modal) return;
+  modal.classList.add('open');
   document.body.style.overflow = 'hidden';
   const iframe = document.getElementById('webapp-iframe');
-  if (!iframe.src) iframe.src = 'webapp.html';
+  if (iframe && !iframe.src) iframe.src = 'webapp.html';
 }
 function closeWebApp() {
-  document.getElementById('webapp-modal').classList.remove('open');
+  const modal = document.getElementById('webapp-modal');
+  if (!modal) return;
+  modal.classList.remove('open');
   document.body.style.overflow = '';
 }
-document.getElementById('webapp-modal').addEventListener('click', function(e) {
-  const wrapper = document.getElementById('phone-wrapper');
-  if (wrapper && !wrapper.contains(e.target)) closeWebApp();
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('webapp-modal');
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      const wrapper = document.getElementById('phone-wrapper');
+      if (wrapper && !wrapper.contains(e.target)) closeWebApp();
+    });
+  }
 });
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeWebApp();
