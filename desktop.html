@@ -189,27 +189,20 @@ nav {
 .hero-desc strong { color: var(--text2); font-weight: 500; }
 
 /* ── STAT ROW ── */
-.stat-row {
-  display: flex; flex-wrap: wrap; gap: 0;
-  border: 1px solid var(--border); border-radius: var(--radius-lg);
-  background: var(--surface); box-shadow: var(--shadow);
-  width: fit-content; margin: 0 auto 40px;
-  overflow: hidden;
+/* ── HERO TAGLINE ── */
+.hero-tagline {
+  font-size: 18px;
+  font-weight: 300;
+  color: var(--text2);
+  letter-spacing: -0.3px;
+  line-height: 1.5;
+  margin: 0 auto 36px;
   animation: fadeUp 0.5s 0.26s ease both;
 }
-.stat-cell {
-  padding: 18px 32px;
-  border-right: 1px solid var(--border);
+.hero-tagline strong {
+  font-weight: 600;
+  color: var(--brand);
 }
-.stat-cell:last-child { border-right: none; }
-.stat-val {
-  font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500;
-  color: var(--text); display: block; line-height: 1; margin-bottom: 5px;
-}
-.stat-val.green { color: var(--brand); }
-.stat-val.blue  { color: var(--blue); }
-.stat-val.amber { color: var(--amber); }
-.stat-lbl { font-size: 12px; color: var(--text4); letter-spacing: 0.2px; }
 
 /* ── HERO ACTIONS ── */
 .hero-actions {
@@ -517,8 +510,6 @@ footer {
   .agents-grid { grid-template-columns: 1fr; }
   .metrics-grid { grid-template-columns: 1fr; }
   .dist-grid { grid-template-columns: 1fr; }
-  .stat-row { width: 100%; }
-  .stat-cell { flex: 1 1 50%; border-bottom: 1px solid var(--border); }
   .footer-inner { flex-direction: column; align-items: flex-start; }
 }
 </style>
@@ -586,24 +577,7 @@ footer {
     <h1><strong>고팡</strong></h1>
     <p class="hero-sub">AI 평행세계 플랫폼 · v3.4</p>
 
-    <div class="stat-row">
-      <div class="stat-cell">
-        <span class="stat-val green" id="s1">7.3M</span>
-        <span class="stat-lbl">TPS 처리 성능</span>
-      </div>
-      <div class="stat-cell">
-        <span class="stat-val" id="s2">88.6%</span>
-        <span class="stat-lbl">전력 절감</span>
-      </div>
-      <div class="stat-cell">
-        <span class="stat-val blue" id="s3">0%</span>
-        <span class="stat-lbl">소비자 데이터 노출</span>
-      </div>
-      <div class="stat-cell">
-        <span class="stat-val amber" id="s4">98%</span>
-        <span class="stat-lbl">재해 복구율</span>
-      </div>
-    </div>
+    <p class="hero-tagline">현실 세계의 비용을 <strong>99%</strong>, 시간을 <strong>99.9%</strong> 줄입니다.</p>
 
     <div class="hero-actions">
       <a href="https://gopang.net" target="_blank" class="btn-lg btn-green">
@@ -1029,31 +1003,6 @@ function toggleNav(btn) {
     sp[2].style.transform = 'translateY(-6.5px) rotate(-45deg)';
   }
 }
-
-/* counter animation */
-function counter(el, target, dec=0, suffix='') {
-  const dur = 1400, start = performance.now();
-  const run = now => {
-    const p = Math.min((now-start)/dur, 1);
-    const e = 1 - Math.pow(1-p, 3);
-    const v = (parseFloat(target) * e).toFixed(dec);
-    el.textContent = v + suffix;
-    if (p < 1) requestAnimationFrame(run);
-    else el.textContent = target + suffix;
-  };
-  requestAnimationFrame(run);
-}
-const ioCount = new IntersectionObserver(entries => {
-  if (entries[0].isIntersecting) {
-    ioCount.disconnect();
-    counter(document.getElementById('s1'), '7.3', 1, 'M');
-    counter(document.getElementById('s2'), '88.6', 1, '%');
-    counter(document.getElementById('s3'), '0', 0, '%');
-    counter(document.getElementById('s4'), '98', 0, '%');
-  }
-}, { threshold: 0.6 });
-const sr = document.querySelector('.stat-row');
-if (sr) ioCount.observe(sr);
 
 /* ── WebApp Phone Modal ─────────────────────────────────────── */
 function openWebApp() {
