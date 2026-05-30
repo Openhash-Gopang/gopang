@@ -234,8 +234,8 @@ nav {
 }
 
 /* ── SECTION ── */
-.section { padding: 88px 24px; }
-.section-inner { max-width: 1100px; margin: 0 auto; }
+.section { padding: 88px 8%; }
+.section-inner { max-width: 860px; margin: 0 auto; }
 .section-tag {
   display: inline-block;
   font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
@@ -254,7 +254,34 @@ nav {
 .section-body {
   font-size: 14px; font-weight: 300;
   color: var(--text3); line-height: 1.75;
-  max-width: 620px;
+  max-width: 100%;
+}
+.section-body p { margin-bottom: 8px; }
+.section-body p:last-child { margin-bottom: 0; }
+.overview-list {
+  list-style: none;
+  margin: 10px 0 12px 0;
+  padding: 0;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.overview-list li {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 14px; font-weight: 300; color: var(--text3); line-height: 1.75;
+}
+.overview-list li::before {
+  content: '—';
+  color: var(--brand);
+  font-weight: 500;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.overview-p2 {
+  margin-top: 20px;
+}
+.overview-p3 {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
 }
 
 /* ── DIVIDER ── */
@@ -307,7 +334,7 @@ nav {
   margin-bottom: 12px;
 }
 .agent-name {
-  font-size: 14px; font-weight: 600; color: var(--text);
+  font-size: 16px; font-weight: 600; color: var(--text);
   letter-spacing: -0.3px; margin-bottom: 2px;
 }
 .agent-link {
@@ -463,6 +490,17 @@ footer {
 }
 .footer-links a:hover { color: var(--brand); }
 .footer-copy { font-size: 12px; font-weight: 300; color: var(--text4); font-family: 'DM Mono', monospace; }
+.footer-disclaimer {
+  max-width: 860px;
+  margin: 20px auto 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 11px; font-weight: 300;
+  color: var(--text4);
+  line-height: 1.7;
+  text-align: center;
+  font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
+}
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
@@ -546,12 +584,7 @@ footer {
       오픈소스 프로젝트 · GitHub
     </a>
     <h1><strong>고팡</strong></h1>
-    <p class="hero-sub">AI 자율 글로벌 시장 플랫폼 · v3.4</p>
-    <p class="hero-desc">
-      현실 세계의 비용을 <strong>천 분의 일(1/1,000)</strong> 수준으로 줄이는 AI 평행 세계.
-      FPGA 기반 하드웨어 가속과 OpenHash 분산원장을 결합한 완전 자율 시스템.
-      소비자 개인정보 <strong>0% 수집</strong>으로 사람의 개입 없이 시장이 스스로 작동합니다.
-    </p>
+    <p class="hero-sub">AI 평행세계 플랫폼 · v3.4</p>
 
     <div class="stat-row">
       <div class="stat-cell">
@@ -594,11 +627,24 @@ footer {
   <div class="section-inner">
     <div class="section-tag reveal">Platform Overview</div>
     <h2 class="section-title reveal"><strong>AI 평행 세계</strong>란 무엇인가</h2>
-    <p class="section-body reveal">
-      고팡은 현실 세계의 사람, 사물, 기관 각각의 AI 쌍둥이로 구성된 별개의 세상입니다.
-      법원, 국세청, 대학, 병원, 시장, 기업, 도청 등 모든 기관의 AI 쌍둥이가 실제 기관의
-      기능을 <strong>1/1,000 비용</strong>으로 수행합니다.
-    </p>
+    <div class="section-body reveal">
+      <p>고팡은 현실 세계의 사람, 사물, 기관 각각의 AI 쌍둥이로 구축한 평행 세계입니다.</p>
+      <ul class="overview-list">
+        <li>기관 — 법원, 국세청, 대학, 병원, 시장, 기업, 시청 등</li>
+        <li>자율주행차량, 주택, 냉장고 등의 사물, 그리고,</li>
+        <li>회계사, 변호사, 의사, 공무원 등 직종</li>
+      </ul>
+      <p>고팡의 AI 쌍둥이는 현실의 쌍둥이에 비해, 비용은 <strong>1/1,000</strong>, 시간은 <strong>1/10,000</strong>의 속도로 업무를 수행합니다.</p>
+
+      <p class="overview-p2">무엇보다 모든 개인은 <strong>"전용 AI 비서"</strong>를 갖습니다.</p>
+      <ul class="overview-list">
+        <li>AI 비서는 내 PC와 스마트폰의 PDV(Private Data Vault)에 나에 대한 모든 정보를 기록하고 갱신합니다.</li>
+        <li>오직 나 자신만 내 PDV에 접근할 수 있으며, 내 PC 등에 저장되므로, 대규모 해킹이 불가능합니다(오프라인).</li>
+        <li>AI 비서는 나 대신 각종 업무를 수행하며, 나는 감독할 뿐입니다.</li>
+      </ul>
+
+      <p class="overview-p3">고팡은 현실 세계의 모든 기관과 사물, 전문직의 AI 쌍둥이가 존재하는 평행 세계이며, 나의 AI 비서는 이들 기관 등과 소통하는 창구입니다.</p>
+    </div>
 
     <div class="steps-grid">
       <div class="step-card reveal">
@@ -630,7 +676,16 @@ footer {
   <div class="section-inner">
     <div class="section-tag reveal">AI Agents</div>
     <h2 class="section-title reveal">등록된 <strong>AI 에이전트</strong></h2>
-    <p class="section-body reveal">고팡에 등록된 전문 AI 에이전트. 각 에이전트는 현실 기관의 AI 쌍둥이로서 동작합니다.</p>
+    <div class="section-body reveal">
+      <p>고팡에 등록된 전문 AI 에이전트는 AI 평행 세계에 거주하는 현실의 AI 쌍둥이입니다.</p>
+      <ul class="overview-list">
+        <li>입법부, 사법부, 행정부 등 정부 기관 각각</li>
+        <li>은행, 시장(Market), 자영업 등 산업 기관</li>
+        <li>의사, 변호사, 회계사 등 전문직</li>
+        <li>자율주행차량, 건물, 도로, 시설 등 사물</li>
+      </ul>
+      <p>아래는 우리가 구축한 AI 평행 세계의 쌍둥이들입니다. 가령, K-Law는 현실의 모든 법원을 통합한 AI 쌍둥이로써, 수 년이 소요되는 소송 기간을 5~10초로 줄이는 한 편, 그 가상 판결문의 법리는 현실 대법원과 큰 차이가 없습니다(v20.0 기준). 사실, <strong>"큰 차이가 없다"</strong>는 표현은 겸손한 말입니다. K-Law가 작성한 판결문 법리를 인간 법조인이 깨뜨리기 쉽지 않습니다. 다른 모든 AI 쌍둥이들도 같습니다. 아래 링크에서 직접 확인해 보십시오.</p>
+    </div>
 
     <div class="agents-grid">
 
@@ -921,18 +976,26 @@ footer {
 <!-- ── FOOTER ── -->
 <footer>
   <div class="footer-inner">
-    <div class="footer-logo">
-      <div class="nav-logo-icon">G</div>
-      gopang
+    <div>
+      <div class="footer-logo">
+        <div class="nav-logo-icon">G</div>
+        gopang
+      </div>
+      <div style="font-size:12px;font-weight:300;color:var(--text4);margin-top:4px;font-family:'DM Mono',monospace;">© 2026 AI City Inc. · KR Patent · v3.4</div>
     </div>
     <div class="footer-links">
       <a href="https://gopang.net" target="_blank">gopang.net</a>
-      <a href="https://klaw.openhash.kr" target="_blank">K-Law</a>
+      <a href="https://klaw.gopang.net" target="_blank">K-Law</a>
       <a href="https://market.gopang.net" target="_blank">K-Market</a>
       <a href="https://fiil.kr" target="_blank">K-Cleaner</a>
-      <a href="https://github.com" target="_blank">GitHub</a>
+      <a href="https://github.com/Openhash-Gopang/gopang_v2" target="_blank">GitHub</a>
     </div>
-    <div class="footer-copy">© 2026 AI City Inc. · KR Patent · v3.4</div>
+  </div>
+  <!-- 면책 조항 -->
+  <div class="footer-disclaimer">
+    본 프로젝트(고팡, Gopang)는 오픈소스 기반의 연구 개발 및 기술 실증을 목적으로 하며, 상업적 비즈니스 모델이 아닙니다.
+    본 플랫폼에서 제공되는 모든 AI 시뮬레이션 결과(판결문, 세무 계산, 의료 정보 등)는 참고용이며,
+    법적·의료적·재무적 효력을 갖지 않습니다. 실제 법률·의료·금융 문제는 반드시 해당 분야 전문가에게 문의하십시오.
   </div>
 </footer>
 
@@ -1004,7 +1067,8 @@ function closeWebApp() {
   document.body.style.overflow = '';
 }
 document.getElementById('webapp-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeWebApp();
+  const wrapper = document.getElementById('phone-wrapper');
+  if (wrapper && !wrapper.contains(e.target)) closeWebApp();
 });
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeWebApp();
@@ -1013,18 +1077,20 @@ document.addEventListener('keydown', function(e) {
 
 <!-- ── Phone Frame Modal ──────────────────────────────────────── -->
 <div id="webapp-modal">
-  <!-- 닫기 버튼 (프레임 바깥 우측 상단) -->
-  <button id="modal-close" onclick="closeWebApp()" title="닫기">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" stroke-width="2.5"
-         stroke-linecap="round" stroke-linejoin="round">
-      <line x1="18" y1="6" x2="6" y2="18"/>
-      <line x1="6" y1="6" x2="18" y2="18"/>
-    </svg>
-  </button>
+  <!-- 닫기 버튼 + 폰 프레임 래퍼 -->
+  <div id="phone-wrapper">
+    <!-- 닫기 버튼: 폰 우측 상단 바로 위 -->
+    <button id="modal-close" onclick="closeWebApp()" title="닫기 (ESC)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
 
-  <!-- 폰 외형 -->
-  <div id="phone-frame">
+    <!-- 폰 외형 -->
+    <div id="phone-frame">
 
     <!-- 상단: 스피커 + 노치 영역 -->
     <div class="phone-top">
@@ -1046,7 +1112,8 @@ document.addEventListener('keydown', function(e) {
     <div class="phone-bottom">
       <div class="phone-home-bar"></div>
     </div>
-  </div>
+  </div><!-- /phone-frame -->
+  </div><!-- /phone-wrapper -->
 
   <!-- 라벨 -->
   <div id="modal-label">
@@ -1067,7 +1134,9 @@ document.addEventListener('keydown', function(e) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding: 48px 24px 40px;
+  overflow-y: auto;
   gap: 20px;
   opacity: 0;
   pointer-events: none;
@@ -1081,14 +1150,23 @@ document.addEventListener('keydown', function(e) {
   transform: translateY(0) scale(1);
 }
 
-/* ── Close Button ── */
+/* ── Phone Wrapper (닫기 버튼 + 폰 묶음) ── */
+#phone-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ── Close Button: 폰 우측 상단 바로 위 ── */
 #modal-close {
   position: absolute;
-  top: 24px; right: 28px;
-  width: 36px; height: 36px;
+  top: -36px; right: 0;
+  width: 28px; height: 28px;
   border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.12);
   color: white;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
@@ -1096,8 +1174,8 @@ document.addEventListener('keydown', function(e) {
   z-index: 10;
 }
 #modal-close:hover {
-  background: rgba(255,255,255,0.22);
-  transform: scale(1.08);
+  background: rgba(255,255,255,0.28);
+  transform: scale(1.1);
 }
 
 /* ── Phone Frame ── */
@@ -1212,12 +1290,12 @@ document.addEventListener('keydown', function(e) {
 
 /* ── 화면 작을 때 폰 축소 ── */
 @media (max-height: 860px) {
-  #phone-frame { transform: translateY(0) scale(0.85); }
-  #webapp-modal.open #phone-frame { transform: translateY(0) scale(0.85); }
+  #phone-wrapper { transform: scale(0.85); transform-origin: center top; }
+  #webapp-modal.open #phone-frame { transform: translateY(0) scale(1); }
 }
 @media (max-height: 700px) {
-  #phone-frame { transform: translateY(0) scale(0.72); }
-  #webapp-modal.open #phone-frame { transform: translateY(0) scale(0.72); }
+  #phone-wrapper { transform: scale(0.72); transform-origin: center top; }
+  #webapp-modal.open #phone-frame { transform: translateY(0) scale(1); }
 }
 </style>
 </body>
