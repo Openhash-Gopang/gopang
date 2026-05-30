@@ -1062,7 +1062,12 @@ function openWebApp() {
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';
   const iframe = document.getElementById('webapp-iframe');
-  if (iframe && !iframe.src) iframe.src = 'webapp.html';
+  if (iframe && !iframe.dataset.loaded) {
+    // 절대경로 사용 — desktop.html과 동일 루트의 webapp.html
+    const base = location.href.replace(/\/[^/]*$/, '/');
+    iframe.src = base + 'webapp.html';
+    iframe.dataset.loaded = '1';
+  }
 }
 function closeWebApp() {
   const modal = document.getElementById('webapp-modal');
@@ -1113,7 +1118,7 @@ document.addEventListener('keydown', function(e) {
 
     <!-- 화면 -->
     <div class="phone-screen">
-      <iframe id="webapp-iframe" src="" title="고팡 웹앱"
+      <iframe id="webapp-iframe" title="고팡 웹앱"
               allow="camera; microphone; geolocation"></iframe>
     </div>
 
