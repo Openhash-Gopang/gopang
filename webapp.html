@@ -1142,6 +1142,44 @@
 
     <button class="sheet-save" onclick="saveSettings()">저장</button>
 
+    <!-- ── 보안 · 인증 섹션 ──────────────────────────── -->
+    <div class="setting-group" style="margin-top:16px;" id="security-section">
+      <div class="setting-label">🔐 보안 · 인증</div>
+
+      <!-- 현재 인증 레벨 표시 -->
+      <div id="auth-level-display" style="
+        background:var(--bg-input);border:1px solid var(--sep);
+        border-radius:10px;padding:12px 14px;margin-bottom:12px;
+        font-size:13px;color:var(--label-2);line-height:1.6;">
+        로딩 중…
+      </div>
+
+      <!-- 지문 등록/재등록 버튼 -->
+      <button id="btn-register-fp" onclick="_settingsRegisterFingerprint()"
+        style="width:100%;padding:12px;border-radius:10px;
+               background:var(--tint);color:#fff;border:none;
+               font-size:14px;font-weight:600;cursor:pointer;
+               margin-bottom:8px;">
+        🔐 지문 등록
+      </button>
+
+      <!-- 얼굴 재등록 버튼 -->
+      <button onclick="_settingsRegisterFace()"
+        style="width:100%;padding:12px;border-radius:10px;
+               background:var(--bg-input);color:var(--label);
+               border:1px solid var(--sep);
+               font-size:14px;cursor:pointer;margin-bottom:8px;">
+        📷 얼굴 재등록
+      </button>
+
+      <!-- 고팡 ID 표시 -->
+      <div id="gopang-id-display" style="
+        font-size:10px;color:var(--label-3);
+        font-family:-apple-system,monospace;
+        word-break:break-all;padding:8px 0;">
+      </div>
+    </div>
+
     <button onclick="clearSWCache()" style="
       width:100%; margin-top:10px; padding:12px;
       background:transparent; border:1px solid #3A3A3C;
@@ -3997,8 +4035,88 @@ function openSettings() {
   if (modelSel) modelSel.value = CFG.model;
   const epSel = document.getElementById('setting-endpoint');
   if (epSel) epSel.value = CFG.endpoint;
+
+  // ── 보안 섹션 업데이트 ──────────────────────────────
+  _updateSecuritySection();
+
   document.getElementById('settings-overlay').classList.add('open');
 }
+
+function _updateSecuritySection() {
+  const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+  const levelEl = document.getElementById('auth-level-display');
+  const idEl    = document.getElementById('gopang-id-display');
+  const fpBtn   = document.getElementById('btn-register-fp');
+
+  if (!stored?.ipv6) {
+    if (levelEl) levelEl.innerHTML = '⚠️ 미등록 사용자';
+    return;
+  }
+
+  const level  = stored.authLevel || 'L0';
+  const hasFace = !!stored.faceVec;
+  const hasFp   = !!stored.webauthn?.credentialId;
+  const hasSeed = !!stored.seedHex;
+
+  const levelColors = { L0:'#FF9F0A', L1:'#30D158', L2:'#0A84FF', L3:'#BF5AF2' };
+  const color = levelColors[level] || '#AEAEB2';
+
+  if (levelEl) levelEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span style="font-size:18px;font-weight:700;color:${color};">${level}</span>
+      <span style="color:var(--label);">인증 레벨</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <span>${hasFace  ? '✅' : '⬜'} 얼굴 인증 (L1)</span>
+      <span>${hasFp    ? '✅' : '⬜'} 지문 인증 (L2)</span>
+      <span>${hasSeed  ? '✅' : '⬜'} 4단어 시드</span>
+    </div>`;
+
+  if (idEl) idEl.textContent = `ID: ${stored.ipv6}`;
+
+  // 지문 버튼 텍스트 동적 변경
+  if (fpBtn) fpBtn.textContent = hasFp ? '🔐 지문 재등록' : '🔐 지문 등록';
+}
+
+// ── 설정에서 지문 등록 ───────────────────────────────────
+window._settingsRegisterFingerprint = async function() {
+  const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+  if (!stored?.ipv6) {
+    appendBubble('ai', '⚠️ 먼저 고팡 등록을 완료해 주세요.', true);
+    closeSettings();
+    return;
+  }
+  closeSettings();
+  await _registerFingerprint(stored.ipv6);
+  // 등록 완료 후 설정 재오픈 시 업데이트 반영
+};
+
+// ── 설정에서 얼굴 재등록 ────────────────────────────────
+window._settingsRegisterFace = async function() {
+  const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+  if (!stored?.ipv6) {
+    appendBubble('ai', '⚠️ 먼저 고팡 등록을 완료해 주세요.', true);
+    closeSettings();
+    return;
+  }
+  closeSettings();
+  appendBubble('ai', '📷 얼굴을 재등록합니다. 전면 카메라를 실행합니다…', true);
+
+  const vec = await _captureFaceVector();
+  if (!vec) {
+    appendBubble('ai', '촬영이 취소됐습니다.', true);
+    return;
+  }
+  // 기존 데이터 유지하며 faceVec만 교체
+  const updated = {
+    ...stored,
+    faceVec:   vec,
+    authLevel: stored.webauthn ? 'L2' : 'L1',
+    lastSeenAt: new Date().toISOString(),
+  };
+  localStorage.setItem('gopang_user_v3', JSON.stringify(updated));
+  appendBubble('ai', '✅ 얼굴 재등록 완료!', true);
+};
 function handleOverlayClick(e) {
   if (e.target.id === 'settings-overlay') closeSettings();
 }
