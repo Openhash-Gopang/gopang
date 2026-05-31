@@ -543,19 +543,28 @@ async function handlePdvReport(request, env, corsHeaders) {
 
   // ── Supabase PDV 기록 ────────────────────────────────
   const pdvId  = `PDV-${ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;
-  const pdvRes = await sbFetch(env, '/rest/v1/pdv_log', 'POST', {
-    id:            pdvId,
-    guid:          ipv6,
-    source:        svcId,
-    type:          r.type          || 'report',
-    report_id:     reportId,
-    summary:       r.what?.summary || '',
-    summary_6w:    JSON.stringify(summary6w),
-    risk_level:    r.analysis?.risk_level || 'low',
-    period:        r.period        || null,
-    raw_hash:      r.content_hash  || null,
-    created_at:    new Date().toISOString(),
+  const _pdvKey = env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
+  const _pdvFetch = await fetch(SUPABASE_URL + '/rest/v1/pdv_log', {
+    method: 'POST',
+    headers: {
+      'apikey': _pdvKey, 'Authorization': 'Bearer ' + _pdvKey,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify({
+      id:         pdvId,
+      guid:       ipv6,
+      source:     svcId,
+      type:       r.type          || 'report',
+      report_id:  reportId,
+      summary:    r.what?.summary || '',
+      summary_6w: JSON.stringify(summary6w),
+      risk_level: r.analysis?.risk_level || 'low',
+      period:     r.period        || null,
+      raw_hash:   r.content_hash  || null,
+      created_at: new Date().toISOString(),
+    }),
   });
+  const pdvRes = _pdvFetch.ok ? {} : null;
 
   if (!pdvRes) {
     return new Response(
