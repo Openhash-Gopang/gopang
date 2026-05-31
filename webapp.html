@@ -5170,7 +5170,7 @@ function _gwpLaunch(service, context) {
   iframeUrl.searchParams.set('gwp',    '1');
   iframeUrl.searchParams.set('token',  _USER.guid);
   iframeUrl.searchParams.set('origin', location.origin);
-  iframeUrl.searchParams.set('ctx',    encodeURIComponent(context || ''));
+  iframeUrl.searchParams.set('ctx',    context || '');  // searchParams.set이 자동 인코딩 — 이중 인코딩 금지
 
   const iframe = document.createElement('iframe');
   iframe.id    = 'gwp-iframe';
