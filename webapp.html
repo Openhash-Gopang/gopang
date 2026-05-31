@@ -877,7 +877,7 @@
         </button>
 
         <!-- 📷 카메라 -->
-        <button class="ia-btn" onclick="triggerCamera()" title="카메라 촬영">
+        <button class="ia-btn" id="btn-camera" title="카메라 촬영">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
                stroke="currentColor" stroke-width="2.2"
                stroke-linecap="round" stroke-linejoin="round">
@@ -888,7 +888,7 @@
         </button>
 
         <!-- 마이크 -->
-        <button class="ia-btn" id="btn-mic" onclick="toggleMic()" title="음성 입력">
+        <button class="ia-btn" id="btn-mic" title="음성 입력">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                stroke="currentColor" stroke-width="2.2"
                stroke-linecap="round" stroke-linejoin="round">
@@ -904,11 +904,10 @@
       <textarea id="msg-input"
                 placeholder="메시지를 입력하세요…"
                 rows="1"
-                oninput="autoResize(this); updateSendBtn()"
-                onkeydown="handleKey(event)"></textarea>
+></textarea>
 
       <!-- 전송 버튼 -->
-      <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>
+      <button class="send-btn" id="send-btn" disabled>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
         </svg>
@@ -4547,12 +4546,35 @@ function _micAutoSend() {
 document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('msg-input');
   if (input) {
+    // 인라인 oninput 대체 — 함수 정의 이후 바인딩
     input.addEventListener('input', () => {
+      autoResize(input);
+      updateSendBtn();
       if (_micAutoSendTimer) {
         clearTimeout(_micAutoSendTimer);
         _micAutoSendTimer = null;
       }
     });
+    // 인라인 onkeydown 대체
+    input.addEventListener('keydown', (e) => handleKey(e));
+  }
+
+  // 전송 버튼
+  const sendBtn = document.getElementById('send-btn');
+  if (sendBtn) {
+    sendBtn.addEventListener('click', () => sendMessage());
+  }
+
+  // 카메라 버튼
+  const camBtn = document.getElementById('btn-camera');
+  if (camBtn) {
+    camBtn.addEventListener('click', () => triggerCamera());
+  }
+
+  // 마이크 버튼
+  const micBtn = document.getElementById('btn-mic');
+  if (micBtn) {
+    micBtn.addEventListener('click', () => toggleMic());
   }
 });
 
