@@ -489,6 +489,8 @@ async function handlePdvReport(request, env, corsHeaders) {
   if (request.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 });
   }
+  try {
+  try {
 
   const origin = request.headers.get('Origin') || '';
   const report  = await request.json().catch(() => null);
@@ -587,6 +589,12 @@ async function handlePdvReport(request, env, corsHeaders) {
     }),
     { status: 200, headers: corsHeaders }
   );
+  } catch(e) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'INTERNAL_ERROR', detail: e.message }),
+      { status: 500, headers: corsHeaders }
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
