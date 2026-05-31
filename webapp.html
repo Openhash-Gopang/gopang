@@ -2977,8 +2977,9 @@ async function sendMessage() {
     return;
   }
 
-  // ── GWP: 의도 분석 → 서비스 자동 실행 ─────────────────
-  if (text && aiActive) {
+  // ── GWP: 의도 분석 → 서비스 자동 실행 (aiActive 무관하게 항상 먼저)
+  // 고팡은 포털 — 학습·법률 등 전문 질문은 하위 시스템이 처리
+  if (text) {
     const matchedSvc = _gwpMatch(text);
     if (matchedSvc) {
       _gwpLaunch(matchedSvc, text);
@@ -2986,6 +2987,7 @@ async function sendMessage() {
     }
   }
 
+  // GWP 매칭 없을 때만 고팡 AI 직접 응답
   if (aiActive) {
     await callAI(text, capturedFile);
   } else {
