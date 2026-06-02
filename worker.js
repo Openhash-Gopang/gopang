@@ -785,7 +785,11 @@ async function callOpenAIFromGeminiBody(bodyText, env, corsHeaders) {
 
 async function callDeepSeek(bodyText, env, corsHeaders, fallbackFrom = null) {
   try {
-    const res  = await fetch(DEEPSEEK_URL, {
+    // 요청 본문에서 stream 여부 확인
+    let isStream = false;
+    try { isStream = !!JSON.parse(bodyText)?.stream; } catch {}
+
+    const res = await fetch(DEEPSEEK_URL, {
       method:  'POST',
       headers: {
         'Content-Type':  'application/json',
@@ -793,14 +797,32 @@ async function callDeepSeek(bodyText, env, corsHeaders, fallbackFrom = null) {
       },
       body: bodyText,
     });
-    const data = await res.json();
 
     if (!res.ok) {
+      const errText = await res.text();
+      let errMsg;
+      try { errMsg = JSON.parse(errText)?.error?.message; } catch {}
       return new Response(
-        JSON.stringify({ error: data.error?.message || `HTTP ${res.status}` }),
+        JSON.stringify({ error: errMsg || `HTTP ${res.status}` }),
         { status: res.status, headers: corsHeaders }
       );
     }
+
+    // ── 스트리밍 응답: 그대로 패스스루 ──────────────────────
+    if (isStream) {
+      return new Response(res.body, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type':      'text/event-stream',
+          'Cache-Control':     'no-cache',
+          'X-Accel-Buffering': 'no',
+        },
+      });
+    }
+
+    // ── 일반 응답: JSON 파싱 ─────────────────────────────────
+    const data = await res.json();
 
     if (fallbackFrom) {
       const text = data.choices?.[0]?.message?.content || '{}';
