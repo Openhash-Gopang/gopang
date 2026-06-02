@@ -1,8 +1,9 @@
 // ═══════════════════════════════════════════════════════════
-// gopang-proxy — v4.0
+// gopang-proxy — v4.1
 // AI API 프록시 + SSO 인증 통합
 // GPT-4o mini Vision + DeepSeek V3 + SameSite=None 쿠키 SSO
 // 환경변수: OpenAI, DEEPSEEK_API_KEY, KAKAO_REST_KEY
+// v4.1 변경: police.gopang.net CORS 추가, /chat/completions 라우트 추가
 // ═══════════════════════════════════════════════════════════
 
 const ALLOWED_ORIGINS = [
@@ -17,6 +18,7 @@ const ALLOWED_ORIGINS = [
   'https://public.gopang.net',
   'https://security.gopang.net',
   'https://democracy.gopang.net',
+  'https://police.gopang.net',   // ← v4.1 추가
   'https://fiil.kr',
   'https://openhash.kr',
   'https://nounweb.github.io',
@@ -116,6 +118,12 @@ export default {
 
     const bodyText = await request.text();
 
+    // ── v4.1: OpenAI 호환 표준 라우트 → DeepSeek 프록시 ──
+    // webapp.html 등이 /chat/completions (OpenAI 표준 주소)로 호출할 때 처리
+    if (pathname === '/chat/completions') {
+      return callDeepSeek(bodyText, env, corsHeaders);
+    }
+
     // DeepSeek 직접 호출
     if (pathname.startsWith('/deepseek')) {
       return callDeepSeek(bodyText, env, corsHeaders);
@@ -191,9 +199,6 @@ async function handleIssue(request, env, corsHeaders) {
   }
 
   const { ipv6, level = 'L0', svc = '*' } = body;
-
-  // Phase 1: 구조 확인만
-  // Phase 2: env.GOPANG_MASTER_KEY 로 HMAC 재검증 예정
   const token  = buildToken(ipv6, level, svc);
   const cookie = buildCookie(token);
 
@@ -254,7 +259,6 @@ async function handleRefresh(request, env, corsHeaders) {
     );
   }
 
-  // 만료 30분 이내일 때만 갱신 (그 이전엔 갱신 불필요)
   const remaining = payload.exp - Math.floor(Date.now() / 1000);
   if (remaining > 1800) {
     return new Response(
@@ -300,19 +304,15 @@ async function sbFetch(env, path, method = 'GET', body = null) {
   return res.ok ? res.json().catch(() => ({})) : null;
 }
 
-// ── /auth/webauthn/challenge: 챌린지 발급 ──────────────────
-// 등록/인증 전 서버가 랜덤 챌린지를 발급
-// Cloudflare Workers KV 없으므로 응답에 챌린지 포함 + HMAC 서명으로 무결성 보장
+// ── /auth/webauthn/challenge ────────────────────────────────
 async function handleWAChallenge(request, env, corsHeaders) {
   const challenge = crypto.getRandomValues(new Uint8Array(32));
   const chalB64   = btoa(String.fromCharCode(...challenge))
     .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 
-  // 5분 유효 만료 포함
   const exp     = Math.floor(Date.now() / 1000) + 300;
   const payload = { challenge: chalB64, exp };
 
-  // Worker 서명 (HMAC) — 클라이언트가 위조 못하도록
   const sigData = `${chalB64}.${exp}`;
   const key     = await crypto.subtle.importKey(
     'raw',
@@ -331,7 +331,7 @@ async function handleWAChallenge(request, env, corsHeaders) {
 
 // ── 챌린지 서명 검증 ────────────────────────────────────────
 async function _verifyChallengeToken(env, chalB64, exp, sig) {
-  if (exp < Math.floor(Date.now() / 1000)) return false;   // 만료
+  if (exp < Math.floor(Date.now() / 1000)) return false;
   const sigData = `${chalB64}.${exp}`;
   const key = await crypto.subtle.importKey(
     'raw',
@@ -342,7 +342,7 @@ async function _verifyChallengeToken(env, chalB64, exp, sig) {
   return crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(sigData));
 }
 
-// ── /auth/webauthn/register: 공개키 등록 ────────────────────
+// ── /auth/webauthn/register ─────────────────────────────────
 async function handleWARegister(request, env, corsHeaders) {
   if (request.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 });
@@ -355,7 +355,6 @@ async function handleWARegister(request, env, corsHeaders) {
     );
   }
 
-  // 챌린지 무결성 검증
   const chalOk = await _verifyChallengeToken(
     env, body.challenge, body.challengeExp, body.challengeSig
   );
@@ -366,7 +365,6 @@ async function handleWARegister(request, env, corsHeaders) {
     );
   }
 
-  // Supabase에 공개키 저장
   const result = await sbFetch(env, '/rest/v1/webauthn_credentials', 'POST', {
     ipv6:          body.ipv6,
     credential_id: body.credentialId,
@@ -389,7 +387,7 @@ async function handleWARegister(request, env, corsHeaders) {
   );
 }
 
-// ── /auth/webauthn/verify: 서명 검증 ────────────────────────
+// ── /auth/webauthn/verify ───────────────────────────────────
 async function handleWAVerify(request, env, corsHeaders) {
   if (request.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 });
@@ -402,7 +400,6 @@ async function handleWAVerify(request, env, corsHeaders) {
     );
   }
 
-  // Supabase에서 공개키 조회
   const rows = await sbFetch(
     env,
     `/rest/v1/webauthn_credentials?ipv6=eq.${encodeURIComponent(body.ipv6)}&credential_id=eq.${encodeURIComponent(body.credentialId)}&select=public_key,counter`,
@@ -418,7 +415,6 @@ async function handleWAVerify(request, env, corsHeaders) {
 
   const cred = rows[0];
 
-  // 카운터 검증 (재사용 공격 방지)
   if (body.counter !== undefined && body.counter <= cred.counter) {
     return new Response(
       JSON.stringify({ valid: false, reason: 'counter_replay' }),
@@ -426,7 +422,6 @@ async function handleWAVerify(request, env, corsHeaders) {
     );
   }
 
-  // 카운터 업데이트
   if (body.counter !== undefined) {
     await sbFetch(
       env,
@@ -436,7 +431,6 @@ async function handleWAVerify(request, env, corsHeaders) {
     );
   }
 
-  // ✅ 검증 성공 → SSO 토큰 발급 (L2)
   const token  = buildToken(body.ipv6, 'L2', '*');
   const cookie = buildCookie(token);
 
@@ -467,14 +461,11 @@ const REGISTERED_SERVICES = {
   // Level 2 — 외부 도메인 파트너
   'fiil':      { level: 2, domain: 'fiil.kr',              minAuth: 'L0', pdv: true  },
   'klaw-ext':  { level: 2, domain: 'klaw.openhash.kr',     minAuth: 'L0', pdv: false },
-  // Level 1 — *.gopang.net 자동 허용 (동적 처리)
 };
 
 function _getSvcRegistration(origin, svcId) {
-  // Level 3/2: 명시적 등록 확인
   const svc = REGISTERED_SERVICES[svcId];
   if (svc && origin.includes(svc.domain)) return { ...svc, svcId };
-  // Level 1: *.gopang.net 자동
   if (/^https:\/\/[a-z0-9-]+\.gopang\.net$/.test(origin)) {
     return { level: 1, domain: origin, minAuth: 'L0', pdv: false, svcId };
   }
@@ -489,8 +480,6 @@ async function handlePdvReport(request, env, corsHeaders) {
   if (request.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 });
   }
-  try {
-  try {
 
   const origin = request.headers.get('Origin') || '';
   const report  = await request.json().catch(() => null);
@@ -506,7 +495,6 @@ async function handlePdvReport(request, env, corsHeaders) {
   const svcId  = r.svc || request.headers.get('X-Gopang-Svc') || 'unknown';
   const ipv6   = r.who?.ipv6;
 
-  // ── 서비스 등록 확인 ──────────────────────────────────
   const reg = _getSvcRegistration(origin, svcId);
   if (!reg) {
     return new Response(
@@ -523,7 +511,6 @@ async function handlePdvReport(request, env, corsHeaders) {
     );
   }
 
-  // ── 필수 필드 검증 ────────────────────────────────────
   if (!ipv6) {
     return new Response(
       JSON.stringify({ ok: false, error: 'USER_NOT_FOUND', detail: 'who.ipv6 필수' }),
@@ -533,7 +520,6 @@ async function handlePdvReport(request, env, corsHeaders) {
 
   const reportId = r.id || `RPT-${svcId}-${Date.now()}-auto`;
 
-  // ── 6하원칙 요약 생성 ────────────────────────────────
   const summary6w = {
     who:   `${r.who?.role || 'user'} (${ipv6.slice(0,20)}...)`,
     when:  `${(r.when?.period_start||'').slice(0,10)} ~ ${(r.when?.period_end||'').slice(0,10)}`,
@@ -543,7 +529,6 @@ async function handlePdvReport(request, env, corsHeaders) {
     why:   r.why?.goal      || '(목표 미지정)',
   };
 
-  // ── Supabase PDV 기록 ────────────────────────────────
   const pdvId  = `PDV-${ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;
   const _pdvKey = env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
   const _pdvFetch = await fetch(SUPABASE_URL + '/rest/v1/pdv_log', {
@@ -561,7 +546,7 @@ async function handlePdvReport(request, env, corsHeaders) {
       summary:    r.what?.summary || '',
       summary_6w: JSON.stringify(summary6w),
       risk_level: r.analysis?.risk_level || 'low',
-      period:     r.period        || null,
+      period:     r.when ?? r.period ?? null,
       raw_hash:   r.content_hash  || null,
       created_at: new Date().toISOString(),
     }),
@@ -575,7 +560,6 @@ async function handlePdvReport(request, env, corsHeaders) {
     );
   }
 
-  // ── ACK 반환 ─────────────────────────────────────────
   const recipients = (r.who?.recipients || []).filter(x => x !== 'gopang-pdv');
   return new Response(
     JSON.stringify({
@@ -589,12 +573,6 @@ async function handlePdvReport(request, env, corsHeaders) {
     }),
     { status: 200, headers: corsHeaders }
   );
-  } catch(e) {
-    return new Response(
-      JSON.stringify({ ok: false, error: 'INTERNAL_ERROR', detail: e.message }),
-      { status: 500, headers: corsHeaders }
-    );
-  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -615,12 +593,9 @@ async function handleSvcRegister(request, env, corsHeaders) {
   }
 
   const { svc_id, domain, description, min_auth, operator_ipv6 } = body;
-
-  // Level 1: *.gopang.net 자동 승인
   const isGopangSub = /^[a-z0-9-]+\.gopang\.net$/.test(domain);
   const auto_level  = isGopangSub ? 1 : 0;
 
-  // Supabase svc_registry 테이블에 저장
   const saved = await sbFetch(env, '/rest/v1/svc_registry', 'POST', {
     svc_id,
     domain,
@@ -690,9 +665,10 @@ async function handleSvcVerify(request, env, corsHeaders) {
   );
 }
 
-// ── 기존 핸들러 ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// /geocode — 카카오 역지오코딩
+// ═══════════════════════════════════════════════════════════
 
-// ── /geocode ────────────────────────────────────────────────
 async function handleGeocode(url, env, corsHeaders) {
   const lat = url.searchParams.get('lat');
   const lng = url.searchParams.get('lng');
@@ -717,7 +693,10 @@ async function handleGeocode(url, env, corsHeaders) {
   }
 }
 
-// ── Gemini 형식 → GPT-4o mini ───────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// Gemini 형식 → GPT-4o mini
+// ═══════════════════════════════════════════════════════════
+
 async function callOpenAIFromGeminiBody(bodyText, env, corsHeaders) {
   const apiKey = env.OpenAI;
   if (!apiKey) {
@@ -800,7 +779,10 @@ async function callOpenAIFromGeminiBody(bodyText, env, corsHeaders) {
   }
 }
 
-// ── /deepseek ────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// /deepseek + /chat/completions 공통 핸들러
+// ═══════════════════════════════════════════════════════════
+
 async function callDeepSeek(bodyText, env, corsHeaders, fallbackFrom = null) {
   try {
     const res  = await fetch(DEEPSEEK_URL, {
@@ -827,7 +809,7 @@ async function callDeepSeek(bodyText, env, corsHeaders, fallbackFrom = null) {
           content: { parts: [{ text }], role: 'model' },
           finishReason: 'STOP',
         }],
-        _provider:     'deepseek-fallback',
+        _provider:      'deepseek-fallback',
         _fallback_from: fallbackFrom,
       }), { headers: corsHeaders });
     }
