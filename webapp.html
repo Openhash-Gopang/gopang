@@ -2897,14 +2897,16 @@ function _renderProgressSteps() {
 
 // ── SP-00-ROUTER 프리로드 (앱 시작 시 백그라운드 fetch) ────
 // 첫 메시지 전송 전에 미리 로드해둬서 응답 지연 방지
-(async () => {
-  try {
-    await _loadRouterPrompt();
-    console.info('[Router] 프리로드 완료 — 버전:', _routerPromptVer);
-  } catch(e) {
-    console.warn('[Router] 프리로드 실패 (나중에 재시도):', e.message);
-  }
-})();
+window.addEventListener('DOMContentLoaded', () => {
+  (async () => {
+    try {
+      await _loadRouterPrompt();
+      console.info('[Router] 프리로드 완료 — 버전:', _routerPromptVer);
+    } catch(e) {
+      console.warn('[Router] 프리로드 실패 (나중에 재시도):', e.message);
+    }
+  })();
+});
 
 // ── 초기 AI 비서 환영 메시지 ────────────────────────────
 function _showWelcomeMessage() {
@@ -3599,8 +3601,7 @@ async function _loadRouterPrompt() {
       const ptrRes = await fetch(_ROUTER_PTR, { cache: 'no-cache' });
       if (!ptrRes.ok) throw new Error('포인터 파일 없음: ' + ptrRes.status);
 
-      const latestFile = (await ptrRes.text()).trim().replace(/[
-]/g, '');
+      const latestFile = (await ptrRes.text()).trim().replace(/[\r\n]/g, '');
       if (!latestFile || !latestFile.endsWith('.txt')) throw new Error('포인터 내용 비정상: ' + latestFile);
 
       // Step 2: 실제 라우터 프롬프트 파일 로드
