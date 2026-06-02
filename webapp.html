@@ -738,6 +738,8 @@
       #message-list { padding: 52px 16% 16px; }
     }
   </style>
+  <!-- GWP 서비스 레지스트리 (API 키 분리) -->
+  <script src="/gwp-registry.js"></script>
 </head>
 <body>
 
@@ -2897,16 +2899,14 @@ function _renderProgressSteps() {
 
 // ── SP-00-ROUTER 프리로드 (앱 시작 시 백그라운드 fetch) ────
 // 첫 메시지 전송 전에 미리 로드해둬서 응답 지연 방지
-window.addEventListener('DOMContentLoaded', () => {
-  (async () => {
-    try {
-      await _loadRouterPrompt();
-      console.info('[Router] 프리로드 완료 — 버전:', _routerPromptVer);
-    } catch(e) {
-      console.warn('[Router] 프리로드 실패 (나중에 재시도):', e.message);
-    }
-  })();
-});
+(async () => {
+  try {
+    await _loadRouterPrompt();
+    console.info('[Router] 프리로드 완료 — 버전:', _routerPromptVer);
+  } catch(e) {
+    console.warn('[Router] 프리로드 실패 (나중에 재시도):', e.message);
+  }
+})();
 
 // ── 초기 AI 비서 환영 메시지 ────────────────────────────
 function _showWelcomeMessage() {
@@ -3601,7 +3601,8 @@ async function _loadRouterPrompt() {
       const ptrRes = await fetch(_ROUTER_PTR, { cache: 'no-cache' });
       if (!ptrRes.ok) throw new Error('포인터 파일 없음: ' + ptrRes.status);
 
-      const latestFile = (await ptrRes.text()).trim().replace(/[\r\n]/g, '');
+      const latestFile = (await ptrRes.text()).trim().replace(/[
+]/g, '');
       if (!latestFile || !latestFile.endsWith('.txt')) throw new Error('포인터 내용 비정상: ' + latestFile);
 
       // Step 2: 실제 라우터 프롬프트 파일 로드
@@ -5364,44 +5365,8 @@ Object.defineProperty(window, '_gopangHistory', {
 // ══════════════════════════════════════════════════════════════════════
 
 // ── 서비스 레지스트리 ─────────────────────────────────────────────
-const GWP_REGISTRY = [
-  {
-    id:       'fiil-kcleaner',
-    name:     'K-Cleaner',
-    icon:     '🌊',
-    url:      'https://fiil.kr/webapp.html',
-    triggers: ['쓰레기','환경','해안','청소','수거','오염','해양','산림','침적'],
-  },
-  {
-    id:       'klaw',
-    name:     'K-Law',
-    icon:     '⚖️',
-    url:      'https://gopang.net/klaw',
-    triggers: ['법률','계약서','분쟁','고소','소송','판결','법원','변호사'],
-  },
-  {
-    id:       'school',
-    name:     'K-School',
-    icon:     '📚',
-    url:      'https://school.gopang.net/webapp.html',
-    triggers: [
-      // 학습·교육 일반
-      '공부','학습','배우','가르쳐','설명해','알려줘','이해','모르겠',
-      // 교과목
-      '수학','영어','과학','국어','물리','화학','생물','역사','지리',
-      '사회','도덕','음악','미술','체육','코딩','프로그래밍','철학',
-      '경제','통계','논리','문학','글쓰기','독서',
-      // 학습 단위
-      '숙제','과제','시험','문제','풀어','계산','증명','해석',
-      '방정식','함수','미적분','확률','기하','대수',
-      // 진로·학제
-      '진로','대학','수능','입시','취업','직업','커리어','전공',
-      '유치원','초등','중학교','고등학교','대학원',
-      // AI 교수
-      'AI 교수','선생님','튜터','과외',
-    ],
-  },
-];
+// gwp-registry.js 에서 동적 로드 (API 키 분리 목적)
+// GWP_REGISTRY 전역 변수는 gwp-registry.js 가 선언함
 
 // ── GWP 상태 ─────────────────────────────────────────────────────
 let _gwpActive           = false;

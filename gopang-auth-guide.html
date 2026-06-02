@@ -495,19 +495,46 @@ p strong { color: var(--ink); font-weight: 700; }
 
   <p><strong>Step 2 — K-Police(또는 다른 하위 서비스)에 접속합니다</strong></p>
   <p>
-    사용자가 police.gopang.net에 접속하면, K-Police는 "이 사람이 누구인지" 고팡에게 조용히 물어봅니다. 사용자는 이 과정을 전혀 알아채지 못합니다. 1~3초 안에 자동으로 완료되기 때문입니다.
+    접속 환경에 따라 두 가지 경로가 있습니다. <strong>스마트폰</strong>으로 접속하면 <code style="background:var(--paper2);padding:2px 6px;border-radius:4px;font-family:'DM Mono',monospace;font-size:13px">webapp.html</code>이 열리고, <strong>PC·노트북</strong>으로 접속하면 <code style="background:var(--paper2);padding:2px 6px;border-radius:4px;font-family:'DM Mono',monospace;font-size:13px">desktop.html</code>이 열립니다. 어느 쪽이든 인증 과정은 동일합니다. 1~3초 안에 자동으로 완료되며, 사용자는 아무것도 할 필요가 없습니다.
   </p>
+
+  <table class="level-table">
+    <thead>
+      <tr>
+        <th>접속 환경</th>
+        <th>열리는 파일</th>
+        <th>특징</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>📱 스마트폰 / GWP</td>
+        <td><code style="font-family:'DM Mono',monospace;font-size:12px">webapp.html</code></td>
+        <td>채팅 중심 UI, GPS 위치 자동 감지</td>
+      </tr>
+      <tr>
+        <td>🖥 PC / 노트북</td>
+        <td><code style="font-family:'DM Mono',monospace;font-size:12px">desktop.html</code></td>
+        <td>랜딩 페이지 + 우측 채팅 패널</td>
+      </tr>
+      <tr>
+        <td>🔗 고팡 앱 내부 (GWP)</td>
+        <td><code style="font-family:'DM Mono',monospace;font-size:12px">webapp.html?gwp=1</code></td>
+        <td>토큰 즉시 전달, 별도 인증 불필요</td>
+      </tr>
+    </tbody>
+  </table>
 
   <div class="analogy">
     <p>
       📞 <strong>호텔 내선 전화에 비유하면:</strong><br>
-      호텔 레스토랑(K-Police)에 들어서면, 레스토랑 직원이 프런트(고팡)에 내선을 걸어 "507호 투숙객 맞나요?"라고 확인합니다. 손님(사용자)은 아무것도 할 필요가 없습니다. 프런트가 "맞습니다"라고 답하면 바로 자리를 안내받습니다.
+      호텔 레스토랑(K-Police)에 들어서면, 레스토랑 직원이 프런트(고팡)에 내선을 걸어 "507호 투숙객 맞나요?"라고 확인합니다. 손님(사용자)은 아무것도 할 필요가 없습니다. 프런트가 "맞습니다"라고 답하면 바로 자리를 안내받습니다. 스마트폰 객실이든 PC 스위트룸이든 확인 절차는 동일합니다.
     </p>
   </div>
 
   <p><strong>Step 3 — 처음 접속이라면 간단한 확인 절차가 있습니다</strong></p>
   <p>
-    만약 같은 기기에서 처음 접속하거나, 기기를 바꿨다면 고팡 인증 화면이 나타납니다. 4단어 시드를 입력하면 바로 신원이 확인되고, 서비스를 이용할 수 있습니다.
+    만약 같은 기기에서 처음 접속하거나, 기기를 바꿨다면 고팡 인증 화면이 나타납니다. 4단어 시드를 입력하면 바로 신원이 확인되고, 완료 후 원래 접속하려던 서비스로 자동 복귀합니다.
   </p>
 
   <hr class="divider" style="margin: 40px 0;">
@@ -608,10 +635,34 @@ p strong { color: var(--ink); font-weight: 700; }
 <span class="kw">if</span> (<span class="nm">ok</span>) { <span class="cm">/* 기능 실행 */</span> }</pre></div>
   </div>
 
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-filename">인증 완료 후 앱 초기화 — desktop.html / webapp.html</span>
+      <span class="code-lang">JavaScript</span>
+    </div>
+    <div class="code-body"><pre><span class="cm">// subsystem-auth.js(type="module")가 자동으로 initAuth()를 실행합니다.</span>
+<span class="cm">// 인증 완료 시 window._onGopangAuth(user)를 호출하므로,</span>
+<span class="cm">// 하위 시스템은 이 함수만 정의해두면 됩니다.</span>
+
+<span class="nm">window</span>.<span class="fn">_onGopangAuth</span> = <span class="kw">async function</span>(<span class="nm">user</span>) {
+  <span class="kw">if</span> (!<span class="nm">user</span>) <span class="kw">return</span>;
+
+  <span class="cm">// 인증 레벨 배지 표시</span>
+  <span class="nm">document</span>.<span class="fn">getElementById</span>(<span class="str">'auth-badge'</span>).<span class="nm">textContent</span> = <span class="nm">user</span>.<span class="nm">level</span>;
+
+  <span class="cm">// 앱 UI 표시 (스마트폰: #app, 데스크탑: 채팅 패널)</span>
+  <span class="nm">document</span>.<span class="fn">getElementById</span>(<span class="str">'auth-loading'</span>).<span class="nm">style</span>.<span class="nm">display</span> = <span class="str">'none'</span>;
+  <span class="nm">document</span>.<span class="fn">getElementById</span>(<span class="str">'app'</span>)?.<span class="nm">style</span>.<span class="nm">display</span> = <span class="str">'flex'</span>;
+
+  <span class="cm">// 이후 앱 고유 초기화 로직 실행</span>
+  <span class="fn">showWelcome</span>();
+};</pre></div>
+  </div>
+
   <div class="callout callout-green">
     <div class="callout-icon">💡</div>
     <div class="callout-body">
-      <strong>핵심:</strong> 인증 로직을 수정할 일이 생기면 <code>gopang.net/auth/subsystem-auth.js</code> 하나만 수정합니다. 수백 개의 하위 시스템 전체에 즉시 반영됩니다. 각 하위 시스템은 아무것도 변경할 필요가 없습니다.
+      <strong>핵심:</strong> <code>subsystem-auth.js</code>는 <code>type="module"</code>로 로드되어 전역 스코프에 함수를 노출하지 않습니다. 대신 인증 완료 시 <code>window._onGopangAuth(user)</code>를 호출합니다. 하위 시스템은 이 콜백 함수만 정의하면 됩니다. 인증 로직 수정이 필요하면 <code>gopang.net/auth/subsystem-auth.js</code> 하나만 수정하면 수백 개 하위 시스템 전체에 즉시 반영됩니다.
     </div>
   </div>
 
@@ -788,6 +839,56 @@ p strong { color: var(--ink); font-weight: 700; }
   <p>
     이 핑거프린트를 앞 16바이트만 사용해 <strong>IPv6 형식의 고유 주소</strong>로 변환합니다. 이것이 고팡에서 사용자를 식별하는 <strong>GUID(고유 식별자)</strong>가 됩니다. 예: <code style="font-family:'DM Mono',monospace;font-size:13px;background:var(--paper2);padding:2px 8px;border-radius:4px">2601:db80:a3f2:...</code>
   </p>
+
+  <hr class="divider" style="margin: 40px 0;">
+
+  <h2 class="section-title" style="font-size: clamp(18px,2.5vw,24px);">GWP_REGISTRY — 고팡이 하위 서비스를 자동으로 연결한다</h2>
+
+  <p>
+    고팡 앱 안에서 사용자가 "집에 도둑이 들었어. 경찰을 불러줘"라고 입력하면, 고팡 AI가 의도를 분석해 <strong>K-Police 서비스를 자동으로 열어줍니다.</strong> 이 라우팅은 <code style="background:var(--paper2);padding:2px 6px;border-radius:4px;font-family:'DM Mono',monospace;font-size:13px">gwp-registry.js</code>의 트리거 키워드로 동작합니다.
+  </p>
+
+  <p>
+    <code style="background:var(--paper2);padding:2px 6px;border-radius:4px;font-family:'DM Mono',monospace;font-size:13px">gwp-registry.js</code>는 API 키를 포함하지 않아 GitHub에 공개 저장합니다. API 키가 담긴 <code style="background:var(--paper2);padding:2px 6px;border-radius:4px;font-family:'DM Mono',monospace;font-size:13px">config.js</code>는 <code style="background:var(--paper2);padding:2px 6px;border-radius:4px;font-family:'DM Mono',monospace;font-size:13px">.gitignore</code>로 보호합니다.
+  </p>
+
+  <div class="file-tree">
+    <div><span class="ft-dir">gopang_v2/</span></div>
+    <div>&nbsp;&nbsp;├── <span class="ft-file">config.js</span>          <span class="ft-note">← .gitignore (API 키 포함, 로컬 전용)</span></div>
+    <div>&nbsp;&nbsp;└── <span class="ft-hl">gwp-registry.js</span>    <span class="ft-note">← git 추적 (공개 가능, 서비스 목록만)</span></div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-filename">gwp-registry.js — 현재 등록된 16개 서비스 (일부)</span>
+      <span class="code-lang">JavaScript</span>
+    </div>
+    <div class="code-body"><pre><span class="kw">const</span> <span class="nm">GWP_REGISTRY</span> = [
+  { <span class="nm">id</span>: <span class="str">'kpolice'</span>,  <span class="nm">name</span>: <span class="str">'K-Police'</span>,  <span class="nm">icon</span>: <span class="str">'👮'</span>,
+    <span class="nm">url</span>: <span class="str">'https://police.gopang.net/webapp.html'</span>,
+    <span class="nm">triggers</span>: [<span class="str">'경찰'</span>, <span class="str">'신고'</span>, <span class="str">'범죄'</span>, <span class="str">'도둑'</span>, <span class="str">'폭행'</span>, <span class="str">'위협'</span>, <span class="str">'보이스피싱'</span>] },
+
+  { <span class="nm">id</span>: <span class="str">'klaw'</span>,     <span class="nm">name</span>: <span class="str">'K-Law'</span>,     <span class="nm">icon</span>: <span class="str">'⚖️'</span>,
+    <span class="nm">url</span>: <span class="str">'https://klaw.openhash.kr/webapp.html'</span>,
+    <span class="nm">triggers</span>: [<span class="str">'법률'</span>, <span class="str">'소송'</span>, <span class="str">'계약서'</span>, <span class="str">'변호사'</span>] },
+
+  { <span class="nm">id</span>: <span class="str">'khealth'</span>,  <span class="nm">name</span>: <span class="str">'K-Health'</span>,  <span class="nm">icon</span>: <span class="str">'🏥'</span>,
+    <span class="nm">url</span>: <span class="str">'https://health.gopang.net/webapp.html'</span>,
+    <span class="nm">triggers</span>: [<span class="str">'병원'</span>, <span class="str">'증상'</span>, <span class="str">'처방'</span>, <span class="str">'의료'</span>] },
+
+  <span class="cm">// … K-School, K-Market, K-Tax, K-Democracy,</span>
+  <span class="cm">//   K-Security, K-Insurance, K-Public, K-GDC,</span>
+  <span class="cm">//   K-Stock, K-Traffic, K-Logistics, K-911, K-Cleaner</span>
+  <span class="cm">// 총 16개 서비스 등록</span>
+];</pre></div>
+  </div>
+
+  <div class="callout callout-blue">
+    <div class="callout-icon">🗺️</div>
+    <div class="callout-body">
+      <strong>라우팅 흐름:</strong> 사용자가 고팡 앱에 메시지를 입력하면 → AI 라우터가 의도를 분석 → <code>GWP_REGISTRY</code>에서 트리거 키워드 매칭 → 해당 서비스 <code>webapp.html</code>을 GWP 토큰과 함께 자동으로 열어줍니다. 사용자는 별도의 로그인 없이 바로 해당 서비스를 이용할 수 있습니다.
+    </div>
+  </div>
 
   <hr class="divider" style="margin: 40px 0;">
 
@@ -986,6 +1087,54 @@ PDV 레코드 생성 (6하원칙)
     <div class="callout-icon">⚖️</div>
     <div class="callout-body">
       <strong>법적 효력:</strong> PDV + OpenHash의 결합이 만드는 것은 <strong>자기완결 증거 구조</strong>입니다. 피해자가 고팡을 통해 신고하거나, 계약을 체결하거나, 진술을 남기면, 그 순간 OpenHash가 내용과 시각을 불변으로 기록합니다. 상대방이 자신의 기기에서 메시지를 삭제해도, 피해자의 PDV와 OpenHash 앵커가 증거로 남습니다. 별도의 공증이나 법원 제출 없이도 증거 효력을 갖습니다.
+    </div>
+  </div>
+
+  <hr class="divider" style="margin: 40px 0;">
+
+  <h2 class="section-title" style="font-size: clamp(18px,2.5vw,24px);">실제 테스트 결과 — 3개 브라우저 통과</h2>
+
+  <p>
+    고팡 인증 시스템은 <strong>크롬·Edge·Opera</strong> 3개 브라우저에서 3가지 시나리오를 실제로 테스트해 모두 통과했습니다.
+  </p>
+
+  <div class="paths">
+    <div class="path-card">
+      <div class="path-num p1" style="font-size:18px">🟢</div>
+      <div>
+        <div class="path-title">시나리오 1 — 기존 사용자 자동 로그인 (크롬)</div>
+        <p class="path-desc">
+          <code style="font-family:'DM Mono',monospace;font-size:12px">gopang_user_v3</code>가 localStorage에 존재하는 상태에서 <code style="font-family:'DM Mono',monospace;font-size:12px">police.gopang.net</code>에 접속. <strong>경로2A 세션 캐시</strong>로 1초 내 자동 인증 완료. 스마트폰(webapp)과 PC(desktop) 모두 동일하게 동작.
+        </p>
+        <span class="path-badge badge-fast">✅ 완전 성공 · 자동 인증</span>
+      </div>
+    </div>
+    <div class="path-card">
+      <div class="path-num p2" style="font-size:18px">🟢</div>
+      <div>
+        <div class="path-title">시나리오 2 — 신규 사용자 등록 후 복귀 (Edge)</div>
+        <p class="path-desc">
+          미등록 상태에서 <code style="font-family:'DM Mono',monospace;font-size:12px">police.gopang.net</code> 접속 → <code style="font-family:'DM Mono',monospace;font-size:12px">gopang.net/auth/silent-auth.html</code> 자동 리다이렉트 → 4단어 시드 입력으로 고팡 등록 → police로 자동 복귀 → <strong>경로2B Silent iframe</strong>으로 즉시 인증.
+        </p>
+        <span class="path-badge badge-cached">✅ 완전 성공 · 등록→복귀 자동화</span>
+      </div>
+    </div>
+    <div class="path-card">
+      <div class="path-num p3" style="font-size:18px">🟢</div>
+      <div>
+        <div class="path-title">시나리오 3 — GWP 고팡 앱 내부 호출 (Opera)</div>
+        <p class="path-desc">
+          고팡 webapp에서 "집에 도둑이 들었어. 경찰을 불러줘" 입력 → AI 라우터가 <strong>kpolice 0.97 신뢰도</strong>로 라우팅 → <code style="font-family:'DM Mono',monospace;font-size:12px">gwp_token</code>과 함께 police.gopang.net 자동 오픈 → 경로1 GWP 토큰으로 즉시 인증 → K-Police AI가 한림파출소 위치·연락처·112 신고 안내 응답.
+        </p>
+        <span class="path-badge badge-cross">✅ 완전 성공 · AI 라우팅+인증 통합</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout callout-green">
+    <div class="callout-icon">✅</div>
+    <div class="callout-body">
+      <strong>결론:</strong> 고팡 SSO는 스마트폰(webapp)·PC(desktop)·GWP 내부 호출 세 가지 접속 경로 모두에서 완전히 동작합니다. 사용자는 어떤 하위 서비스를 이용하든 고팡 계정 하나로 자동 인증되며, 추가 로그인 절차가 없습니다.
     </div>
   </div>
 
