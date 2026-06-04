@@ -1,5 +1,5 @@
 /**
- * subsystem-auth.js  v1.0
+ * subsystem-auth.js  v1.1
  * 고팡 하위 시스템 공용 인증 모듈
  *
  * 배포 위치: https://gopang.net/auth/subsystem-auth.js
@@ -14,6 +14,10 @@
  *     from 'https://gopang.net/auth/subsystem-auth.js';
  *
  * 백서 §12: 하위 서비스 독자 인증 구현 금지
+ *
+ * v1.1 변경사항:
+ *   - 인증 완료 후 K-Security 에이전트 자동 로드 (방안 2)
+ *   - data-security="false" 로 개별 시스템에서 비활성화 가능
  */
 
 // ── gopang-sso.js 로드 ────────────────────────────────────
@@ -48,7 +52,40 @@ export async function initAuth() {
   if (typeof window._onGopangAuth === 'function') {
     window._onGopangAuth(_user);
   }
+  // ── K-Security 에이전트 자동 로드 (v1.1) ─────────────────
+  // 인증 완료 후 security-agent.js를 동적으로 삽입.
+  // 비활성화: <script ... data-security="false">
+  _loadSecurityAgent();
   return _user;
+}
+
+// ── K-Security 에이전트 동적 로드 ────────────────────────
+function _loadSecurityAgent() {
+  // 이미 로드된 경우 중복 방지
+  if (document.getElementById('ksec-agent')) return;
+
+  // 현재 스크립트 태그에서 data-security 속성 확인
+  // <script type="module" src="...subsystem-auth.js" data-security="false">
+  // → 위처럼 명시한 경우에만 비활성화
+  const scriptEl = document.querySelector(
+    'script[src*="subsystem-auth.js"]'
+  );
+  if (scriptEl?.dataset?.security === 'false') return;
+
+  // 서비스 ID: data-svc 속성 → hostname 자동 감지 순
+  const svcId  = scriptEl?.dataset?.svc || _detectServiceId();
+  const svcUrl = location.hostname;
+
+  const agent     = document.createElement('script');
+  agent.id        = 'ksec-agent';
+  agent.src       = 'https://security.gopang.net/security-agent.js';
+  agent.dataset.svc = svcId;
+  agent.dataset.url = svcUrl;
+  // 인증된 사용자 정보를 에이전트에 전달 (진단 정확도 향상)
+  agent.dataset.authLevel = _user?.level || 'L0';
+  document.head.appendChild(agent);
+
+  console.info('[SubsystemAuth] K-Security 에이전트 로드:', svcId);
 }
 
 /**
