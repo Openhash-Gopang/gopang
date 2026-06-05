@@ -54,7 +54,7 @@ body {
   color: var(--text);
   font-family: 'Inter', 'Noto Sans KR', -apple-system, sans-serif;
   font-weight: 400;
-  font-size: 16px;
+  font-size: 13px;
   line-height: 1.75;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -184,7 +184,7 @@ nav {
   animation: fadeUp 0.5s 0.14s ease both;
 }
 .hero-desc {
-  max-width: 580px; font-size: 16px; font-weight: 400;
+  max-width: 580px; font-size: 13px; font-weight: 400;
   color: var(--text3); line-height: 1.75;
   margin: 0 auto 36px;
   animation: fadeUp 0.5s 0.2s ease both;
@@ -255,7 +255,7 @@ nav {
 }
 .section-title strong { font-weight: 600; }
 .section-body {
-  font-size: 16px; font-weight: 400;
+  font-size: 13px; font-weight: 400;
   color: var(--text2); line-height: 1.75;
   max-width: 100%;
 }
@@ -269,7 +269,7 @@ nav {
 }
 .overview-list li {
   display: flex; align-items: flex-start; gap: 8px;
-  font-size: 16px; font-weight: 400; color: var(--text2); line-height: 1.75;
+  font-size: 13px; font-weight: 400; color: var(--text2); line-height: 1.75;
 }
 .overview-list li::before {
   content: '◆';
@@ -310,8 +310,8 @@ nav {
   display: flex; align-items: center; gap: 6px;
 }
 .step-num::before { content:''; width:20px; height:1px; background:var(--brand); }
-.step-card h3 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 8px; letter-spacing: -0.3px; }
-.step-card p { font-size: 15px; font-weight: 400; color: var(--text2); line-height: 1.7; }
+.step-card h3 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; letter-spacing: -0.3px; }
+.step-card p { font-size: 13px; font-weight: 400; color: var(--text2); line-height: 1.7; }
 .step-tag {
   display: inline-block; margin-top: 14px;
   font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
@@ -368,7 +368,7 @@ nav {
 .badge-dev   { color: #d97706; background: #fffbeb; border-color: #fde68a; }
 .badge-soon  { color: var(--text4); background: var(--bg-subtle); border-color: var(--border); }
 .agent-desc {
-  font-size: 15px; font-weight: 400; color: var(--text2);
+  font-size: 13px; font-weight: 400; color: var(--text2);
   line-height: 1.7; margin-bottom: 16px;
 }
 .agent-inst {
@@ -404,7 +404,7 @@ nav {
 .metric-big.blue  { color: var(--blue); }
 .metric-big.amber { color: var(--amber); }
 .metric-big.red   { color: var(--red); }
-.metric-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; letter-spacing: -0.3px; }
+.metric-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; letter-spacing: -0.3px; }
 .metric-sub { font-size: 15px; font-weight: 400; color: var(--text3); line-height: 1.6; }
 
 /* ── TABLE ── */
@@ -424,7 +424,7 @@ th {
 tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
 tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: #f8fafc; }
-td { padding: 14px 18px; font-size: 15px; font-weight: 400; color: var(--text2); }
+td { padding: 14px 18px; font-size: 13px; font-weight: 400; color: var(--text2); }
 td:first-child { font-weight: 600; color: var(--text); }
 .td-bad { color: var(--red); font-weight: 400; }
 .td-bad small { display: block; color: var(--text3); font-size: 14px; font-family: 'DM Mono', monospace; margin-top: 2px; }
@@ -543,6 +543,8 @@ footer {
   .footer-inner { flex-direction: column; align-items: flex-start; }
 }
 </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({startOnLoad:true, theme:"neutral", fontFamily:"inherit"});</script>
 </head>
 <body>
 
@@ -640,7 +642,7 @@ footer {
 <!-- ── OVERVIEW ── -->
 <section class="section" id="overview">
   <div class="section-inner">
-    <p style="font-size:16px;color:var(--text2);line-height:1.8;margin-bottom:28px;font-weight:400">고팡은 상대방과 대화하는 AI 메신저 플랫폼입니다. 카카오톡과 달리 고팡은 첫째, 대화 상대방은 사람 뿐 아니라, 사물(가령, 자율주행차량 등), 기관(가령, 특허청, 음식점 등), 개념(가령, AI 등)을 포함하며, 그 중 으뜸은 전용 AI 비서입니다.<br>
+    <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:28px;font-weight:400">고팡은 상대방과 대화하는 AI 메신저 플랫폼입니다. 카카오톡과 달리 고팡의 대화 상대방은 사람과 사물(자율주행차량 등), 기관(특허청, 자영업 등), 개념(AI 등)을 포함하며, 그 중 으뜸은 사용자의 전용 AI 비서입니다.<br>
 <span style="display:inline-block;padding-left:1.2em"><span style="font-size:0.5em;vertical-align:middle;">◆</span> AI 비서는 100여 종의 전문 분야 AI Agent를 호출하여 사용자의 지시를 수행합니다.</span><br>
 <span style="display:inline-block;padding-left:1.2em"><span style="font-size:0.5em;vertical-align:middle;">◆</span> 전문 분야는 입법, 사법, 행정, 교육, 의료, 시장, 교통, 물류, 경찰, 소방/응급, 금융(은행, 보험, 증권), 산업, 기업 등입니다.</span><br>
 <span style="display:inline-block;padding-left:1.2em"><span style="font-size:0.5em;vertical-align:middle;">◆</span> AI 비서와 AI Agent들은 세상의 모든 지식을 갖추고 있습니다.</span><br>
@@ -652,34 +654,180 @@ footer {
       <ul class="overview-list">
         <li>기관: 법원, 국세청, 대학, 병원, 시장, 기업, 시청 등</li>
         <li>사물: 자율주행차량, 주택, 냉장고 등의 사물</li>
-        <li>사람: 회계사, 변호사, 의사, 공무원 등 직종</li>
+        <li>사람</li>
+        <li>개념: 법률, 지식, 관습 등</li>
       </ul>
-      <p>고팡의 AI 쌍둥이는 현실의 쌍둥이에 비해, 비용은 <strong>1/1,000</strong>, 시간은 <strong>1/1,000,000</strong>의 속도로 업무를 수행합니다.</p>
+      <p style="margin-bottom:2em;">지금까지는 변호사와 법률을 상담하고, 의사와 질환을 상담하며, 공무원과 민원을 상담합니다. 고팡이 제공하는 새로운 세계에서는 사람과 법률이 직접 소통하고, 사람과 의학, 사람과 국가가 직접 대화합니다. 즉, 법률, 의학, 국가 모두 고팡의 인격체이며, 그 인격은 AI입니다. 고팡의 AI 쌍둥이는 현실의 쌍둥이에 비해, 비용은 <strong>1/1,000</strong>, 시간은 <strong>1/1,000,000</strong>의 속도로 업무를 수행합니다.</p>
 
-      <p class="overview-p2">무엇보다 모든 개인은 <strong>"전용 AI 비서"</strong>를 갖습니다.</p>
+      <p class="overview-p2">고팡은 사람과 사람 간의 대화를 <strong>"AI 비서와 AI 비서"</strong> 간의 대화로 치환합니다.</p>
       <ul class="overview-list">
         <li>AI 비서는 내 PC와 스마트폰의 PDV(Private Data Vault)에 나에 대한 모든 정보를 기록하고 갱신합니다.</li>
         <li>오직 나 자신만 내 PDV에 접근할 수 있으며, 내 PC 등에 저장되므로, 대규모 해킹이 불가능합니다(오프라인).</li>
         <li>AI 비서는 나 대신 각종 업무를 수행하며, 나는 감독할 뿐입니다.</li>
       </ul>
 
+
+    <!-- AI 대화 메커니즘 일러스트 -->
+    <div class="reveal" style="margin:0 0 48px 0;">
+      <svg viewBox="0 0 1100 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:1100px;display:block;margin:0 auto;">
+
+        <!-- ── 왼쪽 패널 배경 ── -->
+        <rect x="8" y="16" width="370" height="328" rx="14" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+        <!-- ── 오른쪽 패널 배경 ── -->
+        <rect x="722" y="16" width="370" height="328" rx="14" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+
+        <!-- ════════════ 행 1: 사람 (y=30, 중심=52) ════════════ -->
+        <!-- 객체: 사람 L -->
+        <rect x="22" y="30" width="110" height="44" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+        <circle cx="42" cy="48" r="6" fill="#64748b"/>
+        <path d="M32,62 Q32,55 42,55 Q52,55 52,62" fill="#64748b"/>
+        <text x="80" y="57" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">사람</text>
+        <!-- 수평 연결선 L -->
+        <line x1="132" y1="52" x2="152" y2="52" stroke="#94a3b8" stroke-width="1.2" opacity="0.7"/>
+        <!-- AI비서: 사람 L -->
+        <rect x="152" y="30" width="148" height="44" rx="8" fill="#e8edf2" stroke="#b0bec5" stroke-width="1"/>
+        <text x="226" y="57" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">AI 비서</text>
+
+        <!-- 객체: 사람 R -->
+        <rect x="968" y="30" width="110" height="44" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+        <circle cx="988" cy="48" r="6" fill="#64748b"/>
+        <path d="M978,62 Q978,55 988,55 Q998,55 998,62" fill="#64748b"/>
+        <text x="1026" y="57" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">사람</text>
+        <!-- 수평 연결선 R -->
+        <line x1="968" y1="52" x2="948" y2="52" stroke="#94a3b8" stroke-width="1.2" opacity="0.7"/>
+        <!-- AI비서: 사람 R -->
+        <rect x="800" y="30" width="148" height="44" rx="8" fill="#e8edf2" stroke="#b0bec5" stroke-width="1"/>
+        <text x="874" y="57" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">AI 비서</text>
+
+        <!-- ════════════ 행 2: 사물 (y=110, 중심=132) ════════════ -->
+        <!-- 객체: 사물 L -->
+        <rect x="22" y="110" width="110" height="44" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+        <rect x="36" y="119" width="16" height="14" rx="2" fill="none" stroke="#64748b" stroke-width="1.4"/>
+        <line x1="36" y1="125" x2="52" y2="125" stroke="#64748b" stroke-width="1.2"/>
+        <text x="80" y="137" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">사물</text>
+        <!-- 수평 연결선 L -->
+        <line x1="132" y1="132" x2="152" y2="132" stroke="#94a3b8" stroke-width="1.2" opacity="0.7"/>
+        <!-- AI비서: 사물 L -->
+        <rect x="152" y="110" width="148" height="44" rx="8" fill="#e8edf2" stroke="#b0bec5" stroke-width="1"/>
+        <text x="226" y="137" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">AI 비서</text>
+
+        <!-- 객체: 사물 R -->
+        <rect x="968" y="110" width="110" height="44" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+        <rect x="982" y="119" width="16" height="14" rx="2" fill="none" stroke="#64748b" stroke-width="1.4"/>
+        <line x1="982" y1="125" x2="998" y2="125" stroke="#64748b" stroke-width="1.2"/>
+        <text x="1026" y="137" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">사물</text>
+        <!-- 수평 연결선 R -->
+        <line x1="968" y1="132" x2="948" y2="132" stroke="#94a3b8" stroke-width="1.2" opacity="0.7"/>
+        <!-- AI비서: 사물 R -->
+        <rect x="800" y="110" width="148" height="44" rx="8" fill="#e8edf2" stroke="#b0bec5" stroke-width="1"/>
+        <text x="874" y="137" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">AI 비서</text>
+
+        <!-- ════════════ 행 3: 기관 (y=190, 중심=212) ════════════ -->
+        <!-- 객체: 기관 L -->
+        <rect x="22" y="190" width="110" height="44" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+        <rect x="36" y="197" width="14" height="18" rx="1" fill="none" stroke="#64748b" stroke-width="1.4"/>
+        <line x1="36" y1="203" x2="50" y2="203" stroke="#64748b" stroke-width="1"/>
+        <rect x="40" y="207" width="4" height="8" fill="#64748b"/>
+        <text x="80" y="217" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">기관</text>
+        <!-- 수평 연결선 L -->
+        <line x1="132" y1="212" x2="152" y2="212" stroke="#94a3b8" stroke-width="1.2" opacity="0.7"/>
+        <!-- AI비서: 기관 L -->
+        <rect x="152" y="190" width="148" height="44" rx="8" fill="#e8edf2" stroke="#b0bec5" stroke-width="1"/>
+        <text x="226" y="217" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">AI 비서</text>
+
+        <!-- 객체: 기관 R -->
+        <rect x="968" y="190" width="110" height="44" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+        <rect x="982" y="197" width="14" height="18" rx="1" fill="none" stroke="#64748b" stroke-width="1.4"/>
+        <line x1="982" y1="203" x2="996" y2="203" stroke="#64748b" stroke-width="1"/>
+        <rect x="986" y="207" width="4" height="8" fill="#64748b"/>
+        <text x="1026" y="217" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">기관</text>
+        <!-- 수평 연결선 R -->
+        <line x1="968" y1="212" x2="948" y2="212" stroke="#94a3b8" stroke-width="1.2" opacity="0.7"/>
+        <!-- AI비서: 기관 R -->
+        <rect x="800" y="190" width="148" height="44" rx="8" fill="#e8edf2" stroke="#b0bec5" stroke-width="1"/>
+        <text x="874" y="217" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">AI 비서</text>
+
+        <!-- ════════════ 행 4: 개념 (y=270, 중심=292) ════════════ -->
+        <!-- 객체: 개념 L -->
+        <rect x="22" y="270" width="110" height="44" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+        <circle cx="40" cy="287" r="6" fill="none" stroke="#64748b" stroke-width="1.4"/>
+        <line x1="37" y1="293" x2="37" y2="298" stroke="#64748b" stroke-width="1.2"/>
+        <line x1="43" y1="293" x2="43" y2="298" stroke="#64748b" stroke-width="1.2"/>
+        <line x1="37" y1="298" x2="43" y2="298" stroke="#64748b" stroke-width="1.2"/>
+        <text x="80" y="297" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">개념</text>
+        <!-- 수평 연결선 L -->
+        <line x1="132" y1="292" x2="152" y2="292" stroke="#94a3b8" stroke-width="1.2" opacity="0.7"/>
+        <!-- AI비서: 개념 L -->
+        <rect x="152" y="270" width="148" height="44" rx="8" fill="#e8edf2" stroke="#b0bec5" stroke-width="1"/>
+        <text x="226" y="297" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">AI 비서</text>
+
+        <!-- 객체: 개념 R -->
+        <rect x="968" y="270" width="110" height="44" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+        <circle cx="986" cy="287" r="6" fill="none" stroke="#64748b" stroke-width="1.4"/>
+        <line x1="983" y1="293" x2="983" y2="298" stroke="#64748b" stroke-width="1.2"/>
+        <line x1="989" y1="293" x2="989" y2="298" stroke="#64748b" stroke-width="1.2"/>
+        <line x1="983" y1="298" x2="989" y2="298" stroke="#64748b" stroke-width="1.2"/>
+        <text x="1026" y="297" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">개념</text>
+        <!-- 수평 연결선 R -->
+        <line x1="968" y1="292" x2="948" y2="292" stroke="#94a3b8" stroke-width="1.2" opacity="0.7"/>
+        <!-- AI비서: 개념 R -->
+        <rect x="800" y="270" width="148" height="44" rx="8" fill="#e8edf2" stroke="#b0bec5" stroke-width="1"/>
+        <text x="874" y="297" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">AI 비서</text>
+
+        <!-- ════ 중앙 크로스 연결선 (L AI비서 우끝=300 ↔ R AI비서 좌끝=800) ════ -->
+        <!-- 동일 행: 약간 더 진하게 -->
+        <line x1="300" y1="52"  x2="800" y2="52"  stroke="#cbd5e1" stroke-width="1" opacity="0.6"/>
+        <line x1="300" y1="132" x2="800" y2="132" stroke="#cbd5e1" stroke-width="1" opacity="0.6"/>
+        <line x1="300" y1="212" x2="800" y2="212" stroke="#cbd5e1" stroke-width="1" opacity="0.6"/>
+        <line x1="300" y1="292" x2="800" y2="292" stroke="#cbd5e1" stroke-width="1" opacity="0.6"/>
+        <!-- 크로스 -->
+        <line x1="300" y1="52"  x2="800" y2="132" stroke="#d1d5db" stroke-width="0.85" opacity="0.45"/>
+        <line x1="300" y1="52"  x2="800" y2="212" stroke="#d1d5db" stroke-width="0.85" opacity="0.32"/>
+        <line x1="300" y1="52"  x2="800" y2="292" stroke="#d1d5db" stroke-width="0.85" opacity="0.22"/>
+        <line x1="300" y1="132" x2="800" y2="52"  stroke="#d1d5db" stroke-width="0.85" opacity="0.45"/>
+        <line x1="300" y1="132" x2="800" y2="212" stroke="#d1d5db" stroke-width="0.85" opacity="0.45"/>
+        <line x1="300" y1="132" x2="800" y2="292" stroke="#d1d5db" stroke-width="0.85" opacity="0.32"/>
+        <line x1="300" y1="212" x2="800" y2="52"  stroke="#d1d5db" stroke-width="0.85" opacity="0.32"/>
+        <line x1="300" y1="212" x2="800" y2="132" stroke="#d1d5db" stroke-width="0.85" opacity="0.45"/>
+        <line x1="300" y1="212" x2="800" y2="292" stroke="#d1d5db" stroke-width="0.85" opacity="0.45"/>
+        <line x1="300" y1="292" x2="800" y2="52"  stroke="#d1d5db" stroke-width="0.85" opacity="0.22"/>
+        <line x1="300" y1="292" x2="800" y2="132" stroke="#d1d5db" stroke-width="0.85" opacity="0.32"/>
+        <line x1="300" y1="292" x2="800" y2="212" stroke="#d1d5db" stroke-width="0.85" opacity="0.45"/>
+
+        <!-- 중앙 레이블 -->
+        <rect x="462" y="148" width="176" height="56" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="550" y="172" text-anchor="middle" font-size="13" fill="#475569" font-weight="700">AI 비서 간 대화</text>
+        <text x="550" y="191" text-anchor="middle" font-size="13" fill="#94a3b8" font-weight="500">고팡 메신저</text>
+      </svg>
+    </div>
+
       <p class="overview-p3">고팡은 현실 세계의 모든 기관과 사물, 전문직의 AI 쌍둥이가 존재하는 평행 세계이며, 나의 AI 비서는 이들 기관 등과 소통하는 창구입니다.</p>
 
       <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-        <div style="background:#f0fdf8;border:1px solid #a7f3d0;border-radius:8px;padding:16px 18px">
-          <div style="font-size:12px;font-weight:700;color:#1a9e6a;letter-spacing:.5px;margin-bottom:6px">💬 하나의 앱</div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 18px">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span style="font-size:13px;font-weight:700;color:#334155;letter-spacing:.5px">하나의 앱</span>
+          </div>
           <div style="font-size:13px;color:#374151;line-height:1.75">카카오톡처럼 사용합니다. 채팅으로 다른 사용자와 소통하거나, AI 비서에게 지시하세요. 100여 종의 전문 AI Agent가 자동 호출됩니다.</div>
         </div>
-        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px 18px">
-          <div style="font-size:12px;font-weight:700;color:#1d4ed8;letter-spacing:.5px;margin-bottom:6px">💰 비용 모델</div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 18px">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span style="font-size:13px;font-weight:700;color:#334155;letter-spacing:.5px">비용 모델</span>
+          </div>
           <div style="font-size:13px;color:#374151;line-height:1.75">사용한 만큼만 지불합니다. 평균 <strong>월 100원</strong> 내외. AI를 많이 사용하더라도 최대 월 수천 원 수준입니다.</div>
         </div>
-        <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:16px 18px">
-          <div style="font-size:12px;font-weight:700;color:#92400e;letter-spacing:.5px;margin-bottom:6px">🔐 데이터 보안</div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 18px">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span style="font-size:13px;font-weight:700;color:#334155;letter-spacing:.5px">데이터 보안</span>
+          </div>
           <div style="font-size:13px;color:#374151;line-height:1.75">모든 업무 결과는 사용자 기기의 PDV에 6하원칙으로 기록됩니다. 대규모 해킹은 원천적으로 불가능합니다.</div>
         </div>
       </div>
     </div>
+
 
     <div class="steps-grid">
       <div class="step-card reveal">
@@ -713,15 +861,106 @@ footer {
     <h2 class="section-title reveal">PC 버전과 <strong>모바일 버전</strong></h2>
     <div class="section-body reveal">
       <p>PC와 모바일의 브라우저에 gopang.net 주소를 입력하면, PC와 모바일의 화면이 서로 다릅니다. gopang.net 뿐 아니라, 그 하위 시스템들도 그러합니다. 모바일은 대화형이며, 시종일관 AI가 적용됩니다. 반면, PC는 해당 시스템에 대한 안내가 주요한 용도입니다. 이하, 모바일로 접속한 경우를 설명합니다.</p>
-      <p style="margin-top:16px">모바일 버전의 고팡(Gopang)은 수백 개의 하위 AI 시스템(혹은 서비스)을 호출하는 포털입니다.</p>
+      <p style="margin-top:16px">모바일 버전의 고팡(Gopang)은 수백 개의 하위 AI 시스템(전문 분야 AI Agent)을 호출하는 포털입니다.</p>
+
+      <!-- 흐름도 일러스트 -->
+      <div style="margin:32px 0 8px 0;">
+        <svg viewBox="0 0 900 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:900px;display:block;margin:0 auto;">
+
+          <!-- ── 노드 1: 사람이 AI 비서에게 지시 ── -->
+          <rect x="10" y="80" width="155" height="60" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.2"/>
+          <circle cx="36" cy="104" r="7" fill="#64748b"/>
+          <path d="M24,118 Q24,110 36,110 Q48,110 48,118" fill="#64748b"/>
+          <text x="100" y="106" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">사람이</text>
+          <text x="100" y="123" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">AI 비서에게 지시</text>
+
+          <!-- 화살표 1→2 -->
+          <line x1="165" y1="110" x2="220" y2="110" stroke="#94a3b8" stroke-width="1.3"/>
+          <polygon points="218,105 228,110 218,115" fill="#94a3b8"/>
+
+          <!-- ── 노드 2: 판단 (마름모) 중심 y=110 ── -->
+          <polygon points="310,60 390,110 310,160 230,110" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.2"/>
+          <text x="310" y="105" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">직접 수행</text>
+          <text x="310" y="121" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">가능?</text>
+
+          <!-- YES 아래쪽 화살표 → 직접 수행 -->
+          <line x1="310" y1="160" x2="310" y2="185" stroke="#94a3b8" stroke-width="1.3"/>
+          <polygon points="305,183 310,193 315,183" fill="#94a3b8"/>
+          <text x="298" y="178" text-anchor="middle" font-size="12" fill="#64748b">YES</text>
+          <rect x="228" y="193" width="164" height="44" rx="8" fill="#e0f2e9" stroke="#a7d7b8" stroke-width="1"/>
+          <text x="310" y="213" text-anchor="middle" font-size="13" fill="#1a6b3c" font-weight="600">직접 수행</text>
+          <text x="310" y="230" text-anchor="middle" font-size="11" fill="#4ade80" font-weight="500">✓ 완료</text>
+
+          <!-- NO 오른쪽 화살표 -->
+          <line x1="390" y1="110" x2="445" y2="110" stroke="#94a3b8" stroke-width="1.3"/>
+          <polygon points="443,105 453,110 443,115" fill="#94a3b8"/>
+          <text x="418" y="103" text-anchor="middle" font-size="12" fill="#64748b">NO</text>
+
+          <!-- ── 노드 3: Agent 있음? (마름모) 중심 y=110 ── -->
+          <polygon points="555,60 635,110 555,160 475,110" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.2"/>
+          <text x="555" y="105" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">전문 Agent</text>
+          <text x="555" y="121" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">있음?</text>
+
+          <!-- YES 아래쪽 → Agent 호출 -->
+          <line x1="555" y1="160" x2="555" y2="185" stroke="#94a3b8" stroke-width="1.3"/>
+          <polygon points="550,183 555,193 560,183" fill="#94a3b8"/>
+          <text x="543" y="178" text-anchor="middle" font-size="12" fill="#64748b">YES</text>
+          <rect x="468" y="193" width="174" height="44" rx="8" fill="#e0f2e9" stroke="#a7d7b8" stroke-width="1"/>
+          <text x="555" y="213" text-anchor="middle" font-size="13" fill="#1a6b3c" font-weight="600">전문 Agent 호출</text>
+          <text x="555" y="230" text-anchor="middle" font-size="11" fill="#4ade80" font-weight="500">✓ 완료</text>
+
+          <!-- NO 오른쪽 → 웹 검색 -->
+          <line x1="635" y1="110" x2="685" y2="110" stroke="#94a3b8" stroke-width="1.3"/>
+          <polygon points="683,105 693,110 683,115" fill="#94a3b8"/>
+          <text x="660" y="103" text-anchor="middle" font-size="12" fill="#64748b">NO</text>
+
+          <!-- ── 노드 4: 웹 검색 등 자체 수행 ── -->
+          <rect x="693" y="80" width="197" height="60" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.2"/>
+          <circle cx="716" cy="108" r="7" fill="none" stroke="#64748b" stroke-width="1.5"/>
+          <line x1="721" y1="113" x2="727" y2="119" stroke="#64748b" stroke-width="1.5"/>
+          <text x="806" y="105" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">웹 검색 등으로</text>
+          <text x="806" y="122" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">스스로 수행</text>
+
+        </svg>
+      </div>
+
+      <!-- 짜장면 주문 예시 이미지 (썸네일 + 클릭 확대) -->
+      <!-- ※ jjajang.png 파일을 desktop.html과 같은 폴더에 저장하세요 -->
+      <div style="margin:36px 0 8px 0;">
+
+        <!-- 썸네일 클릭 시 모달 오픈 -->
+        <div onclick="document.getElementById('jjajang-modal').style.display='flex'"
+             style="cursor:pointer;display:inline-block;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07);transition:box-shadow .2s;"
+             onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.13)'"
+             onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.07)'">
+          <img src="jjajang.png" alt="짜장면 주문 시퀀스 다이어그램"
+               style="width:340px;height:auto;display:block;"/>
+          <div style="padding:8px 14px;background:#f8fafc;font-size:12px;color:#94a3b8;text-align:center;">
+            🔍 클릭하면 전체 크기로 볼 수 있습니다
+          </div>
+        </div>
+
+        <!-- 모달 (전체 이미지) -->
+        <div id="jjajang-modal"
+             onclick="this.style.display='none'"
+             style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out;">
+          <div onclick="event.stopPropagation()" style="position:relative;max-width:95vw;max-height:92vh;">
+            <img src="jjajang.png" alt="짜장면 주문 시퀀스 다이어그램"
+                 style="max-width:95vw;max-height:88vh;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.4);display:block;"/>
+            <button onclick="document.getElementById('jjajang-modal').style.display='none'"
+                    style="position:absolute;top:-14px;right:-14px;width:30px;height:30px;border-radius:50%;border:none;background:#334155;color:#fff;font-size:16px;cursor:pointer;line-height:30px;text-align:center;">✕</button>
+          </div>
+        </div>
+
+      </div>
+
       <ul class="overview-list" style="margin-top:12px">
         <li>사용자가 지시나 질의하면, 사용자의 전용 AI 비서는 먼저 자신이 스스로 수행할 업무인지 여부를 판단합니다. 가령, "내일 약속된 미팅이 뭐가 있지?", "이 사건의 대법원 판결문 법리를 분석해 줘." 등입니다. 전자는 AI 비서가 처리할 일이지만, 후자는 K-Law와 같은 특정 분야에 특화된 전문 AI Agent를 호출해야 합니다.</li>
         <li>AI 비서가 수행하는 것보다 전문 AI Agent가 수행하기에 적합한 지시로 판단되면, AI 비서는 고팡에 등록된 수백 개의 AI Agent들 가운데, 사용자의 지시를 이행할 최적의 Agent를 호출합니다. 가령, 법률을 문의하면 K-Law를 호출하고, 치안을 문의하면 K-Police를 호출하며, 질환을 문의하면 K-Health를 호출합니다. 2026년 6월 현재, 약 20종의 하위 AI Agent를 구성하였으며, 2026년 말까지 100여 종으로 확장합니다.</li>
         <li>고팡에 등록된 Agent들 중에서 적절한 AI Agent가 없다면, AI 비서는 웹 검색 등으로 스스로 해당 지시를 이행하고, 결과를 보고합니다. 만약, 특정 분야 Agent의 개발이 필요하다고 판단되면, 그 필요성을 개발자에게 보고합니다.</li>
         <li>AI 비서 및 AI Agent들의 업무 수행 결과는 사용자의 전용 데이터 금고(PDV, Private Data Vault)에 6하원칙에 따라 기록되며, 이 기록은 오직 본인만 접근할 수 있습니다.</li>
       </ul>
-      <p style="margin-top:20px">고팡은 관문(Portal)이며, 100여 종의 하위 AI 시스템은 의료, 법률, 교육 등 제반 인프라의 AI 쌍둥이입니다.</p>
-      <p style="margin-top:12px">또한, 고팡은 완전히 새로운 형식의 웹이며, 한국의 수십 만 웹 사이트를 100여 종의 AI Agent로 대체합니다.</p>
+      <p style="margin-top:20px">고팡은 관문(Portal)이며, 100여 종의 하위 AI 시스템은 의료, 법률, 교육 등 제반 인프라의 AI 쌍둥이입니다. 또한, 고팡은 완전히 새로운 형식의 웹이며, 한국의 수십 만 웹 사이트를 100여 종의 AI Agent로 대체합니다.</p>
       <p style="margin-top:16px;text-align:center;font-size:1.25rem;font-weight:700;letter-spacing:0.5px">아날로그 시대 &nbsp;⇒&nbsp; 디지털 시대 &nbsp;⇒&nbsp; AI 시대 (고팡)</p>
     </div>
   </div>
