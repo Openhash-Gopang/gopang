@@ -2619,15 +2619,20 @@ function _initLocation() {
         }
       },
       (err) => {
-        console.warn(`[Location] GPS 실패(${highAccuracy ? '고정밀' : '저정밀'}):`, err.message);
+        // PERMISSION_DENIED: 사용자가 팝업에서 거부한 것 — 정상 경로, warn만
+        if (err.code === err.PERMISSION_DENIED) {
+          console.log('[Location] GPS 권한 거부 — IP 폴백 사용');
+        } else {
+          console.warn(`[Location] GPS 실패(${highAccuracy ? '고정밀' : '저정밀'}):`, err.message);
+        }
         navigator.geolocation.clearWatch(_watchId);
         _watchId = null;
-        if (!highAccuracy) {
-          // 저정밀 실패 → 고정밀로 재시도
+        if (!highAccuracy && err.code !== err.PERMISSION_DENIED) {
+          // 저정밀 기술 오류 → 고정밀로 재시도 (권한 거부면 재시도 불필요)
           console.log('[Location] 고정밀 GPS로 재시도...');
           _startWatch(true);
         } else {
-          // 고정밀도 실패 → PDV/IP 폴백
+          // 권한 거부 or 고정밀도 실패 → PDV/IP 폴백
           _locationPending = false;
           _loadLocationFromPDV().finally(() => { _locationReady = true; });
         }
@@ -2640,8 +2645,36 @@ function _initLocation() {
     );
   }
 
-  // 저정밀(네트워크 기반)로 먼저 시도 — 빠르고 "대략적 위치" 권한도 커버
-  _startWatch(false);
+  // ── Permission API로 현재 상태 먼저 확인 ──────────────────────
+  // granted → 바로 watch / prompt → 팝업 뜬 후 결과에 따라 처리
+  // denied  → 팝업 없이 즉시 IP 폴백 (팝업 전 오류 메시지 방지)
+  if (navigator.permissions) {
+    navigator.permissions.query({ name: 'geolocation' }).then(result => {
+      if (result.state === 'denied') {
+        // 이미 거부됨 — 팝업도 없고 에러도 없이 조용히 IP 폴백
+        console.log('[Location] GPS 권한 이미 거부됨 — IP 폴백 사용');
+        _locationPending = false;
+        _loadLocationFromPDV().finally(() => { _locationReady = true; });
+      } else {
+        // 'granted' or 'prompt' → watchPosition 시작 (prompt면 팝업 표시됨)
+        _startWatch(false);
+      }
+      // 권한 상태 변경 감지 (사용자가 설정에서 바꿀 경우)
+      result.onchange = () => {
+        if (result.state === 'granted' && !_locationReady) {
+          _locationPending = false;
+          _locationReady   = false;
+          _initLocation();
+        }
+      };
+    }).catch(() => {
+      // Permission API 미지원 브라우저 → 기존 방식 폴백
+      _startWatch(false);
+    });
+  } else {
+    // Permission API 없음 → 기존 방식 (저정밀 먼저)
+    _startWatch(false);
+  }
 }
 
 async function _loadLocationFromPDV() {
@@ -2897,16 +2930,18 @@ function _renderProgressSteps() {
   el.innerHTML = html;
 }
 
-// ── SP-00-ROUTER 프리로드 (앱 시작 시 백그라운드 fetch) ────
-// 첫 메시지 전송 전에 미리 로드해둬서 응답 지연 방지
-(async () => {
-  try {
-    await _loadRouterPrompt();
-    console.info('[Router] 프리로드 완료 — 버전:', _routerPromptVer);
-  } catch(e) {
-    console.warn('[Router] 프리로드 실패 (나중에 재시도):', e.message);
-  }
-})();
+// ── SP-00-ROUTER 프리로드 (DOMContentLoaded 이후 백그라운드 fetch) ────
+// _routerPrompt 변수 초기화 완료 후 실행 — TDZ 오류 방지
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(async () => {
+    try {
+      await _loadRouterPrompt();
+      console.info('[Router] 프리로드 완료 — 버전:', _routerPromptVer);
+    } catch(e) {
+      console.warn('[Router] 프리로드 실패 (나중에 재시도):', e.message);
+    }
+  }, 0);
+});
 
 // ── 초기 AI 비서 환영 메시지 ────────────────────────────
 function _showWelcomeMessage() {
@@ -4301,11 +4336,21 @@ async function callAI(userText, imageFile = null) {
     hideTyping();
     // 스트리밍 버블이 이미 생성된 경우 그 버블에 오류 표시
     const existingBubble = document.querySelector('.bubble-ai.streaming');
+
+    // 402 Payment Required — 프록시 크레딧 소진
+    let userMsg = `⚠️ API 오류: ${err.message}`;
+    if (err.message.includes('402') || err.message.includes('Insufficient Balance')) {
+      userMsg =
+        '⚠️ AI 서버 크레딧이 일시적으로 부족합니다.\n\n' +
+        '잠시 후 다시 시도하거나, 설정(⚙️)에서\n' +
+        'BYOK(내 API 키)를 입력하면 계속 이용할 수 있습니다.';
+    }
+
     if (existingBubble) {
       existingBubble.classList.remove('streaming');
-      existingBubble.textContent = `⚠️ API 오류: ${err.message}`;
+      existingBubble.innerHTML = userMsg.replace(/\n/g, '<br>');
     } else {
-      appendBubble('ai', `⚠️ API 오류: ${err.message}`);
+      appendBubble('ai', userMsg);
     }
     console.error('[AI]', err);
   }
