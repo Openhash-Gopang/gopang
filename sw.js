@@ -21,10 +21,20 @@ const PRECACHE_URLS = [
 self.addEventListener('install', (event) => {
   console.log('[SW] 설치 중...');
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_URLS).catch((err) => {
-        console.warn('[SW] 사전 캐시 일부 실패 (무시):', err.message);
-      });
+    caches.open(CACHE_NAME).then(async (cache) => {
+      // addAll() 대신 파일별 개별 캐시 — 한 파일 실패가 전체에 영향 없음
+      let ok = 0, fail = 0;
+      await Promise.allSettled(
+        PRECACHE_URLS.map(url =>
+          cache.add(url)
+            .then(() => { ok++; })
+            .catch(err => {
+              fail++;
+              console.warn('[SW] 사전 캐시 실패 (무시):', url, '—', err.message);
+            })
+        )
+      );
+      console.log(`[SW] 사전 캐시 완료 — 성공: ${ok}, 실패: ${fail}`);
     }).then(() => {
       console.log('[SW] 설치 완료 — skipWaiting');
       return self.skipWaiting();
