@@ -2313,7 +2313,7 @@ const CFG = {
   geminiKey: 'AIzaSyDiytKUg_0MJVBM3gFYzTms7mO6Y2mhLT4',   // Gemini Vision API Key (하드코딩)
   kakaoKey:  '66648ca49f126d8752b33d542789ac56',   // 카카오 REST API Key (역지오코딩 — GPS→주소 변환용)
   endpoint:  'https://gopang-proxy.tensor-city.workers.dev',
-  model:     'deepseek-v4-pro',
+  model:     'deepseek-v4-flash',   // ✅ V4 Flash — V4 Pro 대비 12배 저렴, 일상 대화·라우팅 충분
   system:   `# AI Secretary Prompt SP-00 v9.0
 # 문서코드: SP-00 | 작성: AI City Inc. · 도영민
 # 사용자 GUID: ${USER_GUID}
@@ -3726,7 +3726,7 @@ async function runRouter(userText, hasImage = false) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model:       'deepseek-chat',   // 라우터는 V3 고정 (빠름·저렴)
+        model:       'deepseek-v4-flash',  // 라우터는 Flash 고정 (빠름·저렴, 분류 작업에 충분)
         max_tokens:  256,
         temperature: 0.0,               // 결정론적
         stream:      false,
@@ -3898,7 +3898,18 @@ async function callAI(userText, imageFile = null) {
         const rawBase = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/';
         const res = await fetch(rawBase + EXPERT_SP_MAP[code], { cache: 'no-cache' });
         if (res.ok) {
-          const expertSP = await res.text();
+          let expertSP = await res.text();
+
+          // ── 전문가 SP 토큰 상한 (10,000자 ≈ 6,600 토큰) ────────
+          // klaw system_prompt.txt 등 대형 SP가 81k 토큰 과금의 원인
+          // 10,000자 초과 시 앞 9,500자 + 말줄임 처리
+          const SP_CHAR_LIMIT = 10000;
+          if (expertSP.length > SP_CHAR_LIMIT) {
+            console.warn(`[폭포수 2단계] 전문가 SP 크기 초과 (${expertSP.length}자) → ${SP_CHAR_LIMIT}자로 트리밍`);
+            expertSP = expertSP.slice(0, SP_CHAR_LIMIT - 100) +
+              '\n\n... [토큰 절약을 위해 일부 생략됨. 핵심 지침 위에 모두 포함됨] ...';
+          }
+
           CFG.system = CFG.system_base + '\n\n' +
             `${'═'.repeat(60)}\n` +
             `## [2단계] 전문가 모드 활성: [${code}]\n` +
@@ -4123,7 +4134,10 @@ async function callAI(userText, imageFile = null) {
   // 끝 슬래시 제거
   baseUrl = baseUrl.replace(/\/+$/, '');
 
-  console.log(`[AI] 호출 → ${baseUrl}/chat/completions | 모델: ${CFG.model} | ${isProxy ? '프록시(보안)' : 'Key: ' + apiKey.slice(0,8) + '...'}`);
+  const activeModel = (['JUS','MED'].includes(detectedCode) && expertLoaded)
+    ? 'deepseek-v4-pro'
+    : CFG.model;
+  console.log(`[AI] 호출 → ${baseUrl}/chat/completions | 모델: ${activeModel} (${detectedCode || 'DIRECT'}) | ${isProxy ? '프록시(보안)' : 'Key: ' + apiKey.slice(0,8) + '...'}`);
 
   // ── 스트리밍 호출 ─────────────────────────────────────────
   try {
@@ -4136,7 +4150,12 @@ async function callAI(userText, imageFile = null) {
         ...(isProxy ? {} : { 'Authorization': `Bearer ${apiKey}` }),
       },
       body: JSON.stringify({
-        model:       CFG.model,
+        // ── 하이브리드 모델 선택 ──────────────────────────────
+        // K-Law(판결 분석) / K-Health(의료 진단) → 복잡 추론 → Pro
+        // 그 외 일상 대화·시장·교통·민원 등 → Flash (12배 저렴)
+        model: (['JUS','MED'].includes(detectedCode) && expertLoaded)
+          ? 'deepseek-v4-pro'
+          : CFG.model,
         messages,
         max_tokens:  2000,
         temperature: 0.6,
