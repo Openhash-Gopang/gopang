@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OFP — Open Federation Protocol 표준화 계획서 · Gopang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+:root{
+  --bg:#f8f9fa;--bg-alt:#ffffff;--bg-subtle:#f1f3f5;--surface:#ffffff;
+  --border:#e5e7eb;--border2:#d1d5db;
+  --brand:#3ecf8e;--brand-dk:#1a9e6a;--brand-lt:#d1fae5;--brand-bg:#f0fdf8;
+  --blue:#3b82f6;--blue-lt:#eff6ff;--amber:#f59e0b;--amber-lt:#fffbeb;
+  --red:#ef4444;--red-lt:#fef2f2;--purple:#8b5cf6;--purple-lt:#f5f3ff;
+  --text:#0f172a;--text2:#1e293b;--text3:#374151;--text4:#6b7280;
+  --nav-h:57px;--radius:6px;--radius-lg:10px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.05);
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -1px rgba(0,0,0,.04);
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans KR',-apple-system,sans-serif;font-size:13px;line-height:1.75;overflow-x:hidden}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;height:var(--nav-h);display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.nav-left{display:flex;align-items:center;gap:8px}
+.nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none;font-family:'DM Mono',monospace;font-weight:500;font-size:15px;color:var(--text);letter-spacing:-.3px}
+.nav-logo-icon{width:28px;height:28px;background:var(--brand);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
+.nav-sep{color:var(--border2);font-size:18px;font-weight:200;margin:0 4px}
+.nav-badge{font-size:10px;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:99px;background:var(--purple-lt);color:var(--purple);border:1px solid #ddd6fe;letter-spacing:.5px}
+.nav-back{display:inline-flex;align-items:center;gap:6px;color:var(--text3);text-decoration:none;font-size:13px;padding:5px 10px;border-radius:var(--radius);transition:all .15s}
+.nav-back:hover{color:var(--text);background:var(--bg-subtle)}
+.nav-cta{display:inline-flex;align-items:center;gap:6px;background:var(--brand);color:#fff;padding:7px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;text-decoration:none;border:none;cursor:pointer;transition:all .15s;box-shadow:var(--shadow-sm)}
+.nav-cta:hover{background:var(--brand-dk)}
+
+/* HERO */
+.hero{padding:calc(var(--nav-h) + 56px) 24px 52px;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;overflow:hidden;background-color:var(--bg);background-image:radial-gradient(circle,#cbd5e1 1px,transparent 1px);background-size:24px 24px}
+.hero-inner{max-width:760px;margin:0 auto;position:relative;z-index:1}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:99px;background:var(--bg-subtle);border:1px solid var(--border2);font-family:'DM Mono',monospace;font-size:12px;color:var(--text3);letter-spacing:.2px;margin-bottom:24px;text-decoration:none;transition:all .15s;animation:fadeUp .5s ease both}
+.hero-eyebrow:hover{border-color:var(--purple);color:var(--purple);background:var(--purple-lt)}
+.hero h1{font-size:clamp(36px,5.5vw,60px);font-weight:700;line-height:1.05;letter-spacing:-2px;color:var(--text);margin-bottom:8px;animation:fadeUp .5s .08s ease both}
+.hero h1 .accent{color:var(--purple)}
+.hero-sub{font-size:17px;font-weight:400;color:var(--text2);letter-spacing:-.3px;margin-bottom:16px;animation:fadeUp .5s .14s ease both}
+.hero-desc{max-width:600px;font-size:13px;color:var(--text3);line-height:1.8;margin:0 auto 32px;animation:fadeUp .5s .2s ease both}
+.hero-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;animation:fadeUp .5s .26s ease both}
+.btn-lg{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:var(--radius);font-size:13px;font-weight:500;text-decoration:none;cursor:pointer;border:none;transition:all .15s}
+.btn-purple{background:var(--purple);color:#fff;box-shadow:var(--shadow-sm)}
+.btn-purple:hover{background:#7c3aed;box-shadow:var(--shadow);transform:translateY(-1px)}
+.btn-outline{background:#fff;color:var(--text2);border:1px solid var(--border2);box-shadow:var(--shadow-sm)}
+.btn-outline:hover{border-color:var(--purple);color:var(--purple);transform:translateY(-1px)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* TICKER */
+.ticker-bar{background:var(--bg-subtle);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:9px 0;overflow:hidden}
+.ticker-track{display:flex;width:max-content;animation:slide 32s linear infinite}
+.tick-item{white-space:nowrap;padding:0 28px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text4);display:flex;align-items:center;gap:8px}
+.tick-item::after{content:'·';color:var(--border2)}
+.tick-item span{color:var(--purple);font-weight:500}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* SECTION */
+.section{padding:72px 8%}
+.section-inner{max-width:900px;margin:0 auto}
+.section-tag{display:inline-block;font-family:'DM Mono',monospace;font-size:11px;font-weight:400;letter-spacing:1px;text-transform:uppercase;color:var(--purple);background:var(--purple-lt);border:1px solid #ddd6fe;padding:3px 10px;border-radius:99px;margin-bottom:14px}
+.section-title{font-size:clamp(22px,3vw,30px);font-weight:300;letter-spacing:-.6px;color:var(--text);margin-bottom:10px;line-height:1.2}
+.section-title strong{font-weight:600}
+.section-body{font-size:13px;color:var(--text2);line-height:1.8}
+.section-body p{margin-bottom:12px}
+
+/* PRINCIPLE CARDS */
+.principle-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:40px}
+.p-card{background:#fff;padding:28px 24px;transition:background .15s}
+.p-card:hover{background:var(--purple-lt)}
+.p-icon{font-size:22px;margin-bottom:12px}
+.p-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;letter-spacing:-.3px}
+.p-body{font-size:13px;color:var(--text2);line-height:1.7}
+
+/* MODULE TABLE */
+.mod-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:40px}
+.mod-card{background:#fff;padding:28px 24px;position:relative}
+.mod-card:hover{background:var(--bg)}
+.mod-badge{font-family:'DM Mono',monospace;font-size:11px;padding:3px 9px;border-radius:99px;letter-spacing:.3px;border:1px solid;display:inline-block;margin-bottom:10px}
+.mod-req{color:#059669;background:#ecfdf5;border-color:#6ee7b7}
+.mod-opt{color:#d97706;background:#fffbeb;border-color:#fde68a}
+.mod-name{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;letter-spacing:-.3px}
+.mod-code{font-family:'DM Mono',monospace;font-size:11px;color:var(--purple);margin-bottom:10px}
+.mod-desc{font-size:13px;color:var(--text2);line-height:1.7}
+
+/* CODE BLOCK */
+.code-wrap{margin:24px 0;border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm)}
+.code-header{background:#1e293b;padding:10px 16px;display:flex;align-items:center;gap:8px}
+.code-dot{width:10px;height:10px;border-radius:50%}
+.code-label{font-family:'DM Mono',monospace;font-size:11px;color:#64748b;letter-spacing:.5px;margin-left:auto}
+pre{background:#0f172a;color:#e2e8f0;padding:20px;overflow-x:auto;font-family:'DM Mono',monospace;font-size:12px;line-height:1.7;margin:0}
+.c-green{color:#4ade80}.c-blue{color:#60a5fa}.c-yellow{color:#fbbf24}.c-gray{color:#64748b}.c-purple{color:#c084fc}.c-red{color:#f87171}
+
+/* COMPARE TABLE */
+.tbl-wrap{margin-top:32px;border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm)}
+table{width:100%;border-collapse:collapse;background:#fff}
+thead{background:#f8fafc;border-bottom:1px solid var(--border)}
+th{padding:11px 18px;text-align:left;font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.8px;text-transform:uppercase}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#f8fafc}
+td{padding:13px 18px;font-size:13px;color:var(--text2)}
+td:first-child{font-weight:600;color:var(--text)}
+.td-good{color:#059669;font-weight:600}
+.td-none{color:var(--text4)}
+.td-ofp{color:var(--purple);font-weight:600}
+
+/* ROADMAP */
+.roadmap{margin-top:40px;display:flex;flex-direction:column;gap:0}
+.rm-item{display:flex;gap:24px;padding:0 0 32px 0;position:relative}
+.rm-item:last-child{padding-bottom:0}
+.rm-item:last-child .rm-line{display:none}
+.rm-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:120px}
+.rm-period{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--purple);text-align:center;margin-bottom:8px}
+.rm-dot{width:12px;height:12px;border-radius:50%;background:var(--purple);border:2px solid var(--purple-lt);flex-shrink:0}
+.rm-line{width:2px;flex:1;background:var(--border);margin-top:6px}
+.rm-content{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;flex:1}
+.rm-content h3{font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;letter-spacing:-.3px}
+.rm-list{list-style:none;display:flex;flex-direction:column;gap:4px}
+.rm-list li{font-size:13px;color:var(--text2);display:flex;gap:8px}
+.rm-list li::before{content:'◆';color:var(--purple);font-size:.5em;flex-shrink:0;margin-top:6px}
+
+/* ENDPOINT TABLE */
+.ep-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:32px}
+.ep-card{background:#fff;padding:20px 22px;transition:background .15s}
+.ep-card:hover{background:var(--bg)}
+.ep-method{font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px;background:var(--blue-lt);color:var(--blue);border:1px solid #bfdbfe;display:inline-block;margin-bottom:8px}
+.ep-method.post{background:var(--brand-bg);color:var(--brand-dk);border-color:#a7f3d0}
+.ep-path{font-family:'DM Mono',monospace;font-size:12px;color:var(--text);font-weight:500;margin-bottom:6px}
+.ep-desc{font-size:13px;color:var(--text3)}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:32px}
+.kpi-card{background:#fff;padding:28px 20px;text-align:center}
+.kpi-val{font-family:'DM Mono',monospace;font-size:28px;font-weight:300;color:var(--purple);letter-spacing:-1px;margin-bottom:6px}
+.kpi-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px}
+.kpi-when{font-size:12px;color:var(--text4)}
+
+/* GOVERNANCE */
+.gov-box{background:#fff;border:1px solid var(--border);border-left:4px solid var(--purple);border-radius:0 var(--radius-lg) var(--radius-lg) 0;padding:24px 28px;margin-top:32px}
+.gov-box h3{font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.gov-box p{font-size:13px;color:var(--text2);line-height:1.8}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:translateY(0)}
+
+/* FOOTER */
+footer{border-top:1px solid var(--border);background:#fff;padding:36px 24px}
+.footer-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.footer-logo{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:var(--text)}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap}
+.footer-links a{color:var(--text3);text-decoration:none;font-size:13px;transition:color .15s}
+.footer-links a:hover{color:var(--purple)}
+.footer-copy{font-size:12px;color:var(--text4);font-family:'DM Mono',monospace}
+
+@media(max-width:900px){.principle-grid,.mod-grid{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}.ep-grid{grid-template-columns:1fr}}
+@media(max-width:680px){nav{padding:0 16px}.hero{padding:calc(var(--nav-h) + 40px) 16px 52px}.section{padding:56px 16px}.rm-item{flex-direction:column;gap:8px}.rm-left{flex-direction:row;width:auto;align-items:center}}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-left">
+    <a class="nav-logo" href="./desktop.html">
+      <div class="nav-logo-icon">G</div>
+      gopang
+    </a>
+    <span class="nav-sep">/</span>
+    <span style="font-size:13px;color:var(--text2)">OFP</span>
+    <span class="nav-sep">/</span>
+    <span class="nav-badge">STANDARD v1.0</span>
+  </div>
+  <a class="nav-back" href="./desktop.html">← 홈으로</a>
+  <a class="nav-cta" href="https://github.com/Openhash-Gopang/gopang_v2" target="_blank">
+    GitHub ↗
+  </a>
+</nav>
+
+<!-- TICKER -->
+<div class="ticker-bar" style="margin-top:var(--nav-h)">
+  <div class="ticker-track">
+    <span class="tick-item">MIT License · 완전 오픈소스</span>
+    <span class="tick-item">필수 모듈 <span>2개</span> · 선택 모듈 <span>4개</span></span>
+    <span class="tick-item">Ed25519 서명 · E2E 암호화</span>
+    <span class="tick-item">WebFinger RFC 7033 기반</span>
+    <span class="tick-item">GDC 크로스 결제 지원</span>
+    <span class="tick-item">K-Democracy 연합 거버넌스</span>
+    <span class="tick-item">MIT License · 완전 오픈소스</span>
+    <span class="tick-item">필수 모듈 <span>2개</span> · 선택 모듈 <span>4개</span></span>
+    <span class="tick-item">Ed25519 서명 · E2E 암호화</span>
+    <span class="tick-item">WebFinger RFC 7033 기반</span>
+    <span class="tick-item">GDC 크로스 결제 지원</span>
+    <span class="tick-item">K-Democracy 연합 거버넌스</span>
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <a class="hero-eyebrow" href="https://github.com/Openhash-Gopang/gopang_v2" target="_blank">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+      오픈소스 프로젝트 · github.com/Openhash-Gopang/OFP
+    </a>
+    <h1>Open Federation <span class="accent">Protocol</span></h1>
+    <p class="hero-sub">경쟁 플랫폼 간 상호운용 표준 — OFP v1.0</p>
+    <p class="hero-desc">경쟁자는 적이 아니라, 더 나은 생태계의 공동 건설자입니다.<br>OFP는 서로 다른 플랫폼의 사용자가 검색하고, 채팅하고, 결제하고, AI 서비스를 공유할 수 있도록 공통 언어를 정의합니다.</p>
+    <div class="hero-actions">
+      <a href="https://github.com/Openhash-Gopang/gopang_v2" target="_blank" class="btn-lg btn-purple">GitHub에서 보기 →</a>
+      <a href="#modules" class="btn-lg btn-outline">모듈 구조 보기</a>
+      <a href="#roadmap" class="btn-lg btn-outline">로드맵</a>
+    </div>
+  </div>
+</section>
+
+<!-- PRINCIPLES -->
+<section class="section" id="principles" style="background:#fff">
+  <div class="section-inner">
+    <div class="section-tag reveal">Design Principles</div>
+    <h2 class="section-title reveal"><strong>6대 핵심 원칙</strong></h2>
+    <p class="section-body reveal">OFP는 고팡의 경쟁 우위를 보호하기 위한 장벽이 아닙니다. 더 나은 AI 시민 서비스 생태계를 만들기 위한 공통 기반입니다.</p>
+    <div class="principle-grid reveal" style="transition-delay:.1s">
+      <div class="p-card">
+        <div class="p-icon">🔓</div>
+        <div class="p-title">개방성 Openness</div>
+        <div class="p-body">모든 사양은 GitHub에 공개되며 누구나 읽고 구현할 수 있습니다.</div>
+      </div>
+      <div class="p-card">
+        <div class="p-icon">⚖️</div>
+        <div class="p-title">중립성 Neutrality</div>
+        <div class="p-body">고팡이 표준을 독점하지 않습니다. 참여 플랫폼이 거버넌스에 동등하게 참여합니다.</div>
+      </div>
+      <div class="p-card">
+        <div class="p-icon">🕸️</div>
+        <div class="p-title">분산성 Decentralization</div>
+        <div class="p-body">중앙 서버 없이 플랫폼 간 직접 통신합니다. P2P Federation 구조입니다.</div>
+      </div>
+      <div class="p-card">
+        <div class="p-icon">🔐</div>
+        <div class="p-title">프라이버시 우선</div>
+        <div class="p-body">사용자 데이터는 각 플랫폼의 PDV에 남습니다. OFP는 메시지만 중계합니다.</div>
+      </div>
+      <div class="p-card">
+        <div class="p-icon">🧩</div>
+        <div class="p-title">점진적 채택</div>
+        <div class="p-body">전체 스펙을 구현하지 않아도 부분 참여가 가능합니다. 모듈형 설계입니다.</div>
+      </div>
+      <div class="p-card">
+        <div class="p-icon">🏆</div>
+        <div class="p-title">경쟁 보호</div>
+        <div class="p-body">연결하되 흡수하지 않습니다. 플랫폼 간 사용자 이탈을 강제하지 않습니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MODULES -->
+<section class="section" id="modules">
+  <div class="section-inner">
+    <div class="section-tag reveal">Protocol Modules</div>
+    <h2 class="section-title reveal">6개 <strong>핵심 모듈</strong></h2>
+    <p class="section-body reveal">필수 2개만 구현해도 OFP에 참여할 수 있습니다. 나머지는 역량에 따라 순차 채택합니다.</p>
+    <div class="mod-grid reveal" style="transition-delay:.1s">
+      <div class="mod-card">
+        <span class="mod-badge mod-req">필수</span>
+        <div class="mod-name">사용자 탐색</div>
+        <div class="mod-code">OFP-DISCOVER</div>
+        <div class="mod-desc">플랫폼 간 사용자 검색 및 프로필 조회. WebFinger RFC 7033 기반. <code style="font-family:'DM Mono',monospace;background:var(--bg-subtle);padding:1px 5px;border-radius:3px">@user@platform.com</code> 형식의 연합 주소 체계를 정의합니다.</div>
+      </div>
+      <div class="mod-card">
+        <span class="mod-badge mod-req">필수</span>
+        <div class="mod-name">메시지 중계</div>
+        <div class="mod-code">OFP-MSG</div>
+        <div class="mod-desc">크로스 플랫폼 실시간 채팅. Ed25519 서명 + X25519-ChaCha20-Poly1305 E2E 암호화. 텍스트·첨부파일·서비스 결과 공유를 지원합니다.</div>
+      </div>
+      <div class="mod-card">
+        <span class="mod-badge mod-opt">선택</span>
+        <div class="mod-name">AI 서비스 브릿지</div>
+        <div class="mod-code">OFP-BRIDGE</div>
+        <div class="mod-desc">K-Law·K-Health 등 AI 서비스를 타 플랫폼 사용자도 호출 가능. 경쟁 플랫폼이 더 뛰어난 AI를 개발하면 고팡 사용자도 이용할 수 있습니다.</div>
+      </div>
+      <div class="mod-card">
+        <span class="mod-badge mod-opt">선택</span>
+        <div class="mod-name">결제 게이트웨이</div>
+        <div class="mod-code">OFP-PAY</div>
+        <div class="mod-desc">GDC 크로스 플랫폼 결제. Atomic Swap으로 양측 원장 동시 정산. 수수료 0%, 실패 시 자동 롤백 보장합니다.</div>
+      </div>
+      <div class="mod-card">
+        <span class="mod-badge mod-opt">선택</span>
+        <div class="mod-name">신원 연합</div>
+        <div class="mod-code">OFP-ID</div>
+        <div class="mod-desc">PDV 기반 크로스 플랫폼 신원 인증. L0~L3 신뢰 수준별 권한 차등 부여. K-Law 준법 이력을 타 플랫폼에서도 인정받습니다.</div>
+      </div>
+      <div class="mod-card">
+        <span class="mod-badge mod-opt">선택</span>
+        <div class="mod-name">거버넌스 연합</div>
+        <div class="mod-code">OFP-GOV</div>
+        <div class="mod-desc">여러 플랫폼 사용자가 공동 안건에 투표. K-Democracy의 DAWN 철학 확장. 의결 결과는 모든 참여 플랫폼에 자동 반영됩니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DISCOVER SPEC -->
+<section class="section" style="background:#fff" id="discover">
+  <div class="section-inner">
+    <div class="section-tag reveal">OFP-DISCOVER</div>
+    <h2 class="section-title reveal">사용자 탐색 — <strong>WebFinger 기반</strong></h2>
+    <p class="section-body reveal">서로 다른 플랫폼의 사용자 주소는 <code style="font-family:'DM Mono',monospace;background:var(--bg-subtle);padding:1px 6px;border-radius:3px">@username@platform-domain</code> 형식으로 표준화됩니다.</p>
+
+    <div class="code-wrap reveal" style="transition-delay:.1s">
+      <div class="code-header">
+        <div class="code-dot" style="background:#ef4444"></div>
+        <div class="code-dot" style="background:#f59e0b"></div>
+        <div class="code-dot" style="background:#22c55e"></div>
+        <span class="code-label">WebFinger Request / Response</span>
+      </div>
+      <pre><span class="c-gray"># 요청 — 플랫폼 B에서 고팡 사용자 탐색</span>
+<span class="c-blue">GET</span> /.well-known/webfinger
+    ?resource=acct:<span class="c-green">kim_cheolsu@gopang.net</span>
+    &rel=http://ofp.gopang.net/ns/user
+
+<span class="c-gray"># 응답 JSON</span>
+{
+  <span class="c-yellow">"subject"</span>: <span class="c-green">"acct:kim_cheolsu@gopang.net"</span>,
+  <span class="c-yellow">"links"</span>: [
+    {
+      <span class="c-yellow">"rel"</span>:  <span class="c-green">"http://ofp.gopang.net/ns/user"</span>,
+      <span class="c-yellow">"type"</span>: <span class="c-green">"application/ofp+json"</span>,
+      <span class="c-yellow">"href"</span>: <span class="c-green">"https://gopang.net/ofp/users/kim_cheolsu"</span>
+    },
+    {
+      <span class="c-yellow">"rel"</span>:  <span class="c-green">"http://ofp.gopang.net/ns/inbox"</span>,
+      <span class="c-yellow">"href"</span>: <span class="c-green">"https://gopang.net/ofp/inbox/kim_cheolsu"</span>
+    }
+  ]
+}</pre>
+    </div>
+  </div>
+</section>
+
+<!-- MSG SPEC -->
+<section class="section" id="messaging">
+  <div class="section-inner">
+    <div class="section-tag reveal">OFP-MSG</div>
+    <h2 class="section-title reveal">크로스 플랫폼 <strong>메시지 프로토콜</strong></h2>
+    <p class="section-body reveal">모든 메시지는 Ed25519 서명과 E2E 암호화를 적용합니다. 수신 플랫폼은 발신자의 공개키로 서명을 검증합니다.</p>
+
+    <div class="code-wrap reveal" style="transition-delay:.1s">
+      <div class="code-header">
+        <div class="code-dot" style="background:#ef4444"></div>
+        <div class="code-dot" style="background:#f59e0b"></div>
+        <div class="code-dot" style="background:#22c55e"></div>
+        <span class="code-label">OFP Message Object</span>
+      </div>
+      <pre>{
+  <span class="c-yellow">"ofp_version"</span>: <span class="c-green">"1.0"</span>,
+  <span class="c-yellow">"type"</span>:        <span class="c-green">"Create"</span>,
+  <span class="c-yellow">"actor"</span>:       <span class="c-green">"https://gopang.net/ofp/users/kim_cheolsu"</span>,
+  <span class="c-yellow">"to"</span>:          [<span class="c-green">"https://nova-ai.kr/ofp/users/park_yeonghui"</span>],
+
+  <span class="c-yellow">"object"</span>: {
+    <span class="c-yellow">"type"</span>:      <span class="c-green">"OFPMessage"</span>,
+    <span class="c-yellow">"content"</span>:   <span class="c-green">"안녕하세요!"</span>,
+    <span class="c-yellow">"published"</span>: <span class="c-green">"2026-06-06T10:30:00Z"</span>,
+    <span class="c-yellow">"encryption"</span>: {
+      <span class="c-yellow">"type"</span>:       <span class="c-green">"X25519-ChaCha20-Poly1305"</span>,
+      <span class="c-yellow">"ciphertext"</span>: <span class="c-green">"base64_encrypted..."</span>
+    }
+  },
+
+  <span class="c-yellow">"signature"</span>: {
+    <span class="c-yellow">"type"</span>:           <span class="c-green">"Ed25519Signature2020"</span>,
+    <span class="c-yellow">"signatureValue"</span>: <span class="c-green">"base64_ed25519_sig..."</span>
+  }
+}</pre>
+    </div>
+
+    <div class="tbl-wrap reveal" style="transition-delay:.15s">
+      <table>
+        <thead><tr><th>메시지 유형</th><th>type 값</th><th>용도</th></tr></thead>
+        <tbody>
+          <tr><td>일반 텍스트</td><td><code style="font-family:'DM Mono',monospace;font-size:12px">OFPMessage</code></td><td>기본 채팅 메시지</td></tr>
+          <tr><td>AI 서비스 결과</td><td><code style="font-family:'DM Mono',monospace;font-size:12px">OFPServiceResult</code></td><td>K-Law 판결문 등 공유</td></tr>
+          <tr><td>GDC 송금 요청</td><td><code style="font-family:'DM Mono',monospace;font-size:12px">OFPPaymentRequest</code></td><td>크로스 플랫폼 결제</td></tr>
+          <tr><td>그룹 초대</td><td><code style="font-family:'DM Mono',monospace;font-size:12px">OFPGroupInvite</code></td><td>멀티 플랫폼 그룹 채팅</td></tr>
+          <tr><td>신원 확인</td><td><code style="font-family:'DM Mono',monospace;font-size:12px">OFPIDVerify</code></td><td>PDV 신원 상호 확인</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARE -->
+<section class="section" style="background:#fff" id="compare">
+  <div class="section-inner">
+    <div class="section-tag reveal">Comparison</div>
+    <h2 class="section-title reveal">기존 연합 프로토콜과의 <strong>차별점</strong></h2>
+    <p class="section-body reveal">ActivityPub·Matrix와 달리, OFP는 AI 서비스 호출과 GDC 결제를 프로토콜 수준에서 표준화합니다.</p>
+    <div class="tbl-wrap reveal" style="transition-delay:.1s">
+      <table>
+        <thead><tr><th>비교 항목</th><th>ActivityPub</th><th>Matrix</th><th class="td-ofp">OFP</th></tr></thead>
+        <tbody>
+          <tr><td>주 용도</td><td>소셜 미디어 피드</td><td>실시간 채팅</td><td class="td-ofp">AI 서비스 + 채팅 + 결제</td></tr>
+          <tr><td>AI 서비스 연동</td><td class="td-none">없음</td><td class="td-none">없음</td><td class="td-good">14개 서비스 연동</td></tr>
+          <tr><td>결제 프로토콜</td><td class="td-none">없음</td><td class="td-none">없음</td><td class="td-good">GDC Atomic Swap</td></tr>
+          <tr><td>PDV 신원</td><td class="td-none">없음</td><td class="td-none">없음</td><td class="td-good">IPv6 기반 분산 신원</td></tr>
+          <tr><td>거버넌스</td><td>단일 조직</td><td>재단</td><td class="td-ofp">K-Democracy 온체인 투표</td></tr>
+          <tr><td>최소 구현 부담</td><td>높음</td><td>높음</td><td class="td-good">모듈 2개로 시작 가능</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ENDPOINTS -->
+<section class="section" id="endpoints">
+  <div class="section-inner">
+    <div class="section-tag reveal">Required Endpoints</div>
+    <h2 class="section-title reveal">참여 플랫폼 <strong>필수 엔드포인트</strong></h2>
+    <p class="section-body reveal">OFP 참여를 위해 반드시 구현해야 하는 HTTP 엔드포인트입니다. 필수 모듈(DISCOVER·MSG) 기준입니다.</p>
+    <div class="ep-grid reveal" style="transition-delay:.1s">
+      <div class="ep-card">
+        <span class="ep-method">GET</span>
+        <div class="ep-path">/.well-known/webfinger</div>
+        <div class="ep-desc">사용자 탐색 — RFC 7033 WebFinger</div>
+      </div>
+      <div class="ep-card">
+        <span class="ep-method">GET</span>
+        <div class="ep-path">/.well-known/ofp</div>
+        <div class="ep-desc">플랫폼 메타데이터 및 지원 모듈 목록</div>
+      </div>
+      <div class="ep-card">
+        <span class="ep-method">GET</span>
+        <div class="ep-path">/.well-known/ofp-services</div>
+        <div class="ep-desc">제공 AI 서비스 레지스트리 (선택)</div>
+      </div>
+      <div class="ep-card">
+        <span class="ep-method post">POST</span>
+        <div class="ep-path">/ofp/inbox/{username}</div>
+        <div class="ep-desc">외부 플랫폼으로부터 메시지 수신</div>
+      </div>
+      <div class="ep-card">
+        <span class="ep-method">GET</span>
+        <div class="ep-path">/ofp/outbox/{username}</div>
+        <div class="ep-desc">메시지 발신 이력 조회</div>
+      </div>
+      <div class="ep-card">
+        <span class="ep-method">GET</span>
+        <div class="ep-path">/ofp/users/{username}</div>
+        <div class="ep-desc">사용자 공개 프로필 및 공개키</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section class="section" style="background:#fff" id="roadmap">
+  <div class="section-inner">
+    <div class="section-tag reveal">Roadmap</div>
+    <h2 class="section-title reveal">OFP <strong>표준화 로드맵</strong></h2>
+    <div class="roadmap reveal" style="transition-delay:.1s;margin-top:40px">
+      <div class="rm-item">
+        <div class="rm-left">
+          <div class="rm-period">2026 Q3</div>
+          <div class="rm-dot"></div>
+          <div class="rm-line"></div>
+        </div>
+        <div class="rm-content">
+          <h3>OFP v1.0 Draft 공개</h3>
+          <ul class="rm-list">
+            <li>DISCOVER + MSG 필수 모듈 스펙 확정</li>
+            <li>레퍼런스 구현 (Node.js) 공개</li>
+            <li>고팡 내부 테스트넷 운영</li>
+          </ul>
+        </div>
+      </div>
+      <div class="rm-item">
+        <div class="rm-left">
+          <div class="rm-period">2026 Q4</div>
+          <div class="rm-dot"></div>
+          <div class="rm-line"></div>
+        </div>
+        <div class="rm-content">
+          <h3>OFP v1.0 Release Candidate</h3>
+          <ul class="rm-list">
+            <li>PAY 모듈 스펙 확정 및 Atomic Swap 구현</li>
+            <li>최소 3개 외부 플랫폼 파일럿 참여</li>
+            <li>보안 외부 감사 완료</li>
+          </ul>
+        </div>
+      </div>
+      <div class="rm-item">
+        <div class="rm-left">
+          <div class="rm-period">2027 Q1</div>
+          <div class="rm-dot"></div>
+          <div class="rm-line"></div>
+        </div>
+        <div class="rm-content">
+          <h3>OFP v1.0 정식 릴리즈</h3>
+          <ul class="rm-list">
+            <li>디렉토리 서비스 공개 — ofp-registry.gopang.net</li>
+            <li>SDK 4개 언어 배포 (JS · Python · Go · Rust)</li>
+            <li>OFP 거버넌스 위원회 공식 출범</li>
+          </ul>
+        </div>
+      </div>
+      <div class="rm-item">
+        <div class="rm-left">
+          <div class="rm-period">2027 Q2+</div>
+          <div class="rm-dot"></div>
+          <div class="rm-line"></div>
+        </div>
+        <div class="rm-content">
+          <h3>OFP v1.x 지속 발전</h3>
+          <ul class="rm-list">
+            <li>BRIDGE · GOV 모듈 정식 채택</li>
+            <li>IETF · W3C 국제 표준화 제안 검토</li>
+            <li>참여 플랫폼 10개+ 목표</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- KPI -->
+<section class="section" id="kpi">
+  <div class="section-inner">
+    <div class="section-tag reveal">KPI</div>
+    <h2 class="section-title reveal">연합 생태계 <strong>목표 지표</strong></h2>
+    <div class="kpi-grid reveal" style="transition-delay:.1s">
+      <div class="kpi-card">
+        <div class="kpi-val">3+</div>
+        <div class="kpi-label">참여 플랫폼</div>
+        <div class="kpi-when">2026 Q4 목표</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val">1,000+</div>
+        <div class="kpi-label">일일 크로스 메시지</div>
+        <div class="kpi-when">2027 Q1 목표</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val">1,000만+</div>
+        <div class="kpi-label">월 GDC 크로스 결제</div>
+        <div class="kpi-when">2027 Q2 목표</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val">10+</div>
+        <div class="kpi-label">참여 플랫폼</div>
+        <div class="kpi-when">2027 Q4 목표</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GOVERNANCE -->
+<section class="section" style="background:#fff" id="governance">
+  <div class="section-inner">
+    <div class="section-tag reveal">Governance</div>
+    <h2 class="section-title reveal">OFP <strong>거버넌스 원칙</strong></h2>
+    <p class="section-body reveal">표준 개정은 고팡이 단독으로 결정하지 않습니다. 모든 등록 플랫폼이 동등한 1표를 가집니다.</p>
+    <div class="gov-box reveal" style="transition-delay:.1s">
+      <h3>⚖️ 거버넌스 위원회 구성</h3>
+      <p>투표 참여 자격: OFP 정식 등록 플랫폼 · 플랫폼당 1표 (사용자 수와 무관) · 의결 요건: 2/3 이상 찬성 · 개정 주기: 분기별 정기 제안 + 긴급 제안 · 모든 투표 결과는 GitHub에 공개됩니다.</p>
+    </div>
+    <div class="gov-box reveal" style="transition-delay:.15s;margin-top:16px;border-left-color:var(--brand)">
+      <h3>📋 RFC 기반 표준화 절차</h3>
+      <p>① OFP-RFC 제출 (누구나 GitHub PR로 제안) → ② 공개 토론 14일 이상 → ③ 기술 검토 위원회 검토 → ④ 플랫폼 투표 7일 → ⑤ 2/3 찬성 시 채택 → 다음 마이너 버전 반영</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">
+        <div class="nav-logo-icon">G</div>
+        gopang · OFP
+      </div>
+      <div style="font-size:13px;color:var(--text4);margin-top:4px;font-family:'DM Mono',monospace">MIT License · Open Standard · v1.0</div>
+    </div>
+    <div class="footer-links">
+      <a href="./desktop.html">← 고팡 홈</a>
+      <a href="./hallim_masterplan.html">한림읍 마스터플랜</a>
+      <a href="./bizplan.html">사업화 계획서</a>
+      <a href="https://github.com/Openhash-Gopang/gopang_v2" target="_blank">GitHub ↗</a>
+      <a href="https://klaw.openhash.kr" target="_blank">K-Law ↗</a>
+      <a href="https://democracy.gopang.net/desktop.html" target="_blank" style="color:var(--brand-dk)">K-Democracy ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+const io = new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')})},{threshold:.1,rootMargin:'0px 0px -32px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

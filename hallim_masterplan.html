@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>한림읍 스타트업 마스터플랜 v2.0 · Gopang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+:root{
+  --bg:#f8f9fa;--bg-alt:#ffffff;--bg-subtle:#f1f3f5;
+  --border:#e5e7eb;--border2:#d1d5db;
+  --brand:#3ecf8e;--brand-dk:#1a9e6a;--brand-lt:#d1fae5;--brand-bg:#f0fdf8;
+  --blue:#3b82f6;--blue-lt:#eff6ff;--amber:#f59e0b;--amber-lt:#fffbeb;
+  --red:#ef4444;--teal:#0d9488;--teal-lt:#f0fdfa;
+  --text:#0f172a;--text2:#1e293b;--text3:#374151;--text4:#6b7280;
+  --nav-h:57px;--radius:6px;--radius-lg:10px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.05);--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans KR',-apple-system,sans-serif;font-size:13px;line-height:1.75;overflow-x:hidden}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;height:var(--nav-h);display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.nav-left{display:flex;align-items:center;gap:8px}
+.nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none;font-family:'DM Mono',monospace;font-weight:500;font-size:15px;color:var(--text);letter-spacing:-.3px}
+.nav-logo-icon{width:28px;height:28px;background:var(--brand);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
+.nav-sep{color:var(--border2);font-size:18px;font-weight:200;margin:0 4px}
+.nav-badge{font-size:10px;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:99px;background:var(--teal-lt);color:var(--teal);border:1px solid #99f6e4;letter-spacing:.5px}
+.nav-back{display:inline-flex;align-items:center;gap:6px;color:var(--text3);text-decoration:none;font-size:13px;padding:5px 10px;border-radius:var(--radius);transition:all .15s}
+.nav-back:hover{color:var(--text);background:var(--bg-subtle)}
+.nav-cta{display:inline-flex;align-items:center;gap:6px;background:var(--brand);color:#fff;padding:7px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;text-decoration:none;border:none;cursor:pointer;transition:all .15s}
+.nav-cta:hover{background:var(--brand-dk)}
+
+.hero{padding:calc(var(--nav-h) + 56px) 24px 52px;display:flex;flex-direction:column;align-items:center;text-align:center;background-color:var(--bg);background-image:radial-gradient(circle,#cbd5e1 1px,transparent 1px);background-size:24px 24px;position:relative;overflow:hidden}
+.hero-inner{max-width:760px;margin:0 auto;position:relative;z-index:1}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:99px;background:var(--bg-subtle);border:1px solid var(--border2);font-family:'DM Mono',monospace;font-size:12px;color:var(--text3);margin-bottom:24px;text-decoration:none;transition:all .15s;animation:fadeUp .5s ease both}
+.hero-eyebrow:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-lt)}
+.hero h1{font-size:clamp(34px,5vw,58px);font-weight:700;line-height:1.05;letter-spacing:-2px;color:var(--text);margin-bottom:8px;animation:fadeUp .5s .08s ease both}
+.accent-teal{color:var(--teal)}
+.hero-sub{font-size:17px;color:var(--text2);margin-bottom:16px;animation:fadeUp .5s .14s ease both}
+.hero-desc{max-width:600px;font-size:13px;color:var(--text3);line-height:1.8;margin:0 auto 32px;animation:fadeUp .5s .2s ease both}
+.hero-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;animation:fadeUp .5s .26s ease both}
+.btn-lg{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:var(--radius);font-size:13px;font-weight:500;text-decoration:none;cursor:pointer;border:none;transition:all .15s}
+.btn-teal{background:var(--teal);color:#fff;box-shadow:var(--shadow-sm)}
+.btn-teal:hover{background:#0f766e;transform:translateY(-1px)}
+.btn-outline{background:#fff;color:var(--text2);border:1px solid var(--border2);box-shadow:var(--shadow-sm)}
+.btn-outline:hover{border-color:var(--teal);color:var(--teal);transform:translateY(-1px)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+.ticker-bar{background:var(--bg-subtle);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:9px 0;overflow:hidden}
+.ticker-track{display:flex;width:max-content;animation:slide 30s linear infinite}
+.tick-item{white-space:nowrap;padding:0 28px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text4);display:flex;align-items:center;gap:8px}
+.tick-item::after{content:'·';color:var(--border2)}
+.tick-item span{color:var(--teal);font-weight:500}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+.section{padding:72px 8%}
+.section-inner{max-width:900px;margin:0 auto}
+.section-tag{display:inline-block;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--teal);background:var(--teal-lt);border:1px solid #99f6e4;padding:3px 10px;border-radius:99px;margin-bottom:14px}
+.section-title{font-size:clamp(22px,3vw,30px);font-weight:300;letter-spacing:-.6px;color:var(--text);margin-bottom:10px;line-height:1.2}
+.section-title strong{font-weight:600}
+.section-body{font-size:13px;color:var(--text2);line-height:1.8}
+.section-body p{margin-bottom:12px}
+
+/* STAT CARDS */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:36px}
+.stat-card{background:#fff;padding:28px 20px;text-align:center;transition:background .15s}
+.stat-card:hover{background:var(--teal-lt)}
+.stat-val{font-family:'DM Mono',monospace;font-size:26px;font-weight:300;color:var(--teal);letter-spacing:-1px;margin-bottom:4px}
+.stat-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.stat-note{font-size:12px;color:var(--text4)}
+
+/* TABLE */
+.tbl-wrap{margin-top:32px;border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm)}
+table{width:100%;border-collapse:collapse;background:#fff}
+thead{background:#f8fafc;border-bottom:1px solid var(--border)}
+th{padding:11px 18px;text-align:left;font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.8px;text-transform:uppercase}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#f8fafc}
+td{padding:13px 18px;font-size:13px;color:var(--text2)}
+td:first-child{font-weight:600;color:var(--text)}
+.td-red{color:var(--red)}
+.td-good{color:#059669;font-weight:600}
+.td-pri-1{color:var(--red);font-weight:700}
+.td-pri-2{color:var(--amber);font-weight:600}
+.td-pri-3{color:#059669}
+
+/* INSTITUTION CARDS */
+.inst-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:36px}
+.inst-card{background:#fff;padding:24px;transition:background .15s}
+.inst-card:hover{background:var(--teal-lt)}
+.inst-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.inst-icon{font-size:22px}
+.inst-name{font-size:14px;font-weight:600;color:var(--text)}
+.inst-contact{font-family:'DM Mono',monospace;font-size:11px;color:var(--teal);margin-bottom:8px}
+.inst-body{font-size:13px;color:var(--text2);line-height:1.7}
+.inst-tag{display:inline-block;margin-top:8px;font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--teal-lt);color:var(--teal);border:1px solid #99f6e4}
+
+/* TIMELINE */
+.timeline{margin-top:40px;display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:20px;padding:0 0 28px}
+.tl-item:last-child{padding-bottom:0}
+.tl-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:90px}
+.tl-label{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:var(--teal);text-align:center;margin-bottom:6px}
+.tl-dot{width:10px;height:10px;border-radius:50%;background:var(--teal);flex-shrink:0}
+.tl-line{width:2px;flex:1;background:var(--border);margin-top:4px}
+.tl-item:last-child .tl-line{display:none}
+.tl-content{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 22px;flex:1}
+.tl-content h3{font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px}
+.tl-list{list-style:none;display:flex;flex-direction:column;gap:3px}
+.tl-list li{font-size:13px;color:var(--text2);display:flex;gap:8px}
+.tl-list li::before{content:'▸';color:var(--teal);font-size:.8em;flex-shrink:0;margin-top:3px}
+
+/* BUDGET */
+.budget-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:32px}
+.bud-card{background:#fff;padding:24px;transition:background .15s}
+.bud-card:hover{background:var(--bg)}
+.bud-val{font-family:'DM Mono',monospace;font-size:24px;font-weight:300;color:var(--text);margin-bottom:4px}
+.bud-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px}
+.bud-note{font-size:12px;color:var(--text4)}
+
+/* DISTRICT MAP */
+.district-box{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;margin-top:32px}
+.district-box h3{font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px}
+.dist-zone{padding:14px 18px;border-radius:var(--radius);margin-bottom:10px;border-left:3px solid}
+.dist-zone:last-child{margin-bottom:0}
+.zone-a{background:var(--teal-lt);border-left-color:var(--teal)}
+.zone-b{background:var(--blue-lt);border-left-color:var(--blue)}
+.zone-c{background:var(--amber-lt);border-left-color:var(--amber)}
+.zone-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px}
+.zone-body{font-size:13px;color:var(--text3);line-height:1.7}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:translateY(0)}
+
+footer{border-top:1px solid var(--border);background:#fff;padding:36px 24px}
+.footer-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.footer-logo{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:var(--text)}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap}
+.footer-links a{color:var(--text3);text-decoration:none;font-size:13px;transition:color .15s}
+.footer-links a:hover{color:var(--teal)}
+
+@media(max-width:900px){.stat-grid{grid-template-columns:repeat(2,1fr)}.inst-grid{grid-template-columns:1fr}.budget-grid{grid-template-columns:1fr}}
+@media(max-width:680px){nav{padding:0 16px}.hero{padding:calc(var(--nav-h)+40px) 16px 52px}.section{padding:56px 16px}.stat-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a class="nav-logo" href="./desktop.html">
+      <div class="nav-logo-icon">G</div>
+      gopang
+    </a>
+    <span class="nav-sep">/</span>
+    <span style="font-size:13px;color:var(--text2)">한림읍</span>
+    <span class="nav-sep">/</span>
+    <span class="nav-badge">PILOT v2.0</span>
+  </div>
+  <a class="nav-back" href="./desktop.html">← 홈으로</a>
+  <a class="nav-cta" href="https://klaw.openhash.kr" target="_blank">K-Law 체험 →</a>
+</nav>
+
+<div class="ticker-bar" style="margin-top:var(--nav-h)">
+  <div class="ticker-track">
+    <span class="tick-item">한림읍 인구 <span>21,156명</span></span>
+    <span class="tick-item">음식점·카페 <span>693곳+</span></span>
+    <span class="tick-item">숙박업 <span>200곳+</span></span>
+    <span class="tick-item">GDC 결제 수수료 <span>0.2%</span></span>
+    <span class="tick-item">민원 처리 단축 <span>89%</span></span>
+    <span class="tick-item">초중고 <span>9개교</span></span>
+    <span class="tick-item">고령인구 <span>25%</span></span>
+    <span class="tick-item">한림읍 인구 <span>21,156명</span></span>
+    <span class="tick-item">음식점·카페 <span>693곳+</span></span>
+    <span class="tick-item">숙박업 <span>200곳+</span></span>
+    <span class="tick-item">GDC 결제 수수료 <span>0.2%</span></span>
+    <span class="tick-item">민원 처리 단축 <span>89%</span></span>
+    <span class="tick-item">초중고 <span>9개교</span></span>
+    <span class="tick-item">고령인구 <span>25%</span></span>
+  </div>
+</div>
+
+<section class="hero">
+  <div class="hero-inner">
+    <a class="hero-eyebrow" href="https://github.com/Openhash-Gopang/gopang_v2" target="_blank">
+      📍 제주특별자치도 제주시 한림읍 · 파일럿 마스터플랜
+    </a>
+    <h1>한림읍 <span class="accent-teal">스타트업</span><br>마스터플랜</h1>
+    <p class="hero-sub">자영업자 500명 + 시민 1,000명 → 제주시청·도청 협의</p>
+    <p class="hero-desc">한림읍 1,500명의 실증 데이터가 제주 60만 명을 여는 열쇠입니다.<br>인구 21,156명 · 음식점 693곳 · 초중고 9개교 · 면적 91km²</p>
+    <div class="hero-actions">
+      <a href="tel:064-728-1521" class="btn-lg btn-teal">📞 한림읍사무소 연락</a>
+      <a href="#institutions" class="btn-lg btn-outline">기관 협력 방안</a>
+      <a href="#timeline" class="btn-lg btn-outline">실행 타임라인</a>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="section" style="background:#fff" id="overview">
+  <div class="section-inner">
+    <div class="section-tag reveal">한림읍 현황</div>
+    <h2 class="section-title reveal">실증 파일럿의 <strong>최적 조건</strong></h2>
+    <p class="section-body reveal">한림읍은 농업 35% · 서비스업 41%의 복합 생활권입니다. 협재·금능 관광 상권과 한림항 수산 거점, 금능 농공단지가 91km² 안에 집약되어 있습니다.</p>
+    <div class="stat-grid reveal" style="transition-delay:.1s">
+      <div class="stat-card"><div class="stat-val">21,156</div><div class="stat-label">총 인구</div><div class="stat-note">약 10,403세대</div></div>
+      <div class="stat-card"><div class="stat-val">693+</div><div class="stat-label">음식점·카페</div><div class="stat-note">다이닝코드 빅데이터 기준</div></div>
+      <div class="stat-card"><div class="stat-val">200+</div><div class="stat-label">숙박업체</div><div class="stat-note">펜션·게스트하우스·호텔</div></div>
+      <div class="stat-card"><div class="stat-val">25%</div><div class="stat-label">65세 이상</div><div class="stat-note">전국 평균(19%) 상회</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- POPULATION -->
+<section class="section" id="population">
+  <div class="section-inner">
+    <div class="section-tag reveal">인구 분포</div>
+    <h2 class="section-title reveal">연령대별 <strong>타겟 분석</strong></h2>
+    <div class="tbl-wrap reveal" style="transition-delay:.1s">
+      <table>
+        <thead><tr><th>연령대</th><th>추정 인구</th><th>비중</th><th>주요 서비스</th><th>우선순위</th></tr></thead>
+        <tbody>
+          <tr><td>0~14세 유소년</td><td>약 2,300명</td><td>11%</td><td>K-School</td><td class="td-pri-3">🟢 보조</td></tr>
+          <tr><td>15~29세 청년</td><td>약 2,800명</td><td>13%</td><td>K-School · K-Stock · K-Law</td><td class="td-pri-2">🟡 중요</td></tr>
+          <tr><td>30~49세 중장년</td><td>약 5,700명</td><td>27%</td><td>GDC · K-Tax · K-Market</td><td class="td-pri-1">🔴 핵심</td></tr>
+          <tr><td>50~64세 장년</td><td>약 5,000명</td><td>24%</td><td>K-Health · K-Insurance · K-Tax</td><td class="td-pri-1">🔴 핵심</td></tr>
+          <tr><td>65세 이상 고령</td><td>약 5,300명</td><td>25%</td><td>K-Health · K-Public · K-119</td><td class="td-pri-1">🔴 핵심</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- BUSINESS -->
+<section class="section" style="background:#fff" id="business">
+  <div class="section-inner">
+    <div class="section-tag reveal">사업체 현황</div>
+    <h2 class="section-title reveal">자영업자 500명 목표의 <strong>현실성</strong></h2>
+    <p class="section-body reveal">음식점·숙박·소매·농어업 자영업자만 합산해도 1,000명을 초과합니다. 500명 목표는 전체의 45% 수준으로 달성 가능합니다.</p>
+    <div class="tbl-wrap reveal" style="transition-delay:.1s">
+      <table>
+        <thead><tr><th>업종</th><th>추정 업체 수</th><th>목표 전환</th><th>전환율</th><th>핵심 유인</th></tr></thead>
+        <tbody>
+          <tr><td>음식점·카페</td><td>693곳+</td><td>150명</td><td>22%</td><td>수수료 2.5%→0.2% 절감</td></tr>
+          <tr><td>숙박업</td><td>200곳+</td><td>100명</td><td>50%</td><td>예약·결제 자동화</td></tr>
+          <tr><td>소매·편의점</td><td>100곳+</td><td>80명</td><td>80%</td><td>재고 자동 발주</td></tr>
+          <tr><td>농어업 종사자</td><td>취업자 35%</td><td>120명</td><td>—</td><td>물류 자동화 + 판매 사이트</td></tr>
+          <tr><td>제조·농공단지</td><td>20곳+</td><td>20명</td><td>100%</td><td>K-Tax 법인세 자동화</td></tr>
+          <tr><td>기타 서비스</td><td>150곳+</td><td>30명</td><td>20%</td><td>K-Tax 세무 자동화</td></tr>
+          <tr><td style="font-weight:700">합계</td><td>1,100곳+</td><td class="td-good">500명</td><td>45%</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- DISTRICT MAP -->
+    <div class="district-box reveal" style="transition-delay:.15s">
+      <h3>🗺️ 3대 상권 구역 공략 전략</h3>
+      <div class="dist-zone zone-a">
+        <div class="zone-title">① 협재·금능 관광 상권 (북서 해안)</div>
+        <div class="zone-body">음식점·카페·펜션 밀집. 협재·금능 해수욕장·한림공원 인접. 성수기(6~9월) 집중 공략.<br>고팡 적용: GDC 관광객 결제 + K-Traffic 이동 매칭</div>
+      </div>
+      <div class="dist-zone zone-b">
+        <div class="zone-title">② 한림리 중심 상권 (읍내 중심)</div>
+        <div class="zone-body">읍사무소·119·파출소·시장·은행 집중. 지역 주민 일상 소비 상권. 연중 안정적 유동 인구.<br>고팡 적용: K-Public 민원 + K-Tax 세무 + GDC 일상 결제</div>
+      </div>
+      <div class="dist-zone zone-c">
+        <div class="zone-title">③ 금능 농공단지·한림항 (산업 거점)</div>
+        <div class="zone-body">제조·가공·수산업 사업체 집중. B2B 법인·사업자 타겟.<br>고팡 적용: K-Logistics + K-Tax 법인 + GDC 거래처 결제</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTITUTIONS -->
+<section class="section" id="institutions">
+  <div class="section-inner">
+    <div class="section-tag reveal">공공기관 협력</div>
+    <h2 class="section-title reveal">기관 파일럿 협약 — <strong>"비용 0원, 잃을 것 없음"</strong></h2>
+    <p class="section-body reveal">모든 기관 접촉 시 핵심 메시지: <em>"도입 비용 없습니다. 기존 시스템 그대로 유지하시면 됩니다. 3개월 써보시고 판단해 주세요."</em></p>
+    <div class="inst-grid reveal" style="transition-delay:.1s">
+      <div class="inst-card">
+        <div class="inst-header"><div class="inst-icon">🏛️</div><div class="inst-name">한림읍사무소</div></div>
+        <div class="inst-contact">064-728-1521 · 한림상로 132</div>
+        <div class="inst-body">K-Public AI 민원 서비스 시범 운영. 민원 처리 89% 시간 단축, 24시간 자동화. "한림읍사무소 AI 민원 서비스" 공식 명칭 부여 시 도청 설득 레퍼런스로 활용.</div>
+        <span class="inst-tag">Month 1 최우선</span>
+      </div>
+      <div class="inst-card">
+        <div class="inst-header"><div class="inst-icon">🚒</div><div class="inst-name">한림 119센터</div></div>
+        <div class="inst-contact">064-795-0130 · 한림중앙로 150</div>
+        <div class="inst-body">K-119 AI 응급신고 보조 시스템 시범 운영. GPS 자동 위치 전송, 중증도 자동 분류. 공식 119 대체가 아닌 사전 정보 수집 보조 도구임을 명확히 안내.</div>
+        <span class="inst-tag">Month 1</span>
+      </div>
+      <div class="inst-card">
+        <div class="inst-header"><div class="inst-icon">👮</div><div class="inst-name">한림파출소</div></div>
+        <div class="inst-contact">064-796-2112 · 한림리 1367-2</div>
+        <div class="inst-body">K-Police AI 치안 보조 서비스 시범 운영. 범죄 신고 자동화, 형사소송 패키지 자동 생성, 보이스피싱 탐지. 경찰관 출동 승인·오버라이드 권한 보유.</div>
+        <span class="inst-tag">Month 1</span>
+      </div>
+      <div class="inst-card">
+        <div class="inst-header"><div class="inst-icon">📚</div><div class="inst-name">한림도서관</div></div>
+        <div class="inst-contact">한림읍 일대 · 추가 확인 필요</div>
+        <div class="inst-body">K-School AI 교육 서비스 거점 운영. 166개 과목 AI 튜터 무료. 태블릿 2~3대 체험 코너 설치. 학부모·학생 자연 유입 채널.</div>
+        <span class="inst-tag">Month 2</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TIMELINE -->
+<section class="section" style="background:#fff" id="timeline">
+  <div class="section-inner">
+    <div class="section-tag reveal">실행 타임라인</div>
+    <h2 class="section-title reveal">Month 1~6 <strong>단계별 실행 계획</strong></h2>
+    <div class="timeline reveal" style="transition-delay:.1s">
+      <div class="tl-item">
+        <div class="tl-left"><div class="tl-label">Month 1</div><div class="tl-dot"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <h3>🏗️ 기반 구축</h3>
+          <ul class="tl-list">
+            <li>인프라 스케일업 (Supabase Team 플랜 전환)</li>
+            <li>한림읍사무소 방문 미팅 → 시범 협약 체결</li>
+            <li>한림 119센터·파출소 접촉</li>
+            <li>자영업자 얼리어답터 30명 온보딩</li>
+            <li>한림읍 내 QR코드 스티커·전단 배포</li>
+          </ul>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-left"><div class="tl-label">Month 2</div><div class="tl-dot"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <h3>🤝 협약 확대 + 온보딩 가속</h3>
+          <ul class="tl-list">
+            <li>4개 공공기관 시범 협약 완료</li>
+            <li>한림상인회·협재관광협회 단체 설명회</li>
+            <li>자영업자 100명 / 시민 150명 달성</li>
+            <li>첫 GDC 거래 실증 데이터 수집 시작</li>
+          </ul>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-left"><div class="tl-label">Month 3</div><div class="tl-dot"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <h3>📢 입소문 확산</h3>
+          <ul class="tl-list">
+            <li>얼리어답터 수수료 절감 실적 커뮤니티 공개</li>
+            <li>카카오오픈채팅·네이버 카페 홍보 집중</li>
+            <li>한림도서관 K-School 체험 행사</li>
+            <li>자영업자 200명 / 시민 400명 달성</li>
+          </ul>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-left"><div class="tl-label">Month 4</div><div class="tl-dot"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <h3>🏖️ 관광 성수기 집중 공략</h3>
+          <ul class="tl-list">
+            <li>협재·금능 관광 상권 집중 온보딩</li>
+            <li>관광객 대상 K-Traffic·K-Market 체험 이벤트</li>
+            <li>한림수협 연계 수산물 K-Logistics 시범</li>
+            <li>자영업자 350명 / 시민 650명 달성</li>
+          </ul>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-left"><div class="tl-label">Month 5</div><div class="tl-dot"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <h3>🎯 목표 달성</h3>
+          <ul class="tl-list">
+            <li>자영업자 500명 / 시민 1,000명 목표 달성</li>
+            <li>전체 성과 데이터 집계 및 분석</li>
+            <li>제주시청 접촉 준비 (담당자 탐색, 자료 준비)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-left"><div class="tl-label">Month 6</div><div class="tl-dot"></div><div class="tl-line"></div></div>
+        <div class="tl-content">
+          <h3>🚀 제주 전체 확산 준비</h3>
+          <ul class="tl-list">
+            <li>한림읍 파일럿 최종 성과 보고서 완성</li>
+            <li>제주시청 공식 협의 미팅 진행</li>
+            <li>제주도청 스마트시티 예산 연계 제안서 제출</li>
+            <li>추가 자금 조달 IR 준비</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BUDGET -->
+<section class="section" id="budget">
+  <div class="section-inner">
+    <div class="section-tag reveal">예산 계획</div>
+    <h2 class="section-title reveal">1억 원 중 <strong>파일럿 집행분 4,200만 원</strong></h2>
+    <p class="section-body reveal">월 인프라 비용 100만 원 수준으로 10만 사용자까지 확장 여유가 있습니다. 나머지 5,800만 원은 제주시청·도청 확대 단계 예비 자금으로 보유합니다.</p>
+    <div class="budget-grid reveal" style="transition-delay:.1s">
+      <div class="bud-card"><div class="bud-val">100만원/월</div><div class="bud-label">인프라 비용</div><div class="bud-note">Supabase + Cloudflare + DeepSeek API 합산</div></div>
+      <div class="bud-card"><div class="bud-val">400만원/월</div><div class="bud-label">인력 활동비 (2인)</div><div class="bud-note">현장 총괄 1인 + 기술·운영 1인</div></div>
+      <div class="bud-card"><div class="bud-val">100만원/월</div><div class="bud-label">현장 홍보</div><div class="bud-note">QR코드·전단·설명회·이벤트</div></div>
+      <div class="bud-card"><div class="bud-val">100만원/월</div><div class="bud-label">기관 협력·예비비</div><div class="bud-note">협약서 작성·법무·돌발 상황 대비</div></div>
+    </div>
+    <div style="margin-top:16px;padding:16px 20px;background:var(--teal-lt);border:1px solid #99f6e4;border-radius:var(--radius-lg);font-size:13px;color:var(--text2)" class="reveal">
+      💡 <strong>월 합계 700만 원 × 6개월 = 4,200만 원</strong> · 잔여 5,800만 원은 제주시청·도청 협의 단계 보유
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo"><div class="nav-logo-icon">G</div>gopang · 한림읍 파일럿</div>
+      <div style="font-size:13px;color:var(--text4);margin-top:4px;font-family:'DM Mono',monospace">AI City Inc. · v2.0 · 2026.06</div>
+    </div>
+    <div class="footer-links">
+      <a href="./desktop.html">← 고팡 홈</a>
+      <a href="./ofp_standard.html">OFP 표준화</a>
+      <a href="./bizplan.html">사업화 계획서</a>
+      <a href="https://klaw.openhash.kr" target="_blank">K-Law ↗</a>
+      <a href="https://github.com/Openhash-Gopang/gopang_v2" target="_blank">GitHub ↗</a>
+      <a href="https://democracy.gopang.net/desktop.html" target="_blank" style="color:var(--brand-dk)">K-Democracy ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+const io=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')})},{threshold:.1,rootMargin:'0px 0px -32px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고팡 확산 전략 및 사업화 계획 v14.0 · Gopang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+:root{
+  --bg:#f8f9fa;--bg-alt:#ffffff;--bg-subtle:#f1f3f5;
+  --border:#e5e7eb;--border2:#d1d5db;
+  --brand:#3ecf8e;--brand-dk:#1a9e6a;--brand-lt:#d1fae5;--brand-bg:#f0fdf8;
+  --blue:#3b82f6;--blue-lt:#eff6ff;--amber:#f59e0b;--amber-lt:#fffbeb;
+  --red:#ef4444;--red-lt:#fef2f2;
+  --text:#0f172a;--text2:#1e293b;--text3:#374151;--text4:#6b7280;
+  --nav-h:57px;--radius:6px;--radius-lg:10px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.05);--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans KR',-apple-system,sans-serif;font-size:13px;line-height:1.75;overflow-x:hidden}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;height:var(--nav-h);display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.nav-left{display:flex;align-items:center;gap:8px}
+.nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none;font-family:'DM Mono',monospace;font-weight:500;font-size:15px;color:var(--text)}
+.nav-logo-icon{width:28px;height:28px;background:var(--brand);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
+.nav-sep{color:var(--border2);font-size:18px;font-weight:200;margin:0 4px}
+.nav-badge{font-size:10px;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:99px;background:var(--brand-bg);color:var(--brand-dk);border:1px solid #a7f3d0;letter-spacing:.5px}
+.nav-back{display:inline-flex;align-items:center;gap:6px;color:var(--text3);text-decoration:none;font-size:13px;padding:5px 10px;border-radius:var(--radius);transition:all .15s}
+.nav-back:hover{color:var(--text);background:var(--bg-subtle)}
+.nav-cta{display:inline-flex;align-items:center;gap:6px;background:var(--brand);color:#fff;padding:7px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;text-decoration:none;border:none;cursor:pointer;transition:all .15s}
+.nav-cta:hover{background:var(--brand-dk)}
+
+.hero{padding:calc(var(--nav-h)+56px) 24px 52px;display:flex;flex-direction:column;align-items:center;text-align:center;background-color:var(--bg);background-image:radial-gradient(circle,#cbd5e1 1px,transparent 1px);background-size:24px 24px}
+.hero-inner{max-width:760px;margin:0 auto}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:99px;background:var(--bg-subtle);border:1px solid var(--border2);font-family:'DM Mono',monospace;font-size:12px;color:var(--text3);margin-bottom:24px;text-decoration:none;transition:all .15s;animation:fadeUp .5s ease both}
+.hero-eyebrow:hover{border-color:var(--brand);color:var(--brand-dk);background:var(--brand-bg)}
+.hero h1{font-size:clamp(34px,5vw,58px);font-weight:700;line-height:1.05;letter-spacing:-2px;color:var(--text);margin-bottom:8px;animation:fadeUp .5s .08s ease both}
+.hero-sub{font-size:17px;color:var(--text2);margin-bottom:16px;animation:fadeUp .5s .14s ease both}
+.hero-desc{max-width:600px;font-size:13px;color:var(--text3);line-height:1.8;margin:0 auto 32px;animation:fadeUp .5s .2s ease both}
+.hero-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;animation:fadeUp .5s .26s ease both}
+.btn-lg{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:var(--radius);font-size:13px;font-weight:500;text-decoration:none;cursor:pointer;border:none;transition:all .15s}
+.btn-green{background:var(--brand);color:#fff;box-shadow:var(--shadow-sm)}
+.btn-green:hover{background:var(--brand-dk);transform:translateY(-1px)}
+.btn-outline{background:#fff;color:var(--text2);border:1px solid var(--border2);box-shadow:var(--shadow-sm)}
+.btn-outline:hover{border-color:var(--brand);color:var(--brand);transform:translateY(-1px)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+.ticker-bar{background:var(--bg-subtle);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:9px 0;overflow:hidden}
+.ticker-track{display:flex;width:max-content;animation:slide 30s linear infinite}
+.tick-item{white-space:nowrap;padding:0 28px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text4);display:flex;align-items:center;gap:8px}
+.tick-item::after{content:'·';color:var(--border2)}
+.tick-item span{color:var(--brand);font-weight:500}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+.section{padding:72px 8%}
+.section-inner{max-width:900px;margin:0 auto}
+.section-tag{display:inline-block;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--brand-dk);background:var(--brand-bg);border:1px solid #a7f3d0;padding:3px 10px;border-radius:99px;margin-bottom:14px}
+.section-title{font-size:clamp(22px,3vw,30px);font-weight:300;letter-spacing:-.6px;color:var(--text);margin-bottom:10px;line-height:1.2}
+.section-title strong{font-weight:600}
+.section-body{font-size:13px;color:var(--text2);line-height:1.8}
+
+/* SERVICE CARDS */
+.svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:36px}
+.svc-card{background:#fff;padding:24px;transition:background .15s;position:relative}
+.svc-card:hover{background:var(--brand-bg)}
+.svc-name{font-size:15px;font-weight:600;color:var(--text);margin-bottom:2px;letter-spacing:-.3px}
+.svc-url{font-family:'DM Mono',monospace;font-size:11px;color:var(--text4);margin-bottom:10px}
+.svc-desc{font-size:13px;color:var(--text2);line-height:1.7}
+.badge{font-family:'DM Mono',monospace;font-size:11px;padding:3px 9px;border-radius:99px;letter-spacing:.3px;white-space:nowrap;border:1px solid;display:inline-block;margin-bottom:10px}
+.badge-live{color:#059669;background:#ecfdf5;border-color:#6ee7b7}
+.badge-pilot{color:var(--amber);background:var(--amber-lt);border-color:#fde68a}
+
+/* TABLE */
+.tbl-wrap{margin-top:32px;border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm)}
+table{width:100%;border-collapse:collapse;background:#fff}
+thead{background:#f8fafc;border-bottom:1px solid var(--border)}
+th{padding:11px 18px;text-align:left;font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.8px;text-transform:uppercase}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#f8fafc}
+td{padding:13px 18px;font-size:13px;color:var(--text2)}
+td:first-child{font-weight:600;color:var(--text)}
+.td-good{color:#059669;font-weight:600}
+.td-b2g{color:var(--blue);font-weight:600}
+
+/* ROADMAP */
+.rm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:36px}
+.rm-card{background:#fff;padding:24px;transition:background .15s}
+.rm-card:hover{background:var(--brand-bg)}
+.rm-period{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--brand-dk);margin-bottom:8px}
+.rm-phase{font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;letter-spacing:-.3px}
+.rm-list{list-style:none;display:flex;flex-direction:column;gap:3px}
+.rm-list li{font-size:13px;color:var(--text2);display:flex;gap:6px}
+.rm-list li::before{content:'◆';color:var(--brand);font-size:.5em;flex-shrink:0;margin-top:6px}
+
+/* STACK */
+.stack-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:36px}
+.stack-card{background:#fff;padding:24px 18px;text-align:center;transition:background .15s}
+.stack-card:hover{background:var(--brand-bg)}
+.stack-val{font-family:'DM Mono',monospace;font-size:22px;font-weight:300;color:var(--brand);margin-bottom:4px}
+.stack-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.stack-note{font-size:12px;color:var(--text4)}
+
+/* KPI */
+.kpi-table{margin-top:32px}
+
+/* RISK */
+.risk-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:36px}
+.risk-card{background:#fff;padding:22px 24px;transition:background .15s}
+.risk-card:hover{background:var(--bg)}
+.risk-level{font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid;display:inline-block;margin-bottom:8px}
+.rl-high{color:var(--red);background:var(--red-lt);border-color:#fca5a5}
+.rl-mid{color:var(--amber);background:var(--amber-lt);border-color:#fde68a}
+.rl-low{color:#059669;background:#ecfdf5;border-color:#6ee7b7}
+.risk-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+.risk-body{font-size:13px;color:var(--text3);line-height:1.7}
+
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:translateY(0)}
+
+footer{border-top:1px solid var(--border);background:#fff;padding:36px 24px}
+.footer-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.footer-logo{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:var(--text)}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap}
+.footer-links a{color:var(--text3);text-decoration:none;font-size:13px;transition:color .15s}
+.footer-links a:hover{color:var(--brand)}
+
+@media(max-width:900px){.svc-grid,.rm-grid{grid-template-columns:repeat(2,1fr)}.stack-grid{grid-template-columns:repeat(2,1fr)}.risk-grid{grid-template-columns:1fr}}
+@media(max-width:680px){nav{padding:0 16px}.hero{padding:calc(var(--nav-h)+40px) 16px 52px}.section{padding:56px 16px}.svc-grid,.rm-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a class="nav-logo" href="./desktop.html">
+      <div class="nav-logo-icon">G</div>
+      gopang
+    </a>
+    <span class="nav-sep">/</span>
+    <span style="font-size:13px;color:var(--text2)">사업화 계획</span>
+    <span class="nav-sep">/</span>
+    <span class="nav-badge">v14.0</span>
+  </div>
+  <a class="nav-back" href="./desktop.html">← 홈으로</a>
+  <a class="nav-cta" href="https://klaw.openhash.kr" target="_blank">K-Law 체험 →</a>
+</nav>
+
+<div class="ticker-bar" style="margin-top:var(--nav-h)">
+  <div class="ticker-track">
+    <span class="tick-item">서브시스템 <span>14개</span></span>
+    <span class="tick-item">월 이용료 <span>평균 100원</span></span>
+    <span class="tick-item">파일럿 <span>제주 한림읍</span></span>
+    <span class="tick-item">이메일 발송 <span>47건</span></span>
+    <span class="tick-item">GDC 수수료 <span>0%</span></span>
+    <span class="tick-item">AI 엔진 <span>DeepSeek V4 Pro</span></span>
+    <span class="tick-item">서브시스템 <span>14개</span></span>
+    <span class="tick-item">월 이용료 <span>평균 100원</span></span>
+    <span class="tick-item">파일럿 <span>제주 한림읍</span></span>
+    <span class="tick-item">이메일 발송 <span>47건</span></span>
+    <span class="tick-item">GDC 수수료 <span>0%</span></span>
+    <span class="tick-item">AI 엔진 <span>DeepSeek V4 Pro</span></span>
+  </div>
+</div>
+
+<section class="hero">
+  <div class="hero-inner">
+    <a class="hero-eyebrow" href="https://github.com/Openhash-Gopang/gopang_v2" target="_blank">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+      AI City Inc. · 팀 주피터 · v14.0
+    </a>
+    <h1>고팡 확산 전략 &amp;<br>사업화 계획</h1>
+    <p class="hero-sub">14개 서브시스템 · 제주도 파일럿 · DAWN 철학</p>
+    <p class="hero-desc">카카오톡은 친구가 없으면 쓸모없지만, 고팡은 나 혼자서도 즉시 유용합니다.<br>K-Law로 법률을 예측하고, K-119로 응급상황을 보고하며, 월 평균 100원으로 작동합니다.</p>
+    <div class="hero-actions">
+      <a href="https://klaw.openhash.kr" target="_blank" class="btn-lg btn-green">K-Law 무료 체험 →</a>
+      <a href="#services" class="btn-lg btn-outline">14개 서비스 보기</a>
+      <a href="#roadmap" class="btn-lg btn-outline">로드맵</a>
+      <a href="#revenue" class="btn-lg btn-outline">수익 모델</a>
+    </div>
+  </div>
+</section>
+
+<!-- SUMMARY -->
+<section class="section" style="background:#fff" id="summary">
+  <div class="section-inner">
+    <div class="section-tag reveal">Executive Summary</div>
+    <h2 class="section-title reveal"><strong>핵심 요약</strong></h2>
+    <div class="stack-grid reveal" style="transition-delay:.1s">
+      <div class="stack-card"><div class="stack-val">14</div><div class="stack-label">서브시스템</div><div class="stack-note">모두 작동 중</div></div>
+      <div class="stack-card"><div class="stack-val">100원</div><div class="stack-label">월 평균 비용</div><div class="stack-note">사용자 부담</div></div>
+      <div class="stack-card"><div class="stack-val">47건</div><div class="stack-label">이메일 발송</div><div class="stack-note">첫 번째 행동</div></div>
+      <div class="stack-card"><div class="stack-val">제주</div><div class="stack-label">파일럿 지역</div><div class="stack-note">한림읍 1,500명</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section class="section" id="services">
+  <div class="section-inner">
+    <div class="section-tag reveal">14개 서브시스템</div>
+    <h2 class="section-title reveal">이미 작동하는 <strong>AI 서비스 생태계</strong></h2>
+    <div class="svc-grid reveal" style="transition-delay:.1s">
+      <div class="svc-card"><span class="badge badge-live">LIVE</span><div class="svc-name">K-Law</div><div class="svc-url">klaw.openhash.kr</div><div class="svc-desc">사건 개요 입력 → 대법원 판결 예측. BYOK 모델, DeepSeek 무료 운용.</div></div>
+      <div class="svc-card"><span class="badge badge-pilot">PILOT</span><div class="svc-name">K-119</div><div class="svc-url">911.gopang.net</div><div class="svc-desc">AI 응급출동. 평균 도착 5.8분, 4단계 중증도 분류, NDMS 연동.</div></div>
+      <div class="svc-card"><span class="badge badge-pilot">PILOT</span><div class="svc-name">K-Police</div><div class="svc-url">police.gopang.net</div><div class="svc-desc">24시간 AI 경찰관. 193개국 K-Law 연동, 형사소송 패키지 자동 생성.</div></div>
+      <div class="svc-card"><span class="badge badge-pilot">PILOT</span><div class="svc-name">K-Health</div><div class="svc-url">health.gopang.net</div><div class="svc-desc">AI 평행 병원. PubMed 3,700만 편, 전국 87,000개 의료기관 연결.</div></div>
+      <div class="svc-card"><span class="badge badge-pilot">PILOT</span><div class="svc-name">K-Insurance</div><div class="svc-url">gopang.net/insurance</div><div class="svc-desc">GDC(₮) 기반 보험. 현실 보험사 대비 비용 1/1,000.</div></div>
+      <div class="svc-card"><span class="badge badge-pilot">PILOT</span><div class="svc-name">K-Traffic</div><div class="svc-url">traffic.gopang.net</div><div class="svc-desc">동선 겹침 알고리즘 매칭. PDV 이중 기록, 우버 대체재.</div></div>
+      <div class="svc-card"><span class="badge badge-live">LIVE</span><div class="svc-name">K-Logistics</div><div class="svc-url">logistics.gopang.net</div><div class="svc-desc">0.8ms 배분, 물류비 34%↓, 농수산물 폐기율 62%↓.</div></div>
+      <div class="svc-card"><span class="badge badge-live">LIVE</span><div class="svc-name">K-Tax</div><div class="svc-url">tax.gopang.net</div><div class="svc-desc">GDC 기반 탈세 구조적 불가. 8단계 누진세 자동화.</div></div>
+      <div class="svc-card"><span class="badge badge-live">LIVE</span><div class="svc-name">GDC</div><div class="svc-url">gdc.gopang.net</div><div class="svc-desc">193개국 환전 0%, AI 신용평가 0.1초, 수수료 0% 이체.</div></div>
+      <div class="svc-card"><span class="badge badge-live">LIVE</span><div class="svc-name">K-Market</div><div class="svc-url">market.gopang.net</div><div class="svc-desc">소비자 데이터 0%, 7.3M TPS, AI 수요 예측 94.7%.</div></div>
+      <div class="svc-card"><span class="badge badge-live">LIVE</span><div class="svc-name">K-School</div><div class="svc-url">school.gopang.net</div><div class="svc-desc">166개 과목, 26개 언어, 50년 진로 예측, +15 퍼센타일.</div></div>
+      <div class="svc-card"><span class="badge badge-live">LIVE</span><div class="svc-name">K-Public</div><div class="svc-url">public.gopang.net</div><div class="svc-desc">말 한 마디 민원. 89% 처리 시간 단축, 24시간 AI 공무원.</div></div>
+      <div class="svc-card"><span class="badge badge-live">LIVE</span><div class="svc-name">K-Stock</div><div class="svc-url">stock.gopang.net</div><div class="svc-desc">89개 자산군, 24개 거래소, 절세 연 148만 원 (KDI 2025).</div></div>
+      <div class="svc-card"><span class="badge badge-live">LIVE</span><div class="svc-name">K-Democracy</div><div class="svc-url">democracy.gopang.net</div><div class="svc-desc">DAWN 철학. 이원 권력 구조, 투표권 AI 산정, OpenHash 불변 기록.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- REVENUE -->
+<section class="section" style="background:#fff" id="revenue">
+  <div class="section-inner">
+    <div class="section-tag reveal">수익 모델</div>
+    <h2 class="section-title reveal">B2C · B2B · <strong>B2G 다층 수익 구조</strong></h2>
+    <div class="tbl-wrap reveal" style="transition-delay:.1s">
+      <table>
+        <thead><tr><th>서비스</th><th>B2C</th><th>B2B</th><th>B2G</th></tr></thead>
+        <tbody>
+          <tr><td>K-Law</td><td>Pro 월 9,900원</td><td>법무법인 API</td><td>—</td></tr>
+          <tr><td>K-119</td><td>—</td><td>AV 지휘 API</td><td class="td-b2g">소방청 SLA</td></tr>
+          <tr><td>K-Stock</td><td>월 구독</td><td>세무사·FP API</td><td>—</td></tr>
+          <tr><td>K-Public</td><td>—</td><td>—</td><td class="td-b2g">행안부·250개 지자체</td></tr>
+          <tr><td>K-School</td><td>월 구독</td><td>교사 대시보드 SaaS</td><td class="td-b2g">교육부·EBS·KERIS</td></tr>
+          <tr><td>K-Market</td><td>—</td><td>AI 수요 예측</td><td class="td-b2g">관세청·무역협회</td></tr>
+          <tr><td>GDC</td><td>—</td><td>—</td><td class="td-b2g">한국은행 CBDC 연구</td></tr>
+          <tr><td>K-Tax</td><td>—</td><td>법인세·부가세 SaaS</td><td class="td-b2g">국세청·관세청</td></tr>
+          <tr><td>K-Traffic</td><td>GDC 수수료 5~10%</td><td>차량 관리 B2B</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section class="section" id="roadmap">
+  <div class="section-inner">
+    <div class="section-tag reveal">실행 로드맵</div>
+    <h2 class="section-title reveal">Phase 0~5 <strong>단계별 실행</strong></h2>
+    <div class="rm-grid reveal" style="transition-delay:.1s">
+      <div class="rm-card">
+        <div class="rm-period">Week 1</div>
+        <div class="rm-phase">Phase 0 — 발사</div>
+        <ul class="rm-list">
+          <li>이메일 47건 발송</li>
+          <li>klaw.openhash.kr 랜딩 최적화</li>
+          <li>한림읍사무소 접촉 시작</li>
+        </ul>
+      </div>
+      <div class="rm-card">
+        <div class="rm-period">Week 2~4</div>
+        <div class="rm-phase">Phase 1 — 검증</div>
+        <ul class="rm-list">
+          <li>회신 기관 화상 미팅</li>
+          <li>GitHub Star 30+ 목표</li>
+          <li>한림읍 파일럿 협약</li>
+        </ul>
+      </div>
+      <div class="rm-card">
+        <div class="rm-period">Month 2</div>
+        <div class="rm-phase">Phase 2 — 성장</div>
+        <ul class="rm-list">
+          <li>K-Law 판결 100건</li>
+          <li>K-119 제주 500명</li>
+          <li>PDV 실사용자 10명</li>
+        </ul>
+      </div>
+      <div class="rm-card">
+        <div class="rm-period">Month 3</div>
+        <div class="rm-phase">Phase 3 — 수익화</div>
+        <ul class="rm-list">
+          <li>K-Law Pro 계약 1건</li>
+          <li>KIISC 논문 투고</li>
+          <li>공동연구 MOU 2건</li>
+        </ul>
+      </div>
+      <div class="rm-card">
+        <div class="rm-period">Month 4</div>
+        <div class="rm-phase">Phase 4 — B2G</div>
+        <ul class="rm-list">
+          <li>소방청 K-119 B2G 협의</li>
+          <li>한국은행 GDC 연구 MOU</li>
+        </ul>
+      </div>
+      <div class="rm-card">
+        <div class="rm-period">Month 6</div>
+        <div class="rm-phase">Phase 5 — 확산</div>
+        <ul class="rm-list">
+          <li>제주 파일럿 결과 보고서</li>
+          <li>R&amp;D 과제 신청</li>
+          <li>제주 60만 명 확산 준비</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RISKS -->
+<section class="section" style="background:#fff" id="risk">
+  <div class="section-inner">
+    <div class="section-tag reveal">리스크 관리</div>
+    <h2 class="section-title reveal">주요 <strong>리스크 및 대응</strong></h2>
+    <div class="risk-grid reveal" style="transition-delay:.1s">
+      <div class="risk-card"><span class="risk-level rl-high">🔴 높음</span><div class="risk-title">K-Law 판결 오류 → 법적 책임</div><div class="risk-body">면책 조항 명시 (법률 정보 제공 목적), 확신도 지표로 불확실성 표시. 코드 내 이미 포함.</div></div>
+      <div class="risk-card"><span class="risk-level rl-high">🔴 높음</span><div class="risk-title">K-119 오출동·오분류</div><div class="risk-body">1급 자동 출동 외 인간 오버라이드 필수. 소방청 공식 채널 병행 안내 의무화.</div></div>
+      <div class="risk-card"><span class="risk-level rl-mid">🟡 중</span><div class="risk-title">GDC(₮) 법적 지위 불명확</div><div class="risk-body">포인트·마일리지로 시작. 금융위 혁신금융서비스 샌드박스 신청 병행.</div></div>
+      <div class="risk-card"><span class="risk-level rl-mid">🟡 중</span><div class="risk-title">이메일 무응답</div><div class="risk-body">2주 후 리마인더 + LinkedIn 병행. KIISC 학술대회 현장 네트워킹 활용.</div></div>
+      <div class="risk-card"><span class="risk-level rl-mid">🟡 중</span><div class="risk-title">DeepSeek 프록시 비용 급증</div><div class="risk-body">월 $10~30 예상. Cloudflare Worker 캐시 최적화, 공동연구 기관 API 공유.</div></div>
+      <div class="risk-card"><span class="risk-level rl-low">🟢 낮음</span><div class="risk-title">Supabase 무료 한도 초과</div><div class="risk-body">트래픽 임계점 전 Pro 플랜($25/월) 전환 또는 협력 기관 서버 이전.</div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo"><div class="nav-logo-icon" style="width:28px;height:28px;background:var(--brand);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff">G</div>gopang</div>
+      <div style="font-size:13px;color:var(--text4);margin-top:4px;font-family:'DM Mono',monospace">© 2026 AI City Inc. · 팀 주피터 · v14.0</div>
+    </div>
+    <div class="footer-links">
+      <a href="./desktop.html">← 고팡 홈</a>
+      <a href="./hallim_masterplan.html">한림읍 마스터플랜</a>
+      <a href="./ofp_standard.html">OFP 표준화</a>
+      <a href="https://klaw.openhash.kr" target="_blank">K-Law ↗</a>
+      <a href="https://github.com/Openhash-Gopang/gopang_v2" target="_blank">GitHub ↗</a>
+      <a href="https://democracy.gopang.net/desktop.html" target="_blank" style="color:var(--brand-dk)">K-Democracy ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+const io=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')})},{threshold:.1,rootMargin:'0px 0px -32px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>
