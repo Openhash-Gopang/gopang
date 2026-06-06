@@ -401,6 +401,7 @@ function getByCategory(category) {
 
 // ── 전역 노출 (classic script 호환) ──
 window.GWP_REGISTRY  = GWP_REGISTRY;
-window.gwpMatch      = gwpMatch;
+window.gwpMatch      = matchService;   // webapp.html 호출명 호환
+window.matchService  = matchService;
 window.getService    = getService;
 window.getByCategory = getByCategory;
