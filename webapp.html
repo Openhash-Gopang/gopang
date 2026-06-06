@@ -3579,7 +3579,7 @@ async function _buildFieldReport(lat, lng, exif, isMarine = false) {
 // ── Router system prompt — GitHub 동적 로드 ──────────────────
 // prompts/SP-00-ROUTER-LATEST.txt 에 현재 버전 파일명이 기재됨
 // 파일명이 바뀌면 webapp.html 수정 없이 자동 반영
-const _RAW_BASE    = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang_v2/main/';
+const _RAW_BASE    = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/';
 const _ROUTER_PTR  = _RAW_BASE + 'prompts/SP-00-ROUTER-LATEST.txt';
 const _ROUTER_FALLBACK = _RAW_BASE + 'prompts/SP-00-ROUTER-v3.0.txt';
 
@@ -3805,17 +3805,17 @@ async function callAI(userText, imageFile = null) {
   // ── 2단계: 전문가 변신 판단 ──────────────────────────────
   const EXPERT_SP_MAP = {
     JUS: 'klaw/prompts/system_prompt.txt',          // K-Law v15.1 ✅ 실제 파일
-    MED: 'gopang/prompts/SP-02_kmedical_v1.0.txt',
-    ECO: 'gopang/prompts/SP-06_kfinance_v1.0.txt',
-    MKT: 'gopang/prompts/SP-05_kcommerce_v1.0.txt',
-    EDU: 'gopang/prompts/SP-07_keducation_v1.0.txt',
-    GOV: 'gopang/prompts/SP-08_kgov_v1.0.txt',
-    IND: 'gopang/prompts/SP-09_kindustry_v1.0.txt',
-    ENV: 'gopang/prompts/SP-10_kenv_v1.0.txt',
-    CLN: 'gopang/prompts/SP-14_kcleaner_v1.2.txt',  // K-Cleaner v1.2 ✅
-    CUL: 'gopang/prompts/SP-11_kculture_v1.0.txt',
-    SOC: 'gopang/prompts/SP-13_ksocial_v1.0.txt',
-    IOT: 'gopang/prompts/SP-12_kiot_v1.0.txt',
+    MED: 'prompts/SP-02_kmedical_v1.0.txt',
+    ECO: 'prompts/SP-06_kfinance_v1.0.txt',
+    MKT: 'prompts/SP-05_kcommerce_v1.0.txt',
+    EDU: 'prompts/SP-07_keducation_v1.0.txt',
+    GOV: 'prompts/SP-08_kgov_v1.0.txt',
+    IND: 'prompts/SP-09_kindustry_v1.0.txt',
+    ENV: 'prompts/SP-10_kenv_v1.0.txt',
+    CLN: 'prompts/SP-14_kcleaner_v1.2.txt',  // K-Cleaner v1.2 ✅
+    CUL: 'prompts/SP-11_kculture_v1.0.txt',
+    SOC: 'prompts/SP-13_ksocial_v1.0.txt',
+    IOT: 'prompts/SP-12_kiot_v1.0.txt',
   };
 
   // 2단계 트리거: 심층 처리 키워드
@@ -3879,7 +3879,7 @@ async function callAI(userText, imageFile = null) {
       if (!EXPERT_SP_MAP[code]) continue;
       detectedCode = code;
       try {
-        const rawBase = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang_v2/main/';
+        const rawBase = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/';
         const res = await fetch(rawBase + EXPERT_SP_MAP[code], { cache: 'no-cache' });
         if (res.ok) {
           const expertSP = await res.text();
