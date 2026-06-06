@@ -3018,19 +3018,56 @@ async function sendMessage() {
   // ── GWP: 의도 분석 → 서비스 자동 실행 (aiActive 무관하게 항상 먼저)
   // 고팡은 포털 — 학습·법률 등 전문 질문은 하위 시스템이 처리
   if (text) {
+    // 1차: GWP_REGISTRY 키워드 직접 매칭
     const matchedSvc = _gwpMatch(text);
     if (matchedSvc) {
       _gwpLaunch(matchedSvc, text);
       return;
     }
+
+    // 2차: SP-00 라우터 결과 기반 GWP 실행
+    // 라우터가 하위 시스템 URL을 반환하면 새 탭으로 실행
+    // ── 라우터 카테고리 → GWP 서비스 매핑 ──────────────────
+    const ROUTER_GWP_MAP = {
+      MKT: { id:'kcommerce',   name:'K-Market',    icon:'🛒', url:'https://market.gopang.net' },
+      TRN: { id:'ktransport',  name:'K-Traffic',   icon:'🚗', url:'https://traffic.gopang.net' },
+      GOV: { id:'kpublic',     name:'K-Public',    icon:'🏛️', url:'https://public.gopang.net' },
+      EDU: { id:'kedu',        name:'K-School',    icon:'📚', url:'https://school.gopang.net' },
+      ECO: { id:'kfinance',    name:'K-Stock',     icon:'📈', url:'https://stock.gopang.net' },
+      LEG: { id:'kdemocracy',  name:'K-Democracy', icon:'🗳️', url:'https://democracy.gopang.net' },
+      ENV: { id:'fiil-kcleaner', name:'K-Cleaner', icon:'♻️', url:'https://fiil.kr' },
+      EMG: { id:'kemergency',  name:'K-119',       icon:'🚨', url:'https://911.gopang.net' },
+      // JUS(K-Law)·MED(K-Health)는 전문 SP로 고팡 내부 처리 (새 탭 아님)
+    };
+
+    // 라우터를 먼저 실행해서 카테고리 파악
+    if (aiActive) {
+      const routerResult = await runRouter(text, !!capturedFile);
+      const cat = routerResult?.category;
+      const svcDef = ROUTER_GWP_MAP[cat];
+
+      if (svcDef && routerResult.confidence >= 0.70) {
+        // 라우터가 하위 시스템으로 분류 → 새 탭으로 실행
+        console.log(`[Router→GWP] ${cat} → ${svcDef.name} 새 탭 실행 (conf:${routerResult.confidence})`);
+        _gwpLaunch(
+          { id: svcDef.id, name: svcDef.name, icon: svcDef.icon, url: svcDef.url },
+          text
+        );
+        return;
+      }
+
+      // DIRECT 또는 JUS·MED → callAI 내부 처리
+      await callAI(text, capturedFile, routerResult);
+    } else {
+      _runPipelineBackground(text);
+      appendBubble('ai', '🔵 AI 버튼을 눌러 AI 비서를 활성화하세요.');
+    }
+    return;
   }
 
-  // GWP 매칭 없을 때만 고팡 AI 직접 응답
-  if (aiActive) {
-    await callAI(text, capturedFile);
-  } else {
-    _runPipelineBackground(text);
-    appendBubble('ai', '🔵 AI 버튼을 눌러 AI 비서를 활성화하세요.');
+  // text 없는 경우 (이미지만) → callAI로 처리
+  if (capturedFile && aiActive) {
+    await callAI('', capturedFile);
   }
 }
 
@@ -3786,14 +3823,14 @@ function applyRouterResult(result) {
 // ── 현재 라우팅 결과 저장 (callAI에서 참조) ────────────────
 let _lastRouterResult = null;
 
-async function callAI(userText, imageFile = null) {
+async function callAI(userText, imageFile = null, precomputedRouterResult = null) {
   showTyping();
 
   // ════════════════════════════════════════════════════
   // SP-00-ROUTER v3.0 — 0단계: 서비스 라우팅
-  // callAI 진입 직후, 위치 대기·전문가 SP 로드보다 먼저 실행
+  // sendMessage에서 이미 실행했으면 재사용, 아니면 새로 실행
   // ════════════════════════════════════════════════════
-  const _routerResult = await runRouter(userText || '', !!imageFile);
+  const _routerResult = precomputedRouterResult || await runRouter(userText || '', !!imageFile);
   _lastRouterResult   = _routerResult;
   applyRouterResult(_routerResult);
 
