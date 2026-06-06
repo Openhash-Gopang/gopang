@@ -1228,10 +1228,11 @@ if ('serviceWorker' in navigator) {
         });
       });
 
-      // ★ SW가 교체 완료(controllerchange) → 자동 새로고침
+      // ★ SW가 교체 완료(controllerchange) — iframe 이중 부트 방지로 자동 새로고침 비활성화
+      // window.location.reload() 제거: desktop.html iframe 안에서 실행 시 webapp이 2회 부팅됨
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('[PWA] 새 버전 적용 — 자동 새로고침');
-        window.location.reload();
+        console.log('[PWA] 새 버전 감지 — 배너에서 수동 새로고침 유도');
+        _showUpdateBanner();
       });
 
       // ★ 앱 시작 시 이미 waiting 중인 SW가 있으면 즉시 배너 표시
@@ -3044,7 +3045,7 @@ async function sendMessage() {
     if (aiActive) {
       const routerResult = await runRouter(text, !!capturedFile);
       const cat = routerResult?.category;
-      const svcDef = ROUTER_GWP_MAP[cat];
+      const svcDef = (typeof getService === 'function' && routerResult?.service_id) ? getService(routerResult.service_id) : ROUTER_GWP_MAP[cat];
 
       if (svcDef && routerResult.confidence >= 0.70) {
         // 라우터가 하위 시스템으로 분류 → 새 탭으로 실행
@@ -3777,6 +3778,7 @@ async function runRouter(userText, hasImage = false) {
     const data   = await res.json();
     const raw    = data.choices?.[0]?.message?.content || '{}';
     const result = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    if (!result?.category) throw new Error('Router 빈 응답: ' + raw);
     result.gwp_ctx = gwpCtx;
 
     // 캐시 저장 (최대 50개)
