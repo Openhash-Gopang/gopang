@@ -3801,187 +3801,32 @@ async function callAI(userText, imageFile = null, _preTab = null) {
     });
   }
 
-  // ── 4단계 폭포수 의사결정 (SP-00 v9.0 §3) ──────────────
-  // 1단계: 자체해결 — LLM이 판단 (코드 개입 없음)
-  // 2단계: 전문가 변신 — 전문 SP GitHub fetch → CFG.system append
-  // 3단계: 외부 AI 호출 — 고팡 레지스트리 탐색 (현재 시뮬레이션)
-  // 4단계: 웹 검색 — LLM web_search 도구 사용
+  // ── SP-00 v10.0: 폭포수 2단계(전문가 변신) 완전 제거 ──────
+  // 모든 전문 도메인은 [GWP:id] 태그로 하위 시스템 새 탭 호출
+  // AI 비서는 직접 처리 가능한 업무만 수행:
+  //   정보조회·계산·번역·날씨·PDV관리·일정·일반대화·웹검색
+  // 이미지 첨부 시: Gemini 범용 분석 후 SP-00에 컨텍스트로 전달
+  //   (이미지 내용이 환경오염이면 LLM이 [GWP:fiil-kcleaner] 태그 출력)
 
-  // ── 2단계: 전문가 변신 판단 ──────────────────────────────
-  const EXPERT_SP_MAP = {
-    JUS: 'klaw/prompts/system_prompt.txt',          // K-Law v15.1 ✅ 실제 파일
-    MED: 'prompts/SP-02_kmedical_v1.0.txt',
-    ECO: 'prompts/SP-06_kfinance_v1.0.txt',
-    MKT: 'prompts/SP-05_kcommerce_v1.0.txt',
-    EDU: 'prompts/SP-07_keducation_v1.0.txt',
-    GOV: 'prompts/SP-08_kgov_v1.0.txt',
-    IND: 'prompts/SP-09_kindustry_v1.0.txt',
-    ENV: 'prompts/SP-10_kenv_v1.0.txt',
-    CLN: 'prompts/SP-14_kcleaner_v1.2.txt',  // K-Cleaner v1.2 ✅
-    CUL: 'prompts/SP-11_kculture_v1.0.txt',
-    SOC: 'prompts/SP-13_ksocial_v1.0.txt',
-    IOT: 'prompts/SP-12_kiot_v1.0.txt',
-  };
+  // system을 항상 base로 유지 (전문가 SP 오염 방지)
+  if (CFG.system_base) CFG.system = CFG.system_base;
 
-  // 2단계 트리거: 심층 처리 키워드
-  const EXPERT_KEYWORDS = /검토|분석|판단|진단|소견|전략|보고서|판결|가상판결|자문|법률|계약서|증상|처방|재무|세무|특허|민원|고소|소송|시켜|주문|배달|예약|찾아줘|추천|쓰레기|신고|해양|오염|투기|정화|청소/;
-
-  // 영역 감지 (2단계 SP 선택용)
-  const DOMAIN_DETECT = [
-    { code: 'CLN', re: /쓰레기|해양쓰레기|해양오염|투기|환경오염|정화|청소|불법투기|해안쓰레기|폐기물|폐어구|기름유출|수거|신고|오염|드론수거|수중쓰레기|산림훼손|오름|탐방로|ROV/ },
-    { code: 'JUS', re: /계약서|소송|고소|판례|변호사|법률|고발|가상판결|법적|분쟁/ },
-    { code: 'MED', re: /병원|처방|증상|수술|진단|의료|건강검진|소견/ },
-    { code: 'ECO', re: /세금|재무|투자|대출|납부|환급|주식|재무제표/ },
-    { code: 'MKT', re: /시켜|주문|배달|예약|음식점|식당|짜장|짬뽕|치킨|피자|커피|카페|쇼핑|구매|찾아줘|추천|근처|계약|거래|부동산/ },
-    { code: 'EDU', re: /특허|논문|학습설계|교육계획|자격/ },
-    { code: 'GOV', re: /민원|등본|허가|면허|행정심판/ },
-    { code: 'TRN', re: /택시|버스|지하철|길|경로|교통|배차|차편/ },
-  ];
-
-  // base system 저장 (최초 1회)
-  if (!CFG.system_base) CFG.system_base = CFG.system;
-
-  let expertLoaded = false;
-  let detectedCode = null;
-
-  // ── 전문가 SP 로드 판단 (SP-00 v10.0: DOMAIN_DETECT 단독 사용) ──
-  const CLN_IMG_KEYWORDS = /쓰레기|폐기물|해양오염|투기|불법투기|폐어구|기름유출|오염물|환경오염|수거|정화|해양쓰레기|해안쓰레기/;
-  const shouldLoadExpert = imageFile
-    ? (userText ? (EXPERT_KEYWORDS.test(userText) || CLN_IMG_KEYWORDS.test(userText)) : true)
-    : (userText && EXPERT_KEYWORDS.test(userText));
-
-  let forceCode = null;
-  if (imageFile && (!userText || CLN_IMG_KEYWORDS.test(userText))) {
-    forceCode = 'CLN';
-    console.log('[폭포수 2단계] 이미지 첨부 → CLN K-Cleaner 자동 감지');
-  }
-
-  if (shouldLoadExpert) {
-    const detectList = forceCode
-      ? [{ code: forceCode, re: null }]
-      : DOMAIN_DETECT;
-
-    for (const { code, re } of detectList) {
-      if (re && !re.test(userText)) continue;
-      if (!EXPERT_SP_MAP[code]) continue;
-      detectedCode = code;
-      try {
-        const rawBase = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/';
-        const res = await fetch(rawBase + EXPERT_SP_MAP[code], { cache: 'no-cache' });
-        if (res.ok) {
-          let expertSP = await res.text();
-
-          // ── 전문가 SP 토큰 상한 (10,000자 ≈ 6,600 토큰) ────────
-          // klaw system_prompt.txt 등 대형 SP가 81k 토큰 과금의 원인
-          // 10,000자 초과 시 앞 9,500자 + 말줄임 처리
-          const SP_CHAR_LIMIT = 10000;
-          if (expertSP.length > SP_CHAR_LIMIT) {
-            console.warn(`[폭포수 2단계] 전문가 SP 크기 초과 (${expertSP.length}자) → ${SP_CHAR_LIMIT}자로 트리밍`);
-            expertSP = expertSP.slice(0, SP_CHAR_LIMIT - 100) +
-              '\n\n... [토큰 절약을 위해 일부 생략됨. 핵심 지침 위에 모두 포함됨] ...';
-          }
-
-          CFG.system = CFG.system_base + '\n\n' +
-            `${'═'.repeat(60)}\n` +
-            `## [2단계] 전문가 모드 활성: [${code}]\n` +
-            `## 방법론: ${EXPERT_SP_MAP[code]}\n` +
-            `${'═'.repeat(60)}\n` +
-            expertSP;
-          expertLoaded = true;
-          console.log(`[폭포수 2단계] [${code}] 전문 SP 로드 완료`);
-        } else {
-          console.warn(`[폭포수 2단계] SP fetch 실패 (${res.status}) → 3단계 시뮬레이션`);
-        }
-      } catch (e) {
-        console.warn(`[폭포수 2단계] fetch 오류 → 3단계 시뮬레이션:`, e.message);
-      }
-      break;
-    }
-  }
-
-  // ── CLN 활성 시 Gemini Vision → DeepSeek 파이프라인 ─────────
-  if (expertLoaded && detectedCode === 'CLN' && imageFile) {
-    // 이미지 분석을 위해 Vision 지원 모델로 자동 전환
-    if (!_modelSupportsVision(CFG.model)) {
-      console.log(`[K-Cleaner] Vision 미지원 모델(${CFG.model}) → deepseek-chat으로 자동 전환`);
-      CFG._modelOverride = CFG.model;
-      CFG.model = 'deepseek-chat';
-    }
-
-    try {
-      // ── Gemini Vision 호출 (이미지 분석 전담) ──────────────
-      if (CFG.geminiKey) {
-        // Progress Bar 표시 (기존 텍스트 버블 대신)
-        const _gpTimer = _showGeminiProgress();
-        console.log('[K-Cleaner] Gemini Vision 호출 시작');
-
-        let geminiResult = null;
-        try {
-          geminiResult = await _callGeminiVision(imageFile, CFG.geminiKey);
-          console.log('[K-Cleaner] Gemini Vision 분석 완료:', geminiResult.scale, geminiResult.risk_level);
-        } catch (e) {
-          console.warn('[K-Cleaner] Gemini Vision 실패, 텍스트 전용 진행:', e.message);
-        }
-
-        // Progress Bar 완료 후 제거
-        _hideGeminiProgress(_gpTimer);
-
-        if (geminiResult) {
-          const analysisText = _geminiResultToText(geminiResult, userText);
-          _sendReportToFiil(geminiResult, imageFile, userText);
-          userContent = analysisText;
-          imageFile   = null;
-          console.log('[K-Cleaner] Gemini 결과 → DeepSeek 전달 준비 완료');
-        }
-      } else {
-        // Gemini 키 없음 → 텍스트만으로 진행 + FIIL 텍스트 신고
-        console.warn('[K-Cleaner] Gemini API 키 없음 → 이미지 없이 텍스트 진행');
-        appendBubble('ai', '⚠️ Gemini API 키가 없어 이미지 분석을 건너뜁니다.\n설정 → Gemini API Key를 입력하면 이미지 자동 분석이 활성됩니다.');
-        document.querySelector('#message-list .bubble-ai:last-child')?.remove();
-        // Gemini 없어도 텍스트·GPS·이미지 기반으로 FIIL 신고 전송
-        _sendReportToFiil(null, imageFile, userText);
-      }
-
-      // ── EXIF + 날씨 수집 (이미지 원본 필요 — 소거 전 처리) ──
-      const exif = await _extractExif(imageFile || new File([], 'dummy'));
-      let fieldLat = exif.lat || _userLocation?.lat;
-      let fieldLng = exif.lng || _userLocation?.lng;
-
-      if (fieldLat) {
-        const isMarineJob = /수중|잠수|해녀|폐그물|침적|ROV|태왁/.test(userText || '');
-        const fieldReport = await _buildFieldReport(fieldLat, fieldLng, exif, isMarineJob);
-        CFG.system = CFG.system + fieldReport;
-        console.log('[K-Cleaner] 현장 기상 보고서 system에 주입 완료');
-      }
-
-    } catch (e) {
-      console.warn('[K-Cleaner] 파이프라인 오류:', e.message);
-      document.querySelector('#message-list .bubble-ai:last-child')?.remove();
-    }
-  }
-
-  // ── SP 없는 이미지: Gemini 범용 분석 폴백 ─────────────────
-  // CLN이 아닌데 이미지가 있는 경우 → SP-00-GEN으로 Gemini 범용 분석
-  if (imageFile && CFG.geminiKey && !(expertLoaded && detectedCode === 'CLN')) {
+  // ── 이미지 첨부 시: Gemini 범용 분석 → SP-00 컨텍스트 주입 ──
+  if (imageFile && CFG.geminiKey) {
     try {
       const _gpTimer = _showGeminiProgress();
-      console.log('[SP-00-GEN] Gemini 범용 이미지 분석 시작');
+      console.log('[IMG] Gemini 범용 이미지 분석 시작');
       const genResult = await _callGeminiGeneral(imageFile, CFG.geminiKey, userText);
       _hideGeminiProgress(_gpTimer);
       if (genResult) {
         const analysisText = _geminiResultToText(genResult, userText);
         userContent = analysisText;
         imageFile   = null;
-        console.log('[SP-00-GEN] Gemini 범용 분석 완료 → DeepSeek 전달');
+        console.log('[IMG] Gemini 분석 완료 → SP-00 컨텍스트로 전달');
       }
     } catch(e) {
-      console.warn('[SP-00-GEN] Gemini 범용 분석 실패:', e.message);
+      console.warn('[IMG] Gemini 분석 실패:', e.message);
     }
-  }
-
-  // 2단계 미사용 시 base로 복귀 (이전 턴 전문가 모드 잔존 방지)
-  if (!expertLoaded && CFG.system_base) {
-    CFG.system = CFG.system_base;
   }
 
   // locNote는 _buildLocNote()로 분리 — 최초 1회만 system에 삽입됨
@@ -4070,13 +3915,8 @@ async function callAI(userText, imageFile = null, _preTab = null) {
     const locNote = _buildLocNote();
     history.push({ role: 'system', content: CFG.system + locNote });
     console.log('[Cache] 세션 최초 — system 1회 삽입');
-  } else if (expertLoaded) {
-    // 전문가 SP 로드: history[0] system 교체 (캐시 무효화 불가피)
-    const locNote = _buildLocNote();
-    history[0] = { role: 'system', content: CFG.system + locNote };
-    console.log('[Cache] 전문가 SP 로드 — system 교체');
   }
-  // 이후 일반 호출: history[0] system 고정 유지, 추가 작업 없음
+  // history[0] system 고정 유지 — 전문가 SP 없으므로 교체 불필요
 
   // 2) user: messages 전송 직전에 history에 추가
   const userRecord = { role: 'user', content: typeof userContent === 'string' ? userContent : `[첨부: 이미지]` };
@@ -4105,10 +3945,8 @@ async function callAI(userText, imageFile = null, _preTab = null) {
   // 끝 슬래시 제거
   baseUrl = baseUrl.replace(/\/+$/, '');
 
-  const activeModel = (['JUS','MED'].includes(detectedCode) && expertLoaded)
-    ? 'deepseek-v4-pro'
-    : CFG.model;
-  console.log(`[AI] 호출 → ${baseUrl}/chat/completions | 모델: ${activeModel} (${detectedCode || 'DIRECT'}) | ${isProxy ? '프록시(보안)' : 'Key: ' + apiKey.slice(0,8) + '...'}`);
+  const activeModel = CFG.model;
+  console.log(`[AI] 호출 → ${baseUrl}/chat/completions | 모델: ${activeModel} | ${isProxy ? '프록시(보안)' : 'Key: ' + apiKey.slice(0,8) + '...'}`);
 
   // ── 스트리밍 호출 ─────────────────────────────────────────
   try {
@@ -4121,12 +3959,7 @@ async function callAI(userText, imageFile = null, _preTab = null) {
         ...(isProxy ? {} : { 'Authorization': `Bearer ${apiKey}` }),
       },
       body: JSON.stringify({
-        // ── 하이브리드 모델 선택 ──────────────────────────────
-        // K-Law(판결 분석) / K-Health(의료 진단) → 복잡 추론 → Pro
-        // 그 외 일상 대화·시장·교통·민원 등 → Flash (12배 저렴)
-        model: (['JUS','MED'].includes(detectedCode) && expertLoaded)
-          ? 'deepseek-v4-pro'
-          : CFG.model,
+        model: CFG.model,
         messages,
         max_tokens:  2000,
         temperature: 0.6,
@@ -4145,9 +3978,7 @@ async function callAI(userText, imageFile = null, _preTab = null) {
     // ── SSE 스트림 수신 + 실시간 렌더링 ─────────────────────
     hideTyping();
 
-    // CLN 신고: 스트리밍을 메시지 창에 표시하지 않고 백그라운드 수집
-    const isCLNReport = (expertLoaded && detectedCode === 'CLN');
-    const bubble = isCLNReport ? null : _createStreamBubble();
+    const bubble = _createStreamBubble();
     const reader  = res.body.getReader();
     const decoder = new TextDecoder();
     let   fullReply = '';
@@ -4225,98 +4056,6 @@ async function callAI(userText, imageFile = null, _preTab = null) {
     // K-Law 백그라운드 감시 트리거 — 대화 내용 자동 검토 (비동기)
     setTimeout(() => _klawReview('conversation', null), 3000);
 
-    // ── CLN 신고: 간략 메시지 표시 + 진행 상황 시작 ────────────
-    if (isCLNReport) {
-      // 1. AI 응답에서 "이해한 지시" 추출 (첫 1~2문장)
-      const intentMatch = fullReply.match(/^([^\n.。]{10,80}[.。\n]?)/);
-      const intentSummary = intentMatch
-        ? intentMatch[1].trim()
-        : '환경 신고 지시로 이해했습니다.';
-
-      // 2. 위치 정보 — 역지오코딩 우선, 없으면 좌표 사용
-      let locStr = _userLocation?.address || null;
-
-      // 역지오코딩이 아직 없고 좌표가 있으면 즉시 시도
-      if (!locStr && _userLocation?.lat) {
-        try {
-          const geo = await _reverseGeocode(_userLocation.lat, _userLocation.lng);
-          if (geo?.jibunAddress) {
-            locStr = geo.jibunAddress;
-            _userLocation.address = locStr;
-          }
-        } catch(e) {}
-      }
-      // 그래도 없으면 좌표 표시
-      if (!locStr) {
-        locStr = _userLocation?.lat
-          ? `${_userLocation.lat.toFixed(4)}°N, ${_userLocation.lng.toFixed(4)}°E`
-          : '위치 미상';
-      }
-
-      // 3. 메시지 창에 간략 접수 확인 표시
-      appendBubble('ai',
-        `${intentSummary}\n\n` +
-        `📍 ${locStr}\n` +
-        `신고가 접수되었습니다.`,
-        false
-      );
-
-      // 3-1. fiil.kr 신고 확인 링크 버튼
-      if (_lastFiilReportId) {
-        const fiilUrl = `https://fiil.kr/webapp.html?id=${encodeURIComponent(_lastFiilReportId)}`;
-        appendBubble('ai',
-          `<a href="${fiilUrl}" target="_blank" style="
-            display:inline-flex;align-items:center;gap:8px;
-            background:var(--tint);color:#fff;
-            padding:10px 18px;border-radius:20px;
-            font-size:14px;font-weight:600;
-            text-decoration:none;margin-top:4px;">
-            📋 신고 접수 확인하기
-          </a>`,
-          true
-        );
-      }
-
-      // 4. 진행 상황 시작 (1단계: 접수)
-      _progressStart(intentSummary, locStr, _lastFiilReportId);
-
-      // 5. 진행 단계 + 순차 메시지 시뮬레이션 (10초 간격)
-      const _delay = (ms) => new Promise(r => setTimeout(r, ms));
-      (async () => {
-        // 1단계: 접수 완료 (즉시)
-        await _delay(10000);
-        appendBubble('ai', '🚁 드론이 현장 확인을 위해 비행 중입니다.');
-        _progressNext();  // 2단계: 현장 분석 중
-
-        await _delay(10000);
-        appendBubble('ai', '✅ 현장 확인 완료');
-
-        await _delay(10000);
-        appendBubble('ai', '🚨 대응팀 출동 준비');
-        _progressNext();  // 3단계: 관할 기관 전달
-
-        await _delay(10000);
-        appendBubble('ai', '🚐 대응팀 출동');
-
-        await _delay(10000);
-        appendBubble('ai', '🧹 처리 완료');
-
-        await _delay(10000);
-        appendBubble('ai', '📸 처리 완료 후 사진\n\n[ 현장 정리 완료 사진이 기록되었습니다. ]');
-        _progressNext();  // 4단계: 처리 완료
-
-        await _delay(10000);
-        appendBubble('ai', '🙏 감사합니다.\n더욱 깨끗한 제주를 만들어 가겠습니다.');
-      })();
-    }
-
-    // ── K-Cleaner 응답에서 성분·비용 파싱 후 Supabase 업데이트 ──
-    if (_lastFiilReportId && /K-Cleaner|CLN|성분|수거비|처리비|합.*계/.test(fullReply)) {
-      const parsed = _parseKCleanerReply(fullReply);
-      if (parsed.materials.length > 0 || parsed.totalCost > 0) {
-        _updateFiilReport(_lastFiilReportId, parsed);
-      }
-    }
 
   } catch (err) {
     hideTyping();
