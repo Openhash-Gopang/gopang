@@ -21,20 +21,10 @@ const PRECACHE_URLS = [
   // ── GWP 레지스트리
   '/gwp-registry.js',
 
-  // ── 고팡 JS 모듈 (로드 순서와 동일)
+  // ── 고팡 JS 모듈
   '/src/pwa/gopang-pwa.js',
   '/src/auth/gopang-auth.js',
-  '/src/location/gopang-location.js',
-  '/src/ui/gopang-ui.js',
-  '/src/ui/gopang-input.js',
-  '/src/ui/gopang-bubble.js',
-  '/src/ui/gopang-settings.js',
-  '/src/gemini/gopang-gemini.js',
-  '/src/router/gopang-router.js',
-  '/src/ai/gopang-ai.js',
-  '/src/mic/gopang-mic.js',
-  '/src/klaw/gopang-klaw.js',
-  '/src/gwp/gopang-gwp.js',
+  '/gopang-app.js',
 
   // ── 인증
   '/auth/gopang-sso.js',
