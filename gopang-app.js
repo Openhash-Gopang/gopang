@@ -2898,13 +2898,10 @@ function _micSetUI(active) {
 
 // ── Web Speech API (Android Chrome / 데스크탑) ───────────────
 async function _micStartWebSpeech(SpeechRecognition) {
-  // 마이크 권한 먼저 명시 요청 (Android Chrome 보안 정책)
-  try {
-    await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch (e) {
-    appendBubble('ai', '⚠️ 마이크 권한이 거부되었습니다. 브라우저 설정에서 gopang.net의 마이크 권한을 허용하세요.');
-    return;
-  }
+  // ★ getUserMedia() 제거:
+  //   SpeechRecognition.start()이 마이크 권한을 자체 처리한다.
+  //   getUserMedia()를 먼저 호출하면 안드로이드 크롬에서
+  //   스트림 충돌이 발생하여 onresult가 호출되지 않는다.
 
   recognition = new SpeechRecognition();
   recognition.lang            = 'ko-KR';
