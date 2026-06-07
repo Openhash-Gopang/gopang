@@ -3,7 +3,7 @@
 // PWA 오프라인 지원 + 캐시 전략
 // ═══════════════════════════════════════════════════════════
 
-const CACHE_NAME    = 'gopang-v3';
+const CACHE_NAME    = 'gopang-v4'; // ★ 모듈 분리 반영
 const CACHE_TIMEOUT = 5000; // 네트워크 타임아웃 5초
 
 // 설치 시 사전 캐시할 핵심 파일
@@ -12,9 +12,37 @@ const PRECACHE_URLS = [
   '/index.html',
   '/desktop.html',
   '/webapp.html',
-  '/config.js',
   '/manifest.json',
   '/favicon.ico',
+
+  // ── 디자인 시스템
+  '/gopang-style.css',
+
+  // ── GWP 레지스트리
+  '/gwp-registry.js',
+
+  // ── 고팡 JS 모듈 (로드 순서와 동일)
+  '/src/pwa/gopang-pwa.js',
+  '/src/auth/gopang-auth.js',
+  '/src/location/gopang-location.js',
+  '/src/ui/gopang-ui.js',
+  '/src/ui/gopang-input.js',
+  '/src/ui/gopang-bubble.js',
+  '/src/ui/gopang-settings.js',
+  '/src/gemini/gopang-gemini.js',
+  '/src/router/gopang-router.js',
+  '/src/ai/gopang-ai.js',
+  '/src/mic/gopang-mic.js',
+  '/src/klaw/gopang-klaw.js',
+  '/src/gwp/gopang-gwp.js',
+
+  // ── 인증
+  '/auth/gopang-sso.js',
+  '/auth/subsystem-auth.js',
+
+  // ── 아이콘
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
 ];
 
 // ── 설치 ───────────────────────────────────────────────────
