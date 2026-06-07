@@ -4650,10 +4650,14 @@ async function _micStartWebSpeech(SpeechRecognition) {
   recognition.onresult = (e) => {
     const t = e.results[0][0].transcript;
     const input = document.getElementById('msg-input');
-    if (input) { input.value = t; autoResize(input); updateSendBtn(); }
+    if (input && t) {
+      input.value = t;
+      // ★ 모바일에서 value 직접 주입 시 input 이벤트가 발생하지 않으므로 강제 발생
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+    }
     micActive = false;
     _micSetUI(false);
-    // 1초 무입력 시 자동 전송
     _micAutoSend();
   };
 
@@ -4741,7 +4745,11 @@ async function _micStartMediaRecorder() {
 
       if (text) {
         const input = document.getElementById('msg-input');
-        if (input) { input.value = text; autoResize(input); updateSendBtn(); }
+        if (input) {
+          input.value = text;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.focus();
+        }
         // 1초 무입력 시 자동 전송
         _micAutoSend();
       } else {
