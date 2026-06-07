@@ -2914,13 +2914,11 @@ async function _micStartWebSpeech(SpeechRecognition) {
     const input = document.getElementById('msg-input');
     if (input && t) {
       input.value = t;
-      // ★ 모바일: JS로 value 주입 시 input 이벤트 미발생 → 강제 발생
-      // ★ focus() 제거: 모바일 소프트 키보드 강제 팝업 방지
-      input.dispatchEvent(new Event('input', { bubbles: true }));
+      autoResize(input);
+      updateSendBtn();
     }
     micActive = false;
     _micSetUI(false);
-    // 1초 후 자동 전송 (dispatchEvent 이후 호출)
     _micAutoSend();
   };
 
@@ -3010,8 +3008,8 @@ async function _micStartMediaRecorder() {
         const input = document.getElementById('msg-input');
         if (input) {
           input.value = text;
-          // ★ 모바일: JS로 value 주입 시 input 이벤트 미발생 → 강제 발생
-          input.dispatchEvent(new Event('input', { bubbles: true }));
+          autoResize(input);
+          updateSendBtn();
         }
         // 1초 후 자동 전송
         _micAutoSend();
