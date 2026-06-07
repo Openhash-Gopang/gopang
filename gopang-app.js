@@ -2825,10 +2825,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('msg-input');
   if (input) {
     // 인라인 oninput 대체 — 함수 정의 이후 바인딩
-    input.addEventListener('input', () => {
+    input.addEventListener('input', (ev) => {
       autoResize(input);
       updateSendBtn();
-      if (_micAutoSendTimer) {
+      // ★ 마이크 dispatchEvent(isTrusted=false)는 타이머 취소 안 함
+      if (_micAutoSendTimer && ev.isTrusted) {
         clearTimeout(_micAutoSendTimer);
         _micAutoSendTimer = null;
       }
@@ -2914,10 +2915,15 @@ async function _micStartWebSpeech(SpeechRecognition) {
   recognition.onresult = (e) => {
     const t = e.results[0][0].transcript;
     const input = document.getElementById('msg-input');
-    if (input) { input.value = t; autoResize(input); updateSendBtn(); }
+    if (input && t) {
+      input.value = t;
+      // ★ 모바일: JS로 value 주입 시 input 이벤트 미발생 → 강제 발생
+      // ★ focus() 제거: 모바일 소프트 키보드 강제 팝업 방지
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
     micActive = false;
     _micSetUI(false);
-    // 1초 무입력 시 자동 전송
+    // 1초 후 자동 전송 (dispatchEvent 이후 호출)
     _micAutoSend();
   };
 
@@ -3005,8 +3011,12 @@ async function _micStartMediaRecorder() {
 
       if (text) {
         const input = document.getElementById('msg-input');
-        if (input) { input.value = text; autoResize(input); updateSendBtn(); }
-        // 1초 무입력 시 자동 전송
+        if (input) {
+          input.value = text;
+          // ★ 모바일: JS로 value 주입 시 input 이벤트 미발생 → 강제 발생
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        // 1초 후 자동 전송
         _micAutoSend();
       } else {
         appendBubble('ai', '⚠️ 음성을 텍스트로 변환하지 못했습니다. 다시 시도해 주세요.');
