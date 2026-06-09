@@ -1,6 +1,7 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
+    <script src="/gopang-wallet.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>고팡 (Gopang) — AI 자율 시장 플랫폼 v3.4</title>
@@ -571,6 +572,7 @@ footer {
     <li><a href="https://democracy.gopang.net/desktop.html" target="_blank" style="color:var(--brand-dk);font-weight:500">K-Democracy</a></li>
     <li><a href="./ofp_standard.html" style="color:var(--blue);font-weight:500">OFP 표준</a></li>
     <li><a href="./hallim_masterplan.html" style="color:var(--blue);font-weight:500">한림읍</a></li>
+    <li><a href="./docs/openhash_whitepaper.html" target="_blank" style="color:var(--blue);font-weight:500">OpenHash 백서</a></li>
     <li><a href="./bizplan.html" style="color:var(--blue);font-weight:500">사업화</a></li>
   </ul>
   <button class="nav-cta" onclick="openWebApp()">
@@ -996,6 +998,103 @@ footer {
 <hr class="sep">
 
 <!-- ── 고팡과 오픈해시 ── -->
+<!-- ── WHAT IS OPENHASH ── -->
+<section class="section" id="what-is-openhash" style="background:var(--bg-alt)">
+  <div class="section-inner">
+    <div class="section-tag reveal">Technology</div>
+    <h2 class="section-title reveal">Openhash란?</h2>
+
+    <div class="section-body reveal">
+      <p>데이터 무결성을 보장하는 다양한 기술 중 하나입니다. 우리가 가진 주민등록증이나 운전면허증은 <strong>국가가 그 무결성을 보장</strong>합니다. 블록체인은 데이터 무결성을 순수히 기술적으로 구현하였지만, 에너지 과소비 문제로 상용화될 수 없는 한계가 있습니다. Openhash는 <strong>각국의 기존 국가 인프라와 통신망을 이용</strong>하여 데이터 무결성을 보장하며, 주민등록증·운전면허증·졸업증명서 등 수천 종의 인증 수단을 단 하나의 기술로 대체합니다.</p>
+    </div>
+
+    <!-- 직조 비유 -->
+    <div class="reveal" style="margin-top:36px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+
+      <!-- 왼쪽: 텍스트 -->
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--brand-dk);letter-spacing:1px;margin-bottom:14px">THE WEAVING PRINCIPLE</div>
+        <h3 style="font-size:18px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:14px">천을 짜는 직조와 동일한 원리</h3>
+        <p style="font-size:14px;color:var(--text2);line-height:1.85;margin-bottom:12px">견우는 밭을 갈고, 직녀는 씨줄과 날줄을 교차하며 천을 짭니다. Openhash도 이와 같습니다. <strong>80억 인구가 생산한 데이터의 원본은 각자가 보관하고</strong>, 그 Hash 값을 마치 천을 짜듯 씨줄과 날줄을 교차하며 서로 엮습니다.</p>
+        <p style="font-size:14px;color:var(--text2);line-height:1.85">80억 인구의 데이터가 서로 물고 물리는 직물이 되어, 어느 한 데이터의 위변조를 원천적으로 차단합니다.</p>
+      </div>
+
+      <!-- 오른쪽: 직조 GIF -->
+      <div style="border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border)">
+        <img
+          src="./weaving.gif"
+          alt="직조 메커니즘 — 씨줄과 날줄이 교차하며 천이 만들어지는 과정"
+          style="width:100%;display:block;object-fit:cover"
+          loading="lazy"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+        >
+        <div style="display:none;height:200px;align-items:center;justify-content:center;background:var(--bg-subtle);color:var(--text3);font-size:13px">이미지 로드 중...</div>
+      </div>
+    </div>
+
+    <!-- 위변조 탐지 -->
+    <div class="reveal" style="margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+
+      <!-- 왼쪽: 실이 터지는 GIF -->
+      <div style="border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border)">
+        <img
+          src="./cut.jpeg"
+          alt="천에서 실이 당겨지는 모습 — 위변조 탐지 비유"
+          style="width:100%;display:block;object-fit:cover;max-height:280px"
+          loading="lazy"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+        >
+        <div style="display:none;height:200px;align-items:center;justify-content:center;background:var(--bg-subtle);color:var(--text3);font-size:13px">이미지 로드 중...</div>
+      </div>
+
+      <!-- 오른쪽: 텍스트 -->
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:14px">TAMPER DETECTION</div>
+        <h3 style="font-size:18px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:14px">올(실)이 터지면 즉시 드러납니다</h3>
+        <p style="font-size:14px;color:var(--text2);line-height:1.85;margin-bottom:12px">누군가의 데이터가 위변조되면, 그 Hash 값이 변하고, 마치 <strong>천의 올이 터지듯</strong> 해당 Hash 값이 삽입된 지점이 즉시 드러납니다.</p>
+        <p style="font-size:14px;color:var(--text2);line-height:1.85">전체 직물 중 단 한 올만 건드려도 전체 패턴이 틀어집니다. Openhash의 위변조 탐지는 이와 정확히 같은 원리입니다.</p>
+      </div>
+    </div>
+
+    <!-- 요약 카드 -->
+    <div class="reveal" style="margin-top:36px;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+      <div style="background:#fff;padding:24px 20px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--brand-dk);letter-spacing:1px;margin-bottom:10px">MECHANISM</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">직조 메커니즘</div>
+        <div style="font-size:13px;color:var(--text3);line-height:1.7">씨줄(사용자 Hash)과 날줄(계층 구조)이 교차하며 단 하나의 직물을 형성합니다.</div>
+      </div>
+      <div style="background:#fff;padding:24px 20px;border-left:1px solid var(--border)">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:1px;margin-bottom:10px">INFRASTRUCTURE</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">기존 인프라 활용</div>
+        <div style="font-size:13px;color:var(--text3);line-height:1.7">별도의 네트워크 구축 없이 국가 행정망과 통신망을 그대로 신뢰 계층으로 활용합니다.</div>
+      </div>
+      <div style="background:#fff;padding:24px 20px;border-left:1px solid var(--border)">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:1px;margin-bottom:10px">RESULT</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">수천 종 인증 대체</div>
+        <div style="font-size:13px;color:var(--text3);line-height:1.7">주민등록증·운전면허증·졸업증명서 등 모든 인증 수단을 단 하나의 기술로 통합합니다.</div>
+      </div>
+    </div>
+
+    <!-- 맺음 + 백서 링크 -->
+    <div class="reveal" style="margin-top:28px;padding:22px 26px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap">
+      <p style="font-size:14px;color:var(--text2);line-height:1.8;margin:0;flex:1;min-width:240px">
+        Openhash는 <strong>천을 짜는 직조 메커니즘을 데이터 무결성 메커니즘으로 전환</strong>합니다. 제주도 한림읍에서 실증 검증이 완료된 기술입니다.
+      </p>
+      <a href="./docs/openhash_whitepaper.html" target="_blank"
+         style="flex-shrink:0;display:inline-flex;align-items:center;gap:8px;padding:11px 22px;background:var(--text);color:#fff;border-radius:var(--radius);font-size:13px;font-weight:600;text-decoration:none;transition:background 0.15s"
+         onmouseover="this.style.background='var(--brand-dk)'"
+         onmouseout="this.style.background='var(--text)'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Openhash Whitepaper
+      </a>
+    </div>
+
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ── OPENHASH & GOPANG ── -->
 <section class="section" id="openhash">
   <div class="section-inner">
     <div class="section-tag reveal">Foundation</div>
@@ -1003,7 +1102,7 @@ footer {
 
     <!-- 서문: AI의 아킬레스건 -->
     <div class="section-body reveal">
-      <p>이 비유에서 AI 비서가 주인공인 이유는 아름다움만이 아닙니다. 주인공의 진정한 가치는 <strong>진실함</strong>에 있습니다. 고팡도 마찬가지입니다.</p>
+      <p>백설 공주 비유에서 AI 비서가 주인공인 이유는 아름다움만이 아닙니다. 주인공의 진정한 가치는 <strong>진실함</strong>에 있습니다. 고팡도 마찬가지입니다.</p>
       <p style="margin-top:12px">많은 사람들이 AI의 경이로운 능력에 감탄하지만, 정작 중요한 한 가지를 놓치고 있습니다. <strong>AI가 아무리 유능해도, 입력 데이터가 거짓이면 AI의 출력은 약이 아니라 독입니다.</strong> 쓰레기를 넣으면 쓰레기가 나옵니다(Garbage in, garbage out). AI 시대에 데이터의 진실성은 AI 자체만큼이나, 어쩌면 그보다 더 중요한 문제입니다.</p>
     </div>
 
@@ -2207,3 +2306,4 @@ document.addEventListener('keydown', function(e) {
 </style>
 </body>
 </html>
+

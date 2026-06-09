@@ -1,0 +1,1832 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenHash 기술 백서 v1.1 — AI City Inc.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+/* ── Typography & Layout — SCI paper style ── */
+:root {
+  --page-width: 860px;
+  --col-text: #111111;
+  --col-light: #444444;
+  --col-rule:  #cccccc;
+  --col-code-bg: #f5f5f5;
+  --col-code:  #222222;
+  --col-link:  #1a4fa8;
+  --font-body: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --font-serif:'Noto Serif KR', 'Georgia', serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  --sz-body:   15px;
+  --sz-small:  13px;
+  --lh-body:   1.85;
+  --lh-tight:  1.4;
+}
+
+body {
+  background: #ffffff;
+  color: var(--col-text);
+  font-family: var(--font-body);
+  font-size: var(--sz-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Outer wrapper ── */
+.paper {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 60px 48px 100px;
+}
+
+/* ── Header / Title block ── */
+.paper-header {
+  border-bottom: 2px solid #111;
+  padding-bottom: 28px;
+  margin-bottom: 40px;
+  text-align: center;
+}
+.paper-title {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.3px;
+  margin-bottom: 6px;
+}
+.paper-subtitle {
+  font-size: 16px;
+  color: var(--col-light);
+  margin-bottom: 20px;
+}
+.paper-meta {
+  font-size: var(--sz-small);
+  color: var(--col-light);
+  line-height: 1.7;
+}
+.paper-meta span { margin: 0 8px; }
+.paper-meta span::before { content: '·'; margin-right: 8px; color: var(--col-rule); }
+.paper-meta span:first-child::before { content: ''; margin: 0; }
+
+/* ── Two-column top: TOC + Preface ── */
+.top-columns {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 36px;
+  margin-bottom: 48px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--col-rule);
+}
+
+/* ── Table of Contents ── */
+.toc {
+  font-size: 13px;
+}
+.toc-title {
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--col-light);
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--col-rule);
+}
+.toc ol {
+  list-style: none;
+  padding: 0;
+}
+.toc > ol > li {
+  margin-bottom: 5px;
+}
+.toc > ol > li > a {
+  color: var(--col-text);
+  text-decoration: none;
+  font-weight: 500;
+}
+.toc > ol > li > a:hover { color: var(--col-link); }
+.toc .toc-sub {
+  padding-left: 12px;
+  margin-top: 3px;
+  border-left: 1px solid var(--col-rule);
+}
+.toc .toc-sub li { margin-bottom: 2px; }
+.toc .toc-sub a {
+  color: var(--col-light);
+  text-decoration: none;
+  font-size: 12px;
+}
+.toc .toc-sub a:hover { color: var(--col-link); }
+
+/* ── Preface / Abstract block ── */
+.preface {
+  font-size: var(--sz-body);
+}
+.preface-label {
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--col-light);
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--col-rule);
+}
+.preface-insight {
+  background: #fafafa;
+  border-left: 3px solid #111;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.preface-insight h4 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.preface-insight p { font-size: 14px; line-height: 1.7; }
+.preface p { margin-bottom: 10px; color: #333; font-size: 14px; }
+.preface strong { color: #111; }
+.verified-badge {
+  display: inline-block;
+  border: 1px solid #111;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+/* ── Section headings ── */
+.section {
+  margin-bottom: 52px;
+}
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  border-bottom: 1px solid #111;
+  padding-bottom: 8px;
+  margin-bottom: 24px;
+}
+.section-num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--col-light);
+  flex-shrink: 0;
+}
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: var(--lh-tight);
+}
+
+/* ── Subsection headings ── */
+.subsection { margin-bottom: 32px; }
+.subsection-heading {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--col-rule);
+}
+.subsection-num {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--col-light);
+  margin-right: 8px;
+}
+
+/* Sub-subsection */
+.subheading {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 20px 0 8px;
+  color: #222;
+}
+
+/* ── Body text ── */
+p { margin-bottom: 12px; }
+strong { font-weight: 600; }
+
+/* ── Blockquote ── */
+blockquote {
+  border-left: 3px solid #333;
+  padding: 10px 18px;
+  margin: 16px 0;
+  font-style: italic;
+  color: #333;
+  background: #fafafa;
+  font-size: 14px;
+}
+blockquote strong { font-style: normal; }
+
+/* ── Lists ── */
+ul, ol {
+  padding-left: 24px;
+  margin-bottom: 12px;
+}
+li { margin-bottom: 4px; }
+li > ul, li > ol { margin-top: 4px; margin-bottom: 4px; }
+
+/* ── Tables ── */
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.5;
+}
+th {
+  background: #f0f0f0;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  font-size: 12px;
+}
+td {
+  padding: 7px 12px;
+  border: 1px solid #ddd;
+  vertical-align: top;
+}
+tr:nth-child(even) td { background: #fafafa; }
+.table-caption {
+  font-size: 12px;
+  color: var(--col-light);
+  margin-top: 6px;
+  font-style: italic;
+}
+
+/* ── Code blocks ── */
+pre {
+  background: var(--col-code-bg);
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 14px 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--col-code);
+}
+code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  background: var(--col-code-bg);
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid #e0e0e0;
+}
+pre code {
+  background: none;
+  padding: 0;
+  border: none;
+  font-size: inherit;
+}
+
+/* ── Warning / note boxes ── */
+.note {
+  border: 1px solid #ddd;
+  border-left: 3px solid #666;
+  background: #fafafa;
+  padding: 12px 16px;
+  margin: 14px 0;
+  font-size: 13.5px;
+}
+.note strong { display: block; margin-bottom: 4px; }
+.warn {
+  border-left-color: #888;
+}
+
+/* ── Definition list style for metadata ── */
+.meta-list {
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.meta-list dt {
+  font-weight: 600;
+  float: left;
+  min-width: 140px;
+  color: var(--col-light);
+}
+.meta-list dd { margin-left: 144px; margin-bottom: 4px; }
+
+/* ── Appendix ── */
+.appendix-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--col-light);
+  margin-bottom: 4px;
+}
+
+/* ── Rule lines ── */
+hr {
+  border: none;
+  border-top: 1px solid var(--col-rule);
+  margin: 40px 0;
+}
+
+/* ── Footer ── */
+.paper-footer {
+  border-top: 1px solid #111;
+  padding-top: 16px;
+  margin-top: 60px;
+  font-size: 12px;
+  color: var(--col-light);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Back-to-top ── */
+.back-top {
+  font-size: 12px;
+  color: var(--col-light);
+  text-decoration: none;
+  float: right;
+  margin-top: 4px;
+}
+.back-top:hover { color: var(--col-link); }
+
+/* ── Print ── */
+@media print {
+  .paper { padding: 20px; }
+  pre { white-space: pre-wrap; }
+}
+
+/* ── Mobile ── */
+@media (max-width: 700px) {
+  .paper { padding: 24px 20px 60px; }
+  .top-columns { grid-template-columns: 1fr; }
+  .toc { display: none; }
+  .paper-title { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="paper" id="top">
+
+<!-- ══ HEADER ══════════════════════════════════════════════ -->
+<header class="paper-header">
+  <div class="paper-title">OpenHash: 계층적 분산 원장 시스템</div>
+  <div class="paper-subtitle">설치 가이드라인 및 기술 백서</div>
+  <div class="paper-meta">
+    <span>v1.1</span>
+    <span>2026-06-09</span>
+    <span>AI City Inc. — Team Jupiter</span>
+    <span>참조: OpenHash SCI 논문 초안 v2.2 (도영민, 2026)</span>
+    <span>상태: 초안 (검토 중)</span>
+  </div>
+</header>
+
+<!-- ══ TOC + PREFACE ════════════════════════════════════════ -->
+<div class="top-columns">
+
+  <!-- TOC -->
+  <nav class="toc">
+    <div class="toc-title">목차</div>
+    <ol>
+      <li><a href="#s1">1. 작동 메커니즘</a>
+        <ol class="toc-sub">
+          <li><a href="#s1-1">1.1 왜 OpenHash인가</a></li>
+          <li><a href="#s1-2">1.2 설계 철학</a></li>
+          <li><a href="#s1-3">1.3 기대 효과</a></li>
+          <li><a href="#s1-4">1.4 5계층 신뢰 구조</a></li>
+          <li><a href="#s1-5">1.5 해시 체인 모델</a></li>
+          <li><a href="#s1-6">1.6 확률적 계층 선택 (PLSM)</a></li>
+          <li><a href="#s1-7">1.7 양방향 검증 (ILMV)</a></li>
+          <li><a href="#s1-8">1.8 적응형 무결성 검증</a></li>
+          <li><a href="#s1-9">1.9 긴급 PBFT (LPBFT)</a></li>
+          <li><a href="#s1-10">1.10 거래 검증 파이프라인</a></li>
+        </ol>
+      </li>
+      <li><a href="#s2">2. Oracle Cloud 환경 설정</a></li>
+      <li><a href="#s3">3. L1~L5 노드 설정</a></li>
+      <li><a href="#s4">4. 양방향 Hash 연동</a></li>
+      <li><a href="#s5">5. Merkle Tree</a></li>
+      <li><a href="#s6">6. 위변조 탐지</a></li>
+      <li><a href="#s7">7. 이동통신망과의 융합</a></li>
+      <li><a href="#s8">8. 설치 오류 및 대응</a></li>
+      <li><a href="#s9">9. 제주도 실증 프로젝트</a></li>
+      <li><a href="#s10">10. 전국 프로젝트 설계</a></li>
+      <li><a href="#s11">11. 부록</a></li>
+    </ol>
+  </nav>
+
+  <!-- PREFACE -->
+  <div class="preface">
+    <div class="preface-label">서문 — OpenHash의 두 가지 핵심 통찰</div>
+
+    <p>블록체인 기술은 탄생 이후 십수 년간 "신뢰할 수 있는 제3자 없이 거래를 기록하는 방법"을 모색해왔다. 그 결과는 PoW의 천문학적 에너지 소비와 PoS의 거버넌스 취약성으로 귀결되었으며, 단 한 국가도 이를 국가 수준의 인증 인프라로 채택하지 못했다.</p>
+
+    <div class="preface-insight">
+      <h4>첫째, "국가"라는 신뢰할 만한 장치가 이미 존재한다.</h4>
+      <p>읍면동사무소, 시청, 광역시도청, 중앙정부는 수백 년에 걸쳐 구축된 제도적 신뢰의 결정체다. 블록체인이 에너지를 태우며 인위적으로 구축하려 한 "탈중앙 신뢰"는, 사실 물리적 공간에 이미 내재되어 있었다. OpenHash는 이 기존의 신뢰 계층을 분산 원장의 앵커로 전용한다.</p>
+    </div>
+
+    <div class="preface-insight">
+      <h4>둘째, "통신망"이라는 신뢰할 만한 소통 메커니즘이 이미 존재한다.</h4>
+      <p>읍면동 기지국에서 시군구 교환국으로, 광역시도 허브를 거쳐 국가 백본망까지 이어지는 통신 인프라는 행정구역과 정확히 일치하는 계층 구조를 갖는다. OpenHash는 이 통신망의 물리적 계층 구조를 그대로 해시 체인의 전파 경로로 활용한다.</p>
+    </div>
+
+    <p><strong>국가가 신뢰 계층을 제공하고, 통신망이 전파 경로를 제공한다.</strong> 합의 알고리즘이 소모하던 에너지는 사라지고, 기존 인프라의 부가적 효용이 극대화된다.</p>
+
+    <div class="verified-badge">검증 완료 — 제주도 한림읍 파일럿 2026</div>
+    <p>Oracle Cloud 단일 VM 위에서 L1(한림읍)부터 L5(Global)까지 전 계층을 구동하고, 14개 읍면동 노드가 상향 전파(L1→L5)와 하향 반환(L5→L1)의 양방향 ILMV를 완성하였으며, leaf_hash 직접 변조 시 즉각 탐지됨을 확인하였다.</p>
+
+    <p>이 문서는 두 가지 목적을 가진다. 첫째, OpenHash 시스템의 이론적 설계를 비전문가도 이해할 수 있게 설명한다. 둘째, Oracle Cloud 환경에서 처음부터 재현할 수 있는 완전한 설치 가이드를 제공한다.</p>
+    <p><strong>독자 대상</strong>: 분산 시스템을 이해하는 개발자, 시스템 관리자, OpenHash 생태계 참여를 검토하는 기관</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     1. 작동 메커니즘
+════════════════════════════════════════════════════════════ -->
+<section class="section" id="s1">
+  <div class="section-heading">
+    <span class="section-num">01</span>
+    <h2 class="section-title">OpenHash의 작동 메커니즘</h2>
+  </div>
+
+  <!-- 1.1 -->
+  <div class="subsection" id="s1-1">
+    <h3 class="subsection-heading"><span class="subsection-num">1.1</span>현대 사회가 직면한 문제 — 왜 OpenHash인가</h3>
+
+    <div class="subheading">문서의 시대, 인증의 위기</div>
+    <p>현대 사회는 문서에 의한, 문서를 위한, 문서의 체제다. 한국 사회 하나만 보더라도 운전면허증·건강진단서·보험증·방문증·진료예약서·졸업증명서·주민등록등본·차량등록증 등 각종 기관들이 무수한 증명서를 발급하고, 시민들은 이들 문서를 수천 종의 기관에 제출한다. 세계 전역에서 수십만 종의 인증서가 난립하며, 그 사회적 비용은 천문학적이다.</p>
+    <p>이 문제를 근본적으로 해결할 수 있는 기술이 블록체인이다. 그러나 지난 십수 년간 블록체인 기술을 국가 수준에서 상용화한 사례가 단 하나도 없다는 사실이 그 한계를 웅변한다.</p>
+
+    <div class="subheading">기존 블록체인의 구조적 한계</div>
+    <p><strong>1. 에너지 과소비</strong> — Bitcoin의 연간 전력 소비량은 아르헨티나 전체(121 TWh)와 맞먹는다. 어떤 국가도 이 에너지 소비를 감당하며 전 국민의 문서 인증 시스템을 운영할 수 없다.</p>
+
+    <p><strong>2. 확장성 한계</strong></p>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>시스템</th><th>처리량</th><th>합의 방식</th><th>에너지 효율</th></tr></thead>
+      <tbody>
+        <tr><td>Bitcoin</td><td>7 TPS</td><td>Proof of Work</td><td>매우 낮음</td></tr>
+        <tr><td>Ethereum</td><td>15 TPS</td><td>Proof of Stake</td><td>낮음</td></tr>
+        <tr><td>Hyperledger Fabric</td><td>3,500 TPS</td><td>허가형 PBFT</td><td>중간</td></tr>
+        <tr><td><strong>OpenHash</strong></td><td><strong>사실상 무제한</strong></td><td><strong>평상시 없음</strong></td><td><strong>HTTPS 수준</strong></td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p><strong>3. 오염 대응의 비효율성</strong> — 기존 블록체인들은 데이터 오염 발생 시 전체 네트워크를 중단하거나 포크·롤백 방식으로 대응한다. 국가 인증 시스템이 멈춰서는 안 된다.</p>
+
+    <p><strong>4. 중앙집중식 기존 시스템의 문제</strong> — 홍길동의 성적표는 학교가 보관하고, 건강 이력은 건강보험공단이 보관하며, 주민등록등본은 행정자치부가 보관한다. 이 구조는 단일 실패점(SPOF), 기관 간 비효율, 데이터 주권 부재, 위변조 검증 어려움의 문제를 낳는다.</p>
+
+    <div class="subheading">OpenHash가 해결하려는 7가지 과제</div>
+    <ol>
+      <li><strong>블록체인에 준하는 보안, 블록체인의 에너지 없이</strong> — PoW를 완전히 제거하고 에너지 소비를 HTTPS API 호출 수준으로 최소화</li>
+      <li><strong>기존 통신 인프라를 그대로 활용하는 계층형 인증</strong> — 읍면동-시군구-광역시도-국가-글로벌의 기존 행정 구조를 신뢰 계층으로 전용</li>
+      <li><strong>보안 강도와 효율성의 균형</strong> — 중요한 문서에는 높은 보안을, 일상적 기록에는 경량 검증을 차등 적용</li>
+      <li><strong>실시간 오염 탐지 및 선별적 치유</strong> — AI 기반으로 위변조를 즉시 탐지하고, 전체 시스템 중단 없이 오염된 부분만 외과적으로 복구</li>
+      <li><strong>통신 인프라 무관성</strong> — 5G, WiFi, 위성통신, 광섬유 등 어떤 통신 방식에서도 동일한 보안 수준 제공</li>
+      <li><strong>물리적 분산 저장을 통한 혁신적 보안</strong> — 데이터를 구성원 각자가 보관하고 해시만 공개 원장에 기록</li>
+      <li><strong>해시 전용 전송으로 프라이버시 보호</strong> — 원본 문서 대신 SHA-256 해시값만 전송, 137바이트 고정 패킷으로 대역폭 90% 절약</li>
+    </ol>
+  </div>
+
+  <!-- 1.2 -->
+  <div class="subsection" id="s1-2">
+    <h3 class="subsection-heading"><span class="subsection-num">1.2</span>설계 철학 — 블록체인과의 본질적 차이</h3>
+
+    <div class="subheading">"오염을 허용하되, 즉시 치유한다"</div>
+    <p>PoW는 오염을 방지하기 위해 전 세계가 동시에 컴퓨터를 돌린다. 이것이 에너지 낭비의 근원이다. OpenHash는 발상을 전환한다:</p>
+    <blockquote><strong>"오염된 데이터라도 사용되지 않으면 해가 없고, 사용되면 즉시 치유한다. 따라서 대규모 오염은 발생할 수 없다."</strong></blockquote>
+    <p>누군가 한림읍 L1 노드의 데이터를 변조하더라도, 그 변조는 상위 L2(제주시)에 이미 anchoring된 Merkle root와 즉시 불일치가 발생한다. 예방이 아닌 실시간 감시와 즉각 치유가 OpenHash의 전략이다.</p>
+
+    <div class="subheading">"모든 기록에 같은 보안을 적용할 필요는 없다"</div>
+<pre>
+[일상적 거래] → 경량 ILMV 검증 → 빠른 처리, 최소 에너지
+[중요한 계약] → 표준 ILMV + 강화 감사 → 균형 잡힌 보안
+[핵심 기록]   → zk-SNARKs + TEE + 스테이킹 → 수학적 무결성 보장</pre>
+
+    <div class="subheading">"기록의 신뢰도는 객관적으로 측정된다"</div>
+    <p>OpenHash는 모든 기록에 객관적인 신뢰도 점수를 부여한다:</p>
+    <pre>신뢰도 점수 = log₂(네트워크 규모) × 계층 가중치 × 서명자 신뢰도 × 시간 가중치</pre>
+    <p>누군가 디지털 운전면허증을 제시하면, 상대방은 그 면허증의 신뢰도를 숫자로 확인할 수 있다. 이것이 OpenHash가 수만 종의 인증서를 대체할 수 있는 근거다.</p>
+
+    <div class="subheading">"기록 그 자체가 신분이 된다"</div>
+    <p>OpenHash가 완전히 도입된 세계에서는, 구성원의 탄생부터 소멸까지의 학적 기록·직업 기록·자격 기록·거래 기록이 시간순으로 해시 체인에 누적된다. 이 생애 기록의 연속성과 일관성이 곧 신분 증명이 된다. 별도의 졸업증명서, 자격증명서, 경력증명서를 발급받을 필요가 없다.</p>
+
+    <div class="subheading">기존 통념의 극복</div>
+    <p>기존 통념: <em>"블록체인의 탈중앙화를 위해서는 모든 참여자가 동등한 권한을 가져야 한다."</em></p>
+    <p>OpenHash의 반론: 계층별 차등 권한이 오히려 더 강력한 분산성을 달성한다. 이 계층 구조는 단일 실패점을 제거하면서도 각 계층이 독립적으로 운영된다.</p>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>PoW (Bitcoin)</th><th>PoS (Ethereum)</th><th>OpenHash</th></tr></thead>
+      <tbody>
+        <tr><td>합의 방식</td><td>항상 필요</td><td>항상 필요</td><td><strong>평상시 없음, 비상시만</strong></td></tr>
+        <tr><td>에너지</td><td>121 TWh/년</td><td>대폭 감소</td><td><strong>HTTPS API 수준</strong></td></tr>
+        <tr><td>처리량</td><td>~7 TPS</td><td>~수백 TPS</td><td><strong>사실상 무제한</strong></td></tr>
+        <tr><td>신뢰 기반</td><td>해시파워</td><td>스테이킹</td><td><strong>물리적 공간 계층</strong></td></tr>
+        <tr><td>위변조 탐지</td><td>체인 재구성</td><td>체인 재구성</td><td><strong>실시간 (합의 없이)</strong></td></tr>
+        <tr><td>51% 공격 비용</td><td>~50억 달러</td><td>상당한 수준</td><td><strong>한국 GDP의 25%</strong></td></tr>
+        <tr><td>데이터 보관</td><td>블록체인 노드</td><td>블록체인 노드</td><td><strong>구성원 개인 장치</strong></td></tr>
+        <tr><td>개별 기록 신뢰도</td><td>균일</td><td>균일</td><td><strong>문서별 객관적 수치</strong></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- 1.3 -->
+  <div class="subsection" id="s1-3">
+    <h3 class="subsection-heading"><span class="subsection-num">1.3</span>기대되는 효과</h3>
+
+    <div class="subheading">사회적 효과 — 인증서 체계의 혁신</div>
+    <p>OpenHash가 전 사회에 도입되면, 수만 종에 달하는 증명서·인증서·신분증·자격증·확인서·예약·거래·계약 등을 단 하나의 시스템으로 대체할 수 있다.</p>
+    <p><strong>주민등록등본 예시</strong>: OpenHash 시스템 내에서 정부가 직접 해당 정보의 생성과 갱신 과정을 관할하면, 종래의 주민등록등초본 관리 체계를 대체하면서 데이터 소유자를 정부에서 개인으로 이관할 수 있다. 내 주민등록 데이터는 내 스마트폰에 보관되고, 정부는 그 해시만 관리한다.</p>
+    <p><strong>금융 기관 예시</strong>: 은행·증권사·보험사 등이 가입자의 계좌 잔고를 갱신하는 과정을 직접 OpenHash에서 관장하면, 기존의 중앙 집중식 금융 원장 체계를 대체할 수 있다.</p>
+
+    <div class="subheading">경제적 효과</div>
+    <ul>
+      <li><strong>전국 배포 비용</strong>: 초기 투자비 4,000억 원, 연간 운영비 2,400억 원 (1인당 월 400원)</li>
+      <li><strong>에너지 절약</strong>: PoW 대비 98.5% 에너지 절약, PoS 대비 평균 28배 효율 개선</li>
+      <li><strong>실증 비용</strong>: AWS 8개 인스턴스 8시간 운영에 $1.00(약 1,350원) 소요</li>
+      <li><strong>사회적 편익</strong>: 사기피해 감소, 행정 효율성 향상, 디지털 전환 가속화로 연간 수십조 원 절감 기대</li>
+    </ul>
+
+    <div class="subheading">기술적 효과</div>
+    <p><strong>확장성</strong>: L1(읍면동) 노드당 1,000 TPS — 전국 3,551개 노드 합산 약 355만 TPS. L2(시군구) 노드당 10,000 TPS, L3(광역시도) 100,000 TPS, L4(국가) 1,000,000 TPS. 전국 5천만 인구 기준 일일 2.5억 건 처리에 최소 23개 노드로 대응 가능.</p>
+    <p><strong>보안성</strong>: 한국의 51% 공격 성공 확률 = (10⁻⁷)²⁵'⁰⁰⁰'⁰⁰⁰ = 10⁻¹⁷⁵'⁰⁰⁰'⁰⁰⁰ (우주 원자 수 10⁸⁰보다 작음). AI 오염 탐지율 97.3% (24시간 내), 평균 복구 시간 2.3시간, 시스템 가동률 99.97%.</p>
+    <p><strong>저장 효율</strong>: 원본 문서 대비 1/1,000 수준의 해시 저장 (50KB 텍스트 → 32바이트, 99.936% 압축률)</p>
+  </div>
+
+  <!-- 1.4 -->
+  <div class="subsection" id="s1-4">
+    <h3 class="subsection-heading"><span class="subsection-num">1.4</span>5계층 물리적 신뢰 구조</h3>
+    <p>OpenHash는 물리적 공간을 5개 계층으로 분할한다. 한국 행정구역을 기준으로 설명하면 다음과 같다.</p>
+<pre>
+L5 GLOBAL        — 글로벌 최상위 (19개 이상 독립 운영 주체)
+│
+L4 KR            — 대한민국 (금융결제원, 한국은행 등 13개 독립 국가기관)
+│
+L3 KR-JEJU       — 제주특별자치도 (광역시도 단위)
+│
+L2 KR-JEJU-JEJU-SI    — 제주시 (시군구 단위)
+L2 KR-JEJU-SGP-SI     — 서귀포시
+│
+L1 KR-JEJU-JEJU-HANLIM  — 한림읍 (읍면동 단위, 실제 노드)
+L1 KR-JEJU-JEJU-EWOL    — 애월읍
+... (전국 약 3,500개 읍면동)</pre>
+    <p>각 계층의 노드 ID는 계층 구조를 반영하는 문자열로 표현된다. <code>KR-JEJU-JEJU-HANLIM</code>은 한국 &gt; 제주 &gt; 제주시 &gt; 한림읍임을 명확히 나타낸다.</p>
+    <div class="note"><strong>일반적 계층 클러스터링 모델 (HTC)</strong>: OpenHash의 계층 구조는 한국 행정구역에 국한되지 않는다. 엣지-클라우드 인프라, 다국적 금융 네트워크, 공급망 무결성 시스템 등 임의의 물리적·논리적 계층 구조에 적용 가능하다.</div>
+    <p><strong>계층별 BFT 정족수</strong>: 각 계층은 비잔틴 장애 허용(BFT)을 위해 최소 n ≥ 3f+1개의 노드를 운영한다.</p>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>계층</th><th>노드 수</th><th>허용 장애(f)</th><th>쿼럼</th></tr></thead>
+      <tbody>
+        <tr><td>L1</td><td>4</td><td>1</td><td>3</td></tr>
+        <tr><td>L2</td><td>7</td><td>2</td><td>5</td></tr>
+        <tr><td>L3</td><td>10</td><td>3</td><td>7</td></tr>
+        <tr><td>L4</td><td>13</td><td>4</td><td>9</td></tr>
+        <tr><td>L5</td><td>19</td><td>6</td><td>13</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- 1.5 -->
+  <div class="subsection" id="s1-5">
+    <h3 class="subsection-heading"><span class="subsection-num">1.5</span>해시 체인 모델 — 오픈 해시</h3>
+    <p>원본 데이터는 절대로 네트워크에 올라가지 않는다. 오직 원본의 SHA-256 해시값(leaf_hash)만 분산 원장에 기록된다. 원본 데이터는 사용자의 PDV(Personal Data Vault, Supabase 암호화 저장소)에만 보관된다.</p>
+<pre>
+[사용자 원본 데이터]
+        ↓ SHA-256
+    leaf_hash (64자 hex)
+        ↓ L1 노드로 전송
+  l1_ledger DB 저장
+        ↓ Merkle root 계산
+  L2로 전파 → L3 → L4 → L5
+        ↓ ILMV 하향 반환
+  parent_root (L5 root) → L4 → L3 → L2 → L1</pre>
+    <p>각 사용자는 개인 해시 체인을 유지한다:</p>
+    <pre>h_i = SHA-256(h_{i-1} ∥ data_i ∥ height_i)</pre>
+    <p>여기서 <code>height_i</code>는 해시 체인 높이로 논스(nonce) 역할을 하여 재생 공격을 방지한다.</p>
+  </div>
+
+  <!-- 1.6 -->
+  <div class="subsection" id="s1-6">
+    <h3 class="subsection-heading"><span class="subsection-num">1.6</span>확률적 계층 선택 모듈 (PLSM)</h3>
+    <p>PLSM은 거래의 중요도와 당사자 간 최하위 공통 계층(LCAT)에 따라 기록 계층을 확률적으로 결정한다.</p>
+    <p><strong>알고리즘</strong>: ① 문서 해시와 타임스탬프를 SHA-256으로 이중 해싱 → ② 결과값을 mod 1,000 연산 → 0~999의 정수 r → ③ r과 LCAT, 중요도 점수에 따라 계층 결정</p>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>중요도</th><th>L1</th><th>L2</th><th>L3</th><th>L4</th><th>L5</th></tr></thead>
+      <tbody>
+        <tr><td>저중요도</td><td>50%</td><td>30%</td><td>12%</td><td>6%</td><td>2%</td></tr>
+        <tr><td>고중요도</td><td>15%</td><td>20%</td><td>30%</td><td>25%</td><td>10%</td></tr>
+      </tbody>
+    </table>
+    <div class="table-caption">표 — LCAT=L1 기준 계층별 선택 확률. 10,000,000회 시뮬레이션에서 χ² 검정 p &gt; 0.99로 균일 분포 확인.</div>
+    </div>
+    <p><strong>중요도 점수 산출</strong>:</p>
+    <pre>score = 0.5 × f_amount(거래금액) + 0.3 × f_type(자산유형) + 0.2 × f_contract(계약유형)
+
+- 고중요도: score ≥ 60  → 강화 모드 (zk-SNARKs, TEE 등)
+- 보통중요도: 25 ≤ score &lt; 60 → 표준 모드
+- 저중요도: score &lt; 25  → 경량 모드 (ILMV만 적용)</pre>
+  </div>
+
+  <!-- 1.7 -->
+  <div class="subsection" id="s1-7">
+    <h3 class="subsection-heading"><span class="subsection-num">1.7</span>양방향 상호 계층 검증 (ILMV)</h3>
+    <p>ILMV(Inter-Layer Merkle Verification)는 합의 없이 계층 간 데이터 무결성을 실시간으로 검증하는 OpenHash의 핵심 혁신이다.</p>
+    <p><strong>상향 전파 (L1→L5)</strong>: 하위 노드가 Merkle root를 계산하여 상위로 전달. <strong>하향 반환 (L5→L1)</strong>: 상위에서 받은 root를 <code>parent_root</code>로 하위에 반환.</p>
+<pre>
+TX 발생 (사용자)
+    ↓
+L1: leaf_hash 저장 → Merkle root 계산 → L2로 전파
+    ↓
+L2: child_root 수신 → 자신의 Merkle root 계산 → L3로 전파
+    ↓
+L3 → L4 → L5 (동일 과정 반복)
+    ↓
+L5: 최상위 root 확정 → L4로 parent_root 반환
+    ↑
+L4 → L3 → L2 → L1 (parent_root 하향 전달)
+    ↓
+L1: parent_root를 DB에 저장</pre>
+    <p><strong>하향 감사 주기</strong>: L2→L1 실시간 100% 스트리밍, L3→L2 10분 주기 15% 샘플링, L4→L3 30분 주기 10% 샘플링, L5→L4 1시간 주기 5% 샘플링. 각 계층은 하위 계층을 6개 항목(BLS 서명 유효성, Merkle 증명 일관성, 타임스탬프 신선도, 잔액 불변성, 순서 연속성, 해시 체인 연결)으로 검증한다.</p>
+  </div>
+
+  <!-- 1.8 -->
+  <div class="subsection" id="s1-8">
+    <h3 class="subsection-heading"><span class="subsection-num">1.8</span>중요도 기반 적응형 무결성 검증</h3>
+    <p><strong>경량 모드</strong> (score &lt; 25): ILMV 실시간 스트리밍만 적용. 소액·빈번 거래에 적합.</p>
+    <p><strong>표준 모드</strong> (25 ≤ score &lt; 60): ILMV + 결정론적 감사 강화. 일반 상거래에 적합.</p>
+    <p><strong>강화 모드</strong> (score ≥ 60): 다음 중 하나 이상 추가 적용:</p>
+    <ul>
+      <li><strong>zk-SNARKs</strong>: 수학적으로 검증 가능한 상태 전이 증명. 세부 데이터 비공개 유지.</li>
+      <li><strong>TEE (신뢰 실행 환경)</strong>: Intel SGX 등을 통해 노드 운영자도 접근 불가한 검증.</li>
+      <li><strong>스테이킹/슬래싱</strong>: 고중요도 거래 처리 노드에 자산 담보. 위변조 시 즉시 소각.</li>
+    </ul>
+  </div>
+
+  <!-- 1.9 -->
+  <div class="subsection" id="s1-9">
+    <h3 class="subsection-heading"><span class="subsection-num">1.9</span>긴급 경량 PBFT (LPBFT)</h3>
+    <p>OpenHash는 평상시에 합의를 전혀 사용하지 않는다. 합의는 다음 5가지 비상 조건에서만 발동된다:</p>
+    <ol>
+      <li>동일 노드 연속 2회 검증 실패</li>
+      <li>동일 거래에 대한 상충 버전 ≥ 2개</li>
+      <li>임의 계층 잔액 불일치 ≥ 10단위</li>
+      <li>동일 계층 노드 30% 이상 무응답</li>
+      <li>동일 높이 체인 분기 ≥ 2개</li>
+    </ol>
+    <p>3단계 합의(Pre-prepare → Prepare → Commit)를 거친 후 비활성화 조건 4개가 모두 충족되면 자동으로 정상 모드로 복귀한다. L1 기준 합의 레이턴시는 단일 머신 환경에서 평균 0.759ms다.</p>
+  </div>
+
+  <!-- 1.10 -->
+  <div class="subsection" id="s1-10">
+    <h3 class="subsection-heading"><span class="subsection-num">1.10</span>5단계 거래 검증 파이프라인</h3>
+    <p>모든 거래는 다음 파이프라인을 통과한다:</p>
+<pre>
+Stage 1: 잔액 확인 — 발신자 잔액 ≥ 거래 금액
+Stage 2: 신원 검증 — Ed25519/BLS 서명 검증
+Stage 3: 한도 확인 — 단일·일일 누적 한도 검증
+Stage 4: 이상 탐지 — Isolation Forest 알고리즘
+Stage 5: 규제 준수 — 블랙리스트, 국제 제재 목록</pre>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     2. Oracle Cloud 환경 설정
+════════════════════════════════════════════════════════════ -->
+<section class="section" id="s2">
+  <div class="section-heading">
+    <span class="section-num">02</span>
+    <h2 class="section-title">Oracle Cloud 환경 설정</h2>
+  </div>
+
+  <div class="subsection" id="s2-1">
+    <h3 class="subsection-heading"><span class="subsection-num">2.1</span>Oracle Always Free 인스턴스 생성</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>값</th></tr></thead>
+      <tbody>
+        <tr><td>Provider</td><td>Oracle Cloud Always Free</td></tr>
+        <tr><td>Shape</td><td>VM.Standard.E2.1.Micro</td></tr>
+        <tr><td>CPU</td><td>1 OCPU</td></tr>
+        <tr><td>RAM</td><td>1GB</td></tr>
+        <tr><td>OS</td><td>Ubuntu 22.04 LTS</td></tr>
+        <tr><td>Region</td><td>ap-chuncheon-1 (춘천) 권장</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p><strong>생성 절차</strong>: cloud.oracle.com 가입 → Compute → Instances → Create Instance → Shape: VM.Standard.E2.1.Micro → OS: Ubuntu 22.04 → SSH 키 생성 및 다운로드(gopang-l1.key) → Create</p>
+    <div class="note warn"><strong>주의</strong> SSH 키 파일(gopang-l1.key)은 분실 시 재생성이 어렵다. 안전한 위치에 백업하라. 분실 시 Oracle Console Connection으로 <code>authorized_keys</code>를 교체할 수 있다.</div>
+  </div>
+
+  <div class="subsection" id="s2-2">
+    <h3 class="subsection-heading"><span class="subsection-num">2.2</span>초기 접속 및 환경 설정</h3>
+<pre>
+# SSH 접속
+ssh -i gopang-l1.key ubuntu@{VM_IP}
+
+# 시스템 업데이트
+sudo apt update && sudo apt upgrade -y
+
+# 필수 패키지 설치
+sudo apt install -y git curl wget python3 sqlite3 build-essential</pre>
+  </div>
+
+  <div class="subsection" id="s2-3">
+    <h3 class="subsection-heading"><span class="subsection-num">2.3</span>Node.js v20 설치</h3>
+    <div class="note warn"><strong>중요</strong> 반드시 nodesource를 통해 v20을 설치해야 한다. Ubuntu apt 기본 버전(v12)은 내장 <code>fetch()</code> API를 지원하지 않는다.</div>
+<pre>
+# apt 기본 nodejs 제거 (설치되어 있다면)
+sudo apt remove -y nodejs libnode-dev libnode72 npm
+
+# nodesource v20 설치
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# 버전 확인 (20.x여야 함)
+node --version</pre>
+  </div>
+
+  <div class="subsection" id="s2-4">
+    <h3 class="subsection-heading"><span class="subsection-num">2.4</span>디렉토리 구조 생성</h3>
+<pre>
+sudo mkdir -p /opt/gopang/{pb,pb_hooks,mock,config,logs,batch}
+sudo mkdir -p /opt/gopang/pb/{hanlim,l2-jeju,l2-seogwipo,l3-jejudo,l4-kr,l5-global}
+sudo chown -R ubuntu:ubuntu /opt/gopang</pre>
+<pre>
+/opt/gopang/
+├── pocketbase              ← PocketBase 바이너리
+├── pb_hooks/
+│   └── main.pb.js          ← 전 인스턴스 공통 훅 (단 하나만!)
+├── pb/
+│   ├── hanlim/             ← L1 한림읍 데이터
+│   ├── l2-jeju/            ← L2 제주시 데이터
+│   ├── l2-seogwipo/        ← L2 서귀포시 데이터
+│   ├── l3-jejudo/          ← L3 제주도 데이터
+│   ├── l4-kr/              ← L4 대한민국 데이터
+│   └── l5-global/          ← L5 Global 데이터
+├── mock/
+│   └── mock-server.js      ← Mock 서버 (13개 읍면동)
+├── config/
+│   └── node-registry.json  ← 전체 노드 설정
+├── logs/                   ← 각 노드 로그
+└── batch/
+    └── daily_snapshot.sh   ← 일일 GitHub 스냅샷</pre>
+  </div>
+
+  <div class="subsection" id="s2-5">
+    <h3 class="subsection-heading"><span class="subsection-num">2.5</span>PocketBase 설치</h3>
+<pre>
+cd /opt/gopang
+wget https://github.com/pocketbase/pocketbase/releases/download/v0.22.14/pocketbase_0.22.14_linux_amd64.zip
+sudo apt install -y unzip
+unzip pocketbase_0.22.14_linux_amd64.zip
+rm pocketbase_0.22.14_linux_amd64.zip
+chmod +x pocketbase
+./pocketbase --version</pre>
+  </div>
+
+  <div class="subsection" id="s2-6">
+    <h3 class="subsection-heading"><span class="subsection-num">2.6</span>SSH 키 관리</h3>
+<pre>
+# 로컬(Windows PowerShell)에서 서버로 파일 전송
+scp -i gopang-l1.key "C:\경로\파일명" ubuntu@{VM_IP}:/opt/gopang/경로/</pre>
+    <div class="note warn"><strong>주의</strong> 붙여넣기 시 터미널 이스케이프 코드 오염 주의. 긴 명령어는 반드시 한 줄씩 입력하거나 파일로 올려서 실행.</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     3. L1~L5 노드 설정
+════════════════════════════════════════════════════════════ -->
+<section class="section" id="s3">
+  <div class="section-heading">
+    <span class="section-num">03</span>
+    <h2 class="section-title">OpenHash L1~L5 노드 설정</h2>
+  </div>
+
+  <div class="subsection" id="s3-1">
+    <h3 class="subsection-heading"><span class="subsection-num">3.1</span>node-registry.json 작성</h3>
+<pre>
+cat > /opt/gopang/config/node-registry.json &lt;&lt; 'EOF'
+{
+  "nodes": {
+    "KR-JEJU-JEJU-HANLIM":    {"type":"real", "port":8091, "layer":1, "name":"한림읍"},
+    "KR-JEJU-JEJU-EWOL":      {"type":"mock", "port":8101, "layer":1, "name":"애월읍"},
+    "KR-JEJU-JEJU-JOCHEON":   {"type":"mock", "port":8102, "layer":1, "name":"조천읍"},
+    "KR-JEJU-JEJU-GUJWA":     {"type":"mock", "port":8103, "layer":1, "name":"구좌읍"},
+    "KR-JEJU-JEJU-HANGYEONG": {"type":"mock", "port":8104, "layer":1, "name":"한경면"},
+    "KR-JEJU-JEJU-CHUJA":     {"type":"mock", "port":8105, "layer":1, "name":"추자면"},
+    "KR-JEJU-JEJU-UDO":       {"type":"mock", "port":8106, "layer":1, "name":"우도면"},
+    "KR-JEJU-JEJU-DONG":      {"type":"mock", "port":8107, "layer":1, "name":"제주시동지역"},
+    "KR-JEJU-SGP-DAEJUNG":    {"type":"mock", "port":8108, "layer":1, "name":"대정읍"},
+    "KR-JEJU-SGP-NAMWON":     {"type":"mock", "port":8109, "layer":1, "name":"남원읍"},
+    "KR-JEJU-SGP-SEONGSAN":   {"type":"mock", "port":8110, "layer":1, "name":"성산읍"},
+    "KR-JEJU-SGP-ANDEOK":     {"type":"mock", "port":8111, "layer":1, "name":"안덕면"},
+    "KR-JEJU-SGP-PYOSEON":    {"type":"mock", "port":8112, "layer":1, "name":"표선면"},
+    "KR-JEJU-SGP-DONG":       {"type":"mock", "port":8113, "layer":1, "name":"서귀포시동지역"},
+    "KR-JEJU-JEJU-SI":        {"type":"real", "port":8092, "layer":2, "name":"제주시"},
+    "KR-JEJU-SGP-SI":         {"type":"real", "port":8093, "layer":2, "name":"서귀포시"},
+    "KR-JEJU":                {"type":"real", "port":8094, "layer":3, "name":"제주특별자치도"},
+    "KR":                     {"type":"real", "port":8095, "layer":4, "name":"대한민국"},
+    "GLOBAL":                 {"type":"real", "port":8096, "layer":5, "name":"Global"}
+  }
+}
+EOF</pre>
+    <p><strong>상위 노드 라우팅 규칙</strong>:</p>
+<pre>
+L1 (제주시 소속)   → L2 제주시    :8092
+L1 (서귀포시 소속) → L2 서귀포시  :8093
+L2 제주시          → L3 제주도    :8094
+L2 서귀포시        → L3 제주도    :8094
+L3 제주도          → L4 대한민국  :8095
+L4 대한민국        → L5 Global    :8096
+L5 Global          → 없음 (최상위)</pre>
+  </div>
+
+  <div class="subsection" id="s3-2">
+    <h3 class="subsection-heading"><span class="subsection-num">3.2</span>PocketBase 컬렉션(DB) 스키마</h3>
+    <p>Admin UI(<code>http://127.0.0.1:{PORT}/_/</code>)에서 컬렉션을 생성한다. Admin 계정: <code>admin@gopang.net</code> / <code>Admin1234!</code></p>
+    <p><strong>L1 노드 — l1_ledger 컬렉션</strong></p>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>필드명</th><th>타입</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>tx_id</td><td>text (required)</td><td>거래 고유 ID</td></tr>
+        <tr><td>tx_type</td><td>text</td><td>TX 유형 (BIZ_ORDER 등)</td></tr>
+        <tr><td>from_guid</td><td>text</td><td>발신자 IPv6 (user.ipv6)</td></tr>
+        <tr><td>leaf_hash</td><td>text (required)</td><td>SHA-256(원본) hex 64자</td></tr>
+        <tr><td>signature</td><td>text</td><td>Ed25519 서명</td></tr>
+        <tr><td>pubkey</td><td>text</td><td>발신자 공개키</td></tr>
+        <tr><td>l1_node</td><td>text</td><td>노드 ID</td></tr>
+        <tr><td>parent_root</td><td>text</td><td>ILMV 하향 반환 root</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p><strong>L2~L5 노드 — node_ledger 컬렉션</strong></p>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>필드명</th><th>타입</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>child_node</td><td>text (required)</td><td>하위 노드 ID</td></tr>
+        <tr><td>child_root</td><td>text (required)</td><td>하위 Merkle root</td></tr>
+        <tr><td>merkle_root</td><td>text</td><td>현재 노드 Merkle root</td></tr>
+        <tr><td>parent_root</td><td>text</td><td>ILMV 하향 반환 root</td></tr>
+        <tr><td>layer</td><td>number</td><td>계층 번호 (2~5)</td></tr>
+        <tr><td>propagated</td><td>bool</td><td>상위 전파 완료 여부</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="subsection" id="s3-3">
+    <h3 class="subsection-heading"><span class="subsection-num">3.3</span>PocketBase 공통 훅 (main.pb.js)</h3>
+    <p>모든 PocketBase 인스턴스가 <code>/opt/gopang/pb_hooks/main.pb.js</code> 단 하나의 파일을 공유한다. 인스턴스는 <code>$app.dataDir()</code> 경로에서 자신의 역할을 판별한다.</p>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>URL</th><th>노드</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>GET</td><td>/health</td><td>전 노드</td><td>노드 상태 및 식별 정보</td></tr>
+        <tr><td>GET</td><td>/merkle</td><td>전 노드</td><td>현재 Merkle root 및 chain 상태</td></tr>
+        <tr><td>POST</td><td>/tx</td><td>L1 전용</td><td>트랜잭션 수신 및 전파</td></tr>
+        <tr><td>POST</td><td>/push_root</td><td>L2~L5</td><td>하위 root 수신 + ILMV 반환</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="note warn"><strong>주의</strong> 엔드포인트 이름이 <code>/child_root</code>가 아닌 <code>/push_root</code>다. PocketBase v0.22에서 <code>/child_root</code> 경로는 내부 예약어로 충돌이 발생한다. 상세 내용은 8.1절을 참조.</div>
+  </div>
+
+  <div class="subsection" id="s3-4">
+    <h3 class="subsection-heading"><span class="subsection-num">3.4</span>systemd 서비스 등록</h3>
+<pre>
+# 예시: L1 한림읍 서비스
+sudo tee /etc/systemd/system/gopang-pb-hanlim.service &lt;&lt; 'EOF'
+[Unit]
+Description=Gopang PocketBase - hanlim
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/gopang
+ExecStart=/opt/gopang/pocketbase serve \
+  --http=127.0.0.1:8091 \
+  --dir=/opt/gopang/pb/hanlim \
+  --hooksDir=/opt/gopang/pb_hooks
+Restart=always
+RestartSec=5
+StandardOutput=append:/opt/gopang/logs/hanlim.log
+StandardError=append:/opt/gopang/logs/hanlim_err.log
+
+[Install]
+WantedBy=multi-user.target
+EOF</pre>
+    <div class="note warn"><strong>필수</strong> <code>--hooksDir=/opt/gopang/pb_hooks</code>를 반드시 포함해야 한다. 미포함 시 훅이 로드되지 않아 모든 커스텀 라우트가 405 Method Not Allowed를 반환한다.</div>
+<pre>
+sudo systemctl daemon-reload
+for NAME in hanlim l2-jeju l2-seogwipo l3-jejudo l4-kr l5-global; do
+  sudo systemctl enable gopang-pb-${NAME}
+  sudo systemctl start gopang-pb-${NAME}
+done</pre>
+  </div>
+
+  <div class="subsection" id="s3-5">
+    <h3 class="subsection-heading"><span class="subsection-num">3.5</span>Mock 서버 설정</h3>
+    <p>실제 노드가 없는 13개 읍면동은 Node.js Mock 서버로 시뮬레이션한다.</p>
+<pre>
+sudo tee /etc/systemd/system/gopang-mock.service &lt;&lt; 'EOF'
+[Unit]
+Description=Gopang OpenHash Mock API Server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/gopang/mock
+ExecStart=/usr/bin/node /opt/gopang/mock/mock-server.js
+Restart=always
+RestartSec=5
+StandardOutput=append:/opt/gopang/logs/mock.log
+StandardError=append:/opt/gopang/logs/mock_err.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable gopang-mock
+sudo systemctl start gopang-mock</pre>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     4. 양방향 Hash 연동
+════════════════════════════════════════════════════════════ -->
+<section class="section" id="s4">
+  <div class="section-heading">
+    <span class="section-num">04</span>
+    <h2 class="section-title">상하 양방향 Hash 연동</h2>
+  </div>
+
+  <div class="subsection" id="s4-1">
+    <h3 class="subsection-heading"><span class="subsection-num">4.1</span>단방향 전파의 문제</h3>
+    <p>v1.0 구현에서는 L1이 leaf_hash를 L2로 보내고, L2가 이를 L3으로 보내는 단방향 전파만 존재했다. 이 상태에서 각 노드의 <code>parent_root</code> 필드는 항상 null이었다. ILMV의 진정한 가치는 양방향 연결에 있다. L5의 전지구적 신뢰 앵커가 L1까지 내려와야 계층 간 상호 검증이 완성된다.</p>
+  </div>
+
+  <div class="subsection" id="s4-2">
+    <h3 class="subsection-heading"><span class="subsection-num">4.2</span>ILMV 양방향 설계</h3>
+<pre>
+L5가 child_root를 받으면:
+  → 자신의 Merkle root 계산
+  → parentUrl이 없으므로 (최상위) 자신의 root를 parent_root로 반환
+
+L4가 child_root를 받으면:
+  → 자신의 Merkle root 계산
+  → L5로 전파 (await)
+  → L5로부터 parent_root 수신
+  → parent_root를 응답에 포함하여 L3로 반환 (ILMV 핵심)
+
+L3 → L2 → L1도 동일한 패턴</pre>
+    <p><strong>L5의 역할이 핵심이다.</strong> L5는 상위 노드가 없으므로 자신의 Merkle root를 <code>parent_root</code>로 반환한다. 이것이 하향 반환의 시작점이다.</p>
+  </div>
+
+  <div class="subsection" id="s4-3">
+    <h3 class="subsection-heading"><span class="subsection-num">4.3</span>/push_root 엔드포인트 구현</h3>
+<pre>
+routerAdd("POST", "/push_root", (c) => {
+  // ... 자신의 노드 판별, node_ledger 저장, Merkle 계산 ...
+
+  let parentRoot = null;
+  if (self.parentUrl) {
+    // 상위에 전파하고 parent_root 수신 (ILMV)
+    const resp = $http.send({ url: self.parentUrl + "/push_root", ... });
+    parentRoot = JSON.parse(resp.raw).parent_root;
+  } else {
+    // L5 최상위: 자신의 root를 반환 (ILMV 시작점)
+    parentRoot = myRoot;
+  }
+
+  // 핵심: parent_root를 하위로 반환
+  return c.json(200, {
+    ok: true,
+    node: self.id,
+    merkle_root: myRoot,
+    parent_root: parentRoot,  // ← 하위 노드가 이 값을 저장
+  });
+});</pre>
+  </div>
+
+  <div class="subsection" id="s4-4">
+    <h3 class="subsection-heading"><span class="subsection-num">4.4</span>노드 자기 식별 — $app.dataDir() 방법</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>방법</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td><code>process.argv</code> 파싱</td><td>null 반환 — Goja 엔진에서 사용 불가</td></tr>
+        <tr><td><code>$http.send()</code>로 포트 탐지</td><td>자기 호출 데드락 발생</td></tr>
+        <tr><td><code>$app.settings().meta.appUrl</code></td><td>모든 노드가 localhost:8090 반환</td></tr>
+        <tr><td><strong><code>$app.dataDir()</code> 경로 파싱</strong></td><td><strong>정상 작동 ✅</strong></td></tr>
+      </tbody>
+    </table>
+    </div>
+<pre>
+const name = $app.dataDir().split("/").pop();
+// → "hanlim", "l2-jeju", "l3-jejudo" 등
+const self = NODE_CONFIG[name] || NODE_CONFIG["hanlim"];</pre>
+  </div>
+
+  <div class="subsection" id="s4-5">
+    <h3 class="subsection-heading"><span class="subsection-num">4.5</span>E2E 검증</h3>
+<pre>
+curl -s -X POST http://127.0.0.1:8091/tx \
+  -H "Content-Type: application/json" \
+  -d '{"tx_id":"ilmv-test-001","tx_type":"TEST","from_guid":"2001:db8::test",
+       "leaf_hash":"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"}' \
+  | python3 -m json.tool</pre>
+    <p><strong>성공 조건</strong>: 응답의 <code>parent_root</code> 필드에 null이 아닌 hex 값이 있어야 한다. 이 값이 L5 <code>/merkle</code> 응답의 <code>merkle_root</code>와 일치하면 ILMV 완성이다.</p>
+<pre>
+# 실측 결과 (제주도 한림읍 파일럿 — 2026-06-08)
+{
+    "ok": true,
+    "node": "KR-JEJU-JEJU-HANLIM",
+    "merkle_root": "cba39b6ef475ae15...",
+    "parent_root": "81072a3c2171884a..."  ← L5 root가 L1까지 도달 ✅
+}</pre>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     5. Merkle Tree
+════════════════════════════════════════════════════════════ -->
+<section class="section" id="s5">
+  <div class="section-heading">
+    <span class="section-num">05</span>
+    <h2 class="section-title">Merkle Tree</h2>
+  </div>
+
+  <div class="subsection" id="s5-1">
+    <h3 class="subsection-heading"><span class="subsection-num">5.1</span>Merkle Tree의 역할</h3>
+    <p>Merkle Tree는 다수의 해시값을 하나의 루트 해시로 요약하는 자료 구조다. <strong>단 하나의 leaf라도 변조되면 Merkle root가 완전히 달라진다</strong>. 이것이 위변조 탐지의 수학적 기반이다.</p>
+<pre>
+leaf_1  leaf_2  leaf_3  leaf_4
+  ↓       ↓       ↓       ↓
+hash(1+2)         hash(3+4)
+       ↓               ↓
+      hash(hash(1+2) + hash(3+4))  ← Merkle root</pre>
+    <p>OpenHash에서 Merkle Tree는 두 가지 맥락에서 사용된다: L1에서는 모든 <code>leaf_hash</code>의 Merkle root를 계산하여 L2로 전파하고, L2~L5에서는 하위 노드들의 <code>child_root</code>의 Merkle root를 계산하여 상위로 전파한다.</p>
+  </div>
+
+  <div class="subsection" id="s5-2">
+    <h3 class="subsection-heading"><span class="subsection-num">5.2</span>구현 — PocketBase JS 환경 제약</h3>
+    <p>PocketBase JS 훅 환경(Goja 엔진)은 Node.js가 아니므로 <code>crypto</code> 모듈을 사용할 수 없다. 대신 PocketBase 내장 <code>$security.md5()</code>를 사용한다.</p>
+<pre>
+function buildMerkle(hashes) {
+  if (!hashes || hashes.length === 0) return "GENESIS";
+  if (hashes.length === 1) return hashes[0];
+  let layer = [...hashes];
+  while (layer.length > 1) {
+    const next = [];
+    for (let i = 0; i &lt; layer.length; i += 2) {
+      const left  = layer[i];
+      const right = (i + 1 &lt; layer.length) ? layer[i + 1] : layer[i];
+      next.push($security.md5(left + right));
+    }
+    layer = next;
+  }
+  return layer[0];
+}</pre>
+    <div class="note"><strong>MD5 사용에 관하여</strong> 현재 구현은 체인 연결(Merkle root 계산)에 MD5를 사용한다. 원본 데이터의 leaf_hash는 사용자가 SHA-256으로 계산하여 전송한다. 프로덕션 환경에서는 SHA-256으로 교체할 것을 권장한다.</div>
+  </div>
+
+  <div class="subsection" id="s5-3">
+    <h3 class="subsection-heading"><span class="subsection-num">5.3</span>Merkle root 갱신 흐름</h3>
+<pre>
+새 TX 수신 (L1) → l1_ledger에 저장
+    ↓
+l1_ledger 전체 leaf_hash 조회 → buildMerkle(hashes) 계산
+    ↓
+myRoot → L2 /push_root로 전송
+    ↓ (L2)
+node_ledger에 child_root 저장 (upsert: 동일 child_node면 업데이트)
+    ↓
+node_ledger 전체 child_root 조회 → buildMerkle(childRoots) 계산
+    ↓
+myRoot → L3 /push_root로 전송 ...</pre>
+  </div>
+
+  <div class="subsection" id="s5-4">
+    <h3 class="subsection-heading"><span class="subsection-num">5.4</span>/merkle 엔드포인트</h3>
+<pre>
+# 전체 계층 체인 길이 및 root 요약
+for PORT in 8091 8092 8094 8095 8096; do
+  echo -n "포트 ${PORT}: "
+  curl -s http://127.0.0.1:${PORT}/merkle | python3 -c \
+    "import sys,json; d=json.load(sys.stdin); print(f'chain={d[\"chain_length\"]} root={d[\"merkle_root\"][:16]}...')"
+done</pre>
+  </div>
+
+  <div class="subsection" id="s5-5">
+    <h3 class="subsection-heading"><span class="subsection-num">5.5</span>배치 동기화를 통한 대역폭 절감</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>배치 크기</th><th>절감률</th><th>루트 생성 시간</th></tr></thead>
+      <tbody>
+        <tr><td>10건</td><td>98.62%</td><td>0.012ms</td></tr>
+        <tr><td>100건</td><td>99.86%</td><td>0.089ms</td></tr>
+        <tr><td>1,000건</td><td>99.99%</td><td>0.851ms</td></tr>
+        <tr><td>10,000건</td><td>100.00%</td><td>8.594ms</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>Merkle Tree는 O(log N) 증명을 제공하므로 노드 수가 늘어도 대역폭이 선형으로 증가하지 않는다.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     6. 위변조 탐지
+════════════════════════════════════════════════════════════ -->
+<section class="section" id="s6">
+  <div class="section-heading">
+    <span class="section-num">06</span>
+    <h2 class="section-title">위변조 탐지</h2>
+  </div>
+
+  <div class="subsection" id="s6-1">
+    <h3 class="subsection-heading"><span class="subsection-num">6.1</span>탐지 원리</h3>
+    <p><strong>L1의 Merkle root는 항상 L2에 저장된 child_root와 일치해야 한다.</strong> L1 DB의 데이터가 변조되면, L1이 새로 계산한 Merkle root는 L2에 이미 anchoring된 child_root와 달라진다. 이 불일치가 위변조의 증거다.</p>
+  </div>
+
+  <div class="subsection" id="s6-2">
+    <h3 class="subsection-heading"><span class="subsection-num">6.2</span>잔액 불변성 검증 (BIVM)</h3>
+    <p><strong>집합 잔액 검증</strong>: 불변 계층(LCAT 이상)에서의 순 잔액 변동량 합이 0이어야 한다.</p>
+    <pre>Σδ_k = 0 (LCAT 이상 모든 계층의 순 잔액 변동량 합)</pre>
+    <p><strong>잔액 매핑 무결성 (BMI)</strong>: 총량은 보존되지만 개별 잔액이 무단 이전되는 내부 위변조를 탐지한다.</p>
+    <pre>BMI_k(T) = MerkleRoot({ balance_u(T) : u ∈ tier_k })</pre>
+    <p>A에서 B로 ε만큼 무단 이전하면 합계는 동일하지만 BMI 루트가 달라진다.</p>
+  </div>
+
+  <div class="subsection" id="s6-3">
+    <h3 class="subsection-heading"><span class="subsection-num">6.3</span>위변조 탐지 정리</h3>
+    <p><strong>정리 1</strong>: 임의의 경제 단위의 데이터 레코드가 위변조된 경우, 최소 1개 이상의 계층에서 잔액 불변성 위반 또는 잔액 매핑 불일치가 탐지된다.</p>
+    <ul>
+      <li><strong>경우 1</strong> (잔액 변동 위변조): 집합 잔액 검증에서 즉시 탐지</li>
+      <li><strong>경우 2</strong> (잔액 이전 위변조): BMI Merkle root 불일치로 탐지</li>
+      <li><strong>경우 3</strong> (복합 위변조): 위 두 경우 중 하나 이상으로 탐지 ∎</li>
+    </ul>
+    <p>완전한 형식 증명은 부록 A를 참조.</p>
+  </div>
+
+  <div class="subsection" id="s6-4">
+    <h3 class="subsection-heading"><span class="subsection-num">6.4</span>실증 테스트 시나리오</h3>
+<pre>
+# 1) 기준 TX 전송
+curl -s -X POST http://127.0.0.1:8091/tx -H "Content-Type: application/json" \
+  -d '{"tx_id":"tamper-test","leaf_hash":"deadbeef11223344...de"}'
+
+# 2) L1 DB 직접 변조
+sqlite3 /opt/gopang/pb/hanlim/data.db \
+  "UPDATE l1_ledger SET leaf_hash='0000...0000' WHERE tx_id='tamper-test';"
+
+# 3) 변조 후 root 비교 → 불일치 확인
+echo "L1 root (변조 후):"; curl -s http://127.0.0.1:8091/merkle | ...
+echo "L2 stored (불변):"; sqlite3 /opt/gopang/pb/l2-jeju/data.db "..."
+# → 두 값이 다르면 위변조 탐지 성공</pre>
+    <p><strong>실측 결과</strong> (제주도 한림읍 파일럿): 변조 전 L1 root = L2 stored = <code>ae2a42ab4b206061...</code>. 변조 후 L1 root = <code>4659220c82df0b9f...</code> (달라짐), L2 stored = <code>ae2a42ab4b206061...</code> (불변). → <strong>불일치 확인, 위변조 탐지 성공.</strong></p>
+  </div>
+
+  <div class="subsection" id="s6-5">
+    <h3 class="subsection-heading"><span class="subsection-num">6.5</span>탐지 확률 하한선</h3>
+    <pre>P(d|f,s) ≥ 1 - (1 - f × s)^m</pre>
+    <p>L2→L1 실시간 100% 감사(s=1.0) 기준: m ≥ 10, f ≥ 0.01이면 P(d) &gt; 0.999</p>
+  </div>
+
+  <div class="subsection" id="s6-6">
+    <h3 class="subsection-heading"><span class="subsection-num">6.6</span>GitHub 스냅샷을 통한 감사 이력</h3>
+<pre>
+# 매일 새벽 3시 자동 실행 (crontab)
+# 0 3 * * * /opt/gopang/batch/daily_snapshot.sh
+
+# 스냅샷 결과: Openhash-Gopang/openhash 레포지토리
+# snapshots/2026-06-08/snapshot.json (전 노드 상태 + L1/L2 DB 레코드)</pre>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     7. 이동통신망과의 융합
+════════════════════════════════════════════════════════════ -->
+<section class="section" id="s7">
+  <div class="section-heading">
+    <span class="section-num">07</span>
+    <h2 class="section-title">이동통신망과 OpenHash 네트워크의 융합</h2>
+  </div>
+
+  <div class="subsection" id="s7-1">
+    <h3 class="subsection-heading"><span class="subsection-num">7.1</span>기본 구상</h3>
+    <p>OpenHash의 L1 노드는 읍면동 단위의 물리적 공간에 배치된다. 이동통신 기지국(BTS)은 이미 읍면동 단위로 촘촘히 배치되어 있으며, 안정적인 전력과 네트워크 인프라를 갖추고 있다. 이 인프라를 L1 노드로 활용하면 별도의 인프라 투자 없이 전국 커버리지를 달성할 수 있다.</p>
+  </div>
+
+  <div class="subsection" id="s7-2">
+    <h3 class="subsection-heading"><span class="subsection-num">7.2</span>IPv6 기반 사용자 식별</h3>
+    <p>Gopang 플랫폼에서 모든 사용자는 <code>user.ipv6</code> 필드를 전역 고유 식별자(GUID)로 사용한다. IPv6는 사실상 무한한 주소 공간을 제공하므로, 모든 사용자·기기·기관에 고유 주소를 부여할 수 있다. OpenHash TX에서 <code>from_guid</code> 필드는 이 IPv6 주소를 사용한다.</p>
+  </div>
+
+  <div class="subsection" id="s7-3">
+    <h3 class="subsection-heading"><span class="subsection-num">7.3</span>기지국 ↔ L1 노드 연동 아키텍처</h3>
+<pre>
+[사용자 단말]
+    ↕ 4G/5G
+[BTS 기지국 (읍면동 단위)]
+    ↕ 광케이블
+[L1 노드 서버]  ← OpenHash PocketBase
+    ↕ HTTPS
+[L2 노드 서버]  ← 시군구 단위
+    ↕
+[L3 → L4 → L5]</pre>
+    <p>BTS와 L1 노드가 동일한 시설에 위치하면 레이턴시를 최소화할 수 있다. 이동통신 사업자(KT, SKT, LG U+)가 L1 노드 운영 주체가 되면 기존 NOC 인프라를 활용 가능하다.</p>
+  </div>
+
+  <div class="subsection" id="s7-4">
+    <h3 class="subsection-heading"><span class="subsection-num">7.4</span>5G MEC와 L1 배치</h3>
+    <p>5G MEC(Mobile Edge Computing)는 기지국 근처에 컴퓨팅 자원을 배치하여 레이턴시를 극소화하는 기술이다. L1 노드를 MEC 서버에 배치하면:</p>
+    <ul>
+      <li>단말↔L1 레이턴시: 1~5ms (MEC) vs 20~50ms (중앙 클라우드)</li>
+      <li>데이터가 지역을 벗어나지 않아 개인정보보호 강화</li>
+      <li>5G 네트워크 슬라이싱으로 OpenHash 전용 대역폭 보장 가능</li>
+    </ul>
+  </div>
+
+  <div class="subsection" id="s7-5">
+    <h3 class="subsection-heading"><span class="subsection-num">7.5</span>이동통신 사업자 참여 모델</h3>
+    <ul>
+      <li><strong>인프라 제공</strong>: 기지국 내 서버 공간, 전력, 네트워크</li>
+      <li><strong>신뢰 계층 역할</strong>: 통신 사업자 라이선스에 따른 제도적 신뢰</li>
+      <li><strong>SIM 기반 인증</strong>: 기존 SIM 카드 인증 인프라와 Ed25519 서명 연동</li>
+      <li><strong>수익 모델</strong>: TX 처리 수수료를 GDC(₮)로 수령</li>
+    </ul>
+  </div>
+
+  <div class="subsection" id="s7-6">
+    <h3 class="subsection-heading"><span class="subsection-num">7.6</span>로밍 사용자의 LCAT 결정</h3>
+<pre>
+A의 L1: KR-JEJU-JEJU-HANLIM (등록 주소 기준)
+B의 L1: KR-SEOUL-JUNG-... (서울 중구)
+
+LCAT(A, B) = min{k : tier_k(A) = tier_k(B)} = L4 (KR — 같은 국가)
+
+→ L4 이상이 불변 계층, L1~L3이 가변 계층
+→ L4 노드(한국은행, 금융결제원 등)가 최종 합의</pre>
+    <p>제주도→서울 간 거래는 L4가 anchoring 계층이 된다. 국제 거래는 L5가 LCAT다.</p>
+  </div>
+
+  <div class="subsection" id="s7-7">
+    <h3 class="subsection-heading"><span class="subsection-num">7.7</span>SIM 기반 인증과 Ed25519 서명 연동</h3>
+<pre>
+[사용자 단말의 SIM]
+    ↓ IMSI/MSISDN → 신원 확인
+[이동통신 사업자 AAA 서버]
+    ↓ 인증 완료 → 세션 키 발급
+[OpenHash L1 노드]
+    ↓ 세션 키 → Ed25519 서명 키 파생
+[TX 서명 및 전송]</pre>
+    <p>SIM의 하드웨어 보안 요소(SE)를 활용하면 서명 키를 단말 외부에 노출하지 않고 안전하게 관리할 수 있다. 사용자가 별도의 키를 관리할 필요 없이 기존 휴대폰 SIM으로 OpenHash에 참여할 수 있게 한다.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     8. 설치 오류 및 대응
+════════════════════════════════════════════════════════════ -->
+<section class="section" id="s8">
+  <div class="section-heading">
+    <span class="section-num">08</span>
+    <h2 class="section-title">자주 발생하는 설치 오류 및 대응 방법</h2>
+  </div>
+  <p>이 섹션은 제주도 한림읍 파일럿 구현 과정에서 실제로 발생한 오류들을 기록한다. 동일한 환경에서 재현하는 경우 반드시 이 섹션을 먼저 숙지하라.</p>
+
+  <div class="subsection" id="s8-1">
+    <h3 class="subsection-heading"><span class="subsection-num">8.1</span>/child_root 경로 예약어 충돌</h3>
+    <p><strong>증상</strong>: POST <code>/child_root</code> 요청이 항상 400을 반환한다. 핸들러 내부 코드가 실행되지 않는다. 로그에 아무런 오류가 없다.</p>
+    <p><strong>원인</strong>: PocketBase v0.22에서 <code>/child_root</code> 경로는 내부 라우터가 예약하고 있다. <code>routerAdd</code>로 등록해도 PocketBase 내부 라우터가 먼저 가로채며, 훅 핸들러는 절대 실행되지 않는다.</p>
+    <p><strong>해결</strong>: 전체 코드에서 <code>/child_root</code> → <code>/push_root</code>로 교체한다.</p>
+<pre>
+sed -i 's|/child_root|/push_root|g' /opt/gopang/pb_hooks/main.pb.js
+sed -i 's|/child_root|/push_root|g' /opt/gopang/mock/mock-server.js</pre>
+  </div>
+
+  <div class="subsection" id="s8-2">
+    <h3 class="subsection-heading"><span class="subsection-num">8.2</span>전역 함수 정의 불가 (Goja 엔진 제약)</h3>
+    <p><strong>증상</strong>: main.pb.js를 배포하면 <code>/health</code>는 정상이지만 <code>/push_root</code>가 400을 반환한다. 로그에 훅 관련 오류가 전혀 없다.</p>
+    <p><strong>원인</strong>: PocketBase v0.22의 JS 훅 엔진은 표준 Node.js가 아닌 Goja(Go 기반 ES5+ 인터프리터)다. 전역 스코프에서 함수를 정의하면 훅 등록 단계에서 내부 예외가 발생한다. 이 예외는 로그에 기록되지 않고 조용히 무시된다.</p>
+    <p><strong>해결</strong>: 모든 코드를 핸들러 내부에 인라인으로 작성한다. 전역 함수/변수를 정의하지 않는다.</p>
+<pre>
+// ❌ 잘못된 패턴 — 전역 함수
+function getSelf() { ... }
+routerAdd("POST", "/push_root", (c) => {
+  const self = getSelf();  // 작동하지 않음
+});
+
+// ✅ 올바른 패턴 — 핸들러 내 인라인
+routerAdd("POST", "/push_root", (c) => {
+  const NODE_CONFIG = { ... };  // 핸들러 안에 정의
+  const name = $app.dataDir().split("/").pop();
+  const self = NODE_CONFIG[name];
+});</pre>
+  </div>
+
+  <div class="subsection" id="s8-3">
+    <h3 class="subsection-heading"><span class="subsection-num">8.3</span>pb_hooks 디렉토리 내 비JS 파일</h3>
+    <p><strong>증상</strong>: PocketBase가 파일 변경을 감지하고 불필요하게 재시작된다. 또는 훅이 전혀 로드되지 않고 모든 커스텀 라우트가 405를 반환한다.</p>
+    <p><strong>원인</strong>: PocketBase는 <code>--hooksDir</code> 디렉토리의 모든 파일을 JS로 파싱하려 시도한다. 확장자를 구분하지 않으므로 <code>.bak</code>, <code>.bak2</code>, <code>.txt</code> 등 모든 파일이 파싱 대상이 된다.</p>
+    <p><strong>해결</strong>: pb_hooks 디렉토리에는 <code>main.pb.js</code> 단 하나만 유지한다.</p>
+<pre>
+# 백업은 외부 경로에 저장
+cp /opt/gopang/pb_hooks/main.pb.js /opt/gopang/main.pb.js.bak.$(date +%Y%m%d)
+
+# pb_hooks 내 잔여 파일 제거
+rm -f /opt/gopang/pb_hooks/main.pb.js.bak*</pre>
+  </div>
+
+  <div class="subsection" id="s8-4">
+    <h3 class="subsection-heading"><span class="subsection-num">8.4</span>pb_migrations 중복</h3>
+    <p><strong>증상</strong>: PocketBase 재시작 시 <code>UNIQUE constraint failed: _collections.name</code> 오류가 반복된다.</p>
+    <p><strong>원인</strong>: Admin UI에서 컬렉션을 생성하면 <code>pb_migrations/</code> 디렉토리에 마이그레이션 파일이 자동 생성된다. 여러 인스턴스가 <code>--hooksDir</code>를 공유하므로 마이그레이션이 중복 적용된다.</p>
+    <p><strong>해결</strong>:</p>
+<pre>
+for NAME in l2-jeju l2-seogwipo l3-jejudo l4-kr l5-global; do
+  rm -f /opt/gopang/pb/${NAME}/pb_migrations/*node_ledger*
+done
+
+for NAME in hanlim l2-jeju l2-seogwipo l3-jejudo l4-kr l5-global; do
+  sudo systemctl restart gopang-pb-${NAME}
+done</pre>
+  </div>
+
+  <div class="subsection" id="s8-5">
+    <h3 class="subsection-heading"><span class="subsection-num">8.5</span>--hooksDir 미지정</h3>
+    <p><strong>증상</strong>: 훅 파일이 존재하는데 모든 커스텀 라우트가 405 Method Not Allowed를 반환한다.</p>
+    <p><strong>원인</strong>: systemd 서비스 파일에서 <code>--hooksDir</code> 옵션을 누락했다.</p>
+    <p><strong>해결</strong>: 서비스 파일에 <code>--hooksDir=/opt/gopang/pb_hooks</code> 추가 후 <code>sudo systemctl daemon-reload &amp;&amp; sudo systemctl restart gopang-pb-hanlim</code>.</p>
+  </div>
+
+  <div class="subsection" id="s8-6">
+    <h3 class="subsection-heading"><span class="subsection-num">8.6</span>process.argv 사용 불가</h3>
+    <p><strong>증상</strong>: <code>process.argv</code>로 <code>--http</code> 포트를 파싱하려 하면 null이 반환된다.</p>
+    <p><strong>원인</strong>: Goja 엔진에서 <code>process.argv</code>는 지원되지 않는다.</p>
+    <p><strong>해결</strong>: <code>$app.dataDir()</code> 경로 파싱을 사용한다. (4.4절 참조)</p>
+  </div>
+
+  <div class="subsection" id="s8-7">
+    <h3 class="subsection-heading"><span class="subsection-num">8.7</span>Node.js 버전 문제</h3>
+    <p><strong>증상</strong>: Mock 서버에서 <code>fetch is not defined</code> 오류 발생.</p>
+    <p><strong>원인</strong>: Ubuntu apt 기본 Node.js 버전(v12)은 내장 <code>fetch()</code> API를 지원하지 않는다.</p>
+    <p><strong>해결</strong>: nodesource를 통해 v20 설치. (2.3절 참조)</p>
+  </div>
+
+  <div class="subsection" id="s8-8">
+    <h3 class="subsection-heading"><span class="subsection-num">8.8</span>Mock 서버 systemd 서비스 누락</h3>
+    <p><strong>증상</strong>: <code>systemctl start gopang-mock</code> 실행 시 <code>Unit gopang-mock.service not found</code> 오류.</p>
+    <p><strong>해결</strong>: 3.5절의 서비스 파일 생성 절차를 따른다.</p>
+  </div>
+
+  <div class="subsection" id="s8-9">
+    <h3 class="subsection-heading"><span class="subsection-num">8.9</span>붙여넣기 이스케이프 코드 오염</h3>
+    <p><strong>증상</strong>: 서버 터미널에 붙여넣기 시 <code>[200~</code>, <code>[201~</code> 같은 이스케이프 코드가 혼입되어 명령이 오작동한다.</p>
+    <p><strong>원인</strong>: 브래킷 붙여넣기 모드(bracketed paste mode)가 활성화된 터미널에서 멀티라인 명령을 붙여넣으면 이스케이프 시퀀스가 혼입된다.</p>
+    <p><strong>해결</strong>: Ctrl+C로 현재 입력 취소 후 한 줄씩 입력하거나 파일로 서버에 올려 실행한다.</p>
+  </div>
+
+  <div class="subsection" id="s8-10">
+    <h3 class="subsection-heading"><span class="subsection-num">8.10</span>sqlite3 미설치</h3>
+    <p><strong>증상</strong>: <code>sqlite3: command not found</code></p>
+    <p><strong>해결</strong>: <code>sudo apt install -y sqlite3</code></p>
+  </div>
+
+  <div class="subsection" id="s8-11">
+    <h3 class="subsection-heading"><span class="subsection-num">8.11</span>오류 로그 확인 방법</h3>
+<pre>
+# systemd 로그
+journalctl -u gopang-pb-hanlim -f
+journalctl -u gopang-pb-l2-jeju --since "10 minutes ago" --no-pager
+
+# 파일 로그
+tail -30 /opt/gopang/logs/l2-jeju_err.log
+
+# 전체 서비스 상태
+for NAME in hanlim l2-jeju l2-seogwipo l3-jejudo l4-kr l5-global; do
+  echo "${NAME}: $(systemctl is-active gopang-pb-${NAME})"
+done</pre>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     9. 제주도 실증 프로젝트
+════════════════════════════════════════════════════════════ -->
+<section class="section" id="s9">
+  <div class="section-heading">
+    <span class="section-num">09</span>
+    <h2 class="section-title">제주도 실증 프로젝트의 구현과 구성</h2>
+  </div>
+
+  <div class="subsection" id="s9-1">
+    <h3 class="subsection-heading"><span class="subsection-num">9.1</span>파일럿 개요</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>대상 지역</td><td>제주특별자치도 제주시 한림읍</td></tr>
+        <tr><td>인구 규모</td><td>약 20,000명</td></tr>
+        <tr><td>기관 수</td><td>약 1,000개</td></tr>
+        <tr><td>L1 실제 노드</td><td>1개 (한림읍, 포트 8091)</td></tr>
+        <tr><td>L1 Mock 노드</td><td>13개 (나머지 읍면동)</td></tr>
+        <tr><td>L2~L5 노드</td><td>5개 (PocketBase, 포트 8092~8096)</td></tr>
+        <tr><td>인프라</td><td>Oracle Cloud VM.Standard.E2.1.Micro</td></tr>
+        <tr><td>IP</td><td>168.110.123.175 (Oracle Cloud 춘천 리전)</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="subsection" id="s9-2">
+    <h3 class="subsection-heading"><span class="subsection-num">9.2</span>포트 구성</h3>
+<pre>
+포트 8091: L1 한림읍 (real PocketBase)
+포트 8092: L2 제주시 (real PocketBase)
+포트 8093: L2 서귀포시 (real PocketBase)
+포트 8094: L3 제주특별자치도 (real PocketBase)
+포트 8095: L4 대한민국 (real PocketBase)
+포트 8096: L5 Global (real PocketBase)
+포트 8101~8113: L1 나머지 읍면동 (Mock)</pre>
+    <p>모든 노드는 <code>127.0.0.1</code>(로컬호스트)에만 바인딩된다. 외부 접근이 필요한 경우 SSH 터널 또는 Cloudflare Tunnel 사용.</p>
+  </div>
+
+  <div class="subsection" id="s9-3">
+    <h3 class="subsection-heading"><span class="subsection-num">9.3</span>Gopang 플랫폼 연동</h3>
+<pre>
+[사용자]
+    ↕ HTTPS
+[Cloudflare Worker] (gopang-proxy.tensor-city.workers.dev)
+    ↕ REST API
+[Supabase PDV] (ebbecjfrwaswbdybbgiu.supabase.co)
+    ↓ SHA-256(원본)
+[OpenHash L1 노드] (Oracle VM: 168.110.123.175:8091)
+    ↓ ILMV
+[L2 → L3 → L4 → L5]</pre>
+    <p>PDV에 저장되는 원본 데이터는 Supabase에서 암호화 보관된다. OpenHash에는 오직 SHA-256 해시만 전송되므로, 원본 데이터가 분산 원장에 노출되지 않는다.</p>
+  </div>
+
+  <div class="subsection" id="s9-4">
+    <h3 class="subsection-heading"><span class="subsection-num">9.4</span>성능 실측 (단일 VM 환경)</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>측정값</th></tr></thead>
+      <tbody>
+        <tr><td>전체 노드 Health 상태</td><td>19/19 정상</td></tr>
+        <tr><td>L1 TX E2E (ILMV 포함)</td><td>parent_root 수신까지 &lt; 100ms</td></tr>
+        <tr><td>Mock TX E2E (13개 노드)</td><td>parent_root 수신 전원 성공</td></tr>
+        <tr><td>위변조 탐지</td><td>leaf_hash 변조 즉시 탐지</td></tr>
+        <tr><td>일일 스냅샷</td><td>GitHub 자동 업로드 성공</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="subsection" id="s9-5">
+    <h3 class="subsection-heading"><span class="subsection-num">9.5</span>GitHub 스냅샷 운영</h3>
+    <p>매일 새벽 3시(KST) 자동 실행 (crontab: <code>0 3 * * * /opt/gopang/batch/daily_snapshot.sh</code>). 스냅샷 내용: 전 노드(19개) health 상태, 전 노드 Merkle root, L1 최근 100건 TX 기록, L2 node_ledger 최근 50건. 결과: <code>https://github.com/Openhash-Gopang/openhash</code></p>
+  </div>
+
+  <div class="subsection" id="s9-6">
+    <h3 class="subsection-heading"><span class="subsection-num">9.6</span>단계별 확장 로드맵</h3>
+    <ul>
+      <li><strong>Phase 0 (현재)</strong>: 한림읍 단일 노드 파일럿. real 1개 + mock 13개 완성, ILMV 검증 완료.</li>
+      <li><strong>Phase 1</strong>: 제주시 전체 읍면동 real 노드 전환. 조건: 각 읍면동 기관 참여 협약.</li>
+      <li><strong>Phase 2</strong>: 서귀포시 포함 제주도 전체. 조건: 제주도청 참여, L3 공식 운영.</li>
+      <li><strong>Phase 3</strong>: 제주도 → 육지 확장. 조건: L4 한국 노드 공식 기관 참여 (금융결제원 등).</li>
+    </ul>
+    <p>네트워크 효과 임계점: DAU 2,000명 이상, 주간 활성 GDC 사용자 1,000명 이상.</p>
+  </div>
+
+  <div class="subsection" id="s9-7">
+    <h3 class="subsection-heading"><span class="subsection-num">9.7</span>향후 Cloudflare Tunnel 연동 계획</h3>
+    <p>현재 모든 노드는 내부(127.0.0.1)에서만 접근 가능하다. Cloudflare Tunnel을 설정하면 <code>pb-hanlim.gopang.net</code>을 통해 외부 접근 및 Cloudflare Worker에서 L1 노드 직접 호출이 가능해진다. 사전 조건: gopang.net 도메인을 Cloudflare에 등록 후 진행.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     10. 전국 프로젝트 설계
+════════════════════════════════════════════════════════════ -->
+<section class="section" id="s10">
+  <div class="section-heading">
+    <span class="section-num">10</span>
+    <h2 class="section-title">한국 전국 실증 프로젝트 설계</h2>
+  </div>
+
+  <div class="subsection" id="s10-1">
+    <h3 class="subsection-heading"><span class="subsection-num">10.1</span>전국 노드 설계</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>계층</th><th>행정구역</th><th>노드 수</th><th>이중화</th><th>총 노드</th></tr></thead>
+      <tbody>
+        <tr><td>L1</td><td>읍면동</td><td>3,500개</td><td>× 2</td><td>7,000</td></tr>
+        <tr><td>L2</td><td>시군구</td><td>226개</td><td>× 2</td><td>452</td></tr>
+        <tr><td>L3</td><td>광역시도</td><td>17개</td><td>× 3</td><td>51</td></tr>
+        <tr><td>L4</td><td>대한민국</td><td>13개 기관</td><td>× 1</td><td>13</td></tr>
+        <tr><td>L5</td><td>Global</td><td>19개 이상</td><td>× 1</td><td>19</td></tr>
+        <tr><td colspan="4"><strong>전국 총 노드 수</strong></td><td><strong>약 7,535개</strong></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="subsection" id="s10-2">
+    <h3 class="subsection-heading"><span class="subsection-num">10.2</span>L4 운영 주체 후보</h3>
+    <p>L4(국가 단위)는 독립적인 국가기관이 운영해야 한다. 최소 13개 기관 필요 (f=4, n ≥ 3f+1 = 13).</p>
+    <p>후보 기관: 금융결제원, 한국은행, 국세청, 법원행정처, 행정안전부, 한국인터넷진흥원(KISA), 국가정보원, 금융감독원, 건강보험심사평가원, 국민건강보험공단, 국민연금공단, 한국전력공사, 한국도로공사</p>
+  </div>
+
+  <div class="subsection" id="s10-3">
+    <h3 class="subsection-heading"><span class="subsection-num">10.3</span>인프라 비용 추정</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>단계</th><th>노드 수</th><th>예상 월 비용</th></tr></thead>
+      <tbody>
+        <tr><td>Phase 0 (제주 파일럿)</td><td>19개 (1 VM)</td><td>무료 (Oracle Free)</td></tr>
+        <tr><td>Phase 1 (제주시 전체)</td><td>19개</td><td>~$30/월</td></tr>
+        <tr><td>Phase 2 (제주도 전체)</td><td>26개</td><td>~$50/월</td></tr>
+        <tr><td>Phase 3 (전국)</td><td>7,535개</td><td>~$30,000/월</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="subsection" id="s10-4">
+    <h3 class="subsection-heading"><span class="subsection-num">10.4</span>거버넌스 구조</h3>
+    <p>L5 대표 노드 선출 및 시스템 파라미터 변경은 분기(90일)마다 자동화된 DAO 선출 알고리즘으로 결정된다. 선출 기준: 처리량 상위 10%, 12개월 이상 무결점 이력, 지리적 다양성 지수(GPDI) ≥ 0.7 유지. 변경 이력은 L5 해시 체인에 불변 기록.</p>
+  </div>
+
+  <div class="subsection" id="s10-5">
+    <h3 class="subsection-heading"><span class="subsection-num">10.5</span>법적·제도적 고려사항</h3>
+    <p><strong>개인정보보호법 (PIPA)</strong>: OpenHash에는 원본 데이터가 아닌 해시값만 기록되므로 개인정보 비해당. 해시값으로부터 원본 역산 불가 (SHA-256 역상 저항성).</p>
+    <p><strong>전자서명법</strong>: Ed25519 기반 전자서명의 법적 효력을 위해 장기적으로 전자서명법 개정 또는 별도 입법 필요.</p>
+    <p><strong>금융 규제</strong>: GDC(₮)는 내부 포인트 성격으로 설계. 고액 거래에 대한 AML 보고 의무는 Stage 5 규제 준수 파이프라인에서 처리.</p>
+  </div>
+
+  <div class="subsection" id="s10-6">
+    <h3 class="subsection-heading"><span class="subsection-num">10.6</span>단계적 배포 전략</h3>
+<pre>
+2026 H2: 제주 Phase 0~1 완료
+2027 H1: 제주 Phase 2 완료 + 수도권 Phase 0 시작
+2027 H2: 수도권 Phase 1 완료 + 타 광역시 Phase 0
+2028 H1: 전국 Phase 1 완료
+2028 H2: 전국 Phase 2 완료 (L4 공식 기관 참여)
+2029~  : 전국 Phase 3 + 글로벌 L5 확장</pre>
+  </div>
+
+  <div class="subsection" id="s10-7">
+    <h3 class="subsection-heading"><span class="subsection-num">10.7</span>KPI 및 성공 지표</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>지표</th><th>Phase 1 목표</th><th>Phase 2 목표</th><th>Phase 3 목표</th></tr></thead>
+      <tbody>
+        <tr><td>일일 활성 사용자 (DAU)</td><td>500</td><td>2,000</td><td>50,000</td></tr>
+        <tr><td>일일 TX 건수</td><td>1,000</td><td>10,000</td><td>1,000,000</td></tr>
+        <tr><td>노드 가동률</td><td>99%</td><td>99.5%</td><td>99.9%</td></tr>
+        <tr><td>위변조 탐지율</td><td>100%</td><td>100%</td><td>100%</td></tr>
+        <tr><td>ILMV E2E 레이턴시</td><td>&lt; 500ms</td><td>&lt; 200ms</td><td>&lt; 100ms</td></tr>
+        <tr><td>GDC 주간 활성 사용자</td><td>200</td><td>1,000</td><td>20,000</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     11. 부록
+════════════════════════════════════════════════════════════ -->
+<section class="section" id="s11">
+  <div class="section-heading">
+    <span class="section-num">11</span>
+    <h2 class="section-title">부록</h2>
+  </div>
+
+  <div class="subsection">
+    <div class="appendix-label">부록 A</div>
+    <h3 class="subsection-heading">ILMV 위변조 탐지 형식 증명</h3>
+    <p><strong>정리 1 (위변조 탐지 정리)</strong>: 임의의 경제 단위 u의 데이터 레코드가 위변조된 경우, 최소 1개 이상의 계층에서 잔액 불변성 위반 또는 잔액 매핑 불일치가 탐지된다.</p>
+    <p><strong>전제 조건</strong>: P-1 SHA-256 충돌 저항성, P-2 Merkle 트리 바인딩 속성, P-3 해시 체인 이중 서명 요구, P-4 ILMV 하향 감사 6개 항목 수행.</p>
+    <p><strong>경우 1</strong> (잔액 변동, ε ≠ 0): u의 잔액이 ε 변경되면 L1 집합 잔액이 ε 변동. 불변 계층에서 Σδ_k ≠ 0이 되어 L2→L1 100% 스트리밍 감사에서 즉시 탐지.</p>
+    <p><strong>경우 2</strong> (잔액 이전, Σ보존): A에서 B로 ε 무단 이전 시, BMI_k(T)_실제 ≠ BMI_k(T)_예상. P-2(Merkle 바인딩)에 의해 불일치 탐지.</p>
+    <p><strong>경우 3</strong> (복합 위변조): 임의의 위변조는 경우 1과 2의 합으로 분해 가능하므로 둘 중 하나 이상에서 탐지. ∎</p>
+  </div>
+
+  <div class="subsection">
+    <div class="appendix-label">부록 B</div>
+    <h3 class="subsection-heading">LPBFT 상태 전이 명세</h3>
+<pre>
+S0: NORMAL_MODE     → [발동 조건 (i)~(v)] → S1
+S1: LPBFT_TRIGGERED → [Pre-prepare 준비]  → S2
+S2: LPBFT_PHASE1    → [2f+1 확인]         → S3
+S3: LPBFT_PHASE2    → [Prepare 수집]      → S4
+S4: LPBFT_PHASE3    → [Commit 완료]       → S5
+S5: RECOVERY_MODE   → [비활성화 조건 충족] → S0
+S5: RECOVERY_MODE   → [60초 타임아웃]     → S1 (재발동)
+S6: NODE_ISOLATED   → [교체 완료]         → S0</pre>
+    <p><strong>비활성화 조건</strong> (4개 모두 충족): (a) 오류 노드 격리 완료, (b) 데이터 불일치 해소, (c) 계층 잔액 무결성 복원, (d) 대표 노드 2/3 이상 건강 상태 확인.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="appendix-label">부록 C</div>
+    <h3 class="subsection-heading">인프라 상수</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>값</th></tr></thead>
+      <tbody>
+        <tr><td>Supabase URL</td><td>https://ebbecjfrwaswbdybbgiu.supabase.co</td></tr>
+        <tr><td>Cloudflare Worker</td><td>https://gopang-proxy.tensor-city.workers.dev</td></tr>
+        <tr><td>GitHub Org</td><td>Openhash-Gopang</td></tr>
+        <tr><td>Oracle VM IP</td><td>168.110.123.175</td></tr>
+        <tr><td>SSH Key</td><td>gopang-l1.key</td></tr>
+        <tr><td>PocketBase Admin 이메일</td><td>admin@gopang.net</td></tr>
+        <tr><td>PocketBase Admin 비밀번호</td><td>Admin1234!</td></tr>
+        <tr><td>Admin UI</td><td>http://127.0.0.1:{PORT}/_/ (SSH 터널 필요)</td></tr>
+        <tr><td>개발 환경</td><td>Windows PowerShell</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="appendix-label">부록 D</div>
+    <h3 class="subsection-heading">API 전체 레퍼런스</h3>
+    <p><strong>GET /health</strong></p>
+    <pre>{"ok": true, "node": "KR-JEJU-JEJU-HANLIM", "layer": 1, "type": "real", "timestamp": "..."}</pre>
+    <p><strong>GET /merkle</strong></p>
+    <pre>{"ok": true, "chain_length": 5, "merkle_root": "cba39b6ef475ae15...", "recent": [...], "timestamp": "..."}</pre>
+    <p><strong>POST /tx</strong> (L1 전용) — 요청:</p>
+    <pre>{"tx_id": "unique-tx-id", "tx_type": "BIZ_ORDER", "from_guid": "2001:db8::1", "leaf_hash": "SHA-256 hex (64자)", "signature": "Ed25519 Base64URL", "pubkey": "..."}</pre>
+    <p>응답:</p>
+    <pre>{"ok": true, "node": "KR-JEJU-JEJU-HANLIM", "tx_id": "...", "merkle_root": "...", "parent_root": "L5→L1 ILMV 반환 root"}</pre>
+    <p><strong>POST /push_root</strong> (L2~L5) — 요청:</p>
+    <pre>{"child_node": "KR-JEJU-JEJU-HANLIM", "child_root": "merkle root hex"}</pre>
+    <p>응답:</p>
+    <pre>{"ok": true, "node": "KR-JEJU-JEJU-SI", "merkle_root": "현재 노드 Merkle root", "parent_root": "상위에서 받은 ILMV root"}</pre>
+  </div>
+
+  <div class="subsection">
+    <div class="appendix-label">부록 E</div>
+    <h3 class="subsection-heading">node-registry.json 전체 스키마</h3>
+    <p>전체 노드 구성은 3.1절을 참조. 각 노드 엔트리의 필드 구조:</p>
+    <pre>
+{
+  "nodes": {
+    "{NODE_ID}": {
+      "type":  "real" | "mock",   // real = PocketBase, mock = Node.js
+      "port":  8091~8113,          // 로컬 바인딩 포트
+      "layer": 1~5,                // 계층 번호
+      "name":  "한국어 지명"        // 표시용 이름
+    }
+  }
+}</pre>
+  </div>
+
+  <div class="subsection">
+    <div class="appendix-label">부록 F</div>
+    <h3 class="subsection-heading">main.pb.js 전체 소스 코드 v1.1</h3>
+    <p>배포 위치: <code>/opt/gopang/pb_hooks/main.pb.js</code>. 변경 이력: v1.0 단방향 전파, v1.1 ILMV 양방향 반환 구현, <code>/child_root</code> → <code>/push_root</code> 경로 변경.</p>
+<pre>
+/// &lt;reference path="../pb_data/types.d.ts" /&gt;
+
+routerAdd("GET", "/health", (c) =&gt; {
+  const NODE_CONFIG = {
+    "hanlim":      { id: "KR-JEJU-JEJU-HANLIM", layer: 1 },
+    "l2-jeju":     { id: "KR-JEJU-JEJU-SI",     layer: 2 },
+    "l2-seogwipo": { id: "KR-JEJU-SGP-SI",      layer: 2 },
+    "l3-jejudo":   { id: "KR-JEJU",             layer: 3 },
+    "l4-kr":       { id: "KR",                  layer: 4 },
+    "l5-global":   { id: "GLOBAL",              layer: 5 },
+  };
+  const name = $app.dataDir().split("/").pop();
+  const self = NODE_CONFIG[name] || NODE_CONFIG["hanlim"];
+  return c.json(200, { ok: true, node: self.id, layer: self.layer,
+    type: "real", timestamp: new Date().toISOString() });
+});
+
+routerAdd("POST", "/tx", (c) =&gt; {
+  const body = $apis.requestInfo(c).data;
+  const { tx_id, leaf_hash, from_guid, tx_type, signature, pubkey } = body;
+  if (!tx_id || !leaf_hash) return c.json(400, { ok: false, error: "MISSING_FIELD" });
+  // ... l1_ledger 저장, Merkle 계산, L2 /push_root 전파, parent_root 업데이트 ...
+  return c.json(200, { ok: true, node: "KR-JEJU-JEJU-HANLIM",
+    tx_id, leaf_hash, merkle_root: myRoot, parent_root: parentRoot });
+});
+
+routerAdd("POST", "/push_root", (c) =&gt; {
+  const body = $apis.requestInfo(c).data;
+  const { child_node, child_root } = body;
+  if (!child_node || !child_root) return c.json(400, { ok: false, error: "MISSING_FIELD" });
+  const NODE_CONFIG = {
+    "hanlim":      { id:"KR-JEJU-JEJU-HANLIM", layer:1, parentUrl:"http://127.0.0.1:8092", selfNode:"KR-JEJU-JEJU-HANLIM" },
+    "l2-jeju":     { id:"KR-JEJU-JEJU-SI",     layer:2, parentUrl:"http://127.0.0.1:8094", selfNode:"KR-JEJU-JEJU-SI"     },
+    "l2-seogwipo": { id:"KR-JEJU-SGP-SI",      layer:2, parentUrl:"http://127.0.0.1:8094", selfNode:"KR-JEJU-SGP-SI"      },
+    "l3-jejudo":   { id:"KR-JEJU",             layer:3, parentUrl:"http://127.0.0.1:8095", selfNode:"KR-JEJU"             },
+    "l4-kr":       { id:"KR",                  layer:4, parentUrl:"http://127.0.0.1:8096", selfNode:"KR"                  },
+    "l5-global":   { id:"GLOBAL",              layer:5, parentUrl:null,                    selfNode:"GLOBAL"              },
+  };
+  const name = $app.dataDir().split("/").pop();
+  const self = NODE_CONFIG[name] || NODE_CONFIG["hanlim"];
+  // ... node_ledger 저장, Merkle 계산, 상위 전파, parent_root 업데이트 ...
+  // L5: parentRoot = myRoot (ILMV 시작점)
+  return c.json(200, { ok: true, node: self.id, child_node,
+    merkle_root: myRoot, parent_root: parentRoot });
+});</pre>
+  </div>
+
+  <div class="subsection">
+    <div class="appendix-label">부록 G</div>
+    <h3 class="subsection-heading">mock-server.js 전체 소스 코드 v1.1</h3>
+    <p>배포 위치: <code>/opt/gopang/mock/mock-server.js</code>. 변경 이력: v1.1 <code>/child_root</code> → <code>/push_root</code> 경로 변경 (PocketBase 예약어 충돌 해결). 전체 코드는 <code>https://github.com/Openhash-Gopang/openhash</code> 참조.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="appendix-label">부록 H</div>
+    <h3 class="subsection-heading">검증 명령어 모음</h3>
+<pre>
+# 전체 노드 health 확인
+for PORT in 8091 8092 8093 8094 8095 8096; do
+  echo -n "포트 ${PORT}: "
+  curl -s http://127.0.0.1:${PORT}/health | python3 -c \
+    "import sys,json; d=json.load(sys.stdin); print(f\"{d.get('node','?')} — layer {d.get('layer','?')}\")" 2>/dev/null || echo "FAIL"
+done
+
+# ILMV E2E 검증 (parent_root != null 이면 성공)
+curl -s -X POST http://127.0.0.1:8091/tx \
+  -H "Content-Type: application/json" \
+  -d '{"tx_id":"verify-001","tx_type":"TEST","from_guid":"2001:db8::test",
+       "leaf_hash":"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"}' \
+  | python3 -m json.tool
+
+# 전체 계층 chain 상태
+for PORT in 8091 8092 8094 8095 8096; do
+  echo "=== 포트 ${PORT} chain ==="
+  curl -s http://127.0.0.1:${PORT}/merkle | python3 -c \
+    "import sys,json; d=json.load(sys.stdin); print(f'chain={d[\"chain_length\"]} root={d[\"merkle_root\"][:16]}...')"
+done
+
+# 전체 서비스 재시작
+for NAME in hanlim l2-jeju l2-seogwipo l3-jejudo l4-kr l5-global; do
+  sudo systemctl restart gopang-pb-${NAME}
+done
+sudo systemctl restart gopang-mock</pre>
+  </div>
+
+  <div class="subsection">
+    <div class="appendix-label">부록 I</div>
+    <h3 class="subsection-heading">참고문헌</h3>
+    <ol style="font-size:13px; line-height:1.7;">
+      <li>S. Nakamoto, "Bitcoin: A peer-to-peer electronic cash system," 2008.</li>
+      <li>Cambridge Centre for Alternative Finance, "Cambridge Bitcoin Electricity Consumption Index," 2025.</li>
+      <li>V. Buterin and V. Griffith, "Casper the friendly finality gadget," arXiv:1710.09437, 2017.</li>
+      <li>S. Popov, "The Tangle," IOTA Foundation White Paper, v1.4.3, 2018.</li>
+      <li>L. Baird, "The Swirlds Hashgraph consensus algorithm," Swirlds TR, 2016.</li>
+      <li>E. Kokoris-Kogias et al., "OmniLedger," IEEE S&amp;P 2018.</li>
+      <li>M. Castro and B. Liskov, "Practical Byzantine fault tolerance," OSDI 1999.</li>
+      <li>M. Yin et al., "HotStuff," PODC 2019.</li>
+      <li>D. Boneh et al., "Short signatures from the Weil pairing," ASIACRYPT 2001.</li>
+      <li>NIST FIPS 204, "CRYSTALS-Dilithium Digital Signature Standard," 2023.</li>
+      <li>A. Shamir, "How to share a secret," CACM, 1979.</li>
+      <li>F. T. Liu et al., "Isolation Forest," ICDM 2008.</li>
+      <li>Y.-M. Do, "OpenHash SCI 논문 초안 v2.2," AI City Inc., 2026.</li>
+      <li>E. Ben-Sasson et al., "Zerocash," IEEE S&amp;P 2014.</li>
+      <li>V. Costan and S. Devadas, "Intel SGX Explained," IACR ePrint 2016.</li>
+      <li>S. Müller et al., "IOTA 2.0," IOTA Foundation TR, 2024.</li>
+      <li>Y. Gilad et al., "Algorand," SOSP 2017.</li>
+      <li>W. Shi et al., "Edge computing: Vision and challenges," IEEE IoT J., 2016.</li>
+      <li>A. S. Aiyer et al., "BAR fault tolerance," ACM SOSP 2005.</li>
+      <li>L. Lamport, "Specifying systems: The TLA+ language," Addison-Wesley, 2002.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══════════════════════════════════════════════ -->
+<footer class="paper-footer">
+  <span>OpenHash: 계층적 분산 원장 시스템 — 설치 가이드라인 및 기술 백서 v1.1</span>
+  <span>AI City Inc. — Team Jupiter | 2026-06-09</span>
+  <a href="#top" class="back-top">↑ 맨 위로</a>
+</footer>
+
+</div><!-- .paper -->
+</body>
+</html>
