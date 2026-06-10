@@ -906,10 +906,13 @@
       if (!fs || Object.keys(fs).length === 0) {
         if (stored?.ipv6) {
           try {
+            const sbKey = localStorage.getItem('_sbkey')
+                        || localStorage.getItem('gopang_supabase_key')
+                        || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
             const res = await fetch(
               `https://ebbecjfrwaswbdybbgiu.supabase.co/rest/v1/user_profiles`
               + `?current_ipv6=eq.${stored.ipv6}&select=extra&limit=1`,
-              { headers: { apikey: localStorage.getItem('_sbkey') || '' } }
+              { headers: { apikey: sbKey, 'Authorization': `Bearer ${sbKey}` } }
             );
             if (res.ok) {
               const rows = await res.json();
