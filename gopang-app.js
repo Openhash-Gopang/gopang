@@ -1,4 +1,4 @@
-// gopang-app.js — 고팡 앱 코어 (위치·UI·AI·라우터·마이크·K-Law·GWP)
+﻿// gopang-app.js — 고팡 앱 코어 (위치·UI·AI·라우터·마이크·K-Law·GWP)
 (async () => {
 const _USER = await (async () => {
   const STORE_KEY = 'gopang_user_v3';
@@ -3544,6 +3544,7 @@ window.addEventListener('message', (e) => {
   if (msg.type === 'GWP_SIGN_REQUEST') {
     const ALLOWED_ORIGINS = [
       'https://market.gopang.net',
+      'https://users.gopang.net',
       'https://gopang.net',
       'https://openhash-gopang.github.io',
       location.origin,  // 개발 환경 (localhost 등)
