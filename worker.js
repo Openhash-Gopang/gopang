@@ -1,19 +1,7 @@
 // ═══════════════════════════════════════════════════════════
-// gopang-proxy — v4.6
-// AI API 프록시 + SSO 인증 통합
-// GPT-4o mini Vision + DeepSeek V4 Pro + SameSite=None 쿠키 SSO
-// 환경변수: OpenAI, DEEPSEEK_API_KEY, KAKAO_REST_KEY, KAKAO_JS_KEY
-// v4.1 변경: police.gopang.net CORS 추가, /chat/completions 라우트 추가
-// v4.2 변경: insurance·911 CORS 추가, stock·traffic·logistics 신규 등록
-// v4.3 변경: SVC_ALIAS 추가 — gwp-registry.js k-prefix ID 자동 resolve
-// v4.4 변경: /kakao/appkey (GET) + /ai/chat (POST) 라우트 추가
-//            traffic·logistics Kakao Maps SDK 동적 로드 지원
-// v4.5 변경: 기본 모델 deepseek-chat → deepseek-v4-flash
-//            handleAIChat system 필드 undefined 버그 수정
-//            callOpenAIFromGeminiBody fallback 모델 동일 적용
-// v4.6 변경: /pdv/query 추가 — PDV 읽기(read) 프로토콜
-//            handlePdvQuery, _verifyConsentToken, _fetchPdvByScope
-//            _storeConsentRequest, _recordConsentEvent, _checkRateLimit
+// gopang-proxy — v4.8
+// v4.7: /pdv/page, /search, ALLOWED_ORIGINS 추가
+// v4.8: /biz/profile, /biz/order, /biz/review, /biz/product 추가
 // ═══════════════════════════════════════════════════════════
 
 const ALLOWED_ORIGINS = [
@@ -34,12 +22,24 @@ const ALLOWED_ORIGINS = [
   'https://stock.gopang.net',
   'https://traffic.gopang.net',
   'https://logistics.gopang.net',
+  'https://users.gopang.net',
+  'https://l1-hanlim.gopang.net',
   'https://fiil.kr',
   'https://openhash.kr',
   'https://nounweb.github.io',
   'http://localhost',
   'http://127.0.0.1',
 ];
+
+const L1_NODE_MAP = {
+  'KR-JEJU-JEJU-HANLIM':  'https://l1-hanlim.gopang.net',
+  'KR-JEJU-JEJU-IDO1':    'https://openhash-l1-ido1.gopang.net',
+  'KR-JEJU-JEJU':         'https://openhash-l2-jeju-city.gopang.net',
+  'KR-JEJU':              'https://openhash-l3-jeju.gopang.net',
+  'KR':                   'https://openhash-l4-kr.gopang.net',
+  'GLOBAL':               'https://openhash-l5-global.gopang.net',
+};
+const L1_DEFAULT = 'https://l1-hanlim.gopang.net';
 
 const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions';
 const DEEPSEEK_URL   = 'https://api.deepseek.com/v1/chat/completions';
@@ -48,53 +48,20 @@ const OPENAI_MODEL   = 'gpt-4o-mini';
 const DEEPSEEK_MODEL = 'deepseek-v4-flash';
 const SUPABASE_URL   = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
 
-// ── 허용 scope 목록 (PDV_QUERY_PROTOCOL_v1_0.md §scope) ─────
 const VALID_PDV_SCOPES = ['ktraffic', 'khealth', 'pdv_general', 'kmarket', 'k119'];
+const SCOPE_MIN_LEVEL  = { ktraffic:'L1', khealth:'L1', pdv_general:'L1', k119:'L1', kmarket:'L0' };
+const SCOPE_SOURCE_MAP = { ktraffic:'traffic', khealth:'health', pdv_general:null, kmarket:'market', k119:'911' };
 
-// ── scope별 최소 인증 레벨 ─────────────────────────────────
-const SCOPE_MIN_LEVEL = {
-  ktraffic:    'L1',
-  khealth:     'L1',
-  pdv_general: 'L1',
-  k119:        'L1',
-  kmarket:     'L0',
-};
-
-// ── PDV source → pdv_log.source 매핑 ──────────────────────
-const SCOPE_SOURCE_MAP = {
-  ktraffic:    'traffic',
-  khealth:     'health',
-  pdv_general: null,       // null = 소스 미지정, 전체 조회
-  kmarket:     'market',
-  k119:        '911',
-};
-
-// ═══════════════════════════════════════════════════════════
-// v4.3 — 서비스 ID 별칭 테이블
-// ═══════════════════════════════════════════════════════════
 const SVC_ALIAS = {
-  'kemergency':    '911',
-  'kpolice':       'police',
-  'ksecurity':     'security',
-  'khealth':       'health',
-  'kedu':          'school',
-  'kgdc':          'gdc',
-  'kfinance':      'stock',
-  'kinsurance':    'insurance',
-  'ktax':          'tax',
-  'kcommerce':     'market',
-  'ktransport':    'traffic',
-  'klogistics':    'logistics',
-  'fiil-kcleaner': 'fiil',
-  'kgov':          'public',
-  'kdemocracy':    'democracy',
+  'kemergency':'911','kpolice':'police','ksecurity':'security',
+  'khealth':'health','kedu':'school','kgdc':'gdc','kfinance':'stock',
+  'kinsurance':'insurance','ktax':'tax','kcommerce':'market',
+  'ktransport':'traffic','klogistics':'logistics','fiil-kcleaner':'fiil',
+  'kgov':'public','kdemocracy':'democracy',
 };
 
-function _resolveSvcId(svcId) {
-  return SVC_ALIAS[svcId] || svcId;
-}
+function _resolveSvcId(svcId) { return SVC_ALIAS[svcId] || svcId; }
 
-// ── CORS origin 결정 ────────────────────────────────────────
 function getCorsOrigin(request) {
   const origin = request.headers.get('Origin') || '';
   if (ALLOWED_ORIGINS.some(o => origin.startsWith(o))) return origin;
@@ -102,7 +69,6 @@ function getCorsOrigin(request) {
   return null;
 }
 
-// ── CORS 헤더 빌더 ──────────────────────────────────────────
 function buildCorsHeaders(corsOrigin, extra = {}) {
   return {
     'Content-Type':                     'application/json',
@@ -114,7 +80,6 @@ function buildCorsHeaders(corsOrigin, extra = {}) {
   };
 }
 
-// ── 공용 에러 응답 빌더 ─────────────────────────────────────
 function _err(status, code, detail, corsHeaders) {
   return new Response(
     JSON.stringify({ ok: false, error: code, detail }),
@@ -122,14 +87,27 @@ function _err(status, code, detail, corsHeaders) {
   );
 }
 
+function _supabaseAnonKey() {
+  return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
+}
+
+function _sbHeaders(env) {
+  const key = env.SUPABASE_KEY || _supabaseAnonKey();
+  return { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' };
+}
+
+function _sbServiceHeaders(env) {
+  const key = env.SUPABASE_SERVICE_KEY || env.SUPABASE_KEY || _supabaseAnonKey();
+  return { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' };
+}
+
 // ═══════════════════════════════════════════════════════════
-// 단일 export default
+// 메인 fetch 핸들러
 // ═══════════════════════════════════════════════════════════
 export default {
   async fetch(request, env) {
     const corsOrigin = getCorsOrigin(request);
 
-    // ── CORS preflight ───────────────────────────────────
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         status: 204,
@@ -143,7 +121,6 @@ export default {
       });
     }
 
-    // ── 도메인 검증 ──────────────────────────────────────
     if (corsOrigin === null) {
       return new Response(
         JSON.stringify({ error: 'Forbidden', origin: request.headers.get('Origin') }),
@@ -155,877 +132,294 @@ export default {
     const url         = new URL(request.url);
     const pathname    = url.pathname;
 
-    // ── 라우팅 ───────────────────────────────────────────
-
-    // SSO 인증 라우트
+    // ── SSO 인증 ──────────────────────────────────────────
     if (pathname === '/auth/issue')              return handleIssue(request, env, corsHeaders);
     if (pathname === '/auth/verify')             return handleVerify(request, env, corsHeaders);
     if (pathname === '/auth/refresh')            return handleRefresh(request, env, corsHeaders);
 
-    // WebAuthn 지문 라우트
+    // ── WebAuthn ─────────────────────────────────────────
     if (pathname === '/auth/webauthn/challenge') return handleWAChallenge(request, env, corsHeaders);
     if (pathname === '/auth/webauthn/register')  return handleWARegister(request, env, corsHeaders);
     if (pathname === '/auth/webauthn/verify')    return handleWAVerify(request, env, corsHeaders);
 
-    // PDV 읽기 (쓰기보다 먼저 — v4.6 신규)
+    // ── PDV ──────────────────────────────────────────────
     if (pathname === '/pdv/query')               return handlePdvQuery(request, env, corsHeaders);
-
-    // PDV 쓰기 (기존)
     if (pathname === '/pdv/report')              return handlePdvReport(request, env, corsHeaders);
+    if (pathname.startsWith('/pdv/page/'))       return handlePdvPage(request, env, corsHeaders);
 
-    // 하위 서비스 등록·확인
+    // ── 서비스 등록 ───────────────────────────────────────
     if (pathname === '/svc/register')            return handleSvcRegister(request, env, corsHeaders);
     if (pathname === '/svc/verify')              return handleSvcVerify(request, env, corsHeaders);
 
-    // 카카오 역지오코딩 (GET)
+    // ── 지오코딩 / 카카오 ─────────────────────────────────
     if (pathname.startsWith('/geocode'))         return handleGeocode(url, env, corsHeaders);
-
-    // v4.4: Kakao Maps JS 앱 키 반환 (GET)
     if (pathname === '/kakao/appkey')            return handleKakaoAppKey(request, env, corsHeaders);
 
-    // POST 전용 (이하)
+    // ── search (v4.7) ────────────────────────────────────
+    if (pathname === '/search' && request.method === 'POST') return handleSearch(request, env, corsHeaders);
+
+    // ── biz (v4.8) ───────────────────────────────────────
+    if (pathname.startsWith('/biz/profile/'))   return handleBizProfile(request, env, corsHeaders);
+    if (pathname === '/biz/order'   && request.method === 'POST') return handleBizOrder(request, env, corsHeaders);
+    if (pathname === '/biz/review'  && request.method === 'POST') return handleBizReview(request, env, corsHeaders);
+    if (pathname === '/biz/product' && request.method === 'POST') return handleBizProduct(request, env, corsHeaders);
+
+    // ── POST 전용 ────────────────────────────────────────
     if (request.method !== 'POST') {
-      return new Response(
-        JSON.stringify({ error: 'Method Not Allowed' }),
-        { status: 405, headers: corsHeaders }
-      );
+      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405, headers: corsHeaders });
     }
 
     const bodyText = await request.text();
-
-    // OpenAI 호환 표준 라우트 → DeepSeek 프록시
     if (pathname === '/chat/completions')        return callDeepSeek(bodyText, env, corsHeaders);
-
-    // DeepSeek 직접 호출
     if (pathname.startsWith('/deepseek'))        return callDeepSeek(bodyText, env, corsHeaders);
-
-    // Gemini 형식 → GPT-4o mini 변환 호출
     if (pathname.startsWith('/gemini/'))         return callOpenAIFromGeminiBody(bodyText, env, corsHeaders);
-
-    // v4.4: AI 채팅 (DeepSeek V4 Pro + Claude 폴백)
     if (pathname === '/ai/chat')                 return handleAIChat(bodyText, env, corsHeaders);
 
-    return new Response(
-      JSON.stringify({ error: 'Not Found', path: pathname }),
-      { status: 404, headers: corsHeaders }
-    );
+    return new Response(JSON.stringify({ error: 'Not Found', path: pathname }), { status: 404, headers: corsHeaders });
   },
 };
 
 // ═══════════════════════════════════════════════════════════
-// v4.6 — /pdv/query 핸들러
-// PDV_QUERY_PROTOCOL_v1_0.md 전체 구현
+// v4.7 — /pdv/page/{identifier}
 // ═══════════════════════════════════════════════════════════
-
-async function handlePdvQuery(request, env, corsHeaders) {
-  if (request.method !== 'POST')
-    return _err(405, 'METHOD_NOT_ALLOWED', 'POST만 허용됩니다', corsHeaders);
-
-  const origin = request.headers.get('Origin') || '';
-
-  try {
-    const body  = await request.json().catch(() => null);
-    const query = body?.query;
-
-    // ── 1. 스키마 검증 ─────────────────────────────────────
-    if (!query?.svc || !query?.ipv6 || !query?.scope || !query?.period)
-      return _err(400, 'SCHEMA_ERROR', '필수 필드 누락: svc, ipv6, scope, period', corsHeaders);
-
-    if (!Array.isArray(query.scope) || query.scope.length === 0)
-      return _err(400, 'SCOPE_INVALID', 'scope는 비어있지 않은 배열이어야 합니다', corsHeaders);
-
-    const invalidScope = query.scope.find(s => !VALID_PDV_SCOPES.includes(s));
-    if (invalidScope)
-      return _err(400, 'SCOPE_INVALID', `허용되지 않은 scope: ${invalidScope}`, corsHeaders);
-
-    if (!query.period?.start || !query.period?.end)
-      return _err(400, 'SCHEMA_ERROR', 'period.start, period.end 필수 (YYYY-MM-DD)', corsHeaders);
-
-    // 기간 12개월 초과 검사
-    const periodMs = new Date(query.period.end) - new Date(query.period.start);
-    if (periodMs > 365 * 24 * 60 * 60 * 1000)
-      return _err(400, 'PERIOD_TOO_LONG', '조회 기간은 12개월을 초과할 수 없습니다', corsHeaders);
-
-    // ── 2. 서비스 등록 확인 ───────────────────────────────
-    const svcReg = _getSvcRegistration(origin, query.svc);
-    if (!svcReg || !svcReg.pdv)
-      return _err(403, 'SVC_NOT_REGISTERED',
-        `미등록 또는 PDV 권한 없는 서비스: ${query.svc}`, corsHeaders);
-
-    // ── 3. 인증 토큰 만료 확인 ────────────────────────────
-    const authToken = query.auth_token;
-    if (!authToken?.exp || Math.floor(Date.now() / 1000) > authToken.exp)
-      return _err(401, 'AUTH_EXPIRED', '인증 토큰이 만료되었습니다. 재인증이 필요합니다', corsHeaders);
-
-    // ── 4. scope별 최소 인증 레벨 확인 ───────────────────
-    const LEVEL_ORDER = { L0: 0, L1: 1, L2: 2, L3: 3 };
-    const userLevel   = LEVEL_ORDER[authToken.level] ?? 0;
-    for (const scope of query.scope) {
-      const required = LEVEL_ORDER[SCOPE_MIN_LEVEL[scope] || 'L1'];
-      if (userLevel < required)
-        return _err(403, 'LEVEL_INSUFFICIENT',
-          `${scope} 조회는 ${SCOPE_MIN_LEVEL[scope]} 이상 필요합니다 (현재: ${authToken.level})`,
-          corsHeaders);
-    }
-
-    // ── 5. 동의 토큰 확인 — 단계A / 단계B 분기 ───────────
-    if (!query.consent_token || !query.request_id) {
-      // ── 단계A: 동의 요청 생성 (202) ──────────────────
-      const reqId     = `CNSREQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;
-      const expiresAt = Math.floor(Date.now() / 1000) + 300;
-
-      // 동의 요청 Supabase 저장
-      await _storeConsentRequest(env, reqId, query, expiresAt);
-
-      const consentUrl = 'https://gopang.net/consent'
-        + `?req=${encodeURIComponent(reqId)}`
-        + `&svc=${encodeURIComponent(query.svc)}`
-        + `&scope=${encodeURIComponent(query.scope.join(','))}`
-        + `&purpose=${encodeURIComponent(query.purpose || '')}`
-        + `&ipv6_hash=${encodeURIComponent(await _sha256Hex(query.ipv6))}`;
-
-      return new Response(JSON.stringify({
-        ok:      false,
-        status:  'CONSENT_REQUIRED',
-        consent: {
-          request_id:  reqId,
-          expires_at:  expiresAt,
-          consent_url: consentUrl,
-          message:     '사용자가 고팡 앱에서 PDV 조회에 동의해야 합니다.',
-        },
-      }), { status: 202, headers: corsHeaders });
-    }
-
-    // ── 단계B: 동의 토큰 검증 ─────────────────────────
-    const consentOk = await _verifyConsentToken(
-      env, query.consent_token, query.request_id, query.ipv6
-    );
-    if (!consentOk)
-      return _err(401, 'CONSENT_INVALID',
-        '동의 토큰이 유효하지 않거나 만료되었습니다. 동의 절차를 다시 시작해 주세요',
-        corsHeaders);
-
-    // ── 6. Rate Limiting — 사용자당 5분 3회 ──────────────
-    const withinLimit = await _checkRateLimit(env, query.ipv6, 'pdv_query');
-    if (!withinLimit)
-      return _err(429, 'RATE_LIMITED', 'PDV 조회 한도 초과입니다. 5분 후 다시 시도해 주세요', corsHeaders);
-
-    // ── 7. PDV 조회 (scope별 pdv_log SELECT) ──────────────
-    const pdvSummary = await _fetchPdvByScope(env, query.ipv6, query.scope, query.period);
-
-    // ── 8. 조회 행위 자체를 PDV에 기록 ───────────────────
-    const queryId    = `PDVQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;
-    const pdvEntryId = await _recordConsentEvent(env, query, queryId);
-
-    return new Response(JSON.stringify({
-      ok:          true,
-      query_id:    queryId,
-      ipv6:        query.ipv6,
-      period:      query.period,
-      pdv_summary: pdvSummary,
-      consent: {
-        granted_at:   new Date().toISOString(),
-        expires_at:   new Date(authToken.exp * 1000).toISOString(),
-        pdv_entry_id: pdvEntryId,
-      },
-    }), { status: 200, headers: corsHeaders });
-
-  } catch (e) {
-    return _err(500, 'INTERNAL_ERROR', e.message, corsHeaders);
-  }
-}
-
-// ── 동의 요청 저장 (pdv_consent_requests) ──────────────────
-async function _storeConsentRequest(env, reqId, query, expiresAt) {
-  const key = env.SUPABASE_KEY || _supabaseAnonKey();
-  try {
-    await fetch(SUPABASE_URL + '/rest/v1/pdv_consent_requests', {
-      method: 'POST',
-      headers: {
-        'apikey':        key,
-        'Authorization': 'Bearer ' + key,
-        'Content-Type':  'application/json',
-        'Prefer':        'return=minimal',
-      },
-      body: JSON.stringify({
-        id:          reqId,
-        ipv6:        query.ipv6,
-        svc:         _resolveSvcId(query.svc),
-        scope:       query.scope,
-        purpose:     query.purpose || '',
-        period:      query.period,
-        status:      'pending',
-        expires_at:  new Date(expiresAt * 1000).toISOString(),
-      }),
-    });
-  } catch (e) {
-    // 저장 실패해도 흐름 중단하지 않음 — 동의 URL은 이미 생성됨
-    console.warn('[PDVQuery] 동의 요청 저장 실패:', e.message);
-  }
-}
-
-// ── 동의 토큰 검증 (HMAC-SHA256) ───────────────────────────
-// gopang.net/consent 페이지가 사용자 동의 후
-// HMAC-SHA256(reqId + '.' + ipv6, GOPANG_MASTER_KEY)으로 서명하여 발급
-async function _verifyConsentToken(env, consentToken, requestId, ipv6) {
-  try {
-    // Supabase에서 동의 요청 상태 확인
-    const key = env.SUPABASE_KEY || _supabaseAnonKey();
-    const res = await fetch(
-      SUPABASE_URL + `/rest/v1/pdv_consent_requests`
-      + `?id=eq.${encodeURIComponent(requestId)}`
-      + `&ipv6=eq.${encodeURIComponent(ipv6)}`
-      + `&select=status,expires_at,consent_token`,
-      {
-        headers: {
-          'apikey':        key,
-          'Authorization': 'Bearer ' + key,
-          'Content-Type':  'application/json',
-        },
-      }
-    );
+async function handlePdvPage(request, env, corsHeaders) {
+  const identifier = decodeURIComponent(new URL(request.url).pathname.replace('/pdv/page/', ''));
+  if (!identifier) return _err(400, 'MISSING_ID', 'identifier 필수', corsHeaders);
+  const sbH = _sbHeaders(env);
+  let primaryGuid = identifier;
+  let l1Node      = 'KR-JEJU-JEJU-HANLIM';
+  if (identifier.includes(':')) {
+    const res  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?current_ipv6=eq.${encodeURIComponent(identifier)}&select=primary_guid,l1_node&limit=1`, { headers: sbH });
     const rows = await res.json().catch(() => []);
-    if (!rows?.length) return false;
-
-    const row = rows[0];
-    // 만료 확인
-    if (new Date(row.expires_at) < new Date()) return false;
-    // 상태 확인
-    if (row.status !== 'granted') return false;
-    // 토큰 일치 확인
-    if (row.consent_token !== consentToken) return false;
-
-    return true;
-  } catch (e) {
-    // Supabase 실패 시 HMAC 직접 검증으로 폴백
-    console.warn('[PDVQuery] 동의 DB 확인 실패, HMAC 폴백:', e.message);
-    return _verifyConsentHmac(env, consentToken, requestId, ipv6);
-  }
-}
-
-// ── HMAC 직접 검증 폴백 ────────────────────────────────────
-async function _verifyConsentHmac(env, consentToken, requestId, ipv6) {
-  try {
-    const masterKey = env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1';
-    const key = await crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(masterKey),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false, ['verify']
-    );
-    const data = new TextEncoder().encode(`${requestId}.${ipv6}`);
-    const sigBytes = Uint8Array.from(
-      atob(consentToken.replace(/-/g, '+').replace(/_/g, '/')),
-      c => c.charCodeAt(0)
-    );
-    return crypto.subtle.verify('HMAC', key, sigBytes, data);
-  } catch { return false; }
-}
-
-// ── Rate Limiting — 5분 3회 ────────────────────────────────
-// KV가 없으면 Supabase 임시 테이블로 대체
-async function _checkRateLimit(env, ipv6, action) {
-  if (env.RATE_LIMIT_KV) {
-    // Cloudflare KV 방식
-    const kvKey   = `rl:${action}:${ipv6}`;
-    const current = parseInt(await env.RATE_LIMIT_KV.get(kvKey) || '0');
-    if (current >= 3) return false;
-    await env.RATE_LIMIT_KV.put(kvKey, String(current + 1), { expirationTtl: 300 });
-    return true;
-  }
-  // KV 없음 — 허용 (Supabase 기반 구현은 추후 추가)
-  return true;
-}
-
-// ── PDV 조회 (scope별 pdv_log SELECT) ─────────────────────
-async function _fetchPdvByScope(env, ipv6, scopes, period) {
-  const key    = env.SUPABASE_KEY || _supabaseAnonKey();
-  const result = {};
-
-  for (const scope of scopes) {
-    const source = SCOPE_SOURCE_MAP[scope];
-
-    let queryUrl = SUPABASE_URL + '/rest/v1/pdv_log'
-      + `?guid=eq.${encodeURIComponent(ipv6)}`
-      + `&created_at=gte.${period.start}T00:00:00Z`
-      + `&created_at=lte.${period.end}T23:59:59Z`
-      + `&select=summary,summary_6w,risk_level,created_at,source`
-      + `&order=created_at.desc`
-      + `&limit=50`;
-
-    if (source) {
-      queryUrl += `&source=eq.${encodeURIComponent(source)}`;
-    }
-
-    try {
-      const res  = await fetch(queryUrl, {
-        headers: {
-          'apikey':        key,
-          'Authorization': 'Bearer ' + key,
-          'Content-Type':  'application/json',
-        },
-      });
-      const rows = await res.json().catch(() => []);
-
-      if (!rows?.length) {
-        result[scope] = { available: false, entry_count: 0,
-          risk_level: 'unknown', summary_6w: null, risk_factors: {} };
-        continue;
-      }
-
-      // risk_level 집계: 가장 높은 레벨 반환
-      const RISK_ORDER = { low: 0, medium: 1, high: 2 };
-      const maxRisk    = rows.reduce((max, r) => {
-        const lvl = r.risk_level || 'low';
-        return RISK_ORDER[lvl] > RISK_ORDER[max] ? lvl : max;
-      }, 'low');
-
-      // 최신 summary_6w 파싱
-      let summary6w = null;
-      for (const row of rows) {
-        try { summary6w = JSON.parse(row.summary_6w); break; }
-        catch {}
-      }
-
-      // scope별 risk_factors 집계
-      const riskFactors = _aggregateRiskFactors(scope, rows);
-
-      result[scope] = {
-        available:    true,
-        entry_count:  rows.length,
-        risk_level:   maxRisk,
-        summary_6w:   summary6w,
-        risk_factors: riskFactors,
-      };
-
-    } catch (e) {
-      console.warn(`[PDVQuery] scope ${scope} 조회 실패:`, e.message);
-      result[scope] = { available: false, entry_count: 0,
-        risk_level: 'unknown', summary_6w: null, risk_factors: {},
-        error: 'fetch_failed' };
-    }
-  }
-
-  return result;
-}
-
-// ── scope별 risk_factors 집계 ──────────────────────────────
-function _aggregateRiskFactors(scope, rows) {
-  if (scope === 'ktraffic') {
-    const accidents = rows.filter(r => {
-      try { return JSON.parse(r.summary_6w)?.what?.includes('사고'); }
-      catch { return false; }
-    }).length;
-    return {
-      accident_count:       accidents,
-      entry_count:          rows.length,
-      high_risk_count:      rows.filter(r => r.risk_level === 'high').length,
-      accident_free_months: accidents === 0 ? 36 : 0,  // 실제 계산은 LLM에 위임
-    };
-  }
-  if (scope === 'khealth') {
-    return {
-      total_records:         rows.length,
-      high_risk_count:       rows.filter(r => r.risk_level === 'high').length,
-      medium_risk_count:     rows.filter(r => r.risk_level === 'medium').length,
-    };
-  }
-  return {
-    entry_count: rows.length,
-    high_risk_count: rows.filter(r => r.risk_level === 'high').length,
-  };
-}
-
-// ── 조회 행위를 PDV에 기록 (consent_event) ─────────────────
-async function _recordConsentEvent(env, query, queryId) {
-  const key       = env.SUPABASE_KEY || _supabaseAnonKey();
-  const svcId     = _resolveSvcId(query.svc);
-  const pdvId     = `PDV-${query.ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;
-  const summary6w = JSON.stringify({
-    who:   svcId,
-    when:  new Date().toISOString(),
-    where: `https://${svcId}.gopang.net`,
-    what:  `PDV 조회 동의: scope=[${query.scope.join(',')}]`,
-    how:   '사용자 명시적 동의 (고팡 앱 팝업)',
-    why:   query.purpose || 'PDV 데이터 조회',
-  });
-
-  try {
-    await fetch(SUPABASE_URL + '/rest/v1/pdv_log', {
-      method: 'POST',
-      headers: {
-        'apikey':        key,
-        'Authorization': 'Bearer ' + key,
-        'Content-Type':  'application/json',
-        'Prefer':        'return=minimal',
-      },
-      body: JSON.stringify({
-        id:          pdvId,
-        guid:        query.ipv6,
-        source:      svcId,
-        type:        'consent_event',
-        report_id:   queryId,
-        summary:     `PDV 조회 동의: ${svcId} → [${query.scope.join(',')}]`,
-        summary_6w:  summary6w,
-        risk_level:  'low',
-        period:      query.period,
-        raw_hash:    null,
-        created_at:  new Date().toISOString(),
-      }),
-    });
-  } catch (e) {
-    console.warn('[PDVQuery] consent_event 기록 실패:', e.message);
-  }
-
-  return pdvId;
-}
-
-// ── SHA-256 헥스 다이제스트 ────────────────────────────────
-async function _sha256Hex(text) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
-// ── Supabase Anon Key (환경변수 없을 때 폴백) ──────────────
-function _supabaseAnonKey() {
-  return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
-}
-
-// ═══════════════════════════════════════════════════════════
-// SSO 핸들러 (v4.5 이하와 동일)
-// ═══════════════════════════════════════════════════════════
-
-function buildCookie(token) {
-  return [
-    `gopang_token=${token}`, 'Path=/', 'Domain=.gopang.net',
-    'Max-Age=3600', 'SameSite=None', 'Secure', 'HttpOnly',
-  ].join('; ');
-}
-
-function parseCookie(header, name) {
-  const match = header.match(new RegExp(`(?:^|;)\\s*${name}=([^;]+)`));
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-function buildToken(ipv6, level, svc) {
-  const now     = Math.floor(Date.now() / 1000);
-  const payload = { ipv6, level, svc, iat: now, exp: now + 3600 };
-  return btoa(JSON.stringify(payload)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-}
-
-function parseToken(token) {
-  try {
-    const padded  = token.replace(/-/g,'+').replace(/_/g,'/');
-    const payload = JSON.parse(atob(padded + '=='.slice((padded.length % 4) || 4)));
-    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
-    return payload;
-  } catch { return null; }
-}
-
-async function handleIssue(request, env, corsHeaders) {
-  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-  const body = await request.json().catch(() => null);
-  if (!body?.ipv6) return _err(400, 'MISSING_FIELD', 'ipv6 필수', corsHeaders);
-  const { ipv6, level = 'L0', svc = '*' } = body;
-  const token  = buildToken(ipv6, level, svc);
-  const cookie = buildCookie(token);
-  return new Response(
-    JSON.stringify({ ok: true, ipv6, level }),
-    { status: 200, headers: { ...corsHeaders, 'Set-Cookie': cookie } }
-  );
-}
-
-async function handleVerify(request, env, corsHeaders) {
-  const cookieHeader = request.headers.get('Cookie') || '';
-  const raw          = parseCookie(cookieHeader, 'gopang_token');
-  if (!raw) return _err(401, 'NO_TOKEN', 'no_token', corsHeaders);
-  const payload = parseToken(raw);
-  if (!payload) return _err(401, 'INVALID_TOKEN', 'expired_or_invalid', corsHeaders);
-  return new Response(
-    JSON.stringify({ valid: true, ipv6: payload.ipv6, level: payload.level,
-                     svc: payload.svc, exp: payload.exp }),
-    { status: 200, headers: corsHeaders }
-  );
-}
-
-async function handleRefresh(request, env, corsHeaders) {
-  const cookieHeader = request.headers.get('Cookie') || '';
-  const raw          = parseCookie(cookieHeader, 'gopang_token');
-  if (!raw) return _err(401, 'NO_TOKEN', 'no_token', corsHeaders);
-  const payload = parseToken(raw);
-  if (!payload) return _err(401, 'INVALID_TOKEN', 'expired_or_invalid', corsHeaders);
-  const remaining = payload.exp - Math.floor(Date.now() / 1000);
-  if (remaining > 1800) return new Response(
-    JSON.stringify({ ok: false, reason: 'not_yet', remaining }),
-    { status: 200, headers: corsHeaders }
-  );
-  const newToken = buildToken(payload.ipv6, payload.level, payload.svc);
-  return new Response(
-    JSON.stringify({ ok: true }),
-    { status: 200, headers: { ...corsHeaders, 'Set-Cookie': buildCookie(newToken) } }
-  );
-}
-
-// ═══════════════════════════════════════════════════════════
-// WebAuthn 핸들러 (v4.5와 동일)
-// ═══════════════════════════════════════════════════════════
-
-const WA_RP_ID   = 'gopang.net';
-const WA_RP_NAME = '고팡 (Gopang)';
-
-async function sbFetch(env, path, method = 'GET', body = null) {
-  const key = env.SUPABASE_KEY || _supabaseAnonKey();
-  const headers = {
-    'apikey': key, 'Authorization': 'Bearer ' + key,
-    'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates',
-  };
-  const res = await fetch(SUPABASE_URL + path, {
-    method, headers, body: body ? JSON.stringify(body) : undefined,
-  });
-  return res.ok ? res.json().catch(() => ({})) : null;
-}
-
-async function handleWAChallenge(request, env, corsHeaders) {
-  const challenge = crypto.getRandomValues(new Uint8Array(32));
-  const chalB64   = btoa(String.fromCharCode(...challenge))
-    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  const exp     = Math.floor(Date.now() / 1000) + 300;
-  const sigData = `${chalB64}.${exp}`;
-  const key     = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1'),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-  );
-  const sig    = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(sigData));
-  const sigHex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
-  return new Response(
-    JSON.stringify({ challenge: chalB64, exp, sig: sigHex }),
-    { status: 200, headers: corsHeaders }
-  );
-}
-
-async function _verifyChallengeToken(env, chalB64, exp, sig) {
-  if (exp < Math.floor(Date.now() / 1000)) return false;
-  const sigData = `${chalB64}.${exp}`;
-  const key = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1'),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
-  );
-  const sigBytes = Uint8Array.from(sig.match(/.{2}/g).map(h => parseInt(h, 16)));
-  return crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(sigData));
-}
-
-async function handleWARegister(request, env, corsHeaders) {
-  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-  const body = await request.json().catch(() => null);
-  if (!body?.ipv6 || !body?.credentialId || !body?.publicKey)
-    return _err(400, 'MISSING_FIELD', 'ipv6, credentialId, publicKey 필수', corsHeaders);
-  const chalOk = await _verifyChallengeToken(env, body.challenge, body.challengeExp, body.challengeSig);
-  if (!chalOk) return _err(401, 'CHALLENGE_INVALID', '챌린지 만료 또는 위조', corsHeaders);
-  const result = await sbFetch(env, '/rest/v1/webauthn_credentials', 'POST', {
-    ipv6: body.ipv6, credential_id: body.credentialId, public_key: body.publicKey,
-    counter: 0, device_type: body.deviceType || 'platform', aaguid: body.aaguid || null,
-  });
-  if (!result) return _err(502, 'DB_ERROR', 'Supabase 저장 실패', corsHeaders);
-  return new Response(JSON.stringify({ ok: true, ipv6: body.ipv6 }), { status: 200, headers: corsHeaders });
-}
-
-async function handleWAVerify(request, env, corsHeaders) {
-  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-  const body = await request.json().catch(() => null);
-  if (!body?.ipv6 || !body?.credentialId)
-    return _err(400, 'MISSING_FIELD', 'ipv6, credentialId 필수', corsHeaders);
-  const rows = await sbFetch(env,
-    `/rest/v1/webauthn_credentials?ipv6=eq.${encodeURIComponent(body.ipv6)}&credential_id=eq.${encodeURIComponent(body.credentialId)}&select=public_key,counter`,
-    'GET'
-  );
-  if (!rows?.length) return _err(404, 'CREDENTIAL_NOT_FOUND', 'credential_not_found', corsHeaders);
-  const cred = rows[0];
-  if (body.counter !== undefined && body.counter <= cred.counter)
-    return _err(401, 'COUNTER_REPLAY', 'counter_replay', corsHeaders);
-  if (body.counter !== undefined) {
-    await sbFetch(env,
-      `/rest/v1/webauthn_credentials?credential_id=eq.${encodeURIComponent(body.credentialId)}`,
-      'PATCH', { counter: body.counter, last_used_at: new Date().toISOString() }
-    );
-  }
-  const token = buildToken(body.ipv6, 'L2', '*');
-  return new Response(
-    JSON.stringify({ valid: true, ipv6: body.ipv6, level: 'L2' }),
-    { status: 200, headers: { ...corsHeaders, 'Set-Cookie': buildCookie(token) } }
-  );
-}
-
-// ═══════════════════════════════════════════════════════════
-// 하위 서비스 등록 화이트리스트
-// ═══════════════════════════════════════════════════════════
-
-const REGISTERED_SERVICES = {
-  'klaw':      { level: 3, domain: 'klaw.gopang.net',      minAuth: 'L0', pdv: true  },
-  'market':    { level: 3, domain: 'market.gopang.net',    minAuth: 'L0', pdv: true  },
-  'school':    { level: 3, domain: 'school.gopang.net',    minAuth: 'L0', pdv: true  },
-  'security':  { level: 3, domain: 'security.gopang.net',  minAuth: 'L1', pdv: true  },
-  'health':    { level: 3, domain: 'health.gopang.net',    minAuth: 'L1', pdv: true  },
-  'tax':       { level: 3, domain: 'tax.gopang.net',       minAuth: 'L0', pdv: true  },
-  'gdc':       { level: 3, domain: 'gdc.gopang.net',       minAuth: 'L1', pdv: true  },
-  'public':    { level: 3, domain: 'public.gopang.net',    minAuth: 'L0', pdv: true  },
-  'democracy': { level: 3, domain: 'democracy.gopang.net', minAuth: 'L1', pdv: true  },
-  '911':       { level: 3, domain: '911.gopang.net',       minAuth: 'L0', pdv: true  },
-  'police':    { level: 3, domain: 'police.gopang.net',    minAuth: 'L1', pdv: true  },
-  'insurance': { level: 3, domain: 'insurance.gopang.net', minAuth: 'L1', pdv: true  },
-  'stock':     { level: 3, domain: 'stock.gopang.net',     minAuth: 'L1', pdv: true  },
-  'traffic':   { level: 3, domain: 'traffic.gopang.net',   minAuth: 'L0', pdv: true  },
-  'logistics': { level: 3, domain: 'logistics.gopang.net', minAuth: 'L0', pdv: true  },
-  'fiil':      { level: 2, domain: 'fiil.kr',              minAuth: 'L0', pdv: true  },
-  'klaw-ext':  { level: 2, domain: 'klaw.openhash.kr',     minAuth: 'L0', pdv: false },
-};
-
-function _getSvcRegistration(origin, svcId) {
-  const resolvedId = _resolveSvcId(svcId);
-  const svc        = REGISTERED_SERVICES[resolvedId];
-  if (svc && origin.includes(svc.domain)) return { ...svc, svcId: resolvedId, originalId: svcId };
-  if (/^https:\/\/[a-z0-9-]+\.gopang\.net$/.test(origin))
-    return { level: 1, domain: origin, minAuth: 'L0', pdv: false, svcId: resolvedId, originalId: svcId };
-  return null;
-}
-
-// ═══════════════════════════════════════════════════════════
-// /pdv/report (v4.5와 동일)
-// ═══════════════════════════════════════════════════════════
-
-async function handlePdvReport(request, env, corsHeaders) {
-  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-  const origin = request.headers.get('Origin') || '';
-  const body   = await request.json().catch(() => null);
-  if (!body?.report) return _err(400, 'SCHEMA_ERROR', 'report.report 필드 필수', corsHeaders);
-  const r     = body.report;
-  const svcId = r.svc || request.headers.get('X-Gopang-Svc') || 'unknown';
-  const ipv6  = r.who?.ipv6;
-  const reg   = _getSvcRegistration(origin, svcId);
-  if (!reg) return _err(403, 'SERVICE_NOT_REGISTERED',
-    `${svcId} (${origin})은 등록된 서비스가 아닙니다`, corsHeaders);
-  if (reg.level < 2 && !reg.pdv) return _err(403, 'PDV_NOT_ALLOWED',
-    'Level 1 서비스는 PDV 보고서 전송 권한이 없습니다', corsHeaders);
-  if (!ipv6) return _err(404, 'USER_NOT_FOUND', 'who.ipv6 필수', corsHeaders);
-
-  const resolvedSvcId = _resolveSvcId(svcId);
-  const reportId      = r.id || `RPT-${resolvedSvcId}-${Date.now()}-auto`;
-  const summary6w = {
-    who:   `${r.who?.role || 'user'} (${ipv6.slice(0,20)}...)`,
-    when:  `${(r.when?.period_start||'').slice(0,10)} ~ ${(r.when?.period_end||'').slice(0,10)}`,
-    where: r.where?.svc_url || `https://${resolvedSvcId}.gopang.net`,
-    what:  r.what?.summary  || '(요약 없음)',
-    how:   r.how?.method    || '자동 집계',
-    why:   r.why?.goal      || '(목표 미지정)',
-  };
-  const pdvId  = `PDV-${ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;
-  const pdvKey = env.SUPABASE_KEY || _supabaseAnonKey();
-  const pdvFetch = await fetch(SUPABASE_URL + '/rest/v1/pdv_log', {
-    method: 'POST',
-    headers: {
-      'apikey': pdvKey, 'Authorization': 'Bearer ' + pdvKey,
-      'Content-Type': 'application/json', 'Prefer': 'return=minimal',
-    },
-    body: JSON.stringify({
-      id: pdvId, guid: ipv6, source: resolvedSvcId,
-      type: r.type || 'report', report_id: reportId,
-      summary: r.what?.summary || '', summary_6w: JSON.stringify(summary6w),
-      risk_level: r.analysis?.risk_level || 'low',
-      period: r.when ?? r.period ?? null,
-      raw_hash: r.content_hash || null, created_at: new Date().toISOString(),
-    }),
-  });
-  if (!pdvFetch.ok) return _err(503, 'PDV_LOCKED', 'PDV 저장 실패, 60초 후 재시도', corsHeaders);
-
-  return new Response(JSON.stringify({
-    ok: true, report_id: reportId, pdv_entry: pdvId,
-    recorded_at: new Date().toISOString(),
-    recipients_notified: (r.who?.recipients || []).filter(x => x !== 'gopang-pdv'),
-    svc_level: reg.level,
-    message: `PDV 기록 완료. ${resolvedSvcId} (Level ${reg.level})`,
-  }), { status: 200, headers: corsHeaders });
-}
-
-// ═══════════════════════════════════════════════════════════
-// /svc/register · /svc/verify (v4.5와 동일)
-// ═══════════════════════════════════════════════════════════
-
-async function handleSvcRegister(request, env, corsHeaders) {
-  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-  const body = await request.json().catch(() => null);
-  if (!body?.svc_id || !body?.domain || !body?.operator_ipv6)
-    return _err(400, 'MISSING_FIELD', 'svc_id, domain, operator_ipv6 필수', corsHeaders);
-  const { svc_id, domain, description, min_auth, operator_ipv6 } = body;
-  const isGopangSub = /^[a-z0-9-]+\.gopang\.net$/.test(domain);
-  await sbFetch(env, '/rest/v1/svc_registry', 'POST', {
-    svc_id, domain, description: description || '', operator_ipv6,
-    min_auth: min_auth || 'L0', trust_level: isGopangSub ? 1 : 0,
-    status: isGopangSub ? 'auto_approved' : 'pending',
-    registered_at: new Date().toISOString(),
-  });
-  return new Response(JSON.stringify({
-    ok: true, svc_id, domain, trust_level: isGopangSub ? 1 : 0,
-    status: isGopangSub ? 'auto_approved' : 'pending_review',
-    message: isGopangSub
-      ? '*.gopang.net 서브도메인으로 자동 승인됐습니다. (Level 1)'
-      : '등록 신청이 접수됐습니다. AI City Inc. 검토 후 승인됩니다.',
-  }), { status: 200, headers: corsHeaders });
-}
-
-async function handleSvcVerify(request, env, corsHeaders) {
-  const url    = new URL(request.url);
-  const svcId  = url.searchParams.get('svc_id');
-  const origin = request.headers.get('Origin') || '';
-  if (!svcId) return _err(400, 'MISSING_FIELD', 'svc_id 파라미터 필수', corsHeaders);
-  const reg = _getSvcRegistration(origin, svcId);
-  if (!reg) return new Response(JSON.stringify({
-    ok: false, registered: false, svc_id: svcId, message: '등록되지 않은 서비스입니다.',
-  }), { status: 200, headers: corsHeaders });
-  return new Response(JSON.stringify({
-    ok: true, registered: true, svc_id: svcId, trust_level: reg.level,
-    pdv_allowed: reg.pdv, min_auth: reg.minAuth,
-    message: `등록된 서비스 (Level ${reg.level})`,
-  }), { status: 200, headers: corsHeaders });
-}
-
-// ═══════════════════════════════════════════════════════════
-// /geocode · /kakao/appkey · /ai/chat (v4.5와 동일)
-// ═══════════════════════════════════════════════════════════
-
-async function handleGeocode(url, env, corsHeaders) {
-  const lat = url.searchParams.get('lat');
-  const lng = url.searchParams.get('lng');
-  if (!lat || !lng) return _err(400, 'MISSING_FIELD', 'lat, lng required', corsHeaders);
-  try {
-    const res  = await fetch(`${KAKAO_BASE}?x=${lng}&y=${lat}&input_coord=WGS84`,
-      { headers: { 'Authorization': `KakaoAK ${env.KAKAO_REST_KEY}` } });
-    const data = await res.json();
-    return new Response(JSON.stringify(data), { headers: corsHeaders });
-  } catch(e) { return _err(502, 'GEOCODE_ERROR', e.message, corsHeaders); }
-}
-
-async function handleKakaoAppKey(request, env, corsHeaders) {
-  const appkey = env.KAKAO_JS_KEY || env.KAKAO_REST_KEY;
-  if (!appkey) return _err(500, 'CONFIG_ERROR', 'Kakao key not configured', corsHeaders);
-  return new Response(JSON.stringify({ appkey }),
-    { status: 200, headers: { ...corsHeaders, 'Cache-Control': 'public, max-age=300' } });
-}
-
-async function handleAIChat(bodyText, env, corsHeaders) {
-  let body;
-  try { body = JSON.parse(bodyText); }
-  catch { return _err(400, 'INVALID_JSON', 'Invalid JSON', corsHeaders); }
-  const { provider = 'deepseek', model, system, messages, max_tokens = 2000 } = body;
-  const builtMessages = [
-    ...(system ? [{ role: 'system', content: system }] : []),
-    ...(messages || []),
-  ];
-  try {
-    if (provider !== 'anthropic') {
-      const res = await fetch(DEEPSEEK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-                   'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}` },
-        body: JSON.stringify({ model: model || DEEPSEEK_MODEL, max_tokens, messages: builtMessages }),
-      });
-      const data    = await res.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (!content) throw new Error('DeepSeek 응답 없음: ' + JSON.stringify(data));
-      return new Response(
-        JSON.stringify({ content, provider: 'deepseek', model: model || DEEPSEEK_MODEL }),
-        { status: 200, headers: corsHeaders }
-      );
-    } else {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-                   'x-api-key': env.ANTHROPIC_API_KEY || env.OpenAI,
-                   'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({
-          model: model || 'claude-sonnet-4-20250514', max_tokens,
-          ...(system ? { system } : {}), messages: messages || [],
-        }),
-      });
-      const data    = await res.json();
-      const content = data.content?.find(c => c.type === 'text')?.text;
-      return new Response(JSON.stringify({ content, provider: 'anthropic' }),
-        { status: 200, headers: corsHeaders });
-    }
-  } catch (e) { return _err(502, 'AI_ERROR', e.message, corsHeaders); }
-}
-
-async function callOpenAIFromGeminiBody(bodyText, env, corsHeaders) {
-  const apiKey = env.OpenAI;
-  if (!apiKey) return _err(500, 'CONFIG_ERROR', 'OpenAI key not configured', corsHeaders);
-  let geminiBody;
-  try { geminiBody = JSON.parse(bodyText); }
-  catch { return _err(400, 'INVALID_JSON', 'Invalid JSON body', corsHeaders); }
-  const systemPrompt = geminiBody.system_instruction?.parts?.[0]?.text || '';
-  const parts        = geminiBody.contents?.[0]?.parts || [];
-  const textPart     = parts.find(p => p.text)?.text || '';
-  const imagePart    = parts.find(p => p.inline_data);
-  const maxTokens    = geminiBody.generationConfig?.maxOutputTokens || 1500;
-  const messages     = [];
-  if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
-  if (imagePart?.inline_data) {
-    messages.push({ role: 'user', content: [
-      { type: 'image_url', image_url: {
-        url: `data:${imagePart.inline_data.mime_type};base64,${imagePart.inline_data.data}` }},
-      { type: 'text', text: textPart || '이미지를 분석하여 JSON으로만 출력하라.' },
-    ]});
+    if (!rows?.length) return _err(404, 'NOT_FOUND', `IPv6 ${identifier} 엔티티 없음`, corsHeaders);
+    primaryGuid = rows[0].primary_guid || identifier;
+    l1Node      = rows[0].l1_node      || l1Node;
   } else {
-    messages.push({ role: 'user', content: textPart });
+    const res  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?primary_guid=eq.${encodeURIComponent(identifier)}&select=primary_guid,l1_node,name,entity_type,current_ipv6&limit=1`, { headers: sbH });
+    const rows = await res.json().catch(() => []);
+    if (rows?.length) l1Node = rows[0].l1_node || l1Node;
   }
+  const nodeBase   = L1_NODE_MAP[l1Node] || L1_DEFAULT;
+  const pguidShort = primaryGuid.slice(0, 8);
+  const pdvUrl     = `${nodeBase}/entities/${pguidShort}.html`;
   try {
-    const res  = await fetch(OPENAI_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: OPENAI_MODEL, messages, max_tokens: maxTokens,
-                             temperature: geminiBody.generationConfig?.temperature ?? 0.1 }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
-    const text = data.choices?.[0]?.message?.content || '{}';
-    return new Response(JSON.stringify({
-      candidates: [{ content: { parts: [{ text }], role: 'model' }, finishReason: 'STOP' }],
-      _provider: 'openai', _model: OPENAI_MODEL,
-    }), { headers: corsHeaders });
-  } catch(e) {
-    const fbBody = JSON.stringify({ model: DEEPSEEK_MODEL, messages, max_tokens: maxTokens,
-                                    temperature: 0.1, stream: false });
-    return callDeepSeek(fbBody, env, corsHeaders, e.message);
-  }
+    const pdvRes = await fetch(pdvUrl);
+    if (pdvRes.ok) {
+      const html = await pdvRes.text();
+      return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Access-Control-Allow-Origin': corsHeaders['Access-Control-Allow-Origin'], 'X-Gopang-Node': l1Node, 'X-Gopang-GUID': primaryGuid } });
+    }
+  } catch {}
+  const res2    = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?primary_guid=eq.${encodeURIComponent(primaryGuid)}&select=*&limit=1`, { headers: sbH });
+  const rows2   = await res2.json().catch(() => []);
+  const profile  = rows2?.[0];
+  if (profile) return new Response(_generatePdvHtml(profile), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Access-Control-Allow-Origin': corsHeaders['Access-Control-Allow-Origin'], 'X-Gopang-Generated': 'dynamic' } });
+  return _err(404, 'PDV_NOT_FOUND', `PDV 페이지 없음: ${primaryGuid}`, corsHeaders);
 }
 
-async function callDeepSeek(bodyText, env, corsHeaders, fallbackFrom = null) {
-  try {
-    let isStream = false;
-    try { isStream = !!JSON.parse(bodyText)?.stream; } catch {}
-    const res = await fetch(DEEPSEEK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json',
-                 'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}` },
-      body: bodyText,
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      let errMsg;
-      try { errMsg = JSON.parse(errText)?.error?.message; } catch {}
-      return new Response(JSON.stringify({ error: errMsg || `HTTP ${res.status}` }),
-        { status: res.status, headers: corsHeaders });
-    }
-    if (isStream) {
-      return new Response(res.body, { status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'text/event-stream',
-                   'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' } });
-    }
-    const data = await res.json();
-    if (fallbackFrom) {
-      const text = data.choices?.[0]?.message?.content || '{}';
-      return new Response(JSON.stringify({
-        candidates: [{ content: { parts: [{ text }], role: 'model' }, finishReason: 'STOP' }],
-        _provider: 'deepseek-fallback', _fallback_from: fallbackFrom,
-      }), { headers: corsHeaders });
-    }
-    return new Response(JSON.stringify(data), { headers: corsHeaders });
-  } catch(e) { return _err(502, 'DEEPSEEK_ERROR', e.message, corsHeaders); }
+function _generatePdvHtml(p) {
+  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${p.name||'엔티티'} — Gopang PDV</title><meta name="ofp:primary_guid" content="${p.primary_guid||''}"><meta name="ofp:current_ipv6" content="${p.current_ipv6||''}"><meta name="ofp:l1_node" content="${p.l1_node||''}"><style>body{font-family:sans-serif;max-width:480px;margin:40px auto;padding:20px;background:#f8f9fa}.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px}h1{font-size:20px;margin-bottom:16px}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px}.label{color:#6b7280}.val{font-family:monospace;font-size:11px;word-break:break-all}.btn{display:block;width:100%;padding:12px;margin-top:16px;background:#3ecf8e;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}</style></head><body><div class="card"><h1>${p.name||'(이름 없음)'}</h1><div class="row"><span class="label">유형</span><span>${p.entity_type||'–'}</span></div><div class="row"><span class="label">업종</span><span>${p.occupation||'–'}</span></div><div class="row"><span class="label">주소</span><span>${p.address||'–'}</span></div><div class="row"><span class="label">Primary GUID</span><span class="val">${p.primary_guid||'–'}</span></div><div class="row"><span class="label">IPv6</span><span class="val">${p.current_ipv6||'–'}</span></div><div class="row"><span class="label">L1 노드</span><span class="val">${p.l1_node||'–'}</span></div><button class="btn" onclick="window.open('https://gopang.net/?connect=${encodeURIComponent(p.primary_guid||'')}','_blank')">고팡으로 연결</button></div></body></html>`;
 }
+
+// ═══════════════════════════════════════════════════════════
+// v4.7 — /search
+// ═══════════════════════════════════════════════════════════
+async function handleSearch(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const sbH = _sbHeaders(env);
+  const res  = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_entities`, { method: 'POST', headers: sbH, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({ error: 'parse failed' }));
+  return new Response(JSON.stringify(data), { status: res.status, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// v4.8 — /biz/profile/{handle}
+// ═══════════════════════════════════════════════════════════
+async function handleBizProfile(request, env, corsHeaders) {
+  const rawHandle = decodeURIComponent(new URL(request.url).pathname.replace('/biz/profile/', ''));
+  if (!rawHandle) return _err(400, 'MISSING_HANDLE', 'handle 필수', corsHeaders);
+  const sbH = _sbHeaders(env);
+  let profile = null;
+  const pRes  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?handle=eq.${encodeURIComponent(rawHandle)}&limit=1`, { headers: sbH });
+  const pRows = await pRes.json().catch(() => []);
+  if (pRows.length) {
+    profile = pRows[0];
+  } else {
+    const nickname = rawHandle.replace(/^@/, '').split('#')[0];
+    const res2     = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?nickname=eq.${encodeURIComponent(nickname)}&limit=1`, { headers: sbH });
+    const rows2    = await res2.json().catch(() => []);
+    if (!rows2.length) return _err(404, 'PROFILE_NOT_FOUND', `handle ${rawHandle} 없음`, corsHeaders);
+    profile = rows2[0];
+  }
+  const guid = profile.current_ipv6;
+  const [prodRes, reviewRes] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/biz_products?seller_guid=eq.${encodeURIComponent(guid)}&is_active=eq.true&order=sort_order.asc`, { headers: sbH }),
+    fetch(`${SUPABASE_URL}/rest/v1/biz_reviews?seller_guid=eq.${encodeURIComponent(guid)}&is_visible=eq.true&order=created_at.desc&limit=20`, { headers: sbH }),
+  ]);
+  const [products, reviews] = await Promise.all([prodRes.json().catch(()=>[]), reviewRes.json().catch(()=>[])]);
+  const avgRating = reviews.length ? (reviews.reduce((s,r)=>s+(r.rating||0),0)/reviews.length).toFixed(1) : null;
+  return new Response(JSON.stringify({ ok:true, profile, products, reviews, review_summary:{count:reviews.length,avg_rating:avgRating} }), { status:200, headers:corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// v4.8 — /biz/order
+// ═══════════════════════════════════════════════════════════
+async function handleBizOrder(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { pubkey, signature, from_guid, product_id, quantity=1, seller_guid, l1_node, memo, nonce } = body;
+  if (!pubkey)      return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  if (!signature)   return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+  if (!from_guid)   return _err(400, 'MISSING_FIELD', 'from_guid 필수', corsHeaders);
+  if (!product_id)  return _err(400, 'MISSING_FIELD', 'product_id 필수', corsHeaders);
+  if (!seller_guid) return _err(400, 'MISSING_FIELD', 'seller_guid 필수', corsHeaders);
+  const sigOk = await _verifyEd25519(pubkey, signature, body);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', 'TX 서명 검증 실패', corsHeaders);
+  const tx_id  = `${from_guid.slice(-8)}-${nonce || Date.now()}`;
+  const sbH    = _sbHeaders(env);
+  const dupRes = await fetch(`${SUPABASE_URL}/rest/v1/biz_orders?tx_id=eq.${encodeURIComponent(tx_id)}&select=id&limit=1`, { headers: sbH });
+  const dupRows = await dupRes.json().catch(()=>[]);
+  if (dupRows.length) return _err(409, 'DUPLICATE_TX', 'tx_id 중복', corsHeaders);
+  const [bRes, sRes] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/user_profiles?current_ipv6=eq.${encodeURIComponent(from_guid)}&select=handle&limit=1`, { headers:sbH }),
+    fetch(`${SUPABASE_URL}/rest/v1/user_profiles?current_ipv6=eq.${encodeURIComponent(seller_guid)}&select=handle&limit=1`, { headers:sbH }),
+  ]);
+  const [bRows, sRows] = await Promise.all([bRes.json().catch(()=>[]), sRes.json().catch(()=>[])]);
+  const sbServiceH = _sbServiceHeaders(env);
+  const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/payment_atomic`, {
+    method:'POST', headers:sbServiceH,
+    body:JSON.stringify({ p_tx_id:tx_id, p_tx_signature:signature, p_buyer_pubkey:pubkey, p_buyer_guid:from_guid, p_seller_guid:seller_guid, p_product_id:product_id, p_quantity:quantity, p_payment_method:'gdc', p_buyer_handle:bRows[0]?.handle||null, p_seller_handle:sRows[0]?.handle||null, p_l1_node:l1_node||null, p_memo:memo||null }),
+  });
+  const result = await rpcRes.json().catch(()=>({ ok:false, error:'RPC_PARSE_FAILED' }));
+  if (!result.ok) {
+    const statusMap = { PRODUCT_NOT_FOUND:404, OUT_OF_STOCK:409, INSUFFICIENT_GDC:402, DUPLICATE_TX:409 };
+    return _err(statusMap[result.error]||500, result.error, result.error, corsHeaders);
+  }
+  return new Response(JSON.stringify({ ok:true, ...result }), { status:200, headers:corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// v4.8 — /biz/review
+// ═══════════════════════════════════════════════════════════
+async function handleBizReview(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { reviewer_guid, product_id, tx_id, rating, body:reviewBody, image_urls=[], seller_guid } = body;
+  if (!reviewer_guid) return _err(400, 'MISSING_FIELD', 'reviewer_guid 필수', corsHeaders);
+  if (!product_id)    return _err(400, 'MISSING_FIELD', 'product_id 필수', corsHeaders);
+  if (!tx_id)         return _err(400, 'MISSING_FIELD', 'tx_id 필수', corsHeaders);
+  if (!rating||rating<1||rating>5) return _err(400, 'INVALID_RATING', 'rating 1~5 필수', corsHeaders);
+  const sbServiceH = _sbServiceHeaders(env);
+  const valRes     = await fetch(`${SUPABASE_URL}/rest/v1/rpc/validate_review`, { method:'POST', headers:sbServiceH, body:JSON.stringify({ p_reviewer_guid:reviewer_guid, p_product_id:product_id, p_tx_id:tx_id }) });
+  const valResult  = await valRes.json().catch(()=>({ ok:false, error:'RPC_PARSE_FAILED' }));
+  if (!valResult.ok) {
+    const statusMap = { NO_VALID_PURCHASE:403, ALREADY_REVIEWED:409 };
+    return _err(statusMap[valResult.error]||400, valResult.error, valResult.error, corsHeaders);
+  }
+  const insRes = await fetch(`${SUPABASE_URL}/rest/v1/biz_reviews`, {
+    method:'POST', headers:{...sbServiceH,'Prefer':'return=representation'},
+    body:JSON.stringify({ order_id:valResult.order_id, tx_id, reviewer_guid, seller_guid:seller_guid||null, product_id, rating, body:reviewBody||null, image_urls }),
+  });
+  if (!insRes.ok) return _err(500, 'INSERT_FAILED', await insRes.text(), corsHeaders);
+  const inserted = await insRes.json().catch(()=>[]);
+  return new Response(JSON.stringify({ ok:true, review_id:inserted[0]?.id||null, message:'리뷰가 등록됐습니다' }), { status:200, headers:corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// v4.8 — /biz/product
+// ═══════════════════════════════════════════════════════════
+async function handleBizProduct(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { action='create', seller_guid, pubkey, signature, product, l1_node } = body;
+  if (!seller_guid)              return _err(400, 'MISSING_FIELD', 'seller_guid 필수', corsHeaders);
+  if (!pubkey)                   return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  if (!signature)                return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+  if (!product?.name && action==='create') return _err(400, 'MISSING_FIELD', 'product.name 필수', corsHeaders);
+  const sigOk = await _verifyEd25519(pubkey, signature, body);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', 'TX 서명 검증 실패', corsHeaders);
+  const sbH       = _sbHeaders(env);
+  const ownerRes  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?current_ipv6=eq.${encodeURIComponent(seller_guid)}&select=pubkey_ed25519,handle&limit=1`, { headers:sbH });
+  const ownerRows = await ownerRes.json().catch(()=>[]);
+  if (!ownerRows.length) return _err(404, 'SELLER_NOT_FOUND', 'seller_guid 없음', corsHeaders);
+  if (ownerRows[0].pubkey_ed25519 && ownerRows[0].pubkey_ed25519 !== pubkey)
+    return _err(403, 'PUBKEY_MISMATCH', '공개키가 등록된 판매자와 일치하지 않습니다', corsHeaders);
+  const sellerHandle = ownerRows[0].handle || null;
+  const sbServiceH   = _sbServiceHeaders(env);
+  if (action === 'create') {
+    const insRes = await fetch(`${SUPABASE_URL}/rest/v1/biz_products`, {
+      method:'POST', headers:{...sbServiceH,'Prefer':'return=representation'},
+      body:JSON.stringify({ seller_guid, seller_handle:sellerHandle, name:product.name, description:product.description||null, category:product.category||null, image_urls:product.image_urls||[], tags:product.tags||[], price_krw:product.price_krw??0, price_gdc:product.price_gdc??0, stock:product.stock??null, sort_order:product.sort_order??0, is_active:product.is_active??true, l1_node:l1_node||null }),
+    });
+    if (!insRes.ok) return _err(500, 'INSERT_FAILED', await insRes.text(), corsHeaders);
+    const inserted = await insRes.json().catch(()=>[]);
+    return new Response(JSON.stringify({ ok:true, action:'created', product_id:inserted[0]?.id||null }), { status:200, headers:corsHeaders });
+  }
+  if (action === 'update') {
+    if (!product?.id) return _err(400, 'MISSING_FIELD', 'product.id 필수 (update)', corsHeaders);
+    const chkRes  = await fetch(`${SUPABASE_URL}/rest/v1/biz_products?id=eq.${encodeURIComponent(product.id)}&seller_guid=eq.${encodeURIComponent(seller_guid)}&select=id&limit=1`, { headers:sbH });
+    const chkRows = await chkRes.json().catch(()=>[]);
+    if (!chkRows.length) return _err(403, 'FORBIDDEN', '본인 상품만 수정할 수 있습니다', corsHeaders);
+    const patch  = {};
+    const fields = ['name','description','category','image_urls','tags','price_krw','price_gdc','stock','sort_order','is_active'];
+    for (const f of fields) { if (product[f] !== undefined) patch[f] = product[f]; }
+    const updRes = await fetch(`${SUPABASE_URL}/rest/v1/biz_products?id=eq.${encodeURIComponent(product.id)}`, { method:'PATCH', headers:{...sbServiceH,'Prefer':'return=minimal'}, body:JSON.stringify(patch) });
+    if (!updRes.ok) return _err(500, 'UPDATE_FAILED', await updRes.text(), corsHeaders);
+    return new Response(JSON.stringify({ ok:true, action:'updated', product_id:product.id }), { status:200, headers:corsHeaders });
+  }
+  return _err(400, 'INVALID_ACTION', 'action은 create 또는 update', corsHeaders);
+}
+
+// ═══════════════════════════════════════════════════════════
+// Ed25519 서명 검증
+// ═══════════════════════════════════════════════════════════
+async function _verifyEd25519(pubkeyB64u, signatureB64u, bodyObj) {
+  try {
+    const { signature: _sig, ...rest } = bodyObj;
+    const payload   = new TextEncoder().encode(JSON.stringify(rest));
+    const pubKeyBytes = _b64uToBytes(pubkeyB64u);
+    const sigBytes    = _b64uToBytes(signatureB64u);
+    const cryptoKey   = await crypto.subtle.importKey('raw', pubKeyBytes, { name:'Ed25519' }, false, ['verify']);
+    return await crypto.subtle.verify('Ed25519', cryptoKey, sigBytes, payload);
+  } catch (e) { console.warn('[Ed25519]', e.message); return false; }
+}
+
+function _b64uToBytes(b64u) {
+  const b64 = b64u.replace(/-/g,'+').replace(/_/g,'/');
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+}
+
+// ═══════════════════════════════════════════════════════════
+// 이하 v4.7과 동일 — PDV, SSO, WebAuthn, AI, Geocode
+// ═══════════════════════════════════════════════════════════
+async function handlePdvQuery(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const origin=request.headers.get('Origin')||'';try{const body=await request.json().catch(()=>null);const query=body?.query;if(!query?.svc||!query?.ipv6||!query?.scope||!query?.period)return _err(400,'SCHEMA_ERROR','필수 필드 누락: svc, ipv6, scope, period',corsHeaders);if(!Array.isArray(query.scope)||query.scope.length===0)return _err(400,'SCOPE_INVALID','scope는 비어있지 않은 배열이어야 합니다',corsHeaders);const invalidScope=query.scope.find(s=>!VALID_PDV_SCOPES.includes(s));if(invalidScope)return _err(400,'SCOPE_INVALID',`허용되지 않은 scope: ${invalidScope}`,corsHeaders);if(!query.period?.start||!query.period?.end)return _err(400,'SCHEMA_ERROR','period.start, period.end 필수',corsHeaders);const periodMs=new Date(query.period.end)-new Date(query.period.start);if(periodMs>365*24*60*60*1000)return _err(400,'PERIOD_TOO_LONG','조회 기간은 12개월을 초과할 수 없습니다',corsHeaders);const svcReg=_getSvcRegistration(origin,query.svc);if(!svcReg||!svcReg.pdv)return _err(403,'SVC_NOT_REGISTERED',`미등록 또는 PDV 권한 없는 서비스: ${query.svc}`,corsHeaders);const authToken=query.auth_token;if(!authToken?.exp||Math.floor(Date.now()/1000)>authToken.exp)return _err(401,'AUTH_EXPIRED','인증 토큰이 만료되었습니다',corsHeaders);const LEVEL_ORDER={L0:0,L1:1,L2:2,L3:3};const userLevel=LEVEL_ORDER[authToken.level]??0;for(const scope of query.scope){const required=LEVEL_ORDER[SCOPE_MIN_LEVEL[scope]||'L1'];if(userLevel<required)return _err(403,'LEVEL_INSUFFICIENT',`${scope} 조회는 ${SCOPE_MIN_LEVEL[scope]} 이상 필요`,corsHeaders);}if(!query.consent_token||!query.request_id){const reqId=`CNSREQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const expiresAt=Math.floor(Date.now()/1000)+300;await _storeConsentRequest(env,reqId,query,expiresAt);const consentUrl='https://gopang.net/consent'+`?req=${encodeURIComponent(reqId)}&svc=${encodeURIComponent(query.svc)}`+`&scope=${encodeURIComponent(query.scope.join(','))}`+`&purpose=${encodeURIComponent(query.purpose||'')}`+`&ipv6_hash=${encodeURIComponent(await _sha256Hex(query.ipv6))}`;return new Response(JSON.stringify({ok:false,status:'CONSENT_REQUIRED',consent:{request_id:reqId,expires_at:expiresAt,consent_url:consentUrl,message:'사용자가 고팡 앱에서 PDV 조회에 동의해야 합니다.'}}),{status:202,headers:corsHeaders});}const consentOk=await _verifyConsentToken(env,query.consent_token,query.request_id,query.ipv6);if(!consentOk)return _err(401,'CONSENT_INVALID','동의 토큰이 유효하지 않습니다',corsHeaders);const withinLimit=await _checkRateLimit(env,query.ipv6,'pdv_query');if(!withinLimit)return _err(429,'RATE_LIMITED','PDV 조회 한도 초과',corsHeaders);const pdvSummary=await _fetchPdvByScope(env,query.ipv6,query.scope,query.period);const queryId=`PDVQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const pdvEntryId=await _recordConsentEvent(env,query,queryId);return new Response(JSON.stringify({ok:true,query_id:queryId,ipv6:query.ipv6,period:query.period,pdv_summary:pdvSummary,consent:{granted_at:new Date().toISOString(),expires_at:new Date(authToken.exp*1000).toISOString(),pdv_entry_id:pdvEntryId}}),{status:200,headers:corsHeaders});}catch(e){return _err(500,'INTERNAL_ERROR',e.message,corsHeaders);}}
+async function _storeConsentRequest(env,reqId,query,expiresAt){const key=env.SUPABASE_KEY||_supabaseAnonKey();try{await fetch(SUPABASE_URL+'/rest/v1/pdv_consent_requests',{method:'POST',headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({id:reqId,ipv6:query.ipv6,svc:_resolveSvcId(query.svc),scope:query.scope,purpose:query.purpose||'',period:query.period,status:'pending',expires_at:new Date(expiresAt*1000).toISOString()})});}catch(e){console.warn('[PDVQuery] 동의 요청 저장 실패:',e.message);}}
+async function _verifyConsentToken(env,consentToken,requestId,ipv6){try{const key=env.SUPABASE_KEY||_supabaseAnonKey();const res=await fetch(SUPABASE_URL+`/rest/v1/pdv_consent_requests?id=eq.${encodeURIComponent(requestId)}&ipv6=eq.${encodeURIComponent(ipv6)}&select=status,expires_at,consent_token`,{headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'}});const rows=await res.json().catch(()=>[]);if(!rows?.length)return false;const row=rows[0];if(new Date(row.expires_at)<new Date())return false;if(row.status!=='granted')return false;if(row.consent_token!==consentToken)return false;return true;}catch(e){return _verifyConsentHmac(env,consentToken,requestId,ipv6);}}
+async function _verifyConsentHmac(env,consentToken,requestId,ipv6){try{const masterKey=env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1';const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(masterKey),{name:'HMAC',hash:'SHA-256'},false,['verify']);const data=new TextEncoder().encode(`${requestId}.${ipv6}`);const sigBytes=Uint8Array.from(atob(consentToken.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));return crypto.subtle.verify('HMAC',key,sigBytes,data);}catch{return false;}}
+async function _checkRateLimit(env,ipv6,action){if(env.RATE_LIMIT_KV){const kvKey=`rl:${action}:${ipv6}`;const current=parseInt(await env.RATE_LIMIT_KV.get(kvKey)||'0');if(current>=3)return false;await env.RATE_LIMIT_KV.put(kvKey,String(current+1),{expirationTtl:300});return true;}return true;}
+async function _fetchPdvByScope(env,ipv6,scopes,period){const key=env.SUPABASE_KEY||_supabaseAnonKey();const result={};for(const scope of scopes){const source=SCOPE_SOURCE_MAP[scope];let queryUrl=SUPABASE_URL+'/rest/v1/pdv_log'+`?guid=eq.${encodeURIComponent(ipv6)}`+`&created_at=gte.${period.start}T00:00:00Z&created_at=lte.${period.end}T23:59:59Z`+`&select=summary,summary_6w,risk_level,created_at,source&order=created_at.desc&limit=50`;if(source)queryUrl+=`&source=eq.${encodeURIComponent(source)}`;try{const res=await fetch(queryUrl,{headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'}});const rows=await res.json().catch(()=>[]);if(!rows?.length){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{}};continue;}const RISK_ORDER={low:0,medium:1,high:2};const maxRisk=rows.reduce((max,r)=>{const lvl=r.risk_level||'low';return RISK_ORDER[lvl]>RISK_ORDER[max]?lvl:max;},'low');let summary6w=null;for(const row of rows){try{summary6w=JSON.parse(row.summary_6w);break;}catch{}}result[scope]={available:true,entry_count:rows.length,risk_level:maxRisk,summary_6w:summary6w,risk_factors:_aggregateRiskFactors(scope,rows)};}catch(e){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{},error:'fetch_failed'};}}return result;}
+function _aggregateRiskFactors(scope,rows){if(scope==='ktraffic')return{accident_count:rows.filter(r=>{try{return JSON.parse(r.summary_6w)?.what?.includes('사고');}catch{return false;}}).length,entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,accident_free_months:0};if(scope==='khealth')return{total_records:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,medium_risk_count:rows.filter(r=>r.risk_level==='medium').length};return{entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length};}
+async function _recordConsentEvent(env,query,queryId){const key=env.SUPABASE_KEY||_supabaseAnonKey();const svcId=_resolveSvcId(query.svc);const pdvId=`PDV-${query.ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;const summary6w=JSON.stringify({who:svcId,when:new Date().toISOString(),where:`https://${svcId}.gopang.net`,what:`PDV 조회 동의: scope=[${query.scope.join(',')}]`,how:'사용자 명시적 동의',why:query.purpose||'PDV 데이터 조회'});try{await fetch(SUPABASE_URL+'/rest/v1/pdv_log',{method:'POST',headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({id:pdvId,guid:query.ipv6,source:svcId,type:'consent_event',report_id:queryId,summary:`PDV 조회 동의: ${svcId} → [${query.scope.join(',')}]`,summary_6w:summary6w,risk_level:'low',period:query.period,raw_hash:null,created_at:new Date().toISOString()})});}catch(e){console.warn('[PDVQuery] consent_event 기록 실패:',e.message);}return pdvId;}
+async function _sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
+function buildCookie(token){return[`gopang_token=${token}`,'Path=/','Domain=.gopang.net','Max-Age=3600','SameSite=None','Secure','HttpOnly'].join('; ');}
+function parseCookie(header,name){const match=header.match(new RegExp(`(?:^|;)\\s*${name}=([^;]+)`));return match?decodeURIComponent(match[1]):null;}
+function buildToken(ipv6,level,svc){const now=Math.floor(Date.now()/1000);const payload={ipv6,level,svc,iat:now,exp:now+3600};return btoa(JSON.stringify(payload)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');}
+function parseToken(token){try{const padded=token.replace(/-/g,'+').replace(/_/g,'/');const payload=JSON.parse(atob(padded+'=='.slice((padded.length%4)||4)));if(payload.exp<Math.floor(Date.now()/1000))return null;return payload;}catch{return null;}}
+async function handleIssue(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.ipv6)return _err(400,'MISSING_FIELD','ipv6 필수',corsHeaders);const{ipv6,level='L0',svc='*'}=body;const token=buildToken(ipv6,level,svc);return new Response(JSON.stringify({ok:true,ipv6,level}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(token)}});}
+async function handleVerify(request,env,corsHeaders){const cookieHeader=request.headers.get('Cookie')||'';const raw=parseCookie(cookieHeader,'gopang_token');if(!raw)return _err(401,'NO_TOKEN','no_token',corsHeaders);const payload=parseToken(raw);if(!payload)return _err(401,'INVALID_TOKEN','expired_or_invalid',corsHeaders);return new Response(JSON.stringify({valid:true,ipv6:payload.ipv6,level:payload.level,svc:payload.svc,exp:payload.exp}),{status:200,headers:corsHeaders});}
+async function handleRefresh(request,env,corsHeaders){const cookieHeader=request.headers.get('Cookie')||'';const raw=parseCookie(cookieHeader,'gopang_token');if(!raw)return _err(401,'NO_TOKEN','no_token',corsHeaders);const payload=parseToken(raw);if(!payload)return _err(401,'INVALID_TOKEN','expired_or_invalid',corsHeaders);const remaining=payload.exp-Math.floor(Date.now()/1000);if(remaining>1800)return new Response(JSON.stringify({ok:false,reason:'not_yet',remaining}),{status:200,headers:corsHeaders});const newToken=buildToken(payload.ipv6,payload.level,payload.svc);return new Response(JSON.stringify({ok:true}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(newToken)}});}
+async function sbFetch(env,path,method='GET',body=null){const key=env.SUPABASE_KEY||_supabaseAnonKey();const headers={'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'};const res=await fetch(SUPABASE_URL+path,{method,headers,body:body?JSON.stringify(body):undefined});return res.ok?res.json().catch(()=>({})):null;}
+async function handleWAChallenge(request,env,corsHeaders){const challenge=crypto.getRandomValues(new Uint8Array(32));const chalB64=btoa(String.fromCharCode(...challenge)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');const exp=Math.floor(Date.now()/1000)+300;const sigData=`${chalB64}.${exp}`;const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['sign']);const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(sigData));const sigHex=Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');return new Response(JSON.stringify({challenge:chalB64,exp,sig:sigHex}),{status:200,headers:corsHeaders});}
+async function _verifyChallengeToken(env,chalB64,exp,sig){if(exp<Math.floor(Date.now()/1000))return false;const sigData=`${chalB64}.${exp}`;const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['verify']);const sigBytes=Uint8Array.from(sig.match(/.{2}/g).map(h=>parseInt(h,16)));return crypto.subtle.verify('HMAC',key,sigBytes,new TextEncoder().encode(sigData));}
+async function handleWARegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.ipv6||!body?.credentialId||!body?.publicKey)return _err(400,'MISSING_FIELD','ipv6, credentialId, publicKey 필수',corsHeaders);const chalOk=await _verifyChallengeToken(env,body.challenge,body.challengeExp,body.challengeSig);if(!chalOk)return _err(401,'CHALLENGE_INVALID','챌린지 만료 또는 위조',corsHeaders);const result=await sbFetch(env,'/rest/v1/webauthn_credentials','POST',{ipv6:body.ipv6,credential_id:body.credentialId,public_key:body.publicKey,counter:0,device_type:body.deviceType||'platform',aaguid:body.aaguid||null});if(!result)return _err(502,'DB_ERROR','Supabase 저장 실패',corsHeaders);return new Response(JSON.stringify({ok:true,ipv6:body.ipv6}),{status:200,headers:corsHeaders});}
+async function handleWAVerify(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.ipv6||!body?.credentialId)return _err(400,'MISSING_FIELD','ipv6, credentialId 필수',corsHeaders);const rows=await sbFetch(env,`/rest/v1/webauthn_credentials?ipv6=eq.${encodeURIComponent(body.ipv6)}&credential_id=eq.${encodeURIComponent(body.credentialId)}&select=public_key,counter`,'GET');if(!rows?.length)return _err(404,'CREDENTIAL_NOT_FOUND','credential_not_found',corsHeaders);const cred=rows[0];if(body.counter!==undefined&&body.counter<=cred.counter)return _err(401,'COUNTER_REPLAY','counter_replay',corsHeaders);if(body.counter!==undefined)await sbFetch(env,`/rest/v1/webauthn_credentials?credential_id=eq.${encodeURIComponent(body.credentialId)}`,'PATCH',{counter:body.counter,last_used_at:new Date().toISOString()});const token=buildToken(body.ipv6,'L2','*');return new Response(JSON.stringify({valid:true,ipv6:body.ipv6,level:'L2'}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(token)}});}
+const REGISTERED_SERVICES={'klaw':{level:3,domain:'klaw.gopang.net',minAuth:'L0',pdv:true},'market':{level:3,domain:'market.gopang.net',minAuth:'L0',pdv:true},'school':{level:3,domain:'school.gopang.net',minAuth:'L0',pdv:true},'security':{level:3,domain:'security.gopang.net',minAuth:'L1',pdv:true},'health':{level:3,domain:'health.gopang.net',minAuth:'L1',pdv:true},'tax':{level:3,domain:'tax.gopang.net',minAuth:'L0',pdv:true},'gdc':{level:3,domain:'gdc.gopang.net',minAuth:'L1',pdv:true},'public':{level:3,domain:'public.gopang.net',minAuth:'L0',pdv:true},'democracy':{level:3,domain:'democracy.gopang.net',minAuth:'L1',pdv:true},'911':{level:3,domain:'911.gopang.net',minAuth:'L0',pdv:true},'police':{level:3,domain:'police.gopang.net',minAuth:'L1',pdv:true},'insurance':{level:3,domain:'insurance.gopang.net',minAuth:'L1',pdv:true},'stock':{level:3,domain:'stock.gopang.net',minAuth:'L1',pdv:true},'traffic':{level:3,domain:'traffic.gopang.net',minAuth:'L0',pdv:true},'logistics':{level:3,domain:'logistics.gopang.net',minAuth:'L0',pdv:true},'fiil':{level:2,domain:'fiil.kr',minAuth:'L0',pdv:true},'klaw-ext':{level:2,domain:'klaw.openhash.kr',minAuth:'L0',pdv:false},'users':{level:3,domain:'users.gopang.net',minAuth:'L0',pdv:false}};
+function _getSvcRegistration(origin,svcId){const resolvedId=_resolveSvcId(svcId);const svc=REGISTERED_SERVICES[resolvedId];if(svc&&origin.includes(svc.domain))return{...svc,svcId:resolvedId,originalId:svcId};if(/^https:\/\/[a-z0-9-]+\.gopang\.net$/.test(origin))return{level:1,domain:origin,minAuth:'L0',pdv:false,svcId:resolvedId,originalId:svcId};return null;}
+async function handlePdvReport(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const origin=request.headers.get('Origin')||'';const body=await request.json().catch(()=>null);if(!body?.report)return _err(400,'SCHEMA_ERROR','report.report 필드 필수',corsHeaders);const r=body.report;const svcId=r.svc||request.headers.get('X-Gopang-Svc')||'unknown';const ipv6=r.who?.ipv6;const reg=_getSvcRegistration(origin,svcId);if(!reg)return _err(403,'SERVICE_NOT_REGISTERED',`${svcId} (${origin})은 등록된 서비스가 아닙니다`,corsHeaders);if(reg.level<2&&!reg.pdv)return _err(403,'PDV_NOT_ALLOWED','Level 1 서비스는 PDV 보고서 전송 권한이 없습니다',corsHeaders);if(!ipv6)return _err(404,'USER_NOT_FOUND','who.ipv6 필수',corsHeaders);const resolvedSvcId=_resolveSvcId(svcId);const reportId=r.id||`RPT-${resolvedSvcId}-${Date.now()}-auto`;const summary6w={who:`${r.who?.role||'user'} (${ipv6.slice(0,20)}...)`,when:`${(r.when?.period_start||'').slice(0,10)} ~ ${(r.when?.period_end||'').slice(0,10)}`,where:r.where?.svc_url||`https://${resolvedSvcId}.gopang.net`,what:r.what?.summary||'(요약 없음)',how:r.how?.method||'자동 집계',why:r.why?.goal||'(목표 미지정)'};const pdvId=`PDV-${ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;const pdvKey=env.SUPABASE_KEY||_supabaseAnonKey();const pdvFetch=await fetch(SUPABASE_URL+'/rest/v1/pdv_log',{method:'POST',headers:{'apikey':pdvKey,'Authorization':'Bearer '+pdvKey,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({id:pdvId,guid:ipv6,source:resolvedSvcId,type:r.type||'report',report_id:reportId,summary:r.what?.summary||'',summary_6w:JSON.stringify(summary6w),risk_level:r.analysis?.risk_level||'low',period:r.when??r.period??null,raw_hash:r.content_hash||null,created_at:new Date().toISOString()})});if(!pdvFetch.ok)return _err(503,'PDV_LOCKED','PDV 저장 실패, 60초 후 재시도',corsHeaders);return new Response(JSON.stringify({ok:true,report_id:reportId,pdv_entry:pdvId,recorded_at:new Date().toISOString(),recipients_notified:(r.who?.recipients||[]).filter(x=>x!=='gopang-pdv'),svc_level:reg.level,message:`PDV 기록 완료. ${resolvedSvcId} (Level ${reg.level})`}),{status:200,headers:corsHeaders});}
+async function handleSvcRegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.svc_id||!body?.domain||!body?.operator_ipv6)return _err(400,'MISSING_FIELD','svc_id, domain, operator_ipv6 필수',corsHeaders);const{svc_id,domain,description,min_auth,operator_ipv6}=body;const isGopangSub=/^[a-z0-9-]+\.gopang\.net$/.test(domain);await sbFetch(env,'/rest/v1/svc_registry','POST',{svc_id,domain,description:description||'',operator_ipv6,min_auth:min_auth||'L0',trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending',registered_at:new Date().toISOString()});return new Response(JSON.stringify({ok:true,svc_id,domain,trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending_review',message:isGopangSub?'*.gopang.net 서브도메인으로 자동 승인됐습니다. (Level 1)':'등록 신청이 접수됐습니다.'}),{status:200,headers:corsHeaders});}
+async function handleSvcVerify(request,env,corsHeaders){const url=new URL(request.url);const svcId=url.searchParams.get('svc_id');const origin=request.headers.get('Origin')||'';if(!svcId)return _err(400,'MISSING_FIELD','svc_id 파라미터 필수',corsHeaders);const reg=_getSvcRegistration(origin,svcId);if(!reg)return new Response(JSON.stringify({ok:false,registered:false,svc_id:svcId,message:'등록되지 않은 서비스입니다.'}),{status:200,headers:corsHeaders});return new Response(JSON.stringify({ok:true,registered:true,svc_id:svcId,trust_level:reg.level,pdv_allowed:reg.pdv,min_auth:reg.minAuth,message:`등록된 서비스 (Level ${reg.level})`}),{status:200,headers:corsHeaders});}
+async function handleGeocode(url,env,corsHeaders){const lat=url.searchParams.get('lat');const lng=url.searchParams.get('lng');if(!lat||!lng)return _err(400,'MISSING_FIELD','lat, lng required',corsHeaders);try{const res=await fetch(`${KAKAO_BASE}?x=${lng}&y=${lat}&input_coord=WGS84`,{headers:{'Authorization':`KakaoAK ${env.KAKAO_REST_KEY}`}});const data=await res.json();return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'GEOCODE_ERROR',e.message,corsHeaders);}}
+async function handleKakaoAppKey(request,env,corsHeaders){const appkey=env.KAKAO_JS_KEY||env.KAKAO_REST_KEY;if(!appkey)return _err(500,'CONFIG_ERROR','Kakao key not configured',corsHeaders);return new Response(JSON.stringify({appkey}),{status:200,headers:{...corsHeaders,'Cache-Control':'public, max-age=300'}});}
+async function handleAIChat(bodyText,env,corsHeaders){let body;try{body=JSON.parse(bodyText);}catch{return _err(400,'INVALID_JSON','Invalid JSON',corsHeaders);}const{provider='deepseek',model,system,messages,max_tokens=2000}=body;const builtMessages=[...(system?[{role:'system',content:system}]:[]),...(messages||[])];try{if(provider!=='anthropic'){const res=await fetch(DEEPSEEK_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${env.DEEPSEEK_API_KEY}`},body:JSON.stringify({model:model||DEEPSEEK_MODEL,max_tokens,messages:builtMessages})});const data=await res.json();const content=data.choices?.[0]?.message?.content;if(!content)throw new Error('DeepSeek 응답 없음: '+JSON.stringify(data));return new Response(JSON.stringify({content,provider:'deepseek',model:model||DEEPSEEK_MODEL}),{status:200,headers:corsHeaders});}else{const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY||env.OpenAI,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:model||'claude-sonnet-4-20250514',max_tokens,...(system?{system}:{}),messages:messages||[]})});const data=await res.json();const content=data.content?.find(c=>c.type==='text')?.text;return new Response(JSON.stringify({content,provider:'anthropic'}),{status:200,headers:corsHeaders});}}catch(e){return _err(502,'AI_ERROR',e.message,corsHeaders);}}
+async function callOpenAIFromGeminiBody(bodyText,env,corsHeaders){const apiKey=env.OpenAI;if(!apiKey)return _err(500,'CONFIG_ERROR','OpenAI key not configured',corsHeaders);let geminiBody;try{geminiBody=JSON.parse(bodyText);}catch{return _err(400,'INVALID_JSON','Invalid JSON body',corsHeaders);}const systemPrompt=geminiBody.system_instruction?.parts?.[0]?.text||'';const parts=geminiBody.contents?.[0]?.parts||[];const textPart=parts.find(p=>p.text)?.text||'';const imagePart=parts.find(p=>p.inline_data);const maxTokens=geminiBody.generationConfig?.maxOutputTokens||1500;const messages=[];if(systemPrompt)messages.push({role:'system',content:systemPrompt});if(imagePart?.inline_data){messages.push({role:'user',content:[{type:'image_url',image_url:{url:`data:${imagePart.inline_data.mime_type};base64,${imagePart.inline_data.data}`}},{type:'text',text:textPart||'이미지를 분석하여 JSON으로만 출력하라.'}]});}else{messages.push({role:'user',content:textPart});}try{const res=await fetch(OPENAI_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},body:JSON.stringify({model:OPENAI_MODEL,messages,max_tokens:maxTokens,temperature:geminiBody.generationConfig?.temperature??0.1})});const data=await res.json();if(!res.ok)throw new Error(data.error?.message||`HTTP ${res.status}`);const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'openai',_model:OPENAI_MODEL}),{headers:corsHeaders});}catch(e){const fbBody=JSON.stringify({model:DEEPSEEK_MODEL,messages,max_tokens:maxTokens,temperature:0.1,stream:false});return callDeepSeek(fbBody,env,corsHeaders,e.message);}}
+async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null){try{let isStream=false;try{isStream=!!JSON.parse(bodyText)?.stream;}catch{}const res=await fetch(DEEPSEEK_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${env.DEEPSEEK_API_KEY}`},body:bodyText});if(!res.ok){const errText=await res.text();let errMsg;try{errMsg=JSON.parse(errText)?.error?.message;}catch{}return new Response(JSON.stringify({error:errMsg||`HTTP ${res.status}`}),{status:res.status,headers:corsHeaders});}if(isStream){return new Response(res.body,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});}const data=await res.json();if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'DEEPSEEK_ERROR',e.message,corsHeaders);}}
