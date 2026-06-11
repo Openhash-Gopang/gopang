@@ -336,9 +336,10 @@
    */
   async function buildTxWithPrevHash({
     buyerGuid, sellerGuid, total, sellerNet, platformFee,
-    financialState, items,
+    financialState, items, prevSettleHash,
   }) {
-    const prevSettleHash = await computePrevSettleHash(financialState);
+    // prevSettleHash는 호출자(sign → buildPrevSettleHash)가 주입
+    // L1 검증 기준: prev_settle_hash === 직전 블록의 content_hash
     const nonce     = bufToHex(crypto.getRandomValues(new Uint8Array(8)));
     const timestamp = nowSec();
 
@@ -554,6 +555,7 @@
         platformFee,
         financialState,
         items:          rawTx.items || [],
+        prevSettleHash,   // ← block_hash 기반 값 주입
       });
 
       // tx_hash 계산 + Ed25519 서명
