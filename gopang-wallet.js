@@ -336,10 +336,9 @@
    */
   async function buildTxWithPrevHash({
     buyerGuid, sellerGuid, total, sellerNet, platformFee,
-    financialState, items, prevSettleHash,
+    financialState, items,
   }) {
-    // prevSettleHash는 호출자(sign → buildPrevSettleHash)가 주입.
-    // L1 검증 기준: prev_settle_hash === 직전 블록의 content_hash
+    const prevSettleHash = await computePrevSettleHash(financialState);
     const nonce     = bufToHex(crypto.getRandomValues(new Uint8Array(8)));
     const timestamp = nowSec();
 
@@ -514,17 +513,15 @@
     /**
      * prev_settle_hash 반환 — L1 main.pb.js 3단계 검증 기준
      * L1은 prev_settle_hash === 직전 블록의 content_hash 를 검증함.
-     * fs_state 해시가 아닌 IndexedDB financial_state.block_hash 를 그대로 사용.
-     * @returns {{ prevSettleHash: string, financialState: Object }}
+     * block_hash null = 최초 거래 (L1 블록 없음) → L1이 자체 처리.
+     * @returns {{ prevSettleHash: string|null, financialState: Object }}
      */
     async buildPrevSettleHash() {
       const db  = await openDB();
       const rec = await idbGet(db, IDB_FS_KEY);
       const financialState = rec?.state || {};
-      const prevSettleHash = rec?.block_hash;
-      if (!prevSettleHash) {
-        throw new Error('[Wallet] block_hash 미설정 — Section 18.6 수동 동기화 필요');
-      }
+      const prevSettleHash = rec?.block_hash || null;
+      // null = 최초 거래 → L1이 latestBlock 없을 때 검증 건너뜀
       return { prevSettleHash, financialState };
     }
 
@@ -557,7 +554,6 @@
         platformFee,
         financialState,
         items:          rawTx.items || [],
-        prevSettleHash,   // ← block_hash 기반 값 주입
       });
 
       // tx_hash 계산 + Ed25519 서명
@@ -590,8 +586,7 @@
       // 현재 재무 상태 로드
       const fsRec  = await idbGet(db, IDB_FS_KEY);
       const fs     = fsRec?.state || {};
-      // hash_chain 이력용: 거래 직전의 block_hash (= 직전 블록 content_hash)
-      const prevSettleHash = fsRec?.block_hash || null;
+      const prevSettleHash = await computePrevSettleHash(fs);
 
       // 만료 확인 + 청구권 적용
       const now = Date.now();
