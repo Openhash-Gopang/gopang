@@ -3607,10 +3607,18 @@ window.addEventListener('message', (e) => {
 
       // block_hash 포함 시 gopang-wallet.js에 청구권 자기갱신 요청 (STEP 24)
       if (msg.block_hash && window.gopangWallet?.redeemClaim) {
+        // buyer_claim(단일 객체) → claims 배열 변환. msg.claims 직접 전달도 병행 지원.
+        const claims = msg.claims?.length
+          ? msg.claims
+          : (msg.buyer_claim ? [msg.buyer_claim] : []);
         window.gopangWallet.redeemClaim({
           block_hash: msg.block_hash,
-          block_id:   msg.block_id   || null,
-          claims:     msg.claims     || [],
+          block_id:   msg.block_id  || null,
+          tx_hash:    msg.tx_hash   || null,
+          claims,
+        }).then(({ fs, applied }) => {
+          console.info('[GWP_DONE] redeemClaim 완료 — block_hash:',
+            msg.block_hash.slice(0, 8), '| applied:', applied, '| bs-cash:', fs['bs-cash']);
         }).catch(err => console.warn('[GWP_DONE] redeemClaim 실패:', err.message));
       }
 
