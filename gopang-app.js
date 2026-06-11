@@ -3917,9 +3917,9 @@ async function _recordPDV(record) {
 
     // ── 6하 원칙 필드 구성 ─────────────────────────────────
     // 누가 (Who)
-    const whoName = _USER.phone
+    const whoName = _USER?.phone
       ? _USER.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
-      : 'GUID:' + _USER.guid.slice(0, 8);
+      : 'GUID:' + (_USER?.guid?.slice(0, 8) ?? 'unknown');
 
     // 어디서 (Where) — GPS 우선, 주소 fallback
     const locStr = _userLocation
