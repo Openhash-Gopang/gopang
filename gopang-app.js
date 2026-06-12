@@ -3591,6 +3591,7 @@ window.addEventListener('message', (e) => {
     }
     case 'GWP_DONE': {
       // 작업 완료 — sessionId 확정 → redeemClaim → PDV 기록/소급 → 탭 자동 닫기
+      window._lastGwpDone = msg;  // T08 디버그
       if (msg.summary) appendBubble('ai', msg.summary, false);
 
       // sessionId: reporter_svc 무관하게 항상 확정 (PDV 연동 키)
