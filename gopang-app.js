@@ -2304,6 +2304,14 @@ async function callAI(userText, imageFile = null, _preTab = null) {
         _gwpLaunch(svcDef, userText, _preTab);
       } else {
         console.warn('[GWP] 알 수 없는 서비스 ID:', svcId);
+        // 미등록 서비스 → 예약된 빈 탭 닫기
+        if (_preTab && !_preTab.closed) { _preTab.close(); }
+      }
+    } else {
+      // GWP 태그 없음 = 직접 처리 → 예약된 빈 탭 닫기
+      if (_preTab && !_preTab.closed) {
+        _preTab.close();
+        console.info('[GWP] 직접 처리 — 예약 탭 닫힘');
       }
     }
 
