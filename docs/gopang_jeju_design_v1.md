@@ -1,0 +1,679 @@
+# 고팡 제주 시스템 설계도 v1.0
+**작성일**: 2026-06-12  
+**작성자**: AI City Inc. 팀 주피터  
+**상태**: v1.0 확정 — 구현 대기  
+**대상 지역**: 제주특별자치도 (파일럿: 한림읍)  
+**대상 엔티티**: 10만 명/기관 (개인 + 사업자 + 기관)
+
+---
+
+## 목차
+1. [시스템 개요](#1-시스템-개요)
+2. [아키텍처](#2-아키텍처)
+3. [데이터 모델](#3-데이터-모델)
+4. [엔티티 등록 시스템](#4-엔티티-등록-시스템)
+5. [QR 코드 결제](#5-qr-코드-결제)
+6. [프로필 시스템](#6-프로필-시스템)
+7. [AI 비서 + 다국어 통역](#7-ai-비서--다국어-통역)
+8. [리뷰 시스템](#8-리뷰-시스템)
+9. [대량 등록 자동화](#9-대량-등록-자동화)
+10. [v1.0 예상 문제점](#10-v10-예상-문제점)
+11. [v2.0 계획](#11-v20-계획)
+
+---
+
+## 1. 시스템 개요
+
+### 목적
+제주도 소재 10만 개 개인·사업자·기관을 디지털 경제 네트워크에 연결.  
+스마트폰 QR 스캔만으로 프로필 접속 → AI 비서 상담 → 결제까지 완결.
+
+### 핵심 원칙
+```
+최소 등록   — 전화번호 + 이름만으로 소비자 등록 완료
+최소 결제   — QR 스캔 + 서명 1회 = 결제 완료
+최대 호환   — 국내/외국 번호, 6개 언어, 앱 설치 불필요
+단방향 복원 — 동일 전화번호 → 항상 동일 GUID
+```
+
+### 대상 엔티티 3종
+| 유형 | entity_type | 예시 |
+|------|-------------|------|
+| 개인 | individual | 관광객, 주민 |
+| 사업자 | org | 식당, 숙박, 상점 |
+| 기관 | institution | 병원, 학교, 관공서 |
+
+---
+
+## 2. 아키텍처
+
+### 전체 구성
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   users.gopang.net                           │
+│  register-consumer.html  — 소비자 최소 등록                  │
+│  register.html           — 사업자/기관 등록 (3-step)         │
+│  profile.html            — 프로필 + 주문 + AI 비서 + 리뷰    │
+│  pay.html                — 금액 지정 즉시 결제               │
+│  ai-setup.html           — LLM 키 등록 + AI 비서 설정        │
+│  chat.html               — 에스컬레이션 채팅                 │
+│  search.html             — 엔티티 검색                       │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ HTTPS
+┌──────────────────────▼──────────────────────────────────────┐
+│              Cloudflare Worker (gopang-proxy)                │
+│  /register-consumer   /register      /qr/:handle            │
+│  /biz/profile/:handle /biz/order     /review                │
+│  /ai-chat             /interpret     /ai-setup              │
+│  /escalate            /token-refresh /handle/check          │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+          ┌────────────┴────────────┐
+          │                         │
+┌─────────▼──────────┐   ┌─────────▼──────────┐
+│     Supabase        │   │   L1 PocketBase     │
+│  user_profiles      │   │  168.110.123.175    │
+│  reviews            │   │  blocks             │
+│  ai_sessions        │   │  gdc_keys           │
+│  messages           │   │  transactions       │
+│  user_llm_keys      │   │                     │
+│  fs_ledger          │   └─────────────────────┘
+│  l1_ledger          │
+│  pdv_log            │
+└─────────────────────┘
+```
+
+### 기술 스택
+| 구성요소 | 기술 | 비고 |
+|----------|------|------|
+| Frontend | GitHub Pages | users.gopang.net |
+| Proxy | Cloudflare Worker v4.9+ | gopang-proxy |
+| DB | Supabase (PostgreSQL) | ebbecjfrwaswbdybbgiu |
+| L1 Node | PocketBase 0.22.14 | 한림읍 노드 |
+| 서명 | ED25519 | 브라우저 내 keypair |
+| 해시 | SHA-256 | PDV Hash Chain v3.0 |
+| 음성 | Web Speech API | STT + TTS |
+| 실시간 | Supabase Realtime | messages 푸시 |
+
+---
+
+## 3. 데이터 모델
+
+### 3.1 고정 레이어 (user_profiles)
+```sql
+user_profiles:
+  guid          TEXT PK        -- uuidv5(phone_digits, NS)
+  entity_type   TEXT           -- individual | org | institution
+  name          TEXT           -- 검색 인덱스 대상
+  address       TEXT           -- 검색 인덱스 대상
+  handle        TEXT UNIQUE    -- @hallim_geumneung (QR URL)
+  native_lang   TEXT           -- ko | zh | en | ja | vi | th
+  is_public     BOOLEAN        -- 검색 노출 여부
+  public_key    TEXT           -- ED25519 (결제 서명 검증)
+  extra         JSONB          -- entity_type별 유동 데이터
+  created_at    TIMESTAMPTZ
+  updated_at    TIMESTAMPTZ
+```
+
+### 3.2 유동 레이어 (extra JSONB) — entity_type별 JSON Schema
+
+**individual**
+```json
+{
+  "phone":       "+82-10-1234-5678",
+  "gender":      "M | F",
+  "birthday":    "1985-03-15",
+  "nationality": "KR | CN | US ...",
+  "consumer":    true,
+  "verified_at": "2026-06-12T..."
+}
+```
+
+**org (사업자)**
+```json
+{
+  "phone":          "064-796-0003",
+  "biz_reg_no":     "123-45-67890",
+  "ceo_name":       "김제주",
+  "ksic_code":      "56111",
+  "business_hours": "11:00–20:00",
+  "closed_days":    "매주 화요일",
+  "gdc_accepted":   true,
+  "menu":           [{"id":"m001","name":"짜장면","price":7000}],
+  "reservation":    false,
+  "ai_active":      true,
+  "fs": {
+    "bs-cash":     0,
+    "pl-purchase": 0,
+    "pl-revenue":  0
+  }
+}
+```
+
+**institution (기관)**
+```json
+{
+  "phone":        "064-000-0000",
+  "org_type":     "hospital | school | government | ngo",
+  "parent_org":   "제주특별자치도",
+  "departments":  ["내과","외과"],
+  "services":     ["진료","예약"],
+  "public_hours": "09:00–18:00",
+  "jurisdiction": "한림읍",
+  "ai_active":    true
+}
+```
+
+### 3.3 신규 테이블
+
+**reviews**
+```
+id, target_guid, target_type, reviewer_guid,
+tx_id (구매 검증), rating(1-5), body,
+body_lang, created_at, is_visible
+UNIQUE(target_guid, reviewer_guid, tx_id)
+```
+
+**user_llm_keys**
+```
+guid(FK), provider, api_key_enc(AES-256-GCM),
+model, custom_prompt, ai_active,
+native_lang, escalate_to
+```
+
+**ai_sessions**
+```
+id, caller_guid, caller_lang,
+target_guid, target_lang,
+mode(ai|human|escalated), session_type,
+messages(JSONB), is_active, escalated_at
+```
+
+**messages**
+```
+id, session_id(FK), sender_guid, receiver_guid,
+content_original, content_translated,
+lang_from, lang_to, content_type,
+voice_url, is_read, created_at
+```
+
+---
+
+## 4. 엔티티 등록 시스템
+
+### 4.1 소비자 최소 등록 (register-consumer.html)
+```
+입력: 전화번호 + 이름 (2개 필드만)
+언어: navigator.language 자동 감지
+GUID: uuidv5(phone.replace(/\D/g,''), GOPANG_NS)
+
+지원 언어 UI:
+  ko: 고팡 시작하기
+  zh: 开始使用高팡
+  en: Get Started
+  ja: ご利用開始
+  vi: Bắt đầu
+
+완료: gopang_token(JWT) 발급 → localStorage
+      return_to URL로 자동 복귀
+```
+
+### 4.2 사업자/기관 등록 (register.html 3-step)
+```
+Step 0: 유형 선택 [개인 | 사업자 | 기관]
+
+Step 1: 기본 정보
+  공통: 이름, 전화번호, 주소(읍면동)
+  org: + 업종(KSIC), 사업자번호, 대표자명, 영업시간
+  institution: + 기관유형, 상위기관, 부서
+
+Step 2: 핸들 + AI 비서
+  핸들 자동 생성: @{읍면동}_{이름_로마자}
+  중복 시: @{읍면동}_{이름_로마자}_{4자리}
+  AI 비서: ON/OFF 선택
+  ON 시: LLM 제공자, API 키, 모델, 소개글
+
+Step 3: 확인 + QR 발급
+  입력 요약 표시
+  [등록 완료] → QR 이미지 즉시 표시
+  다운로드 + 인쇄 버튼
+```
+
+### 4.3 GUID 결정성
+```
+전화번호 원문: "+86-138-0013-0000"
+숫자 추출:     "8613800130000"
+GUID:          uuidv5("8613800130000", GOPANG_NS)
+
+효과:
+  동일 번호 재등록 → 동일 GUID (거래 이력 연속)
+  기기 변경 → 번호 재입력으로 복원
+  서버에 번호 평문 저장 불필요
+```
+
+---
+
+## 5. QR 코드 결제
+
+### 5.1 QR URL 구조
+```
+단순 프로필 접속 (메뉴 선택 방식):
+  https://users.gopang.net/profile.html?handle=@hallim_geumneung
+
+금액 지정 즉시 결제 (계산대 방식):
+  https://users.gopang.net/pay.html
+    ?to=@hallim_geumneung
+    &amount=22000
+    &items=짜장면×2,짬뽕×1
+    &expires=300
+```
+
+### 5.2 결제 단계 비교
+```
+Alipay (4단계): 앱실행 → QR스캔 → 확인 → 비밀번호
+고팡 A  (2단계): QR스캔 → 서명버튼 1회
+고팡 B  (2단계): QR스캔 → 서명버튼 1회
+초방문  (3단계): QR스캔 → 번호+이름 입력 → 서명버튼
+```
+
+### 5.3 결제 파이프라인 (변경 없음)
+```
+서명버튼 클릭
+  → gopangWallet.sign(tx)       브라우저 내 ED25519 서명
+  → GWP_SIGN_REQUEST            gopang.net 전달
+  → GWP_SIGN_RESPONSE           서명 완료
+  → /biz/order POST             Worker → L1
+  → GWP_DONE                    PDV 기록
+  → fs_ledger + l1_ledger       잔액 동기화
+```
+
+### 5.4 pay.html 화면 구성
+```
+┌─────────────────────────────┐
+│  🏪 금능반점                 │
+│  ₮ 22,000                  │ (크게)
+│  짜장면×2, 짬뽕×1           │
+│  유효시간 04:32 ⏱           │
+│  [서명하여 결제]             │ (버튼 1개)
+│  취소                       │
+└─────────────────────────────┘
+```
+
+### 5.5 Worker /qr/:handle
+```
+GET /qr/@hallim_geumneung
+→ QR 이미지 PNG (300×300px) 즉시 반환
+→ 하단 업체명 + handle 텍스트 포함
+→ Cloudflare 캐시 max-age=86400
+```
+
+---
+
+## 6. 프로필 시스템
+
+### 6.1 profile.html 탭 구성
+```
+[메뉴] [정보] [리뷰] [AI비서]
+              ↑ ai_active=true 시만 표시
+```
+
+### 6.2 다국어 자동 전환
+```
+진입 시 navigator.language 감지
+→ UI 전체 해당 언어로 렌더링
+→ 업체 정보 실시간 번역 (Worker /interpret)
+지원: ko | zh | en | ja | vi | th
+```
+
+### 6.3 리뷰 탭
+```
+표시: 별점 평균 + 건수
+작성: 구매 완료 tx_id 있는 경우만 활성
+다국어: 원문 + 번역문 함께 표시 (접기/펼치기)
+```
+
+---
+
+## 7. AI 비서 + 다국어 통역
+
+### 7.1 라우팅 로직
+```
+소비자 발화 (중국어)
+  → STT (Web Speech API, zh-CN)
+  → Worker /ai-chat
+      → translate(zh→ko)
+      → target.ai_active = true?
+          YES: B의 LLM 키로 응답 생성
+               주문 의도 탐지 → requestSign() 트리거
+               응답 translate(ko→zh) → TTS(zh-CN)
+          NO:  messages INSERT (번역문 포함)
+               Supabase Realtime → B 기기 푸시
+               B 답장 → translate(ko→zh) → TTS(zh-CN)
+```
+
+### 7.2 에스컬레이션 조건
+```
+AI 3회 연속 처리 실패
+또는 사용자 "사람 연결해줘" 발화
+→ mode: 'escalated'
+→ B 기기 알림 푸시
+→ chat.html 전환 (사람 간 직접 채팅)
+```
+
+### 7.3 지원 언어
+```
+ko-KR 한국어, zh-CN 중국어, en-US 영어
+ja-JP 일본어, vi-VN 베트남어, th-TH 태국어
+```
+
+### 7.4 음성 처리
+```
+STT: Web Speech API (브라우저 내장, 무료)
+TTS: Web Speech Synthesis API (브라우저 내장, 무료)
+번역: Worker 내 LLM 호출 (DeepSeek 기본)
+      B의 LLM 키 없어도 번역은 항상 가능
+```
+
+### 7.5 ai-setup.html
+```
+AI 비서 ON/OFF
+LLM 제공자 선택 (Anthropic | OpenAI | DeepSeek | 기타)
+API 키 입력 (Worker에서 AES-256-GCM 암호화 저장)
+모델 선택
+비서 소개글 (손님에게 표시되는 문구)
+에스컬레이션 설정
+지원 언어 선택
+```
+
+---
+
+## 8. 리뷰 시스템
+
+### 8.1 작성 조건
+```
+해당 사업자/기관과의 거래 tx_id 필수
+→ 구매하지 않은 사용자 리뷰 차단
+→ 거래 1건 = 리뷰 1건 (UNIQUE 제약)
+```
+
+### 8.2 다국어 리뷰
+```
+작성: 소비자 모국어로 작성
+저장: 원문(body) + 번역문(body_translated) + 언어코드(body_lang)
+표시: 조회자 언어로 번역본 우선 표시, 원문 접기/펼치기
+```
+
+---
+
+## 9. 대량 등록 자동화
+
+### 9.1 bulk_register.py
+```
+입력: CSV (name, type, phone, address, occupation, region)
+처리: 100건 배치 INSERT, 10 스레드 병렬
+GUID: uuidv5(phone_digits, GOPANG_NS)
+핸들: @{읍면동_en}_{이름_로마자}_{4자리}
+충돌: ON CONFLICT DO UPDATE (name, updated_at 갱신)
+속도: 예상 10만 건 / 30분 이내
+```
+
+### 9.2 QR PDF 일괄 생성
+```
+등록 완료 후 handle 목록 추출
+→ qrcode 라이브러리로 PNG 생성
+→ reportlab으로 PDF 합본
+→ 1페이지 = 1기관 (QR + 업체명 + handle + 주소)
+→ 인쇄소 전달 또는 자체 출력
+```
+
+---
+
+## 10. v1.0 예상 문제점
+
+### P01 — 전화번호 기반 GUID 충돌
+```
+문제: 번호 재활용(통신사 정책) 시 이전 사용자 GUID와 충돌
+영향: 거래 이력 혼용, 잔액 오귀속
+v1 대응: extra.verified_at 타임스탬프로 최신 등록자 구분
+```
+
+### P02 — Web Speech API 브라우저 호환성
+```
+문제: Safari iOS STT 불안정, 일부 Android 미지원
+영향: AI 비서 음성 기능 동작 불가
+v1 대응: 텍스트 입력 폴백 UI 항상 제공
+```
+
+### P03 — LLM API 키 보안
+```
+문제: Worker AES-256-GCM 암호화 키 관리
+      Cloudflare 환경변수 유출 시 전체 키 노출
+영향: 사용자 LLM API 키 탈취 가능성
+v1 대응: 키 저장 시 경고 고지, 사용자 동의 획득
+```
+
+### P04 — 실시간 통역 레이턴시
+```
+문제: STT → 번역 → LLM → 번역 → TTS 파이프라인
+      왕복 레이턴시 2~5초 예상
+영향: 자연스러운 대화 흐름 방해
+v1 대응: 처리 중 시각적 인디케이터 표시
+```
+
+### P05 — 오프라인 결제 불가
+```
+문제: 네트워크 단절 시 L1 접근 불가 → 결제 중단
+영향: 제주도 산간/해안 음영 지역 서비스 불가
+v1 대응: 오프라인 상태 명시적 안내
+```
+
+### P06 — GDC 잔액 초기값 문제
+```
+문제: 신규 소비자 IDB financial_state 잔액 = 0
+      GDC 충전 수단 미정
+영향: 등록 직후 결제 불가
+v1 대응: 최초 등록 시 웰컴 보너스 지급 정책 필요
+```
+
+### P07 — handle 로마자 변환 품질
+```
+문제: 한글 → 로마자 변환 알고리즘 정확도
+      '금능반점' → 'geumneungbanjum' (어색)
+영향: QR URL 가독성 저하
+v1 대응: 사업자가 handle 직접 수정 가능하도록 설정
+```
+
+### P08 — 리뷰 어뷰징
+```
+문제: 소액 거래 다수 생성 후 리뷰 도배 가능
+영향: 리뷰 신뢰도 저하
+v1 대응: tx당 1리뷰 UNIQUE 제약으로 1차 방어
+```
+
+### P09 — AI 비서 할루시네이션
+```
+문제: LLM이 존재하지 않는 메뉴/가격/영업시간 응답
+영향: 소비자 신뢰 손상, 분쟁 발생
+v1 대응: 시스템 프롬프트에 extra.menu 전체 주입
+         "메뉴 외 정보는 모른다고 답하라" 명시
+```
+
+### P10 — 번역 품질 (전문용어/방언)
+```
+문제: 제주 방언, 의료/법률 전문용어 번역 오류
+영향: 기관(병원, 관공서) 서비스 품질 저하
+v1 대응: 일반 서비스(식당, 숙박) 우선 적용
+         전문 기관은 수동 검토 후 활성화
+```
+
+### P11 — 에스컬레이션 알림 미수신
+```
+문제: 사업자가 알림을 못 보는 경우 소비자 대기
+영향: 서비스 단절, 이탈
+v1 대응: 에스컬레이션 후 30초 무응답 시
+         "현재 연결이 어렵습니다" 자동 안내
+```
+
+### P12 — 대량 등록 데이터 품질
+```
+문제: CSV 원본 데이터 오기재 (주소, 전화번호 오류)
+영향: 잘못된 프로필, QR → 엉뚱한 업체
+v1 대응: bulk_register.py 유효성 검증 로직 포함
+         등록 후 사업자 본인 확인 절차 권고
+```
+
+### P13 — Supabase Realtime 동시 접속 한계
+```
+문제: 10만 엔티티 동시 활성 시 Realtime 연결 수 초과
+영향: 메시지 푸시 지연 또는 누락
+v1 대응: 파일럿(한림읍) 규모에서 검증 후 확장
+```
+
+### P14 — gopang_token 만료 처리
+```
+문제: 24시간 만료 후 재등록 화면 진입 시
+      소비자 혼란 (다시 등록해야 하나?)
+영향: UX 이탈
+v1 대응: 만료 1시간 전 자동 갱신
+         갱신 실패 시 "다시 시작하기" 1버튼만 표시
+```
+
+---
+
+## 11. v2.0 계획
+
+### V2-01 — 번호 재활용 문제 해결
+```
+방식: 전화번호 + 생년월일 조합으로 GUID 생성
+      uuidv5(phone + birthday, NS)
+      또는 번호 인증 시점 타임스탬프 결합
+효과: 번호 재활용 충돌 원천 차단
+```
+
+### V2-02 — 네이티브 앱 (PWA → 앱 클립)
+```
+iOS:     App Clip (QR 스캔 시 앱 없이 네이티브 UI)
+Android: Instant App
+효과:    Web Speech API 불안정 해소
+         오프라인 캐싱 (결제 대기열)
+         푸시 알림 안정화
+```
+
+### V2-03 — 엣지 캐시 번역
+```
+자주 쓰이는 번역 쌍을 Cloudflare KV에 캐싱
+예: "짜장면" → "炸酱面" (zh), "Jajangmyeon" (en)
+효과: 번역 레이턴시 2~5초 → 0.1초 이하
+```
+
+### V2-04 — 오프라인 결제 대기열
+```
+구조: IDB에 서명된 tx 임시 저장
+      네트워크 복구 시 자동 전송
+      만료시간 내 미전송 시 자동 취소
+효과: 음영 지역 결제 가능
+```
+
+### V2-05 — GDC 충전 수단
+```
+충전 방법:
+  A. 신용카드 → GDC 전환 (PG 연동)
+  B. 은행 계좌 → GDC 전환 (오픈뱅킹 API)
+  C. 현금 → 읍면동 사무소 충전 키오스크
+  D. 관광객 환전소 연동 (외화 → GDC)
+v2 우선: B (오픈뱅킹) + C (키오스크)
+```
+
+### V2-06 — LLM 키 보안 강화
+```
+현재: Cloudflare 환경변수 기반 AES 암호화
+v2:   사용자 기기 내 키 분산 (Shamir Secret Sharing)
+      서버는 암호화된 조각만 보유
+      복호화는 사용자 기기에서만 가능
+```
+
+### V2-07 — 실시간 음성 스트리밍 통역
+```
+현재: STT 완성 후 번역 (청크 방식, 레이턴시 큼)
+v2:   WebSocket 스트리밍
+      STT 중간 결과 실시간 번역
+      응답 TTS와 병렬 처리
+목표 레이턴시: 0.5초 이하
+```
+
+### V2-08 — 리뷰 어뷰징 방어
+```
+추가 조건:
+  거래 금액 최소 기준 (₮1,000 이상)
+  거래 후 24시간 이후 리뷰 가능 (숙려 기간)
+  동일 IP 하루 3건 이상 리뷰 차단
+  AI 어뷰징 탐지 (Isolation Forest 적용)
+```
+
+### V2-09 — OpenHash L2/L3 앵커링
+```
+현재: L1 (한림읍 노드) 단일
+v2:   L2 (제주시 노드) 앵커링
+      T10 openhash_anchored=true 완성
+      머클 루트 Cron (10분 주기)
+효과: 무결성 보증 범위 확대
+```
+
+### V2-10 — 프로필 분석 대시보드
+```
+사업자용:
+  일별/월별 매출 (fs_ledger 집계)
+  메뉴별 판매량
+  리뷰 감성 분석 (LLM)
+  방문자 국적 분포 (native_lang 통계)
+  AI 비서 대화 통계
+
+관공서용:
+  읍면동별 거래량
+  업종별 GDC 유통량
+  관광객 소비 패턴
+```
+
+### V2-11 — 예약 시스템
+```
+현재: 주문(즉시 결제)만 구현
+v2:   calendar 기반 예약
+      숙박, 병원, 식당 테이블 예약
+      예약금 선결제 (escrow)
+      노쇼 패널티 자동 처리
+```
+
+### V2-12 — K-Market 통합 검색
+```
+현재: search_entities() 단순 키워드 검색
+v2:   벡터 검색 (pgvector)
+      "제주 흑돼지 맛집" → 의미 기반 검색
+      사용자 언어로 검색 → 한국어 업체 매칭
+      위치 기반 반경 검색 (PostGIS)
+```
+
+### V2-13 — 정부 연동
+```
+사업자 등록번호 → 국세청 API 자동 검증
+의료기관 → 건강보험심사평가원 연동
+관광지 → 한국관광공사 API 연동
+효과: 허위 기관 등록 차단, 공식 정보 자동 채움
+```
+
+---
+
+## 버전 로드맵
+
+| 버전 | 목표 | 기간 |
+|------|------|------|
+| v0.4 (현재) | K-Market T01~T07 완료 | 2026-06 |
+| v1.0 | 제주 파일럿 (한림읍 300개 기관) | 2026-Q3 |
+| v1.1 | 한림읍 전체 + 소비자 1,000명 | 2026-Q4 |
+| v1.5 | 제주시 전체 확장 | 2027-Q1 |
+| v2.0 | 10만 엔티티 + V2 기능 전체 | 2027-Q3 |
+
+---
+
+*고팡 제주 설계도 v1.0*  
+*AI City Inc. | 2026-06-12*  
+*Gopang v0.4.0-T07 기준*
