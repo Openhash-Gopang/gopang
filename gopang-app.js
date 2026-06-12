@@ -3974,7 +3974,8 @@ async function _recordPDV(record) {
       method: 'POST',
       headers: {
         'apikey': _SUPABASE_KEY, 'Authorization': 'Bearer ' + _SUPABASE_KEY,
-        'Content-Type': 'application/json', 'Prefer': 'return=minimal',
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal,resolution=ignore-duplicates',
       },
       body: JSON.stringify({
         guid:              _effectiveGuid,
