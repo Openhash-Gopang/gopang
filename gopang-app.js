@@ -3609,6 +3609,11 @@ window.addEventListener('message', (e) => {
             '| bs-cash:', fs['bs-cash']);
           appendBubble('ai', `거래 완료. 잔액 ₩${fs['bs-cash']?.toLocaleString()}`, false);
 
+          // l1_ledger.user_hash를 클라이언트 local_hash로 교정
+          // Worker의 단순화 공식(block∥tx∥height)과 클라이언트 공식(h_{i-1}∥tx∥block∥height)이 다르므로
+          // 클라이언트가 직접 PATCH — pdv_chain_integrity JOIN 일치 보장
+          _patchL1LedgerUserHash(msg.block_hash, chainRec.local_hash);
+
           if (!reporterSvc) {
             // 고팡이 직접 PDV 기록
             const p = msg.pdvData || {};
@@ -3998,6 +4003,39 @@ async function _recordPDV(record) {
 }
 
 // ── PDV Chain 연동 유틸 (v3.0) ─────────────────────────────────────────────
+
+/**
+ * l1_ledger.user_hash를 클라이언트 local_hash로 교정
+ * Worker의 단순화 공식과 클라이언트 h_i 공식이 달라 불일치 발생
+ * → 클라이언트가 redeemClaim 직후 PATCH로 덮어씀
+ */
+async function _patchL1LedgerUserHash(blockHash, localHash) {
+  if (!blockHash || !localHash) return;
+  try {
+    const res = await fetch(
+      _SUPABASE_URL + '/rest/v1/l1_ledger'
+        + '?block_hash=eq.' + encodeURIComponent(blockHash),
+      {
+        method: 'PATCH',
+        headers: {
+          'apikey':        _SUPABASE_KEY,
+          'Authorization': 'Bearer ' + _SUPABASE_KEY,
+          'Content-Type':  'application/json',
+          'Prefer':        'return=minimal',
+        },
+        body: JSON.stringify({ user_hash: localHash }),
+      }
+    );
+    if (res.ok) {
+      console.info('[PDV] l1_ledger.user_hash 교정 완료 | block_hash:',
+        blockHash.slice(0, 8), '| user_hash:', localHash.slice(0, 8));
+    } else {
+      console.warn('[PDV] l1_ledger.user_hash PATCH 실패 | status:', res.status);
+    }
+  } catch(e) {
+    console.warn('[PDV] _patchL1LedgerUserHash 오류:', e.message);
+  }
+}
 
 /**
  * B-3: market 등 하위 시스템이 이미 INSERT한 pdv_log 레코드에
