@@ -3582,51 +3582,61 @@ window.addEventListener('message', (e) => {
       break;
     }
     case 'GWP_DONE': {
-      // 작업 완료 — PDV 중복 방지 확인 → 필요 시 기록 → 탭 자동 닫기
+      // 작업 완료 — sessionId 확정 → redeemClaim → PDV 기록/소급 → 탭 자동 닫기
       if (msg.summary) appendBubble('ai', msg.summary, false);
 
-      // STEP 24 준비: reporter_svc가 있으면 하위 시스템이 이미 PDV 기록 → 고팡 중복 방지
+      // sessionId: reporter_svc 무관하게 항상 확정 (PDV 연동 키)
+      const sessionId   = msg.session_id || msg.pdvData?.session_id || crypto.randomUUID();
       const reporterSvc = msg.reporter_svc || msg.pdvData?.reporter_svc || null;
-      const sessionId   = msg.session_id   || msg.pdvData?.session_id   || null;
-      if (!reporterSvc) {
-        // 하위 시스템이 PDV 미기록 → 고팡이 직접 기록
-        const p = msg.pdvData || {};
-        _recordPDV({
-          type:      'service_task',
-          serviceId: _gwpService?.id   || null,
-          service:   _gwpService?.name || null,
-          summary:   msg.summary       || null,
-          who:       p.who   || null,
-          when:      p.when  || null,
-          where:     p.where || null,
-          what:      p.what  || msg.summary || null,
-          how:       p.how   || null,
-          why:       p.why   || null,
-          data:      p.data  || p,
-          ts:        p.when  || new Date().toISOString(),
-        });
-      } else {
-        console.info('[GWP_DONE] PDV 중복 방지 — reporter_svc:', reporterSvc,
-                     '| session_id:', sessionId || '-');
-      }
 
-      // block_hash 포함 시 gopang-wallet.js에 청구권 자기갱신 요청 (STEP 24)
       if (msg.block_hash && window.gopangWallet?.redeemClaim) {
-        // buyer_claim(단일 객체) → claims 배열 변환. msg.claims 직접 전달도 병행 지원.
         const claims = msg.claims?.length
           ? msg.claims
           : (msg.buyer_claim ? [msg.buyer_claim] : []);
+
         window.gopangWallet.redeemClaim({
-          block_hash: msg.block_hash,
-          block_id:   msg.block_id  || null,
-          tx_hash:    msg.tx_hash   || null,
+          block_hash:     msg.block_hash,
+          block_id:       msg.block_id  || null,
+          tx_hash:        msg.tx_hash   || null,
           claims,
-        }).then(({ fs, applied }) => {
-          console.info('[GWP_DONE] redeemClaim 완료 — block_hash:',
-            msg.block_hash.slice(0, 8), '| applied:', applied, '| bs-cash:', fs['bs-cash']);
+          pdv_session_id: sessionId,
+          pdv_type:       'service_task',
+        }).then(({ fs, chainRec, applied }) => {
+          console.info('[GWP_DONE] redeemClaim 완료',
+            '| block_hash:', msg.block_hash.slice(0, 8),
+            '| height:', chainRec.height,
+            '| session_id:', sessionId.slice(0, 8),
+            '| bs-cash:', fs['bs-cash']);
           appendBubble('ai', `거래 완료. 잔액 ₩${fs['bs-cash']?.toLocaleString()}`, false);
+
+          if (!reporterSvc) {
+            // 고팡이 직접 PDV 기록
+            const p = msg.pdvData || {};
+            _recordPDV({
+              type:             'service_task',
+              serviceId:        _gwpService?.id   || null,
+              service:          _gwpService?.name || null,
+              summary:          msg.summary       || null,
+              who:              p.who   || _USER?.ipv6 || null,
+              when:             p.when  || null,
+              where:            p.where || null,
+              what:             p.what  || msg.summary || null,
+              how:              p.how   || 'gwp',
+              why:              p.why   || ((_gwpService?.name || '') + ' 서비스 이용'),
+              session_id:       sessionId,
+              chain_height:     chainRec.height,
+              chain_local_hash: chainRec.local_hash,
+              ts:               new Date().toISOString(),
+            }).then(() => _markPdvAnchored(chainRec.height));
+          } else {
+            // market 등 하위 시스템이 이미 PDV 기록 → chain_height 소급
+            console.info('[GWP_DONE] PDV 중복 방지 — reporter_svc:', reporterSvc,
+              '| chain_height 소급:', chainRec.height);
+            _patchPdvChainHeight(sessionId, chainRec.height, chainRec.local_hash);
+          }
         }).catch(err => console.warn('[GWP_DONE] redeemClaim 실패:', err.message));
       }
+
       // 하위 시스템 탭 자동 닫기 → gopang 탭 포커스 복귀
       setTimeout(() => {
         if (_gwpTab && !_gwpTab.closed) _gwpTab.close();
@@ -3916,10 +3926,11 @@ async function _recordPDV(record) {
     localStorage.setItem('gopang_pdv_log', JSON.stringify(log));
 
     // ── 6하 원칙 필드 구성 ─────────────────────────────────
-    // 누가 (Who)
+    // 누가 (Who) — P17: guid 방어코드
+    const _effectiveGuid = _USER?.guid || _USER?.ipv6 || null;
     const whoName = _USER?.phone
       ? _USER.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
-      : 'GUID:' + (_USER?.guid?.slice(0, 8) ?? 'unknown');
+      : 'GUID:' + (_effectiveGuid?.slice(0, 8) ?? 'unknown');
 
     // 어디서 (Where) — GPS 우선, 주소 fallback
     const locStr = _userLocation
@@ -3931,8 +3942,8 @@ async function _recordPDV(record) {
 
     // 어떻게 (How) — 입력 방식 추론
     const howStr = record.how
-      || (record.data?.reportId  ? 'image'   // 서비스 신고 = 이미지
-        : record.type === 'klaw_monitor' ? 'auto'  // K-Law 자동 감시
+      || (record.data?.reportId  ? 'image'
+        : record.type === 'klaw_monitor' ? 'auto'
         : 'text');
 
     // 왜 (Why) — 서비스명 또는 직접 기록된 의도
@@ -3943,38 +3954,117 @@ async function _recordPDV(record) {
         : '대화');
 
     // ── Supabase pdv_log 저장 ──────────────────────────────
-    await fetch(_SUPABASE_URL + '/rest/v1/pdv_log', {
+    // 실제 컬럼명: guid(user_guid), type(record_type), summary_6w(6하원칙 요약)
+    const res = await fetch(_SUPABASE_URL + '/rest/v1/pdv_log', {
       method: 'POST',
       headers: {
         'apikey': _SUPABASE_KEY, 'Authorization': 'Bearer ' + _SUPABASE_KEY,
         'Content-Type': 'application/json', 'Prefer': 'return=minimal',
       },
       body: JSON.stringify({
-        // 누가
-        user_guid:   _USER.guid,
-        device_fp:   _USER.fp,
-        who_name:    whoName,
-        // 언제 (created_at은 DB 기본값 사용)
-        // 어디서
-        location:    locStr,
-        // 무엇을
-        record_type: record.type,
-        summary:     record.summary || null,
-        payload:     record,
-        // 어떻게
-        how:         howStr,
-        service_id:  record.serviceId || null,
-        // 왜
-        why:         whyStr,
+        guid:              _effectiveGuid,
+        source:            'gopang',
+        type:              record.type,
+        summary:           record.summary || null,
+        summary_6w:        record.what    || record.summary || null,
+        // 위치
+        // (pdv_log에 location 컬럼 없음 — summary_6w에 포함)
+        // Hash Chain 연동 (v3.0)
+        session_id:        record.session_id        ?? null,
+        chain_height:      record.chain_height       ?? null,
+        chain_local_hash:  record.chain_local_hash   ?? null,
+        openhash_anchored: false,
+        via_worker:        false,
+        reporter_svc:      null,
+        block_hash:        record.block_hash         ?? null,
       }),
     });
 
-    console.info('[PDV] 기록 완료:', record.type, '|', whyStr);
+    if (!res.ok) {
+      const err = await res.text().catch(() => res.status);
+      console.warn('[PDV] Supabase 오류:', res.status, err);
+    } else {
+      console.info('[PDV] 기록 완료:', record.type,
+        '| session_id:', record.session_id?.slice(0, 8) || '-',
+        '| chain_height:', record.chain_height ?? '-');
+    }
   } catch(e) { console.warn('[PDV] 기록 실패:', e.message); }
 
   // K-Law 백그라운드 감시 트리거 — 서비스 완료 결과 자동 검토
   if (record.type === 'service_task' && record.serviceId !== 'klaw') {
     setTimeout(() => _klawReview('service', record), 2000);
+  }
+}
+
+// ── PDV Chain 연동 유틸 (v3.0) ─────────────────────────────────────────────
+
+/**
+ * B-3: market 등 하위 시스템이 이미 INSERT한 pdv_log 레코드에
+ *      chain_height / chain_local_hash 소급 기록
+ * 타이밍 경쟁 조건 대응: 실패 시 300ms 후 1회 재시도 (설계서 E2 수정)
+ */
+async function _patchPdvChainHeight(sessionId, chainHeight, chainLocalHash, retry = true) {
+  if (!sessionId || chainHeight == null) return;
+  try {
+    const res = await fetch(
+      _SUPABASE_URL + '/rest/v1/pdv_log'
+        + '?session_id=eq.' + encodeURIComponent(sessionId)
+        + '&chain_height=is.null',
+      {
+        method: 'PATCH',
+        headers: {
+          'apikey':        _SUPABASE_KEY,
+          'Authorization': 'Bearer ' + _SUPABASE_KEY,
+          'Content-Type':  'application/json',
+          'Prefer':        'return=minimal',
+        },
+        body: JSON.stringify({
+          chain_height:     chainHeight,
+          chain_local_hash: chainLocalHash,
+        }),
+      }
+    );
+    if (res.ok) {
+      console.info('[PDV] chain_height 소급 완료 | session_id:',
+        sessionId.slice(0, 8), '| height:', chainHeight);
+    } else if (retry) {
+      console.warn('[PDV] chain_height PATCH 실패 — 300ms 후 재시도 | status:', res.status);
+      setTimeout(() =>
+        _patchPdvChainHeight(sessionId, chainHeight, chainLocalHash, false),
+        300
+      );
+    } else {
+      console.warn('[PDV] chain_height PATCH 최종 실패 | status:', res.status);
+    }
+  } catch(e) {
+    console.warn('[PDV] _patchPdvChainHeight 오류:', e.message);
+  }
+}
+
+/**
+ * B-4: Supabase INSERT 완료 후 IDB hash_chain 레코드의 pdv_anchored를 true로 갱신
+ */
+async function _markPdvAnchored(height) {
+  try {
+    const db = await new Promise((resolve, reject) => {
+      const req = indexedDB.open('gopang-wallet');
+      req.onsuccess = e => resolve(e.target.result);
+      req.onerror   = e => reject(e.target.error);
+    });
+    const tx    = db.transaction('hash_chain', 'readwrite');
+    const store = tx.objectStore('hash_chain');
+    const rec   = await new Promise((resolve, reject) => {
+      const r = store.get(height);
+      r.onsuccess = e => resolve(e.target.result);
+      r.onerror   = e => reject(e.target.error);
+    });
+    if (rec) {
+      rec.pdv_anchored = true;
+      store.put(rec);
+      console.info('[PDV] pdv_anchored 갱신 | height:', height);
+    }
+  } catch(e) {
+    console.warn('[PDV] pdv_anchored 갱신 실패:', e.message);
   }
 }
 
