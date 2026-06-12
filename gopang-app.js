@@ -3626,6 +3626,7 @@ window.addEventListener('message', (e) => {
               session_id:       sessionId,
               chain_height:     chainRec.height,
               chain_local_hash: chainRec.local_hash,
+              block_hash:       msg.block_hash    || null,
               ts:               new Date().toISOString(),
             }).then(() => _markPdvAnchored(chainRec.height));
           } else {
