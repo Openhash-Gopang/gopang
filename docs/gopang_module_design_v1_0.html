@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고팡 제주 모듈 설계도 v1.0</title>
+<style>
+  :root {
+    --text: #1a1a1a;
+    --muted: #555555;
+    --line: #cccccc;
+    --bg-soft: #f7f7f7;
+    --bg: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Noto Sans KR", "Segoe UI", -apple-system, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+    line-height: 1.65;
+    font-size: 15px;
+  }
+  h1, h2, h3, h4 {
+    font-weight: 700;
+    line-height: 1.35;
+    margin-top: 2.2em;
+    margin-bottom: 0.6em;
+  }
+  h1 {
+    font-size: 26px;
+    border-bottom: 2px solid var(--text);
+    padding-bottom: 16px;
+    margin-top: 0;
+  }
+  h2 {
+    font-size: 20px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+    margin-top: 2.6em;
+  }
+  h3 {
+    font-size: 16px;
+    margin-top: 1.8em;
+  }
+  h4 { font-size: 14.5px; }
+
+  .meta {
+    font-size: 13.5px;
+    color: var(--muted);
+    margin: 4px 0;
+  }
+  .meta strong { color: var(--text); }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 2.5em 0;
+  }
+
+  /* Table of contents */
+  .toc {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 20px 28px;
+    margin: 24px 0;
+  }
+  .toc h2 {
+    margin-top: 0;
+    border-bottom: none;
+    font-size: 16px;
+  }
+  .toc ol {
+    margin: 0;
+    padding-left: 1.4em;
+    columns: 2;
+    column-gap: 32px;
+  }
+  .toc li { margin-bottom: 6px; font-size: 14px; }
+  .toc a {
+    color: var(--text);
+    text-decoration: none;
+  }
+  .toc a:hover { text-decoration: underline; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.2em 0;
+    font-size: 13.5px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 7px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--bg-soft);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  td code, th code { font-size: 12.5px; }
+
+  /* Code / preformatted blocks (diagrams, flows) */
+  pre {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    font-size: 12.5px;
+    line-height: 1.55;
+    font-family: "SF Mono", "Consolas", "Courier New", monospace;
+    margin: 1.2em 0;
+  }
+  code {
+    font-family: "SF Mono", "Consolas", "Courier New", monospace;
+    background: var(--bg-soft);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.92em;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+  }
+
+  /* Section blocks */
+  .section-label {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 8px;
+    margin-bottom: 4px;
+    letter-spacing: 0.03em;
+  }
+
+  ul, ol { padding-left: 1.6em; }
+  li { margin-bottom: 4px; }
+
+  .footer {
+    margin-top: 4em;
+    padding-top: 1.5em;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  .back-to-top {
+    font-size: 12.5px;
+  }
+  .back-to-top a {
+    color: var(--muted);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 2px 10px;
+  }
+  .back-to-top a:hover { color: var(--text); }
+
+  @media print {
+    body { padding: 0 12px; }
+    .back-to-top { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<h1 id="top">고팡 제주 모듈 설계도 v1.0</h1>
+<p class="meta"><strong>작성일</strong>: 2026-06-12</p>
+<p class="meta"><strong>작성자</strong>: AI City Inc. 팀 주피터</p>
+<p class="meta"><strong>기반 문서</strong>: gopang_jeju_design_v1.3.md</p>
+<p class="meta"><strong>목적</strong>: 시스템 골격 정의 — 각 모듈의 책임, 인터페이스, 의존성, 테스트 기준</p>
+<p class="meta"><strong>원칙</strong>: 코드 제외, 구조·계약·검증 기준만 기술</p>
+
+<hr>
+
+<div class="toc">
+<h2>목차</h2>
+<ol>
+  <li><a href="#sec1">모듈 전체 지도</a></li>
+  <li><a href="#sec2">계층 구조</a></li>
+  <li><a href="#sec3">M01 — 인증 모듈 (Auth)</a></li>
+  <li><a href="#sec4">M02 — 등록 모듈 (Register)</a></li>
+  <li><a href="#sec5">M03 — 결제 모듈 (Payment)</a></li>
+  <li><a href="#sec6">M04 — 프로필 모듈 (Profile)</a></li>
+  <li><a href="#sec7">M05 — AI 비서 모듈 (AI Assistant)</a></li>
+  <li><a href="#sec8">M06 — 리뷰 모듈 (Review)</a></li>
+  <li><a href="#sec9">M07 — 위치 모듈 (Location)</a></li>
+  <li><a href="#sec10">M08 — 히트맵 모듈 (Heatmap)</a></li>
+  <li><a href="#sec11">M09 — 커뮤니티 모듈 (Community)</a></li>
+  <li><a href="#sec12">M10 — GDC 결제 원장 모듈 (Ledger)</a></li>
+  <li><a href="#sec13">M11 — PDV Hash Chain 모듈 (Audit)</a></li>
+  <li><a href="#sec14">M12 — 검색 모듈 (Search)</a></li>
+  <li><a href="#sec15">M13 — 보안 모듈 (Security)</a></li>
+  <li><a href="#sec16">M14 — 대량 등록 모듈 (Bulk Register)</a></li>
+  <li><a href="#sec17">공유 인프라 (Shared Infrastructure)</a></li>
+  <li><a href="#sec18">모듈 간 의존성 매트릭스</a></li>
+  <li><a href="#sec19">통합 테스트 시나리오</a></li>
+  <li><a href="#sec20">구현 순서 로드맵</a></li>
+</ol>
+</div>
+
+<hr>
+
+<h2 id="sec1">1. 모듈 전체 지도</h2>
+
+<pre>┌─────────────────────────────────────────────────────────────────────┐
+│                        Frontend (GitHub Pages)                       │
+│                        users.gopang.net                              │
+│                                                                       │
+│  [M02]           [M03]      [M04]        [M05]    [M06]              │
+│  register*.html  pay.html   profile.html ai-setup  (profile 내 탭)   │
+│                                                                       │
+│  [M07]           [M08]       [M09]          [M12]                    │
+│  search.html     search.html community.html search.html              │
+│  (위치카드)      (히트맵탭)  (게시판)       (검색탭)                  │
+└────────────────────────────┬────────────────────────────────────────┘
+                              │ HTTPS / JWT
+┌─────────────────────────────▼───────────────────────────────────────┐
+│                  Cloudflare Worker (gopang-proxy)                    │
+│                                                                       │
+│  [M01] Auth      [M02] Register    [M03] Payment                     │
+│  /auth/*         /register*        /biz/order  /qr/*                 │
+│                                                                       │
+│  [M04] Profile   [M05] AI          [M06] Review                      │
+│  /biz/profile/*  /ai-chat          /review                           │
+│  /interpret      /ai-setup                                           │
+│                  /escalate                                           │
+│                                                                       │
+│  [M07] Location  [M08] Heatmap     [M09] Community                    │
+│  /nearby         /heatmap          /community/*                      │
+│  /location                                                           │
+│  /directions                                                         │
+│                                                                       │
+│  [M10] Ledger    [M11] Audit       [M12] Search   [M13] Security      │
+│  (내부 함수)     /merkle/verify    /search        (파이프라인)        │
+└──────────┬───────────────────────────────────┬───────────────────────┘
+           │                                    │
+┌──────────▼──────────┐            ┌────────────▼────────────┐
+│      Supabase        │            │     L1 PocketBase        │
+│  [M01] gopang_sessions│            │  blocks                  │
+│  [M02] user_profiles  │            │  gdc_keys                │
+│  [M03] biz_orders     │            │  transactions            │
+│        fs_ledger      │            │                          │
+│  [M04] user_profiles  │            └──────────────────────────┘
+│  [M05] ai_sessions    │
+│        messages       │
+│        user_llm_keys  │
+│  [M06] profile_reviews│
+│  [M07] location_log   │
+│        user_profiles  │
+│        (lat/lng)      │
+│  [M08] location_log   │
+│  [M09] community_*    │
+│  [M10] fs_ledger      │
+│        l1_ledger      │
+│  [M11] pdv_log        │
+│        merkle_anchors │
+│  [M12] user_profiles  │
+│  [M13] security_*     │
+└──────────────────────-─┘</pre>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec2">2. 계층 구조</h2>
+
+<p>모듈은 4개 계층으로 분류됩니다. 상위 계층은 하위 계층에 의존하고, 역방향 의존은 금지입니다.</p>
+
+<pre>L4 — 애플리케이션 계층   M02 M03 M04 M05 M06 M07 M08 M09 M12 M14
+     (사용자 기능)
+
+L3 — 도메인 계층         M10 M11
+     (원장·감사)
+
+L2 — 인프라 계층         M01 M13
+     (인증·보안)
+
+L1 — 공유 인프라         Supabase Client · Worker Router
+     (런타임 기반)        · JWT Lib · Translate Helper</pre>
+
+<h3>계층 규칙</h3>
+<ul>
+  <li>L4 모듈은 L1~L3 모두 호출 가능</li>
+  <li>L3 모듈은 L1~L2만 호출 가능</li>
+  <li>L2 모듈은 L1만 호출 가능</li>
+  <li>동일 계층 모듈 간 직접 호출 금지 — Worker 라우터를 통해서만 조합</li>
+</ul>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec3">3. M01 — 인증 모듈 (Auth)</h2>
+
+<h3>3.1 책임</h3>
+<ul>
+  <li>gopang_token(JWT) 발급·갱신·검증</li>
+  <li>GUID 결정성 생성 (uuidv5)</li>
+  <li>모든 인증 필요 엔드포인트의 게이트키퍼</li>
+</ul>
+
+<h3>3.2 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>엔드포인트 / 함수</th><th>입력</th><th>출력</th></tr>
+<tr><td>Worker IN</td><td><code>POST /register-consumer</code></td><td>phone, name, lang</td><td>JWT token</td></tr>
+<tr><td>Worker IN</td><td><code>POST /register</code></td><td>entity data</td><td>JWT token</td></tr>
+<tr><td>Worker IN</td><td><code>POST /token-refresh</code></td><td>Bearer JWT</td><td>신규 JWT</td></tr>
+<tr><td>내부 함수</td><td><code>verifyJWT(token, key)</code></td><td>JWT string</td><td>payload | 401</td></tr>
+<tr><td>내부 함수</td><td><code>makeGUID(phone_digits)</code></td><td>string</td><td>uuidv5 string</td></tr>
+</table>
+
+<h3>3.3 상태·저장</h3>
+<ul>
+  <li><code>gopang_sessions</code> 테이블 — 발급된 토큰 감사 기록 (선택적)</li>
+  <li><code>user_profiles.guid</code> — GUID 원천</li>
+</ul>
+
+<h3>3.4 의존 모듈</h3>
+<ul><li>없음 (최하위 인증 계층)</li></ul>
+
+<h3>3.5 테스트 항목</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>A01</td><td>정상 등록 후 토큰 발급</td><td>유효한 phone + name</td><td>JWT 반환, 24시간 exp</td></tr>
+<tr><td>A02</td><td>동일 전화번호 재등록</td><td>기존 phone</td><td>동일 GUID, 새 JWT</td></tr>
+<tr><td>A03</td><td>유효 토큰 갱신</td><td>exp 1시간 이내 JWT</td><td>새 JWT, 갱신된 exp</td></tr>
+<tr><td>A04</td><td>만료 토큰 갱신 시도</td><td>exp 초과 JWT</td><td>401 Unauthorized</td></tr>
+<tr><td>A05</td><td>서명 위조 토큰</td><td>임의 변조 JWT</td><td>401 Unauthorized</td></tr>
+<tr><td>A06</td><td>인증 필요 엔드포인트 무토큰 접근</td><td>헤더 없음</td><td>401</td></tr>
+<tr><td>A07</td><td>외국 번호(+86) GUID 결정성</td><td>+86-138-0013-0000 (2회)</td><td>동일 GUID</td></tr>
+<tr><td>A08</td><td>GOPANG_MASTER_KEY 미등록 시</td><td>env 누락</td><td>500 + 명시적 오류 메시지</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec4">4. M02 — 등록 모듈 (Register)</h2>
+
+<h3>4.1 책임</h3>
+<ul>
+  <li>소비자 최소 등록 (전화번호 + 이름)</li>
+  <li>사업자/기관 3-step 등록</li>
+  <li>handle 로마자 생성 및 중복 처리</li>
+  <li>QR 이미지(SVG) 생성 및 반환</li>
+</ul>
+
+<h3>4.2 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>엔드포인트</th><th>입력</th><th>출력</th></tr>
+<tr><td>Worker IN</td><td><code>POST /register-consumer</code></td><td>phone, name, lang</td><td>JWT, guid, handle</td></tr>
+<tr><td>Worker IN</td><td><code>POST /register</code></td><td>entity_type + 상세 필드</td><td>JWT, guid, handle</td></tr>
+<tr><td>Worker IN</td><td><code>GET /handle/check</code></td><td>handle 후보</td><td>available: bool</td></tr>
+<tr><td>Worker IN</td><td><code>GET /qr/:handle</code></td><td>handle</td><td>SVG image</td></tr>
+<tr><td>Frontend</td><td>register-consumer.html</td><td>—</td><td>2-field 폼</td></tr>
+<tr><td>Frontend</td><td>register.html</td><td>—</td><td>3-step 폼</td></tr>
+</table>
+
+<h3>4.3 상태·저장</h3>
+<ul>
+  <li><code>user_profiles</code> — 모든 등록 엔티티</li>
+  <li><code>user_profiles.handle</code> — UNIQUE 제약</li>
+</ul>
+
+<h3>4.4 내부 처리 흐름</h3>
+<pre>소비자 등록:
+  phone 입력 → 숫자 추출 → uuidv5 → GUID
+  → handle 자동 생성 (@{읍면동}_{이름_로마자})
+  → handle UNIQUE 확인 → 충돌 시 suffix 4자리 채번
+  → user_profiles INSERT (ON CONFLICT (guid) DO UPDATE)
+  → JWT 발급 (M01 위임)
+  → return_to 복귀 처리 (pending_pay_url)
+
+사업자 등록:
+  위와 동일 + entity_type='org' + extra JSONB 구성
+  + AI 비서 ON 시 → user_llm_keys INSERT (M05 위임)</pre>
+
+<h3>4.5 의존 모듈</h3>
+<ul>
+  <li>M01 (JWT 발급)</li>
+  <li>M05 (AI 비서 키 저장 — 선택적)</li>
+</ul>
+
+<h3>4.6 테스트 항목</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>R01</td><td>소비자 최소 등록</td><td>phone + name</td><td>user_profiles INSERT, JWT 반환</td></tr>
+<tr><td>R02</td><td>handle 충돌 시 suffix</td><td>동일 지역+이름 2명</td><td>@hallim_kimmin vs @hallim_kimmin_0001</td></tr>
+<tr><td>R03</td><td>사업자 3-step 완료</td><td>org 전체 필드</td><td>entity_type=org, extra 구성 정확</td></tr>
+<tr><td>R04</td><td>기관 등록</td><td>institution 필드</td><td>entity_type=institution</td></tr>
+<tr><td>R05</td><td>QR SVG 반환</td><td>GET /qr/@handle</td><td>image/svg+xml, 300×300</td></tr>
+<tr><td>R06</td><td>QR Cloudflare 캐시</td><td>동일 handle 2회 요청</td><td>2번째는 캐시 HIT</td></tr>
+<tr><td>R07</td><td>return_to 복귀</td><td>pay.html → 등록 → 복귀</td><td>pending_pay_url 정확히 복귀</td></tr>
+<tr><td>R08</td><td>ON CONFLICT 재등록</td><td>기존 GUID로 재등록</td><td>name 갱신, GUID 불변</td></tr>
+<tr><td>R09</td><td>외국 번호 국가코드</td><td>+86 prefix 포함 입력</td><td>숫자만 추출 후 GUID 생성</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec5">5. M03 — 결제 모듈 (Payment)</h2>
+
+<h3>5.1 책임</h3>
+<ul>
+  <li>QR 결제 파이프라인 (GWP_SIGN_REQUEST → L1 → GWP_DONE)</li>
+  <li>pay.html 금액 지정 즉시 결제</li>
+  <li>QR 만료 검증 (created_at + expires)</li>
+  <li>buyer_claim 생성 및 클라이언트 전달</li>
+  <li>fs_ledger 3행 원자 INSERT</li>
+</ul>
+
+<h3>5.2 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>엔드포인트</th><th>입력</th><th>출력</th></tr>
+<tr><td>Worker IN</td><td><code>POST /biz/order</code></td><td>signed_tx, to, amount, items, created_at, expires</td><td>ok, buyer_claim, block_hash</td></tr>
+<tr><td>Frontend</td><td>pay.html</td><td>QR URL 파라미터</td><td>결제 UI</td></tr>
+<tr><td>Frontend</td><td>profile.html</td><td>메뉴 선택</td><td>GWP_SIGN_REQUEST 트리거</td></tr>
+<tr><td>L1 OUT</td><td><code>POST /api/tx</code></td><td>tx payload</td><td>block_id, block_hash, height</td></tr>
+</table>
+
+<h3>5.3 상태·저장</h3>
+<ul>
+  <li><code>biz_orders</code> — 주문 레코드</li>
+  <li><code>fs_ledger</code> — 3행 (buyer debit / seller credit / platform credit)</li>
+  <li><code>l1_ledger</code> — L1 블록 미러</li>
+</ul>
+
+<h3>5.4 내부 처리 흐름</h3>
+<pre>POST /biz/order 수신
+  → QR 만료 검증: now() - created_at > expires → 409 QR_EXPIRED
+  → ED25519 서명 검증 (user_profiles.public_key)
+  → L1 POST /api/tx
+  → L1 응답: block_id, block_hash
+  → buyer_claim 생성 (expires_at: 7일, direction: debit)
+  → seller_claim 생성 (direction: credit)
+  → market_purchase() RPC → fs_ledger 3행 원자 INSERT
+  → biz_orders INSERT
+  → GWP_DONE payload 구성 → 클라이언트 반환
+
+pay.html 만료 처리:
+  진입 시: now() - created_at > expires → "결제 시간 만료" 표시
+  복귀 시: localStorage pending_pay_url → 잔여 시간 재계산</pre>
+
+<h3>5.5 계정 과목 규칙 (T07 확정)</h3>
+<pre>bs-cash    : Σcredit - Σdebit (순변동분)
+pl-purchase: Σdebit (양수 누적 — cur + amount)
+pl-revenue : Σcredit (양수 누적)
+fs_ledger.source: 'market' 고정 ('kmarket' 사용 금지)</pre>
+
+<h3>5.6 의존 모듈</h3>
+<ul>
+  <li>M01 (JWT 검증)</li>
+  <li>M10 (Ledger — fs_ledger 원자 INSERT)</li>
+  <li>M11 (PDV 기록 — 결제 완료 후)</li>
+</ul>
+
+<h3>5.7 테스트 항목</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>P01</td><td>정상 결제</td><td>유효 QR + 잔액 충분</td><td>biz_orders, fs_ledger 3행, buyer_claim</td></tr>
+<tr><td>P02</td><td>QR 만료 결제</td><td>expires=300, created_at 301초 전</td><td>409 QR_EXPIRED</td></tr>
+<tr><td>P03</td><td>잔액 부족</td><td>GDC &lt; amount</td><td>402 INSUFFICIENT_BALANCE</td></tr>
+<tr><td>P04</td><td>서명 위조</td><td>잘못된 ED25519 서명</td><td>403 INVALID_SIGNATURE</td></tr>
+<tr><td>P05</td><td>fs_ledger source 검증</td><td>source='kmarket'</td><td>400 CHECK_VIOLATION</td></tr>
+<tr><td>P06</td><td>pl-purchase 양수 누적</td><td>3회 연속 결제</td><td>pl-purchase 항상 양수</td></tr>
+<tr><td>P07</td><td>buyer_claim expires_at</td><td>결제 완료</td><td>expires_at = now + 7일</td></tr>
+<tr><td>P08</td><td>초방문자 pay.html 진입</td><td>토큰 없음</td><td>register-consumer 리다이렉트 + return_to 저장</td></tr>
+<tr><td>P09</td><td>L1 타임아웃</td><td>L1 무응답 5초</td><td>504 + 롤백</td></tr>
+<tr><td>P10</td><td>중복 결제 방지</td><td>동일 tx_id 2회</td><td>biz_orders UNIQUE 위반 → 409</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec6">6. M04 — 프로필 모듈 (Profile)</h2>
+
+<h3>6.1 책임</h3>
+<ul>
+  <li>업체·기관 프로필 조회 및 다국어 번역</li>
+  <li>탭 구성 (메뉴/정보/리뷰/AI비서) 동적 제어</li>
+  <li>위치 카드 표시 (현재 위치 → 업체 거리)</li>
+  <li>OG meta 태그 동적 생성 (SNS 공유용)</li>
+</ul>
+
+<h3>6.2 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>엔드포인트</th><th>입력</th><th>출력</th></tr>
+<tr><td>Worker IN</td><td><code>GET /biz/profile/:handle</code></td><td>handle, viewer_lang</td><td>profile JSON + review_summary</td></tr>
+<tr><td>Worker IN</td><td><code>GET /interpret</code></td><td>text, from_lang, to_lang</td><td>translated text</td></tr>
+<tr><td>Frontend</td><td>profile.html</td><td>?handle=, ?viewer_lang=</td><td>다국어 프로필 UI</td></tr>
+</table>
+
+<h3>6.3 /biz/profile 응답 구조</h3>
+<pre>{
+  guid, handle, name, entity_type, address,
+  native_lang, is_public, lat, lng,
+  extra: { menu[], business_hours, ai_active, ... },
+  ai_active: bool,           -- user_llm_keys 기준 (M01 §6.1)
+  review_summary: {          -- M06에서 조합
+    overall: { count, avg },
+    by_lang: [...],
+    viewer_highlight: { lang, avg, count }
+  },
+  distance_m: number | null  -- viewer 위치 제공 시
+}</pre>
+
+<h3>6.4 ai_active 판정 규칙</h3>
+<pre>1. user_llm_keys WHERE guid = profile.guid 조회
+2. 레코드 없음 → ai_active = false
+3. 레코드 있고 ai_active = false → false
+4. 레코드 있고 ai_active = true → true</pre>
+
+<h3>6.5 의존 모듈</h3>
+<ul>
+  <li>M01 (선택적 JWT — 미인증 시 read-only)</li>
+  <li>M06 (review_summary 조합)</li>
+  <li>M07 (distance_m 계산)</li>
+</ul>
+
+<h3>6.6 테스트 항목</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>PR01</td><td>한국어 프로필 조회</td><td>?handle=@hallim_x, lang=ko</td><td>원문 반환</td></tr>
+<tr><td>PR02</td><td>중국어 자동 번역</td><td>?handle=@hallim_x, lang=zh</td><td>name/address 번역본</td></tr>
+<tr><td>PR03</td><td>ai_active 탭 표시</td><td>user_llm_keys 있고 true</td><td>[AI비서] 탭 표시</td></tr>
+<tr><td>PR04</td><td>ai_active 탭 미표시</td><td>user_llm_keys 없음</td><td>[AI비서] 탭 없음</td></tr>
+<tr><td>PR05</td><td>is_public=false</td><td>비공개 업체</td><td>404 NOT_FOUND</td></tr>
+<tr><td>PR06</td><td>review_summary 정합성</td><td>리뷰 10건</td><td>by_lang 합계 = overall.count</td></tr>
+<tr><td>PR07</td><td>viewer_highlight</td><td>viewer_lang=zh, zh 리뷰 있음</td><td>zh 항목 highlight 포함</td></tr>
+<tr><td>PR08</td><td>OG meta 생성</td><td>profile.html?handle=</td><td>og:title, og:description, og:image</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec7">7. M05 — AI 비서 모듈 (AI Assistant)</h2>
+
+<h3>7.1 책임</h3>
+<ul>
+  <li>소비자↔업체 다국어 실시간 통역</li>
+  <li>업체 LLM으로 AI 응답 생성</li>
+  <li>에스컬레이션 (3회 실패 / "사람 연결" 감지)</li>
+  <li>LLM API 키 AES-256-GCM 암호화 저장·복호화</li>
+  <li>위치 컨텍스트 주입 (관광지 추천, 영업시간 판단)</li>
+  <li>STT/TTS는 브라우저 담당 (Web Speech API)</li>
+</ul>
+
+<h3>7.2 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>엔드포인트</th><th>입력</th><th>출력</th></tr>
+<tr><td>Worker IN</td><td><code>POST /ai-chat</code></td><td>session_id, message, caller_lang, target_guid</td><td>response, mode</td></tr>
+<tr><td>Worker IN</td><td><code>POST /ai-setup</code></td><td>guid, provider, api_key, model, custom_prompt</td><td>ok</td></tr>
+<tr><td>Worker IN</td><td><code>POST /escalate</code></td><td>session_id</td><td>ok, mode=escalated</td></tr>
+<tr><td>Worker IN</td><td><code>POST /interpret</code></td><td>text, from_lang, to_lang</td><td>translated</td></tr>
+<tr><td>Frontend</td><td>profile.html AI탭</td><td>STT 텍스트</td><td>TTS 재생</td></tr>
+<tr><td>Frontend</td><td>ai-setup.html</td><td>LLM 설정 폼</td><td>저장 완료</td></tr>
+</table>
+
+<h3>7.3 /ai-chat 처리 흐름</h3>
+<pre>수신: { session_id, message, caller_lang, target_guid }
+  → JWT 서명 검증 (M01)
+  → ai_sessions 조회 (mode, messages, fail_count)
+  → 에스컬레이션 조건 확인:
+      messages 내 최근 10분 fail 이벤트 ≥ 3 → escalate
+      message 내 에스컬레이션 키워드 감지 → escalate
+  → translate(message, caller_lang → 'ko')  [DeepSeek 기본]
+  → user_llm_keys 조회 (target_guid)
+  → ai_active=true:
+      시스템 프롬프트 구성:
+        extra.menu 전체 + business_hours + 위치 컨텍스트
+        "메뉴 외 정보는 모른다고 답하라" 강제 규칙
+      업체 LLM으로 응답 생성
+      translate(response, 'ko' → caller_lang)
+      ai_sessions.messages 갱신
+      반환
+  → ai_active=false:
+      messages INSERT (번역문 포함)
+      Supabase Realtime → 업체 기기 푸시
+      반환 { mode: 'human' }</pre>
+
+<h3>7.4 에스컬레이션 상태 머신</h3>
+<pre>상태: ai → human → escalated
+전이:
+  ai → escalated: 실패 ≥ 3 또는 키워드
+  human → escalated: 30초 무응답
+  escalated: mode UPDATE, Realtime 브로드캐스트
+복구: 수동 전용 (관리자 또는 업체가 mode 재설정)</pre>
+
+<h3>7.5 의존 모듈</h3>
+<ul>
+  <li>M01 (JWT 검증)</li>
+  <li>M07 (위치 컨텍스트 — 선택적)</li>
+</ul>
+
+<h3>7.6 테스트 항목</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>AI01</td><td>정상 AI 응답</td><td>중국어 질문, ai_active=true</td><td>중국어 번역 응답</td></tr>
+<tr><td>AI02</td><td>AI 비활성 업체</td><td>ai_active=false</td><td>messages INSERT, mode=human</td></tr>
+<tr><td>AI03</td><td>3회 연속 실패</td><td>fail 이벤트 3회</td><td>mode=escalated, Realtime 푸시</td></tr>
+<tr><td>AI04</td><td>에스컬레이션 키워드</td><td>"사람 연결해줘"</td><td>mode=escalated</td></tr>
+<tr><td>AI05</td><td>할루시네이션 방지</td><td>"근처 편의점 어디?"</td><td>메뉴 외 정보 거절 응답</td></tr>
+<tr><td>AI06</td><td>LLM 키 암호화 저장</td><td>POST /ai-setup</td><td>DB에 암호화 저장, 평문 없음</td></tr>
+<tr><td>AI07</td><td>AES 복호화 정합성</td><td>저장 후 조회</td><td>원본 키와 동일</td></tr>
+<tr><td>AI08</td><td>AES_ENCRYPTION_KEY 미등록</td><td>env 누락</td><td>500 + 명시적 오류</td></tr>
+<tr><td>AI09</td><td>위치 컨텍스트 주입</td><td>"여기서 얼마나 걸려?"</td><td>distance_m 포함 응답</td></tr>
+<tr><td>AI10</td><td>6개 언어 번역</td><td>ko/zh/en/ja/vi/th</td><td>각 언어로 정상 번역</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec8">8. M06 — 리뷰 모듈 (Review)</h2>
+
+<h3>8.1 책임</h3>
+<ul>
+  <li>구매 검증 후 리뷰 작성 (tx_id 기반)</li>
+  <li>다국어 리뷰 저장 (원문 + 한국어 번역본)</li>
+  <li>reviewer_lang 자동 주입 (JWT.lang)</li>
+  <li>국적별 평점 집계 (profile_review_stats View)</li>
+  <li>평점 편향 감지 및 중립 문구 표시</li>
+</ul>
+
+<h3>8.2 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>엔드포인트</th><th>입력</th><th>출력</th></tr>
+<tr><td>Worker IN</td><td><code>POST /review</code></td><td>target_guid, tx_id, rating, body</td><td>ok, review_id</td></tr>
+<tr><td>Worker IN</td><td><code>GET /biz/profile/:handle</code></td><td>handle, viewer_lang</td><td>review_summary 포함</td></tr>
+<tr><td>Frontend</td><td>profile.html 리뷰탭</td><td>국적 필터 칩</td><td>필터된 리뷰 목록</td></tr>
+</table>
+
+<h3>8.3 리뷰 저장 흐름</h3>
+<pre>POST /review 수신
+  → JWT 검증 → reviewer_guid, reviewer_lang 추출
+  → tx_id 유효성 검증:
+      biz_orders WHERE tx_id=? AND buyer_guid=reviewer_guid → 존재해야 함
+  → UNIQUE 검증: (target_guid, reviewer_guid, tx_id) 중복 시 409
+  → body → /interpret → body_translated (한국어) 생성
+  → profile_reviews INSERT (reviewer_lang 자동 주입)</pre>
+
+<h3>8.4 국적별 필터 UI 규칙</h3>
+<pre>평점 요약 카드:
+  viewer_lang 일치 항목 → 상단 크게 표시
+  전체 평점 → 하단 작게 병기
+
+편향 감지:
+  |viewer_lang_avg - overall_avg| ≥ 1.0
+  → "국적별 평점에 차이가 있습니다. 다양한 시각을 함께 참고해 주세요." 표시</pre>
+
+<h3>8.5 의존 모듈</h3>
+<ul>
+  <li>M01 (JWT 검증, reviewer_lang 추출)</li>
+  <li>M03 (tx_id 유효성 — biz_orders 조회)</li>
+</ul>
+
+<h3>8.6 테스트 항목</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>RV01</td><td>정상 리뷰 작성</td><td>유효 tx_id + rating</td><td>profile_reviews INSERT</td></tr>
+<tr><td>RV02</td><td>미구매자 리뷰 시도</td><td>없는 tx_id</td><td>403 NO_VALID_PURCHASE</td></tr>
+<tr><td>RV03</td><td>중복 리뷰</td><td>동일 (target, reviewer, tx)</td><td>409 ALREADY_REVIEWED</td></tr>
+<tr><td>RV04</td><td>reviewer_lang 자동 주입</td><td>JWT.lang=zh</td><td>reviewer_lang='zh' 저장</td></tr>
+<tr><td>RV05</td><td>번역본 자동 생성</td><td>중국어 리뷰 작성</td><td>body_translated 한국어 저장</td></tr>
+<tr><td>RV06</td><td>국적별 평점 집계</td><td>zh 리뷰 5건</td><td>profile_review_stats zh 행 정확</td></tr>
+<tr><td>RV07</td><td>viewer_highlight</td><td>viewer_lang=zh</td><td>zh 항목 별도 추출</td></tr>
+<tr><td>RV08</td><td>편향 감지 문구</td><td>zh_avg=5.0, overall_avg=3.0</td><td>편향 안내 문구 표시</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec9">9. M07 — 위치 모듈 (Location)</h2>
+
+<h3>9.1 책임</h3>
+<ul>
+  <li>반경 내 엔티티 검색 (/nearby)</li>
+  <li>소비자/사업자 위치 기록 (/location, consent 필수)</li>
+  <li>경로 안내 중계 (/directions)</li>
+  <li>영업시간 기반 is_open 판단</li>
+  <li>길찾기 딥링크 생성 (iOS/Android 분기)</li>
+</ul>
+
+<h3>9.2 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>엔드포인트</th><th>입력</th><th>출력</th></tr>
+<tr><td>Worker IN</td><td><code>GET /nearby</code></td><td>lat, lng, radius, type, lang</td><td>엔티티 배열 + is_open</td></tr>
+<tr><td>Worker IN</td><td><code>POST /location</code></td><td>guid, lat, lng, accuracy, consent</td><td>ok</td></tr>
+<tr><td>Worker IN</td><td><code>GET /directions</code></td><td>from_lat, from_lng, to_handle, mode</td><td>distance_m, duration_sec | fallback</td></tr>
+<tr><td>Frontend</td><td>search.html 지도탭</td><td>—</td><td>Kakao Maps + 마커</td></tr>
+<tr><td>Frontend</td><td>profile.html 정보탭</td><td>—</td><td>위치 카드</td></tr>
+</table>
+
+<h3>9.3 /nearby 쿼리 규칙</h3>
+<pre>변수명 충돌 방지 (BUG-C3):
+  파라미터: userLat, userLng (컬럼명 lat, lng과 구분)
+  반경 변환: R = radius / 111320 (미터 → 위도도)
+  Supabase 쿼리: lat BETWEEN userLat-R AND userLat+R
+
+is_open 판단:
+  org → extra.business_hours 파싱 ("11:00–20:00")
+  institution → extra.public_hours 폴백
+  KST(UTC+9) 기준 현재 시각 비교
+  파싱 실패 → is_open = null</pre>
+
+<h3>9.4 /location 저장 규칙</h3>
+<pre>consent=false 또는 미전달 → INSERT 거부, 400 반환
+저장 컬럼: guid, lat, lng, accuracy, consent=true, recorded_at
+JWT 검증 필수 — 익명 위치 기록 금지</pre>
+
+<h3>9.5 /directions 분기</h3>
+<pre>KAKAO_MOBILITY_KEY 등록됨:
+  → Kakao Mobility Directions API 호출
+  → { distance_m, duration_sec, steps[] } 반환
+
+KAKAO_MOBILITY_KEY 미등록:
+  → { fallback: true, lat: toLat, lng: toLng } 반환
+  → 클라이언트에서 kakaomap:// 딥링크 직접 생성</pre>
+
+<h3>9.6 길찾기 딥링크 폴백 패턴 (BUG-C4)</h3>
+<pre>visibilitychange 이벤트로 앱 전환 감지
+appOpened = false 초기값
+document.hidden 시 appOpened = true
+1500ms 후: appOpened=false 이면 폴백 URL 실행</pre>
+
+<h3>9.7 의존 모듈</h3>
+<ul><li>M01 (JWT 검증 — /location)</li></ul>
+
+<h3>9.8 테스트 항목</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>L01</td><td>반경 내 엔티티</td><td>lat=33.39, radius=500</td><td>500m 이내 엔티티 목록</td></tr>
+<tr><td>L02</td><td>전체 테이블 반환 방지</td><td>쿼리 파라미터 userLat 사용</td><td>BETWEEN 조건 정상 동작</td></tr>
+<tr><td>L03</td><td>is_open 판단 영업 중</td><td>business_hours='10:00-20:00', 현재 14:00</td><td>is_open=true</td></tr>
+<tr><td>L04</td><td>is_open 판단 영업 외</td><td>business_hours='10:00-20:00', 현재 22:00</td><td>is_open=false</td></tr>
+<tr><td>L05</td><td>is_open 정보 없음</td><td>institution, public_hours 없음</td><td>is_open=null</td></tr>
+<tr><td>L06</td><td>consent 없이 위치 기록</td><td>consent=false</td><td>400 CONSENT_REQUIRED</td></tr>
+<tr><td>L07</td><td>consent 정상 기록</td><td>consent=true</td><td>location_log INSERT</td></tr>
+<tr><td>L08</td><td>길찾기 폴백</td><td>KAKAO_MOBILITY_KEY 없음</td><td>fallback:true + lat/lng</td></tr>
+<tr><td>L09</td><td>lang 번역</td><td>lang=zh</td><td>name/address 중국어 번역</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec10">10. M08 — 히트맵 모듈 (Heatmap)</h2>
+
+<h3>10.1 책임</h3>
+<ul>
+  <li>국적별 관광객 밀집도 격자 집계</li>
+  <li>k-익명성 보장 (count &lt; 5 미표시)</li>
+  <li>search.html 히트맵 탭 데이터 제공</li>
+</ul>
+
+<h3>10.2 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>엔드포인트</th><th>입력</th><th>출력</th></tr>
+<tr><td>Worker IN</td><td><code>GET /heatmap</code></td><td>lang, period, zoom</td><td>cells 배열</td></tr>
+<tr><td>Supabase RPC</td><td><code>heatmap_by_lang(p_lang, p_days)</code></td><td>—</td><td>grid_lat, grid_lng, visit_count</td></tr>
+<tr><td>Frontend</td><td>search.html 히트맵탭</td><td>국적 칩 + 기간 슬라이더</td><td>Kakao Maps 오버레이</td></tr>
+</table>
+
+<h3>10.3 프라이버시 규칙</h3>
+<pre>집계 단위: 위도·경도 소수점 2자리 반올림 (약 1km²)
+k-익명성: count < 5인 격자 → HAVING 절로 제외
+consent 필터: location_log.consent = true 만
+캐시: Cloudflare max-age=300 (5분)
+고지 문구: 모든 히트맵 표시 시 "집계 통계 데이터" 안내 필수</pre>
+
+<h3>10.4 색상 농도 매핑</h3>
+<table>
+<tr><th>방문 횟수 구간</th><th>표시 등급</th></tr>
+<tr><td>1~10</td><td>레벨 1 (최저)</td></tr>
+<tr><td>11~30</td><td>레벨 2</td></tr>
+<tr><td>31~100</td><td>레벨 3</td></tr>
+<tr><td>101~300</td><td>레벨 4</td></tr>
+<tr><td>300+</td><td>레벨 5 (최고)</td></tr>
+</table>
+
+<h3>10.5 활성화 조건</h3>
+<pre>v1.0: 탭 표시, 데이터 없으면 "참여자가 더 늘면 표시됩니다" 안내
+v1.1: 사용자 1,000명+ 이후 자동 활성화</pre>
+
+<h3>10.6 의존 모듈</h3>
+<ul><li>M07 (location_log 데이터 소스)</li></ul>
+
+<h3>10.7 테스트 항목</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>H01</td><td>정상 집계</td><td>lang=zh, period=7</td><td>격자별 count 배열</td></tr>
+<tr><td>H02</td><td>k-익명성 필터</td><td>count=3인 격자</td><td>결과 배열에서 제외</td></tr>
+<tr><td>H03</td><td>consent=false 제외</td><td>비동의 레코드</td><td>집계 제외</td></tr>
+<tr><td>H04</td><td>lang=all</td><td>전체 언어</td><td>모든 native_lang 포함</td></tr>
+<tr><td>H05</td><td>빈 데이터</td><td>신규 파일럿 초기</td><td>빈 cells 배열 + 안내 문구</td></tr>
+<tr><td>H06</td><td>Cloudflare 캐시</td><td>동일 요청 2회</td><td>2번째 캐시 HIT</td></tr>
+<tr><td>H07</td><td>period 경계</td><td>period=1, 25시간 전 레코드</td><td>집계 제외</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec11">11. M09 — 커뮤니티 모듈 (Community)</h2>
+
+<h3>11.1 책임</h3>
+<ul>
+  <li>언어별 여행자 게시판 CRUD</li>
+  <li>긴급 카테고리 Realtime 알림</li>
+  <li>댓글 자동 번역 (이중 언어 커뮤니케이션)</li>
+  <li>한국인 봉사자 GDC ₮500 인센티브</li>
+  <li>K-Security 연동 콘텐츠 스코어링</li>
+</ul>
+
+<h3>11.2 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>엔드포인트</th><th>입력</th><th>출력</th></tr>
+<tr><td>Worker IN</td><td><code>GET /community</code></td><td>lang, category, limit, offset, near_lat, near_lng</td><td>posts 배열</td></tr>
+<tr><td>Worker IN</td><td><code>POST /community</code></td><td>lang, category, title, body, lat?, lng?</td><td>post_id</td></tr>
+<tr><td>Worker IN</td><td><code>GET /community/:id</code></td><td>id</td><td>post + replies</td></tr>
+<tr><td>Worker IN</td><td><code>POST /community/:id/reply</code></td><td>body</td><td>reply_id</td></tr>
+<tr><td>Worker IN</td><td><code>POST /community/:id/resolve</code></td><td>—</td><td>ok, is_resolved=true</td></tr>
+<tr><td>Frontend</td><td>community.html</td><td>—</td><td>게시판 UI</td></tr>
+<tr><td>Supabase RT</td><td>community:{lang}:emergency</td><td>—</td><td>실시간 알림</td></tr>
+</table>
+
+<h3>11.3 게시물 작성 흐름</h3>
+<pre>POST /community 수신
+  → JWT 검증 (M01) → author_guid, lang 추출
+  → K-Security 스코어링 (M13):
+      anomaly_score ≥ 0.6 → security_event INSERT
+      is_visible=false로 대기 상태 저장
+  → body → /interpret → body_translated (한국어) 생성
+  → community_posts INSERT
+  → emergency 카테고리:
+      Supabase Realtime 브로드캐스트
+      채널: community:{lang}:emergency
+      반경 10km 사용자 대상</pre>
+
+<h3>11.4 댓글 작성 흐름</h3>
+<pre>POST /community/:id/reply 수신
+  → JWT 검증 → author_guid, author_lang 추출
+  → 게시물 lang 조회 (post.lang)
+  → body → /interpret(author_lang → post.lang) → body_translated
+    (한국인 댓글 → 중국어로 번역하여 중국어 게시물에 표시)
+  → community_replies INSERT
+  → community_posts.reply_count += 1
+  → 게시물 작성자에게 Realtime 알림</pre>
+
+<h3>11.5 봉사자 인센티브 흐름</h3>
+<pre>POST /community/:id/resolve 수신
+  → 작성자 본인 확인 (JWT.guid = post.author_guid)
+  → is_resolved=true UPDATE
+  → 마지막 is_helpful=true 댓글 작성자 조회
+  → M10 위임: fs_ledger INSERT (credit ₮500, source='manual')
+  → user_profiles.extra.fs UPDATE</pre>
+
+<h3>11.6 카테고리별 활성화 시점</h3>
+<pre>v1.0 오픈: help, emergency, lost_found
+v1.1 오픈: info, general (사용자 100명+)
+v1.5 오픈: companion (사용자 500명+)</pre>
+
+<h3>11.7 의존 모듈</h3>
+<ul>
+  <li>M01 (JWT 검증)</li>
+  <li>M10 (봉사자 GDC 지급)</li>
+  <li>M13 (K-Security 스코어링)</li>
+</ul>
+
+<h3>11.8 테스트 항목</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>C01</td><td>게시물 작성</td><td>lang=zh, category=help</td><td>community_posts INSERT</td></tr>
+<tr><td>C02</td><td>번역본 자동 생성</td><td>중국어 body</td><td>body_translated 한국어 저장</td></tr>
+<tr><td>C03</td><td>긴급 Realtime</td><td>category=emergency</td><td>Supabase Realtime 브로드캐스트</td></tr>
+<tr><td>C04</td><td>한국어 댓글 → 중국어 번역</td><td>zh 게시물에 ko 댓글</td><td>body_translated zh 저장</td></tr>
+<tr><td>C05</td><td>해결 완료</td><td>작성자가 /resolve</td><td>is_resolved=true</td></tr>
+<tr><td>C06</td><td>타인 해결 시도</td><td>비작성자 /resolve</td><td>403 FORBIDDEN</td></tr>
+<tr><td>C07</td><td>봉사자 GDC 지급</td><td>is_helpful=true → resolve</td><td>fs_ledger ₮500 credit</td></tr>
+<tr><td>C08</td><td>K-Security 필터</td><td>스팸 내용</td><td>anomaly_score ≥ 0.6 → 대기</td></tr>
+<tr><td>C09</td><td>반경 근접 정렬</td><td>near_lat, near_lng</td><td>가까운 게시물 상단</td></tr>
+<tr><td>C10</td><td>미인증 쓰기 시도</td><td>토큰 없음 POST</td><td>401 Unauthorized</td></tr>
+<tr><td>C11</td><td>읽기는 비인증 허용</td><td>토큰 없음 GET</td><td>게시물 목록 정상 반환</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec12">12. M10 — GDC 결제 원장 모듈 (Ledger)</h2>
+
+<h3>12.1 책임</h3>
+<ul>
+  <li>fs_ledger 3행 원자 INSERT (market_purchase RPC)</li>
+  <li>l1_ledger 기록 (L1 블록 미러)</li>
+  <li>gdc_settle_ledger() — user_profiles.extra.fs 갱신</li>
+  <li>잔액 재구성 (reconstruct_balances)</li>
+  <li>이중 기입 원칙 준수 (BIVM Σδ=0)</li>
+</ul>
+
+<h3>12.2 계정 과목 규칙</h3>
+<pre>bs-cash    = Σcredit - Σdebit (순변동분, 절대잔액 아님)
+pl-purchase = Σdebit  (양수 누적, cur + amount)
+pl-revenue  = Σcredit (양수 누적)
+
+fs_ledger 1건 거래 = 3행:
+  행1: buyer  debit  bs-cash + pl-purchase
+  행2: seller credit bs-cash + pl-revenue
+  행3: platform credit bs-cash + pl-revenue (수수료)
+
+Σdebit = Σcredit per block_hash (BIVM §4.2.1)</pre>
+
+<h3>12.3 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>함수 / 엔드포인트</th><th>입력</th><th>출력</th></tr>
+<tr><td>내부 함수</td><td><code>market_purchase(RPC)</code></td><td>tx 파라미터</td><td>fs_ledger 3행</td></tr>
+<tr><td>내부 함수</td><td><code>gdc_settle_ledger()</code></td><td>guid</td><td>extra.fs 갱신</td></tr>
+<tr><td>내부 함수</td><td><code>reconstruct_balances(guid)</code></td><td>guid</td><td>bs-cash, pl-purchase, pl-revenue</td></tr>
+<tr><td>Supabase View</td><td><code>ktax_balance_anomalies</code></td><td>—</td><td>잔액 불일치 탐지</td></tr>
+<tr><td>Supabase View</td><td><code>sigma_delta_by_node</code></td><td>—</td><td>Σδ=0 검증</td></tr>
+</table>
+
+<h3>12.4 의존 모듈</h3>
+<ul><li>없음 (L3 도메인 계층 — L2 이하만 의존)</li></ul>
+
+<h3>12.5 테스트 항목 (T07~T08 기반)</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>LD01</td><td>fs_ledger 3행 원자성</td><td>정상 결제</td><td>3행 동시 INSERT</td></tr>
+<tr><td>LD02</td><td>pl-purchase 양수 누적</td><td>3회 결제</td><td>pl-purchase 항상 양수</td></tr>
+<tr><td>LD03</td><td>bs-cash 순변동분</td><td>결제 후</td><td>bs-cash = Σcredit - Σdebit</td></tr>
+<tr><td>LD04</td><td>BIVM Σδ=0</td><td>결제 후</td><td>sigma_delta_by_node count=0</td></tr>
+<tr><td>LD05</td><td>잔액 불일치 탐지</td><td>extra.fs 불일치</td><td>ktax_balance_anomalies count&gt;0</td></tr>
+<tr><td>LD06</td><td>source 제약</td><td>source='kmarket'</td><td>23514 CHECK_VIOLATION</td></tr>
+<tr><td>LD07</td><td>amount &gt; 0 제약</td><td>amount=0</td><td>CHECK_VIOLATION</td></tr>
+<tr><td>LD08</td><td>gdc_settle_ledger 공식</td><td>집계 후</td><td>extra.fs = reconstruct 결과 일치</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec13">13. M11 — PDV Hash Chain 모듈 (Audit)</h2>
+
+<h3>13.1 책임</h3>
+<ul>
+  <li>pdv_log INSERT (resolution=ignore-duplicates 필수)</li>
+  <li>머클 트리 앵커링 (10분 Cron)</li>
+  <li>P1~P6 감사 View 관리</li>
+  <li>/merkle/verify 무결성 검증</li>
+</ul>
+
+<h3>13.2 감사 원칙 (P1~P6)</h3>
+<pre>P1: 모든 l1_ledger 거래에 pdv_log 존재
+P2: pdv_log chain_height 연속성 (gap ≠ 1 탐지)
+P3: l1_ledger user_hash 미교정 건 없음
+P4: pdv_log.chain_local_hash = l1_ledger.user_hash
+P5: fs_ledger Σδ=0 위반 없음
+P6: user_profiles.extra.fs 잔액 불일치 없음
+
+합격 기준: 모든 View의 fail_count = 0</pre>
+
+<h3>13.3 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>엔드포인트 / 함수</th><th>입력</th><th>출력</th></tr>
+<tr><td>Worker IN</td><td><code>GET /merkle/verify</code></td><td>pdv_id</td><td>valid: bool, merkle_root</td></tr>
+<tr><td>Cron</td><td><code>anchorL1MerkleRoot()</code></td><td>—</td><td>merkle_anchors INSERT</td></tr>
+<tr><td>Supabase View</td><td><code>p1_tx_has_pdv</code> ~ <code>p6_balance_anomalies</code></td><td>—</td><td>fail_count</td></tr>
+</table>
+
+<h3>13.4 pdv_log INSERT 규칙</h3>
+<pre>Prefer 헤더: resolution=ignore-duplicates 필수
+session_id UNIQUE 인덱스로 중복 자동 방지 (T09)
+via_worker 조건 없이 전체 미앵커링 대상 집계</pre>
+
+<h3>13.5 의존 모듈</h3>
+<ul><li>M10 (Ledger — P5, P6 View 공유)</li></ul>
+
+<h3>13.6 테스트 항목 (T09~T10 기반)</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>AU01</td><td>중복 pdv_log INSERT</td><td>동일 session_id 2회</td><td>1건만 저장 (ignore-duplicates)</td></tr>
+<tr><td>AU02</td><td>P1~P6 전체 통과</td><td>정상 거래 후</td><td>모든 View fail_count=0</td></tr>
+<tr><td>AU03</td><td>머클 앵커링</td><td>Cron 실행</td><td>merkle_anchors INSERT, status=confirmed</td></tr>
+<tr><td>AU04</td><td>머클 검증</td><td>GET /merkle/verify?pdv_id=xxx</td><td>valid=true, root 일치</td></tr>
+<tr><td>AU05</td><td>chain_height 연속성</td><td>순차 거래 3건</td><td>P2 View count=0</td></tr>
+<tr><td>AU06</td><td>user_hash 교정</td><td>_patchL1LedgerUserHash</td><td>P3, P4 View count=0</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec14">14. M12 — 검색 모듈 (Search)</h2>
+
+<h3>14.1 책임</h3>
+<ul>
+  <li>다국어 키워드 검색 (자국어 → 한국어 변환 → search_entities)</li>
+  <li>음성 검색 (STT → 텍스트 → 검색)</li>
+  <li>엔티티 타입 필터 (org / institution / 관광지)</li>
+</ul>
+
+<h3>14.2 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>엔드포인트</th><th>입력</th><th>출력</th></tr>
+<tr><td>Worker IN</td><td><code>GET /search</code></td><td>q, lang, type, limit</td><td>엔티티 배열</td></tr>
+<tr><td>Frontend</td><td>search.html 검색탭</td><td>텍스트 또는 STT</td><td>검색 결과 목록</td></tr>
+</table>
+
+<h3>14.3 다국어 검색 흐름</h3>
+<pre>GET /search?q=黑猪&lang=zh&type=org
+  → /interpret(q, 'zh' → 'ko') → "흑돼지"
+  → search_entities(p_keyword='흑돼지', p_type='org')
+  → 결과 각 엔티티 name/address → /interpret('ko' → 'zh')
+  → 다국어 결과 반환</pre>
+
+<h3>14.4 의존 모듈</h3>
+<ul><li>M07 (위치 기반 정렬 — 선택적)</li></ul>
+
+<h3>14.5 테스트 항목</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>SR01</td><td>한국어 검색</td><td>q=흑돼지, lang=ko</td><td>관련 업체 목록</td></tr>
+<tr><td>SR02</td><td>중국어 검색</td><td>q=黑猪, lang=zh</td><td>번역 후 동일 결과</td></tr>
+<tr><td>SR03</td><td>결과 다국어 표시</td><td>lang=zh</td><td>name/address 중국어</td></tr>
+<tr><td>SR04</td><td>빈 결과</td><td>q=없는단어</td><td>빈 배열 (오류 아님)</td></tr>
+<tr><td>SR05</td><td>타입 필터</td><td>type=institution</td><td>기관만 반환</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec15">15. M13 — 보안 모듈 (Security)</h2>
+
+<h3>15.1 책임</h3>
+<ul>
+  <li>서비스 상태 모니터링 (security_log)</li>
+  <li>이상 콘텐츠 스코어링 (DeepSeek V3 → Claude Opus)</li>
+  <li>보안 이벤트 분류 (S1/S2/S3)</li>
+  <li>K-Security 두 단계 LLM 파이프라인</li>
+</ul>
+
+<h3>15.2 스코어링 파이프라인</h3>
+<pre>콘텐츠 수신 (community 게시물, 리뷰 등)
+  → 1단계: DeepSeek V3 anomaly_score (0~1)
+  → score < 0.6: 정상 처리
+  → score ≥ 0.6: 2단계 Claude Opus 정밀 분석
+  → 분류: S1(정보) / S2(경고) / S3(차단)
+  → security_event INSERT
+  → S3: is_visible=false 자동 처리</pre>
+
+<h3>15.3 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>함수</th><th>입력</th><th>출력</th></tr>
+<tr><td>내부 함수</td><td><code>scoreContent(text)</code></td><td>텍스트</td><td>anomaly_score, severity</td></tr>
+<tr><td>Supabase View</td><td><code>security_open_events</code></td><td>—</td><td>미해결 이벤트</td></tr>
+<tr><td>Supabase View</td><td><code>security_status</code></td><td>—</td><td>서비스별 최신 상태</td></tr>
+</table>
+
+<h3>15.4 의존 모듈</h3>
+<ul><li>없음 (L2 인프라 계층)</li></ul>
+
+<h3>15.5 테스트 항목</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>SC01</td><td>정상 콘텐츠</td><td>일반 게시물</td><td>score &lt; 0.6, 정상 처리</td></tr>
+<tr><td>SC02</td><td>스팸 감지</td><td>반복 광고 텍스트</td><td>score ≥ 0.6 → S2 이벤트</td></tr>
+<tr><td>SC03</td><td>혐오 차단</td><td>혐오 발언</td><td>score ≥ 0.6 → S3, is_visible=false</td></tr>
+<tr><td>SC04</td><td>2단계 파이프라인</td><td>score 0.6~0.8 경계</td><td>Claude Opus 정밀 분석 실행</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec16">16. M14 — 대량 등록 모듈 (Bulk Register)</h2>
+
+<h3>16.1 책임</h3>
+<ul>
+  <li>CSV 기반 10만 건 일괄 등록</li>
+  <li>100건 배치 / 10 스레드 병렬 처리</li>
+  <li>ON CONFLICT (guid) 충돌 처리</li>
+  <li>QR PDF 일괄 생성</li>
+</ul>
+
+<h3>16.2 인터페이스</h3>
+<table>
+<tr><th>방향</th><th>도구</th><th>입력</th><th>출력</th></tr>
+<tr><td>로컬 실행</td><td><code>bulk_register.py</code></td><td>CSV 파일</td><td>Supabase INSERT 결과</td></tr>
+<tr><td>로컬 실행</td><td><code>qr_pdf_generator.py</code></td><td>handle 목록</td><td>PDF 파일</td></tr>
+</table>
+
+<h3>16.3 ON CONFLICT 규칙</h3>
+<pre>ON CONFLICT (guid) DO UPDATE SET
+  name = EXCLUDED.name,
+  updated_at = now()
+
+handle 충돌 (UNIQUE):
+  suffix 4자리 순번 재시도
+  @{region_en}_{name_roman}_{0001}</pre>
+
+<h3>16.4 테스트 항목</h3>
+<table>
+<tr><th>ID</th><th>시나리오</th><th>입력</th><th>기대 결과</th></tr>
+<tr><td>BK01</td><td>정상 100건 배치</td><td>100행 CSV</td><td>100건 INSERT</td></tr>
+<tr><td>BK02</td><td>GUID 충돌 재등록</td><td>기존 GUID 포함</td><td>ON CONFLICT UPDATE</td></tr>
+<tr><td>BK03</td><td>handle 충돌 suffix</td><td>동명이인 같은 지역</td><td>suffix 자동 부여</td></tr>
+<tr><td>BK04</td><td>전화번호 유효성</td><td>빈 전화번호 행</td><td>해당 행 스킵 + 로그</td></tr>
+<tr><td>BK05</td><td>10만 건 속도</td><td>100,000행 CSV</td><td>30분 이내 완료</td></tr>
+<tr><td>BK06</td><td>QR PDF 생성</td><td>handle 100개</td><td>100페이지 PDF</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec17">17. 공유 인프라 (Shared Infrastructure)</h2>
+
+<h3>17.1 Worker 라우터</h3>
+<ul>
+  <li>모든 Worker 엔드포인트 진입점</li>
+  <li>CORS 헤더 전역 적용</li>
+  <li>인증 필요 엔드포인트 자동 JWT 검증 (M01 위임)</li>
+  <li>오류 응답 형식 통일: <code>{ error: 'CODE', message: '...' }</code></li>
+</ul>
+
+<h3>17.2 Supabase Client</h3>
+<ul>
+  <li>모든 모듈이 공유하는 Supabase JS 클라이언트</li>
+  <li><code>SUPABASE_KEY</code> (anon) / <code>SUPABASE_SERVICE_KEY</code> (service role) 분리 사용</li>
+  <li>service role: 관리자 전용 작업, RPC 호출</li>
+  <li>anon key: 일반 CRUD (RLS 적용)</li>
+</ul>
+
+<h3>17.3 Translate Helper</h3>
+<ul>
+  <li><code>/interpret</code> 엔드포인트의 내부 구현체</li>
+  <li>DeepSeek V3 기본, 실패 시 ANTHROPIC_API_KEY 폴백</li>
+  <li>결과 캐시: Cloudflare KV (추후 V2-03)</li>
+  <li>입력: { text, from_lang, to_lang }</li>
+  <li>출력: { translated, model_used }</li>
+</ul>
+
+<h3>17.4 JWT Library</h3>
+<ul>
+  <li>HMAC-SHA256 서명/검증 (Web Crypto API)</li>
+  <li><code>GOPANG_MASTER_KEY</code> 환경변수 필수</li>
+  <li>payload 구조: <code>{ guid, name, lang, type, iat, exp }</code></li>
+</ul>
+
+<h3>17.5 환경변수 관리</h3>
+<pre>필수 (미등록 시 500 반환):
+  GOPANG_MASTER_KEY, SUPABASE_KEY, SUPABASE_SERVICE_KEY,
+  AES_ENCRYPTION_KEY, DEEPSEEK_API_KEY
+
+선택 (기능 제한):
+  ANTHROPIC_API_KEY  — AI 폴백 없음
+  KAKAO_REST_KEY     — 위치 기능 없음
+  KAKAO_MOBILITY_KEY — Directions fallback 모드
+  OPENAI_API_KEY     — OpenAI 제공자 선택 불가
+
+Worker 시작 시 필수 환경변수 존재 여부 체크 → 누락 시 명시적 오류 로그</pre>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec18">18. 모듈 간 의존성 매트릭스</h2>
+
+<p>의존 방향: 행(M) → 열(M) 호출</p>
+
+<table>
+<tr><th></th><th>M01</th><th>M03</th><th>M04</th><th>M05</th><th>M06</th><th>M07</th><th>M08</th><th>M09</th><th>M10</th><th>M11</th><th>M12</th><th>M13</th></tr>
+<tr><td><strong>M02</strong> Register</td><td>✓</td><td></td><td></td><td>○</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td><strong>M03</strong> Payment</td><td>✓</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>✓</td><td>✓</td><td></td><td></td></tr>
+<tr><td><strong>M04</strong> Profile</td><td>○</td><td></td><td></td><td></td><td>✓</td><td>○</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td><strong>M05</strong> AI</td><td>✓</td><td></td><td></td><td></td><td></td><td>○</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td><strong>M06</strong> Review</td><td>✓</td><td>✓</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td><strong>M07</strong> Location</td><td>✓</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td><strong>M08</strong> Heatmap</td><td></td><td></td><td></td><td></td><td></td><td>✓</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td><strong>M09</strong> Community</td><td>✓</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>✓</td><td></td><td></td><td>✓</td></tr>
+<tr><td><strong>M10</strong> Ledger</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td><strong>M11</strong> Audit</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>✓</td><td></td><td></td><td></td></tr>
+<tr><td><strong>M12</strong> Search</td><td></td><td></td><td></td><td></td><td></td><td>○</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+</table>
+
+<p>✓ 필수 의존　○ 선택적 의존　빈칸 의존 없음</p>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec19">19. 통합 테스트 시나리오</h2>
+
+<p>전체 시스템을 관통하는 E2E 시나리오입니다. 각 시나리오는 여러 모듈을 순서대로 통과합니다.</p>
+
+<h3>IT01 — 외국인 관광객 첫 방문 결제</h3>
+<pre>흐름: M02(등록) → M01(JWT) → M03(pay.html 복귀) → M03(결제)
+      → M10(Ledger) → M11(PDV)
+
+검증 항목:
+  1. 등록 완료 후 JWT 발급 확인
+  2. pending_pay_url 복귀 정확
+  3. QR 만료 시간 서버 검증
+  4. fs_ledger 3행 정합성
+  5. ktax_balance_anomalies count=0
+  6. pdv_log 중복 없음</pre>
+
+<h3>IT02 — AI 비서 통역 → 에스컬레이션 → 채팅</h3>
+<pre>흐름: M05(ai-chat) × 3 fail → M05(escalate) → M09(chat.html)
+
+검증 항목:
+  1. 3회 실패 카운터 ai_sessions.messages 정확
+  2. mode = escalated Realtime 브로드캐스트
+  3. 30초 무응답 → "연결 어렵습니다" 자동 안내</pre>
+
+<h3>IT03 — 다국어 리뷰 → 국적별 필터 표시</h3>
+<pre>흐름: M06(review POST) → M04(profile.html) → M06(review_summary)
+
+검증 항목:
+  1. reviewer_lang 자동 주입 정확
+  2. body_translated 한국어 생성
+  3. profile_review_stats View 집계 정확
+  4. viewer_highlight 국적 일치
+  5. 편향 감지 문구 조건 (격차 ≥ 1.0)</pre>
+
+<h3>IT04 — 커뮤니티 긴급 → 봉사자 답변 → GDC 지급</h3>
+<pre>흐름: M09(POST emergency) → Realtime → M09(reply)
+      → M09(resolve) → M10(GDC ₮500)
+
+검증 항목:
+  1. emergency Realtime 브로드캐스트 수신
+  2. 한국어 댓글 → 중국어 자동 번역
+  3. resolve 권한 (작성자 본인만)
+  4. fs_ledger ₮500 credit 정확</pre>
+
+<h3>IT05 — P1~P6 감사 전체 통과</h3>
+<pre>흐름: IT01 실행 후 → M11(P1~P6 View 조회)
+
+검증 항목:
+  모든 View fail_count = 0
+  merkle_anchors status = confirmed
+  /merkle/verify → valid: true</pre>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec20">20. 구현 순서 로드맵</h2>
+
+<p>모듈 간 의존성 기반 최적 구현 순서입니다.</p>
+
+<h3>Phase 0 — 인프라 준비 (구현 전 필수)</h3>
+<ul>
+  <li>Cloudflare Worker 환경변수 9개 전체 등록 (§2.1)</li>
+  <li>Supabase 신규 테이블 생성: ai_sessions, messages, user_llm_keys, profile_reviews (reviewer_lang 포함), community_posts, community_replies</li>
+  <li>location_log.consent 컬럼 추가</li>
+  <li>user_profiles lat/lng/geo_updated_at 컬럼 추가</li>
+  <li>profile_review_stats View 생성</li>
+  <li>heatmap_by_lang() RPC 생성</li>
+  <li>P1~P6 감사 View 확인 (T10 기준 이미 존재)</li>
+</ul>
+
+<h3>Phase 1 — 인증·등록 (Sprint 1)</h3>
+<ul>
+  <li>M01 Auth — JWT 발급·검증·갱신</li>
+  <li>M02 Register — 소비자 등록, handle 생성, QR SVG</li>
+</ul>
+
+<h3>Phase 2 — 결제·원장 (Sprint 2)</h3>
+<ul>
+  <li>M10 Ledger — fs_ledger RPC, settle</li>
+  <li>M03 Payment — /biz/order, pay.html, 만료 검증</li>
+  <li>M11 Audit — pdv_log, merkle Cron, P1~P6 확인</li>
+</ul>
+
+<h3>Phase 3 — 프로필·AI·리뷰 (Sprint 3)</h3>
+<ul>
+  <li>M04 Profile — /biz/profile, 다국어 번역</li>
+  <li>M05 AI — /ai-chat, /ai-setup, 에스컬레이션</li>
+  <li>M06 Review — /review, reviewer_lang, 국적별 집계</li>
+</ul>
+
+<h3>Phase 4 — 위치·검색 (Sprint 4)</h3>
+<ul>
+  <li>M07 Location — /nearby, /location, /directions</li>
+  <li>M12 Search — /search, 다국어 키워드</li>
+</ul>
+
+<h3>Phase 5 — 히트맵·커뮤니티·보안 (Sprint 5)</h3>
+<ul>
+  <li>M13 Security — K-Security 스코어링</li>
+  <li>M08 Heatmap — /heatmap, k-익명성</li>
+  <li>M09 Community — /community, Realtime, 봉사자 GDC</li>
+</ul>
+
+<h3>Phase 6 — 대량 등록 (Sprint 6)</h3>
+<ul>
+  <li>M14 Bulk Register — bulk_register.py, QR PDF</li>
+</ul>
+
+<h3>각 Sprint 완료 기준</h3>
+<ul>
+  <li>기능 구현 완료</li>
+  <li>모듈별 테스트 항목 전체 통과</li>
+  <li>통합 테스트 시나리오 해당 부분 통과</li>
+  <li>ktax_balance_anomalies count=0 유지</li>
+  <li>P1~P6 View fail_count=0 유지</li>
+</ul>
+
+<div class="footer">
+  <p>고팡 제주 모듈 설계도 v1.0</p>
+  <p>AI City Inc. 팀 주피터 | 2026-06-12</p>
+  <p>기반: gopang_jeju_design_v1.3.md</p>
+  <p>모듈 14개 · 테스트 항목 95개 · 통합 시나리오 5개</p>
+</div>
+
+</body>
+</html>
