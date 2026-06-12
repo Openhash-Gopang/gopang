@@ -393,25 +393,35 @@
    *   opts.blockId         — L1 block_id
    * @returns {Object} 새 chain record
    */
-  async function appendHashChain(db, { prevSettleHash, newSettleHash, txHash, blockHash, blockId }) {
-    const last   = await idbChainGetLast(db);
-    const height = (last?.height ?? -1) + 1;
+  async function appendHashChain(db, {
+    txHash,
+    blockHash,
+    blockId      = null,
+    pdvSessionId = null,
+    pdvType      = null,
+  }) {
+    const last          = await idbChainGetLast(db);
+    const height        = (last?.height ?? -1) + 1;
     const prevLocalHash = last?.local_hash ?? '0'.repeat(64);
 
+    // 공식 불변 (v3.0 확정)
     // h_i = SHA-256(h_{i-1} ∥ tx_hash ∥ block_hash ∥ height)
     const chainInput = prevLocalHash + txHash + blockHash + String(height);
     const localHash  = bufToHex(await sha256(chainInput));
 
     const record = {
       height,
-      local_hash:       localHash,
-      prev_local_hash:  prevLocalHash,
-      prev_settle_hash: prevSettleHash,
-      new_settle_hash:  newSettleHash,
-      tx_hash:          txHash,
-      block_hash:       blockHash,
-      block_id:         blockId || null,
-      recorded_at:      new Date().toISOString(),
+      local_hash:      localHash,
+      prev_local_hash: prevLocalHash,
+      tx_hash:         txHash,
+      block_hash:      blockHash,
+      block_id:        blockId,
+      recorded_at:     new Date().toISOString(),
+      pdv_session_id:  pdvSessionId,
+      pdv_type:        pdvType,
+      pdv_anchored:    false,
+      // prev_settle_hash: @deprecated — 제거됨
+      // new_settle_hash:  @deprecated — 제거됨
     };
 
     await idbChainPut(db, record);
@@ -580,15 +590,21 @@
      *   opts.claims       — [{ direction, amount, fs_account, expires_at, ... }]
      *   opts.tx_hash      — tx_hash (없으면 block_hash로 대체)
      */
-    async redeemClaim({ block_hash, block_id, claims = [], tx_hash }) {
+    async redeemClaim({
+      block_hash,
+      block_id       = null,
+      claims         = [],
+      tx_hash,
+      pdv_session_id = null,
+      pdv_type       = null,
+    }) {
       if (!block_hash) throw new Error('[Wallet] block_hash 없음');
 
       const db = await openDB();
 
       // 현재 재무 상태 로드
-      const fsRec  = await idbGet(db, IDB_FS_KEY);
-      const fs     = fsRec?.state || {};
-      const prevSettleHash = await computePrevSettleHash(fs);
+      const fsRec = await idbGet(db, IDB_FS_KEY);
+      const fs    = fsRec?.state || {};
 
       // 만료 확인 + 청구권 적용
       const now = Date.now();
@@ -615,25 +631,27 @@
       }
 
       // 갱신된 재무 상태 저장
-      const newSettleHash = await computePrevSettleHash(fs);
       await idbPut(db, IDB_FS_KEY, {
-        state:      fs,
-        updatedAt:  new Date().toISOString(),
+        state:     fs,
+        updatedAt: new Date().toISOString(),
         block_hash,
       });
 
-      // Hash Chain 기록
-      const usedTxHash = tx_hash || block_hash;
+      // Hash Chain 기록 (v3.0: pdv_session_id 연동)
       const chainRec = await appendHashChain(db, {
-        prevSettleHash,
-        newSettleHash,
-        txHash:    usedTxHash,
-        blockHash: block_hash,
-        blockId:   block_id || null,
+        txHash:       tx_hash || block_hash,
+        blockHash:    block_hash,
+        blockId:      block_id,
+        pdvSessionId: pdv_session_id,
+        pdvType:      pdv_type,
       });
 
-      console.info('[Wallet] redeemClaim 완료 | height:', chainRec.height,
-                   '| applied:', applied, '| bs-cash:', fs['bs-cash']);
+      console.info('[Wallet] redeemClaim 완료',
+        '| height:', chainRec.height,
+        '| applied:', applied,
+        '| bs-cash:', fs['bs-cash'],
+        '| pdv_session_id:', pdv_session_id?.slice(0, 8) || 'none');
+
       return { fs, chainRec, applied };
     }
 
@@ -654,8 +672,20 @@
     async verifyChain() {
       const chain = await this.getHashChain();
       for (let i = 1; i < chain.length; i++) {
-        if (chain[i].prev_local_hash !== chain[i - 1].local_hash) {
-          return { valid: false, broken_at: chain[i].height };
+        const cur  = chain[i];
+        const prev = chain[i - 1];
+
+        // 1) 연결 확인
+        if (cur.prev_local_hash !== prev.local_hash) {
+          return { valid: false, broken_at: cur.height, reason: 'chain_break' };
+        }
+
+        // 2) 해시 재계산 (h_{i-1} ∥ tx_hash ∥ block_hash ∥ height)
+        const recomputed = bufToHex(await sha256(
+          prev.local_hash + cur.tx_hash + cur.block_hash + String(cur.height)
+        ));
+        if (recomputed !== cur.local_hash) {
+          return { valid: false, broken_at: cur.height, reason: 'hash_mismatch' };
         }
       }
       return { valid: true, broken_at: null };
