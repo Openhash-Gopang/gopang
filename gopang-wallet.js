@@ -619,7 +619,13 @@
         if (claim.direction === 'credit') {
           fs[acc] = cur + (claim.amount || 0);
         } else if (claim.direction === 'debit') {
-          fs[acc] = cur - (claim.amount || 0);
+          // pl-purchase: 누적 지출액(양수) — cur + amount
+          // bs-cash: 잔액 감소 — 별도 처리
+          if (acc === 'pl-purchase') {
+            fs[acc] = cur + (claim.amount || 0);
+          } else {
+            fs[acc] = cur - (claim.amount || 0);
+          }
         }
         // bs-cash 동기화 (pl 계정 변동 시)
         if (acc !== 'bs-cash') {
