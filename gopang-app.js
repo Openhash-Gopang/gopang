@@ -40,7 +40,11 @@ const _USER = await (async () => {
   window.setPeer       = setPeer;
   window._clearPeer    = _clearPeer;
   window.selectContact = selectContact;
-  window.openProfile   = openProfile;
+  window.openProfile              = openProfile;
+  window.handleSearchOverlayClick = handleSearchOverlayClick;
+  window.dismissInstall           = typeof dismissInstall   !== 'undefined' ? dismissInstall   : ()=>{};
+  window.dismissIOSInstall        = typeof dismissIOSInstall !== 'undefined' ? dismissIOSInstall : ()=>{};
+  window.requestInstall           = typeof requestInstall   !== 'undefined' ? requestInstall   : ()=>{};
 })();
 
 // 하위 호환성 (기존 코드 USER_GUID 참조 유지)
@@ -1951,7 +1955,11 @@ async function _loadRouterPrompt() {
   window.setPeer       = setPeer;
   window._clearPeer    = _clearPeer;
   window.selectContact = selectContact;
-  window.openProfile   = openProfile;
+  window.openProfile              = openProfile;
+  window.handleSearchOverlayClick = handleSearchOverlayClick;
+  window.dismissInstall           = typeof dismissInstall   !== 'undefined' ? dismissInstall   : ()=>{};
+  window.dismissIOSInstall        = typeof dismissIOSInstall !== 'undefined' ? dismissIOSInstall : ()=>{};
+  window.requestInstall           = typeof requestInstall   !== 'undefined' ? requestInstall   : ()=>{};
 })();
 
   return _routerLoadPromise;
@@ -4634,7 +4642,11 @@ function _sendReportToFiil(geminiResult, imageFile, userText) {
   window.setPeer       = setPeer;
   window._clearPeer    = _clearPeer;
   window.selectContact = selectContact;
-  window.openProfile   = openProfile;
+  window.openProfile              = openProfile;
+  window.handleSearchOverlayClick = handleSearchOverlayClick;
+  window.dismissInstall           = typeof dismissInstall   !== 'undefined' ? dismissInstall   : ()=>{};
+  window.dismissIOSInstall        = typeof dismissIOSInstall !== 'undefined' ? dismissIOSInstall : ()=>{};
+  window.requestInstall           = typeof requestInstall   !== 'undefined' ? requestInstall   : ()=>{};
 })();
 
 

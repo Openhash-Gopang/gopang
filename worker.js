@@ -956,7 +956,7 @@ async function handleSignalDelete(request, env, corsHeaders) {
 }
 
 async function handleSearchUsers(request, env, corsHeaders) {
-  if (request.method !== 'GET') return _err(405, 'METHOD_NOT_ALLOWED', '', corsHeaders);
+  if (request.method !== 'GET' && request.method !== 'POST') return _err(405, 'METHOD_NOT_ALLOWED', '', corsHeaders);
   const url   = new URL(request.url);
   const q     = url.searchParams.get('q')?.trim();
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 50);
