@@ -45,9 +45,18 @@ const _USER = await (async () => {
   window.handleOverlayClick       = handleOverlayClick;
   window._updateHandleChip        = _updateHandleChip;
   window._settingsRegisterHandle  = _settingsRegisterHandle;
+  window.handleOverlayClick       = handleOverlayClick;
+  window._updateHandleChip        = _updateHandleChip;
+  window._settingsRegisterHandle  = _settingsRegisterHandle;
   window.dismissInstall           = typeof dismissInstall   !== 'undefined' ? dismissInstall   : ()=>{};
   window.dismissIOSInstall        = typeof dismissIOSInstall !== 'undefined' ? dismissIOSInstall : ()=>{};
   window.requestInstall           = typeof requestInstall   !== 'undefined' ? requestInstall   : ()=>{};
+  // 상단 바 handle 칩 초기화
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => _updateHandleChip(_USER.handle||null));
+  } else {
+    _updateHandleChip(_USER.handle||null);
+  }
 })();
 
 // 하위 호환성 (기존 코드 USER_GUID 참조 유지)
@@ -1960,6 +1969,9 @@ async function _loadRouterPrompt() {
   window.selectContact = selectContact;
   window.openProfile              = openProfile;
   window.handleSearchOverlayClick = handleSearchOverlayClick;
+  window.handleOverlayClick       = handleOverlayClick;
+  window._updateHandleChip        = _updateHandleChip;
+  window._settingsRegisterHandle  = _settingsRegisterHandle;
   window.handleOverlayClick       = handleOverlayClick;
   window._updateHandleChip        = _updateHandleChip;
   window._settingsRegisterHandle  = _settingsRegisterHandle;
@@ -4763,9 +4775,11 @@ function _sendReportToFiil(geminiResult, imageFile, userText) {
   window.handleOverlayClick       = handleOverlayClick;
   window._updateHandleChip        = _updateHandleChip;
   window._settingsRegisterHandle  = _settingsRegisterHandle;
+  window.handleOverlayClick       = handleOverlayClick;
+  window._updateHandleChip        = _updateHandleChip;
+  window._settingsRegisterHandle  = _settingsRegisterHandle;
   window.dismissInstall           = typeof dismissInstall   !== 'undefined' ? dismissInstall   : ()=>{};
   window.dismissIOSInstall        = typeof dismissIOSInstall !== 'undefined' ? dismissIOSInstall : ()=>{};
   window.requestInstall           = typeof requestInstall   !== 'undefined' ? requestInstall   : ()=>{};
 })();
 
-document.addEventListener('DOMContentLoaded', () => _updateHandleChip(_USER.handle||null));
