@@ -18,11 +18,6 @@ import { _patchL1LedgerUserHash, _patchPdvChainHeight,
 // gwp-registry.js 에서 동적 로드 (API 키 분리 목적)
 // GWP_REGISTRY 전역 변수는 gwp-registry.js 가 선언함
 
-// ── GWP 상태 ─────────────────────────────────────────────────────
-let _gwpActive    = false;
-let _gwpService   = null;
-let _gwpTab       = null;   // 열린 새 탭 참조
-let _gwpTabTimer  = null;   // 탭 닫힘 감지 인터벌
 
 // ── 의도 → 서비스 매칭 ─────────────────────────────────────────
 export function _gwpMatch(text) {
