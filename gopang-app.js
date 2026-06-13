@@ -1227,9 +1227,9 @@ function updateSendBtn() {
   document.getElementById('send-btn').disabled = !hasInput;
 
   // 입력 시작 시 AI 자동 활성화
-  // (대화 상대 미지정 상태 = aiActive가 false인 상태)
-  if (hasInput && !aiActive) {
-    activateAI(true);  // silent=true: 활성화 메시지 미표시
+  // Type B(seedHex 존재) 또는 Type C(profileHandle 존재)만 허용
+  if (hasInput && !aiActive && _isTypeBorC()) {
+    activateAI(true);
   }
 }
 function handleKey(e) {
@@ -2430,13 +2430,30 @@ function closeAI() {
 }
 // silent=true : 버튼 클릭이 아닌 자동 활성화 (메시지 미표시)
 // silent=false: 버튼 클릭으로 활성화 (안내 메시지 표시)
+// Type B: seedHex 존재(지갑 초기화) / Type C: profileHandle 존재(프로필 등록)
+function _isTypeBorC() {
+  try {
+    const s = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+    if (!s) return false;
+    return !!(s.seedHex || s.faceVec || s.webauthn?.credentialId || s.profileHandle);
+  } catch (e) { return false; }
+}
+
 function activateAI(silent = false) {
-  if (aiActive) return;   // 이미 활성 상태면 무시
+  if (aiActive) return;
+  if (!_isTypeBorC()) {
+    if (!silent) {
+      appendBubble('ai',
+        '🔒 AI 비서는 고팡 지갑을 초기화하거나 프로필을 등록한 사용자만 이용할 수 있습니다.\n\n' +
+        '• 지갑 초기화: 설정(⚙️) → 보안 설정에서 4단어 시드 등록\n' +
+        '• 프로필 등록: users.gopang.net/register-profile.html'
+      );
+    }
+    return;
+  }
   aiActive = true;
   document.getElementById('btn-ai').classList.add('active');
-  // dot 색상은 CSS .btn-ai.active .ai-dot 으로 자동 처리
   document.getElementById('ai-card-sub').textContent = `${CFG.model} 연결됨`;
-
   if (!silent) {
     appendBubble('ai', '귀하의 AI 비서입니다. 지시하십시오.');
   }
