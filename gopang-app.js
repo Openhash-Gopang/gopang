@@ -2597,7 +2597,7 @@ async function _registerToL1(name) {
   const guid          = _USER.ipv6 || USER_GUID;
   const nickname_hash = await _sha256('ko:' + name);
   const handle        = '@' + name + '#' + guid.slice(-4);
-  const L1_URL = 'https://l1-hanlim.gopang.net/api/collections/users/records';
+  const L1_URL = 'https://l1-hanlim.gopang.net/api/collections/profiles/records';
   try {
     // 1차: POST 시도
     const postRes = await fetch(L1_URL, {
@@ -3283,7 +3283,7 @@ async function runSearch() {
       `(nickname_hash='${nickHash}' || handle~'${safeQ}') && is_public=true`
     );
     const res  = await fetch(
-      `https://l1-hanlim.gopang.net/api/collections/users/records?filter=${filter}&perPage=20`
+      `https://l1-hanlim.gopang.net/api/collections/profiles/records?filter=${filter}&perPage=20`
     );
     const data = await res.json();
     serverUsers = (data.items || []).map(u => ({
