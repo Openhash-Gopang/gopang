@@ -482,6 +482,21 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   border-radius:12px;padding:14px 16px;margin:0 16px 14px;
   font-size:13px;line-height:1.7;color:#374151;
 }
+
+/* ── 검색 결과 카드 ── */
+.search-item{display:flex;align-items:center;gap:10px;padding:9px 10px;
+  border-radius:var(--r-md);background:var(--bg-input);margin-bottom:6px;
+  cursor:pointer;transition:background .15s}
+.search-item:active{background:var(--tint-dim)}
+.search-avatar{font-size:20px;flex-shrink:0;width:28px;text-align:center}
+.search-item-body{flex:1;min-width:0}
+.search-item-name{display:block;font-size:14px;font-weight:500;
+  color:var(--label);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-item-sub{display:block;font-size:11px;color:var(--label-3);
+  margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-item-badge{flex-shrink:0;font-size:10px;font-weight:600;
+  padding:2px 7px;border-radius:10px;background:var(--tint-dim);
+  color:var(--tint)}
 </style>
 </head>
 <body>
