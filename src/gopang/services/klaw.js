@@ -24,9 +24,6 @@ import { _recordPDV } from '../pdv/record.js';
 // ══════════════════════════════════════════════════════════════════════
 
 // ── K-Law 감시 상태 ────────────────────────────────────────────────
-let _klawBusy          = false;   // 중복 실행 방지
-let _klawLastCheck     = 0;       // 마지막 검토 시각 (ms)
-const KLAW_COOLDOWN_MS = 30000;   // 30초 쿨다운 (과도한 API 호출 방지)
 
 // K-Law Monitor 프롬프트 캐시 (감시용 경량 프롬프트 — v15.1 판결예측과 별개)
 let _klawMonitorPrompt = null;
