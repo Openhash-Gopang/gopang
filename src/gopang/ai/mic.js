@@ -81,7 +81,7 @@ export function toggleMic() {
 
 export function _micStop() {
   recognition?.stop();
-  micActive = false;
+  setMicActive(false);
   _micSetUI(false);
   if (window._micMediaRecorder?.state === 'recording') {
     window._micMediaRecorder.stop();
@@ -103,7 +103,7 @@ async function _micStartWebSpeech(SpeechRecognition) {
   //   getUserMedia()를 먼저 호출하면 안드로이드 크롬에서
   //   스트림 충돌이 발생하여 onresult가 호출되지 않는다.
 
-  recognition = new SpeechRecognition();
+  setRecognition(new SpeechRecognition());
   recognition.lang            = 'ko-KR';
   recognition.continuous      = false;
   recognition.interimResults  = false;
@@ -117,13 +117,13 @@ async function _micStartWebSpeech(SpeechRecognition) {
       autoResize(input);
       updateSendBtn();
     }
-    micActive = false;
+    setMicActive(false);
     _micSetUI(false);
     _micAutoSend();
   };
 
   recognition.onerror = (e) => {
-    micActive = false;
+    setMicActive(false);
     _micSetUI(false);
     const MSG = {
       'not-allowed':     '마이크 권한이 거부되었습니다. 브라우저 설정에서 허용하세요.',
@@ -138,12 +138,12 @@ async function _micStartWebSpeech(SpeechRecognition) {
   };
 
   recognition.onend = () => {
-    micActive = false;
+    setMicActive(false);
     _micSetUI(false);
   };
 
   recognition.start();
-  micActive = true;
+  setMicActive(true);
   _micSetUI(true);
 }
 
@@ -177,7 +177,7 @@ async function _micStartMediaRecorder() {
 
   recorder.onstop = async () => {
     stream.getTracks().forEach(t => t.stop());
-    micActive = false;
+    setMicActive(false);
     _micSetUI(false);
 
     const blob = new Blob(chunks, { type: mimeType });
@@ -224,7 +224,7 @@ async function _micStartMediaRecorder() {
   };
 
   recorder.start();
-  micActive = true;
+  setMicActive(true);
   _micSetUI(true);
 
   // 최대 30초 자동 종료

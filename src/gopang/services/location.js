@@ -48,12 +48,12 @@ export function _scheduleLocation() {
 
 export function _initLocation() {
   if (_locationPending || _locationReady) return;
-  _locationPending = true;
+  setLocationPending(true);
 
   if (!navigator.geolocation) {
     _loadLocationFromPDV().finally(() => {
-      _locationPending = false;
-      _locationReady   = true;
+      setLocationPending(false);
+      setLocationReady(true);
     });
     return;
   }
@@ -80,21 +80,21 @@ export function _initLocation() {
         const prevAddress = _userLocation?.address || null;
         const prevRegion  = _userLocation?.region  || null;
 
-        _userLocation = {
+        setUserLocation({
           lat:      newLat,
           lng:      newLng,
           accuracy: newAcc,
           source:   'GPS',
           address:  prevAddress,   // ← 기존 주소 유지
           region:   prevRegion,
-        };
+        });
 
         _updateLocationInPrompt(coordChanged);  // 변경 여부 전달
 
         if (!_gotFirst) {
           _gotFirst        = true;
-          _locationPending = false;
-          _locationReady   = true;
+          setLocationPending(false);
+          setLocationReady(true);
           console.log(`[Location] GPS 획득(${highAccuracy ? '고정밀' : '저정밀'}): ${newLat.toFixed(4)}, ${newLng.toFixed(4)} ±${Math.round(newAcc)}m`);
           if (!highAccuracy) _startWatch(true);
         }
@@ -112,8 +112,8 @@ export function _initLocation() {
           console.log('[Location] 고정밀 GPS로 재시도...');
           _startWatch(true);
         } else {
-          _locationPending = false;
-          _loadLocationFromPDV().finally(() => { _locationReady = true; });
+          setLocationPending(false);
+          _loadLocationFromPDV().finally(() => { setLocationReady(true); });
         }
       },
       {
@@ -132,15 +132,15 @@ export function _initLocation() {
     navigator.permissions.query({ name: 'geolocation' }).then(result => {
       if (result.state === 'denied') {
         console.log('[Location] GPS 권한 이미 거부됨 — IP 폴백 사용');
-        _locationPending = false;
-        _loadLocationFromPDV().finally(() => { _locationReady = true; });
+        setLocationPending(false);
+        _loadLocationFromPDV().finally(() => { setLocationReady(true); });
       } else {
         _startWatch(false);
       }
       result.onchange = () => {
         if (result.state === 'granted' && !_locationReady) {
-          _locationPending = false;
-          _locationReady   = false;
+          setLocationPending(false);
+          setLocationReady(false);
           _initLocation();
         }
       };
@@ -154,7 +154,7 @@ export async function _loadLocationFromPDV() {
   try {
     const pdvAddr = localStorage.getItem('gopang_profile_address');
     if (pdvAddr) {
-      _userLocation = { source: 'PDV', address: pdvAddr, lat: null, lng: null };
+      setUserLocation({ source: 'PDV', address: pdvAddr, lat: null, lng: null });
       _updateLocationInPrompt();
       console.log('[Location] PDV 주소 사용:', pdvAddr);
     } else {
@@ -169,7 +169,7 @@ async function _loadLocationFromIP() {
     const res  = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(4000) });
     const data = await res.json();
     if (data.latitude && data.city) {
-      _userLocation = {
+      setUserLocation({
         source:  'IP',
         address: `${data.country_name} ${data.region} ${data.city}`,
         lat:     data.latitude,
@@ -178,10 +178,10 @@ async function _loadLocationFromIP() {
       _updateLocationInPrompt();
       console.log('[Location] IP 위치 사용 (정확도 낮음):', _userLocation.address);
     } else {
-      _userLocation = { source: 'UNKNOWN', address: null, lat: null, lng: null };
+      setUserLocation({ source: 'UNKNOWN', address: null, lat: null, lng: null });
     }
   } catch {
-    _userLocation = { source: 'UNKNOWN', address: null, lat: null, lng: null };
+    setUserLocation({ source: 'UNKNOWN', address: null, lat: null, lng: null });
     console.warn('[Location] IP 위치도 실패 — GPS 권한을 허용하거나 PDV에 주소를 등록하세요.');
   }
 }
