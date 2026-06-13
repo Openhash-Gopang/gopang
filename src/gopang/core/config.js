@@ -1,4 +1,4 @@
-/**
+﻿/**
  * core/config.js — 앱 설정 (CFG, 모델, 엔드포인트)
  */
 import { setAiActive, aiActive, _USER, USER_GUID } from './state.js';
@@ -114,3 +114,4 @@ export const VISION_MODELS = new Set([
 export function _modelSupportsVision(model) {
   return VISION_MODELS.has(model);
 }
+
