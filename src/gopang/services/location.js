@@ -1,4 +1,4 @@
-/**
+﻿/**
  * services/location.js — GPS·역지오코딩·위치 관리
  */
 import { setUserLocation, setLocationReady, setLocationPending,
@@ -241,4 +241,5 @@ export function _buildLocNote() {
   }
   return `\n\n[현재 위치 — 반드시 이 정보만 사용할 것, 임의로 다른 도시 추정 절대 금지]\n${detail}`;
 }
+
 

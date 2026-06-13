@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ai/mic.js — 마이크 입력 (Web Speech API / MediaRecorder STT)
  */
 import { micActive, recognition, setMicActive, setRecognition } from '../core/state.js';
@@ -238,3 +238,4 @@ async function _micStartMediaRecorder() {
 // localStorage/postMessage 방식 폐기 → Supabase REST API 사용
 // 어떤 브라우저에서도 동일한 DB에 저장/조회 가능
 // ── K-Cleaner AI 응답 텍스트 파싱 — 전체 데이터 추출 ────────
+

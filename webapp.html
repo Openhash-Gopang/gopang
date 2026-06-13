@@ -17,6 +17,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap">
 <script src="/gopang-wallet.js"></script>
+<script>
+function gopangLogout() {
+  if (!confirm('로그아웃 하시겠습니까?
+(아이디·설정이 초기화됩니다)')) return;
+  localStorage.clear();
+  sessionStorage.clear();
+  caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+    .finally(() => location.reload());
+}
+</script>
 <script src="/gwp-registry.js"></script>
 <style>
 
@@ -645,7 +655,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;
     <div class="input-row">
       <!-- 좌측 보조 버튼 — 입력 시 숨김 -->
       <div class="input-actions-left" id="input-aux-btns">
-        <button class="ia-btn" id="btn-attach" title="파일 첨부">
+        <button class="ia-btn" onclick="triggerAttach()" title="파일 첨부">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
           </svg>
@@ -831,8 +841,12 @@ html,body{height:100%;height:100dvh;overflow:hidden;
       <div id="gopang-id-display" style="font-size:10px;color:var(--txt3);font-family:monospace;word-break:break-all;padding:8px 0"></div>
     </div>
 
+    <button onclick="gopangLogout()"
+      style="width:calc(100% - 32px);margin:0 16px 8px;padding:12px;background:transparent;border:1px solid #fca5a5;border-radius:10px;color:#dc2626;font-size:14px;font-family:inherit;cursor:pointer">
+      🚪 로그아웃
+    </button>
     <button onclick="clearSWCache()"
-      style="width:calc(100% - 32px);margin:0 16px 16px;padding:12px;background:transparent;border:1px solid #fca5a5;border-radius:10px;color:#dc2626;font-size:14px;font-family:inherit;cursor:pointer">
+      style="width:calc(100% - 32px);margin:0 16px 16px;padding:12px;background:transparent;border:1px solid #e5e7eb;border-radius:10px;color:#9ca3af;font-size:13px;font-family:inherit;cursor:pointer">
       🗑 앱 캐시 초기화
     </button>
   </div>
