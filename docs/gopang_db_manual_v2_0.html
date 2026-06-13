@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고팡 Supabase DB 완전 매뉴얼 v2.0</title>
+<style>
+  :root {
+    --text: #1a1a1a;
+    --muted: #555555;
+    --line: #cccccc;
+    --bg-soft: #f7f7f7;
+    --bg: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Noto Sans KR", "Segoe UI", -apple-system, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+    line-height: 1.65;
+    font-size: 15px;
+  }
+  h1, h2, h3, h4, h5 {
+    font-weight: 700;
+    line-height: 1.35;
+    margin-top: 2.2em;
+    margin-bottom: 0.6em;
+  }
+  h1 {
+    font-size: 26px;
+    border-bottom: 2px solid var(--text);
+    padding-bottom: 16px;
+    margin-top: 0;
+  }
+  h2 {
+    font-size: 20px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+    margin-top: 2.6em;
+  }
+  h3 {
+    font-size: 16px;
+    margin-top: 1.8em;
+  }
+  h4 { font-size: 14.5px; margin-top: 1.4em; }
+  h5 { font-size: 13.5px; margin-top: 1.2em; }
+
+  .meta {
+    font-size: 13.5px;
+    color: var(--muted);
+    margin: 4px 0;
+  }
+  .meta strong { color: var(--text); }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 2.5em 0;
+  }
+
+  .toc {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 20px 28px;
+    margin: 24px 0;
+  }
+  .toc h2 {
+    margin-top: 0;
+    border-bottom: none;
+    font-size: 16px;
+  }
+  .toc ol {
+    margin: 0;
+    padding-left: 1.4em;
+    columns: 2;
+    column-gap: 32px;
+  }
+  .toc li { margin-bottom: 6px; font-size: 14px; }
+  .toc a {
+    color: var(--text);
+    text-decoration: none;
+  }
+  .toc a:hover { text-decoration: underline; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.2em 0;
+    font-size: 13.5px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 7px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--bg-soft);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  td code, th code { font-size: 12.5px; }
+
+  pre {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    font-size: 12.5px;
+    line-height: 1.55;
+    font-family: "SF Mono", "Consolas", "Courier New", monospace;
+    margin: 1.2em 0;
+  }
+  code {
+    font-family: "SF Mono", "Consolas", "Courier New", monospace;
+    background: var(--bg-soft);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.92em;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+  }
+
+  blockquote {
+    border-left: 3px solid var(--line);
+    margin: 1em 0;
+    padding: 0.2em 1em;
+    color: var(--muted);
+    font-size: 14px;
+    background: var(--bg-soft);
+  }
+  blockquote strong { color: var(--text); }
+  blockquote p { margin: 0.4em 0; }
+
+  ul, ol { padding-left: 1.6em; }
+  li { margin-bottom: 4px; }
+
+  .footer {
+    margin-top: 4em;
+    padding-top: 1.5em;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  .back-to-top { font-size: 12.5px; }
+  .back-to-top a {
+    color: var(--muted);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 2px 10px;
+  }
+  .back-to-top a:hover { color: var(--text); }
+
+  @media print {
+    body { padding: 0 12px; }
+    .back-to-top { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<h1 id="top">고팡(Gopang) Supabase DB 완전 매뉴얼 v2.0</h1>
+<p class="meta"><strong>작성일</strong>: 2026-06-12</p>
+<p class="meta"><strong>프로젝트</strong>: ebbecjfrwaswbdybbgiu.supabase.co</p>
+<p class="meta"><strong>기준</strong>: T01~T10 완료, 실제 Supabase 스키마 검증 완료</p>
+<p class="meta"><strong>테이블</strong>: 43개 ｜ <strong>Views</strong>: 14개 ｜ <strong>Functions</strong>: 9개 (사용자 정의)</p>
+
+<hr>
+
+<div class="toc">
+<h2>목차</h2>
+<ol>
+  <li><a href="#sec1">DB 객체 전체 목록</a></li>
+  <li><a href="#sec2">테이블 그룹 개요</a></li>
+  <li><a href="#sec3">핵심 테이블 상세</a></li>
+  <li><a href="#sec4">GDC 금융 테이블</a></li>
+  <li><a href="#sec5">GDUDA 분산 네트워크 테이블</a></li>
+  <li><a href="#sec6">K-Market 테이블</a></li>
+  <li><a href="#sec7">K-Law 테이블</a></li>
+  <li><a href="#sec8">K-School 테이블</a></li>
+  <li><a href="#sec9">K-Security 테이블</a></li>
+  <li><a href="#sec10">사용자 보조 테이블</a></li>
+  <li><a href="#sec11">공통 인프라 테이블</a></li>
+  <li><a href="#sec12">Views 상세</a></li>
+  <li><a href="#sec13">Functions 상세</a></li>
+  <li><a href="#sec14">인덱스 전체 목록</a></li>
+  <li><a href="#sec15">CHECK 제약 전체 목록</a></li>
+  <li><a href="#sec16">3계층 동기화 구조</a></li>
+  <li><a href="#sec17">T-시리즈 DB 검증 기준</a></li>
+  <li><a href="#sec18">즉각 조치 가이드</a></li>
+</ol>
+</div>
+
+<hr>
+
+<h2 id="sec1">1. DB 객체 전체 목록</h2>
+
+<h3>1.1 테이블 (43개)</h3>
+
+<table>
+<tr><th>그룹</th><th>테이블명</th><th>역할</th></tr>
+<tr><td><strong>핵심</strong></td><td><code>user_profiles</code></td><td>사용자/기관 마스터 프로필</td></tr>
+<tr><td>핵심</td><td><code>fs_ledger</code></td><td>거래 원장 (차변/대변)</td></tr>
+<tr><td>핵심</td><td><code>l1_ledger</code></td><td>L1 블록체인 미러 + Hash Chain</td></tr>
+<tr><td>핵심</td><td><code>pdv_log</code></td><td>PDV 6하원칙 감사 로그</td></tr>
+<tr><td>핵심</td><td><code>merkle_anchors</code></td><td>머클 루트 앵커링 기록</td></tr>
+<tr><td><strong>GDC</strong></td><td><code>gdc_claims</code></td><td>GDC 청구권 (buyer_claim/seller_claim)</td></tr>
+<tr><td>GDC</td><td><code>gdc_deposits</code></td><td>GDC 예치금/정기예금</td></tr>
+<tr><td><strong>GDUDA</strong></td><td><code>gduda_nodes</code></td><td>분산 네트워크 노드</td></tr>
+<tr><td>GDUDA</td><td><code>gduda_openid_blocks</code></td><td>OpenID 블록체인</td></tr>
+<tr><td>GDUDA</td><td><code>gduda_propagation_log</code></td><td>노드 간 전파 로그</td></tr>
+<tr><td>GDUDA</td><td><code>gduda_routing_table</code></td><td>노드 라우팅 테이블</td></tr>
+<tr><td><strong>K-Market</strong></td><td><code>biz_orders</code></td><td>주문 레코드</td></tr>
+<tr><td>K-Market</td><td><code>biz_products</code></td><td>상품/메뉴 목록</td></tr>
+<tr><td>K-Market</td><td><code>biz_reviews</code></td><td>상품 리뷰 (product 단위)</td></tr>
+<tr><td>K-Market</td><td><code>reviews</code></td><td>거래 리뷰 (tx 단위)</td></tr>
+<tr><td>K-Market</td><td><code>review_votes</code></td><td>리뷰 유용성 투표</td></tr>
+<tr><td>K-Market</td><td><code>seller_ratings</code></td><td>판매자 가중 평점 집계</td></tr>
+<tr><td>K-Market</td><td><code>kmarket_sellers</code></td><td>K-Market 판매자 (레거시)</td></tr>
+<tr><td>K-Market</td><td><code>kmarket_menus</code></td><td>K-Market 메뉴 (레거시)</td></tr>
+<tr><td>K-Market</td><td><code>inventory</code></td><td>재고 관리</td></tr>
+<tr><td><strong>K-Law</strong></td><td><code>klaw_cases</code></td><td>K-Law 사건 DB</td></tr>
+<tr><td>K-Law</td><td><code>klaw_sessions</code></td><td>K-Law 세션 기록</td></tr>
+<tr><td>K-Law</td><td><code>klaw_benchmark</code></td><td>K-Law 벤치마크 평가</td></tr>
+<tr><td><strong>K-School</strong></td><td><code>school_student_profiles</code></td><td>학생 프로필 + 역량 점수</td></tr>
+<tr><td>K-School</td><td><code>school_subjects</code></td><td>수강 과목</td></tr>
+<tr><td>K-School</td><td><code>school_sessions</code></td><td>학습 세션</td></tr>
+<tr><td>K-School</td><td><code>school_progress</code></td><td>과목별 진도</td></tr>
+<tr><td>K-School</td><td><code>school_assessments</code></td><td>평가 기록</td></tr>
+<tr><td>K-School</td><td><code>school_career_log</code></td><td>진로 변경 이력</td></tr>
+<tr><td>K-School</td><td><code>school_reports</code></td><td>학습 리포트</td></tr>
+<tr><td><strong>K-Security</strong></td><td><code>security_log</code></td><td>서비스 상태 모니터링 로그</td></tr>
+<tr><td>K-Security</td><td><code>security_event</code></td><td>보안 이벤트</td></tr>
+<tr><td>K-Security</td><td><code>security_command</code></td><td>보안 명령</td></tr>
+<tr><td><strong>사용자 보조</strong></td><td><code>users</code></td><td>기기 등록 + GDUDA 전파 상태</td></tr>
+<tr><td>사용자 보조</td><td><code>user_attributes</code></td><td>사용자 속성 (학력/자격)</td></tr>
+<tr><td>사용자 보조</td><td><code>user_nicknames</code></td><td>닉네임 원문 + 해시</td></tr>
+<tr><td>사용자 보조</td><td><code>user_trust_levels</code></td><td>신뢰 레벨 (L0~L3)</td></tr>
+<tr><td>사용자 보조</td><td><code>user_gdc_settings</code></td><td>GDC 수락 여부</td></tr>
+<tr><td>사용자 보조</td><td><code>gopang_sessions</code></td><td>JWT 세션 토큰</td></tr>
+<tr><td>사용자 보조</td><td><code>location_log</code></td><td>위치 기록</td></tr>
+<tr><td><strong>공통 인프라</strong></td><td><code>nickname_cache</code></td><td>닉네임 해시 캐시 (다국어)</td></tr>
+<tr><td>공통 인프라</td><td><code>lang_node_map</code></td><td>언어별 우선 노드 매핑</td></tr>
+<tr><td>공통 인프라</td><td><code>region_node_map</code></td><td>지역별 노드 매핑</td></tr>
+<tr><td>공통 인프라</td><td><code>reports</code></td><td>민원/신고 레코드 (공통)</td></tr>
+</table>
+
+<h3>1.2 Views (14개)</h3>
+
+<table>
+<tr><th>Views명</th><th>역할</th></tr>
+<tr><td><code>pdv_chain_integrity</code></td><td>PDV ↔ L1 Hash 3계층 무결성</td></tr>
+<tr><td><code>ktax_balance_anomalies</code></td><td>잔액 불일치 탐지</td></tr>
+<tr><td><code>sigma_delta_by_node</code></td><td>BIVM Σδ=0 검증</td></tr>
+<tr><td><code>p1_tx_has_pdv</code></td><td>P1 감사: 거래별 PDV 존재</td></tr>
+<tr><td><code>p2_chain_continuity</code></td><td>P2 감사: chain_height 연속성</td></tr>
+<tr><td><code>p3_user_hash_unpatched</code></td><td>P3 감사: user_hash 미교정</td></tr>
+<tr><td><code>p4_chain_integrity_fail</code></td><td>P4 감사: chain_local_hash ≠ user_hash</td></tr>
+<tr><td><code>p5_sigma_delta_fail</code></td><td>P5 감사: Σδ≠0 위반</td></tr>
+<tr><td><code>p6_balance_anomalies</code></td><td>P6 감사: 잔액 불일치</td></tr>
+<tr><td><code>klaw_benchmark_trend</code></td><td>K-Law 벤치마크 추이</td></tr>
+<tr><td><code>school_student_dashboard</code></td><td>K-School 학생 대시보드</td></tr>
+<tr><td><code>security_open_events</code></td><td>미해결 보안 이벤트</td></tr>
+<tr><td><code>security_status</code></td><td>서비스별 최신 상태</td></tr>
+<tr><td><code>security_uptime_1h</code></td><td>최근 1시간 가동률</td></tr>
+</table>
+
+<h3>1.3 Functions (사용자 정의, 9개)</h3>
+
+<table>
+<tr><th>Function</th><th>반환 타입</th><th>역할</th></tr>
+<tr><td><code>reconstruct_balances(p_guid)</code></td><td>RECORD</td><td>fs_ledger 집계 → 잔액 재구성</td></tr>
+<tr><td><code>search_entities(...)</code></td><td>RECORD</td><td>엔티티 복합 검색</td></tr>
+<tr><td><code>search_by_attributes(...)</code></td><td>RECORD</td><td>속성 기반 검색</td></tr>
+<tr><td><code>market_purchase(...)</code></td><td>JSONB</td><td>fs_ledger 3행 원자 INSERT</td></tr>
+<tr><td><code>payment_atomic(...)</code></td><td>JSONB</td><td>원자 결제 처리</td></tr>
+<tr><td><code>gdc_settle_ledger(...)</code></td><td>JSONB</td><td>GDC 정산 → extra.fs 갱신</td></tr>
+<tr><td><code>validate_review(...)</code></td><td>JSONB</td><td>리뷰 작성 권한 검증</td></tr>
+<tr><td><code>recalc_seller_rating(...)</code></td><td>VOID</td><td>판매자 평점 재계산</td></tr>
+<tr><td><code>set_updated_at()</code></td><td>TRIGGER</td><td>updated_at 자동 갱신 트리거</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec2">2. 테이블 그룹 개요</h2>
+
+<pre>Gopang Supabase DB
+│
+├── 핵심 (5)          user_profiles, fs_ledger, l1_ledger, pdv_log, merkle_anchors
+│
+├── GDC 금융 (2)      gdc_claims, gdc_deposits
+│
+├── GDUDA 네트워크 (4) gduda_nodes, gduda_openid_blocks,
+│                     gduda_propagation_log, gduda_routing_table
+│
+├── K-Market (10)     biz_orders, biz_products, biz_reviews, reviews,
+│                     review_votes, seller_ratings,
+│                     kmarket_sellers, kmarket_menus, inventory, reports
+│
+├── K-Law (3)         klaw_cases, klaw_sessions, klaw_benchmark
+│
+├── K-School (6)      school_student_profiles, school_subjects,
+│                     school_sessions, school_progress,
+│                     school_assessments, school_career_log, school_reports
+│
+├── K-Security (3)    security_log, security_event, security_command
+│
+├── 사용자 보조 (7)    users, user_attributes, user_nicknames,
+│                     user_trust_levels, user_gdc_settings,
+│                     gopang_sessions, location_log
+│
+└── 공통 인프라 (4)    nickname_cache, lang_node_map, region_node_map, reports</pre>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec3">3. 핵심 테이블 상세</h2>
+
+<h3>3.1 user_profiles — 사용자/기관 마스터 프로필</h3>
+
+<p>모든 엔티티(개인/사업자/기관)의 핵심 마스터. 고정 레이어 + <code>extra</code> JSONB 유동 레이어.</p>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>제약</th><th>설명</th></tr>
+<tr><td><code>guid</code></td><td>TEXT</td><td><strong>PK</strong></td><td>사용자 IPv6 주소. 시스템 전체 GUID 기준값</td></tr>
+<tr><td><code>primary_guid</code></td><td>TEXT</td><td></td><td>대표 GUID (일반적으로 guid와 동일)</td></tr>
+<tr><td><code>entity_type</code></td><td>TEXT</td><td></td><td><code>'individual'</code> | <code>'org'</code> | <code>'institution'</code></td></tr>
+<tr><td><code>name</code></td><td>TEXT</td><td></td><td>이름/업체명. 검색 인덱스 대상</td></tr>
+<tr><td><code>address</code></td><td>TEXT</td><td></td><td>주소. 검색 인덱스 대상</td></tr>
+<tr><td><code>handle</code></td><td>TEXT</td><td>UNIQUE</td><td>QR URL 식별자 (<code>@hallim_geumneung</code>)</td></tr>
+<tr><td><code>native_lang</code></td><td>TEXT</td><td>DEFAULT <code>'ko'</code></td><td>모국어 코드. 다국어 UI 자동 전환 기준</td></tr>
+<tr><td><code>is_public</code></td><td>BOOLEAN</td><td></td><td>검색 노출 여부</td></tr>
+<tr><td><code>public_key</code></td><td>TEXT</td><td></td><td><strong>ED25519 공개키 (Base64url). 결제 서명 검증 기준</strong></td></tr>
+<tr><td><code>current_ipv6</code></td><td>TEXT</td><td></td><td>현재 기기 IPv6</td></tr>
+<tr><td><code>l1_node</code></td><td>TEXT</td><td></td><td>소속 L1 노드 코드</td></tr>
+<tr><td><code>extra</code></td><td><strong>JSONB</strong></td><td></td><td>entity_type별 유동 데이터. <strong>extra.fs = 재무 상태</strong></td></tr>
+<tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td>DEFAULT now()</td><td>생성 시각</td></tr>
+<tr><td><code>updated_at</code></td><td>TIMESTAMPTZ</td><td></td><td>최종 수정 시각</td></tr>
+</table>
+
+<h4>extra.fs 구조 (GDC settleLedger 후 갱신)</h4>
+<pre>{
+  "bs-cash":     -41000,
+  "pl-purchase":  41000,
+  "pl-revenue":       0,
+  "settled_at": "2026-06-12T..."
+}</pre>
+
+<blockquote><p><strong>주의</strong>: <code>extra.fs.bs-cash</code> = <code>Σcredit - Σdebit</code> (순변동분, 절대잔액 아님).<br>
+<code>reconstruct_balances()</code>와 반드시 동일 공식 사용.</p></blockquote>
+
+<h4>extra JSONB — entity_type별 표준 필드</h4>
+
+<table>
+<tr><th>entity_type</th><th>주요 필드</th></tr>
+<tr><td><code>individual</code></td><td><code>phone</code>, <code>gender</code>, <code>birthday</code>, <code>nationality</code>, <code>consumer:true</code>, <code>verified_at</code></td></tr>
+<tr><td><code>org</code></td><td><code>phone</code>, <code>biz_reg_no</code>, <code>ceo_name</code>, <code>ksic_code</code>, <code>business_hours</code>, <code>gdc_accepted</code>, <code>menu[]</code>, <code>ai_active</code>, <code>fs</code></td></tr>
+<tr><td><code>institution</code></td><td><code>phone</code>, <code>org_type</code>, <code>parent_org</code>, <code>departments[]</code>, <code>services[]</code>, <code>public_hours</code>, <code>ai_active</code></td></tr>
+</table>
+
+<h3>3.2 fs_ledger — 거래 원장</h3>
+
+<p>이중 기입 원장. 동일 거래 = 동일 <code>tx_id</code>/<code>block_hash</code>로 3행 (buyer debit + seller credit + platform fee credit).</p>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>제약</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>BIGINT</td><td><strong>PK AUTO</strong></td><td>자동증가</td></tr>
+<tr><td><code>tx_id</code></td><td>TEXT</td><td></td><td>거래 ID (Worker 생성)</td></tr>
+<tr><td><code>tx_at</code></td><td>TIMESTAMPTZ</td><td></td><td>거래 시각</td></tr>
+<tr><td><code>guid</code></td><td><strong>TEXT</strong></td><td></td><td><strong>행의 소유자 GUID</strong> (buyer/seller/platform 각각)</td></tr>
+<tr><td><code>buyer_guid</code></td><td>TEXT</td><td></td><td>구매자 GUID</td></tr>
+<tr><td><code>seller_guid</code></td><td>TEXT</td><td></td><td>판매자 GUID</td></tr>
+<tr><td><code>direction</code></td><td>TEXT</td><td>CHECK</td><td><strong><code>'debit'</code>(지출) | <code>'credit'</code>(수입)</strong></td></tr>
+<tr><td><code>amount</code></td><td>NUMERIC</td><td>CHECK &gt; 0</td><td>거래 금액. <strong>항상 양수</strong></td></tr>
+<tr><td><code>fs_account</code></td><td>TEXT</td><td>CHECK</td><td>계정 과목 (아래 허용값 참조)</td></tr>
+<tr><td><code>item_name</code></td><td>TEXT</td><td></td><td>상품/서비스명</td></tr>
+<tr><td><code>item_id</code></td><td>TEXT</td><td></td><td>상품 ID</td></tr>
+<tr><td><code>quantity</code></td><td>INTEGER</td><td></td><td>수량</td></tr>
+<tr><td><code>memo</code></td><td>TEXT</td><td></td><td>거래 메모</td></tr>
+<tr><td><code>source</code></td><td>TEXT</td><td><strong>CHECK</strong></td><td>출처 서비스 (아래 허용값 참조)</td></tr>
+<tr><td><code>block_hash</code></td><td>TEXT</td><td></td><td><strong>L1 블록 content_hash. l1_ledger JOIN 키</strong></td></tr>
+<tr><td><code>block_id</code></td><td>TEXT</td><td></td><td>L1 블록 레코드 ID</td></tr>
+<tr><td><code>prev_settle_hash</code></td><td>TEXT</td><td></td><td>이전 거래 block_hash</td></tr>
+</table>
+
+<h4>fs_account CHECK 허용값</h4>
+<pre>'bs-cash', 'pl-revenue', 'pl-purchase', 'pl-opex',
+'pl-platform_fee', 'pl-interest_income', 'pl-interest_expense',
+'pl-loan_repayment', 'bs-loan', 'bs-deposit'</pre>
+
+<h4>source CHECK 허용값</h4>
+<pre>'market', 'gdc', 'insurance', 'tax', 'health', 'democracy', 'manual'</pre>
+
+<blockquote><p><strong>주의</strong>: <code>'kmarket'</code> 등 prefix 형태 불가. INSERT 시 23514 오류 발생.</p></blockquote>
+
+<h4>계정 과목 처리 규칙</h4>
+
+<table>
+<tr><th>계정</th><th>debit 처리</th><th>credit 처리</th><th>설명</th></tr>
+<tr><td><code>bs-cash</code></td><td><code>cur - amount</code></td><td><code>cur + amount</code></td><td>현재 잔액 변동분</td></tr>
+<tr><td><code>pl-purchase</code></td><td><code>cur + amount</code> (<strong>양수 누적</strong>)</td><td>—</td><td>누적 구매액</td></tr>
+<tr><td><code>pl-revenue</code></td><td>—</td><td><code>cur + amount</code></td><td>누적 매출액</td></tr>
+</table>
+
+<blockquote><p><strong>주의</strong>: <code>pl-purchase</code>를 <code>cur - amount</code>로 처리하면 음수 누적 오류 발생 (T08 수정).</p></blockquote>
+
+<h3>3.3 l1_ledger — L1 블록체인 미러</h3>
+
+<p>L1 PocketBase 거래 블록을 Supabase에 미러링. Worker <code>updateNodeHashChain()</code>이 INSERT.</p>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>제약</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>BIGINT</td><td><strong>PK AUTO</strong></td><td>자동증가</td></tr>
+<tr><td><code>tx_id</code></td><td>TEXT</td><td></td><td>거래 ID</td></tr>
+<tr><td><code>buyer_guid</code></td><td>TEXT</td><td></td><td>구매자 GUID</td></tr>
+<tr><td><code>seller_guid</code></td><td>TEXT</td><td></td><td>판매자 GUID</td></tr>
+<tr><td><code>block_hash</code></td><td><strong>TEXT</strong></td><td></td><td><strong>L1 content_hash. 핵심 JOIN 키</strong></td></tr>
+<tr><td><code>user_hash</code></td><td><strong>TEXT</strong></td><td></td><td><strong>IDB local_hash. <code>_patchL1LedgerUserHash()</code>로 사후 교정 필수</strong></td></tr>
+<tr><td><code>node_hash</code></td><td>TEXT</td><td></td><td>Worker H_N 해시. <code>SHA-256(prev_node_hash ∥ user_hash)</code></td></tr>
+<tr><td><code>balance_claimed</code></td><td>TEXT</td><td></td><td><strong>거래 후 buyer 잔액 (절대값, 양수)</strong>. 부호 없음</td></tr>
+<tr><td><code>anchored_at</code></td><td>TIMESTAMPTZ</td><td>DEFAULT now()</td><td>앵커링 시각</td></tr>
+</table>
+
+<blockquote>
+<p><strong>주의 1</strong>: <code>balance_claimed</code>은 buyer 잔액(절대값). Σδ 계산에 직접 사용 불가.</p>
+<p><strong>주의 2</strong>: <code>user_hash</code>는 Worker 산출값 ≠ 클라이언트 산출값. <code>_patchL1LedgerUserHash()</code> 교정 필수 (설계서 F4).</p>
+</blockquote>
+
+<h3>3.4 pdv_log — PDV 6하원칙 감사 로그</h3>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>제약</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>TEXT</td><td><strong>PK</strong></td><td>DEFAULT <code>gen_random_uuid()::TEXT</code></td></tr>
+<tr><td><code>guid</code></td><td>TEXT</td><td></td><td>사용자 GUID</td></tr>
+<tr><td><code>source</code></td><td>TEXT</td><td></td><td>기록 출처 서비스</td></tr>
+<tr><td><code>type</code></td><td>TEXT</td><td></td><td>레코드 유형</td></tr>
+<tr><td><code>report_id</code></td><td>TEXT</td><td></td><td>보고서 ID</td></tr>
+<tr><td><code>summary</code></td><td>TEXT</td><td></td><td>요약</td></tr>
+<tr><td><code>summary_6w</code></td><td>TEXT</td><td></td><td>JSON: <code>{who,when,where,what,how,why}</code></td></tr>
+<tr><td><code>session_id</code></td><td>UUID</td><td><strong>UNIQUE (IS NOT NULL)</strong></td><td>세션 ID. <strong>중복 INSERT 차단 기준</strong></td></tr>
+<tr><td><code>chain_height</code></td><td>INTEGER</td><td></td><td>IDB hash_chain 높이. P2 연속성 감사 기준</td></tr>
+<tr><td><code>chain_local_hash</code></td><td>TEXT</td><td></td><td>IDB local_hash. l1_ledger.user_hash와 일치 필수</td></tr>
+<tr><td><code>block_hash</code></td><td>TEXT</td><td></td><td>L1 블록 해시</td></tr>
+<tr><td><code>openhash_anchored</code></td><td>BOOLEAN</td><td>DEFAULT false</td><td><strong>머클 앵커링 완료 여부. Cron이 true로 갱신</strong></td></tr>
+<tr><td><code>openhash_anchored_at</code></td><td>TIMESTAMPTZ</td><td></td><td>앵커링 완료 시각</td></tr>
+<tr><td><code>reporter_svc</code></td><td>TEXT</td><td></td><td>기록 주체 서비스</td></tr>
+<tr><td><code>via_worker</code></td><td>BOOLEAN</td><td>DEFAULT false</td><td>Worker 경유 여부</td></tr>
+<tr><td><code>risk_level</code></td><td>TEXT</td><td></td><td><code>'low'</code>|<code>'medium'</code>|<code>'high'</code></td></tr>
+<tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td>DEFAULT now()</td><td>생성 시각</td></tr>
+</table>
+
+<h4>인덱스</h4>
+<pre>-- 핵심: session_id 중복 방지
+CREATE UNIQUE INDEX pdv_log_session_id_idx
+  ON pdv_log (session_id) WHERE session_id IS NOT NULL;
+
+-- 미앵커링 조회 (Cron 대상)
+CREATE INDEX idx_pdv_log_pending_anchor
+  ON pdv_log (id) WHERE openhash_anchored=false AND via_worker=true;
+
+-- chain_height 연속성 감사
+CREATE INDEX pdv_log_chain_height_idx ON pdv_log (chain_height);</pre>
+
+<blockquote><p><strong>필수</strong>: <code>_recordPDV()</code> INSERT 시 <code>Prefer: return=minimal,resolution=ignore-duplicates</code> 헤더 필수.</p></blockquote>
+
+<h3>3.5 merkle_anchors — 머클 앵커링 기록</h3>
+
+<p>Worker <code>anchorL1MerkleRoot()</code> Cron (10분)이 미앵커링 pdv_log를 머클 트리로 묶어 기록.</p>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>제약</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>UUID</td><td><strong>PK</strong></td><td><code>gen_random_uuid()</code></td></tr>
+<tr><td><code>merkle_root</code></td><td>TEXT</td><td>NOT NULL</td><td>머클 루트 해시 (SHA-256)</td></tr>
+<tr><td><code>anchored_at</code></td><td>TIMESTAMPTZ</td><td>DEFAULT now()</td><td>앵커링 시각</td></tr>
+<tr><td><code>block_count</code></td><td>INTEGER</td><td>NOT NULL</td><td>포함된 pdv_log 건수</td></tr>
+<tr><td><code>pdv_ids</code></td><td>JSONB</td><td>NOT NULL</td><td>포함된 pdv_log.id 배열</td></tr>
+<tr><td><code>l1_block_hash</code></td><td>TEXT</td><td></td><td>L1 앵커 블록 해시</td></tr>
+<tr><td><code>status</code></td><td>TEXT</td><td>CHECK</td><td><code>'pending'</code>|<code>'confirmed'</code>|<code>'failed'</code></td></tr>
+<tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td>DEFAULT now()</td><td>생성 시각</td></tr>
+</table>
+
+<h4>머클 트리 알고리즘</h4>
+<pre>leaf = chain_local_hash || block_hash || id (우선순위 순)
+nodes = SHA-256(leaf) for each leaf
+while nodes.length > 1:
+  홀수 노드 → 마지막 복제
+  next = SHA-256(left + right) for each pair
+merkle_root = nodes[0]</pre>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec4">4. GDC 금융 테이블</h2>
+
+<h3>4.1 gdc_claims — GDC 청구권</h3>
+
+<p>거래 완료 시 Worker가 생성하는 buyer/seller 청구권. <code>expires_at</code> 내 미사용 시 자동 만료.</p>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>제약</th><th>설명</th></tr>
+<tr><td><code>claim_id</code></td><td>TEXT</td><td><strong>PK</strong></td><td>청구권 ID</td></tr>
+<tr><td><code>tx_id</code></td><td>TEXT</td><td>NOT NULL</td><td>거래 ID</td></tr>
+<tr><td><code>claimant</code></td><td>TEXT</td><td>NOT NULL</td><td>청구자 GUID</td></tr>
+<tr><td><code>direction</code></td><td>TEXT</td><td>CHECK</td><td><code>'debit'</code>|<code>'credit'</code></td></tr>
+<tr><td><code>amount</code></td><td>NUMERIC</td><td>CHECK &gt; 0</td><td>청구 금액</td></tr>
+<tr><td><code>fs_account</code></td><td>TEXT</td><td>CHECK</td><td>계정 과목</td></tr>
+<tr><td><code>block_id</code></td><td>TEXT</td><td></td><td>L1 블록 ID</td></tr>
+<tr><td><code>block_hash</code></td><td>TEXT</td><td></td><td>L1 블록 해시</td></tr>
+<tr><td><code>issued_by</code></td><td>TEXT</td><td>NOT NULL</td><td>발급 주체</td></tr>
+<tr><td><code>issued_at</code></td><td>TIMESTAMPTZ</td><td>DEFAULT now()</td><td>발급 시각</td></tr>
+<tr><td><code>nonce</code></td><td>TEXT</td><td></td><td>재사용 방지 nonce</td></tr>
+<tr><td><code>expires_at</code></td><td>TIMESTAMPTZ</td><td>DEFAULT <code>now()+72h</code></td><td><strong>만료 시각. 기본 72시간</strong></td></tr>
+<tr><td><code>claim_signature</code></td><td>TEXT</td><td></td><td>청구권 서명</td></tr>
+<tr><td><code>redeemed</code></td><td>BOOLEAN</td><td>DEFAULT false</td><td>사용 여부</td></tr>
+<tr><td><code>redeemed_at</code></td><td>TIMESTAMPTZ</td><td></td><td>사용 시각</td></tr>
+</table>
+
+<blockquote><p><strong>T08 관련</strong>: <code>gopang-wallet.js redeemClaim()</code>은 <code>expires_at &lt; now()</code>인 청구권을 자동 무시.<br>
+Worker는 <code>buyer_claim.expires_at</code>을 7일로 생성하여 GWP_DONE에 포함.</p></blockquote>
+
+<h3>4.2 gdc_deposits — GDC 예치금</h3>
+
+<p>GDC 예치/정기예금 상품.</p>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>제약</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>BIGINT</td><td><strong>PK AUTO</strong></td><td></td></tr>
+<tr><td><code>account_id</code></td><td>TEXT</td><td>UNIQUE</td><td><code>gen_random_uuid()</code></td></tr>
+<tr><td><code>user_guid</code></td><td>TEXT</td><td>NOT NULL</td><td>예치자 GUID</td></tr>
+<tr><td><code>product_type</code></td><td>TEXT</td><td>DEFAULT <code>'demand'</code></td><td>상품 유형 (demand/time)</td></tr>
+<tr><td><code>principal</code></td><td>NUMERIC</td><td>DEFAULT 0</td><td>원금</td></tr>
+<tr><td><code>interest_rate</code></td><td>NUMERIC</td><td>DEFAULT 0.05</td><td>이율 (5%)</td></tr>
+<tr><td><code>accrued_interest</code></td><td>NUMERIC</td><td>DEFAULT 0</td><td>누적 이자</td></tr>
+<tr><td><code>maturity_date</code></td><td>DATE</td><td></td><td>만기일</td></tr>
+<tr><td><code>status</code></td><td>TEXT</td><td>DEFAULT <code>'active'</code></td><td>상태</td></tr>
+<tr><td><code>opened_at</code></td><td>TIMESTAMPTZ</td><td>DEFAULT now()</td><td>개설 시각</td></tr>
+<tr><td><code>closed_at</code></td><td>TIMESTAMPTZ</td><td></td><td>해지 시각</td></tr>
+<tr><td><code>last_interest_at</code></td><td>TIMESTAMPTZ</td><td>DEFAULT now()</td><td>최종 이자 계산 시각</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec5">5. GDUDA 분산 네트워크 테이블</h2>
+
+<p>GDUDA(Gopang Distributed User Directory Architecture) — 분산 사용자 디렉토리.</p>
+
+<h3>5.1 gduda_nodes — 노드 목록</h3>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>BIGINT PK</td><td></td></tr>
+<tr><td><code>node_id</code></td><td>TEXT UNIQUE</td><td>노드 식별자</td></tr>
+<tr><td><code>node_level</code></td><td>SMALLINT</td><td>계층 레벨 (1=읍면동, 2=시군구, 3=광역, ...)</td></tr>
+<tr><td><code>node_name</code></td><td>TEXT</td><td>노드 이름</td></tr>
+<tr><td><code>parent_node</code></td><td>TEXT</td><td>상위 노드 ID</td></tr>
+<tr><td><code>endpoint_url</code></td><td>TEXT</td><td>API 엔드포인트</td></tr>
+<tr><td><code>user_count</code></td><td>INTEGER DEFAULT 0</td><td>등록 사용자 수</td></tr>
+<tr><td><code>is_local</code></td><td>BOOLEAN DEFAULT true</td><td>로컬 노드 여부</td></tr>
+<tr><td><code>is_active</code></td><td>BOOLEAN DEFAULT true</td><td>활성 여부</td></tr>
+<tr><td><code>lat</code>, <code>lng</code></td><td>DOUBLE PRECISION</td><td>위치 좌표</td></tr>
+<tr><td><code>created_at</code>, <code>updated_at</code></td><td>TIMESTAMPTZ</td><td></td></tr>
+</table>
+
+<h3>5.2 gduda_openid_blocks — OpenID 블록체인</h3>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>BIGINT PK</td><td></td></tr>
+<tr><td><code>block_hash</code></td><td>TEXT UNIQUE</td><td>블록 해시</td></tr>
+<tr><td><code>prev_hash</code></td><td>TEXT</td><td>이전 블록 해시</td></tr>
+<tr><td><code>block_type</code></td><td>TEXT</td><td>블록 유형</td></tr>
+<tr><td><code>primary_guid</code></td><td>TEXT</td><td>소유자 GUID</td></tr>
+<tr><td><code>payload</code></td><td>JSONB</td><td>블록 페이로드</td></tr>
+<tr><td><code>signature</code></td><td>TEXT</td><td>ED25519 서명</td></tr>
+<tr><td><code>is_verified</code></td><td>BOOLEAN DEFAULT false</td><td>검증 여부</td></tr>
+<tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td></td></tr>
+</table>
+
+<h3>5.3 gduda_propagation_log — 전파 로그</h3>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>BIGINT PK</td><td></td></tr>
+<tr><td><code>primary_guid</code></td><td>TEXT</td><td>전파 대상 GUID</td></tr>
+<tr><td><code>event_type</code></td><td>TEXT</td><td>이벤트 유형</td></tr>
+<tr><td><code>from_level</code>, <code>to_level</code></td><td>SMALLINT</td><td>전파 방향</td></tr>
+<tr><td><code>status</code></td><td>TEXT DEFAULT <code>'pending'</code></td><td><code>pending</code>|<code>done</code>|<code>failed</code></td></tr>
+<tr><td><code>payload</code></td><td>JSONB</td><td>전파 데이터</td></tr>
+<tr><td><code>scheduled_at</code></td><td>TIMESTAMPTZ</td><td>예약 시각</td></tr>
+<tr><td><code>propagated_at</code></td><td>TIMESTAMPTZ</td><td>완료 시각</td></tr>
+<tr><td><code>error_msg</code></td><td>TEXT</td><td>오류 메시지</td></tr>
+</table>
+
+<h3>5.4 gduda_routing_table — 라우팅 테이블</h3>
+
+<p>노드 간 GUID/닉네임 라우팅 경로.</p>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>BIGINT PK</td><td></td></tr>
+<tr><td><code>from_node</code>, <code>to_node</code></td><td>TEXT</td><td>라우팅 경로</td></tr>
+<tr><td><code>primary_guid</code></td><td>TEXT</td><td>대상 GUID (nullable)</td></tr>
+<tr><td><code>nickname_hash</code></td><td>TEXT</td><td>대상 닉네임 해시 (nullable)</td></tr>
+<tr><td><code>hop_count</code></td><td>SMALLINT DEFAULT 1</td><td>홉 수</td></tr>
+<tr><td><code>latency_ms</code></td><td>INTEGER</td><td>지연 시간</td></tr>
+<tr><td><code>last_verified</code></td><td>TIMESTAMPTZ</td><td>최종 검증 시각</td></tr>
+<tr><td><code>ttl_seconds</code></td><td>INTEGER DEFAULT 86400</td><td>TTL (24시간)</td></tr>
+</table>
+
+<h4>조건부 UNIQUE 인덱스 4종 (GUID/닉네임 조합에 따라 다른 유일성 보장)</h4>
+<pre>uq_routing_guid_only      -- primary_guid IS NOT NULL AND nickname_hash IS NULL
+uq_routing_nickname_only  -- nickname_hash IS NOT NULL AND primary_guid IS NULL
+uq_routing_node_only      -- 둘 다 NULL
+uq_routing_with_guids     -- 둘 다 NOT NULL</pre>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec6">6. K-Market 테이블</h2>
+
+<h3>6.1 biz_orders — 주문 레코드</h3>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>제약</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>UUID</td><td><strong>PK</strong></td><td><code>gen_random_uuid()</code></td></tr>
+<tr><td><code>tx_id</code></td><td>TEXT</td><td>UNIQUE</td><td>거래 ID</td></tr>
+<tr><td><code>tx_signature</code></td><td>TEXT</td><td>NOT NULL</td><td>ED25519 서명</td></tr>
+<tr><td><code>buyer_pubkey</code></td><td>TEXT</td><td>NOT NULL</td><td>구매자 공개키</td></tr>
+<tr><td><code>buyer_guid</code>, <code>seller_guid</code></td><td>TEXT</td><td>NOT NULL</td><td>구매자/판매자 GUID</td></tr>
+<tr><td><code>buyer_handle</code>, <code>seller_handle</code></td><td>TEXT</td><td></td><td>핸들</td></tr>
+<tr><td><code>product_id</code></td><td>UUID</td><td>NOT NULL</td><td><code>biz_products.id</code></td></tr>
+<tr><td><code>product_name</code></td><td>TEXT</td><td>NOT NULL</td><td>상품명</td></tr>
+<tr><td><code>quantity</code></td><td>INTEGER</td><td>DEFAULT 1</td><td>수량</td></tr>
+<tr><td><code>unit_price_krw</code>, <code>total_krw</code></td><td>INTEGER</td><td>DEFAULT 0</td><td>원화 금액</td></tr>
+<tr><td><code>unit_price_gdc</code>, <code>total_gdc</code></td><td>NUMERIC</td><td>DEFAULT 0</td><td>GDC 금액</td></tr>
+<tr><td><code>status</code></td><td>TEXT</td><td>CHECK</td><td><code>'pending'</code>|<code>'paid'</code>|<code>'delivered'</code>|<code>'completed'</code>|<code>'cancelled'</code>|<code>'refunded'</code></td></tr>
+<tr><td><code>ledger_entry_id</code></td><td>UUID</td><td></td><td>fs_ledger 연결 ID</td></tr>
+<tr><td><code>l1_node</code></td><td>TEXT</td><td></td><td>L1 노드</td></tr>
+<tr><td><code>memo</code></td><td>TEXT</td><td></td><td>메모</td></tr>
+<tr><td><code>created_at</code>, <code>updated_at</code></td><td>TIMESTAMPTZ</td><td></td><td></td></tr>
+</table>
+
+<h3>6.2 biz_products — 상품/메뉴</h3>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>UUID PK</td><td></td></tr>
+<tr><td><code>seller_guid</code></td><td>TEXT</td><td>판매자 GUID</td></tr>
+<tr><td><code>seller_handle</code></td><td>TEXT</td><td>판매자 핸들</td></tr>
+<tr><td><code>name</code></td><td>TEXT NOT NULL</td><td>상품명</td></tr>
+<tr><td><code>description</code></td><td>TEXT</td><td>설명</td></tr>
+<tr><td><code>category</code></td><td>TEXT</td><td>카테고리</td></tr>
+<tr><td><code>price_gdc</code></td><td>NUMERIC DEFAULT 0</td><td>GDC 가격 (결제 기준)</td></tr>
+<tr><td><code>price_krw</code></td><td>NUMERIC DEFAULT 0</td><td>원화 참고가</td></tr>
+<tr><td><code>stock</code></td><td>INTEGER</td><td>재고 (NULL=무제한)</td></tr>
+<tr><td><code>image_urls</code></td><td>TEXT[]</td><td>이미지 URL 배열</td></tr>
+<tr><td><code>tags</code></td><td>TEXT[]</td><td>태그 배열</td></tr>
+<tr><td><code>sort_order</code></td><td>INTEGER DEFAULT 0</td><td>정렬 순서</td></tr>
+<tr><td><code>is_active</code></td><td>BOOLEAN DEFAULT true</td><td>노출 여부</td></tr>
+<tr><td><code>l1_node</code></td><td>TEXT</td><td>등록 L1 노드</td></tr>
+</table>
+
+<h4>인덱스</h4>
+<pre>idx_biz_products_seller     -- (seller_guid, is_active)
+idx_biz_products_l1_node    -- (l1_node, is_active)
+idx_biz_products_name_trgm  -- GIN 트라이그램 (유사 검색)</pre>
+
+<h3>6.3 biz_reviews — 상품 리뷰 (product 단위)</h3>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>제약</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>UUID</td><td>PK</td><td></td></tr>
+<tr><td><code>order_id</code></td><td>TEXT</td><td></td><td>validate_review() 반환값</td></tr>
+<tr><td><code>tx_id</code></td><td>TEXT</td><td></td><td>거래 tx_id</td></tr>
+<tr><td><code>reviewer_guid</code></td><td>TEXT</td><td></td><td>작성자</td></tr>
+<tr><td><code>seller_guid</code></td><td>TEXT</td><td></td><td>판매자</td></tr>
+<tr><td><code>product_id</code></td><td>UUID</td><td></td><td>biz_products.id</td></tr>
+<tr><td><code>rating</code></td><td>SMALLINT</td><td>CHECK 1~5</td><td>별점</td></tr>
+<tr><td><code>body</code></td><td>TEXT</td><td></td><td>리뷰 본문</td></tr>
+<tr><td><code>image_urls</code></td><td>TEXT[]</td><td></td><td>이미지 URL</td></tr>
+<tr><td><code>is_visible</code></td><td>BOOLEAN DEFAULT true</td><td></td><td>노출 여부</td></tr>
+<tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td></td><td></td></tr>
+</table>
+
+<blockquote><p>UNIQUE: <code>(reviewer_guid, product_id)</code> — 상품당 1인 1리뷰.</p></blockquote>
+
+<h3>6.4 reviews — 거래 리뷰 (tx 단위)</h3>
+
+<p><code>biz_reviews</code>와 별개. 거래(tx_id) 단위 리뷰. <code>trg_set_review_seq</code> 트리거가 <code>buyer_review_seq</code> 자동 설정.</p>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>UUID PK</td><td></td></tr>
+<tr><td><code>tx_id</code></td><td>TEXT UNIQUE</td><td>거래 ID (1거래 1리뷰)</td></tr>
+<tr><td><code>seller_guid</code></td><td>TEXT</td><td>판매자</td></tr>
+<tr><td><code>buyer_guid</code></td><td>TEXT</td><td>구매자</td></tr>
+<tr><td><code>item_id</code></td><td>UUID</td><td>상품 ID</td></tr>
+<tr><td><code>item_name</code></td><td>TEXT</td><td>상품명</td></tr>
+<tr><td><code>stars</code></td><td>SMALLINT</td><td>CHECK 1~5</td></tr>
+<tr><td><code>comment</code></td><td>TEXT</td><td>리뷰 내용</td></tr>
+<tr><td><code>tx_amount</code></td><td>NUMERIC</td><td>거래 금액</td></tr>
+<tr><td><code>buyer_review_seq</code></td><td>INTEGER DEFAULT 1</td><td>구매자의 n번째 리뷰</td></tr>
+<tr><td><code>weight</code></td><td>NUMERIC</td><td>리뷰 가중치</td></tr>
+<tr><td><code>helpful_count</code></td><td>INTEGER DEFAULT 0</td><td>유용 투표 수</td></tr>
+<tr><td><code>unhelpful_count</code></td><td>INTEGER DEFAULT 0</td><td>비유용 투표 수</td></tr>
+<tr><td><code>reward_paid</code></td><td>BOOLEAN DEFAULT false</td><td>리뷰 보상 지급 여부</td></tr>
+<tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td></td></tr>
+</table>
+
+<h3>6.5 review_votes — 리뷰 유용성 투표</h3>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>UUID PK</td><td></td></tr>
+<tr><td><code>review_id</code></td><td>UUID</td><td>reviews.id</td></tr>
+<tr><td><code>voter_guid</code></td><td>TEXT</td><td>투표자</td></tr>
+<tr><td><code>is_helpful</code></td><td>BOOLEAN</td><td>true=유용, false=비유용</td></tr>
+<tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td></td></tr>
+</table>
+
+<blockquote><p>UNIQUE: <code>(review_id, voter_guid)</code> — 리뷰당 1인 1투표.</p></blockquote>
+
+<h3>6.6 seller_ratings — 판매자 평점 집계</h3>
+
+<p><code>trg_recalc_rating</code> 트리거가 reviews INSERT/UPDATE 시 자동 갱신.</p>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>seller_guid</code></td><td>TEXT PK</td><td>판매자 GUID</td></tr>
+<tr><td><code>weighted_avg</code></td><td>NUMERIC DEFAULT 0</td><td>가중 평균 별점</td></tr>
+<tr><td><code>review_count</code></td><td>INTEGER DEFAULT 0</td><td>리뷰 수</td></tr>
+<tr><td><code>total_volume</code></td><td>NUMERIC DEFAULT 0</td><td>총 거래 금액</td></tr>
+<tr><td><code>updated_at</code></td><td>TIMESTAMPTZ</td><td>최종 갱신</td></tr>
+</table>
+
+<h3>6.7 kmarket_sellers / kmarket_menus — 레거시</h3>
+
+<p>초기 K-Market 구조. 현재는 <code>user_profiles</code> + <code>biz_products</code>로 대체됨. 하위 호환성 유지.</p>
+
+<h3>6.8 inventory — 재고 관리</h3>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>UUID PK</td><td></td></tr>
+<tr><td><code>owner_guid</code></td><td>TEXT</td><td>소유자 GUID</td></tr>
+<tr><td><code>name</code></td><td>TEXT</td><td>품목명</td></tr>
+<tr><td><code>description</code></td><td>TEXT</td><td>설명</td></tr>
+<tr><td><code>category</code></td><td>TEXT</td><td>분류</td></tr>
+<tr><td><code>unit</code></td><td>TEXT DEFAULT <code>'개'</code></td><td>단위</td></tr>
+<tr><td><code>unit_price</code></td><td>NUMERIC DEFAULT 0</td><td>단가</td></tr>
+<tr><td><code>quantity</code></td><td>NUMERIC DEFAULT 0</td><td>재고량</td></tr>
+<tr><td><code>min_qty</code></td><td>NUMERIC DEFAULT 0</td><td>최소 재고 알림 기준</td></tr>
+<tr><td><code>delivery</code></td><td>TEXT</td><td>배송 방법</td></tr>
+<tr><td><code>is_public</code></td><td>BOOLEAN DEFAULT true</td><td>공개 여부</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec7">7. K-Law 테이블</h2>
+
+<h3>7.1 klaw_cases — 사건 DB</h3>
+
+<p>K-Law AI 법률 추론 시스템의 사건 레코드.</p>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>TEXT PK</td><td>사건 ID</td></tr>
+<tr><td><code>source</code></td><td>TEXT DEFAULT <code>'webapp'</code></td><td>입력 출처</td></tr>
+<tr><td><code>case_type</code>, <code>case_type_code</code></td><td>TEXT</td><td>사건 유형/코드</td></tr>
+<tr><td><code>case_level</code></td><td>TEXT</td><td>사건 난이도</td></tr>
+<tr><td><code>case_detail</code>, <code>case_input</code>, <code>case_summary</code></td><td>TEXT</td><td>사건 내용</td></tr>
+<tr><td><code>plaintiff</code>, <code>defendant</code>, <code>dispute</code></td><td>TEXT</td><td>원고/피고/쟁점</td></tr>
+<tr><td><code>verdict</code>, <code>verdict_full</code>, <code>verdict_type</code></td><td>TEXT</td><td>판결 요약/전문/유형</td></tr>
+<tr><td><code>confidence</code>, <code>complexity</code>, <code>match_rate</code></td><td>TEXT</td><td>신뢰도/복잡도/일치율</td></tr>
+<tr><td><code>llm_model</code></td><td>TEXT DEFAULT <code>'deepseek'</code></td><td>사용 LLM</td></tr>
+<tr><td><code>klaw_version</code></td><td>TEXT DEFAULT <code>'v15.1'</code></td><td>K-Law 버전</td></tr>
+<tr><td><code>reporter</code></td><td>TEXT</td><td>보고자</td></tr>
+<tr><td><code>location</code>, <code>gps</code></td><td>TEXT</td><td>위치 정보</td></tr>
+<tr><td><code>status</code></td><td>TEXT DEFAULT <code>'completed'</code></td><td>상태</td></tr>
+<tr><td><code>blockchain</code></td><td>JSONB</td><td>블록체인 앵커링 정보</td></tr>
+<tr><td><code>created_at</code>, <code>updated_at</code></td><td>TIMESTAMPTZ</td><td></td></tr>
+</table>
+
+<h3>7.2 klaw_sessions — 세션 기록</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>id</code> UUID PK</td><td></td></tr>
+<tr><td><code>user_id</code></td><td>사용자 ID</td></tr>
+<tr><td><code>klaw_version</code>, <code>llm_model</code></td><td>버전/모델</td></tr>
+<tr><td><code>case_type</code>, <code>case_level</code>, <code>case_summary</code></td><td>사건 정보</td></tr>
+<tr><td><code>verdict</code>, <code>confidence</code>, <code>case_input</code></td><td>판결/신뢰도/입력</td></tr>
+<tr><td><code>used_at</code></td><td>사용 시각</td></tr>
+</table>
+
+<h3>7.3 klaw_benchmark — 벤치마크 평가</h3>
+
+<p>K-Law 성능 평가 레코드. 실제 판결과 AI 판결 비교.</p>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>id</code> UUID PK</td><td></td></tr>
+<tr><td><code>case_no</code></td><td>사건 번호</td></tr>
+<tr><td><code>case_type</code>, <code>case_input</code></td><td>사건 유형/입력</td></tr>
+<tr><td><code>virtual_verdict</code>, <code>real_verdict</code></td><td>AI 판결/실제 판결</td></tr>
+<tr><td><code>score_conclusion</code>, <code>score_law_logic</code>, <code>score_detail</code>, <code>score_total</code></td><td>평가 점수</td></tr>
+<tr><td><code>grade</code></td><td>등급</td></tr>
+<tr><td><code>eval_raw</code></td><td>평가 원문</td></tr>
+<tr><td><code>klaw_version</code> DEFAULT <code>'v15.3'</code></td><td>K-Law 버전</td></tr>
+<tr><td><code>llm_model</code> DEFAULT <code>'deepseek-v4-pro'</code></td><td>사용 모델</td></tr>
+<tr><td><code>reporter</code></td><td>보고자</td></tr>
+<tr><td><code>summary</code></td><td>요약</td></tr>
+<tr><td><code>created_at</code></td><td></td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec8">8. K-School 테이블</h2>
+
+<p>AI 기반 개인 맞춤 교육 시스템. 6개 테이블 + 1개 리포트.</p>
+
+<h3>8.1 school_student_profiles — 학생 프로필</h3>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>BIGINT PK AUTO</td><td></td></tr>
+<tr><td><code>user_guid</code></td><td>TEXT</td><td>사용자 GUID</td></tr>
+<tr><td><code>display_name</code></td><td>TEXT</td><td>표시 이름</td></tr>
+<tr><td><code>stage</code></td><td>TEXT</td><td>CHECK: S1~S7 (학습 단계)</td></tr>
+<tr><td><code>age</code></td><td>SMALLINT</td><td>CHECK 0~120</td></tr>
+<tr><td><code>gender</code></td><td>TEXT</td><td>성별</td></tr>
+<tr><td><code>native_language</code></td><td>TEXT DEFAULT <code>'ko'</code></td><td>모국어</td></tr>
+<tr><td><code>cultural_region</code></td><td>TEXT</td><td>CHECK: western/east_asian/latin/african/middle_eastern/other</td></tr>
+<tr><td><code>personality</code></td><td>TEXT[]</td><td>성격 특성 배열</td></tr>
+<tr><td><code>interests</code></td><td>TEXT[]</td><td>관심사 배열</td></tr>
+<tr><td><code>learning_style</code></td><td>TEXT</td><td>CHECK: visual/auditory/kinesthetic/reading</td></tr>
+<tr><td><code>c_score</code>, <code>p_score</code>, <code>cr_score</code>, <code>s_score</code>, <code>j_score</code></td><td>NUMERIC</td><td>CHECK 0~100, 역량 점수 (각 50)</td></tr>
+<tr><td><code>ai_replaceability</code></td><td>NUMERIC</td><td>AI 대체 가능성 (0~1)</td></tr>
+<tr><td><code>career_primary</code>, <code>career_personal</code>, <code>career_balance</code></td><td>TEXT</td><td>진로 추천</td></tr>
+<tr><td><code>utility_score</code></td><td>NUMERIC</td><td>CHECK 0~1</td></tr>
+<tr><td><code>happiness_score</code></td><td>NUMERIC</td><td>CHECK 0~1</td></tr>
+<tr><td><code>created_at</code>, <code>updated_at</code></td><td>TIMESTAMPTZ</td><td></td></tr>
+</table>
+
+<h3>8.2 school_subjects — 수강 과목</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>id</code> BIGINT PK</td><td></td></tr>
+<tr><td><code>user_guid</code></td><td>사용자 GUID</td></tr>
+<tr><td><code>subject_id</code></td><td>과목 코드</td></tr>
+<tr><td><code>subject_name_en</code>, <code>subject_name_ko</code></td><td>과목명 (영/한)</td></tr>
+<tr><td><code>stage</code></td><td>학습 단계</td></tr>
+<tr><td><code>field_code</code></td><td>분야 코드</td></tr>
+<tr><td><code>subject_type</code></td><td>CHECK: core/HL/SL/major/elective/lab/reskill/optional</td></tr>
+<tr><td><code>oer_primary</code>, <code>oer_title</code>, <code>oer_url</code></td><td>OER 자료 정보</td></tr>
+<tr><td><code>total_hours</code>, <code>total_sessions</code>, <code>sessions_pw</code>, <code>session_minutes</code>, <code>duration_months</code></td><td>학습 계획</td></tr>
+<tr><td><code>topic_blocks</code></td><td>JSONB: 토픽 블록 구조</td></tr>
+<tr><td><code>status</code></td><td>CHECK: active/paused/completed/dropped</td></tr>
+<tr><td><code>started_at</code>, <code>completed_at</code></td><td>시작/완료 시각</td></tr>
+</table>
+
+<h3>8.3 school_sessions — 학습 세션</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>id</code> BIGINT PK</td><td></td></tr>
+<tr><td><code>user_guid</code>, <code>subject_id</code></td><td>사용자/과목</td></tr>
+<tr><td><code>session_no</code></td><td>세션 번호</td></tr>
+<tr><td><code>topic_block</code>, <code>topic_detail</code></td><td>학습 주제</td></tr>
+<tr><td><code>bloom_level</code></td><td>CHECK 1~6 (블룸 분류)</td></tr>
+<tr><td><code>session_type</code></td><td>CHECK: learning/review/assessment/supplementary</td></tr>
+<tr><td><code>session_minutes</code></td><td>학습 시간</td></tr>
+<tr><td><code>comprehension</code></td><td>CHECK 0~100</td></tr>
+<tr><td><code>self_rating</code></td><td>CHECK 0~10</td></tr>
+<tr><td><code>summary</code>, <code>next_session</code>, <code>notes</code></td><td>세션 요약/다음 세션/메모</td></tr>
+<tr><td><code>needs_supplement</code></td><td>보충 필요 여부</td></tr>
+<tr><td><code>from_gwp</code>, <code>gwp_context</code></td><td>GWP 연동 여부/컨텍스트</td></tr>
+</table>
+
+<h3>8.4 school_progress — 진도</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>id</code> BIGINT PK</td><td></td></tr>
+<tr><td><code>user_guid</code>, <code>subject_id</code></td><td>사용자/과목</td></tr>
+<tr><td><code>completed_sessions</code>, <code>total_sessions</code></td><td>완료/전체 세션 수</td></tr>
+<tr><td><code>progress_pct</code></td><td>진도율</td></tr>
+<tr><td><code>current_block</code>, <code>current_block_no</code></td><td>현재 블록</td></tr>
+<tr><td><code>avg_comprehension</code>, <code>avg_self_rating</code></td><td>평균 이해도/자가평가</td></tr>
+<tr><td><code>total_minutes</code></td><td>누적 학습 시간</td></tr>
+<tr><td><code>bloom_achieved</code></td><td>CHECK 1~6, 달성 블룸 레벨</td></tr>
+<tr><td><code>pace_label</code></td><td>CHECK: fast/normal/slow/very_slow</td></tr>
+</table>
+
+<h3>8.5 school_assessments — 평가</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>id</code> BIGINT PK</td><td></td></tr>
+<tr><td><code>user_guid</code>, <code>subject_id</code>, <code>session_id</code></td><td>연결 ID</td></tr>
+<tr><td><code>assessment_type</code></td><td>CHECK: quiz_5session/self_rating/block_test/mid_term/final/bloom_check</td></tr>
+<tr><td><code>questions</code></td><td>JSONB: 문항</td></tr>
+<tr><td><code>score</code>, <code>max_score</code></td><td>점수/만점</td></tr>
+<tr><td><code>bloom_level</code></td><td>CHECK 1~6</td></tr>
+<tr><td><code>wrong_topics</code></td><td>TEXT[]: 오답 토픽</td></tr>
+<tr><td><code>feedback</code>, <code>recommendation</code></td><td>피드백/추천</td></tr>
+<tr><td><code>c_delta</code>, <code>cr_delta</code>, <code>s_delta</code>, <code>j_delta</code></td><td>역량 점수 변동</td></tr>
+</table>
+
+<h3>8.6 school_career_log — 진로 변경 이력</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>id</code> BIGINT PK</td><td></td></tr>
+<tr><td><code>user_guid</code></td><td>사용자</td></tr>
+<tr><td><code>event_type</code></td><td>CHECK: initial_assignment/consultation/change_request/change_approved/change_conditional/change_rejected/periodic_review/ai_update</td></tr>
+<tr><td><code>career_before</code>, <code>career_after</code></td><td>변경 전/후 진로</td></tr>
+<tr><td><code>career_alternatives</code></td><td>TEXT[]: 대안 진로</td></tr>
+<tr><td><code>utility_before</code>, <code>utility_after</code></td><td>효용 변화</td></tr>
+<tr><td><code>social_impact_pct</code></td><td>사회적 영향도</td></tr>
+<tr><td><code>happiness_before</code>, <code>happiness_after</code></td><td>행복도 변화</td></tr>
+<tr><td><code>c_score</code>, <code>p_score</code>, <code>cr_score</code>, <code>s_score</code>, <code>j_score</code></td><td>역량 점수 스냅샷</td></tr>
+<tr><td><code>ai_replaceability</code></td><td>AI 대체 가능성</td></tr>
+<tr><td><code>xai_reason</code>, <code>xai_uncertainty</code></td><td>XAI 설명/불확실성</td></tr>
+<tr><td><code>curriculum_rebuilt</code></td><td>커리큘럼 재구성 여부</td></tr>
+<tr><td><code>processing_minutes</code></td><td>처리 시간</td></tr>
+</table>
+
+<h3>8.7 school_reports — 학습 리포트</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>id</code> BIGINT PK</td><td></td></tr>
+<tr><td><code>user_guid</code></td><td>사용자</td></tr>
+<tr><td><code>report_type</code></td><td>리포트 유형</td></tr>
+<tr><td><code>period_start</code>, <code>period_end</code></td><td>DATE: 기간</td></tr>
+<tr><td><code>report_data</code></td><td>JSONB DEFAULT <code>{}</code></td></tr>
+<tr><td><code>pdv_entry_id</code></td><td>pdv_log 연결 ID</td></tr>
+<tr><td><code>report_hash</code></td><td>리포트 해시</td></tr>
+<tr><td><code>sent_to</code></td><td>TEXT[]: 수신자 목록</td></tr>
+<tr><td><code>generated_at</code>, <code>created_at</code></td><td>생성 시각</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+<h2 id="sec9">9. K-Security 테이블</h2>
+
+<h3>9.1 security_log — 서비스 상태 모니터링</h3>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>BIGINT PK AUTO</td><td></td></tr>
+<tr><td><code>svc</code></td><td>TEXT</td><td>서비스 ID</td></tr>
+<tr><td><code>svc_url</code></td><td>TEXT</td><td>서비스 URL</td></tr>
+<tr><td><code>status</code></td><td>TEXT</td><td>CHECK: ok/warn/error/critical/offline</td></tr>
+<tr><td><code>latency_ms</code></td><td>INTEGER</td><td>응답 지연 ms</td></tr>
+<tr><td><code>auth_ok</code></td><td>BOOLEAN DEFAULT true</td><td>인증 정상 여부</td></tr>
+<tr><td><code>pdv_ok</code></td><td>BOOLEAN DEFAULT true</td><td>PDV 정상 여부</td></tr>
+<tr><td><code>err_streak</code></td><td>INTEGER DEFAULT 0</td><td>연속 오류 횟수</td></tr>
+<tr><td><code>last_error</code></td><td>TEXT</td><td>최종 오류 메시지</td></tr>
+<tr><td><code>uptime_sec</code></td><td>INTEGER</td><td>가동 시간</td></tr>
+<tr><td><code>raw</code></td><td>JSONB</td><td>원시 데이터</td></tr>
+<tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td></td></tr>
+</table>
+
+<h3>9.2 security_event — 보안 이벤트</h3>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>BIGINT PK AUTO</td><td></td></tr>
+<tr><td><code>svc</code></td><td>TEXT</td><td>서비스 ID</td></tr>
+<tr><td><code>severity</code></td><td>TEXT</td><td>CHECK: S1(긴급)/S2(경고)/S3(정보)</td></tr>
+<tr><td><code>title</code></td><td>TEXT</td><td>이벤트 제목</td></tr>
+<tr><td><code>detail</code></td><td>TEXT</td><td>상세 내용</td></tr>
+<tr><td><code>status</code></td><td>TEXT</td><td>CHECK: open/investigating/resolved</td></tr>
+<tr><td><code>notified_at</code></td><td>TIMESTAMPTZ</td><td>알림 시각</td></tr>
+<tr><td><code>resolved_at</code></td><td>TIMESTAMPTZ</td><td>해결 시각</td></tr>
+<tr><td><code>raw</code></td><td>JSONB</td><td>원시 데이터</td></tr>
+<tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td></td></tr>
+</table>
+
+<h3>9.3 security_command — 보안 명령</h3>
+
+<table>
+<tr><th>컬럼</th><th>타입</th><th>설명</th></tr>
+<tr><td><code>id</code></td><td>BIGINT PK AUTO</td><td></td></tr>
+<tr><td><code>svc</code></td><td>TEXT</td><td>대상 서비스</td></tr>
+<tr><td><code>cmd_type</code></td><td>TEXT</td><td>명령 유형</td></tr>
+<tr><td><code>cmd_payload</code></td><td>JSONB</td><td>명령 페이로드</td></tr>
+<tr><td><code>event_id</code></td><td>BIGINT</td><td>security_event.id 연결</td></tr>
+<tr><td><code>issued_at</code></td><td>TIMESTAMPTZ</td><td>발령 시각</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec10">10. 사용자 보조 테이블</h2>
+
+<h3>10.1 users — 기기 등록</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>guid</code> TEXT PK</td><td>사용자 GUID</td></tr>
+<tr><td><code>device_fp</code></td><td>기기 지문</td></tr>
+<tr><td><code>phone</code></td><td>전화번호</td></tr>
+<tr><td><code>registered_at</code>, <code>last_seen_at</code></td><td>등록/최종 접속</td></tr>
+<tr><td><code>gduda_registered</code> BOOLEAN</td><td>GDUDA 등록 여부</td></tr>
+<tr><td><code>gduda_registered_at</code></td><td>GDUDA 등록 시각</td></tr>
+<tr><td><code>l1_propagated_at</code>, <code>l2_propagated_at</code>, <code>l3_propagated_at</code></td><td>계층별 전파 완료 시각</td></tr>
+</table>
+
+<h3>10.2 user_attributes — 사용자 속성 (학력/자격)</h3>
+
+<p>ZKP 기반 속성 증명 저장.</p>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>id</code> BIGINT PK</td><td></td></tr>
+<tr><td><code>primary_guid</code></td><td>사용자 GUID</td></tr>
+<tr><td><code>current_ipv6</code></td><td>현재 IPv6</td></tr>
+<tr><td><code>attr_type</code></td><td>속성 유형 (학교, 자격증 등)</td></tr>
+<tr><td><code>attr_value_hash</code></td><td>속성값 해시 (원문 비공개)</td></tr>
+<tr><td><code>school_guid</code></td><td>학교 GUID</td></tr>
+<tr><td><code>enroll_year</code>, <code>graduate_year</code></td><td>입학/졸업 연도</td></tr>
+<tr><td><code>role</code>, <code>field</code></td><td>역할/분야</td></tr>
+<tr><td><code>attr_l3_node</code>, <code>attr_l2_node</code></td><td>속성 발급 노드</td></tr>
+<tr><td><code>is_public</code> BOOLEAN DEFAULT true</td><td>공개 여부</td></tr>
+<tr><td><code>owner_signature</code></td><td>소유자 서명</td></tr>
+<tr><td><code>submitted_at</code></td><td>제출 시각</td></tr>
+<tr><td><code>is_active</code> BOOLEAN DEFAULT true</td><td>유효 여부</td></tr>
+<tr><td><code>revoked_at</code></td><td>폐지 시각</td></tr>
+</table>
+
+<h3>10.3 user_nicknames — 닉네임 원문 + 해시</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>id</code> BIGINT PK</td><td></td></tr>
+<tr><td><code>guid</code></td><td>사용자 GUID</td></tr>
+<tr><td><code>nickname</code></td><td>닉네임 원문</td></tr>
+<tr><td><code>nickname_hash</code></td><td>SHA-256 해시</td></tr>
+<tr><td><code>nickname_hash_v2</code></td><td>v2 해시 (업데이트된 알고리즘)</td></tr>
+<tr><td><code>status</code> DEFAULT <code>'active'</code></td><td>상태</td></tr>
+<tr><td><code>lang_code</code> DEFAULT <code>'ko'</code></td><td>언어 코드</td></tr>
+<tr><td><code>script</code></td><td>문자 체계</td></tr>
+<tr><td><code>handle</code></td><td>핸들 (<code>@xxx</code>)</td></tr>
+<tr><td><code>verified</code> BOOLEAN</td><td>검증 여부</td></tr>
+<tr><td><code>issuer_guid</code></td><td>발급자 GUID</td></tr>
+</table>
+
+<h3>10.4 user_trust_levels — 신뢰 레벨</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>guid</code> TEXT PK</td><td>사용자 GUID</td></tr>
+<tr><td><code>trust_level</code> DEFAULT <code>'L0'</code></td><td>L0~L3</td></tr>
+<tr><td><code>verified_at</code></td><td>검증 시각</td></tr>
+<tr><td><code>verifier</code></td><td>검증자</td></tr>
+</table>
+
+<h3>10.5 user_gdc_settings — GDC 수락 여부</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>guid</code> TEXT PK</td><td>사용자 GUID</td></tr>
+<tr><td><code>gdc_accepted</code> BOOLEAN DEFAULT false</td><td>GDC 결제 수락 여부</td></tr>
+<tr><td><code>updated_at</code></td><td>갱신 시각</td></tr>
+</table>
+
+<h3>10.6 gopang_sessions — JWT 세션 토큰</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>token</code> TEXT PK</td><td>JWT 토큰</td></tr>
+<tr><td><code>guid</code></td><td>사용자 GUID</td></tr>
+<tr><td><code>device_fp</code></td><td>기기 지문</td></tr>
+<tr><td><code>created_at</code></td><td>생성 시각</td></tr>
+<tr><td><code>expires_at</code> DEFAULT <code>now()+30d</code></td><td>만료 시각</td></tr>
+<tr><td><code>last_used</code></td><td>최종 사용</td></tr>
+</table>
+
+<h3>10.7 location_log — 위치 기록</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>id</code> UUID PK</td><td></td></tr>
+<tr><td><code>user_guid</code></td><td>사용자 GUID</td></tr>
+<tr><td><code>lat</code>, <code>lng</code></td><td>위도/경도</td></tr>
+<tr><td><code>address</code></td><td>주소 (역지오코딩)</td></tr>
+<tr><td><code>recorded_at</code></td><td>기록 시각</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec11">11. 공통 인프라 테이블</h2>
+
+<h3>11.1 nickname_cache — 닉네임 해시 캐시</h3>
+
+<p>GDUDA 노드 간 닉네임 해시 전파 캐시. TTL 기반 자동 만료.</p>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>nickname_hash</code> + <code>primary_guid</code></td><td><strong>복합 PK</strong></td></tr>
+<tr><td><code>handle</code></td><td>UNIQUE (IS NOT NULL AND != '')</td></tr>
+<tr><td><code>lang_code</code> DEFAULT <code>'ko'</code></td><td>언어 코드</td></tr>
+<tr><td><code>script</code></td><td>문자 체계</td></tr>
+<tr><td><code>verified</code> BOOLEAN DEFAULT false</td><td>검증 여부</td></tr>
+<tr><td><code>issuer_guid</code></td><td>발급자</td></tr>
+<tr><td><code>l1_node</code>, <code>l2_node</code>, <code>l3_node</code></td><td>노드 계층</td></tr>
+<tr><td><code>ttl</code> INTEGER DEFAULT 86400</td><td>TTL (초)</td></tr>
+<tr><td><code>updated_at</code></td><td>갱신 시각</td></tr>
+</table>
+
+<h3>11.2 lang_node_map — 언어별 노드 매핑</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>lang_code</code> TEXT PK</td><td>언어 코드 (<code>ko</code>, <code>zh</code>, <code>en</code> 등)</td></tr>
+<tr><td><code>priority_nodes</code> TEXT[]</td><td>우선 노드 목록</td></tr>
+<tr><td><code>fallback_global</code> BOOLEAN DEFAULT false</td><td>글로벌 폴백 여부</td></tr>
+<tr><td><code>note</code></td><td>메모</td></tr>
+<tr><td><code>updated_at</code></td><td>갱신 시각</td></tr>
+</table>
+
+<h3>11.3 region_node_map — 지역별 노드 매핑</h3>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>id</code> PK</td><td></td></tr>
+<tr><td><code>region_text</code> TEXT UNIQUE</td><td>지역명 텍스트 (<code>한림읍</code> 등)</td></tr>
+<tr><td><code>node_level</code></td><td>노드 계층</td></tr>
+<tr><td><code>country_code</code></td><td>국가 코드</td></tr>
+</table>
+
+<h3>11.4 reports — 민원/신고 (공통)</h3>
+
+<p>K-119, K-Police, K-Public 등 공통 신고 레코드.</p>
+
+<table>
+<tr><th>컬럼</th><th>설명</th></tr>
+<tr><td><code>id</code> TEXT PK</td><td>신고 ID</td></tr>
+<tr><td><code>type</code>, <code>type_code</code></td><td>신고 유형/코드</td></tr>
+<tr><td><code>location</code>, <code>gps</code></td><td>위치/GPS</td></tr>
+<tr><td><code>reporter</code></td><td>신고자 GUID</td></tr>
+<tr><td><code>reported_at</code></td><td>신고 시각</td></tr>
+<tr><td><code>urgency</code></td><td>긴급도</td></tr>
+<tr><td><code>status</code> DEFAULT <code>'접수'</code></td><td>처리 상태</td></tr>
+<tr><td><code>image_url</code></td><td>첨부 이미지</td></tr>
+<tr><td><code>analysis</code>, <code>dispatch</code>, <code>cost</code></td><td>JSONB: AI 분석/출동/비용</td></tr>
+<tr><td><code>blockchain</code></td><td>JSONB: 블록체인 앵커링</td></tr>
+<tr><td><code>approved_at</code>, <code>approved_by</code>, <code>approved_cost</code></td><td>승인 정보</td></tr>
+<tr><td><code>income_before_tax</code></td><td>세전 소득</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec12">12. Views 상세</h2>
+
+<h3>12.1 감사 Views (P1~P6, T10)</h3>
+
+<pre>-- 통합 감사 쿼리
+SELECT 'P1' AS principle, COUNT(*) AS fail_count FROM p1_tx_has_pdv
+UNION ALL SELECT 'P2', COUNT(*) FROM p2_chain_continuity
+UNION ALL SELECT 'P3', COUNT(*) FROM p3_user_hash_unpatched
+UNION ALL SELECT 'P4', COUNT(*) FROM p4_chain_integrity_fail
+UNION ALL SELECT 'P5', COUNT(*) FROM p5_sigma_delta_fail
+UNION ALL SELECT 'P6', COUNT(*) FROM p6_balance_anomalies;
+-- 전체 0이면 T10 합격</pre>
+
+<table>
+<tr><th>View</th><th>감사 대상</th><th>제외 조건</th></tr>
+<tr><td><code>p1_tx_has_pdv</code></td><td>l1_ledger 거래 중 pdv_log 없는 건</td><td><code>block_hash NOT LIKE 'bh-%'</code></td></tr>
+<tr><td><code>p2_chain_continuity</code></td><td>chain_height gap≠1</td><td>chain_height IS NOT NULL</td></tr>
+<tr><td><code>p3_user_hash_unpatched</code></td><td>user_hash NULL/빈값</td><td><code>block_hash NOT LIKE 'bh-%'</code></td></tr>
+<tr><td><code>p4_chain_integrity_fail</code></td><td>chain_local_hash ≠ user_hash</td><td>—</td></tr>
+<tr><td><code>p5_sigma_delta_fail</code></td><td>sigma_delta_by_node WHERE sigma_delta&gt;1</td><td>—</td></tr>
+<tr><td><code>p6_balance_anomalies</code></td><td>ktax_balance_anomalies 재활용</td><td>—</td></tr>
+</table>
+
+<blockquote><p><strong>bh- 제외 이유</strong>: t07_setup.py 생성 테스트 데이터는 실제 L1 거래가 아님. 감사 대상 제외.</p></blockquote>
+
+<h3>12.2 ktax_balance_anomalies (T07)</h3>
+
+<p><code>reconstruct_balances()</code> vs <code>user_profiles.extra.fs</code> 비교.</p>
+
+<table>
+<tr><th>anomaly_type</th><th>원인</th></tr>
+<tr><td><code>PROFILE_MISSING</code></td><td>extra.fs가 NULL — settleLedger() 미실행</td></tr>
+<tr><td><code>BS_CASH_MISMATCH</code></td><td>bs-cash 공식 불일치 또는 동기화 누락</td></tr>
+<tr><td><code>PL_PURCHASE_MISMATCH</code></td><td>pl-purchase 불일치</td></tr>
+<tr><td><code>PL_REVENUE_MISMATCH</code></td><td>pl-revenue 불일치</td></tr>
+</table>
+
+<h3>12.3 sigma_delta_by_node (T07)</h3>
+
+<p>BIVM §4.2.1. <code>ABS(Σdebit - Σcredit) &gt; 1</code>인 block_hash만 반환.</p>
+
+<h3>12.4 pdv_chain_integrity</h3>
+
+<p><code>pdv_log LEFT JOIN l1_ledger ON block_hash</code>. <code>pdv_l1_match</code> = <code>chain_local_hash = user_hash</code> 여부.</p>
+
+<h3>12.5 K-Security Views</h3>
+
+<table>
+<tr><th>View</th><th>설명</th></tr>
+<tr><td><code>security_open_events</code></td><td>status='open' 이벤트</td></tr>
+<tr><td><code>security_status</code></td><td>서비스별 최신 security_log 1건</td></tr>
+<tr><td><code>security_uptime_1h</code></td><td>최근 1시간 가동률</td></tr>
+</table>
+
+<h3>12.6 klaw_benchmark_trend</h3>
+
+<p>K-Law 버전별 벤치마크 추이 집계.</p>
+
+<h3>12.7 school_student_dashboard</h3>
+
+<p>학생별 진도/역량 점수 통합 대시보드.</p>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec13">13. Functions 상세</h2>
+
+<h3>13.1 reconstruct_balances(p_guid TEXT DEFAULT NULL)</h3>
+
+<pre>-- fs_ledger 집계 → 사용자별 잔액 재구성
+-- p_guid=NULL이면 전체
+SELECT * FROM reconstruct_balances('2601:db80:...');</pre>
+
+<table>
+<tr><th>반환</th><th>공식</th></tr>
+<tr><td><code>bs_cash</code></td><td><code>Σcredit - Σdebit</code> (순변동분)</td></tr>
+<tr><td><code>pl_purchase</code></td><td><code>Σdebit</code> (누적 구매, 양수)</td></tr>
+<tr><td><code>pl_revenue</code></td><td><code>Σcredit</code> (누적 매출)</td></tr>
+<tr><td><code>tx_count</code>, <code>last_tx_at</code></td><td>거래 수, 최종 시각</td></tr>
+</table>
+
+<h3>13.2 search_entities(p_keyword, p_occupation, p_address, p_entity_type)</h3>
+
+<p><code>user_profiles</code> 복합 검색. GIN 트라이그램 인덱스 활용.</p>
+
+<h3>13.3 search_by_attributes(...)</h3>
+
+<p><code>user_attributes</code> 기반 속성 검색.</p>
+
+<h3>13.4 market_purchase(...)</h3>
+
+<p>fs_ledger 3행 원자 INSERT (buyer debit + seller credit + platform fee credit).</p>
+
+<pre>SELECT market_purchase(
+  p_tx_id := 'tx-xxx', p_buyer_guid := '...', p_seller_guid := '...',
+  p_item_name := '짜장면', p_quantity := 1,
+  p_total := 7000, p_seller_net := 6965, p_fee := 35,
+  p_block_hash := 'xxx', p_block_id := 'yyy'
+);</pre>
+
+<h3>13.5 payment_atomic(...)</h3>
+
+<p>원자 결제. 잔액 확인 + fs_ledger INSERT를 트랜잭션으로 처리.</p>
+
+<h3>13.6 gdc_settle_ledger(...)</h3>
+
+<p><code>fs_ledger</code> 집계 → <code>user_profiles.extra.fs</code> UPDATE. <code>reconstruct_balances()</code>와 동일 공식 필수.</p>
+
+<h3>13.7 validate_review(p_reviewer_guid, p_product_id, p_tx_id)</h3>
+
+<p>리뷰 작성 권한 검증. 미구매 시 <code>NO_VALID_PURCHASE</code>, 중복 시 <code>ALREADY_REVIEWED</code> 반환.</p>
+
+<h3>13.8 recalc_seller_rating(seller_guid)</h3>
+
+<p><code>reviews</code> 테이블 집계 → <code>seller_ratings</code> 갱신. <code>trg_recalc_rating</code> 트리거가 자동 호출.</p>
+
+<h3>13.9 트리거 Functions</h3>
+
+<table>
+<tr><th>트리거</th><th>대상</th><th>동작</th></tr>
+<tr><td><code>trg_set_updated_at</code></td><td>다수 테이블</td><td>INSERT/UPDATE 시 <code>updated_at = now()</code></td></tr>
+<tr><td><code>trg_recalc_rating</code></td><td><code>reviews</code></td><td>INSERT/UPDATE/DELETE 시 <code>seller_ratings</code> 갱신</td></tr>
+<tr><td><code>trg_set_review_seq</code></td><td><code>reviews</code></td><td>INSERT 시 <code>buyer_review_seq</code> 자동 설정</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec14">14. 인덱스 전체 목록</h2>
+
+<h3>핵심 테이블 인덱스</h3>
+
+<pre>-- fs_ledger
+idx_fs_ledger_guid_tx_at     (guid, tx_at DESC)
+idx_fs_ledger_tx_id          (tx_id)
+idx_fs_ledger_block_hash     (block_hash) WHERE NOT NULL
+idx_fs_ledger_buyer_guid     (buyer_guid) WHERE NOT NULL
+idx_fs_ledger_seller_guid    (seller_guid) WHERE NOT NULL
+idx_fs_ledger_source         (source)
+
+-- pdv_log
+pdv_log_session_id_idx       UNIQUE (session_id) WHERE NOT NULL  ← 핵심
+pdv_log_chain_height_idx     (chain_height)
+idx_pdv_log_pending_anchor   (id) WHERE anchored=false AND via_worker=true
+
+-- merkle_anchors
+idx_merkle_anchors_status    (status, anchored_at DESC)
+idx_merkle_anchors_root      (merkle_root)
+
+-- biz_products
+idx_biz_products_seller      (seller_guid, is_active)
+idx_biz_products_name_trgm   GIN 트라이그램</pre>
+
+<h3>주요 비즈니스 인덱스</h3>
+
+<pre>-- biz_orders
+idx_biz_orders_buyer    (buyer_guid, status)
+idx_biz_orders_seller   (seller_guid, status)
+idx_biz_orders_product  (product_id, status)
+biz_orders_tx_id_key    UNIQUE (tx_id)
+
+-- biz_reviews
+idx_biz_reviews_once    UNIQUE (reviewer_guid, product_id)
+idx_biz_reviews_product (product_id, is_visible)
+
+-- reviews
+reviews_tx_id_key       UNIQUE (tx_id)
+
+-- gdc_claims
+idx_gdc_claims_expires_at        (expires_at)
+idx_gdc_claims_claimant_redeemed (claimant, redeemed)
+
+-- gopang_sessions
+idx_sessions_guid  (guid)</pre>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec15">15. CHECK 제약 전체 목록</h2>
+
+<table>
+<tr><th>테이블</th><th>컬럼</th><th>허용값</th></tr>
+<tr><td><code>fs_ledger</code></td><td><code>direction</code></td><td><code>'debit'</code>, <code>'credit'</code></td></tr>
+<tr><td><code>fs_ledger</code></td><td><code>amount</code></td><td>&gt; 0</td></tr>
+<tr><td><code>fs_ledger</code></td><td><code>source</code></td><td>market, gdc, insurance, tax, health, democracy, manual</td></tr>
+<tr><td><code>fs_ledger</code></td><td><code>fs_account</code></td><td>bs-cash, pl-revenue, pl-purchase, pl-opex, pl-platform_fee, pl-interest_income, pl-interest_expense, pl-loan_repayment, bs-loan, bs-deposit</td></tr>
+<tr><td><code>gdc_claims</code></td><td><code>direction</code></td><td><code>'debit'</code>, <code>'credit'</code></td></tr>
+<tr><td><code>gdc_claims</code></td><td><code>amount</code></td><td>&gt; 0</td></tr>
+<tr><td><code>gdc_claims</code></td><td><code>fs_account</code></td><td>(fs_ledger와 동일)</td></tr>
+<tr><td><code>biz_orders</code></td><td><code>status</code></td><td>pending, paid, delivered, completed, cancelled, refunded</td></tr>
+<tr><td><code>biz_reviews</code></td><td><code>rating</code></td><td>1~5</td></tr>
+<tr><td><code>reviews</code></td><td><code>stars</code></td><td>1~5</td></tr>
+<tr><td><code>merkle_anchors</code></td><td><code>status</code></td><td>pending, confirmed, failed</td></tr>
+<tr><td><code>security_log</code></td><td><code>status</code></td><td>ok, warn, error, critical, offline</td></tr>
+<tr><td><code>security_event</code></td><td><code>severity</code></td><td>S1, S2, S3</td></tr>
+<tr><td><code>security_event</code></td><td><code>status</code></td><td>open, investigating, resolved</td></tr>
+<tr><td><code>school_student_profiles</code></td><td><code>stage</code></td><td>S1~S7</td></tr>
+<tr><td><code>school_student_profiles</code></td><td><code>cultural_region</code></td><td>western, east_asian, latin, african, middle_eastern, other</td></tr>
+<tr><td><code>school_student_profiles</code></td><td><code>learning_style</code></td><td>visual, auditory, kinesthetic, reading</td></tr>
+<tr><td><code>school_student_profiles</code></td><td>역량 점수</td><td>0~100</td></tr>
+<tr><td><code>school_student_profiles</code></td><td>utility_score, happiness_score</td><td>0~1</td></tr>
+<tr><td><code>school_subjects</code></td><td><code>subject_type</code></td><td>core, HL, SL, major, elective, lab, reskill, optional</td></tr>
+<tr><td><code>school_subjects</code></td><td><code>status</code></td><td>active, paused, completed, dropped</td></tr>
+<tr><td><code>school_sessions</code></td><td><code>session_type</code></td><td>learning, review, assessment, supplementary</td></tr>
+<tr><td><code>school_sessions</code></td><td><code>bloom_level</code></td><td>1~6</td></tr>
+<tr><td><code>school_sessions</code></td><td><code>comprehension</code></td><td>0~100</td></tr>
+<tr><td><code>school_sessions</code></td><td><code>self_rating</code></td><td>0~10</td></tr>
+<tr><td><code>school_progress</code></td><td><code>bloom_achieved</code></td><td>1~6</td></tr>
+<tr><td><code>school_progress</code></td><td><code>pace_label</code></td><td>fast, normal, slow, very_slow</td></tr>
+<tr><td><code>school_assessments</code></td><td><code>assessment_type</code></td><td>quiz_5session, self_rating, block_test, mid_term, final, bloom_check</td></tr>
+<tr><td><code>school_assessments</code></td><td><code>bloom_level</code></td><td>1~6</td></tr>
+<tr><td><code>school_career_log</code></td><td><code>event_type</code></td><td>initial_assignment, consultation, change_request, change_approved, change_conditional, change_rejected, periodic_review, ai_update</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec16">16. 3계층 동기화 구조</h2>
+
+<h3>16.1 거래 완료 후 데이터 흐름</h3>
+
+<pre>① Worker handleBizOrder
+   → fs_ledger 3행 INSERT (market_purchase RPC)
+     buyer debit / seller credit / gopang-platform credit
+
+② Worker updateNodeHashChain
+   → l1_ledger INSERT (block_hash, user_hash, node_hash, balance_claimed)
+
+③ Worker (T08 신규)
+   → buyer_claim 생성 {direction, amount, expires_at:7일}
+   → GWP_DONE에 포함하여 클라이언트 전달
+
+④ gopang-app.js redeemClaim
+   → IDB financial_state 갱신
+     bs-cash 차감, pl-purchase 양수 누적
+
+⑤ gopang-app.js _patchL1LedgerUserHash
+   → l1_ledger.user_hash ← IDB local_hash PATCH 교정
+
+⑥ gopang-app.js _recordPDV
+   → pdv_log INSERT
+   → Prefer: resolution=ignore-duplicates 필수
+
+⑦ GDC gdc_settle_ledger()
+   → fs_ledger 집계 → user_profiles.extra.fs UPDATE
+
+⑧ Worker Cron (10분)
+   → anchorL1MerkleRoot()
+   → pdv_log 배치 앵커링 → merkle_anchors INSERT</pre>
+
+<h3>16.2 핵심 불변 조건</h3>
+
+<h4>STALE_STATE 방지</h4>
+<pre>IDB financial_state.block_hash
+  = L1 blocks 최신 content_hash</pre>
+
+<h4>PDV Hash Chain 3계층 일치 (v3.0)</h4>
+<pre>IDB hash_chain[N].local_hash
+  = pdv_log.chain_local_hash  (chain_height = N)
+  = l1_ledger.user_hash       (PATCH 후)</pre>
+
+<h4>BIVM Σδ=0</h4>
+<pre>Σ(fs_ledger debit) = Σ(fs_ledger credit) per block_hash
+buyer debit = seller credit + gopang-platform credit (수수료)</pre>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec17">17. T-시리즈 DB 검증 기준</h2>
+
+<table>
+<tr><th>T</th><th>항목</th><th>검증 SQL</th><th>상태</th></tr>
+<tr><td>T01</td><td>기본 주문</td><td>L1 /api/tx 200 OK</td><td>완료</td></tr>
+<tr><td>T02</td><td>AI 검색</td><td><code>SELECT * FROM search_entities(p_keyword=>'짜장면',...)</code></td><td>완료</td></tr>
+<tr><td>T03</td><td>SSO 팝업</td><td>gopang_token URL 파라미터 전달</td><td>완료</td></tr>
+<tr><td>T04</td><td>반복 주문</td><td>STALE_STATE 없이 연속 주문</td><td>완료</td></tr>
+<tr><td>T05</td><td>앵커링</td><td><code>SELECT COUNT(*) FROM pdv_chain_integrity WHERE pdv_l1_match=FALSE; -- =0</code></td><td>완료</td></tr>
+<tr><td>T06</td><td>IDB 무결성</td><td><code>gopangWallet.verifyChain() → {valid:true}</code></td><td>완료</td></tr>
+<tr><td>T07</td><td>잔액 일치</td><td><code>SELECT COUNT(*) FROM ktax_balance_anomalies; -- =0</code></td><td>완료</td></tr>
+<tr><td>T07</td><td>Σδ=0</td><td><code>SELECT COUNT(*) FROM sigma_delta_by_node WHERE sigma_delta&gt;1; -- =0</code></td><td>완료</td></tr>
+<tr><td>T08</td><td>오프라인 청구권</td><td>buyer_claim expires_at 생성, pl-purchase 양수</td><td>완료</td></tr>
+<tr><td>T09</td><td>중복 방지</td><td><code>SELECT session_id, COUNT(*) FROM pdv_log GROUP BY session_id HAVING COUNT(*)&gt;1; -- 0rows</code></td><td>완료</td></tr>
+<tr><td>T10</td><td>P1~P6 전체</td><td>위 통합 감사 쿼리 전체 0</td><td>완료</td></tr>
+<tr><td>T10</td><td>머클 검증</td><td><code>GET /merkle/verify?pdv_id=xxx → {valid:true}</code></td><td>완료</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">목차로 이동</a></p>
+<hr>
+
+<h2 id="sec18">18. 즉각 조치 가이드</h2>
+
+<h3>ktax_balance_anomalies &gt; 0</h3>
+<pre>-- 불일치 내용 확인
+SELECT guid, anomaly_type, ledger_bs_cash, profile_bs_cash
+FROM ktax_balance_anomalies;</pre>
+<ul>
+<li><code>PROFILE_MISSING</code>: <code>t07_setup.py</code> 재실행</li>
+<li><code>BS_CASH_MISMATCH</code>: <code>gdc_settle_ledger()</code> 공식 확인 (<code>Σcredit - Σdebit</code> 필수)</li>
+</ul>
+
+<h3>409 STALE_STATE</h3>
+<pre>// gopang.net 콘솔
+const req = indexedDB.open('gopang-wallet');
+req.onsuccess = e => e.target.result.transaction('keys')
+  .objectStore('keys').get('financial_state')
+  .onsuccess = ev => console.log(ev.target.result?.block_hash);</pre>
+
+<h3>pdv_l1_match = false</h3>
+<ol>
+<li><code>window.gopangWallet.publicKeyB64u</code> 확인</li>
+<li>L1 <code>gdc_keys</code> 공개키와 비교</li>
+<li><code>_patchL1LedgerUserHash()</code> 재실행</li>
+</ol>
+
+<h3>머클 앵커링 안 됨</h3>
+<pre>Cloudflare → gopang-proxy → Triggers → Cron: */10 * * * *
+Schedule 탭 → Test → [Merkle] 로그 확인</pre>
+
+<h3>fs_ledger source 오류 (23514)</h3>
+<pre>-- 허용값 확인
+SELECT pg_get_constraintdef(oid)
+FROM pg_constraint WHERE conname = 'fs_ledger_source_check';
+-- 허용: market, gdc, insurance, tax, health, democracy, manual</pre>
+
+<div class="footer">
+  <p>Gopang Supabase DB 완전 매뉴얼 v2.0</p>
+  <p>AI City Inc. 팀 주피터 | 2026-06-12</p>
+  <p>실제 Supabase 스키마 검증 완료 — 테이블 43개, Views 14개, Functions 9개</p>
+</div>
+
+</body>
+</html>
