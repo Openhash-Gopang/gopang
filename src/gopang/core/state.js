@@ -1,0 +1,90 @@
+/**
+ * core/state.js — 고팡 전역 상태 (단일 진실 공급원)
+ * 모든 모듈이 이 파일에서 상태를 import하여 공유
+ */
+
+// ── 사용자 ───────────────────────────────────────────────
+export let _USER     = null;   // 초기화 전 null, initAuth() 완료 후 설정
+export let USER_GUID = '';
+
+export function setUser(user) {
+  _USER     = user;
+  USER_GUID = user?.ipv6 || user?.guid || crypto.randomUUID();
+}
+
+// ── AI 상태 ──────────────────────────────────────────────
+export let aiActive   = false;
+export let micActive  = false;
+export let attachFile = null;
+export let recognition = null;
+export const history  = [];   // { role, content }
+
+export function setAiActive(v)    { aiActive   = v; }
+export function setMicActive(v)   { micActive  = v; }
+export function setAttachFile(v)  { attachFile = v; }
+export function setRecognition(v) { recognition = v; }
+
+// ── P2P 상태 ─────────────────────────────────────────────
+export const PROXY      = 'https://gopang-proxy.tensor-city.workers.dev';
+export const RTC_CONFIG = { iceServers: [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+]};
+
+export let _peer       = null;
+export let _rtcConn    = null;
+export let _rtcChannel = null;
+export let _signalPoll = null;
+export let _pdvChatDB  = null;
+
+export function setPeerState(v)      { _peer       = v; }
+export function setRtcConn(v)        { _rtcConn    = v; }
+export function setRtcChannel(v)     { _rtcChannel = v; }
+export function setSignalPoll(v)     { _signalPoll = v; }
+export function setPdvChatDB(v)      { _pdvChatDB  = v; }
+
+// ── 위치 ─────────────────────────────────────────────────
+export let _userLocation    = null;
+export let _locationReady   = false;
+export let _locationPending = false;
+
+export function setUserLocation(v)    { _userLocation    = v; }
+export function setLocationReady(v)   { _locationReady   = v; }
+export function setLocationPending(v) { _locationPending = v; }
+
+// ── GWP ──────────────────────────────────────────────────
+export let _gwpActive   = false;
+export let _gwpService  = null;
+export let _gwpTab      = null;
+export let _gwpTabTimer = null;
+
+export function setGwpActive(v)   { _gwpActive   = v; }
+export function setGwpService(v)  { _gwpService  = v; }
+export function setGwpTab(v)      { _gwpTab      = v; }
+export function setGwpTabTimer(v) { _gwpTabTimer = v; }
+
+// ── K-Law ────────────────────────────────────────────────
+export let _klawBusy      = false;
+export let _klawLastCheck = 0;
+export const KLAW_COOLDOWN_MS = 30000;
+
+export function setKlawBusy(v)      { _klawBusy      = v; }
+export function setKlawLastCheck(v) { _klawLastCheck = v; }
+
+// ── Supabase ─────────────────────────────────────────────
+export const _SUPABASE_URL = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
+export const _SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
+
+// ── L1 ───────────────────────────────────────────────────
+export const L1_URL = 'https://l1-hanlim.gopang.net/api/collections/profiles/records';
+
+// ── 기타 ─────────────────────────────────────────────────
+export let _lastPipelineResult = null;
+export let _lastRouterResult   = null;
+export let _lastFiilReportId   = null;
+export let _installBannerVisible = false;
+
+export function setLastPipelineResult(v)   { _lastPipelineResult   = v; }
+export function setLastRouterResult(v)     { _lastRouterResult     = v; }
+export function setLastFiilReportId(v)     { _lastFiilReportId     = v; }
+export function setInstallBannerVisible(v) { _installBannerVisible = v; }
