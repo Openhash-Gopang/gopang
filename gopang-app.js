@@ -21,12 +21,10 @@ const _USER = await (async () => {
              registeredAt: new Date().toISOString() };
   }
 
-  // ── 신규 사용자 → 등록 UI ────────────────────────
-  console.info('[Auth v2] 신규 사용자 — 등록 시작');
-  _showRegisterUI(fpHex, ipv6);
-
-  // 등록 완료까지 임시 진행
-  return { ipv6, fpHex, isTemp: true,
+  // ── 신규 사용자 → 게스트로 진입 (등록 강제 없음) ──
+  // 지갑 초기화는 사용자가 명시적으로 신청할 때만 진행
+  console.info('[Auth v2] 신규 게스트 — 등록 없이 진입');
+  return { ipv6, fpHex, isTemp: true, isGuest: true,
            registeredAt: new Date().toISOString() };
 })();
 
