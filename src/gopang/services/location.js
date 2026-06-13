@@ -16,9 +16,6 @@ import { CFG } from '../core/config.js';
 //   - PWA 설치 배너(beforeinstallprompt)와 GPS 권한 요청이 동시에 뜨면
 //     Android Chrome이 두 번째 다이얼로그를 차단함
 //   - 해결: GPS 요청을 PWA 배너 해소 후 OR 첫 메시지 전송 시로 지연
-let _userLocation    = null;   // { lat, lng, address, source }
-let _locationReady   = false;  // GPS 요청이 완료됐는지 여부
-let _locationPending = false;  // GPS 요청이 진행 중인지 여부
 
 // ── GPS 지연 스케줄러 (PWA 배너와 충돌 방지) ────────────────
 export function _scheduleLocation() {
@@ -48,9 +45,6 @@ export function _scheduleLocation() {
   // 1초 후 첫 시도, 이후 500ms 폴링 (최대 6초 대기)
   setTimeout(tryInit, 1000);
 }
-
-// PWA 배너 가시성 상태 추적
-let _installBannerVisible = false;
 
 export function _initLocation() {
   if (_locationPending || _locationReady) return;
