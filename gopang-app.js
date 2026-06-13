@@ -8,30 +8,30 @@
  */
 
 // ── Core ─────────────────────────────────────────────────
-import { initAuth, _isRegistered, gopangAuth } from './src/core/auth.js';
-import { loadSettings, CFG, saveSettings }     from './src/core/config.js';
-import { _USER }                               from './src/core/state.js';
+import { initAuth, _isRegistered, gopangAuth } from './src/gopang/core/auth.js';
+import { loadSettings, CFG, saveSettings }     from './src/gopang/core/config.js';
+import { _USER }                               from './src/gopang/core/state.js';
 
 // ── UI ───────────────────────────────────────────────────
-import { appendBubble }                        from './src/ui/bubble.js';
+import { appendBubble }                        from './src/gopang/ui/bubble.js';
 import { openSettings, closeSettings, handleOverlayClick,
          _updateHandleChip, _settingsRegisterHandle,
-         clearSWCache, _updateSecuritySection } from './src/ui/settings.js';
+         clearSWCache, _updateSecuritySection } from './src/gopang/ui/settings.js';
 import { openSearch, closeSearch,
          handleSearchOverlayClick,
          runSearch, selectContact,
-         openProfile }                          from './src/ui/search.js';
-import { _showRegisterFlow }                   from './src/ui/register-flow.js';
+         openProfile }                          from './src/gopang/ui/search.js';
+import { _showRegisterFlow }                   from './src/gopang/ui/register-flow.js';
 
 // ── AI ───────────────────────────────────────────────────
-import { toggleAI, activateAI, closeAI }       from './src/ai/toggle.js';
+import { toggleAI, activateAI, closeAI }       from './src/gopang/ai/toggle.js';
 
 // ── P2P ──────────────────────────────────────────────────
 import { setPeer, _clearPeer,
-         _startSignalPoll }                     from './src/p2p/webrtc.js';
+         _startSignalPoll }                     from './src/gopang/p2p/webrtc.js';
 
 // ── PDV ──────────────────────────────────────────────────
-import { recordPDV }                           from './src/pdv/record.js';
+import { recordPDV }                           from './src/gopang/pdv/record.js';
 
 // ════════════════════════════════════════════════════════
 // 1. 사용자 초기화 (await — _USER 확정 후 진행)
@@ -128,17 +128,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     { callAI },
     { runRouter, applyRouterResult },
   ] = await Promise.all([
-    import('./src/ui/send-message.js'),
-    import('./src/ui/file-attach.js'),
-    import('./src/ai/mic.js'),
-    import('./src/services/location.js'),
-    import('./src/ui/welcome.js'),
-    import('./src/ui/progress.js'),
-    import('./src/gwp/engine.js'),
-    import('./src/gwp/sign.js'),
-    import('./src/services/klaw.js'),
-    import('./src/ai/call-ai.js'),
-    import('./src/ai/router.js'),
+    import('./src/gopang/ui/send-message.js'),
+    import('./src/gopang/ui/file-attach.js'),
+    import('./src/gopang/ai/mic.js'),
+    import('./src/gopang/services/location.js'),
+    import('./src/gopang/ui/welcome.js'),
+    import('./src/gopang/ui/progress.js'),
+    import('./src/gopang/gwp/engine.js'),
+    import('./src/gopang/gwp/sign.js'),
+    import('./src/gopang/services/klaw.js'),
+    import('./src/gopang/ai/call-ai.js'),
+    import('./src/gopang/ai/router.js'),
   ]);
 
   // 4-4. 동적 로드 함수 전역 노출
@@ -152,7 +152,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   // 4-5. GWP postMessage 수신 리스너
-  const { initGwpListener } = await import('./src/gwp/engine.js');
+  const { initGwpListener } = await import('./src/gopang/gwp/engine.js');
   initGwpListener();
 
   // 4-6. 입력 이벤트 바인딩
@@ -187,7 +187,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 4-9. 세션 저장 훅
-  const { _saveOnce } = await import('./src/core/session.js');
+  const { _saveOnce } = await import('./src/gopang/core/session.js');
   window.addEventListener('pagehide', _saveOnce);
   window.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') _saveOnce();
