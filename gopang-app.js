@@ -604,8 +604,8 @@ window.gopangAuth = gopangAuth;
 
 // ── 설정 ────────────────────────────────────────────────
 const CFG = {
-  apiKey:    'sk-e4a6f005aecf43d4aa60e77bb71de14c',   // DeepSeek API Key (하드코딩)
-  geminiKey: 'AIzaSyDiytKUg_0MJVBM3gFYzTms7mO6Y2mhLT4',   // Gemini Vision API Key (하드코딩)
+  apiKey:    '',   // 실제 키는 localStorage에서만 로드
+  geminiKey: '',   // 실제 키는 localStorage에서만 로드
   kakaoKey:  '66648ca49f126d8752b33d542789ac56',   // 카카오 REST API Key (역지오코딩 — GPS→주소 변환용)
   endpoint:  'https://gopang-proxy.tensor-city.workers.dev',
   model:     'deepseek-v4-flash',   // ✅ V4 Flash — V4 Pro 대비 12배 저렴, 일상 대화·라우팅 충분
@@ -2486,13 +2486,73 @@ function hideTyping() {
 // ── AI 비서 토글 ────────────────────────────────────────
 function toggleAI() {
   if (aiActive) {
-    // 이미 활성 → 카드 열지 않고 비활성화
+    // 이미 활성 → 비활성화
     aiActive = false;
     document.getElementById('btn-ai').classList.remove('active');
+    appendBubble('system', 'AI 비서 비활성화됨.');
     return;
   }
-  // 미활성 → 카드 열기
-  document.getElementById('ai-overlay').classList.toggle('open');
+  // 미활성 → AI 설정 팩업 표시
+  _showAISetupPopup();
+}
+
+function _showAISetupPopup() {
+  const ov = document.createElement('div');
+  ov.id = 'ai-setup-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  ov.innerHTML = [
+    '<div style="background:var(--bg-primary,#fff);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">',
+    '<div style="width:36px;height:4px;background:var(--border,#ddd);border-radius:2px;margin:0 auto 16px"></div>',
+    '<p style="font-weight:700;font-size:16px;margin:0 0 16px">&#x1F916; AI 비서 활성화</p>',
+    '<label style="font-size:12px;font-weight:600;color:var(--txt2);display:block;margin-bottom:6px">LLM 모델</label>',
+    '<select id="_ai_model" style="width:100%;padding:10px;border:1px solid var(--border,#ddd);border-radius:8px;font-size:14px;margin-bottom:12px">',
+    '<option value="deepseek-v4-flash">DeepSeek V4 Flash (빠름 게원령)</option>',
+    '<option value="deepseek-v4-pro">DeepSeek V4 Pro</option>',
+    '<option value="deepseek-chat">DeepSeek V3</option>',
+    '<option value="gpt-4o">GPT-4o</option>',
+    '<option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>',
+    '<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>',
+    '</select>',
+    '<label style="font-size:12px;font-weight:600;color:var(--txt2);display:block;margin-bottom:6px">API Key</label>',
+    '<input id="_ai_key" type="password" placeholder="sk-... 또는 다른 키" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--border,#ddd);border-radius:8px;font-size:14px;margin-bottom:4px">',
+    '<p style="font-size:11px;color:var(--txt3,#aaa);margin:0 0 12px">고팡 프록시 사용 시 API Key 불필요</p>',
+    '<label style="font-size:12px;font-weight:600;color:var(--txt2);display:block;margin-bottom:6px">시스템 프롬프트 (선택)</label>',
+    '<textarea id="_ai_sys" rows="3" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--border,#ddd);border-radius:8px;font-size:13px;resize:vertical;margin-bottom:16px" placeholder="디폴트 SP-00 사용"></textarea>',
+    '<div style="display:flex;gap:8px">',
+    '<button id="_ai_cancel" style="flex:1;padding:12px;border:1px solid var(--border,#ddd);border-radius:10px;background:none;cursor:pointer;font-size:14px">취소</button>',
+    '<button id="_ai_ok" style="flex:2;padding:12px;border:none;border-radius:10px;background:var(--green,#16a34a);color:#fff;cursor:pointer;font-size:14px;font-weight:600">AI 활성화</button>',
+    '</div></div>'
+  ].join('');
+  document.body.appendChild(ov);
+  // 디폴트값 세팅
+  const modelSel = ov.querySelector('#_ai_model');
+  if (CFG.model) modelSel.value = CFG.model;
+  ov.querySelector('#_ai_sys').value = CFG.system?.split('\n').slice(0,3).join('\n') || '';
+  const close = () => { ov.remove(); };
+  ov.querySelector('#_ai_cancel').onclick = close;
+  ov.querySelector('#_ai_ok').onclick = () => {
+    const model = modelSel.value;
+    const key   = ov.querySelector('#_ai_key').value.trim();
+    const sys   = ov.querySelector('#_ai_sys').value.trim();
+    const isProxy = CFG.endpoint.includes('gopang-proxy');
+    if (!isProxy && !key) {
+      alert('고팡 프록시가 아닌 경우 API Key가 필요합니다.');
+      return;
+    }
+    if (model) CFG.model = model;
+    if (key)   CFG.apiKey = key;
+    if (sys)   CFG.system = sys;
+    try {
+      localStorage.setItem('gopang_cfg', JSON.stringify({
+        model: CFG.model, endpoint: CFG.endpoint,
+        apiKey: CFG.apiKey, geminiKey: CFG.geminiKey,
+      }));
+    } catch {}
+    close();
+    aiActive = true;
+    document.getElementById('btn-ai').classList.add('active');
+    appendBubble('ai', '귀하의 AI 비서입니다. 지시하십시오.');
+  };
 }
 function closeAI() {
   document.getElementById('ai-overlay').classList.remove('open');
@@ -2881,7 +2941,9 @@ function activateAI(silent = false) {
 
 // ── 설정 패널 ───────────────────────────────────────────
 function openSettings() {
-  // API 키는 하드코딩 — 설정 화면에 별표로 마스킹 표시
+  // LLM 섹션: AI 활성 시만 표시
+  const llmSec = document.getElementById('llm-settings-section');
+  if (llmSec) llmSec.style.display = aiActive ? 'block' : 'none';
   document.getElementById('setting-apikey').value     = CFG.apiKey    ? '••••••••••••••••••••••••••••••••' : '';
   document.getElementById('setting-gemini-key').value = CFG.geminiKey ? '••••••••••••••••••••••••••••••••' : '';
   document.getElementById('setting-system').value     = CFG.system;
@@ -3044,9 +3106,11 @@ function loadSettings() {
     if (saved.endpoint)  CFG.endpoint  = saved.endpoint;
     // system은 localStorage에서 복원하지 않음 — gopang-app.js 하드코딩 SP-00이 항상 우선
     // 하드코딩 키가 있으면 localStorage 값으로 덮어쓰지 않음
-    if (saved.apiKey    && !CFG.apiKey)    CFG.apiKey    = saved.apiKey;
-    if (saved.geminiKey && !CFG.geminiKey) CFG.geminiKey = saved.geminiKey;
+    if (saved.apiKey)    CFG.apiKey    = saved.apiKey;
+    if (saved.geminiKey) CFG.geminiKey = saved.geminiKey;
     // kakaoKey는 CFG에 하드코딩 — localStorage 복원 불필요
+    // API 키 있으면 AI 자동 복원
+    if (saved.apiKey) { aiActive = true; }
   } catch {}
 }
 
