@@ -1,4 +1,4 @@
-﻿// gopang-app.js — 고팡 앱 코어 (위치·UI·AI·라우터·마이크·K-Law·GWP)
+// gopang-app.js — 고팡 앱 코어 (위치·UI·AI·라우터·마이크·K-Law·GWP)
 (async () => {
 const _USER = await (async () => {
   const STORE_KEY = 'gopang_user_v3';
@@ -2486,8 +2486,85 @@ function closeAI() {
 // 메시지는 서버에 저장하지 않음 — 기기 PDV(IndexedDB)에만 저장
 // ════════════════════════════════════════════════════════════
 
+// SHA-256 헬퍼 (L1 nickname_hash 생성용)
+async function _sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// L1 사용자 등록
+async function _registerToL1(name) {
+  const guid          = _USER.ipv6 || USER_GUID;
+  const nickname_hash = await _sha256('ko:' + name);
+  const handle        = '@' + name + '#' + guid.slice(-4);
+  try {
+    await fetch('https://l1-hanlim.gopang.net/api/collections/users/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid, nickname_hash, handle,
+        native_lang: navigator.language?.slice(0,2) || 'ko',
+        is_public: true,
+      }),
+    });
+    _USER.handle = handle;
+    _USER.name   = name;
+    const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || '{}');
+    stored.handle = handle;
+    stored.name   = name;
+    localStorage.setItem('gopang_user_v3', JSON.stringify(stored));
+    console.info('[L1] 등록 완료:', handle);
+  } catch(e) {
+    console.warn('[L1] 등록 실패:', e.message);
+  }
+  return handle;
+}
+
+// 닉네임 입력 모달 (채팅 시작 전 1회)
+function _promptNickname() {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML = `
+      <div style="background:var(--bg-primary,#fff);border-radius:16px;padding:28px 24px;width:320px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+        <p style="margin:0 0 8px;font-weight:600;font-size:16px">대화 상대방에게 표시될 이름을 입력해 주세요</p>
+        <p style="margin:0 0 16px;font-size:13px;color:var(--label-3,#888)">실명이 아니어도 됩니다</p>
+        <input id="_nick_input" type="text" placeholder="예: 민준, 제주상회" maxlength="20"
+          style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--separator,#ddd);border-radius:8px;font-size:15px;outline:none">
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button id="_nick_cancel" style="flex:1;padding:10px;border:1px solid var(--separator,#ddd);border-radius:8px;background:none;cursor:pointer;font-size:14px">취소</button>
+          <button id="_nick_ok" style="flex:2;padding:10px;border:none;border-radius:8px;background:var(--accent,#0071e3);color:#fff;cursor:pointer;font-size:14px;font-weight:600">확인</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const inp = overlay.querySelector('#_nick_input');
+    inp.focus();
+    overlay.querySelector('#_nick_cancel').onclick = () => { overlay.remove(); resolve(null); };
+    overlay.querySelector('#_nick_ok').onclick = async () => {
+      const v = inp.value.trim();
+      if (!v) { inp.focus(); return; }
+      overlay.remove();
+      resolve(v);
+    };
+    inp.addEventListener('keydown', async e => {
+      if (e.key === 'Enter') {
+        const v = inp.value.trim();
+        if (!v) return;
+        overlay.remove();
+        resolve(v);
+      }
+    });
+  });
+}
+
 // 대화 상대 설정 — 검색 결과 클릭 시 호출
 async function setPeer(peer) {
+  // 자신의 handle이 없으면 닉네임 입력 요청
+  if (!_USER.handle) {
+    const name = await _promptNickname();
+    if (!name) return;                    // 취소 → 채팅 안 함
+    await _registerToL1(name);
+  }
   _closeRTC();
   _peer = peer;
 
@@ -2960,13 +3037,20 @@ async function runSearch() {
   // ── 1. 로컬 대화 상대 검색 ─────────────────────────────
   const contactMatches = _searchContacts(q);
 
-  // ── 2. 서버 사용자 검색 (GDUDA Phase 1 — Supabase 기반) ─
+  // ── 2. 서버 사용자 검색 (GDUDA Phase 1 — L1 PocketBase) ─
   let serverUsers = [];
   try {
-    const res  = await fetch(`${PROXY}/search/users?q=${encodeURIComponent(q)}&limit=10`);
+    const filter = encodeURIComponent(`(nickname_hash~'${q}' || handle~'${q}') && is_public=true`);
+    const res  = await fetch(`https://l1-hanlim.gopang.net/api/collections/users/records?filter=${filter}&perPage=20`);
     const data = await res.json();
-    if (data.ok) serverUsers = data.users || [];
-  } catch(e) { console.warn('[Search] 서버 검색 실패:', e.message); }
+    serverUsers = (data.items || []).map(u => ({
+      guid:        u.guid,
+      name:        u.handle?.split('#')[0]?.replace('@','') || u.handle,
+      handle:      u.handle,
+      entity_type: 'person',
+      avatar_emoji:'🙂',
+    }));
+  } catch(e) { console.warn('[Search] L1 검색 실패:', e.message); }
 
   // ── 3. PDV 데이터 검색 ─────────────────────────────────
   const pdvMatches = _searchPDV(q);
