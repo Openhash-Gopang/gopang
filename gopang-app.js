@@ -151,9 +151,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     callAI, runRouter,
   });
 
-  // 4-5. GWP postMessage 수신 리스너
-  const { initGwpListener } = await import('./src/gopang/gwp/engine.js');
-  initGwpListener();
 
   // 4-6. 입력 이벤트 바인딩
   const input   = document.getElementById('msg-input');
@@ -170,6 +167,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
     input.addEventListener('keydown', (e) => handleKey(e));
   }
+  const attBtn = document.getElementById('btn-attach');
+  if (attBtn)  attBtn.addEventListener('click',  () => triggerAttach());
   if (sendBtn) sendBtn.addEventListener('click', () => sendMessage());
   if (camBtn)  camBtn.addEventListener('click',  () => triggerCamera());
   if (micBtn)  micBtn.addEventListener('click',  () => toggleMic());
