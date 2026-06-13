@@ -82,31 +82,17 @@ export function _updateSecuritySection() {
   const idEl    = document.getElementById('gopang-id-display');
   const fpBtn   = document.getElementById('btn-register-fp');
 
+  // 얼굴·지문 인증 버튼 숨김 (GDC 사용 시에만 필요)
+  if (fpBtn) fpBtn.style.display = 'none';
+
   if (!stored?.ipv6) {
-    if (levelEl) levelEl.innerHTML = '⚠️ 미등록 사용자';
+    if (levelEl) levelEl.textContent = '⚠️ 미등록 사용자';
     return;
   }
 
-  const level   = stored.authLevel || 'L0';
-  const hasFace = !!stored.faceVec;
-  const hasFp   = !!stored.webauthn?.credentialId;
-  const hasSeed = !!stored.seedHex;
-  const colors  = { L0:'#FF9F0A', L1:'#30D158', L2:'#0A84FF', L3:'#BF5AF2' };
-  const color   = colors[level] || '#AEAEB2';
-
-  if (levelEl) levelEl.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-      <span style="font-size:18px;font-weight:700;color:${color};">${level}</span>
-      <span style="color:var(--label);">인증 레벨</span>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      <span>${hasFace ? '✅' : '⬜'} 얼굴 인증 (L1)</span>
-      <span>${hasFp   ? '✅' : '⬜'} 지문 인증 (L2)</span>
-      <span>${hasSeed ? '✅' : '⬜'} 4단어 시드</span>
-    </div>`;
-
-  if (idEl) idEl.textContent = `ID: ${stored.ipv6}`;
-  if (fpBtn) fpBtn.textContent = hasFp ? '🔐 지문 재등록' : '🔐 지문 등록';
+  if (levelEl) levelEl.innerHTML =
+    `<span style="font-size:13px;color:var(--green)">✅ ${stored.handle || stored.ipv6}</span>`;
+  if (idEl) idEl.textContent = '';
 }
 
 // ── 설정에서 아이디 등록 버튼 ────────────────────────────
