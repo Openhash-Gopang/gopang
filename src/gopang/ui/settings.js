@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ui/settings.js — 설정 패널
  */
 import { CFG, loadSettings } from '../core/config.js';
@@ -37,7 +37,7 @@ export function openSettings() {
   const idStatus = document.getElementById('gopang-id-status');
   if (idStatus) {
     if (registered) {
-      const s = JSON.parse(localStorage.getItem('gopang_user_v3') || '{}');
+      const s = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}');
       idStatus.innerHTML = `<b style="color:var(--green,#16a34a)">${s.handle}</b> <span style="font-size:11px">(등록됨)</span>`;
     } else {
       idStatus.textContent = '등록되지 않았습니다.';
@@ -119,7 +119,7 @@ export function handleAISettingsOverlayClick(e) {
 
 // ── 보안 섹션 업데이트 ───────────────────────────────────
 export function _updateSecuritySection() {
-  const stored  = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+  const stored  = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || 'null');
   const levelEl = document.getElementById('auth-level-display');
   const idEl    = document.getElementById('gopang-id-display');
   const fpBtn   = document.getElementById('btn-register-fp');

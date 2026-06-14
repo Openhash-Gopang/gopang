@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -18,28 +18,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap">
 <script src="/gopang-wallet.js"></script>
 <script>
-async function gopangLogout() {
-  if (!confirm('로그아웃 하시겠습니까?\n(아이디·설정이 초기화됩니다)')) return;
-  // [L-A] L1에서 fpHex 무효화 (타인 도용 방지)
-  try {
-    const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
-    if (stored?.fpHex) {
-      const L1_URL = 'https://l1-hanlim.gopang.net/api/collections/profiles/records';
-      const filter = encodeURIComponent(`fpHex='${stored.fpHex}'`);
-      const res = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
-      if (res.ok) {
-        const data = await res.json();
-        const id = data.items?.[0]?.id;
-        if (id) {
-          await fetch(`${L1_URL}/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fpHex: null })
-          });
-        }
-      }
-    }
-  } catch(e) { console.warn('[Logout] L1 fpHex 무효화 실패:', e.message); }
+function gopangLogout() {
+  if (!confirm('로그아웃 하시겠습니까?
+(아이디·설정이 초기화됩니다)')) return;
   localStorage.clear();
   sessionStorage.clear();
   caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
