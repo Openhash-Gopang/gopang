@@ -1,7 +1,7 @@
-/**
+﻿/**
  * ui/file-attach.js — 파일 첨부·카메라
  */
-import { setAttachFile } from '../core/state.js';
+import { setAttachFile, attachFile } from '../core/state.js';
 import { appendBubble } from './bubble.js';
 
 // ── 파일 첨부 ───────────────────────────────────────────

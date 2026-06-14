@@ -3,7 +3,7 @@
  */
 import { CFG, _modelSupportsVision } from '../core/config.js';
 import { aiActive, history, _userLocation, _lastRouterResult,
-         setLastRouterResult, _USER, USER_GUID } from '../core/state.js';
+         setLastRouterResult, _USER, USER_GUID, _locationPending, _locationReady } from '../core/state.js';
 import { appendBubble, showTyping, hideTyping,
          _createStreamBubble, _updateStreamBubble } from '../ui/bubble.js';
 import { _buildLocNote } from '../services/location.js';
