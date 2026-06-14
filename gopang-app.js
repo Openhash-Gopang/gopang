@@ -34,6 +34,10 @@ import { setPeer, _clearPeer,
 // ── PDV ──────────────────────────────────────────────────
 import { recordPDV }                           from './src/gopang/pdv/record.js';
 
+// ── P2P 검색/채팅 (GDUDA Phase 1) ────────────────────────
+import { openSearch as openP2PSearch }         from './src/gopang/ui/p2p-search.js';
+import { startIncomingWatch }                  from './src/gopang/ui/p2p-chat.js';
+
 // ════════════════════════════════════════════════════════
 // 1. 사용자 초기화 (await — _USER 확정 후 진행)
 // ════════════════════════════════════════════════════════
@@ -76,6 +80,9 @@ await initAuth();
   // P2P
   window.setPeer                   = setPeer;
   window._clearPeer                = _clearPeer;
+
+  // P2P 검색/채팅 (GDUDA Phase 1)
+  window.openP2PSearch             = openP2PSearch;
 
   // PDV (하위 시스템 공통)
   window.recordPDV                 = recordPDV;
@@ -189,6 +196,9 @@ const _boot = async () => {
   if (_isRegistered()) {
     _startSignalPoll();
     console.info('[Signal] 자동 폴링 시작 (등록 사용자)');
+
+    // GDUDA Phase 1 — incoming offer 감시
+    if (_USER?.ipv6) startIncomingWatch(_USER.ipv6);
   }
 
   // 4-9. 세션 저장 훅
