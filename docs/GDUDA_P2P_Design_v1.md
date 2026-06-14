@@ -236,3 +236,69 @@ CREATE INDEX ON global_profiles (country_code);
 | GUID | handle로부터 로컬 계산 — 라우팅에 사용 |
 | GDUDA | Gopang Distributed User Discovery Algorithm |
 | GAS | Gopang Address System |
+
+---
+
+## 10. webrtc.js vs p2p-chat.js 비교
+
+### 배경
+
+고팡에는 두 개의 WebRTC 구현이 공존합니다.
+
+| 항목 | `src/gopang/p2p/webrtc.js` | `src/gopang/ui/p2p-chat.js` |
+|------|---------------------------|------------------------------|
+| 도입 시기 | 기존 (v3.0 이전) | 신규 (GDUDA Phase 1) |
+| 식별자 | `_peer` (프로필 객체) | handle (전세계 유일) |
+| 발신자 확인 | `/profile?guid=` 조회 | `from_handle` (시그널 payload 포함) |
+| 검색 연동 | 없음 (직접 setPeer) | `p2p-search.js` → 닉네임 검색 |
+| 수신 처리 | `_handleSignal()` → `_handleOffer()` | `handleIncomingOffer()` |
+| 폴링 시작 | `_startSignalPoll()` (gopang-app.js 4-8) | `startIncomingWatch()` (gopang-app.js 4-8) |
+| 채팅 UI | 기존 채팅 UI (웹앱 내장) | `_openChatUI()` (풀스크린 오버레이) |
+
+---
+
+### 충돌 문제
+
+두 모듈이 동시에 `/signal/poll`을 폴링하므로 동일한 offer를 중복 처리:
+
+```
+기존 webrtc.js._startSignalPoll
+  └─ offer 수신 → /profile?guid= 조회 (404) → 실패
+
+신규 p2p-chat.js.startIncomingWatch
+  └─ offer 수신 → handleIncomingOffer() → 정상 처리
+```
+
+---
+
+### 현재 구현 방식 (임시 해결)
+
+기존 `webrtc.js`의 offer 처리를 비활성화하고 신규 `p2p-chat.js`가 전담:
+
+```javascript
+// webrtc.js — offer 처리 비활성화
+if (false && sig.type === 'offer' && !_peer) { // p2p-chat.js로 이전
+  ...
+}
+```
+
+```
+폴링 담당:
+  webrtc.js._startSignalPoll  → answer/ice 처리 (기존 역할 유지)
+  p2p-chat.js.startIncomingWatch → offer 처리 (신규)
+```
+
+---
+
+### 향후 방향 (Phase 2)
+
+기존 `webrtc.js`를 `p2p-chat.js`로 완전 통합하고 단일 폴링으로 일원화:
+
+```
+p2p-chat.js (통합)
+  ├─ offer  → handleIncomingOffer()
+  ├─ answer → conn.setRemoteDescription()
+  └─ ice    → conn.addIceCandidate()
+```
+
+`webrtc.js`는 하위 호환성을 위해 유지하되 로직은 비활성화.
