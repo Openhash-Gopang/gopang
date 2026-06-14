@@ -38,6 +38,7 @@ export async function initAuth() {
   console.info('[Auth] 신규 게스트 — 등록 없이 진입');
   const user = { ipv6, fpHex, isTemp: true, isGuest: true, registeredAt: new Date().toISOString() };
   setUser(user);
+  localStorage.setItem('gopang_user_v3', JSON.stringify(user));
   return user;
 }
 
@@ -95,10 +96,9 @@ export async function _registerToL1(name) {
     // 성공 → _USER + localStorage 업데이트
     user.handle = handle;
     user.name   = name;
-    const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || '{}');
-    stored.handle = handle;
-    stored.name   = name;
-    localStorage.setItem('gopang_user_v3', JSON.stringify(stored));
+    user.isGuest = false;
+    user.isTemp  = false;
+    localStorage.setItem('gopang_user_v3', JSON.stringify(user));
     console.info('[L1] 등록 완료:', handle);
     return handle;
 
