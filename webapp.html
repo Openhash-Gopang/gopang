@@ -27,17 +27,11 @@ function gopangLogout() {
 }
 function _isGuestUser() {
   try {
-    const s = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+    const s = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || 'null');
     return !s || s.isGuest === true || !s.handle;
   } catch { return true; }
 }
-function _settingsLogoutOrLogin() {
-  if (_isGuestUser()) {
-    location.href = '/login.html';
-  } else {
-    gopangLogout();
-  }
-}
+function _settingsLogoutOrLogin() { gopangLogout(); }
 function _updateLogoutBtn() {
   const btn = document.getElementById('btn-logout-or-login');
   if (!btn) return;
@@ -847,8 +841,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;
         style="display:none;width:100%;padding:12px;border-radius:8px;
                background:#16a34a;border:none;color:#fff;
                font-size:14px;font-weight:600;font-family:inherit;
-               cursor:pointer;text-align:left;display:none;
-               align-items:center;gap:8px">
+               cursor:pointer;text-align:left">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"/>

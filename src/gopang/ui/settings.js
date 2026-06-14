@@ -67,7 +67,7 @@ export function openSettings() {
 
   // 5. AI 설정 버튼: 등록 사용자만 표시
   const aiBtn = document.getElementById('btn-ai-settings');
-  if (aiBtn) aiBtn.style.display = registered ? 'block' : 'none';
+  if (aiBtn) aiBtn.style.display = registered ? 'flex' : 'none';
 
   // 6. 로그아웃 버튼: 등록 사용자만 표시
   const logoutBtn = document.getElementById('btn-logout-or-login');
