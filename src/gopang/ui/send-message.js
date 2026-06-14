@@ -1,7 +1,7 @@
 ﻿/**
  * ui/send-message.js — 메시지 전송 라우팅
  */
-import { aiActive, _peer, attachFile, setAttachFile } from '../core/state.js';
+import { aiActive, _peer, attachFile, setAttachFile, _locationReady, _locationPending } from '../core/state.js';
 import { _isRegistered } from '../core/auth.js';
 import { appendBubble } from './bubble.js';
 import { activateAI } from '../ai/toggle.js';
