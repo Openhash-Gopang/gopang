@@ -1,10 +1,9 @@
 /**
- * core/auth.js — 사용자 인증·등록 v2.0
- * - 4단어 시드 기반 GUID (fpHex 완전 제거)
+ * core/auth.js — 사용자 인증·등록 v3.0
+ * - Sign-in: handle로 L1 조회 → 자동 로그인
+ * - Sign-up: 이름 입력 → GUID 생성 → L1 등록
+ * - 익명 모드: randomUUID → sessionStorage
  * - 내 기기: localStorage / 공용 기기: sessionStorage
- * - 익명 Guest: sessionStorage 임시 UUID
- * - L1 PocketBase 아이디 등록 (upsert)
- * - gopangAuth (레벨별 인증 요구)
  */
 import { setUser, _USER, USER_GUID, L1_URL } from './state.js';
 import { appendBubble } from '../ui/bubble.js';
@@ -17,7 +16,17 @@ export async function _sha256(str) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-// ── 저장소 읽기 (localStorage 우선, sessionStorage 폴백) ─
+// ── UUID → IPv6 형식 GUID ────────────────────────────────
+function _uuidToIPv6() {
+  const uuid = crypto.randomUUID().replace(/-/g, '');
+  const groups = [];
+  for (let i = 0; i < 8; i++) groups.push(uuid.slice(i*4, i*4+4));
+  groups[0] = '2601';
+  groups[1] = 'db80';
+  return groups.join(':');
+}
+
+// ── 저장소 읽기 ──────────────────────────────────────────
 function _loadStored() {
   try {
     return JSON.parse(localStorage.getItem(STORE_KEY) || 'null') ||
@@ -29,23 +38,21 @@ function _loadStored() {
 export async function initAuth() {
   const stored = _loadStored();
 
-  // 자동 로그인
   if (stored?.ipv6) {
     console.info('[Auth] 자동 로그인 ✅', stored.ipv6);
     setUser(stored);
     return stored;
   }
 
-  // 진입 선택 팝업
   return new Promise((resolve) => {
-    _showEntryPopup(resolve);
+    _showSignPopup(resolve);
   });
 }
 
-// ── 진입 선택 팝업 ───────────────────────────────────────
-function _showEntryPopup(resolve) {
+// ── 진입 팝업 (Sign-in / Sign-up / 익명) ─────────────────
+function _showSignPopup(resolve) {
   const overlay = document.createElement('div');
-  overlay.id = '_entry-overlay';
+  overlay.id = '_sign-overlay';
   overlay.style.cssText = [
     'position:fixed;inset:0;z-index:9999',
     'background:rgba(0,0,0,0.4)',
@@ -64,39 +71,119 @@ function _showEntryPopup(resolve) {
       </svg>
       <h2 style="margin:0 0 8px;font-size:20px;font-weight:600;color:#111827;
                  letter-spacing:-0.5px">고팡에 오신 것을<br>환영합니다</h2>
-      <p style="margin:0 0 32px;font-size:14px;color:#6b7280;line-height:1.6">
-        시작하려면 방법을 선택해 주세요
+      <p style="margin:0 0 28px;font-size:14px;color:#6b7280;line-height:1.6">
+        시작 방법을 선택해 주세요
       </p>
-      <button id="_entry-seed"
+
+      <!-- Sign-in: 아이디 입력 -->
+      <div style="margin-bottom:10px">
+        <div style="display:flex;gap:8px">
+          <input id="_signin-handle" type="text"
+            placeholder="고팡 아이디 (예: @금능#0996)"
+            style="flex:1;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;
+                   font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
+            autocomplete="off" autocorrect="off" spellcheck="false"/>
+          <button id="_signin-btn"
+            style="padding:12px 16px;border-radius:10px;background:#16a34a;
+                   color:#fff;border:none;font-size:14px;font-weight:600;
+                   font-family:inherit;cursor:pointer;white-space:nowrap">
+            로그인
+          </button>
+        </div>
+        <div id="_signin-error" style="display:none;font-size:12px;color:#dc2626;
+             margin-top:6px;text-align:left"></div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin:16px 0">
+        <div style="flex:1;height:1px;background:#e5e7eb"></div>
+        <span style="font-size:12px;color:#9ca3af">또는</span>
+        <div style="flex:1;height:1px;background:#e5e7eb"></div>
+      </div>
+
+      <!-- Sign-up -->
+      <button id="_signup-btn"
         style="width:100%;padding:13px;border-radius:10px;
-               background:#16a34a;color:#fff;border:none;
-               font-size:15px;font-weight:600;font-family:inherit;
-               cursor:pointer;margin-bottom:10px;">
-        4단어로 시작하기
+               background:#f9fafb;border:1px solid #e5e7eb;
+               color:#111827;font-size:15px;font-weight:500;
+               font-family:inherit;cursor:pointer;margin-bottom:10px">
+        새 아이디 만들기
       </button>
-      <button id="_entry-anon"
+
+      <!-- 익명 모드 -->
+      <button id="_anon-btn"
         style="width:100%;padding:12px;border-radius:10px;
-               background:transparent;color:#6b7280;
-               border:1px solid #e5e7eb;
-               font-size:14px;font-family:inherit;cursor:pointer;">
-        익명으로 시작하기
+               background:transparent;border:none;
+               color:#9ca3af;font-size:14px;font-family:inherit;cursor:pointer">
+        익명 모드
       </button>
-      <p style="margin:20px 0 0;font-size:11px;color:#9ca3af;line-height:1.5">
-        익명 접속은 기록이 저장되지 않습니다
+      <p style="margin:12px 0 0;font-size:11px;color:#9ca3af;line-height:1.5">
+        익명 모드는 기록이 저장되지 않습니다
       </p>
     </div>`;
 
   document.body.appendChild(overlay);
 
-  document.getElementById('_entry-seed').onclick = () => {
-    overlay.remove();
-    _showSeedPopup(resolve);
+  // 입력 포커스 스타일
+  const input = document.getElementById('_signin-handle');
+  input.addEventListener('focus', () => input.style.borderColor = '#16a34a');
+  input.addEventListener('blur',  () => input.style.borderColor = '#e5e7eb');
+
+  // Sign-in
+  const _doSignIn = async () => {
+    const handle = input.value.trim();
+    if (!handle) { input.focus(); return; }
+
+    const errEl = document.getElementById('_signin-error');
+    const btn   = document.getElementById('_signin-btn');
+    btn.disabled = true;
+    btn.textContent = '확인 중…';
+    errEl.style.display = 'none';
+
+    try {
+      // handle로 L1 조회
+      const filter = encodeURIComponent(`handle='${handle}'`);
+      const res  = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+      const data = await res.json();
+      const found = data.items?.[0];
+
+      if (!found?.guid) {
+        errEl.textContent = '아이디를 찾을 수 없습니다.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '로그인';
+        return;
+      }
+
+      overlay.remove();
+      _showTrustPopup(resolve, found.guid, {
+        handle: found.handle,
+        name: found.handle.replace(/@(.+)#.+/, '$1'),
+        isGuest: false, isTemp: false,
+        registeredAt: found.created
+      });
+
+    } catch(e) {
+      errEl.textContent = '네트워크 오류. 다시 시도해 주세요.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '로그인';
+    }
   };
 
-  document.getElementById('_entry-anon').onclick = () => {
+  document.getElementById('_signin-btn').onclick = _doSignIn;
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') _doSignIn(); });
+
+  // Sign-up
+  document.getElementById('_signup-btn').onclick = () => {
+    overlay.remove();
+    _showSignUpPopup(resolve);
+  };
+
+  // 익명 모드
+  document.getElementById('_anon-btn').onclick = () => {
     overlay.remove();
     const user = {
-      ipv6: crypto.randomUUID(),
+      ipv6: _uuidToIPv6(),
       isGuest: true, isAnon: true,
       registeredAt: new Date().toISOString()
     };
@@ -106,10 +193,10 @@ function _showEntryPopup(resolve) {
   };
 }
 
-// ── 4단어 입력 팝업 ──────────────────────────────────────
-function _showSeedPopup(resolve) {
+// ── Sign-up 팝업 ─────────────────────────────────────────
+function _showSignUpPopup(resolve) {
   const overlay = document.createElement('div');
-  overlay.id = '_seed-overlay';
+  overlay.id = '_signup-overlay';
   overlay.style.cssText = [
     'position:fixed;inset:0;z-index:9999',
     'background:rgba(0,0,0,0.4)',
@@ -120,68 +207,64 @@ function _showSeedPopup(resolve) {
   overlay.innerHTML = `
     <div style="background:#fff;border-radius:16px;padding:36px 28px;
                 width:100%;max-width:360px;box-sizing:border-box;">
-      <button id="_seed-back"
-        style="background:none;border:none;color:#6b7280;font-size:13px;
-               cursor:pointer;padding:0;margin-bottom:20px;display:flex;
-               align-items:center;gap:4px;font-family:inherit;">
+      <button id="_signup-back"
+        style="background:none;border:none;color:#16a34a;font-size:14px;
+               cursor:pointer;padding:0;margin-bottom:20px;font-family:inherit">
         ← 뒤로
       </button>
       <h2 style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;
-                 letter-spacing:-0.4px">나만의 4단어를<br>입력하세요</h2>
-      <p style="margin:0 0 6px;font-size:13px;color:#6b7280;line-height:1.6">
-        예: <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;
-             font-size:12px">사과 바다 하늘 강</code>
+                 letter-spacing:-0.4px">새 아이디 만들기</h2>
+      <p style="margin:0 0 20px;font-size:13px;color:#6b7280;line-height:1.6">
+        표시될 이름을 입력하세요.<br>
+        <span style="color:#9ca3af;font-size:12px">아이디 형식: @이름#고유번호</span>
       </p>
-      <p style="margin:0 0 20px;font-size:12px;color:#dc2626;line-height:1.5">
-        이 단어를 잃으면 계정을 복구할 수 없습니다
-      </p>
-      <input id="_seed-input" type="text" placeholder="단어를 띄어쓰기로 구분하여 입력"
-        style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;
-               font-size:14px;font-family:inherit;box-sizing:border-box;
-               outline:none;margin-bottom:16px;"
+      <input id="_signup-name" type="text" maxlength="20"
+        placeholder="표시될 이름"
+        style="width:100%;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;
+               font-size:15px;font-family:inherit;outline:none;
+               box-sizing:border-box;margin-bottom:16px"
         autocomplete="off" autocorrect="off" spellcheck="false"/>
-      <button id="_seed-confirm"
+      <button id="_signup-confirm"
         style="width:100%;padding:13px;border-radius:10px;
                background:#16a34a;color:#fff;border:none;
-               font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;">
-        확인
+               font-size:15px;font-weight:600;font-family:inherit;cursor:pointer">
+        아이디 만들기
       </button>
     </div>`;
 
   document.body.appendChild(overlay);
 
-  const input = document.getElementById('_seed-input');
+  const input = document.getElementById('_signup-name');
   input.focus();
   input.addEventListener('focus', () => input.style.borderColor = '#16a34a');
   input.addEventListener('blur',  () => input.style.borderColor = '#e5e7eb');
 
-  const _confirm = async () => {
-    const words = input.value.trim();
-    if (!words) { input.focus(); return; }
+  document.getElementById('_signup-back').onclick = () => {
     overlay.remove();
-    const ipv6 = await _seedToGUID(words);
-
-    // L1에서 기존 등록 여부 조회 → handle 자동 복원
-    let existingHandle = null;
-    try {
-      const filter = encodeURIComponent(`guid='${ipv6}'`);
-      const res = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
-      if (res.ok) {
-        const data = await res.json();
-        existingHandle = data.items?.[0]?.handle || null;
-      }
-    } catch(e) { console.warn('[Auth] L1 조회 실패:', e.message); }
-
-    _showTrustPopup(resolve, ipv6, existingHandle);
+    _showSignPopup(resolve);
   };
 
-  document.getElementById('_seed-back').onclick    = () => { overlay.remove(); _showEntryPopup(resolve); };
-  document.getElementById('_seed-confirm').onclick = _confirm;
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') _confirm(); });
+  const _doSignUp = async () => {
+    const name = input.value.trim();
+    if (!name) { input.focus(); return; }
+
+    const btn = document.getElementById('_signup-confirm');
+    btn.disabled = true;
+    btn.textContent = '생성 중…';
+
+    const ipv6 = _uuidToIPv6();
+    overlay.remove();
+    _showTrustPopup(resolve, ipv6, null, name);
+  };
+
+  document.getElementById('_signup-confirm').onclick = _doSignUp;
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') _doSignUp(); });
 }
 
 // ── 기기 신뢰 선택 팝업 ─────────────────────────────────
-function _showTrustPopup(resolve, ipv6, existingHandle = null) {
+// existingUser: Sign-in 시 L1에서 가져온 사용자 정보
+// newName: Sign-up 시 입력한 이름
+function _showTrustPopup(resolve, ipv6, existingUser = null, newName = null) {
   const overlay = document.createElement('div');
   overlay.id = '_trust-overlay';
   overlay.style.cssText = [
@@ -217,15 +300,46 @@ function _showTrustPopup(resolve, ipv6, existingHandle = null) {
 
   document.body.appendChild(overlay);
 
-  const _save = (storage) => {
+  const _save = async (storage) => {
     overlay.remove();
-    const user = existingHandle
-      ? { ipv6, isGuest: false, isTemp: false,
-          handle: existingHandle,
-          name: existingHandle.replace(/@(.+)#.+/, '$1'),
-          registeredAt: new Date().toISOString() }
-      : { ipv6, isGuest: false, isTemp: true,
-          registeredAt: new Date().toISOString() };
+
+    let user;
+    if (existingUser) {
+      // Sign-in: L1에서 복원
+      user = { ipv6, ...existingUser };
+    } else {
+      // Sign-up: 새 GUID + 이름 → L1 등록
+      user = {
+        ipv6, isGuest: false, isTemp: false,
+        registeredAt: new Date().toISOString()
+      };
+      storage.setItem(STORE_KEY, JSON.stringify(user));
+      setUser(user);
+
+      // L1 자동 등록
+      if (newName) {
+        const nickname_hash = await _sha256('ko:' + newName);
+        const handle        = '@' + newName + '#' + ipv6.slice(-4);
+        try {
+          await fetch(L1_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              guid: ipv6, nickname_hash, handle,
+              native_lang: navigator.language?.slice(0,2) || 'ko',
+              is_public: true
+            })
+          });
+          user.handle = handle;
+          user.name   = newName;
+          user.isTemp = false;
+          console.info('[L1] 등록 완료:', handle);
+        } catch(e) {
+          console.warn('[L1] 등록 실패:', e.message);
+        }
+      }
+    }
+
     storage.setItem(STORE_KEY, JSON.stringify(user));
     setUser(user);
     resolve(user);
@@ -258,7 +372,7 @@ export function _isGDCUser() {
   } catch { return false; }
 }
 
-// ── L1 PocketBase 등록 (upsert) ──────────────────────────
+// ── L1 PocketBase 등록 (설정 창에서 호출) ────────────────
 export async function _registerToL1(name) {
   const user = _USER;
   if (!user) return null;
