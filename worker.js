@@ -205,6 +205,10 @@ export default {
     if (pathname === '/signal/poll')   return handleSignalPoll(request, env, corsHeaders);
     if (pathname === '/signal/delete') return handleSignalDelete(request, env, corsHeaders);
 
+    // ── 사용자 P2P 등록 (GDUDA Phase 1) ────────────────────────
+    if (pathname === '/p2p/register' && request.method === 'POST')
+      return handleP2PRegister(request, env, corsHeaders);
+
     // ── 사용자 검색 (GDUDA Phase 1) ──────────────────────────
     if (pathname === '/search/users')  return handleSearchUsers(request, env, corsHeaders);
 
@@ -953,6 +957,38 @@ async function handleSignalDelete(request, env, corsHeaders) {
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
   }
   return _err(400, 'ID_OR_FROM_GUID_REQUIRED', '', corsHeaders);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// GDUDA Phase 1 — /p2p/register
+// global_profiles에 사용자 등록 (HLR 역할)
+// ═══════════════════════════════════════════════════════════
+async function handleP2PRegister(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', '', corsHeaders);
+
+  const { guid, handle, nickname, nickname_hash, country_code, region, current_l1 } = body;
+  if (!guid)   return _err(400, 'MISSING_FIELDS', 'guid 필수', corsHeaders);
+  if (!handle) return _err(400, 'MISSING_FIELDS', 'handle 필수', corsHeaders);
+
+  const sbH = _sbServiceHeaders(env);
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/global_profiles`, {
+    method: 'POST',
+    headers: { ...sbH, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      guid, handle, nickname: nickname || null,
+      nickname_hash: nickname_hash || null,
+      country_code:  country_code  || null,
+      region:        region        || null,
+      current_l1:    current_l1   || 'https://l1-hanlim.gopang.net',
+      l1_updated_at: new Date().toISOString(),
+      is_public: true,
+    }),
+  });
+
+  if (!res.ok) return _err(500, 'DB_ERROR', await res.text(), corsHeaders);
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
 }
 
 async function handleSearchUsers(request, env, corsHeaders) {
