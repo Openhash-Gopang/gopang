@@ -246,7 +246,7 @@ function _showFaceCaptureUI(onCapture) {
 // ── 기기 핑거프린트 (SHA-256, IPv6 유도용) ──────────────
 async function _buildDeviceFingerprint() {
   const raw = [
-    navigator.language,
+    navigator.language?.slice(0,2) || '',
     screen.width + 'x' + screen.height,
     screen.colorDepth,
     Intl.DateTimeFormat().resolvedOptions().timeZone,
