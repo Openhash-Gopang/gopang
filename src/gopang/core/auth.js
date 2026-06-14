@@ -1,10 +1,8 @@
 /**
- * core/auth.js — 사용자 인증·등록 v3.1
- * - Sign-in: 휴대폰 뒷 8자리 → L1 조회 → 자동 로그인
- * - Sign-up: 휴대폰 뒷 8자리 → GUID 생성 → L1 등록
- * - 익명 모드: randomUUID → sessionStorage
- * - 내 기기: localStorage / 공용 기기: sessionStorage
- * - 테스트 모드: OTP 인증 생략
+ * core/auth.js — 사용자 인증·등록 v3.2
+ * - 휴대폰 뒷 8자리 입력 → L1 조회 → 로그인 또는 자동 등록
+ * - 익명 모드 없음
+ * - 항상 localStorage 저장 (내 기기)
  */
 import { setUser, _USER, USER_GUID, L1_URL } from './state.js';
 import { appendBubble } from '../ui/bubble.js';
@@ -17,21 +15,11 @@ export async function _sha256(str) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-// ── 8자리 번호 → IPv6 형식 GUID ─────────────────────────
+// ── 8자리 → IPv6 형식 GUID ──────────────────────────────
 async function _phoneToIPv6(digits8) {
   const hash = await _sha256('gopang-phone:' + digits8);
   const groups = [];
   for (let i = 0; i < 8; i++) groups.push(hash.slice(i*4, i*4+4));
-  groups[0] = '2601';
-  groups[1] = 'db80';
-  return groups.join(':');
-}
-
-// ── UUID → IPv6 형식 GUID (익명용) ──────────────────────
-function _uuidToIPv6() {
-  const uuid = crypto.randomUUID().replace(/-/g, '');
-  const groups = [];
-  for (let i = 0; i < 8; i++) groups.push(uuid.slice(i*4, i*4+4));
   groups[0] = '2601';
   groups[1] = 'db80';
   return groups.join(':');
@@ -45,11 +33,6 @@ function _loadStored() {
   } catch { return null; }
 }
 
-// ── 입력값 검증: 숫자 8자리 ─────────────────────────────
-function _validatePhone(val) {
-  return /^\d{8}$/.test(val.trim());
-}
-
 // ── 사용자 초기화 (앱 시작 시 1회) ──────────────────────
 export async function initAuth() {
   const stored = _loadStored();
@@ -61,14 +44,14 @@ export async function initAuth() {
   }
 
   return new Promise((resolve) => {
-    _showSignPopup(resolve);
+    _showPhonePopup(resolve);
   });
 }
 
-// ── Sign 팝업 ────────────────────────────────────────────
-function _showSignPopup(resolve) {
+// ── 전화번호 입력 팝업 ───────────────────────────────────
+function _showPhonePopup(resolve) {
   const overlay = document.createElement('div');
-  overlay.id = '_sign-overlay';
+  overlay.id = '_phone-overlay';
   overlay.style.cssText = [
     'position:fixed;inset:0;z-index:9999',
     'background:rgba(0,0,0,0.4)',
@@ -80,352 +63,99 @@ function _showSignPopup(resolve) {
     <div style="background:#fff;border-radius:20px;padding:32px 24px;
                 width:100%;max-width:340px;box-sizing:border-box;">
 
-      <!-- 전화번호 입력 필드 -->
-      <div style="margin-bottom:12px">
-        <div style="display:flex;align-items:center;
-                    border:1px solid #e5e7eb;border-radius:12px;
-                    background:#f9fafb;overflow:hidden">
-          <div style="padding:0 14px;display:flex;align-items:center;
-                      border-right:1px solid #e5e7eb;height:50px;flex-shrink:0">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
-                 stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
-            </svg>
-          </div>
-          <input id="_signin-handle" type="tel" maxlength="8"
-            placeholder="휴대폰 뒷 8자리  예: 96627170"
-            style="flex:1;padding:0 12px;height:50px;border:none;background:transparent;
-                   font-size:14px;font-family:inherit;outline:none;color:#111827;
-                   min-width:0;letter-spacing:0.5px"
-            autocomplete="off" inputmode="numeric"/>
-          <button id="_signin-btn"
-            style="padding:0 14px;height:50px;border:none;background:transparent;
-                   cursor:pointer;display:flex;align-items:center;
-                   border-left:1px solid #e5e7eb;flex-shrink:0">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
-                 stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13"/>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
-          </button>
+      <div style="display:flex;align-items:center;
+                  border:1px solid #e5e7eb;border-radius:12px;
+                  background:#f9fafb;overflow:hidden;margin-bottom:8px"
+           id="_phone-field">
+        <div style="padding:0 14px;display:flex;align-items:center;
+                    border-right:1px solid #e5e7eb;height:52px;flex-shrink:0">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+               stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.56 3.35 2 2 0 0 1 3.53 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 6 6l.87-.87a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.5 16z"/>
+          </svg>
         </div>
-        <div id="_signin-error" style="display:none;font-size:12px;color:#dc2626;
-             margin-top:6px;padding:0 4px"></div>
+        <input id="_phone-input" type="tel" maxlength="8"
+          placeholder="휴대폰 뒷 8자리"
+          style="flex:1;padding:0 14px;height:52px;border:none;background:transparent;
+                 font-size:16px;font-family:inherit;outline:none;color:#111827;
+                 min-width:0;letter-spacing:2px"
+          autocomplete="off" inputmode="numeric"/>
+        <button id="_phone-btn"
+          style="padding:0 16px;height:52px;border:none;background:transparent;
+                 cursor:pointer;display:flex;align-items:center;
+                 border-left:1px solid #e5e7eb;flex-shrink:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+               stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
       </div>
-
-      <!-- 구분선 -->
-      <div style="display:flex;align-items:center;gap:10px;margin:16px 0">
-        <div style="flex:1;height:1px;background:#f3f4f6"></div>
-        <span style="font-size:12px;color:#d1d5db">또는</span>
-        <div style="flex:1;height:1px;background:#f3f4f6"></div>
+      <div id="_phone-error" style="display:none;font-size:12px;color:#dc2626;
+           padding:0 4px;margin-bottom:4px"></div>
+      <div id="_phone-hint" style="font-size:12px;color:#9ca3af;padding:0 4px">
+        예: 010-9662-7170 → 96627170
       </div>
-
-      <!-- Sign-up -->
-      <button id="_signup-btn"
-        style="width:100%;padding:13px;border-radius:12px;
-               background:#16a34a;border:none;color:#fff;
-               font-size:15px;font-weight:600;font-family:inherit;
-               cursor:pointer;margin-bottom:10px;
-               display:flex;align-items:center;justify-content:center;gap:8px">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <line x1="19" y1="8" x2="19" y2="14"/>
-          <line x1="22" y1="11" x2="16" y2="11"/>
-        </svg>
-        새 아이디 만들기
-      </button>
-
-      <!-- 익명 모드 -->
-      <button id="_anon-btn"
-        style="width:100%;padding:12px;border-radius:12px;
-               background:transparent;border:1px solid #e5e7eb;
-               color:#6b7280;font-size:14px;font-family:inherit;cursor:pointer;
-               display:flex;align-items:center;justify-content:center;gap:8px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-          <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-          <line x1="1" y1="1" x2="23" y2="23"/>
-        </svg>
-        익명 모드
-      </button>
 
     </div>`;
 
   document.body.appendChild(overlay);
 
-  // 외부 클릭 시 익명 모드
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) {
-      overlay.remove();
-      const user = {
-        ipv6: _uuidToIPv6(),
-        isGuest: true, isAnon: true,
-        registeredAt: new Date().toISOString()
-      };
-      sessionStorage.setItem(STORE_KEY, JSON.stringify(user));
-      setUser(user);
-      resolve(user);
-    }
-  });
+  const input  = document.getElementById('_phone-input');
+  const field  = document.getElementById('_phone-field');
+  const errEl  = document.getElementById('_phone-error');
 
-  const input = document.getElementById('_signin-handle');
   input.focus();
-  input.addEventListener('focus', () => input.parentElement.style.borderColor = '#16a34a');
-  input.addEventListener('blur',  () => input.parentElement.style.borderColor = '#e5e7eb');
-
-  // 숫자만 입력
+  input.addEventListener('focus', () => field.style.borderColor = '#16a34a');
+  input.addEventListener('blur',  () => field.style.borderColor = '#e5e7eb');
   input.addEventListener('input', () => {
     input.value = input.value.replace(/\D/g, '').slice(0, 8);
+    errEl.style.display = 'none';
   });
 
-  // Sign-in
-  const _doSignIn = async () => {
+  const _submit = async () => {
     const val = input.value.trim();
-    const errEl = document.getElementById('_signin-error');
-    errEl.style.display = 'none';
 
-    if (!_validatePhone(val)) {
-      errEl.textContent = '휴대폰 뒷 8자리를 입력해 주세요.';
+    if (!/^\d{8}$/.test(val)) {
+      errEl.textContent = '숫자 8자리를 입력해 주세요.';
       errEl.style.display = 'block';
       input.focus();
       return;
     }
 
-    const btn = document.getElementById('_signin-btn');
+    const btn = document.getElementById('_phone-btn');
     btn.style.opacity = '0.4';
     btn.style.pointerEvents = 'none';
+    errEl.style.display = 'none';
 
     try {
       const handle = '@' + val;
+      const ipv6   = await _phoneToIPv6(val);
+
+      // L1 조회
       const filter = encodeURIComponent(`handle='${handle}'`);
       const res    = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
       const data   = await res.json();
       const found  = data.items?.[0];
 
-      if (!found?.guid) {
-        errEl.textContent = '등록된 아이디가 없습니다. 새 아이디를 만들어 주세요.';
-        errEl.style.display = 'block';
-        btn.style.opacity = '1';
-        btn.style.pointerEvents = '';
-        return;
-      }
+      let user;
+      if (found?.guid) {
+        // 기존 사용자 → 로그인
+        user = {
+          ipv6: found.guid, handle: found.handle,
+          name: val, isGuest: false, isTemp: false,
+          registeredAt: found.created
+        };
+        console.info('[Auth] 로그인:', handle);
+      } else {
+        // 신규 사용자 → 자동 등록
+        const nickname_hash = await _sha256('phone:' + val);
+        user = {
+          ipv6, handle, name: val,
+          isGuest: false, isTemp: false,
+          registeredAt: new Date().toISOString()
+        };
 
-      overlay.remove();
-      _showTrustPopup(resolve, found.guid, {
-        handle: found.handle,
-        name: val,
-        isGuest: false, isTemp: false,
-        registeredAt: found.created
-      });
-
-    } catch(e) {
-      errEl.textContent = '네트워크 오류. 다시 시도해 주세요.';
-      errEl.style.display = 'block';
-      btn.style.opacity = '1';
-      btn.style.pointerEvents = '';
-    }
-  };
-
-  document.getElementById('_signin-btn').onclick = _doSignIn;
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') _doSignIn(); });
-
-  // Sign-up
-  document.getElementById('_signup-btn').onclick = () => {
-    overlay.remove();
-    _showSignUpPopup(resolve);
-  };
-
-  // 익명 모드
-  document.getElementById('_anon-btn').onclick = () => {
-    overlay.remove();
-    const user = {
-      ipv6: _uuidToIPv6(),
-      isGuest: true, isAnon: true,
-      registeredAt: new Date().toISOString()
-    };
-    sessionStorage.setItem(STORE_KEY, JSON.stringify(user));
-    setUser(user);
-    resolve(user);
-  };
-}
-
-// ── Sign-up 팝업 ─────────────────────────────────────────
-function _showSignUpPopup(resolve) {
-  const overlay = document.createElement('div');
-  overlay.id = '_signup-overlay';
-  overlay.style.cssText = [
-    'position:fixed;inset:0;z-index:9999',
-    'background:rgba(0,0,0,0.4)',
-    'display:flex;align-items:center;justify-content:center',
-    'padding:24px;box-sizing:border-box',
-  ].join(';');
-
-  overlay.innerHTML = `
-    <div style="background:#fff;border-radius:20px;padding:32px 24px;
-                width:100%;max-width:340px;box-sizing:border-box;">
-      <button id="_signup-back"
-        style="background:none;border:none;color:#16a34a;font-size:14px;
-               cursor:pointer;padding:0;margin-bottom:20px;font-family:inherit">
-        ← 뒤로
-      </button>
-      <h2 style="margin:0 0 6px;font-size:18px;font-weight:600;color:#111827;
-                 letter-spacing:-0.4px">새 아이디 만들기</h2>
-      <p style="margin:0 0 20px;font-size:13px;color:#6b7280;line-height:1.6">
-        휴대폰 뒷 8자리를 입력하세요.<br>
-        <span style="color:#9ca3af;font-size:12px">아이디: @96627170 형식으로 생성됩니다</span>
-      </p>
-
-      <div style="border:1px solid #e5e7eb;border-radius:12px;
-                  background:#f9fafb;overflow:hidden;margin-bottom:10px">
-        <div style="display:flex;align-items:center">
-          <div style="padding:0 14px;display:flex;align-items:center;
-                      border-right:1px solid #e5e7eb;height:50px;flex-shrink:0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.56 3.35 2 2 0 0 1 3.53 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 6 6l.87-.87a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.5 16z"/>
-            </svg>
-          </div>
-          <input id="_signup-phone" type="tel" maxlength="8"
-            placeholder="뒷 8자리  예: 96627170"
-            style="flex:1;padding:0 12px;height:50px;border:none;background:transparent;
-                   font-size:15px;font-family:inherit;outline:none;color:#111827;
-                   min-width:0;letter-spacing:1px"
-            autocomplete="off" inputmode="numeric"/>
-        </div>
-      </div>
-      <div id="_signup-error" style="display:none;font-size:12px;color:#dc2626;
-           margin-bottom:10px;padding:0 4px"></div>
-
-      <button id="_signup-confirm"
-        style="width:100%;padding:13px;border-radius:12px;
-               background:#16a34a;color:#fff;border:none;
-               font-size:15px;font-weight:600;font-family:inherit;cursor:pointer">
-        아이디 만들기
-      </button>
-    </div>`;
-
-  document.body.appendChild(overlay);
-
-  const input = document.getElementById('_signup-phone');
-  input.focus();
-  input.addEventListener('focus', () => input.parentElement.parentElement.style.borderColor = '#16a34a');
-  input.addEventListener('blur',  () => input.parentElement.parentElement.style.borderColor = '#e5e7eb');
-  input.addEventListener('input', () => {
-    input.value = input.value.replace(/\D/g, '').slice(0, 8);
-  });
-
-  document.getElementById('_signup-back').onclick = () => {
-    overlay.remove();
-    _showSignPopup(resolve);
-  };
-
-  const _doSignUp = async () => {
-    const val    = input.value.trim();
-    const errEl  = document.getElementById('_signup-error');
-    errEl.style.display = 'none';
-
-    if (!_validatePhone(val)) {
-      errEl.textContent = '휴대폰 뒷 8자리를 입력해 주세요.';
-      errEl.style.display = 'block';
-      input.focus();
-      return;
-    }
-
-    const btn = document.getElementById('_signup-confirm');
-    btn.disabled = true;
-    btn.textContent = '확인 중…';
-
-    // 중복 확인
-    try {
-      const handle = '@' + val;
-      const filter = encodeURIComponent(`handle='${handle}'`);
-      const res    = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
-      const data   = await res.json();
-      if (data.items?.[0]) {
-        errEl.textContent = '이미 사용 중인 번호입니다. 로그인을 시도해 주세요.';
-        errEl.style.display = 'block';
-        btn.disabled = false;
-        btn.textContent = '아이디 만들기';
-        return;
-      }
-    } catch(e) {
-      errEl.textContent = '네트워크 오류. 다시 시도해 주세요.';
-      errEl.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = '아이디 만들기';
-      return;
-    }
-
-    const ipv6 = await _phoneToIPv6(val);
-    overlay.remove();
-    _showTrustPopup(resolve, ipv6, null, val);
-  };
-
-  document.getElementById('_signup-confirm').onclick = _doSignUp;
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') _doSignUp(); });
-}
-
-// ── 기기 신뢰 선택 팝업 ─────────────────────────────────
-function _showTrustPopup(resolve, ipv6, existingUser = null, phone8 = null) {
-  const overlay = document.createElement('div');
-  overlay.id = '_trust-overlay';
-  overlay.style.cssText = [
-    'position:fixed;inset:0;z-index:9999',
-    'background:rgba(0,0,0,0.4)',
-    'display:flex;align-items:center;justify-content:center',
-    'padding:24px;box-sizing:border-box',
-  ].join(';');
-
-  overlay.innerHTML = `
-    <div style="background:#fff;border-radius:20px;padding:36px 24px;
-                width:100%;max-width:340px;box-sizing:border-box;text-align:center;">
-      <h2 style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;
-                 letter-spacing:-0.4px">이 기기를<br>신뢰하시겠습니까?</h2>
-      <p style="margin:0 0 28px;font-size:13px;color:#6b7280;line-height:1.6">
-        내 기기를 선택하면 다음에 자동으로 로그인됩니다
-      </p>
-      <button id="_trust-mine"
-        style="width:100%;padding:13px;border-radius:12px;
-               background:#16a34a;color:#fff;border:none;
-               font-size:15px;font-weight:600;font-family:inherit;
-               cursor:pointer;margin-bottom:10px;">
-        내 기기 (자동 로그인 유지)
-      </button>
-      <button id="_trust-public"
-        style="width:100%;padding:12px;border-radius:12px;
-               background:transparent;color:#6b7280;
-               border:1px solid #e5e7eb;
-               font-size:14px;font-family:inherit;cursor:pointer;">
-        공용 기기 (탭 닫으면 삭제)
-      </button>
-    </div>`;
-
-  document.body.appendChild(overlay);
-
-  const _save = async (storage) => {
-    overlay.remove();
-    let user;
-
-    if (existingUser) {
-      // Sign-in: L1에서 복원
-      user = { ipv6, ...existingUser };
-    } else {
-      // Sign-up: 새 아이디 생성 + L1 등록
-      const handle        = '@' + phone8;
-      const nickname_hash = await _sha256('phone:' + phone8);
-      user = {
-        ipv6, handle, name: phone8,
-        isGuest: false, isTemp: false,
-        registeredAt: new Date().toISOString()
-      };
-      storage.setItem(STORE_KEY, JSON.stringify(user));
-      setUser(user);
-
-      try {
         await fetch(L1_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -435,19 +165,24 @@ function _showTrustPopup(resolve, ipv6, existingUser = null, phone8 = null) {
             is_public: true
           })
         });
-        console.info('[L1] 등록 완료:', handle);
-      } catch(e) {
-        console.warn('[L1] 등록 실패:', e.message);
+        console.info('[Auth] 신규 등록:', handle);
       }
-    }
 
-    storage.setItem(STORE_KEY, JSON.stringify(user));
-    setUser(user);
-    resolve(user);
+      localStorage.setItem(STORE_KEY, JSON.stringify(user));
+      setUser(user);
+      overlay.remove();
+      resolve(user);
+
+    } catch(e) {
+      errEl.textContent = '네트워크 오류. 다시 시도해 주세요.';
+      errEl.style.display = 'block';
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = '';
+    }
   };
 
-  document.getElementById('_trust-mine').onclick   = () => _save(localStorage);
-  document.getElementById('_trust-public').onclick = () => _save(sessionStorage);
+  document.getElementById('_phone-btn').onclick = _submit;
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') _submit(); });
 }
 
 // ── 등록 여부 판별 ────────────────────────────────────────
@@ -504,8 +239,6 @@ export async function _registerToL1(name) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ guid, nickname_hash, handle, is_public: true }),
         });
-      } else {
-        throw new Error('레코드 조회 실패: ' + getRes.status);
       }
     }
 
@@ -513,13 +246,7 @@ export async function _registerToL1(name) {
     user.name    = name;
     user.isGuest = false;
     user.isTemp  = false;
-
-    if (localStorage.getItem(STORE_KEY)) {
-      localStorage.setItem(STORE_KEY, JSON.stringify(user));
-    } else {
-      sessionStorage.setItem(STORE_KEY, JSON.stringify(user));
-    }
-
+    localStorage.setItem(STORE_KEY, JSON.stringify(user));
     console.info('[L1] 등록 완료:', handle);
     return handle;
 
