@@ -21,12 +21,23 @@ export async function initAuth() {
   const fpHex     = await _buildDeviceFingerprint();
   const ipv6      = await _buildIPv6Identity(fpHex);
 
+  // L0 자동 로그인
   if (stored?.ipv6 && stored?.fpHex === fpHex) {
     console.info('[Auth] L0 자동 로그인 ✅', stored.ipv6);
     setUser(stored);
+
+    // [7-A] 기존 등록 사용자 fpHex L1 동기화 (최초 1회)
+    if (stored.handle && !stored.fpHexSynced) {
+      _patchFpHexToL1(stored, fpHex).then(() => {
+        stored.fpHexSynced = true;
+        localStorage.setItem(STORE_KEY, JSON.stringify(stored));
+      });
+    }
+
     return stored;
   }
 
+  // 기기 변경 감지
   if (stored?.ipv6 && stored?.fpHex !== fpHex) {
     console.warn('[Auth] 기기 변경 감지 — 복원 필요');
     _showRestoreUI(stored, fpHex, ipv6);
@@ -35,10 +46,71 @@ export async function initAuth() {
     return user;
   }
 
+  // [1-B] localStorage 없음 → L1에서 fpHex로 기존 등록 여부 조회
+  try {
+    const filter = encodeURIComponent(`fpHex='${fpHex}'`);
+    const res = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+    if (res.ok) {
+      const data = await res.json();
+      const found = data.items?.[0];
+      if (found?.handle) {
+        // 동일 기기, 타 브라우저 → 기존 아이디 발견 → 복원 팝업
+        return new Promise((resolve) => {
+          const overlay = document.createElement('div');
+          overlay.style.cssText = [
+            'position:fixed;inset:0;background:rgba(0,0,0,0.6);',
+            'display:flex;align-items:center;justify-content:center;z-index:9999'
+          ].join('');
+          overlay.innerHTML = `
+            <div style="background:#fff;border-radius:16px;padding:24px;width:300px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:14px;color:#6b7280;">이 기기의 고팡 아이디</p>
+              <strong style="font-size:20px;color:#16a34a;">${found.handle}</strong>
+              <p style="font-size:12px;color:#9ca3af;margin:8px 0 20px;">이 아이디로 로그인하시겠습니까?</p>
+              <button id="_l1-confirm" style="width:100%;background:#16a34a;color:#fff;border:none;
+                border-radius:10px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px;">
+                로그인
+              </button>
+              <button id="_l1-cancel" style="width:100%;background:transparent;color:#9ca3af;
+                border:1px solid #e5e7eb;border-radius:10px;padding:10px;font-size:13px;cursor:pointer;">
+                Guest로 계속
+              </button>
+            </div>`;
+          document.body.appendChild(overlay);
+
+          document.getElementById('_l1-confirm').onclick = () => {
+            overlay.remove();
+            const restored = {
+              ipv6, fpHex,
+              handle: found.handle,
+              name: found.handle.replace(/@(.+)#.+/, '$1'),
+              isGuest: false, isTemp: false,
+              registeredAt: found.created
+            };
+            setUser(restored);
+            localStorage.setItem(STORE_KEY, JSON.stringify(restored));
+            resolve(restored);
+          };
+
+          document.getElementById('_l1-cancel').onclick = () => {
+            overlay.remove();
+            const guest = { ipv6, fpHex, isTemp: true, isGuest: true,
+                            registeredAt: new Date().toISOString() };
+            setUser(guest);
+            localStorage.setItem(STORE_KEY, JSON.stringify(guest));
+            resolve(guest);
+          };
+        });
+      }
+    }
+  } catch(e) {
+    console.warn('[Auth] L1 fpHex 조회 실패 (오프라인?):', e.message);
+  }
+
+  // 신규 게스트
   console.info('[Auth] 신규 게스트 — 등록 없이 진입');
   const user = { ipv6, fpHex, isTemp: true, isGuest: true, registeredAt: new Date().toISOString() };
   setUser(user);
-  localStorage.setItem('gopang_user_v3', JSON.stringify(user));
+  localStorage.setItem(STORE_KEY, JSON.stringify(user));
   return user;
 }
 
@@ -58,6 +130,14 @@ export function _isTypeBorC() {
   } catch(e) { return false; }
 }
 
+// ── GDC 사용자 판별 [5-A] ────────────────────────────────
+export function _isGDCUser() {
+  try {
+    const s = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+    return !!(s?.gdcEnabled && s?.walletPubKey);
+  } catch { return false; }
+}
+
 // ── L1 PocketBase 등록 (upsert) ──────────────────────────
 export async function _registerToL1(name) {
   const user = _USER;
@@ -66,11 +146,29 @@ export async function _registerToL1(name) {
   const nickname_hash = await _sha256('ko:' + name);
   const handle        = '@' + name + '#' + guid.slice(-4);
 
+  // [2-B] fpHex 중복 검증
+  if (user.fpHex) {
+    try {
+      const filter = encodeURIComponent(`fpHex='${user.fpHex}'`);
+      const chkRes = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+      if (chkRes.ok) {
+        const chkData = await chkRes.json();
+        const existing = chkData.items?.[0];
+        if (existing?.handle && existing.handle !== handle) {
+          alert('이 기기는 이미 다른 사용자에게 등록된 기기입니다.\n고팡 아이디는 기기당 1개만 등록할 수 있습니다.');
+          return null;
+        }
+      }
+    } catch(e) {
+      console.warn('[L1] fpHex 중복 검증 실패:', e.message);
+    }
+  }
+
   try {
     const postRes = await fetch(L1_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ guid, nickname_hash, handle,
+      body: JSON.stringify({ guid, nickname_hash, handle, fpHex: user.fpHex,
         native_lang: navigator.language?.slice(0,2) || 'ko',
         is_public: true }),
     });
@@ -86,7 +184,7 @@ export async function _registerToL1(name) {
         await fetch(`${L1_URL}/${existingId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nickname_hash, handle, is_public: true }),
+          body: JSON.stringify({ nickname_hash, handle, fpHex: user.fpHex, is_public: true }),
         });
       } else {
         throw new Error('레코드 조회 실패: ' + getRes.status);
@@ -94,8 +192,8 @@ export async function _registerToL1(name) {
     }
 
     // 성공 → _USER + localStorage 업데이트
-    user.handle = handle;
-    user.name   = name;
+    user.handle  = handle;
+    user.name    = name;
     user.isGuest = false;
     user.isTemp  = false;
     localStorage.setItem('gopang_user_v3', JSON.stringify(user));
@@ -106,6 +204,56 @@ export async function _registerToL1(name) {
     console.warn('[L1] 등록 실패:', e.message);
     return null;
   }
+}
+
+// ── L1 fpHex 동기화 (기존 사용자 마이그레이션) [7-A] ─────
+async function _patchFpHexToL1(stored, fpHex) {
+  try {
+    const filter = encodeURIComponent(`guid='${stored.ipv6}'`);
+    const res = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const id = data.items?.[0]?.id;
+    if (!id) return;
+    await fetch(`${L1_URL}/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fpHex })
+    });
+    console.info('[Auth] L1 fpHex 동기화 완료');
+  } catch(e) {
+    console.warn('[Auth] L1 fpHex 동기화 실패:', e.message);
+  }
+}
+
+// ── 기기 완전 초기화 [4-A] ───────────────────────────────
+export async function _deviceFullReset() {
+  if (!confirm('기기를 완전 초기화합니다.\n판매·양도 전 실행하세요.\n\n⚠️ 이 기기의 모든 고팡 데이터가 삭제됩니다.')) return;
+  try {
+    const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+    if (stored?.fpHex) {
+      const filter = encodeURIComponent(`fpHex='${stored.fpHex}'`);
+      const res = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+      if (res.ok) {
+        const data = await res.json();
+        const id = data.items?.[0]?.id;
+        if (id) await fetch(`${L1_URL}/${id}`, { method: 'DELETE' });
+      }
+    }
+  } catch(e) { console.warn('[Reset] L1 삭제 실패:', e.message); }
+
+  localStorage.clear();
+  sessionStorage.clear();
+
+  const dbs = await indexedDB.databases?.() || [];
+  for (const db of dbs) indexedDB.deleteDatabase(db.name);
+
+  const keys = await caches.keys();
+  await Promise.all(keys.map(k => caches.delete(k)));
+  const regs = await navigator.serviceWorker.getRegistrations();
+  await Promise.all(regs.map(r => r.unregister()));
+
+  location.reload();
 }
 
 // ── gopangAuth — 레벨별 인증 요구 ────────────────────────
