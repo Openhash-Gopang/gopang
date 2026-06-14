@@ -456,38 +456,27 @@ function _showPhonePopup(resolve) {
 
       let user;
       if (found?.guid) {
+        // 기존 사용자 → 바로 로그인
         user = {
           ipv6: found.guid, handle: found.handle,
           e164: found.e164 || e164,
           country_code: found.country_code || selectedCountry,
+          nickname: found.nickname || '',
+          region: found.region || '',
           name: val, isGuest: false, isTemp: false,
           registeredAt: found.created
         };
         console.info('[Auth] 로그인:', handle);
+        localStorage.setItem(STORE_KEY, JSON.stringify(user));
+        setUser(user);
+        overlay.remove();
+        resolve(user);
       } else {
-        const nickname_hash = await _sha256('phone:' + e164);
-        user = {
-          ipv6, handle, e164, country_code: selectedCountry,
-          name: val, isGuest: false, isTemp: false,
-          registeredAt: new Date().toISOString()
-        };
-        await fetch(L1_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            guid: ipv6, nickname_hash, handle,
-            e164, country_code: selectedCountry,
-            native_lang: navigator.language?.slice(0,2) || 'ko',
-            is_public: true
-          })
-        });
-        console.info('[Auth] 신규 등록:', handle, e164);
+        // 신규 사용자 → 닉네임 입력 단계로 전환
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = '';
+        _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, resolve });
       }
-
-      localStorage.setItem(STORE_KEY, JSON.stringify(user));
-      setUser(user);
-      overlay.remove();
-      resolve(user);
 
     } catch(e) {
       errEl.textContent = '네트워크 오류. 다시 시도해 주세요.';
@@ -499,6 +488,118 @@ function _showPhonePopup(resolve) {
 
   document.getElementById('_phone-btn').onclick = _submit;
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') _submit(); });
+}
+
+// ── 닉네임 입력 단계 ─────────────────────────────────────
+function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, resolve }) {
+  const card = overlay.querySelector('div');
+  card.innerHTML = `
+    <div style="margin-bottom:20px">
+      <div style="font-size:16px;font-weight:600;color:#111827;margin-bottom:4px">닉네임 설정</div>
+      <div style="font-size:13px;color:#6b7280">다른 사용자가 검색할 때 사용됩니다</div>
+    </div>
+
+    <!-- 닉네임 입력 -->
+    <div style="display:flex;align-items:center;
+                border:1px solid #e5e7eb;border-radius:12px;
+                background:#f9fafb;overflow:hidden;margin-bottom:10px"
+         id="_nick-field">
+      <input id="_nick-input" type="text" maxlength="20"
+        placeholder="닉네임 (예: 홍길동, James)"
+        style="flex:1;padding:0 14px;height:52px;border:none;background:transparent;
+               font-size:15px;font-family:inherit;outline:none;color:#111827;min-width:0"
+        autocomplete="off"/>
+    </div>
+
+    <!-- 지역 입력 (선택) -->
+    <div style="display:flex;align-items:center;
+                border:1px solid #e5e7eb;border-radius:12px;
+                background:#f9fafb;overflow:hidden;margin-bottom:8px"
+         id="_region-field">
+      <input id="_region-input" type="text" maxlength="30"
+        placeholder="지역 (선택, 예: 서울, New York)"
+        style="flex:1;padding:0 14px;height:48px;border:none;background:transparent;
+               font-size:14px;font-family:inherit;outline:none;color:#111827;min-width:0"
+        autocomplete="off"/>
+    </div>
+
+    <div id="_nick-error" style="display:none;font-size:12px;color:#dc2626;padding:0 4px;margin-bottom:8px"></div>
+
+    <!-- 완료 버튼 -->
+    <button id="_nick-btn"
+      style="width:100%;height:52px;background:#16a34a;color:#fff;
+             border:none;border-radius:12px;font-size:16px;font-weight:600;
+             cursor:pointer;font-family:inherit">
+      가입 완료
+    </button>
+    <div style="font-size:12px;color:#9ca3af;text-align:center;margin-top:10px">
+      handle: <span style="color:#16a34a">${handle}</span>
+    </div>`;
+
+  const nickInput   = document.getElementById('_nick-input');
+  const regionInput = document.getElementById('_region-input');
+  const nickField   = document.getElementById('_nick-field');
+  const nickErr     = document.getElementById('_nick-error');
+
+  nickInput.focus();
+  nickInput.addEventListener('focus', () => nickField.style.borderColor = '#16a34a');
+  nickInput.addEventListener('blur',  () => nickField.style.borderColor = '#e5e7eb');
+  nickInput.addEventListener('input', () => { nickErr.style.display = 'none'; });
+
+  const _register = async () => {
+    const nickname = nickInput.value.trim();
+    const region   = regionInput.value.trim();
+
+    if (!nickname) {
+      nickErr.textContent = '닉네임을 입력해 주세요.';
+      nickErr.style.display = 'block';
+      nickInput.focus();
+      return;
+    }
+
+    const btn = document.getElementById('_nick-btn');
+    btn.textContent = '등록 중...';
+    btn.style.opacity = '0.6';
+    btn.style.pointerEvents = 'none';
+
+    try {
+      const nickname_hash = await _sha256('phone:' + e164);
+      const user = {
+        ipv6, handle, e164, country_code: selectedCountry,
+        nickname, region,
+        name: val, isGuest: false, isTemp: false,
+        registeredAt: new Date().toISOString()
+      };
+
+      await fetch(L1_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guid: ipv6, nickname_hash, handle, nickname, region,
+          e164, country_code: selectedCountry,
+          native_lang: navigator.language?.slice(0,2) || 'ko',
+          is_public: true
+        })
+      });
+      console.info('[Auth] 신규 등록:', handle, nickname);
+
+      localStorage.setItem(STORE_KEY, JSON.stringify(user));
+      setUser(user);
+      overlay.remove();
+      resolve(user);
+
+    } catch(e) {
+      nickErr.textContent = '네트워크 오류. 다시 시도해 주세요.';
+      nickErr.style.display = 'block';
+      btn.textContent = '가입 완료';
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = '';
+    }
+  };
+
+  document.getElementById('_nick-btn').onclick = _register;
+  nickInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') regionInput.focus(); });
+  regionInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') _register(); });
 }
 
 // ── 등록 여부 판별 ────────────────────────────────────────
