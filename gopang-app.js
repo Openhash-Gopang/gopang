@@ -1,4 +1,4 @@
-/**
+﻿/**
  * gopang-app.js — 진입점 v3.0
  * 실제 로직은 전부 src/ 하위 모듈에 있음
  * 이 파일의 역할: import → exposeGlobals → bootstrap
@@ -15,6 +15,7 @@ import { _USER }                               from './src/gopang/core/state.js'
 // ── UI ───────────────────────────────────────────────────
 import { appendBubble }                        from './src/gopang/ui/bubble.js';
 import { openSettings, closeSettings, handleOverlayClick,
+         openAISettings, closeAISettings, handleAISettingsOverlayClick,
          _updateHandleChip, _settingsRegisterHandle,
          clearSWCache, _updateSecuritySection } from './src/gopang/ui/settings.js';
 import { openSearch, closeSearch,
@@ -45,6 +46,9 @@ await initAuth();
 (function exposeGlobals() {
   // 설정
   window.openSettings              = openSettings;
+  window.openAISettings            = openAISettings;
+  window.closeAISettings           = closeAISettings;
+  window.handleAISettingsOverlayClick = handleAISettingsOverlayClick;
   window.closeSettings             = closeSettings;
   window.handleOverlayClick        = handleOverlayClick;
   window.saveSettings              = saveSettings;
