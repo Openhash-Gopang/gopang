@@ -160,7 +160,19 @@ function _showSeedPopup(resolve) {
     if (!words) { input.focus(); return; }
     overlay.remove();
     const ipv6 = await _seedToGUID(words);
-    _showTrustPopup(resolve, ipv6);
+
+    // L1에서 기존 등록 여부 조회 → handle 자동 복원
+    let existingHandle = null;
+    try {
+      const filter = encodeURIComponent(`guid='${ipv6}'`);
+      const res = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+      if (res.ok) {
+        const data = await res.json();
+        existingHandle = data.items?.[0]?.handle || null;
+      }
+    } catch(e) { console.warn('[Auth] L1 조회 실패:', e.message); }
+
+    _showTrustPopup(resolve, ipv6, existingHandle);
   };
 
   document.getElementById('_seed-back').onclick    = () => { overlay.remove(); _showEntryPopup(resolve); };
@@ -169,7 +181,7 @@ function _showSeedPopup(resolve) {
 }
 
 // ── 기기 신뢰 선택 팝업 ─────────────────────────────────
-function _showTrustPopup(resolve, ipv6) {
+function _showTrustPopup(resolve, ipv6, existingHandle = null) {
   const overlay = document.createElement('div');
   overlay.id = '_trust-overlay';
   overlay.style.cssText = [
@@ -207,10 +219,13 @@ function _showTrustPopup(resolve, ipv6) {
 
   const _save = (storage) => {
     overlay.remove();
-    const user = {
-      ipv6, isGuest: false, isTemp: true,
-      registeredAt: new Date().toISOString()
-    };
+    const user = existingHandle
+      ? { ipv6, isGuest: false, isTemp: false,
+          handle: existingHandle,
+          name: existingHandle.replace(/@(.+)#.+/, '$1'),
+          registeredAt: new Date().toISOString() }
+      : { ipv6, isGuest: false, isTemp: true,
+          registeredAt: new Date().toISOString() };
     storage.setItem(STORE_KEY, JSON.stringify(user));
     setUser(user);
     resolve(user);
