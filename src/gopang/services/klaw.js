@@ -1,4 +1,4 @@
-/**
+﻿/**
  * services/klaw.js — K-Law 백그라운드 감시 파이프라인
  */
 import { _klawBusy, _klawLastCheck, KLAW_COOLDOWN_MS,
@@ -62,8 +62,8 @@ export async function _klawReview(source, payload) {
   const klawPrompt = await _getKlawPrompt();
   if (!klawPrompt) return;
 
-  _klawBusy      = true;
-  _klawLastCheck = now;
+  setKlawBusy(true);
+  setKlawLastCheck(now);
 
   try {
     // ── 검토 대상 텍스트 구성 ────────────────────────────────
@@ -76,7 +76,7 @@ export async function _klawReview(source, payload) {
         .slice(-10)
         .map(m => `[${m.role === 'user' ? '사용자' : 'AI'}] ${m.content}`)
         .join('\n');
-      if (!recent || recent.length < 50) { _klawBusy = false; return; }
+      if (!recent || recent.length < 50) { setKlawBusy(false); return; }
       reviewText = `## 검토 대상: 고팡 대화 내용\n\n${recent}`;
 
     } else if (source === 'service') {
@@ -87,7 +87,7 @@ export async function _klawReview(source, payload) {
         `데이터: ${JSON.stringify(payload.data || {}, null, 2)}`;
     }
 
-    if (!reviewText) { _klawBusy = false; return; }
+    if (!reviewText) { setKlawBusy(false); return; }
 
     // ── K-Law API 호출 (백그라운드) ──────────────────────────
     // monitor_prompt.txt가 출력 형식을 완전히 정의하므로 추가 지시 불필요
@@ -107,14 +107,14 @@ export async function _klawReview(source, payload) {
       }),
     });
 
-    if (!res.ok) { _klawBusy = false; return; }
+    if (!res.ok) { setKlawBusy(false); return; }
     const data = await res.json();
     const raw  = data.choices?.[0]?.message?.content || '{}';
     const clean = raw.replace(/```json|```/g, '').trim();
 
     let result;
     try { result = JSON.parse(clean); }
-    catch { _klawBusy = false; return; }
+    catch { setKlawBusy(false); return; }
 
     const level = result.risk_level || 'NONE';
     const risk  = KLAW_RISK[level] || KLAW_RISK.NONE;
@@ -153,7 +153,7 @@ export async function _klawReview(source, payload) {
   } catch(e) {
     console.warn('[K-Law] 감시 오류 (무시):', e.message);
   } finally {
-    _klawBusy = false;
+    setKlawBusy(false);
   }
 }
 
