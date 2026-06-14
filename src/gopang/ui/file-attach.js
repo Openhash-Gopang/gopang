@@ -1,7 +1,7 @@
 ﻿/**
  * ui/file-attach.js — 파일 첨부·카메라
  */
-import { setAttachFile, attachFile } from '../core/state.js';
+import { setAttachFile } from '../core/state.js';
 import { appendBubble } from './bubble.js';
 
 // ── 파일 첨부 ───────────────────────────────────────────
@@ -46,7 +46,7 @@ export function handleFileSelect(e) {
 }
 
 export function removeAttach() {
-  attachFile = null;
+  setAttachFile(null);
   document.getElementById('attach-preview').style.display = 'none';
   document.getElementById('attach-name').innerHTML = '';
   updateSendBtn();   // ★ 첨부 제거 후 버튼 상태 재계산
