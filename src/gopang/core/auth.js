@@ -368,7 +368,7 @@ function _showPhonePopup(resolve) {
 
     listEl.querySelectorAll('[data-country]').forEach(el => {
       el.onmouseenter = () => el.style.background = '#f0fdf4';
-      el.onmouseleave = () => el.style.background = key === selectedCountry ? '#f0fdf4' : '';
+      el.onmouseleave = () => el.style.background = el.dataset.country === selectedCountry ? '#f0fdf4' : '';
       el.onclick = () => _selectCountry(el.dataset.country);
     });
   }
