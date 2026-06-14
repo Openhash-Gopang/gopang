@@ -50,7 +50,7 @@ function _showAISetupPopup() {
     <div style="background:#fff;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;
                 max-height:80vh;overflow-y:auto;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))">
       <div style="width:36px;height:4px;background:#e5e7eb;border-radius:2px;margin:0 auto 16px"></div>
-      <p style="font-weight:700;font-size:16px;margin:0 0 16px">🤖 AI 비서 활성화</p>
+      <p style="font-weight:600;font-size:16px;margin:0 0 16px;color:#111827;letter-spacing:-0.3px">AI 비서 활성화</p>
       <label style="font-size:12px;font-weight:600;color:var(--txt2);display:block;margin-bottom:6px">LLM 모델</label>
       <select id="_ai_model" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:12px;font-family:inherit">
         <option value="deepseek-v4-flash">DeepSeek V4 Flash (빠름)</option>
@@ -61,8 +61,19 @@ function _showAISetupPopup() {
         <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
       </select>
       <label style="font-size:12px;font-weight:600;color:var(--txt2);display:block;margin-bottom:6px">API Key</label>
-      <input id="_ai_key" type="password" placeholder="sk-... (고팡 프록시 사용 시 불필요)"
-        style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:16px;font-family:inherit">
+      <div style="display:flex;align-items:center;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:16px">
+        <input id="_ai_key" type="password" placeholder="sk-... (고팡 프록시 사용 시 불필요)"
+          style="flex:1;padding:10px 12px;border:none;outline:none;font-size:14px;font-family:inherit;min-width:0">
+        <button id="_ai_key_toggle" type="button"
+          style="padding:0 12px;height:42px;border:none;background:transparent;cursor:pointer;
+                 border-left:1px solid #e5e7eb;display:flex;align-items:center;flex-shrink:0">
+          <svg id="_ai_key_eye" width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
       <div style="display:flex;gap:8px">
         <button id="_ai_cancel" style="flex:1;padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:none;cursor:pointer;font-size:14px;font-family:inherit">취소</button>
         <button id="_ai_ok" style="flex:2;padding:12px;border:none;border-radius:10px;background:#16a34a;color:#fff;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit">AI 활성화</button>
@@ -71,6 +82,19 @@ function _showAISetupPopup() {
   document.body.appendChild(ov);
 
   const modelSel = ov.querySelector('#_ai_model');
+
+  // API Key 보기/숨기기
+  ov.querySelector('#_ai_key_toggle').onclick = () => {
+    const inp = ov.querySelector('#_ai_key');
+    const eye = ov.querySelector('#_ai_key_eye');
+    if (inp.type === 'password') {
+      inp.type = 'text';
+      eye.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
+    } else {
+      inp.type = 'password';
+      eye.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    }
+  };
   if (CFG.model) modelSel.value = CFG.model;
 
   ov.querySelector('#_ai_cancel').onclick = () => ov.remove();
