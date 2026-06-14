@@ -53,7 +53,7 @@ export function openSettings() {
         g.id = '_id-section-guide';
         g.style.cssText = 'font-size:12px;color:#16a34a;font-weight:600;margin-bottom:8px;' +
                           'background:#dcfce7;border-radius:8px;padding:8px 10px;line-height:1.5';
-        g.innerHTML = '👤 아이디를 등록하면 AI 비서와 P2P 채팅을 사용할 수 있습니다.';
+        g.innerHTML = '아이디를 등록하면 AI 비서와 P2P 채팅을 사용할 수 있습니다.';
         idSec.insertBefore(g, idSec.firstChild);
       }
     } else {

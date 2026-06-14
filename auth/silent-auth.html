@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -371,7 +371,7 @@ window.doLogin = async function() {
       }
       // ✅ 기기 갱신
       const updated = { ...stored, fpHex, lastSeenAt: new Date().toISOString() };
-      localStorage.setItem('gopang_user_v3', JSON.stringify(updated));
+      localStorage.setItem('gopang_user_v4', JSON.stringify(updated));
       _showMsg('✅ 복원 완료!', 'success');
 
     } else {
@@ -384,7 +384,7 @@ window.doLogin = async function() {
         registeredAt: new Date().toISOString(),
         lastSeenAt:   new Date().toISOString(),
       };
-      localStorage.setItem('gopang_user_v3', JSON.stringify(user));
+      localStorage.setItem('gopang_user_v4', JSON.stringify(user));
       _showMsg('✅ 등록 완료!', 'success');
     }
 
@@ -478,7 +478,7 @@ async function _snapFace() {
 
 // ── 유틸 ─────────────────────────────────────────────────
 function _getLocalUser() {
-  try { return JSON.parse(localStorage.getItem('gopang_user_v3') || 'null'); }
+  try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); }
   catch { return null; }
 }
 

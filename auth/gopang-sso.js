@@ -1,4 +1,4 @@
-/**
+﻿/**
  * gopang-sso.js  v1.0
  * 고팡 중앙 인증 라이브러리 — 하위 서비스 전용
  *
@@ -13,7 +13,7 @@
 
 const _GOPANG_ORIGIN  = 'https://gopang.net';
 const _WORKER         = 'https://gopang-proxy.tensor-city.workers.dev';
-const _STORE_KEY      = 'gopang_user_v3';       // gopang_v2와 공유
+const _STORE_KEY      = 'gopang_user_v4';       // gopang_v2와 공유
 const _SSO_SESSION    = 'gopang_sso_token';     // sessionStorage 키
 const _LEVEL_ORDER    = { L0:0, L1:1, L2:2, L3:3 };
 
@@ -197,7 +197,7 @@ function _trySilentIframe(requiredLevel) {
   });
 }
 
-// ── 경로 2-B(보조): gopang_user_v3 직접 대조 (same-site) ─
+// ── 경로 2-B(보조): gopang_user_v4 직접 대조 (same-site) ─
 async function _tryLocalStore(requiredLevel) {
   const stored = _readStore();
   if (!stored?.ipv6 || !stored?.fpHex) return null;
@@ -231,7 +231,7 @@ function _redirectToGopang(requiredLevel) {
   return null;
 }
 
-// ── gopang_user_v3 읽기 전용 ─────────────────────────────
+// ── gopang_user_v4 읽기 전용 ─────────────────────────────
 function _readStore() {
   try { return JSON.parse(localStorage.getItem(_STORE_KEY) || 'null'); }
   catch { return null; }

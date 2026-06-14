@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ui/search.js — 검색 (사용자·업체·PDV)
  */
 import { _sha256, _isRegistered } from '../core/auth.js';
@@ -198,7 +198,7 @@ function _searchPDV(q) {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key?.startsWith('gopang_')) continue;
-      if (['gopang_user_v3','gopang_cfg','gopang_contacts'].includes(key)) continue;
+      if (['gopang_user_v4','gopang_cfg','gopang_contacts'].includes(key)) continue;
       if (key.toLowerCase().includes(lq)) {
         const val = localStorage.getItem(key);
         let date = '';

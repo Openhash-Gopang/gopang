@@ -1,4 +1,4 @@
-/**
+﻿/**
  * subsystem-auth.js  v1.2
  * 고팡 하위 시스템 공용 인증 모듈
  *
@@ -240,7 +240,7 @@ export function showLoginPrompt(level) {
 
 // ── 로컬 폴백 (gopang-sso.js 로드 실패 시) ───────────────
 function _localFallback() {
-  const STORE   = 'gopang_user_v3';
+  const STORE   = 'gopang_user_v4';
   const SESSION = 'gopang_sso_token';
   const LVL     = { L0:0, L1:1, L2:2, L3:3 };
 

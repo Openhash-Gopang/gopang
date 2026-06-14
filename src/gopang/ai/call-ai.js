@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ai/call-ai.js — LLM API 호출·스트리밍·GWP 태그 처리
  */
 import { CFG, _modelSupportsVision } from '../core/config.js';
@@ -283,7 +283,7 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
     const authMatch = fullReply.match(/\[AUTH:(L[0-3])\]/);
     if (authMatch) {
       const requiredLevel = authMatch[1];
-      const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+      const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
       const currentLevel = stored?.authLevel || 'L0';
       const levels = ['L0','L1','L2','L3'];
       const needsUpgrade = levels.indexOf(requiredLevel) > levels.indexOf(currentLevel);

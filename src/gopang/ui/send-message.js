@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ui/send-message.js — 메시지 전송 라우팅
  */
 import { aiActive, _peer, attachFile, setAttachFile } from '../core/state.js';
@@ -82,7 +82,7 @@ export async function sendMessage() {
     } else {
       // 미등록(Guest) → 등록 유도
       appendBubble('ai',
-        '👤 <b>고팡 아이디를 등록</b>하면 AI 비서와 대화할 수 있습니다.<br>' +
+        '<b>고팡 아이디를 등록</b>하면 AI 비서와 대화할 수 있습니다.<br>' +
         '<span style="font-size:12px;color:var(--txt3)">상단 <b>AI</b> 버튼을 탭하여 등록하세요.</span>',
         true
       );

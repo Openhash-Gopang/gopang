@@ -1,4 +1,4 @@
-/**
+﻿/**
  * gwp/sign.js — GWP 결제 서명 처리
  */
 import { appendBubble } from '../ui/bubble.js';
@@ -43,7 +43,7 @@ export async function _handleGwpSignRequest(msg, sourceWin, sourceOrigin) {
     if (window.gopangWallet?.getBalance) {
       currentBalance = await window.gopangWallet.getBalance();
     } else {
-      const user = JSON.parse(localStorage.getItem('gopang_user_v3') || '{}');
+      const user = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
       currentBalance = parseFloat(user?.fs?.['bs-cash'] ?? '0') || 0;
     }
   } catch(_) {}

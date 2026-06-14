@@ -1,4 +1,4 @@
-/**
+﻿/**
  * gopang-wallet.js — Gopang 클라이언트 지갑 공통 모듈
  * Version  : 1.0.0
  * Spec     : GDUDA 5-Layer / OpenHash L1
@@ -935,9 +935,9 @@
         console.info('[GopangWallet] 새 지갑 자동 생성 완료');
       }
 
-      // gopang_user_v3에서 guid 연결
+      // gopang_user_v4에서 guid 연결
       const stored = (() => {
-        try { return JSON.parse(localStorage.getItem('gopang_user_v3') || 'null'); }
+        try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); }
         catch { return null; }
       })();
       if (stored?.ipv6) {
