@@ -100,7 +100,7 @@ _updateHandleChip(_USER?.handle || null);
 // ════════════════════════════════════════════════════════
 // 4. DOMContentLoaded — 나머지 모듈 동적 로드
 // ════════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', async () => {
+const _boot = async () => {
 
   // 4-1. 부트스트랩 (src/app.js)
   try {
@@ -199,4 +199,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   console.info('[Gopang v3] 부트스트랩 완료');
-});
+};
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', _boot);
+} else {
+  _boot();
+}
