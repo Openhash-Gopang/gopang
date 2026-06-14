@@ -351,19 +351,29 @@ function _showPhonePopup(resolve) {
   // ── 국가 목록 렌더 ──────────────────────────────────────
   function _renderList(query = '') {
     const q = query.toLowerCase();
-    const entries = Object.entries(COUNTRIES).filter(([key, c]) =>
-      !q || c.name.toLowerCase().includes(q) ||
-            key.toLowerCase().includes(q) ||
-            c.code.includes(q)
-    );
+    const allEntries = Object.entries(COUNTRIES);
+    const entries = !q ? allEntries : [
+      // 1순위: 국가코드 완전/전방 일치 (US, KR, JP)
+      ...allEntries.filter(([key]) => key.toLowerCase() === q),
+      ...allEntries.filter(([key]) => key.toLowerCase() !== q && key.toLowerCase().startsWith(q)),
+      // 2순위: 국가명 부분 일치
+      ...allEntries.filter(([key, c]) =>
+        !key.toLowerCase().startsWith(q) && c.name.toLowerCase().includes(q)
+      ),
+      // 3순위: 전화코드 일치 (+1, +82)
+      ...allEntries.filter(([key, c]) =>
+        !key.toLowerCase().startsWith(q) && !c.name.toLowerCase().includes(q) && c.code.includes(q)
+      ),
+    ];
     listEl.innerHTML = entries.map(([key, c]) => `
       <div data-country="${key}"
            style="padding:10px 14px;cursor:pointer;
                   display:flex;align-items:center;gap:10px;
                   border-bottom:1px solid #f9f9f9;
                   ${key === selectedCountry ? 'background:#f0fdf4;' : ''}">
-        <span style="font-size:18px;flex-shrink:0">${c.flag}</span>
+        <span style="font-size:20px;flex-shrink:0;width:28px;text-align:center">${c.flag}</span>
         <span style="flex:1;color:#111827;font-size:14px">${c.name}</span>
+        <span style="color:#6b7280;font-size:12px;margin-right:4px">${key}</span>
         <span style="color:#9ca3af;font-size:14px">${c.code}</span>
       </div>`).join('');
 
