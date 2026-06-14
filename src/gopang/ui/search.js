@@ -43,7 +43,7 @@ export async function runSearch() {
       handle:       u.handle,
       entity_type:  u.entity_type || 'person',
       avatar_emoji: u.entity_type === 'business'   ? '🏪'
-                  : u.entity_type === 'institution' ? '🏛️' : '🙂',
+                  : u.entity_type === 'institution' ? '🏛' : '',
     }));
   } catch(e) { console.warn('[Search] L1 검색 실패:', e.message); }
 
@@ -53,10 +53,12 @@ export async function runSearch() {
 
   // 로컬 연락처
   if (contactMatches.length > 0) {
-    html += _sectionHeader('👤 연락처');
+    html += _sectionHeader('연락처');
     contactMatches.forEach(c => {
       html += `<div class="search-item" onclick="window.selectContact('${c.id}')">
-        <span class="search-avatar">🙂</span>
+        <span class="search-avatar" style="display:flex;align-items:center;justify-content:center">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+</span>
         <div class="search-item-body">
           <span class="search-item-name">${_highlight(c.name, q)}</span>
           <span class="search-item-sub">${c.guid ? c.guid.slice(0,8)+'…' : ''}</span>
@@ -121,10 +123,12 @@ export async function runSearch() {
 
   // PDV
   if (pdvMatches.length > 0) {
-    html += _sectionHeader('🔐 PDV 데이터', !!(contactMatches.length + serverUsers.length));
+    html += _sectionHeader('PDV 데이터', !!(contactMatches.length + serverUsers.length));
     pdvMatches.forEach(p => {
       html += `<div class="search-item">
-        <span class="search-avatar">🔐</span>
+        <span class="search-avatar" style="display:flex;align-items:center;justify-content:center">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+</span>
         <div class="search-item-body">
           <span class="search-item-name">${_highlight(p.key, q)}</span>
           <span class="search-item-sub">${p.date}</span>
@@ -149,7 +153,7 @@ export async function selectContact(id, serverUser = null) {
     try {
       const contacts = JSON.parse(localStorage.getItem('gopang_contacts') || '[]');
       const c = contacts.find(x => x.id === id);
-      return c ? { guid: c.guid, name: c.name, handle: c.handle || '', avatar_emoji: '🙂' } : null;
+      return c ? { guid: c.guid, name: c.name, handle: c.handle || '', avatar_emoji: '' } : null;
     } catch { return null; }
   })();
 

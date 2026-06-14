@@ -57,7 +57,7 @@ export async function sendMessage() {
     });
   } else {
     if (text) appendBubble('user', text);
-    if (capturedFile) appendBubble('user', `📎 ${capturedFile.name}`, false);
+    if (capturedFile) appendBubble('user', capturedFile.name, false);
   }
 
   // ★ history.push(user)는 callAI 내부에서 처리

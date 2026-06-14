@@ -131,12 +131,12 @@ export function _updateSecuritySection() {
   if (fpBtn) fpBtn.style.display = 'none';
 
   if (!stored?.ipv6) {
-    if (levelEl) levelEl.textContent = '⚠️ 미등록 사용자';
+    if (levelEl) levelEl.textContent = '미등록 사용자';
     return;
   }
 
   if (levelEl) levelEl.innerHTML =
-    `<span style="font-size:13px;color:var(--green)">✅ ${stored.handle || stored.ipv6}</span>`;
+    `<span style="font-size:13px;color:var(--green)">${stored.handle || stored.ipv6}</span>`;
   if (idEl) idEl.textContent = '';
 }
 
