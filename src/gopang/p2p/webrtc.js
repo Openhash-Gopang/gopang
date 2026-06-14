@@ -1,4 +1,4 @@
-/**
+﻿/**
  * p2p/webrtc.js — P2P WebRTC DataChannel + 시그널링 + PDV 채팅 저장
  */
 import {
@@ -177,7 +177,7 @@ export function _startSignalPoll() {
 async function _handleSignal(sig) {
   console.info('[Signal] 수신:', sig.type, 'from:', sig.from_guid?.slice(-6));
 
-  if (sig.type === 'offer' && !_peer) {
+  if (false && sig.type === 'offer' && !_peer) { // p2p-chat.js로 이전
     try {
       const res  = await fetch(`${PROXY}/profile?guid=${encodeURIComponent(sig.from_guid)}`);
       const data = await res.json();
