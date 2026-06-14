@@ -357,13 +357,13 @@ function _showPhonePopup(resolve) {
     );
     listEl.innerHTML = entries.map(([key, c]) => `
       <div data-country="${key}"
-           style="padding:10px 14px;cursor:pointer;font-size:13px;
+           style="padding:10px 14px;cursor:pointer;
                   display:flex;align-items:center;gap:10px;
                   border-bottom:1px solid #f9f9f9;
                   ${key === selectedCountry ? 'background:#f0fdf4;' : ''}">
-        <span style="font-size:18px">${c.flag}</span>
-        <span style="flex:1;color:#111827">${c.name}</span>
-        <span style="color:#9ca3af;font-size:12px">${c.code}</span>
+        <span style="font-size:18px;flex-shrink:0">${c.flag}</span>
+        <span style="flex:1;color:#111827;font-size:14px">${c.name}</span>
+        <span style="color:#9ca3af;font-size:14px">${c.code}</span>
       </div>`).join('');
 
     listEl.querySelectorAll('[data-country]').forEach(el => {
