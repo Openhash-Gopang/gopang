@@ -109,6 +109,7 @@ export async function _settingsRegisterHandle() {
   const { _registerToL1 } = await import('../core/auth.js');
   await _registerToL1(name);
   _updateHandleChip(_USER?.handle || null);
+  if (typeof _updateLogoutBtn === 'function') _updateLogoutBtn();
 
   if (btn) { btn.disabled = false; btn.textContent = '아이디 등록'; }
 }

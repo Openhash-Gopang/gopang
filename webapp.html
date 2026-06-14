@@ -42,10 +42,9 @@ function _updateLogoutBtn() {
   const btn = document.getElementById('btn-logout-or-login');
   if (!btn) return;
   if (_isGuestUser()) {
-    btn.textContent = '🔑 로그인';
-    btn.style.borderColor = '#86efac';
-    btn.style.color = '#16a34a';
+    btn.style.display = 'none';
   } else {
+    btn.style.display = 'block';
     btn.textContent = '🚪 로그아웃';
     btn.style.borderColor = '#fca5a5';
     btn.style.color = '#dc2626';
@@ -854,11 +853,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;
 
     <div class="setting-group" style="margin-top:8px" id="security-section">
       <label class="setting-label">🔐 보안 · 인증</label>
-      <div id="auth-level-display" style="background:var(--chip-bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--txt2);line-height:1.6">로딩 중…</div>
-      <button id="btn-register-fp" onclick="_settingsRegisterFingerprint()"
-        style="width:100%;padding:12px;border-radius:10px;background:var(--green);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px">
-        🔐 지문 등록
-      </button>
+
       <div id="gopang-id-display" style="font-size:10px;color:var(--txt3);font-family:monospace;word-break:break-all;padding:8px 0"></div>
     </div>
 
