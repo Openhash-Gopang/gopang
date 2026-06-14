@@ -65,19 +65,23 @@ export function openSettings() {
   const gdcSec = document.getElementById('gdc-wallet-section');
   if (gdcSec) gdcSec.style.display = isGDC ? 'block' : 'none';
 
-  // 5. AI 설정 버튼: 등록 사용자만 표시
-  const aiBtn = document.getElementById('btn-ai-settings');
-  if (aiBtn) aiBtn.style.display = registered ? 'flex' : 'none';
+  // 5. AI 설정 카드: 등록 사용자만 표시
+  const aiCard  = document.getElementById('_ai-card');
+  const aiLabel = document.getElementById('_ai-label');
+  if (aiCard)  aiCard.style.display  = registered ? 'block' : 'none';
+  if (aiLabel) aiLabel.style.display = registered ? 'block' : 'none';
 
   // 6. 로그아웃 버튼: 등록 사용자만 표시
-  const logoutBtn = document.getElementById('btn-logout-or-login');
-  if (logoutBtn) logoutBtn.style.display = registered ? 'block' : 'none';
+  const logoutBtn  = document.getElementById('btn-logout-or-login');
+  const actionCard = document.getElementById('_action-card');
+  if (logoutBtn)  logoutBtn.style.display  = registered ? 'flex' : 'none';
+  if (actionCard) actionCard.style.display = registered ? 'block' : 'none';
 
   // 7. 기기 초기화 버튼: 등록 사용자만 표시
   const resetBtn = document.getElementById('btn-device-reset');
-  if (resetBtn) resetBtn.style.display = registered ? 'block' : 'none';
+  if (resetBtn) resetBtn.style.display = registered ? 'flex' : 'none';
 
-  // 8. LLM 섹션: 항상 숨김 (AI 설정 슬라이드로 이동)
+  // 8. LLM 섹션: 항상 숨김
   const llmSec = document.getElementById('llm-settings-section');
   if (llmSec) llmSec.style.display = 'none';
 
