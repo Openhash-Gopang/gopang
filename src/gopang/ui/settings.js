@@ -27,6 +27,7 @@ export function _updateHandleChip(h) {
 // ── 설정 패널 열기 ───────────────────────────────────────
 export function openSettings() {
   const registered = _isRegistered();
+  if (typeof _updateLogoutBtn === 'function') _updateLogoutBtn();
 
   // LLM 섹션: 등록 사용자만 표시
   const llmSec = document.getElementById('llm-settings-section');

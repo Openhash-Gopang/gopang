@@ -58,8 +58,5 @@ export function _buildLocNote() {
   if (!_userLocation || !_userLocation.source) return '';
   const loc = _userLocation;
   const detail = loc.lat ? 'GPS: ' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5) + (loc.address ? ' (' + loc.address + ')' : '') : (loc.address || '위치정보없음');
-  return '
-
-[현재 위치]
-' + detail;
+  return `\n\n[현재 위치]\n` + detail;
 }
