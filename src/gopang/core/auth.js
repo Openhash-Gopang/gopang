@@ -5,7 +5,8 @@
  *         UN 가입국 194개 + 실시간 검색
  * - 익명 모드 없음
  */
-import { setUser, _USER, USER_GUID, L1_URL } from './state.js';
+import { setUser, _USER, USER_GUID, L1_URL, PROXY } from './state.js';
+const PROXY_URL = PROXY;
 import { appendBubble } from '../ui/bubble.js';
 
 const STORE_KEY = 'gopang_user_v4';
@@ -582,6 +583,23 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
         })
       });
       console.info('[Auth] 신규 등록:', handle, nickname);
+
+      // L5 글로벌 디렉토리 등록 (GDUDA Phase 1 — HLR)
+      const nickLang = (navigator.language?.slice(0,2) || 'ko') + ':' + nickname;
+      const nickHash = await _sha256(nickLang);
+      fetch(`${PROXY_URL}/p2p/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guid:          ipv6,
+          handle,
+          nickname,
+          nickname_hash: nickHash,
+          country_code:  selectedCountry,
+          region,
+          current_l1:    L1_URL.replace('/api/collections/profiles/records', ''),
+        })
+      }).catch(e => console.warn('[P2P] global_profiles 등록 실패:', e.message));
 
       localStorage.setItem(STORE_KEY, JSON.stringify(user));
       setUser(user);
