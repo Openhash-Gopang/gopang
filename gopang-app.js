@@ -8,7 +8,7 @@
  */
 
 // ── Core ─────────────────────────────────────────────────
-import { initAuth, _isRegistered, gopangAuth } from './src/gopang/core/auth.js';
+import { initAuth, _isRegistered, _isGDCUser, _deviceFullReset, gopangAuth } from './src/gopang/core/auth.js';
 import { loadSettings, CFG, saveSettings }     from './src/gopang/core/config.js';
 import { _USER }                               from './src/gopang/core/state.js';
 
@@ -47,6 +47,8 @@ await initAuth();
   // 설정
   window.openSettings              = openSettings;
   window.openAISettings            = openAISettings;
+  window._deviceFullReset          = _deviceFullReset;
+  window._isGDCUser                = _isGDCUser;
   window.closeAISettings           = closeAISettings;
   window.handleAISettingsOverlayClick = handleAISettingsOverlayClick;
   window.closeSettings             = closeSettings;

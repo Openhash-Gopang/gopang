@@ -535,6 +535,10 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   box-shadow:none;height:auto;
 }
 #settings-overlay.open .settings-sheet{transform:translateY(0)}
+#ai-settings-overlay{position:fixed;inset:0;z-index:1000;visibility:hidden;background:rgba(0,0,0,.25);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .25s}
+#ai-settings-overlay.open{visibility:visible;opacity:1}
+#ai-settings-overlay .settings-sheet{width:100%;max-width:430px;height:auto;max-height:90dvh;overflow-y:auto;transform:translateY(100%);transition:transform .25s;box-shadow:none;border-radius:16px 16px 0 0}
+#ai-settings-overlay.open .settings-sheet{transform:translateY(0)}
 /* 설정 시트 내부 스타일 정리 */
 #perm-guide{
   background:var(--chip-bg);border:1px solid var(--border);
