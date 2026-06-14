@@ -14,7 +14,7 @@ export function triggerCamera() {
 export function handleFileSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
-  attachFile = file;
+  setAttachFile(file);
 
   const nameEl    = document.getElementById('attach-name');
   const previewEl = document.getElementById('attach-preview');
