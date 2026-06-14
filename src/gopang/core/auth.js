@@ -1,9 +1,10 @@
-﻿/**
- * core/auth.js — 사용자 인증·등록 v3.0
- * - Sign-in: handle로 L1 조회 → 자동 로그인
- * - Sign-up: 이름 입력 → GUID 생성 → L1 등록
+/**
+ * core/auth.js — 사용자 인증·등록 v3.1
+ * - Sign-in: 휴대폰 뒷 8자리 → L1 조회 → 자동 로그인
+ * - Sign-up: 휴대폰 뒷 8자리 → GUID 생성 → L1 등록
  * - 익명 모드: randomUUID → sessionStorage
  * - 내 기기: localStorage / 공용 기기: sessionStorage
+ * - 테스트 모드: OTP 인증 생략
  */
 import { setUser, _USER, USER_GUID, L1_URL } from './state.js';
 import { appendBubble } from '../ui/bubble.js';
@@ -16,7 +17,17 @@ export async function _sha256(str) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-// ── UUID → IPv6 형식 GUID ────────────────────────────────
+// ── 8자리 번호 → IPv6 형식 GUID ─────────────────────────
+async function _phoneToIPv6(digits8) {
+  const hash = await _sha256('gopang-phone:' + digits8);
+  const groups = [];
+  for (let i = 0; i < 8; i++) groups.push(hash.slice(i*4, i*4+4));
+  groups[0] = '2601';
+  groups[1] = 'db80';
+  return groups.join(':');
+}
+
+// ── UUID → IPv6 형식 GUID (익명용) ──────────────────────
 function _uuidToIPv6() {
   const uuid = crypto.randomUUID().replace(/-/g, '');
   const groups = [];
@@ -34,6 +45,11 @@ function _loadStored() {
   } catch { return null; }
 }
 
+// ── 입력값 검증: 숫자 8자리 ─────────────────────────────
+function _validatePhone(val) {
+  return /^\d{8}$/.test(val.trim());
+}
+
 // ── 사용자 초기화 (앱 시작 시 1회) ──────────────────────
 export async function initAuth() {
   const stored = _loadStored();
@@ -49,7 +65,7 @@ export async function initAuth() {
   });
 }
 
-// ── 진입 팝업 (Sign-in / Sign-up / 익명) ─────────────────
+// ── Sign 팝업 ────────────────────────────────────────────
 function _showSignPopup(resolve) {
   const overlay = document.createElement('div');
   overlay.id = '_sign-overlay';
@@ -64,7 +80,7 @@ function _showSignPopup(resolve) {
     <div style="background:#fff;border-radius:20px;padding:32px 24px;
                 width:100%;max-width:340px;box-sizing:border-box;">
 
-      <!-- Sign-in 입력 필드 -->
+      <!-- 전화번호 입력 필드 -->
       <div style="margin-bottom:12px">
         <div style="display:flex;align-items:center;
                     border:1px solid #e5e7eb;border-radius:12px;
@@ -77,23 +93,12 @@ function _showSignPopup(resolve) {
               <circle cx="12" cy="7" r="4"/>
             </svg>
           </div>
-          <input id="_signin-handle" type="text"
-            placeholder="고팡 아이디  예: @금능#0996"
+          <input id="_signin-handle" type="tel" maxlength="8"
+            placeholder="휴대폰 뒷 8자리  예: 96627170"
             style="flex:1;padding:0 12px;height:50px;border:none;background:transparent;
-                   font-size:14px;font-family:inherit;outline:none;color:#111827;min-width:0"
-            autocomplete="off" autocorrect="off" spellcheck="false"/>
-          <button id="_signin-mic"
-            style="padding:0 13px;height:50px;border:none;background:transparent;
-                   cursor:pointer;display:flex;align-items:center;
-                   border-left:1px solid #e5e7eb;flex-shrink:0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="2" width="6" height="11" rx="3"/>
-              <path d="M5 10a7 7 0 0 0 14 0"/>
-              <line x1="12" y1="19" x2="12" y2="22"/>
-              <line x1="8" y1="22" x2="16" y2="22"/>
-            </svg>
-          </button>
+                   font-size:14px;font-family:inherit;outline:none;color:#111827;
+                   min-width:0;letter-spacing:0.5px"
+            autocomplete="off" inputmode="numeric"/>
           <button id="_signin-btn"
             style="padding:0 14px;height:50px;border:none;background:transparent;
                    cursor:pointer;display:flex;align-items:center;
@@ -152,7 +157,7 @@ function _showSignPopup(resolve) {
 
   document.body.appendChild(overlay);
 
-  // 외부 클릭 시 익명 모드로 진입
+  // 외부 클릭 시 익명 모드
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) {
       overlay.remove();
@@ -167,41 +172,52 @@ function _showSignPopup(resolve) {
     }
   });
 
-  // 입력 포커스 스타일
   const input = document.getElementById('_signin-handle');
-  input.addEventListener('focus', () => input.style.borderColor = '#16a34a');
-  input.addEventListener('blur',  () => input.style.borderColor = '#e5e7eb');
+  input.focus();
+  input.addEventListener('focus', () => input.parentElement.style.borderColor = '#16a34a');
+  input.addEventListener('blur',  () => input.parentElement.style.borderColor = '#e5e7eb');
+
+  // 숫자만 입력
+  input.addEventListener('input', () => {
+    input.value = input.value.replace(/\D/g, '').slice(0, 8);
+  });
 
   // Sign-in
   const _doSignIn = async () => {
-    const handle = input.value.trim();
-    if (!handle) { input.focus(); return; }
-
+    const val = input.value.trim();
     const errEl = document.getElementById('_signin-error');
-    const btn   = document.getElementById('_signin-btn');
-    btn.disabled = true;
-    btn.textContent = '확인 중…';
     errEl.style.display = 'none';
 
+    if (!_validatePhone(val)) {
+      errEl.textContent = '휴대폰 뒷 8자리를 입력해 주세요.';
+      errEl.style.display = 'block';
+      input.focus();
+      return;
+    }
+
+    const btn = document.getElementById('_signin-btn');
+    btn.style.opacity = '0.4';
+    btn.style.pointerEvents = 'none';
+
     try {
-      // handle로 L1 조회
+      const handle = '@' + val;
       const filter = encodeURIComponent(`handle='${handle}'`);
-      const res  = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
-      const data = await res.json();
-      const found = data.items?.[0];
+      const res    = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+      const data   = await res.json();
+      const found  = data.items?.[0];
 
       if (!found?.guid) {
-        errEl.textContent = '아이디를 찾을 수 없습니다.';
+        errEl.textContent = '등록된 아이디가 없습니다. 새 아이디를 만들어 주세요.';
         errEl.style.display = 'block';
-        btn.disabled = false;
-        btn.textContent = '로그인';
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = '';
         return;
       }
 
       overlay.remove();
       _showTrustPopup(resolve, found.guid, {
         handle: found.handle,
-        name: found.handle.replace(/@(.+)#.+/, '$1'),
+        name: val,
         isGuest: false, isTemp: false,
         registeredAt: found.created
       });
@@ -209,8 +225,8 @@ function _showSignPopup(resolve) {
     } catch(e) {
       errEl.textContent = '네트워크 오류. 다시 시도해 주세요.';
       errEl.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = '로그인';
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = '';
     }
   };
 
@@ -249,27 +265,43 @@ function _showSignUpPopup(resolve) {
   ].join(';');
 
   overlay.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:36px 28px;
-                width:100%;max-width:360px;box-sizing:border-box;">
+    <div style="background:#fff;border-radius:20px;padding:32px 24px;
+                width:100%;max-width:340px;box-sizing:border-box;">
       <button id="_signup-back"
         style="background:none;border:none;color:#16a34a;font-size:14px;
                cursor:pointer;padding:0;margin-bottom:20px;font-family:inherit">
         ← 뒤로
       </button>
-      <h2 style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;
+      <h2 style="margin:0 0 6px;font-size:18px;font-weight:600;color:#111827;
                  letter-spacing:-0.4px">새 아이디 만들기</h2>
       <p style="margin:0 0 20px;font-size:13px;color:#6b7280;line-height:1.6">
-        표시될 이름을 입력하세요.<br>
-        <span style="color:#9ca3af;font-size:12px">아이디 형식: @이름#고유번호</span>
+        휴대폰 뒷 8자리를 입력하세요.<br>
+        <span style="color:#9ca3af;font-size:12px">아이디: @96627170 형식으로 생성됩니다</span>
       </p>
-      <input id="_signup-name" type="text" maxlength="20"
-        placeholder="표시될 이름"
-        style="width:100%;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;
-               font-size:15px;font-family:inherit;outline:none;
-               box-sizing:border-box;margin-bottom:16px"
-        autocomplete="off" autocorrect="off" spellcheck="false"/>
+
+      <div style="border:1px solid #e5e7eb;border-radius:12px;
+                  background:#f9fafb;overflow:hidden;margin-bottom:10px">
+        <div style="display:flex;align-items:center">
+          <div style="padding:0 14px;display:flex;align-items:center;
+                      border-right:1px solid #e5e7eb;height:50px;flex-shrink:0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.56 3.35 2 2 0 0 1 3.53 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 6 6l.87-.87a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.5 16z"/>
+            </svg>
+          </div>
+          <input id="_signup-phone" type="tel" maxlength="8"
+            placeholder="뒷 8자리  예: 96627170"
+            style="flex:1;padding:0 12px;height:50px;border:none;background:transparent;
+                   font-size:15px;font-family:inherit;outline:none;color:#111827;
+                   min-width:0;letter-spacing:1px"
+            autocomplete="off" inputmode="numeric"/>
+        </div>
+      </div>
+      <div id="_signup-error" style="display:none;font-size:12px;color:#dc2626;
+           margin-bottom:10px;padding:0 4px"></div>
+
       <button id="_signup-confirm"
-        style="width:100%;padding:13px;border-radius:10px;
+        style="width:100%;padding:13px;border-radius:12px;
                background:#16a34a;color:#fff;border:none;
                font-size:15px;font-weight:600;font-family:inherit;cursor:pointer">
         아이디 만들기
@@ -278,10 +310,13 @@ function _showSignUpPopup(resolve) {
 
   document.body.appendChild(overlay);
 
-  const input = document.getElementById('_signup-name');
+  const input = document.getElementById('_signup-phone');
   input.focus();
-  input.addEventListener('focus', () => input.style.borderColor = '#16a34a');
-  input.addEventListener('blur',  () => input.style.borderColor = '#e5e7eb');
+  input.addEventListener('focus', () => input.parentElement.parentElement.style.borderColor = '#16a34a');
+  input.addEventListener('blur',  () => input.parentElement.parentElement.style.borderColor = '#e5e7eb');
+  input.addEventListener('input', () => {
+    input.value = input.value.replace(/\D/g, '').slice(0, 8);
+  });
 
   document.getElementById('_signup-back').onclick = () => {
     overlay.remove();
@@ -289,16 +324,45 @@ function _showSignUpPopup(resolve) {
   };
 
   const _doSignUp = async () => {
-    const name = input.value.trim();
-    if (!name) { input.focus(); return; }
+    const val    = input.value.trim();
+    const errEl  = document.getElementById('_signup-error');
+    errEl.style.display = 'none';
+
+    if (!_validatePhone(val)) {
+      errEl.textContent = '휴대폰 뒷 8자리를 입력해 주세요.';
+      errEl.style.display = 'block';
+      input.focus();
+      return;
+    }
 
     const btn = document.getElementById('_signup-confirm');
     btn.disabled = true;
-    btn.textContent = '생성 중…';
+    btn.textContent = '확인 중…';
 
-    const ipv6 = _uuidToIPv6();
+    // 중복 확인
+    try {
+      const handle = '@' + val;
+      const filter = encodeURIComponent(`handle='${handle}'`);
+      const res    = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+      const data   = await res.json();
+      if (data.items?.[0]) {
+        errEl.textContent = '이미 사용 중인 번호입니다. 로그인을 시도해 주세요.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '아이디 만들기';
+        return;
+      }
+    } catch(e) {
+      errEl.textContent = '네트워크 오류. 다시 시도해 주세요.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '아이디 만들기';
+      return;
+    }
+
+    const ipv6 = await _phoneToIPv6(val);
     overlay.remove();
-    _showTrustPopup(resolve, ipv6, null, name);
+    _showTrustPopup(resolve, ipv6, null, val);
   };
 
   document.getElementById('_signup-confirm').onclick = _doSignUp;
@@ -306,9 +370,7 @@ function _showSignUpPopup(resolve) {
 }
 
 // ── 기기 신뢰 선택 팝업 ─────────────────────────────────
-// existingUser: Sign-in 시 L1에서 가져온 사용자 정보
-// newName: Sign-up 시 입력한 이름
-function _showTrustPopup(resolve, ipv6, existingUser = null, newName = null) {
+function _showTrustPopup(resolve, ipv6, existingUser = null, phone8 = null) {
   const overlay = document.createElement('div');
   overlay.id = '_trust-overlay';
   overlay.style.cssText = [
@@ -319,22 +381,22 @@ function _showTrustPopup(resolve, ipv6, existingUser = null, newName = null) {
   ].join(';');
 
   overlay.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:36px 28px;
-                width:100%;max-width:360px;box-sizing:border-box;text-align:center;">
+    <div style="background:#fff;border-radius:20px;padding:36px 24px;
+                width:100%;max-width:340px;box-sizing:border-box;text-align:center;">
       <h2 style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;
                  letter-spacing:-0.4px">이 기기를<br>신뢰하시겠습니까?</h2>
       <p style="margin:0 0 28px;font-size:13px;color:#6b7280;line-height:1.6">
         내 기기를 선택하면 다음에 자동으로 로그인됩니다
       </p>
       <button id="_trust-mine"
-        style="width:100%;padding:13px;border-radius:10px;
+        style="width:100%;padding:13px;border-radius:12px;
                background:#16a34a;color:#fff;border:none;
                font-size:15px;font-weight:600;font-family:inherit;
                cursor:pointer;margin-bottom:10px;">
         내 기기 (자동 로그인 유지)
       </button>
       <button id="_trust-public"
-        style="width:100%;padding:12px;border-radius:10px;
+        style="width:100%;padding:12px;border-radius:12px;
                background:transparent;color:#6b7280;
                border:1px solid #e5e7eb;
                font-size:14px;font-family:inherit;cursor:pointer;">
@@ -346,41 +408,36 @@ function _showTrustPopup(resolve, ipv6, existingUser = null, newName = null) {
 
   const _save = async (storage) => {
     overlay.remove();
-
     let user;
+
     if (existingUser) {
       // Sign-in: L1에서 복원
       user = { ipv6, ...existingUser };
     } else {
-      // Sign-up: 새 GUID + 이름 → L1 등록
+      // Sign-up: 새 아이디 생성 + L1 등록
+      const handle        = '@' + phone8;
+      const nickname_hash = await _sha256('phone:' + phone8);
       user = {
-        ipv6, isGuest: false, isTemp: false,
+        ipv6, handle, name: phone8,
+        isGuest: false, isTemp: false,
         registeredAt: new Date().toISOString()
       };
       storage.setItem(STORE_KEY, JSON.stringify(user));
       setUser(user);
 
-      // L1 자동 등록
-      if (newName) {
-        const nickname_hash = await _sha256('ko:' + newName);
-        const handle        = '@' + newName + '#' + ipv6.slice(-4);
-        try {
-          await fetch(L1_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              guid: ipv6, nickname_hash, handle,
-              native_lang: navigator.language?.slice(0,2) || 'ko',
-              is_public: true
-            })
-          });
-          user.handle = handle;
-          user.name   = newName;
-          user.isTemp = false;
-          console.info('[L1] 등록 완료:', handle);
-        } catch(e) {
-          console.warn('[L1] 등록 실패:', e.message);
-        }
+      try {
+        await fetch(L1_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            guid: ipv6, nickname_hash, handle,
+            native_lang: navigator.language?.slice(0,2) || 'ko',
+            is_public: true
+          })
+        });
+        console.info('[L1] 등록 완료:', handle);
+      } catch(e) {
+        console.warn('[L1] 등록 실패:', e.message);
       }
     }
 
@@ -421,8 +478,8 @@ export async function _registerToL1(name) {
   const user = _USER;
   if (!user) return null;
   const guid          = user.ipv6 || USER_GUID;
-  const nickname_hash = await _sha256('ko:' + name);
-  const handle        = '@' + name + '#' + guid.slice(-4);
+  const nickname_hash = await _sha256('phone:' + name);
+  const handle        = '@' + name;
 
   try {
     const postRes = await fetch(L1_URL, {
@@ -553,11 +610,11 @@ export const gopangAuth = {
     }
 
     if (needed >= 3) {
-      const words = prompt('4단어 시드를 입력하세요:');
-      if (!words) return false;
-      const inputGUID = await _seedToGUID(words);
+      const phone = prompt('휴대폰 뒷 8자리를 입력하세요:');
+      if (!phone) return false;
+      const inputGUID = await _phoneToIPv6(phone.trim());
       if (inputGUID !== stored.ipv6) {
-        appendBubble('ai', '❌ 시드가 일치하지 않습니다.', true);
+        appendBubble('ai', '❌ 번호가 일치하지 않습니다.', true);
         return false;
       }
       appendBubble('ai', '✅ L3 인증 완료.', true);
@@ -571,7 +628,7 @@ export const gopangAuth = {
 export function _injectAuthConfirmButton(level) {
   const list = document.getElementById('message-list');
   if (!list) return;
-  const labels = { L1:'얼굴 인증', L2:'지문 인증', L3:'시드 인증' };
+  const labels = { L1:'얼굴 인증', L2:'지문 인증', L3:'번호 인증' };
   const row = document.createElement('div');
   row.className = 'msg-row ai';
   row.id = '_auth-confirm-row';

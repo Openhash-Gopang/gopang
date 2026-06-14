@@ -143,8 +143,8 @@ export function _updateSecuritySection() {
 // ── 설정에서 아이디 등록 버튼 ────────────────────────────
 export async function _settingsRegisterHandle() {
   const inp  = document.getElementById('gopang-id-input');
-  const name = inp?.value?.trim() || '';
-  if (!name) { inp?.focus(); return; }
+  const name = inp?.value?.trim().replace(/\D/g,'').slice(0,8) || '';
+  if (!name || !/^\d{8}$/.test(name)) { inp?.focus(); return; }
 
   const btn = document.getElementById('gopang-id-register-btn') ||
               document.querySelector('#gopang-id-register-box button');
