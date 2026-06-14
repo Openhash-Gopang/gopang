@@ -1,4 +1,4 @@
-// gopang-auth.js — 인증 헬퍼(MediaPipe·카메라·지문·시드·등록·복구)
+﻿// gopang-auth.js — 인증 헬퍼(MediaPipe·카메라·지문·시드·등록·복구)
 async function _loadMediaPipe() {
   if (_mpFaceLandmarker) return _mpFaceLandmarker;
   if (_mpLoading) {
@@ -246,7 +246,6 @@ function _showFaceCaptureUI(onCapture) {
 // ── 기기 핑거프린트 (SHA-256, IPv6 유도용) ──────────────
 async function _buildDeviceFingerprint() {
   const raw = [
-    navigator.userAgent,
     navigator.language,
     screen.width + 'x' + screen.height,
     screen.colorDepth,
