@@ -1,4 +1,4 @@
-/**
+﻿/**
  * core/auth.js — 사용자 인증·등록 v3.0
  * - Sign-in: handle로 L1 조회 → 자동 로그인
  * - Sign-up: 이름 입력 → GUID 생성 → L1 등록
@@ -151,6 +151,21 @@ function _showSignPopup(resolve) {
     </div>`;
 
   document.body.appendChild(overlay);
+
+  // 외부 클릭 시 익명 모드로 진입
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.remove();
+      const user = {
+        ipv6: _uuidToIPv6(),
+        isGuest: true, isAnon: true,
+        registeredAt: new Date().toISOString()
+      };
+      sessionStorage.setItem(STORE_KEY, JSON.stringify(user));
+      setUser(user);
+      resolve(user);
+    }
+  });
 
   // 입력 포커스 스타일
   const input = document.getElementById('_signin-handle');
