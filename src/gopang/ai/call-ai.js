@@ -10,6 +10,8 @@ import { _buildLocNote } from '../services/location.js';
 import { runRouter, applyRouterResult } from './router.js';
 import { _injectAuthConfirmButton } from '../core/auth.js';
 import { _klawReview } from '../services/klaw.js';
+import { saveMessage } from '../../pdv/vault.js';
+import { anchor } from '../../openhash/hashChain.js';
 
 export let history_ref = history;  // 외부 참조용
 
@@ -256,6 +258,17 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
     history.push({ role: 'assistant', content: fullReply });
     if (bubble) bubble.classList.remove('streaming');
 
+    // ── 대화 완료 — PDV 저장 + OpenHash 앵커링 ─────────────
+    // 설계: user + assistant 1턴 쌍을 완료 즉시 저장
+    //   1. vault.saveMessage() → IndexedDB AES-256-GCM 암호화 저장
+    //   2. hashChain.anchor() → h_i = SHA-256(h_{i-1} ∥ data ∥ blockHeight)
+    //   3. _patchPdvChainHeight() → pdv_log에 chain_height 소급 기록
+    _saveTurnToPdv({
+      userText,
+      assistantText: fullReply,
+      guid: USER_GUID,
+    }).catch(e => console.warn('[PDV] 대화 저장 실패 (무시):', e.message));
+
     // ── GWP 태그 감지 → 하위 시스템 새 탭 오픈 (SP-00 v10.0) ──
     const gwpMatch = fullReply.match(/\[GWP:([\w-]+)\]/);
     if (gwpMatch) {
@@ -318,3 +331,94 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
   }
 }
 
+
+// ── _saveTurnToPdv — 대화 1턴 완료 후 PDV 저장 + OpenHash 앵커링 ─────────
+// 설계 원칙:
+//   - user + assistant 쌍이 완성된 시점(assistant 응답 완료)에 1회 저장
+//   - vault.js IndexedDB: AES-256-GCM 암호화 저장 (로컬 원본)
+//   - hashChain.anchor(): h_i = SHA-256(h_{i-1} ∥ data ∥ blockHeight)
+//   - /pdv/report Worker: pdv_log INSERT (openhash_anchored: true)
+//   - fire-and-forget — 저장 실패가 대화 흐름을 차단하지 않음
+async function _saveTurnToPdv({ userText, assistantText, guid }) {
+  if (!guid) return;
+
+  const now       = new Date().toISOString();
+  const sessionId = `TURN-${guid.replace(/:/g, '').slice(0, 12)}-${Date.now()}`;
+
+  // ① vault.js — IndexedDB AES-256-GCM 암호화 저장 (로컬 원본)
+  //    user 메시지
+  const userMsgId = await _sha256hex(userText + now + guid).catch(() => sessionId + '-u');
+  await saveMessage({
+    msgId:     userMsgId,
+    senderId:  guid,
+    role:      'user',
+    content:   userText,
+    timestamp: now,
+    riskLevel: 'S0',
+    sessionId,
+  }).catch(e => console.warn('[Vault] user 메시지 저장 실패:', e.message));
+
+  //    assistant 메시지
+  const asstMsgId = await _sha256hex(assistantText + now + 'assistant').catch(() => sessionId + '-a');
+  await saveMessage({
+    msgId:     asstMsgId,
+    senderId:  'assistant',
+    role:      'assistant',
+    content:   assistantText,
+    timestamp: now,
+    riskLevel: 'S0',
+    sessionId,
+  }).catch(e => console.warn('[Vault] assistant 메시지 저장 실패:', e.message));
+
+  // ② hashChain.anchor() — 1턴 쌍을 하나의 앵커로 기록
+  //    content = user + assistant 직렬화 (원문 해시, 원문은 IndexedDB에만)
+  let entryHash = null;
+  let layer     = null;
+  try {
+    const anchorContent = JSON.stringify({
+      type:      'conversation_turn',
+      guid,
+      sessionId,
+      userHash:  userMsgId,
+      asstHash:  asstMsgId,
+      ts:        now,
+    });
+    const result = await anchor(anchorContent, guid, sessionId);
+    entryHash    = result.entryHash;
+    layer        = result.layer;
+    console.info('[PDV] OpenHash 앵커링 완료',
+      '| layer:', layer,
+      '| entryHash:', entryHash?.slice(0, 16));
+  } catch (e) {
+    console.warn('[PDV] OpenHash 앵커링 실패 (무시):', e.message);
+  }
+
+  // ③ /pdv/report Worker — pdv_log INSERT
+  //    block_hash = entryHash → Worker가 openhash_anchored: true 설정
+  const { PROXY } = await import('../core/state.js');
+  await fetch(`${PROXY}/pdv/report`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({
+      report: {
+        svc:          'gopang',
+        type:         'conversation_turn',
+        reporter_svc: 'gopang-ai',
+        session_id:   sessionId,
+        block_hash:   entryHash,
+        who:  { ipv6: guid },
+        when: now,
+        where: 'https://gopang.net',
+        what: `대화 1턴 — user:${userText.slice(0, 40)}... / asst:${assistantText.slice(0, 40)}...`,
+        how:  'AI 대화',
+        why:  '사용자 요청',
+      },
+    }),
+  }).catch(e => console.warn('[PDV] report 전송 실패 (무시):', e.message));
+}
+
+// ── SHA-256 헥스 헬퍼 (call-ai.js 로컬) ───────────────────────────────────
+async function _sha256hex(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
