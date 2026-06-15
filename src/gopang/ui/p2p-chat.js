@@ -146,6 +146,16 @@ function _setupChannel(channel) {
   channel.onmessage = e => {
     try {
       const msg = JSON.parse(e.data);
+      if (msg.type === 'bye') {
+        _appendMsg('system', '🔴 상대방이 대화를 종료했습니다.');
+        // James 쪽도 PDV 저장 후 종료
+        if (_p2pMessages.length > 0 && _peerInfo) {
+          _saveP2PSession(_p2pMessages, _peerInfo, _sessionStart)
+            .catch(e => console.warn('[P2P] PDV 저장 실패:', e.message));
+        }
+        setTimeout(() => _closeP2P(), 1500);
+        return;
+      }
       _appendMsg('peer', msg.text, msg.ts);
     } catch {
       _appendMsg('peer', e.data);
@@ -349,6 +359,29 @@ function _esc(str) {
 // ── P2P 종료 ─────────────────────────────────────────────
 function _closeP2P() {
   _stopPoll();
+
+  // 상대방에게 종료 신호 전송 (DataChannel 우선, 실패 시 signal 경유)
+  if (_peerInfo && _USER?.ipv6) {
+    // ① DataChannel로 종료 메시지 전송
+    try {
+      if (_rtcChannel && _rtcChannel.readyState === 'open') {
+        _rtcChannel.send(JSON.stringify({ type: 'bye', ts: new Date().toISOString() }));
+      }
+    } catch(e) { console.warn('[P2P] bye DataChannel 전송 실패:', e.message); }
+
+    // ② signal 경유 종료 알림 (DataChannel 실패 대비)
+    fetch(`${PROXY}/signal/send`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from_guid: _USER.ipv6,
+        to_guid:   _peerInfo.guid,
+        type:      'ice',
+        payload:   { bye: true },
+      }),
+    }).catch(() => {});
+  }
+
   if (_rtcChannel) { _rtcChannel.close(); setRtcChannel(null); }
   if (_rtcConn)    { _rtcConn.close();    setRtcConn(null);    }
   _chatOverlay?.remove();
