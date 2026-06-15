@@ -1,5 +1,5 @@
 # GDUDA P2P 설계 결론
-> 작성일: 2026-06-15 (v1.1 수정)
+> 작성일: 2026-06-15 (v1.2 수정 — 전화번호 온보딩 반영)
 > 저장소: Openhash-Gopang/gopang
 > 관련 문서: gopang-id-auth-guide.md (GDUDA v1.0, GAS v1.6)
 
@@ -76,13 +76,18 @@ handle: "@US-1234567890"
 
 ## 4. 전체 흐름
 
-### 가입 시
+### 가입 시 (전화번호 온보딩, gopang-id-auth-guide.md §4.2)
 
 ```
-@US-1234567890 (James) 가입
-  ├─ nickname_hash = SHA-256('en:James') → DHT 인덱스 노드 등록
+@US-1234567890 (James) 첫 접속
+  ├─ 전화번호 입력: +11234567890
+  ├─ GUID = SHA-256('gopang-phone:+11234567890') → IPv6 (로컬 계산)
+  ├─ handle = '@US-1234567890'
+  ├─ gopangWallet.create() → Ed25519 키페어 자동 생성
+  ├─ localStorage['gopang_user_v4'] 저장
+  ├─ POST /p2p/register → DHT 인덱스 노드(global_profiles) 등록
   │    { guid, handle: '@US-1234567890', nickname: 'James',
-  │      nickname_hash, current_l1, region, country_code }
+  │      nickname_hash, current_l1, region, country_code: 'US' }
   └─ 현재 접속 L1에 단말 등록
 ```
 
@@ -210,9 +215,10 @@ CREATE INDEX ON global_profiles (country_code);
 
 | 단계 | 상태 | 내용 |
 |------|------|------|
+| Step 0 | ⏳ | gopang-app.js — 전화번호 온보딩 UI 구현 (기존 얼굴/시드 흐름 대체) |
 | Step 1 | ✅ | Supabase `global_profiles` 테이블 생성 |
 | Step 2-A | ✅ | CF Worker `/p2p/register` 엔드포인트 추가 |
-| Step 2-B | 🔄 | auth.js — 가입 시 `/p2p/register` 호출 |
+| Step 2-B | 🔄 | auth.js — 가입 시 `/p2p/register` 호출 (전화번호 온보딩과 통합) |
 | Step 3 | ⏳ | `search.js` — 닉네임 검색 UI + 상세 필터 |
 | Step 4 | ⏳ | CF Worker — `/p2p/search` 엔드포인트 |
 | Step 5 | ⏳ | `p2p.js` — 연결 요청/수락/채팅 |

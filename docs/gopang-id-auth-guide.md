@@ -36,14 +36,12 @@
 - 3.4 4단어 시드 (L3 + 복원용)
 - 3.5 하위 시스템별 최소 인증 레벨
 
-**4. 온보딩 흐름 — 시나리오 A/B/C 분기**
-- 4.1 배경 — 기존 온보딩의 문제점
-- 4.2 0단계: AI 비서 API 키 설정 (비용 통제)
-- 4.3 분기점 — "고팡을 어떻게 이용하시겠습니까?"
-- 4.4 시나리오 A — 게스트 (정보 조회만)
-- 4.5 시나리오 B — GDC 지갑 사용자
-- 4.6 시나리오 C — 프로필 등록 (개인/사업자)
-- 4.7 그룹 1 vs 그룹 2 — 지갑 연결 여부에 따른 분기 처리
+**4. 온보딩 흐름 — 전화번호 기반 단일 경로** *(v2.0, 2026-06-15)*
+- 4.1 설계 원칙
+- 4.2 온보딩 단일 흐름
+- 4.3 전화번호 → GUID 변환 알고리즘
+- 4.4 AI 비서 API 키 설정 (온보딩 직후)
+- 4.5 wallet 자동 할당 보장
 
 **5. 하위 시스템 SSO 인증**
 - 5.1 핵심 원칙 — 고팡이 유일한 인증 포털
@@ -218,7 +216,7 @@ async function _buildIPv6Identity(fpHex) {
 
 **특성**: 자동(무의식), 빠름(0초), 기기 종속, 브라우저 업데이트 시 변경 가능 → 변경 시 §8(기기 변경 및 복원) 절차로 동일 정체성 유지.
 
-`localStorage['gopang_user_v3']`에 다음 구조로 저장됩니다.
+`localStorage['gopang_user_v4']`에 다음 구조로 저장됩니다.
 
 ```json
 {
@@ -295,7 +293,7 @@ async function _buildGopangId(username, fpHex, regionCode, userType) {
 │  · public.users (guid=ipv6, device_fp, ...)       │
 ├─────────────────────────────────────────────────┤
 │  PDV — Private Data Vault / localStorage(기기 로컬)│
-│  · gopang_user_v3: ipv6, fpHex, seedHex, faceVec   │
+│  · gopang_user_v4: ipv6, fpHex, seedHex, faceVec   │
 │  · gopang_wallet_pubkey (Ed25519 공개키)           │
 ├─────────────────────────────────────────────────┤
 │  기기 Secure Enclave (하드웨어 보안)               │
@@ -372,61 +370,115 @@ navigator.credentials.get() [인증]
 
 ---
 
-## 4. 온보딩 흐름 — 시나리오 A/B/C 분기
+## 4. 온보딩 흐름 — 전화번호 기반 단일 경로
 
-### 4.1 배경 — 기존 온보딩의 문제점
+> **v2.0 변경 (2026-06-15)**: 기존 시나리오 A(게스트)/B(GDC)/C(프로필) 3분기를 **전화번호 입력 → 즉시 GDC 사용자 등록** 단일 경로로 통합. 게스트 모드 폐지.
 
-기존 `gopang-app.js`의 `_USER` 초기화 로직은 **모든 신규 접속자를 GDC 지갑 사용자로 전제**하고, 진입 즉시 얼굴 등록 → 4단어 시드 → 지문 등록(L0→L2) 흐름을 강제했습니다. 또한 AI 비서는 별도 설정 없이 즉시 공유 `DEEPSEEK_API_KEY`를 사용해, 방문자 수에 비례해 운영사 API 비용이 무한정 증가하는 구조였습니다.
+### 4.1 설계 원칙
 
-이 두 가지를 해결하기 위해, 2026-06-13 세션에서 다음과 같은 3단계 분기 온보딩을 도출했습니다.
+```
+원칙: 모든 사용자는 첫 접속 시 전화번호를 입력하고 즉시 등록된다.
+      전화번호 자체가 신원이다.
 
-### 4.2 0단계: AI 비서 API 키 설정 (비용 통제)
+현재(테스트):  전화번호 입력 → 즉시 등록 (OTP 없음)
+상용화 시점:   전화번호 입력 → SMS 2FA → 등록
+```
 
-신규 사용자에게 **생체인증보다 먼저** 제시되어야 할 것은 무료 LLM API 키 발급/등록입니다.
+게스트(미등록) 상태는 존재하지 않습니다. 모든 접속자는 등록된 GDC 사용자입니다.
 
-- DeepSeek(platform.deepseek.com), Gemini(aistudio.google.com 무료 티어), Claude(console.anthropic.com 무료 크레딧) 등 무료 발급처 안내
+### 4.2 온보딩 단일 흐름
+
+```
+[Step 1] 전화번호 입력
+  ┌────────────────────────────────┐
+  │  📱 전화번호를 입력하세요        │
+  │  +82 010-____-____            │
+  │  [계속]                        │
+  └────────────────────────────────┘
+  ※ 상용화 시: SMS OTP 인증 추가 (2FA)
+
+[Step 2] 자동 사용자 등록
+  e164 = normalizePhone(input)         // '+821012345678'
+  guid = SHA-256('gopang-phone:' + e164) → IPv6 변환 (2601:db80:...)
+  handle = '@' + digits8               // KR: @12345678 / 비KR: @US-1234567890
+  nickname_hash = SHA-256(e164)        // GDUDA 검색 키
+
+  gopangWallet.create()                // Ed25519 키페어 자동 생성
+  gopangWallet.setIdentity({ guid, handle, e164 })
+
+  localStorage['gopang_user_v4'] = { ipv6: guid, handle, e164,
+                                      country_code, nickname, ... }
+
+[Step 3] Supabase 등록 (upsert)
+  POST /p2p/register → global_profiles upsert
+    { guid, handle, e164, country_code, region, current_l1, ... }
+
+  public.users upsert
+    { guid: ipv6, device_fp, registered_at, last_seen_at, gduda_registered: true }
+
+[Step 4] 온보딩 완료 → gopang.net/webapp.html 진입
+```
+
+### 4.3 전화번호 → GUID 변환 알고리즘
+
+handle 및 GUID 생성 규칙은 GAS v1.6 § 및 GDUDA P2P Design §2와 동일합니다.
+
+```javascript
+// 전화번호 정규화
+function normalizePhone(input, countryCode = 'KR') {
+  const digits = input.replace(/[^0-9]/g, '');
+  if (countryCode === 'KR') return '+82' + digits.replace(/^0/, '');
+  // 비KR: country dial code 자동 부착
+  return '+' + dialCode(countryCode) + digits;
+}
+
+// GUID 생성 (서버 불필요 — 로컬 계산)
+async function phoneToGuid(e164) {
+  const buf = await crypto.subtle.digest('SHA-256',
+    new TextEncoder().encode('gopang-phone:' + e164));
+  const hex = Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  const groups = [];
+  for (let i = 0; i < 8; i++) groups.push(hex.slice(i*4, i*4+4));
+  groups[0] = '2601'; groups[1] = 'db80';
+  return groups.join(':');
+}
+
+// handle 생성
+function phoneToHandle(e164, countryCode = 'KR') {
+  const digits = e164.replace(/[^0-9]/g, '');
+  if (countryCode === 'KR') return '@' + digits.slice(-8);       // @12345678
+  return '@' + countryCode + '-' + digits.slice(-10);            // @US-1234567890
+}
+```
+
+### 4.4 AI 비서 API 키 설정 (온보딩 직후)
+
+등록 완료 직후, AI 비서 API 키 설정 화면을 제시합니다.
+
+- DeepSeek / Gemini(무료 티어) / Claude 등 무료 발급처 안내
 - API 키는 AES-256-GCM 암호화 후 `user_llm_keys`에 guid 기준 저장 (§6.4)
-- "건너뛰기" 시 공유 크레딧 한도 내에서만 응답 — 한도 초과 시 본인 키 요구
+- "나중에 설정" 시 공유 크레딧 한도 내에서만 응답 — 한도 초과 시 본인 키 요구
 
-### 4.3 분기점 — "고팡을 어떻게 이용하시겠습니까?"
+### 4.5 wallet 자동 할당 보장
 
-| 옵션 | 설명 |
+`gopang-wallet.js`는 로드 시 **항상** Ed25519 키페어를 자동 생성합니다. 전화번호 입력 후 `setIdentity()`가 호출되면 wallet과 guid가 즉시 연결됩니다.
+
+```
+gopang-wallet.js 로드
+  └─ GopangWallet.load() 또는 create()
+       └─ wallet.publicKeyB64u  ← 항상 존재
+       └─ wallet.guid           ← 전화번호 입력 전: null
+                                   setIdentity() 호출 후: ipv6 연결됨
+```
+
+| 항목 | 값 |
 |---|---|
-| 🔍 정보만 둘러보기 | 업체 정보, AI 상담만 이용. 결제는 카드/알리페이 등 외부 수단 |
-| 💰 고팡 지갑(GDC) 사용 | GDC 기반 결제, PDV 데이터 주권 — 본인 인증(L0→L2) 필요 |
-| 🏪 프로필 등록(개인/사업자) | 본인·업체 정보를 등록하여 검색·AI 비서에 노출 |
+| `gopangWallet.publicKeyB64u` | 항상 존재 (로드 즉시) |
+| `gopangWallet.guid` | `gopang_user_v4.ipv6` 연결 (전화번호 등록 완료 후) |
+| `localStorage['gopang_user_v4']` | `{ ipv6, handle, e164, country_code, nickname, ... }` |
 
-### 4.4 시나리오 A — 게스트 (정보 조회만)
-
-- GopangWallet/IPv6/얼굴/지문 인증 불필요
-- `_showRegisterUI()`(얼굴/시드/지문 흐름)를 완전히 스킵
-- `_USER = { isTemp: true, mode: 'guest' }` 경량 상태만 유지
-- AI 채팅, 업체 검색 등 일반 기능 전면 허용. 결제 관련 UI는 숨김 또는 클릭 시 시나리오 B로 안내
-
-### 4.5 시나리오 B — GDC 지갑 사용자
-
-- 기존 `_showRegisterUI()`(얼굴 등록 → 4단어 시드 → 지문 등록, L0→L2) 그대로 진행
-- 완료 후 `public.users`에 `ipv6` 기반 레코드 생성, `gopangWallet.setIdentity({ guid: ipv6 })`
-- `user_profiles`(공개 프로필) 생성은 하지 않음 — 거래 주체이지 검색 대상이 아님
-
-### 4.6 시나리오 C — 프로필 등록 (개인/사업자)
-
-- `register-profile.html`로 이동 (§6.3)
-- entity_type(person/business/org/institution) 선택 → 기본정보·위치·영업시간·결제수단·공개설정 입력
-- 완료 시 `user_profiles`에 upsert, `handle` 발급
-- AI 비서 설정(`/ai-setup`)은 동일 guid로 자연스럽게 연결됨 (§6.4)
-
-### 4.7 그룹 1 vs 그룹 2 — 지갑 연결 여부에 따른 분기 처리
-
-`gopang-wallet.js`는 로드 시 **항상** Ed25519 키페어를 자동 생성합니다. 문제는 `guid(ipv6)` 연결 여부입니다.
-
-| | 그룹 1 (정체성 등록 완료) | 그룹 2 (시나리오 A로 진입, 미등록) |
-|---|---|---|
-| `gopangWallet.publicKeyB64u` | 존재 | 존재 |
-| `gopangWallet.guid` | `gopang_user_v3.ipv6`와 연결됨 | `null` |
-| 시나리오 C 진입 시 | 즉시 `/profile` 서명·전송 가능 | **ipv6만 경량 생성** 후 `setIdentity()` |
-
-그룹 2가 시나리오 C로 전환할 때, 시나리오 B 전체(시드+얼굴+지문)를 요구하지 않고 **ipv6만 시드 없이 생성**합니다(`register-profile.html`의 `ensureIdentity()`, §6.3). 사용자에게는 "분실 시 복구하려면 설정에서 4단어 시드를 추가하세요"라는 안내만 노출합니다. 즉 **프로필 소유권 증명에는 키페어+ipv6만으로 충분하며, 결제 인증 레벨(L0-L3)과 무관**합니다.
+> **⚠️ 스토리지 키 주의**: 현재 구현은 `gopang_user_v4`를 사용합니다. 구버전 `gopang_user_v4` 참조 코드는 모두 `v4`로 교체해야 합니다 (`gopang-wallet.js` 싱글턴 초기화 포함).
 ## 5. 하위 시스템 SSO 인증
 
 ### 5.1 핵심 원칙 — 고팡이 유일한 인증 포털
@@ -437,12 +489,12 @@ navigator.credentials.get() [인증]
 [금지]
 하위 서비스가 자체 로그인 화면 구현
 하위 서비스가 지문·얼굴·시드를 독자 등록
-하위 서비스가 gopang_user_v3를 직접 읽고 조작
+하위 서비스가 gopang_user_v4를 직접 읽고 조작
 
 [허용]
 gopang-sso.js를 통한 토큰 요청
 Cloudflare Worker /auth/verify로 토큰 검증
-gopang_user_v3 읽기 전용 참조 (L0 기기 일치 확인만)
+gopang_user_v4 읽기 전용 참조 (L0 기기 일치 확인만)
 ```
 
 ### 5.2 도메인 요건 (서브도메인 · HTTPS)
@@ -494,7 +546,7 @@ gopang.net/auth/
 경로 2-A: sessionStorage 캐시 (gopang_sso_token)
    → 이전 인증 결과 재사용
 
-경로 2-B: 로컬스토어 직접 대조 (same-device, gopang_user_v3 + fpHex 일치)
+경로 2-B: 로컬스토어 직접 대조 (same-device, gopang_user_v4 + fpHex 일치)
    → Silent iframe 없이 즉시 토큰 생성
 
 경로 2-B(iframe): Silent iframe (gopang.net/auth/silent-auth.html)
@@ -511,8 +563,8 @@ gopang.net/auth/
 
 `silent-auth.html`은 두 가지 모드로 동작합니다.
 
-- **Silent 모드** (`window.parent !== window`, iframe): `gopang_user_v3`를 읽어 기기 일치 확인 후 `issueToken(user, svc)`로 토큰을 발급하고 `postMessage({type:'GOPANG_SSO_TOKEN', token})`으로 부모 창에 전달
-- **리다이렉트 모드**: 4단어 시드 입력 UI(`#auth-card`) 표시. 시드 일치 시 토큰 발급 후 `return` URL로 `?gopang_token=...` 부착 리다이렉트. 신규 사용자는 "처음 오셨나요? 고팡 등록하기" 버튼으로 `gopang.net?register=1`로 이동
+- **Silent 모드** (`window.parent !== window`, iframe): `gopang_user_v4`를 읽어 기기 일치 확인 후 `issueToken(user, svc)`로 토큰을 발급하고 `postMessage({type:'GOPANG_SSO_TOKEN', token})`으로 부모 창에 전달
+- **리다이렉트 모드**: 4단어 시드 입력 UI(`#auth-card`) 표시. 시드 일치 시 토큰 발급 후 `return` URL로 `?gopang_token=...` 부착 리다이렉트. `gopang_user_v4`가 없는 미등록 기기는 전화번호 입력 온보딩(`gopang.net?onboard=1`)으로 이동 (§4.2)
 
 `issueToken(user, svcId)`는 `{ ver, ipv6, level, svc, iat, exp }` payload를 만들고, `user.seedHex`가 있으면 HMAC-SHA256(seedHex)로 서명합니다. 시드가 없는 사용자는 `sig: 'unsigned'`로 반환됩니다 — 이 토큰은 §6의 Ed25519 서명과는 **별개의 메커니즘**입니다 (§6.5 참조).
 
@@ -553,7 +605,7 @@ let wallet = await GopangWallet.load();
 if (!wallet) {
   wallet = await GopangWallet.create();  // Ed25519 키페어 자동 생성
 }
-const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
+const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
 if (stored?.ipv6) {
   wallet.setIdentity({ guid: stored.ipv6, handle: stored.handle || null });
 }
@@ -561,7 +613,7 @@ global.gopangWallet = wallet;
 ```
 
 - 개인키는 IndexedDB(AES-GCM 암호화) + localStorage 폴백에 저장
-- `wallet.publicKeyB64u` (Base64URL Ed25519 공개키), `wallet.guid` (=ipv6, `gopang_user_v3.ipv6` 존재 시에만 연결)
+- `wallet.publicKeyB64u` (Base64URL Ed25519 공개키), `wallet.guid` (=ipv6, `gopang_user_v4.ipv6` 존재 시에만 연결)
 - `wallet.sign(payload)` — Ed25519 서명, `wallet.verify(payload, sig)` — 검증
 
 ### 6.2 /profile API — Ed25519 서명 + TOFU
@@ -591,14 +643,14 @@ global.gopangWallet = wallet;
 
 ### 6.3 register-profile.html 흐름
 
+> 전화번호 온보딩(§4) 완료 후 호출됩니다. `gopang_user_v4`에 ipv6가 항상 존재하므로 경량 ipv6 생성 분기(`ensureIdentity`)가 불필요합니다.
+
 ```
 1. <script src="/gopang-wallet.js"> 로드 → window.gopangWallet 자동 생성
 
-2. ensureIdentity()
-   - localStorage.gopang_user_v3.ipv6 존재? 
-       있음 → 그대로 사용 (그룹 1)
-       없음 → fpHex/ipv6를 시드 없이 즉시 생성·저장 (그룹 2, §4.7)
-   - gopangWallet.guid 없으면 setIdentity({ guid: ipv6 })
+2. 신원 확인
+   - localStorage['gopang_user_v4'].ipv6 읽기 (항상 존재 — §4.2 보장)
+   - gopangWallet.guid 미연결이면 setIdentity({ guid: ipv6, handle, e164 })
 
 3. 기존 프로필 로드
    GET /profile?guid={ipv6} → 있으면 폼에 자동 채움
@@ -607,12 +659,12 @@ global.gopangWallet = wallet;
    1단계: entity_type 선택 (person/business/org/institution)
    2단계: 이름·소개·태그·언어·위치(Kakao 지오코딩)·연락처
    3단계: 영업시간·GDC 결제 수락 여부·공개 설정
-        + "4단어 시드 미설정" 경고 (그룹 2인 경우)
 
 5. 제출
    payload = { guid, pubkey: wallet.publicKeyB64u, ...폼데이터 }
    signature = await wallet.sign(JSON.stringify(payload))
    POST /profile  body = { ...payload, signature }
+   POST /p2p/register → global_profiles 동시 갱신 (§4.2 Step 3)
 
 6. 응답의 handle로 /profile.html?handle=... 이동
 ```
@@ -627,7 +679,7 @@ global.gopangWallet = wallet;
 
 - `register-profile.html`은 `users.gopang.net` 자체 페이지이므로 크로스도메인 SSO(silent-auth.html, iframe, 리다이렉트)가 필요 없습니다 — `window.gopangWallet`을 직접 사용
 - `/profile`, `/ai-setup`의 쓰기 요청은 "이 요청이 정말 이 guid의 개인키 소유자가 보낸 것인가"를 증명해야 하며, 이는 SSO 토큰(HMAC, 세션 캐시 가능)보다 **매 요청 서명(Ed25519)**이 더 강한 보장을 제공합니다
-- 두 체계는 공통적으로 `gopang_user_v3.ipv6`를 정체성의 근거로 사용하므로 **상호 호환**되며, 충돌하지 않습니다
+- 두 체계는 공통적으로 `gopang_user_v4.ipv6`를 정체성의 근거로 사용하므로 **상호 호환**되며, 충돌하지 않습니다
 
 ---
 
@@ -804,15 +856,26 @@ DNS(평균 ~30ms, 캐시히트 90% 가정) 대비 GDUDA 검색 자체(~23ms)는 
 
 ```
 새 기기 접속
-   → 기기 핑거프린트 불일치 감지
-   → 4단어 시드 입력
-   → PBKDF2(입력값) == PDV 저장 해시?
-        일치 ✅ → 기기 핑거프린트 갱신, IPv6 정체성 유지
-                  → 얼굴 또는 지문 재등록 (선택)
-        불일치 ❌ → 재입력 요청 (3회 실패 시 잠금)
+   → gopang_user_v4 없음 감지
+   → 온보딩 화면: 전화번호 입력
+        └─ GUID = SHA-256('gopang-phone:' + e164) → 동일 정체성 즉시 복원 (§4.3)
+        └─ gopangWallet.setIdentity({ guid, handle, e164 })
+
+   ※ 생체(얼굴/지문)는 새 기기에서 재등록 필요
+   ※ 4단어 시드가 있으면 L3 거래 즉시 복원 가능
+   ※ 기기 핑거프린트 불일치 시에도 전화번호 일치로 동일 guid 확인됨
 ```
 
-`gopang-sso.js`/`silent-auth.html` 차원에서는, `_tryLocalStore()`가 같은 브라우저의 `localStorage['gopang_user_v3']`를 읽고 현재 기기의 `_buildDeviceFingerprint()`와 대조합니다. 일치하면 토큰을 즉시 발급하고, 불일치 시 `silent-auth.html`의 리다이렉트 모드(4단어 입력 UI)로 전환됩니다.
+4단어 시드 보유 사용자는 기존 흐름도 유효합니다:
+
+```
+4단어 시드 입력 → PBKDF2(입력값) == PDV 저장 해시?
+   일치 ✅ → 기기 핑거프린트 갱신, IPv6 정체성 유지
+             → 얼굴 또는 지문 재등록 (선택)
+   불일치 ❌ → 재입력 요청 (3회 실패 시 잠금)
+```
+
+`gopang-sso.js`/`silent-auth.html` 차원에서는, `_tryLocalStore()`가 같은 브라우저의 `localStorage['gopang_user_v4']`를 읽고 현재 기기의 `_buildDeviceFingerprint()`와 대조합니다. 일치하면 토큰을 즉시 발급하고, 불일치 시 `silent-auth.html`의 리다이렉트 모드(전화번호 재입력 또는 4단어 입력 UI)로 전환됩니다.
 
 ---
 
@@ -924,9 +987,10 @@ AI 비서 (1차 판단)
 4. iOS Safari WebAuthn 제한
    → Face ID는 지원, Touch ID는 부분 지원
 
-5. (신규, §4.7) 4단어 시드 없이 프로필을 등록한 사용자(그룹 2)
-   → 기기 변경 시 해당 프로필에 다시 접근할 수 없음
-   → register-profile.html에서 시드 미설정 시 경고 표시
+5. 전화번호만으로 등록한 사용자 (4단어 시드 미설정)
+   → 기기 변경 시 같은 전화번호로 guid를 재계산하면 정체성은 복원 가능
+   → 단, 얼굴/지문 등 생체 인증은 새 기기에서 재등록 필요
+   → 고액 거래·프로필 소유권 분쟁 방지를 위해 설정에서 4단어 시드 등록 강권
 ```
 
 ---
@@ -984,29 +1048,33 @@ GAS(`Gopang_Auth_and_Discovery.html` §15)의 PUBLIC/SEMI-PUBLIC/PRIVATE 3계층
 | [AUTH:Lx] 자동 인증 | 완료 | AI 응답 태그 파싱 |
 | 설정 화면 보안 섹션 | 완료 | 지문·얼굴 재등록 |
 
-### 12.2 이번 세션 반영 사항 (worker.js v5.1 / register-profile.html)
+### 12.2 이번 세션 반영 사항 (2026-06-15 / v2.0)
 
 | 기능 | 상태 | 비고 |
 |------|------|------|
-| 온보딩 시나리오 A/B/C 분기 설계 | 설계 완료, 구현 대기 | §4 — gopang-app.js 패치 필요 |
+| 온보딩 단일화 — 전화번호 입력 즉시 GDC 등록 | 설계 완료, 구현 대기 | §4 — 게스트·B·C 분기 폐지 |
+| 전화번호 → GUID/handle 변환 알고리즘 | 설계 완료 | §4.3, GDUDA §2 동기화 |
+| `gopang_user_v3` → `gopang_user_v4` 키 통일 | 설계 완료, 구현 대기 | gopang-wallet.js, gopang-app.js 패치 필요 |
 | `/profile` GET/POST (Ed25519+TOFU) | worker.js v5.1 패치 완료 | §6.2 |
-| `/ai-setup` Ed25519+TOFU 전환 | worker.js v5.1 패치 완료 | §6.4 — 기존 `_parseGopangJWT`/`/auth/issue` 경로 제거 |
-| `register-profile.html` | 작성 완료 | §6.3 — gopangWallet 직접 사용, ipv6 경량 생성 포함 |
+| `/ai-setup` Ed25519+TOFU 전환 | worker.js v5.1 패치 완료 | §6.4 |
+| `register-profile.html` | 구현 대기 | §6.3 — ensureIdentity() 분기 제거됨 |
 | `user_profiles.pubkey_ed25519` 컬럼 | **확인 필요** | `/biz/product`가 이미 참조하나 스키마 존재 여부 미확인 |
 
 ### 12.3 구현 예정
 
 | 기능 | 예정 | 비고 |
 |------|------|------|
-| `gopang-app.js` 온보딩 A/B/C 분기 패치 | 다음 세션 | §4 — `_showRegisterUI()` 교체 |
+| `gopang-app.js` 온보딩 전화번호 입력 UI 구현 | 다음 세션 | §4.2 — `_showRegisterUI()` 전면 교체 |
+| `gopang-wallet.js` v3 키 → v4 키 마이그레이션 | 다음 세션 | 기존 기기 하위호환 처리 필요 |
+| `register-profile.html` 3단계 폼 구현 | 다음 세션 | §6.3 |
+| SMS 2FA (상용화 시) | Phase 2 | 현재는 전화번호 입력만으로 즉시 등록 |
 | `GET /profile` PUBLIC/SEMI/PRIVATE 마스킹 | Phase 2 | §11.1 |
 | OpenHash 공개키 등록 | Phase 2 | 완전 탈중앙 |
 | 얼굴 라이브니스 감지 | Phase 2 | 딥페이크 방어 |
 | 다기기 지문 동기화 | Phase 2 | OpenHash 기반 |
-| 언어코드 기반 닉네임 해시(v2) | Phase 2 | §7.3 — v1과 병행 지원 |
+| 언어코드 기반 닉네임 해시(v2) | Phase 2 | §7.3 |
 | IPv6 PAR(분산 공개 속성 레코드) | Phase 3 | §7.5 |
-| Primary GUID/Current IPv6/Nickname Hash 3단계 분리 | Phase 3 | §2.2 — 미도입 |
-| 아이디 기반 IPv6 변환(GAS ID Whitepaper) | 미정 — §2.3과 양립 불가, 별도 검토 필요 | §2.4 |
+| Primary GUID/Current IPv6/Nickname Hash 3단계 분리 | Phase 3 | §2.2 |
 
 ### 12.4 로드맵
 
