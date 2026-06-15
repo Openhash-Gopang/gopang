@@ -614,6 +614,14 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
       localStorage.setItem(STORE_KEY, JSON.stringify(user));
       setUser(user);
       overlay.remove();
+
+      // ── PDV 초기 레코드 생성 (가입 완료 시 1회) ─────────────
+      // 가입 직후 pdv_log에 'user_register' 레코드를 남겨
+      // K-Tax 등이 fs가 null인 신규 사용자를 정상 식별 가능하게 함
+      _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountry }).catch(
+        e => console.warn('[PDV] 가입 초기 레코드 실패 (무시):', e.message)
+      );
+
       resolve(user);
 
     } catch(e) {
@@ -809,3 +817,72 @@ window._cancelAuthRequest = function() {
   document.getElementById('_auth-confirm-row')?.remove();
   appendBubble('ai', '거래가 취소됐습니다.', true);
 };
+
+// ── _recordRegisterPdv — 가입 완료 시 PDV 초기 레코드 생성 ────────────────
+// 목적:
+//   1. pdv_log에 'user_register' 레코드를 남겨 가입 이력 보존
+//   2. K-Tax 등이 extra.fs=null인 신규 사용자를 'PROFILE_MISSING_FS'가 아닌
+//      정상 신규 사용자로 식별 가능하게 함
+//   3. fs_ledger 초기값을 { bs-cash:0, pl-purchase:0, pl-revenue:0 }으로 설정
+//
+// 설계: Worker /pdv/report 경유 (P2: 모든 PDV는 Worker 경유 필수)
+//       fire-and-forget — 실패해도 가입 흐름 차단 안 함
+async function _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountry }) {
+  const now = new Date().toISOString();
+
+  // ① pdv_log — 가입 이벤트 기록
+  const report = {
+    svc:          'gopang',
+    type:         'user_register',
+    reporter_svc: 'gopang-auth',
+    session_id:   `REG-${ipv6.replace(/:/g, '').slice(0, 12)}-${Date.now()}`,
+    who:  { ipv6, handle },
+    when: now,
+    where: 'https://gopang.net',
+    what: `신규 사용자 가입: ${nickname} (${handle})`,
+    how:  '전화번호 입력 → 즉시 등록 (테스트 모드)',
+    why:  '고팡 서비스 최초 가입',
+  };
+
+  await fetch(`${PROXY_URL}/pdv/report`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ report }),
+  });
+
+  // ② user_profiles.extra.fs 초기화 — 첫 거래 전 K-Tax 읽기 오류 방지
+  // Worker /profile PATCH: extra.fs = { bs-cash:0, pl-purchase:0, pl-revenue:0 }
+  // 단, /profile PATCH 엔드포인트가 없는 경우 Supabase 직접 PATCH (fallback)
+  const fsInit = { 'bs-cash': 0, 'pl-purchase': 0, 'pl-revenue': 0 };
+
+  // Worker 경유 시도
+  const patchRes = await fetch(`${PROXY_URL}/profile`, {
+    method:  'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ guid: ipv6, extra_fs: fsInit }),
+  }).catch(() => null);
+
+  // Worker가 PATCH 미지원이면 → Supabase 직접 PATCH (fallback)
+  if (!patchRes || !patchRes.ok) {
+    const { _SUPABASE_URL, _SUPABASE_KEY } = await import('./state.js');
+    if (_SUPABASE_URL && _SUPABASE_KEY) {
+      await fetch(
+        `${_SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(ipv6)}`,
+        {
+          method:  'PATCH',
+          headers: {
+            'apikey':        _SUPABASE_KEY,
+            'Authorization': `Bearer ${_SUPABASE_KEY}`,
+            'Content-Type':  'application/json',
+            'Prefer':        'return=minimal',
+          },
+          body: JSON.stringify({
+            extra: { public: { finance: { fs: fsInit } } },
+          }),
+        }
+      ).catch(e => console.warn('[PDV] fs 초기화 Supabase fallback 실패:', e.message));
+    }
+  }
+
+  console.info('[Auth] 가입 PDV + fs 초기화 완료 | handle:', handle);
+}
