@@ -231,6 +231,11 @@ function _openChatUI(peer, mode) {
         style="font-size:12px;color:#9ca3af">
         ${mode === 'calling' ? '연결 중...' : '수락됨'}
       </div>
+      <button id="_p2p-leave"
+        style="border:none;background:#fee2e2;color:#dc2626;
+               font-size:12px;font-weight:600;padding:6px 12px;
+               border-radius:8px;cursor:pointer;margin-left:8px;
+               font-family:inherit">나가기</button>
     </div>
 
     <!-- 메시지 목록 -->
@@ -261,9 +266,14 @@ function _openChatUI(peer, mode) {
   document.body.appendChild(overlay);
   _chatOverlay = overlay;
 
-  // 뒤로가기
+  // 뒤로가기 (← 버튼)
   document.getElementById('_p2p-back').onclick = () => {
     if (confirm('채팅을 종료하시겠습니까?')) _closeP2P();
+  };
+
+  // 나가기 버튼
+  document.getElementById('_p2p-leave').onclick = () => {
+    if (confirm('대화방에서 나가시겠습니까?\n대화 내용이 PDV에 저장됩니다.')) _closeP2P();
   };
 
   // 메시지 전송
