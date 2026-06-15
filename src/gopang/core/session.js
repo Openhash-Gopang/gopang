@@ -61,21 +61,7 @@ async function _saveSessionOnce() {
     messages:  sessionMessages,   // 대화 + 거래 전체 원문
   };
 
-  // ── localStorage 저장 (원문 보존) ────────────────────
-  try {
-    const existing = JSON.parse(localStorage.getItem(key) || '[]');
-    existing.push({
-      ts:      now,
-      domain:  primaryDomain,
-      turns:   sessionMessages.length,
-      summary: sessionMessages.slice(-4),
-      sessionId,
-    });
-    localStorage.setItem(key, JSON.stringify(existing));
-    console.log(`[Session] localStorage 저장 완료 — 영역: ${primaryDomain}, 턴: ${sessionMessages.length}`);
-  } catch(e) {
-    console.warn('[Session] localStorage 저장 실패:', e.message);
-  }
+
 
   // ── OpenHash 앵커링 ───────────────────────────────────
   // 설계 원칙:
@@ -130,6 +116,25 @@ async function _saveSessionOnce() {
       '| sessionHash:', sessionHash.slice(0,16) + '...',
       '| entryHash:', result.entryHash.slice(0,16) + '...',
       '| layer:', result.layer);
+
+    // ── localStorage 저장 (entryHash 포함 — 앵커링 완료 후)
+    // Hash Chain 보기에서 AI 대화 세션도 조회 가능하도록 entryHash 포함
+    try {
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      existing.push({
+        ts:        now,
+        domain:    primaryDomain,
+        turns:     sessionMessages.length,
+        summary:   sessionMessages.slice(-4),
+        sessionId,
+        entryHash: result.entryHash,   // ← Hash Chain 보기용
+        layer:     result.layer,
+      });
+      localStorage.setItem(key, JSON.stringify(existing));
+      console.log(`[Session] localStorage 저장 완료 — 영역: ${primaryDomain}, entryHash: ${result.entryHash.slice(0,16)}...`);
+    } catch(e) {
+      console.warn('[Session] localStorage 저장 실패:', e.message);
+    }
 
     // ── pdv_log 기록 (block_hash = entryHash → openhash_anchored: true)
     if (PROXY) {

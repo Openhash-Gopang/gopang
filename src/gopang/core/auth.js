@@ -332,7 +332,7 @@ function _showPhonePopup(resolve) {
       <div id="_phone-error" style="display:none;font-size:12px;color:#dc2626;
            padding:0 4px;margin-bottom:4px"></div>
       <div id="_phone-hint" style="font-size:12px;color:#9ca3af;padding:0 4px">
-        예: 010-9662-7170 → 96627170
+        전화번호 또는 닉네임
       </div>
     </div>`;
 
@@ -435,16 +435,23 @@ function _showPhonePopup(resolve) {
   input.addEventListener('focus', () => field.style.borderColor = '#16a34a');
   input.addEventListener('blur',  () => field.style.borderColor = '#e5e7eb');
   input.addEventListener('input', () => {
-    input.value = input.value.replace(/\D/g, '').slice(0, COUNTRIES[selectedCountry].digits);
+    // 닉네임 입력 시 숫자 제한 해제
+    const v = input.value;
+    if (!/^\d/.test(v) && v.length > 0) {
+      // 닉네임 모드 — 자유 입력
+    } else {
+      input.value = v.replace(/\D/g, '').slice(0, COUNTRIES[selectedCountry].digits);
+    }
     errEl.style.display = 'none';
   });
 
   const _submit = async () => {
     const val    = input.value.trim();
     const digits = COUNTRIES[selectedCountry].digits;
+    const isNickname = val.length > 0 && !/^\d+$/.test(val);
 
-    if (!new RegExp(`^\\d{${digits}}$`).test(val)) {
-      errEl.textContent = `숫자 ${digits}자리를 입력해 주세요.`;
+    if (!isNickname && !new RegExp(`^\\d{${digits}}$`).test(val)) {
+      errEl.textContent = `전화번호(${digits}자리) 또는 닉네임을 입력해 주세요.`;
       errEl.style.display = 'block';
       input.focus();
       return;
@@ -456,38 +463,64 @@ function _showPhonePopup(resolve) {
     errEl.style.display = 'none';
 
     try {
-      const e164   = buildE164(val, selectedCountry);
-      const handle = buildHandle(val, selectedCountry);
-      const ipv6   = await _e164ToIPv6(e164);
+      let found;
 
-      const filter = encodeURIComponent(`handle='${handle}'`);
-      const res    = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
-      const data   = await res.json();
-      const found  = data.items?.[0];
+      if (isNickname) {
+        // ── 닉네임으로 L1 PocketBase 검색 (정확 일치, 대소문자 무시) ──
+        // PocketBase = 연산자는 대소문자 구분 → 저장값과 동일한 케이스로 시도
+        // 1차: 입력값 그대로, 2차: toLowerCase(), 3차: 첫 글자 대문자
+        const nickLower = val.toLowerCase();
+        const nickTitle = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+        let found3 = null;
+        for (const nick of [val, nickLower, nickTitle]) {
+          const f = encodeURIComponent(`nickname='${nick}'`);
+          const r = await fetch(`${L1_URL}?filter=${f}&perPage=1`);
+          const d = await r.json();
+          if (d.items?.[0]) { found3 = d.items[0]; break; }
+        }
+        found = found3;
 
-      let user;
-      if (found?.guid) {
-        // 기존 사용자 → 바로 로그인
-        user = {
-          ipv6: found.guid, handle: found.handle,
-          e164: found.e164 || e164,
-          country_code: found.country_code || selectedCountry,
-          nickname: found.nickname || '',
-          region: found.region || '',
-          name: val, isGuest: false, isTemp: false,
-          registeredAt: found.created
-        };
-        console.info('[Auth] 로그인:', handle);
-        localStorage.setItem(STORE_KEY, JSON.stringify(user));
-        setUser(user);
-        overlay.remove();
-        resolve(user);
+        if (!found) {
+          errEl.textContent = `닉네임 '${val}'을(를) 찾을 수 없습니다. 전화번호로 로그인해 주세요.`;
+          errEl.style.display = 'block';
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = '';
+          return;
+        }
       } else {
-        // 신규 사용자 → 닉네임 입력 단계로 전환
-        btn.style.opacity = '1';
-        btn.style.pointerEvents = '';
-        _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, resolve });
+        // ── 전화번호로 검색 (기존 로직) ────────────────
+        const e164   = buildE164(val, selectedCountry);
+        const handle = buildHandle(val, selectedCountry);
+        const filter = encodeURIComponent(`handle='${handle}'`);
+        const res    = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+        const data   = await res.json();
+        found = data.items?.[0];
+
+        if (!found) {
+          // 신규 사용자 → 닉네임 입력 단계
+          const ipv6 = await _e164ToIPv6(e164);
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = '';
+          _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, resolve });
+          return;
+        }
       }
+
+      // 기존 사용자 → 바로 로그인
+      const user = {
+        ipv6: found.guid, handle: found.handle,
+        e164: found.e164 || '',
+        country_code: found.country_code || selectedCountry,
+        nickname: found.nickname || '',
+        region: found.region || '',
+        name: val, isGuest: false, isTemp: false,
+        registeredAt: found.created,
+      };
+      console.info('[Auth] 로그인:', found.handle, '(닉네임:', isNickname, ')');
+      localStorage.setItem(STORE_KEY, JSON.stringify(user));
+      setUser(user);
+      overlay.remove();
+      resolve(user);
 
     } catch(e) {
       errEl.textContent = '네트워크 오류. 다시 시도해 주세요.';
