@@ -85,10 +85,8 @@ export function saveSettings() {
     }));
   } catch {}
 
-  const { closeSettings } = require('../ui/settings.js');
-  closeSettings();
-  const { appendBubble } = require('../ui/bubble.js');
-  appendBubble('ai', `⚙️ 설정 저장: ${CFG.model}`);
+  if (typeof window.closeSettings === 'function') window.closeSettings();
+  if (typeof window.appendBubble  === 'function') window.appendBubble('ai', `⚙️ 설정 저장: ${CFG.model}`);
 }
 
 // ── 설정 불러오기 ─────────────────────────────────────────
