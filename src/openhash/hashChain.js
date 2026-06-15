@@ -28,12 +28,12 @@ let _batchTimer = null
 /** 체인 엔트리 인메모리 저장소 (Phase 2B: 실제 노드 연동 전 임시) */
 const _chainStore = new Map()   // entryHash → entry
 
-// ── IndexedDB 영속성 (전용 DB: gopang-openhash) ─────────────────────────
-// gopang-wallet DB와 완전히 분리 — 버전 충돌 방지
-// keyPath: 'entryHash' (OpenHash 앵커링 전용)
-const _IDB_NAME  = 'gopang-openhash'
+// ── IndexedDB 영속성 (gopang-wallet / anchor_chain store) ───────────────
+// gopang-wallet.js v3.0과 동일한 DB + store 공유
+// keyPath: 'entryHash' — 모든 이벤트(가입/대화/거래) 단일 체인
+const _IDB_NAME  = 'gopang-wallet'
 const _IDB_STORE = 'anchor_chain'
-const _IDB_VER   = 1
+const _IDB_VER   = 3   // gopang-wallet.js와 동일 버전
 
 async function _idbOpen() {
   return new Promise((resolve, reject) => {
@@ -41,8 +41,12 @@ async function _idbOpen() {
     req.onsuccess = e => resolve(e.target.result)
     req.onerror   = e => reject(e.target.error)
     req.onupgradeneeded = e => {
-      const db = e.target.result
-      if (!db.objectStoreNames.contains(_IDB_STORE)) {
+      const db     = e.target.result
+      const oldVer = e.oldVersion
+      if (oldVer < 1) db.createObjectStore('keys')
+      if (oldVer < 2) db.createObjectStore('hash_chain', { keyPath: 'height' })
+      if (oldVer < 3) {
+        if (db.objectStoreNames.contains('hash_chain')) db.deleteObjectStore('hash_chain')
         db.createObjectStore(_IDB_STORE, { keyPath: 'entryHash' })
       }
     }

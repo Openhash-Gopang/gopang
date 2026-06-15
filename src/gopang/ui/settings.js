@@ -405,7 +405,7 @@ window._openWalletTxDetail = async function() {
 };
 
 // ══════════════════════════════════════════════════════════════
-// ④ 재무제표
+// ④ 재무제표 (4탭: 대차대조표 / 손익계산서 / 현금흐름표 / 재무분석)
 // ══════════════════════════════════════════════════════════════
 export async function openFinancialStatement() {
   _openSheet('재무제표', '<div style="padding:40px 16px;text-align:center;color:#9ca3af;font-size:14px">로딩 중...</div>');
@@ -422,54 +422,126 @@ export async function openFinancialStatement() {
     const plPurchase = fs['pl-purchase'] || 0;
     const plRevenue  = fs['pl-revenue']  || 0;
     const netIncome  = plRevenue - plPurchase;
+    const lastUpdated = fs['last_updated_at']
+      ? new Date(fs['last_updated_at']).toLocaleString('ko-KR')
+      : '거래 없음';
 
+    const _row = (label, val, cls='', bold=false) => `
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid #f2f2f7">
+        <span style="font-size:13px;color:${bold?'#111827':'#6b7280'};font-weight:${bold?'600':'400'}">${label}</span>
+        <span style="font-size:13px;font-weight:${bold?'700':'500'};color:${cls==='green'?'#16a34a':cls==='red'?'#dc2626':'#111827'}">${val}</span>
+      </div>`;
+
+    const _card = (rows) =>
+      `<div style="background:#f9fafb;border-radius:10px;padding:4px 12px;margin-bottom:14px">${rows}</div>`;
+
+    const _title = (text, color='#16a34a') =>
+      `<div style="font-size:12px;font-weight:600;color:#374151;margin:12px 0 6px;
+                   padding-bottom:4px;border-bottom:2px solid ${color}">${text}</div>`;
+
+    const _notice = `<div style="text-align:center;font-size:11px;color:#9ca3af;padding:8px 0">마지막 갱신: ${lastUpdated}</div>`;
+
+    // ── 탭별 콘텐츠 ──────────────────────────────────────────
+    const tabs = {
+      bs: `
+        ${_title('대차대조표 (Balance Sheet)', '#16a34a')}
+        ${_card(
+          _row('자산 · 현금 (bs-cash)', '₮' + bsCash.toLocaleString()) +
+          _row('자산 합계', '₮' + bsCash.toLocaleString(), 'green', true)
+        )}
+        ${_title('부채 및 자본', '#3b82f6')}
+        ${_card(
+          _row('부채 합계', '₮0') +
+          _row('자본 (순자산)', '₮' + bsCash.toLocaleString()) +
+          _row('부채 + 자본 합계', '₮' + bsCash.toLocaleString(), 'green', true)
+        )}
+        ${_notice}`,
+
+      pl: `
+        ${_title('손익계산서 (P&L)', '#3b82f6')}
+        ${_card(
+          _row('수입 (pl-revenue)', '+₮' + plRevenue.toLocaleString(), 'green') +
+          _row('지출 (pl-purchase)', '-₮' + plPurchase.toLocaleString(), 'red') +
+          _row('순이익', (netIncome >= 0 ? '+' : '') + '₮' + netIncome.toLocaleString(),
+               netIncome >= 0 ? 'green' : 'red', true)
+        )}
+        ${_notice}`,
+
+      cf: `
+        ${_title('현금흐름표 (Cash Flow)', '#8b5cf6')}
+        ${_card(
+          _row('영업 활동 현금흐름', '₮' + netIncome.toLocaleString(), netIncome >= 0 ? 'green' : 'red') +
+          _row('투자 활동 현금흐름', '₮0') +
+          _row('재무 활동 현금흐름', '₮0') +
+          _row('순 현금 증감', (netIncome >= 0 ? '+' : '') + '₮' + netIncome.toLocaleString(),
+               netIncome >= 0 ? 'green' : 'red', true)
+        )}
+        ${_title('현금 잔액', '#8b5cf6')}
+        ${_card(
+          _row('기초 현금', '₮0') +
+          _row('기말 현금', '₮' + bsCash.toLocaleString(), 'green', true)
+        )}
+        ${_notice}`,
+
+      fa: `
+        ${_title('재무분석 (Financial Analysis)', '#f59e0b')}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+          ${[
+            ['수익률', plRevenue > 0 ? ((netIncome/plRevenue)*100).toFixed(1)+'%' : '0%', netIncome >= 0 ? '#16a34a' : '#dc2626'],
+            ['유동비율', '100%', '#16a34a'],
+            ['부채비율', '0%', '#111827'],
+            ['총거래 횟수', (fs['last_tx_id'] ? '1건+' : '0건'), '#111827'],
+          ].map(([label, val, color]) => `
+            <div style="background:#f9fafb;border-radius:10px;padding:12px">
+              <div style="font-size:11px;color:#9ca3af;margin-bottom:4px">${label}</div>
+              <div style="font-size:18px;font-weight:500;color:${color}">${val}</div>
+            </div>`).join('')}
+        </div>
+        ${_card(
+          _row('총 수입', '+₮' + plRevenue.toLocaleString(), 'green') +
+          _row('총 지출', '-₮' + plPurchase.toLocaleString(), 'red') +
+          _row('평균 거래금액', fs['last_tx_id'] ? '₮' + plRevenue.toLocaleString() : '₮0') +
+          _row('순자산', '₮' + bsCash.toLocaleString(), bsCash >= 0 ? 'green' : 'red', true)
+        )}
+        ${_notice}`,
+    };
+
+    // ── 탭 UI ────────────────────────────────────────────────
     const html = `
-      <div style="padding:16px">
-        <!-- 대차대조표 -->
-        <div style="margin-bottom:20px">
-          <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px;
-                      padding-bottom:4px;border-bottom:2px solid #16a34a">대차대조표 (Balance Sheet)</div>
-          <div style="background:#f9fafb;border-radius:10px;padding:12px">
-            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f2f2f7">
-              <span style="font-size:13px;color:#6b7280">자산 · 현금(bs-cash)</span>
-              <span style="font-size:13px;font-weight:600;color:#111827">₮${bsCash.toLocaleString()}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:6px 0">
-              <span style="font-size:13px;font-weight:700;color:#111827">자산 합계</span>
-              <span style="font-size:13px;font-weight:700;color:#16a34a">₮${bsCash.toLocaleString()}</span>
-            </div>
-          </div>
+      <div>
+        <div id="_fs-tabs" style="display:flex;border-bottom:0.5px solid #f2f2f7;background:#f9fafb">
+          ${[['bs','대차대조표'],['pl','손익계산서'],['cf','현금흐름표'],['fa','재무분석']].map(([id,label],i) => `
+            <button onclick="_fsSwitchTab('${id}')" id="_fs-tab-${id}"
+              style="flex:1;padding:10px 2px;font-size:11px;font-weight:${i===0?'600':'400'};
+                     color:${i===0?'#16a34a':'#9ca3af'};background:${i===0?'#fff':'transparent'};
+                     border:none;border-bottom:${i===0?'2px solid #16a34a':'2px solid transparent'};
+                     cursor:pointer;font-family:inherit;transition:all .15s">
+              ${label}
+            </button>`).join('')}
         </div>
-
-        <!-- 손익계산서 -->
-        <div style="margin-bottom:20px">
-          <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px;
-                      padding-bottom:4px;border-bottom:2px solid #3b82f6">손익계산서 (P&L)</div>
-          <div style="background:#f9fafb;border-radius:10px;padding:12px">
-            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f2f2f7">
-              <span style="font-size:13px;color:#6b7280">수입(pl-revenue)</span>
-              <span style="font-size:13px;color:#16a34a">+₮${plRevenue.toLocaleString()}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f2f2f7">
-              <span style="font-size:13px;color:#6b7280">지출(pl-purchase)</span>
-              <span style="font-size:13px;color:#dc2626">-₮${plPurchase.toLocaleString()}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:6px 0">
-              <span style="font-size:13px;font-weight:700;color:#111827">순이익</span>
-              <span style="font-size:13px;font-weight:700;color:${netIncome >= 0 ? '#16a34a' : '#dc2626'}">
-                ${netIncome >= 0 ? '+' : ''}₮${netIncome.toLocaleString()}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 마지막 갱신 -->
-        <div style="text-align:center;font-size:11px;color:#9ca3af">
-          마지막 갱신: ${fs['last_updated_at'] ? new Date(fs['last_updated_at']).toLocaleString('ko-KR') : '거래 없음'}
+        <div id="_fs-body" style="padding:12px 16px">
+          ${tabs['bs']}
         </div>
       </div>`;
 
     document.getElementById('_gopang-sheet-body').innerHTML = html;
+
+    // 탭 전환 함수 전역 등록
+    window._fsSwitchTab = function(id) {
+      const tabData = { bs: tabs.bs, pl: tabs.pl, cf: tabs.cf, fa: tabs.fa };
+      ['bs','pl','cf','fa'].forEach(t => {
+        const el = document.getElementById('_fs-tab-' + t);
+        if (!el) return;
+        const active = t === id;
+        el.style.color      = active ? '#16a34a' : '#9ca3af';
+        el.style.fontWeight = active ? '600' : '400';
+        el.style.background = active ? '#fff' : 'transparent';
+        el.style.borderBottom = active ? '2px solid #16a34a' : '2px solid transparent';
+      });
+      const body = document.getElementById('_fs-body');
+      if (body) body.innerHTML = tabData[id];
+    };
+
   } catch(e) {
     document.getElementById('_gopang-sheet-body').innerHTML =
       '<div style="padding:40px 16px;text-align:center;color:#ef4444;font-size:13px">데이터 로드 실패</div>';

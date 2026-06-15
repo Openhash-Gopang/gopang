@@ -17,9 +17,9 @@
    * ──────────────────────────────────────────────── */
   const VERSION          = '2.0.0';
   const IDB_NAME         = 'gopang-wallet';
-  const IDB_VER          = 2;               // v2.0: hash_chain store 추가
+  const IDB_VER          = 3;               // v3.0: hash_chain → anchor_chain (OpenHash 통합)
   const IDB_STORE        = 'keys';           // 개인키·재무상태 저장
-  const IDB_STORE_CHAIN  = 'hash_chain';     // Hash Chain 이력 저장 (keys와 분리)
+  const IDB_STORE_CHAIN  = 'anchor_chain';   // OpenHash 통합 앵커 체인 (v3.0)
   const IDB_KEY_ID       = 'ed25519-main';
   const IDB_FS_KEY       = 'financial_state'; // 로컬 재무제표 키
   const LS_PUBKEY        = 'gopang_wallet_pubkey';
@@ -80,8 +80,13 @@
         const oldVer  = e.oldVersion;
         // v1: keys store
         if (oldVer < 1) db.createObjectStore(IDB_STORE);
-        // v2: hash_chain store (keys와 완전 분리)
-        if (oldVer < 2) db.createObjectStore(IDB_STORE_CHAIN, { keyPath: 'height' });
+        // v2: hash_chain store (구버전 — v3에서 교체)
+        if (oldVer < 2) db.createObjectStore('hash_chain', { keyPath: 'height' });
+        // v3: anchor_chain (OpenHash 통합 — keyPath: entryHash)
+        if (oldVer < 3) {
+          if (db.objectStoreNames.contains('hash_chain')) db.deleteObjectStore('hash_chain');
+          db.createObjectStore(IDB_STORE_CHAIN, { keyPath: 'entryHash' });
+        }
       };
       req.onsuccess = e => resolve(e.target.result);
       req.onerror   = e => reject(e.target.error);
@@ -100,11 +105,17 @@
 
   async function idbChainGetLast(db) {
     return new Promise((resolve, reject) => {
-      const tx     = db.transaction(IDB_STORE_CHAIN, 'readonly');
-      const store  = tx.objectStore(IDB_STORE_CHAIN);
-      const req    = store.openCursor(null, 'prev'); // 내림차순 → 최신
-      req.onsuccess = e => resolve(e.target.result?.value ?? null);
-      req.onerror   = e => reject(e.target.error);
+      const tx    = db.transaction(IDB_STORE_CHAIN, 'readonly');
+      const store = tx.objectStore(IDB_STORE_CHAIN);
+      // keyPath='entryHash' → getAll 후 recorded_at 기준 최신 조회
+      const req   = store.getAll();
+      req.onsuccess = e => {
+        const all = e.target.result || [];
+        if (!all.length) { resolve(null); return; }
+        all.sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at));
+        resolve(all[0]);
+      };
+      req.onerror = e => reject(e.target.error);
     });
   }
 
@@ -400,32 +411,63 @@
     pdvSessionId = null,
     pdvType      = null,
   }) {
-    const last          = await idbChainGetLast(db);
-    const height        = (last?.height ?? -1) + 1;
-    const prevLocalHash = last?.local_hash ?? '0'.repeat(64);
+    // ── v3.0: OpenHash anchor() 위임 (단일 체인 통합) ──────────────────
+    // hashChain.js의 anchor()를 통해 단일 앵커 체인에 기록
+    // contentHash = SHA-256(txHash + blockHash) — 거래 식별자
+    // signatures  = [] → guid fallback (wallet 컨텍스트에서 서명)
+    try {
+      const { anchor } = await import('./src/openhash/hashChain.js');
+      const contentInput = txHash + (blockHash || '');
+      const buf         = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(contentInput));
+      const contentHash = bufToHex(buf);
 
-    // 공식 불변 (v3.0 확정)
-    // h_i = SHA-256(h_{i-1} ∥ tx_hash ∥ block_hash ∥ height)
-    const chainInput = prevLocalHash + txHash + blockHash + String(height);
-    const localHash  = bufToHex(await sha256(chainInput));
+      // wallet 서명 (this 컨텍스트 없으므로 window.gopangWallet 사용)
+      let sig = contentHash;  // fallback
+      try {
+        if (window.gopangWallet?._privKey) {
+          const sigBuf = await crypto.subtle.sign('Ed25519', window.gopangWallet._privKey, new TextEncoder().encode(contentHash));
+          sig = btoa(String.fromCharCode(...new Uint8Array(sigBuf)));
+        }
+      } catch(e) { /* fallback 유지 */ }
 
-    const record = {
-      height,
-      local_hash:      localHash,
-      prev_local_hash: prevLocalHash,
-      tx_hash:         txHash,
-      block_hash:      blockHash,
-      block_id:        blockId,
-      recorded_at:     new Date().toISOString(),
-      pdv_session_id:  pdvSessionId,
-      pdv_type:        pdvType,
-      pdv_anchored:    false,
-      // prev_settle_hash: @deprecated — 제거됨
-      // new_settle_hash:  @deprecated — 제거됨
-    };
+      const result = await anchor(contentHash, [sig], pdvSessionId || txHash);
 
-    await idbChainPut(db, record);
-    return record;
+      // anchor_chain store에 저장 (OpenHash 통합 레코드)
+      const record = {
+        entryHash:     result.entryHash,
+        contentHash,
+        prevHash:      result.prevHash,
+        tx_hash:       txHash,
+        block_hash:    blockHash,
+        block_id:      blockId,
+        layer:         result.layer,
+        recorded_at:   new Date().toISOString(),
+        pdv_session_id: pdvSessionId,
+        pdv_type:      pdvType,
+      };
+      await idbChainPut(db, record);
+      return record;
+    } catch(e) {
+      console.warn('[Wallet] appendHashChain anchor() 실패, 로컬 기록만:', e.message);
+      // fallback: anchor() 실패 시 로컬만 기록
+      const contentInput = txHash + (blockHash || '');
+      const buf         = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(contentInput));
+      const contentHash = bufToHex(buf);
+      const record = {
+        entryHash:     contentHash,
+        contentHash,
+        prevHash:      '0'.repeat(64),
+        tx_hash:       txHash,
+        block_hash:    blockHash,
+        block_id:      blockId,
+        layer:         'local',
+        recorded_at:   new Date().toISOString(),
+        pdv_session_id: pdvSessionId,
+        pdv_type:      pdvType,
+      };
+      await idbChainPut(db, record);
+      return record;
+    }
   }
 
   /* ────────────────────────────────────────────────
@@ -668,7 +710,7 @@
     async getHashChain() {
       const db = await openDB();
       const records = await idbChainGetAll(db);
-      return records.sort((a, b) => a.height - b.height);
+      return records.sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at));
     }
 
     /**
@@ -676,25 +718,14 @@
      * @returns {{ valid: boolean, broken_at: number|null }}
      */
     async verifyChain() {
-      const chain = await this.getHashChain();
-      for (let i = 1; i < chain.length; i++) {
-        const cur  = chain[i];
-        const prev = chain[i - 1];
-
-        // 1) 연결 확인
-        if (cur.prev_local_hash !== prev.local_hash) {
-          return { valid: false, broken_at: cur.height, reason: 'chain_break' };
-        }
-
-        // 2) 해시 재계산 (h_{i-1} ∥ tx_hash ∥ block_hash ∥ height)
-        const recomputed = bufToHex(await sha256(
-          prev.local_hash + cur.tx_hash + cur.block_hash + String(cur.height)
-        ));
-        if (recomputed !== cur.local_hash) {
-          return { valid: false, broken_at: cur.height, reason: 'hash_mismatch' };
-        }
+      // v3.0: OpenHash anchor_chain — hashChain.js verifyChainIntegrity() 위임
+      try {
+        const { verifyChainIntegrity } = await import('./src/openhash/hashChain.js');
+        return await verifyChainIntegrity();
+      } catch(e) {
+        console.warn('[Wallet] verifyChain 실패:', e.message);
+        return { valid: false, broken_at: null, reason: e.message };
       }
-      return { valid: true, broken_at: null };
     }
 
     /**
