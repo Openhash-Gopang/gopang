@@ -1589,35 +1589,7 @@ footer {
         </svg>
       </div>
 
-      <!-- 짜장면 주문 예시 이미지 (썸네일 + 클릭 확대) -->
-      <!-- ※ jjajang.png 파일을 desktop.html과 같은 폴더에 저장하세요 -->
-      <div style="margin:36px 0 8px 0;">
 
-        <!-- 썸네일 클릭 시 모달 오픈 -->
-        <div onclick="document.getElementById('jjajang-modal').style.display='flex'"
-             style="cursor:pointer;display:inline-block;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07);transition:box-shadow .2s;"
-             onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.13)'"
-             onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.07)'">
-          <img src="jjajang.png" alt="짜장면 주문 시퀀스 다이어그램"
-               style="width:340px;height:auto;display:block;"/>
-          <div style="padding:8px 14px;background:#f8fafc;font-size:12px;color:#94a3b8;text-align:center;">
-            🔍 클릭하면 전체 크기로 볼 수 있습니다
-          </div>
-        </div>
-
-        <!-- 모달 (전체 이미지) -->
-        <div id="jjajang-modal"
-             onclick="this.style.display='none'"
-             style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out;">
-          <div onclick="event.stopPropagation()" style="position:relative;max-width:95vw;max-height:92vh;">
-            <img src="jjajang.png" alt="짜장면 주문 시퀀스 다이어그램"
-                 style="max-width:95vw;max-height:88vh;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.4);display:block;"/>
-            <button onclick="document.getElementById('jjajang-modal').style.display='none'"
-                    style="position:absolute;top:-14px;right:-14px;width:30px;height:30px;border-radius:50%;border:none;background:#334155;color:#fff;font-size:16px;cursor:pointer;line-height:30px;text-align:center;">✕</button>
-          </div>
-        </div>
-
-      </div>
 
       <ul class="overview-list" style="margin-top:12px">
         <li>사용자가 지시나 질의하면, 사용자의 전용 AI 비서는 먼저 자신이 스스로 수행할 업무인지 여부를 판단합니다. 가령, "내일 약속된 미팅이 뭐가 있지?", "이 사건의 대법원 판결문 법리를 분석해 줘." 등입니다. 전자는 AI 비서가 처리할 일이지만, 후자는 K-Law와 같은 특정 분야에 특화된 전문 AI Agent를 호출해야 합니다.</li>
