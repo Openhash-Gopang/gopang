@@ -397,7 +397,21 @@ async function _saveP2PSession(messages, peer, startedAt) {
   };
   const sessionRaw = JSON.stringify(sessionData);
 
-  // ② vault.js — 원본 저장 (IndexedDB AES-256-GCM)
+  // ② contentHash = SHA-256(sessionRaw)
+  const buf         = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sessionRaw));
+  const contentHash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+
+  // ③ Ed25519 서명 (vault 저장 전에 먼저 생성)
+  let userSig = _USER.ipv6;
+  try {
+    if (window.gopangWallet?.sign) {
+      userSig = await window.gopangWallet.sign(contentHash);
+    }
+  } catch(e) {
+    console.warn('[P2P] Ed25519 서명 실패, guid로 대체:', e.message);
+  }
+
+  // ④ vault.js — 원본 저장 (IndexedDB AES-256-GCM)
   try {
     const { storeMessage } = await import('../../pdv/vault.js');
     const pubKeyB64 = window.gopangWallet?.publicKeyB64u || '';
@@ -415,20 +429,6 @@ async function _saveP2PSession(messages, peer, startedAt) {
     console.info('[P2P] vault 저장 완료 | sessionId:', sessionId);
   } catch(e) {
     console.warn('[P2P] vault 저장 실패 (무시):', e.message);
-  }
-
-  // ③ contentHash = SHA-256(sessionRaw)
-  const buf         = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sessionRaw));
-  const contentHash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-
-  // ④ Ed25519 서명
-  let userSig = _USER.ipv6;
-  try {
-    if (window.gopangWallet?.sign) {
-      userSig = await window.gopangWallet.sign(contentHash);
-    }
-  } catch(e) {
-    console.warn('[P2P] Ed25519 서명 실패, guid로 대체:', e.message);
   }
 
   // ⑤ OpenHash 앵커링
@@ -472,17 +472,16 @@ async function _saveP2PSession(messages, peer, startedAt) {
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify({
       report: {
-        svc:          'gopang',
-        type:         'p2p_conversation',
-        reporter_svc: 'gopang',
-        session_id:   sessionId,
-        block_hash:   entryHash,
-        who:   { ipv6: _USER.ipv6, handle: _USER.handle },
-        when:  now,
+        svc:        'gopang',
+        type:       'p2p_conversation',
+        session_id: sessionId,
+        block_hash: entryHash,
+        who:  { ipv6: _USER.ipv6, handle: _USER.handle },
+        when: now,
         where: 'https://gopang.net',
-        what:  `P2P 대화 종료 — ${peer.handle}와 ${messages.length}턴`,
-        how:   'WebRTC P2P DataChannel',
-        why:   'P2P 대화 PDV 기록',
+        what: `P2P 대화 종료 — ${peer.handle}와 ${messages.length}턴`,
+        how:  'WebRTC P2P DataChannel',
+        why:  'P2P 대화 PDV 기록',
       },
     }),
   }).catch(e => console.warn('[P2P] pdv_log 전송 실패 (무시):', e.message));

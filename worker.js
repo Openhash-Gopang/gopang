@@ -813,7 +813,7 @@ async function handleWAChallenge(request,env,corsHeaders){const challenge=crypto
 async function _verifyChallengeToken(env,chalB64,exp,sig){if(exp<Math.floor(Date.now()/1000))return false;const sigData=`${chalB64}.${exp}`;const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['verify']);const sigBytes=Uint8Array.from(sig.match(/.{2}/g).map(h=>parseInt(h,16)));return crypto.subtle.verify('HMAC',key,sigBytes,new TextEncoder().encode(sigData));}
 async function handleWARegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.ipv6||!body?.credentialId||!body?.publicKey)return _err(400,'MISSING_FIELD','ipv6, credentialId, publicKey 필수',corsHeaders);const chalOk=await _verifyChallengeToken(env,body.challenge,body.challengeExp,body.challengeSig);if(!chalOk)return _err(401,'CHALLENGE_INVALID','챌린지 만료 또는 위조',corsHeaders);const result=await sbFetch(env,'/rest/v1/webauthn_credentials','POST',{ipv6:body.ipv6,credential_id:body.credentialId,public_key:body.publicKey,counter:0,device_type:body.deviceType||'platform',aaguid:body.aaguid||null});if(!result)return _err(502,'DB_ERROR','Supabase 저장 실패',corsHeaders);return new Response(JSON.stringify({ok:true,ipv6:body.ipv6}),{status:200,headers:corsHeaders});}
 async function handleWAVerify(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.ipv6||!body?.credentialId)return _err(400,'MISSING_FIELD','ipv6, credentialId 필수',corsHeaders);const rows=await sbFetch(env,`/rest/v1/webauthn_credentials?ipv6=eq.${encodeURIComponent(body.ipv6)}&credential_id=eq.${encodeURIComponent(body.credentialId)}&select=public_key,counter`,'GET');if(!rows?.length)return _err(404,'CREDENTIAL_NOT_FOUND','credential_not_found',corsHeaders);const cred=rows[0];if(body.counter!==undefined&&body.counter<=cred.counter)return _err(401,'COUNTER_REPLAY','counter_replay',corsHeaders);if(body.counter!==undefined)await sbFetch(env,`/rest/v1/webauthn_credentials?credential_id=eq.${encodeURIComponent(body.credentialId)}`,'PATCH',{counter:body.counter,last_used_at:new Date().toISOString()});const token=buildToken(body.ipv6,'L2','*');return new Response(JSON.stringify({valid:true,ipv6:body.ipv6,level:'L2'}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(token)}});}
-const REGISTERED_SERVICES={'klaw':{level:3,domain:'klaw.gopang.net',minAuth:'L0',pdv:true},'market':{level:3,domain:'market.gopang.net',minAuth:'L0',pdv:true},'school':{level:3,domain:'school.gopang.net',minAuth:'L0',pdv:true},'security':{level:3,domain:'security.gopang.net',minAuth:'L1',pdv:true},'health':{level:3,domain:'health.gopang.net',minAuth:'L1',pdv:true},'tax':{level:3,domain:'tax.gopang.net',minAuth:'L0',pdv:true},'gdc':{level:3,domain:'gdc.gopang.net',minAuth:'L1',pdv:true},'public':{level:3,domain:'public.gopang.net',minAuth:'L0',pdv:true},'democracy':{level:3,domain:'democracy.gopang.net',minAuth:'L1',pdv:true},'911':{level:3,domain:'911.gopang.net',minAuth:'L0',pdv:true},'police':{level:3,domain:'police.gopang.net',minAuth:'L1',pdv:true},'insurance':{level:3,domain:'insurance.gopang.net',minAuth:'L1',pdv:true},'stock':{level:3,domain:'stock.gopang.net',minAuth:'L1',pdv:true},'traffic':{level:3,domain:'traffic.gopang.net',minAuth:'L0',pdv:true},'logistics':{level:3,domain:'logistics.gopang.net',minAuth:'L0',pdv:true},'fiil':{level:2,domain:'fiil.kr',minAuth:'L0',pdv:true},'klaw-ext':{level:2,domain:'klaw.openhash.kr',minAuth:'L0',pdv:false},'users':{level:3,domain:'users.gopang.net',minAuth:'L0',pdv:false}};
+const REGISTERED_SERVICES={'gopang':{level:3,domain:'gopang.net',minAuth:'L0',pdv:true},'klaw':{level:3,domain:'klaw.gopang.net',minAuth:'L0',pdv:true},'market':{level:3,domain:'market.gopang.net',minAuth:'L0',pdv:true},'school':{level:3,domain:'school.gopang.net',minAuth:'L0',pdv:true},'security':{level:3,domain:'security.gopang.net',minAuth:'L1',pdv:true},'health':{level:3,domain:'health.gopang.net',minAuth:'L1',pdv:true},'tax':{level:3,domain:'tax.gopang.net',minAuth:'L0',pdv:true},'gdc':{level:3,domain:'gdc.gopang.net',minAuth:'L1',pdv:true},'public':{level:3,domain:'public.gopang.net',minAuth:'L0',pdv:true},'democracy':{level:3,domain:'democracy.gopang.net',minAuth:'L1',pdv:true},'911':{level:3,domain:'911.gopang.net',minAuth:'L0',pdv:true},'police':{level:3,domain:'police.gopang.net',minAuth:'L1',pdv:true},'insurance':{level:3,domain:'insurance.gopang.net',minAuth:'L1',pdv:true},'stock':{level:3,domain:'stock.gopang.net',minAuth:'L1',pdv:true},'traffic':{level:3,domain:'traffic.gopang.net',minAuth:'L0',pdv:true},'logistics':{level:3,domain:'logistics.gopang.net',minAuth:'L0',pdv:true},'fiil':{level:2,domain:'fiil.kr',minAuth:'L0',pdv:true},'klaw-ext':{level:2,domain:'klaw.openhash.kr',minAuth:'L0',pdv:false},'users':{level:3,domain:'users.gopang.net',minAuth:'L0',pdv:false}};
 function _getSvcRegistration(origin,svcId){const resolvedId=_resolveSvcId(svcId);const svc=REGISTERED_SERVICES[resolvedId];if(svc&&origin.includes(svc.domain))return{...svc,svcId:resolvedId,originalId:svcId};if(/^https:\/\/[a-z0-9-]+\.gopang\.net$/.test(origin))return{level:1,domain:origin,minAuth:'L0',pdv:false,svcId:resolvedId,originalId:svcId};return null;}
 async function handleSvcRegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.svc_id||!body?.domain||!body?.operator_ipv6)return _err(400,'MISSING_FIELD','svc_id, domain, operator_ipv6 필수',corsHeaders);const{svc_id,domain,description,min_auth,operator_ipv6}=body;const isGopangSub=/^[a-z0-9-]+\.gopang\.net$/.test(domain);await sbFetch(env,'/rest/v1/svc_registry','POST',{svc_id,domain,description:description||'',operator_ipv6,min_auth:min_auth||'L0',trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending',registered_at:new Date().toISOString()});return new Response(JSON.stringify({ok:true,svc_id,domain,trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending_review',message:isGopangSub?'*.gopang.net 서브도메인으로 자동 승인됐습니다. (Level 1)':'등록 신청이 접수됐습니다.'}),{status:200,headers:corsHeaders});}
 async function handleSvcVerify(request,env,corsHeaders){const url=new URL(request.url);const svcId=url.searchParams.get('svc_id');const origin=request.headers.get('Origin')||'';if(!svcId)return _err(400,'MISSING_FIELD','svc_id 파라미터 필수',corsHeaders);const reg=_getSvcRegistration(origin,svcId);if(!reg)return new Response(JSON.stringify({ok:false,registered:false,svc_id:svcId,message:'등록되지 않은 서비스입니다.'}),{status:200,headers:corsHeaders});return new Response(JSON.stringify({ok:true,registered:true,svc_id:svcId,trust_level:reg.level,pdv_allowed:reg.pdv,min_auth:reg.minAuth,message:`등록된 서비스 (Level ${reg.level})`}),{status:200,headers:corsHeaders});}
@@ -1045,30 +1045,47 @@ async function handleP2PSearch(request, env, corsHeaders) {
 
   if (!q && !handle) return _err(400, 'QUERY_REQUIRED', 'q 또는 handle 파라미터 필수', corsHeaders);
 
-  const sbH = _sbHeaders(env);
-  let queryUrl = `${SUPABASE_URL}/rest/v1/global_profiles?is_public=eq.true&limit=${limit}`;
-  queryUrl += `&select=guid,handle,nickname,country_code,region,current_l1`;
+  // ── L1 PocketBase 검색 (GDUDA 본 구현) ──────────────────
+  // Supabase global_profiles → L1 PocketBase profiles 컬렉션으로 전환
+  // L1 PocketBase: https://l1-hanlim.gopang.net
+  const L1_PROFILES = L1_DEFAULT + '/api/collections/profiles/records';
+
+  let queryUrl = `${L1_PROFILES}?perPage=${limit}&fields=guid,handle,nickname,country_code,region`;
 
   // handle 직접 검색 (정확히 일치)
   if (handle) {
     const h = handle.startsWith('@') ? handle : '@' + handle;
-    queryUrl += `&handle=eq.${encodeURIComponent(h)}`;
+    queryUrl += `&filter=${encodeURIComponent(`handle='${h}'`)}`;
   } else {
-    // 닉네임 부분 일치 (ilike)
-    queryUrl += `&nickname=ilike.${encodeURIComponent('%' + q + '%')}`;
-    if (country) queryUrl += `&country_code=eq.${encodeURIComponent(country)}`;
-    if (region)  queryUrl += `&region=ilike.${encodeURIComponent('%' + region + '%')}`;
+    // 닉네임 부분 일치 + 국가/지역 필터
+    let filter = `nickname~'${q}'`;
+    if (country) filter += `&&country_code='${country}'`;
+    if (region)  filter += `&&region~'${region}'`;
+    queryUrl += `&filter=${encodeURIComponent(filter)}`;
   }
 
-  const res  = await fetch(queryUrl, { headers: sbH });
-  const data = await res.json().catch(() => []);
+  try {
+    const res  = await fetch(queryUrl);
+    const data = await res.json().catch(() => ({ items: [] }));
+    const users = (data.items || []).map(r => ({
+      guid:         r.guid,
+      handle:       r.handle,
+      nickname:     r.nickname,
+      country_code: r.country_code,
+      region:       r.region,
+      current_l1:   L1_DEFAULT,
+    }));
 
-  return new Response(JSON.stringify({
-    ok:    true,
-    users: data,
-    count: data.length,
-    query: { q, country, region, handle },
-  }), { status: 200, headers: corsHeaders });
+    return new Response(JSON.stringify({
+      ok:    true,
+      users,
+      count: users.length,
+      query: { q, country, region, handle },
+      source: 'l1-pocketbase',
+    }), { status: 200, headers: corsHeaders });
+  } catch(e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 PocketBase 검색 실패: ' + e.message, corsHeaders);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1083,23 +1100,54 @@ async function handleP2PRegister(request, env, corsHeaders) {
   if (!guid)   return _err(400, 'MISSING_FIELDS', 'guid 필수', corsHeaders);
   if (!handle) return _err(400, 'MISSING_FIELDS', 'handle 필수', corsHeaders);
 
-  const sbH = _sbServiceHeaders(env);
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/global_profiles`, {
-    method: 'POST',
-    headers: { ...sbH, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({
-      guid, handle, nickname: nickname || null,
-      nickname_hash: nickname_hash || null,
-      country_code:  country_code  || null,
-      region:        region        || null,
-      current_l1:    current_l1   || 'https://l1-hanlim.gopang.net',
-      l1_updated_at: new Date().toISOString(),
-      is_public: true,
-    }),
-  });
+  // ── L1 PocketBase 등록 (GDUDA 본 구현) ──────────────────
+  // Supabase global_profiles → L1 PocketBase profiles 컬렉션으로 전환
+  const L1_PROFILES = L1_DEFAULT + '/api/collections/profiles/records';
+  const now = new Date().toISOString();
 
-  if (!res.ok) return _err(500, 'DB_ERROR', await res.text(), corsHeaders);
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
+  // 기존 레코드 확인 (handle 기준)
+  try {
+    const chkRes = await fetch(
+      `${L1_PROFILES}?filter=${encodeURIComponent(`handle='${handle}'`)}&perPage=1`
+    );
+    const chkData = await chkRes.json().catch(() => ({ items: [] }));
+    const existing = chkData.items?.[0];
+
+    if (existing) {
+      // 기존 레코드 PATCH (current_l1 갱신)
+      const patchRes = await fetch(`${L1_PROFILES}/${existing.id}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nickname: nickname || existing.nickname,
+          region:   region   || existing.region,
+        }),
+      });
+      if (!patchRes.ok) return _err(500, 'L1_UPDATE_ERROR', await patchRes.text(), corsHeaders);
+    } else {
+      // 신규 레코드 POST
+      const postRes = await fetch(L1_PROFILES, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guid,
+          handle,
+          nickname:      nickname      || null,
+          nickname_hash: nickname_hash || null,
+          country_code:  country_code  || null,
+          region:        region        || null,
+          is_public:     true,
+        }),
+      });
+      if (!postRes.ok) return _err(500, 'L1_INSERT_ERROR', await postRes.text(), corsHeaders);
+    }
+
+    return new Response(JSON.stringify({ ok: true, source: 'l1-pocketbase' }), {
+      status: 200, headers: corsHeaders,
+    });
+  } catch(e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 PocketBase 등록 실패: ' + e.message, corsHeaders);
+  }
 }
 
 async function handleSearchUsers(request, env, corsHeaders) {
