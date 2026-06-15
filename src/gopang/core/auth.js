@@ -883,11 +883,19 @@ async function _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountr
   const contentHash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 
   // ③ Ed25519 서명 — "나는 이 가입 데이터가 정확함을 서명한다"
-  //    gopangWallet.sign()이 없으면 guid로 fallback (테스트 환경)
+  //    _recordRegisterPdv 호출 시점에 gopangWallet은 아직 guid 미반영
+  //    (wallet은 모듈 로드 시 1회만 localStorage를 읽음)
+  //    → setIdentity()로 직접 guid를 주입한 후 서명
   let userSig = ipv6;  // fallback
   try {
-    if (window.gopangWallet?.sign) {
-      userSig = await window.gopangWallet.sign(contentHash);
+    if (window.gopangWallet) {
+      // guid 직접 주입
+      if (typeof window.gopangWallet.setIdentity === 'function') {
+        window.gopangWallet.setIdentity({ guid: ipv6, handle: null });
+      }
+      if (typeof window.gopangWallet.sign === 'function') {
+        userSig = await window.gopangWallet.sign(contentHash);
+      }
     }
   } catch (e) {
     console.warn('[Auth] Ed25519 서명 실패, guid로 대체:', e.message);

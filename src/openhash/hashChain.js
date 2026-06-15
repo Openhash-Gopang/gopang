@@ -28,14 +28,16 @@ let _batchTimer = null
 /** 체인 엔트리 인메모리 저장소 (Phase 2B: 실제 노드 연동 전 임시) */
 const _chainStore = new Map()   // entryHash → entry
 
-// ── IndexedDB 영속성 (gopang-wallet / hash_chain store) ──────────────────
-// 앱 새로고침 후에도 prevHash 연속성 보장
-const _IDB_NAME  = 'gopang-wallet'
-const _IDB_STORE = 'hash_chain'
+// ── IndexedDB 영속성 (전용 DB: gopang-openhash) ─────────────────────────
+// gopang-wallet DB와 완전히 분리 — 버전 충돌 방지
+// keyPath: 'entryHash' (OpenHash 앵커링 전용)
+const _IDB_NAME  = 'gopang-openhash'
+const _IDB_STORE = 'anchor_chain'
+const _IDB_VER   = 1
 
 async function _idbOpen() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(_IDB_NAME, 2)
+    const req = indexedDB.open(_IDB_NAME, _IDB_VER)
     req.onsuccess = e => resolve(e.target.result)
     req.onerror   = e => reject(e.target.error)
     req.onupgradeneeded = e => {
@@ -372,6 +374,9 @@ export async function _resetChain() {
   try {
     const db = await _idbOpen()
     const tx = db.transaction(_IDB_STORE, 'readwrite')
-    tx.objectStore(_IDB_STORE).clear()
+    await new Promise((res, rej) => {
+      const req = tx.objectStore(_IDB_STORE).clear()
+      req.onsuccess = res; req.onerror = rej
+    })
   } catch(e) { console.warn('[HashChain] IDB 초기화 실패:', e.message) }
 }
