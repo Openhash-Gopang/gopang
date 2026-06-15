@@ -171,3 +171,343 @@ export async function clearSWCache() {
   alert('캐시 초기화 완료. 페이지를 새로고침합니다.');
   location.reload();
 }
+
+// ══════════════════════════════════════════════════════════════
+// ① 이전 대화 기록
+// ══════════════════════════════════════════════════════════════
+export function openChatHistory() {
+  const user = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
+  const guid = user.ipv6 || '';
+
+  // 모든 날짜의 기록 수집
+  const allSessions = [];
+  for (const key of Object.keys(localStorage)) {
+    if (!key.startsWith(`gopang_history_${guid}`)) continue;
+    const entries = JSON.parse(localStorage.getItem(key) || '[]');
+    allSessions.push(...entries.filter(e => e.domain === 'P2P' || e.peerHandle));
+  }
+  allSessions.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+
+  _openSheet('이전 대화 기록', _renderHistoryList(allSessions));
+}
+
+function _renderHistoryList(sessions) {
+  if (!sessions.length) {
+    return '<div style="padding:40px 16px;text-align:center;color:#9ca3af;font-size:14px">대화 기록이 없습니다.</div>';
+  }
+  return sessions.map((s, i) => `
+    <div onclick="_openChatDetail(${i})" data-idx="${i}"
+         style="padding:14px 16px;border-bottom:1px solid #f2f2f7;cursor:pointer;display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;border-radius:50%;background:#f0fdf4;
+                  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">💬</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:500;color:#111827">${s.peerHandle || '알 수 없음'}</div>
+        <div style="font-size:12px;color:#9ca3af;margin-top:2px">
+          ${new Date(s.ts).toLocaleString('ko-KR')} · ${s.turns}턴
+        </div>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+  `).join('');
+}
+
+window._openChatDetail = async function(idx) {
+  const user = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
+  const guid = user.ipv6 || '';
+
+  // IndexedDB에서 원본 찾기
+  const allSessions = [];
+  for (const key of Object.keys(localStorage)) {
+    if (!key.startsWith(`gopang_history_${guid}`)) continue;
+    const entries = JSON.parse(localStorage.getItem(key) || '[]');
+    allSessions.push(...entries.filter(e => e.domain === 'P2P' || e.peerHandle));
+  }
+  allSessions.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+  const session = allSessions[idx];
+  if (!session) return;
+
+  // IndexedDB에서 원문 조회
+  let messages = session.summary || [];
+  try {
+    const db = await new Promise(r => { const req = indexedDB.open('gopang_pdv_dev'); req.onsuccess = e => r(e.target.result); });
+    const tx = db.transaction('messages', 'readonly');
+    const rec = await new Promise(r => { const req = tx.objectStore('messages').get(session.sessionId); req.onsuccess = e => r(e.target.result); });
+    if (rec?.content) {
+      const data = JSON.parse(rec.content);
+      messages = data.messages || messages;
+    }
+  } catch(e) {}
+
+  const html = `
+    <div style="padding:0">
+      <div style="padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:10px">
+        <button onclick="openChatHistory()" style="border:none;background:none;color:#16a34a;font-size:15px;cursor:pointer;padding:0">← 목록</button>
+        <span style="font-size:15px;font-weight:600">${session.peerHandle || '대화'}</span>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
+        ${messages.map(m => m.role === 'me' || m.role === 'user'
+          ? `<div style="display:flex;justify-content:flex-end">
+               <div style="background:#16a34a;color:#fff;padding:8px 12px;border-radius:16px 16px 4px 16px;max-width:70%;font-size:14px">${m.content}</div>
+             </div>`
+          : `<div style="display:flex;justify-content:flex-start">
+               <div style="background:#f3f4f6;color:#111827;padding:8px 12px;border-radius:16px 16px 16px 4px;max-width:70%;font-size:14px">${m.content}</div>
+             </div>`
+        ).join('')}
+      </div>
+    </div>`;
+
+  document.getElementById('_gopang-sheet-body').innerHTML = html;
+};
+
+// ══════════════════════════════════════════════════════════════
+// ② Hash Chain 보기
+// ══════════════════════════════════════════════════════════════
+export function openHashChain() {
+  const user = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
+  const guid = user.ipv6 || '';
+
+  // localStorage의 history에서 entryHash 수집
+  const chains = [];
+  for (const key of Object.keys(localStorage)) {
+    if (!key.startsWith(`gopang_history_${guid}`)) continue;
+    const entries = JSON.parse(localStorage.getItem(key) || '[]');
+    for (const e of entries) {
+      if (e.entryHash) chains.push(e);
+    }
+  }
+  chains.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+
+  const html = chains.length === 0
+    ? '<div style="padding:40px 16px;text-align:center;color:#9ca3af;font-size:14px">Hash Chain 기록이 없습니다.</div>'
+    : chains.map((c, i) => `
+      <div style="padding:12px 16px;border-bottom:1px solid #f2f2f7">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:11px;background:#f0fdf4;color:#16a34a;padding:2px 6px;border-radius:4px;font-weight:600">
+            ${i === chains.length - 1 ? 'Genesis' : 'L' + (i + 1)}
+          </span>
+          <span style="font-size:11px;color:#9ca3af">${new Date(c.ts).toLocaleString('ko-KR')}</span>
+        </div>
+        <div style="font-family:monospace;font-size:11px;color:#374151;word-break:break-all;background:#f9fafb;padding:6px 8px;border-radius:6px">
+          ${c.entryHash}
+        </div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:4px">
+          ${c.peerHandle ? `P2P: ${c.peerHandle}` : c.domain || ''} · ${c.turns || 0}턴
+        </div>
+      </div>`).join('');
+
+  _openSheet('Hash Chain', html);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ③ Gopang Wallet
+// ══════════════════════════════════════════════════════════════
+export async function openGopangWallet() {
+  const user = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
+  const guid = user.ipv6 || '';
+
+  _openSheet('Gopang Wallet', '<div style="padding:40px 16px;text-align:center;color:#9ca3af;font-size:14px">로딩 중...</div>');
+
+  try {
+    const { PROXY } = await import('../core/state.js');
+    // Supabase에서 fs_ledger 조회
+    const { _SUPABASE_URL, _SUPABASE_KEY } = await import('../core/state.js').catch(() => ({}));
+
+    // extra.fs에서 잔액 조회
+    const profileRes = await fetch(`${PROXY}/profile?guid=${encodeURIComponent(guid)}`);
+    const profileData = await profileRes.json().catch(() => ({}));
+    const fs = profileData.profile?.extra?.public?.finance?.fs || {};
+    const balance = fs['bs-cash'] ?? 0;
+
+    // pdv_log에서 거래 기록 조회
+    const pdvRes = await fetch(`${PROXY}/pdv/query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: {
+          svc: 'gopang', ipv6: guid,
+          scope: ['kmarket'],
+          period: { start: '2026-01-01', end: new Date().toISOString().slice(0,10) },
+          auth_token: { level: 'L0', exp: Math.floor(Date.now()/1000) + 3600 },
+        }
+      })
+    }).catch(() => null);
+
+    const html = `
+      <div style="padding:20px 16px;border-bottom:1px solid #f2f2f7;text-align:center">
+        <div style="font-size:32px;font-weight:700;color:#111827">₮${balance.toLocaleString()}</div>
+        <div style="font-size:13px;color:#9ca3af;margin-top:4px">GDC 잔액</div>
+        <div style="display:flex;gap:16px;margin-top:12px;justify-content:center">
+          <div style="text-align:center">
+            <div style="font-size:16px;font-weight:600;color:#dc2626">-₮${(fs['pl-purchase'] || 0).toLocaleString()}</div>
+            <div style="font-size:11px;color:#9ca3af">지출</div>
+          </div>
+          <div style="width:1px;background:#f2f2f7"></div>
+          <div style="text-align:center">
+            <div style="font-size:16px;font-weight:600;color:#16a34a">+₮${(fs['pl-revenue'] || 0).toLocaleString()}</div>
+            <div style="font-size:11px;color:#9ca3af">수입</div>
+          </div>
+        </div>
+      </div>
+      ${fs['last_tx_id'] ? `
+      <div style="padding:0">
+        <div style="padding:10px 16px;font-size:12px;color:#9ca3af;font-weight:600">최근 거래</div>
+        <div onclick="_openWalletTxDetail()" style="padding:14px 16px;border-bottom:1px solid #f2f2f7;cursor:pointer;display:flex;align-items:center;gap:12px">
+          <div style="width:40px;height:40px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;font-size:18px">💸</div>
+          <div style="flex:1">
+            <div style="font-size:14px;color:#111827">${fs['last_tx_id']?.slice(0,20)}...</div>
+            <div style="font-size:12px;color:#9ca3af">${fs['last_updated_at'] ? new Date(fs['last_updated_at']).toLocaleString('ko-KR') : ''}</div>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>` : '<div style="padding:40px 16px;text-align:center;color:#9ca3af;font-size:13px">거래 내역이 없습니다.</div>'}`;
+
+    document.getElementById('_gopang-sheet-body').innerHTML = html;
+  } catch(e) {
+    document.getElementById('_gopang-sheet-body').innerHTML =
+      '<div style="padding:40px 16px;text-align:center;color:#ef4444;font-size:13px">데이터 로드 실패</div>';
+  }
+}
+
+window._openWalletTxDetail = async function() {
+  const user = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
+  const profileRes = await fetch(`https://gopang-proxy.tensor-city.workers.dev/profile?guid=${encodeURIComponent(user.ipv6)}`);
+  const profileData = await profileRes.json().catch(() => ({}));
+  const fs = profileData.profile?.extra?.public?.finance?.fs || {};
+
+  let txRecord = {};
+  try { txRecord = JSON.parse(fs['last_tx_record'] || '{}'); } catch {}
+
+  const html = `
+    <div style="padding:0">
+      <div style="padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:10px">
+        <button onclick="openGopangWallet()" style="border:none;background:none;color:#16a34a;font-size:15px;cursor:pointer;padding:0">← 뒤로</button>
+        <span style="font-size:15px;font-weight:600">거래 상세</span>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+        ${Object.entries({
+          '거래 ID':    fs['last_tx_id'] || '-',
+          '거래 시각':  fs['last_updated_at'] ? new Date(fs['last_updated_at']).toLocaleString('ko-KR') : '-',
+          '상품명':     txRecord.item_name || '-',
+          '금액':       txRecord.total ? `₮${Number(txRecord.total).toLocaleString()}` : '-',
+          '수수료':     txRecord.fee   ? `₮${Number(txRecord.fee).toLocaleString()}` : '-',
+          '거래 상대':  txRecord.seller_guid ? txRecord.seller_guid.slice(0,20) + '...' : '-',
+          'Block Hash': fs['last_block_hash'] ? fs['last_block_hash'].slice(0,24) + '...' : '-',
+        }).map(([k, v]) => `
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f9fafb">
+            <span style="font-size:13px;color:#6b7280">${k}</span>
+            <span style="font-size:13px;color:#111827;font-family:${k.includes('Hash') || k.includes('ID') ? 'monospace' : 'inherit'};word-break:break-all;text-align:right;max-width:60%">${v}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  document.getElementById('_gopang-sheet-body').innerHTML = html;
+};
+
+// ══════════════════════════════════════════════════════════════
+// ④ 재무제표
+// ══════════════════════════════════════════════════════════════
+export async function openFinancialStatement() {
+  _openSheet('재무제표', '<div style="padding:40px 16px;text-align:center;color:#9ca3af;font-size:14px">로딩 중...</div>');
+
+  try {
+    const user = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
+    const guid = user.ipv6 || '';
+
+    const profileRes = await fetch(`https://gopang-proxy.tensor-city.workers.dev/profile?guid=${encodeURIComponent(guid)}`);
+    const profileData = await profileRes.json().catch(() => ({}));
+    const fs = profileData.profile?.extra?.public?.finance?.fs || {};
+
+    const bsCash     = fs['bs-cash']     || 0;
+    const plPurchase = fs['pl-purchase'] || 0;
+    const plRevenue  = fs['pl-revenue']  || 0;
+    const netIncome  = plRevenue - plPurchase;
+
+    const html = `
+      <div style="padding:16px">
+        <!-- 대차대조표 -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px;
+                      padding-bottom:4px;border-bottom:2px solid #16a34a">대차대조표 (Balance Sheet)</div>
+          <div style="background:#f9fafb;border-radius:10px;padding:12px">
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f2f2f7">
+              <span style="font-size:13px;color:#6b7280">자산 · 현금(bs-cash)</span>
+              <span style="font-size:13px;font-weight:600;color:#111827">₮${bsCash.toLocaleString()}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0">
+              <span style="font-size:13px;font-weight:700;color:#111827">자산 합계</span>
+              <span style="font-size:13px;font-weight:700;color:#16a34a">₮${bsCash.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 손익계산서 -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px;
+                      padding-bottom:4px;border-bottom:2px solid #3b82f6">손익계산서 (P&L)</div>
+          <div style="background:#f9fafb;border-radius:10px;padding:12px">
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f2f2f7">
+              <span style="font-size:13px;color:#6b7280">수입(pl-revenue)</span>
+              <span style="font-size:13px;color:#16a34a">+₮${plRevenue.toLocaleString()}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f2f2f7">
+              <span style="font-size:13px;color:#6b7280">지출(pl-purchase)</span>
+              <span style="font-size:13px;color:#dc2626">-₮${plPurchase.toLocaleString()}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0">
+              <span style="font-size:13px;font-weight:700;color:#111827">순이익</span>
+              <span style="font-size:13px;font-weight:700;color:${netIncome >= 0 ? '#16a34a' : '#dc2626'}">
+                ${netIncome >= 0 ? '+' : ''}₮${netIncome.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 마지막 갱신 -->
+        <div style="text-align:center;font-size:11px;color:#9ca3af">
+          마지막 갱신: ${fs['last_updated_at'] ? new Date(fs['last_updated_at']).toLocaleString('ko-KR') : '거래 없음'}
+        </div>
+      </div>`;
+
+    document.getElementById('_gopang-sheet-body').innerHTML = html;
+  } catch(e) {
+    document.getElementById('_gopang-sheet-body').innerHTML =
+      '<div style="padding:40px 16px;text-align:center;color:#ef4444;font-size:13px">데이터 로드 실패</div>';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 공통 시트 패널
+// ══════════════════════════════════════════════════════════════
+function _openSheet(title, html) {
+  let sheet = document.getElementById('_gopang-bottom-sheet');
+  if (!sheet) {
+    sheet = document.createElement('div');
+    sheet.id = '_gopang-bottom-sheet';
+    sheet.style.cssText = [
+      'position:fixed;inset:0;z-index:10000',
+      'background:#fff',
+      'display:flex;flex-direction:column',
+      'transform:translateY(100%)',
+      'transition:transform 0.3s ease',
+    ].join(';');
+    sheet.innerHTML = `
+      <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid #f2f2f7;flex-shrink:0">
+        <button id="_gopang-sheet-close"
+          style="border:none;background:none;font-size:15px;color:#16a34a;cursor:pointer;padding:0;font-family:inherit">
+          닫기
+        </button>
+        <div id="_gopang-sheet-title" style="flex:1;text-align:center;font-size:16px;font-weight:600"></div>
+        <div style="width:36px"></div>
+      </div>
+      <div id="_gopang-sheet-body" style="flex:1;overflow-y:auto"></div>`;
+    document.body.appendChild(sheet);
+    document.getElementById('_gopang-sheet-close').onclick = () => {
+      sheet.style.transform = 'translateY(100%)';
+    };
+  }
+
+  document.getElementById('_gopang-sheet-title').textContent = title;
+  document.getElementById('_gopang-sheet-body').innerHTML = html;
+  requestAnimationFrame(() => { sheet.style.transform = 'translateY(0)'; });
+}

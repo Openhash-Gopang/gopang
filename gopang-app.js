@@ -17,7 +17,9 @@ import { appendBubble }                        from './src/gopang/ui/bubble.js';
 import { openSettings, closeSettings, handleOverlayClick,
          openAISettings, closeAISettings, handleAISettingsOverlayClick,
          _updateHandleChip, _settingsRegisterHandle,
-         clearSWCache, _updateSecuritySection } from './src/gopang/ui/settings.js';
+         clearSWCache, _updateSecuritySection,
+         openChatHistory, openHashChain, openGopangWallet, openFinancialStatement,
+} from './src/gopang/ui/settings.js';
 import { openSearch, closeSearch,
          handleSearchOverlayClick,
          runSearch, selectContact,
@@ -33,6 +35,7 @@ import { setPeer, _clearPeer,
 
 // ── PDV ──────────────────────────────────────────────────
 import { recordPDV }                           from './src/gopang/pdv/record.js';
+import { loadChainFromIDB }                    from './src/openhash/hashChain.js';
 
 // ── P2P 검색/채팅 (GDUDA Phase 1) ────────────────────────
 import { openSearch as openP2PSearch }         from './src/gopang/ui/p2p-search.js';
@@ -50,6 +53,10 @@ await initAuth();
 (function exposeGlobals() {
   // 설정
   window.openSettings              = openSettings;
+  window.openChatHistory           = openChatHistory;
+  window.openHashChain             = openHashChain;
+  window.openGopangWallet          = openGopangWallet;
+  window.openFinancialStatement    = openFinancialStatement;
   window.openAISettings            = openAISettings;
   window._deviceFullReset          = _deviceFullReset;
   window._isGDCUser                = _isGDCUser;
@@ -108,6 +115,13 @@ _updateHandleChip(_USER?.handle || null);
 // 4. DOMContentLoaded — 나머지 모듈 동적 로드
 // ════════════════════════════════════════════════════════
 const _boot = async () => {
+
+  // 4-0. Hash Chain IDB 복원 — prevHash 연속성 보장
+  try {
+    await loadChainFromIDB();
+  } catch(e) {
+    console.warn('[Boot] Hash Chain IDB 복원 실패 (무시):', e.message);
+  }
 
   // 4-1. 부트스트랩 (src/app.js)
   try {

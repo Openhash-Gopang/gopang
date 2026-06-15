@@ -28,6 +28,65 @@ let _batchTimer = null
 /** 체인 엔트리 인메모리 저장소 (Phase 2B: 실제 노드 연동 전 임시) */
 const _chainStore = new Map()   // entryHash → entry
 
+// ── IndexedDB 영속성 (gopang-wallet / hash_chain store) ──────────────────
+// 앱 새로고침 후에도 prevHash 연속성 보장
+const _IDB_NAME  = 'gopang-wallet'
+const _IDB_STORE = 'hash_chain'
+
+async function _idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(_IDB_NAME, 2)
+    req.onsuccess = e => resolve(e.target.result)
+    req.onerror   = e => reject(e.target.error)
+    req.onupgradeneeded = e => {
+      const db = e.target.result
+      if (!db.objectStoreNames.contains(_IDB_STORE)) {
+        db.createObjectStore(_IDB_STORE, { keyPath: 'entryHash' })
+      }
+    }
+  })
+}
+
+async function _idbPut(entry) {
+  try {
+    const db = await _idbOpen()
+    const tx = db.transaction(_IDB_STORE, 'readwrite')
+    tx.objectStore(_IDB_STORE).put(entry)
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; })
+  } catch(e) { console.warn('[HashChain] IDB 저장 실패:', e.message) }
+}
+
+async function _idbGetAll() {
+  try {
+    const db = await _idbOpen()
+    const tx = db.transaction(_IDB_STORE, 'readonly')
+    return await new Promise((res, rej) => {
+      const req = tx.objectStore(_IDB_STORE).getAll()
+      req.onsuccess = e => res(e.target.result)
+      req.onerror   = e => rej(e.target.error)
+    })
+  } catch(e) { console.warn('[HashChain] IDB 로드 실패:', e.message); return [] }
+}
+
+/**
+ * 앱 시작 시 IDB에서 체인 복원
+ * anchor() 첫 호출 전에 실행 — prevHash 연속성 보장
+ */
+export async function loadChainFromIDB() {
+  const entries = await _idbGetAll()
+  if (!entries.length) return
+
+  // timestamp 순 정렬 → 마지막 entryHash = prevHash
+  entries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+  for (const e of entries) {
+    _chainStore.set(e.entryHash, e)
+  }
+  _prevHash = entries[entries.length - 1].entryHash
+  console.info('[HashChain] IDB 복원 완료',
+    '| 엔트리:', entries.length,
+    '| prevHash:', _prevHash.slice(0, 16) + '...')
+}
+
 // ── 앵커링 ───────────────────────────────────────────────────────────────
 
 /**
@@ -86,9 +145,10 @@ export async function anchor(contentHash, signatures, msgId) {
     anchored:    false,   // 실제 노드 제출 전
   }
 
-  // 체인 상태 업데이트
+  // 체인 상태 업데이트 + IDB 영속화
   _prevHash = entryHash
   _chainStore.set(entryHash, entry)
+  _idbPut(entry)   // fire-and-forget — 체인 흐름 차단 안 함
 
   // 배치 큐에 추가 → Merkle 배치 처리
   _batchQueue.push(entry)
@@ -303,9 +363,15 @@ async function _submitToLayer(layer, entry) {
 }
 
 /** 테스트용: 체인 상태 초기화 */
-export function _resetChain() {
+export async function _resetChain() {
   _prevHash   = '0'.repeat(64)
   _batchQueue = []
   _chainStore.clear()
   if (_batchTimer) { clearTimeout(_batchTimer); _batchTimer = null }
+  // IDB도 초기화
+  try {
+    const db = await _idbOpen()
+    const tx = db.transaction(_IDB_STORE, 'readwrite')
+    tx.objectStore(_IDB_STORE).clear()
+  } catch(e) { console.warn('[HashChain] IDB 초기화 실패:', e.message) }
 }
