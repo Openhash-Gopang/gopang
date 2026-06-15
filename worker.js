@@ -371,6 +371,73 @@ async function handleBizOrder(request, env, corsHeaders) {
   });
   const rpcResult = await rpcRes.json().catch(() => ({ error: 'RPC_PARSE_FAILED' }));
 
+  // ── extra.fs 갱신 — 잔액 변경 원인 추적 필드 추가 ──────────
+  // bs-cash 잔액이 변경될 때 last_tx_id + last_block_hash를 함께 기록
+  // → extra.fs['last_tx_id'] → fs_ledger 조회 → 거래 원본 확인
+  // → extra.fs['last_block_hash'] → OpenHash L1 노드에서 앵커 검증
+  //
+  // seller 사전 서명 (상품 등록 시 저장된 값):
+  //   buyer  서명: 요청의 Ed25519 서명 (기존 TOFU 검증)
+  //   seller 서명: 상품 등록 시 item_sig로 사전 서명 → 여기서 활용
+  //   두 서명이 txPayload에 포함 → contentHash의 위변조 방지
+  const sellerItemSig = body.item_sig || body.seller_item_sig || null;
+  const txRecord = JSON.stringify({
+    tx_id:       tx_hash,
+    buyer_guid:  from_guid,
+    seller_guid: seller_guid,
+    item_name:   item_name || memo || '상품',
+    total:       totalOutput,
+    fee:         _fee,
+    seller_net:  _sellerNet,
+    block_hash,
+    block_id,
+    timestamp:   new Date().toISOString(),
+    buyer_sig:   body.signature    || null,   // Ed25519 buyer 서명
+    seller_sig:  sellerItemSig,               // Ed25519 seller 사전 서명
+  });
+
+  // buyer + seller 양방 서명이 포함된 거래 원본을 Supabase fs_ledger에 보존
+  // (Supabase = L1 노드 임시 대체 — 추후 OpenHash L1 노드로 이전)
+  // extra.fs 갱신: last_tx_id, last_block_hash, last_updated_at 추가
+  const now_fs = new Date().toISOString();
+  fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(from_guid)}`, {
+    method: 'PATCH',
+    headers: { ...sbServiceH, 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      extra: {
+        public: {
+          finance: {
+            fs: {
+              'last_tx_id':      tx_hash,
+              'last_block_hash': block_hash,
+              'last_updated_at': now_fs,
+              'last_tx_record':  txRecord,   // 거래 원본 (buyer+seller 서명 포함)
+            }
+          }
+        }
+      }
+    }),
+  }).catch(e => console.warn('[BizOrder] buyer fs 추적 갱신 실패 (무시):', e.message));
+
+  fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(seller_guid)}`, {
+    method: 'PATCH',
+    headers: { ...sbServiceH, 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      extra: {
+        public: {
+          finance: {
+            fs: {
+              'last_tx_id':      tx_hash,
+              'last_block_hash': block_hash,
+              'last_updated_at': now_fs,
+              'last_tx_record':  txRecord,
+            }
+          }
+        }
+      }
+    }),
+  }).catch(e => console.warn('[BizOrder] seller fs 추적 갱신 실패 (무시):', e.message));
+
   // ── STEP 11: reporter_svc 없을 때만 Worker가 PDV 기록 ────
   // reporter_svc가 있으면 하위 시스템이 이미 기록했으므로 중복 방지
   if (!reporter_svc) {

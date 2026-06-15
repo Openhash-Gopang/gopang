@@ -31,30 +31,44 @@ const _chainStore = new Map()   // entryHash → entry
 // ── 앵커링 ───────────────────────────────────────────────────────────────
 
 /**
- * 메시지를 OpenHash 해시 체인에 앵커링
+ * 데이터를 OpenHash 해시 체인에 앵커링
  *
- * @param {string} content      - 메시지 원문 (해시 대상)
- * @param {string} senderSig    - 발신자 서명 (Base64)
- * @param {string} msgId        - 메시지 식별자
+ * 설계 원칙:
+ *   - contentHash = SHA-256(원본 데이터) — 원본은 호출자가 보관 (vault / L1 노드)
+ *   - signatures  = Ed25519 서명 배열 — 신원 증명 레이어
+ *       대화: [userSig]             — 사용자 단방향 서명
+ *       거래: [buyerSig, sellerSig] — 양방 서명 (seller는 상품 등록 시 사전 서명)
+ *       가입: [userSig]             — 사용자 단방향 서명
+ *   - prevHash가 위변조 방지 핵심 — 체인 재계산 없이 변조 불가
+ *
+ * @param {string}   contentHash  - SHA-256(원본 데이터) — 원본은 호출자 보관
+ * @param {string[]} signatures   - Ed25519 서명 배열 (Base64)
+ * @param {string}   msgId        - 이벤트 식별자
  * @returns {Promise<{
  *   entryHash: string,
- *   msgHash: string,
+ *   contentHash: string,
  *   prevHash: string,
  *   layer: string,
  *   timestamp: string,
  *   blockHeight: number
  * }>}
  */
-export async function anchor(content, senderSig, msgId) {
-  const timestamp  = new Date().toISOString()
+export async function anchor(contentHash, signatures, msgId) {
+  if (typeof contentHash !== 'string' || contentHash.length !== 64)
+    throw new Error('[HashChain] contentHash는 SHA-256 hex(64자)여야 합니다.')
+  if (!Array.isArray(signatures) || signatures.length === 0)
+    throw new Error('[HashChain] signatures는 비어있지 않은 배열이어야 합니다.')
+
+  const timestamp   = new Date().toISOString()
   const blockHeight = _getBlockHeight()
 
-  // 메시지 해시
-  const msgHash = await sha256(content)
-
   // 체인 엔트리 구성
-  // h_i = SHA-256(h_{i-1} ∥ data_i ∥ block_height)
-  const chainInput = `${_prevHash}|${msgHash}|${senderSig}|${blockHeight}|${timestamp}`
+  // h_i = SHA-256(h_{i-1} ∥ contentHash ∥ signatures ∥ blockHeight ∥ timestamp)
+  // prevHash: 이전 체인 상태 — 공격자가 통제 불가 (위변조 방지 핵심)
+  // contentHash: SHA-256(원본) — 원본은 vault/L1 노드에 보관
+  // signatures: Ed25519 서명들 — 신원 증명 (누가 이 데이터를 승인했는가)
+  const sigConcat  = signatures.join('|')
+  const chainInput = `${_prevHash}|${contentHash}|${sigConcat}|${blockHeight}|${timestamp}`
   const entryHash  = await sha256(chainInput)
 
   // 계층 선택 (PLSM)
@@ -62,9 +76,9 @@ export async function anchor(content, senderSig, msgId) {
 
   const entry = {
     entryHash,
-    msgHash,
+    contentHash,
+    signatures,
     msgId,
-    senderSig,
     prevHash:    _prevHash,
     blockHeight,
     timestamp,
@@ -85,7 +99,7 @@ export async function anchor(content, senderSig, msgId) {
 
   return {
     entryHash,
-    msgHash,
+    contentHash,
     prevHash: entry.prevHash,
     layer,
     timestamp,
@@ -215,7 +229,8 @@ export async function verifyChainIntegrity() {
     }
 
     // 엔트리 해시 재계산 검증
-    const chainInput = `${entry.prevHash}|${entry.msgHash}|${entry.senderSig}|${entry.blockHeight}|${entry.timestamp}`
+    const sigConcat2 = (entry.signatures || [entry.senderSig || '']).join('|')
+    const chainInput = `${entry.prevHash}|${entry.contentHash || entry.msgHash}|${sigConcat2}|${entry.blockHeight}|${entry.timestamp}`
     const recomputed = await sha256(chainInput)
 
     if (recomputed !== entry.entryHash) {

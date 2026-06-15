@@ -78,23 +78,50 @@ async function _saveSessionOnce() {
   }
 
   // ── OpenHash 앵커링 ───────────────────────────────────
-  // 세션 전체를 하나의 JSON으로 직렬화 → SHA-256 → anchor() 1회
-  // 원칙: 연결 시작 ~ 연결 종료가 하나의 데이터 뭉치
+  // 설계 원칙:
+  //   - 세션 원본 → vault.js IndexedDB (AES-256-GCM, 기기 내 보관)
+  //   - contentHash = SHA-256(sessionRaw) → OpenHash에만 기록
+  //   - userSig = gopangWallet.sign(contentHash) → 신원 증명
+  //     "나는 이 세션 데이터가 정확함을 서명한다"
+  //   - anchor(contentHash, [userSig], sessionId)
+  //     entryHash = SHA-256(prevHash + contentHash + userSig + blockHeight)
+  //   - prevHash: 이전 세션 체인 상태 (위변조 방지 핵심)
   try {
-    const { anchor } = await import('../../openhash/hashChain.js');
+    const { anchor }       = await import('../../openhash/hashChain.js');
+    const { storeMessage } = await import('../../pdv/vault.js');
 
-    // 세션 원문 직렬화 (원문 전체 — 대화 + 거래 포함)
-    const sessionRaw  = JSON.stringify(sessionData);
+    // 세션 원문 직렬화
+    const sessionRaw = JSON.stringify(sessionData);
 
-    // SHA-256(sessionRaw) = 세션 콘텐츠 해시
+    // ① vault.js — 원본 저장 (IndexedDB AES-256-GCM)
+    //    원본 보관 주체 = 사용자 기기
+    //    검증 시: vault에서 원본 꺼냄 → SHA-256 재계산 → entryHash 대조
+    await storeMessage({
+      msgId:     sessionId,
+      senderId:  USER_GUID || 'anon',
+      role:      'session',
+      content:   sessionRaw,
+      timestamp: now,
+      riskLevel: 'S0',
+      sessionId,
+    }).catch(e => console.warn('[Session] vault 저장 실패 (무시):', e.message));
+
+    // ② contentHash = SHA-256(sessionRaw)
     const buf         = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sessionRaw));
     const sessionHash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 
-    // anchor() 입력:
-    //   content   = sessionHash (원문은 localStorage, 체인엔 해시만)
-    //   senderSig = USER_GUID
-    //   msgId     = sessionId
-    const result = await anchor(sessionHash, USER_GUID || 'anon', sessionId);
+    // ③ Ed25519 서명 — gopangWallet.sign()이 없으면 guid로 fallback
+    let userSig = USER_GUID || 'anon';
+    try {
+      if (window.gopangWallet?.sign) {
+        userSig = await window.gopangWallet.sign(sessionHash);
+      }
+    } catch (e) {
+      console.warn('[Session] Ed25519 서명 실패, guid로 대체:', e.message);
+    }
+
+    // ④ anchor(contentHash, [userSig], sessionId)
+    const result = await anchor(sessionHash, [userSig], sessionId);
 
     console.log(`[Session] OpenHash 앵커링 완료`,
       '| sessionId:', sessionId,

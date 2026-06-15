@@ -818,29 +818,78 @@ window._cancelAuthRequest = function() {
   appendBubble('ai', '거래가 취소됐습니다.', true);
 };
 
-// ── _recordRegisterPdv — 가입 완료 시 PDV 초기 레코드 생성 ────────────────
+// ── _recordRegisterPdv — 가입 완료 시 PDV 초기 레코드 + OpenHash 앵커링 ─────
 // 목적:
-//   1. pdv_log에 'user_register' 레코드를 남겨 가입 이력 보존
-//   2. K-Tax 등이 extra.fs=null인 신규 사용자를 'PROFILE_MISSING_FS'가 아닌
-//      정상 신규 사용자로 식별 가능하게 함
-//   3. fs_ledger 초기값을 { bs-cash:0, pl-purchase:0, pl-revenue:0 }으로 설정
+//   1. 가입 원본 데이터 구성 → SHA-256(원본) = contentHash
+//   2. gopangWallet.sign(contentHash) → userSig (Ed25519 서명)
+//   3. hashChain.anchor(contentHash, [userSig], sessionId) → entryHash
+//      entryHash = SHA-256(prevHash + contentHash + userSig + blockHeight)
+//      prevHash: 이전 체인 상태 (위변조 방지 핵심)
+//      userSig:  "나는 이 가입 데이터가 정확함을 서명한다"
+//   4. pdv_log INSERT (openhash_anchored: true)
+//   5. extra.fs 초기화
+//      { bs-cash:0, pl-purchase:0, pl-revenue:0,
+//        last_tx_id:null, last_block_hash:null }
+//      bs-cash = wallet 잔액 (재무제표 현금 계정 = wallet)
 //
-// 설계: Worker /pdv/report 경유 (P2: 모든 PDV는 Worker 경유 필수)
-//       fire-and-forget — 실패해도 가입 흐름 차단 안 함
+// 설계:
+//   - 원본은 호출자(auth.js)가 보관 — OpenHash에는 contentHash만 기록
+//   - fire-and-forget — 실패해도 가입 흐름 차단 안 함
 async function _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountry }) {
-  const now = new Date().toISOString();
+  const now       = new Date().toISOString();
+  const sessionId = `REG-${ipv6.replace(/:/g, '').slice(0, 12)}-${Date.now()}`;
 
-  // ① pdv_log — 가입 이벤트 기록
+  // ① 가입 원본 데이터 구성
+  const regPayload = JSON.stringify({
+    type: 'user_register', guid: ipv6, handle, nickname, e164,
+    country_code: selectedCountry, ts: now,
+  });
+
+  // ② contentHash = SHA-256(원본)
+  const buf         = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(regPayload));
+  const contentHash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+
+  // ③ Ed25519 서명 — "나는 이 가입 데이터가 정확함을 서명한다"
+  //    gopangWallet.sign()이 없으면 guid로 fallback (테스트 환경)
+  let userSig = ipv6;  // fallback
+  try {
+    if (window.gopangWallet?.sign) {
+      userSig = await window.gopangWallet.sign(contentHash);
+    }
+  } catch (e) {
+    console.warn('[Auth] Ed25519 서명 실패, guid로 대체:', e.message);
+  }
+
+  // ④ OpenHash 앵커링
+  //    anchor(contentHash, [userSig], sessionId)
+  //    entryHash = SHA-256(prevHash + contentHash + userSig + blockHeight)
+  let entryHash = null;
+  let layer     = null;
+  try {
+    const { anchor } = await import('../../openhash/hashChain.js');
+    const result  = await anchor(contentHash, [userSig], sessionId);
+    entryHash     = result.entryHash;
+    layer         = result.layer;
+    console.info('[Auth] OpenHash 앵커링 완료',
+      '| contentHash:', contentHash.slice(0, 16),
+      '| entryHash:', entryHash.slice(0, 16),
+      '| layer:', layer);
+  } catch (e) {
+    console.warn('[Auth] OpenHash 앵커링 실패 (무시):', e.message);
+  }
+
+  // ⑤ pdv_log 기록
   const report = {
     svc:          'gopang',
     type:         'user_register',
     reporter_svc: 'gopang-auth',
-    session_id:   `REG-${ipv6.replace(/:/g, '').slice(0, 12)}-${Date.now()}`,
+    session_id:   sessionId,
+    block_hash:   entryHash,
     who:  { ipv6, handle },
     when: now,
     where: 'https://gopang.net',
     what: `신규 사용자 가입: ${nickname} (${handle})`,
-    how:  '전화번호 입력 → 즉시 등록 (테스트 모드)',
+    how:  '전화번호 입력 → 즉시 등록 (테스트 모드, 상용화 시 SMS 2FA)',
     why:  '고팡 서비스 최초 가입',
   };
 
@@ -848,21 +897,28 @@ async function _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountr
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify({ report }),
-  });
+  }).catch(e => console.warn('[PDV] report 전송 실패:', e.message));
 
-  // ② user_profiles.extra.fs 초기화 — 첫 거래 전 K-Tax 읽기 오류 방지
-  // Worker /profile PATCH: extra.fs = { bs-cash:0, pl-purchase:0, pl-revenue:0 }
-  // 단, /profile PATCH 엔드포인트가 없는 경우 Supabase 직접 PATCH (fallback)
-  const fsInit = { 'bs-cash': 0, 'pl-purchase': 0, 'pl-revenue': 0 };
+  // ⑥ extra.fs 초기화
+  //    bs-cash          = wallet 잔액 (재무제표 현금 계정)
+  //    last_tx_id       = 마지막 거래 식별자 (null: 거래 없음)
+  //    last_block_hash  = 마지막 거래 OpenHash 앵커
+  //    last_updated_at  = 마지막 갱신 시각
+  const fsInit = {
+    'bs-cash':          0,
+    'pl-purchase':      0,
+    'pl-revenue':       0,
+    'last_tx_id':       null,
+    'last_block_hash':  null,
+    'last_updated_at':  now,
+  };
 
-  // Worker 경유 시도
   const patchRes = await fetch(`${PROXY_URL}/profile`, {
     method:  'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify({ guid: ipv6, extra_fs: fsInit }),
   }).catch(() => null);
 
-  // Worker가 PATCH 미지원이면 → Supabase 직접 PATCH (fallback)
   if (!patchRes || !patchRes.ok) {
     const { _SUPABASE_URL, _SUPABASE_KEY } = await import('./state.js');
     if (_SUPABASE_URL && _SUPABASE_KEY) {
@@ -884,5 +940,9 @@ async function _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountr
     }
   }
 
-  console.info('[Auth] 가입 PDV + fs 초기화 완료 | handle:', handle);
+  console.info('[Auth] 가입 PDV + OpenHash 앵커링 + fs 초기화 완료',
+    '| handle:', handle,
+    '| contentHash:', contentHash.slice(0, 16),
+    '| entryHash:', entryHash?.slice(0, 16) ?? 'none',
+    '| layer:', layer ?? 'none');
 }
