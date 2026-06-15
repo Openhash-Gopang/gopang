@@ -1,7 +1,13 @@
 /**
- * core/session.js — 세션 대화 저장 (앱 숨김 시 1회)
+ * core/session.js — 세션 대화 저장 + OpenHash 앵커링 (앱 숨김 시 1회)
+ *
+ * 설계 원칙:
+ *   - 세션 단위 = 앱 진입 ~ 앱 종료(visibilitychange / pagehide)
+ *   - 세션 안의 모든 대화 + 거래를 하나의 데이터 뭉치로 묶어
+ *     SHA-256 → hashChain.anchor() 1회 기록
+ *   - 원문은 localStorage에 보존, OpenHash에는 해시만 기록
  */
-import { history } from './state.js';
+import { history, PROXY } from './state.js';
 import { USER_GUID } from './state.js';
 
 const DOMAIN_PATTERNS = {
@@ -26,28 +32,103 @@ function _classifyDomain(text) {
   return 'ETC';
 }
 
-function _saveSessionOnce() {
+async function _saveSessionOnce() {
   if (history.length < 2) return;
+
+  // ── 도메인 분류 ──────────────────────────────────────
   const domainCount = {};
   for (const msg of history) {
     const d = _classifyDomain(String(msg.content));
     domainCount[d] = (domainCount[d] || 0) + 1;
   }
   const primaryDomain = Object.entries(domainCount).sort((a,b)=>b[1]-a[1])[0][0];
-  const today = new Date().toISOString().slice(0,10);
+  const now   = new Date().toISOString();
+  const today = now.slice(0, 10);
   const key   = `gopang_history_${USER_GUID}_${today}`;
+
+  // ── 세션 데이터 구성 ─────────────────────────────────
+  // system 메시지 제외 — 사용자/AI 발화 + 거래만 포함
+  const sessionMessages = history.filter(m => m.role !== 'system');
+  const sessionId = `SES-${(USER_GUID || 'anon').replace(/:/g,'').slice(0,12)}-${Date.now()}`;
+
+  const sessionData = {
+    sessionId,
+    guid:      USER_GUID || null,
+    startedAt: history.find(m => m.role !== 'system')?.ts || now,
+    endedAt:   now,
+    domain:    primaryDomain,
+    turns:     sessionMessages.length,
+    messages:  sessionMessages,   // 대화 + 거래 전체 원문
+  };
+
+  // ── localStorage 저장 (원문 보존) ────────────────────
   try {
     const existing = JSON.parse(localStorage.getItem(key) || '[]');
     existing.push({
-      ts: new Date().toISOString(),
-      domain: primaryDomain,
-      turns:  history.length,
-      summary: history.slice(-4),
+      ts:      now,
+      domain:  primaryDomain,
+      turns:   sessionMessages.length,
+      summary: sessionMessages.slice(-4),
+      sessionId,
     });
     localStorage.setItem(key, JSON.stringify(existing));
-    console.log(`[Session] 저장 완료 — 영역: ${primaryDomain}, 턴: ${history.length}`);
+    console.log(`[Session] localStorage 저장 완료 — 영역: ${primaryDomain}, 턴: ${sessionMessages.length}`);
   } catch(e) {
-    console.warn('[Session] 저장 실패:', e.message);
+    console.warn('[Session] localStorage 저장 실패:', e.message);
+  }
+
+  // ── OpenHash 앵커링 ───────────────────────────────────
+  // 세션 전체를 하나의 JSON으로 직렬화 → SHA-256 → anchor() 1회
+  // 원칙: 연결 시작 ~ 연결 종료가 하나의 데이터 뭉치
+  try {
+    const { anchor } = await import('../../openhash/hashChain.js');
+
+    // 세션 원문 직렬화 (원문 전체 — 대화 + 거래 포함)
+    const sessionRaw  = JSON.stringify(sessionData);
+
+    // SHA-256(sessionRaw) = 세션 콘텐츠 해시
+    const buf         = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sessionRaw));
+    const sessionHash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+
+    // anchor() 입력:
+    //   content   = sessionHash (원문은 localStorage, 체인엔 해시만)
+    //   senderSig = USER_GUID
+    //   msgId     = sessionId
+    const result = await anchor(sessionHash, USER_GUID || 'anon', sessionId);
+
+    console.log(`[Session] OpenHash 앵커링 완료`,
+      '| sessionId:', sessionId,
+      '| domain:', primaryDomain,
+      '| turns:', sessionMessages.length,
+      '| sessionHash:', sessionHash.slice(0,16) + '...',
+      '| entryHash:', result.entryHash.slice(0,16) + '...',
+      '| layer:', result.layer);
+
+    // ── pdv_log 기록 (block_hash = entryHash → openhash_anchored: true)
+    if (PROXY) {
+      fetch(`${PROXY}/pdv/report`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          report: {
+            svc:          'gopang',
+            type:         'session_end',
+            reporter_svc: 'gopang-session',
+            session_id:   sessionId,
+            block_hash:   result.entryHash,
+            who:   { ipv6: USER_GUID },
+            when:  now,
+            where: 'https://gopang.net',
+            what:  `세션 종료 — ${primaryDomain} 영역, ${sessionMessages.length}턴`,
+            how:   '앱 종료(visibilitychange / pagehide)',
+            why:   '세션 데이터 PDV 기록',
+          },
+        }),
+      }).catch(e => console.warn('[Session] pdv_log 전송 실패 (무시):', e.message));
+    }
+
+  } catch(e) {
+    console.warn('[Session] OpenHash 앵커링 실패 (무시):', e.message);
   }
 }
 
@@ -55,5 +136,6 @@ let _sessionSaved = false;
 export function _saveOnce() {
   if (_sessionSaved) return;
   _sessionSaved = true;
-  _saveSessionOnce();
+  // async — fire-and-forget (visibilitychange/pagehide 핸들러가 await 불가)
+  _saveSessionOnce().catch(e => console.warn('[Session] _saveOnce 오류:', e.message));
 }
