@@ -1,7 +1,10 @@
 /**
  * ui/welcome.js — 초기 환영 메시지
+ * - 모든 사용자: nickname + handle 표시
+ * - 잔액은 표시 안 함 (사용자 요청 시 응답)
  */
 import { appendBubble } from './bubble.js';
+import { _USER } from '../core/state.js';
 
 // ── 초기 AI 비서 환영 메시지 ────────────────────────────
 export function _showWelcomeMessage() {
@@ -22,7 +25,13 @@ export function _showWelcomeMessage() {
   const bubble = document.createElement('div');
   bubble.className = 'bubble bubble-ai';
   bubble.style.whiteSpace = 'nowrap';
-  bubble.innerHTML = '지시 대기 중.';
+
+  const nickname = _USER?.nickname || _USER?.name || '';
+  const handle   = _USER?.handle   || '';
+
+  bubble.innerHTML = nickname
+    ? `안녕하세요, ${nickname}님 (${handle})<br>지시 대기 중.`
+    : '지시 대기 중.';
 
   row.appendChild(bubble);
   list.appendChild(label);
