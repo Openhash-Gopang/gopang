@@ -400,13 +400,16 @@ async function _saveP2PSession(messages, peer, startedAt) {
   // ② vault.js — 원본 저장 (IndexedDB AES-256-GCM)
   try {
     const { storeMessage } = await import('../../pdv/vault.js');
+    const pubKeyB64 = window.gopangWallet?.publicKeyB64u || '';
     await storeMessage({
-      msgId:     sessionId,
-      senderId:  _USER.ipv6,
-      role:      'p2p_session',
-      content:   sessionRaw,
-      timestamp: now,
-      riskLevel: 'S0',
+      msgId:           sessionId,
+      senderId:        _USER.ipv6,
+      senderPubKeyB64: pubKeyB64,
+      signature:       userSig !== _USER.ipv6 ? userSig : '',
+      role:            'p2p_session',
+      content:         sessionRaw,
+      timestamp:       now,
+      riskLevel:       'S0',
       sessionId,
     });
     console.info('[P2P] vault 저장 완료 | sessionId:', sessionId);
@@ -471,7 +474,7 @@ async function _saveP2PSession(messages, peer, startedAt) {
       report: {
         svc:          'gopang',
         type:         'p2p_conversation',
-        reporter_svc: 'gopang-p2p',
+        reporter_svc: 'gopang',
         session_id:   sessionId,
         block_hash:   entryHash,
         who:   { ipv6: _USER.ipv6, handle: _USER.handle },
