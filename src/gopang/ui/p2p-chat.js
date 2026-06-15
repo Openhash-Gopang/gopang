@@ -419,7 +419,7 @@ async function _saveP2PSession(messages, peer, startedAt) {
       msgId:           sessionId,
       senderId:        _USER.ipv6,
       senderPubKeyB64: pubKeyB64,
-      signature:       userSig !== _USER.ipv6 ? userSig : '',
+      signature:       userSig || _USER.ipv6,
       role:            'p2p_session',
       content:         sessionRaw,
       timestamp:       now,
