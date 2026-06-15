@@ -13,10 +13,14 @@ import {
 let _chatOverlay  = null;
 let _peerInfo     = null;  // { guid, handle, nickname }
 let _pollInterval = null;
+let _p2pMessages  = [];    // P2P 대화 원문 누적 (PDV 저장용)
+let _sessionStart = null;  // 세션 시작 시각
 
 // ── P2P 통화 시작 (발신측) ───────────────────────────────
 export async function startP2PCall(targetUser) {
-  _peerInfo = targetUser;
+  _peerInfo     = targetUser;
+  _p2pMessages  = [];
+  _sessionStart = new Date().toISOString();
   _openChatUI(targetUser, 'calling');
 
   const conn    = new RTCPeerConnection(RTC_CONFIG);
@@ -284,6 +288,15 @@ function _appendMsg(role, text, ts) {
   const el = document.getElementById('_p2p-messages');
   if (!el) return;
 
+  // PDV 저장용 메시지 누적 (system 메시지 제외)
+  if (role !== 'system') {
+    _p2pMessages.push({
+      role,
+      content: text,
+      ts: ts || new Date().toISOString(),
+    });
+  }
+
   const time = ts ? new Date(ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
 
   if (role === 'system') {
@@ -330,7 +343,143 @@ function _closeP2P() {
   if (_rtcConn)    { _rtcConn.close();    setRtcConn(null);    }
   _chatOverlay?.remove();
   _chatOverlay = null;
-  _peerInfo    = null;
+
+  // ── PDV 저장 + OpenHash 앵커링 ───────────────────────
+  // P2P 세션 종료 시 대화 원문을 vault에 저장하고 OpenHash에 앵커링
+  if (_p2pMessages.length > 0 && _peerInfo) {
+    _saveP2PSession(_p2pMessages, _peerInfo, _sessionStart)
+      .catch(e => console.warn('[P2P] PDV 저장 실패 (무시):', e.message));
+  }
+
+  _peerInfo     = null;
+  _p2pMessages  = [];
+  _sessionStart = null;
+}
+
+// ── P2P 세션 PDV 저장 + OpenHash 앵커링 ─────────────────
+// 설계:
+//   원본 = { sessionId, myGuid, peerGuid, peerHandle, startedAt, endedAt, messages[] }
+//   vault.js → IndexedDB AES-256-GCM 저장 (원본 보관)
+//   contentHash = SHA-256(원본)
+//   userSig = gopangWallet.sign(contentHash)
+//   hashChain.anchor(contentHash, [userSig], sessionId)
+//   POST /pdv/report { block_hash: entryHash }
+async function _saveP2PSession(messages, peer, startedAt) {
+  const { _USER, PROXY } = await import('../core/state.js');
+  if (!_USER?.ipv6) return;
+
+  const now       = new Date().toISOString();
+  const sessionId = `P2P-${_USER.ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;
+
+  // ① 세션 원본 구성
+  const sessionData = {
+    sessionId,
+    type:      'p2p_conversation',
+    myGuid:    _USER.ipv6,
+    myHandle:  _USER.handle,
+    peerGuid:  peer.guid,
+    peerHandle: peer.handle,
+    peerNickname: peer.nickname || peer.handle,
+    startedAt: startedAt || now,
+    endedAt:   now,
+    turns:     messages.length,
+    messages,  // 대화 원문 전체
+  };
+  const sessionRaw = JSON.stringify(sessionData);
+
+  // ② vault.js — 원본 저장 (IndexedDB AES-256-GCM)
+  try {
+    const { storeMessage } = await import('../../pdv/vault.js');
+    await storeMessage({
+      msgId:     sessionId,
+      senderId:  _USER.ipv6,
+      role:      'p2p_session',
+      content:   sessionRaw,
+      timestamp: now,
+      riskLevel: 'S0',
+      sessionId,
+    });
+    console.info('[P2P] vault 저장 완료 | sessionId:', sessionId);
+  } catch(e) {
+    console.warn('[P2P] vault 저장 실패 (무시):', e.message);
+  }
+
+  // ③ contentHash = SHA-256(sessionRaw)
+  const buf         = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sessionRaw));
+  const contentHash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+
+  // ④ Ed25519 서명
+  let userSig = _USER.ipv6;
+  try {
+    if (window.gopangWallet?.sign) {
+      userSig = await window.gopangWallet.sign(contentHash);
+    }
+  } catch(e) {
+    console.warn('[P2P] Ed25519 서명 실패, guid로 대체:', e.message);
+  }
+
+  // ⑤ OpenHash 앵커링
+  let entryHash = null;
+  let layer     = null;
+  try {
+    const { anchor } = await import('../../openhash/hashChain.js');
+    const result = await anchor(contentHash, [userSig], sessionId);
+    entryHash    = result.entryHash;
+    layer        = result.layer;
+    console.info('[P2P] OpenHash 앵커링 완료',
+      '| contentHash:', contentHash.slice(0,16),
+      '| entryHash:', entryHash.slice(0,16),
+      '| layer:', layer);
+  } catch(e) {
+    console.warn('[P2P] OpenHash 앵커링 실패 (무시):', e.message);
+  }
+
+  // ⑥ localStorage 백업
+  try {
+    const today = now.slice(0,10);
+    const key   = `gopang_history_${_USER.ipv6}_${today}`;
+    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    existing.push({
+      ts:        now,
+      domain:    'P2P',
+      turns:     messages.length,
+      sessionId,
+      entryHash,
+      peerHandle: peer.handle,
+      summary:   messages.slice(-4),
+    });
+    localStorage.setItem(key, JSON.stringify(existing));
+  } catch(e) {
+    console.warn('[P2P] localStorage 백업 실패:', e.message);
+  }
+
+  // ⑦ POST /pdv/report (block_hash = entryHash → openhash_anchored: true)
+  await fetch(`${PROXY}/pdv/report`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({
+      report: {
+        svc:          'gopang',
+        type:         'p2p_conversation',
+        reporter_svc: 'gopang-p2p',
+        session_id:   sessionId,
+        block_hash:   entryHash,
+        who:   { ipv6: _USER.ipv6, handle: _USER.handle },
+        when:  now,
+        where: 'https://gopang.net',
+        what:  `P2P 대화 종료 — ${peer.handle}와 ${messages.length}턴`,
+        how:   'WebRTC P2P DataChannel',
+        why:   'P2P 대화 PDV 기록',
+      },
+    }),
+  }).catch(e => console.warn('[P2P] pdv_log 전송 실패 (무시):', e.message));
+
+  console.info('[P2P] PDV 저장 완료',
+    '| sessionId:', sessionId,
+    '| turns:', messages.length,
+    '| contentHash:', contentHash.slice(0,16),
+    '| entryHash:', entryHash?.slice(0,16) ?? 'none',
+    '| layer:', layer ?? 'none');
 }
 
 // ── 앱 시작 시 incoming offer 감시 ───────────────────────
