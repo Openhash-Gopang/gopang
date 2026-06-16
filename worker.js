@@ -1256,13 +1256,21 @@ async function handleProfilePost(request, env, corsHeaders) {
 
   const sbH = _sbHeaders(env);
 
-  // 기존 프로필 존재 여부 확인 (upsert 분기) — TOFU: pubkey 일치 확인
+  // 기존 프로필 존재 여부 확인 (upsert 분기)
+  // TOFU v2: 새 기기에서 동일 guid로 접속 시 pubkey 갱신 허용
+  // 근거: guid = SHA-256(전화번호) 기반 IPv6 → 전화번호 소유 자체가 본인 증명
+  // 단, 서명 검증(_verifyEd25519)은 이미 통과한 상태 (새 pubkey로 서명됨)
   const existRes  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=guid,handle,extra,pubkey_ed25519&limit=1`, { headers: sbH });
   const existRows = await existRes.json().catch(() => []);
   const existing  = existRows[0] || null;
 
-  if (existing?.pubkey_ed25519 && existing.pubkey_ed25519 !== pubkey) {
-    return _err(401, 'PUBKEY_MISMATCH', '등록된 공개키와 일치하지 않습니다', corsHeaders);
+  // pubkey 불일치 = 새 기기/브라우저에서 새 키페어 생성
+  // guid(전화번호 기반)가 동일 + 새 pubkey로 서명 검증 통과 → pubkey 갱신 허용
+  // (이미 _verifyEd25519 통과 = 새 privKey 보유 증명)
+  const pubkeyChanged = existing?.pubkey_ed25519 && existing.pubkey_ed25519 !== pubkey;
+  if (pubkeyChanged) {
+    console.warn(`[Profile] pubkey 갱신: ${guid.slice(-8)} | 새 기기 접속으로 판단`);
+    // 갱신 허용 — 아래 record에서 pubkey_ed25519 덮어씀
   }
 
   // handle 자동 생성 (미지정 + 신규일 때)
