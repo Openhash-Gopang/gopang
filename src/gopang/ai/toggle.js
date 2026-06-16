@@ -81,6 +81,12 @@ function _showAISetupPopup() {
     </div>`;
   document.body.appendChild(ov);
 
+  // 외부(배경) 클릭 시 닫힘
+  ov.addEventListener('click', (e) => {
+    const sheet = ov.querySelector('div');
+    if (sheet && !sheet.contains(e.target)) ov.remove();
+  });
+
   const modelSel = ov.querySelector('#_ai_model');
 
   // API Key 보기/숨기기
