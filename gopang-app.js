@@ -348,6 +348,18 @@ function _closeWelcome(ov) {
   setTimeout(() => ov.remove(), 200);
 }
 
+// ── SW → 앱 메시지 수신 (소리 재생) ────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'PLAY_SOUND') {
+      const sound = event.data.sound || localStorage.getItem('gopang_push_sound') || 'ping';
+      if (sound === 'none') return;
+      const audio = new Audio(`/assets/sounds/${sound}.mp3`);
+      audio.play().catch(() => {});
+    }
+  });
+}
+
 // ── 사용자 등록 안내 팝업 (한국 사용자 전화번호 안내) ───────────
 function _showRegisterGuide() {
   const ov = document.createElement('div');
@@ -448,6 +460,7 @@ function _showRegisterGuide() {
     if (stored?.handle && typeof _updateHandleChip === 'function') {
       _updateHandleChip(stored.handle);
     }
+    if (typeof openSettings === 'function') openSettings();
   };
 
   okBtn.onclick = doSubmit;

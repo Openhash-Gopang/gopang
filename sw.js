@@ -149,3 +149,64 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
+// ── Push 알림 수신 ─────────────────────────────────────────
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data?.json() || {}; } catch { data = { title: '고팡', body: event.data?.text() || '새 메시지' }; }
+
+  const title   = data.title || '고팡';
+  const body    = data.body  || '새 메시지가 도착했습니다.';
+  const sound   = data.sound || 'ping';
+  const tag     = data.tag   || 'gopang-msg';
+  const url     = data.url   || '/webapp.html';
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon:  '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag,
+      data:  { url, sound },
+      vibrate: [200, 100, 200],
+    })
+  );
+});
+
+// ── 알림 클릭 → 앱 열기 + 소리 재생 ──────────────────────
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url   = event.notification.data?.url   || '/webapp.html';
+  const sound = event.notification.data?.sound || 'ping';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      // 이미 열린 창이 있으면 포커스
+      for (const client of list) {
+        if (client.url.includes('gopang.net') && 'focus' in client) {
+          client.postMessage({ type: 'PLAY_SOUND', sound });
+          return client.focus();
+        }
+      }
+      // 없으면 새 창
+      return clients.openWindow(url).then(w => {
+        if (w) w.postMessage({ type: 'PLAY_SOUND', sound });
+      });
+    })
+  );
+});
+
+// ── Push 구독 변경 감지 ────────────────────────────────────
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    self.registration.pushManager.subscribe({ userVisibleOnly: true })
+      .then(sub => {
+        // 새 구독을 서버에 재등록
+        return fetch('https://gopang-proxy.tensor-city.workers.dev/push/subscribe', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ subscription: sub }),
+        });
+      })
+  );
+});
