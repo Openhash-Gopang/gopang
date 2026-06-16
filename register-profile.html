@@ -61,7 +61,7 @@ textarea{resize:vertical;min-height:70px}
 .add-field-btn{margin:0 16px 14px;padding:10px;border:1.5px dashed #16a34a;border-radius:10px;background:#f0fdf4;color:#16a34a;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;width:calc(100% - 32px)}
 /* 상품 */
 .product-list{padding:0 16px 8px;display:flex;flex-direction:column;gap:12px}
-.product-item{border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff}
+.product-item{border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff;position:relative}
 .product-header{padding:12px 14px;display:flex;align-items:center;gap:10px}
 .product-img-thumb{width:44px;height:44px;border-radius:8px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px dashed #d1d5db;flex-shrink:0;overflow:hidden}
 .product-img-thumb img{width:100%;height:100%;object-fit:cover}
@@ -232,19 +232,23 @@ textarea{resize:vertical;min-height:70px}
   <!-- 사업자 정보 -->
   <div class="card">
     <div class="card-title">사업자 정보</div>
-    <div class="field">
-      <div class="fl"><span>사업자등록번호</span><label class="pc"><input type="checkbox" id="b-pub-bizno"> 공개</label></div>
-      <input type="text" id="b-biz-reg" placeholder="000-00-00000" maxlength="12" oninput="fmtBiz(this)" onblur="lookupBiz(this.value)">
-      <span class="err" id="b-err-biz">올바른 사업자등록번호를 입력하세요.</span>
-      <div id="b-biz-badge" style="font-size:11px;color:#16a34a;display:none"></div>
-    </div>
-    <div class="field">
-      <div class="fl"><span>대표자명</span><label class="pc"><input type="checkbox" id="b-pub-ceo"> 공개</label></div>
-      <input type="text" id="b-ceo" placeholder="홍길동">
-    </div>
-    <div class="field">
-      <div class="fl"><span>KSIC 업종코드 <span class="hint">(상품 입력 시 자동 분류)</span></span></div>
-      <input type="text" id="b-ksic" placeholder="자동 입력" readonly style="background:#f9fafb;color:#9ca3af">
+    <!-- HomeTax 연동 (비활성 — 추후 구현) -->
+    <div style="margin:12px 16px;padding:14px 16px;border:1.5px solid #e5e7eb;border-radius:12px;
+                background:#f9fafb;display:flex;align-items:center;justify-content:space-between;opacity:.55;pointer-events:none">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <path d="M8 21h8M12 17v4"/>
+          <path d="M7 8h.01M11 8h6M7 12h10"/>
+        </svg>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:#111827">홈택스(HomeTax) 연동</div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:2px">연동 시 사업자 정보 자동 입력</div>
+        </div>
+      </div>
+      <span style="font-size:11px;font-weight:600;color:#9ca3af;background:#e5e7eb;
+                   padding:3px 8px;border-radius:20px">준비 중</span>
     </div>
     <div class="toggle-row">
       <span style="font-size:14px;color:#111827">GDC 결제 수락</span>
@@ -378,16 +382,16 @@ function renderHours(){
   if(!g)return;
   g.innerHTML='';
   DAYS.forEach(({k,l})=>{
-    const isWeekday=['mon','tue','wed','thu','fri'].includes(k);
+    // 토/일 포함 모두 기본 활성화 (휴무 체크 없음, 시간 직접 수정 가능)
     const row=document.createElement('div');
     row.style.cssText='display:grid;grid-template-columns:32px 1fr 12px 1fr auto;align-items:center;gap:6px;padding:0 16px 10px';
     row.innerHTML=`
       <span style="font-size:13px;font-weight:600;color:#374151">${l}</span>
-      <input type="time" id="h-${k}-open" value="${isWeekday?'09:00':''}" ${!isWeekday?'disabled style="opacity:.4"':''} class="hours-time">
+      <input type="time" id="h-${k}-open" value="09:00" class="hours-time">
       <span style="color:#9ca3af;text-align:center;font-size:12px">~</span>
-      <input type="time" id="h-${k}-close" value="${isWeekday?'18:00':''}" ${!isWeekday?'disabled style="opacity:.4"':''} class="hours-time">
+      <input type="time" id="h-${k}-close" value="18:00" class="hours-time">
       <label style="display:flex;align-items:center;gap:3px;font-size:12px;color:#9ca3af;cursor:pointer;white-space:nowrap">
-        <input type="checkbox" id="h-${k}-closed" ${!isWeekday?'checked':''} onchange="toggleDay('${k}',this.checked)" style="accent-color:#ef4444;width:13px;height:13px"> 휴무
+        <input type="checkbox" id="h-${k}-closed" onchange="toggleDay('${k}',this.checked)" style="accent-color:#ef4444;width:13px;height:13px"> 휴무
       </label>`;
     g.appendChild(row);
   });
@@ -525,12 +529,15 @@ function addProduct(){
         <input class="pin" type="text" placeholder="상품명" oninput="classifyProducts()">
         <input class="pip" type="text" placeholder="가격 (예: 4,500원)" oninput="fmtPrice(this)">
       </div>
+      <!-- 삭제 버튼: 우측 상단 절대위치 -->
+      <button class="pdel" onclick="askDel(${id})" title="삭제"
+        style="position:absolute;top:6px;right:6px;background:#fff;border:1px solid #fca5a5;
+               border-radius:6px;padding:4px;z-index:1">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </button>
       <div class="product-actions">
         <button class="pdt" onclick="togglePD(${id})">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> 상세
-        </button>
-        <button class="pdel" onclick="askDel(${id})" title="삭제">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         </button>
       </div>
     </div>
@@ -570,7 +577,7 @@ function validate(){
   const el=document.getElementById(NAME_ID[selectedType]);
   if(!el?.value?.trim()){document.getElementById(ERR_ID[selectedType]).style.display='block';el?.focus();return false;}
   document.getElementById(ERR_ID[selectedType]).style.display='none';
-  if(selectedType==='business'){const biz=document.getElementById('b-biz-reg').value;if(biz&&!validBiz(biz)){document.getElementById('b-err-biz').style.display='block';return false;}document.getElementById('b-err-biz').style.display='none';}
+  // 사업자 필드 검증 — HomeTax 연동 후 처리 예정
   return true;
 }
 
@@ -653,13 +660,10 @@ async function submitProfile(){
         phone:document.getElementById('b-phone').value.trim(),
         website:document.getElementById('b-website').value.trim(),
         hours:getHours(),
-        biz_reg_no:document.getElementById('b-biz-reg').value.replace(/[^0-9]/g,''),
-        ceo_name:document.getElementById('b-ceo').value.trim(),
-        ksic_code:document.getElementById('b-ksic').value,
         gdc_accepted:document.getElementById('b-gdc').checked,
         products,
         custom_fields:cf,
-        visibility:{bizno:document.getElementById('b-pub-bizno').checked,ceo:document.getElementById('b-pub-ceo').checked},
+        visibility:{},
       });
     } else if(selectedType==='institution'){
       const tags=document.getElementById('i-tags').value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,5);
