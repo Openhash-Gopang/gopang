@@ -66,8 +66,10 @@ export function openSettings() {
   if (gdcSec) gdcSec.style.display = isGDC ? 'block' : 'none';
 
   // 5. AI 설정 카드: 등록 사용자만 표시
-  const aiCard  = document.getElementById('_ai-card');
-  const aiLabel = document.getElementById('_ai-label');
+  const aiCard      = document.getElementById('_ai-card');
+  const aiLabel     = document.getElementById('_ai-label');
+  const profileCard = document.getElementById('_profile-card');
+  if (profileCard) profileCard.style.display = registered ? 'block' : 'none';
   if (aiCard)  aiCard.style.display  = registered ? 'block' : 'none';
   if (aiLabel) aiLabel.style.display = registered ? 'block' : 'none';
 
@@ -118,7 +120,6 @@ export function closeAISettings() {
 }
 
 export function handleAISettingsOverlayClick(e) {
-  // 시트 내부 클릭은 무시, 배경(시트 바깥) 터치 시에만 닫힘
   const sheet = document.querySelector('#ai-settings-overlay .settings-sheet');
   if (sheet && !sheet.contains(e.target)) closeAISettings();
 }
@@ -586,12 +587,8 @@ function _openSheet(title, html) {
   requestAnimationFrame(() => { sheet.style.transform = 'translateY(0)'; });
 }
 
-
 export function openMyProfile() {
-  const stored = JSON.parse(
-    localStorage.getItem('gopang_user_v4') ||
-    sessionStorage.getItem('gopang_user_v4') || 'null'
-  );
+  const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || 'null');
   const handle = stored?.handle;
   if (!handle) { alert('프로필을 먼저 등록해주세요.'); return; }
   window.open('/profile/' + handle, '_blank');
