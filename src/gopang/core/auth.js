@@ -297,6 +297,9 @@ export async function initAuthWithPhone(digits, countryKey = 'KR') {
         dummyCard.style.cssText = 'background:#fff;border-radius:20px;padding:28px 20px;width:100%;max-width:340px;box-sizing:border-box';
         dummyOverlay.appendChild(dummyCard);
         document.body.appendChild(dummyOverlay);
+        // _showNicknameStep은 overlay.querySelector('div')로 card를 찾으므로
+        // DOM 삽입 완료 후 다음 틱에 호출
+        await new Promise(r => setTimeout(r, 0));
         _showNicknameStep({ ipv6, handle, e164, selectedCountry: countryKey, val: digits, overlay: dummyOverlay, resolve });
       }
     } catch(e) {
