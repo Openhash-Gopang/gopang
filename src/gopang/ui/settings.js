@@ -14,13 +14,7 @@ export function _updateHandleChip(h) {
   const s = document.getElementById('gopang-id-status');
   const b = document.getElementById('gopang-id-register-box');
   if (h) {
-    if (s) {
-      const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}');
-      const nick = stored.nickname || '';
-      s.innerHTML = nick
-        ? `<span style="font-size:15px;font-weight:600;color:#111827">${nick}</span> <b style="color:var(--green,#16a34a);margin-left:4px">${h}</b>`
-        : `<b style="color:var(--green,#16a34a)">${h}</b>`;
-    }
+    if (s) s.innerHTML = `<b style="color:var(--green,#16a34a)">${h}</b> <span style="font-size:11px">(등록됨)</span>`;
     if (b) b.style.display = 'none';
   } else {
     if (s) s.textContent = '등록되지 않았습니다.';
@@ -44,9 +38,7 @@ export function openSettings() {
   if (idStatus) {
     if (registered) {
       const s = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}');
-      idStatus.innerHTML = (s.nickname)
-        ? `<span style="font-size:15px;font-weight:600;color:#111827">${s.nickname}</span> <b style="color:var(--green,#16a34a);margin-left:4px">${s.handle}</b>`
-        : `<b style="color:var(--green,#16a34a)">${s.handle}</b>`;
+      idStatus.innerHTML = `<b style="color:var(--green,#16a34a)">${s.handle}</b> <span style="font-size:11px">(등록됨)</span>`;
     } else {
       idStatus.textContent = '등록되지 않았습니다.';
     }
@@ -74,10 +66,8 @@ export function openSettings() {
   if (gdcSec) gdcSec.style.display = isGDC ? 'block' : 'none';
 
   // 5. AI 설정 카드: 등록 사용자만 표시
-  const aiCard      = document.getElementById('_ai-card');
-  const aiLabel     = document.getElementById('_ai-label');
-  const profileCard = document.getElementById('_profile-card');
-  if (profileCard) profileCard.style.display = registered ? 'block' : 'none';
+  const aiCard  = document.getElementById('_ai-card');
+  const aiLabel = document.getElementById('_ai-label');
   if (aiCard)  aiCard.style.display  = registered ? 'block' : 'none';
   if (aiLabel) aiLabel.style.display = registered ? 'block' : 'none';
 
@@ -100,21 +90,6 @@ export function openSettings() {
 }
 
 // ── 설정 패널 닫기 ───────────────────────────────────────
-export function openMyProfile() {
-  // 현재 로그인 사용자의 handle로 프로필 페이지 열기
-  const stored = JSON.parse(
-    localStorage.getItem('gopang_user_v4') ||
-    sessionStorage.getItem('gopang_user_v4') || 'null'
-  );
-  const handle = stored?.handle;
-  if (!handle) {
-    alert('프로필을 먼저 등록해주세요.');
-    return;
-  }
-  // 새 탭에서 프로필 보기 (다른 사람이 보는 모습 그대로)
-  window.open(`/profile/${handle}`, '_blank');
-}
-
 export function closeSettings() {
   document.getElementById('settings-overlay')?.classList.remove('open');
 }
@@ -143,7 +118,7 @@ export function closeAISettings() {
 }
 
 export function handleAISettingsOverlayClick(e) {
-  // 시트 내부 클릭은 무시, 오버레이 배경(시트 바깥) 터치 시에만 닫힘
+  // 시트 내부 클릭은 무시, 배경 터치 시에만 닫힘
   const sheet = document.querySelector('#ai-settings-overlay .settings-sheet');
   if (sheet && !sheet.contains(e.target)) closeAISettings();
 }
