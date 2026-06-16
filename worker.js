@@ -1612,17 +1612,38 @@ async function handlePushSubscribe(request, env, corsHeaders) {
     return _err(400, 'MISSING_FIELD', 'subscription, guid 필수', corsHeaders);
 
   const sbH = _sbServiceHeaders(env);
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions`, {
-    method:  'POST',
-    headers: { ...sbH, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({
-      guid:         body.guid,
-      subscription: JSON.stringify(body.subscription),
-      sound:        body.sound || 'ping',
-      updated_at:   new Date().toISOString(),
-    }),
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(body.guid)}`, {
+    method:  'GET',
+    headers: sbH,
   });
-  if (!res.ok) return _err(500, 'DB_ERROR', await res.text(), corsHeaders);
+  const existing = await res.json().catch(() => []);
+
+  let saveRes;
+  if (existing.length) {
+    // 기존 레코드 업데이트
+    saveRes = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(body.guid)}`, {
+      method:  'PATCH',
+      headers: { ...sbH, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        subscription: JSON.stringify(body.subscription),
+        sound:        body.sound || 'ping',
+        updated_at:   new Date().toISOString(),
+      }),
+    });
+  } else {
+    // 신규 등록
+    saveRes = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions`, {
+      method:  'POST',
+      headers: { ...sbH, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        guid:         body.guid,
+        subscription: JSON.stringify(body.subscription),
+        sound:        body.sound || 'ping',
+        updated_at:   new Date().toISOString(),
+      }),
+    });
+  }
+  if (!saveRes.ok) return _err(500, 'DB_ERROR', await saveRes.text(), corsHeaders);
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
 }
 
