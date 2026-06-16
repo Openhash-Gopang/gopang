@@ -5,8 +5,8 @@
 -- ============================================================
 
 -- ── search_users RPC ─────────────────────────────────────────
--- GET /search/users?q=키워드 → Worker → Supabase RPC
--- handle 정확 매칭 우선, 이후 FTS 랭킹 순
+DROP FUNCTION IF EXISTS search_users(text, integer);
+
 CREATE OR REPLACE FUNCTION search_users(
   q        TEXT    DEFAULT '',
   limit_n  INT     DEFAULT 20
@@ -19,7 +19,7 @@ RETURNS TABLE (
   address     TEXT,
   search_tags TEXT[],
   extra       JSONB,
-  match_type  TEXT    -- 'handle_exact' | 'name_prefix' | 'fts'
+  match_type  TEXT
 )
 LANGUAGE plpgsql
 STABLE
@@ -29,7 +29,7 @@ DECLARE
 BEGIN
   IF q IS NULL OR trim(q) = '' THEN RETURN; END IF;
 
-  -- 1) handle 정확 매칭 (@handle 또는 handle)
+  -- 1) handle 정확 매칭
   RETURN QUERY
     SELECT p.guid, p.handle, p.name, p.entity_type,
            p.address, p.search_tags, p.extra,
@@ -39,7 +39,7 @@ BEGIN
       AND (p.handle = q OR p.handle = '@' || q)
     LIMIT limit_n;
 
-  -- 2) 이름 prefix 매칭 (이미 handle로 찾은 경우 제외)
+  -- 2) 이름 prefix 매칭
   RETURN QUERY
     SELECT p.guid, p.handle, p.name, p.entity_type,
            p.address, p.search_tags, p.extra,
@@ -51,7 +51,7 @@ BEGIN
     ORDER BY p.name
     LIMIT limit_n;
 
-  -- 3) FTS 전문검색 (위 두 결과에 없는 것)
+  -- 3) FTS 전문검색
   BEGIN
     tsq := websearch_to_tsquery('simple', q);
   EXCEPTION WHEN OTHERS THEN
@@ -72,8 +72,9 @@ BEGIN
 END;
 $$;
 
--- ── search_nearby RPC (위치 기반) ────────────────────────────
--- 가까운 순으로 프로필 반환 (entity_type 필터 가능)
+-- ── search_nearby RPC (Haversine 공식 — 확장 불필요) ─────────
+DROP FUNCTION IF EXISTS search_nearby(float8, float8, float8, text, integer);
+
 CREATE OR REPLACE FUNCTION search_nearby(
   user_lat   FLOAT8,
   user_lng   FLOAT8,
@@ -98,20 +99,29 @@ AS $$
   SELECT
     p.guid, p.handle, p.name, p.entity_type,
     p.address, p.search_tags, p.phone, p.extra,
-    (point(user_lng, user_lat) <@> point(p.lng, p.lat)) * 1.60934 AS distance_km
+    -- Haversine 공식 (km)
+    6371.0 * 2 * ASIN(SQRT(
+      POWER(SIN(RADIANS(p.lat - user_lat) / 2), 2) +
+      COS(RADIANS(user_lat)) * COS(RADIANS(p.lat)) *
+      POWER(SIN(RADIANS(p.lng - user_lng) / 2), 2)
+    )) AS distance_km
   FROM user_profiles p
   WHERE p.is_public = TRUE
     AND p.lat IS NOT NULL
     AND p.lng IS NOT NULL
-    AND (point(user_lng, user_lat) <@> point(p.lng, p.lat)) * 1.60934 <= radius_km
     AND (etype IS NULL OR p.entity_type = etype)
+    -- 반경 필터 (Haversine 재계산)
+    AND 6371.0 * 2 * ASIN(SQRT(
+      POWER(SIN(RADIANS(p.lat - user_lat) / 2), 2) +
+      COS(RADIANS(user_lat)) * COS(RADIANS(p.lat)) *
+      POWER(SIN(RADIANS(p.lng - user_lng) / 2), 2)
+    )) <= radius_km
   ORDER BY distance_km ASC
   LIMIT lim;
 $$;
 
 -- ── 완료 확인 ─────────────────────────────────────────────────
 SELECT
-  (SELECT count(*) FROM pg_proc WHERE proname = 'search_users')   AS search_users_ok,
-  (SELECT count(*) FROM pg_proc WHERE proname = 'search_nearby')  AS search_nearby_ok,
+  (SELECT count(*) FROM pg_proc WHERE proname = 'search_users')    AS search_users_ok,
+  (SELECT count(*) FROM pg_proc WHERE proname = 'search_nearby')   AS search_nearby_ok,
   (SELECT count(*) FROM pg_proc WHERE proname = 'search_entities') AS search_entities_ok;
--- 모두 1 이면 완료
