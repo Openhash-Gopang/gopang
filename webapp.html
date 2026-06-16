@@ -942,11 +942,17 @@ select.setting-field{appearance:none;-webkit-appearance:none;
         </div>
       </div>
 
-      <!-- 기기 완전 초기화 (최하단, 등록 사용자만) -->
-      <div style="padding:8px 16px 0">
-        <div class="settings-card-row" onclick="_deviceFullReset()" id="btn-device-reset"
-             style="display:none;cursor:pointer;padding:12px 0;background:transparent">
-          <span style="font-size:11px;color:#c7c7cc">기기 완전 초기화 (판매·양도 전 실행)</span>
+      <!-- 기기 초기화 (최하단, 등록 사용자만) -->
+      <div style="padding:8px 16px 0" id="btn-device-reset" style="display:none">
+        <div class="settings-card-row" onclick="_deviceLocalReset()"
+             style="display:none;cursor:pointer;padding:12px 0;background:transparent" id="btn-device-local-reset">
+          <span style="font-size:13px;color:#374151">재접속 시 복원 가능</span>
+          <span style="font-size:11px;color:#9ca3af;display:block;margin-top:2px">이 기기의 데이터만 삭제 — 계정은 유지됩니다</span>
+        </div>
+        <div class="settings-card-row" onclick="_deviceFullReset()"
+             style="display:none;cursor:pointer;padding:12px 0;background:transparent;border-top:0.5px solid #f3f4f6" id="btn-device-full-reset">
+          <span style="font-size:13px;color:#ef4444">계정 완전 삭제</span>
+          <span style="font-size:11px;color:#fca5a5;display:block;margin-top:2px">판매·양도 전 실행 — 복원 불가</span>
         </div>
       </div>
 

@@ -80,8 +80,10 @@ export function openSettings() {
   if (actionCard) actionCard.style.display = registered ? 'block' : 'none';
 
   // 7. 기기 초기화 버튼: 등록 사용자만 표시
-  const resetBtn = document.getElementById('btn-device-reset');
-  if (resetBtn) resetBtn.style.display = registered ? 'flex' : 'none';
+  const resetBtn      = document.getElementById('btn-device-local-reset');
+  const resetFullBtn  = document.getElementById('btn-device-full-reset');
+  if (resetBtn)     resetBtn.style.display     = registered ? 'flex' : 'none';
+  if (resetFullBtn) resetFullBtn.style.display = registered ? 'flex' : 'none';
 
   // 8. LLM 섹션: 항상 숨김
   const llmSec = document.getElementById('llm-settings-section');
