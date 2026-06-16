@@ -222,6 +222,14 @@ export default {
       if (request.method === 'POST') return handleProfilePost(request, env, corsHeaders);
     }
 
+    // ── Feedback ─────────────────────────────────────────────
+    if (pathname === '/feedback' && request.method === 'POST')
+      return handleFeedbackPost(request, env, corsHeaders);
+    if (pathname === '/feedback' && request.method === 'GET')
+      return handleFeedbackGet(request, env, corsHeaders);
+    if (pathname.startsWith('/feedback/') && request.method === 'PATCH')
+      return handleFeedbackPatch(request, env, corsHeaders);
+
     // ── Push 알림 ───────────────────────────────────────────
     if (pathname === '/push/subscribe' && request.method === 'POST')
       return handlePushSubscribe(request, env, corsHeaders);
@@ -1761,4 +1769,109 @@ async function _sendPushToGuid(env, guid, { title, body, tag, url }) {
       console.warn('[Push] _sendPushToGuid 실패:', e.message);
     }
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feedback — 기능 제안
+// ═══════════════════════════════════════════════════════════
+
+// POST /feedback — 제안 등록 + DeepSeek 카테고리 분류
+async function handleFeedbackPost(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { guid, handle, content } = body;
+  if (!guid)    return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!handle)  return _err(400, 'MISSING_FIELD', 'handle 필수', corsHeaders);
+  if (!content) return _err(400, 'MISSING_FIELD', 'content 필수', corsHeaders);
+
+  // DeepSeek v4 flash — 카테고리 자동 분류
+  let category = 'etc';
+  try {
+    const aiRes = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify({
+        model: 'deepseek-v4-flash',
+        max_tokens: 10,
+        messages: [
+          { role: 'system', content: '사용자 제안을 bug/feature/ui/etc 중 하나로만 분류하라. 단어 하나만 출력.' },
+          { role: 'user',   content },
+        ],
+      }),
+    });
+    const aiData = await aiRes.json();
+    const raw = aiData.choices?.[0]?.message?.content?.trim().toLowerCase() || 'etc';
+    if (['bug','feature','ui','etc'].includes(raw)) category = raw;
+  } catch(e) {
+    console.warn('[Feedback] AI 분류 실패:', e.message);
+  }
+
+  const sbH = _sbServiceHeaders(env);
+  const now  = new Date().toISOString();
+  const insRes = await fetch(`${SUPABASE_URL}/rest/v1/feedback`, {
+    method:  'POST',
+    headers: { ...sbH, 'Prefer': 'return=representation' },
+    body: JSON.stringify({ guid, handle, content, category, status: 'pending', created_at: now, updated_at: now }),
+  });
+  if (!insRes.ok) return _err(500, 'DB_ERROR', await insRes.text(), corsHeaders);
+  const rows = await insRes.json().catch(() => []);
+
+  return new Response(JSON.stringify({ ok: true, id: rows[0]?.id, category }), { status: 200, headers: corsHeaders });
+}
+
+// GET /feedback — 목록 조회
+async function handleFeedbackGet(request, env, corsHeaders) {
+  const url    = new URL(request.url);
+  const status = url.searchParams.get('status');
+  const limit  = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
+
+  const sbH = _sbHeaders(env);
+  let query = `${SUPABASE_URL}/rest/v1/feedback?order=created_at.desc&limit=${limit}`;
+  if (status) query += `&status=eq.${encodeURIComponent(status)}`;
+
+  const res  = await fetch(query, { headers: sbH });
+  const rows = await res.json().catch(() => []);
+  return new Response(JSON.stringify({ ok: true, items: rows, count: rows.length }), { status: 200, headers: corsHeaders });
+}
+
+// PATCH /feedback/{id} — 상태 변경 (관리자 전용) + Push 알림
+async function handleFeedbackPatch(request, env, corsHeaders) {
+  const id   = new URL(request.url).pathname.replace('/feedback/', '');
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { status, admin_note, admin_guid } = body;
+  if (!status)     return _err(400, 'MISSING_FIELD', 'status 필수', corsHeaders);
+  if (!admin_guid) return _err(400, 'MISSING_FIELD', 'admin_guid 필수', corsHeaders);
+
+  // 관리자 확인 (주피터 guid)
+  const sbH = _sbServiceHeaders(env);
+  const adminRes  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(admin_guid)}&select=handle&limit=1`, { headers: sbH });
+  const adminRows = await adminRes.json().catch(() => []);
+  if (!adminRows.length || adminRows[0].handle !== '@96627170')
+    return _err(403, 'FORBIDDEN', '관리자만 상태를 변경할 수 있습니다', corsHeaders);
+
+  // 상태 변경
+  const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/feedback?id=eq.${encodeURIComponent(id)}`, {
+    method:  'PATCH',
+    headers: { ...sbH, 'Prefer': 'return=representation' },
+    body: JSON.stringify({ status, admin_note: admin_note || null, updated_at: new Date().toISOString() }),
+  });
+  if (!patchRes.ok) return _err(500, 'DB_ERROR', await patchRes.text(), corsHeaders);
+  const rows = await patchRes.json().catch(() => []);
+  const item = rows[0];
+
+  // 제안자에게 Push 알림
+  const STATUS_LABEL = { pending: '검토 대기', reviewing: '검토중', accepted: '반영 확정', rejected: '보류' };
+  if (item?.guid) {
+    _sendPushToGuid(env, item.guid, {
+      title: '제안 상태가 변경됐습니다',
+      body:  `"${item.content?.slice(0, 30)}..." → ${STATUS_LABEL[status] || status}`,
+      tag:   'gopang-feedback-' + id,
+      url:   '/feedback.html',
+    }).catch(e => console.warn('[Feedback Push]', e.message));
+  }
+
+  return new Response(JSON.stringify({ ok: true, item }), { status: 200, headers: corsHeaders });
 }
