@@ -1618,9 +1618,17 @@ async function handlePushSubscribe(request, env, corsHeaders) {
   });
   const existing = await res.json().catch(() => []);
 
+  // 구독 취소 요청
+  if (body.unsubscribe) {
+    if (!existing.length) return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
+    const delRes = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(body.guid)}`, {
+      method: 'DELETE', headers: sbH,
+    });
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
+  }
+
   let saveRes;
   if (existing.length) {
-    // 기존 레코드 업데이트
     saveRes = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(body.guid)}`, {
       method:  'PATCH',
       headers: { ...sbH, 'Prefer': 'return=minimal' },
@@ -1631,7 +1639,6 @@ async function handlePushSubscribe(request, env, corsHeaders) {
       }),
     });
   } else {
-    // 신규 등록
     saveRes = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions`, {
       method:  'POST',
       headers: { ...sbH, 'Prefer': 'return=minimal' },

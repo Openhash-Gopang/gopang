@@ -922,12 +922,24 @@ select.setting-field{appearance:none;-webkit-appearance:none;
                 <input type="radio" name="push-sound" value="none"  onchange="_savePushSound(this.value)" style="accent-color:#16a34a"> 없음
               </label>
             </div>
-            <button id="btn-push-subscribe" onclick="_subscribePush()"
-              style="width:100%;padding:10px;background:#111;color:#fff;border:none;
-                     border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit">
-              알림 켜기
-            </button>
-            <div id="push-status" style="font-size:11px;color:#9ca3af;text-align:center;width:100%"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:4px 0">
+              <span style="font-size:13px;color:#333" id="push-status-label">알림 끄기/켜기</span>
+              <label style="position:relative;display:inline-block;width:48px;height:28px;cursor:pointer">
+                <input type="checkbox" id="push-toggle" onchange="_togglePush(this.checked)"
+                  style="opacity:0;width:0;height:0;position:absolute">
+                <span id="push-toggle-track" style="
+                  position:absolute;inset:0;border-radius:28px;
+                  background:#e5e7eb;transition:background .2s;
+                "></span>
+                <span id="push-toggle-thumb" style="
+                  position:absolute;top:3px;left:3px;
+                  width:22px;height:22px;border-radius:50%;
+                  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);
+                  transition:transform .2s;
+                "></span>
+              </label>
+            </div>
+            <div id="push-status" style="font-size:11px;color:#9ca3af;width:100%"></div>
           </div>
         </div>
 
@@ -1187,17 +1199,11 @@ function _initPushSoundUI() {
   const radios = document.querySelectorAll('input[name="push-sound"]');
   radios.forEach(r => { if (r.value === saved) r.checked = true; });
 
-  // 구독 상태 확인
+  // 구독 상태 확인 → 토글 반영
   if ('serviceWorker' in navigator && 'PushManager' in window) {
     navigator.serviceWorker.ready.then(reg => {
       reg.pushManager.getSubscription().then(sub => {
-        const btn    = document.getElementById('btn-push-subscribe');
-        const status = document.getElementById('push-status');
-        if (sub) {
-          btn.textContent    = '알림 켜짐 ✓';
-          btn.style.background = '#16a34a';
-          if (status) status.textContent = '알림이 활성화되어 있습니다';
-        }
+        _setPushToggle(!!sub);
       });
     });
   }
@@ -1229,51 +1235,69 @@ function _testPushSound() {
   audio.play().catch(() => {});
 }
 
-async function _subscribePush() {
-  const btn    = document.getElementById('btn-push-subscribe');
+// 토글 상태 시각 반영
+function _setPushToggle(on) {
+  const toggle = document.getElementById('push-toggle');
+  const track  = document.getElementById('push-toggle-track');
+  const thumb  = document.getElementById('push-toggle-thumb');
+  const status = document.getElementById('push-status');
+  if (!toggle) return;
+  toggle.checked        = on;
+  track.style.background  = on ? '#16a34a' : '#e5e7eb';
+  thumb.style.transform   = on ? 'translateX(20px)' : 'translateX(0)';
+  if (status) status.textContent = on ? '알림이 활성화되어 있습니다' : '';
+}
+
+async function _togglePush(on) {
   const status = document.getElementById('push-status');
   const user   = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
 
-  if (!user?.ipv6) {
-    if (status) status.textContent = '먼저 로그인해 주세요';
-    return;
-  }
-
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     if (status) status.textContent = '이 브라우저는 푸시 알림을 지원하지 않습니다';
-    return;
+    _setPushToggle(false); return;
   }
 
-  try {
-    btn.textContent = '권한 요청 중…'; btn.disabled = true;
-
-    // VAPID 공개키 조회
-    const keyRes  = await fetch('https://gopang-proxy.tensor-city.workers.dev/push/vapid-public-key');
-    const keyData = await keyRes.json();
-    const vapidKey = keyData.publicKey;
-
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly:      true,
-      applicationServerKey: _urlBase64ToUint8Array(vapidKey),
-    });
-
-    const sound = localStorage.getItem('gopang_push_sound') || 'ping';
-    await fetch('https://gopang-proxy.tensor-city.workers.dev/push/subscribe', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ guid: user.ipv6, subscription: sub.toJSON(), sound }),
-    });
-
-    btn.textContent      = '알림 켜짐 ✓';
-    btn.style.background = '#16a34a';
-    btn.disabled         = false;
-    if (status) status.textContent = '알림이 활성화됐습니다';
-  } catch(e) {
-    btn.textContent  = '알림 켜기';
-    btn.disabled     = false;
-    if (status) status.textContent = '알림 권한이 거부됐거나 오류가 발생했습니다';
-    console.warn('[Push]', e.message);
+  if (on) {
+    // 켜기
+    if (!user?.ipv6) { if (status) status.textContent = '먼저 로그인해 주세요'; _setPushToggle(false); return; }
+    try {
+      if (status) status.textContent = '권한 요청 중…';
+      const keyRes  = await fetch('https://gopang-proxy.tensor-city.workers.dev/push/vapid-public-key');
+      const vapidKey = (await keyRes.json()).publicKey;
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: _urlBase64ToUint8Array(vapidKey),
+      });
+      const sound = localStorage.getItem('gopang_push_sound') || 'ping';
+      await fetch('https://gopang-proxy.tensor-city.workers.dev/push/subscribe', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guid: user.ipv6, subscription: sub.toJSON(), sound }),
+      });
+      _setPushToggle(true);
+    } catch(e) {
+      if (status) status.textContent = '알림 권한이 거부됐거나 오류가 발생했습니다';
+      _setPushToggle(false);
+      console.warn('[Push]', e.message);
+    }
+  } else {
+    // 끄기
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) await sub.unsubscribe();
+      // 서버에서도 삭제
+      if (user?.ipv6) {
+        await fetch('https://gopang-proxy.tensor-city.workers.dev/push/subscribe', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guid: user.ipv6, subscription: null, sound: 'none', unsubscribe: true }),
+        }).catch(()=>{});
+      }
+      _setPushToggle(false);
+    } catch(e) {
+      console.warn('[Push unsubscribe]', e.message);
+      _setPushToggle(false);
+    }
   }
 }
 
