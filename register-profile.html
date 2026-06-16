@@ -691,8 +691,11 @@ async function submitProfile(){
     // → 클라이언트도 동일하게 signature 제외한 payload를 JSON.stringify
     // pubkey 최종 설정 (wallet 초기화 완료 후)
     payload.pubkey = wallet.publicKeyB64u;
-    const { signature: _omit, ...payloadForSign } = payload;
-    payload.signature = await wallet.sign(JSON.stringify(payloadForSign));
+    // 서명 대상: 'guid:pubkey:ts' 고정 문자열 (Worker와 동일)
+    const ts = Date.now().toString();
+    payload.ts = ts;
+    const sigData = `${payload.guid}:${payload.pubkey}:${ts}`;
+    payload.signature = await wallet.sign(sigData);
 
     // 1. 프로필 저장
     const res=await fetch(`${PROXY}/profile`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});

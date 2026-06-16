@@ -692,6 +692,19 @@ async function _verifyEd25519(pubkeyB64u, signatureB64u, bodyObj) {
   } catch (e) { console.warn('[Ed25519]', e.message); return false; }
 }
 
+// 고정 문자열 서명 검증 (JSON 직렬화 불일치 방지)
+async function _verifyEd25519Simple(pubkeyB64u, signatureB64u, message) {
+  try {
+    const data       = new TextEncoder().encode(message);
+    const pubKeyBytes = _b64uToBytes(pubkeyB64u);
+    const sigBytes    = _b64uToBytes(signatureB64u);
+    const cryptoKey   = await crypto.subtle.importKey(
+      'raw', pubKeyBytes, { name: 'Ed25519' }, false, ['verify']
+    );
+    return await crypto.subtle.verify('Ed25519', cryptoKey, sigBytes, data);
+  } catch (e) { console.warn('[Ed25519Simple]', e.message); return false; }
+}
+
 function _b64uToBytes(b64u) {
   const b64 = b64u.replace(/-/g,'+').replace(/_/g,'/');
   return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
@@ -1233,7 +1246,11 @@ async function handleProfilePost(request, env, corsHeaders) {
   if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
   if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
 
-  const sigOk = await _verifyEd25519(pubkey, signature, body);
+  // 서명 대상: 고정 문자열 'guid:pubkey:ts'
+  // JSON 직렬화 순서/내용 불일치 문제 원천 차단
+  const ts      = body.ts || '';
+  const sigData = `${guid}:${pubkey}:${ts}`;
+  const sigOk   = await _verifyEd25519Simple(pubkey, signature, sigData);
   if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
 
   const {
