@@ -1024,23 +1024,24 @@ async function _createMinimalProfile({ ipv6, handle, nickname, e164, isPublic })
       wallet.setIdentity({ guid: ipv6, handle });
     }
 
+    const ts = Date.now().toString();
+    const sigMsg = `${ipv6}:${wallet.publicKeyB64u}:${ts}`;
+    const signature = wallet.sign
+      ? await wallet.sign(sigMsg)
+      : ipv6;
+
     const payload = {
       guid:        ipv6,
       pubkey:      wallet.publicKeyB64u,
-      entity_type: null,           // register-profile.html에서 선택
+      signature,
+      ts,
+      entity_type: 'person',
       name:        nickname,
       handle,
       phone:       e164 || null,
       is_public:   isPublic,
       native_lang: navigator.language?.slice(0, 2) || 'ko',
     };
-
-    // Ed25519 서명
-    if (wallet.sign) {
-      payload.signature = await wallet.sign(JSON.stringify(payload));
-    } else {
-      payload.signature = ipv6; // fallback
-    }
 
     const { PROXY } = await import('./state.js');
     const res = await fetch(`${PROXY}/profile`, {
@@ -1158,13 +1159,8 @@ async function _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountr
     'last_updated_at':  now,
   };
 
-  const patchRes = await fetch(`${PROXY_URL}/profile`, {
-    method:  'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ guid: ipv6, extra_fs: fsInit }),
-  }).catch(() => null);
-
-  if (!patchRes || !patchRes.ok) {
+  // PATCH /profile은 worker.js 미지원 — Supabase 직접 접근
+  {
     const { _SUPABASE_URL, _SUPABASE_KEY } = await import('./state.js');
     if (_SUPABASE_URL && _SUPABASE_KEY) {
       await fetch(
