@@ -176,7 +176,6 @@ export default {
 
     // ── search (v4.7) ────────────────────────────────────
     if (pathname === '/search' && request.method === 'POST') return handleSearch(request, env, corsHeaders);
-    if (pathname === '/search/index' && request.method === 'POST') return handleSearchIndex(request, env, corsHeaders);
 
     // ── merkle (T10) ─────────────────────────────────────────
     if (pathname === '/merkle/verify')           return handleMerkleVerify(request, env, corsHeaders);
@@ -540,33 +539,9 @@ async function handleSearch(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
   const sbH = _sbHeaders(env);
-
-  const { q, etype, lat, lng, lim = 20, ofst = 0 } = body;
-
-  // q 없음 + 위치 있음 → 위치 기반 추천 (search_nearby)
-  if ((!q || !q.trim()) && lat && lng) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_nearby`, {
-      method: 'POST', headers: sbH,
-      body: JSON.stringify({ user_lat: lat, user_lng: lng,
-        radius_km: 5.0, etype: etype || null, lim }),
-    });
-    const data = await res.json().catch(() => []);
-    return new Response(JSON.stringify(Array.isArray(data) ? data : []),
-      { status: 200, headers: corsHeaders });
-  }
-
-  // q 있음 → FTS 검색 (search_entities)
-  if (!q || !q.trim()) return new Response(JSON.stringify([]),
-    { status: 200, headers: corsHeaders });
-
-  const res  = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_entities`, {
-    method: 'POST', headers: sbH,
-    body: JSON.stringify({ q, etype: etype||null, lat: lat||null,
-      lng: lng||null, lim, ofst }),
-  });
-  const data = await res.json().catch(() => []);
-  return new Response(JSON.stringify(Array.isArray(data) ? data : []),
-    { status: 200, headers: corsHeaders });
+  const res  = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_entities`, { method: 'POST', headers: sbH, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({ error: 'parse failed' }));
+  return new Response(JSON.stringify(data), { status: res.status, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -692,15 +667,12 @@ async function _verifyEd25519(pubkeyB64u, signatureB64u, bodyObj) {
   } catch (e) { console.warn('[Ed25519]', e.message); return false; }
 }
 
-// 고정 문자열 서명 검증 (JSON 직렬화 불일치 방지)
 async function _verifyEd25519Simple(pubkeyB64u, signatureB64u, message) {
   try {
     const data       = new TextEncoder().encode(message);
     const pubKeyBytes = _b64uToBytes(pubkeyB64u);
     const sigBytes    = _b64uToBytes(signatureB64u);
-    const cryptoKey   = await crypto.subtle.importKey(
-      'raw', pubKeyBytes, { name: 'Ed25519' }, false, ['verify']
-    );
+    const cryptoKey   = await crypto.subtle.importKey('raw', pubKeyBytes, { name:'Ed25519' }, false, ['verify']);
     return await crypto.subtle.verify('Ed25519', cryptoKey, sigBytes, data);
   } catch (e) { console.warn('[Ed25519Simple]', e.message); return false; }
 }
@@ -836,7 +808,7 @@ const REGISTERED_SERVICES={'gopang':{level:3,domain:'gopang.net',minAuth:'L0',pd
 function _getSvcRegistration(origin,svcId){const resolvedId=_resolveSvcId(svcId);const svc=REGISTERED_SERVICES[resolvedId];if(svc&&origin.includes(svc.domain))return{...svc,svcId:resolvedId,originalId:svcId};if(/^https:\/\/[a-z0-9-]+\.gopang\.net$/.test(origin))return{level:1,domain:origin,minAuth:'L0',pdv:false,svcId:resolvedId,originalId:svcId};return null;}
 async function handleSvcRegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.svc_id||!body?.domain||!body?.operator_ipv6)return _err(400,'MISSING_FIELD','svc_id, domain, operator_ipv6 필수',corsHeaders);const{svc_id,domain,description,min_auth,operator_ipv6}=body;const isGopangSub=/^[a-z0-9-]+\.gopang\.net$/.test(domain);await sbFetch(env,'/rest/v1/svc_registry','POST',{svc_id,domain,description:description||'',operator_ipv6,min_auth:min_auth||'L0',trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending',registered_at:new Date().toISOString()});return new Response(JSON.stringify({ok:true,svc_id,domain,trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending_review',message:isGopangSub?'*.gopang.net 서브도메인으로 자동 승인됐습니다. (Level 1)':'등록 신청이 접수됐습니다.'}),{status:200,headers:corsHeaders});}
 async function handleSvcVerify(request,env,corsHeaders){const url=new URL(request.url);const svcId=url.searchParams.get('svc_id');const origin=request.headers.get('Origin')||'';if(!svcId)return _err(400,'MISSING_FIELD','svc_id 파라미터 필수',corsHeaders);const reg=_getSvcRegistration(origin,svcId);if(!reg)return new Response(JSON.stringify({ok:false,registered:false,svc_id:svcId,message:'등록되지 않은 서비스입니다.'}),{status:200,headers:corsHeaders});return new Response(JSON.stringify({ok:true,registered:true,svc_id:svcId,trust_level:reg.level,pdv_allowed:reg.pdv,min_auth:reg.minAuth,message:`등록된 서비스 (Level ${reg.level})`}),{status:200,headers:corsHeaders});}
-async function handleGeocode(url,env,corsHeaders){  // lat/lng 우선, x/y fallback (클라이언트 혼용 대응)  const lat=url.searchParams.get('lat')||url.searchParams.get('y');  const lng=url.searchParams.get('lng')||url.searchParams.get('x');  if(!lat||!lng)return _err(400,'MISSING_FIELD','lat, lng required',corsHeaders);  try{    const res=await fetch(`${KAKAO_BASE}?x=${lng}&y=${lat}&input_coord=WGS84`,      {headers:{'Authorization':`KakaoAK ${env.KAKAO_REST_KEY}`}});    const data=await res.json();    return new Response(JSON.stringify(data),{headers:corsHeaders});  }catch(e){return _err(502,'GEOCODE_ERROR',e.message,corsHeaders);}}
+async function handleGeocode(url,env,corsHeaders){const lat=url.searchParams.get('lat');const lng=url.searchParams.get('lng');if(!lat||!lng)return _err(400,'MISSING_FIELD','lat, lng required',corsHeaders);try{const res=await fetch(`${KAKAO_BASE}?x=${lng}&y=${lat}&input_coord=WGS84`,{headers:{'Authorization':`KakaoAK ${env.KAKAO_REST_KEY}`}});const data=await res.json();return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'GEOCODE_ERROR',e.message,corsHeaders);}}
 async function handleKakaoAppKey(request,env,corsHeaders){const appkey=env.KAKAO_JS_KEY||env.KAKAO_REST_KEY;if(!appkey)return _err(500,'CONFIG_ERROR','Kakao key not configured',corsHeaders);return new Response(JSON.stringify({appkey}),{status:200,headers:{...corsHeaders,'Cache-Control':'public, max-age=300'}});}
 async function handleAIChat(bodyText,env,corsHeaders){let body;try{body=JSON.parse(bodyText);}catch{return _err(400,'INVALID_JSON','Invalid JSON',corsHeaders);}const{provider='deepseek',model,system,messages,max_tokens=2000}=body;const builtMessages=[...(system?[{role:'system',content:system}]:[]),...(messages||[])];try{if(provider!=='anthropic'){const res=await fetch(DEEPSEEK_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${env.DEEPSEEK_API_KEY}`},body:JSON.stringify({model:model||DEEPSEEK_MODEL,max_tokens,messages:builtMessages})});const data=await res.json();const content=data.choices?.[0]?.message?.content;if(!content)throw new Error('DeepSeek 응답 없음: '+JSON.stringify(data));return new Response(JSON.stringify({content,provider:'deepseek',model:model||DEEPSEEK_MODEL}),{status:200,headers:corsHeaders});}else{const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY||env.OpenAI,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:model||'claude-sonnet-4-20250514',max_tokens,...(system?{system}:{}),messages:messages||[]})});const data=await res.json();const content=data.content?.find(c=>c.type==='text')?.text;return new Response(JSON.stringify({content,provider:'anthropic'}),{status:200,headers:corsHeaders});}}catch(e){return _err(502,'AI_ERROR',e.message,corsHeaders);}}
 async function callOpenAIFromGeminiBody(bodyText,env,corsHeaders){const apiKey=env.OpenAI;if(!apiKey)return _err(500,'CONFIG_ERROR','OpenAI key not configured',corsHeaders);let geminiBody;try{geminiBody=JSON.parse(bodyText);}catch{return _err(400,'INVALID_JSON','Invalid JSON body',corsHeaders);}const systemPrompt=geminiBody.system_instruction?.parts?.[0]?.text||'';const parts=geminiBody.contents?.[0]?.parts||[];const textPart=parts.find(p=>p.text)?.text||'';const imagePart=parts.find(p=>p.inline_data);const maxTokens=geminiBody.generationConfig?.maxOutputTokens||1500;const messages=[];if(systemPrompt)messages.push({role:'system',content:systemPrompt});if(imagePart?.inline_data){messages.push({role:'user',content:[{type:'image_url',image_url:{url:`data:${imagePart.inline_data.mime_type};base64,${imagePart.inline_data.data}`}},{type:'text',text:textPart||'이미지를 분석하여 JSON으로만 출력하라.'}]});}else{messages.push({role:'user',content:textPart});}try{const res=await fetch(OPENAI_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},body:JSON.stringify({model:OPENAI_MODEL,messages,max_tokens:maxTokens,temperature:geminiBody.generationConfig?.temperature??0.1})});const data=await res.json();if(!res.ok)throw new Error(data.error?.message||`HTTP ${res.status}`);const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'openai',_model:OPENAI_MODEL}),{headers:corsHeaders});}catch(e){const fbBody=JSON.stringify({model:DEEPSEEK_MODEL,messages,max_tokens:maxTokens,temperature:0.1,stream:false});return callDeepSeek(fbBody,env,corsHeaders,e.message);}}
@@ -1246,11 +1218,10 @@ async function handleProfilePost(request, env, corsHeaders) {
   if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
   if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
 
-  // 서명 대상: 고정 문자열 'guid:pubkey:ts'
-  // JSON 직렬화 순서/내용 불일치 문제 원천 차단
-  const ts      = body.ts || '';
-  const sigData = `${guid}:${pubkey}:${ts}`;
-  const sigOk   = await _verifyEd25519Simple(pubkey, signature, sigData);
+  // 서명 대상: 'guid:pubkey:ts' 고정 문자열 — JSON 직렬화 불일치 원천 차단
+  const ts     = body.ts || '';
+  const sigMsg = `${guid}:${pubkey}:${ts}`;
+  const sigOk  = await _verifyEd25519Simple(pubkey, signature, sigMsg);
   if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
 
   const {
@@ -1266,28 +1237,21 @@ async function handleProfilePost(request, env, corsHeaders) {
     phone_visible = false,
   } = body;
 
-  // entity_type: 온보딩 최소 프로필은 null 허용, 상세 등록 시 지정
-  if (entity_type && !['person','consumer','individual','org','institution','business','platform'].includes(entity_type)) {
+  if (!entity_type) return _err(400, 'MISSING_FIELD', 'entity_type 필수', corsHeaders);
+  if (!name)        return _err(400, 'MISSING_FIELD', 'name 필수', corsHeaders);
+  if (!['person','consumer','individual','org','institution','business','platform'].includes(entity_type)) {
     return _err(400, 'INVALID_FIELD', 'entity_type 값이 올바르지 않습니다', corsHeaders);
   }
 
   const sbH = _sbHeaders(env);
 
-  // 기존 프로필 존재 여부 확인 (upsert 분기)
-  // TOFU v2: 새 기기에서 동일 guid로 접속 시 pubkey 갱신 허용
-  // 근거: guid = SHA-256(전화번호) 기반 IPv6 → 전화번호 소유 자체가 본인 증명
-  // 단, 서명 검증(_verifyEd25519)은 이미 통과한 상태 (새 pubkey로 서명됨)
+  // 기존 프로필 존재 여부 확인 (upsert 분기) — TOFU: pubkey 일치 확인
   const existRes  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=guid,handle,extra,pubkey_ed25519&limit=1`, { headers: sbH });
   const existRows = await existRes.json().catch(() => []);
   const existing  = existRows[0] || null;
 
-  // pubkey 불일치 = 새 기기/브라우저에서 새 키페어 생성
-  // guid(전화번호 기반)가 동일 + 새 pubkey로 서명 검증 통과 → pubkey 갱신 허용
-  // (이미 _verifyEd25519 통과 = 새 privKey 보유 증명)
-  const pubkeyChanged = existing?.pubkey_ed25519 && existing.pubkey_ed25519 !== pubkey;
-  if (pubkeyChanged) {
-    console.warn(`[Profile] pubkey 갱신: ${guid.slice(-8)} | 새 기기 접속으로 판단`);
-    // 갱신 허용 — 아래 record에서 pubkey_ed25519 덮어씀
+  if (existing?.pubkey_ed25519 && existing.pubkey_ed25519 !== pubkey) {
+    return _err(401, 'PUBKEY_MISMATCH', '등록된 공개키와 일치하지 않습니다', corsHeaders);
   }
 
   // handle 자동 생성 (미지정 + 신규일 때)
