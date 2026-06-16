@@ -556,15 +556,21 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
     </div>
 
     <!-- 지역 입력 (선택) -->
-    <div style="display:flex;align-items:center;
-                border:1px solid #e5e7eb;border-radius:12px;
-                background:#f9fafb;overflow:hidden;margin-bottom:8px"
-         id="_region-field">
-      <input id="_region-input" type="text" maxlength="30"
-        placeholder="지역 (선택, 예: 서울, New York)"
-        style="flex:1;padding:0 14px;height:48px;border:none;background:transparent;
-               font-size:14px;font-family:inherit;outline:none;color:#111827;min-width:0"
-        autocomplete="off"/>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+      <div style="flex:1;display:flex;align-items:center;
+                  border:1px solid #e5e7eb;border-radius:12px;
+                  background:#f9fafb;overflow:hidden"
+           id="_region-field">
+        <input id="_region-input" type="text" maxlength="60"
+          placeholder="예: 서울, New York"
+          style="flex:1;padding:0 14px;height:48px;border:none;background:transparent;
+                 font-size:14px;font-family:inherit;outline:none;color:#111827;min-width:0"
+          autocomplete="off"/>
+      </div>
+      <button id="_region-loc-btn"
+        style="height:48px;padding:0 12px;border:1px solid #e5e7eb;border-radius:12px;
+               background:#f9fafb;font-size:12px;color:#374151;cursor:pointer;
+               font-family:inherit;white-space:nowrap;flex-shrink:0">내 위치</button>
     </div>
 
     <!-- 프로필 공개 여부 -->
@@ -601,13 +607,37 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
     </div>`;
 
   const nickInput   = document.getElementById('_nick-input');
-  const regionInput = document.getElementById('_region-input');
   const nickField   = document.getElementById('_nick-field');
   const nickErr     = document.getElementById('_nick-error');
 
   nickInput.focus();
   nickInput.addEventListener('focus', () => nickField.style.borderColor = '#16a34a');
   nickInput.addEventListener('blur',  () => nickField.style.borderColor = '#e5e7eb');
+
+  const regionInput  = document.getElementById('_region-input');
+  const regionLocBtn = document.getElementById('_region-loc-btn');
+
+  const _autoRegion = () => {
+    if (!navigator.geolocation) return;
+    regionLocBtn.textContent = '확인 중…'; regionLocBtn.disabled = true;
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      try {
+        const res  = await fetch(PROXY_URL + '/geocode?lat=' + lat + '&lng=' + lng);
+        const data = await res.json();
+        const doc  = data && data.documents && data.documents[0];
+        const addr = (doc && doc.road_address && doc.road_address.address_name)
+                  || (doc && doc.address && doc.address.address_name)
+                  || (lat.toFixed(5) + ', ' + lng.toFixed(5));
+        regionInput.value = addr;
+      } catch(e) {
+        regionInput.value = lat.toFixed(5) + ', ' + lng.toFixed(5);
+      }
+      regionLocBtn.textContent = '재검색'; regionLocBtn.disabled = false;
+    }, () => { regionLocBtn.textContent = '내 위치'; regionLocBtn.disabled = false; });
+  };
+  regionLocBtn.onclick = _autoRegion;
+  _autoRegion();
 
   // ── 닉네임 실시간 동명이인 안내 ─────────────────────────
   let _nickTimer = null;
