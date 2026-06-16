@@ -540,9 +540,33 @@ async function handleSearch(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
   const sbH = _sbHeaders(env);
-  const res  = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_entities`, { method: 'POST', headers: sbH, body: JSON.stringify(body) });
-  const data = await res.json().catch(() => ({ error: 'parse failed' }));
-  return new Response(JSON.stringify(data), { status: res.status, headers: corsHeaders });
+
+  const { q, etype, lat, lng, lim = 20, ofst = 0 } = body;
+
+  // q 없음 + 위치 있음 → 위치 기반 추천 (search_nearby)
+  if ((!q || !q.trim()) && lat && lng) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_nearby`, {
+      method: 'POST', headers: sbH,
+      body: JSON.stringify({ user_lat: lat, user_lng: lng,
+        radius_km: 5.0, etype: etype || null, lim }),
+    });
+    const data = await res.json().catch(() => []);
+    return new Response(JSON.stringify(Array.isArray(data) ? data : []),
+      { status: 200, headers: corsHeaders });
+  }
+
+  // q 있음 → FTS 검색 (search_entities)
+  if (!q || !q.trim()) return new Response(JSON.stringify([]),
+    { status: 200, headers: corsHeaders });
+
+  const res  = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_entities`, {
+    method: 'POST', headers: sbH,
+    body: JSON.stringify({ q, etype: etype||null, lat: lat||null,
+      lng: lng||null, lim, ofst }),
+  });
+  const data = await res.json().catch(() => []);
+  return new Response(JSON.stringify(Array.isArray(data) ? data : []),
+    { status: 200, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
