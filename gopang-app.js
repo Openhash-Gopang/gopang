@@ -448,7 +448,6 @@ function _showRegisterGuide() {
     if (stored?.handle && typeof _updateHandleChip === 'function') {
       _updateHandleChip(stored.handle);
     }
-    if (typeof openSettings === 'function') openSettings();
   };
 
   okBtn.onclick = doSubmit;
