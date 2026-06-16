@@ -1205,6 +1205,8 @@ function _initPushSoundUI() {
 
 function _savePushSound(val) {
   localStorage.setItem('gopang_push_sound', val);
+  // 소리 선택 시 자동 미리듣기
+  if (val !== 'none') new Audio('/assets/sounds/' + val + '.mp3').play().catch(()=>{});
   // 구독 중이면 서버에도 업데이트
   const user = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
   if (!user?.ipv6) return;
@@ -1214,7 +1216,7 @@ function _savePushSound(val) {
       fetch('https://gopang-proxy.tensor-city.workers.dev/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ guid: user.ipv6, subscription: sub, sound: val }),
+        body: JSON.stringify({ guid: user.ipv6, subscription: sub.toJSON(), sound: val }),
       });
     })
   );
@@ -1260,7 +1262,7 @@ async function _subscribePush() {
     await fetch('https://gopang-proxy.tensor-city.workers.dev/push/subscribe', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ guid: user.ipv6, subscription: sub, sound }),
+      body:    JSON.stringify({ guid: user.ipv6, subscription: sub.toJSON(), sound }),
     });
 
     btn.textContent      = '알림 켜짐 ✓';
