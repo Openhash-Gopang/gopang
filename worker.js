@@ -1250,9 +1250,8 @@ async function handleProfilePost(request, env, corsHeaders) {
   const existRows = await existRes.json().catch(() => []);
   const existing  = existRows[0] || null;
 
-  if (existing?.pubkey_ed25519 && existing.pubkey_ed25519 !== pubkey) {
-    return _err(401, 'PUBKEY_MISMATCH', '등록된 공개키와 일치하지 않습니다', corsHeaders);
-  }
+  // TOFU 제거: guid(전화번호 기반) + 서명 검증 통과 = 본인 증명
+  // 새 기기에서도 pubkey 갱신 허용
 
   // handle 자동 생성 (미지정 + 신규일 때)
   let finalHandle = handle || existing?.handle || null;
