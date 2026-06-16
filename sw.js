@@ -83,6 +83,9 @@ self.addEventListener('fetch', (event) => {
   // Cache API는 http/https 스킴만 허용하므로 그 외는 즉시 반환
   if (!event.request.url.startsWith('http')) return;
 
+  // 미디어 파일 캐시 안 함 (206 Partial Content 오류 방지)
+  if (new URL(event.request.url).pathname.match(/\.(mp3|ogg|wav|mp4|webm)$/)) return;
+
   const url = new URL(event.request.url);
 
   // ── 외부 API 요청은 캐시 안 함 ──────────────────────────
