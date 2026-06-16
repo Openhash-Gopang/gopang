@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenHash — 고팡</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+<style>
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── TOKENS (Supabase-inspired light) ── */
+:root {
+  --bg:        #f8f9fa;
+  --bg-alt:    #ffffff;
+  --bg-subtle: #f1f3f5;
+  --surface:   #ffffff;
+  --surface2:  #f8f9fa;
+
+  --border:    #e5e7eb;
+  --border2:   #d1d5db;
+
+  --brand:     #3ecf8e;
+  --brand-dk:  #1a9e6a;
+  --brand-lt:  #d1fae5;
+  --brand-bg:  #f0fdf8;
+
+  --blue:      #3b82f6;
+  --blue-lt:   #eff6ff;
+  --amber:     #f59e0b;
+  --amber-lt:  #fffbeb;
+  --red:       #ef4444;
+  --red-lt:    #fef2f2;
+
+  /* 텍스트 — Supabase 수준 대비율 */
+  --text:      #0f172a;   /* 본문 제목: 대비율 ~18:1 */
+  --text2:     #1e293b;   /* 본문 내용: 대비율 ~14:1 */
+  --text3:     #374151;   /* 보조 텍스트: 대비율 ~9:1 */
+  --text4:     #6b7280;   /* 힌트: 대비율 ~5:1 */
+
+  --nav-h:     57px; /* 하위 호환 */
+  --radius:    6px;
+  --radius-lg: 10px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 1.75;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── DOTTED BG PATTERN (Supabase signature) ── */
+.dot-bg {
+  background-color: var(--bg);
+  background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.dot-bg-light {
+  background-color: var(--bg-alt);
+  background-image: radial-gradient(circle, #e9ecef 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* ── NAV ── */
+/* ── SIDEBAR ── */
+:root { --sb-w: 52px; --sb-expanded: 220px; }
+
+.sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: var(--sb-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.22s cubic-bezier(.4,0,.2,1);
+}
+.sidebar:hover { width: var(--sb-expanded); }
+
+/* 로고 */
+.sb-logo {
+  display: flex; align-items: center;
+  height: 52px; padding: 0 13px;
+  gap: 10px;
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sb-logo-icon {
+  width: 26px; height: 26px; flex-shrink: 0;
+  background: var(--brand); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: white;
+  font-family: 'DM Mono', monospace;
+}
+.sb-logo-text {
+  font-size: 14px; font-weight: 600; color: var(--text);
+  font-family: 'DM Mono', monospace;
+  white-space: nowrap; opacity: 0;
+  transition: opacity 0.15s 0.05s;
+}
+.sidebar:hover .sb-logo-text { opacity: 1; }
+
+/* 섹션 */
+.sb-section { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.sb-section:last-child { border-bottom: none; margin-top: auto; }
+.sb-section-label {
+  font-size: 9px; font-weight: 600; letter-spacing: 1px;
+  color: var(--text3); text-transform: uppercase;
+  padding: 4px 14px 6px;
+  white-space: nowrap; opacity: 0;
+  transition: opacity 0.12s;
+}
+.sidebar:hover .sb-section-label { opacity: 1; }
+
+/* 메뉴 아이템 */
+.sb-item {
+  display: flex; align-items: center;
+  height: 36px; padding: 0 13px; gap: 10px;
+  text-decoration: none; cursor: pointer;
+  color: var(--text3);
+  font-size: 13px; font-weight: 400;
+  border-radius: 0;
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
+  border: none; background: none; width: 100%;
+  font-family: 'Inter','Noto Sans KR',sans-serif;
+}
+.sb-item:hover { background: var(--bg-subtle); color: var(--text); }
+.sb-item.active { color: var(--text); background: var(--bg-subtle); }
+.sb-item svg { flex-shrink: 0; }
+.sb-item-label {
+  opacity: 0; transition: opacity 0.12s 0.04s;
+  white-space: nowrap; overflow: hidden;
+}
+.sidebar:hover .sb-item-label { opacity: 1; }
+
+/* CTA 버튼 */
+.sb-cta {
+  display: flex; align-items: center;
+  height: 36px; padding: 0 13px; gap: 10px;
+  background: var(--brand); color: white;
+  border: none; cursor: pointer; width: 100%;
+  font-size: 13px; font-weight: 500;
+  font-family: 'Inter','Noto Sans KR',sans-serif;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.sb-cta:hover { background: var(--brand-dk); }
+.sb-cta-label {
+  opacity: 0; transition: opacity 0.12s 0.04s;
+}
+.sidebar:hover .sb-cta-label { opacity: 1; }
+
+/* 모바일: 사이드바 숨김 → 상단바 */
+@media (max-width: 680px) {
+  .sidebar { display: none; }
+  .mobile-topbar { display: flex !important; }
+  body { padding-left: 0 !important; }
+  .main-content { margin-left: 0 !important; }
+}
+
+/* 모바일 상단바 */
+.mobile-topbar {
+  display: none;
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 52px; z-index: 1000;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  align-items: center; padding: 0 16px;
+  justify-content: space-between;
+}
+.mobile-topbar-logo {
+  display: flex; align-items: center; gap: 8px;
+  text-decoration: none; font-family: 'DM Mono',monospace;
+  font-size: 15px; font-weight: 600; color: var(--text);
+}
+
+/* 기존 nav 스타일 호환 유지 */
+.nav-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--brand); color: white;
+  padding: 7px 16px; border-radius: var(--radius);
+  font-size: 13px; font-weight: 500; text-decoration: none;
+  border: none; cursor: pointer; transition: all 0.15s;
+}
+.nav-cta:hover { background: var(--brand-dk); }
+
+/* ── HERO ── */
+.hero {
+  min-height: auto;
+  padding: 72px 24px 52px;
+  display: flex; flex-direction: column; justify-content: flex-start;
+  align-items: center; text-align: center;
+  position: relative; overflow: hidden;
+}
+.hero-inner { max-width: 720px; margin: 0 auto; width: 100%; position: relative; z-index: 1; }
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 14px; border-radius: 99px;
+  background: var(--bg-subtle); border: 1px solid var(--border2);
+  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 400;
+  color: var(--text3); letter-spacing: 0.2px;
+  margin-bottom: 24px;
+  text-decoration: none;
+  transition: all 0.15s;
+  animation: fadeUp 0.5s ease both;
+}
+.hero-eyebrow:hover { border-color: var(--brand); color: var(--brand-dk); background: var(--brand-bg); }
+.hero-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.hero h1 {
+  font-size: clamp(40px, 6vw, 68px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -2px;
+  color: var(--text);
+  margin-bottom: 12px;
+  animation: fadeUp 0.5s 0.08s ease both;
+}
+.hero h1 strong { font-weight: 700; }
+.hero h1 .brand { color: var(--brand); font-weight: 600; }
+.hero-sub {
+  font-size: 18px; font-weight: 400;
+  color: var(--text); letter-spacing: -0.3px;
+  margin-bottom: 20px;
+  animation: fadeUp 0.5s 0.14s ease both;
+}
+.hero-desc {
+  max-width: 580px; font-size: 13px; font-weight: 400;
+  color: var(--text3); line-height: 1.75;
+  margin: 0 auto 36px;
+  animation: fadeUp 0.5s 0.2s ease both;
+}
+.hero-desc strong { color: var(--text2); font-weight: 500; }
+
+/* ── STAT ROW ── */
+/* ── HERO TAGLINE ── */
+.hero-tagline {
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--text2);
+  letter-spacing: -0.3px;
+  line-height: 1.5;
+  margin: 0 auto 36px;
+  animation: fadeUp 0.5s 0.26s ease both;
+}
+.hero-tagline strong {
+  font-weight: 600;
+  color: var(--brand);
+}
+
+/* ── HERO ACTIONS ── */
+.hero-actions {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  justify-content: center;
+  animation: fadeUp 0.5s 0.32s ease both;
+}
+.btn-lg {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: var(--radius);
+  font-size: 13px; font-weight: 500; text-decoration: none;
+  cursor: pointer; border: none; transition: all 0.15s;
+}
+.btn-green { background: var(--brand); color: white; box-shadow: var(--shadow-sm); }
+.btn-green:hover { background: var(--brand-dk); box-shadow: var(--shadow); transform: translateY(-1px); }
+.btn-outline { background: white; color: var(--text2); border: 1px solid var(--border2); box-shadow: var(--shadow-sm); }
+.btn-outline:hover { border-color: var(--brand); color: var(--brand); box-shadow: var(--shadow); transform: translateY(-1px); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── SECTION ── */
+.section { padding: 88px 8%; }
+.section-inner { max-width: 860px; margin: 0 auto; }
+
+/* 섹션 배경: 순백 ↔ 연회색 교대로 대비 강화 */
+.agents-bg   { background: #ffffff; }
+.table-bg    { background: #ffffff; }
+.metrics-section { background: #ffffff; }
+.dist-section    { background: #ffffff; }
+.comparison-section { background: #ffffff; }
+.section-tag {
+  display: inline-block;
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  letter-spacing: 1px; text-transform: uppercase;
+  color: var(--brand-dk); background: var(--brand-bg);
+  border: 1px solid #a7f3d0;
+  padding: 3px 10px; border-radius: 99px;
+  margin-bottom: 14px;
+}
+.section-title {
+  font-size: clamp(22px, 3vw, 30px); font-weight: 300;
+  letter-spacing: -0.6px; color: var(--text);
+  margin-bottom: 10px; line-height: 1.2;
+}
+.section-title strong { font-weight: 600; }
+.section-body {
+  font-size: 13px; font-weight: 400;
+  color: var(--text2); line-height: 1.75;
+  max-width: 100%;
+}
+.section-body p { margin-bottom: 10px; }
+.section-body p:last-child { margin-bottom: 0; }
+.overview-list {
+  list-style: none;
+  margin: 10px 0 12px 0;
+  padding: 0;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.overview-list li {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 13px; font-weight: 400; color: var(--text2); line-height: 1.75;
+}
+.overview-list li::before {
+  content: '◆';
+  color: var(--text);
+  font-size: 0.5em;
+  font-weight: 500;
+  flex-shrink: 0;
+  margin-top: 6px;
+  padding-left: 0.6em;
+}
+.overview-p2 {
+  margin-top: 20px;
+}
+.overview-p3 {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── DIVIDER ── */
+.sep { border: none; border-top: 1px solid var(--border); }
+
+/* ── HOW STEPS ── */
+.steps-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  overflow: hidden; margin-top: 48px;
+}
+.step-card {
+  background: white; padding: 36px 28px;
+  transition: background 0.15s;
+}
+.step-card:hover { background: var(--brand-bg); }
+.step-num {
+  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+  color: var(--brand); letter-spacing: 0.5px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 6px;
+}
+.step-num::before { content:''; width:20px; height:1px; background:var(--brand); }
+.step-card h3 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; letter-spacing: -0.3px; }
+.step-card p { font-size: 13px; font-weight: 400; color: var(--text2); line-height: 1.7; }
+.step-tag {
+  display: inline-block; margin-top: 14px;
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  color: var(--blue); background: var(--blue-lt);
+  border: 1px solid #bfdbfe; padding: 2px 9px; border-radius: 99px;
+  letter-spacing: 0.3px;
+}
+
+/* ── AGENTS ── */
+.agents-bg { background: var(--bg-alt); }
+.agents-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  overflow: hidden; margin-top: 48px;
+}
+.agent-card {
+  background: white; padding: 28px 24px;
+  position: relative; transition: background 0.15s;
+  cursor: default;
+}
+.agent-card:hover { background: var(--bg); }
+.agent-card-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 12px;
+}
+.agent-name {
+  font-size: 16px; font-weight: 600; color: var(--text);
+  letter-spacing: -0.3px; margin-bottom: 2px;
+}
+.agent-link {
+  text-decoration: none;
+  color: var(--text);
+  transition: color 0.15s;
+  display: inline-block;
+}
+.agent-link:hover { color: var(--brand-dk); }
+.agent-desc strong {
+  display: block;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.agent-url {
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  color: var(--text3); letter-spacing: 0.2px;
+}
+.badge {
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  padding: 3px 9px; border-radius: 99px; letter-spacing: 0.3px;
+  white-space: nowrap; border: 1px solid;
+}
+.badge-live  { color: #059669; background: #ecfdf5; border-color: #6ee7b7; }
+.badge-dev   { color: #d97706; background: #fffbeb; border-color: #fde68a; }
+.badge-soon  { color: var(--text4); background: var(--bg-subtle); border-color: var(--border); }
+.agent-desc {
+  font-size: 13px; font-weight: 400; color: var(--text2);
+  line-height: 1.7; margin-bottom: 16px;
+}
+.agent-inst {
+  font-size: 14px; font-weight: 500; color: var(--text3);
+  display: flex; align-items: center; gap: 5px;
+  padding-top: 14px; border-top: 1px solid var(--border);
+}
+.agent-inst::before { content: '↔'; color: var(--brand); font-size: 12px; }
+
+/* ── METRICS ── */
+.metrics-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  overflow: hidden; margin-top: 48px;
+}
+.metric-card {
+  background: white; padding: 40px 36px;
+  position: relative; overflow: hidden;
+}
+.metric-card::after {
+  content: attr(data-label);
+  position: absolute; bottom: 24px; right: 24px;
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: var(--border2); letter-spacing: 2px; text-transform: uppercase;
+}
+.metric-big {
+  font-family: 'DM Mono', monospace;
+  font-size: clamp(36px, 4.5vw, 52px); font-weight: 300;
+  line-height: 1; margin-bottom: 10px; letter-spacing: -2px;
+}
+.metric-big.green { color: var(--brand); }
+.metric-big.blue  { color: var(--blue); }
+.metric-big.amber { color: var(--amber); }
+.metric-big.red   { color: var(--red); }
+.metric-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; letter-spacing: -0.3px; }
+.metric-sub { font-size: 15px; font-weight: 400; color: var(--text3); line-height: 1.6; }
+
+/* ── TABLE ── */
+.table-bg { background: var(--bg-alt); }
+.tbl-wrap {
+  margin-top: 48px; border-radius: var(--radius-lg);
+  border: 1px solid var(--border); overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+table { width: 100%; border-collapse: collapse; background: white; }
+thead { background: #f8fafc; border-bottom: 1px solid var(--border); }
+th {
+  padding: 11px 18px; text-align: left;
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+  color: var(--text3); letter-spacing: 0.8px; text-transform: uppercase;
+}
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #f8fafc; }
+td { padding: 14px 18px; font-size: 13px; font-weight: 400; color: var(--text2); }
+td:first-child { font-weight: 600; color: var(--text); }
+.td-bad { color: var(--red); font-weight: 400; }
+.td-bad small { display: block; color: var(--text3); font-size: 14px; font-family: 'DM Mono', monospace; margin-top: 2px; }
+.td-good { color: #059669; font-weight: 600; }
+.td-mod { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--blue); font-weight: 500; }
+
+/* ── DISTRIBUTION ── */
+.dist-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  overflow: hidden; margin-top: 48px;
+}
+.dist-card {
+  background: white; padding: 32px 24px; text-align: center;
+  transition: background 0.15s;
+}
+.dist-card:hover { background: var(--brand-bg); }
+.dist-pct {
+  font-family: 'DM Mono', monospace;
+  font-size: 36px; font-weight: 300;
+  line-height: 1; margin-bottom: 10px; letter-spacing: -1.5px;
+}
+.dist-role { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+.dist-note { font-size: 14px; font-weight: 400; color: var(--text3); }
+.dc-green  { color: var(--brand); }
+.dc-blue   { color: var(--blue); }
+.dc-amber  { color: var(--amber); }
+.dc-red    { color: var(--red); }
+
+/* ── TICKER ── */
+.ticker-bar {
+  background: var(--bg-subtle); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 9px 0; overflow: hidden;
+  position: relative; z-index: 1;
+}
+.ticker-track { display: flex; width: max-content; animation: slide 28s linear infinite; }
+.tick-item {
+  white-space: nowrap; padding: 0 28px;
+  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 400;
+  color: var(--text4); display: flex; align-items: center; gap: 8px;
+}
+.tick-item::after { content: '·'; color: var(--border2); }
+.tick-item span { color: var(--brand); font-weight: 500; }
+@keyframes slide { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+/* ── REVEAL ── */
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.reveal.in { opacity: 1; transform: translateY(0); }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border); background: white;
+  padding: 36px 24px;
+}
+.footer-inner {
+  max-width: 1100px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;
+}
+.footer-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--text);
+}
+.footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.footer-links a {
+  color: var(--text3); text-decoration: none; font-size: 13px; font-weight: 400;
+  transition: color 0.15s;
+}
+.footer-links a:hover { color: var(--brand); }
+.footer-copy { font-size: 12px; font-weight: 400; color: var(--text3); font-family: 'DM Mono', monospace; }
+.footer-disclaimer {
+  max-width: 860px;
+  margin: 32px auto 0;
+  padding-top: 0;
+  font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
+}
+.footer-disclaimer-panel {
+  background: #f8f9fa;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--brand);
+  border-radius: 0 12px 12px 0;
+  padding: 20px 28px;
+  text-align: left;
+}
+.footer-disclaimer-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text2);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.footer-disclaimer-body {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text2);
+  line-height: 1.8;
+}
+
+/* ── K-LAW SECTION ── */
+.klaw-section {
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+}
+.klaw-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 72px 8%;
+}
+.klaw-lead {
+  font-size: 13px;
+  color: var(--text3);
+  line-height: 1.8;
+  margin-bottom: 40px;
+}
+.klaw-lead strong { color: var(--text2); font-weight: 500; }
+.klaw-body {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.8;
+}
+.klaw-body p { margin-bottom: 14px; }
+.klaw-body p:last-child { margin-bottom: 0; }
+.klaw-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin: 36px 0;
+}
+.klaw-stat-cell {
+  background: white;
+  padding: 28px 24px;
+  transition: background 0.15s;
+}
+.klaw-stat-cell:hover { background: var(--brand-bg); }
+.klaw-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text3);
+  letter-spacing: -0.2px;
+  margin-bottom: 10px;
+}
+.klaw-stat-before {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--red);
+  font-weight: 400;
+  margin-bottom: 4px;
+  text-decoration: line-through;
+  text-decoration-color: rgba(239,68,68,0.4);
+  min-height: 18px;
+}
+.klaw-stat-after {
+  font-family: 'DM Mono', monospace;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--brand-dk);
+  margin-bottom: 6px;
+  letter-spacing: -0.5px;
+}
+.klaw-stat-pct {
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--text4);
+  letter-spacing: 0.3px;
+}
+.klaw-note {
+  background: var(--brand-bg);
+  border: 1px solid #a7f3d0;
+  border-left: 3px solid var(--brand);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 16px 20px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.7;
+  margin-top: 32px;
+}
+.klaw-note strong { color: var(--brand-dk); font-weight: 600; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .agents-grid { grid-template-columns: repeat(2, 1fr); }
+  .steps-grid  { grid-template-columns: 1fr; }
+  .dist-grid   { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 680px) {
+  nav { padding: 0 16px; }
+  /* .nav-links hidden */
+  /* mobile nav handled by .mobile-topbar */
+  .hero { padding: 72px 16px 60px; }
+  .section { padding: 56px 16px; }
+  .agents-grid { grid-template-columns: 1fr; }
+  .metrics-grid { grid-template-columns: 1fr; }
+  .dist-grid { grid-template-columns: 1fr; }
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+  .klaw-stats { grid-template-columns: 1fr; }
+  .klaw-inner { padding: 52px 16px; }
+}
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({startOnLoad:true, theme:"neutral", fontFamily:"inherit"});</script>
+</head>
+<body>
+
+/* 페이지 내장 시 padding 제거 */
+body { padding-left: 0 !important; background: transparent; }
+.section { scroll-margin-top: 24px; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:"neutral", fontFamily:"inherit"});</script>
+</head>
+<body>
+<!-- ── 고팡과 오픈해시 ── -->
+<!-- ── WHAT IS OPENHASH ── -->
+<section class="section" id="what-is-openhash" style="background:var(--bg-alt)">
+  <div class="section-inner">
+    <div class="section-tag reveal">Technology</div>
+    <h2 class="section-title reveal">Openhash란?</h2>
+
+    <div class="section-body reveal">
+      <p>데이터 무결성을 보장하는 다양한 기술 중 하나입니다. 우리가 가진 주민등록증이나 운전면허증은 <strong>국가가 그 무결성을 보장</strong>합니다. 블록체인은 데이터 무결성을 순수히 기술적으로 구현하였지만, 에너지 과소비 문제로 상용화될 수 없는 한계가 있습니다. Openhash는 <strong>각국의 기존 국가 인프라와 통신망을 이용</strong>하여 데이터 무결성을 보장하며, 주민등록증·운전면허증·졸업증명서 등 수천 종의 인증 수단을 단 하나의 기술로 대체합니다.</p>
+    </div>
+
+    <!-- 직조 비유 -->
+    <div class="reveal" style="margin-top:36px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+
+      <!-- 왼쪽: 텍스트 -->
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--brand-dk);letter-spacing:1px;margin-bottom:14px">THE WEAVING PRINCIPLE</div>
+        <h3 style="font-size:18px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:14px">천을 짜는 직조와 동일한 원리</h3>
+        <p style="font-size:14px;color:var(--text2);line-height:1.85;margin-bottom:12px">견우는 밭을 갈고, 직녀는 씨줄과 날줄을 교차하며 천을 짭니다. Openhash도 이와 같습니다. <strong>80억 인구가 생산한 데이터의 원본은 각자가 보관하고</strong>, 그 Hash 값을 마치 천을 짜듯 씨줄과 날줄을 교차하며 서로 엮습니다.</p>
+        <p style="font-size:14px;color:var(--text2);line-height:1.85">80억 인구의 데이터가 서로 물고 물리는 직물이 되어, 어느 한 데이터의 위변조를 원천적으로 차단합니다.</p>
+      </div>
+
+      <!-- 오른쪽: 직조 GIF -->
+      <div style="border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border)">
+        <img
+          src="./weaving.gif"
+          alt="직조 메커니즘 — 씨줄과 날줄이 교차하며 천이 만들어지는 과정"
+          style="width:100%;display:block;object-fit:cover"
+          loading="lazy"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+        >
+        <div style="display:none;height:200px;align-items:center;justify-content:center;background:var(--bg-subtle);color:var(--text3);font-size:13px">이미지 로드 중...</div>
+      </div>
+    </div>
+
+    <!-- 위변조 탐지 -->
+    <div class="reveal" style="margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+
+      <!-- 왼쪽: 실이 터지는 GIF -->
+      <div style="border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border)">
+        <img
+          src="./cut.jpeg"
+          alt="천에서 실이 당겨지는 모습 — 위변조 탐지 비유"
+          style="width:100%;display:block;object-fit:cover;max-height:280px"
+          loading="lazy"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+        >
+        <div style="display:none;height:200px;align-items:center;justify-content:center;background:var(--bg-subtle);color:var(--text3);font-size:13px">이미지 로드 중...</div>
+      </div>
+
+      <!-- 오른쪽: 텍스트 -->
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:14px">TAMPER DETECTION</div>
+        <h3 style="font-size:18px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:14px">올(실)이 터지면 즉시 드러납니다</h3>
+        <p style="font-size:14px;color:var(--text2);line-height:1.85;margin-bottom:12px">누군가의 데이터가 위변조되면, 그 Hash 값이 변하고, 마치 <strong>천의 올이 터지듯</strong> 해당 Hash 값이 삽입된 지점이 즉시 드러납니다.</p>
+        <p style="font-size:14px;color:var(--text2);line-height:1.85">전체 직물 중 단 한 올만 건드려도 전체 패턴이 틀어집니다. Openhash의 위변조 탐지는 이와 정확히 같은 원리입니다.</p>
+      </div>
+    </div>
+
+    <!-- 요약 카드 -->
+    <div class="reveal" style="margin-top:36px;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+      <div style="background:#fff;padding:24px 20px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--brand-dk);letter-spacing:1px;margin-bottom:10px">MECHANISM</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">직조 메커니즘</div>
+        <div style="font-size:13px;color:var(--text3);line-height:1.7">씨줄(사용자 Hash)과 날줄(계층 구조)이 교차하며 단 하나의 직물을 형성합니다.</div>
+      </div>
+      <div style="background:#fff;padding:24px 20px;border-left:1px solid var(--border)">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:1px;margin-bottom:10px">INFRASTRUCTURE</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">기존 인프라 활용</div>
+        <div style="font-size:13px;color:var(--text3);line-height:1.7">별도의 네트워크 구축 없이 국가 행정망과 통신망을 그대로 신뢰 계층으로 활용합니다.</div>
+      </div>
+      <div style="background:#fff;padding:24px 20px;border-left:1px solid var(--border)">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:1px;margin-bottom:10px">RESULT</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">수천 종 인증 대체</div>
+        <div style="font-size:13px;color:var(--text3);line-height:1.7">주민등록증·운전면허증·졸업증명서 등 모든 인증 수단을 단 하나의 기술로 통합합니다.</div>
+      </div>
+    </div>
+
+    <!-- 맺음 + 백서 링크 -->
+    <div class="reveal" style="margin-top:28px;padding:22px 26px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap">
+      <p style="font-size:14px;color:var(--text2);line-height:1.8;margin:0;flex:1;min-width:240px">
+        Openhash는 <strong>천을 짜는 직조 메커니즘을 데이터 무결성 메커니즘으로 전환</strong>합니다. 제주도 한림읍에서 실증 검증이 완료된 기술입니다.
+      </p>
+      <a href="./docs/openhash_whitepaper.html" target="_blank"
+         style="flex-shrink:0;display:inline-flex;align-items:center;gap:8px;padding:11px 22px;background:var(--text);color:#fff;border-radius:var(--radius);font-size:13px;font-weight:600;text-decoration:none;transition:background 0.15s"
+         onmouseover="this.style.background='var(--brand-dk)'"
+         onmouseout="this.style.background='var(--text)'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Openhash Whitepaper
+      </a>
+    </div>
+
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ── OPENHASH & GOPANG ── -->
+<section class="section" id="openhash">
+  <div class="section-inner">
+    <div class="section-tag reveal">Foundation</div>
+    <h2 class="section-title reveal">고팡과 <strong>오픈해시(Openhash)</strong></h2>
+
+    <!-- 서문: AI의 아킬레스건 -->
+    <div class="section-body reveal">
+      <p>백설 공주 비유에서 AI 비서가 주인공인 이유는 아름다움만이 아닙니다. 주인공의 진정한 가치는 <strong>진실함</strong>에 있습니다. 고팡도 마찬가지입니다.</p>
+      <p style="margin-top:12px">많은 사람들이 AI의 경이로운 능력에 감탄하지만, 정작 중요한 한 가지를 놓치고 있습니다. <strong>AI가 아무리 유능해도, 입력 데이터가 거짓이면 AI의 출력은 약이 아니라 독입니다.</strong> 쓰레기를 넣으면 쓰레기가 나옵니다(Garbage in, garbage out). AI 시대에 데이터의 진실성은 AI 자체만큼이나, 어쩌면 그보다 더 중요한 문제입니다.</p>
+    </div>
+
+    <!-- 3단 카드: 사실 확인 비용의 규모 -->
+    <div class="reveal" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:32px">
+
+      <div style="background:#fff;padding:28px 24px">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--brand-dk);letter-spacing:1px;margin-bottom:12px">FACT CHECK COST</div>
+        <div style="font-size:clamp(28px,3vw,40px);font-weight:300;font-family:'DM Mono',monospace;color:var(--text);letter-spacing:-1px;line-height:1;margin-bottom:10px">수백 조</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">한국의 연간 사실 확인 비용</div>
+        <div style="font-size:13px;color:var(--text3);line-height:1.7">GDP의 상당 부분이 데이터의 진실 여부를 확인하는 데 소비됩니다. 흔히 간과하지만, 이는 경제 전반에 걸친 구조적 비용입니다.</div>
+      </div>
+
+      <div style="background:#fff;padding:28px 24px;border-left:1px solid var(--border)">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:12px">EXAMPLES</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px">사실 확인이 본업인 제도들</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text2);line-height:1.65">
+            <span style="color:var(--text4);font-family:'DM Mono',monospace;font-size:11px;flex-shrink:0;margin-top:2px">01</span>
+            <span><strong>법원 재판</strong> — 대부분은 사실관계 확인의 과정</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text2);line-height:1.65">
+            <span style="color:var(--text4);font-family:'DM Mono',monospace;font-size:11px;flex-shrink:0;margin-top:2px">02</span>
+            <span><strong>신분증·증명서</strong> — 신원과 자격의 진실 여부 증명</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text2);line-height:1.65">
+            <span style="color:var(--text4);font-family:'DM Mono',monospace;font-size:11px;flex-shrink:0;margin-top:2px">03</span>
+            <span><strong>교통 단속 카메라</strong> — 법규 위반이라는 사실을 기록하는 기술적 장치</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text2);line-height:1.65">
+            <span style="color:var(--text4);font-family:'DM Mono',monospace;font-size:11px;flex-shrink:0;margin-top:2px">04</span>
+            <span><strong>회계·감사</strong> — 재무 사실의 진위 확인</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#fff;padding:28px 24px;border-left:1px solid var(--border)">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:12px">IMPLICATION</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">AI 시대의 역설</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.75">AI가 강력해질수록, 거짓 데이터가 만들어내는 피해도 그만큼 커집니다. AI는 틀린 전제를 의심하지 않고, 틀린 전제 위에서 완벽하게 논리적인 결론을 도출합니다. <strong>진실한 데이터 없이 신뢰할 수 있는 AI는 없습니다.</strong></div>
+      </div>
+
+    </div>
+
+    <!-- 블록체인 → 오픈해시 이행 서술 -->
+    <div class="reveal" style="margin-top:40px">
+
+      <!-- 블록체인: 혁신이자 한계 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+        <div style="background:#fff;border:1px solid var(--border);border-top:3px solid var(--amber);border-radius:var(--radius-lg);padding:28px 24px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            <span style="font-size:13px;font-weight:700;color:#92400e">블록체인 — 혁신이자 한계</span>
+          </div>
+          <p style="font-size:13px;color:var(--text2);line-height:1.8;margin:0 0 12px">블록체인이 세상을 놀라게 한 이유는 하나입니다. <strong>사람의 개입 없이 데이터의 진실성을 보장한 최초의 기술</strong>이기 때문입니다. 공증인도, 법원도, 국가도 필요 없이, 코드가 곧 진실의 보증인이 되었습니다.</p>
+          <div style="background:var(--amber-lt);border:1px solid #fde68a;border-radius:var(--radius);padding:12px 14px;font-size:13px;color:#92400e;line-height:1.75">
+            그러나 블록체인은 태생적이자 치명적인 한계를 안고 있습니다. <strong>에너지 과소비.</strong> 이 때문에 그 적용 범위는 사실상 지하 경제와 투기적 자산에 국한되었고, 일상적 경제 활동으로 확장되지 못했습니다.
+          </div>
+        </div>
+
+        <div style="background:var(--brand-bg);border:1px solid #a7f3d0;border-top:3px solid var(--brand);border-radius:var(--radius-lg);padding:28px 24px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-dk)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span style="font-size:13px;font-weight:700;color:var(--brand-dk)">오픈해시(Openhash) — 한계의 해소</span>
+          </div>
+          <p style="font-size:13px;color:var(--text2);line-height:1.8;margin:0 0 16px">오픈해시는 블록체인의 데이터 무결성 보장 능력을 계승하면서, 에너지 소비를 <strong>99.8% 절감</strong>했습니다. 비로소 일상 경제 전반에 적용 가능한 사실 확인 인프라가 탄생했습니다.</p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 12px;background:white;border:1px solid #a7f3d0;border-radius:var(--radius)">
+              <span style="color:var(--text3)">에너지 절감</span>
+              <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--brand-dk)">99.8%</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 12px;background:white;border:1px solid #a7f3d0;border-radius:var(--radius)">
+              <span style="color:var(--text3)">최대 처리 성능</span>
+              <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--brand-dk)">7.3M TPS</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 12px;background:white;border:1px solid #a7f3d0;border-radius:var(--radius)">
+              <span style="color:var(--text3)">소비자 데이터 노출</span>
+              <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--brand-dk)">0%</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 맺음: 고팡의 아름다움 -->
+    <div class="reveal" style="margin-top:28px;padding:24px 28px;background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;gap:18px;align-items:flex-start">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px">
+        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+      </svg>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">백설공주의 빼어난 미모만큼이나 고팡의 아름다움</div>
+        <p style="font-size:13px;color:var(--text2);line-height:1.8;margin:0">AI 비서가 신뢰받을 수 있는 이유는, 그 발판인 PDV의 모든 기록이 오픈해시에 의해 위변조 불가능하게 앵커링되기 때문입니다. 거짓 데이터가 끼어들 여지가 없습니다. 오픈해시는 고팡이라는 AI 평행 세계의 <strong>진실의 토대</strong>이며, 이것이 AI 비서가 주인공인 진짜 이유입니다.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ── PC vs MOBILE ── -->
+<section class="section" id="pc-mobile">
+  <div class="section-inner">
+    <div class="section-tag reveal">Interface</div>
+    <h2 class="section-title reveal">PC 버전과 <strong>모바일 버전</strong></h2>
+    <div class="section-body reveal">
+      <p>PC와 모바일의 브라우저에 gopang.net 주소를 입력하면, PC와 모바일의 화면이 서로 다릅니다. gopang.net 뿐 아니라, 그 하위 시스템들도 그러합니다. 모바일은 대화형이며, 시종일관 AI가 적용됩니다. 반면, PC는 해당 시스템에 대한 안내가 주요한 용도입니다. 이하, 모바일로 접속한 경우를 설명합니다.</p>
+      <p style="margin-top:16px">모바일 버전의 고팡(Gopang)은 수백 개의 하위 AI 시스템(전문 분야 AI Agent)을 호출하는 포털입니다.</p>
+
+      <!-- 흐름도 일러스트 -->
+      <div style="margin:32px 0 8px 0;">
+        <svg viewBox="0 0 900 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:900px;display:block;margin:0 auto;">
+
+          <!-- ── 노드 1: 사람이 AI 비서에게 지시 ── -->
+          <rect x="10" y="80" width="155" height="60" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.2"/>
+          <circle cx="36" cy="104" r="7" fill="#64748b"/>
+          <path d="M24,118 Q24,110 36,110 Q48,110 48,118" fill="#64748b"/>
+          <text x="100" y="106" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">사람이</text>
+          <text x="100" y="123" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">AI 비서에게 지시</text>
+
+          <!-- 화살표 1→2 -->
+          <line x1="165" y1="110" x2="220" y2="110" stroke="#94a3b8" stroke-width="1.3"/>
+          <polygon points="218,105 228,110 218,115" fill="#94a3b8"/>
+
+          <!-- ── 노드 2: 판단 (마름모) 중심 y=110 ── -->
+          <polygon points="310,60 390,110 310,160 230,110" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.2"/>
+          <text x="310" y="105" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">직접 수행</text>
+          <text x="310" y="121" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">가능?</text>
+
+          <!-- YES 아래쪽 화살표 → 직접 수행 -->
+          <line x1="310" y1="160" x2="310" y2="185" stroke="#94a3b8" stroke-width="1.3"/>
+          <polygon points="305,183 310,193 315,183" fill="#94a3b8"/>
+          <text x="298" y="178" text-anchor="middle" font-size="12" fill="#64748b">YES</text>
+          <rect x="228" y="193" width="164" height="44" rx="8" fill="#e0f2e9" stroke="#a7d7b8" stroke-width="1"/>
+          <text x="310" y="213" text-anchor="middle" font-size="13" fill="#1a6b3c" font-weight="600">직접 수행</text>
+          <text x="310" y="230" text-anchor="middle" font-size="11" fill="#4ade80" font-weight="500">✓ 완료</text>
+
+          <!-- NO 오른쪽 화살표 -->
+          <line x1="390" y1="110" x2="445" y2="110" stroke="#94a3b8" stroke-width="1.3"/>
+          <polygon points="443,105 453,110 443,115" fill="#94a3b8"/>
+          <text x="418" y="103" text-anchor="middle" font-size="12" fill="#64748b">NO</text>
+
+          <!-- ── 노드 3: Agent 있음? (마름모) 중심 y=110 ── -->
+          <polygon points="555,60 635,110 555,160 475,110" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.2"/>
+          <text x="555" y="105" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">전문 Agent</text>
+          <text x="555" y="121" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">있음?</text>
+
+          <!-- YES 아래쪽 → Agent 호출 -->
+          <line x1="555" y1="160" x2="555" y2="185" stroke="#94a3b8" stroke-width="1.3"/>
+          <polygon points="550,183 555,193 560,183" fill="#94a3b8"/>
+          <text x="543" y="178" text-anchor="middle" font-size="12" fill="#64748b">YES</text>
+          <rect x="468" y="193" width="174" height="44" rx="8" fill="#e0f2e9" stroke="#a7d7b8" stroke-width="1"/>
+          <text x="555" y="213" text-anchor="middle" font-size="13" fill="#1a6b3c" font-weight="600">전문 Agent 호출</text>
+          <text x="555" y="230" text-anchor="middle" font-size="11" fill="#4ade80" font-weight="500">✓ 완료</text>
+
+          <!-- NO 오른쪽 → 웹 검색 -->
+          <line x1="635" y1="110" x2="685" y2="110" stroke="#94a3b8" stroke-width="1.3"/>
+          <polygon points="683,105 693,110 683,115" fill="#94a3b8"/>
+          <text x="660" y="103" text-anchor="middle" font-size="12" fill="#64748b">NO</text>
+
+          <!-- ── 노드 4: 웹 검색 등 자체 수행 ── -->
+          <rect x="693" y="80" width="197" height="60" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.2"/>
+          <circle cx="716" cy="108" r="7" fill="none" stroke="#64748b" stroke-width="1.5"/>
+          <line x1="721" y1="113" x2="727" y2="119" stroke="#64748b" stroke-width="1.5"/>
+          <text x="806" y="105" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">웹 검색 등으로</text>
+          <text x="806" y="122" text-anchor="middle" font-size="13" fill="#334155" font-weight="600">스스로 수행</text>
+
+        </svg>
+      </div>
+
+
+
+      <ul class="overview-list" style="margin-top:12px">
+        <li>사용자가 지시나 질의하면, 사용자의 전용 AI 비서는 먼저 자신이 스스로 수행할 업무인지 여부를 판단합니다. 가령, "내일 약속된 미팅이 뭐가 있지?", "이 사건의 대법원 판결문 법리를 분석해 줘." 등입니다. 전자는 AI 비서가 처리할 일이지만, 후자는 K-Law와 같은 특정 분야에 특화된 전문 AI Agent를 호출해야 합니다.</li>
+        <li>AI 비서가 수행하는 것보다 전문 AI Agent가 수행하기에 적합한 지시로 판단되면, AI 비서는 고팡에 등록된 수백 개의 AI Agent들 가운데, 사용자의 지시를 이행할 최적의 Agent를 호출합니다. 가령, 법률을 문의하면 K-Law를 호출하고, 치안을 문의하면 K-Police를 호출하며, 질환을 문의하면 K-Health를 호출합니다. 2026년 6월 현재, 약 20종의 하위 AI Agent를 구성하였으며, 2026년 말까지 100여 종으로 확장합니다.</li>
+        <li>고팡에 등록된 Agent들 중에서 적절한 AI Agent가 없다면, AI 비서는 웹 검색 등으로 스스로 해당 지시를 이행하고, 결과를 보고합니다. 만약, 특정 분야 Agent의 개발이 필요하다고 판단되면, 그 필요성을 개발자에게 보고합니다.</li>
+        <li>AI 비서 및 AI Agent들의 업무 수행 결과는 사용자의 전용 데이터 금고(PDV, Private Data Vault)에 6하원칙에 따라 기록되며, 이 기록은 오직 본인만 접근할 수 있습니다.</li>
+      </ul>
+      <p style="margin-top:20px">고팡은 관문(Portal)이며, 100여 종의 하위 AI 시스템은 의료, 법률, 교육 등 제반 인프라의 AI 쌍둥이입니다. 또한, 고팡은 완전히 새로운 형식의 웹이며, 한국의 수십 만 웹 사이트를 100여 종의 AI Agent로 대체합니다.</p>
+      <p style="margin-top:16px;text-align:center;font-size:1.25rem;font-weight:700;letter-spacing:0.5px">아날로그 시대 &nbsp;⇒&nbsp; 디지털 시대 &nbsp;⇒&nbsp; AI 시대 (고팡)</p>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ── SCENARIO: 짜장면 주문 ── -->
+<section class="section" id="scenario-jjajang">
+  <div class="section-inner">
+    <div class="section-tag reveal">Use Case</div>
+    <h2 class="section-title reveal"><strong>"짜장면 두 그릇 주문해 줘."</strong></h2>
+    <div class="section-body reveal">
+      <p>같은 주문 한 마디. 기존 방식과 고팡 방식은 어떻게 다를까요?</p>
+    </div>
+
+    <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:32px">
+
+      <!-- 좌측: 기존 방식 -->
+      <div style="background:#fff;padding:32px 28px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+          <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0"></div>
+          <span style="font-size:13px;font-weight:700;color:var(--text);letter-spacing:-0.3px">기존</span>
+          <span style="font-size:12px;color:var(--text4);font-family:'DM Mono',monospace">네이버·쿠팡이츠</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--bg-subtle);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+              <span style="font-size:10px;font-weight:700;color:var(--text3);font-family:'DM Mono',monospace">1</span>
+            </div>
+            <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">검색 엔진(네이버, 구글)과 쿠팡이츠 등으로 근처 중국 음식점을 직접 검색</p>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--bg-subtle);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+              <span style="font-size:10px;font-weight:700;color:var(--text3);font-family:'DM Mono',monospace">2</span>
+            </div>
+            <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">평점·리뷰·가격을 직접 비교한 뒤 앱으로 주문 및 결제</p>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:#fef2f2;border:1px solid #fecaca;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+              <span style="font-size:10px;font-weight:700;color:var(--red);font-family:'DM Mono',monospace">!</span>
+            </div>
+            <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">카드 수수료 약 <strong style="color:var(--red)">3%</strong>, 쿠팡이츠 등 업체 수수료 약 <strong style="color:var(--red)">15%</strong> (추정) 부과</p>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:#fef2f2;border:1px solid #fecaca;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+              <span style="font-size:10px;font-weight:700;color:var(--red);font-family:'DM Mono',monospace">!</span>
+            </div>
+            <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">검색·주문 정보는 네이버·구글·쿠팡이츠 등 <strong style="color:var(--red)">플랫폼이 소유</strong></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 우측: 고팡 방식 -->
+      <div style="background:var(--brand-bg);padding:32px 28px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #a7f3d0">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--brand);flex-shrink:0"></div>
+          <span style="font-size:13px;font-weight:700;color:var(--text);letter-spacing:-0.3px">고팡</span>
+          <span style="font-size:12px;color:var(--brand-dk);font-family:'DM Mono',monospace">K-Market Agent</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+              <span style="font-size:10px;font-weight:700;color:white;font-family:'DM Mono',monospace">1</span>
+            </div>
+            <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">고팡 마이크 터치 후 <strong>"짜장면 두 그릇 주문해 줘."</strong> 한 마디</p>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+              <span style="font-size:10px;font-weight:700;color:white;font-family:'DM Mono',monospace">2</span>
+            </div>
+            <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">K-Market Agent 자동 호출 → 현재 위치 전달 → 주변 중국 음식점 검색·영업시간·리뷰·평점 참조 → 업체 추천</p>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+              <span style="font-size:10px;font-weight:700;color:white;font-family:'DM Mono',monospace">3</span>
+            </div>
+            <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">업체 선택하면 주문·결제 자동 완료. 카드 수수료 <strong style="color:var(--brand-dk)">0%</strong>, 플랫폼 수수료 <strong style="color:var(--brand-dk)">0%</strong></p>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+              <span style="font-size:10px;font-weight:700;color:white;font-family:'DM Mono',monospace">4</span>
+            </div>
+            <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0"><strong>누가·언제·어디서·무엇을·어떻게·왜</strong> → 익명화 → 공공 데이터 → 정부 정책에 반영</p>
+          </div>
+        </div>
+        <div style="margin-top:18px;padding:12px 14px;background:white;border:1px solid #a7f3d0;border-radius:var(--radius);font-size:12px;color:var(--brand-dk);line-height:1.7">
+          수수료 0%는 <strong>수익자 부담 원칙</strong>에 따릅니다. 고팡 네트워크 유지 비용은 소비자·판매자·플랫폼이 공정하게 분담하며, 별도 중간 수수료는 없습니다.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+</body>
+</html>

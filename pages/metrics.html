@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>고팡 (Gopang) — AI 자율 시장 플랫폼 v3.4</title>
+<title>성능 · 비교 — 고팡</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -685,621 +685,338 @@ footer {
   .klaw-stats { grid-template-columns: 1fr; }
   .klaw-inner { padding: 52px 16px; }
 }
-
-/* ── SIDEBAR ── */
-:root { --sb-w: 52px; --sb-expanded: 220px; }
-
-body {
-  padding-left: var(--sb-w);
-  transition: padding-left 0.22s cubic-bezier(.4,0,.2,1);
-}
-
-.sidebar {
-  position: fixed;
-  top: 0; left: 0; bottom: 0;
-  width: var(--sb-w);
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: width 0.22s cubic-bezier(.4,0,.2,1);
-}
-.sidebar:hover { width: var(--sb-expanded); }
-
-.sb-logo {
-  display: flex; align-items: center;
-  height: 52px; padding: 0 13px; gap: 10px;
-  text-decoration: none;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.sb-logo-icon {
-  width: 26px; height: 26px; flex-shrink: 0;
-  background: var(--brand); border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; color: white;
-  font-family: 'DM Mono', monospace;
-}
-.sb-logo-text {
-  font-size: 14px; font-weight: 600; color: var(--text);
-  font-family: 'DM Mono', monospace;
-  white-space: nowrap; opacity: 0;
-  transition: opacity 0.15s 0.05s;
-}
-.sidebar:hover .sb-logo-text { opacity: 1; }
-
-.sb-section { padding: 8px 0; border-bottom: 1px solid var(--border); }
-.sb-section.bottom { border-bottom: none; margin-top: auto; padding-bottom: 12px; }
-
-.sb-section-label {
-  font-size: 9px; font-weight: 600; letter-spacing: 1px;
-  color: var(--text3); text-transform: uppercase;
-  padding: 4px 14px 4px;
-  white-space: nowrap; opacity: 0;
-  transition: opacity 0.12s;
-}
-.sidebar:hover .sb-section-label { opacity: 1; }
-
-.sb-item {
-  display: flex; align-items: center;
-  height: 34px; padding: 0 13px; gap: 11px;
-  text-decoration: none; cursor: pointer;
-  color: var(--text3);
-  font-size: 13px; font-weight: 400;
-  transition: background 0.1s, color 0.1s;
-  white-space: nowrap;
-  border: none; background: none; width: 100%;
-  font-family: 'Inter','Noto Sans KR',sans-serif;
-}
-.sb-item:hover { background: var(--bg-subtle); color: var(--text); }
-.sb-item.active { color: var(--text); background: var(--bg-subtle); }
-.sb-item svg { flex-shrink: 0; }
-.sb-item-label {
-  opacity: 0; transition: opacity 0.12s 0.04s;
-  white-space: nowrap; overflow: hidden;
-}
-.sidebar:hover .sb-item-label { opacity: 1; }
-
-.sb-cta {
-  display: flex; align-items: center;
-  height: 36px; padding: 0 13px; gap: 10px;
-  background: var(--brand); color: white;
-  border: none; cursor: pointer; width: 100%;
-  font-size: 13px; font-weight: 500;
-  font-family: 'Inter','Noto Sans KR',sans-serif;
-  transition: background 0.15s; white-space: nowrap;
-}
-.sb-cta:hover { background: var(--brand-dk); }
-.sb-cta-label { opacity: 0; transition: opacity 0.12s 0.04s; }
-.sidebar:hover .sb-cta-label { opacity: 1; }
-
-/* ── CONTENT AREA ── */
-#content {
-  min-height: 100vh;
-  transition: opacity 0.2s;
-}
-#content.loading { opacity: 0.4; pointer-events: none; }
-
-/* ── MOBILE ── */
-.mobile-topbar {
-  display: none;
-  position: fixed; top: 0; left: 0; right: 0;
-  height: 52px; z-index: 1000;
-  background: var(--surface); border-bottom: 1px solid var(--border);
-  align-items: center; padding: 0 16px;
-  justify-content: space-between;
-}
-@media (max-width: 680px) {
-  .sidebar { display: none; }
-  .mobile-topbar { display: flex; }
-  body { padding-left: 0; padding-top: 52px; }
-}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({startOnLoad:false, theme:"neutral", fontFamily:"inherit"});</script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({startOnLoad:true, theme:"neutral", fontFamily:"inherit"});</script>
 </head>
 <body>
 
-<!-- ── SIDEBAR ── -->
-<aside class="sidebar">
-  <a class="sb-logo" href="#" onclick="loadPage('overview');return false;">
-    <div class="sb-logo-icon">G</div>
-    <span class="sb-logo-text">gopang</span>
-  </a>
-
-  <!-- 탐색 -->
-  <div class="sb-section">
-    <div class="sb-section-label">탐색</div>
-    <a class="sb-item active" id="nav-overview" onclick="loadPage('overview')" href="#">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-      </svg>
-      <span class="sb-item-label">개요</span>
-    </a>
-    <a class="sb-item" id="nav-agents" onclick="loadPage('agents')" href="#">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/>
-      </svg>
-      <span class="sb-item-label">에이전트</span>
-    </a>
-    <a class="sb-item" id="nav-metrics" onclick="loadPage('metrics')" href="#">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
-        <line x1="6" y1="20" x2="6" y2="14"/>
-      </svg>
-      <span class="sb-item-label">성능 · 비교</span>
-    </a>
-    <a class="sb-item" id="nav-openhash" onclick="loadPage('openhash')" href="#">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-      </svg>
-      <span class="sb-item-label">OpenHash</span>
-    </a>
-  </div>
-
-  <!-- 문서 -->
-  <div class="sb-section">
-    <div class="sb-section-label">문서</div>
-    <a class="sb-item" href="/docs/gopang_whitepaper.html" target="_blank">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-      </svg>
-      <span class="sb-item-label">기술 백서 ↗</span>
-    </a>
-    <a class="sb-item" href="./docs/openhash_whitepaper.html" target="_blank">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-      </svg>
-      <span class="sb-item-label">OpenHash 백서 ↗</span>
-    </a>
-    <a class="sb-item" href="./ofp_standard.html">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="4 7 4 4 20 4 20 7"/>
-        <line x1="9" y1="20" x2="15" y2="20"/>
-        <line x1="12" y1="4" x2="12" y2="20"/>
-      </svg>
-      <span class="sb-item-label">OFP 표준</span>
-    </a>
-    <a class="sb-item" href="./bizplan.html">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="12" y1="1" x2="12" y2="23"/>
-        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-      </svg>
-      <span class="sb-item-label">사업화</span>
-    </a>
-  </div>
-
-  <!-- 서비스 -->
-  <div class="sb-section">
-    <div class="sb-section-label">서비스</div>
-    <a class="sb-item" href="https://democracy.gopang.net/desktop.html" target="_blank">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        <polyline points="9 22 9 12 15 12 15 22"/>
-      </svg>
-      <span class="sb-item-label">K-Democracy ↗</span>
-    </a>
-    <a class="sb-item" href="./hallim_masterplan.html">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="10" r="3"/>
-        <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 13 8 13s8-7.75 8-13a8 8 0 0 0-8-8z"/>
-      </svg>
-      <span class="sb-item-label">한림읍</span>
-    </a>
-    <a class="sb-item" href="/feedback.html">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      <span class="sb-item-label">제안 현황</span>
-    </a>
-  </div>
-
-  <!-- 하단: 앱 실행 -->
-  <div class="sb-section bottom">
-    <button class="sb-cta" onclick="openWebApp()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M5 12h14M12 5l7 7-7 7"/>
-      </svg>
-      <span class="sb-cta-label">웹앱 열기</span>
-    </button>
-  </div>
-</aside>
-
-<!-- 모바일 상단바 -->
-<div class="mobile-topbar">
-  <div style="display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:var(--text)">
-    <div class="sb-logo-icon">G</div> gopang
-  </div>
-  <button style="background:var(--brand);color:white;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer" onclick="openWebApp()">웹앱 열기</button>
-</div>
-
-<div class="ticker-bar" style="margin-top:0;">
-  <div class="ticker-track">
-    <span class="tick-item">Hash Chain 갱신 완료</span>
-    <span class="tick-item">최대 처리 성능 <span>7.3M TPS</span></span>
-    <span class="tick-item">전력 절감 <span>99.8%</span></span>
-    <span class="tick-item">소비자 데이터 노출 <span>0%</span></span>
-    <span class="tick-item">알리페이 대비 <span>29배</span></span>
-    <span class="tick-item">차분 프라이버시 <span>ε ≤ 0.1</span></span>
-    <span class="tick-item">재해 복구율 <span>99.99%</span></span>
-    <span class="tick-item">GDPR 완벽 준수</span>
-    <span class="tick-item">Hash Chain 갱신 완료</span>
-    <span class="tick-item">최대 처리 성능 <span>7.3M TPS</span></span>
-    <span class="tick-item">전력 절감 <span>99.8%</span></span>
-    <span class="tick-item">소비자 데이터 노출 <span>0%</span></span>
-    <span class="tick-item">알리페이 대비 <span>29배</span></span>
-    <span class="tick-item">차분 프라이버시 <span>ε ≤ 0.1</span></span>
-    <span class="tick-item">재해 복구율 <span>99.99%</span></span>
-    <span class="tick-item">GDPR 완벽 준수</span>
-  </div>
-
-
-<!-- ── CONTENT ── -->
-<div id="content"></div>
-
-<!-- ── Phone Frame Modal ──────────────────────────────────────── -->
-<div id="webapp-modal">
-  <!-- 닫기 버튼 + 폰 프레임 래퍼 -->
-  <div id="phone-wrapper">
-    <!-- 닫기 버튼: 폰 우측 상단 바로 위 -->
-    <button id="modal-close" onclick="closeWebApp()" title="닫기 (ESC)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="2.5"
-           stroke-linecap="round" stroke-linejoin="round">
-        <line x1="18" y1="6" x2="6" y2="18"/>
-        <line x1="6" y1="6" x2="18" y2="18"/>
-      </svg>
-    </button>
-
-    <!-- 폰 외형 -->
-    <div id="phone-frame">
-
-    <!-- 상단: 스피커 + 노치 영역 -->
-    <div class="phone-top">
-      <div class="phone-speaker"></div>
-    </div>
-
-    <!-- 사이드 버튼들 -->
-    <div class="phone-btn-vol-up"></div>
-    <div class="phone-btn-vol-dn"></div>
-    <div class="phone-btn-power"></div>
-
-    <!-- 화면 -->
-    <div class="phone-screen">
-      <!-- 로딩 중 표시 -->
-      <div id="_iframe-loading" style="
-        position:absolute;inset:0;z-index:2;
-        display:flex;flex-direction:column;align-items:center;justify-content:center;
-        background:#f8f9fa;gap:12px;border-radius:12px;
-        opacity:1;transition:opacity 0.3s;">
-        <div style="width:28px;height:28px;border:2.5px solid #e5e7eb;
-             border-top-color:#3ecf8e;border-radius:50%;
-             animation:spin 0.8s linear infinite;"></div>
-        <span style="font-size:14px;color:#9ca3af;">웹앱 로딩 중…</span>
-      </div>
-      <!-- 에러 폴백 -->
-      <div id="_iframe-err" style="
-        display:none;position:absolute;inset:0;z-index:3;
-        flex-direction:column;align-items:center;justify-content:center;
-        background:#f8f9fa;gap:16px;border-radius:12px;padding:24px;text-align:center;">
-        <span style="font-size:32px;">📱</span>
-        <p style="font-size:13px;color:#374151;font-weight:500;">웹앱을 불러올 수 없습니다</p>
-        <a href="https://gopang.net/webapp.html" target="_blank"
-           style="background:#3ecf8e;color:white;padding:10px 20px;border-radius:8px;
-                  font-size:13px;font-weight:600;text-decoration:none;">
-          새 탭에서 열기 →
-        </a>
-      </div>
-      <iframe id="webapp-iframe" title="고팡 웹앱"
-              allow="camera; microphone; geolocation; clipboard-write"
-              allowfullscreen></iframe>
-    </div>
-
-    <!-- 하단 홈 인디케이터 -->
-    <div class="phone-bottom">
-      <div class="phone-home-bar"></div>
-    </div>
-  </div><!-- /phone-frame -->
-  </div><!-- /phone-wrapper -->
-
-  <!-- 라벨 -->
-  <div id="modal-label">
-    <span class="modal-label-dot"></span>
-    고팡 웹앱 · 스마트폰 미리보기
-  </div>
-</div>
-
-<style>
-/* ── Modal Overlay ── */
-#webapp-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 9000;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 48px 24px 40px;
-  overflow-y: auto;
-  gap: 20px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-}
-#webapp-modal.open {
-  opacity: 1;
-  pointer-events: all;
-}
-#webapp-modal.open #phone-frame {
-  transform: translateY(0) scale(1);
-}
-
-/* ── Phone Wrapper (닫기 버튼 + 폰 묶음) ── */
-#phone-wrapper {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-/* ── Close Button: 폰 우측 상단 바로 위 ── */
-#modal-close {
-  position: absolute;
-  top: -36px; right: 0;
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.25);
-  background: rgba(255,255,255,0.12);
-  color: white;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s, transform 0.15s;
-  z-index: 10;
-}
-#modal-close:hover {
-  background: rgba(255,255,255,0.28);
-  transform: scale(1.1);
-}
-
-/* ── Phone Frame ── */
-#phone-frame {
-  position: relative;
-  width: 375px;
-  height: 760px;
-  background: #111113;
-  border-radius: 18px;          /* 갤럭시 노트: 작은 곡률 */
-  box-shadow:
-    0 0 0 1px #2a2a2c,
-    0 0 0 2.5px #111113,
-    0 0 0 4px #333335,
-    0 32px 80px rgba(0,0,0,0.65),
-    inset 0 0 0 1px rgba(255,255,255,0.04);
-  transform: translateY(30px) scale(0.96);
-  transition: transform 0.35s cubic-bezier(0.34,1.3,0.64,1);
-  flex-shrink: 0;
-}
-
-/* 상단 — 펀치홀 카메라 (노치 없음) */
-.phone-top {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 36px;
-  background: #111113;
-  border-radius: 18px 18px 0 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.phone-speaker {
-  /* 갤럭시 노트: 상단 중앙 얇은 스피커 슬릿 */
-  width: 48px; height: 4px;
-  background: #252527;
-  border-radius: 2px;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.6);
-}
-
-/* 사이드 버튼 — 갤럭시 노트: 우측 전원, 좌측 볼륨 플랫 버튼 */
-.phone-btn-vol-up,
-.phone-btn-vol-dn,
-.phone-btn-power {
-  position: absolute;
-  background: #252527;
-  border-radius: 1.5px;
-}
-.phone-btn-vol-up {
-  left: -2.5px; top: 110px;
-  width: 2.5px; height: 44px;
-  box-shadow: -1px 0 0 #0a0a0a;
-}
-.phone-btn-vol-dn {
-  left: -2.5px; top: 165px;
-  width: 2.5px; height: 44px;
-  box-shadow: -1px 0 0 #0a0a0a;
-}
-.phone-btn-power {
-  right: -2.5px; top: 130px;
-  width: 2.5px; height: 64px;   /* 노트: 전원+빅스비 통합 긴 버튼 */
-  box-shadow: 1px 0 0 #0a0a0a;
-}
-
-/* 화면 영역 — 갤럭시 노트: 베젤 얇고 모서리 작은 곡률 */
-.phone-screen {
-  position: absolute;
-  top: 36px; left: 8px; right: 8px; bottom: 28px; /* top=phone-top 높이, bottom=phone-bottom 높이 */
-  border-radius: 12px;          /* 화면 모서리도 작게 */
-  overflow: hidden;
-  background: #09090f;
-}
-.phone-screen iframe {
-  width: 100%; height: 100%;
-  border: none;
-  border-radius: 12px;
-}
-
-/* 하단 — 갤럭시 노트: 홈 바 없음, 얇은 제스처 바 */
-.phone-bottom {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 20px;
-  display: flex; align-items: center; justify-content: center;
-  z-index: 10;
-}
-.phone-home-bar {
-  width: 80px; height: 3px;
-  background: rgba(255,255,255,0.18);
-  border-radius: 1.5px;
-}
-
-/* ── Label ── */
-#modal-label {
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  color: rgba(255,255,255,0.4);
-  letter-spacing: 0.5px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.modal-label-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: #3ecf8e;
-  animation: mpulse 2s ease-in-out infinite;
-}
-@keyframes mpulse {
-  0%,100% { opacity: 1; }
-  50%      { opacity: 0.3; }
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ── 화면 작을 때 폰 축소 ── */
-@media (max-height: 860px) {
-  #phone-wrapper { transform: scale(0.85); transform-origin: center top; }
-  #webapp-modal.open #phone-frame { transform: translateY(0) scale(1); }
-}
-@media (max-height: 700px) {
-  #phone-wrapper { transform: scale(0.72); transform-origin: center top; }
-  #webapp-modal.open #phone-frame { transform: translateY(0) scale(1); }
-}
+/* 페이지 내장 시 padding 제거 */
+body { padding-left: 0 !important; background: transparent; }
+.section { scroll-margin-top: 24px; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:"neutral", fontFamily:"inherit"});</script>
+</head>
+<body>
+
+<!-- ── METRICS ── -->
+<section class="section" id="metrics">
+  <div class="section-inner">
+    <div class="section-tag reveal">Performance</div>
+    <h2 class="section-title reveal">검증된 <strong>성능 수치</strong></h2>
+    <p class="section-body reveal">AWS EC2 환경 실증 결과. 기존 시스템 대비 압도적인 처리 성능과 에너지 효율.</p>
+    <p class="section-body reveal" style="margin-top:16px">고팡의 AI 비서와 수백 종의 AI Agent가 딛고 있는 발판은 각 사용자가 자신의 PC와 스마트폰에 보관하는 데이터 금고(PDV, Private Data Vault)이며, 재차, PDV의 발판은 데이터 무결성을 보장하는 Openhash 기술입니다.</p>
+
+    <!-- 계층 구조 시각화 -->
+    <div class="reveal" style="margin:32px 0 28px;display:flex;flex-direction:column;align-items:center;gap:0;max-width:640px;margin-left:auto;margin-right:auto">
+
+      <!-- Layer 1: AI 비서 + AI Agents -->
+      <div style="width:100%;display:flex;gap:10px">
+
+        <!-- AI 비서 -->
+        <div style="flex:1;background:#fff;border:1px solid #d0d5dd;border-top:3px solid #003366;
+                    border-radius:4px;padding:18px 16px;text-align:center;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+               stroke="#003366" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               style="margin-bottom:10px">
+            <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            <rect x="9" y="2" width="6" height="2" rx="1"/>
+            <line x1="12" y1="2" x2="12" y2="4"/>
+          </svg>
+          <div style="font-size:13px;font-weight:700;color:#1a1a1a;margin-bottom:5px">전용 AI 비서</div>
+          <div style="font-size:14px;color:#555;line-height:1.6">사용자 1인 전담<br>지시 판단 · 직접 수행</div>
+        </div>
+
+        <!-- AI Agents -->
+        <div style="flex:2;background:#fff;border:1px solid #d0d5dd;border-top:3px solid #003366;
+                    border-radius:4px;padding:18px 16px;text-align:center;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+               stroke="#003366" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+               style="margin-bottom:10px">
+            <rect x="2" y="7" width="5" height="10" rx="1"/>
+            <rect x="9.5" y="4" width="5" height="13" rx="1"/>
+            <rect x="17" y="9" width="5" height="8" rx="1"/>
+          </svg>
+          <div style="font-size:13px;font-weight:700;color:#1a1a1a;margin-bottom:5px">수백 종의 AI Agent</div>
+          <div style="font-size:14px;color:#555;line-height:1.6">K-Law · K-Police · K-Health<br>K-School · K-Market · 기타 전문 Agent</div>
+        </div>
+      </div>
+
+      <!-- 연결선 -->
+      <div style="display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:2px">
+        <div style="width:1px;height:16px;background:#adb5bd"></div>
+        <div style="font-size:12px;color:#6c757d;letter-spacing:1px;font-family:'DM Mono',monospace">기반</div>
+        <div style="width:1px;height:16px;background:#adb5bd"></div>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="#adb5bd">
+          <polygon points="5,6 0,0 10,0"/>
+        </svg>
+      </div>
+
+      <!-- Layer 2: PDV -->
+      <div style="width:100%;background:#f0f4f8;border:1px solid #d0d5dd;border-left:4px solid #003366;
+                  border-radius:4px;padding:16px 20px;display:flex;align-items:center;gap:16px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+             stroke="#003366" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+             style="flex-shrink:0">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          <circle cx="12" cy="16" r="1" fill="#003366"/>
+        </svg>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:4px">PDV &mdash; Private Data Vault</div>
+          <div style="font-size:14px;color:#555;line-height:1.7">사용자 PC · 스마트폰 내 보관 · 오직 본인만 접근<br>AI 비서 · Agent 업무 결과를 6하원칙으로 기록</div>
+        </div>
+      </div>
+
+      <!-- 연결선 -->
+      <div style="display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:2px">
+        <div style="width:1px;height:16px;background:#adb5bd"></div>
+        <div style="font-size:12px;color:#6c757d;letter-spacing:1px;font-family:'DM Mono',monospace">기반</div>
+        <div style="width:1px;height:16px;background:#adb5bd"></div>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="#adb5bd">
+          <polygon points="5,6 0,0 10,0"/>
+        </svg>
+      </div>
+
+      <!-- Layer 3: OpenHash -->
+      <div style="width:100%;background:#f0f4f8;border:1px solid #d0d5dd;border-left:4px solid #003366;
+                  border-radius:4px;padding:16px 20px;display:flex;align-items:center;gap:16px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+             stroke="#003366" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+             style="flex-shrink:0">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:4px">OpenHash &mdash; PHLD 분산 원장</div>
+          <div style="font-size:14px;color:#555;line-height:1.7">데이터 무결성 보장 · 변조 불가 · 에너지 소비 99.8% 절감<br>전 세계 분산 노드 · 블록체인 대비 압도적 효율</div>
+        </div>
+      </div>
+
+    </div>
+    <!-- /계층 구조 시각화 -->
+
+    <p class="section-body reveal" style="margin-top:12px">블록체인은 혁신적인 데이터 위변조 방지 기술이지만, 에너지 과소비 문제로 상용화될 수 없는 한계가 뚜렷하며, 그 용도는 불법 자금 세탁 등 매우 제한적입니다. Openhash는 블록체인의 데이터 무결성을 보장하면서 에너지 소비를 <strong>99.8%</strong> 줄였습니다.</p>
+
+    <div class="metrics-grid">
+      <div class="metric-card reveal" data-label="TPS">
+        <div class="metric-big green">7.3M</div>
+        <div class="metric-title">TPS 최대 처리 성능</div>
+        <div class="metric-sub">토스 대비 146배 · 알리페이 대비 29배<br>AWS EC2 환경 실증</div>
+      </div>
+      <div class="metric-card reveal" style="transition-delay:.08s" data-label="POWER">
+        <div class="metric-big blue">99.8%</div>
+        <div class="metric-title">전력 절감율</div>
+        <div class="metric-sub">18.2W vs GPU 160.3W<br>FPGA 기반 하드웨어 가속</div>
+      </div>
+      <div class="metric-card reveal" style="transition-delay:.16s" data-label="PRIVACY">
+        <div class="metric-big amber">0%</div>
+        <div class="metric-title">소비자 데이터 노출</div>
+        <div class="metric-sub">차분 프라이버시 ε ≤ 0.1<br>GDPR · 개인정보보호법 완벽 준수</div>
+      </div>
+      <div class="metric-card reveal" style="transition-delay:.24s" data-label="RECOVERY">
+        <div class="metric-big" style="color:#059669">99.99%</div>
+        <div class="metric-title">재해 복구율</div>
+        <div class="metric-sub">글로벌 백업 센터 네트워크<br>자동 장애 복구 시스템</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ── GDC & K-MARKET ── -->
+<section class="section" id="gdc">
+  <div class="section-inner">
+    <div class="section-tag reveal">Revenue Model</div>
+    <h2 class="section-title reveal">수익 모델 — <strong>GDC 글로벌 디지털 화폐</strong></h2>
+    <div class="section-body reveal">
+      <p>고팡의 모든 AI 서비스(법률·의료·교육·행정 등)는 <strong>무료</strong>입니다. 고팡의 수익은 오직 <strong>GDC(Gopang Digital Currency)</strong>에서 발생합니다. GDC는 글로벌 디지털 화폐로, 고팡 마켓의 기본 결제 수단입니다.</p>
+    </div>
+
+    <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:32px">
+
+      <div style="background:#fff;border:1px solid #d0d5dd;border-top:3px solid var(--brand);border-radius:6px;padding:24px 22px">
+        <div style="font-size:13px;font-weight:700;color:var(--brand-dk);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          GDC — 금융 통합
+        </div>
+        <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--text2);line-height:1.7">
+          <li>— 결제 수수료: Visa·Master 대비 <strong>1/10 이하</strong></li>
+          <li>— 은행·보험·증권 기능 통합</li>
+          <li>— 예금 이자율: 기존 대비 <strong>10배</strong></li>
+          <li>— 대출 이자율: 기존 대비 <strong>1/2 이하</strong></li>
+          <li>— 193개국 POOL 분산 보관, 환전 수수료 0%</li>
+          <li>— 고팡 마켓 내 유일한 결제 수단</li>
+        </ul>
+      </div>
+
+      <div style="background:#fff;border:1px solid #d0d5dd;border-top:3px solid var(--blue);border-radius:6px;padding:24px 22px">
+        <div style="font-size:13px;font-weight:700;color:#1d4ed8;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+          K-Market — 수수료 0%
+        </div>
+        <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--text2);line-height:1.7">
+          <li>— 플랫폼 수수료 <strong>0%</strong> (쿠팡 5~10% 대비)</li>
+          <li>— 소비자 개인정보 수집 <strong>0%</strong></li>
+          <li>— 자연어로 원하는 상품·시각·장소 지정</li>
+          <li>— 모든 거래의 재무제표 자동 생성·갱신</li>
+          <li>— 세금 납부 자동화 (K-Tax 연동)</li>
+          <li>— AI가 공정 거래 보장</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ── PRINCIPLES ── -->
+<section class="section" id="principles">
+  <div class="section-inner">
+    <div class="section-tag reveal">Principles</div>
+    <h2 class="section-title reveal">고팡의 <strong>운영 원칙</strong></h2>
+
+    <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px;max-width:860px;margin-left:auto;margin-right:auto">
+
+      <!-- 데이터 주권 -->
+      <div style="background:#fff;border:1px solid #d0d5dd;border-top:3px solid #003366;border-radius:4px;padding:24px 22px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#003366" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <span style="font-size:14px;font-weight:700;color:#003366">데이터 주권</span>
+        </div>
+        <p style="font-size:13px;color:#374151;line-height:1.8;margin:0">모든 데이터는 오직 사용자 본인이 지정한 장소에 보관되며, 암호화됩니다. 따라서, 대규모 사용자 정보 누출이 원천적으로 불가능합니다.</p>
+      </div>
+
+      <!-- 오픈소스 -->
+      <div style="background:#fff;border:1px solid #d0d5dd;border-top:3px solid #003366;border-radius:4px;padding:24px 22px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#003366" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+          </svg>
+          <span style="font-size:14px;font-weight:700;color:#003366">오픈소스</span>
+        </div>
+        <p style="font-size:13px;color:#374151;line-height:1.8;margin:0">모든 소스코드가 GitHub에 공개되므로, 누구나 작동 과정을 이해하고, 기능 개선에 참여할 수 있습니다.</p>
+      </div>
+
+      <!-- 자발적 공동체 -->
+      <div style="background:#fff;border:1px solid #d0d5dd;border-top:3px solid #003366;border-radius:4px;padding:24px 22px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#003366" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/>
+            <path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/>
+            <path d="M17 13c2.2.5 4 2.3 4 5"/>
+          </svg>
+          <span style="font-size:14px;font-weight:700;color:#003366">자발적 공동체</span>
+        </div>
+        <p style="font-size:13px;color:#374151;line-height:1.8;margin:0">주주도 없고, 임직원도 없으며, 건물도 없습니다. 고팡 생태계의 유지 개선은 오직 시민들의 자발적 참여와 공헌으로 이뤄집니다. 심지어, 고팡의 운영 방식을 결정하는 규칙도 오픈소스입니다.</p>
+      </div>
+
+      <!-- 고팡 운영진 -->
+      <div style="background:#fff;border:1px solid #d0d5dd;border-top:3px solid #003366;border-radius:4px;padding:24px 22px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#003366" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          <span style="font-size:14px;font-weight:700;color:#003366">고팡 운영진</span>
+        </div>
+        <p style="font-size:13px;color:#374151;line-height:1.8;margin:0">한시적으로 팀 주피터가 고팡을 통괄하며, 고팡 의사 결정 구조(<a href="https://democracy.gopang.net" target="_blank" style="color:#003366;text-decoration:underline">democracy.gopang.net</a>)가 정착하면, 새로운 조직과 기관에 그 권한을 이양합니다.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ── TABLE ── -->
+<section class="section table-bg dot-bg-light" id="compare">
+  <div class="section-inner">
+    <div class="section-tag reveal">System Comparison</div>
+    <h2 class="section-title reveal">기존 시스템 <strong>5대 한계</strong>와 해결</h2>
+    <p class="section-body reveal">기존 플랫폼이 해결하지 못한 근본적인 문제들에 대한 고팡의 혁신적 해결책.</p>
+
+    <div class="tbl-wrap reveal">
+      <table>
+        <thead>
+          <tr>
+            <th>한계</th>
+            <th>기존 시스템</th>
+            <th>고팡 해결책</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>소비자 프라이버시 침해</td>
+            <td class="td-bad">Amazon · 쿠팡 · 알리바바<small>개인 구매이력 전면 수집</small></td>
+            <td class="td-good">소비자 데이터 0% 수집</td>
+          </tr>
+          <tr>
+            <td>중앙화 수동 운영</td>
+            <td class="td-bad">토스 5만 TPS<small>알리페이 25.6만 TPS (중앙 서버)</small></td>
+            <td class="td-good">7.3M TPS 완전 자율화</td>
+          </tr>
+          <tr>
+            <td>불공정 비용 구조</td>
+            <td class="td-bad">아마존 8–15%<small>쿠팡 5–10% 고정 수수료</small></td>
+            <td class="td-good">수익 비례 자동 분담</td>
+          </tr>
+          <tr>
+            <td>분산된 시장 구조</td>
+            <td class="td-bad">의류 · 도서 · 전자<small>플랫폼 분리 운영</small></td>
+            <td class="td-good">GPID 글로벌 단일 시장</td>
+          </tr>
+          <tr>
+            <td>신용평가 한계</td>
+            <td class="td-bad">제한적 금융 데이터<small>실시간 반영 불가</small></td>
+            <td class="td-good">실시간 재무제표 자동 생성</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ── DISTRIBUTION ── -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-tag reveal">Value Distribution</div>
+    <h2 class="section-title reveal">메트칼프 법칙 기반 <strong>네트워크 가치 분배</strong></h2>
+    <p class="section-body reveal">고팡은 오픈소스 프로젝트이며(GPL v3), 전 세계에서 누구나 코드의 개선과 배포에 참여할 수 있습니다. 고팡 네트워크의 유지 비용은 수익자 부담 원칙에 따라, 고팡 이용자들 간에 적절히 분배되며, 비용 산출과 분배 메커니즘 역시 오픈소스로 공개됩니다.</p>
+
+    <div class="dist-grid">
+      <div class="dist-card reveal">
+        <div class="dist-pct dc-green">40%</div>
+        <div class="dist-role">소비자</div>
+        <div class="dist-note">네트워크 수요 기반 분배</div>
+      </div>
+      <div class="dist-card reveal" style="transition-delay:.08s">
+        <div class="dist-pct dc-blue">35%</div>
+        <div class="dist-role">판매자</div>
+        <div class="dist-note">거래 기여 비례 분배</div>
+      </div>
+      <div class="dist-card reveal" style="transition-delay:.16s">
+        <div class="dist-pct dc-amber">20%</div>
+        <div class="dist-role">플랫폼</div>
+        <div class="dist-note">인프라 운영 비용 충당</div>
+      </div>
+      <div class="dist-card reveal" style="transition-delay:.24s">
+        <div class="dist-pct dc-red">5%</div>
+        <div class="dist-role">기술개발</div>
+        <div class="dist-note">지속적 혁신 투자</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
 </body>
 </html>
-
-
-
-<script>
-// ── SPA 라우터 ────────────────────────────────────────────
-const PAGES = {
-  overview: '/pages/overview.html',
-  agents:   '/pages/agents.html',
-  metrics:  '/pages/metrics.html',
-  openhash: '/pages/openhash.html',
-};
-
-let currentPage = null;
-
-async function loadPage(name) {
-  if (currentPage === name) return;
-  currentPage = name;
-
-  // 사이드바 active 표시
-  document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
-  const navEl = document.getElementById('nav-' + name);
-  if (navEl) navEl.classList.add('active');
-
-  // URL 업데이트
-  history.pushState({ page: name }, '', '#' + name);
-
-  const content = document.getElementById('content');
-  content.classList.add('loading');
-
-  try {
-    const res  = await fetch(PAGES[name]);
-    const html = await res.text();
-
-    // body 내용만 추출
-    const parser = new DOMParser();
-    const doc    = parser.parseFromString(html, 'text/html');
-    content.innerHTML = doc.body.innerHTML;
-
-    // scroll reveal 재등록
-    const io = new IntersectionObserver(entries => {
-      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
-    }, { threshold: 0.1, rootMargin: '0px 0px -32px 0px' });
-    content.querySelectorAll('.reveal').forEach(el => io.observe(el));
-
-    // mermaid 재렌더링
-    if (window.mermaid) mermaid.run({ nodes: content.querySelectorAll('.mermaid') });
-
-    window.scrollTo(0, 0);
-  } catch(e) {
-    content.innerHTML = '<div style="padding:60px 24px;text-align:center;color:var(--text3)">페이지를 불러올 수 없습니다.</div>';
-    console.error('[SPA]', e);
-  }
-
-  content.classList.remove('loading');
-}
-
-// 뒤로가기 지원
-window.addEventListener('popstate', e => {
-  const page = e.state?.page || 'overview';
-  loadPage(page);
-});
-
-// 초기 로드
-const initPage = location.hash.replace('#', '') || 'overview';
-loadPage(PAGES[initPage] ? initPage : 'overview');
-
-// ── WebApp Phone Modal ────────────────────────────────────
-function openWebApp() {
-  const modal = document.getElementById('webapp-modal');
-  if (!modal) return;
-  modal.classList.add('open');
-  document.body.style.overflow = 'hidden';
-  const iframe = document.getElementById('webapp-iframe');
-  if (iframe && !iframe.dataset.loaded) {
-    iframe.src = location.origin + '/webapp.html';
-    iframe.dataset.loaded = '1';
-  }
-}
-function closeWebApp() {
-  const modal = document.getElementById('webapp-modal');
-  if (!modal) return;
-  modal.classList.remove('open');
-  document.body.style.overflow = '';
-}
-document.addEventListener('DOMContentLoaded', function() {
-  const modal = document.getElementById('webapp-modal');
-  if (modal) modal.addEventListener('click', function(e) {
-    const wrapper = document.getElementById('phone-wrapper');
-    if (wrapper && !wrapper.contains(e.target)) closeWebApp();
-  });
-  const iframe = document.getElementById('webapp-iframe');
-  if (iframe) {
-    iframe.addEventListener('load', function() {
-      if (!iframe.src || iframe.src === location.origin + '/') return;
-      const loading = document.getElementById('_iframe-loading');
-      if (loading) { loading.style.opacity = '0'; setTimeout(() => { loading.style.display = 'none'; }, 300); }
-    });
-    iframe.addEventListener('error', function() {
-      const loading = document.getElementById('_iframe-loading');
-      if (loading) loading.style.display = 'none';
-      const err = document.getElementById('_iframe-err');
-      if (err) err.style.display = 'flex';
-    });
-  }
-});
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeWebApp(); });
-</script>
