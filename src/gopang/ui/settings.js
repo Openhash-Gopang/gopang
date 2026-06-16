@@ -118,7 +118,7 @@ export function closeAISettings() {
 }
 
 export function handleAISettingsOverlayClick(e) {
-  // 시트 내부 클릭은 무시, 배경 터치 시에만 닫힘
+  // 시트 내부 클릭은 무시, 배경(시트 바깥) 터치 시에만 닫힘
   const sheet = document.querySelector('#ai-settings-overlay .settings-sheet');
   if (sheet && !sheet.contains(e.target)) closeAISettings();
 }
@@ -584,4 +584,15 @@ function _openSheet(title, html) {
   document.getElementById('_gopang-sheet-title').textContent = title;
   document.getElementById('_gopang-sheet-body').innerHTML = html;
   requestAnimationFrame(() => { sheet.style.transform = 'translateY(0)'; });
+}
+
+
+export function openMyProfile() {
+  const stored = JSON.parse(
+    localStorage.getItem('gopang_user_v4') ||
+    sessionStorage.getItem('gopang_user_v4') || 'null'
+  );
+  const handle = stored?.handle;
+  if (!handle) { alert('프로필을 먼저 등록해주세요.'); return; }
+  window.open('/profile/' + handle, '_blank');
 }
