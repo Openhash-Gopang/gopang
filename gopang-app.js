@@ -8,7 +8,7 @@
  */
 
 // ── Core ─────────────────────────────────────────────────
-import { initAuth, _isRegistered, _isGDCUser, _deviceFullReset, gopangAuth } from './src/gopang/core/auth.js';
+import { initAuth, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, gopangAuth } from './src/gopang/core/auth.js';
 import { loadSettings, CFG, saveSettings }     from './src/gopang/core/config.js';
 import { _USER }                               from './src/gopang/core/state.js';
 
@@ -66,6 +66,7 @@ if (!_isFirstVisit) {
   window.openMyProfile             = openMyProfile;
   window.openAISettings            = openAISettings;
   window._deviceFullReset          = _deviceFullReset;
+  window._deviceLocalReset         = _deviceLocalReset;
   window._isGDCUser                = _isGDCUser;
   window.closeAISettings           = closeAISettings;
   window.handleAISettingsOverlayClick = handleAISettingsOverlayClick;
@@ -340,7 +341,10 @@ function _showWelcomePopup() {
     if (stored?.handle && typeof _updateHandleChip === 'function') {
       _updateHandleChip(stored.handle);
     }
-    if (typeof openSettings === 'function') openSettings();
+    // 등록 안내 팝업 (한국 사용자 전화번호 안내) → 확인 후 설정 화면으로
+    _showRegisterGuide(() => {
+      if (typeof openSettings === 'function') openSettings();
+    });
   };
 }
 
@@ -349,4 +353,65 @@ function _closeWelcome(ov) {
   ov.style.opacity = '0';
   ov.style.transition = 'opacity .2s';
   setTimeout(() => ov.remove(), 200);
+}
+
+// ── 사용자 등록 안내 팝업 (한국 사용자 전화번호 안내) ───────────
+function _showRegisterGuide(onConfirm) {
+  const ov = document.createElement('div');
+  ov.id = 'gopang-register-guide-overlay';
+  ov.style.cssText = [
+    'position:fixed;inset:0;z-index:10000',
+    'background:rgba(0,0,0,.5)',
+    'display:flex;align-items:center;justify-content:center',
+    'padding:24px',
+  ].join(';');
+
+  ov.innerHTML = `
+    <div style="
+      background:#fff;border-radius:12px;
+      width:100%;max-width:340px;
+      padding:28px 24px 24px;
+      font-family:'Pretendard',-apple-system,sans-serif;
+    ">
+      <div style="font-size:15px;font-weight:600;color:#111;margin-bottom:20px;letter-spacing:-.2px">
+        사용자 등록
+      </div>
+
+      <div style="
+        border-left:3px solid #111;
+        padding:12px 14px;
+        font-size:13.5px;color:#333;line-height:1.8;
+        margin-bottom:12px;
+      ">
+        <code style="font-size:13px;font-weight:600;">010</code>을 제외한 나머지
+        <strong>8자</strong>를 대시(<code>-</code>)없이 입력하세요.
+      </div>
+
+      <div style="font-size:12px;color:#888;margin-bottom:20px;line-height:1.6">
+        귀하의 고유 로그인 + 패스워드입니다.
+      </div>
+
+      <div style="
+        background:#f5f5f5;border-radius:6px;padding:10px 12px;
+        font-size:12px;color:#555;margin-bottom:24px;
+      ">
+        예) 010-1234-5678 &nbsp;→&nbsp; <code style="font-weight:600;color:#111">12345678</code>
+      </div>
+
+      <button id="_register_guide_ok" style="
+        width:100%;padding:13px;
+        background:#111;color:#fff;border:none;
+        border-radius:8px;font-size:14px;font-weight:600;
+        cursor:pointer;font-family:inherit;letter-spacing:-.1px;
+      ">확인</button>
+    </div>
+  `;
+
+  document.body.appendChild(ov);
+
+  document.getElementById('_register_guide_ok').onclick = () => {
+    ov.style.opacity = '0';
+    ov.style.transition = 'opacity .2s';
+    setTimeout(() => { ov.remove(); if (typeof onConfirm === 'function') onConfirm(); }, 200);
+  };
 }

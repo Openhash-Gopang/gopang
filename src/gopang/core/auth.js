@@ -1,4 +1,4 @@
-/**
+﻿/**
  * core/auth.js — 사용자 인증·등록 v3.4
  * - 내부: E.164 풀번호 기반 GUID/nickname_hash
  * - UI:   한국 기본(뒷 8자리), 비KR은 국가prefix handle (@US-XXXXXXXX)
@@ -808,8 +808,15 @@ export async function _registerToL1(name) {
 }
 
 // ── 기기 완전 초기화 ─────────────────────────────────────
+// ── 로컬 데이터만 초기화 (L1 레코드 유지 → 재접속 시 복원 가능) ──
+export async function _deviceLocalReset() {
+  if (!confirm('이 기기의 고팡 데이터를 초기화합니다.\n\n계정 정보는 서버에 유지되므로\n같은 번호로 재접속하면 복원됩니다.')) return;
+  await _clearLocalData();
+}
+
+// ── 계정 완전 삭제 (L1 레코드 + 로컬 모두 삭제, 판매·양도용) ──
 export async function _deviceFullReset() {
-  if (!confirm('기기를 완전 초기화합니다.\n판매·양도 전 실행하세요.\n\n⚠️ 이 기기의 모든 고팡 데이터가 삭제됩니다.')) return;
+  if (!confirm('계정을 완전히 삭제합니다.\n판매·양도 전 실행하세요.\n\n⚠️ 서버 기록까지 삭제되며 복원이 불가능합니다.')) return;
   try {
     const stored = _loadStored();
     if (stored?.ipv6) {
@@ -822,6 +829,11 @@ export async function _deviceFullReset() {
       }
     }
   } catch(e) { console.warn('[Reset] L1 삭제 실패:', e.message); }
+  await _clearLocalData();
+}
+
+// ── 공통: 로컬 데이터 삭제 + 페이지 리로드 ─────────────────
+async function _clearLocalData() {
   localStorage.clear(); sessionStorage.clear();
   const dbs = await indexedDB.databases?.() || [];
   for (const db of dbs) indexedDB.deleteDatabase(db.name);
