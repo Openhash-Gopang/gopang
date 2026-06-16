@@ -555,7 +555,31 @@ async function handleSearch(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
   const sbH = _sbHeaders(env);
-  const res  = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_entities`, { method: 'POST', headers: sbH, body: JSON.stringify(body) });
+
+  // 파라미터 정규화: q/limit → p_keyword/p_limit
+  const rpcBody = {
+    p_keyword:      body.p_keyword     || body.q           || null,
+    p_entity_type:  body.p_entity_type || body.entity_type || null,
+    p_occupation:   body.p_occupation  || body.occupation  || null,
+    p_address:      body.p_address     || body.address     || null,
+    p_gdc_only:     body.p_gdc_only    ?? false,
+    p_trust_min:    body.p_trust_min   || null,
+    p_lat:          body.p_lat         || body.lat         || null,
+    p_lng:          body.p_lng         || body.lng         || null,
+    p_sort:         body.p_sort        || 'rank',
+    p_limit:        body.p_limit       || body.limit       || body.lim || 20,
+    p_offset:       body.p_offset      || body.offset      || body.ofst || 0,
+    p_exclude_guid: body.p_exclude_guid|| null,
+    p_l1_node:      body.p_l1_node     || null,
+    p_l2_node:      body.p_l2_node     || null,
+    p_primary_guid: body.p_primary_guid|| null,
+    p_handle:       body.p_handle      || body.handle      || null,
+    p_nickname:     body.p_nickname    || body.nickname    || null,
+    p_lang_code:    body.p_lang_code   || null,
+    p_l3_node:      body.p_l3_node     || null,
+  };
+
+  const res  = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_entities`, { method: 'POST', headers: sbH, body: JSON.stringify(rpcBody) });
   const data = await res.json().catch(() => ({ error: 'parse failed' }));
   return new Response(JSON.stringify(data), { status: res.status, headers: corsHeaders });
 }
@@ -1076,7 +1100,7 @@ async function handleP2PSearch(request, env, corsHeaders) {
     queryUrl += `&filter=${encodeURIComponent(`handle='${h}'`)}`;
   } else {
     // 닉네임 부분 일치 + 국가/지역 필터
-    let filter = `nickname~'${q}'`;
+    let filter = `(nickname~'${q}'||handle~'${q}')`;
     if (country) filter += `&&country_code='${country}'`;
     if (region)  filter += `&&region~'${region}'`;
     queryUrl += `&filter=${encodeURIComponent(filter)}`;
