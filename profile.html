@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ── SEO / OpenGraph (JS로 동적 교체) ── -->
+<title>고팡 프로필</title>
+<meta name="description" content="">
+<meta property="og:type"        content="profile">
+<meta property="og:title"       content="">
+<meta property="og:description" content="">
+<meta property="og:image"       content="https://gopang.net/icons/icon-512.png">
+<meta property="og:url"         content="">
+<meta name="twitter:card"       content="summary">
+
+<!-- JSON-LD Schema.org (JS로 삽입) -->
+<script id="jsonld" type="application/ld+json">{}</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:#111827;min-height:100dvh}
+
+/* ── 헤더 ── */
+.top-bar{background:#fff;border-bottom:1px solid #e5e7eb;padding:14px 16px;
+  display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+.top-back{background:none;border:none;cursor:pointer;padding:4px;color:#374151;display:flex;align-items:center}
+.top-title{font-size:16px;font-weight:700;flex:1}
+.top-share{background:none;border:none;cursor:pointer;padding:4px;color:#374151;display:flex;align-items:center}
+
+/* ── 프로필 헤더 카드 ── */
+.profile-hero{background:#fff;padding:24px 20px 20px;border-bottom:1px solid #f3f4f6}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#4ade80);
+  display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;
+  color:#fff;margin-bottom:14px;flex-shrink:0}
+.profile-name{font-size:22px;font-weight:700;color:#111827;margin-bottom:4px}
+.profile-handle{font-size:14px;color:#16a34a;font-weight:600;margin-bottom:8px}
+.profile-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.badge{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.badge-type{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+.badge-gdc{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.profile-desc{font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:12px}
+.profile-tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{padding:4px 10px;background:#f3f4f6;border-radius:20px;font-size:12px;color:#374151}
+
+/* ── 섹션 카드 ── */
+.card{background:#fff;border-radius:14px;margin:12px 16px;overflow:hidden}
+.card-title{font-size:12px;font-weight:600;color:#9ca3af;padding:14px 16px 8px;
+  text-transform:uppercase;letter-spacing:.06em}
+.info-row{padding:10px 16px;display:flex;align-items:flex-start;gap:12px;border-top:1px solid #f9fafb}
+.info-icon{width:18px;flex-shrink:0;color:#9ca3af;margin-top:2px}
+.info-text{font-size:14px;color:#374151;line-height:1.5;flex:1}
+.info-text a{color:#16a34a;text-decoration:none}
+
+/* ── 영업시간 ── */
+.hours-table{width:100%;border-collapse:collapse}
+.hours-table td{padding:6px 16px;font-size:13px}
+.hours-table td:first-child{color:#6b7280;font-weight:600;width:32px}
+.hours-table td:last-child{color:#374151}
+.hours-closed{color:#9ca3af!important}
+.hours-today{background:#f0fdf4}
+.hours-today td{color:#15803d!important;font-weight:600}
+
+/* ── 상품 목록 ── */
+.product-grid{display:flex;flex-direction:column;gap:1px;background:#f3f4f6}
+.product-item{background:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px}
+.product-img{width:56px;height:56px;border-radius:10px;object-fit:cover;background:#f3f4f6;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.product-img img{width:100%;height:100%;object-fit:cover}
+.product-info{flex:1;min-width:0}
+.product-name{font-size:15px;font-weight:600;color:#111827;margin-bottom:2px}
+.product-price{font-size:14px;color:#16a34a;font-weight:700}
+.product-detail-btn{background:none;border:none;cursor:pointer;color:#9ca3af;padding:4px}
+.product-detail-text{font-size:13px;color:#6b7280;line-height:1.5;
+  padding:0 16px 14px;display:none}
+.product-detail-text.open{display:block}
+
+/* ── 커스텀 필드 ── */
+.custom-field-row{padding:10px 16px;border-top:1px solid #f9fafb;
+  display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.cf-key{font-size:13px;color:#9ca3af;flex-shrink:0}
+.cf-val{font-size:14px;color:#374151;text-align:right}
+
+/* ── AI 비서 채팅 ── */
+.ai-section{margin:12px 16px 0}
+.ai-toggle-btn{width:100%;padding:14px 20px;border:2px solid #16a34a;border-radius:16px;
+  background:linear-gradient(135deg,#f0fdf4,#dcfce7);
+  display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.ai-toggle-left{display:flex;align-items:center;gap:10px}
+.ai-toggle-name{font-size:15px;font-weight:700;color:#15803d}
+.ai-toggle-sub{font-size:12px;color:#86efac;margin-top:2px}
+.ai-toggle-arrow{color:#16a34a;transition:transform .2s}
+.ai-toggle-arrow.open{transform:rotate(180deg)}
+
+.ai-chat-box{border:1.5px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px;
+  background:#fff;display:none;flex-direction:column;max-height:420px}
+.ai-chat-box.open{display:flex}
+.ai-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.ai-msg{max-width:80%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.55}
+.ai-msg-ai{background:#f3f4f6;color:#111827;align-self:flex-start;border-radius:4px 14px 14px 14px}
+.ai-msg-user{background:#16a34a;color:#fff;align-self:flex-end;border-radius:14px 14px 4px 14px}
+.ai-msg-typing{display:flex;gap:4px;align-items:center;padding:10px 14px}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:#9ca3af;
+  animation:bounce .8s infinite alternate}
+.ai-dot:nth-child(2){animation-delay:.2s}
+.ai-dot:nth-child(3){animation-delay:.4s}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+.ai-input-row{padding:10px 12px;border-top:1px solid #f3f4f6;display:flex;gap:8px}
+.ai-input{flex:1;border:1.5px solid #e5e7eb;border-radius:20px;padding:8px 14px;
+  font-size:14px;font-family:inherit;outline:none;resize:none;max-height:80px}
+.ai-input:focus{border-color:#16a34a}
+.ai-send{width:36px;height:36px;border:none;border-radius:50%;background:#16a34a;
+  color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:opacity .2s}
+.ai-send:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── 액션 버튼 ── */
+.action-bar{padding:16px;display:flex;gap:10px}
+.btn-contact{flex:1;padding:13px;border:1.5px solid #16a34a;border-radius:12px;
+  background:#fff;color:#16a34a;font-size:14px;font-weight:700;cursor:pointer}
+.btn-p2p{flex:1;padding:13px;border:none;border-radius:12px;
+  background:#16a34a;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+
+/* ── 로딩 / 에러 ── */
+.skeleton{background:linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 50%,#f3f4f6 75%);
+  background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:8px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.error-box{margin:40px 20px;text-align:center;color:#9ca3af}
+
+/* ── 반응형 ── */
+@media(min-width:480px){
+  .card,.ai-section,.action-bar{max-width:480px;margin-left:auto;margin-right:auto}
+  .profile-hero{max-width:480px;margin:0 auto}
+}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- 상단 바 -->
+<div class="top-bar">
+  <button class="top-back" onclick="history.back()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <span class="top-title" id="top-title">프로필</span>
+  <button class="top-share" onclick="shareProfile()" title="공유">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+  </button>
+</div>
+
+<!-- 로딩 스켈레톤 -->
+<div id="skeleton" style="padding:20px 16px;display:flex;flex-direction:column;gap:12px">
+  <div class="skeleton" style="height:72px;width:72px;border-radius:50%"></div>
+  <div class="skeleton" style="height:24px;width:60%"></div>
+  <div class="skeleton" style="height:16px;width:40%"></div>
+  <div class="skeleton" style="height:60px;width:100%"></div>
+</div>
+
+<!-- 에러 -->
+<div class="error-box hidden" id="error-box">
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px;display:block"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <div style="font-size:16px;font-weight:600;color:#374151;margin-bottom:6px">프로필을 찾을 수 없습니다</div>
+  <div style="font-size:13px">존재하지 않거나 비공개 프로필입니다.</div>
+</div>
+
+<!-- 메인 콘텐츠 (로드 후 표시) -->
+<div id="main" class="hidden">
+
+  <!-- 프로필 헤더 -->
+  <div class="profile-hero">
+    <div style="display:flex;align-items:flex-start;gap:16px">
+      <div class="profile-avatar" id="p-avatar"></div>
+      <div style="flex:1;min-width:0">
+        <div class="profile-name" id="p-name"></div>
+        <div class="profile-handle" id="p-handle"></div>
+        <div class="profile-badges" id="p-badges"></div>
+      </div>
+    </div>
+    <div class="profile-desc hidden" id="p-desc"></div>
+    <div class="profile-tags hidden" id="p-tags"></div>
+  </div>
+
+  <!-- 연락처 / 위치 -->
+  <div class="card hidden" id="card-contact">
+    <div class="card-title">연락처 및 위치</div>
+    <div id="contact-rows"></div>
+  </div>
+
+  <!-- 영업시간 (사업자) -->
+  <div class="card hidden" id="card-hours">
+    <div class="card-title">영업시간</div>
+    <table class="hours-table" id="hours-table"></table>
+  </div>
+
+  <!-- 판매 상품 (사업자) -->
+  <div class="card hidden" id="card-products">
+    <div class="card-title">판매 상품</div>
+    <div class="product-grid" id="product-grid"></div>
+  </div>
+
+  <!-- 커스텀 필드 -->
+  <div class="card hidden" id="card-custom">
+    <div class="card-title">추가 정보</div>
+    <div id="custom-rows"></div>
+  </div>
+
+  <!-- AI 비서 채팅 -->
+  <div class="ai-section hidden" id="ai-section">
+    <button class="ai-toggle-btn" onclick="toggleAIChat()">
+      <div class="ai-toggle-left">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-4 4 4 4 0 0 1-4-4V6a4 4 0 0 1 4-4z"/>
+          <path d="M8 13v1a4 4 0 0 0 8 0v-1"/>
+          <line x1="12" y1="18" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+        <div>
+          <div class="ai-toggle-name" id="ai-name">AI 비서와 대화</div>
+          <div class="ai-toggle-sub">질문이나 문의사항을 입력하세요</div>
+        </div>
+      </div>
+      <svg class="ai-toggle-arrow" id="ai-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="ai-chat-box" id="ai-chat-box">
+      <div class="ai-messages" id="ai-messages"></div>
+      <div class="ai-input-row">
+        <textarea class="ai-input" id="ai-input" placeholder="메시지를 입력하세요..." rows="1"
+          onkeydown="handleAIKey(event)" oninput="autoResizeAI(this)"></textarea>
+        <button class="ai-send" id="ai-send" onclick="sendAIMsg()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 액션 버튼 -->
+  <div class="action-bar">
+    <button class="btn-contact" onclick="contactOwner()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      메시지
+    </button>
+    <button class="btn-p2p" onclick="startP2P()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 14a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 3.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      P2P 연결
+    </button>
+  </div>
+
+  <div style="height:40px"></div>
+</div>
+
+<script>
+const PROXY = 'https://gopang-proxy.tensor-city.workers.dev';
+
+// handle: URL 경로에서 추출 (/profile/@handle 또는 /profile/handle)
+const _handle = (() => {
+  const p = location.pathname.replace(/\/profile\/?/, '').trim();
+  const q = new URLSearchParams(location.search).get('handle');
+  return (p || q || '').replace(/^@/, '');
+})();
+
+let _profile    = null;
+let _aiHistory  = [];   // AI 채팅 대화 이력 (프록시 AI용)
+let _aiSystem   = '';   // 사업체 AI 비서 system prompt
+
+const DAYS_KO = {mon:'월',tue:'화',wed:'수',thu:'목',fri:'금',sat:'토',sun:'일'};
+const TYPE_KO = {person:'개인',business:'사업자',institution:'공공기관',org:'협회/단체',platform:'플랫폼'};
+
+// ── 로드 ─────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', loadProfile);
+
+async function loadProfile() {
+  if (!_handle) { showError(); return; }
+  try {
+    const res  = await fetch(`${PROXY}/profile/@${_handle}`);
+    const data = await res.json();
+    if (!res.ok || !data.ok) { showError(); return; }
+    _profile = data.profile;
+    render(_profile);
+  } catch(e) {
+    showError();
+  }
+}
+
+// ── 렌더링 ───────────────────────────────────────────────
+function render(p) {
+  document.getElementById('skeleton').style.display = 'none';
+  document.getElementById('main').classList.remove('hidden');
+
+  const pub   = p.extra?.public || {};
+  const ident = pub.identity || {};
+  const loc   = pub.location || {};
+  const fin   = pub.finance  || {};
+  const hrs   = pub.activity?.hours || {};
+  const cont  = pub.contact  || {};
+  const aiCfg = pub.ai_assistant || p.ai_assistant || null;
+
+  // ── 헤더 ──
+  document.getElementById('top-title').textContent = p.name || '프로필';
+  document.getElementById('p-name').textContent    = p.name || '';
+  document.getElementById('p-handle').textContent  = p.handle || '';
+
+  // 아바타: 이름 첫 글자
+  const av = document.getElementById('p-avatar');
+  av.textContent = (p.name || '?')[0];
+
+  // 뱃지
+  const badges = document.getElementById('p-badges');
+  if (p.entity_type) {
+    badges.innerHTML = `<span class="badge badge-type">${TYPE_KO[p.entity_type]||p.entity_type}</span>`;
+  }
+  if (fin.gdc_accepted) {
+    badges.innerHTML += `<span class="badge badge-gdc">💰 GDC 결제</span>`;
+  }
+
+  // 소개
+  const desc = ident.description || p.description || '';
+  if (desc) {
+    const el = document.getElementById('p-desc');
+    el.textContent = desc;
+    el.classList.remove('hidden');
+  }
+
+  // 태그
+  const tags = ident.tags || p.search_tags || p.tags || [];
+  if (tags.length) {
+    const el = document.getElementById('p-tags');
+    el.innerHTML = tags.map(t => `<span class="tag">#${t}</span>`).join('');
+    el.classList.remove('hidden');
+  }
+
+  // ── 연락처 / 위치 ──
+  const contactRows = [];
+  const phone = cont.phone_display || p.phone;
+  if (phone) contactRows.push({
+    icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 14a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 3.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
+    text: `<a href="tel:${phone}">${phone}</a>`
+  });
+  const website = cont.website || p.website;
+  if (website) contactRows.push({
+    icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+    text: `<a href="${website.startsWith('http')?website:'https://'+website}" target="_blank">${website}</a>`
+  });
+  const address = loc.address_short || p.address;
+  if (address) contactRows.push({
+    icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+    text: address
+  });
+  if (contactRows.length) {
+    const card = document.getElementById('card-contact');
+    const rows = document.getElementById('contact-rows');
+    rows.innerHTML = contactRows.map(r =>
+      `<div class="info-row"><span class="info-icon">${r.icon}</span><span class="info-text">${r.text}</span></div>`
+    ).join('');
+    card.classList.remove('hidden');
+  }
+
+  // ── 영업시간 ──
+  const hrsKeys = Object.keys(hrs);
+  if (hrsKeys.length) {
+    const today = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+    const tbl = document.getElementById('hours-table');
+    tbl.innerHTML = Object.entries(hrs).map(([k,v]) => {
+      const isToday = k === today;
+      const val = v ? `${v.open||''} ~ ${v.close||''}` : '<span class="hours-closed">휴무</span>';
+      return `<tr class="${isToday?'hours-today':''}">
+        <td>${DAYS_KO[k]||k}</td>
+        <td>${val}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('card-hours').classList.remove('hidden');
+  }
+
+  // ── 판매 상품 ──
+  const products = p.products || pub.products || [];
+  if (products.length) {
+    const grid = document.getElementById('product-grid');
+    grid.innerHTML = products.map((prod, i) => `
+      <div class="product-item">
+        <div class="product-img">
+          ${prod.image
+            ? `<img src="${prod.image}" alt="${prod.name}" loading="lazy">`
+            : `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`}
+        </div>
+        <div class="product-info">
+          <div class="product-name">${prod.name}</div>
+          <div class="product-price">${prod.price||''}</div>
+        </div>
+        ${prod.detail ? `<button class="product-detail-btn" onclick="toggleProductDetail(${i})" title="상세보기">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>` : ''}
+      </div>
+      ${prod.detail ? `<div class="product-detail-text" id="pd-${i}">${prod.detail}</div>` : ''}
+    `).join('');
+    document.getElementById('card-products').classList.remove('hidden');
+  }
+
+  // ── 커스텀 필드 (공개 항목만) ──
+  const cf = (p.custom_fields || []).filter(f => f.public);
+  if (cf.length) {
+    const rows = document.getElementById('custom-rows');
+    rows.innerHTML = cf.map(f =>
+      `<div class="custom-field-row">
+        <span class="cf-key">${f.key}</span>
+        <span class="cf-val">${f.value}</span>
+      </div>`
+    ).join('');
+    document.getElementById('card-custom').classList.remove('hidden');
+  }
+
+  // ── AI 비서 ──
+  if (aiCfg?.system_prompt) {
+    _aiSystem = aiCfg.system_prompt;
+    const sec = document.getElementById('ai-section');
+    sec.classList.remove('hidden');
+    // AI 비서 이름 표시
+    if (p.name) document.getElementById('ai-name').textContent = `${p.name} AI 비서`;
+    // 초기 인사말
+    addAIMsg('ai', aiCfg.greeting || `안녕하세요! ${p.name||'저희'}에 대해 궁금한 것이 있으시면 무엇이든 물어보세요. 😊`);
+  }
+
+  // ── SEO ──
+  injectSEO(p, ident, tags);
+}
+
+// ── AI 비서 채팅 ─────────────────────────────────────────
+function toggleAIChat() {
+  const box   = document.getElementById('ai-chat-box');
+  const arrow = document.getElementById('ai-arrow');
+  const open  = box.classList.toggle('open');
+  arrow.classList.toggle('open', open);
+  if (open) document.getElementById('ai-input').focus();
+}
+
+function addAIMsg(role, text) {
+  const el = document.createElement('div');
+  el.className = `ai-msg ai-msg-${role}`;
+  el.textContent = text;
+  document.getElementById('ai-messages').appendChild(el);
+  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return el;
+}
+
+function handleAIKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAIMsg(); }
+}
+function autoResizeAI(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 80) + 'px';
+}
+
+async function sendAIMsg() {
+  const input = document.getElementById('ai-input');
+  const text  = input.value.trim();
+  if (!text || !_aiSystem) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('ai-send').disabled = true;
+
+  addAIMsg('user', text);
+  _aiHistory.push({ role: 'user', content: text });
+
+  // 타이핑 인디케이터
+  const typingEl = document.createElement('div');
+  typingEl.className = 'ai-msg ai-msg-ai ai-msg-typing';
+  typingEl.innerHTML = '<div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>';
+  document.getElementById('ai-messages').appendChild(typingEl);
+  typingEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+  try {
+    // ★ 캐시 최적화:
+    //   system = _aiSystem (정적, 사업체별 고정 → 동일 사업체 방문자 간 캐시 공유)
+    //   대화 이력은 user/assistant 교대 — prefix 누적으로 캐시 적중률 상승
+    const res = await fetch(`${PROXY}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:      'deepseek-v4-flash',
+        max_tokens: 400,        // 응대 AI — 간결한 답변으로 제한
+        temperature: 0.7,
+        stream:     false,      // 프로필 페이지 — 비스트리밍 (단순)
+        messages: [
+          { role: 'system', content: _aiSystem },  // ← 사업체 system (정적, 캐시됨)
+          ..._aiHistory.slice(-10),                 // 최근 10턴 (캐시 prefix 누적)
+        ],
+      }),
+    });
+    const data  = await res.json();
+    const reply = data?.choices?.[0]?.message?.content
+               || data?.content
+               || '죄송합니다, 잠시 후 다시 시도해주세요.';
+
+    typingEl.remove();
+    addAIMsg('ai', reply);
+    _aiHistory.push({ role: 'assistant', content: reply });
+
+  } catch(e) {
+    typingEl.remove();
+    addAIMsg('ai', '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+  } finally {
+    document.getElementById('ai-send').disabled = false;
+    document.getElementById('ai-input').focus();
+  }
+}
+
+// ── 상품 상세 토글 ───────────────────────────────────────
+function toggleProductDetail(i) {
+  document.getElementById(`pd-${i}`)?.classList.toggle('open');
+}
+
+// ── 액션 ─────────────────────────────────────────────────
+function contactOwner() {
+  if (!_profile?.guid) return;
+  // gopang P2P 채팅 열기
+  window.opener?.openP2PSearch?.(_profile.handle);
+  location.href = `/webapp.html?connect=${encodeURIComponent(_profile.guid)}`;
+}
+function startP2P() {
+  if (!_profile?.guid) return;
+  location.href = `/webapp.html?p2p=${encodeURIComponent(_profile.guid)}`;
+}
+
+// ── 공유 ─────────────────────────────────────────────────
+async function shareProfile() {
+  const url   = location.href;
+  const title = _profile?.name || '고팡 프로필';
+  if (navigator.share) {
+    await navigator.share({ title, url }).catch(()=>{});
+  } else {
+    await navigator.clipboard.writeText(url).catch(()=>{});
+    alert('링크가 복사됐습니다.');
+  }
+}
+
+// ── SEO: OpenGraph + JSON-LD ─────────────────────────────
+function injectSEO(p, ident, tags) {
+  const title = `${p.name||'프로필'} — 고팡`;
+  const desc  = (ident.description || p.description || tags.join(', ')).slice(0, 160);
+  const url   = location.href;
+
+  document.title = title;
+  setMeta('description', desc);
+  setMeta('og:title',       title);
+  setMeta('og:description', desc);
+  setMeta('og:url',         url);
+  setMeta('twitter:title',  title);
+
+  // JSON-LD Schema.org
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type':    p.entity_type === 'person' ? 'Person' :
+                p.entity_type === 'business' ? 'LocalBusiness' :
+                p.entity_type === 'institution' ? 'GovernmentOrganization' : 'Organization',
+    name:       p.name,
+    url,
+    description: ident.description || p.description || '',
+    identifier:  p.handle,
+  };
+  if (p.address) schema.address = { '@type': 'PostalAddress', streetAddress: p.address };
+  if (p.phone)   schema.telephone = p.phone;
+  if (tags.length) schema.keywords = tags.join(', ');
+  if (p.entity_type === 'business' && p.products?.length) {
+    schema.hasOfferCatalog = {
+      '@type': 'OfferCatalog',
+      itemListElement: p.products.map(prod => ({
+        '@type': 'Offer',
+        name:    prod.name,
+        price:   prod.price?.replace(/[^0-9]/g,'') || '',
+        priceCurrency: 'KRW',
+      }))
+    };
+  }
+  document.getElementById('jsonld').textContent = JSON.stringify(schema, null, 2);
+  document.getElementById('top-title').textContent = p.name || '프로필';
+}
+
+function setMeta(name, content) {
+  const sel = name.startsWith('og:') || name.startsWith('twitter:')
+    ? `meta[property="${name}"]`
+    : `meta[name="${name}"]`;
+  const el = document.querySelector(sel);
+  if (el) el.setAttribute('content', content);
+}
+
+function showError() {
+  document.getElementById('skeleton').style.display = 'none';
+  document.getElementById('error-box').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
