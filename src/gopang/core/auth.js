@@ -567,6 +567,26 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
         autocomplete="off"/>
     </div>
 
+    <!-- 프로필 공개 여부 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:10px 14px;border:1px solid #e5e7eb;border-radius:12px;
+                background:#f9fafb;margin-bottom:8px">
+      <span style="font-size:14px;color:#374151">프로필 공개</span>
+      <label style="position:relative;display:inline-block;width:44px;height:26px">
+        <input type="checkbox" id="_is-public-chk" checked
+               style="opacity:0;width:0;height:0">
+        <span id="_is-public-slider"
+              style="position:absolute;inset:0;background:#16a34a;border-radius:13px;
+                     cursor:pointer;transition:background .2s"
+              onclick="this.style.background=document.getElementById('_is-public-chk').checked?'#d1d5db':'#16a34a'">
+          <span style="position:absolute;width:20px;height:20px;border-radius:50%;
+                       background:#fff;left:3px;top:3px;transition:transform .2s;
+                       box-shadow:0 1px 3px rgba(0,0,0,.2);
+                       transform:translateX(18px)" id="_is-public-knob"></span>
+        </span>
+      </label>
+    </div>
+
     <div id="_nick-error" style="display:none;font-size:12px;color:#dc2626;padding:0 4px;margin-bottom:8px"></div>
 
     <!-- 완료 버튼 -->
@@ -654,6 +674,13 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
       _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountry }).catch(
         e => console.warn('[PDV] 가입 초기 레코드 실패 (무시):', e.message)
       );
+
+      // ── 최소 프로필 자동 생성 ────────────────────────────────
+      // entity_type: null (register-profile.html에서 선택)
+      // name: nickname, phone: e164, is_public: 토글 값
+      _createMinimalProfile({ ipv6, handle, nickname, e164, isPublic:
+        document.getElementById('_is-public-chk')?.checked ?? true
+      }).catch(e => console.warn('[Profile] 최소 프로필 생성 실패 (무시):', e.message));
 
       resolve(user);
 
@@ -850,6 +877,48 @@ window._cancelAuthRequest = function() {
   document.getElementById('_auth-confirm-row')?.remove();
   appendBubble('ai', '거래가 취소됐습니다.', true);
 };
+
+// ── _createMinimalProfile — 가입 완료 시 최소 프로필 자동 생성 ───────────────
+async function _createMinimalProfile({ ipv6, handle, nickname, e164, isPublic }) {
+  try {
+    const wallet = window.gopangWallet;
+    if (!wallet) throw new Error('gopangWallet 없음');
+
+    // wallet에 guid 반영 (setIdentity가 아직 안 된 경우 대비)
+    if (!wallet.guid && wallet.setIdentity) {
+      wallet.setIdentity({ guid: ipv6, handle });
+    }
+
+    const payload = {
+      guid:        ipv6,
+      pubkey:      wallet.publicKeyB64u,
+      entity_type: null,           // register-profile.html에서 선택
+      name:        nickname,
+      handle,
+      phone:       e164 || null,
+      is_public:   isPublic,
+      native_lang: navigator.language?.slice(0, 2) || 'ko',
+    };
+
+    // Ed25519 서명
+    if (wallet.sign) {
+      payload.signature = await wallet.sign(JSON.stringify(payload));
+    } else {
+      payload.signature = ipv6; // fallback
+    }
+
+    const { PROXY } = await import('./state.js');
+    const res = await fetch(`${PROXY}/profile`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    console.info('[Profile] 최소 프로필 생성 완료 | handle:', handle, '| is_public:', isPublic);
+  } catch(e) {
+    console.warn('[Profile] 최소 프로필 생성 실패:', e.message);
+  }
+}
 
 // ── _recordRegisterPdv — 가입 완료 시 PDV 초기 레코드 + OpenHash 앵커링 ─────
 // 목적:

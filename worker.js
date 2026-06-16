@@ -1224,9 +1224,8 @@ async function handleProfilePost(request, env, corsHeaders) {
     phone_visible = false,
   } = body;
 
-  if (!entity_type) return _err(400, 'MISSING_FIELD', 'entity_type 필수', corsHeaders);
-  if (!name)        return _err(400, 'MISSING_FIELD', 'name 필수', corsHeaders);
-  if (!['person','consumer','individual','org','institution','business','platform'].includes(entity_type)) {
+  // entity_type: 온보딩 최소 프로필은 null 허용, 상세 등록 시 지정
+  if (entity_type && !['person','consumer','individual','org','institution','business','platform'].includes(entity_type)) {
     return _err(400, 'INVALID_FIELD', 'entity_type 값이 올바르지 않습니다', corsHeaders);
   }
 
