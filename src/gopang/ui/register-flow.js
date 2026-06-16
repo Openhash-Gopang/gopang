@@ -1,10 +1,10 @@
-/**
+﻿/**
  * ui/register-flow.js — 아이디 등록 플로우 UI
  * - _showRegisterFlow()      : AI버튼/설정 경유 등록
  * - _showRegisterFlowThenPeer(): 검색 → 채팅 시도 시 등록 후 자동 연결
  */
 import { _registerToL1, _isRegistered } from '../core/auth.js';
-import { _USER } from '../core/state.js';
+import { _USER, PROXY } from '../core/state.js';
 import { appendBubble } from './bubble.js';
 import { _updateHandleChip } from './settings.js';
 
@@ -83,6 +83,21 @@ function _buildRegisterModal({ pendingPeer, subtitle, peerCard, btnLabel, onSucc
         style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #e5e7eb;
                border-radius:10px;font-size:15px;outline:none;font-family:inherit;
                transition:border-color .15s;margin-bottom:18px">
+      <label style="font-size:12px;font-weight:700;color:#9ca3af;display:block;margin-bottom:6px;
+                    text-transform:uppercase;letter-spacing:.5px">지역 <span style="font-weight:400;color:#d1d5db">(선택)</span></label>
+      <div style="display:flex;gap:8px;margin-bottom:18px">
+        <input id="_reg_region" type="text" placeholder="내 위치 버튼으로 자동 입력"
+          style="flex:1;box-sizing:border-box;padding:12px 14px;border:1.5px solid #e5e7eb;
+                 border-radius:10px;font-size:14px;outline:none;font-family:inherit;
+                 background:#f9fafb;transition:border-color .15s">
+        <button id="_reg_loc_btn"
+          style="padding:0 14px;border:1.5px solid #e5e7eb;border-radius:10px;
+                 background:#fff;cursor:pointer;font-size:12px;font-family:inherit;
+                 white-space:nowrap;color:#374151">내 위치</button>
+      </div>
+      <input type="hidden" id="_reg_lat">
+      <input type="hidden" id="_reg_lng">
+
       <div style="display:flex;gap:8px">
         <button id="_reg_cancel"
           style="flex:1;padding:13px;border:1px solid #e5e7eb;border-radius:10px;
@@ -98,6 +113,38 @@ function _buildRegisterModal({ pendingPeer, subtitle, peerCard, btnLabel, onSucc
   const inp   = ov.querySelector('#_reg_name');
   const okBtn = ov.querySelector('#_reg_ok');
   inp.focus();
+
+  // 지역 자동 설정 (Kakao 역지오코딩, register-profile.html 동일 방식)
+  const locBtn    = ov.querySelector('#_reg_loc_btn');
+  const regionInp = ov.querySelector('#_reg_region');
+  const latInp    = ov.querySelector('#_reg_lat');
+  const lngInp    = ov.querySelector('#_reg_lng');
+
+  const _autoRegion = () => {
+    if (!navigator.geolocation) return;
+    locBtn.textContent = '확인 중…'; locBtn.disabled = true;
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      latInp.value = lat; lngInp.value = lng;
+      try {
+        const res  = await fetch(`${PROXY}/geocode?lat=${lat}&lng=${lng}`);
+        const data = await res.json();
+        const doc  = data?.documents?.[0];
+        const addr = doc?.road_address?.address_name
+                  || doc?.address?.address_name
+                  || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        regionInp.value = addr;
+      } catch {
+        regionInp.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      }
+      locBtn.textContent = '재검색'; locBtn.disabled = false;
+    }, () => { locBtn.textContent = '내 위치'; locBtn.disabled = false; });
+  };
+
+  locBtn.onclick = _autoRegion;
+  // 모달 열리자마자 자동 시도
+  _autoRegion();
+
   inp.addEventListener('focus', () => inp.style.borderColor = '#16a34a');
   inp.addEventListener('blur',  () => inp.style.borderColor = '#e5e7eb');
   ov.querySelector('#_reg_cancel').onclick = () => ov.remove();
@@ -109,7 +156,8 @@ function _buildRegisterModal({ pendingPeer, subtitle, peerCard, btnLabel, onSucc
     okBtn.disabled = true;
     okBtn.textContent = '등록 중…';
 
-    await _registerToL1(name);
+    const region = regionInp?.value?.trim() || '';
+    await _registerToL1(name, region);
 
     if (!_USER?.handle) {
       okBtn.disabled = false;
