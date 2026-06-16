@@ -695,7 +695,11 @@ async function submitProfile(){
     const ts = Date.now().toString();
     payload.ts = ts;
     const sigMsg = `${payload.guid}:${payload.pubkey}:${ts}`;
-    payload.signature = await wallet.sign(sigMsg);
+    // wallet.sign()은 UTXO TX 메서드가 덮어씀 → crypto.subtle.sign() 직접 호출
+    const _sigBuf = await crypto.subtle.sign('Ed25519', wallet._privKey,
+      new TextEncoder().encode(sigMsg));
+    payload.signature = btoa(String.fromCharCode(...new Uint8Array(_sigBuf)))
+      .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 
     // 1. 프로필 저장
     const res=await fetch(`${PROXY}/profile`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
