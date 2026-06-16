@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script>
+// GitHub Pages SPA 라우팅
+// /profile/@handle → profile.html?handle=@handle 로 리다이렉트
+(function() {
+  var path = window.location.pathname;
+  var search = window.location.search;
+
+  // /profile/@handle 또는 /profile/handle 패턴 감지
+  var profileMatch = path.match(/^\/profile\/(.+)$/);
+  if (profileMatch) {
+    var handle = profileMatch[1];
+    window.location.replace('/profile.html?handle=' + encodeURIComponent(handle));
+    return;
+  }
+
+  // 그 외 경로 → webapp.html로
+  window.location.replace('/webapp.html');
+})();
+</script>
+</head>
+<body></body>
+</html>
