@@ -7,91 +7,76 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap">
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Pretendard', -apple-system, sans-serif; background: #f9fafb; color: #111827; min-height: 100dvh; padding-bottom: env(safe-area-inset-bottom,0px); }
-.header { background:#fff; border-bottom:1px solid #e5e7eb; padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:10; }
-.header button { background:none; border:none; cursor:pointer; padding:4px; color:#374151; display:flex; align-items:center; }
-.header-title { font-size:17px; font-weight:700; }
-.step-bar { display:flex; gap:6px; padding:16px 16px 0; }
-.step-dot { height:4px; flex:1; border-radius:2px; background:#e5e7eb; transition:background .3s; }
-.step-dot.active { background:#16a34a; }
-.step-label { font-size:12px; color:#9ca3af; padding:8px 16px 16px; }
-.step-label span { color:#16a34a; font-weight:600; }
-.card { background:#fff; border-radius:14px; margin:0 16px 16px; overflow:hidden; }
-.card-title { font-size:13px; font-weight:600; color:#6b7280; padding:14px 16px 10px; text-transform:uppercase; letter-spacing:.05em; }
-
-/* 필드 */
-.field { padding:0 16px 14px; display:flex; flex-direction:column; gap:6px; }
-.field-label {
-  display:flex; align-items:center; justify-content:space-between;
-  font-size:13px; font-weight:600; color:#374151;
-}
-.field-label .pub-chk {
-  display:flex; align-items:center; gap:4px;
-  font-size:12px; font-weight:400; color:#9ca3af; cursor:pointer;
-  flex-shrink:0;
-}
-.field-label .pub-chk input { accent-color:#16a34a; width:13px; height:13px; cursor:pointer; }
-.req { color:#ef4444; margin-left:2px; }
-.hint { font-size:11px; font-weight:400; color:#9ca3af; }
-input[type=text], input[type=tel], input[type=url], input[type=number],
-select, textarea {
-  width:100%; border:1.5px solid #e5e7eb; border-radius:10px;
-  padding:10px 12px; font-size:15px; font-family:inherit; outline:none;
-  transition:border-color .2s; background:#fff;
-}
-input:focus, select:focus, textarea:focus { border-color:#16a34a; }
-textarea { resize:vertical; min-height:80px; }
-.err { font-size:11px; color:#ef4444; display:none; }
-
-/* 주소 */
-.addr-row { display:flex; gap:8px; }
-.addr-row input { flex:1; }
-.addr-btn { padding:10px 14px; border:1.5px solid #16a34a; border-radius:10px; background:#f0fdf4; color:#16a34a; font-weight:600; font-size:13px; cursor:pointer; white-space:nowrap; }
-
-/* 토글 */
-.toggle-row { padding:12px 16px; display:flex; align-items:center; justify-content:space-between; border-top:1px solid #f3f4f6; }
-.toggle { position:relative; width:44px; height:26px; }
-.toggle input { opacity:0; width:0; height:0; }
-.toggle-slider { position:absolute; inset:0; background:#d1d5db; border-radius:13px; cursor:pointer; transition:background .2s; }
-.toggle-slider::before { content:''; position:absolute; width:20px; height:20px; border-radius:50%; background:#fff; left:3px; top:3px; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
-.toggle input:checked + .toggle-slider { background:#16a34a; }
-.toggle input:checked + .toggle-slider::before { transform:translateX(18px); }
-
-/* entity grid */
-.entity-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:16px; }
-.entity-btn { border:2px solid #e5e7eb; border-radius:14px; background:#fff; padding:20px 12px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:10px; transition:border-color .15s, background .15s; }
-.entity-btn:active { background:#f0fdf4; border-color:#16a34a; }
-.entity-btn .name { font-size:14px; font-weight:700; color:#111827; }
-.entity-btn .desc { font-size:11px; color:#9ca3af; text-align:center; }
-
-/* 판매 상품 */
-.product-list { padding:0 16px 8px; display:flex; flex-direction:column; gap:12px; }
-.product-item { border:1.5px solid #e5e7eb; border-radius:12px; overflow:hidden; background:#fff; }
-.product-header { padding:12px 14px; display:flex; align-items:center; justify-content:space-between; }
-.product-header-left { display:flex; align-items:center; gap:10px; }
-.product-img-thumb { width:44px; height:44px; border-radius:8px; object-fit:cover; background:#f3f4f6; display:flex; align-items:center; justify-content:center; cursor:pointer; border:1.5px dashed #d1d5db; flex-shrink:0; overflow:hidden; }
-.product-img-thumb img { width:100%; height:100%; object-fit:cover; }
-.product-img-thumb svg { color:#9ca3af; }
-.product-name-price { display:flex; flex-direction:column; gap:4px; }
-.product-name-input { border:none; outline:none; font-size:14px; font-weight:600; font-family:inherit; color:#111827; padding:0; background:transparent; width:160px; }
-.product-price-input { border:none; outline:none; font-size:13px; color:#16a34a; font-weight:600; font-family:inherit; padding:0; background:transparent; width:120px; }
-.product-detail-toggle { background:none; border:none; cursor:pointer; color:#9ca3af; font-size:12px; padding:4px; display:flex; align-items:center; gap:2px; }
-.product-detail { display:none; padding:0 14px 12px; border-top:1px solid #f3f4f6; }
-.product-detail.open { display:block; }
-.product-detail textarea { min-height:60px; font-size:13px; margin-top:8px; }
-.product-del { background:none; border:none; cursor:pointer; color:#ef4444; padding:4px; flex-shrink:0; }
-.add-product-btn { margin:0 16px 16px; padding:12px; border:1.5px dashed #16a34a; border-radius:12px; background:#f0fdf4; color:#16a34a; font-size:14px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; width:calc(100% - 32px); }
-.ksic-badge { margin:0 16px 12px; padding:10px 14px; background:#f0fdf4; border-radius:10px; font-size:13px; color:#15803d; display:none; }
-
-/* 하단 */
-.bottom-bar { position:sticky; bottom:0; background:#fff; border-top:1px solid #e5e7eb; padding:12px 16px; padding-bottom:calc(12px + env(safe-area-inset-bottom,0px)); display:flex; gap:10px; }
-.btn-back { flex:0 0 72px; padding:13px; border:1.5px solid #e5e7eb; border-radius:12px; background:#fff; font-size:15px; font-weight:600; color:#374151; cursor:pointer; }
-.btn-next { flex:1; padding:13px; border:none; border-radius:12px; background:#16a34a; font-size:15px; font-weight:700; color:#fff; cursor:pointer; transition:opacity .2s; }
-.btn-next:disabled { opacity:.45; cursor:not-allowed; }
-.hidden { display:none !important; }
-.success-wrap { display:none; flex-direction:column; align-items:center; padding:60px 32px; text-align:center; gap:16px; }
-.site-badge { font-size:11px; color:#16a34a; margin-top:4px; display:none; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:#111827;min-height:100dvh;padding-bottom:env(safe-area-inset-bottom,0px)}
+.header{background:#fff;border-bottom:1px solid #e5e7eb;padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+.header button{background:none;border:none;cursor:pointer;padding:4px;color:#374151;display:flex;align-items:center}
+.header-title{font-size:17px;font-weight:700}
+.step-bar{display:flex;gap:6px;padding:16px 16px 0}
+.step-dot{height:4px;flex:1;border-radius:2px;background:#e5e7eb;transition:background .3s}
+.step-dot.active{background:#16a34a}
+.step-label{font-size:12px;color:#9ca3af;padding:8px 16px 16px}
+.step-label span{color:#16a34a;font-weight:600}
+.card{background:#fff;border-radius:14px;margin:0 16px 16px;overflow:hidden}
+.card-title{font-size:13px;font-weight:600;color:#6b7280;padding:14px 16px 10px;text-transform:uppercase;letter-spacing:.05em}
+.field{padding:0 16px 14px;display:flex;flex-direction:column;gap:6px}
+.field-label{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;color:#374151}
+.pub-chk{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;color:#9ca3af;cursor:pointer;flex-shrink:0}
+.pub-chk input{accent-color:#16a34a;width:13px;height:13px;cursor:pointer}
+.req{color:#ef4444;margin-left:2px}
+.hint{font-size:11px;font-weight:400;color:#9ca3af}
+input[type=text],input[type=tel],input[type=url],input[type=number],select,textarea{width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;outline:none;transition:border-color .2s;background:#fff}
+input:focus,select:focus,textarea:focus{border-color:#16a34a}
+textarea{resize:vertical;min-height:80px}
+.err{font-size:11px;color:#ef4444;display:none}
+.addr-row{display:flex;gap:8px}
+.addr-row input{flex:1}
+.addr-btn{padding:10px 14px;border:1.5px solid #16a34a;border-radius:10px;background:#f0fdf4;color:#16a34a;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
+.toggle-row{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #f3f4f6}
+.toggle{position:relative;width:44px;height:26px}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#d1d5db;border-radius:13px;cursor:pointer;transition:background .2s}
+.toggle-slider::before{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;left:3px;top:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle input:checked+.toggle-slider{background:#16a34a}
+.toggle input:checked+.toggle-slider::before{transform:translateX(18px)}
+.entity-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px}
+.entity-btn{border:2px solid #e5e7eb;border-radius:14px;background:#fff;padding:20px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;transition:border-color .15s,background .15s}
+.entity-btn:active{background:#f0fdf4;border-color:#16a34a}
+.entity-btn .name{font-size:14px;font-weight:700;color:#111827}
+.entity-btn .desc{font-size:11px;color:#9ca3af;text-align:center}
+/* 상품 */
+.product-list{padding:0 16px 8px;display:flex;flex-direction:column;gap:12px}
+.product-item{border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff}
+.product-header{padding:12px 14px;display:flex;align-items:center;gap:10px}
+.product-img-thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;background:#f3f4f6;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px dashed #d1d5db;flex-shrink:0;overflow:hidden}
+.product-img-thumb img{width:100%;height:100%;object-fit:cover}
+.product-img-thumb svg{color:#9ca3af}
+.product-name-price{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.product-name-input{border:none;outline:none;font-size:14px;font-weight:600;font-family:inherit;color:#111827;padding:0;background:transparent;width:100%}
+.product-price-input{border:none;outline:none;font-size:13px;color:#16a34a;font-weight:600;font-family:inherit;padding:0;background:transparent;width:100%}
+.product-actions{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.product-detail-toggle{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:12px;padding:4px;display:flex;align-items:center;gap:2px}
+.product-del{background:none;border:none;cursor:pointer;color:#ef4444;padding:4px;display:flex;align-items:center}
+.product-detail{display:none;padding:0 14px 12px;border-top:1px solid #f3f4f6}
+.product-detail.open{display:block}
+.product-detail textarea{min-height:60px;font-size:13px;margin-top:8px}
+.add-product-btn{margin:0 16px 16px;padding:12px;border:1.5px dashed #16a34a;border-radius:12px;background:#f0fdf4;color:#16a34a;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;width:calc(100% - 32px)}
+.ksic-badge{margin:0 16px 12px;padding:10px 14px;background:#f0fdf4;border-radius:10px;font-size:13px;color:#15803d;display:none}
+.bottom-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid #e5e7eb;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:10px}
+.btn-back{flex:0 0 72px;padding:13px;border:1.5px solid #e5e7eb;border-radius:12px;background:#fff;font-size:15px;font-weight:600;color:#374151;cursor:pointer}
+.btn-next{flex:1;padding:13px;border:none;border-radius:12px;background:#16a34a;font-size:15px;font-weight:700;color:#fff;cursor:pointer;transition:opacity .2s}
+.btn-next:disabled{opacity:.45;cursor:not-allowed}
+.hidden{display:none!important}
+.success-wrap{display:none;flex-direction:column;align-items:center;padding:60px 32px;text-align:center;gap:16px}
+.site-badge{font-size:11px;color:#16a34a;margin-top:4px;display:none}
+/* 확인 팝업 */
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center}
+.confirm-box{background:#fff;border-radius:16px;padding:24px 20px;width:280px;display:flex;flex-direction:column;gap:16px}
+.confirm-box .msg{font-size:15px;font-weight:600;color:#111827;text-align:center}
+.confirm-box .sub{font-size:13px;color:#6b7280;text-align:center}
+.confirm-btns{display:flex;gap:10px}
+.confirm-cancel{flex:1;padding:12px;border:1.5px solid #e5e7eb;border-radius:10px;background:#fff;font-size:14px;font-weight:600;color:#374151;cursor:pointer}
+.confirm-ok{flex:1;padding:12px;border:none;border-radius:10px;background:#ef4444;font-size:14px;font-weight:600;color:#fff;cursor:pointer}
 </style>
 </head>
 <body>
@@ -103,14 +88,13 @@ textarea { resize:vertical; min-height:80px; }
   <span class="header-title">프로필 등록</span>
 </div>
 
-<div class="step-bar">
+<div class="step-bar" id="step-bar">
   <div class="step-dot active" id="dot-1"></div>
   <div class="step-dot" id="dot-2"></div>
-  <div class="step-dot" id="dot-3"></div>
 </div>
 <div class="step-label" id="step-label"><span>1단계</span> · 유형 선택</div>
 
-<!-- Step 1 -->
+<!-- ── Step 1: entity 선택 ── -->
 <div id="step1">
   <div class="card" style="margin-top:8px">
     <div class="card-title">어떤 유형으로 등록하시나요?</div>
@@ -139,105 +123,187 @@ textarea { resize:vertical; min-height:80px; }
   </div>
 </div>
 
-<!-- Step 2 -->
-<div id="step2" class="hidden">
-
-  <!-- 공통: 기본 정보 -->
+<!-- ── Step 2: 개인 통합 ── -->
+<div id="step2-person" class="hidden">
   <div class="card" style="margin-top:8px">
     <div class="card-title">기본 정보</div>
-
     <div class="field">
       <div class="field-label">
-        <span id="label-name">이름 <span class="req">*</span></span>
-        <label class="pub-chk"><input type="checkbox" id="pub-name"> 공개</label>
+        <span>이름 <span class="req">*</span></span>
+        <label class="pub-chk"><input type="checkbox" id="p-pub-name"> 공개</label>
       </div>
-      <input type="text" id="f-name" placeholder="홍길동">
-      <span class="err" id="err-name">이름을 입력해 주세요.</span>
+      <input type="text" id="p-name" placeholder="홍길동">
+      <span class="err" id="p-err-name">이름을 입력해 주세요.</span>
     </div>
-
     <div class="field">
       <div class="field-label">
         <span>소개</span>
-        <label class="pub-chk"><input type="checkbox" id="pub-desc"> 공개</label>
+        <label class="pub-chk"><input type="checkbox" id="p-pub-desc"> 공개</label>
       </div>
-      <textarea id="f-desc" placeholder="간단한 소개를 입력하세요."></textarea>
+      <textarea id="p-desc" placeholder="간단한 소개를 입력하세요."></textarea>
     </div>
-
     <div class="field">
       <div class="field-label">
         <span>태그 <span class="hint">(쉼표 구분, 최대 5개 — 검색에 활용됩니다)</span></span>
-        <label class="pub-chk"><input type="checkbox" id="pub-tags"> 공개</label>
+        <label class="pub-chk"><input type="checkbox" id="p-pub-tags"> 공개</label>
       </div>
-      <input type="text" id="f-tags" placeholder="카페, 제주, 핸드드립">
+      <input type="text" id="p-tags" placeholder="제주, 개발자, 커피">
     </div>
-
-    <!-- 공통: 주소 -->
     <div class="field">
       <div class="field-label">
         <span>주소</span>
-        <label class="pub-chk"><input type="checkbox" id="pub-addr"> 공개</label>
+        <label class="pub-chk"><input type="checkbox" id="p-pub-addr"> 공개</label>
       </div>
       <div class="addr-row">
-        <input type="text" id="f-address" placeholder="내 위치 버튼을 눌러주세요">
-        <button class="addr-btn" onclick="getAddr(this)">내 위치</button>
+        <input type="text" id="p-address" placeholder="내 위치 버튼을 눌러주세요">
+        <button class="addr-btn" onclick="getAddr('p',this)">내 위치</button>
       </div>
-      <input type="hidden" id="f-lat">
-      <input type="hidden" id="f-lng">
+      <input type="hidden" id="p-lat">
+      <input type="hidden" id="p-lng">
+    </div>
+    <div class="field">
+      <div class="field-label">
+        <span>전화번호</span>
+        <label class="pub-chk"><input type="checkbox" id="p-pub-phone"> 공개</label>
+      </div>
+      <input type="tel" id="p-phone" placeholder="010-0000-0000">
+    </div>
+    <div class="field">
+      <div class="field-label">
+        <span>웹사이트</span>
+        <label class="pub-chk"><input type="checkbox" id="p-pub-web"> 공개</label>
+      </div>
+      <input type="text" id="p-website" placeholder="gopang.net" onblur="fetchSiteMeta(this.value,'p')">
+      <div class="site-badge" id="p-site-badge">✅ 사이트 정보 수집 완료</div>
+    </div>
+    <div class="field">
+      <div class="field-label">
+        <span>주요 언어</span>
+      </div>
+      <select id="p-lang">
+        <option value="ko">한국어</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+        <option value="zh">中文</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- ── Step 2: 사업자 통합 ── -->
+<div id="step2-business" class="hidden">
+  <div class="card" style="margin-top:8px">
+    <div class="card-title">기본 정보</div>
+    <div class="field">
+      <div class="field-label"><span>상호명 <span class="req">*</span></span></div>
+      <input type="text" id="b-name" placeholder="고팡 카페">
+      <span class="err" id="b-err-name">상호명을 입력해 주세요.</span>
+    </div>
+    <div class="field">
+      <div class="field-label"><span>소개</span></div>
+      <textarea id="b-desc" placeholder="사업체 소개를 입력하세요."></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label"><span>태그 <span class="hint">(쉼표 구분, 최대 5개 — 검색에 활용됩니다)</span></span></div>
+      <input type="text" id="b-tags" placeholder="카페, 제주, 핸드드립">
+    </div>
+    <div class="field">
+      <div class="field-label"><span>주소</span></div>
+      <div class="addr-row">
+        <input type="text" id="b-address" placeholder="내 위치 버튼을 눌러주세요">
+        <button class="addr-btn" onclick="getAddr('b',this)">내 위치</button>
+      </div>
+      <input type="hidden" id="b-lat">
+      <input type="hidden" id="b-lng">
+    </div>
+    <div class="field">
+      <div class="field-label"><span>전화번호</span></div>
+      <input type="tel" id="b-phone" placeholder="010-0000-0000">
+    </div>
+    <div class="field">
+      <div class="field-label"><span>웹사이트</span></div>
+      <input type="text" id="b-website" placeholder="gopang.net" onblur="fetchSiteMeta(this.value,'b')">
+      <div class="site-badge" id="b-site-badge">✅ 사이트 정보 수집 완료</div>
+    </div>
+    <div class="field">
+      <div class="field-label"><span>영업시간</span></div>
+      <input type="text" id="b-hours" placeholder="평일 09:00~18:00, 토 09:00~13:00">
     </div>
   </div>
 
-  <!-- 사업자 전용 -->
-  <div id="biz-fields" class="hidden">
-    <div class="card">
-      <div class="card-title">사업자 정보</div>
-      <div class="field">
-        <div class="field-label">
-          <span>사업자등록번호</span>
-          <label class="pub-chk"><input type="checkbox" id="pub-bizno"> 공개</label>
-        </div>
-        <input type="text" id="f-biz-reg" placeholder="000-00-00000" maxlength="12"
-               oninput="fmtBiz(this)" onblur="lookupBiz(this.value)">
-        <span class="err" id="err-biz">올바른 사업자등록번호를 입력하세요.</span>
-        <div id="biz-lookup-badge" style="font-size:11px;color:#16a34a;display:none"></div>
+  <div class="card">
+    <div class="card-title">사업자 정보</div>
+    <div class="field">
+      <div class="field-label">
+        <span>사업자등록번호</span>
+        <label class="pub-chk"><input type="checkbox" id="b-pub-bizno"> 공개</label>
       </div>
-      <div class="field">
-        <div class="field-label">
-          <span>대표자명</span>
-          <label class="pub-chk"><input type="checkbox" id="pub-ceo"> 공개</label>
-        </div>
-        <input type="text" id="f-ceo" placeholder="홍길동">
-      </div>
-      <div class="field">
-        <div class="field-label">
-          <span>KSIC 업종코드 <span class="hint">(상품 입력 시 자동 분류)</span></span>
-        </div>
-        <input type="text" id="f-ksic-code" placeholder="자동 입력" readonly
-               style="background:#f9fafb;color:#9ca3af">
-      </div>
-      <div class="toggle-row">
-        <span style="font-size:14px;color:#111827">GDC 결제 수락</span>
-        <label class="toggle"><input type="checkbox" id="f-gdc" checked><span class="toggle-slider"></span></label>
-      </div>
+      <input type="text" id="b-biz-reg" placeholder="000-00-00000" maxlength="12"
+             oninput="fmtBiz(this)" onblur="lookupBiz(this.value)">
+      <span class="err" id="b-err-biz">올바른 사업자등록번호를 입력하세요.</span>
+      <div id="b-biz-badge" style="font-size:11px;color:#16a34a;display:none"></div>
     </div>
-
-    <!-- 판매 상품 -->
-    <div class="card">
-      <div class="card-title">판매 상품</div>
-      <div class="product-list" id="product-list"></div>
-      <button class="add-product-btn" onclick="addProduct()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        상품 추가
-      </button>
-      <div class="ksic-badge" id="ksic-badge"></div>
+    <div class="field">
+      <div class="field-label">
+        <span>대표자명</span>
+        <label class="pub-chk"><input type="checkbox" id="b-pub-ceo"> 공개</label>
+      </div>
+      <input type="text" id="b-ceo" placeholder="홍길동">
+    </div>
+    <div class="field">
+      <div class="field-label"><span>KSIC 업종코드 <span class="hint">(상품 입력 시 자동 분류)</span></span></div>
+      <input type="text" id="b-ksic" placeholder="자동 입력" readonly style="background:#f9fafb;color:#9ca3af">
+    </div>
+    <div class="toggle-row">
+      <span style="font-size:14px;color:#111827">GDC 결제 수락</span>
+      <label class="toggle"><input type="checkbox" id="b-gdc" checked><span class="toggle-slider"></span></label>
     </div>
   </div>
 
-  <!-- 공공기관 전용 -->
-  <div class="card hidden" id="inst-fields">
-    <div class="card-title">공공기관 정보</div>
+  <!-- 판매 상품 -->
+  <div class="card">
+    <div class="card-title">판매 상품</div>
+    <div class="product-list" id="product-list"></div>
+    <button class="add-product-btn" onclick="addProduct()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      상품 추가
+    </button>
+    <div class="ksic-badge" id="ksic-badge"></div>
+  </div>
+</div>
+
+<!-- ── Step 2: 공공기관 ── -->
+<div id="step2-institution" class="hidden">
+  <div class="card" style="margin-top:8px">
+    <div class="card-title">기본 정보</div>
+    <div class="field">
+      <div class="field-label"><span>기관명 <span class="req">*</span></span></div>
+      <input type="text" id="i-name" placeholder="제주특별자치도청">
+      <span class="err" id="i-err-name">기관명을 입력해 주세요.</span>
+    </div>
+    <div class="field">
+      <div class="field-label"><span>소개</span></div>
+      <textarea id="i-desc" placeholder="기관 소개를 입력하세요."></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label"><span>태그 <span class="hint">(검색에 활용됩니다)</span></span></div>
+      <input type="text" id="i-tags" placeholder="제주, 행정, 민원">
+    </div>
+    <div class="field">
+      <div class="field-label"><span>주소</span></div>
+      <div class="addr-row">
+        <input type="text" id="i-address" placeholder="내 위치 버튼을 눌러주세요">
+        <button class="addr-btn" onclick="getAddr('i',this)">내 위치</button>
+      </div>
+      <input type="hidden" id="i-lat"><input type="hidden" id="i-lng">
+    </div>
+    <div class="field">
+      <div class="field-label"><span>전화번호</span></div>
+      <input type="tel" id="i-phone" placeholder="064-000-0000">
+    </div>
     <div class="field">
       <div class="field-label"><span>기관 유형</span></div>
-      <select id="f-inst-type">
+      <select id="i-inst-type">
         <option value="central">중앙행정기관</option>
         <option value="local">지방자치단체</option>
         <option value="public_corp">공기업</option>
@@ -247,37 +313,83 @@ textarea { resize:vertical; min-height:80px; }
     </div>
     <div class="field">
       <div class="field-label"><span>소관부처</span></div>
-      <input type="text" id="f-ministry" placeholder="행정안전부">
+      <input type="text" id="i-ministry" placeholder="행정안전부">
     </div>
     <div class="field">
       <div class="field-label"><span>기관코드</span></div>
-      <input type="text" id="f-inst-code" placeholder="B000000">
+      <input type="text" id="i-inst-code" placeholder="B000000">
     </div>
   </div>
+</div>
 
-  <!-- 단체 전용 -->
-  <div class="card hidden" id="org-fields">
-    <div class="card-title">단체 정보</div>
+<!-- ── Step 2: 단체 ── -->
+<div id="step2-org" class="hidden">
+  <div class="card" style="margin-top:8px">
+    <div class="card-title">기본 정보</div>
+    <div class="field">
+      <div class="field-label"><span>단체명 <span class="req">*</span></span></div>
+      <input type="text" id="o-name" placeholder="한림읍 주민자치회">
+      <span class="err" id="o-err-name">단체명을 입력해 주세요.</span>
+    </div>
     <div class="field">
       <div class="field-label"><span>설립목적</span></div>
-      <textarea id="f-purpose" placeholder="단체의 설립 목적을 입력하세요."></textarea>
+      <textarea id="o-purpose" placeholder="단체의 설립 목적을 입력하세요."></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label"><span>태그 <span class="hint">(검색에 활용됩니다)</span></span></div>
+      <input type="text" id="o-tags" placeholder="제주, 주민자치, 협회">
+    </div>
+    <div class="field">
+      <div class="field-label"><span>주소</span></div>
+      <div class="addr-row">
+        <input type="text" id="o-address" placeholder="내 위치 버튼을 눌러주세요">
+        <button class="addr-btn" onclick="getAddr('o',this)">내 위치</button>
+      </div>
+      <input type="hidden" id="o-lat"><input type="hidden" id="o-lng">
+    </div>
+    <div class="field">
+      <div class="field-label"><span>전화번호</span></div>
+      <input type="tel" id="o-phone" placeholder="064-000-0000">
     </div>
     <div class="field">
       <div class="field-label"><span>단체등록번호 <span class="hint">(선택)</span></span></div>
-      <input type="text" id="f-org-reg" placeholder="000000-0000000">
+      <input type="text" id="o-org-reg" placeholder="000000-0000000">
     </div>
     <div class="field">
       <div class="field-label"><span>회원 수 <span class="hint">(선택)</span></span></div>
-      <input type="number" id="f-member-count" placeholder="100">
+      <input type="number" id="o-member-count" placeholder="100">
     </div>
   </div>
+</div>
 
-  <!-- 플랫폼 전용 -->
-  <div class="card hidden" id="platform-fields">
-    <div class="card-title">플랫폼 정보</div>
+<!-- ── Step 2: 플랫폼 ── -->
+<div id="step2-platform" class="hidden">
+  <div class="card" style="margin-top:8px">
+    <div class="card-title">기본 정보</div>
+    <div class="field">
+      <div class="field-label"><span>플랫폼명 <span class="req">*</span></span></div>
+      <input type="text" id="pl-name" placeholder="고팡">
+      <span class="err" id="pl-err-name">플랫폼명을 입력해 주세요.</span>
+    </div>
+    <div class="field">
+      <div class="field-label"><span>소개</span></div>
+      <textarea id="pl-desc" placeholder="플랫폼 소개를 입력하세요."></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label"><span>태그 <span class="hint">(검색에 활용됩니다)</span></span></div>
+      <input type="text" id="pl-tags" placeholder="AI, 제주, 공공서비스">
+    </div>
+    <div class="field">
+      <div class="field-label"><span>주소</span></div>
+      <div class="addr-row">
+        <input type="text" id="pl-address" placeholder="내 위치 버튼을 눌러주세요">
+        <button class="addr-btn" onclick="getAddr('pl',this)">내 위치</button>
+      </div>
+      <input type="hidden" id="pl-lat"><input type="hidden" id="pl-lng">
+    </div>
     <div class="field">
       <div class="field-label"><span>플랫폼 유형</span></div>
-      <select id="f-platform-type">
+      <select id="pl-type">
         <option value="marketplace">마켓플레이스</option>
         <option value="community">커뮤니티</option>
         <option value="saas">SaaS</option>
@@ -286,54 +398,7 @@ textarea { resize:vertical; min-height:80px; }
     </div>
     <div class="field">
       <div class="field-label"><span>API 엔드포인트 <span class="hint">(선택)</span></span></div>
-      <input type="url" id="f-api-endpoint" placeholder="https://api.example.com">
-    </div>
-  </div>
-
-</div>
-
-<!-- Step 3 -->
-<div id="step3" class="hidden">
-  <div class="card" style="margin-top:8px">
-    <div class="card-title">연락처</div>
-    <div class="field">
-      <div class="field-label">
-        <span>전화번호</span>
-        <label class="pub-chk"><input type="checkbox" id="pub-phone"> 공개</label>
-      </div>
-      <input type="tel" id="f-phone" placeholder="010-0000-0000">
-    </div>
-    <div class="field">
-      <div class="field-label">
-        <span>웹사이트</span>
-        <label class="pub-chk"><input type="checkbox" id="pub-web"> 공개</label>
-      </div>
-      <input type="text" id="f-website" placeholder="gopang.net" onblur="fetchSiteMeta(this.value)">
-      <div class="site-badge" id="site-badge">✅ 사이트 정보 수집 완료</div>
-    </div>
-  </div>
-
-  <div class="card hidden" id="hours-card">
-    <div class="card-title">영업시간</div>
-    <div class="field">
-      <input type="text" id="f-hours" placeholder="평일 09:00~18:00, 토 09:00~13:00">
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">공개 설정</div>
-    <div class="toggle-row">
-      <span style="font-size:14px;color:#111827">프로필 전체 공개</span>
-      <label class="toggle"><input type="checkbox" id="f-public"><span class="toggle-slider"></span></label>
-    </div>
-    <div class="toggle-row">
-      <span style="font-size:14px;color:#111827">주요 언어</span>
-      <select id="f-lang" style="border:none;font-size:14px;color:#374151;outline:none;background:transparent">
-        <option value="ko">한국어</option>
-        <option value="en">English</option>
-        <option value="ja">日本語</option>
-        <option value="zh">中文</option>
-      </select>
+      <input type="url" id="pl-api" placeholder="https://api.example.com">
     </div>
   </div>
 </div>
@@ -350,7 +415,19 @@ textarea { resize:vertical; min-height:80px; }
 
 <div class="bottom-bar" id="bottom-bar" style="display:none">
   <button class="btn-back hidden" id="btn-back" onclick="prevStep()">이전</button>
-  <button class="btn-next" id="btn-next" onclick="nextStep()">다음</button>
+  <button class="btn-next" id="btn-next" onclick="nextStep()">등록 완료</button>
+</div>
+
+<!-- 상품 삭제 확인 팝업 -->
+<div class="confirm-overlay hidden" id="del-confirm">
+  <div class="confirm-box">
+    <div class="msg">상품을 삭제할까요?</div>
+    <div class="sub" id="del-confirm-name"></div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="cancelDel()">취소</button>
+      <button class="confirm-ok" onclick="confirmDel()">삭제</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -359,108 +436,130 @@ let step = 1;
 let selectedType = null;
 let _siteMeta = {};
 let _productId = 0;
+let _pendingDelId = null;
 
-// KSIC 자동 분류 맵 (상품명 키워드 기반)
 const KSIC_MAP = [
-  { keywords:['커피','카페','음료','라떼','에스프레소'], code:'56220', name:'비알코올 음료점업' },
-  { keywords:['식당','밥','한식','중식','일식','분식','치킨','피자','햄버거','음식'], code:'56111', name:'한식 음식점업' },
-  { keywords:['숙박','호텔','펜션','게스트하우스','모텔'], code:'55101', name:'호텔업' },
-  { keywords:['의류','옷','패션','신발','가방','악세서리'], code:'47411', name:'의복 소매업' },
-  { keywords:['전자','컴퓨터','스마트폰','가전','IT'], code:'47520', name:'전기·전자제품 소매업' },
-  { keywords:['농산물','과일','채소','쌀','곡물'], code:'46210', name:'농산물 도매업' },
-  { keywords:['소프트웨어','앱','프로그램','개발','SaaS'], code:'62010', name:'소프트웨어 개발업' },
-  { keywords:['교육','강의','학원','과외','레슨'], code:'85509', name:'기타 교육기관' },
-  { keywords:['미용','헤어','네일','피부','마사지'], code:'96112', name:'이용업' },
-  { keywords:['배달','택배','물류','운송'], code:'52100', name:'육상 운송업' },
+  { kw:['커피','카페','음료','라떼','에스프레소','드립'], code:'56220', name:'비알코올 음료점업' },
+  { kw:['식당','밥','한식','중식','일식','분식','치킨','피자','햄버거','음식','반찬'], code:'56111', name:'한식 음식점업' },
+  { kw:['숙박','호텔','펜션','게스트하우스','모텔','리조트'], code:'55101', name:'호텔업' },
+  { kw:['의류','옷','패션','신발','가방','악세서리'], code:'47411', name:'의복 소매업' },
+  { kw:['전자','컴퓨터','스마트폰','가전','IT'], code:'47520', name:'전기·전자제품 소매업' },
+  { kw:['농산물','과일','채소','쌀','곡물'], code:'46210', name:'농산물 도매업' },
+  { kw:['소프트웨어','앱','프로그램','개발','SaaS'], code:'62010', name:'소프트웨어 개발업' },
+  { kw:['교육','강의','학원','과외','레슨'], code:'85509', name:'기타 교육기관' },
+  { kw:['미용','헤어','네일','피부','마사지'], code:'96112', name:'이용업' },
+  { kw:['배달','택배','물류','운송'], code:'52100', name:'육상 운송업' },
 ];
 
 function classifyKSIC(products) {
-  const allText = products.map(p => (p.name + ' ' + p.detail).toLowerCase()).join(' ');
-  for (const entry of KSIC_MAP) {
-    if (entry.keywords.some(kw => allText.includes(kw))) return entry;
-  }
+  const txt = products.map(p=>(p.name+' '+p.detail).toLowerCase()).join(' ');
+  for (const e of KSIC_MAP) { if (e.kw.some(k=>txt.includes(k))) return e; }
   return null;
 }
 
-// ── 초기화 ───────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  step = 1; showStep(1);
+  step=1; showStep(1);
   try {
-    const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
-    const handle = stored.handle || '';
+    const s = JSON.parse(localStorage.getItem('gopang_user_v4')||'{}');
+    // 전화번호 자동 추출
+    const handle = s.handle||'';
     const digits = handle.replace(/[^0-9]/g,'');
-    if (digits.length === 8)       document.getElementById('f-phone').value = `010-${digits.slice(0,4)}-${digits.slice(4)}`;
-    else if (digits.length === 10) document.getElementById('f-phone').value = `0${digits.slice(0,2)}-${digits.slice(2,6)}-${digits.slice(6)}`;
-    else if (digits.length === 11) document.getElementById('f-phone').value = `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
-    if (stored.nickname) document.getElementById('f-name').value = stored.nickname;
+    const phoneVal = digits.length===8 ? `010-${digits.slice(0,4)}-${digits.slice(4)}`
+      : digits.length===10 ? `0${digits.slice(0,2)}-${digits.slice(2,6)}-${digits.slice(6)}`
+      : digits.length===11 ? `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}` : '';
+    ['p-phone','b-phone','i-phone','o-phone'].forEach(id=>{
+      const el=document.getElementById(id); if(el&&phoneVal) el.value=phoneVal;
+    });
+    // 이름 자동
+    if (s.nickname) {
+      ['p-name','b-name'].forEach(id=>{ const el=document.getElementById(id); if(el&&!el.value) el.value=s.nickname; });
+    }
+    // 언어 자동 (브라우저)
+    const lang = navigator.language?.slice(0,2)||'ko';
+    const pLang = document.getElementById('p-lang');
+    if (pLang) { for(const o of pLang.options){ if(o.value===lang){o.selected=true;break;} } }
   } catch(_) {}
-  addProduct(); // 사업자용 기본 상품 1개
+  addProduct();
 });
 
-// ── entity 선택 → 즉시 step2 ────────────────────────────
 function selectType(type) {
   selectedType = type;
-  // 이름 라벨
-  document.getElementById('label-name').innerHTML =
-    type === 'business'
-      ? '상호명 <span class="req">*</span>'
-      : '이름 <span class="req">*</span>';
-  document.getElementById('f-name').placeholder =
-    type === 'business' ? '고팡 카페' : '홍길동';
-  // 전용 필드 표시
-  ['biz-fields','inst-fields','org-fields','platform-fields'].forEach(id =>
-    document.getElementById(id).classList.add('hidden'));
-  const map = { business:'biz-fields', institution:'inst-fields', org:'org-fields', platform:'platform-fields' };
-  if (map[type]) document.getElementById(map[type]).classList.remove('hidden');
-  if (type === 'business') document.getElementById('hours-card')?.classList.remove('hidden');
+  ['step2-person','step2-business','step2-institution','step2-org','step2-platform']
+    .forEach(id=>document.getElementById(id).classList.add('hidden'));
+  const map = {person:'step2-person',business:'step2-business',institution:'step2-institution',org:'step2-org',platform:'step2-platform'};
+  document.getElementById(map[type]).classList.remove('hidden');
   showStep(2);
 }
 
-// ── 스텝 표시 ────────────────────────────────────────────
 function showStep(n) {
-  step = n;
-  ['step1','step2','step3'].forEach((id,i) =>
-    document.getElementById(id).classList.toggle('hidden', i+1 !== n));
-  [1,2,3].forEach(i =>
-    document.getElementById(`dot-${i}`).classList.toggle('active', i <= n));
-  const labels = ['유형 선택','기본 정보','연락처·공개 설정'];
-  document.getElementById('step-label').innerHTML = `<span>${n}단계</span> · ${labels[n-1]}`;
-  const bar = document.getElementById('bottom-bar');
-  bar.style.display = n === 1 ? 'none' : 'flex';
-  if (n > 1) {
-    document.getElementById('btn-back').classList.toggle('hidden', n === 2);
-    document.getElementById('btn-next').textContent = n === 3 ? '등록 완료' : '다음';
+  step=n;
+  document.getElementById('step1').classList.toggle('hidden', n!==1);
+  [1,2].forEach(i=>document.getElementById(`dot-${i}`).classList.toggle('active', i<=n));
+  const labels={1:'유형 선택',2:'정보 입력'};
+  document.getElementById('step-label').innerHTML=`<span>${n}단계</span> · ${labels[n]}`;
+  const bar=document.getElementById('bottom-bar');
+  bar.style.display=n===1?'none':'flex';
+  if(n>1){
+    document.getElementById('btn-back').classList.toggle('hidden', n===2);
+    document.getElementById('btn-next').textContent='등록 완료';
   }
   window.scrollTo(0,0);
 }
 
-function nextStep() {
-  if (step === 2) { if (!validate2()) return; showStep(3); }
-  else if (step === 3) submitProfile();
-}
-function prevStep() { if (step === 3) showStep(2); else if (step === 2) showStep(1); }
+function nextStep() { submitProfile(); }
+function prevStep() { if(step===2) showStep(1); }
 
-// ── 2단계 검증 ───────────────────────────────────────────
-function validate2() {
-  const name = document.getElementById('f-name').value.trim();
-  if (!name) { document.getElementById('err-name').style.display='block'; document.getElementById('f-name').focus(); return false; }
-  document.getElementById('err-name').style.display='none';
-  if (selectedType === 'business') {
-    const biz = document.getElementById('f-biz-reg').value;
-    if (biz && !validBiz(biz)) { document.getElementById('err-biz').style.display='block'; return false; }
-    document.getElementById('err-biz').style.display='none';
-  }
-  return true;
+// ── 주소: GPS → Kakao 역지오코딩 행정주소 ────────────────
+async function getAddr(prefix, btn) {
+  if(!navigator.geolocation){alert('위치 정보를 사용할 수 없습니다.');return;}
+  btn.textContent='확인 중…'; btn.disabled=true;
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const {latitude:lat,longitude:lng}=pos.coords;
+    document.getElementById(`${prefix}-lat`).value=lat;
+    document.getElementById(`${prefix}-lng`).value=lng;
+    try {
+      // Kakao 역지오코딩 — Worker /geocode 경유 (KAKAO_REST_KEY 환경변수 사용)
+      const res  = await fetch(`${PROXY}/geocode?x=${lng}&y=${lat}`);
+      const data = await res.json();
+      const doc  = data?.documents?.[0];
+      // road_address(도로명) 우선, 없으면 address(지번)
+      const addr = doc?.road_address?.address_name
+                || doc?.address?.address_name
+                || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      const el=document.getElementById(`${prefix}-address`);
+      el.value=addr; el.readOnly=false;
+    } catch {
+      document.getElementById(`${prefix}-address`).value=`${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    }
+    btn.textContent='재검색'; btn.disabled=false;
+  },()=>{alert('위치 권한을 허용해 주세요.');btn.textContent='내 위치';btn.disabled=false;});
+}
+
+// ── 웹사이트 메타 ────────────────────────────────────────
+async function fetchSiteMeta(rawUrl,prefix) {
+  if(!rawUrl)return;
+  const url=rawUrl.startsWith('http')?rawUrl:'https://'+rawUrl;
+  try {
+    const res=await fetch(`${PROXY}/fetch-meta?url=${encodeURIComponent(url)}`);
+    if(!res.ok)return;
+    const data=await res.json(); _siteMeta=data;
+    const descEl=document.getElementById(`${prefix}-desc`);
+    if(descEl&&!descEl.value&&data.description) descEl.value=data.description;
+    const tagsEl=document.getElementById(`${prefix}-tags`);
+    if(tagsEl&&!tagsEl.value&&data.keywords) tagsEl.value=data.keywords.slice(0,5).join(', ');
+    const badge=document.getElementById(`${prefix}-site-badge`);
+    if(badge) badge.style.display='block';
+  } catch(_){}
 }
 
 // ── 사업자번호 ───────────────────────────────────────────
-function fmtBiz(el) {
-  let v = el.value.replace(/[^0-9]/g,'').slice(0,10);
-  if (v.length>5) v=v.slice(0,3)+'-'+v.slice(3,5)+'-'+v.slice(5);
-  else if (v.length>3) v=v.slice(0,3)+'-'+v.slice(3);
+function fmtBiz(el){
+  let v=el.value.replace(/[^0-9]/g,'').slice(0,10);
+  if(v.length>5)v=v.slice(0,3)+'-'+v.slice(3,5)+'-'+v.slice(5);
+  else if(v.length>3)v=v.slice(0,3)+'-'+v.slice(3);
   el.value=v;
 }
-function validBiz(num) {
+function validBiz(num){
   const d=num.replace(/[^0-9]/g,'');
   if(d.length!==10)return false;
   const w=[1,3,7,1,3,7,1,3,5];let s=0;
@@ -468,83 +567,44 @@ function validBiz(num) {
   s+=Math.floor(parseInt(d[8])*5/10);
   return(10-(s%10))%10===parseInt(d[9]);
 }
-async function lookupBiz(val) {
-  const digits = val.replace(/[^0-9]/g,'');
-  if (digits.length !== 10 || !validBiz(val)) return;
-  const badge = document.getElementById('biz-lookup-badge');
-  badge.style.display='block'; badge.textContent='사업자 정보 조회 중…';
+async function lookupBiz(val){
+  const digits=val.replace(/[^0-9]/g,'');
+  if(digits.length!==10||!validBiz(val))return;
+  const badge=document.getElementById('b-biz-badge');
+  badge.style.display='block';badge.textContent='사업자 정보 조회 중…';
   try {
-    const res  = await fetch(`${PROXY}/biz-lookup?reg_no=${digits}`);
-    const data = await res.json();
-    if (data?.ceo_name) {
-      document.getElementById('f-ceo').value = data.ceo_name;
-      badge.textContent = `✅ 대표자: ${data.ceo_name}${data.biz_type ? ' · '+data.biz_type : ''}`;
+    const res=await fetch(`${PROXY}/biz-lookup?reg_no=${digits}`);
+    const data=await res.json();
+    if(data?.ceo_name){
+      document.getElementById('b-ceo').value=data.ceo_name;
+      badge.textContent=`✅ 대표자: ${data.ceo_name}${data.biz_type?' · '+data.biz_type:''}`;
     } else { badge.style.display='none'; }
   } catch { badge.style.display='none'; }
 }
 
-// ── 주소: GPS → Kakao 역지오코딩 ────────────────────────
-async function getAddr(btn) {
-  if (!navigator.geolocation) { alert('위치 정보를 사용할 수 없습니다.'); return; }
-  btn.textContent='위치 확인 중…'; btn.disabled=true;
-  navigator.geolocation.getCurrentPosition(async pos => {
-    const {latitude:lat, longitude:lng} = pos.coords;
-    document.getElementById('f-lat').value=lat;
-    document.getElementById('f-lng').value=lng;
-    try {
-      const res  = await fetch(`${PROXY}/geocode?x=${lng}&y=${lat}`);
-      const data = await res.json();
-      const doc  = data?.documents?.[0];
-      const addr = doc?.road_address?.address_name || doc?.address?.address_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-      const el = document.getElementById('f-address');
-      el.value=addr; el.readOnly=false;
-    } catch { document.getElementById('f-address').value=`${lat.toFixed(5)}, ${lng.toFixed(5)}`; }
-    btn.textContent='재검색'; btn.disabled=false;
-  }, () => { alert('위치 권한을 허용해 주세요.'); btn.textContent='내 위치'; btn.disabled=false; });
-}
-
-// ── 웹사이트 메타 수집 ───────────────────────────────────
-async function fetchSiteMeta(rawUrl) {
-  if (!rawUrl) return;
-  const url = rawUrl.startsWith('http') ? rawUrl : 'https://'+rawUrl;
-  try {
-    const res  = await fetch(`${PROXY}/fetch-meta?url=${encodeURIComponent(url)}`);
-    if (!res.ok) return;
-    const data = await res.json();
-    _siteMeta = data;
-    const descEl = document.getElementById('f-desc');
-    if (!descEl.value && data.description) descEl.value=data.description;
-    const tagsEl = document.getElementById('f-tags');
-    if (!tagsEl.value && data.keywords) tagsEl.value=data.keywords.slice(0,5).join(', ');
-    document.getElementById('site-badge').style.display='block';
-  } catch(_) {}
-}
-
 // ── 판매 상품 ────────────────────────────────────────────
-function addProduct() {
-  const id = ++_productId;
-  const list = document.getElementById('product-list');
-  const item = document.createElement('div');
+function addProduct(){
+  const id=++_productId;
+  const list=document.getElementById('product-list');
+  const item=document.createElement('div');
   item.className='product-item'; item.id=`prod-${id}`;
   item.innerHTML=`
     <div class="product-header">
-      <div class="product-header-left">
-        <div class="product-img-thumb" id="prod-img-wrap-${id}" onclick="triggerImgUpload(${id})" title="사진 추가(선택)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        </div>
-        <input type="file" id="prod-img-input-${id}" accept="image/*" style="display:none" onchange="previewImg(${id},this)">
-        <div class="product-name-price">
-          <input class="product-name-input" type="text" placeholder="상품명" oninput="classifyFromProducts()">
-          <input class="product-price-input" type="text" placeholder="가격 (예: 4,500원)" oninput="fmtPrice(this)">
-        </div>
+      <div class="product-img-thumb" onclick="triggerImg(${id})" title="사진 추가(선택)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
       </div>
-      <div style="display:flex;align-items:center;gap:4px">
+      <input type="file" id="img-input-${id}" accept="image/*" style="display:none" onchange="previewImg(${id},this)">
+      <div class="product-name-price">
+        <input class="product-name-input" type="text" placeholder="상품명" oninput="classifyFromProducts()">
+        <input class="product-price-input" type="text" placeholder="가격 (예: 4,500원)" oninput="fmtPrice(this)">
+      </div>
+      <div class="product-actions">
         <button class="product-detail-toggle" onclick="toggleDetail(${id})">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           상세
         </button>
-        <button class="product-del" onclick="delProduct(${id})" title="삭제">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <button class="product-del" onclick="askDelProduct(${id})" title="삭제">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         </button>
       </div>
     </div>
@@ -554,127 +614,145 @@ function addProduct() {
   list.appendChild(item);
 }
 
-function delProduct(id) {
-  document.getElementById(`prod-${id}`)?.remove();
-  classifyFromProducts();
-}
-function toggleDetail(id) {
-  document.getElementById(`prod-detail-${id}`)?.classList.toggle('open');
-}
-function triggerImgUpload(id) {
-  document.getElementById(`prod-img-input-${id}`)?.click();
-}
-function previewImg(id, input) {
-  const file = input.files[0]; if (!file) return;
-  const wrap = document.getElementById(`prod-img-wrap-${id}`);
-  const reader = new FileReader();
-  reader.onload = e => { wrap.innerHTML=`<img src="${e.target.result}" alt="">`; };
+function toggleDetail(id){ document.getElementById(`prod-detail-${id}`)?.classList.toggle('open'); }
+function triggerImg(id){ document.getElementById(`img-input-${id}`)?.click(); }
+function previewImg(id,input){
+  const file=input.files[0];if(!file)return;
+  const wrap=document.querySelector(`#prod-${id} .product-img-thumb`);
+  const reader=new FileReader();
+  reader.onload=e=>{ wrap.innerHTML=`<img src="${e.target.result}" alt="">`; };
   reader.readAsDataURL(file);
 }
-function fmtPrice(el) {
-  let v = el.value.replace(/[^0-9]/g,'');
-  if (v) el.value = parseInt(v).toLocaleString()+'원';
+function fmtPrice(el){
+  let v=el.value.replace(/[^0-9]/g,'');
+  if(v) el.value=parseInt(v).toLocaleString()+'원';
 }
 
-// 상품 입력 → KSIC 자동 분류
-function classifyFromProducts() {
-  const products = getProducts();
-  const match = classifyKSIC(products);
-  const badge = document.getElementById('ksic-badge');
-  const codeEl = document.getElementById('f-ksic-code');
-  if (match) {
-    badge.textContent = `🏷 업종 자동 분류: ${match.name} (${match.code})`;
-    badge.style.display='block';
-    codeEl.value = match.code;
-    codeEl.style.color='#15803d';
-  } else {
-    badge.style.display='none';
-    codeEl.value=''; codeEl.style.color='#9ca3af';
-  }
+// 삭제 확인 팝업
+function askDelProduct(id){
+  _pendingDelId=id;
+  const name=document.querySelector(`#prod-${id} .product-name-input`)?.value||'이 상품';
+  document.getElementById('del-confirm-name').textContent=`"${name}"을(를) 삭제합니다.`;
+  document.getElementById('del-confirm').classList.remove('hidden');
+}
+function cancelDel(){ _pendingDelId=null; document.getElementById('del-confirm').classList.add('hidden'); }
+function confirmDel(){
+  if(_pendingDelId) document.getElementById(`prod-${_pendingDelId}`)?.remove();
+  _pendingDelId=null;
+  document.getElementById('del-confirm').classList.add('hidden');
+  classifyFromProducts();
 }
 
-function getProducts() {
-  const items = document.querySelectorAll('.product-item');
-  return Array.from(items).map(item => ({
-    name:   item.querySelector('.product-name-input')?.value||'',
-    price:  item.querySelector('.product-price-input')?.value||'',
+function classifyFromProducts(){
+  const products=getProducts();
+  const match=classifyKSIC(products);
+  const badge=document.getElementById('ksic-badge');
+  const codeEl=document.getElementById('b-ksic');
+  if(match){ badge.textContent=`🏷 업종 자동 분류: ${match.name} (${match.code})`; badge.style.display='block'; codeEl.value=match.code; codeEl.style.color='#15803d'; }
+  else { badge.style.display='none'; codeEl.value=''; codeEl.style.color='#9ca3af'; }
+}
+
+function getProducts(){
+  return Array.from(document.querySelectorAll('.product-item')).map(item=>({
+    name: item.querySelector('.product-name-input')?.value||'',
+    price: item.querySelector('.product-price-input')?.value||'',
     detail: item.querySelector('.product-detail textarea')?.value||'',
-    image:  item.querySelector('.product-img-thumb img')?.src||null,
-  })).filter(p => p.name);
+    image: item.querySelector('.product-img-thumb img')?.src||null,
+  })).filter(p=>p.name);
 }
 
-// ── 최종 제출 ────────────────────────────────────────────
-async function submitProfile() {
-  const btn = document.getElementById('btn-next');
+// ── 검증 ─────────────────────────────────────────────────
+function validate(){
+  const pfx={person:'p',business:'b',institution:'i',org:'o',platform:'pl'};
+  const nameMap={person:'p-name',business:'b-name',institution:'i-name',org:'o-name',platform:'pl-name'};
+  const errMap ={person:'p-err-name',business:'b-err-name',institution:'i-err-name',org:'o-err-name',platform:'pl-err-name'};
+  const nameEl=document.getElementById(nameMap[selectedType]);
+  if(!nameEl?.value?.trim()){ document.getElementById(errMap[selectedType]).style.display='block'; nameEl?.focus(); return false; }
+  document.getElementById(errMap[selectedType]).style.display='none';
+  if(selectedType==='business'){
+    const biz=document.getElementById('b-biz-reg').value;
+    if(biz&&!validBiz(biz)){ document.getElementById('b-err-biz').style.display='block'; return false; }
+    document.getElementById('b-err-biz').style.display='none';
+  }
+  return true;
+}
+
+// ── 제출 ─────────────────────────────────────────────────
+async function submitProfile(){
+  if(!validate())return;
+  const btn=document.getElementById('btn-next');
   btn.textContent='등록 중…'; btn.disabled=true;
   try {
-    const stored = JSON.parse(localStorage.getItem('gopang_user_v4')||'null');
-    if (!stored?.ipv6) throw new Error('로그인이 필요합니다.');
-    const wallet = window.gopangWallet;
+    const stored=JSON.parse(localStorage.getItem('gopang_user_v4')||'null');
+    if(!stored?.ipv6) throw new Error('로그인이 필요합니다.');
+    const wallet=window.gopangWallet;
+    const lang=navigator.language?.slice(0,2)||'ko';
+    let payload={guid:stored.ipv6, pubkey:wallet?.publicKeyB64u||stored.pubkey||'', entity_type:selectedType, native_lang:lang, is_public:true};
 
-    const pubMap = {
-      name:    document.getElementById('pub-name')?.checked||false,
-      desc:    document.getElementById('pub-desc')?.checked||false,
-      tags:    document.getElementById('pub-tags')?.checked||false,
-      address: document.getElementById('pub-addr')?.checked||false,
-      phone:   document.getElementById('pub-phone')?.checked||false,
-      website: document.getElementById('pub-web')?.checked||false,
-    };
-
-    const tags = document.getElementById('f-tags').value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,5);
-    const products = selectedType==='business' ? getProducts() : [];
-
-    const payload = {
-      guid: stored.ipv6,
-      pubkey: wallet?.publicKeyB64u || stored.pubkey || '',
-      entity_type: selectedType,
-      name: document.getElementById('f-name').value.trim(),
-      description: document.getElementById('f-desc').value.trim(),
-      tags,
-      address: document.getElementById('f-address').value,
-      lat: parseFloat(document.getElementById('f-lat').value)||null,
-      lng: parseFloat(document.getElementById('f-lng').value)||null,
-      phone: document.getElementById('f-phone').value.trim(),
-      website: document.getElementById('f-website').value.trim(),
-      is_public: document.getElementById('f-public').checked,
-      native_lang: document.getElementById('f-lang').value,
-      visibility: pubMap,
-      site_meta: Object.keys(_siteMeta).length ? _siteMeta : undefined,
-    };
-
-    if (selectedType==='business') {
-      Object.assign(payload, {
-        biz_reg_no: document.getElementById('f-biz-reg').value.replace(/[^0-9]/g,''),
-        ceo_name: document.getElementById('f-ceo').value.trim(),
-        ksic_code: document.getElementById('f-ksic-code').value,
-        ksic_name: document.getElementById('ksic-badge').textContent.replace(/.*: /,'').replace(/ \(.*/,''),
-        hours: document.getElementById('f-hours').value.trim(),
-        gdc_accepted: document.getElementById('f-gdc').checked,
-        products,
+    if(selectedType==='person'){
+      const tags=document.getElementById('p-tags').value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,5);
+      Object.assign(payload,{
+        name:document.getElementById('p-name').value.trim(),
+        description:document.getElementById('p-desc').value.trim(),
+        tags, address:document.getElementById('p-address').value,
+        lat:parseFloat(document.getElementById('p-lat').value)||null,
+        lng:parseFloat(document.getElementById('p-lng').value)||null,
+        phone:document.getElementById('p-phone').value.trim(),
+        website:document.getElementById('p-website').value.trim(),
+        native_lang:document.getElementById('p-lang').value,
+        visibility:{
+          name:document.getElementById('p-pub-name').checked,
+          desc:document.getElementById('p-pub-desc').checked,
+          tags:document.getElementById('p-pub-tags').checked,
+          address:document.getElementById('p-pub-addr').checked,
+          phone:document.getElementById('p-pub-phone').checked,
+          website:document.getElementById('p-pub-web').checked,
+        },
       });
-    } else if (selectedType==='institution') {
-      Object.assign(payload, { inst_type: document.getElementById('f-inst-type').value, ministry: document.getElementById('f-ministry').value.trim(), inst_code: document.getElementById('f-inst-code').value.trim() });
-    } else if (selectedType==='org') {
-      Object.assign(payload, { purpose: document.getElementById('f-purpose').value.trim(), org_reg_no: document.getElementById('f-org-reg').value.trim(), member_count: parseInt(document.getElementById('f-member-count').value)||null });
-    } else if (selectedType==='platform') {
-      Object.assign(payload, { platform_type: document.getElementById('f-platform-type').value, api_endpoint: document.getElementById('f-api-endpoint').value.trim() });
+    } else if(selectedType==='business'){
+      const tags=document.getElementById('b-tags').value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,5);
+      const products=getProducts();
+      Object.assign(payload,{
+        name:document.getElementById('b-name').value.trim(),
+        description:document.getElementById('b-desc').value.trim(),
+        tags, address:document.getElementById('b-address').value,
+        lat:parseFloat(document.getElementById('b-lat').value)||null,
+        lng:parseFloat(document.getElementById('b-lng').value)||null,
+        phone:document.getElementById('b-phone').value.trim(),
+        website:document.getElementById('b-website').value.trim(),
+        hours:document.getElementById('b-hours').value.trim(),
+        biz_reg_no:document.getElementById('b-biz-reg').value.replace(/[^0-9]/g,''),
+        ceo_name:document.getElementById('b-ceo').value.trim(),
+        ksic_code:document.getElementById('b-ksic').value,
+        gdc_accepted:document.getElementById('b-gdc').checked,
+        products,
+        visibility:{bizno:document.getElementById('b-pub-bizno').checked, ceo:document.getElementById('b-pub-ceo').checked},
+      });
+    } else if(selectedType==='institution'){
+      const tags=document.getElementById('i-tags').value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,5);
+      Object.assign(payload,{ name:document.getElementById('i-name').value.trim(), description:document.getElementById('i-desc').value.trim(), tags, address:document.getElementById('i-address').value, lat:parseFloat(document.getElementById('i-lat').value)||null, lng:parseFloat(document.getElementById('i-lng').value)||null, phone:document.getElementById('i-phone').value.trim(), inst_type:document.getElementById('i-inst-type').value, ministry:document.getElementById('i-ministry').value.trim(), inst_code:document.getElementById('i-inst-code').value.trim() });
+    } else if(selectedType==='org'){
+      const tags=document.getElementById('o-tags').value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,5);
+      Object.assign(payload,{ name:document.getElementById('o-name').value.trim(), purpose:document.getElementById('o-purpose').value.trim(), tags, address:document.getElementById('o-address').value, lat:parseFloat(document.getElementById('o-lat').value)||null, lng:parseFloat(document.getElementById('o-lng').value)||null, phone:document.getElementById('o-phone').value.trim(), org_reg_no:document.getElementById('o-org-reg').value.trim(), member_count:parseInt(document.getElementById('o-member-count').value)||null });
+    } else if(selectedType==='platform'){
+      const tags=document.getElementById('pl-tags').value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,5);
+      Object.assign(payload,{ name:document.getElementById('pl-name').value.trim(), description:document.getElementById('pl-desc').value.trim(), tags, address:document.getElementById('pl-address').value, lat:parseFloat(document.getElementById('pl-lat').value)||null, lng:parseFloat(document.getElementById('pl-lng').value)||null, platform_type:document.getElementById('pl-type').value, api_endpoint:document.getElementById('pl-api').value.trim() });
     }
 
-    payload.signature = wallet?.sign ? await wallet.sign(JSON.stringify(payload)) : stored.ipv6;
+    if(Object.keys(_siteMeta).length) payload.site_meta=_siteMeta;
+    payload.signature=wallet?.sign ? await wallet.sign(JSON.stringify(payload)) : stored.ipv6;
 
-    const res = await fetch(`${PROXY}/profile`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
-    if (!res.ok) { const e=await res.json().catch(()=>({})); throw new Error(e.detail||`등록 실패 (${res.status})`); }
+    const res=await fetch(`${PROXY}/profile`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.detail||`등록 실패 (${res.status})`); }
 
-    fetch(`${PROXY}/p2p/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ guid:stored.ipv6, handle:stored.handle, nickname:payload.name, country_code:stored.country_code||'KR', region:payload.address||'', current_l1:'https://l1-hanlim.gopang.net', tags }) }).catch(()=>{});
+    const tags=payload.tags||[];
+    fetch(`${PROXY}/p2p/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guid:stored.ipv6,handle:stored.handle,nickname:payload.name,country_code:stored.country_code||'KR',region:payload.address||'',current_l1:'https://l1-hanlim.gopang.net',tags})}).catch(()=>{});
 
-    ['step1','step2','step3'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+    ['step1','step2-person','step2-business','step2-institution','step2-org','step2-platform'].forEach(id=>document.getElementById(id).classList.add('hidden'));
     document.getElementById('bottom-bar').style.display='none';
     const sc=document.getElementById('success-screen'); sc.style.display='flex';
     document.getElementById('success-msg').innerHTML=`<b>${payload.name}</b> 프로필이 등록됐습니다.<br>태그 <b>${tags.join(', ')||'없음'}</b>으로 검색됩니다.`;
-  } catch(e) {
-    alert(`등록 실패: ${e.message}`);
-    btn.textContent='등록 완료'; btn.disabled=false;
-  }
+  } catch(e){ alert(`등록 실패: ${e.message}`); btn.textContent='등록 완료'; btn.disabled=false; }
 }
 </script>
 <script src="/gopang-wallet.js"></script>
