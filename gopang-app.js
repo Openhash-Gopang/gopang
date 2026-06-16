@@ -43,9 +43,14 @@ import { openSearch as openP2PSearch }         from './src/gopang/ui/p2p-search.
 import { startIncomingWatch }                  from './src/gopang/ui/p2p-chat.js';
 
 // ════════════════════════════════════════════════════════
-// 1. 사용자 초기화 (await — _USER 확정 후 진행)
+// 1. 사용자 초기화
+// 첫 접속자: 환영 팝업 → 시작하기 → initAuth()
+// 기존 사용자: 바로 initAuth()
 // ════════════════════════════════════════════════════════
-await initAuth();
+const _isFirstVisit = !localStorage.getItem('gopang_welcomed');
+if (!_isFirstVisit) {
+  await initAuth();
+}
 
 // ════════════════════════════════════════════════════════
 // 2. 전역 노출 — import 완료 직후 동기 실행
@@ -228,8 +233,8 @@ const _boot = async () => {
 
   console.info('[Gopang v3] 부트스트랩 완료');
 
-  // ── 첫 접속 환영 팝업 ─────────────────────────────────
-  if (!localStorage.getItem('gopang_welcomed')) {
+  // 첫 접속자: 환영 팝업 (initAuth 포함)
+  if (_isFirstVisit) {
     _showWelcomePopup();
   }
 };
@@ -239,7 +244,7 @@ if (document.readyState === 'loading') {
   _boot();
 }
 
-// ── 첫 접속 환영 팝업 ────────────────────────────────────
+// ── 첫 접속 환영 팝업 (initAuth 포함) ──────────────────────
 function _showWelcomePopup() {
   const stored = (() => {
     try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { return null; }
@@ -325,7 +330,18 @@ function _showWelcomePopup() {
     if (sheet && !sheet.contains(e.target)) _closeWelcome(ov);
   });
 
-  document.getElementById('_welcome_ok').onclick = () => _closeWelcome(ov);
+  document.getElementById('_welcome_ok').onclick = async () => {
+    localStorage.setItem('gopang_welcomed', '1');
+    ov.style.opacity = '0';
+    ov.style.transition = 'opacity .2s';
+    setTimeout(() => ov.remove(), 200);
+    await initAuth();
+    const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+    if (stored?.handle && typeof _updateHandleChip === 'function') {
+      _updateHandleChip(stored.handle);
+    }
+    if (typeof openSettings === 'function') openSettings();
+  };
 }
 
 function _closeWelcome(ov) {
