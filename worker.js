@@ -222,6 +222,14 @@ export default {
       if (request.method === 'POST') return handleProfilePost(request, env, corsHeaders);
     }
 
+    // ── Push 알림 ───────────────────────────────────────────
+    if (pathname === '/push/subscribe' && request.method === 'POST')
+      return handlePushSubscribe(request, env, corsHeaders);
+    if (pathname === '/push/send' && request.method === 'POST')
+      return handlePushSend(request, env, corsHeaders);
+    if (pathname === '/push/vapid-public-key' && request.method === 'GET')
+      return handlePushVapidKey(request, env, corsHeaders);
+
     // ── POST 전용 ────────────────────────────────────────
     if (request.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405, headers: corsHeaders });
@@ -981,6 +989,17 @@ async function handleSignalSend(request, env, corsHeaders) {
     method: 'DELETE', headers: sbH,
   }).catch(() => {});
 
+  // ── 수신자에게 Push 알림 전송 (백그라운드 수신용) ──────
+  // offer 시그널일 때만 전송 (ICE/answer는 이미 연결 중)
+  if (type === 'offer') {
+    _sendPushToGuid(env, to_guid, {
+      title: from_guid.slice(0, 8) + '님의 메시지',
+      body:  '새 메시지가 도착했습니다.',
+      tag:   'gopang-msg-' + from_guid.slice(0, 8),
+      url:   '/webapp.html',
+    }).catch(e => console.warn('[Push] 알림 전송 실패:', e.message));
+  }
+
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
 }
 
@@ -1573,4 +1592,145 @@ async function handleMerkleVerify(request, env, corsHeaders) {
     anchored_at: anchor.anchored_at,
     block_count: anchor.block_count,
   }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Push 알림 — VAPID Web Push
+// ═══════════════════════════════════════════════════════════
+
+// GET /push/vapid-public-key
+function handlePushVapidKey(request, env, corsHeaders) {
+  const key = env.VAPID_PUBLIC_KEY;
+  if (!key) return _err(500, 'CONFIG_ERROR', 'VAPID_PUBLIC_KEY 미설정', corsHeaders);
+  return new Response(JSON.stringify({ publicKey: key }), { status: 200, headers: corsHeaders });
+}
+
+// POST /push/subscribe — 구독 정보 저장
+async function handlePushSubscribe(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body?.subscription || !body?.guid)
+    return _err(400, 'MISSING_FIELD', 'subscription, guid 필수', corsHeaders);
+
+  const sbH = _sbServiceHeaders(env);
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions`, {
+    method:  'POST',
+    headers: { ...sbH, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      guid:         body.guid,
+      subscription: JSON.stringify(body.subscription),
+      sound:        body.sound || 'ping',
+      updated_at:   new Date().toISOString(),
+    }),
+  });
+  if (!res.ok) return _err(500, 'DB_ERROR', await res.text(), corsHeaders);
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
+}
+
+// POST /push/send — 특정 guid에게 push 전송
+async function handlePushSend(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body?.to_guid) return _err(400, 'MISSING_FIELD', 'to_guid 필수', corsHeaders);
+
+  if (!env.VAPID_PRIVATE_KEY || !env.VAPID_PUBLIC_KEY || !env.VAPID_SUBJECT)
+    return _err(500, 'CONFIG_ERROR', 'VAPID 환경변수 미설정', corsHeaders);
+
+  const sbH = _sbServiceHeaders(env);
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(body.to_guid)}&select=subscription,sound&limit=5`,
+    { headers: sbH }
+  );
+  const rows = await res.json().catch(() => []);
+  if (!rows.length) return new Response(JSON.stringify({ ok: true, sent: 0, reason: 'NO_SUBSCRIPTION' }), { status: 200, headers: corsHeaders });
+
+  const payload = JSON.stringify({
+    title: body.title || '고팡',
+    body:  body.body  || '새 메시지가 도착했습니다.',
+    sound: rows[0].sound || body.sound || 'ping',
+    url:   body.url   || '/webapp.html',
+    tag:   body.tag   || 'gopang-msg',
+  });
+
+  let sent = 0;
+  for (const row of rows) {
+    try {
+      const sub = JSON.parse(row.subscription);
+      const result = await _sendWebPush(env, sub, payload);
+      if (result) sent++;
+    } catch(e) {
+      console.warn('[Push] 전송 실패:', e.message);
+    }
+  }
+  return new Response(JSON.stringify({ ok: true, sent }), { status: 200, headers: corsHeaders });
+}
+
+// Web Push 전송 (VAPID)
+async function _sendWebPush(env, subscription, payload) {
+  const vapidHeaders = await _buildVapidHeaders(env, subscription.endpoint);
+  const res = await fetch(subscription.endpoint, {
+    method:  'POST',
+    headers: {
+      ...vapidHeaders,
+      'Content-Type':  'application/octet-stream',
+      'Content-Length': payload.length.toString(),
+      'TTL': '60',
+    },
+    body: new TextEncoder().encode(payload),
+  });
+  return res.ok || res.status === 201;
+}
+
+// VAPID JWT 생성
+async function _buildVapidHeaders(env, endpoint) {
+  const url      = new URL(endpoint);
+  const audience = `${url.protocol}//${url.host}`;
+  const now      = Math.floor(Date.now() / 1000);
+
+  const header  = _b64uEncode(JSON.stringify({ alg: 'ES256', typ: 'JWT' }));
+  const claims  = _b64uEncode(JSON.stringify({ aud: audience, exp: now + 3600, sub: env.VAPID_SUBJECT }));
+  const sigInput = `${header}.${claims}`;
+
+  const privKeyBytes = _b64uToBytes(env.VAPID_PRIVATE_KEY);
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw', privKeyBytes, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']
+  );
+  const sig    = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, cryptoKey, new TextEncoder().encode(sigInput));
+  const sigB64 = _b64uEncode(String.fromCharCode(...new Uint8Array(sig)));
+  const jwt    = `${sigInput}.${sigB64}`;
+
+  return {
+    'Authorization': `vapid t=${jwt},k=${env.VAPID_PUBLIC_KEY}`,
+  };
+}
+
+function _b64uEncode(str) {
+  return btoa(typeof str === 'string' ? str : String.fromCharCode(...new Uint8Array(str)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+// ── Push 알림 전송 헬퍼 (guid 기준) ─────────────────────
+async function _sendPushToGuid(env, guid, { title, body, tag, url }) {
+  if (!env.VAPID_PRIVATE_KEY || !env.VAPID_PUBLIC_KEY) return;
+
+  const sbH = _sbServiceHeaders(env);
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(guid)}&select=subscription,sound&limit=5`,
+    { headers: sbH }
+  );
+  const rows = await res.json().catch(() => []);
+  if (!rows.length) return;
+
+  const payload = JSON.stringify({
+    title, body, tag,
+    sound: rows[0].sound || 'ping',
+    url:   url || '/webapp.html',
+  });
+
+  for (const row of rows) {
+    try {
+      const sub = JSON.parse(row.subscription);
+      await _sendWebPush(env, sub, payload);
+    } catch(e) {
+      console.warn('[Push] _sendPushToGuid 실패:', e.message);
+    }
+  }
 }
