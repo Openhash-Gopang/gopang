@@ -293,6 +293,9 @@ export async function initAuthWithPhone(digits, countryKey = 'KR') {
         const ipv6 = await _e164ToIPv6(e164);
         const dummyOverlay = document.createElement('div');
         dummyOverlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:24px';
+        const dummyCard = document.createElement('div');
+        dummyCard.style.cssText = 'background:#fff;border-radius:20px;padding:28px 20px;width:100%;max-width:340px;box-sizing:border-box';
+        dummyOverlay.appendChild(dummyCard);
         document.body.appendChild(dummyOverlay);
         _showNicknameStep({ ipv6, handle, e164, selectedCountry: countryKey, val: digits, overlay: dummyOverlay, resolve });
       }
