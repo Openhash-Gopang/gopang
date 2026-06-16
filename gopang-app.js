@@ -227,9 +227,110 @@ const _boot = async () => {
   });
 
   console.info('[Gopang v3] 부트스트랩 완료');
+
+  // ── 첫 접속 환영 팝업 ─────────────────────────────────
+  if (!localStorage.getItem('gopang_welcomed')) {
+    _showWelcomePopup();
+  }
 };
 if (document.readyState === 'loading') {
   window.addEventListener('DOMContentLoaded', _boot);
 } else {
   _boot();
+}
+
+// ── 첫 접속 환영 팝업 ────────────────────────────────────
+function _showWelcomePopup() {
+  const stored = (() => {
+    try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { return null; }
+  })();
+  const name = stored?.nickname || stored?.handle || null;
+
+  const ov = document.createElement('div');
+  ov.id = 'gopang-welcome-overlay';
+  ov.style.cssText = [
+    'position:fixed;inset:0;z-index:9999',
+    'background:rgba(0,0,0,.45)',
+    'display:flex;align-items:flex-end;justify-content:center',
+  ].join(';');
+
+  ov.innerHTML = `
+    <div id="_welcome_sheet" style="
+      background:#fff;border-radius:20px 20px 0 0;
+      width:100%;max-width:480px;
+      max-height:88dvh;overflow-y:auto;
+      padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
+      font-family:'Pretendard',-apple-system,sans-serif;
+    ">
+      <div style="width:36px;height:4px;background:#e5e7eb;border-radius:2px;margin:12px auto 0"></div>
+
+      <!-- 헤더 -->
+      <div style="padding:20px 24px 16px;display:flex;align-items:center;gap:14px;border-bottom:1px solid #f3f4f6">
+        <div style="width:44px;height:44px;flex-shrink:0;background:#16a34a;border-radius:10px;display:flex;align-items:center;justify-content:center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:600;color:#111827;line-height:1.3">
+            ${name ? name + '님, ' : ''}고팡에 오신 것을<br>환영합니다
+          </div>
+          <div style="font-size:12px;color:#9ca3af;margin-top:3px">카카오톡과 비슷해 보이지만 근본적으로 다릅니다</div>
+        </div>
+      </div>
+
+      <!-- 항목 목록 -->
+      <div style="padding:16px 24px;display:flex;flex-direction:column;gap:16px">
+
+        ${[
+          ['M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5', '데이터 주권', '모든 데이터는 사용자 단말에 저장됩니다. OpenHash 기술로 위변조가 불가능합니다.'],
+          ['M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6', 'AI 비서', '상단 AI 버튼이 법률·의료·세금 등 각종 업무를 대신 처리합니다. 사용 여부는 자유입니다.'],
+          ['M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0-20 0M4.93 4.93l14.14 14.14', '광고 없음', '의료·법률·교육 등 전문 AI 서비스를 광고 없이 이용할 수 있습니다.'],
+          ['M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z', '고팡 스토어', '앱 스토어처럼 누구나 AI 서비스를 등록하고 배포할 수 있습니다.'],
+          ['M2 5h20v14H2zM2 10h20', '결제', '기존 결제 수단을 그대로 이용할 수 있습니다. 전용 화폐 GDC(₮)는 각국 인덱스 투자 수익을 이용자에게 배분합니다.'],
+          ['M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22', '완전 오픈소스', '모든 코드를 한 줄도 빠짐없이 공개합니다. github.com/Openhash-Gopang'],
+        ].map(([path, title, desc]) => `
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div style="width:34px;height:34px;flex-shrink:0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:2px">${title}</div>
+              <div style="font-size:12px;color:#6b7280;line-height:1.6">${desc}</div>
+            </div>
+          </div>
+        `).join('')}
+
+      </div>
+
+      <!-- 버튼 -->
+      <div style="padding:0 24px 4px;display:flex;flex-direction:column;gap:10px">
+        <button id="_welcome_ok" style="
+          width:100%;padding:14px;
+          background:#16a34a;color:#fff;border:none;
+          border-radius:12px;font-size:15px;font-weight:600;
+          cursor:pointer;font-family:inherit;
+        ">시작하기</button>
+        <a href="https://gopang.net" target="_blank" style="
+          display:block;text-align:center;
+          font-size:12px;color:#9ca3af;text-decoration:none;padding:6px;
+        ">PC에서 더 알아보기 → gopang.net</a>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(ov);
+
+  // 외부 클릭 닫힘
+  ov.addEventListener('click', e => {
+    const sheet = document.getElementById('_welcome_sheet');
+    if (sheet && !sheet.contains(e.target)) _closeWelcome(ov);
+  });
+
+  document.getElementById('_welcome_ok').onclick = () => _closeWelcome(ov);
+}
+
+function _closeWelcome(ov) {
+  localStorage.setItem('gopang_welcomed', '1');
+  ov.style.opacity = '0';
+  ov.style.transition = 'opacity .2s';
+  setTimeout(() => ov.remove(), 200);
 }
