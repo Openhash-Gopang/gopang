@@ -257,6 +257,52 @@ export async function initAuth() {
   return new Promise((resolve) => { _showPhonePopup(resolve); });
 }
 
+// ── 번호를 직접 받아 처리 (통합 팝업용) ─────────────────
+export async function initAuthWithPhone(digits, countryKey = 'KR') {
+  const stored = _loadStored();
+  if (stored?.ipv6) {
+    setUser(stored);
+    return stored;
+  }
+  return new Promise(async (resolve) => {
+    const e164   = buildE164(digits, countryKey);
+    const handle = buildHandle(digits, countryKey);
+    try {
+      const filter = encodeURIComponent(`handle='${handle}'`);
+      const res    = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+      const data   = await res.json();
+      const found  = data.items?.[0];
+
+      if (found) {
+        // 기존 사용자 → 바로 로그인
+        const user = {
+          ipv6: found.guid, handle: found.handle,
+          e164: found.e164 || '',
+          country_code: found.country_code || countryKey,
+          nickname: found.nickname || '',
+          region: found.region || '',
+          name: digits, isGuest: false, isTemp: false,
+          registeredAt: found.created,
+        };
+        console.info('[Auth] 로그인 (통합팝업):', found.handle);
+        localStorage.setItem(STORE_KEY, JSON.stringify(user));
+        setUser(user);
+        resolve(user);
+      } else {
+        // 신규 사용자 → 닉네임 입력 단계 (더미 overlay 생성)
+        const ipv6 = await _e164ToIPv6(e164);
+        const dummyOverlay = document.createElement('div');
+        dummyOverlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:24px';
+        document.body.appendChild(dummyOverlay);
+        _showNicknameStep({ ipv6, handle, e164, selectedCountry: countryKey, val: digits, overlay: dummyOverlay, resolve });
+      }
+    } catch(e) {
+      console.warn('[Auth] initAuthWithPhone 실패:', e.message);
+      resolve(null);
+    }
+  });
+}
+
 // ── 전화번호 입력 팝업 ───────────────────────────────────
 function _showPhonePopup(resolve) {
   let selectedCountry = DEFAULT_COUNTRY;

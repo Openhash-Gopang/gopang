@@ -8,7 +8,7 @@
  */
 
 // ── Core ─────────────────────────────────────────────────
-import { initAuth, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, gopangAuth } from './src/gopang/core/auth.js';
+import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, gopangAuth } from './src/gopang/core/auth.js';
 import { loadSettings, CFG, saveSettings }     from './src/gopang/core/config.js';
 import { _USER }                               from './src/gopang/core/state.js';
 
@@ -331,20 +331,13 @@ function _showWelcomePopup() {
     if (sheet && !sheet.contains(e.target)) _closeWelcome(ov);
   });
 
-  document.getElementById('_welcome_ok').onclick = async () => {
+  document.getElementById('_welcome_ok').onclick = () => {
     localStorage.setItem('gopang_welcomed', '1');
     ov.style.opacity = '0';
     ov.style.transition = 'opacity .2s';
     setTimeout(() => ov.remove(), 200);
-    await initAuth();
-    const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
-    if (stored?.handle && typeof _updateHandleChip === 'function') {
-      _updateHandleChip(stored.handle);
-    }
-    // 등록 안내 팝업 (한국 사용자 전화번호 안내) → 확인 후 설정 화면으로
-    _showRegisterGuide(() => {
-      if (typeof openSettings === 'function') openSettings();
-    });
+    // 안내문구 + 번호 입력 통합 팝업
+    _showRegisterGuide();
   };
 }
 
@@ -356,7 +349,7 @@ function _closeWelcome(ov) {
 }
 
 // ── 사용자 등록 안내 팝업 (한국 사용자 전화번호 안내) ───────────
-function _showRegisterGuide(onConfirm) {
+function _showRegisterGuide() {
   const ov = document.createElement('div');
   ov.id = 'gopang-register-guide-overlay';
   ov.style.cssText = [
@@ -387,31 +380,77 @@ function _showRegisterGuide(onConfirm) {
         <strong>8자</strong>를 대시(<code>-</code>)없이 입력하세요.
       </div>
 
-      <div style="font-size:12px;color:#888;margin-bottom:20px;line-height:1.6">
+      <div style="font-size:12px;color:#888;margin-bottom:16px;line-height:1.6">
         귀하의 고유 로그인 + 패스워드입니다.
       </div>
 
-      <div style="
-        background:#f5f5f5;border-radius:6px;padding:10px 12px;
-        font-size:12px;color:#555;margin-bottom:24px;
-      ">
-        예) 010-1234-5678 &nbsp;→&nbsp; <code style="font-weight:600;color:#111">12345678</code>
+      <!-- 번호 입력 필드 -->
+      <div style="display:flex;align-items:center;
+                  border:1.5px solid #e5e7eb;border-radius:10px;
+                  background:#f9fafb;overflow:hidden;margin-bottom:8px"
+           id="_rg-field">
+        <span style="padding:0 12px;font-size:13px;color:#555;
+                     border-right:1px solid #e5e7eb;height:50px;
+                     display:flex;align-items:center;white-space:nowrap">
+          🇰🇷 010 -
+        </span>
+        <input id="_rg-input" type="tel" maxlength="8" inputmode="numeric"
+          placeholder="12345678"
+          style="flex:1;padding:0 14px;height:50px;border:none;background:transparent;
+                 font-size:18px;font-family:inherit;outline:none;color:#111;
+                 letter-spacing:3px;min-width:0"/>
+      </div>
+      <div id="_rg-error" style="display:none;font-size:12px;color:#dc2626;margin-bottom:8px;padding:0 4px"></div>
+      <div style="font-size:11px;color:#aaa;margin-bottom:20px;padding:0 4px">
+        예) 010-1234-5678 → <code style="font-weight:600;color:#555">12345678</code>
       </div>
 
-      <button id="_register_guide_ok" style="
-        width:100%;padding:13px;
+      <button id="_rg-ok" style="
+        width:100%;padding:14px;
         background:#111;color:#fff;border:none;
         border-radius:8px;font-size:14px;font-weight:600;
         cursor:pointer;font-family:inherit;letter-spacing:-.1px;
-      ">확인</button>
+      ">시작하기</button>
     </div>
   `;
 
   document.body.appendChild(ov);
 
-  document.getElementById('_register_guide_ok').onclick = () => {
-    ov.style.opacity = '0';
-    ov.style.transition = 'opacity .2s';
-    setTimeout(() => { ov.remove(); if (typeof onConfirm === 'function') onConfirm(); }, 200);
+  const inp   = ov.querySelector('#_rg-input');
+  const okBtn = ov.querySelector('#_rg-ok');
+  const errEl = ov.querySelector('#_rg-error');
+  const field = ov.querySelector('#_rg-field');
+
+  inp.focus();
+  inp.addEventListener('focus', () => field.style.borderColor = '#111');
+  inp.addEventListener('blur',  () => field.style.borderColor = '#e5e7eb');
+  inp.addEventListener('input', () => {
+    inp.value = inp.value.replace(/\D/g, '').slice(0, 8);
+    errEl.style.display = 'none';
+  });
+
+  const doSubmit = async () => {
+    const val = inp.value.trim();
+    if (val.length !== 8) {
+      errEl.textContent = '8자리를 모두 입력해 주세요.';
+      errEl.style.display = 'block';
+      inp.focus();
+      return;
+    }
+    okBtn.disabled = true;
+    okBtn.textContent = '확인 중…';
+    // 번호를 localStorage에 임시 저장 후 initAuth 호출
+    // initAuth는 내부적으로 번호 입력 팝업을 띄우므로
+    // 여기서는 직접 _phone-input에 값을 주입하는 방식 사용
+    ov.remove();
+    await initAuthWithPhone(val);
+    const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+    if (stored?.handle && typeof _updateHandleChip === 'function') {
+      _updateHandleChip(stored.handle);
+    }
+    if (typeof openSettings === 'function') openSettings();
   };
+
+  okBtn.onclick = doSubmit;
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') doSubmit(); });
 }
