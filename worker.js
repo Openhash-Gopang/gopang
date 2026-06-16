@@ -88,7 +88,7 @@ function buildCorsHeaders(corsOrigin, extra = {}) {
     'Content-Type':                     'application/json',
     'Access-Control-Allow-Origin':      corsOrigin || '*',
     'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Methods':     'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods':     'GET, POST, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers':     'Content-Type',
     ...extra,
   };
@@ -133,7 +133,7 @@ export default {
         headers: {
           'Access-Control-Allow-Origin':      corsOrigin ?? 'null',
           'Access-Control-Allow-Credentials': 'true',
-          'Access-Control-Allow-Methods':     'GET, POST, OPTIONS',
+          'Access-Control-Allow-Methods':     'GET, POST, PATCH, DELETE, OPTIONS',
           'Access-Control-Allow-Headers':     'Content-Type',
           'Access-Control-Max-Age':           '86400',
         },
