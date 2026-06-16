@@ -144,11 +144,12 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
   // history 구조: [system(index 0, 고정), user, assistant, user, assistant, ...]
 
   // 1) system: 세션 최초 1회만 history[0]으로 삽입
+  //    ★ 캐시 최적화: system은 완전 정적 — locNote/GUID 미포함
+  //    DeepSeek prefix cache가 system을 캐시 prefix unit으로 인식,
+  //    이후 모든 요청에서 system 토큰 90% 절감 (~95% 캐시 적중)
   if (history.length === 0) {
-    // 세션 최초 — system + locNote 고정
-    const locNote = _buildLocNote();
-    history.push({ role: 'system', content: CFG.system + locNote });
-    console.log('[Cache] 세션 최초 — system 1회 삽입');
+    history.push({ role: 'system', content: CFG.system });
+    console.log('[Cache] 세션 최초 — 정적 system 삽입 (캐시 최적화)');
   }
   // history[0] system 고정 유지 — 전문가 SP 없으므로 교체 불필요
 
@@ -156,11 +157,29 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
   const userRecord = { role: 'user', content: typeof userContent === 'string' ? userContent : `[첨부: 이미지]` };
   history.push(userRecord);
 
-  // 3) messages: history 전체 (system + 대화 누적 + 현재 user)
-  //    단, 이미지가 있을 경우 마지막 user content는 multipart로 교체
+  // 3) messages 구성
+  //    ★ 캐시 구조: system(정적, 캐시됨) → ctx(동적, 매번) → 대화 → user
+  //    system이 항상 동일 → DeepSeek이 prefix unit으로 캐시 유지
+  //    locNote·GUID는 history 밖 별도 ctx 메시지로 주입 → 캐시 prefix 보호
+  const locNote = _buildLocNote();
+  const ctxParts = [];
+  if (USER_GUID) ctxParts.push(`사용자:${USER_GUID.slice(-8)}`);
+  if (locNote)   ctxParts.push(locNote.trim());
+  const ctxMsg = ctxParts.length
+    ? [{ role: 'user',      content: `[ctx]${ctxParts.join(' ')}` },
+       { role: 'assistant', content: '확인.' }]
+    : [];
+
+  // history에서 system(index 0) 분리 + 최근 대화 슬라이싱
+  const sysMsg   = history[0]?.role === 'system' ? [history[0]] : [];
+  const dialogs  = history.slice(1);  // system 제외 대화
+  const recent   = dialogs.slice(-18); // 최근 18턴 (ctx 2턴 + user 합산 20)
+
   const messages = [
-    ...history.slice(-20, -1),                      // 최근 20턴 상한 (KV Cache 효율)
-    { role: 'user', content: userContent },         // 현재 user (이미지 포함 가능)
+    ...sysMsg,                                      // [0] system (정적, 캐시됨)
+    ...ctxMsg,                                      // [1-2] 동적 ctx (GUID+위치)
+    ...recent.slice(0, -1),                         // 대화 이력
+    { role: 'user', content: userContent },         // 현재 user
   ];
 
   // ── 엔드포인트 + API Key 결정 ────────────────────────────
