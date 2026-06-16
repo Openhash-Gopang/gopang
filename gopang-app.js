@@ -131,8 +131,10 @@ const _boot = async () => {
     await bootstrap();
     document.getElementById('status-dot').style.background = 'var(--green)';
   } catch(e) {
-    document.getElementById('status-text').textContent = '오프라인 모드';
-    document.getElementById('status-dot').style.background = 'var(--yellow)';
+    const st = document.getElementById('status-text');
+    const sd = document.getElementById('status-dot');
+    if (st) st.textContent = '오프라인 모드';
+    if (sd) sd.style.background = 'var(--yellow)';
     console.warn('[Boot] 오프라인 모드:', e.message);
   }
 
