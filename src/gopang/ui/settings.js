@@ -74,8 +74,10 @@ export function openSettings() {
   if (gdcSec) gdcSec.style.display = isGDC ? 'block' : 'none';
 
   // 5. AI 설정 카드: 등록 사용자만 표시
-  const aiCard  = document.getElementById('_ai-card');
-  const aiLabel = document.getElementById('_ai-label');
+  const aiCard      = document.getElementById('_ai-card');
+  const aiLabel     = document.getElementById('_ai-label');
+  const profileCard = document.getElementById('_profile-card');
+  if (profileCard) profileCard.style.display = registered ? 'block' : 'none';
   if (aiCard)  aiCard.style.display  = registered ? 'block' : 'none';
   if (aiLabel) aiLabel.style.display = registered ? 'block' : 'none';
 
@@ -98,6 +100,21 @@ export function openSettings() {
 }
 
 // ── 설정 패널 닫기 ───────────────────────────────────────
+export function openMyProfile() {
+  // 현재 로그인 사용자의 handle로 프로필 페이지 열기
+  const stored = JSON.parse(
+    localStorage.getItem('gopang_user_v4') ||
+    sessionStorage.getItem('gopang_user_v4') || 'null'
+  );
+  const handle = stored?.handle;
+  if (!handle) {
+    alert('프로필을 먼저 등록해주세요.');
+    return;
+  }
+  // 새 탭에서 프로필 보기 (다른 사람이 보는 모습 그대로)
+  window.open(`/profile/${handle}`, '_blank');
+}
+
 export function closeSettings() {
   document.getElementById('settings-overlay')?.classList.remove('open');
 }
@@ -126,7 +143,9 @@ export function closeAISettings() {
 }
 
 export function handleAISettingsOverlayClick(e) {
-  if (e.target.id === 'ai-settings-overlay') closeAISettings();
+  // 시트 내부 클릭은 무시, 오버레이 배경(시트 바깥) 터치 시에만 닫힘
+  const sheet = document.querySelector('#ai-settings-overlay .settings-sheet');
+  if (sheet && !sheet.contains(e.target)) closeAISettings();
 }
 
 // ── 보안 섹션 업데이트 ───────────────────────────────────

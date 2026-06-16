@@ -19,6 +19,7 @@ import { openSettings, closeSettings, handleOverlayClick,
          _updateHandleChip, _settingsRegisterHandle,
          clearSWCache, _updateSecuritySection,
          openChatHistory, openHashChain, openGopangWallet, openFinancialStatement,
+         openMyProfile,
 } from './src/gopang/ui/settings.js';
 import { openSearch, closeSearch,
          handleSearchOverlayClick,
@@ -57,6 +58,7 @@ await initAuth();
   window.openHashChain             = openHashChain;
   window.openGopangWallet          = openGopangWallet;
   window.openFinancialStatement    = openFinancialStatement;
+  window.openMyProfile             = openMyProfile;
   window.openAISettings            = openAISettings;
   window._deviceFullReset          = _deviceFullReset;
   window._isGDCUser                = _isGDCUser;
