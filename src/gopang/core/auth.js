@@ -608,7 +608,48 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
   nickInput.focus();
   nickInput.addEventListener('focus', () => nickField.style.borderColor = '#16a34a');
   nickInput.addEventListener('blur',  () => nickField.style.borderColor = '#e5e7eb');
-  nickInput.addEventListener('input', () => { nickErr.style.display = 'none'; });
+
+  // ── 닉네임 실시간 동명이인 안내 ─────────────────────────
+  let _nickTimer = null;
+  nickInput.addEventListener('input', () => {
+    nickErr.style.display = 'none';
+    const nick = nickInput.value.trim();
+    clearTimeout(_nickTimer);
+
+    // 힌트 초기화
+    let hintEl = document.getElementById('_nick-hint');
+    if (!hintEl) {
+      hintEl = document.createElement('div');
+      hintEl.id = '_nick-hint';
+      hintEl.style.cssText = 'font-size:12px;color:#9ca3af;padding:0 4px;margin-bottom:6px;line-height:1.6;min-height:18px';
+      nickErr.insertAdjacentElement('afterend', hintEl);
+    }
+
+    if (nick.length < 2) { hintEl.innerHTML = ''; return; }
+
+    hintEl.innerHTML = '<span style="color:#9ca3af">확인 중…</span>';
+
+    _nickTimer = setTimeout(async () => {
+      try {
+        // L1 PocketBase에서 동명이인 수 조회
+        const nickLower = encodeURIComponent(`nickname='${nick}'`);
+        const r = await fetch(`${L1_URL}?filter=${nickLower}&perPage=1`);
+        const d = await r.json();
+        const total = d.totalItems ?? d.items?.length ?? 0;
+
+        if (total === 0) {
+          hintEl.innerHTML =
+            `<span style="color:#16a34a">✓ 처음 사용하는 닉네임입니다.</span>`;
+        } else {
+          hintEl.innerHTML =
+            `<span style="color:#f59e0b">⚠ 이미 ${total}명이 사용 중입니다.</span> ` +
+            `<span style="color:#9ca3af">handle <b style="color:#16a34a">${handle}</b>로 구분됩니다.</span>`;
+        }
+      } catch {
+        hintEl.innerHTML = '';
+      }
+    }, 400);
+  });
 
   const _register = async () => {
     const nickname = nickInput.value.trim();
