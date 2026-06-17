@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>나만의 AI 비서 활성화 — 고팡</title>
+<script src="/gopang-wallet.js"></script>
 </head>
 <body>
 
@@ -13,18 +14,28 @@
     <p style="font-size:14px;color:var(--text4);line-height:1.6">귀하 한 사람만을 위한 맞춤형으로 진화합니다. 모델을 선택하면 해당 업체의 무료 API Key 발급 페이지가 새 탭에서 열리고, 단계별로 안내해 드립니다.</p>
   </div>
 
+  <!-- 본인 인증 상태 -->
+  <div id="_setup_authgate" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:24px;text-align:center">
+    <p style="font-size:13px;color:var(--text3);margin-bottom:12px">고팡 휴대폰 웹앱에서 인증된 본인만 AI Key를 등록할 수 있습니다.</p>
+    <input id="_setup_phone" type="tel" placeholder="전화번호 뒷 8자리" maxlength="8"
+      style="width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;text-align:center;font-family:inherit">
+    <button id="_setup_phone_check" style="margin-left:8px;padding:10px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-size:13px;font-weight:600;cursor:pointer">확인</button>
+    <p id="_setup_authgate_msg" style="font-size:12px;color:var(--red);margin-top:10px;display:none"></p>
+  </div>
+
   <!-- 다중 등록 안내 -->
+  <div id="_setup_main" style="display:none">
   <div style="background:var(--brand-bg);border:1px solid var(--brand-lt);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:24px">
     <p style="font-size:13px;color:var(--brand-dk);line-height:1.7;margin:0">
-      💡 <b>여러 LLM을 동시에 등록</b>해두시면, 한 모델의 무료 한도가 차더라도 등록 순서대로 다음 모델로 자동 전환되어 AI 비서가 끊기지 않고 계속 동작합니다. 2~3개 모델을 함께 등록하는 것을 권장합니다.
+      💡 <b>여러 LLM을 동시에 등록</b>해두시면, 한 모델의 무료 한도가 차더라도 등록 순서대로 다음 모델로 자동 전환되어 AI 비서가 끊기지 않고 계속 동작합니다. 2~3개 모델을 함께 등록하는 것을 권장합니다.<br>
+      🔒 입력하신 API Key는 <b>이 화면에서 즉시 암호화</b>되어 전송됩니다. 고팡 서버는 평문 Key를 절대 볼 수 없으며, 휴대폰만 복호화할 수 있습니다.
     </p>
   </div>
 
-  <!-- 등록된 LLM 목록 -->
+  <!-- 등록 현황 (휴대폰 쪽 데이터를 직접 못 보므로 상태만 표시) -->
   <div style="margin-bottom:24px">
-    <label style="font-size:13px;font-weight:600;color:var(--text3);display:block;margin-bottom:8px">등록된 LLM (호출 순서대로 자동 전환)</label>
-    <div id="_setup_list" style="display:flex;flex-direction:column;gap:8px"></div>
-    <div id="_setup_list_empty" style="display:none;font-size:13px;color:var(--text4);padding:16px;text-align:center;background:var(--surface2);border-radius:var(--radius-lg)">아직 등록된 LLM이 없습니다. 아래에서 추가해 주세요.</div>
+    <label style="font-size:13px;font-weight:600;color:var(--text3);display:block;margin-bottom:8px">등록 현황</label>
+    <div id="_setup_status_box" style="font-size:13px;color:var(--text4);padding:16px;text-align:center;background:var(--surface2);border-radius:var(--radius-lg)">확인 중...</div>
   </div>
 
   <hr style="border:none;border-top:1px solid var(--border);margin:28px 0">
@@ -62,14 +73,18 @@
     <p style="font-size:11.5px;color:var(--text4);margin-top:6px">🔒 이 키는 이 기기의 브라우저에만 저장되며, 고팡 서버로 전송되지 않습니다.</p>
   </div>
 
-  <button id="_setup_add" style="width:100%;padding:14px;border:none;border-radius:var(--radius-lg);background:var(--brand);color:#fff;font-size:14px;font-weight:600;cursor:pointer">+ 이 LLM 추가 등록 — 휴대폰에 자동 반영됩니다</button>
+  <button id="_setup_add" style="width:100%;padding:14px;border:none;border-radius:var(--radius-lg);background:var(--brand);color:#fff;font-size:14px;font-weight:600;cursor:pointer">+ 이 LLM 암호화 후 휴대폰으로 전송</button>
 
   <div id="_setup_saved_msg" style="display:none;margin-top:14px;font-size:13px;color:var(--brand-dk);background:var(--brand-bg);border-radius:8px;padding:12px 14px"></div>
+
+  </div><!-- /_setup_main -->
 
 </div>
 
 <script>
 (function(){
+  const WORKER_URL = 'https://gopang-proxy.tensor-city.workers.dev';
+
   const GUIDES = {
     'gemini-2.0-flash': {
       provider: 'gemini', label: 'Gemini',
@@ -148,6 +163,14 @@
     },
   };
 
+  // ── DOM refs ──────────────────────────────────────────
+  const authGate    = document.getElementById('_setup_authgate');
+  const authMsg     = document.getElementById('_setup_authgate_msg');
+  const phoneInput  = document.getElementById('_setup_phone');
+  const phoneCheck  = document.getElementById('_setup_phone_check');
+  const mainBox     = document.getElementById('_setup_main');
+  const statusBox   = document.getElementById('_setup_status_box');
+
   const sel        = document.getElementById('_setup_model');
   const guideBox   = document.getElementById('_setup_guide');
   const guideTitle = document.getElementById('_setup_guide_title');
@@ -158,54 +181,79 @@
   const keyToggle  = document.getElementById('_setup_key_toggle');
   const addBtn     = document.getElementById('_setup_add');
   const savedMsg   = document.getElementById('_setup_saved_msg');
-  const listBox    = document.getElementById('_setup_list');
-  const listEmpty  = document.getElementById('_setup_list_empty');
 
-  function loadCfg() {
-    try { return JSON.parse(localStorage.getItem('gopang_cfg') || '{}'); } catch { return {}; }
+  let _myGuid = null;
+  let _x25519Pubkey = null;
+
+  // ── 전화번호 → IPv6 GUID (auth.js의 _e164ToIPv6와 동일 알고리즘) ──
+  async function _sha256Hex(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
   }
-  function saveCfg(cfg) {
-    localStorage.setItem('gopang_cfg', JSON.stringify(cfg));
+  async function _phoneToIPv6(digits8) {
+    const e164 = '+82010' + digits8;  // 한국 기본 — 다국가는 추후 확장
+    const hash = await _sha256Hex('gopang-phone:' + e164);
+    const groups = [];
+    for (let i = 0; i < 8; i++) groups.push(hash.slice(i*4, i*4+4));
+    groups[0] = '2601';
+    groups[1] = 'db80';
+    return groups.join(':');
   }
 
-  function maskKey(key) {
-    if (!key) return '';
-    return key.slice(0, 6) + '••••' + key.slice(-4);
+  // ── 1단계: 전화번호 확인 → X25519 공개키 조회 ──────────
+  async function _checkPhone() {
+    const digits = phoneInput.value.trim();
+    if (!/^\d{8}$/.test(digits)) {
+      authMsg.textContent = '전화번호 뒷 8자리를 정확히 입력해 주세요.';
+      authMsg.style.display = 'block';
+      return;
+    }
+    authMsg.style.display = 'none';
+    phoneCheck.disabled = true;
+    phoneCheck.textContent = '확인 중…';
+
+    try {
+      const guid = await _phoneToIPv6(digits);
+      const res  = await fetch(`${WORKER_URL}/wallet/x25519?guid=${encodeURIComponent(guid)}`);
+      const data = await res.json();
+
+      if (!data.ok || !data.registered) {
+        authMsg.innerHTML = (data.message || '먼저 휴대폰에서 고팡 웹앱 → 설정 → AI 설정을 한 번 열어 주세요.') +
+          '<br><span style="font-size:11px">(휴대폰이 암호화 키를 자동으로 만들어야 PC에서 전송할 수 있습니다.)</span>';
+        authMsg.style.display = 'block';
+        return;
+      }
+
+      _myGuid = guid;
+      _x25519Pubkey = data.x25519_pubkey;
+      authGate.style.display = 'none';
+      mainBox.style.display  = 'block';
+      _refreshStatus();
+    } catch(e) {
+      authMsg.textContent = '확인 중 오류가 발생했습니다: ' + e.message;
+      authMsg.style.display = 'block';
+    } finally {
+      phoneCheck.disabled = false;
+      phoneCheck.textContent = '확인';
+    }
   }
+  phoneCheck.onclick = _checkPhone;
+  phoneInput.addEventListener('keydown', e => { if (e.key === 'Enter') _checkPhone(); });
 
-  function renderList() {
-    const cfg = loadCfg();
-    const providers = Array.isArray(cfg.providers) ? cfg.providers : [];
-    listBox.innerHTML = '';
-    listEmpty.style.display = providers.length ? 'none' : 'block';
-
-    providers.forEach((p, idx) => {
-      const guideEntry = GUIDES[p.model] || Object.values(GUIDES).find(g => g.provider === p.provider) || {};
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg)';
-      row.innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="width:22px;height:22px;border-radius:50%;background:var(--brand);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${idx + 1}</span>
-          <div>
-            <div style="font-size:13.5px;font-weight:600;color:var(--text)">${guideEntry.label || p.provider} <span style="color:var(--text4);font-weight:400">(${p.model})</span></div>
-            <div style="font-size:11.5px;color:var(--text4);font-family:monospace">${maskKey(p.apiKey)}</div>
-          </div>
-        </div>
-        <button data-idx="${idx}" class="_setup_remove" style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;padding:6px 10px">삭제</button>
-      `;
-      listBox.appendChild(row);
-    });
-
-    listBox.querySelectorAll('._setup_remove').forEach(btn => {
-      btn.onclick = () => {
-        const cfg = loadCfg();
-        cfg.providers = (cfg.providers || []).filter((_, i) => i !== Number(btn.dataset.idx));
-        saveCfg(cfg);
-        renderList();
-      };
-    });
+  // ── 등록 현황 표시 (PC는 평문을 못 보므로 "전송됨/대기중"만 표시) ──
+  async function _refreshStatus() {
+    try {
+      const res  = await fetch(`${WORKER_URL}/ai-setup/seal?guid=${encodeURIComponent(_myGuid)}`);
+      const data = await res.json();
+      if (data.sealed) {
+        statusBox.textContent = '🔒 암호화된 설정이 전송 대기 중입니다 — 휴대폰에서 확인해 주세요.';
+      } else {
+        statusBox.textContent = '현재 전송 대기 중인 설정이 없습니다. 아래에서 새로 등록해 보세요.';
+      }
+    } catch {
+      statusBox.textContent = '상태를 확인할 수 없습니다.';
+    }
   }
-  renderList();
 
   function renderGuide(model) {
     const g = GUIDES[model];
@@ -223,7 +271,8 @@
     keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
   };
 
-  addBtn.onclick = () => {
+  // ── 등록: 평문을 절대 저장하지 않고, 즉시 X25519로 암호화 후 전송 ──
+  addBtn.onclick = async () => {
     const model = sel.value;
     const key   = keyInput.value.trim();
     if (!model) { alert('모델을 선택해 주세요.'); return; }
@@ -235,34 +284,40 @@
       keyInput.focus();
       return;
     }
+
+    addBtn.disabled = true;
+    addBtn.textContent = '암호화 중…';
+
     try {
-      const cfg = loadCfg();
-      if (!Array.isArray(cfg.providers)) cfg.providers = [];
+      const payload = JSON.stringify({ provider: g.provider, model, apiKey: key });
+      // PC는 임시(ephemeral) 키만 쓰고 절대 자신의 키를 저장하지 않음
+      const sealed = await GopangWallet.sealForRecipient(_x25519Pubkey, payload);
 
-      // 동일 provider 중복 등록 방지 — 있으면 키만 갱신
-      const existingIdx = cfg.providers.findIndex(p => p.provider === g.provider && p.model === model);
-      if (existingIdx >= 0) {
-        cfg.providers[existingIdx].apiKey = key;
-      } else {
-        cfg.providers.push({ provider: g.provider, model, apiKey: key });
-      }
-
-      // 첫 등록이면 기본 model/키도 동기화 (이전 버전 호환)
-      if (!cfg.model || cfg.providers.length === 1) cfg.model = model;
-      if (g.provider === 'gemini') cfg.geminiKey = key;
-      else cfg.apiKey = key;
-
-      saveCfg(cfg);
-      renderList();
+      const res = await fetch(`${WORKER_URL}/ai-setup/seal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guid: _myGuid,
+          ephemeral_pubkey: sealed.ephemeralPubKey,
+          iv: sealed.iv,
+          ciphertext: sealed.ciphertext,
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.detail || data.error || '전송 실패');
 
       keyInput.value = '';
       sel.value = '';
       guideBox.style.display = 'none';
 
-      savedMsg.textContent = `✅ ${g.label} 등록 완료 (${cfg.providers.length}개 등록됨) — 같은 계정으로 로그인한 휴대폰에서 바로 사용됩니다.`;
+      savedMsg.textContent = `🔒 ${g.label} 설정이 암호화되어 전송되었습니다. 휴대폰에서 "AI 설정"을 열어 확인 후 등록을 완료해 주세요. (5분 내 미확인 시 자동 폐기)`;
       savedMsg.style.display = 'block';
+      _refreshStatus();
     } catch (e) {
-      alert('저장 중 오류가 발생했습니다: ' + e.message);
+      alert('전송 중 오류가 발생했습니다: ' + e.message);
+    } finally {
+      addBtn.disabled = false;
+      addBtn.textContent = '+ 이 LLM 암호화 후 휴대폰으로 전송';
     }
   };
 })();

@@ -115,6 +115,167 @@ export function openAISettings() {
   if (modelEl) modelEl.value = CFG.model;
   if (epEl)    epEl.value    = CFG.endpoint;
   document.getElementById('ai-settings-overlay')?.classList.add('open');
+
+  // ── X25519 자동 부트스트랩 (공장초기화 후 첫 진입 시 자동 개시) ──
+  // PC(ai-setup.html)가 이 공개키로 API 설정을 암호화해 보낼 수 있도록
+  // 설정 창을 열 때마다 보장 — 이미 있으면 아무 일도 하지 않음
+  _ensurePcSyncReady();
+}
+
+// ── PC→휴대폰 동기화 준비: X25519 키 보장 + 등록 + 대기 중인 PC 설정 확인 ──
+async function _ensurePcSyncReady() {
+  const guid = _USER?.ipv6 || JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}')?.ipv6;
+  if (!guid || typeof window.GopangWallet === 'undefined') return;
+
+  try {
+    const wallet = await window.GopangWallet.load();
+    if (!wallet) return; // 지갑이 아직 없으면(=완전 신규 미가입) 건너뜀 — 가입 흐름에서 별도 처리
+
+    const { publicKeyB64u } = await wallet.ensureX25519Key();
+
+    // 로컬에 키가 있다는 사실(ensureX25519Key)과 "서버에 등록되어 있다"는 사실은
+    // 별개이므로(네트워크 오류, user_profiles 미생성 등으로 서버 등록이 실패할 수 있음),
+    // created 플래그만 믿지 않고 매번 서버 상태를 직접 조회해 확인한다.
+    let serverOk = false;
+    try {
+      const checkRes = await fetch(`${CFG.endpoint}/wallet/x25519?guid=${encodeURIComponent(guid)}`);
+      const checkData = await checkRes.json();
+      serverOk = !!(checkData.ok && checkData.registered && checkData.x25519_pubkey === publicKeyB64u);
+    } catch {}
+
+    if (!serverOk) {
+      const ts = Math.floor(Date.now() / 1000);
+      const sigMsg = `${guid}:${publicKeyB64u}:${ts}`;
+      const signature = await wallet.sign(sigMsg);
+
+      const regRes = await fetch(`${CFG.endpoint}/wallet/x25519`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guid, x25519_pubkey: publicKeyB64u,
+          ed25519_pubkey: wallet.publicKeyB64u,
+          signature, ts,
+        }),
+      }).catch(e => { console.warn('[AI설정] X25519 공개키 등록 요청 실패:', e.message); return null; });
+
+      if (regRes) {
+        const regData = await regRes.json().catch(() => null);
+        if (!regRes.ok || !regData?.ok) {
+          // 사용자가 원인을 알 수 있도록 화면에도 안내 (콘솔에만 남기지 않음)
+          _renderPcSyncBanner({
+            _error: true,
+            message: regData?.detail || '암호화 키 등록에 실패했습니다. 프로필을 먼저 등록한 뒤 다시 시도해 주세요.',
+          });
+          return;
+        }
+      } else {
+        _renderPcSyncBanner({ _error: true, message: '네트워크 오류로 암호화 키를 등록하지 못했습니다. 잠시 후 다시 열어 주세요.' });
+        return;
+      }
+    }
+
+    _pollPcSealedSetting(guid, wallet);
+  } catch(e) {
+    console.warn('[AI설정] X25519 부트스트랩 실패:', e.message);
+  }
+}
+
+// ── PC가 보낸 암호화 봉투가 있는지 확인하고, 있으면 복호화하여 안내 ──
+async function _pollPcSealedSetting(guid, wallet) {
+  try {
+    const res  = await fetch(`${CFG.endpoint}/ai-setup/seal?guid=${encodeURIComponent(guid)}`);
+    const data = await res.json();
+    if (!data.ok || !data.sealed) {
+      _renderPcSyncBanner(null);
+      return;
+    }
+
+    const plaintext = await wallet.openSealed(data.sealed);
+    const parsed = JSON.parse(plaintext);  // { provider, model, apiKey }
+    _renderPcSyncBanner(parsed, guid);
+  } catch(e) {
+    console.warn('[AI설정] PC 봉투 확인 실패:', e.message);
+    _renderPcSyncBanner(null);
+  }
+}
+
+// ── "PC에서 보낸 설정이 있습니다" 안내 배너 렌더링 ──
+function _renderPcSyncBanner(parsed, guid) {
+  const host = document.getElementById('setting-model')?.closest('.settings-body') || document.body;
+  let banner = document.getElementById('_pc-sync-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = '_pc-sync-banner';
+    banner.style.cssText = 'margin:0 16px 12px;padding:14px 16px;border-radius:12px;font-size:13px;line-height:1.6';
+    host.insertBefore(banner, host.firstChild);
+  }
+
+  if (!parsed) { banner.style.display = 'none'; return; }
+
+  if (parsed._error) {
+    banner.style.display = 'block';
+    banner.style.background = '#fef2f2';
+    banner.style.color = '#991b1b';
+    banner.innerHTML = `⚠️ ${parsed.message}`;
+    return;
+  }
+
+  banner.style.display = 'block';
+  banner.style.background = '#dcfce7';
+  banner.style.color = '#166534';
+  banner.innerHTML = `
+    🔒 PC에서 <b>${parsed.model}</b> 설정이 암호화되어 도착했습니다.<br>
+    <button id="_pc-sync-accept" style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;background:#16a34a;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer">이 설정으로 등록하기</button>
+    <button id="_pc-sync-dismiss" style="margin-top:8px;margin-left:6px;padding:8px 14px;border:none;border-radius:8px;background:transparent;color:#166534;font-size:12.5px;cursor:pointer">무시</button>
+  `;
+
+  document.getElementById('_pc-sync-accept').onclick = async () => {
+    await _acceptPcSyncedSetting(parsed, guid);
+  };
+  document.getElementById('_pc-sync-dismiss').onclick = async () => {
+    await fetch(`${CFG.endpoint}/ai-setup/seal?guid=${encodeURIComponent(guid)}&consume=1`).catch(()=>{});
+    banner.style.display = 'none';
+  };
+}
+
+// ── PC가 보낸 설정을 휴대폰의 진짜 지갑으로 서명하여 최종 등록 ──
+async function _acceptPcSyncedSetting(parsed, guid) {
+  try {
+    const wallet = await window.GopangWallet.load();
+    if (!wallet) throw new Error('지갑을 찾을 수 없습니다.');
+
+    const body = {
+      guid,
+      pubkey: wallet.publicKeyB64u,
+      provider: parsed.provider,
+      model: parsed.model,
+      api_key: parsed.apiKey,
+      ai_active: true,
+    };
+    const signature = await wallet.sign(JSON.stringify({ ...body, signature: undefined }));
+    body.signature = signature;
+
+    const res  = await fetch(`${CFG.endpoint}/ai-setup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.detail || data.error || '등록 실패');
+
+    // 사용 완료된 봉투는 폐기
+    await fetch(`${CFG.endpoint}/ai-setup/seal?guid=${encodeURIComponent(guid)}&consume=1`).catch(()=>{});
+
+    // 화면 갱신
+    CFG.model = parsed.model;
+    if (parsed.provider === 'gemini') CFG.geminiKey = parsed.apiKey;
+    else CFG.apiKey = parsed.apiKey;
+    document.getElementById('setting-model')?.value && (document.getElementById('setting-model').value = parsed.model);
+    document.getElementById('_pc-sync-banner')?.style && (document.getElementById('_pc-sync-banner').style.display = 'none');
+    if (typeof appendBubble === 'function') appendBubble('ai', `⚙️ PC에서 보낸 ${parsed.model} 설정이 등록되었습니다.`);
+  } catch(e) {
+    alert('등록 중 오류가 발생했습니다: ' + e.message);
+  }
 }
 
 export function closeAISettings() {

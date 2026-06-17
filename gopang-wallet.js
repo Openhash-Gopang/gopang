@@ -21,8 +21,10 @@
   const IDB_STORE        = 'keys';           // 개인키·재무상태 저장
   const IDB_STORE_CHAIN  = 'anchor_chain';   // OpenHash 통합 앵커 체인 (v3.0)
   const IDB_KEY_ID       = 'ed25519-main';
+  const IDB_X25519_ID    = 'x25519-enc-main';  // 암호화 전용 키페어 (Ed25519와 별도)
   const IDB_FS_KEY       = 'financial_state'; // 로컬 재무제표 키
   const LS_PUBKEY        = 'gopang_wallet_pubkey';
+  const LS_X25519_PUBKEY = 'gopang_wallet_x25519_pubkey';
   const LS_HANDLE        = 'gopang_wallet_handle';
   const SUPABASE_URL     = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
   const WORKER_URL       = 'https://gopang-proxy.tensor-city.workers.dev';
@@ -258,6 +260,107 @@
   }
 
   /* ────────────────────────────────────────────────
+   *  X25519 암호화 전용 키페어 (Ed25519와 별도)
+   *  용도: PC가 입력한 민감정보(API Key 등)를 이 공개키로
+   *        봉투 암호화 → Supabase에는 암호문만 저장
+   *        복호화는 이 키페어를 보관한 기기(휴대폰)에서만 가능
+   * ──────────────────────────────────────────────── */
+
+  /**
+   * 새 X25519 키페어 생성 (암호화 전용 — 서명 불가)
+   * @returns {{ publicKey, privateKey, publicKeyB64u, privateKeyB64u }}
+   */
+  async function generateX25519KeyPair() {
+    const keyPair = await crypto.subtle.generateKey(
+      { name: 'X25519' },
+      true,
+      ['deriveKey', 'deriveBits']
+    );
+    const pubRaw  = await crypto.subtle.exportKey('raw', keyPair.publicKey);
+    const privJwk = await crypto.subtle.exportKey('jwk', keyPair.privateKey);
+
+    return {
+      publicKey     : keyPair.publicKey,
+      privateKey    : keyPair.privateKey,
+      publicKeyB64u : bufToB64u(pubRaw),
+      privateKeyB64u: privJwk.d,
+    };
+  }
+
+  /**
+   * ECDH(X25519) 공유키 유도 → AES-GCM 256 CryptoKey
+   * @param {CryptoKey} privateKey  — 내 X25519 개인키
+   * @param {CryptoKey} peerPublicKey — 상대 X25519 공개키
+   */
+  async function _deriveSharedAesKey(privateKey, peerPublicKey) {
+    return crypto.subtle.deriveKey(
+      { name: 'X25519', public: peerPublicKey },
+      privateKey,
+      { name: 'AES-GCM', length: 256 },
+      false, ['encrypt', 'decrypt']
+    );
+  }
+
+  /**
+   * 봉투 암호화 — PC가 휴대폰의 X25519 공개키로 평문을 암호화
+   * 송신자(PC)는 매번 임시(ephemeral) 키페어를 새로 생성하므로
+   * 송신자 쪽에 개인키를 보관할 필요가 없음 (PC는 거울일 뿐)
+   *
+   * @param {string} recipientPubKeyB64u — 수신자(휴대폰)의 X25519 공개키
+   * @param {string} plaintext
+   * @returns {{ ephemeralPubKey, iv, ciphertext }} 전부 Base64URL
+   */
+  async function sealForRecipient(recipientPubKeyB64u, plaintext) {
+    const recipientPubKey = await crypto.subtle.importKey(
+      'raw', b64uToBuf(recipientPubKeyB64u),
+      { name: 'X25519' }, false, []
+    );
+
+    // 송신자(PC) 측 1회용 임시 키페어 — PC에는 절대 저장하지 않음
+    const ephemeral = await crypto.subtle.generateKey(
+      { name: 'X25519' }, true, ['deriveKey']
+    );
+    const aesKey = await crypto.subtle.deriveKey(
+      { name: 'X25519', public: recipientPubKey },
+      ephemeral.privateKey,
+      { name: 'AES-GCM', length: 256 },
+      false, ['encrypt']
+    );
+
+    const iv  = crypto.getRandomValues(new Uint8Array(12));
+    const enc = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv }, aesKey,
+      new TextEncoder().encode(plaintext)
+    );
+    const ephemeralPubRaw = await crypto.subtle.exportKey('raw', ephemeral.publicKey);
+
+    return {
+      ephemeralPubKey: bufToB64u(ephemeralPubRaw),
+      iv             : bufToB64u(iv),
+      ciphertext     : bufToB64u(enc),
+    };
+  }
+
+  /**
+   * 봉투 복호화 — 휴대폰이 자신의 X25519 개인키로 PC가 보낸 암호문을 해독
+   * @param {CryptoKey} myPrivateKey
+   * @param {{ ephemeralPubKey, iv, ciphertext }} sealed
+   * @returns {string} plaintext
+   */
+  async function openSealed(myPrivateKey, sealed) {
+    const ephemeralPubKey = await crypto.subtle.importKey(
+      'raw', b64uToBuf(sealed.ephemeralPubKey),
+      { name: 'X25519' }, false, []
+    );
+    const aesKey = await _deriveSharedAesKey(myPrivateKey, ephemeralPubKey);
+    const dec = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: b64uToBuf(sealed.iv) },
+      aesKey, b64uToBuf(sealed.ciphertext)
+    );
+    return new TextDecoder().decode(dec);
+  }
+
+  /* ────────────────────────────────────────────────
    *  TX (Transaction) 빌더
    * ──────────────────────────────────────────────── */
 
@@ -476,13 +579,17 @@
 
   class GopangWallet {
 
-    constructor({ publicKey, privateKey, publicKeyB64u, publicKeyHex, handle, guid }) {
+    constructor({ publicKey, privateKey, publicKeyB64u, publicKeyHex, handle, guid, x25519PublicKey, x25519PrivateKey, x25519PublicKeyB64u }) {
       this._pubKey     = publicKey;
       this._privKey    = privateKey;
       this.publicKeyB64u = publicKeyB64u;
       this.publicKeyHex  = publicKeyHex;
       this.handle      = handle ?? null;   // @닉네임#태그
       this.guid        = guid   ?? null;   // user_profiles.current_ipv6
+      // X25519 암호화 전용 키페어 (Ed25519와 별도 — PC→휴대폰 봉투암호화 수신용)
+      this._x25519PrivKey   = x25519PrivateKey ?? null;
+      this._x25519PubKey    = x25519PublicKey  ?? null;
+      this.x25519PublicKeyB64u = x25519PublicKeyB64u ?? null;
     }
 
     /* ── 서명 ── */
@@ -499,6 +606,18 @@
     /* ── 공개키로 서명 검증 (정적으로도 호출 가능) ── */
     async verify(payload, signatureB64u) {
       return verify(this.publicKeyB64u, payload, signatureB64u);
+    }
+
+    /* ── X25519: 이 지갑(휴대폰)이 PC로부터 받은 봉투를 해독 ── */
+    async openSealed(sealed) {
+      if (!this._x25519PrivKey)
+        throw new Error('wallet: X25519 키페어가 아직 등록되지 않았습니다. ensureX25519Key()를 먼저 호출하세요.');
+      return openSealed(this._x25519PrivKey, sealed);
+    }
+
+    /* ── X25519 공개키 보유 여부 ── */
+    hasX25519Key() {
+      return !!this._x25519PubKey;
     }
 
     /* ── handle / guid 설정 ── */
@@ -810,6 +929,30 @@
           'raw', pubRaw, { name: 'Ed25519' }, false, ['verify']
         );
 
+        // X25519 암호화 키페어 — 없으면 null (ensureX25519Key()로 추후 생성)
+        let x25519PrivKey = null, x25519PubKey = null, x25519PubKeyB64u = null;
+        const xRecord = await idbGet(db, IDB_X25519_ID).catch(() => null);
+        if (xRecord) {
+          const xEncBuf = b64uToBuf(xRecord.encPrivKey).buffer;
+          const xPrivRaw = await decryptPrivKey(
+            xEncBuf,
+            passphrase || await GopangWallet._deviceEntropy()
+          );
+          const xPrivJwk = {
+            kty: 'OKP', crv: 'X25519',
+            x  : xRecord.publicKeyB64u,
+            d  : bufToB64u(xPrivRaw),
+            key_ops: ['deriveKey', 'deriveBits'],
+          };
+          x25519PrivKey = await crypto.subtle.importKey(
+            'jwk', xPrivJwk, { name: 'X25519' }, false, ['deriveKey']
+          );
+          x25519PubKey = await crypto.subtle.importKey(
+            'raw', b64uToBuf(xRecord.publicKeyB64u), { name: 'X25519' }, false, []
+          );
+          x25519PubKeyB64u = xRecord.publicKeyB64u;
+        }
+
         return new GopangWallet({
           publicKey    : pubKey,
           privateKey   : privKey,
@@ -817,11 +960,48 @@
           publicKeyHex : record.publicKeyHex,
           handle       : localStorage.getItem(LS_HANDLE),
           guid         : null,
+          x25519PrivateKey   : x25519PrivKey,
+          x25519PublicKey    : x25519PubKey,
+          x25519PublicKeyB64u: x25519PubKeyB64u,
         });
       } catch (e) {
         console.error('[GopangWallet] load 실패:', e);
         return null;
       }
+    }
+
+    /**
+     * X25519 암호화 키페어 보장 — 없으면 생성 후 IndexedDB에 저장
+     * "공장 초기화 후 첫 접속 시 자동 개시"용 진입점
+     * 휴대폰(설정 창)에서만 호출할 것 — PC는 이 키를 생성하지 않음
+     * @param {string} [passphrase='']
+     * @returns {{ publicKeyB64u }} 등록할 공개키
+     */
+    async ensureX25519Key(passphrase = '') {
+      if (this._x25519PrivKey && this.x25519PublicKeyB64u) {
+        return { publicKeyB64u: this.x25519PublicKeyB64u, created: false };
+      }
+
+      const kp  = await generateX25519KeyPair();
+      const enc = await encryptPrivKey(
+        b64uToBuf(kp.privateKeyB64u).buffer,
+        passphrase || await GopangWallet._deviceEntropy()
+      );
+
+      const record = {
+        publicKeyB64u: kp.publicKeyB64u,
+        encPrivKey   : bufToB64u(enc),
+        createdAt    : nowSec(),
+      };
+      const db = await openDB();
+      await idbPut(db, IDB_X25519_ID, record);
+      localStorage.setItem(LS_X25519_PUBKEY, kp.publicKeyB64u);
+
+      this._x25519PrivKey      = kp.privateKey;
+      this._x25519PubKey       = kp.publicKey;
+      this.x25519PublicKeyB64u = kp.publicKeyB64u;
+
+      return { publicKeyB64u: kp.publicKeyB64u, created: true };
     }
 
     /**
@@ -841,7 +1021,9 @@
     static async destroy() {
       const db = await openDB();
       await idbDel(db, IDB_KEY_ID);
+      await idbDel(db, IDB_X25519_ID).catch(() => {});
       localStorage.removeItem(LS_PUBKEY);
+      localStorage.removeItem(LS_X25519_PUBKEY);
       localStorage.removeItem(LS_HANDLE);
     }
 
@@ -911,6 +1093,14 @@
     static nicknameHash(nickname, lang) { return nicknameHash(nickname, lang); }
     static verify(publicKeyB64u, payload, signatureB64u) {
       return verify(publicKeyB64u, payload, signatureB64u);
+    }
+    /**
+     * PC(거울)에서 호출 — 지갑 인스턴스 없이, 휴대폰의 X25519 공개키만으로 봉투 암호화
+     * @param {string} recipientPubKeyB64u — 휴대폰의 X25519 공개키
+     * @param {string} plaintext
+     */
+    static async sealForRecipient(recipientPubKeyB64u, plaintext) {
+      return sealForRecipient(recipientPubKeyB64u, plaintext);
     }
     static bufToB64u(buf)     { return bufToB64u(buf); }
     static b64uToBuf(b64u)    { return b64uToBuf(b64u); }
@@ -1091,3 +1281,5 @@
  * const ok = await GopangWallet.verify(pubKeyB64u, payload, sig);
  *
  * ==================================================== */
+
+

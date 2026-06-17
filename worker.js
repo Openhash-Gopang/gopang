@@ -190,6 +190,16 @@ export default {
     // v5.1: 토큰 기반 폐기 — Ed25519 서명(/biz/product와 동일 패턴)으로 전환
     //   GET  : ?guid=... 만으로 조회 (저장값은 암호화되어 있어 평문 키 노출 없음)
     //   POST : body={guid,pubkey,signature,...} — _verifyEd25519 + TOFU
+    // ── Wallet X25519 (PC→휴대폰 AI 설정 봉투암호화) ──────
+    if (pathname === '/wallet/x25519') {
+      if (request.method === 'GET')  return handleWalletX25519Get(request, env, corsHeaders);
+      if (request.method === 'POST') return handleWalletX25519Post(request, env, corsHeaders);
+    }
+    if (pathname === '/ai-setup/seal') {
+      if (request.method === 'GET')  return handleAiSetupSealGet(request, env, corsHeaders);
+      if (request.method === 'POST') return handleAiSetupSealPost(request, env, corsHeaders);
+    }
+
     if (pathname === '/ai-setup') {
       if (request.method === 'GET') {
         const guid = url.searchParams.get('guid');
@@ -962,6 +972,164 @@ function verifyDeltaZero(outputs, balanceClaimed) {
 // 미앵커링 pdv_log 배치 → 머클 루트 계산 → merkle_anchors INSERT
 // → pdv_log openhash_anchored = true 갱신
 // ═══════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════
+// Wallet X25519 — PC가 휴대폰의 암호화 공개키를 조회/등록
+// ═══════════════════════════════════════════════════════════
+
+// GET /wallet/x25519?guid=...  (PC가 호출, 인증 불필요 — 공개키는 비밀 아님)
+async function handleWalletX25519Get(request, env, corsHeaders) {
+  const url  = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const sbH = _sbHeaders(env);
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=extra&limit=1`,
+    { headers: sbH }
+  );
+  const rows = await res.json().catch(() => []);
+  const pubkey = rows?.[0]?.extra?.public?.security?.x25519_pubkey || null;
+
+  if (!pubkey) {
+    return new Response(JSON.stringify({
+      ok: false, registered: false,
+      message: '이 사용자는 아직 휴대폰에서 AI 설정 창을 연 적이 없습니다. 휴대폰 웹앱 → 설정 → AI 설정을 먼저 열어 주세요.',
+    }), { status: 200, headers: corsHeaders });
+  }
+  return new Response(JSON.stringify({ ok: true, registered: true, x25519_pubkey: pubkey }),
+    { status: 200, headers: corsHeaders });
+}
+
+// POST /wallet/x25519  — 휴대폰이 자신의 X25519 공개키 등록
+// body: { guid, x25519_pubkey, ed25519_pubkey, signature, ts }
+// 서명 대상: `${guid}:${x25519_pubkey}:${ts}` (固定 문자열, /profile과 동일 패턴)
+// Ed25519 서명을 요구하는 이유: 서명 없이 등록을 허용하면 공격자가
+// 피해자의 guid를 알아내 먼저 자신의 키로 선점 등록(레이스 컨디션)할 수 있고,
+// 이후 PC가 그 guid로 암호화한 API Key를 공격자가 복호화할 수 있게 된다.
+async function handleWalletX25519Post(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, x25519_pubkey, ed25519_pubkey, signature, ts } = body;
+  if (!guid)           return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!x25519_pubkey)  return _err(400, 'MISSING_FIELD', 'x25519_pubkey 필수', corsHeaders);
+  if (!ed25519_pubkey) return _err(400, 'MISSING_FIELD', 'ed25519_pubkey 필수', corsHeaders);
+  if (!signature)      return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+
+  const sigMsg = `${guid}:${x25519_pubkey}:${ts || ''}`;
+  const sigOk  = await _verifyEd25519Simple(ed25519_pubkey, signature, sigMsg);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+
+  const sbH = _sbHeaders(env);
+  const existRes  = await fetch(
+    `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=extra,pubkey_ed25519&limit=1`,
+    { headers: sbH }
+  );
+  const existRows = await existRes.json().catch(() => []);
+  if (!existRows.length) return _err(404, 'PROFILE_NOT_FOUND', '프로필이 먼저 등록되어야 합니다', corsHeaders);
+
+  // TOFU: 이 guid에 이미 등록된 Ed25519 공개키와 일치해야만 진짜 소유자로 인정
+  const knownEdPubkey = existRows[0].pubkey_ed25519;
+  if (knownEdPubkey && knownEdPubkey !== ed25519_pubkey) {
+    return _err(403, 'PUBKEY_MISMATCH', '등록된 공개키와 일치하지 않습니다', corsHeaders);
+  }
+
+  const prevExtra = existRows[0].extra || {};
+  const prevSecurity = prevExtra?.public?.security || {};
+
+  // X25519 키 자체도 TOFU: 이미 등록된 키가 있으면 그대로 반환 (덮어쓰지 않음)
+  if (prevSecurity.x25519_pubkey) {
+    return new Response(JSON.stringify({
+      ok: true, already_registered: true, x25519_pubkey: prevSecurity.x25519_pubkey,
+    }), { status: 200, headers: corsHeaders });
+  }
+
+  const newExtra = {
+    ...prevExtra,
+    public: {
+      ...(prevExtra.public || {}),
+      security: { ...prevSecurity, x25519_pubkey, registered_at: new Date().toISOString() },
+    },
+  };
+
+  const sbServiceH = _sbServiceHeaders(env);
+  const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
+    method: 'PATCH',
+    headers: { ...sbServiceH, 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ extra: newExtra }),
+  });
+  if (!patchRes.ok) return _err(500, 'DB_ERROR', await patchRes.text(), corsHeaders);
+
+  return new Response(JSON.stringify({ ok: true, already_registered: false, x25519_pubkey }),
+    { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// AI Setup Seal — PC→휴대폰 1회용 암호화 봉투
+// 평문 API 키는 절대 이 테이블에 닿지 않음 (PC가 암호화한 바이트만 경유)
+// ═══════════════════════════════════════════════════════════
+
+// POST /ai-setup/seal — PC가 암호문 저장 (서명 불필요, 암호문 자체가 무의미한 바이트)
+// body: { guid, ephemeral_pubkey, iv, ciphertext }
+async function handleAiSetupSealPost(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, ephemeral_pubkey, iv, ciphertext } = body;
+  if (!guid)             return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!ephemeral_pubkey) return _err(400, 'MISSING_FIELD', 'ephemeral_pubkey 필수', corsHeaders);
+  if (!iv)               return _err(400, 'MISSING_FIELD', 'iv 필수', corsHeaders);
+  if (!ciphertext)       return _err(400, 'MISSING_FIELD', 'ciphertext 필수', corsHeaders);
+
+  const sbServiceH = _sbServiceHeaders(env);
+  const expiresAt = new Date(Date.now() + 5 * 60_000).toISOString(); // 5분 후 만료
+
+  // 같은 guid의 이전 봉투는 덮어씀 (PC에서 여러 번 수정 가능)
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/ai_setup_seals?guid=eq.${encodeURIComponent(guid)}`, {
+    method: 'DELETE', headers: sbServiceH,
+  }).catch(() => {});
+
+  const insRes = await fetch(`${SUPABASE_URL}/rest/v1/ai_setup_seals`, {
+    method: 'POST',
+    headers: { ...sbServiceH, 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      guid, ephemeral_pubkey, iv, ciphertext,
+      created_at: new Date().toISOString(),
+      expires_at: expiresAt,
+    }),
+  });
+  if (!insRes.ok) return _err(500, 'DB_ERROR', await insRes.text(), corsHeaders);
+
+  return new Response(JSON.stringify({ ok: true, expires_at: expiresAt }),
+    { status: 200, headers: corsHeaders });
+}
+
+// GET /ai-setup/seal?guid=...&consume=1 — 휴대폰이 자신의 봉투 조회 (consume=1이면 즉시 삭제)
+async function handleAiSetupSealGet(request, env, corsHeaders) {
+  const url    = new URL(request.url);
+  const guid    = url.searchParams.get('guid');
+  const consume = url.searchParams.get('consume') === '1';
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const sbH = _sbHeaders(env);
+  const now = new Date().toISOString();
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/ai_setup_seals?guid=eq.${encodeURIComponent(guid)}&expires_at=gt.${now}&select=ephemeral_pubkey,iv,ciphertext,created_at&limit=1`,
+    { headers: sbH }
+  );
+  const rows = await res.json().catch(() => []);
+  if (!rows.length) {
+    return new Response(JSON.stringify({ ok: true, sealed: null }), { status: 200, headers: corsHeaders });
+  }
+
+  if (consume) {
+    const sbServiceH = _sbServiceHeaders(env);
+    await fetch(`${SUPABASE_URL}/rest/v1/ai_setup_seals?guid=eq.${encodeURIComponent(guid)}`, {
+      method: 'DELETE', headers: sbServiceH,
+    }).catch(() => {});
+  }
+
+  return new Response(JSON.stringify({ ok: true, sealed: rows[0] }), { status: 200, headers: corsHeaders });
+}
 
 // ═══════════════════════════════════════════════════════════
 // /ai-setup GET — 현재 AI 비서 설정 조회
