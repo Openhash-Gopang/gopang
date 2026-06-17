@@ -117,7 +117,7 @@ if (!_isFirstVisit) {
 // 3. 설정 복원 + 핸들 칩 초기화
 // ════════════════════════════════════════════════════════
 loadSettings();
-_updateHandleChip(_USER?.handle || null);
+_updateHandleChip(_USER?.nickname || _USER?.handle || null);
 
 // ════════════════════════════════════════════════════════
 // 4. DOMContentLoaded — 나머지 모듈 동적 로드
@@ -469,7 +469,7 @@ function _showRegisterGuide() {
     await initAuthWithPhone(val);
     const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
     if (stored?.handle && typeof _updateHandleChip === 'function') {
-      _updateHandleChip(stored.handle);
+      _updateHandleChip(stored.nickname || stored.handle);
     }
     // ── Bug Fix: 등록 완료 후 설정 창 자동 열기 제거 ──
     // (사용자가 직접 설정 버튼을 눌러야 열림)
