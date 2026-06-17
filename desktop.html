@@ -901,6 +901,12 @@ body {
 
   <!-- 하단: 앱 실행 -->
   <div class="sb-section bottom">
+    <button class="sb-cta" id="nav-ai-setup" onclick="loadPage('ai-setup')" style="background:var(--brand);margin-bottom:8px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.07-7.07-4.24 4.24M11.17 18.83l-4.24 4.24m12.14 0-4.24-4.24M7.93 7.93 3.69 3.69"/>
+      </svg>
+      <span class="sb-cta-label">AI 비서 활성화</span>
+    </button>
     <button class="sb-cta" onclick="openWebApp()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -915,7 +921,10 @@ body {
   <div style="display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:var(--text)">
     <div class="sb-logo-icon">G</div> gopang
   </div>
-  <button style="background:var(--brand);color:white;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer" onclick="openWebApp()">웹앱 열기</button>
+  <div style="display:flex;gap:6px">
+    <button style="background:none;color:var(--brand);border:1px solid var(--brand);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer" onclick="loadPage('ai-setup')">AI 비서</button>
+    <button style="background:var(--brand);color:white;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer" onclick="openWebApp()">웹앱 열기</button>
+  </div>
 </div>
 
 <div class="ticker-bar" style="margin-top:0;">
@@ -1206,6 +1215,7 @@ const PAGES = {
   agents:   '/pages/agents.html',
   metrics:  '/pages/metrics.html',
   openhash: '/pages/openhash.html',
+  'ai-setup': '/pages/ai-setup.html',
 };
 
 let currentPage = null;

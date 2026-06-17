@@ -3,12 +3,34 @@
  */
 import { setAiActive, aiActive, _USER, USER_GUID } from './state.js';
 
+// ── Provider별 정보 (모델 → provider 식별 + baseUrl) ────────
+// 모든 provider가 OpenAI 호환 /chat/completions 형식 지원
+export const PROVIDER_INFO = {
+  gemini:    { label: 'Gemini',    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', keyField: 'geminiKey' },
+  deepseek:  { label: 'DeepSeek',  baseUrl: 'https://api.deepseek.com',                                 keyField: 'apiKey' },
+  anthropic: { label: 'Claude',    baseUrl: 'https://api.anthropic.com/v1',                              keyField: 'apiKey' },
+  openai:    { label: 'GPT',       baseUrl: 'https://api.openai.com/v1',                                 keyField: 'apiKey' },
+};
+
+export function _providerOf(model) {
+  if (!model) return null;
+  if (model.startsWith('gemini'))  return 'gemini';
+  if (model.startsWith('deepseek'))return 'deepseek';
+  if (model.startsWith('claude'))  return 'anthropic';
+  if (model.startsWith('gpt'))     return 'openai';
+  return null;
+}
+
 export const CFG = {
   apiKey:    '',
   geminiKey: '',
   kakaoKey:  '66648ca49f126d8752b33d542789ac56',
   endpoint:  'https://gopang-proxy.tensor-city.workers.dev',
   model:     'deepseek-v4-flash',
+  // ── 다중 LLM 순차 페일오버 ───────────────────────────────
+  // 각 항목: { provider, model, apiKey }
+  // 등록된 순서대로 호출하며, 한도 초과(429/402) 시 다음 항목으로 자동 전환
+  providers: [],
   // SP-00 v11.0 — 캐시 최적화: 완전 정적, 동적값 없음
   // GUID·위치·시간은 call-ai.js에서 user 컨텍스트 메시지로 주입
   // DeepSeek prefix cache: system이 동일하면 ~95% 캐시 적중
@@ -53,6 +75,7 @@ export function saveSettings() {
     localStorage.setItem('gopang_cfg', JSON.stringify({
       model: CFG.model, endpoint: CFG.endpoint,
       apiKey: CFG.apiKey, geminiKey: CFG.geminiKey,
+      providers: CFG.providers,
     }));
   } catch {}
 
@@ -68,7 +91,10 @@ export function loadSettings() {
     if (saved.endpoint) CFG.endpoint = saved.endpoint;
     if (saved.apiKey)   CFG.apiKey   = saved.apiKey;
     if (saved.geminiKey)CFG.geminiKey= saved.geminiKey;
-    if (saved.apiKey)   setAiActive(true);
+    if (Array.isArray(saved.providers) && saved.providers.length) {
+      CFG.providers = saved.providers;
+    }
+    if (saved.apiKey || saved.geminiKey || CFG.providers.length) setAiActive(true);
   } catch {}
 }
 

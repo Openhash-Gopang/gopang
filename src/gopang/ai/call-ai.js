@@ -1,7 +1,7 @@
 ﻿/**
  * ai/call-ai.js — LLM API 호출·스트리밍·GWP 태그 처리
  */
-import { CFG, _modelSupportsVision } from '../core/config.js';
+import { CFG, _modelSupportsVision, PROVIDER_INFO } from '../core/config.js';
 import { aiActive, history, _userLocation, _lastRouterResult,
          setLastRouterResult, _USER, USER_GUID, _locationPending, _locationReady } from '../core/state.js';
 import { appendBubble, showTyping, hideTyping,
@@ -13,6 +13,66 @@ import { _klawReview } from '../services/klaw.js';
 
 
 export let history_ref = history;  // 외부 참조용
+
+// ── 호출 후보 목록 생성 ────────────────────────────────────
+// 우선순위: 1) 고팡 프록시(기본, 무료) 2) 사용자가 등록한 BYOK provider들 (등록 순서대로)
+// 한도 초과(429)·크레딧부족(402) 시 callAI()에서 다음 후보로 자동 전환
+function _buildCallCandidates() {
+  const candidates = [];
+
+  // 1) 고팡 프록시 — 키 불필요, 기본 모델 사용
+  if (CFG.endpoint.includes('workers.dev')) {
+    candidates.push({
+      provider: 'gopang-proxy',
+      baseUrl:  CFG.endpoint.replace(/\/+$/, ''),
+      model:    CFG.model,
+      apiKey:   '',
+      isProxy:  true,
+    });
+  }
+
+  // 2) 사용자가 등록한 BYOK provider 목록 (순서대로)
+  if (Array.isArray(CFG.providers)) {
+    for (const p of CFG.providers) {
+      if (!p?.apiKey || !p?.model) continue;
+      const info = PROVIDER_INFO[p.provider];
+      if (!info) continue;
+      candidates.push({
+        provider: p.provider,
+        baseUrl:  (p.baseUrl || info.baseUrl).replace(/\/+$/, ''),
+        model:    p.model,
+        apiKey:   p.apiKey,
+        isProxy:  false,
+      });
+    }
+  }
+
+  // 3) 하위 호환 — CFG.apiKey/geminiKey 단일 키만 있던 기존 사용자
+  if (!candidates.some(c => !c.isProxy)) {
+    if (CFG.apiKey && !CFG.endpoint.includes('workers.dev')) {
+      candidates.push({
+        provider: 'legacy', baseUrl: CFG.endpoint.replace(/\/+$/, ''),
+        model: CFG.model, apiKey: CFG.apiKey, isProxy: false,
+      });
+    } else if (CFG.geminiKey) {
+      candidates.push({
+        provider: 'gemini', baseUrl: PROVIDER_INFO.gemini.baseUrl,
+        model: CFG.model.startsWith('gemini') ? CFG.model : 'gemini-2.0-flash',
+        apiKey: CFG.geminiKey, isProxy: false,
+      });
+    }
+  }
+
+  // 후보가 전혀 없으면 최소 프록시 1개는 항상 시도
+  if (candidates.length === 0) {
+    candidates.push({
+      provider: 'gopang-proxy', baseUrl: 'https://gopang-proxy.tensor-city.workers.dev',
+      model: CFG.model, apiKey: '', isProxy: true,
+    });
+  }
+
+  return candidates;
+}
 
 
 export async function callAI(userText, imageFile = null, _preTab = null) {
@@ -182,48 +242,65 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
     { role: 'user', content: userContent },         // 현재 user
   ];
 
-  // ── 엔드포인트 + API Key 결정 ────────────────────────────
-  const epSel   = document.getElementById('setting-endpoint');
-  const savedKey = document.getElementById('setting-apikey')?.value?.trim();
-  // Worker 프록시 사용 시: API 키 불필요 (Worker 환경변수에서 관리)
-  // 직접 API 사용 시: 설정 키 또는 CFG.apiKey 사용
-  const isProxy = CFG.endpoint.includes('workers.dev');
-  const apiKey  = isProxy ? '' : ((savedKey && savedKey.startsWith('sk-')) ? savedKey : CFG.apiKey);
-
-  let baseUrl = CFG.endpoint;
-  if (document.getElementById('setting-endpoint')?.value === 'custom') {
-    const customUrl = document.getElementById('custom-endpoint-url')?.value?.trim();
-    if (customUrl) baseUrl = customUrl;
-  }
-  // 끝 슬래시 제거
-  baseUrl = baseUrl.replace(/\/+$/, '');
-
+  // ── 호출 후보 목록 생성 (순차 페일오버) ──────────────────
+  // 1순위: 고팡 프록시(키 불필요, 기본) → 등록된 BYOK provider들 순서대로
+  // 한도 초과(429) 또는 크레딧 부족(402) 시 다음 후보로 자동 전환
+  const candidates = _buildCallCandidates();
   const activeModel = CFG.model;
-  console.log(`[AI] 호출 → ${baseUrl}/chat/completions | 모델: ${activeModel} | ${isProxy ? '프록시(보안)' : 'Key: ' + apiKey.slice(0,8) + '...'}`);
+  console.log(`[AI] 호출 후보 ${candidates.length}개 준비 — 1번부터 순차 시도`);
 
-  // ── 스트리밍 호출 ─────────────────────────────────────────
+  // ── 스트리밍 호출 (페일오버 포함) ───────────────────────
   try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        // 프록시 사용 시: Authorization 헤더 미전송 (Worker가 자체 키 사용)
-        // 직접 API 사용 시: Bearer 키 전송
-        ...(isProxy ? {} : { 'Authorization': `Bearer ${apiKey}` }),
-      },
-      body: JSON.stringify({
-        model: CFG.model,
-        messages,
-        max_tokens:  800,
-        temperature: 0.6,
-        stream:      true,
-        stream_options: { include_usage: true },  // 캐시 히트 토큰 수 확인용
-      }),
-    });
+    let res = null, usedCandidate = null, lastErr = null;
 
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => '');
-      throw new Error(`API ${res.status}: ${errBody.slice(0, 300) || '응답없음'}`);
+    for (let i = 0; i < candidates.length; i++) {
+      const c = candidates[i];
+      console.log(`[AI] 시도 ${i + 1}/${candidates.length} → ${c.baseUrl}/chat/completions | 모델: ${c.model} | ${c.isProxy ? '프록시(보안)' : 'provider: ' + c.provider}`);
+      try {
+        const reqBody = {
+          model: c.model,
+          messages,
+          max_tokens:  800,
+          temperature: 0.6,
+          stream:      true,
+        };
+        // Gemini OpenAI 호환 엔드포인트는 stream_options를 거부함(400) — 캐시 사용량 확인은 다른 provider에서만
+        if (c.provider !== 'gemini') {
+          reqBody.stream_options = { include_usage: true };
+        }
+        const attempt = await fetch(`${c.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(c.isProxy ? {} : { 'Authorization': `Bearer ${c.apiKey}` }),
+          },
+          body: JSON.stringify(reqBody),
+        });
+
+        if (attempt.ok) { res = attempt; usedCandidate = c; break; }
+
+        // 한도 초과(429) 또는 크레딧/결제 부족(402) → 다음 후보로 페일오버
+        if (attempt.status === 429 || attempt.status === 402) {
+          const errBody = await attempt.text().catch(() => '');
+          console.warn(`[AI] ${c.provider} 한도 초과(${attempt.status}) — 다음 LLM으로 전환:`, errBody.slice(0, 150));
+          lastErr = new Error(`API ${attempt.status}: ${errBody.slice(0, 300) || '응답없음'}`);
+          continue;
+        }
+
+        // 그 외 오류는 즉시 실패 처리
+        const errBody = await attempt.text().catch(() => '');
+        throw new Error(`API ${attempt.status}: ${errBody.slice(0, 300) || '응답없음'}`);
+      } catch (fetchErr) {
+        lastErr = fetchErr;
+        // 네트워크 오류 등도 다음 후보가 있으면 계속 시도
+        if (i < candidates.length - 1) continue;
+        throw fetchErr;
+      }
+    }
+
+    if (!res) throw (lastErr || new Error('모든 LLM 호출에 실패했습니다.'));
+    if (usedCandidate && usedCandidate.model !== CFG.model) {
+      console.info(`[AI] 페일오버로 모델 전환됨: ${CFG.model} → ${usedCandidate.model}`);
     }
 
     console.log(`[AI] 응답 시작 — status:${res.status}, streaming...`);
