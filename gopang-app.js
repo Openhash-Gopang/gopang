@@ -338,8 +338,17 @@ function _showWelcomePopup() {
     ov.style.opacity = '0';
     ov.style.transition = 'opacity .2s';
     setTimeout(() => ov.remove(), 200);
-    // 안내문구 + 번호 입력 통합 팝업
-    _showRegisterGuide();
+    // ── Bug Fix: 이미 등록된 사용자는 번호 입력 팝업 표시 안 함 ──
+    const _alreadyRegistered = (() => {
+      try {
+        const s = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+        return !!(s?.handle && s?.guid);
+      } catch { return false; }
+    })();
+    if (!_alreadyRegistered) {
+      // 안내문구 + 번호 입력 통합 팝업
+      _showRegisterGuide();
+    }
   };
 }
 
@@ -462,7 +471,8 @@ function _showRegisterGuide() {
     if (stored?.handle && typeof _updateHandleChip === 'function') {
       _updateHandleChip(stored.handle);
     }
-    if (typeof openSettings === 'function') openSettings();
+    // ── Bug Fix: 등록 완료 후 설정 창 자동 열기 제거 ──
+    // (사용자가 직접 설정 버튼을 눌러야 열림)
   };
 
   okBtn.onclick = doSubmit;
