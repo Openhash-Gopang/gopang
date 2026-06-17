@@ -44,11 +44,18 @@ import { startIncomingWatch }                  from './src/gopang/ui/p2p-chat.js
 
 // ════════════════════════════════════════════════════════
 // 1. 사용자 초기화
-// 첫 접속자: 환영 팝업 → 시작하기 → initAuth()
-// 기존 사용자: 바로 initAuth()
+// ── Bug Fix: gopang_welcomed(환영팝업 플래그)가 아니라
+//    실제 등록 데이터(gopang_user_v4) 존재 여부로 initAuth() 호출 결정.
+//    체크박스를 누르지 않고 가입을 마친 사용자가 재접속 시
+//    initAuth()가 스킵되어 헤더에 "Guest"가 표시되는 문제 수정.
 // ════════════════════════════════════════════════════════
-const _isFirstVisit = !localStorage.getItem('gopang_welcomed');
-if (!_isFirstVisit) {
+const _hasRegisteredUser = (() => {
+  try {
+    const s = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+    return !!(s?.handle && s?.ipv6);
+  } catch { return false; }
+})();
+if (_hasRegisteredUser) {
   await initAuth();
 }
 
