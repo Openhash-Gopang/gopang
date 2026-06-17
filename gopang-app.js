@@ -348,6 +348,41 @@ function _closeWelcome(ov) {
   setTimeout(() => ov.remove(), 200);
 }
 
+// ── 매 접속마다 SW 업데이트 강제 체크 ──────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then(reg => {
+    // 즉시 업데이트 체크
+    reg.update().then(() => {
+      console.log('[PWA] SW 업데이트 체크 완료');
+    });
+
+    // 새 SW가 waiting 상태면 즉시 skipWaiting 메시지 전송
+    if (reg.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+
+    // 새 SW 설치 감지 → 자동 reload
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          newWorker.postMessage({ type: 'SKIP_WAITING' });
+        }
+      });
+    });
+  });
+
+  // SW 교체 완료 → 페이지 자동 reload
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      console.log('[PWA] 새 버전 감지 — 자동 새로고침');
+      window.location.reload();
+    }
+  });
+}
+
 // ── SW → 앱 메시지 수신 (소리 재생) ────────────────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (event) => {
