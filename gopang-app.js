@@ -235,9 +235,8 @@ const _boot = async () => {
   console.info('[Gopang v3] 부트스트랩 완료');
 
   // 첫 접속자: 환영 팝업 (initAuth 포함)
-  if (_isFirstVisit) {
-    _showWelcomePopup();
-  }
+  // 매 접속마다 환영 팝업 표시 (체크박스로만 숨김)
+  _showWelcomePopup();
 };
 if (document.readyState === 'loading') {
   window.addEventListener('DOMContentLoaded', _boot);
@@ -287,12 +286,12 @@ function _showWelcomePopup() {
       <div style="padding:16px 24px;display:flex;flex-direction:column;gap:16px">
 
         ${[
-          ['M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5', '데이터 주권', '모든 데이터는 사용자 단말에 저장됩니다. OpenHash 기술로 위변조가 불가능합니다.'],
-          ['M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6', 'AI 비서', '상단 AI 버튼이 법률·의료·세금 등 각종 업무를 대신 처리합니다. 사용 여부는 자유입니다.'],
-          ['M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0-20 0M4.93 4.93l14.14 14.14', '광고 없음', '의료·법률·교육 등 전문 AI 서비스를 광고 없이 이용할 수 있습니다.'],
-          ['M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z', '고팡 스토어', '앱 스토어처럼 누구나 AI 서비스를 등록하고 배포할 수 있습니다.'],
-          ['M2 5h20v14H2zM2 10h20', '결제', '기존 결제 수단을 그대로 이용할 수 있습니다. 전용 화폐 GDC(₮)는 각국 인덱스 투자 수익을 이용자에게 배분합니다.'],
-          ['M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22', '완전 오픈소스', '모든 코드를 한 줄도 빠짐없이 공개합니다. github.com/Openhash-Gopang'],
+          ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', '완전한 프라이버시', '주고받은 모든 문서와 대화는 스마트폰에 저장되며, 서버가 없습니다. 모든 기록은 본인만 볼 수 있습니다.'],
+          ['M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5', '위변조 불가', '모든 기록은 OpenHash 기술로 암호화되어 위조나 변조될 수 없습니다.'],
+          ['M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0 1 12 2.944a11.955 11.955 0 0 1-8.618 3.04A12.02 12.02 0 0 0 3 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', '합법성 보장', '주고받은 데이터의 합법성을 보장하며, 불법적 내용은 적절히 조치합니다(신고 등).'],
+          ['M3 6l3 1m0 0-3 9a5.002 5.002 0 0 0 6.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1-3 9a5.002 5.002 0 0 0 6.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3', '판결 추정', '모든 다툼에 대해 수 년 뒤의 대법원 판결문을 상당한 수준의 신뢰도로 예상할 수 있습니다. (자체 평가 일치도 99%)'],
+          ['M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M9 15h.01M15 15h.01M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', '정확한 세금', '모든 거래는 즉시 사용자의 장부(재무제표)에 반영되며, 세금은 단 1원도 더 내거나 덜내지 않습니다.'],
+          ['M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22', '자세한 정보', 'PC에서 gopang.net에 접속하세요.'],
         ].map(([path, title, desc]) => `
           <div style="display:flex;align-items:flex-start;gap:12px">
             <div style="width:34px;height:34px;flex-shrink:0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center">
@@ -315,10 +314,10 @@ function _showWelcomePopup() {
           border-radius:12px;font-size:15px;font-weight:600;
           cursor:pointer;font-family:inherit;
         ">시작하기</button>
-        <a href="https://gopang.net" target="_blank" style="
-          display:block;text-align:center;
-          font-size:12px;color:#9ca3af;text-decoration:none;padding:6px;
-        ">PC에서 더 알아보기 → gopang.net</a>
+        <label style="display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;margin-top:10px">
+          <input type="checkbox" id="_welcome_no_show" style="width:14px;height:14px;accent-color:#16a34a;cursor:pointer">
+          <span style="font-size:12px;color:#9ca3af">이 메시지를 다시 표시하지 않음</span>
+        </label>
       </div>
     </div>
   `;
@@ -332,7 +331,10 @@ function _showWelcomePopup() {
   });
 
   document.getElementById('_welcome_ok').onclick = () => {
-    localStorage.setItem('gopang_welcomed', '1');
+    // 체크박스가 체크된 경우에만 다시 표시 안 함
+    if (document.getElementById('_welcome_no_show')?.checked) {
+      localStorage.setItem('gopang_welcomed', '1');
+    }
     ov.style.opacity = '0';
     ov.style.transition = 'opacity .2s';
     setTimeout(() => ov.remove(), 200);
@@ -346,41 +348,6 @@ function _closeWelcome(ov) {
   ov.style.opacity = '0';
   ov.style.transition = 'opacity .2s';
   setTimeout(() => ov.remove(), 200);
-}
-
-// ── 매 접속마다 SW 업데이트 강제 체크 ──────────────────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.ready.then(reg => {
-    // 즉시 업데이트 체크
-    reg.update().then(() => {
-      console.log('[PWA] SW 업데이트 체크 완료');
-    });
-
-    // 새 SW가 waiting 상태면 즉시 skipWaiting 메시지 전송
-    if (reg.waiting) {
-      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-    }
-
-    // 새 SW 설치 감지 → 자동 reload
-    reg.addEventListener('updatefound', () => {
-      const newWorker = reg.installing;
-      newWorker.addEventListener('statechange', () => {
-        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          newWorker.postMessage({ type: 'SKIP_WAITING' });
-        }
-      });
-    });
-  });
-
-  // SW 교체 완료 → 페이지 자동 reload
-  let refreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) {
-      refreshing = true;
-      console.log('[PWA] 새 버전 감지 — 자동 새로고침');
-      window.location.reload();
-    }
-  });
 }
 
 // ── SW → 앱 메시지 수신 (소리 재생) ────────────────────────
