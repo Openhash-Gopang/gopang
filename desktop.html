@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>고팡 (Gopang) — AI 자율 시장 플랫폼 v3.4</title>
+<title>혼디 (Hondi) — AI 자율 시장 플랫폼 v3.4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
 <style>
 /* ── RESET ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -162,6 +161,7 @@ body {
   white-space: nowrap;
 }
 .sb-cta:hover { background: var(--brand-dk); }
+.sb-cta svg { flex-shrink: 0; }
 .sb-cta-label {
   opacity: 0; transition: opacity 0.12s 0.04s;
 }
@@ -512,22 +512,6 @@ td:first-child { font-weight: 600; color: var(--text); }
 .dc-amber  { color: var(--amber); }
 .dc-red    { color: var(--red); }
 
-/* ── TICKER ── */
-.ticker-bar {
-  background: var(--bg-subtle); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-  padding: 9px 0; overflow: hidden;
-  position: relative; z-index: 1;
-}
-.ticker-track { display: flex; width: max-content; animation: slide 28s linear infinite; }
-.tick-item {
-  white-space: nowrap; padding: 0 28px;
-  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 400;
-  color: var(--text4); display: flex; align-items: center; gap: 8px;
-}
-.tick-item::after { content: '·'; color: var(--border2); }
-.tick-item span { color: var(--brand); font-weight: 500; }
-@keyframes slide { from{transform:translateX(0)} to{transform:translateX(-50%)} }
-
 /* ── REVEAL ── */
 .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
 .reveal.in { opacity: 1; transform: translateY(0); }
@@ -772,6 +756,7 @@ body {
   transition: background 0.15s; white-space: nowrap;
 }
 .sb-cta:hover { background: var(--brand-dk); }
+.sb-cta svg { flex-shrink: 0; }
 .sb-cta-label { opacity: 0; transition: opacity 0.12s 0.04s; }
 .sidebar:hover .sb-cta-label { opacity: 1; }
 
@@ -806,7 +791,7 @@ body {
 <aside class="sidebar">
   <a class="sb-logo" href="#" onclick="loadPage('overview');return false;">
     <div class="sb-logo-icon">G</div>
-    <span class="sb-logo-text">gopang</span>
+    <span class="sb-logo-text">hondi</span>
   </a>
 
   <!-- 탐색 -->
@@ -872,11 +857,36 @@ body {
       </svg>
       <span class="sb-item-label">사업화</span>
     </a>
+    <a class="sb-item" href="/gopang-auth-guide.html" target="_blank">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </svg>
+      <span class="sb-item-label">인증 안내 ↗</span>
+    </a>
+    <a class="sb-item" href="/gopang-id-whitepaper.html" target="_blank">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="16" rx="2"/>
+        <circle cx="9" cy="10" r="2"/>
+        <path d="M15 8h3M15 12h3M6 16h12"/>
+      </svg>
+      <span class="sb-item-label">ID 백서 ↗</span>
+    </a>
+    <a class="sb-item" href="https://github.com/Openhash-Gopang/gopang" target="_blank">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+      <span class="sb-item-label">GitHub ↗</span>
+    </a>
   </div>
 
   <!-- 서비스 -->
   <div class="sb-section">
     <div class="sb-section-label">서비스</div>
+    <a class="sb-item" href="https://klaw.openhash.kr" target="_blank">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 6l3 1m0 0-3 9a5.002 5.002 0 0 0 6.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1-3 9a5.002 5.002 0 0 0 6.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>
+      </svg>
+      <span class="sb-item-label">K-Law 체험하기 ↗</span>
+    </a>
     <a class="sb-item" href="https://democracy.gopang.net/desktop.html" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -919,33 +929,13 @@ body {
 <!-- 모바일 상단바 -->
 <div class="mobile-topbar">
   <div style="display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:var(--text)">
-    <div class="sb-logo-icon">G</div> gopang
+    <div class="sb-logo-icon">G</div> hondi
   </div>
   <div style="display:flex;gap:6px">
     <button style="background:none;color:var(--brand);border:1px solid var(--brand);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer" onclick="loadPage('ai-setup')">AI 비서</button>
     <button style="background:var(--brand);color:white;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer" onclick="openWebApp()">웹앱 열기</button>
   </div>
 </div>
-
-<div class="ticker-bar" style="margin-top:0;">
-  <div class="ticker-track">
-    <span class="tick-item">Hash Chain 갱신 완료</span>
-    <span class="tick-item">최대 처리 성능 <span>7.3M TPS</span></span>
-    <span class="tick-item">전력 절감 <span>99.8%</span></span>
-    <span class="tick-item">소비자 데이터 노출 <span>0%</span></span>
-    <span class="tick-item">알리페이 대비 <span>29배</span></span>
-    <span class="tick-item">차분 프라이버시 <span>ε ≤ 0.1</span></span>
-    <span class="tick-item">재해 복구율 <span>99.99%</span></span>
-    <span class="tick-item">GDPR 완벽 준수</span>
-    <span class="tick-item">Hash Chain 갱신 완료</span>
-    <span class="tick-item">최대 처리 성능 <span>7.3M TPS</span></span>
-    <span class="tick-item">전력 절감 <span>99.8%</span></span>
-    <span class="tick-item">소비자 데이터 노출 <span>0%</span></span>
-    <span class="tick-item">알리페이 대비 <span>29배</span></span>
-    <span class="tick-item">차분 프라이버시 <span>ε ≤ 0.1</span></span>
-    <span class="tick-item">재해 복구율 <span>99.99%</span></span>
-    <span class="tick-item">GDPR 완벽 준수</span>
-  </div>
 
 
 <!-- ── CONTENT ── -->
@@ -1004,7 +994,7 @@ body {
           새 탭에서 열기 →
         </a>
       </div>
-      <iframe id="webapp-iframe" title="고팡 웹앱"
+      <iframe id="webapp-iframe" title="혼디 웹앱"
               allow="camera; microphone; geolocation; clipboard-write"
               allowfullscreen></iframe>
     </div>
@@ -1019,7 +1009,7 @@ body {
   <!-- 라벨 -->
   <div id="modal-label">
     <span class="modal-label-dot"></span>
-    고팡 웹앱 · 스마트폰 미리보기
+    혼디 웹앱 · 스마트폰 미리보기
   </div>
 </div>
 
