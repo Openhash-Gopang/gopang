@@ -1,4 +1,4 @@
-﻿/**
+/**
  * gopang-app.js — 진입점 v3.0
  * 실제 로직은 전부 src/ 하위 모듈에 있음
  * 이 파일의 역할: import → exposeGlobals → bootstrap
@@ -342,7 +342,7 @@ function _showWelcomePopup() {
     const _alreadyRegistered = (() => {
       try {
         const s = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
-        return !!(s?.handle && s?.guid);
+        return !!(s?.handle && s?.ipv6);  // ipv6가 실제 저장 키
       } catch { return false; }
     })();
     if (!_alreadyRegistered) {
