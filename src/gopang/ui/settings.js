@@ -146,7 +146,7 @@ async function _ensurePcSyncReady() {
     if (!serverOk) {
       const ts = Math.floor(Date.now() / 1000);
       const sigMsg = `${guid}:${publicKeyB64u}:${ts}`;
-      const signature = await wallet.sign(sigMsg);
+      const signature = await wallet.signPayload(sigMsg);
 
       const regRes = await fetch(`${CFG.endpoint}/wallet/x25519`, {
         method: 'POST',
@@ -252,7 +252,7 @@ async function _acceptPcSyncedSetting(parsed, guid) {
       api_key: parsed.apiKey,
       ai_active: true,
     };
-    const signature = await wallet.sign(JSON.stringify({ ...body, signature: undefined }));
+    const signature = await wallet.signPayload(JSON.stringify({ ...body, signature: undefined }));
     body.signature = signature;
 
     const res  = await fetch(`${CFG.endpoint}/ai-setup`, {

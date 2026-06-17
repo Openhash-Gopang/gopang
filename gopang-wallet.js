@@ -592,8 +592,8 @@
       this.x25519PublicKeyB64u = x25519PublicKeyB64u ?? null;
     }
 
-    /* ── 서명 ── */
-    async sign(payload) {
+    /* ── 서명 (단순 문자열/바이트 페이로드 — TX 빌드와 무관) ── */
+    async signPayload(payload) {
       return sign(this._privKey, payload);
     }
 
