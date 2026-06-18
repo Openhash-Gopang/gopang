@@ -190,6 +190,11 @@ export default {
     // v5.1: 토큰 기반 폐기 — Ed25519 서명(/biz/product와 동일 패턴)으로 전환
     //   GET  : ?guid=... 만으로 조회 (저장값은 암호화되어 있어 평문 키 노출 없음)
     //   POST : body={guid,pubkey,signature,...} — _verifyEd25519 + TOFU
+    // ── PC 세션 인증 (6자리 코드, 휴대폰 발급 → PC 입력) ──
+    // PDV 비기록. 세션 토큰은 짧은 TTL(10분), PC는 sessionStorage에만 보관.
+    if (pathname === '/pc-auth/issue'  && request.method === 'POST') return handlePcAuthIssue(request, env, corsHeaders);
+    if (pathname === '/pc-auth/verify' && request.method === 'POST') return handlePcAuthVerify(request, env, corsHeaders);
+
     // ── Wallet X25519 (PC→휴대폰 AI 설정 봉투암호화) ──────
     if (pathname === '/wallet/x25519') {
       if (request.method === 'GET')  return handleWalletX25519Get(request, env, corsHeaders);
@@ -978,6 +983,76 @@ function verifyDeltaZero(outputs, balanceClaimed) {
 // ═══════════════════════════════════════════════════════════
 
 // GET /wallet/x25519?guid=...  (PC가 호출, 인증 불필요 — 공개키는 비밀 아님)
+// ═══════════════════════════════════════════════════════════
+// PC 세션 인증 — 6자리 코드 발급/검증
+// ═══════════════════════════════════════════════════════════
+
+function _genPcAuthCode() {
+  // 000000~999999, 6자리 0-padding
+  const n = Math.floor(Math.random() * 1000000);
+  return String(n).padStart(6, '0');
+}
+
+// POST /pc-auth/issue  — 휴대폰이 호출. body: { guid }
+// 반환: { ok, code, expires_at }
+async function handlePcAuthIssue(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body?.guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const code = _genPcAuthCode();
+  const expires_at = new Date(Date.now() + 60_000).toISOString(); // 60초
+
+  const sbH = _sbServiceHeaders(env);
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/pc_auth_codes`, {
+    method: 'POST',
+    headers: { ...sbH, 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ code, guid: body.guid, expires_at, used: false }),
+  });
+  if (!res.ok) return _err(500, 'DB_ERROR', await res.text(), corsHeaders);
+
+  // 기회적 만료 코드 정리 (webrtc_signals 패턴과 동일)
+  fetch(`${SUPABASE_URL}/rest/v1/pc_auth_codes?expires_at=lt.${new Date().toISOString()}`, {
+    method: 'DELETE', headers: sbH,
+  }).catch(() => {});
+
+  return new Response(JSON.stringify({ ok: true, code, expires_at }), { status: 200, headers: corsHeaders });
+}
+
+// POST /pc-auth/verify — PC가 호출. body: { code }
+// 반환 성공 시: { ok:true, pc_session: { token, exp } } — 10분 TTL, PDV 비연동
+async function handlePcAuthVerify(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body?.code) return _err(400, 'MISSING_FIELD', 'code 필수', corsHeaders);
+
+  const sbH = _sbServiceHeaders(env);
+  const lookupRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/pc_auth_codes?code=eq.${encodeURIComponent(body.code)}&select=guid,expires_at,used`,
+    { headers: sbH }
+  );
+  const rows = await lookupRes.json().catch(() => []);
+  const row = rows?.[0];
+
+  if (!row) return _err(404, 'CODE_NOT_FOUND', '코드를 찾을 수 없습니다', corsHeaders);
+  if (row.used) return _err(410, 'CODE_USED', '이미 사용된 코드입니다', corsHeaders);
+  if (new Date(row.expires_at).getTime() < Date.now())
+    return _err(410, 'CODE_EXPIRED', '코드가 만료되었습니다', corsHeaders);
+
+  // 1회용 처리
+  await fetch(`${SUPABASE_URL}/rest/v1/pc_auth_codes?code=eq.${encodeURIComponent(body.code)}`, {
+    method: 'PATCH', headers: sbH, body: JSON.stringify({ used: true }),
+  });
+
+  // PC 세션 토큰 — buildToken과 같은 포맷이나 별도 svc 태그로 구분, TTL 10분
+  const now = Math.floor(Date.now() / 1000);
+  const payload = { ipv6: row.guid, level: 'L0', svc: 'pc-temp', iat: now, exp: now + 600 };
+  const token = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+  return new Response(JSON.stringify({
+    ok: true,
+    pc_session: { token, guid: row.guid, exp: payload.exp },
+  }), { status: 200, headers: corsHeaders });
+}
+
 async function handleWalletX25519Get(request, env, corsHeaders) {
   const url  = new URL(request.url);
   const guid = url.searchParams.get('guid');
