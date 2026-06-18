@@ -1095,6 +1095,10 @@ async function handleWalletX25519Post(request, env, corsHeaders) {
 
 // POST /ai-setup/seal — PC가 암호문 저장 (서명 불필요, 암호문 자체가 무의미한 바이트)
 // body: { guid, ephemeral_pubkey, iv, ciphertext }
+// AI Setup Seal — PC가 X25519로 암호화한 LLM 설정을 5분짜리 임시 우편함에 보관.
+// 영구 저장이 필요 없는 단기 메시지이므로 Supabase(RLS 정책 관리 부담, 관계형 DB)
+// 대신 Cloudflare KV를 사용 — TTL을 네이티브로 지원하고 행 단위 권한 정책이
+// 없어 이런 종류의 권한 오류(42501 등) 자체가 발생할 수 없다.
 async function handleAiSetupSealPost(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
@@ -1104,29 +1108,22 @@ async function handleAiSetupSealPost(request, env, corsHeaders) {
   if (!iv)               return _err(400, 'MISSING_FIELD', 'iv 필수', corsHeaders);
   if (!ciphertext)       return _err(400, 'MISSING_FIELD', 'ciphertext 필수', corsHeaders);
 
-  const sbServiceH = _sbServiceHeaders(env);
-  const expiresAt = new Date(Date.now() + 5 * 60_000).toISOString(); // 5분 후 만료
+  if (!env.AI_SETUP_SEALS_KV)
+    return _err(500, 'CONFIG_ERROR', 'AI_SETUP_SEALS_KV 바인딩 미설정', corsHeaders);
 
-  // 같은 guid의 이전 봉투는 덮어씀 (PC에서 여러 번 수정 가능)
-  await fetch(`${SUPABASE_URL}/rest/v1/ai_setup_seals?guid=eq.${encodeURIComponent(guid)}`, {
-    method: 'DELETE', headers: sbServiceH,
-  }).catch(() => {});
+  const ttlSeconds = 5 * 60; // 5분 — KV expirationTtl 최소값은 60초이므로 충분히 안전
+  const expiresAt  = new Date(Date.now() + ttlSeconds * 1000).toISOString();
 
-  let insRes;
   try {
-    insRes = await fetch(`${SUPABASE_URL}/rest/v1/ai_setup_seals`, {
-      method: 'POST',
-      headers: { ...sbServiceH, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({
-        guid, ephemeral_pubkey, iv, ciphertext,
-        created_at: new Date().toISOString(),
-        expires_at: expiresAt,
-      }),
-    });
+    // KV는 같은 키에 put()하면 자동으로 덮어쓰므로 별도 DELETE 불필요
+    await env.AI_SETUP_SEALS_KV.put(
+      guid,
+      JSON.stringify({ ephemeral_pubkey, iv, ciphertext, created_at: new Date().toISOString() }),
+      { expirationTtl: ttlSeconds }
+    );
   } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+    return _err(502, 'KV_ERROR', 'KV 저장 실패: ' + e.message, corsHeaders);
   }
-  if (!insRes.ok) return _err(500, 'DB_ERROR', await insRes.text(), corsHeaders);
 
   return new Response(JSON.stringify({ ok: true, expires_at: expiresAt }),
     { status: 200, headers: corsHeaders });
@@ -1134,39 +1131,30 @@ async function handleAiSetupSealPost(request, env, corsHeaders) {
 
 // GET /ai-setup/seal?guid=...&consume=1 — 휴대폰이 자신의 봉투 조회 (consume=1이면 즉시 삭제)
 async function handleAiSetupSealGet(request, env, corsHeaders) {
-  const url    = new URL(request.url);
+  const url     = new URL(request.url);
   const guid    = url.searchParams.get('guid');
   const consume = url.searchParams.get('consume') === '1';
   if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
 
-  const sbH = _sbHeaders(env);
-  const now = new Date().toISOString();
-  let res;
+  if (!env.AI_SETUP_SEALS_KV)
+    return _err(500, 'CONFIG_ERROR', 'AI_SETUP_SEALS_KV 바인딩 미설정', corsHeaders);
+
+  let raw;
   try {
-    res = await fetch(
-      `${SUPABASE_URL}/rest/v1/ai_setup_seals?guid=eq.${encodeURIComponent(guid)}&expires_at=gt.${now}&select=ephemeral_pubkey,iv,ciphertext,created_at&limit=1`,
-      { headers: sbH }
-    );
+    raw = await env.AI_SETUP_SEALS_KV.get(guid);
   } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+    return _err(502, 'KV_ERROR', 'KV 조회 실패: ' + e.message, corsHeaders);
   }
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${res.status}): ${errText}`, corsHeaders);
-  }
-  const rows = await res.json().catch(() => []);
-  if (!rows.length) {
+  if (!raw) {
     return new Response(JSON.stringify({ ok: true, sealed: null }), { status: 200, headers: corsHeaders });
   }
+  const sealed = JSON.parse(raw);
 
   if (consume) {
-    const sbServiceH = _sbServiceHeaders(env);
-    await fetch(`${SUPABASE_URL}/rest/v1/ai_setup_seals?guid=eq.${encodeURIComponent(guid)}`, {
-      method: 'DELETE', headers: sbServiceH,
-    }).catch(() => {});
+    await env.AI_SETUP_SEALS_KV.delete(guid).catch(() => {});
   }
 
-  return new Response(JSON.stringify({ ok: true, sealed: rows[0] }), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify({ ok: true, sealed }), { status: 200, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
