@@ -12,6 +12,96 @@ import { appendBubble } from '../ui/bubble.js';
 const STORE_KEY = 'gopang_user_v4';
 const DEFAULT_COUNTRY = 'KR';
 
+// ── 모바일 기기 판별 (보수적: 확실한 모바일 키워드가 없으면 PC로 간주) ──
+// 목적: 암호키(GDC Wallet) 생성은 휴대폰에서만 — PC가 먼저 키를 만들어
+//       가입 시점의 진짜 키와 어긋나는 사고(부록 A-1)를 원천 차단.
+// 애매한 UA(태블릿, 알 수 없는 기기 등)는 안전한 쪽으로 "PC"로 판정한다.
+function _isMobileDevice() {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+}
+
+// ── PC로 판별된 기기에서 신규가입 시도 시 확인 다이얼로그 ──────
+// "예"를 누르면 그 자리에서 가입 진행, "아니요"/닫기는 가입 자체를 막는다.
+function _confirmMobileRegistration() {
+  return new Promise((resolve) => {
+    document.getElementById('_mobile-confirm-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = '_mobile-confirm-overlay';
+    overlay.style.cssText = [
+      'position:fixed;inset:0;z-index:10002',
+      'background:rgba(0,0,0,0.5)',
+      'display:flex;align-items:center;justify-content:center',
+      'padding:24px;box-sizing:border-box',
+    ].join(';');
+
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:28px 22px;
+                  width:100%;max-width:360px;box-sizing:border-box;">
+        <p style="font-weight:700;font-size:16px;margin:0 0 10px;color:#111827">
+          첫 방문이시군요
+        </p>
+        <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 20px">
+          고팡의 암호키(GDC Wallet)는 보안을 위해 <b>오직 스마트폰에서만</b> 생성할 수 있습니다.<br><br>
+          지금 접속하신 기기가 <b>스마트폰</b>인가요?
+        </p>
+        <div style="display:flex;gap:8px">
+          <button id="_mc_no"
+            style="flex:1;padding:13px;border:1px solid #e5e7eb;border-radius:10px;
+                   background:none;cursor:pointer;font-size:14px;font-family:inherit">
+            아니요, PC입니다
+          </button>
+          <button id="_mc_yes"
+            style="flex:1;padding:13px;border:none;border-radius:10px;
+                   background:#16a34a;color:#fff;cursor:pointer;
+                   font-size:14px;font-weight:700;font-family:inherit">
+            예, 스마트폰입니다
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#_mc_yes').onclick = () => { overlay.remove(); resolve(true); };
+    overlay.querySelector('#_mc_no').onclick  = () => { overlay.remove(); resolve(false); };
+  });
+}
+
+// ── PC 확인 후 "아니요"를 선택했을 때 보여줄 안내 ───────────
+function _showPcRegisterBlockedNotice() {
+  document.getElementById('_mobile-confirm-overlay')?.remove();
+  document.getElementById('_pc-blocked-overlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = '_pc-blocked-overlay';
+  overlay.style.cssText = [
+    'position:fixed;inset:0;z-index:10002',
+    'background:rgba(0,0,0,0.5)',
+    'display:flex;align-items:center;justify-content:center',
+    'padding:24px;box-sizing:border-box',
+  ].join(';');
+
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:28px 22px;
+                width:100%;max-width:360px;box-sizing:border-box;text-align:center">
+      <p style="font-weight:700;font-size:16px;margin:0 0 10px;color:#111827">
+        스마트폰으로 등록해 주세요
+      </p>
+      <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 20px">
+        사용자 등록(암호키 생성)은 스마트폰에서만 가능합니다.<br>
+        스마트폰으로 <b>gopang.net</b>에 접속해 등록해 주세요.<br><br>
+        등록을 마친 후에는 PC에서도 로그인할 수 있습니다.
+      </p>
+      <button id="_pc_blocked_close"
+        style="width:100%;padding:13px;border:none;border-radius:10px;
+               background:#16a34a;color:#fff;cursor:pointer;
+               font-size:14px;font-weight:700;font-family:inherit">
+        확인
+      </button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#_pc_blocked_close').onclick = () => overlay.remove();
+}
+
 // 194개국
 const COUNTRIES = {
   AF: { flag: "🇦🇫", name: "Afghanistan", code: "+93", prefix: "", digits: 9 },
@@ -289,6 +379,15 @@ export async function initAuthWithPhone(digits, countryKey = 'KR') {
         setUser(user);
         resolve(user);
       } else {
+        // 신규 사용자 → 모바일 기기 확인 (암호키 생성은 휴대폰 전용)
+        if (!_isMobileDevice()) {
+          const ok = await _confirmMobileRegistration();
+          if (!ok) {
+            _showPcRegisterBlockedNotice();
+            resolve(null);
+            return;
+          }
+        }
         // 신규 사용자 → 닉네임 입력 단계 (더미 overlay 생성)
         const ipv6 = await _e164ToIPv6(e164);
         const dummyOverlay = document.createElement('div');
@@ -549,6 +648,20 @@ function _showPhonePopup(resolve) {
         found = data.items?.[0];
 
         if (!found) {
+          // 신규 사용자 → 모바일 기기 확인 (암호키 생성은 휴대폰 전용)
+          if (!_isMobileDevice()) {
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = '';
+            const ok = await _confirmMobileRegistration();
+            if (!ok) {
+              _showPcRegisterBlockedNotice();
+              overlay.remove();
+              resolve(null);
+              return;
+            }
+            btn.style.opacity = '0.4';
+            btn.style.pointerEvents = 'none';
+          }
           // 신규 사용자 → 닉네임 입력 단계
           const ipv6 = await _e164ToIPv6(e164);
           btn.style.opacity = '1';
