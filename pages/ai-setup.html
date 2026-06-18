@@ -64,6 +64,14 @@
     <div id="_setup_guide_note" style="margin-top:12px;font-size:12px;color:var(--text4);background:var(--bg);border-radius:8px;padding:10px 12px"></div>
   </div>
 
+  <!-- 시스템 프롬프트 (선택 사항 — 비워두면 기존 값 유지) -->
+  <div style="margin-bottom:24px">
+    <label style="font-size:13px;font-weight:600;color:var(--text3);display:block;margin-bottom:8px">AI 비서 시스템 프롬프트 (선택)</label>
+    <textarea id="_setup_sysprompt" rows="5" placeholder="AI 비서의 역할과 동작 방식을 정의하세요. 비워두면 휴대폰의 기존 설정이 유지됩니다."
+      style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-lg);font-size:13.5px;line-height:1.6;font-family:inherit;resize:vertical;background:var(--surface);color:var(--text)"></textarea>
+    <p style="font-size:11.5px;color:var(--text4);margin-top:6px">여기에 입력한 내용은 아래에서 등록하는 모델과 함께 암호화되어 전송됩니다.</p>
+  </div>
+
   <!-- API Key 입력 -->
   <div style="margin-bottom:20px">
     <label style="font-size:13px;font-weight:600;color:var(--text3);display:block;margin-bottom:8px">2. 발급받은 API Key 입력</label>
@@ -180,6 +188,7 @@
   const guideUrl   = document.getElementById('_setup_guide_url');
   const guideSteps = document.getElementById('_setup_guide_steps');
   const guideNote  = document.getElementById('_setup_guide_note');
+  const sysPromptInput = document.getElementById('_setup_sysprompt');
   const keyInput   = document.getElementById('_setup_key');
   const keyToggle  = document.getElementById('_setup_key_toggle');
   const addBtn     = document.getElementById('_setup_add');
@@ -291,7 +300,11 @@
     addBtn.textContent = '암호화 중…';
 
     try {
-      const payload = JSON.stringify({ provider: g.provider, model, apiKey: key });
+      const sysPrompt = sysPromptInput.value.trim(); // 비워두면 휴대폰 기존 값 유지
+      const payload = JSON.stringify({
+        provider: g.provider, model, apiKey: key,
+        systemPrompt: sysPrompt || undefined,
+      });
       // PC는 임시(ephemeral) 키만 쓰고 절대 자신의 키를 저장하지 않음
       const sealed = await GopangWallet.sealForRecipient(_x25519Pubkey, payload);
 
@@ -309,6 +322,7 @@
       if (!data.ok) throw new Error(data.detail || data.error || '전송 실패');
 
       keyInput.value = '';
+      sysPromptInput.value = '';
       sel.value = '';
       guideBox.style.display = 'none';
 
