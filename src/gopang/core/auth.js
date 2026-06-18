@@ -1135,10 +1135,11 @@ window._cancelAuthRequest = function() {
 // 암호화해 보낼 수 있도록, 가입 직후부터 키를 준비해 둔다.
 // 반환: { ok, publicKeyB64u } — 실패해도 가입 흐름을 막지 않도록 호출부에서 catch 처리.
 export async function ensureX25519Synced(guid) {
-  if (!guid || typeof window.GopangWallet === 'undefined') return { ok: false };
+  if (!guid) return { ok: false, reason: 'guid_missing' };
+  if (typeof window.GopangWallet === 'undefined') return { ok: false, reason: 'wallet_module_not_loaded' };
 
   const wallet = await window.GopangWallet.load();
-  if (!wallet) return { ok: false };
+  if (!wallet) return { ok: false, reason: 'wallet_not_found' };
 
   const { publicKeyB64u } = await wallet.ensureX25519Key();
 

@@ -125,25 +125,33 @@ export function openAISettings() {
 // ── PC→휴대폰 동기화 준비: X25519 키 보장 + 등록 + 대기 중인 PC 설정 확인 ──
 async function _ensurePcSyncReady() {
   const guid = _USER?.ipv6 || JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}')?.ipv6;
-  if (!guid) return;
+  if (!guid) {
+    console.warn('[AI설정] guid를 찾을 수 없어 PC 동기화 안내를 건너뜁니다.');
+    return;
+  }
 
   try {
     const result = await ensureX25519Synced(guid);
     if (!result.ok) {
-      if (result.reason) {
-        _renderPcSyncBanner({
-          _error: true,
-          message: result.reason === 'network'
-            ? '네트워크 오류로 암호화 키를 등록하지 못했습니다. 잠시 후 다시 열어 주세요.'
-            : (result.reason || '암호화 키 등록에 실패했습니다. 프로필을 먼저 등록한 뒤 다시 시도해 주세요.'),
-        });
-      }
-      return; // 지갑이 아직 없으면(=완전 신규 미가입) 조용히 건너뜀
+      console.warn('[AI설정] X25519 동기화 미완료:', result.reason || '(원인 미상)');
+      const REASON_MSG = {
+        guid_missing:              '사용자 식별 정보를 찾을 수 없습니다. 다시 로그인해 주세요.',
+        wallet_module_not_loaded:  '지갑 모듈을 불러오지 못했습니다. 앱을 다시 열어 주세요.',
+        wallet_not_found:          '지갑이 아직 생성되지 않았습니다. 잠시 후 다시 열어 주세요.',
+        network:                   '네트워크 오류로 암호화 키를 등록하지 못했습니다. 잠시 후 다시 열어 주세요.',
+      };
+      _renderPcSyncBanner({
+        _error: true,
+        message: REASON_MSG[result.reason] || (result.reason || '암호화 키를 아직 준비하지 못했습니다. 설정 창을 한 번 더 열어 주세요.'),
+      });
+      return;
     }
 
+    console.info('[AI설정] X25519 동기화 완료, PC 설정 확인 중...');
     _pollPcSealedSetting(guid, result.wallet);
   } catch(e) {
     console.warn('[AI설정] X25519 부트스트랩 실패:', e.message);
+    _renderPcSyncBanner({ _error: true, message: '암호화 키 준비 중 오류가 발생했습니다: ' + e.message });
   }
 }
 
