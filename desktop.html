@@ -972,30 +972,6 @@ body {
 <!-- ── CONTENT ── -->
 <div id="content"></div>
 
-<!-- ── FOOTER (복원: 분할 작업 중 누락되었던 면책조항. 링크 목록은 이미 사이드바에 있어 중복 제외) ── -->
-<footer>
-  <div class="footer-inner">
-    <div>
-      <div class="footer-logo">
-        <div class="sb-logo-icon">G</div>
-        hondi
-      </div>
-      <div style="font-size:14px;font-weight:300;color:var(--text4);margin-top:4px;font-family:'Pretendard',sans-serif;">© 2026 AI City Inc. · KR Patent · v3.4</div>
-    </div>
-  </div>
-  <!-- 면책 조항 -->
-  <div class="footer-disclaimer">
-    <div class="footer-disclaimer-panel">
-      <div class="footer-disclaimer-title">⚠️ 면책 조항 · Disclaimer</div>
-      <div class="footer-disclaimer-body">
-        본 프로젝트(혼디, Hondi)는 오픈소스 기반의 연구 개발 및 기술 실증을 목적으로 하며, 상업적 비즈니스 모델이 아닙니다.
-        본 플랫폼에서 제공되는 모든 AI 시뮬레이션 결과(판결문, 세무 계산, 의료 정보 등)는 참고용이며,
-        법적·의료적·재무적 효력을 갖지 않습니다. 실제 법률·의료·금융 문제는 반드시 해당 분야 전문가에게 문의하십시오.
-      </div>
-    </div>
-  </div>
-</footer>
-
 <!-- ── Phone Frame Modal ──────────────────────────────────────── -->
 <div id="webapp-modal">
   <!-- 닫기 버튼 + 폰 프레임 래퍼 -->
@@ -1255,91 +1231,154 @@ body {
 
 <script>
 // ── SPA 라우터 ────────────────────────────────────────────
+// ── 섹션 순서 정의 (스크롤 순서) ───────────────────────────────
+const PAGE_ORDER = ['overview','agents','ai-types','hondi-market','metrics','openhash','ai-setup'];
 const PAGES = {
-  overview: '/pages/overview.html',
-  agents:   '/pages/agents.html',
-  metrics:  '/pages/metrics.html',
-  openhash: '/pages/openhash.html',
-  'ai-setup': '/pages/ai-setup.html',
-  'ai-types': '/pages/ai-types.html',
+  overview:       '/pages/overview.html',
+  agents:         '/pages/agents.html',
+  metrics:        '/pages/metrics.html',
+  openhash:       '/pages/openhash.html',
+  'ai-setup':     '/pages/ai-setup.html',
+  'ai-types':     '/pages/ai-types.html',
   'hondi-market': '/pages/hondi-market.html',
 };
 
-let currentPage = null;
+// 로드 상태 추적
+const loaded   = new Set();   // 이미 DOM에 삽입된 섹션
+let   loading  = false;       // 현재 fetch 진행 중 여부
+let   nextIdx  = 0;           // 다음 로드할 섹션 인덱스
 
+// ── 유틸: 페이지 body 내용 추출 후 섹션 div로 삽입 ──────────────
+function extractBody(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return doc.body.innerHTML;
+}
+
+function activateScripts(container) {
+  container.querySelectorAll('script').forEach(old => {
+    const s = document.createElement('script');
+    [...old.attributes].forEach(a => s.setAttribute(a.name, a.value));
+    s.textContent = old.textContent;
+    old.replaceWith(s);
+  });
+}
+
+// scroll reveal 옵저버 (전역 1개)
+const revealIO = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: 0.08, rootMargin: '0px 0px -24px 0px' });
+
+function registerReveal(container) {
+  container.querySelectorAll('.reveal').forEach(el => revealIO.observe(el));
+}
+
+// ── 섹션 하나를 fetch해서 #content 끝에 이어붙이기 ───────────────
+async function appendSection(name) {
+  if (loaded.has(name) || loading) return;
+  loading = true;
+
+  const content = document.getElementById('content');
+
+  // 로딩 스피너 sentinel
+  const sentinel = document.createElement('div');
+  sentinel.id = 'sec-sentinel-' + name;
+  sentinel.style.cssText = 'padding:40px;text-align:center;color:var(--text4);font-size:13px';
+  sentinel.textContent = '불러오는 중…';
+  content.appendChild(sentinel);
+
+  try {
+    const res  = await fetch(PAGES[name]);
+    const html = await res.text();
+
+    // 섹션 wrapper
+    const wrapper = document.createElement('div');
+    wrapper.id = 'sec-' + name;
+    wrapper.setAttribute('data-section', name);
+    wrapper.innerHTML = extractBody(html);
+
+    sentinel.replaceWith(wrapper);
+    loaded.add(name);
+
+    activateScripts(wrapper);
+    registerReveal(wrapper);
+    if (window.mermaid) {
+      try { mermaid.run({ nodes: wrapper.querySelectorAll('.mermaid') }); } catch(e) {}
+    }
+
+    // 다음 섹션 인덱스 전진
+    nextIdx = PAGE_ORDER.indexOf(name) + 1;
+  } catch(err) {
+    sentinel.textContent = '⚠ 섹션을 불러올 수 없습니다 (' + name + ')';
+    console.error('[scroll-load]', err);
+  }
+
+  loading = false;
+}
+
+// ── 스크롤 감지: 페이지 하단 300px 이내면 다음 섹션 로드 ─────────
+function onScroll() {
+  if (loading) return;
+  if (nextIdx >= PAGE_ORDER.length) return;
+  const scrollBottom = window.scrollY + window.innerHeight;
+  const pageHeight   = document.body.scrollHeight;
+  if (pageHeight - scrollBottom < 400) {
+    appendSection(PAGE_ORDER[nextIdx]);
+  }
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+
+// ── 사이드바 클릭: 해당 섹션까지 순서대로 로드 후 스크롤 이동 ────
 async function loadPage(name) {
-  if (currentPage === name) return;
-  currentPage = name;
+  if (!PAGES[name]) return;
 
   // 사이드바 active 표시
   document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
   const navEl = document.getElementById('nav-' + name);
   if (navEl) navEl.classList.add('active');
 
-  // URL 업데이트
   history.pushState({ page: name }, '', '#' + name);
 
-  const content = document.getElementById('content');
-  content.classList.add('loading');
-
-  // file:// 로 직접 열면 fetch가 보안상 차단되어 하위 페이지를 불러올 수 없음 — 명확히 안내
-  if (location.protocol === 'file:') {
-    content.innerHTML = `
-      <div style="max-width:560px;margin:80px auto;padding:28px 32px;text-align:left;
-                  background:var(--surface);border:1px solid var(--border);border-radius:10px">
-        <div style="font-weight:700;color:var(--text);margin-bottom:10px;font-size:15px">
-          ⚠ 로컬 파일(file://)에서는 하위 페이지를 불러올 수 없습니다
-        </div>
-        <div style="color:var(--text3);font-size:13px;line-height:1.7">
-          이 페이지는 <code style="background:var(--bg-subtle);padding:2px 5px;border-radius:4px">/pages/*.html</code> 등을
-          fetch()로 동적으로 불러오는 구조라, 브라우저로 파일을 직접 더블클릭해서 열면(file://) 보안 정책상 차단됩니다.<br><br>
-          다음 중 한 가지 방법으로 확인해주세요.<br><br>
-          1) 실제 서버(예: https://gopang.net/desktop.html)에 배포 후 접속<br>
-          2) 로컬 테스트: 이 폴더에서 PowerShell로<br>
-          <code style="display:block;margin:6px 0;background:var(--bg-subtle);padding:8px 10px;border-radius:6px;font-size:12px">python -m http.server 8000</code>
-          실행 후 <code style="background:var(--bg-subtle);padding:2px 5px;border-radius:4px">http://localhost:8000/desktop.html</code> 로 접속
-        </div>
-      </div>`;
-    content.classList.remove('loading');
-    return;
+  // 아직 로드 안 됐으면 해당 섹션까지 순서대로 로드
+  const targetIdx = PAGE_ORDER.indexOf(name);
+  for (let i = nextIdx; i <= targetIdx; i++) {
+    await appendSection(PAGE_ORDER[i]);
   }
 
-  try {
-    const res  = await fetch(PAGES[name]);
-    const html = await res.text();
-
-    // body 내용만 추출
-    const parser = new DOMParser();
-    const doc    = parser.parseFromString(html, 'text/html');
-    content.innerHTML = doc.body.innerHTML;
-
-    // ── innerHTML로 삽입된 <script>는 브라우저가 실행하지 않음(표준 동작) ──
-    // ai-setup.html 등 자체 로직(_checkHandle 등)을 가진 페이지가 동작하려면
-    // script 태그를 새로 만들어 교체 삽입해야 한다.
-    content.querySelectorAll('script').forEach(oldScript => {
-      const newScript = document.createElement('script');
-      for (const attr of oldScript.attributes) newScript.setAttribute(attr.name, attr.value);
-      newScript.textContent = oldScript.textContent;
-      oldScript.replaceWith(newScript);
-    });
-
-    // scroll reveal 재등록
-    const io = new IntersectionObserver(entries => {
-      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
-    }, { threshold: 0.1, rootMargin: '0px 0px -32px 0px' });
-    content.querySelectorAll('.reveal').forEach(el => io.observe(el));
-
-    // mermaid 재렌더링
-    if (window.mermaid) mermaid.run({ nodes: content.querySelectorAll('.mermaid') });
-
-    window.scrollTo(0, 0);
-  } catch(e) {
-    content.innerHTML = '<div style="padding:60px 24px;text-align:center;color:var(--text3)">페이지를 불러올 수 없습니다.</div>';
-    console.error('[SPA]', e);
+  // 해당 섹션으로 스크롤
+  const sec = document.getElementById('sec-' + name);
+  if (sec) {
+    const top = sec.getBoundingClientRect().top + window.scrollY - 16;
+    window.scrollTo({ top, behavior: 'smooth' });
   }
-
-  content.classList.remove('loading');
 }
+
+// ── IntersectionObserver로 현재 뷰포트의 섹션 → 사이드바 활성화 ─
+const sectionIO = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const name = e.target.getAttribute('data-section');
+      if (!name) return;
+      document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
+      const navEl = document.getElementById('nav-' + name);
+      if (navEl) navEl.classList.add('active');
+      history.replaceState({ page: name }, '', '#' + name);
+    }
+  });
+}, { threshold: 0.2 });
+
+// 섹션이 추가될 때마다 observe 등록 (MutationObserver)
+const contentMO = new MutationObserver(() => {
+  document.querySelectorAll('#content [data-section]').forEach(el => {
+    if (!el._sectionObserved) {
+      sectionIO.observe(el);
+      el._sectionObserved = true;
+    }
+  });
+});
+document.addEventListener('DOMContentLoaded', () => {
+  const content = document.getElementById('content');
+  if (content) contentMO.observe(content, { childList: true });
+});
 
 // 뒤로가기 지원
 window.addEventListener('popstate', e => {
@@ -1347,9 +1386,41 @@ window.addEventListener('popstate', e => {
   loadPage(page);
 });
 
-// 초기 로드
-const initPage = location.hash.replace('#', '') || 'overview';
-loadPage(PAGES[initPage] ? initPage : 'overview');
+// ── 초기 로드: 첫 섹션(overview) 즉시, 나머지는 스크롤로 ─────────
+(async () => {
+  if (location.protocol === 'file:') {
+    document.getElementById('content').innerHTML = `
+      <div style="max-width:560px;margin:80px auto;padding:28px 32px;
+                  background:var(--surface);border:1px solid var(--border);border-radius:10px">
+        <div style="font-weight:700;color:var(--text);margin-bottom:10px;font-size:15px">
+          ⚠ 로컬 파일(file://)에서는 하위 페이지를 불러올 수 없습니다
+        </div>
+        <div style="color:var(--text3);font-size:13px;line-height:1.7">
+          다음 중 한 가지 방법으로 확인하세요.<br><br>
+          1) 실제 서버에 배포 후 접속<br>
+          2) 로컬 테스트: 폴더에서<br>
+          <code style="display:block;margin:6px 0;background:var(--bg-subtle);padding:8px 10px;border-radius:6px;font-size:12px">python -m http.server 8000</code>
+          실행 후 <code style="background:var(--bg-subtle);padding:2px 5px;border-radius:4px">http://localhost:8000/desktop.html</code> 접속
+        </div>
+      </div>`;
+    return;
+  }
+
+  // hash가 있으면 해당 섹션까지 로드
+  const initName = location.hash.replace('#', '') || 'overview';
+  const initTarget = PAGES[initName] ? initName : 'overview';
+  const initIdx = PAGE_ORDER.indexOf(initTarget);
+
+  for (let i = 0; i <= initIdx; i++) {
+    await appendSection(PAGE_ORDER[i]);
+  }
+
+  // 해당 섹션으로 스크롤
+  if (initTarget !== 'overview') {
+    const sec = document.getElementById('sec-' + initTarget);
+    if (sec) window.scrollTo({ top: sec.getBoundingClientRect().top + window.scrollY - 16 });
+  }
+})();
 
 // ── WebApp Phone Modal ────────────────────────────────────
 function openWebApp() {

@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenHash — 고팡</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
 <style>
 /* ── RESET ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -53,7 +50,7 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', 'Noto Sans KR', -apple-system, sans-serif;
+  font-family: 'Pretendard', -apple-system, sans-serif;
   font-weight: 400;
   font-size: 13px;
   line-height: 1.75;
@@ -106,11 +103,11 @@ body {
   background: var(--brand); border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-weight: 700; color: white;
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
 }
 .sb-logo-text {
   font-size: 14px; font-weight: 600; color: var(--text);
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   white-space: nowrap; opacity: 0;
   transition: opacity 0.15s 0.05s;
 }
@@ -139,7 +136,7 @@ body {
   transition: background 0.1s, color 0.1s;
   white-space: nowrap;
   border: none; background: none; width: 100%;
-  font-family: 'Inter','Noto Sans KR',sans-serif;
+  font-family: 'Pretendard', sans-serif;
 }
 .sb-item:hover { background: var(--bg-subtle); color: var(--text); }
 .sb-item.active { color: var(--text); background: var(--bg-subtle); }
@@ -157,7 +154,7 @@ body {
   background: var(--brand); color: white;
   border: none; cursor: pointer; width: 100%;
   font-size: 13px; font-weight: 500;
-  font-family: 'Inter','Noto Sans KR',sans-serif;
+  font-family: 'Pretendard', sans-serif;
   transition: background 0.15s;
   white-space: nowrap;
 }
@@ -186,7 +183,7 @@ body {
 }
 .mobile-topbar-logo {
   display: flex; align-items: center; gap: 8px;
-  text-decoration: none; font-family: 'DM Mono',monospace;
+  text-decoration: none; font-family: 'Pretendard', sans-serif;
   font-size: 15px; font-weight: 600; color: var(--text);
 }
 
@@ -213,7 +210,7 @@ body {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 5px 14px; border-radius: 99px;
   background: var(--bg-subtle); border: 1px solid var(--border2);
-  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 400;
+  font-family: 'Pretendard', sans-serif; font-size: 12px; font-weight: 400;
   color: var(--text3); letter-spacing: 0.2px;
   margin-bottom: 24px;
   text-decoration: none;
@@ -298,7 +295,7 @@ body {
 .comparison-section { background: #ffffff; }
 .section-tag {
   display: inline-block;
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 400;
   letter-spacing: 1px; text-transform: uppercase;
   color: var(--brand-dk); background: var(--brand-bg);
   border: 1px solid #a7f3d0;
@@ -362,7 +359,7 @@ body {
 }
 .step-card:hover { background: var(--brand-bg); }
 .step-num {
-  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+  font-family: 'Pretendard', sans-serif; font-size: 12px; font-weight: 500;
   color: var(--brand); letter-spacing: 0.5px; margin-bottom: 14px;
   display: flex; align-items: center; gap: 6px;
 }
@@ -371,7 +368,7 @@ body {
 .step-card p { font-size: 13px; font-weight: 400; color: var(--text2); line-height: 1.7; }
 .step-tag {
   display: inline-block; margin-top: 14px;
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 400;
   color: var(--blue); background: var(--blue-lt);
   border: 1px solid #bfdbfe; padding: 2px 9px; border-radius: 99px;
   letter-spacing: 0.3px;
@@ -413,11 +410,11 @@ body {
   margin-bottom: 3px;
 }
 .agent-url {
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 400;
   color: var(--text3); letter-spacing: 0.2px;
 }
 .badge {
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 400;
   padding: 3px 9px; border-radius: 99px; letter-spacing: 0.3px;
   white-space: nowrap; border: 1px solid;
 }
@@ -449,11 +446,11 @@ body {
 .metric-card::after {
   content: attr(data-label);
   position: absolute; bottom: 24px; right: 24px;
-  font-family: 'DM Mono', monospace; font-size: 11px;
+  font-family: 'Pretendard', sans-serif; font-size: 11px;
   color: var(--border2); letter-spacing: 2px; text-transform: uppercase;
 }
 .metric-big {
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   font-size: clamp(36px, 4.5vw, 52px); font-weight: 300;
   line-height: 1; margin-bottom: 10px; letter-spacing: -2px;
 }
@@ -475,7 +472,7 @@ table { width: 100%; border-collapse: collapse; background: white; }
 thead { background: #f8fafc; border-bottom: 1px solid var(--border); }
 th {
   padding: 11px 18px; text-align: left;
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+  font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 500;
   color: var(--text3); letter-spacing: 0.8px; text-transform: uppercase;
 }
 tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
@@ -484,9 +481,9 @@ tbody tr:hover { background: #f8fafc; }
 td { padding: 14px 18px; font-size: 13px; font-weight: 400; color: var(--text2); }
 td:first-child { font-weight: 600; color: var(--text); }
 .td-bad { color: var(--red); font-weight: 400; }
-.td-bad small { display: block; color: var(--text3); font-size: 14px; font-family: 'DM Mono', monospace; margin-top: 2px; }
+.td-bad small { display: block; color: var(--text3); font-size: 14px; font-family: 'Pretendard', sans-serif; margin-top: 2px; }
 .td-good { color: #059669; font-weight: 600; }
-.td-mod { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--blue); font-weight: 500; }
+.td-mod { font-family: 'Pretendard', sans-serif; font-size: 12px; color: var(--blue); font-weight: 500; }
 
 /* ── DISTRIBUTION ── */
 .dist-grid {
@@ -501,7 +498,7 @@ td:first-child { font-weight: 600; color: var(--text); }
 }
 .dist-card:hover { background: var(--brand-bg); }
 .dist-pct {
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   font-size: 36px; font-weight: 300;
   line-height: 1; margin-bottom: 10px; letter-spacing: -1.5px;
 }
@@ -521,7 +518,7 @@ td:first-child { font-weight: 600; color: var(--text); }
 .ticker-track { display: flex; width: max-content; animation: slide 28s linear infinite; }
 .tick-item {
   white-space: nowrap; padding: 0 28px;
-  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 400;
+  font-family: 'Pretendard', sans-serif; font-size: 12px; font-weight: 400;
   color: var(--text4); display: flex; align-items: center; gap: 8px;
 }
 .tick-item::after { content: '·'; color: var(--border2); }
@@ -543,7 +540,7 @@ footer {
 }
 .footer-logo {
   display: flex; align-items: center; gap: 8px;
-  font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--text);
+  font-family: 'Pretendard', sans-serif; font-size: 14px; font-weight: 500; color: var(--text);
 }
 .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
 .footer-links a {
@@ -551,12 +548,12 @@ footer {
   transition: color 0.15s;
 }
 .footer-links a:hover { color: var(--brand); }
-.footer-copy { font-size: 12px; font-weight: 400; color: var(--text3); font-family: 'DM Mono', monospace; }
+.footer-copy { font-size: 12px; font-weight: 400; color: var(--text3); font-family: 'Pretendard', sans-serif; }
 .footer-disclaimer {
   max-width: 860px;
   margin: 32px auto 0;
   padding-top: 0;
-  font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
 }
 .footer-disclaimer-panel {
   background: #f8f9fa;
@@ -630,7 +627,7 @@ footer {
   margin-bottom: 10px;
 }
 .klaw-stat-before {
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   font-size: 13px;
   color: var(--red);
   font-weight: 400;
@@ -640,7 +637,7 @@ footer {
   min-height: 18px;
 }
 .klaw-stat-after {
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   font-size: 20px;
   font-weight: 500;
   color: var(--brand-dk);
@@ -649,7 +646,7 @@ footer {
 }
 .klaw-stat-pct {
   font-size: 11px;
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   color: var(--text4);
   letter-spacing: 0.3px;
 }
@@ -685,11 +682,6 @@ footer {
   .klaw-stats { grid-template-columns: 1fr; }
   .klaw-inner { padding: 52px 16px; }
 }
-</style>
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-  <script>mermaid.initialize({startOnLoad:true, theme:"neutral", fontFamily:"inherit"});</script>
-</head>
-<body>
 
 /* 페이지 내장 시 padding 제거 */
 body { padding-left: 0 !important; background: transparent; }
@@ -715,7 +707,7 @@ body { padding-left: 0 !important; background: transparent; }
 
       <!-- 왼쪽: 텍스트 -->
       <div>
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--brand-dk);letter-spacing:1px;margin-bottom:14px">THE WEAVING PRINCIPLE</div>
+        <div style="font-family:'Pretendard', sans-serif;font-size:11px;color:var(--brand-dk);letter-spacing:1px;margin-bottom:14px">THE WEAVING PRINCIPLE</div>
         <h3 style="font-size:18px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:14px">천을 짜는 직조와 동일한 원리</h3>
         <p style="font-size:14px;color:var(--text2);line-height:1.85;margin-bottom:12px">견우는 밭을 갈고, 직녀는 씨줄과 날줄을 교차하며 천을 짭니다. Openhash도 이와 같습니다. <strong>80억 인구가 생산한 데이터의 원본은 각자가 보관하고</strong>, 그 Hash 값을 마치 천을 짜듯 씨줄과 날줄을 교차하며 서로 엮습니다.</p>
         <p style="font-size:14px;color:var(--text2);line-height:1.85">80억 인구의 데이터가 서로 물고 물리는 직물이 되어, 어느 한 데이터의 위변조를 원천적으로 차단합니다.</p>
@@ -724,7 +716,7 @@ body { padding-left: 0 !important; background: transparent; }
       <!-- 오른쪽: 직조 GIF -->
       <div style="border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border)">
         <img
-          src="./weaving.gif"
+          src="/pages/weaving.gif"
           alt="직조 메커니즘 — 씨줄과 날줄이 교차하며 천이 만들어지는 과정"
           style="width:100%;display:block;object-fit:cover"
           loading="lazy"
@@ -740,7 +732,7 @@ body { padding-left: 0 !important; background: transparent; }
       <!-- 왼쪽: 실이 터지는 GIF -->
       <div style="border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border)">
         <img
-          src="./cut.jpeg"
+          src="/pages/cut.jpeg"
           alt="천에서 실이 당겨지는 모습 — 위변조 탐지 비유"
           style="width:100%;display:block;object-fit:cover;max-height:280px"
           loading="lazy"
@@ -751,7 +743,7 @@ body { padding-left: 0 !important; background: transparent; }
 
       <!-- 오른쪽: 텍스트 -->
       <div>
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:14px">TAMPER DETECTION</div>
+        <div style="font-family:'Pretendard', sans-serif;font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:14px">TAMPER DETECTION</div>
         <h3 style="font-size:18px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:14px">올(실)이 터지면 즉시 드러납니다</h3>
         <p style="font-size:14px;color:var(--text2);line-height:1.85;margin-bottom:12px">누군가의 데이터가 위변조되면, 그 Hash 값이 변하고, 마치 <strong>천의 올이 터지듯</strong> 해당 Hash 값이 삽입된 지점이 즉시 드러납니다.</p>
         <p style="font-size:14px;color:var(--text2);line-height:1.85">전체 직물 중 단 한 올만 건드려도 전체 패턴이 틀어집니다. Openhash의 위변조 탐지는 이와 정확히 같은 원리입니다.</p>
@@ -761,17 +753,17 @@ body { padding-left: 0 !important; background: transparent; }
     <!-- 요약 카드 -->
     <div class="reveal" style="margin-top:36px;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
       <div style="background:#fff;padding:24px 20px">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--brand-dk);letter-spacing:1px;margin-bottom:10px">MECHANISM</div>
+        <div style="font-family:'Pretendard', sans-serif;font-size:10px;color:var(--brand-dk);letter-spacing:1px;margin-bottom:10px">MECHANISM</div>
         <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">직조 메커니즘</div>
         <div style="font-size:13px;color:var(--text3);line-height:1.7">씨줄(사용자 Hash)과 날줄(계층 구조)이 교차하며 단 하나의 직물을 형성합니다.</div>
       </div>
       <div style="background:#fff;padding:24px 20px;border-left:1px solid var(--border)">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:1px;margin-bottom:10px">INFRASTRUCTURE</div>
+        <div style="font-family:'Pretendard', sans-serif;font-size:10px;color:var(--text3);letter-spacing:1px;margin-bottom:10px">INFRASTRUCTURE</div>
         <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">기존 인프라 활용</div>
         <div style="font-size:13px;color:var(--text3);line-height:1.7">별도의 네트워크 구축 없이 국가 행정망과 통신망을 그대로 신뢰 계층으로 활용합니다.</div>
       </div>
       <div style="background:#fff;padding:24px 20px;border-left:1px solid var(--border)">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:1px;margin-bottom:10px">RESULT</div>
+        <div style="font-family:'Pretendard', sans-serif;font-size:10px;color:var(--text3);letter-spacing:1px;margin-bottom:10px">RESULT</div>
         <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">수천 종 인증 대체</div>
         <div style="font-size:13px;color:var(--text3);line-height:1.7">주민등록증·운전면허증·졸업증명서 등 모든 인증 수단을 단 하나의 기술로 통합합니다.</div>
       </div>
@@ -812,37 +804,37 @@ body { padding-left: 0 !important; background: transparent; }
     <div class="reveal" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:32px">
 
       <div style="background:#fff;padding:28px 24px">
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--brand-dk);letter-spacing:1px;margin-bottom:12px">FACT CHECK COST</div>
-        <div style="font-size:clamp(28px,3vw,40px);font-weight:300;font-family:'DM Mono',monospace;color:var(--text);letter-spacing:-1px;line-height:1;margin-bottom:10px">수백 조</div>
+        <div style="font-family:'Pretendard', sans-serif;font-size:11px;color:var(--brand-dk);letter-spacing:1px;margin-bottom:12px">FACT CHECK COST</div>
+        <div style="font-size:clamp(28px,3vw,40px);font-weight:300;font-family:'Pretendard', sans-serif;color:var(--text);letter-spacing:-1px;line-height:1;margin-bottom:10px">수백 조</div>
         <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">한국의 연간 사실 확인 비용</div>
         <div style="font-size:13px;color:var(--text3);line-height:1.7">GDP의 상당 부분이 데이터의 진실 여부를 확인하는 데 소비됩니다. 흔히 간과하지만, 이는 경제 전반에 걸친 구조적 비용입니다.</div>
       </div>
 
       <div style="background:#fff;padding:28px 24px;border-left:1px solid var(--border)">
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:12px">EXAMPLES</div>
+        <div style="font-family:'Pretendard', sans-serif;font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:12px">EXAMPLES</div>
         <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px">사실 확인이 본업인 제도들</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text2);line-height:1.65">
-            <span style="color:var(--text4);font-family:'DM Mono',monospace;font-size:11px;flex-shrink:0;margin-top:2px">01</span>
+            <span style="color:var(--text4);font-family:'Pretendard', sans-serif;font-size:11px;flex-shrink:0;margin-top:2px">01</span>
             <span><strong>법원 재판</strong> — 대부분은 사실관계 확인의 과정</span>
           </div>
           <div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text2);line-height:1.65">
-            <span style="color:var(--text4);font-family:'DM Mono',monospace;font-size:11px;flex-shrink:0;margin-top:2px">02</span>
+            <span style="color:var(--text4);font-family:'Pretendard', sans-serif;font-size:11px;flex-shrink:0;margin-top:2px">02</span>
             <span><strong>신분증·증명서</strong> — 신원과 자격의 진실 여부 증명</span>
           </div>
           <div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text2);line-height:1.65">
-            <span style="color:var(--text4);font-family:'DM Mono',monospace;font-size:11px;flex-shrink:0;margin-top:2px">03</span>
+            <span style="color:var(--text4);font-family:'Pretendard', sans-serif;font-size:11px;flex-shrink:0;margin-top:2px">03</span>
             <span><strong>교통 단속 카메라</strong> — 법규 위반이라는 사실을 기록하는 기술적 장치</span>
           </div>
           <div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text2);line-height:1.65">
-            <span style="color:var(--text4);font-family:'DM Mono',monospace;font-size:11px;flex-shrink:0;margin-top:2px">04</span>
+            <span style="color:var(--text4);font-family:'Pretendard', sans-serif;font-size:11px;flex-shrink:0;margin-top:2px">04</span>
             <span><strong>회계·감사</strong> — 재무 사실의 진위 확인</span>
           </div>
         </div>
       </div>
 
       <div style="background:#fff;padding:28px 24px;border-left:1px solid var(--border)">
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:12px">IMPLICATION</div>
+        <div style="font-family:'Pretendard', sans-serif;font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:12px">IMPLICATION</div>
         <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">AI 시대의 역설</div>
         <div style="font-size:13px;color:var(--text2);line-height:1.75">AI가 강력해질수록, 거짓 데이터가 만들어내는 피해도 그만큼 커집니다. AI는 틀린 전제를 의심하지 않고, 틀린 전제 위에서 완벽하게 논리적인 결론을 도출합니다. <strong>진실한 데이터 없이 신뢰할 수 있는 AI는 없습니다.</strong></div>
       </div>
@@ -875,15 +867,15 @@ body { padding-left: 0 !important; background: transparent; }
           <div style="display:flex;flex-direction:column;gap:8px">
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 12px;background:white;border:1px solid #a7f3d0;border-radius:var(--radius)">
               <span style="color:var(--text3)">에너지 절감</span>
-              <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--brand-dk)">99.8%</span>
+              <span style="font-family:'Pretendard', sans-serif;font-weight:600;color:var(--brand-dk)">99.8%</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 12px;background:white;border:1px solid #a7f3d0;border-radius:var(--radius)">
               <span style="color:var(--text3)">최대 처리 성능</span>
-              <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--brand-dk)">7.3M TPS</span>
+              <span style="font-family:'Pretendard', sans-serif;font-weight:600;color:var(--brand-dk)">7.3M TPS</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 12px;background:white;border:1px solid #a7f3d0;border-radius:var(--radius)">
               <span style="color:var(--text3)">소비자 데이터 노출</span>
-              <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--brand-dk)">0%</span>
+              <span style="font-family:'Pretendard', sans-serif;font-weight:600;color:var(--brand-dk)">0%</span>
             </div>
           </div>
         </div>
@@ -1009,30 +1001,30 @@ body { padding-left: 0 !important; background: transparent; }
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
           <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0"></div>
           <span style="font-size:13px;font-weight:700;color:var(--text);letter-spacing:-0.3px">기존</span>
-          <span style="font-size:12px;color:var(--text4);font-family:'DM Mono',monospace">네이버·쿠팡이츠</span>
+          <span style="font-size:12px;color:var(--text4);font-family:'Pretendard'">네이버·쿠팡이츠</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:14px">
           <div style="display:flex;gap:12px;align-items:flex-start">
             <div style="width:22px;height:22px;border-radius:50%;background:var(--bg-subtle);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
-              <span style="font-size:10px;font-weight:700;color:var(--text3);font-family:'DM Mono',monospace">1</span>
+              <span style="font-size:10px;font-weight:700;color:var(--text3);font-family:'Pretendard'">1</span>
             </div>
             <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">검색 엔진(네이버, 구글)과 쿠팡이츠 등으로 근처 중국 음식점을 직접 검색</p>
           </div>
           <div style="display:flex;gap:12px;align-items:flex-start">
             <div style="width:22px;height:22px;border-radius:50%;background:var(--bg-subtle);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
-              <span style="font-size:10px;font-weight:700;color:var(--text3);font-family:'DM Mono',monospace">2</span>
+              <span style="font-size:10px;font-weight:700;color:var(--text3);font-family:'Pretendard'">2</span>
             </div>
             <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">평점·리뷰·가격을 직접 비교한 뒤 앱으로 주문 및 결제</p>
           </div>
           <div style="display:flex;gap:12px;align-items:flex-start">
             <div style="width:22px;height:22px;border-radius:50%;background:#fef2f2;border:1px solid #fecaca;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
-              <span style="font-size:10px;font-weight:700;color:var(--red);font-family:'DM Mono',monospace">!</span>
+              <span style="font-size:10px;font-weight:700;color:var(--red);font-family:'Pretendard'">!</span>
             </div>
             <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">카드 수수료 약 <strong style="color:var(--red)">3%</strong>, 쿠팡이츠 등 업체 수수료 약 <strong style="color:var(--red)">15%</strong> (추정) 부과</p>
           </div>
           <div style="display:flex;gap:12px;align-items:flex-start">
             <div style="width:22px;height:22px;border-radius:50%;background:#fef2f2;border:1px solid #fecaca;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
-              <span style="font-size:10px;font-weight:700;color:var(--red);font-family:'DM Mono',monospace">!</span>
+              <span style="font-size:10px;font-weight:700;color:var(--red);font-family:'Pretendard'">!</span>
             </div>
             <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">검색·주문 정보는 네이버·구글·쿠팡이츠 등 <strong style="color:var(--red)">플랫폼이 소유</strong></p>
           </div>
@@ -1044,30 +1036,30 @@ body { padding-left: 0 !important; background: transparent; }
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #a7f3d0">
           <div style="width:8px;height:8px;border-radius:50%;background:var(--brand);flex-shrink:0"></div>
           <span style="font-size:13px;font-weight:700;color:var(--text);letter-spacing:-0.3px">고팡</span>
-          <span style="font-size:12px;color:var(--brand-dk);font-family:'DM Mono',monospace">K-Market Agent</span>
+          <span style="font-size:12px;color:var(--brand-dk);font-family:'Pretendard'">K-Market Agent</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:14px">
           <div style="display:flex;gap:12px;align-items:flex-start">
             <div style="width:22px;height:22px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
-              <span style="font-size:10px;font-weight:700;color:white;font-family:'DM Mono',monospace">1</span>
+              <span style="font-size:10px;font-weight:700;color:white;font-family:'Pretendard'">1</span>
             </div>
             <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">고팡 마이크 터치 후 <strong>"짜장면 두 그릇 주문해 줘."</strong> 한 마디</p>
           </div>
           <div style="display:flex;gap:12px;align-items:flex-start">
             <div style="width:22px;height:22px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
-              <span style="font-size:10px;font-weight:700;color:white;font-family:'DM Mono',monospace">2</span>
+              <span style="font-size:10px;font-weight:700;color:white;font-family:'Pretendard'">2</span>
             </div>
             <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">K-Market Agent 자동 호출 → 현재 위치 전달 → 주변 중국 음식점 검색·영업시간·리뷰·평점 참조 → 업체 추천</p>
           </div>
           <div style="display:flex;gap:12px;align-items:flex-start">
             <div style="width:22px;height:22px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
-              <span style="font-size:10px;font-weight:700;color:white;font-family:'DM Mono',monospace">3</span>
+              <span style="font-size:10px;font-weight:700;color:white;font-family:'Pretendard'">3</span>
             </div>
             <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0">업체 선택하면 주문·결제 자동 완료. 카드 수수료 <strong style="color:var(--brand-dk)">0%</strong>, 플랫폼 수수료 <strong style="color:var(--brand-dk)">0%</strong></p>
           </div>
           <div style="display:flex;gap:12px;align-items:flex-start">
             <div style="width:22px;height:22px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
-              <span style="font-size:10px;font-weight:700;color:white;font-family:'DM Mono',monospace">4</span>
+              <span style="font-size:10px;font-weight:700;color:white;font-family:'Pretendard'">4</span>
             </div>
             <p style="font-size:13px;color:var(--text2);line-height:1.75;margin:0"><strong>누가·언제·어디서·무엇을·어떻게·왜</strong> → 익명화 → 공공 데이터 → 정부 정책에 반영</p>
           </div>
