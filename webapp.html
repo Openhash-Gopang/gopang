@@ -2,6 +2,47 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>
+// ── PC 접속 차단 가드 ────────────────────────────────────
+// 고팡은 스마트폰 전용 앱. PDV(개인 일상/업무 기록)는 휴대폰에만 저장되어야
+// 하며, PC에 남으면 다른 사람이 탈취할 위험이 있다. PC는 ai-setup.html 같은
+// 특수 목적(LLM API 키 입력 등)에만 쓰여야 한다.
+// 개발/테스트 우회: 콘솔에서 localStorage.setItem('gopang_dev_bypass','true')
+(function () {
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+  if (isMobile) return;
+
+  let devBypass = false;
+  try { devBypass = localStorage.getItem('gopang_dev_bypass') === 'true'; } catch {}
+  if (devBypass) {
+    console.warn('[Gopang] 개발자 우회 플래그 활성 — PC 접속 차단을 건너뜁니다.');
+    return;
+  }
+
+  document.write(
+    '<div style="position:fixed;inset:0;z-index:99999;background:#fff;' +
+    'display:flex;align-items:center;justify-content:center;padding:24px;' +
+    'box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,' +
+    '\'Pretendard\',sans-serif">' +
+      '<div style="max-width:380px;text-align:center">' +
+        '<p style="font-weight:700;font-size:18px;margin:0 0 14px;color:#111827">' +
+          '스마트폰 전용 서비스입니다' +
+        '</p>' +
+        '<p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 8px">' +
+          '고팡은 개인정보 보호를 위해 스마트폰에서만 사용할 수 있습니다.<br>' +
+          'PC에서는 대화·기록이 다른 사람에게 노출될 위험이 있어 접속을 제한합니다.' +
+        '</p>' +
+        '<p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0">' +
+          'LLM API 키 설정 등 PC 작업이 필요하면<br>' +
+          '<b>gopang.net/pages/ai-setup.html</b>을 이용해 주세요.' +
+        '</p>' +
+      '</div>' +
+    '</div>'
+  );
+  document.close();
+  throw new Error('[Gopang] PC 접속 차단 — webapp.html은 스마트폰 전용입니다.');
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -23,8 +64,11 @@ function gopangLogout() {
   if (!confirm('로그아웃 하시겠습니까?\n(아이디·설정이 초기화됩니다)')) return;
   localStorage.clear();
   sessionStorage.clear();
-  caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
-    .finally(() => location.reload());
+  const _wipeIDB = (indexedDB.databases?.() || Promise.resolve([]))
+    .then(dbs => Promise.all(dbs.map(db => indexedDB.deleteDatabase(db.name))))
+    .catch(() => {});
+  const _wipeCache = caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
+  Promise.all([_wipeIDB, _wipeCache]).finally(() => location.reload());
 }
 function _isGuestUser() {
   try {
