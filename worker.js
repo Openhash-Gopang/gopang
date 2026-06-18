@@ -1430,6 +1430,40 @@ async function handleSearchUsers(request, env, corsHeaders) {
 // v5.1: 인증 불필요 — 공개 프로필 조회 (PUBLIC 계층만 노출 대상이나,
 //       현재는 단순화를 위해 user_profiles 행 전체를 반환한다.
 //       PRIVATE/SEMI 분리 마스킹은 추후 별도 작업에서 처리)
+//
+// ═══════════════════════════════════════════════════════════
+// ⚠️ 임시 경로 (필드 테스트용) — 표준 절차가 아님
+// ═══════════════════════════════════════════════════════════
+// OpenHash 표준 절차는 다음과 같다:
+//   1) A가 L1에서 B의 존재를 확인 (guid만 확보, 상세정보는 L1에 없음)
+//   2) A가 B 본인(B의 기기/노드)에게 P2P로 직접 프로필 상세를 요청
+//   3) B가 동의하여 자신의 프로필을 A에게 직접 전송
+//   4) A가 전송받은 데이터로 B의 프로필 페이지를 직접 조합
+// 장기적으로는 L1 자체가 상세 프로필 정보까지 저장하게 되며,
+// Supabase는 그 이후에도 백업 레이어로만 남는다.
+//
+// 아래 구현은 2~3단계(P2P 직접 요청/응답)가 아직 구축되지 않았으므로,
+// 그 자리에 "A가 Supabase에 캐시된 B의 데이터를 대신 가져오는" 임시 경로를
+// 끼워 넣은 것이다 — 표준의 본체가 아니라 필드 테스트 단계의 대체 수단.
+// P2P 요청/응답 채널(예: /signal/* 위에 profile_request 타입 추가)이
+// 구축되면 이 함수는 1)L1 존재 확인까지만 남기고, 상세조회는 클라이언트의
+// P2P 요청 로직으로 옮겨야 한다.
+// handle로 L1 PocketBase에서 존재 확인 + guid 조회 (표준 1단계: 분산 노드가 1차 소스)
+async function _resolveGuidFromL1(handle) {
+  const L1_PROFILES = L1_DEFAULT + '/api/collections/profiles/records';
+  const h = handle.startsWith('@') ? handle : '@' + handle;
+  const queryUrl = `${L1_PROFILES}?perPage=1&fields=guid,handle&filter=${encodeURIComponent(`handle='${h}'`)}`;
+  try {
+    const res = await fetch(queryUrl);
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    return data?.items?.[0]?.guid || null;
+  } catch (e) {
+    console.warn('[L1] handle 조회 실패 (Supabase로 폴백):', e.message);
+    return null;
+  }
+}
+
 async function handleProfileGet(request, env, corsHeaders) {
   const url = new URL(request.url);
   const sbH = _sbHeaders(env);
@@ -1437,11 +1471,21 @@ async function handleProfileGet(request, env, corsHeaders) {
   const rawHandle = decodeURIComponent(url.pathname.replace('/profile/', '').replace('/profile', ''));
   const guidParam = url.searchParams.get('guid');
 
+  // ── 표준 1단계: L1(분산 노드)에서 handle → guid 존재 확인 ──
+  // guid로 직접 조회하는 경우는 이미 신원이 확정된 상태이므로 이 단계 불필요
+  let resolvedGuid = guidParam || null;
+  if (!resolvedGuid && rawHandle) {
+    resolvedGuid = await _resolveGuidFromL1(rawHandle);
+  }
+
+  // ── ⚠️ 임시 경로: 본래는 여기서 B에게 P2P 요청을 보내야 하나,
+  //    그 채널이 아직 없어 Supabase 캐시를 대신 조회한다 (필드 테스트용) ──
   let query;
-  if (rawHandle) {
+  if (resolvedGuid) {
+    query = `guid=eq.${encodeURIComponent(resolvedGuid)}`;
+  } else if (rawHandle) {
+    // L1에 없거나(아직 미동기화) L1 연결 실패 — Supabase에서 handle로 직접 폴백 조회
     query = `handle=eq.${encodeURIComponent(rawHandle.startsWith('@') ? rawHandle : '@' + rawHandle)}`;
-  } else if (guidParam) {
-    query = `guid=eq.${encodeURIComponent(guidParam)}`;
   } else {
     return _err(400, 'MISSING_FIELD', 'handle 또는 guid 필요', corsHeaders);
   }
@@ -1462,7 +1506,13 @@ async function handleProfileGet(request, env, corsHeaders) {
   const rows = await res.json().catch(() => []);
   if (!rows.length) return _err(404, 'PROFILE_NOT_FOUND', '프로필 없음', corsHeaders);
 
-  return new Response(JSON.stringify({ ok: true, profile: rows[0] }), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify({
+    ok: true, profile: rows[0],
+    // identity_source: handle→guid 확인을 어디서 했는지 (L1 우선, 미동기화 시 Supabase 직접조회)
+    // detail_source: 상세 데이터는 항상 Supabase에서 옴 — 표준 P2P 직접요청 채널 구축 전까지의 임시 경로
+    identity_source: resolvedGuid ? 'l1' : 'supabase-direct',
+    detail_source:   'supabase-temporary', // TODO: P2P 직접 요청/응답 채널 구축 후 제거
+  }), { status: 200, headers: corsHeaders });
 }
 
 // POST /profile — 본인 프로필 생성/갱신 (upsert)
