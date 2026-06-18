@@ -153,7 +153,7 @@ async function _pollPcSealedSetting(guid, wallet) {
     const res  = await fetch(`${CFG.endpoint}/ai-setup/seal?guid=${encodeURIComponent(guid)}`);
     const data = await res.json();
     if (!data.ok || !data.sealed) {
-      _renderPcSyncBanner(null);
+      _renderPcSyncBanner({ _idle: true }, guid);
       return;
     }
 
@@ -162,11 +162,11 @@ async function _pollPcSealedSetting(guid, wallet) {
     _renderPcSyncBanner(parsed, guid);
   } catch(e) {
     console.warn('[AI설정] PC 봉투 확인 실패:', e.message);
-    _renderPcSyncBanner(null);
+    _renderPcSyncBanner({ _idle: true }, guid);
   }
 }
 
-// ── "PC에서 보낸 설정이 있습니다" 안내 배너 렌더링 ──
+// ── "PC에서 입력하세요" 안내 / "PC에서 보낸 설정이 있습니다" 배너 렌더링 ──
 function _renderPcSyncBanner(parsed, guid) {
   const host = document.getElementById('setting-model')?.closest('.settings-body') || document.body;
   let banner = document.getElementById('_pc-sync-banner');
@@ -184,6 +184,19 @@ function _renderPcSyncBanner(parsed, guid) {
     banner.style.background = '#fef2f2';
     banner.style.color = '#991b1b';
     banner.innerHTML = `⚠️ ${parsed.message}`;
+    return;
+  }
+
+  // PC가 아직 아무것도 보내지 않은 기본 상태 — API Key 입력이 번거로운 휴대폰 대신
+  // PC에서 등록하는 방법을 항상 안내한다.
+  if (parsed._idle) {
+    banner.style.display = 'block';
+    banner.style.background = '#eff6ff';
+    banner.style.color = '#1e3a8a';
+    banner.innerHTML =
+      `💻 API Key 입력은 PC에서 하는 것이 편리합니다.<br>` +
+      `PC로 <b>gopang.net</b>에 접속해 <b>"나만의 AI 비서 설정"</b> 버튼을 클릭하고,<br>` +
+      `핸들(<b>${_USER?.handle || ''}</b>)을 입력해 하나 이상의 LLM API Key를 등록해 주세요.`;
     return;
   }
 
