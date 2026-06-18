@@ -1,0 +1,445 @@
+<div class="hm-wrap reveal">
+<style>
+.hm-wrap {
+  max-width: 860px; margin: 0 auto; padding: 64px 32px 120px;
+  --m-el1: 0 1px 2px rgba(0,0,0,.30), 0 1px 3px 1px rgba(0,0,0,.15);
+  --m-el2: 0 1px 2px rgba(0,0,0,.30), 0 2px 6px 2px rgba(0,0,0,.15);
+  --m-el3: 0 1px 3px rgba(0,0,0,.30), 0 4px 8px 3px rgba(0,0,0,.15);
+  --m-state-hover: rgba(15,23,42,.04);
+  --m-state-press: rgba(15,23,42,.08);
+}
+
+/* ── Ripple (Material state layer / touch feedback) ── */
+.m-ripple-host { position: relative; overflow: hidden; }
+.m-ripple { position: absolute; border-radius: 50%; transform: scale(0); pointer-events: none;
+  animation: m-rip .55s ease-out; }
+@keyframes m-rip { to { transform: scale(2.6); opacity: 0; } }
+
+/* ── Typography ── */
+.hm-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px; border-radius: 99px;
+  background: var(--brand-bg); color: var(--brand-dk);
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 600;
+  letter-spacing: 1px; margin-bottom: 22px;
+}
+.hm-eyebrow::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--brand-dk); }
+.hm-wrap h1 {
+  font-size: 36px; font-weight: 700; color: var(--text); letter-spacing: -0.6px;
+  line-height: 1.18; margin: 0 0 11px; text-wrap: balance;
+}
+.hm-sub { font-size: 14.5px; color: var(--text3); margin: 0 0 22px; }
+.hm-lead { font-size: 14.5px; color: var(--text2); line-height: 1.8; margin: 0 0 24px; max-width: 600px; }
+.hm-lead b { color: var(--text); font-weight: 600; }
+.hm-lead code, .hm-how p code, .hm-callout code, .hm-form code {
+  font-family: 'DM Mono', monospace; font-size: 0.9em;
+  background: var(--bg-subtle); color: var(--text2); padding: 1px 6px; border-radius: 4px;
+}
+
+.hm-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 44px; }
+.hm-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: var(--text2); background: var(--bg-subtle);
+  border-radius: 8px; padding: 7px 13px;
+}
+.hm-badge b { color: var(--brand-dk); font-weight: 700; }
+
+.hm-section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;
+  color: var(--text4); margin: 0 0 4px;
+}
+.hm-section-title { font-size: 20px; font-weight: 700; color: var(--text); margin: 0 0 6px; }
+
+/* ── Material List (app chart) ── */
+.hm-list { border-radius: 16px; overflow: hidden; box-shadow: var(--m-el1); margin: 22px 0 10px; }
+.hm-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 16px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: relative; overflow: hidden;
+}
+.hm-row::after {
+  content: ''; position: absolute; inset: 0; background: var(--brand);
+  opacity: 0; transition: opacity .15s; pointer-events: none;
+}
+.hm-row:hover::after { opacity: .04; }
+.hm-row:last-child { border-bottom: none; }
+.hm-rank {
+  width: 20px; flex-shrink: 0; text-align: center;
+  font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 700; color: var(--text4);
+}
+.hm-mono {
+  flex-shrink: 0; width: 42px; height: 42px; border-radius: 50%;
+  background: var(--brand-bg); color: var(--brand-dk);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Noto Sans KR', sans-serif; font-weight: 700; font-size: 16px;
+}
+.hm-row-body { flex: 1; min-width: 0; }
+.hm-row-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.hm-row-top h3 { font-size: 14.5px; font-weight: 700; color: var(--text); margin: 0; }
+.hm-row-tag { font-size: 11.5px; color: var(--text4); }
+.hm-row-desc {
+  font-size: 12.5px; color: var(--text3); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hm-row-actions { flex-shrink: 0; display: flex; align-items: center; gap: 14px; z-index: 1; }
+.hm-row-link {
+  font-family: 'DM Mono', monospace; font-size: 11.5px; color: var(--text3);
+  text-decoration: none; white-space: nowrap;
+}
+.hm-row-link:hover { color: var(--brand-dk); text-decoration: underline; }
+.hm-row-price {
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 700; color: var(--brand-dk);
+  white-space: nowrap; background: var(--brand-bg); border-radius: 99px; padding: 4px 10px;
+}
+
+@media (max-width: 600px) {
+  .hm-row-actions { flex-direction: column; align-items: flex-end; gap: 5px; }
+  .hm-row-desc { display: none; }
+  .hm-rank { display: none; }
+}
+
+/* ── Chips (Material Assist Chip) ── */
+.hm-more { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 40px; }
+.hm-chip {
+  font-family: 'DM Mono', monospace; font-size: 11.5px; font-weight: 500; color: var(--text2);
+  background: var(--surface); border: 1px solid var(--border2); border-radius: 8px;
+  padding: 7px 14px; text-decoration: none; display: inline-block;
+  position: relative; overflow: hidden; transition: box-shadow .15s, border-color .15s;
+}
+a.hm-chip:hover { border-color: var(--brand); box-shadow: var(--m-el1); color: var(--brand-dk); text-decoration: none; }
+
+.hm-divider { border: none; height: 1px; margin: 0 0 44px;
+  background: linear-gradient(to right, transparent, var(--border) 15%, var(--border) 85%, transparent); }
+
+/* ── Stepper (Material vertical stepper) ── */
+.hm-how { margin: 22px 0 40px; }
+.hm-step { display: flex; gap: 16px; padding: 0 0 28px; position: relative; }
+.hm-step::before {
+  content: ''; position: absolute; left: 15px; top: 32px; bottom: 0;
+  width: 2px; background: var(--border);
+}
+.hm-step:last-child::before { display: none; }
+.hm-step-num {
+  flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
+  color: var(--text4); border: 2px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace; font-size: 12.5px; font-weight: 700;
+  background: var(--surface); position: relative; z-index: 1; transition: all .2s;
+}
+.hm-step.is-active .hm-step-num, .hm-step:hover .hm-step-num {
+  border-color: var(--brand); color: #fff; background: var(--brand); box-shadow: var(--m-el1);
+}
+.hm-step-body { flex: 1; padding-top: 4px; }
+.hm-step h4 { font-size: 14.5px; font-weight: 700; color: var(--text); margin: 0 0 5px; }
+.hm-step p { font-size: 13.3px; color: var(--text2); line-height: 1.75; margin: 0; }
+.hm-step-link {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 10px;
+  font-family: 'DM Mono', monospace; font-size: 11.5px; font-weight: 600; color: var(--brand-dk);
+  text-decoration: none; background: var(--brand-bg); border-radius: 8px; padding: 6px 12px;
+}
+.hm-step-link:hover { background: var(--brand-lt); }
+
+/* ── Cards: Material tonal surfaces ── */
+.hm-callout {
+  border-radius: 16px; padding: 18px 22px; margin: 0 0 14px;
+}
+.hm-callout.tone-primary { background: var(--brand-bg); }
+.hm-callout.tone-neutral { background: var(--bg-subtle); }
+.hm-callout-title {
+  font-size: 12.5px; font-weight: 700; margin-bottom: 8px;
+}
+.hm-callout.tone-primary .hm-callout-title { color: var(--brand-dk); }
+.hm-callout.tone-neutral .hm-callout-title { color: var(--text3); }
+.hm-callout p { font-size: 13px; color: var(--text2); line-height: 1.75; margin: 0; }
+
+/* ── Application form: Material outlined text fields ── */
+.hm-form {
+  border-radius: 24px; padding: 30px 30px 28px; margin: 0 0 40px;
+  background: var(--surface); box-shadow: var(--m-el2);
+}
+.hm-form-title { font-size: 18px; font-weight: 700; color: var(--text); margin: 0 0 4px; }
+.hm-form-sub { font-size: 12.5px; color: var(--text4); margin: 0 0 26px; }
+.hm-field { margin-bottom: 20px; transition: color .15s; }
+.hm-field label {
+  display: block; font-size: 12px; font-weight: 600; color: var(--text3);
+  margin-bottom: 8px; letter-spacing: .2px; transition: color .15s;
+}
+.hm-field:focus-within label { color: var(--brand-dk); }
+.hm-field .hm-hint { font-size: 11.5px; color: var(--text4); margin-top: 7px; }
+.hm-domain-row { display: flex; align-items: stretch; }
+.hm-domain-row input {
+  border-radius: 4px 0 0 4px; border-right: none; text-align: right;
+}
+.hm-domain-suffix {
+  display: flex; align-items: center; padding: 0 14px;
+  background: var(--bg-subtle); border: 1.5px solid var(--border2); border-left: none;
+  border-radius: 0 4px 4px 0;
+  font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text3); white-space: nowrap;
+}
+.hm-field input[type="text"], .hm-field input[type="url"], .hm-field input[type="number"], .hm-field textarea {
+  width: 100%; font-family: 'Inter','Noto Sans KR',sans-serif; font-size: 13.5px;
+  color: var(--text); background: var(--surface); border: 1.5px solid var(--border2);
+  border-radius: 4px; padding: 11px 13px; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.hm-field input:focus, .hm-field textarea:focus {
+  border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand);
+}
+.hm-domain-row input:focus + .hm-domain-suffix { border-color: var(--brand); }
+.hm-field textarea { min-height: 84px; resize: vertical; line-height: 1.6; }
+.hm-price-row { display: flex; gap: 10px; }
+.hm-price-row input { flex: 1; }
+.hm-unit-group { display: flex; border-radius: 99px; background: var(--bg-subtle); padding: 3px; flex-shrink: 0; }
+.hm-unit-btn {
+  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 700; color: var(--text3);
+  background: transparent; border: none; border-radius: 99px; padding: 0 14px; height: 32px; cursor: pointer;
+  position: relative; overflow: hidden; transition: background .2s, color .2s;
+}
+.hm-unit-btn.active { background: var(--brand); color: #fff; box-shadow: var(--m-el1); }
+
+/* ── FAB-style primary action ── */
+.hm-form-submit {
+  width: 100%; margin-top: 8px; padding: 15px 0; border-radius: 99px;
+  background: var(--brand); color: #fff; font-size: 14px; font-weight: 700;
+  border: none; cursor: pointer; box-shadow: var(--m-el2);
+  transition: background .15s, box-shadow .15s, transform .1s;
+  position: relative; overflow: hidden;
+}
+.hm-form-submit:hover { background: var(--brand-dk); box-shadow: var(--m-el3); }
+.hm-form-submit:active { transform: translateY(1px); box-shadow: var(--m-el1); }
+.hm-form-note { font-size: 11.5px; color: var(--text4); text-align: center; margin-top: 14px; }
+</style>
+
+  <div class="hm-eyebrow">HONDI WEBAPP MARKETPLACE</div>
+  <h1>혼디장 — AI Webapp 마켓플레이스</h1>
+  <p class="hm-sub">애플 앱스토어, 구글 플레이에 대응하는 혼디의 장터</p>
+  <p class="hm-lead">
+    혼디장에 등록되는 앱은 모두 <b>웹앱(Webapp)이자 AI 앱</b>입니다. 사용자가 말 한마디를 건네면,
+    등록된 AI가 해당 업무를 직접 수행합니다.
+  </p>
+  <div class="hm-badges">
+    <span class="hm-badge"><b>100%</b> 오픈소스</span>
+    <span class="hm-badge">혼디 심사 <b>통과</b> 후 게시</span>
+    <span class="hm-badge">이용 <b>1회당</b> 과금</span>
+  </div>
+
+  <div class="hm-section-label">대표 WEBAPP</div>
+  <div class="hm-section-title">지금 운영 중인 시범 사례</div>
+  <div class="hm-list">
+    <div class="hm-row">
+      <div class="hm-rank">1</div>
+      <div class="hm-mono">法</div>
+      <div class="hm-row-body">
+        <div class="hm-row-top"><h3>K-Law</h3><span class="hm-row-tag">사법 · 분쟁 해결</span></div>
+        <div class="hm-row-desc">기존 사법 체제를 대체 또는 보완하는 AI 분쟁 해결 시스템</div>
+      </div>
+      <div class="hm-row-actions">
+        <span class="hm-row-price">1T / 회</span>
+        <a class="hm-row-link" href="https://klaw.gopang.net" target="_blank">웹앱</a>
+        <a class="hm-row-link" href="https://github.com/Openhash-Gopang/klaw" target="_blank">GitHub</a>
+      </div>
+    </div>
+    <div class="hm-row">
+      <div class="hm-rank">2</div>
+      <div class="hm-mono">稅</div>
+      <div class="hm-row-body">
+        <div class="hm-row-top"><h3>K-Tax</h3><span class="hm-row-tag">세무 · 행정 자동화</span></div>
+        <div class="hm-row-desc">국세청 업무 자동화를 위한 AI 세무 비서</div>
+      </div>
+      <div class="hm-row-actions">
+        <span class="hm-row-price">0.5T / 회</span>
+        <a class="hm-row-link" href="https://tax.gopang.net" target="_blank">웹앱</a>
+        <a class="hm-row-link" href="https://github.com/Openhash-Gopang/tax" target="_blank">GitHub</a>
+      </div>
+    </div>
+    <div class="hm-row">
+      <div class="hm-rank">3</div>
+      <div class="hm-mono">市</div>
+      <div class="hm-row-body">
+        <div class="hm-row-top"><h3>K-Market</h3><span class="hm-row-tag">커머스 · 주문</span></div>
+        <div class="hm-row-desc">쿠팡, 이마트의 대체제 역할을 하는 AI 커머스 플랫폼</div>
+      </div>
+      <div class="hm-row-actions">
+        <span class="hm-row-price">0.1T / 건</span>
+        <a class="hm-row-link" href="https://market.gopang.net" target="_blank">웹앱</a>
+        <a class="hm-row-link" href="https://github.com/Openhash-Gopang/market" target="_blank">GitHub</a>
+      </div>
+    </div>
+    <div class="hm-row">
+      <div class="hm-rank">4</div>
+      <div class="hm-mono">校</div>
+      <div class="hm-row-body">
+        <div class="hm-row-top"><h3>K-School</h3><span class="hm-row-tag">교육</span></div>
+        <div class="hm-row-desc">초·중·고 및 대학 과정을 가르치는 AI 교사</div>
+      </div>
+      <div class="hm-row-actions">
+        <span class="hm-row-price">0.3T / 시간</span>
+        <a class="hm-row-link" href="https://school.gopang.net" target="_blank">웹앱</a>
+        <a class="hm-row-link" href="https://github.com/Openhash-Gopang/school" target="_blank">GitHub</a>
+      </div>
+    </div>
+    <div class="hm-row">
+      <div class="hm-rank">5</div>
+      <div class="hm-mono">貨</div>
+      <div class="hm-row-body">
+        <div class="hm-row-top"><h3>GDC</h3><span class="hm-row-tag">통화 · 금융</span></div>
+        <div class="hm-row-desc">193개국 국적 화폐를 보완하는 글로벌 디지털 통화 시스템</div>
+      </div>
+      <div class="hm-row-actions">
+        <span class="hm-row-price">무료</span>
+        <a class="hm-row-link" href="https://gdc.gopang.net" target="_blank">웹앱</a>
+        <a class="hm-row-link" href="https://github.com/Openhash-Gopang/gdc" target="_blank">GitHub</a>
+      </div>
+    </div>
+    <div class="hm-row">
+      <div class="hm-rank">6</div>
+      <div class="hm-mono">民</div>
+      <div class="hm-row-body">
+        <div class="hm-row-top"><h3>K-Democracy</h3><span class="hm-row-tag">거버넌스 · 투표</span></div>
+        <div class="hm-row-desc">참여 시민의 투표로 의사결정을 내리는 DAWN 거버넌스 시스템</div>
+      </div>
+      <div class="hm-row-actions">
+        <span class="hm-row-price">무료</span>
+        <a class="hm-row-link" href="https://democracy.gopang.net" target="_blank">웹앱</a>
+        <a class="hm-row-link" href="https://github.com/Openhash-Gopang/democracy" target="_blank">GitHub</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="hm-section-label">그 외 K-시리즈 (확장 중)</div>
+  <div class="hm-more">
+    <a class="hm-chip" href="https://911.gopang.net" target="_blank" onmousedown="var r=document.createElement('span');r.className='m-ripple';var rect=this.getBoundingClientRect();var d=Math.max(rect.width,rect.height)*2;r.style.width=r.style.height=d+'px';r.style.left=(event.clientX-rect.left-d/2)+'px';r.style.top=(event.clientY-rect.top-d/2)+'px';r.style.background='rgba(15,23,42,.10)';this.appendChild(r);setTimeout(function(){r.remove();},550);">K-119</a>
+    <a class="hm-chip" href="https://police.gopang.net" target="_blank" onmousedown="var r=document.createElement('span');r.className='m-ripple';var rect=this.getBoundingClientRect();var d=Math.max(rect.width,rect.height)*2;r.style.width=r.style.height=d+'px';r.style.left=(event.clientX-rect.left-d/2)+'px';r.style.top=(event.clientY-rect.top-d/2)+'px';r.style.background='rgba(15,23,42,.10)';this.appendChild(r);setTimeout(function(){r.remove();},550);">K-Police</a>
+    <a class="hm-chip" href="https://health.gopang.net" target="_blank" onmousedown="var r=document.createElement('span');r.className='m-ripple';var rect=this.getBoundingClientRect();var d=Math.max(rect.width,rect.height)*2;r.style.width=r.style.height=d+'px';r.style.left=(event.clientX-rect.left-d/2)+'px';r.style.top=(event.clientY-rect.top-d/2)+'px';r.style.background='rgba(15,23,42,.10)';this.appendChild(r);setTimeout(function(){r.remove();},550);">K-Health</a>
+    <a class="hm-chip" href="https://traffic.gopang.net" target="_blank" onmousedown="var r=document.createElement('span');r.className='m-ripple';var rect=this.getBoundingClientRect();var d=Math.max(rect.width,rect.height)*2;r.style.width=r.style.height=d+'px';r.style.left=(event.clientX-rect.left-d/2)+'px';r.style.top=(event.clientY-rect.top-d/2)+'px';r.style.background='rgba(15,23,42,.10)';this.appendChild(r);setTimeout(function(){r.remove();},550);">K-Traffic</a>
+    <a class="hm-chip" href="https://stock.gopang.net" target="_blank" onmousedown="var r=document.createElement('span');r.className='m-ripple';var rect=this.getBoundingClientRect();var d=Math.max(rect.width,rect.height)*2;r.style.width=r.style.height=d+'px';r.style.left=(event.clientX-rect.left-d/2)+'px';r.style.top=(event.clientY-rect.top-d/2)+'px';r.style.background='rgba(15,23,42,.10)';this.appendChild(r);setTimeout(function(){r.remove();},550);">K-Stock</a>
+    <a class="hm-chip" href="https://logistics.gopang.net" target="_blank" onmousedown="var r=document.createElement('span');r.className='m-ripple';var rect=this.getBoundingClientRect();var d=Math.max(rect.width,rect.height)*2;r.style.width=r.style.height=d+'px';r.style.left=(event.clientX-rect.left-d/2)+'px';r.style.top=(event.clientY-rect.top-d/2)+'px';r.style.background='rgba(15,23,42,.10)';this.appendChild(r);setTimeout(function(){r.remove();},550);">K-Logistics</a>
+    <a class="hm-chip" href="https://insurance.gopang.net" target="_blank" onmousedown="var r=document.createElement('span');r.className='m-ripple';var rect=this.getBoundingClientRect();var d=Math.max(rect.width,rect.height)*2;r.style.width=r.style.height=d+'px';r.style.left=(event.clientX-rect.left-d/2)+'px';r.style.top=(event.clientY-rect.top-d/2)+'px';r.style.background='rgba(15,23,42,.10)';this.appendChild(r);setTimeout(function(){r.remove();},550);">K-Insurance</a>
+    <a class="hm-chip" href="https://public.gopang.net" target="_blank" onmousedown="var r=document.createElement('span');r.className='m-ripple';var rect=this.getBoundingClientRect();var d=Math.max(rect.width,rect.height)*2;r.style.width=r.style.height=d+'px';r.style.left=(event.clientX-rect.left-d/2)+'px';r.style.top=(event.clientY-rect.top-d/2)+'px';r.style.background='rgba(15,23,42,.10)';this.appendChild(r);setTimeout(function(){r.remove();},550);">K-Public</a>
+    <a class="hm-chip" href="https://security.gopang.net" target="_blank" onmousedown="var r=document.createElement('span');r.className='m-ripple';var rect=this.getBoundingClientRect();var d=Math.max(rect.width,rect.height)*2;r.style.width=r.style.height=d+'px';r.style.left=(event.clientX-rect.left-d/2)+'px';r.style.top=(event.clientY-rect.top-d/2)+'px';r.style.background='rgba(15,23,42,.10)';this.appendChild(r);setTimeout(function(){r.remove();},550);">K-Security</a>
+    <span class="hm-chip">K-QnA</span>
+  </div>
+
+  <p class="hm-lead">
+    "K" 접두사가 붙은 앱들은 혼디가 제시하는 AI Webapp의 시범 사례이며, <code>gopang.net</code> 위에서
+    운영되고 있습니다. 사용자가 새로 등록하는 Webapp은 <b>hondi.net</b> 서브도메인을 받게 됩니다.
+    가격은 모두 1회 이용당 부과되며, 1T(GDC)는 KRW 1,000원에 해당합니다.
+  </p>
+
+  <hr class="hm-divider">
+
+  <div class="hm-section-label">등록 절차</div>
+  <div class="hm-section-title">나만의 Webapp, 다섯 단계로 게시하기</div>
+  <div class="hm-how">
+    <div class="hm-step">
+      <div class="hm-step-num">1</div>
+      <div class="hm-step-body">
+        <h4>주소 정하기</h4>
+        <p>원하는 이름을 정하면 <code>*****.hondi.net</code> 형태의 고유 주소가 됩니다. 아래 신청서의
+        주소 입력란에 바로 입력할 수 있습니다.</p>
+      </div>
+    </div>
+    <div class="hm-step">
+      <div class="hm-step-num">2</div>
+      <div class="hm-step-body">
+        <h4>GitHub에 코드 업로드</h4>
+        <p>System Prompt를 포함한 Webapp 코드 전체를 본인 GitHub 저장소에 <b>공개(Public)</b>로
+        업로드합니다. 혼디장의 모든 Webapp은 예외 없이 오픈소스여야 합니다.</p>
+      </div>
+    </div>
+    <div class="hm-step">
+      <div class="hm-step-num">3</div>
+      <div class="hm-step-body">
+        <h4>혼디 보안 심사</h4>
+        <p>혼디 심사 AI가 제출된 저장소를 직접 방문해 System Prompt와 코드에 악의적인 지시나
+        코드(데이터 무단 전송, 사용자 기만, 인증·결제 우회 등)가 없는지 점검합니다.</p>
+        <a class="hm-step-link" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-15_hondimarket-review_v1.0.txt" target="_blank">심사 System Prompt 전문 보기 ↗</a>
+      </div>
+    </div>
+    <div class="hm-step">
+      <div class="hm-step-num">4</div>
+      <div class="hm-step-body">
+        <h4>Cloudflare 등록</h4>
+        <p>심사를 통과하면 혼디가 <code>*****.hondi.net</code> 주소를 Cloudflare에 등록합니다.
+        신청자가 직접 DNS를 설정할 필요는 없습니다.</p>
+      </div>
+    </div>
+    <div class="hm-step">
+      <div class="hm-step-num">5</div>
+      <div class="hm-step-body">
+        <h4>게시 및 과금 시작</h4>
+        <p>게시된 Webapp은 코드가 모두 공개된 오픈소스이지만, 신청서에 기재한 가격대로 실제
+        이용 1회마다 과금됩니다. 코드를 보는 것은 무료지만, 서비스를 쓰는 것은 유료입니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="hm-callout tone-primary">
+    <div class="hm-callout-title">오픈소스 + 사용량 기반 과금</div>
+    <p>
+      혼디장의 모든 Webapp은 코드와 System Prompt가 누구에게나 공개된 오픈소스입니다. 그러나
+      공개된 코드를 읽는 것과 실제로 그 서비스를 이용하는 것은 별개입니다. 이용자가 사이트에
+      접속해 AI 비서를 실제로 호출하면, 등록 시 신청자가 정한 가격에 따라 GDC로 이용료가
+      이용 1회마다 자동 정산됩니다.
+    </p>
+  </div>
+  <div class="hm-callout tone-neutral">
+    <div class="hm-callout-title">혼디의 보안 심사 책임</div>
+    <p>
+      오픈소스라는 이유로 검증되지 않은 채로 게시되지는 않습니다. 혼디는 등록 신청이 들어올
+      때마다 신청자의 GitHub 저장소를 방문해 System Prompt와 코드를 심사하며, 통과한 Webapp만
+      <code>hondi.net</code> 주소를 받고 게시됩니다.
+    </p>
+  </div>
+
+  <hr class="hm-divider">
+
+  <div class="hm-form">
+    <div class="hm-form-title">Webapp 등록 신청</div>
+    <p class="hm-form-sub">아래 정보를 입력하면 혼디 심사 AI에게 전달됩니다.</p>
+
+    <div class="hm-field">
+      <label for="hm-domain">주소 (서브도메인)</label>
+      <div class="hm-domain-row">
+        <input type="text" id="hm-domain" placeholder="mybot">
+        <span class="hm-domain-suffix">.hondi.net</span>
+      </div>
+    </div>
+
+    <div class="hm-field">
+      <label for="hm-repo">GitHub 저장소 주소</label>
+      <input type="url" id="hm-repo" placeholder="https://github.com/yourname/your-webapp">
+    </div>
+
+    <div class="hm-field">
+      <label for="hm-desc">앱 설명 — 용도와 기능 (심사 AI에게 전달됩니다)</label>
+      <textarea id="hm-desc" placeholder="예: 이 앱은 동네 세탁소 예약과 결제를 자동으로 처리하는 AI 비서입니다. 사용자가 옷의 종류와 픽업 시간을 말하면, 가까운 세탁소를 찾아 예약하고 결제까지 진행합니다."></textarea>
+    </div>
+
+    <div class="hm-field">
+      <label for="hm-price">이용 1회당 희망 가격</label>
+      <div class="hm-price-row">
+        <input type="number" id="hm-price" placeholder="예: 1" min="0" step="0.1">
+        <div class="hm-unit-group">
+          <button type="button" class="hm-unit-btn active m-ripple-host" data-unit="GDC"
+            onclick="this.parentNode.querySelectorAll('.hm-unit-btn').forEach(function(b){b.classList.remove('active');});this.classList.add('active');"
+            onmousedown="var r=document.createElement('span');r.className='m-ripple';var rect=this.getBoundingClientRect();var d=Math.max(rect.width,rect.height)*2;r.style.width=r.style.height=d+'px';r.style.left=(event.clientX-rect.left-d/2)+'px';r.style.top=(event.clientY-rect.top-d/2)+'px';r.style.background='rgba(255,255,255,.5)';this.appendChild(r);setTimeout(function(){r.remove();},550);"
+          >GDC ₮</button>
+          <button type="button" class="hm-unit-btn m-ripple-host" data-unit="KRW"
+            onclick="this.parentNode.querySelectorAll('.hm-unit-btn').forEach(function(b){b.classList.remove('active');});this.classList.add('active');"
+            onmousedown="var r=document.createElement('span');r.className='m-ripple';var rect=this.getBoundingClientRect();var d=Math.max(rect.width,rect.height)*2;r.style.width=r.style.height=d+'px';r.style.left=(event.clientX-rect.left-d/2)+'px';r.style.top=(event.clientY-rect.top-d/2)+'px';r.style.background='rgba(15,23,42,.18)';this.appendChild(r);setTimeout(function(){r.remove();},550);"
+          >KRW ₩</button>
+        </div>
+      </div>
+      <div class="hm-hint">참고: 1 GDC₮ ≈ KRW 1,000 (예: K-Law는 1회 이용당 1T/1,000원)</div>
+    </div>
+
+    <button type="button" class="hm-form-submit m-ripple-host" id="hm-submit"
+      onmousedown="var r=document.createElement('span');r.className='m-ripple';var rect=this.getBoundingClientRect();var d=Math.max(rect.width,rect.height)*2;r.style.width=r.style.height=d+'px';r.style.left=(event.clientX-rect.left-d/2)+'px';r.style.top=(event.clientY-rect.top-d/2)+'px';r.style.background='rgba(255,255,255,.45)';this.appendChild(r);setTimeout(function(){r.remove();},550);"
+      onclick="var d=document.getElementById('hm-domain').value.trim();var r=document.getElementById('hm-repo').value.trim();var ds=document.getElementById('hm-desc').value.trim();var p=document.getElementById('hm-price').value.trim();var u=document.querySelector('.hm-unit-btn.active').dataset.unit;if(!d||!r||!ds||!p){alert('주소, GitHub 저장소, 앱 설명, 가격을 모두 입력해주세요.');}else{var subject='[혼디장 등록 신청] '+d+'.hondi.net';var body='서브도메인: '+d+'.hondi.net\nGitHub 저장소: '+r+'\n희망 가격: '+p+' '+u+' / 회\n\n앱 설명:\n'+ds;window.location.href='mailto:dev@gopang.net?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);}"
+    >심사 신청하기</button>
+    <p class="hm-form-note">제출하면 기본 메일 앱이 열리며, dev@gopang.net으로 신청 내용이 전달됩니다.</p>
+  </div>
+
+</div>
