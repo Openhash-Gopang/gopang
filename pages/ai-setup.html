@@ -64,16 +64,8 @@
     <div id="_setup_guide_note" style="margin-top:12px;font-size:12px;color:var(--text4);background:var(--bg);border-radius:8px;padding:10px 12px"></div>
   </div>
 
-  <!-- 시스템 프롬프트 (선택 사항 — 비워두면 기존 값 유지) -->
-  <div style="margin-bottom:24px">
-    <label style="font-size:13px;font-weight:600;color:var(--text3);display:block;margin-bottom:8px">AI 비서 시스템 프롬프트 (선택)</label>
-    <textarea id="_setup_sysprompt" rows="5" placeholder="AI 비서의 역할과 동작 방식을 정의하세요. 비워두면 휴대폰의 기존 설정이 유지됩니다."
-      style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-lg);font-size:13.5px;line-height:1.6;font-family:inherit;resize:vertical;background:var(--surface);color:var(--text)"></textarea>
-    <p style="font-size:11.5px;color:var(--text4);margin-top:6px">여기에 입력한 내용은 아래에서 등록하는 모델과 함께 암호화되어 전송됩니다.</p>
-  </div>
-
   <!-- API Key 입력 -->
-  <div style="margin-bottom:20px">
+  <div style="margin-bottom:24px">
     <label style="font-size:13px;font-weight:600;color:var(--text3);display:block;margin-bottom:8px">2. 발급받은 API Key 입력</label>
     <div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;background:var(--surface)">
       <input id="_setup_key" type="password" placeholder="여기에 API Key를 붙여넣으세요"
@@ -84,12 +76,28 @@
     <p style="font-size:11.5px;color:var(--text4);margin-top:6px">🔒 이 키는 이 기기의 브라우저에만 저장되며, 고팡 서버로 전송되지 않습니다.</p>
   </div>
 
-  <button id="_setup_add" style="width:100%;padding:14px;border:none;border-radius:var(--radius-lg);background:var(--brand);color:#fff;font-size:14px;font-weight:600;cursor:pointer">+ 이 LLM 암호화 후 휴대폰으로 전송</button>
+  <!-- 시스템 프롬프트 (선택 사항 — 비워두면 기존 값 유지) -->
+  <div style="margin-bottom:20px">
+    <label style="font-size:13px;font-weight:600;color:var(--text3);display:block;margin-bottom:8px">3. AI 비서 시스템 프롬프트 (선택)</label>
+    <textarea id="_setup_sysprompt" rows="5" placeholder="AI 비서의 역할과 동작 방식을 정의하세요. 비워두면 휴대폰의 기존 설정이 유지됩니다."
+      style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-lg);font-size:13.5px;line-height:1.6;font-family:inherit;resize:vertical;background:var(--surface);color:var(--text)"></textarea>
+    <p style="font-size:11.5px;color:var(--text4);margin-top:6px">여기에 입력한 내용은 위에서 등록하는 모델과 함께 암호화되어 전송됩니다.</p>
+  </div>
 
-  <div id="_setup_saved_msg" style="display:none;margin-top:14px;font-size:13px;color:var(--brand-dk);background:var(--brand-bg);border-radius:8px;padding:12px 14px"></div>
+  <button id="_setup_add" style="width:100%;padding:14px;border:none;border-radius:var(--radius-lg);background:var(--brand);color:#fff;font-size:14px;font-weight:600;cursor:pointer">+ 이 LLM 암호화 후 휴대폰으로 전송</button>
 
   </div><!-- /_setup_main -->
 
+</div>
+
+<!-- 전송 완료 안내 모달 — 작은 인라인 텍스트는 놓치기 쉬워 명시적 팝업으로 표시 -->
+<div id="_setup_sent_modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border-radius:var(--radius-lg);max-width:420px;width:100%;padding:28px 24px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,0.25)">
+    <div style="font-size:36px;margin-bottom:12px">🔒</div>
+    <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:10px">암호화된 설정이 전송되었습니다</div>
+    <div id="_setup_sent_modal_body" style="font-size:13.5px;color:var(--text3);line-height:1.7;margin-bottom:22px"></div>
+    <button id="_setup_sent_modal_close" style="width:100%;padding:12px;border:none;border-radius:var(--radius-lg);background:var(--brand);color:#fff;font-size:14px;font-weight:600;cursor:pointer">확인</button>
+  </div>
 </div>
 
 <script>
@@ -233,7 +241,9 @@
   const keyInput   = document.getElementById('_setup_key');
   const keyToggle  = document.getElementById('_setup_key_toggle');
   const addBtn     = document.getElementById('_setup_add');
-  const savedMsg   = document.getElementById('_setup_saved_msg');
+  const sentModal     = document.getElementById('_setup_sent_modal');
+  const sentModalBody = document.getElementById('_setup_sent_modal_body');
+  const sentModalClose= document.getElementById('_setup_sent_modal_close');
 
   let _myGuid = null;
   let _x25519Pubkey = null;
@@ -291,6 +301,9 @@
   }
   handleCheck.onclick = _checkHandle;
   handleInput.addEventListener('keydown', e => { if (e.key === 'Enter') _checkHandle(); });
+
+  sentModalClose.onclick = () => { sentModal.style.display = 'none'; };
+  sentModal.addEventListener('click', e => { if (e.target === sentModal) sentModal.style.display = 'none'; });
 
   // ── 등록 현황 표시 (PC는 평문을 못 보므로 "전송됨/대기중"만 표시) ──
   async function _refreshStatus() {
@@ -367,8 +380,8 @@
       sel.value = '';
       guideBox.style.display = 'none';
 
-      savedMsg.textContent = `🔒 ${g.label} 설정이 암호화되어 전송되었습니다. 휴대폰에서 "AI 설정"을 열어 확인 후 등록을 완료해 주세요. (5분 내 미확인 시 자동 폐기)`;
-      savedMsg.style.display = 'block';
+      sentModalBody.textContent = `${g.label} 설정이 휴대폰으로 전송되었습니다. 휴대폰에서 "AI 설정"을 열어 확인 후 등록을 완료해 주세요. (5분 내 미확인 시 자동 폐기)`;
+      sentModal.style.display = 'flex';
       _refreshStatus();
     } catch (e) {
       alert('전송 중 오류가 발생했습니다: ' + e.message);
