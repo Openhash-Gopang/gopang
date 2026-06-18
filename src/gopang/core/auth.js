@@ -916,7 +916,11 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
       // name: nickname, phone: e164, is_public: 토글 값
       _createMinimalProfile({ ipv6, handle, nickname, e164, isPublic:
         document.getElementById('_is-public-chk')?.checked ?? true
-      }).catch(e => console.warn('[Profile] 최소 프로필 생성 실패 (무시):', e.message));
+      }).then(() => {
+        // ── X25519 키 생성 + 서버 등록 (PC가 핸들 검색으로 LLM Key를 보낼 수 있도록) ──
+        // user_profiles row가 생성된 뒤 시도 (TOFU 검증 대상이 존재해야 함)
+        return ensureX25519Synced(ipv6);
+      }).catch(e => console.warn('[X25519] 가입 시 키 동기화 실패 (무시):', e.message));
 
       resolve(user);
 
@@ -1125,6 +1129,51 @@ window._cancelAuthRequest = function() {
   document.getElementById('_auth-confirm-row')?.remove();
   appendBubble('ai', '거래가 취소됐습니다.', true);
 };
+
+// ── ensureX25519Synced — X25519 키 보장 + 서버 등록 (가입 완료 / AI 설정 화면 공통) ──
+// PC(ai-setup.html)가 이 사용자의 핸들을 검색해 공개키를 얻어 LLM Key를
+// 암호화해 보낼 수 있도록, 가입 직후부터 키를 준비해 둔다.
+// 반환: { ok, publicKeyB64u } — 실패해도 가입 흐름을 막지 않도록 호출부에서 catch 처리.
+export async function ensureX25519Synced(guid) {
+  if (!guid || typeof window.GopangWallet === 'undefined') return { ok: false };
+
+  const wallet = await window.GopangWallet.load();
+  if (!wallet) return { ok: false };
+
+  const { publicKeyB64u } = await wallet.ensureX25519Key();
+
+  // 로컬에 키가 있다는 사실과 "서버에 등록되어 있다"는 사실은 별개이므로
+  // (네트워크 오류, user_profiles 미생성 등으로 서버 등록이 실패할 수 있음),
+  // 매번 서버 상태를 직접 조회해 확인한다.
+  let serverOk = false;
+  try {
+    const checkRes = await fetch(`${PROXY_URL}/wallet/x25519?guid=${encodeURIComponent(guid)}`);
+    const checkData = await checkRes.json();
+    serverOk = !!(checkData.ok && checkData.registered && checkData.x25519_pubkey === publicKeyB64u);
+  } catch {}
+
+  if (!serverOk) {
+    const ts = Math.floor(Date.now() / 1000);
+    const sigMsg = `${guid}:${publicKeyB64u}:${ts}`;
+    const signature = await wallet.signPayload(sigMsg);
+
+    const regRes = await fetch(`${PROXY_URL}/wallet/x25519`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid, x25519_pubkey: publicKeyB64u,
+        ed25519_pubkey: wallet.publicKeyB64u,
+        signature, ts,
+      }),
+    }).catch(e => { console.warn('[X25519] 공개키 등록 요청 실패:', e.message); return null; });
+
+    if (!regRes) return { ok: false, reason: 'network' };
+    const regData = await regRes.json().catch(() => null);
+    if (!regRes.ok || !regData?.ok) return { ok: false, reason: regData?.detail || 'server_error' };
+  }
+
+  return { ok: true, publicKeyB64u, wallet };
+}
 
 // ── _createMinimalProfile — 가입 완료 시 최소 프로필 자동 생성 ───────────────
 async function _createMinimalProfile({ ipv6, handle, nickname, e164, isPublic }) {

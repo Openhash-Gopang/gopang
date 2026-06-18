@@ -2,7 +2,7 @@
  * ui/settings.js — 설정 패널
  */
 import { CFG, loadSettings } from '../core/config.js';
-import { _isRegistered, _isGDCUser } from '../core/auth.js';
+import { _isRegistered, _isGDCUser, ensureX25519Synced } from '../core/auth.js';
 import { _USER } from '../core/state.js';
 import { appendBubble } from './bubble.js';
 
@@ -125,56 +125,23 @@ export function openAISettings() {
 // ── PC→휴대폰 동기화 준비: X25519 키 보장 + 등록 + 대기 중인 PC 설정 확인 ──
 async function _ensurePcSyncReady() {
   const guid = _USER?.ipv6 || JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}')?.ipv6;
-  if (!guid || typeof window.GopangWallet === 'undefined') return;
+  if (!guid) return;
 
   try {
-    const wallet = await window.GopangWallet.load();
-    if (!wallet) return; // 지갑이 아직 없으면(=완전 신규 미가입) 건너뜀 — 가입 흐름에서 별도 처리
-
-    const { publicKeyB64u } = await wallet.ensureX25519Key();
-
-    // 로컬에 키가 있다는 사실(ensureX25519Key)과 "서버에 등록되어 있다"는 사실은
-    // 별개이므로(네트워크 오류, user_profiles 미생성 등으로 서버 등록이 실패할 수 있음),
-    // created 플래그만 믿지 않고 매번 서버 상태를 직접 조회해 확인한다.
-    let serverOk = false;
-    try {
-      const checkRes = await fetch(`${CFG.endpoint}/wallet/x25519?guid=${encodeURIComponent(guid)}`);
-      const checkData = await checkRes.json();
-      serverOk = !!(checkData.ok && checkData.registered && checkData.x25519_pubkey === publicKeyB64u);
-    } catch {}
-
-    if (!serverOk) {
-      const ts = Math.floor(Date.now() / 1000);
-      const sigMsg = `${guid}:${publicKeyB64u}:${ts}`;
-      const signature = await wallet.signPayload(sigMsg);
-
-      const regRes = await fetch(`${CFG.endpoint}/wallet/x25519`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          guid, x25519_pubkey: publicKeyB64u,
-          ed25519_pubkey: wallet.publicKeyB64u,
-          signature, ts,
-        }),
-      }).catch(e => { console.warn('[AI설정] X25519 공개키 등록 요청 실패:', e.message); return null; });
-
-      if (regRes) {
-        const regData = await regRes.json().catch(() => null);
-        if (!regRes.ok || !regData?.ok) {
-          // 사용자가 원인을 알 수 있도록 화면에도 안내 (콘솔에만 남기지 않음)
-          _renderPcSyncBanner({
-            _error: true,
-            message: regData?.detail || '암호화 키 등록에 실패했습니다. 프로필을 먼저 등록한 뒤 다시 시도해 주세요.',
-          });
-          return;
-        }
-      } else {
-        _renderPcSyncBanner({ _error: true, message: '네트워크 오류로 암호화 키를 등록하지 못했습니다. 잠시 후 다시 열어 주세요.' });
-        return;
+    const result = await ensureX25519Synced(guid);
+    if (!result.ok) {
+      if (result.reason) {
+        _renderPcSyncBanner({
+          _error: true,
+          message: result.reason === 'network'
+            ? '네트워크 오류로 암호화 키를 등록하지 못했습니다. 잠시 후 다시 열어 주세요.'
+            : (result.reason || '암호화 키 등록에 실패했습니다. 프로필을 먼저 등록한 뒤 다시 시도해 주세요.'),
+        });
       }
+      return; // 지갑이 아직 없으면(=완전 신규 미가입) 조용히 건너뜀
     }
 
-    _pollPcSealedSetting(guid, wallet);
+    _pollPcSealedSetting(guid, result.wallet);
   } catch(e) {
     console.warn('[AI설정] X25519 부트스트랩 실패:', e.message);
   }
