@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>혼디 (Hondi) — AI 자율 시장 플랫폼 v3.4</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 /* ── RESET ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -52,7 +52,7 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', 'Noto Sans KR', -apple-system, sans-serif;
+  font-family: 'Pretendard', -apple-system, sans-serif;
   font-weight: 400;
   font-size: 13px;
   line-height: 1.75;
@@ -105,11 +105,11 @@ body {
   background: var(--brand); border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-weight: 700; color: white;
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
 }
 .sb-logo-text {
   font-size: 14px; font-weight: 600; color: var(--text);
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   white-space: nowrap; opacity: 0;
   transition: opacity 0.15s 0.05s;
 }
@@ -138,7 +138,7 @@ body {
   transition: background 0.1s, color 0.1s;
   white-space: nowrap;
   border: none; background: none; width: 100%;
-  font-family: 'Inter','Noto Sans KR',sans-serif;
+  font-family: 'Pretendard', sans-serif;
 }
 .sb-item:hover { background: var(--bg-subtle); color: var(--text); }
 .sb-item.active { color: var(--text); background: var(--bg-subtle); }
@@ -156,7 +156,7 @@ body {
   background: var(--brand); color: white;
   border: none; cursor: pointer; width: 100%;
   font-size: 13px; font-weight: 500;
-  font-family: 'Inter','Noto Sans KR',sans-serif;
+  font-family: 'Pretendard', sans-serif;
   transition: background 0.15s;
   white-space: nowrap;
 }
@@ -186,7 +186,7 @@ body {
 }
 .mobile-topbar-logo {
   display: flex; align-items: center; gap: 8px;
-  text-decoration: none; font-family: 'DM Mono',monospace;
+  text-decoration: none; font-family: 'Pretendard', sans-serif;
   font-size: 15px; font-weight: 600; color: var(--text);
 }
 
@@ -213,7 +213,7 @@ body {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 5px 14px; border-radius: 99px;
   background: var(--bg-subtle); border: 1px solid var(--border2);
-  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 400;
+  font-family: 'Pretendard', sans-serif; font-size: 12px; font-weight: 400;
   color: var(--text3); letter-spacing: 0.2px;
   margin-bottom: 24px;
   text-decoration: none;
@@ -298,7 +298,7 @@ body {
 .comparison-section { background: #ffffff; }
 .section-tag {
   display: inline-block;
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 400;
   letter-spacing: 1px; text-transform: uppercase;
   color: var(--brand-dk); background: var(--brand-bg);
   border: 1px solid #a7f3d0;
@@ -362,7 +362,7 @@ body {
 }
 .step-card:hover { background: var(--brand-bg); }
 .step-num {
-  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+  font-family: 'Pretendard', sans-serif; font-size: 12px; font-weight: 500;
   color: var(--brand); letter-spacing: 0.5px; margin-bottom: 14px;
   display: flex; align-items: center; gap: 6px;
 }
@@ -371,7 +371,7 @@ body {
 .step-card p { font-size: 13px; font-weight: 400; color: var(--text2); line-height: 1.7; }
 .step-tag {
   display: inline-block; margin-top: 14px;
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 400;
   color: var(--blue); background: var(--blue-lt);
   border: 1px solid #bfdbfe; padding: 2px 9px; border-radius: 99px;
   letter-spacing: 0.3px;
@@ -413,11 +413,11 @@ body {
   margin-bottom: 3px;
 }
 .agent-url {
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 400;
   color: var(--text3); letter-spacing: 0.2px;
 }
 .badge {
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+  font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 400;
   padding: 3px 9px; border-radius: 99px; letter-spacing: 0.3px;
   white-space: nowrap; border: 1px solid;
 }
@@ -449,11 +449,11 @@ body {
 .metric-card::after {
   content: attr(data-label);
   position: absolute; bottom: 24px; right: 24px;
-  font-family: 'DM Mono', monospace; font-size: 11px;
+  font-family: 'Pretendard', sans-serif; font-size: 11px;
   color: var(--border2); letter-spacing: 2px; text-transform: uppercase;
 }
 .metric-big {
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   font-size: clamp(36px, 4.5vw, 52px); font-weight: 300;
   line-height: 1; margin-bottom: 10px; letter-spacing: -2px;
 }
@@ -475,7 +475,7 @@ table { width: 100%; border-collapse: collapse; background: white; }
 thead { background: #f8fafc; border-bottom: 1px solid var(--border); }
 th {
   padding: 11px 18px; text-align: left;
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+  font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 500;
   color: var(--text3); letter-spacing: 0.8px; text-transform: uppercase;
 }
 tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
@@ -484,9 +484,9 @@ tbody tr:hover { background: #f8fafc; }
 td { padding: 14px 18px; font-size: 13px; font-weight: 400; color: var(--text2); }
 td:first-child { font-weight: 600; color: var(--text); }
 .td-bad { color: var(--red); font-weight: 400; }
-.td-bad small { display: block; color: var(--text3); font-size: 14px; font-family: 'DM Mono', monospace; margin-top: 2px; }
+.td-bad small { display: block; color: var(--text3); font-size: 14px; font-family: 'Pretendard', sans-serif; margin-top: 2px; }
 .td-good { color: #059669; font-weight: 600; }
-.td-mod { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--blue); font-weight: 500; }
+.td-mod { font-family: 'Pretendard', sans-serif; font-size: 12px; color: var(--blue); font-weight: 500; }
 
 /* ── DISTRIBUTION ── */
 .dist-grid {
@@ -501,7 +501,7 @@ td:first-child { font-weight: 600; color: var(--text); }
 }
 .dist-card:hover { background: var(--brand-bg); }
 .dist-pct {
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   font-size: 36px; font-weight: 300;
   line-height: 1; margin-bottom: 10px; letter-spacing: -1.5px;
 }
@@ -527,7 +527,7 @@ footer {
 }
 .footer-logo {
   display: flex; align-items: center; gap: 8px;
-  font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--text);
+  font-family: 'Pretendard', sans-serif; font-size: 14px; font-weight: 500; color: var(--text);
 }
 .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
 .footer-links a {
@@ -535,12 +535,12 @@ footer {
   transition: color 0.15s;
 }
 .footer-links a:hover { color: var(--brand); }
-.footer-copy { font-size: 12px; font-weight: 400; color: var(--text3); font-family: 'DM Mono', monospace; }
+.footer-copy { font-size: 12px; font-weight: 400; color: var(--text3); font-family: 'Pretendard', sans-serif; }
 .footer-disclaimer {
   max-width: 860px;
   margin: 32px auto 0;
   padding-top: 0;
-  font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', sans-serif;
 }
 .footer-disclaimer-panel {
   background: #f8f9fa;
@@ -614,7 +614,7 @@ footer {
   margin-bottom: 10px;
 }
 .klaw-stat-before {
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   font-size: 13px;
   color: var(--red);
   font-weight: 400;
@@ -624,7 +624,7 @@ footer {
   min-height: 18px;
 }
 .klaw-stat-after {
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   font-size: 20px;
   font-weight: 500;
   color: var(--brand-dk);
@@ -633,7 +633,7 @@ footer {
 }
 .klaw-stat-pct {
   font-size: 11px;
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   color: var(--text4);
   letter-spacing: 0.3px;
 }
@@ -704,11 +704,11 @@ body {
   background: var(--brand); border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-weight: 700; color: white;
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
 }
 .sb-logo-text {
   font-size: 14px; font-weight: 600; color: var(--text);
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   white-space: nowrap; opacity: 0;
   transition: opacity 0.15s 0.05s;
 }
@@ -735,7 +735,7 @@ body {
   transition: background 0.1s, color 0.1s;
   white-space: nowrap;
   border: none; background: none; width: 100%;
-  font-family: 'Inter','Noto Sans KR',sans-serif;
+  font-family: 'Pretendard', sans-serif;
 }
 .sb-item:hover { background: var(--bg-subtle); color: var(--text); }
 .sb-item.active { color: var(--text); background: var(--bg-subtle); }
@@ -752,7 +752,7 @@ body {
   background: var(--brand); color: white;
   border: none; cursor: pointer; width: 100%;
   font-size: 13px; font-weight: 500;
-  font-family: 'Inter','Noto Sans KR',sans-serif;
+  font-family: 'Pretendard', sans-serif;
   transition: background 0.15s; white-space: nowrap;
 }
 .sb-cta:hover { background: var(--brand-dk); }
@@ -816,6 +816,19 @@ body {
         <circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/>
       </svg>
       <span class="sb-item-label">에이전트</span>
+    </a>
+    <a class="sb-item" id="nav-ai-types" onclick="loadPage('ai-types')" href="#">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="9" cy="7" r="3"/><path d="M2 21v-1a6 6 0 0 1 12 0v1"/>
+        <circle cx="18" cy="9" r="2.5"/><path d="M15.5 21v-1a4 4 0 0 1 6.2-3.3"/>
+      </svg>
+      <span class="sb-item-label">나만의 AI 비서</span>
+    </a>
+    <a class="sb-item" id="nav-hondi-market" onclick="loadPage('hondi-market')" href="#">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M8 13a3 3 0 0 0 6 0"/>
+      </svg>
+      <span class="sb-item-label">혼디장</span>
     </a>
     <a class="sb-item" id="nav-metrics" onclick="loadPage('metrics')" href="#">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -918,39 +931,39 @@ body {
 
   <!-- 하단: 앱 실행 -->
   <div class="sb-section bottom">
-    <div class="sb-cta-row" style="margin-bottom:8px">
+    <button class="sb-cta" id="nav-ai-setup" onclick="loadPage('ai-setup')" style="background:var(--brand);margin-bottom:8px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.07-7.07-4.24 4.24M11.17 18.83l-4.24 4.24m12.14 0-4.24-4.24M7.93 7.93 3.69 3.69"/>
+      </svg>
+      <span class="sb-cta-label">AI 비서 활성화</span>
+    </button>
+    <div class="sb-cta-row">
       <button class="sb-cta" onclick="openWebApp()" style="flex:1;min-width:0">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
         <span class="sb-cta-label">웹앱 열기</span>
       </button>
-      <button class="sb-cta" id="nav-ai-setup" onclick="loadPage('ai-setup')" style="flex:1;min-width:0">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.07-7.07-4.24 4.24M11.17 18.83l-4.24 4.24m12.14 0-4.24-4.24M7.93 7.93 3.69 3.69"/>
+      <button class="sb-cta" onclick="window.open('/docs/gopang_whitepaper.html','_blank')" style="flex:1;min-width:0;background:var(--bg-subtle);color:var(--text2);border:1px solid var(--border2)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <path d="M14 2v6h6"/>
+          <path d="M9 13h6M9 17h6"/>
         </svg>
-        <span class="sb-cta-label">AI 설정</span>
+        <span class="sb-cta-label">Whitepaper</span>
       </button>
     </div>
-    <button class="sb-cta" onclick="window.open('/docs/gopang_whitepaper.html','_blank')" style="width:100%;background:var(--bg-subtle);color:var(--text2);border:1px solid var(--border2)">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <path d="M14 2v6h6"/>
-        <path d="M9 13h6M9 17h6"/>
-      </svg>
-      <span class="sb-cta-label">Whitepaper</span>
-    </button>
   </div>
 </aside>
 
 <!-- 모바일 상단바 -->
 <div class="mobile-topbar">
-  <div style="display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:var(--text)">
+  <div style="display:flex;align-items:center;gap:8px;font-family:'Pretendard', sans-serif;font-size:15px;font-weight:600;color:var(--text)">
     <div class="sb-logo-icon">G</div> hondi
   </div>
   <div style="display:flex;gap:6px">
+    <button style="background:none;color:var(--brand);border:1px solid var(--brand);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer" onclick="loadPage('ai-setup')">AI 비서</button>
     <button style="background:var(--brand);color:white;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer" onclick="openWebApp()">웹앱 열기</button>
-    <button style="background:none;color:var(--brand);border:1px solid var(--brand);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer" onclick="loadPage('ai-setup')">AI 설정</button>
     <button style="background:none;color:var(--text3);border:1px solid var(--border2);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer" onclick="window.open('/docs/gopang_whitepaper.html','_blank')">Whitepaper</button>
   </div>
 </div>
@@ -1179,7 +1192,7 @@ body {
 
 /* ── Label ── */
 #modal-label {
-  font-family: 'DM Mono', monospace;
+  font-family: 'Pretendard', sans-serif;
   font-size: 11px;
   color: rgba(255,255,255,0.4);
   letter-spacing: 0.5px;
@@ -1224,6 +1237,8 @@ const PAGES = {
   metrics:  '/pages/metrics.html',
   openhash: '/pages/openhash.html',
   'ai-setup': '/pages/ai-setup.html',
+  'ai-types': '/pages/ai-types.html',
+  'hondi-market': '/pages/hondi-market.html',
 };
 
 let currentPage = null;

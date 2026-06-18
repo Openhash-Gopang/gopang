@@ -19,78 +19,78 @@
 .hm-eyebrow {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 6px 14px; border-radius: 99px;
-  background: var(--brand-bg); color: var(--brand-dk);
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 600;
+  background: var(--brand-bg, #f0fdf8); color: var(--brand-dk, #1a9e6a);
+  font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 600;
   letter-spacing: 1px; margin-bottom: 22px;
 }
-.hm-eyebrow::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--brand-dk); }
+.hm-eyebrow::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--brand-dk, #1a9e6a); }
 .hm-wrap h1 {
-  font-size: 36px; font-weight: 700; color: var(--text); letter-spacing: -0.6px;
+  font-size: 36px; font-weight: 700; color: var(--text, #0f172a); letter-spacing: -0.6px;
   line-height: 1.18; margin: 0 0 11px; text-wrap: balance;
 }
-.hm-sub { font-size: 14.5px; color: var(--text3); margin: 0 0 22px; }
-.hm-lead { font-size: 14.5px; color: var(--text2); line-height: 1.8; margin: 0 0 24px; max-width: 600px; }
-.hm-lead b { color: var(--text); font-weight: 600; }
+.hm-sub { font-size: 14.5px; color: var(--text3, #374151); margin: 0 0 22px; }
+.hm-lead { font-size: 14.5px; color: var(--text2, #1e293b); line-height: 1.8; margin: 0 0 24px; max-width: 600px; }
+.hm-lead b { color: var(--text, #0f172a); font-weight: 600; }
 .hm-lead code, .hm-how p code, .hm-callout code, .hm-form code {
-  font-family: 'DM Mono', monospace; font-size: 0.9em;
-  background: var(--bg-subtle); color: var(--text2); padding: 1px 6px; border-radius: 4px;
+  font-family: 'Pretendard', sans-serif; font-size: 0.9em;
+  background: var(--bg-subtle, #f1f3f5); color: var(--text2, #1e293b); padding: 1px 6px; border-radius: 4px;
 }
 
 .hm-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 44px; }
 .hm-badge {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11.5px; color: var(--text2); background: var(--bg-subtle);
+  font-size: 11.5px; color: var(--text2, #1e293b); background: var(--bg-subtle, #f1f3f5);
   border-radius: 8px; padding: 7px 13px;
 }
-.hm-badge b { color: var(--brand-dk); font-weight: 700; }
+.hm-badge b { color: var(--brand-dk, #1a9e6a); font-weight: 700; }
 
 .hm-section-label {
   font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;
-  color: var(--text4); margin: 0 0 4px;
+  color: var(--text4, #6b7280); margin: 0 0 4px;
 }
-.hm-section-title { font-size: 20px; font-weight: 700; color: var(--text); margin: 0 0 6px; }
+.hm-section-title { font-size: 20px; font-weight: 700; color: var(--text, #0f172a); margin: 0 0 6px; }
 
 /* ── Material List (app chart) ── */
 .hm-list { border-radius: 16px; overflow: hidden; box-shadow: var(--m-el1); margin: 22px 0 10px; }
 .hm-row {
   display: flex; align-items: center; gap: 16px;
-  padding: 14px 16px; background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  padding: 14px 16px; background: var(--surface, #ffffff);
+  border-bottom: 1px solid var(--border, #e5e7eb);
   position: relative; overflow: hidden;
 }
 .hm-row::after {
-  content: ''; position: absolute; inset: 0; background: var(--brand);
+  content: ''; position: absolute; inset: 0; background: var(--brand, #3ecf8e);
   opacity: 0; transition: opacity .15s; pointer-events: none;
 }
 .hm-row:hover::after { opacity: .04; }
 .hm-row:last-child { border-bottom: none; }
 .hm-rank {
   width: 20px; flex-shrink: 0; text-align: center;
-  font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 700; color: var(--text4);
+  font-family: 'Pretendard', sans-serif; font-size: 13px; font-weight: 700; color: var(--text4, #6b7280);
 }
 .hm-mono {
   flex-shrink: 0; width: 42px; height: 42px; border-radius: 50%;
-  background: var(--brand-bg); color: var(--brand-dk);
+  background: var(--brand-bg, #f0fdf8); color: var(--brand-dk, #1a9e6a);
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Noto Sans KR', sans-serif; font-weight: 700; font-size: 16px;
+  font-family: 'Pretendard', sans-serif; font-weight: 700; font-size: 16px;
 }
 .hm-row-body { flex: 1; min-width: 0; }
 .hm-row-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.hm-row-top h3 { font-size: 14.5px; font-weight: 700; color: var(--text); margin: 0; }
-.hm-row-tag { font-size: 11.5px; color: var(--text4); }
+.hm-row-top h3 { font-size: 14.5px; font-weight: 700; color: var(--text, #0f172a); margin: 0; }
+.hm-row-tag { font-size: 11.5px; color: var(--text4, #6b7280); }
 .hm-row-desc {
-  font-size: 12.5px; color: var(--text3); margin-top: 2px;
+  font-size: 12.5px; color: var(--text3, #374151); margin-top: 2px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .hm-row-actions { flex-shrink: 0; display: flex; align-items: center; gap: 14px; z-index: 1; }
 .hm-row-link {
-  font-family: 'DM Mono', monospace; font-size: 11.5px; color: var(--text3);
+  font-family: 'Pretendard', sans-serif; font-size: 11.5px; color: var(--text3, #374151);
   text-decoration: none; white-space: nowrap;
 }
-.hm-row-link:hover { color: var(--brand-dk); text-decoration: underline; }
+.hm-row-link:hover { color: var(--brand-dk, #1a9e6a); text-decoration: underline; }
 .hm-row-price {
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 700; color: var(--brand-dk);
-  white-space: nowrap; background: var(--brand-bg); border-radius: 99px; padding: 4px 10px;
+  font-family: 'Pretendard', sans-serif; font-size: 11px; font-weight: 700; color: var(--brand-dk, #1a9e6a);
+  white-space: nowrap; background: var(--brand-bg, #f0fdf8); border-radius: 99px; padding: 4px 10px;
 }
 
 @media (max-width: 600px) {
@@ -102,113 +102,113 @@
 /* ── Chips (Material Assist Chip) ── */
 .hm-more { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 40px; }
 .hm-chip {
-  font-family: 'DM Mono', monospace; font-size: 11.5px; font-weight: 500; color: var(--text2);
-  background: var(--surface); border: 1px solid var(--border2); border-radius: 8px;
+  font-family: 'Pretendard', sans-serif; font-size: 11.5px; font-weight: 500; color: var(--text2, #1e293b);
+  background: var(--surface, #ffffff); border: 1px solid var(--border2, #d1d5db); border-radius: 8px;
   padding: 7px 14px; text-decoration: none; display: inline-block;
   position: relative; overflow: hidden; transition: box-shadow .15s, border-color .15s;
 }
-a.hm-chip:hover { border-color: var(--brand); box-shadow: var(--m-el1); color: var(--brand-dk); text-decoration: none; }
+a.hm-chip:hover { border-color: var(--brand, #3ecf8e); box-shadow: var(--m-el1); color: var(--brand-dk, #1a9e6a); text-decoration: none; }
 
 .hm-divider { border: none; height: 1px; margin: 0 0 44px;
-  background: linear-gradient(to right, transparent, var(--border) 15%, var(--border) 85%, transparent); }
+  background: linear-gradient(to right, transparent, var(--border, #e5e7eb) 15%, var(--border, #e5e7eb) 85%, transparent); }
 
 /* ── Stepper (Material vertical stepper) ── */
 .hm-how { margin: 22px 0 40px; }
 .hm-step { display: flex; gap: 16px; padding: 0 0 28px; position: relative; }
 .hm-step::before {
   content: ''; position: absolute; left: 15px; top: 32px; bottom: 0;
-  width: 2px; background: var(--border);
+  width: 2px; background: var(--border, #e5e7eb);
 }
 .hm-step:last-child::before { display: none; }
 .hm-step-num {
   flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
-  color: var(--text4); border: 2px solid var(--border2);
+  color: var(--text4, #6b7280); border: 2px solid var(--border2, #d1d5db);
   display: flex; align-items: center; justify-content: center;
-  font-family: 'DM Mono', monospace; font-size: 12.5px; font-weight: 700;
-  background: var(--surface); position: relative; z-index: 1; transition: all .2s;
+  font-family: 'Pretendard', sans-serif; font-size: 12.5px; font-weight: 700;
+  background: var(--surface, #ffffff); position: relative; z-index: 1; transition: all .2s;
 }
 .hm-step.is-active .hm-step-num, .hm-step:hover .hm-step-num {
-  border-color: var(--brand); color: #fff; background: var(--brand); box-shadow: var(--m-el1);
+  border-color: var(--brand, #3ecf8e); color: #fff; background: var(--brand, #3ecf8e); box-shadow: var(--m-el1);
 }
 .hm-step-body { flex: 1; padding-top: 4px; }
-.hm-step h4 { font-size: 14.5px; font-weight: 700; color: var(--text); margin: 0 0 5px; }
-.hm-step p { font-size: 13.3px; color: var(--text2); line-height: 1.75; margin: 0; }
+.hm-step h4 { font-size: 14.5px; font-weight: 700; color: var(--text, #0f172a); margin: 0 0 5px; }
+.hm-step p { font-size: 13.3px; color: var(--text2, #1e293b); line-height: 1.75; margin: 0; }
 .hm-step-link {
   display: inline-flex; align-items: center; gap: 4px; margin-top: 10px;
-  font-family: 'DM Mono', monospace; font-size: 11.5px; font-weight: 600; color: var(--brand-dk);
-  text-decoration: none; background: var(--brand-bg); border-radius: 8px; padding: 6px 12px;
+  font-family: 'Pretendard', sans-serif; font-size: 11.5px; font-weight: 600; color: var(--brand-dk, #1a9e6a);
+  text-decoration: none; background: var(--brand-bg, #f0fdf8); border-radius: 8px; padding: 6px 12px;
 }
-.hm-step-link:hover { background: var(--brand-lt); }
+.hm-step-link:hover { background: var(--brand-lt, #d1fae5); }
 
 /* ── Cards: Material tonal surfaces ── */
 .hm-callout {
   border-radius: 16px; padding: 18px 22px; margin: 0 0 14px;
 }
-.hm-callout.tone-primary { background: var(--brand-bg); }
-.hm-callout.tone-neutral { background: var(--bg-subtle); }
+.hm-callout.tone-primary { background: var(--brand-bg, #f0fdf8); }
+.hm-callout.tone-neutral { background: var(--bg-subtle, #f1f3f5); }
 .hm-callout-title {
   font-size: 12.5px; font-weight: 700; margin-bottom: 8px;
 }
-.hm-callout.tone-primary .hm-callout-title { color: var(--brand-dk); }
-.hm-callout.tone-neutral .hm-callout-title { color: var(--text3); }
-.hm-callout p { font-size: 13px; color: var(--text2); line-height: 1.75; margin: 0; }
+.hm-callout.tone-primary .hm-callout-title { color: var(--brand-dk, #1a9e6a); }
+.hm-callout.tone-neutral .hm-callout-title { color: var(--text3, #374151); }
+.hm-callout p { font-size: 13px; color: var(--text2, #1e293b); line-height: 1.75; margin: 0; }
 
 /* ── Application form: Material outlined text fields ── */
 .hm-form {
   border-radius: 24px; padding: 30px 30px 28px; margin: 0 0 40px;
-  background: var(--surface); box-shadow: var(--m-el2);
+  background: var(--surface, #ffffff); box-shadow: var(--m-el2);
 }
-.hm-form-title { font-size: 18px; font-weight: 700; color: var(--text); margin: 0 0 4px; }
-.hm-form-sub { font-size: 12.5px; color: var(--text4); margin: 0 0 26px; }
+.hm-form-title { font-size: 18px; font-weight: 700; color: var(--text, #0f172a); margin: 0 0 4px; }
+.hm-form-sub { font-size: 12.5px; color: var(--text4, #6b7280); margin: 0 0 26px; }
 .hm-field { margin-bottom: 20px; transition: color .15s; }
 .hm-field label {
-  display: block; font-size: 12px; font-weight: 600; color: var(--text3);
+  display: block; font-size: 12px; font-weight: 600; color: var(--text3, #374151);
   margin-bottom: 8px; letter-spacing: .2px; transition: color .15s;
 }
-.hm-field:focus-within label { color: var(--brand-dk); }
-.hm-field .hm-hint { font-size: 11.5px; color: var(--text4); margin-top: 7px; }
+.hm-field:focus-within label { color: var(--brand-dk, #1a9e6a); }
+.hm-field .hm-hint { font-size: 11.5px; color: var(--text4, #6b7280); margin-top: 7px; }
 .hm-domain-row { display: flex; align-items: stretch; }
 .hm-domain-row input {
   border-radius: 4px 0 0 4px; border-right: none; text-align: right;
 }
 .hm-domain-suffix {
   display: flex; align-items: center; padding: 0 14px;
-  background: var(--bg-subtle); border: 1.5px solid var(--border2); border-left: none;
+  background: var(--bg-subtle, #f1f3f5); border: 1.5px solid var(--border2, #d1d5db); border-left: none;
   border-radius: 0 4px 4px 0;
-  font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text3); white-space: nowrap;
+  font-family: 'Pretendard', sans-serif; font-size: 13px; color: var(--text3, #374151); white-space: nowrap;
 }
 .hm-field input[type="text"], .hm-field input[type="url"], .hm-field input[type="number"], .hm-field textarea {
-  width: 100%; font-family: 'Inter','Noto Sans KR',sans-serif; font-size: 13.5px;
-  color: var(--text); background: var(--surface); border: 1.5px solid var(--border2);
+  width: 100%; font-family: 'Pretendard', sans-serif; font-size: 13.5px;
+  color: var(--text, #0f172a); background: var(--surface, #ffffff); border: 1.5px solid var(--border2, #d1d5db);
   border-radius: 4px; padding: 11px 13px; outline: none;
   transition: border-color .15s, box-shadow .15s;
 }
 .hm-field input:focus, .hm-field textarea:focus {
-  border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand);
+  border-color: var(--brand, #3ecf8e); box-shadow: 0 0 0 1px var(--brand, #3ecf8e);
 }
-.hm-domain-row input:focus + .hm-domain-suffix { border-color: var(--brand); }
+.hm-domain-row input:focus + .hm-domain-suffix { border-color: var(--brand, #3ecf8e); }
 .hm-field textarea { min-height: 84px; resize: vertical; line-height: 1.6; }
 .hm-price-row { display: flex; gap: 10px; }
 .hm-price-row input { flex: 1; }
-.hm-unit-group { display: flex; border-radius: 99px; background: var(--bg-subtle); padding: 3px; flex-shrink: 0; }
+.hm-unit-group { display: flex; border-radius: 99px; background: var(--bg-subtle, #f1f3f5); padding: 3px; flex-shrink: 0; }
 .hm-unit-btn {
-  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 700; color: var(--text3);
+  font-family: 'Pretendard', sans-serif; font-size: 12px; font-weight: 700; color: var(--text3, #374151);
   background: transparent; border: none; border-radius: 99px; padding: 0 14px; height: 32px; cursor: pointer;
   position: relative; overflow: hidden; transition: background .2s, color .2s;
 }
-.hm-unit-btn.active { background: var(--brand); color: #fff; box-shadow: var(--m-el1); }
+.hm-unit-btn.active { background: var(--brand, #3ecf8e); color: #fff; box-shadow: var(--m-el1); }
 
 /* ── FAB-style primary action ── */
 .hm-form-submit {
   width: 100%; margin-top: 8px; padding: 15px 0; border-radius: 99px;
-  background: var(--brand); color: #fff; font-size: 14px; font-weight: 700;
+  background: var(--brand, #3ecf8e); color: #fff; font-size: 14px; font-weight: 700;
   border: none; cursor: pointer; box-shadow: var(--m-el2);
   transition: background .15s, box-shadow .15s, transform .1s;
   position: relative; overflow: hidden;
 }
-.hm-form-submit:hover { background: var(--brand-dk); box-shadow: var(--m-el3); }
+.hm-form-submit:hover { background: var(--brand-dk, #1a9e6a); box-shadow: var(--m-el3); }
 .hm-form-submit:active { transform: translateY(1px); box-shadow: var(--m-el1); }
-.hm-form-note { font-size: 11.5px; color: var(--text4); text-align: center; margin-top: 14px; }
+.hm-form-note { font-size: 11.5px; color: var(--text4, #6b7280); text-align: center; margin-top: 14px; }
 </style>
 
   <div class="hm-eyebrow">HONDI WEBAPP MARKETPLACE</div>

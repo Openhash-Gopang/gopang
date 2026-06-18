@@ -1,0 +1,148 @@
+<div class="ait-wrap reveal">
+<style>
+.ait-wrap { max-width: 880px; margin: 0 auto; padding: 56px 32px 96px; }
+.ait-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 14px; border-radius: 99px;
+  background: var(--bg-subtle); border: 1px solid var(--border2);
+  font-family: 'Pretendard', sans-serif; font-size: 11.5px; font-weight: 500;
+  color: var(--text3); letter-spacing: .4px; margin-bottom: 18px;
+}
+.ait-eyebrow::before { content:''; width:6px; height:6px; border-radius:50%; background: var(--brand); }
+.ait-wrap h1 {
+  font-size: 30px; font-weight: 800; color: var(--text);
+  letter-spacing: -0.5px; margin: 0 0 14px;
+}
+.ait-lead { font-size: 15px; color: var(--text2); line-height: 1.85; margin: 0 0 22px; }
+.ait-lead b { color: var(--text); font-weight: 600; }
+
+.ait-examples { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 22px; }
+.ait-example {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 14px 16px;
+  font-size: 13px; color: var(--text2); line-height: 1.6;
+  box-shadow: var(--shadow-sm);
+}
+.ait-ex-tag {
+  display: block; font-family: 'Pretendard', sans-serif; font-size: 10.5px;
+  font-weight: 600; letter-spacing: .3px; color: var(--brand-dk);
+  text-transform: uppercase; margin-bottom: 7px;
+}
+.ait-example.supplier .ait-ex-tag { color: var(--blue); }
+.ait-example q { font-style: normal; }
+
+.ait-note {
+  font-size: 13.5px; color: var(--text3); margin: 0 0 40px;
+  padding-left: 14px; border-left: 3px solid var(--border2);
+}
+
+.ait-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0 0 36px; }
+@media (max-width: 720px) { .ait-grid, .ait-examples { grid-template-columns: 1fr; } }
+
+.ait-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 22px 22px 24px;
+  box-shadow: var(--shadow-sm);
+}
+.ait-card.type-a { border-top: 3px solid var(--brand); }
+.ait-card.type-b { border-top: 3px solid var(--blue); }
+.ait-card-badge {
+  display: inline-block; font-family: 'Pretendard', sans-serif;
+  font-size: 11px; font-weight: 700; letter-spacing: .5px;
+  color: #fff; border-radius: 99px; padding: 3px 11px; margin-bottom: 12px;
+}
+.type-a .ait-card-badge { background: var(--brand); }
+.type-b .ait-card-badge { background: var(--blue); }
+.ait-card h3 { font-size: 16.5px; font-weight: 700; color: var(--text); margin: 0 0 10px; }
+.ait-card p { font-size: 13.3px; color: var(--text2); line-height: 1.75; margin: 0 0 10px; }
+.ait-card p:last-child { margin-bottom: 0; }
+.ait-card .ait-highlight { color: var(--text); font-weight: 600; }
+
+.ait-callout {
+  background: var(--brand-bg); border: 1px solid var(--brand-lt);
+  border-radius: var(--radius-lg); padding: 20px 24px; margin: 0 0 28px;
+}
+.ait-callout-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 8px;
+}
+.ait-callout-title svg { color: var(--brand-dk); flex-shrink: 0; }
+.ait-callout p { font-size: 13.3px; color: var(--text2); line-height: 1.8; margin: 0; }
+.ait-callout code {
+  font-family: 'Pretendard', sans-serif; font-size: 0.92em;
+  background: rgba(255,255,255,0.7); color: var(--brand-dk);
+  padding: 1px 6px; border-radius: 4px;
+}
+
+.ait-footnote {
+  font-size: 13px; color: var(--text3); text-align: center;
+  padding-top: 18px; border-top: 1px solid var(--border);
+}
+</style>
+
+  <div class="ait-eyebrow">PERSONAL AI ASSISTANT</div>
+  <h1>나만의 AI 비서 — Type A · Type B</h1>
+
+  <p class="ait-lead">
+    나만의 AI 비서가 하는 역할은 두 가지입니다. 첫째는 <b>소비자</b>의 입장에서 나의 일상과 업무를 돕는 역할이고,
+    둘째는 <b>공급자</b>의 입장에서 나를 대신해 업무를 수행하는 역할입니다. 각 사용자는 자신만의 AI 비서가
+    오직 자신만을 위해 기능하도록 훈련해 나가게 됩니다.
+  </p>
+
+  <div class="ait-examples">
+    <div class="ait-example consumer">
+      <span class="ait-ex-tag">소비자 입장 · Type A</span>
+      "짜장면 두 그릇 주문해줘."
+    </div>
+    <div class="ait-example supplier">
+      <span class="ait-ex-tag">공급자 입장 · Type B</span>
+      "5분 거리의 소비자가 짜장면 두 그릇을 주문했습니다. 주문을 승인할까요?"
+    </div>
+  </div>
+
+  <div class="ait-grid">
+    <div class="ait-card type-a">
+      <div class="ait-card-badge">TYPE A</div>
+      <h3>소비자형 AI 비서</h3>
+      <p>
+        사용자의 일상과 업무를 본인 기기의 <span class="ait-highlight">PDV(Private Data Vault)</span>에 기록하며,
+        이를 통해 입맛·여행지·업무 패턴·질환·친구·가족 관계 등 사용자를 점점 더 깊이 이해하게 됩니다.
+      </p>
+      <p>
+        이렇게 축적된 이해를 바탕으로 오직 <span class="ait-highlight">사용자 본인의 이익</span>만을 추구합니다.
+        따라서 100만 명이 나만의 AI 비서를 사용하면, 동일한 하나의 AI가 아니라
+        <span class="ait-highlight">100만 세트의 서로 다른 AI</span>가 각자 다르게 동작하게 됩니다.
+      </p>
+    </div>
+    <div class="ait-card type-b">
+      <div class="ait-card-badge">TYPE B</div>
+      <h3>공급자형 AI 비서</h3>
+      <p>
+        공급자를 대신해 각종 업무를 직접 수행합니다. 예를 들어 중국음식점을 운영하는 사용자라면,
+        AI 비서가 고객 주문에 응대하고, 회계 장부를 작성하며, 세금을 신고·납부하고,
+        위생 점검을 준비합니다.
+      </p>
+      <p>
+        나아가 고객 평점과 리뷰를 분석하여 <span class="ait-highlight">경영 개선책</span>까지 제시함으로써,
+        사장님 한 사람의 1인 경영 역량을 실질적으로 확장합니다.
+      </p>
+    </div>
+  </div>
+
+  <div class="ait-callout">
+    <div class="ait-callout-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>
+      System Prompt — 오직 한 사람만을 위한 AI로 성장
+    </div>
+    <p>
+      사용자는 자신의 AI 비서가 어떻게 행동하고 판단할지에 대한 일종의 지침서, 즉
+      <code>System Prompt</code>를 제공합니다. 혼디는 기본 지침서를 제공하며, 사용자는 이를 자유롭게 수정·갱신하여
+      자신이 의도하는 방식대로 AI 비서를 훈련할 수 있습니다. 사용 기간이 길어질수록 AI 비서는 사용자를 더 깊이
+      이해하게 되고, 지침서는 점점 더 정교해져 결국 <b>오직 한 사람만을 위한 AI</b>로 성장합니다.
+    </p>
+  </div>
+
+  <p class="ait-footnote">
+    사용자는 Type A와 Type B를 모두 이용할 수도 있고, 둘 중 하나만 선택해 이용할 수도 있습니다.
+  </p>
+</div>
