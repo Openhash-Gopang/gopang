@@ -1678,9 +1678,13 @@ async function handleAiSetupPost(request, env, corsHeaders) {
     off_hours_message = '', endpoint = '',
   } = body;
 
-  const validProviders = ['deepseek', 'anthropic', 'openai', 'custom'];
-  if (!validProviders.includes(provider))
-    return _err(400, 'INVALID_PROVIDER', '허용: deepseek|anthropic|openai|custom', corsHeaders);
+  // provider는 워커가 직접 호출하지 않고 단순히 DB 컬럼에 저장되는 값일 뿐이며,
+  // 실제 LLM 호출은 클라이언트가 config.js의 PROVIDER_INFO(baseUrl)를 보고 수행한다.
+  // 워커에 하드코딩된 화이트리스트는 클라이언트가 새 provider를 추가할 때마다
+  // 같이 갱신해야 해서 동기화가 깨지기 쉽다(오늘 'gemini' 누락이 그 사례).
+  // 완전히 검증을 없애는 대신, 형식만 확인해 오타/이상값 유입만 방지한다.
+  if (!/^[a-z0-9-]{2,30}$/.test(provider))
+    return _err(400, 'INVALID_PROVIDER', 'provider는 영문 소문자/숫자/하이픈 2~30자여야 합니다', corsHeaders);
 
   // 기존 키 조회
   const sbSvcH = _sbServiceHeaders(env);
