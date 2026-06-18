@@ -760,6 +760,13 @@ body {
 .sb-cta-label { opacity: 0; transition: opacity 0.12s 0.04s; }
 .sidebar:hover .sb-cta-label { opacity: 1; }
 
+/* Whitepaper 버튼 — 축소 시 세로 배치, 확장 시 웹앱 열기 오른쪽으로 가로 배치 */
+.sb-cta-row { display: flex; flex-direction: column; gap: 5px; }
+.sidebar:hover .sb-cta-row { flex-direction: row; }
+.sb-cta-row .sb-cta { padding: 0 13px; justify-content: flex-start; }
+.sidebar:hover .sb-cta-row .sb-cta { padding: 0 10px; justify-content: center; }
+.sidebar:hover .sb-cta-row .sb-cta .sb-cta-label { white-space: nowrap; }
+
 /* ── CONTENT AREA ── */
 #content {
   min-height: 100vh;
@@ -917,12 +924,22 @@ body {
       </svg>
       <span class="sb-cta-label">AI 비서 활성화</span>
     </button>
-    <button class="sb-cta" onclick="openWebApp()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M5 12h14M12 5l7 7-7 7"/>
-      </svg>
-      <span class="sb-cta-label">웹앱 열기</span>
-    </button>
+    <div class="sb-cta-row">
+      <button class="sb-cta" onclick="openWebApp()" style="flex:1;min-width:0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+        <span class="sb-cta-label">웹앱 열기</span>
+      </button>
+      <button class="sb-cta" onclick="window.open('/docs/gopang_whitepaper.html','_blank')" style="flex:1;min-width:0;background:var(--bg-subtle);color:var(--text2);border:1px solid var(--border2)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <path d="M14 2v6h6"/>
+          <path d="M9 13h6M9 17h6"/>
+        </svg>
+        <span class="sb-cta-label">Whitepaper</span>
+      </button>
+    </div>
   </div>
 </aside>
 
@@ -934,6 +951,7 @@ body {
   <div style="display:flex;gap:6px">
     <button style="background:none;color:var(--brand);border:1px solid var(--brand);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer" onclick="loadPage('ai-setup')">AI 비서</button>
     <button style="background:var(--brand);color:white;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer" onclick="openWebApp()">웹앱 열기</button>
+    <button style="background:none;color:var(--text3);border:1px solid var(--border2);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer" onclick="window.open('/docs/gopang_whitepaper.html','_blank')">Whitepaper</button>
   </div>
 </div>
 
@@ -1224,6 +1242,28 @@ async function loadPage(name) {
 
   const content = document.getElementById('content');
   content.classList.add('loading');
+
+  // file:// 로 직접 열면 fetch가 보안상 차단되어 하위 페이지를 불러올 수 없음 — 명확히 안내
+  if (location.protocol === 'file:') {
+    content.innerHTML = `
+      <div style="max-width:560px;margin:80px auto;padding:28px 32px;text-align:left;
+                  background:var(--surface);border:1px solid var(--border);border-radius:10px">
+        <div style="font-weight:700;color:var(--text);margin-bottom:10px;font-size:15px">
+          ⚠ 로컬 파일(file://)에서는 하위 페이지를 불러올 수 없습니다
+        </div>
+        <div style="color:var(--text3);font-size:13px;line-height:1.7">
+          이 페이지는 <code style="background:var(--bg-subtle);padding:2px 5px;border-radius:4px">/pages/*.html</code> 등을
+          fetch()로 동적으로 불러오는 구조라, 브라우저로 파일을 직접 더블클릭해서 열면(file://) 보안 정책상 차단됩니다.<br><br>
+          다음 중 한 가지 방법으로 확인해주세요.<br><br>
+          1) 실제 서버(예: https://gopang.net/desktop.html)에 배포 후 접속<br>
+          2) 로컬 테스트: 이 폴더에서 PowerShell로<br>
+          <code style="display:block;margin:6px 0;background:var(--bg-subtle);padding:8px 10px;border-radius:6px;font-size:12px">python -m http.server 8000</code>
+          실행 후 <code style="background:var(--bg-subtle);padding:2px 5px;border-radius:4px">http://localhost:8000/desktop.html</code> 로 접속
+        </div>
+      </div>`;
+    content.classList.remove('loading');
+    return;
+  }
 
   try {
     const res  = await fetch(PAGES[name]);
