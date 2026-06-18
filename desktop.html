@@ -918,28 +918,28 @@ body {
 
   <!-- 하단: 앱 실행 -->
   <div class="sb-section bottom">
-    <button class="sb-cta" id="nav-ai-setup" onclick="loadPage('ai-setup')" style="background:var(--brand);margin-bottom:8px">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.07-7.07-4.24 4.24M11.17 18.83l-4.24 4.24m12.14 0-4.24-4.24M7.93 7.93 3.69 3.69"/>
-      </svg>
-      <span class="sb-cta-label">AI 비서 활성화</span>
-    </button>
-    <div class="sb-cta-row">
+    <div class="sb-cta-row" style="margin-bottom:8px">
       <button class="sb-cta" onclick="openWebApp()" style="flex:1;min-width:0">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
         <span class="sb-cta-label">웹앱 열기</span>
       </button>
-      <button class="sb-cta" onclick="window.open('/docs/gopang_whitepaper.html','_blank')" style="flex:1;min-width:0;background:var(--bg-subtle);color:var(--text2);border:1px solid var(--border2)">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <path d="M14 2v6h6"/>
-          <path d="M9 13h6M9 17h6"/>
+      <button class="sb-cta" id="nav-ai-setup" onclick="loadPage('ai-setup')" style="flex:1;min-width:0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.07-7.07-4.24 4.24M11.17 18.83l-4.24 4.24m12.14 0-4.24-4.24M7.93 7.93 3.69 3.69"/>
         </svg>
-        <span class="sb-cta-label">Whitepaper</span>
+        <span class="sb-cta-label">AI 설정</span>
       </button>
     </div>
+    <button class="sb-cta" onclick="window.open('/docs/gopang_whitepaper.html','_blank')" style="width:100%;background:var(--bg-subtle);color:var(--text2);border:1px solid var(--border2)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <path d="M14 2v6h6"/>
+        <path d="M9 13h6M9 17h6"/>
+      </svg>
+      <span class="sb-cta-label">Whitepaper</span>
+    </button>
   </div>
 </aside>
 
@@ -949,8 +949,8 @@ body {
     <div class="sb-logo-icon">G</div> hondi
   </div>
   <div style="display:flex;gap:6px">
-    <button style="background:none;color:var(--brand);border:1px solid var(--brand);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer" onclick="loadPage('ai-setup')">AI 비서</button>
     <button style="background:var(--brand);color:white;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer" onclick="openWebApp()">웹앱 열기</button>
+    <button style="background:none;color:var(--brand);border:1px solid var(--brand);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer" onclick="loadPage('ai-setup')">AI 설정</button>
     <button style="background:none;color:var(--text3);border:1px solid var(--border2);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer" onclick="window.open('/docs/gopang_whitepaper.html','_blank')">Whitepaper</button>
   </div>
 </div>

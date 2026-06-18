@@ -65,10 +65,6 @@ export function openSettings() {
   const gdcSec = document.getElementById('gdc-wallet-section');
   if (gdcSec) gdcSec.style.display = isGDC ? 'block' : 'none';
 
-  // 4-1. PC 인증 코드 발급 섹션: 등록 사용자 전용 (GDC 무관)
-  const pcAuthSec = document.getElementById('_pc-auth-section');
-  if (pcAuthSec) pcAuthSec.style.display = registered ? 'block' : 'none';
-
   // 5. AI 설정 카드: 등록 사용자만 표시
   const aiCard      = document.getElementById('_ai-card');
   const aiLabel     = document.getElementById('_ai-label');

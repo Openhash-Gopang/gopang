@@ -14,12 +14,15 @@
     <p style="font-size:14px;color:var(--text4);line-height:1.6">귀하 한 사람만을 위한 맞춤형으로 진화합니다. 모델을 선택하면 해당 업체의 무료 API Key 발급 페이지가 새 탭에서 열리고, 단계별로 안내해 드립니다.</p>
   </div>
 
-  <!-- 본인 인증 상태 -->
+  <!-- 본인 인증 상태 — 핸들 검색 (handle은 유일하므로 검색 = 본인 특정) -->
   <div id="_setup_authgate" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:24px;text-align:center">
-    <p style="font-size:13px;color:var(--text3);margin-bottom:12px">고팡 휴대폰 웹앱에서 인증된 본인만 AI Key를 등록할 수 있습니다.</p>
-    <input id="_setup_phone" type="tel" placeholder="전화번호 뒷 8자리" maxlength="8"
-      style="width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;text-align:center;font-family:inherit">
-    <button id="_setup_phone_check" style="margin-left:8px;padding:10px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-size:13px;font-weight:600;cursor:pointer">확인</button>
+    <p style="font-size:13px;color:var(--text3);margin-bottom:12px">
+      본인의 고팡 아이디(핸들)를 입력하세요.<br>
+      <span style="font-size:11.5px;color:var(--text4)">예: 96627170 또는 @96627170 — 설정한 LLM Key는 이 핸들의 휴대폰만 복호화할 수 있습니다.</span>
+    </p>
+    <input id="_setup_handle" type="text" placeholder="핸들 (예: 96627170)"
+      style="width:220px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;text-align:center;font-family:inherit">
+    <button id="_setup_handle_check" style="margin-left:8px;padding:10px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-size:13px;font-weight:600;cursor:pointer">확인</button>
     <p id="_setup_authgate_msg" style="font-size:12px;color:var(--red);margin-top:10px;display:none"></p>
   </div>
 
@@ -166,8 +169,8 @@
   // ── DOM refs ──────────────────────────────────────────
   const authGate    = document.getElementById('_setup_authgate');
   const authMsg     = document.getElementById('_setup_authgate_msg');
-  const phoneInput  = document.getElementById('_setup_phone');
-  const phoneCheck  = document.getElementById('_setup_phone_check');
+  const handleInput = document.getElementById('_setup_handle');
+  const handleCheck = document.getElementById('_setup_handle_check');
   const mainBox     = document.getElementById('_setup_main');
   const statusBox   = document.getElementById('_setup_status_box');
 
@@ -185,35 +188,34 @@
   let _myGuid = null;
   let _x25519Pubkey = null;
 
-  // ── 전화번호 → IPv6 GUID (auth.js의 _e164ToIPv6와 동일 알고리즘) ──
-  async function _sha256Hex(str) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-  }
-  async function _phoneToIPv6(digits8) {
-    const e164 = '+82010' + digits8;  // 한국 기본 — 다국가는 추후 확장
-    const hash = await _sha256Hex('gopang-phone:' + e164);
-    const groups = [];
-    for (let i = 0; i < 8; i++) groups.push(hash.slice(i*4, i*4+4));
-    groups[0] = '2601';
-    groups[1] = 'db80';
-    return groups.join(':');
-  }
-
-  // ── 1단계: 전화번호 확인 → X25519 공개키 조회 ──────────
-  async function _checkPhone() {
-    const digits = phoneInput.value.trim();
-    if (!/^\d{8}$/.test(digits)) {
-      authMsg.textContent = '전화번호 뒷 8자리를 정확히 입력해 주세요.';
+  // ── 1단계: 핸들 검색 → guid 획득 → X25519 공개키 조회 ──────
+  // handle은 전화번호 기반으로 자동 생성되어 유일하므로, 검색 자체가
+  // 한 명의 사용자를 정확히 특정한다 (서버가 별도 임시 비밀을 보관할 필요 없음).
+  async function _checkHandle() {
+    let handle = handleInput.value.trim();
+    if (!handle) {
+      authMsg.textContent = '핸들을 입력해 주세요.';
       authMsg.style.display = 'block';
       return;
     }
+    if (!handle.startsWith('@')) handle = '@' + handle;
+
     authMsg.style.display = 'none';
-    phoneCheck.disabled = true;
-    phoneCheck.textContent = '확인 중…';
+    handleCheck.disabled = true;
+    handleCheck.textContent = '확인 중…';
 
     try {
-      const guid = await _phoneToIPv6(digits);
+      const profRes  = await fetch(`${WORKER_URL}/profile/${encodeURIComponent(handle)}`);
+      const profData = await profRes.json();
+
+      if (!profData.ok || !profData.profile?.guid) {
+        authMsg.textContent = '해당 핸들의 프로필을 찾을 수 없습니다. 다시 확인해 주세요.';
+        authMsg.style.display = 'block';
+        return;
+      }
+
+      const guid = profData.profile.guid;
+
       const res  = await fetch(`${WORKER_URL}/wallet/x25519?guid=${encodeURIComponent(guid)}`);
       const data = await res.json();
 
@@ -233,12 +235,12 @@
       authMsg.textContent = '확인 중 오류가 발생했습니다: ' + e.message;
       authMsg.style.display = 'block';
     } finally {
-      phoneCheck.disabled = false;
-      phoneCheck.textContent = '확인';
+      handleCheck.disabled = false;
+      handleCheck.textContent = '확인';
     }
   }
-  phoneCheck.onclick = _checkPhone;
-  phoneInput.addEventListener('keydown', e => { if (e.key === 'Enter') _checkPhone(); });
+  handleCheck.onclick = _checkHandle;
+  handleInput.addEventListener('keydown', e => { if (e.key === 'Enter') _checkHandle(); });
 
   // ── 등록 현황 표시 (PC는 평문을 못 보므로 "전송됨/대기중"만 표시) ──
   async function _refreshStatus() {
