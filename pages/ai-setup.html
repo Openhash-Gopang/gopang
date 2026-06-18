@@ -48,11 +48,20 @@
     <label style="font-size:13px;font-weight:600;color:var(--text3);display:block;margin-bottom:8px">1. 추가할 LLM 모델 선택</label>
     <select id="_setup_model" style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-lg);font-size:14px;font-family:inherit;background:var(--surface);color:var(--text)">
       <option value="">모델을 선택하세요</option>
-      <option value="gemini-2.0-flash">Gemini 2.0 Flash (Google · 무료, 카드 불필요)</option>
-      <option value="deepseek-v4-flash">DeepSeek V4 Flash (DeepSeek · 신규가입 무료 토큰)</option>
-      <option value="deepseek-chat">DeepSeek V3 (DeepSeek · 신규가입 무료 토큰)</option>
-      <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (Anthropic · $5 체험 크레딧)</option>
-      <option value="gpt-4o">GPT-4o (OpenAI · 카드 등록 필요)</option>
+      <optgroup label="── 추천: 키 하나로 여러 LLM ──">
+        <option value="openrouter-auto">OpenRouter Auto (28개+ 모델 · 카드 불필요)</option>
+        <option value="openrouter-deepseek-r1">OpenRouter — DeepSeek R1 (추론 · 무료)</option>
+        <option value="openrouter-deepseek-v3">OpenRouter — DeepSeek V3 (범용 · 무료)</option>
+        <option value="openrouter-llama4">OpenRouter — Llama 4 Scout (10M context · 무료)</option>
+        <option value="openrouter-qwen3-coder">OpenRouter — Qwen3 Coder 480B (코딩 · 무료)</option>
+      </optgroup>
+      <optgroup label="── 개별 provider ──">
+        <option value="gemini-2.0-flash">Gemini 2.0 Flash (Google · 무료, 카드 불필요)</option>
+        <option value="deepseek-v4-flash">DeepSeek V4 Flash (DeepSeek · 신규가입 무료 토큰)</option>
+        <option value="deepseek-chat">DeepSeek V3 (DeepSeek · 신규가입 무료 토큰)</option>
+        <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (Anthropic · $5 체험 크레딧)</option>
+        <option value="gpt-4o">GPT-4o (OpenAI · 카드 등록 필요)</option>
+      </optgroup>
     </select>
   </div>
 
@@ -145,9 +154,68 @@
     };
   }
 
+  // OpenRouter 공통 안내 헬퍼
+  const _OR_STEPS = [
+    'openrouter.ai 에 접속해 "Sign In" → "Sign Up"으로 회원가입합니다 (카드 불필요).',
+    '오른쪽 상단 아이콘 → "Keys" 메뉴로 이동합니다.',
+    '"Create Key" 버튼을 클릭하고 이름을 입력합니다.',
+    '"sk-or-v1-..."로 시작하는 키가 표시되면 즉시 복사합니다 (다시 표시되지 않습니다).',
+    '아래 입력칸에 붙여넣고 "추가 등록"을 누르세요.',
+  ];
+  const _OR_NOTE = '카드 등록 없이 무료로 사용 가능합니다. 무료 모델은 모델 ID 뒤에 ":free"가 붙습니다.\n' +
+    '※ 무료 티어: 분당 20 요청 / 일 50 요청. $10 1회 충전 시 일 1,000 요청으로 영구 상향됩니다.\n' +
+    '※ 무료 모델 데이터는 제공사 학습에 사용될 수 있으므로 개인정보는 입력하지 마세요.';
+  const _OR_VALIDATE = v => v.startsWith('sk-or-') && v.length >= 20;
+  const _OR_HINT = 'sk-or-v1-... 형식의 OpenRouter API Key여야 합니다.';
+
   const GUIDES = {
+    'openrouter-auto': {
+      provider: 'openrouter', label: 'OpenRouter Auto',
+      model: 'openrouter/auto',
+      title: 'OpenRouter Auto — 하나의 키로 28개+ 무료 LLM',
+      url: 'https://openrouter.ai/keys',
+      steps: _OR_STEPS,
+      note: _OR_NOTE + '\n※ "Auto" 모드는 OpenRouter가 질문 유형에 따라 최적 모델을 자동 선택합니다.',
+      validate: _OR_VALIDATE, formatHint: _OR_HINT,
+    },
+    'openrouter-deepseek-r1': {
+      provider: 'openrouter', label: 'OpenRouter — DeepSeek R1',
+      model: 'deepseek/deepseek-r1:free',
+      title: 'OpenRouter — DeepSeek R1 (추론 특화 · 무료)',
+      url: 'https://openrouter.ai/keys',
+      steps: _OR_STEPS,
+      note: _OR_NOTE,
+      validate: _OR_VALIDATE, formatHint: _OR_HINT,
+    },
+    'openrouter-deepseek-v3': {
+      provider: 'openrouter', label: 'OpenRouter — DeepSeek V3',
+      model: 'deepseek/deepseek-chat-v3-5:free',
+      title: 'OpenRouter — DeepSeek V3 (범용 · 무료)',
+      url: 'https://openrouter.ai/keys',
+      steps: _OR_STEPS,
+      note: _OR_NOTE,
+      validate: _OR_VALIDATE, formatHint: _OR_HINT,
+    },
+    'openrouter-llama4': {
+      provider: 'openrouter', label: 'OpenRouter — Llama 4 Scout',
+      model: 'meta-llama/llama-4-scout:free',
+      title: 'OpenRouter — Llama 4 Scout (10M context · 무료)',
+      url: 'https://openrouter.ai/keys',
+      steps: _OR_STEPS,
+      note: _OR_NOTE + '\n※ 최대 10M 토큰 컨텍스트 — 긴 문서 분석에 특히 유용합니다.',
+      validate: _OR_VALIDATE, formatHint: _OR_HINT,
+    },
+    'openrouter-qwen3-coder': {
+      provider: 'openrouter', label: 'OpenRouter — Qwen3 Coder',
+      model: 'qwen/qwen3-coder:free',
+      title: 'OpenRouter — Qwen3 Coder 480B (코딩 특화 · 무료)',
+      url: 'https://openrouter.ai/keys',
+      steps: _OR_STEPS,
+      note: _OR_NOTE + '\n※ 코딩 작업 최강 무료 모델. 262K 컨텍스트.',
+      validate: _OR_VALIDATE, formatHint: _OR_HINT,
+    },
     'gemini-2.0-flash': {
-      provider: 'gemini', label: 'Gemini',
+      provider: 'gemini', label: 'Gemini', model: 'gemini-2.0-flash',
       title: 'Gemini — Google AI Studio (무료, 카드 불필요)',
       url: 'https://aistudio.google.com/apikey',
       steps: [
@@ -162,8 +230,8 @@
       formatHint: 'AIza... 형식의 키여야 합니다. (AQ.로 시작하는 키도 등록은 가능하지만, Google 쪽 알려진 이슈로 정상 동작하지 않을 수 있습니다.)',
     },
     'deepseek-v4-flash': {
-      provider: 'deepseek', label: 'DeepSeek V4 Flash',
-      title: 'DeepSeek — platform.deepseek.com',
+      provider: 'deepseek', label: 'DeepSeek V4 Flash', model: 'deepseek-v4-flash',
+      title: 'DeepSeek V4 Flash — platform.deepseek.com',
       url: 'https://platform.deepseek.com/api_keys',
       steps: [
         '이메일 또는 Google 계정으로 회원가입/로그인합니다.',
@@ -172,12 +240,12 @@
         '생성된 키(sk-...)를 즉시 복사합니다 (다시 표시되지 않습니다).',
         '아래 입력칸에 붙여넣고 "추가 등록"을 누르세요.',
       ],
-      note: '신규 가입 시 무료 토큰이 제공되나, 소진 후에는 소액 충전(카드)이 필요할 수 있습니다.',
+      note: '신규 가입 시 5M 무료 토큰(30일 유효)이 제공됩니다. 단, API Key 생성 버튼이 비활성 상태인 경우 "Top up" 메뉴에서 소액 충전(카드) 후 활성화됩니다.\n※ OpenRouter를 통해 DeepSeek R1/V3를 카드 없이 사용하는 방법도 위에서 선택 가능합니다.',
       validate: v => v.startsWith('sk-') && v.length >= 20,
       formatHint: 'sk-... 형식의 키여야 합니다.',
     },
     'deepseek-chat': {
-      provider: 'deepseek', label: 'DeepSeek V3',
+      provider: 'deepseek', label: 'DeepSeek V3', model: 'deepseek-chat',
       title: 'DeepSeek V3 — platform.deepseek.com',
       url: 'https://platform.deepseek.com/api_keys',
       steps: [
@@ -187,12 +255,12 @@
         '생성된 키(sk-...)를 즉시 복사합니다.',
         '아래 입력칸에 붙여넣고 "추가 등록"을 누르세요.',
       ],
-      note: '신규 가입 시 무료 토큰이 제공되나, 소진 후에는 소액 충전(카드)이 필요할 수 있습니다.',
+      note: '신규 가입 시 무료 토큰이 제공되나, 소진 후에는 소액 충전(카드)이 필요할 수 있습니다.\n※ OpenRouter를 통해 DeepSeek를 카드 없이 사용하는 방법도 위에서 선택 가능합니다.',
       validate: v => v.startsWith('sk-') && v.length >= 20,
       formatHint: 'sk-... 형식의 키여야 합니다.',
     },
     'claude-sonnet-4-20250514': {
-      provider: 'anthropic', label: 'Claude',
+      provider: 'anthropic', label: 'Claude', model: 'claude-sonnet-4-20250514',
       title: 'Claude — console.anthropic.com',
       url: 'https://console.anthropic.com/settings/keys',
       steps: [
@@ -207,7 +275,7 @@
       formatHint: 'sk-ant-... 형식의 키여야 합니다.',
     },
     'gpt-4o': {
-      provider: 'openai', label: 'GPT-4o',
+      provider: 'openai', label: 'GPT-4o', model: 'gpt-4o',
       title: 'GPT-4o — platform.openai.com',
       url: 'https://platform.openai.com/api-keys',
       steps: [
@@ -356,7 +424,9 @@
     try {
       const sysPrompt = sysPromptInput.value.trim(); // 비워두면 휴대폰 기존 값 유지
       const payload = JSON.stringify({
-        provider: g.provider, model, apiKey: key,
+        provider: g.provider,
+        model: g.model || model,   // OpenRouter는 g.model(실제 모델 ID) 사용
+        apiKey: key,
         systemPrompt: sysPrompt || undefined,
       });
       // PC는 임시(ephemeral) 키만 쓰고 절대 자신의 키를 저장하지 않음
