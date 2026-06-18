@@ -104,16 +104,10 @@ export function handleOverlayClick(e) {
 
 // ── AI 설정 슬라이드 패널 ────────────────────────────────
 export function openAISettings() {
-  const apiEl   = document.getElementById('setting-apikey');
-  const gKeyEl  = document.getElementById('setting-gemini-key');
   const sysEl   = document.getElementById('setting-system');
   const modelEl = document.getElementById('setting-model');
-  const epEl    = document.getElementById('setting-endpoint');
-  if (apiEl)   apiEl.value   = CFG.apiKey    ? '••••••••••••••••••••••••••••••••' : '';
-  if (gKeyEl)  gKeyEl.value  = CFG.geminiKey ? '••••••••••••••••••••••••••••••••' : '';
   if (sysEl)   sysEl.value   = CFG.system;
-  if (modelEl) modelEl.value = CFG.model;
-  if (epEl)    epEl.value    = CFG.endpoint;
+  if (modelEl && CFG.model) modelEl.value = CFG.model;
   document.getElementById('ai-settings-overlay')?.classList.add('open');
 
   // ── X25519 자동 부트스트랩 (공장초기화 후 첫 진입 시 자동 개시) ──
@@ -165,8 +159,16 @@ async function _pollPcSealedSetting(guid, wallet) {
       return;
     }
 
-    const plaintext = await wallet.openSealed(data.sealed);
-    const parsed = JSON.parse(plaintext);  // { provider, model, apiKey }
+    // 서버는 DB 컬럼명(snake_case)을 그대로 반환하지만, wallet.openSealed는
+    // ephemeralPubKey(camelCase)를 기대한다 — 여기서 맞춰준다.
+    const sealedCamel = {
+      ephemeralPubKey: data.sealed.ephemeral_pubkey,
+      iv:              data.sealed.iv,
+      ciphertext:      data.sealed.ciphertext,
+    };
+
+    const plaintext = await wallet.openSealed(sealedCamel);
+    const parsed = JSON.parse(plaintext);  // { provider, model, apiKey, systemPrompt? }
     _renderPcSyncBanner(parsed, guid);
   } catch(e) {
     console.warn('[AI설정] PC 봉투 확인 실패:', e.message);
@@ -195,16 +197,16 @@ function _renderPcSyncBanner(parsed, guid) {
     return;
   }
 
-  // PC가 아직 아무것도 보내지 않은 기본 상태 — API Key 입력이 번거로운 휴대폰 대신
-  // PC에서 등록하는 방법을 항상 안내한다.
+  // PC가 아직 아무것도 보내지 않은 기본 상태 — API Key/시스템 프롬프트 입력이
+  // 번거로운 휴대폰 대신 PC에서 등록하는 방법을 항상 안내한다.
   if (parsed._idle) {
     banner.style.display = 'block';
     banner.style.background = '#eff6ff';
     banner.style.color = '#1e3a8a';
     banner.innerHTML =
       `💻 API Key 입력은 PC에서 하는 것이 편리합니다.<br>` +
-      `PC로 <b>gopang.net</b>에 접속해 <b>"나만의 AI 비서 설정"</b> 버튼을 클릭하고,<br>` +
-      `핸들(<b>${_USER?.handle || ''}</b>)을 입력해 하나 이상의 LLM API Key를 등록해 주세요.`;
+      `PC에서 <b>gopang.net</b> 접속 후, <b>"나만의 AI 비서 설정"</b> 버튼을 누르고,<br>` +
+      `페이지의 지시대로 이행하십시오.`;
     return;
   }
 
@@ -212,7 +214,7 @@ function _renderPcSyncBanner(parsed, guid) {
   banner.style.background = '#dcfce7';
   banner.style.color = '#166534';
   banner.innerHTML = `
-    🔒 PC에서 <b>${parsed.model}</b> 설정이 암호화되어 도착했습니다.<br>
+    🔒 PC에서 <b>${parsed.model}</b> 설정이 암호화되어 도착했습니다.${parsed.systemPrompt ? '<br>시스템 프롬프트도 함께 도착했습니다.' : ''}<br>
     <button id="_pc-sync-accept" style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;background:#16a34a;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer">이 설정으로 등록하기</button>
     <button id="_pc-sync-dismiss" style="margin-top:8px;margin-left:6px;padding:8px 14px;border:none;border-radius:8px;background:transparent;color:#166534;font-size:12.5px;cursor:pointer">무시</button>
   `;
@@ -239,6 +241,7 @@ async function _acceptPcSyncedSetting(parsed, guid) {
       model: parsed.model,
       api_key: parsed.apiKey,
       ai_active: true,
+      ...(parsed.systemPrompt && { custom_prompt: parsed.systemPrompt }),
     };
     const signature = await wallet.signPayload(JSON.stringify({ ...body, signature: undefined }));
     body.signature = signature;
@@ -258,7 +261,19 @@ async function _acceptPcSyncedSetting(parsed, guid) {
     CFG.model = parsed.model;
     if (parsed.provider === 'gemini') CFG.geminiKey = parsed.apiKey;
     else CFG.apiKey = parsed.apiKey;
+    if (parsed.systemPrompt) CFG.system = parsed.systemPrompt;
+
+    try {
+      localStorage.setItem('gopang_cfg', JSON.stringify({
+        model: CFG.model, endpoint: CFG.endpoint,
+        apiKey: CFG.apiKey, geminiKey: CFG.geminiKey,
+        system: CFG.system, providers: CFG.providers,
+      }));
+    } catch {}
+
     document.getElementById('setting-model')?.value && (document.getElementById('setting-model').value = parsed.model);
+    const sysEl = document.getElementById('setting-system');
+    if (sysEl && parsed.systemPrompt) sysEl.value = parsed.systemPrompt;
     document.getElementById('_pc-sync-banner')?.style && (document.getElementById('_pc-sync-banner').style.display = 'none');
     if (typeof appendBubble === 'function') appendBubble('ai', `⚙️ PC에서 보낸 ${parsed.model} 설정이 등록되었습니다.`);
   } catch(e) {
