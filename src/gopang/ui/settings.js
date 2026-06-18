@@ -259,8 +259,20 @@ async function _acceptPcSyncedSetting(parsed, guid) {
 
     // 화면 갱신
     CFG.model = parsed.model;
-    if (parsed.provider === 'gemini') CFG.geminiKey = parsed.apiKey;
-    else CFG.apiKey = parsed.apiKey;
+    if (Array.isArray(parsed.freeModelPool) && parsed.freeModelPool.length) {
+      // OpenRouter 등 무료 모델 풀 — CFG.providers 배열에 순서대로 등록
+      // call-ai.js의 _buildCallCandidates()가 이 배열을 순차 페일오버 후보로 사용
+      if (!Array.isArray(CFG.providers)) CFG.providers = [];
+      CFG.providers = CFG.providers.filter(p => p.provider !== parsed.provider);
+      for (const m of parsed.freeModelPool) {
+        CFG.providers.push({ provider: parsed.provider, model: m, apiKey: parsed.apiKey });
+      }
+      console.info(`[AI설정] ${parsed.provider} 무료 모델 풀 ${parsed.freeModelPool.length}개 등록 (페일오버 순서 유지)`);
+    } else if (parsed.provider === 'gemini') {
+      CFG.geminiKey = parsed.apiKey;
+    } else {
+      CFG.apiKey = parsed.apiKey;
+    }
     if (parsed.systemPrompt) CFG.system = parsed.systemPrompt;
 
     try {

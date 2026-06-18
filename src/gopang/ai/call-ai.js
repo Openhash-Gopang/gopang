@@ -264,8 +264,9 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
           temperature: 0.6,
           stream:      true,
         };
-        // Gemini OpenAI 호환 엔드포인트는 stream_options를 거부함(400) — 캐시 사용량 확인은 다른 provider에서만
-        if (c.provider !== 'gemini') {
+        // Gemini·OpenRouter 등 일부 provider는 stream_options를 거부함(400)
+        // PROVIDER_INFO[provider].noStreamOptions 플래그로 일반화 처리
+        if (!PROVIDER_INFO[c.provider]?.noStreamOptions) {
           reqBody.stream_options = { include_usage: true };
         }
         const attempt = await fetch(`${c.baseUrl}/chat/completions`, {

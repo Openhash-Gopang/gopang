@@ -6,14 +6,17 @@ import { setAiActive, aiActive, _USER, USER_GUID } from './state.js';
 // ── Provider별 정보 (모델 → provider 식별 + baseUrl) ────────
 // 모든 provider가 OpenAI 호환 /chat/completions 형식 지원
 export const PROVIDER_INFO = {
-  gemini:    { label: 'Gemini',    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', keyField: 'geminiKey' },
-  deepseek:  { label: 'DeepSeek',  baseUrl: 'https://api.deepseek.com',                                 keyField: 'apiKey' },
-  anthropic: { label: 'Claude',    baseUrl: 'https://api.anthropic.com/v1',                              keyField: 'apiKey' },
-  openai:    { label: 'GPT',       baseUrl: 'https://api.openai.com/v1',                                 keyField: 'apiKey' },
+  gemini:     { label: 'Gemini',     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', keyField: 'geminiKey' },
+  deepseek:   { label: 'DeepSeek',   baseUrl: 'https://api.deepseek.com',                                 keyField: 'apiKey' },
+  anthropic:  { label: 'Claude',     baseUrl: 'https://api.anthropic.com/v1',                              keyField: 'apiKey' },
+  openai:     { label: 'GPT',        baseUrl: 'https://api.openai.com/v1',                                 keyField: 'apiKey' },
+  openrouter: { label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1',                               keyField: 'apiKey', noStreamOptions: true },
 };
 
 export function _providerOf(model) {
   if (!model) return null;
+  // OpenRouter 모델 ID는 'vendor/model-name' 형식 (예: deepseek/deepseek-r1:free)
+  if (model.includes('/'))         return 'openrouter';
   if (model.startsWith('gemini'))  return 'gemini';
   if (model.startsWith('deepseek'))return 'deepseek';
   if (model.startsWith('claude'))  return 'anthropic';
