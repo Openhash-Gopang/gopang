@@ -984,10 +984,20 @@ async function handleWalletX25519Get(request, env, corsHeaders) {
   if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
 
   const sbH = _sbHeaders(env);
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=extra&limit=1`,
-    { headers: sbH }
-  );
+  let res;
+  try {
+    res = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=extra&limit=1`,
+      { headers: sbH }
+    );
+  } catch (e) {
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${res.status}): ${errText}`, corsHeaders);
+  }
+
   const rows = await res.json().catch(() => []);
   const pubkey = rows?.[0]?.extra?.public?.security?.x25519_pubkey || null;
 
@@ -1021,10 +1031,19 @@ async function handleWalletX25519Post(request, env, corsHeaders) {
   if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
 
   const sbH = _sbHeaders(env);
-  const existRes  = await fetch(
-    `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=extra,pubkey_ed25519&limit=1`,
-    { headers: sbH }
-  );
+  let existRes;
+  try {
+    existRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=extra,pubkey_ed25519&limit=1`,
+      { headers: sbH }
+    );
+  } catch (e) {
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!existRes.ok) {
+    const errText = await existRes.text().catch(() => '');
+    return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${existRes.status}): ${errText}`, corsHeaders);
+  }
   const existRows = await existRes.json().catch(() => []);
   if (!existRows.length) return _err(404, 'PROFILE_NOT_FOUND', '프로필이 먼저 등록되어야 합니다', corsHeaders);
 
@@ -1053,11 +1072,16 @@ async function handleWalletX25519Post(request, env, corsHeaders) {
   };
 
   const sbServiceH = _sbServiceHeaders(env);
-  const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
-    method: 'PATCH',
-    headers: { ...sbServiceH, 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ extra: newExtra }),
-  });
+  let patchRes;
+  try {
+    patchRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
+      method: 'PATCH',
+      headers: { ...sbServiceH, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ extra: newExtra }),
+    });
+  } catch (e) {
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+  }
   if (!patchRes.ok) return _err(500, 'DB_ERROR', await patchRes.text(), corsHeaders);
 
   return new Response(JSON.stringify({ ok: true, already_registered: false, x25519_pubkey }),
@@ -1084,19 +1108,24 @@ async function handleAiSetupSealPost(request, env, corsHeaders) {
   const expiresAt = new Date(Date.now() + 5 * 60_000).toISOString(); // 5분 후 만료
 
   // 같은 guid의 이전 봉투는 덮어씀 (PC에서 여러 번 수정 가능)
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/ai_setup_seals?guid=eq.${encodeURIComponent(guid)}`, {
+  await fetch(`${SUPABASE_URL}/rest/v1/ai_setup_seals?guid=eq.${encodeURIComponent(guid)}`, {
     method: 'DELETE', headers: sbServiceH,
   }).catch(() => {});
 
-  const insRes = await fetch(`${SUPABASE_URL}/rest/v1/ai_setup_seals`, {
-    method: 'POST',
-    headers: { ...sbServiceH, 'Prefer': 'return=minimal' },
-    body: JSON.stringify({
-      guid, ephemeral_pubkey, iv, ciphertext,
-      created_at: new Date().toISOString(),
-      expires_at: expiresAt,
-    }),
-  });
+  let insRes;
+  try {
+    insRes = await fetch(`${SUPABASE_URL}/rest/v1/ai_setup_seals`, {
+      method: 'POST',
+      headers: { ...sbServiceH, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        guid, ephemeral_pubkey, iv, ciphertext,
+        created_at: new Date().toISOString(),
+        expires_at: expiresAt,
+      }),
+    });
+  } catch (e) {
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+  }
   if (!insRes.ok) return _err(500, 'DB_ERROR', await insRes.text(), corsHeaders);
 
   return new Response(JSON.stringify({ ok: true, expires_at: expiresAt }),
@@ -1112,10 +1141,19 @@ async function handleAiSetupSealGet(request, env, corsHeaders) {
 
   const sbH = _sbHeaders(env);
   const now = new Date().toISOString();
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/ai_setup_seals?guid=eq.${encodeURIComponent(guid)}&expires_at=gt.${now}&select=ephemeral_pubkey,iv,ciphertext,created_at&limit=1`,
-    { headers: sbH }
-  );
+  let res;
+  try {
+    res = await fetch(
+      `${SUPABASE_URL}/rest/v1/ai_setup_seals?guid=eq.${encodeURIComponent(guid)}&expires_at=gt.${now}&select=ephemeral_pubkey,iv,ciphertext,created_at&limit=1`,
+      { headers: sbH }
+    );
+  } catch (e) {
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${res.status}): ${errText}`, corsHeaders);
+  }
   const rows = await res.json().catch(() => []);
   if (!rows.length) {
     return new Response(JSON.stringify({ ok: true, sealed: null }), { status: 200, headers: corsHeaders });
@@ -1408,7 +1446,19 @@ async function handleProfileGet(request, env, corsHeaders) {
     return _err(400, 'MISSING_FIELD', 'handle 또는 guid 필요', corsHeaders);
   }
 
-  const res  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?${query}&limit=1`, { headers: sbH });
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?${query}&limit=1`, { headers: sbH });
+  } catch (e) {
+    // Supabase 연결 자체가 실패한 경우(타임아웃/DNS 등) — 처리되지 않은 예외가
+    // Cloudflare Workers 런타임까지 전파되면 503으로 노출되므로 여기서 명시적으로 잡는다.
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${res.status}): ${errText}`, corsHeaders);
+  }
+
   const rows = await res.json().catch(() => []);
   if (!rows.length) return _err(404, 'PROFILE_NOT_FOUND', '프로필 없음', corsHeaders);
 
@@ -1465,7 +1515,16 @@ async function handleProfilePost(request, env, corsHeaders) {
   const sbH = _sbHeaders(env);
 
   // 기존 프로필 존재 여부 확인 (upsert 분기) — TOFU: pubkey 일치 확인
-  const existRes  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=guid,handle,extra,pubkey_ed25519&limit=1`, { headers: sbH });
+  let existRes;
+  try {
+    existRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=guid,handle,extra,pubkey_ed25519&limit=1`, { headers: sbH });
+  } catch (e) {
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!existRes.ok) {
+    const errText = await existRes.text().catch(() => '');
+    return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${existRes.status}): ${errText}`, corsHeaders);
+  }
   const existRows = await existRes.json().catch(() => []);
   const existing  = existRows[0] || null;
 
@@ -1512,19 +1571,23 @@ async function handleProfilePost(request, env, corsHeaders) {
   };
 
   let saveRes;
-  if (existing) {
-    saveRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
-      method: 'PATCH',
-      headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
-      body: JSON.stringify(record),
-    });
-  } else {
-    record.created_at = new Date().toISOString();
-    saveRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
-      method: 'POST',
-      headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
-      body: JSON.stringify(record),
-    });
+  try {
+    if (existing) {
+      saveRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
+        method: 'PATCH',
+        headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
+        body: JSON.stringify(record),
+      });
+    } else {
+      record.created_at = new Date().toISOString();
+      saveRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
+        method: 'POST',
+        headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
+        body: JSON.stringify(record),
+      });
+    }
+  } catch (e) {
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
   }
 
   if (!saveRes.ok) {
@@ -1553,7 +1616,16 @@ async function handleAiSetupPost(request, env, corsHeaders) {
 
   {
     const sbHChk = _sbHeaders(env);
-    const chkRes  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=pubkey_ed25519&limit=1`, { headers: sbHChk });
+    let chkRes;
+    try {
+      chkRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=pubkey_ed25519&limit=1`, { headers: sbHChk });
+    } catch (e) {
+      return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+    }
+    if (!chkRes.ok) {
+      const errText = await chkRes.text().catch(() => '');
+      return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${chkRes.status}): ${errText}`, corsHeaders);
+    }
     const chkRows = await chkRes.json().catch(() => []);
     const existingPubkey = chkRows[0]?.pubkey_ed25519;
     if (existingPubkey && existingPubkey !== pubkey) {
@@ -1592,16 +1664,21 @@ async function handleAiSetupPost(request, env, corsHeaders) {
 
   const tokenEst = Math.ceil(custom_prompt.length / 3.5);
 
-  const upsertRes = await fetch(`${SUPABASE_URL}/rest/v1/user_llm_keys`, {
-    method: 'POST',
-    headers: { ...sbSvcH, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({
-      guid, provider, model, api_key_enc: apiKeyEnc,
-      ai_active, custom_prompt,
-      native_lang: 'ko',
-      ...(endpoint && { endpoint }),
-    }),
-  });
+  let upsertRes;
+  try {
+    upsertRes = await fetch(`${SUPABASE_URL}/rest/v1/user_llm_keys`, {
+      method: 'POST',
+      headers: { ...sbSvcH, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({
+        guid, provider, model, api_key_enc: apiKeyEnc,
+        ai_active, custom_prompt,
+        native_lang: 'ko',
+        ...(endpoint && { endpoint }),
+      }),
+    });
+  } catch (e) {
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+  }
 
   if (!upsertRes.ok) {
     const err = await upsertRes.text();
