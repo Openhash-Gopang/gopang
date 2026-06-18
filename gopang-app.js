@@ -8,7 +8,7 @@
  */
 
 // ── Core ─────────────────────────────────────────────────
-import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, gopangAuth } from './src/gopang/core/auth.js';
+import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, gopangAuth, openPcAuthIssue } from './src/gopang/core/auth.js';
 import { loadSettings, CFG, saveSettings }     from './src/gopang/core/config.js';
 import { _USER }                               from './src/gopang/core/state.js';
 
@@ -75,6 +75,7 @@ if (_hasRegisteredUser) {
   window._deviceFullReset          = _deviceFullReset;
   window._deviceLocalReset         = _deviceLocalReset;
   window._isGDCUser                = _isGDCUser;
+  window.openPcAuthIssue           = openPcAuthIssue;
   window.closeAISettings           = closeAISettings;
   window.handleAISettingsOverlayClick = handleAISettingsOverlayClick;
   window.closeSettings             = closeSettings;

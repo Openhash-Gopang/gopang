@@ -66,6 +66,99 @@ function _confirmMobileRegistration() {
   });
 }
 
+// ── PC 인증 코드 발급 (휴대폰 → PC 임시 대화 우회 경로) ────────
+// PC는 원칙적으로 등록·대화 차단. 단, 휴대폰에서 6자리 코드를 발급받아
+// PC 화면에 직접 입력하면, PDV 미기록 임시 대화 세션을 허용한다.
+// 코드는 60초 TTL, 1회용. PC는 세션을 sessionStorage에만 보관(탭 닫으면 소멸).
+export async function openPcAuthIssue() {
+  document.getElementById('_pc-auth-issue-overlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = '_pc-auth-issue-overlay';
+  overlay.style.cssText = [
+    'position:fixed;inset:0;z-index:10002',
+    'background:rgba(0,0,0,0.5)',
+    'display:flex;align-items:center;justify-content:center',
+    'padding:24px;box-sizing:border-box',
+  ].join(';');
+
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:28px 22px;
+                width:100%;max-width:360px;box-sizing:border-box;text-align:center">
+      <p style="font-weight:700;font-size:16px;margin:0 0 10px;color:#111827">
+        PC 인증 코드
+      </p>
+      <div id="_pc-auth-code-area" style="margin:18px 0">
+        <div style="font-size:13px;color:#9ca3af">코드를 발급하는 중...</div>
+      </div>
+      <p style="font-size:12px;color:#6b7280;line-height:1.6;margin:0 0 18px">
+        PC 화면에 이 6자리 코드를 입력하면<br>
+        <b>PDV 기록 없이</b> 임시로 대화할 수 있습니다.<br>
+        탭이나 브라우저를 닫으면 PC의 모든 기록은 즉시 사라집니다.
+      </p>
+      <button id="_pc_auth_close"
+        style="width:100%;padding:13px;border:none;border-radius:10px;
+               background:#16a34a;color:#fff;cursor:pointer;
+               font-size:14px;font-weight:700;font-family:inherit">
+        닫기
+      </button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#_pc_auth_close').onclick = () => overlay.remove();
+
+  const guid = _USER?.ipv6 || _USER?.guid || USER_GUID;
+  if (!guid) {
+    document.getElementById('_pc-auth-code-area').innerHTML =
+      '<div style="font-size:13px;color:#ef4444">사용자 정보를 확인할 수 없습니다.</div>';
+    return;
+  }
+
+  try {
+    const res  = await fetch(`${PROXY_URL}/pc-auth/issue`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ guid }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!data?.ok) throw new Error(data?.detail || '코드 발급 실패');
+
+    _renderPcAuthCode(data.code, data.expires_at);
+  } catch (e) {
+    const area = document.getElementById('_pc-auth-code-area');
+    if (area) area.innerHTML =
+      `<div style="font-size:13px;color:#ef4444">코드 발급 실패: ${e.message}</div>`;
+  }
+}
+
+let _pcAuthTimerId = null;
+
+function _renderPcAuthCode(code, expiresAtIso) {
+  const area = document.getElementById('_pc-auth-code-area');
+  if (!area) return;
+
+  const spaced = code.split('').join(' ');
+  area.innerHTML = `
+    <div style="font-size:36px;font-weight:800;letter-spacing:6px;color:#16a34a;
+                font-family:'SF Mono',Consolas,monospace">${spaced}</div>
+    <div id="_pc-auth-countdown" style="font-size:12px;color:#9ca3af;margin-top:6px">60초 남음</div>`;
+
+  if (_pcAuthTimerId) clearInterval(_pcAuthTimerId);
+  const expiresAtMs = new Date(expiresAtIso).getTime();
+
+  _pcAuthTimerId = setInterval(() => {
+    const remain = Math.max(0, Math.ceil((expiresAtMs - Date.now()) / 1000));
+    const cd = document.getElementById('_pc-auth-countdown');
+    if (!cd) { clearInterval(_pcAuthTimerId); return; }
+    if (remain <= 0) {
+      cd.textContent = '코드가 만료되었습니다';
+      cd.style.color = '#ef4444';
+      clearInterval(_pcAuthTimerId);
+    } else {
+      cd.textContent = `${remain}초 남음`;
+    }
+  }, 1000);
+}
+
 // ── PC 확인 후 "아니요"를 선택했을 때 보여줄 안내 ───────────
 function _showPcRegisterBlockedNotice() {
   document.getElementById('_mobile-confirm-overlay')?.remove();
