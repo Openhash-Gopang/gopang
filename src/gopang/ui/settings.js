@@ -1,7 +1,7 @@
 /**
  * ui/settings.js — 설정 패널
  */
-import { CFG, loadSettings } from '../core/config.js';
+import { CFG, loadSettings, PROVIDER_INFO } from '../core/config.js';
 import { _isRegistered, _isGDCUser, ensureX25519Synced } from '../core/auth.js';
 import { _USER } from '../core/state.js';
 import { appendBubble } from './bubble.js';
@@ -210,11 +210,15 @@ function _renderPcSyncBanner(parsed, guid) {
     return;
   }
 
+  const _displayLabel = Array.isArray(parsed.freeModelPool) && parsed.freeModelPool.length
+    ? 'OpenRouter (무료 모델 ' + parsed.freeModelPool.length + '개 자동 순환)'
+    : (PROVIDER_INFO[parsed.provider]?.label || parsed.provider);
+
   banner.style.display = 'block';
   banner.style.background = '#dcfce7';
   banner.style.color = '#166534';
   banner.innerHTML = `
-    🔒 PC에서 <b>${parsed.model}</b> 설정이 암호화되어 도착했습니다.${parsed.systemPrompt ? '<br>시스템 프롬프트도 함께 도착했습니다.' : ''}<br>
+    🔒 PC에서 <b>${_displayLabel}</b> 설정이 암호화되어 도착했습니다.${parsed.systemPrompt ? '<br>시스템 프롬프트도 함께 도착했습니다.' : ''}<br>
     <button id="_pc-sync-accept" style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;background:#16a34a;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer">이 설정으로 등록하기</button>
     <button id="_pc-sync-dismiss" style="margin-top:8px;margin-left:6px;padding:8px 14px;border:none;border-radius:8px;background:transparent;color:#166534;font-size:12.5px;cursor:pointer">무시</button>
   `;
@@ -320,7 +324,10 @@ async function _acceptPcSyncedSetting(parsed, guid) {
     const sysEl = document.getElementById('setting-system');
     if (sysEl && parsed.systemPrompt) sysEl.value = parsed.systemPrompt;
     document.getElementById('_pc-sync-banner')?.style && (document.getElementById('_pc-sync-banner').style.display = 'none');
-    if (typeof appendBubble === 'function') appendBubble('ai', `⚙️ PC에서 보낸 ${parsed.model} 설정이 등록되었습니다.`);
+    const _doneLabel = Array.isArray(parsed.freeModelPool) && parsed.freeModelPool.length
+      ? 'OpenRouter (무료 모델 ' + parsed.freeModelPool.length + '개 자동 순환)'
+      : (PROVIDER_INFO[parsed.provider]?.label || parsed.provider);
+    if (typeof appendBubble === 'function') appendBubble('ai', `⚙️ PC에서 보낸 ${_doneLabel} 설정이 등록되었습니다.`);
   } catch(e) {
     alert('등록 중 오류가 발생했습니다: ' + e.message);
   }
