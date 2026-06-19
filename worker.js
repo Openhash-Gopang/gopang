@@ -1552,7 +1552,21 @@ async function handleProfileGet(request, env, corsHeaders) {
   }
 
   const rows = await res.json().catch(() => []);
-  if (!rows.length) return _err(404, 'PROFILE_NOT_FOUND', '프로필 없음', corsHeaders);
+  if (!rows.length) {
+    // Supabase에 프로필 row가 없어도, L1에서 handle -> guid가 확인됐다면
+    // (즉 가입 자체는 되어 있다면) guid만 포함한 최소 응답을 반환한다.
+    // 가입(L1)과 프로필 생성(Supabase)은 별개 단계이므로 프로필 미생성을
+    // "가입 안 됨"으로 취급해 404를 던지면 안 된다.
+    if (resolvedGuid) {
+      return new Response(JSON.stringify({
+        ok: true,
+        profile: { guid: resolvedGuid, handle: rawHandle?.startsWith('@') ? rawHandle : (rawHandle ? '@' + rawHandle : null) },
+        identity_source: 'l1',
+        detail_source: 'minimal-fallback',
+      }), { status: 200, headers: corsHeaders });
+    }
+    return _err(404, 'PROFILE_NOT_FOUND', '프로필 없음', corsHeaders);
+  }
 
   return new Response(JSON.stringify({
     ok: true, profile: rows[0],
