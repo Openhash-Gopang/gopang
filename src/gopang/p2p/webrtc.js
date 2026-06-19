@@ -10,40 +10,32 @@ import { _isRegistered } from '../core/auth.js';
 import { appendBubble } from '../ui/bubble.js';
 import { _showRegisterFlowThenPeer } from '../ui/register-flow.js';
 
-// ── 대화 상대 설정 ───────────────────────────────────────
+// ── 대화 상대 설정 — p2p-chat.js startP2PCall()로 위임 ──
+// 발신/수신 모두 p2p-chat.js 단일 경로로 통일
+// payload 구조: { sdp, from_handle } — 양쪽 동일
 export async function setPeer(peer) {
   if (!_isRegistered()) {
     _showRegisterFlowThenPeer(peer);
     return;
   }
 
-  _closeRTC();
-  setPeerState(peer);
-
-  // peer-bar 표시
-  const bar = document.getElementById('peer-bar');
-  const ava = document.getElementById('peer-avatar');
-  const nm  = document.getElementById('peer-name');
-  const hnd = document.getElementById('peer-handle');
-  if (bar) {
-    if (ava) ava.textContent = peer.avatar_emoji || '🙂';
-    if (nm)  nm.textContent  = peer.name || peer.handle || '상대방';
-    if (hnd) hnd.textContent = peer.handle || '';
-    bar.style.display = 'flex';
-  }
-
-  const inp = document.getElementById('msg-input');
-  if (inp) inp.placeholder = `${peer.name || peer.handle || '상대방'}에게 메시지…`;
-
   // TURN credential 취득 (55분 캐시, 실패 시 STUN 자동 폴백)
   await fetchRtcConfig(USER_GUID).catch(() => {});
 
-  await _loadChatHistory(peer.guid);
-  _startSignalPoll();
-  await _createOffer();
-
-  appendBubble('system', `🔗 ${peer.name || peer.handle || '상대방'}에게 연결 중…`);
-  console.info('[WebRTC] setPeer:', peer.name, peer.guid?.slice(-8));
+  // p2p-chat.js의 startP2PCall()로 위임
+  // → UI(오버레이), PDV 저장, OpenHash 앵커링 모두 p2p-chat.js가 담당
+  try {
+    const { startP2PCall } = await import('../ui/p2p-chat.js');
+    await startP2PCall({
+      guid:     peer.guid,
+      handle:   peer.handle || peer.name || '',
+      nickname: peer.name   || peer.handle || '상대방',
+      avatar_emoji: peer.avatar_emoji || '🙂',
+    });
+  } catch(e) {
+    console.error('[WebRTC] startP2PCall 실패:', e.message);
+    appendBubble('system', '⚠️ P2P 연결을 시작할 수 없습니다.');
+  }
 }
 
 // ── 대화 상대 해제 ───────────────────────────────────────

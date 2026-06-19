@@ -48,15 +48,117 @@ export async function startP2PCall(targetUser) {
 
   _appendMsg('system', `📞 ${targetUser.nickname || targetUser.handle}님께 연결 요청을 보냈습니다...`);
 
-  // answer 폴링 시작
-  _startPoll(_USER.ipv6, async signal => {
-    if (signal.type === 'answer' && signal.from_guid === targetUser.guid) {
-      await conn.setRemoteDescription(signal.payload.sdp);
-      _appendMsg('system', '✅ 연결됐습니다.');
-      _stopPoll();
+  // answer/ICE 수신 — Supabase WS Realtime (폴링 폴백 포함)
+  _watchAnswerRealtime(conn, targetUser.guid);
+}
+
+// ── answer/ICE 실시간 수신 (발신측) ─────────────────────
+function _watchAnswerRealtime(conn, peerGuid) {
+  const SB_WS  = 'wss://ebbecjfrwaswbdybbgiu.supabase.co/realtime/v1/websocket';
+  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
+  const myGuid = _USER.ipv6;
+
+  let ws = null, hb = null, ref = 1, wsOk = false, done = false;
+
+  function _close() {
+    done = true;
+    if (hb) { clearInterval(hb); hb = null; }
+    if (ws) { ws.close(1000); ws = null; }
+    _stopPoll();
+  }
+
+  // Supabase WS로 answer/ICE 수신
+  ws = new WebSocket(`${SB_WS}?apikey=${SB_KEY}&vsn=1.0.0`);
+  const send = o => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(o)); };
+
+  ws.onopen = () => {
+    send({
+      topic: `realtime:public:webrtc_signals:to_guid=eq.${myGuid}`,
+      event: 'phx_join',
+      payload: {
+        config: {
+          broadcast: { self: false }, presence: { key: '' },
+          postgres_changes: [{ event: 'INSERT', schema: 'public',
+            table: 'webrtc_signals', filter: `to_guid=eq.${myGuid}` }],
+        },
+      },
+      ref: String(ref++),
+    });
+    hb = setInterval(() =>
+      send({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(ref++) }), 30000);
+  };
+
+  ws.onmessage = async ({ data }) => {
+    if (done) return;
+    let msg; try { msg = JSON.parse(data); } catch { return; }
+
+    if (msg.event === 'phx_reply' && msg.payload?.status === 'ok') {
+      wsOk = true;
+      console.info('[P2P] 발신측 WS 구독 완료 ✓');
     }
-    if (signal.type === 'ice' && signal.from_guid === targetUser.guid) {
-      await conn.addIceCandidate(signal.payload.candidate).catch(() => {});
+
+    const row = msg.payload?.data?.record ?? msg.payload?.record ?? null;
+    if (!row || row.to_guid !== myGuid) return;
+
+    if (row.type === 'answer' && row.from_guid === peerGuid) {
+      try {
+        const sdp = typeof row.payload === 'string'
+          ? JSON.parse(row.payload)
+          : row.payload;
+        const answerSdp = sdp.sdp || sdp;
+        await conn.setRemoteDescription(new RTCSessionDescription(answerSdp));
+        _appendMsg('system', '✅ 연결됐습니다. 채널이 열리면 메시지를 입력하세요.');
+        console.info('[P2P] answer 수신 완료');
+        // answer 수신 후 WS 닫기 (ICE는 ondatachannel onopen 후 불필요)
+        setTimeout(_close, 10000);
+      } catch(e) { console.warn('[P2P] answer setRemoteDescription 실패:', e.message); }
+    }
+
+    if (row.type === 'ice' && row.from_guid === peerGuid) {
+      try {
+        const ice = typeof row.payload === 'string'
+          ? JSON.parse(row.payload)
+          : row.payload;
+        const candidate = ice.candidate || ice;
+        await conn.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch(e) { console.warn('[P2P] ICE 추가 실패:', e.message); }
+    }
+
+    // 처리 후 시그널 삭제
+    fetch(`${PROXY}/signal/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: row.id }),
+    }).catch(() => {});
+  };
+
+  ws.onerror = () => { wsOk = false; };
+  ws.onclose = () => {
+    if (hb) { clearInterval(hb); hb = null; }
+    wsOk = false;
+  };
+
+  // 폴백: WS 미작동 시 1.5초 폴링
+  _startPoll(myGuid, async signal => {
+    if (wsOk || done) return;
+    if (signal.type === 'answer' && signal.from_guid === peerGuid) {
+      try {
+        const sdp = typeof signal.payload === 'string'
+          ? JSON.parse(signal.payload)
+          : signal.payload;
+        const answerSdp = sdp.sdp || sdp;
+        await conn.setRemoteDescription(new RTCSessionDescription(answerSdp));
+        _appendMsg('system', '✅ 연결됐습니다.');
+        _close();
+      } catch(e) { console.warn('[P2P] 폴백 answer 실패:', e.message); }
+    }
+    if (signal.type === 'ice' && signal.from_guid === peerGuid) {
+      try {
+        const ice = typeof signal.payload === 'string'
+          ? JSON.parse(signal.payload)
+          : signal.payload;
+        await conn.addIceCandidate(new RTCIceCandidate(ice.candidate || ice));
+      } catch {}
     }
   });
 }
@@ -86,7 +188,11 @@ export async function handleIncomingOffer(signal) {
   _setupConn(conn, _peerInfo);
 
   // SDP answer 생성
-  await conn.setRemoteDescription(signal.payload.sdp);
+  // payload 구조 방어적 파싱 (webrtc.js/p2p-chat.js 양쪽 호환)
+  const _offerPayload = typeof signal.payload === 'string'
+    ? JSON.parse(signal.payload) : (signal.payload || {});
+  const _offerSdp = _offerPayload.sdp || _offerPayload;
+  await conn.setRemoteDescription(new RTCSessionDescription(_offerSdp));
   const answer = await conn.createAnswer();
   await conn.setLocalDescription(answer);
   await _waitForIce(conn);
