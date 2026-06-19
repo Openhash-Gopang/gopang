@@ -105,10 +105,8 @@ export function handleOverlayClick(e) {
 
 // ── AI 설정 슬라이드 패널 ────────────────────────────────
 export function openAISettings() {
-  const sysEl   = document.getElementById('setting-system');
-  const modelEl = document.getElementById('setting-model');
-  if (sysEl)   sysEl.value   = CFG.system;
-  if (modelEl && CFG.model) modelEl.value = CFG.model;
+  const sysEl = document.getElementById('setting-system');
+  if (sysEl) sysEl.value = CFG.system;
   document.getElementById('ai-settings-overlay')?.classList.add('open');
 
   // ── X25519 자동 부트스트랩 (공장초기화 후 첫 진입 시 자동 개시) ──
@@ -122,17 +120,21 @@ export function openAISettings() {
 // PC에서 최초 등록할 때(ai-setup.html)뿐 아니라, 이미 등록을 마친 사용자도
 // 폰에서 직접 갱신할 수 있도록 한다 — OpenRouter Key는 폰에 이미 저장돼 있으므로
 // PC 재등록 없이 이 화면에서 바로 처리 가능.
+// 결과 메시지는 대화창이 아니라 AI 설정 창의 #model-refresh-status에 표시한다
+// (대화창 버블은 설정 시트 뒤에 가려져 사용자가 결과를 못 보는 문제가 있었음).
 export async function _refreshFreeModelPool() {
   const btn = document.getElementById('btn-refresh-free-models');
+  const statusEl = document.getElementById('model-refresh-status');
+  const setStatus = (msg, color) => {
+    if (statusEl) { statusEl.textContent = msg; statusEl.style.color = color || '#6b7280'; }
+  };
 
   const openrouterEntries = Array.isArray(CFG.providers)
     ? CFG.providers.filter(p => p?.provider === 'openrouter' && p?.apiKey)
     : [];
 
   if (openrouterEntries.length === 0) {
-    if (typeof appendBubble === 'function') {
-      appendBubble('ai', '⚠️ 등록된 OpenRouter 무료 모델이 없습니다. PC에서 "나만의 AI 비서 설정"으로 먼저 등록해 주세요.');
-    }
+    setStatus('⚠️ 등록된 OpenRouter 무료 모델이 없습니다. PC에서 "나만의 AI 비서 설정"으로 먼저 등록해 주세요.', '#dc2626');
     return;
   }
 
@@ -141,6 +143,7 @@ export async function _refreshFreeModelPool() {
   const wasUsingOpenrouter = typeof CFG.model === 'string' && CFG.model.includes('/');
 
   if (btn) { btn.disabled = true; btn.textContent = '확인 중…'; }
+  setStatus('🔄 OpenRouter에서 현재 가용한 무료 모델을 확인하는 중…');
 
   try {
     const { pool, validated, error } = await buildLiveFreeModelPool();
@@ -162,18 +165,14 @@ export async function _refreshFreeModelPool() {
       }));
     } catch {}
 
-    const modelEl = document.getElementById('setting-model');
-    if (modelEl && CFG.model) modelEl.value = CFG.model;
-
-    if (typeof appendBubble === 'function') {
-      appendBubble('ai', validated
-        ? `🔄 무료 모델 갱신 완료 — 현재 활성 모델 ${pool.length}개를 확인했습니다.`
-        : `⚠️ 모델 갱신을 실시간으로 확인하지 못해 기본 목록(${pool.length}개)을 유지합니다. (${error || '알 수 없는 오류'})`);
-    }
+    setStatus(
+      validated
+        ? `✅ 무료 모델 갱신 완료 — 현재 활성 모델 ${pool.length}개를 확인했습니다.`
+        : `⚠️ 실시간 확인에 실패해 기존 목록(${pool.length}개)을 유지합니다. (${error || '알 수 없는 오류'})`,
+      validated ? '#16a34a' : '#d97706'
+    );
   } catch (e) {
-    if (typeof appendBubble === 'function') {
-      appendBubble('ai', `⚠️ 모델 갱신 중 오류가 발생했습니다: ${e.message}`);
-    }
+    setStatus(`⚠️ 모델 갱신 중 오류가 발생했습니다: ${e.message}`, '#dc2626');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '🔄 모델 갱신'; }
   }
@@ -241,7 +240,7 @@ async function _pollPcSealedSetting(guid, wallet) {
 
 // ── "PC에서 입력하세요" 안내 / "PC에서 보낸 설정이 있습니다" 배너 렌더링 ──
 function _renderPcSyncBanner(parsed, guid) {
-  const host = document.getElementById('setting-model')?.closest('.settings-body') || document.body;
+  const host = document.getElementById('btn-refresh-free-models')?.closest('.settings-body') || document.body;
   let banner = document.getElementById('_pc-sync-banner');
   if (!banner) {
     banner = document.createElement('div');
@@ -260,9 +259,17 @@ function _renderPcSyncBanner(parsed, guid) {
     return;
   }
 
-  // PC가 아직 아무것도 보내지 않은 기본 상태 — API Key/시스템 프롬프트 입력이
-  // 번거로운 휴대폰 대신 PC에서 등록하는 방법을 항상 안내한다.
+  // PC가 아직 아무것도 보내지 않은 기본 상태 — 단, 이미 LLM Key가 등록되어
+  // 있다면(CFG.providers/apiKey/geminiKey 중 하나라도 있으면) 더 이상
+  // "PC에서 등록하세요" 안내가 필요 없으므로 띄우지 않는다.
   if (parsed._idle) {
+    const alreadyRegistered =
+      (Array.isArray(CFG.providers) && CFG.providers.length > 0) ||
+      !!CFG.apiKey || !!CFG.geminiKey;
+    if (alreadyRegistered) {
+      banner.style.display = 'none';
+      return;
+    }
     banner.style.display = 'block';
     banner.style.background = '#eff6ff';
     banner.style.color = '#1e3a8a';
@@ -430,7 +437,7 @@ async function _acceptPcSyncedSetting(parsed, guid, opts = {}) {
       }));
     } catch {}
 
-    document.getElementById('setting-model')?.value && (document.getElementById('setting-model').value = parsed.model);
+    // (등록된 LLM 모델 섹션을 삭제했으므로 이 시점의 화면 갱신은 불필요)
     const sysEl = document.getElementById('setting-system');
     if (sysEl && parsed.systemPrompt) sysEl.value = parsed.systemPrompt;
     document.getElementById('_pc-sync-banner')?.style && (document.getElementById('_pc-sync-banner').style.display = 'none');
