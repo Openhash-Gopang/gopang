@@ -19,7 +19,7 @@ import { openSettings, closeSettings, handleOverlayClick,
          _updateHandleChip, _settingsRegisterHandle,
          clearSWCache, _updateSecuritySection,
          openChatHistory, openHashChain, openGopangWallet, openFinancialStatement,
-         openMyProfile,
+         openMyProfile, _refreshFreeModelPool,
 } from './src/gopang/ui/settings.js';
 import { openSearch, closeSearch,
          handleSearchOverlayClick,
@@ -76,6 +76,7 @@ if (_hasRegisteredUser) {
   window._deviceLocalReset         = _deviceLocalReset;
   window._isGDCUser                = _isGDCUser;
   window.closeAISettings           = closeAISettings;
+  window._refreshFreeModelPool     = _refreshFreeModelPool;
   window.handleAISettingsOverlayClick = handleAISettingsOverlayClick;
   window.closeSettings             = closeSettings;
   window.handleOverlayClick        = handleOverlayClick;

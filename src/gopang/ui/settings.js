@@ -2,6 +2,7 @@
  * ui/settings.js — 설정 패널
  */
 import { CFG, loadSettings, PROVIDER_INFO } from '../core/config.js';
+import { buildLiveFreeModelPool } from '../core/free-model-pool.js';
 import { _isRegistered, _isGDCUser, ensureX25519Synced } from '../core/auth.js';
 import { _USER } from '../core/state.js';
 import { appendBubble } from './bubble.js';
@@ -114,6 +115,68 @@ export function openAISettings() {
   // PC(ai-setup.html)가 이 공개키로 API 설정을 암호화해 보낼 수 있도록
   // 설정 창을 열 때마다 보장 — 이미 있으면 아무 일도 하지 않음
   _ensurePcSyncReady();
+}
+
+// ── "모델 갱신" 버튼 — 이미 등록된 OpenRouter 무료 모델 풀을
+// 현재 시점 기준으로 다시 검증해 단종된 모델을 빼고 새 무료 모델을 채운다.
+// PC에서 최초 등록할 때(ai-setup.html)뿐 아니라, 이미 등록을 마친 사용자도
+// 폰에서 직접 갱신할 수 있도록 한다 — OpenRouter Key는 폰에 이미 저장돼 있으므로
+// PC 재등록 없이 이 화면에서 바로 처리 가능.
+export async function _refreshFreeModelPool() {
+  const btn = document.getElementById('btn-refresh-free-models');
+
+  const openrouterEntries = Array.isArray(CFG.providers)
+    ? CFG.providers.filter(p => p?.provider === 'openrouter' && p?.apiKey)
+    : [];
+
+  if (openrouterEntries.length === 0) {
+    if (typeof appendBubble === 'function') {
+      appendBubble('ai', '⚠️ 등록된 OpenRouter 무료 모델이 없습니다. PC에서 "나만의 AI 비서 설정"으로 먼저 등록해 주세요.');
+    }
+    return;
+  }
+
+  const apiKey = openrouterEntries[0].apiKey;
+  const firstIdx = CFG.providers.findIndex(p => p?.provider === 'openrouter' && p?.apiKey === apiKey);
+  const wasUsingOpenrouter = typeof CFG.model === 'string' && CFG.model.includes('/');
+
+  if (btn) { btn.disabled = true; btn.textContent = '확인 중…'; }
+
+  try {
+    const { pool, validated, error } = await buildLiveFreeModelPool();
+
+    // 기존 openrouter 항목들을 제거하고, 같은 위치에 새 풀로 교체
+    // (다른 provider 항목의 순서·우선순위는 그대로 유지)
+    const others = CFG.providers.filter(p => !(p?.provider === 'openrouter' && p?.apiKey === apiKey));
+    const insertAt = Math.min(firstIdx, others.length);
+    const newEntries = pool.map(model => ({ provider: 'openrouter', model, apiKey }));
+    CFG.providers = [...others.slice(0, insertAt), ...newEntries, ...others.slice(insertAt)];
+
+    if (wasUsingOpenrouter) CFG.model = pool[0];
+
+    try {
+      localStorage.setItem('gopang_cfg', JSON.stringify({
+        model: CFG.model, endpoint: CFG.endpoint,
+        apiKey: CFG.apiKey, geminiKey: CFG.geminiKey,
+        system: CFG.system, providers: CFG.providers,
+      }));
+    } catch {}
+
+    const modelEl = document.getElementById('setting-model');
+    if (modelEl && CFG.model) modelEl.value = CFG.model;
+
+    if (typeof appendBubble === 'function') {
+      appendBubble('ai', validated
+        ? `🔄 무료 모델 갱신 완료 — 현재 활성 모델 ${pool.length}개를 확인했습니다.`
+        : `⚠️ 모델 갱신을 실시간으로 확인하지 못해 기본 목록(${pool.length}개)을 유지합니다. (${error || '알 수 없는 오류'})`);
+    }
+  } catch (e) {
+    if (typeof appendBubble === 'function') {
+      appendBubble('ai', `⚠️ 모델 갱신 중 오류가 발생했습니다: ${e.message}`);
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 모델 갱신'; }
+  }
 }
 
 // ── PC→휴대폰 동기화 준비: X25519 키 보장 + 등록 + 대기 중인 PC 설정 확인 ──
