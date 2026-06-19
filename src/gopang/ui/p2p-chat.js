@@ -528,12 +528,78 @@ async function _saveP2PSession(messages, peer, startedAt) {
     '| layer:', layer ?? 'none');
 }
 
-// ── 앱 시작 시 incoming offer 감시 ───────────────────────
+// ── 앱 시작 시 incoming offer 감시 — _P2P_REALTIME_FIX_APPLIED_ ────────────
+// L1 SSE Realtime 우선, 실패 시 3초 폴링 폴백
 export function startIncomingWatch(myGuid) {
   if (!myGuid) return;
-  setInterval(async () => {
+
+  const L1_BASE = 'https://l1-hanlim.gopang.net';
+  let realtimeOk = false;
+  let es = null;
+  let clientId = null;
+
+  // ── L1 SSE 구독 시도 ─────────────────────────────────
+  function _startSSE() {
     try {
-      // 이미 채팅 중이면 스킵
+      es = new EventSource(`${L1_BASE}/api/realtime`);
+
+      es.onmessage = async (ev) => {
+        try {
+          const data = JSON.parse(ev.data);
+
+          // clientId 수신 → 구독 등록
+          if (data.clientId && !clientId) {
+            clientId = data.clientId;
+            fetch(`${L1_BASE}/api/realtime`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({
+                clientId,
+                subscriptions: [`webrtc_signals/${myGuid}`],
+              }),
+            }).then(r => {
+              if (r.ok) {
+                realtimeOk = true;
+                console.info('[P2P Realtime] L1 SSE 구독 완료 ✓');
+              }
+            }).catch(() => {});
+            return;
+          }
+
+          // offer 시그널 수신
+          if (data.action === 'create' && data.record?.to_guid === myGuid) {
+            const sig = data.record;
+            if (sig.type === 'offer' && !_chatOverlay) {
+              await handleIncomingOffer(sig);
+              fetch(`${PROXY}/signal/delete`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ id: sig.id }),
+              }).catch(() => {});
+            }
+          }
+        } catch(e) { console.warn('[P2P Realtime] 메시지 처리 오류:', e.message); }
+      };
+
+      es.onerror = () => {
+        realtimeOk = false;
+        clientId = null;
+        console.warn('[P2P Realtime] SSE 오류 — 3초 후 재연결');
+        if (es) { es.close(); es = null; }
+        setTimeout(_startSSE, 3000);
+      };
+    } catch(e) {
+      console.warn('[P2P Realtime] SSE 시작 실패:', e.message);
+      realtimeOk = false;
+    }
+  }
+
+  _startSSE();
+
+  // ── 폴백: Realtime 비정상 시 3초 폴링 ────────────────
+  setInterval(async () => {
+    if (realtimeOk) return;   // Realtime 정상이면 폴링 스킵
+    try {
       if (_chatOverlay) return;
       const res  = await fetch(`${PROXY}/signal/poll?guid=${encodeURIComponent(myGuid)}`);
       const data = await res.json();
