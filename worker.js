@@ -1393,9 +1393,14 @@ async function _l1SignalSend(from_guid, to_guid, type, payload, expires_at) {
 async function _l1SignalPoll(guid) {
   const now    = new Date().toISOString();
   const filter = encodeURIComponent(`to_guid='${guid}'`);
+  // 캐시 완전 무력화: cache:'no-store' + 매번 달라지는 cache-buster 쿼리.
+  // Cloudflare Worker의 fetch()는 기본적으로 GET을 엣지에서 캐싱할 수 있어서,
+  // 같은 URL 패턴이 반복되는 폴링 요청이 옛(비어있던) 응답을 계속 재사용하는
+  // 문제가 있었다. PocketBase에 직접 조회하면 최신 데이터가 보이는데
+  // 워커를 거치면 비어있던 게 정확히 이 캐시 문제였다.
   const res    = await fetch(
-    `${L1_SIGNAL_URL}?filter=${filter}&sort=created&perPage=20`,
-    { headers: { 'Content-Type': 'application/json' } }
+    `${L1_SIGNAL_URL}?filter=${filter}&sort=created&perPage=20&_ts=${Date.now()}`,
+    { headers: { 'Content-Type': 'application/json' }, cache: 'no-store' }
   );
   if (!res.ok) throw new Error(`L1 signal poll ${res.status}`);
   const data = await res.json().catch(() => ({ items: [] }));
@@ -1411,10 +1416,11 @@ async function _l1SignalPoll(guid) {
 // ── L1 시그널 삭제 헬퍼 ──────────────────────────────────────
 async function _l1SignalDelete(field, value) {
   // PocketBase: 필터로 목록 조회 후 id별 삭제 (REST v1)
+  // 캐시 완전 무력화 (이유는 _l1SignalPoll 주석 참고)
   const filter = encodeURIComponent(`${field}='${value}'`);
   const listRes = await fetch(
-    `${L1_SIGNAL_URL}?filter=${filter}&perPage=50`,
-    { headers: { 'Content-Type': 'application/json' } }
+    `${L1_SIGNAL_URL}?filter=${filter}&perPage=50&_ts=${Date.now()}`,
+    { headers: { 'Content-Type': 'application/json' }, cache: 'no-store' }
   );
   if (!listRes.ok) throw new Error(`L1 signal list ${listRes.status}`);
   const data  = await listRes.json().catch(() => ({ items: [] }));
