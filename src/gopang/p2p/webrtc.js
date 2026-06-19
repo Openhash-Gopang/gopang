@@ -303,3 +303,4 @@ async function _loadChatHistory(peerGuid) {
     }
   } catch(e) { console.warn('[PDV] 이력 로드 실패:', e); }
 }
+
