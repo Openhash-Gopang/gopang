@@ -14,44 +14,77 @@ if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
       console.log('[PWA] SW 등록 완료:', reg.scope);
 
-      // ★ 새 SW가 waiting 상태로 들어오면 → 갱신 알림 표시
+      // ★ _AUTO_UPDATE_PATCH_APPLIED_
+      // ══════════════════════════════════════════════════
+      // 이중 자동 업데이트 강제 적용
+      //
+      // 경로 ①: 새 SW 설치 완료 → 5초 후 자동 skipWaiting + 새로고침
+      //          (사용자 입력 불필요, 배너는 카운트다운용으로만 표시)
+      // 경로 ②: 30분마다 주기적 update() 체크
+      //          (탭을 장시간 열어두는 사용자 대응)
+      // ══════════════════════════════════════════════════
+
+      // 자동 적용 타이머 ID (중복 방지)
+      let _autoApplyTimer = null;
+
+      function _autoApplyUpdate(reg) {
+        if (_autoApplyTimer) return;  // 이미 예약됨
+        console.log('[PWA] 새 버전 감지 — 5초 후 자동 적용');
+        _showUpdateBanner(5);         // 카운트다운 배너 표시
+        _autoApplyTimer = setTimeout(() => {
+          const sw = reg.waiting;
+          if (sw) {
+            sw.postMessage({ type: 'SKIP_WAITING' });
+          } else {
+            window.location.reload();
+          }
+        }, 5000);
+      }
+
+      // 경로 ①: 새 SW 설치 완료 → 자동 적용
       reg.addEventListener('updatefound', () => {
         const newSW = reg.installing;
         if (!newSW) return;
         newSW.addEventListener('statechange', () => {
           if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-            // 구버전 SW가 제어 중 + 새 SW 설치 완료 → 갱신 배너 표시
-            _showUpdateBanner();
+            _autoApplyUpdate(reg);
           }
         });
       });
 
-      // ★ SW가 교체 완료(controllerchange) → 자동 새로고침
+      // SW 교체 완료(controllerchange) → 즉시 새로고침
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         console.log('[PWA] 새 버전 적용 — 자동 새로고침');
         window.location.reload();
       });
 
-      // ★ 앱 시작 시 이미 waiting 중인 SW가 있으면 즉시 배너 표시
-      //    (앱을 껐다 켰을 때 이미 다운로드된 버전이 대기 중인 경우)
+      // 앱 시작 시 이미 waiting 중인 SW → 즉시 자동 적용
       if (reg.waiting && navigator.serviceWorker.controller) {
-        console.log('[PWA] 시작 시 대기 중인 새 버전 감지 → 배너 표시');
-        _showUpdateBanner();
+        console.log('[PWA] 시작 시 대기 중 버전 감지 → 자동 적용');
+        _autoApplyUpdate(reg);
       }
 
-      // ★ 앱이 포그라운드로 돌아올 때마다 새 버전 즉시 확인
-      //    (웹앱은 24시간 캐시 주기를 기다리지 않고 강제 체크)
+      // 포그라운드 복귀 시 즉시 업데이트 체크
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           reg.update().then(() => {
             console.log('[PWA] 포그라운드 복귀 — SW 업데이트 체크');
-            // update() 후 waiting 상태가 새로 생기면 배너 표시
             if (reg.waiting && navigator.serviceWorker.controller) {
-              _showUpdateBanner();
+              _autoApplyUpdate(reg);
             }
           }).catch(() => {});
         }
       });
+
+      // 경로 ②: 30분마다 주기적 업데이트 체크
+      setInterval(() => {
+        reg.update().then(() => {
+          console.log('[PWA] 주기 체크(30분) — SW 업데이트 확인');
+          if (reg.waiting && navigator.serviceWorker.controller) {
+            _autoApplyUpdate(reg);
+          }
+        }).catch(() => {});
+      }, 30 * 60 * 1000);
 
     } catch (err) {
       console.warn('[PWA] SW 등록 실패:', err);
@@ -59,9 +92,8 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ── 앱 갱신 알림 배너 ────────────────────────────────────────
-function _showUpdateBanner() {
-  // 이미 표시 중이면 중복 방지
+// ── 앱 갱신 알림 배너 (카운트다운 자동 적용) ───────────────────
+function _showUpdateBanner(seconds = 0) {
   if (document.getElementById('update-banner')) return;
 
   const banner = document.createElement('div');
@@ -76,19 +108,33 @@ function _showUpdateBanner() {
     z-index: 9999; white-space: nowrap;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   `;
+
+  const countdownLabel = seconds > 0
+    ? `<span id="update-countdown" style="color:#8E8E93;font-size:12px">${seconds}초 후 자동 적용</span>`
+    : '';
+
   banner.innerHTML = `
     <span>🆕 새 버전이 있습니다</span>
+    ${countdownLabel}
     <button onclick="_applyUpdate()" style="
       background:#0057A8; color:#fff; border:none;
       border-radius:8px; padding:6px 14px;
       font-size:13px; font-weight:600; cursor:pointer;">
-      지금 업데이트
+      지금 적용
     </button>
-    <button onclick="this.parentElement.remove()" style="
-      background:transparent; color:#8E8E93; border:none;
-      font-size:18px; cursor:pointer; padding:0 4px;">✕</button>
   `;
   document.body.appendChild(banner);
+
+  // 카운트다운 표시
+  if (seconds > 0) {
+    let remain = seconds;
+    const cd = setInterval(() => {
+      remain--;
+      const el = document.getElementById('update-countdown');
+      if (el) el.textContent = `${remain}초 후 자동 적용`;
+      if (remain <= 0) clearInterval(cd);
+    }, 1000);
+  }
 }
 
 // ── 업데이트 적용 (skipWaiting 메시지 전송) ──────────────────
