@@ -116,6 +116,75 @@ function _sbServiceHeaders(env) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// L1 PocketBase Admin 인증 — X25519/Ed25519 등 보안 필드는 L1이 소스
+// Supabase는 필드 테스트/시뮬레이션 용도이므로 신원 관련 핵심 키는 L1에 둔다.
+// 토큰은 Worker 인스턴스 생애 동안 메모리에 캐싱 (PocketBase 토큰 기본 유효기간 길음).
+// ═══════════════════════════════════════════════════════════
+let _l1AdminTokenCache = null;
+let _l1AdminTokenExp = 0;
+
+async function _l1AdminToken(env) {
+  const now = Date.now();
+  if (_l1AdminTokenCache && now < _l1AdminTokenExp) return _l1AdminTokenCache;
+
+  const email = env.L1_ADMIN_EMAIL;
+  const password = env.L1_ADMIN_PASSWORD;
+  if (!email || !password) throw new Error('L1_ADMIN_EMAIL/L1_ADMIN_PASSWORD secret 미설정');
+
+  // PocketBase 0.23+ 신버전 경로 우선 시도, 실패 시 구버전 경로 폴백
+  const endpoints = [
+    `${L1_DEFAULT}/api/collections/_superusers/auth-with-password`,
+    `${L1_DEFAULT}/api/admins/auth-with-password`,
+  ];
+  let lastErr = null;
+  for (const ep of endpoints) {
+    try {
+      const res = await fetch(ep, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identity: email, password }),
+      });
+      if (!res.ok) { lastErr = new Error(`L1 admin auth ${res.status}`); continue; }
+      const data = await res.json().catch(() => null);
+      if (!data?.token) { lastErr = new Error('L1 admin auth: token 없음'); continue; }
+      _l1AdminTokenCache = data.token;
+      _l1AdminTokenExp = now + 25 * 60 * 1000; // 25분 캐시 (PocketBase 토큰은 보통 더 길게 유효)
+      return _l1AdminTokenCache;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('L1 admin auth 실패');
+}
+
+// L1 profiles 컬렉션에서 guid로 레코드 조회 (Admin 토큰 필요 — is_public=false인 레코드도 봐야 하므로)
+async function _l1FindProfileByGuid(env, guid) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`guid='${guid}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`L1 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+// L1 profiles 레코드 PATCH (Admin 토큰 필요 — Update rule이 Admins only이므로)
+async function _l1PatchProfile(env, recordId, patch) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records/${recordId}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`L1 PATCH 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════════════
 // 메인 fetch 핸들러
 // ═══════════════════════════════════════════════════════════
 export default {
@@ -988,23 +1057,14 @@ async function handleWalletX25519Get(request, env, corsHeaders) {
   const guid = url.searchParams.get('guid');
   if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
 
-  const sbH = _sbHeaders(env);
-  let res;
+  let record;
   try {
-    res = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=extra&limit=1`,
-      { headers: sbH }
-    );
+    record = await _l1FindProfileByGuid(env, guid);
   } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
-  }
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${res.status}): ${errText}`, corsHeaders);
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
   }
 
-  const rows = await res.json().catch(() => []);
-  const pubkey = rows?.[0]?.extra?.public?.security?.x25519_pubkey || null;
+  const pubkey = record?.x25519_pubkey || null;
 
   if (!pubkey) {
     return new Response(JSON.stringify({
@@ -1035,59 +1095,38 @@ async function handleWalletX25519Post(request, env, corsHeaders) {
   const sigOk  = await _verifyEd25519Simple(ed25519_pubkey, signature, sigMsg);
   if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
 
-  const sbH = _sbHeaders(env);
-  let existRes;
+  let record;
   try {
-    existRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=extra,pubkey_ed25519&limit=1`,
-      { headers: sbH }
-    );
+    record = await _l1FindProfileByGuid(env, guid);
   } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
   }
-  if (!existRes.ok) {
-    const errText = await existRes.text().catch(() => '');
-    return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${existRes.status}): ${errText}`, corsHeaders);
-  }
-  const existRows = await existRes.json().catch(() => []);
-  if (!existRows.length) return _err(404, 'PROFILE_NOT_FOUND', '프로필이 먼저 등록되어야 합니다', corsHeaders);
+  // L1 profiles row는 가입(_register) 시 이미 생성되어 있어야 한다 — guid가 L1에 없으면
+  // 가입 자체가 안 된 상태이므로 등록을 거부한다.
+  if (!record) return _err(404, 'PROFILE_NOT_FOUND', '가입(L1 등록)이 먼저 완료되어야 합니다', corsHeaders);
 
   // TOFU: 이 guid에 이미 등록된 Ed25519 공개키와 일치해야만 진짜 소유자로 인정
-  const knownEdPubkey = existRows[0].pubkey_ed25519;
+  const knownEdPubkey = record.pubkey_ed25519;
   if (knownEdPubkey && knownEdPubkey !== ed25519_pubkey) {
     return _err(403, 'PUBKEY_MISMATCH', '등록된 공개키와 일치하지 않습니다', corsHeaders);
   }
 
-  const prevExtra = existRows[0].extra || {};
-  const prevSecurity = prevExtra?.public?.security || {};
-
   // X25519 키 자체도 TOFU: 이미 등록된 키가 있으면 그대로 반환 (덮어쓰지 않음)
-  if (prevSecurity.x25519_pubkey) {
+  if (record.x25519_pubkey) {
     return new Response(JSON.stringify({
-      ok: true, already_registered: true, x25519_pubkey: prevSecurity.x25519_pubkey,
+      ok: true, already_registered: true, x25519_pubkey: record.x25519_pubkey,
     }), { status: 200, headers: corsHeaders });
   }
 
-  const newExtra = {
-    ...prevExtra,
-    public: {
-      ...(prevExtra.public || {}),
-      security: { ...prevSecurity, x25519_pubkey, registered_at: new Date().toISOString() },
-    },
-  };
-
-  const sbServiceH = _sbServiceHeaders(env);
-  let patchRes;
   try {
-    patchRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
-      method: 'PATCH',
-      headers: { ...sbServiceH, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ extra: newExtra }),
+    await _l1PatchProfile(env, record.id, {
+      pubkey_ed25519: knownEdPubkey || ed25519_pubkey,
+      x25519_pubkey,
+      x25519_registered_at: new Date().toISOString(),
     });
   } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+    return _err(500, 'L1_PATCH_FAILED', e.message, corsHeaders);
   }
-  if (!patchRes.ok) return _err(500, 'DB_ERROR', await patchRes.text(), corsHeaders);
 
   return new Response(JSON.stringify({ ok: true, already_registered: false, x25519_pubkey }),
     { status: 200, headers: corsHeaders });
