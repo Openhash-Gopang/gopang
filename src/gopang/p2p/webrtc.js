@@ -160,6 +160,32 @@ async function _sendSignal(type, payload, toGuid = null) {
 
 // ── 시그널 폴링 (1.5초) ──────────────────────────────────
 export function _startSignalPoll() {
+  // ── _REALTIME_PATCH_APPLIED_ ──────────────────────────────
+  // Realtime 구독 시도: 성공하면 폴링을 절반(3초) 간격으로 줄이고
+  // 실패 시 기존 폴링 그대로 유지한다.
+  const _myGuid = (typeof USER_GUID !== 'undefined' ? USER_GUID : null)
+    || window?._USER?.ipv6 || window?._USER?.guid || null;
+
+  if (_myGuid) {
+    try {
+      const { startRealtimeSignal, isRealtimeActive } = await import('./webrtc-realtime.js');
+      startRealtimeSignal(_myGuid, (signal) => {
+        // Realtime 경로로 받은 시그널을 기존 처리 함수로 전달
+        if (typeof _handleIncomingSignal === 'function') {
+          _handleIncomingSignal(signal).catch(e =>
+            console.warn('[Realtime] 시그널 처리 오류:', e.message));
+        } else if (typeof handleSignal === 'function') {
+          handleSignal(signal).catch?.(e =>
+            console.warn('[Realtime] 시그널 처리 오류:', e.message));
+        }
+      });
+      console.info('[Signal] Realtime 구독 시작 — 폴링은 폴백으로만 동작');
+    } catch (e) {
+      console.warn('[Signal] Realtime 모듈 로드 실패, HTTP 폴링만 사용:', e.message);
+    }
+  }
+  // ── END REALTIME PATCH ────────────────────────────────
+
   if (_signalPoll) clearInterval(_signalPoll);
   const id = setInterval(async () => {
     if (!USER_GUID) return;
