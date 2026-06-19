@@ -237,18 +237,37 @@ function _renderPcSyncBanner(parsed, guid) {
 export async function _autoApplyPcSyncedSetting() {
   const guid = _USER?.ipv6 ||
     JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}')?.ipv6;
-  if (!guid) return;
-
-  const result = await ensureX25519Synced(guid);
-  if (!result.ok) {
-    console.info('[AI설정] 자동 동기화: X25519 준비 안 됨 (', result.reason, ') — 다음 부팅 시 재시도');
+  if (!guid) {
+    console.info('[AI설정][자동] guid 없음 — 미등록 사용자, 건너뜀');
     return;
   }
+
+  console.info('[AI설정][자동] 시작 — guid:', guid.slice(0, 12) + '...');
+
+  let result = await ensureX25519Synced(guid);
+  if (!result.ok) {
+    console.warn('[AI설정][자동] X25519 1차 시도 실패:', result.reason, '— 1.5초 후 재시도');
+    await new Promise(r => setTimeout(r, 1500));
+    result = await ensureX25519Synced(guid);
+    if (!result.ok) {
+      console.error('[AI설정][자동] X25519 재시도도 실패:', result.reason, '— 자동 적용 중단');
+      return;
+    }
+  }
+  console.info('[AI설정][자동] X25519 준비 완료');
 
   try {
     const res  = await fetch(`${CFG.endpoint}/ai-setup/seal?guid=${encodeURIComponent(guid)}`);
     const data = await res.json();
-    if (!data.ok || !data.sealed) return; // 대기 중인 PC 설정 없음 — 정상
+    if (!data.ok || !data.sealed) {
+      console.info('[AI설정][자동] 대기 중인 PC 설정 없음 — 정상 종료');
+      return;
+    }
+
+    console.info('[AI설정][자동] PC 설정 발견 — 복호화 시도');
+    if (typeof appendBubble === 'function') {
+      appendBubble('ai', 'PC로부터 Key를 받았습니다. 나만의 AI 비서를 설정합니다.');
+    }
 
     const sealedCamel = {
       ephemeralPubKey: data.sealed.ephemeral_pubkey,
@@ -258,15 +277,23 @@ export async function _autoApplyPcSyncedSetting() {
     const plaintext = await result.wallet.openSealed(sealedCamel);
     const parsed = JSON.parse(plaintext);
 
-    console.info('[AI설정] 앱 시작 시 PC 설정 발견 — 자동 적용:', parsed.provider, parsed.model);
-    await _acceptPcSyncedSetting(parsed, guid);
+    console.info('[AI설정][자동] 복호화 성공 — provider:', parsed.provider, 'model:', parsed.model);
+    await _acceptPcSyncedSetting(parsed, guid, { silent: true });
+
+    const _doneLabel = Array.isArray(parsed.freeModelPool) && parsed.freeModelPool.length
+      ? 'OpenRouter (무료 모델 ' + parsed.freeModelPool.length + '개 자동 순환)'
+      : (PROVIDER_INFO[parsed.provider]?.label || parsed.provider);
+    if (typeof appendBubble === 'function') {
+      appendBubble('ai', `설정 완료. 이제부터 AI 비서를 호출하여 이용하십시오. (${_doneLabel})`);
+    }
+    console.info('[AI설정][자동] 적용 완료');
   } catch(e) {
-    console.warn('[AI설정] 자동 동기화 중 오류:', e.message);
+    console.error('[AI설정][자동] 처리 중 오류:', e.message, e.stack);
   }
 }
 
 // ── PC가 보낸 설정을 휴대폰의 진짜 지갑으로 서명하여 최종 등록 ──
-async function _acceptPcSyncedSetting(parsed, guid) {
+async function _acceptPcSyncedSetting(parsed, guid, opts = {}) {
   try {
     const wallet = await window.GopangWallet.load();
     if (!wallet) throw new Error('지갑을 찾을 수 없습니다.');
@@ -324,10 +351,12 @@ async function _acceptPcSyncedSetting(parsed, guid) {
     const sysEl = document.getElementById('setting-system');
     if (sysEl && parsed.systemPrompt) sysEl.value = parsed.systemPrompt;
     document.getElementById('_pc-sync-banner')?.style && (document.getElementById('_pc-sync-banner').style.display = 'none');
-    const _doneLabel = Array.isArray(parsed.freeModelPool) && parsed.freeModelPool.length
-      ? 'OpenRouter (무료 모델 ' + parsed.freeModelPool.length + '개 자동 순환)'
-      : (PROVIDER_INFO[parsed.provider]?.label || parsed.provider);
-    if (typeof appendBubble === 'function') appendBubble('ai', `⚙️ PC에서 보낸 ${_doneLabel} 설정이 등록되었습니다.`);
+    if (!opts.silent) {
+      const _doneLabel = Array.isArray(parsed.freeModelPool) && parsed.freeModelPool.length
+        ? 'OpenRouter (무료 모델 ' + parsed.freeModelPool.length + '개 자동 순환)'
+        : (PROVIDER_INFO[parsed.provider]?.label || parsed.provider);
+      if (typeof appendBubble === 'function') appendBubble('ai', `⚙️ PC에서 보낸 ${_doneLabel} 설정이 등록되었습니다.`);
+    }
   } catch(e) {
     alert('등록 중 오류가 발생했습니다: ' + e.message);
   }
