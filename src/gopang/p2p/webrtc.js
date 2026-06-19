@@ -120,13 +120,57 @@ function _setupRTCEvents(conn) {
 
 // ── DataChannel 이벤트 ───────────────────────────────────
 function _setupChannelEvents(ch) {
+  // ★ onopen: 연결 완료 시 입력창 활성화
+  ch.onopen = () => {
+    console.info('[WebRTC] DataChannel open — 입력창 활성화');
+    appendBubble('system', '✅ P2P 연결 완료 — 메시지를 입력하세요.');
+    // p2p-chat.js 오버레이 입력창 활성화
+    const p2pInput = document.getElementById('_p2p-input');
+    if (p2pInput) p2pInput.disabled = false;
+    // gopang 메인 입력창도 활성화 (peer 모드)
+    const mainInput = document.getElementById('msg-input');
+    if (mainInput) mainInput.placeholder = `${_peer?.name || '상대방'}에게 메시지…`;
+  };
+
   ch.onmessage = async (e) => {
     try {
       const msg = JSON.parse(e.data);
-      appendBubble('peer', msg.text, false, _peer?.name || '상대방');
+      if (msg.type === 'bye') {
+        appendBubble('system', '🔴 상대방이 대화를 종료했습니다.');
+        return;
+      }
+      // p2p-chat.js 오버레이가 열려있으면 거기에, 아니면 메인 채팅창에
+      const p2pMsgs = document.getElementById('_p2p-messages');
+      if (p2pMsgs) {
+        const time = new Date(msg.ts || Date.now())
+          .toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' });
+        const esc = s => String(s)
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        p2pMsgs.innerHTML += `
+          <div style="display:flex;justify-content:flex-start;align-items:flex-end;gap:6px">
+            <div style="background:#fff;color:#111827;padding:8px 12px;
+                        border:1px solid #e5e7eb;
+                        border-radius:16px 16px 16px 4px;max-width:70%;
+                        font-size:14px;line-height:1.4;word-break:break-word">
+              ${esc(msg.text)}
+            </div>
+            <span style="font-size:10px;color:#9ca3af">${time}</span>
+          </div>`;
+        p2pMsgs.scrollTop = p2pMsgs.scrollHeight;
+      } else {
+        appendBubble('peer', msg.text, false, _peer?.name || '상대방');
+      }
       await _saveMsgPDV({ dir:'in', from: _peer?.guid, text: msg.text, ts: msg.ts });
     } catch(err) { console.warn('[WebRTC] 메시지 파싱 오류:', err); }
   };
+
+  ch.onclose = () => {
+    console.info('[WebRTC] DataChannel closed');
+    const p2pInput = document.getElementById('_p2p-input');
+    if (p2pInput) p2pInput.disabled = true;
+  };
+
   ch.onerror = (e) => console.error('[WebRTC] DataChannel 오류:', e);
 }
 

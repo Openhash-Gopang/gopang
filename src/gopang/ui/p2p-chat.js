@@ -528,77 +528,76 @@ async function _saveP2PSession(messages, peer, startedAt) {
     '| layer:', layer ?? 'none');
 }
 
-// ── 앱 시작 시 incoming offer 감시 — _P2P_REALTIME_FIX_APPLIED_ ────────────
-// L1 SSE Realtime 우선, 실패 시 3초 폴링 폴백
+// ── 앱 시작 시 incoming offer 감시 — _P2P_SUPABASE_WS_APPLIED_ ──
+// PocketBase SSE가 ERR_INCOMPLETE_CHUNKED_ENCODING으로 실패하므로
+// Supabase Realtime WebSocket으로 교체
 export function startIncomingWatch(myGuid) {
   if (!myGuid) return;
 
-  const L1_BASE = 'https://l1-hanlim.gopang.net';
-  let realtimeOk = false;
-  let es = null;
-  let clientId = null;
+  const SB_WS  = 'wss://ebbecjfrwaswbdybbgiu.supabase.co/realtime/v1/websocket';
+  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
 
-  // ── L1 SSE 구독 시도 ─────────────────────────────────
-  function _startSSE() {
-    try {
-      es = new EventSource(`${L1_BASE}/api/realtime`);
+  let ws = null, hb = null, ref = 1, wsOk = false;
 
-      es.onmessage = async (ev) => {
-        try {
-          const data = JSON.parse(ev.data);
+  function _connectWS() {
+    ws = new WebSocket(`${SB_WS}?apikey=${SB_KEY}&vsn=1.0.0`);
+    const send = o => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(o)); };
 
-          // clientId 수신 → 구독 등록
-          if (data.clientId && !clientId) {
-            clientId = data.clientId;
-            fetch(`${L1_BASE}/api/realtime`, {
-              method:  'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body:    JSON.stringify({
-                clientId,
-                subscriptions: [`webrtc_signals/${myGuid}`],
-              }),
-            }).then(r => {
-              if (r.ok) {
-                realtimeOk = true;
-                console.info('[P2P Realtime] L1 SSE 구독 완료 ✓');
-              }
-            }).catch(() => {});
-            return;
-          }
+    ws.onopen = () => {
+      send({
+        topic:   `realtime:public:webrtc_signals:to_guid=eq.${myGuid}`,
+        event:   'phx_join',
+        payload: {
+          config: {
+            broadcast: { self: false }, presence: { key: '' },
+            postgres_changes: [{ event: 'INSERT', schema: 'public',
+              table: 'webrtc_signals', filter: `to_guid=eq.${myGuid}` }],
+          },
+        },
+        ref: String(ref++),
+      });
+      hb = setInterval(() =>
+        send({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(ref++) }), 30000);
+    };
 
-          // offer 시그널 수신
-          if (data.action === 'create' && data.record?.to_guid === myGuid) {
-            const sig = data.record;
-            if (sig.type === 'offer' && !_chatOverlay) {
-              await handleIncomingOffer(sig);
-              fetch(`${PROXY}/signal/delete`, {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ id: sig.id }),
-              }).catch(() => {});
-            }
-          }
-        } catch(e) { console.warn('[P2P Realtime] 메시지 처리 오류:', e.message); }
-      };
+    ws.onmessage = async ({ data }) => {
+      let msg; try { msg = JSON.parse(data); } catch { return; }
 
-      es.onerror = () => {
-        realtimeOk = false;
-        clientId = null;
-        console.warn('[P2P Realtime] SSE 오류 — 3초 후 재연결');
-        if (es) { es.close(); es = null; }
-        setTimeout(_startSSE, 3000);
-      };
-    } catch(e) {
-      console.warn('[P2P Realtime] SSE 시작 실패:', e.message);
-      realtimeOk = false;
-    }
+      if (msg.event === 'phx_reply' && msg.payload?.status === 'ok') {
+        wsOk = true;
+        console.info('[P2P Realtime] Supabase WS 구독 완료 ✓');
+      }
+
+      const row = msg.payload?.data?.record ?? msg.payload?.record ?? null;
+      if (!row || row.to_guid !== myGuid) return;
+
+      if (row.type === 'offer' && !_chatOverlay) {
+        console.info('[P2P Realtime] offer 수신 → handleIncomingOffer');
+        await handleIncomingOffer(row);
+        fetch(`${PROXY}/signal/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: row.id }),
+        }).catch(() => {});
+      }
+    };
+
+    ws.onerror = () => { wsOk = false; };
+    ws.onclose = ({ code }) => {
+      if (hb) { clearInterval(hb); hb = null; }
+      wsOk = false;
+      if (code !== 1000 && code !== 1001) {
+        console.info('[P2P Realtime] WS 재연결 (5초)...');
+        setTimeout(_connectWS, 5000);
+      }
+    };
   }
 
-  _startSSE();
+  _connectWS();
 
-  // ── 폴백: Realtime 비정상 시 3초 폴링 ────────────────
+  // 폴백: WS 미작동 시 3초 폴링
   setInterval(async () => {
-    if (realtimeOk) return;   // Realtime 정상이면 폴링 스킵
+    if (wsOk) return;
     try {
       if (_chatOverlay) return;
       const res  = await fetch(`${PROXY}/signal/poll?guid=${encodeURIComponent(myGuid)}`);
@@ -607,9 +606,9 @@ export function startIncomingWatch(myGuid) {
         if (sig.type === 'offer') {
           await handleIncomingOffer(sig);
           await fetch(`${PROXY}/signal/delete`, {
-            method:  'POST',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ id: sig.id }),
+            body: JSON.stringify({ id: sig.id }),
           });
           break;
         }
@@ -617,6 +616,4 @@ export function startIncomingWatch(myGuid) {
     } catch {}
   }, 3000);
 }
-
-// ── 전역 노출 ─────────────────────────────────────────────
 window._closeP2P = _closeP2P;
