@@ -15,9 +15,26 @@ let _peerInfo     = null;  // { guid, handle, nickname }
 let _pollInterval = null;
 let _p2pMessages  = [];    // P2P 대화 원문 누적 (PDV 저장용)
 let _sessionStart = null;  // 세션 시작 시각
+let _activeCallId = null;  // 현재 유효한 통화 시도 ID — 재연결 시 이전 watcher 자동 무력화
+const _seenOfferIds = new Set();  // 처리한 offer callId — 중복 confirm() 방지
 
 // ── P2P 통화 시작 (발신측) ───────────────────────────────
 export async function startP2PCall(targetUser) {
+  // 이전 시도(재연결 등)가 정리되지 않고 남아있으면 먼저 로컬 정리.
+  // (이전 watcher는 _activeCallId가 바뀌는 즉시 스스로 종료됨 — 아래 참고)
+  if (_rtcConn || _rtcChannel) {
+    try { _rtcChannel?.close(); } catch {}
+    try { _rtcConn?.close(); } catch {}
+    setRtcChannel(null);
+    setRtcConn(null);
+  }
+
+  // 통화 시도마다 고유 ID — 재연결 시 이전/새 시도를 구분하는 핵심 키
+  const callId = (crypto.randomUUID
+    ? crypto.randomUUID()
+    : `call-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  _activeCallId = callId;
+
   _peerInfo     = targetUser;
   _p2pMessages  = [];
   _sessionStart = new Date().toISOString();
@@ -29,7 +46,7 @@ export async function startP2PCall(targetUser) {
   setRtcChannel(channel);
 
   _setupChannel(channel);
-  _setupConn(conn, targetUser);
+  _setupConn(conn, targetUser, callId);
 
   // SDP offer 생성
   const offer = await conn.createOffer();
@@ -38,27 +55,30 @@ export async function startP2PCall(targetUser) {
   // ICE 수집 완료 대기 (최대 2초)
   await _waitForIce(conn);
 
-  // offer 전송
+  // offer 전송 (callId 포함 — 재연결 시 이전/이후 시도 구분용)
   await _signalSend({
     from_guid: _USER.ipv6,
     to_guid:   targetUser.guid,
     type:      'offer',
-    payload:   { sdp: conn.localDescription, from_handle: _USER.handle },
+    payload:   { sdp: conn.localDescription, from_handle: _USER.handle, callId },
   });
 
   _appendMsg('system', `📞 ${targetUser.nickname || targetUser.handle}님께 연결 요청을 보냈습니다...`);
 
   // answer/ICE 수신 — Supabase WS Realtime (폴링 폴백 포함)
-  _watchAnswerRealtime(conn, targetUser.guid);
+  _watchAnswerRealtime(conn, targetUser.guid, callId);
 }
 
 // ── answer/ICE 실시간 수신 (발신측) ─────────────────────
-function _watchAnswerRealtime(conn, peerGuid) {
+function _watchAnswerRealtime(conn, peerGuid, callId) {
   const SB_WS  = 'wss://ebbecjfrwaswbdybbgiu.supabase.co/realtime/v1/websocket';
   const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
   const myGuid = _USER.ipv6;
 
   let ws = null, hb = null, ref = 1, wsOk = false, done = false;
+
+  // 더 새로운 통화 시도가 시작되면 이 watcher는 즉시 폐기
+  function _stale() { return _activeCallId !== callId; }
 
   function _close() {
     done = true;
@@ -90,6 +110,7 @@ function _watchAnswerRealtime(conn, peerGuid) {
 
   ws.onmessage = async ({ data }) => {
     if (done) return;
+    if (_stale()) { console.info('[P2P] 오래된 통화 시도 — watcher 종료'); _close(); return; }
     let msg; try { msg = JSON.parse(data); } catch { return; }
 
     if (msg.event === 'phx_reply' && msg.payload?.status === 'ok') {
@@ -104,12 +125,15 @@ function _watchAnswerRealtime(conn, peerGuid) {
     //  오지 않으므로, 핸드셰이크 성공만으로 wsOk=true 하면 폴백이 영구 정지됨)
     wsOk = true;
 
+    const _rowPayload = typeof row.payload === 'string'
+      ? JSON.parse(row.payload) : (row.payload || {});
+
+    // callId가 있는데 이 시도와 다르면 — 다른(이전/이후) 통화 시도의 시그널이므로 무시
+    if (_rowPayload.callId && _rowPayload.callId !== callId) return;
+
     if (row.type === 'answer' && row.from_guid === peerGuid) {
       try {
-        const sdp = typeof row.payload === 'string'
-          ? JSON.parse(row.payload)
-          : row.payload;
-        const answerSdp = sdp.sdp || sdp;
+        const answerSdp = _rowPayload.sdp || _rowPayload;
         await conn.setRemoteDescription(new RTCSessionDescription(answerSdp));
         _appendMsg('system', '✅ 연결됐습니다. 채널이 열리면 메시지를 입력하세요.');
         console.info('[P2P] answer 수신 완료');
@@ -120,10 +144,7 @@ function _watchAnswerRealtime(conn, peerGuid) {
 
     if (row.type === 'ice' && row.from_guid === peerGuid) {
       try {
-        const ice = typeof row.payload === 'string'
-          ? JSON.parse(row.payload)
-          : row.payload;
-        const candidate = ice.candidate || ice;
+        const candidate = _rowPayload.candidate || _rowPayload;
         await conn.addIceCandidate(new RTCIceCandidate(candidate));
       } catch(e) { console.warn('[P2P] ICE 추가 실패:', e.message); }
     }
@@ -145,12 +166,14 @@ function _watchAnswerRealtime(conn, peerGuid) {
   // 폴백: WS 미작동 시 1.5초 폴링
   _startPoll(myGuid, async signal => {
     if (wsOk || done) return;
+    if (_stale()) { _close(); return; }
+    const _sigPayload = typeof signal.payload === 'string'
+      ? JSON.parse(signal.payload) : (signal.payload || {});
+    if (_sigPayload.callId && _sigPayload.callId !== callId) return;
+
     if (signal.type === 'answer' && signal.from_guid === peerGuid) {
       try {
-        const sdp = typeof signal.payload === 'string'
-          ? JSON.parse(signal.payload)
-          : signal.payload;
-        const answerSdp = sdp.sdp || sdp;
+        const answerSdp = _sigPayload.sdp || _sigPayload;
         await conn.setRemoteDescription(new RTCSessionDescription(answerSdp));
         _appendMsg('system', '✅ 연결됐습니다.');
         _close();
@@ -158,10 +181,7 @@ function _watchAnswerRealtime(conn, peerGuid) {
     }
     if (signal.type === 'ice' && signal.from_guid === peerGuid) {
       try {
-        const ice = typeof signal.payload === 'string'
-          ? JSON.parse(signal.payload)
-          : signal.payload;
-        await conn.addIceCandidate(new RTCIceCandidate(ice.candidate || ice));
+        await conn.addIceCandidate(new RTCIceCandidate(_sigPayload.candidate || _sigPayload));
       } catch {}
     }
   });
@@ -171,6 +191,23 @@ function _watchAnswerRealtime(conn, peerGuid) {
 export async function handleIncomingOffer(signal) {
   const fromHandle  = signal.payload?.from_handle || signal.from_guid;
   const fromGuid    = signal.from_guid;
+
+  // payload 방어적 파싱 (webrtc.js/p2p-chat.js 양쪽 호환) — callId 추출용으로 먼저 파싱
+  const _offerPayload = typeof signal.payload === 'string'
+    ? JSON.parse(signal.payload) : (signal.payload || {});
+  const callId = _offerPayload.callId || null;
+
+  // 같은 callId의 offer가 중복 도착(재시도/레이스 컨디션)하면 두 번째부터는 무시
+  if (callId) {
+    if (_seenOfferIds.has(callId)) {
+      console.info('[P2P] 중복 offer 무시 (callId 이미 처리됨):', callId);
+      return;
+    }
+    _seenOfferIds.add(callId);
+    if (_seenOfferIds.size > 50) {
+      _seenOfferIds.delete(_seenOfferIds.values().next().value);
+    }
+  }
 
   // 수락 확인
   const accepted = confirm(`📞 ${fromHandle}님의 연결 요청\n수락하시겠습니까?`);
@@ -189,24 +226,21 @@ export async function handleIncomingOffer(signal) {
     _setupChannel(channel);
   };
 
-  _setupConn(conn, _peerInfo);
+  _setupConn(conn, _peerInfo, callId);
 
   // SDP answer 생성
-  // payload 구조 방어적 파싱 (webrtc.js/p2p-chat.js 양쪽 호환)
-  const _offerPayload = typeof signal.payload === 'string'
-    ? JSON.parse(signal.payload) : (signal.payload || {});
   const _offerSdp = _offerPayload.sdp || _offerPayload;
   await conn.setRemoteDescription(new RTCSessionDescription(_offerSdp));
   const answer = await conn.createAnswer();
   await conn.setLocalDescription(answer);
   await _waitForIce(conn);
 
-  // answer 전송
+  // answer 전송 (callId 포함 — 발신측이 어느 시도에 대한 answer인지 구분)
   await _signalSend({
     from_guid: _USER.ipv6,
     to_guid:   fromGuid,
     type:      'answer',
-    payload:   { sdp: conn.localDescription, from_handle: _USER.handle },
+    payload:   { sdp: conn.localDescription, from_handle: _USER.handle, callId },
   });
 
   _appendMsg('system', `✅ ${fromHandle}님과 연결됐습니다.`);
@@ -214,20 +248,22 @@ export async function handleIncomingOffer(signal) {
   // ICE 폴링
   _startPoll(_USER.ipv6, async sig => {
     if (sig.type === 'ice' && sig.from_guid === fromGuid) {
-      await conn.addIceCandidate(sig.payload.candidate).catch(() => {});
+      const _p = typeof sig.payload === 'string'
+        ? JSON.parse(sig.payload) : (sig.payload || {});
+      await conn.addIceCandidate(new RTCIceCandidate(_p.candidate || _p)).catch(() => {});
     }
   });
 }
 
 // ── RTCPeerConnection 공통 설정 ───────────────────────────
-function _setupConn(conn, peer) {
+function _setupConn(conn, peer, callId) {
   conn.onicecandidate = async e => {
     if (!e.candidate) return;
     await _signalSend({
       from_guid: _USER.ipv6,
       to_guid:   peer.guid,
       type:      'ice',
-      payload:   { candidate: e.candidate },
+      payload:   { candidate: e.candidate, callId },
     });
   };
 
@@ -469,6 +505,7 @@ function _esc(str) {
 // ── P2P 종료 ─────────────────────────────────────────────
 function _closeP2P() {
   _stopPoll();
+  _activeCallId = null;
 
   // 상대방에게 종료 신호 전송 (DataChannel 우선, 실패 시 signal 경유)
   if (_peerInfo && _USER?.ipv6) {
