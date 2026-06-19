@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>에이전트 — 고팡</title>
+<title>K-Law — 혼디</title>
 <style>
+
 /* ── RESET ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
@@ -686,208 +687,60 @@ footer {
 /* 페이지 내장 시 padding 제거 */
 body { padding-left: 0 !important; background: transparent; }
 .section { scroll-margin-top: 24px; }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({startOnLoad:true, theme:"neutral", fontFamily:"inherit"});</script>
 </head>
 <body>
 
-<!-- ── AGENTS ── -->
-<section class="section agents-bg dot-bg-light" id="agents">
+<section class="section" id="klaw-impact">
   <div class="section-inner">
-    <div class="section-tag reveal">AI Agents</div>
-    <h2 class="section-title reveal">등록된 <strong>AI 에이전트</strong></h2>
+    <div class="section-tag reveal">Social Impact — AI 평행 세계 예시</div>
+    <h2 class="section-title reveal"><strong>K‑Law</strong> — AI 평행 세계가 바꾸는 사법 시스템</h2>
+
     <div class="section-body reveal">
-      <p>아래는 우리가 구축한 AI 평행 세계의 쌍둥이들입니다. 각 Agent는 해당 분야 전용 System Prompt를 보유하며, 이로 인해 일반 AI 모델(Claude, GPT 등)보다 월등히 우수한 성능을 발휘합니다. 가령, K-Law의 System Prompt를 적용한 Claude는 그렇지 않은 Claude에 비해 법리 분석과 판결 성능이 압도적으로 뛰어납니다. K-Law는 수 년이 소요되는 소송 기간을 <strong>5~10초</strong>로, 비용을 <strong>100원 내외</strong>로 줄입니다. 다른 모든 AI 쌍둥이들도 같습니다.</p>
-      <p style="margin-top:10px;font-size:13px;color:var(--text3)">전문 Agent가 업무를 완료하면, 결과를 자체 DB에 저장하고 6하원칙 보고서를 AI 비서에게 제출합니다. AI 비서는 이를 사용자의 PDV에 기록하며, PDV의 해시값은 OpenHash Network에 앵커링되어 위변조를 원천 차단합니다.</p>
+      <p>고팡의 수십 개 하위 시스템은 현실 세계의 제도·기관·전문직 각각에 대응하는 AI 평행 세계를 구성합니다. <a href="https://klaw.gopang.net" target="_blank" style="color:var(--brand-dk);font-weight:600;text-decoration:none;border-bottom:1px solid var(--brand)">K‑Law</a>는 그 대표적 예시입니다. 한국 사법 체계의 구조적 한계가 AI 평행 세계 안에서 어떻게 해소되는지를 구체적 수치로 보여줍니다.</p>
+
+      <p style="margin-top:12px"><strong>현실의 한국 사법 체계</strong>는 지방법원(1심), 고등법원(2심), 대법원(3심) 및 헌법재판소로 구성됩니다. 약 3천 명의 판사(대법원·헌법재판소 20여 명), 3천 명의 검사, 4만 명의 변호사가 활동 중입니다. 민사 합의 사건 기준, 1심 선고까지 평균 13~14개월, 3심 확정 판결까지는 통상 3~4년 이상 소요되며, 소송 비용은 변호사 착수금(최소 330만~550만 원)과 인지대·송달료 등이 포함되어 평균 수백만 원에서 수천만 원 수준입니다.</p>
+
+      <p style="margin-top:12px">이러한 현실에서 <strong>K‑Law</strong>는 사건 개요만으로 대법원 가상 판결문을 생성하는 AI 시스템입니다. 대법원이 공개한 최신 판례 300건으로 실증 실험한 결과, 앙상블 모델(DeepSeek·Gemini·Claude) 기준 실제 대법원 판결과 <strong>90% 일치</strong>하며, 고등법원(원심) 판결과 대법원 판결의 일치도(약 45%)보다 월등히 높습니다.</p>
+
+      <p style="margin-top:12px">90%라는 수치는 대법원이 공개하는 <strong>법리적으로 복잡하고 난해한 사건들(전체 소송의 극히 일부)</strong>만을 대상으로 한 결과입니다. 일반적이고 일상적인 갈등(전체 소송의 대다수, 나아가 소송 이전 단계의 수백만 건 분쟁)에서는 기존 판례와 법리가 명확하므로, K‑Law의 예측 정확도는 <strong>99% 이상</strong>으로 자연히 상승합니다.</p>
+
+      <p style="margin-top:12px">따라서 대부분의 분쟁 당사자들은 수년간의 소송 비용과 시간 없이 즉시 K‑Law의 예측 결과를 알 수 있게 됩니다. K‑Law를 활용하면 <strong>수년이 걸리던 소송 기간이 수 분 이내</strong>로, <strong>수백만~수천만 원에 달하던 비용이 수천 원 수준</strong>으로 감소합니다. 이는 현실 사법 체계의 시간·비용을 각각 99.999% 이상, 99% 이상 절감하는 효과입니다.</p>
+
+      <p style="margin-top:12px">다만, 이러한 변화가 기존 법원 중심의 사법 체계를 즉각 대체할 것이라고 단정하기는 어렵습니다. 인적·제도적 장벽이 존재할 수 있으며, 궁극적으로는 <strong>기존 사법 체계와의 공존 또는 점진적인 보완 관계</strong>를 모색하게 될 가능성이 큽니다. 일각에서는 K‑Law에 기반한 <strong>초고속·저비용 중재·조정 시스템</strong>이 장기적으로 법원의 역할을 상당 부분 대체할 수 있을 것이라는 전망을 내놓고 있으나, 이는 어디까지나 기술적 가능성에 대한 하나의 시나리오입니다.</p>
+
+      <p style="margin-top:12px">결과적으로, K‑Law는 '판결을 예측하는 도구'를 넘어 <strong>사법 접근성의 민주화</strong>와 <strong>사회적 갈등 해결 비용의 혁신적 감소</strong>라는 사회적 효용을 가져올 잠재력을 지니고 있습니다.</p>
     </div>
 
-    <div class="agents-grid">
-
-      <div class="agent-card reveal">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://klaw.gopang.net" target="_blank">K-Law ↗</a>
-            <div class="agent-url">klaw.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 법원</strong><br>지방·고등·대법원·헌법재판소 수준의 판결 시뮬레이션. 1초 이내, 약 1,000원으로 판결문 산출.</p>
-        <div class="agent-inst">지방법원 · 고등법원 · 대법원 · 헌법재판소</div>
+    <!-- 수치 요약 카드 -->
+    <div class="reveal" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:48px">
+      <div style="background:var(--surface);padding:28px 20px;text-align:center">
+        <div style="font-family:'Pretendard', sans-serif;font-size:11px;color:var(--brand-dk);letter-spacing:1px">소요 기간</div>
+        <div style="font-size:28px;font-weight:300;color:var(--text);margin:8px 0">3~4년 → <strong style="color:var(--brand)">수 분</strong></div>
+        <div style="font-size:13px;color:var(--text3)">99.999% 이상 단축</div>
       </div>
-
-      <div class="agent-card reveal" style="transition-delay:.05s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://market.gopang.net" target="_blank">K-Market ↗</a>
-            <div class="agent-url">market.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 시장</strong><br>판매자 이력 전용 수요 예측·공급망 자동화. 소비자 데이터 0% 수집. GPID 글로벌 단일 시장.</p>
-        <div class="agent-inst">전통시장 · 쇼핑몰 · 유통 플랫폼</div>
+      <div style="background:var(--surface);padding:28px 20px;text-align:center;border-left:1px solid var(--border)">
+        <div style="font-family:'Pretendard', sans-serif;font-size:11px;color:var(--brand-dk);letter-spacing:1px">소송 비용</div>
+        <div style="font-size:28px;font-weight:300;color:var(--text);margin:8px 0">수백만 원 → <strong style="color:var(--brand)">수천 원</strong></div>
+        <div style="font-size:13px;color:var(--text3)">99% 이상 절감</div>
       </div>
-
-      <div class="agent-card reveal" style="transition-delay:.10s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://fiil.kr" target="_blank">K-Cleaner ↗</a>
-            <div class="agent-url">clean.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 환경 감시</strong><br>사진 한 장으로 해안 쓰레기·불법 투기를 AI가 자동 분석·신고. GWP 프로토콜 연동.</p>
-        <div class="agent-inst">환경부 · 지방자치단체 · 해양수산부</div>
+      <div style="background:var(--surface);padding:28px 20px;text-align:center;border-left:1px solid var(--border)">
+        <div style="font-family:'Pretendard', sans-serif;font-size:11px;color:var(--brand-dk);letter-spacing:1px">예측 정확도 (일반 사건)</div>
+        <div style="font-size:28px;font-weight:300;color:var(--text);margin:8px 0"><strong style="color:var(--brand)">99%</strong> 이상</div>
+        <div style="font-size:13px;color:var(--text3)">대법원 판결 기준</div>
       </div>
-
-      <div class="agent-card reveal" style="transition-delay:.15s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://gdc.gopang.net" target="_blank">GDC 화폐 ↗</a>
-            <div class="agent-url">gdc.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>무위험 자산 담보 디지털 화폐</strong><br>판매자 실물 자산 기반 4중 헤징. 국경 없는 글로벌 결제.</p>
-        <div class="agent-inst">중앙은행 · 시중은행 · 결제 플랫폼</div>
-      </div>
-
-      <div class="agent-card reveal" style="transition-delay:.20s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://tax.gopang.net" target="_blank">K-Tax ↗</a>
-            <div class="agent-url">tax.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 세무</strong><br>거래 재무제표 실시간 자동 생성·신고. 국가별 세무 규정 자동 적용. 관세·부가세 계산.</p>
-        <div class="agent-inst">국세청 · 세관 · 지방세 담당기관</div>
-      </div>
-
-      <div class="agent-card reveal" style="transition-delay:.25s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://insurance.gopang.net" target="_blank">K-Insurance ↗</a>
-            <div class="agent-url">insurance.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 보험</strong><br>실거래 데이터 기반 개인화 보험료 자동 산정. 청구·심사·지급 자동화. PDV 기반 계약 관리.</p>
-        <div class="agent-inst">보험사 · 금융감독원 · 건강보험공단</div>
-      </div>
-
-      <div class="agent-card reveal" style="transition-delay:.30s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://health.gopang.net" target="_blank">K-Health ↗</a>
-            <div class="agent-url">health.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 병원</strong><br>실거래 기반 건강 위험도 실시간 산정. 개인화 보험료 자동 계산. 의료 기록 PDV 보존.</p>
-        <div class="agent-inst">병원 · 건강보험공단 · 의료보험사</div>
-      </div>
-
-      <div class="agent-card reveal" style="transition-delay:.35s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://school.gopang.net" target="_blank">K-School ↗</a>
-            <div class="agent-url">school.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 대학</strong><br>강의·연구·행정을 AI 쌍둥이로 구현. 학위 검증 PDV 기록. 100개 언어 실시간 교육.</p>
-        <div class="agent-inst">대학교 · 교육부 · 연구기관</div>
-      </div>
-
-      <div class="agent-card reveal" style="transition-delay:.40s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://public.gopang.net" target="_blank">K-Gov ↗</a>
-            <div class="agent-url">public.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 도청·시청</strong><br>민원·행정·허가를 AI 자동 처리. 규제 변경 자동 적용. 스마트 계약 기반 공공 서비스.</p>
-        <div class="agent-inst">도청 · 시청 · 행정안전부</div>
-      </div>
-
-      <div class="agent-card reveal" style="transition-delay:.45s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://security.gopang.net" target="_blank">K-Security ↗</a>
-            <div class="agent-url">security.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>고팡 보안 시스템</strong><br>고팡의 사용자 ID, PDV(개인 데이터 금고), 인증 시스템을 보호합니다. 이상 로그인 탐지, 기기 변경 감지, 4단계 추가 인증 등 고팡 생태계 전체의 보안을 전담합니다.</p>
-        <div class="agent-inst">ID 보안 · PDV 보호 · 인증 이상 탐지</div>
-      </div>
-
-      <div class="agent-card reveal" style="transition-delay:.50s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://police.gopang.net" target="_blank">K-Police ↗</a>
-            <div class="agent-url">police.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 치안</strong><br>실시간 범죄 예측·대응 자동화. 순찰 경로 최적화. 디지털 증거 OpenHash 보존.</p>
-        <div class="agent-inst">경찰청 · 지방경찰청 · 자치경찰</div>
-      </div>
-
-      <div class="agent-card reveal" style="transition-delay:.55s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://democracy.gopang.net" target="_blank">K-Democracy ↗</a>
-            <div class="agent-url">democracy.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 민주주의</strong><br>고팡의 운영 원칙과 규칙을 제안·심의·의결하는 플랫폼. 누구나 안건을 제안하고, 공헌도에 비례한 투표권으로 결정하며, 결과는 OpenHash에 영구 기록됩니다.</p>
-        <div class="agent-inst">선거관리위원회 · 국회 · 지방의회</div>
-      </div>
-
-      <div class="agent-card reveal" style="transition-delay:.60s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://911.gopang.net" target="_blank">K-911 ↗</a>
-            <div class="agent-url">911.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 긴급구조</strong><br>신고 접수부터 현장 출동까지 0.8mS 자동 디스패치. 재난 대응 자원 실시간 최적 배분.</p>
-        <div class="agent-inst">소방청 · 해양경찰 · 응급의료센터</div>
-      </div>
-
-      <div class="agent-card reveal" style="transition-delay:.65s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://stock.gopang.net" target="_blank">K-Stock ↗</a>
-            <div class="agent-url">stock.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 자산관리</strong><br>주식·채권·부동산·암호화폐·원자재 등 89개 자산군 실시간 분석. 개인 맞춤형 포트폴리오·절세 시뮬레이션. PDV 기록.</p>
-        <div class="agent-inst">증권사 · 자산운용사 · 금융위원회</div>
-      </div>
-
-      <div class="agent-card reveal" style="transition-delay:.70s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://traffic.gopang.net" target="_blank">K-Traffic ↗</a>
-            <div class="agent-url">traffic.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 교통</strong><br>실시간 교통 흐름 예측·신호 자동 최적화. 자율주행 인프라 연동. 사고·정체 0.8mS 감지 및 우회 경로 자동 안내.</p>
-        <div class="agent-inst">국토교통부 · 도로공사 · 지방경찰청</div>
-      </div>
-
-      <div class="agent-card reveal" style="transition-delay:.75s">
-        <div class="agent-card-top">
-          <div>
-            <a class="agent-name agent-link" href="https://logistics.gopang.net" target="_blank">K-Logistics ↗</a>
-            <div class="agent-url">logistics.gopang.net</div>
-          </div>
-        </div>
-        <p class="agent-desc"><strong>AI 물류</strong><br>주문-출고-배송-반품 전 과정 자동화. 재고·운송·창고를 AI가 실시간 최적 배분. OpenHash 배송 증빙 불변 기록.</p>
-        <div class="agent-inst">물류센터 · 택배사 · 관세청</div>
-      </div>
-
     </div>
+
+    <!-- 맺음말: 공존 시나리오 -->
+    <div class="reveal" style="margin-top:28px;padding:20px 26px;background:var(--bg-subtle);border-left:4px solid var(--brand);border-radius:var(--radius);font-size:13px;color:var(--text2);line-height:1.8">
+      ⚖️ K‑Law는 법원을 대체하는 것이 아니라, <strong>국민의 알 권리와 사법 접근성을 획기적으로 높이는 도구</strong>로 기능할 것입니다. 법원은 여전히 최종적 분쟁 해결 기관으로서의 역할을 유지하되, K‑Law는 예측 가능성을 제공하여 소송 이전의 조정·화해를 촉진하는 역할을 담당할 것입니다.
+    </div>
+
   </div>
 </section>
-
-<hr class="sep">
-
-<!-- ── K‑Law Impact: AI 평행 세계가 바꾸는 사법 시스템 ── -->
-<hr class="sep">
 
 </body>
 </html>

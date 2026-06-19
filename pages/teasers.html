@@ -1,0 +1,78 @@
+<div class="teasers-wrap reveal">
+<style>
+.teasers-wrap { max-width: 1080px; margin: 0 auto; padding: 90px 24px 100px; }
+.teasers-head { text-align: center; margin-bottom: 48px; }
+.teasers-tag {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 14px; border-radius: 99px;
+  background: var(--bg-subtle, #f1f3f5); border: 1px solid var(--border2, #d1d5db);
+  font-family: 'Pretendard', sans-serif; font-size: 11.5px; font-weight: 500;
+  color: var(--text3, #374151); letter-spacing: .4px; margin-bottom: 16px;
+}
+.teasers-tag::before { content:''; width:6px; height:6px; border-radius:50%; background: var(--brand, #3ecf8e); }
+.teasers-head h2 { font-size: 26px; font-weight: 800; color: var(--text, #0f172a); letter-spacing: -0.5px; margin: 0; }
+
+.teasers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 760px) { .teasers-grid { grid-template-columns: 1fr; } }
+
+.teaser-card {
+  background: var(--surface, #fff); border: 1px solid var(--border, #e5e7eb);
+  border-radius: 16px; padding: 32px 30px; box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.05));
+  display: flex; flex-direction: column;
+}
+.teaser-icon {
+  width: 44px; height: 44px; border-radius: 12px; margin-bottom: 18px;
+  background: var(--brand-bg, #f0fdf8); color: var(--brand-dk, #1a9e6a);
+  display: flex; align-items: center; justify-content: center;
+}
+.teaser-card h3 { font-size: 18px; font-weight: 700; color: var(--text, #0f172a); margin: 0 0 10px; }
+.teaser-card p { font-size: 13.8px; color: var(--text2, #1e293b); line-height: 1.75; margin: 0 0 24px; flex: 1; }
+.teaser-btn {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 20px; border-radius: 99px; border: none; cursor: pointer;
+  background: var(--brand, #3ecf8e); color: #fff; font-size: 13.5px; font-weight: 700;
+  font-family: 'Pretendard', sans-serif; transition: background .15s;
+}
+.teaser-btn:hover { background: var(--brand-dk, #1a9e6a); }
+</style>
+
+  <div class="teasers-head reveal">
+    <div class="teasers-tag">EXPLORE MORE</div>
+    <h2>더 알아보기</h2>
+  </div>
+
+  <div class="teasers-grid">
+    <div class="teaser-card reveal">
+      <div class="teaser-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="7" r="3"/><path d="M2 21v-1a6 6 0 0 1 12 0v1"/>
+          <circle cx="18" cy="9" r="2.5"/><path d="M15.5 21v-1a4 4 0 0 1 6.2-3.3"/>
+        </svg>
+      </div>
+      <h3>나만의 AI 비서</h3>
+      <p>
+        사용 기간이 길어질수록 나를 이해하는 전용 AI 비서로 성장합니다. System Prompt를
+        직접 설정하고, 원하는 LLM 모델을 연결해 내 손으로 훈련시켜보세요.
+      </p>
+      <button class="teaser-btn" onclick="loadPage('ai-setup')">
+        AI 비서 설정하러 가기 →
+      </button>
+    </div>
+
+    <div class="teaser-card reveal">
+      <div class="teaser-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M8 13a3 3 0 0 0 6 0"/>
+        </svg>
+      </div>
+      <h3>혼디장</h3>
+      <p>
+        애플 앱스토어처럼, 누구나 만든 AI Webapp을 등록하고 거래하는 장터입니다.
+        오픈소스로 공개하고, 이용 1회당 과금되는 나만의 Webapp을 직접 등록해보세요.
+      </p>
+      <button class="teaser-btn" onclick="loadPage('hondi-market')">
+        혼디장 둘러보기 →
+      </button>
+    </div>
+  </div>
+</div>
