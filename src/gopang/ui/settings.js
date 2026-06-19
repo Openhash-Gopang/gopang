@@ -305,7 +305,7 @@ export async function _autoApplyPcSyncedSetting() {
     console.info('[AI설정][자동] 복호화 성공 — provider:', parsed.provider, 'model:', parsed.model);
     await _acceptPcSyncedSetting(parsed, guid, { silent: true });
 
-    _enqueueBubble('ai', 'PC로부터 AI 키 도착. 자동 설정 완료.');
+    _enqueueBubble('ai', 'PC로부터 AI 키 도착 및 설정 완료. 상단 AI 버튼을 클릭하여, 자신 만의 AI 비서로 훈련하십시오.');
     console.info('[AI설정][자동] 적용 완료');
   } catch(e) {
     console.error('[AI설정][자동] 처리 중 오류:', e.message, e.stack);
