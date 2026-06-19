@@ -1216,6 +1216,15 @@ async function handleAiSetupSealPost(request, env, corsHeaders) {
     return _err(502, 'KV_ERROR', 'KV 저장 실패: ' + e.message, corsHeaders);
   }
 
+  // PC가 키 전송을 완료한 "이 순간"이 트리거 — 휴대폰이 화면을 보고 있지 않아도
+  // 즉시 푸시 알림을 보내 자동 동기화를 깨운다 (polling 불필요).
+  _sendPushToGuid(env, guid, {
+    title: 'AI 비서 설정',
+    body:  'PC에서 보낸 설정을 적용하는 중입니다.',
+    tag:   'gopang-ai-setup-' + guid.slice(-8),
+    url:   '/webapp.html',
+  }).catch(e => console.warn('[AI Setup] 푸시 트리거 실패 (무시):', e.message));
+
   return new Response(JSON.stringify({ ok: true, expires_at: expiresAt }),
     { status: 200, headers: corsHeaders });
 }
