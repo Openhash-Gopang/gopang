@@ -1069,7 +1069,7 @@ async function handleWalletX25519Get(request, env, corsHeaders) {
   if (!pubkey) {
     return new Response(JSON.stringify({
       ok: false, registered: false,
-      message: '이 사용자는 아직 휴대폰에서 AI 설정 창을 연 적이 없습니다. 휴대폰 웹앱 → 설정 → AI 설정을 먼저 열어 주세요.',
+      message: '암호화 키가 아직 준비되지 않았습니다. 휴대폰에서 고팡 앱을 한 번 완전히 종료한 뒤 다시 열어 주세요. (가입이 안 되어 있다면 먼저 가입을 완료해 주세요.)',
     }), { status: 200, headers: corsHeaders });
   }
   return new Response(JSON.stringify({ ok: true, registered: true, x25519_pubkey: pubkey }),

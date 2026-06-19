@@ -179,7 +179,7 @@
       const res  = await fetch(`${WORKER_URL}/wallet/x25519?guid=${encodeURIComponent(guid)}`);
       const data = await res.json();
       if (!data.ok || !data.registered) {
-        authMsg.innerHTML = (data.message || '먼저 휴대폰에서 고팡 웹앱 → 설정 → AI 설정을 한 번 열어 주세요.') +
+        authMsg.innerHTML = (data.message || '암호화 키가 아직 준비되지 않았습니다. 휴대폰에서 고팡 앱을 다시 열어 주세요.') +
           '<br><span style="font-size:11px">(휴대폰이 암호화 키를 자동으로 만들어야 PC에서 전송할 수 있습니다.)</span>';
         authMsg.style.display = 'block'; return;
       }
