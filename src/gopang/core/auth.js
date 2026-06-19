@@ -8,6 +8,7 @@
 import { setUser, _USER, USER_GUID, L1_URL, PROXY } from './state.js';
 const PROXY_URL = PROXY;
 import { appendBubble } from '../ui/bubble.js';
+import { requestPushSubscription } from '../services/push.js';
 
 const STORE_KEY = 'gopang_user_v4';
 const DEFAULT_COUNTRY = 'KR';
@@ -943,6 +944,18 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
       }
 
       resolve(user);
+
+      // 가입 완료 시점에 푸시 알림 권한 요청 — 결과를 채팅에 안내
+      // (가입 완료를 막지 않도록 resolve 이후 비동기로 처리)
+      requestPushSubscription(ipv6).then(pushResult => {
+        if (!document.getElementById('message-list')) return; // 화면 전환 전이면 조용히 스킵
+        if (pushResult.ok) {
+          appendBubble('ai', '🔔 알림이 활성화되었습니다. PC에서 AI 키를 보내면 실시간으로 알려드릴게요.');
+        } else if (pushResult.reason === 'permission_denied') {
+          appendBubble('ai', '🔔 알림 권한이 꺼져 있어요. PC에서 보낸 메시지를 실시간으로 받으려면 브라우저 설정 → 알림에서 고팡을 허용해 주세요.');
+        }
+        // unsupported/guid_missing 등은 사용자가 할 수 있는 게 없으므로 조용히 무시
+      }).catch(() => {});
 
     } catch(e) {
       nickErr.textContent = '네트워크 오류. 다시 시도해 주세요.';
