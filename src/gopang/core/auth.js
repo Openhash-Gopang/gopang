@@ -916,11 +916,32 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
       // name: nickname, phone: e164, is_public: 토글 값
       _createMinimalProfile({ ipv6, handle, nickname, e164, isPublic:
         document.getElementById('_is-public-chk')?.checked ?? true
-      }).then(() => {
+      }).then((profileResult) => {
+        console.info('[가입] _createMinimalProfile 완료:', profileResult);
         // ── X25519 키 생성 + 서버 등록 (PC가 핸들 검색으로 LLM Key를 보낼 수 있도록) ──
         // user_profiles row가 생성된 뒤 시도 (TOFU 검증 대상이 존재해야 함)
         return ensureX25519Synced(ipv6);
-      }).catch(e => console.warn('[X25519] 가입 시 키 동기화 실패 (무시):', e.message));
+      }).then((syncResult) => {
+        if (syncResult?.ok) {
+          console.info('[가입][X25519] 키 동기화 성공:', syncResult.publicKeyB64u?.slice(0, 16) + '...');
+        } else {
+          console.error('[가입][X25519] 키 동기화 실패 — reason:', syncResult?.reason || '(알 수 없음)');
+          // 3초 후 1회 재시도 — 서버 측 row 생성 지연(race condition) 대응
+          setTimeout(async () => {
+            console.info('[가입][X25519] 재시도 시작...');
+            try {
+              const retryResult = await ensureX25519Synced(ipv6);
+              if (retryResult?.ok) {
+                console.info('[가입][X25519] 재시도 성공');
+              } else {
+                console.error('[가입][X25519] 재시도도 실패 — reason:', retryResult?.reason || '(알 수 없음)');
+              }
+            } catch(e2) {
+              console.error('[가입][X25519] 재시도 중 예외:', e2.message);
+            }
+          }, 3000);
+        }
+      }).catch(e => console.error('[가입][X25519] 체인 전체 실패 (프로필 생성 단계 포함):', e.message, e.stack));
 
       resolve(user);
 
