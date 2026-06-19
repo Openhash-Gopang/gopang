@@ -195,6 +195,11 @@ export default {
       if (request.method === 'GET')  return handleWalletX25519Get(request, env, corsHeaders);
       if (request.method === 'POST') return handleWalletX25519Post(request, env, corsHeaders);
     }
+    // 계정 완전 삭제 시 Supabase user_profiles row도 함께 정리 (L1과 별도 저장소이므로 누락되면
+    // pubkey_ed25519/x25519 TOFU 키가 남아 재가입 시 PUBKEY_MISMATCH 발생)
+    if (pathname === '/account/full-reset' && request.method === 'POST') {
+      return handleAccountFullReset(request, env, corsHeaders);
+    }
     if (pathname === '/ai-setup/seal') {
       if (request.method === 'GET')  return handleAiSetupSealGet(request, env, corsHeaders);
       if (request.method === 'POST') return handleAiSetupSealPost(request, env, corsHeaders);
@@ -1086,6 +1091,61 @@ async function handleWalletX25519Post(request, env, corsHeaders) {
 
   return new Response(JSON.stringify({ ok: true, already_registered: false, x25519_pubkey }),
     { status: 200, headers: corsHeaders });
+}
+
+
+// POST /account/full-reset — 계정 완전 삭제 시 Supabase user_profiles row 삭제
+// body: { guid, ed25519_pubkey, signature, ts }
+// 서명 대상: `full-reset:${guid}:${ts}` — 기존 등록된 ed25519 키로 서명해야 본인 확인됨
+// (등록된 키가 없는 경우 — 즉 가입 직후 한 번도 X25519 설정을 안 한 계정 —는 서명 검증 없이 허용)
+async function handleAccountFullReset(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, ed25519_pubkey, signature, ts } = body;
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const sbH = _sbHeaders(env);
+  let existRes;
+  try {
+    existRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=pubkey_ed25519&limit=1`,
+      { headers: sbH }
+    );
+  } catch (e) {
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+  }
+  const existRows = await existRes.json().catch(() => []);
+  const knownEdPubkey = existRows?.[0]?.pubkey_ed25519;
+
+  // 기존에 등록된 키가 있으면 서명으로 본인 확인 (탈취 방지)
+  if (knownEdPubkey) {
+    if (!ed25519_pubkey || !signature) {
+      return _err(400, 'MISSING_FIELD', '본인 확인을 위해 ed25519_pubkey/signature가 필요합니다', corsHeaders);
+    }
+    if (knownEdPubkey !== ed25519_pubkey) {
+      return _err(403, 'PUBKEY_MISMATCH', '등록된 공개키와 일치하지 않습니다', corsHeaders);
+    }
+    const sigMsg = `full-reset:${guid}:${ts || ''}`;
+    const sigOk  = await _verifyEd25519Simple(ed25519_pubkey, signature, sigMsg);
+    if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+  }
+
+  const sbServiceH = _sbServiceHeaders(env);
+  let delRes;
+  try {
+    delRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
+      method: 'DELETE',
+      headers: sbServiceH,
+    });
+  } catch (e) {
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!delRes.ok) {
+    const errText = await delRes.text().catch(() => '');
+    return _err(502, 'SUPABASE_ERROR', `DB 삭제 실패 (HTTP ${delRes.status}): ${errText}`, corsHeaders);
+  }
+
+  return new Response(JSON.stringify({ ok: true, deleted: true }), { status: 200, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════

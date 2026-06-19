@@ -1016,8 +1016,8 @@ export async function _deviceLocalReset() {
 // ── 계정 완전 삭제 (L1 레코드 + 로컬 모두 삭제, 판매·양도용) ──
 export async function _deviceFullReset() {
   if (!confirm('계정을 완전히 삭제합니다.\n판매·양도 전 실행하세요.\n\n⚠️ 서버 기록까지 삭제되며 복원이 불가능합니다.')) return;
+  const stored = _loadStored();
   try {
-    const stored = _loadStored();
     if (stored?.ipv6) {
       const filter = encodeURIComponent(`guid='${stored.ipv6}'`);
       const res    = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
@@ -1028,6 +1028,28 @@ export async function _deviceFullReset() {
       }
     }
   } catch(e) { console.warn('[Reset] L1 삭제 실패:', e.message); }
+
+  // ── Supabase user_profiles row도 함께 삭제 (X25519/Ed25519 TOFU 키 포함) ──
+  // L1과 별도 저장소이므로 누락 시 재가입 후 PUBKEY_MISMATCH가 발생함
+  try {
+    if (stored?.ipv6) {
+      let resetBody = { guid: stored.ipv6 };
+      if (typeof window.GopangWallet !== 'undefined') {
+        const wallet = await window.GopangWallet.load().catch(() => null);
+        if (wallet?.publicKeyB64u && typeof wallet.signPayload === 'function') {
+          const ts = Date.now();
+          const signature = await wallet.signPayload(`full-reset:${stored.ipv6}:${ts}`);
+          resetBody = { guid: stored.ipv6, ed25519_pubkey: wallet.publicKeyB64u, signature, ts };
+        }
+      }
+      await fetch(`${PROXY_URL}/account/full-reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(resetBody),
+      });
+    }
+  } catch(e) { console.warn('[Reset] Supabase 삭제 실패:', e.message); }
+
   await _clearLocalData();
 }
 
