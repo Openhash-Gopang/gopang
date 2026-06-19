@@ -1399,7 +1399,7 @@ async function _l1SignalPoll(guid) {
   // 문제가 있었다. PocketBase에 직접 조회하면 최신 데이터가 보이는데
   // 워커를 거치면 비어있던 게 정확히 이 캐시 문제였다.
   const res    = await fetch(
-    `${L1_SIGNAL_URL}?filter=${filter}&sort=created&perPage=20&_ts=${Date.now()}`,
+    `${L1_SIGNAL_URL}?filter=${filter}&sort=-created&perPage=40&_ts=${Date.now()}`,
     { headers: { 'Content-Type': 'application/json' }, cache: 'no-store' }
   );
   if (!res.ok) throw new Error(`L1 signal poll ${res.status}`);
