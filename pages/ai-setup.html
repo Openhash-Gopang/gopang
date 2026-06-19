@@ -30,8 +30,8 @@
     <!-- 안내 배너 -->
     <div style="background:var(--brand-bg);border:1px solid var(--brand-lt);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:24px">
       <p style="font-size:13px;color:var(--brand-dk);line-height:1.7;margin:0">
-        🌐 <b>OpenRouter</b>는 키 하나로 DeepSeek R1, Llama 4, Qwen3 등 <b>28개 이상의 무료 AI 모델</b>을 이용할 수 있는 서비스입니다. 카드 등록이 필요 없습니다.<br>
-        🔄 무료 한도가 차면 <b>다음 모델로 자동 전환</b>되어 AI 비서가 끊기지 않고 계속 동작합니다.<br>
+        🌐 <b>OpenRouter</b>는 키 하나로 DeepSeek, Llama, Qwen 등 <b>여러 개의 무료 AI 모델</b>을 이용할 수 있는 서비스입니다. 카드 등록이 필요 없습니다.<br>
+        🔄 전송 시점에 <b>현재 가용한 무료 모델을 실시간으로 확인</b>하여 자동 구성하고, 한도가 차면 다음 모델로 전환되어 AI 비서가 끊기지 않고 계속 동작합니다.<br>
         🔒 입력하신 Key는 <b>이 화면에서 즉시 암호화</b>되어 전송됩니다. 고팡 서버는 평문 Key를 절대 볼 수 없습니다.
       </p>
     </div>
@@ -49,8 +49,8 @@
         <li>아래 입력칸에 붙여넣고 전송 버튼을 누르세요</li>
       </ol>
       <div style="margin-top:12px;font-size:12px;color:var(--text4);background:var(--bg);border-radius:8px;padding:10px 12px;line-height:1.7">
-        ※ 무료 티어: 분당 20 요청 / 일 50 요청<br>
-        ※ 자동 순환 모델: DeepSeek R1 → DeepSeek V3 → Llama 4 Scout → Qwen3 Coder → Gemini Flash<br>
+        ※ 무료 티어: 분당 20 요청 / 일 200 요청<br>
+        ※ 자동 순환 모델: 전송 시점에 OpenRouter에서 <b>현재 실제로 무료인 모델</b>을 실시간으로 확인하여 자동 구성합니다<br>
         ※ 무료 모델은 입력 데이터가 제공사 학습에 사용될 수 있으므로 민감한 개인정보는 입력하지 마세요.
       </div>
     </div>
@@ -102,14 +102,66 @@
 (function(){
   const WORKER_URL = 'https://gopang-proxy.tensor-city.workers.dev';
 
-  // OpenRouter 무료 모델 순환 풀 — call-ai.js 페일오버와 동일 순서
-  const OR_FREE_MODELS = [
+  // OpenRouter 무료 모델 우선순위 + 최종 폴백 목록.
+  // 가입 시점에 _buildLiveFreeModelPool()이 OpenRouter 공개 카탈로그를 조회해
+  // "현재 실제로 무료인" 모델만 골라내며, 이 목록은 그 순위 기준이자
+  // 조회 자체가 실패했을 때 쓰는 안전망이다. (단종 모델 포함 가능성 있음 — 그래서
+  // 정적 목록만 믿지 않고 실시간 검증을 거친다.)
+  const OR_FREE_MODELS_FALLBACK = [
     'deepseek/deepseek-r1:free',
     'deepseek/deepseek-chat-v3-5:free',
     'meta-llama/llama-4-scout:free',
     'qwen/qwen3-coder:free',
     'google/gemini-flash-1.5:free',
   ];
+
+  // ── 무료 모델 풀 실시간 검증 ──────────────────────────────
+  // OpenRouter는 무료(:free) 모델을 수시로 추가/제거한다. 고정 리스트만 믿으면
+  // 단종된 모델 때문에 call-ai.js의 페일오버 체인이 막히는 문제가 재발할 수 있다.
+  // 그래서 가입(키 등록) 시점에 OpenRouter의 공개 모델 카탈로그
+  // (/api/v1/models, 인증 불필요·과금 없음)를 조회해 "현재 실제로 무료인 모델"만
+  // 골라 풀을 구성한다.
+  //   1) 우선순위 목록(OR_FREE_MODELS_FALLBACK) 중 현재도 무료인 것만 채택
+  //   2) 우선순위 목록에 없는 새 무료 모델이 있으면 뒤에 추가(향후 신규 모델 자동 포함)
+  //   3) 조회 자체가 실패하면(네트워크/CORS 등) 안전하게 정적 목록으로 폴백
+  async function _buildLiveFreeModelPool() {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/models');
+      if (!res.ok) throw new Error(`models API ${res.status}`);
+      const data = await res.json();
+      const all = Array.isArray(data?.data) ? data.data : [];
+      if (all.length === 0) throw new Error('모델 목록 비어있음 — 응답 형식 변경 추정');
+
+      const isFree = (m) =>
+        typeof m?.id === 'string' && (
+          m.id.endsWith(':free') ||
+          (m.pricing && m.pricing.prompt === '0' && m.pricing.completion === '0')
+        );
+
+      const liveFreeIds = new Set(all.filter(isFree).map(m => m.id));
+      if (liveFreeIds.size === 0) throw new Error('무료 모델 0개 — 응답 형식 변경 추정');
+
+      // 1) 우선순위 목록 중 현재도 살아있는 것만, 순서 유지
+      const ranked = OR_FREE_MODELS_FALLBACK.filter(id => liveFreeIds.has(id));
+
+      // 2) 우선순위 목록에 없는 신규 무료 모델 추가 (라우터형 id는 제외)
+      const known = new Set(OR_FREE_MODELS_FALLBACK);
+      const discovered = [...liveFreeIds].filter(id => !known.has(id) && id !== 'openrouter/free');
+
+      let pool = [...ranked, ...discovered].slice(0, 40);
+      if (pool.length === 0) throw new Error('교차 검증된 무료 모델 0개');
+
+      // 자동 무료모델 라우터는 최종 안전망으로 항상 마지막에 위치
+      pool = pool.filter(id => id !== 'openrouter/free');
+      pool.push('openrouter/free');
+
+      console.info(`[AI설정] 무료 모델 실시간 검증 완료 — ${pool.length}개 (우선순위:${ranked.length}, 신규발견:${discovered.length})`);
+      return { pool, validated: true };
+    } catch (e) {
+      console.warn('[AI설정] 무료 모델 실시간 검증 실패 — 정적 목록으로 폴백:', e.message);
+      return { pool: OR_FREE_MODELS_FALLBACK, validated: false, error: e.message };
+    }
+  }
 
   // ── X25519 + AES-256-GCM 봉인 (PC 전용 인라인 구현) ──
   function _bufToB64u(buf) {
@@ -229,14 +281,18 @@
     }
 
     addBtn.disabled = true;
+    addBtn.textContent = '무료 모델 가용성 확인 중…';
+
+    const { pool: freeModelPool, validated, error: validateErr } = await _buildLiveFreeModelPool();
+
     addBtn.textContent = '암호화 중…';
 
     try {
       const sysPrompt = sysPromptInput.value.trim();
       const payload = JSON.stringify({
         provider: 'openrouter',
-        model: OR_FREE_MODELS[0],
-        freeModelPool: OR_FREE_MODELS,
+        model: freeModelPool[0],
+        freeModelPool,
         apiKey: key,
         systemPrompt: sysPrompt || undefined,
       });
@@ -257,6 +313,9 @@
       keyInput.value = '';
       sysPromptInput.value = '';
       sentModalBody.innerHTML =
+        (validated
+          ? `🔎 현재 활성 무료 모델 <b>${freeModelPool.length}개</b>를 실시간으로 확인했습니다.<br>`
+          : `⚠️ 모델 가용성을 실시간으로 확인하지 못해 기본 목록(${freeModelPool.length}개)을 사용했습니다.<br>`) +
         'OpenRouter 설정이 휴대폰으로 전송되었습니다.<br>' +
         '휴대폰에서 <b>AI 설정</b>을 열어 확인 후 등록을 완료해 주세요.<br>' +
         '<span style="font-size:12px;color:var(--text4)">(5분 내 미확인 시 자동 폐기)</span>';
