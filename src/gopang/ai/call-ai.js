@@ -280,17 +280,12 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
 
         if (attempt.ok) { res = attempt; usedCandidate = c; break; }
 
-        // 한도 초과(429) 또는 크레딧/결제 부족(402) → 다음 후보로 페일오버
-        if (attempt.status === 429 || attempt.status === 402) {
-          const errBody = await attempt.text().catch(() => '');
-          console.warn(`[AI] ${c.provider} 한도 초과(${attempt.status}) — 다음 LLM으로 전환:`, errBody.slice(0, 150));
-          lastErr = new Error(`API ${attempt.status}: ${errBody.slice(0, 300) || '응답없음'}`);
-          continue;
-        }
-
-        // 그 외 오류는 즉시 실패 처리
+        // 실패(429/402/404/400/5xx 등 모든 상황) → 다음 후보로 항상 페일오버
+        // (단종된 모델일 때도, 한도 초과도, 일시 장애도 어떻든 다음 LLM을 시도한다)
         const errBody = await attempt.text().catch(() => '');
-        throw new Error(`API ${attempt.status}: ${errBody.slice(0, 300) || '응답없음'}`);
+        lastErr = new Error(`API ${attempt.status}: ${errBody.slice(0, 300) || '응답없음'}`);
+        console.warn(`[AI] ${c.provider}(${c.model}) 실패(${attempt.status}) — 다음 LLM으로 전환:`, errBody.slice(0, 150));
+        continue;
       } catch (fetchErr) {
         lastErr = fetchErr;
         // 네트워크 오류 등도 다음 후보가 있으면 계속 시도
