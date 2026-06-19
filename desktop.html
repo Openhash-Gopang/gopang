@@ -844,6 +844,18 @@ body {
       </svg>
       <span class="sb-item-label">성능 · 비교</span>
     </a>
+    <a class="sb-item" id="nav-ai-setup" onclick="loadPage('ai-setup');return false;" href="#">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.07-7.07-4.24 4.24M11.17 18.83l-4.24 4.24m12.14 0-4.24-4.24M7.93 7.93 3.69 3.69"/>
+      </svg>
+      <span class="sb-item-label">AI 비서 설정</span>
+    </a>
+    <a class="sb-item" id="nav-teasers" onclick="loadPage('teasers');return false;" href="#">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+      <span class="sb-item-label">티저</span>
+    </a>
     <a class="sb-item" id="nav-hondi-market" onclick="loadPage('hondi-market');return false;" href="#">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M8 13a3 3 0 0 0 6 0"/>
@@ -937,7 +949,7 @@ body {
 
   <!-- 하단: 앱 실행 -->
   <div class="sb-section bottom">
-    <button class="sb-cta" id="nav-ai-setup" onclick="loadPage('ai-setup')" style="background:var(--brand);margin-bottom:8px">
+    <button class="sb-cta" onclick="loadPage('ai-setup')" style="background:var(--brand);margin-bottom:8px">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.07-7.07-4.24 4.24M11.17 18.83l-4.24 4.24m12.14 0-4.24-4.24M7.93 7.93 3.69 3.69"/>
       </svg>
@@ -1261,8 +1273,8 @@ body {
 <script>
 // ── SPA 라우터 ────────────────────────────────────────────
 // ── 섹션 순서 정의 (스크롤 순서) ───────────────────────────────
-const PAGE_ORDER = ['overview','klaw','openhash','agents','ai-types','metrics','teasers'];
-const STANDALONE_PAGES = ['ai-setup','hondi-market'];  // 스크롤 체인 밖 — 단독 표시
+const PAGE_ORDER = ['overview'];
+const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','metrics','teasers','ai-setup','hondi-market'];  // 모두 단독 오버레이로 표시
 const PAGES = {
   overview:       '/pages/overview.html',
   klaw:           '/pages/klaw.html',
