@@ -19,6 +19,13 @@ export function toggleAI() {
     appendBubble('system', 'AI 비서 비활성화됨.');
     return;
   }
+  // 키가 이미 등록된 경우 팝업 없이 즉시 활성화
+  const providerCount = Array.isArray(CFG.providers) ? CFG.providers.length : 0;
+  const hasKey = !!(CFG.apiKey || CFG.geminiKey || providerCount > 0);
+  if (hasKey) {
+    activateAI(false);
+    return;
+  }
   _showAISetupPopup();
 }
 
