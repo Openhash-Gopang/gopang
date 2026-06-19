@@ -226,8 +226,12 @@ const _boot = async () => {
 
   // 4-8. 등록 사용자 → 시그널 폴링 자동 시작
   if (_isRegistered()) {
-    _startSignalPoll();
-    console.info('[Signal] 자동 폴링 시작 (등록 사용자)');
+    // _startSignalPoll() 비활성화 — webrtc.js의 레거시 _handleOffer/_handleSignal이
+    // p2p-chat.js의 객체 payload({sdp, from_handle})를 JSON.parse()하다가 크래시함.
+    // offer/answer는 영구 jam(삭제 안 됨), ice는 파싱 실패한 채로 삭제되어 증발.
+    // 모든 시그널 처리는 startIncomingWatch (p2p-chat.js) 단일 경로로 통일.
+    // _startSignalPoll();
+    console.info('[Signal] 레거시 폴링 비활성화 — p2p-chat.js Realtime/폴링 단일화');
 
     // GDUDA Phase 1 — incoming offer 감시
     if (_USER?.ipv6) startIncomingWatch(_USER.ipv6);

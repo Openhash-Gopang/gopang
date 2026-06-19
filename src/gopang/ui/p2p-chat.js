@@ -93,12 +93,16 @@ function _watchAnswerRealtime(conn, peerGuid) {
     let msg; try { msg = JSON.parse(data); } catch { return; }
 
     if (msg.event === 'phx_reply' && msg.payload?.status === 'ok') {
-      wsOk = true;
-      console.info('[P2P] 발신측 WS 구독 완료 ✓');
+      console.info('[P2P] 발신측 WS 구독 완료 (대기 중) — 실제 데이터 수신 시 폴링 비활성화');
     }
 
     const row = msg.payload?.data?.record ?? msg.payload?.record ?? null;
     if (!row || row.to_guid !== myGuid) return;
+
+    // 실제 매칭 시그널을 수신한 시점에만 폴백 폴링 비활성화.
+    // (L1 저장 구조에서는 Supabase Realtime이 구독은 성공해도 데이터가
+    //  오지 않으므로, 핸드셰이크 성공만으로 wsOk=true 하면 폴백이 영구 정지됨)
+    wsOk = true;
 
     if (row.type === 'answer' && row.from_guid === peerGuid) {
       try {
@@ -670,12 +674,14 @@ export function startIncomingWatch(myGuid) {
       let msg; try { msg = JSON.parse(data); } catch { return; }
 
       if (msg.event === 'phx_reply' && msg.payload?.status === 'ok') {
-        wsOk = true;
-        console.info('[P2P Realtime] Supabase WS 구독 완료 ✓');
+        console.info('[P2P Realtime] Supabase WS 구독 완료 (대기 중)');
       }
 
       const row = msg.payload?.data?.record ?? msg.payload?.record ?? null;
       if (!row || row.to_guid !== myGuid) return;
+
+      // 실제 매칭 데이터 수신 시에만 폴백 폴링 비활성화
+      wsOk = true;
 
       if (row.type === 'offer' && !_chatOverlay) {
         console.info('[P2P Realtime] offer 수신 → handleIncomingOffer');
