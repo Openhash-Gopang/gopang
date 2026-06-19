@@ -30,12 +30,24 @@ export function _showWelcomeMessage() {
   const handle   = _USER?.handle   || '';
 
   bubble.innerHTML = nickname
-    ? `안녕하세요, ${nickname}님 (${handle})<br>지시 대기 중.`
-    : '지시 대기 중.';
+    ? `안녕하세요, ${nickname}님 (${handle})`
+    : '안녕하세요.';
 
   row.appendChild(bubble);
   list.appendChild(label);
   list.appendChild(row);
+
+  // 사용자 안내 메시지
+  const guideRow = document.createElement('div');
+  guideRow.className = 'msg-row ai';
+
+  const guideBubble = document.createElement('div');
+  guideBubble.className = 'bubble bubble-ai';
+  guideBubble.textContent =
+    '사용자를 검색하여, 대화를 시작하십시오. 상단 AI 버튼으로 귀하 만의 AI 비서를 생성 및 훈련할 수 있습니다.';
+
+  guideRow.appendChild(guideBubble);
+  list.appendChild(guideRow);
 }
 
 // ── 입력 필드 ───────────────────────────────────────────

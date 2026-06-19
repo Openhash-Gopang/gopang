@@ -33,7 +33,7 @@ export function activateAI(silent = false) {
   document.getElementById('btn-ai')?.classList.add('active');
   const sub = document.getElementById('ai-card-sub');
   if (sub) sub.textContent = `${CFG.model} 연결됨`;
-  if (!silent) appendBubble('ai', '귀하의 AI 비서입니다. 지시하십시오.');
+  if (!silent) appendBubble('ai', '지시를 기다립니다.');
 }
 
 export function closeAI() {
@@ -93,7 +93,7 @@ function _showAISetupPopup() {
     if (CFG.apiKey || CFG.geminiKey || providerCount > 0) {
       setAiActive(true);
       document.getElementById('btn-ai')?.classList.add('active');
-      appendBubble('ai', '귀하의 AI 비서입니다. 지시하십시오.');
+      appendBubble('ai', '지시를 기다립니다.');
     }
   };
 }

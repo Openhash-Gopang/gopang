@@ -904,44 +904,43 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
       setUser(user);
       overlay.remove();
 
-      // ── PDV 초기 레코드 생성 (가입 완료 시 1회) ─────────────
-      // 가입 직후 pdv_log에 'user_register' 레코드를 남겨
-      // K-Tax 등이 fs가 null인 신규 사용자를 정상 식별 가능하게 함
+      // ── 암호키 등록 + 프로필 생성 (가입의 일부 — resolve 전 완료) ─────────
+      // 정책: 가입 즉시 Ed25519·X25519 키가 L1에 등록 완료되어야 한다.
+      // _createMinimalProfile: Supabase user_profiles에 Ed25519 공개키 등록
+      // ensureX25519Synced:    L1 profiles에 X25519 공개키 등록
+      // 두 단계 모두 await — 실패 시 3초 후 1회 재시도, 이후에도 가입은 진행(UX 차단 방지)
+      try {
+        await _createMinimalProfile({ ipv6, handle, nickname, e164, isPublic:
+          document.getElementById('_is-public-chk')?.checked ?? true
+        });
+        console.info('[가입] 프로필 생성 완료');
+      } catch(e) {
+        console.warn('[가입] 프로필 생성 실패 (무시):', e.message);
+      }
+
+      // PDV 초기 레코드 (비동기 — 가입 흐름 차단 불필요)
       _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountry }).catch(
         e => console.warn('[PDV] 가입 초기 레코드 실패 (무시):', e.message)
       );
 
-      // ── 최소 프로필 자동 생성 ────────────────────────────────
-      // entity_type: null (register-profile.html에서 선택)
-      // name: nickname, phone: e164, is_public: 토글 값
-      _createMinimalProfile({ ipv6, handle, nickname, e164, isPublic:
-        document.getElementById('_is-public-chk')?.checked ?? true
-      }).then((profileResult) => {
-        console.info('[가입] _createMinimalProfile 완료:', profileResult);
-        // ── X25519 키 생성 + 서버 등록 (PC가 핸들 검색으로 LLM Key를 보낼 수 있도록) ──
-        // user_profiles row가 생성된 뒤 시도 (TOFU 검증 대상이 존재해야 함)
-        return ensureX25519Synced(ipv6);
-      }).then((syncResult) => {
+      // X25519 키 생성 + L1 등록 — 가입 완료 전 동기 처리
+      let syncResult = await ensureX25519Synced(ipv6).catch(e => {
+        console.error('[가입][X25519] 예외:', e.message); return { ok: false };
+      });
+      if (!syncResult?.ok) {
+        console.warn('[가입][X25519] 1차 실패:', syncResult?.reason, '— 3초 후 재시도');
+        await new Promise(r => setTimeout(r, 3000));
+        syncResult = await ensureX25519Synced(ipv6).catch(e => {
+          console.error('[가입][X25519] 재시도 예외:', e.message); return { ok: false };
+        });
         if (syncResult?.ok) {
-          console.info('[가입][X25519] 키 동기화 성공:', syncResult.publicKeyB64u?.slice(0, 16) + '...');
+          console.info('[가입][X25519] 재시도 성공');
         } else {
-          console.error('[가입][X25519] 키 동기화 실패 — reason:', syncResult?.reason || '(알 수 없음)');
-          // 3초 후 1회 재시도 — 서버 측 row 생성 지연(race condition) 대응
-          setTimeout(async () => {
-            console.info('[가입][X25519] 재시도 시작...');
-            try {
-              const retryResult = await ensureX25519Synced(ipv6);
-              if (retryResult?.ok) {
-                console.info('[가입][X25519] 재시도 성공');
-              } else {
-                console.error('[가입][X25519] 재시도도 실패 — reason:', retryResult?.reason || '(알 수 없음)');
-              }
-            } catch(e2) {
-              console.error('[가입][X25519] 재시도 중 예외:', e2.message);
-            }
-          }, 3000);
+          console.error('[가입][X25519] 재시도도 실패:', syncResult?.reason, '— 가입은 계속 진행');
         }
-      }).catch(e => console.error('[가입][X25519] 체인 전체 실패 (프로필 생성 단계 포함):', e.message, e.stack));
+      } else {
+        console.info('[가입][X25519] 키 등록 완료:', syncResult.publicKeyB64u?.slice(0, 16) + '...');
+      }
 
       resolve(user);
 
@@ -1036,41 +1035,42 @@ export async function _deviceLocalReset() {
 
 // ── 계정 완전 삭제 (L1 레코드 + 로컬 모두 삭제, 판매·양도용) ──
 export async function _deviceFullReset() {
-  if (!confirm('계정을 완전히 삭제합니다.\n판매·양도 전 실행하세요.\n\n⚠️ 서버 기록까지 삭제되며 복원이 불가능합니다.')) return;
-  const stored = _loadStored();
-  try {
-    if (stored?.ipv6) {
-      const filter = encodeURIComponent(`guid='${stored.ipv6}'`);
-      const res    = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
-      if (res.ok) {
-        const data = await res.json();
-        const id   = data.items?.[0]?.id;
-        if (id) await fetch(`${L1_URL}/${id}`, { method: 'DELETE' });
-      }
-    }
-  } catch(e) { console.warn('[Reset] L1 삭제 실패:', e.message); }
+  if (!confirm(
+    '계정을 완전히 삭제합니다.\n' +
+    '\n' +
+    '⚠️ L1 서버, Supabase, 이 기기의 모든 기록이 삭제됩니다.\n' +
+    '복원이 불가능합니다. 계속하시겠습니까?'
+  )) return;
 
-  // ── Supabase user_profiles row도 함께 삭제 (X25519/Ed25519 TOFU 키 포함) ──
-  // L1과 별도 저장소이므로 누락 시 재가입 후 PUBKEY_MISMATCH가 발생함
-  try {
-    if (stored?.ipv6) {
-      let resetBody = { guid: stored.ipv6 };
+  const stored = _loadStored();
+  const guid   = stored?.ipv6;
+
+  if (guid) {
+    // 서버 전체 삭제 — Worker가 L1·Supabase·KV 일괄 처리
+    try {
+      let resetBody = { guid };
       if (typeof window.GopangWallet !== 'undefined') {
         const wallet = await window.GopangWallet.load().catch(() => null);
         if (wallet?.publicKeyB64u && typeof wallet.signPayload === 'function') {
-          const ts = Date.now();
-          const signature = await wallet.signPayload(`full-reset:${stored.ipv6}:${ts}`);
-          resetBody = { guid: stored.ipv6, ed25519_pubkey: wallet.publicKeyB64u, signature, ts };
+          const ts  = Date.now();
+          const sig = await wallet.signPayload(`full-reset:${guid}:${ts}`);
+          resetBody = { guid, ed25519_pubkey: wallet.publicKeyB64u, signature: sig, ts };
         }
       }
-      await fetch(`${PROXY_URL}/account/full-reset`, {
-        method: 'POST',
+      const res  = await fetch(`${PROXY_URL}/account/full-reset`, {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(resetBody),
+        body:    JSON.stringify(resetBody),
       });
+      const data = await res.json().catch(() => ({}));
+      console.info('[Reset] 서버 삭제 완료:', data.results || data);
+    } catch(e) {
+      console.warn('[Reset] 서버 삭제 실패 (로컬은 계속 진행):', e.message);
     }
-  } catch(e) { console.warn('[Reset] Supabase 삭제 실패:', e.message); }
+  }
 
+  // 스마트폰/PC 로컬 전체 삭제
+  // localStorage, sessionStorage, IndexedDB(지갑 포함), SW 캐시, PWA 캐시
   await _clearLocalData();
 }
 
@@ -1232,9 +1232,7 @@ async function _createMinimalProfile({ ipv6, handle, nickname, e164, isPublic })
 
     const ts = Date.now().toString();
     const sigMsg = `${ipv6}:${wallet.publicKeyB64u}:${ts}`;
-    const signature = wallet.sign
-      ? await wallet.sign(sigMsg)
-      : ipv6;
+    const signature = await wallet.signPayload(sigMsg);
 
     const payload = {
       guid:        ipv6,

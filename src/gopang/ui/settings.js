@@ -234,6 +234,35 @@ function _renderPcSyncBanner(parsed, guid) {
 
 // ── 앱 부트스트랩 시점 자동 동기화 — AI 설정 화면을 열지 않아도 PC가 보낸
 // LLM Key 설정을 확인 즉시 적용한다. 사용자 확인 버튼 없이 자동 적용.
+// ── 백그라운드 수신 시 bubble 큐 — 포그라운드 복귀 시 flush ──
+const _pendingBubbles = [];
+let _pendingFlushRegistered = false;
+
+function _enqueueBubble(role, text) {
+  const list = document.getElementById('message-list');
+  if (list) {
+    // 채팅창이 이미 열려있으면 즉시 출력
+    appendBubble(role, text);
+    return;
+  }
+  // 백그라운드 상태 — 큐에 적재
+  _pendingBubbles.push({ role, text });
+  if (!_pendingFlushRegistered) {
+    _pendingFlushRegistered = true;
+    document.addEventListener('visibilitychange', function _flush() {
+      if (document.visibilityState !== 'visible') return;
+      const list = document.getElementById('message-list');
+      if (!list) return;
+      let item;
+      while ((item = _pendingBubbles.shift())) {
+        appendBubble(item.role, item.text);
+      }
+      document.removeEventListener('visibilitychange', _flush);
+      _pendingFlushRegistered = false;
+    });
+  }
+}
+
 export async function _autoApplyPcSyncedSetting() {
   const guid = _USER?.ipv6 ||
     JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}')?.ipv6;
@@ -265,10 +294,6 @@ export async function _autoApplyPcSyncedSetting() {
     }
 
     console.info('[AI설정][자동] PC 설정 발견 — 복호화 시도');
-    if (typeof appendBubble === 'function') {
-      appendBubble('ai', 'PC로부터 Key를 받았습니다. 나만의 AI 비서를 설정합니다.');
-    }
-
     const sealedCamel = {
       ephemeralPubKey: data.sealed.ephemeral_pubkey,
       iv:              data.sealed.iv,
@@ -280,12 +305,7 @@ export async function _autoApplyPcSyncedSetting() {
     console.info('[AI설정][자동] 복호화 성공 — provider:', parsed.provider, 'model:', parsed.model);
     await _acceptPcSyncedSetting(parsed, guid, { silent: true });
 
-    const _doneLabel = Array.isArray(parsed.freeModelPool) && parsed.freeModelPool.length
-      ? 'OpenRouter (무료 모델 ' + parsed.freeModelPool.length + '개 자동 순환)'
-      : (PROVIDER_INFO[parsed.provider]?.label || parsed.provider);
-    if (typeof appendBubble === 'function') {
-      appendBubble('ai', `설정 완료. 이제부터 AI 비서를 호출하여 이용하십시오. (${_doneLabel})`);
-    }
+    _enqueueBubble('ai', 'PC로부터 AI 키 도착. 자동 설정 완료.');
     console.info('[AI설정][자동] 적용 완료');
   } catch(e) {
     console.error('[AI설정][자동] 처리 중 오류:', e.message, e.stack);

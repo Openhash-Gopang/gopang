@@ -1103,13 +1103,10 @@ async function handleWalletX25519Post(request, env, corsHeaders) {
     return _err(403, 'PUBKEY_MISMATCH', '등록된 공개키와 일치하지 않습니다', corsHeaders);
   }
 
-  // X25519 키 자체도 TOFU: 이미 등록된 키가 있으면 그대로 반환 (덮어쓰지 않음)
-  if (record.x25519_pubkey) {
-    return new Response(JSON.stringify({
-      ok: true, already_registered: true, x25519_pubkey: record.x25519_pubkey,
-    }), { status: 200, headers: corsHeaders });
-  }
-
+  // 정책: Ed25519 서명 검증 통과 = 본인 증명.
+  // 기기 교체/앱 재설치는 계정 삭제로 처리하므로, 동일 기기에서 재등록 시
+  // (앱 업데이트 후 IDB 유지 등) Ed25519가 일치하면 X25519도 갱신 허용.
+  const alreadyRegistered = !!record.x25519_pubkey;
   try {
     await _l1PatchProfile(env, record.id, {
       pubkey_ed25519: knownEdPubkey || ed25519_pubkey,
@@ -1120,7 +1117,7 @@ async function handleWalletX25519Post(request, env, corsHeaders) {
     return _err(500, 'L1_PATCH_FAILED', e.message, corsHeaders);
   }
 
-  return new Response(JSON.stringify({ ok: true, already_registered: false, x25519_pubkey }),
+  return new Response(JSON.stringify({ ok: true, already_registered: alreadyRegistered, x25519_pubkey }),
     { status: 200, headers: corsHeaders });
 }
 
@@ -1130,53 +1127,126 @@ async function handleWalletX25519Post(request, env, corsHeaders) {
 // 서명 대상: `full-reset:${guid}:${ts}` — 기존 등록된 ed25519 키로 서명해야 본인 확인됨
 // (등록된 키가 없는 경우 — 즉 가입 직후 한 번도 X25519 설정을 안 한 계정 —는 서명 검증 없이 허용)
 async function handleAccountFullReset(request, env, corsHeaders) {
+  // POST /account/full-reset
+  // 정책: 해당 사용자의 모든 기록을 서버에서 완전 삭제.
+  // L1(profiles), Supabase(전 테이블), KV(봉투)에서 guid에 연결된 모든 row 제거.
+  // 본인 확인: L1 pubkey_ed25519로 서명 검증. L1 키가 없으면(가입 직후 미등록) 서명 생략 허용.
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
   const { guid, ed25519_pubkey, signature, ts } = body;
   if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
 
-  const sbH = _sbHeaders(env);
-  let existRes;
+  // ── 본인 확인: L1 기준 ───────────────────────────────────
+  let l1Record = null;
   try {
-    existRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=pubkey_ed25519&limit=1`,
-      { headers: sbH }
-    );
+    l1Record = await _l1FindProfileByGuid(env, guid);
   } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
   }
-  const existRows = await existRes.json().catch(() => []);
-  const knownEdPubkey = existRows?.[0]?.pubkey_ed25519;
-
-  // 기존에 등록된 키가 있으면 서명으로 본인 확인 (탈취 방지)
+  const knownEdPubkey = l1Record?.pubkey_ed25519;
   if (knownEdPubkey) {
-    if (!ed25519_pubkey || !signature) {
+    if (!ed25519_pubkey || !signature)
       return _err(400, 'MISSING_FIELD', '본인 확인을 위해 ed25519_pubkey/signature가 필요합니다', corsHeaders);
-    }
-    if (knownEdPubkey !== ed25519_pubkey) {
+    if (knownEdPubkey !== ed25519_pubkey)
       return _err(403, 'PUBKEY_MISMATCH', '등록된 공개키와 일치하지 않습니다', corsHeaders);
-    }
-    const sigMsg = `full-reset:${guid}:${ts || ''}`;
-    const sigOk  = await _verifyEd25519Simple(ed25519_pubkey, signature, sigMsg);
+    const sigOk = await _verifyEd25519Simple(ed25519_pubkey, signature, `full-reset:${guid}:${ts || ''}`);
     if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
   }
 
-  const sbServiceH = _sbServiceHeaders(env);
-  let delRes;
-  try {
-    delRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
-      method: 'DELETE',
-      headers: sbServiceH,
-    });
-  } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
-  }
-  if (!delRes.ok) {
-    const errText = await delRes.text().catch(() => '');
-    return _err(502, 'SUPABASE_ERROR', `DB 삭제 실패 (HTTP ${delRes.status}): ${errText}`, corsHeaders);
+  const results = {};
+  const sbSvcH  = _sbServiceHeaders(env);
+
+  // ── 1. L1 profiles 삭제 ──────────────────────────────────
+  if (l1Record?.id) {
+    try {
+      const token = await _l1AdminToken(env);
+      const r = await fetch(
+        `${L1_DEFAULT}/api/collections/profiles/records/${l1Record.id}`,
+        { method: 'DELETE', headers: { 'Authorization': 'Admin ' + token } }
+      );
+      results.l1_profiles = r.ok || r.status === 404 ? 'deleted' : `error:${r.status}`;
+    } catch (e) { results.l1_profiles = 'error:' + e.message; }
+  } else {
+    results.l1_profiles = 'not_found';
   }
 
-  return new Response(JSON.stringify({ ok: true, deleted: true }), { status: 200, headers: corsHeaders });
+  // ── 2. Supabase: user_profiles ───────────────────────────
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`,
+      { method: 'DELETE', headers: sbSvcH });
+    results.sb_user_profiles = r.ok ? 'deleted' : `error:${r.status}`;
+  } catch (e) { results.sb_user_profiles = 'error:' + e.message; }
+
+  // ── 3. Supabase: user_llm_keys ───────────────────────────
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_llm_keys?guid=eq.${encodeURIComponent(guid)}`,
+      { method: 'DELETE', headers: sbSvcH });
+    results.sb_user_llm_keys = r.ok ? 'deleted' : `error:${r.status}`;
+  } catch (e) { results.sb_user_llm_keys = 'error:' + e.message; }
+
+  // ── 4. Supabase: pdv_log ─────────────────────────────────
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/pdv_log?guid=eq.${encodeURIComponent(guid)}`,
+      { method: 'DELETE', headers: sbSvcH });
+    results.sb_pdv_log = r.ok ? 'deleted' : `error:${r.status}`;
+  } catch (e) { results.sb_pdv_log = 'error:' + e.message; }
+
+  // ── 5. Supabase: pdv_consent_requests ────────────────────
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/pdv_consent_requests?ipv6=eq.${encodeURIComponent(guid)}`,
+      { method: 'DELETE', headers: sbSvcH });
+    results.sb_pdv_consent = r.ok ? 'deleted' : `error:${r.status}`;
+  } catch (e) { results.sb_pdv_consent = 'error:' + e.message; }
+
+  // ── 6. Supabase: biz_products (판매자) ───────────────────
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/biz_products?seller_guid=eq.${encodeURIComponent(guid)}`,
+      { method: 'DELETE', headers: sbSvcH });
+    results.sb_biz_products = r.ok ? 'deleted' : `error:${r.status}`;
+  } catch (e) { results.sb_biz_products = 'error:' + e.message; }
+
+  // ── 7. Supabase: biz_reviews (작성자 + 판매자) ───────────
+  try {
+    const r1 = await fetch(`${SUPABASE_URL}/rest/v1/biz_reviews?reviewer_guid=eq.${encodeURIComponent(guid)}`,
+      { method: 'DELETE', headers: sbSvcH });
+    const r2 = await fetch(`${SUPABASE_URL}/rest/v1/biz_reviews?seller_guid=eq.${encodeURIComponent(guid)}`,
+      { method: 'DELETE', headers: sbSvcH });
+    results.sb_biz_reviews = (r1.ok && r2.ok) ? 'deleted' : `error:${r1.status}/${r2.status}`;
+  } catch (e) { results.sb_biz_reviews = 'error:' + e.message; }
+
+  // ── 8. Supabase: webauthn_credentials ────────────────────
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/webauthn_credentials?ipv6=eq.${encodeURIComponent(guid)}`,
+      { method: 'DELETE', headers: sbSvcH });
+    results.sb_webauthn = r.ok ? 'deleted' : `error:${r.status}`;
+  } catch (e) { results.sb_webauthn = 'error:' + e.message; }
+
+  // ── 9. Supabase: webrtc_signals (송신 + 수신) ────────────
+  try {
+    const r1 = await fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals?from_guid=eq.${encodeURIComponent(guid)}`,
+      { method: 'DELETE', headers: sbSvcH });
+    const r2 = await fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals?to_guid=eq.${encodeURIComponent(guid)}`,
+      { method: 'DELETE', headers: sbSvcH });
+    results.sb_webrtc = (r1.ok && r2.ok) ? 'deleted' : `error:${r1.status}/${r2.status}`;
+  } catch (e) { results.sb_webrtc = 'error:' + e.message; }
+
+  // ── 10. Supabase: push_subscriptions (레거시 테이블) ─────
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(guid)}`,
+      { method: 'DELETE', headers: sbSvcH });
+    results.sb_push_subscriptions = r.ok ? 'deleted' : `error:${r.status}`;
+  } catch (e) { results.sb_push_subscriptions = 'error:' + e.message; }
+
+  // ── 11. Cloudflare KV: AI Setup 봉투 ────────────────────
+  if (env.AI_SETUP_SEALS_KV) {
+    try {
+      await env.AI_SETUP_SEALS_KV.delete(guid);
+      results.kv_ai_seal = 'deleted';
+    } catch (e) { results.kv_ai_seal = 'error:' + e.message; }
+  }
+
+  console.info('[FullReset] 삭제 완료 | guid:', guid.slice(0, 16), '| 결과:', JSON.stringify(results));
+  return new Response(JSON.stringify({ ok: true, deleted: true, results }), { status: 200, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1766,20 +1836,16 @@ async function handleAiSetupPost(request, env, corsHeaders) {
   const sigOk = await _verifyEd25519(pubkey, signature, body);
   if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
 
+  // TOFU: L1이 중심 저장소 — Supabase가 아닌 L1 profiles에서 Ed25519 공개키 확인
   {
-    const sbHChk = _sbHeaders(env);
-    let chkRes;
+    let l1Record;
     try {
-      chkRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=pubkey_ed25519&limit=1`, { headers: sbHChk });
+      l1Record = await _l1FindProfileByGuid(env, guid);
     } catch (e) {
-      return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+      return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
     }
-    if (!chkRes.ok) {
-      const errText = await chkRes.text().catch(() => '');
-      return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${chkRes.status}): ${errText}`, corsHeaders);
-    }
-    const chkRows = await chkRes.json().catch(() => []);
-    const existingPubkey = chkRows[0]?.pubkey_ed25519;
+    if (!l1Record) return _err(404, 'PROFILE_NOT_FOUND', '가입(L1 등록)이 먼저 완료되어야 합니다', corsHeaders);
+    const existingPubkey = l1Record.pubkey_ed25519;
     if (existingPubkey && existingPubkey !== pubkey) {
       return _err(401, 'PUBKEY_MISMATCH', '등록된 공개키와 일치하지 않습니다', corsHeaders);
     }
@@ -2041,49 +2107,31 @@ function handlePushVapidKey(request, env, corsHeaders) {
 // POST /push/subscribe — 구독 정보 저장
 async function handlePushSubscribe(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
-  if (!body?.subscription || !body?.guid)
-    return _err(400, 'MISSING_FIELD', 'subscription, guid 필수', corsHeaders);
+  if (!body?.guid)
+    return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  // unsubscribe는 subscription 없어도 허용
+  if (!body.unsubscribe && !body.subscription)
+    return _err(400, 'MISSING_FIELD', 'subscription 필수', corsHeaders);
 
-  const sbH = _sbServiceHeaders(env);
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(body.guid)}`, {
-    method:  'GET',
-    headers: sbH,
-  });
-  const existing = await res.json().catch(() => []);
+  let record;
+  try { record = await _l1FindProfileByGuid(env, body.guid); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders); }
+  if (!record) return _err(404, 'PROFILE_NOT_FOUND', '가입(L1 등록)이 먼저 완료되어야 합니다', corsHeaders);
 
-  // 구독 취소 요청
+  // 구독 취소: L1 row는 삭제 불가 → 빈 문자열로 PATCH
   if (body.unsubscribe) {
-    if (!existing.length) return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
-    const delRes = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(body.guid)}`, {
-      method: 'DELETE', headers: sbH,
-    });
+    try { await _l1PatchProfile(env, record.id, { push_subscription: '', push_sound: '' }); }
+    catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
   }
 
-  let saveRes;
-  if (existing.length) {
-    saveRes = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(body.guid)}`, {
-      method:  'PATCH',
-      headers: { ...sbH, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({
-        subscription: JSON.stringify(body.subscription),
-        sound:        body.sound || 'ping',
-        updated_at:   new Date().toISOString(),
-      }),
+  // 구독 등록/갱신: 프로필 row는 가입 시 이미 존재 → 항상 PATCH
+  try {
+    await _l1PatchProfile(env, record.id, {
+      push_subscription: JSON.stringify(body.subscription),
+      push_sound:        body.sound || 'ping',
     });
-  } else {
-    saveRes = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions`, {
-      method:  'POST',
-      headers: { ...sbH, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({
-        guid:         body.guid,
-        subscription: JSON.stringify(body.subscription),
-        sound:        body.sound || 'ping',
-        updated_at:   new Date().toISOString(),
-      }),
-    });
-  }
-  if (!saveRes.ok) return _err(500, 'DB_ERROR', await saveRes.text(), corsHeaders);
+  } catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
 }
 
