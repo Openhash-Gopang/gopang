@@ -1361,6 +1361,62 @@ async function handleAiSetupGet(request, env, corsHeaders, guid) {
 // 원칙: 메시지 본문 절대 저장 없음 — SDP/ICE 60초 TTL 후 삭제
 // ═══════════════════════════════════════════════════════════
 
+// _SIGNAL_L1_PATCH_APPLIED_
+// ═══════════════════════════════════════════════════════════
+// 시그널 핸들러 — L1 PocketBase 우선 + Supabase 폴백
+// L1: https://l1-hanlim.gopang.net/api/collections/webrtc_signals/records
+//     API Rules = 빈칸(모두 허용) — 토큰 불필요
+// Supabase: 기존 webrtc_signals 테이블 (L1 실패 시 자동 폴백)
+// ═══════════════════════════════════════════════════════════
+
+const L1_SIGNAL_URL = `${L1_DEFAULT}/api/collections/webrtc_signals/records`;
+
+// ── L1 시그널 저장 헬퍼 ──────────────────────────────────────
+async function _l1SignalSend(from_guid, to_guid, type, payload, expires_at) {
+  const res = await fetch(L1_SIGNAL_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ from_guid, to_guid, type, payload, expires_at }),
+  });
+  if (!res.ok) throw new Error(`L1 signal send ${res.status}: ${await res.text().catch(()=>'')}`);
+  return res;
+}
+
+// ── L1 시그널 조회 헬퍼 ──────────────────────────────────────
+async function _l1SignalPoll(guid) {
+  const now    = new Date().toISOString();
+  const filter = encodeURIComponent(`to_guid='${guid}'`);
+  const res    = await fetch(
+    `${L1_SIGNAL_URL}?filter=${filter}&sort=created&perPage=20`,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+  if (!res.ok) throw new Error(`L1 signal poll ${res.status}`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  // PocketBase 응답: { items: [...] } → Supabase 형식 배열로 정규화
+  const items = (data.items || []).filter(r => {
+    // expires_at 필터 (L1은 필터 표현식으로 처리 안 되므로 클라이언트 필터)
+    if (!r.expires_at) return true;
+    return new Date(r.expires_at) > new Date();
+  });
+  return items;
+}
+
+// ── L1 시그널 삭제 헬퍼 ──────────────────────────────────────
+async function _l1SignalDelete(field, value) {
+  // PocketBase: 필터로 목록 조회 후 id별 삭제 (REST v1)
+  const filter = encodeURIComponent(`${field}='${value}'`);
+  const listRes = await fetch(
+    `${L1_SIGNAL_URL}?filter=${filter}&perPage=50`,
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+  if (!listRes.ok) throw new Error(`L1 signal list ${listRes.status}`);
+  const data  = await listRes.json().catch(() => ({ items: [] }));
+  const items = data.items || [];
+  await Promise.all(items.map(r =>
+    fetch(`${L1_SIGNAL_URL}/${r.id}`, { method: 'DELETE' }).catch(() => {})
+  ));
+}
+
 async function handleSignalSend(request, env, corsHeaders) {
   if (request.method !== 'POST') return _err(405, 'METHOD_NOT_ALLOWED', '', corsHeaders);
   const body = await request.json().catch(() => null);
@@ -1372,21 +1428,31 @@ async function handleSignalSend(request, env, corsHeaders) {
     return _err(400, 'INVALID_TYPE', 'offer|answer|ice 만 허용', corsHeaders);
 
   const expires_at = new Date(Date.now() + 60_000).toISOString();
-  const sbH = _sbServiceHeaders(env);
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals`, {
-    method: 'POST',
-    headers: { ...sbH, 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ from_guid, to_guid, type, payload, expires_at }),
-  });
-  if (!res.ok) return _err(500, 'DB_ERROR', await res.text(), corsHeaders);
 
-  // 기회적 만료 시그널 정리
-  fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals?expires_at=lt.${new Date().toISOString()}`, {
-    method: 'DELETE', headers: sbH,
-  }).catch(() => {});
+  // ① L1 우선 저장
+  let savedTo = 'l1';
+  try {
+    await _l1SignalSend(from_guid, to_guid, type, payload, expires_at);
+    console.log('[Signal] L1 저장 성공');
+  } catch (l1Err) {
+    // ② Supabase 폴백
+    console.warn('[Signal] L1 실패 → Supabase 폴백:', l1Err.message);
+    savedTo = 'supabase';
+    const sbH = _sbServiceHeaders(env);
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals`, {
+      method:  'POST',
+      headers: { ...sbH, 'Prefer': 'return=minimal' },
+      body:    JSON.stringify({ from_guid, to_guid, type, payload, expires_at }),
+    });
+    if (!res.ok) return _err(500, 'DB_ERROR', await res.text(), corsHeaders);
 
-  // ── 수신자에게 Push 알림 전송 (백그라운드 수신용) ──────
-  // offer 시그널일 때만 전송 (ICE/answer는 이미 연결 중)
+    // 기회적 만료 시그널 정리 (Supabase)
+    fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals?expires_at=lt.${new Date().toISOString()}`, {
+      method: 'DELETE', headers: sbH,
+    }).catch(() => {});
+  }
+
+  // ── 수신자에게 Push 알림 전송 (offer 시그널일 때만)
   if (type === 'offer') {
     _sendPushToGuid(env, to_guid, {
       title: from_guid.slice(0, 8) + '님의 메시지',
@@ -1396,7 +1462,7 @@ async function handleSignalSend(request, env, corsHeaders) {
     }).catch(e => console.warn('[Push] 알림 전송 실패:', e.message));
   }
 
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify({ ok: true, source: savedTo }), { status: 200, headers: corsHeaders });
 }
 
 async function handleSignalPoll(request, env, corsHeaders) {
@@ -1405,33 +1471,50 @@ async function handleSignalPoll(request, env, corsHeaders) {
   const guid = url.searchParams.get('guid');
   if (!guid) return _err(400, 'GUID_REQUIRED', '', corsHeaders);
 
-  const sbH = _sbHeaders(env);
-  const now = new Date().toISOString();
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/webrtc_signals?to_guid=eq.${encodeURIComponent(guid)}&expires_at=gt.${now}&order=created_at.asc&limit=20`,
-    { headers: sbH }
-  );
-  const signals = await res.json().catch(() => []);
-  return new Response(JSON.stringify({ ok: true, signals }), { status: 200, headers: corsHeaders });
+  // ① L1 우선 조회
+  try {
+    const signals = await _l1SignalPoll(guid);
+    return new Response(JSON.stringify({ ok: true, signals, source: 'l1' }), { status: 200, headers: corsHeaders });
+  } catch (l1Err) {
+    // ② Supabase 폴백
+    console.warn('[Signal] L1 poll 실패 → Supabase 폴백:', l1Err.message);
+    const sbH = _sbHeaders(env);
+    const now = new Date().toISOString();
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/webrtc_signals?to_guid=eq.${encodeURIComponent(guid)}&expires_at=gt.${now}&order=created_at.asc&limit=20`,
+      { headers: sbH }
+    );
+    const signals = await res.json().catch(() => []);
+    return new Response(JSON.stringify({ ok: true, signals, source: 'supabase' }), { status: 200, headers: corsHeaders });
+  }
 }
 
 async function handleSignalDelete(request, env, corsHeaders) {
   if (request.method !== 'POST') return _err(405, 'METHOD_NOT_ALLOWED', '', corsHeaders);
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', '', corsHeaders);
-  const sbH = _sbServiceHeaders(env);
 
-  if (body.id) {
-    await fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals?id=eq.${encodeURIComponent(body.id)}`,
-      { method: 'DELETE', headers: sbH });
-    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
+  // ① L1 우선 삭제
+  try {
+    if (body.id)        await _l1SignalDelete('id',        body.id);
+    if (body.from_guid) await _l1SignalDelete('from_guid', body.from_guid);
+    return new Response(JSON.stringify({ ok: true, source: 'l1' }), { status: 200, headers: corsHeaders });
+  } catch (l1Err) {
+    // ② Supabase 폴백
+    console.warn('[Signal] L1 delete 실패 → Supabase 폴백:', l1Err.message);
+    const sbH = _sbServiceHeaders(env);
+    if (body.id) {
+      await fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals?id=eq.${encodeURIComponent(body.id)}`,
+        { method: 'DELETE', headers: sbH });
+      return new Response(JSON.stringify({ ok: true, source: 'supabase' }), { status: 200, headers: corsHeaders });
+    }
+    if (body.from_guid) {
+      await fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals?from_guid=eq.${encodeURIComponent(body.from_guid)}`,
+        { method: 'DELETE', headers: sbH });
+      return new Response(JSON.stringify({ ok: true, source: 'supabase' }), { status: 200, headers: corsHeaders });
+    }
+    return _err(400, 'ID_OR_FROM_GUID_REQUIRED', '', corsHeaders);
   }
-  if (body.from_guid) {
-    await fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals?from_guid=eq.${encodeURIComponent(body.from_guid)}`,
-      { method: 'DELETE', headers: sbH });
-    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
-  }
-  return _err(400, 'ID_OR_FROM_GUID_REQUIRED', '', corsHeaders);
 }
 
 
