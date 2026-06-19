@@ -2172,27 +2172,26 @@ function _b64uEncode(str) {
 async function _sendPushToGuid(env, guid, { title, body, tag, url }) {
   if (!env.VAPID_PRIVATE_KEY || !env.VAPID_PUBLIC_KEY) return;
 
-  const sbH = _sbServiceHeaders(env);
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(guid)}&select=subscription,sound&limit=5`,
-    { headers: sbH }
-  );
-  const rows = await res.json().catch(() => []);
-  if (!rows.length) return;
+  let record;
+  try {
+    record = await _l1FindProfileByGuid(env, guid);
+  } catch (e) {
+    console.warn('[Push] L1 조회 실패:', e.message);
+    return;
+  }
+  if (!record?.push_subscription) return;
 
   const payload = JSON.stringify({
     title, body, tag,
-    sound: rows[0].sound || 'ping',
+    sound: record.push_sound || 'ping',
     url:   url || '/webapp.html',
   });
 
-  for (const row of rows) {
-    try {
-      const sub = JSON.parse(row.subscription);
-      await _sendWebPush(env, sub, payload);
-    } catch(e) {
-      console.warn('[Push] _sendPushToGuid 실패:', e.message);
-    }
+  try {
+    const sub = JSON.parse(record.push_subscription);
+    await _sendWebPush(env, sub, payload);
+  } catch(e) {
+    console.warn('[Push] _sendPushToGuid 실패:', e.message);
   }
 }
 
