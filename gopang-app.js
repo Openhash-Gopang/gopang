@@ -230,6 +230,17 @@ const _boot = async () => {
 
     // GDUDA Phase 1 — incoming offer 감시
     if (_USER?.ipv6) startIncomingWatch(_USER.ipv6);
+
+    // PC→휴대폰 LLM Key 자동 동기화 — AI 설정 화면을 열지 않아도
+    // 앱 시작 시점에 X25519 키를 보장하고, PC가 보낸 대기 설정이 있으면
+    // 즉시 적용한다. (전송 채널 자체가 X25519 ECDH로 본인 인증되어 있으므로
+    // 추가 확인 버튼 없이 자동 적용해도 안전함)
+    import('./src/gopang/ui/settings.js').then(({ _autoApplyPcSyncedSetting }) => {
+      if (typeof _autoApplyPcSyncedSetting === 'function') {
+        _autoApplyPcSyncedSetting().catch(e =>
+          console.warn('[AI설정] 앱 시작 시 자동 동기화 실패 (무시):', e.message));
+      }
+    }).catch(e => console.warn('[AI설정] settings.js 로드 실패 (무시):', e.message));
   }
 
   // 4-9. 세션 저장 훅

@@ -228,6 +228,39 @@ function _renderPcSyncBanner(parsed, guid) {
   };
 }
 
+// ── 앱 부트스트랩 시점 자동 동기화 — AI 설정 화면을 열지 않아도 PC가 보낸
+// LLM Key 설정을 확인 즉시 적용한다. 사용자 확인 버튼 없이 자동 적용.
+export async function _autoApplyPcSyncedSetting() {
+  const guid = _USER?.ipv6 ||
+    JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}')?.ipv6;
+  if (!guid) return;
+
+  const result = await ensureX25519Synced(guid);
+  if (!result.ok) {
+    console.info('[AI설정] 자동 동기화: X25519 준비 안 됨 (', result.reason, ') — 다음 부팅 시 재시도');
+    return;
+  }
+
+  try {
+    const res  = await fetch(`${CFG.endpoint}/ai-setup/seal?guid=${encodeURIComponent(guid)}`);
+    const data = await res.json();
+    if (!data.ok || !data.sealed) return; // 대기 중인 PC 설정 없음 — 정상
+
+    const sealedCamel = {
+      ephemeralPubKey: data.sealed.ephemeral_pubkey,
+      iv:              data.sealed.iv,
+      ciphertext:      data.sealed.ciphertext,
+    };
+    const plaintext = await result.wallet.openSealed(sealedCamel);
+    const parsed = JSON.parse(plaintext);
+
+    console.info('[AI설정] 앱 시작 시 PC 설정 발견 — 자동 적용:', parsed.provider, parsed.model);
+    await _acceptPcSyncedSetting(parsed, guid);
+  } catch(e) {
+    console.warn('[AI설정] 자동 동기화 중 오류:', e.message);
+  }
+}
+
 // ── PC가 보낸 설정을 휴대폰의 진짜 지갑으로 서명하여 최종 등록 ──
 async function _acceptPcSyncedSetting(parsed, guid) {
   try {
