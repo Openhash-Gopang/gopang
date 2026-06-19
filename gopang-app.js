@@ -236,10 +236,27 @@ const _boot = async () => {
     // 즉시 적용한다. (전송 채널 자체가 X25519 ECDH로 본인 인증되어 있으므로
     // 추가 확인 버튼 없이 자동 적용해도 안전함)
     import('./src/gopang/ui/settings.js').then(({ _autoApplyPcSyncedSetting }) => {
-      if (typeof _autoApplyPcSyncedSetting === 'function') {
-        _autoApplyPcSyncedSetting().catch(e =>
-          console.warn('[AI설정] 앱 시작 시 자동 동기화 실패 (무시):', e.message));
+      if (typeof _autoApplyPcSyncedSetting !== 'function') return;
+
+      const _runSync = () => _autoApplyPcSyncedSetting().catch(e =>
+        console.warn('[AI설정] 자동 동기화 실패 (무시):', e.message));
+
+      _runSync(); // 앱 시작 시 1회 즉시 확인
+
+      // 메인 경로: PC가 키를 전송하면 서버가 즉시 푸시를 보내고, Service Worker가
+      // 열려있는 탭에 SYNC_AI_SETTING을 postMessage로 전달한다 — 화면 무관 즉시 반응.
+      if (navigator.serviceWorker) {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event.data?.type === 'SYNC_AI_SETTING') {
+            console.info('[AI설정] 푸시 신호 수신 — 즉시 동기화');
+            _runSync();
+          }
+        });
       }
+
+      // 폴백: 알림 권한 거부, 푸시 구독 미완료 등으로 push가 동작하지 않는
+      // 경우를 위해 60초 간격으로도 한 번씩 확인한다.
+      setInterval(_runSync, 60000);
     }).catch(e => console.warn('[AI설정] settings.js 로드 실패 (무시):', e.message));
   }
 
