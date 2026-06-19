@@ -131,30 +131,22 @@ async function _l1AdminToken(env) {
   const password = env.L1_ADMIN_PASSWORD;
   if (!email || !password) throw new Error('L1_ADMIN_EMAIL/L1_ADMIN_PASSWORD secret 미설정');
 
-  // PocketBase 0.23+ 신버전 경로 우선 시도, 실패 시 구버전 경로 폴백
-  const endpoints = [
-    `${L1_DEFAULT}/api/collections/_superusers/auth-with-password`,
-    `${L1_DEFAULT}/api/admins/auth-with-password`,
-  ];
-  let lastErr = null;
-  for (const ep of endpoints) {
-    try {
-      const res = await fetch(ep, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identity: email, password }),
-      });
-      if (!res.ok) { lastErr = new Error(`L1 admin auth ${res.status}`); continue; }
-      const data = await res.json().catch(() => null);
-      if (!data?.token) { lastErr = new Error('L1 admin auth: token 없음'); continue; }
-      _l1AdminTokenCache = data.token;
-      _l1AdminTokenExp = now + 25 * 60 * 1000; // 25분 캐시 (PocketBase 토큰은 보통 더 길게 유효)
-      return _l1AdminTokenCache;
-    } catch (e) {
-      lastErr = e;
-    }
+  // 이 L1 인스턴스(PocketBase 구버전)는 /api/admins/auth-with-password 경로 사용
+  // (※ /api/collections/_superusers/auth-with-password는 이 인스턴스에서 404)
+  const res = await fetch(`${L1_DEFAULT}/api/admins/auth-with-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identity: email, password }),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`L1 admin auth ${res.status}: ${errText.slice(0, 200)}`);
   }
-  throw lastErr || new Error('L1 admin auth 실패');
+  const data = await res.json().catch(() => null);
+  if (!data?.token) throw new Error('L1 admin auth: token 없음');
+  _l1AdminTokenCache = data.token;
+  _l1AdminTokenExp = now + 25 * 60 * 1000; // 25분 캐시
+  return _l1AdminTokenCache;
 }
 
 // L1 profiles 컬렉션에서 guid로 레코드 조회 (Admin 토큰 필요 — is_public=false인 레코드도 봐야 하므로)
