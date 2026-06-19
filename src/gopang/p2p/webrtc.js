@@ -4,7 +4,7 @@
 import {
   _peer, _rtcConn, _rtcChannel, _signalPoll, _pdvChatDB,
   setPeerState, setRtcConn, setRtcChannel, setSignalPoll, setPdvChatDB,
-  PROXY, RTC_CONFIG, USER_GUID,
+  PROXY, RTC_CONFIG, USER_GUID, fetchRtcConfig,
 } from '../core/state.js';
 import { _isRegistered } from '../core/auth.js';
 import { appendBubble } from '../ui/bubble.js';
@@ -34,6 +34,9 @@ export async function setPeer(peer) {
 
   const inp = document.getElementById('msg-input');
   if (inp) inp.placeholder = `${peer.name || peer.handle || '상대방'}에게 메시지…`;
+
+  // TURN credential 취득 (55분 캐시, 실패 시 STUN 자동 폴백)
+  await fetchRtcConfig(USER_GUID).catch(() => {});
 
   await _loadChatHistory(peer.guid);
   _startSignalPoll();

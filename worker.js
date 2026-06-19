@@ -275,6 +275,13 @@ export default {
       if (request.method === 'POST') return handleAiSetupPost(request, env, corsHeaders);
     }
 
+    // ── TURN credential (coturn, RFC 8489) — _TURN_COTURN_PATCH_APPLIED_ ──────
+    // GET /turn/credential?guid=...
+    // TURN 서버: l1-hanlim.gopang.net:3478 (UDP/TCP), :5349 (TLS)
+    // Credential: HMAC-SHA1 time-limited (coturn static-auth-secret 방식)
+    if (pathname === '/turn/credential' && request.method === 'GET')
+      return handleTurnCredential(request, env, corsHeaders);
+
     // ── WebRTC 시그널링 (P2P 채팅 — OpenHash 철학) ──────────
     // 메시지는 서버에 저장하지 않음 — 시그널(SDP/ICE)만 임시 경유
     if (pathname === '/signal/send')   return handleSignalSend(request, env, corsHeaders);
@@ -1415,6 +1422,67 @@ async function _l1SignalDelete(field, value) {
   await Promise.all(items.map(r =>
     fetch(`${L1_SIGNAL_URL}/${r.id}`, { method: 'DELETE' }).catch(() => {})
   ));
+}
+
+// ═══════════════════════════════════════════════════════════
+// TURN credential 발급 (coturn static-auth-secret 방식)
+// RFC 8489 time-limited credential:
+//   username  = "{expiry}:{guid}"
+//   credential = base64(HMAC-SHA1(TURN_SECRET, username))
+// coturn turnserver.conf:
+//   use-auth-secret
+//   static-auth-secret=${TURN_SECRET}
+// ═══════════════════════════════════════════════════════════
+async function handleTurnCredential(request, env, corsHeaders) {
+  const url    = new URL(request.url);
+  const guid   = url.searchParams.get('guid') || 'anonymous';
+  const secret = env.TURN_SECRET;
+
+  // TURN_SECRET 미설정 시 STUN 전용 폴백
+  if (!secret) {
+    console.warn('[TURN] TURN_SECRET 미설정 — STUN 전용 사용');
+    return new Response(JSON.stringify({
+      ok: true,
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+      ],
+      fallback: true,
+    }), { status: 200, headers: corsHeaders });
+  }
+
+  // expiry = 지금 + 1시간
+  const expiry   = Math.floor(Date.now() / 1000) + 3600;
+  const username = `${expiry}:${guid}`;
+
+  // HMAC-SHA1(secret, username) → base64
+  const keyData   = new TextEncoder().encode(secret);
+  const msgData   = new TextEncoder().encode(username);
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw', keyData, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
+  );
+  const sigBuf     = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
+  const credential = btoa(String.fromCharCode(...new Uint8Array(sigBuf)));
+
+  const host = 'l1-hanlim.gopang.net';
+
+  return new Response(JSON.stringify({
+    ok: true,
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      {
+        urls: [
+          `turn:${host}:3478?transport=udp`,
+          `turn:${host}:3478?transport=tcp`,
+          `turns:${host}:5349?transport=tcp`,
+        ],
+        username,
+        credential,
+      },
+    ],
+    expiry,
+  }), { status: 200, headers: { ...corsHeaders, 'Cache-Control': 'no-store' } });
 }
 
 async function handleSignalSend(request, env, corsHeaders) {

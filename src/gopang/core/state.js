@@ -26,10 +26,53 @@ export function setRecognition(v) { recognition = v; }
 
 // ── P2P 상태 ─────────────────────────────────────────────
 export const PROXY      = 'https://gopang-proxy.tensor-city.workers.dev';
-export const RTC_CONFIG = { iceServers: [
+// RTC_CONFIG — 기본값 (STUN 전용)
+// fetchRtcConfig() 호출 시 TURN credential 포함 버전으로 교체됨
+export const RTC_CONFIG_STUN_ONLY = { iceServers: [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
 ]};
+
+export let RTC_CONFIG = RTC_CONFIG_STUN_ONLY;
+export function setRtcConfig(v) { RTC_CONFIG = v; }
+
+// TURN credential 캐시 (55분)
+let _rtcConfigCache    = null;
+let _rtcConfigCachedAt = 0;
+
+/**
+ * Worker /turn/credential 에서 TURN 포함 iceServers 취득.
+ * TURN_SECRET 미설정 시 STUN 전용 자동 폴백.
+ * @param {string} guid - 사용자 GUID (credential username에 포함)
+ */
+export async function fetchRtcConfig(guid = '') {
+  const now = Date.now();
+  if (_rtcConfigCache && now - _rtcConfigCachedAt < 55 * 60 * 1000) {
+    return _rtcConfigCache;
+  }
+  try {
+    const res  = await fetch(
+      `${PROXY}/turn/credential?guid=${encodeURIComponent(guid)}`,
+      { cache: 'no-store' }
+    );
+    const data = await res.json();
+    if (data.ok && Array.isArray(data.iceServers)) {
+      const cfg = { iceServers: data.iceServers };
+      _rtcConfigCache    = cfg;
+      _rtcConfigCachedAt = now;
+      setRtcConfig(cfg);
+      if (!data.fallback) {
+        console.info('[RTC] TURN credential 적용 ✓', data.iceServers.length, 'servers');
+      } else {
+        console.warn('[RTC] TURN 미설정 — STUN 전용 사용');
+      }
+      return cfg;
+    }
+  } catch (e) {
+    console.warn('[RTC] TURN credential 취득 실패, STUN 전용 사용:', e.message);
+  }
+  return RTC_CONFIG_STUN_ONLY;
+}
 
 export let _peer       = null;
 export let _rtcConn    = null;
