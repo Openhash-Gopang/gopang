@@ -29,9 +29,24 @@ if ('serviceWorker' in navigator) {
 
       function _autoApplyUpdate(reg) {
         if (_autoApplyTimer) return;  // 이미 예약됨
+
+        // ★ 무한 재시작 루프 방지 회로차단기 ★
+        // CDN 전파 지연 등으로 sw.js가 edge마다 다르게 응답되면 새로고침
+        // 직후에도 또 "새 버전"으로 오인될 수 있다. 최근 20초 내에 이미
+        // 자동 재시작했다면 이번엔 건너뛰고 수동 배너만 표시한다.
+        // sessionStorage는 reload에도 유지되므로 루프를 끝까지 추적해 막는다.
+        const LOOP_KEY = 'gopang_last_auto_reload';
+        const lastReload = Number(sessionStorage.getItem(LOOP_KEY) || 0);
+        if (Date.now() - lastReload < 20000) {
+          console.warn('[PWA] 최근 20초 내 자동 재시작 이력 감지 — 반복 루프 의심, 자동 적용 중단(수동 배너만 표시)');
+          _showUpdateBanner(0);
+          return;
+        }
+
         console.log('[PWA] 새 버전 감지 — 5초 후 자동 적용');
         _showUpdateBanner(5);         // 카운트다운 배너 표시
         _autoApplyTimer = setTimeout(() => {
+          sessionStorage.setItem(LOOP_KEY, String(Date.now()));
           const sw = reg.waiting;
           if (sw) {
             sw.postMessage({ type: 'SKIP_WAITING' });
