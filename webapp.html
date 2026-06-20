@@ -151,7 +151,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   display:flex;align-items:center;justify-content:center;
   width:42px;height:24px;flex-shrink:0;
   border-radius:999px;border:none;
-  background:#d1d5db;
+  background:#bcc0c5;
   cursor:pointer;
   padding:0;overflow:visible;
   transition:background .2s;
@@ -310,7 +310,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   max-width:0;opacity:0;pointer-events:none;
 }
 .ia-btn{
-  width:38px;height:38px;border-radius:50%;background:none;border:none;
+  width:39.9px;height:39.9px;border-radius:50%;background:none;border:none;
   display:flex;align-items:center;justify-content:center;cursor:pointer;
   color:var(--txt3);transition:background .12s,color .12s;flex-shrink:0;
 }
@@ -325,7 +325,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   flex:1;display:flex;align-items:flex-end;
   background:#f3f4f6;
   border:1.5px solid transparent;border-radius:22px;
-  padding:7px 10px 7px 14px;
+  padding:6.65px 10px 6.65px 14px;
   transition:border-color .15s,background .15s;
   min-width:0;
 }
@@ -336,7 +336,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   flex:1;background:transparent;border:none;
   font-family:'Pretendard',sans-serif;font-size:14px;
   resize:none;outline:none;
-  min-height:22px;max-height:160px;
+  min-height:20.9px;max-height:160px;
   line-height:1.55;color:#111;
   padding:1px 0;min-width:0;
   overflow-y:auto;
@@ -345,13 +345,13 @@ html,body{height:100%;height:100dvh;overflow:hidden;
 
 /* 전송 버튼 — Claude 입력창 스타일: 작은 둥근 사각형, 평상시 화살표 / 생성 중 정지 사각형 */
 .send-btn{
-  width:28px;height:28px;border-radius:8px;background:var(--green);
+  width:26.6px;height:26.6px;border-radius:8px;background:var(--green);
   display:flex;align-items:center;justify-content:center;
   flex-shrink:0;border:none;cursor:pointer;
   transition:background .12s;align-self:flex-end;
 }
 .send-btn:disabled{background:var(--green-bd);cursor:not-allowed}
-.send-btn svg{width:14px;height:14px;stroke:#fff;stroke-width:2.4;fill:none;
+.send-btn svg{width:13.3px;height:13.3px;stroke:#fff;stroke-width:2.4;fill:none;
   stroke-linecap:round;stroke-linejoin:round}
 .send-btn .icon-stop{display:none}
 .send-btn.generating{background:#111}
@@ -702,11 +702,6 @@ select.setting-field{appearance:none;-webkit-appearance:none;
       <button class="top-btn" id="btn-install" onclick="requestInstall()" title="홈 화면에 설치" style="display:none">
         <svg viewBox="0 0 24 24"><path d="M12 2v13M7 11l5 5 5-5"/><path d="M3 19h18"/></svg>
       </button>
-      <button id="btn-my-id" onclick="openSettings()"
-        style="font-size:12px;font-weight:600;color:var(--txt2);display:flex;align-items:center;gap:3px;padding:4px 8px;border-radius:20px;border:1px solid var(--border);background:var(--chip-bg);cursor:pointer;white-space:nowrap">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span id="my-handle-chip">Guest</span>
-      </button>
       <button class="top-btn" id="btn-search" onclick="openP2PSearch()" title="사용자 검색">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>
@@ -769,18 +764,18 @@ select.setting-field{appearance:none;-webkit-appearance:none;
       <!-- 좌측 보조 버튼 — 입력 시 숨김 -->
       <div class="input-actions-left" id="input-aux-btns">
         <button class="ia-btn" onclick="triggerAttach()" title="파일 첨부">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="18.9" height="18.9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
           </svg>
         </button>
         <button class="ia-btn" id="btn-camera" title="카메라">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="17.85" height="17.85" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
             <circle cx="12" cy="13" r="4"/>
           </svg>
         </button>
         <button class="ia-btn" id="btn-mic" title="음성 입력">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="16.8" height="16.8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="9" y="2" width="6" height="11" rx="3"/>
             <path d="M5 10a7 7 0 0 0 14 0"/>
             <line x1="12" y1="19" x2="12" y2="22"/>
