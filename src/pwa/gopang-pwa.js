@@ -85,7 +85,9 @@ if ('serviceWorker' in navigator) {
       });
 
       // SW 교체 완료(controllerchange) → 즉시 새로고침
+      // (forceUpdateApp이 수동 갱신 중이면 자체적으로 새로고침을 처리하므로 건너뜀)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (window._manualUpdateInProgress) return;
         console.log('[PWA] 새 버전 적용 — 자동 새로고침');
         window.location.reload();
       });
@@ -184,12 +186,15 @@ function _applyUpdate() {
 // ── 설정 패널의 "최신 버전으로 갱신" 버튼 — 수동 강제 갱신 ──────
 // 자동 감지(_autoApplyUpdate)와 달리 사용자가 언제든 직접 누를 수 있다.
 // 1) 모든 Cache Storage 항목 삭제 (sw.js가 들고 있던 캐시 전부 무효화)
-// 2) SW 갱신 체크 → 새 버전 있으면 즉시 skipWaiting + 재시작
-// 3) 새 버전이 없어도(=이미 최신) 캐시는 비웠으니 강제 새로고침으로 마무리
+// 2) SW 갱신 체크 → 새 버전 있으면 즉시 skipWaiting 지시
+// 3) 새 버전 유무·에러 여부와 관계없이 항상 동일하게
+//    버튼 라벨에 "✅ 갱신 완료"를 0.9초간 보여준 뒤 새로고침
+//    (사용자가 클릭 직후 반응을 바로 인지할 수 있도록)
 async function forceUpdateApp(btn) {
   const label = document.getElementById('btn-force-update-label');
   if (btn) btn.style.pointerEvents = 'none';
   if (label) label.textContent = '갱신 중…';
+  window._manualUpdateInProgress = true; // controllerchange 자동 새로고침 억제
 
   try {
     if ('caches' in window) {
@@ -204,15 +209,15 @@ async function forceUpdateApp(btn) {
         await reg.update();
         if (reg.waiting) {
           reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          return; // controllerchange 리스너가 자동으로 reload 처리
         }
       }
     }
-    window.location.reload();
   } catch (err) {
     console.warn('[PWA] 강제 갱신 실패 — 일반 새로고침으로 대체:', err);
-    window.location.reload();
   }
+
+  if (label) label.textContent = '✅ 갱신 완료';
+  setTimeout(() => window.location.reload(), 900);
 }
 window.forceUpdateApp = forceUpdateApp;
 
