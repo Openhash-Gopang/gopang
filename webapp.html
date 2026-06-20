@@ -1260,15 +1260,26 @@ function _setPushToggle(on) {
   const thumb  = document.getElementById('push-toggle-thumb');
   const status = document.getElementById('push-status');
   if (!toggle) return;
+  toggle.disabled        = false;
+  toggle.style.opacity   = '1';
   toggle.checked        = on;
   track.style.background  = on ? '#16a34a' : '#e5e7eb';
   thumb.style.transform   = on ? 'translateX(20px)' : 'translateX(0)';
   if (status) status.textContent = on ? '알림이 활성화되어 있습니다' : '';
 }
 
+// 누른 즉시 — 결과를 기다리는 동안 "처리 중" 상태로 바로 반응
+function _setPushToggleLoading() {
+  const toggle = document.getElementById('push-toggle');
+  const status = document.getElementById('push-status');
+  if (toggle) { toggle.disabled = true; toggle.style.opacity = '0.5'; }
+  if (status) status.textContent = '처리 중…';
+}
+
 async function _togglePush(on) {
   const status = document.getElementById('push-status');
   const user   = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+  _setPushToggleLoading(); // 누른 즉시 시각적 반응
 
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     if (status) status.textContent = '이 브라우저는 푸시 알림을 지원하지 않습니다';
