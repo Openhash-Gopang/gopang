@@ -1,16 +1,20 @@
 {
-  "name": "고팡 — AI 비서",
-  "short_name": "고팡",
-  "description": "고팡(Gopang) AI 법률·의료·생활 비서. 귀하의 모든 일상과 업무를 함께합니다.",
+  "name": "혼디 — AI 비서",
+  "short_name": "혼디",
+  "description": "혼디(Hondi) AI 법률·의료·생활 비서. 귀하의 모든 일상과 업무를 함께합니다.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#09090F",
-  "theme_color": "#09090F",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "lang": "ko",
   "dir": "ltr",
-  "categories": ["productivity", "utilities", "lifestyle"],
+  "categories": [
+    "productivity",
+    "utilities",
+    "lifestyle"
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -43,7 +47,7 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "고팡 AI 비서 홈"
+      "label": "혼디 AI 비서 홈"
     }
   ],
   "shortcuts": [
@@ -52,7 +56,12 @@
       "short_name": "AI",
       "description": "AI 비서를 바로 시작합니다",
       "url": "/?ai=1",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ],
   "prefer_related_applications": false
