@@ -109,7 +109,7 @@ html,body{height:100%;background:#fff;color:#111;
 <div class="menu-section">
   <div class="menu-section-title">최근 대화 상대</div>
   <div class="menu-empty" id="recent-empty">아직 대화한 상대가 없습니다.<br>상단 검색(🔍)으로 상대를 찾아보세요.</div>
-  <div class="recent-row" id="recent-row" style="display:none"></div>
+  <div class="recent-row" id="recent-row" data-noswipe style="display:none"></div>
 </div>
 
 <!-- ── 서비스 ── -->
@@ -142,6 +142,88 @@ html,body{height:100%;background:#fff;color:#111;
 </div>
 
 <div class="menu-footer">혼디 · Gopang Platform</div>
+
+<!-- ── 오른쪽→왼쪽 스와이프로 메뉴 밀어넣기(닫기) ──
+     left-menu.html은 webapp.html과 같은 origin의 iframe이므로
+     parent.document에 직접 접근해 드로어를 손가락에 맞춰 드래그하듯
+     움직이고, 일정 거리 이상이면 parent.closeLeftMenu()를 호출한다.
+     [data-noswipe] 영역(예: 가로 스크롤 목록)에서 시작한 터치는 제외. -->
+<script>
+(function () {
+  const THRESH      = 70; // 닫기로 확정하는 최소 이동 거리(px)
+  const MOVE_DECIDE  = 10; // 가로/세로 판정을 위한 최소 이동 거리(px)
+
+  let startX = 0, startY = 0;
+  let tracking = false, decided = false, valid = false;
+  let drawerEl = null;
+
+  function getDrawer() {
+    try { return parent.document.querySelector('#left-menu-overlay .left-menu-drawer'); }
+    catch (e) { return null; }
+  }
+
+  function onStart(e) {
+    if (e.touches.length !== 1) return;
+    if (e.target.closest && e.target.closest('[data-noswipe]')) return;
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY;
+    tracking = true; decided = false; valid = false;
+  }
+
+  function onMove(e) {
+    if (!tracking) return;
+    const t  = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+
+    if (!decided) {
+      if (Math.abs(dx) < MOVE_DECIDE && Math.abs(dy) < MOVE_DECIDE) return;
+      decided = true;
+      // 세로 스크롤이거나, 닫는 방향(왼쪽)이 아니면 우리 제스처가 아님
+      if (Math.abs(dy) >= Math.abs(dx) || dx >= 0) { tracking = false; return; }
+      valid = true;
+      drawerEl = getDrawer();
+      if (drawerEl) drawerEl.style.transition = 'none';
+    }
+
+    if (valid) {
+      e.preventDefault();
+      if (drawerEl) drawerEl.style.transform = `translateX(${dx}px)`; // dx는 음수
+    }
+  }
+
+  function onEnd(e) {
+    if (!tracking) return;
+    tracking = false;
+    if (!valid) { drawerEl = null; return; }
+
+    const t  = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    if (drawerEl) drawerEl.style.transition = '';
+
+    if (dx < -THRESH) {
+      if (drawerEl) drawerEl.style.transform = '';
+      if (typeof parent.closeLeftMenu === 'function') parent.closeLeftMenu();
+    } else if (drawerEl) {
+      drawerEl.style.transform = ''; // 임계값 미달 — 원래 위치로 스냅백
+    }
+    drawerEl = null;
+  }
+
+  function onCancel() {
+    if (tracking && valid && drawerEl) {
+      drawerEl.style.transition = '';
+      drawerEl.style.transform  = '';
+    }
+    tracking = false; valid = false; drawerEl = null;
+  }
+
+  document.addEventListener('touchstart',  onStart,  { passive: true });
+  document.addEventListener('touchmove',   onMove,   { passive: false });
+  document.addEventListener('touchend',    onEnd,    { passive: true });
+  document.addEventListener('touchcancel', onCancel, { passive: true });
+})();
+</script>
 
 </body>
 </html>
