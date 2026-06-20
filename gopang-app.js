@@ -401,17 +401,19 @@ function _showWelcomePopup() {
     ov.style.transition = 'opacity .2s';
     setTimeout(() => ov.remove(), 200);
     // ── Bug Fix: 이미 등록된 사용자는 번호 입력 팝업 표시 안 함 ──
-    const _alreadyRegistered = (() => {
-      try {
-        const s = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
-        return !!(s?.handle && s?.ipv6);  // ipv6가 실제 저장 키
-      } catch { return false; }
-    })();
-    if (!_alreadyRegistered) {
+    if (!_isAlreadyRegistered()) {
       // 안내문구 + 번호 입력 통합 팝업
       _showRegisterGuide();
     }
   };
+}
+
+// ── 등록 여부 확인 (Guest 모드 폐기 — 환영 팝업의 모든 닫기 경로에서 공통 사용) ──
+function _isAlreadyRegistered() {
+  try {
+    const s = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+    return !!(s?.handle && s?.ipv6);  // ipv6가 실제 저장 키
+  } catch { return false; }
 }
 
 function _closeWelcome(ov) {
@@ -419,6 +421,10 @@ function _closeWelcome(ov) {
   ov.style.opacity = '0';
   ov.style.transition = 'opacity .2s';
   setTimeout(() => ov.remove(), 200);
+  // Guest 모드는 폐기됨 — 배경 클릭으로 닫아도 미등록 사용자는 반드시 가입 안내로 이동
+  if (!_isAlreadyRegistered()) {
+    _showRegisterGuide();
+  }
 }
 
 // ── SW → 앱 메시지 수신 (소리 재생) ────────────────────────
