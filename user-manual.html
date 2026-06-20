@@ -53,6 +53,12 @@ html,body{height:100%;background:#fff;color:#111;
 }
 .m-icon svg{width:10.5px;height:10.5px;stroke:currentColor;stroke-width:2.1;fill:none;
   stroke-linecap:round;stroke-linejoin:round}
+.m-category{
+  font-size:11px;font-weight:700;color:var(--green-dk);
+  text-transform:uppercase;letter-spacing:0.6px;
+  padding:18px 0 6px;
+}
+.m-category:first-child{padding-top:2px}
 .m-title{font-size:14.5px;font-weight:700;color:#111}
 .m-body{font-size:13px;color:#374151;line-height:1.75}
 .m-body b{color:#111;font-weight:700}
@@ -79,6 +85,7 @@ html,body{height:100%;background:#fff;color:#111;
 
 <div class="manual-body">
 
+  <div class="m-category">기본 사용법</div>
   <div class="m-section">
     <div class="m-section-head">
       <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M9 3v18M9 3h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H9"/></svg></span>
@@ -93,6 +100,17 @@ html,body{height:100%;background:#fff;color:#111;
       <span class="m-title">AI 비서 설정</span>
     </div>
     <div class="m-body">상단의 AI 버튼은 원하는 시점에 <b>한 번만 설정</b>하면 됩니다. 버튼을 누르면 OpenRouter API Key 등록 화면으로 이동하고, Key를 한 번 등록해두면 그 이후로는 AI 버튼이 계속 활성 상태로 유지됩니다. Key가 없으면 AI 버튼은 항상 비활성 상태입니다.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.7 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
+      <span class="m-title">설정 창(바퀴모양 아이콘) — Profile</span>
+    </div>
+    <div class="m-body">
+      설정 창(바퀴모양 아이콘)의 <b>Profile</b>은 내부용과 공개용 두 블럭으로 구성됩니다.
+      <div class="eg">공개용 블럭의 데이터는 곧 <b>사용자의 웹 사이트</b>입니다. 가령, 판매자는 자신의 상품과 서비스를 등록하고, 구매자는 자신의 구매 이력을 기록합니다.</div>
+    </div>
   </div>
 
   <div class="m-section">
@@ -134,14 +152,7 @@ html,body{height:100%;background:#fff;color:#111;
     <div class="m-body">부재 중 대화는 좌측 패널의 <b>메시지 수신함</b>에 저장됩니다.</div>
   </div>
 
-  <div class="m-section">
-    <div class="m-section-head">
-      <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-      <span class="m-title">영구 보존 — 언행에 신중하십시오</span>
-    </div>
-    <div class="m-body">대화 창에서 오간 모든 대화와 문서는 <b>영구 보존</b>되며, OpenHash 기술로 위변조를 원천 차단합니다. 그러므로 언행과 문서 등에 신중하십시오.</div>
-  </div>
-
+  <div class="m-category">신원·보안</div>
   <div class="m-section">
     <div class="m-section-head">
       <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/><path d="M9.5 12.5l2 2 3.5-4"/></svg></span>
@@ -152,15 +163,45 @@ html,body{height:100%;background:#fff;color:#111;
 
   <div class="m-section">
     <div class="m-section-head">
-      <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M9 4v16"/></svg></span>
-      <span class="m-title">우측 패널 — 혼디의 하위 시스템</span>
+      <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg></span>
+      <span class="m-title">휴대폰 번호 — 전 세계 유일한 식별자</span>
     </div>
-    <div class="m-body">
-      우측 패널은 혼디의 제반 하위 시스템 목록입니다. 가령 <b>K-Law</b>는 법률 시스템으로, 나만의 AI 비서에게 법률 질의나 업무를 요청하면 나만의 AI 비서가 K-Law를 호출합니다.
-      <div class="eg">
-        호출 즉시 대화창 우측 상단 제목이 "혼디"에서 "K-Law"로 바뀝니다. 즉 대화 상대방이 <b>나만의 AI 비서</b>에서 <b>법률 전문 AI Agent</b>로 넘어가는 것입니다. 대화가 끝나면 법률 Agent는 6하 원칙(누가·언제·어디서·무엇을·어떻게·왜)에 따라 나만의 AI 비서에게 대화 내용을 보고합니다.
-      </div>
+    <div class="m-body">내 휴대폰 번호는 전 세계에서 유일하며, 고유합니다. 그러므로 나를 식별하는 최적의 데이터이며, 혼디 가입 시 전화번호를 입력하는 이유입니다.
+      <div class="eg">혼디는 글로벌 시스템이며, 디폴트 국가명은 <b>한국</b>입니다.</div>
     </div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.5 12.5 20 3"/><path d="M17 6l2 2"/><path d="M19 3l2 2"/></svg></span>
+      <span class="m-title">로그인 키와 GUID</span>
+    </div>
+    <div class="m-body">스마트폰이 곧 혼디의 로그인 키입니다. 기기마다 고유한 지문이 있으므로, 해당 지문과 전화번호를 결합하여 개별 사용자의 고유한 ID를 생성합니다. 이를 <b>GUID</b>라 부릅니다.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 7v5"/><path d="M12 12l-5 5"/><path d="M12 12l5 5"/></svg></span>
+      <span class="m-title">IPv6 주소 — 웹과의 통합</span>
+    </div>
+    <div class="m-body">모든 사용자는 고유한 <b>IPv6</b> 주소를 갖습니다. 이 주소는 향후 웹과 혼디의 통합을 위한 것입니다.</div>
+  </div>
+
+  <div class="m-category">PDV & OpenHash</div>
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+      <span class="m-title">영구 보존 — 언행에 신중하십시오</span>
+    </div>
+    <div class="m-body">대화 창에서 오간 모든 대화와 문서는 <b>영구 보존</b>되며, OpenHash 기술로 위변조를 원천 차단합니다. 그러므로 언행과 문서 등에 신중하십시오.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.5L22 9.5l-5 4.9L18.2 22 12 18.3 5.8 22 7 14.4 2 9.5l7.1-1z"/></svg></span>
+      <span class="m-title">AI가 아니라 OpenHash</span>
+    </div>
+    <div class="m-body">혼디의 가장 큰 특징은 AI가 아니라, <b>Openhash</b>입니다. 나만의 AI 비서는 나의 일상과 업무를 분 단위로 내 PDV에 기록하며, 이 기록은 위변조가 불가능합니다.</div>
   </div>
 
   <div class="m-section">
@@ -179,6 +220,8 @@ html,body{height:100%;background:#fff;color:#111;
     <div class="m-body">
       모든 대화는 메시징 서버가 아니라, 내 스마트폰에 있는 <b>'나만의 PDV'</b>에 암호화되어 기록됩니다. 그러므로 데이터가 대량으로 유출되는 사고는 원천 차단될 뿐 아니라, 오직 나만 접근할 수 있습니다.
       <div class="eg">그러나 귀하의 언행과 문서는 귀하의 PDV뿐 아니라, <b>상대방의 PDV에도 함께 기록된다는 점</b>을 잊지 마십시오.</div>
+      혼디의 모든 데이터는 서버가 아니라 각자의 단말기에 보관되며, 서버는 사용자와 사용자를 연결하는 기능과 Openhash Network의 데이터 무결성 보장 장치로 역할합니다. 간단히, 혼디 서버들은 사용자 단말기에 저장된 수많은 데이터(대화, 문서 등)의 지문을 보관하는 장소입니다.
+      <div class="eg">Openhash Network를 구성하는 서버들은 읍면동 단위로 하나씩 위치합니다.</div>
     </div>
   </div>
 
@@ -187,7 +230,17 @@ html,body{height:100%;background:#fff;color:#111;
       <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7 3 13a3 3 0 0 0 4 0z"/><path d="M19 7l-2 6a3 3 0 0 0 4 0z"/></svg></span>
       <span class="m-title">OpenHash — 위변조 불가능한 지문</span>
     </div>
-    <div class="m-body">PDV는 OpenHash Network에 데이터 각각의 지문(Hash)을 보관합니다. 이 지문은 결코 위변조될 수 없습니다.</div>
+    <div class="m-body">PDV는 OpenHash Network에 데이터 각각의 지문(Hash)을 보관합니다. 이 지문은 결코 위변조될 수 없습니다. Openhash의 주된 용도는 언제 어떤 일이 있었는지 입증하는 것입니다.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></span>
+      <span class="m-title">PDV 기록 삭제하기</span>
+    </div>
+    <div class="m-body">내 기록을 삭제하는 방법은 통상의 파일과 같습니다. 내 PDV에 접속하여 삭제하면 됩니다.
+      <div class="eg">단, 삭제된 데이터는 과거 사건의 진실성을 입증할 수 없습니다.</div>
+    </div>
   </div>
 
   <div class="m-section">
@@ -196,6 +249,20 @@ html,body{height:100%;background:#fff;color:#111;
       <span class="m-title">분쟁 해결 — 1초 안에 진실 확인</span>
     </div>
     <div class="m-body">분쟁이나 갈등이 발생하면 PDV는 증거나 증언을 대체하며, 데이터의 진실성을 <b>100% 보장</b>합니다. 확인 과정은 <b>1초 이내</b>에 완료됩니다.</div>
+  </div>
+
+  <div class="m-category">나만의 AI 비서</div>
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M9 4v16"/></svg></span>
+      <span class="m-title">우측 패널 — 혼디의 하위 시스템</span>
+    </div>
+    <div class="m-body">
+      우측 패널은 나만의 AI 비서가 호출하는 전문 분야 AI Agent 목록입니다. 각 하위 시스템은 자체 웹 사이트에서 해당 기능을 상세히 설명합니다. 가령 <b>K-Law</b>는 법률 시스템으로, 나만의 AI 비서에게 법률 질의나 업무를 요청하면 나만의 AI 비서가 K-Law를 호출합니다. K-Law는 소송을 접수하기 전, 4~5년 뒤에나 보게 될 대법원 판결문을 신뢰할 만한 정확도로 미리 보여줍니다.
+      <div class="eg">
+        호출 즉시 대화창 우측 상단 제목이 "혼디"에서 "K-Law"로 바뀝니다. 즉 대화 상대방이 <b>나만의 AI 비서</b>에서 <b>법률 전문 AI Agent</b>로 넘어가는 것입니다. 대화가 끝나면 법률 Agent는 6하 원칙(누가·언제·어디서·무엇을·어떻게·왜)에 따라 나만의 AI 비서에게 대화 내용을 보고합니다.
+      </div>
+    </div>
   </div>
 
   <div class="m-section">
@@ -230,6 +297,7 @@ html,body{height:100%;background:#fff;color:#111;
     </div>
   </div>
 
+  <div class="m-category">커뮤니티·운영</div>
   <div class="m-section">
     <div class="m-section-head">
       <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9"/><path d="M21 4v6h-6"/></svg></span>
@@ -246,6 +314,7 @@ html,body{height:100%;background:#fff;color:#111;
     <div class="m-body">혼디의 모든 소스코드는 Github에 공개되므로, 누구나 혼디의 시스템 개발과 갱신에 참여할 수 있습니다.</div>
   </div>
 
+  <div class="m-category">경제 시스템</div>
   <div class="m-section">
     <div class="m-section-head">
       <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M6 8h12l1.5 13h-15z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg></span>
