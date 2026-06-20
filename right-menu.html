@@ -8,7 +8,11 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:#fff;color:#111;
   font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
-  -webkit-font-smoothing:antialiased;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  -webkit-font-smoothing:antialiased;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  /* 닫기 스와이프(왼쪽→오른쪽)가 화면 절대 오른쪽 가장자리에 가까워질 때
+     안드로이드 시스템 뒤로가기 제스처가 가로채 드래그가 중간에 끊기는
+     문제 방지 — webapp.html에 이미 적용한 것과 동일 */
+  overscroll-behavior-x:none;touch-action:pan-y}
 
 :root{
   --green:#16a34a;--green-lt:#dcfce7;--green-dk:#15803d;
