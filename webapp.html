@@ -117,6 +117,16 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   --r-md:12px;
 }
 
+/* 설치된 PWA(standalone) 모드 — 안드로이드 하단 내비게이션 바가
+   env(safe-area-inset-bottom)을 0으로 잘못 보고하는 기기가 많아
+   최소 여백을 강제로 보장한다 */
+@media (display-mode: standalone) {
+  :root {
+    --safe-b: max(env(safe-area-inset-bottom, 0px), 24px);
+  }
+}
+
+
 /* ── 앱 레이아웃 ── */
 #app,.app{display:flex;flex-direction:column;height:100%;height:100dvh;
   max-width:480px;margin:0 auto;background:#fff;overflow:hidden}
