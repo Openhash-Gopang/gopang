@@ -45,26 +45,51 @@ html,body{height:100%;background:#fff;color:#111;
   padding:10px 18px 8px;text-transform:uppercase;
 }
 
-/* 시스템 항목 — 2열 그리드 카드 */
-.sys-grid{
-  display:grid;grid-template-columns:1fr 1fr;gap:10px;
-  padding:2px 16px 10px;
+/* 시스템 항목 — 아코디언(터치하면 안내가 아래로 펼쳐짐) */
+.acc-list{padding:2px 16px 10px;display:flex;flex-direction:column;gap:8px}
+.acc-item{
+  border:1px solid var(--border);border-radius:14px;background:var(--chip-bg);
+  overflow:hidden;
 }
-.sys-item{
-  display:flex;flex-direction:column;align-items:flex-start;gap:8px;
-  padding:14px 12px;border-radius:14px;background:var(--chip-bg);
-  border:1px solid var(--border);cursor:pointer;text-align:left;
+.acc-item.open{border-color:var(--green-bd,#86efac);background:#fff}
+.acc-header{
+  width:100%;display:flex;align-items:center;gap:10px;
+  padding:12px 12px;background:none;border:none;cursor:pointer;text-align:left;
   font-family:inherit;color:#111;
 }
-.sys-item:active{background:var(--green-lt);border-color:var(--green)}
+.acc-header:active{background:var(--green-lt)}
 .sys-icon{
-  width:36px;height:36px;border-radius:10px;background:#fff;color:var(--green-dk);
+  width:34px;height:34px;border-radius:10px;background:#fff;color:var(--green-dk);
   display:flex;align-items:center;justify-content:center;border:1px solid var(--border);
+  flex-shrink:0;
 }
-.sys-icon svg{width:18px;height:18px;stroke:currentColor;stroke-width:2;
+.sys-icon svg{width:17px;height:17px;stroke:currentColor;stroke-width:2;
   fill:none;stroke-linecap:round;stroke-linejoin:round}
-.sys-name{font-size:13.5px;font-weight:700;letter-spacing:-0.2px}
-.sys-desc{font-size:11px;color:var(--txt3);line-height:1.4;margin-top:-4px}
+.acc-header-text{flex:1;min-width:0}
+.sys-name{font-size:13.5px;font-weight:700;letter-spacing:-0.2px;display:block}
+.sys-desc{font-size:11px;color:var(--txt3);line-height:1.4;display:block;margin-top:1px}
+.acc-chevron{
+  width:16px;height:16px;stroke:var(--txt3);stroke-width:2.3;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;
+  transition:transform .2s;
+}
+.acc-item.open .acc-chevron{transform:rotate(180deg);stroke:var(--green-dk)}
+
+.acc-panel{
+  max-height:0;overflow:hidden;
+  transition:max-height .25s ease;
+}
+.acc-panel-inner{padding:0 14px 14px 56px}
+.acc-guide{font-size:12.5px;color:#374151;line-height:1.65;margin-bottom:10px}
+.acc-goto{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:8px 14px;border-radius:20px;border:none;
+  background:var(--green);color:#fff;font-size:12.5px;font-weight:700;
+  cursor:pointer;font-family:inherit;
+}
+.acc-goto:active{background:var(--green-dk)}
+.acc-goto svg{width:13px;height:13px;stroke:#fff;stroke-width:2.4;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
 
 .menu-footer{
   padding:14px 18px calc(var(--safe-b) + 18px);
@@ -86,12 +111,12 @@ html,body{height:100%;background:#fff;color:#111;
 
 <div class="menu-section">
   <div class="menu-section-title">시스템 선택</div>
-  <div class="sys-grid" id="sys-grid"></div>
+  <div class="acc-list" id="acc-list"></div>
 </div>
 
 <div class="menu-footer">
-  항목을 누르면 해당 시스템 앱으로 이동합니다.<br>
-  더 많은 시스템이 계속 추가될 예정입니다.
+  항목을 누르면 간단한 안내가 펼쳐집니다.<br>
+  안내 안의 '바로가기' 버튼을 누르면 해당 시스템으로 이동합니다.
 </div>
 
 <script>
@@ -103,22 +128,38 @@ html,body{height:100%;background:#fff;color:#111;
 // k119.gopang.net 등 다른 이름을 쓸 수도 있음)
 // ────────────────────────────────────────────────────────────
 const SUBSYSTEMS = [
-  { id:'klaw',       name:'K-Law',       desc:'법률 상담·소송',   url:'https://klaw.gopang.net/webapp.html',       icon:'scale' },
-  { id:'tax',        name:'K-Tax',       desc:'국세·세무',        url:'https://tax.gopang.net/webapp.html',        icon:'receipt' },
-  { id:'school',     name:'K-School',    desc:'교육·학사',        url:'https://school.gopang.net/webapp.html',     icon:'cap' },
-  { id:'health',     name:'K-Health',    desc:'의료·건강',        url:'https://health.gopang.net/webapp.html',     icon:'heart' },
-  { id:'police',     name:'K-Police',    desc:'민원·신고',        url:'https://police.gopang.net/webapp.html',     icon:'shield' },
-  { id:'911',        name:'K-119',       desc:'소방·구급',        url:'https://911.gopang.net/webapp.html',        icon:'siren' },
-  { id:'traffic',    name:'K-Traffic',   desc:'교통·단속',        url:'https://traffic.gopang.net/webapp.html',    icon:'car' },
-  { id:'public',     name:'K-Public',    desc:'행정·민원',        url:'https://public.gopang.net/webapp.html',     icon:'building' },
-  { id:'democracy',  name:'K-Democracy', desc:'청원·투표',        url:'https://democracy.gopang.net/webapp.html',  icon:'vote' },
-  { id:'logistics',  name:'K-Logistics', desc:'물류·배송',        url:'https://logistics.gopang.net/webapp.html',  icon:'truck' },
-  { id:'insurance',  name:'K-Insurance', desc:'보험',             url:'https://insurance.gopang.net/webapp.html',  icon:'umbrella' },
-  { id:'stock',      name:'K-Stock',     desc:'증권·투자',        url:'https://stock.gopang.net/webapp.html',      icon:'trend' },
-  { id:'market',     name:'혼디 마켓',     desc:'커머스',           url:'https://market.gopang.net/webapp.html',     icon:'bag' },
-  { id:'security',   name:'K-Security',  desc:'보안',             url:'https://security.gopang.net/webapp.html',   icon:'lock' },
-  { id:'gdc',        name:'GDC',         desc:'디지털 화폐',       url:'https://gdc.gopang.net/webapp.html',        icon:'coin' },
-  { id:'qna',        name:'Q&A',         desc:'고객 지원',         url:'https://qna.gopang.net/webapp.html',        icon:'chat' },
+  { id:'klaw',       name:'K-Law',       desc:'법률 상담·소송',   url:'https://klaw.gopang.net/webapp.html',       icon:'scale',
+    guide:'법률 상담과 소송 업무를 지원하는 전문 AI Agent입니다. 나만의 AI 비서에게 법률 관련 질의를 하면 자동으로 호출되며, 계약서 검토·분쟁 조정·소송 절차 안내 등을 제공합니다.' },
+  { id:'tax',        name:'K-Tax',       desc:'국세·세무',        url:'https://tax.gopang.net/webapp.html',        icon:'receipt',
+    guide:'국세·세무 신고와 상담을 지원합니다. 혼디의 자동 재무제표와 연동되어 누락이나 오류 없는 정확한 세금 계산을 돕습니다.' },
+  { id:'school',     name:'K-School',    desc:'교육·학사',        url:'https://school.gopang.net/webapp.html',     icon:'cap',
+    guide:'교육과 학사 업무를 지원합니다. 학습 관리, 학사 행정, 진학·진로 상담 등을 제공합니다.' },
+  { id:'health',     name:'K-Health',    desc:'의료·건강',        url:'https://health.gopang.net/webapp.html',     icon:'heart',
+    guide:'의료 상담과 건강 관리를 지원합니다. 증상 확인, 병원·진료과 안내, 개인 건강 기록 관리 등을 제공합니다.' },
+  { id:'police',     name:'K-Police',    desc:'민원·신고',        url:'https://police.gopang.net/webapp.html',     icon:'shield',
+    guide:'경찰 관련 민원과 신고를 지원합니다. 사건 신고, 민원 접수, 법률 절차 안내 등을 처리합니다.' },
+  { id:'911',        name:'K-119',       desc:'소방·구급',        url:'https://911.gopang.net/webapp.html',        icon:'siren',
+    guide:'소방·구급 상황을 지원합니다. 화재 신고, 응급 구조 요청, 안전 관련 안내 등을 처리합니다.' },
+  { id:'traffic',    name:'K-Traffic',   desc:'교통·단속',        url:'https://traffic.gopang.net/webapp.html',    icon:'car',
+    guide:'교통 정보와 단속 관련 업무를 지원합니다. 교통 민원, 단속 이의제기, 실시간 교통 정보 안내 등을 제공합니다.' },
+  { id:'public',     name:'K-Public',    desc:'행정·민원',        url:'https://public.gopang.net/webapp.html',     icon:'building',
+    guide:'일반 행정과 민원 업무를 지원합니다. 각종 증명서 발급, 행정 절차 안내 등을 제공합니다.' },
+  { id:'democracy',  name:'K-Democracy', desc:'청원·투표',        url:'https://democracy.gopang.net/webapp.html',  icon:'vote',
+    guide:'청원과 투표 등 민주적 의사결정을 지원합니다. 국민청원, 주민투표, 정책 제안 등을 처리합니다.' },
+  { id:'logistics',  name:'K-Logistics', desc:'물류·배송',        url:'https://logistics.gopang.net/webapp.html',  icon:'truck',
+    guide:'물류와 배송 업무를 지원합니다. 배송 조회, 물류 관리, 운송 상담 등을 제공합니다.' },
+  { id:'insurance',  name:'K-Insurance', desc:'보험',             url:'https://insurance.gopang.net/webapp.html',  icon:'umbrella',
+    guide:'보험 상담과 가입을 지원합니다. 보험 비교, 청구 절차 안내, 손해 사정 등을 제공합니다.' },
+  { id:'stock',      name:'K-Stock',     desc:'증권·투자',        url:'https://stock.gopang.net/webapp.html',      icon:'trend',
+    guide:'증권과 투자 상담을 지원합니다. 시장 정보, 투자 자문, 거래 절차 안내 등을 제공합니다.' },
+  { id:'market',     name:'혼디 마켓',     desc:'커머스',           url:'https://market.gopang.net/webapp.html',     icon:'bag',
+    guide:'혼디의 장터입니다. 혼디 자체는 비영리 공동체이지만, 혼디장은 영리를 위한 공간으로, 누구나 상품을 등록하고 판매할 수 있습니다.' },
+  { id:'security',   name:'K-Security',  desc:'보안',             url:'https://security.gopang.net/webapp.html',   icon:'lock',
+    guide:'보안 위협을 감지하고 차단하는 경비 AI Agent입니다. 보이스피싱 등 불법 행위를 자동으로 탐지해 신고 등 적절한 조치를 실행합니다.' },
+  { id:'gdc',        name:'GDC',         desc:'디지털 화폐',       url:'https://gdc.gopang.net/webapp.html',        icon:'coin',
+    guide:'혼디의 결제 통화인 GDC(Global Digital Currency)를 관리합니다. 환전, 결제, 잔액 조회 등을 제공합니다. 혼디에서 상품·서비스를 구매하려면 먼저 GDC로 환전해야 합니다.' },
+  { id:'qna',        name:'Q&A',         desc:'고객 지원',         url:'https://qna.gopang.net/webapp.html',        icon:'chat',
+    guide:'혼디 이용 중 궁금한 점을 문의하는 고객 지원 시스템입니다.' },
 ];
 
 const ICONS = {
@@ -140,23 +181,55 @@ const ICONS = {
   chat:     '<path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9"/><path d="M21 4v6h-6"/><path d="M8 10a4 4 0 1 1 5.5 3.7"/><circle cx="8" cy="15.5" r=".6" fill="currentColor"/>',
 };
 
-const grid = document.getElementById('sys-grid');
-grid.innerHTML = SUBSYSTEMS.map(s => `
-  <button class="sys-item" data-url="${s.url}">
-    <span class="sys-icon"><svg viewBox="0 0 24 24">${ICONS[s.icon] || ''}</svg></span>
-    <span class="sys-name">${s.name}</span>
-    <span class="sys-desc">${s.desc}</span>
-  </button>
+const list = document.getElementById('acc-list');
+list.innerHTML = SUBSYSTEMS.map(s => `
+  <div class="acc-item" data-id="${s.id}">
+    <button class="acc-header" onclick="toggleAcc('${s.id}')">
+      <span class="sys-icon"><svg viewBox="0 0 24 24">${ICONS[s.icon] || ''}</svg></span>
+      <span class="acc-header-text">
+        <span class="sys-name">${s.name}</span>
+        <span class="sys-desc">${s.desc}</span>
+      </span>
+      <svg class="acc-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="acc-panel">
+      <div class="acc-panel-inner">
+        <p class="acc-guide">${s.guide || ''}</p>
+        <button class="acc-goto" data-url="${s.url}">
+          바로가기
+          <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
 `).join('');
 
-grid.addEventListener('click', (e) => {
-  const btn = e.target.closest('.sys-item');
+// 항목을 누르면 안내가 아래로 펼쳐짐(아코디언). 여러 항목을 동시에 펼쳐둘 수 있음.
+function toggleAcc(id) {
+  const item  = list.querySelector(`.acc-item[data-id="${id}"]`);
+  if (!item) return;
+  const panel = item.querySelector('.acc-panel');
+  const open  = item.classList.contains('open');
+
+  if (open) {
+    item.classList.remove('open');
+    panel.style.maxHeight = '0px';
+  } else {
+    item.classList.add('open');
+    panel.style.maxHeight = panel.scrollHeight + 'px';
+  }
+}
+window.toggleAcc = toggleAcc;
+
+// '바로가기' 버튼 — 외부 시스템 사이트로 전체 페이지 이동 (현재 탭의 최상위 프레임 이동)
+list.addEventListener('click', (e) => {
+  const btn = e.target.closest('.acc-goto');
   if (!btn) return;
+  e.stopPropagation(); // 아코디언 토글과 겹치지 않도록
   const url = btn.dataset.url;
   if (!url) return;
-  // 외부 시스템 사이트로 전체 페이지 이동 (현재 탭의 최상위 프레임 이동)
   try { window.top.location.href = url; }
-  catch (e) { window.location.href = url; }
+  catch (err) { window.location.href = url; }
 });
 </script>
 
