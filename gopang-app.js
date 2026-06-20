@@ -10,7 +10,7 @@
 // ── Core ─────────────────────────────────────────────────
 import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, gopangAuth } from './src/gopang/core/auth.js';
 import { loadSettings, CFG, saveSettings }     from './src/gopang/core/config.js';
-import { _USER, aiActive }                     from './src/gopang/core/state.js';
+import { _USER, aiActive, setAiActive }        from './src/gopang/core/state.js';
 
 // ── UI ───────────────────────────────────────────────────
 import { appendBubble }                        from './src/gopang/ui/bubble.js';
@@ -226,6 +226,7 @@ const _boot = async () => {
   // 4-7. 초기화
   loadSettings();         // CFG 최신화 (initAIToggleState 판단 기준)
   initAIToggleState();    // 마지막 AI 켬/끔 상태 복원 (또는 설정 직후 첫 부팅 시 자동 켬)
+  setAiActive(aiActive);  // 강제 재동기화 — 위 단계에서 상태가 안 바뀌었어도 버튼 화면은 항상 맞춘다
   _showWelcomeMessage();
   _scheduleLocation();
 
@@ -301,9 +302,20 @@ const _boot = async () => {
     if (e.key !== 'gopang_cfg' || !e.newValue) return;
     _checkAutoActivateAI();
   });
+
+  // ── 화면이 다시 보일 때마다 AI 버튼 강제 재동기화 ──────────
+  // setAiActive()가 호출될 때마다 버튼도 같이 갱신되지만, 상태값 자체는
+  // 안 바뀌고(예: 이미 true) 화면만 어떤 이유로든 어긋난 경우는 setAiActive가
+  // 다시 호출되지 않는다. 그래서 화면이 다시 보일 수 있는 모든 시점에
+  // setAiActive(aiActive)를 그대로 다시 호출해 강제로 한 번 더 맞춘다.
+  const _resyncAIButton = () => setAiActive(aiActive);
   window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') _checkAutoActivateAI();
+    if (document.visibilityState === 'visible') {
+      _checkAutoActivateAI();
+      _resyncAIButton();
+    }
   });
+  window.addEventListener('pageshow', _resyncAIButton); // 뒤로가기 등 BFCache 복원 시
 
   console.info('[Gopang v3] 부트스트랩 완료');
 

@@ -35,8 +35,7 @@ export function toggleAI() {
 
   // 설정 완료 사용자 → 단순 토글 (켬 ↔ 끔)
   if (aiActive) {
-    setAiActive(false);
-    document.getElementById('btn-ai')?.classList.remove('active');
+    setAiActive(false); // 버튼 화면도 setAiActive() 안에서 같이 갱신됨
     localStorage.setItem(_AI_TOGGLE_KEY, '0');
     appendBubble('system', 'AI 비서 비활성화됨.');
   } else {
@@ -58,8 +57,7 @@ export function activateAI(silent = false) {
     if (!silent) window.open('/pages/ai-setup-mobile.html', '_blank');
     return;
   }
-  setAiActive(true);
-  document.getElementById('btn-ai')?.classList.add('active');
+  setAiActive(true); // 버튼 화면도 setAiActive() 안에서 같이 갱신됨
   localStorage.setItem(_AI_TOGGLE_KEY, '1');
   const sub = document.getElementById('ai-card-sub');
   if (sub) sub.textContent = `${CFG.model} 연결됨`;

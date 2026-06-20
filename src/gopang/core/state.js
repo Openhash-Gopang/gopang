@@ -19,7 +19,15 @@ export let attachFile = null;
 export let recognition = null;
 export const history  = [];   // { role, content }
 
-export function setAiActive(v)    { aiActive   = v; }
+export function setAiActive(v) {
+  aiActive = v;
+  // AI 토글 버튼은 상단 바에 항상 떠 있어 "다시 그려지는" 계기가 없는
+  // 유일한 토글이라, 다른 설정 토글들과 달리 화면이 따로 동기화되지
+  // 않으면 어긋난 채로 영원히 남는다. 그래서 상태가 바뀌는 이 단일
+  // 지점에서 항상 버튼 화면도 같이 맞춘다 — 호출자가 매번 버튼 클래스를
+  // 직접 건드릴 필요가 없고, 앞으로 추가되는 코드도 자동으로 안전하다.
+  document.getElementById('btn-ai')?.classList.toggle('active', !!v);
+}
 export function setMicActive(v)   { micActive  = v; }
 export function setAttachFile(v)  { attachFile = v; }
 export function setRecognition(v) { recognition = v; }
