@@ -14,6 +14,43 @@ import { _klawReview } from '../services/klaw.js';
 
 export let history_ref = history;  // 외부 참조용
 
+// ── 응답 생성 중지(Stop) 지원 ───────────────────────────────
+// 전송 버튼이 "생성 중" 상태일 때 클릭하면 stopGeneration()이 호출되어
+// 현재 진행 중인 스트리밍 fetch를 중단한다 (Claude의 정지 버튼과 동일한 동작).
+let _currentAbort = null;
+
+export function stopGeneration() {
+  if (_currentAbort) {
+    console.log('[AI] 사용자 요청으로 응답 생성 중지');
+    _currentAbort.abort();
+  }
+}
+
+function _setSendBtnGenerating(active) {
+  const btn = document.getElementById('send-btn');
+  if (!btn) return;
+  btn.classList.toggle('generating', active);
+  if (active) {
+    btn.disabled = false; // 생성 중에는 항상 클릭 가능해야 중지 버튼으로 동작
+  } else {
+    const input = document.getElementById('msg-input');
+    btn.disabled = !(input && input.value.trim());
+  }
+}
+
+// callAI는 얇은 래퍼 — 실제 로직(_callAIInner)이 어떤 경로로 끝나든(정상 종료/
+// 에러/중지) try/finally가 버튼 상태와 AbortController를 항상 정리한다.
+export async function callAI(userText, imageFile = null, _preTab = null) {
+  _currentAbort = new AbortController();
+  _setSendBtnGenerating(true);
+  try {
+    await _callAIInner(userText, imageFile, _preTab);
+  } finally {
+    _setSendBtnGenerating(false);
+    _currentAbort = null;
+  }
+}
+
 // ── 호출 후보 목록 생성 ────────────────────────────────────
 // 우선순위: 1) 고팡 프록시(기본, 무료) 2) 사용자가 등록한 BYOK provider들 (등록 순서대로)
 // 한도 초과(429)·크레딧부족(402) 시 callAI()에서 다음 후보로 자동 전환
@@ -75,7 +112,7 @@ function _buildCallCandidates() {
 }
 
 
-export async function callAI(userText, imageFile = null, _preTab = null) {
+async function _callAIInner(userText, imageFile = null, _preTab = null) {
   showTyping();
 
   // urgent=true → kemergency면 경고 표시 후 계속 처리
@@ -276,6 +313,7 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
             ...(c.isProxy ? {} : { 'Authorization': `Bearer ${c.apiKey}` }),
           },
           body: JSON.stringify(reqBody),
+          signal: _currentAbort?.signal,
         });
 
         if (attempt.ok) { res = attempt; usedCandidate = c; break; }
@@ -287,6 +325,7 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
         console.warn(`[AI] ${c.provider}(${c.model}) 실패(${attempt.status}) — 다음 LLM으로 전환:`, errBody.slice(0, 150));
         continue;
       } catch (fetchErr) {
+        if (fetchErr.name === 'AbortError') throw fetchErr; // 사용자 중지 — 페일오버 없이 즉시 중단
         lastErr = fetchErr;
         // 네트워크 오류 등도 다음 후보가 있으면 계속 시도
         if (i < candidates.length - 1) continue;
@@ -394,6 +433,11 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
 
   } catch (err) {
     hideTyping();
+    if (err.name === 'AbortError') {
+      console.log('[AI] 응답 생성이 중지되었습니다 (사용자 요청)');
+      document.querySelector('.bubble-ai.streaming')?.classList.remove('streaming');
+      return;
+    }
     const existingBubble = document.querySelector('.bubble-ai.streaming');
     let userMsg = `⚠️ API 오류: ${err.message}`;
     if (err.message.includes('402') || err.message.includes('Insufficient Balance')) {

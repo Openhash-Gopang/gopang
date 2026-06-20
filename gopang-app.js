@@ -10,7 +10,7 @@
 // ── Core ─────────────────────────────────────────────────
 import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, gopangAuth } from './src/gopang/core/auth.js';
 import { loadSettings, CFG, saveSettings }     from './src/gopang/core/config.js';
-import { _USER }                               from './src/gopang/core/state.js';
+import { _USER, aiActive }                     from './src/gopang/core/state.js';
 
 // ── UI ───────────────────────────────────────────────────
 import { appendBubble }                        from './src/gopang/ui/bubble.js';
@@ -170,7 +170,7 @@ const _boot = async () => {
     { _gwpLaunch, _gwpClose, _gwpMatch },
     { _handleGwpSignRequest },
     { _klawReview },
-    { callAI },
+    { callAI, stopGeneration },
     { runRouter, applyRouterResult },
   ] = await Promise.all([
     import('./src/gopang/ui/send-message.js'),
@@ -214,7 +214,10 @@ const _boot = async () => {
   }
   const attBtn = document.getElementById('btn-attach');
   if (attBtn)  attBtn.addEventListener('click',  () => triggerAttach());
-  if (sendBtn) sendBtn.addEventListener('click', () => sendMessage());
+  if (sendBtn) sendBtn.addEventListener('click', () => {
+    if (sendBtn.classList.contains('generating')) stopGeneration();
+    else sendMessage();
+  });
   if (camBtn)  camBtn.addEventListener('click',  () => triggerCamera());
   if (micBtn)  micBtn.addEventListener('click',  () => toggleMic());
   if (fileInp) fileInp.addEventListener('change', (e) => handleFileSelect(e));
@@ -270,6 +273,23 @@ const _boot = async () => {
   window.addEventListener('pagehide', _saveOnce);
   window.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') _saveOnce();
+  });
+
+  // 4-9b. 다른 탭(ai-setup-mobile.html)의 로컬 저장 감지 ──────────
+  // 모바일 AI 설정 페이지는 서버를 거치지 않고 localStorage(gopang_cfg)에
+  // 직접 쓴다. 그 탭은 닫히고 이 탭(webapp.html)은 계속 떠 있는 경우,
+  // storage 이벤트로 변경을 즉시 감지해 새로고침 없이 CFG를 재적용한다.
+  // (PC→폰 푸시 동기화용 _runSync와는 별개 경로 — 그쪽은 서버의 seal 큐를
+  //  조회하므로 이 로컬 저장 방식의 변경은 감지하지 못한다.)
+  window.addEventListener('storage', (e) => {
+    if (e.key !== 'gopang_cfg' || !e.newValue) return;
+    loadSettings();
+    const hasKey = !!(CFG.apiKey || CFG.geminiKey ||
+      (Array.isArray(CFG.providers) && CFG.providers.length));
+    if (hasKey && !aiActive) {
+      activateAI(true);
+      appendBubble('ai', '⚙️ AI 비서 설정이 저장되어 자동으로 활성화되었습니다.');
+    }
   });
 
   console.info('[Gopang v3] 부트스트랩 완료');
