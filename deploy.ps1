@@ -65,4 +65,26 @@ else {
     }
 }
 
+# 6. 배포 완료 push 브로드캐스트 (켜져 있는 클라이언트 즉시 업데이트 체크 유도)
+Write-Host "--- 업데이트 push 브로드캐스트 시작 ---"
+
+$pushSecret = $env:DEPLOY_PUSH_SECRET
+if ([string]::IsNullOrEmpty($pushSecret)) {
+    Write-Host "DEPLOY_PUSH_SECRET 환경변수가 없어 push 브로드캐스트를 건너뜁니다."
+}
+else {
+    $broadcastUrl = "https://gopang-proxy.tensor-city.workers.dev/push/broadcast"
+    $broadcastBodyObj = @{ secret = $pushSecret }
+    $broadcastBody = $broadcastBodyObj | ConvertTo-Json
+
+    try {
+        $bResp = Invoke-RestMethod -Method POST -Uri $broadcastUrl -ContentType "application/json" -Body $broadcastBody
+        Write-Host ("push 브로드캐스트 완료: 전체 " + $bResp.total + "건 중 " + $bResp.sent + "건 전송 (실패 " + $bResp.failed + "건)")
+    }
+    catch {
+        Write-Host "push 브로드캐스트 요청 중 오류 발생"
+        Write-Host $_.Exception.Message
+    }
+}
+
 Write-Host "--- 배포 스크립트 종료 ---"

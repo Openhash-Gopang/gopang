@@ -176,6 +176,28 @@ async function _l1PatchProfile(env, recordId, patch) {
   return res.json();
 }
 
+// L1 profiles 중 push_subscription이 설정된 전체 레코드 조회 (배포 브로드캐스트용, 페이지네이션)
+async function _l1ListPushSubscribers(env) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent("push_subscription != ''");
+  const out = [];
+  let page = 1;
+  const perPage = 200;
+  while (true) {
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=${perPage}&page=${page}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    if (!res.ok) throw new Error(`L1 조회 실패 (HTTP ${res.status})`);
+    const data = await res.json().catch(() => ({ items: [] }));
+    out.push(...(data.items || []));
+    if (!data.items?.length || data.items.length < perPage) break;
+    page++;
+    if (page > 50) break; // 안전장치
+  }
+  return out;
+}
+
 // ═══════════════════════════════════════════════════════════
 // 메인 fetch 핸들러
 // ═══════════════════════════════════════════════════════════
@@ -320,6 +342,8 @@ export default {
       return handlePushSend(request, env, corsHeaders);
     if (pathname === '/push/vapid-public-key' && request.method === 'GET')
       return handlePushVapidKey(request, env, corsHeaders);
+    if (pathname === '/push/broadcast' && request.method === 'POST')
+      return handlePushBroadcast(request, env, corsHeaders);
 
     // ── POST 전용 ────────────────────────────────────────
     if (request.method !== 'POST') {
@@ -2259,6 +2283,42 @@ function handlePushVapidKey(request, env, corsHeaders) {
   const key = env.VAPID_PUBLIC_KEY;
   if (!key) return _err(500, 'CONFIG_ERROR', 'VAPID_PUBLIC_KEY 미설정', corsHeaders);
   return new Response(JSON.stringify({ publicKey: key }), { status: 200, headers: corsHeaders });
+}
+
+// POST /push/broadcast — 배포 스크립트가 호출. 활성 구독자 전체에게
+// "새 버전이 있습니다" push 전송 → sw.js가 CHECK_FOR_UPDATE를 클라이언트에 전달
+// → 포그라운드 30분 폴링을 기다리지 않고 즉시 업데이트 체크.
+// 관리자(배포자) 전용 — 평소 polling 부하는 그대로, 배포 시점에만 1회 발생.
+async function handlePushBroadcast(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body?.secret || body.secret !== env.DEPLOY_PUSH_SECRET)
+    return _err(403, 'FORBIDDEN', '시크릿이 일치하지 않습니다', corsHeaders);
+
+  if (!env.VAPID_PRIVATE_KEY || !env.VAPID_PUBLIC_KEY || !env.VAPID_SUBJECT)
+    return _err(500, 'CONFIG_ERROR', 'VAPID 환경변수 미설정', corsHeaders);
+
+  let rows;
+  try { rows = await _l1ListPushSubscribers(env); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 조회 실패: ' + e.message, corsHeaders); }
+
+  const payload = JSON.stringify({
+    title: body.title || '고팡 업데이트',
+    body:  body.body  || '새 버전이 준비됐습니다.',
+    tag:   'gopang-version-update',
+    url:   body.url   || '/webapp.html',
+  });
+
+  let sent = 0, failed = 0;
+  for (const row of rows) {
+    try {
+      const sub = JSON.parse(row.push_subscription);
+      const ok = await _sendWebPush(env, sub, payload);
+      if (ok) sent++; else failed++;
+    } catch (e) {
+      failed++;
+    }
+  }
+  return new Response(JSON.stringify({ ok: true, total: rows.length, sent, failed }), { status: 200, headers: corsHeaders });
 }
 
 // POST /push/subscribe — 구독 정보 저장

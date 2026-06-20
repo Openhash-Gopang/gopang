@@ -167,7 +167,8 @@ self.addEventListener('push', (event) => {
   // PC가 AI 비서 Key를 전송한 경우(tag가 gopang-ai-setup-로 시작) — 열려있는
   // 모든 탭에 즉시 동기화 신호를 보낸다. 앱이 켜져 있으면 화면을 보고 있지
   // 않아도(채팅창이든 다른 화면이든) 즉시 PC 설정이 자동 적용된다.
-  const isAiSetupSync = tag.startsWith('gopang-ai-setup-');
+  const isAiSetupSync   = tag.startsWith('gopang-ai-setup-');
+  const isVersionUpdate = tag === 'gopang-version-update';
 
   event.waitUntil(
     Promise.all([
@@ -179,10 +180,10 @@ self.addEventListener('push', (event) => {
         data:  { url, sound },
         vibrate: [200, 100, 200],
       }),
-      isAiSetupSync
+      (isAiSetupSync || isVersionUpdate)
         ? clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
             for (const client of list) {
-              client.postMessage({ type: 'SYNC_AI_SETTING' });
+              client.postMessage({ type: isVersionUpdate ? 'CHECK_FOR_UPDATE' : 'SYNC_AI_SETTING' });
             }
           })
         : Promise.resolve(),
