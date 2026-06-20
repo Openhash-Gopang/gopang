@@ -1625,6 +1625,53 @@ function _applyI18n() {
 document.addEventListener('DOMContentLoaded', _applyI18n);
 if (document.readyState === 'complete') _applyI18n();
 </script>
+
+<!-- ── 바텀시트 스와이프-다운으로 닫기 ── -->
+<script>
+(function () {
+  function setupSwipeToClose(overlay) {
+    const sheet  = overlay.querySelector('.settings-sheet');
+    const handle = overlay.querySelector('.sheet-handle');
+    if (!sheet || !handle) return;
+
+    let startY = 0, lastY = 0, dragging = false;
+
+    function start(y) {
+      dragging = true;
+      startY = lastY = y;
+      sheet.style.transition = 'none';
+    }
+    function move(y) {
+      if (!dragging) return;
+      lastY = y;
+      const delta = Math.max(0, lastY - startY);
+      sheet.style.transform = 'translateY(' + delta + 'px)';
+    }
+    function end() {
+      if (!dragging) return;
+      dragging = false;
+      sheet.style.transition = '';
+      const delta = Math.max(0, lastY - startY);
+      sheet.style.transform = '';
+      // 80px 이상 끌어내리면 기존 닫기 로직(backdrop 클릭 핸들러)을 그대로 재사용
+      if (delta > 80) overlay.click();
+    }
+
+    handle.addEventListener('touchstart', (e) => start(e.touches[0].clientY), { passive: true });
+    handle.addEventListener('touchmove',  (e) => move(e.touches[0].clientY),  { passive: true });
+    handle.addEventListener('touchend', end);
+
+    // 데스크탑 마우스 드래그(테스트용)도 함께 지원
+    handle.addEventListener('mousedown', (e) => start(e.clientY));
+    window.addEventListener('mousemove', (e) => move(e.clientY));
+    window.addEventListener('mouseup', end);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.settings-overlay').forEach(setupSwipeToClose);
+  });
+})();
+</script>
 </body>
 </html>
 
