@@ -394,12 +394,17 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   font-family:inherit;font-size:11px;color:var(--txt3);cursor:pointer;
 }
 
-/* ── 좌측 메뉴 (왼쪽 가장자리 스와이프로 열림) ── */
+/* ── 좌측 메뉴 (왼쪽 가장자리 스와이프로 열림) ──
+   ※ visibility는 transform 트랜지션을 끊어버려(즉시 적용) 닫힐 때
+   슬라이드 애니메이션이 재생되지 못하고 뚝 끊겨 사라지는 문제가 있었음.
+   pointer-events로만 클릭 차단을 제어하고, 실제 표시는 transform
+   위치(화면 밖/안)에 맡긴다 — 닫혀있을 때 드로어는 화면 밖에 있으므로
+   어차피 보이지도, 클릭되지도 않는다. */
 .left-menu-overlay{
   position:fixed;inset:0;z-index:998;display:flex;justify-content:flex-start;
-  visibility:hidden;
+  pointer-events:none;
 }
-.left-menu-overlay.open{visibility:visible}
+.left-menu-overlay.open{pointer-events:auto}
 .left-menu-backdrop{
   position:absolute;inset:0;background:rgba(0,0,0,.25);
   opacity:0;transition:opacity .25s;
@@ -419,9 +424,9 @@ html,body{height:100%;height:100dvh;overflow:hidden;
 /* ── 우측 메뉴 — 하위 시스템 목록 (오른쪽 가장자리 스와이프로 열림) ── */
 .right-menu-overlay{
   position:fixed;inset:0;z-index:998;display:flex;justify-content:flex-end;
-  visibility:hidden;
+  pointer-events:none;
 }
-.right-menu-overlay.open{visibility:visible}
+.right-menu-overlay.open{pointer-events:auto}
 .right-menu-backdrop{
   position:absolute;inset:0;background:rgba(0,0,0,.25);
   opacity:0;transition:opacity .25s;
@@ -862,7 +867,7 @@ select.setting-field{appearance:none;-webkit-appearance:none;
 <div class="left-menu-overlay" id="left-menu-overlay">
   <div class="left-menu-backdrop" onclick="closeLeftMenu()"></div>
   <div class="left-menu-drawer">
-    <iframe id="left-menu-frame" src="about:blank" title="메뉴"></iframe>
+    <iframe id="left-menu-frame" src="/left-menu.html" title="메뉴"></iframe>
   </div>
 </div>
 
@@ -870,7 +875,7 @@ select.setting-field{appearance:none;-webkit-appearance:none;
 <div class="right-menu-overlay" id="right-menu-overlay">
   <div class="right-menu-backdrop" onclick="closeRightMenu()"></div>
   <div class="right-menu-drawer">
-    <iframe id="right-menu-frame" src="about:blank" title="하위 시스템"></iframe>
+    <iframe id="right-menu-frame" src="/right-menu.html" title="하위 시스템"></iframe>
   </div>
 </div>
 
@@ -1763,20 +1768,12 @@ if (document.readyState === 'complete') _applyI18n();
      settings.js의 설정 시트(.settings-overlay)와는 완전히 별개.
      - 좌측 메뉴(left-menu.html)  : 최근 대화 상대 / GDC / 알림 등 — 왼쪽 가장자리 스와이프
      - 우측 메뉴(right-menu.html): K-Law, K-Tax, K-School 등 하위 시스템 목록 — 오른쪽 가장자리 스와이프
-     각 iframe은 처음 열릴 때 한 번만 해당 페이지를 로드하고, 이후로는 재사용한다. -->
+     두 iframe 모두 페이지 로드 시점에 미리 로드해 둔다(eager load) —
+     처음 열 때 로딩과 슬라이드 애니메이션이 겹쳐 깜박이는 문제 방지. -->
 <script>
-function _openMenu(overlayId, frameId, src) {
-  const overlay = document.getElementById(overlayId);
-  const frame   = document.getElementById(frameId);
-  if (!overlay) return;
-  if (frame && (frame.src === 'about:blank' || !frame.src || frame.src.endsWith('about:blank'))) {
-    frame.src = src;
-  }
-  overlay.classList.add('open');
-}
-function openLeftMenu()   { _openMenu('left-menu-overlay',  'left-menu-frame',  '/left-menu.html'); }
+function openLeftMenu()   { document.getElementById('left-menu-overlay')?.classList.add('open'); }
 function closeLeftMenu()  { document.getElementById('left-menu-overlay')?.classList.remove('open'); }
-function openRightMenu()  { _openMenu('right-menu-overlay', 'right-menu-frame', '/right-menu.html'); }
+function openRightMenu()  { document.getElementById('right-menu-overlay')?.classList.add('open'); }
 function closeRightMenu() { document.getElementById('right-menu-overlay')?.classList.remove('open'); }
 
 window.openLeftMenu   = openLeftMenu;
