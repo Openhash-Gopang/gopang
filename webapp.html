@@ -338,15 +338,29 @@ html,body{height:100%;height:100dvh;overflow:hidden;
 }
 #msg-input::placeholder{color:var(--txt3)}
 
-/* 전송 버튼 */
+/* 전송 버튼 — Claude 입력창 스타일: 작은 둥근 사각형, 평상시 화살표 / 생성 중 정지 사각형 */
 .send-btn{
-  width:34px;height:34px;border-radius:50%;background:var(--green);
+  width:28px;height:28px;border-radius:8px;background:var(--green);
   display:flex;align-items:center;justify-content:center;
   flex-shrink:0;border:none;cursor:pointer;
   transition:background .12s;align-self:flex-end;
 }
 .send-btn:disabled{background:var(--green-bd);cursor:not-allowed}
-.send-btn svg{width:14px;height:14px;stroke:#fff;stroke-width:2.2;fill:none;
+.send-btn svg{width:14px;height:14px;stroke:#fff;stroke-width:2.4;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+.send-btn .icon-stop{display:none}
+.send-btn.generating{background:#111}
+.send-btn.generating .icon-send{display:none}
+.send-btn.generating .icon-stop{display:block}
+
+/* 검색 패널 버튼 — 기존 원형 스타일 그대로 유지 (전송 버튼과 분리) */
+.search-send-btn{
+  width:34px;height:34px;border-radius:50%;background:var(--green);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;border:none;cursor:pointer;
+  transition:background .12s;align-self:flex-end;
+}
+.search-send-btn svg{width:14px;height:14px;stroke:#fff;stroke-width:2.2;fill:none;
   stroke-linecap:round;stroke-linejoin:round}
 
 /* 상태 스트립 */
@@ -777,7 +791,8 @@ select.setting-field{appearance:none;-webkit-appearance:none;
       <div class="input-wrap">
         <textarea id="msg-input" placeholder="메시지를 입력하세요…" rows="1"></textarea>
         <button class="send-btn" id="send-btn" disabled>
-          <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <svg class="icon-send" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          <svg class="icon-stop" viewBox="0 0 24 24" fill="#fff" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
         </button>
       </div>
     </div>
@@ -813,7 +828,7 @@ select.setting-field{appearance:none;-webkit-appearance:none;
         <textarea id="search-input" style="flex:1;background:transparent;border:none;outline:none;color:#111;font-family:'Pretendard',sans-serif;font-size:14px;resize:none;line-height:1.4;width:100%;height:36px"
                   placeholder="이름, GUID, 또는 PDV 키워드 입력"
                   onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();runSearch();}"></textarea>
-        <button class="send-btn" onclick="runSearch()">
+        <button class="search-send-btn" onclick="runSearch()">
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
       </div>
@@ -1006,10 +1021,6 @@ select.setting-field{appearance:none;-webkit-appearance:none;
         </div>
 
         <div class="setting-label" id="setting-label-perm">권한 설정</div>
-        <p style="font-size:11px;color:#9ca3af;margin:-2px 4px 8px;line-height:1.5">
-          위치는 앱 실행 시 자동 요청되고, 마이크는 마이크 버튼을 누를 때 요청됩니다.<br>
-          한 번 거부하면 다시 묻지 않으니, 거부했다면 아래에서 직접 허용해 주세요.
-        </p>
         <div class="settings-card" style="display:flex;flex-direction:row">
           <details style="flex:1;border-right:1px solid #f2f2f7">
             <summary style="cursor:pointer;outline:none;list-style:none;
@@ -1020,7 +1031,7 @@ select.setting-field{appearance:none;-webkit-appearance:none;
             </summary>
             <div style="padding:4px 14px 12px;font-size:12px;color:#6b6b6b;line-height:1.6">
               크롬 ⋮ → 사이트 설정<br>
-              <b style="color:#000">위치·마이크</b>를 허용으로 변경
+              <b style="color:#000">위치·카메라·마이크</b> 허용
             </div>
           </details>
           <details style="flex:1">
@@ -1031,8 +1042,8 @@ select.setting-field{appearance:none;-webkit-appearance:none;
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </summary>
             <div style="padding:4px 14px 12px;font-size:12px;color:#6b6b6b;line-height:1.6">
-              주소창의 <b style="color:#000">Aa</b> → 웹사이트 설정<br>
-              <b style="color:#000">위치·마이크</b>를 허용으로 변경
+              AA → 웹사이트 설정<br>
+              <b style="color:#000">위치·마이크</b> 허용
             </div>
           </details>
         </div>
@@ -1262,7 +1273,7 @@ async function _togglePush(on) {
       if (!result.ok) throw new Error(result.reason || '구독 실패');
       _setPushToggle(true);
     } catch(e) {
-      if (status) status.textContent = '알림 활성화 실패: ' + (e.message || '알 수 없는 오류');
+      if (status) status.textContent = '알림 권한이 거부됐거나 오류가 발생했습니다';
       _setPushToggle(false);
       console.warn('[Push]', e.message);
     }

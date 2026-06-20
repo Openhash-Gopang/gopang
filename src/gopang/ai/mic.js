@@ -91,9 +91,8 @@ export function _micStop() {
 function _micSetUI(active) {
   const btn = document.getElementById('btn-mic');
   if (!btn) return;
-  btn.style.color     = active ? 'var(--red)' : '';
-  btn.title           = active ? '음성 입력 중 (탭하여 중지)' : '음성 입력';
-  btn.style.animation = active ? 'pulse 1s infinite' : '';
+  btn.classList.toggle('mic-recording', active);
+  btn.title = active ? '음성 입력 중 (탭하여 중지)' : '음성 입력';
 }
 
 // ── Web Speech API (Android Chrome / 데스크탑) ───────────────
