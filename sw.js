@@ -3,7 +3,7 @@
 // PWA 오프라인 지원 + 캐시 전략
 // ═══════════════════════════════════════════════════════════
 
-const CACHE_NAME    = 'gopang-20260620-1900';
+const CACHE_NAME    = 'gopang-20260621-1000';
 const CACHE_TIMEOUT = 5000; // 네트워크 타임아웃 5초
 
 // 설치 시 사전 캐시할 핵심 파일
@@ -13,6 +13,8 @@ const PRECACHE_URLS = [
   '/desktop.html',
   '/webapp.html',
   '/left-menu.html',
+  '/right-menu.html',
+  '/user-manual.html',
   '/manifest.json',
   '/favicon.ico',
 

@@ -163,7 +163,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;
 .btn-ai{
   position:relative;
   display:flex;align-items:center;justify-content:center;
-  width:42px;height:24px;flex-shrink:0;
+  width:40.74px;height:23.28px;flex-shrink:0;
   border-radius:999px;border:none;
   background:#bcc0c5;
   cursor:pointer;
@@ -171,17 +171,17 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   transition:background .2s;
 }
 .ai-switch-thumb{
-  position:absolute;top:2.5px;left:2.5px;
-  width:19px;height:19px;border-radius:50%;
+  position:absolute;top:2.42px;left:2.42px;
+  width:18.43px;height:18.43px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
   background:#fff;color:var(--txt3);
-  font-size:9px;font-weight:800;letter-spacing:.1px;
+  font-size:8.9px;font-weight:840;letter-spacing:.105px;
   box-shadow:0 1px 3px rgba(0,0,0,.3);
   transition:transform .2s ease,color .2s;
 }
 /* 활성 상태 — JS로 .active 클래스 부여 */
 .btn-ai.active{background:#3b82f6}
-.btn-ai.active .ai-switch-thumb{transform:translateX(18px);color:#1d4ed8}
+.btn-ai.active .ai-switch-thumb{transform:translateX(17.46px);color:#1d4ed8}
 
 /* ── 라우터 뱃지 ── */
 #router-badge{
@@ -393,6 +393,21 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   background:none;border:none;outline:none;
   font-family:inherit;font-size:11px;color:var(--txt3);cursor:pointer;
 }
+
+/* ── 좌우 엣지 손잡이 ── 화면 가장자리 중간에 작은 grip을 항상 띄워
+   "여기에 슬라이드 패널이 있다"는 걸 시각적으로 알려준다. 탭하면 바로
+   열리고(스와이프 발견이 어려운 사용자를 위한 보조 진입점), 메뉴가
+   열리면 드로어(z-index:998)가 그 위를 덮으므로 별도 숨김 처리가
+   필요 없다(z-index:60으로 충분히 낮게 유지). */
+.edge-handle{
+  position:fixed;top:50%;transform:translateY(-50%);
+  width:5px;height:56px;z-index:60;
+  background:rgba(17,17,17,.14);
+  transition:background .15s,width .15s;
+}
+.edge-handle:active{background:rgba(17,17,17,.32);width:7px}
+.edge-handle-left{left:0;border-radius:0 7px 7px 0}
+.edge-handle-right{right:0;border-radius:7px 0 0 7px}
 
 /* ── 좌측 메뉴 (왼쪽 가장자리 스와이프로 열림) ──
    ※ visibility는 transform 트랜지션을 끊어버려(즉시 적용) 닫힐 때
@@ -862,6 +877,10 @@ select.setting-field{appearance:none;-webkit-appearance:none;
     <input type="file" id="camera-selfie" style="display:none" accept="image/*" capture="user" onchange="_authHandleSelfie(event)">
   </div>
 </div><!-- /#app -->
+
+<!-- ── 좌우 엣지 손잡이 — 슬라이드 패널 존재를 시각적으로 안내 + 탭으로도 열기 ── -->
+<div class="edge-handle edge-handle-left"  onclick="openLeftMenu()"  role="button" aria-label="메뉴 열기"></div>
+<div class="edge-handle edge-handle-right" onclick="openRightMenu()" role="button" aria-label="하위 시스템 열기"></div>
 
 <!-- ── 좌측 메뉴 (왼쪽 가장자리 스와이프) ── -->
 <div class="left-menu-overlay" id="left-menu-overlay">
