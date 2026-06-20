@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>
 // ── PC 접속 차단 가드 ────────────────────────────────────
-// 고팡은 스마트폰 전용 앱. PDV(개인 일상/업무 기록)는 휴대폰에만 저장되어야
+// 혼디는 스마트폰 전용 앱. PDV(개인 일상/업무 기록)는 휴대폰에만 저장되어야
 // 하며, PC에 남으면 다른 사람이 탈취할 위험이 있다. PC는 ai-setup.html 같은
 // 특수 목적(LLM API 키 입력 등)에만 쓰여야 한다.
 // 개발/테스트 우회: 콘솔에서 localStorage.setItem('gopang_dev_bypass','true')
@@ -33,7 +33,7 @@
           '스마트폰 전용 서비스입니다' +
         '</p>' +
         '<p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 8px">' +
-          '고팡은 개인정보 보호를 위해 스마트폰에서만 사용할 수 있습니다.<br>' +
+          '혼디는 개인정보 보호를 위해 스마트폰에서만 사용할 수 있습니다.<br>' +
           'PC에서는 대화·기록이 다른 사람에게 노출될 위험이 있어 접속을 제한합니다.' +
         '</p>' +
         '<p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0">' +
@@ -50,16 +50,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="고팡">
+<meta name="apple-mobile-web-app-title" content="혼디">
 <meta name="theme-color" content="#ffffff">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="description" content="고팡(Gopang) AI 메신저 플랫폼">
+<meta name="description" content="혼디(Hondi) AI 메신저 플랫폼">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png">
 <link rel="icon" type="image/png" href="/icons/icon-192.png">
-<title>고팡</title>
+<title>혼디</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap">
 <script src="/gopang-wallet.js"></script>
@@ -659,9 +659,9 @@ select.setting-field{appearance:none;-webkit-appearance:none;
 
 <!-- ── PWA 설치 배너 ── -->
 <div class="install-banner" id="install-banner">
-  <div class="install-banner-icon"><img src="/icons/icon-192.png" alt="고팡"></div>
+  <div class="install-banner-icon"><img src="/icons/icon-192.png" alt="혼디"></div>
   <div class="install-banner-text">
-    <div class="install-banner-title">고팡 앱 설치</div>
+    <div class="install-banner-title">혼디 앱 설치</div>
     <div class="install-banner-sub">홈 화면에 추가하면<br>주소창 없이 바로 실행됩니다</div>
   </div>
   <div class="install-banner-actions">
@@ -671,7 +671,7 @@ select.setting-field{appearance:none;-webkit-appearance:none;
 </div>
 
 <div class="install-banner" id="ios-install-banner">
-  <div class="install-banner-icon"><img src="/icons/icon-192.png" alt="고팡"></div>
+  <div class="install-banner-icon"><img src="/icons/icon-192.png" alt="혼디"></div>
   <div class="install-banner-text">
     <div class="install-banner-title">홈 화면에 추가</div>
     <div class="install-banner-sub" id="ios-install-text">
@@ -747,9 +747,9 @@ select.setting-field{appearance:none;-webkit-appearance:none;
       <span>OpenHash <code id="hash-ref" style="font-size:10px;background:var(--chip-bg);padding:1px 4px;border-radius:3px">대기중</code></span>
       <span id="layer-lbl">L1</span>
       <span style="margin-left:auto">
-        <select class="version-select" id="version-select" title="고팡 버전">
-          <option value="v2">고팡 v2</option>
-          <option value="v1">고팡 v1</option>
+        <select class="version-select" id="version-select" title="혼디 버전">
+          <option value="v2">혼디 v2</option>
+          <option value="v1">혼디 v1</option>
         </select>
       </span>
     </div>
@@ -842,7 +842,7 @@ select.setting-field{appearance:none;-webkit-appearance:none;
   <div class="ai-card">
     <div class="ai-card-icon">🤖</div>
     <div class="ai-card-title">AI 비서</div>
-    <div class="ai-card-sub" id="ai-card-sub">DeepSeek v3을 AI 대화 상대로 연결합니다.<br>고팡 법률·의료 분석과 함께 동작합니다.</div>
+    <div class="ai-card-sub" id="ai-card-sub">DeepSeek v3을 AI 대화 상대로 연결합니다.<br>혼디 법률·의료 분석과 함께 동작합니다.</div>
     <button class="ai-card-btn ai-card-btn-primary" onclick="activateAI(false); closeAI()">AI 비서 시작</button>
     <button class="ai-card-btn ai-card-btn-secondary" onclick="closeAI()">취소</button>
   </div>
@@ -1225,7 +1225,7 @@ select.setting-field{appearance:none;-webkit-appearance:none;
 })();
 </script>
 
-<!-- 고팡 모듈 -->
+<!-- 혼디 모듈 -->
 <script src="/src/pwa/gopang-pwa.js"></script>
 <script src="/src/auth/gopang-auth.js"></script>
 <!-- v3: ES Module 진입점 -->
