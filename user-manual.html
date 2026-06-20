@@ -11,7 +11,7 @@ html,body{height:100%;background:#fff;color:#111;
   -webkit-font-smoothing:antialiased;overflow-y:auto;-webkit-overflow-scrolling:touch;
   /* 닫기 스와이프(아래→위)가 화면 절대 위쪽 가장자리에 가까워질 때
      브라우저의 당겨서 새로고침/뒤로가기 제스처가 가로채는 문제 방지 */
-  overscroll-behavior:none;touch-action:pan-x}
+  overscroll-behavior:none;touch-action:pan-y}
 
 :root{
   --green:#16a34a;--green-lt:#dcfce7;--green-dk:#15803d;
@@ -112,6 +112,46 @@ html,body{height:100%;background:#fff;color:#111;
 
   <div class="m-section">
     <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9"/><circle cx="12" cy="11" r="1"/><circle cx="9" cy="11" r="1"/><circle cx="15" cy="11" r="1"/></svg></span>
+      <span class="m-title">대화 상대를 정하지 않았다면</span>
+    </div>
+    <div class="m-body">대화 상대를 지정하지 않고 대화를 시작하면, 자동으로 <b>'나만의 AI 비서'</b>가 호출됩니다.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+      <span class="m-title">그룹 대화방</span>
+    </div>
+    <div class="m-body">그룹 대화방은 방장이 대화방을 개설하고, 상대방을 초청해야 합니다.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span>
+      <span class="m-title">부재 중 대화</span>
+    </div>
+    <div class="m-body">부재 중 대화는 좌측 패널의 <b>메시지 수신함</b>에 저장됩니다.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+      <span class="m-title">영구 보존 — 언행에 신중하십시오</span>
+    </div>
+    <div class="m-body">대화 창에서 오간 모든 대화와 문서는 <b>영구 보존</b>되며, OpenHash 기술로 위변조를 원천 차단합니다. 그러므로 언행과 문서 등에 신중하십시오.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/><path d="M9.5 12.5l2 2 3.5-4"/></svg></span>
+      <span class="m-title">경비 AI Agent — 불법 행위 차단</span>
+    </div>
+    <div class="m-body">보이스피싱 등 불법 행위는 <b>'경비 AI Agent'</b>에 의해 차단되고, 신고 등 적절한 조치가 자동으로 실행됩니다.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
       <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M9 4v16"/></svg></span>
       <span class="m-title">우측 패널 — 혼디의 하위 시스템</span>
     </div>
@@ -129,6 +169,17 @@ html,body{height:100%;background:#fff;color:#111;
       <span class="m-title">나만의 PDV (Private Data Vault)</span>
     </div>
     <div class="m-body">나만의 AI 비서는 나의 일상과 업무, 대화와 주고받은 문서를 모두 <b>'나만의 PDV'</b>에 저장합니다. PDV는 나 자신만 접근할 수 있는 개인 데이터 금고입니다.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1.3"/></svg></span>
+      <span class="m-title">서버가 아니라 내 스마트폰에</span>
+    </div>
+    <div class="m-body">
+      모든 대화는 메시징 서버가 아니라, 내 스마트폰에 있는 <b>'나만의 PDV'</b>에 암호화되어 기록됩니다. 그러므로 데이터가 대량으로 유출되는 사고는 원천 차단될 뿐 아니라, 오직 나만 접근할 수 있습니다.
+      <div class="eg">그러나 귀하의 언행과 문서는 귀하의 PDV뿐 아니라, <b>상대방의 PDV에도 함께 기록된다는 점</b>을 잊지 마십시오.</div>
+    </div>
   </div>
 
   <div class="m-section">
