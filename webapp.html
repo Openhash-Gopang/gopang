@@ -1061,38 +1061,59 @@ select.setting-field{appearance:none;-webkit-appearance:none;
         </div>
       </div>
 
-      <!-- 계정 액션 (등록 사용자만) -->
-      <div style="padding:0 16px">
-        <div class="settings-card" id="_action-card" style="display:none">
-          <div class="settings-card-row" onclick="_settingsLogoutOrLogin()" id="btn-logout-or-login"
-               style="cursor:pointer;display:none">
-            <span style="font-size:15px;color:#dc2626">로그아웃</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 앱 캐시 초기화 (항상) -->
-      <div style="padding:0 16px">
-        <div class="settings-card">
-          <div class="settings-card-row" onclick="clearSWCache()" style="cursor:pointer">
-            <span class="settings-card-row-label" id="label-cache-clear">앱 캐시 초기화</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 기기 초기화 (최하단, 등록 사용자만) -->
+      <!-- 계정 완전 삭제 (최하단, 등록 사용자만) -->
       <div style="padding:8px 16px 0" id="btn-device-reset" style="display:none">
-        <div class="settings-card-row" onclick="_deviceLocalReset()"
-             style="display:none;cursor:pointer;padding:12px 0;background:transparent" id="btn-device-local-reset">
-          <span style="font-size:13px;color:#374151" id="label-local-reset">재접속 시 복원 가능</span>
-          <span style="font-size:11px;color:#9ca3af;display:block;margin-top:2px" id="label-local-reset-sub">이 기기의 데이터만 삭제 — 계정은 유지됩니다</span>
-        </div>
-        <div class="settings-card-row" onclick="_deviceFullReset()"
-             style="display:none;cursor:pointer;padding:12px 0;background:transparent;border-top:0.5px solid #f3f4f6" id="btn-device-full-reset">
-          <span style="font-size:13px;color:#ef4444" id="label-full-reset">계정 완전 삭제</span>
-          <span style="font-size:11px;color:#fca5a5;display:block;margin-top:2px" id="label-full-reset-sub">판매·양도 전 실행 — 복원 불가</span>
+        <div class="settings-card" style="display:none;border:1px solid #fecaca;background:#fef2f2" id="card-account-delete">
+          <div style="padding:14px 16px">
+            <div style="font-size:13px;color:#ef4444;font-weight:600;margin-bottom:4px" id="label-full-reset">계정 완전 삭제</div>
+            <div style="font-size:11px;color:#fca5a5;margin-bottom:12px;line-height:1.6" id="label-full-reset-sub">
+              서버·기기의 모든 기록이 삭제되며 복원할 수 없습니다. 실수 방지를 위해 아이디와 핸들을 직접 입력해야 삭제할 수 있습니다.
+            </div>
+            <input type="text" id="delete-confirm-nickname" placeholder="아이디 입력"
+              autocomplete="off" autocapitalize="off" spellcheck="false"
+              style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:8px;
+                     border:1px solid #fca5a5;border-radius:8px;font-size:13px;
+                     font-family:inherit;outline:none;background:#fff"
+              oninput="_checkDeleteConfirmInput()">
+            <input type="text" id="delete-confirm-handle" placeholder="핸들 입력 (예: @11112223)"
+              autocomplete="off" autocapitalize="off" spellcheck="false"
+              style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:10px;
+                     border:1px solid #fca5a5;border-radius:8px;font-size:13px;
+                     font-family:inherit;outline:none;background:#fff"
+              oninput="_checkDeleteConfirmInput()">
+            <button id="btn-device-full-reset" onclick="_deviceFullReset()" disabled
+              style="width:100%;padding:12px;border:none;border-radius:8px;
+                     background:#fca5a5;color:#fff;font-size:14px;font-weight:600;
+                     cursor:not-allowed;font-family:inherit;transition:background .15s">
+              계정 완전 삭제
+            </button>
+          </div>
         </div>
       </div>
+
+      <script>
+      function _checkDeleteConfirmInput() {
+        const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}');
+        const nickInput   = document.getElementById('delete-confirm-nickname');
+        const handleInput = document.getElementById('delete-confirm-handle');
+        const btn         = document.getElementById('btn-device-full-reset');
+        if (!nickInput || !handleInput || !btn) return;
+
+        const norm = (s) => (s || '').trim().replace(/^@/, '');
+        const nickMatch   = stored.nickname && norm(nickInput.value)   === norm(stored.nickname);
+        const handleMatch = stored.handle   && norm(handleInput.value) === norm(stored.handle);
+
+        if (nickMatch && handleMatch) {
+          btn.disabled = false;
+          btn.style.background = '#dc2626';
+          btn.style.cursor = 'pointer';
+        } else {
+          btn.disabled = true;
+          btn.style.background = '#fca5a5';
+          btn.style.cursor = 'not-allowed';
+        }
+      }
+      </script>
 
     </div>
 
@@ -1364,7 +1385,7 @@ const _I18N = {
     s_local_reset:    '재접속 시 복원 가능',
     s_local_reset_sub:'이 기기의 데이터만 삭제 — 계정은 유지됩니다',
     s_full_reset:     '계정 완전 삭제',
-    s_full_reset_sub: '판매·양도 전 실행 — 복원 불가',
+    s_full_reset_sub: '서버·기기의 모든 기록이 삭제되며 복원할 수 없습니다. 실수 방지를 위해 아이디와 핸들을 직접 입력해야 삭제할 수 있습니다.',
     s_logout:         '로그아웃',
     // 입력 안내
     ph_message:       '메시지를 입력하세요…',
@@ -1412,7 +1433,7 @@ const _I18N = {
     s_local_reset:    'Recoverable Reset',
     s_local_reset_sub:'Clears local data only — account is kept',
     s_full_reset:     'Delete Account',
-    s_full_reset_sub: 'Run before sale/transfer — cannot be undone',
+    s_full_reset_sub: 'All records on the server and this device will be deleted and cannot be restored. To prevent accidental deletion, type your ID and handle exactly to confirm.',
     s_logout:         'Log out',
     ph_message:       'Type a message…',
     ph_search:        'Name, GUID, or PDV keyword',
@@ -1457,7 +1478,7 @@ const _I18N = {
     s_local_reset:    '再接続時に復元可能',
     s_local_reset_sub:'このデバイスのデータのみ削除 — アカウントは維持されます',
     s_full_reset:     'アカウント完全削除',
-    s_full_reset_sub: '譲渡前に実行 — 復元不可',
+    s_full_reset_sub: 'サーバーとこの端末のすべての記録が削除され、復元できません。誤操作防止のため、IDとハンドルを直接入力する必要があります。',
     s_logout:         'ログアウト',
     ph_message:       'メッセージを入力…',
     ph_search:        '名前、GUID、またはキーワード',
@@ -1502,7 +1523,7 @@ const _I18N = {
     s_local_reset:    '可恢复的重置',
     s_local_reset_sub:'仅删除本设备数据 — 账户保留',
     s_full_reset:     '彻底删除账户',
-    s_full_reset_sub: '出售前执行 — 无法恢复',
+    s_full_reset_sub: '服务器和本设备上的所有记录都将被删除且无法恢复。为防止误删，需要直接输入账号和handle才能删除。',
     s_logout:         '退出登录',
     ph_message:       '输入消息…',
     ph_search:        '名称、GUID 或关键词',

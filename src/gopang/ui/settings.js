@@ -15,7 +15,9 @@ export function _updateHandleChip(h) {
   const s = document.getElementById('gopang-id-status');
   const b = document.getElementById('gopang-id-register-box');
   if (h) {
-    if (s) s.innerHTML = `<b style="color:var(--green,#16a34a)">${h}</b> <span style="font-size:11px">(등록됨)</span>`;
+    const nickname = _USER?.nickname || _USER?.name || '';
+    const nickPrefix = nickname ? `${nickname} ` : '';
+    if (s) s.innerHTML = `${nickPrefix}<b style="color:var(--green,#16a34a)">${h}</b>`;
     if (b) b.style.display = 'none';
   } else {
     if (s) s.textContent = '등록되지 않았습니다.';
@@ -39,7 +41,8 @@ export function openSettings() {
   if (idStatus) {
     if (registered) {
       const s = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}');
-      idStatus.innerHTML = `<b style="color:var(--green,#16a34a)">${s.handle}</b> <span style="font-size:11px">(등록됨)</span>`;
+      const nickPrefix = s.nickname ? `${s.nickname} ` : '';
+      idStatus.innerHTML = `${nickPrefix}<b style="color:var(--green,#16a34a)">${s.handle}</b>`;
     } else {
       idStatus.textContent = '등록되지 않았습니다.';
     }
@@ -74,17 +77,15 @@ export function openSettings() {
   if (aiCard)  aiCard.style.display  = registered ? 'block' : 'none';
   if (aiLabel) aiLabel.style.display = registered ? 'block' : 'none';
 
-  // 6. 로그아웃 버튼: 등록 사용자만 표시
-  const logoutBtn  = document.getElementById('btn-logout-or-login');
-  const actionCard = document.getElementById('_action-card');
-  if (logoutBtn)  logoutBtn.style.display  = registered ? 'flex' : 'none';
-  if (actionCard) actionCard.style.display = registered ? 'block' : 'none';
-
-  // 7. 기기 초기화 버튼: 등록 사용자만 표시
-  const resetBtn      = document.getElementById('btn-device-local-reset');
-  const resetFullBtn  = document.getElementById('btn-device-full-reset');
-  if (resetBtn)     resetBtn.style.display     = registered ? 'flex' : 'none';
-  if (resetFullBtn) resetFullBtn.style.display = registered ? 'flex' : 'none';
+  // 6. 계정 완전 삭제 카드: 등록 사용자만 표시 (열 때마다 입력값 초기화)
+  const deleteCard = document.getElementById('card-account-delete');
+  if (deleteCard) deleteCard.style.display = registered ? 'block' : 'none';
+  const nickIn = document.getElementById('delete-confirm-nickname');
+  const hIn    = document.getElementById('delete-confirm-handle');
+  const delBtn = document.getElementById('btn-device-full-reset');
+  if (nickIn) nickIn.value = '';
+  if (hIn)    hIn.value = '';
+  if (delBtn) { delBtn.disabled = true; delBtn.style.background = '#fca5a5'; delBtn.style.cursor = 'not-allowed'; }
 
   // 8. LLM 섹션: 항상 숨김
   const llmSec = document.getElementById('llm-settings-section');
