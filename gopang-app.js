@@ -283,8 +283,12 @@ const _boot = async () => {
   // storage 이벤트로 변경을 즉시 감지해 새로고침 없이 CFG를 재적용한다.
   // (PC→폰 푸시 동기화용 _runSync와는 별개 경로 — 그쪽은 서버의 seal 큐를
   //  조회하므로 이 로컬 저장 방식의 변경은 감지하지 못한다.)
-  window.addEventListener('storage', (e) => {
-    if (e.key !== 'gopang_cfg' || !e.newValue) return;
+  //
+  // ※ 같은 점검 로직을 visibilitychange(탭 복귀) 시점에도 한 번 더 돌린다.
+  //   안드로이드에서 백그라운드 탭이 동결(frozen)되어 storage 이벤트를
+  //   놓치는 경우, 탭으로 돌아왔을 때 CFG는 이미 갱신돼 있는데 AI 버튼만
+  //   꺼진 채로 남는 "실제로는 켜졌는데 꺼진 것처럼 보이는" 불일치를 막는다.
+  const _checkAutoActivateAI = () => {
     loadSettings();
     const hasKey = !!(CFG.apiKey || CFG.geminiKey ||
       (Array.isArray(CFG.providers) && CFG.providers.length));
@@ -292,6 +296,13 @@ const _boot = async () => {
       activateAI(true);
       appendBubble('ai', '⚙️ AI 비서 설정이 저장되어 자동으로 활성화되었습니다.');
     }
+  };
+  window.addEventListener('storage', (e) => {
+    if (e.key !== 'gopang_cfg' || !e.newValue) return;
+    _checkAutoActivateAI();
+  });
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') _checkAutoActivateAI();
   });
 
   console.info('[Gopang v3] 부트스트랩 완료');

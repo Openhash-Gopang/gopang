@@ -179,8 +179,8 @@ saveBtn.onclick = async () => {
   }));
 
   doneDetail.textContent = validated
-    ? `현재 활성 무료 모델 ${freeModelPool.length}개가 저장되었습니다. 앱으로 돌아가 AI 버튼을 눌러보세요.`
-    : `모델 가용성을 실시간으로 확인하지 못해 기본 목록(${freeModelPool.length}개)을 사용했습니다. 앱으로 돌아가 AI 버튼을 눌러보세요.`;
+    ? `현재 활성 무료 모델 ${freeModelPool.length}개가 저장되었습니다. 앱으로 돌아가면 AI 비서가 자동으로 켜집니다 — 따로 AI 버튼을 누르지 않아도 됩니다.`
+    : `모델 가용성을 실시간으로 확인하지 못해 기본 목록(${freeModelPool.length}개)을 사용했습니다. 앱으로 돌아가면 AI 비서가 자동으로 켜집니다 — 따로 AI 버튼을 누르지 않아도 됩니다.`;
   mainBox.style.display = 'none';
   doneBox.style.display = 'block';
 };
