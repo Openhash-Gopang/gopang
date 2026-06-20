@@ -306,7 +306,7 @@ function dismissIOSInstall() {
 // ── 사용자가 직접 설치 요청 (홈 화면 추가 버튼 등) ─────────
 function requestInstall() {
   if (_isInStandaloneMode()) {
-    appendBubble?.('ai', '✅ 고팡은 이미 홈 화면에 설치되어 있습니다.');
+    appendBubble?.('ai', '✅ 혼디는 이미 홈 화면에 설치되어 있습니다.');
     return;
   }
   if (_deferredInstallPrompt) {
