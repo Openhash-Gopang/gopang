@@ -17,9 +17,10 @@ export function toggleAI() {
   const providerCount = Array.isArray(CFG.providers) ? CFG.providers.length : 0;
   const hasKey = !!(CFG.apiKey || CFG.geminiKey || providerCount > 0);
 
-  // 미설정 사용자 → ai-setup.html로 안내 (새 탭, 팝업 없음)
+  // 미설정 사용자 → 모바일 전용 설정 페이지로 안내 (새 탭, 팝업 없음)
+  // ai-setup.html(PC용, 핸들 입력 후 암호화 전송)과는 별개의 파일.
   if (!hasKey) {
-    window.open('/pages/ai-setup.html', '_blank');
+    window.open('/pages/ai-setup-mobile.html', '_blank');
     return;
   }
 
@@ -44,7 +45,6 @@ export function activateAI(silent = false) {
   document.getElementById('btn-ai')?.classList.add('active');
   const sub = document.getElementById('ai-card-sub');
   if (sub) sub.textContent = `${CFG.model} 연결됨`;
-  if (!silent) appendBubble('ai', '지시를 기다립니다.');
 }
 
 export function closeAI() {

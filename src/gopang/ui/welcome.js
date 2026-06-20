@@ -37,17 +37,25 @@ export function _showWelcomeMessage() {
   list.appendChild(label);
   list.appendChild(row);
 
-  // 사용자 안내 메시지
-  const guideRow = document.createElement('div');
-  guideRow.className = 'msg-row ai';
+  // 사용자 안내 메시지 — 최초 접속 시에만 표시 (두 번째 방문부터는 생략)
+  const GUIDE_SHOWN_KEY = 'gopang_welcome_guide_shown';
+  let alreadyShown = false;
+  try { alreadyShown = !!localStorage.getItem(GUIDE_SHOWN_KEY); } catch {}
 
-  const guideBubble = document.createElement('div');
-  guideBubble.className = 'bubble bubble-ai';
-  guideBubble.textContent =
-    '사용자를 검색하여, 대화를 시작하십시오. 상단 AI 버튼으로 귀하 만의 AI 비서를 생성 및 훈련할 수 있습니다.';
+  if (!alreadyShown) {
+    const guideRow = document.createElement('div');
+    guideRow.className = 'msg-row ai';
 
-  guideRow.appendChild(guideBubble);
-  list.appendChild(guideRow);
+    const guideBubble = document.createElement('div');
+    guideBubble.className = 'bubble bubble-ai';
+    guideBubble.textContent =
+      '사용자를 검색하여, 대화를 시작하십시오. 상단 AI 버튼으로 귀하 만의 AI 비서를 생성 및 훈련할 수 있습니다.';
+
+    guideRow.appendChild(guideBubble);
+    list.appendChild(guideRow);
+
+    try { localStorage.setItem(GUIDE_SHOWN_KEY, '1'); } catch {}
+  }
 }
 
 // ── 입력 필드 ───────────────────────────────────────────
