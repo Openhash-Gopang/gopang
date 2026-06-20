@@ -2415,9 +2415,17 @@ async function _buildVapidHeaders(env, endpoint) {
   const claims  = _b64uEncode(JSON.stringify({ aud: audience, exp: now + 3600, sub: env.VAPID_SUBJECT }));
   const sigInput = `${header}.${claims}`;
 
-  const privKeyBytes = _b64uToBytes(env.VAPID_PRIVATE_KEY);
+  // ECDSA 개인키는 WebCrypto 'raw' import가 공개키 전용이라 지원되지 않는다.
+  // VAPID_PUBLIC_KEY(65바이트 비압축 포인트)에서 x/y를 떼어 JWK로 조립해 import한다.
+  const pubBytes = _b64uToBytes(env.VAPID_PUBLIC_KEY);
+  const jwk = {
+    kty: 'EC', crv: 'P-256', ext: true,
+    d: env.VAPID_PRIVATE_KEY.replace(/=+$/, ''),
+    x: _b64uEncode(pubBytes.slice(1, 33)),
+    y: _b64uEncode(pubBytes.slice(33, 65)),
+  };
   const cryptoKey = await crypto.subtle.importKey(
-    'raw', privKeyBytes, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']
+    'jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']
   );
   const sig    = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, cryptoKey, new TextEncoder().encode(sigInput));
   const sigB64 = _b64uEncode(String.fromCharCode(...new Uint8Array(sig)));
