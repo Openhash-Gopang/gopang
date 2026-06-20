@@ -8,7 +8,11 @@
 // 하며, PC에 남으면 다른 사람이 탈취할 위험이 있다. PC는 ai-setup.html 같은
 // 특수 목적(LLM API 키 입력 등)에만 쓰여야 한다.
 // 개발/테스트 우회: 콘솔에서 localStorage.setItem('gopang_dev_bypass','true')
+//
+// 🚧🚧🚧 TEMP-DISABLED — 개발 중 PC 테스트를 위해 통째로 꺼둠 🚧🚧🚧
+// 개발 끝나면 아래 "if (true)" 한 줄을 지우거나 false로 바꿔서 원복할 것.
 (function () {
+  if (true) return; // ← 🚧 이 줄만 지우면 원래대로 복구됨 🚧
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
   if (isMobile) return;
 
@@ -124,11 +128,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   border-bottom:1px solid var(--border);flex-shrink:0;background:#fff;
 }
 #top-logo{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;flex-shrink:0}
-.topbar-icon{width:28px;height:28px;background:var(--green);border-radius:7px;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.topbar-icon svg{width:14px;height:14px;stroke:#fff;stroke-width:2.2;fill:none;
-  stroke-linecap:round;stroke-linejoin:round}
-#top-logo-text{font-size:15px;font-weight:800;color:#111;letter-spacing:-.3px}
+#top-logo-img{height:30px;width:auto;display:block}
 #top-progress-dot{width:7px;height:7px;border-radius:50%;background:#f59e0b;
   animation:pulse-dot 1.5s ease-in-out infinite;flex-shrink:0}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
@@ -689,10 +689,7 @@ select.setting-field{appearance:none;-webkit-appearance:none;
   <!-- ── 상단 바 ── -->
   <div class="top-bar">
     <div id="top-logo" onclick="_onLogoTap()">
-      <div class="topbar-icon">
-        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      </div>
-      <span id="top-logo-text">고팡</span>
+      <img id="top-logo-img" src="/assets/hondi-logo.png" alt="혼디">
       <span id="top-progress-dot" style="display:none"></span>
     </div>
 
