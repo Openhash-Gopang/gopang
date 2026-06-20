@@ -19,7 +19,7 @@ import { openSettings, closeSettings, handleOverlayClick,
          _updateHandleChip, _settingsRegisterHandle,
          clearSWCache, _updateSecuritySection,
          openChatHistory, openHashChain, openGopangWallet, openFinancialStatement,
-         openMyProfile, _refreshFreeModelPool,
+         openMyProfile, openBackupKey, _refreshFreeModelPool,
 } from './src/gopang/ui/settings.js';
 import { openSearch, closeSearch,
          handleSearchOverlayClick,
@@ -64,8 +64,13 @@ const _hasRegisteredUser = (() => {
   } catch { return false; }
 })();
 void _hasRegisteredUser; // 참고용 — 실제 분기는 initAuth() 내부에서 처리(이미 등록 시 즉시 resolve)
-await initAuth();   // 가입/로그인 완료(또는 저장된 사용자 자동 로그인)까지 블로킹
-// 위 await를 통과했다는 것은 곧 등록 완료 상태라는 뜻 — 이제 대화창을 공개한다.
+// initAuth()는 가입/로그인 취소, PC 차단, 기기 불일치 후 "닫기" 등의 경로에서
+// null로 resolve될 수 있다 — 그 경우에도 #app을 공개하면 게스트 모드가 되살아나므로,
+// _isRegistered()로 실제 등록 여부를 직접 재확인하고 아니면 다시 initAuth()를 띄운다.
+while (!_isRegistered()) {
+  await initAuth();
+}
+// 이 줄에 도달했다는 것은 곧 _isRegistered() === true라는 뜻 — 이제 대화창을 공개한다.
 document.getElementById('gopang-auth-gate')?.remove();
 document.body.classList.add('gopang-authed');
 
@@ -79,6 +84,7 @@ document.body.classList.add('gopang-authed');
   window.openChatHistory           = openChatHistory;
   window.openHashChain             = openHashChain;
   window.openGopangWallet          = openGopangWallet;
+  window.openBackupKey             = openBackupKey;
   window.openFinancialStatement    = openFinancialStatement;
   window.openMyProfile             = openMyProfile;
   window.openAISettings            = openAISettings;

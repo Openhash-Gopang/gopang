@@ -931,3 +931,104 @@ export function openMyProfile() {
   if (!handle) { alert('프로필을 먼저 등록해주세요.'); return; }
   window.open('/profile/' + handle, '_blank');
 }
+
+// ══════════════════════════════════════════════════════════════
+// ⑤ 백업 키 — v6.0
+// 이 기기를 잃어버리거나 바꿀 때, 같은 계정으로 다시 들어오기 위한 유일한
+// 방법이다(전화번호/닉네임만으로는 더 이상 로그인되지 않음 — 의도된 동작).
+// ══════════════════════════════════════════════════════════════
+export async function openBackupKey() {
+  _openSheet('백업 키', '<div style="padding:40px 16px;text-align:center;color:#9ca3af;font-size:14px">로딩 중...</div>');
+
+  const html = `
+    <div style="padding:20px 16px">
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;
+                  padding:12px 14px;font-size:12px;color:#92400e;line-height:1.6;margin-bottom:20px">
+        이 키를 아는 사람은 누구나 이 계정이 될 수 있습니다.<br>
+        캡처/공유하지 말고, 본인만 아는 안전한 곳(예: 비밀번호 관리자)에<br>보관하세요. 고팡은 이 키를 서버에 저장하지 않습니다.
+      </div>
+
+      <p style="font-size:13px;font-weight:600;color:#111827;margin-bottom:8px">내 백업 키 내보내기</p>
+      <div id="_bk-display" style="display:none;background:#f9fafb;border:1px solid #e5e7eb;
+           border-radius:8px;padding:12px;font-family:monospace;font-size:12px;
+           word-break:break-all;color:#111827;margin-bottom:8px"></div>
+      <button id="_bk-show-btn" style="width:100%;padding:13px;border:1px solid #e5e7eb;border-radius:10px;
+              background:none;color:#16a34a;font-weight:600;cursor:pointer;font-size:14px;margin-bottom:8px">
+        키 표시
+      </button>
+      <button id="_bk-copy-btn" style="display:none;width:100%;padding:13px;border:none;border-radius:10px;
+              background:#16a34a;color:#fff;font-weight:600;cursor:pointer;font-size:14px;margin-bottom:28px">
+        복사
+      </button>
+
+      <div style="height:1px;background:#f2f2f7;margin-bottom:20px"></div>
+
+      <p style="font-size:13px;font-weight:600;color:#111827;margin-bottom:4px">다른 기기의 백업 키로 복구</p>
+      <p style="font-size:12px;color:#9ca3af;line-height:1.5;margin-bottom:10px">
+        이 기기를 그 백업 키의 계정으로 등록합니다. 이 기기에 이미 있던<br>로컬 키는 교체됩니다.
+      </p>
+      <textarea id="_bk-restore-input" rows="3" placeholder="백업 키 붙여넣기"
+        style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:12px;
+               font-size:13px;font-family:monospace;resize:none;box-sizing:border-box;
+               margin-bottom:8px" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+      <div id="_bk-restore-err" style="display:none;font-size:12px;color:#dc2626;margin-bottom:8px"></div>
+      <div id="_bk-restore-ok" style="display:none;font-size:12px;color:#16a34a;margin-bottom:8px"></div>
+      <button id="_bk-restore-btn" style="width:100%;padding:13px;border:none;border-radius:10px;
+              background:#111827;color:#fff;font-weight:600;cursor:pointer;font-size:14px">
+        이 기기에 적용
+      </button>
+    </div>`;
+
+  document.getElementById('_gopang-sheet-body').innerHTML = html;
+
+  document.getElementById('_bk-show-btn').onclick = async () => {
+    const { _exportBackupKey } = await import('../core/auth.js');
+    const key = await _exportBackupKey();
+    const disp = document.getElementById('_bk-display');
+    if (!key) { alert('지갑을 아직 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); return; }
+    disp.textContent = key;
+    disp.style.display = 'block';
+    document.getElementById('_bk-show-btn').style.display = 'none';
+    document.getElementById('_bk-copy-btn').style.display = 'block';
+  };
+
+  document.getElementById('_bk-copy-btn').onclick = async () => {
+    const text = document.getElementById('_bk-display').textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      const btn = document.getElementById('_bk-copy-btn');
+      btn.textContent = '복사됨';
+      setTimeout(() => { btn.textContent = '복사'; }, 1500);
+    } catch { alert('복사에 실패했습니다. 직접 길게 눌러 선택해 주세요.'); }
+  };
+
+  document.getElementById('_bk-restore-btn').onclick = async () => {
+    const input  = document.getElementById('_bk-restore-input');
+    const errEl  = document.getElementById('_bk-restore-err');
+    const okEl   = document.getElementById('_bk-restore-ok');
+    const btn    = document.getElementById('_bk-restore-btn');
+    const val    = input.value.trim();
+    errEl.style.display = 'none'; okEl.style.display = 'none';
+    if (!val) { errEl.textContent = '백업 키를 입력해 주세요.'; errEl.style.display = 'block'; return; }
+
+    btn.disabled = true; btn.textContent = '확인 중…';
+    const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+    const { _restoreFromBackupKey } = await import('../core/auth.js');
+    const result = await _restoreFromBackupKey(val, stored?.ipv6 || null, 'gopang');
+    btn.disabled = false; btn.textContent = '이 기기에 적용';
+
+    if (!result.ok) {
+      const msg = result.reason === 'PUBKEY_MISMATCH'
+        ? '이 백업 키는 현재 로그인된 계정의 키가 아닙니다.'
+        : result.reason === 'invalid_key'
+          ? '키 형식이 올바르지 않습니다.'
+          : '적용에 실패했습니다 (' + result.reason + ').';
+      errEl.textContent = msg;
+      errEl.style.display = 'block';
+      return;
+    }
+    okEl.textContent = '✅ 이 기기가 백업 키로 등록되었습니다.';
+    okEl.style.display = 'block';
+    input.value = '';
+  };
+}

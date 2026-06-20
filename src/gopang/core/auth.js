@@ -381,8 +381,39 @@ async function _issueSession(guid, svc = 'gopang', level = 'L0') {
   }
 }
 
-// ── 기기 불일치 안내(이 기기가 그 계정의 등록된 기기가 아닐 때) ───────
-function _showDeviceMismatchNotice(onRetry) {
+// ── 백업 키 내보내기 (설정 화면에서 사용) ────────────────
+export async function _exportBackupKey() {
+  const wallet = await _waitForWallet();
+  if (!wallet || typeof wallet.exportPrivateKey !== 'function') return null;
+  return wallet.exportPrivateKey();
+}
+
+// ── 백업 키로 이 기기의 지갑을 교체 + 서버 검증 ──────────
+// 성공하면 window.gopangWallet이 복원된 키로 교체되어, 이후 모든 서명이
+// 그 키로 이뤄진다. guid가 주어지면 그 guid에 대해 즉시 /auth/issue로
+// 검증까지 시도한다(로그인 복구 흐름용). guid 없이 호출(설정 화면에서의
+// 단순 키 교체)도 가능하다.
+export async function _restoreFromBackupKey(privKeyB64u, guid = null, svc = 'gopang') {
+  if (typeof window.GopangWallet === 'undefined') return { ok: false, reason: 'wallet_module_not_loaded' };
+  let wallet;
+  try {
+    wallet = await window.GopangWallet.restoreFromPrivateKey(privKeyB64u);
+  } catch (e) {
+    return { ok: false, reason: e.message || 'invalid_key' };
+  }
+  if (guid) wallet.setIdentity({ guid, handle: null });
+  window.gopangWallet = wallet; // 싱글턴 교체 — 이후 서명은 전부 복원된 키로
+
+  if (!guid) return { ok: true };
+
+  const session = await _issueSession(guid, svc);
+  if (!session.ok) return { ok: false, reason: session.reason };
+  return { ok: true };
+}
+
+// ── 기기 불일치 안내 + 백업 키 복구 폼 ───────────────────
+// found: L1에서 찾은 기존 계정 레코드, resolve: initAuth류의 원래 resolve 콜백
+function _showDeviceMismatchNotice(found, resolve) {
   document.getElementById('_device-mismatch-overlay')?.remove();
   const overlay = document.createElement('div');
   overlay.id = '_device-mismatch-overlay';
@@ -392,27 +423,109 @@ function _showDeviceMismatchNotice(onRetry) {
     'display:flex;align-items:center;justify-content:center',
     'padding:24px;box-sizing:border-box',
   ].join(';');
-  overlay.innerHTML = `
-    <div style="background:#fff;border-radius:20px;padding:28px 22px;
-                width:100%;max-width:360px;box-sizing:border-box;text-align:center">
-      <p style="font-weight:700;font-size:16px;margin:0 0 10px;color:#111827">
-        이 기기는 등록된 기기가 아닙니다
-      </p>
-      <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 20px">
-        입력하신 번호(또는 닉네임)로 가입된 계정이 이미 있지만,<br>
-        이 계정의 암호키(GDC Wallet)는 이 기기에 없습니다.<br><br>
-        본인 계정이 맞다면 설정 → 백업 키로 복구해 주세요.<br>
-        본인 계정이 아니라면 다른 번호로 가입해 주세요.
-      </p>
-      <button id="_dm_close"
-        style="width:100%;padding:13px;border:none;border-radius:10px;
-               background:#16a34a;color:#fff;cursor:pointer;
-               font-size:14px;font-weight:700;font-family:inherit">
-        확인
-      </button>
-    </div>`;
+
+  const _renderNotice = () => {
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:28px 22px;
+                  width:100%;max-width:360px;box-sizing:border-box;text-align:center">
+        <p style="font-weight:700;font-size:16px;margin:0 0 10px;color:#111827">
+          이 기기는 등록된 기기가 아닙니다
+        </p>
+        <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 20px">
+          입력하신 번호(또는 닉네임)로 가입된 계정이 이미 있지만,<br>
+          이 계정의 암호키(GDC Wallet)는 이 기기에 없습니다.<br><br>
+          본인 계정이라면 백업 키로 이 기기를 등록할 수 있습니다.<br>
+          본인 계정이 아니라면 다른 번호로 가입해 주세요.
+        </p>
+        <button id="_dm_restore"
+          style="width:100%;padding:13px;border:none;border-radius:10px;
+                 background:#16a34a;color:#fff;cursor:pointer;margin-bottom:8px;
+                 font-size:14px;font-weight:700;font-family:inherit">
+          백업 키로 복구
+        </button>
+        <button id="_dm_close"
+          style="width:100%;padding:13px;border:1px solid #e5e7eb;border-radius:10px;
+                 background:none;color:#6b7280;cursor:pointer;
+                 font-size:14px;font-family:inherit">
+          닫기
+        </button>
+      </div>`;
+    overlay.querySelector('#_dm_restore').onclick = _renderRestoreForm;
+    overlay.querySelector('#_dm_close').onclick = () => { overlay.remove(); resolve?.(null); };
+  };
+
+  const _renderRestoreForm = () => {
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:28px 22px;
+                  width:100%;max-width:360px;box-sizing:border-box">
+        <p style="font-weight:700;font-size:16px;margin:0 0 10px;color:#111827;text-align:center">
+          백업 키 입력
+        </p>
+        <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 16px;text-align:center">
+          가입 시 또는 설정 → 백업 키에서 내보낸<br>키 문자열을 붙여넣어 주세요.
+        </p>
+        <textarea id="_dm_key_input" rows="3" placeholder="백업 키 붙여넣기"
+          style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:12px;
+                 font-size:13px;font-family:monospace;resize:none;box-sizing:border-box;
+                 margin-bottom:8px" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+        <div id="_dm_err" style="display:none;font-size:12px;color:#dc2626;margin-bottom:8px"></div>
+        <button id="_dm_submit"
+          style="width:100%;padding:13px;border:none;border-radius:10px;
+                 background:#16a34a;color:#fff;cursor:pointer;margin-bottom:8px;
+                 font-size:14px;font-weight:700;font-family:inherit">
+          복구
+        </button>
+        <button id="_dm_back"
+          style="width:100%;padding:13px;border:1px solid #e5e7eb;border-radius:10px;
+                 background:none;color:#6b7280;cursor:pointer;
+                 font-size:14px;font-family:inherit">
+          뒤로
+        </button>
+      </div>`;
+    const input  = overlay.querySelector('#_dm_key_input');
+    const errEl  = overlay.querySelector('#_dm_err');
+    const subBtn = overlay.querySelector('#_dm_submit');
+    input.focus();
+
+    overlay.querySelector('#_dm_back').onclick = _renderNotice;
+    subBtn.onclick = async () => {
+      const val = input.value.trim();
+      if (!val) { errEl.textContent = '백업 키를 입력해 주세요.'; errEl.style.display = 'block'; return; }
+      subBtn.disabled = true; subBtn.textContent = '확인 중…'; errEl.style.display = 'none';
+
+      const result = await _restoreFromBackupKey(val, found.guid, 'gopang');
+      if (!result.ok) {
+        const msg = result.reason === 'PUBKEY_MISMATCH'
+          ? '이 백업 키는 이 계정의 키가 아닙니다.'
+          : result.reason === 'invalid_key'
+            ? '키 형식이 올바르지 않습니다.'
+            : '복구에 실패했습니다 (' + result.reason + ').';
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+        subBtn.disabled = false; subBtn.textContent = '복구';
+        return;
+      }
+
+      // 복구 + 서버 검증 통과 → 로그인 완료
+      const user = {
+        ipv6: found.guid, handle: found.handle,
+        e164: found.e164 || '',
+        country_code: found.country_code || DEFAULT_COUNTRY,
+        nickname: found.nickname || '',
+        region: found.region || '',
+        name: found.handle, isGuest: false, isTemp: false,
+        registeredAt: found.created,
+      };
+      localStorage.setItem(STORE_KEY, JSON.stringify(user));
+      setUser(user);
+      console.info('[Auth] 백업 키 복구 완료:', found.handle);
+      overlay.remove();
+      resolve?.(user);
+    };
+  };
+
   document.body.appendChild(overlay);
-  overlay.querySelector('#_dm_close').onclick = () => { overlay.remove(); onRetry?.(); };
+  _renderNotice();
 }
 
 // ── 저장소 읽기 ──────────────────────────────────────────
@@ -457,8 +570,7 @@ export async function initAuthWithPhone(digits, countryKey = 'KR') {
         const session = await _issueSession(found.guid, 'gopang');
         if (!session.ok) {
           console.warn('[Auth] 세션 검증 실패(통합팝업):', session.reason);
-          _showDeviceMismatchNotice();
-          resolve(null);
+          _showDeviceMismatchNotice(found, resolve);
           return;
         }
         const user = {
@@ -776,7 +888,7 @@ function _showPhonePopup(resolve) {
         btn.style.opacity = '1';
         btn.style.pointerEvents = '';
         overlay.remove();
-        _showDeviceMismatchNotice(() => _showPhonePopup(resolve));
+        _showDeviceMismatchNotice(found, resolve);
         return;
       }
 

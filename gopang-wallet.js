@@ -915,6 +915,10 @@
         );
 
         // JWK 형식으로 복원
+        // v6.0: extractable을 true로 — exportPrivateKey()(백업 키 내보내기)가
+        // 첫 생성 직후뿐 아니라 재방문 세션(load() 경로)에서도 동작해야 한다.
+        // 개인키 자체는 여전히 IndexedDB에 AES-GCM 암호화되어 있으므로, 이 변경이
+        // 새로 노출시키는 것은 "이미 메모리에 로드된 이 세션의 키"뿐이다.
         const privJwk = {
           kty: 'OKP', crv: 'Ed25519',
           x  : record.publicKeyB64u,
@@ -922,7 +926,7 @@
           key_ops: ['sign'],
         };
         const privKey = await crypto.subtle.importKey(
-          'jwk', privJwk, { name: 'Ed25519' }, false, ['sign']
+          'jwk', privJwk, { name: 'Ed25519' }, true, ['sign']
         );
         const pubRaw  = b64uToBuf(record.publicKeyB64u);
         const pubKey  = await crypto.subtle.importKey(
@@ -1077,6 +1081,50 @@
         handle       : localStorage.getItem(LS_HANDLE),
         guid         : null,
       });
+    }
+
+    /**
+     * v6.0 — 백업 키 복구: 개인키(Base64URL) 한 줄만으로 지갑 전체 복원.
+     * 공개키는 별도로 저장/입력받지 않고 개인키로부터 결정적으로 유도한다.
+     *
+     * 원리: Ed25519 개인키는 32바이트 시드 그 자체이며(JWK의 `d` 값과 동일),
+     * PKCS8 DER 포맷은 Ed25519에 한해 알고리즘 파라미터가 없어 앞 16바이트
+     * 헤더가 항상 고정값이다 — `302e020100300506032b657004220420`(hex).
+     * 이 고정 헤더 + 32바이트 시드로 PKCS8 버퍼를 직접 구성해 importKey하면,
+     * WebCrypto 구현이 공개키를 내부적으로 계산해 jwk export 시 `x`로 돌려준다
+     * (실제 브라우저/Node WebCrypto에서 라운드트립 서명·검증으로 검증된 방식).
+     *
+     * "백업 키를 다시 입력하면 정확히 같은 계정이 복원된다"가 보장되는 이유는
+     * 이 유도가 결정적(deterministic)이기 때문 — 같은 32바이트는 항상 같은
+     * 공개키(=같은 guid 검증 결과)를 낸다.
+     *
+     * @param {string} privKeyB64u — exportPrivateKey()가 내보낸 그 문자열
+     * @param {string} [passphrase='']
+     * @returns {GopangWallet}
+     * @throws {Error} 형식이 32바이트가 아니면 (잘못 붙여넣은 경우)
+     */
+    static async restoreFromPrivateKey(privKeyB64u, passphrase = '') {
+      const seed = b64uToBuf(privKeyB64u.trim());
+      if (seed.length !== 32) {
+        throw new Error('백업 키 형식이 올바르지 않습니다 (32바이트가 아님).');
+      }
+      const PKCS8_ED25519_HEADER = Uint8Array.from(
+        '302e020100300506032b657004220420'.match(/.{2}/g).map(h => parseInt(h, 16))
+      );
+      const pkcs8 = new Uint8Array(PKCS8_ED25519_HEADER.length + seed.length);
+      pkcs8.set(PKCS8_ED25519_HEADER, 0);
+      pkcs8.set(seed, PKCS8_ED25519_HEADER.length);
+
+      let imported;
+      try {
+        imported = await crypto.subtle.importKey('pkcs8', pkcs8, { name: 'Ed25519' }, true, ['sign']);
+      } catch (e) {
+        throw new Error('백업 키를 읽을 수 없습니다: ' + e.message);
+      }
+      const jwk = await crypto.subtle.exportKey('jwk', imported);
+      const pubKeyB64u = jwk.x; // 결정적으로 유도된 공개키
+
+      return GopangWallet.importFromBackup(privKeyB64u.trim(), pubKeyB64u, passphrase);
     }
 
     /* ── 내부: 기기 고유 entropy (passphrase 미사용 시 대체) ── */
