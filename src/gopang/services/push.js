@@ -35,11 +35,14 @@ export async function requestPushSubscription(guid) {
     let sub = await reg.pushManager.getSubscription();
 
     if (!sub) {
-      const keyRes   = await fetch(`${WORKER_URL}/push/vapid-public-key`);
-      const vapidKey = (await keyRes.json()).publicKey;
+      const keyRes  = await fetch(`${WORKER_URL}/push/vapid-public-key`);
+      const keyData = await keyRes.json().catch(() => ({}));
+      if (!keyRes.ok || !keyData.publicKey) {
+        return { ok: false, reason: keyData.detail || `vapid_key_http_${keyRes.status}` };
+      }
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: _urlBase64ToUint8Array(vapidKey),
+        applicationServerKey: _urlBase64ToUint8Array(keyData.publicKey),
       });
     }
 

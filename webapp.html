@@ -1258,7 +1258,7 @@ async function _togglePush(on) {
       if (!result.ok) throw new Error(result.reason || '구독 실패');
       _setPushToggle(true);
     } catch(e) {
-      if (status) status.textContent = '알림 권한이 거부됐거나 오류가 발생했습니다';
+      if (status) status.textContent = '알림 활성화 실패: ' + (e.message || '알 수 없는 오류');
       _setPushToggle(false);
       console.warn('[Push]', e.message);
     }
