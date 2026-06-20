@@ -128,7 +128,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   border-bottom:1px solid var(--border);flex-shrink:0;background:#fff;
 }
 #top-logo{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;flex-shrink:0}
-#top-logo-img{height:30px;width:auto;display:block}
+#top-logo-img{height:27px;width:auto;display:block}
 #top-progress-dot{width:7px;height:7px;border-radius:50%;background:#f59e0b;
   animation:pulse-dot 1.5s ease-in-out infinite;flex-shrink:0}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
@@ -147,22 +147,27 @@ html,body{height:100%;height:100dvh;overflow:hidden;
 
 /* AI 버튼 — 비활성:회색, 활성:파란 불 */
 .btn-ai{
-  display:flex;align-items:center;gap:5px;
-  width:auto;padding:0 10px;height:30px;
-  border-radius:8px;border:1.5px solid var(--border);
-  background:none;color:var(--txt3);
-  font-size:12px;font-weight:700;cursor:pointer;
-  transition:border-color .15s,color .15s;
-}
-.btn-ai:hover{background:var(--chip-bg)}
-.ai-dot{
-  width:7px;height:7px;border-radius:50%;
-  background:var(--txt4);flex-shrink:0;
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  width:42px;height:24px;flex-shrink:0;
+  border-radius:999px;border:none;
+  background:#d1d5db;
+  cursor:pointer;
+  padding:0;overflow:visible;
   transition:background .2s;
 }
+.ai-switch-thumb{
+  position:absolute;top:2.5px;left:2.5px;
+  width:19px;height:19px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:#fff;color:var(--txt3);
+  font-size:9px;font-weight:800;letter-spacing:.1px;
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+  transition:transform .2s ease,color .2s;
+}
 /* 활성 상태 — JS로 .active 클래스 부여 */
-.btn-ai.active{border-color:#3b82f6;color:#1d4ed8}
-.btn-ai.active .ai-dot{background:#3b82f6;box-shadow:0 0 6px rgba(59,130,246,.6)}
+.btn-ai.active{background:#3b82f6}
+.btn-ai.active .ai-switch-thumb{transform:translateX(18px);color:#1d4ed8}
 
 /* ── 라우터 뱃지 ── */
 #router-badge{
@@ -706,7 +711,7 @@ select.setting-field{appearance:none;-webkit-appearance:none;
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>
       <button class="top-btn btn-ai" id="btn-ai" onclick="toggleAI()" title="AI 비서">
-        <span class="ai-dot" id="ai-dot"></span>AI
+        <span class="ai-switch-thumb">AI</span>
       </button>
       <button class="top-btn" id="btn-settings" onclick="openSettings()" title="설정">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1223,20 +1228,7 @@ select.setting-field{appearance:none;-webkit-appearance:none;
     });
   }
 
-  // AI 버튼 활성 상태 감시 (gopang-app.js 가 aiActive 변수를 노출하면 연동)
-  // MutationObserver로 btn-ai 클래스 변화 감지
-  const btnAI = document.getElementById('btn-ai');
-  if(btnAI){
-    const obs = new MutationObserver(function(){
-      const active = btnAI.classList.contains('active');
-      const dot = document.getElementById('ai-dot');
-      if(dot){
-        dot.style.background = active ? '#3b82f6' : 'var(--txt4)';
-        dot.style.boxShadow  = active ? '0 0 6px rgba(59,130,246,.6)' : 'none';
-      }
-    });
-    obs.observe(btnAI, {attributes:true, attributeFilter:['class']});
-  }
+  // AI 버튼 활성 상태는 .btn-ai.active CSS 규칙이 ai-switch까지 declaratively 처리
 })();
 </script>
 
