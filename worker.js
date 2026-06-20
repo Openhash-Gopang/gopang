@@ -2339,6 +2339,7 @@ async function handlePushSubscribe(request, env, corsHeaders) {
   if (body.unsubscribe) {
     try { await _l1PatchProfile(env, record.id, { push_subscription: '', push_sound: '' }); }
     catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
+    _backupPushSubscriptionToSupabase(env, body.guid, null).catch(() => {});
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
   }
 
@@ -2349,10 +2350,31 @@ async function handlePushSubscribe(request, env, corsHeaders) {
       push_sound:        body.sound || 'ping',
     });
   } catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
+  _backupPushSubscriptionToSupabase(env, body.guid, body.subscription, body.sound).catch(() => {});
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
 }
 
+// L1 쓰기가 끝난 뒤 Supabase에도 best-effort로 미러링 (백업·시뮬레이션 용도).
+// 실패해도 throw하지 않음 — 호출부에서 .catch(()=>{})로 무시, 메인 흐름은 L1만으로 완결.
+async function _backupPushSubscriptionToSupabase(env, guid, subscription, sound) {
+  const sbH = _sbServiceHeaders(env);
+  if (subscription === null) {
+    await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(guid)}`, {
+      method: 'DELETE', headers: sbH,
+    });
+    return;
+  }
+  await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?on_conflict=guid`, {
+    method:  'POST',
+    headers: { ...sbH, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body:    JSON.stringify({ guid, subscription: JSON.stringify(subscription), sound: sound || 'ping' }),
+  });
+}
+
 // POST /push/send — 특정 guid에게 push 전송
+// L1이 실제 구독 저장소이므로 L1을 우선 조회. L1 "연결 자체"가 실패했을 때만
+// Supabase 백업을 본다 — L1이 정상 응답했는데 구독이 없으면 그게 정답이므로
+// 폴백하지 않는다 (해지한 사용자에게 옛 백업으로 다시 push가 나가는 사고 방지).
 async function handlePushSend(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body?.to_guid) return _err(400, 'MISSING_FIELD', 'to_guid 필수', corsHeaders);
@@ -2360,13 +2382,29 @@ async function handlePushSend(request, env, corsHeaders) {
   if (!env.VAPID_PRIVATE_KEY || !env.VAPID_PUBLIC_KEY || !env.VAPID_SUBJECT)
     return _err(500, 'CONFIG_ERROR', 'VAPID 환경변수 미설정', corsHeaders);
 
-  const sbH = _sbServiceHeaders(env);
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(body.to_guid)}&select=subscription,sound&limit=5`,
-    { headers: sbH }
-  );
-  const rows = await res.json().catch(() => []);
-  if (!rows.length) return new Response(JSON.stringify({ ok: true, sent: 0, reason: 'NO_SUBSCRIPTION' }), { status: 200, headers: corsHeaders });
+  let rows = [];
+  let source = 'l1';
+  try {
+    const record = await _l1FindProfileByGuid(env, body.to_guid);
+    if (record?.push_subscription) {
+      rows = [{ subscription: record.push_subscription, sound: record.push_sound }];
+    }
+  } catch (e) {
+    console.warn('[Push] L1 조회 실패 → Supabase 백업 조회:', e.message);
+    source = 'supabase';
+    try {
+      const sbH = _sbServiceHeaders(env);
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(body.to_guid)}&select=subscription,sound&limit=5`,
+        { headers: sbH }
+      );
+      rows = await res.json().catch(() => []);
+    } catch (e2) {
+      console.warn('[Push] Supabase 백업 조회도 실패:', e2.message);
+    }
+  }
+
+  if (!rows.length) return new Response(JSON.stringify({ ok: true, sent: 0, reason: 'NO_SUBSCRIPTION', source }), { status: 200, headers: corsHeaders });
 
   const payload = JSON.stringify({
     title: body.title || '고팡',
@@ -2386,7 +2424,7 @@ async function handlePushSend(request, env, corsHeaders) {
       console.warn('[Push] 전송 실패:', e.message);
     }
   }
-  return new Response(JSON.stringify({ ok: true, sent }), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify({ ok: true, sent, source }), { status: 200, headers: corsHeaders });
 }
 
 // Web Push 전송 (VAPID)
