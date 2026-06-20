@@ -331,6 +331,12 @@ if (document.readyState === 'loading') {
 
 // ── 첫 접속 환영 팝업 (initAuth 포함) ──────────────────────
 function _showWelcomePopup() {
+  // 이 탭이 살아있는 동안(세션) 한 번만 표시 — 채팅 화면으로 돌아올 때마다
+  // 다시 뜨지 않게 한다. sessionStorage는 탭을 닫으면 사라지므로,
+  // 탭을 닫았다가 다시 열면(=새 세션) 자연스럽게 다시 표시된다.
+  if (sessionStorage.getItem('gopang_welcome_shown_session')) return;
+  sessionStorage.setItem('gopang_welcome_shown_session', '1');
+
   const stored = (() => {
     try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { return null; }
   })();
@@ -354,14 +360,14 @@ function _showWelcomePopup() {
     ">
       <div style="width:36px;height:4px;background:#e5e7eb;border-radius:2px;margin:12px auto 0"></div>
 
-      <!-- 헤더 -->
-      <div style="padding:20px 24px 16px;display:flex;align-items:center;gap:14px;border-bottom:1px solid #f3f4f6">
+      <!-- 헤더 (터치 후 아래로 스와이프하면 패널이 닫힘) -->
+      <div id="_welcome_title" style="padding:20px 24px 16px;display:flex;align-items:center;gap:14px;border-bottom:1px solid #f3f4f6">
         <div style="width:44px;height:44px;flex-shrink:0;background:#16a34a;border-radius:10px;display:flex;align-items:center;justify-content:center">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
         </div>
         <div>
           <div style="font-size:16px;font-weight:600;color:#111827;line-height:1.3">
-            ${name ? name + '님, ' : ''}고팡에 오신 것을<br>환영합니다
+            ${name ? name + '님, ' : ''}혼디에 오신 것을<br>환영합니다
           </div>
           <div style="font-size:12px;color:#9ca3af;margin-top:3px">카카오톡과 비슷해 보이지만 근본적으로 다릅니다</div>
         </div>
@@ -408,6 +414,46 @@ function _showWelcomePopup() {
   `;
 
   document.body.appendChild(ov);
+
+  // ── 제목을 터치해 위→아래로 스와이프하면 패널이 아래로 slide-in(닫힘) ──
+  // 기존 settings-overlay의 핸들 스와이프-닫기와 같은 패턴: 손가락을
+  // 따라 sheet를 끌어내리고, 일정 거리 이상이면 닫는다.
+  (() => {
+    const handle = document.getElementById('_welcome_title');
+    const sheet  = document.getElementById('_welcome_sheet');
+    if (!handle || !sheet) return;
+
+    let startY = 0, dragging = false;
+
+    const start = (e) => {
+      startY = e.touches[0].clientY;
+      dragging = true;
+      sheet.style.transition = 'none';
+    };
+    const move = (e) => {
+      if (!dragging) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy <= 0) return; // 위로 끌면 무시 — 아래 방향만 처리
+      e.preventDefault();
+      sheet.style.transform = `translateY(${dy}px)`;
+    };
+    const end = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      const dy = e.changedTouches[0].clientY - startY;
+      sheet.style.transition = 'transform .25s ease';
+      if (dy > 100) {
+        sheet.style.transform = 'translateY(100%)';
+        setTimeout(() => _closeWelcome(ov), 180);
+      } else {
+        sheet.style.transform = ''; // 임계값 미달 — 원래 위치로 스냅백
+      }
+    };
+
+    handle.addEventListener('touchstart', start, { passive: true });
+    handle.addEventListener('touchmove',  move,  { passive: false });
+    handle.addEventListener('touchend',   end,   { passive: true });
+  })();
 
   // 외부 클릭 닫힘
   ov.addEventListener('click', e => {
