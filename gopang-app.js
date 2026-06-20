@@ -28,7 +28,7 @@ import { openSearch, closeSearch,
 import { _showRegisterFlow }                   from './src/gopang/ui/register-flow.js';
 
 // ── AI ───────────────────────────────────────────────────
-import { toggleAI, activateAI, closeAI }       from './src/gopang/ai/toggle.js';
+import { toggleAI, activateAI, closeAI, initAIToggleState } from './src/gopang/ai/toggle.js';
 
 // ── P2P ──────────────────────────────────────────────────
 import { setPeer, _clearPeer,
@@ -224,6 +224,8 @@ const _boot = async () => {
   if (camInp)  camInp.addEventListener('change',  (e) => handleFileSelect(e));
 
   // 4-7. 초기화
+  loadSettings();         // CFG 최신화 (initAIToggleState 판단 기준)
+  initAIToggleState();    // 마지막 AI 켬/끔 상태 복원 (또는 설정 직후 첫 부팅 시 자동 켬)
   _showWelcomeMessage();
   _scheduleLocation();
 

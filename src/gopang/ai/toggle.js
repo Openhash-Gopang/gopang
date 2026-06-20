@@ -7,6 +7,9 @@ import { _isRegistered } from '../core/auth.js';
 import { appendBubble } from '../ui/bubble.js';
 import { _showRegisterFlow } from '../ui/register-flow.js';
 
+// 마지막 토글 상태 저장 키 — 화면을 닫기 전 상태를 기억하기 위함
+const _AI_TOGGLE_KEY = 'gopang_ai_toggle_state';
+
 // ── AI 토글 (버튼 클릭) ──────────────────────────────────
 export function toggleAI() {
   if (!_isRegistered()) {
@@ -28,6 +31,7 @@ export function toggleAI() {
   if (aiActive) {
     setAiActive(false);
     document.getElementById('btn-ai')?.classList.remove('active');
+    localStorage.setItem(_AI_TOGGLE_KEY, '0');
     appendBubble('system', 'AI 비서 비활성화됨.');
   } else {
     activateAI(false);
@@ -43,10 +47,27 @@ export function activateAI(silent = false) {
   }
   setAiActive(true);
   document.getElementById('btn-ai')?.classList.add('active');
+  localStorage.setItem(_AI_TOGGLE_KEY, '1');
   const sub = document.getElementById('ai-card-sub');
   if (sub) sub.textContent = `${CFG.model} 연결됨`;
 }
 
 export function closeAI() {
   document.getElementById('ai-overlay')?.classList.remove('open');
+}
+
+// ── 부팅 시점 토글 상태 복원 ──────────────────────────────
+// - AI 미설정(키 없음) → 항상 꺼짐 (최초 방문자 기본값)
+// - 설정은 했지만 켬/끔을 기록한 적 없음(설정 직후 첫 부팅) → 켬 (기존 자동 활성화 동작과 동일)
+// - 마지막으로 명시적으로 끔/켬을 선택한 기록이 있음 → 그 상태를 그대로 복원
+export function initAIToggleState() {
+  const providerCount = Array.isArray(CFG.providers) ? CFG.providers.length : 0;
+  const hasKey = !!(CFG.apiKey || CFG.geminiKey || providerCount > 0);
+
+  if (!hasKey) return; // 미설정 — 꺼짐 유지
+
+  const stored = localStorage.getItem(_AI_TOGGLE_KEY);
+  if (stored === '0') return; // 마지막에 명시적으로 꺼둔 상태 → 유지
+
+  activateAI(true); // stored === '1' 이거나 기록 없음(설정 직후 첫 부팅) → 켬
 }
