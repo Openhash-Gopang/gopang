@@ -181,6 +181,41 @@ function _applyUpdate() {
   });
 }
 
+// ── 설정 패널의 "최신 버전으로 갱신" 버튼 — 수동 강제 갱신 ──────
+// 자동 감지(_autoApplyUpdate)와 달리 사용자가 언제든 직접 누를 수 있다.
+// 1) 모든 Cache Storage 항목 삭제 (sw.js가 들고 있던 캐시 전부 무효화)
+// 2) SW 갱신 체크 → 새 버전 있으면 즉시 skipWaiting + 재시작
+// 3) 새 버전이 없어도(=이미 최신) 캐시는 비웠으니 강제 새로고침으로 마무리
+async function forceUpdateApp(btn) {
+  const label = document.getElementById('btn-force-update-label');
+  if (btn) btn.style.pointerEvents = 'none';
+  if (label) label.textContent = '갱신 중…';
+
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+      console.log('[PWA] 강제 갱신 — 캐시 전체 삭제 완료:', keys);
+    }
+
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.update();
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          return; // controllerchange 리스너가 자동으로 reload 처리
+        }
+      }
+    }
+    window.location.reload();
+  } catch (err) {
+    console.warn('[PWA] 강제 갱신 실패 — 일반 새로고침으로 대체:', err);
+    window.location.reload();
+  }
+}
+window.forceUpdateApp = forceUpdateApp;
+
 // ── Android/Chrome — beforeinstallprompt 이벤트 ─────────
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
