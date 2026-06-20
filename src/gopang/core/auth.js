@@ -329,6 +329,92 @@ async function _e164ToIPv6(e164) {
   return groups.join(':');
 }
 
+// ── window.gopangWallet 준비 대기 ────────────────────────
+// gopang-wallet.js의 싱글턴 초기화는 비동기(IIFE)라서, 이 모듈이 먼저 실행되면
+// window.gopangWallet이 아직 null/undefined일 수 있다. 최대 5초 폴링.
+function _waitForWallet(timeoutMs = 5000) {
+  return new Promise((resolve) => {
+    if (window.gopangWallet) { resolve(window.gopangWallet); return; }
+    const start = Date.now();
+    const t = setInterval(() => {
+      if (window.gopangWallet) {
+        clearInterval(t);
+        resolve(window.gopangWallet);
+      } else if (Date.now() - start > timeoutMs) {
+        clearInterval(t);
+        resolve(null);
+      }
+    }, 100);
+  });
+}
+
+// ── _issueSession — Ed25519 챌린지 서명 → Worker /auth/issue 검증 ───────
+// v6.0: 로그인(또는 가입 직후 세션 수립)은 "전화번호/닉네임을 안다"가 아니라
+// "그 guid에 핀(pin)된 Ed25519 개인키를 갖고 있다"로만 증명되어야 한다.
+// 서버가 TOFU 핀과 다른 공개키를 보면 PUBKEY_MISMATCH를 반환 — 이 기기가
+// 그 계정의 정당한 기기가 아니라는 뜻이므로, 호출부는 절대 로그인으로
+// 폴백하지 말고 reason을 그대로 사용자에게 보여줘야 한다.
+async function _issueSession(guid, svc = 'gopang', level = 'L0') {
+  const wallet = await _waitForWallet();
+  if (!wallet?.publicKeyB64u || typeof wallet.signPayload !== 'function') {
+    return { ok: false, reason: 'wallet_not_ready' };
+  }
+  const ts = Date.now();
+  const sigMsg = `auth-issue:${guid}:${wallet.publicKeyB64u}:${svc}:${ts}`;
+  let signature;
+  try {
+    signature = await wallet.signPayload(sigMsg);
+  } catch (e) {
+    return { ok: false, reason: 'sign_failed' };
+  }
+  try {
+    const res = await fetch(`${PROXY_URL}/auth/issue`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guid, pubkey: wallet.publicKeyB64u, signature, ts, level, svc }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, reason: data?.code || data?.detail || `http_${res.status}` };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: 'network' };
+  }
+}
+
+// ── 기기 불일치 안내(이 기기가 그 계정의 등록된 기기가 아닐 때) ───────
+function _showDeviceMismatchNotice(onRetry) {
+  document.getElementById('_device-mismatch-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = '_device-mismatch-overlay';
+  overlay.style.cssText = [
+    'position:fixed;inset:0;z-index:10003',
+    'background:rgba(0,0,0,0.5)',
+    'display:flex;align-items:center;justify-content:center',
+    'padding:24px;box-sizing:border-box',
+  ].join(';');
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:28px 22px;
+                width:100%;max-width:360px;box-sizing:border-box;text-align:center">
+      <p style="font-weight:700;font-size:16px;margin:0 0 10px;color:#111827">
+        이 기기는 등록된 기기가 아닙니다
+      </p>
+      <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 20px">
+        입력하신 번호(또는 닉네임)로 가입된 계정이 이미 있지만,<br>
+        이 계정의 암호키(GDC Wallet)는 이 기기에 없습니다.<br><br>
+        본인 계정이 맞다면 설정 → 백업 키로 복구해 주세요.<br>
+        본인 계정이 아니라면 다른 번호로 가입해 주세요.
+      </p>
+      <button id="_dm_close"
+        style="width:100%;padding:13px;border:none;border-radius:10px;
+               background:#16a34a;color:#fff;cursor:pointer;
+               font-size:14px;font-weight:700;font-family:inherit">
+        확인
+      </button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#_dm_close').onclick = () => { overlay.remove(); onRetry?.(); };
+}
+
 // ── 저장소 읽기 ──────────────────────────────────────────
 function _loadStored() {
   try {
@@ -365,7 +451,16 @@ export async function initAuthWithPhone(digits, countryKey = 'KR') {
       const found  = data.items?.[0];
 
       if (found) {
-        // 기존 사용자 → 바로 로그인
+        // v6.0: handle 일치만으로 더 이상 즉시 로그인하지 않는다 — 이 기기가
+        // 그 guid에 핀(pin)된 Ed25519 키를 실제로 갖고 있다는 서명 증거가 있어야
+        // 한다. 다른 사람의 번호/닉네임을 알았다고 해서 그 계정이 되어선 안 된다.
+        const session = await _issueSession(found.guid, 'gopang');
+        if (!session.ok) {
+          console.warn('[Auth] 세션 검증 실패(통합팝업):', session.reason);
+          _showDeviceMismatchNotice();
+          resolve(null);
+          return;
+        }
         const user = {
           ipv6: found.guid, handle: found.handle,
           e164: found.e164 || '',
@@ -672,7 +767,20 @@ function _showPhonePopup(resolve) {
         }
       }
 
-      // 기존 사용자 → 바로 로그인
+      // v6.0: handle/닉네임 일치만으로 더 이상 즉시 로그인하지 않는다 —
+      // 이 기기가 그 guid에 핀(pin)된 Ed25519 키를 실제로 갖고 있다는 서명
+      // 증거가 있어야 한다. 전화번호나 닉네임은 비밀이 아니다(누구나 알 수 있음).
+      const session = await _issueSession(found.guid, 'gopang');
+      if (!session.ok) {
+        console.warn('[Auth] 세션 검증 실패:', session.reason);
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = '';
+        overlay.remove();
+        _showDeviceMismatchNotice(() => _showPhonePopup(resolve));
+        return;
+      }
+
+      // 기존 사용자 → 로그인 (서명 검증 통과)
       const user = {
         ipv6: found.guid, handle: found.handle,
         e164: found.e164 || '',
@@ -919,6 +1027,12 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
         console.warn('[가입] 프로필 생성 실패 (무시):', e.message);
       }
 
+      // 가입 직후 세션 수립 — /profile이 방금 핀(pin)한 pubkey와 같은 지갑이므로
+      // 항상 성공해야 정상이다. 실패해도 가입 자체는 막지 않는다(다음 진입 시
+      // 다시 시도됨) — 단, 실패를 조용히 묻지 않고 로그로 남겨 추적 가능하게 한다.
+      const _session = await _issueSession(ipv6, 'gopang');
+      if (!_session.ok) console.warn('[가입] 세션 수립 실패 (무시):', _session.reason);
+
       // PDV 초기 레코드 (비동기 — 가입 흐름 차단 불필요)
       _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountry }).catch(
         e => console.warn('[PDV] 가입 초기 레코드 실패 (무시):', e.message)
@@ -1137,11 +1251,16 @@ export const gopangAuth = {
     }
 
     if (needed >= 3) {
-      const countryKey = stored.country_code || DEFAULT_COUNTRY;
-      const phone = prompt('전화번호를 입력하세요:');
-      if (!phone) return false;
-      const inputGUID = await _e164ToIPv6(buildE164(phone.trim(), countryKey));
-      if (inputGUID !== stored.ipv6) { appendBubble('ai', '❌ 번호가 일치하지 않습니다.', true); return false; }
+      // v6.0: 전화번호 재입력은 증명이 아니다(전화번호는 비밀이 아님 — 아는 사람
+      // 누구나 통과할 수 있었다). 대신 이 기기의 Ed25519 키가 실제로 이 계정에
+      // 핀(pin)된 키인지 서버가 서명으로 검증한다(_issueSession과 동일 경로,
+      // level만 L3).
+      appendBubble('ai', '🔑 보안키 인증이 필요합니다.', true);
+      const session = await _issueSession(stored.ipv6, 'gopang', 'L3');
+      if (!session.ok) {
+        appendBubble('ai', `❌ 인증 실패 (${session.reason === 'PUBKEY_MISMATCH' ? '이 기기는 등록된 기기가 아닙니다' : session.reason}).`, true);
+        return false;
+      }
       appendBubble('ai', '✅ L3 인증 완료.', true);
       return true;
     }

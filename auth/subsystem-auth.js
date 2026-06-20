@@ -239,30 +239,26 @@ export function showLoginPrompt(level) {
 }
 
 // ── 로컬 폴백 (gopang-sso.js 로드 실패 시) ───────────────
+// v6.0: 이전에는 gopang_user_v4를 서명 검증 없이 그대로 믿고 토큰을 만들어줬다
+// (지문 대조조차 없었음 — gopang-sso.js의 옛 _tryLocalStore보다도 약한 경로).
+// gopang-sso.js(따라서 Worker /auth/issue 서명+TOFU 검증)를 로드할 수 없는
+// 상황에서는 "검증 안 됨"을 인정하고 로그인 안내로 보내는 쪽이 안전하다 —
+// 네트워크 장애 상황에서까지 무검증 신뢰를 허용할 이유가 없다.
 function _localFallback() {
-  const STORE   = 'gopang_user_v4';
   const SESSION = 'gopang_sso_token';
   const LVL     = { L0:0, L1:1, L2:2, L3:3 };
 
   return {
     async require(level) {
-      // 세션 캐시
+      // 세션 캐시(이전에 gopang-sso.js가 정상적으로 서버 검증해 발급한 토큰)만 신뢰
       try {
         const s = JSON.parse(sessionStorage.getItem(SESSION) || 'null');
         if (s?.exp && Date.now() / 1000 < s.exp && LVL[s.level] >= LVL[level])
           return { ...s, via: 'session' };
       } catch {}
-
-      // 로컬스토어
-      const stored = JSON.parse(localStorage.getItem(STORE) || 'null');
-      if (!stored?.ipv6) { showLoginPrompt(); return null; }
-
-      const exp   = Math.floor(Date.now() / 1000) + 3600;
-      const token = { ipv6: stored.ipv6, level: stored.authLevel || 'L0', exp };
-      sessionStorage.setItem(SESSION, JSON.stringify(token));
-
-      if (LVL[token.level] < LVL[level]) { showLoginPrompt(level); return null; }
-      return { ...token, via: 'local' };
+      // 검증 모듈을 로드할 수 없으므로 로컬 데이터를 무검증으로 신뢰하지 않는다
+      showLoginPrompt(level);
+      return null;
     },
     async verify(level) { return this.require(level); },
     session() {

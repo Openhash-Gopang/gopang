@@ -139,6 +139,19 @@ html,body{height:100%;height:100dvh;overflow:hidden;
 #app,.app{display:flex;flex-direction:column;height:100%;height:100dvh;
   max-width:480px;margin:0 auto;background:#fff;overflow:hidden}
 
+/* ── v6.0: Guest 모드 폐지 — 가입/로그인 완료(body.gopang-authed) 전에는
+   #app(혼디 대화창) 자체를 그려도 보이지 않게 한다. 기존에는 환영 팝업이
+   대화창 "위에" 떠 있을 뿐이라, 팝업이 닫히는 찰나나 race condition에서
+   미등록 사용자가 입력창/대화 내역을 볼 수 있었다. visibility:hidden은
+   레이아웃은 유지하되(JS의 getElementById 등은 정상 동작) 화면에 그리지도,
+   포커스/클릭도 되지 않게 한다 — #gopang-auth-gate가 그 자리를 덮는다. */
+body:not(.gopang-authed) #app{visibility:hidden}
+#gopang-auth-gate{
+  position:fixed;inset:0;z-index:99998;background:#fff;
+  display:flex;align-items:center;justify-content:center;
+}
+body.gopang-authed #gopang-auth-gate{display:none}
+
 /* ── 상단 바 ── */
 .top-bar{
   display:flex;align-items:center;justify-content:space-between;
@@ -825,6 +838,13 @@ select.setting-field{appearance:none;-webkit-appearance:none;
   <div class="install-banner-actions">
     <button class="install-btn install-btn-dismiss" onclick="dismissIOSInstall()">확인</button>
   </div>
+</div>
+
+<!-- v6.0: Guest 모드 폐지 — 가입/로그인 확인 전까지 #app을 덮는 게이트.
+     gopang-app.js가 등록 확인(또는 완료) 후에만 body.gopang-authed를 붙이고
+     이 div를 제거한다. -->
+<div id="gopang-auth-gate">
+  <img src="/icons/icon-192.png" alt="혼디" style="width:56px;height:56px;border-radius:14px;opacity:.9">
 </div>
 
 <div id="app">

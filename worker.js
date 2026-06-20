@@ -941,16 +941,90 @@ async function _recordConsentEvent(env,query,queryId){const key=env.SUPABASE_KEY
 async function _sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
 function buildCookie(token){return[`gopang_token=${token}`,'Path=/','Domain=.gopang.net','Max-Age=3600','SameSite=None','Secure','HttpOnly'].join('; ');}
 function parseCookie(header,name){const match=header.match(new RegExp(`(?:^|;)\\s*${name}=([^;]+)`));return match?decodeURIComponent(match[1]):null;}
-function buildToken(ipv6,level,svc){const now=Math.floor(Date.now()/1000);const payload={ipv6,level,svc,iat:now,exp:now+3600};return btoa(JSON.stringify(payload)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');}
-function parseToken(token){try{const padded=token.replace(/-/g,'+').replace(/_/g,'/');const payload=JSON.parse(atob(padded+'=='.slice((padded.length%4)||4)));if(payload.exp<Math.floor(Date.now()/1000))return null;return payload;}catch{return null;}}
-async function handleIssue(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.ipv6)return _err(400,'MISSING_FIELD','ipv6 필수',corsHeaders);const{ipv6,level='L0',svc='*'}=body;const token=buildToken(ipv6,level,svc);return new Response(JSON.stringify({ok:true,ipv6,level}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(token)}});}
-async function handleVerify(request,env,corsHeaders){const cookieHeader=request.headers.get('Cookie')||'';const raw=parseCookie(cookieHeader,'gopang_token');if(!raw)return _err(401,'NO_TOKEN','no_token',corsHeaders);const payload=parseToken(raw);if(!payload)return _err(401,'INVALID_TOKEN','expired_or_invalid',corsHeaders);return new Response(JSON.stringify({valid:true,ipv6:payload.ipv6,level:payload.level,svc:payload.svc,exp:payload.exp}),{status:200,headers:corsHeaders});}
-async function handleRefresh(request,env,corsHeaders){const cookieHeader=request.headers.get('Cookie')||'';const raw=parseCookie(cookieHeader,'gopang_token');if(!raw)return _err(401,'NO_TOKEN','no_token',corsHeaders);const payload=parseToken(raw);if(!payload)return _err(401,'INVALID_TOKEN','expired_or_invalid',corsHeaders);const remaining=payload.exp-Math.floor(Date.now()/1000);if(remaining>1800)return new Response(JSON.stringify({ok:false,reason:'not_yet',remaining}),{status:200,headers:corsHeaders});const newToken=buildToken(payload.ipv6,payload.level,payload.svc);return new Response(JSON.stringify({ok:true}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(newToken)}});}
+// ═══════════════════════════════════════════════════════════
+// v6.0 — 세션 토큰: HMAC-SHA256 서명 (env.GOPANG_MASTER_KEY, _verifyConsentHmac/
+// handleWAChallenge와 동일 패턴). 이전 버전은 base64 평문이라 누구나 임의의
+// ipv6로 토큰을 위조할 수 있었다 — 서명 검증 없이는 token이 절대 발급되지 않는다.
+// ═══════════════════════════════════════════════════════════
+async function buildToken(env,guid,level,svc){
+  const now=Math.floor(Date.now()/1000);
+  const payload={ipv6:guid,level,svc,iat:now,exp:now+3600};
+  const b64p=btoa(JSON.stringify(payload)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(b64p));
+  const b64s=btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  return `${b64p}.${b64s}`;
+}
+async function parseToken(env,token){
+  try{
+    const [b64p,b64s]=String(token).split('.');
+    if(!b64p||!b64s)return null;
+    const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['verify']);
+    const sigBytes=Uint8Array.from(atob(b64s.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+    const sigOk=await crypto.subtle.verify('HMAC',key,sigBytes,new TextEncoder().encode(b64p));
+    if(!sigOk)return null;
+    const padded=b64p.replace(/-/g,'+').replace(/_/g,'/');
+    const payload=JSON.parse(atob(padded+'=='.slice((padded.length%4)||4)));
+    if(payload.exp<Math.floor(Date.now()/1000))return null;
+    return payload;
+  }catch{return null;}
+}
+
+// POST /auth/issue — v6.0: Ed25519 서명 + TOFU(Trust-On-First-Use) 검증 후에만 세션 발급
+// 이전 버전은 클라이언트가 보낸 ipv6를 무검증으로 토큰화했다 — 누구나 임의의 ipv6를
+// 자칭해 그 사람으로 로그인할 수 있었다(계정 탈취). 이제는 그 ipv6(guid)에 연결된
+// Ed25519 개인키를 실제로 보유하고 있다는 서명 증거 없이는 토큰이 발급되지 않는다.
+// body: { guid, pubkey, signature, ts, level, svc }
+// 서명 대상: `auth-issue:${guid}:${pubkey}:${svc}:${ts}`
+async function handleIssue(request,env,corsHeaders){
+  if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});
+  const body=await request.json().catch(()=>null);
+  if(!body)return _err(400,'INVALID_JSON','JSON body 필수',corsHeaders);
+  const{guid,pubkey,signature,ts,level='L0',svc='*'}=body;
+  if(!guid)      return _err(400,'MISSING_FIELD','guid 필수',corsHeaders);
+  if(!pubkey)    return _err(400,'MISSING_FIELD','pubkey 필수',corsHeaders);
+  if(!signature) return _err(400,'MISSING_FIELD','signature 필수',corsHeaders);
+  if(!ts)        return _err(400,'MISSING_FIELD','ts 필수',corsHeaders);
+
+  // 재전송(replay) 방지 — 서명 시각이 현재로부터 120초 이상 벗어나면 거부
+  const tsNum=Number(ts);
+  if(!Number.isFinite(tsNum)||Math.abs(Date.now()-tsNum)>120000){
+    return _err(401,'TS_EXPIRED','서명 시각이 만료되었습니다',corsHeaders);
+  }
+
+  const sigMsg=`auth-issue:${guid}:${pubkey}:${svc}:${ts}`;
+  const sigOk=await _verifyEd25519Simple(pubkey,signature,sigMsg);
+  if(!sigOk)return _err(401,'INVALID_SIGNATURE','서명 검증 실패',corsHeaders);
+
+  // TOFU: 이 guid에 이미 핀(pin)된 Ed25519 공개키와 대조 — /profile 등록 시
+  // 핀이 기록된다(handleProfilePost). 핀이 있는데 다른 키로 서명했다면, 이 기기는
+  // 그 계정의 정당한 기기가 아니다(다른 사람의 전화번호/닉네임을 알아냈을 뿐).
+  let existing=null;
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=pubkey_ed25519&limit=1`,{headers:_sbHeaders(env)});
+    const rows=await r.json().catch(()=>[]);
+    existing=rows[0]||null;
+  }catch(e){
+    return _err(502,'SUPABASE_UNREACHABLE','DB 연결 실패: '+e.message,corsHeaders);
+  }
+  if(existing?.pubkey_ed25519 && existing.pubkey_ed25519!==pubkey){
+    return _err(403,'PUBKEY_MISMATCH','이 기기는 해당 계정의 등록된 기기가 아닙니다',corsHeaders);
+  }
+  // existing이 없거나 pubkey_ed25519가 비어있는 경우 — 핀 기록 자체는 /profile(POST)이
+  // 전담한다(단일 책임). 여기서는 "아직 아무도 핀을 선점하지 않았다"는 사실만으로
+  // 통과시키며, 곧이어 /profile 호출이 이 pubkey를 핀으로 기록한다.
+
+  const token=await buildToken(env,guid,level,svc);
+  return new Response(JSON.stringify({ok:true,guid,level}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(token)}});
+}
+
+async function handleVerify(request,env,corsHeaders){const cookieHeader=request.headers.get('Cookie')||'';const raw=parseCookie(cookieHeader,'gopang_token');if(!raw)return _err(401,'NO_TOKEN','no_token',corsHeaders);const payload=await parseToken(env,raw);if(!payload)return _err(401,'INVALID_TOKEN','expired_or_invalid',corsHeaders);return new Response(JSON.stringify({valid:true,ipv6:payload.ipv6,level:payload.level,svc:payload.svc,exp:payload.exp}),{status:200,headers:corsHeaders});}
+async function handleRefresh(request,env,corsHeaders){const cookieHeader=request.headers.get('Cookie')||'';const raw=parseCookie(cookieHeader,'gopang_token');if(!raw)return _err(401,'NO_TOKEN','no_token',corsHeaders);const payload=await parseToken(env,raw);if(!payload)return _err(401,'INVALID_TOKEN','expired_or_invalid',corsHeaders);const remaining=payload.exp-Math.floor(Date.now()/1000);if(remaining>1800)return new Response(JSON.stringify({ok:false,reason:'not_yet',remaining}),{status:200,headers:corsHeaders});const newToken=await buildToken(env,payload.ipv6,payload.level,payload.svc);return new Response(JSON.stringify({ok:true}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(newToken)}});}
 async function sbFetch(env,path,method='GET',body=null){const key=env.SUPABASE_KEY||_supabaseAnonKey();const headers={'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'};const res=await fetch(SUPABASE_URL+path,{method,headers,body:body?JSON.stringify(body):undefined});return res.ok?res.json().catch(()=>({})):null;}
 async function handleWAChallenge(request,env,corsHeaders){const challenge=crypto.getRandomValues(new Uint8Array(32));const chalB64=btoa(String.fromCharCode(...challenge)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');const exp=Math.floor(Date.now()/1000)+300;const sigData=`${chalB64}.${exp}`;const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['sign']);const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(sigData));const sigHex=Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');return new Response(JSON.stringify({challenge:chalB64,exp,sig:sigHex}),{status:200,headers:corsHeaders});}
 async function _verifyChallengeToken(env,chalB64,exp,sig){if(exp<Math.floor(Date.now()/1000))return false;const sigData=`${chalB64}.${exp}`;const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['verify']);const sigBytes=Uint8Array.from(sig.match(/.{2}/g).map(h=>parseInt(h,16)));return crypto.subtle.verify('HMAC',key,sigBytes,new TextEncoder().encode(sigData));}
 async function handleWARegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.ipv6||!body?.credentialId||!body?.publicKey)return _err(400,'MISSING_FIELD','ipv6, credentialId, publicKey 필수',corsHeaders);const chalOk=await _verifyChallengeToken(env,body.challenge,body.challengeExp,body.challengeSig);if(!chalOk)return _err(401,'CHALLENGE_INVALID','챌린지 만료 또는 위조',corsHeaders);const result=await sbFetch(env,'/rest/v1/webauthn_credentials','POST',{ipv6:body.ipv6,credential_id:body.credentialId,public_key:body.publicKey,counter:0,device_type:body.deviceType||'platform',aaguid:body.aaguid||null});if(!result)return _err(502,'DB_ERROR','Supabase 저장 실패',corsHeaders);return new Response(JSON.stringify({ok:true,ipv6:body.ipv6}),{status:200,headers:corsHeaders});}
-async function handleWAVerify(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.ipv6||!body?.credentialId)return _err(400,'MISSING_FIELD','ipv6, credentialId 필수',corsHeaders);const rows=await sbFetch(env,`/rest/v1/webauthn_credentials?ipv6=eq.${encodeURIComponent(body.ipv6)}&credential_id=eq.${encodeURIComponent(body.credentialId)}&select=public_key,counter`,'GET');if(!rows?.length)return _err(404,'CREDENTIAL_NOT_FOUND','credential_not_found',corsHeaders);const cred=rows[0];if(body.counter!==undefined&&body.counter<=cred.counter)return _err(401,'COUNTER_REPLAY','counter_replay',corsHeaders);if(body.counter!==undefined)await sbFetch(env,`/rest/v1/webauthn_credentials?credential_id=eq.${encodeURIComponent(body.credentialId)}`,'PATCH',{counter:body.counter,last_used_at:new Date().toISOString()});const token=buildToken(body.ipv6,'L2','*');return new Response(JSON.stringify({valid:true,ipv6:body.ipv6,level:'L2'}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(token)}});}
+async function handleWAVerify(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.ipv6||!body?.credentialId)return _err(400,'MISSING_FIELD','ipv6, credentialId 필수',corsHeaders);const rows=await sbFetch(env,`/rest/v1/webauthn_credentials?ipv6=eq.${encodeURIComponent(body.ipv6)}&credential_id=eq.${encodeURIComponent(body.credentialId)}&select=public_key,counter`,'GET');if(!rows?.length)return _err(404,'CREDENTIAL_NOT_FOUND','credential_not_found',corsHeaders);const cred=rows[0];if(body.counter!==undefined&&body.counter<=cred.counter)return _err(401,'COUNTER_REPLAY','counter_replay',corsHeaders);if(body.counter!==undefined)await sbFetch(env,`/rest/v1/webauthn_credentials?credential_id=eq.${encodeURIComponent(body.credentialId)}`,'PATCH',{counter:body.counter,last_used_at:new Date().toISOString()});const token=await buildToken(env,body.ipv6,'L2','*');return new Response(JSON.stringify({valid:true,ipv6:body.ipv6,level:'L2'}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(token)}});}
 const REGISTERED_SERVICES={'gopang':{level:3,domain:'gopang.net',minAuth:'L0',pdv:true},'klaw':{level:3,domain:'klaw.gopang.net',minAuth:'L0',pdv:true},'market':{level:3,domain:'market.gopang.net',minAuth:'L0',pdv:true},'school':{level:3,domain:'school.gopang.net',minAuth:'L0',pdv:true},'security':{level:3,domain:'security.gopang.net',minAuth:'L1',pdv:true},'health':{level:3,domain:'health.gopang.net',minAuth:'L1',pdv:true},'tax':{level:3,domain:'tax.gopang.net',minAuth:'L0',pdv:true},'gdc':{level:3,domain:'gdc.gopang.net',minAuth:'L1',pdv:true},'public':{level:3,domain:'public.gopang.net',minAuth:'L0',pdv:true},'democracy':{level:3,domain:'democracy.gopang.net',minAuth:'L1',pdv:true},'911':{level:3,domain:'911.gopang.net',minAuth:'L0',pdv:true},'police':{level:3,domain:'police.gopang.net',minAuth:'L1',pdv:true},'insurance':{level:3,domain:'insurance.gopang.net',minAuth:'L1',pdv:true},'stock':{level:3,domain:'stock.gopang.net',minAuth:'L1',pdv:true},'traffic':{level:3,domain:'traffic.gopang.net',minAuth:'L0',pdv:true},'logistics':{level:3,domain:'logistics.gopang.net',minAuth:'L0',pdv:true},'fiil':{level:2,domain:'fiil.kr',minAuth:'L0',pdv:true},'klaw-ext':{level:2,domain:'klaw.openhash.kr',minAuth:'L0',pdv:false},'users':{level:3,domain:'users.gopang.net',minAuth:'L0',pdv:false}};
 function _getSvcRegistration(origin,svcId){const resolvedId=_resolveSvcId(svcId);const svc=REGISTERED_SERVICES[resolvedId];if(svc&&origin.includes(svc.domain))return{...svc,svcId:resolvedId,originalId:svcId};if(/^https:\/\/[a-z0-9-]+\.gopang\.net$/.test(origin))return{level:1,domain:origin,minAuth:'L0',pdv:false,svcId:resolvedId,originalId:svcId};return null;}
 async function handleSvcRegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.svc_id||!body?.domain||!body?.operator_ipv6)return _err(400,'MISSING_FIELD','svc_id, domain, operator_ipv6 필수',corsHeaders);const{svc_id,domain,description,min_auth,operator_ipv6}=body;const isGopangSub=/^[a-z0-9-]+\.gopang\.net$/.test(domain);await sbFetch(env,'/rest/v1/svc_registry','POST',{svc_id,domain,description:description||'',operator_ipv6,min_auth:min_auth||'L0',trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending',registered_at:new Date().toISOString()});return new Response(JSON.stringify({ok:true,svc_id,domain,trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending_review',message:isGopangSub?'*.gopang.net 서브도메인으로 자동 승인됐습니다. (Level 1)':'등록 신청이 접수됐습니다.'}),{status:200,headers:corsHeaders});}
@@ -1931,8 +2005,13 @@ async function handleProfilePost(request, env, corsHeaders) {
   const existRows = await existRes.json().catch(() => []);
   const existing  = existRows[0] || null;
 
-  // TOFU 제거: guid(전화번호 기반) + 서명 검증 통과 = 본인 증명
-  // 새 기기에서도 pubkey 갱신 허용
+  // v6.0: TOFU 복원. "guid는 전화번호 기반이라 안전하다"는 이전 가정은 틀렸다 —
+  // 로그인 시점에 전화번호/닉네임만으로 기존 계정에 접근 가능했던 별도 결함이
+  // 있었으므로(현재 patch에서 함께 수정), guid 자체는 더 이상 "본인 증명"이 아니다.
+  // 최초 등록 시 핀(pin)된 pubkey와 다른 키로는 같은 guid의 프로필을 덮어쓸 수 없다.
+  if (existing?.pubkey_ed25519 && existing.pubkey_ed25519 !== pubkey) {
+    return _err(403, 'PUBKEY_MISMATCH', '공개키가 이 계정에 등록된 키와 일치하지 않습니다', corsHeaders);
+  }
 
   // handle 자동 생성 (미지정 + 신규일 때)
   let finalHandle = handle || existing?.handle || null;

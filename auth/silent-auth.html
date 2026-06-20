@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>고팡 인증</title>
+<script src="/gopang-wallet.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
@@ -194,7 +195,10 @@
   <span>인증 확인 중…</span>
 </div>
 
-<!-- 인증 카드 (리다이렉트 모드) -->
+<!-- 안내 카드 (리다이렉트 모드 — 미가입/기기 불일치일 때만 표시) -->
+<!-- v6.0: 이 페이지는 더 이상 정체성을 발급하지 않으므로 시드/얼굴 입력 폼이
+     없다. 등록·로그인은 항상 gopang.net(webapp.html)의 진짜 가입 흐름에서만
+     일어난다. -->
 <div id="auth-card">
   <div class="auth-logo">
     <div class="auth-logo-icon">G</div>
@@ -207,63 +211,39 @@
     고팡 계정으로 로그인하면 모든 하위 서비스를 이용할 수 있습니다.
   </p>
 
-  <div id="device-change-notice">
-    📱 새 기기 또는 앱 갱신이 감지됐습니다.<br>
-    4단어 시드로 이전 정체성을 복원해 주세요.
-  </div>
-
-  <div class="msg" id="msg-box"></div>
-
-  <!-- 4단어 시드 입력 -->
-  <div class="input-group">
-    <label>4단어 시드 <span style="color:#9ca3af;font-weight:400;">(기기 분실·변경 시)</span></label>
-    <input type="text" id="seed-input"
-           placeholder="등록 시 설정한 단어 4개"
-           autocomplete="off" autocorrect="off" spellcheck="false"/>
-  </div>
-
-  <!-- 얼굴 인증 (선택) -->
-  <div id="face-area">
-    <p id="face-status" style="display:none;"></p>
-    <div id="face-video-wrap">
-      <video id="face-video" autoplay playsinline muted></video>
-      <div class="face-ring"></div>
-    </div>
-    <button class="btn-secondary" id="face-btn" onclick="toggleFace()">
-      📷 얼굴 인증 추가 (선택)
-    </button>
-  </div>
-
-  <!-- 로그인 버튼 -->
-  <button class="btn-primary" id="login-btn" onclick="doLogin()">
-    로그인
-  </button>
-
-  <!-- 신규 등록 -->
-  <button class="btn-secondary" id="register-btn" onclick="goRegister()">
-    처음 오셨나요? 고팡 등록하기
+  <!-- gopang.net 가입/복구로 이동 -->
+  <button class="btn-primary" id="register-btn" onclick="goRegister()">
+    gopang.net에서 계속하기
   </button>
 </div>
 
 <script type="module">
 // ══════════════════════════════════════════════════════════
-// silent-auth.html
-// 역할 1: Silent iframe → 고팡 로컬 토큰 발급 → postMessage
-// 역할 2: 리다이렉트 → 인증 UI → 토큰 발급 → return URL 복귀
+// silent-auth.html — v6.0
+//
+// 이전 버전: 기기 지문(_buildDeviceFingerprint)으로 자체 ipv6를 만들고,
+// 4단어 시드(PBKDF2)로 별도 정체성을 발급하는 독자적인 인증 시스템이었다.
+// 문제: (1) 지문은 동일 기종 기기 간 충돌 가능성이 있고, (2) 이 페이지가
+// gopang.net과 같은 출처(origin)라서 gopang_user_v4를 공유하는데, 여기서
+// "신규 등록"이 발동하면 실제 전화번호 기반 가입으로 만들어진 진짜 정체성을
+// 통째로 덮어써 버렸다.
+//
+// v6.0: 이 페이지는 더 이상 정체성을 "만들지" 않는다. gopang.net의 진짜
+// 가입 흐름(webapp.html → src/gopang/core/auth.js)이 이미 써놓은
+// gopang_user_v4 + window.gopangWallet(Ed25519)을 그대로 읽어, 하위
+// 서비스에게 "이 사람이 진짜 그 guid의 개인키를 갖고 있다"를 Worker
+// /auth/issue(서명 검증 + TOFU)로 증명한 뒤 결과만 중계한다.
 // ══════════════════════════════════════════════════════════
-
-import { gopangAuth, issueToken } from './gopang-sso.js?v=1.1';
 
 const params    = new URLSearchParams(location.search);
 const SERVICE   = params.get('svc')    || '*';
 const ORIGIN    = params.get('origin') || '*';
 const RETURN    = params.get('return') || null;
 const IS_SILENT = (window.parent !== window);   // iframe 여부
+const WORKER    = 'https://gopang-proxy.tensor-city.workers.dev';
 
-// ── 모드 분기 ─────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('svc-label').textContent = SERVICE;
-
   if (IS_SILENT) {
     await _runSilentMode();
   } else {
@@ -271,44 +251,65 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// ── Silent 모드: 로컬 토큰 즉시 발급 → postMessage ──────
-async function _runSilentMode() {
-  try {
-    const user = _getLocalUser();
+// ── window.gopangWallet 준비 대기 (gopang-wallet.js 싱글턴은 비동기 초기화) ──
+function _waitForWallet(timeoutMs = 4000) {
+  return new Promise((resolve) => {
+    if (window.gopangWallet) { resolve(window.gopangWallet); return; }
+    const start = Date.now();
+    const t = setInterval(() => {
+      if (window.gopangWallet) { clearInterval(t); resolve(window.gopangWallet); }
+      else if (Date.now() - start > timeoutMs) { clearInterval(t); resolve(null); }
+    }, 100);
+  });
+}
 
-    if (!user?.ipv6 || !user?.seedHex) {
-      // 미등록 → 실패 통보
-      _postToParent(null, 'NOT_REGISTERED');
-      return;
-    }
+// ── 로컬 정체성 + 지갑 서명으로 /auth/issue 호출 (공통) ──────────────
+async function _issueViaWorker(svc, level = 'L0') {
+  const user = _getLocalUser();
+  if (!user?.ipv6 || !user?.handle) return { ok: false, reason: 'NOT_REGISTERED' };
 
-    // 기기 일치 확인
-    const fpHex = await _buildDeviceFingerprint();
-    if (user.fpHex !== fpHex) {
-      // 기기 불일치 → 리다이렉트 요청
-      _postToParent(null, 'DEVICE_CHANGED');
-      return;
-    }
-
-    // ✅ 토큰 발급 (issueToken(user, svcId) 형식)
-    const tokenObj = await issueToken(user, SERVICE);
-    const flatToken = {
-      ipv6:  tokenObj.payload.ipv6,
-      level: tokenObj.payload.level,
-      exp:   tokenObj.payload.exp,
-    };
-    _postToParent(flatToken, null);
-
-  } catch(e) {
-    _postToParent(null, e.message);
+  const wallet = await _waitForWallet();
+  if (!wallet?.publicKeyB64u || typeof wallet.signPayload !== 'function') {
+    return { ok: false, reason: 'WALLET_NOT_READY' };
   }
+
+  const ts = Date.now();
+  const sigMsg = `auth-issue:${user.ipv6}:${wallet.publicKeyB64u}:${svc}:${ts}`;
+  let signature;
+  try { signature = await wallet.signPayload(sigMsg); }
+  catch (e) { return { ok: false, reason: 'SIGN_FAILED' }; }
+
+  try {
+    const res = await fetch(`${WORKER}/auth/issue`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guid: user.ipv6, pubkey: wallet.publicKeyB64u, signature, ts, level, svc }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, reason: data?.code || `http_${res.status}` };
+    return { ok: true, ipv6: user.ipv6, level: data.level || level, exp: Math.floor(ts / 1000) + 3600 };
+  } catch (e) {
+    return { ok: false, reason: 'NETWORK' };
+  }
+}
+
+// ── Silent 모드: 서버 검증된 토큰을 postMessage로 전달 ──────
+async function _runSilentMode() {
+  const result = await _issueViaWorker(SERVICE, params.get('level') || 'L0');
+  if (!result.ok) {
+    // PUBKEY_MISMATCH: 이 기기에 있는 로컬 기록과 서버에 핀(pin)된 키가 다름
+    // (탈취/오염된 로컬 데이터). NOT_REGISTERED: 가입 자체가 안 됨.
+    // 두 경우 모두 "여기서 새 정체성을 만들지" 않고 그대로 실패를 알린다.
+    _postToParent(null, result.reason);
+    return;
+  }
+  _postToParent({ ipv6: result.ipv6, level: result.level, exp: result.exp }, null);
 }
 
 function _postToParent(token, error) {
   const targetOrigin = ORIGIN !== '*'
     ? ORIGIN
     : (document.referrer ? new URL(document.referrer).origin : '*');
-
   window.parent.postMessage({
     type:  'GOPANG_SSO_TOKEN',
     token: token || null,
@@ -316,216 +317,50 @@ function _postToParent(token, error) {
   }, targetOrigin);
 }
 
-// ── 리다이렉트 모드: 인증 UI 표시 ───────────────────────
+// ── 리다이렉트 모드: 로그인 UI 대신 가입 여부만 안내 ────────
+// v6.0: 이 페이지는 더 이상 4단어 시드/전화번호 입력 폼을 직접 받지 않는다.
+// 등록은 gopang.net(webapp.html)의 진짜 가입 흐름에서만 일어난다 — 두 곳에서
+// 각자 정체성을 만들면 다시 같은 충돌 버그로 되돌아간다.
 async function _runRedirectMode() {
-  document.getElementById('loading').style.display    = 'none';
-  document.getElementById('auth-card').style.display  = 'block';
+  document.getElementById('loading').style.display = 'none';
 
-  const user = _getLocalUser();
+  const result = await _issueViaWorker(SERVICE, params.get('level') || 'L0');
 
-  if (!user?.ipv6) {
-    // 신규 사용자
-    document.getElementById('auth-title').textContent = '고팡 등록';
-    document.getElementById('auth-desc').textContent  =
-      '고팡은 처음이신가요? 4단어 시드를 설정하면 모든 서비스를 이용할 수 있습니다.';
-  } else {
-    // 기기 변경 감지
-    const fpHex = await _buildDeviceFingerprint();
-    if (user.fpHex !== fpHex) {
-      document.getElementById('device-change-notice').style.display = 'block';
-      document.getElementById('auth-title').textContent = '정체성 복원';
-      document.getElementById('auth-desc').textContent  =
-        '기기 변경이 감지됐습니다. 4단어 시드로 이전 정체성을 복원하세요.';
-    }
-  }
-}
-
-// ── 로그인 / 복원 ────────────────────────────────────────
-window.doLogin = async function() {
-  const seedInput = document.getElementById('seed-input').value.trim();
-  const btn       = document.getElementById('login-btn');
-  btn.disabled    = true;
-  btn.textContent = '확인 중…';
-  _hideMsg();
-
-  if (seedInput.split(/\s+/).length < 4) {
-    _showMsg('단어 4개를 공백으로 구분하여 입력하세요.', 'error');
-    btn.disabled = false; btn.textContent = '로그인';
-    return;
-  }
-
-  try {
-    const stored  = _getLocalUser();
-    const fpHex   = await _buildDeviceFingerprint();
-    const ipv6    = await _buildIPv6Identity(fpHex);
-
-    // 시드 검증
-    const inputSeedHex = await _seedToHex(seedInput);
-
-    if (stored?.seedHex) {
-      // 기존 사용자 — 시드 일치 확인
-      if (inputSeedHex !== stored.seedHex) {
-        _showMsg('시드가 일치하지 않습니다. 다시 확인해 주세요.', 'error');
-        btn.disabled = false; btn.textContent = '로그인';
-        return;
-      }
-      // ✅ 기기 갱신
-      const updated = { ...stored, fpHex, lastSeenAt: new Date().toISOString() };
-      localStorage.setItem('gopang_user_v4', JSON.stringify(updated));
-      _showMsg('✅ 복원 완료!', 'success');
-
-    } else {
-      // 신규 등록
-      const user = {
-        ipv6, fpHex,
-        seedHex:     inputSeedHex,
-        faceVec:     null,
-        authLevel:   'L0',
-        registeredAt: new Date().toISOString(),
-        lastSeenAt:   new Date().toISOString(),
-      };
-      localStorage.setItem('gopang_user_v4', JSON.stringify(user));
-      _showMsg('✅ 등록 완료!', 'success');
-    }
-
-    // 토큰 발급 (issueToken(user, svcId) 형식)
-    const freshUser = _getLocalUser();
-    const tokenResult = await issueToken(freshUser, SERVICE);
-    const token = btoa(JSON.stringify(tokenResult))
+  if (result.ok) {
+    const token = btoa(JSON.stringify({ ipv6: result.ipv6, level: result.level, exp: result.exp }))
       .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-
-    await new Promise(r => setTimeout(r, 600));
-
     if (RETURN) {
-      // 리다이렉트 복귀
       const returnUrl = new URL(decodeURIComponent(RETURN));
       returnUrl.searchParams.set('gopang_token', token);
       location.href = returnUrl.toString();
     } else {
       location.href = 'https://gopang.net';
     }
-
-  } catch(e) {
-    _showMsg('오류: ' + e.message, 'error');
-    btn.disabled = false; btn.textContent = '로그인';
-  }
-};
-
-// ── 신규 등록 → gopang.net으로 이동 ─────────────────────
-window.goRegister = function() {
-  const returnParam = RETURN
-    ? `&return=${encodeURIComponent(RETURN)}`
-    : '';
-  location.href = `https://gopang.net?register=1&svc=${SERVICE}${returnParam}`;
-};
-
-// ── 얼굴 인증 토글 ───────────────────────────────────────
-let _faceStream = null;
-let _faceVec    = null;
-
-window.toggleFace = async function() {
-  const wrap = document.getElementById('face-video-wrap');
-  const btn  = document.getElementById('face-btn');
-  const stat = document.getElementById('face-status');
-
-  if (_faceStream) {
-    // 카메라 끄기
-    _faceStream.getTracks().forEach(t => t.stop());
-    _faceStream = null;
-    wrap.style.display = 'none';
-    stat.style.display = 'none';
-    btn.textContent    = '📷 얼굴 인증 추가 (선택)';
     return;
   }
 
-  try {
-    stat.style.display = 'block';
-    stat.textContent   = '카메라 시작 중…';
-    _faceStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: 640, height: 640 }
-    });
-    const video = document.getElementById('face-video');
-    video.srcObject  = _faceStream;
-    wrap.style.display = 'block';
-    stat.textContent   = '얼굴을 원 안에 맞추고 촬영하세요.';
-    btn.textContent    = '📸 촬영';
-
-    // 두 번째 클릭: 촬영
-    btn.onclick = () => _snapFace();
-  } catch(e) {
-    stat.textContent = '카메라를 사용할 수 없습니다: ' + e.message;
+  // 미가입/기기 불일치 — 진짜 가입 흐름이 있는 gopang.net으로 보낸다
+  document.getElementById('auth-card').style.display = 'block';
+  const title = document.getElementById('auth-title');
+  const desc  = document.getElementById('auth-desc');
+  if (result.reason === 'PUBKEY_MISMATCH') {
+    title.textContent = '이 기기는 등록된 기기가 아닙니다';
+    desc.textContent  = '이 계정은 다른 기기에서 가입되었습니다. gopang.net 설정에서 백업 키로 복구하거나, 새로 가입해 주세요.';
+  } else {
+    title.textContent = '고팡 가입이 필요합니다';
+    desc.textContent  = 'gopang.net에서 먼저 가입해 주세요. 가입을 마치면 이 서비스도 자동으로 이용할 수 있습니다.';
   }
-};
-
-async function _snapFace() {
-  const video  = document.getElementById('face-video');
-  const canvas = document.createElement('canvas');
-  canvas.width  = video.videoWidth  || 640;
-  canvas.height = video.videoHeight || 640;
-  const ctx = canvas.getContext('2d');
-  ctx.translate(canvas.width, 0);
-  ctx.scale(-1, 1);
-  ctx.drawImage(video, 0, 0);
-
-  _faceStream?.getTracks().forEach(t => t.stop());
-  _faceStream = null;
-
-  document.getElementById('face-video-wrap').style.display = 'none';
-  document.getElementById('face-status').textContent = '✅ 얼굴 촬영 완료 (인증 시 사용됩니다)';
-  document.getElementById('face-btn').textContent    = '📷 얼굴 다시 촬영';
-  document.getElementById('face-btn').onclick        = window.toggleFace;
 }
+
+window.goRegister = function() {
+  const returnParam = RETURN ? `&return=${encodeURIComponent(RETURN)}` : '';
+  location.href = `https://gopang.net?register=1&svc=${SERVICE}${returnParam}`;
+};
 
 // ── 유틸 ─────────────────────────────────────────────────
 function _getLocalUser() {
   try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); }
   catch { return null; }
-}
-
-async function _buildDeviceFingerprint() {
-  const raw = [
-    navigator.userAgent, navigator.language,
-    screen.width + 'x' + screen.height,
-    screen.colorDepth,
-    Intl.DateTimeFormat().resolvedOptions().timeZone,
-    navigator.hardwareConcurrency || '',
-    navigator.deviceMemory        || '',
-    screen.pixelDepth             || '',
-  ].join('|');
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
-  return Array.from(new Uint8Array(buf))
-    .map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
-async function _buildIPv6Identity(fpHex) {
-  const groups = [];
-  for (let i = 0; i < 8; i++) groups.push(fpHex.slice(i*4, i*4+4));
-  groups[0] = '2601'; groups[1] = 'db80';
-  return groups.join(':');
-}
-
-async function _seedToHex(words) {
-  const key = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(words.trim().toLowerCase()),
-    { name: 'PBKDF2' }, false, ['deriveBits']
-  );
-  const bits = await crypto.subtle.deriveBits(
-    { name:'PBKDF2', salt: new TextEncoder().encode('gopang-v2-salt'),
-      iterations: 100000, hash: 'SHA-256' },
-    key, 256
-  );
-  return Array.from(new Uint8Array(bits))
-    .map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
-function _showMsg(text, type) {
-  const el = document.getElementById('msg-box');
-  el.textContent    = text;
-  el.className      = `msg ${type}`;
-  el.style.display  = 'block';
-}
-function _hideMsg() {
-  document.getElementById('msg-box').style.display = 'none';
 }
 </script>
 </body>

@@ -43,11 +43,19 @@ import { openSearch as openP2PSearch }         from './src/gopang/ui/p2p-search.
 import { startIncomingWatch }                  from './src/gopang/ui/p2p-chat.js';
 
 // ════════════════════════════════════════════════════════
-// 1. 사용자 초기화
-// ── Bug Fix: gopang_welcomed(환영팝업 플래그)가 아니라
-//    실제 등록 데이터(gopang_user_v4) 존재 여부로 initAuth() 호출 결정.
-//    체크박스를 누르지 않고 가입을 마친 사용자가 재접속 시
-//    initAuth()가 스킵되어 헤더에 "Guest"가 표시되는 문제 수정.
+// 1. 사용자 초기화 — v6.0: Guest 모드 완전 폐지
+//
+// 이전 버전: 이미 등록된 사용자일 때만 initAuth()를 호출했다(그래서 "등록
+// 안 된 사용자는 initAuth를 건너뛰고 그대로 채팅 화면으로 들어가는" 게스트
+// 모드가 사실상 기본 동작이었다). 이제는 정반대다 — 등록이 안 되어 있으면
+// "무조건" initAuth()로 가입/로그인 팝업을 띄우고, 그 Promise가 resolve될
+// 때까지(=가입 또는 로그인 완료) 이 아래 어떤 코드도 #app을 공개하지 않는다.
+//
+// #app은 CSS에서 기본적으로 visibility:hidden이며(webapp.html 참조),
+// body에 gopang-authed 클래스가 붙어야만 보인다 — 즉 "혼디 대화창을 그렸지만
+// 팝업으로 가려놨다"가 아니라 "애초에 그려서 보여주지 않는다". initAuth()의
+// 전화번호 입력 팝업에는 닫기(X) 버튼이나 바깥 클릭 닫기가 없으므로(의도적),
+// 가입/로그인을 완료하지 않고는 이 await를 빠져나갈 방법이 없다.
 // ════════════════════════════════════════════════════════
 const _hasRegisteredUser = (() => {
   try {
@@ -55,9 +63,11 @@ const _hasRegisteredUser = (() => {
     return !!(s?.handle && s?.ipv6);
   } catch { return false; }
 })();
-if (_hasRegisteredUser) {
-  await initAuth();
-}
+void _hasRegisteredUser; // 참고용 — 실제 분기는 initAuth() 내부에서 처리(이미 등록 시 즉시 resolve)
+await initAuth();   // 가입/로그인 완료(또는 저장된 사용자 자동 로그인)까지 블로킹
+// 위 await를 통과했다는 것은 곧 등록 완료 상태라는 뜻 — 이제 대화창을 공개한다.
+document.getElementById('gopang-auth-gate')?.remove();
+document.body.classList.add('gopang-authed');
 
 // ════════════════════════════════════════════════════════
 // 2. 전역 노출 — import 완료 직후 동기 실행

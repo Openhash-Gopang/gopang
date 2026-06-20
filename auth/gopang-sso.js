@@ -56,23 +56,6 @@ export async function issueToken(user, svcId) {
   const sig = await signToken(payload, user.seedHex);
   return { payload, sig };
 }
-// ── 기기 핑거프린트 (gopang_v2와 동일 로직) ──────────────
-async function _buildDeviceFingerprint() {
-  const raw = [
-    navigator.userAgent,
-    navigator.language,
-    screen.width + 'x' + screen.height,
-    screen.colorDepth,
-    Intl.DateTimeFormat().resolvedOptions().timeZone,
-    navigator.hardwareConcurrency || '',
-    navigator.deviceMemory        || '',
-    screen.pixelDepth             || '',
-  ].join('|');
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
-  return Array.from(new Uint8Array(buf))
-    .map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 // ── 서비스 ID 추출 (hostname에서 자동) ──────────────────
 function _detectServiceId() {
   // security.gopang.net → 'security'
@@ -198,25 +181,11 @@ function _trySilentIframe(requiredLevel) {
 }
 
 // ── 경로 2-B(보조): gopang_user_v4 직접 대조 (same-site) ─
-async function _tryLocalStore(requiredLevel) {
-  const stored = _readStore();
-  if (!stored?.ipv6 || !stored?.fpHex) return null;
-
-  const fpHex = await _buildDeviceFingerprint();
-  if (stored.fpHex !== fpHex) return null; // 기기 불일치
-
-  const storedOrder = _LEVEL_ORDER[stored.authLevel || 'L0'];
-  const needOrder   = _LEVEL_ORDER[requiredLevel];
-  if (storedOrder < needOrder) return null; // 레벨 부족
-
-  // 1시간 유효 토큰 생성 (클라이언트 측)
-  const exp = Math.floor(Date.now() / 1000) + 3600;
-  const token = { ipv6: stored.ipv6, level: stored.authLevel || 'L0', exp };
-  sessionStorage.setItem(_SSO_SESSION, JSON.stringify(token));
-
-  console.info('[SSO] 경로2B 로컬스토어 ✅', stored.ipv6, stored.authLevel);
-  return { ...token, via: 'local' };
-}
+// v6.0: 기기 지문 대조 제거. localStorage는 same-origin 외 누구도 읽을 수 없다는
+// 사실 자체가 브라우저가 공짜로 주는 보안 경계지만, 그것만으로는 "이 사람이
+// 키를 갖고 있다"를 증명하지 못한다(지문은 같은 기종 기기끼리 충돌할 수 있었음).
+// 이 경로는 폐기하고, 항상 Silent iframe(_trySilentIframe → Worker /auth/issue의
+// 실제 서명+TOFU 검증)을 거치도록 한다 — 느리지만 거짓 양성이 없다.
 
 // ── 경로 2-C/D: gopang.net 리다이렉트 ────────────────────
 // silent-auth.html이 리다이렉트 모드(return 파라미터 있을 때)도 처리
@@ -276,11 +245,8 @@ export const gopangAuth = {
     user = _trySession();
     if (user) return _checkLevel(user, level);
 
-    // 경로 2-B: 로컬스토어 (same-device)
-    user = await _tryLocalStore(level);
-    if (user) return user;
-
-    // 경로 2-B(iframe): Silent iframe — 서드파티 쿠키가 없어도 postMessage 수신
+    // 경로 2-B(iframe): Silent iframe — Worker /auth/issue가 서명+TOFU를
+    // 실제로 검증한 결과만 신뢰한다(서드파티 쿠키가 없어도 postMessage 수신)
     user = await _trySilentIframe(level);
     if (user) return _checkLevel(user, level);
 
