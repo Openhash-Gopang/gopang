@@ -1120,6 +1120,28 @@ select.setting-field{appearance:none;-webkit-appearance:none;
         </div>
       </div>
 
+      <!-- 앱 관리 — 캐시 삭제 / 기기 초기화(로컬) -->
+      <div style="padding:0 16px" id="setting-section-cache">
+        <div class="setting-label" id="setting-label-cache">앱 관리</div>
+        <div class="settings-card">
+          <div class="settings-card-row" onclick="clearSWCache()" style="cursor:pointer">
+            <span class="settings-card-row-label">
+              <i class="ti ti-refresh" aria-hidden="true" style="font-size:17px;color:#16a34a;width:20px;text-align:center"></i>
+              <span id="label-cache-clear">앱 캐시 초기화</span>
+            </span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="settings-card-row" onclick="_deviceLocalReset()" style="cursor:pointer">
+            <span class="settings-card-row-label">
+              <i class="ti ti-device-mobile-x" aria-hidden="true" style="font-size:17px;color:#f59e0b;width:20px;text-align:center"></i>
+              기기 초기화
+            </span>
+            <span style="font-size:10px;background:#fffbeb;color:#b45309;padding:2px 6px;border-radius:4px" id="label-local-reset">재접속 시 복원 가능</span>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--txt3);padding:6px 4px 14px;line-height:1.6" id="label-local-reset-sub">이 기기의 데이터만 삭제 — 계정은 유지됩니다</div>
+      </div>
+
       <!-- 계정 완전 삭제 (최하단, 등록 사용자만) -->
       <div style="padding:8px 16px 0" id="btn-device-reset" style="display:none">
         <div class="settings-card" style="display:none;border:1px solid #fecaca;background:#fef2f2" id="card-account-delete">
