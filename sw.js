@@ -3,7 +3,7 @@
 // PWA 오프라인 지원 + 캐시 전략
 // ═══════════════════════════════════════════════════════════
 
-const CACHE_NAME    = 'gopang-20260621-1000';
+const CACHE_NAME    = 'gopang-20260621-1300';
 const CACHE_TIMEOUT = 5000; // 네트워크 타임아웃 5초
 
 // 설치 시 사전 캐시할 핵심 파일
@@ -15,6 +15,7 @@ const PRECACHE_URLS = [
   '/left-menu.html',
   '/right-menu.html',
   '/user-manual.html',
+  '/terms-of-use.html',
   '/manifest.json',
   '/favicon.ico',
 
@@ -195,6 +196,13 @@ self.addEventListener('push', (event) => {
 });
 
 // ── 알림 클릭 → 앱 열기 + 소리 재생 ──────────────────────
+// 버그: 탭이 닫혀 있어 새 창을 열어야 하는 경우, clients.openWindow()가
+// resolve된 직후 postMessage를 보내면 새 페이지의 JS(gopang-app.js)가
+// 아직 로드·리스너 등록 전이라 메시지가 받는 사람 없이 사라진다(경쟁 상태).
+// → 새 창 케이스는 URL 쿼리 파라미터로 사운드 정보를 실어 보내, 페이지가
+//    로드되자마자(리스너 등록을 기다릴 필요 없이) 직접 읽어 재생하게 한다.
+// 이미 열려있는 창(focus만 하면 되는 경우)은 리스너가 이미 살아있으므로
+// 기존 postMessage 방식 그대로 둔다.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url   = event.notification.data?.url   || '/webapp.html';
@@ -202,17 +210,16 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      // 이미 열린 창이 있으면 포커스
+      // 이미 열린 창이 있으면 포커스 + postMessage (리스너가 이미 살아있음)
       for (const client of list) {
         if (client.url.startsWith(self.location.origin) && 'focus' in client) {
           client.postMessage({ type: 'PLAY_SOUND', sound });
           return client.focus();
         }
       }
-      // 없으면 새 창
-      return clients.openWindow(url).then(w => {
-        if (w) w.postMessage({ type: 'PLAY_SOUND', sound });
-      });
+      // 없으면 새 창 — postMessage 대신 URL 파라미터로 전달(경쟁 상태 회피)
+      const sep = url.includes('?') ? '&' : '?';
+      return clients.openWindow(url + sep + 'playSound=' + encodeURIComponent(sound));
     })
   );
 });
