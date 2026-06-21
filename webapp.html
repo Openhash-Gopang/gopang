@@ -588,6 +588,23 @@ body.gopang-authed #gopang-auth-gate{display:none}
   letter-spacing:.2px;margin:16px 4px 8px;display:block;
 }
 
+/* ── 설정 시트 섹션 블록 — 모든 섹션을 동일한 옅은 회색 바탕에 두고,
+   구분선과 라벨(아이콘+텍스트)로만 그룹을 나눈다. 배경색을 섹션마다
+   다르게 칠하던 시안은 폐기 — 통일된 회색 + 분리선이 더 차분하다. ── */
+.settings-block{padding:2px 0 14px;border-top:1px solid rgba(0,0,0,.07)}
+.settings-block:first-child{border-top:none}
+.settings-block-label{
+  display:flex;align-items:center;gap:6px;margin:0;padding:14px 16px 8px;
+  font-size:12px;font-weight:600;color:#16a34a;letter-spacing:.2px;
+}
+.settings-block-label.danger{color:#b91c1c}
+.settings-block-label i{font-size:14px}
+.settings-block-caption{
+  display:flex;align-items:flex-start;gap:6px;
+  font-size:11px;color:#6b6b6b;line-height:1.6;padding:8px 16px 0;
+}
+.settings-block-caption i{font-size:13px;margin-top:1px;flex-shrink:0}
+
 /* 카드 그룹 */
 .settings-card{
   background:#fff;border-radius:12px;
@@ -824,11 +841,6 @@ select.setting-field{appearance:none;-webkit-appearance:none;
 #ai-settings-overlay .settings-sheet{width:100%;max-width:430px;height:auto;max-height:90dvh;overflow-y:auto;transform:translateY(100%);transition:transform .25s;box-shadow:none;border-radius:16px 16px 0 0}
 #ai-settings-overlay.open .settings-sheet{transform:translateY(0)}
 /* 설정 시트 내부 스타일 정리 */
-#perm-guide{
-  background:var(--chip-bg);border:1px solid var(--border);
-  border-radius:12px;padding:14px 16px;margin:0 16px 14px;
-  font-size:13px;line-height:1.7;color:#374151;
-}
 
 /* ── 검색 결과 카드 ── */
 .search-item{display:flex;align-items:center;gap:10px;padding:9px 10px;
@@ -1108,291 +1120,293 @@ select.setting-field{appearance:none;-webkit-appearance:none;
 
     <div class="settings-body">
 
-      <!-- 계정 섹션 -->
-      <div id="gopang-id-section" style="padding:0 16px">
-        <div class="setting-label" id="setting-label-account">계정</div>
-        <div class="settings-card">
-          <div class="settings-card-row" style="flex-direction:column;align-items:flex-start;gap:4px">
-            <div id="gopang-id-status" style="font-size:15px;color:#000">로딩 중…</div>
-            <div id="gopang-id-display" style="font-size:12px;color:#8e8e93;font-family:monospace;word-break:break-all"></div>
-          </div>
-          <div id="gopang-id-register-box" style="padding:14px 16px;border-top:1px solid #f2f2f7">
-            <input class="setting-field" id="gopang-id-input" type="text" maxlength="20"
-              placeholder="휴대폰 뒷 8자리" type="tel" maxlength="8" inputmode="numeric" style="margin-bottom:10px">
-            <button id="gopang-id-register-btn" onclick="_settingsRegisterHandle()"
-              style="width:100%;padding:13px;border-radius:10px;background:#16a34a;
-                     color:#fff;border:none;font-size:15px;font-weight:600;
-                     cursor:pointer;font-family:inherit;letter-spacing:-0.2px">
-              아이디 등록
-            </button>
+      <!-- ① 계정 -->
+      <div class="settings-block">
+        <div class="settings-block-label"><i class="ti ti-user-circle" aria-hidden="true"></i><span id="setting-label-account">계정</span></div>
+
+        <div id="gopang-id-section" style="padding:0 16px">
+          <div class="settings-card">
+            <div class="settings-card-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+              <div id="gopang-id-status" style="font-size:15px;color:#000">로딩 중…</div>
+              <div id="gopang-id-display" style="font-size:12px;color:#8e8e93;font-family:monospace;word-break:break-all"></div>
+            </div>
+            <div id="gopang-id-register-box" style="padding:14px 16px;border-top:1px solid #f2f2f7">
+              <input class="setting-field" id="gopang-id-input" type="text" maxlength="20"
+                placeholder="휴대폰 뒷 8자리" type="tel" maxlength="8" inputmode="numeric" style="margin-bottom:10px">
+              <button id="gopang-id-register-btn" onclick="_settingsRegisterHandle()"
+                style="width:100%;padding:13px;border-radius:10px;background:#16a34a;
+                       color:#fff;border:none;font-size:15px;font-weight:600;
+                       cursor:pointer;font-family:inherit;letter-spacing:-0.2px">
+                아이디 등록
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- GDC Wallet (GDC 사용자만) -->
-      <div id="gdc-wallet-section" style="display:none;padding:0 16px">
-        <div class="setting-label" id="setting-label-wallet">GDC Wallet</div>
-        <div class="settings-card">
-          <div class="settings-card-row" style="flex-direction:column;align-items:flex-start;gap:4px">
-            <div id="gdc-balance-display" style="font-size:24px;font-weight:600;color:#000;letter-spacing:-0.5px">— GDC</div>
-            <div style="font-size:13px;color:#8e8e93">사용 가능한 잔액</div>
-          </div>
-          <div class="settings-card-row" onclick="_openGDCWallet()" style="cursor:pointer">
-            <span class="settings-card-row-label">Wallet 관리</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-        </div>
-      </div>
-
-      <!-- PDV 메뉴 (등록 사용자만) -->
-      <div style="padding:0 16px" id="_pdv-menu-card" style="display:none">
-        <div class="setting-label" id="setting-label-history">내 기록</div>
-        <div class="settings-card">
-          <div class="settings-card-row" onclick="openChatHistory()" style="cursor:pointer">
-            <span class="settings-card-row-label"><i class="ti ti-message-circle" aria-hidden="true" style="font-size:17px;color:#16a34a;width:20px;text-align:center"></i id="label-chat-history"> 이전 대화 기록</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-          <div class="settings-card-row" onclick="openHashChain()" style="cursor:pointer">
-            <span class="settings-card-row-label"><i class="ti ti-link" aria-hidden="true" style="font-size:17px;color:#16a34a;width:20px;text-align:center"></i id="label-hash-chain"> Hash Chain</span>
-            <div style="display:flex;align-items:center;gap:6px">
-              <span style="font-size:10px;background:#f0fdf4;color:#16a34a;padding:2px 6px;border-radius:4px">통합</span>
+        <!-- 프로필 (등록 사용자만) -->
+        <div style="padding:10px 16px 0;display:none" id="_profile-card">
+          <div class="settings-card">
+            <div class="settings-card-row" onclick="location.href='/register-profile.html'" style="cursor:pointer">
+              <span class="settings-card-row-label">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><line x1="19" y1="8" x2="23" y2="8"/><line x1="21" y1="6" x2="21" y2="10"/></svg>프로필 등록
+              </span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-card-row" onclick="openMyProfile()" style="cursor:pointer">
+              <span class="settings-card-row-label">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>내 프로필 보기
+              </span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
           </div>
-          <div class="settings-card-row" onclick="openGopangWallet()" style="cursor:pointer">
-            <span class="settings-card-row-label"><i class="ti ti-wallet" aria-hidden="true" style="font-size:17px;color:#16a34a;width:20px;text-align:center"></i id="label-gopang-wallet"> Gopang Wallet</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-          <div class="settings-card-row" onclick="openBackupKey()" style="cursor:pointer">
-            <span class="settings-card-row-label"><i class="ti ti-key" aria-hidden="true" style="font-size:17px;color:#16a34a;width:20px;text-align:center"></i> 백업 키</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-          <div class="settings-card-row" onclick="openFinancialStatement()" style="cursor:pointer">
-            <span class="settings-card-row-label"><i class="ti ti-report-analytics" aria-hidden="true" style="font-size:17px;color:#16a34a;width:20px;text-align:center"></i id="label-financial"> 재무제표</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
         </div>
       </div>
 
-      <!-- 프로필 카드 (등록 사용자만) -->
-      <div style="padding:0 16px" id="_profile-card" style="display:none">
-        <div class="settings-card">
-          <div class="settings-card-row" onclick="location.href='/register-profile.html'" style="cursor:pointer">
-            <span class="settings-card-row-label">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><line x1="19" y1="8" x2="23" y2="8"/><line x1="21" y1="6" x2="21" y2="10"/></svg>프로필 등록
-            </span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      <!-- ② AI 비서 -->
+      <div class="settings-block">
+        <div class="settings-block-label"><i class="ti ti-robot" aria-hidden="true"></i>AI 비서</div>
+
+        <div style="padding:0 16px">
+          <div class="settings-card" id="_ai-card" style="display:none">
+            <div class="settings-card-row" onclick="window.open('/pages/ai-setup-mobile.html','_blank')" id="btn-ai-settings" style="cursor:pointer">
+              <span class="settings-card-row-label" id="label-ai-settings">AI 설정</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
           </div>
-          <div class="settings-card-row" onclick="openMyProfile()" style="cursor:pointer">
-            <span class="settings-card-row-label">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>내 프로필 보기
-            </span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
+        </div>
+
+        <div class="settings-block-caption">
+          <i class="ti ti-message-circle" aria-hidden="true"></i>
+          <span>채팅 창의 AI 비서에게 기능 개선이나 추가 사항을 말해 주세요.</span>
         </div>
       </div>
 
-      <!-- AI 설정 (등록 사용자만) -->
-      <div style="padding:0 16px">
-        <div class="settings-card" id="_ai-card" style="display:none">
-          <div class="settings-card-row" onclick="window.open('/pages/ai-setup-mobile.html','_blank')" id="btn-ai-settings" style="cursor:pointer">
-            <span class="settings-card-row-label" id="label-ai-settings">AI 설정</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      <!-- ③ 지갑 & 기록 -->
+      <div class="settings-block">
+        <div class="settings-block-label"><i class="ti ti-wallet" aria-hidden="true"></i><span id="setting-label-wallet">GDC Wallet</span></div>
+
+        <!-- GDC Wallet (GDC 사용자만) -->
+        <div id="gdc-wallet-section" style="display:none;padding:0 16px">
+          <div class="settings-card">
+            <div class="settings-card-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+              <div id="gdc-balance-display" style="font-size:24px;font-weight:600;color:#000;letter-spacing:-0.5px">— GDC</div>
+              <div style="font-size:13px;color:#8e8e93">사용 가능한 잔액</div>
+            </div>
+            <div class="settings-card-row" onclick="_openGDCWallet()" style="cursor:pointer">
+              <span class="settings-card-row-label">Wallet 관리</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- 화면 -->
-      <div style="padding:0 16px">
-        <div class="setting-label">화면</div>
-        <div class="settings-card">
-          <div class="settings-card-row" style="cursor:default;flex-direction:column;align-items:flex-start;gap:10px">
-            <span class="settings-card-row-label">스킨 선택</span>
-            <div style="display:flex;gap:14px">
-              <button class="skin-swatch" data-skin="blue"   onclick="applySkinColor('blue')"   style="background:#2563eb" aria-label="블루"></button>
-              <button class="skin-swatch" data-skin="teal"   onclick="applySkinColor('teal')"   style="background:#0d9488" aria-label="틸"></button>
-              <button class="skin-swatch" data-skin="amber"  onclick="applySkinColor('amber')"  style="background:#d97706" aria-label="앰버"></button>
-              <button class="skin-swatch" data-skin="violet" onclick="applySkinColor('violet')" style="background:#7c3aed" aria-label="바이올렛"></button>
-              <button class="skin-swatch" data-skin="slate"  onclick="applySkinColor('slate')"  style="background:#475569" aria-label="슬레이트"></button>
+        <!-- 내 기록 -->
+        <div style="padding:0 16px" id="_pdv-menu-card">
+          <div class="settings-block-label" style="padding:10px 0 8px"><i class="ti ti-history" aria-hidden="true"></i><span id="setting-label-history">내 기록</span></div>
+          <div class="settings-card">
+            <div class="settings-card-row" onclick="openChatHistory()" style="cursor:pointer">
+              <span class="settings-card-row-label"><i class="ti ti-message-circle" aria-hidden="true" style="font-size:17px;color:#16a34a;width:20px;text-align:center"></i id="label-chat-history"> 이전 대화 기록</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-card-row" onclick="openHashChain()" style="cursor:pointer">
+              <span class="settings-card-row-label"><i class="ti ti-link" aria-hidden="true" style="font-size:17px;color:#16a34a;width:20px;text-align:center"></i id="label-hash-chain"> Hash Chain</span>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:11px;background:#f0fdf4;color:#16a34a;padding:2px 6px;border-radius:4px">통합</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+            </div>
+            <div class="settings-card-row" onclick="openGopangWallet()" style="cursor:pointer">
+              <span class="settings-card-row-label"><i class="ti ti-wallet" aria-hidden="true" style="font-size:17px;color:#16a34a;width:20px;text-align:center"></i id="label-gopang-wallet"> Gopang Wallet</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-card-row" onclick="openBackupKey()" style="cursor:pointer">
+              <span class="settings-card-row-label"><i class="ti ti-key" aria-hidden="true" style="font-size:17px;color:#16a34a;width:20px;text-align:center"></i> 백업 키</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-card-row" onclick="openFinancialStatement()" style="cursor:pointer">
+              <span class="settings-card-row-label"><i class="ti ti-report-analytics" aria-hidden="true" style="font-size:17px;color:#16a34a;width:20px;text-align:center"></i id="label-financial"> 재무제표</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 제안하기 안내 -->
-      <div style="padding:0 16px">
-        <div class="settings-card">
-          <div class="settings-card-row" style="cursor:default">
-            <span class="settings-card-row-label" style="display:flex;align-items:center;gap:8px;color:#8e8e93;font-size:13px;line-height:1.5">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              채팅 창의 AI 비서에게 기능 개선이나 추가 사항을 말해 주세요.
-            </span>
+      <!-- ④ 화면 -->
+      <div class="settings-block">
+        <div class="settings-block-label"><i class="ti ti-palette" aria-hidden="true"></i><span id="setting-label-screen">화면</span></div>
+        <div style="padding:0 16px">
+          <div class="settings-card">
+            <div class="settings-card-row" style="cursor:default;flex-direction:column;align-items:flex-start;gap:10px">
+              <span class="settings-card-row-label">스킨 선택</span>
+              <div style="display:flex;gap:14px">
+                <button class="skin-swatch" data-skin="blue"   onclick="applySkinColor('blue')"   style="background:#2563eb" aria-label="블루"></button>
+                <button class="skin-swatch" data-skin="teal"   onclick="applySkinColor('teal')"   style="background:#0d9488" aria-label="틸"></button>
+                <button class="skin-swatch" data-skin="amber"  onclick="applySkinColor('amber')"  style="background:#d97706" aria-label="앰버"></button>
+                <button class="skin-swatch" data-skin="violet" onclick="applySkinColor('violet')" style="background:#7c3aed" aria-label="바이올렛"></button>
+                <button class="skin-swatch" data-skin="slate"  onclick="applySkinColor('slate')"  style="background:#475569" aria-label="슬레이트"></button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 홈 화면에 바로가기 만들기 -->
-      <div style="padding:0 16px">
-        <div class="settings-card">
-          <div class="settings-card-row" id="btn-create-shortcut" onclick="requestInstall()" style="cursor:pointer">
-            <span class="settings-card-row-label" style="display:flex;align-items:center;gap:8px">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 2v13M7 11l5 5 5-5"/><path d="M3 19h18"/>
-              </svg>
-              <span>홈 화면에 바로가기 만들기</span>
-            </span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      <!-- ⑤ 알림 -->
+      <div class="settings-block">
+        <div class="settings-block-label"><i class="ti ti-bell" aria-hidden="true"></i><span id="setting-label-notif">알림</span></div>
+        <div style="padding:0 16px">
+          <div class="settings-card" style="padding:4px 0">
+            <div class="settings-card-row" style="flex-direction:column;align-items:flex-start;gap:10px;padding:14px 16px">
+              <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+                <span class="settings-card-row-label" id="label-sound">메시지 알림 소리</span>
+                <button id="btn-push-test" onclick="_testPushSound()"
+                  style="font-size:12px;color:#16a34a;background:none;border:none;cursor:pointer;font-family:inherit">
+                  <span id="label-preview">미리듣기</span>
+                </button>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
+                  <input type="radio" name="push-sound" value="ping"  onchange="_savePushSound(this.value)" style="accent-color:#16a34a"> <span id="snd-label-ping">기본</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
+                  <input type="radio" name="push-sound" value="bell"  onchange="_savePushSound(this.value)" style="accent-color:#16a34a"> <span id="snd-label-bell">벨</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
+                  <input type="radio" name="push-sound" value="drop"  onchange="_savePushSound(this.value)" style="accent-color:#16a34a"> <span id="snd-label-drop">물방울</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
+                  <input type="radio" name="push-sound" value="chime" onchange="_savePushSound(this.value)" style="accent-color:#16a34a"> <span id="snd-label-chime">차임</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
+                  <input type="radio" name="push-sound" value="none"  onchange="_savePushSound(this.value)" style="accent-color:#16a34a"> <span id="snd-label-none">없음</span>
+                </label>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:4px 0">
+                <span style="font-size:13px;color:#333" id="label-notif-toggle">알림 끄기/켜기</span>
+                <label style="position:relative;display:inline-block;width:48px;height:28px;cursor:pointer">
+                  <input type="checkbox" id="push-toggle" onchange="_togglePush(this.checked)"
+                    style="opacity:0;width:0;height:0;position:absolute">
+                  <span id="push-toggle-track" style="
+                    position:absolute;inset:0;border-radius:28px;
+                    background:#e5e7eb;transition:background .2s;
+                  "></span>
+                  <span id="push-toggle-thumb" style="
+                    position:absolute;top:3px;left:3px;
+                    width:22px;height:22px;border-radius:50%;
+                    background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);
+                    transition:transform .2s;
+                  "></span>
+                </label>
+              </div>
+              <div id="push-status" style="font-size:11px;color:#9ca3af;width:100%"></div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 최신 버전으로 갱신 -->
-      <div style="padding:0 16px">
-        <div class="settings-card">
-          <div class="settings-card-row" id="btn-force-update" onclick="forceUpdateApp(this)" style="cursor:pointer">
-            <span class="settings-card-row-label" style="display:flex;align-items:center;gap:8px">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-              </svg>
-              <span id="btn-force-update-label">최신 버전으로 갱신</span>
-            </span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      <!-- ⑥ 권한 설정 -->
+      <div class="settings-block">
+        <div class="settings-block-label"><i class="ti ti-shield-lock" aria-hidden="true"></i><span id="setting-label-perm">권한 설정</span></div>
+        <div style="padding:0 16px">
+          <div class="settings-card" style="display:flex;flex-direction:row">
+            <details style="flex:1;border-right:1px solid #f2f2f7">
+              <summary style="cursor:pointer;outline:none;list-style:none;
+                              padding:13px 14px;font-size:14px;color:#000;
+                              display:flex;align-items:center;justify-content:space-between">
+                Android
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </summary>
+              <div style="padding:4px 14px 12px;font-size:12px;color:#6b6b6b;line-height:1.6">
+                크롬 ⋮ → 사이트 설정<br>
+                <b style="color:#000">위치·카메라·마이크</b> 허용
+              </div>
+            </details>
+            <details style="flex:1">
+              <summary style="cursor:pointer;outline:none;list-style:none;
+                              padding:13px 14px;font-size:14px;color:#000;
+                              display:flex;align-items:center;justify-content:space-between">
+                iPhone
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </summary>
+              <div style="padding:4px 14px 12px;font-size:12px;color:#6b6b6b;line-height:1.6">
+                AA → 웹사이트 설정<br>
+                <b style="color:#000">위치·마이크</b> 허용
+              </div>
+            </details>
           </div>
         </div>
       </div>
 
-      <!-- 권한 안내 -->
-      <div id="perm-guide" style="padding:0 16px">
-        <!-- 알림 소리 설정 -->
-        <div class="setting-label" id="setting-label-notif">알림</div>
-        <div class="settings-card" style="padding:4px 0">
-          <div class="settings-card-row" style="flex-direction:column;align-items:flex-start;gap:10px;padding:14px 16px">
-            <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
-              <span class="settings-card-row-label" id="label-sound">메시지 알림 소리</span>
-              <button id="btn-push-test" onclick="_testPushSound()"
-                style="font-size:12px;color:#16a34a;background:none;border:none;cursor:pointer;font-family:inherit">
-                <span id="label-preview">미리듣기</span>
+      <!-- ⑦ 앱 관리 -->
+      <div class="settings-block" id="setting-section-cache">
+        <div class="settings-block-label"><i class="ti ti-apps" aria-hidden="true"></i><span id="setting-label-cache">앱 관리</span></div>
+        <div style="padding:0 16px">
+          <div class="settings-card">
+            <div class="settings-card-row" id="btn-create-shortcut" onclick="requestInstall()" style="cursor:pointer">
+              <span class="settings-card-row-label" style="display:flex;align-items:center;gap:8px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2v13M7 11l5 5 5-5"/><path d="M3 19h18"/>
+                </svg>
+                <span>홈 화면에 바로가기 만들기</span>
+              </span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-card-row" id="btn-force-update" onclick="forceUpdateApp(this)" style="cursor:pointer">
+              <span class="settings-card-row-label" style="display:flex;align-items:center;gap:8px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                <span id="btn-force-update-label">최신 버전으로 갱신</span>
+              </span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-card-row" onclick="clearSWCache()" style="cursor:pointer">
+              <span class="settings-card-row-label">
+                <i class="ti ti-refresh" aria-hidden="true" style="font-size:17px;color:#16a34a;width:20px;text-align:center"></i>
+                <span id="label-cache-clear">앱 캐시 초기화</span>
+              </span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-card-row" onclick="_deviceLocalReset()" style="cursor:pointer">
+              <span class="settings-card-row-label">
+                <i class="ti ti-device-mobile-x" aria-hidden="true" style="font-size:17px;color:#f59e0b;width:20px;text-align:center"></i>
+                기기 초기화
+              </span>
+              <span style="font-size:11px;background:#fffbeb;color:#b45309;padding:2px 6px;border-radius:4px" id="label-local-reset">재접속 시 복원 가능</span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--txt3);padding:8px 4px 0;line-height:1.6" id="label-local-reset-sub">이 기기의 데이터만 삭제 — 계정은 유지됩니다</div>
+        </div>
+      </div>
+
+      <!-- ⑧ 위험 구역 (계정 완전 삭제, 등록 사용자만) -->
+      <div class="settings-block" id="btn-device-reset">
+        <div class="settings-block-label danger"><i class="ti ti-alert-triangle" aria-hidden="true"></i><span id="setting-label-danger">위험 구역</span></div>
+        <div style="padding:0 16px">
+          <div class="settings-card" style="display:none;border:1px solid #fecaca;background:#fef2f2" id="card-account-delete">
+            <div style="padding:14px 16px">
+              <div style="font-size:13px;color:#ef4444;font-weight:600;margin-bottom:4px" id="label-full-reset">계정 완전 삭제</div>
+              <div style="font-size:11px;color:#fca5a5;margin-bottom:12px;line-height:1.6" id="label-full-reset-sub">
+                서버·기기의 모든 기록이 삭제되며 복원할 수 없습니다. 실수 방지를 위해 아이디와 핸들을 직접 입력해야 삭제할 수 있습니다.
+              </div>
+              <input type="text" id="delete-confirm-nickname" placeholder="아이디 입력"
+                autocomplete="off" autocapitalize="off" spellcheck="false"
+                style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:8px;
+                       border:1px solid #fca5a5;border-radius:8px;font-size:13px;
+                       font-family:inherit;outline:none;background:#fff"
+                oninput="_checkDeleteConfirmInput()">
+              <input type="text" id="delete-confirm-handle" placeholder="핸들 입력 (예: @11112223)"
+                autocomplete="off" autocapitalize="off" spellcheck="false"
+                style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:10px;
+                       border:1px solid #fca5a5;border-radius:8px;font-size:13px;
+                       font-family:inherit;outline:none;background:#fff"
+                oninput="_checkDeleteConfirmInput()">
+              <button id="btn-device-full-reset" onclick="_deviceFullReset()" disabled
+                style="width:100%;padding:12px;border:none;border-radius:8px;
+                       background:#fca5a5;color:#fff;font-size:14px;font-weight:600;
+                       cursor:not-allowed;font-family:inherit;transition:background .15s">
+                계정 완전 삭제
               </button>
             </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
-                <input type="radio" name="push-sound" value="ping"  onchange="_savePushSound(this.value)" style="accent-color:#16a34a"> <span id="snd-label-ping">기본</span>
-              </label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
-                <input type="radio" name="push-sound" value="bell"  onchange="_savePushSound(this.value)" style="accent-color:#16a34a"> <span id="snd-label-bell">벨</span>
-              </label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
-                <input type="radio" name="push-sound" value="drop"  onchange="_savePushSound(this.value)" style="accent-color:#16a34a"> <span id="snd-label-drop">물방울</span>
-              </label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
-                <input type="radio" name="push-sound" value="chime" onchange="_savePushSound(this.value)" style="accent-color:#16a34a"> <span id="snd-label-chime">차임</span>
-              </label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
-                <input type="radio" name="push-sound" value="none"  onchange="_savePushSound(this.value)" style="accent-color:#16a34a"> <span id="snd-label-none">없음</span>
-              </label>
-            </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:4px 0">
-              <span style="font-size:13px;color:#333" id="label-notif-toggle">알림 끄기/켜기</span>
-              <label style="position:relative;display:inline-block;width:48px;height:28px;cursor:pointer">
-                <input type="checkbox" id="push-toggle" onchange="_togglePush(this.checked)"
-                  style="opacity:0;width:0;height:0;position:absolute">
-                <span id="push-toggle-track" style="
-                  position:absolute;inset:0;border-radius:28px;
-                  background:#e5e7eb;transition:background .2s;
-                "></span>
-                <span id="push-toggle-thumb" style="
-                  position:absolute;top:3px;left:3px;
-                  width:22px;height:22px;border-radius:50%;
-                  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);
-                  transition:transform .2s;
-                "></span>
-              </label>
-            </div>
-            <div id="push-status" style="font-size:11px;color:#9ca3af;width:100%"></div>
-          </div>
-        </div>
-
-        <div class="setting-label" id="setting-label-perm">권한 설정</div>
-        <div class="settings-card" style="display:flex;flex-direction:row">
-          <details style="flex:1;border-right:1px solid #f2f2f7">
-            <summary style="cursor:pointer;outline:none;list-style:none;
-                            padding:13px 14px;font-size:14px;color:#000;
-                            display:flex;align-items:center;justify-content:space-between">
-              Android
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </summary>
-            <div style="padding:4px 14px 12px;font-size:12px;color:#6b6b6b;line-height:1.6">
-              크롬 ⋮ → 사이트 설정<br>
-              <b style="color:#000">위치·카메라·마이크</b> 허용
-            </div>
-          </details>
-          <details style="flex:1">
-            <summary style="cursor:pointer;outline:none;list-style:none;
-                            padding:13px 14px;font-size:14px;color:#000;
-                            display:flex;align-items:center;justify-content:space-between">
-              iPhone
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </summary>
-            <div style="padding:4px 14px 12px;font-size:12px;color:#6b6b6b;line-height:1.6">
-              AA → 웹사이트 설정<br>
-              <b style="color:#000">위치·마이크</b> 허용
-            </div>
-          </details>
-        </div>
-      </div>
-
-      <!-- 앱 관리 — 캐시 삭제 / 기기 초기화(로컬) -->
-      <div style="padding:0 16px" id="setting-section-cache">
-        <div class="setting-label" id="setting-label-cache">앱 관리</div>
-        <div class="settings-card">
-          <div class="settings-card-row" onclick="clearSWCache()" style="cursor:pointer">
-            <span class="settings-card-row-label">
-              <i class="ti ti-refresh" aria-hidden="true" style="font-size:17px;color:#16a34a;width:20px;text-align:center"></i>
-              <span id="label-cache-clear">앱 캐시 초기화</span>
-            </span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-          <div class="settings-card-row" onclick="_deviceLocalReset()" style="cursor:pointer">
-            <span class="settings-card-row-label">
-              <i class="ti ti-device-mobile-x" aria-hidden="true" style="font-size:17px;color:#f59e0b;width:20px;text-align:center"></i>
-              기기 초기화
-            </span>
-            <span style="font-size:10px;background:#fffbeb;color:#b45309;padding:2px 6px;border-radius:4px" id="label-local-reset">재접속 시 복원 가능</span>
-          </div>
-        </div>
-        <div style="font-size:11px;color:var(--txt3);padding:6px 4px 14px;line-height:1.6" id="label-local-reset-sub">이 기기의 데이터만 삭제 — 계정은 유지됩니다</div>
-      </div>
-
-      <!-- 계정 완전 삭제 (최하단, 등록 사용자만) -->
-      <div style="padding:8px 16px 0" id="btn-device-reset" style="display:none">
-        <div class="settings-card" style="display:none;border:1px solid #fecaca;background:#fef2f2" id="card-account-delete">
-          <div style="padding:14px 16px">
-            <div style="font-size:13px;color:#ef4444;font-weight:600;margin-bottom:4px" id="label-full-reset">계정 완전 삭제</div>
-            <div style="font-size:11px;color:#fca5a5;margin-bottom:12px;line-height:1.6" id="label-full-reset-sub">
-              서버·기기의 모든 기록이 삭제되며 복원할 수 없습니다. 실수 방지를 위해 아이디와 핸들을 직접 입력해야 삭제할 수 있습니다.
-            </div>
-            <input type="text" id="delete-confirm-nickname" placeholder="아이디 입력"
-              autocomplete="off" autocapitalize="off" spellcheck="false"
-              style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:8px;
-                     border:1px solid #fca5a5;border-radius:8px;font-size:13px;
-                     font-family:inherit;outline:none;background:#fff"
-              oninput="_checkDeleteConfirmInput()">
-            <input type="text" id="delete-confirm-handle" placeholder="핸들 입력 (예: @11112223)"
-              autocomplete="off" autocapitalize="off" spellcheck="false"
-              style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:10px;
-                     border:1px solid #fca5a5;border-radius:8px;font-size:13px;
-                     font-family:inherit;outline:none;background:#fff"
-              oninput="_checkDeleteConfirmInput()">
-            <button id="btn-device-full-reset" onclick="_deviceFullReset()" disabled
-              style="width:100%;padding:12px;border:none;border-radius:8px;
-                     background:#fca5a5;color:#fff;font-size:14px;font-weight:600;
-                     cursor:not-allowed;font-family:inherit;transition:background .15s">
-              계정 완전 삭제
-            </button>
           </div>
         </div>
       </div>
