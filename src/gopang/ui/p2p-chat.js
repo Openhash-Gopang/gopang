@@ -225,8 +225,12 @@ export async function handleIncomingOffer(signal) {
       .catch(e => console.warn('[TEST-SOUND] 재생 실패:', e.name, e.message));
   } catch (e) { console.warn('[TEST-SOUND] Audio 생성 실패:', e.message); }
 
-  // 수락 확인
-  const accepted = confirm(`📞 ${fromHandle}님의 연결 요청\n수락하시겠습니까?`);
+  // 수락 확인 — confirm()은 메인 스레드를 동기적으로 막기 때문에, 그 직전에
+  // audio.play()를 호출해도 디코딩/재생 파이프라인이 confirm()이 닫히기
+  // 전까지 시작되지 않는다(실측: "수락하시겠습니까?"를 누르는 순간에야
+  // 소리가 들림 — 소리 자체는 동작하지만 발생 시점이 사용자 응답 이후로
+  // 밀리는 버그). 막지 않는 커스텀 모달로 교체해 이 문제를 해결한다.
+  const accepted = await _showIncomingCallModal(fromHandle);
   if (!accepted) return;
 
   _peerInfo = { guid: fromGuid, handle: fromHandle, nickname: fromHandle };
@@ -375,6 +379,50 @@ function _stopPoll() {
 }
 
 // ── 채팅 UI ───────────────────────────────────────────────
+// 막지 않는(non-blocking) 연결 요청 확인 모달 — confirm()을 대체한다.
+// confirm()은 메인 스레드를 동기적으로 막아 그 직전에 시작한 오디오
+// 재생이 다이얼로그가 닫힐 때까지 들리지 않는 문제가 있었다(p2p-chat.js
+// handleIncomingOffer 호출부 주석 참고).
+function _showIncomingCallModal(fromHandle) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = [
+      'position:fixed;inset:0;z-index:9998',
+      'background:rgba(0,0,0,0.4)',
+      'display:flex;align-items:center;justify-content:center',
+    ].join(';');
+
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:16px;padding:24px;
+                  width:min(320px,85vw);text-align:center;
+                  box-shadow:0 10px 30px rgba(0,0,0,0.2)">
+        <div style="font-size:32px;margin-bottom:8px">📞</div>
+        <div style="font-size:16px;font-weight:600;color:#111827;margin-bottom:4px">
+          ${fromHandle}님의 연결 요청
+        </div>
+        <div style="font-size:13px;color:#6b7280;margin-bottom:20px">
+          수락하시겠습니까?
+        </div>
+        <div style="display:flex;gap:8px">
+          <button id="_p2p-decline"
+            style="flex:1;padding:11px;border:none;border-radius:10px;
+                   background:#f3f4f6;color:#374151;font-size:14px;
+                   font-weight:600;cursor:pointer;font-family:inherit">거절</button>
+          <button id="_p2p-accept"
+            style="flex:1;padding:11px;border:none;border-radius:10px;
+                   background:#16a34a;color:#fff;font-size:14px;
+                   font-weight:600;cursor:pointer;font-family:inherit">수락</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+
+    const cleanup = (result) => { overlay.remove(); resolve(result); };
+    overlay.querySelector('#_p2p-accept').onclick  = () => cleanup(true);
+    overlay.querySelector('#_p2p-decline').onclick = () => cleanup(false);
+  });
+}
+
 function _openChatUI(peer, mode) {
   if (_chatOverlay) _chatOverlay.remove();
 
