@@ -81,6 +81,17 @@
 
 /* ── 하위 시스템 System Prompt 목록 ── */
 .ait-prompts-section { margin-top: 48px; padding-top: 4px; }
+.ait-industry-group { margin: 0 0 28px; }
+.ait-industry-group:last-child { margin-bottom: 0; }
+.ait-industry-group-title {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 14.5px; font-weight: 700; color: var(--text); margin: 0 0 12px;
+}
+.ait-industry-code {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 22px; height: 22px; border-radius: 7px; background: var(--blue); color: #fff;
+  font-size: 12px; font-weight: 800;
+}
 .ait-section-head { margin: 0 0 6px; }
 .ait-section-head h2 {
   font-size: 21px; font-weight: 800; color: var(--text);
@@ -184,13 +195,790 @@
 
   <div class="ait-prompts-section">
     <div class="ait-section-head">
-      <div class="ait-eyebrow">SUBSYSTEM PROMPTS</div>
-      <h2>혼디 하위 시스템 — System Prompt</h2>
+      <div class="ait-eyebrow">CONSUMER AI AGENT</div>
+      <h2>소비자형 AI 비서 — System Prompt</h2>
     </div>
     <p class="ait-section-lead">
-      혼디 AI 비서는 영역별 전문 지식이 필요할 때 아래 하위 시스템의 System Prompt로 자동 전환됩니다(SP-00-ROUTER).
-      각 카드의 "프롬프트 편집" 링크는 관리자 로그인 후 원문을 직접 수정하는 편집기로 연결되며, 수정 내용은
-      GitHub PR로 생성되어 검토·머지 후 반영됩니다. 현재 15개이며 계속 추가됩니다.
+      소비자형(Type A) AI 비서가 공통으로 따르는 System Prompt입니다. 모든 사용자가 동일한 기본
+      지침에서 출발해, PDV(Private Data Vault)에 쌓이는 데이터로 점차 자신만의 비서로 훈련해
+      나갑니다. 현재 표준 placeholder 상태이며 추후 보강됩니다.
+    </p>
+    <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">👤</div>
+          <div><div class="ait-prompt-name">나만의 AI 비서</div><div class="ait-prompt-version">CONSUMER-01 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">소비자형(Type A) 공통 System Prompt — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-CONSUMER_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="ait-prompts-section">
+    <div class="ait-section-head">
+      <div class="ait-eyebrow">SUPPLIER AI AGENT</div>
+      <h2>공급자형 AI 비서 — System Prompt</h2>
+    </div>
+    <p class="ait-section-lead">
+      공급자형(Type B) AI 비서는 사장님이 속한 업종에 따라 서로 다른 System Prompt에서 출발합니다.
+      한국표준산업분류(KSIC) 제11차 개정 기준 대분류 21개 · 중분류 77개를 그대로 따르며, 모두 표준
+      placeholder 상태로 추후 업종별로 개별 보강됩니다.
+    </p>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">A</span>농업, 임업 및 어업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🌾</div>
+          <div><div class="ait-prompt-name">농업</div><div class="ait-prompt-version">A01 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">농업, 임업 및 어업 > 농업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-01_agriculture_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🌾</div>
+          <div><div class="ait-prompt-name">임업</div><div class="ait-prompt-version">A02 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">농업, 임업 및 어업 > 임업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-02_forestry_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🌾</div>
+          <div><div class="ait-prompt-name">어업</div><div class="ait-prompt-version">A03 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">농업, 임업 및 어업 > 어업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-03_fisheries_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">B</span>광업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">⛏️</div>
+          <div><div class="ait-prompt-name">석탄, 원유 및 천연가스 광업</div><div class="ait-prompt-version">B05 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">광업 > 석탄, 원유 및 천연가스 광업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-05_coal-oil-gas-mining_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">⛏️</div>
+          <div><div class="ait-prompt-name">금속 광업</div><div class="ait-prompt-version">B06 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">광업 > 금속 광업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-06_metal-mining_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">⛏️</div>
+          <div><div class="ait-prompt-name">비금속광물 광업; 연료용 제외</div><div class="ait-prompt-version">B07 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">광업 > 비금속광물 광업; 연료용 제외 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-07_nonmetallic-mineral-mining_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">⛏️</div>
+          <div><div class="ait-prompt-name">광업 지원 서비스업</div><div class="ait-prompt-version">B08 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">광업 > 광업 지원 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-08_mining-support-services_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">C</span>제조업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">식료품 제조업</div><div class="ait-prompt-version">C10 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 식료품 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-10_food-manufacturing_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">음료 제조업</div><div class="ait-prompt-version">C11 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 음료 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-11_beverage-manufacturing_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">담배 제조업</div><div class="ait-prompt-version">C12 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 담배 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-12_tobacco-manufacturing_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">섬유제품 제조업; 의복제외</div><div class="ait-prompt-version">C13 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 섬유제품 제조업; 의복제외 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-13_textile-manufacturing_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">의복, 의복 액세서리 및 모피제품 제조업</div><div class="ait-prompt-version">C14 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 의복, 의복 액세서리 및 모피제품 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-14_apparel-manufacturing_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">가죽, 가방 및 신발 제조업</div><div class="ait-prompt-version">C15 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 가죽, 가방 및 신발 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-15_leather-bags-footwear_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">목재 및 나무제품 제조업; 가구 제외</div><div class="ait-prompt-version">C16 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 목재 및 나무제품 제조업; 가구 제외 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-16_wood-products_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">펄프, 종이 및 종이제품 제조업</div><div class="ait-prompt-version">C17 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 펄프, 종이 및 종이제품 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-17_pulp-paper_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">인쇄 및 기록매체 복제업</div><div class="ait-prompt-version">C18 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 인쇄 및 기록매체 복제업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-18_printing-media-reproduction_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">코크스, 연탄 및 석유정제품 제조업</div><div class="ait-prompt-version">C19 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 코크스, 연탄 및 석유정제품 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-19_coke-petroleum-refining_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">화학물질 및 화학제품 제조업; 의약품 제외</div><div class="ait-prompt-version">C20 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 화학물질 및 화학제품 제조업; 의약품 제외 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-20_chemicals-manufacturing_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">의료용 물질 및 의약품 제조업</div><div class="ait-prompt-version">C21 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 의료용 물질 및 의약품 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-21_pharmaceuticals_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">고무 및 플라스틱제품 제조업</div><div class="ait-prompt-version">C22 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 고무 및 플라스틱제품 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-22_rubber-plastics_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">비금속 광물제품 제조업</div><div class="ait-prompt-version">C23 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 비금속 광물제품 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-23_nonmetallic-mineral-products_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">1차 금속 제조업</div><div class="ait-prompt-version">C24 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 1차 금속 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-24_primary-metals_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">금속가공제품 제조업; 기계 및 가구 제외</div><div class="ait-prompt-version">C25 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 금속가공제품 제조업; 기계 및 가구 제외 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-25_fabricated-metal-products_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">전자부품, 컴퓨터, 영상, 음향 및 통신장비 제조업</div><div class="ait-prompt-version">C26 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 전자부품, 컴퓨터, 영상, 음향 및 통신장비 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-26_electronics-computers-communication_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">의료, 정밀, 광학기기 및 시계 제조업</div><div class="ait-prompt-version">C27 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 의료, 정밀, 광학기기 및 시계 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-27_medical-precision-optical-instruments_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">전기장비 제조업</div><div class="ait-prompt-version">C28 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 전기장비 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-28_electrical-equipment_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">기타 기계 및 장비 제조업</div><div class="ait-prompt-version">C29 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 기타 기계 및 장비 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-29_other-machinery-equipment_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">자동차 및 트레일러 제조업</div><div class="ait-prompt-version">C30 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 자동차 및 트레일러 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-30_automobiles-trailers_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">기타 운송장비 제조업</div><div class="ait-prompt-version">C31 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 기타 운송장비 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-31_other-transport-equipment_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">가구 제조업</div><div class="ait-prompt-version">C32 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 가구 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-32_furniture-manufacturing_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">기타 제품 제조업</div><div class="ait-prompt-version">C33 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 기타 제품 제조업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-33_other-products-manufacturing_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏭</div>
+          <div><div class="ait-prompt-name">산업용 기계 및 장비 수리업</div><div class="ait-prompt-version">C34 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">제조업 > 산업용 기계 및 장비 수리업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-34_industrial-machinery-repair_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">D</span>전기, 가스, 증기 및 공기조절 공급업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">⚡</div>
+          <div><div class="ait-prompt-name">전기, 가스, 증기 및 공기조절 공급업</div><div class="ait-prompt-version">D35 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">전기, 가스, 증기 및 공기조절 공급업 > 전기, 가스, 증기 및 공기조절 공급업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-35_electricity-gas-steam-supply_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">E</span>수도, 하수 및 폐기물 처리, 원료 재생업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">♻️</div>
+          <div><div class="ait-prompt-name">수도업</div><div class="ait-prompt-version">E36 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">수도, 하수 및 폐기물 처리, 원료 재생업 > 수도업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-36_water-supply_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">♻️</div>
+          <div><div class="ait-prompt-name">하수, 폐수 및 분뇨 처리업</div><div class="ait-prompt-version">E37 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">수도, 하수 및 폐기물 처리, 원료 재생업 > 하수, 폐수 및 분뇨 처리업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-37_sewage-wastewater-treatment_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">♻️</div>
+          <div><div class="ait-prompt-name">폐기물 수집, 운반, 처리 및 원료 재생업</div><div class="ait-prompt-version">E38 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">수도, 하수 및 폐기물 처리, 원료 재생업 > 폐기물 수집, 운반, 처리 및 원료 재생업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-38_waste-collection-recycling_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">♻️</div>
+          <div><div class="ait-prompt-name">환경 정화 및 복원업</div><div class="ait-prompt-version">E39 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">수도, 하수 및 폐기물 처리, 원료 재생업 > 환경 정화 및 복원업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-39_environmental-remediation_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">F</span>건설업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏗️</div>
+          <div><div class="ait-prompt-name">종합 건설업</div><div class="ait-prompt-version">F41 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">건설업 > 종합 건설업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-41_general-construction_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏗️</div>
+          <div><div class="ait-prompt-name">전문직별 공사업</div><div class="ait-prompt-version">F42 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">건설업 > 전문직별 공사업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-42_specialty-trade-construction_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">G</span>도매 및 소매업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🛒</div>
+          <div><div class="ait-prompt-name">자동차 및 부품 판매업</div><div class="ait-prompt-version">G45 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">도매 및 소매업 > 자동차 및 부품 판매업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-45_automobile-parts-sales_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🛒</div>
+          <div><div class="ait-prompt-name">도매 및 상품 중개업</div><div class="ait-prompt-version">G46 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">도매 및 소매업 > 도매 및 상품 중개업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-46_wholesale-trade-brokerage_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🛒</div>
+          <div><div class="ait-prompt-name">소매업; 자동차 제외</div><div class="ait-prompt-version">G47 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">도매 및 소매업 > 소매업; 자동차 제외 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-47_retail-trade_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">H</span>운수 및 창고업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🚚</div>
+          <div><div class="ait-prompt-name">육상운송 및 파이프라인 운송업</div><div class="ait-prompt-version">H49 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">운수 및 창고업 > 육상운송 및 파이프라인 운송업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-49_land-transport-pipeline_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🚚</div>
+          <div><div class="ait-prompt-name">수상 운송업</div><div class="ait-prompt-version">H50 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">운수 및 창고업 > 수상 운송업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-50_water-transport_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🚚</div>
+          <div><div class="ait-prompt-name">항공 운송업</div><div class="ait-prompt-version">H51 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">운수 및 창고업 > 항공 운송업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-51_air-transport_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🚚</div>
+          <div><div class="ait-prompt-name">창고 및 운송관련 서비스업</div><div class="ait-prompt-version">H52 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">운수 및 창고업 > 창고 및 운송관련 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-52_warehousing-transport-support_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">I</span>숙박 및 음식점업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🍽️</div>
+          <div><div class="ait-prompt-name">숙박업</div><div class="ait-prompt-version">I55 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">숙박 및 음식점업 > 숙박업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-55_accommodation_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🍽️</div>
+          <div><div class="ait-prompt-name">음식점 및 주점업</div><div class="ait-prompt-version">I56 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">숙박 및 음식점업 > 음식점 및 주점업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-56_restaurants-bars_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">J</span>정보통신업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">💻</div>
+          <div><div class="ait-prompt-name">출판업</div><div class="ait-prompt-version">J58 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">정보통신업 > 출판업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-58_publishing_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">💻</div>
+          <div><div class="ait-prompt-name">영상ㆍ오디오 기록물 제작 및 배급업</div><div class="ait-prompt-version">J59 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">정보통신업 > 영상ㆍ오디오 기록물 제작 및 배급업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-59_film-video-audio-production_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">💻</div>
+          <div><div class="ait-prompt-name">방송 및 영상·오디오물 제공 서비스업</div><div class="ait-prompt-version">J60 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">정보통신업 > 방송 및 영상·오디오물 제공 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-60_broadcasting-streaming_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">💻</div>
+          <div><div class="ait-prompt-name">우편 및 통신업</div><div class="ait-prompt-version">J61 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">정보통신업 > 우편 및 통신업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-61_postal-telecommunications_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">💻</div>
+          <div><div class="ait-prompt-name">컴퓨터 프로그래밍, 시스템 통합 및 관리업</div><div class="ait-prompt-version">J62 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">정보통신업 > 컴퓨터 프로그래밍, 시스템 통합 및 관리업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-62_computer-programming-it_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">💻</div>
+          <div><div class="ait-prompt-name">정보서비스업</div><div class="ait-prompt-version">J63 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">정보통신업 > 정보서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-63_information-services_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">K</span>금융 및 보험업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">💰</div>
+          <div><div class="ait-prompt-name">금융업</div><div class="ait-prompt-version">K64 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">금융 및 보험업 > 금융업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-64_banking-finance_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">💰</div>
+          <div><div class="ait-prompt-name">보험업</div><div class="ait-prompt-version">K65 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">금융 및 보험업 > 보험업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-65_insurance_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">💰</div>
+          <div><div class="ait-prompt-name">금융 및 보험 관련 서비스업</div><div class="ait-prompt-version">K66 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">금융 및 보험업 > 금융 및 보험 관련 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-66_financial-insurance-support_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">L</span>부동산업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏠</div>
+          <div><div class="ait-prompt-name">부동산업</div><div class="ait-prompt-version">L68 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">부동산업 > 부동산업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-68_real-estate_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">M</span>전문, 과학 및 기술 서비스업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🔬</div>
+          <div><div class="ait-prompt-name">연구개발업</div><div class="ait-prompt-version">M70 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">전문, 과학 및 기술 서비스업 > 연구개발업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-70_research-development_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🔬</div>
+          <div><div class="ait-prompt-name">전문 서비스업</div><div class="ait-prompt-version">M71 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">전문, 과학 및 기술 서비스업 > 전문 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-71_professional-services_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🔬</div>
+          <div><div class="ait-prompt-name">건축기술, 엔지니어링 및 기타 과학기술 서비스업</div><div class="ait-prompt-version">M72 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">전문, 과학 및 기술 서비스업 > 건축기술, 엔지니어링 및 기타 과학기술 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-72_architecture-engineering_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🔬</div>
+          <div><div class="ait-prompt-name">기타 전문, 과학 및 기술 서비스업</div><div class="ait-prompt-version">M73 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">전문, 과학 및 기술 서비스업 > 기타 전문, 과학 및 기술 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-73_other-professional-scientific-services_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">N</span>사업시설 관리, 사업 지원 및 임대 서비스업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🧰</div>
+          <div><div class="ait-prompt-name">사업시설 관리 및 조경 서비스업</div><div class="ait-prompt-version">N74 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">사업시설 관리, 사업 지원 및 임대 서비스업 > 사업시설 관리 및 조경 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-74_facilities-management-landscaping_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🧰</div>
+          <div><div class="ait-prompt-name">사업지원 서비스업</div><div class="ait-prompt-version">N75 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">사업시설 관리, 사업 지원 및 임대 서비스업 > 사업지원 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-75_business-support-services_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🧰</div>
+          <div><div class="ait-prompt-name">임대업; 부동산 제외</div><div class="ait-prompt-version">N76 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">사업시설 관리, 사업 지원 및 임대 서비스업 > 임대업; 부동산 제외 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-76_rental-leasing_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">O</span>공공행정, 국방 및 사회보장 행정</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏛️</div>
+          <div><div class="ait-prompt-name">공공행정, 국방 및 사회보장 행정</div><div class="ait-prompt-version">O84 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">공공행정, 국방 및 사회보장 행정 > 공공행정, 국방 및 사회보장 행정 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-84_public-administration-defense_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">P</span>교육 서비스업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🎓</div>
+          <div><div class="ait-prompt-name">교육 서비스업</div><div class="ait-prompt-version">P85 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">교육 서비스업 > 교육 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-85_education-services_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">Q</span>보건업 및 사회복지 서비스업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏥</div>
+          <div><div class="ait-prompt-name">보건업</div><div class="ait-prompt-version">Q86 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">보건업 및 사회복지 서비스업 > 보건업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-86_health-care_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏥</div>
+          <div><div class="ait-prompt-name">사회복지 서비스업</div><div class="ait-prompt-version">Q87 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">보건업 및 사회복지 서비스업 > 사회복지 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-87_social-welfare-services_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">R</span>예술, 스포츠 및 여가관련 서비스업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🎨</div>
+          <div><div class="ait-prompt-name">창작, 예술 및 여가관련 서비스업</div><div class="ait-prompt-version">R90 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">예술, 스포츠 및 여가관련 서비스업 > 창작, 예술 및 여가관련 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-90_creative-arts-leisure_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🎨</div>
+          <div><div class="ait-prompt-name">스포츠 및 오락관련 서비스업</div><div class="ait-prompt-version">R91 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">예술, 스포츠 및 여가관련 서비스업 > 스포츠 및 오락관련 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-91_sports-recreation_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">S</span>협회 및 단체, 수리 및 기타 개인 서비스업</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🔧</div>
+          <div><div class="ait-prompt-name">협회 및 단체</div><div class="ait-prompt-version">S94 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">협회 및 단체, 수리 및 기타 개인 서비스업 > 협회 및 단체 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-94_associations-organizations_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🔧</div>
+          <div><div class="ait-prompt-name">개인 및 소비용품 수리업</div><div class="ait-prompt-version">S95 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">협회 및 단체, 수리 및 기타 개인 서비스업 > 개인 및 소비용품 수리업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-95_personal-goods-repair_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🔧</div>
+          <div><div class="ait-prompt-name">기타 개인 서비스업</div><div class="ait-prompt-version">S96 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">협회 및 단체, 수리 및 기타 개인 서비스업 > 기타 개인 서비스업 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-96_other-personal-services_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">T</span>가구 내 고용활동 및 달리 분류되지 않은 자가소비 생산활동</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏡</div>
+          <div><div class="ait-prompt-name">가구 내 고용활동</div><div class="ait-prompt-version">T97 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">가구 내 고용활동 및 달리 분류되지 않은 자가소비 생산활동 > 가구 내 고용활동 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-97_household-employment_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏡</div>
+          <div><div class="ait-prompt-name">달리 분류되지 않은 자가소비를 위한 가구의 재화 및 서비스 생산활동</div><div class="ait-prompt-version">T98 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">가구 내 고용활동 및 달리 분류되지 않은 자가소비 생산활동 > 달리 분류되지 않은 자가소비를 위한 가구의 재화 및 서비스 생산활동 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-98_own-consumption-production_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+    <div class="ait-industry-group">
+      <div class="ait-industry-group-title"><span class="ait-industry-code">U</span>국제 및 외국기관</div>
+      <div class="ait-prompt-grid">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🌐</div>
+          <div><div class="ait-prompt-name">국제 및 외국기관</div><div class="ait-prompt-version">U99 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">국제 및 외국기관 > 국제 및 외국기관 — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-SUPPLIER-99_international-foreign-organizations_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ait-prompts-section">
+    <div class="ait-section-head">
+      <div class="ait-eyebrow">EXPERT AI AGENTS</div>
+      <h2>전문 분야 AI Agent — System Prompt</h2>
+    </div>
+    <p class="ait-section-lead">
+      혼디 AI 비서는 영역별 전문 지식이 필요할 때 아래 전문 분야 AI Agent의 System Prompt로 자동 전환됩니다(SP-00-ROUTER).
+      각 카드의 "프롬프트 보기" 링크는 누구나 원문을 확인할 수 있으며, 관리자 로그인 시 같은 페이지에서
+      직접 수정해 GitHub PR로 제출할 수 있습니다(검토·머지 후 반영). 현재 15개이며 계속 추가됩니다.
     </p>
 
     <div class="ait-prompt-grid">
@@ -201,7 +989,7 @@
           <div><div class="ait-prompt-name">K-Law</div><div class="ait-prompt-version">SP-01 · v1.0</div></div>
         </div>
         <div class="ait-prompt-desc">대법원 판결 시뮬레이터 — 소송 결과를 사전에 예측합니다.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-01_klaw_v1.0.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-01_klaw_v1.0.txt">프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -210,7 +998,7 @@
           <div><div class="ait-prompt-name">K-119</div><div class="ait-prompt-version">SP-02 · v1.0</div></div>
         </div>
         <div class="ait-prompt-desc">AI 응급출동 비서 — 24시간 생명 감시와 신속 출동 연계.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-02_k119_v1.0.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-02_k119_v1.0.txt">프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -219,7 +1007,7 @@
           <div><div class="ait-prompt-name">K-Police</div><div class="ait-prompt-version">SP-03 · v1.0</div></div>
         </div>
         <div class="ait-prompt-desc">AI 경찰관 — 치안 상담과 범죄 신고를 접수·처리합니다.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-03_kpolice_v1.0.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-03_kpolice_v1.0.txt">프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -228,7 +1016,7 @@
           <div><div class="ait-prompt-name">K-Health</div><div class="ait-prompt-version">SP-04 · v1.0</div></div>
         </div>
         <div class="ait-prompt-desc">AI 평행 병원 — 7단계 진료 워크플로로 의료 전 과정을 지원합니다.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-04_khealth_v1.0.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-04_khealth_v1.0.txt">프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -237,7 +1025,7 @@
           <div><div class="ait-prompt-name">K-Market</div><div class="ait-prompt-version">SP-05 · v2.2</div></div>
         </div>
         <div class="ait-prompt-desc">AI 구매자 비서 — 시장을 탐색하고 거래를 직접 중개·기록합니다.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-05_kcommerce_v2.2.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-05_kcommerce_v2.2.txt">프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -246,7 +1034,7 @@
           <div><div class="ait-prompt-name">K-Traffic</div><div class="ait-prompt-version">SP-06 · v1.0</div></div>
         </div>
         <div class="ait-prompt-desc">AI 교통·물류 비서 — 동선이 겹치는 이동을 자동으로 매칭합니다.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-06_ktraffic_v1.0.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-06_ktraffic_v1.0.txt">프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -255,7 +1043,7 @@
           <div><div class="ait-prompt-name">K-Tax</div><div class="ait-prompt-version">SP-07 · v1.0</div></div>
         </div>
         <div class="ait-prompt-desc">세무 신고·납부를 자동화하는 AI 세무사입니다.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-07_ktax_v1.0.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-07_ktax_v1.0.txt">프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -264,7 +1052,7 @@
           <div><div class="ait-prompt-name">GDC</div><div class="ait-prompt-version">SP-08 · v2.0</div></div>
         </div>
         <div class="ait-prompt-desc">193개국 통용 디지털 화폐 — 수수료 0%의 송금·결제.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-08_gdc_v2.0.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-08_gdc_v2.0.txt">프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -273,7 +1061,7 @@
           <div><div class="ait-prompt-name">K-School</div><div class="ait-prompt-version">SP-09 · v1.0</div></div>
         </div>
         <div class="ait-prompt-desc">AI 교수 — 166개 과목을 26개 언어로 가르칩니다.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-09_kschool_v1.0.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-09_kschool_v1.0.txt">프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -282,7 +1070,7 @@
           <div><div class="ait-prompt-name">K-Public</div><div class="ait-prompt-version">SP-10 · v1.0</div></div>
         </div>
         <div class="ait-prompt-desc">AI 공무원 — 민원 접수부터 처리까지 자동화합니다.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-10_kpublic_v1.0.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-10_kpublic_v1.0.txt">프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -291,7 +1079,7 @@
           <div><div class="ait-prompt-name">K-Stock</div><div class="ait-prompt-version">SP-11 · v1.0</div></div>
         </div>
         <div class="ait-prompt-desc">AI 자산관리 비서 — 89개 자산군을 아우르는 운용 전략.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-11_kstock_v1.0.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-11_kstock_v1.0.txt">프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -300,7 +1088,7 @@
           <div><div class="ait-prompt-name">K-Democracy</div><div class="ait-prompt-version">SP-12 · v1.0</div></div>
         </div>
         <div class="ait-prompt-desc">DAWN — AI가 보조하는 직접 민주주의 의사결정 시스템.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-12_kdemocracy_v1.0.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-12_kdemocracy_v1.0.txt">프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -309,7 +1097,7 @@
           <div><div class="ait-prompt-name">K-Logistics</div><div class="ait-prompt-version">SP-13 · v1.0</div></div>
         </div>
         <div class="ait-prompt-desc">1~3차 산업 물류를 하나로 통합해 운영합니다.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-13_klogistics_v1.0.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-13_klogistics_v1.0.txt">프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -318,8 +1106,8 @@
           <div><div class="ait-prompt-name">K-Cleaner</div><div class="ait-prompt-version">SP-14 · v1.2</div></div>
         </div>
         <div class="ait-prompt-desc">환경 신고·정화 견적·드론 운용까지 처리하는 환경 AI.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-14_kcleaner_v1.2.txt">프롬프트 편집 ↗</a>
-        <a class="ait-prompt-extra" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-14-IMG_kcleaner_vision_prompt_v1.0.txt">Vision 프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-14_kcleaner_v1.2.txt">프롬프트 보기 ↗</a>
+        <a class="ait-prompt-extra" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-14-IMG_kcleaner_vision_prompt_v1.0.txt">Vision 프롬프트 보기 ↗</a>
       </div>
 
       <div class="ait-prompt-card">
@@ -328,7 +1116,7 @@
           <div><div class="ait-prompt-name">K-Insurance</div><div class="ait-prompt-version">SP-14 · v1.0</div></div>
         </div>
         <div class="ait-prompt-desc">AI 보험 설계사 — 기존 대비 1/1,000 비용으로 운영됩니다.</div>
-        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-14_kinsurance_v1.0.txt">프롬프트 편집 ↗</a>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/SP-14_kinsurance_v1.0.txt">프롬프트 보기 ↗</a>
       </div>
 
     </div>
