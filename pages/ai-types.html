@@ -78,6 +78,44 @@
   font-size: 13px; color: var(--text3); text-align: center;
   padding-top: 18px; border-top: 1px solid var(--border);
 }
+
+/* ── 하위 시스템 System Prompt 목록 ── */
+.ait-prompts-section { margin-top: 48px; padding-top: 4px; }
+.ait-section-head { margin: 0 0 6px; }
+.ait-section-head h2 {
+  font-size: 21px; font-weight: 800; color: var(--text);
+  letter-spacing: -0.3px; margin: 0 0 8px;
+}
+.ait-section-lead { font-size: 13.5px; color: var(--text3); line-height: 1.75; margin: 0 0 22px; }
+
+.ait-prompt-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px; margin: 0 0 16px;
+}
+.ait-prompt-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px 17px;
+  box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 6px;
+}
+.ait-prompt-top { display: flex; align-items: center; gap: 9px; margin-bottom: 2px; }
+.ait-prompt-icon {
+  width: 30px; height: 30px; border-radius: 9px; background: var(--brand-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0;
+}
+.ait-prompt-name { font-size: 13.5px; font-weight: 700; color: var(--text); line-height: 1.3; }
+.ait-prompt-version {
+  font-size: 10px; color: var(--text4); font-weight: 600;
+  letter-spacing: .2px; margin-top: 1px;
+}
+.ait-prompt-desc { font-size: 12px; color: var(--text2); line-height: 1.6; flex: 1; }
+.ait-prompt-link {
+  font-size: 11.5px; font-weight: 700; color: var(--brand-dk);
+  text-decoration: none; margin-top: 4px;
+}
+.ait-prompt-link:hover { text-decoration: underline; }
+.ait-prompt-extra { font-size: 10.5px; color: var(--text4); text-decoration: none; margin-left: 8px; }
+.ait-prompt-extra:hover { text-decoration: underline; }
 </style>
 
   <div class="ait-eyebrow">PERSONAL AI ASSISTANT</div>
@@ -143,4 +181,155 @@
   <p class="ait-footnote">
     사용자는 Type A와 Type B를 모두 이용할 수도 있고, 둘 중 하나만 선택해 이용할 수도 있습니다.
   </p>
+
+  <div class="ait-prompts-section">
+    <div class="ait-section-head">
+      <div class="ait-eyebrow">SUBSYSTEM PROMPTS</div>
+      <h2>혼디 하위 시스템 — System Prompt</h2>
+    </div>
+    <p class="ait-section-lead">
+      혼디 AI 비서는 영역별 전문 지식이 필요할 때 아래 하위 시스템의 System Prompt로 자동 전환됩니다(SP-00-ROUTER).
+      각 카드를 누르면 GitHub에서 실제 프롬프트 원문을 바로 확인할 수 있습니다. 현재 15개이며 계속 추가됩니다.
+    </p>
+
+    <div class="ait-prompt-grid">
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">⚖️</div>
+          <div><div class="ait-prompt-name">K-Law</div><div class="ait-prompt-version">SP-01 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">대법원 판결 시뮬레이터 — 소송 결과를 사전에 예측합니다.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-01_klaw_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🚑</div>
+          <div><div class="ait-prompt-name">K-119</div><div class="ait-prompt-version">SP-02 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">AI 응급출동 비서 — 24시간 생명 감시와 신속 출동 연계.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-02_k119_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🚔</div>
+          <div><div class="ait-prompt-name">K-Police</div><div class="ait-prompt-version">SP-03 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">AI 경찰관 — 치안 상담과 범죄 신고를 접수·처리합니다.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-03_kpolice_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏥</div>
+          <div><div class="ait-prompt-name">K-Health</div><div class="ait-prompt-version">SP-04 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">AI 평행 병원 — 7단계 진료 워크플로로 의료 전 과정을 지원합니다.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-04_khealth_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🛒</div>
+          <div><div class="ait-prompt-name">K-Market</div><div class="ait-prompt-version">SP-05 · v2.2</div></div>
+        </div>
+        <div class="ait-prompt-desc">AI 구매자 비서 — 시장을 탐색하고 거래를 직접 중개·기록합니다.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-05_kcommerce_v2.2.txt">프롬프트 보기 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🚦</div>
+          <div><div class="ait-prompt-name">K-Traffic</div><div class="ait-prompt-version">SP-06 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">AI 교통·물류 비서 — 동선이 겹치는 이동을 자동으로 매칭합니다.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-06_ktraffic_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">💰</div>
+          <div><div class="ait-prompt-name">K-Tax</div><div class="ait-prompt-version">SP-07 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">세무 신고·납부를 자동화하는 AI 세무사입니다.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-07_ktax_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">💱</div>
+          <div><div class="ait-prompt-name">GDC</div><div class="ait-prompt-version">SP-08 · v2.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">193개국 통용 디지털 화폐 — 수수료 0%의 송금·결제.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-08_gdc_v2.0.txt">프롬프트 보기 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🎓</div>
+          <div><div class="ait-prompt-name">K-School</div><div class="ait-prompt-version">SP-09 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">AI 교수 — 166개 과목을 26개 언어로 가르칩니다.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-09_kschool_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🏛️</div>
+          <div><div class="ait-prompt-name">K-Public</div><div class="ait-prompt-version">SP-10 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">AI 공무원 — 민원 접수부터 처리까지 자동화합니다.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-10_kpublic_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">📈</div>
+          <div><div class="ait-prompt-name">K-Stock</div><div class="ait-prompt-version">SP-11 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">AI 자산관리 비서 — 89개 자산군을 아우르는 운용 전략.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-11_kstock_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🗳️</div>
+          <div><div class="ait-prompt-name">K-Democracy</div><div class="ait-prompt-version">SP-12 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">DAWN — AI가 보조하는 직접 민주주의 의사결정 시스템.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-12_kdemocracy_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🚚</div>
+          <div><div class="ait-prompt-name">K-Logistics</div><div class="ait-prompt-version">SP-13 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">1~3차 산업 물류를 하나로 통합해 운영합니다.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-13_klogistics_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🧹</div>
+          <div><div class="ait-prompt-name">K-Cleaner</div><div class="ait-prompt-version">SP-14 · v1.2</div></div>
+        </div>
+        <div class="ait-prompt-desc">환경 신고·정화 견적·드론 운용까지 처리하는 환경 AI.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-14_kcleaner_v1.2.txt">프롬프트 보기 ↗</a>
+        <a class="ait-prompt-extra" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-14-IMG_kcleaner_vision_prompt_v1.0.txt">Vision 프롬프트 ↗</a>
+      </div>
+
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🛡️</div>
+          <div><div class="ait-prompt-name">K-Insurance</div><div class="ait-prompt-version">SP-14 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">AI 보험 설계사 — 기존 대비 1/1,000 비용으로 운영됩니다.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="https://github.com/Openhash-Gopang/gopang/blob/main/prompts/SP-14_kinsurance_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+
+    </div>
+  </div>
 </div>
