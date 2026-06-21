@@ -3,5 +3,7 @@ serve.py
 *.bak
 *.bak2
 *.bak3
-fix_*.py
-fix.py
+fix*.py
+.wrangler/
+*.patch
+*.lnk
