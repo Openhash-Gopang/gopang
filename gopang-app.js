@@ -557,6 +557,27 @@ function _closeWelcome(ov) {
 }
 
 // ── TEST: SW → 앱 메시지 수신 — 조건 무시하고 무조건 강제 재생 + 진동 ──
+// ── 오디오 자동재생 잠금 해제 ─────────────────────────────────
+// 모바일 브라우저는 사용자 동작과 무관하게 발생한 audio.play() 호출을
+// 차단할 수 있다(WebSocket 메시지로 트리거된 알림 소리 등). 페이지에
+// 처음 손을 댄 순간(탭/클릭) 짧게 한 번 재생→정지하면, 이후 같은 세션
+// 안에서는 사용자 동작 없이 호출돼도 막히지 않는다. 알림 사운드로 쓰는
+// 4개 파일 전부를 한 번씩 잠금 해제해 둔다(어떤 걸 선택해도 안전하게).
+let _audioUnlocked = false;
+function _unlockAudioOnce() {
+  if (_audioUnlocked) return;
+  _audioUnlocked = true;
+  for (const name of ['ping', 'chime', 'bell', 'drop']) {
+    try {
+      const a = new Audio(`/assets/sounds/${name}.mp3`);
+      a.volume = 0.01;
+      a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
+    } catch (e) { /* 무시 */ }
+  }
+  console.info('[Audio] 첫 사용자 동작 — 자동재생 잠금 해제 시도 완료');
+}
+document.addEventListener('pointerdown', _unlockAudioOnce, { once: true, capture: true });
+
 function _forcePlayTestSound(tag) {
   console.info(`[TEST-SOUND] ${tag} 트리거됨 — 강제 재생 시도`);
   try { if (navigator.vibrate) navigator.vibrate([300, 100, 300]); }
