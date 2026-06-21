@@ -20,6 +20,7 @@ import { openSettings, closeSettings, handleOverlayClick,
          clearSWCache, _updateSecuritySection,
          openChatHistory, openHashChain, openGopangWallet, openFinancialStatement,
          openMyProfile, openBackupKey, _refreshFreeModelPool,
+         applySkinColor,
 } from './src/gopang/ui/settings.js';
 import { openSearch, closeSearch,
          handleSearchOverlayClick,
@@ -119,6 +120,7 @@ window.dismissBackupWarn = function() {
   window.clearSWCache              = clearSWCache;
   window._settingsRegisterHandle   = _settingsRegisterHandle;
   window._updateHandleChip         = _updateHandleChip;
+  window.applySkinColor            = applySkinColor;
   window._settingsRegisterFingerprint = window._settingsRegisterFingerprint || (() => {});
   window._settingsRegisterFace        = window._settingsRegisterFace        || (() => {});
 

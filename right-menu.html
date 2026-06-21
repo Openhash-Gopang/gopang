@@ -96,6 +96,33 @@ html,body{height:100%;background:#fff;color:#111;
   font-size:11px;color:var(--txt3);text-align:center;line-height:1.6;
 }
 </style>
+<script>
+/* ── 스킨 색상 적용 ── left-menu.html과 동일한 메커니즘.
+   이 파일은 --green(베이스)과 --green-bd(아코디언 열림 테두리)도
+   쓰므로 두 값까지 함께 덮어쓴다. */
+(function () {
+  const SKIN_COLORS = {
+    blue:   { base: '#2563eb', lt: '#dbeafe', dk: '#1d4ed8', bd: '#93c5fd' },
+    teal:   { base: '#0d9488', lt: '#ccfbf1', dk: '#0f766e', bd: '#5eead4' },
+    amber:  { base: '#d97706', lt: '#fef3c7', dk: '#b45309', bd: '#fcd34d' },
+    violet: { base: '#7c3aed', lt: '#ede9fe', dk: '#6d28d9', bd: '#c4b5fd' },
+    slate:  { base: '#475569', lt: '#f1f5f9', dk: '#334155', bd: '#cbd5e1' }
+  };
+  function applyStoredSkinColor() {
+    const c = SKIN_COLORS[localStorage.getItem('hondi_menu_color')];
+    if (!c) return;
+    const root = document.documentElement.style;
+    root.setProperty('--green', c.base);
+    root.setProperty('--green-lt', c.lt);
+    root.setProperty('--green-dk', c.dk);
+    root.setProperty('--green-bd', c.bd);
+  }
+  applyStoredSkinColor();
+  window.addEventListener('storage', function (e) {
+    if (e.key === 'hondi_menu_color') applyStoredSkinColor();
+  });
+})();
+</script>
 </head>
 <body>
 

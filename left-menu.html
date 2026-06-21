@@ -98,6 +98,35 @@ html,body{height:100%;background:#fff;color:#111;
   font-size:11px;color:var(--txt3);text-align:center;
 }
 </style>
+<script>
+/* ── 스킨 색상 적용 ──────────────────────────────────────
+   webapp.html 설정 패널(스킨 선택)에서 localStorage에 기록한
+   색상을 읽어 --green-lt / --green-dk를 덮어쓴다. 동일 출처
+   iframe이므로 부모 창이 값을 바꾸면 storage 이벤트가 이쪽
+   window에도 자동으로 도착한다(같은 문서에서는 안 옴 — 그래서
+   부모가 바꿔도 여기서는 정상적으로 수신됨). 선택값이 없으면
+   원래 그린 테마를 그대로 둔다. */
+(function () {
+  const SKIN_COLORS = {
+    blue:   { lt: '#dbeafe', dk: '#1d4ed8' },
+    teal:   { lt: '#ccfbf1', dk: '#0f766e' },
+    amber:  { lt: '#fef3c7', dk: '#b45309' },
+    violet: { lt: '#ede9fe', dk: '#6d28d9' },
+    slate:  { lt: '#f1f5f9', dk: '#334155' }
+  };
+  function applyStoredSkinColor() {
+    const c = SKIN_COLORS[localStorage.getItem('hondi_menu_color')];
+    if (!c) return;
+    const root = document.documentElement.style;
+    root.setProperty('--green-lt', c.lt);
+    root.setProperty('--green-dk', c.dk);
+  }
+  applyStoredSkinColor();
+  window.addEventListener('storage', function (e) {
+    if (e.key === 'hondi_menu_color') applyStoredSkinColor();
+  });
+})();
+</script>
 </head>
 <body>
 

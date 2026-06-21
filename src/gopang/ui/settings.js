@@ -7,6 +7,36 @@ import { _isRegistered, _isGDCUser, ensureX25519Synced } from '../core/auth.js';
 import { _USER } from '../core/state.js';
 import { appendBubble } from './bubble.js';
 
+// ── 스킨 색상 (좌/우 슬라이드 메뉴 전용) ─────────────────
+// left-menu.html / right-menu.html이 같은 키(SKIN_COLOR_KEY)를
+// localStorage에서 읽어 자체적으로 --green 계열 변수를 덮어쓴다.
+// 이 파일은 값을 저장하고, 현재 열린 설정 패널의 스와치 선택
+// 표시만 갱신한다 — 실제 메뉴 iframe 색 변경은 storage 이벤트로
+// 전달되므로 여기서 iframe을 직접 건드리지 않는다.
+const SKIN_COLOR_KEY = 'hondi_menu_color';
+export const SKIN_COLORS = {
+  blue:   { label: '블루',     accent: '#2563eb' },
+  teal:   { label: '틸',       accent: '#0d9488' },
+  amber:  { label: '앰버',     accent: '#d97706' },
+  violet: { label: '바이올렛', accent: '#7c3aed' },
+  slate:  { label: '슬레이트', accent: '#475569' },
+};
+
+export function applySkinColor(key) {
+  if (!SKIN_COLORS[key]) return;
+  localStorage.setItem(SKIN_COLOR_KEY, key);
+  document.querySelectorAll('.skin-swatch').forEach(el => {
+    el.classList.toggle('is-selected', el.dataset.skin === key);
+  });
+}
+
+function _syncSkinSwatchSelection() {
+  const current = localStorage.getItem(SKIN_COLOR_KEY);
+  document.querySelectorAll('.skin-swatch').forEach(el => {
+    el.classList.toggle('is-selected', el.dataset.skin === current);
+  });
+}
+
 // ── 핸들 칩 업데이트 ────────────────────────────────────
 export function _updateHandleChip(h) {
   const c = document.getElementById('my-handle-chip');
@@ -92,6 +122,7 @@ export function openSettings() {
   if (llmSec) llmSec.style.display = 'none';
 
   _updateSecuritySection();
+  _syncSkinSwatchSelection();
   document.getElementById('settings-overlay')?.classList.add('open');
 }
 
