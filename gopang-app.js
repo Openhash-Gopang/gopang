@@ -85,10 +85,14 @@ document.body.classList.add('gopang-authed');
 // "로그인이 필요합니다" 오류가 뜨거나 P2P 연결 자체가 조용히 실패한다.
 // → while 루프를 빠져나온 시점(_isRegistered()===true가 보장됨)에 _USER가
 // 아직 비어있다면, 저장된 사용자 정보로 명시적으로 한 번 동기화한다.
+// ※ stored?.ipv6를 추가로 요구하지 않는다 — _isRegistered()는 handle만
+// 확인하므로, 여기서 ipv6까지 요구하면 "handle은 있는데 ipv6가 빠진" 데이터에서
+// 똑같은 버그가 재발한다. 이미 위에서 _isRegistered()===true가 보장됐으므로
+// stored가 존재한다는 사실 자체를 신뢰한다.
 if (!_USER) {
   try {
     const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || 'null');
-    if (stored?.ipv6) setUser(stored);
+    if (stored) setUser(stored);
   } catch (e) {
     console.warn('[Boot] 이미 등록된 사용자의 _USER 동기화 실패:', e.message);
   }
