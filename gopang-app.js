@@ -10,7 +10,7 @@
 // ── Core ─────────────────────────────────────────────────
 import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, gopangAuth, _hasConfirmedBackup } from './src/gopang/core/auth.js';
 import { loadSettings, CFG, saveSettings }     from './src/gopang/core/config.js';
-import { _USER, aiActive, setAiActive }        from './src/gopang/core/state.js';
+import { _USER, aiActive, setAiActive, setUser } from './src/gopang/core/state.js';
 
 // ── UI ───────────────────────────────────────────────────
 import { appendBubble }                        from './src/gopang/ui/bubble.js';
@@ -74,6 +74,25 @@ while (!_isRegistered()) {
 // 이 줄에 도달했다는 것은 곧 _isRegistered() === true라는 뜻 — 이제 대화창을 공개한다.
 document.getElementById('gopang-auth-gate')?.remove();
 document.body.classList.add('gopang-authed');
+
+// ★ 버그 수정 — 이미 등록된 사용자(흔한 "재방문" 케이스)는 위 while 루프의
+// 조건이 시작부터 참이라 루프 본문(await initAuth())이 단 한 번도 실행되지
+// 않는다. setUser()는 initAuth() 내부에서만 호출되므로, 이 경로를 탄
+// 사용자는 _isRegistered()(localStorage 기준)는 true이면서도 state.js의
+// 메모리 상 _USER는 세션 내내 null로 남는다. p2p-search.js의 연결 요청,
+// p2p-chat.js의 시그널링 등 여러 곳이 _isRegistered()가 아니라 메모리 상의
+// _USER.ipv6를 직접 참조하므로, 이 상태에서는 분명히 로그인된 사용자인데도
+// "로그인이 필요합니다" 오류가 뜨거나 P2P 연결 자체가 조용히 실패한다.
+// → while 루프를 빠져나온 시점(_isRegistered()===true가 보장됨)에 _USER가
+// 아직 비어있다면, 저장된 사용자 정보로 명시적으로 한 번 동기화한다.
+if (!_USER) {
+  try {
+    const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || 'null');
+    if (stored?.ipv6) setUser(stored);
+  } catch (e) {
+    console.warn('[Boot] 이미 등록된 사용자의 _USER 동기화 실패:', e.message);
+  }
+}
 
 // v6.0: 백업 키를 아직 확인하지 않은 사용자에게 탭마다 경고 — 가입 직후 단계를
 // 거쳤다면 정상적으로는 뜨지 않지만, 이 업데이트 이전에 가입한 기존 사용자나
