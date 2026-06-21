@@ -144,10 +144,14 @@ html,body{height:100%;height:100dvh;overflow:hidden;
    대화창 "위에" 떠 있을 뿐이라, 팝업이 닫히는 찰나나 race condition에서
    미등록 사용자가 입력창/대화 내역을 볼 수 있었다. visibility:hidden은
    레이아웃은 유지하되(JS의 getElementById 등은 정상 동작) 화면에 그리지도,
-   포커스/클릭도 되지 않게 한다 — #gopang-auth-gate가 그 자리를 덮는다. */
+   포커스/클릭도 되지 않게 한다 — #gopang-auth-gate가 그 자리를 덮는다.
+   z-index는 #app보다는 위, 가입/로그인 팝업(전화번호 입력 9999, 닉네임 단계
+   동일, 기기불일치 10003, 필수백업 10004)보다는 반드시 아래여야 한다 —
+   안 그러면 이 가림막이 그 팝업들까지 같이 가려버려 가입 자체가 불가능해진다
+   (실사용 중 발견·수정된 버그). */
 body:not(.gopang-authed) #app{visibility:hidden}
 #gopang-auth-gate{
-  position:fixed;inset:0;z-index:99998;background:#fff;
+  position:fixed;inset:0;z-index:500;background:#fff;
   display:flex;align-items:center;justify-content:center;
 }
 body.gopang-authed #gopang-auth-gate{display:none}
