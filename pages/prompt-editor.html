@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prompt Editor — 혼디 관리자</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   html,body{background:#fafafa;color:#16181c;
@@ -88,13 +94,18 @@
     margin-bottom:10px;font-size:12px;color:var(--text4);
   }
   .pe-meta b{color:var(--text3);font-weight:600}
-  textarea.pe-textarea{
-    width:100%;min-height:60vh;font-size:13.5px;line-height:1.75;color:var(--text);
-    font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
-    border:1px solid var(--border);border-radius:12px;padding:18px;background:var(--surface);
-    resize:vertical;white-space:pre-wrap;
+  .CodeMirror{
+    width:100%;height:60vh;font-size:13.5px;line-height:1.75;color:var(--text);
+    font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+    border:1px solid var(--border);border-radius:12px;background:var(--surface);
   }
-  textarea.pe-textarea:focus{outline:none;border-color:var(--brand)}
+  .CodeMirror-focused{border-color:var(--brand)}
+  .CodeMirror-lines{padding:18px 0}
+  .CodeMirror pre.CodeMirror-line,.CodeMirror pre.CodeMirror-line-like{padding:0 18px}
+  .CodeMirror-gutters{border-radius:12px 0 0 12px;background:var(--surface2);border-right:1px solid var(--border)}
+  .CodeMirror-linenumber{color:var(--text4);font-size:11.5px}
+  .CodeMirror-dialog{font-family:inherit;font-size:13px}
+  .CodeMirror-dialog input{font-family:inherit;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px}
   .pe-msgfield{margin-top:14px}
   .pe-msgfield input{
     width:100%;font-size:13px;padding:10px 12px;border:1px solid var(--border);
@@ -161,7 +172,7 @@
         <span><b id="peAdminName">—</b>님으로 로그인됨</span>
         <span id="peLenLabel">0자</span>
       </div>
-      <textarea class="pe-textarea" id="peContent" spellcheck="false"></textarea>
+      <textarea id="peContent" spellcheck="false"></textarea>
       <div class="pe-msgfield">
         <input type="text" id="peCommitMsg" placeholder="변경 사유 (PR 제목/본문에 들어갑니다 — 비워두면 기본 문구 사용)">
       </div>
@@ -183,8 +194,20 @@
   // 세션은 메모리에만 — 새로고침 시 재로그인 (관리자 도구이므로 의도된 동작)
   let peToken = null;
   let peSha   = null;
+  let cm      = null; // CodeMirror 인스턴스 — 로그인 후 1회만 생성, 이후 refresh()만 호출
 
   function $(id){ return document.getElementById(id); }
+
+  function peEnsureEditor(){
+    if (cm) { cm.refresh(); return; }
+    cm = CodeMirror.fromTextArea($('peContent'), {
+      lineNumbers:   true,
+      lineWrapping:  true,
+      mode:          null,   // 일반 텍스트 — System Prompt는 코드가 아니라 자연어/마크다운 혼합
+      extraKeys:     { 'Ctrl-F': 'findPersistent', 'Cmd-F': 'findPersistent' },
+    });
+    cm.on('change', peUpdateLen);
+  }
 
   function peFatal(msg){
     $('peFatal').style.display = 'block';
@@ -220,6 +243,7 @@
       $('peLoginBox').style.display = 'none';
       $('peLogoutBtn').style.display = 'inline-block';
       $('peEditor').style.display = 'block';
+      peEnsureEditor();
       await peLoadFile();
     } catch (e) {
       errEl.textContent = '서버에 연결할 수 없습니다: ' + e.message;
@@ -232,6 +256,7 @@
 
   function peLogout(){
     peToken = null; peSha = null;
+    if (cm) cm.setValue('');
     $('peEditor').style.display = 'none';
     $('peLogoutBtn').style.display = 'none';
     $('peLoginBox').style.display = 'block';
@@ -255,7 +280,9 @@
         return;
       }
       peSha = data.sha;
-      $('peContent').value = data.content;
+      cm.setValue(data.content);
+      cm.markClean();
+      cm.refresh();
       peUpdateLen();
       statusEl.textContent = '';
     } catch (e) {
@@ -267,13 +294,13 @@
   function peReload(){ peLoadFile(); }
 
   function peUpdateLen(){
-    $('peLenLabel').textContent = $('peContent').value.length.toLocaleString() + '자';
+    $('peLenLabel').textContent = cm.getValue().length.toLocaleString() + '자';
   }
 
   async function peSave(){
     const btn = $('peSaveBtn');
     const statusEl = $('peStatus');
-    const content = $('peContent').value;
+    const content = cm.getValue();
     const message = $('peCommitMsg').value.trim();
     if (!content.trim()) {
       statusEl.className = 'pe-status err';
@@ -305,8 +332,6 @@
       btn.disabled = false; btn.textContent = 'PR 생성';
     }
   }
-
-  $('peContent') && $('peContent').addEventListener('input', peUpdateLen);
 
   (function init(){
     if (!peFile) {
