@@ -1087,6 +1087,15 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
 
     <div id="_nick-error" style="display:none;font-size:12px;color:#dc2626;padding:0 4px;margin-bottom:8px"></div>
 
+    <!-- 이용 약정서 동의 -->
+    <label style="display:flex;align-items:flex-start;gap:8px;padding:10px 4px;margin-bottom:6px;cursor:pointer">
+      <input type="checkbox" id="_terms-agree-chk" style="margin-top:2px;width:16px;height:16px;flex-shrink:0;accent-color:#16a34a">
+      <span style="font-size:12.5px;color:#374151;line-height:1.6">
+        <span onclick="event.preventDefault();window.openTermsOfUse&&window.openTermsOfUse()" style="color:#16a34a;font-weight:600;text-decoration:underline">이용 약정서</span>(베타 서비스 면책조항 포함)를 읽었으며 동의합니다.
+      </span>
+    </label>
+    <div id="_terms-error" style="display:none;font-size:12px;color:#dc2626;padding:0 4px;margin-bottom:8px">이용 약정서에 동의해야 가입을 완료할 수 있습니다.</div>
+
     <!-- 완료 버튼 -->
     <button id="_nick-btn"
       style="width:100%;height:52px;background:#16a34a;color:#fff;
@@ -1183,6 +1192,15 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
       nickInput.focus();
       return;
     }
+
+    const termsChk = document.getElementById('_terms-agree-chk');
+    const termsErr = document.getElementById('_terms-error');
+    if (!termsChk?.checked) {
+      termsErr.style.display = 'block';
+      termsChk?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    termsErr.style.display = 'none';
 
     const btn = document.getElementById('_nick-btn');
     btn.textContent = '등록 중...';

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>이용 약정서 — 혼디</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#fff;color:#111;
+  font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+  -webkit-font-smoothing:antialiased;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:none;touch-action:pan-y}
+
+:root{
+  --green:#16a34a;--green-lt:#dcfce7;--green-dk:#15803d;
+  --amber:#d97706;--amber-lt:#fef3c7;--amber-dk:#92400e;
+  --border:#e5e7eb;--txt2:#6b7280;--txt3:#9ca3af;
+  --chip-bg:#f9fafb;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+
+.manual-header{
+  position:sticky;top:0;background:#fff;z-index:1;
+  padding:calc(var(--safe-t) + 14px) 20px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.drag-grip{
+  position:absolute;top:6px;left:50%;transform:translateX(-50%);
+  width:36px;height:4px;background:var(--border);border-radius:2px;
+}
+.manual-title{font-size:17px;font-weight:700;letter-spacing:-0.3px;margin-top:6px}
+.manual-subtitle{font-size:11px;color:var(--txt3);margin-top:2px}
+.manual-close{
+  width:30px;height:30px;border-radius:50%;border:none;background:var(--chip-bg);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt2);
+  flex-shrink:0;margin-top:6px;
+}
+.manual-close svg{width:14px;height:14px;stroke:currentColor;stroke-width:2.4;
+  stroke-linecap:round;stroke-linejoin:round}
+
+.manual-body{padding:6px 20px 40px}
+
+.terms-notice{
+  margin:14px 0 18px;padding:12px 14px;background:var(--amber-lt);
+  border:1px solid var(--amber);border-radius:10px;
+  font-size:12.5px;color:var(--amber-dk);line-height:1.7;
+}
+.terms-notice b{font-weight:700}
+
+.t-article{padding:16px 0;border-bottom:1px solid var(--border)}
+.t-article:last-child{border-bottom:none}
+.t-h{font-size:14.5px;font-weight:700;color:#111;margin-bottom:8px}
+.t-body{font-size:13px;color:#374151;line-height:1.8}
+.t-body p{margin-bottom:8px}
+.t-body p:last-child{margin-bottom:0}
+.t-body b{color:#111;font-weight:700}
+.t-body ol,.t-body ul{padding-left:18px;margin:6px 0}
+.t-body li{margin-bottom:6px}
+.t-warn{color:var(--amber-dk);font-weight:700}
+
+.manual-footer{padding:8px 20px calc(var(--safe-b) + 24px);font-size:11px;color:var(--txt3);text-align:center}
+</style>
+</head>
+<body>
+
+<div class="manual-header" id="manual-header">
+  <div class="drag-grip"></div>
+  <div>
+    <div class="manual-title">혼디 이용 약정서</div>
+    <div class="manual-subtitle">베타 서비스 이용약관 · 면책조항 포함</div>
+  </div>
+  <button class="manual-close" onclick="parent.closeTermsOfUse && parent.closeTermsOfUse()" title="닫기">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+</div>
+
+<div class="manual-body">
+
+  <div class="terms-notice">
+    본 약정서는 <b>베타(β) 서비스</b>에 적용됩니다. 정식 안드로이드·아이폰 앱 출시 전 기능 실증(Proof of Concept) 목적의 버전으로, 본 약정서의 내용은 정식 출시 시 변경될 수 있습니다.
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제1조 (목적)</div>
+    <div class="t-body">
+      <p>이 약정서는 AI City Inc.(이하 "회사")가 제공하는 혼디(Hondi, 이하 "서비스") 베타 버전의 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항, 기타 필요한 사항을 정함을 목적으로 합니다.</p>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제2조 (정의)</div>
+    <div class="t-body">
+      <ol>
+        <li><b>"서비스"</b>란 회사가 제공하는 혼디 웹앱(PWA) 및 이와 연동된 일체의 기능(AI 대화, P2P 메시징, K-Market, GDC, PDV 기록 등)을 말합니다.</li>
+        <li><b>"베타 버전"</b>이란 정식 출시 전, 기능 검증 및 개선을 목적으로 한정된 범위에서 제공되는 시험판 서비스를 말합니다.</li>
+        <li><b>"PDV"</b>란 이용자가 서비스 이용 과정에서 생성하는 개인 일상·업무 기록 데이터를 말합니다.</li>
+        <li><b>"GDC"</b>란 서비스 내에서 시험적으로 운용되는 디지털 포인트 단위를 말하며, 법정화폐 또는 가상자산이 아닙니다.</li>
+        <li><b>"OpenHash"</b>란 서비스가 채택한 분산원장 방식의 데이터 기록·검증 체계를 말합니다.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제3조 (약정의 게시 및 개정)</div>
+    <div class="t-body">
+      <p>① 회사는 이 약정서의 내용을 이용자가 쉽게 확인할 수 있도록 서비스 초기 화면 또는 연결 화면에 게시합니다.</p>
+      <p>② 회사는 관련 법령을 위반하지 않는 범위에서 이 약정서를 개정할 수 있으며, 개정 시 적용일자 및 개정사유를 명시하여 사전 공지합니다. 베타 기간 중에는 기능 변경 빈도가 높을 수 있어 공지 후 단기간 내 시행될 수 있습니다.</p>
+      <p>③ 이용자가 개정 약정서 시행일 이후에도 서비스를 계속 이용하는 경우 개정 내용에 동의한 것으로 봅니다.</p>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제4조 (서비스의 내용과 베타 버전 고지)</div>
+    <div class="t-body">
+      <p>① 본 서비스는 정식 안드로이드·아이폰 앱 출시 전 단계의 <b>베타(시험) 버전</b>입니다. 따라서 다음 각 호의 사정이 있을 수 있음을 이용자는 충분히 인지하고 동의합니다.</p>
+      <ol>
+        <li>일부 기능이 예고 없이 추가, 변경, 제한 또는 중단될 수 있습니다.</li>
+        <li>버그, 오류, 성능 저하가 발생할 수 있으며, 정식 버전 수준의 완성도를 보장하지 않습니다.</li>
+        <li>베타 기간 중 누적된 데이터(대화 기록, PDV, 설정 등)는 정식 버전으로 100% 이전되지 않을 수 있습니다.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제5조 (이용계약의 성립)</div>
+    <div class="t-body">
+      <p>① 이용계약은 이용자가 이 약정서의 내용에 동의하고 회사가 정한 가입 절차(전화번호 확인, 닉네임 설정 등)를 완료함으로써 성립합니다.</p>
+      <p>② 회사는 다음 각 호에 해당하는 경우 가입을 거절하거나 사후에 이용계약을 해지할 수 있습니다.</p>
+      <ol>
+        <li>타인의 명의나 전화번호를 도용하여 신청한 경우</li>
+        <li>허위 정보를 기재하거나 회사가 요구하는 정보를 제공하지 않은 경우</li>
+        <li>관계 법령에 위배되거나 사회 질서를 저해할 목적으로 신청한 경우</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제6조 (개인정보 및 PDV 데이터 처리에 관한 동의)</div>
+    <div class="t-body">
+      <p>① 이용자는 서비스 이용 과정에서 전화번호, 닉네임, 위치정보(선택), 대화 내용, PDV 등 개인정보 및 서비스 이용 기록이 회사의 서버(L1 노드, Supabase 등)에 저장·처리됨에 동의합니다.</p>
+      <p>② 회사는 수집한 정보를 서비스 제공, 품질 개선, 본인 확인 목적 외에는 이용하지 않으며, 관련 법령에 따라 안전하게 관리합니다. 다만 베타 단계의 보안 수준에 관하여는 제10조를 함께 확인하시기 바랍니다.</p>
+      <p>③ 이용자는 설정 메뉴를 통해 언제든지 계정 및 데이터의 삭제를 요청할 수 있으며, 삭제 처리 범위와 절차는 별도의 개인정보처리방침에 따릅니다.</p>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제7조 (AI 생성 정보의 성격과 한계)</div>
+    <div class="t-body">
+      <p>① 서비스가 제공하는 K-Law(법률 정보), K-Health(건강 정보) 등 AI 기반 응답은 <b>인공지능 모델이 생성한 참고용 정보</b>이며, 변호사, 의사 등 전문가의 자문이나 처방을 대체하지 않습니다.</p>
+      <p>② 이용자는 AI 응답의 정확성, 완전성, 최신성을 회사가 보증하지 않는다는 점을 인지하고, <span class="t-warn">중요한 법률적·의학적 판단이 필요한 사안은 반드시 해당 분야의 자격 있는 전문가와 상담</span>하여야 합니다.</p>
+      <p>③ 회사는 AI 응답을 신뢰하여 발생한 이용자의 결정 및 그로 인한 손해에 대해 책임을 지지 않습니다.</p>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제8조 (OpenHash 분산원장 기록의 비가역성)</div>
+    <div class="t-body">
+      <p>① 서비스의 일부 기록은 OpenHash 분산원장 방식으로 처리되며, 그 구조적 특성상 <b>한 번 기록된 데이터는 사후적으로 수정 또는 삭제가 불가능하거나 매우 제한적</b>일 수 있습니다.</p>
+      <p>② 이용자는 이러한 비가역성을 인지하고, 기록 전 신중을 기할 책임이 있습니다. 회사는 이용자의 입력 실수, 의도하지 않은 기록 등으로 인한 결과에 대해 책임을 지지 않습니다.</p>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제9조 (GDC의 성격 및 비환금성)</div>
+    <div class="t-body">
+      <p>① GDC는 베타 기간 중 시험적으로 운용되는 <b>내부 디지털 포인트</b>로서, 법정화폐, 전자화폐 또는 「특정 금융거래정보의 보고 및 이용 등에 관한 법률」상 가상자산에 해당하지 않습니다.</p>
+      <p>② GDC는 현금, 상품권, 또는 그 밖의 재산적 가치로 환전·환급되지 않으며, 회사는 GDC의 가치를 보장하지 않습니다.</p>
+      <p>③ 베타 종료, 서비스 정책 변경 또는 정식 버전 전환 시 GDC 잔액의 일부 또는 전부가 소멸, 초기화 또는 변경될 수 있습니다.</p>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제10조 (베타 서비스의 보안 위험 고지)</div>
+    <div class="t-body">
+      <p>① 회사는 인증 체계 등 서비스의 보안을 지속적으로 점검·강화하고 있으나, 베타 단계의 특성상 <b>아직 발견되지 않았거나 보완 중인 보안 취약점이 존재할 수 있습니다.</b></p>
+      <p>② 이용자는 다음 각 호의 위험을 인지하고 동의합니다.</p>
+      <ol>
+        <li>예기치 못한 보안 결함으로 인해 계정 정보, 대화 내용 등이 노출되거나 손상될 가능성</li>
+        <li>서비스 점검, 오류 또는 외부 공격 등으로 인한 일시적 서비스 중단 가능성</li>
+        <li>데이터 손실 발생 시 완전한 복구가 보장되지 않을 가능성</li>
+      </ol>
+      <p>③ 회사는 보안 취약점을 인지한 즉시 합리적인 기간 내에 보완 조치를 취하기 위해 노력하며, 중대한 보안 사고 발생 시 관련 법령에 따라 이용자에게 고지합니다.</p>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제11조 (회사의 면책)</div>
+    <div class="t-body">
+      <p>① 회사는 천재지변, 정전, 통신장애, 제3자의 고의적인 서비스 방해 등 회사가 통제할 수 없는 사유로 인한 서비스 중단에 대해 책임을 지지 않습니다.</p>
+      <p>② 회사는 베타 서비스의 특성상 발생할 수 있는 버그, 오류, 데이터 유실, 일시적 또는 영구적 서비스 중단에 대하여 고의 또는 중대한 과실이 없는 한 책임을 지지 않습니다.</p>
+      <p>③ 회사는 이용자가 서비스를 이용하여 기대하는 수익을 얻지 못하거나 상실한 것에 대하여 책임을 지지 않으며, 그 밖에 서비스를 통하여 얻은 자료로 인한 손해에 관하여 책임을 지지 않습니다.</p>
+      <p>④ 회사는 이용자 상호간 또는 이용자와 제3자 간에 서비스를 매개로 발생한 분쟁에 대해 개입할 의무가 없으며, 이로 인한 손해를 배상할 책임이 없습니다.</p>
+      <p>⑤ 본 조의 면책은 회사의 고의 또는 중과실로 인한 손해, 그리고 관계 법령상 면책이 허용되지 않는 범위에는 적용되지 않습니다.</p>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제12조 (이용자의 의무)</div>
+    <div class="t-body">
+      <p>① 이용자는 본인의 전화번호로만 가입하여야 하며, 타인의 전화번호나 명의를 도용하여서는 안 됩니다.</p>
+      <p>② 이용자는 계정 정보(백업 키 등) 보관에 대한 책임이 있으며, 관리 소홀로 발생한 손해에 대해 회사는 책임을 지지 않습니다.</p>
+      <p>③ 이용자는 서비스를 이용하여 법령 또는 공서양속에 위배되는 행위를 하여서는 안 됩니다.</p>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제13조 (서비스의 변경, 중단 및 종료)</div>
+    <div class="t-body">
+      <p>① 회사는 베타 서비스의 운영상, 기술상 필요에 따라 서비스의 전부 또는 일부를 변경, 중단 또는 종료할 수 있으며, 가능한 경우 사전에 공지합니다.</p>
+      <p>② 정식 버전(안드로이드·아이폰 앱) 출시에 따라 베타 서비스가 종료될 수 있으며, 이 경우 데이터 이전 가능 범위는 별도 공지합니다.</p>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제14조 (계정 삭제 및 데이터 처리)</div>
+    <div class="t-body">
+      <p>① 이용자는 설정 메뉴를 통해 언제든지 계정 삭제를 요청할 수 있습니다.</p>
+      <p>② 제8조에 따라 OpenHash 방식으로 기록된 데이터는 계정 삭제 이후에도 비가역적 특성상 완전한 삭제가 불가능할 수 있으며, 이 경우 회사는 개인 식별이 가능한 정보를 합리적인 범위에서 분리·익명화 조치합니다.</p>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">제15조 (분쟁해결 및 준거법)</div>
+    <div class="t-body">
+      <p>① 이 약정서는 대한민국 법령에 따라 규율되고 해석됩니다.</p>
+      <p>② 서비스 이용과 관련하여 회사와 이용자 간에 발생한 분쟁에 대하여는 관계 법령에 정한 관할법원에 소를 제기할 수 있습니다.</p>
+    </div>
+  </div>
+
+  <div class="t-article">
+    <div class="t-h">부칙</div>
+    <div class="t-body">
+      <p>이 약정서는 2026년 6월 21일부터 시행합니다. (베타 버전 — 추후 개정될 수 있습니다.)</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="manual-footer">혼디(Hondi) · AI City Inc. · 베타 서비스</div>
+
+</body>
+</html>
