@@ -52,6 +52,12 @@ const OPENAI_MODEL   = 'gpt-4o-mini';
 const DEEPSEEK_MODEL = 'deepseek-v4-flash';
 const SUPABASE_URL   = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
 
+// ── GitHub (Prompt Editor PR 워크플로) ──────────────────────
+const GITHUB_OWNER          = 'Openhash-Gopang';
+const GITHUB_REPO_NAME      = 'gopang';
+const GITHUB_API            = 'https://api.github.com';
+const GITHUB_DEFAULT_BRANCH = 'main';
+
 // STEP 10: VALID_PDV_SCOPES 11개로 확장
 const VALID_PDV_SCOPES = [
   'ktraffic', 'khealth', 'pdv_general', 'kmarket', 'k119',
@@ -89,7 +95,7 @@ function buildCorsHeaders(corsOrigin, extra = {}) {
     'Access-Control-Allow-Origin':      corsOrigin || '*',
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods':     'GET, POST, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers':     'Content-Type',
+    'Access-Control-Allow-Headers':     'Content-Type, Authorization',
     ...extra,
   };
 }
@@ -217,7 +223,7 @@ export default {
           'Access-Control-Allow-Origin':      corsOrigin ?? 'null',
           'Access-Control-Allow-Credentials': 'true',
           'Access-Control-Allow-Methods':     'GET, POST, PATCH, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers':     'Content-Type',
+          'Access-Control-Allow-Headers':     'Content-Type, Authorization',
           'Access-Control-Max-Age':           '86400',
         },
       });
@@ -344,6 +350,14 @@ export default {
       return handlePushVapidKey(request, env, corsHeaders);
     if (pathname === '/push/broadcast' && request.method === 'POST')
       return handlePushBroadcast(request, env, corsHeaders);
+
+    // ── Prompt Editor (관리자 — L1 prompt_admins 인증 + GitHub PR) ──
+    if (pathname === '/admin/login' && request.method === 'POST')
+      return handleAdminLogin(request, env, corsHeaders);
+    if (pathname === '/admin/prompt' && request.method === 'GET')
+      return handleAdminPromptGet(request, env, corsHeaders);
+    if (pathname === '/admin/prompt' && request.method === 'POST')
+      return handleAdminPromptSave(request, env, corsHeaders);
 
     // ── POST 전용 ────────────────────────────────────────
     if (request.method !== 'POST') {
@@ -2779,4 +2793,217 @@ async function handleFeedbackPatch(request, env, corsHeaders) {
   }
 
   return new Response(JSON.stringify({ ok: true, item }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Prompt Editor — 관리자 인증(L1 prompt_admins) + GitHub PR 워크플로
+//
+// 인증: L1 PocketBase의 prompt_admins(Auth Collection)에 위임 — Worker는
+//   비밀번호를 직접 검증하지 않고, PocketBase의
+//   /api/collections/prompt_admins/auth-with-password 결과만 신뢰한다.
+//   성공 시 Worker가 자체 admin 세션 토큰(HMAC-SHA256, ADMIN_MASTER_KEY로 서명)을
+//   발급한다. 이 토큰은 쿠키가 아니라 Authorization: Bearer 헤더로 주고받는다 —
+//   이 Worker는 커스텀 도메인(gopang.net) 라우트가 없는 *.workers.dev 인스턴스라
+//   기존 buildCookie()처럼 Domain=.gopang.net 쿠키를 발급해도 브라우저가 도메인
+//   불일치로 폐기한다. prompt-editor.html은 새 탭에서 열리는 독립 단일 페이지라
+//   세션을 메모리에만 들고 있으면 충분하다(새로고침 시 재로그인 — 의도된 동작).
+//
+// 저장 대상 제한: prompts/ 디렉터리의 .txt 파일만 — 그 외 경로는 일괄 거부
+// (worker.js 자체나 다른 파일을 덮어쓸 수 없도록 화이트리스트로 강제).
+//
+// 반영 방식: main 직접 커밋이 아니라 새 브랜치 + PR — 머지는 GitHub에서
+// 사람이 검토 후 수동으로 진행한다(요청하신 "PR 생성 후 검토·머지" 워크플로).
+//
+// 필요 secret (wrangler secret put):
+//   ADMIN_MASTER_KEY — admin 토큰 서명용 HMAC 키. GOPANG_MASTER_KEY와는
+//                      별개 키를 쓴다(사용자 세션 토큰 위조 경로와 완전히 분리).
+//   GITHUB_TOKEN     — Openhash-Gopang/gopang repo로 한정한 fine-grained PAT.
+//                      권한: Contents (Read and write), Pull requests (Read and write).
+//
+// 필요 L1 PocketBase 설정 (Admin UI에서 1회 수동 작업):
+//   Collections → New collection → name: prompt_admins → type: Auth
+//   Options에서 Email/Password를 사용(Username/Password, OAuth2는 미사용이면 꺼두기) →
+//   admin마다 레코드 1개씩 생성(email + password). 로그인 ID는 이메일 주소.
+// ═══════════════════════════════════════════════════════════
+
+function _isAllowedPromptPath(path) {
+  if (typeof path !== 'string') return false;
+  if (path.includes('..')) return false;
+  return /^prompts\/[A-Za-z0-9_.-]+\.txt$/.test(path);
+}
+
+async function buildAdminToken(env, username) {
+  if (!env.ADMIN_MASTER_KEY) throw new Error('ADMIN_MASTER_KEY secret 미설정');
+  const now = Math.floor(Date.now() / 1000);
+  const payload = { role: 'prompt_admin', admin: username, iat: now, exp: now + 1800 }; // 30분
+  const b64p = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  const key  = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.ADMIN_MASTER_KEY), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig  = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(b64p));
+  const b64s = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return `${b64p}.${b64s}`;
+}
+
+async function parseAdminToken(env, token) {
+  if (!env.ADMIN_MASTER_KEY) return null;
+  try {
+    const [b64p, b64s] = String(token).split('.');
+    if (!b64p || !b64s) return null;
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.ADMIN_MASTER_KEY), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
+    const sigBytes = Uint8Array.from(atob(b64s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+    const sigOk = await crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(b64p));
+    if (!sigOk) return null;
+    const padded = b64p.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(padded + '=='.slice((padded.length % 4) || 4)));
+    if (payload.role !== 'prompt_admin') return null;
+    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+    return payload;
+  } catch { return null; }
+}
+
+async function _requireAdmin(request, env) {
+  const auth = request.headers.get('Authorization') || '';
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  if (!m) return null;
+  return parseAdminToken(env, m[1]);
+}
+
+// POST /admin/login  body: { email, password }
+async function handleAdminLogin(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  const email = body?.email?.trim();
+  const password = body?.password;
+  if (!email || !password) return _err(400, 'MISSING_FIELD', 'email, password 필수', corsHeaders);
+
+  let authRes;
+  try {
+    authRes = await fetch(`${L1_DEFAULT}/api/collections/prompt_admins/auth-with-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identity: email, password }),
+    });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!authRes.ok) return _err(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호가 올바르지 않습니다', corsHeaders);
+
+  const data = await authRes.json().catch(() => null);
+  const adminName = data?.record?.email || data?.record?.username || email;
+  const token = await buildAdminToken(env, adminName);
+  const now = Math.floor(Date.now() / 1000);
+  return new Response(JSON.stringify({ ok: true, admin: adminName, token, exp: now + 1800 }), { status: 200, headers: corsHeaders });
+}
+
+function _ghHeaders(env) {
+  return {
+    'Authorization':        `Bearer ${env.GITHUB_TOKEN}`,
+    'Accept':                'application/vnd.github+json',
+    'X-GitHub-Api-Version':  '2022-11-28',
+    'User-Agent':             'gopang-prompt-editor',
+  };
+}
+
+function _b64DecodeUtf8(b64) {
+  const binary = atob(b64.replace(/\n/g, ''));
+  const bytes  = Uint8Array.from(binary, c => c.charCodeAt(0));
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+function _b64EncodeUtf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
+}
+
+async function _ghGetFile(env, path, ref = GITHUB_DEFAULT_BRANCH) {
+  if (!env.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN secret 미설정');
+  const url = `${GITHUB_API}/repos/${GITHUB_OWNER}/${GITHUB_REPO_NAME}/contents/${path}?ref=${encodeURIComponent(ref)}`;
+  const res = await fetch(url, { headers: _ghHeaders(env) });
+  if (!res.ok) throw new Error(`GitHub 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json();
+  return { content: _b64DecodeUtf8(data.content), sha: data.sha };
+}
+
+// 새 브랜치를 만들어 커밋하고 main으로의 PR을 생성한다 (직접 main 커밋 없음).
+async function _ghCommitViaPR(env, path, newContent, baseSha, adminName, message) {
+  if (!env.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN secret 미설정');
+  const headers  = _ghHeaders(env);
+  const repoBase = `${GITHUB_API}/repos/${GITHUB_OWNER}/${GITHUB_REPO_NAME}`;
+
+  const refRes = await fetch(`${repoBase}/git/ref/heads/${GITHUB_DEFAULT_BRANCH}`, { headers });
+  if (!refRes.ok) throw new Error(`main ref 조회 실패 (HTTP ${refRes.status})`);
+  const mainSha = (await refRes.json()).object.sha;
+
+  const slug   = path.split('/').pop().replace(/\.[^.]+$/, '').toLowerCase();
+  const branch = `prompt-edit/${slug}-${Date.now()}`;
+  const createRefRes = await fetch(`${repoBase}/git/refs`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: mainSha }),
+  });
+  if (!createRefRes.ok) throw new Error(`브랜치 생성 실패 (HTTP ${createRefRes.status})`);
+
+  const putRes = await fetch(`${repoBase}/contents/${path}`, {
+    method: 'PUT', headers,
+    body: JSON.stringify({
+      message: (message && message.trim()) || `prompt-editor: ${adminName}님이 ${path} 수정`,
+      content: _b64EncodeUtf8(newContent),
+      sha:     baseSha,
+      branch,
+      committer: { name: 'Gopang Prompt Editor', email: 'noreply@gopang.net' },
+    }),
+  });
+  if (!putRes.ok) {
+    if (putRes.status === 409 || putRes.status === 422) {
+      throw new Error('충돌: 다른 곳에서 먼저 수정됐습니다. 새로고침 후 다시 시도하세요.');
+    }
+    const errBody = await putRes.text().catch(() => '');
+    throw new Error(`커밋 실패 (HTTP ${putRes.status}): ${errBody.slice(0, 200)}`);
+  }
+
+  const prRes = await fetch(`${repoBase}/pulls`, {
+    method: 'POST', headers,
+    body: JSON.stringify({
+      title: `[prompt-editor] ${path} 수정 (${adminName})`,
+      head:  branch,
+      base:  GITHUB_DEFAULT_BRANCH,
+      body:  (message && message.trim()) || `관리자 \`${adminName}\`님이 Prompt Editor에서 직접 수정한 변경사항입니다.`,
+    }),
+  });
+  if (!prRes.ok) throw new Error(`PR 생성 실패 (HTTP ${prRes.status})`);
+  return (await prRes.json()).html_url;
+}
+
+// GET /admin/prompt?file=prompts/SP-01_klaw_v1.0.txt
+async function handleAdminPromptGet(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
+
+  const file = new URL(request.url).searchParams.get('file') || '';
+  if (!_isAllowedPromptPath(file)) return _err(400, 'INVALID_FILE', '허용되지 않은 파일 경로', corsHeaders);
+
+  try {
+    const { content, sha } = await _ghGetFile(env, file);
+    return new Response(JSON.stringify({ ok: true, file, content, sha }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'GITHUB_ERROR', e.message, corsHeaders);
+  }
+}
+
+// POST /admin/prompt  body: { file, content, sha, message? }
+async function handleAdminPromptSave(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
+
+  const body = await request.json().catch(() => null);
+  const { file, content, sha, message } = body || {};
+  if (!_isAllowedPromptPath(file)) return _err(400, 'INVALID_FILE', '허용되지 않은 파일 경로', corsHeaders);
+  if (typeof content !== 'string' || !content.trim()) return _err(400, 'MISSING_FIELD', 'content 필수', corsHeaders);
+  if (!sha) return _err(400, 'MISSING_FIELD', 'sha 필수 (충돌 감지용 — GET /admin/prompt로 먼저 조회하세요)', corsHeaders);
+
+  try {
+    const prUrl = await _ghCommitViaPR(env, file, content, sha, admin.admin, message);
+    return new Response(JSON.stringify({ ok: true, pr_url: prUrl }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'GITHUB_ERROR', e.message, corsHeaders);
+  }
 }

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Editor — 혼디 관리자</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#fafafa;color:#16181c;
+    font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.6}
+
+  :root{
+    --brand:    #16a34a;
+    --brand-dk: #15803d;
+    --brand-lt: #bbf7d0;
+    --brand-bg: #f0fdf4;
+    --border:   #e5e7eb;
+    --text:     #16181c;
+    --text2:    #374151;
+    --text3:    #6b7280;
+    --text4:    #9ca3af;
+    --surface:  #ffffff;
+    --surface2: #f7f7f8;
+    --red:      #dc2626;
+    --red-bg:   #fef2f2;
+  }
+
+  .pe-header{
+    position:sticky;top:0;z-index:10;background:rgba(255,255,255,.92);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--border);
+  }
+  .pe-header-inner{
+    max-width:760px;margin:0 auto;padding:18px 24px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+  }
+  .pe-title{font-size:16px;font-weight:700;color:var(--text)}
+  .pe-title span{color:var(--brand-dk)}
+  .pe-title-file{font-size:12px;color:var(--text3);font-weight:500;margin-top:2px}
+  .pe-header-actions{display:flex;align-items:center;gap:8px}
+  .pe-logout{
+    font-size:12.5px;font-weight:600;color:var(--text3);background:var(--surface2);
+    border:1px solid var(--border);border-radius:8px;padding:7px 13px;cursor:pointer;
+  }
+  .pe-logout:hover{color:var(--text)}
+  .pe-close{
+    width:32px;height:32px;border-radius:50%;border:none;background:var(--surface2);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);
+    flex-shrink:0;
+  }
+  .pe-close svg{width:14px;height:14px;stroke:currentColor;stroke-width:2.4;
+    stroke-linecap:round;stroke-linejoin:round}
+
+  .pe-wrap{max-width:760px;margin:0 auto;padding:28px 24px 80px}
+
+  /* ── 로그인 화면 ── */
+  .pe-login-box{
+    max-width:360px;margin:64px auto 0;background:var(--surface);
+    border:1px solid var(--border);border-radius:16px;padding:32px 28px;
+    box-shadow:0 1px 3px rgba(0,0,0,.05);
+  }
+  .pe-login-box h2{font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px}
+  .pe-login-box p{font-size:12.5px;color:var(--text3);margin-bottom:22px;line-height:1.6}
+  .pe-field{margin-bottom:14px}
+  .pe-field label{display:block;font-size:12.5px;font-weight:600;color:var(--text2);margin-bottom:6px}
+  .pe-field input{
+    width:100%;font-size:14px;padding:10px 12px;border:1px solid var(--border);
+    border-radius:9px;background:var(--surface2);color:var(--text);font-family:inherit;
+  }
+  .pe-field input:focus{outline:none;border-color:var(--brand);background:var(--surface)}
+  .pe-btn{
+    width:100%;font-size:14px;font-weight:700;color:#fff;background:var(--brand);
+    border:none;border-radius:10px;padding:11px 0;cursor:pointer;margin-top:6px;
+  }
+  .pe-btn:hover{background:var(--brand-dk)}
+  .pe-btn:disabled{opacity:.55;cursor:default}
+  .pe-btn.secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+  .pe-btn.secondary:hover{background:#eee}
+  .pe-error{
+    font-size:12.5px;color:var(--red);background:var(--red-bg);border-radius:8px;
+    padding:9px 12px;margin-top:14px;display:none;line-height:1.6;
+  }
+
+  /* ── 에디터 화면 ── */
+  .pe-editor{display:none}
+  .pe-meta{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    margin-bottom:10px;font-size:12px;color:var(--text4);
+  }
+  .pe-meta b{color:var(--text3);font-weight:600}
+  textarea.pe-textarea{
+    width:100%;min-height:60vh;font-size:13.5px;line-height:1.75;color:var(--text);
+    font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+    border:1px solid var(--border);border-radius:12px;padding:18px;background:var(--surface);
+    resize:vertical;white-space:pre-wrap;
+  }
+  textarea.pe-textarea:focus{outline:none;border-color:var(--brand)}
+  .pe-msgfield{margin-top:14px}
+  .pe-msgfield input{
+    width:100%;font-size:13px;padding:10px 12px;border:1px solid var(--border);
+    border-radius:9px;background:var(--surface2);color:var(--text);font-family:inherit;
+  }
+  .pe-msgfield input:focus{outline:none;border-color:var(--brand);background:var(--surface)}
+  .pe-actions{display:flex;align-items:center;gap:10px;margin-top:16px}
+  .pe-actions .pe-btn{width:auto;padding:11px 22px}
+  .pe-status{margin-top:16px;font-size:13px;line-height:1.7}
+  .pe-status.ok{color:var(--brand-dk)}
+  .pe-status.err{color:var(--red)}
+  .pe-status a{color:var(--brand-dk);font-weight:700;text-decoration:none}
+  .pe-status a:hover{text-decoration:underline}
+
+  .pe-loading,.pe-fatal{
+    max-width:360px;margin:64px auto 0;text-align:center;
+    font-size:13.5px;color:var(--text3);
+  }
+  .pe-fatal{color:var(--red)}
+</style>
+</head>
+<body>
+
+  <div class="pe-header">
+    <div class="pe-header-inner">
+      <div>
+        <div class="pe-title">Prompt <span>Editor</span></div>
+        <div class="pe-title-file" id="peFileLabel">—</div>
+      </div>
+      <div class="pe-header-actions">
+        <button class="pe-logout" id="peLogoutBtn" style="display:none" onclick="peLogout()">로그아웃</button>
+        <button class="pe-close" onclick="window.close()" title="닫기">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="pe-wrap">
+
+    <div id="peFatal" class="pe-fatal" style="display:none"></div>
+
+    <!-- 로그인 -->
+    <div id="peLoginBox" class="pe-login-box" style="display:none">
+      <h2>관리자 로그인</h2>
+      <p>System Prompt 원문을 수정하려면 관리자 이메일/PW로 로그인하세요.<br>수정 내용은 즉시 반영되지 않고 GitHub PR로 생성되어 검토 후 머지됩니다.</p>
+      <form id="peLoginForm" onsubmit="return peLogin(event)">
+        <div class="pe-field">
+          <label for="peUser">관리자 이메일</label>
+          <input type="email" id="peUser" autocomplete="username email" required>
+        </div>
+        <div class="pe-field">
+          <label for="pePass">비밀번호</label>
+          <input type="password" id="pePass" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="pe-btn" id="peLoginBtn">로그인</button>
+      </form>
+      <div class="pe-error" id="peLoginErr"></div>
+    </div>
+
+    <!-- 에디터 -->
+    <div id="peEditor" class="pe-editor">
+      <div class="pe-meta">
+        <span><b id="peAdminName">—</b>님으로 로그인됨</span>
+        <span id="peLenLabel">0자</span>
+      </div>
+      <textarea class="pe-textarea" id="peContent" spellcheck="false"></textarea>
+      <div class="pe-msgfield">
+        <input type="text" id="peCommitMsg" placeholder="변경 사유 (PR 제목/본문에 들어갑니다 — 비워두면 기본 문구 사용)">
+      </div>
+      <div class="pe-actions">
+        <button class="pe-btn" id="peSaveBtn" onclick="peSave()">PR 생성</button>
+        <button class="pe-btn secondary" onclick="peReload()">새로고침</button>
+      </div>
+      <div class="pe-status" id="peStatus"></div>
+    </div>
+
+  </div>
+
+<script>
+  const WORKER_URL = 'https://gopang-proxy.tensor-city.workers.dev';
+
+  const params  = new URLSearchParams(location.search);
+  const peFile  = params.get('file') || '';
+
+  // 세션은 메모리에만 — 새로고침 시 재로그인 (관리자 도구이므로 의도된 동작)
+  let peToken = null;
+  let peSha   = null;
+
+  function $(id){ return document.getElementById(id); }
+
+  function peFatal(msg){
+    $('peFatal').style.display = 'block';
+    $('peFatal').textContent = msg;
+  }
+
+  function peAuthHeaders(){
+    return peToken ? { 'Authorization': 'Bearer ' + peToken } : {};
+  }
+
+  async function peLogin(ev){
+    ev.preventDefault();
+    const email = $('peUser').value.trim();
+    const password = $('pePass').value;
+    const btn = $('peLoginBtn');
+    const errEl = $('peLoginErr');
+    errEl.style.display = 'none';
+    btn.disabled = true; btn.textContent = '확인 중…';
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        errEl.textContent = data?.detail || '로그인에 실패했습니다.';
+        errEl.style.display = 'block';
+        return false;
+      }
+      peToken = data.token;
+      $('peAdminName').textContent = data.admin;
+      $('peLoginBox').style.display = 'none';
+      $('peLogoutBtn').style.display = 'inline-block';
+      $('peEditor').style.display = 'block';
+      await peLoadFile();
+    } catch (e) {
+      errEl.textContent = '서버에 연결할 수 없습니다: ' + e.message;
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = '로그인';
+    }
+    return false;
+  }
+
+  function peLogout(){
+    peToken = null; peSha = null;
+    $('peEditor').style.display = 'none';
+    $('peLogoutBtn').style.display = 'none';
+    $('peLoginBox').style.display = 'block';
+    $('peUser').value = ''; $('pePass').value = '';
+    $('peStatus').textContent = '';
+  }
+
+  async function peLoadFile(){
+    const statusEl = $('peStatus');
+    statusEl.className = 'pe-status';
+    statusEl.textContent = '불러오는 중…';
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/prompt?file=${encodeURIComponent(peFile)}`, {
+        headers: peAuthHeaders(),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.status === 401) { peLogout(); return; }
+      if (!res.ok || !data?.ok) {
+        statusEl.className = 'pe-status err';
+        statusEl.textContent = data?.detail || '파일을 불러오지 못했습니다.';
+        return;
+      }
+      peSha = data.sha;
+      $('peContent').value = data.content;
+      peUpdateLen();
+      statusEl.textContent = '';
+    } catch (e) {
+      statusEl.className = 'pe-status err';
+      statusEl.textContent = '서버에 연결할 수 없습니다: ' + e.message;
+    }
+  }
+
+  function peReload(){ peLoadFile(); }
+
+  function peUpdateLen(){
+    $('peLenLabel').textContent = $('peContent').value.length.toLocaleString() + '자';
+  }
+
+  async function peSave(){
+    const btn = $('peSaveBtn');
+    const statusEl = $('peStatus');
+    const content = $('peContent').value;
+    const message = $('peCommitMsg').value.trim();
+    if (!content.trim()) {
+      statusEl.className = 'pe-status err';
+      statusEl.textContent = '내용이 비어있습니다.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'PR 생성 중…';
+    statusEl.className = 'pe-status';
+    statusEl.textContent = '';
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...peAuthHeaders() },
+        body: JSON.stringify({ file: peFile, content, sha: peSha, message }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.status === 401) { peLogout(); return; }
+      if (!res.ok || !data?.ok) {
+        statusEl.className = 'pe-status err';
+        statusEl.textContent = data?.detail || 'PR 생성에 실패했습니다.';
+        return;
+      }
+      statusEl.className = 'pe-status ok';
+      statusEl.innerHTML = 'PR이 생성됐습니다 — <a href="' + data.pr_url + '" target="_blank" rel="noopener">' + data.pr_url + '</a><br>GitHub에서 검토 후 머지해야 실제 반영됩니다.';
+    } catch (e) {
+      statusEl.className = 'pe-status err';
+      statusEl.textContent = '서버에 연결할 수 없습니다: ' + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'PR 생성';
+    }
+  }
+
+  $('peContent') && $('peContent').addEventListener('input', peUpdateLen);
+
+  (function init(){
+    if (!peFile) {
+      peFatal('file 파라미터가 없습니다. 예: /pages/prompt-editor.html?file=prompts/SP-01_klaw_v1.0.txt');
+      return;
+    }
+    $('peFileLabel').textContent = peFile;
+    $('peLoginBox').style.display = 'block';
+  })();
+</script>
+
+</body>
+</html>
