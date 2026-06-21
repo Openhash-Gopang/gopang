@@ -381,6 +381,108 @@ async function _issueSession(guid, svc = 'gopang', level = 'L0') {
   }
 }
 
+// ── 백업 키 확인 여부(이 기기) ────────────────────────────
+const BACKUP_CONFIRMED_KEY = 'gopang_backup_confirmed_v1';
+export function _hasConfirmedBackup() {
+  try { return localStorage.getItem(BACKUP_CONFIRMED_KEY) === '1'; }
+  catch { return false; }
+}
+
+// ── 백업 키를 본인 이메일로 — mailto (서버를 거치지 않음) ──
+// 서버가 개인키를 보거나 보관하지 않도록, 발송은 전적으로 사용자 기기의
+// 메일 앱이 처리한다(mailto:). 키는 기기 → 사용자 본인 메일함으로만 이동한다.
+function _mailtoBackupKey(key, handle) {
+  const subject = encodeURIComponent('[혼디] 내 백업 키 — 안전하게 보관하세요');
+  const body = encodeURIComponent(
+    `혼디(Hondi) 계정 백업 키입니다.\n` +
+    (handle ? `계정: ${handle}\n` : '') +
+    `\n${key}\n\n` +
+    `이 키를 아는 사람은 누구나 이 계정이 될 수 있습니다.\n` +
+    `이 메일을 다른 사람에게 전달하거나 공개된 곳에 저장하지 마세요.\n` +
+    `기기를 분실했을 때, 새 기기의 설정 → 백업 키 화면에서 이 키를 입력하면 계정을 복구할 수 있습니다.`
+  );
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+}
+
+// ── 가입 직후 필수 백업 확인 단계 ─────────────────────────
+// v6.0: 이 단계를 건너뛸 방법이 없다(닫기/배경클릭 없음, _showPhonePopup과 동일
+// 패턴) — resolve()가 호출돼야만 _register()가 끝나고 가입이 "완료"된다.
+// 개인키는 서버 어디에도 사본이 없으므로, 사용자가 직접 백업해두지 않으면
+// 기기 분실 시 영구히 그 계정을 잃는다 — 이 위험을 가입 완료 조건으로 만든다.
+function _showMandatoryBackupStep(key, handle) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.id = '_backup-mandatory-overlay';
+    overlay.style.cssText = [
+      'position:fixed;inset:0;z-index:10004',
+      'background:rgba(0,0,0,0.6)',
+      'display:flex;align-items:center;justify-content:center',
+      'padding:24px;box-sizing:border-box',
+    ].join(';');
+
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:28px 22px;
+                  width:100%;max-width:380px;box-sizing:border-box">
+        <p style="font-weight:700;font-size:17px;margin:0 0 8px;color:#111827;text-align:center">
+          백업 키를 저장하세요
+        </p>
+        <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 16px;text-align:center">
+          이 키는 이 기기에만 있고, 혼디 서버에는 사본이 없습니다.<br>
+          <b>지금 저장하지 않으면, 이 기기를 잃었을 때 계정을 되찾을 방법이 없습니다.</b>
+        </p>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;
+             padding:12px;font-family:monospace;font-size:12px;word-break:break-all;
+             color:#111827;margin-bottom:12px">${key}</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button id="_bm_copy" style="flex:1;padding:11px;border:1px solid #e5e7eb;border-radius:8px;
+                  background:none;color:#16a34a;font-weight:600;cursor:pointer;font-size:13px">
+            복사
+          </button>
+          <button id="_bm_mail" style="flex:1;padding:11px;border:1px solid #e5e7eb;border-radius:8px;
+                  background:none;color:#16a34a;font-weight:600;cursor:pointer;font-size:13px">
+            이메일로 보내기
+          </button>
+        </div>
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin-bottom:16px">
+          <input type="checkbox" id="_bm_chk" style="width:16px;height:16px;margin-top:1px;accent-color:#16a34a;flex-shrink:0">
+          <span style="font-size:13px;color:#374151;line-height:1.5">이 키를 안전한 곳에 저장했습니다. 분실 시 계정을 복구할 수 없다는 점을 이해했습니다.</span>
+        </label>
+        <button id="_bm_continue" disabled
+          style="width:100%;padding:13px;border:none;border-radius:10px;
+                 background:#d1d5db;color:#fff;cursor:not-allowed;
+                 font-size:14px;font-weight:700;font-family:inherit;transition:background .15s">
+          계속하기
+        </button>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#_bm_copy').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(key);
+        const btn = overlay.querySelector('#_bm_copy');
+        btn.textContent = '복사됨';
+        setTimeout(() => { btn.textContent = '복사'; }, 1500);
+      } catch { alert('복사에 실패했습니다. 직접 길게 눌러 선택해 주세요.'); }
+    };
+    overlay.querySelector('#_bm_mail').onclick = () => _mailtoBackupKey(key, handle);
+
+    const chk = overlay.querySelector('#_bm_chk');
+    const continueBtn = overlay.querySelector('#_bm_continue');
+    chk.addEventListener('change', () => {
+      continueBtn.disabled = !chk.checked;
+      continueBtn.style.background = chk.checked ? '#16a34a' : '#d1d5db';
+      continueBtn.style.cursor = chk.checked ? 'pointer' : 'not-allowed';
+    });
+    continueBtn.onclick = () => {
+      if (!chk.checked) return;
+      try { localStorage.setItem(BACKUP_CONFIRMED_KEY, '1'); } catch {}
+      overlay.remove();
+      resolve();
+    };
+    // 의도적으로 닫기/배경클릭 핸들러를 두지 않음 — 확인 없이는 빠져나갈 수 없다.
+  });
+}
+
 // ── 백업 키 내보내기 (설정 화면에서 사용) ────────────────
 export async function _exportBackupKey() {
   const wallet = await _waitForWallet();
@@ -403,6 +505,10 @@ export async function _restoreFromBackupKey(privKeyB64u, guid = null, svc = 'gop
   }
   if (guid) wallet.setIdentity({ guid, handle: null });
   window.gopangWallet = wallet; // 싱글턴 교체 — 이후 서명은 전부 복원된 키로
+
+  // 백업 키를 직접 입력했다는 것 자체가 "이미 어딘가에 저장해 뒀다"는 증거다 —
+  // 이 기기에서 다시 백업 안내로 귀찮게 하지 않는다.
+  try { localStorage.setItem(BACKUP_CONFIRMED_KEY, '1'); } catch {}
 
   if (!guid) return { ok: true };
 
@@ -1167,6 +1273,15 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
         }
       } else {
         console.info('[가입][X25519] 키 등록 완료:', syncResult.publicKeyB64u?.slice(0, 16) + '...');
+      }
+
+      // 필수 백업 확인 — 체크박스를 누르기 전까지 가입이 "완료"되지 않는다.
+      // 개인키는 서버에 사본이 없으므로, 이 단계가 사실상 마지막 안전망이다.
+      const backupKey = await _exportBackupKey();
+      if (backupKey) {
+        await _showMandatoryBackupStep(backupKey, handle);
+      } else {
+        console.warn('[가입] 백업 키를 내보내지 못함 — 지갑 준비 지연 가능성. 확인 단계 생략.');
       }
 
       resolve(user);

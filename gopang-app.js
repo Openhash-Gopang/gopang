@@ -8,7 +8,7 @@
  */
 
 // ── Core ─────────────────────────────────────────────────
-import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, gopangAuth } from './src/gopang/core/auth.js';
+import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, gopangAuth, _hasConfirmedBackup } from './src/gopang/core/auth.js';
 import { loadSettings, CFG, saveSettings }     from './src/gopang/core/config.js';
 import { _USER, aiActive, setAiActive }        from './src/gopang/core/state.js';
 
@@ -73,6 +73,25 @@ while (!_isRegistered()) {
 // 이 줄에 도달했다는 것은 곧 _isRegistered() === true라는 뜻 — 이제 대화창을 공개한다.
 document.getElementById('gopang-auth-gate')?.remove();
 document.body.classList.add('gopang-authed');
+
+// v6.0: 백업 키를 아직 확인하지 않은 사용자에게 탭마다 경고 — 가입 직후 단계를
+// 거쳤다면 정상적으로는 뜨지 않지만, 이 업데이트 이전에 가입한 기존 사용자나
+// (지갑 준비 지연 등으로) 그 단계를 못 거친 경우를 위한 안전망이다. "나중에"는
+// 이 탭 안에서만 숨기고, 새 탭/새로고침에서는 다시 뜬다(sessionStorage).
+(function _maybeShowBackupWarn() {
+  if (!_isRegistered() || _hasConfirmedBackup()) return;
+  if (sessionStorage.getItem('gopang_backup_warn_dismissed')) return;
+  const banner = document.getElementById('backup-warn-banner');
+  if (!banner) return;
+  const installShowing = document.getElementById('install-banner')?.classList.contains('show')
+    || document.getElementById('ios-install-banner')?.classList.contains('show');
+  if (installShowing) banner.classList.add('below-install');
+  banner.classList.add('show');
+})();
+window.dismissBackupWarn = function() {
+  sessionStorage.setItem('gopang_backup_warn_dismissed', '1');
+  document.getElementById('backup-warn-banner')?.classList.remove('show');
+};
 
 // ════════════════════════════════════════════════════════
 // 2. 전역 노출 — import 완료 직후 동기 실행

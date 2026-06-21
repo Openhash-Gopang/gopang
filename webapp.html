@@ -695,6 +695,26 @@ select.setting-field{appearance:none;-webkit-appearance:none;
 .install-btn-primary{background:var(--green);color:#fff}
 .install-btn-dismiss{background:var(--chip-bg);color:var(--txt2);border:1px solid var(--border)}
 
+/* ── v6.0: 백업 키 미확인 경고 배너 — install-banner와 같은 패턴, 그 아래에 위치 ── */
+.backup-warn-banner{
+  position:fixed;top:calc(var(--safe-t)+8px);left:8px;right:8px;z-index:1999;
+  background:#fffbeb;border:1px solid #fde68a;border-radius:14px;
+  padding:12px 14px;display:none;align-items:center;gap:12px;
+  box-shadow:0 4px 20px rgba(0,0,0,.1);
+}
+.backup-warn-banner.show{display:flex}
+.backup-warn-banner.below-install{top:calc(var(--safe-t)+72px)}
+.backup-warn-icon{width:36px;height:36px;border-radius:8px;background:#fef3c7;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px}
+.backup-warn-text{flex:1}
+.backup-warn-title{font-size:13px;font-weight:700;color:#92400e;margin-bottom:2px}
+.backup-warn-sub{font-size:11px;color:#92400e;line-height:1.5;opacity:.85}
+.backup-warn-actions{display:flex;gap:6px;flex-shrink:0}
+.backup-warn-btn{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;
+  border:none;cursor:pointer;white-space:nowrap}
+.backup-warn-btn-primary{background:#f59e0b;color:#fff}
+.backup-warn-btn-dismiss{background:#fff;color:#92400e;border:1px solid #fde68a}
+
 /* ── AI 오버레이 카드 ── */
 .ai-overlay{
   position:fixed;inset:0;z-index:998;
@@ -837,6 +857,20 @@ select.setting-field{appearance:none;-webkit-appearance:none;
   </div>
   <div class="install-banner-actions">
     <button class="install-btn install-btn-dismiss" onclick="dismissIOSInstall()">확인</button>
+  </div>
+</div>
+
+<!-- v6.0: 백업 키 미확인 경고 — 탭을 새로 열 때마다(세션마다) 표시.
+     gopang-app.js가 _isRegistered() && !_hasConfirmedBackup()일 때만 .show를 붙인다. -->
+<div class="backup-warn-banner" id="backup-warn-banner">
+  <div class="backup-warn-icon">🔑</div>
+  <div class="backup-warn-text">
+    <div class="backup-warn-title">백업 키를 저장하지 않았습니다</div>
+    <div class="backup-warn-sub">기기를 잃으면 계정을 복구할 수 없습니다</div>
+  </div>
+  <div class="backup-warn-actions">
+    <button class="backup-warn-btn backup-warn-btn-primary" onclick="openBackupKey()">지금 저장</button>
+    <button class="backup-warn-btn backup-warn-btn-dismiss" onclick="dismissBackupWarn()">나중에</button>
   </div>
 </div>
 
