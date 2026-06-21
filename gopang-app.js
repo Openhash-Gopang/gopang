@@ -556,30 +556,32 @@ function _closeWelcome(ov) {
   }
 }
 
-// ── SW → 앱 메시지 수신 (소리 재생) ────────────────────────
+// ── TEST: SW → 앱 메시지 수신 — 조건 무시하고 무조건 강제 재생 + 진동 ──
+function _forcePlayTestSound(tag) {
+  console.info(`[TEST-SOUND] ${tag} 트리거됨 — 강제 재생 시도`);
+  try { if (navigator.vibrate) navigator.vibrate([300, 100, 300]); }
+  catch (e) { console.warn('[TEST-SOUND] vibrate 실패:', e.message); }
+  try {
+    const a = new Audio('/assets/sounds/ping.mp3');
+    a.volume = 1.0;
+    a.play()
+      .then(() => console.info(`[TEST-SOUND] ${tag} 재생 성공`))
+      .catch(e => console.warn(`[TEST-SOUND] ${tag} 재생 실패:`, e.name, e.message));
+  } catch (e) { console.warn('[TEST-SOUND] Audio 생성 실패:', e.message); }
+}
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data?.type === 'PLAY_SOUND') {
-      const sound = event.data.sound || localStorage.getItem('gopang_push_sound') || 'ping';
-      if (sound === 'none') return;
-      const audio = new Audio(`/assets/sounds/${sound}.mp3`);
-      audio.play().catch(() => {});
-    }
+    if (event.data?.type === 'PLAY_SOUND') _forcePlayTestSound('postMessage(PLAY_SOUND)');
   });
 }
 
-// ── 알림 클릭으로 새 창이 열린 경우 — URL 쿼리 파라미터로 전달된
-// 사운드 재생 (sw.js notificationclick이 새 창에는 postMessage 대신
-// ?playSound= 파라미터를 쓴다 — 새 창의 JS가 로드되기 전에 postMessage가
-// 도착해 사라지는 경쟁 상태를 피하기 위함). 재생 후 주소창에서 파라미터를
-// 제거해 새로고침/공유 시 다시 재생되지 않게 한다. ─────────────────
+// 알림 클릭으로 새 창이 열린 경우 — URL 쿼리 파라미터(?playSound=...) 존재
+// 여부만 보고 무조건 강제 재생 (sound 값/none 체크 등 조건 전부 제거)
 (() => {
   const params = new URLSearchParams(location.search);
-  const sound = params.get('playSound');
-  if (!sound) return;
-  if (sound !== 'none') {
-    new Audio(`/assets/sounds/${sound}.mp3`).play().catch(() => {});
-  }
+  if (!params.has('playSound')) return;
+  _forcePlayTestSound('URL ?playSound=');
   params.delete('playSound');
   const qs = params.toString();
   history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);

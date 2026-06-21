@@ -3,7 +3,7 @@
 // PWA 오프라인 지원 + 캐시 전략
 // ═══════════════════════════════════════════════════════════
 
-const CACHE_NAME    = 'gopang-20260621-1300';
+const CACHE_NAME    = 'gopang-20260621-1700';
 const CACHE_TIMEOUT = 5000; // 네트워크 타임아웃 5초
 
 // 설치 시 사전 캐시할 핵심 파일
@@ -174,6 +174,16 @@ self.addEventListener('push', (event) => {
   const isAiSetupSync   = tag.startsWith('gopang-ai-setup-');
   const isVersionUpdate = tag === 'gopang-version-update';
 
+  // ── TEST: push 도착 즉시(클릭 대기 없이) 열려있는 모든 탭에 강제
+  // 사운드 신호를 브로드캐스트한다 — 클릭 시점까지 기다리지 않고 도착
+  // 시점에 바로 소리가 나는지 확인하기 위한 단순화된 테스트 경로.
+  const _broadcastSound = clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    console.info('[TEST-SOUND] push 도착 — 열린 탭', list.length, '개에 브로드캐스트');
+    for (const client of list) {
+      client.postMessage({ type: 'PLAY_SOUND', sound: 'ping' });
+    }
+  });
+
   event.waitUntil(
     Promise.all([
       self.registration.showNotification(title, {
@@ -184,6 +194,7 @@ self.addEventListener('push', (event) => {
         data:  { url, sound },
         vibrate: [200, 100, 200],
       }),
+      _broadcastSound,
       (isAiSetupSync || isVersionUpdate)
         ? clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
             for (const client of list) {

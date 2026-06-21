@@ -209,15 +209,21 @@ export async function handleIncomingOffer(signal) {
     }
   }
 
-  // 수락 확인 — confirm()이 동기적으로 화면을 막으므로, 그 전에 먼저
-  // 소리부터 재생한다(설정에서 끈 경우 'none'이면 재생 안 함). 닫힌 상태의
-  // push 알림과는 완전히 별개 경로(Realtime/폴링)라 sw.js의 사운드 수정이
-  // 적용되지 않으므로 여기에 별도로 추가 — 활성 상태에서 소리가 전혀 안 나던
-  // 버그의 원인이었음.
-  const _incomingSound = localStorage.getItem('gopang_push_sound') || 'ping';
-  if (_incomingSound !== 'none') {
-    new Audio(`/assets/sounds/${_incomingSound}.mp3`).play().catch(() => {});
-  }
+  // ── TEST: 조건/설정 전부 무시하고 무조건 강제 재생 + 진동 ──────
+  // 디버깅 목적 — 소리가 전혀 안 난다는 신고에 따라, 코드가 실제로
+  // 실행되는지부터 확인하기 위해 단순화. 콘솔에 명시적 로그를 남겨
+  // chrome://inspect로 확인 가능하게 한다.
+  console.info('[TEST-SOUND] handleIncomingOffer 진입 — 강제 재생 시도');
+  try {
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+  } catch (e) { console.warn('[TEST-SOUND] vibrate 실패:', e.message); }
+  try {
+    const _a = new Audio('/assets/sounds/ping.mp3');
+    _a.volume = 1.0;
+    _a.play()
+      .then(() => console.info('[TEST-SOUND] 재생 성공'))
+      .catch(e => console.warn('[TEST-SOUND] 재생 실패:', e.name, e.message));
+  } catch (e) { console.warn('[TEST-SOUND] Audio 생성 실패:', e.message); }
 
   // 수락 확인
   const accepted = confirm(`📞 ${fromHandle}님의 연결 요청\n수락하시겠습니까?`);
