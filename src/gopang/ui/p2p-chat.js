@@ -209,31 +209,35 @@ export async function handleIncomingOffer(signal) {
     }
   }
 
-  // ── TEST: 조건/설정 전부 무시하고 무조건 강제 재생 + 진동 ──────
-  // 디버깅 목적 — 소리가 전혀 안 난다는 신고에 따라, 코드가 실제로
-  // 실행되는지부터 확인하기 위해 단순화. 콘솔에 명시적 로그를 남겨
-  // chrome://inspect로 확인 가능하게 한다.
-  console.info('[TEST-SOUND] handleIncomingOffer 진입 — 강제 재생 시도');
+  // ── 활성 상태 알림음 — <audio> 자동재생 대신 시스템 알림 사용 ──────
+  // <audio>.play()는 사용자 동작과 같은 호출 스택 안에서 일어나야만
+  // 허용되는 것으로 확인됨(탭으로 미리 풀어둬도 효과 없음, 콘솔 로그로
+  // 검증 — play() Promise가 사용자가 모달의 "확인"을 누르기 전까지
+  // pending 상태로 멈춰있다가 그 순간에야 resolve됨). 페이지 오디오
+  // 자동재생 정책이 아니라 알림 권한 체계를 타는 showNotification()을
+  // 쓰면 이 제약을 받지 않는다 — 닫힌 상태(push)에서 쓰던 것과 동일한
+  // 메커니즘을 활성 상태에서도 그대로 사용.
+  console.info('[TEST-SOUND] handleIncomingOffer 진입 — 시스템 알림으로 재생 시도');
+  try { if (navigator.vibrate) navigator.vibrate([300, 100, 300]); }
+  catch (e) { console.warn('[TEST-SOUND] vibrate 실패:', e.message); }
   try {
-    if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
-  } catch (e) { console.warn('[TEST-SOUND] vibrate 실패:', e.message); }
-  try {
-    // gopang-app.js에서 미리 만들어 잠금 해제해 둔 동일 인스턴스를
-    // 재사용한다(없으면 새로 생성해 폴백 — 단, 이 경우 자동재생이
-    // 막혀있을 수 있음).
-    const _a = window.__gopangSoundPool?.ping || new Audio('/assets/sounds/ping.mp3');
-    if (window.__gopangSoundPool?.ping) _a.currentTime = 0;
-    _a.volume = 1.0;
-    _a.play()
-      .then(() => console.info('[TEST-SOUND] 재생 성공'))
-      .catch(e => console.warn('[TEST-SOUND] 재생 실패:', e.name, e.message));
-  } catch (e) { console.warn('[TEST-SOUND] Audio 생성 실패:', e.message); }
+    if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification('혼디', {
+        body: `${fromHandle}님이 대화를 요청했습니다`,
+        icon: '/icons/icon-192.png',
+        tag:  'gopang-incoming-call',
+        vibrate: [300, 100, 300],
+        silent: false,
+      });
+      console.info('[TEST-SOUND] showNotification 호출 성공');
+    } else {
+      console.warn('[TEST-SOUND] 알림 권한 없음(permission:', Notification.permission, ') — showNotification 건너뜀');
+    }
+  } catch (e) { console.warn('[TEST-SOUND] showNotification 실패:', e.message); }
 
-  // 수락 확인 — confirm()은 메인 스레드를 동기적으로 막기 때문에, 그 직전에
-  // audio.play()를 호출해도 디코딩/재생 파이프라인이 confirm()이 닫히기
-  // 전까지 시작되지 않는다(실측: "수락하시겠습니까?"를 누르는 순간에야
-  // 소리가 들림 — 소리 자체는 동작하지만 발생 시점이 사용자 응답 이후로
-  // 밀리는 버그). 막지 않는 커스텀 모달로 교체해 이 문제를 해결한다.
+  // 수락 확인 — confirm()은 메인 스레드를 동기적으로 막기 때문에 막지
+  // 않는 커스텀 모달을 사용한다.
   const accepted = await _showIncomingCallModal(fromHandle);
   if (!accepted) return;
 
