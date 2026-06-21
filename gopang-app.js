@@ -556,39 +556,54 @@ function _closeWelcome(ov) {
   }
 }
 
-// ── TEST: SW → 앱 메시지 수신 — 조건 무시하고 무조건 강제 재생 + 진동 ──
-// ── 오디오 자동재생 잠금 해제 ─────────────────────────────────
-// 모바일 브라우저는 사용자 동작과 무관하게 발생한 audio.play() 호출을
-// 차단할 수 있다(WebSocket 메시지로 트리거된 알림 소리 등). 페이지에
-// 처음 손을 댄 순간(탭/클릭) 짧게 한 번 재생→정지하면, 이후 같은 세션
-// 안에서는 사용자 동작 없이 호출돼도 막히지 않는다. 알림 사운드로 쓰는
-// 4개 파일 전부를 한 번씩 잠금 해제해 둔다(어떤 걸 선택해도 안전하게).
+// ── 오디오 자동재생 잠금 해제 (인스턴스 재사용) ──────────────────
+// 모바일 브라우저의 자동재생 허용 여부는 "이 페이지가 사용자 동작으로
+// 미디어를 재생한 적이 있는가"뿐 아니라, 실무적으로는 동일 Audio
+// 인스턴스를 계속 재사용하는 편이 가장 안정적으로 동작한다. 매번
+// new Audio()로 새 인스턴스를 만들면 잠금 해제 효과가 새 인스턴스에는
+// 적용되지 않아 여전히 차단되는 사례가 있었다 — 그래서 사운드별로 하나의
+// Audio 인스턴스만 만들어 두고 이후 전부 그 인스턴스를 재사용한다.
+// window에 노출해 p2p-chat.js 등 다른 모듈에서도 같은 인스턴스를 쓴다.
+window.__gopangSoundPool = {};
+for (const _name of ['ping', 'chime', 'bell', 'drop']) {
+  window.__gopangSoundPool[_name] = new Audio(`/assets/sounds/${_name}.mp3`);
+}
+
 let _audioUnlocked = false;
 function _unlockAudioOnce() {
   if (_audioUnlocked) return;
   _audioUnlocked = true;
-  for (const name of ['ping', 'chime', 'bell', 'drop']) {
-    try {
-      const a = new Audio(`/assets/sounds/${name}.mp3`);
-      a.volume = 0.01;
-      a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
-    } catch (e) { /* 무시 */ }
+  for (const a of Object.values(window.__gopangSoundPool)) {
+    const prevVolume = a.volume;
+    a.volume = 0.01;
+    a.play().then(() => {
+      a.pause();
+      a.currentTime = 0;
+      a.volume = prevVolume;
+    }).catch(() => {});
   }
   console.info('[Audio] 첫 사용자 동작 — 자동재생 잠금 해제 시도 완료');
 }
 document.addEventListener('pointerdown', _unlockAudioOnce, { once: true, capture: true });
 
+// 풀에 있는 같은 인스턴스를 재사용해 재생한다(없으면 새로 생성해 폴백).
+function _playPooledSound(name) {
+  const a = window.__gopangSoundPool?.[name];
+  if (a) {
+    a.currentTime = 0;
+    a.volume = 1.0;
+    return a.play();
+  }
+  return new Audio(`/assets/sounds/${name}.mp3`).play();
+}
+
 function _forcePlayTestSound(tag) {
   console.info(`[TEST-SOUND] ${tag} 트리거됨 — 강제 재생 시도`);
   try { if (navigator.vibrate) navigator.vibrate([300, 100, 300]); }
   catch (e) { console.warn('[TEST-SOUND] vibrate 실패:', e.message); }
-  try {
-    const a = new Audio('/assets/sounds/ping.mp3');
-    a.volume = 1.0;
-    a.play()
-      .then(() => console.info(`[TEST-SOUND] ${tag} 재생 성공`))
-      .catch(e => console.warn(`[TEST-SOUND] ${tag} 재생 실패:`, e.name, e.message));
-  } catch (e) { console.warn('[TEST-SOUND] Audio 생성 실패:', e.message); }
+  _playPooledSound('ping')
+    .then(() => console.info(`[TEST-SOUND] ${tag} 재생 성공`))
+    .catch(e => console.warn(`[TEST-SOUND] ${tag} 재생 실패:`, e.name, e.message));
 }
 
 if ('serviceWorker' in navigator) {

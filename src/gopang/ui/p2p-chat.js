@@ -218,7 +218,11 @@ export async function handleIncomingOffer(signal) {
     if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
   } catch (e) { console.warn('[TEST-SOUND] vibrate 실패:', e.message); }
   try {
-    const _a = new Audio('/assets/sounds/ping.mp3');
+    // gopang-app.js에서 미리 만들어 잠금 해제해 둔 동일 인스턴스를
+    // 재사용한다(없으면 새로 생성해 폴백 — 단, 이 경우 자동재생이
+    // 막혀있을 수 있음).
+    const _a = window.__gopangSoundPool?.ping || new Audio('/assets/sounds/ping.mp3');
+    if (window.__gopangSoundPool?.ping) _a.currentTime = 0;
     _a.volume = 1.0;
     _a.play()
       .then(() => console.info('[TEST-SOUND] 재생 성공'))
