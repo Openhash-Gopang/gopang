@@ -56,4 +56,4 @@ STEP C — 확신도 산출·자기검증
 ## PDV 기록
 - svc: 'klaw'
 - 판결문, 확신도, 사건 유형 Supabase klaw_cases + klaw_sessions 저장
-- user.ipv6 기반 PDV 자동 보고
+- user.ipv6 기반 PDV 자동 보고.
