@@ -2653,7 +2653,10 @@ async function _sendPushToGuid(env, guid, { title, body, tag, url }) {
     console.warn('[Push] L1 조회 실패:', e.message);
     return;
   }
-  if (!record?.push_subscription) return;
+  if (!record?.push_subscription) {
+    console.warn('[Push] push_subscription 없음 — 구독 안 된 계정, 발송 건너뜀. guid:', guid);
+    return;
+  }
 
   const payload = JSON.stringify({
     title, body, tag,
