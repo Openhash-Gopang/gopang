@@ -2600,10 +2600,13 @@ async function _sendWebPush(env, subscription, payload) {
     },
     body,
   });
-  if (!res.ok && res.status !== 201) {
+  const ok = res.ok || res.status === 201;
+  if (ok) {
+    console.info('[Push] 발송 성공:', res.status, subscription.endpoint?.slice(0, 60));
+  } else {
     console.warn('[Push] 발송 실패:', res.status, await res.text().catch(() => ''));
   }
-  return res.ok || res.status === 201;
+  return ok;
 }
 
 // VAPID JWT 생성
@@ -2666,6 +2669,7 @@ async function _sendPushToGuid(env, guid, { title, body, tag, url }) {
 
   try {
     const sub = JSON.parse(record.push_subscription);
+    console.info('[Push] 발송 시도:', guid, sub.endpoint?.slice(0, 50));
     await _sendWebPush(env, sub, payload);
   } catch(e) {
     console.warn('[Push] _sendPushToGuid 실패:', e.message);
