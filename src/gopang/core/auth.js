@@ -1399,6 +1399,9 @@ export async function _deviceFullReset() {
   const stored = _loadStored();
   const guid   = stored?.ipv6;
 
+  let serverDeleteOk = false;
+  let serverErrorMsg = '';
+
   if (guid) {
     // 서버 전체 삭제 — Worker가 L1·Supabase·KV 일괄 처리
     try {
@@ -1417,10 +1420,42 @@ export async function _deviceFullReset() {
         body:    JSON.stringify(resetBody),
       });
       const data = await res.json().catch(() => ({}));
-      console.info('[Reset] 서버 삭제 완료:', data.results || data);
+
+      if (res.ok && data?.ok) {
+        // HTTP 200이어도 results 안의 개별 테이블이 'error:...'로 실패했을 수 있음
+        const failedTables = Object.entries(data.results || {})
+          .filter(([, v]) => typeof v === 'string' && v.startsWith('error:'))
+          .map(([k]) => k);
+        if (failedTables.length === 0) {
+          serverDeleteOk = true;
+          console.info('[Reset] 서버 삭제 완료:', data.results);
+        } else {
+          serverErrorMsg = `일부 항목 삭제 실패: ${failedTables.join(', ')}`;
+          console.warn('[Reset] 서버 일부 삭제 실패:', data.results);
+        }
+      } else {
+        serverErrorMsg = data?.message || `HTTP ${res.status}`;
+        console.warn('[Reset] 서버 삭제 실패:', res.status, data);
+      }
     } catch(e) {
-      console.warn('[Reset] 서버 삭제 실패 (로컬은 계속 진행):', e.message);
+      serverErrorMsg = e.message;
+      console.warn('[Reset] 서버 삭제 요청 실패:', e.message);
     }
+  } else {
+    serverErrorMsg = 'guid 없음 (로컬에 등록 정보가 없음)';
+  }
+
+  // 서버 삭제가 확인되지 않았다면, 모르고 넘어가지 않도록 명시적으로 경고하고
+  // 사용자가 직접 선택하게 한다 — 예전에는 여기서 조용히 로컬만 지우고 진행했음
+  if (!serverDeleteOk) {
+    const proceedAnyway = confirm(
+      `⚠️ 서버 삭제가 완료되지 않았습니다 (${serverErrorMsg || '알 수 없는 오류'}).\n\n` +
+      '이대로 진행하면 이 기기의 기록만 지워지고 서버에는 계정이 그대로 남아,\n' +
+      '다음 접속 시 "백업 키 입력" 화면이 다시 나타날 수 있습니다.\n\n' +
+      '그래도 이 기기의 로컬 데이터만 초기화하시겠습니까?\n' +
+      '("취소"를 누르면 아무것도 삭제하지 않고 그대로 종료합니다.)'
+    );
+    if (!proceedAnyway) return;
   }
 
   // 스마트폰/PC 로컬 전체 삭제
