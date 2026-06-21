@@ -204,7 +204,7 @@ self.addEventListener('notificationclick', (event) => {
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       // 이미 열린 창이 있으면 포커스
       for (const client of list) {
-        if (client.url.includes('gopang.net') && 'focus' in client) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
           client.postMessage({ type: 'PLAY_SOUND', sound });
           return client.focus();
         }
