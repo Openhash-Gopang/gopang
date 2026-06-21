@@ -568,6 +568,23 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// ── 알림 클릭으로 새 창이 열린 경우 — URL 쿼리 파라미터로 전달된
+// 사운드 재생 (sw.js notificationclick이 새 창에는 postMessage 대신
+// ?playSound= 파라미터를 쓴다 — 새 창의 JS가 로드되기 전에 postMessage가
+// 도착해 사라지는 경쟁 상태를 피하기 위함). 재생 후 주소창에서 파라미터를
+// 제거해 새로고침/공유 시 다시 재생되지 않게 한다. ─────────────────
+(() => {
+  const params = new URLSearchParams(location.search);
+  const sound = params.get('playSound');
+  if (!sound) return;
+  if (sound !== 'none') {
+    new Audio(`/assets/sounds/${sound}.mp3`).play().catch(() => {});
+  }
+  params.delete('playSound');
+  const qs = params.toString();
+  history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+})();
+
 // ── 사용자 등록 안내 팝업 (한국 사용자 전화번호 안내) ───────────
 function _showRegisterGuide() {
   const ov = document.createElement('div');

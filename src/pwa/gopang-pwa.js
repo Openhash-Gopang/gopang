@@ -14,10 +14,9 @@ if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
       console.log('[PWA] SW 등록 완료:', reg.scope);
 
-      // 서버 push 즉시 반응 — 배포 시 push로 받는 CHECK_FOR_UPDATE,
-      // 알림 클릭 시 받는 PLAY_SOUND를 처리한다.
-      // (지금까지 sw.js는 두 메시지를 모두 보내고 있었지만 받는 쪽 리스너가
-      //  전혀 없어 둘 다 무반응이었음 — 알림 사운드 미재생 버그의 원인)
+      // 서버 push 즉시 반응 — 배포 시 push로 받는 CHECK_FOR_UPDATE를 처리한다.
+      // (PLAY_SOUND는 gopang-app.js에서 처리한다 — 예전에는 이 파일에도
+      //  동일 리스너가 있어 사운드가 두 번 겹쳐 재생되는 버그가 있었음)
       navigator.serviceWorker.addEventListener('message', (event) => {
         const msgType = event.data?.type;
         if (msgType === 'CHECK_FOR_UPDATE') {
@@ -25,9 +24,6 @@ if ('serviceWorker' in navigator) {
           reg.update().then(() => {
             if (reg.waiting && navigator.serviceWorker.controller) _autoApplyUpdate(reg);
           }).catch(() => {});
-        } else if (msgType === 'PLAY_SOUND') {
-          const sound = event.data.sound || 'ping';
-          if (sound !== 'none') new Audio('/assets/sounds/' + sound + '.mp3').play().catch(() => {});
         }
       });
 
