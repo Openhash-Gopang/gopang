@@ -2507,18 +2507,102 @@ async function handlePushSend(request, env, corsHeaders) {
 }
 
 // Web Push 전송 (VAPID)
+// ── Web Push 페이로드 암호화 (RFC 8291 aes128gcm) ──────────────
+// 브라우저 푸시 서비스(FCM 등)는 암호화되지 않은 페이로드를 사양 위반으로
+// 거부한다 — 이 암호화 없이는 구독·VAPID가 다 정상이어도 실제 발송이
+// 매번 조용히 실패한다(닫힌 상태에서 알림이 아예 안 오던 근본 원인).
+function _concatBytes(...arrays) {
+  const total = arrays.reduce((n, a) => n + a.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const a of arrays) { out.set(a, offset); offset += a.length; }
+  return out;
+}
+
+async function _hmacSha256(keyBytes, data) {
+  const key = await crypto.subtle.importKey(
+    'raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, data));
+}
+
+async function _encryptWebPushPayload(payloadStr, p256dhB64u, authB64u) {
+  const ua_public   = _b64uToBytes(p256dhB64u);   // 65바이트 비압축 EC 포인트(구독자)
+  const auth_secret = _b64uToBytes(authB64u);     // 16바이트
+
+  // 1) 발신 서버용 임시(message마다 새로) ECDH 키쌍
+  const asKeyPair = await crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']
+  );
+  const as_public = new Uint8Array(await crypto.subtle.exportKey('raw', asKeyPair.publicKey));
+
+  // 2) 구독자 공개키 import + ECDH 공유 비밀
+  const uaPublicKey = await crypto.subtle.importKey(
+    'raw', ua_public, { name: 'ECDH', namedCurve: 'P-256' }, false, []
+  );
+  const ecdhSecret = new Uint8Array(await crypto.subtle.deriveBits(
+    { name: 'ECDH', public: uaPublicKey }, asKeyPair.privateKey, 256
+  ));
+
+  // 3) HKDF 1단계 — auth_secret을 salt로 PRK_key 도출 → IKM' 도출
+  const keyInfo = _concatBytes(
+    new TextEncoder().encode('WebPush: info\0'), ua_public, as_public
+  );
+  const prkKey = await _hmacSha256(auth_secret, ecdhSecret);
+  const ikm    = (await _hmacSha256(prkKey, _concatBytes(keyInfo, new Uint8Array([1])))).slice(0, 32);
+
+  // 4) 메시지별 salt(16바이트 랜덤) + HKDF 2단계 — CEK, NONCE 도출
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const prk  = await _hmacSha256(salt, ikm);
+
+  const cekInfo = new TextEncoder().encode('Content-Encoding: aes128gcm\0');
+  const cek = (await _hmacSha256(prk, _concatBytes(cekInfo, new Uint8Array([1])))).slice(0, 16);
+
+  const nonceInfo = new TextEncoder().encode('Content-Encoding: nonce\0');
+  const nonce = (await _hmacSha256(prk, _concatBytes(nonceInfo, new Uint8Array([1])))).slice(0, 12);
+
+  // 5) 평문 + 레코드 구분자(0x02, 단일 레코드라 패딩 없음) + AES-128-GCM
+  const plaintext  = new TextEncoder().encode(payloadStr);
+  const padded     = _concatBytes(plaintext, new Uint8Array([2]));
+  const cekKey     = await crypto.subtle.importKey('raw', cek, { name: 'AES-GCM' }, false, ['encrypt']);
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: nonce }, cekKey, padded
+  ));
+
+  // 6) RFC 8188 aes128gcm 본문 헤더: salt(16) | rs(4, big-endian) | idlen(1) | keyid(as_public)
+  // rs는 레코드 크기 상한값 — 단일 레코드이므로 고정값 4096이면 충분(웹푸시 페이로드는 항상 작음)
+  const recordSize = new Uint8Array(4);
+  new DataView(recordSize.buffer).setUint32(0, 4096, false);
+  const header = _concatBytes(salt, recordSize, new Uint8Array([as_public.length]), as_public);
+
+  return _concatBytes(header, ciphertext);
+}
+
 async function _sendWebPush(env, subscription, payload) {
+  const p256dh = subscription.keys?.p256dh;
+  const auth   = subscription.keys?.auth;
+  if (!p256dh || !auth) {
+    console.warn('[Push] 구독에 p256dh/auth 없음 — 암호화 불가, 발송 건너뜀');
+    return false;
+  }
+
+  const body = await _encryptWebPushPayload(payload, p256dh, auth);
   const vapidHeaders = await _buildVapidHeaders(env, subscription.endpoint);
+
   const res = await fetch(subscription.endpoint, {
     method:  'POST',
     headers: {
       ...vapidHeaders,
-      'Content-Type':  'application/octet-stream',
-      'Content-Length': payload.length.toString(),
+      'Content-Type':     'application/octet-stream',
+      'Content-Encoding': 'aes128gcm',
+      'Content-Length':   body.length.toString(),
       'TTL': '60',
     },
-    body: new TextEncoder().encode(payload),
+    body,
   });
+  if (!res.ok && res.status !== 201) {
+    console.warn('[Push] 발송 실패:', res.status, await res.text().catch(() => ''));
+  }
   return res.ok || res.status === 201;
 }
 
@@ -2549,7 +2633,7 @@ async function _buildVapidHeaders(env, endpoint) {
   const jwt    = `${sigInput}.${sigB64}`;
 
   return {
-    'Authorization': `vapid t=${jwt},k=${env.VAPID_PUBLIC_KEY}`,
+    'Authorization': `vapid t=${jwt}, k=${env.VAPID_PUBLIC_KEY}`,
   };
 }
 
