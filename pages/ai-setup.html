@@ -73,10 +73,12 @@
       <div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;background:var(--surface)">
         <input id="_setup_key" type="password" placeholder="sk-or-v1-..."
           style="flex:1;padding:12px 14px;border:none;outline:none;font-size:14px;font-family:inherit;min-width:0;background:transparent;color:var(--text)">
+        <button id="_setup_key_paste" type="button" title="클립보드에서 붙여넣기"
+          style="padding:0 12px;height:46px;border:none;background:transparent;cursor:pointer;border-left:1px solid var(--border);flex-shrink:0;font-size:12.5px;color:var(--brand-dk);font-weight:600;white-space:nowrap">📋 붙여넣기</button>
         <button id="_setup_key_toggle" type="button"
           style="padding:0 14px;height:46px;border:none;background:transparent;cursor:pointer;border-left:1px solid var(--border);flex-shrink:0">👁</button>
       </div>
-      <p style="font-size:11.5px;color:var(--text4);margin-top:6px">🔒 이 키는 이 기기의 브라우저에만 존재하며, 즉시 암호화되어 전송됩니다. 평문은 저장되지 않습니다.</p>
+      <p id="_setup_key_msg" style="font-size:11.5px;color:var(--text4);margin-top:6px">🔒 이 키는 이 기기의 브라우저에만 존재하며, 즉시 암호화되어 전송됩니다. 평문은 저장되지 않습니다.</p>
     </div>
 
     <!-- 시스템 프롬프트 -->
@@ -151,6 +153,9 @@ import { buildLiveFreeModelPool } from '../src/gopang/core/free-model-pool.js';
   const statusBox      = document.getElementById('_setup_status_box');
   const keyInput       = document.getElementById('_setup_key');
   const keyToggle      = document.getElementById('_setup_key_toggle');
+  const keyPasteBtn    = document.getElementById('_setup_key_paste');
+  const keyMsg         = document.getElementById('_setup_key_msg');
+  const keyMsgDefault  = keyMsg.textContent;
   const sysPromptInput = document.getElementById('_setup_sysprompt');
   const addBtn         = document.getElementById('_setup_add');
   const sentModal      = document.getElementById('_setup_sent_modal');
@@ -218,6 +223,45 @@ import { buildLiveFreeModelPool } from '../src/gopang/core/free-model-pool.js';
   keyToggle.onclick = () => {
     keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
   };
+
+  // ── 클립보드 붙여넣기 ──────────────────────────────────────
+  // 페이지가 스스로 클립보드를 자동으로 읽을 수는 없다(보안 정책상
+  // 직접적인 사용자 클릭 안에서만 navigator.clipboard.readText() 허용).
+  // 한 번의 클릭으로 끝나는 버튼이 현실적인 최선이다.
+  keyPasteBtn.onclick = async () => {
+    keyMsg.style.color = '';
+    if (!navigator.clipboard?.readText) {
+      keyMsg.textContent = '이 브라우저는 자동 붙여넣기를 지원하지 않습니다. Ctrl+V로 직접 붙여넣어 주세요.';
+      keyMsg.style.color = 'var(--red)';
+      keyInput.focus();
+      return;
+    }
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (!text) {
+        keyMsg.textContent = '클립보드가 비어 있습니다. OpenRouter에서 키를 먼저 복사해 주세요.';
+        keyMsg.style.color = 'var(--red)';
+        return;
+      }
+      keyInput.value = text;
+      keyInput.type = 'text';
+      if (text.startsWith('sk-or-')) {
+        keyMsg.textContent = '✅ 클립보드에서 키를 가져왔습니다.';
+        keyMsg.style.color = 'var(--brand-dk)';
+      } else {
+        keyMsg.textContent = '⚠️ 클립보드 내용이 sk-or-로 시작하지 않습니다. 올바른 키인지 확인해 주세요.';
+        keyMsg.style.color = 'var(--red)';
+      }
+    } catch (e) {
+      keyMsg.textContent = '클립보드 접근이 거부되었습니다. Ctrl+V로 직접 붙여넣어 주세요.';
+      keyMsg.style.color = 'var(--red)';
+      keyInput.focus();
+    }
+  };
+  keyInput.addEventListener('input', () => {
+    keyMsg.textContent = keyMsgDefault;
+    keyMsg.style.color = '';
+  });
 
   // ── 전송 ──
   addBtn.onclick = async () => {
