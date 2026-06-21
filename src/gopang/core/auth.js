@@ -1308,12 +1308,10 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
       // (가입 완료를 막지 않도록 resolve 이후 비동기로 처리)
       requestPushSubscription(ipv6).then(pushResult => {
         if (!document.getElementById('message-list')) return; // 화면 전환 전이면 조용히 스킵
-        if (pushResult.ok) {
-          appendBubble('ai', '🔔 알림이 활성화되었습니다. PC에서 AI 키를 보내면 실시간으로 알려드릴게요.');
-        } else if (pushResult.reason === 'permission_denied') {
+        if (pushResult.reason === 'permission_denied') {
           appendBubble('ai', '🔔 알림 권한이 꺼져 있어요. PC에서 보낸 메시지를 실시간으로 받으려면 브라우저 설정 → 알림에서 고팡을 허용해 주세요.');
         }
-        // unsupported/guid_missing 등은 사용자가 할 수 있는 게 없으므로 조용히 무시
+        // 성공 시에는 별도 안내 없음(환영 메시지로 충분) — unsupported/guid_missing 등도 조용히 무시
       }).catch(() => {});
 
     } catch(e) {

@@ -1,6 +1,6 @@
 /**
  * ui/welcome.js — 초기 환영 메시지
- * - 모든 사용자: nickname + handle 표시
+ * - 모든 사용자: nickname 표시
  * - 잔액은 표시 안 함 (사용자 요청 시 응답)
  */
 import { appendBubble } from './bubble.js';
@@ -27,10 +27,9 @@ export function _showWelcomeMessage() {
   bubble.style.whiteSpace = 'nowrap';
 
   const nickname = _USER?.nickname || _USER?.name || '';
-  const handle   = _USER?.handle   || '';
 
   bubble.innerHTML = nickname
-    ? `안녕하세요, ${nickname}님 (${handle})`
+    ? `안녕하세요, ${nickname}님.`
     : '안녕하세요.';
 
   row.appendChild(bubble);
@@ -49,7 +48,7 @@ export function _showWelcomeMessage() {
     const guideBubble = document.createElement('div');
     guideBubble.className = 'bubble bubble-ai';
     guideBubble.textContent =
-      '사용자를 검색하여, 대화를 시작하십시오. 상단 AI 버튼으로 귀하 만의 AI 비서를 생성 및 훈련할 수 있습니다.';
+      "'나만의 AI 비서'를 설정하십시오. 오른쪽 위 AI 토글을 터치하면, 설정 방법을 자세히 안내합니다. PC에서 혼디넷에 접속하면, 안내 페이지를 편리하게 보실 수 있습니다('AI 비서 설정 가이드' 버튼).";
 
     guideRow.appendChild(guideBubble);
     list.appendChild(guideRow);
