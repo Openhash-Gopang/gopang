@@ -1275,7 +1275,19 @@ async function handleOpenhashStatus(request, env, corsHeaders) {
     L4: 'https://openhash-gopang.github.io/openhash-L4-kr/chain_status.json',
     L5: 'https://openhash-gopang.github.io/openhash-L5-global/chain_status.json',
   };
-  const TIMESTAMP_FRESH_MS = 5 * 60 * 1000;
+  // 계층별 타임스탬프 신선도 임계값 (논문 §4.3 주기 기반)
+  // L1: 실시간 100% 스트리밍 → 5분
+  // L2: 10분 주기 → 15분 (여유 50%)
+  // L3: 30분 주기 → 45분
+  // L4: 1시간 주기 → 90분
+  // L5: 1시간 주기 → 90분
+  const STALENESS_THRESHOLDS = {
+    L1:  5 * 60,      // 300초
+    L2: 15 * 60,      // 900초
+    L3: 45 * 60,      // 2700초
+    L4: 90 * 60,      // 5400초
+    L5: 90 * 60,      // 5400초
+  };
 
   async function fetchOne(l) {
     const url = LAYER_STATUS_URLS[l];
@@ -1286,6 +1298,8 @@ async function handleOpenhashStatus(request, env, corsHeaders) {
       const now = Date.now();
       const lastMs = raw.last_verified ? new Date(raw.last_verified).getTime() : 0;
       const staleMs = now - lastMs;
+      const staleThresholdSec = STALENESS_THRESHOLDS[l] ?? 300;
+      const isStale = lastMs > 0 && staleMs > staleThresholdSec * 1000;
       return {
         layer:          l,
         fetched:        true,
@@ -1297,11 +1311,12 @@ async function handleOpenhashStatus(request, env, corsHeaders) {
         openhash_tx:    raw.openhash_tx,
         last_verified:  raw.last_verified,
         staleness_sec:  Math.round(staleMs / 1000),
-        timestamp_stale: lastMs > 0 && staleMs > TIMESTAMP_FRESH_MS,
+        staleness_threshold_sec: staleThresholdSec,
+        timestamp_stale: isStale,
         audit: {
           hashChainBreak:   raw.chain_valid === false,
           bivmViolation:    raw.ilmv_status === 'VIOLATION',
-          timestampStale:   lastMs > 0 && staleMs > TIMESTAMP_FRESH_MS,
+          timestampStale:   isStale,
           signatureFailure: raw.ilmv_status === 'SIGNATURE_FAILURE',
           errorRate:        raw.openhash_tx === 'FAILED' ? 1.0 : 0,
         },
@@ -1325,13 +1340,15 @@ async function handleOpenhashStatus(request, env, corsHeaders) {
 
   // 전체 상태 요약
   const allFetched = Object.values(results).filter(r => r.fetched);
-  const anyIssue   = allFetched.some(r =>
+  // summary: 치명적 이슈(체인단절/BIVM/서명실패)와 경고(타임스탬프)를 분리
+  const criticalIssue = allFetched.some(r =>
     r.audit?.hashChainBreak || r.audit?.bivmViolation || r.audit?.signatureFailure
   );
+  const staleWarning = allFetched.some(r => r.audit?.timestampStale);
 
   return new Response(JSON.stringify({
     ok:        true,
-    summary:   anyIssue ? 'ISSUE_DETECTED' : 'NORMAL',
+    summary:   criticalIssue ? 'ISSUE_DETECTED' : staleWarning ? 'STALE_WARNING' : 'NORMAL',
     queried_at: new Date().toISOString(),
     layers:    results,
   }, null, 2), { status: 200, headers: corsHeaders });
