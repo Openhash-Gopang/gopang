@@ -1,14 +1,23 @@
 /**
  * @file importanceVerifier.js
  * @description 중요도 기반 적응형 무결성 검증 (경량·표준·강화 모드)
- * @version 1.0.0
+ * @version 2.0.0
  * @author AI City Inc.
  *
- * 근거: OpenHash SCI 논문 §4.6 (C5 기여)
- *   - score < 30  → 경량 모드
- *   - 30 ≤ score < 60 → 표준 모드
- *   - score ≥ 60  → 강화 모드 (zk-SNARKs + TEE + 슬래싱)
- *   - 강화 모드 대상: 전체의 5~10% 미만 (§6.8 실측)
+ * 근거: OpenHash SCI 논문 §4.1, §4.6 (C5 기여)
+ *
+ * 점수 공식:
+ *   score = w1·f_amount + w2·f_type + w3·f_contract
+ *   w1=0.5, w2=0.3, w3=0.2
+ *   f_amount(v)    = min(v / V_REF, 1.0) × 100     (V_REF=100,000 GDC)
+ *   f_type(a)      : stable=1.0, physical=0.8, point=0.3
+ *   f_contract(c)  : escrow=1.0, conditional=0.8, instant=0.5
+ *
+ * 임계값:
+ *   score < 25  → 경량 모드
+ *   25 ≤ score < 60 → 표준 모드
+ *   score ≥ 60  → 강화 모드 (zk-SNARKs + TEE + 슬래싱)
+ *   강화 모드 대상: 전체의 5~10% 미만 (§6.8 실측)
  */
 
 import { IMPORTANCE } from '../core/constants.js'
@@ -20,35 +29,33 @@ export const MODE = Object.freeze({
 })
 
 /**
- * 거래 중요도 점수 계산
+ * 거래 중요도 점수 계산 (논문 §4.1 공식)
+ *
  * @param {Object} tx
- * @param {number} tx.amount      - 거래 금액
- * @param {string} tx.type        - 'message'|'financial'|'legal'|'government'
- * @param {boolean} tx.crossBorder - 국경 간 거래 여부
+ * @param {number}  tx.amount        - 거래 금액 (GDC)
+ * @param {string}  tx.assetType     - 'stable'|'physical'|'point'  (f_type 입력)
+ * @param {string}  tx.contractType  - 'instant'|'conditional'|'escrow' (f_contract 입력)
+ * @param {number} [vRef]            - f_amount 정규화 기준 (기본: IMPORTANCE.V_REF)
  * @returns {number} 0~100 점수
  */
-export function calculateImportanceScore(tx) {
-  let score = 0
+export function calculateImportanceScore(tx, vRef = IMPORTANCE.V_REF) {
+  const { amount = 0, assetType = 'stable', contractType = 'instant' } = tx
 
-  // 금액 기준 (0~50점)
-  if (tx.amount >= 100_000_000) score += 50       // 1억 이상
-  else if (tx.amount >= 10_000_000) score += 35   // 1000만 이상
-  else if (tx.amount >= 1_000_000) score += 20    // 100만 이상
-  else if (tx.amount >= 100_000) score += 10      // 10만 이상
+  // f_amount: 금액 요소 (0~100)
+  const fAmount = Math.min(amount / vRef, 1.0) * 100
 
-  // 유형 기준 (0~30점)
-  const typeScore = {
-    government: 30,
-    legal:      25,
-    financial:  20,
-    message:     0,
-  }
-  score += typeScore[tx.type] ?? 0
+  // f_type: 자산 유형 계수
+  const fType = IMPORTANCE.F_TYPE[assetType] ?? IMPORTANCE.F_TYPE.stable
 
-  // 국경 간 거래 (0~20점)
-  if (tx.crossBorder) score += 20
+  // f_contract: 계약 구조 계수
+  const fContract = IMPORTANCE.F_CONTRACT[contractType] ?? IMPORTANCE.F_CONTRACT.instant
 
-  return Math.min(score, 100)
+  // 가중 합산
+  return (
+    IMPORTANCE.W_AMOUNT   * fAmount +
+    IMPORTANCE.W_TYPE     * fType   +
+    IMPORTANCE.W_CONTRACT * fContract
+  )
 }
 
 /**
@@ -65,7 +72,7 @@ export function selectMode(score) {
 /**
  * 모드별 검증 실행
  * @param {Object} tx
- * @param {string} mode
+ * @param {string} [mode] - 생략 시 calculateImportanceScore + selectMode로 자동 결정
  * @returns {Promise<{ mode: string, score: number, passed: boolean, details: Object }>}
  */
 export async function verify(tx, mode) {
@@ -86,7 +93,7 @@ export async function verify(tx, mode) {
 
 // ── 경량 모드 ─────────────────────────────────────────────────────────────
 async function _lightweight(tx, score) {
-  // 기본 서명 검증만 수행
+  // 기본 서명 검증만 수행 (ILMV 스트리밍 100%는 계층 노드 책임)
   return { mode: MODE.LIGHTWEIGHT, score, passed: true, details: { checks: ['signature'] } }
 }
 
@@ -103,13 +110,14 @@ async function _standard(tx, score) {
 async function _enhanced(tx, score) {
   // zk-SNARKs + TEE + 스테이킹/슬래싱
   // Phase 2B: 서킷 기본 구조만 구현 (실제 증명은 추후)
-  console.log(`[ImportanceVerifier] 강화 모드 적용: score=${score}`)
+  console.log(`[ImportanceVerifier] 강화 모드 적용: score=${score.toFixed(2)}`)
   return {
     mode: MODE.ENHANCED, score, passed: true,
     details: {
-      checks:   ['signature', 'bivm', 'ilmv', 'zk-snarks', 'tee', 'slashing'],
-      zkProof:  'pending',   // Phase 5에서 실제 구현
+      checks:    ['signature', 'bivm', 'ilmv', 'zk-snarks', 'tee', 'slashing'],
+      zkProof:   'pending',   // Phase 5에서 실제 구현
       teeAttest: 'pending',
     },
   }
 }
+

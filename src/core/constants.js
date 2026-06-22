@@ -98,11 +98,44 @@ export const LPBFT = Object.freeze({
 })
 
 // ── 중요도 기반 적응형 검증 임계값 ────────────────────────────────────────
-// 근거: OpenHash SCI 논문 §4.6
+// 근거: OpenHash SCI 논문 §4.1, §4.6 (C5 기여)
+//
+// 점수 공식: score = w1·f_amount + w2·f_type + w3·f_contract
+//   w1=0.5, w2=0.3, w3=0.2
+//   f_amount   = min(amount / V_REF, 1.0) × 100  (V_REF=100,000 GDC)
+//   f_type     : stable=1.0, physical=0.8, point=0.3
+//   f_contract : escrow=1.0, conditional=0.8, instant=0.5
+//
+// 임계값 (논문 §4.1 기본값):
+//   score < 25  → 경량 모드 (ILMV 스트리밍 100%, 추가 검증 없음)
+//   25 ≤ score < 60 → 표준 모드 (재조회 1회 추가)
+//   score ≥ 60  → 강화 모드 (zk-SNARKs + TEE + 슬래싱)
 export const IMPORTANCE = Object.freeze({
-  LIGHTWEIGHT_MAX: 30,   // score < 30 → 경량 모드
-  STANDARD_MAX:    60,   // 30 ≤ score < 60 → 표준 모드
-  // score ≥ 60 → 강화 모드 (zk-SNARKs + TEE + 슬래싱)
+  // 임계값
+  LIGHTWEIGHT_MAX: 25,   // score < 25  → 경량 모드  ← 논문 기본값(이전: 30)
+  STANDARD_MAX:    60,   // 25 ≤ score < 60 → 표준 모드
+
+  // 가중치 (논문 §4.1 w1,w2,w3)
+  W_AMOUNT:   0.5,
+  W_TYPE:     0.3,
+  W_CONTRACT: 0.2,
+
+  // f_amount 정규화 기준 (GDC) — 운영 실측 후 보정
+  V_REF: 100_000,
+
+  // f_type 계수 (자산 유형)
+  F_TYPE: Object.freeze({
+    stable:   1.0,   // 스테이블코인·GDC
+    physical: 0.8,   // 실물 자산
+    point:    0.3,   // 포인트·쿠폰
+  }),
+
+  // f_contract 계수 (계약 구조)
+  F_CONTRACT: Object.freeze({
+    escrow:      1.0,   // 다단계 에스크로 (분쟁 중재형)
+    conditional: 0.8,   // 조건부 결제 (구독 등)
+    instant:     0.5,   // 즉시 결제
+  }),
 })
 
 // ── GDC 통화 정책 ──────────────────────────────────────────────────────────

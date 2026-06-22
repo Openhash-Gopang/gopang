@@ -388,6 +388,11 @@ async function handleBizOrder(request, env, corsHeaders) {
     session_id, reporter_svc,
     item_name, item_id, quantity,
     seller_net, fee,
+    // Phase 3/4 추가: 중요도 점수 + LCAT 입력
+    asset_type    = 'stable',  // 'stable'|'physical'|'point'
+    contract_type = 'instant', // 'instant'|'conditional'|'escrow'
+    buyer_region  = null,      // 지역 코드 (예: 'jeju', 'seoul')
+    seller_region = null,
   } = body;
 
   // 필수 필드 확인
@@ -401,7 +406,17 @@ async function handleBizOrder(request, env, corsHeaders) {
   const l1Base = l1_node ? (L1_NODE_MAP[l1_node] || L1_DEFAULT) : L1_DEFAULT;
   const l1Url  = l1Base + '/api/tx';
 
-// L1에는 순수 UTXO만 전달 (items/memo 등 제거)
+  // ── Phase 3/4: 중요도 점수 + LCAT 계산 ──────────────────────────────────
+  // importanceVerifier.js와 동일 공식(단일 정의 원칙) — refactor_plan_v2 §Phase1 참조
+  const _txAmount = (tx?.input?.balance_claimed ?? balance_claimed ?? 0);
+  const _actualAmount = (seller_net || 0) + (fee || 0) || _txAmount;
+  const importance_score = _computeImportanceScore(_actualAmount, asset_type, contract_type);
+  const importance_mode  = _selectImportanceMode(importance_score);
+  const lcat             = computeLCAT(buyer_region, seller_region);
+  // LCAT과 requires_geo는 완전히 독립 — PLSM 계층 라우팅 전용 입력
+  console.log(`[BizOrder] score=${importance_score.toFixed(2)} mode=${importance_mode} lcat=${lcat}`);
+
+  // L1에는 순수 UTXO만 전달 (items/memo 등 제거)
   const txPayload = {
     version: tx?.version || 1,
     input: tx?.input || {
@@ -413,6 +428,9 @@ async function handleBizOrder(request, env, corsHeaders) {
       { recipient_guid: seller_guid,        amount: seller_net || 0 },
       { recipient_guid: 'gopang-platform',  amount: fee        || 0 },
     ],
+    // PLSM 입력값 — L1이 아직 미수신해도 unknown field 무시, 거래 흐름 미차단
+    score: importance_score,
+    lcat,
   };
 
   let l1Result;
@@ -465,6 +483,17 @@ async function handleBizOrder(request, env, corsHeaders) {
   const _outputs = txPayload.outputs;
   verifyOutputConsistency(l1Result, _outputs);
   verifyDeltaZero(_outputs, txPayload.input?.balance_claimed || balance_claimed || 0);
+
+  // ── Phase 4: 차등 검증 레이어 (refactor_plan_v2 §Phase1 차등 레이어) ─────
+  // baseline(카탈로그+수수료 검증)은 항상 실행됨 — ILMV-100% 대응
+  // 표준 모드: 가격 재조회 로그(TOCTOU 창 축소) — 현재 pilot 단계라 로그만
+  // 강화 모드: PDV에 risk_tier:'high' 플래그 기록 (L1/L4 강화 모드 트리거 힌트)
+  if (importance_mode === 'ENHANCED') {
+    console.warn(`[BizOrder][ENHANCED] score=${importance_score.toFixed(2)} — risk_tier:high 기록 예정`);
+    // risk_tier 플래그는 아래 PDV 기록 시 extra에 포함됨
+  } else if (importance_mode === 'STANDARD') {
+    console.log(`[BizOrder][STANDARD] score=${importance_score.toFixed(2)} — 표준 검증`);
+  }
 
   // ── Module 5.5: l1_ledger H_N 기록 (updateNodeHashChain) ──
   // await는 fs_ledger RPC와 병렬 실행 — 거래 응답 차단 안 함
@@ -563,6 +592,10 @@ async function handleBizOrder(request, env, corsHeaders) {
       from_guid, seller_guid, tx_hash, block_hash, block_id,
       session_id, item_name: item_name || memo || '상품',
       total: totalOutput, l1_result: l1Result,
+      importance_score, importance_mode, lcat,
+      risk_tier: importance_mode === 'ENHANCED' ? 'high'
+               : importance_mode === 'STANDARD' ? 'standard'
+               : 'low',
     });
   }
   console.log('[BizOrder] 성공:', JSON.stringify({ ok: true, block_hash, height, buyer_claim: !!buyer_claim }));
@@ -578,6 +611,11 @@ async function handleBizOrder(request, env, corsHeaders) {
     seller_claim,
     ledger:       rpcResult,
     reporter_svc: reporter_svc || 'gopang-proxy',
+    importance: {
+      score: parseFloat(importance_score.toFixed(4)),
+      mode:  importance_mode,
+      lcat,
+    },
   }), { status: 200, headers: corsHeaders });
 }
 
@@ -585,6 +623,7 @@ async function handleBizOrder(request, env, corsHeaders) {
 async function _recordOrderPdv(env, {
   from_guid, seller_guid, tx_hash, block_hash, block_id,
   session_id, item_name, total,
+  importance_score = 0, importance_mode = 'LIGHTWEIGHT', lcat = 'B', risk_tier = 'low',
 }) {
   const pdvKey   = env.SUPABASE_KEY || _supabaseAnonKey();
   const pdvId    = `PDV-${from_guid.replace(/:/g, '').slice(0, 12)}-${Date.now()}`;
@@ -600,6 +639,11 @@ async function _recordOrderPdv(env, {
     why:   '상품 구매 거래',
   });
 
+  // risk_level: PDV 표준 필드. importance 기반으로 매핑
+  const pdvRiskLevel = risk_tier === 'high' ? 'high'
+                     : importance_mode === 'STANDARD' ? 'medium'
+                     : 'low';
+
   await fetch(`${SUPABASE_URL}/rest/v1/pdv_log`, {
     method:  'POST',
     headers: {
@@ -614,7 +658,7 @@ async function _recordOrderPdv(env, {
       report_id:            reportId,
       summary:              `구매: ${item_name} ₮${total}`,
       summary_6w:           summary6w,
-      risk_level:           'low',
+      risk_level:           pdvRiskLevel,
       raw_hash:             tx_hash,
       // STEP 09: 동기 앵커링 — L1 응답 수신 즉시 true
       block_hash:           block_hash,
@@ -624,6 +668,13 @@ async function _recordOrderPdv(env, {
       reporter_svc:         'gopang-proxy',
       via_worker:           true,
       created_at:           now,
+      // Phase 4: 중요도·LCAT·risk_tier (OpenHash PLSM 입력 추적)
+      extra: {
+        importance_score: parseFloat(importance_score.toFixed(4)),
+        importance_mode,
+        lcat,
+        risk_tier,
+      },
     }),
   }).catch(e => console.warn('[PDV] 기록 실패:', e.message));
 }
@@ -1052,6 +1103,82 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null){try{let 
 // ═══════════════════════════════════════════════════════════
 // Module 5.5 — Hash Chain & BIVM (PDV-HASHCHAIN-DESIGN-v3.0)
 // ═══════════════════════════════════════════════════════════
+
+// ── 중요도 점수 (논문 §4.1 공식) ────────────────────────────────────────
+// importanceVerifier.js와 100% 동일 공식 유지 — 단일 정의 원칙
+// worker.js는 ES 모듈 import 불가(단일 파일 구조)이므로 인라인 포팅
+//
+// score = W_AMOUNT·f_amount + W_TYPE·f_type + W_CONTRACT·f_contract
+//   f_amount(v)   = min(v / V_REF, 1.0) × 100
+//   f_type        : stable=1.0, physical=0.8, point=0.3
+//   f_contract    : escrow=1.0, conditional=0.8, instant=0.5
+//   임계값: LIGHTWEIGHT<25, STANDARD<60, ENHANCED≥60
+const _IMPORTANCE = {
+  W_AMOUNT: 0.5, W_TYPE: 0.3, W_CONTRACT: 0.2,
+  V_REF: 100_000,
+  F_TYPE:     { stable: 1.0, physical: 0.8, point: 0.3 },
+  F_CONTRACT: { escrow: 1.0, conditional: 0.8, instant: 0.5 },
+  LIGHTWEIGHT_MAX: 25,
+  STANDARD_MAX:    60,
+};
+
+/**
+ * 거래 중요도 점수 계산 (논문 §4.1)
+ * importanceVerifier.js#calculateImportanceScore 와 동일 공식
+ * @param {number} amount       - 거래 금액 (GDC)
+ * @param {string} assetType    - 'stable'|'physical'|'point'
+ * @param {string} contractType - 'instant'|'conditional'|'escrow'
+ * @returns {number} score (0~100)
+ */
+function _computeImportanceScore(amount, assetType = 'stable', contractType = 'instant') {
+  const fAmount   = Math.min(amount / _IMPORTANCE.V_REF, 1.0) * 100;
+  const fType     = _IMPORTANCE.F_TYPE[assetType]     ?? _IMPORTANCE.F_TYPE.stable;
+  const fContract = _IMPORTANCE.F_CONTRACT[contractType] ?? _IMPORTANCE.F_CONTRACT.instant;
+  return (
+    _IMPORTANCE.W_AMOUNT   * fAmount   +
+    _IMPORTANCE.W_TYPE     * fType     +
+    _IMPORTANCE.W_CONTRACT * fContract
+  );
+}
+
+/**
+ * score → 검증 모드
+ * @param {number} score
+ * @returns {'LIGHTWEIGHT'|'STANDARD'|'ENHANCED'}
+ */
+function _selectImportanceMode(score) {
+  if (score < _IMPORTANCE.LIGHTWEIGHT_MAX) return 'LIGHTWEIGHT';
+  if (score < _IMPORTANCE.STANDARD_MAX)    return 'STANDARD';
+  return 'ENHANCED';
+}
+
+// ── LCAT 계산 (논문 §4.1 PLSM 입력) ────────────────────────────────────
+// LCAT(Localized Commit Affinity Type): 거래 당사자의 물리적 위치로 결정
+// 검색 requires_geo 플래그와 완전히 독립 — 절대 같은 플래그로 묶지 않는다
+//
+// 현재: gopang 한림읍 파일럿 단계 → 제주 내부=A, 제주↔육지=B, 국제=C
+// geo 정보가 없는 경우 보수적으로 'B' (표준 계층 라우팅) 사용
+/**
+ * LCAT 계산
+ * @param {string|null} buyerRegion  - 구매자 지역 코드 (예: 'jeju', 'seoul', 'us')
+ * @param {string|null} sellerRegion - 판매자 지역 코드
+ * @returns {'A'|'B'|'C'}
+ */
+function computeLCAT(buyerRegion, sellerRegion) {
+  const jeju = new Set(['jeju', 'jeju-si', 'seogwipo']);
+  const kr   = new Set(['seoul', 'busan', 'daegu', 'incheon', 'gwangju',
+                        'daejeon', 'ulsan', 'sejong', 'gyeonggi', 'gangwon',
+                        'chungbuk', 'chungnam', 'jeonbuk', 'jeonnam',
+                        'gyeongbuk', 'gyeongnam', 'jeju']); // 제주도 본인도 kr 포함
+  if (!buyerRegion || !sellerRegion) return 'B'; // 정보 없음 → 보수적
+  const bJeju = jeju.has(buyerRegion.toLowerCase());
+  const sJeju = jeju.has(sellerRegion.toLowerCase());
+  const bKr   = kr.has(buyerRegion.toLowerCase());
+  const sKr   = kr.has(sellerRegion.toLowerCase());
+  if (bJeju && sJeju) return 'A';   // 제주 내부
+  if (bKr   && sKr)   return 'B';   // 국내 (제주↔육지 포함)
+  return 'C';                        // 국제
+}
 
 /**
  * C-1: L1 노드 Hash Chain H_N 기록
