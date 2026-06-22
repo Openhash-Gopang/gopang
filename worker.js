@@ -291,6 +291,10 @@ export default {
     if (pathname === '/openhash/anchor' && request.method === 'POST')
       return handleOpenhashAnchor(request, env, corsHeaders);
 
+    // ── OpenHash ILMV 상태 조회 (Phase 5) ───────────────────────────────
+    if (pathname === '/openhash/status' && request.method === 'GET')
+      return handleOpenhashStatus(request, env, corsHeaders);
+
     // ── debug (진단용, 인증 불필요) ──────────────────────────
     if (pathname === '/debug/importance' && request.method === 'GET') {
       const amount        = parseFloat(url.searchParams.get('amount')        || '1050');
@@ -1257,6 +1261,82 @@ async function handleOpenhashAnchor(request, env, corsHeaders) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// Phase 5 — OpenHash ILMV 상태 조회 (/openhash/status)
+// chain_status.json을 fetch해 실시간 ILMV 감사 결과 반환
+// ═══════════════════════════════════════════════════════════
+async function handleOpenhashStatus(request, env, corsHeaders) {
+  const url2 = new URL(request.url);
+  const layer = url2.searchParams.get('layer') || null;  // 특정 계층만 조회
+  const LAYER_STATUS_URLS = {
+    L1: 'https://openhash-gopang.github.io/openhash-L1-ido1/chain_status.json',
+    L2: 'https://openhash-gopang.github.io/openhash-L2-jeju-city/chain_status.json',
+    L3: 'https://openhash-gopang.github.io/openhash-L3-jeju/chain_status.json',
+    L4: 'https://openhash-gopang.github.io/openhash-L4-kr/chain_status.json',
+    L5: 'https://openhash-gopang.github.io/openhash-L5-global/chain_status.json',
+  };
+  const TIMESTAMP_FRESH_MS = 5 * 60 * 1000;
+
+  async function fetchOne(l) {
+    const url = LAYER_STATUS_URLS[l];
+    try {
+      const res = await fetch(url, { cf: { cacheTtl: 30 } });
+      if (!res.ok) return { layer: l, fetched: false, error: `HTTP ${res.status}` };
+      const raw = await res.json();
+      const now = Date.now();
+      const lastMs = raw.last_verified ? new Date(raw.last_verified).getTime() : 0;
+      const staleMs = now - lastMs;
+      return {
+        layer:          l,
+        fetched:        true,
+        node_id:        raw.node_id,
+        total_blocks:   raw.total_blocks,
+        latest_hash:    raw.latest_hash,
+        chain_valid:    raw.chain_valid,
+        ilmv_status:    raw.ilmv_status,
+        openhash_tx:    raw.openhash_tx,
+        last_verified:  raw.last_verified,
+        staleness_sec:  Math.round(staleMs / 1000),
+        timestamp_stale: lastMs > 0 && staleMs > TIMESTAMP_FRESH_MS,
+        audit: {
+          hashChainBreak:   raw.chain_valid === false,
+          bivmViolation:    raw.ilmv_status === 'VIOLATION',
+          timestampStale:   lastMs > 0 && staleMs > TIMESTAMP_FRESH_MS,
+          signatureFailure: raw.ilmv_status === 'SIGNATURE_FAILURE',
+          errorRate:        raw.openhash_tx === 'FAILED' ? 1.0 : 0,
+        },
+      };
+    } catch(e) {
+      return { layer: l, fetched: false, error: e.message };
+    }
+  }
+
+  let results;
+  if (layer && LAYER_STATUS_URLS[layer]) {
+    results = { [layer]: await fetchOne(layer) };
+  } else {
+    const layers = ['L1','L2','L3','L4','L5'];
+    const settled = await Promise.allSettled(layers.map(l => fetchOne(l)));
+    results = {};
+    settled.forEach((r,i) => {
+      results[layers[i]] = r.status === 'fulfilled' ? r.value : { layer: layers[i], fetched: false };
+    });
+  }
+
+  // 전체 상태 요약
+  const allFetched = Object.values(results).filter(r => r.fetched);
+  const anyIssue   = allFetched.some(r =>
+    r.audit?.hashChainBreak || r.audit?.bivmViolation || r.audit?.signatureFailure
+  );
+
+  return new Response(JSON.stringify({
+    ok:        true,
+    summary:   anyIssue ? 'ISSUE_DETECTED' : 'NORMAL',
+    queried_at: new Date().toISOString(),
+    layers:    results,
+  }, null, 2), { status: 200, headers: corsHeaders });
+}
+
 // Module 5.5 — Hash Chain & BIVM (PDV-HASHCHAIN-DESIGN-v3.0)
 // ═══════════════════════════════════════════════════════════
 
