@@ -2483,7 +2483,13 @@ async function _createAgentForPrincipal(env, principalProfile) {
   // 1) 그림자 키쌍 생성 + 봉투암호화
   const { publicKeyB64, privateKeyPkcs8B64 } = await _generateAgentKeyPairInline();
   if (!env.AGENT_KEK) {
-    return { ok: false, error: 'NO_AGENT_KEK', detail: 'env.AGENT_KEK(Cloudflare secret) 미설정' };
+    return {
+      ok: false, error: 'NO_AGENT_KEK',
+      detail: 'env.AGENT_KEK(Cloudflare secret) 미설정',
+      // 임시 진단(2026-06-22) — 값은 절대 안 내보내고 타입/길이만. 확인 후 제거할 것.
+      debug_kek_typeof: typeof env.AGENT_KEK,
+      debug_env_keys_sample: Object.keys(env).filter(k => k.includes('KEK') || k.includes('AGENT')),
+    };
   }
   const kek = await _importKEKInline(env.AGENT_KEK);
   const { ciphertextB64, ivB64 } = await _encryptAgentPrivateKeyInline(privateKeyPkcs8B64, kek);
