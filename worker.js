@@ -58,6 +58,18 @@ const GITHUB_REPO_NAME      = 'gopang';
 const GITHUB_API            = 'https://api.github.com';
 const GITHUB_DEFAULT_BRANCH = 'main';
 
+// ── OpenHash L1~L5 저장소 매핑 (repository_dispatch 앵커링용) ─
+// buildout_plan_v2 Phase 1: 클라이언트가 GitHub 토큰 직접 보유 금지
+// → worker.js가 OPENHASH_TOKEN으로 dispatch를 중계
+// 현재 제주 파일럿: L1=이도1동 노드만 실존, L2~L5 수신 가능하나 블록 구조 미완
+const LAYER_REPOS = {
+  L1: 'Openhash-Gopang/openhash-L1-ido1',
+  L2: 'Openhash-Gopang/openhash-L2-jeju-city',
+  L3: 'Openhash-Gopang/openhash-L3-jeju',
+  L4: 'Openhash-Gopang/openhash-L4-kr',
+  L5: 'Openhash-Gopang/openhash-L5-global',
+};
+
 // STEP 10: VALID_PDV_SCOPES 11개로 확장
 const VALID_PDV_SCOPES = [
   'ktraffic', 'khealth', 'pdv_general', 'kmarket', 'k119',
@@ -268,6 +280,13 @@ export default {
 
     // ── merkle (T10) ─────────────────────────────────────────
     if (pathname === '/merkle/verify')           return handleMerkleVerify(request, env, corsHeaders);
+
+    // ── OpenHash 앵커링 프록시 ────────────────────────────────
+    // buildout_plan_v2 Phase 1: 클라이언트가 GitHub 토큰 직접 보유 금지
+    // hashChain.js의 _submitToLayer가 이 엔드포인트를 호출
+    // worker.js가 OPENHASH_TOKEN으로 repository_dispatch 중계
+    if (pathname === '/openhash/anchor' && request.method === 'POST')
+      return handleOpenhashAnchor(request, env, corsHeaders);
 
     // ── debug (진단용, 인증 불필요) ──────────────────────────
     if (pathname === '/debug/importance' && request.method === 'GET') {
@@ -1122,6 +1141,101 @@ async function handleKakaoAppKey(request,env,corsHeaders){const appkey=env.KAKAO
 async function handleAIChat(bodyText,env,corsHeaders){let body;try{body=JSON.parse(bodyText);}catch{return _err(400,'INVALID_JSON','Invalid JSON',corsHeaders);}const{provider='deepseek',model,system,messages,max_tokens=2000}=body;const builtMessages=[...(system?[{role:'system',content:system}]:[]),...(messages||[])];try{if(provider!=='anthropic'){const res=await fetch(DEEPSEEK_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${env.DEEPSEEK_API_KEY}`},body:JSON.stringify({model:model||DEEPSEEK_MODEL,max_tokens,messages:builtMessages})});const data=await res.json();const content=data.choices?.[0]?.message?.content;if(!content)throw new Error('DeepSeek 응답 없음: '+JSON.stringify(data));return new Response(JSON.stringify({content,provider:'deepseek',model:model||DEEPSEEK_MODEL}),{status:200,headers:corsHeaders});}else{const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY||env.OpenAI,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:model||'claude-sonnet-4-20250514',max_tokens,...(system?{system}:{}),messages:messages||[]})});const data=await res.json();const content=data.content?.find(c=>c.type==='text')?.text;return new Response(JSON.stringify({content,provider:'anthropic'}),{status:200,headers:corsHeaders});}}catch(e){return _err(502,'AI_ERROR',e.message,corsHeaders);}}
 async function callOpenAIFromGeminiBody(bodyText,env,corsHeaders){const apiKey=env.OpenAI;if(!apiKey)return _err(500,'CONFIG_ERROR','OpenAI key not configured',corsHeaders);let geminiBody;try{geminiBody=JSON.parse(bodyText);}catch{return _err(400,'INVALID_JSON','Invalid JSON body',corsHeaders);}const systemPrompt=geminiBody.system_instruction?.parts?.[0]?.text||'';const parts=geminiBody.contents?.[0]?.parts||[];const textPart=parts.find(p=>p.text)?.text||'';const imagePart=parts.find(p=>p.inline_data);const maxTokens=geminiBody.generationConfig?.maxOutputTokens||1500;const messages=[];if(systemPrompt)messages.push({role:'system',content:systemPrompt});if(imagePart?.inline_data){messages.push({role:'user',content:[{type:'image_url',image_url:{url:`data:${imagePart.inline_data.mime_type};base64,${imagePart.inline_data.data}`}},{type:'text',text:textPart||'이미지를 분석하여 JSON으로만 출력하라.'}]});}else{messages.push({role:'user',content:textPart});}try{const res=await fetch(OPENAI_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},body:JSON.stringify({model:OPENAI_MODEL,messages,max_tokens:maxTokens,temperature:geminiBody.generationConfig?.temperature??0.1})});const data=await res.json();if(!res.ok)throw new Error(data.error?.message||`HTTP ${res.status}`);const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'openai',_model:OPENAI_MODEL}),{headers:corsHeaders});}catch(e){const fbBody=JSON.stringify({model:DEEPSEEK_MODEL,messages,max_tokens:maxTokens,temperature:0.1,stream:false});return callDeepSeek(fbBody,env,corsHeaders,e.message);}}
 async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null){try{let isStream=false;try{isStream=!!JSON.parse(bodyText)?.stream;}catch{}const res=await fetch(DEEPSEEK_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${env.DEEPSEEK_API_KEY}`},body:bodyText});if(!res.ok){const errText=await res.text();let errMsg;try{errMsg=JSON.parse(errText)?.error?.message;}catch{}return new Response(JSON.stringify({error:errMsg||`HTTP ${res.status}`}),{status:res.status,headers:corsHeaders});}if(isStream){return new Response(res.body,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});}const data=await res.json();if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'DEEPSEEK_ERROR',e.message,corsHeaders);}}
+
+// ═══════════════════════════════════════════════════════════
+// Phase 1 — OpenHash 앵커링 프록시 (/openhash/anchor)
+// buildout_plan_v2 Phase 1: _submitToLayer 교체
+//
+// 설계 원칙:
+//   - 클라이언트(브라우저)는 GitHub 토큰을 직접 보유하지 않음
+//   - hashChain.js anchor()가 POST /openhash/anchor를 호출
+//   - worker.js가 env.OPENHASH_TOKEN으로 repository_dispatch 중계
+//
+// 앵커링 상태:
+//   submitted  : dispatch 202 Accepted — 블록 생성 진행 중 (비동기)
+//   confirmed  : chain_status.json 재조회로 block 생성 확인
+//   failed     : 네트워크 오류 또는 token 누락
+// ═══════════════════════════════════════════════════════════
+async function handleOpenhashAnchor(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { entry_hash, content_hash, msg_id, signatures, layer, score, lcat, block_height, submitted_at } = body;
+
+  // 필수 필드 검증
+  if (!entry_hash || entry_hash.length !== 64)
+    return _err(400, 'INVALID_ENTRY_HASH', 'entry_hash는 SHA-256 hex(64자) 필수', corsHeaders);
+  if (!layer || !LAYER_REPOS[layer])
+    return _err(400, 'INVALID_LAYER', `지원 계층: ${Object.keys(LAYER_REPOS).join(', ')}`, corsHeaders);
+
+  // OPENHASH_TOKEN 확인 (env 변수 — wrangler secret)
+  const token = env.OPENHASH_TOKEN;
+  if (!token) {
+    console.warn('[OpenHash] OPENHASH_TOKEN 미설정 — submitted=false');
+    return new Response(JSON.stringify({
+      ok:        false,
+      status:    'failed',
+      reason:    'OPENHASH_TOKEN not configured',
+      entry_hash,
+      layer,
+    }), { status: 200, headers: corsHeaders });
+  }
+
+  const repo = LAYER_REPOS[layer];
+
+  // repository_dispatch 전송 (GitHub API)
+  // 응답: 204 No Content = 수락됨 (비동기 처리)
+  let dispatchStatus;
+  try {
+    const res = await fetch(`${GITHUB_API}/repos/${repo}/dispatches`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept':        'application/vnd.github+json',
+        'Content-Type':  'application/json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      body: JSON.stringify({
+        event_type:     'HASH_CHAIN_ANCHOR',
+        client_payload: {
+          entry_hash,
+          content_hash:  content_hash  || '',
+          msg_id:        msg_id        || '',
+          signatures:    signatures    || [],
+          merkle_layer:  layer,
+          score:         score         ?? 0,
+          lcat:          lcat          || 'B',
+          block_height:  block_height  || 0,
+          submitted_at:  submitted_at  || new Date().toISOString(),
+        },
+      }),
+    });
+    dispatchStatus = res.status;
+  } catch (e) {
+    console.error('[OpenHash] dispatch 실패:', e.message);
+    return new Response(JSON.stringify({
+      ok: false, status: 'failed', reason: e.message, entry_hash, layer,
+    }), { status: 200, headers: corsHeaders });
+  }
+
+  // 204 = 수락됨 (블록 생성은 Actions 워크플로우가 비동기 처리)
+  const submitted = dispatchStatus === 204;
+  console.log(`[OpenHash] dispatch ${layer} → ${repo} | status=${dispatchStatus} | entry=${entry_hash.slice(0,16)}...`);
+
+  return new Response(JSON.stringify({
+    ok:         submitted,
+    status:     submitted ? 'submitted' : 'failed',
+    // submitted: dispatch 수락됨, 블록 생성은 수 초~수십 초 후
+    // confirmed: chain_status.json 재조회로 확인 (클라이언트가 별도 폴링)
+    layer,
+    repo,
+    entry_hash,
+    dispatch_status: dispatchStatus,
+    note: submitted
+      ? '블록 생성 진행 중. /openhash/status?layer=L1&entry_hash=... 로 확정 확인 가능.'
+      : `dispatch 실패 (HTTP ${dispatchStatus})`,
+  }), { status: 200, headers: corsHeaders });
+}
 
 // ═══════════════════════════════════════════════════════════
 // Module 5.5 — Hash Chain & BIVM (PDV-HASHCHAIN-DESIGN-v3.0)

@@ -170,6 +170,9 @@ export async function anchor(contentHash, signatures, msgId) {
     layer,
     timestamp,
     blockHeight,
+    submitted:  entry.submitted  ?? false,   // dispatch 수락 여부
+    confirmed:  entry.confirmed  ?? false,   // 블록 생성 확정 여부 (비동기)
+    anchored:   entry.anchored   ?? false,   // confirmed와 동기화 (하위 호환)
   }
 }
 
@@ -340,31 +343,64 @@ async function _processBatch() {
   // await submitMerkleRoot(merkleRoot)
 }
 
-/** 계층 노드에 엔트리 제출 */
+/** 계층 노드에 엔트리 제출 (worker.js 프록시 경유)
+ *
+ * buildout_plan_v2 Phase 1:
+ *   구 방식: 클라이언트 → GitHub Pages POST /anchor (정적 서버라 수신 불가)
+ *   신 방식: 클라이언트 → POST {PROXY_BASE}/openhash/anchor → worker.js → repository_dispatch
+ *
+ * 앵커링 2단계 상태:
+ *   submitted  : worker.js가 dispatch 수락(202) → 블록 생성 비동기 진행 중
+ *   confirmed  : chain_status.json 재조회로 블록 생성 확인 (수 초~수십 초 후)
+ *
+ * dev 환경(PROXY_BASE=null): 네트워크 호출 없이 submitted=true로 즉시 처리
+ */
 async function _submitToLayer(layer, entry) {
-  const endpoint = config.LAYER_ENDPOINTS[layer]
-  if (!endpoint) return
+  const proxyBase = config.PROXY_BASE
+
+  // dev 환경: 로컬 Worker 없음 → submitted=true 즉시 처리
+  if (!proxyBase) {
+    entry.anchored   = false   // 실제 L1 도달 안 됨
+    entry.submitted  = true    // dev 환경 시뮬레이션
+    entry.confirmed  = false
+    return
+  }
 
   try {
-    // dev 환경: 로컬 노드가 없으므로 성공으로 처리
-    if (config.ENV === 'dev') {
-      entry.anchored = true
-      return
-    }
-
-    const res = await fetch(`${endpoint}/anchor`, {
+    const res = await fetch(`${proxyBase}/openhash/anchor`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(entry),
+      body: JSON.stringify({
+        entry_hash:   entry.entryHash,
+        content_hash: entry.contentHash,
+        msg_id:       entry.msgId,
+        signatures:   entry.signatures,
+        layer,
+        score:        entry.score        ?? 0,
+        lcat:         entry.lcat         || 'B',
+        block_height: entry.blockHeight,
+        submitted_at: new Date().toISOString(),
+      }),
     })
 
-    if (res.ok) {
-      entry.anchored = true
-      console.log(`[HashChain] ✅ ${layer} 앵커링 완료: ${entry.entryHash.slice(0, 8)}...`)
+    const result = await res.json().catch(() => ({ ok: false }))
+
+    if (result.ok && result.status === 'submitted') {
+      entry.submitted = true
+      entry.confirmed = false   // 블록 생성은 비동기 — confirmed는 폴링으로 확인
+      entry.anchored  = false   // 확정 전까지 false 유지
+      console.log(`[HashChain] ✅ ${layer} dispatch 수락 | entry=${entry.entryHash.slice(0,16)}...`)
+    } else {
+      entry.submitted = false
+      entry.confirmed = false
+      entry.anchored  = false
+      console.warn(`[HashChain] ⚠️ ${layer} dispatch 실패:`, result.reason || result.dispatch_status)
     }
-  } catch (_) {
-    // 네트워크 오류 — 배치로 재시도
-    entry.anchored = false
+  } catch (e) {
+    entry.submitted = false
+    entry.confirmed = false
+    entry.anchored  = false
+    console.warn(`[HashChain] ⚠️ proxy 연결 실패:`, e.message)
   }
 }
 
