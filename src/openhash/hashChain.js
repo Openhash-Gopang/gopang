@@ -118,7 +118,7 @@ export async function loadChainFromIDB() {
  *   blockHeight: number
  * }>}
  */
-export async function anchor(contentHash, signatures, msgId) {
+export async function anchor(contentHash, signatures, msgId, lcat, score) {
   if (typeof contentHash !== 'string' || contentHash.length !== 64)
     throw new Error('[HashChain] contentHash는 SHA-256 hex(64자)여야 합니다.')
   if (!Array.isArray(signatures) || signatures.length === 0)
@@ -127,17 +127,12 @@ export async function anchor(contentHash, signatures, msgId) {
   const timestamp   = new Date().toISOString()
   const blockHeight = _getBlockHeight()
 
-  // 체인 엔트리 구성
-  // h_i = SHA-256(h_{i-1} ∥ contentHash ∥ signatures ∥ blockHeight ∥ timestamp)
-  // prevHash: 이전 체인 상태 — 공격자가 통제 불가 (위변조 방지 핵심)
-  // contentHash: SHA-256(원본) — 원본은 vault/L1 노드에 보관
-  // signatures: Ed25519 서명들 — 신원 증명 (누가 이 데이터를 승인했는가)
   const sigConcat  = signatures.join('|')
   const chainInput = `${_prevHash}|${contentHash}|${sigConcat}|${blockHeight}|${timestamp}`
   const entryHash  = await sha256(chainInput)
 
-  // 계층 선택 (PLSM)
-  const layer = await selectLayer(`${msgId}|${timestamp}`)
+  // 계층 선택 (PLSM v2.0 — lcat/score 전달 시 표1 비대칭 분포, 미전달 시 폴백)
+  const layer = await selectLayer(`${msgId}|${timestamp}`, lcat, score)
 
   const entry = {
     entryHash,
@@ -148,7 +143,9 @@ export async function anchor(contentHash, signatures, msgId) {
     blockHeight,
     timestamp,
     layer,
-    anchored:    false,   // 실제 노드 제출 전
+    lcat:        lcat  ?? null,
+    score:       score ?? null,
+    anchored:    false,
   }
 
   // 체인 상태 업데이트 + IDB 영속화

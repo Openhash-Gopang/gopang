@@ -9,8 +9,8 @@
  */
 
 // ── OpenHash PLSM 계층 분포 ────────────────────────────────────────────────
-// 근거: OpenHash SCI 논문 §4.1 표 1
-// mod 1000 버킷 기준 누적 상한값
+// 근거: OpenHash SCI 논문 §4.1 표 1 (국가 규모 기준)
+// mod 1000 버킷 기준 누적 상한값 — 단일 분포(LCAT/score 미반영 시 폴백)
 export const PLSM = Object.freeze({
   L1_UPPER: 600,   // 0~599   → 60%
   L2_UPPER: 800,   // 600~799 → 20%
@@ -18,6 +18,34 @@ export const PLSM = Object.freeze({
   L4_UPPER: 960,   // 900~959 → 6%
   L5_UPPER: 1000,  // 960~999 → 4%
   LAYERS: ['L1', 'L2', 'L3', 'L4', 'L5'],
+
+  // ── 표1: LCAT × 중요도별 비대칭 분포 (누적 상한, mod 1000) ──────────────
+  // LCAT: 'L1'(읍면동/로컬) | 'L2'(시군구/국내) | 'L3'(광역/국제)
+  // 중요도: 'low'(score<25) | 'high'(score≥25)
+  // worker.js computeLCAT() A→L1, B→L2, C→L3 매핑
+  //
+  // 원본 표1 (단위: %)
+  //   LCAT  중요도  L1  L2  L3  L4  L5
+  //   L1    저      50  30  12   6   2
+  //   L1    고      15  20  30  25  10
+  //   L2    저       0  55  27  13   5
+  //   L2    고       0  20  35  30  15
+  //   L3    저       0   0  60  30  10
+  //   L3    고       0   0  25  45  30
+  ASYMMETRIC: Object.freeze({
+    L1: Object.freeze({
+      low:  Object.freeze({ L1: 500, L2: 800, L3: 920, L4: 980, L5: 1000 }),
+      high: Object.freeze({ L1: 150, L2: 350, L3: 650, L4: 900, L5: 1000 }),
+    }),
+    L2: Object.freeze({
+      low:  Object.freeze({ L1:   0, L2: 550, L3: 820, L4: 950, L5: 1000 }),
+      high: Object.freeze({ L1:   0, L2: 200, L3: 550, L4: 850, L5: 1000 }),
+    }),
+    L3: Object.freeze({
+      low:  Object.freeze({ L1:   0, L2:   0, L3: 600, L4: 900, L5: 1000 }),
+      high: Object.freeze({ L1:   0, L2:   0, L3: 250, L4: 700, L5: 1000 }),
+    }),
+  }),
 })
 
 // ── AI 비서 위험 등급 임계값 ───────────────────────────────────────────────
