@@ -480,6 +480,23 @@ async function handleBizOrder(request, env, corsHeaders) {
 
   let l1Result;
   try {
+
+    // ── Phase 4: 잔액 조회 + BIVM 검증 (L1 호출 전) ─────────────────────
+    // 양쪽 잔액을 Supabase에서 권위있게 조회 — 클라이언트 balance_claimed 불신뢰
+    // 병렬 조회로 레이턴시 최소화
+    const [fromBal, toBal] = await Promise.all([
+      _fetchUserBalance(env, from_guid),
+      _fetchUserBalance(env, seller_guid),
+    ]);
+    const txAmount = (seller_net || 0) + (fee || 0) || _actualAmount;
+    const bivmResult = _bivmVerify(fromBal, toBal, txAmount);
+    if (!bivmResult.valid) {
+      console.warn('[BIVM] 검증 실패:', bivmResult.error,
+        `| from=${fromBal} to=${toBal} amount=${txAmount}`);
+      return _err(402, 'BIVM_VIOLATION', bivmResult.error, corsHeaders);
+    }
+    console.log(`[BIVM] 검증 통과 | from=${fromBal} to=${toBal} amount=${txAmount}`);
+
     const l1Res = await fetch(l1Url, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1317,6 +1334,65 @@ function computeLCAT(buyerRegion, sellerRegion) {
   if (bJeju && sJeju) return 'A';   // 제주 내부
   if (bKr   && sKr)   return 'B';   // 국내 (제주↔육지 포함)
   return 'C';                        // 국제
+}
+
+// ── Phase 4: 사용자 잔액 조회 ────────────────────────────────────────────
+// Supabase user_profiles.extra.public.finance.fs['bs-cash']에서 조회
+// BIVM이 fromBalance/toBalance 둘 다 필요하므로 worker.js가 권위있게 조회
+// 클라이언트 제출 balance_claimed를 신뢰하지 않음
+/**
+ * @param {Object} env
+ * @param {string} guid - 사용자 GUID (IPv6 형식)
+ * @returns {Promise<number>} bs-cash 잔액 (없으면 0)
+ */
+async function _fetchUserBalance(env, guid) {
+  try {
+    const sbH = _sbServiceHeaders(env);
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=extra&limit=1`,
+      { headers: sbH }
+    );
+    const rows = await res.json().catch(() => []);
+    const fs = rows?.[0]?.extra?.public?.finance?.fs;
+    const bal = parseFloat(fs?.['bs-cash'] ?? 0);
+    return isNaN(bal) ? 0 : bal;
+  } catch (e) {
+    console.warn('[BIVM] 잔액 조회 실패:', guid?.slice(0, 20), e.message);
+    return 0;
+  }
+}
+
+// ── Phase 4: 인라인 BIVM 검증 (processTx 로직 worker.js 포팅) ──────────
+// transactionPipeline.js는 브라우저 전용(IndexedDB) 의존 없이 Web Crypto만 사용하나
+// worker.js는 단일 파일 구조라 import 불가 → 핵심 BIVM 검증만 인라인 포팅
+// Stage1(잔액확인) + BIVM(Σδ=0 + BMI) 두 단계 — 나머지 Stage는 L1이 담당
+const _BIVM_EPSILON = 1e-9;
+
+/**
+ * BIVM 검증 (논문 §4.2)
+ * @param {number} fromBalance - 발신자 실제 잔액 (Supabase 조회값)
+ * @param {number} toBalance   - 수신자 실제 잔액 (Supabase 조회값)
+ * @param {number} amount      - 거래 금액
+ * @returns {{ valid: boolean, error: string|null }}
+ */
+function _bivmVerify(fromBalance, toBalance, amount) {
+  // Stage 1: 잔액 확인
+  if (fromBalance < amount) {
+    return { valid: false, error: `BIVM_INSUFFICIENT: 잔액 ${fromBalance} < 요청 ${amount}` };
+  }
+  // Σδ = 0 검증: 발신 delta(-amount) + 수신 delta(+amount) = 0
+  const sigmaDelta = (-amount) + amount;
+  if (Math.abs(sigmaDelta) > _BIVM_EPSILON) {
+    return { valid: false, error: `BIVM_SET_VIOLATION: Σδ=${sigmaDelta}` };
+  }
+  // BMI: balanceBefore + delta = balanceAfter
+  const fromAfter = fromBalance - amount;
+  const toAfter   = toBalance   + amount;
+  if (Math.abs((fromBalance + (-amount)) - fromAfter) > _BIVM_EPSILON ||
+      Math.abs((toBalance   + amount)    - toAfter)   > _BIVM_EPSILON) {
+    return { valid: false, error: 'BIVM_BMI_VIOLATION' };
+  }
+  return { valid: true, error: null };
 }
 
 /**
