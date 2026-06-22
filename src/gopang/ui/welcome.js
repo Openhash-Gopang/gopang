@@ -1,64 +1,176 @@
 /**
- * ui/welcome.js — 초기 환영 메시지
- * - 모든 사용자: nickname 표시
- * - 잔액은 표시 안 함 (사용자 요청 시 응답)
+ * ui/welcome.js — 초기 환영 메시지 + Profile 온보딩 트리거
+ * - Profile 미완성: AI 비서에게 온보딩 시작 메시지를 주입
+ * - Profile 완성: 닉네임 표시 후 일상 비서 모드
  */
 import { appendBubble } from './bubble.js';
 import { _USER } from '../core/state.js';
+import { callAI } from '../ai/call-ai.js';
+import { loadPersonalAssistantSP } from '../core/config.js';
+
+// ── Profile 완성 여부 확인 ───────────────────────────────
+function _isProfileDone() {
+  try { return !!localStorage.getItem('hondi_profile_done'); } catch { return false; }
+}
+
+function _getProfileStep() {
+  try { return localStorage.getItem('hondi_profile_step') || null; } catch { return null; }
+}
 
 // ── 초기 AI 비서 환영 메시지 ────────────────────────────
-export function _showWelcomeMessage() {
+export async function _showWelcomeMessage() {
   const list = document.getElementById('message-list');
   if (!list) return;
 
-  // 발신자 레이블 (AI 비서)
+  // Personal Assistant SP 로드 (비동기, 캐시됨)
+  await loadPersonalAssistantSP();
+
+  const nickname = _USER?.nickname || _USER?.name || '';
+  const profileDone = _isProfileDone();
+  const profileStep = _getProfileStep();
+
+  // ── 레이블 ──
   const label = document.createElement('div');
   label.style.cssText =
     'font-size:11px;color:var(--label-3);margin:8px 16px 2px;' +
     'letter-spacing:0.02em;font-weight:500;';
-  label.textContent = '전용 AI 비서';
+  label.textContent = '나만의 AI 비서';
+  list.appendChild(label);
 
-  // 메시지 버블 행
+  // ── 환영 버블 ──
   const row = document.createElement('div');
   row.className = 'msg-row ai';
-
   const bubble = document.createElement('div');
   bubble.className = 'bubble bubble-ai';
-  bubble.style.whiteSpace = 'nowrap';
 
-  const nickname = _USER?.nickname || _USER?.name || '';
+  if (profileDone) {
+    // ── Profile 완성 → 일상 비서 모드 ──
+    bubble.textContent = nickname
+      ? `안녕하세요, ${nickname}님. 무엇을 도와드릴까요?`
+      : '안녕하세요. 무엇을 도와드릴까요?';
+    row.appendChild(bubble);
+    list.appendChild(row);
+  } else {
+    // ── Profile 미완성 → 온보딩 시작 ──
+    bubble.textContent = nickname
+      ? `안녕하세요, ${nickname}님! 나만의 AI 비서입니다.`
+      : '안녕하세요! 나만의 AI 비서입니다.';
+    row.appendChild(bubble);
+    list.appendChild(row);
 
-  bubble.innerHTML = nickname
-    ? `안녕하세요, ${nickname}님.`
-    : '안녕하세요.';
+    // AI 비서에게 온보딩 시작 지시 메시지를 자동 주입
+    // (사용자가 텍스트를 입력하지 않아도 AI가 먼저 질문)
+    const triggerMsg = profileStep
+      ? `[SYSTEM] 이용자가 Profile 작성을 ${profileStep}단계에서 중단했습니다. 해당 단계부터 재개해 주세요.`
+      : `[SYSTEM] 이용자의 Profile이 아직 없습니다. PHASE 1 온보딩을 시작해 주세요. STEP 1(이름 질문)부터 시작합니다.`;
 
-  row.appendChild(bubble);
-  list.appendChild(label);
-  list.appendChild(row);
-
-  // 사용자 안내 메시지 — 최초 접속 시에만 표시 (두 번째 방문부터는 생략)
-  const GUIDE_SHOWN_KEY = 'gopang_welcome_guide_shown';
-  let alreadyShown = false;
-  try { alreadyShown = !!localStorage.getItem(GUIDE_SHOWN_KEY); } catch {}
-
-  if (!alreadyShown) {
-    const guideRow = document.createElement('div');
-    guideRow.className = 'msg-row ai';
-
-    const guideBubble = document.createElement('div');
-    guideBubble.className = 'bubble bubble-ai';
-    guideBubble.textContent =
-      "'나만의 AI 비서'를 설정하십시오. 오른쪽 위 AI 토글을 터치하면, 설정 방법을 자세히 안내합니다. PC에서 혼디넷에 접속하면, 안내 페이지를 편리하게 보실 수 있습니다('AI 비서 설정 가이드' 버튼).";
-
-    guideRow.appendChild(guideBubble);
-    list.appendChild(guideRow);
-
-    try { localStorage.setItem(GUIDE_SHOWN_KEY, '1'); } catch {}
+    // 약간의 딜레이 후 AI 비서 호출 (UI가 먼저 렌더링되도록)
+    setTimeout(() => {
+      callAI(triggerMsg, null, '_onboarding_');
+    }, 600);
   }
 }
 
-// ── 입력 필드 ───────────────────────────────────────────
-function autoResize(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+// ── PROFILE_SUBMIT 파서 ───────────────────────────────────
+// call-ai.js의 응답에서 PROFILE_SUBMIT {...} 블록을 감지하여
+// Worker에 POST하고 IndexedDB PDV를 초기화
+export async function handleProfileSubmit(aiResponseText) {
+  const match = aiResponseText.match(/PROFILE_SUBMIT\s*(\{[\s\S]*?\})\s*(?:$|\n)/);
+  if (!match) return false;
+
+  let profile;
+  try { profile = JSON.parse(match[1]); } catch (e) {
+    console.warn('[Profile] PROFILE_SUBMIT JSON 파싱 실패:', e.message);
+    return false;
+  }
+
+  // 사용자 GUID 주입
+  const user = _USER || JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
+  if (user?.ipv6) profile.guid = user.ipv6;
+  if (user?.handle) profile.handle = profile.handle || user.handle;
+
+  // 판매자 AI 비서 endpoint 설정 (사업자일 때)
+  if (profile.entity_type === 'business' && profile.handle) {
+    const ep = `https://market.gopang.net/webapp.html?seller=${profile.handle}`;
+    const aiCfg = profile.extra?.public?.ai_assistant;
+    if (aiCfg) {
+      aiCfg.seller_ai_endpoint = ep;
+      aiCfg.seller_guid = profile.guid || '';
+    }
+  }
+
+  const PROXY = 'https://gopang-proxy.tensor-city.workers.dev';
+
+  try {
+    const res = await fetch(`${PROXY}/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profile),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.detail || data.error || 'Profile 등록 실패');
+
+    // ── 완성 플래그 설정 ──
+    localStorage.setItem('hondi_profile_done', '1');
+    localStorage.removeItem('hondi_profile_step');
+    console.info('[Profile] 등록 완료:', profile.handle);
+
+    // ── PDV IndexedDB 초기화 ──
+    await _initPDV(profile.guid);
+
+    return true;
+  } catch (e) {
+    console.error('[Profile] 등록 오류:', e.message);
+    appendBubble('ai', `⚠️ 프로필 등록 중 오류가 발생했습니다: ${e.message}\n잠시 후 다시 시도해 주세요.`);
+    return false;
+  }
+}
+
+// ── PDV IndexedDB 초기화 ─────────────────────────────────
+async function _initPDV(guid) {
+  try {
+    const DB_NAME    = 'hondi-pdv';
+    const DB_VERSION = 1;
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      // 대화·거래·Agent 보고서 저장소
+      if (!db.objectStoreNames.contains('records')) {
+        const store = db.createObjectStore('records', { keyPath: 'id', autoIncrement: true });
+        store.createIndex('ts',   'ts',   { unique: false });
+        store.createIndex('type', 'type', { unique: false });
+        store.createIndex('guid', 'guid', { unique: false });
+      }
+      // Hash Chain 저장소
+      if (!db.objectStoreNames.contains('hash_chain')) {
+        db.createObjectStore('hash_chain', { keyPath: 'entryHash' });
+      }
+    };
+
+    await new Promise((resolve, reject) => {
+      req.onsuccess = resolve;
+      req.onerror   = reject;
+    });
+
+    // 초기화 레코드 삽입
+    const db = req.result;
+    const tx  = db.transaction('records', 'readwrite');
+    tx.objectStore('records').add({
+      ts:      new Date().toISOString(),
+      type:    'pdv_init',
+      guid:    guid || '',
+      summary: 'PDV IndexedDB 초기화 완료',
+      content: { db: DB_NAME, version: DB_VERSION },
+    });
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror    = reject;
+    });
+
+    console.info('[PDV] IndexedDB 초기화 완료 | DB:', DB_NAME, '| GUID:', guid?.slice(0, 16));
+    appendBubble('ai', '✅ 로컬 데이터 저장소(PDV)가 준비되었습니다. 이제 모든 대화와 거래가 이 기기에 안전하게 기록됩니다.');
+  } catch (e) {
+    console.warn('[PDV] IndexedDB 초기화 실패:', e.message);
+  }
 }

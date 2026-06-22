@@ -34,14 +34,15 @@ export const CFG = {
   // 각 항목: { provider, model, apiKey }
   // 등록된 순서대로 호출하며, 한도 초과(429/402) 시 다음 항목으로 자동 전환
   providers: [],
-  // SP-00 v11.0 — 캐시 최적화: 완전 정적, 동적값 없음
-  // GUID·위치·시간은 call-ai.js에서 user 컨텍스트 메시지로 주입
-  // DeepSeek prefix cache: system이 동일하면 ~95% 캐시 적중
-  system: `고팡 AI 비서. 한국어, 간결.
-요청: 직접처리 OR 응답 첫줄에 [GWP:ID] 출력.
-긴급시 즉시 [GWP:kemergency].
-GWP:[kemergency]긴급 [klaw]법률 [kpolice]경찰 [khealth]병원 [kedu]교육 [kgdc]GDC [kfinance]주식 [ktax]세금 [kcommerce]쇼핑 [ktransport]교통 [klogistics]택배 [fiil-kcleaner]환경오염 [kgov]민원 [kdemocracy]투표
-AUTH:[L2]지문(10만↑) [L1]얼굴(10만↓) [L0]자동`,
+  // personal-assistant-v1.0 — Profile 온보딩 + 일상 비서 + P2P 대리 응대
+  // GitHub raw에서 동적 로드 (loadPersonalAssistantSP 참조)
+  // 로드 실패 시 아래 인라인 폴백 사용
+  system: `당신은 혼디(Hondi) 나만의 AI 비서입니다. 한국어 해요체.
+세션 시작 시: localStorage 'hondi_profile_done'이 없으면 Profile 작성을 시작합니다.
+Profile 작성: 이름 → 유형(개인/사업자/기관) → 업종·상품 → 주소 → 연락처 → GDC결제 → 확인 순서로 한 번에 하나씩 질문합니다.
+완성 시 PROFILE_SUBMIT {...} 출력 후 PDV_STORE를 출력합니다.
+완성 후: 일상 대화 직접 처리, 전문 분야는 라우팅(K-Law/K-Tax/K-Market 등).
+P2P 채널에서 상대방 문의 시: 내 Profile 기반으로 대신 응대합니다.`,
   system_base: null,
   locationStr: '',
 };
@@ -113,3 +114,41 @@ export function _modelSupportsVision(model) {
   return VISION_MODELS.has(model);
 }
 
+
+// ── Personal Assistant SP 로더 ────────────────────────────────────
+// GitHub raw에서 personal-assistant-v1.0.txt를 로드하여 CFG.system에 적용
+// 캐시: 세션당 1회 (페이지 리로드 시 재로드)
+const _PA_SP_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/personal-assistant/personal-assistant-v1.0.txt';
+let _paSPLoaded = false;
+
+export async function loadPersonalAssistantSP() {
+  if (_paSPLoaded) return CFG.system;
+  // gopang_cfg에 저장된 system이 있으면 사용자가 직접 설정한 것 → 우선
+  const saved = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
+  if (saved.system && saved.system.length > 100) {
+    CFG.system = saved.system;
+    _paSPLoaded = true;
+    return CFG.system;
+  }
+  try {
+    const res = await fetch(_PA_SP_URL, { cache: 'no-cache' });
+    if (res.ok) {
+      const sp = await res.text();
+      if (sp && sp.length > 200) {
+        CFG.system = sp;
+        CFG.system_base = sp;
+        // gopang_cfg에도 저장 (다음 세션 빠른 로드용)
+        try {
+          const cfg2 = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
+          cfg2.system = sp;
+          localStorage.setItem('gopang_cfg', JSON.stringify(cfg2));
+        } catch {}
+        console.info('[PA-SP] personal-assistant-v1.0 로드 완료:', sp.length, 'chars');
+      }
+    }
+  } catch (e) {
+    console.warn('[PA-SP] SP 로드 실패 — 인라인 폴백 사용:', e.message);
+  }
+  _paSPLoaded = true;
+  return CFG.system;
+}

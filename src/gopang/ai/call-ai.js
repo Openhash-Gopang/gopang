@@ -430,6 +430,20 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     // K-Law 백그라운드 감시 트리거 — 대화 내용 자동 검토 (비동기)
     setTimeout(() => _klawReview('conversation', null), 3000);
 
+    // ── PROFILE_SUBMIT 감지 → Worker POST + PDV 초기화 ──────
+    if (fullReply.includes('PROFILE_SUBMIT')) {
+      import('../ui/welcome.js').then(({ handleProfileSubmit }) => {
+        handleProfileSubmit(fullReply);
+      }).catch(e => console.warn('[Profile] handleProfileSubmit import 실패:', e.message));
+    }
+
+    // ── hondi_profile_step 업데이트 ──────────────────────────
+    // AI가 "[N/7단계]" 패턴을 출력하면 현재 단계를 저장
+    const stepMatch = fullReply.match(/\[(\d+)\/\d+단계\]/);
+    if (stepMatch && !localStorage.getItem('hondi_profile_done')) {
+      try { localStorage.setItem('hondi_profile_step', stepMatch[1]); } catch {}
+    }
+
 
   } catch (err) {
     hideTyping();
