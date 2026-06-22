@@ -710,6 +710,30 @@ async function submitProfile(){
     // 1. 프로필 저장
     const res=await fetch(`${PROXY}/profile`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.detail||`등록 실패 (${res.status})`);}
+    const _regResult = await res.json().catch(()=>({}));
+
+    // 1.5 위임 인증서 — 그림자가 방금 생성됐으면(agent.created===true) 본인 키로
+    //     "나는 이 그림자를 내 대리인으로 위임한다"는 서명 1회 생성 → PDV 영구기록.
+    //     agent_profile_pdv_plan_v2.md Phase 0 보강(2026-06-22). 본인이 지금
+    //     온라인이라 서명 가능한 유일한 시점 — 이후엔 본체 없이 그림자가 응대해도
+    //     이 위임 자체는 본인이 직접 한 행위라는 증거가 영구히 남는다.
+    if (_regResult?.agent?.created && _regResult.agent.guid) {
+      try {
+        const delTs = Date.now().toString();
+        const delMsg = `DELEGATE:${payload.guid}:${_regResult.agent.guid}:${delTs}`;
+        const delSigBuf = await crypto.subtle.sign('Ed25519', wallet._privKey,
+          new TextEncoder().encode(delMsg));
+        const delSig = btoa(String.fromCharCode(...new Uint8Array(delSigBuf)))
+          .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+        const delRes = await fetch(`${PROXY}/profile/delegate`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ principal_guid: payload.guid, agent_guid: _regResult.agent.guid, ts: delTs, signature: delSig }),
+        });
+        if (!delRes.ok) console.warn('[위임] 기록 실패(가입 자체는 정상):', await delRes.text().catch(()=>''));
+      } catch (e) {
+        console.warn('[위임] 서명 생성 실패(가입 자체는 정상):', e.message);
+      }
+    }
 
     // 2. 검색 인덱스 등록
     await registerToSearchIndex(payload);

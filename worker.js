@@ -384,6 +384,9 @@ export default {
     // ── profile (사용자/사업자 프로필 등록·조회 — v5.1) ──────
     //   GET  : 인증 불필요 — handle 또는 guid로 공개 조회
     //   POST : body={guid,pubkey,signature,...} — _verifyEd25519 + TOFU
+    if (pathname === '/profile/delegate' && request.method === 'POST') {
+      return handleProfileDelegate(request, env, corsHeaders);
+    }
     if (pathname.startsWith('/profile')) {
       if (request.method === 'GET')  return handleProfileGet(request, env, corsHeaders);
       if (request.method === 'POST') return handleProfilePost(request, env, corsHeaders);
@@ -2698,6 +2701,94 @@ async function handleProfilePost(request, env, corsHeaders) {
   }
 
   return new Response(JSON.stringify({ ok: true, profile: savedProfile, agent: agentResult }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// /profile/delegate — 본체 → 그림자 위임 인증서 (2026-06-22)
+// agent_profile_pdv_plan_v2.md Phase 0 보강.
+// 본체가 자기 개인키로 "이 그림자는 내 대리인이다"를 1회 서명, PDV 영구기록.
+// 서버는 절대 본체 키로 대신 서명하지 않는다(불가능 — non-extractable).
+// ═══════════════════════════════════════════════════════════
+async function handleProfileDelegate(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { principal_guid, agent_guid, ts = '', signature } = body;
+  if (!principal_guid) return _err(400, 'MISSING_FIELD', 'principal_guid 필수', corsHeaders);
+  if (!agent_guid)     return _err(400, 'MISSING_FIELD', 'agent_guid 필수', corsHeaders);
+  if (!signature)      return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+
+  const sbSvc = _sbServiceHeaders(env);
+
+  // 1) 본체의 등록된 pubkey를 서버가 직접 조회(클라이언트가 pubkey를 또 보내게
+  //    하면 위조 위험 — DB에 저장된 값만 권위 있는 기준으로 삼는다)
+  const pRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(principal_guid)}&select=guid,pubkey_ed25519`,
+    { headers: sbSvc }
+  );
+  const pRows = await pRes.json().catch(() => []);
+  if (!Array.isArray(pRows) || !pRows.length) return _err(404, 'PRINCIPAL_NOT_FOUND', '본체를 찾을 수 없습니다', corsHeaders);
+  const principalPubkey = pRows[0].pubkey_ed25519;
+  if (!principalPubkey) return _err(409, 'NO_PUBKEY', '본체에 등록된 pubkey가 없습니다', corsHeaders);
+
+  // 2) 그림자가 실제로 이 본체의 그림자인지 확인(엉뚱한 그림자 위임 시도 차단)
+  const aRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agent_guid)}&select=guid,casts_for,entity_type`,
+    { headers: sbSvc }
+  );
+  const aRows = await aRes.json().catch(() => []);
+  if (!Array.isArray(aRows) || !aRows.length) return _err(404, 'AGENT_NOT_FOUND', '그림자를 찾을 수 없습니다', corsHeaders);
+  const agent = aRows[0];
+  if (agent.entity_type !== 'agent' || agent.casts_for !== principal_guid) {
+    return _err(403, 'NOT_YOUR_AGENT', '본인의 그림자가 아닙니다', corsHeaders);
+  }
+
+  // 3) 서명 검증 — 메시지 포맷은 서버가 고정 재구성(클라이언트가 임의 문자열에 서명 못 하게)
+  const sigMsg = `DELEGATE:${principal_guid}:${agent_guid}:${ts}`;
+  const sigOk = await _verifyEd25519Simple(principalPubkey, signature, sigMsg);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '위임 서명 검증 실패', corsHeaders);
+
+  // 4) 중복 위임 기록 방지(재시도 등)
+  const dupRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/pdv_log?type=eq.agent_delegation&guid=eq.${encodeURIComponent(principal_guid)}&select=id&limit=1`,
+    { headers: sbSvc }
+  );
+  const dupRows = await dupRes.json().catch(() => []);
+  if (Array.isArray(dupRows) && dupRows.length) {
+    return new Response(JSON.stringify({ ok: true, skipped: true, reason: 'ALREADY_DELEGATED' }), { status: 200, headers: corsHeaders });
+  }
+
+  // 5) PDV에 영구 기록 — raw_hash에 위임 서명 자체를 보존(사후 무결성 증빙)
+  const now = new Date().toISOString();
+  const pdvId = `PDV-DELEGATE-${principal_guid.replace(/[^a-zA-Z0-9]/g,'').slice(0,12)}-${Date.now()}`;
+  const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/pdv_log`, {
+    method: 'POST',
+    headers: { ...sbSvc, 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      id: pdvId,
+      guid: principal_guid,
+      source: 'gopang-core',
+      type: 'agent_delegation',
+      report_id: `DELEGATE-${agent_guid}`,
+      summary: `본체가 그림자(${agent_guid})를 자신의 대리인으로 위임함`,
+      summary_6w: JSON.stringify({
+        who: principal_guid, when: now, where: 'gopang.net',
+        what: `agent_guid=${agent_guid}`, how: 'Ed25519 위임서명(본인 키)', why: '나만의 AI비서 활성화',
+      }),
+      risk_level: 'low',
+      period: null,
+      raw_hash: signature,
+      reporter_svc: 'gopang-core',
+      via_worker: true,
+      created_at: now,
+    }),
+  });
+  if (!insertRes.ok) {
+    const errText = await insertRes.text().catch(() => '');
+    return _err(502, 'PDV_SAVE_FAILED', `위임 기록 저장 실패: ${errText}`, corsHeaders);
+  }
+
+  return new Response(JSON.stringify({ ok: true, principal_guid, agent_guid, delegated_at: now }), { status: 200, headers: corsHeaders });
 }
 
 // /ai-setup POST — AI 비서 설정 저장 (API 키 AES-256-GCM 암호화)
