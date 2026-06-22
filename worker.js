@@ -2415,6 +2415,124 @@ async function handleProfileGet(request, env, corsHeaders) {
 //   gdc_accepted, currencies, price_range, // S07 finance
 //   phone_visible,
 // }
+// ═══════════════════════════════════════════════════════════
+// 그림자(에이전트) 자동 생성 — agent_profile_pdv_plan_v2.md Phase 1
+// 2026-06-22
+//
+// ⚠️ 키 생성/암호화 함수는 src/pdv/keyManager.js의 generateAgentKeyPair/
+// importKEK/encryptAgentPrivateKey와 동일 로직의 인라인 포팅이다(worker.js는
+// import 구문이 없는 단일 파일 — _computeImportanceScore와 같은 이유).
+// keyManager.js를 고치면 여기도 같이 고쳐야 한다.
+// ═══════════════════════════════════════════════════════════
+
+function _b64ToBuf(b64) { return Uint8Array.from(atob(b64), c => c.charCodeAt(0)); }
+function _bufToB64(buf)  { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+
+async function _generateAgentKeyPairInline() {
+  const keyPair = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const pubKeyRaw    = await crypto.subtle.exportKey('raw', keyPair.publicKey);
+  const privKeyPkcs8 = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey); // raw 불가, pkcs8만 가능(실측 확인됨)
+  return { publicKeyB64: _bufToB64(pubKeyRaw), privateKeyPkcs8B64: _bufToB64(privKeyPkcs8) };
+}
+
+async function _importKEKInline(kekRawB64) {
+  return crypto.subtle.importKey('raw', _b64ToBuf(kekRawB64), { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+
+async function _encryptAgentPrivateKeyInline(privateKeyPkcs8B64, kek) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, kek, _b64ToBuf(privateKeyPkcs8B64));
+  return { ciphertextB64: _bufToB64(ciphertext), ivB64: _bufToB64(iv) };
+}
+
+/** 본체 guid로부터 결정론적 IPv6 형태 그림자 guid 파생(같은 본체는 항상 같은 그림자 guid) */
+async function _deriveAgentGuid(principalGuid) {
+  const hash  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(principalGuid + ':agent'));
+  const bytes = new Uint8Array(hash).slice(0, 16);
+  const hex   = [...bytes].map(b => b.toString(16).padStart(2, '0'));
+  const groups = [];
+  for (let i = 0; i < 16; i += 2) groups.push(hex[i] + hex[i + 1]);
+  return groups.join(':');
+}
+
+/**
+ * 본인(person/business) 신규가입 직후 그림자(_ai) 자동 생성.
+ * 실패해도 본 가입 자체를 막지 않음(호출부에서 .catch로 흡수) — 그림자는
+ * 나중에 재시도로도 만들 수 있지만 본인 가입 실패는 되돌릴 수 없는 손해라서.
+ */
+async function _createAgentForPrincipal(env, principalProfile) {
+  const principalGuid   = principalProfile.guid;
+  const principalHandle = principalProfile.handle;
+  if (!principalHandle) {
+    return { ok: false, error: 'NO_HANDLE', detail: '본인 handle이 없어 그림자 handle을 만들 수 없습니다' };
+  }
+  const agentHandle = `${principalHandle}_ai`;
+  const agentGuid   = await _deriveAgentGuid(principalGuid);
+  const sbSvc = _sbServiceHeaders(env);
+
+  // 이미 존재하면(재시도 등) 새로 만들지 않음 — 중복 생성 방지, idempotent
+  const checkRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agentGuid)}&select=guid`,
+    { headers: sbSvc }
+  );
+  const existingAgent = await checkRes.json().catch(() => []);
+  if (Array.isArray(existingAgent) && existingAgent.length) {
+    return { ok: true, guid: agentGuid, handle: agentHandle, created: false };
+  }
+
+  // 1) 그림자 키쌍 생성 + 봉투암호화
+  const { publicKeyB64, privateKeyPkcs8B64 } = await _generateAgentKeyPairInline();
+  if (!env.AGENT_KEK) {
+    return { ok: false, error: 'NO_AGENT_KEK', detail: 'env.AGENT_KEK(Cloudflare secret) 미설정' };
+  }
+  const kek = await _importKEKInline(env.AGENT_KEK);
+  const { ciphertextB64, ivB64 } = await _encryptAgentPrivateKeyInline(privateKeyPkcs8B64, kek);
+
+  // 2) agent_keys(별도 테이블, user_profiles.extra와 분리 — 공개 API 노출 방지)에 암호문 저장
+  const keyRes = await fetch(`${SUPABASE_URL}/rest/v1/agent_keys`, {
+    method: 'POST',
+    headers: { ...sbSvc, 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ agent_guid: agentGuid, ciphertext: ciphertextB64, iv: ivB64 }),
+  });
+  if (!keyRes.ok) {
+    const errText = await keyRes.text().catch(() => '');
+    return { ok: false, error: 'AGENT_KEY_SAVE_FAILED', detail: errText };
+  }
+
+  // 3) user_profiles에 그림자 행 생성 (entity_type='agent', casts_for=본체guid)
+  //    ai_assistant.system_prompt는 Phase 2(SP 합성)가 채울 자리 — 지금은 비워둠.
+  //    profile.html은 system_prompt 없으면 그냥 채팅창을 안 띄우니 안전하게 비워둘 수 있음.
+  const agentRecord = {
+    guid: agentGuid,
+    pubkey_ed25519: publicKeyB64,
+    entity_type: 'agent',
+    casts_for: principalGuid,
+    name: `${principalProfile.name || principalHandle} AI비서`,
+    handle: agentHandle,
+    native_lang: principalProfile.native_lang || 'ko',
+    is_public: true,
+    extra: {
+      public: {
+        identity: { _schema_version: '2.0', display_name: agentHandle, description: '', tags: [], entity_subtype: null },
+        ai_assistant: { system_prompt: null, greeting: null }, // Phase 2 대기
+      },
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  const profRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
+    method: 'POST',
+    headers: { ...sbSvc, 'Prefer': 'return=representation' },
+    body: JSON.stringify(agentRecord),
+  });
+  if (!profRes.ok) {
+    const errText = await profRes.text().catch(() => '');
+    return { ok: false, error: 'AGENT_PROFILE_SAVE_FAILED', detail: errText };
+  }
+
+  return { ok: true, guid: agentGuid, handle: agentHandle, created: true };
+}
+
 async function handleProfilePost(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
@@ -2445,6 +2563,11 @@ async function handleProfilePost(request, env, corsHeaders) {
 
   if (!entity_type) return _err(400, 'MISSING_FIELD', 'entity_type 필수', corsHeaders);
   if (!name)        return _err(400, 'MISSING_FIELD', 'name 필수', corsHeaders);
+  // 2026-06-22: 'agent'(그림자)는 이 화이트리스트에 의도적으로 없다 — 보안 경계.
+  // 그림자는 본인 가입(/profile POST) 직후 _createAgentForPrincipal()이 서버
+  // 내부에서만 생성한다. 클라이언트가 entity_type:'agent'를 직접 보내 임의
+  // guid를 casts_for로 지정해 남의 그림자를 사칭 생성하는 걸 막는다 — 나중에
+  // "지원 추가"로 여기 'agent'를 넣지 말 것.
   if (!['person','consumer','individual','org','institution','business','platform'].includes(entity_type)) {
     return _err(400, 'INVALID_FIELD', 'entity_type 값이 올바르지 않습니다', corsHeaders);
   }
@@ -2552,8 +2675,23 @@ async function handleProfilePost(request, env, corsHeaders) {
     return _err(502, 'DB_ERROR', `프로필 저장 실패: ${errText}`, corsHeaders);
   }
   const savedRows = await saveRes.json().catch(() => []);
+  const savedProfile = savedRows[0] || record;
 
-  return new Response(JSON.stringify({ ok: true, profile: savedRows[0] || record }), { status: 200, headers: corsHeaders });
+  // 2026-06-22: agent_profile_pdv_plan_v2.md Phase 1 — 그림자 자동생성.
+  // 신규가입(!existing)이고 본인이 person/business일 때만(agent가 또 agent를
+  // 낳지 않게, 그리고 기존 가입자의 매 정보수정마다 재생성 시도가 안 일어나게).
+  let agentResult = null;
+  if (!existing && (entity_type === 'person' || entity_type === 'business')) {
+    agentResult = await _createAgentForPrincipal(env, savedProfile).catch(e => {
+      console.error('[Profile] 그림자 자동생성 실패(본 가입은 정상 처리됨):', e.message);
+      return { ok: false, error: 'EXCEPTION', detail: e.message };
+    });
+    if (!agentResult.ok) {
+      console.warn('[Profile] 그림자 자동생성 실패:', JSON.stringify(agentResult));
+    }
+  }
+
+  return new Response(JSON.stringify({ ok: true, profile: savedProfile, agent: agentResult }), { status: 200, headers: corsHeaders });
 }
 
 // /ai-setup POST — AI 비서 설정 저장 (API 키 AES-256-GCM 암호화)
