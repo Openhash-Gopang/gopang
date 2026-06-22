@@ -81,6 +81,76 @@ export async function importPublicKey(publicKeyB64) {
   )
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// 그림자(에이전트) 키 커스터디 — 2026-06-22 추가
+// agent_profile_pdv_plan_v2.md Phase 0
+//
+// ⚠️ 위 generateKeyPair()는 의도적으로 non-extractable이라 본인 키에 쓴다.
+//    그림자는 본체가 오프라인일 때도 서명해야 해서 서버(Worker)가 키를
+//    들고 있어야 하므로, 이 섹션만 extractable:true로 생성하는 유일한
+//    예외다. 추출된 평문 키는 즉시 봉투암호화해서만 영속화하고, 그 외
+//    경로(로그, 클라이언트 응답 등)로는 절대 내보내지 않는다.
+//
+// 실측 확인(2026-06-22): Ed25519 개인키는 'raw' export가 불가능하고
+// 'pkcs8'(또는 'jwk')만 가능하다 — Node Web Crypto로 직접 실행해 확인함.
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * 그림자 전용 Ed25519 키쌍 생성 (extractable=true — 의도된 예외)
+ * @returns {Promise<{ publicKeyB64: string, privateKeyPkcs8B64: string }>}
+ *   privateKeyPkcs8B64는 호출자가 즉시 encryptAgentPrivateKey()로 암호화해야 함.
+ *   평문 상태로 저장·로그·반환하지 않는다.
+ */
+export async function generateAgentKeyPair() {
+  const keyPair = await subtle.generateKey(
+    { name: 'Ed25519' },
+    true,            // extractable = true — 그림자 키만의 의도된 예외
+    ['sign', 'verify']
+  )
+  const pubKeyRaw    = await subtle.exportKey('raw', keyPair.publicKey)
+  const privKeyPkcs8 = await subtle.exportKey('pkcs8', keyPair.privateKey)  // raw 불가, pkcs8만 가능(실측 확인)
+  return {
+    publicKeyB64:       bufToB64(pubKeyRaw),
+    privateKeyPkcs8B64: bufToB64(privKeyPkcs8),
+  }
+}
+
+/**
+ * KEK(Key Encryption Key) raw bytes → AES-GCM CryptoKey
+ * @param {string} kekRawB64 - env.AGENT_KEK(Cloudflare secret, 32바이트 base64) 값
+ */
+export async function importKEK(kekRawB64) {
+  return subtle.importKey(
+    'raw', b64ToBuf(kekRawB64), { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']
+  )
+}
+
+/**
+ * 그림자 개인키(pkcs8) 봉투암호화
+ * @param {string}    privateKeyPkcs8B64
+ * @param {CryptoKey} kek - importKEK() 결과
+ * @returns {Promise<{ ciphertextB64: string, ivB64: string }>} DB에 그대로 저장
+ */
+export async function encryptAgentPrivateKey(privateKeyPkcs8B64, kek) {
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const ciphertext = await subtle.encrypt(
+    { name: 'AES-GCM', iv }, kek, b64ToBuf(privateKeyPkcs8B64)
+  )
+  return { ciphertextB64: bufToB64(ciphertext), ivB64: bufToB64(iv) }
+}
+
+/**
+ * 그림자 개인키 복호화 → 즉시 non-extractable로 재import(이중 보호) → 서명에 바로 사용
+ * @returns {Promise<CryptoKey>} sign 용도로만 쓸 수 있는 non-extractable 키
+ */
+export async function loadAgentPrivateKey(ciphertextB64, ivB64, kek) {
+  const plaintext = await subtle.decrypt(
+    { name: 'AES-GCM', iv: b64ToBuf(ivB64) }, kek, b64ToBuf(ciphertextB64)
+  )
+  // 복호화된 평문은 이 함수 스코프를 벗어나지 않고, 즉시 non-extractable로 재포장한다.
+  return subtle.importKey('pkcs8', plaintext, { name: 'Ed25519' }, false, ['sign'])
+}
+
 // ── 서명 · 검증 ───────────────────────────────────────────────────────────
 
 /**
