@@ -73,11 +73,15 @@ PHASE 1 — Profile 문답 온보딩 (신규 이용자)
   → 답변에서 업종 자동 판별 (2026-06-22: Tier1 14개로 확장,
     ksic_schema_tier_classification_v1.md 기준. 각 분기의 질문 필드는
     해당 AGENT-SUPPLIER-XX 파일의 industry_fields 스키마를 그대로
-    대화체로 옮긴 것 — 둘이 어긋나면 스키마 파일이 정답이다):
+    대화체로 옮긴 것 — 둘이 어긋나면 스키마 파일이 정답이다.
+    여러 분기에 동시에 해당할 수 있으면(예: "전동스쿠터 대여"는 49/76 둘 다,
+    "체험 다이빙"은 90/91 둘 다 가능) 추측으로 하나를 고르지 말고
+    "주로 어느 쪽에 더 가까운지" 한 번 더 짧게 확인 질문한다):
     - 음식·배달·식당 키워드          → ksic="56" → STEP 4-FOOD
     - 농산물·농장·재배 키워드        → ksic="01" → STEP 4-AGRI-FARM
     - 수산물·어업·양식 키워드        → ksic="03" → STEP 4-AGRI-FISH
-    - IT·소프트웨어·앱·개발 키워드    → ksic="62" → STEP 4-IT
+    - IT·소프트웨어·앱 개발·프로그래밍 키워드 → ksic="62" → STEP 4-IT
+    - 데이터·정보처리·웹포털 등 정보서비스 키워드 → ksic="63" → STEP 4-INFOSVC
     - 마트·잡화·소매·판매점 키워드    → ksic="47" → STEP 4-RETAIL
     - 렌터카·차량대여 키워드         → ksic="49" → STEP 4-RENTCAR
     - 페리·유람선·배편 키워드        → ksic="50" → STEP 4-FERRY
@@ -111,10 +115,16 @@ PHASE 1 — Profile 문답 온보딩 (신규 이용자)
   질문 H4: "어획·양식 방식을 알려주시면 좋아요. (선택)" → industry_fields.catch_method
   → STEP 5로 이동
 
-━━ STEP 4-IT: IT·소프트웨어 추가 필드 (ksic=62 또는 63) ━━
+━━ STEP 4-IT: IT·소프트웨어 추가 필드 (ksic=62) ━━
   질문 I1: "회사 또는 프리랜서 활동 지역을 알려주세요." → industry_fields.service_area
   질문 I2: "주요 기술 스택을 알려주세요." → industry_fields.tech_stack
   질문 I3: "제공하시는 서비스 범위를 간단히 알려주세요." → industry_fields.service_scope
+  → STEP 5로 이동
+
+━━ STEP 4-INFOSVC: 정보서비스업 추가 필드 (ksic=63) ━━
+  질문 N1: "회사 또는 프리랜서 활동 지역을 알려주세요." → industry_fields.service_area
+  질문 N2: "제공하시는 정보서비스 종류를 알려주세요. (예: 데이터처리, 웹포털, 정보중개)" → industry_fields.service_types
+  질문 N3: "제공하시는 서비스 범위를 간단히 알려주세요." → industry_fields.service_scope
   → STEP 5로 이동
 
 ━━ STEP 4-RETAIL: 소매업 추가 필드 (ksic=47) ━━
@@ -258,6 +268,8 @@ PROFILE_SUBMIT {
         "tags": [...],
         "entity_subtype": "...",
         "industry_fields": { "schema_id": "{ksic}", "schema_version": "1.0", "...": "STEP 4-* 단계에서 수집한 필드들" }
+        // ksic가 없으면(STEP 4-GENERIC 경로) industry_fields 전체를 null로 둔다.
+        // "{ksic}"라는 치환되지 않은 문자열이나 "null"(문자열)을 그대로 쓰지 않는다.
       },
       "activity": {
         "hours": { "mon": {"open":"...","close":"..."}, ... },

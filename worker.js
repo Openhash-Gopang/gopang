@@ -73,6 +73,13 @@ const LAYER_REPOS = {
   L5: 'Openhash-Gopang/openhash-L5-global',
 };
 
+// 2026-06-22: industry_fields.schema_id 화이트리스트 — ksic_schema_tier_classification_v1.md Tier1.
+// profile_pdv_schema_plan_v1.md Phase 6에서 Tier2/3가 추가될 때마다 이 목록도 같이 늘린다.
+// 클라이언트(또는 모델 출력)가 "{ksic}" 같은 미치환 리터럴이나 미정의 코드를 보내는 걸 막는 최소 방어선.
+const VALID_INDUSTRY_SCHEMA_IDS = new Set([
+  '01','03','47','49','50','51','55','56','62','63','76','90','91','96',
+]);
+
 // STEP 10: VALID_PDV_SCOPES 11개로 확장
 const VALID_PDV_SCOPES = [
   'ktraffic', 'khealth', 'pdv_general', 'kmarket', 'k119',
@@ -2440,6 +2447,18 @@ async function handleProfilePost(request, env, corsHeaders) {
   if (!name)        return _err(400, 'MISSING_FIELD', 'name 필수', corsHeaders);
   if (!['person','consumer','individual','org','institution','business','platform'].includes(entity_type)) {
     return _err(400, 'INVALID_FIELD', 'entity_type 값이 올바르지 않습니다', corsHeaders);
+  }
+
+  // 2026-06-22: industry_fields.schema_id 검증 — AI(SP)가 지침을 어기고 "{ksic}" 같은
+  // 미치환 리터럴이나 정의되지 않은 코드를 보내도 그대로 저장되지 않게 막는다.
+  // null/undefined(=미해당)는 항상 허용 — GENERIC 경로의 정상 동작.
+  if (body.industry_fields != null) {
+    const sid = body.industry_fields.schema_id;
+    if (!sid || !VALID_INDUSTRY_SCHEMA_IDS.has(String(sid))) {
+      return _err(400, 'INVALID_SCHEMA_ID',
+        `industry_fields.schema_id가 유효하지 않습니다: ${JSON.stringify(sid)} (허용: ${[...VALID_INDUSTRY_SCHEMA_IDS].join(',')})`,
+        corsHeaders);
+    }
   }
 
   const sbH = _sbHeaders(env);
