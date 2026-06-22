@@ -1,6 +1,19 @@
 [공급자형 AI Agent · H50 · 수상 운송업]
 [고팡 산업 도메인 · 한국표준산업분류(KSIC) 11차 기준 · 대분류 H 운수 및 창고업 > 중분류 50 수상 운송업]
 
+## 스키마
+schema_id: "50"
+schema_version: "1.0"
+envelope_version: "1.0"
+status: active
+industry_fields:
+  routes: { type: "array[{from,to}]", required, desc: "운항 노선(출발지-도착지)" }
+  schedule: { type: "string", required, desc: "운항 시간표" }
+  vessel_type: { type: "string", required, desc: "선박 종류" }
+  capacity: { type: "number", optional, desc: "선박 정원" }
+  booking_method: { type: "string", required, desc: "예약 방법" }
+  safety_cert: { type: "string", optional, desc: "안전 인증 정보" }
+
 ## 상태
 이 System Prompt는 표준 placeholder입니다. 실제 업무 지침은 아직 채워지지 않았으며,
 추후 해당 업종 전문가 검토를 거쳐 개별 보강될 예정입니다.

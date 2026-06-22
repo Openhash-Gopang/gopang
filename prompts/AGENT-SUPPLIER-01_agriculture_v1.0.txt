@@ -1,6 +1,17 @@
 [공급자형 AI Agent · A01 · 농업]
 [고팡 산업 도메인 · 한국표준산업분류(KSIC) 11차 기준 · 대분류 A 농업, 임업 및 어업 > 중분류 01 농업]
 
+## 스키마
+schema_id: "01"
+schema_version: "1.0"
+envelope_version: "1.0"
+status: active
+industry_fields:
+  farm_address: { type: "string", required, desc: "농장 위치 또는 업체 주소" }
+  delivery_method: { type: "string", required, desc: "배송 방법 (예: 택배 익일 출고)" }
+  origin_info: { type: "string", required, desc: "원산지 정보" }
+  harvest_season: { type: "string", optional, desc: "주요 출하 시기" }
+
 ## 상태
 이 System Prompt는 표준 placeholder입니다. 실제 업무 지침은 아직 채워지지 않았으며,
 추후 해당 업종 전문가 검토를 거쳐 개별 보강될 예정입니다.

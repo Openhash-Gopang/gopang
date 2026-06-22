@@ -1,6 +1,19 @@
 [공급자형 AI Agent · I55 · 숙박업]
 [고팡 산업 도메인 · 한국표준산업분류(KSIC) 11차 기준 · 대분류 I 숙박 및 음식점업 > 중분류 55 숙박업]
 
+## 스키마
+schema_id: "55"
+schema_version: "1.0"
+envelope_version: "1.0"
+status: active
+industry_fields:
+  lodging_type: { type: "string", required, desc: "숙소 유형(호텔/펜션/게스트하우스 등)" }
+  address: { type: "string", required, desc: "주소" }
+  checkin_checkout: { type: "object{checkin,checkout}", required, desc: "체크인/체크아웃 시간" }
+  room_types: { type: "array[{name,capacity,count}]", required, desc: "객실 유형·인원·개수" }
+  amenities: { type: "string[]", optional, desc: "부대시설" }
+  pets_allowed: { type: "boolean", optional, desc: "반려동물 동반 가능 여부" }
+
 ## 상태
 이 System Prompt는 표준 placeholder입니다. 실제 업무 지침은 아직 채워지지 않았으며,
 추후 해당 업종 전문가 검토를 거쳐 개별 보강될 예정입니다.

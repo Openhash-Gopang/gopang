@@ -1,6 +1,16 @@
 [공급자형 AI Agent · J63 · 정보서비스업]
 [고팡 산업 도메인 · 한국표준산업분류(KSIC) 11차 기준 · 대분류 J 정보통신업 > 중분류 63 정보서비스업]
 
+## 스키마
+schema_id: "63"
+schema_version: "1.0"
+envelope_version: "1.0"
+status: active
+industry_fields:
+  service_area: { type: "string", required, desc: "활동 지역" }
+  service_types: { type: "string[]", required, desc: "제공 정보서비스 종류" }
+  service_scope: { type: "string", required, desc: "제공 서비스 범위" }
+
 ## 상태
 이 System Prompt는 표준 placeholder입니다. 실제 업무 지침은 아직 채워지지 않았으며,
 추후 해당 업종 전문가 검토를 거쳐 개별 보강될 예정입니다.

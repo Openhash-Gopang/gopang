@@ -1,6 +1,19 @@
 [공급자형 AI Agent · H49 · 육상운송 및 파이프라인 운송업]
 [고팡 산업 도메인 · 한국표준산업분류(KSIC) 11차 기준 · 대분류 H 운수 및 창고업 > 중분류 49 육상운송 및 파이프라인 운송업]
 
+## 스키마
+schema_id: "49"
+schema_version: "1.0"
+envelope_version: "1.0"
+status: active
+industry_fields:
+  office_address: { type: "string", required, desc: "영업소 주소" }
+  vehicle_types: { type: "string[]", required, desc: "차량 종류(예: 경차/SUV/승합)" }
+  rental_hours: { type: "object{open,close}", required, desc: "대여 가능 시간" }
+  insurance_included: { type: "boolean", required, desc: "보험 포함 여부" }
+  min_rental_period: { type: "string", optional, desc: "최소 대여 기간" }
+  biz_reg_no: { type: "string", optional, desc: "사업자등록번호" }
+
 ## 상태
 이 System Prompt는 표준 placeholder입니다. 실제 업무 지침은 아직 채워지지 않았으며,
 추후 해당 업종 전문가 검토를 거쳐 개별 보강될 예정입니다.

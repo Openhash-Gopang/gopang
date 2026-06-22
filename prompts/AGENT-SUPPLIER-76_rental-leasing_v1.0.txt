@@ -1,6 +1,17 @@
 [공급자형 AI Agent · N76 · 임대업; 부동산 제외]
 [고팡 산업 도메인 · 한국표준산업분류(KSIC) 11차 기준 · 대분류 N 사업시설 관리, 사업 지원 및 임대 서비스업 > 중분류 76 임대업; 부동산 제외]
 
+## 스키마
+schema_id: "76"
+schema_version: "1.0"
+envelope_version: "1.0"
+status: active
+industry_fields:
+  item_categories: { type: "string[]", required, desc: "대여 품목 카테고리(스쿠터/캠핑용품/전자기기 등)" }
+  rental_unit: { type: "string", required, desc: "대여 단위(시간/일/주)" }
+  deposit_required: { type: "boolean", optional, desc: "보증금 필요 여부" }
+  pickup_or_delivery: { type: "string", optional, desc: "수령 방식(매장픽업/배달)" }
+
 ## 상태
 이 System Prompt는 표준 placeholder입니다. 실제 업무 지침은 아직 채워지지 않았으며,
 추후 해당 업종 전문가 검토를 거쳐 개별 보강될 예정입니다.

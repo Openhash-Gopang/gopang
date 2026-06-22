@@ -1,6 +1,17 @@
 [공급자형 AI Agent · I56 · 음식점 및 주점업]
 [고팡 산업 도메인 · 한국표준산업분류(KSIC) 11차 기준 · 대분류 I 숙박 및 음식점업 > 중분류 56 음식점 및 주점업]
 
+## 스키마
+schema_id: "56"
+schema_version: "1.0"
+envelope_version: "1.0"
+status: active
+industry_fields:
+  address: { type: "string", required, desc: "업체 주소" }
+  hours: { type: "object{mon..sun:{open,close}}", required, desc: "영업시간" }
+  delivery: { type: "object{available,zone,min_order}", optional, desc: "배달 가능 여부·지역·최소주문금액" }
+  biz_reg_no: { type: "string", optional, desc: "사업자등록번호" }
+
 ## 상태
 이 System Prompt는 표준 placeholder입니다. 실제 업무 지침은 아직 채워지지 않았으며,
 추후 해당 업종 전문가 검토를 거쳐 개별 보강될 예정입니다.

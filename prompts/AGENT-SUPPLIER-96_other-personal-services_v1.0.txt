@@ -1,6 +1,17 @@
 [공급자형 AI Agent · S96 · 기타 개인 서비스업]
 [고팡 산업 도메인 · 한국표준산업분류(KSIC) 11차 기준 · 대분류 S 협회 및 단체, 수리 및 기타 개인 서비스업 > 중분류 96 기타 개인 서비스업]
 
+## 스키마
+schema_id: "96"
+schema_version: "1.0"
+envelope_version: "1.0"
+status: active
+industry_fields:
+  service_desc: { type: "string", required, desc: "제공 서비스 자유 기술" }
+  location_type: { type: "string", required, desc: "서비스 형태(매장형/출장형)" }
+  hours: { type: "string", optional, desc: "영업시간" }
+  price_range: { type: "string", optional, desc: "가격대" }
+
 ## 상태
 이 System Prompt는 표준 placeholder입니다. 실제 업무 지침은 아직 채워지지 않았으며,
 추후 해당 업종 전문가 검토를 거쳐 개별 보강될 예정입니다.
