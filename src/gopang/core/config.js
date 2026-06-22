@@ -115,21 +115,44 @@ export function _modelSupportsVision(model) {
 }
 
 
-// ── Personal Assistant SP 로더 ────────────────────────────────────
-// GitHub raw에서 personal-assistant-v1.0.txt를 로드하여 CFG.system에 적용
-// 캐시: 세션당 1회 (페이지 리로드 시 재로드)
+// ── Personal Assistant / 그림자 SP 로더 ─────────────────────────────
+// 설계 원칙(2026-06-22 합의):
+//   1) 그림자(_ai)가 존재하면: Worker에서 그 Profile을 fresh fetch → system_prompt 사용
+//      (profile.html이 B의 Profile에서 system_prompt를 가져오는 것과 동일한 메커니즘)
+//   2) 그림자 없음(온보딩 미완료): GitHub raw에서 personal-assistant-v1.0.txt 로드
+// 영구 localStorage 캐시 제거 — 매 세션 fresh fetch로 통일(갱신 자동 반영)
 const _PA_SP_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/personal-assistant/personal-assistant-v1.0.txt';
+const _PROXY_URL = 'https://gopang-proxy.tensor-city.workers.dev';
 let _paSPLoaded = false;
 
 export async function loadPersonalAssistantSP() {
   if (_paSPLoaded) return CFG.system;
-  // gopang_cfg에 저장된 system이 있으면 사용자가 직접 설정한 것 → 우선
-  const saved = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
-  if (saved.system && saved.system.length > 100) {
-    CFG.system = saved.system;
-    _paSPLoaded = true;
-    return CFG.system;
+
+  // 1) 그림자 우선 경로: hondi_profile_done + _USER.handle 이 있으면 시도
+  const profileDone = _profileDone();
+  const handle = _USER?.handle || null;
+  if (profileDone && handle) {
+    try {
+      const agentHandle = handle.replace(/^@/, '') + '_ai';
+      const res = await fetch(`${_PROXY_URL}/profile/@${agentHandle}`, { cache: 'no-cache' });
+      if (res.ok) {
+        const data = await res.json();
+        const sp = data?.extra?.public?.ai_assistant?.system_prompt;
+        if (sp && sp.length > 200) {
+          CFG.system = sp;
+          CFG.system_base = sp;
+          _paSPLoaded = true;
+          console.info('[SP] 그림자 system_prompt 로드 완료:', agentHandle, sp.length, 'chars');
+          return CFG.system;
+        }
+      }
+    } catch (e) {
+      console.warn('[SP] 그림자 SP 로드 실패 — 폴백:', e.message);
+    }
   }
+
+  // 2) 폴백: personal-assistant-v1.0.txt (온보딩용)
+  //    localStorage 영구 캐시 금지 — 항상 fresh fetch (그림자가 생기면 자동 전환됨)
   try {
     const res = await fetch(_PA_SP_URL, { cache: 'no-cache' });
     if (res.ok) {
@@ -137,18 +160,16 @@ export async function loadPersonalAssistantSP() {
       if (sp && sp.length > 200) {
         CFG.system = sp;
         CFG.system_base = sp;
-        // gopang_cfg에도 저장 (다음 세션 빠른 로드용)
-        try {
-          const cfg2 = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
-          cfg2.system = sp;
-          localStorage.setItem('gopang_cfg', JSON.stringify(cfg2));
-        } catch {}
-        console.info('[PA-SP] personal-assistant-v1.0 로드 완료:', sp.length, 'chars');
+        console.info('[SP] personal-assistant-v1.0 로드 완료:', sp.length, 'chars');
       }
     }
   } catch (e) {
-    console.warn('[PA-SP] SP 로드 실패 — 인라인 폴백 사용:', e.message);
+    console.warn('[SP] SP 로드 실패 — 인라인 폴백 사용:', e.message);
   }
   _paSPLoaded = true;
   return CFG.system;
+}
+
+function _profileDone() {
+  try { return !!localStorage.getItem('hondi_profile_done'); } catch { return false; }
 }

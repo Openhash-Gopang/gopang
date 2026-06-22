@@ -77,7 +77,7 @@ const LAYER_REPOS = {
 // profile_pdv_schema_plan_v1.md Phase 6에서 Tier2/3가 추가될 때마다 이 목록도 같이 늘린다.
 // 클라이언트(또는 모델 출력)가 "{ksic}" 같은 미치환 리터럴이나 미정의 코드를 보내는 걸 막는 최소 방어선.
 const VALID_INDUSTRY_SCHEMA_IDS = new Set([
-  '01','03','47','49','50','51','55','56','62','63','76','90','91','96',
+  '01','03','46','47','49','50','51','55','56','62','63','76','90','91','96',
 ]);
 
 // STEP 10: VALID_PDV_SCOPES 11개로 확장
@@ -2458,6 +2458,61 @@ async function _deriveAgentGuid(principalGuid) {
   return groups.join(':');
 }
 
+// ── Phase 2: 그림자 SP 합성 ──────────────────────────────────────────
+// AGENT-COMMON + AGENT-SUPPLIER-{ksic} + 본인 industry_fields 지식을 합성해
+// 그림자의 system_prompt를 만든다.
+// 설계 원칙:
+//   - 합성 실패 시 null 반환(그림자 생성을 막지 않는다)
+//   - 향후 industry_fields 변경 시 /profile/sync-sp 엔드포인트로 재합성 가능하게 설계
+async function _compileAgentSP(env, principalProfile) {
+  const REPO_RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main';
+  const headers  = { 'User-Agent': 'gopang-worker/4.9', 'Cache-Control': 'no-cache' };
+
+  // 1) AGENT-COMMON 로드
+  const commonRes = await fetch(`${REPO_RAW}/prompts/AGENT-COMMON_v1.0.txt`, { headers });
+  const commonSP  = commonRes.ok ? await commonRes.text() : '';
+
+  // 2) AGENT-SUPPLIER-{ksic} 로드 (업종 불명이면 생략)
+  const ksic = principalProfile?.extra?.public?.industry_fields?.schema_id || null;
+  let supplierSP = '';
+  if (ksic && VALID_INDUSTRY_SCHEMA_IDS.has(String(ksic))) {
+    // 파일명 규칙: AGENT-SUPPLIER-{code}_*_v1.0.txt — 전수 목록 대신 known map 사용
+    const SUPPLIER_FILE_MAP = {
+      '01':'01_agriculture_v1.0',       '03':'03_fisheries_v1.0',
+      '46':'46_wholesale-brokerage_v1.0','47':'47_retail-trade_v1.0',
+      '49':'49_land-transport-pipeline_v1.0','50':'50_water-transport_v1.0',
+      '51':'51_air-transport_v1.0',     '55':'55_accommodation_v1.0',
+      '56':'56_restaurants-bars_v1.0',  '62':'62_computer-programming-it_v1.0',
+      '63':'63_information-services_v1.0','76':'76_rental-leasing_v1.0',
+      '90':'90_creative-arts-leisure_v1.0','91':'91_sports-recreation_v1.0',
+      '96':'96_other-personal-services_v1.0',
+    };
+    const fname = SUPPLIER_FILE_MAP[String(ksic)];
+    if (fname) {
+      const supRes = await fetch(`${REPO_RAW}/prompts/AGENT-SUPPLIER-${fname}.txt`, { headers });
+      supplierSP = supRes.ok ? await supRes.text() : '';
+    }
+  }
+
+  // 3) industry_fields 지식 블록(본인 등록 데이터를 AI가 참조할 수 있게)
+  const iFields = principalProfile?.extra?.public?.industry_fields;
+  const iFieldsBlock = iFields
+    ? `
+
+## 나의 업종 정보 (industry_fields)
+\`\`\`json
+${JSON.stringify(iFields, null, 2)}
+\`\`\``
+    : '';
+
+  // 4) 합성
+  const parts = [commonSP, supplierSP, iFieldsBlock].filter(Boolean);
+  if (!parts.length) return null;
+
+  const compiled = parts.join('\n\n---\n\n').trim();
+  return compiled.length > 100 ? compiled : null;
+}
+
 /**
  * 본인(person/business) 신규가입 직후 그림자(_ai) 자동 생성.
  * 실패해도 본 가입 자체를 막지 않음(호출부에서 .catch로 흡수) — 그림자는
@@ -2486,13 +2541,7 @@ async function _createAgentForPrincipal(env, principalProfile) {
   // 1) 그림자 키쌍 생성 + 봉투암호화
   const { publicKeyB64, privateKeyPkcs8B64 } = await _generateAgentKeyPairInline();
   if (!env.AGENT_KEK) {
-    return {
-      ok: false, error: 'NO_AGENT_KEK',
-      detail: 'env.AGENT_KEK(Cloudflare secret) 미설정',
-      // 임시 진단(2026-06-22) — 값은 절대 안 내보내고 타입/길이만. 확인 후 제거할 것.
-      debug_kek_typeof: typeof env.AGENT_KEK,
-      debug_env_keys_sample: Object.keys(env).filter(k => k.includes('KEK') || k.includes('AGENT')),
-    };
+    return { ok: false, error: 'NO_AGENT_KEK', detail: 'env.AGENT_KEK(Cloudflare secret) 미설정' };
   }
   const kek = await _importKEKInline(env.AGENT_KEK);
   const { ciphertextB64, ivB64 } = await _encryptAgentPrivateKeyInline(privateKeyPkcs8B64, kek);
@@ -2509,8 +2558,11 @@ async function _createAgentForPrincipal(env, principalProfile) {
   }
 
   // 3) user_profiles에 그림자 행 생성 (entity_type='agent', casts_for=본체guid)
-  //    ai_assistant.system_prompt는 Phase 2(SP 합성)가 채울 자리 — 지금은 비워둠.
-  //    profile.html은 system_prompt 없으면 그냥 채팅창을 안 띄우니 안전하게 비워둘 수 있음.
+  // Phase 2: SP 합성 (AGENT-COMMON + AGENT-SUPPLIER-{ksic} + industry_fields 지식)
+  //   - GitHub raw에서 두 파일을 fetch해 합성한 뒤 system_prompt에 저장
+  //   - 실패해도 그림자 생성은 계속(system_prompt=null로 저장, 나중에 /profile/sync-sp로 재합성 가능)
+  const compiledSP = await _compileAgentSP(env, principalProfile).catch(() => null);
+
   const agentRecord = {
     guid: agentGuid,
     pubkey_ed25519: publicKeyB64,
@@ -2523,7 +2575,10 @@ async function _createAgentForPrincipal(env, principalProfile) {
     extra: {
       public: {
         identity: { _schema_version: '2.0', display_name: agentHandle, description: '', tags: [], entity_subtype: null },
-        ai_assistant: { system_prompt: null, greeting: null }, // Phase 2 대기
+        ai_assistant: {
+          system_prompt: compiledSP,
+          greeting: compiledSP ? `안녕하세요! ${principalProfile.name || principalHandle} AI비서입니다.` : null,
+        },
       },
     },
     created_at: new Date().toISOString(),
