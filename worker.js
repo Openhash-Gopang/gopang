@@ -61,7 +61,10 @@ const GITHUB_DEFAULT_BRANCH = 'main';
 // ── OpenHash L1~L5 저장소 매핑 (repository_dispatch 앵커링용) ─
 // buildout_plan_v2 Phase 1: 클라이언트가 GitHub 토큰 직접 보유 금지
 // → worker.js가 OPENHASH_TOKEN으로 dispatch를 중계
-// 현재 제주 파일럿: L1=이도1동 노드만 실존, L2~L5 수신 가능하나 블록 구조 미완
+//
+// 저장소 오너: Openhash-Gopang (push 권한 보유)
+// nounweb은 GitHub Pages 호스팅 fork — node.json repo 필드 오기재
+// 로컬 경로: Downloads\openhash\L1-ido1 ~ L5-global
 const LAYER_REPOS = {
   L1: 'Openhash-Gopang/openhash-L1-ido1',
   L2: 'Openhash-Gopang/openhash-L2-jeju-city',
