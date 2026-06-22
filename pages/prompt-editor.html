@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prompt Editor — 혼디 관리자</title>
+<title>Prompt Editor — 혼디</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
@@ -59,14 +59,14 @@
 
   .pe-wrap{max-width:760px;margin:0 auto;padding:28px 24px 80px}
 
-  /* ── 로그인 화면 ── */
+  /* ── 로그인 패널 (토글, 기본 숨김 — 조회는 항상 공개) ── */
   .pe-login-box{
-    max-width:360px;margin:64px auto 0;background:var(--surface);
-    border:1px solid var(--border);border-radius:16px;padding:32px 28px;
+    max-width:380px;margin:0 0 28px;background:var(--surface);
+    border:1px solid var(--border);border-radius:16px;padding:26px 26px 28px;
     box-shadow:0 1px 3px rgba(0,0,0,.05);
   }
-  .pe-login-box h2{font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px}
-  .pe-login-box p{font-size:12.5px;color:var(--text3);margin-bottom:22px;line-height:1.6}
+  .pe-login-box h2{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
+  .pe-login-box p{font-size:12.5px;color:var(--text3);margin-bottom:18px;line-height:1.6}
   .pe-field{margin-bottom:14px}
   .pe-field label{display:block;font-size:12.5px;font-weight:600;color:var(--text2);margin-bottom:6px}
   .pe-field input{
@@ -75,9 +75,10 @@
   }
   .pe-field input:focus{outline:none;border-color:var(--brand);background:var(--surface)}
   .pe-btn{
-    width:100%;font-size:14px;font-weight:700;color:#fff;background:var(--brand);
-    border:none;border-radius:10px;padding:11px 0;cursor:pointer;margin-top:6px;
+    font-size:14px;font-weight:700;color:#fff;background:var(--brand);
+    border:none;border-radius:10px;padding:11px 22px;cursor:pointer;
   }
+  .pe-login-box .pe-btn{width:100%;margin-top:6px}
   .pe-btn:hover{background:var(--brand-dk)}
   .pe-btn:disabled{opacity:.55;cursor:default}
   .pe-btn.secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
@@ -87,13 +88,18 @@
     padding:9px 12px;margin-top:14px;display:none;line-height:1.6;
   }
 
-  /* ── 에디터 화면 ── */
-  .pe-editor{display:none}
+  /* ── 본문(조회는 항상 표시) ── */
   .pe-meta{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
     margin-bottom:10px;font-size:12px;color:var(--text4);
   }
   .pe-meta b{color:var(--text3);font-weight:600}
+  .pe-mode-badge{
+    font-weight:600;padding:2px 9px;border-radius:99px;background:var(--surface2);
+    color:var(--text3);font-size:11px;
+  }
+  .pe-mode-badge.edit{background:var(--brand-bg);color:var(--brand-dk)}
+
   .CodeMirror{
     width:100%;height:60vh;font-size:13.5px;line-height:1.75;color:var(--text);
     font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
@@ -106,25 +112,24 @@
   .CodeMirror-linenumber{color:var(--text4);font-size:11.5px}
   .CodeMirror-dialog{font-family:inherit;font-size:13px}
   .CodeMirror-dialog input{font-family:inherit;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px}
-  .pe-msgfield{margin-top:14px}
+
+  .pe-edit-controls{margin-top:14px}
   .pe-msgfield input{
     width:100%;font-size:13px;padding:10px 12px;border:1px solid var(--border);
     border-radius:9px;background:var(--surface2);color:var(--text);font-family:inherit;
   }
   .pe-msgfield input:focus{outline:none;border-color:var(--brand);background:var(--surface)}
-  .pe-actions{display:flex;align-items:center;gap:10px;margin-top:16px}
-  .pe-actions .pe-btn{width:auto;padding:11px 22px}
+  .pe-actions{display:flex;align-items:center;gap:10px;margin-top:14px}
   .pe-status{margin-top:16px;font-size:13px;line-height:1.7}
   .pe-status.ok{color:var(--brand-dk)}
   .pe-status.err{color:var(--red)}
   .pe-status a{color:var(--brand-dk);font-weight:700;text-decoration:none}
   .pe-status a:hover{text-decoration:underline}
 
-  .pe-loading,.pe-fatal{
+  .pe-fatal{
     max-width:360px;margin:64px auto 0;text-align:center;
-    font-size:13.5px;color:var(--text3);
+    font-size:13.5px;color:var(--red);
   }
-  .pe-fatal{color:var(--red)}
 </style>
 </head>
 <body>
@@ -136,6 +141,7 @@
         <div class="pe-title-file" id="peFileLabel">—</div>
       </div>
       <div class="pe-header-actions">
+        <button class="pe-logout" id="peLoginToggleBtn" onclick="peToggleLoginBox()">관리자 로그인</button>
         <button class="pe-logout" id="peLogoutBtn" style="display:none" onclick="peLogout()">로그아웃</button>
         <button class="pe-close" onclick="window.close()" title="닫기">
           <svg viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -148,10 +154,10 @@
 
     <div id="peFatal" class="pe-fatal" style="display:none"></div>
 
-    <!-- 로그인 -->
+    <!-- 로그인 패널 — 토글, 누구나 보는 본문과는 별도 -->
     <div id="peLoginBox" class="pe-login-box" style="display:none">
       <h2>관리자 로그인</h2>
-      <p>System Prompt 원문을 수정하려면 관리자 이메일/PW로 로그인하세요.<br>수정 내용은 즉시 반영되지 않고 GitHub PR로 생성되어 검토 후 머지됩니다.</p>
+      <p>이 내용을 수정하려면 관리자 이메일/PW로 로그인하세요.<br>수정 내용은 즉시 반영되지 않고 GitHub PR로 생성되어 검토 후 머지됩니다.</p>
       <form id="peLoginForm" onsubmit="return peLogin(event)">
         <div class="pe-field">
           <label for="peUser">관리자 이메일</label>
@@ -166,20 +172,28 @@
       <div class="pe-error" id="peLoginErr"></div>
     </div>
 
-    <!-- 에디터 -->
-    <div id="peEditor" class="pe-editor">
+    <!-- 본문 — 누구나 조회 가능, 편집 컨트롤만 로그인 후 노출 -->
+    <div id="peEditor">
       <div class="pe-meta">
-        <span><b id="peAdminName">—</b>님으로 로그인됨</span>
+        <span><span class="pe-mode-badge" id="peModeBadge">읽기 전용</span></span>
         <span id="peLenLabel">0자</span>
       </div>
       <textarea id="peContent" spellcheck="false"></textarea>
-      <div class="pe-msgfield">
-        <input type="text" id="peCommitMsg" placeholder="변경 사유 (PR 제목/본문에 들어갑니다 — 비워두면 기본 문구 사용)">
+
+      <div id="peEditControls" class="pe-edit-controls" style="display:none">
+        <div class="pe-msgfield">
+          <input type="text" id="peCommitMsg" placeholder="변경 사유 (PR 제목/본문에 들어갑니다 — 비워두면 기본 문구 사용)">
+        </div>
+        <div class="pe-actions">
+          <button class="pe-btn" id="peSaveBtn" onclick="peSave()">PR 생성</button>
+          <button class="pe-btn secondary" onclick="peReload()">새로고침</button>
+        </div>
       </div>
-      <div class="pe-actions">
-        <button class="pe-btn" id="peSaveBtn" onclick="peSave()">PR 생성</button>
+
+      <div id="peViewControls" class="pe-actions">
         <button class="pe-btn secondary" onclick="peReload()">새로고침</button>
       </div>
+
       <div class="pe-status" id="peStatus"></div>
     </div>
 
@@ -192,17 +206,19 @@
   const peFile  = params.get('file') || '';
 
   // 세션은 메모리에만 — 새로고침 시 재로그인 (관리자 도구이므로 의도된 동작)
-  let peToken = null;
-  let peSha   = null;
-  let cm      = null; // CodeMirror 인스턴스 — 로그인 후 1회만 생성, 이후 refresh()만 호출
+  let peToken    = null;
+  let peSha      = null;
+  let peIsAdmin  = false;
+  let cm         = null; // CodeMirror 인스턴스 — 1회만 생성, 이후 setOption/refresh만 호출
 
   function $(id){ return document.getElementById(id); }
 
   function peEnsureEditor(){
-    if (cm) { cm.refresh(); return; }
+    if (cm) return;
     cm = CodeMirror.fromTextArea($('peContent'), {
       lineNumbers:   true,
       lineWrapping:  true,
+      readOnly:      true,   // 기본 읽기 전용 — 로그인해야 편집 가능
       mode:          null,   // 일반 텍스트 — System Prompt는 코드가 아니라 자연어/마크다운 혼합
       extraKeys:     { 'Ctrl-F': 'findPersistent', 'Cmd-F': 'findPersistent' },
     });
@@ -216,6 +232,11 @@
 
   function peAuthHeaders(){
     return peToken ? { 'Authorization': 'Bearer ' + peToken } : {};
+  }
+
+  function peToggleLoginBox(){
+    const box = $('peLoginBox');
+    box.style.display = (box.style.display === 'none') ? 'block' : 'none';
   }
 
   async function peLogin(ev){
@@ -239,12 +260,16 @@
         return false;
       }
       peToken = data.token;
-      $('peAdminName').textContent = data.admin;
+      peIsAdmin = true;
       $('peLoginBox').style.display = 'none';
+      $('peLoginToggleBtn').style.display = 'none';
       $('peLogoutBtn').style.display = 'inline-block';
-      $('peEditor').style.display = 'block';
-      peEnsureEditor();
-      await peLoadFile();
+      $('peModeBadge').textContent = data.admin + '님 — 편집 가능';
+      $('peModeBadge').classList.add('edit');
+      $('peEditControls').style.display = 'block';
+      $('peViewControls').style.display = 'none';
+      cm.setOption('readOnly', false);
+      await peLoadFile(); // 편집 시작 직전 최신 sha로 다시 동기화(충돌 방지)
     } catch (e) {
       errEl.textContent = '서버에 연결할 수 없습니다: ' + e.message;
       errEl.style.display = 'block';
@@ -255,25 +280,26 @@
   }
 
   function peLogout(){
-    peToken = null; peSha = null;
-    if (cm) cm.setValue('');
-    $('peEditor').style.display = 'none';
+    peToken = null; peIsAdmin = false;
+    cm.setOption('readOnly', true);
+    $('peEditControls').style.display = 'none';
+    $('peViewControls').style.display = 'flex';
+    $('peModeBadge').textContent = '읽기 전용';
+    $('peModeBadge').classList.remove('edit');
     $('peLogoutBtn').style.display = 'none';
-    $('peLoginBox').style.display = 'block';
+    $('peLoginToggleBtn').style.display = 'inline-block';
     $('peUser').value = ''; $('pePass').value = '';
     $('peStatus').textContent = '';
   }
 
+  // 공개 조회 — 인증 불필요. 로그인 여부와 무관하게 항상 이 엔드포인트로 불러온다.
   async function peLoadFile(){
     const statusEl = $('peStatus');
     statusEl.className = 'pe-status';
     statusEl.textContent = '불러오는 중…';
     try {
-      const res = await fetch(`${WORKER_URL}/admin/prompt?file=${encodeURIComponent(peFile)}`, {
-        headers: peAuthHeaders(),
-      });
+      const res = await fetch(`${WORKER_URL}/prompt?file=${encodeURIComponent(peFile)}`);
       const data = await res.json().catch(() => null);
-      if (res.status === 401) { peLogout(); return; }
       if (!res.ok || !data?.ok) {
         statusEl.className = 'pe-status err';
         statusEl.textContent = data?.detail || '파일을 불러오지 못했습니다.';
@@ -281,7 +307,6 @@
       }
       peSha = data.sha;
       cm.setValue(data.content);
-      cm.markClean();
       cm.refresh();
       peUpdateLen();
       statusEl.textContent = '';
@@ -298,6 +323,7 @@
   }
 
   async function peSave(){
+    if (!peIsAdmin) return;
     const btn = $('peSaveBtn');
     const statusEl = $('peStatus');
     const content = cm.getValue();
@@ -317,7 +343,12 @@
         body: JSON.stringify({ file: peFile, content, sha: peSha, message }),
       });
       const data = await res.json().catch(() => null);
-      if (res.status === 401) { peLogout(); return; }
+      if (res.status === 401) {
+        statusEl.className = 'pe-status err';
+        statusEl.textContent = '관리자 세션이 만료됐습니다. 다시 로그인해주세요.';
+        peLogout();
+        return;
+      }
       if (!res.ok || !data?.ok) {
         statusEl.className = 'pe-status err';
         statusEl.textContent = data?.detail || 'PR 생성에 실패했습니다.';
@@ -339,7 +370,8 @@
       return;
     }
     $('peFileLabel').textContent = peFile;
-    $('peLoginBox').style.display = 'block';
+    peEnsureEditor();
+    peLoadFile();
   })();
 </script>
 

@@ -354,8 +354,8 @@ export default {
     // ── Prompt Editor (관리자 — L1 prompt_admins 인증 + GitHub PR) ──
     if (pathname === '/admin/login' && request.method === 'POST')
       return handleAdminLogin(request, env, corsHeaders);
-    if (pathname === '/admin/prompt' && request.method === 'GET')
-      return handleAdminPromptGet(request, env, corsHeaders);
+    if (pathname === '/prompt' && request.method === 'GET')
+      return handlePromptGet(request, env, corsHeaders);
     if (pathname === '/admin/prompt' && request.method === 'POST')
       return handleAdminPromptSave(request, env, corsHeaders);
 
@@ -2796,7 +2796,10 @@ async function handleFeedbackPatch(request, env, corsHeaders) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// Prompt Editor — 관리자 인증(L1 prompt_admins) + GitHub PR 워크플로
+// Prompt Editor — 조회는 공개, 편집은 관리자 인증(L1 prompt_admins) + GitHub PR
+//
+// GET /prompt는 인증 없이 누구나 호출 가능 — System Prompt 원문은 일반인도
+// 볼 수 있어야 한다는 요구사항. 인증은 POST /admin/prompt(저장)에만 걸린다.
 //
 // 인증: L1 PocketBase의 prompt_admins(Auth Collection)에 위임 — Worker는
 //   비밀번호를 직접 검증하지 않고, PocketBase의
@@ -2973,11 +2976,11 @@ async function _ghCommitViaPR(env, path, newContent, baseSha, adminName, message
   return (await prRes.json()).html_url;
 }
 
-// GET /admin/prompt?file=prompts/SP-01_klaw_v1.0.txt
-async function handleAdminPromptGet(request, env, corsHeaders) {
-  const admin = await _requireAdmin(request, env);
-  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
-
+// GET /prompt?file=prompts/SP-01_klaw_v1.0.txt — 공개. 누구나 System Prompt 원문을
+// 조회할 수 있어야 한다(요청사항). 화이트리스트(prompts/*.txt)는 그대로 유지 —
+// 어차피 GitHub repo 자체가 public이라 정보 노출 위험은 없고, 의도한 파일 범위만
+// 이 엔드포인트로 받게 하기 위한 것. 수정(POST /admin/prompt)만 관리자 인증 필요.
+async function handlePromptGet(request, env, corsHeaders) {
   const file = new URL(request.url).searchParams.get('file') || '';
   if (!_isAllowedPromptPath(file)) return _err(400, 'INVALID_FILE', '허용되지 않은 파일 경로', corsHeaders);
 
@@ -2998,7 +3001,7 @@ async function handleAdminPromptSave(request, env, corsHeaders) {
   const { file, content, sha, message } = body || {};
   if (!_isAllowedPromptPath(file)) return _err(400, 'INVALID_FILE', '허용되지 않은 파일 경로', corsHeaders);
   if (typeof content !== 'string' || !content.trim()) return _err(400, 'MISSING_FIELD', 'content 필수', corsHeaders);
-  if (!sha) return _err(400, 'MISSING_FIELD', 'sha 필수 (충돌 감지용 — GET /admin/prompt로 먼저 조회하세요)', corsHeaders);
+  if (!sha) return _err(400, 'MISSING_FIELD', 'sha 필수 (충돌 감지용 — GET /prompt로 먼저 조회하세요)', corsHeaders);
 
   try {
     const prUrl = await _ghCommitViaPR(env, file, content, sha, admin.admin, message);

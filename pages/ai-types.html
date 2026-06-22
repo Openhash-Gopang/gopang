@@ -81,6 +81,16 @@
 
 /* ── 하위 시스템 System Prompt 목록 ── */
 .ait-prompts-section { margin-top: 48px; padding-top: 4px; }
+.ait-essay-section { margin: 40px 0 36px; }
+.ait-numlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.ait-numlist li { display: flex; gap: 14px; align-items: flex-start; }
+.ait-numlist .ait-num {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; margin-top: 1px;
+  background: var(--brand); color: #fff; font-size: 12.5px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.ait-numlist p { font-size: 14.5px; color: var(--text2); line-height: 1.8; margin: 0; }
+.ait-numlist b { color: var(--text); font-weight: 600; }
 .ait-industry-group { margin: 0 0 28px; }
 .ait-industry-group:last-child { margin-bottom: 0; }
 .ait-industry-group-title {
@@ -189,9 +199,101 @@
     </p>
   </div>
 
-  <p class="ait-footnote">
-    사용자는 Type A와 Type B를 모두 이용할 수도 있고, 둘 중 하나만 선택해 이용할 수도 있습니다.
-  </p>
+  <div class="ait-essay-section">
+    <div class="ait-section-head">
+      <div class="ait-eyebrow">HONDI USERS</div>
+      <h2>혼디의 이용자 — 사람, 사물, 그리고 개념</h2>
+    </div>
+    <p class="ait-lead">
+      혼디의 이용자는 사람, 사물, 개념입니다. 개념은 다시 기관과 사상(思想)으로 나뉩니다. 기관은
+      특허청, 특정 시청, 특정 음식점, 특정 기업, 특정 법원처럼 구체적인 단위이고, 사상은 헌법, 민법,
+      내과의 통칭, 외과의 통칭, 법원의 통칭, 사람의 통칭처럼 보편적인 단위입니다.
+    </p>
+    <p class="ait-lead">
+      혼디 앱을 열면 예외 없이 <b>나만의 AI 비서</b>가 호출되고, 나만의 AI 비서는 다시 필요에 따라
+      전문 분야 AI Agent를 호출합니다. 예를 들어 홍길동이 앱을 열면 홍길동의 나만의 AI 비서가
+      호출되고, 어느 음식점이 앱을 열면 그 음식점의 나만의 AI 비서가 호출되는 식입니다.
+    </p>
+    <p class="ait-lead">
+      시중에는 다양한 AI 모델이 있습니다(Claude, DeepSeek, ChatGPT, Gemini, Grok 등). System Prompt는
+      그 모델에게 내리는 일종의 지침서입니다. 자동차에 비유하면 AI 모델은 제조사가 서로 다른 차량이고,
+      System Prompt는 내비게이션의 지도와 목적지에 해당합니다. 차종이 달라도 내비게이션과 목적지가
+      같으면 같은 경로로 같은 목적지에 도착합니다 — System Prompt는 AI 모델이 이용자의 요구를
+      충족하도록 이끄는 가이드라인입니다.
+    </p>
+    <p class="ait-lead" style="margin-bottom:0">
+      다만 모든 사람, 모든 음식점이 각자 System Prompt를 처음부터 작성하는 건 비효율적입니다. 그래서
+      사람들이 공통으로 가지는 요소, 음식점들이 공통으로 가지는 요소를 각각 하나의 System Prompt
+      템플릿으로 미리 구성해 두었습니다. 이용자는 이 템플릿에 자신의 취향과 성향, 요구를 반영해
+      나가며, 점차 자신만의 System Prompt로 다듬어 갑니다.
+    </p>
+  </div>
+
+  <div class="ait-essay-section">
+    <div class="ait-section-head">
+      <div class="ait-eyebrow">SHARED FUNCTIONS</div>
+      <h2>모든 AI 비서의 공통 프롬프트</h2>
+    </div>
+    <p class="ait-lead">
+      사람, 사물, 개념 등 혼디넷 이용자의 정체성과 무관하게, 모두가 공유하는 일련의 기능은
+      대표적으로 다음과 같습니다.
+    </p>
+    <ol class="ait-numlist">
+      <li>
+        <span class="ait-num">1</span>
+        <p>혼디 앱과 혼디넷의 전체 구성을 이해하고, 이용자를 대신해 이를 관리합니다.</p>
+      </li>
+      <li>
+        <span class="ait-num">2</span>
+        <p>이용자의 일상과 업무를 <b>PDV(Private Data Vault)</b>에 기록합니다 — 이 기록은
+        위변조가 불가능합니다. PDV를 생성하고 끊임없이 갱신하는 것이 나만의 AI 비서의 핵심
+        임무 중 하나입니다.</p>
+      </li>
+      <li>
+        <span class="ait-num">3</span>
+        <p>PDV가 위변조 불가능한 이유는, 그 데이터 뭉치로부터 주기적으로 Hash 값을 계산해
+        <b>OpenHash Network</b>에 등록하기 때문입니다. 비유하자면 모든 문서의 지문을 떠서,
+        누구도 뚫을 수 없는 성채에 보관해 두는 것과 같습니다. 나중에 어떤 문서의 진위가
+        의심되면, 그 문서의 지문을 다시 떠서 성채에 보관된 지문과 대조해보면 됩니다. 그 성채가
+        바로 OpenHash Network입니다.</p>
+      </li>
+      <li>
+        <span class="ait-num">4</span>
+        <p>대화를 마치거나 문서를 전달받으면, 그 내용을 PDV에 기록하는 동시에 그 Hash를
+        OpenHash Network에 전달하고, PDV 자체의 Hash Chain을 갱신합니다. 이것이 데이터
+        위변조를 막는 메커니즘입니다.</p>
+      </li>
+      <li>
+        <span class="ait-num">5</span>
+        <p>이용자의 간단한 요구(오늘 날씨, 내일 일정, 주가 현황 등)는 즉시 수행하고 결과를
+        곧바로 보고합니다.</p>
+      </li>
+      <li>
+        <span class="ait-num">6</span>
+        <p>스스로 수행할 수 없는 고도의 업무(소송 접수, 환자 진료, 진로 추천 등)는 해당 분야의
+        전문 AI Agent를 호출해 이용자의 요구를 전달하고, 수행 과정을 모니터링하며, 결과를
+        6하원칙(누가·언제·어디서·무엇을·어떻게·왜)에 따라 PDV에 기록합니다.</p>
+      </li>
+      <li>
+        <span class="ait-num">7</span>
+        <p>외부 전문 Agent가 요청하는 데이터를 제공합니다. 예를 들어 병원 진료를 예약하려는
+        홍길동은 자신의 질병 이력을 해당 병원에 미리 제출해 진단의 정확도를 높일 수 있습니다 —
+        외부 AI Agent의 요청에 이용자가 승인하면, PDV에서 필요한 개인 정보를 인출해 전달하는
+        것도 나만의 AI 비서가 공통으로 수행하는 기능입니다.</p>
+      </li>
+    </ol>
+
+    <div class="ait-prompt-grid" style="margin-top:22px">
+      <div class="ait-prompt-card">
+        <div class="ait-prompt-top">
+          <div class="ait-prompt-icon">🧩</div>
+          <div><div class="ait-prompt-name">공통 시스템 프롬프트</div><div class="ait-prompt-version">COMMON-01 · v1.0</div></div>
+        </div>
+        <div class="ait-prompt-desc">모든 나만의 AI 비서가 공유하는 기반 System Prompt — 표준 placeholder, 보강 예정.</div>
+        <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-COMMON_v1.0.txt">프롬프트 보기 ↗</a>
+      </div>
+    </div>
+  </div>
 
   <div class="ait-prompts-section">
     <div class="ait-section-head">
@@ -207,7 +309,7 @@
       <div class="ait-prompt-card">
         <div class="ait-prompt-top">
           <div class="ait-prompt-icon">👤</div>
-          <div><div class="ait-prompt-name">나만의 AI 비서</div><div class="ait-prompt-version">CONSUMER-01 · v1.0</div></div>
+          <div><div class="ait-prompt-name">소비자를 위한 AI 비서</div><div class="ait-prompt-version">CONSUMER-01 · v1.0</div></div>
         </div>
         <div class="ait-prompt-desc">소비자형(Type A) 공통 System Prompt — 표준 placeholder, 보강 예정.</div>
         <a class="ait-prompt-link" target="_blank" rel="noopener" href="/pages/prompt-editor.html?file=prompts/AGENT-CONSUMER_v1.0.txt">프롬프트 보기 ↗</a>
