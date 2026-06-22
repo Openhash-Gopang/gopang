@@ -1186,6 +1186,9 @@ async function handleOpenhashAnchor(request, env, corsHeaders) {
 
   const repo = LAYER_REPOS[layer];
 
+  // ── 임시 디버그: 토큰 앞 8자 확인 ──
+  console.log(`[OpenHash] token_prefix=${token ? token.slice(0,8) : 'NULL'} repo=${repo}`);
+
   // repository_dispatch 전송 (GitHub API)
   // 응답: 204 No Content = 수락됨 (비동기 처리)
   let dispatchStatus;
@@ -1228,14 +1231,13 @@ async function handleOpenhashAnchor(request, env, corsHeaders) {
   return new Response(JSON.stringify({
     ok:         submitted,
     status:     submitted ? 'submitted' : 'failed',
-    // submitted: dispatch 수락됨, 블록 생성은 수 초~수십 초 후
-    // confirmed: chain_status.json 재조회로 확인 (클라이언트가 별도 폴링)
     layer,
     repo,
     entry_hash,
     dispatch_status: dispatchStatus,
+    token_prefix: token ? token.slice(0, 8) + '...' : 'NULL',
     note: submitted
-      ? '블록 생성 진행 중. /openhash/status?layer=L1&entry_hash=... 로 확정 확인 가능.'
+      ? '블록 생성 진행 중.'
       : `dispatch 실패 (HTTP ${dispatchStatus})`,
   }), { status: 200, headers: corsHeaders });
 }
