@@ -53,16 +53,25 @@ export async function processTx(tx) {
     await stage4_anomalyDetect(tx)
     await stage5_complianceCheck(tx)
 
-    // 중요도 기반 적응형 검증
+    // 중요도 기반 적응형 검증 (Phase 3: 논문 §4.1 공식)
+    // tx.assetType/contractType 없으면 기본값(stable/instant) 폴백
     const score = calculateImportanceScore(tx)
     const mode  = selectMode(score)
     await importanceVerify(tx, mode)
+
+    // BIVM 검증 (Phase 4: 논문 §4.2)
+    // toBalance가 있는 경우만 실행 — 상대방 잔액은 서버(worker.js)만 알 수 있음
+    // 클라이언트 단독 호출 시 toBalance 없으면 건너뜀 (프라이버시 원칙)
+    if (tx.toBalance !== undefined && tx.toBalance !== null) {
+      const txPair = createTxPair(tx.id, tx.from, tx.to, tx.amount, tx.fromBalance, tx.toBalance)
+      await bivmVerify(txPair)
+    }
 
     // 일일 누적 업데이트
     _updateDailyAccum(tx.from, tx.amount)
     _updateRecentTx(tx.from)
 
-    return { success: true, stage: 5, error: null, mode }
+    return { success: true, stage: 5, error: null, mode, score }
 
   } catch (err) {
     const stage = err._stage ?? 0
