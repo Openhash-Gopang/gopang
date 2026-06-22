@@ -260,6 +260,18 @@ const _handle = (() => {
   return (p || q || '').replace(/^@/, '');
 })();
 
+// buyer_request: K-Market Agent가 [OPEN_SELLER_AI] 태그로 전달하는 구매 요청
+// 예: ?buyer_request={"item":"고기국수","qty":2,"delivery":"포장"}&buyer_guid=fe80::...
+const _buyerRequest = (() => {
+  const q = new URLSearchParams(location.search);
+  const raw = q.get('buyer_request');
+  if (!raw) return null;
+  try { return JSON.parse(decodeURIComponent(raw)); } catch { return null; }
+})();
+const _buyerGuid   = new URLSearchParams(location.search).get('buyer_guid') || '';
+const _gwpMode     = new URLSearchParams(location.search).get('gwp') === '1';
+const _openerOrigin = new URLSearchParams(location.search).get('opener_origin') || 'https://market.gopang.net';
+
 let _profile    = null;
 let _aiHistory  = [];   // AI 채팅 대화 이력 (프록시 AI용)
 let _aiSystem   = '';   // 사업체 AI 비서 system prompt
@@ -416,8 +428,23 @@ function render(p) {
     sec.classList.remove('hidden');
     // AI 비서 이름 표시
     if (p.name) document.getElementById('ai-name').textContent = `${p.name} AI 비서`;
-    // 초기 인사말
-    addAIMsg('ai', aiCfg.greeting || `안녕하세요! ${p.name||'저희'}에 대해 궁금한 것이 있으시면 무엇이든 물어보세요. 😊`);
+
+    if (_buyerRequest) {
+      // K-Market Agent가 buyer_request를 전달한 경우 → 채팅창 자동 열기 + 요청 주입
+      toggleAIChat();
+      const reqMsg = `[BUYER_REQUEST] ${_buyerGuid ? 'buyer_guid: ' + _buyerGuid + ' | ' : ''}` +
+        `품목: ${_buyerRequest.item}, 수량: ${_buyerRequest.qty}` +
+        (_buyerRequest.delivery ? `, 배달: ${_buyerRequest.delivery}` : '') +
+        (_buyerRequest.budget   ? `, 예산: ${_buyerRequest.budget}` : '');
+      // 판매자 AI 비서에게 자동 주입 (600ms 딜레이 — 채팅창 렌더 후)
+      setTimeout(() => {
+        _aiHistory.push({ role: 'user', content: reqMsg });
+        _callSellerAI('');  // 빈 user 메시지로 AI 응답만 유도
+      }, 600);
+    } else {
+      // 일반 방문자 → 인사말만 표시
+      addAIMsg('ai', aiCfg.greeting || `안녕하세요! ${p.name||'저희'}에 대해 궁금한 것이 있으시면 무엇이든 물어보세요. 😊`);
+    }
   }
 
   // ── SEO ──
@@ -461,8 +488,13 @@ async function sendAIMsg() {
 
   addAIMsg('user', text);
   _aiHistory.push({ role: 'user', content: text });
+  await _callSellerAI(text);
+}
 
-  // 타이핑 인디케이터
+// 실제 LLM 호출 — buyer_request 자동 주입과 일반 대화 양쪽에서 사용
+async function _callSellerAI(userText) {
+  document.getElementById('ai-send').disabled = true;
+
   const typingEl = document.createElement('div');
   typingEl.className = 'ai-msg ai-msg-ai ai-msg-typing';
   typingEl.innerHTML = '<div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>';
@@ -470,20 +502,17 @@ async function sendAIMsg() {
   typingEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
   try {
-    // ★ 캐시 최적화:
-    //   system = _aiSystem (정적, 사업체별 고정 → 동일 사업체 방문자 간 캐시 공유)
-    //   대화 이력은 user/assistant 교대 — prefix 누적으로 캐시 적중률 상승
     const res = await fetch(`${PROXY}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model:      'deepseek-v4-flash',
-        max_tokens: 400,        // 응대 AI — 간결한 답변으로 제한
+        max_tokens: 400,
         temperature: 0.7,
-        stream:     false,      // 프로필 페이지 — 비스트리밍 (단순)
+        stream:     false,
         messages: [
-          { role: 'system', content: _aiSystem },  // ← 사업체 system (정적, 캐시됨)
-          ..._aiHistory.slice(-10),                 // 최근 10턴 (캐시 prefix 누적)
+          { role: 'system', content: _aiSystem },
+          ..._aiHistory.slice(-10),
         ],
       }),
     });
@@ -496,13 +525,69 @@ async function sendAIMsg() {
     addAIMsg('ai', reply);
     _aiHistory.push({ role: 'assistant', content: reply });
 
+    // ── SELLER_RESPONSE 감지 → Market/Gopang 탭에 포워딩 ──
+    if (reply.includes('[SELLER_RESPONSE:') || reply.includes('[SELLER_RESPONSE:{')) {
+      const srMatch = reply.match(/\[SELLER_RESPONSE:(\{[\s\S]*?\})\]/);
+      if (srMatch) {
+        const srData = JSON.parse(srMatch[1]);
+        // opener(market webapp)에 결과 전달
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage({
+            type:           'GWP_SELLER_RESPONSE',
+            seller_response: srData,
+          }, _openerOrigin);
+          console.log('[Profile] SELLER_RESPONSE → market 탭 포워딩:', srData);
+        }
+      }
+    }
+
+    // ── SELLER_PDV 감지 → 판매자 측 IndexedDB 기록 ──
+    if (reply.includes('[SELLER_PDV:') || reply.includes('[SELLER_PDV:{')) {
+      const pdvMatch = reply.match(/\[SELLER_PDV:(\{[\s\S]*?\})\]/);
+      if (pdvMatch) {
+        try {
+          const pdvData = JSON.parse(pdvMatch[1]);
+          await _writeSellerPDV(pdvData);
+        } catch (e) {
+          console.warn('[Profile] SELLER_PDV 파싱 오류:', e.message);
+        }
+      }
+    }
+
   } catch(e) {
     typingEl.remove();
     addAIMsg('ai', '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
   } finally {
     document.getElementById('ai-send').disabled = false;
-    document.getElementById('ai-input').focus();
+    document.getElementById('ai-input')?.focus();
   }
+}
+
+// 판매자 PDV IndexedDB 기록
+async function _writeSellerPDV(data) {
+  const DB_NAME = 'hondi-pdv';
+  const req = indexedDB.open(DB_NAME, 1);
+  req.onupgradeneeded = (e) => {
+    const db = e.target.result;
+    if (!db.objectStoreNames.contains('records')) {
+      const s = db.createObjectStore('records', { keyPath: 'id', autoIncrement: true });
+      s.createIndex('ts',   'ts',   { unique: false });
+      s.createIndex('type', 'type', { unique: false });
+    }
+  };
+  const db = await new Promise((res, rej) => {
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+  const tx = db.transaction('records', 'readwrite');
+  tx.objectStore('records').add({
+    ts:      data.ts || new Date().toISOString(),
+    type:    data.type || 'sale',
+    summary: `판매: ${data.item} × ${data.qty} ₮${data.revenue}`,
+    content: data,
+  });
+  await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+  console.info('[Profile] SELLER_PDV 기록 완료:', data.item, data.revenue);
 }
 
 // ── 상품 상세 토글 ───────────────────────────────────────
