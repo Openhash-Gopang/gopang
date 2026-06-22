@@ -1200,6 +1200,7 @@ async function handleOpenhashAnchor(request, env, corsHeaders) {
         'Accept':        'application/vnd.github+json',
         'Content-Type':  'application/json',
         'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent':    'gopang-proxy/1.0',
       },
       body: JSON.stringify({
         event_type:     'HASH_CHAIN_ANCHOR',
