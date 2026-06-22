@@ -269,6 +269,29 @@ export default {
     // ── merkle (T10) ─────────────────────────────────────────
     if (pathname === '/merkle/verify')           return handleMerkleVerify(request, env, corsHeaders);
 
+    // ── debug (진단용, 인증 불필요) ──────────────────────────
+    if (pathname === '/debug/importance' && request.method === 'GET') {
+      const amount        = parseFloat(url.searchParams.get('amount')        || '1050');
+      const asset_type    = url.searchParams.get('asset_type')    || 'stable';
+      const contract_type = url.searchParams.get('contract_type') || 'instant';
+      const buyer_region  = url.searchParams.get('buyer_region')  || null;
+      const seller_region = url.searchParams.get('seller_region') || null;
+      const score = _computeImportanceScore(amount, asset_type, contract_type);
+      const mode  = _selectImportanceMode(score);
+      const lcat  = computeLCAT(buyer_region, seller_region);
+      return new Response(JSON.stringify({
+        ok: true,
+        input:  { amount, asset_type, contract_type, buyer_region, seller_region },
+        output: {
+          score: parseFloat(score.toFixed(4)),
+          mode,
+          lcat,
+          thresholds: { LIGHTWEIGHT_MAX: 25, STANDARD_MAX: 60 },
+        },
+        note: '이 엔드포인트는 score/LCAT 진단 전용입니다. L1 호출 없음.',
+      }, null, 2), { status: 200, headers: corsHeaders });
+    }
+
     // ── biz (v4.8+) ──────────────────────────────────────
     if (pathname.startsWith('/biz/profile/'))   return handleBizProfile(request, env, corsHeaders);
     if (pathname === '/biz/order'   && request.method === 'POST') return handleBizOrder(request, env, corsHeaders);
