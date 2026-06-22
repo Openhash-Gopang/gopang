@@ -120,7 +120,7 @@ BEGIN
         END AS distance_km
       FROM user_profiles p
       WHERE p.is_public = TRUE
-        AND (etype IS NULL OR p.entity_type = etype)
+        AND (etype IS NULL OR p.entity_type = etype OR (etype IN ('institution','org','platform') AND p.extra #>> '{public,identity,entity_subtype}' = etype))
       ORDER BY p.updated_at DESC
       LIMIT lim OFFSET ofst;
     RETURN;
@@ -145,7 +145,7 @@ BEGIN
     FROM user_profiles p
     WHERE p.is_public = TRUE
       AND p.search_vector @@ tsq
-      AND (etype IS NULL OR p.entity_type = etype)
+      AND (etype IS NULL OR p.entity_type = etype OR (etype IN ('institution','org','platform') AND p.extra #>> '{public,identity,entity_subtype}' = etype))
     ORDER BY
       rank DESC,
       distance_km ASC NULLS LAST
@@ -179,7 +179,7 @@ AS $$
   FROM user_profiles p
   WHERE p.is_public = TRUE
     AND p.search_tags && tags          -- 배열 교집합 (하나라도 일치)
-    AND (etype IS NULL OR p.entity_type = etype)
+    AND (etype IS NULL OR p.entity_type = etype OR (etype IN ('institution','org','platform') AND p.extra #>> '{public,identity,entity_subtype}' = etype))
   ORDER BY p.updated_at DESC
   LIMIT lim OFFSET ofst;
 $$;

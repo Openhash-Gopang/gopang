@@ -616,7 +616,13 @@ async function submitProfile(){
     const wallet=window.gopangWallet;
     const lang=navigator.language?.slice(0,2)||'ko';
     // pubkey는 서명 직전에 최신 wallet에서 가져옴 (초기화 타이밍 문제 방지)
-    let payload={guid:stored.ipv6,pubkey:'__PUBKEY__',entity_type:selectedType,native_lang:lang,is_public:true};
+    // 2026-06-22: entity_type은 백엔드에 person/business 두 값만 보낸다.
+    // institution/org/platform은 selectedType(화면 분기·필드수집용)으로는 계속 쓰지만
+    // 제출 시에는 entity_subtype으로 옮긴다 — refactor_plan_v2.md Phase 2.
+    const _SUBTYPES = ['institution','org','platform'];
+    const _submitEntityType = _SUBTYPES.includes(selectedType) ? 'business' : selectedType;
+    const _entitySubtype    = _SUBTYPES.includes(selectedType) ? selectedType : '';
+    let payload={guid:stored.ipv6,pubkey:'__PUBKEY__',entity_type:_submitEntityType,entity_subtype:_entitySubtype,native_lang:lang,is_public:true};
 
     if(selectedType==='person'){
       const tags=document.getElementById('p-tags').value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,5);
