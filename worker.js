@@ -2484,6 +2484,9 @@ async function handleProfilePost(request, env, corsHeaders) {
     contact:  { phone_display: phone, phone_visible: !!phone_visible, website, sns_public, languages_spoken },
     location: { region, address_short: address, directions, parking },
     finance:  { gdc_accepted, currencies, price_range },
+    // 2026-06-22: 업종/유형별 확장 슬롯(profile_pdv_schema_plan_v1.md Phase 1).
+    // 'industry_fields' in body로 "필드 자체를 안 보냄(보존)"과 "null을 명시적으로 보냄(비움)"을 구분.
+    industry_fields: ('industry_fields' in body) ? body.industry_fields : ((prevExtra.public || {}).industry_fields ?? null),
   };
   const newExtra = { ...prevExtra, public: newExtraPublic };
 

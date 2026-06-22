@@ -211,10 +211,27 @@ extra (JSONB) {
     activity: { timezone, hours, holidays },
     contact:  { phone_display, website, sns_public, languages_spoken },
     location: { region, address_short, directions, parking },
-    finance:  { gdc_accepted, currencies, price_range }
+    finance:  { gdc_accepted, currencies, price_range },
+    industry_fields: { ... }   // 2026-06-22 추가, 아래 §6.1 참조
   }
 }
 ```
+
+> **2026-06-22 갱신**: `entity_type`은 이제 `person`/`business` 두 값만 신규 등록에 쓰입니다. institution/org/platform은 `entity_type:'business'` + `extra.public.identity.entity_subtype`로 흡수됨(`sql/phase2_entity_type_simplify.sql`). 아래 §3의 institution/org/platform 절은 **필드 정의 자체는 여전히 유효**하지만(어떤 정보를 받을지는 그대로), 그 정보가 들어가는 `entity_type` 값만 바뀌었습니다.
+
+### 6.1 industry_fields — 업종/유형별 확장 슬롯 (2026-06-22 신설)
+`identity`~`finance` 5개 섹션은 모든 유형 공통이라 구조 변경이 영구 금지된 "봉투"입니다. 업종마다(또는 institution/org/platform 유형마다) 다른 세부 필드는 이 슬롯 하나에 모읍니다 — 최상위에 새 섹션을 추가하지 않는 이유는 `profile_pdv_schema_plan_v1.md` Phase 1 참조.
+
+```javascript
+industry_fields: {
+  schema_id:      "I56201",  // KSIC 코드(business) 또는 entity_subtype(institution/org/platform)
+  schema_version: "1.0",     // AGENT-SUPPLIER-XX 파일의 스키마 버전과 일치
+  // ... 그 스키마가 정의한 필드들
+}
+```
+조회 키는 `entity_type='business'`면 `ksic_code`, 그 외(institution/org/platform)면 `entity_subtype`. 정의는 `prompts/AGENT-SUPPLIER-XX_*.txt`(또는 향후 institution/org/platform 전용 스키마 파일)에 있다.
+
+`worker.js`의 `/profile` 핸들러는 `'industry_fields' in body`로 "필드 미전송(보존)"과 "명시적 `null`(비움)"을 구분한다 — 부분 갱신 시 의도치 않게 지워지지 않는다.
 
 ### 추가 필요 필드 (extra.public.identity에 추가)
 ```javascript
