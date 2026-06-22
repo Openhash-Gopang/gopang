@@ -36,23 +36,26 @@
   padding-left: 14px; border-left: 3px solid var(--border2);
 }
 
-.ait-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0 0 36px; }
-@media (max-width: 720px) { .ait-grid, .ait-examples { grid-template-columns: 1fr; } }
+.ait-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 0 0 36px; }
+@media (max-width: 880px) { .ait-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .ait-grid, .ait-examples { grid-template-columns: 1fr; } }
 
 .ait-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: 22px 22px 24px;
   box-shadow: var(--shadow-sm);
 }
-.ait-card.type-a { border-top: 3px solid var(--brand); }
-.ait-card.type-b { border-top: 3px solid var(--blue); }
+.ait-card.type-a { border-top: 3px solid var(--brand, #3ecf8e); }
+.ait-card.type-b { border-top: 3px solid var(--blue, #3b82f6); }
+.ait-card.type-c { border-top: 3px solid #8b5cf6; }
 .ait-card-badge {
   display: inline-block; font-family: 'Pretendard', sans-serif;
   font-size: 11px; font-weight: 700; letter-spacing: .5px;
   color: #fff; border-radius: 99px; padding: 3px 11px; margin-bottom: 12px;
 }
-.type-a .ait-card-badge { background: var(--brand); }
-.type-b .ait-card-badge { background: var(--blue); }
+.type-a .ait-card-badge { background: var(--brand, #3ecf8e); }
+.type-b .ait-card-badge { background: var(--blue, #3b82f6); }
+.type-c .ait-card-badge { background: #8b5cf6; }
 .ait-card h3 { font-size: 16.5px; font-weight: 700; color: var(--text); margin: 0 0 10px; }
 .ait-card p { font-size: 13.3px; color: var(--text2); line-height: 1.75; margin: 0 0 10px; }
 .ait-card p:last-child { margin-bottom: 0; }
@@ -140,24 +143,42 @@
 </style>
 
   <div class="ait-eyebrow">PERSONAL AI ASSISTANT</div>
-  <h1>나만의 AI 비서 — Type A · Type B</h1>
+  <h1>AI 비서의 종류는 크게 둘입니다</h1>
 
   <p class="ait-lead">
-    나만의 AI 비서가 하는 역할은 두 가지입니다. 첫째는 <b>소비자</b>의 입장에서 나의 일상과 업무를 돕는 역할이고,
-    둘째는 <b>공급자</b>의 입장에서 나를 대신해 업무를 수행하는 역할입니다. 각 사용자는 자신만의 AI 비서가
-    오직 자신만을 위해 기능하도록 훈련해 나가게 됩니다.
+    혼디 앱의 우측 상단 AI 버튼을 누르면, 먼저 나의 일상과 업무를 보조할 <b>'나만의 AI 비서'</b>가
+    등장합니다. 나만의 AI 비서는 내 지시를 수행하며, 나의 일상과 업무를 기록합니다. 그러나 단
+    하나의 AI 에이전트가 세상의 모든 지식을 다 알지는 못합니다(2026년 6월 기준). 그래서 나만의
+    AI 비서(=에이전트)는 외부에 있는 다수의 <b>전문 분야 AI Agent</b>를 적시 적소에 호출해, 특정
+    전문 분야의 업무를 수행하게 합니다. AI 비서와 AI 에이전트는 같은 말이지만, 앞의 표현은 개인용
+    AI 에이전트를 가리킵니다.
   </p>
 
-  <div class="ait-examples">
-    <div class="ait-example consumer">
-      <span class="ait-ex-tag">소비자 입장 · Type A</span>
-      "짜장면 두 그릇 주문해줘."
-    </div>
-    <div class="ait-example supplier">
-      <span class="ait-ex-tag">공급자 입장 · Type B</span>
-      "5분 거리의 소비자가 짜장면 두 그릇을 주문했습니다. 주문을 승인할까요?"
-    </div>
-  </div>
+  <p class="ait-lead">
+    예를 들어보겠습니다. 분쟁에 휘말린 이용자가, 이 다툼이 법적 소송으로 번지면 그 결과가 어떨지
+    궁금하지만, 대법원 판결까지는 수년이 걸리고 비용도 수천만 원입니다. 이때 자신의 AI 비서에게
+    다툼의 내용을 설명하고, 소송을 진행하면 승소 가능성이 얼마인지 물어볼 수 있습니다. AI 비서는
+    법률 영역에 특화된 AI Agent를 호출해 사건 개요를 전달한 뒤, 수년 뒤에 나올 대법원 판결문을
+    지금 제출하도록 요청합니다.
+  </p>
+
+  <p class="ait-lead">
+    나만의 AI 비서는 오직 나의 이익을 위해 복무합니다. 나의 일상과 업무를 기록하고, 나에 대한 모든
+    정보를 파악해, 오직 나의 지시에만 반응하도록 훈련해 나갈 수 있습니다. 1년쯤 뒤에는 내가
+    척하면, 착하고 알아듣게 됩니다. 5천만 한국 국민이 제각기 다른 나만의 AI 비서를 키워나가게
+    됩니다.
+  </p>
+
+  <p class="ait-lead">
+    전문 분야 AI 에이전트는 5천만 한국 국민이 공동으로 이용하는, 분야별 단일 Agent입니다. 법률
+    에이전트, 의료 에이전트 등이 그 예입니다.
+  </p>
+
+  <p class="ait-lead">
+    그런데 혼디의 이용자는 사람뿐 아니라, 사물이나 기관, 개념(음식점, 법원, 학교, 헌법, 민법 등)을
+    포함합니다. 그래서 나만의 AI 비서는 사람, 기관, 개념에 따라 조금씩 다른 모습을 갖습니다. 이
+    페이지는 그 각각을 자세히 설명합니다.
+  </p>
 
   <div class="ait-grid">
     <div class="ait-card type-a">
@@ -183,6 +204,19 @@
       <p>
         나아가 고객 평점과 리뷰를 분석하여 <span class="ait-highlight">경영 개선책</span>까지 제시함으로써,
         사장님 한 사람의 1인 경영 역량을 실질적으로 확장합니다.
+      </p>
+    </div>
+    <div class="ait-card type-c">
+      <div class="ait-card-badge">TYPE C</div>
+      <h3>공용 AI Agent</h3>
+      <p>
+        특정 사람이나 사물·기관이 아니라, 헌법·민법처럼 보편적인 <span class="ait-highlight">개념(사상)</span>을
+        대신하는 비서입니다. 개념은 하나뿐이라 "나만의" 비서 대신, 누구나 함께 이용하는 공용 Agent가
+        배정됩니다.
+      </p>
+      <p>
+        법률 에이전트, 의료 에이전트 같은 <span class="ait-highlight">전문 분야 AI Agent</span>가 그 예입니다 —
+        5천만 국민이 분야마다 하나씩의 Agent를 공동으로 이용합니다.
       </p>
     </div>
   </div>
