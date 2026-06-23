@@ -986,30 +986,16 @@ async function handlePdvReport(request,env,corsHeaders){
   if(reg.level<2&&!reg.pdv)return _err(403,'PDV_NOT_ALLOWED','Level 1 서비스는 PDV 보고서 전송 권한이 없습니다',corsHeaders);
   if(!ipv6)return _err(404,'USER_NOT_FOUND','who.ipv6 필수',corsHeaders);
 
-  // STEP 11: session_id 기반 중복 PDV 방지
+  // T-C 후속(①): session_id 기반 report_id 결정 — sessionId 있으면 'sessionId:reporterSvc'로
+  // 고정해 L1 pdv_records의 report_id UNIQUE 인덱스가 중복방지를 대신하게 한다.
+  // (기존 Supabase 사전조회 방식은 report_id=eq.${sessionId}로 비교했지만 실제 저장값은
+  //  별도 생성된 reportId라서 절대 일치할 수 없던 잠재 버그였음 — 이번에 같이 해소)
   const sessionId = r.session_id || body.session_id || null;
   const reporterSvc = r.reporter_svc || body.reporter_svc || null;
-  if (sessionId && reporterSvc) {
-    // 하위 시스템이 이미 보고한 경우 중복 확인
-    const pdvKey = env.SUPABASE_KEY || _supabaseAnonKey();
-    const dupRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/pdv_log?report_id=eq.${encodeURIComponent(sessionId)}&reporter_svc=eq.${encodeURIComponent(reporterSvc)}&select=id&limit=1`,
-      { headers: { 'apikey': pdvKey, 'Authorization': `Bearer ${pdvKey}`, 'Content-Type': 'application/json' } }
-    );
-    const dupRows = await dupRes.json().catch(() => []);
-    if (dupRows.length) {
-      return new Response(JSON.stringify({
-        ok: true,
-        skipped: true,
-        reason: 'DUPLICATE_SESSION',
-        session_id: sessionId,
-        message: '하위 시스템이 이미 PDV를 기록했습니다',
-      }), { status: 200, headers: corsHeaders });
-    }
-  }
 
   const resolvedSvcId=_resolveSvcId(svcId);
   const reportId=r.id||`RPT-${resolvedSvcId}-${Date.now()}-auto`;
+  const pdvReportId = sessionId ? `${sessionId}:${reporterSvc || resolvedSvcId}` : reportId;
   const summary6w={
     who:`${r.who?.role||'user'} (${ipv6.slice(0,20)}...)`,
     when:`${(r.when?.period_start||'').slice(0,10)} ~ ${(r.when?.period_end||'').slice(0,10)}`,
@@ -1019,7 +1005,6 @@ async function handlePdvReport(request,env,corsHeaders){
     why:r.why?.goal||'(목표 미지정)',
   };
   const pdvId=`PDV-${ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;
-  const pdvKey=env.SUPABASE_KEY||_supabaseAnonKey();
   const now = new Date().toISOString();
 
   // STEP 09: block_hash가 report에 포함된 경우 동기 앵커링
@@ -1027,29 +1012,48 @@ async function handlePdvReport(request,env,corsHeaders){
   const blockId     = r.block_id     || body.block_id     || null;
   const isAnchored  = !!blockHash;
 
-  const pdvFetch=await fetch(SUPABASE_URL+'/rest/v1/pdv_log',{method:'POST',headers:{'apikey':pdvKey,'Authorization':'Bearer '+pdvKey,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({
-    id:pdvId,
-    guid:ipv6,
-    source:resolvedSvcId,
-    type:r.type||'report',
-    report_id:reportId,
-    summary:r.what?.summary||'',
-    summary_6w:JSON.stringify(summary6w),
-    risk_level:r.analysis?.risk_level||'low',
-    period:r.when??r.period??null,
-    raw_hash:r.content_hash||null,
-    // STEP 09: 동기 앵커링
-    block_hash:           blockHash,
-    openhash_block_id:    blockId,
-    openhash_anchored:    isAnchored,
+  // pdv_records 스키마에 없는 필드(period/raw_hash/openhash_block_id/openhash_anchored_at)는
+  // summary_6w(JSON, 스키마리스) 안에 같이 보존 — 컬렉션 스키마 변경 없이 무손실 이관
+  const summary6wFull = {
+    ...summary6w,
+    period:             r.when ?? r.period ?? null,
+    raw_hash:           r.content_hash || null,
+    openhash_block_id:  blockId,
     openhash_anchored_at: isAnchored ? now : null,
-    // STEP 11: 보고 주체 기록
-    reporter_svc:         reporterSvc || resolvedSvcId,
-    via_worker:           true,
-    created_at:           now,
-  })});
+  };
 
-  if(!pdvFetch.ok)return _err(503,'PDV_LOCKED','PDV 저장 실패, 60초 후 재시도',corsHeaders);
+  const pdvFetch = await fetch(`${L1_DEFAULT}/api/collections/pdv_records/records`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      guid:         ipv6,
+      report_id:    pdvReportId,
+      reporter_svc: reporterSvc || resolvedSvcId,
+      svc:          resolvedSvcId,
+      type:         r.type || 'report',
+      summary:      r.what?.summary || '',
+      summary_6w:   JSON.stringify(summary6wFull),
+      block_hash:   blockHash,
+      risk_level:   r.analysis?.risk_level || 'low',
+      source:       resolvedSvcId,
+      openhash_anchored: isAnchored,
+    }),
+  });
+
+  if (!pdvFetch.ok) {
+    const errBody = await pdvFetch.json().catch(() => null);
+    const isDup = errBody?.data?.report_id?.code === 'validation_not_unique';
+    if (isDup) {
+      return new Response(JSON.stringify({
+        ok: true,
+        skipped: true,
+        reason: 'DUPLICATE_SESSION',
+        session_id: sessionId,
+        message: '하위 시스템이 이미 PDV를 기록했습니다',
+      }), { status: 200, headers: corsHeaders });
+    }
+    return _err(503,'PDV_LOCKED','PDV 저장 실패, 60초 후 재시도',corsHeaders);
+  }
 
   return new Response(JSON.stringify({
     ok:true,

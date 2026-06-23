@@ -724,6 +724,25 @@ await test('M-15', "T-C 실제 이관 — p2p-chat.js/auth.js/session.js의 /pdv
   assert(stateSrc.includes("anchor_records/records"), 'state.js: L1_ANCHOR_URL 정의 없음')
 })
 
+await test('M-16', "T-C 후속① — handlePdvReport(Worker)가 Supabase pdv_log 대신 L1 pdv_records에 직접 기록", async () => {
+  const src = await readFile('./worker.js', 'utf8')
+  // handlePdvReport 함수 본문만 추출
+  const start = src.indexOf('async function handlePdvReport')
+  const end   = src.indexOf('\nasync function ', start + 30)
+  const fn    = src.slice(start, end === -1 ? start + 4000 : end)
+
+  assert(!fn.includes("SUPABASE_URL+'/rest/v1/pdv_log'"), 'handlePdvReport: Supabase pdv_log 쓰기 잔존')
+  assert(!fn.includes('rest/v1/pdv_log?report_id=eq'), 'handlePdvReport: Supabase 사전조회 중복방지 잔존')
+  assert(fn.includes('pdv_records/records'), 'handlePdvReport: L1 pdv_records 직접 기록 없음')
+  assert(fn.includes('validation_not_unique'), 'handlePdvReport: UNIQUE 충돌 기반 중복방지 없음')
+  // 외부 응답 계약(호출부가 의존하는 필드) 보존 확인
+  for (const field of ['ok:true', 'report_id:reportId', 'pdv_entry:pdvId', 'recorded_at:now', 'svc_level:reg.level']) {
+    assert(fn.includes(field), `handlePdvReport: 응답 필드 누락 — ${field}`)
+  }
+  // 접근통제(①)·등록 검증은 그대로 유지돼야 함 (이번 변경 범위 아님)
+  assert(fn.includes('_getSvcRegistration'), 'handlePdvReport: 서비스 접근통제 로직 손상')
+})
+
 // ══════════════════════════════════════════════════════════════
 console.log(`\n══════════════════════════════════════════`)
 console.log(`결과: ${passed} 통과 / ${failed} 실패 / 총 ${passed + failed}`)
