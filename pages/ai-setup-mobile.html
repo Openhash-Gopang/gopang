@@ -69,14 +69,14 @@ body {
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;margin-bottom:20px">
       <div style="font-size:calc(13.5px * var(--fs,1));font-weight:700;color:var(--text);margin-bottom:10px">OpenRouter API Key 발급 방법</div>
       <p style="font-size:calc(11.5px * var(--fs,1));color:var(--text4);background:var(--bg);border-radius:8px;padding:8px 10px;line-height:1.6;margin-bottom:12px">
-        ⚠️ 아래 1번 링크를 누르면 이 화면에서 바로 OpenRouter로 이동합니다. Key를 복사한 뒤, 휴대폰 브라우저의 <b>뒤로가기</b>를 눌러 이 화면으로 돌아오세요.
+        💡 아래 버튼을 누르면 <b>새 탭</b>에서 OpenRouter가 열립니다. Key를 복사하면 이 화면으로 돌아왔을 때 <b>자동으로 입력</b>을 시도합니다.
       </p>
       <ol style="font-size:calc(13px * var(--fs,1));color:var(--text2);line-height:1.9;padding-left:18px;margin:0">
-        <li><a href="https://openrouter.ai" style="color:var(--brand-dk)">openrouter.ai</a> 접속 → 오른쪽 상단 <b>Sign Up</b> (카드 불필요)</li>
+        <li><button id="_or_open" type="button" style="display:inline;padding:2px 10px;border:1px solid var(--brand-lt);border-radius:6px;background:var(--brand-bg);color:var(--brand-dk);font-size:calc(13px * var(--fs,1));font-weight:600;cursor:pointer">🌐 openrouter.ai 새 탭으로 열기</button> → 오른쪽 상단 <b>Sign Up</b> (카드 불필요)</li>
         <li>로그인 후 오른쪽 상단 아이콘 → <b>Keys</b> 메뉴</li>
         <li><b>Create Key</b> 버튼 클릭 → 이름 입력 후 생성</li>
-        <li><b>sk-or-v1-...</b> 로 시작하는 키를 즉시 복사 (다시 표시되지 않음)</li>
-        <li><b>뒤로가기</b>로 이 화면에 돌아와 아래 <b>📋 붙여넣기</b> 버튼을 누르면 복사한 키가 자동으로 입력됩니다</li>
+        <li><b>sk-or-v1-...</b> 로 시작하는 키를 즉시 <b>복사</b></li>
+        <li>이 탭으로 돌아오면 <b>자동 입력</b>을 시도합니다 — 안 되면 아래 📋 버튼을 누르세요</li>
       </ol>
     </div>
 
@@ -176,15 +176,46 @@ keyInput.addEventListener('input', () => {
 // ── openrouter.ai에서 "뒤로가기"로 돌아왔을 때 ──────────────
 // 자동으로 클립보드를 읽을 수는 없지만, 포커스를 옮기고 붙여넣기
 // 버튼을 잠깐 강조해 다음 동작(탭 한 번)을 바로 알 수 있게 한다.
-function _highlightPasteOnReturn() {
+// OR 탭에서 돌아왔을 때: 클립보드 자동 읽기 시도 → 실패하면 버튼 강조
+let _orTabOpened = false;
+
+document.getElementById('_or_open').onclick = () => {
+  _orTabOpened = true;
+  window.open('https://openrouter.ai/keys', '_blank', 'noopener');
+};
+
+async function _onReturnFromOR() {
   if (keyInput.value) return; // 이미 입력돼 있으면 건드리지 않음
-  pasteBtn.style.transition = 'box-shadow .25s ease';
-  pasteBtn.style.boxShadow = '0 0 0 3px var(--brand-lt)';
-  setTimeout(() => { pasteBtn.style.boxShadow = 'none'; }, 1600);
+  if (!_orTabOpened) return;  // OR 탭을 우리가 열어준 게 아니면 건드리지 않음
+
+  // 클립보드 자동 읽기 시도 (사용자 탭 복귀 직후 — 보안 정책상 이 타이밍만 허용)
+  if (navigator.clipboard?.readText) {
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (text.startsWith('sk-or-') && text.length >= 20) {
+        keyInput.value = text;
+        pasteMsg.textContent = '✅ OR에서 복사한 키가 자동으로 입력됐습니다.';
+        pasteMsg.style.color = 'var(--brand-dk)';
+        _orTabOpened = false;
+        return;
+      }
+    } catch { /* 권한 거부 — 폴백으로 */ }
+  }
+
+  // 자동 실패 시 버튼 강조
+  pasteBtn.style.transition = 'box-shadow .25s ease, background .25s ease';
+  pasteBtn.style.boxShadow = '0 0 0 3px var(--brand)';
+  pasteBtn.style.background = 'var(--brand-lt)';
+  pasteMsg.textContent = '👆 OR에서 키를 복사했으면 이 버튼을 눌러주세요.';
+  pasteMsg.style.color = 'var(--brand-dk)';
+  setTimeout(() => {
+    pasteBtn.style.boxShadow = 'none';
+    pasteBtn.style.background = 'var(--brand-bg)';
+  }, 3000);
 }
-window.addEventListener('pageshow', _highlightPasteOnReturn);
+
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') _highlightPasteOnReturn();
+  if (document.visibilityState === 'visible') _onReturnFromOR();
 });
 
 // ── 글자 크기 조절 (가- / 가+) ──────────────────────────────

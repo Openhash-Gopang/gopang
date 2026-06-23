@@ -2764,17 +2764,46 @@ async function handleProfilePost(request, env, corsHeaders) {
   const savedRows = await saveRes.json().catch(() => []);
   const savedProfile = savedRows[0] || record;
 
-  // 2026-06-22: agent_profile_pdv_plan_v2.md Phase 1 — 그림자 자동생성.
-  // 신규가입(!existing)이고 본인이 person/business일 때만(agent가 또 agent를
-  // 낳지 않게, 그리고 기존 가입자의 매 정보수정마다 재생성 시도가 안 일어나게).
+  // 2026-06-23: 그림자 생성 시점 변경 — 가입 직후 -> PROFILE_SUBMIT 완료 후.
+  // 이유: SP2(그림자 전용 SP) 합성에 industry_fields가 필요한데,
+  //       최초 가입 시점엔 온보딩 대화가 끝나지 않아 industry_fields가 없음.
+  //       흐름: 가입 -> AI설정(OR키) -> SP1으로 온보딩 대화 -> PROFILE_SUBMIT ->
+  //             /profile POST(upsert, industry_fields 포함) -> 이때 그림자 생성.
+  // 조건: industry_fields가 있을 때만 (PROFILE_SUBMIT 완료 신호).
   let agentResult = null;
-  if (!existing && (entity_type === 'person' || entity_type === 'business')) {
-    agentResult = await _createAgentForPrincipal(env, savedProfile).catch(e => {
-      console.error('[Profile] 그림자 자동생성 실패(본 가입은 정상 처리됨):', e.message);
-      return { ok: false, error: 'EXCEPTION', detail: e.message };
-    });
-    if (!agentResult.ok) {
-      console.warn('[Profile] 그림자 자동생성 실패:', JSON.stringify(agentResult));
+  if ((entity_type === 'person' || entity_type === 'business') && body.industry_fields != null) {
+    const agentGuid = await _deriveAgentGuid(guid);
+    const agentCheck = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agentGuid)}&select=guid`,
+      { headers: _sbHeaders(env) }
+    ).then(r => r.json()).catch(() => []);
+    const agentExists = Array.isArray(agentCheck) && agentCheck.length > 0;
+
+    if (!agentExists) {
+      agentResult = await _createAgentForPrincipal(env, savedProfile).catch(e => {
+        console.error('[Profile] 그림자 자동생성 실패(본 저장은 정상 처리됨):', e.message);
+        return { ok: false, error: 'EXCEPTION', detail: e.message };
+      });
+      if (!agentResult?.ok) {
+        console.warn('[Profile] 그림자 자동생성 실패:', JSON.stringify(agentResult));
+      }
+    } else {
+      // 그림자가 이미 있으면 SP만 재합성 (industry_fields 갱신 반영)
+      const compiledSP = await _compileAgentSP(env, savedProfile).catch(() => null);
+      if (compiledSP) {
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agentGuid)}`,
+          {
+            method: 'PATCH',
+            headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=minimal' },
+            body: JSON.stringify({
+              extra: { public: { ai_assistant: { system_prompt: compiledSP } } },
+              updated_at: new Date().toISOString(),
+            }),
+          }
+        ).catch(e => console.warn('[Profile] 그림자 SP 재합성 실패:', e.message));
+        agentResult = { ok: true, guid: agentGuid, created: false, sp_updated: true };
+      }
     }
   }
 

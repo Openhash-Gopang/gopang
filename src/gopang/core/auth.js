@@ -1305,6 +1305,28 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
 
       resolve(user);
 
+      // ── 가입 완료 직후 AI 설정 유도 (2026-06-23) ─────────────────────
+      // 흐름: 가입 → AI설정(OR키) → SP1으로 온보딩 대화 → PROFILE_SUBMIT → 그림자 생성
+      // 가입 직후 ai-setup-mobile.html을 채팅 버블로 안내 (강제 이동 아님)
+      setTimeout(() => {
+        const msgList = document.getElementById('message-list');
+        if (!msgList) return;
+        const bubble = document.createElement('div');
+        bubble.className = 'msg-row ai';
+        const inner = document.createElement('div');
+        inner.className = 'bubble bubble-ai';
+        inner.innerHTML = '🎉 가입을 환영합니다!<br><br>'
+          + 'AI 비서를 활성화하면 지금 바로 대화를 시작할 수 있습니다.<br><br>'
+          + '<button id="_goto_ai_setup" style="width:100%;margin-top:8px;padding:12px;border:none;border-radius:8px;background:#3ecf8e;color:#fff;font-size:14px;font-weight:600;cursor:pointer">🤖 AI 비서 활성화하기</button>';
+        bubble.appendChild(inner);
+        msgList.appendChild(bubble);
+        msgList.scrollTop = msgList.scrollHeight;
+
+        document.getElementById('_goto_ai_setup')?.addEventListener('click', () => {
+          window.open('/pages/ai-setup-mobile.html', '_blank');
+        });
+      }, 800);
+
       // 가입 완료 시점에 푸시 알림 권한 요청 — 결과를 채팅에 안내
       // (가입 완료를 막지 않도록 resolve 이후 비동기로 처리)
       requestPushSubscription(ipv6).then(pushResult => {
