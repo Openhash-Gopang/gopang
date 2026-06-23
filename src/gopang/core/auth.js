@@ -1202,6 +1202,12 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
     }
     termsErr.style.display = 'none';
 
+    // ── AI 설정 탭을 클릭 시점에 미리 열어둠 ─────────────────────────
+    // window.open은 사용자 클릭 이벤트 직후에만 팝업 차단 없이 동작함.
+    // 비동기 작업(await) 이후 호출하면 브라우저가 팝업으로 간주해 차단.
+    // about:blank로 미리 열고 가입 완료 후 URL만 교체하는 방식으로 우회.
+    const _aiSetupTab = window.open('about:blank', '_blank');
+
     const btn = document.getElementById('_nick-btn');
     btn.textContent = '등록 중...';
     btn.style.opacity = '0.6';
@@ -1299,10 +1305,15 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
 
       resolve(user);
 
-      // ── 가입 완료 직후 AI 설정 페이지를 새 탭으로 열기 (2026-06-23) ──────
-      // 흐름: 가입 → [새 탭] AI설정(OR키+인증번호) → SP1 온보딩 대화 → PROFILE_SUBMIT
-      // wallet/X25519 초기화는 사용자가 OR 키 발급하는 3~5분 동안 백그라운드 완료
-      window.open('/pages/ai-setup-mobile.html', '_blank');
+      // ── 가입 완료 직후 AI 설정 탭 URL 교체 ─────────────────────────────
+      // 클릭 시점에 about:blank로 미리 열어둔 탭(_aiSetupTab)의 URL을 교체.
+      // 팝업 차단 우회 — window.open은 클릭 직후에만 허용됨.
+      if (_aiSetupTab && !_aiSetupTab.closed) {
+        _aiSetupTab.location.href = '/pages/ai-setup-mobile.html';
+      } else {
+        // 팝업 차단된 경우 폴백: 같은 탭에서 이동
+        window.location.href = '/pages/ai-setup-mobile.html';
+      }
 
       // 가입 완료 시점에 푸시 알림 권한 요청 — 결과를 채팅에 안내
       // (가입 완료를 막지 않도록 resolve 이후 비동기로 처리)
