@@ -49,7 +49,7 @@ const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions';
 const DEEPSEEK_URL   = 'https://api.deepseek.com/v1/chat/completions';
 const KAKAO_BASE     = 'https://dapi.kakao.com/v2/local/geo/coord2address.json';
 const OPENAI_MODEL   = 'gpt-4o-mini';
-const DEEPSEEK_MODEL = 'deepseek-v4-flash';
+const DEEPSEEK_MODEL = 'deepseek/deepseek-r1:free'; // OR 무료 최상위 모델 (프록시 폴백용)
 const SUPABASE_URL   = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
 
 // ── GitHub (Prompt Editor PR 워크플로) ──────────────────────
@@ -3514,7 +3514,7 @@ async function handleFeedbackPost(request, env, corsHeaders) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}` },
       body: JSON.stringify({
-        model: 'deepseek-v4-flash',
+        model: 'deepseek/deepseek-r1:free',
         max_tokens: 10,
         messages: [
           { role: 'system', content: '사용자 제안을 bug/feature/ui/etc 중 하나로만 분류하라. 단어 하나만 출력.' },

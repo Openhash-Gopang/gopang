@@ -57,18 +57,9 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
 function _buildCallCandidates() {
   const candidates = [];
 
-  // 1) 고팡 프록시 — 키 불필요, 기본 모델 사용
-  if (CFG.endpoint.includes('workers.dev')) {
-    candidates.push({
-      provider: 'gopang-proxy',
-      baseUrl:  CFG.endpoint.replace(/\/+$/, ''),
-      model:    CFG.model,
-      apiKey:   '',
-      isProxy:  true,
-    });
-  }
-
-  // 2) 사용자가 등록한 BYOK provider 목록 (순서대로)
+  // 1) 사용자가 등록한 OR 키 (ai-setup-mobile에서 등록한 무료 모델 풀)
+  //    성능 높은 순서로 이미 정렬된 상태 (free-model-pool.js의 OR_FREE_MODELS_FALLBACK 순)
+  //    한도 초과(429/402) 시 다음 모델로 자동 페일오버
   if (Array.isArray(CFG.providers)) {
     for (const p of CFG.providers) {
       if (!p?.apiKey || !p?.model) continue;
@@ -84,7 +75,7 @@ function _buildCallCandidates() {
     }
   }
 
-  // 3) 하위 호환 — CFG.apiKey/geminiKey 단일 키만 있던 기존 사용자
+  // 2) 하위 호환 — CFG.apiKey/geminiKey 단일 키만 있던 기존 사용자
   if (!candidates.some(c => !c.isProxy)) {
     if (CFG.apiKey && !CFG.endpoint.includes('workers.dev')) {
       candidates.push({
@@ -98,6 +89,17 @@ function _buildCallCandidates() {
         apiKey: CFG.geminiKey, isProxy: false,
       });
     }
+  }
+
+  // 3) 고팡 프록시 — 최후 폴백 (OR 키 전부 소진 후)
+  if (CFG.endpoint.includes('workers.dev')) {
+    candidates.push({
+      provider: 'gopang-proxy',
+      baseUrl:  CFG.endpoint.replace(/\/+$/, ''),
+      model:    CFG.model,
+      apiKey:   '',
+      isProxy:  true,
+    });
   }
 
   // 후보가 전혀 없으면 최소 프록시 1개는 항상 시도
@@ -455,10 +457,13 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     const existingBubble = document.querySelector('.bubble-ai.streaming');
     let userMsg = `⚠️ API 오류: ${err.message}`;
     if (err.message.includes('402') || err.message.includes('Insufficient Balance')) {
-      userMsg =
-        '⚠️ AI 서버 크레딧이 일시적으로 부족합니다.\n\n' +
-        '잠시 후 다시 시도하거나, 설정(⚙️)에서\n' +
-        'BYOK(내 API 키)를 입력하면 계속 이용할 수 있습니다.';
+      // 402는 프록시 크레딧 부족 — 사용자에게 노출하지 않음
+      // OR 키가 등록돼 있으면 자동 페일오버로 이미 처리됐어야 하고,
+      // 없으면 AI 설정 유도 메시지만 표시
+      const hasUserKey = Array.isArray(CFG?.providers) && CFG.providers.length > 0;
+      userMsg = hasUserKey
+        ? '⚠️ 모든 AI 모델 한도가 일시적으로 초과됐습니다. 잠시 후 다시 시도해 주세요.'
+        : 'AI 비서를 사용하려면 설정(⚙️)에서 OpenRouter 키를 등록해 주세요.';
     }
     if (existingBubble) {
       existingBubble.classList.remove('streaming');
