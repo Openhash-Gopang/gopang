@@ -477,6 +477,12 @@ function _showMandatoryBackupStep(key, handle) {
       if (!chk.checked) return;
       try { localStorage.setItem(BACKUP_CONFIRMED_KEY, '1'); } catch {}
       overlay.remove();
+      // ── 진짜 사용자 클릭 이벤트 안에서 직접 호출 ──────────────────
+      // 가입 흐름의 마지막 사용자 클릭이므로 비동기 지연이 0이다.
+      // about:blank 사전오픈+지연 후 URL교체 방식은 브라우저마다
+      // 팝업 차단 판정이 달라(Chrome 차단/Edge 통과) 신뢰할 수 없었음.
+      // 여기서 직접 열면 어떤 브라우저에서도 차단되지 않는다.
+      window.open('/pages/ai-setup-mobile.html', '_blank');
       resolve();
     };
     // 의도적으로 닫기/배경클릭 핸들러를 두지 않음 — 확인 없이는 빠져나갈 수 없다.
@@ -1202,12 +1208,6 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
     }
     termsErr.style.display = 'none';
 
-    // ── AI 설정 탭을 클릭 시점에 미리 열어둠 ─────────────────────────
-    // window.open은 사용자 클릭 이벤트 직후에만 팝업 차단 없이 동작함.
-    // 비동기 작업(await) 이후 호출하면 브라우저가 팝업으로 간주해 차단.
-    // about:blank로 미리 열고 가입 완료 후 URL만 교체하는 방식으로 우회.
-    const _aiSetupTab = window.open('about:blank', '_blank');
-
     const btn = document.getElementById('_nick-btn');
     btn.textContent = '등록 중...';
     btn.style.opacity = '0.6';
@@ -1296,24 +1296,21 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
 
       // 필수 백업 확인 — 체크박스를 누르기 전까지 가입이 "완료"되지 않는다.
       // 개인키는 서버에 사본이 없으므로, 이 단계가 사실상 마지막 안전망이다.
+      // ★ AI 설정 탭은 이 모달의 "계속하기" 클릭(진짜 클릭 이벤트) 안에서
+      //   직접 열린다 — _showMandatoryBackupStep 참조. 지연 0이라 모든
+      //   브라우저에서 팝업 차단이 불가능하다.
       const backupKey = await _exportBackupKey();
       if (backupKey) {
         await _showMandatoryBackupStep(backupKey, handle);
       } else {
+        // 지갑 준비 지연 등으로 백업 모달 자체를 못 띄운 예외 케이스 —
+        // 여기엔 클릭 컨텍스트가 없어 window.open을 직접 부를 수 없으므로
+        // 대화창에 버튼 버블을 띄워 사용자의 실제 클릭을 받는다.
         console.warn('[가입] 백업 키를 내보내지 못함 — 지갑 준비 지연 가능성. 확인 단계 생략.');
+        setTimeout(() => _injectAISetupButton(), 600);
       }
 
       resolve(user);
-
-      // ── 가입 완료 직후 AI 설정 탭 URL 교체 ─────────────────────────────
-      // 클릭 시점에 about:blank로 미리 열어둔 탭(_aiSetupTab)의 URL을 교체.
-      // 팝업 차단 우회 — window.open은 클릭 직후에만 허용됨.
-      if (_aiSetupTab && !_aiSetupTab.closed) {
-        _aiSetupTab.location.href = '/pages/ai-setup-mobile.html';
-      } else {
-        // 팝업 차단된 경우 폴백: 같은 탭에서 이동
-        window.location.href = '/pages/ai-setup-mobile.html';
-      }
 
       // 가입 완료 시점에 푸시 알림 권한 요청 — 결과를 채팅에 안내
       // (가입 완료를 막지 않도록 resolve 이후 비동기로 처리)
@@ -1558,6 +1555,27 @@ export const gopangAuth = {
 };
 
 // ── 인증 확인 버튼 ───────────────────────────────────────
+// ── AI 설정 시작 버튼 버블 (백업 모달 생략 시 폴백) ──────────
+// _showMandatoryBackupStep의 "계속하기" 클릭에서 직접 열지 못한
+// 예외 상황(지갑 준비 지연 등)에서만 사용. 사용자의 실제 클릭을
+// 받아 그 안에서 window.open하므로 팝업 차단되지 않는다.
+function _injectAISetupButton() {
+  const list = document.getElementById('message-list');
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0;">
+      <button onclick="window.open('/pages/ai-setup-mobile.html','_blank');this.closest('.msg-row').remove();"
+        style="background:var(--tint);color:#fff;border:none;border-radius:8px;
+               padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;">
+        🤖 AI 비서 설정 시작하기
+      </button>
+    </div>`;
+  list.appendChild(row);
+  list.scrollTop = list.scrollHeight;
+}
+
 export function _injectAuthConfirmButton(level) {
   const list = document.getElementById('message-list');
   if (!list) return;
