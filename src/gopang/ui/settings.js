@@ -686,9 +686,10 @@ export async function openGopangWallet() {
     const { _SUPABASE_URL, _SUPABASE_KEY } = await import('../core/state.js').catch(() => ({}));
 
     // extra.fs에서 잔액 조회
-    const profileRes = await fetch(`${PROXY}/profile?guid=${encodeURIComponent(guid)}`);
+    const profileRes = await fetch(`${L1_URL}?filter=${encodeURIComponent("guid='" + guid + "'")}&perPage=1`);
     const profileData = await profileRes.json().catch(() => ({}));
-    const fs = profileData.profile?.extra?.public?.finance?.fs || {};
+    const _profile = profileData.items?.[0] || profileData.profile || profileData;
+    const fs = _profile?.extra?.public?.finance?.fs || {};
     const balance = fs['bs-cash'] ?? 0;
 
     // pdv_log에서 거래 기록 조회
@@ -743,7 +744,7 @@ export async function openGopangWallet() {
 
 window._openWalletTxDetail = async function() {
   const user = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
-  const profileRes = await fetch(`https://gopang-proxy.tensor-city.workers.dev/profile?guid=${encodeURIComponent(user.ipv6)}`);
+  const profileRes = await fetch(`${L1_URL}?filter=${encodeURIComponent("guid='" + user.ipv6 + "'")}&perPage=1`);
   const profileData = await profileRes.json().catch(() => ({}));
   const fs = profileData.profile?.extra?.public?.finance?.fs || {};
 
@@ -786,9 +787,10 @@ export async function openFinancialStatement() {
     const user = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
     const guid = user.ipv6 || '';
 
-    const profileRes = await fetch(`https://gopang-proxy.tensor-city.workers.dev/profile?guid=${encodeURIComponent(guid)}`);
+    const profileRes = await fetch(`${L1_URL}?filter=${encodeURIComponent("guid='" + guid + "'")}&perPage=1`);
     const profileData = await profileRes.json().catch(() => ({}));
-    const fs = profileData.profile?.extra?.public?.finance?.fs || {};
+    const _profile = profileData.items?.[0] || profileData.profile || profileData;
+    const fs = _profile?.extra?.public?.finance?.fs || {};
 
     const bsCash     = fs['bs-cash']     || 0;
     const plPurchase = fs['pl-purchase'] || 0;
