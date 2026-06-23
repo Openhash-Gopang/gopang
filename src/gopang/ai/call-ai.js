@@ -395,6 +395,11 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
 
 
     // ── GWP 태그 감지 → 하위 시스템 새 탭 오픈 (SP-00 v10.0) ──
+    // _preTab은 반드시 window.open()이 반환한 실제 탭 객체 또는 null이어야
+    // 한다. 그 외 값(예: 마커 문자열)이 들어오면 .closed/.close() 접근 시
+    // TypeError가 발생해 — 이미 받은 정상 AI 응답까지 통째로 ⚠️ 오류로
+    // 덮어써버리는 사고가 있었다(2026-06-23 발견). 타입 가드로 원천 차단.
+    const _validPreTab = (_preTab && typeof _preTab.close === 'function') ? _preTab : null;
     const gwpMatch = fullReply.match(/\[GWP:([\w-]+)\]/);
     if (gwpMatch) {
       const svcId  = gwpMatch[1];
@@ -403,16 +408,16 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
         console.info('[GWP] LLM 판단 → 새 탭:', svcId);
         // 버블에서 [GWP:...] 태그 제거 후 렌더링
         if (bubble) _updateStreamBubble(bubble, fullReply.replace(/\[GWP:[\w-]+\]\s*/, ''));
-        _gwpLaunch(svcDef, userText, _preTab);
+        _gwpLaunch(svcDef, userText, _validPreTab);
       } else {
         console.warn('[GWP] 알 수 없는 서비스 ID:', svcId);
         // 미등록 서비스 → 예약된 빈 탭 닫기
-        if (_preTab && !_preTab.closed) { _preTab.close(); }
+        if (_validPreTab && !_validPreTab.closed) { _validPreTab.close(); }
       }
     } else {
       // GWP 태그 없음 = 직접 처리 → 예약된 빈 탭 닫기
-      if (_preTab && !_preTab.closed) {
-        _preTab.close();
+      if (_validPreTab && !_validPreTab.closed) {
+        _validPreTab.close();
         console.info('[GWP] 직접 처리 — 예약 탭 닫힘');
       }
     }
