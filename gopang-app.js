@@ -359,8 +359,15 @@ const _boot = async () => {
     }
   };
   window.addEventListener('storage', (e) => {
-    if (e.key !== 'gopang_cfg' || !e.newValue) return;
-    _checkAutoActivateAI();
+    if (e.key === 'gopang_cfg' && e.newValue) {
+      _checkAutoActivateAI();
+    }
+    // ai-setup-mobile.html 탭이 저장 완료 후 닫히면서 보내는 신호
+    if (e.key === 'gopang_ai_activated' && e.newValue) {
+      localStorage.removeItem('gopang_ai_activated');
+      _checkAutoActivateAI();
+      appendBubble('ai', 'AI 비서가 활성화되었습니다. 지금 바로 대화를 시작해 보세요.');
+    }
   });
 
   // ── 화면이 다시 보일 때마다 AI 버튼 강제 재동기화 ──────────
