@@ -34,6 +34,14 @@ export function setRecognition(v) { recognition = v; }
 
 // ── P2P 상태 ─────────────────────────────────────────────
 export const PROXY      = 'https://gopang-proxy.tensor-city.workers.dev';
+
+// ── 탈중앙화 이관 ③: P2P 시그널링 L1 직접 엔드포인트 (2026-06-23) ──────
+// 이전: 단말 → PROXY /signal/* → Worker → L1 webrtc_signals
+// 이후: 단말 → L1_SIGNAL_BASE /signal/* (Worker 경유 없음)
+// Worker는 이미 "L1 우선, Supabase 폴백" 구조로 L1을 직접 호출 중.
+// 단말이 같은 L1 URL을 직접 호출하면 Worker 경유가 불필요.
+// L1 PocketBase webrtc_signals 컬렉션 Rule: 인증 없음 (guid 기반 필터링으로 충분)
+export const L1_SIGNAL_BASE = 'https://l1-hanlim.gopang.net/api/collections/webrtc_signals';
 // RTC_CONFIG — 기본값 (STUN 전용)
 // fetchRtcConfig() 호출 시 TURN credential 포함 버전으로 교체됨
 export const RTC_CONFIG_STUN_ONLY = { iceServers: [

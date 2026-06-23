@@ -1231,17 +1231,18 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
       // L5 글로벌 디렉토리 등록 (GDUDA Phase 1 — HLR)
       const nickLang = (navigator.language?.slice(0,2) || 'ko') + ':' + nickname;
       const nickHash = await _sha256(nickLang);
-      fetch(`${PROXY_URL}/p2p/register`, {
+      // ── 탈중앙화 이관 ④: p2p/register → L1 직접 (2026-06-23) ────────────
+      // 이전: PROXY_URL /p2p/register → Worker → L1 profiles
+      // 이후: L1 profiles 직접 (Worker는 이미 L1을 직접 호출 중이었음)
+      const _L1_PROFILES_P2P = L1_URL.replace('/api/collections/profiles/records', '') + '/api/collections/profiles/records';
+      fetch(_L1_PROFILES_P2P, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          guid:          ipv6,
+          guid:     ipv6,
           handle,
-          nickname,
-          nickname_hash: nickHash,
-          country_code:  selectedCountry,
-          region,
-          current_l1:    L1_URL.replace('/api/collections/profiles/records', ''),
+          nickname: nickname || null,
+          region:   region   || null,
         })
       }).catch(e => console.warn('[P2P] global_profiles 등록 실패:', e.message));
 

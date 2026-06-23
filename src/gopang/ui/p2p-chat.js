@@ -5,10 +5,45 @@
  * - from/to 모두 handle 기준 (전세계 유일)
  */
 import {
-  PROXY, RTC_CONFIG, _USER,
+  PROXY, L1_SIGNAL_BASE, RTC_CONFIG, _USER,
   setRtcConn, setRtcChannel, setSignalPoll,
   _rtcConn, _rtcChannel, _signalPoll,
 } from '../core/state.js';
+
+// ── 탈중앙화 이관 ③: 시그널링 전송/수신/삭제를 L1 직접으로 ──────────────
+// Worker가 이미 L1 webrtc_signals 컬렉션을 직접 쓰는 구조이므로,
+// 단말도 같은 경로로 직접 접근. Worker 경유 불필요.
+const _L1_SIGNAL = L1_SIGNAL_BASE;
+
+async function _signalSendDirect(from_guid, to_guid, type, payload) {
+  const expires_at = new Date(Date.now() + 60_000).toISOString();
+  const res = await fetch(_L1_SIGNAL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ from_guid, to_guid, type, payload, expires_at }),
+  });
+  if (!res.ok) throw new Error(`L1 signal send ${res.status}`);
+}
+
+async function _signalPollDirect(guid) {
+  const now    = new Date().toISOString();
+  const filter = encodeURIComponent(`to_guid='${guid}' && expires_at>'${now}'`);
+  const res    = await fetch(`${_L1_SIGNAL}?filter=${filter}&sort=created&perPage=50`);
+  if (!res.ok) throw new Error(`L1 signal poll ${res.status}`);
+  const data = await res.json();
+  return (data.items || []).map(r => ({
+    from_guid: r.from_guid,
+    to_guid:   r.to_guid,
+    type:      r.type,
+    payload:   r.payload,
+    id:        r.id,
+  }));
+}
+
+async function _signalDeleteDirect(id) {
+  if (!id) return;
+  await fetch(`${_L1_SIGNAL}/${id}`, { method: 'DELETE' }).catch(() => {});
+}
 
 let _chatOverlay  = null;
 let _peerInfo     = null;  // { guid, handle, nickname }
@@ -150,11 +185,7 @@ function _watchAnswerRealtime(conn, peerGuid, callId) {
     }
 
     // 처리 후 시그널 삭제
-    fetch(`${PROXY}/signal/delete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: row.id }),
-    }).catch(() => {});
+    _signalDeleteDirect(row.id);
   };
 
   ws.onerror = () => { wsOk = false; };
@@ -352,13 +383,11 @@ function _waitForIce(conn, timeout = 2000) {
   });
 }
 
-// ── 시그널 전송 ───────────────────────────────────────────
+// ── 시그널 전송 ③: L1 직접 (2026-06-23 이관) ──────────────
 async function _signalSend(body) {
-  await fetch(`${PROXY}/signal/send`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body),
-  });
+  // 이전: PROXY /signal/send → Worker → L1
+  // 이후: L1 직접 (Worker 경유 없음)
+  await _signalSendDirect(body.from_guid, body.to_guid, body.type, body.payload);
 }
 
 // ── 시그널 폴링 ───────────────────────────────────────────
@@ -366,17 +395,11 @@ function _startPoll(myGuid, handler) {
   _stopPoll();
   _pollInterval = setInterval(async () => {
     try {
-      const res     = await fetch(`${PROXY}/signal/poll?guid=${encodeURIComponent(myGuid)}`);
-      const data    = await res.json();
-      const signals = data.signals || [];
+      const signals = await _signalPollDirect(myGuid);
       for (const sig of signals) {
         await handler(sig);
-        // 처리 후 삭제
-        await fetch(`${PROXY}/signal/delete`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ id: sig.id }),
-        });
+        // 처리 후 삭제 — L1 직접 DELETE
+        await _signalDeleteDirect(sig.id);
       }
     } catch(e) { console.warn('[P2P] 폴링 오류:', e.message); }
   }, 1500);
@@ -588,17 +611,8 @@ function _closeP2P() {
       }
     } catch(e) { console.warn('[P2P] bye DataChannel 전송 실패:', e.message); }
 
-    // ② signal 경유 종료 알림 (DataChannel 실패 대비)
-    fetch(`${PROXY}/signal/send`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from_guid: _USER.ipv6,
-        to_guid:   _peerInfo.guid,
-        type:      'ice',
-        payload:   { bye: true },
-      }),
-    }).catch(() => {});
+    // ② signal 경유 종료 알림 (DataChannel 실패 대비) — L1 직접
+    _signalSendDirect(_USER.ipv6, _peerInfo.guid, 'ice', { bye: true }).catch(() => {});
   }
 
   if (_rtcChannel) { _rtcChannel.close(); setRtcChannel(null); }
@@ -795,11 +809,7 @@ export function startIncomingWatch(myGuid) {
       if (row.type === 'offer' && !_chatOverlay) {
         console.info('[P2P Realtime] offer 수신 → handleIncomingOffer');
         await handleIncomingOffer(row);
-        fetch(`${PROXY}/signal/delete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: row.id }),
-        }).catch(() => {});
+        _signalDeleteDirect(row.id);
       }
     };
 
@@ -821,16 +831,13 @@ export function startIncomingWatch(myGuid) {
     if (wsOk) return;
     try {
       if (_chatOverlay) return;
-      const res  = await fetch(`${PROXY}/signal/poll?guid=${encodeURIComponent(myGuid)}`);
+      const signals_raw2 = await _signalPollDirect(myGuid);
+        const res  = { ok: true, _direct: true, json: async () => signals_raw2 };
       const data = await res.json();
       for (const sig of (data.signals || [])) {
         if (sig.type === 'offer') {
           await handleIncomingOffer(sig);
-          await fetch(`${PROXY}/signal/delete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: sig.id }),
-          });
+          _signalDeleteDirect(sig.id);
           break;
         }
       }

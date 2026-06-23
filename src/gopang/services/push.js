@@ -12,6 +12,12 @@
  */
 const WORKER_URL = 'https://gopang-proxy.tensor-city.workers.dev';
 
+// ── 탈중앙화 이관 ①: VAPID 공개키 하드코딩 (2026-06-23) ─────────────────
+// 이전: Worker GET /push/vapid-public-key → env.VAPID_PUBLIC_KEY 반환
+// 이후: 공개키는 공개 정보이므로 단말에 직접 내장. Worker 엔드포인트 호출 불필요.
+// 공개키가 교체될 경우 이 상수와 함께 Worker secret도 같이 교체해야 함.
+const VAPID_PUBLIC_KEY = 'BPl0BPpqPr9qGGU7BvMv4CuUAf2i9e3g_ChE4LHSN5l4dCVOBAtaOFQkifgP3GbD44NMIHRfFDlFH3TGJEf2Jgk';
+
 function _urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -30,19 +36,13 @@ export async function requestPushSubscription(guid) {
 
   try {
     const reg = await navigator.serviceWorker.ready;
-
-    // 이미 구독돼 있으면 권한 다이얼로그 없이 그대로 재사용
     let sub = await reg.pushManager.getSubscription();
 
     if (!sub) {
-      const keyRes  = await fetch(`${WORKER_URL}/push/vapid-public-key`);
-      const keyData = await keyRes.json().catch(() => ({}));
-      if (!keyRes.ok || !keyData.publicKey) {
-        return { ok: false, reason: keyData.detail || `vapid_key_http_${keyRes.status}` };
-      }
+      // 이전: Worker API 호출 → 이후: 내장 상수 직접 사용
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: _urlBase64ToUint8Array(keyData.publicKey),
+        applicationServerKey: _urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
     }
 

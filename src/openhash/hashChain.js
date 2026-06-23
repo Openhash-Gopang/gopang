@@ -417,3 +417,92 @@ export async function _resetChain() {
     })
   } catch(e) { console.warn('[HashChain] IDB 초기화 실패:', e.message) }
 }
+
+// ── 탈중앙화 이관 ②: OpenHash 상태 직접 조회 (2026-06-23) ──────────────
+// 이전: 단말 → Worker GET /openhash/status → Worker가 GitHub Pages fetch 대리
+// 이후: 단말이 GitHub Pages URL 직접 fetch (공개 URL, 인증 불필요)
+// Worker 엔드포인트 호출 불필요.
+
+const LAYER_STATUS_URLS = {
+  L1: 'https://openhash-gopang.github.io/openhash-L1-ido1/chain_status.json',
+  L2: 'https://openhash-gopang.github.io/openhash-L2-jeju-city/chain_status.json',
+  L3: 'https://openhash-gopang.github.io/openhash-L3-jeju/chain_status.json',
+  L4: 'https://openhash-gopang.github.io/openhash-L4-kr/chain_status.json',
+  L5: 'https://openhash-gopang.github.io/openhash-L5-global/chain_status.json',
+}
+
+const STALENESS_THRESHOLDS_SEC = {
+  L1:  5 * 60,   // 300초 — 실시간 스트리밍
+  L2: 15 * 60,   // 900초
+  L3: 45 * 60,   // 2700초
+  L4: 90 * 60,   // 5400초
+  L5: 90 * 60,
+}
+
+/**
+ * OpenHash L1~L5 체인 상태 직접 조회.
+ * Worker 없이 GitHub Pages에서 직접 fetch.
+ * @param {string|null} layer - 특정 계층만 ('L1'~'L5'), null이면 전체
+ * @returns {Promise<{ok, layers, summary}>}
+ */
+export async function fetchChainStatus(layer = null) {
+  async function fetchOne(l) {
+    const url = LAYER_STATUS_URLS[l]
+    try {
+      const res = await fetch(url, { cache: 'no-store' })
+      if (!res.ok) return { layer: l, fetched: false, error: `HTTP ${res.status}` }
+      const raw = await res.json()
+      const now = Date.now()
+      const lastMs = raw.last_verified ? new Date(raw.last_verified).getTime() : 0
+      const staleMs = now - lastMs
+      const threshold = (STALENESS_THRESHOLDS_SEC[l] ?? 300) * 1000
+      const isStale = lastMs > 0 && staleMs > threshold
+      return {
+        layer,
+        fetched:         true,
+        node_id:         raw.node_id,
+        total_blocks:    raw.total_blocks,
+        latest_hash:     raw.latest_hash,
+        chain_valid:     raw.chain_valid,
+        ilmv_status:     raw.ilmv_status,
+        last_verified:   raw.last_verified,
+        staleness_sec:   Math.round(staleMs / 1000),
+        timestamp_stale: isStale,
+        audit: {
+          hashChainBreak:   raw.chain_valid === false,
+          bivmViolation:    raw.ilmv_status === 'VIOLATION',
+          timestampStale:   isStale,
+          signatureFailure: raw.ilmv_status === 'SIGNATURE_FAILURE',
+        },
+      }
+    } catch (e) {
+      return { layer: l, fetched: false, error: e.message }
+    }
+  }
+
+  const targets = layer ? [layer] : Object.keys(LAYER_STATUS_URLS)
+  const settled = await Promise.allSettled(targets.map(l => fetchOne(l)))
+  const layers  = {}
+  settled.forEach((r, i) => {
+    const l = targets[i]
+    layers[l] = r.status === 'fulfilled' ? r.value : { layer: l, fetched: false }
+  })
+
+  const all = Object.values(layers).filter(r => r.fetched)
+  const critical = all.some(r =>
+    r.audit?.hashChainBreak || r.audit?.bivmViolation || r.audit?.signatureFailure
+  )
+  const stale = all.some(r => r.audit?.timestampStale)
+
+  return {
+    ok: true,
+    layers,
+    summary: {
+      total:        targets.length,
+      fetched:      all.length,
+      critical_issue: critical,
+      stale_warning:  stale,
+      overall: critical ? 'CRITICAL' : stale ? 'WARNING' : 'OK',
+    },
+  }
+}
