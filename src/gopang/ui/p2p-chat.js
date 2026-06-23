@@ -5,7 +5,7 @@
  * - from/to 모두 handle 기준 (전세계 유일)
  */
 import {
-  PROXY, L1_SIGNAL_BASE, L1_PDV_URL, L1_ANCHOR_URL, RTC_CONFIG, _USER,
+  PROXY, L1_SIGNAL_BASE, L1_PDV_URL, L1_ANCHOR_URL, L1_URL, RTC_CONFIG, _USER,
   setRtcConn, setRtcChannel, setSignalPoll,
   _rtcConn, _rtcChannel, _signalPoll,
 } from '../core/state.js';
@@ -52,6 +52,27 @@ let _p2pMessages  = [];    // P2P 대화 원문 누적 (PDV 저장용)
 let _sessionStart = null;  // 세션 시작 시각
 let _activeCallId = null;  // 현재 유효한 통화 시도 ID — 재연결 시 이전 watcher 자동 무력화
 const _seenOfferIds = new Set();  // 처리한 offer callId — 중복 confirm() 방지
+
+// ── handle로 즉시 초대 (발신측) ──────────────────────────
+// 그림자 AI가 [P2P_INVITE: handle=@xxx] 태그를 출력했을 때 호출됨.
+// 모호한 이름(예: "김동")은 이 함수를 쓰지 않고 [SEARCH]로 먼저 후보를 보여준 뒤,
+// 사용자가 정확한 handle을 확인한 경우에만 이 함수로 즉시 연결한다.
+export async function inviteByHandle(handle) {
+  const clean = String(handle || '').replace(/^@/, '').trim();
+  if (!clean) throw new Error('handle 누락');
+  const filter = encodeURIComponent(`handle='${clean}'`);
+  const res = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+  if (!res.ok) throw new Error('프로필 조회 실패');
+  const raw = await res.json();
+  const u = raw.items?.[0];
+  if (!u) throw new Error(`@${clean} 사용자를 찾을 수 없습니다`);
+  const targetUser = {
+    guid: u.guid, handle: u.handle, nickname: u.nickname,
+    region: u.region, country_code: u.country_code, current_l1: u.current_l1,
+  };
+  await startP2PCall(targetUser);
+  return targetUser;
+}
 
 // ── P2P 통화 시작 (발신측) ───────────────────────────────
 export async function startP2PCall(targetUser) {

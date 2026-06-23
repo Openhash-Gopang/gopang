@@ -7,6 +7,7 @@ import { aiActive, history, _userLocation, _lastRouterResult,
 import { appendBubble, showTyping, hideTyping,
          _createStreamBubble, _updateStreamBubble } from '../ui/bubble.js';
 import { _buildLocNote } from '../services/location.js';
+import { _buildPDVNote } from '../pdv/record.js';
 import { runRouter, applyRouterResult } from './router.js';
 import { _injectAuthConfirmButton } from '../core/auth.js';
 import { _klawReview } from '../services/klaw.js';
@@ -261,9 +262,11 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
   //    system이 항상 동일 → DeepSeek이 prefix unit으로 캐시 유지
   //    locNote·GUID는 history 밖 별도 ctx 메시지로 주입 → 캐시 prefix 보호
   const locNote = _buildLocNote();
+  const pdvNote = _buildPDVNote();
   const ctxParts = [];
   if (USER_GUID) ctxParts.push(`사용자:${USER_GUID.slice(-8)}`);
   if (locNote)   ctxParts.push(locNote.trim());
+  if (pdvNote)   ctxParts.push(pdvNote.trim());
   const ctxMsg = ctxParts.length
     ? [{ role: 'user',      content: `[ctx]${ctxParts.join(' ')}` },
        { role: 'assistant', content: '확인.' }]
@@ -444,6 +447,63 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     const stepMatch = fullReply.match(/\[(\d+)\/\d+단계\]/);
     if (stepMatch && !localStorage.getItem('hondi_profile_done')) {
       try { localStorage.setItem('hondi_profile_step', stepMatch[1]); } catch {}
+    }
+
+    // ══════════════════════════════════════════════════════
+    // 그림자 AI(AGENT-COMMON v2.0) 행동 태그 — 임무 1·3 실행
+    // ══════════════════════════════════════════════════════
+
+    // ── [SEARCH: query=..., type=...] 감지 → 검색 패널(자동 실행) ──
+    //    이름이 모호할 수 있으므로 직접 연결하지 않고 패널에 결과를
+    //    띄워 사용자가 "연결" 버튼으로 직접 선택하게 한다(임무 1 — 명확화 원칙).
+    const searchMatch = fullReply.match(/\[SEARCH:\s*query=([^,\]]+)(?:,\s*type=([^,\]]+))?\]/);
+    if (searchMatch) {
+      const q = searchMatch[1].trim();
+      console.info('[Agent] SEARCH 태그 감지:', q);
+      import('../ui/p2p-search.js').then(({ openSearch }) => openSearch(q))
+        .catch(e => console.warn('[Agent] SEARCH 실행 실패:', e.message));
+    }
+
+    // ── [P2P_INVITE: handle=@xxx] 감지 → handle 확정 시 즉시 연결 ──
+    const inviteMatch = fullReply.match(/\[P2P_INVITE:\s*handle=(@[\w.-]+)\]/);
+    if (inviteMatch) {
+      const handle = inviteMatch[1];
+      console.info('[Agent] P2P_INVITE 태그 감지:', handle);
+      import('../ui/p2p-chat.js').then(({ inviteByHandle }) => inviteByHandle(handle))
+        .catch(e => {
+          console.warn('[Agent] P2P_INVITE 실행 실패:', e.message);
+          appendBubble?.('ai', `⚠️ ${handle} 연결에 실패했습니다: ${e.message}`);
+        });
+    }
+
+    // ── [OPEN_PROFILE: handle=@xxx] 감지 → 공급자 profile 페이지 새 탭 ──
+    //    공급자 profile 페이지 = 공급자의 웹페이지이자 혼디 인터페이스(임무 3).
+    //    사용자는 그 안에서 직접 탐색하거나 공급자 그림자 AI와 대화할 수 있다.
+    const openProfileMatch = fullReply.match(/\[OPEN_PROFILE:\s*handle=(@[\w.-]+)\]/);
+    if (openProfileMatch) {
+      const handle = openProfileMatch[1].replace(/^@/, '');
+      console.info('[Agent] OPEN_PROFILE 태그 감지:', handle);
+      window.open(`https://users.gopang.net/profile.html?handle=${encodeURIComponent(handle)}`, '_blank');
+    }
+
+    // ── PDV_STORE {...} 감지 → 그림자 독립 메모리 기록 ──────────
+    //    그림자가 대화를 통해 알게 된 정보(취향·맥락 등)를 PDV에 축적한다.
+    //    AGENT-COMMON v2.0 §4 PDV 운영 규칙 참조.
+    const pdvStoreMatch = fullReply.match(/PDV_STORE\s*(\{[\s\S]*?\})\s*(?:$|\n)/);
+    if (pdvStoreMatch) {
+      try {
+        const pdvData = JSON.parse(pdvStoreMatch[1]);
+        import('../pdv/record.js').then(({ _recordPDV }) => {
+          _recordPDV({
+            type:    pdvData.type    || 'interaction',
+            summary: pdvData.summary || null,
+            what:    pdvData.content || pdvData.summary || null,
+            why:     '그림자 AI 자율 기록',
+          });
+        }).catch(e => console.warn('[PDV] _recordPDV import 실패:', e.message));
+      } catch (e) {
+        console.warn('[PDV] PDV_STORE JSON 파싱 실패:', e.message);
+      }
     }
 
 

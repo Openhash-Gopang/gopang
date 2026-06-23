@@ -9,7 +9,9 @@ let _searchOverlay = null;
 let _searchTimer   = null;
 
 // ── 검색 패널 열기 ────────────────────────────────────────
-export function openSearch() {
+// @param {string} [prefillQuery] — 그림자 AI [SEARCH: query=...] 태그에서 전달.
+//   지정 시 입력란에 자동 채우고 즉시 검색을 실행한다(사용자 타이핑 불필요).
+export function openSearch(prefillQuery) {
   if (_searchOverlay) { _searchOverlay.remove(); _searchOverlay = null; }
 
   const overlay = document.createElement('div');
@@ -126,7 +128,13 @@ export function openSearch() {
     if (e.key === 'Escape') _closeSearch();
   });
 
-  input.focus();
+  // ── 그림자 AI가 query를 미리 전달한 경우: 자동 입력 + 즉시 검색 ──
+  if (prefillQuery && prefillQuery.trim()) {
+    input.value = prefillQuery.trim();
+    _doSearch(prefillQuery.trim(), '', '', resultsEl);
+  } else {
+    input.focus();
+  }
 }
 
 // ── 검색 실행 ─────────────────────────────────────────────

@@ -288,7 +288,9 @@ async function installPWA() {
   }
   _deferredInstallPrompt = null;
   // PWA 처리 완료 → GPS 즉시 요청 (배너 사라진 뒤이므로 충돌 없음)
-  if (!_locationReady && !_locationPending) _initLocation();
+  // gopang-pwa.js는 일반 스크립트라 ES모듈 변수(_locationReady 등)에 직접 접근 불가.
+  // CustomEvent로 ES모듈 컨텍스트(gopang-app.js)에 위치 초기화를 위임한다.
+  document.dispatchEvent(new CustomEvent('gopang:pwa-install-done'));
 }
 
 // ── 나중에 버튼 ──────────────────────────────────────────
@@ -296,12 +298,12 @@ function dismissInstall() {
   _hideInstallBanner();
   localStorage.setItem(_INSTALL_DISMISSED_KEY, Date.now());
   // 거절 후 → GPS 즉시 요청
-  if (!_locationReady && !_locationPending) _initLocation();
+  document.dispatchEvent(new CustomEvent('gopang:pwa-install-done'));
 }
 function dismissIOSInstall() {
   _hideInstallBanner();
   localStorage.setItem(_INSTALL_DISMISSED_KEY, Date.now());
-  if (!_locationReady && !_locationPending) _initLocation();
+  document.dispatchEvent(new CustomEvent('gopang:pwa-install-done'));
 }
 
 // ── 사용자가 직접 설치 요청 (홈 화면 추가 버튼 등) ─────────

@@ -42,7 +42,36 @@ export async function recordPDV({ report }) {
 // 전역 노출 — 하위 시스템(market, gdc, kinsurance 등) window.recordPDV()로 접근
 window.recordPDV = recordPDV;
 
-// ── PDV 메타데이터 기록 ────────────────────────────────────────
+// ── PDV 최근 요약 — 동적 ctx 주입용 (call-ai.js _buildLocNote와 동일 위치에 삽입) ──
+// 그림자가 "PDV에서 인출"한다고 말해도 실제로 LLM은 IndexedDB/localStorage에
+// 접근할 수 없으므로, 매 턴 최근 PDV 항목을 텍스트로 압축해 [ctx]에 동봉한다.
+// 정적 system 프롬프트에는 절대 굽지 않는다(PDV는 계속 자라므로 캐시 prefix를
+// 깨뜨리고, 오래된 정보가 영구 고정되는 문제가 생긴다 — 동적 주입만 사용).
+const _PDV_NOTE_MAX_ITEMS = 8;
+const _PDV_NOTE_MAX_CHARS = 500;
+
+export function _buildPDVNote() {
+  let log;
+  try { log = JSON.parse(localStorage.getItem('gopang_pdv_log') || '[]'); }
+  catch { return ''; }
+  if (!Array.isArray(log) || !log.length) return '';
+
+  const recent = log.slice(-_PDV_NOTE_MAX_ITEMS).reverse(); // 최신순
+  const lines = [];
+  let used = 0;
+  for (const r of recent) {
+    const summary = (r.summary || r.what || r.data?.location || '').toString().slice(0, 60);
+    if (!summary) continue;
+    const line = `· ${summary}`;
+    if (used + line.length > _PDV_NOTE_MAX_CHARS) break;
+    lines.push(line);
+    used += line.length;
+  }
+  if (!lines.length) return '';
+  return `\n\n[PDV 최근 기록 — 참고용, 추측 금지]\n` + lines.join('\n');
+}
+
+
 // 고팡 내부 전용. 직접 Supabase INSERT. 하위 시스템은 위 recordPDV() 사용.
 export async function _recordPDV(record) {
   try {

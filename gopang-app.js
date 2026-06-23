@@ -37,6 +37,11 @@ import { setPeer, _clearPeer,
 
 // ── PDV ──────────────────────────────────────────────────
 import { recordPDV }                           from './src/gopang/pdv/record.js';
+import { _initLocation }                       from './src/gopang/services/location.js';
+
+// gopang-pwa.js(일반 스크립트)는 ES모듈 상태 변수에 직접 접근 불가하므로
+// CustomEvent로 위치 초기화를 위임받는다. (배너 처리 완료/거절 후 GPS 요청)
+document.addEventListener('gopang:pwa-install-done', () => { _initLocation(); });
 import { loadChainFromIDB }                    from './src/openhash/hashChain.js';
 
 // ── P2P 검색/채팅 (GDUDA Phase 1) ────────────────────────
