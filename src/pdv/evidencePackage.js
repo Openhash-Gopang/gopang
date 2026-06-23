@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file evidencePackage.js
  * @description 자기완결 증거 패키지 생성·검증
  * @version 1.0.0
@@ -127,7 +127,7 @@ export async function generateEvidencePackage(msgId, options = {}) {
     proofWeightGDC,
     proofWeight,           // 법원 신뢰도 등급
     verifyFeeGDC:  ZKP.VERIFY_FEE_GDC,
-    verificationUrl: `${config.VERIFY_API_BASE}/evidence-report/${msgId}`,
+    verificationUrl: `${VERIFY_API_BASE}/evidence-report/${msgId}`,
     tripleSig:     record.tripleSign ?? null,
   }
 
