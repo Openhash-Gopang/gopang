@@ -5,7 +5,7 @@
  * - from/to 모두 handle 기준 (전세계 유일)
  */
 import {
-  PROXY, L1_SIGNAL_BASE, RTC_CONFIG, _USER,
+  PROXY, L1_SIGNAL_BASE, L1_PDV_URL, L1_ANCHOR_URL, RTC_CONFIG, _USER,
   setRtcConn, setRtcChannel, setSignalPoll,
   _rtcConn, _rtcChannel, _signalPoll,
 } from '../core/state.js';
@@ -639,9 +639,9 @@ function _closeP2P() {
 //   contentHash = SHA-256(원본)
 //   userSig = gopangWallet.sign(contentHash)
 //   hashChain.anchor(contentHash, [userSig], sessionId)
-//   POST /pdv/report { block_hash: entryHash }
+//   T-C: L1 pdv_records 직접 POST { block_hash: entryHash } (+ entryHash 있으면 anchor_records도 직접 POST)
 async function _saveP2PSession(messages, peer, startedAt) {
-  const { _USER, PROXY } = await import('../core/state.js');
+  const { _USER } = await import('../core/state.js');
   if (!_USER?.ipv6) return;
 
   const now       = new Date().toISOString();
@@ -732,26 +732,46 @@ async function _saveP2PSession(messages, peer, startedAt) {
     console.warn('[P2P] localStorage 백업 실패:', e.message);
   }
 
-  // ⑦ POST /pdv/report (block_hash = entryHash → openhash_anchored: true)
-  await fetch(`${PROXY}/pdv/report`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({
-      report: {
+  // ⑦ T-C: L1 pdv_records 직접 기록 (Worker pdv 리포트 대체)
+  {
+    const _who   = { ipv6: _USER.ipv6, handle: _USER.handle };
+    const _when  = { period_start: startedAt || now, period_end: now };
+    const _where = { svc_url: 'https://gopang.net' };
+    const _what  = { summary: `P2P 대화 종료 — ${peer.handle}와 ${messages.length}턴` };
+    const _how   = { method: 'WebRTC P2P DataChannel' };
+    const _why   = { goal: 'P2P 대화 PDV 기록' };
+
+    await fetch(L1_PDV_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid:         _USER.ipv6,
+        report_id:    `${sessionId}:gopang-p2p`,
+        reporter_svc: 'gopang-p2p',
         svc:          'gopang',
         type:         'p2p_conversation',
-        session_id:   sessionId,
-        reporter_svc: 'gopang-p2p',
+        summary:      _what.summary,
+        summary_6w:   JSON.stringify({ who: _who, when: _when, where: _where, what: _what, how: _how, why: _why }),
         block_hash:   entryHash,
-        who:   { ipv6: _USER.ipv6, handle: _USER.handle },
-        when:  { period_start: startedAt || now, period_end: now },
-        where: { svc_url: 'https://gopang.net' },
-        what:  { summary: `P2P 대화 종료 — ${peer.handle}와 ${messages.length}턴` },
-        how:   { method: 'WebRTC P2P DataChannel' },
-        why:   { goal: 'P2P 대화 PDV 기록' },
-      },
-    }),
-  }).catch(e => console.warn('[P2P] pdv_log 전송 실패 (무시):', e.message));
+        risk_level:   'low',
+        source:       'gopang',
+        openhash_anchored: !!entryHash,
+      }),
+    }).catch(e => console.warn('[P2P] L1 pdv_records 전송 실패 (무시):', e.message));
+
+    if (entryHash) {
+      fetch(L1_ANCHOR_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entry_hash:   entryHash,
+          content_hash: contentHash,
+          msg_id:       sessionId,
+          source:       'pdv_records',
+        }),
+      }).catch(e => console.warn('[P2P] L1 anchor_records 전송 실패 (무시):', e.message));
+    }
+  }
 
   console.info('[P2P] PDV 저장 완료',
     '| sessionId:', sessionId,

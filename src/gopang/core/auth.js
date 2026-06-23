@@ -5,7 +5,7 @@
  *         UN 가입국 194개 + 실시간 검색
  * - 익명 모드 없음
  */
-import { setUser, _USER, USER_GUID, L1_URL, PROXY } from './state.js';
+import { setUser, _USER, USER_GUID, L1_URL, L1_PDV_URL, L1_ANCHOR_URL, PROXY } from './state.js';
 const PROXY_URL = PROXY;
 import { appendBubble } from '../ui/bubble.js';
 import { requestPushSubscription } from '../services/push.js';
@@ -1754,11 +1754,37 @@ async function _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountr
     why:  '고팡 서비스 최초 가입',
   };
 
-  await fetch(`${PROXY_URL}/pdv/report`, {
+  // ⑤ T-C: L1 pdv_records 직접 기록 (Worker pdv 리포트 대체)
+  await fetch(L1_PDV_URL, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ report }),
-  }).catch(e => console.warn('[PDV] report 전송 실패:', e.message));
+    body: JSON.stringify({
+      guid:         ipv6,
+      report_id:    `${sessionId}:gopang-auth`,
+      reporter_svc: report.reporter_svc,
+      svc:          report.svc,
+      type:         report.type,
+      summary:      report.what,
+      summary_6w:   JSON.stringify(report),
+      block_hash:   report.block_hash,
+      risk_level:   'low',
+      source:       report.svc,
+      openhash_anchored: !!report.block_hash,
+    }),
+  }).catch(e => console.warn('[PDV] L1 pdv_records 전송 실패:', e.message));
+
+  if (entryHash) {
+    fetch(L1_ANCHOR_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        entry_hash:   entryHash,
+        content_hash: contentHash,
+        msg_id:       sessionId,
+        source:       'pdv_records',
+      }),
+    }).catch(e => console.warn('[PDV] L1 anchor_records 전송 실패:', e.message));
+  }
 
   // ⑥ extra.fs 초기화
   //    bs-cash          = wallet 잔액 (재무제표 현금 계정)

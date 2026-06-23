@@ -7,7 +7,7 @@
  *     SHA-256 → hashChain.anchor() 1회 기록
  *   - 원문은 localStorage에 보존, OpenHash에는 해시만 기록
  */
-import { history, PROXY } from './state.js';
+import { history, L1_PDV_URL, L1_ANCHOR_URL } from './state.js';
 import { USER_GUID } from './state.js';
 
 const DOMAIN_PATTERNS = {
@@ -137,26 +137,50 @@ async function _saveSessionOnce() {
     }
 
     // ── pdv_log 기록 (block_hash = entryHash → openhash_anchored: true)
-    if (PROXY) {
-      fetch(`${PROXY}/pdv/report`, {
+    {
+      const _report = {
+        svc:          'gopang',
+        type:         'session_end',
+        reporter_svc: 'gopang-session',
+        session_id:   sessionId,
+        block_hash:   result.entryHash,
+        who:   { ipv6: USER_GUID },
+        when:  { period_start: sessionData.startedAt, period_end: now },
+        where: { svc_url: 'https://gopang.net' },
+        what:  { summary: `세션 종료 — ${primaryDomain} 영역, ${sessionMessages.length}턴` },
+        how:   { method: '앱 종료(visibilitychange / pagehide)' },
+        why:   { goal: '세션 데이터 PDV 기록' },
+      };
+
+      // T-C: L1 pdv_records 직접 기록 (Worker pdv 리포트 대체)
+      fetch(L1_PDV_URL, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          report: {
-            svc:          'gopang',
-            type:         'session_end',
-            reporter_svc: 'gopang-session',
-            session_id:   sessionId,
-            block_hash:   result.entryHash,
-            who:   { ipv6: USER_GUID },
-            when:  { period_start: sessionData.startedAt, period_end: now },
-            where: { svc_url: 'https://gopang.net' },
-            what:  { summary: `세션 종료 — ${primaryDomain} 영역, ${sessionMessages.length}턴` },
-            how:   { method: '앱 종료(visibilitychange / pagehide)' },
-            why:   { goal: '세션 데이터 PDV 기록' },
-          },
+          guid:         USER_GUID,
+          report_id:    `${sessionId}:gopang-session`,
+          reporter_svc: _report.reporter_svc,
+          svc:          _report.svc,
+          type:         _report.type,
+          summary:      _report.what.summary,
+          summary_6w:   JSON.stringify(_report),
+          block_hash:   _report.block_hash,
+          risk_level:   'low',
+          source:       _report.svc,
+          openhash_anchored: !!_report.block_hash,
         }),
-      }).catch(e => console.warn('[Session] pdv_log 전송 실패 (무시):', e.message));
+      }).catch(e => console.warn('[Session] L1 pdv_records 전송 실패 (무시):', e.message));
+
+      fetch(L1_ANCHOR_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entry_hash:   result.entryHash,
+          content_hash: sessionHash,
+          msg_id:       sessionId,
+          source:       'pdv_records',
+        }),
+      }).catch(e => console.warn('[Session] L1 anchor_records 전송 실패 (무시):', e.message));
     }
 
   } catch(e) {
