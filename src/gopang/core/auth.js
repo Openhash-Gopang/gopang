@@ -1299,10 +1299,10 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
 
       resolve(user);
 
-      // ── 가입 완료 직후 AI 설정 페이지로 즉시 이동 (2026-06-23) ───────────
-      // 흐름: 가입 → [즉시 이동] AI설정(OR키+인증번호) → SP1 온보딩 대화 → PROFILE_SUBMIT
+      // ── 가입 완료 직후 AI 설정 페이지를 새 탭으로 열기 (2026-06-23) ──────
+      // 흐름: 가입 → [새 탭] AI설정(OR키+인증번호) → SP1 온보딩 대화 → PROFILE_SUBMIT
       // wallet/X25519 초기화는 사용자가 OR 키 발급하는 3~5분 동안 백그라운드 완료
-      window.location.href = '/pages/ai-setup-mobile.html';
+      window.open('/pages/ai-setup-mobile.html', '_blank');
 
       // 가입 완료 시점에 푸시 알림 권한 요청 — 결과를 채팅에 안내
       // (가입 완료를 막지 않도록 resolve 이후 비동기로 처리)
