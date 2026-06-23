@@ -228,9 +228,6 @@ await test('O-14', '논문 §4.1 공식 수치 정합성 검증', async () => {
   assert(Math.abs(sE - sA) < 1e-9, `E 폴백 score=${sE.toFixed(4)} == A=${sA.toFixed(4)}`)
 })
 
-
-})
-
 // ── 결과 출력 ────────────────────────────────────────────────────────────
 console.log(`\n결과: ${passed} 통과 / ${failed} 실패 / 총 ${passed + failed}\n`)
 if (failed > 0) process.exit(1); else process.exit(0)
