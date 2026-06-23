@@ -10,7 +10,7 @@
  *   - prod 환경: 실제 GitHub Pages 노드
  */
 
-import { config } from '../core/config.js'
+// layerClient.js: 구설계(폐기 예정) — config import 제거
 import { PLSM } from '../core/constants.js'
 
 // K=3 리던던시: 각 계층별 3개 노드 엔드포인트

@@ -17,12 +17,10 @@
  *   - Phase 1~6 판정 상세
  */
 
-import { config } from '../core/config.js'
-
 // ── 스키마 ────────────────────────────────────────────────────────────────
 
-const DB_NAME    = config.IDB_NAME
-const DB_VERSION = config.IDB_VERSION
+const DB_NAME    = 'gopang_pdv_chat'
+const DB_VERSION = 1
 const STORE_MESSAGES = 'messages'
 const STORE_KEYS     = 'keys'
 

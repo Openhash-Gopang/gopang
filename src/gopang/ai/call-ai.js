@@ -170,9 +170,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     try {
       const dynamicCtx = await _buildShadowContext();
       if (dynamicCtx) {
-        CFG.system = CFG.system_base + '
-
-' + dynamicCtx;
+        CFG.system = CFG.system_base + '\n\n' + dynamicCtx;
       }
     } catch (e) {
       console.warn('[Shadow] 동적 컨텍스트 주입 실패 (무시):', e.message);

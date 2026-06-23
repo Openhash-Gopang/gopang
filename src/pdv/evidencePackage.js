@@ -24,7 +24,8 @@ import {
   verifyMerkleProof,
 } from '../openhash/hashChain.js'
 import { PERF, ZKP } from '../core/constants.js'
-import { config } from '../core/config.js'
+/** 증거 검증 API 베이스 */
+const VERIFY_API_BASE = 'https://verify.gopang.net'
 
 // ── 증거 패키지 생성 ──────────────────────────────────────────────────────
 
