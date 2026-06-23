@@ -83,6 +83,12 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
 .cf-key{font-size:13px;color:#9ca3af;flex-shrink:0}
 .cf-val{font-size:14px;color:#374151;text-align:right}
 
+/* ── 업종 정보 (industry_fields) ── */
+.ifield-row{padding:10px 16px;border-top:1px solid #f9fafb;
+  display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.ifield-key{font-size:13px;color:#9ca3af;flex-shrink:0}
+.ifield-val{font-size:14px;color:#374151;text-align:right;word-break:break-all}
+
 /* ── AI 비서 채팅 ── */
 .ai-section{margin:12px 16px 0}
 .ai-toggle-btn{width:100%;padding:14px 20px;border:2px solid #16a34a;border-radius:16px;
@@ -198,6 +204,12 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
   <div class="card hidden" id="card-products">
     <div class="card-title">판매 상품</div>
     <div class="product-grid" id="product-grid"></div>
+  </div>
+
+  <!-- 업종 정보 (industry_fields) -->
+  <div class="card hidden" id="card-industry">
+    <div class="card-title">업종 정보</div>
+    <div id="industry-rows"></div>
   </div>
 
   <!-- 커스텀 필드 -->
@@ -406,6 +418,57 @@ function render(p) {
       ${prod.detail ? `<div class="product-detail-text" id="pd-${i}">${prod.detail}</div>` : ''}
     `).join('');
     document.getElementById('card-products').classList.remove('hidden');
+  }
+
+  // ── 업종 정보 (industry_fields 범용 렌더러) ──
+  const iFields = pub.industry_fields;
+  if (iFields && p.entity_type === 'business') {
+    const SKIP_KEYS = new Set(['schema_id','schema_version','envelope_version']);
+    const LABEL_MAP = {
+      address:'주소', hours:'영업시간', delivery:'배달', biz_reg_no:'사업자번호',
+      commission_rate:'수수료율', matching_categories:'중개 업종',
+      search_radius_km:'검색 반경(km)', settlement_currency:'정산 통화',
+      activity_type:'활동 유형', capacity:'수용 인원', max_participants:'최대 인원',
+      price:'요금', location:'위치 유형', service_types:'서비스 유형',
+      service_area:'서비스 지역', service_scope:'서비스 범위',
+      rental_items:'대여 품목', deposit_required:'보증금 필요',
+      license_required:'면허 필요', vehicle_type:'차량 유형',
+      cuisine_type:'요리 유형', seating_capacity:'좌석 수',
+      accom_type:'숙박 유형', room_types:'객실 유형', amenities:'편의시설',
+      fish_type:'어종', farming_method:'양식 방법', crop_type:'작물',
+      farming_type:'영농 유형', certification:'인증', genre:'장르',
+      format:'형식', tools:'사용 도구', dev_type:'개발 유형',
+    };
+    function _fmtVal(v) {
+      if (v === null || v === undefined) return null;
+      if (typeof v === 'boolean') return v ? '예' : '아니오';
+      if (Array.isArray(v)) return v.length ? v.join(', ') : null;
+      if (typeof v === 'object') {
+        if ('open' in v && 'close' in v) return `${v.open} ~ ${v.close}`;
+        if ('available' in v) {
+          if (!v.available) return '미제공';
+          return [v.zone && `지역: ${v.zone}`, v.min_order && `최소: ${v.min_order}`]
+            .filter(Boolean).join(' / ') || '제공';
+        }
+        return JSON.stringify(v);
+      }
+      return String(v);
+    }
+    const rows = [];
+    for (const [k, v] of Object.entries(iFields)) {
+      if (SKIP_KEYS.has(k)) continue;
+      const label = LABEL_MAP[k] || k;
+      const val   = _fmtVal(v);
+      if (val === null || val === '') continue;
+      rows.push(`<div class="ifield-row">
+        <span class="ifield-key">${label}</span>
+        <span class="ifield-val">${val}</span>
+      </div>`);
+    }
+    if (rows.length) {
+      document.getElementById('industry-rows').innerHTML = rows.join('');
+      document.getElementById('card-industry').classList.remove('hidden');
+    }
   }
 
   // ── 커스텀 필드 (공개 항목만) ──

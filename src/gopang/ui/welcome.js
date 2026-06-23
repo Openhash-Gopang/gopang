@@ -6,7 +6,7 @@
 import { appendBubble } from './bubble.js';
 import { _USER } from '../core/state.js';
 import { callAI } from '../ai/call-ai.js';
-import { loadPersonalAssistantSP } from '../core/config.js';
+import { loadPersonalAssistantSP, resetSPLoader } from '../core/config.js';
 
 // ── Profile 완성 여부 확인 ───────────────────────────────
 function _isProfileDone() {
@@ -115,8 +115,23 @@ export async function handleProfileSubmit(aiResponseText) {
     localStorage.removeItem('hondi_profile_step');
     console.info('[Profile] 등록 완료:', profile.handle);
 
+    // ── SP 로더 리셋 — 다음 loadPersonalAssistantSP() 호출 시 그림자 SP fresh fetch ──
+    // _paSPLoaded=true가 유지되면 온보딩 SP가 세션 내내 고정되는 버그 방지
+    resetSPLoader();
+
+    // ── 위임 인증서 서명 (본인 키로 그림자 위임) ──
+    // data.agent가 있을 때만 시도. 실패해도 가입 자체는 완료로 처리.
+    if (data.agent?.ok && data.agent?.guid) {
+      _triggerDelegationSignature(data.agent.guid, profile.guid || user?.ipv6).catch(
+        e => console.warn('[Delegation] 위임 서명 실패 (비치명적):', e.message)
+      );
+    }
+
     // ── PDV IndexedDB 초기화 ──
     await _initPDV(profile.guid);
+
+    // ── 그림자 SP 즉시 로드 (플래그 리셋 직후) ──
+    await loadPersonalAssistantSP();
 
     return true;
   } catch (e) {
@@ -172,5 +187,40 @@ async function _initPDV(guid) {
     appendBubble('ai', '✅ 로컬 데이터 저장소(PDV)가 준비되었습니다. 이제 모든 대화와 거래가 이 기기에 안전하게 기록됩니다.');
   } catch (e) {
     console.warn('[PDV] IndexedDB 초기화 실패:', e.message);
+  }
+}
+
+
+// ── 위임 인증서 서명 헬퍼 ─────────────────────────────────────────────
+// PROFILE_SUBMIT 완료 후 본인 지갑 키로 그림자를 위임 서명한다.
+// window.gopangWallet.signPayload가 없으면 조용히 건너뜀.
+async function _triggerDelegationSignature(agentGuid, principalGuid) {
+  const PROXY = 'https://gopang-proxy.tensor-city.workers.dev';
+  const wallet = window.gopangWallet;
+  if (!wallet?.signPayload || typeof wallet.signPayload !== 'function') {
+    console.warn('[Delegation] gopangWallet 미준비 — 위임 서명 건너뜀');
+    return;
+  }
+
+  const delegateMsg = `delegate:${agentGuid}:${principalGuid}`;
+  const signature   = await wallet.signPayload(delegateMsg);
+  const pubkey      = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+
+  const res = await fetch(`${PROXY}/profile/delegate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      principal_guid: principalGuid,
+      agent_guid:     agentGuid,
+      pubkey,
+      signature,
+    }),
+  });
+
+  const result = await res.json().catch(() => ({}));
+  if (result.ok) {
+    console.info('[Delegation] 위임 인증서 등록 완료 ✅', agentGuid);
+  } else {
+    console.warn('[Delegation] 서버 거부:', result.error, result.detail);
   }
 }
