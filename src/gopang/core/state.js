@@ -1,4 +1,4 @@
-/**
+﻿/**
  * core/state.js — 고팡 전역 상태 (단일 진실 공급원)
  * 모든 모듈이 이 파일에서 상태를 import하여 공유
  */
@@ -41,7 +41,7 @@ export const PROXY      = 'https://gopang-proxy.tensor-city.workers.dev';
 // Worker는 이미 "L1 우선, Supabase 폴백" 구조로 L1을 직접 호출 중.
 // 단말이 같은 L1 URL을 직접 호출하면 Worker 경유가 불필요.
 // L1 PocketBase webrtc_signals 컬렉션 Rule: 인증 없음 (guid 기반 필터링으로 충분)
-export const L1_SIGNAL_BASE = 'https://l1-hanlim.gopang.net/api/collections/webrtc_signals';
+export const L1_SIGNAL_BASE = 'https://l1-hanlim.gopang.net/api/collections/webrtc_signals/records';
 // RTC_CONFIG — 기본값 (STUN 전용)
 // fetchRtcConfig() 호출 시 TURN credential 포함 버전으로 교체됨
 export const RTC_CONFIG_STUN_ONLY = { iceServers: [
