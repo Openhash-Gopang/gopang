@@ -220,8 +220,12 @@ async function _handleSignal(sig) {
 
   if (false && sig.type === 'offer' && !_peer) { // p2p-chat.js로 이전
     try {
-      const res  = await fetch(`${PROXY}/profile?guid=${encodeURIComponent(sig.from_guid)}`);
-      const data = await res.json();
+      // ── 이관 ⑩: profile GET → L1 직접 (2026-06-23) ─────────────────
+      const _L1_PROF = L1_URL + '?filter=' + encodeURIComponent(`guid='${sig.from_guid}'`) + '&perPage=1';
+      const res  = await fetch(_L1_PROF);
+      const _raw = await res.json();
+      const _p   = _raw.items?.[0] || null;
+      const data = { ok: res.ok && !!_p, profile: _p };
       if (data.ok && data.profile) {
         setPeerState(data.profile);
         const bar = document.getElementById('peer-bar');

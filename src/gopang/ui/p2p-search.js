@@ -3,7 +3,7 @@
  * - 닉네임 검색 → 상세 필터 → 연결 요청
  * - CF Worker /p2p/search 경유
  */
-import { PROXY, _USER } from '../core/state.js';
+import { PROXY, L1_URL, _USER } from '../core/state.js';
 
 let _searchOverlay = null;
 let _searchTimer   = null;
@@ -137,19 +137,38 @@ async function _doSearch(q, country, region, resultsEl) {
     </div>`;
 
   try {
-    // handle 검색 (@로 시작) vs 닉네임 검색
+    // ── 탈중앙화 이관 ⑨: p2p/search → L1 직접 (2026-06-23) ─────────────
+    // 이전: PROXY /p2p/search → Worker → L1 profiles 검색
+    // 이후: L1 profiles 직접 검색 (Worker 경유 없음)
+    const L1_PROFILES_BASE = L1_URL.replace('/api/collections/profiles/records', '') + '/api/collections/profiles/records';
     const isHandle = q.startsWith('@');
-    let url = `${PROXY}/p2p/search?limit=20`;
+    let filter;
     if (isHandle) {
-      url += `&handle=${encodeURIComponent(q)}`;
+      const handleClean = q.replace(/^@/, '');
+      filter = `handle='${handleClean}'`;
     } else {
-      url += `&q=${encodeURIComponent(q)}`;
-      if (country) url += `&country=${encodeURIComponent(country)}`;
-      if (region)  url += `&region=${encodeURIComponent(region)}`;
+      // 닉네임 또는 handle에서 검색 (PocketBase like 필터)
+      filter = `nickname~'${q}' || handle~'${q}'`;
+      if (country) filter += ` && country_code='${country}'`;
+      if (region)  filter += ` && region~'${region}'`;
     }
-
-    const res  = await fetch(url);
-    const data = await res.json();
+    const l1Url = `${L1_PROFILES_BASE}?filter=${encodeURIComponent(filter)}&perPage=20&sort=handle`;
+    const res  = await fetch(l1Url);
+    const raw  = await res.json();
+    // L1 응답 → Worker 응답 형식으로 정규화
+    const data = {
+      ok:    res.ok,
+      users: (raw.items || []).map(u => ({
+        guid:      u.guid,
+        handle:    u.handle,
+        nickname:  u.nickname,
+        region:    u.region,
+        country_code: u.country_code,
+        current_l1:   u.current_l1,
+      })),
+      count:  raw.totalItems || 0,
+      source: 'l1-direct',
+    };
 
     if (!data.ok || !data.users?.length) {
       resultsEl.innerHTML = `

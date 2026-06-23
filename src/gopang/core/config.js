@@ -133,10 +133,16 @@ export async function loadPersonalAssistantSP() {
   const handle = _USER?.handle || null;
   if (profileDone && handle) {
     try {
+      // ── 이관 ⑪: 그림자 SP fetch → L1 직접 (2026-06-23) ────────────
+      // 이전: PROXY /profile/@{handle}_ai → Worker → Supabase/L1
+      // 이후: L1 profiles 직접 GET (공개 컬렉션, 인증 불필요)
       const agentHandle = handle.replace(/^@/, '') + '_ai';
-      const res = await fetch(`${_PROXY_URL}/profile/@${agentHandle}`, { cache: 'no-cache' });
+      const _L1_BASE = 'https://l1-hanlim.gopang.net/api/collections/profiles/records';
+      const _agentFilter = encodeURIComponent(`handle='${agentHandle}'`);
+      const res = await fetch(`${_L1_BASE}?filter=${_agentFilter}&perPage=1`, { cache: 'no-cache' });
       if (res.ok) {
-        const data = await res.json();
+        const _raw = await res.json();
+        const data = _raw.items?.[0] || null;
         const sp = data?.extra?.public?.ai_assistant?.system_prompt;
         if (sp && sp.length > 200) {
           CFG.system = sp;

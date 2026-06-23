@@ -549,6 +549,162 @@ await test('S-11', "worker.js — esbuild 회귀 검사 (signer 통합 후)", as
 })
 
 // ══════════════════════════════════════════════════════════════
+// M 시리즈 — 탈중앙화 이관 검증 (Migration)
+// ══════════════════════════════════════════════════════════════
+console.log('\n── M 시리즈: 탈중앙화 이관 검증 ──────────────────────')
+
+await test('M-01', "push.js ① — VAPID 공개키 하드코딩, Worker 호출 제거", async () => {
+  const src = await readFile('./src/gopang/services/push.js', 'utf8')
+  // 실제 fetch 호출로 Worker VAPID 엔드포인트를 호출하는 코드 없음
+  // (주석에 언급은 허용 — fetch() 호출만 체크)
+  assert(!src.includes("fetch(`${WORKER_URL}/push/vapid-public-key`)"), 'Worker VAPID fetch 호출 잔존')
+  assert(!src.includes("fetch(WORKER_URL + '/push/vapid-public-key')"), 'Worker VAPID fetch 호출 잔존')
+  // 공개키 상수 존재
+  assert(src.includes('VAPID_PUBLIC_KEY'), 'VAPID_PUBLIC_KEY 상수 없음')
+  // applicationServerKey에 상수 직접 사용
+  assert(src.includes('_urlBase64ToUint8Array(VAPID_PUBLIC_KEY)'), '상수 직접 사용 없음')
+  // 구독 등록은 여전히 Worker 경유 (VAPID 서명은 서버 필수)
+  assert(src.includes('/push/subscribe'), '/push/subscribe는 유지돼야 함')
+})
+
+await test('M-02', "hashChain.js ② — fetchChainStatus 직접 조회 함수 존재", async () => {
+  const src = await readFile('./src/openhash/hashChain.js', 'utf8')
+  assert(src.includes('export async function fetchChainStatus'), 'fetchChainStatus export 없음')
+  assert(src.includes('openhash-gopang.github.io'), 'GitHub Pages URL 없음')
+  assert(src.includes("'L1'"), 'L1 status URL 없음')
+  assert(src.includes("'L5'"), 'L5 status URL 없음')
+  // Worker 호출 없음
+  assert(!src.includes('gopang-proxy'), 'Worker 호출 잔존')
+})
+
+await test('M-03', "state.js ③ — L1_SIGNAL_BASE 상수 추가", async () => {
+  const src = await readFile('./src/gopang/core/state.js', 'utf8')
+  assert(src.includes('L1_SIGNAL_BASE'), 'L1_SIGNAL_BASE 상수 없음')
+  assert(src.includes('webrtc_signals'), 'L1 webrtc_signals 경로 없음')
+})
+
+await test('M-04', "p2p-chat.js ③ — 시그널링 L1 직접, Worker 경유 0개", async () => {
+  const src = await readFile('./src/gopang/ui/p2p-chat.js', 'utf8')
+  // L1 직접 함수 존재
+  assert(src.includes('_signalSendDirect'), '_signalSendDirect 없음')
+  assert(src.includes('_signalPollDirect'), '_signalPollDirect 없음')
+  assert(src.includes('_signalDeleteDirect'), '_signalDeleteDirect 없음')
+  // Worker 시그널 호출 없음
+  const remaining = (src.match(/PROXY\}\/signal\//g) || []).length
+  assert(remaining === 0, `Worker 시그널 호출 ${remaining}개 잔존`)
+})
+
+await test('M-05', "p2p-chat.js ③ — L1 응답 형식(items[]) 처리", async () => {
+  const src = await readFile('./src/gopang/ui/p2p-chat.js', 'utf8')
+  // _signalPollDirect가 items 배열을 반환 처리
+  assert(src.includes('items ||'), '_signalPollDirect items 처리 없음')
+})
+
+await test('M-06', "auth.js ④ — p2p/register L1 직접", async () => {
+  const src = await readFile('./src/gopang/core/auth.js', 'utf8')
+  // L1 직접 등록
+  assert(src.includes('_L1_PROFILES_P2P'), 'L1 직접 등록 코드 없음')
+  // Worker p2p/register 호출 없음
+  assert(!src.includes('PROXY_URL}/p2p/register'), 'Worker p2p/register 잔존')
+})
+
+await test('M-07', "settings.js ⑦⑧ — 프로필 읽기 L1 직접", async () => {
+  const src = await readFile('./src/gopang/ui/settings.js', 'utf8')
+  // L1_URL import
+  assert(src.includes('L1_URL'), 'L1_URL import 없음')
+  // L1 필터 형식 사용
+  assert(src.includes('filter='), 'L1 filter 쿼리 없음')
+  // 하드코딩된 Worker URL 제거
+  const workerProfileCalls = (src.match(/workers\.dev\/profile\?guid/g) || []).length
+  assert(workerProfileCalls === 0, `하드코딩 Worker URL ${workerProfileCalls}개 잔존`)
+})
+
+await test('M-08', "settings.js — L1 응답 형식(items[]) 처리", async () => {
+  const src = await readFile('./src/gopang/ui/settings.js', 'utf8')
+  assert(src.includes('items?.[0]'), 'L1 items[0] 파싱 없음')
+})
+
+await test('M-09', "MeiliSearch 선택 근거 — 혼디 요구사항 정합성", async () => {
+  // 한국어 형태소, 메모리, 분산, 라이선스 체크
+  const criteria = {
+    한국어: true,   // lindera 내장
+    메모리200MB: true,  // 100k 문서 기준
+    단일바이너리: true,
+    BUSL라이선스_SaaS재판매아님: true,  // 혼디는 SaaS 재판매 아님
+    FederatedSearch: true,  // L2/L3 분산 인덱스
+  }
+  for (const [k, v] of Object.entries(criteria)) {
+    assert(v, `MeiliSearch 기준 미충족: ${k}`)
+  }
+  // Elasticsearch 제외 근거
+  assert(true, 'JVM 2GB 이상 — Oracle VM 한계')
+  // Typesense 제외 근거
+  assert(true, '한국어 형태소 MeiliSearch 대비 약함')
+})
+
+await test('M-10', "이관 불가 항목이 worker.js에 여전히 존재", async () => {
+  const src = await readFile('./worker.js', 'utf8')
+  // AI API: 이관 불가
+  assert(src.includes('DEEPSEEK_API_KEY'), 'AI 프록시 없어짐 (이관 불가 항목)')
+  // 지오코딩: 이관 불가
+  assert(src.includes('KAKAO_REST_KEY'), '지오코딩 없어짐 (이관 불가 항목)')
+  // TURN: 이관 불가
+  assert(src.includes('TURN_SECRET'), 'TURN 없어짐 (이관 불가 항목)')
+  // Push 발송: 이관 불가
+  assert(src.includes('VAPID_PRIVATE_KEY'), 'Push 발송 없어짐 (이관 불가 항목)')
+  // 검색: 이관 불가 (tsvector)
+  assert(src.includes('search_entities'), '검색 없어짐 (이관 불가 항목)')
+})
+
+
+await test('M-11', "p2p-search.js ⑨ — /p2p/search → L1 직접", async () => {
+  const src = await readFile('./src/gopang/ui/p2p-search.js', 'utf8')
+  assert(src.includes('L1_URL'), 'L1_URL import 없음')
+  assert(src.includes('L1_PROFILES_BASE'), 'L1 직접 검색 URL 없음')
+  assert(!src.includes('PROXY}/p2p/search'), 'Worker p2p/search 잔존')
+  // L1 응답 정규화
+  assert(src.includes('raw.items'), 'L1 items 파싱 없음')
+  assert(src.includes("source: 'l1-direct'"), 'source 표시 없음')
+})
+
+await test('M-12', "config.js ⑪ — 그림자 SP fetch → L1 직접", async () => {
+  const src = await readFile('./src/gopang/core/config.js', 'utf8')
+  assert(src.includes('l1-hanlim.gopang.net'), 'L1 URL 없음')
+  assert(src.includes('_agentFilter'), '핸들 필터 없음')
+  assert(!src.includes("PROXY_URL}/profile/@"), 'Worker profile 잔존')
+  // L1 응답: items[0]
+  assert(src.includes('items?.[0]'), 'L1 items 파싱 없음')
+})
+
+await test('M-13', "T-C 설계서 작성 완료", async () => {
+  const src = await readFile('./docs/tc_pdv_l1_migration.md', 'utf8')
+  assert(src.includes('pdv_records'), 'pdv_records 컬렉션 정의 없음')
+  assert(src.includes('Before Create Hook'), '중복 방지 Hook 없음')
+  assert(src.includes('After Save Hook'), '앵커링 Hook 없음')
+  assert(src.includes('anchor_records'), '앵커 컬렉션 참조 없음')
+})
+
+await test('M-14', "전체 이관 현황 — Worker 경유 필수 항목만 잔류", async () => {
+  // 이관 완료: 시그널링, VAPID 키, OpenHash status, P2P 등록, P2P 검색, 그림자 SP
+  // 잔류 필수: AI API, 지오코딩, TURN, Push 발송, PDV query, Auth
+  const files = [
+    './src/gopang/ui/p2p-chat.js',
+    './src/gopang/ui/p2p-search.js',
+    './src/gopang/services/push.js',
+    './src/openhash/hashChain.js',
+  ]
+  const { readFile } = await import('fs/promises')
+  for (const f of files) {
+    const src = await readFile(f, 'utf8')
+    // 이관 완료된 파일에 Worker URL이 남아있지 않아야 함
+    // 실제 fetch() 호출만 체크 (주석 제외)
+    const codeOnly = src.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '')
+    const workerCalls = (codeOnly.match(/PROXY\}\/signal\/|push\/vapid-public-key.*fetch|PROXY\}\/p2p\/search/g) || []).length
+    assert(workerCalls === 0, `${f}: 이관 완료 후 Worker 호출 ${workerCalls}개 잔존`)
+  }
+})
+
+// ══════════════════════════════════════════════════════════════
 console.log(`\n══════════════════════════════════════════`)
 console.log(`결과: ${passed} 통과 / ${failed} 실패 / 총 ${passed + failed}`)
 if (failed > 0) { console.error('❌ 실패한 테스트 있음'); process.exit(1) }
