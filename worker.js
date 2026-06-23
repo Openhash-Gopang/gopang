@@ -2502,7 +2502,7 @@ async function _compileAgentSP(env, principalProfile) {
   const headers  = { 'User-Agent': 'gopang-worker/4.9', 'Cache-Control': 'no-cache' };
 
   // 1) AGENT-COMMON 로드
-  const commonRes = await fetch(`${REPO_RAW}/prompts/AGENT-COMMON_v2.0.txt`, { headers });
+  const commonRes = await fetch(`${REPO_RAW}/prompts/AGENT-COMMON_v1.0.txt`, { headers });
   const commonSP  = commonRes.ok ? await commonRes.text() : '';
 
   // 2) AGENT-SUPPLIER-{ksic} 로드 (업종 불명이면 생략)

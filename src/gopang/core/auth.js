@@ -477,12 +477,6 @@ function _showMandatoryBackupStep(key, handle) {
       if (!chk.checked) return;
       try { localStorage.setItem(BACKUP_CONFIRMED_KEY, '1'); } catch {}
       overlay.remove();
-      // ── 진짜 사용자 클릭 이벤트 안에서 직접 호출 ──────────────────
-      // 가입 흐름의 마지막 사용자 클릭이므로 비동기 지연이 0이다.
-      // about:blank 사전오픈+지연 후 URL교체 방식은 브라우저마다
-      // 팝업 차단 판정이 달라(Chrome 차단/Edge 통과) 신뢰할 수 없었음.
-      // 여기서 직접 열면 어떤 브라우저에서도 차단되지 않는다.
-      window.open('/pages/ai-setup-mobile.html', '_blank');
       resolve();
     };
     // 의도적으로 닫기/배경클릭 핸들러를 두지 않음 — 확인 없이는 빠져나갈 수 없다.
@@ -1264,11 +1258,8 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
       // 흐름: 가입 → AI설정(OR키) → SP1 온보딩 대화 → PROFILE_SUBMIT → /profile POST → 그림자 생성
       // wallet은 OR 키 발급 3~5분 동안 백그라운드에서 초기화 완료되므로 타이밍 문제 없음.
 
-      // 가입 직후 세션 수립 — /profile이 방금 핀(pin)한 pubkey와 같은 지갑이므로
-      // 항상 성공해야 정상이다. 실패해도 가입 자체는 막지 않는다(다음 진입 시
-      // 다시 시도됨) — 단, 실패를 조용히 묻지 않고 로그로 남겨 추적 가능하게 한다.
-      const _session = await _issueSession(ipv6, 'gopang');
-      if (!_session.ok) console.warn('[가입] 세션 수립 실패 (무시):', _session.reason);
+      // 세션 수립은 ai-setup 완료 후 혼디 대화창 복귀 시 자동 처리됨.
+      // 가입 직후는 wallet 초기화 전이라 _issueSession이 항상 wallet_not_ready로 실패하므로 생략.
 
       // PDV 초기 레코드 (비동기 — 가입 흐름 차단 불필요)
       _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountry }).catch(
@@ -1296,21 +1287,46 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
 
       // 필수 백업 확인 — 체크박스를 누르기 전까지 가입이 "완료"되지 않는다.
       // 개인키는 서버에 사본이 없으므로, 이 단계가 사실상 마지막 안전망이다.
-      // ★ AI 설정 탭은 이 모달의 "계속하기" 클릭(진짜 클릭 이벤트) 안에서
-      //   직접 열린다 — _showMandatoryBackupStep 참조. 지연 0이라 모든
-      //   브라우저에서 팝업 차단이 불가능하다.
       const backupKey = await _exportBackupKey();
       if (backupKey) {
         await _showMandatoryBackupStep(backupKey, handle);
       } else {
-        // 지갑 준비 지연 등으로 백업 모달 자체를 못 띄운 예외 케이스 —
-        // 여기엔 클릭 컨텍스트가 없어 window.open을 직접 부를 수 없으므로
-        // 대화창에 버튼 버블을 띄워 사용자의 실제 클릭을 받는다.
         console.warn('[가입] 백업 키를 내보내지 못함 — 지갑 준비 지연 가능성. 확인 단계 생략.');
-        setTimeout(() => _injectAISetupButton(), 600);
       }
 
       resolve(user);
+
+      // ── 가입 완료 — 현재 overlay를 AI 설정 안내 화면으로 교체 ──────────
+      // window.open은 비동기 완료 후엔 팝업 차단에 걸리므로,
+      // 현재 overlay 자체를 AI 설정 시작 버튼 화면으로 바꿔서 사용자가 직접 클릭하게 함.
+      // 이렇게 하면 클릭 이벤트 컨텍스트에서 window.open이 호출되어 차단 없음.
+      {
+        const overlayEl = document.getElementById('_phone-overlay') || overlay;
+        if (overlayEl) {
+          overlayEl.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                        height:100%;padding:32px 24px;text-align:center;gap:16px">
+              <div style="font-size:22px;font-weight:700;color:#111">가입 완료</div>
+              <div style="font-size:14px;color:#6b7280;line-height:1.7;max-width:280px">
+                AI 비서를 활성화하면 바로 대화를 시작할 수 있습니다.<br>
+                아래 버튼을 눌러 OpenRouter 키를 발급받으세요.
+              </div>
+              <button id="_goto_setup_btn"
+                style="width:100%;max-width:320px;height:52px;background:#1a9e6a;color:#fff;
+                       border:none;border-radius:10px;font-size:16px;font-weight:600;
+                       cursor:pointer;font-family:inherit">
+                AI 비서 설정 시작
+              </button>
+              <div style="font-size:12px;color:#9ca3af">
+                나중에 설정하려면 앱 우측 상단 AI 버튼을 누르세요.
+              </div>
+            </div>`;
+          document.getElementById('_goto_setup_btn').onclick = () => {
+            window.open('/pages/ai-setup-mobile.html', '_blank');
+            overlayEl.remove();
+          };
+        }
+      }
 
       // 가입 완료 시점에 푸시 알림 권한 요청 — 결과를 채팅에 안내
       // (가입 완료를 막지 않도록 resolve 이후 비동기로 처리)
@@ -1555,27 +1571,6 @@ export const gopangAuth = {
 };
 
 // ── 인증 확인 버튼 ───────────────────────────────────────
-// ── AI 설정 시작 버튼 버블 (백업 모달 생략 시 폴백) ──────────
-// _showMandatoryBackupStep의 "계속하기" 클릭에서 직접 열지 못한
-// 예외 상황(지갑 준비 지연 등)에서만 사용. 사용자의 실제 클릭을
-// 받아 그 안에서 window.open하므로 팝업 차단되지 않는다.
-function _injectAISetupButton() {
-  const list = document.getElementById('message-list');
-  if (!list) return;
-  const row = document.createElement('div');
-  row.className = 'msg-row ai';
-  row.innerHTML = `
-    <div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0;">
-      <button onclick="window.open('/pages/ai-setup-mobile.html','_blank');this.closest('.msg-row').remove();"
-        style="background:var(--tint);color:#fff;border:none;border-radius:8px;
-               padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;">
-        🤖 AI 비서 설정 시작하기
-      </button>
-    </div>`;
-  list.appendChild(row);
-  list.scrollTop = list.scrollHeight;
-}
-
 export function _injectAuthConfirmButton(level) {
   const list = document.getElementById('message-list');
   if (!list) return;
