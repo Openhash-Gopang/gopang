@@ -7,7 +7,6 @@ import { aiActive, history, _userLocation, _lastRouterResult,
 import { appendBubble, showTyping, hideTyping,
          _createStreamBubble, _updateStreamBubble } from '../ui/bubble.js';
 import { _buildLocNote } from '../services/location.js';
-import { _buildPDVNote } from '../pdv/record.js';
 import { runRouter, applyRouterResult } from './router.js';
 import { _injectAuthConfirmButton } from '../core/auth.js';
 import { _klawReview } from '../services/klaw.js';
@@ -163,6 +162,23 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     }
   }
 
+  // ── 그림자 SP 동적 컨텍스트 주입 (AGENT-COMMON v2.0 §10) ────────
+  // 그림자 SP(SP2)가 로드된 세션에서만 동작.
+  // PDV 요약 + 현재 위치 + 미완료 작업을 시스템 프롬프트 끝에 주입.
+  // LLM은 IndexedDB에 직접 접근 불가하므로 클라이언트가 세션마다 주입.
+  if (CFG.system && CFG.system.includes('AGENT-COMMON v2.0')) {
+    try {
+      const dynamicCtx = await _buildShadowContext();
+      if (dynamicCtx) {
+        CFG.system = CFG.system_base + '
+
+' + dynamicCtx;
+      }
+    } catch (e) {
+      console.warn('[Shadow] 동적 컨텍스트 주입 실패 (무시):', e.message);
+    }
+  }
+
   // locNote는 _buildLocNote()로 분리 — 최초 1회만 system에 삽입됨
 
   // ── 이미지 → content 배열 변환 ──────────────────────
@@ -262,11 +278,9 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
   //    system이 항상 동일 → DeepSeek이 prefix unit으로 캐시 유지
   //    locNote·GUID는 history 밖 별도 ctx 메시지로 주입 → 캐시 prefix 보호
   const locNote = _buildLocNote();
-  const pdvNote = _buildPDVNote();
   const ctxParts = [];
   if (USER_GUID) ctxParts.push(`사용자:${USER_GUID.slice(-8)}`);
   if (locNote)   ctxParts.push(locNote.trim());
-  if (pdvNote)   ctxParts.push(pdvNote.trim());
   const ctxMsg = ctxParts.length
     ? [{ role: 'user',      content: `[ctx]${ctxParts.join(' ')}` },
        { role: 'assistant', content: '확인.' }]
@@ -395,11 +409,6 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
 
 
     // ── GWP 태그 감지 → 하위 시스템 새 탭 오픈 (SP-00 v10.0) ──
-    // _preTab은 반드시 window.open()이 반환한 실제 탭 객체 또는 null이어야
-    // 한다. 그 외 값(예: 마커 문자열)이 들어오면 .closed/.close() 접근 시
-    // TypeError가 발생해 — 이미 받은 정상 AI 응답까지 통째로 ⚠️ 오류로
-    // 덮어써버리는 사고가 있었다(2026-06-23 발견). 타입 가드로 원천 차단.
-    const _validPreTab = (_preTab && typeof _preTab.close === 'function') ? _preTab : null;
     const gwpMatch = fullReply.match(/\[GWP:([\w-]+)\]/);
     if (gwpMatch) {
       const svcId  = gwpMatch[1];
@@ -408,16 +417,16 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
         console.info('[GWP] LLM 판단 → 새 탭:', svcId);
         // 버블에서 [GWP:...] 태그 제거 후 렌더링
         if (bubble) _updateStreamBubble(bubble, fullReply.replace(/\[GWP:[\w-]+\]\s*/, ''));
-        _gwpLaunch(svcDef, userText, _validPreTab);
+        _gwpLaunch(svcDef, userText, _preTab);
       } else {
         console.warn('[GWP] 알 수 없는 서비스 ID:', svcId);
         // 미등록 서비스 → 예약된 빈 탭 닫기
-        if (_validPreTab && !_validPreTab.closed) { _validPreTab.close(); }
+        if (_preTab && !_preTab.closed) { _preTab.close(); }
       }
     } else {
       // GWP 태그 없음 = 직접 처리 → 예약된 빈 탭 닫기
-      if (_validPreTab && !_validPreTab.closed) {
-        _validPreTab.close();
+      if (_preTab && !_preTab.closed) {
+        _preTab.close();
         console.info('[GWP] 직접 처리 — 예약 탭 닫힘');
       }
     }
@@ -447,68 +456,19 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
       }).catch(e => console.warn('[Profile] handleProfileSubmit import 실패:', e.message));
     }
 
+    // ── 그림자 SP 실행 태그 파서 (AGENT-COMMON v2.0 §9) ─────
+    // SP2(그림자) 세션에서만 동작. 각 태그를 순서대로 처리.
+    if (CFG.system?.includes('AGENT-COMMON v2.0')) {
+      _parseShadowTags(fullReply).catch(e =>
+        console.warn('[Shadow] 태그 파서 오류 (무시):', e.message)
+      );
+    }
+
     // ── hondi_profile_step 업데이트 ──────────────────────────
     // AI가 "[N/7단계]" 패턴을 출력하면 현재 단계를 저장
     const stepMatch = fullReply.match(/\[(\d+)\/\d+단계\]/);
     if (stepMatch && !localStorage.getItem('hondi_profile_done')) {
       try { localStorage.setItem('hondi_profile_step', stepMatch[1]); } catch {}
-    }
-
-    // ══════════════════════════════════════════════════════
-    // 그림자 AI(AGENT-COMMON v2.0) 행동 태그 — 임무 1·3 실행
-    // ══════════════════════════════════════════════════════
-
-    // ── [SEARCH: query=..., type=...] 감지 → 검색 패널(자동 실행) ──
-    //    이름이 모호할 수 있으므로 직접 연결하지 않고 패널에 결과를
-    //    띄워 사용자가 "연결" 버튼으로 직접 선택하게 한다(임무 1 — 명확화 원칙).
-    const searchMatch = fullReply.match(/\[SEARCH:\s*query=([^,\]]+)(?:,\s*type=([^,\]]+))?\]/);
-    if (searchMatch) {
-      const q = searchMatch[1].trim();
-      console.info('[Agent] SEARCH 태그 감지:', q);
-      import('../ui/p2p-search.js').then(({ openSearch }) => openSearch(q))
-        .catch(e => console.warn('[Agent] SEARCH 실행 실패:', e.message));
-    }
-
-    // ── [P2P_INVITE: handle=@xxx] 감지 → handle 확정 시 즉시 연결 ──
-    const inviteMatch = fullReply.match(/\[P2P_INVITE:\s*handle=(@[\w.-]+)\]/);
-    if (inviteMatch) {
-      const handle = inviteMatch[1];
-      console.info('[Agent] P2P_INVITE 태그 감지:', handle);
-      import('../ui/p2p-chat.js').then(({ inviteByHandle }) => inviteByHandle(handle))
-        .catch(e => {
-          console.warn('[Agent] P2P_INVITE 실행 실패:', e.message);
-          appendBubble?.('ai', `⚠️ ${handle} 연결에 실패했습니다: ${e.message}`);
-        });
-    }
-
-    // ── [OPEN_PROFILE: handle=@xxx] 감지 → 공급자 profile 페이지 새 탭 ──
-    //    공급자 profile 페이지 = 공급자의 웹페이지이자 혼디 인터페이스(임무 3).
-    //    사용자는 그 안에서 직접 탐색하거나 공급자 그림자 AI와 대화할 수 있다.
-    const openProfileMatch = fullReply.match(/\[OPEN_PROFILE:\s*handle=(@[\w.-]+)\]/);
-    if (openProfileMatch) {
-      const handle = openProfileMatch[1].replace(/^@/, '');
-      console.info('[Agent] OPEN_PROFILE 태그 감지:', handle);
-      window.open(`https://users.gopang.net/profile.html?handle=${encodeURIComponent(handle)}`, '_blank');
-    }
-
-    // ── PDV_STORE {...} 감지 → 그림자 독립 메모리 기록 ──────────
-    //    그림자가 대화를 통해 알게 된 정보(취향·맥락 등)를 PDV에 축적한다.
-    //    AGENT-COMMON v2.0 §4 PDV 운영 규칙 참조.
-    const pdvStoreMatch = fullReply.match(/PDV_STORE\s*(\{[\s\S]*?\})\s*(?:$|\n)/);
-    if (pdvStoreMatch) {
-      try {
-        const pdvData = JSON.parse(pdvStoreMatch[1]);
-        import('../pdv/record.js').then(({ _recordPDV }) => {
-          _recordPDV({
-            type:    pdvData.type    || 'interaction',
-            summary: pdvData.summary || null,
-            what:    pdvData.content || pdvData.summary || null,
-            why:     '그림자 AI 자율 기록',
-          });
-        }).catch(e => console.warn('[PDV] _recordPDV import 실패:', e.message));
-      } catch (e) {
-        console.warn('[PDV] PDV_STORE JSON 파싱 실패:', e.message);
-      }
     }
 
 
@@ -541,3 +501,89 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
 }
 
 
+
+// ── _buildShadowContext — 그림자 SP 동적 컨텍스트 빌더 ───────────────
+// AGENT-COMMON v2.0 §10: 세션 시작 시 PDV 요약·위치·미완료 작업 주입
+async function _buildShadowContext() {
+  const lines = [];
+
+  // 1) 현재 세션 기본 정보
+  const { _USER, USER_GUID, _userLocation } = await import('../core/state.js');
+  const userName = _USER?.name || _USER?.nickname || '이용자';
+  const now = new Date().toISOString();
+
+  lines.push('--- [CONTEXT: 현재 세션 정보] ---');
+  lines.push(`USER_GUID: ${USER_GUID || '미연결'}`);
+  lines.push(`USER_NAME: ${userName}`);
+
+  // 2) 위치 정보
+  if (_userLocation?.lat) {
+    lines.push(`LOCATION: ${_userLocation.city || '위치확인중'} (lat=${_userLocation.lat.toFixed(4)}, lng=${_userLocation.lng.toFixed(4)})`);
+  } else {
+    lines.push('LOCATION: 위치 정보 없음 (GPS 미허용 또는 대기 중)');
+  }
+  lines.push(`TIMESTAMP: ${now}`);
+
+  // 3) PDV 요약 — IndexedDB gopang_pdv_chat에서 최근 항목 인출
+  lines.push('');
+  lines.push('--- [PDV: 이용자 요약] ---');
+  try {
+    const pdvSummary = await _loadPdvSummary();
+    if (pdvSummary.length > 0) {
+      pdvSummary.forEach(item => lines.push(`${item.key}: ${item.value}`));
+    } else {
+      lines.push('PDV 데이터 없음 — 대화로 점진적 축적');
+    }
+  } catch {
+    lines.push('PDV 데이터 없음 — 대화로 점진적 축적');
+  }
+
+  // 4) 미완료 작업
+  const pending = [];
+  const profileStep = localStorage.getItem('hondi_profile_step');
+  if (profileStep && !localStorage.getItem('hondi_profile_done')) {
+    pending.push(`프로필 작성 ${profileStep}단계 미완료`);
+  }
+  if (pending.length > 0) {
+    lines.push('');
+    lines.push('--- [PENDING: 미완료 작업] ---');
+    pending.forEach(p => lines.push(`- ${p}`));
+  }
+
+  return lines.join('\n');
+}
+
+// ── _loadPdvSummary — PDV IndexedDB에서 요약 항목 인출 ──────────────
+// gopang_pdv_chat DB의 최근 PDV_STORE 항목 중 preference/relation/economic
+// 유형만 인출해 요약 (민감 정보 health는 제외)
+async function _loadPdvSummary() {
+  return new Promise((resolve) => {
+    const SAFE_TYPES = ['preference', 'relation', 'economic', 'location'];
+    const req = indexedDB.open('gopang_pdv_chat', 1);
+    req.onerror = () => resolve([]);
+    req.onsuccess = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('messages')) { resolve([]); return; }
+      try {
+        const tx = db.transaction('messages', 'readonly');
+        const store = tx.objectStore('messages');
+        const all = store.getAll();
+        all.onsuccess = () => {
+          const items = (all.result || [])
+            .filter(m => m.pdv && SAFE_TYPES.includes(m.pdv.type))
+            .sort((a, b) => new Date(b.ts || 0) - new Date(a.ts || 0))
+            .slice(0, 20) // 최근 20개
+            .reduce((acc, m) => {
+              // 동일 key는 최신값만 유지
+              if (!acc.find(x => x.key === m.pdv.key)) {
+                acc.push({ key: m.pdv.key, value: m.pdv.value });
+              }
+              return acc;
+            }, []);
+          resolve(items);
+        };
+        all.onerror = () => resolve([]);
+      } catch { resolve([]); }
+    };
+  });
+}
