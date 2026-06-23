@@ -134,6 +134,20 @@ html, body {
         autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
       <button id="_m_paste">붙여넣기</button>
     </div>
+    <div id="_sms-row" style="display:flex;gap:8px;margin-bottom:8px">
+      <input id="_m_sms" type="text" inputmode="numeric" maxlength="6"
+        placeholder="인증번호 6자리 (SMS)"
+        autocomplete="one-time-code" spellcheck="false"
+        style="flex:1;min-width:0;height:40px;padding:0 12px;border:1px solid var(--border);
+               border-radius:var(--r);font-size:calc(14px * var(--fs));font-family:inherit;
+               color:var(--text);background:var(--surface);outline:none;transition:border-color .15s">
+      <div id="_m_sms_badge"
+        style="flex-shrink:0;height:40px;padding:0 12px;display:flex;align-items:center;
+               border:1px solid var(--border);border-radius:var(--r);
+               font-size:calc(11px * var(--fs));color:var(--text4);white-space:nowrap">
+        출시 후 연동
+      </div>
+    </div>
     <button id="_m_save">저장</button>
     <div id="_m_msg">이 기기에만 저장됩니다. 서버로 전송되지 않습니다.</div>
   </div>

@@ -1250,19 +1250,13 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
       setUser(user);
       overlay.remove();
 
-      // ── 암호키 등록 + 프로필 생성 (가입의 일부 — resolve 전 완료) ─────────
+      // ── 암호키 등록 (가입의 일부 — resolve 전 완료) ─────────────────────
       // 정책: 가입 즉시 Ed25519·X25519 키가 L1에 등록 완료되어야 한다.
-      // _createMinimalProfile: Supabase user_profiles에 Ed25519 공개키 등록
-      // ensureX25519Synced:    L1 profiles에 X25519 공개키 등록
-      // 두 단계 모두 await — 실패 시 3초 후 1회 재시도, 이후에도 가입은 진행(UX 차단 방지)
-      try {
-        await _createMinimalProfile({ ipv6, handle, nickname, e164, isPublic:
-          document.getElementById('_is-public-chk')?.checked ?? true
-        });
-        console.info('[가입] 프로필 생성 완료');
-      } catch(e) {
-        console.warn('[가입] 프로필 생성 실패 (무시):', e.message);
-      }
+      // ensureX25519Synced: L1 profiles에 X25519 공개키 등록
+      //
+      // _createMinimalProfile은 PROFILE_SUBMIT 완료 후 호출 (industry_fields 포함)
+      // 흐름: 가입 → AI설정(OR키) → SP1 온보딩 대화 → PROFILE_SUBMIT → /profile POST → 그림자 생성
+      // wallet은 OR 키 발급 3~5분 동안 백그라운드에서 초기화 완료되므로 타이밍 문제 없음.
 
       // 가입 직후 세션 수립 — /profile이 방금 핀(pin)한 pubkey와 같은 지갑이므로
       // 항상 성공해야 정상이다. 실패해도 가입 자체는 막지 않는다(다음 진입 시
@@ -1305,27 +1299,10 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
 
       resolve(user);
 
-      // ── 가입 완료 직후 AI 설정 유도 (2026-06-23) ─────────────────────
-      // 흐름: 가입 → AI설정(OR키) → SP1으로 온보딩 대화 → PROFILE_SUBMIT → 그림자 생성
-      // 가입 직후 ai-setup-mobile.html을 채팅 버블로 안내 (강제 이동 아님)
-      setTimeout(() => {
-        const msgList = document.getElementById('message-list');
-        if (!msgList) return;
-        const bubble = document.createElement('div');
-        bubble.className = 'msg-row ai';
-        const inner = document.createElement('div');
-        inner.className = 'bubble bubble-ai';
-        inner.innerHTML = '🎉 가입을 환영합니다!<br><br>'
-          + 'AI 비서를 활성화하면 지금 바로 대화를 시작할 수 있습니다.<br><br>'
-          + '<button id="_goto_ai_setup" style="width:100%;margin-top:8px;padding:12px;border:none;border-radius:8px;background:#3ecf8e;color:#fff;font-size:14px;font-weight:600;cursor:pointer">🤖 AI 비서 활성화하기</button>';
-        bubble.appendChild(inner);
-        msgList.appendChild(bubble);
-        msgList.scrollTop = msgList.scrollHeight;
-
-        document.getElementById('_goto_ai_setup')?.addEventListener('click', () => {
-          window.open('/pages/ai-setup-mobile.html', '_blank');
-        });
-      }, 800);
+      // ── 가입 완료 직후 AI 설정 페이지로 즉시 이동 (2026-06-23) ───────────
+      // 흐름: 가입 → [즉시 이동] AI설정(OR키+인증번호) → SP1 온보딩 대화 → PROFILE_SUBMIT
+      // wallet/X25519 초기화는 사용자가 OR 키 발급하는 3~5분 동안 백그라운드 완료
+      window.location.href = '/pages/ai-setup-mobile.html';
 
       // 가입 완료 시점에 푸시 알림 권한 요청 — 결과를 채팅에 안내
       // (가입 완료를 막지 않도록 resolve 이후 비동기로 처리)
