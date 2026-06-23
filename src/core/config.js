@@ -1,7 +1,7 @@
 ﻿/**
  * core/config.js — 앱 설정 (CFG, 모델, 엔드포인트)
  */
-import { setAiActive, aiActive, _USER, USER_GUID } from './state.js';
+import { setAiActive, aiActive, _USER, USER_GUID } from '../gopang/core/state.js';
 
 // ── Provider별 정보 (모델 → provider 식별 + baseUrl) ────────
 // 모든 provider가 OpenAI 호환 /chat/completions 형식 지원
