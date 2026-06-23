@@ -173,3 +173,13 @@ export async function loadPersonalAssistantSP() {
 function _profileDone() {
   try { return !!localStorage.getItem('hondi_profile_done'); } catch { return false; }
 }
+
+/**
+ * SP 로더 플래그 리셋 — PROFILE_SUBMIT 완료 직후 호출.
+ * 이후 loadPersonalAssistantSP()를 다시 호출하면 그림자 SP를 fresh fetch한다.
+ * 이렇게 하지 않으면 세션 내에 _paSPLoaded=true가 유지돼
+ * 온보딩 SP가 평생 그대로 남는다.
+ */
+export function resetSPLoader() {
+  _paSPLoaded = false;
+}
