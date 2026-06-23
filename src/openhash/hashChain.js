@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file hashChain.js
  * @description OpenHash 해시 체인 앵커링 + 1시간 주기 Merkle 배치
  * @version 1.0.0
@@ -12,7 +12,10 @@
 
 import { sha256 } from '../pdv/keyManager.js'
 import { selectLayer } from './plsm.js'
-import { config } from '../core/config.js'
+import { PROXY } from '../gopang/core/state.js'
+
+/** Merkle 배치 주기 — GDC paragraph14.4: 1시간 */
+const MERKLE_BATCH_INTERVAL_MS = 60 * 60 * 1000
 
 // ── 내부 상태 ────────────────────────────────────────────────────────────
 
@@ -322,7 +325,7 @@ function _scheduleBatch() {
   _batchTimer = setTimeout(async () => {
     _batchTimer = null
     await _processBatch()
-  }, config.MERKLE_BATCH_INTERVAL_MS)
+  }, MERKLE_BATCH_INTERVAL_MS)
 }
 
 /** 배치 처리 — Merkle Root 계산 */
@@ -353,10 +356,12 @@ async function _processBatch() {
  * dev 환경(PROXY_BASE=null): 네트워크 호출 없이 submitted=true로 즉시 처리
  */
 async function _submitToLayer(layer, entry) {
-  const proxyBase = config.PROXY_BASE
+  const proxyBase = PROXY
 
   // dev 환경: 로컬 Worker 없음 → submitted=true 즉시 처리
-  if (!proxyBase) {
+  const isDev = typeof location !== 'undefined' && location.hostname === 'localhost'
+
+  if (isDev) {
     entry.anchored   = false   // 실제 L1 도달 안 됨
     entry.submitted  = true    // dev 환경 시뮬레이션
     entry.confirmed  = false
