@@ -2431,21 +2431,50 @@ async function handleProfileGet(request, env, corsHeaders) {
 function _b64ToBuf(b64) { return Uint8Array.from(atob(b64), c => c.charCodeAt(0)); }
 function _bufToB64(buf)  { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
 
-async function _generateAgentKeyPairInline() {
-  const keyPair = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
-  const pubKeyRaw    = await crypto.subtle.exportKey('raw', keyPair.publicKey);
-  const privKeyPkcs8 = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey); // raw 불가, pkcs8만 가능(실측 확인됨)
-  return { publicKeyB64: _bufToB64(pubKeyRaw), privateKeyPkcs8B64: _bufToB64(privKeyPkcs8) };
+// ── signer Worker 위임 함수 (Service Binding 경유) ──────────────────────
+// 설계 원칙(2026-06-23):
+//   - AGENT_KEK는 이 Worker에 존재하지 않음. signer Worker만 보유.
+//   - 호출자는 "누가 서명하는지" 알 필요 없음 (탈중앙화 방향 인터페이스).
+//   - 향후 "본체 단말 온라인이면 단말 직접 서명"으로 signer 내부만 교체 가능.
+//
+// env.AGENT_SIGNER: Service Binding 바인딩 이름 (wrangler.json에 선언)
+//                  binding이 없으면 graceful 실패(그림자 생성 자체는 계속).
+
+async function _signerKeypair(env, agentGuid, principalGuid) {
+  if (!env.AGENT_SIGNER) {
+    console.warn('[Signer] AGENT_SIGNER binding 없음 — 키 생성 건너뜀');
+    return { ok: false, error: 'NO_SIGNER_BINDING', public_key_b64: null };
+  }
+  const sbKey = env.SUPABASE_SERVICE_KEY || env.SUPABASE_KEY || '';
+  const res = await env.AGENT_SIGNER.fetch('http://signer/agent/keypair', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      agent_guid:           agentGuid,
+      principal_guid:       principalGuid,
+      supabase_url:         SUPABASE_URL,
+      supabase_service_key: sbKey,
+    }),
+  });
+  return res.json().catch(() => ({ ok: false, error: 'SIGNER_PARSE_ERROR' }));
 }
 
-async function _importKEKInline(kekRawB64) {
-  return crypto.subtle.importKey('raw', _b64ToBuf(kekRawB64), { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-}
-
-async function _encryptAgentPrivateKeyInline(privateKeyPkcs8B64, kek) {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, kek, _b64ToBuf(privateKeyPkcs8B64));
-  return { ciphertextB64: _bufToB64(ciphertext), ivB64: _bufToB64(iv) };
+async function _signerSign(env, agentGuid, message) {
+  if (!env.AGENT_SIGNER) {
+    return { ok: false, error: 'NO_SIGNER_BINDING', signature_b64: null };
+  }
+  const sbKey = env.SUPABASE_SERVICE_KEY || env.SUPABASE_KEY || '';
+  const res = await env.AGENT_SIGNER.fetch('http://signer/agent/sign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      agent_guid:           agentGuid,
+      message,
+      supabase_url:         SUPABASE_URL,
+      supabase_service_key: sbKey,
+    }),
+  });
+  return res.json().catch(() => ({ ok: false, error: 'SIGNER_PARSE_ERROR' }));
 }
 
 /** 본체 guid로부터 결정론적 IPv6 형태 그림자 guid 파생(같은 본체는 항상 같은 그림자 guid) */
@@ -2538,23 +2567,13 @@ async function _createAgentForPrincipal(env, principalProfile) {
     return { ok: true, guid: agentGuid, handle: agentHandle, created: false };
   }
 
-  // 1) 그림자 키쌍 생성 + 봉투암호화
-  const { publicKeyB64, privateKeyPkcs8B64 } = await _generateAgentKeyPairInline();
-  if (!env.AGENT_KEK) {
-    return { ok: false, error: 'NO_AGENT_KEK', detail: 'env.AGENT_KEK(Cloudflare secret) 미설정' };
-  }
-  const kek = await _importKEKInline(env.AGENT_KEK);
-  const { ciphertextB64, ivB64 } = await _encryptAgentPrivateKeyInline(privateKeyPkcs8B64, kek);
-
-  // 2) agent_keys(별도 테이블, user_profiles.extra와 분리 — 공개 API 노출 방지)에 암호문 저장
-  const keyRes = await fetch(`${SUPABASE_URL}/rest/v1/agent_keys`, {
-    method: 'POST',
-    headers: { ...sbSvc, 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ agent_guid: agentGuid, ciphertext: ciphertextB64, iv: ivB64 }),
-  });
-  if (!keyRes.ok) {
-    const errText = await keyRes.text().catch(() => '');
-    return { ok: false, error: 'AGENT_KEY_SAVE_FAILED', detail: errText };
+  // 1) 그림자 키쌍 생성 + 암호화 저장 (signer Worker에 위임)
+  //    AGENT_KEK는 이 Worker에 없음 — signer가 독점 보유.
+  //    실패해도 그림자 프로필 행은 만들어야 하므로 에러를 흡수하되 로그에 남김.
+  const keypairResult = await _signerKeypair(env, agentGuid, principalGuid);
+  const publicKeyB64  = keypairResult?.public_key_b64 || null;
+  if (!keypairResult?.ok) {
+    console.warn('[Agent] signer 키 생성 실패 (계속 진행):', keypairResult?.error);
   }
 
   // 3) user_profiles에 그림자 행 생성 (entity_type='agent', casts_for=본체guid)
