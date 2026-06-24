@@ -387,7 +387,7 @@ const _boot = async () => {
     if (e.key === 'gopang_ai_activated' && e.newValue) {
       localStorage.removeItem('gopang_ai_activated');
       _checkAutoActivateAI();
-      appendBubble('ai', '찾기(🔍) 버튼으로 대화 상대를 검색하거나, 입력 필드 위에 부착된 납작한 버튼을 터치하거나, 화면 아래에서 위로 밀어올리면 나만의 AI 비서가 나타납니다.');
+      // 안내 문구는 삭제됨 (2026-06-24, 사용자 요청: 중복 표시 문제로 완전 제거)
     }
   });
 

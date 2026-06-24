@@ -31,18 +31,7 @@ export async function _showWelcomeMessage() {
   const profileDone = _isProfileDone();
   const profileStep = _getProfileStep();
 
-  // 첫 접속 안내 — localStorage 플래그로 1회만 표시
-  const introShown = localStorage.getItem('hondi_intro_shown');
-  if (!introShown) {
-    localStorage.setItem('hondi_intro_shown', '1');
-    const row = document.createElement('div');
-    row.className = 'msg-row ai';
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble bubble-ai';
-    bubble.textContent = '찾기(🔍) 버튼으로 대화 상대를 검색할 수 있으며, 아래쪽 AI 버튼을 터치하거나, 화면 아래에서 위로 밀어올리면 나만의 AI 비서가 나타납니다.';
-    row.appendChild(bubble);
-    list.appendChild(row);
-  }
+  // 첫 접속 안내 문구 — 삭제됨 (2026-06-24, 사용자 요청: 중복 표시 문제로 완전 제거)
 
   // 온보딩이 필요한 경우 — AI 패널이 열릴 때 시작 (메인 대화창에 표시 안 함)
   if (!profileDone) {
