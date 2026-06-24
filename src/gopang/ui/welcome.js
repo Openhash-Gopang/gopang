@@ -18,7 +18,10 @@ function _getProfileStep() {
 }
 
 // ── 초기 환영 메시지 — 첫 접속 1회만 ──────────────────
+let _welcomeShown = false;
 export async function _showWelcomeMessage() {
+  if (_welcomeShown) return;   // 중복 호출 방지
+  _welcomeShown = true;
   const list = document.getElementById('message-list');
   if (!list) return;
 
