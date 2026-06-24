@@ -46,15 +46,15 @@ export async function _showWelcomeMessage() {
   if (profileDone) {
     // ── Profile 완성 → 일상 비서 모드 ──
     bubble.textContent = nickname
-      ? `안녕하세요, ${nickname}님. 무엇을 도와드릴까요?`
-      : '안녕하세요. 무엇을 도와드릴까요?';
+      ? `안녕하세요, ${nickname}님. 찾기(🔍) 버튼으로 대화 상대를 검색하거나, 입력 필드 위에 부착된 납작한 버튼을 터치하거나, 화면 아래에서 위로 밀어올리면 나만의 AI 비서가 나타납니다.`
+      : '찾기(🔍) 버튼으로 대화 상대를 검색하거나, 입력 필드 위에 부착된 납작한 버튼을 터치하거나, 화면 아래에서 위로 밀어올리면 나만의 AI 비서가 나타납니다.';
     row.appendChild(bubble);
     list.appendChild(row);
   } else {
     // ── Profile 미완성 → 온보딩 시작 ──
     bubble.textContent = nickname
-      ? `안녕하세요, ${nickname}님! 화면 아래에서 위쪽으로 밀어올리면, AI 비서와 대화 창이 나타납니다. 높이를 조절하거나, 밀어 내려서 사라지게 할 수 있습니다.`
-      : '화면 아래에서 위쪽으로 밀어올리면, AI 비서와 대화 창이 나타납니다. 높이를 조절하거나, 밀어 내려서 사라지게 할 수 있습니다.';
+      ? `안녕하세요, ${nickname}님. 찾기(🔍) 버튼으로 대화 상대를 검색하거나, 입력 필드 위에 부착된 납작한 버튼을 터치하거나, 화면 아래에서 위로 밀어올리면 나만의 AI 비서가 나타납니다.`
+      : '찾기(🔍) 버튼으로 대화 상대를 검색하거나, 입력 필드 위에 부착된 납작한 버튼을 터치하거나, 화면 아래에서 위로 밀어올리면 나만의 AI 비서가 나타납니다.';
     row.appendChild(bubble);
     list.appendChild(row);
 
