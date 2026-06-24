@@ -75,6 +75,21 @@ while (!_isRegistered()) {
 document.getElementById('gopang-auth-gate')?.remove();
 document.body.classList.add('gopang-authed');
 
+// ── 신규 가입 직후 AI 설정 페이지로 이동 ──────────────────────────────
+// auth.js가 resolve() 전에 localStorage 플래그를 설정해두면
+// 대화창이 열린 이 시점(gopang-authed 추가 직후)에 감지해서 이동.
+// 이 시점은 사용자가 실제로 본 화면이 전환되는 순간이므로
+// window.open/location.href 모두 팝업 차단 없이 동작함.
+if (localStorage.getItem('hondi_new_registration') === '1') {
+  localStorage.removeItem('hondi_new_registration');
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) {
+    window.location.href = '/pages/ai-setup-mobile.html';
+  } else {
+    window.open('/pages/ai-setup-mobile.html', '_blank');
+  }
+}
+
 // ★ 버그 수정 — 이미 등록된 사용자(흔한 "재방문" 케이스)는 위 while 루프의
 // 조건이 시작부터 참이라 루프 본문(await initAuth())이 단 한 번도 실행되지
 // 않는다. setUser()는 initAuth() 내부에서만 호출되므로, 이 경로를 탄

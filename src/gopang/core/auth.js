@@ -332,7 +332,7 @@ async function _e164ToIPv6(e164) {
 // ── window.gopangWallet 준비 대기 ────────────────────────
 // gopang-wallet.js의 싱글턴 초기화는 비동기(IIFE)라서, 이 모듈이 먼저 실행되면
 // window.gopangWallet이 아직 null/undefined일 수 있다. 최대 5초 폴링.
-function _waitForWallet(timeoutMs = 5000) {
+function _waitForWallet(timeoutMs = 15000) {
   return new Promise((resolve) => {
     if (window.gopangWallet) { resolve(window.gopangWallet); return; }
     const start = Date.now();
@@ -676,6 +676,13 @@ export async function initAuthWithPhone(digits, countryKey = 'KR') {
         const session = await _issueSession(found.guid, 'gopang');
         if (!session.ok) {
           console.warn('[Auth] 세션 검증 실패(통합팝업):', session.reason);
+          if (session.reason === 'wallet_not_ready') {
+            errEl.textContent = '보안 키 준비 중입니다. 잠시 후 다시 시도해 주세요.';
+            errEl.style.display = 'block';
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = '';
+            return;
+          }
           _showDeviceMismatchNotice(found, resolve);
           return;
         }
@@ -993,6 +1000,12 @@ function _showPhonePopup(resolve) {
         console.warn('[Auth] 세션 검증 실패:', session.reason);
         btn.style.opacity = '1';
         btn.style.pointerEvents = '';
+        if (session.reason === 'wallet_not_ready') {
+          // wallet 초기화 중 — 재시도 안내 (Device Mismatch 아님)
+          errEl.textContent = '보안 키 준비 중입니다. 잠시 후 다시 시도해 주세요.';
+          errEl.style.display = 'block';
+          return;
+        }
         overlay.remove();
         _showDeviceMismatchNotice(found, resolve);
         return;
@@ -1294,39 +1307,12 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
         console.warn('[가입] 백업 키를 내보내지 못함 — 지갑 준비 지연 가능성. 확인 단계 생략.');
       }
 
-      resolve(user);
+      // ── 신규 가입 플래그 설정 — gopang-app.js가 대화창 열린 직후 감지 ──
+      // resolve() 이후 auth-gate가 즉시 제거되므로, overlay에서 버튼을 만들면
+      // DOM이 사라져 동작 안 함. 대신 localStorage 플래그로 신호를 전달.
+      localStorage.setItem('hondi_new_registration', '1');
 
-      // ── 가입 완료 — 현재 overlay를 AI 설정 안내 화면으로 교체 ──────────
-      // window.open은 비동기 완료 후엔 팝업 차단에 걸리므로,
-      // 현재 overlay 자체를 AI 설정 시작 버튼 화면으로 바꿔서 사용자가 직접 클릭하게 함.
-      // 이렇게 하면 클릭 이벤트 컨텍스트에서 window.open이 호출되어 차단 없음.
-      {
-        const overlayEl = document.getElementById('_phone-overlay') || overlay;
-        if (overlayEl) {
-          overlayEl.innerHTML = `
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
-                        height:100%;padding:32px 24px;text-align:center;gap:16px">
-              <div style="font-size:22px;font-weight:700;color:#111">가입 완료</div>
-              <div style="font-size:14px;color:#6b7280;line-height:1.7;max-width:280px">
-                AI 비서를 활성화하면 바로 대화를 시작할 수 있습니다.<br>
-                아래 버튼을 눌러 OpenRouter 키를 발급받으세요.
-              </div>
-              <button id="_goto_setup_btn"
-                style="width:100%;max-width:320px;height:52px;background:#1a9e6a;color:#fff;
-                       border:none;border-radius:10px;font-size:16px;font-weight:600;
-                       cursor:pointer;font-family:inherit">
-                AI 비서 설정 시작
-              </button>
-              <div style="font-size:12px;color:#9ca3af">
-                나중에 설정하려면 앱 우측 상단 AI 버튼을 누르세요.
-              </div>
-            </div>`;
-          document.getElementById('_goto_setup_btn').onclick = () => {
-            window.open('/pages/ai-setup-mobile.html', '_blank');
-            overlayEl.remove();
-          };
-        }
-      }
+      resolve(user);
 
       // 가입 완료 시점에 푸시 알림 권한 요청 — 결과를 채팅에 안내
       // (가입 완료를 막지 않도록 resolve 이후 비동기로 처리)
