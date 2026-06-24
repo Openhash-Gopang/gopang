@@ -1534,6 +1534,17 @@ select.setting-field{appearance:none;-webkit-appearance:none;
       </div>
 
       <script>
+      // ── 미정의 함수 stub (ReferenceError 방지) ───────────
+      function _openGDCWallet() {
+        // GDC 지갑 열기 — gopang-app.js의 openGopangWallet과 통합 예정
+        if (typeof openGopangWallet === 'function') openGopangWallet();
+        else alert('GDC 지갑 준비 중입니다.');
+      }
+      function _authHandleSelfie(event) {
+        // 셀피 인증 — 추후 구현
+        console.info('[Auth] 셀피 파일 선택:', event?.target?.files?.[0]?.name);
+      }
+
       function _checkDeleteConfirmInput() {
         const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}');
         const nickInput   = document.getElementById('delete-confirm-nickname');
@@ -2608,8 +2619,7 @@ window.closeTermsOfUse = closeTermsOfUse;
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const lines = dec.decode(value).split('
-');
+          const lines = dec.decode(value).split('\n');
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
             const data = line.slice(6).trim();
