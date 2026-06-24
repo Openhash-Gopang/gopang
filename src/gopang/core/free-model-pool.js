@@ -9,17 +9,15 @@
  *   1) 검증 시 "우선순위" 기준 — 우리가 품질을 검토해둔 순서
  *   2) 카탈로그 조회 자체가 실패했을 때(네트워크/CORS 등) 쓰는 안전망
  *
- * 우선순위 정책 (v3.0, 2026-06-24 — OR 1순위 + vendor 그룹 정렬):
- *   1) 1차 정렬: vendor 그룹 (Claude→Gemini→DeepSeek→ChatGPT→Grok 순)
- *      OpenRouter의 모델 id는 'vendor-slug/model-name[:free]' 형식이므로
- *      슬러그(anthropic/google/deepseek/openai/x-ai)로 그룹을 식별한다.
- *      ※ 현실: Anthropic·xAI는 OpenRouter에 무료 모델을 올리지 않는 경우가
- *        대부분이라 해당 그룹이 비어있을 수 있다 — 그 경우 그냥 다음 그룹으로
- *        넘어간다(빈 그룹은 자동 스킵, 에러 아님).
- *   2) 2차 정렬(그룹 내부): 기존 컨텍스트·파라미터 기준 품질 순서 유지
- *      (아래 OR_FREE_MODELS_FALLBACK 순서, stable sort로 보존)
- *   3) vendor 그룹에 속하지 않는 나머지 무료 모델(Llama·Qwen·Nemotron 등
- *      오픈웨이트 진영)은 모든 vendor 그룹 뒤, openrouter/free 앞에 배치.
+ * 우선순위 정책 (v3.1, 2026-06-24):
+ *   기본 정렬은 컨텍스트·파라미터 기준 품질 순서(아래 OR_FREE_MODELS_FALLBACK)다.
+ *   2026-06 시점 Anthropic·xAI는 OpenRouter에 무료 모델을 올리지 않으므로,
+ *   "vendor 그룹 전체 재정렬"은 오늘은 효과가 없고 코드만 복잡해지는 것으로
+ *   판단해 제거했다. 대신 OR_AUTO_PROMOTE_VENDORS에 해당하는 vendor
+ *   (anthropic·x-ai)가 신규로 무료 모델을 올리는 순간, 그 모델만 카탈로그
+ *   신규 발견 단계에서 자동으로 풀 최상단에 배치한다 — 정적 목록을
+ *   수정할 필요 없이 다음 buildLiveFreeModelPool() 호출(가입 시·설정 새로고침 시)
+ *   부터 즉시 반영된다.
  *
  * 컨텍스트 정렬 정책(2026-06):
  *     1순위 (1~14): 컨텍스트 128K+, 파라미터 20B+ — 추론·라우팅·지시이행 최상
@@ -42,16 +40,14 @@
  *   - ui/settings.js의 _refreshFreeModelPool() (폰 AI 설정창의 "모델 갱신" 버튼)
  */
 
-// ── vendor 그룹 우선순위 (OpenRouter 모델 id의 'vendor-slug/...' 부분) ──
-// 사용자 지정 순서: Claude → Gemini → DeepSeek → ChatGPT → Grok
-// 현재(2026-06) 기준 Anthropic·xAI는 OR에 무료 모델을 거의 올리지 않으므로
-// 해당 그룹은 비어 있을 가능성이 높다 — 비어 있으면 자동으로 다음 그룹으로 넘어간다.
-export const OR_VENDOR_PRIORITY = ['anthropic', 'google', 'deepseek', 'openai', 'x-ai'];
+// ── 신규 발견 시 자동 최우선 배치할 vendor (OR 모델 id의 'vendor-slug/...' 부분) ──
+// 오늘(2026-06) 기준 Claude(anthropic)·Grok(x-ai)는 OR에 무료 모델이 없다.
+// 둘 중 하나라도 무료 모델을 올리면, 카탈로그에서 발견되는 즉시 풀 최상단으로
+// 자동 승격된다 — 코드 수정이나 정적 목록 갱신이 전혀 필요 없다.
+export const OR_AUTO_PROMOTE_VENDORS = ['anthropic', 'x-ai'];
 
-function _vendorRank(id) {
-  const slug = typeof id === 'string' ? id.split('/')[0] : '';
-  const idx = OR_VENDOR_PRIORITY.indexOf(slug);
-  return idx === -1 ? OR_VENDOR_PRIORITY.length : idx; // 미지정 vendor는 모든 그룹 뒤
+function _vendorOf(id) {
+  return typeof id === 'string' ? id.split('/')[0] : '';
 }
 
 export const OR_FREE_MODELS_FALLBACK = [
@@ -165,11 +161,21 @@ export async function buildLiveFreeModelPool() {
       id => !known.has(id) && id !== 'openrouter/free'
     );
 
-    // 신규 모델: 16K+ → preferred / 16K 미만 → small
-    const discoveredPreferred = discovered.filter(
+    // 2-1) 신규 모델 중 anthropic·x-ai(Claude/Grok) — 발견 즉시 최우선 배치
+    //      (OR_AUTO_PROMOTE_VENDORS. 오늘은 보통 0개지만, 추가되는 순간부터
+    //       정적 목록 수정 없이 자동으로 풀 맨 앞에 들어간다.)
+    const discoveredPromoted = discovered.filter(
+      id => OR_AUTO_PROMOTE_VENDORS.includes(_vendorOf(id))
+    );
+    const discoveredRest = discovered.filter(
+      id => !OR_AUTO_PROMOTE_VENDORS.includes(_vendorOf(id))
+    );
+
+    // 2-2) 나머지 신규 모델: 16K+ → preferred / 16K 미만 → small
+    const discoveredPreferred = discoveredRest.filter(
       id => (ctxMap.get(id) ?? 0) >= MIN_CONTEXT_PREFERRED
     );
-    const discoveredSmall = discovered.filter(
+    const discoveredSmall = discoveredRest.filter(
       id => (ctxMap.get(id) ?? 0) < MIN_CONTEXT_PREFERRED
     );
 
@@ -185,11 +191,10 @@ export async function buildLiveFreeModelPool() {
     const rankedRear  = ranked.filter(id => rearModels.has(id));
 
     // 최종 풀 조합:
-    //   [전위 우선순위] + [신규 16K+] + [후위 소형] + [신규 16K 미만]
-    //   → 그 다음 vendor 그룹(Claude→Gemini→DeepSeek→ChatGPT→Grok) 순으로
-    //     stable sort 재배치 (그룹 내부는 위 품질 순서가 그대로 유지됨)
-    //   → 마지막에 openrouter/free
+    //   [Claude/Grok 신규발견(있으면 최상단)] + [전위 우선순위] + [신규 16K+]
+    //   + [후위 소형] + [신규 16K 미만] + openrouter/free
     let pool = [
+      ...discoveredPromoted,
       ...rankedFront,
       ...discoveredPreferred,
       ...rankedRear,
@@ -197,8 +202,6 @@ export async function buildLiveFreeModelPool() {
     ].slice(0, 40);
 
     if (pool.length === 0) throw new Error('교차 검증된 무료 모델 0개');
-
-    pool.sort((a, b) => _vendorRank(a) - _vendorRank(b)); // stable — 그룹 내부 순서 보존
 
     pool.push('openrouter/free');
 
@@ -208,7 +211,7 @@ export async function buildLiveFreeModelPool() {
       `| 16K+우선: ${preferredCount}`,
       `| 신규발견: ${discovered.length}(16K+:${discoveredPreferred.length})`,
       `| 후순위: ${rankedRear.length + discoveredSmall.length}`,
-      `| vendor정렬: Claude→Gemini→DeepSeek→ChatGPT→Grok→기타`
+      discoveredPromoted.length ? `| Claude/Grok 신규발견 최우선배치: ${discoveredPromoted.join(', ')}` : ''
     );
     return { pool, validated: true };
   } catch (e) {

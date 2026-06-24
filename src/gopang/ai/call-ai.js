@@ -58,8 +58,9 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
 // ── 호출 후보 목록 생성 ────────────────────────────────────
 // 우선순위(PRIORITY_ORDER, config.js): OpenRouter(무료풀) → Claude → Gemini → DeepSeek → ChatGPT → Grok
 // → 마지막 안전망으로 고팡 프록시(키 불필요)
-// OR 내부는 vendor 그룹(Claude→Gemini→DeepSeek→ChatGPT→Grok 계열) 순으로 이미 정렬돼 있다
-// (free-model-pool.js의 OR_VENDOR_PRIORITY 참고).
+// OR 풀 내부는 기본적으로 컨텍스트·파라미터 기준 품질 순서다. 단, Claude·Grok이
+// OpenRouter에 무료 모델을 새로 올리면 free-model-pool.js가 발견 즉시 풀 최상단으로
+// 자동 승격한다(OR_AUTO_PROMOTE_VENDORS 참고) — 오늘은 보통 해당 없음.
 // 등록된(키 입력된) provider만 후보가 되며, 한도 초과(429)·크레딧부족(402)·404 등
 // 모든 실패 상황에서 callAI()가 다음 후보로 자동 전환한다.
 // OR 후보는 추가로 (1) 24h 쿨다운 캐시, (2) 분당 호출 예산 두 가지 필터를 통과해야 한다.

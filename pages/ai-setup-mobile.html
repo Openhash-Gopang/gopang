@@ -162,7 +162,8 @@ html, body {
   </div>
   <div id="_head-title">AI 비서 활성화</div>
   <div id="_head-desc">
-    <b>OpenRouter 무료 모델이 1순위</b>로 항상 먼저 시도됩니다 (내부적으로 Claude→Gemini→DeepSeek→ChatGPT→Grok 계열 순).
+    <b>OpenRouter 무료 모델이 1순위</b>로 항상 먼저 시도됩니다 (컨텍스트·성능 기준으로 검증된 20여개 모델을 자동 순차 시도).
+    Claude·Grok이 OpenRouter에 무료 모델을 추가하면 자동으로 최우선 반영됩니다.
     분당 호출 수도 자동으로 제한해 한도초과를 예방합니다. 그래도 안 되면 아래 등록한 키 순서로 자동 전환됩니다.
     하나도 등록하지 않아도 OpenRouter 무료 모델만으로 바로 시작할 수 있습니다.
   </div>
@@ -199,7 +200,7 @@ const PROVIDERS = [
   {
     id: 'openrouter', name: 'OpenRouter', sub: '1순위 · 무료풀', badge: 'free',
     badgeText: '무료 (카드 불필요)',
-    desc: '키 하나로 매일 약 200회, 20개 이상의 무료 모델을 자동으로 순서대로 시도합니다. 내부적으로 Claude→Gemini→DeepSeek→ChatGPT→Grok 계열 무료 모델을 먼저 시도하고(있는 경우), 그 외 오픈웨이트 모델로 이어집니다. 모델 목록은 매번 실시간 검증해 자동 구성되므로 따로 선택할 필요가 없습니다. 분당 호출 수도 자동으로 제한해 한도초과를 예방합니다.',
+    desc: '키 하나로 매일 약 200회, 20개 이상의 무료 모델을 컨텍스트·성능 기준으로 검증된 순서대로 자동 시도합니다. Claude·Grok이 OpenRouter에 무료 모델을 새로 올리면 발견 즉시 최우선으로 자동 반영됩니다(현재는 둘 다 무료 모델이 없어 적용되지 않음). 모델 목록은 매번 실시간 검증해 자동 구성되므로 따로 선택할 필요가 없습니다. 분당 호출 수도 자동으로 제한해 한도초과를 예방합니다.',
     linkLabel: 'openrouter.ai/keys 새 탭으로 열기',
     link: 'https://openrouter.ai/keys',
     steps: 'Google 계정으로 로그인 → + New Key → Create',
