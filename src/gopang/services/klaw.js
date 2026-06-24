@@ -159,8 +159,17 @@ export async function _klawReview(source, payload) {
 
 // ── 대화 히스토리 전역 노출 (K-Law 감시용) ──────────────────────────
 // callAI() 내부의 history를 K-Law가 읽을 수 있도록
+// _gopangHistory: call-ai.js의 history 배열을 K-Law가 읽을 수 있도록 노출
+// 주의: window.history는 브라우저 히스토리 객체 — 절대 사용 금지
+// call-ai.js의 history_ref를 통해 접근
 Object.defineProperty(window, '_gopangHistory', {
-  get: () => typeof history !== 'undefined' ? history : [],
+  get: () => {
+    // call-ai.js가 export한 history_ref (배열) 우선 사용
+    if (window._callAiHistoryRef && Array.isArray(window._callAiHistoryRef)) {
+      return window._callAiHistoryRef;
+    }
+    return [];
+  },
   configurable: true,
 });
 

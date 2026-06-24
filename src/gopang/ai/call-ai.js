@@ -13,6 +13,8 @@ import { _klawReview } from '../services/klaw.js';
 
 
 export let history_ref = history;  // 외부 참조용
+// klaw.js 등이 배열 참조용으로 사용 (window.history와 구분)
+if (typeof window !== 'undefined') window._callAiHistoryRef = history;
 
 // ── 응답 생성 중지(Stop) 지원 ───────────────────────────────
 // 전송 버튼이 "생성 중" 상태일 때 클릭하면 stopGeneration()이 호출되어

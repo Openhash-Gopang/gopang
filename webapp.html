@@ -2453,15 +2453,8 @@ window.closeTermsOfUse = closeTermsOfUse;
       setTimeout(async () => {
         const aiBubble = _appendPanelMsg('ai', '…');
         aiBubble.classList.add('streaming');
-        try {
-          if (typeof callAI === 'function') await callAI(msg, null, null);
-          // 응답을 패널로 이동
-          const mainLast = document.querySelector('#message-list .bubble-ai:last-child');
-          if (mainLast) {
-            const row = mainLast.closest('.msg-row');
-            if (row) { aiBubble.parentElement?.remove(); msgList.appendChild(row); }
-          }
-        } catch(e) { aiBubble.textContent = 'AI 오류: ' + e.message; }
+        try { await _callPanelAI(msg, aiBubble); }
+        catch(e) { aiBubble.textContent = 'AI 오류: ' + e.message; }
         aiBubble.classList.remove('streaming');
       }, 400);
     }
@@ -2572,6 +2565,71 @@ window.closeTermsOfUse = closeTermsOfUse;
     return b;
   }
 
+  // ── AI 패널 전용 독립 fetch ──────────────────────────
+  // callAI()는 항상 메인 #message-list에 결과를 씀 → 패널에서 직접 쓰면 중복 발생
+  // 따라서 패널은 OR API를 독립적으로 직접 호출
+  const _panelHistory = [];  // 패널 전용 대화 히스토리
+
+  async function _callPanelAI(userText, bubbleEl) {
+    // CFG에서 현재 설정 읽기
+    const cfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
+    const providers = Array.isArray(cfg.providers) ? cfg.providers : [];
+    const endpoint = cfg.endpoint || 'https://gopang-proxy.tensor-city.workers.dev';
+    const system = cfg.system || '';
+
+    // 히스토리에 user 추가
+    if (_panelHistory.length === 0 && system) {
+      _panelHistory.push({ role: 'system', content: system });
+    }
+    _panelHistory.push({ role: 'user', content: userText });
+
+    // OR providers 순서대로 시도
+    const candidates = providers.length > 0
+      ? providers.map(p => ({ url: 'https://openrouter.ai/api/v1/chat/completions', model: p.model, key: p.apiKey }))
+      : [{ url: endpoint + '/chat/completions', model: cfg.model || 'deepseek/deepseek-r1:free', key: '' }];
+
+    let lastErr = '';
+    for (const c of candidates) {
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (c.key) { headers['Authorization'] = 'Bearer ' + c.key; headers['HTTP-Referer'] = 'https://gopang.net'; }
+        const res = await fetch(c.url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ model: c.model, messages: _panelHistory, stream: true, max_tokens: 1500 }),
+        });
+        if (!res.ok) { lastErr = `HTTP ${res.status}`; continue; }
+
+        // 스트리밍 렌더
+        bubbleEl.textContent = '';
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let full = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const lines = dec.decode(value).split('
+');
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') break;
+            try {
+              const chunk = JSON.parse(data)?.choices?.[0]?.delta?.content || '';
+              full += chunk;
+              bubbleEl.textContent = full;
+              msgList.scrollTop = msgList.scrollHeight;
+            } catch {}
+          }
+        }
+        // 히스토리에 assistant 추가
+        _panelHistory.push({ role: 'assistant', content: full });
+        return;
+      } catch(e) { lastErr = e.message; }
+    }
+    bubbleEl.textContent = 'AI 오류: ' + lastErr;
+  }
+
   // ── 전송 ─────────────────────────────────────────────
   async function _sendToAI() {
     const text = input.value.trim();
@@ -2580,33 +2638,15 @@ window.closeTermsOfUse = closeTermsOfUse;
     sendBtn.disabled = true;
     _appendPanelMsg('user', text);
 
-    // AI 응답 버블 (스트리밍)
     const aiBubble = _appendPanelMsg('ai', '…');
     aiBubble.classList.add('streaming');
-
     try {
-      // callAI를 AI 패널 컨텍스트로 호출
-      if (typeof callAI === 'function') {
-        // AI 패널 전용 호출 — _preTab은 null, 응답 버블을 직접 교체
-        await callAI(text, null, null);
-        // 응답이 메인 message-list에 붙지 않도록 패널 메시지 리스트로 이동
-        const mainLastBubble = document.querySelector('#message-list .bubble-ai:last-child');
-        if (mainLastBubble) {
-          const row = mainLastBubble.closest('.msg-row');
-          if (row) {
-            aiBubble.parentElement?.remove(); // 임시 버블 제거
-            msgList.appendChild(row);         // 메인에서 패널로 이동
-          }
-        } else {
-          aiBubble.classList.remove('streaming');
-        }
-      } else {
-        aiBubble.textContent = 'AI 비서가 아직 준비되지 않았습니다.';
-      }
+      await _callPanelAI(text, aiBubble);
     } catch(e) {
       aiBubble.textContent = 'AI 오류: ' + e.message;
     }
     aiBubble.classList.remove('streaming');
+    sendBtn.disabled = false;
   }
 
   sendBtn.addEventListener('click', _sendToAI);
