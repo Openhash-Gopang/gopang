@@ -47,6 +47,12 @@ const L1_DEFAULT = 'https://l1-hanlim.gopang.net';
 
 const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions';
 const DEEPSEEK_URL   = 'https://api.deepseek.com/v1/chat/completions';
+// OpenRouter — Worker 내부 AI 호출 (내부 Agent, 피드백 분류 등)
+// 클라이언트가 OR 키로 직접 OR에 접속하는 것과 별개.
+// env.OPENROUTER_API_KEY = wrangler secret put OPENROUTER_API_KEY 로 등록.
+const OR_URL         = 'https://openrouter.ai/api/v1/chat/completions';
+const OR_MODEL_FAST  = 'deepseek/deepseek-chat-v3-0324:free'; // 내부용 경량 모델
+const OR_MODEL_THINK = 'deepseek/deepseek-r1:free';           // 추론 필요 시
 const KAKAO_BASE     = 'https://dapi.kakao.com/v2/local/geo/coord2address.json';
 const OPENAI_MODEL   = 'gpt-4o-mini';
 const DEEPSEEK_MODEL = 'deepseek/deepseek-r1:free'; // OR 무료 최상위 모델 (프록시 폴백용)
@@ -1176,9 +1182,22 @@ async function handleSvcRegister(request,env,corsHeaders){if(request.method!=='P
 async function handleSvcVerify(request,env,corsHeaders){const url=new URL(request.url);const svcId=url.searchParams.get('svc_id');const origin=request.headers.get('Origin')||'';if(!svcId)return _err(400,'MISSING_FIELD','svc_id 파라미터 필수',corsHeaders);const reg=_getSvcRegistration(origin,svcId);if(!reg)return new Response(JSON.stringify({ok:false,registered:false,svc_id:svcId,message:'등록되지 않은 서비스입니다.'}),{status:200,headers:corsHeaders});return new Response(JSON.stringify({ok:true,registered:true,svc_id:svcId,trust_level:reg.level,pdv_allowed:reg.pdv,min_auth:reg.minAuth,message:`등록된 서비스 (Level ${reg.level})`}),{status:200,headers:corsHeaders});}
 async function handleGeocode(url,env,corsHeaders){const lat=url.searchParams.get('lat');const lng=url.searchParams.get('lng');if(!lat||!lng)return _err(400,'MISSING_FIELD','lat, lng required',corsHeaders);try{const res=await fetch(`${KAKAO_BASE}?x=${lng}&y=${lat}&input_coord=WGS84`,{headers:{'Authorization':`KakaoAK ${env.KAKAO_REST_KEY}`}});const data=await res.json();return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'GEOCODE_ERROR',e.message,corsHeaders);}}
 async function handleKakaoAppKey(request,env,corsHeaders){const appkey=env.KAKAO_JS_KEY||env.KAKAO_REST_KEY;if(!appkey)return _err(500,'CONFIG_ERROR','Kakao key not configured',corsHeaders);return new Response(JSON.stringify({appkey}),{status:200,headers:{...corsHeaders,'Cache-Control':'public, max-age=300'}});}
-async function handleAIChat(bodyText,env,corsHeaders){let body;try{body=JSON.parse(bodyText);}catch{return _err(400,'INVALID_JSON','Invalid JSON',corsHeaders);}const{provider='deepseek',model,system,messages,max_tokens=2000}=body;const builtMessages=[...(system?[{role:'system',content:system}]:[]),...(messages||[])];try{if(provider!=='anthropic'){const res=await fetch(DEEPSEEK_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${env.DEEPSEEK_API_KEY}`},body:JSON.stringify({model:model||DEEPSEEK_MODEL,max_tokens,messages:builtMessages})});const data=await res.json();const content=data.choices?.[0]?.message?.content;if(!content)throw new Error('DeepSeek 응답 없음: '+JSON.stringify(data));return new Response(JSON.stringify({content,provider:'deepseek',model:model||DEEPSEEK_MODEL}),{status:200,headers:corsHeaders});}else{const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY||env.OpenAI,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:model||'claude-sonnet-4-20250514',max_tokens,...(system?{system}:{}),messages:messages||[]})});const data=await res.json();const content=data.content?.find(c=>c.type==='text')?.text;return new Response(JSON.stringify({content,provider:'anthropic'}),{status:200,headers:corsHeaders});}}catch(e){return _err(502,'AI_ERROR',e.message,corsHeaders);}}
+async function handleAIChat(bodyText,env,corsHeaders){let body;try{body=JSON.parse(bodyText);}catch{return _err(400,'INVALID_JSON','Invalid JSON',corsHeaders);}const{provider='deepseek',model,system,messages,max_tokens=2000}=body;const builtMessages=[...(system?[{role:'system',content:system}]:[]),...(messages||[])];try{if(provider!=='anthropic'){
+  const _orKey=env.OPENROUTER_API_KEY||env.DEEPSEEK_API_KEY;
+  const _orUrl=env.OPENROUTER_API_KEY?OR_URL:DEEPSEEK_URL;
+  const _orMdl=model||(env.OPENROUTER_API_KEY?OR_MODEL_FAST:DEEPSEEK_MODEL);
+  const _orHdr={'Content-Type':'application/json','Authorization':`Bearer ${_orKey}`,...(env.OPENROUTER_API_KEY?{'HTTP-Referer':'https://gopang.net','X-Title':'Hondi'}:{})};
+  const res=await fetch(_orUrl,{method:'POST',headers:_orHdr,body:JSON.stringify({model:_orMdl,max_tokens,messages:builtMessages})});
+  const data=await res.json();const content=data.choices?.[0]?.message?.content;
+  if(!content)throw new Error('AI 응답 없음: '+JSON.stringify(data));
+  return new Response(JSON.stringify({content,provider:env.OPENROUTER_API_KEY?'openrouter':'deepseek',model:_orMdl}),{status:200,headers:corsHeaders});}else{const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY||env.OpenAI,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:model||'claude-sonnet-4-20250514',max_tokens,...(system?{system}:{}),messages:messages||[]})});const data=await res.json();const content=data.content?.find(c=>c.type==='text')?.text;return new Response(JSON.stringify({content,provider:'anthropic'}),{status:200,headers:corsHeaders});}}catch(e){return _err(502,'AI_ERROR',e.message,corsHeaders);}}
 async function callOpenAIFromGeminiBody(bodyText,env,corsHeaders){const apiKey=env.OpenAI;if(!apiKey)return _err(500,'CONFIG_ERROR','OpenAI key not configured',corsHeaders);let geminiBody;try{geminiBody=JSON.parse(bodyText);}catch{return _err(400,'INVALID_JSON','Invalid JSON body',corsHeaders);}const systemPrompt=geminiBody.system_instruction?.parts?.[0]?.text||'';const parts=geminiBody.contents?.[0]?.parts||[];const textPart=parts.find(p=>p.text)?.text||'';const imagePart=parts.find(p=>p.inline_data);const maxTokens=geminiBody.generationConfig?.maxOutputTokens||1500;const messages=[];if(systemPrompt)messages.push({role:'system',content:systemPrompt});if(imagePart?.inline_data){messages.push({role:'user',content:[{type:'image_url',image_url:{url:`data:${imagePart.inline_data.mime_type};base64,${imagePart.inline_data.data}`}},{type:'text',text:textPart||'이미지를 분석하여 JSON으로만 출력하라.'}]});}else{messages.push({role:'user',content:textPart});}try{const res=await fetch(OPENAI_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},body:JSON.stringify({model:OPENAI_MODEL,messages,max_tokens:maxTokens,temperature:geminiBody.generationConfig?.temperature??0.1})});const data=await res.json();if(!res.ok)throw new Error(data.error?.message||`HTTP ${res.status}`);const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'openai',_model:OPENAI_MODEL}),{headers:corsHeaders});}catch(e){const fbBody=JSON.stringify({model:DEEPSEEK_MODEL,messages,max_tokens:maxTokens,temperature:0.1,stream:false});return callDeepSeek(fbBody,env,corsHeaders,e.message);}}
-async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null){try{let isStream=false;try{isStream=!!JSON.parse(bodyText)?.stream;}catch{}const res=await fetch(DEEPSEEK_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${env.DEEPSEEK_API_KEY}`},body:bodyText});if(!res.ok){const errText=await res.text();let errMsg;try{errMsg=JSON.parse(errText)?.error?.message;}catch{}return new Response(JSON.stringify({error:errMsg||`HTTP ${res.status}`}),{status:res.status,headers:corsHeaders});}if(isStream){return new Response(res.body,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});}const data=await res.json();if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'DEEPSEEK_ERROR',e.message,corsHeaders);}}
+async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null){try{let isStream=false;try{isStream=!!JSON.parse(bodyText)?.stream;}catch{}
+  // OR 키가 있으면 OR API 사용, 없으면 기존 DeepSeek API 폴백
+  const _useOR = !!env.OPENROUTER_API_KEY;
+  const _url   = _useOR ? OR_URL : DEEPSEEK_URL;
+  const _key   = _useOR ? env.OPENROUTER_API_KEY : env.DEEPSEEK_API_KEY;
+  const res=await fetch(_url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${_key}`,...(_useOR?{'HTTP-Referer':'https://gopang.net','X-Title':'Hondi'}:{})},body:bodyText});if(!res.ok){const errText=await res.text();let errMsg;try{errMsg=JSON.parse(errText)?.error?.message;}catch{}return new Response(JSON.stringify({error:errMsg||`HTTP ${res.status}`}),{status:res.status,headers:corsHeaders});}if(isStream){return new Response(res.body,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});}const data=await res.json();if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'DEEPSEEK_ERROR',e.message,corsHeaders);}}
 
 // ═══════════════════════════════════════════════════════════
 // Phase 1 — OpenHash 앵커링 프록시 (/openhash/anchor)
@@ -3510,11 +3529,14 @@ async function handleFeedbackPost(request, env, corsHeaders) {
   // DeepSeek v4 flash — 카테고리 자동 분류
   let category = 'etc';
   try {
-    const aiRes = await fetch(DEEPSEEK_URL, {
+    const _fbKey = env.OPENROUTER_API_KEY || env.DEEPSEEK_API_KEY;
+    const _fbUrl = env.OPENROUTER_API_KEY ? OR_URL : DEEPSEEK_URL;
+    const aiRes = await fetch(_fbUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_fbKey}`,
+                 ...(env.OPENROUTER_API_KEY ? {'HTTP-Referer':'https://gopang.net','X-Title':'Hondi'} : {}) },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-r1:free',
+        model: env.OPENROUTER_API_KEY ? OR_MODEL_FAST : 'deepseek/deepseek-r1:free',
         max_tokens: 10,
         messages: [
           { role: 'system', content: '사용자 제안을 bug/feature/ui/etc 중 하나로만 분류하라. 단어 하나만 출력.' },
