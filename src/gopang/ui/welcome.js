@@ -17,7 +17,7 @@ function _getProfileStep() {
   try { return localStorage.getItem('hondi_profile_step') || null; } catch { return null; }
 }
 
-// ── 초기 AI 비서 환영 메시지 ────────────────────────────
+// ── 초기 환영 메시지 — 첫 접속 1회만 ──────────────────
 export async function _showWelcomeMessage() {
   const list = document.getElementById('message-list');
   if (!list) return;
@@ -25,49 +25,29 @@ export async function _showWelcomeMessage() {
   // Personal Assistant SP 로드 (비동기, 캐시됨)
   await loadPersonalAssistantSP();
 
-  const nickname = _USER?.nickname || _USER?.name || '';
   const profileDone = _isProfileDone();
   const profileStep = _getProfileStep();
 
-  // ── 레이블 ──
-  const label = document.createElement('div');
-  label.style.cssText =
-    'font-size:11px;color:var(--label-3);margin:8px 16px 2px;' +
-    'letter-spacing:0.02em;font-weight:500;';
-  label.textContent = '나만의 AI 비서';
-  list.appendChild(label);
-
-  // ── 환영 버블 ──
-  const row = document.createElement('div');
-  row.className = 'msg-row ai';
-  const bubble = document.createElement('div');
-  bubble.className = 'bubble bubble-ai';
-
-  if (profileDone) {
-    // ── Profile 완성 → 일상 비서 모드 ──
-    bubble.textContent = nickname
-      ? `안녕하세요, ${nickname}님. 찾기(🔍) 버튼으로 대화 상대를 검색하거나, 입력 필드 위에 부착된 납작한 버튼을 터치하거나, 화면 아래에서 위로 밀어올리면 나만의 AI 비서가 나타납니다.`
-      : '찾기(🔍) 버튼으로 대화 상대를 검색하거나, 입력 필드 위에 부착된 납작한 버튼을 터치하거나, 화면 아래에서 위로 밀어올리면 나만의 AI 비서가 나타납니다.';
+  // 첫 접속 안내 — localStorage 플래그로 1회만 표시
+  const introShown = localStorage.getItem('hondi_intro_shown');
+  if (!introShown) {
+    localStorage.setItem('hondi_intro_shown', '1');
+    const row = document.createElement('div');
+    row.className = 'msg-row ai';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble bubble-ai';
+    bubble.textContent = '찾기(🔍) 버튼으로 대화 상대를 검색할 수 있으며, 아래쪽 AI 버튼을 터치하거나, 화면 아래에서 위로 밀어올리면 나만의 AI 비서가 나타납니다.';
     row.appendChild(bubble);
     list.appendChild(row);
-  } else {
-    // ── Profile 미완성 → 온보딩 시작 ──
-    bubble.textContent = nickname
-      ? `안녕하세요, ${nickname}님. 찾기(🔍) 버튼으로 대화 상대를 검색하거나, 입력 필드 위에 부착된 납작한 버튼을 터치하거나, 화면 아래에서 위로 밀어올리면 나만의 AI 비서가 나타납니다.`
-      : '찾기(🔍) 버튼으로 대화 상대를 검색하거나, 입력 필드 위에 부착된 납작한 버튼을 터치하거나, 화면 아래에서 위로 밀어올리면 나만의 AI 비서가 나타납니다.';
-    row.appendChild(bubble);
-    list.appendChild(row);
+  }
 
-    // AI 비서에게 온보딩 시작 지시 메시지를 자동 주입
-    // (사용자가 텍스트를 입력하지 않아도 AI가 먼저 질문)
+  // 온보딩이 필요한 경우 — AI 패널이 열릴 때 시작 (메인 대화창에 표시 안 함)
+  if (!profileDone) {
+    // AI 패널 첫 열기 시 온보딩 자동 시작 플래그 설정
     const triggerMsg = profileStep
       ? `[SYSTEM] 이용자가 Profile 작성을 ${profileStep}단계에서 중단했습니다. 해당 단계부터 재개해 주세요.`
       : `[SYSTEM] 이용자의 Profile이 아직 없습니다. PHASE 1 온보딩을 시작해 주세요. STEP 1(이름 질문)부터 시작합니다.`;
-
-    // 약간의 딜레이 후 AI 비서 호출 (UI가 먼저 렌더링되도록)
-    setTimeout(() => {
-      callAI(triggerMsg, null, '_onboarding_');
-    }, 600);
+    window._aiPanelOnboardingMsg = triggerMsg;
   }
 }
 

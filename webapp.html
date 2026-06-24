@@ -189,46 +189,23 @@ body.gopang-authed #gopang-auth-gate{display:none}
 .top-btn svg{width:17px;height:17px;stroke:currentColor;stroke-width:2;fill:none;
   stroke-linecap:round;stroke-linejoin:round}
 
-/* AI 버튼 — 내 AI 비서 호출 버튼 (토글 아님) */
+/* AI 버튼 — 입력 필드 오른쪽, ia-btn 스타일 기반 */
 .btn-ai{
-  position:relative;
   display:flex;align-items:center;justify-content:center;
   width:32px;height:32px;flex-shrink:0;
   border-radius:50%;border:none;
-  background:var(--green-lt,#d1fae5);
-  cursor:pointer;
-  padding:0;
-  transition:background .15s, transform .1s;
-}
-.btn-ai:active{ transform:scale(.92); }
-.ai-switch-thumb{
-  font-size:12px;font-weight:800;letter-spacing:-.3px;
-  color:var(--green-dk,#1a9e6a);
-  user-select:none;
-}
-/* AI 패널 열린 상태 강조 */
-.btn-ai.panel-open{background:var(--green-dk,#1a9e6a);}
-.btn-ai.panel-open .ai-switch-thumb{color:#fff;}
-
-/* ── AI 패널 트리거 버튼 (입력창 위, PC/모바일 공통) ── */
-#ai-panel-trigger{
-  display:flex;align-items:center;justify-content:center;gap:6px;
-  width:100%;height:28px;
   background:transparent;
-  border:none;border-bottom:1px solid var(--border);
-  cursor:pointer;
-  color:var(--green-dk,#1a9e6a);
-  font-size:12px;font-weight:600;letter-spacing:.03em;
-  font-family:inherit;
-  transition:background .15s;
-  flex-shrink:0;
+  color:var(--txt3,#9ca3af);
+  cursor:pointer;padding:0;
+  transition:background .15s, color .15s;
 }
-#ai-panel-trigger:hover{ background:rgba(52,211,153,.08); }
-#ai-panel-trigger svg{ width:13px;height:13px;stroke:currentColor;stroke-width:2.2;flex-shrink:0; }
-#ai-panel-trigger.open{
-  background:rgba(26,158,106,.1);
-  color:var(--green-dk,#1a9e6a);
-}
+.btn-ai:hover,.btn-ai:active{background:var(--chip-bg);color:#111}
+.btn-ai svg{width:19px;height:19px;stroke:currentColor;stroke-width:2;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;}
+/* 패널 열린 상태 — 초록 강조 */
+.btn-ai.panel-open{color:#1a9e6a;}
+.btn-ai.panel-open svg{stroke:#1a9e6a;}
+
 
 /* ── AI 비서 패널 (반투명 slide-up) ── */
 #ai-panel{
@@ -1042,9 +1019,7 @@ select.setting-field{appearance:none;-webkit-appearance:none;
       <button class="top-btn" id="btn-search" onclick="openP2PSearch()" title="사용자 검색">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>
-      <button class="top-btn btn-ai" id="btn-ai" onclick="openAIPanel()" title="내 AI 비서">
-        <span class="ai-switch-thumb">AI</span>
-      </button>
+
       <button class="top-btn" id="btn-settings" onclick="openSettings()" title="설정">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -1089,11 +1064,6 @@ select.setting-field{appearance:none;-webkit-appearance:none;
 
   <!-- ── 하단 입력 ── -->
   <div class="input-dock">
-
-    <!-- AI 비서 패널 트리거 버튼 (PC 클릭 / 모바일 탭 공통) -->
-    <button id="ai-panel-trigger" onclick="openAIPanel()" title="나만의 AI 비서 열기">
-      나만의 AI 비서
-    </button>
 
     <div class="status-strip" style="display:none">
       <div class="status-dot" id="status-dot"></div>
@@ -1159,6 +1129,14 @@ select.setting-field{appearance:none;-webkit-appearance:none;
           </svg>
         </button>
       </div>
+      <!-- AI 비서 버튼 — 입력 필드 오른쪽 -->
+      <button class="btn-ai" id="btn-ai" onclick="openAIPanel()" title="나만의 AI 비서">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2a7 7 0 0 1 7 7c0 3-1.5 5.5-4 6.7V17a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1.3C6.5 14.5 5 12 5 9a7 7 0 0 1 7-7z"/>
+          <line x1="9" y1="21" x2="15" y2="21"/><line x1="10" y1="17" x2="10" y2="21"/>
+          <line x1="14" y1="17" x2="14" y2="21"/>
+        </svg>
+      </button>
     </div>
 
     <input type="file" id="file-input" style="display:none" accept="image/*,.pdf,.txt,.docx" onchange="handleFileSelect(event)">
@@ -2466,8 +2444,27 @@ window.closeTermsOfUse = closeTermsOfUse;
     _panelOpen = true;
     panel.classList.add('open');
     btnAI.classList.add('panel-open');
-    if (triggerBtn) triggerBtn.classList.add('open');
     setTimeout(() => input.focus(), 340);
+
+    // 온보딩 메시지가 대기 중이면 AI 패널에서 자동 시작 (1회)
+    if (window._aiPanelOnboardingMsg) {
+      const msg = window._aiPanelOnboardingMsg;
+      delete window._aiPanelOnboardingMsg;
+      setTimeout(async () => {
+        const aiBubble = _appendPanelMsg('ai', '…');
+        aiBubble.classList.add('streaming');
+        try {
+          if (typeof callAI === 'function') await callAI(msg, null, null);
+          // 응답을 패널로 이동
+          const mainLast = document.querySelector('#message-list .bubble-ai:last-child');
+          if (mainLast) {
+            const row = mainLast.closest('.msg-row');
+            if (row) { aiBubble.parentElement?.remove(); msgList.appendChild(row); }
+          }
+        } catch(e) { aiBubble.textContent = 'AI 오류: ' + e.message; }
+        aiBubble.classList.remove('streaming');
+      }, 400);
+    }
   }
   function closeAIPanel() {
     _panelOpen = false;
