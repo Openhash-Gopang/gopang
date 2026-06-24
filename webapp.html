@@ -237,11 +237,11 @@ body.gopang-authed #gopang-auth-gate{display:none}
   height:62%;
   z-index:400;
   border-radius:20px 20px 0 0;
-  background:rgba(240,253,248,0.88);
-  backdrop-filter:blur(18px) saturate(1.4);
-  -webkit-backdrop-filter:blur(18px) saturate(1.4);
-  border-top:1px solid rgba(52,211,153,.35);
-  box-shadow:0 -8px 32px rgba(0,0,0,.13);
+  background:rgba(200,210,205,0.28);
+  backdrop-filter:blur(6px) saturate(1.1);
+  -webkit-backdrop-filter:blur(6px) saturate(1.1);
+  border-top:1px solid rgba(180,195,188,.4);
+  box-shadow:0 -4px 20px rgba(0,0,0,.08);
   display:flex;flex-direction:column;
   transform:translateY(100%);
   transition:transform .32s cubic-bezier(.32,1,.4,1);
@@ -1074,7 +1074,7 @@ select.setting-field{appearance:none;-webkit-appearance:none;
   <!-- ── AI 비서 패널 (반투명 slide-up) ── -->
   <div id="ai-panel">
     <div id="ai-panel-handle"></div>
-    <div id="ai-panel-title">🤖 내 AI 비서</div>
+    <div id="ai-panel-title">내 AI 비서</div>
     <div id="ai-panel-messages"></div>
     <div id="ai-panel-input-row">
       <textarea id="ai-panel-input" rows="1" placeholder="AI 비서에게 물어보세요…"></textarea>
@@ -1092,7 +1092,6 @@ select.setting-field{appearance:none;-webkit-appearance:none;
 
     <!-- AI 비서 패널 트리거 버튼 (PC 클릭 / 모바일 탭 공통) -->
     <button id="ai-panel-trigger" onclick="openAIPanel()" title="나만의 AI 비서 열기">
-      <svg viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15"/></svg>
       나만의 AI 비서
     </button>
 
@@ -2467,20 +2466,14 @@ window.closeTermsOfUse = closeTermsOfUse;
     _panelOpen = true;
     panel.classList.add('open');
     btnAI.classList.add('panel-open');
-    if (triggerBtn) {
-      triggerBtn.classList.add('open');
-      triggerBtn.querySelector('svg polyline')?.setAttribute('points','6 9 12 15 18 9');
-    }
+    if (triggerBtn) triggerBtn.classList.add('open');
     setTimeout(() => input.focus(), 340);
   }
   function closeAIPanel() {
     _panelOpen = false;
     panel.classList.remove('open');
     btnAI.classList.remove('panel-open');
-    if (triggerBtn) {
-      triggerBtn.classList.remove('open');
-      triggerBtn.querySelector('svg polyline')?.setAttribute('points','18 15 12 9 6 15');
-    }
+    if (triggerBtn) triggerBtn.classList.remove('open');
     input.blur();
   }
   window.openAIPanel = openAIPanel;
@@ -2597,7 +2590,19 @@ window.closeTermsOfUse = closeTermsOfUse;
     try {
       // callAI를 AI 패널 컨텍스트로 호출
       if (typeof callAI === 'function') {
-        await callAI(text, null, aiBubble);
+        // AI 패널 전용 호출 — _preTab은 null, 응답 버블을 직접 교체
+        await callAI(text, null, null);
+        // 응답이 메인 message-list에 붙지 않도록 패널 메시지 리스트로 이동
+        const mainLastBubble = document.querySelector('#message-list .bubble-ai:last-child');
+        if (mainLastBubble) {
+          const row = mainLastBubble.closest('.msg-row');
+          if (row) {
+            aiBubble.parentElement?.remove(); // 임시 버블 제거
+            msgList.appendChild(row);         // 메인에서 패널로 이동
+          }
+        } else {
+          aiBubble.classList.remove('streaming');
+        }
       } else {
         aiBubble.textContent = 'AI 비서가 아직 준비되지 않았습니다.';
       }

@@ -419,11 +419,11 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
       } else {
         console.warn('[GWP] 알 수 없는 서비스 ID:', svcId);
         // 미등록 서비스 → 예약된 빈 탭 닫기
-        if (_preTab && !_preTab.closed) { _preTab.close(); }
+        if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
       }
     } else {
       // GWP 태그 없음 = 직접 처리 → 예약된 빈 탭 닫기
-      if (_preTab && !_preTab.closed) {
+      if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) {
         _preTab.close();
         console.info('[GWP] 직접 처리 — 예약 탭 닫힘');
       }
@@ -484,9 +484,18 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
       // OR 키가 등록돼 있으면 자동 페일오버로 이미 처리됐어야 하고,
       // 없으면 AI 설정 유도 메시지만 표시
       const hasUserKey = Array.isArray(CFG?.providers) && CFG.providers.length > 0;
-      userMsg = hasUserKey
-        ? '⚠️ 모든 AI 모델 한도가 일시적으로 초과됐습니다. 잠시 후 다시 시도해 주세요.'
-        : 'AI 비서를 사용하려면 설정(⚙️)에서 OpenRouter 키를 등록해 주세요.';
+      if (!hasUserKey) {
+        // OR 키 미등록 — 메시지 대신 ai-setup 페이지로 즉시 이동
+        if (existingBubble) existingBubble.remove();
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.location.href = '/pages/ai-setup-mobile.html';
+        } else {
+          window.open('/pages/ai-setup-mobile.html', '_blank');
+        }
+        return;
+      }
+      userMsg = '⚠️ 모든 AI 모델 한도가 일시적으로 초과됐습니다. 잠시 후 다시 시도해 주세요.';
     }
     if (existingBubble) {
       existingBubble.classList.remove('streaming');
