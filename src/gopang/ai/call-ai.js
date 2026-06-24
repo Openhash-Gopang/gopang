@@ -1,5 +1,12 @@
 ﻿/**
- * ai/call-ai.js — LLM API 호출·스트리밍·GWP 태그 처리
+ * ai/call-ai.js — LLM API 호출·스트리밍·GWP 태그 처리 + PA 온보딩 관리 v1.1
+ *
+ * PA 온보딩 흐름:
+ *   1. _buildProfileContext() — gopang_user_v4(가입 데이터) + hondi_profile_partial(진행 중 데이터)를
+ *      읽어 [CONTEXT: PROFILE_ONBOARDING] 블록 생성 → PA SP에 주입
+ *      → 이미 아는 항목은 PA가 다시 묻지 않음
+ *   2. _callAIInner() — profile 미완료 시 PA SP 로드 + 컨텍스트 주입
+ *   3. 응답 처리 — PROFILE_SUBMIT / PROFILE_SKIP / [N/6단계] 감지 → 상태 갱신 + SP 전환
  */
 import { CFG, _modelSupportsVision, PROVIDER_INFO, getPriorityOrder } from '../core/config.js';
 import { isModelOnCooldown, markModelFailed, recordOpenRouterCall, getOpenRouterRemainingBudget }
@@ -22,6 +29,217 @@ if (typeof window !== 'undefined') window._callAiHistoryRef = history;
 // 전송 버튼이 "생성 중" 상태일 때 클릭하면 stopGeneration()이 호출되어
 // 현재 진행 중인 스트리밍 fetch를 중단한다 (Claude의 정지 버튼과 동일한 동작).
 let _currentAbort = null;
+
+// ══════════════════════════════════════════════════════════════
+// PA 온보딩 관련 함수
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * _buildProfileContext — [CONTEXT: PROFILE_ONBOARDING] 블록 생성
+ *
+ * call-ai.js가 "이미 아는 것"을 결정하는 유일한 주체입니다.
+ * 아래 데이터 소스를 순서대로 병합하여 PA SP에 주입합니다:
+ *   1. gopang_user_v4 — 가입 시 등록된 필드 (guid, handle, nickname, region, e164)
+ *   2. hondi_profile_partial — 온보딩 도중 저장된 진행 중 데이터
+ *
+ * PA SP는 [CONTEXT]에 값이 있는 항목은 절대 다시 묻지 않습니다.
+ * 재호출(설정 → 프로필 작성) 시에도 동일 로직으로 미작성 항목만 진행합니다.
+ */
+function _buildProfileContext() {
+  // 가입 시 저장 데이터 (항상 신뢰할 수 있는 기준 데이터)
+  let reg = {};
+  try { reg = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}'); } catch {}
+
+  // 온보딩 진행 중 저장 데이터 (reg보다 구체적인 항목을 가질 수 있음)
+  let partial = {};
+  try { partial = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}'); } catch {}
+
+  // 두 소스 병합 — reg가 기본값, partial이 덮어씀 (진행 중 데이터 우선)
+  const ctx = Object.assign({}, {
+    guid:     reg.ipv6   || reg.guid || '',
+    handle:   reg.handle || '',
+    nickname: reg.nickname || '',
+    region:   reg.region || '',
+    e164:     reg.e164   || '',       // 가입 시 입력한 전화번호 — 다시 묻지 않음
+  }, partial);
+
+  // 현재 단계 (없으면 0 = 최초 시작)
+  const step = parseInt(localStorage.getItem('hondi_profile_step') || '0', 10);
+
+  // [CONTEXT] 블록 조립 — 값이 있는 항목만 포함
+  const lines = ['[CONTEXT: PROFILE_ONBOARDING]'];
+  lines.push(`step: ${step}`);
+  lines.push(`done: false`);
+  lines.push(`skipped: false`);
+  if (ctx.guid)           lines.push(`guid: ${ctx.guid}`);
+  if (ctx.handle)         lines.push(`handle: ${ctx.handle}`);
+  if (ctx.nickname)       lines.push(`nickname: ${ctx.nickname}`);
+  if (ctx.region)         lines.push(`region: ${ctx.region}`);
+  if (ctx.e164)           lines.push(`e164: ${ctx.e164}`);   // 있으면 PA가 phone을 묻지 않음
+  if (ctx.name)           lines.push(`name: ${ctx.name}`);
+  if (ctx.address)        lines.push(`address: ${ctx.address}`);
+  if (ctx.phone)          lines.push(`phone: ${ctx.phone}`);
+  if (ctx.entity_type)    lines.push(`entity_type: ${ctx.entity_type}`);
+  if (ctx.entity_subtype) lines.push(`entity_subtype: ${ctx.entity_subtype}`);
+  if (ctx.schema_id)      lines.push(`schema_id: ${ctx.schema_id}`);
+  if (ctx.products)       lines.push(`products: ${JSON.stringify(ctx.products)}`);
+  if (ctx.description)    lines.push(`description: ${ctx.description}`);
+  if (ctx.platform_type)  lines.push(`platform_type: ${ctx.platform_type}`);
+  if (ctx.member_count)   lines.push(`member_count: ${ctx.member_count}`);
+  if (ctx.industry_fields) lines.push(`industry_fields: ${JSON.stringify(ctx.industry_fields)}`);
+  if (ctx.gdc_accepted !== undefined) lines.push(`gdc_accepted: ${ctx.gdc_accepted}`);
+  if (ctx.is_public !== undefined)    lines.push(`is_public: ${ctx.is_public}`);
+  lines.push('[/CONTEXT]');
+
+  return lines.join('\n');
+}
+
+/**
+ * _handleProfileTags — PROFILE_SUBMIT / PROFILE_SKIP / 단계 업데이트 처리
+ *
+ * @param {string} fullReply — LLM 응답 전문
+ * @param {HTMLElement|null} bubble — 스트림 버블 (SKIP 시 태그 제거용)
+ * @returns {boolean} true = 태그 처리됨 (GWP 등 후속 처리 생략)
+ */
+async function _handleProfileTags(fullReply, bubble) {
+  // ── PROFILE_SUBMIT ────────────────────────────────────────
+  if (fullReply.includes('PROFILE_SUBMIT')) {
+    console.log('[Profile] PROFILE_SUBMIT 감지 — 프로필 등록 시작');
+    try {
+      const { handleProfileSubmit } = await import('../ui/welcome.js');
+      await handleProfileSubmit(fullReply);
+    } catch (e) {
+      console.warn('[Profile] handleProfileSubmit 실패:', e.message);
+    }
+    // 상태 정리
+    try {
+      localStorage.setItem('hondi_profile_done', '1');
+      localStorage.removeItem('hondi_profile_step');
+      localStorage.removeItem('hondi_profile_skipped');
+      localStorage.removeItem('hondi_profile_partial');
+    } catch {}
+    // history를 비우고 AGENT-COMMON SP로 전환 (다음 callAI 호출 시 새 세션 시작)
+    history.length = 0;
+    await _switchToAssistantSP();
+    return true;
+  }
+
+  // ── PROFILE_SKIP ──────────────────────────────────────────
+  if (fullReply.includes('[PROFILE_SKIP]')) {
+    console.log('[Profile] PROFILE_SKIP 감지 — 온보딩 건너뜀');
+    try {
+      localStorage.setItem('hondi_profile_skipped', '1');
+      localStorage.removeItem('hondi_profile_step');
+      localStorage.removeItem('hondi_profile_partial');
+    } catch {}
+    // 버블에서 태그 제거
+    if (bubble) {
+      const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+      if (_usb) _usb(bubble, fullReply.replace(/\[PROFILE_SKIP\]/g, '').trim());
+    }
+    history.length = 0;
+    await _switchToAssistantSP();
+    return true;
+  }
+
+  // ── 단계 업데이트 [N/6단계] ───────────────────────────────
+  // PA SP가 "[3/6단계]" 형태로 현재 단계를 출력하면 저장
+  const stepMatch = fullReply.match(/\[(\d+)\/\d+단계\]/);
+  if (stepMatch && !localStorage.getItem('hondi_profile_done')) {
+    try { localStorage.setItem('hondi_profile_step', stepMatch[1]); } catch {}
+    // 대화 중 LLM이 수집한 데이터를 partial에 저장하기 위해
+    // 응답에서 JSON 블록을 찾아 병합 (PA SP가 중간 상태를 JSON으로 출력하는 경우 대비)
+    const partialMatch = fullReply.match(/\[PARTIAL_SAVE\]\s*(\{[\s\S]*?\})/);
+    if (partialMatch) {
+      try {
+        const incoming = JSON.parse(partialMatch[1]);
+        const existing = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}');
+        localStorage.setItem('hondi_profile_partial', JSON.stringify(Object.assign(existing, incoming)));
+      } catch {}
+    }
+  }
+
+  return false;
+}
+
+/**
+ * _switchToAssistantSP — AGENT-COMMON SP를 CFG.system_base / CFG.system에 적용
+ * PROFILE_SUBMIT 또는 PROFILE_SKIP 직후 호출됩니다.
+ * history가 비워진 상태이므로 다음 callAI 호출 시 새 system이 history[0]으로 삽입됩니다.
+ */
+async function _switchToAssistantSP() {
+  try {
+    if (!CFG.system_base || CFG.system_base.includes('나만의 AI 비서')) {
+      // system_base가 아직 PA SP이거나 미로드 상태 → AGENT-COMMON 재로드
+      const res = await fetch('/prompts/AGENT-COMMON_v2.0.txt');
+      if (res.ok) {
+        CFG.system_base = await res.text();
+      }
+    }
+    CFG.system = CFG.system_base;
+    // 설정 저장 (다음 페이지 로드 시 복원)
+    try {
+      const cfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
+      cfg.system = CFG.system;
+      cfg.system_base = CFG.system_base;
+      localStorage.setItem('gopang_cfg', JSON.stringify(cfg));
+    } catch {}
+    console.log('[Profile] AGENT-COMMON SP로 전환 완료');
+  } catch (e) {
+    console.warn('[Profile] SP 전환 실패 (무시):', e.message);
+  }
+}
+
+/**
+ * _buildEnhancedUserContent — 동적 컨텍스트를 사용자 메시지 앞에 병합
+ *
+ * DeepSeek Auto Prompt Caching 최적화의 핵심:
+ *   • system 메시지는 완전히 정적 → 캐시 prefix 100% 보존
+ *   • GUID·위치·PDV 요약은 ctxMsg(별도 메시지)가 아닌 현재 user 메시지 앞에 주입
+ *   → 캐시 prefix(system)가 매 호출 동일 → DeepSeek 캐시 적중률 95%+
+ *
+ * PA 온보딩 중일 때는 [CONTEXT: PROFILE_ONBOARDING] 블록을 대신 삽입합니다.
+ *
+ * @param {string|Array} userContent — 현재 사용자 메시지 (텍스트 또는 multipart)
+ * @param {boolean} isOnboarding — true이면 프로필 컨텍스트 블록 삽입
+ * @returns {string|Array} 컨텍스트가 병합된 사용자 메시지
+ */
+async function _buildEnhancedUserContent(userContent, isOnboarding) {
+  const parts = [];
+
+  if (isOnboarding) {
+    // PA 온보딩: 이미 아는 항목 + 진행 단계를 PA SP에 알림
+    parts.push(_buildProfileContext());
+  } else {
+    // 일반 비서 모드: GUID + 위치 + PDV 요약 (RAG 스타일, 압축)
+    if (USER_GUID) parts.push(`GUID:${USER_GUID.slice(-8)}`);
+
+    const locNote = _buildLocNote();
+    if (locNote) parts.push(locNote.trim());
+
+    // PDV 요약 — IndexedDB 대신 localStorage log 사용 (동기, 압축)
+    try {
+      const log = JSON.parse(localStorage.getItem('gopang_pdv_log') || '[]');
+      if (Array.isArray(log) && log.length) {
+        const summaries = log.slice(-8).reverse()
+          .map(r => r.summary || r.what || '').filter(Boolean);
+        if (summaries.length) parts.push(`[이력]${summaries.join('; ')}`);
+      }
+    } catch {}
+  }
+
+  if (!parts.length) return userContent;
+
+  const ctxBlock = `[ctx]\n${parts.join('\n')}\n\n`;
+
+  // multipart(이미지 포함) 메시지 처리
+  if (Array.isArray(userContent)) {
+    return [{ type: 'text', text: ctxBlock }, ...userContent];
+  }
+  return ctxBlock + (userContent || '');
+}
+
+// ══════════════════════════════════════════════════════════════
 
 export function stopGeneration() {
   if (_currentAbort) {
@@ -171,17 +389,47 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     });
   }
 
-  // ── SP-00 v10.0: 폭포수 2단계(전문가 변신) 완전 제거 ──────
-  // 모든 전문 도메인은 [GWP:id] 태그로 하위 시스템 새 탭 호출
-  // AI 비서는 직접 처리 가능한 업무만 수행:
-  //   정보조회·계산·번역·날씨·PDV관리·일정·일반대화·웹검색
-  // 이미지 첨부 시: Gemini 범용 분석 후 SP-00에 컨텍스트로 전달
-  //   (이미지 내용이 환경오염이면 LLM이 [GWP:fiil-kcleaner] 태그 출력)
+  // ── SP 결정 (캐시 최적화 v1.1) ───────────────────────────
+  // 원칙: system 메시지는 세션 내 절대 변경하지 않는다 (DeepSeek 캐시 prefix 보존).
+  //   • AGENT-COMMON: system_base에 최초 1회 로드 후 고정
+  //   • PA SP: profile 미완료 세션에서만 사용 — history가 비어있을 때만 삽입
+  //   • 동적 데이터(GUID·위치·PDV): system이 아닌 user 메시지 앞에 병합
+  //     (_buildEnhancedUserContent 참조)
+  //   • 그림자 컨텍스트(_buildShadowContext): 제거 — user 메시지 병합 방식으로 대체
 
-  // system을 항상 base로 유지 (전문가 SP 오염 방지)
-  // system_base 최초 1회 고정 — 이후 callAI 재진입 시 항상 원본으로 복원
-  if (!CFG.system_base) CFG.system_base = CFG.system;
-  CFG.system = CFG.system_base;
+  const _profileDone    = localStorage.getItem('hondi_profile_done')    === '1';
+  const _profileSkipped = localStorage.getItem('hondi_profile_skipped') === '1';
+  const _isOnboarding   = !_profileDone && !_profileSkipped;
+
+  // AGENT-COMMON 최초 1회 로드 (이후 캐시)
+  if (!CFG.system_base) {
+    try {
+      const commonRes = await fetch('/prompts/AGENT-COMMON_v2.0.txt');
+      if (commonRes.ok) CFG.system_base = await commonRes.text();
+    } catch (e) {
+      console.warn('[SP] AGENT-COMMON 로드 실패:', e.message);
+    }
+  }
+
+  // PA SP는 신규 세션(history 비어있음)일 때만 적용
+  // — 이미 대화 중인 세션에서는 history[0]의 system을 교체하지 않음 (캐시 보존)
+  if (_isOnboarding && history.length === 0) {
+    try {
+      const paRes = await fetch('/prompts/personal-assistant-v1.1.txt');
+      if (paRes.ok) {
+        CFG.system = await paRes.text();
+        console.log('[SP] PA SP(v1.1) 로드 완료 — 온보딩 세션');
+      } else {
+        CFG.system = CFG.system_base || '';
+      }
+    } catch (e) {
+      console.warn('[SP] PA SP 로드 실패 (AGENT-COMMON 사용):', e.message);
+      CFG.system = CFG.system_base || '';
+    }
+  } else {
+    // 일반 비서 모드 또는 계속 진행 중인 온보딩 세션 — system 변경 없음
+    if (!CFG.system) CFG.system = CFG.system_base || '';
+  }
 
   // ── 이미지 첨부 시: Gemini 범용 분석 → SP-00 컨텍스트 주입 ──
   if (imageFile && CFG.geminiKey) {
@@ -200,23 +448,6 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
       console.warn('[IMG] Gemini 분석 실패:', e.message);
     }
   }
-
-  // ── 그림자 SP 동적 컨텍스트 주입 (AGENT-COMMON v2.0 §10) ────────
-  // 그림자 SP(SP2)가 로드된 세션에서만 동작.
-  // PDV 요약 + 현재 위치 + 미완료 작업을 시스템 프롬프트 끝에 주입.
-  // LLM은 IndexedDB에 직접 접근 불가하므로 클라이언트가 세션마다 주입.
-  if (CFG.system && CFG.system.includes('AGENT-COMMON v2.0')) {
-    try {
-      const dynamicCtx = await _buildShadowContext();
-      if (dynamicCtx) {
-        CFG.system = CFG.system_base + '\n\n' + dynamicCtx;
-      }
-    } catch (e) {
-      console.warn('[Shadow] 동적 컨텍스트 주입 실패 (무시):', e.message);
-    }
-  }
-
-  // locNote는 _buildLocNote()로 분리 — 최초 1회만 system에 삽입됨
 
   // ── 이미지 → content 배열 변환 ──────────────────────
   let userContent;
@@ -294,45 +525,38 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
   }
 
   // ── history에 system(최초) 및 user 추가 ─────────────────
-  // history 구조: [system(index 0, 고정), user, assistant, user, assistant, ...]
-
   // 1) system: 세션 최초 1회만 history[0]으로 삽입
-  //    ★ 캐시 최적화: system은 완전 정적 — locNote/GUID 미포함
-  //    DeepSeek prefix cache가 system을 캐시 prefix unit으로 인식,
-  //    이후 모든 요청에서 system 토큰 90% 절감 (~95% 캐시 적중)
+  //    ★ 캐시 최적화: system은 완전 정적 — 동적 데이터는 user 메시지에 병합
+  //    DeepSeek Auto Prompt Caching이 system prefix를 영구 캐시
+  //    → 수백 번 호출해도 system 토큰 비용 사실상 0
   if (history.length === 0) {
     history.push({ role: 'system', content: CFG.system });
-    console.log('[Cache] 세션 최초 — 정적 system 삽입 (캐시 최적화)');
+    console.log('[Cache] 세션 최초 — 정적 system 삽입 (DeepSeek 캐시 최적화)');
   }
-  // history[0] system 고정 유지 — 전문가 SP 없으므로 교체 불필요
 
-  // 2) user: messages 전송 직전에 history에 추가
-  const userRecord = { role: 'user', content: typeof userContent === 'string' ? userContent : `[첨부: 이미지]` };
+  // 2) 동적 컨텍스트를 현재 user 메시지 앞에 병합
+  //    ★ system prefix를 건드리지 않으므로 캐시 적중률 95%+ 유지
+  //    온보딩 중: [CONTEXT: PROFILE_ONBOARDING] 블록 삽입
+  //    일반 모드: GUID + 위치 + PDV 요약 (RAG 스타일, 압축)
+  const enhancedUserContent = await _buildEnhancedUserContent(userContent, _isOnboarding);
+
+  // 3) user 레코드는 원본(userContent)으로 history에 저장
+  //    → enhancedUserContent(컨텍스트 포함)는 messages 전송용으로만 사용
+  const userRecord = { role: 'user', content: typeof userContent === 'string' ? userContent : '[첨부: 이미지]' };
   history.push(userRecord);
 
-  // 3) messages 구성
-  //    ★ 캐시 구조: system(정적, 캐시됨) → ctx(동적, 매번) → 대화 → user
-  //    system이 항상 동일 → DeepSeek이 prefix unit으로 캐시 유지
-  //    locNote·GUID는 history 밖 별도 ctx 메시지로 주입 → 캐시 prefix 보호
-  const locNote = _buildLocNote();
-  const ctxParts = [];
-  if (USER_GUID) ctxParts.push(`사용자:${USER_GUID.slice(-8)}`);
-  if (locNote)   ctxParts.push(locNote.trim());
-  const ctxMsg = ctxParts.length
-    ? [{ role: 'user',      content: `[ctx]${ctxParts.join(' ')}` },
-       { role: 'assistant', content: '확인.' }]
-    : [];
-
-  // history에서 system(index 0) 분리 + 최근 대화 슬라이싱
-  const sysMsg   = history[0]?.role === 'system' ? [history[0]] : [];
-  const dialogs  = history.slice(1);  // system 제외 대화
-  const recent   = dialogs.slice(-18); // 최근 18턴 (ctx 2턴 + user 합산 20)
+  // 4) messages 구성
+  //    ★ 구조: [system(고정·캐시)] → [대화이력] → [user(동적ctx 병합)]
+  //    기존의 ctxMsg([ctx]GUID+위치 별도 메시지 쌍) 완전 제거
+  //    — ctxMsg가 system 바로 뒤에 오면 캐시 prefix가 매번 달라져 캐시 0% 적중
+  const sysMsg  = history[0]?.role === 'system' ? [history[0]] : [];
+  const dialogs = history.slice(1);           // system 제외 대화
+  const recent  = dialogs.slice(-18);         // 최근 18턴
 
   const messages = [
-    ...sysMsg,                                      // [0] system (정적, 캐시됨)
-    ...ctxMsg,                                      // [1-2] 동적 ctx (GUID+위치)
-    ...recent.slice(0, -1),                         // 대화 이력
-    { role: 'user', content: userContent },         // 현재 user
+    ...sysMsg,                                // ★ system (완전 정적 → DeepSeek 캐시 100%)
+    ...recent.slice(0, -1),                   // 대화 이력 (userRecord 제외)
+    { role: 'user', content: enhancedUserContent }, // ★ 동적 ctx + 현재 질문 (캐시 무관)
   ];
 
   // ── 호출 후보 목록 생성 (순차 페일오버) ──────────────────
@@ -447,6 +671,19 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     if (bubble) bubble.classList.remove('streaming');
 
 
+    // ── PROFILE 태그 처리 (SUBMIT / SKIP / 단계 업데이트) ───
+    // 온보딩 세션(_isOnboarding)에서만 실질적으로 동작.
+    // SUBMIT/SKIP 감지 시 history 초기화 + SP 전환 후 true 반환 → 후속 처리 생략.
+    const _profileHandled = await _handleProfileTags(fullReply, bubble);
+    if (_profileHandled) return;
+
+    // ── 그림자 SP 실행 태그 파서 (AGENT-COMMON v2.0 §9) ─────
+    if (CFG.system?.includes('AGENT-COMMON v2.0')) {
+      _parseShadowTags(fullReply).catch(e =>
+        console.warn('[Shadow] 태그 파서 오류 (무시):', e.message)
+      );
+    }
+
     // ── GWP 태그 감지 → 하위 시스템 새 탭 오픈 (SP-00 v10.0) ──
     const gwpMatch = fullReply.match(/\[GWP:([\w-]+)\]/);
     if (gwpMatch) {
@@ -454,16 +691,13 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
       const svcDef = (typeof getService === 'function') ? getService(svcId) : null;
       if (svcDef) {
         console.info('[GWP] LLM 판단 → 새 탭:', svcId);
-        // 버블에서 [GWP:...] 태그 제거 후 렌더링
         if (bubble) _updateStreamBubble(bubble, fullReply.replace(/\[GWP:[\w-]+\]\s*/, ''));
         _gwpLaunch(svcDef, userText, _preTab);
       } else {
         console.warn('[GWP] 알 수 없는 서비스 ID:', svcId);
-        // 미등록 서비스 → 예약된 빈 탭 닫기
         if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
       }
     } else {
-      // GWP 태그 없음 = 직접 처리 → 예약된 빈 탭 닫기
       if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) {
         _preTab.close();
         console.info('[GWP] 직접 처리 — 예약 탭 닫힘');
@@ -477,38 +711,13 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
       const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
       const currentLevel = stored?.authLevel || 'L0';
       const levels = ['L0','L1','L2','L3'];
-      const needsUpgrade = levels.indexOf(requiredLevel) > levels.indexOf(currentLevel);
-
-      if (needsUpgrade) {
-        // 인증 버튼 주입
+      if (levels.indexOf(requiredLevel) > levels.indexOf(currentLevel)) {
         setTimeout(() => _injectAuthConfirmButton(requiredLevel), 400);
       }
     }
 
     // K-Law 백그라운드 감시 트리거 — 대화 내용 자동 검토 (비동기)
     setTimeout(() => _klawReview('conversation', null), 3000);
-
-    // ── PROFILE_SUBMIT 감지 → Worker POST + PDV 초기화 ──────
-    if (fullReply.includes('PROFILE_SUBMIT')) {
-      import('../ui/welcome.js').then(({ handleProfileSubmit }) => {
-        handleProfileSubmit(fullReply);
-      }).catch(e => console.warn('[Profile] handleProfileSubmit import 실패:', e.message));
-    }
-
-    // ── 그림자 SP 실행 태그 파서 (AGENT-COMMON v2.0 §9) ─────
-    // SP2(그림자) 세션에서만 동작. 각 태그를 순서대로 처리.
-    if (CFG.system?.includes('AGENT-COMMON v2.0')) {
-      _parseShadowTags(fullReply).catch(e =>
-        console.warn('[Shadow] 태그 파서 오류 (무시):', e.message)
-      );
-    }
-
-    // ── hondi_profile_step 업데이트 ──────────────────────────
-    // AI가 "[N/7단계]" 패턴을 출력하면 현재 단계를 저장
-    const stepMatch = fullReply.match(/\[(\d+)\/\d+단계\]/);
-    if (stepMatch && !localStorage.getItem('hondi_profile_done')) {
-      try { localStorage.setItem('hondi_profile_step', stepMatch[1]); } catch {}
-    }
 
 
   } catch (err) {
@@ -550,60 +759,18 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
 
 
 
-// ── _buildShadowContext — 그림자 SP 동적 컨텍스트 빌더 ───────────────
-// AGENT-COMMON v2.0 §10: 세션 시작 시 PDV 요약·위치·미완료 작업 주입
+// ── _buildShadowContext — DEPRECATED (v1.1) ─────────────────────────
+// 동적 컨텍스트를 system에 주입하던 방식 → _buildEnhancedUserContent로 대체.
+// DeepSeek Auto Prompt Caching: system을 완전 정적으로 유지해야 캐시 적중.
+// 이 함수는 더 이상 호출되지 않으며, 다음 버전에서 제거됩니다.
 async function _buildShadowContext() {
-  const lines = [];
-
-  // 1) 현재 세션 기본 정보
-  const { _USER, USER_GUID, _userLocation } = await import('../core/state.js');
-  const userName = _USER?.name || _USER?.nickname || '이용자';
-  const now = new Date().toISOString();
-
-  lines.push('--- [CONTEXT: 현재 세션 정보] ---');
-  lines.push(`USER_GUID: ${USER_GUID || '미연결'}`);
-  lines.push(`USER_NAME: ${userName}`);
-
-  // 2) 위치 정보
-  if (_userLocation?.lat) {
-    lines.push(`LOCATION: ${_userLocation.city || '위치확인중'} (lat=${_userLocation.lat.toFixed(4)}, lng=${_userLocation.lng.toFixed(4)})`);
-  } else {
-    lines.push('LOCATION: 위치 정보 없음 (GPS 미허용 또는 대기 중)');
-  }
-  lines.push(`TIMESTAMP: ${now}`);
-
-  // 3) PDV 요약 — IndexedDB gopang_pdv_chat에서 최근 항목 인출
-  lines.push('');
-  lines.push('--- [PDV: 이용자 요약] ---');
-  try {
-    const pdvSummary = await _loadPdvSummary();
-    if (pdvSummary.length > 0) {
-      pdvSummary.forEach(item => lines.push(`${item.key}: ${item.value}`));
-    } else {
-      lines.push('PDV 데이터 없음 — 대화로 점진적 축적');
-    }
-  } catch {
-    lines.push('PDV 데이터 없음 — 대화로 점진적 축적');
-  }
-
-  // 4) 미완료 작업
-  const pending = [];
-  const profileStep = localStorage.getItem('hondi_profile_step');
-  if (profileStep && !localStorage.getItem('hondi_profile_done')) {
-    pending.push(`프로필 작성 ${profileStep}단계 미완료`);
-  }
-  if (pending.length > 0) {
-    lines.push('');
-    lines.push('--- [PENDING: 미완료 작업] ---');
-    pending.forEach(p => lines.push(`- ${p}`));
-  }
-
-  return lines.join('\n');
+  console.warn('[Shadow] _buildShadowContext는 deprecated — _buildEnhancedUserContent 사용');
+  return '';
 }
 
 // ── _loadPdvSummary — PDV IndexedDB에서 요약 항목 인출 ──────────────
-// gopang_pdv_chat DB의 최근 PDV_STORE 항목 중 preference/relation/economic
-// 유형만 인출해 요약 (민감 정보 health는 제외)
+// _buildEnhancedUserContent 내부에서 localStorage 기반으로 간소화됨.
+// IndexedDB 기반 상세 조회가 필요한 경우를 위해 보존.
 async function _loadPdvSummary() {
   return new Promise((resolve) => {
     const SAFE_TYPES = ['preference', 'relation', 'economic', 'location'];
@@ -620,9 +787,8 @@ async function _loadPdvSummary() {
           const items = (all.result || [])
             .filter(m => m.pdv && SAFE_TYPES.includes(m.pdv.type))
             .sort((a, b) => new Date(b.ts || 0) - new Date(a.ts || 0))
-            .slice(0, 20) // 최근 20개
+            .slice(0, 20)
             .reduce((acc, m) => {
-              // 동일 key는 최신값만 유지
               if (!acc.find(x => x.key === m.pdv.key)) {
                 acc.push({ key: m.pdv.key, value: m.pdv.value });
               }
