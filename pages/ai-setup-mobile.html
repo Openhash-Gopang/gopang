@@ -3,712 +3,593 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 비서 활성화 — 혼디</title>
+<title>AI 비서 설정 — 혼디</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" as="style" crossorigin
   href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --brand: #1a9e6a; --border: #e0e0e0; --bg: #fafafa; --surface: #ffffff;
+  --brand: #1a9e6a; --border: #e0e0e0; --bg: #f5f5f5; --surface: #ffffff;
   --text: #212121; --text2: #424242; --text3: #757575; --text4: #9e9e9e;
-  --divider: #eeeeee; --error: #b00020; --r: 4px; --fs: 1;
+  --divider: #eeeeee; --error: #c62828; --r: 8px; --fs: 1;
 }
 html, body {
-  height: 100%; background: var(--bg); color: var(--text);
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  min-height: 100%; background: var(--bg); color: var(--text);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px; line-height: 1.55; -webkit-font-smoothing: antialiased;
 }
-#_head {
+#_hdr {
   position: sticky; top: 0; z-index: 50;
   background: var(--surface); border-bottom: 1px solid var(--border);
-  padding: 16px 16px 12px;
+  padding: 14px 16px 12px;
 }
-#_head-title { font-size: calc(16px * var(--fs)); font-weight: 700; }
-#_head-desc  { font-size: calc(12px * var(--fs)); color: var(--text3); margin-top: 4px; line-height: 1.6; }
-#_fs-row { position: absolute; top: 14px; right: 16px; display: flex; }
-.fs-btn {
-  width: 28px; height: 28px; border: 1px solid var(--border); background: var(--surface);
-  color: var(--text3); cursor: pointer; font-family: inherit; font-weight: 600;
-}
-.fs-btn:first-child { border-radius: var(--r) 0 0 var(--r); font-size: 10px; }
-.fs-btn:last-child  { border-radius: 0 var(--r) var(--r) 0; font-size: 15px; border-left: none; }
-
-#_body { max-width: 600px; margin: 0 auto; padding: 12px 16px 120px; }
-
-.card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
-  margin-bottom: 10px; overflow: hidden;
-}
-.card-head {
-  display: flex; align-items: center; gap: 10px; padding: 14px 14px;
-  cursor: pointer; user-select: none;
-}
-.card-num {
-  flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
-  background: var(--bg); border: 1px solid var(--border); color: var(--text3);
-  font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;
-}
-.card-num[data-handle] { cursor: grab; touch-action: none; }
-.card-num[data-handle]:active { cursor: grabbing; }
-.card.filled .card-num { background: var(--brand); border-color: var(--brand); color: #fff; }
-.card.dragging { opacity: .5; }
-.card-order-btns { display: flex; flex-direction: column; gap: 2px; margin-left: 2px; }
-.order-btn {
-  width: 20px; height: 16px; padding: 0; line-height: 1;
-  border: 1px solid var(--border); border-radius: 2px;
-  background: var(--surface); color: var(--text3); font-size: 8px; cursor: pointer;
-}
-.order-btn:disabled { opacity: .25; cursor: default; }
-.order-btn:not(:disabled):hover { border-color: var(--brand); color: var(--brand); }
-.card-titles { flex: 1; min-width: 0; }
-.card-name { font-size: calc(14px * var(--fs)); font-weight: 700; color: var(--text); }
-.card-name small { font-weight: 500; color: var(--text3); margin-left: 4px; font-size: calc(11px * var(--fs)); }
-.card-badge {
-  display: inline-block; margin-top: 3px; font-size: calc(10.5px * var(--fs));
-  color: var(--text3); border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px;
-}
-.card-badge.free  { color: var(--brand); border-color: var(--brand); }
-.card-chev { flex-shrink: 0; color: var(--text4); font-size: 11px; transition: transform .15s; }
-.card.open .card-chev { transform: rotate(180deg); }
-.card-body { display: none; padding: 0 14px 16px; border-top: 1px solid var(--divider); }
-.card.open .card-body { display: block; }
-.card-desc {
-  font-size: calc(12.5px * var(--fs)); color: var(--text2); line-height: 1.7;
-  padding-top: 12px; margin-bottom: 10px;
-}
-.card-desc b { color: var(--text); font-weight: 600; }
-.card-link-row { display: flex; gap: 8px; margin-bottom: 10px; }
-.card-open-btn {
-  flex: 1; height: 38px; border: 1px solid var(--brand); border-radius: var(--r);
-  background: var(--surface); color: var(--brand);
-  font-size: calc(12.5px * var(--fs)); font-family: inherit; font-weight: 600;
-  cursor: pointer; transition: background .15s;
-}
-.card-open-btn:hover { background: #f0fdf8; }
-.card-open-btn:disabled { opacity: .45; cursor: default; }
-.card-status {
-  display: none; font-size: calc(11.5px * var(--fs)); color: var(--text3);
-  background: var(--bg); border: 1px solid var(--border); border-radius: var(--r);
-  padding: 7px 10px; margin-bottom: 10px; text-align: center;
-}
-.card-status.active { display: block; }
-.card-status b { color: var(--brand); }
-.key-row { display: flex; gap: 8px; margin-bottom: 8px; }
-.key-input {
-  flex: 1; min-width: 0; height: 38px; padding: 0 10px;
-  border: 1px solid var(--border); border-radius: var(--r);
-  font-size: calc(12.5px * var(--fs));
-  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  color: var(--text); background: var(--surface); outline: none; transition: border-color .15s;
-}
-.key-input:focus { border-color: var(--brand); }
-.key-input::placeholder { color: var(--text4); font-family: inherit; }
-.paste-btn {
-  flex-shrink: 0; height: 38px; padding: 0 12px;
-  border: 1px solid var(--border); border-radius: var(--r);
-  background: var(--surface); color: var(--text2);
-  font-size: calc(12px * var(--fs)); font-family: inherit; font-weight: 500;
-  cursor: pointer; transition: border-color .15s, color .15s, background .15s;
-}
-.paste-btn.highlight { border-color: var(--brand); background: #f0fdf8; color: var(--brand); }
-.model-row { margin-bottom: 4px; }
-.model-select {
-  width: 100%; height: 38px; padding: 0 10px;
-  border: 1px solid var(--border); border-radius: var(--r);
-  font-size: calc(12.5px * var(--fs)); font-family: inherit;
-  color: var(--text2); background: var(--surface); outline: none;
-}
-.model-custom {
-  width: 100%; height: 38px; padding: 0 10px; margin-top: 6px; display: none;
-  border: 1px solid var(--border); border-radius: var(--r);
-  font-size: calc(12.5px * var(--fs)); font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  color: var(--text); background: var(--surface); outline: none;
-}
-.model-custom.show { display: block; }
-.card-msg { font-size: calc(11px * var(--fs)); color: var(--text3); margin-top: 6px; min-height: 14px; }
-.card-msg.ok    { color: var(--brand); }
-.card-msg.error { color: var(--error); }
-.card-foot {
-  margin-top: 10px; font-size: calc(11px * var(--fs)); color: var(--text4); line-height: 1.7;
-}
-
-#_bottom {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
-  background: var(--surface); border-top: 1px solid var(--border);
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-}
-#_bottom-inner { max-width: 600px; margin: 0 auto; }
-#_save-summary { font-size: calc(11.5px * var(--fs)); color: var(--text3); margin-bottom: 8px; text-align: center; }
-#_save-summary b { color: var(--brand); }
-#_save-btn {
-  width: 100%; height: 44px; border: none; border-radius: var(--r);
+#_hdr-title { font-size: 17px; font-weight: 700; margin-bottom: 2px; }
+#_hdr-sub   { font-size: 12px; color: var(--text3); }
+#_save-fab {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  z-index: 100; min-width: 200px; height: 52px;
   background: var(--brand); color: #fff;
-  font-size: calc(14px * var(--fs)); font-family: inherit; font-weight: 700;
-  letter-spacing: .02em; cursor: pointer; transition: opacity .15s;
+  border: none; border-radius: 26px;
+  font-size: 15px; font-weight: 700; font-family: inherit;
+  cursor: pointer; box-shadow: 0 4px 16px rgba(26,158,106,.4);
+  transition: opacity .2s;
 }
-#_save-btn:disabled { opacity: .5; cursor: default; }
-#_save-msg { font-size: calc(11px * var(--fs)); color: var(--text3); margin-top: 6px; text-align: center; min-height: 14px; }
-#_save-msg.error { color: var(--error); }
-
-/* 완료 오버레이 */
+#_save-fab:disabled { opacity: .5; cursor: default; }
 #_done {
   display: none; position: fixed; inset: 0; z-index: 200;
-  background: var(--surface); flex-direction: column;
-  align-items: center; justify-content: center; padding: 40px 24px; text-align: center;
+  background: var(--surface);
+  flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 24px; text-align: center; gap: 12px;
 }
 #_done.visible { display: flex; }
-#_done-title { font-size: calc(18px * var(--fs)); font-weight: 700; color: var(--text); margin-bottom: 10px; }
-#_done-desc  { font-size: calc(13px * var(--fs)); color: var(--text3); line-height: 1.7; max-width: 320px; }
-#_done-bar   { width: 100%; max-width: 320px; height: 3px; background: var(--divider); border-radius: 2px; margin-top: 28px; overflow: hidden; }
-#_done-prog  { height: 100%; background: var(--brand); border-radius: 2px; width: 0; }
+#_done-icon  { font-size: 48px; }
+#_done-title { font-size: 20px; font-weight: 700; }
+#_done-desc  { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.7; }
+#_done-bar   { width: 260px; height: 4px; background: var(--divider); border-radius: 2px; overflow: hidden; }
+#_done-prog  { height: 100%; background: var(--brand); width: 0; }
+#_body { max-width: 600px; margin: 0 auto; padding: 16px 16px 120px; }
+.info-banner {
+  background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: var(--r);
+  padding: 12px 14px; font-size: 12.5px; color: #2e7d32; line-height: 1.7;
+  margin-bottom: 20px;
+}
+.info-banner b { font-weight: 700; }
+.llm-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); margin-bottom: 12px; overflow: hidden;
+  transition: border-color .2s;
+}
+.llm-card.has-key { border-color: var(--brand); }
+.llm-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; cursor: pointer; user-select: none;
+}
+.llm-rank {
+  flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--bg); border: 1px solid var(--border);
+  font-size: 11px; font-weight: 700; color: var(--text3);
+  display: flex; align-items: center; justify-content: center;
+}
+.llm-card.has-key .llm-rank { background: var(--brand); border-color: var(--brand); color: #fff; }
+.llm-logo { font-size: 22px; flex-shrink: 0; }
+.llm-info { flex: 1; min-width: 0; }
+.llm-name { font-size: 15px; font-weight: 700; }
+.llm-tagline { font-size: 12px; color: var(--text3); margin-top: 1px; }
+.llm-badge {
+  flex-shrink: 0; font-size: 11px; font-weight: 600;
+  padding: 3px 8px; border-radius: 99px; border: 1px solid;
+}
+.badge-free  { color: #1565c0; border-color: #90caf9; background: #e3f2fd; }
+.badge-pay   { color: #6a1b9a; border-color: #ce93d8; background: #f3e5f5; }
+.badge-saved { color: var(--brand); border-color: #a5d6a7; background: #e8f5e9; }
+.llm-chevron { flex-shrink: 0; font-size: 12px; color: var(--text4); transition: transform .2s; }
+.llm-card.open .llm-chevron { transform: rotate(180deg); }
+.llm-body { display: none; border-top: 1px solid var(--divider); padding: 14px 16px 16px; }
+.llm-card.open .llm-body { display: block; }
+.llm-specs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.spec-box { background: var(--bg); border-radius: 6px; padding: 8px 10px; }
+.spec-label { font-size: 10px; color: var(--text4); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.spec-value { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 2px; }
+.spec-note  { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.steps {
+  background: var(--bg); border-radius: 6px;
+  padding: 10px 12px; margin-bottom: 12px;
+  font-size: 12.5px; color: var(--text2); line-height: 1.9;
+}
+.steps ol { padding-left: 16px; }
+.steps a  { color: var(--brand); text-decoration: none; font-weight: 600; }
+.steps-note { margin-top: 6px; color: var(--text3); font-size: 12px; }
+.key-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.key-input {
+  flex: 1; min-width: 0; height: 40px; padding: 0 12px;
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 12.5px; font-family: ui-monospace, Menlo, monospace;
+  color: var(--text); background: var(--surface); outline: none;
+  transition: border-color .15s;
+}
+.key-input:focus { border-color: var(--brand); }
+.key-input.saved { border-color: var(--brand); background: #f0fdf4; }
+.key-input::placeholder { color: var(--text4); font-family: inherit; }
+.btn-sm {
+  flex-shrink: 0; height: 40px; padding: 0 12px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--text2);
+  font-size: 12.5px; font-family: inherit; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: border-color .15s, color .15s;
+}
+.btn-sm:hover { border-color: var(--brand); color: var(--brand); }
+.key-msg { font-size: 11.5px; min-height: 16px; color: var(--text3); }
+.key-msg.ok    { color: var(--brand); }
+.key-msg.error { color: var(--error); }
+.poll-status {
+  display: none; background: #fff8e1; border: 1px solid #ffe082;
+  border-radius: 6px; padding: 8px 12px;
+  font-size: 12px; color: #f57f17; margin-bottom: 8px; text-align: center;
+}
+.poll-status.active { display: block; }
 </style>
 </head>
 <body>
 
-<div id="_head">
-  <div id="_fs-row">
-    <button class="fs-btn" id="_fs_dec">가</button>
-    <button class="fs-btn" id="_fs_inc">가</button>
-  </div>
-  <div id="_head-title">AI 비서 활성화</div>
-  <div id="_head-desc">
-    아래 카드의 <b>번호를 끌어서</b> 또는 ▲▼ 버튼으로 호출 순서를 직접 정할 수 있습니다.
-    등록된 항목이 위에서부터 차례로 시도되며, 한도 초과·오류 시 다음 순서로 자동 전환됩니다.
-    분당 호출 수도 자동으로 제한해 한도초과를 예방합니다. 하나도 등록하지 않아도 OpenRouter 무료 모델만으로 시작할 수 있습니다.
-    각 모델의 성능·비용 비율은 공개 벤치마크·가격표를 참고한 대략적인 추정치이며(기준: Claude Sonnet 4.6 = 100%·1배), 실제 체감은 작업에 따라 다를 수 있습니다.
-  </div>
+<div id="_hdr">
+  <div id="_hdr-title">🤖 AI 비서 설정</div>
+  <div id="_hdr-sub">입력한 키는 이 기기에만 저장됩니다 · 서버로 전송되지 않습니다</div>
 </div>
 
-<div id="_body">
-  <div id="_cards"></div>
-</div>
-
-<div id="_bottom">
-  <div id="_bottom-inner">
-    <div id="_save-summary">등록된 항목이 없으면 <b>OpenRouter 무료 모델</b>로 시작합니다.</div>
-    <button id="_save-btn">저장하고 시작하기</button>
-    <div id="_save-msg">이 기기에만 저장됩니다. 서버로 전송되지 않습니다.</div>
-  </div>
-</div>
-
-<!-- 완료 오버레이 -->
 <div id="_done">
-  <div id="_done-title">AI 비서 활성화 완료</div>
+  <div id="_done-icon">✅</div>
+  <div id="_done-title">저장 완료</div>
   <div id="_done-desc"></div>
   <div id="_done-bar"><div id="_done-prog"></div></div>
 </div>
 
-<script type="module">
-import { buildLiveFreeModelPool } from '../src/gopang/core/free-model-pool.js';
+<div id="_body">
 
-// ── Provider 정의 (core/config.js PRIORITY_ORDER와 동일 순서) ─────────
-// badge: 'free' | 'credit' | 'paid'
-//   free   = 사실상 무제한·영구 무료 한도 (카드 불필요)
-//   credit = 가입 시 일정 크레딧/토큰 지급, 소진 후 결제 필요
-//   paid   = 무료 한도가 거의 없어 사실상 유료
-// 성능%·비용비율은 공개 벤치마크·가격표를 참고한 대략적 추정치입니다(2026-06-24 기준).
-// 기준(=100%, 1배): Claude Sonnet 4.6 ($3/$15 per 1M input/output)
-const PROVIDERS = [
-  {
-    id: 'openrouter', name: 'OpenRouter', sub: '무료풀', badge: 'free',
-    badgeText: '무료 (카드 불필요)',
-    desc: '키 하나로 매일 약 200회, 20개 이상의 무료 모델을 컨텍스트·성능 기준으로 검증된 순서대로 자동 시도합니다. Claude·Grok이 OpenRouter에 무료 모델을 새로 올리면 발견 즉시 최우선으로 자동 반영됩니다(현재는 둘 다 무료 모델이 없어 적용되지 않음). 모델 목록은 매번 실시간 검증해 자동 구성되므로 따로 선택할 필요가 없습니다. 분당 호출 수도 자동으로 제한해 한도초과를 예방합니다.',
-    linkLabel: 'openrouter.ai/keys 새 탭으로 열기',
-    link: 'https://openrouter.ai/keys',
-    steps: 'Google 계정으로 로그인 → + New Key → Create',
-    keyPlaceholder: 'sk-or-v1-...',
-    models: null,
-  },
-  {
-    id: 'anthropic', name: 'Claude', sub: 'Anthropic', badge: 'credit',
-    badgeText: '가입크레딧 (소진 후 유료)',
-    desc: '추론·코딩·장문 작성에서 최상위권 품질입니다. 가입 시 일회성 테스트 크레딧(보통 $5 내외, 미지급되는 경우도 있음)만 제공되고 카드 등록이 필요합니다. 소진 후에는 충전해야 계속 쓸 수 있습니다. 아래 Sonnet이 비용·성능 비교의 기준(1배·100%)입니다.',
-    linkLabel: 'console.anthropic.com 새 탭으로 열기',
-    link: 'https://console.anthropic.com/settings/keys',
-    steps: 'console.anthropic.com 가입 → 결제수단 등록 → API Keys → Create Key',
-    keyPlaceholder: 'sk-ant-...',
-    models: [
-      { v: 'claude-haiku-4-5-20251001', t: 'Claude Haiku 4.5 — 성능 70~80% · 비용 1/3 · 유료' },
-      { v: 'claude-sonnet-4-6', t: 'Claude Sonnet 4.6 — 기준모델 · 비용 1배 · 유료 (권장)', rec: true },
-      { v: 'claude-opus-4-7', t: 'Claude Opus 4.7 — 성능 최상위 · 비용 1.7배 · 유료' },
-    ],
-  },
-  {
-    id: 'gemini', name: 'Gemini', sub: 'Google AI Studio', badge: 'free',
-    badgeText: '무료~유료 혼합 (Flash 무료한도)',
-    desc: 'Flash·Flash-Lite는 매일 일정량(보통 수백~1,500회)까지 카드 등록 없이 무료입니다. Pro 계열은 2026년부터 무료 제공이 종료돼 결제수단이 필요하지만, Claude Sonnet보다 오히려 약간 저렴하면서 성능은 동급 이상입니다.',
-    linkLabel: 'aistudio.google.com 새 탭으로 열기',
-    link: 'https://aistudio.google.com/apikey',
-    steps: 'Google 계정으로 로그인 → Create API key → 즉시 발급(카드 불필요)',
-    keyPlaceholder: 'AIza...',
-    models: [
-      { v: 'gemini-2.5-flash-lite', t: 'Gemini 2.5 Flash-Lite — 성능 50~60% · 비용 1/30~1/40 · 무료한도' },
-      { v: 'gemini-2.5-flash', t: 'Gemini 2.5 Flash — 성능 70~80% · 비용 1/6~1/10 · 무료한도 (권장)', rec: true },
-      { v: 'gemini-3.1-pro', t: 'Gemini 3.1 Pro — 성능 동급이상 · 비용 0.8배 · 유료전용' },
-    ],
-  },
-  {
-    id: 'deepseek', name: 'DeepSeek', sub: '', badge: 'credit',
-    badgeText: '가입크레딧 5M 토큰',
-    desc: '신규 계정에 약 500만 토큰 분량의 무료 크레딧이 지급되며, 별도의 분당 호출 제한이 거의 없습니다. V4 Flash는 압도적으로 저렴하고, V4 Pro는 Sonnet과 맞먹는 성능을 1/10 안팎의 비용으로 제공합니다.',
-    linkLabel: 'platform.deepseek.com 새 탭으로 열기',
-    link: 'https://platform.deepseek.com/api_keys',
-    steps: '이메일로 가입 → API Keys → Create new API key',
-    keyPlaceholder: 'sk-...',
-    models: [
-      { v: 'deepseek-v4-flash', t: 'DeepSeek V4 Flash — 성능 85~90% · 비용 1/20~1/50 · 가입크레딧 (권장)', rec: true },
-      { v: 'deepseek-v4-pro', t: 'DeepSeek V4 Pro — 성능 동급 · 비용 1/7~1/17 · 가입크레딧' },
-    ],
-  },
-  {
-    id: 'openai', name: 'ChatGPT', sub: 'OpenAI', badge: 'paid',
-    badgeText: '유료 (최소 $5 선결제)',
-    desc: '2025년 중반부터 신규가입 무료 크레딧이 폐지되었습니다. 카드 등록 후 최소 $5를 선결제해야 GPT 모델을 호출할 수 있습니다. GPT-5.4가 Sonnet과 거의 같은 가격대의 표준 모델입니다.',
-    linkLabel: 'platform.openai.com 새 탭으로 열기',
-    link: 'https://platform.openai.com/api-keys',
-    steps: '가입 → Billing에서 결제수단·최소 $5 등록 → API keys → Create new secret key',
-    keyPlaceholder: 'sk-...',
-    models: [
-      { v: 'gpt-5.4-nano', t: 'GPT-5.4 Nano — 성능 50~60% · 비용 1/12~1/15 · 유료' },
-      { v: 'gpt-5.4', t: 'GPT-5.4 — 성능 거의동급 · 비용 거의동일 · 유료 (권장)', rec: true },
-      { v: 'gpt-5.5', t: 'GPT-5.5 — 성능 동급이상(플래그십) · 비용 약 2배 · 유료' },
-    ],
-  },
-  {
-    id: 'xai', name: 'Grok', sub: 'xAI', badge: 'credit',
-    badgeText: '가입크레딧 (기간 한정)',
-    desc: '신규 계정에 약 $25 상당의 크레딧이 지급되며 보통 30~90일 내 소멸됩니다. 데이터 공유 동의 시 추가 월간 크레딧을 주는 프로그램이 운영되기도 하지만 정책이 자주 바뀌므로 콘솔에서 직접 확인하세요.',
-    linkLabel: 'console.x.ai 새 탭으로 열기',
-    link: 'https://console.x.ai',
-    steps: 'X 계정 또는 이메일로 가입 → API Keys → Create Key',
-    keyPlaceholder: 'xai-...',
-    models: [
-      { v: 'grok-4.1-fast', t: 'Grok 4.1 Fast — 성능 약 70% · 비용 1/22~1/30 · 가입크레딧 (권장)', rec: true },
-      { v: 'grok-4.3', t: 'Grok 4.3 — 성능 동급(추론특화) · 비용 약 1/5 · 가입크레딧' },
-    ],
-  },
+  <div class="info-banner">
+    <b>무료 또는 유료 API 키로 혼디 AI 비서를 사용할 수 있습니다.</b><br>
+    아래 LLM 중 하나 이상의 키를 발급받아 입력하세요.<br>
+    여러 개 입력할수록 안정성이 높아집니다. 1순위부터 순서대로 시도됩니다.
+  </div>
+
+  <!-- 1순위: Claude -->
+  <div class="llm-card" id="card-claude">
+    <div class="llm-head" onclick="_toggle('claude')">
+      <div class="llm-rank">1</div>
+      <div class="llm-logo">🟣</div>
+      <div class="llm-info">
+        <div class="llm-name">Claude <span style="font-size:11px;color:var(--text3)">(Anthropic)</span></div>
+        <div class="llm-tagline">한국어 최강 · 긴 문서 분석 · 안전성 1위</div>
+      </div>
+      <div class="llm-badge badge-pay" id="badge-claude">유료</div>
+      <div class="llm-chevron">▼</div>
+    </div>
+    <div class="llm-body">
+      <div class="llm-specs">
+        <div class="spec-box">
+          <div class="spec-label">성능</div>
+          <div class="spec-value">⭐⭐⭐⭐⭐</div>
+          <div class="spec-note">코딩·분석·창작 전반 최상위</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">비용</div>
+          <div class="spec-value">$3 / 1M 토큰</div>
+          <div class="spec-note">신규 $5 테스트 크레딧 (일회성)</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">컨텍스트</div>
+          <div class="spec-value">200K 토큰</div>
+          <div class="spec-note">약 책 1.5권 분량</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">한국어</div>
+          <div class="spec-value">🇰🇷 최상</div>
+          <div class="spec-note">뉘앙스·존댓말 완벽 이해</div>
+        </div>
+      </div>
+      <div class="steps">
+        <ol>
+          <li><a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a> 접속 → 회원가입</li>
+          <li>신용카드 등록 (무료 크레딧 $5 자동 지급)</li>
+          <li>좌측 메뉴 <b>API Keys</b> → <b>Create Key</b></li>
+          <li><code>sk-ant-</code>로 시작하는 키 복사 → 아래 입력</li>
+        </ol>
+        <div class="steps-note">💡 신규 $5 테스트 크레딧 (신용카드 불필요) · 소진 후 유료 · 성능은 최상</div>
+      </div>
+      <div class="poll-status" id="poll-claude">🔍 새 탭에서 키를 복사하면 자동으로 입력됩니다…</div>
+      <div class="key-row">
+        <input class="key-input" id="key-claude" type="password" placeholder="sk-ant-api03-..." autocomplete="off">
+        <button class="btn-sm" onclick="_openTab('claude','https://console.anthropic.com/settings/keys')">발급</button>
+        <button class="btn-sm" onclick="_paste('claude')">붙여넣기</button>
+      </div>
+      <div class="key-msg" id="msg-claude"></div>
+    </div>
+  </div>
+
+  <!-- 2순위: Gemini -->
+  <div class="llm-card" id="card-gemini">
+    <div class="llm-head" onclick="_toggle('gemini')">
+      <div class="llm-rank">2</div>
+      <div class="llm-logo">🔵</div>
+      <div class="llm-info">
+        <div class="llm-name">Gemini <span style="font-size:11px;color:var(--text3)">(Google)</span></div>
+        <div class="llm-tagline">무료 한도 최대 · 1M 컨텍스트 · 빠른 속도</div>
+      </div>
+      <div class="llm-badge badge-free" id="badge-gemini">무료</div>
+      <div class="llm-chevron">▼</div>
+    </div>
+    <div class="llm-body">
+      <div class="llm-specs">
+        <div class="spec-box">
+          <div class="spec-label">성능</div>
+          <div class="spec-value">⭐⭐⭐⭐½</div>
+          <div class="spec-note">멀티모달·검색 연동 강점</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">비용</div>
+          <div class="spec-value">완전 무료</div>
+          <div class="spec-note">1,500 req/일 무료</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">컨텍스트</div>
+          <div class="spec-value">1M 토큰</div>
+          <div class="spec-note">업계 최장 컨텍스트</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">한국어</div>
+          <div class="spec-value">🇰🇷 상</div>
+          <div class="spec-note">구글 기반 우수한 한국어</div>
+        </div>
+      </div>
+      <div class="steps">
+        <ol>
+          <li><a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> 접속</li>
+          <li>Google 계정으로 로그인 (Gmail 계정)</li>
+          <li><b>Create API key</b> 클릭 → 프로젝트 선택 또는 새로 만들기</li>
+          <li><code>AIzaSy</code>로 시작하는 키 복사 → 아래 입력</li>
+        </ol>
+        <div class="steps-note">⚡ Google 계정만 있으면 1분 내 발급 · 신용카드 불필요</div>
+      </div>
+      <div class="poll-status" id="poll-gemini">🔍 새 탭에서 키를 복사하면 자동으로 입력됩니다…</div>
+      <div class="key-row">
+        <input class="key-input" id="key-gemini" type="password" placeholder="AIzaSy..." autocomplete="off">
+        <button class="btn-sm" onclick="_openTab('gemini','https://aistudio.google.com/apikey')">발급</button>
+        <button class="btn-sm" onclick="_paste('gemini')">붙여넣기</button>
+      </div>
+      <div class="key-msg" id="msg-gemini"></div>
+    </div>
+  </div>
+
+  <!-- 3순위: DeepSeek -->
+  <div class="llm-card" id="card-deepseek">
+    <div class="llm-head" onclick="_toggle('deepseek')">
+      <div class="llm-rank">3</div>
+      <div class="llm-logo">🐋</div>
+      <div class="llm-info">
+        <div class="llm-name">DeepSeek <span style="font-size:11px;color:var(--text3)">(DeepSeek AI)</span></div>
+        <div class="llm-tagline">추론·코딩 최강 · 5M 토큰 무료 · 초저가</div>
+      </div>
+      <div class="llm-badge badge-free" id="badge-deepseek">무료시작</div>
+      <div class="llm-chevron">▼</div>
+    </div>
+    <div class="llm-body">
+      <div class="llm-specs">
+        <div class="spec-box">
+          <div class="spec-label">성능</div>
+          <div class="spec-value">⭐⭐⭐⭐⭐</div>
+          <div class="spec-note">추론·코딩 Claude와 동급</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">비용</div>
+          <div class="spec-value">무료 → 유료</div>
+          <div class="spec-note">신규 5M 토큰 무료 후 $0.14/1M</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">컨텍스트</div>
+          <div class="spec-value">64K 토큰</div>
+          <div class="spec-note">일반 대화에 충분</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">한국어</div>
+          <div class="spec-value">🇰🇷 중상</div>
+          <div class="spec-note">한국어 이해 양호</div>
+        </div>
+      </div>
+      <div class="steps">
+        <ol>
+          <li><a href="https://platform.deepseek.com/api_keys" target="_blank">platform.deepseek.com</a> 접속 → 이메일 회원가입</li>
+          <li>이메일 인증 완료 후 로그인</li>
+          <li><b>API Keys</b> → <b>Create new secret key</b></li>
+          <li><code>sk-</code>로 시작하는 키 복사 → 아래 입력</li>
+        </ol>
+        <div class="steps-note">🎁 신규 가입 시 5백만 토큰 무료 (약 3,000~5,000번 대화) · 신용카드 불필요</div>
+      </div>
+      <div class="poll-status" id="poll-deepseek">🔍 새 탭에서 키를 복사하면 자동으로 입력됩니다…</div>
+      <div class="key-row">
+        <input class="key-input" id="key-deepseek" type="password" placeholder="sk-..." autocomplete="off">
+        <button class="btn-sm" onclick="_openTab('deepseek','https://platform.deepseek.com/api_keys')">발급</button>
+        <button class="btn-sm" onclick="_paste('deepseek')">붙여넣기</button>
+      </div>
+      <div class="key-msg" id="msg-deepseek"></div>
+    </div>
+  </div>
+
+  <!-- 4순위: ChatGPT -->
+  <div class="llm-card" id="card-openai">
+    <div class="llm-head" onclick="_toggle('openai')">
+      <div class="llm-rank">4</div>
+      <div class="llm-logo">🟢</div>
+      <div class="llm-info">
+        <div class="llm-name">ChatGPT <span style="font-size:11px;color:var(--text3)">(OpenAI)</span></div>
+        <div class="llm-tagline">범용 최강 · 이미지 생성 · GPT-4o</div>
+      </div>
+      <div class="llm-badge badge-pay" id="badge-openai">유료</div>
+      <div class="llm-chevron">▼</div>
+    </div>
+    <div class="llm-body">
+      <div class="llm-specs">
+        <div class="spec-box">
+          <div class="spec-label">성능</div>
+          <div class="spec-value">⭐⭐⭐⭐⭐</div>
+          <div class="spec-note">GPT-4o · 이미지 생성 포함</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">비용</div>
+          <div class="spec-value">$2.5 / 1M</div>
+          <div class="spec-note">신규 $5 무료 크레딧</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">컨텍스트</div>
+          <div class="spec-value">128K 토큰</div>
+          <div class="spec-note">긴 문서 처리 가능</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">한국어</div>
+          <div class="spec-value">🇰🇷 상</div>
+          <div class="spec-note">자연스러운 한국어</div>
+        </div>
+      </div>
+      <div class="steps">
+        <ol>
+          <li><a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a> 접속</li>
+          <li>OpenAI 계정 로그인 (ChatGPT 계정과 동일)</li>
+          <li>신용카드 등록 → <b>Create new secret key</b></li>
+          <li><code>sk-proj-</code>로 시작하는 키 복사 → 아래 입력</li>
+        </ol>
+        <div class="steps-note">💡 ChatGPT Plus 구독자도 API 키는 별도 발급 필요</div>
+      </div>
+      <div class="poll-status" id="poll-openai">🔍 새 탭에서 키를 복사하면 자동으로 입력됩니다…</div>
+      <div class="key-row">
+        <input class="key-input" id="key-openai" type="password" placeholder="sk-proj-..." autocomplete="off">
+        <button class="btn-sm" onclick="_openTab('openai','https://platform.openai.com/api-keys')">발급</button>
+        <button class="btn-sm" onclick="_paste('openai')">붙여넣기</button>
+      </div>
+      <div class="key-msg" id="msg-openai"></div>
+    </div>
+  </div>
+
+  <!-- 5순위: Grok -->
+  <div class="llm-card" id="card-grok">
+    <div class="llm-head" onclick="_toggle('grok')">
+      <div class="llm-rank">5</div>
+      <div class="llm-logo">⚡</div>
+      <div class="llm-info">
+        <div class="llm-name">Grok <span style="font-size:11px;color:var(--text3)">(xAI)</span></div>
+        <div class="llm-tagline">실시간 X 검색 · 매월 $25 무료 · 빠른 응답</div>
+      </div>
+      <div class="llm-badge badge-free" id="badge-grok">무료</div>
+      <div class="llm-chevron">▼</div>
+    </div>
+    <div class="llm-body">
+      <div class="llm-specs">
+        <div class="spec-box">
+          <div class="spec-label">성능</div>
+          <div class="spec-value">⭐⭐⭐⭐</div>
+          <div class="spec-note">실시간 뉴스·X 검색 강점</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">비용</div>
+          <div class="spec-value">$2 / 1M</div>
+          <div class="spec-note">매월 $25 무료 크레딧</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">컨텍스트</div>
+          <div class="spec-value">131K 토큰</div>
+          <div class="spec-note">긴 문서 처리 가능</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">한국어</div>
+          <div class="spec-value">🇰🇷 중</div>
+          <div class="spec-note">기본 한국어 지원</div>
+        </div>
+      </div>
+      <div class="steps">
+        <ol>
+          <li><a href="https://console.x.ai" target="_blank">console.x.ai</a> 접속</li>
+          <li>X(구 트위터) 계정으로 로그인</li>
+          <li><b>API Keys</b> → <b>Create API Key</b></li>
+          <li><code>xai-</code>로 시작하는 키 복사 → 아래 입력</li>
+        </ol>
+        <div class="steps-note">🎁 매월 $25 무료 크레딧 자동 지급 — X 계정 필요</div>
+      </div>
+      <div class="poll-status" id="poll-grok">🔍 새 탭에서 키를 복사하면 자동으로 입력됩니다…</div>
+      <div class="key-row">
+        <input class="key-input" id="key-grok" type="password" placeholder="xai-..." autocomplete="off">
+        <button class="btn-sm" onclick="_openTab('grok','https://console.x.ai')">발급</button>
+        <button class="btn-sm" onclick="_paste('grok')">붙여넣기</button>
+      </div>
+      <div class="key-msg" id="msg-grok"></div>
+    </div>
+  </div>
+
+  <!-- 6순위: OpenRouter -->
+  <div class="llm-card" id="card-or">
+    <div class="llm-head" onclick="_toggle('or')">
+      <div class="llm-rank">6</div>
+      <div class="llm-logo">🔀</div>
+      <div class="llm-info">
+        <div class="llm-name">OpenRouter <span style="font-size:11px;color:var(--text3)">(멀티 LLM)</span></div>
+        <div class="llm-tagline">키 하나로 26개+ 무료 모델 · 최후 안전망</div>
+      </div>
+      <div class="llm-badge badge-free" id="badge-or">무료</div>
+      <div class="llm-chevron">▼</div>
+    </div>
+    <div class="llm-body">
+      <div class="llm-specs">
+        <div class="spec-box">
+          <div class="spec-label">성능</div>
+          <div class="spec-value">⭐⭐⭐½</div>
+          <div class="spec-note">무료 모델 중 최상급</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">비용</div>
+          <div class="spec-value">완전 무료</div>
+          <div class="spec-note">200 req/일 무료 한도</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">모델 수</div>
+          <div class="spec-value">26개+</div>
+          <div class="spec-note">자동 폴백 라우팅</div>
+        </div>
+        <div class="spec-box">
+          <div class="spec-label">한국어</div>
+          <div class="spec-value">🇰🇷 중상</div>
+          <div class="spec-note">모델에 따라 다름</div>
+        </div>
+      </div>
+      <div class="steps">
+        <ol>
+          <li><a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a> 접속 → 회원가입</li>
+          <li>GitHub·Google 계정으로 1클릭 가입 (신용카드 불필요)</li>
+          <li>약관 동의 → <b>+ New Key</b> → 이름 입력 → <b>Create</b></li>
+          <li><code>sk-or-v1-</code>로 시작하는 키 복사 → 아래 입력</li>
+        </ol>
+        <div class="steps-note">⚡ 2분 내 발급 가능 · Llama·Gemma·DeepSeek 등 26개 무료 모델</div>
+      </div>
+      <div class="poll-status" id="poll-or">🔍 새 탭에서 키를 복사하면 자동으로 입력됩니다…</div>
+      <div class="key-row">
+        <input class="key-input" id="key-or" type="password" placeholder="sk-or-v1-..." autocomplete="off">
+        <button class="btn-sm" onclick="_openTab('or','https://openrouter.ai/keys')">발급</button>
+        <button class="btn-sm" onclick="_paste('or')">붙여넣기</button>
+      </div>
+      <div class="key-msg" id="msg-or"></div>
+    </div>
+  </div>
+
+</div>
+
+<button id="_save-fab" onclick="_saveAll()">저장</button>
+
+<script>
+const LLM = [
+  { id:'claude',   name:'Claude',      provider:'anthropic',   baseUrl:'https://api.anthropic.com/v1',                          model:'claude-sonnet-4-5',     validate:k=>k.startsWith('sk-ant-')&&k.length>20 },
+  { id:'gemini',   name:'Gemini',      provider:'google',      baseUrl:'https://generativelanguage.googleapis.com/v1beta/openai', model:'gemini-2.0-flash',      validate:k=>k.startsWith('AIza')&&k.length>20 },
+  { id:'deepseek', name:'DeepSeek',    provider:'deepseek',    baseUrl:'https://api.deepseek.com/v1',                           model:'deepseek-chat',          validate:k=>k.startsWith('sk-')&&!k.startsWith('sk-ant-')&&!k.startsWith('sk-proj-')&&!k.startsWith('sk-or-')&&k.length>20 },
+  { id:'openai',   name:'OpenAI',      provider:'openai',      baseUrl:'https://api.openai.com/v1',                             model:'gpt-4o-mini',            validate:k=>(k.startsWith('sk-proj-')||k.startsWith('sk-'))&&!k.startsWith('sk-ant-')&&!k.startsWith('sk-or-')&&k.length>20 },
+  { id:'grok',     name:'Grok',        provider:'xai',         baseUrl:'https://api.x.ai/v1',                                   model:'grok-3-mini',            validate:k=>k.startsWith('xai-')&&k.length>10 },
+  { id:'or',       name:'OpenRouter',  provider:'openrouter',  baseUrl:'https://openrouter.ai/api/v1',                          model:'openrouter/free',        validate:k=>k.startsWith('sk-or-')&&k.length>20 },
 ];
 
-// ── 카드 렌더링 ──────────────────────────────────────────
-const cardsEl = document.getElementById('_cards');
-const existing = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
-const existingProviders = Array.isArray(existing.providers) ? existing.providers : [];
-
-// 이전에 드래그로 저장해둔 순서가 있으면 그 순서로 카드를 그린다
-if (Array.isArray(existing.providerOrder) && existing.providerOrder.length) {
-  const order = existing.providerOrder;
-  PROVIDERS.sort((a, b) => {
-    const ia = order.indexOf(a.id), ib = order.indexOf(b.id);
-    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
-  });
+function _detectLLM(key) { for (const l of LLM) if (l.validate(key)) return l.id; return null; }
+function _toggle(id) { document.getElementById('card-'+id)?.classList.toggle('open'); }
+function _msg(id,text,type) { const el=document.getElementById('msg-'+id); if(!el)return; el.textContent=text; el.className='key-msg'+(type?' '+type:''); }
+function _updateBadge(id,key) {
+  const badge=document.getElementById('badge-'+id), card=document.getElementById('card-'+id);
+  if(!badge)return;
+  if(key&&key.length>5){ badge.textContent='✓ 입력됨'; badge.className='llm-badge badge-saved'; card?.classList.add('has-key'); }
+  else { const free=['gemini','or','grok'].includes(id); badge.textContent=free?'무료':'유료'; badge.className='llm-badge '+(free?'badge-free':'badge-pay'); card?.classList.remove('has-key'); }
 }
 
-function _findExisting(id) {
-  const hit = existingProviders.find(p => p?.provider === id);
-  return hit || null;
-}
-
-PROVIDERS.forEach((p, idx) => {
-  const prev = _findExisting(p.id);
-  const card = document.createElement('div');
-  card.className = 'card' + (prev?.apiKey ? ' filled' : '');
-  card.dataset.id = p.id;
-
-  let modelHtml = '';
-  if (p.models) {
-    modelHtml = `
-      <div class="model-row">
-        <select class="model-select" data-id="${p.id}">
-          ${p.models.map(m => `<option value="${m.v}" ${m.rec ? 'selected' : ''}>${m.t}</option>`).join('')}
-          <option value="__custom__">다른 모델 직접 입력 (고급)</option>
-        </select>
-        <input type="text" class="model-custom" data-id="${p.id}" placeholder="예: ${p.models[0].v}">
-      </div>`;
-  }
-
-  card.innerHTML = `
-    <div class="card-head" data-toggle="${p.id}">
-      <div class="card-num" data-handle="${p.id}" title="끌어서 순서 변경">${idx + 1}</div>
-      <div class="card-titles">
-        <div class="card-name">${p.name}${p.sub ? `<small>${p.sub}</small>` : ''}</div>
-        <div class="card-badge ${p.badge === 'free' ? 'free' : ''}">${p.badgeText}</div>
-      </div>
-      <div class="card-order-btns">
-        <button class="order-btn" data-move="up" data-id="${p.id}" aria-label="위로" title="위로">▲</button>
-        <button class="order-btn" data-move="down" data-id="${p.id}" aria-label="아래로" title="아래로">▼</button>
-      </div>
-      <div class="card-chev">▼</div>
-    </div>
-    <div class="card-body">
-      <div class="card-desc">${p.desc}</div>
-      <div class="card-link-row">
-        <button class="card-open-btn" data-open="${p.id}">${p.linkLabel}</button>
-      </div>
-      <div class="card-status" data-status="${p.id}"></div>
-      <div class="key-row">
-        <input type="text" class="key-input" data-key="${p.id}" placeholder="${p.keyPlaceholder}"
-          autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
-          value="${prev?.apiKey ? prev.apiKey.replace(/"/g, '') : ''}">
-        <button class="paste-btn" data-paste="${p.id}">붙여넣기</button>
-      </div>
-      ${modelHtml}
-      <div class="card-msg" data-msg="${p.id}"></div>
-      <div class="card-foot">발급 절차: ${p.steps}</div>
-    </div>`;
-  cardsEl.appendChild(card);
-
-  if (p.models && prev?.model) {
-    const sel = card.querySelector(`.model-select[data-id="${p.id}"]`);
-    const cus = card.querySelector(`.model-custom[data-id="${p.id}"]`);
-    const known = p.models.some(m => m.v === prev.model);
-    if (known) {
-      sel.value = prev.model;
-    } else {
-      sel.value = '__custom__';
-      cus.classList.add('show');
-      cus.value = prev.model;
-    }
-  }
-});
-
-// ── 우선순위 드래그앤드롭 + 위/아래 버튼 ──────────────────
-// 카드가 보이는 순서 = 실제 호출 우선순위. card-num(번호 원)을 끌어서
-// 옮기거나 ▲▼ 버튼으로 한 칸씩 옮길 수 있다.
-let _justDragged = false;
-
-function _renumberCards() {
-  const cards = [...cardsEl.children];
-  cards.forEach((card, i) => {
-    const numEl = card.querySelector('.card-num');
-    if (numEl) numEl.textContent = i + 1;
-    const upBtn   = card.querySelector('[data-move="up"]');
-    const downBtn = card.querySelector('[data-move="down"]');
-    if (upBtn)   upBtn.disabled   = (i === 0);
-    if (downBtn) downBtn.disabled = (i === cards.length - 1);
-  });
-}
-_renumberCards();
-
-let _dragCard = null;
-
-cardsEl.addEventListener('pointerdown', (e) => {
-  const handle = e.target.closest('[data-handle]');
-  if (!handle) return;
-  _dragCard = handle.closest('.card');
-  _dragCard.classList.add('dragging');
-  try { handle.setPointerCapture(e.pointerId); } catch {}
-  document.addEventListener('pointermove', _onDragMove);
-  document.addEventListener('pointerup', _onDragEnd, { once: true });
-});
-
-function _onDragMove(e) {
-  if (!_dragCard) return;
-  const y = e.clientY;
-  const siblings = [...cardsEl.children].filter(c => c !== _dragCard);
-  let target = null;
-  for (const sib of siblings) {
-    const rect = sib.getBoundingClientRect();
-    if (y < rect.top + rect.height / 2) { target = sib; break; }
-  }
-  if (target) cardsEl.insertBefore(_dragCard, target);
-  else cardsEl.appendChild(_dragCard);
-}
-
-function _onDragEnd() {
-  document.removeEventListener('pointermove', _onDragMove);
-  if (_dragCard) {
-    _dragCard.classList.remove('dragging');
-    _dragCard = null;
-    _justDragged = true;
-    setTimeout(() => { _justDragged = false; }, 50); // 드래그 직후의 click이 펼치기로 새지 않도록
-  }
-  _renumberCards();
-  _updateSummary();
-}
-
-// ▲▼ 버튼 — 드래그가 번거로운 경우를 위한 정밀 조정
-cardsEl.addEventListener('click', (e) => {
-  const btn = e.target.closest('.order-btn');
-  if (!btn || btn.disabled) return;
-  const card = btn.closest('.card');
-  if (btn.dataset.move === 'up' && card.previousElementSibling) {
-    cardsEl.insertBefore(card, card.previousElementSibling);
-  } else if (btn.dataset.move === 'down' && card.nextElementSibling) {
-    cardsEl.insertBefore(card.nextElementSibling, card);
-  }
-  _renumberCards();
-  _updateSummary();
-});
-
-// ── 아코디언 토글 ────────────────────────────────────────
-cardsEl.addEventListener('click', (e) => {
-  const head = e.target.closest('[data-toggle]');
-  if (!head) return;
-  if (_justDragged) return;               // 드래그를 마친 직후의 click은 무시
-  if (e.target.closest('.order-btn')) return; // ▲▼ 버튼 클릭은 펼치기와 무관
-  const card = head.closest('.card');
-  const wasOpen = card.classList.contains('open');
-  cardsEl.querySelectorAll('.card.open').forEach(c => c.classList.remove('open'));
-  if (!wasOpen) card.classList.add('open');
-});
-
-// ── 모델 select → custom 입력 토글 ───────────────────────
-cardsEl.addEventListener('change', (e) => {
-  if (!e.target.classList.contains('model-select')) return;
-  const id = e.target.dataset.id;
-  const cus = cardsEl.querySelector(`.model-custom[data-id="${id}"]`);
-  cus.classList.toggle('show', e.target.value === '__custom__');
-});
-
-function _cardMsg(id, text, type) {
-  const el = cardsEl.querySelector(`[data-msg="${id}"]`);
-  if (!el) return;
-  el.textContent = text;
-  el.className = 'card-msg' + (type ? ' ' + type : '');
-}
-
-// ── 클립보드 붙여넣기 (버튼) ──────────────────────────────
-cardsEl.addEventListener('click', async (e) => {
-  const btn = e.target.closest('[data-paste]');
-  if (!btn) return;
-  const id = btn.dataset.paste;
-  const input = cardsEl.querySelector(`.key-input[data-key="${id}"]`);
-  if (!navigator.clipboard?.readText) {
-    _cardMsg(id, '이 브라우저는 자동 붙여넣기를 지원하지 않습니다. 입력칸을 길게 눌러 붙여넣어 주세요.', 'error');
-    return;
-  }
+async function _paste(id) {
+  if(!navigator.clipboard?.readText){ _msg(id,'직접 입력칸을 길게 눌러 붙여넣어 주세요.','error'); return; }
   try {
-    const text = (await navigator.clipboard.readText()).trim();
-    if (!text) { _cardMsg(id, '클립보드가 비어 있습니다. 먼저 키를 복사해 주세요.', 'error'); return; }
-    input.value = text;
-    _cardMsg(id, '클립보드에서 가져왔습니다.', 'ok');
-  } catch {
-    _cardMsg(id, '클립보드 접근이 거부되었습니다. 입력칸을 길게 눌러 붙여넣어 주세요.', 'error');
-  }
-});
-
-// ── 발급 페이지 열기 + 클립보드 polling ──────────────────
-// 외부 도메인이라 직접 닫거나 메시지를 받을 수 없으므로,
-// 탭이 열린 동안 클립보드를 100ms마다 polling해 변경을 감지한다.
-const _pollState = {};
-
-function _stopPolling(id) {
-  const st = _pollState[id];
-  if (!st) return;
-  if (st.timer) clearInterval(st.timer);
-  const statusEl = cardsEl.querySelector(`[data-status="${id}"]`);
-  if (statusEl) { statusEl.textContent = ''; statusEl.classList.remove('active'); }
-  const openBtn = cardsEl.querySelector(`[data-open="${id}"]`);
-  if (openBtn) openBtn.disabled = false;
-  delete _pollState[id];
+    const text=(await navigator.clipboard.readText()).trim();
+    if(!text){ _msg(id,'클립보드가 비어 있습니다.','error'); return; }
+    const targetId=_detectLLM(text)||id;
+    const input=document.getElementById('key-'+targetId);
+    if(input){ input.value=text; input.classList.add('saved'); _updateBadge(targetId,text); _msg(targetId,'입력되었습니다. ✓','ok'); document.getElementById('card-'+targetId)?.classList.add('open'); }
+    if(targetId!==id) _msg(id,LLM.find(l=>l.id===targetId)?.name+' 키가 감지되어 해당 항목에 입력했습니다.','ok');
+  } catch { _msg(id,'클립보드 접근이 거부되었습니다.','error'); }
 }
 
-async function _pollClipboard(id) {
-  const st = _pollState[id];
-  if (!st) return;
-  const input = cardsEl.querySelector(`.key-input[data-key="${id}"]`);
-  const pasteBtn = cardsEl.querySelector(`[data-paste="${id}"]`);
+const _tabs={}, _polls={};
+let _lastClip='';
+function _stopPoll(id) { if(_polls[id]){clearInterval(_polls[id]);delete _polls[id];} document.getElementById('poll-'+id)?.classList.remove('active'); }
 
-  if (st.tab && st.tab.closed) {
-    _stopPolling(id);
-    if (!input.value) {
-      pasteBtn.classList.add('highlight');
-      _cardMsg(id, '발급 탭이 닫혔습니다. 키를 복사했다면 붙여넣기를 눌러주세요.', 'ok');
-      setTimeout(() => pasteBtn.classList.remove('highlight'), 4000);
-    }
-    return;
-  }
-  if (!navigator.clipboard?.readText) return;
-  try {
-    const text = (await navigator.clipboard.readText()).trim();
-    if (text === st.lastClip) return;
-    st.lastClip = text;
-    if (text && text.length >= 16 && !/\s/.test(text)) {
-      _stopPolling(id);
-      input.value = text;
-      _cardMsg(id, '키가 자동으로 입력되었습니다.', 'ok');
-      try { st.tab?.close(); } catch {}
-    }
-  } catch { _stopPolling(id); }
-}
-
-cardsEl.addEventListener('click', async (e) => {
-  const btn = e.target.closest('[data-open]');
-  if (!btn) return;
-  const id = btn.dataset.open;
-  const provider = PROVIDERS.find(p => p.id === id);
-  if (!provider) return;
-
-  let lastClip = '';
-  try { lastClip = (await navigator.clipboard.readText().catch(() => '')).trim(); } catch {}
-
-  const tab = window.open(provider.link, '_blank', 'noopener');
-  btn.disabled = true;
-  const statusEl = cardsEl.querySelector(`[data-status="${id}"]`);
-  statusEl.innerHTML = '발급 탭이 열렸습니다. 키를 <b>복사</b>하면 자동으로 입력됩니다.';
-  statusEl.classList.add('active');
-
-  _pollState[id] = { tab, lastClip, timer: null };
-  let elapsed = 0;
-  _pollState[id].timer = setInterval(() => {
-    elapsed += 100;
-    if (elapsed > 10 * 60 * 1000) _stopPolling(id);
-    else _pollClipboard(id);
-  }, 100);
-});
-
-// visibilitychange 폴백 (polling 권한이 없는 환경)
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState !== 'visible') return;
-  for (const id of Object.keys(_pollState)) {
-    const input = cardsEl.querySelector(`.key-input[data-key="${id}"]`);
-    if (input.value) continue;
-    if (!navigator.clipboard?.readText) continue;
-    try {
-      const text = (await navigator.clipboard.readText()).trim();
-      if (text && text.length >= 16 && !/\s/.test(text)) {
-        _stopPolling(id);
-        input.value = text;
-        _cardMsg(id, '키가 자동으로 입력되었습니다.', 'ok');
+async function _openTab(id,url) {
+  try{ _lastClip=(await navigator.clipboard.readText().catch(()=>'')).trim(); }catch{}
+  const tab=window.open(url,'_blank','noopener'); _tabs[id]=tab;
+  document.getElementById('poll-'+id)?.classList.add('active');
+  document.getElementById('card-'+id)?.classList.add('open');
+  let elapsed=0;
+  if(_polls[id]) clearInterval(_polls[id]);
+  _polls[id]=setInterval(async()=>{
+    elapsed+=100;
+    if(elapsed>600000||tab?.closed){ _stopPoll(id); return; }
+    if(!navigator.clipboard?.readText){ _stopPoll(id); return; }
+    try{
+      const text=(await navigator.clipboard.readText()).trim();
+      if(text===_lastClip||!text) return;
+      _lastClip=text;
+      const detected=_detectLLM(text);
+      if(detected){
+        _stopPoll(id);
+        const input=document.getElementById('key-'+detected);
+        if(input){ input.value=text; input.classList.add('saved'); _updateBadge(detected,text); _msg(detected,'키가 자동으로 입력되었습니다. ✓','ok'); document.getElementById('card-'+detected)?.classList.add('open'); }
+        try{ tab?.close(); }catch{}
       }
-    } catch {}
-  }
+    }catch{ _stopPoll(id); }
+  },100);
+}
+
+document.addEventListener('visibilitychange',async()=>{
+  if(document.visibilityState!=='visible'||!navigator.clipboard?.readText) return;
+  try{
+    const text=(await navigator.clipboard.readText()).trim();
+    if(!text||text===_lastClip) return; _lastClip=text;
+    const detected=_detectLLM(text); if(!detected) return;
+    const input=document.getElementById('key-'+detected);
+    if(input&&!input.value){ input.value=text; input.classList.add('saved'); _updateBadge(detected,text); _msg(detected,'키가 자동으로 입력되었습니다. ✓','ok'); document.getElementById('card-'+detected)?.classList.add('open'); }
+    Object.keys(_polls).forEach(id=>_stopPoll(id));
+  }catch{}
 });
 
-// ── 저장 ─────────────────────────────────────────────────
-const saveBtn = document.getElementById('_save-btn');
-const saveSummary = document.getElementById('_save-summary');
-const doneEl = document.getElementById('_done');
-const doneDesc = document.getElementById('_done-desc');
-const doneProg = document.getElementById('_done-prog');
-
-function _collect() {
-  // 화면에 보이는 카드 순서(드래그·▲▼로 바꾼 순서) 그대로 수집한다.
-  const out = [];
-  for (const card of cardsEl.children) {
-    const id = card.dataset.id;
-    const p = PROVIDERS.find(x => x.id === id);
-    if (!p || id === 'openrouter') continue;
-    const input = card.querySelector(`.key-input[data-key="${id}"]`);
-    const key = input.value.trim();
-    if (!key) continue;
-    let model = (p.models.find(m => m.rec) || p.models[0]).v;
-    const sel = card.querySelector(`.model-select[data-id="${id}"]`);
-    if (sel.value === '__custom__') {
-      const cus = card.querySelector(`.model-custom[data-id="${id}"]`);
-      model = cus.value.trim() || model;
-    } else {
-      model = sel.value;
-    }
-    out.push({ provider: id, model, apiKey: key });
+async function _saveAll() {
+  const fab=document.getElementById('_save-fab'); fab.disabled=true; fab.textContent='저장 중…';
+  const providers=[]; let savedCount=0;
+  for(const llm of LLM){
+    const key=document.getElementById('key-'+llm.id)?.value?.trim()||'';
+    if(!key) continue;
+    if(!llm.validate(key)){ _msg(llm.id,'키 형식이 올바르지 않습니다.','error'); document.getElementById('card-'+llm.id)?.classList.add('open'); continue; }
+    providers.push({ provider:llm.provider, model:llm.model, baseUrl:llm.baseUrl, apiKey:key }); savedCount++;
   }
-  return out;
-}
-
-function _currentOrder() {
-  return [...cardsEl.children].map(c => c.dataset.id);
-}
-
-function _updateSummary() {
-  const filled = _collect();
-  const orInput = cardsEl.querySelector('.key-input[data-key="openrouter"]');
-  const names = [];
-  for (const id of _currentOrder()) {
-    if (id === 'openrouter') {
-      if (orInput?.value.trim()) names.push('OpenRouter');
-    } else if (filled.some(f => f.provider === id)) {
-      names.push(PROVIDERS.find(p => p.id === id)?.name);
-    }
+  if(savedCount===0){
+    _msg('or','최소 하나의 키를 입력해 주세요.','error'); document.getElementById('card-or')?.classList.add('open');
+    fab.disabled=false; fab.textContent='저장'; return;
   }
-  saveSummary.innerHTML = names.length
-    ? `등록됨: <b>${names.join(' → ')}</b> 순서로 호출`
-    : '등록된 항목이 없으면 <b>OpenRouter 무료 모델</b>로 시작합니다.';
-}
-cardsEl.addEventListener('input', _updateSummary);
-cardsEl.addEventListener('change', _updateSummary);
-_updateSummary();
-
-saveBtn.addEventListener('click', async () => {
-  saveBtn.disabled = true;
-  saveBtn.textContent = '저장 중…';
-
-  const directProviders = _collect();
-  const orKeyInput = cardsEl.querySelector('.key-input[data-key="openrouter"]');
-  const orKey = orKeyInput.value.trim();
-
-  // OpenRouter 무료 모델 풀 — 키가 등록됐으면 실시간 검증된 풀 전체를 등록.
-  // OR 키가 없으면 고팡 프록시가 call-ai.js에서 자동으로 최종 안전망 역할을 한다.
-  let orProviders = [];
-  if (orKey) {
-    try {
-      const result = await buildLiveFreeModelPool();
-      orProviders = result.pool.map(m => ({ provider: 'openrouter', model: m, apiKey: orKey }));
-    } catch (e) {
-      console.warn('[AI설정] 무료 모델 풀 로드 실패 — OR 키만 단일 등록:', e.message);
-      orProviders = [{ provider: 'openrouter', model: 'openrouter/free', apiKey: orKey }];
-    }
-  }
-
-  // 카드의 현재 화면 순서(드래그·▲▼로 정한 순서)를 그대로 providers 배열로 만들고,
-  // 그 순서 자체도 providerOrder로 저장한다 — config.js의 getPriorityOrder()가
-  // 이 값을 최우선으로 읽으므로 실제 호출 순서가 화면에서 정한 순서와 항상 일치한다.
-  const providerOrder = _currentOrder();
-  const providers = [];
-  for (const id of providerOrder) {
-    if (id === 'openrouter') providers.push(...orProviders);
-    else providers.push(...directProviders.filter(d => d.provider === id));
-  }
-
-  const existingCfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
-  localStorage.setItem('gopang_cfg', JSON.stringify({
-    model:        providers[0]?.model || existingCfg.model || 'deepseek-v4-flash',
-    endpoint:     existingCfg.endpoint  || 'https://gopang-proxy.tensor-city.workers.dev',
-    apiKey:       existingCfg.apiKey    || '',
-    geminiKey:    existingCfg.geminiKey || '',
-    system:       existingCfg.system    || '',
-    providers,
-    providerOrder,
-  }));
-
-  localStorage.setItem('gopang_ai_activated', Date.now().toString());
-
-  const usedNames = providerOrder
-    .map(id => id === 'openrouter'
-      ? (orProviders.length ? 'OpenRouter 무료모델' : null)
-      : (directProviders.some(d => d.provider === id) ? PROVIDERS.find(p => p.id === id)?.name : null))
-    .filter(Boolean);
-  doneDesc.textContent = usedNames.length
-    ? `${usedNames.join(' → ')} 순서로 등록되었습니다. 혼디로 돌아가면 AI 비서가 바로 시작됩니다.`
-    : '등록된 키가 없어 기본 안전망(고팡 프록시)으로 시작합니다. 혼디로 돌아가면 AI 비서가 바로 시작됩니다.';
+  const existing=JSON.parse(localStorage.getItem('gopang_cfg')||'{}');
+  localStorage.setItem('gopang_cfg',JSON.stringify({ ...existing, model:providers[0]?.model||'', endpoint:existing.endpoint||'https://gopang-proxy.tensor-city.workers.dev', apiKey:existing.apiKey||'', providers }));
+  localStorage.setItem('gopang_ai_activated',Date.now().toString());
+  const doneEl=document.getElementById('_done'), doneDesc=document.getElementById('_done-desc'), doneProg=document.getElementById('_done-prog');
+  doneDesc.textContent=savedCount+'개 AI 키가 저장되었습니다. 1순위부터 순차 시도됩니다.';
   doneEl.classList.add('visible');
+  let pct=0;
+  const tick=setInterval(()=>{ pct+=2; doneProg.style.width=pct+'%'; if(pct>=100){ clearInterval(tick); window.close(); setTimeout(()=>{ doneDesc.textContent+=' 이 탭을 직접 닫아 혼디로 돌아가세요.'; },300); } },40);
+}
 
-  let pct = 0;
-  const tick = setInterval(() => {
-    pct += 2;
-    doneProg.style.width = pct + '%';
-    if (pct >= 100) {
-      clearInterval(tick);
-      window.close();
-      setTimeout(() => { doneDesc.textContent += ' 이 탭을 직접 닫아 혼디로 돌아가세요.'; }, 300);
-    }
-  }, 40);
-});
-
-// ── 글자 크기 ────────────────────────────────────────────
-const FS_KEY = 'gopang_mobile_fontscale';
-const FS_MIN = 0.85, FS_MAX = 1.5, FS_STEP = 0.1;
-let fsScale = parseFloat(localStorage.getItem(FS_KEY)) || 1;
-function _applyFS() { document.documentElement.style.setProperty('--fs', fsScale.toFixed(2)); }
-_applyFS();
-document.getElementById('_fs_dec').addEventListener('click', () => {
-  fsScale = Math.max(FS_MIN, +(fsScale - FS_STEP).toFixed(2));
-  _applyFS(); localStorage.setItem(FS_KEY, fsScale);
-});
-document.getElementById('_fs_inc').addEventListener('click', () => {
-  fsScale = Math.min(FS_MAX, +(fsScale + FS_STEP).toFixed(2));
-  _applyFS(); localStorage.setItem(FS_KEY, fsScale);
-});
+// 초기화: 기존 저장된 키 복원
+(function _init(){
+  const cfg=JSON.parse(localStorage.getItem('gopang_cfg')||'{}');
+  const providers=Array.isArray(cfg.providers)?cfg.providers:[];
+  for(const p of providers){
+    const llm=LLM.find(l=>l.provider===p.provider); if(!llm) continue;
+    const input=document.getElementById('key-'+llm.id);
+    if(input&&p.apiKey){ input.value=p.apiKey; input.classList.add('saved'); _updateBadge(llm.id,p.apiKey); }
+  }
+  // 빈 카드 중 첫 번째 자동 열기
+  for(const llm of LLM){ const input=document.getElementById('key-'+llm.id); if(!input?.value){ document.getElementById('card-'+llm.id)?.classList.add('open'); break; } }
+})();
 </script>
 </body>
 </html>
