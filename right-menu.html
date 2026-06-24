@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>하위 시스템 — 혼디</title>
+<title>전문 분야 AI 에이전트 — 혼디</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:#fff;color:#111;
@@ -17,7 +17,7 @@ html,body{height:100%;background:#fff;color:#111;
 :root{
   --green:#16a34a;--green-lt:#dcfce7;--green-dk:#15803d;
   --border:#e5e7eb;--txt2:#6b7280;--txt3:#9ca3af;
-  --chip-bg:#f9fafb;
+  --chip-bg:#f9fafb;--gray-tile:#eceff1;--gray-tile-bd:#d8dcdf;
   --safe-t:env(safe-area-inset-top,0px);
   --safe-b:env(safe-area-inset-bottom,0px);
 }
@@ -30,7 +30,6 @@ html,body{height:100%;background:#fff;color:#111;
   border-bottom:1px solid var(--border);
 }
 .menu-title{font-size:18px;font-weight:700;letter-spacing:-0.3px}
-.menu-subtitle{font-size:11px;color:var(--txt3);margin-top:2px}
 .menu-close{
   width:30px;height:30px;border-radius:50%;border:none;background:var(--chip-bg);
   display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt2);
@@ -39,13 +38,36 @@ html,body{height:100%;background:#fff;color:#111;
 .menu-close svg{width:14px;height:14px;stroke:currentColor;stroke-width:2.4;
   stroke-linecap:round;stroke-linejoin:round}
 
+/* ── 검색 ── */
+.menu-search{
+  display:flex;align-items:center;gap:8px;
+  margin:14px 16px 4px;padding:9px 12px;
+  border:1px solid var(--border);border-radius:14px;background:var(--chip-bg);
+}
+.menu-search svg{width:16px;height:16px;stroke:var(--txt3);stroke-width:2.2;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.menu-search input{
+  flex:1;border:none;background:none;outline:none;font-family:inherit;
+  font-size:13.5px;color:#111;min-width:0;
+}
+.menu-search input::placeholder{color:var(--txt3)}
+.search-clear{
+  border:none;background:var(--border);color:#fff;width:18px;height:18px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+  font-size:12px;line-height:1;
+}
+.search-clear[hidden]{display:none}
+
 .menu-section{padding:10px 0 4px}
 .menu-section-title{
   font-size:11px;font-weight:700;color:var(--txt3);letter-spacing:.4px;
   padding:10px 18px 8px;text-transform:uppercase;
 }
+.search-empty{
+  padding:18px 16px;text-align:center;color:var(--txt3);font-size:12.5px;
+}
 
-/* 시스템 항목 — 아코디언(터치하면 안내가 아래로 펼쳐짐) */
+/* 카테고리 항목 — 아코디언(터치하면 하위 항목이 아래로 펼쳐짐) */
 .acc-list{padding:2px 16px 10px;display:flex;flex-direction:column;gap:8px}
 .acc-item{
   border:1px solid var(--border);border-radius:14px;background:var(--chip-bg);
@@ -75,21 +97,31 @@ html,body{height:100%;background:#fff;color:#111;
 }
 .acc-item.open .acc-chevron{transform:rotate(180deg);stroke:var(--green-dk)}
 
+/* K-Law — 하위 항목 없이 곧바로 이동하는 특별 메뉴. 연한 회색 배경으로 구분 */
+.acc-item.klaw-special{background:var(--gray-tile);border-color:var(--gray-tile-bd)}
+.acc-item.klaw-special .acc-header:active{background:#e2e5e8}
+.acc-item.klaw-special .sys-icon{background:#fff;color:var(--txt2)}
+
 .acc-panel{
   max-height:0;overflow:hidden;
   transition:max-height .25s ease;
 }
-.acc-panel-inner{padding:0 14px 14px 56px}
-.acc-guide{font-size:12.5px;color:#374151;line-height:1.65;margin-bottom:10px}
-.acc-goto{
-  display:inline-flex;align-items:center;gap:5px;
-  padding:8px 14px;border-radius:20px;border:none;
-  background:var(--green);color:#fff;font-size:12.5px;font-weight:700;
-  cursor:pointer;font-family:inherit;
+.acc-panel-inner{padding:0 12px 12px 12px}
+
+/* 하위 항목(전문직/기관/소셜 펼쳤을 때의 개별 항목) */
+.leaf-list{display:flex;flex-direction:column;gap:6px}
+.leaf-item{
+  width:100%;display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#fff;
+  font-family:inherit;color:#111;cursor:pointer;text-align:left;
 }
-.acc-goto:active{background:var(--green-dk)}
-.acc-goto svg{width:13px;height:13px;stroke:#fff;stroke-width:2.4;fill:none;
-  stroke-linecap:round;stroke-linejoin:round}
+.leaf-item:active{background:var(--green-lt);border-color:var(--green-bd,#86efac)}
+.leaf-text{flex:1;min-width:0}
+.leaf-name{font-size:13px;font-weight:600;display:block}
+.leaf-desc{font-size:11px;color:var(--txt3);line-height:1.4;display:block;margin-top:1px}
+.leaf-cat-badge{font-style:normal;color:var(--green-dk);font-weight:600}
+.leaf-arrow{width:14px;height:14px;stroke:var(--txt3);stroke-width:2.3;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 
 .menu-footer{
   padding:14px 18px calc(var(--safe-b) + 18px);
@@ -128,22 +160,32 @@ html,body{height:100%;background:#fff;color:#111;
 
 <div class="menu-header">
   <div>
-    <div class="menu-title">하위 시스템</div>
-    <div class="menu-subtitle">정부·공공 서비스 바로가기</div>
+    <div class="menu-title">전문 분야 AI 에이전트</div>
   </div>
   <button class="menu-close" onclick="parent.closeRightMenu && parent.closeRightMenu()" title="닫기">
     <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
   </button>
 </div>
 
-<div class="menu-section">
-  <div class="menu-section-title">시스템 선택</div>
+<div class="menu-search">
+  <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg>
+  <input id="search-input" type="text" inputmode="search" placeholder="기관·전문직 검색 (예: 제주도청, 변호사)" autocomplete="off">
+  <button class="search-clear" id="search-clear" hidden title="지우기">×</button>
+</div>
+
+<div class="menu-section" id="category-section">
+  <div class="menu-section-title">분야 선택</div>
   <div class="acc-list" id="acc-list"></div>
 </div>
 
+<div class="menu-section" id="search-section" hidden>
+  <div class="menu-section-title">검색 결과</div>
+  <div class="acc-list leaf-list" id="search-list" style="padding:2px 16px 10px"></div>
+</div>
+
 <div class="menu-footer">
-  항목을 누르면 간단한 안내가 펼쳐집니다.<br>
-  안내 안의 '바로가기' 버튼을 누르면 해당 시스템으로 이동합니다.
+  카테고리를 누르면 하위 항목이 펼쳐집니다.<br>
+  항목을 선택하면 해당 페이지로 곧바로 이동합니다.
 </div>
 
 <script>
@@ -151,91 +193,133 @@ html,body{height:100%;background:#fff;color:#111;
 // 주소 패턴: 서브도메인.gopang.net/webapp.html (확인됨)
 // 단, 각 서브도메인 이름은 GitHub 저장소명(github.com/Openhash-Gopang/<id>)을
 // 그대로 사용한다고 가정한 것 — 실제 이름이 다른 시스템이 있으면
-// 아래 url 값만 수정하면 됩니다. (예: '911' 저장소가 실제로는
-// k119.gopang.net 등 다른 이름을 쓸 수도 있음)
+// 아래 url 값만 수정하면 됩니다.
+//
+// 주의: patent / realty / customs / games / sns / community 서브도메인은
+// 기존 SUBSYSTEMS 목록에 없던 신규 항목으로, 아직 실제 서비스가 없을 수
+// 있습니다. 실제 도메인이 정해지면 url 값만 교체하면 됩니다.
 // ────────────────────────────────────────────────────────────
-const SUBSYSTEMS = [
-  { id:'klaw',       name:'K-Law',       desc:'법률 상담·소송',   url:'https://klaw.gopang.net/webapp.html',       icon:'scale',
-    guide:'법률 상담과 소송 업무를 지원하는 전문 AI Agent입니다. 나만의 AI 비서에게 법률 관련 질의를 하면 자동으로 호출되며, 계약서 검토·분쟁 조정·소송 절차 안내 등을 제공합니다.' },
-  { id:'tax',        name:'K-Tax',       desc:'국세·세무',        url:'https://tax.gopang.net/webapp.html',        icon:'receipt',
-    guide:'국세·세무 신고와 상담을 지원합니다. 혼디의 자동 재무제표와 연동되어 누락이나 오류 없는 정확한 세금 계산을 돕습니다.' },
-  { id:'school',     name:'K-School',    desc:'교육·학사',        url:'https://school.gopang.net/webapp.html',     icon:'cap',
-    guide:'교육과 학사 업무를 지원합니다. 학습 관리, 학사 행정, 진학·진로 상담 등을 제공합니다.' },
-  { id:'health',     name:'K-Health',    desc:'의료·건강',        url:'https://health.gopang.net/webapp.html',     icon:'heart',
-    guide:'의료 상담과 건강 관리를 지원합니다. 증상 확인, 병원·진료과 안내, 개인 건강 기록 관리 등을 제공합니다.' },
-  { id:'police',     name:'K-Police',    desc:'민원·신고',        url:'https://police.gopang.net/webapp.html',     icon:'shield',
-    guide:'경찰 관련 민원과 신고를 지원합니다. 사건 신고, 민원 접수, 법률 절차 안내 등을 처리합니다.' },
-  { id:'911',        name:'K-119',       desc:'소방·구급',        url:'https://911.gopang.net/webapp.html',        icon:'siren',
-    guide:'소방·구급 상황을 지원합니다. 화재 신고, 응급 구조 요청, 안전 관련 안내 등을 처리합니다.' },
-  { id:'traffic',    name:'K-Traffic',   desc:'교통·단속',        url:'https://traffic.gopang.net/webapp.html',    icon:'car',
-    guide:'교통 정보와 단속 관련 업무를 지원합니다. 교통 민원, 단속 이의제기, 실시간 교통 정보 안내 등을 제공합니다.' },
-  { id:'public',     name:'K-Public',    desc:'행정·민원',        url:'https://public.gopang.net/webapp.html',     icon:'building',
-    guide:'일반 행정과 민원 업무를 지원합니다. 각종 증명서 발급, 행정 절차 안내 등을 제공합니다.' },
-  { id:'democracy',  name:'K-Democracy', desc:'청원·투표',        url:'https://democracy.gopang.net/webapp.html',  icon:'vote',
-    guide:'청원과 투표 등 민주적 의사결정을 지원합니다. 국민청원, 주민투표, 정책 제안 등을 처리합니다.' },
-  { id:'logistics',  name:'K-Logistics', desc:'물류·배송',        url:'https://logistics.gopang.net/webapp.html',  icon:'truck',
-    guide:'물류와 배송 업무를 지원합니다. 배송 조회, 물류 관리, 운송 상담 등을 제공합니다.' },
-  { id:'insurance',  name:'K-Insurance', desc:'보험',             url:'https://insurance.gopang.net/webapp.html',  icon:'umbrella',
-    guide:'보험 상담과 가입을 지원합니다. 보험 비교, 청구 절차 안내, 손해 사정 등을 제공합니다.' },
-  { id:'stock',      name:'K-Stock',     desc:'증권·투자',        url:'https://stock.gopang.net/webapp.html',      icon:'trend',
-    guide:'증권과 투자 상담을 지원합니다. 시장 정보, 투자 자문, 거래 절차 안내 등을 제공합니다.' },
-  { id:'market',     name:'혼디 마켓',     desc:'커머스',           url:'https://market.gopang.net/webapp.html',     icon:'bag',
-    guide:'혼디의 장터입니다. 혼디 자체는 비영리 공동체이지만, 혼디장은 영리를 위한 공간으로, 누구나 상품을 등록하고 판매할 수 있습니다.' },
-  { id:'security',   name:'K-Security',  desc:'보안',             url:'https://security.gopang.net/webapp.html',   icon:'lock',
-    guide:'보안 위협을 감지하고 차단하는 경비 AI Agent입니다. 보이스피싱 등 불법 행위를 자동으로 탐지해 신고 등 적절한 조치를 실행합니다.' },
-  { id:'gdc',        name:'GDC',         desc:'디지털 화폐',       url:'https://gdc.gopang.net/webapp.html',        icon:'coin',
-    guide:'혼디의 결제 통화인 GDC(Global Digital Currency)를 관리합니다. 환전, 결제, 잔액 조회 등을 제공합니다. 혼디에서 상품·서비스를 구매하려면 먼저 GDC로 환전해야 합니다.' },
-  { id:'qna',        name:'Q&A',         desc:'고객 지원',         url:'https://qna.gopang.net/webapp.html',        icon:'chat',
-    guide:'혼디 이용 중 궁금한 점을 문의하는 고객 지원 시스템입니다.' },
+
+// K-Law — 하위 항목 없이 단독으로 곧바로 이동하는 특별 메뉴 (연한 회색 타일)
+const KLAW = {
+  id:'klaw', name:'K-Law', desc:'법률 상담·소송',
+  url:'https://klaw.gopang.net/webapp.html', icon:'scale'
+};
+
+// 전문직 — 직업(역할) 기준 AI 에이전트. 변호사는 K-Law와 동일한 목적지로 연결됩니다.
+const CATEGORIES = [
+  {
+    id:'pro', name:'전문직', desc:'직업별 전문가 AI 에이전트', icon:'briefcase',
+    items:[
+      { id:'lawyer',      name:'변호사',     desc:'법률 상담·소송',        url:'https://klaw.gopang.net/webapp.html' },
+      { id:'tax-pro',     name:'세무사',     desc:'세금 신고·절세 상담',     url:'https://tax.gopang.net/webapp.html' },
+      { id:'accountant',  name:'회계사',     desc:'재무제표·회계 자문',      url:'https://tax.gopang.net/webapp.html?mode=accounting' },
+      { id:'doctor',      name:'의사',       desc:'증상 상담·진료 안내',     url:'https://health.gopang.net/webapp.html' },
+      { id:'pharmacist',  name:'약사',       desc:'복약 안내·의약품 상담',   url:'https://health.gopang.net/webapp.html?mode=pharmacy' },
+      { id:'patent-atty', name:'변리사',     desc:'특허·상표·디자인 출원',   url:'https://patent.gopang.net/webapp.html' },
+      { id:'ins-agent',   name:'보험설계사', desc:'보험 비교·청구 상담',     url:'https://insurance.gopang.net/webapp.html' },
+      { id:'broker',      name:'증권전문가', desc:'투자 자문·시장 분석',     url:'https://stock.gopang.net/webapp.html' },
+      { id:'realtor',     name:'공인중개사', desc:'부동산 중개·시세 상담',   url:'https://realty.gopang.net/webapp.html' },
+    ]
+  },
+  {
+    id:'org', name:'기관', desc:'정부·공공기관 AI 에이전트', icon:'building',
+    items:[
+      { id:'nts',          name:'국세청',         desc:'국세·세무 행정',         url:'https://tax.gopang.net/webapp.html' },
+      { id:'kipo',         name:'특허청',         desc:'특허·상표·디자인 행정',   url:'https://patent.gopang.net/webapp.html' },
+      { id:'hospital',     name:'병원',           desc:'진료 예약·의료 상담',     url:'https://health.gopang.net/webapp.html' },
+      { id:'police-stn',   name:'경찰서',         desc:'민원·신고 접수',         url:'https://police.gopang.net/webapp.html' },
+      { id:'fire-stn',     name:'소방서',         desc:'화재 신고·구급 요청',     url:'https://911.gopang.net/webapp.html' },
+      { id:'school-org',   name:'학교·교육청',     desc:'학사·교육 행정',         url:'https://school.gopang.net/webapp.html' },
+      { id:'jeju-city',    name:'제주도청',       desc:'행정·민원 처리',         url:'https://public.gopang.net/webapp.html' },
+      { id:'nec',          name:'선거관리위원회', desc:'청원·투표',             url:'https://democracy.gopang.net/webapp.html' },
+      { id:'customs',      name:'관세청',         desc:'통관·수출입 신고',       url:'https://customs.gopang.net/webapp.html' },
+    ]
+  },
+  {
+    id:'social', name:'소셜', desc:'게임·SNS', icon:'users',
+    items:[
+      { id:'game-zone',  name:'게임존',     desc:'미니게임·이벤트',     url:'https://games.gopang.net/webapp.html' },
+      { id:'sns-feed',   name:'고팡 SNS',  desc:'소셜 피드·친구',      url:'https://sns.gopang.net/webapp.html' },
+      { id:'community',  name:'커뮤니티',   desc:'게시판·동네 소식',    url:'https://community.gopang.net/webapp.html' },
+    ]
+  }
 ];
 
 const ICONS = {
-  scale:    '<path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7 3 13a3 3 0 0 0 4 0z"/><path d="M19 7l-2 6a3 3 0 0 0 4 0z"/>',
-  receipt:  '<path d="M5 2v20l3-2 3 2 3-2 3 2 3-2V2l-3 2-3-2-3 2-3-2-3 2z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/>',
-  cap:      '<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 3 3 6 3s6-2 6-3v-5"/>',
-  heart:    '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>',
-  shield:   '<path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/>',
-  siren:    '<path d="M12 2a5 5 0 0 0-5 5v6h10V7a5 5 0 0 0-5-5z"/><line x1="12" y1="2" x2="12" y2="0.5"/><line x1="3" y1="21" x2="21" y2="21"/><path d="M5 21v-3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/>',
-  car:      '<path d="M3 13l1.5-5A2 2 0 0 1 6.4 6.5h11.2A2 2 0 0 1 19.5 8l1.5 5"/><rect x="2.5" y="13" width="19" height="5" rx="1.5"/><circle cx="7" cy="18.5" r="1.5"/><circle cx="17" cy="18.5" r="1.5"/>',
+  scale:     '<path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7 3 13a3 3 0 0 0 4 0z"/><path d="M19 7l-2 6a3 3 0 0 0 4 0z"/>',
+  briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="2" y1="13" x2="22" y2="13"/>',
   building: '<rect x="4" y="9" width="16" height="12" rx="1"/><path d="M2 9l10-6 10 6"/><line x1="9" y1="13" x2="9" y2="17"/><line x1="15" y1="13" x2="15" y2="17"/>',
-  vote:     '<path d="M3 10v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9"/><path d="M2 10l10-7 10 7"/><path d="M12 12v5"/>',
-  truck:    '<rect x="1" y="7" width="14" height="10" rx="1"/><path d="M15 11h4l3 3v3h-7z"/><circle cx="6" cy="19" r="1.6"/><circle cx="17.5" cy="19" r="1.6"/>',
-  umbrella: '<path d="M2 11a10 10 0 0 1 20 0z"/><line x1="12" y1="11" x2="12" y2="19"/><path d="M12 19a2 2 0 0 1-4 0"/>',
-  trend:    '<polyline points="3 17 9 11 13 15 21 6"/><polyline points="14 6 21 6 21 13"/>',
-  bag:      '<path d="M6 8h12l1.5 13h-15z"/><path d="M9 8a3 3 0 0 1 6 0"/>',
-  lock:     '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
-  coin:     '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 0 1 5 0c0 1.4-1.1 1.9-2.5 2.4S9.5 12.6 9.5 14a2.5 2.5 0 0 0 5 0"/><line x1="12" y1="6.5" x2="12" y2="17.5"/>',
-  chat:     '<path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9"/><path d="M21 4v6h-6"/><path d="M8 10a4 4 0 1 1 5.5 3.7"/><circle cx="8" cy="15.5" r=".6" fill="currentColor"/>',
+  users:     '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9" r="3"/><path d="M15.5 13.2A6.5 6.5 0 0 1 21.5 20"/>',
 };
 
-const list = document.getElementById('acc-list');
-list.innerHTML = SUBSYSTEMS.map(s => `
-  <div class="acc-item" data-id="${s.id}">
-    <button class="acc-header" onclick="toggleAcc('${s.id}')">
-      <span class="sys-icon"><svg viewBox="0 0 24 24">${ICONS[s.icon] || ''}</svg></span>
-      <span class="acc-header-text">
-        <span class="sys-name">${s.name}</span>
-        <span class="sys-desc">${s.desc}</span>
-      </span>
-      <svg class="acc-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-    </button>
-    <div class="acc-panel">
-      <div class="acc-panel-inner">
-        <p class="acc-guide">${s.guide || ''}</p>
-        <button class="acc-goto" data-url="${s.url}">
-          바로가기
-          <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg>
-        </button>
-      </div>
-    </div>
-  </div>
-`).join('');
+const accList     = document.getElementById('acc-list');
+const searchList  = document.getElementById('search-list');
+const categorySec = document.getElementById('category-section');
+const searchSec   = document.getElementById('search-section');
+const searchInput = document.getElementById('search-input');
+const searchClear = document.getElementById('search-clear');
 
-// 항목을 누르면 안내가 아래로 펼쳐짐(아코디언). 여러 항목을 동시에 펼쳐둘 수 있음.
+// 검색 대상 — K-Law + 모든 카테고리의 하위 항목을 한 줄로 펼친 목록
+const SEARCHABLE = [
+  { ...KLAW, catLabel:'K-Law' },
+  ...CATEGORIES.flatMap(cat => cat.items.map(it => ({ ...it, catLabel: cat.name })))
+];
+
+function leafRowHtml(it, showCatBadge) {
+  const desc = showCatBadge
+    ? `${it.desc} · <span class="leaf-cat-badge">${it.catLabel}</span>`
+    : it.desc;
+  return `
+    <button class="leaf-item" data-goto="${it.url}">
+      <span class="leaf-text">
+        <span class="leaf-name">${it.name}</span>
+        <span class="leaf-desc">${desc}</span>
+      </span>
+      <svg class="leaf-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>`;
+}
+
+function renderCategories() {
+  const klawTile = `
+    <div class="acc-item klaw-special" data-id="klaw">
+      <button class="acc-header" data-goto="${KLAW.url}">
+        <span class="sys-icon"><svg viewBox="0 0 24 24">${ICONS[KLAW.icon] || ''}</svg></span>
+        <span class="acc-header-text">
+          <span class="sys-name">${KLAW.name}</span>
+          <span class="sys-desc">${KLAW.desc}</span>
+        </span>
+        <svg class="leaf-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>`;
+
+  const catTiles = CATEGORIES.map(cat => `
+    <div class="acc-item" data-id="${cat.id}">
+      <button class="acc-header" onclick="toggleAcc('${cat.id}')">
+        <span class="sys-icon"><svg viewBox="0 0 24 24">${ICONS[cat.icon] || ''}</svg></span>
+        <span class="acc-header-text">
+          <span class="sys-name">${cat.name}</span>
+          <span class="sys-desc">${cat.desc}</span>
+        </span>
+        <svg class="acc-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-panel">
+        <div class="acc-panel-inner leaf-list">
+          ${cat.items.map(it => leafRowHtml(it, false)).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+
+  accList.innerHTML = klawTile + catTiles;
+}
+renderCategories();
+
+// 카테고리 항목을 누르면 하위 목록이 아래로 펼쳐짐(아코디언). 여러 항목을 동시에 펼쳐둘 수 있음.
 function toggleAcc(id) {
-  const item  = list.querySelector(`.acc-item[data-id="${id}"]`);
+  const item  = accList.querySelector(`.acc-item[data-id="${id}"]`);
   if (!item) return;
   const panel = item.querySelector('.acc-panel');
+  if (!panel) return; // K-Law는 펼칠 패널이 없음
   const open  = item.classList.contains('open');
 
   if (open) {
@@ -248,15 +332,49 @@ function toggleAcc(id) {
 }
 window.toggleAcc = toggleAcc;
 
-// '바로가기' 버튼 — 외부 시스템 사이트로 전체 페이지 이동 (현재 탭의 최상위 프레임 이동)
-list.addEventListener('click', (e) => {
-  const btn = e.target.closest('.acc-goto');
-  if (!btn) return;
-  e.stopPropagation(); // 아코디언 토글과 겹치지 않도록
-  const url = btn.dataset.url;
+// '하위 항목' 또는 K-Law 타일 클릭 → 외부 시스템 사이트로 전체 페이지 이동 (최상위 프레임 이동)
+function navigateTo(url) {
   if (!url) return;
   try { window.top.location.href = url; }
   catch (err) { window.location.href = url; }
+}
+function bindGotoDelegation(container) {
+  container.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-goto]');
+    if (!btn) return;
+    e.stopPropagation(); // 아코디언 토글과 겹치지 않도록
+    navigateTo(btn.dataset.goto);
+  });
+}
+bindGotoDelegation(accList);
+bindGotoDelegation(searchList);
+
+// ── 검색 ── 입력하면 카테고리 아코디언 대신 평탄화된 검색 결과를 보여준다.
+function runSearch() {
+  const q = searchInput.value.trim().toLowerCase();
+  searchClear.hidden = !q;
+
+  if (!q) {
+    categorySec.hidden = false;
+    searchSec.hidden   = true;
+    return;
+  }
+
+  const matches = SEARCHABLE.filter(it =>
+    it.name.toLowerCase().includes(q) || (it.desc || '').toLowerCase().includes(q)
+  );
+
+  categorySec.hidden = true;
+  searchSec.hidden   = false;
+  searchList.innerHTML = matches.length
+    ? matches.map(it => leafRowHtml(it, true)).join('')
+    : `<div class="search-empty">'${searchInput.value}'와 일치하는 항목이 없습니다.</div>`;
+}
+searchInput.addEventListener('input', runSearch);
+searchClear.addEventListener('click', () => {
+  searchInput.value = '';
+  runSearch();
+  searchInput.focus();
 });
 </script>
 
