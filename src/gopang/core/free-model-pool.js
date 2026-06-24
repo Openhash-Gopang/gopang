@@ -9,25 +9,50 @@
  *   1) 검증 시 "우선순위" 기준 — 우리가 품질을 검토해둔 순서
  *   2) 카탈로그 조회 자체가 실패했을 때(네트워크/CORS 등) 쓰는 안전망
  *
- * 우선순위 정책 (v2.0, 2026-06 — COMMON-01 v4.0 대응):
- *   COMMON-01 v4.0 시스템 프롬프트 정적 부분이 704 tokens이므로,
- *   컨텍스트 윈도우가 8K인 모델(10% 예산 819 tokens)에서는 PDV 동적 여유가
- *   115 tokens뿐이어서 안정적인 Hash Chain 임무 수행이 불가능하다.
- *   → 16K+ 모델(10% 예산 1,638+)을 우선 배치하여 폴백 체인 초반에
- *     항상 충분한 컨텍스트가 확보되도록 한다.
+ * 우선순위 정책 (v3.0, 2026-06-24 — OR 1순위 + vendor 그룹 정렬):
+ *   1) 1차 정렬: vendor 그룹 (Claude→Gemini→DeepSeek→ChatGPT→Grok 순)
+ *      OpenRouter의 모델 id는 'vendor-slug/model-name[:free]' 형식이므로
+ *      슬러그(anthropic/google/deepseek/openai/x-ai)로 그룹을 식별한다.
+ *      ※ 현실: Anthropic·xAI는 OpenRouter에 무료 모델을 올리지 않는 경우가
+ *        대부분이라 해당 그룹이 비어있을 수 있다 — 그 경우 그냥 다음 그룹으로
+ *        넘어간다(빈 그룹은 자동 스킵, 에러 아님).
+ *   2) 2차 정렬(그룹 내부): 기존 컨텍스트·파라미터 기준 품질 순서 유지
+ *      (아래 OR_FREE_MODELS_FALLBACK 순서, stable sort로 보존)
+ *   3) vendor 그룹에 속하지 않는 나머지 무료 모델(Llama·Qwen·Nemotron 등
+ *      오픈웨이트 진영)은 모든 vendor 그룹 뒤, openrouter/free 앞에 배치.
  *
- *   정렬 기준:
+ * 컨텍스트 정렬 정책(2026-06):
  *     1순위 (1~14): 컨텍스트 128K+, 파라미터 20B+ — 추론·라우팅·지시이행 최상
  *     2순위 (15~21): 컨텍스트 32K~131K, 파라미터 9B+ — 충분한 여유
  *     3순위 (22~23): 컨텍스트 16K — System Prompt 수용 가능한 최소 규격
  *     후순위 (24~26): 파라미터 1~3B — 복잡한 다단계 지시(Hash·라우팅) 이행 불안정
- *   제거:
- *     nvidia/nemotron-3.5-content-safety:free — 8K 특수 안전 분류 전용, AI 비서 부적합
+ *
+ * 신뢰성 관리(2026-06-24 신규):
+ *   매일 전체 모델을 미리 호출 테스트하는 방식은 그 자체로 호출량을 낭비하므로
+ *   채택하지 않았다. 대신 "실제 사용 중 실패하면 24시간 동안 그 모델만 제외"하는
+ *   반응형 쿨다운 캐시(markModelFailed/isModelOnCooldown)를 쓴다.
+ *   24시간 뒤 자동 만료되므로 결과적으로 "매일 목록이 갱신"되는 효과를 내며,
+ *   불필요한 테스트 호출이 전혀 추가되지 않는다.
+ *   또한 OpenRouter 분당 호출 한도를 보호하기 위해 60초 슬라이딩 윈도우
+ *   호출 카운터(canCallOpenRouterNow/recordOpenRouterCall)를 둔다.
  *
  * 사용처:
- *   - pages/ai-setup.html (PC에서 OpenRouter 키 최초 등록 시)
+ *   - pages/ai-setup-mobile.html (OpenRouter 키 최초 등록 시 풀 구성)
+ *   - ai/call-ai.js (_buildCallCandidates에서 쿨다운·레이트리밋 적용)
  *   - ui/settings.js의 _refreshFreeModelPool() (폰 AI 설정창의 "모델 갱신" 버튼)
  */
+
+// ── vendor 그룹 우선순위 (OpenRouter 모델 id의 'vendor-slug/...' 부분) ──
+// 사용자 지정 순서: Claude → Gemini → DeepSeek → ChatGPT → Grok
+// 현재(2026-06) 기준 Anthropic·xAI는 OR에 무료 모델을 거의 올리지 않으므로
+// 해당 그룹은 비어 있을 가능성이 높다 — 비어 있으면 자동으로 다음 그룹으로 넘어간다.
+export const OR_VENDOR_PRIORITY = ['anthropic', 'google', 'deepseek', 'openai', 'x-ai'];
+
+function _vendorRank(id) {
+  const slug = typeof id === 'string' ? id.split('/')[0] : '';
+  const idx = OR_VENDOR_PRIORITY.indexOf(slug);
+  return idx === -1 ? OR_VENDOR_PRIORITY.length : idx; // 미지정 vendor는 모든 그룹 뒤
+}
 
 export const OR_FREE_MODELS_FALLBACK = [
   // ── 1순위: 컨텍스트 128K+, 파라미터 20B+ ────────────────────────────────
@@ -160,7 +185,10 @@ export async function buildLiveFreeModelPool() {
     const rankedRear  = ranked.filter(id => rearModels.has(id));
 
     // 최종 풀 조합:
-    //   [전위 우선순위] + [신규 16K+] + [후위 소형] + [신규 16K 미만] + openrouter/free
+    //   [전위 우선순위] + [신규 16K+] + [후위 소형] + [신규 16K 미만]
+    //   → 그 다음 vendor 그룹(Claude→Gemini→DeepSeek→ChatGPT→Grok) 순으로
+    //     stable sort 재배치 (그룹 내부는 위 품질 순서가 그대로 유지됨)
+    //   → 마지막에 openrouter/free
     let pool = [
       ...rankedFront,
       ...discoveredPreferred,
@@ -170,6 +198,8 @@ export async function buildLiveFreeModelPool() {
 
     if (pool.length === 0) throw new Error('교차 검증된 무료 모델 0개');
 
+    pool.sort((a, b) => _vendorRank(a) - _vendorRank(b)); // stable — 그룹 내부 순서 보존
+
     pool.push('openrouter/free');
 
     const preferredCount = rankedFront.length + discoveredPreferred.length;
@@ -177,11 +207,97 @@ export async function buildLiveFreeModelPool() {
       `[무료모델풀] 실시간 검증 완료 — ${pool.length}개`,
       `| 16K+우선: ${preferredCount}`,
       `| 신규발견: ${discovered.length}(16K+:${discoveredPreferred.length})`,
-      `| 후순위: ${rankedRear.length + discoveredSmall.length}`
+      `| 후순위: ${rankedRear.length + discoveredSmall.length}`,
+      `| vendor정렬: Claude→Gemini→DeepSeek→ChatGPT→Grok→기타`
     );
     return { pool, validated: true };
   } catch (e) {
     console.warn('[무료모델풀] 실시간 검증 실패 — 정적 목록으로 폴백:', e.message);
     return { pool: OR_FREE_MODELS_FALLBACK, validated: false, error: e.message };
   }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── 신뢰성 관리: 24h 쿨다운 캐시 + 60초 슬라이딩 호출 제한기 ──────────
+// ══════════════════════════════════════════════════════════════════
+//
+// 설계 이유: "매일 모든 무료 모델을 실제로 호출해 응답 확인"하는 방식은
+// 그 검증 호출 자체가 분당/일일 한도를 갉아먹는다. 대신:
+//   1) 실제 사용 중 실패(429/402/404/5xx)한 모델만 그 시각부터 24시간
+//      "쿨다운" 처리해 후보에서 제외한다 → 추가 호출 비용 0.
+//   2) 24시간이 지나면 캐시에서 자동 만료되어 다시 후보에 포함된다
+//      → 결과적으로 "매일 목록이 갱신"되는 효과.
+//   3) call-ai.js가 OR 모델을 시도하기 직전마다 분당 호출 카운터를
+//      확인해, 한도(OR_MAX_CALLS_PER_MINUTE)에 도달하면 남은 OR 후보를
+//      전부 건너뛰고 사용자 등록 키 폴백으로 넘어간다 — OR 한도 초과로
+//      키 자체가 일시 차단되는 사태를 예방한다.
+
+const _HEALTH_KEY      = 'gopang_or_health';   // localStorage: { [modelId]: { failedAt, status } }
+const _RATE_KEY        = 'gopang_or_rate';     // localStorage: number[] (최근 호출 타임스탬프)
+const _COOLDOWN_MS     = 24 * 60 * 60 * 1000;  // 24시간
+const _RATE_WINDOW_MS  = 60 * 1000;            // 60초 슬라이딩 윈도우
+export const OR_MAX_CALLS_PER_MINUTE = 15;     // OR 공유 무료풀 분당 한도(보통 ~20rpm) 대비 여유
+
+function _readJSON(key, fallback) {
+  try {
+    const v = JSON.parse(localStorage.getItem(key) || 'null');
+    return v ?? fallback;
+  } catch { return fallback; }
+}
+function _writeJSON(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
+/** 24시간 지난 쿨다운 항목을 캐시에서 제거 (만료 = 자동 "매일 갱신") */
+export function pruneModelHealthCache() {
+  const cache = _readJSON(_HEALTH_KEY, {});
+  const now = Date.now();
+  let changed = false;
+  for (const id of Object.keys(cache)) {
+    if (now - (cache[id]?.failedAt || 0) > _COOLDOWN_MS) { delete cache[id]; changed = true; }
+  }
+  if (changed) _writeJSON(_HEALTH_KEY, cache);
+  return cache;
+}
+
+/** 모델이 현재 24h 쿨다운 중인지 확인 (openrouter/free 자동라우터는 절대 제외하지 않음) */
+export function isModelOnCooldown(modelId) {
+  if (modelId === 'openrouter/free') return false;
+  const cache = pruneModelHealthCache();
+  return !!cache[modelId];
+}
+
+/** 실패한 모델을 24h 쿨다운 캐시에 기록 */
+export function markModelFailed(modelId, status) {
+  if (!modelId || modelId === 'openrouter/free') return;
+  const cache = pruneModelHealthCache();
+  cache[modelId] = { failedAt: Date.now(), status: status || 0 };
+  _writeJSON(_HEALTH_KEY, cache);
+}
+
+/** pool에서 현재 쿨다운 중인 모델을 제외한 배열 반환 */
+export function filterHealthyModels(pool) {
+  if (!Array.isArray(pool)) return pool;
+  const cache = pruneModelHealthCache();
+  return pool.filter(id => !cache[id]);
+}
+
+/** 60초 슬라이딩 윈도우 내 OR 호출 횟수가 한도 미만인지 확인 */
+export function canCallOpenRouterNow() {
+  return getOpenRouterRemainingBudget() > 0;
+}
+
+/** 이번 60초 윈도우에 추가로 시도할 수 있는 OR 호출 잔여 횟수 */
+export function getOpenRouterRemainingBudget() {
+  const now = Date.now();
+  const hits = _readJSON(_RATE_KEY, []).filter(t => now - t < _RATE_WINDOW_MS);
+  return Math.max(0, OR_MAX_CALLS_PER_MINUTE - hits.length);
+}
+
+/** OR 호출 시도를 기록 (성공/실패 무관 — 시도 자체가 분당 한도를 소모) */
+export function recordOpenRouterCall() {
+  const now = Date.now();
+  const hits = _readJSON(_RATE_KEY, []).filter(t => now - t < _RATE_WINDOW_MS);
+  hits.push(now);
+  _writeJSON(_RATE_KEY, hits);
 }

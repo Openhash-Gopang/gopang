@@ -5,13 +5,23 @@ import { setAiActive, aiActive, _USER, USER_GUID } from './state.js';
 
 // ── Provider별 정보 (모델 → provider 식별 + baseUrl) ────────
 // 모든 provider가 OpenAI 호환 /chat/completions 형식 지원
+// (Anthropic은 공식 OpenAI SDK 호환 레이어 제공 — base_url=api.anthropic.com/v1,
+//  Authorization: Bearer 사용. 단, prompt caching 등 일부 고급기능은 미지원이므로
+//  stream_options도 보수적으로 비활성화.)
 export const PROVIDER_INFO = {
-  gemini:     { label: 'Gemini',     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', keyField: 'geminiKey' },
+  anthropic:  { label: 'Claude',     baseUrl: 'https://api.anthropic.com/v1',                              keyField: 'apiKey',    noStreamOptions: true },
+  gemini:     { label: 'Gemini',     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', keyField: 'geminiKey', noStreamOptions: true },
   deepseek:   { label: 'DeepSeek',   baseUrl: 'https://api.deepseek.com',                                 keyField: 'apiKey' },
-  anthropic:  { label: 'Claude',     baseUrl: 'https://api.anthropic.com/v1',                              keyField: 'apiKey' },
-  openai:     { label: 'GPT',        baseUrl: 'https://api.openai.com/v1',                                 keyField: 'apiKey' },
+  openai:     { label: 'ChatGPT',    baseUrl: 'https://api.openai.com/v1',                                 keyField: 'apiKey' },
+  xai:        { label: 'Grok',       baseUrl: 'https://api.x.ai/v1',                                       keyField: 'apiKey' },
   openrouter: { label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1',                               keyField: 'apiKey', noStreamOptions: true },
 };
+
+// ── 호출 우선순위 (2026-06-24 v2 — OpenRouter 무료풀 1순위) ──
+// OpenRouter(무료풀, 내부적으로 Claude→Gemini→DeepSeek→ChatGPT→Grok 계열 순으로 시도)
+// → 그래도 안 되면 사용자가 직접 등록한 유료/크레딧 키 순서로 폴백.
+// "무료부터 최대한 써보고, 정말 안 될 때만 내 돈으로 호출"이 되는 순서.
+export const PRIORITY_ORDER = ['openrouter', 'anthropic', 'gemini', 'deepseek', 'openai', 'xai'];
 
 export function _providerOf(model) {
   if (!model) return null;
@@ -20,7 +30,8 @@ export function _providerOf(model) {
   if (model.startsWith('gemini'))  return 'gemini';
   if (model.startsWith('deepseek'))return 'deepseek';
   if (model.startsWith('claude'))  return 'anthropic';
-  if (model.startsWith('gpt'))     return 'openai';
+  if (model.startsWith('grok'))    return 'xai';
+  if (model.startsWith('gpt') || model.startsWith('o1') || model.startsWith('o3')) return 'openai';
   return null;
 }
 

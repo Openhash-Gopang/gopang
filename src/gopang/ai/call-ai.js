@@ -1,7 +1,9 @@
 ﻿/**
  * ai/call-ai.js — LLM API 호출·스트리밍·GWP 태그 처리
  */
-import { CFG, _modelSupportsVision, PROVIDER_INFO } from '../core/config.js';
+import { CFG, _modelSupportsVision, PROVIDER_INFO, PRIORITY_ORDER } from '../core/config.js';
+import { isModelOnCooldown, markModelFailed, recordOpenRouterCall, getOpenRouterRemainingBudget }
+  from '../core/free-model-pool.js';
 import { aiActive, history, _userLocation, _lastRouterResult,
          setLastRouterResult, _USER, USER_GUID, _locationPending, _locationReady } from '../core/state.js';
 import { appendBubble, showTyping, hideTyping,
@@ -54,19 +56,43 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
 }
 
 // ── 호출 후보 목록 생성 ────────────────────────────────────
-// 우선순위: 1) 고팡 프록시(기본, 무료) 2) 사용자가 등록한 BYOK provider들 (등록 순서대로)
-// 한도 초과(429)·크레딧부족(402) 시 callAI()에서 다음 후보로 자동 전환
+// 우선순위(PRIORITY_ORDER, config.js): OpenRouter(무료풀) → Claude → Gemini → DeepSeek → ChatGPT → Grok
+// → 마지막 안전망으로 고팡 프록시(키 불필요)
+// OR 내부는 vendor 그룹(Claude→Gemini→DeepSeek→ChatGPT→Grok 계열) 순으로 이미 정렬돼 있다
+// (free-model-pool.js의 OR_VENDOR_PRIORITY 참고).
+// 등록된(키 입력된) provider만 후보가 되며, 한도 초과(429)·크레딧부족(402)·404 등
+// 모든 실패 상황에서 callAI()가 다음 후보로 자동 전환한다.
+// OR 후보는 추가로 (1) 24h 쿨다운 캐시, (2) 분당 호출 예산 두 가지 필터를 통과해야 한다.
 function _buildCallCandidates() {
   const candidates = [];
 
-  // 1) 사용자가 등록한 OR 키 (ai-setup-mobile에서 등록한 무료 모델 풀)
-  //    성능 높은 순서로 이미 정렬된 상태 (free-model-pool.js의 OR_FREE_MODELS_FALLBACK 순)
-  //    한도 초과(429/402) 시 다음 모델로 자동 페일오버
+  // 1) 사용자가 등록한 provider 키들 (ai-setup-mobile.html에서 등록)
+  //    저장 순서와 무관하게 PRIORITY_ORDER(OR→Claude→Gemini→DeepSeek→ChatGPT→Grok)로
+  //    항상 재정렬 — 키가 등록된 provider만 그 순서대로 호출된다.
+  //    OR 슬롯은 무료 모델 풀 전체(여러 model 항목)가 들어있으므로,
+  //    같은 provider 내부 상대 순서는 stable sort로 보존된다(OR 풀 자체의 우선순위 유지).
   if (Array.isArray(CFG.providers)) {
-    for (const p of CFG.providers) {
+    const sorted = [...CFG.providers].sort((a, b) => {
+      const ia = PRIORITY_ORDER.indexOf(a?.provider);
+      const ib = PRIORITY_ORDER.indexOf(b?.provider);
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
+
+    // OR 분당 호출 예산 — 이번 callAI() 호출에서 추가로 시도 가능한 OR 후보 수.
+    // 0이면 OR 후보를 전부 건너뛰고 곧장 사용자 직접등록 키(또는 프록시)로 넘어간다.
+    let orBudget = getOpenRouterRemainingBudget();
+
+    for (const p of sorted) {
       if (!p?.apiKey || !p?.model) continue;
       const info = PROVIDER_INFO[p.provider];
       if (!info) continue;
+
+      if (p.provider === 'openrouter') {
+        if (isModelOnCooldown(p.model)) continue; // 24h 쿨다운 중 — 건너뜀
+        if (orBudget <= 0) continue;               // 분당 한도 초과 — 건너뜀
+        orBudget--;
+      }
+
       candidates.push({
         provider: p.provider,
         baseUrl:  (p.baseUrl || info.baseUrl).replace(/\/+$/, ''),
@@ -312,6 +338,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     for (let i = 0; i < candidates.length; i++) {
       const c = candidates[i];
       console.log(`[AI] 시도 ${i + 1}/${candidates.length} → ${c.baseUrl}/chat/completions | 모델: ${c.model} | ${c.isProxy ? '프록시(보안)' : 'provider: ' + c.provider}`);
+      if (c.provider === 'openrouter') recordOpenRouterCall(); // 분당 슬라이딩 윈도우에 기록
       try {
         const reqBody = {
           model: c.model,
@@ -342,6 +369,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
         const errBody = await attempt.text().catch(() => '');
         lastErr = new Error(`API ${attempt.status}: ${errBody.slice(0, 300) || '응답없음'}`);
         console.warn(`[AI] ${c.provider}(${c.model}) 실패(${attempt.status}) — 다음 LLM으로 전환:`, errBody.slice(0, 150));
+        if (c.provider === 'openrouter') markModelFailed(c.model, attempt.status); // 24h 쿨다운
         continue;
       } catch (fetchErr) {
         if (fetchErr.name === 'AbortError') throw fetchErr; // 사용자 중지 — 페일오버 없이 즉시 중단
