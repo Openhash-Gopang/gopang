@@ -1651,7 +1651,10 @@ select.setting-field{appearance:none;-webkit-appearance:none;
   if(inp){
     inp.addEventListener('input', syncState);
     inp.addEventListener('keydown', function(e){
-      if(e.key === 'Enter' && !e.shiftKey){
+      // e.isComposing: 한글 등 IME로 글자를 조합 중일 때 Enter를 눌러 조합을 확정하면
+      // 그 확정 keydown도 'Enter'로 들어온다. 가드가 없으면 조합 확정 1번 + 실제 전송 1번
+      // 으로 두 번 제출돼 "60대" 같은 입력이 버블 2개로 중복 표시된다.
+      if(e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229){
         e.preventDefault();
         // gopang-app.js 의 전송 함수 호출 시도
         if(typeof sendMessage === 'function') sendMessage();
@@ -2578,10 +2581,17 @@ window.closeTermsOfUse = closeTermsOfUse;
 
   // ── AI 패널 전용 독립 fetch ──────────────────────────
   // callAI()는 항상 메인 #message-list에 결과를 씀 → 패널에서 직접 쓰면 중복 발생
-  // 따라서 패널은 OR API를 독립적으로 직접 호출
+  // 따라서 패널은 독립적으로 직접 호출하지만, call-ai.js와 동일한
+  // PRIORITY_ORDER 정렬·24h 쿨다운·분당 호출 제한 로직을 공유 모듈에서 가져와 쓴다.
+  // (이전 버전은 이 로직이 전혀 없어 OR 한도 도달 시 등록된 모델 전부를
+  //  순서대로 다 두드리느라 응답이 10초 이상 걸리는 문제가 있었음 — 2026-06-24 수정)
   const _panelHistory = [];  // 패널 전용 대화 히스토리
 
   async function _callPanelAI(userText, bubbleEl) {
+    const { PROVIDER_INFO, PRIORITY_ORDER } = await import('./src/gopang/core/config.js');
+    const { isModelOnCooldown, markModelFailed, getOpenRouterRemainingBudget, recordOpenRouterCall }
+      = await import('./src/gopang/core/free-model-pool.js');
+
     // CFG에서 현재 설정 읽기
     const cfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
     const providers = Array.isArray(cfg.providers) ? cfg.providers : [];
@@ -2594,22 +2604,57 @@ window.closeTermsOfUse = closeTermsOfUse;
     }
     _panelHistory.push({ role: 'user', content: userText });
 
-    // OR providers 순서대로 시도
-    const candidates = providers.length > 0
-      ? providers.map(p => ({ url: 'https://openrouter.ai/api/v1/chat/completions', model: p.model, key: p.apiKey }))
-      : [{ url: endpoint + '/chat/completions', model: cfg.model || 'deepseek/deepseek-r1:free', key: '' }];
+    // ── 후보 생성: PRIORITY_ORDER로 정렬 + OR은 24h쿨다운·분당예산으로 사전 필터링 ──
+    // (call-ai.js의 _buildCallCandidates와 동일한 원칙 — 실패가 뻔한 후보는
+    //  애초에 시도하지 않아야 응답이 느려지지 않는다.)
+    const sorted = [...providers].sort((a, b) => {
+      const ia = PRIORITY_ORDER.indexOf(a?.provider);
+      const ib = PRIORITY_ORDER.indexOf(b?.provider);
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
+
+    let orBudget = getOpenRouterRemainingBudget();
+    const MAX_OR_TRIES_PER_MESSAGE = 6; // 분당 예산이 남아있어도 한 메시지당 이 이상은 안 시도 — 최악의 경우 지연시간 상한
+    let orTriesLeft = MAX_OR_TRIES_PER_MESSAGE;
+    const candidates = [];
+    for (const p of sorted) {
+      if (!p?.apiKey || !p?.model) continue;
+      const info = PROVIDER_INFO[p.provider];
+      if (!info) continue;
+      if (p.provider === 'openrouter') {
+        if (isModelOnCooldown(p.model)) continue; // 24h 내 실패한 모델 — 건너뜀
+        if (orBudget <= 0 || orTriesLeft <= 0) continue; // 분당 한도 또는 메시지당 상한 초과
+        orBudget--; orTriesLeft--;
+      }
+      candidates.push({
+        provider: p.provider,
+        url: (p.baseUrl || info.baseUrl).replace(/\/+$/, '') + '/chat/completions',
+        model: p.model, key: p.apiKey,
+      });
+    }
+    // 최종 안전망 — 고팡 프록시(키 불필요)
+    candidates.push({ provider: 'gopang-proxy', url: endpoint + '/chat/completions', model: cfg.model || 'deepseek-chat', key: '' });
 
     let lastErr = '';
     for (const c of candidates) {
       try {
         const headers = { 'Content-Type': 'application/json' };
-        if (c.key) { headers['Authorization'] = 'Bearer ' + c.key; headers['HTTP-Referer'] = 'https://gopang.net'; }
+        if (c.key) {
+          headers['Authorization'] = 'Bearer ' + c.key;
+          if (c.provider === 'openrouter') headers['HTTP-Referer'] = 'https://gopang.net';
+        }
+        if (c.provider === 'openrouter') recordOpenRouterCall(); // 분당 슬라이딩 윈도우에 기록
+
         const res = await fetch(c.url, {
           method: 'POST',
           headers,
           body: JSON.stringify({ model: c.model, messages: _panelHistory, stream: true, max_tokens: 1500 }),
         });
-        if (!res.ok) { lastErr = `HTTP ${res.status}`; continue; }
+        if (!res.ok) {
+          lastErr = `HTTP ${res.status}`;
+          if (c.provider === 'openrouter') markModelFailed(c.model, res.status); // 24h 쿨다운
+          continue;
+        }
 
         // 스트리밍 렌더
         bubbleEl.textContent = '';
@@ -2661,7 +2706,10 @@ window.closeTermsOfUse = closeTermsOfUse;
 
   sendBtn.addEventListener('click', _sendToAI);
   input.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); _sendToAI(); }
+    // 한글 IME 조합 확정 Enter와 실제 전송 Enter가 겹쳐 이중 전송되는 것을 방지
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+      e.preventDefault(); _sendToAI();
+    }
   });
 })();
 </script>

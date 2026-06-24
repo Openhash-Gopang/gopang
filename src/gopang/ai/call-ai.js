@@ -82,6 +82,11 @@ function _buildCallCandidates() {
     // OR 분당 호출 예산 — 이번 callAI() 호출에서 추가로 시도 가능한 OR 후보 수.
     // 0이면 OR 후보를 전부 건너뛰고 곧장 사용자 직접등록 키(또는 프록시)로 넘어간다.
     let orBudget = getOpenRouterRemainingBudget();
+    // 분당 예산이 충분히 남아있어도 한 메시지당 시도 횟수는 별도로 상한을 둔다
+    // — 그래야 "분당 한도 미달이지만 26개 중 앞쪽 여러 개가 동시에 막힌" 최악의
+    //   경우에도 응답 지연이 일정 수준 이상으로 길어지지 않는다.
+    const MAX_OR_TRIES_PER_MESSAGE = 6;
+    let orTriesLeft = MAX_OR_TRIES_PER_MESSAGE;
 
     for (const p of sorted) {
       if (!p?.apiKey || !p?.model) continue;
@@ -90,8 +95,8 @@ function _buildCallCandidates() {
 
       if (p.provider === 'openrouter') {
         if (isModelOnCooldown(p.model)) continue; // 24h 쿨다운 중 — 건너뜀
-        if (orBudget <= 0) continue;               // 분당 한도 초과 — 건너뜀
-        orBudget--;
+        if (orBudget <= 0 || orTriesLeft <= 0) continue; // 분당 한도 또는 메시지당 상한 초과
+        orBudget--; orTriesLeft--;
       }
 
       candidates.push({
