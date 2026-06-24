@@ -49,7 +49,18 @@ html, body {
   background: var(--bg); border: 1px solid var(--border); color: var(--text3);
   font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;
 }
+.card-num[data-handle] { cursor: grab; touch-action: none; }
+.card-num[data-handle]:active { cursor: grabbing; }
 .card.filled .card-num { background: var(--brand); border-color: var(--brand); color: #fff; }
+.card.dragging { opacity: .5; }
+.card-order-btns { display: flex; flex-direction: column; gap: 2px; margin-left: 2px; }
+.order-btn {
+  width: 20px; height: 16px; padding: 0; line-height: 1;
+  border: 1px solid var(--border); border-radius: 2px;
+  background: var(--surface); color: var(--text3); font-size: 8px; cursor: pointer;
+}
+.order-btn:disabled { opacity: .25; cursor: default; }
+.order-btn:not(:disabled):hover { border-color: var(--brand); color: var(--brand); }
 .card-titles { flex: 1; min-width: 0; }
 .card-name { font-size: calc(14px * var(--fs)); font-weight: 700; color: var(--text); }
 .card-name small { font-weight: 500; color: var(--text3); margin-left: 4px; font-size: calc(11px * var(--fs)); }
@@ -162,10 +173,10 @@ html, body {
   </div>
   <div id="_head-title">AI 비서 활성화</div>
   <div id="_head-desc">
-    <b>OpenRouter 무료 모델이 1순위</b>로 항상 먼저 시도됩니다 (컨텍스트·성능 기준으로 검증된 20여개 모델을 자동 순차 시도).
-    Claude·Grok이 OpenRouter에 무료 모델을 추가하면 자동으로 최우선 반영됩니다.
-    분당 호출 수도 자동으로 제한해 한도초과를 예방합니다. 그래도 안 되면 아래 등록한 키 순서로 자동 전환됩니다.
-    하나도 등록하지 않아도 OpenRouter 무료 모델만으로 바로 시작할 수 있습니다.
+    아래 카드의 <b>번호를 끌어서</b> 또는 ▲▼ 버튼으로 호출 순서를 직접 정할 수 있습니다.
+    등록된 항목이 위에서부터 차례로 시도되며, 한도 초과·오류 시 다음 순서로 자동 전환됩니다.
+    분당 호출 수도 자동으로 제한해 한도초과를 예방합니다. 하나도 등록하지 않아도 OpenRouter 무료 모델만으로 시작할 수 있습니다.
+    각 모델의 성능·비용 비율은 공개 벤치마크·가격표를 참고한 대략적인 추정치이며(기준: Claude Sonnet 4.6 = 100%·1배), 실제 체감은 작업에 따라 다를 수 있습니다.
   </div>
 </div>
 
@@ -196,9 +207,11 @@ import { buildLiveFreeModelPool } from '../src/gopang/core/free-model-pool.js';
 //   free   = 사실상 무제한·영구 무료 한도 (카드 불필요)
 //   credit = 가입 시 일정 크레딧/토큰 지급, 소진 후 결제 필요
 //   paid   = 무료 한도가 거의 없어 사실상 유료
+// 성능%·비용비율은 공개 벤치마크·가격표를 참고한 대략적 추정치입니다(2026-06-24 기준).
+// 기준(=100%, 1배): Claude Sonnet 4.6 ($3/$15 per 1M input/output)
 const PROVIDERS = [
   {
-    id: 'openrouter', name: 'OpenRouter', sub: '1순위 · 무료풀', badge: 'free',
+    id: 'openrouter', name: 'OpenRouter', sub: '무료풀', badge: 'free',
     badgeText: '무료 (카드 불필요)',
     desc: '키 하나로 매일 약 200회, 20개 이상의 무료 모델을 컨텍스트·성능 기준으로 검증된 순서대로 자동 시도합니다. Claude·Grok이 OpenRouter에 무료 모델을 새로 올리면 발견 즉시 최우선으로 자동 반영됩니다(현재는 둘 다 무료 모델이 없어 적용되지 않음). 모델 목록은 매번 실시간 검증해 자동 구성되므로 따로 선택할 필요가 없습니다. 분당 호출 수도 자동으로 제한해 한도초과를 예방합니다.',
     linkLabel: 'openrouter.ai/keys 새 탭으로 열기',
@@ -210,67 +223,69 @@ const PROVIDERS = [
   {
     id: 'anthropic', name: 'Claude', sub: 'Anthropic', badge: 'credit',
     badgeText: '가입크레딧 (소진 후 유료)',
-    desc: 'OpenRouter 무료풀이 모두 막혔을 때만 호출되는 폴백입니다. 추론·코딩·장문 작성에서 최상위권 품질이지만, 가입 시 일회성 테스트 크레딧(보통 $5 내외, 미지급되는 경우도 있음)만 제공되고 카드 등록이 필요합니다. 소진 후에는 충전해야 계속 쓸 수 있습니다.',
+    desc: '추론·코딩·장문 작성에서 최상위권 품질입니다. 가입 시 일회성 테스트 크레딧(보통 $5 내외, 미지급되는 경우도 있음)만 제공되고 카드 등록이 필요합니다. 소진 후에는 충전해야 계속 쓸 수 있습니다. 아래 Sonnet이 비용·성능 비교의 기준(1배·100%)입니다.',
     linkLabel: 'console.anthropic.com 새 탭으로 열기',
     link: 'https://console.anthropic.com/settings/keys',
     steps: 'console.anthropic.com 가입 → 결제수단 등록 → API Keys → Create Key',
     keyPlaceholder: 'sk-ant-...',
     models: [
-      { v: 'claude-sonnet-4-6', t: 'Claude Sonnet 4.6 (균형, 권장)' },
-      { v: 'claude-haiku-4-5-20251001', t: 'Claude Haiku 4.5 (저가·고속)' },
-      { v: 'claude-opus-4-7', t: 'Claude Opus 4.7 (최고성능·고가)' },
+      { v: 'claude-haiku-4-5-20251001', t: 'Claude Haiku 4.5 — 성능 70~80% · 비용 1/3 · 유료' },
+      { v: 'claude-sonnet-4-6', t: 'Claude Sonnet 4.6 — 기준모델 · 비용 1배 · 유료 (권장)', rec: true },
+      { v: 'claude-opus-4-7', t: 'Claude Opus 4.7 — 성능 최상위 · 비용 1.7배 · 유료' },
     ],
   },
   {
     id: 'gemini', name: 'Gemini', sub: 'Google AI Studio', badge: 'free',
-    badgeText: '무료 (카드 불필요)',
-    desc: 'OpenRouter 무료풀이 막혔을 때의 2차 폴백입니다. Flash 계열 모델은 매일 일정량(보통 수백~1,500회)까지 카드 등록 없이 무료입니다. 단, Pro 계열 모델은 2026년부터 무료 제공이 종료되어 빌링을 켜야 합니다. 무료로 쓰려면 아래에서 Flash 계열을 선택하세요.',
+    badgeText: '무료~유료 혼합 (Flash 무료한도)',
+    desc: 'Flash·Flash-Lite는 매일 일정량(보통 수백~1,500회)까지 카드 등록 없이 무료입니다. Pro 계열은 2026년부터 무료 제공이 종료돼 결제수단이 필요하지만, Claude Sonnet보다 오히려 약간 저렴하면서 성능은 동급 이상입니다.',
     linkLabel: 'aistudio.google.com 새 탭으로 열기',
     link: 'https://aistudio.google.com/apikey',
     steps: 'Google 계정으로 로그인 → Create API key → 즉시 발급(카드 불필요)',
     keyPlaceholder: 'AIza...',
     models: [
-      { v: 'gemini-2.5-flash', t: 'Gemini 2.5 Flash (무료한도 권장)' },
-      { v: 'gemini-2.0-flash', t: 'Gemini 2.0 Flash (무료, 저비용)' },
+      { v: 'gemini-2.5-flash-lite', t: 'Gemini 2.5 Flash-Lite — 성능 50~60% · 비용 1/30~1/40 · 무료한도' },
+      { v: 'gemini-2.5-flash', t: 'Gemini 2.5 Flash — 성능 70~80% · 비용 1/6~1/10 · 무료한도 (권장)', rec: true },
+      { v: 'gemini-3.1-pro', t: 'Gemini 3.1 Pro — 성능 동급이상 · 비용 0.8배 · 유료전용' },
     ],
   },
   {
     id: 'deepseek', name: 'DeepSeek', sub: '', badge: 'credit',
     badgeText: '가입크레딧 5M 토큰',
-    desc: 'OpenRouter·Gemini가 모두 막혔을 때의 폴백입니다. 신규 계정에 약 500만 토큰 분량의 무료 크레딧이 지급되며, 별도의 분당 호출 제한이 거의 없습니다. 크레딧 소진 후에도 단가가 매우 저렴한 편입니다.',
+    desc: '신규 계정에 약 500만 토큰 분량의 무료 크레딧이 지급되며, 별도의 분당 호출 제한이 거의 없습니다. V4 Flash는 압도적으로 저렴하고, V4 Pro는 Sonnet과 맞먹는 성능을 1/10 안팎의 비용으로 제공합니다.',
     linkLabel: 'platform.deepseek.com 새 탭으로 열기',
     link: 'https://platform.deepseek.com/api_keys',
     steps: '이메일로 가입 → API Keys → Create new API key',
     keyPlaceholder: 'sk-...',
     models: [
-      { v: 'deepseek-chat', t: 'DeepSeek Chat (일반 대화)' },
-      { v: 'deepseek-reasoner', t: 'DeepSeek Reasoner (추론 특화)' },
+      { v: 'deepseek-v4-flash', t: 'DeepSeek V4 Flash — 성능 85~90% · 비용 1/20~1/50 · 가입크레딧 (권장)', rec: true },
+      { v: 'deepseek-v4-pro', t: 'DeepSeek V4 Pro — 성능 동급 · 비용 1/7~1/17 · 가입크레딧' },
     ],
   },
   {
     id: 'openai', name: 'ChatGPT', sub: 'OpenAI', badge: 'paid',
     badgeText: '유료 (최소 $5 선결제)',
-    desc: '위 세 가지가 모두 막혔을 때의 폴백입니다. 2025년 중반부터 신규가입 무료 크레딧이 폐지되었습니다. 카드 등록 후 최소 $5를 선결제해야 GPT 모델을 호출할 수 있습니다. (결제 없이는 매우 제한적인 구버전 모델만 동작합니다.)',
+    desc: '2025년 중반부터 신규가입 무료 크레딧이 폐지되었습니다. 카드 등록 후 최소 $5를 선결제해야 GPT 모델을 호출할 수 있습니다. GPT-5.4가 Sonnet과 거의 같은 가격대의 표준 모델입니다.',
     linkLabel: 'platform.openai.com 새 탭으로 열기',
     link: 'https://platform.openai.com/api-keys',
     steps: '가입 → Billing에서 결제수단·최소 $5 등록 → API keys → Create new secret key',
     keyPlaceholder: 'sk-...',
     models: [
-      { v: 'gpt-4o-mini', t: 'GPT-4o mini (저가)' },
-      { v: 'gpt-4o', t: 'GPT-4o (고성능)' },
+      { v: 'gpt-5.4-nano', t: 'GPT-5.4 Nano — 성능 50~60% · 비용 1/12~1/15 · 유료' },
+      { v: 'gpt-5.4', t: 'GPT-5.4 — 성능 거의동급 · 비용 거의동일 · 유료 (권장)', rec: true },
+      { v: 'gpt-5.5', t: 'GPT-5.5 — 성능 동급이상(플래그십) · 비용 약 2배 · 유료' },
     ],
   },
   {
-    id: 'xai', name: 'Grok', sub: 'xAI · 최종 폴백', badge: 'credit',
+    id: 'xai', name: 'Grok', sub: 'xAI', badge: 'credit',
     badgeText: '가입크레딧 (기간 한정)',
-    desc: '위 네 가지가 모두 막혔을 때의 최종 폴백입니다. 신규 계정에 약 $25 상당의 크레딧이 지급되며 보통 30~90일 내 소멸됩니다. 데이터 공유 동의 시 추가 월간 크레딧을 주는 프로그램이 운영되기도 하지만 정책이 자주 바뀌므로 콘솔에서 직접 확인하세요.',
+    desc: '신규 계정에 약 $25 상당의 크레딧이 지급되며 보통 30~90일 내 소멸됩니다. 데이터 공유 동의 시 추가 월간 크레딧을 주는 프로그램이 운영되기도 하지만 정책이 자주 바뀌므로 콘솔에서 직접 확인하세요.',
     linkLabel: 'console.x.ai 새 탭으로 열기',
     link: 'https://console.x.ai',
     steps: 'X 계정 또는 이메일로 가입 → API Keys → Create Key',
     keyPlaceholder: 'xai-...',
     models: [
-      { v: 'grok-4-fast', t: 'Grok 4 Fast (저가·고속)' },
-      { v: 'grok-4', t: 'Grok 4 (고성능)' },
+      { v: 'grok-4.1-fast', t: 'Grok 4.1 Fast — 성능 약 70% · 비용 1/22~1/30 · 가입크레딧 (권장)', rec: true },
+      { v: 'grok-4.3', t: 'Grok 4.3 — 성능 동급(추론특화) · 비용 약 1/5 · 가입크레딧' },
     ],
   },
 ];
@@ -279,6 +294,15 @@ const PROVIDERS = [
 const cardsEl = document.getElementById('_cards');
 const existing = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
 const existingProviders = Array.isArray(existing.providers) ? existing.providers : [];
+
+// 이전에 드래그로 저장해둔 순서가 있으면 그 순서로 카드를 그린다
+if (Array.isArray(existing.providerOrder) && existing.providerOrder.length) {
+  const order = existing.providerOrder;
+  PROVIDERS.sort((a, b) => {
+    const ia = order.indexOf(a.id), ib = order.indexOf(b.id);
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+  });
+}
 
 function _findExisting(id) {
   const hit = existingProviders.find(p => p?.provider === id);
@@ -296,7 +320,7 @@ PROVIDERS.forEach((p, idx) => {
     modelHtml = `
       <div class="model-row">
         <select class="model-select" data-id="${p.id}">
-          ${p.models.map(m => `<option value="${m.v}">${m.t}</option>`).join('')}
+          ${p.models.map(m => `<option value="${m.v}" ${m.rec ? 'selected' : ''}>${m.t}</option>`).join('')}
           <option value="__custom__">다른 모델 직접 입력 (고급)</option>
         </select>
         <input type="text" class="model-custom" data-id="${p.id}" placeholder="예: ${p.models[0].v}">
@@ -305,10 +329,14 @@ PROVIDERS.forEach((p, idx) => {
 
   card.innerHTML = `
     <div class="card-head" data-toggle="${p.id}">
-      <div class="card-num">${idx + 1}</div>
+      <div class="card-num" data-handle="${p.id}" title="끌어서 순서 변경">${idx + 1}</div>
       <div class="card-titles">
         <div class="card-name">${p.name}${p.sub ? `<small>${p.sub}</small>` : ''}</div>
         <div class="card-badge ${p.badge === 'free' ? 'free' : ''}">${p.badgeText}</div>
+      </div>
+      <div class="card-order-btns">
+        <button class="order-btn" data-move="up" data-id="${p.id}" aria-label="위로" title="위로">▲</button>
+        <button class="order-btn" data-move="down" data-id="${p.id}" aria-label="아래로" title="아래로">▼</button>
       </div>
       <div class="card-chev">▼</div>
     </div>
@@ -344,10 +372,81 @@ PROVIDERS.forEach((p, idx) => {
   }
 });
 
+// ── 우선순위 드래그앤드롭 + 위/아래 버튼 ──────────────────
+// 카드가 보이는 순서 = 실제 호출 우선순위. card-num(번호 원)을 끌어서
+// 옮기거나 ▲▼ 버튼으로 한 칸씩 옮길 수 있다.
+let _justDragged = false;
+
+function _renumberCards() {
+  const cards = [...cardsEl.children];
+  cards.forEach((card, i) => {
+    const numEl = card.querySelector('.card-num');
+    if (numEl) numEl.textContent = i + 1;
+    const upBtn   = card.querySelector('[data-move="up"]');
+    const downBtn = card.querySelector('[data-move="down"]');
+    if (upBtn)   upBtn.disabled   = (i === 0);
+    if (downBtn) downBtn.disabled = (i === cards.length - 1);
+  });
+}
+_renumberCards();
+
+let _dragCard = null;
+
+cardsEl.addEventListener('pointerdown', (e) => {
+  const handle = e.target.closest('[data-handle]');
+  if (!handle) return;
+  _dragCard = handle.closest('.card');
+  _dragCard.classList.add('dragging');
+  try { handle.setPointerCapture(e.pointerId); } catch {}
+  document.addEventListener('pointermove', _onDragMove);
+  document.addEventListener('pointerup', _onDragEnd, { once: true });
+});
+
+function _onDragMove(e) {
+  if (!_dragCard) return;
+  const y = e.clientY;
+  const siblings = [...cardsEl.children].filter(c => c !== _dragCard);
+  let target = null;
+  for (const sib of siblings) {
+    const rect = sib.getBoundingClientRect();
+    if (y < rect.top + rect.height / 2) { target = sib; break; }
+  }
+  if (target) cardsEl.insertBefore(_dragCard, target);
+  else cardsEl.appendChild(_dragCard);
+}
+
+function _onDragEnd() {
+  document.removeEventListener('pointermove', _onDragMove);
+  if (_dragCard) {
+    _dragCard.classList.remove('dragging');
+    _dragCard = null;
+    _justDragged = true;
+    setTimeout(() => { _justDragged = false; }, 50); // 드래그 직후의 click이 펼치기로 새지 않도록
+  }
+  _renumberCards();
+  _updateSummary();
+}
+
+// ▲▼ 버튼 — 드래그가 번거로운 경우를 위한 정밀 조정
+cardsEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.order-btn');
+  if (!btn || btn.disabled) return;
+  const card = btn.closest('.card');
+  if (btn.dataset.move === 'up' && card.previousElementSibling) {
+    cardsEl.insertBefore(card, card.previousElementSibling);
+  } else if (btn.dataset.move === 'down' && card.nextElementSibling) {
+    cardsEl.insertBefore(card.nextElementSibling, card);
+  }
+  _renumberCards();
+  _updateSummary();
+});
+
 // ── 아코디언 토글 ────────────────────────────────────────
 cardsEl.addEventListener('click', (e) => {
   const head = e.target.closest('[data-toggle]');
   if (!head) return;
+  if (_justDragged) return;               // 드래그를 마친 직후의 click은 무시
+  if (e.target.closest('.order-btn')) return; // ▲▼ 버튼 클릭은 펼치기와 무관
   const card = head.closest('.card');
   const wasOpen = card.classList.contains('open');
   cardsEl.querySelectorAll('.card.open').forEach(c => c.classList.remove('open'));
@@ -485,31 +584,43 @@ const doneDesc = document.getElementById('_done-desc');
 const doneProg = document.getElementById('_done-prog');
 
 function _collect() {
+  // 화면에 보이는 카드 순서(드래그·▲▼로 바꾼 순서) 그대로 수집한다.
   const out = [];
-  for (const p of PROVIDERS) {
-    if (p.id === 'openrouter') continue;
-    const input = cardsEl.querySelector(`.key-input[data-key="${p.id}"]`);
+  for (const card of cardsEl.children) {
+    const id = card.dataset.id;
+    const p = PROVIDERS.find(x => x.id === id);
+    if (!p || id === 'openrouter') continue;
+    const input = card.querySelector(`.key-input[data-key="${id}"]`);
     const key = input.value.trim();
     if (!key) continue;
-    let model = p.models[0].v;
-    const sel = cardsEl.querySelector(`.model-select[data-id="${p.id}"]`);
+    let model = (p.models.find(m => m.rec) || p.models[0]).v;
+    const sel = card.querySelector(`.model-select[data-id="${id}"]`);
     if (sel.value === '__custom__') {
-      const cus = cardsEl.querySelector(`.model-custom[data-id="${p.id}"]`);
+      const cus = card.querySelector(`.model-custom[data-id="${id}"]`);
       model = cus.value.trim() || model;
     } else {
       model = sel.value;
     }
-    out.push({ provider: p.id, model, apiKey: key });
+    out.push({ provider: id, model, apiKey: key });
   }
   return out;
+}
+
+function _currentOrder() {
+  return [...cardsEl.children].map(c => c.dataset.id);
 }
 
 function _updateSummary() {
   const filled = _collect();
   const orInput = cardsEl.querySelector('.key-input[data-key="openrouter"]');
   const names = [];
-  if (orInput?.value.trim()) names.push('OpenRouter');
-  names.push(...filled.map(f => PROVIDERS.find(p => p.id === f.provider)?.name));
+  for (const id of _currentOrder()) {
+    if (id === 'openrouter') {
+      if (orInput?.value.trim()) names.push('OpenRouter');
+    } else if (filled.some(f => f.provider === id)) {
+      names.push(PROVIDERS.find(p => p.id === id)?.name);
+    }
+  }
   saveSummary.innerHTML = names.length
     ? `등록됨: <b>${names.join(' → ')}</b> 순서로 호출`
     : '등록된 항목이 없으면 <b>OpenRouter 무료 모델</b>로 시작합니다.';
@@ -539,24 +650,34 @@ saveBtn.addEventListener('click', async () => {
     }
   }
 
-  // 저장 순서도 1순위(OR)부터 — call-ai.js가 PRIORITY_ORDER로 다시 정렬하긴 하지만,
-  // CFG.model 기본값(providers[0])이 실제 1순위와 일치하도록 여기서도 OR을 앞에 둔다.
-  const providers = [...orProviders, ...directProviders];
+  // 카드의 현재 화면 순서(드래그·▲▼로 정한 순서)를 그대로 providers 배열로 만들고,
+  // 그 순서 자체도 providerOrder로 저장한다 — config.js의 getPriorityOrder()가
+  // 이 값을 최우선으로 읽으므로 실제 호출 순서가 화면에서 정한 순서와 항상 일치한다.
+  const providerOrder = _currentOrder();
+  const providers = [];
+  for (const id of providerOrder) {
+    if (id === 'openrouter') providers.push(...orProviders);
+    else providers.push(...directProviders.filter(d => d.provider === id));
+  }
 
   const existingCfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
   localStorage.setItem('gopang_cfg', JSON.stringify({
-    model:     providers[0]?.model || existingCfg.model || 'deepseek-chat',
-    endpoint:  existingCfg.endpoint  || 'https://gopang-proxy.tensor-city.workers.dev',
-    apiKey:    existingCfg.apiKey    || '',
-    geminiKey: existingCfg.geminiKey || '',
-    system:    existingCfg.system    || '',
+    model:        providers[0]?.model || existingCfg.model || 'deepseek-v4-flash',
+    endpoint:     existingCfg.endpoint  || 'https://gopang-proxy.tensor-city.workers.dev',
+    apiKey:       existingCfg.apiKey    || '',
+    geminiKey:    existingCfg.geminiKey || '',
+    system:       existingCfg.system    || '',
     providers,
+    providerOrder,
   }));
 
   localStorage.setItem('gopang_ai_activated', Date.now().toString());
 
-  const usedNames = [...(orProviders.length ? ['OpenRouter 무료모델'] : []),
-                      ...directProviders.map(p => PROVIDERS.find(x => x.id === p.provider)?.name)].filter(Boolean);
+  const usedNames = providerOrder
+    .map(id => id === 'openrouter'
+      ? (orProviders.length ? 'OpenRouter 무료모델' : null)
+      : (directProviders.some(d => d.provider === id) ? PROVIDERS.find(p => p.id === id)?.name : null))
+    .filter(Boolean);
   doneDesc.textContent = usedNames.length
     ? `${usedNames.join(' → ')} 순서로 등록되었습니다. 혼디로 돌아가면 AI 비서가 바로 시작됩니다.`
     : '등록된 키가 없어 기본 안전망(고팡 프록시)으로 시작합니다. 혼디로 돌아가면 AI 비서가 바로 시작됩니다.';

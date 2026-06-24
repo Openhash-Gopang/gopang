@@ -2588,7 +2588,7 @@ window.closeTermsOfUse = closeTermsOfUse;
   const _panelHistory = [];  // 패널 전용 대화 히스토리
 
   async function _callPanelAI(userText, bubbleEl) {
-    const { PROVIDER_INFO, PRIORITY_ORDER } = await import('./src/gopang/core/config.js');
+    const { PROVIDER_INFO, getPriorityOrder } = await import('./src/gopang/core/config.js');
     const { isModelOnCooldown, markModelFailed, getOpenRouterRemainingBudget, recordOpenRouterCall }
       = await import('./src/gopang/core/free-model-pool.js');
 
@@ -2604,12 +2604,13 @@ window.closeTermsOfUse = closeTermsOfUse;
     }
     _panelHistory.push({ role: 'user', content: userText });
 
-    // ── 후보 생성: PRIORITY_ORDER로 정렬 + OR은 24h쿨다운·분당예산으로 사전 필터링 ──
+    // ── 후보 생성: getPriorityOrder()로 정렬 + OR은 24h쿨다운·분당예산으로 사전 필터링 ──
     // (call-ai.js의 _buildCallCandidates와 동일한 원칙 — 실패가 뻔한 후보는
     //  애초에 시도하지 않아야 응답이 느려지지 않는다.)
+    const priorityOrder = getPriorityOrder();
     const sorted = [...providers].sort((a, b) => {
-      const ia = PRIORITY_ORDER.indexOf(a?.provider);
-      const ib = PRIORITY_ORDER.indexOf(b?.provider);
+      const ia = priorityOrder.indexOf(a?.provider);
+      const ib = priorityOrder.indexOf(b?.provider);
       return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
     });
 

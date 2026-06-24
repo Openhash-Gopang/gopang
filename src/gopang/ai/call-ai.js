@@ -1,7 +1,7 @@
 ﻿/**
  * ai/call-ai.js — LLM API 호출·스트리밍·GWP 태그 처리
  */
-import { CFG, _modelSupportsVision, PROVIDER_INFO, PRIORITY_ORDER } from '../core/config.js';
+import { CFG, _modelSupportsVision, PROVIDER_INFO, getPriorityOrder } from '../core/config.js';
 import { isModelOnCooldown, markModelFailed, recordOpenRouterCall, getOpenRouterRemainingBudget }
   from '../core/free-model-pool.js';
 import { aiActive, history, _userLocation, _lastRouterResult,
@@ -56,7 +56,9 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
 }
 
 // ── 호출 후보 목록 생성 ────────────────────────────────────
-// 우선순위(PRIORITY_ORDER, config.js): OpenRouter(무료풀) → Claude → Gemini → DeepSeek → ChatGPT → Grok
+// 우선순위는 getPriorityOrder()(config.js)가 결정한다. 기본값은
+// OpenRouter(무료풀) → Claude → Gemini → DeepSeek → ChatGPT → Grok 이지만,
+// 사용자가 ai-setup-mobile.html에서 드래그로 순서를 바꿨으면 그 순서가 우선 적용된다.
 // → 마지막 안전망으로 고팡 프록시(키 불필요)
 // OR 풀 내부는 기본적으로 컨텍스트·파라미터 기준 품질 순서다. 단, Claude·Grok이
 // OpenRouter에 무료 모델을 새로 올리면 free-model-pool.js가 발견 즉시 풀 최상단으로
@@ -73,9 +75,12 @@ function _buildCallCandidates() {
   //    OR 슬롯은 무료 모델 풀 전체(여러 model 항목)가 들어있으므로,
   //    같은 provider 내부 상대 순서는 stable sort로 보존된다(OR 풀 자체의 우선순위 유지).
   if (Array.isArray(CFG.providers)) {
+    // 사용자가 ai-setup-mobile.html에서 드래그로 순서를 바꿨으면 그 순서를,
+    // 아니면 기본 순서(OR→Claude→Gemini→DeepSeek→ChatGPT→Grok)를 사용한다.
+    const priorityOrder = getPriorityOrder();
     const sorted = [...CFG.providers].sort((a, b) => {
-      const ia = PRIORITY_ORDER.indexOf(a?.provider);
-      const ib = PRIORITY_ORDER.indexOf(b?.provider);
+      const ia = priorityOrder.indexOf(a?.provider);
+      const ib = priorityOrder.indexOf(b?.provider);
       return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
     });
 
@@ -119,7 +124,7 @@ function _buildCallCandidates() {
     } else if (CFG.geminiKey) {
       candidates.push({
         provider: 'gemini', baseUrl: PROVIDER_INFO.gemini.baseUrl,
-        model: CFG.model.startsWith('gemini') ? CFG.model : 'gemini-2.0-flash',
+        model: CFG.model.startsWith('gemini') ? CFG.model : 'gemini-2.5-flash',
         apiKey: CFG.geminiKey, isProxy: false,
       });
     }

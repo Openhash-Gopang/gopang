@@ -17,11 +17,31 @@ export const PROVIDER_INFO = {
   openrouter: { label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1',                               keyField: 'apiKey', noStreamOptions: true },
 };
 
-// ── 호출 우선순위 (2026-06-24 v2 — OpenRouter 무료풀 1순위) ──
-// OpenRouter(무료풀, 내부적으로 Claude→Gemini→DeepSeek→ChatGPT→Grok 계열 순으로 시도)
-// → 그래도 안 되면 사용자가 직접 등록한 유료/크레딧 키 순서로 폴백.
-// "무료부터 최대한 써보고, 정말 안 될 때만 내 돈으로 호출"이 되는 순서.
-export const PRIORITY_ORDER = ['openrouter', 'anthropic', 'gemini', 'deepseek', 'openai', 'xai'];
+// ── 호출 우선순위 (2026-06-24 v2 — OpenRouter 무료풀 1순위, 사용자 조정 가능) ──
+// DEFAULT_PRIORITY_ORDER는 사용자가 한 번도 순서를 바꾸지 않았을 때의 기본값이다.
+// ai-setup-mobile.html에서 드래그로 순서를 바꾸면 그 결과가
+// localStorage(gopang_cfg.providerOrder)에 저장되고, getPriorityOrder()가 그 값을
+// 최우선으로 읽는다. call-ai.js·webapp.html(_callPanelAI) 모두 이 함수를 통해서만
+// 우선순위를 읽어야 사용자 설정이 실제 호출 순서에 반영된다.
+export const DEFAULT_PRIORITY_ORDER = ['openrouter', 'anthropic', 'gemini', 'deepseek', 'openai', 'xai'];
+// 하위 호환용 별칭 — 기존에 PRIORITY_ORDER를 직접 import하던 코드가 있어도 깨지지 않게 유지
+export const PRIORITY_ORDER = DEFAULT_PRIORITY_ORDER;
+
+export function getPriorityOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
+    const order = saved?.providerOrder;
+    if (Array.isArray(order) && order.length) {
+      // 알려진 provider id만 채택 + 빠진 id는 기본 순서대로 뒤에 보충
+      // (새 provider가 추가됐는데 사용자의 저장된 순서가 오래된 경우를 대비)
+      const known = new Set(DEFAULT_PRIORITY_ORDER);
+      const valid = order.filter(id => known.has(id));
+      const missing = DEFAULT_PRIORITY_ORDER.filter(id => !valid.includes(id));
+      if (valid.length) return [...valid, ...missing];
+    }
+  } catch {}
+  return DEFAULT_PRIORITY_ORDER;
+}
 
 export function _providerOf(model) {
   if (!model) return null;
@@ -61,8 +81,11 @@ P2P 채널에서 상대방 문의 시: 내 Profile 기반으로 대신 응대합
 // ── 모델명 교정 매핑 ──────────────────────────────────────
 export const MODEL_MIGRATION = {
   'deepseek-v4':  'deepseek-v4-flash',
-  'deepseek-v3':  'deepseek-chat',
+  'deepseek-v3':  'deepseek-v4-flash',
   'deepseek-r1':  'deepseek-reasoner',
+  // deepseek-chat/reasoner는 2026-07-24 단종 예정 별칭 — 명시적 V4 ID로 선이전
+  'deepseek-chat':     'deepseek-v4-flash',
+  'deepseek-reasoner': 'deepseek-v4-flash',
 };
 
 // ── 설정 저장 ─────────────────────────────────────────────
@@ -114,11 +137,23 @@ export function loadSettings() {
 }
 
 // ── 모델 비전 지원 여부 ───────────────────────────────────
+// 2026-06-24: ai-setup-mobile.html에 추가된 현행 모델 ID들을 반영.
+// 레거시 ID(구버전 사용자가 이미 등록해둔 값)도 하위호환으로 그대로 둔다.
+// DeepSeek V4(Flash/Pro)는 비전 미지원으로 알려져 있어 포함하지 않음.
 export const VISION_MODELS = new Set([
+  // Claude
+  'claude-sonnet-4-6', 'claude-haiku-4-5-20251001', 'claude-opus-4-7',
+  'claude-sonnet-4-20250514', 'claude-opus-4-20250514', // 레거시
+  // Gemini (전 모델 멀티모달 기본 지원)
+  'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.1-pro',
+  'gemini-2.0-flash', 'gemini-1.5-pro', // 레거시(단종)
+  // OpenAI
+  'gpt-5.4', 'gpt-5.4-nano', 'gpt-5.5',
+  'gpt-4o', 'gpt-4o-mini', // 레거시
+  // xAI
+  'grok-4.1-fast', 'grok-4.3',
+  // 레거시
   'deepseek-chat',
-  'gpt-4o', 'gpt-4o-mini',
-  'claude-sonnet-4-20250514', 'claude-opus-4-20250514',
-  'gemini-2.0-flash', 'gemini-1.5-pro',
 ]);
 
 export function _modelSupportsVision(model) {
