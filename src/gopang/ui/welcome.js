@@ -18,20 +18,18 @@ function _getProfileStep() {
 }
 
 // ── 초기 AI 비서 환영 메시지 ────────────────────────────
-// 하드코딩된 인사말 버블을 출력하지 않는다 — 첫 마디도 SP(PA 또는 그림자)가
-// 직접 생성한다. JS가 "안녕하세요..."를 미리 박아두면 SP가 정의한 정체성·
-// 어조와 어긋날 수 있고, 그림자 전환 후에도 옛 문구가 남는 문제가 있었다.
 export async function _showWelcomeMessage() {
   const list = document.getElementById('message-list');
   if (!list) return;
 
-  // Personal Assistant SP 로드 (비동기, 캐시됨) — 그림자가 있으면 그림자로 대체됨
+  // Personal Assistant SP 로드 (비동기, 캐시됨)
   await loadPersonalAssistantSP();
 
+  const nickname = _USER?.nickname || _USER?.name || '';
   const profileDone = _isProfileDone();
   const profileStep = _getProfileStep();
 
-  // ── 레이블만 표시 (대화 내용은 전부 AI가 생성) ──
+  // ── 레이블 ──
   const label = document.createElement('div');
   label.style.cssText =
     'font-size:11px;color:var(--label-3);margin:8px 16px 2px;' +
@@ -39,17 +37,38 @@ export async function _showWelcomeMessage() {
   label.textContent = '나만의 AI 비서';
   list.appendChild(label);
 
-  // AI에게 보낼 silent 트리거 — 사용자에게는 보이지 않고, AI의 응답만 버블로 표시된다.
-  const triggerMsg = profileDone
-    ? '[SYSTEM] 세션이 시작되었습니다. 평소처럼 자연스럽게 첫 인사를 건네주세요.'
-    : profileStep
-      ? `[SYSTEM] 이용자가 Profile 작성을 ${profileStep}단계에서 중단했습니다. 인사 후 해당 단계부터 재개해 주세요.`
-      : `[SYSTEM] 이용자의 Profile이 아직 없습니다. 자기소개 인사 후 PHASE 1 온보딩을 시작해 주세요. STEP 1(이름 질문)부터 시작합니다.`;
+  // ── 환영 버블 ──
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble bubble-ai';
 
-  // 약간의 딜레이 후 AI 비서 호출 (UI가 먼저 렌더링되도록)
-  setTimeout(() => {
-    callAI(triggerMsg, null, null);
-  }, 600);
+  if (profileDone) {
+    // ── Profile 완성 → 일상 비서 모드 ──
+    bubble.textContent = nickname
+      ? `안녕하세요, ${nickname}님. 무엇을 도와드릴까요?`
+      : '안녕하세요. 무엇을 도와드릴까요?';
+    row.appendChild(bubble);
+    list.appendChild(row);
+  } else {
+    // ── Profile 미완성 → 온보딩 시작 ──
+    bubble.textContent = nickname
+      ? `안녕하세요, ${nickname}님! 화면 아래에서 위쪽으로 밀어올리면, AI 비서와 대화 창이 나타납니다. 높이를 조절하거나, 밀어 내려서 사라지게 할 수 있습니다.`
+      : '화면 아래에서 위쪽으로 밀어올리면, AI 비서와 대화 창이 나타납니다. 높이를 조절하거나, 밀어 내려서 사라지게 할 수 있습니다.';
+    row.appendChild(bubble);
+    list.appendChild(row);
+
+    // AI 비서에게 온보딩 시작 지시 메시지를 자동 주입
+    // (사용자가 텍스트를 입력하지 않아도 AI가 먼저 질문)
+    const triggerMsg = profileStep
+      ? `[SYSTEM] 이용자가 Profile 작성을 ${profileStep}단계에서 중단했습니다. 해당 단계부터 재개해 주세요.`
+      : `[SYSTEM] 이용자의 Profile이 아직 없습니다. PHASE 1 온보딩을 시작해 주세요. STEP 1(이름 질문)부터 시작합니다.`;
+
+    // 약간의 딜레이 후 AI 비서 호출 (UI가 먼저 렌더링되도록)
+    setTimeout(() => {
+      callAI(triggerMsg, null, '_onboarding_');
+    }, 600);
+  }
 }
 
 // ── PROFILE_SUBMIT 파서 ───────────────────────────────────

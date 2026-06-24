@@ -387,7 +387,7 @@ const _boot = async () => {
     if (e.key === 'gopang_ai_activated' && e.newValue) {
       localStorage.removeItem('gopang_ai_activated');
       _checkAutoActivateAI();
-      appendBubble('ai', 'AI 비서가 활성화되었습니다. 지금 바로 대화를 시작해 보세요.');
+      appendBubble('ai', '화면 아래에서 위쪽으로 밀어올리면, AI 비서와 대화 창이 나타납니다. 높이를 조절하거나, 밀어 내려서 사라지게 할 수 있습니다.');
     }
   });
 
