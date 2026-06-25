@@ -2568,6 +2568,20 @@ async function _deleteSubdomain(i) {
 }
 
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeAdminPanel(); });
+
+// ── 전역 노출 (onclick에서 직접 호출 가능하도록) ──────────────
+window._openAdminPanel   = _openAdminPanel;
+window.closeAdminPanel   = closeAdminPanel;
+window._adminLogin       = _adminLogin;
+window._saveTrialDays    = _saveTrialDays;
+window._saveExpiredMsg   = _saveExpiredMsg;
+window._addKeyRow        = _addKeyRow;
+window._removeKey        = _removeKey;
+window._saveAllKeys      = _saveAllKeys;
+window._onProviderChange = _onProviderChange;
+window._saveCFCredentials= _saveCFCredentials;
+window._addSubdomainRow  = _addSubdomainRow;
+window._deleteSubdomain  = _deleteSubdomain;
 </script>
 
 </body>
