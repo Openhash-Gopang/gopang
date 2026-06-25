@@ -2508,8 +2508,7 @@ function _renderSubdomainList() {
 }
 
 function _addSubdomainRow() {
-  const name=prompt('추가할 서브도메인 이름 입력
-(예: klaw → klaw.hondi.net)');
+  const name=prompt('추가할 서브도메인 이름 입력\n(예: klaw → klaw.hondi.net)');
   if(!name||!name.trim()) return;
   const sub=name.trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
   if(!sub){alert('유효하지 않은 이름입니다.');return;}
