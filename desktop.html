@@ -2043,12 +2043,73 @@ const LS_EXPR_MSG  = 'hondi_trial_expired_msg';   // string
 const LS_SESSION   = 'hondi_admin_session';       // expires timestamp
 
 const PROVIDERS = [
-  { id:'openrouter', label:'OpenRouter',   prefix:'sk-or-' },
-  { id:'anthropic',  label:'Claude (Anthropic)', prefix:'sk-ant-' },
-  { id:'openai',     label:'OpenAI / ChatGPT',   prefix:'sk-' },
-  { id:'gemini',     label:'Gemini',       prefix:'AIza' },
-  { id:'deepseek',   label:'DeepSeek',     prefix:'sk-' },
-  { id:'grok',       label:'Grok (xAI)',   prefix:'xai-' },
+  // ── OpenRouter (라우터 — 모든 모델 접근 가능, 권장) ──────────
+  { id:'openrouter', label:'OpenRouter',   prefix:'sk-or-', models:[
+    // Claude
+    { id:'anthropic/claude-opus-4-5',              label:'Claude Opus 4.5' },
+    { id:'anthropic/claude-sonnet-4-5',            label:'Claude Sonnet 4.5' },
+    { id:'anthropic/claude-haiku-4-5',             label:'Claude Haiku 4.5' },
+    // OpenAI
+    { id:'openai/gpt-4o',                          label:'GPT-4o' },
+    { id:'openai/gpt-4o-mini',                     label:'GPT-4o Mini' },
+    { id:'openai/o3',                              label:'o3' },
+    { id:'openai/o4-mini',                         label:'o4-mini' },
+    // Gemini
+    { id:'google/gemini-2.5-pro-preview',          label:'Gemini 2.5 Pro' },
+    { id:'google/gemini-2.5-flash-preview-05-20',  label:'Gemini 2.5 Flash' },
+    // DeepSeek
+    { id:'deepseek/deepseek-chat-v3-0324',         label:'DeepSeek V3 (0324)' },
+    { id:'deepseek/deepseek-r1-0528',              label:'DeepSeek R1 (0528)' },
+    // Llama
+    { id:'meta-llama/llama-4-maverick',            label:'Llama 4 Maverick' },
+    { id:'meta-llama/llama-4-scout',               label:'Llama 4 Scout' },
+    { id:'meta-llama/llama-3.3-70b-instruct',      label:'Llama 3.3 70B' },
+    // Mistral
+    { id:'mistralai/mistral-medium-3',             label:'Mistral Medium 3' },
+    { id:'mistralai/devstral-small-2505',          label:'Devstral Small' },
+    // Grok
+    { id:'x-ai/grok-3',                           label:'Grok 3' },
+    { id:'x-ai/grok-3-mini',                      label:'Grok 3 Mini' },
+  ]},
+  // ── Anthropic 직접 ──────────────────────────────────────────
+  { id:'anthropic',  label:'Claude (Anthropic)', prefix:'sk-ant-', models:[
+    { id:'claude-opus-4-5-20251101',           label:'Claude Opus 4.5' },
+    { id:'claude-sonnet-4-5-20251022',         label:'Claude Sonnet 4.5' },
+    { id:'claude-haiku-4-5-20251001',          label:'Claude Haiku 4.5' },
+    { id:'claude-opus-4-0-20250514',           label:'Claude Opus 4.0' },
+    { id:'claude-sonnet-4-0-20250514',         label:'Claude Sonnet 4.0' },
+  ]},
+  // ── OpenAI 직접 ─────────────────────────────────────────────
+  { id:'openai',     label:'OpenAI / ChatGPT',   prefix:'sk-', models:[
+    { id:'gpt-4.1',                label:'GPT-4.1' },
+    { id:'gpt-4.1-mini',           label:'GPT-4.1 Mini' },
+    { id:'gpt-4o',                 label:'GPT-4o' },
+    { id:'gpt-4o-mini',            label:'GPT-4o Mini' },
+    { id:'o3',                     label:'o3' },
+    { id:'o4-mini',                label:'o4-mini' },
+    { id:'o3-mini',                label:'o3-mini' },
+  ]},
+  // ── Google Gemini 직접 ───────────────────────────────────────
+  { id:'gemini',     label:'Gemini',       prefix:'AIza', models:[
+    { id:'gemini-2.5-pro-preview-06-05',       label:'Gemini 2.5 Pro' },
+    { id:'gemini-2.5-flash-preview-05-20',     label:'Gemini 2.5 Flash' },
+    { id:'gemini-2.5-flash-lite-preview-06-17',label:'Gemini 2.5 Flash Lite' },
+    { id:'gemini-2.0-flash-001',               label:'Gemini 2.0 Flash' },
+    { id:'gemini-2.0-flash-lite-001',          label:'Gemini 2.0 Flash Lite' },
+  ]},
+  // ── DeepSeek 직접 ────────────────────────────────────────────
+  { id:'deepseek',   label:'DeepSeek',     prefix:'sk-', models:[
+    { id:'deepseek-chat',          label:'DeepSeek V3 (최신)' },
+    { id:'deepseek-reasoner',      label:'DeepSeek R1 (최신)' },
+  ]},
+  // ── xAI Grok 직접 ────────────────────────────────────────────
+  { id:'grok',       label:'Grok (xAI)',   prefix:'xai-', models:[
+    { id:'grok-3',                 label:'Grok 3' },
+    { id:'grok-3-mini',            label:'Grok 3 Mini' },
+    { id:'grok-3-fast',            label:'Grok 3 Fast' },
+    { id:'grok-3-mini-fast',       label:'Grok 3 Mini Fast' },
+    { id:'grok-2-vision-1212',     label:'Grok 2 Vision' },
+  ]},
 ];
 
 // ── HMAC-SHA256 계산 ──────────────────────────────────────────
@@ -2179,18 +2240,31 @@ function _renderKeyList() {
       `<option value="${p.id}" ${k.provider===p.id?'selected':''}>${p.label}</option>`
     ).join('');
 
+    // 현재 선택된 provider의 models
+    const curProv  = PROVIDERS.find(p => p.id === (k.provider || 'openrouter')) || PROVIDERS[0];
+    const modelOpts = curProv.models.map(m =>
+      `<option value="${m.id}" ${k.model===m.id?'selected':''}>${m.label}</option>`
+    ).join('');
+
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;' +
       'background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px';
     row.innerHTML = `
       <select data-i="${i}" class="ak-prov"
+              onchange="_onProviderChange(this)"
               style="padding:7px 8px;border:1px solid #d1d5db;border-radius:7px;
                      font-size:13px;font-family:inherit;background:#f9fafb;flex-shrink:0">
         ${provOpts}
       </select>
+      <select data-i="${i}" class="ak-model"
+              style="padding:7px 8px;border:1px solid #d1d5db;border-radius:7px;
+                     font-size:13px;font-family:inherit;background:#f9fafb;flex-shrink:0;
+                     max-width:200px">
+        ${modelOpts}
+      </select>
       <input data-i="${i}" class="ak-label" type="text" value="${_esc(k.label||'')}"
              placeholder="설명 (예: 서비스용 키 #1)"
-             style="flex:1;min-width:120px;padding:7px 10px;border:1px solid #d1d5db;
+             style="flex:1;min-width:100px;padding:7px 10px;border:1px solid #d1d5db;
                     border-radius:7px;font-size:13px;font-family:inherit">
       <input data-i="${i}" class="ak-key" type="password" value="${_esc(k.key||'')}"
              placeholder="API Key"
@@ -2213,10 +2287,23 @@ function _renderKeyList() {
 
 function _esc(s) { return s.replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
+// provider 드롭다운 변경 → 해당 행의 model 드롭다운 갱신
+function _onProviderChange(provSel) {
+  const row      = provSel.closest('div');
+  const modelSel = row.querySelector('.ak-model');
+  if (!modelSel) return;
+  const prov = PROVIDERS.find(p => p.id === provSel.value) || PROVIDERS[0];
+  modelSel.innerHTML = prov.models.map(m =>
+    `<option value="${m.id}">${m.label}</option>`
+  ).join('');
+}
+
 function _addKeyRow() {
   const keys = _getKeys();
   if (keys.length >= 10) { alert('키는 최대 10개까지 등록할 수 있습니다.'); return; }
-  keys.push({ provider:'openrouter', label:'', key:'', active:true });
+  const defProv  = PROVIDERS[0];
+  const defModel = defProv.models[0]?.id || '';
+  keys.push({ provider:'openrouter', model:defModel, label:'', key:'', active:true });
   localStorage.setItem(LS_KEYS, JSON.stringify(keys));
   _renderKeyList();
   document.getElementById('llm-key-empty').style.display = 'none';
@@ -2236,6 +2323,7 @@ function _saveAllKeys() {
     const i = parseInt(row.querySelector('.ak-prov').dataset.i);
     keys.push({
       provider: row.querySelector('.ak-prov').value,
+      model:    row.querySelector('.ak-model')?.value || '',
       label:    row.querySelector('.ak-label').value.trim(),
       key:      row.querySelector('.ak-key').value.trim(),
       active:   row.querySelector('.ak-active').checked,
