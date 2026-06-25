@@ -171,6 +171,46 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
   <div style="font-size:13px">존재하지 않거나 비공개 프로필입니다.</div>
 </div>
 
+<!-- 기본 프로필 (본인 보기 — 아직 사업자 등록 등 상세 프로필을 작성하지 않은 경우의 대체 화면) -->
+<div id="basic-main" class="hidden">
+  <div class="profile-hero">
+    <div style="display:flex;align-items:flex-start;gap:16px">
+      <div class="profile-avatar" id="bp-avatar"></div>
+      <div style="flex:1;min-width:0">
+        <div class="profile-name" id="bp-name"></div>
+        <div class="profile-handle" id="bp-handle"></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:12.5px;color:#9ca3af;line-height:1.6">
+      아직 사업자·기관 등 상세 프로필을 작성하지 않았습니다. 본인에게만 보이는 기본 정보입니다.
+    </div>
+  </div>
+
+  <!-- 위치 -->
+  <div class="card hidden" id="bp-card-location">
+    <div class="card-title">현재 위치</div>
+    <div class="info-row">
+      <span class="info-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+      <span class="info-text" id="bp-region"></span>
+    </div>
+  </div>
+
+  <!-- 혼디 색상 코드 -->
+  <div class="card hidden" id="bp-card-code">
+    <div class="card-title">내 혼디 코드</div>
+    <div style="padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px">
+      <img id="bp-code-img" alt="내 혼디 색상 코드" style="max-width:100%;width:280px;border:1px solid #f3f4f6;border-radius:10px;background:#fff">
+      <div style="font-size:11.5px;color:#9ca3af;text-align:center;line-height:1.6">
+        이 코드를 출입문이나 명함에 인쇄하면, 다른 사람이 카메라로 비추기만 해도<br>바로 이 프로필로 연결됩니다.
+      </div>
+      <button id="bp-code-download" style="padding:10px 20px;border:1px solid #e5e7eb;border-radius:99px;
+              background:#fff;color:#16a34a;font-weight:600;font-size:13px;cursor:pointer">
+        이미지로 저장
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- 메인 콘텐츠 (로드 후 표시) -->
 <div id="main" class="hidden">
 
@@ -265,9 +305,15 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
 <script>
 const PROXY = 'https://gopang-proxy.tensor-city.workers.dev';
 
-// handle: URL 경로에서 추출 (/profile/@handle 또는 /profile/handle)
+// handle: URL 경로에서 추출 (/profile/@handle) 또는 쿼리스트링(?handle=@handle)
+// 주의: GitHub Pages는 서버 라우팅이 없어 /profile/@handle은 항상 404 →
+// 404.html이 /profile.html?handle=@handle로 리다이렉트한다. 즉 실제 접속은
+// 거의 항상 쿼리스트링 경로다. 이전엔 "/profile.html".replace(/\/profile\/?/,'')가
+// ".html"이라는 값을 남겨 쿼리스트링을 가려버리는 버그가 있었다 — 경로 전체가
+// 정확히 /profile/... 형태일 때만 path 값을 인정하도록 수정.
 const _handle = (() => {
-  const p = location.pathname.replace(/\/profile\/?/, '').trim();
+  const m = location.pathname.match(/^\/profile\/(.+)$/);
+  const p = m ? decodeURIComponent(m[1]) : '';
   const q = new URLSearchParams(location.search).get('handle');
   return (p || q || '').replace(/^@/, '');
 })();
@@ -299,11 +345,62 @@ async function loadProfile() {
   try {
     const res  = await fetch(`${PROXY}/profile/@${_handle}`);
     const data = await res.json();
-    if (!res.ok || !data.ok) { showError(); return; }
+    if (!res.ok || !data.ok) { await renderBasicOrError(); return; }
     _profile = data.profile;
     render(_profile);
   } catch(e) {
-    showError();
+    await renderBasicOrError();
+  }
+}
+
+// ── 상세 프로필(사업자 등록 등)이 아직 없을 때의 대체 화면 ──────
+// 조회 중인 handle이 "나 자신"의 계정일 때만 기본 정보(이름·핸들·위치·
+// 혼디 색상 코드)를 보여준다. 남의 미작성/비공개 프로필은 그대로 에러 표시.
+async function renderBasicOrError() {
+  let stored = null;
+  try {
+    stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+  } catch { stored = null; }
+
+  const myHandle = (stored?.handle || '').replace(/^@/, '');
+  if (!stored || !myHandle || myHandle !== _handle) { showError(); return; }
+
+  document.getElementById('skeleton').style.display = 'none';
+  document.getElementById('basic-main').classList.remove('hidden');
+
+  const nickname = stored.nickname || stored.name || '회원';
+  document.getElementById('top-title').textContent = nickname;
+  document.getElementById('bp-name').textContent   = nickname;
+  document.getElementById('bp-handle').textContent = stored.handle || '@' + _handle;
+  document.getElementById('bp-avatar').textContent = nickname[0] || '?';
+
+  if (stored.region) {
+    document.getElementById('bp-region').textContent = stored.region;
+    document.getElementById('bp-card-location').classList.remove('hidden');
+  }
+
+  // ── 혼디 색상 코드 — 캐시 우선, 없으면 guid로 즉시 재생성 ──
+  try {
+    let codeImg = localStorage.getItem('hondi_code_image_v1');
+    if (!codeImg && stored.ipv6) {
+      const { guidToShortId, generateHondiCodeDataURL } = await import('./src/gopang/ai/hondi-code.js');
+      const version = stored.hondi_code_version || 'v1';
+      const shortId = guidToShortId(stored.ipv6, version);
+      codeImg = await generateHondiCodeDataURL(shortId, version);
+    }
+    if (codeImg) {
+      const img = document.getElementById('bp-code-img');
+      img.src = codeImg;
+      document.getElementById('bp-card-code').classList.remove('hidden');
+      document.getElementById('bp-code-download').onclick = () => {
+        const a = document.createElement('a');
+        a.href = codeImg;
+        a.download = `hondi-code-${myHandle}.png`;
+        a.click();
+      };
+    }
+  } catch (e) {
+    console.warn('[프로필] 색상 코드 표시 실패:', e.message);
   }
 }
 
