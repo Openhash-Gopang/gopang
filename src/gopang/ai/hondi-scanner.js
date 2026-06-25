@@ -19,13 +19,14 @@ import {
 const SCAN_FPS        = 15;                      // 초당 스캔 횟수
 const SCAN_MS         = Math.round(1000/SCAN_FPS);
 const THUMB_SCALE     = 0.25;                    // 탐지용 축소 비율
-const LOCK_FRAMES     = 4;                       // 연속 N프레임 일치로 확정
-const MIN_GLYPH_H     = 40;                      // 썸네일 기준 최소 높이(px)
+const LOCK_FRAMES     = 4;    // 일반 환경; 야간은 _setNightMode()로 6으로 상향                       // 연속 N프레임 일치로 확정
+const MIN_GLYPH_H     = 16;   // 썸네일 기준 → 실제 64px → 최대 ~2.9m 인식                      // 썸네일 기준 최소 높이(px)
 const ASPECT_MIN      = 1.4;                     // "혼디" 글자 최소 가로/세로 비율
 const ASPECT_MAX      = 3.5;                     // 최대 가로/세로 비율
 
 // ── 상태 ──────────────────────────────────────────────────────
 let _stream    = null;
+let _lockFramesRequired = LOCK_FRAMES;
 let _rafId     = null;
 let _lastTime  = 0;
 let _lockCount = 0;
@@ -137,7 +138,7 @@ function _processFrame(video, canvas) {
   const pct = Math.round(_lockCount / LOCK_FRAMES * 100);
   _status(`인식 중... ${pct}% [${result.version}]`);
 
-  if (_lockCount >= LOCK_FRAMES) {
+  if (_lockCount >= _lockFramesRequired) {
     _locked = true;
     stopScanner();
     // 진동 피드백
