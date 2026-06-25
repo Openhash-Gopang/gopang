@@ -2043,8 +2043,38 @@ const LS_EXPR_MSG  = 'hondi_trial_expired_msg';   // string
 const LS_SESSION   = 'hondi_admin_session';       // expires timestamp
 
 const PROVIDERS = [
-  // ── OpenRouter (라우터 — 모든 모델 접근 가능, 권장) ──────────
+  // ── Google Gemini 직접 ───────────────────────────────────────
+  { id:'gemini',     label:'Gemini',       prefix:'AIza', models:[
+    { id:'gemini-2.5-pro-preview-06-05',        label:'Gemini 2.5 Pro' },
+    { id:'gemini-2.5-flash-preview-05-20',      label:'Gemini 2.5 Flash' },
+    { id:'gemini-2.5-flash-lite-preview-06-17', label:'Gemini 2.5 Flash Lite' },
+    { id:'gemini-2.0-flash-001',                label:'Gemini 2.0 Flash' },
+    { id:'gemini-2.0-flash-lite-001',           label:'Gemini 2.0 Flash Lite' },
+  ]},
+  // ── DeepSeek 직접 ────────────────────────────────────────────
+  { id:'deepseek',   label:'DeepSeek',     prefix:'sk-', models:[
+    { id:'deepseek-chat',          label:'DeepSeek V3 (최신)' },
+    { id:'deepseek-reasoner',      label:'DeepSeek R1 (최신)' },
+  ]},
+  // ── xAI Grok 직접 ────────────────────────────────────────────
+  { id:'grok',       label:'Grok (xAI)',   prefix:'xai-', models:[
+    { id:'grok-3',                 label:'Grok 3' },
+    { id:'grok-3-mini',            label:'Grok 3 Mini' },
+    { id:'grok-3-fast',            label:'Grok 3 Fast' },
+    { id:'grok-3-mini-fast',       label:'Grok 3 Mini Fast' },
+    { id:'grok-2-vision-1212',     label:'Grok 2 Vision' },
+  ]},
+  // ── OpenRouter (라우터 — 모든 모델 접근 가능) ─────────────────
   { id:'openrouter', label:'OpenRouter',   prefix:'sk-or-', models:[
+    // Gemini
+    { id:'google/gemini-2.5-pro-preview',          label:'Gemini 2.5 Pro' },
+    { id:'google/gemini-2.5-flash-preview-05-20',  label:'Gemini 2.5 Flash' },
+    // DeepSeek
+    { id:'deepseek/deepseek-chat-v3-0324',         label:'DeepSeek V3 (0324)' },
+    { id:'deepseek/deepseek-r1-0528',              label:'DeepSeek R1 (0528)' },
+    // Grok
+    { id:'x-ai/grok-3',                           label:'Grok 3' },
+    { id:'x-ai/grok-3-mini',                      label:'Grok 3 Mini' },
     // Claude
     { id:'anthropic/claude-opus-4-5',              label:'Claude Opus 4.5' },
     { id:'anthropic/claude-sonnet-4-5',            label:'Claude Sonnet 4.5' },
@@ -2054,12 +2084,6 @@ const PROVIDERS = [
     { id:'openai/gpt-4o-mini',                     label:'GPT-4o Mini' },
     { id:'openai/o3',                              label:'o3' },
     { id:'openai/o4-mini',                         label:'o4-mini' },
-    // Gemini
-    { id:'google/gemini-2.5-pro-preview',          label:'Gemini 2.5 Pro' },
-    { id:'google/gemini-2.5-flash-preview-05-20',  label:'Gemini 2.5 Flash' },
-    // DeepSeek
-    { id:'deepseek/deepseek-chat-v3-0324',         label:'DeepSeek V3 (0324)' },
-    { id:'deepseek/deepseek-r1-0528',              label:'DeepSeek R1 (0528)' },
     // Llama
     { id:'meta-llama/llama-4-maverick',            label:'Llama 4 Maverick' },
     { id:'meta-llama/llama-4-scout',               label:'Llama 4 Scout' },
@@ -2067,9 +2091,6 @@ const PROVIDERS = [
     // Mistral
     { id:'mistralai/mistral-medium-3',             label:'Mistral Medium 3' },
     { id:'mistralai/devstral-small-2505',          label:'Devstral Small' },
-    // Grok
-    { id:'x-ai/grok-3',                           label:'Grok 3' },
-    { id:'x-ai/grok-3-mini',                      label:'Grok 3 Mini' },
   ]},
   // ── Anthropic 직접 ──────────────────────────────────────────
   { id:'anthropic',  label:'Claude (Anthropic)', prefix:'sk-ant-', models:[
@@ -2088,27 +2109,6 @@ const PROVIDERS = [
     { id:'o3',                     label:'o3' },
     { id:'o4-mini',                label:'o4-mini' },
     { id:'o3-mini',                label:'o3-mini' },
-  ]},
-  // ── Google Gemini 직접 ───────────────────────────────────────
-  { id:'gemini',     label:'Gemini',       prefix:'AIza', models:[
-    { id:'gemini-2.5-pro-preview-06-05',       label:'Gemini 2.5 Pro' },
-    { id:'gemini-2.5-flash-preview-05-20',     label:'Gemini 2.5 Flash' },
-    { id:'gemini-2.5-flash-lite-preview-06-17',label:'Gemini 2.5 Flash Lite' },
-    { id:'gemini-2.0-flash-001',               label:'Gemini 2.0 Flash' },
-    { id:'gemini-2.0-flash-lite-001',          label:'Gemini 2.0 Flash Lite' },
-  ]},
-  // ── DeepSeek 직접 ────────────────────────────────────────────
-  { id:'deepseek',   label:'DeepSeek',     prefix:'sk-', models:[
-    { id:'deepseek-chat',          label:'DeepSeek V3 (최신)' },
-    { id:'deepseek-reasoner',      label:'DeepSeek R1 (최신)' },
-  ]},
-  // ── xAI Grok 직접 ────────────────────────────────────────────
-  { id:'grok',       label:'Grok (xAI)',   prefix:'xai-', models:[
-    { id:'grok-3',                 label:'Grok 3' },
-    { id:'grok-3-mini',            label:'Grok 3 Mini' },
-    { id:'grok-3-fast',            label:'Grok 3 Fast' },
-    { id:'grok-3-mini-fast',       label:'Grok 3 Mini Fast' },
-    { id:'grok-2-vision-1212',     label:'Grok 2 Vision' },
   ]},
 ];
 
