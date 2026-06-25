@@ -712,7 +712,7 @@ body {
 
 
   <!-- 관리자 -->
-  <div class="sb-section" id="sb-admin-section" style="display:none">
+  <div class="sb-section" id="sb-admin-section">
     <div class="sb-section-label">관리자</div>
     <a class="sb-item" id="nav-admin" onclick="loadPage('admin');return false;" href="#">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -2247,14 +2247,7 @@ function _saveAllKeys() {
   _renderKeyList();
 }
 
-// ── 관리자 사이드바 노출 조건 ─────────────────────────────────
-// URL에 ?admin=1 파라미터가 있을 때만 사이드바 항목 표시
-(function() {
-  if (new URLSearchParams(location.search).has('admin')) {
-    const sec = document.getElementById('sb-admin-section');
-    if (sec) sec.style.display = 'block';
-  }
-})();
+
 
 // ESC로 닫기
 document.addEventListener('keydown', e => {
