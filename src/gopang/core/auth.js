@@ -9,6 +9,7 @@ import { setUser, _USER, USER_GUID, L1_URL, L1_PDV_URL, L1_ANCHOR_URL, PROXY } f
 const PROXY_URL = PROXY;
 import { appendBubble } from '../ui/bubble.js';
 import { requestPushSubscription } from '../services/push.js';
+import { guidToShortId, generateHondiCodeDataURL } from '../ai/hondi-code.js';
 
 const STORE_KEY = 'gopang_user_v4';
 const DEFAULT_COUNTRY = 'KR';
@@ -1222,11 +1223,27 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
 
     try {
       const nickname_hash = await _sha256('phone:' + e164);
+
+      // ── 혼디 색상 코드 생성 (가입 ↔ AI 비서 설정 사이) ──────────────
+      // short_id는 guid로부터 결정적으로 도출되므로, 서버에 이미지 자체를
+      // 올리지 않아도 클라이언트가 언제든 동일한 코드를 재생성할 수 있다.
+      // 지금은 v1(세로 10칸)만 발급 — 주소 공간 소진 시 전체 v2로 전환.
+      const hondiCodeVersion = 'v1';
+      let hondiShortId = null, hondiCodeImage = null;
+      try {
+        hondiShortId  = guidToShortId(ipv6, hondiCodeVersion);
+        hondiCodeImage = generateHondiCodeDataURL(hondiShortId, hondiCodeVersion);
+      } catch (e) {
+        console.warn('[가입][색상코드] 생성 실패 (가입은 계속 진행):', e.message);
+      }
+
       const user = {
         ipv6, handle, e164, country_code: selectedCountry,
         nickname, region,
         name: val, isGuest: false, isTemp: false,
-        registeredAt: new Date().toISOString()
+        registeredAt: new Date().toISOString(),
+        hondi_code_version: hondiCodeVersion,
+        hondi_code_id: hondiShortId ? hondiShortId.toString() : null,
       };
 
       await fetch(L1_URL, {
@@ -1236,10 +1253,18 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
           guid: ipv6, nickname_hash, handle, nickname, region,
           e164, country_code: selectedCountry,
           native_lang: navigator.language?.slice(0,2) || 'ko',
-          is_public: true
+          is_public: true,
+          hondi_code_version: hondiCodeVersion,
+          hondi_code_id: hondiShortId ? hondiShortId.toString() : null,
         })
       });
       console.info('[Auth] 신규 등록:', handle, nickname);
+
+      // 색상 코드 이미지을 로컬에 보관 — 설정 화면 "내 혼디 코드 받기"에서
+      // 재계산 없이 즉시 보여주거나 다운로드할 수 있도록 캐시.
+      if (hondiCodeImage) {
+        try { localStorage.setItem('hondi_code_image_v1', hondiCodeImage); } catch {}
+      }
 
       // L5 글로벌 디렉토리 등록 (GDUDA Phase 1 — HLR)
       const nickLang = (navigator.language?.slice(0,2) || 'ko') + ':' + nickname;

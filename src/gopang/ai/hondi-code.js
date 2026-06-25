@@ -150,3 +150,109 @@ export function base9StringToId(str) {
   }
   return id;
 }
+
+// ── GUID → short_id (가입 시점 색상 코드 생성용) ──────────────
+// guid: "2601:db80:xxxx:xxxx:..." 형태의 IPv6 문자열(콜론 포함).
+// 결정적(deterministic) 변환 — 같은 guid는 항상 같은 short_id를 만들어내므로
+// 서버에 별도 저장 없이도 클라이언트가 언제든 동일한 코드를 재생성할 수 있다.
+export function guidToShortId(guid, version = 'v1') {
+  const hex = guid.replace(/:/g, '');
+  const big = BigInt('0x' + hex);
+  const max = version === 'v2' ? MAX_V2 : MAX_V1;
+  return big % max;
+}
+
+// ── 캔버스 기반 "혼디" 코드 이미지 생성기 ─────────────────────
+// hondi-scanner.js의 _detectHondiROI 비율(ㅎ/ㅗ/ㄴ/ㄷ/ㅣ)과 동일한 비율
+// 상수를 사용한다 — 생성된 이미지가 스캐너로 다시 인식 가능해야 하기 때문.
+// 브라우저 환경(document 필요)에서만 동작한다.
+export function generateHondiCodeCanvas(shortId, version = 'v1') {
+  const gW = 400, gH = 222;   // aspect ≈ 1.8 (ASPECT_MIN 1.4 ~ ASPECT_MAX 3.5 이내)
+  const PAD = 24;
+  const W = gW + PAD * 2, H = gH + PAD * 2;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+  ctx.translate(PAD, PAD);
+
+  const BLUE = 'rgb(0,0,220)', RED = 'rgb(220,0,0)', BLACK = 'rgb(0,0,0)', GRAY = 'rgb(140,140,140)';
+
+  // ㅎ ROI: x0,y0, gW*0.38, gH*0.38
+  const hihW = gW * 0.38, hihH = gH * 0.38;
+  ctx.fillStyle = BLUE;
+  ctx.fillRect(hihW * 0.10, hihH * 0.05, hihW * 0.80, hihH * 0.30);   // 가로획
+  ctx.fillRect(hihW * 0.38, -hihH * 0.30, hihW * 0.24, hihH * 0.35);  // 위로 돌출
+  ctx.lineWidth = hihH * 0.30;
+  ctx.strokeStyle = BLUE;
+  ctx.beginPath();
+  ctx.ellipse(hihW * 0.50, hihH * 0.72, hihW * 0.34, hihH * 0.26, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // ㅗ ROI: x=gW*0.08, y=gH*0.30, w=gW*0.28, h=gH*0.20 (원으로 채움)
+  const hoX = gW * 0.08 + gW * 0.14, hoY = gH * 0.30 + gH * 0.10;
+  ctx.fillStyle = RED;
+  ctx.beginPath();
+  ctx.arc(hoX, hoY, Math.min(gW * 0.14, gH * 0.10), 0, Math.PI * 2);
+  ctx.fill();
+
+  // ㄴ ROI: x0,y=gH*0.72,w=gW*0.38,h=gH*0.20
+  const nY = gH * 0.72, nH = gH * 0.20, nW = gW * 0.38;
+  ctx.fillStyle = BLACK;
+  ctx.fillRect(0, nY, nW * 0.26, nH);
+  ctx.fillRect(0, nY + nH - nH * 0.30, nW, nH * 0.30);
+
+  // ㄷ ROI: x=midX, y=gH*0.08, w=gW*0.38, h=gH*0.70 (오른쪽이 열린 형태)
+  const midX = gW * 0.52;
+  const dX = midX, dY = gH * 0.08, dW = gW * 0.38, dH = gH * 0.70;
+  const dStroke = dH * 0.16;
+  ctx.fillStyle = BLACK;
+  ctx.fillRect(dX, dY, dW, dStroke);                       // 위
+  ctx.fillRect(dX, dY, dStroke, dH);                        // 좌측
+  ctx.fillRect(dX, dY + dH - dStroke, dW, dStroke);         // 아래
+  if (version === 'v2') {
+    // v2 신호 — ㄷ 아래쪽 일부를 회색으로 (detectVersion이 읽는 부분)
+    ctx.fillStyle = GRAY;
+    ctx.fillRect(dX, dY + dH - dStroke, dW * 0.5, dStroke);
+  }
+
+  // ㅣ ROI: x=midX+gW*0.32, y=0, w=gW*0.13, h=gH → 색상 코드 칸
+  // 칸 순서는 idToIndices와 동일: 배열 첫 원소(최상위 자릿수)가 맨 위 칸.
+  const iX = midX + gW * 0.32, iY = 0, iW = gW * 0.13, iH = gH;
+  const indices = idToIndices(BigInt(shortId), version);
+  const ROWS = 10;
+  const cellH = iH / ROWS;
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  ctx.lineWidth = 1;
+
+  if (version === 'v1') {
+    for (let row = 0; row < ROWS; row++) {
+      const c = PALETTE[indices[row]];
+      ctx.fillStyle = `rgb(${c.r},${c.g},${c.b})`;
+      ctx.fillRect(iX, iY + row * cellH, iW, cellH);
+      ctx.strokeRect(iX, iY + row * cellH, iW, cellH);
+    }
+  } else {
+    const halfW = iW / 2;
+    for (let row = 0; row < ROWS; row++) {
+      const y = iY + row * cellH;
+      const cL = PALETTE[indices[row * 2]];
+      const cR = PALETTE[indices[row * 2 + 1]];
+      ctx.fillStyle = `rgb(${cL.r},${cL.g},${cL.b})`;
+      ctx.fillRect(iX, y, halfW, cellH);
+      ctx.fillStyle = `rgb(${cR.r},${cR.g},${cR.b})`;
+      ctx.fillRect(iX + halfW, y, halfW, cellH);
+      ctx.strokeRect(iX, y, iW, cellH);
+    }
+  }
+
+  return canvas;
+}
+
+// 가입·설정 화면에서 바로 쓰는 편의 함수 — data URL(PNG) 반환
+export function generateHondiCodeDataURL(shortId, version = 'v1') {
+  return generateHondiCodeCanvas(shortId, version).toDataURL('image/png');
+}
