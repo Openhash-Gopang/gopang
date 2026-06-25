@@ -163,68 +163,52 @@ export function guidToShortId(guid, version = 'v1') {
 }
 
 // ── 캔버스 기반 "혼디" 코드 이미지 생성기 ─────────────────────
-// hondi-scanner.js의 _detectHondiROI 비율(ㅎ/ㅗ/ㄴ/ㄷ/ㅣ)과 동일한 비율
-// 상수를 사용한다 — 생성된 이미지가 스캐너로 다시 인식 가능해야 하기 때문.
-// 브라우저 환경(document 필요)에서만 동작한다.
-export function generateHondiCodeCanvas(shortId, version = 'v1') {
-  const gW = 400, gH = 222;   // aspect ≈ 1.8 (ASPECT_MIN 1.4 ~ ASPECT_MAX 3.5 이내)
-  const PAD = 24;
-  const W = gW + PAD * 2, H = gH + PAD * 2;
+// 방식: "혼ㄷ" 부분은 공용 베이스 이미지(/icons/hondi-base-hond.png, 680×542,
+// 투명배경)를 그대로 불러와 고정 위치에 그리고, 색상 코드("ㅣ")만 정확한
+// 픽셀 좌표에 사각형으로 덧그린다. 매번 도형을 새로 그리지 않으므로 결과가
+// 항상 동일하고 빠르다. 브라우저 환경(document/Image 필요)에서만 동작.
+//
+// ── 픽셀 좌표 사양 (베이스 이미지 680×542 기준) ───────────────
+//   ㄷ의 오른쪽 끝(로컬 x)             : 665
+//   색상 코드 시작 x (STRIP_X)         : 705   (ㄷ 끝 + 40px 간격)
+//   색상 코드 시작 y (STRIP_Y)         : 15    (ㅎㅗㄴㄷ 컨텐츠 상단과 동일)
+//   색상 코드 전체 폭 (STRIP_W)        : 65    (v1: 1열 65px / v2: 2열 32.5px씩)
+//   색상 코드 전체 높이 (STRIP_H)      : 512   (10칸 → 칸당 51.2px)
+//   캔버스 전체 크기                   : 785 × 542 (오른쪽 여백 15px 포함)
+export const BASE_IMG_URL = '/icons/hondi-base-hond.png';
+export const BASE_IMG_W = 680, BASE_IMG_H = 542;
+export const STRIP_X = 705, STRIP_Y = 15, STRIP_W = 65, STRIP_H = 512;
+export const CANVAS_W = 785, CANVAS_H = 542;
+const ROWS = 10;
+const CELL_H = STRIP_H / ROWS;   // 51.2
+
+let _baseImgPromise = null;
+function _loadBaseImage() {
+  if (_baseImgPromise) return _baseImgPromise;
+  _baseImgPromise = new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = (e) => reject(new Error('혼ㄷ 베이스 이미지 로드 실패: ' + BASE_IMG_URL));
+    img.src = BASE_IMG_URL;
+  });
+  return _baseImgPromise;
+}
+
+export async function generateHondiCodeCanvas(shortId, version = 'v1') {
+  const baseImg = await _loadBaseImage();
 
   const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
+  canvas.width = CANVAS_W; canvas.height = CANVAS_H;
   const ctx = canvas.getContext('2d');
+
+  // 배경 흰색 + "혼ㄷ" 베이스 이미지를 (0,0)에 고정 배치
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, W, H);
-  ctx.translate(PAD, PAD);
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  ctx.drawImage(baseImg, 0, 0, BASE_IMG_W, BASE_IMG_H);
 
-  const BLUE = 'rgb(0,0,220)', RED = 'rgb(220,0,0)', BLACK = 'rgb(0,0,0)', GRAY = 'rgb(140,140,140)';
-
-  // ㅎ ROI: x0,y0, gW*0.38, gH*0.38
-  const hihW = gW * 0.38, hihH = gH * 0.38;
-  ctx.fillStyle = BLUE;
-  ctx.fillRect(hihW * 0.10, hihH * 0.05, hihW * 0.80, hihH * 0.30);   // 가로획
-  ctx.fillRect(hihW * 0.38, -hihH * 0.30, hihW * 0.24, hihH * 0.35);  // 위로 돌출
-  ctx.lineWidth = hihH * 0.30;
-  ctx.strokeStyle = BLUE;
-  ctx.beginPath();
-  ctx.ellipse(hihW * 0.50, hihH * 0.72, hihW * 0.34, hihH * 0.26, 0, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // ㅗ ROI: x=gW*0.08, y=gH*0.30, w=gW*0.28, h=gH*0.20 (원으로 채움)
-  const hoX = gW * 0.08 + gW * 0.14, hoY = gH * 0.30 + gH * 0.10;
-  ctx.fillStyle = RED;
-  ctx.beginPath();
-  ctx.arc(hoX, hoY, Math.min(gW * 0.14, gH * 0.10), 0, Math.PI * 2);
-  ctx.fill();
-
-  // ㄴ ROI: x0,y=gH*0.72,w=gW*0.38,h=gH*0.20
-  const nY = gH * 0.72, nH = gH * 0.20, nW = gW * 0.38;
-  ctx.fillStyle = BLACK;
-  ctx.fillRect(0, nY, nW * 0.26, nH);
-  ctx.fillRect(0, nY + nH - nH * 0.30, nW, nH * 0.30);
-
-  // ㄷ ROI: x=midX, y=gH*0.08, w=gW*0.38, h=gH*0.70 (오른쪽이 열린 형태)
-  const midX = gW * 0.52;
-  const dX = midX, dY = gH * 0.08, dW = gW * 0.38, dH = gH * 0.70;
-  const dStroke = dH * 0.16;
-  ctx.fillStyle = BLACK;
-  ctx.fillRect(dX, dY, dW, dStroke);                       // 위
-  ctx.fillRect(dX, dY, dStroke, dH);                        // 좌측
-  ctx.fillRect(dX, dY + dH - dStroke, dW, dStroke);         // 아래
-  if (version === 'v2') {
-    // v2 신호 — ㄷ 아래쪽 일부를 회색으로 (detectVersion이 읽는 부분)
-    ctx.fillStyle = GRAY;
-    ctx.fillRect(dX, dY + dH - dStroke, dW * 0.5, dStroke);
-  }
-
-  // ㅣ ROI: x=midX+gW*0.32, y=0, w=gW*0.13, h=gH → 색상 코드 칸
+  // 색상 코드("ㅣ") — 정확한 픽셀 좌표(STRIP_X, STRIP_Y, STRIP_W, STRIP_H)에 덧그림
   // 칸 순서는 idToIndices와 동일: 배열 첫 원소(최상위 자릿수)가 맨 위 칸.
-  const iX = midX + gW * 0.32, iY = 0, iW = gW * 0.13, iH = gH;
   const indices = idToIndices(BigInt(shortId), version);
-  const ROWS = 10;
-  const cellH = iH / ROWS;
-
   ctx.strokeStyle = 'rgba(0,0,0,0.15)';
   ctx.lineWidth = 1;
 
@@ -232,27 +216,28 @@ export function generateHondiCodeCanvas(shortId, version = 'v1') {
     for (let row = 0; row < ROWS; row++) {
       const c = PALETTE[indices[row]];
       ctx.fillStyle = `rgb(${c.r},${c.g},${c.b})`;
-      ctx.fillRect(iX, iY + row * cellH, iW, cellH);
-      ctx.strokeRect(iX, iY + row * cellH, iW, cellH);
+      ctx.fillRect(STRIP_X, STRIP_Y + row * CELL_H, STRIP_W, CELL_H);
+      ctx.strokeRect(STRIP_X, STRIP_Y + row * CELL_H, STRIP_W, CELL_H);
     }
   } else {
-    const halfW = iW / 2;
+    const halfW = STRIP_W / 2;
     for (let row = 0; row < ROWS; row++) {
-      const y = iY + row * cellH;
+      const y = STRIP_Y + row * CELL_H;
       const cL = PALETTE[indices[row * 2]];
       const cR = PALETTE[indices[row * 2 + 1]];
       ctx.fillStyle = `rgb(${cL.r},${cL.g},${cL.b})`;
-      ctx.fillRect(iX, y, halfW, cellH);
+      ctx.fillRect(STRIP_X, y, halfW, CELL_H);
       ctx.fillStyle = `rgb(${cR.r},${cR.g},${cR.b})`;
-      ctx.fillRect(iX + halfW, y, halfW, cellH);
-      ctx.strokeRect(iX, y, iW, cellH);
+      ctx.fillRect(STRIP_X + halfW, y, halfW, CELL_H);
+      ctx.strokeRect(STRIP_X, y, STRIP_W, CELL_H);
     }
   }
 
   return canvas;
 }
 
-// 가입·설정 화면에서 바로 쓰는 편의 함수 — data URL(PNG) 반환
-export function generateHondiCodeDataURL(shortId, version = 'v1') {
-  return generateHondiCodeCanvas(shortId, version).toDataURL('image/png');
+// 가입·설정 화면에서 바로 쓰는 편의 함수 — data URL(PNG) 반환 (비동기!)
+export async function generateHondiCodeDataURL(shortId, version = 'v1') {
+  const canvas = await generateHondiCodeCanvas(shortId, version);
+  return canvas.toDataURL('image/png');
 }

@@ -1232,7 +1232,8 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
       let hondiShortId = null, hondiCodeImage = null;
       try {
         hondiShortId  = guidToShortId(ipv6, hondiCodeVersion);
-        hondiCodeImage = generateHondiCodeDataURL(hondiShortId, hondiCodeVersion);
+        hondiCodeImage = await generateHondiCodeDataURL(hondiShortId, hondiCodeVersion);
+        console.info('[가입][색상코드] 생성 완료 | short_id:', hondiShortId.toString(), '| version:', hondiCodeVersion);
       } catch (e) {
         console.warn('[가입][색상코드] 생성 실패 (가입은 계속 진행):', e.message);
       }
