@@ -14,6 +14,7 @@ import {
   detectVersion, buildCalibMatrix, applyCalib,
   rgbToIndex, indicesToId,
 } from './hondi-code.js';
+import { L1_URL } from '../core/state.js';
 
 // ── 상수 ──────────────────────────────────────────────────────
 const SCAN_FPS        = 15;                      // 초당 스캔 횟수
@@ -377,10 +378,9 @@ function _status(msg) { _onStatus?.(msg); }
 // ── L1 프로필 조회 ───────────────────────────────────────────
 export async function lookupProfile(shortId, version) {
   try {
-    const base = (typeof L1_URL !== 'undefined' ? L1_URL : '')
-      .replace('/api/collections/profiles/records', '');
+    const base = L1_URL.replace('/api/collections/profiles/records', '');
     const res = await fetch(
-      `${base}/api/collections/profiles/records?filter=(short_id='${shortId.toString()}')&perPage=1`,
+      `${base}/api/collections/profiles/records?filter=(hondi_code_id='${shortId.toString()}')&perPage=1`,
       { signal: AbortSignal.timeout(5000) }
     );
     if (!res.ok) throw new Error(`L1 응답 오류: ${res.status}`);
