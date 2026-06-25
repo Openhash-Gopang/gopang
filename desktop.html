@@ -581,6 +581,20 @@ body {
   .mobile-topbar { display: flex; }
   body { padding-left: 0; padding-top: 52px; }
 }
+
+/* ── 혼디 vs 카카오/앱스토어 비교 테이블 ── */
+.cmp-table-wrap { overflow-x: auto; margin: 8px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.cmp-table { width: 100%; border-collapse: collapse; font-family: 'Pretendard', sans-serif; font-size: 12.5px; line-height: 1.6; min-width: 760px; }
+.cmp-table th, .cmp-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.cmp-table thead th { background: var(--bg-subtle); color: var(--text); font-weight: 700; white-space: nowrap; }
+.cmp-table thead th.cmp-hondi { background: var(--brand-bg); color: var(--brand-dk); }
+.cmp-table tbody td.cmp-axis { font-weight: 700; color: var(--text); white-space: nowrap; }
+.cmp-table tbody td.cmp-hondi { background: var(--brand-bg); color: var(--text); font-weight: 500; }
+.cmp-table tbody tr:last-child td { border-bottom: none; }
+.cmp-summary { margin-top: 18px; padding: 16px 20px; background: var(--brand-bg); border: 1px solid #a7f3d0; border-radius: var(--radius-lg); font-size: 13px; line-height: 1.8; color: var(--text); font-weight: 400; }
+@media (max-width: 680px) {
+  .cmp-table { font-size: 12px; }
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({startOnLoad:false, theme:"neutral", fontFamily:"inherit"});</script>
@@ -829,6 +843,73 @@ body {
 <section class="section" id="overview">
   <div class="section-inner">
     <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:28px;font-weight:400">혼디는 AI 메신저 플랫폼입니다. 카카오톡과 비슷한 외형과 달리 혼디의 대화 당사자는 사람 뿐 아니라, 사물, 기관 및 개념을 포함하며, 사람과 사람, 사람과 사물, 사람과 개념이 소통하고, 사물과 사물, 사물과 개념이 소통합니다. 예로써, 사람과 자율주행차량이 소통하고, 민법과 헌법이 소통하며,  차량과 교통법규가 소통합니다.</p>
+
+    <div class="cmp-table-wrap">
+    <table class="cmp-table">
+    <thead>
+    <tr>
+      <th>비교축</th>
+      <th>카카오톡</th>
+      <th>구글플레이 · 애플 앱스토어</th>
+      <th class="cmp-hondi">혼디(Hondi)</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr><td class="cmp-axis">대화/거래 당사자</td><td>사람만 대화</td><td>사람이 앱을 설치해 사용 — 앱끼리 직접 대화하지 않음</td><td class="cmp-hondi">사람·사물·기관·개념이 서로 직접 대화</td></tr>
+    <tr><td class="cmp-axis">금융 기능</td><td>카카오뱅크 — 국내 은행업무만 수행</td><td>인앱결제 수수료 징수만, 금융업 자체는 없음</td><td class="cmp-hondi">GDC(Global Digital Currency) — 화폐 안에 은행·보험·증권 통합</td></tr>
+    <tr><td class="cmp-axis">거래/마켓 구조</td><td>카카오마켓 — 기업이 직접 관리하는 중앙형 커머스</td><td>기업이 앱 등록·심사·수수료(15~30%)를 관리하는 중앙형 유통망</td><td class="cmp-hondi">혼디장(Hondi Market) — 색상코드 기반 자발적·검증가능 온오프 통합시장, 중앙 심사기관 없음</td></tr>
+    <tr><td class="cmp-axis">데이터 저장·접근</td><td>중앙서버가 저장, 운영사가 열람 가능</td><td>클라우드 계정에 저장, 플랫폼사가 정책상 접근 가능</td><td class="cmp-hondi">로컬(기기)에만 보관, 본인만 접근</td></tr>
+    <tr><td class="cmp-axis">준법성 관리</td><td>대화 자체는 불법·편법·위법 가능 — 사후 신고·수사 필요</td><td>앱 심사로 사전 차단하나, 사용자 간 대화 내용엔 관여 안 함</td><td class="cmp-hondi">백그라운드 상시 준법성 모니터링 — 불법 탐지 시 즉시 대응</td></tr>
+    <tr><td class="cmp-axis">확장 모델(플러그인)</td><td>별도 앱 연동 방식</td><td>수백만 개 서드파티 앱을 사람이 직접 설치·실행</td><td class="cmp-hondi">AI 전문분야 SP(K-Law·K-Tax·K-School·K-Health 등 25개 이상)가 대화 안에서 설치 없이 즉시 호출</td></tr>
+    <tr><td class="cmp-axis">운영주체/수익모델</td><td>영리기업 — 광고+커머스+수수료</td><td>영리기업 — 앱 수수료(15~30%)+광고</td><td class="cmp-hondi">오픈소스 공동체 — 수익자부담 원칙(쓴 만큼만 비용)</td></tr>
+    <tr><td class="cmp-axis">무결성/위변조</td><td>서버 DB는 관리자 권한으로 위변조 가능</td><td>계정·구매기록이 플랫폼 DB에 종속, 플랫폼이 임의 삭제·정지 가능</td><td class="cmp-hondi">OpenHash 분산 해시체인에 anchoring — 위변조 불가능</td></tr>
+    <tr><td class="cmp-axis">범법 대응/증거확보</td><td>서버 압수수색 절차 필요(시간 소요)</td><td>플랫폼에 영장·정책요청 절차 필요</td><td class="cmp-hondi">로컬 PDV(개인데이터금고)+해시체인 — 0.1초 내 증거수집·검증 완료</td></tr>
+    <tr><td class="cmp-axis">신원체계</td><td>전화번호+카카오계정(중앙발급)</td><td>구글계정/Apple ID — 기기·플랫폼에 종속</td><td class="cmp-hondi">전화번호→SHA-256→IPv6 GUID→색상코드(base-9 short_id) — 플랫폼 독립적, 시각적으로 검증 가능</td></tr>
+    <tr><td class="cmp-axis">AI의 위상</td><td>대화 보조용 챗봇 수준의 부가기능</td><td>OS 차원 기능(Gemini·Siri)일 뿐 앱 생태계의 거래 당사자는 아님</td><td class="cmp-hondi">AI(Claude·DeepSeek 등)가 대화의 정식 당사자이자 전문가(SP) — AI-AI 대화도 1급 주체</td></tr>
+    <tr><td class="cmp-axis">사물(IoT) 통합</td><td>사실상 없음</td><td>제조사별 개별 앱으로 분절 통합(상호운용 제한)</td><td class="cmp-hondi">동일 프로토콜 위에서 사물-사물(차량↔충전소)이 직접 협상·소통</td></tr>
+    <tr><td class="cmp-axis">개념(제도) 참여</td><td>해당 없음</td><td>해당 없음 — 앱이 법률정보를 제공할 뿐, 법 자체가 대화 주체는 아님</td><td class="cmp-hondi">민법·헌법·의학 등 개념이 SP 형태로 대화 당사자가 되어 서로 교차 참조</td></tr>
+    <tr><td class="cmp-axis">거버넌스</td><td>단일기업 의사결정</td><td>플랫폼 정책에 개발자가 종속(일방적 정책 변경 위험)</td><td class="cmp-hondi">오픈소스 커뮤니티(Team Jupiter 등) 기반 — 누구나 SP 기여 가능</td></tr>
+    </tbody>
+    </table>
+    </div>
+
+    <div class="cmp-summary">핵심 차이를 한 줄로 압축하면: 카카오·구글·애플은 <strong>"사람이 소프트웨어를 설치해 쓰는 폐쇄형 영리 플랫폼"</strong>이고, 혼디는 <strong>"사람·사물·기관·개념이 동등한 대화 주체로 참여하는 개방형 프로토콜"</strong>입니다.</div>
+
+  </div>
+</section>
+
+<!-- ── 현실 세계 vs 혼디 AI 평행세계 ── -->
+<section class="section" id="parallel-world" style="background:var(--bg-alt)">
+  <div class="section-inner">
+    <div class="section-tag reveal">AI Parallel World</div>
+    <h2 class="section-title reveal">현실 세계와 <strong>혼디의 AI 평행세계</strong></h2>
+    <p style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:28px;font-weight:400">혼디는 메시징 플랫폼을 넘어, 입법·사법·행정·금융·의료·교육·교통·시장·산업·기업 경영까지 — 현실 세계의 제도와 산업을 AI 기반으로 재구성한 평행세계를 지향합니다.</p>
+
+    <div class="cmp-table-wrap">
+    <table class="cmp-table">
+    <thead>
+    <tr>
+      <th>영역</th>
+      <th>현실 세계</th>
+      <th class="cmp-hondi">혼디 AI 평행세계</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr><td class="cmp-axis">입법</td><td>주기적 선거에 기반한 간접 민주주의</td><td class="cmp-hondi">시민의 차등적 의결권과 상시 투표에 기반한 직접 민주주의 입법지원체계</td></tr>
+    <tr><td class="cmp-axis">사법</td><td>막대한 시간과 비용으로 구동</td><td class="cmp-hondi">위법·범법의 99%를 사전 차단, 이미 발생한 범죄는 1분 내 판결 도출 지원</td></tr>
+    <tr><td class="cmp-axis">행정</td><td>중앙정부와 지자체 중심</td><td class="cmp-hondi">시민 중심의 완전 자동화 행정체계</td></tr>
+    <tr><td class="cmp-axis">금융</td><td>은행·보험·증권이 분리된 산업구조</td><td class="cmp-hondi">디지털화폐(GDC) 안에 금융산업을 융합</td></tr>
+    <tr><td class="cmp-axis">교육</td><td>초중고·대학 중심의 정형화된 교육기관</td><td class="cmp-hondi">학습자마다 할당된 AI 교원이 평생학습을 지원</td></tr>
+    <tr><td class="cmp-axis">의료</td><td>병원·의원·보건소 중심</td><td class="cmp-hondi">세상의 모든 의료지식을 갖춘 AI 진단지원시스템 중심</td></tr>
+    <tr><td class="cmp-axis">교통·물류</td><td>개별 기업의 독립적 운영, 개별 차량의 독립적 운행</td><td class="cmp-hondi">자율주행과 공유차량 중심의 단일 통합 교통물류 인프라</td></tr>
+    <tr><td class="cmp-axis">시장</td><td>플랫폼 기업이 중앙 관리하는 폐쇄형 시장(심사·수수료 중심)</td><td class="cmp-hondi">색상코드 기반 자발적·검증가능한 혼디장(Hondi Market) — 온오프 통합 자율시장</td></tr>
+    <tr><td class="cmp-axis">산업</td><td>개별 기업의 폐쇄적 생산·공급망, 기업 간 정보 비대칭</td><td class="cmp-hondi">해시체인으로 연결된 사물 간 직접 협상에 기반한 투명 산업 인프라</td></tr>
+    <tr><td class="cmp-axis">기업(경영)</td><td>사람이 경영</td><td class="cmp-hondi">시장의 모든 정보를 파악하는 AI 기반 경영지원체계</td></tr>
+    </tbody>
+    </table>
+    </div>
+
+    <div class="cmp-summary">현실 세계는 인간의 제한된 인지·시간·자원에 맞춰 설계된 제도이고, 혼디의 AI 평행세계는 같은 기능을 <strong>AI가 흡수해 압도적으로 빠르고 투명하게 재구성한 것</strong>입니다 — 이것이 혼디가 "삶의 비용을 99.9%, 처리 시간을 99.99999% 줄인다"고 말하는 근거입니다.</div>
 
   </div>
 </section>
