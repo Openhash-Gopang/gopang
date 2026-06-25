@@ -68,7 +68,21 @@ export async function startScanner(video, canvas, overlayCanvas, onResult, onSta
     _status('혼디 글자를 화면에 맞춰주세요.');
     _scheduleFrame(video, canvas);
   } catch (e) {
-    _status(`카메라 오류: ${e.message}`);
+    // 에러 유형별 안내
+    let msg;
+    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+      msg = '카메라 권한이 거부됐습니다.\n'
+          + '브라우저 주소창 왼쪽 🔒 아이콘 → 권한 → 카메라 허용 후 다시 시도해 주세요.';
+    } else if (e.name === 'NotFoundError' || e.name === 'DevicesNotFoundError') {
+      msg = '카메라를 찾을 수 없습니다. 기기에 카메라가 연결돼 있는지 확인해 주세요.';
+    } else if (e.name === 'NotReadableError' || e.name === 'TrackStartError') {
+      msg = '카메라가 다른 앱에서 사용 중입니다. 다른 앱을 닫고 다시 시도해 주세요.';
+    } else if (e.name === 'OverconstrainedError') {
+      msg = '카메라 설정 오류입니다. 잠시 후 다시 시도해 주세요.';
+    } else {
+      msg = `카메라 오류: ${e.message}`;
+    }
+    _status(msg);
     throw e;
   }
 }

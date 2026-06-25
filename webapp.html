@@ -2902,12 +2902,21 @@ function _setStatus(msg) {
 }
 
 /* ── 공개 함수 ── */
-window.openHondiScanner = function () {
+window.openHondiScanner = async function () {
   const ov = document.getElementById('hondi-scanner-overlay');
   ov.style.display = 'flex';
   document.getElementById('hs-result').style.display = 'none';
   _setStatus('카메라를 시작하는 중...');
-  _startScan();
+  try {
+    await _startScan();
+  } catch (e) {
+    // 권한 거부면 닫기 버튼만 남기고 오버레이 유지 (메시지는 hs-status에 표시됨)
+    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+      // 상태 바를 빨갛게 강조
+      const st = document.getElementById('hs-status');
+      if (st) st.style.color = '#ff6b6b';
+    }
+  }
 };
 
 window.closeHondiScanner = function () {
