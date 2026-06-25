@@ -21,6 +21,7 @@ import { openSettings, closeSettings, handleOverlayClick,
          openChatHistory, openHashChain, openGopangWallet, openFinancialStatement,
          openMyProfile, openBackupKey, _refreshFreeModelPool,
          applySkinColor,
+         openHondiCodeModal, closeHondiCodeModal, _downloadHondiCode,
 } from './src/gopang/ui/settings.js';
 import { openSearch, closeSearch,
          handleSearchOverlayClick,
@@ -153,6 +154,9 @@ window.dismissBackupWarn = function() {
   window._refreshFreeModelPool     = _refreshFreeModelPool;
   window.handleAISettingsOverlayClick = handleAISettingsOverlayClick;
   window.closeSettings             = closeSettings;
+  window.openHondiCodeModal        = openHondiCodeModal;
+  window.closeHondiCodeModal       = closeHondiCodeModal;
+  window._downloadHondiCode        = _downloadHondiCode;
   window.handleOverlayClick        = handleOverlayClick;
   window.saveSettings              = saveSettings;
   window.clearSWCache              = clearSWCache;

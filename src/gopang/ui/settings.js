@@ -78,6 +78,10 @@ export function openSettings() {
     }
   }
 
+  // 2-1. 혼디 코드 썸네일
+  if (registered) _renderHondiCodeThumb();
+  else { const t = document.getElementById('hondi-code-thumb'); if (t) t.style.display = 'none'; }
+
   // 3. Guest 등록 유도 안내
   const idSec = document.getElementById('gopang-id-section');
   if (idSec) {
@@ -1064,4 +1068,59 @@ export async function openBackupKey() {
     okEl.style.display = 'block';
     input.value = '';
   };
+}
+
+// ── 혼디 코드 썸네일 렌더링 ──────────────────────────────────
+export function _renderHondiCodeThumb() {
+  const thumb = document.getElementById('hondi-code-thumb');
+  if (!thumb) return;
+  const img = localStorage.getItem('hondi_code_image_v1');
+  if (img) {
+    thumb.src = img;
+    thumb.style.display = 'block';
+    return;
+  }
+  // 캐시 없으면 guid로 즉시 재생성
+  try {
+    const s = JSON.parse(
+      localStorage.getItem('gopang_user_v4') ||
+      sessionStorage.getItem('gopang_user_v4') || '{}'
+    );
+    if (!s.guid) return;
+    import('../ai/hondi-code.js')
+      .then(({ guidToShortId, generateHondiCodeDataURL }) =>
+        generateHondiCodeDataURL(guidToShortId(s.guid), 1)
+      )
+      .then(dataURL => {
+        try { localStorage.setItem('hondi_code_image_v1', dataURL); } catch {}
+        if (thumb) { thumb.src = dataURL; thumb.style.display = 'block'; }
+      })
+      .catch(() => {});
+  } catch {}
+}
+
+// ── 혼디 코드 모달 열기/닫기 ────────────────────────────────
+export function openHondiCodeModal() {
+  const modal    = document.getElementById('hondi-code-modal');
+  const modalImg = document.getElementById('hondi-code-modal-img');
+  const thumb    = document.getElementById('hondi-code-thumb');
+  if (!modal) return;
+  if (modalImg && thumb?.src) modalImg.src = thumb.src;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+export function closeHondiCodeModal() {
+  const modal = document.getElementById('hondi-code-modal');
+  if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+export function _downloadHondiCode() {
+  const img = localStorage.getItem('hondi_code_image_v1');
+  if (!img) return;
+  const a = document.createElement('a');
+  a.href = img;
+  a.download = 'hondi-code.png';
+  a.click();
 }
