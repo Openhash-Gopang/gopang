@@ -514,6 +514,174 @@ html,body{height:100%;background:#fff;color:#111;
     </div>
   </div>
 
+  <!-- ══ 범용 색상 코드 (Universal Color Bar) ══ -->
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="2" y="8" width="20" height="8" rx="3"/><path d="M6 8V6M10 8V5M14 8V6M18 8V5"/></svg></span>
+      <span class="m-title">무지개 막대 — "혼디"가 없어도 됩니다</span>
+    </div>
+    <div class="m-body">
+      혼디 코드는 사실 두 부분으로 나뉩니다. <b>"혼ㄷ" 문자</b>와 <b>색상 막대(ㅣ)</b>입니다. 지금까지는 둘이 항상 함께 붙어 있었지만, <b>색상 막대는 어떤 단어나 기호 옆에도 붙일 수 있습니다.</b>
+      <div class="eg">
+        "중화요리" 간판 옆에 무지개 막대 → 중화요리집 프로필로 연결<br>
+        "제주시청" 현판 옆에 무지개 막대 → 제주시청 공식 페이지로 연결<br>
+        "제주지방법원" 표지판 옆에 무지개 막대 → 법원 안내 페이지로 연결<br><br>
+        이 경우 스캐너는 <b>색상 막대만 읽어서</b> 프로필을 찾아줍니다. 단어 자체는 읽지 않습니다.
+      </div>
+    </div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></span>
+      <span class="m-title">그러나 문제가 있습니다 — 스캐너는 어디를 봐야 하는가</span>
+    </div>
+    <div class="m-body">
+      "혼디" 코드에서 <b>ㅎ(파랑)과 ㅗ(빨강)</b>은 스캐너의 나침반 역할을 합니다. 이 두 색이 보이면 스캐너는 "아, 여기 색상 막대가 있구나"라고 인식하고, 색상 막대의 위치·크기·기울기를 정확히 계산합니다.
+      <div class="eg">
+        "중화요리" 간판에는 파랑·빨강 기준점이 없습니다.<br>
+        스캐너 입장에서는 어디가 색상 막대인지 알 방법이 없습니다.<br><br>
+        <b>→ 새로운 "기준 부호(Anchor Mark)"가 필요합니다.</b>
+      </div>
+    </div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></span>
+      <span class="m-title">기준 부호 설계 — 3가지 후보 제안</span>
+    </div>
+    <div class="m-body">
+      색상 막대를 단독으로 쓸 때 스캐너가 인식할 수 있도록, 막대 양 끝(위·아래)에 작은 <b>Anchor Mark</b>를 붙입니다. 아래 세 가지 방식 중 하나를 선택하면 됩니다.
+      <div class="eg">
+        <b>① 이중 사각형 (권장)</b><br>
+        막대 위아래에 작은 정사각형 2개를 배치합니다. QR코드의 위치 탐지 패턴(□□)과 같은 원리입니다. 흑백 2중 테두리로 인쇄·조명 조건에 강합니다.<br>
+        <code style="display:block;background:#f3f4f6;padding:6px 10px;border-radius:6px;margin:6px 0;font-size:12px">
+        ┌─┐<br>
+        │■│  ← 위 앵커 (흑+백 이중 정사각형, 5×5px 기준)<br>
+        └─┘<br>
+        ░░░<br>
+        ░░░  ← 색상 막대 (10~20칸)<br>
+        ░░░<br>
+        ┌─┐<br>
+        │■│  ← 아래 앵커<br>
+        └─┘
+        </code>
+        <b>② 컬러 도트 쌍 (간단)</b><br>
+        막대 위 = 파랑 원형 도트, 아래 = 빨강 원형 도트. 현재 "혼디"의 ㅎ(파랑)/ㅗ(빨강)과 동일한 인식 방식을 재활용합니다. 기존 스캐너 코드 수정이 최소화됩니다.<br><br>
+        <b>③ L자형 코너 마크</b><br>
+        막대 상단 좌우에 L자 모양의 검정 코너를 붙입니다. 기울어진 상태에서도 인식이 안정적입니다.
+      </div>
+    </div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+      <span class="m-title">권장 방향 — ② 컬러 도트 쌍 채택</span>
+    </div>
+    <div class="m-body">
+      현재 혼디 스캐너는 이미 <b>파랑 픽셀과 빨강 픽셀을 탐지하는 로직</b>이 구현되어 있습니다. "혼디" 글자에서 ㅎ(파랑)과 ㅗ(빨강)을 찾는 코드입니다. 이 코드를 그대로 재활용할 수 있습니다.
+      <div class="eg">
+        <b>범용 색상 코드(UCB) 구성:</b><br><br>
+        <code style="display:block;background:#f3f4f6;padding:8px 12px;border-radius:6px;font-size:12px;line-height:1.8">
+        🔵  ← 파랑 원형 도트 (지름 = 막대 폭의 1.5배)<br>
+        ████  ← 색상 막대 10칸 또는 20칸<br>
+        🔴  ← 빨강 원형 도트
+        </code>
+        <br>
+        이 구성은 "혼디" 글자 없이도 스캐너가 동일하게 인식합니다.<br>
+        파랑 도트가 위, 빨강 도트가 아래 — 이 방향이 v1/v2 판별과 색상 읽기 방향의 기준이 됩니다.
+      </div>
+    </div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>
+      <span class="m-title">활용 시나리오 — 어디에든 붙일 수 있다</span>
+    </div>
+    <div class="m-body">
+      범용 색상 코드(UCB)를 사용하면 기존 간판·현판·명패를 그대로 유지하면서 색상 막대만 추가하면 됩니다.
+      <div class="eg">
+        <b>가게 간판:</b> "한림해녀국밥" 글자 오른쪽에 세로 방향 UCB 스티커 부착<br>
+        <b>공공기관:</b> "제주시청" 현판 아래 또는 옆에 UCB 동판 매립<br>
+        <b>법원·병원:</b> 기존 안내판 귀퉁이에 UCB 스티커 — 스마트폰으로 스캔하면 해당 기관의 혼디 프로필·서비스로 즉시 연결<br>
+        <b>명함·봉투:</b> 이름 옆에 가로 방향 UCB 인쇄 (파랑 도트가 왼쪽, 빨강 도트가 오른쪽)<br>
+        <b>도로 표지판:</b> 관광지·버스정류장 표지판에 UCB를 추가하면 스마트폰으로 해당 장소 정보 즉시 조회
+      </div>
+    </div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
+      <span class="m-title">기술 구현 — 스캐너 수정 범위</span>
+    </div>
+    <div class="m-body">
+      기존 스캐너(hondi-scanner.js)에서 수정해야 할 부분은 ROI 탐지 함수 하나입니다. "혼디" 글자 전체를 찾던 방식에서, <b>파랑 도트 + 빨강 도트 쌍</b>을 찾는 방식으로 확장합니다.
+      <div class="eg">
+        <b>현재:</b> 파랑(ㅎ) + 빨강(ㅗ) + 종횡비 검증(혼디 글자 비율) → "혼디" ROI 확정<br><br>
+        <b>변경 후:</b><br>
+        ① 파랑 픽셀 클러스터 탐지 → 도트인지, ㅎ자모인지 판별<br>
+        ② 빨강 픽셀 클러스터 탐지 → 도트인지, ㅗ자모인지 판별<br>
+        ③-A 두 클러스터가 세로로 배열 + 사이 폭이 좁음 → <b>UCB 모드</b> (범용 색상 코드)<br>
+        ③-B 두 클러스터가 "혼디" 글자 비율 → <b>혼디 코드 모드</b> (기존)<br><br>
+        두 모드 모두 캘리브레이션과 색상 추출 로직은 동일하게 재사용합니다.<br>
+        <b>추가 코드량: 약 60~80줄</b>
+      </div>
+    </div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+      <span class="m-title">UCB vs 혼디 코드 — 언제 무엇을 쓰나</span>
+    </div>
+    <div class="m-body">
+      두 방식은 용도에 따라 선택합니다.
+      <div class="eg">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#f2f2f7">
+              <th style="padding:8px 10px;text-align:left">구분</th>
+              <th style="padding:8px 10px;text-align:left">혼디 코드</th>
+              <th style="padding:8px 10px;text-align:left">범용 색상 코드(UCB)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-top:1px solid #e5e5ea">
+              <td style="padding:8px 10px"><b>모양</b></td>
+              <td style="padding:8px 10px">"혼디" 글자 + 색상 막대</td>
+              <td style="padding:8px 10px">파랑 도트 + 색상 막대 + 빨강 도트</td>
+            </tr>
+            <tr style="border-top:1px solid #e5e5ea;background:#fafafa">
+              <td style="padding:8px 10px"><b>인식 단서</b></td>
+              <td style="padding:8px 10px">ㅎ(파랑) + ㅗ(빨강) 자모</td>
+              <td style="padding:8px 10px">파랑 원형 + 빨강 원형 도트</td>
+            </tr>
+            <tr style="border-top:1px solid #e5e5ea">
+              <td style="padding:8px 10px"><b>브랜드</b></td>
+              <td style="padding:8px 10px">혼디 고유 아이덴티티</td>
+              <td style="padding:8px 10px">기존 간판·현판과 병존</td>
+            </tr>
+            <tr style="border-top:1px solid #e5e5ea;background:#fafafa">
+              <td style="padding:8px 10px"><b>적합 대상</b></td>
+              <td style="padding:8px 10px">신규 명함·스티커 제작</td>
+              <td style="padding:8px 10px">공공기관·기존 사업장 간판</td>
+            </tr>
+            <tr style="border-top:1px solid #e5e5ea">
+              <td style="padding:8px 10px"><b>인식 거리</b></td>
+              <td style="padding:8px 10px">동일</td>
+              <td style="padding:8px 10px">동일</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div class="m-section" style="text-align:center">
     <div class="m-body">
       더욱 자세한 내용은 <a href="https://gopang.net/desktop.html" target="_blank" rel="noopener" style="font-weight:700;color:var(--green-dk);text-decoration:none;white-space:nowrap">여기 ↗</a>를 방문하십시오
