@@ -2053,8 +2053,10 @@ const PROVIDERS = [
   ]},
   // ── DeepSeek 직접 ────────────────────────────────────────────
   { id:'deepseek',   label:'DeepSeek',     prefix:'sk-', models:[
-    { id:'deepseek-chat',          label:'DeepSeek V3 (최신)' },
-    { id:'deepseek-reasoner',      label:'DeepSeek R1 (최신)' },
+    { id:'deepseek-v4-flash',      label:'DeepSeek V4 Flash (284B, 1M ctx) ★권장' },
+    { id:'deepseek-v4-pro',        label:'DeepSeek V4 Pro (1.6T, 1M ctx)' },
+    { id:'deepseek-chat',          label:'DeepSeek V3 ← 2026-07-24 폐기 예정' },
+    { id:'deepseek-reasoner',      label:'DeepSeek R1 ← 2026-07-24 폐기 예정' },
   ]},
   // ── xAI Grok 직접 ────────────────────────────────────────────
   { id:'grok',       label:'Grok (xAI)',   prefix:'xai-', models:[
@@ -2070,8 +2072,9 @@ const PROVIDERS = [
     { id:'google/gemini-2.5-pro-preview',          label:'Gemini 2.5 Pro' },
     { id:'google/gemini-2.5-flash-preview-05-20',  label:'Gemini 2.5 Flash' },
     // DeepSeek
-    { id:'deepseek/deepseek-chat-v3-0324',         label:'DeepSeek V3 (0324)' },
-    { id:'deepseek/deepseek-r1-0528',              label:'DeepSeek R1 (0528)' },
+    { id:'deepseek/deepseek-v4-flash',             label:'DeepSeek V4 Flash ★권장' },
+    { id:'deepseek/deepseek-v4-pro',               label:'DeepSeek V4 Pro' },
+    { id:'deepseek/deepseek-chat-v3-0324',         label:'DeepSeek V3 (0324) — 레거시' },
     // Grok
     { id:'x-ai/grok-3',                           label:'Grok 3' },
     { id:'x-ai/grok-3-mini',                      label:'Grok 3 Mini' },
