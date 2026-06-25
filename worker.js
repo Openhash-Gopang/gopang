@@ -10,6 +10,9 @@
 const ALLOWED_ORIGINS = [
   'https://hondi.net',
   'https://www.hondi.net',
+  // ── 전환 기간 병행 허용 (gopang.net → hondi.net 301 리다이렉트 완료 후 제거) ──
+  'https://gopang.net',
+  'https://www.gopang.net',
   'https://klaw.hondi.net',
   'https://market.hondi.net',
   'https://tax.hondi.net',
