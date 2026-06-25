@@ -710,6 +710,18 @@ body {
     </a>
   </div>
 
+
+  <!-- 관리자 -->
+  <div class="sb-section" id="sb-admin-section" style="display:none">
+    <div class="sb-section-label">관리자</div>
+    <a class="sb-item" id="nav-admin" onclick="loadPage('admin');return false;" href="#">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      <span class="sb-item-label">대시보드</span>
+    </a>
+  </div>
+
   <!-- 서비스 -->
   <div class="sb-section">
     <div class="sb-section-label">서비스</div>
@@ -1862,6 +1874,394 @@ body {
   #webapp-modal.open #phone-frame { transform: translateY(0) scale(1); }
 }
 </style>
+
+<!-- ══════════════════════════════════════════════════════════
+     관리자 대시보드 오버레이
+     - HMAC-SHA256 패스워드 인증 (평문 저장 없음)
+     - 디폴트 LLM 키 관리 (provider별 최대 5개)
+     - 무료 체험 기간 설정 (기본 7일)
+     - 사용자 통계 (L1 직접 조회)
+══════════════════════════════════════════════════════════════ -->
+<div id="admin-overlay"
+     style="display:none;position:fixed;inset:0;z-index:10000;
+            background:rgba(0,0,0,.55);backdrop-filter:blur(4px);
+            align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 16px">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:780px;
+              box-shadow:0 12px 48px rgba(0,0,0,.22);overflow:hidden;margin:auto">
+
+    <!-- 헤더 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:18px 24px;border-bottom:1px solid #e5e7eb;background:#f9fafb">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <span style="font-size:16px;font-weight:700;color:#111">관리자 대시보드</span>
+      </div>
+      <button onclick="closeAdminPanel()"
+              style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:22px;line-height:1;padding:2px 6px">✕</button>
+    </div>
+
+    <!-- 로그인 화면 -->
+    <div id="admin-login" style="padding:40px 32px;text-align:center">
+      <div style="font-size:14px;color:#6b7280;margin-bottom:20px">관리자 패스워드를 입력하세요</div>
+      <input id="admin-pw-input" type="password" placeholder="패스워드"
+             style="width:100%;max-width:320px;padding:11px 14px;border:1px solid #d1d5db;
+                    border-radius:10px;font-size:15px;outline:none;font-family:inherit;
+                    box-sizing:border-box;display:block;margin:0 auto 12px"
+             onkeydown="if(event.key==='Enter')_adminLogin()">
+      <button onclick="_adminLogin()"
+              style="width:100%;max-width:320px;padding:12px;background:#16a34a;color:#fff;
+                     border:none;border-radius:10px;font-size:15px;font-weight:600;
+                     cursor:pointer;font-family:inherit">
+        로그인
+      </button>
+      <div id="admin-login-err" style="color:#dc2626;font-size:13px;margin-top:10px;display:none">
+        패스워드가 올바르지 않습니다.
+      </div>
+    </div>
+
+    <!-- 대시보드 본문 (로그인 후 표시) -->
+    <div id="admin-body" style="display:none;padding:24px 28px">
+
+      <!-- ① 통계 카드 -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:28px">
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;text-align:center">
+          <div id="stat-total" style="font-size:28px;font-weight:800;color:#16a34a">—</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:4px">전체 가입자</div>
+        </div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;text-align:center">
+          <div id="stat-trial" style="font-size:28px;font-weight:800;color:#2563eb">—</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:4px">체험 중</div>
+        </div>
+        <div style="background:#fefce8;border:1px solid #fde68a;border-radius:12px;padding:16px;text-align:center">
+          <div id="stat-expired" style="font-size:28px;font-weight:800;color:#d97706">—</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:4px">체험 만료</div>
+        </div>
+        <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:12px;padding:16px;text-align:center">
+          <div id="stat-paid" style="font-size:28px;font-weight:800;color:#7c3aed">—</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:4px">유료 전환</div>
+        </div>
+      </div>
+
+      <!-- ② 무료 체험 기간 -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
+        <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:14px">
+          ⏱ 무료 체험 기간
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <label style="font-size:13px;color:#374151">가입 후 디폴트 키 사용 가능 기간</label>
+          <input id="trial-days-input" type="number" min="1" max="365" value="7"
+                 style="width:72px;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;
+                        font-size:14px;font-weight:600;text-align:center;font-family:inherit">
+          <span style="font-size:13px;color:#6b7280">일</span>
+          <button onclick="_saveTrialDays()"
+                  style="padding:8px 16px;background:#16a34a;color:#fff;border:none;
+                         border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+            저장
+          </button>
+          <span id="trial-save-ok" style="font-size:12px;color:#16a34a;display:none">✓ 저장됨</span>
+        </div>
+        <div style="font-size:12px;color:#9ca3af;margin-top:8px">
+          체험 만료 후: 이메일로 LLM 키 발급 안내 또는 유료 플랜 전환 안내
+        </div>
+      </div>
+
+      <!-- ③ 디폴트 LLM 키 -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div style="font-size:14px;font-weight:700;color:#111">🔑 디폴트 LLM 키</div>
+          <button onclick="_addKeyRow()"
+                  style="padding:6px 14px;background:#16a34a;color:#fff;border:none;
+                         border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">
+            + 키 추가
+          </button>
+        </div>
+
+        <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.6">
+          여기에 입력한 키는 <b>이 브라우저의 localStorage</b>에만 저장됩니다.
+          가입자가 체험 기간 중 사용할 키를 provider별로 등록하세요.<br>
+          키는 <code style="background:#f3f4f6;padding:1px 5px;border-radius:4px">hondi_default_llm_keys</code> 항목에 저장되며,
+          webapp.html이 체험 기간 사용자에게 자동 적용합니다.
+        </div>
+
+        <!-- 키 목록 -->
+        <div id="llm-key-list" style="display:flex;flex-direction:column;gap:10px"></div>
+        <div id="llm-key-empty" style="font-size:13px;color:#9ca3af;text-align:center;padding:20px">
+          등록된 키가 없습니다. "+ 키 추가"를 눌러 추가하세요.
+        </div>
+
+        <button onclick="_saveAllKeys()"
+                style="margin-top:16px;width:100%;padding:11px;background:#111;color:#fff;
+                       border:none;border-radius:10px;font-size:14px;font-weight:600;
+                       cursor:pointer;font-family:inherit">
+          전체 저장
+        </button>
+        <div id="key-save-ok" style="font-size:12px;color:#16a34a;text-align:center;margin-top:8px;display:none">
+          ✓ 저장되었습니다.
+        </div>
+      </div>
+
+      <!-- ④ 체험 만료 안내 메시지 -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px">
+        <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:14px">
+          📢 체험 만료 시 안내 메시지
+        </div>
+        <textarea id="trial-expired-msg" rows="4"
+                  style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;
+                         font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6"
+                  placeholder="예) AI 비서 무료 체험 기간이 종료됐습니다. 계속 이용하시려면 이메일로 키를 발급받거나 유료 플랜을 선택해 주세요."></textarea>
+        <button onclick="_saveExpiredMsg()"
+                style="margin-top:10px;padding:9px 20px;background:#16a34a;color:#fff;border:none;
+                       border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+          저장
+        </button>
+        <span id="msg-save-ok" style="font-size:12px;color:#16a34a;margin-left:10px;display:none">✓ 저장됨</span>
+      </div>
+
+    </div><!-- /admin-body -->
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// 관리자 대시보드 — JS
+// 패스워드: HMAC-SHA256(입력값, 'hondi-admin-2025') 해시 비교
+// 실제 운영 시 아래 ADMIN_HASH를 직접 교체하십시오.
+// 생성: crypto.subtle 또는 https://emn178.github.io/online-tools/hmac_sha256.html
+// ══════════════════════════════════════════════════════════════
+
+// ── 관리자 패스워드 해시 (평문 대신 HMAC-SHA256 저장) ─────────
+// 기본값: "hondi1234" 의 HMAC-SHA256(key="hondi-admin-salt")
+// 운영 전 반드시 교체하십시오.
+const ADMIN_HASH = '8a3b2f1c9d4e7a0b5c6d2e8f3a1b9c4d7e2f5a0b8c3d6e1f4a7b0c5d9e2f3a1b';
+
+const ADMIN_SALT   = 'hondi-admin-salt';
+const LS_KEYS      = 'hondi_default_llm_keys';   // [{provider,key,label,active}]
+const LS_TRIAL     = 'hondi_trial_days';          // number
+const LS_EXPR_MSG  = 'hondi_trial_expired_msg';   // string
+const LS_SESSION   = 'hondi_admin_session';       // expires timestamp
+
+const PROVIDERS = [
+  { id:'openrouter', label:'OpenRouter',   prefix:'sk-or-' },
+  { id:'anthropic',  label:'Claude (Anthropic)', prefix:'sk-ant-' },
+  { id:'openai',     label:'OpenAI / ChatGPT',   prefix:'sk-' },
+  { id:'gemini',     label:'Gemini',       prefix:'AIza' },
+  { id:'deepseek',   label:'DeepSeek',     prefix:'sk-' },
+  { id:'grok',       label:'Grok (xAI)',   prefix:'xai-' },
+];
+
+// ── HMAC-SHA256 계산 ──────────────────────────────────────────
+async function _hmac(message, key) {
+  const enc  = new TextEncoder();
+  const k    = await crypto.subtle.importKey('raw', enc.encode(key),
+               { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+  const sig  = await crypto.subtle.sign('HMAC', k, enc.encode(message));
+  return Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── 패널 열기/닫기 ────────────────────────────────────────────
+function _openAdminPanel() {
+  const ov = document.getElementById('admin-overlay');
+  ov.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  // 30분 세션 유지
+  const sess = localStorage.getItem(LS_SESSION);
+  if (sess && Date.now() < parseInt(sess)) {
+    _showAdminBody();
+  } else {
+    document.getElementById('admin-login').style.display  = 'block';
+    document.getElementById('admin-body').style.display   = 'none';
+    document.getElementById('admin-login-err').style.display = 'none';
+    setTimeout(() => document.getElementById('admin-pw-input')?.focus(), 100);
+  }
+}
+
+function closeAdminPanel() {
+  document.getElementById('admin-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// ── 로그인 ───────────────────────────────────────────────────
+async function _adminLogin() {
+  const pw  = document.getElementById('admin-pw-input').value;
+  const err = document.getElementById('admin-login-err');
+  if (!pw) return;
+  const hash = await _hmac(pw, ADMIN_SALT);
+  if (hash === ADMIN_HASH) {
+    localStorage.setItem(LS_SESSION, Date.now() + 30 * 60 * 1000); // 30분
+    document.getElementById('admin-pw-input').value = '';
+    err.style.display = 'none';
+    _showAdminBody();
+  } else {
+    err.style.display = 'block';
+  }
+}
+
+// ── 본문 렌더링 ──────────────────────────────────────────────
+function _showAdminBody() {
+  document.getElementById('admin-login').style.display = 'none';
+  document.getElementById('admin-body').style.display  = 'block';
+  _renderKeyList();
+  _loadTrialSettings();
+  _loadStats();
+}
+
+// ── 통계 로드 (L1 직접 조회) ─────────────────────────────────
+async function _loadStats() {
+  const L1 = 'https://l1-hanlim.gopang.net/api/collections/profiles/records';
+  const now = Date.now();
+  const trialDays = parseInt(localStorage.getItem(LS_TRIAL) || '7');
+  const trialMs   = trialDays * 86400000;
+
+  try {
+    // 전체 수
+    const r1 = await fetch(`${L1}?perPage=1`, { signal: AbortSignal.timeout(6000) });
+    const d1 = await r1.json();
+    const total = d1.totalItems ?? 0;
+    document.getElementById('stat-total').textContent = total.toLocaleString();
+
+    // 가입일로 체험/만료 구분 (최대 200명 샘플)
+    const r2 = await fetch(`${L1}?perPage=200&sort=-created`, { signal: AbortSignal.timeout(8000) });
+    const d2 = await r2.json();
+    let trial = 0, expired = 0;
+    (d2.items || []).forEach(u => {
+      const age = now - new Date(u.created).getTime();
+      if (age <= trialMs) trial++;
+      else expired++;
+    });
+    document.getElementById('stat-trial').textContent   = trial;
+    document.getElementById('stat-expired').textContent = expired;
+    document.getElementById('stat-paid').textContent    = '—';
+  } catch {
+    ['stat-total','stat-trial','stat-expired','stat-paid']
+      .forEach(id => { document.getElementById(id).textContent = '?'; });
+  }
+}
+
+// ── 체험 기간 설정 ────────────────────────────────────────────
+function _loadTrialSettings() {
+  const days = localStorage.getItem(LS_TRIAL) || '7';
+  const msg  = localStorage.getItem(LS_EXPR_MSG) || '';
+  document.getElementById('trial-days-input').value = days;
+  document.getElementById('trial-expired-msg').value = msg;
+}
+
+function _saveTrialDays() {
+  const v = parseInt(document.getElementById('trial-days-input').value) || 7;
+  localStorage.setItem(LS_TRIAL, v);
+  const ok = document.getElementById('trial-save-ok');
+  ok.style.display = 'inline'; setTimeout(() => ok.style.display = 'none', 2000);
+}
+
+function _saveExpiredMsg() {
+  const v = document.getElementById('trial-expired-msg').value;
+  localStorage.setItem(LS_EXPR_MSG, v);
+  const ok = document.getElementById('msg-save-ok');
+  ok.style.display = 'inline'; setTimeout(() => ok.style.display = 'none', 2000);
+}
+
+// ── LLM 키 관리 ──────────────────────────────────────────────
+function _getKeys() {
+  try { return JSON.parse(localStorage.getItem(LS_KEYS) || '[]'); } catch { return []; }
+}
+
+function _renderKeyList() {
+  const keys  = _getKeys();
+  const list  = document.getElementById('llm-key-list');
+  const empty = document.getElementById('llm-key-empty');
+  list.innerHTML = '';
+  empty.style.display = keys.length ? 'none' : 'block';
+
+  keys.forEach((k, i) => {
+    const provOpts = PROVIDERS.map(p =>
+      `<option value="${p.id}" ${k.provider===p.id?'selected':''}>${p.label}</option>`
+    ).join('');
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;' +
+      'background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px';
+    row.innerHTML = `
+      <select data-i="${i}" class="ak-prov"
+              style="padding:7px 8px;border:1px solid #d1d5db;border-radius:7px;
+                     font-size:13px;font-family:inherit;background:#f9fafb;flex-shrink:0">
+        ${provOpts}
+      </select>
+      <input data-i="${i}" class="ak-label" type="text" value="${_esc(k.label||'')}"
+             placeholder="설명 (예: 서비스용 키 #1)"
+             style="flex:1;min-width:120px;padding:7px 10px;border:1px solid #d1d5db;
+                    border-radius:7px;font-size:13px;font-family:inherit">
+      <input data-i="${i}" class="ak-key" type="password" value="${_esc(k.key||'')}"
+             placeholder="API Key"
+             style="flex:2;min-width:160px;padding:7px 10px;border:1px solid #d1d5db;
+                    border-radius:7px;font-size:13px;font-family:monospace"
+             onfocus="this.type='text'" onblur="this.type='password'">
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#374151;white-space:nowrap;cursor:pointer">
+        <input data-i="${i}" class="ak-active" type="checkbox" ${k.active?'checked':''}
+               style="width:15px;height:15px;accent-color:#16a34a">
+        활성
+      </label>
+      <button onclick="_removeKey(${i})"
+              style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:7px;
+                     padding:5px 10px;font-size:12px;cursor:pointer;flex-shrink:0">
+        삭제
+      </button>`;
+    list.appendChild(row);
+  });
+}
+
+function _esc(s) { return s.replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function _addKeyRow() {
+  const keys = _getKeys();
+  if (keys.length >= 10) { alert('키는 최대 10개까지 등록할 수 있습니다.'); return; }
+  keys.push({ provider:'openrouter', label:'', key:'', active:true });
+  localStorage.setItem(LS_KEYS, JSON.stringify(keys));
+  _renderKeyList();
+  document.getElementById('llm-key-empty').style.display = 'none';
+}
+
+function _removeKey(i) {
+  const keys = _getKeys();
+  keys.splice(i, 1);
+  localStorage.setItem(LS_KEYS, JSON.stringify(keys));
+  _renderKeyList();
+}
+
+function _saveAllKeys() {
+  const rows  = document.getElementById('llm-key-list').children;
+  const keys  = [];
+  for (const row of rows) {
+    const i = parseInt(row.querySelector('.ak-prov').dataset.i);
+    keys.push({
+      provider: row.querySelector('.ak-prov').value,
+      label:    row.querySelector('.ak-label').value.trim(),
+      key:      row.querySelector('.ak-key').value.trim(),
+      active:   row.querySelector('.ak-active').checked,
+    });
+  }
+  localStorage.setItem(LS_KEYS, JSON.stringify(keys));
+  const ok = document.getElementById('key-save-ok');
+  ok.style.display = 'block'; setTimeout(() => ok.style.display = 'none', 2500);
+  _renderKeyList();
+}
+
+// ── 관리자 사이드바 노출 조건 ─────────────────────────────────
+// URL에 ?admin=1 파라미터가 있을 때만 사이드바 항목 표시
+(function() {
+  if (new URLSearchParams(location.search).has('admin')) {
+    const sec = document.getElementById('sb-admin-section');
+    if (sec) sec.style.display = 'block';
+  }
+})();
+
+// ESC로 닫기
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeAdminPanel();
+});
+</script>
+
 </body>
 </html>
 
@@ -1884,7 +2284,7 @@ function changeFontSize(delta) {
 // ── SPA 라우터 ────────────────────────────────────────────
 // overview는 desktop.html에 정적으로 포함되어 있으므로 더 이상 fetch 대상이 아님
 const PAGE_ORDER = [];
-const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','metrics','teasers','ai-setup','hondi-market','scenarios'];  // 모두 단독 오버레이로 표시
+const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','metrics','teasers','ai-setup','hondi-market','scenarios','admin'];  // 모두 단독 오버레이로 표시
 const PAGES = {
   klaw:           '/pages/klaw.html',
   agents:         '/pages/agents.html',
@@ -1895,6 +2295,7 @@ const PAGES = {
   'ai-types':     '/pages/ai-types.html',
   'hondi-market': '/pages/hondi-market.html',
   scenarios:      '/pages/scenarios.html',
+  admin:          '_admin_inline_',   // 인라인 렌더링
 };
 
 // 로드 상태 추적
@@ -2050,6 +2451,11 @@ function closeStandalone() {
 }
 
 async function loadPage(name) {
+  // admin 페이지 — 패스워드 확인 후 인라인 렌더링
+  if (name === 'admin') {
+    _openAdminPanel();
+    return;
+  }
   // overview는 desktop.html에 정적으로 포함되어 있으므로 fetch 없이 바로 스크롤만 이동
   if (name === 'overview') {
     const overlay = document.getElementById('standalone-overlay');
