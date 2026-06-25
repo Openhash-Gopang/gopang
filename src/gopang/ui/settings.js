@@ -311,7 +311,7 @@ function _renderPcSyncBanner(parsed, guid) {
     banner.style.color = '#1e3a8a';
     banner.innerHTML =
       `💻 API Key 입력은 PC에서 하는 것이 편리합니다.<br>` +
-      `PC에서 <b>gopang.net</b> 접속 후, <b>"나만의 AI 비서 설정"</b> 버튼을 누르고,<br>` +
+      `PC에서 <b>hondi.net</b> 접속 후, <b>"나만의 AI 비서 설정"</b> 버튼을 누르고,<br>` +
       `페이지의 지시대로 이행하십시오.`;
     return;
   }

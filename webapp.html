@@ -38,7 +38,7 @@
         '</p>' +
         '<p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0">' +
           'LLM API 키 설정 등 PC 작업이 필요하면<br>' +
-          '<b>gopang.net/pages/ai-setup.html</b>을 이용해 주세요.' +
+          '<b>hondi.net/pages/ai-setup.html</b>을 이용해 주세요.' +
         '</p>' +
       '</div>' +
     '</div>'
@@ -1757,7 +1757,7 @@ function _savePushSound(val) {
   navigator.serviceWorker?.ready.then(reg =>
     reg.pushManager.getSubscription().then(sub => {
       if (!sub) return;
-      fetch('https://gopang-proxy.tensor-city.workers.dev/push/subscribe', {
+      fetch('https://hondi-proxy.tensor-city.workers.dev/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ guid: user.ipv6, subscription: sub.toJSON(), sound: val }),
@@ -1828,7 +1828,7 @@ async function _togglePush(on) {
       if (sub) await sub.unsubscribe();
       // 서버에서도 삭제
       if (user?.ipv6) {
-        await fetch('https://gopang-proxy.tensor-city.workers.dev/push/subscribe', {
+        await fetch('https://hondi-proxy.tensor-city.workers.dev/push/subscribe', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ guid: user.ipv6, subscription: null, sound: 'none', unsubscribe: true }),
         }).catch(()=>{});
@@ -2651,7 +2651,7 @@ window.closeTermsOfUse = closeTermsOfUse;
     // CFG에서 현재 설정 읽기
     const cfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
     const providers = Array.isArray(cfg.providers) ? cfg.providers : [];
-    const endpoint = cfg.endpoint || 'https://gopang-proxy.tensor-city.workers.dev';
+    const endpoint = cfg.endpoint || 'https://hondi-proxy.tensor-city.workers.dev';
     const system = cfg.system || '';
 
     // 히스토리에 user 추가
@@ -2690,7 +2690,7 @@ window.closeTermsOfUse = closeTermsOfUse;
       });
     }
     // 최종 안전망 — 고팡 프록시(키 불필요)
-    candidates.push({ provider: 'gopang-proxy', url: endpoint + '/chat/completions', model: cfg.model || 'deepseek-chat', key: '' });
+    candidates.push({ provider: 'hondi-proxy', url: endpoint + '/chat/completions', model: cfg.model || 'deepseek-chat', key: '' });
 
     let lastErr = '';
     for (const c of candidates) {
@@ -2698,7 +2698,7 @@ window.closeTermsOfUse = closeTermsOfUse;
         const headers = { 'Content-Type': 'application/json' };
         if (c.key) {
           headers['Authorization'] = 'Bearer ' + c.key;
-          if (c.provider === 'openrouter') headers['HTTP-Referer'] = 'https://gopang.net';
+          if (c.provider === 'openrouter') headers['HTTP-Referer'] = 'https://hondi.net';
         }
         if (c.provider === 'openrouter') recordOpenRouterCall(); // 분당 슬라이딩 윈도우에 기록
 

@@ -150,8 +150,9 @@ function _processFrame(video, canvas) {
     _lastId    = idStr;
   }
 
-  const pct = Math.round(_lockCount / LOCK_FRAMES * 100);
-  _status(`인식 중... ${pct}% [${result.version}]`);
+  const pct      = Math.round(_lockCount / LOCK_FRAMES * 100);
+  const modeLabel = result.roi?.mode === 'ucb' ? 'UCB' : '혼디';
+  _status(`인식 중... ${pct}% [${modeLabel} ${result.version}]`);
 
   if (_lockCount >= _lockFramesRequired) {
     _locked = true;
@@ -196,7 +197,18 @@ function _makeThumb(ctx, W, H, tW, tH) {
   return oc;
 }
 
-// ── "혼디" 글자 ROI 탐지 ─────────────────────────────────────
+// ── ROI 탐지 — 혼디 코드 + UCB(범용 색상 코드) 공용 ──────────
+//
+// 혼디 코드: "혼디" 글자에서 ㅎ(파랑)·ㅗ(빨강)이 넓게 분포
+//   → 파랑·빨강 클러스터의 X 스팬이 넓음 (gW/gH > ASPECT_MIN)
+//
+// UCB 모드: 파랑 도트(위)·빨강 도트(아래) + 세로 색상 막대
+//   → 두 클러스터가 세로로 좁게 배열 (gW/gH < UCB_ASPECT_MAX)
+//   → 색상 막대(ㅣ)는 두 도트 사이 중앙 세로선
+//
+// 자동 판별: aspect 비율 하나로 두 모드를 분기
+const UCB_ASPECT_MAX = 0.55;  // 이 비율 미만이면 UCB 모드
+
 function _detectHondiROI(ctx, W, H) {
   const data = ctx.getImageData(0, 0, W, H).data;
 
@@ -207,11 +219,11 @@ function _detectHondiROI(ctx, W, H) {
       const i = (y * W + x) * 4;
       const r = data[i], g = data[i+1], b = data[i+2];
 
-      // ㅎ 파랑: b 우세
+      // 파랑 픽셀: ㅎ 자모(혼디) 또는 위쪽 앵커 도트(UCB)
       if (b > 120 && r < 90 && g < 90 && b - Math.max(r,g) > 60) {
         blueX.push(x); blueY.push(y);
       }
-      // ㅗ 빨강: r 우세
+      // 빨강 픽셀: ㅗ 자모(혼디) 또는 아래쪽 앵커 도트(UCB)
       if (r > 120 && g < 90 && b < 90 && r - Math.max(g,b) > 60) {
         redX.push(x); redY.push(y);
       }
@@ -229,27 +241,80 @@ function _detectHondiROI(ctx, W, H) {
 
   if (gH < MIN_GLYPH_H) return null;
 
-  // 종횡비 검증 — "혼디" 글자는 가로가 세로보다 넓음
   const aspect = gW / gH;
+
+  // ── UCB 모드: 파랑(위 도트)·빨강(아래 도트)이 세로로 좁게 배열 ──
+  if (aspect < UCB_ASPECT_MAX) {
+    return _buildUCBRoi(x1, y1, gW, gH, blueY, redY);
+  }
+
+  // ── 혼디 코드 모드: 종횡비 검증 ──────────────────────────────
   if (aspect < ASPECT_MIN || aspect > ASPECT_MAX) return null;
 
-  // 자모별 ROI (비율 기반)
-  const midX = x1 + gW * 0.52;   // ㅣ는 오른쪽 끝
+  const midX = x1 + gW * 0.52;
+  return {
+    mode: 'hondi',
+    full: { x: x1, y: y1, w: gW, h: gH },
+    hih:  { x: x1,           y: y1,          w: gW*0.38, h: gH*0.38 },
+    ho:   { x: x1+gW*0.08,   y: y1+gH*0.30, w: gW*0.28, h: gH*0.20 },
+    n:    { x: x1,           y: y1+gH*0.72, w: gW*0.38, h: gH*0.20 },
+    bg:   { x: Math.max(0,x1-20), y: y1,    w: 14,      h: 14       },
+    d:    { x: midX,         y: y1+gH*0.08, w: gW*0.38, h: gH*0.70 },
+    i:    { x: midX+gW*0.32, y: y1,         w: gW*0.13, h: gH       },
+  };
+}
+
+// ── UCB ROI 구성 ──────────────────────────────────────────────
+// 파랑 도트 클러스터 중심 = 상단 앵커
+// 빨강 도트 클러스터 중심 = 하단 앵커
+// 색상 막대(i) = 두 앵커 사이 세로선
+function _buildUCBRoi(x1, y1, gW, gH, blueY, redY) {
+  // 파랑·빨강 각 클러스터의 Y 중심
+  const blueYc = blueY.reduce((a,b)=>a+b,0) / blueY.length;
+  const redYc  = redY.reduce((a,b)=>a+b,0)  / redY.length;
+
+  // 위=파랑, 아래=빨강 보장 (카메라 방향에 무관하게 정규화)
+  const topY    = Math.min(blueYc, redYc);
+  const botY    = Math.max(blueYc, redYc);
+  const barH    = botY - topY;           // 색상 막대 높이
+  const dotSize = Math.max(6, gW * 0.8); // 앵커 도트 샘플 크기
+
+  // 막대 X 중심: 두 클러스터 X 평균
+  const barCX = x1 + gW * 0.5;
+  const barW  = Math.max(6, gW * 0.6);
+
+  // 캘리브레이션용 앵커 샘플 영역
+  const hihRoi = { x: barCX - dotSize/2, y: topY - dotSize/2, w: dotSize, h: dotSize };
+  const hoRoi  = { x: barCX - dotSize/2, y: botY - dotSize/2, w: dotSize, h: dotSize };
+
+  // 배경: 막대 왼쪽 바깥
+  const bgRoi  = { x: Math.max(0, barCX - barW - 12), y: topY, w: 10, h: 10 };
+
+  // ㄴ 대용: 배경 흰색 영역 (UCB엔 ㄴ이 없으므로 배경으로 대체)
+  const nRoi   = bgRoi;
+
+  // ㄷ 대용: 막대 중간 영역 (UCB 버전 판별용 — 단색이면 v1)
+  const dRoi   = { x: barCX - barW/2, y: topY + barH*0.3, w: barW, h: barH*0.4 };
+
+  // ㅣ: 색상 막대 전체
+  const iRoi   = { x: barCX - barW/2, y: topY, w: barW, h: barH };
 
   return {
+    mode: 'ucb',
     full: { x: x1, y: y1, w: gW, h: gH },
-    hih:  { x: x1,         y: y1,           w: gW*0.38, h: gH*0.38 },  // ㅎ
-    ho:   { x: x1+gW*0.08, y: y1+gH*0.30,  w: gW*0.28, h: gH*0.20 },  // ㅗ
-    n:    { x: x1,         y: y1+gH*0.72,  w: gW*0.38, h: gH*0.20 },  // ㄴ
-    bg:   { x: Math.max(0,x1-20), y: y1,   w: 14,      h: 14       },  // 배경
-    d:    { x: midX,       y: y1+gH*0.08,  w: gW*0.38, h: gH*0.70 },  // ㄷ
-    i:    { x: midX+gW*0.32, y: y1,        w: gW*0.13, h: gH       },  // ㅣ
+    hih:  hihRoi,
+    ho:   hoRoi,
+    n:    nRoi,
+    bg:   bgRoi,
+    d:    dRoi,
+    i:    iRoi,
   };
 }
 
 function _scaleRoi(roi, s) {
   const sc = r => ({ x:r.x*s, y:r.y*s, w:r.w*s, h:r.h*s });
   return {
+    mode: roi.mode,
     full: sc(roi.full), hih: sc(roi.hih), ho: sc(roi.ho),
     n: sc(roi.n),  bg: sc(roi.bg),  d: sc(roi.d),  i: sc(roi.i),
   };
@@ -388,7 +453,7 @@ export async function lookupProfile(shortId, version) {
     if (!data.items?.length) throw new Error('등록되지 않은 혼디 코드입니다.');
     const p = data.items[0];
     return { guid:p.ipv6||p.id, handle:p.handle, name:p.name,
-             url:`https://gopang.net/profile?id=${p.id}` };
+             url:`https://hondi.net/profile?id=${p.id}` };
   } catch (e) {
     throw new Error(`프로필 조회 실패: ${e.message}`);
   }
