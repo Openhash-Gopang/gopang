@@ -1,0 +1,431 @@
+<div class="scn-wrap reveal">
+<style>
+.scn-wrap { max-width: 880px; margin: 0 auto; padding: 70px 24px 110px; }
+
+/* ── 헤더 ── */
+.scn-head { text-align: center; margin-bottom: 18px; }
+.scn-logo { width: 64px; height: 64px; object-fit: contain; margin: 0 auto 18px; display: block; }
+.scn-tag {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 14px; border-radius: 99px;
+  background: var(--bg-subtle, #f1f3f5); border: 1px solid var(--border2, #d1d5db);
+  font-family: 'Pretendard', sans-serif; font-size: 11.5px; font-weight: 500;
+  color: var(--text3, #374151); letter-spacing: .4px; margin-bottom: 16px;
+}
+.scn-tag::before { content:''; width:6px; height:6px; border-radius:50%; background: var(--brand, #3ecf8e); }
+.scn-head h2 {
+  font-size: 27px; font-weight: 800; color: var(--text, #0f172a);
+  letter-spacing: -0.5px; margin: 0 0 14px; font-family: 'Pretendard', sans-serif;
+}
+.scn-head p {
+  font-size: 14.5px; color: var(--text3, #374151); line-height: 1.8;
+  max-width: 560px; margin: 0 auto;
+}
+
+/* 색상 코드 띠 장식 */
+.scn-swatch-row { display: flex; justify-content: center; gap: 4px; margin: 26px 0 50px; }
+.scn-swatch { width: 18px; height: 28px; border-radius: 4px; }
+
+/* ── 시나리오 카드 ── */
+.scn-card {
+  background: var(--surface, #fff); border: 1px solid var(--border, #e5e7eb);
+  border-radius: 18px; padding: 34px 32px; margin-bottom: 26px;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.05));
+}
+.scn-card-head { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
+.scn-num {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--brand-bg, #f0fdf8); color: var(--brand-dk, #1a9e6a);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Pretendard', sans-serif; font-size: 14px; font-weight: 800;
+}
+.scn-card-head h3 {
+  font-size: 18.5px; font-weight: 700; color: var(--text, #0f172a); margin: 0;
+  font-family: 'Pretendard', sans-serif;
+}
+.scn-persona {
+  font-size: 12.5px; color: var(--text4, #6b7280); margin: 10px 0 26px 48px;
+  font-family: 'Pretendard', sans-serif;
+}
+
+/* ── 단계 스테퍼 (가로 사이드 라인) ── */
+.scn-steps { margin: 0 0 6px 4px; }
+.scn-step { display: flex; gap: 16px; padding: 0 0 24px; position: relative; }
+.scn-step::before {
+  content: ''; position: absolute; left: 13px; top: 28px; bottom: 0;
+  width: 2px; background: var(--border, #e5e7eb);
+}
+.scn-step:last-child::before { display: none; }
+.scn-step-num {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+  color: var(--text4, #6b7280); border: 2px solid var(--border2, #d1d5db);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Pretendard', sans-serif; font-size: 11.5px; font-weight: 700;
+  background: var(--surface, #fff); position: relative; z-index: 1;
+}
+.scn-step-body { flex: 1; padding-top: 2px; }
+.scn-step-body h4 {
+  font-size: 14px; font-weight: 700; color: var(--text, #0f172a); margin: 0 0 5px;
+  font-family: 'Pretendard', sans-serif;
+}
+.scn-step-body p { font-size: 13.2px; color: var(--text2, #1e293b); line-height: 1.75; margin: 0; }
+
+/* ── 대화 버블 ── */
+.scn-chat { margin: 14px 0 22px 4px; display: flex; flex-direction: column; gap: 8px; }
+.scn-bubble {
+  max-width: 82%; padding: 10px 15px; border-radius: 14px;
+  font-size: 13px; line-height: 1.65; font-family: 'Pretendard', sans-serif;
+}
+.scn-bubble b { font-weight: 700; }
+.scn-bubble.ai {
+  align-self: flex-start; background: var(--brand-bg, #f0fdf8);
+  color: var(--text2, #1e293b); border-bottom-left-radius: 4px;
+}
+.scn-bubble.user {
+  align-self: flex-end; background: var(--bg-subtle, #f1f3f5);
+  color: var(--text2, #1e293b); border-bottom-right-radius: 4px;
+}
+.scn-bubble .who {
+  display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .3px;
+  margin-bottom: 3px; opacity: .65;
+}
+
+/* ── 코드/보고서 블록 ── */
+.scn-code {
+  background: var(--label, #0f172a); color: #d1fae5;
+  border-radius: 12px; padding: 16px 18px; margin: 10px 0 22px 4px;
+  font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+  font-size: 12px; line-height: 1.7; overflow-x: auto; white-space: pre;
+}
+.scn-code .k { color: #93c5fd; }
+
+/* ── 콜아웃 ── */
+.scn-callout {
+  border-radius: 12px; padding: 14px 18px; margin: 4px 0 4px 4px;
+  background: var(--bg-subtle, #f1f3f5); font-size: 12.8px;
+  color: var(--text3, #374151); line-height: 1.7;
+}
+.scn-callout b { color: var(--text, #0f172a); }
+.scn-callout.warn { background: var(--amber-lt, #fffbeb); color: #92611a; }
+.scn-callout.warn b { color: #7a4f0f; }
+
+/* ── 흐름도 ── */
+.scn-flow-wrap {
+  background: var(--bg-subtle, #f1f3f5); border-radius: 18px;
+  padding: 36px 28px; margin: 10px 0 26px;
+}
+.scn-flow-title {
+  text-align: center; font-size: 13.5px; font-weight: 700; color: var(--text3, #374151);
+  margin-bottom: 28px; letter-spacing: .2px; font-family: 'Pretendard', sans-serif;
+}
+.scn-flow {
+  display: flex; flex-direction: column; align-items: stretch; gap: 0;
+  max-width: 480px; margin: 0 auto;
+}
+.scn-flow-box {
+  background: var(--surface, #fff); border: 1px solid var(--border, #e5e7eb);
+  border-radius: 10px; padding: 11px 16px; text-align: center;
+  font-size: 12.8px; font-weight: 600; color: var(--text2, #1e293b);
+  font-family: 'Pretendard', sans-serif;
+}
+.scn-flow-box.accent { border-color: var(--brand, #3ecf8e); color: var(--brand-dk, #1a9e6a); background: var(--brand-bg, #f0fdf8); }
+.scn-flow-arrow { display: flex; justify-content: center; padding: 4px 0; color: var(--text4, #9ca3af); }
+.scn-flow-split { display: flex; gap: 14px; }
+.scn-flow-split > div { flex: 1; display: flex; flex-direction: column; gap: 0; }
+.scn-flow-track-label {
+  text-align: center; font-size: 10.5px; font-weight: 700; color: var(--text4, #6b7280);
+  letter-spacing: .3px; margin-bottom: 6px;
+}
+
+/* ── 이슈 테이블 ── */
+.scn-table-wrap { overflow-x: auto; margin: 4px 0 10px; }
+.scn-table { width: 100%; border-collapse: collapse; font-size: 12.8px; font-family: 'Pretendard', sans-serif; }
+.scn-table th, .scn-table td {
+  text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border, #e5e7eb);
+  vertical-align: top; line-height: 1.6;
+}
+.scn-table th {
+  font-size: 11px; font-weight: 700; color: var(--text4, #6b7280);
+  text-transform: uppercase; letter-spacing: .4px; border-bottom: 2px solid var(--border2, #d1d5db);
+}
+.scn-table td.issue { color: var(--text, #0f172a); font-weight: 600; white-space: nowrap; }
+.scn-table td.fix { color: var(--text2, #1e293b); }
+
+.scn-divider { border: none; height: 1px; margin: 6px 0 36px;
+  background: linear-gradient(to right, transparent, var(--border, #e5e7eb) 15%, var(--border, #e5e7eb) 85%, transparent); }
+
+@media (max-width: 600px) {
+  .scn-card { padding: 26px 20px; }
+  .scn-persona { margin-left: 0; }
+  .scn-steps { margin-left: 0; }
+  .scn-flow-split { flex-direction: column; }
+}
+</style>
+
+  <!-- ── 헤더 ── -->
+  <div class="scn-head reveal">
+    <img class="scn-logo" src="/icons/icon-512.png" alt="혼디">
+    <div class="scn-tag">USE CASE · 일상 시나리오</div>
+    <h2>혼디, 하루의 풍경</h2>
+    <p>가게 간판에 적힌 색색의 글자 하나가 주문이 되고, 민원이 되고,<br>다음 사람의 편리함으로 이어지는 과정을 네 장면으로 보여드립니다.</p>
+  </div>
+
+  <div class="scn-swatch-row reveal">
+    <div class="scn-swatch" style="background:#e5293c"></div>
+    <div class="scn-swatch" style="background:#2fa84f"></div>
+    <div class="scn-swatch" style="background:#f08a1c"></div>
+    <div class="scn-swatch" style="background:#f4d61e"></div>
+    <div class="scn-swatch" style="background:#2fa84f"></div>
+    <div class="scn-swatch" style="background:#1e4fd8"></div>
+    <div class="scn-swatch" style="background:#7b2fb5"></div>
+    <div class="scn-swatch" style="background:#3d1e7a"></div>
+    <div class="scn-swatch" style="background:#7b2fb5"></div>
+  </div>
+
+  <!-- ── 시나리오 1 ── -->
+  <div class="scn-card reveal">
+    <div class="scn-card-head">
+      <span class="scn-num">1</span>
+      <h3>가게 주인 — 혼디 코드를 만들다</h3>
+    </div>
+    <p class="scn-persona">제주시 한림읍에서 해녀국밥집을 운영하는 고씨 (60대)</p>
+
+    <div class="scn-steps">
+      <div class="scn-step">
+        <div class="scn-step-num">1</div>
+        <div class="scn-step-body">
+          <h4>혼디 가입</h4>
+          <p>전화번호 인증 한 번으로 Ed25519 · X25519 키쌍과 IPv6 GUID가 자동으로 발급됩니다. 닉네임은 "한림해녀국밥", 지역은 "제주시 한림읍"으로 설정합니다.</p>
+        </div>
+      </div>
+      <div class="scn-step">
+        <div class="scn-step-num">2</div>
+        <div class="scn-step-body">
+          <h4>AI 비서와의 대화로 끝나는 사업자 등록</h4>
+          <p>혼디 비서가 묻는 몇 가지 질문에 답하는 것만으로 프로필이 완성됩니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="scn-chat">
+      <div class="scn-bubble ai"><span class="who">혼디</span>어떤 유형에 해당하시나요?</div>
+      <div class="scn-bubble user"><span class="who">고씨</span>사업자요</div>
+      <div class="scn-bubble ai"><span class="who">혼디</span>어떤 상품이나 서비스를 판매하시나요?</div>
+      <div class="scn-bubble user"><span class="who">고씨</span>해녀국밥 12,000원, 성게비빔밥 15,000원, 전복죽 18,000원</div>
+      <div class="scn-bubble ai"><span class="who">혼디</span>GDC 결제를 수락하시겠어요?</div>
+      <div class="scn-bubble user"><span class="who">고씨</span>네</div>
+    </div>
+
+    <div class="scn-steps">
+      <div class="scn-step">
+        <div class="scn-step-num">3</div>
+        <div class="scn-step-body">
+          <h4>혼디 코드 발급</h4>
+          <p>설정 메뉴에서 "내 혼디 코드 받기"를 누르면, 등록된 고유 ID가 9진법 색상 배열로 변환되어 "혼디" 두 글자 안에 새겨집니다. ㅎ은 파랑, ㅗ는 빨강, ㄴ·ㄷ은 검정 — 그리고 마지막 자모 ㅣ에 색상 코드가 담깁니다.</p>
+        </div>
+      </div>
+      <div class="scn-step">
+        <div class="scn-step-num">4</div>
+        <div class="scn-step-body">
+          <h4>간판 · 명함에 인쇄</h4>
+          <p>완성된 이미지를 내려받아 출입문 스티커, 테이블 명함, 메뉴판 한쪽에 인쇄합니다. 별도 단말기나 가입비 없이, 인쇄소 한 번이면 끝입니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 시나리오 2 ── -->
+  <div class="scn-card reveal">
+    <div class="scn-card-head">
+      <span class="scn-num">2</span>
+      <h3>손님 — 코드를 비추고, 주문하다</h3>
+    </div>
+    <p class="scn-persona">제주 여행 중인 박씨 (30대)</p>
+
+    <div class="scn-steps">
+      <div class="scn-step">
+        <div class="scn-step-num">1</div>
+        <div class="scn-step-body">
+          <h4>발견</h4>
+          <p>한림 올레길을 걷다 해녀국밥집 간판의 알록달록한 "혼디" 글자를 발견합니다.</p>
+        </div>
+      </div>
+      <div class="scn-step">
+        <div class="scn-step-num">2</div>
+        <div class="scn-step-body">
+          <h4>스캔</h4>
+          <p>혼디 앱 상단 카메라 아이콘을 누르면 뷰파인더가 바로 열립니다. QR코드를 찍을 때처럼, 간판을 향해 스마트폰을 들기만 하면 됩니다. 네 프레임 연속으로 같은 값이 읽히면 진동과 짧은 신호음으로 인식이 확정됩니다.</p>
+        </div>
+      </div>
+      <div class="scn-step">
+        <div class="scn-step-num">3</div>
+        <div class="scn-step-body">
+          <h4>자동 이동</h4>
+          <p>1초 남짓 뒤, "한림해녀국밥"의 혼디 프로필이 화면에 펼쳐집니다. 메뉴와 가격, 주문·결제·채팅·길찾기 버튼이 한눈에 보입니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="scn-chat">
+      <div class="scn-bubble ai"><span class="who">혼디</span>해녀국밥집에 연결합니다.</div>
+      <div class="scn-bubble ai"><span class="who">K-Market</span>안녕하세요! 무엇을 주문하시겠어요?</div>
+      <div class="scn-bubble user"><span class="who">박씨</span>해녀국밥 2개요</div>
+      <div class="scn-bubble ai"><span class="who">K-Market</span>해녀국밥 2인분, 24,000원입니다. GDC로 결제하시겠어요?</div>
+      <div class="scn-bubble user"><span class="who">박씨</span>네</div>
+    </div>
+
+    <p style="font-size:13.2px;color:var(--text2,#1e293b);line-height:1.75;margin:0 0 10px 4px">
+      결제가 끝나면 그림자 AI가 6하원칙으로 정리된 짧은 이행 보고서를 받아 손님의 PDV에 조용히 기록해 둡니다.
+    </p>
+    <div class="scn-code">REPORT_6W {
+  <span class="k">"who"</span>:   "박씨(@park_jeju)",
+  <span class="k">"when"</span>:  "2026-06-25T12:34:00+09:00",
+  <span class="k">"where"</span>: "제주시 한림읍 한림해녀국밥",
+  <span class="k">"what"</span>:  "해녀국밥 2인분 주문·결제",
+  <span class="k">"how"</span>:   "K-Market + GDC",
+  <span class="k">"why"</span>:   "현장 식사",
+  <span class="k">"result"</span>:"24,000 GDC 결제 완료, 접수번호 #2847"
+}</div>
+    <p style="font-size:12.5px;color:var(--text4,#6b7280);margin:0 0 0 4px">고씨의 스마트폰에는 곧바로 주문 알림이 도착합니다.</p>
+  </div>
+
+  <!-- ── 시나리오 3 ── -->
+  <div class="scn-card reveal">
+    <div class="scn-card-head">
+      <span class="scn-num">3</span>
+      <h3>아직 없는 기관 — 그 자리에서 만들어지다</h3>
+    </div>
+    <p class="scn-persona">강원도 출장 중인 제주도민 이씨 (40대)</p>
+
+    <div class="scn-chat">
+      <div class="scn-bubble user"><span class="who">이씨</span>강원도청에 관광지 불편사항 민원 넣고 싶어</div>
+    </div>
+
+    <div class="scn-steps">
+      <div class="scn-step">
+        <div class="scn-step-num">1</div>
+        <div class="scn-step-body">
+          <h4>검색 — 없음</h4>
+          <p>혼디는 먼저 등록된 전문 에이전트 목록(GWP Registry)에서 "강원도청"을 찾습니다. 아직 없습니다.</p>
+        </div>
+      </div>
+      <div class="scn-step">
+        <div class="scn-step-num">2</div>
+        <div class="scn-step-body">
+          <h4>유사 기관 참조 + 실시간 웹 검색</h4>
+          <p>가장 가까운 유형인 "제주도청" 에이전트를 뼈대로 삼고, 강원도청의 실제 업무·민원 절차·연락처를 웹에서 확인해 빈 곳을 채웁니다.</p>
+        </div>
+      </div>
+      <div class="scn-step">
+        <div class="scn-step-num">3</div>
+        <div class="scn-step-body">
+          <h4>임시 등록</h4>
+          <p>새로 만들어진 "강원도청" 에이전트는 곧바로 쓸 수 있지만, 관리자 검토를 거치기 전까지는 임시 상태로 표시됩니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="scn-chat">
+      <div class="scn-bubble ai"><span class="who">강원도청</span>안녕하세요. 강원도청 AI 민원 대리인입니다. 어떤 불편사항을 접수하시겠어요?</div>
+      <div class="scn-bubble user"><span class="who">이씨</span>설악산 케이블카 매표소 안내판이 일본어만 있고 한국어가 없어요</div>
+      <div class="scn-bubble ai"><span class="who">강원도청</span>접수하겠습니다. 담당부서는 관광국 관광진흥과입니다. 국민신문고를 통해 공식 접수할까요?</div>
+      <div class="scn-bubble user"><span class="who">이씨</span>네</div>
+      <div class="scn-bubble ai"><span class="who">강원도청</span>접수 완료. 처리기한 7일, 접수번호 #GW-2026-48291</div>
+    </div>
+
+    <div class="scn-callout">
+      <b>그다음 사람은 기다리지 않습니다.</b> 다른 사용자가 "강원도청 민원"을 입력하면, 이미 만들어진 에이전트가 곧바로 응답합니다. 관리자 승인이 끝나면 정식 등록되어 모든 사용자에게 공유됩니다.
+    </div>
+  </div>
+
+  <!-- ── 시나리오 4 ── -->
+  <div class="scn-card reveal">
+    <div class="scn-card-head">
+      <span class="scn-num">4</span>
+      <h3>밤, 그리고 사진 한 장</h3>
+    </div>
+    <p class="scn-persona">박씨, 저녁 식사 후 야간에 다른 가게를 찾아서</p>
+
+    <div class="scn-steps">
+      <div class="scn-step">
+        <div class="scn-step-num">1</div>
+        <div class="scn-step-body">
+          <h4>흔들리는 인식</h4>
+          <p>조명이 어두운 골목, 연속 스캔이 75% → 50%를 오가며 좀처럼 확정되지 않습니다.</p>
+        </div>
+      </div>
+      <div class="scn-step">
+        <div class="scn-step-num">2</div>
+        <div class="scn-step-body">
+          <h4>사진 모드로 전환</h4>
+          <p>화면의 "📷 사진" 버튼을 누르면 그 순간의 한 장을 여러 번 평균 내어 분석합니다. 흔들리는 영상보다 한 장의 정확한 사진이 어두운 환경에서는 더 강합니다.</p>
+        </div>
+      </div>
+      <div class="scn-step">
+        <div class="scn-step-num">3</div>
+        <div class="scn-step-body">
+          <h4>인식 성공</h4>
+          <p>잠시 후 가게 프로필이 열립니다. 연속 스캔이 흔들리는 순간에도, 항상 다음 수단이 준비되어 있습니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="scn-callout warn">
+      <b>설계 원칙.</b> 혼디 코드는 "한 가지 방법만 통하는" 시스템이 아니라, 조명·거리·각도가 나빠도 항상 빠져나갈 길이 있는 시스템을 지향합니다.
+    </div>
+  </div>
+
+  <hr class="scn-divider">
+
+  <!-- ── 전체 흐름도 ── -->
+  <div class="scn-flow-wrap reveal">
+    <div class="scn-flow-title">전체 흐름 한눈에 보기</div>
+    <div class="scn-flow">
+      <div class="scn-flow-split">
+        <div>
+          <div class="scn-flow-track-label">가게 주인</div>
+          <div class="scn-flow-box">혼디 가입 · 프로필 등록</div>
+          <div class="scn-flow-arrow">↓</div>
+          <div class="scn-flow-box">혼디 코드 생성</div>
+          <div class="scn-flow-arrow">↓</div>
+          <div class="scn-flow-box">간판 · 명함 인쇄</div>
+        </div>
+        <div>
+          <div class="scn-flow-track-label">손님</div>
+          <div class="scn-flow-box">카메라로 코드 스캔</div>
+          <div class="scn-flow-arrow">↓</div>
+          <div class="scn-flow-box">자동 인식 · 진동 확정</div>
+          <div class="scn-flow-arrow">↓</div>
+          <div class="scn-flow-box">프로필 자동 이동</div>
+        </div>
+      </div>
+      <div class="scn-flow-arrow" style="padding:10px 0">↓ ↓</div>
+      <div class="scn-flow-box accent">전문 에이전트 호출 (K-Market · K-Law · 지자체 …)</div>
+      <div class="scn-flow-arrow">↓</div>
+      <div class="scn-flow-box">6하원칙 보고서 → 그림자 AI → PDV 기록</div>
+    </div>
+  </div>
+
+  <!-- ── 이슈 / 대응 ── -->
+  <div class="scn-card reveal" style="padding-bottom:24px">
+    <div class="scn-card-head" style="margin-bottom:18px">
+      <span class="scn-num">!</span>
+      <h3>미리 생각해 둔 것들</h3>
+    </div>
+    <div class="scn-table-wrap">
+      <table class="scn-table">
+        <thead>
+          <tr><th>상황</th><th>대응</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="issue">간판이 더럽거나 일부 가려짐</td><td class="fix">여러 프레임을 모아 판단하므로 일시적인 가림은 자연스럽게 무시됩니다.</td></tr>
+          <tr><td class="issue">백열등 등 강한 색조명</td><td class="fix">색상 팔레트 사이의 거리를 넉넉히 두어 주황·노랑처럼 가까운 색의 혼동을 줄였습니다.</td></tr>
+          <tr><td class="issue">야간, 어두운 환경</td><td class="fix">사진 한 장을 여러 번 평균 내는 보조 모드로 전환할 수 있습니다.</td></tr>
+          <tr><td class="issue">코드 위조</td><td class="fix">코드가 가리키는 값은 결국 L1 서명 검증을 통과해야만 진짜 프로필로 연결됩니다.</td></tr>
+          <tr><td class="issue">너무 멀거나 너무 작은 코드</td><td class="fix">일정 거리 이상 멀어지면 화면에 "더 가까이 대주세요" 안내가 표시됩니다.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

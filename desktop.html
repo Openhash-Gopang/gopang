@@ -284,10 +284,9 @@ body {
 }
 .sb-logo-icon {
   width: 26px; height: 26px; flex-shrink: 0;
-  background: var(--brand); border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; color: white;
-  font-family: 'Pretendard', sans-serif;
+  border-radius: 6px; object-fit: contain;
+  background: #fff; border: 1px solid var(--border);
+  padding: 2px;
 }
 .sb-logo-text {
   font-size: 14px; font-weight: 600; color: var(--text);
@@ -496,10 +495,9 @@ body {
 }
 .sb-logo-icon {
   width: 26px; height: 26px; flex-shrink: 0;
-  background: var(--brand); border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; color: white;
-  font-family: 'Pretendard', sans-serif;
+  border-radius: 6px; object-fit: contain;
+  background: #fff; border: 1px solid var(--border);
+  padding: 2px;
 }
 .sb-logo-text {
   font-size: 14px; font-weight: 600; color: var(--text);
@@ -599,7 +597,7 @@ body {
 <!-- ── SIDEBAR ── -->
 <aside class="sidebar">
   <a class="sb-logo" href="#" onclick="loadPage('overview');return false;">
-    <div class="sb-logo-icon">G</div>
+    <img class="sb-logo-icon" src="/icons/icon-192.png" alt="혼디">
     <span class="sb-logo-text">hondi</span>
   </a>
 
@@ -644,6 +642,13 @@ body {
         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
       </svg>
       <span class="sb-item-label">티저</span>
+    </a>
+    <a class="sb-item" id="nav-scenarios" onclick="loadPage('scenarios');return false;" href="#">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+      <span class="sb-item-label">일상 시나리오</span>
     </a>
     <a class="sb-item" id="nav-hondi-market" onclick="loadPage('hondi-market');return false;" href="#">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -766,7 +771,7 @@ body {
 <!-- 모바일 상단바 -->
 <div class="mobile-topbar">
   <div style="display:flex;align-items:center;gap:8px;font-family:'Pretendard', sans-serif;font-size:15px;font-weight:600;color:var(--text)">
-    <div class="sb-logo-icon">G</div> hondi
+    <img class="sb-logo-icon" src="/icons/icon-192.png" alt="혼디"> hondi
   </div>
   <div style="display:flex;gap:6px">
     <button style="background:none;color:var(--brand);border:1px solid var(--brand);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer" onclick="loadPage('ai-setup')">AI 비서</button>
@@ -1586,7 +1591,7 @@ body {
   <div class="footer-inner" style="justify-content:flex-end;margin-top:20px">
     <div style="text-align:right">
       <div class="footer-logo" style="justify-content:flex-end">
-        <div class="sb-logo-icon">G</div>
+        <img class="sb-logo-icon" src="/icons/icon-192.png" alt="혼디">
         hondi
       </div>
       <div class="footer-copy">© 2026 AI City Inc. · KR Patent · v3.4</div>
@@ -1868,7 +1873,7 @@ function changeFontSize(delta) {
 // ── SPA 라우터 ────────────────────────────────────────────
 // overview는 desktop.html에 정적으로 포함되어 있으므로 더 이상 fetch 대상이 아님
 const PAGE_ORDER = [];
-const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','metrics','teasers','ai-setup','hondi-market'];  // 모두 단독 오버레이로 표시
+const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','metrics','teasers','ai-setup','hondi-market','scenarios'];  // 모두 단독 오버레이로 표시
 const PAGES = {
   klaw:           '/pages/klaw.html',
   agents:         '/pages/agents.html',
@@ -1878,6 +1883,7 @@ const PAGES = {
   'ai-setup':     '/pages/ai-setup.html',
   'ai-types':     '/pages/ai-types.html',
   'hondi-market': '/pages/hondi-market.html',
+  scenarios:      '/pages/scenarios.html',
 };
 
 // 로드 상태 추적
