@@ -2037,9 +2037,10 @@ body {
 const ADMIN_HASH = '828b92846fc9e6108aa986cfa57336e26d596fb60dbe898601e7c2fe7060f68b';
 
 const ADMIN_SALT   = 'hondi-admin-salt';
-const LS_KEYS      = 'hondi_default_llm_keys';   // [{provider,key,label,active}]
-const LS_TRIAL     = 'hondi_trial_days';          // number
-const LS_EXPR_MSG  = 'hondi_trial_expired_msg';   // string
+const WORKER_URL   = 'https://hondi-proxy.tensor-city.workers.dev';
+const LS_KEYS      = 'hondi_default_llm_keys';   // 로컬 임시 캐시 (실제 저장은 KV)
+const LS_TRIAL     = 'hondi_trial_days';          // 로컬 캐시
+const LS_EXPR_MSG  = 'hondi_trial_expired_msg';   // 로컬 캐시
 const LS_SESSION   = 'hondi_admin_session';       // expires timestamp
 
 const PROVIDERS = [
@@ -2122,6 +2123,19 @@ async function _hmac(message, key) {
                { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
   const sig  = await crypto.subtle.sign('HMAC', k, enc.encode(message));
   return Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── 관리자 토큰 생성 (ts.hmac 형식, 5분 유효) ───────────────
+async function _buildAdminToken() {
+  const ts  = Math.floor(Date.now() / 1000).toString();
+  const enc = new TextEncoder();
+  const k   = await crypto.subtle.importKey(
+    'raw', enc.encode('hondi-admin-salt'),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', k, enc.encode(ts));
+  const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return `${ts}.${hex}`;
 }
 
 // ── 패널 열기/닫기 ────────────────────────────────────────────
@@ -2212,16 +2226,30 @@ function _loadTrialSettings() {
   document.getElementById('trial-expired-msg').value = msg;
 }
 
-function _saveTrialDays() {
+async function _saveTrialDays() {
   const v = parseInt(document.getElementById('trial-days-input').value) || 7;
   localStorage.setItem(LS_TRIAL, v);
+  try {
+    const token = await _buildAdminToken();
+    await fetch(`${WORKER_URL}/admin/default-key`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ admin_token: token, trial_days: v }),
+    });
+  } catch {}
   const ok = document.getElementById('trial-save-ok');
   ok.style.display = 'inline'; setTimeout(() => ok.style.display = 'none', 2000);
 }
 
-function _saveExpiredMsg() {
+async function _saveExpiredMsg() {
   const v = document.getElementById('trial-expired-msg').value;
   localStorage.setItem(LS_EXPR_MSG, v);
+  try {
+    const token = await _buildAdminToken();
+    await fetch(`${WORKER_URL}/admin/default-key`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ admin_token: token, expired_msg: v }),
+    });
+  } catch {}
   const ok = document.getElementById('msg-save-ok');
   ok.style.display = 'inline'; setTimeout(() => ok.style.display = 'none', 2000);
 }
@@ -2319,11 +2347,10 @@ function _removeKey(i) {
   _renderKeyList();
 }
 
-function _saveAllKeys() {
-  const rows  = document.getElementById('llm-key-list').children;
-  const keys  = [];
+async function _saveAllKeys() {
+  const rows = document.getElementById('llm-key-list').children;
+  const keys = [];
   for (const row of rows) {
-    const i = parseInt(row.querySelector('.ak-prov').dataset.i);
     keys.push({
       provider: row.querySelector('.ak-prov').value,
       model:    row.querySelector('.ak-model')?.value || '',
@@ -2332,9 +2359,34 @@ function _saveAllKeys() {
       active:   row.querySelector('.ak-active').checked,
     });
   }
-  localStorage.setItem(LS_KEYS, JSON.stringify(keys));
+  const trialDays  = parseInt(document.getElementById('trial-days-input').value) || 7;
+  const expiredMsg = document.getElementById('trial-expired-msg').value;
+
+  // 로컬 캐시 (UI 빠른 반응)
+  localStorage.setItem(LS_KEYS,     JSON.stringify(keys));
+  localStorage.setItem(LS_TRIAL,    trialDays);
+  localStorage.setItem(LS_EXPR_MSG, expiredMsg);
+
+  // Worker KV에 저장 (모든 사용자에게 실제 적용)
   const ok = document.getElementById('key-save-ok');
-  ok.style.display = 'block'; setTimeout(() => ok.style.display = 'none', 2500);
+  try {
+    const token = await _buildAdminToken();
+    const res   = await fetch(`${WORKER_URL}/admin/default-key`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ admin_token: token, keys, trial_days: trialDays, expired_msg: expiredMsg }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      ok.textContent = '✓ KV에 저장됐습니다 — 모든 사용자에게 적용됩니다.';
+    } else {
+      ok.textContent = '⚠️ KV 저장 실패: ' + (data.message || res.status);
+    }
+  } catch (e) {
+    ok.textContent = '⚠️ Worker 연결 실패: ' + e.message;
+  }
+  ok.style.display = 'block';
+  setTimeout(() => { ok.style.display = 'none'; ok.textContent = '✓ 저장되었습니다.'; }, 4000);
   _renderKeyList();
 }
 

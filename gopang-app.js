@@ -9,7 +9,7 @@
 
 // ── Core ─────────────────────────────────────────────────
 import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, gopangAuth, _hasConfirmedBackup } from './src/gopang/core/auth.js';
-import { loadSettings, CFG, saveSettings }     from './src/gopang/core/config.js';
+import { loadSettings, CFG, saveSettings, loadDefaultKeyIfNeeded } from './src/gopang/core/config.js';
 import { _USER, aiActive, setAiActive, setUser } from './src/gopang/core/state.js';
 
 // ── UI ───────────────────────────────────────────────────
@@ -206,9 +206,28 @@ window.dismissBackupWarn = function() {
 loadSettings();
 _updateHandleChip(_USER?.nickname || _USER?.handle || null);
 
+// 사용자 키가 없으면 체험 기간 디폴트 키를 Worker에서 fetch
+loadDefaultKeyIfNeeded().catch(() => {});
+
 // ════════════════════════════════════════════════════════
 // 4. DOMContentLoaded — 나머지 모듈 동적 로드
 // ════════════════════════════════════════════════════════
+// 체험 기간 만료 이벤트 → 안내 배너 표시
+window.addEventListener('hondi:trial_expired', (e) => {
+  const msg = e.detail?.message || 'AI 비서 무료 체험 기간이 종료됐습니다.';
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);' +
+    'background:#1e293b;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;' +
+    'z-index:9999;max-width:90vw;text-align:center;line-height:1.5;' +
+    'box-shadow:0 4px 20px rgba(0,0,0,.3)';
+  banner.innerHTML = msg +
+    '<br><a href="/pages/ai-setup-mobile.html" ' +
+    'style="color:#4ade80;text-decoration:underline;margin-top:6px;display:inline-block">' +
+    '내 키 등록하기 →</a>';
+  document.body.appendChild(banner);
+  setTimeout(() => banner.remove(), 10000);
+});
+
 const _boot = async () => {
 
   // 4-0. Hash Chain IDB 복원 — prevHash 연속성 보장
@@ -474,7 +493,7 @@ function _showWelcomePopup() {
           ['M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0 1 12 2.944a11.955 11.955 0 0 1-8.618 3.04A12.02 12.02 0 0 0 3 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', '합법성 보장', '주고받은 데이터의 합법성을 보장하며, 불법적 내용은 적절히 조치합니다(신고 등).'],
           ['M3 6l3 1m0 0-3 9a5.002 5.002 0 0 0 6.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1-3 9a5.002 5.002 0 0 0 6.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3', '판결 추정', '모든 다툼에 대해 수 년 뒤의 대법원 판결문을 상당한 수준의 신뢰도로 예상할 수 있습니다. (자체 평가 일치도 99%)'],
           ['M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M9 15h.01M15 15h.01M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', '정확한 세금', '모든 거래는 즉시 사용자의 장부(재무제표)에 반영되며, 세금은 단 1원도 더 내거나 덜내지 않습니다.'],
-          ['M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22', '자세한 정보', 'PC에서 gopang.net에 접속하세요.'],
+          ['M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22', '자세한 정보', 'PC에서 hondi.net에 접속하세요.'],
         ].map(([path, title, desc]) => `
           <div style="display:flex;align-items:flex-start;gap:12px">
             <div style="width:34px;height:34px;flex-shrink:0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center">

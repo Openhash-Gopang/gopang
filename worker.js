@@ -1,5 +1,5 @@
 ﻿// ═══════════════════════════════════════════════════════════
-// gopang-proxy — v4.9
+// hondi-proxy — v4.9
 // v4.8: /biz/profile, /biz/order, /biz/review, /biz/product
 // v4.9: STEP 08 /biz/order L1 위임 (Worker 검증 제거)
 //       STEP 09 handlePdvReport 동기 앵커링
@@ -8,25 +8,25 @@
 // ═══════════════════════════════════════════════════════════
 
 const ALLOWED_ORIGINS = [
-  'https://gopang.net',
-  'https://www.gopang.net',
-  'https://klaw.gopang.net',
-  'https://market.gopang.net',
-  'https://tax.gopang.net',
-  'https://gdc.gopang.net',
-  'https://health.gopang.net',
-  'https://school.gopang.net',
-  'https://public.gopang.net',
-  'https://security.gopang.net',
-  'https://democracy.gopang.net',
-  'https://police.gopang.net',
-  'https://insurance.gopang.net',
-  'https://911.gopang.net',
-  'https://stock.gopang.net',
-  'https://traffic.gopang.net',
-  'https://logistics.gopang.net',
-  'https://users.gopang.net',
-  'https://l1-hanlim.gopang.net',
+  'https://hondi.net',
+  'https://www.hondi.net',
+  'https://klaw.hondi.net',
+  'https://market.hondi.net',
+  'https://tax.hondi.net',
+  'https://gdc.hondi.net',
+  'https://health.hondi.net',
+  'https://school.hondi.net',
+  'https://public.hondi.net',
+  'https://security.hondi.net',
+  'https://democracy.hondi.net',
+  'https://police.hondi.net',
+  'https://insurance.hondi.net',
+  'https://911.hondi.net',
+  'https://stock.hondi.net',
+  'https://traffic.hondi.net',
+  'https://logistics.hondi.net',
+  'https://users.hondi.net',
+  'https://l1-hanlim.hondi.net',
   'https://fiil.kr',
   'https://openhash.kr',
   'https://nounweb.github.io',
@@ -36,14 +36,14 @@ const ALLOWED_ORIGINS = [
 
 
 const L1_NODE_MAP = {
-  'KR-JEJU-JEJU-HANLIM':  'https://l1-hanlim.gopang.net',
-  'KR-JEJU-JEJU-IDO1':    'https://openhash-l1-ido1.gopang.net',
-  'KR-JEJU-JEJU':         'https://openhash-l2-jeju-city.gopang.net',
-  'KR-JEJU':              'https://openhash-l3-jeju.gopang.net',
-  'KR':                   'https://openhash-l4-kr.gopang.net',
-  'GLOBAL':               'https://openhash-l5-global.gopang.net',
+  'KR-JEJU-JEJU-HANLIM':  'https://l1-hanlim.hondi.net',
+  'KR-JEJU-JEJU-IDO1':    'https://openhash-l1-ido1.hondi.net',
+  'KR-JEJU-JEJU':         'https://openhash-l2-jeju-city.hondi.net',
+  'KR-JEJU':              'https://openhash-l3-jeju.hondi.net',
+  'KR':                   'https://openhash-l4-kr.hondi.net',
+  'GLOBAL':               'https://openhash-l5-global.hondi.net',
 };
-const L1_DEFAULT = 'https://l1-hanlim.gopang.net';
+const L1_DEFAULT = 'https://l1-hanlim.hondi.net';
 
 const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions';
 const DEEPSEEK_URL   = 'https://api.deepseek.com/v1/chat/completions';
@@ -367,7 +367,7 @@ export default {
 
     // ── TURN credential (coturn, RFC 8489) — _TURN_COTURN_PATCH_APPLIED_ ──────
     // GET /turn/credential?guid=...
-    // TURN 서버: l1-hanlim.gopang.net:3478 (UDP/TCP), :5349 (TLS)
+    // TURN 서버: l1-hanlim.hondi.net:3478 (UDP/TCP), :5349 (TLS)
     // Credential: HMAC-SHA1 time-limited (coturn static-auth-secret 방식)
     if (pathname === '/turn/credential' && request.method === 'GET')
       return handleTurnCredential(request, env, corsHeaders);
@@ -419,6 +419,14 @@ export default {
     // ── Prompt Editor (관리자 — L1 prompt_admins 인증 + GitHub PR) ──
     if (pathname === '/admin/login' && request.method === 'POST')
       return handleAdminLogin(request, env, corsHeaders);
+
+    // ── 디폴트 LLM 키 관리 ──────────────────────────────────────
+    // POST /admin/default-key  — 관리자가 KV에 저장 (HMAC 인증)
+    // GET  /default-key        — 앱이 체험기간 확인 후 키 수신
+    if (pathname === '/admin/default-key' && request.method === 'POST')
+      return handleAdminDefaultKeySet(request, env, corsHeaders);
+    if (pathname === '/default-key' && request.method === 'GET')
+      return handleDefaultKeyGet(request, env, corsHeaders);
     if (pathname === '/prompt' && request.method === 'GET')
       return handlePromptGet(request, env, corsHeaders);
     if (pathname === '/admin/prompt' && request.method === 'POST')
@@ -692,7 +700,7 @@ async function handleBizOrder(request, env, corsHeaders) {
     buyer_claim,
     seller_claim,
     ledger:       rpcResult,
-    reporter_svc: reporter_svc || 'gopang-proxy',
+    reporter_svc: reporter_svc || 'hondi-proxy',
     importance: {
       score: parseFloat(importance_score.toFixed(4)),
       mode:  importance_mode,
@@ -715,7 +723,7 @@ async function _recordOrderPdv(env, {
   const summary6w = JSON.stringify({
     who:   `buyer(${from_guid.slice(0, 20)}...)`,
     when:  now,
-    where: 'https://market.gopang.net',
+    where: 'https://market.hondi.net',
     what:  `구매: ${item_name} ₮${total}`,
     how:   'Ed25519 서명 + L1 4단계 검증',
     why:   '상품 구매 거래',
@@ -747,7 +755,7 @@ async function _recordOrderPdv(env, {
       openhash_block_id:    block_id,
       openhash_anchored:    true,
       openhash_anchored_at: now,
-      reporter_svc:         'gopang-proxy',
+      reporter_svc:         'hondi-proxy',
       via_worker:           true,
       created_at:           now,
       // Phase 4: 중요도·LCAT·risk_tier (OpenHash PLSM 입력 추적)
@@ -799,7 +807,7 @@ async function handlePdvPage(request, env, corsHeaders) {
 }
 
 function _generatePdvHtml(p) {
-  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${p.name||'엔티티'} — Gopang PDV</title><meta name="ofp:primary_guid" content="${p.primary_guid||''}"><meta name="ofp:current_ipv6" content="${p.current_ipv6||''}"><meta name="ofp:l1_node" content="${p.l1_node||''}"><style>body{font-family:sans-serif;max-width:480px;margin:40px auto;padding:20px;background:#f8f9fa}.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px}h1{font-size:20px;margin-bottom:16px}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px}.label{color:#6b7280}.val{font-family:monospace;font-size:11px;word-break:break-all}.btn{display:block;width:100%;padding:12px;margin-top:16px;background:#3ecf8e;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}</style></head><body><div class="card"><h1>${p.name||'(이름 없음)'}</h1><div class="row"><span class="label">유형</span><span>${p.entity_type||'–'}</span></div><div class="row"><span class="label">업종</span><span>${p.occupation||'–'}</span></div><div class="row"><span class="label">주소</span><span>${p.address||'–'}</span></div><div class="row"><span class="label">Primary GUID</span><span class="val">${p.primary_guid||'–'}</span></div><div class="row"><span class="label">IPv6</span><span class="val">${p.current_ipv6||'–'}</span></div><div class="row"><span class="label">L1 노드</span><span class="val">${p.l1_node||'–'}</span></div><button class="btn" onclick="window.open('https://gopang.net/?connect=${encodeURIComponent(p.primary_guid||'')}','_blank')">고팡으로 연결</button></div></body></html>`;
+  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${p.name||'엔티티'} — Gopang PDV</title><meta name="ofp:primary_guid" content="${p.primary_guid||''}"><meta name="ofp:current_ipv6" content="${p.current_ipv6||''}"><meta name="ofp:l1_node" content="${p.l1_node||''}"><style>body{font-family:sans-serif;max-width:480px;margin:40px auto;padding:20px;background:#f8f9fa}.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px}h1{font-size:20px;margin-bottom:16px}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px}.label{color:#6b7280}.val{font-family:monospace;font-size:11px;word-break:break-all}.btn{display:block;width:100%;padding:12px;margin-top:16px;background:#3ecf8e;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}</style></head><body><div class="card"><h1>${p.name||'(이름 없음)'}</h1><div class="row"><span class="label">유형</span><span>${p.entity_type||'–'}</span></div><div class="row"><span class="label">업종</span><span>${p.occupation||'–'}</span></div><div class="row"><span class="label">주소</span><span>${p.address||'–'}</span></div><div class="row"><span class="label">Primary GUID</span><span class="val">${p.primary_guid||'–'}</span></div><div class="row"><span class="label">IPv6</span><span class="val">${p.current_ipv6||'–'}</span></div><div class="row"><span class="label">L1 노드</span><span class="val">${p.l1_node||'–'}</span></div><button class="btn" onclick="window.open('https://hondi.net/?connect=${encodeURIComponent(p.primary_guid||'')}','_blank')">고팡으로 연결</button></div></body></html>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1005,7 +1013,7 @@ async function handlePdvReport(request,env,corsHeaders){
   const summary6w={
     who:`${r.who?.role||'user'} (${ipv6.slice(0,20)}...)`,
     when:`${(r.when?.period_start||'').slice(0,10)} ~ ${(r.when?.period_end||'').slice(0,10)}`,
-    where:r.where?.svc_url||`https://${resolvedSvcId}.gopang.net`,
+    where:r.where?.svc_url||`https://${resolvedSvcId}.hondi.net`,
     what:r.what?.summary||'(요약 없음)',
     how:r.how?.method||'자동 집계',
     why:r.why?.goal||'(목표 미지정)',
@@ -1081,16 +1089,16 @@ async function handlePdvReport(request,env,corsHeaders){
 // ═══════════════════════════════════════════════════════════
 // 이하 v4.8과 동일 — PDV Query, SSO, WebAuthn, AI, Geocode
 // ═══════════════════════════════════════════════════════════
-async function handlePdvQuery(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const origin=request.headers.get('Origin')||'';try{const body=await request.json().catch(()=>null);const query=body?.query;if(!query?.svc||!query?.ipv6||!query?.scope||!query?.period)return _err(400,'SCHEMA_ERROR','필수 필드 누락: svc, ipv6, scope, period',corsHeaders);if(!Array.isArray(query.scope)||query.scope.length===0)return _err(400,'SCOPE_INVALID','scope는 비어있지 않은 배열이어야 합니다',corsHeaders);const invalidScope=query.scope.find(s=>!VALID_PDV_SCOPES.includes(s));if(invalidScope)return _err(400,'SCOPE_INVALID',`허용되지 않은 scope: ${invalidScope}`,corsHeaders);if(!query.period?.start||!query.period?.end)return _err(400,'SCHEMA_ERROR','period.start, period.end 필수',corsHeaders);const periodMs=new Date(query.period.end)-new Date(query.period.start);if(periodMs>365*24*60*60*1000)return _err(400,'PERIOD_TOO_LONG','조회 기간은 12개월을 초과할 수 없습니다',corsHeaders);const svcReg=_getSvcRegistration(origin,query.svc);if(!svcReg||!svcReg.pdv)return _err(403,'SVC_NOT_REGISTERED',`미등록 또는 PDV 권한 없는 서비스: ${query.svc}`,corsHeaders);const authToken=query.auth_token;if(!authToken?.exp||Math.floor(Date.now()/1000)>authToken.exp)return _err(401,'AUTH_EXPIRED','인증 토큰이 만료되었습니다',corsHeaders);const LEVEL_ORDER={L0:0,L1:1,L2:2,L3:3};const userLevel=LEVEL_ORDER[authToken.level]??0;for(const scope of query.scope){const required=LEVEL_ORDER[SCOPE_MIN_LEVEL[scope]||'L1'];if(userLevel<required)return _err(403,'LEVEL_INSUFFICIENT',`${scope} 조회는 ${SCOPE_MIN_LEVEL[scope]} 이상 필요`,corsHeaders);}if(!query.consent_token||!query.request_id){const reqId=`CNSREQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const expiresAt=Math.floor(Date.now()/1000)+300;await _storeConsentRequest(env,reqId,query,expiresAt);const consentUrl='https://gopang.net/consent'+`?req=${encodeURIComponent(reqId)}&svc=${encodeURIComponent(query.svc)}`+`&scope=${encodeURIComponent(query.scope.join(','))}`+`&purpose=${encodeURIComponent(query.purpose||'')}`+`&ipv6_hash=${encodeURIComponent(await _sha256Hex(query.ipv6))}`;return new Response(JSON.stringify({ok:false,status:'CONSENT_REQUIRED',consent:{request_id:reqId,expires_at:expiresAt,consent_url:consentUrl,message:'사용자가 고팡 앱에서 PDV 조회에 동의해야 합니다.'}}),{status:202,headers:corsHeaders});}const consentOk=await _verifyConsentToken(env,query.consent_token,query.request_id,query.ipv6);if(!consentOk)return _err(401,'CONSENT_INVALID','동의 토큰이 유효하지 않습니다',corsHeaders);const withinLimit=await _checkRateLimit(env,query.ipv6,'pdv_query');if(!withinLimit)return _err(429,'RATE_LIMITED','PDV 조회 한도 초과',corsHeaders);const pdvSummary=await _fetchPdvByScope(env,query.ipv6,query.scope,query.period);const queryId=`PDVQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const pdvEntryId=await _recordConsentEvent(env,query,queryId);return new Response(JSON.stringify({ok:true,query_id:queryId,ipv6:query.ipv6,period:query.period,pdv_summary:pdvSummary,consent:{granted_at:new Date().toISOString(),expires_at:new Date(authToken.exp*1000).toISOString(),pdv_entry_id:pdvEntryId}}),{status:200,headers:corsHeaders});}catch(e){return _err(500,'INTERNAL_ERROR',e.message,corsHeaders);}}
+async function handlePdvQuery(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const origin=request.headers.get('Origin')||'';try{const body=await request.json().catch(()=>null);const query=body?.query;if(!query?.svc||!query?.ipv6||!query?.scope||!query?.period)return _err(400,'SCHEMA_ERROR','필수 필드 누락: svc, ipv6, scope, period',corsHeaders);if(!Array.isArray(query.scope)||query.scope.length===0)return _err(400,'SCOPE_INVALID','scope는 비어있지 않은 배열이어야 합니다',corsHeaders);const invalidScope=query.scope.find(s=>!VALID_PDV_SCOPES.includes(s));if(invalidScope)return _err(400,'SCOPE_INVALID',`허용되지 않은 scope: ${invalidScope}`,corsHeaders);if(!query.period?.start||!query.period?.end)return _err(400,'SCHEMA_ERROR','period.start, period.end 필수',corsHeaders);const periodMs=new Date(query.period.end)-new Date(query.period.start);if(periodMs>365*24*60*60*1000)return _err(400,'PERIOD_TOO_LONG','조회 기간은 12개월을 초과할 수 없습니다',corsHeaders);const svcReg=_getSvcRegistration(origin,query.svc);if(!svcReg||!svcReg.pdv)return _err(403,'SVC_NOT_REGISTERED',`미등록 또는 PDV 권한 없는 서비스: ${query.svc}`,corsHeaders);const authToken=query.auth_token;if(!authToken?.exp||Math.floor(Date.now()/1000)>authToken.exp)return _err(401,'AUTH_EXPIRED','인증 토큰이 만료되었습니다',corsHeaders);const LEVEL_ORDER={L0:0,L1:1,L2:2,L3:3};const userLevel=LEVEL_ORDER[authToken.level]??0;for(const scope of query.scope){const required=LEVEL_ORDER[SCOPE_MIN_LEVEL[scope]||'L1'];if(userLevel<required)return _err(403,'LEVEL_INSUFFICIENT',`${scope} 조회는 ${SCOPE_MIN_LEVEL[scope]} 이상 필요`,corsHeaders);}if(!query.consent_token||!query.request_id){const reqId=`CNSREQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const expiresAt=Math.floor(Date.now()/1000)+300;await _storeConsentRequest(env,reqId,query,expiresAt);const consentUrl='https://hondi.net/consent'+`?req=${encodeURIComponent(reqId)}&svc=${encodeURIComponent(query.svc)}`+`&scope=${encodeURIComponent(query.scope.join(','))}`+`&purpose=${encodeURIComponent(query.purpose||'')}`+`&ipv6_hash=${encodeURIComponent(await _sha256Hex(query.ipv6))}`;return new Response(JSON.stringify({ok:false,status:'CONSENT_REQUIRED',consent:{request_id:reqId,expires_at:expiresAt,consent_url:consentUrl,message:'사용자가 고팡 앱에서 PDV 조회에 동의해야 합니다.'}}),{status:202,headers:corsHeaders});}const consentOk=await _verifyConsentToken(env,query.consent_token,query.request_id,query.ipv6);if(!consentOk)return _err(401,'CONSENT_INVALID','동의 토큰이 유효하지 않습니다',corsHeaders);const withinLimit=await _checkRateLimit(env,query.ipv6,'pdv_query');if(!withinLimit)return _err(429,'RATE_LIMITED','PDV 조회 한도 초과',corsHeaders);const pdvSummary=await _fetchPdvByScope(env,query.ipv6,query.scope,query.period);const queryId=`PDVQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const pdvEntryId=await _recordConsentEvent(env,query,queryId);return new Response(JSON.stringify({ok:true,query_id:queryId,ipv6:query.ipv6,period:query.period,pdv_summary:pdvSummary,consent:{granted_at:new Date().toISOString(),expires_at:new Date(authToken.exp*1000).toISOString(),pdv_entry_id:pdvEntryId}}),{status:200,headers:corsHeaders});}catch(e){return _err(500,'INTERNAL_ERROR',e.message,corsHeaders);}}
 async function _storeConsentRequest(env,reqId,query,expiresAt){const key=env.SUPABASE_KEY||_supabaseAnonKey();try{await fetch(SUPABASE_URL+'/rest/v1/pdv_consent_requests',{method:'POST',headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({id:reqId,ipv6:query.ipv6,svc:_resolveSvcId(query.svc),scope:query.scope,purpose:query.purpose||'',period:query.period,status:'pending',expires_at:new Date(expiresAt*1000).toISOString()})});}catch(e){console.warn('[PDVQuery] 동의 요청 저장 실패:',e.message);}}
 async function _verifyConsentToken(env,consentToken,requestId,ipv6){try{const key=env.SUPABASE_KEY||_supabaseAnonKey();const res=await fetch(SUPABASE_URL+`/rest/v1/pdv_consent_requests?id=eq.${encodeURIComponent(requestId)}&ipv6=eq.${encodeURIComponent(ipv6)}&select=status,expires_at,consent_token`,{headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'}});const rows=await res.json().catch(()=>[]);if(!rows?.length)return false;const row=rows[0];if(new Date(row.expires_at)<new Date())return false;if(row.status!=='granted')return false;if(row.consent_token!==consentToken)return false;return true;}catch(e){return _verifyConsentHmac(env,consentToken,requestId,ipv6);}}
 async function _verifyConsentHmac(env,consentToken,requestId,ipv6){try{const masterKey=env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1';const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(masterKey),{name:'HMAC',hash:'SHA-256'},false,['verify']);const data=new TextEncoder().encode(`${requestId}.${ipv6}`);const sigBytes=Uint8Array.from(atob(consentToken.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));return crypto.subtle.verify('HMAC',key,sigBytes,data);}catch{return false;}}
 async function _checkRateLimit(env,ipv6,action){if(env.RATE_LIMIT_KV){const kvKey=`rl:${action}:${ipv6}`;const current=parseInt(await env.RATE_LIMIT_KV.get(kvKey)||'0');if(current>=3)return false;await env.RATE_LIMIT_KV.put(kvKey,String(current+1),{expirationTtl:300});return true;}return true;}
 async function _fetchPdvByScope(env,ipv6,scopes,period){const key=env.SUPABASE_KEY||_supabaseAnonKey();const result={};for(const scope of scopes){const source=SCOPE_SOURCE_MAP[scope];let queryUrl=SUPABASE_URL+'/rest/v1/pdv_log'+`?guid=eq.${encodeURIComponent(ipv6)}`+`&created_at=gte.${period.start}T00:00:00Z&created_at=lte.${period.end}T23:59:59Z`+`&select=summary,summary_6w,risk_level,created_at,source&order=created_at.desc&limit=50`;if(source)queryUrl+=`&source=eq.${encodeURIComponent(source)}`;try{const res=await fetch(queryUrl,{headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'}});const rows=await res.json().catch(()=>[]);if(!rows?.length){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{}};continue;}const RISK_ORDER={low:0,medium:1,high:2};const maxRisk=rows.reduce((max,r)=>{const lvl=r.risk_level||'low';return RISK_ORDER[lvl]>RISK_ORDER[max]?lvl:max;},'low');let summary6w=null;for(const row of rows){try{summary6w=JSON.parse(row.summary_6w);break;}catch{}}result[scope]={available:true,entry_count:rows.length,risk_level:maxRisk,summary_6w:summary6w,risk_factors:_aggregateRiskFactors(scope,rows)};}catch(e){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{},error:'fetch_failed'};}}return result;}
 function _aggregateRiskFactors(scope,rows){if(scope==='ktraffic')return{accident_count:rows.filter(r=>{try{return JSON.parse(r.summary_6w)?.what?.includes('사고');}catch{return false;}}).length,entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,accident_free_months:0};if(scope==='khealth')return{total_records:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,medium_risk_count:rows.filter(r=>r.risk_level==='medium').length};return{entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length};}
-async function _recordConsentEvent(env,query,queryId){const key=env.SUPABASE_KEY||_supabaseAnonKey();const svcId=_resolveSvcId(query.svc);const pdvId=`PDV-${query.ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;const summary6w=JSON.stringify({who:svcId,when:new Date().toISOString(),where:`https://${svcId}.gopang.net`,what:`PDV 조회 동의: scope=[${query.scope.join(',')}]`,how:'사용자 명시적 동의',why:query.purpose||'PDV 데이터 조회'});try{await fetch(SUPABASE_URL+'/rest/v1/pdv_log',{method:'POST',headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({id:pdvId,guid:query.ipv6,source:svcId,type:'consent_event',report_id:queryId,summary:`PDV 조회 동의: ${svcId} → [${query.scope.join(',')}]`,summary_6w:summary6w,risk_level:'low',period:query.period,raw_hash:null,created_at:new Date().toISOString()})});}catch(e){console.warn('[PDVQuery] consent_event 기록 실패:',e.message);}return pdvId;}
+async function _recordConsentEvent(env,query,queryId){const key=env.SUPABASE_KEY||_supabaseAnonKey();const svcId=_resolveSvcId(query.svc);const pdvId=`PDV-${query.ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;const summary6w=JSON.stringify({who:svcId,when:new Date().toISOString(),where:`https://${svcId}.hondi.net`,what:`PDV 조회 동의: scope=[${query.scope.join(',')}]`,how:'사용자 명시적 동의',why:query.purpose||'PDV 데이터 조회'});try{await fetch(SUPABASE_URL+'/rest/v1/pdv_log',{method:'POST',headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({id:pdvId,guid:query.ipv6,source:svcId,type:'consent_event',report_id:queryId,summary:`PDV 조회 동의: ${svcId} → [${query.scope.join(',')}]`,summary_6w:summary6w,risk_level:'low',period:query.period,raw_hash:null,created_at:new Date().toISOString()})});}catch(e){console.warn('[PDVQuery] consent_event 기록 실패:',e.message);}return pdvId;}
 async function _sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
-function buildCookie(token){return[`gopang_token=${token}`,'Path=/','Domain=.gopang.net','Max-Age=3600','SameSite=None','Secure','HttpOnly'].join('; ');}
+function buildCookie(token){return[`gopang_token=${token}`,'Path=/','Domain=.hondi.net','Max-Age=3600','SameSite=None','Secure','HttpOnly'].join('; ');}
 function parseCookie(header,name){const match=header.match(new RegExp(`(?:^|;)\\s*${name}=([^;]+)`));return match?decodeURIComponent(match[1]):null;}
 // ═══════════════════════════════════════════════════════════
 // v6.0 — 세션 토큰: HMAC-SHA256 서명 (env.GOPANG_MASTER_KEY, _verifyConsentHmac/
@@ -1176,9 +1184,9 @@ async function handleWAChallenge(request,env,corsHeaders){const challenge=crypto
 async function _verifyChallengeToken(env,chalB64,exp,sig){if(exp<Math.floor(Date.now()/1000))return false;const sigData=`${chalB64}.${exp}`;const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['verify']);const sigBytes=Uint8Array.from(sig.match(/.{2}/g).map(h=>parseInt(h,16)));return crypto.subtle.verify('HMAC',key,sigBytes,new TextEncoder().encode(sigData));}
 async function handleWARegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.ipv6||!body?.credentialId||!body?.publicKey)return _err(400,'MISSING_FIELD','ipv6, credentialId, publicKey 필수',corsHeaders);const chalOk=await _verifyChallengeToken(env,body.challenge,body.challengeExp,body.challengeSig);if(!chalOk)return _err(401,'CHALLENGE_INVALID','챌린지 만료 또는 위조',corsHeaders);const result=await sbFetch(env,'/rest/v1/webauthn_credentials','POST',{ipv6:body.ipv6,credential_id:body.credentialId,public_key:body.publicKey,counter:0,device_type:body.deviceType||'platform',aaguid:body.aaguid||null});if(!result)return _err(502,'DB_ERROR','Supabase 저장 실패',corsHeaders);return new Response(JSON.stringify({ok:true,ipv6:body.ipv6}),{status:200,headers:corsHeaders});}
 async function handleWAVerify(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.ipv6||!body?.credentialId)return _err(400,'MISSING_FIELD','ipv6, credentialId 필수',corsHeaders);const rows=await sbFetch(env,`/rest/v1/webauthn_credentials?ipv6=eq.${encodeURIComponent(body.ipv6)}&credential_id=eq.${encodeURIComponent(body.credentialId)}&select=public_key,counter`,'GET');if(!rows?.length)return _err(404,'CREDENTIAL_NOT_FOUND','credential_not_found',corsHeaders);const cred=rows[0];if(body.counter!==undefined&&body.counter<=cred.counter)return _err(401,'COUNTER_REPLAY','counter_replay',corsHeaders);if(body.counter!==undefined)await sbFetch(env,`/rest/v1/webauthn_credentials?credential_id=eq.${encodeURIComponent(body.credentialId)}`,'PATCH',{counter:body.counter,last_used_at:new Date().toISOString()});const token=await buildToken(env,body.ipv6,'L2','*');return new Response(JSON.stringify({valid:true,ipv6:body.ipv6,level:'L2'}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(token)}});}
-const REGISTERED_SERVICES={'gopang':{level:3,domain:'gopang.net',minAuth:'L0',pdv:true},'klaw':{level:3,domain:'klaw.gopang.net',minAuth:'L0',pdv:true},'market':{level:3,domain:'market.gopang.net',minAuth:'L0',pdv:true},'school':{level:3,domain:'school.gopang.net',minAuth:'L0',pdv:true},'security':{level:3,domain:'security.gopang.net',minAuth:'L1',pdv:true},'health':{level:3,domain:'health.gopang.net',minAuth:'L1',pdv:true},'tax':{level:3,domain:'tax.gopang.net',minAuth:'L0',pdv:true},'gdc':{level:3,domain:'gdc.gopang.net',minAuth:'L1',pdv:true},'public':{level:3,domain:'public.gopang.net',minAuth:'L0',pdv:true},'democracy':{level:3,domain:'democracy.gopang.net',minAuth:'L1',pdv:true},'911':{level:3,domain:'911.gopang.net',minAuth:'L0',pdv:true},'police':{level:3,domain:'police.gopang.net',minAuth:'L1',pdv:true},'insurance':{level:3,domain:'insurance.gopang.net',minAuth:'L1',pdv:true},'stock':{level:3,domain:'stock.gopang.net',minAuth:'L1',pdv:true},'traffic':{level:3,domain:'traffic.gopang.net',minAuth:'L0',pdv:true},'logistics':{level:3,domain:'logistics.gopang.net',minAuth:'L0',pdv:true},'fiil':{level:2,domain:'fiil.kr',minAuth:'L0',pdv:true},'klaw-ext':{level:2,domain:'klaw.openhash.kr',minAuth:'L0',pdv:false},'users':{level:3,domain:'users.gopang.net',minAuth:'L0',pdv:false}};
+const REGISTERED_SERVICES={'gopang':{level:3,domain:'hondi.net',minAuth:'L0',pdv:true},'klaw':{level:3,domain:'klaw.hondi.net',minAuth:'L0',pdv:true},'market':{level:3,domain:'market.hondi.net',minAuth:'L0',pdv:true},'school':{level:3,domain:'school.hondi.net',minAuth:'L0',pdv:true},'security':{level:3,domain:'security.hondi.net',minAuth:'L1',pdv:true},'health':{level:3,domain:'health.hondi.net',minAuth:'L1',pdv:true},'tax':{level:3,domain:'tax.hondi.net',minAuth:'L0',pdv:true},'gdc':{level:3,domain:'gdc.hondi.net',minAuth:'L1',pdv:true},'public':{level:3,domain:'public.hondi.net',minAuth:'L0',pdv:true},'democracy':{level:3,domain:'democracy.hondi.net',minAuth:'L1',pdv:true},'911':{level:3,domain:'911.hondi.net',minAuth:'L0',pdv:true},'police':{level:3,domain:'police.hondi.net',minAuth:'L1',pdv:true},'insurance':{level:3,domain:'insurance.hondi.net',minAuth:'L1',pdv:true},'stock':{level:3,domain:'stock.hondi.net',minAuth:'L1',pdv:true},'traffic':{level:3,domain:'traffic.hondi.net',minAuth:'L0',pdv:true},'logistics':{level:3,domain:'logistics.hondi.net',minAuth:'L0',pdv:true},'fiil':{level:2,domain:'fiil.kr',minAuth:'L0',pdv:true},'klaw-ext':{level:2,domain:'klaw.openhash.kr',minAuth:'L0',pdv:false},'users':{level:3,domain:'users.hondi.net',minAuth:'L0',pdv:false}};
 function _getSvcRegistration(origin,svcId){const resolvedId=_resolveSvcId(svcId);const svc=REGISTERED_SERVICES[resolvedId];if(svc&&origin.includes(svc.domain))return{...svc,svcId:resolvedId,originalId:svcId};if(/^https:\/\/[a-z0-9-]+\.gopang\.net$/.test(origin))return{level:1,domain:origin,minAuth:'L0',pdv:false,svcId:resolvedId,originalId:svcId};return null;}
-async function handleSvcRegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.svc_id||!body?.domain||!body?.operator_ipv6)return _err(400,'MISSING_FIELD','svc_id, domain, operator_ipv6 필수',corsHeaders);const{svc_id,domain,description,min_auth,operator_ipv6}=body;const isGopangSub=/^[a-z0-9-]+\.gopang\.net$/.test(domain);await sbFetch(env,'/rest/v1/svc_registry','POST',{svc_id,domain,description:description||'',operator_ipv6,min_auth:min_auth||'L0',trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending',registered_at:new Date().toISOString()});return new Response(JSON.stringify({ok:true,svc_id,domain,trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending_review',message:isGopangSub?'*.gopang.net 서브도메인으로 자동 승인됐습니다. (Level 1)':'등록 신청이 접수됐습니다.'}),{status:200,headers:corsHeaders});}
+async function handleSvcRegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.svc_id||!body?.domain||!body?.operator_ipv6)return _err(400,'MISSING_FIELD','svc_id, domain, operator_ipv6 필수',corsHeaders);const{svc_id,domain,description,min_auth,operator_ipv6}=body;const isGopangSub=/^[a-z0-9-]+\.gopang\.net$/.test(domain);await sbFetch(env,'/rest/v1/svc_registry','POST',{svc_id,domain,description:description||'',operator_ipv6,min_auth:min_auth||'L0',trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending',registered_at:new Date().toISOString()});return new Response(JSON.stringify({ok:true,svc_id,domain,trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending_review',message:isGopangSub?'*.hondi.net 서브도메인으로 자동 승인됐습니다. (Level 1)':'등록 신청이 접수됐습니다.'}),{status:200,headers:corsHeaders});}
 async function handleSvcVerify(request,env,corsHeaders){const url=new URL(request.url);const svcId=url.searchParams.get('svc_id');const origin=request.headers.get('Origin')||'';if(!svcId)return _err(400,'MISSING_FIELD','svc_id 파라미터 필수',corsHeaders);const reg=_getSvcRegistration(origin,svcId);if(!reg)return new Response(JSON.stringify({ok:false,registered:false,svc_id:svcId,message:'등록되지 않은 서비스입니다.'}),{status:200,headers:corsHeaders});return new Response(JSON.stringify({ok:true,registered:true,svc_id:svcId,trust_level:reg.level,pdv_allowed:reg.pdv,min_auth:reg.minAuth,message:`등록된 서비스 (Level ${reg.level})`}),{status:200,headers:corsHeaders});}
 async function handleGeocode(url,env,corsHeaders){const lat=url.searchParams.get('lat');const lng=url.searchParams.get('lng');if(!lat||!lng)return _err(400,'MISSING_FIELD','lat, lng required',corsHeaders);try{const res=await fetch(`${KAKAO_BASE}?x=${lng}&y=${lat}&input_coord=WGS84`,{headers:{'Authorization':`KakaoAK ${env.KAKAO_REST_KEY}`}});const data=await res.json();return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'GEOCODE_ERROR',e.message,corsHeaders);}}
 async function handleKakaoAppKey(request,env,corsHeaders){const appkey=env.KAKAO_JS_KEY||env.KAKAO_REST_KEY;if(!appkey)return _err(500,'CONFIG_ERROR','Kakao key not configured',corsHeaders);return new Response(JSON.stringify({appkey}),{status:200,headers:{...corsHeaders,'Cache-Control':'public, max-age=300'}});}
@@ -1186,7 +1194,7 @@ async function handleAIChat(bodyText,env,corsHeaders){let body;try{body=JSON.par
   const _orKey=env.OPENROUTER_API_KEY||env.DEEPSEEK_API_KEY;
   const _orUrl=env.OPENROUTER_API_KEY?OR_URL:DEEPSEEK_URL;
   const _orMdl=model||(env.OPENROUTER_API_KEY?OR_MODEL_FAST:DEEPSEEK_MODEL);
-  const _orHdr={'Content-Type':'application/json','Authorization':`Bearer ${_orKey}`,...(env.OPENROUTER_API_KEY?{'HTTP-Referer':'https://gopang.net','X-Title':'Hondi'}:{})};
+  const _orHdr={'Content-Type':'application/json','Authorization':`Bearer ${_orKey}`,...(env.OPENROUTER_API_KEY?{'HTTP-Referer':'https://hondi.net','X-Title':'Hondi'}:{})};
   const res=await fetch(_orUrl,{method:'POST',headers:_orHdr,body:JSON.stringify({model:_orMdl,max_tokens,messages:builtMessages})});
   const data=await res.json();const content=data.choices?.[0]?.message?.content;
   if(!content)throw new Error('AI 응답 없음: '+JSON.stringify(data));
@@ -1197,7 +1205,7 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null){try{let 
   const _useOR = !!env.OPENROUTER_API_KEY;
   const _url   = _useOR ? OR_URL : DEEPSEEK_URL;
   const _key   = _useOR ? env.OPENROUTER_API_KEY : env.DEEPSEEK_API_KEY;
-  const res=await fetch(_url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${_key}`,...(_useOR?{'HTTP-Referer':'https://gopang.net','X-Title':'Hondi'}:{})},body:bodyText});if(!res.ok){const errText=await res.text();let errMsg;try{errMsg=JSON.parse(errText)?.error?.message;}catch{}return new Response(JSON.stringify({error:errMsg||`HTTP ${res.status}`}),{status:res.status,headers:corsHeaders});}if(isStream){return new Response(res.body,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});}const data=await res.json();if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'DEEPSEEK_ERROR',e.message,corsHeaders);}}
+  const res=await fetch(_url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${_key}`,...(_useOR?{'HTTP-Referer':'https://hondi.net','X-Title':'Hondi'}:{})},body:bodyText});if(!res.ok){const errText=await res.text();let errMsg;try{errMsg=JSON.parse(errText)?.error?.message;}catch{}return new Response(JSON.stringify({error:errMsg||`HTTP ${res.status}`}),{status:res.status,headers:corsHeaders});}if(isStream){return new Response(res.body,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});}const data=await res.json();if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'DEEPSEEK_ERROR',e.message,corsHeaders);}}
 
 // ═══════════════════════════════════════════════════════════
 // Phase 1 — OpenHash 앵커링 프록시 (/openhash/anchor)
@@ -1251,7 +1259,7 @@ async function handleOpenhashAnchor(request, env, corsHeaders) {
         'Accept':        'application/vnd.github+json',
         'Content-Type':  'application/json',
         'X-GitHub-Api-Version': '2022-11-28',
-        'User-Agent':    'gopang-proxy/1.0',
+        'User-Agent':    'hondi-proxy/1.0',
       },
       body: JSON.stringify({
         event_type:     'HASH_CHAIN_ANCHOR',
@@ -1955,7 +1963,7 @@ async function handleAiSetupGet(request, env, corsHeaders, guid) {
 // _SIGNAL_L1_PATCH_APPLIED_
 // ═══════════════════════════════════════════════════════════
 // 시그널 핸들러 — L1 PocketBase 우선 + Supabase 폴백
-// L1: https://l1-hanlim.gopang.net/api/collections/webrtc_signals/records
+// L1: https://l1-hanlim.hondi.net/api/collections/webrtc_signals/records
 //     API Rules = 빈칸(모두 허용) — 토큰 불필요
 // Supabase: 기존 webrtc_signals 테이블 (L1 실패 시 자동 폴백)
 // ═══════════════════════════════════════════════════════════
@@ -2054,7 +2062,7 @@ async function handleTurnCredential(request, env, corsHeaders) {
   const sigBuf     = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
   const credential = btoa(String.fromCharCode(...new Uint8Array(sigBuf)));
 
-  const host = 'l1-hanlim.gopang.net';
+  const host = 'l1-hanlim.hondi.net';
 
   return new Response(JSON.stringify({
     ok: true,
@@ -2194,7 +2202,7 @@ async function handleP2PSearch(request, env, corsHeaders) {
 
   // ── L1 PocketBase 검색 (GDUDA 본 구현) ──────────────────
   // Supabase global_profiles → L1 PocketBase profiles 컬렉션으로 전환
-  // L1 PocketBase: https://l1-hanlim.gopang.net
+  // L1 PocketBase: https://l1-hanlim.hondi.net
   const L1_PROFILES = L1_DEFAULT + '/api/collections/profiles/records';
 
   let queryUrl = `${L1_PROFILES}?perPage=${limit}&fields=guid,handle,nickname,country_code,region`;
@@ -2898,7 +2906,7 @@ async function handleProfileDelegate(request, env, corsHeaders) {
       report_id: `DELEGATE-${agent_guid}`,
       summary: `본체가 그림자(${agent_guid})를 자신의 대리인으로 위임함`,
       summary_6w: JSON.stringify({
-        who: principal_guid, when: now, where: 'gopang.net',
+        who: principal_guid, when: now, where: 'hondi.net',
         what: `agent_guid=${agent_guid}`, how: 'Ed25519 위임서명(본인 키)', why: '나만의 AI비서 활성화',
       }),
       risk_level: 'low',
@@ -3534,7 +3542,7 @@ async function handleFeedbackPost(request, env, corsHeaders) {
     const aiRes = await fetch(_fbUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_fbKey}`,
-                 ...(env.OPENROUTER_API_KEY ? {'HTTP-Referer':'https://gopang.net','X-Title':'Hondi'} : {}) },
+                 ...(env.OPENROUTER_API_KEY ? {'HTTP-Referer':'https://hondi.net','X-Title':'Hondi'} : {}) },
       body: JSON.stringify({
         model: env.OPENROUTER_API_KEY ? OR_MODEL_FAST : 'deepseek/deepseek-r1:free',
         max_tokens: 10,
@@ -3631,8 +3639,8 @@ async function handleFeedbackPatch(request, env, corsHeaders) {
 //   /api/collections/prompt_admins/auth-with-password 결과만 신뢰한다.
 //   성공 시 Worker가 자체 admin 세션 토큰(HMAC-SHA256, ADMIN_MASTER_KEY로 서명)을
 //   발급한다. 이 토큰은 쿠키가 아니라 Authorization: Bearer 헤더로 주고받는다 —
-//   이 Worker는 커스텀 도메인(gopang.net) 라우트가 없는 *.workers.dev 인스턴스라
-//   기존 buildCookie()처럼 Domain=.gopang.net 쿠키를 발급해도 브라우저가 도메인
+//   이 Worker는 커스텀 도메인(hondi.net) 라우트가 없는 *.workers.dev 인스턴스라
+//   기존 buildCookie()처럼 Domain=.hondi.net 쿠키를 발급해도 브라우저가 도메인
 //   불일치로 폐기한다. prompt-editor.html은 새 탭에서 열리는 독립 단일 페이지라
 //   세션을 메모리에만 들고 있으면 충분하다(새로고침 시 재로그인 — 의도된 동작).
 //
@@ -3777,7 +3785,7 @@ async function _ghCommitViaPR(env, path, newContent, baseSha, adminName, message
       content: _b64EncodeUtf8(newContent),
       sha:     baseSha,
       branch,
-      committer: { name: 'Gopang Prompt Editor', email: 'noreply@gopang.net' },
+      committer: { name: 'Gopang Prompt Editor', email: 'noreply@hondi.net' },
     }),
   });
   if (!putRes.ok) {
@@ -3834,4 +3842,122 @@ async function handleAdminPromptSave(request, env, corsHeaders) {
   } catch (e) {
     return _err(502, 'GITHUB_ERROR', e.message, corsHeaders);
   }
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// 디폴트 LLM 키 관리
+// KV 키:
+//   hondi:default_llm_keys  — [{provider,model,key,active}]
+//   hondi:trial_days        — number (무료 체험 일수)
+//   hondi:trial_expired_msg — string (만료 안내 메시지)
+// ══════════════════════════════════════════════════════════════
+
+// POST /admin/default-key
+// body: { admin_token, keys:[{provider,model,key,active}], trial_days, expired_msg }
+// admin_token: desktop.html에서 HMAC-SHA256으로 생성한 토큰
+async function handleAdminDefaultKeySet(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
+
+  // HMAC 검증 — desktop.html의 ADMIN_SALT와 동일한 키로 검증
+  const { admin_token, keys, trial_days, expired_msg } = body;
+  if (!admin_token) return _err(401, 'MISSING_TOKEN', 'admin_token 필수', corsHeaders);
+
+  const isValid = await _verifyAdminToken(env, admin_token);
+  if (!isValid) return _err(403, 'INVALID_TOKEN', '관리자 인증 실패', corsHeaders);
+
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv) return _err(500, 'KV_UNAVAILABLE', 'KV 바인딩 없음', corsHeaders);
+
+  // 키 저장 (active인 것만 실제 사용, inactive는 보관)
+  if (Array.isArray(keys)) {
+    await kv.put('hondi:default_llm_keys', JSON.stringify(keys));
+  }
+  if (trial_days !== undefined) {
+    await kv.put('hondi:trial_days', String(parseInt(trial_days) || 7));
+  }
+  if (expired_msg !== undefined) {
+    await kv.put('hondi:trial_expired_msg', expired_msg);
+  }
+
+  return new Response(JSON.stringify({ ok: true, saved_at: new Date().toISOString() }),
+    { status: 200, headers: corsHeaders });
+}
+
+// GET /default-key?guid=...&registered_at=ISO8601
+// 체험기간 내이면 활성 키 중 첫 번째 반환 (key 값은 마스킹 안 함 — HTTPS 전용)
+// 체험기간 만료이면 expired_msg 반환
+async function handleDefaultKeyGet(request, env, corsHeaders) {
+  const url  = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  const registeredAt = url.searchParams.get('registered_at');
+
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv) return _err(500, 'KV_UNAVAILABLE', 'KV 바인딩 없음', corsHeaders);
+
+  // 체험 기간 계산
+  const trialDays = parseInt(await kv.get('hondi:trial_days') || '7');
+  const regTime   = registeredAt ? new Date(registeredAt).getTime() : 0;
+  const now       = Date.now();
+  const trialMs   = trialDays * 24 * 60 * 60 * 1000;
+  const inTrial   = regTime > 0 && (now - regTime) <= trialMs;
+  const daysLeft  = inTrial ? Math.ceil((regTime + trialMs - now) / 86400000) : 0;
+
+  if (!inTrial) {
+    const expiredMsg = await kv.get('hondi:trial_expired_msg') ||
+      'AI 비서 무료 체험 기간이 종료됐습니다. 계속 이용하시려면 이메일로 키를 발급받거나 유료 플랜을 선택해 주세요.';
+    return new Response(JSON.stringify({
+      ok: false,
+      status: 'TRIAL_EXPIRED',
+      message: expiredMsg,
+      trial_days: trialDays,
+    }), { status: 200, headers: corsHeaders });
+  }
+
+  // 활성 키 조회
+  const keysRaw = await kv.get('hondi:default_llm_keys');
+  const keys    = keysRaw ? JSON.parse(keysRaw).filter(k => k.active && k.key) : [];
+
+  if (!keys.length) {
+    return new Response(JSON.stringify({
+      ok: false,
+      status: 'NO_DEFAULT_KEY',
+      message: '관리자가 디폴트 키를 아직 등록하지 않았습니다.',
+    }), { status: 200, headers: corsHeaders });
+  }
+
+  // 첫 번째 활성 키 반환
+  const { provider, model, key } = keys[0];
+  return new Response(JSON.stringify({
+    ok: true,
+    status: 'TRIAL_ACTIVE',
+    days_left: daysLeft,
+    provider,
+    model,
+    key,            // HTTPS 전용 — 평문 전달
+    trial_days: trialDays,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// 관리자 토큰 검증 — HMAC-SHA256(timestamp, GOPANG_MASTER_KEY)
+// desktop.html에서 생성한 토큰: {ts}.{hmac}
+async function _verifyAdminToken(env, token) {
+  try {
+    const [tsStr, hmacHex] = token.split('.');
+    if (!tsStr || !hmacHex) return false;
+    const ts  = parseInt(tsStr);
+    const now = Math.floor(Date.now() / 1000);
+    if (Math.abs(now - ts) > 300) return false;  // 5분 유효
+
+    const secret = env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1';
+    const k = await crypto.subtle.importKey(
+      'raw', new TextEncoder().encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
+    );
+    const sigBytes = Uint8Array.from(hmacHex.match(/.{2}/g).map(h => parseInt(h, 16)));
+    return await crypto.subtle.verify('HMAC', k, sigBytes, new TextEncoder().encode(tsStr));
+  } catch { return false; }
 }

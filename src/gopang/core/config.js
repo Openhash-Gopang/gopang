@@ -59,7 +59,7 @@ export const CFG = {
   apiKey:    '',
   geminiKey: '',
   kakaoKey:  '66648ca49f126d8752b33d542789ac56',
-  endpoint:  'https://gopang-proxy.tensor-city.workers.dev',
+  endpoint:  'https://hondi-proxy.tensor-city.workers.dev',
   model:     'deepseek-v4-flash',
   // ── 다중 LLM 순차 페일오버 ───────────────────────────────
   // 각 항목: { provider, model, apiKey }
@@ -136,6 +136,96 @@ export function loadSettings() {
   } catch {}
 }
 
+// ── 디폴트 LLM 키 fetch (체험 기간 사용자 전용) ─────────────
+// 사용자가 직접 키를 등록하지 않은 경우에만 호출
+// 등록된 키가 있으면 건너뜀 (사용자 키 우선)
+export async function loadDefaultKeyIfNeeded() {
+  try {
+    // 이미 사용자 키가 있으면 건너뜀
+    const cfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
+    const hasUserKey = (Array.isArray(cfg.providers) && cfg.providers.length > 0)
+                    || cfg.apiKey || cfg.geminiKey;
+    if (hasUserKey) return;
+
+    // 가입일 확인
+    const user = JSON.parse(
+      localStorage.getItem('gopang_user_v4') ||
+      sessionStorage.getItem('gopang_user_v4') || '{}'
+    );
+    const registeredAt = user.registeredAt || user.created;
+    if (!registeredAt || !user.guid) return;
+
+    // 이미 만료 확인했고 캐시가 유효하면 재요청 안 함 (1시간 캐시)
+    const cache = JSON.parse(localStorage.getItem('hondi_default_key_cache') || 'null');
+    if (cache && Date.now() - cache.ts < 3600000) {
+      if (cache.ok) _applyDefaultKey(cache);
+      return;
+    }
+
+    const PROXY = (await import('./state.js')).PROXY;
+    const res   = await fetch(
+      `${PROXY}/default-key?guid=${encodeURIComponent(user.guid)}&registered_at=${encodeURIComponent(registeredAt)}`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    const data  = await res.json();
+
+    // 캐시 저장
+    localStorage.setItem('hondi_default_key_cache', JSON.stringify({ ...data, ts: Date.now() }));
+
+    if (data.ok && data.key) {
+      _applyDefaultKey(data);
+    } else if (data.status === 'TRIAL_EXPIRED') {
+      // 만료 배너 표시 (웹앱에서 처리)
+      window._hondiTrialExpiredMsg = data.message;
+      window.dispatchEvent(new CustomEvent('hondi:trial_expired', { detail: data }));
+    }
+  } catch (e) {
+    console.info('[DefaultKey] fetch 실패 (무시):', e.message);
+  }
+}
+
+function _applyDefaultKey({ provider, model, key }) {
+  // CFG.providers에 임시 주입 (localStorage 저장 안 함 — 매 세션 fetch)
+  const entry = {
+    provider,
+    baseUrl:  _providerBaseUrl(provider),
+    model:    model || _providerDefaultModel(provider),
+    apiKey:   key,
+    isProxy:  false,
+    priority: 0,
+    _isDefault: true,  // 구분 플래그
+  };
+  // 기존에 _isDefault 항목이 있으면 교체, 없으면 앞에 추가
+  const existing = Array.isArray(CFG.providers) ? CFG.providers : [];
+  CFG.providers = [entry, ...existing.filter(p => !p._isDefault)];
+  setAiActive(true);
+  console.info('[DefaultKey] 디폴트 키 적용:', provider, model);
+}
+
+function _providerBaseUrl(provider) {
+  const map = {
+    openrouter: 'https://openrouter.ai/api/v1',
+    anthropic:  'https://api.anthropic.com/v1',
+    openai:     'https://api.openai.com/v1',
+    gemini:     'https://generativelanguage.googleapis.com/v1beta',
+    deepseek:   'https://api.deepseek.com',
+    grok:       'https://api.x.ai/v1',
+  };
+  return map[provider] || 'https://openrouter.ai/api/v1';
+}
+
+function _providerDefaultModel(provider) {
+  const map = {
+    openrouter: 'deepseek/deepseek-v4-flash',
+    anthropic:  'claude-haiku-4-5-20251001',
+    openai:     'gpt-4o-mini',
+    gemini:     'gemini-2.5-flash-preview-05-20',
+    deepseek:   'deepseek-v4-flash',
+    grok:       'grok-3-mini',
+  };
+  return map[provider] || 'deepseek/deepseek-v4-flash';
+}
+
 // ── 모델 비전 지원 여부 ───────────────────────────────────
 // 2026-06-24: ai-setup-mobile.html에 추가된 현행 모델 ID들을 반영.
 // 레거시 ID(구버전 사용자가 이미 등록해둔 값)도 하위호환으로 그대로 둔다.
@@ -168,7 +258,7 @@ export function _modelSupportsVision(model) {
 //   2) 그림자 없음(온보딩 미완료): GitHub raw에서 personal-assistant-v1.0.txt 로드
 // 영구 localStorage 캐시 제거 — 매 세션 fresh fetch로 통일(갱신 자동 반영)
 const _PA_SP_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/personal-assistant/personal-assistant-v1.0.txt';
-const _PROXY_URL = 'https://gopang-proxy.tensor-city.workers.dev';
+const _PROXY_URL = 'https://hondi-proxy.tensor-city.workers.dev';
 let _paSPLoaded = false;
 
 export async function loadPersonalAssistantSP() {
@@ -183,7 +273,7 @@ export async function loadPersonalAssistantSP() {
       // 이전: PROXY /profile/@{handle}_ai → Worker → Supabase/L1
       // 이후: L1 profiles 직접 GET (공개 컬렉션, 인증 불필요)
       const agentHandle = handle.replace(/^@/, '') + '_ai';
-      const _L1_BASE = 'https://l1-hanlim.gopang.net/api/collections/profiles/records';
+      const _L1_BASE = 'https://l1-hanlim.hondi.net/api/collections/profiles/records';
       const _agentFilter = encodeURIComponent(`handle='${agentHandle}'`);
       const res = await fetch(`${_L1_BASE}?filter=${_agentFilter}&perPage=1`, { cache: 'no-cache' });
       if (res.ok) {
