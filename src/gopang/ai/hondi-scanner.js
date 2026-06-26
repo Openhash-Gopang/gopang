@@ -337,6 +337,18 @@ function _detectHondiROI(ctx, W, H) {
   // ── 혼디 코드 모드: 종횡비 검증 ──────────────────────────────
   if (aspect < ASPECT_MIN || aspect > ASPECT_MAX) return null;
 
+  // v2.4: 실제 "혼ㄷ" 글자(파랑+빨강 최대 연결요소)의 종횡비는 약 0.73
+  // (세로가 가로보다 길다)으로 고정돼 있다. 실제 카메라로 작게 표시된
+  // 로고를 찍으면 압축·블러로 인해 십자/도넛 모양이 통째로 안 잡히고
+  // 일부만 연결요소로 잡히는 경우가 있는데, 이때는 종횡비가 완전히
+  // 달라진다(실측 사례: 기대 0.73 vs 실제 1.94 — 가로/세로가 거의
+  // 뒤바뀐 수준). 이런 비정상 모양으로는 캘리브레이션이 무조건 빗나가므로,
+  // 차라리 결과를 내지 않고 다음 프레임에서 다시 시도하게 한다(거리/각도
+  // 조정 유도) — 확신을 갖고 틀린 코드를 내는 것보다 안전하다.
+  const HONDI_ASPECT_EXPECTED = 0.73;
+  const HONDI_ASPECT_TOLERANCE = 0.45; // 허용 범위: 약 0.40 ~ 1.06
+  if (Math.abs(aspect - HONDI_ASPECT_EXPECTED) > HONDI_ASPECT_TOLERANCE) return null;
+
   // v2.2: /icons/hondi-base-hond.png 실측 좌표로 재캘리브레이션(2026-06).
   // 기존 비율(hih/ho/n/d/i)은 실제 베이스 아트워크의 ㅎ·ㅗ·ㄴ·ㄷ·색상스트립
   // 위치와 전혀 맞지 않아 캘리브레이션이 항상 빗나가던 근본 버그였다.
