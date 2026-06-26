@@ -1,5 +1,5 @@
 {
-  "name": "gopang-proxy",
+  "name": "hondi-proxy",
   "compatibility_date": "2026-06-16",
   "main": "worker.js",
   "kv_namespaces": [
