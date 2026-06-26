@@ -3951,7 +3951,8 @@ async function handleDefaultKeyGet(request, env, corsHeaders) {
 
 // 관리자 토큰 검증 — HMAC-SHA256(timestamp, GOPANG_MASTER_KEY)
 // desktop.html에서 생성한 토큰: {ts}.{hmac}
-// GET /admin/stats?token=... — L1 PocketBase profiles 통계 프록시
+// GET /admin/stats?token=... — 통계 (Supabase user_profiles 기반)
+// L1 PocketBase는 SSL 미설정으로 Worker에서 직접 접근 불가 → Supabase 사용
 async function handleAdminStats(request, env, corsHeaders) {
   const url = new URL(request.url);
   const token = url.searchParams.get('token');
@@ -3960,17 +3961,26 @@ async function handleAdminStats(request, env, corsHeaders) {
   if (!isValid) return new Response(JSON.stringify({error:'INVALID_TOKEN'}), {status:403, headers:corsHeaders});
 
   try {
-    const adminToken = await _l1AdminToken(env);
-    const l1Base = L1_DEFAULT + '/api/collections/profiles/records';
-    const headers = { 'Authorization': `Bearer ${adminToken}` };
-    const [r1, r2] = await Promise.all([
-      fetch(`${l1Base}?perPage=1`, {headers, signal: AbortSignal.timeout(6000)}),
-      fetch(`${l1Base}?perPage=500&sort=-created`, {headers, signal: AbortSignal.timeout(8000)})
-    ]);
-    const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+    const sbKey = env.SUPABASE_SERVICE_KEY || env.SUPABASE_KEY || _supabaseAnonKey();
+    const sbHeaders = { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` };
+
+    // 전체 카운트
+    const r1 = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_profiles?select=count`,
+      { headers: { ...sbHeaders, 'Prefer': 'count=exact', 'Range': '0-0' }, signal: AbortSignal.timeout(6000) }
+    );
+    const total = parseInt(r1.headers.get('content-range')?.split('/')?.[1] ?? '0');
+
+    // 최근 500개 created 날짜
+    const r2 = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_profiles?select=created_at&order=created_at.desc&limit=500`,
+      { headers: sbHeaders, signal: AbortSignal.timeout(8000) }
+    );
+    const items = await r2.json();
+
     return new Response(JSON.stringify({
-      total: d1.totalItems ?? 0,
-      items: (d2.items || []).map(u => ({created: u.created}))
+      total,
+      items: (Array.isArray(items) ? items : []).map(u => ({created: u.created_at}))
     }), {status:200, headers:{...corsHeaders,'Content-Type':'application/json'}});
   } catch(e) {
     return new Response(JSON.stringify({error: e.message}), {status:502, headers:corsHeaders});
