@@ -287,9 +287,25 @@ async function installPWA() {
     localStorage.setItem(_INSTALL_DONE_KEY, Date.now());
   }
   _deferredInstallPrompt = null;
-  // PWA 처리 완료 → GPS 즉시 요청 이벤트 발행 (gopang-app.js가 수신)
   window.dispatchEvent(new CustomEvent('gopang:pwa-install-done'));
 }
+
+// 설치 + 권한 요청 통합
+async function installPWAWithPermission() {
+  // 1. PWA 설치
+  if (_deferredInstallPrompt) {
+    await installPWA();
+  } else {
+    // beforeinstallprompt 없음 → 수동 안내
+    _hideInstallBanner();
+    const manual = document.getElementById('manual-install-banner');
+    if (manual) manual.style.display = 'flex';
+    localStorage.setItem(_INSTALL_DISMISSED_KEY, Date.now());
+  }
+  // 2. 권한 요청
+  await _requestPWAPermissions().catch(() => {});
+}
+window.installPWAWithPermission = installPWAWithPermission;
 
 // ── 나중에 버튼 ──────────────────────────────────────────
 function dismissInstall() {
@@ -332,6 +348,14 @@ window.addEventListener('DOMContentLoaded', () => {
   if (_isInStandaloneMode() || localStorage.getItem(_INSTALL_DONE_KEY)) {
     const btn = document.getElementById('btn-install');
     if (btn) btn.style.display = 'none';
+  } else if (!_isIOS() && _shouldShowInstallBanner()) {
+    // Android — beforeinstallprompt 없으면 2초 후 수동 배너 표시
+    setTimeout(() => {
+      if (!_deferredInstallPrompt && !_isInStandaloneMode()) {
+        const manual = document.getElementById('manual-install-banner');
+        if (manual) manual.style.display = 'flex';
+      }
+    }, 2000);
   }
 
   // URL 파라미터 ?ai=1 — AI 비서 자동 활성화 (manifest shortcuts)
