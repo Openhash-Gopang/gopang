@@ -2127,34 +2127,33 @@ body {
           <div>
             <label style="font-size:12px;color:#374151;display:block;margin-bottom:4px">Global API Key</label>
             <input id="cf-api-key" type="text" placeholder="cfk_..."
+                   oninput="_saveCFCredentials()"
                    style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;
                           font-size:12px;font-family:monospace;box-sizing:border-box">
           </div>
           <div>
             <label style="font-size:12px;color:#374151;display:block;margin-bottom:4px">Email</label>
             <input id="cf-email" type="email" placeholder="Tensor.city@gmail.com"
+                   oninput="_saveCFCredentials()"
                    style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;
                           font-size:12px;font-family:inherit;box-sizing:border-box">
           </div>
           <div>
             <label style="font-size:12px;color:#374151;display:block;margin-bottom:4px">Zone ID</label>
             <input id="cf-zone-id" type="text" placeholder="fd842cd737258a783e510e06fafbb07e"
+                   oninput="_saveCFCredentials()"
                    style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;
                           font-size:12px;font-family:monospace;box-sizing:border-box">
           </div>
           <div>
             <label style="font-size:12px;color:#374151;display:block;margin-bottom:4px">Target (CNAME 값)</label>
             <input id="cf-target" type="text" value="openhash-gopang.github.io"
+                   oninput="_saveCFCredentials()"
                    style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;
                           font-size:12px;font-family:monospace;box-sizing:border-box">
           </div>
         </div>
-        <button onclick="_saveCFCredentials()"
-                style="padding:7px 16px;background:#374151;color:#fff;border:none;border-radius:8px;
-                       font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:16px">
-          자격증명 저장 (localStorage)
-        </button>
-        <span id="cf-cred-ok" style="font-size:12px;color:#16a34a;margin-left:8px;display:none">✓ 저장됨</span>
+        <span id="cf-cred-ok" style="font-size:12px;color:#16a34a;display:none;margin-bottom:12px;display:block;min-height:16px"></span>
 
         <!-- 서브도메인 목록 -->
         <div id="subdomain-list" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
@@ -2492,27 +2491,20 @@ function _loadCFCredentials() {
 }
 
 function _saveCFCredentials() {
-  // password 필드는 JS로 세팅된 값이 브라우저에 따라 .value로 못 읽히는 경우가 있음
-  // → 비어있으면 기존 localStorage 값으로 보완
+  // oninput으로 실시간 호출 — 조용히 저장, alert 없음
   const prev=_getCFCred();
   const c={
     apiKey:document.getElementById('cf-api-key').value.trim() || prev.apiKey || '',
-    email:document.getElementById('cf-email').value.trim()  || prev.email  || '',
-    zoneId:document.getElementById('cf-zone-id').value.trim()|| prev.zoneId|| '',
-    target:document.getElementById('cf-target').value.trim() || prev.target || 'openhash-gopang.github.io',
+    email:document.getElementById('cf-email').value.trim()    || prev.email  || CF_DEFAULTS.email,
+    zoneId:document.getElementById('cf-zone-id').value.trim() || prev.zoneId || CF_DEFAULTS.zoneId,
+    target:document.getElementById('cf-target').value.trim()  || prev.target || CF_DEFAULTS.target,
   };
-  if(!c.apiKey||!c.email||!c.zoneId){
-    alert('API Key, Email, Zone ID는 필수입니다.\n\n값이 인식되지 않으면 필드를 직접 다시 입력하세요.');return;
-  }
-  localStorage.setItem(LS_CF_CRED,JSON.stringify(c));
-  const saved=_getCFCred();
+  localStorage.setItem(LS_CF_CRED, JSON.stringify(c));
   const ok=document.getElementById('cf-cred-ok');
-  if(saved.apiKey&&saved.email&&saved.zoneId){
-    ok.textContent='✓ 저장됨 ('+saved.apiKey.slice(0,8)+'...)';
-    ok.style.display='inline';
-    setTimeout(()=>{ok.style.display='none';ok.textContent='✓ 저장됨';},4000);
-  } else {
-    alert('저장 실패: localStorage를 사용할 수 없습니다.');
+  if(ok) {
+    ok.textContent = c.apiKey ? '✓ 자동 저장됨' : '⚠ API Key 입력 필요';
+    ok.style.color = c.apiKey ? '#16a34a' : '#d97706';
+    ok.style.display = 'block';
   }
 }
 
