@@ -2877,7 +2877,16 @@ function _startScan() {
     async (shortId, version) => {
       _setStatus('프로필 조회 중...');
       try {
-        const p = await lookupProfile(shortId, version);
+        // ── 로컬 프로필 라우팅 테이블 ──
+        const LOCAL_PROFILES = {
+          '5zvxrthQVkz': { name: '혼디', handle: 'hondi', url: '/profiles/5zvxrthQVkz.html' },
+        };
+        let p;
+        if (LOCAL_PROFILES[shortId]) {
+          p = LOCAL_PROFILES[shortId];
+        } else {
+          p = await lookupProfile(shortId, version);
+        }
         _profileUrl = p.url;
         document.getElementById('hs-result-name').textContent    = p.name || p.handle;
         document.getElementById('hs-result-handle').textContent  = '@' + p.handle;
@@ -2949,7 +2958,10 @@ window.hsTakePhoto = function () {
   analyzePhoto(imgData,
     async (shortId, version) => {
       try {
-        const p = await lookupProfile(shortId, version);
+        const LOCAL_PROFILES = {
+          '5zvxrthQVkz': { name: '혼디', handle: 'hondi', url: '/profiles/5zvxrthQVkz.html' },
+        };
+        const p = LOCAL_PROFILES[shortId] || await lookupProfile(shortId, version);
         _profileUrl = p.url;
         document.getElementById('hs-result-name').textContent    = p.name || p.handle;
         document.getElementById('hs-result-handle').textContent  = '@' + p.handle;
