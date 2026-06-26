@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>혼디 — 권한 설정</title>
+<link rel="manifest" href="/manifest.json">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Pretendard',sans-serif;background:#fff;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:0}
+.logo{font-size:28px;font-weight:900;color:#1050DC;letter-spacing:-1px;margin-bottom:8px}
+.sub{font-size:14px;color:#6B7280;margin-bottom:36px;text-align:center;line-height:1.6}
+.perm-list{width:100%;max-width:340px;display:flex;flex-direction:column;gap:12px;margin-bottom:28px}
+.perm-row{display:flex;align-items:center;gap:14px;background:#F7F7F5;border-radius:14px;padding:14px 16px}
+.perm-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.perm-icon.cam{background:#EEF3FF}
+.perm-icon.mic{background:#FFF3E0}
+.perm-icon.geo{background:#E8F5E9}
+.perm-info{flex:1}
+.perm-name{font-size:14px;font-weight:600;color:#1A1A18}
+.perm-desc{font-size:12px;color:#9A9A96;margin-top:2px}
+.perm-status{font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;flex-shrink:0}
+.status-idle{background:#F0F0EE;color:#9A9A96}
+.status-granted{background:#E8F5E9;color:#1B7F3A}
+.status-denied{background:#FEECEC;color:#C0392B}
+.status-asking{background:#EEF3FF;color:#1050DC}
+.btn-main{width:100%;max-width:340px;padding:16px;background:#1050DC;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-main:disabled{background:#C0C8E8;cursor:not-allowed}
+.btn-skip{margin-top:12px;background:none;border:none;color:#9A9A96;font-size:13px;cursor:pointer;font-family:inherit;padding:8px}
+.notice{font-size:12px;color:#9A9A96;text-align:center;margin-top:20px;line-height:1.6;max-width:300px}
+</style>
+</head>
+<body>
+
+<div class="logo">혼디</div>
+<p class="sub">카메라·마이크·위치 권한을 허용하면<br>혼디 코드 스캔과 AI 비서를 바로 사용할 수 있습니다.</p>
+
+<div class="perm-list">
+  <div class="perm-row">
+    <div class="perm-icon cam">📷</div>
+    <div class="perm-info">
+      <div class="perm-name">카메라</div>
+      <div class="perm-desc">혼디 코드 스캔, 신원 확인</div>
+    </div>
+    <span class="perm-status status-idle" id="st-cam">대기</span>
+  </div>
+  <div class="perm-row">
+    <div class="perm-icon mic">🎤</div>
+    <div class="perm-info">
+      <div class="perm-name">마이크</div>
+      <div class="perm-desc">AI 비서 음성 입력</div>
+    </div>
+    <span class="perm-status status-idle" id="st-mic">대기</span>
+  </div>
+  <div class="perm-row">
+    <div class="perm-icon geo">📍</div>
+    <div class="perm-info">
+      <div class="perm-name">위치</div>
+      <div class="perm-desc">주변 서비스 탐색</div>
+    </div>
+    <span class="perm-status status-idle" id="st-geo">대기</span>
+  </div>
+</div>
+
+<button class="btn-main" id="btn-allow" onclick="requestAll()">권한 허용하기</button>
+<button class="btn-skip" onclick="goApp()">나중에 →</button>
+
+<p class="notice">권한은 이 기기에만 저장되며<br>혼디 서버로 전송되지 않습니다.</p>
+
+<script>
+function setStatus(id, state) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const map = {
+    'asking':  ['status-asking',  '요청 중…'],
+    'granted': ['status-granted', '✓ 허용됨'],
+    'denied':  ['status-denied',  '✗ 차단됨'],
+    'idle':    ['status-idle',    '대기'],
+  };
+  el.className = 'perm-status ' + (map[state]?.[0] || 'status-idle');
+  el.textContent = map[state]?.[1] || state;
+}
+
+async function requestAll() {
+  const btn = document.getElementById('btn-allow');
+  btn.disabled = true;
+  btn.textContent = '요청 중…';
+
+  // 카메라
+  setStatus('st-cam', 'asking');
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    s.getTracks().forEach(t => t.stop());
+    setStatus('st-cam', 'granted');
+  } catch(e) {
+    setStatus('st-cam', 'denied');
+  }
+
+  // 마이크
+  setStatus('st-mic', 'asking');
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+    s.getTracks().forEach(t => t.stop());
+    setStatus('st-mic', 'granted');
+  } catch(e) {
+    setStatus('st-mic', 'denied');
+  }
+
+  // 위치
+  setStatus('st-geo', 'asking');
+  try {
+    await new Promise((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000, maximumAge: 0 })
+    );
+    setStatus('st-geo', 'granted');
+  } catch(e) {
+    setStatus('st-geo', e.code === 1 ? 'denied' : 'granted'); // timeout은 허용으로 간주
+  }
+
+  localStorage.setItem('hondi_perm_requested', '1');
+
+  btn.textContent = '혼디 시작하기 →';
+  btn.disabled = false;
+  btn.onclick = goApp;
+}
+
+function goApp() {
+  const next = new URLSearchParams(location.search).get('next') || '/webapp.html';
+  location.href = next;
+}
+
+// 이미 허용된 항목은 미리 표시
+async function checkExisting() {
+  if (!navigator.permissions) return;
+  const checks = [
+    { name: 'camera',      id: 'st-cam' },
+    { name: 'microphone',  id: 'st-mic' },
+    { name: 'geolocation', id: 'st-geo' },
+  ];
+  for (const c of checks) {
+    try {
+      const r = await navigator.permissions.query({ name: c.name });
+      if (r.state === 'granted') setStatus(c.id, 'granted');
+      if (r.state === 'denied')  setStatus(c.id, 'denied');
+    } catch {}
+  }
+}
+checkExisting();
+</script>
+</body>
+</html>
