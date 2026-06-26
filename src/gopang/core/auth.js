@@ -858,7 +858,7 @@ function _showPhonePopup(resolve) {
       <div id="_phone-error" style="display:none;font-size:12px;color:#dc2626;
            padding:0 4px;margin-bottom:4px"></div>
       <div id="_phone-hint" style="font-size:12px;color:#9ca3af;padding:0 4px">
-        전화번호 또는 닉네임
+        전화번호를 010과 대시(-)없이 기입(숫자 8자리)하세요.
       </div>
     </div>`;
 
