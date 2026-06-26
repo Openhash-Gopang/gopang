@@ -306,9 +306,71 @@ function _nearestWithCalib(pixel, palette) {
   return best;
 }
 
+
+// ── 기준점 마커 탐지 ─────────────────────────────────────────
+// 색상 막대 왼쪽의 흰 원 2개(상단/하단)를 찾아
+// 막대의 정확한 Y 범위를 확정한다.
+// 기준점이 없으면 null 반환 → 기존 방식으로 fallback
+function _detectMarkers(ctx, strip) {
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  const sw = strip.w;
+
+  // 기준점은 막대 왼쪽 sw*0.4 ~ sw*2.5 범위에 있음
+  const searchX1 = Math.max(0, strip.x1 - Math.round(sw * 2.5));
+  const searchX2 = Math.max(0, strip.x1 - Math.round(sw * 0.2));
+  if (searchX2 <= searchX1) return null;
+
+  const searchW = searchX2 - searchX1;
+  const data = ctx.getImageData(searchX1, 0, searchW, H).data;
+
+  // 흰 원 탐지: 각 행에서 흰 픽셀(R>220,G>220,B>220) 밀집 구간 찾기
+  // 상단과 하단 각각 탐지
+  const rowWhite = new Float32Array(H);
+  for (let y = 0; y < H; y++) {
+    let cnt = 0;
+    for (let x = 0; x < searchW; x++) {
+      const i = (y * searchW + x) * 4;
+      if (data[i] > 220 && data[i+1] > 220 && data[i+2] > 220 && data[i+3] > 128) cnt++;
+    }
+    rowWhite[y] = cnt / searchW;  // 흰 픽셀 비율
+  }
+
+  // 흰 원 중심 = rowWhite 피크 위치
+  // 상단 절반과 하단 절반에서 각각 최대값
+  const half = Math.floor(H / 2);
+  let topY = -1, topVal = 0;
+  let botY = -1, botVal = 0;
+
+  for (let y = 0; y < half; y++) {
+    if (rowWhite[y] > topVal) { topVal = rowWhite[y]; topY = y; }
+  }
+  for (let y = half; y < H; y++) {
+    if (rowWhite[y] > botVal) { botVal = rowWhite[y]; botY = y; }
+  }
+
+  // 흰 원이 충분히 검출됐는지 (최소 비율 5%)
+  if (topVal < 0.05 || botVal < 0.05) return null;
+  // 두 기준점 사이 거리가 막대 높이와 비슷한지 검증
+  const markerDist = botY - topY;
+  const stripH = strip.y2 - strip.y1;
+  if (markerDist < stripH * 0.7 || markerDist > stripH * 1.3) return null;
+
+  return { topY, botY, markerDist };
+}
+
 // ── 3·4단계: 10칸 분할 → 색상 읽기 ──────────────────────────
 function _decode(ctx, strip, anchor) {
-  const { x1, x2, y1, y2, h } = strip;
+  let { x1, x2, y1, y2, h } = strip;
+
+  // 기준점 마커 탐지 → 막대 Y 범위 정밀 보정
+  const markers = _detectMarkers(ctx, strip);
+  if (markers) {
+    // 기준점이 탐지되면 → 막대 상단/하단 Y를 기준점으로 덮어씀
+    y1 = markers.topY;
+    y2 = markers.botY;
+    h  = y2 - y1;
+  }
+
   const cellH = h / ROWS;
   const W = ctx.canvas.width, H = ctx.canvas.height;
 

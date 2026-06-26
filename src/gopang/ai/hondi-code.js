@@ -210,7 +210,7 @@ function _loadBaseImage() {
   return _baseImgPromise;
 }
 
-export async function generateHondiCodeCanvas(shortId, version = 'v1') {
+export async function generateHondiCodeCanvas(shortId, version = 'v1', { markers = false } = {}) {
   const baseImg = await _loadBaseImage();
 
   const canvas = document.createElement('canvas');
@@ -247,6 +247,38 @@ export async function generateHondiCodeCanvas(shortId, version = 'v1') {
       ctx.fillRect(STRIP_X + halfW, y, halfW, CELL_H);
       ctx.strokeRect(STRIP_X, y, STRIP_W, CELL_H);
     }
+  }
+
+  // ── 기준점 마커: 모니터 표시용 (markers=true 시에만) ──
+  // 막대 상단/하단에 흰 원 2개를 배치 → 스캐너가 막대 Y 범위를 정확히 확정
+  if (markers) {
+    const MR  = Math.round(STRIP_W * 0.22);  // 반지름 (막대 너비의 22%)
+    const MX  = STRIP_X - MR * 2 - 8;        // 막대 왼쪽에 배치
+    const MY_A = STRIP_Y;                      // 상단 기준점 Y
+    const MY_B = STRIP_Y + STRIP_H;            // 하단 기준점 Y
+
+    [MY_A, MY_B].forEach(my => {
+      // 검은 테두리
+      ctx.beginPath();
+      ctx.arc(MX, my, MR + 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#000';
+      ctx.fill();
+      // 흰 원
+      ctx.beginPath();
+      ctx.arc(MX, my, MR, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    });
+
+    // 두 기준점 사이 연결선 (점선)
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.moveTo(MX, MY_A + MR);
+    ctx.lineTo(MX, MY_B - MR);
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
 
   // ── 캘리브레이션 패치: 9색을 PATCH_Y에 가로로 배열 ──
