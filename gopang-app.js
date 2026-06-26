@@ -114,22 +114,26 @@ if (!_USER) {
   }
 }
 
-// v6.0: 백업 키를 아직 확인하지 않은 사용자에게 탭마다 경고 — 가입 직후 단계를
+// v6.0: 백업 키를 아직 확인하지 않은 사용자에게 경고 — 가입 직후 단계를
 // 거쳤다면 정상적으로는 뜨지 않지만, 이 업데이트 이전에 가입한 기존 사용자나
-// (지갑 준비 지연 등으로) 그 단계를 못 거친 경우를 위한 안전망이다. "나중에"는
-// 이 탭 안에서만 숨기고, 새 탭/새로고침에서는 다시 뜬다(sessionStorage).
+// (지갑 준비 지연 등으로) 그 단계를 못 거친 경우를 위한 안전망이다.
+// v6.1: 이 기기에서 한 번이라도 노출됐으면 이후 영구적으로 다시 표시하지
+// 않는다(localStorage). "나중에"를 누르지 않고 그냥 다른 화면으로 이동해도
+// 동일하게 적용된다 — 표시되는 순간 바로 "본 것"으로 기록한다.
+const BACKUP_WARN_SEEN_KEY = 'gopang_backup_warn_seen_v1';
 (function _maybeShowBackupWarn() {
   if (!_isRegistered() || _hasConfirmedBackup()) return;
-  if (sessionStorage.getItem('gopang_backup_warn_dismissed')) return;
+  if (localStorage.getItem(BACKUP_WARN_SEEN_KEY)) return;
   const banner = document.getElementById('backup-warn-banner');
   if (!banner) return;
   const installShowing = document.getElementById('install-banner')?.classList.contains('show')
     || document.getElementById('ios-install-banner')?.classList.contains('show');
   if (installShowing) banner.classList.add('below-install');
   banner.classList.add('show');
+  try { localStorage.setItem(BACKUP_WARN_SEEN_KEY, '1'); } catch (e) {}
 })();
 window.dismissBackupWarn = function() {
-  sessionStorage.setItem('gopang_backup_warn_dismissed', '1');
+  try { localStorage.setItem(BACKUP_WARN_SEEN_KEY, '1'); } catch (e) {}
   document.getElementById('backup-warn-banner')?.classList.remove('show');
 };
 
