@@ -141,17 +141,18 @@ async function send() {
   hist.push({role:'user',content:text});
   const typing = addMsg('혼디가 생각 중...','ai');
   try {
-    const res = await fetch('https://api.deepseek.com/v1/chat/completions',{
+    const res = await fetch('https://hondi-proxy.tensor-city.workers.dev/ai/chat',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer ' + await getKey()},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'deepseek-chat',
-        messages:[{role:'system',content:SP},...hist],
-        max_tokens:300,temperature:0.9
+        provider:'deepseek',
+        system: SP,
+        messages: hist,
+        max_tokens: 300,
       })
     });
     const d = await res.json();
-    const reply = d.choices?.[0]?.message?.content || '잠시 후 다시 시도해 주세요.';
+    const reply = d.choices?.[0]?.message?.content || d.content || '잠시 후 다시 시도해 주세요.';
     typing.textContent = reply;
     hist.push({role:'assistant',content:reply});
   } catch(e) {
@@ -187,10 +188,6 @@ function startCall() {
   msg.addEventListener('click', e => { if(e.target===msg) msg.remove(); });
 }
 
-async function getKey() {
-  try {
-    const r = await fetch('https://hondi-proxy.jupiter-ai.workers.dev/ai/key?provider=deepseek');
-    if (r.ok) { const d = await r.json(); return d.key || ''; }
   } catch(e) {}
   return '';
 }
