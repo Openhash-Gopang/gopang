@@ -2527,13 +2527,21 @@ window._deleteSubdomain  = _deleteSubdomain;
 <script>
 window.openHondiZoom = async function() {
   const overlay = document.getElementById('hondi-zoom-overlay');
-  overlay.style.display = 'flex';
-  try {
-    // generateHondiCodeCanvas가 있으면 사용, 없으면 베이스 이미지 직접 표시
-    const canvas = document.getElementById('hondi-zoom-canvas');
-    const ctx = canvas.getContext('2d');
+  const canvas  = document.getElementById('hondi-zoom-canvas');
+  const ctx     = canvas.getContext('2d');
 
-    // 현재 사용자 short_id 가져오기 (state.js에서)
+  // 로딩 스피너 표시 (이미지 준비 전 검은 화면 방지)
+  canvas.width  = 200;
+  canvas.height = 200;
+  ctx.fillStyle = '#f0f0ee';
+  ctx.fillRect(0, 0, 200, 200);
+  ctx.fillStyle = '#aaa';
+  ctx.font = '13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('로딩 중…', 100, 108);
+
+  // 이미지 완전히 준비된 후 팝업 표시
+  try {
     let shortId = '5zvxrthQVkz';
     try {
       const { getState } = await import('/src/gopang/core/state.js');
@@ -2542,18 +2550,27 @@ window.openHondiZoom = async function() {
     } catch(e) {}
 
     const { generateHondiCodeCanvas } = await import('/src/gopang/ai/hondi-code.js');
-    const src = await generateHondiCodeCanvas(shortId, 'v1');
+    const offscreen = await generateHondiCodeCanvas(shortId, 'v1');
 
-    // 화면 크기에 맞게 스케일 (최소 400px, 최대 80vw/70vh)
+    // 화면 크기에 맞게 스케일
     const maxW = Math.min(window.innerWidth * 0.90, window.innerHeight * 0.80 * (680/542), 900);
-    const scale = maxW / src.width;
-    canvas.width  = src.width  * scale;
-    canvas.height = src.height * scale;
+    const scale = maxW / offscreen.width;
+    canvas.width  = offscreen.width  * scale;
+    canvas.height = offscreen.height * scale;
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
   } catch(e) {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#999';
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('로드 실패', canvas.width/2, canvas.height/2);
     console.error('혼디 코드 확대 실패:', e);
   }
+
+  // 이미지 준비 완료 후 팝업 표시 (깜빡임 없음)
+  overlay.style.display = 'flex';
 };
 
 window.closeHondiZoom = function() {
