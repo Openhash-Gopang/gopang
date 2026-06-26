@@ -427,6 +427,10 @@ export default {
     if (pathname === '/admin/stats' && request.method === 'GET')
       return handleAdminStats(request, env, corsHeaders);
 
+    // POST /admin/cf-dns — Cloudflare DNS CNAME 추가 (CORS 우회 프록시)
+    if (pathname === '/admin/cf-dns' && request.method === 'POST')
+      return handleAdminCfDns(request, env, corsHeaders);
+
     // ── 디폴트 LLM 키 관리 ──────────────────────────────────────
     // POST /admin/default-key  — 관리자가 KV에 저장 (HMAC 인증)
     // GET  /default-key        — 앱이 체험기간 확인 후 키 수신
@@ -3951,6 +3955,29 @@ async function handleDefaultKeyGet(request, env, corsHeaders) {
 
 // 관리자 토큰 검증 — HMAC-SHA256(timestamp, GOPANG_MASTER_KEY)
 // desktop.html에서 생성한 토큰: {ts}.{hmac}
+// POST /admin/cf-dns — Cloudflare DNS CNAME 추가 (브라우저 CORS 우회)
+// body: { token, apiKey, email, zoneId, name, content }
+async function handleAdminCfDns(request, env, corsHeaders) {
+  const body = await request.json().catch(() => ({}));
+  const { token, apiKey, email, zoneId, name, content } = body;
+  if (!token) return new Response(JSON.stringify({error:'MISSING_TOKEN'}), {status:401, headers:corsHeaders});
+  const isValid = await _verifyAdminToken(env, token);
+  if (!isValid) return new Response(JSON.stringify({error:'INVALID_TOKEN'}), {status:403, headers:corsHeaders});
+  if (!apiKey || !email || !zoneId || !name) 
+    return new Response(JSON.stringify({error:'MISSING_PARAMS'}), {status:400, headers:corsHeaders});
+
+  const cfRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`, {
+    method: 'POST',
+    headers: { 'X-Auth-Key': apiKey, 'X-Auth-Email': email, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type:'CNAME', name, content: content||'openhash-gopang.github.io', ttl:1, proxied:false })
+  });
+  const data = await cfRes.json();
+  return new Response(JSON.stringify(data), {
+    status: cfRes.status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+}
+
 // GET /admin/stats?token=... — 통계 (Supabase user_profiles 기반)
 // L1 PocketBase는 SSL 미설정으로 Worker에서 직접 접근 불가 → Supabase 사용
 async function handleAdminStats(request, env, corsHeaders) {
