@@ -2884,7 +2884,11 @@ import { startScanner, stopScanner, lookupProfile, analyzePhoto }
 let _profileUrl = null;
 
 /* ── 스캔 시작 헬퍼 ── */
+let _scannerActive = false;  // 중복 시작 방지 플래그
+
 function _startScan() {
+  if (_scannerActive) stopScanner();  // 이미 실행 중이면 먼저 정지
+  _scannerActive = true;
   const video   = document.getElementById('hs-video');
   const canvas  = document.getElementById('hs-canvas');
   const overlay = document.getElementById('hs-overlay');
@@ -2892,6 +2896,7 @@ function _startScan() {
   startScanner(video, canvas, overlay,
     /* 인식 성공 */
     async (shortId, version) => {
+      _scannerActive = false;  // 스캐너 완전 종료 — 재인식 없음
       _setStatus('프로필 조회 중...');
       try {
         // ── 로컬 프로필 라우팅 테이블 ──
@@ -2913,8 +2918,9 @@ function _startScan() {
         // 1.2초 후 자동 이동
         setTimeout(() => { if (_profileUrl) window.location.href = _profileUrl; }, 1200);
       } catch (e) {
+        // 프로필 조회 실패 — 다시 스캔하지 않고 오류 표시만
         _setStatus('❌ ' + e.message);
-        setTimeout(hsRescan, 2500);
+        // 사용자가 직접 hsRescan 버튼을 눌러야 재시도 가능
       }
     },
     /* 상태 메시지 */
@@ -2929,6 +2935,7 @@ function _setStatus(msg) {
 
 /* ── 공개 함수 ── */
 window.openHondiScanner = async function () {
+  _scannerActive = false;  // 상태 초기화
   const ov = document.getElementById('hondi-scanner-overlay');
   ov.style.display = 'flex';
   document.getElementById('hs-result').style.display = 'none';
@@ -2946,6 +2953,7 @@ window.openHondiScanner = async function () {
 };
 
 window.closeHondiScanner = function () {
+  _scannerActive = false;
   stopScanner();
   document.getElementById('hondi-scanner-overlay').style.display = 'none';
 };
@@ -2955,6 +2963,8 @@ window.hsGoProfile = function () {
 };
 
 window.hsRescan = function () {
+  stopScanner();           // 혹시 남아있는 스트림 정리
+  _scannerActive = false;
   document.getElementById('hs-result').style.display = 'none';
   _setStatus('다시 스캔합니다...');
   _startScan();

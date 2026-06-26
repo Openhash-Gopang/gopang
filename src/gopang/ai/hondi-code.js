@@ -27,13 +27,13 @@
 export const PALETTE = [
   { idx: 0, name: '무색', r: 255, g: 255, b: 255 },
   { idx: 1, name: '빨강', r: 220, g:   0, b:   0 },
-  { idx: 2, name: '주황', r: 255, g: 100, b:   0 },  // 노랑과 거리 확보 (80→135)
-  { idx: 3, name: '노랑', r: 255, g: 235, b:   0 },  // 주황과 거리 확보
-  { idx: 4, name: '초록', r:   0, g: 180, b:   0 },
+  { idx: 2, name: '주황', r: 255, g: 110, b:   0 },
+  { idx: 3, name: '노랑', r: 255, g: 235, b:   0 },
+  { idx: 4, name: '초록', r:   0, g: 185, b:   0 },
   { idx: 5, name: '파랑', r:   0, g:   0, b: 220 },
-  { idx: 6, name: '남색', r:   0, g:   0, b: 100 },  // 파랑·흑색과 거리 확보
-  { idx: 7, name: '보라', r: 150, g:   0, b: 150 },  // 더 선명한 보라
-  { idx: 8, name: '흑색', r:   0, g:   0, b:   0 },
+  { idx: 6, name: '남색', r:   0, g:   0, b: 180 },  // (0,0,100)→(0,0,180): 흑색과 거리 확보
+  { idx: 7, name: '보라', r: 180, g:   0, b: 180 },  // (150,0,150)→(180,0,180): 더 선명
+  { idx: 8, name: '흑색', r:  30, g:  30, b:  30 },  // (0,0,0)→(30,30,30): 흰 경계선과 구분
 ];
 
 // ── 캘리브레이션 기준색 ────────────────────────────────────────
@@ -221,8 +221,8 @@ export async function generateHondiCodeCanvas(shortId, version = 'v1') {
   // 색상 코드("ㅣ") — 정확한 픽셀 좌표(STRIP_X, STRIP_Y, STRIP_W, STRIP_H)에 덧그림
   // 칸 순서는 idToIndices와 동일: 배열 첫 원소(최상위 자릿수)가 맨 위 칸.
   const indices = idToIndices(BigInt(shortId), version);
-  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';  // 흰색 경계선 — 흑색 셀과 충돌 방지
+  ctx.lineWidth = 1.5;
 
   if (version === 'v1') {
     for (let row = 0; row < ROWS; row++) {
