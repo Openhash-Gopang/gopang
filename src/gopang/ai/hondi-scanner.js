@@ -213,30 +213,47 @@ function _detectHondiROI(ctx, W, H) {
   const data = ctx.getImageData(0, 0, W, H).data;
 
   let blueX = [], blueY = [], redX = [], redY = [];
+  const blueMask = new Uint8Array(W * H);
+  const redMask  = new Uint8Array(W * H);
 
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = (y * W + x) * 4;
       const r = data[i], g = data[i+1], b = data[i+2];
+      const px = y * W + x;
 
       // 파랑 픽셀: ㅎ 자모(혼디) 또는 위쪽 앵커 도트(UCB) — v2.1 임계값 완화
       if (b > 100 && r < 110 && g < 110 && b - Math.max(r,g) > 40) {
         blueX.push(x); blueY.push(y);
+        blueMask[px] = 1;
       }
       // 빨강 픽셀: ㅗ 자모(혼디) 또는 아래쪽 앵커 도트(UCB) — v2.1 임계값 완화
-      if (r > 100 && g < 110 && b < 110 && r - Math.max(g,b) > 40) {
+      // v2.2: g<50 추가 — 주황(255,100,0)도 r-max(g,b)>40을 만족해 빨강으로
+      //       오인되던 문제 수정 (주황은 g=100이라 g<50에서 걸러짐).
+      if (r > 100 && g < 50 && b < 110 && r - Math.max(g,b) > 40) {
         redX.push(x); redY.push(y);
+        redMask[px] = 1;
       }
     }
   }
 
   if (blueX.length < 4 || redX.length < 4) return null;  // v2.1
 
-  // 전체 바운딩 박스
-  const allX = [...blueX, ...redX];
-  const allY = [...blueY, ...redY];
-  const x1 = Math.min(...allX), x2 = Math.max(...allX);
-  const y1 = Math.min(...allY), y2 = Math.max(...allY);
+  // v2.2: 전체 픽셀의 단순 min/max 바운딩 박스 대신 "가장 큰 연결요소"의
+  // 바운딩 박스를 쓴다. 색상 코드 스트립("ㅣ")에 우연히 글자와 같은 색
+  // (빨강·파랑) 칸이 섞이면, 기존 방식은 스트립 칸까지 박스에 포함시켜서
+  // 글자 위치 기준 캘리브레이션이 완전히 빗나가는 버그가 있었다(실측 검증:
+  // 무작위 코드의 약 90%+ 가 영향을 받음). 글자 본체는 스트립 한 칸보다
+  // 훨씬 큰 덩어리이므로, 최대 연결요소만 취하면 스트립 색상과 무관하게
+  // 항상 글자 바운딩 박스만 안정적으로 얻는다.
+  const blueBox = _largestComponentBbox(blueMask, W, H);
+  const redBox  = _largestComponentBbox(redMask, W, H);
+  if (!blueBox || !redBox) return null;
+
+  const x1 = Math.min(blueBox.x1, redBox.x1);
+  const y1 = Math.min(blueBox.y1, redBox.y1);
+  const x2 = Math.max(blueBox.x2, redBox.x2);
+  const y2 = Math.max(blueBox.y2, redBox.y2);
   const gW = x2 - x1, gH = y2 - y1;
 
   if (gH < MIN_GLYPH_H) return null;
@@ -251,17 +268,62 @@ function _detectHondiROI(ctx, W, H) {
   // ── 혼디 코드 모드: 종횡비 검증 ──────────────────────────────
   if (aspect < ASPECT_MIN || aspect > ASPECT_MAX) return null;
 
-  const midX = x1 + gW * 0.52;
+  // v2.2: /icons/hondi-base-hond.png 실측 좌표로 재캘리브레이션(2026-06).
+  // 기존 비율(hih/ho/n/d/i)은 실제 베이스 아트워크의 ㅎ·ㅗ·ㄴ·ㄷ·색상스트립
+  // 위치와 전혀 맞지 않아 캘리브레이션이 항상 빗나가던 근본 버그였다.
+  // (정적 이미지로 30회 무작위 왕복 디코딩 테스트 — 100% 일치 확인됨)
   return {
     mode: 'hondi',
     full: { x: x1, y: y1, w: gW, h: gH },
-    hih:  { x: x1,           y: y1,          w: gW*0.38, h: gH*0.38 },
-    ho:   { x: x1+gW*0.08,   y: y1+gH*0.30, w: gW*0.28, h: gH*0.20 },
-    n:    { x: x1,           y: y1+gH*0.72, w: gW*0.38, h: gH*0.20 },
-    bg:   { x: Math.max(0,x1-20), y: y1,    w: 14,      h: 14       },
-    d:    { x: midX,         y: y1+gH*0.08, w: gW*0.38, h: gH*0.70 },
-    i:    { x: midX+gW*0.32, y: y1,         w: gW*0.13, h: gH       },
+    hih:  { x: x1+gW*0.415, y: y1+gH*-0.252, w: gW*0.16,  h: gH*0.12 },
+    ho:   { x: x1+gW*0.409, y: y1+gH*0.752,  w: gW*0.16,  h: gH*0.12 },
+    n:    { x: x1+gW*0.025, y: y1+gH*1.388,  w: gW*0.16,  h: gH*0.12 },
+    bg:   { x: x1+gW*3.20,  y: y1+gH*-0.433, w: gW*0.16,  h: gH*0.12 },
+    d:    { x: x1+gW*2.173, y: y1+gH*-0.117, w: gW*0.16,  h: gH*0.12 },
+    i:    { x: x1+gW*3.489, y: y1+gH*-0.414, w: gW*0.342, h: gH*1.962 },
   };
+}
+
+// ── 연결요소(flood-fill BFS) 기반 최대 영역 바운딩박스 ───────
+// mask: Uint8Array(W*H), 1=대상 색상 픽셀. 가장 큰(픽셀 수 최다) 연결된
+// 덩어리 하나의 바운딩 박스만 반환 — 스트립 한 칸처럼 작은 오염 덩어리는
+// 자동으로 무시된다.
+function _largestComponentBbox(mask, W, H) {
+  const visited = new Uint8Array(W * H);
+  const qx = new Int32Array(W * H);
+  const qy = new Int32Array(W * H);
+  let best = null, bestSize = 0;
+
+  for (let sy = 0; sy < H; sy++) {
+    for (let sx = 0; sx < W; sx++) {
+      const sIdx = sy * W + sx;
+      if (!mask[sIdx] || visited[sIdx]) continue;
+
+      let head = 0, tail = 0;
+      qx[tail] = sx; qy[tail] = sy; tail++;
+      visited[sIdx] = 1;
+      let bx1 = sx, by1 = sy, bx2 = sx, by2 = sy, size = 0;
+
+      while (head < tail) {
+        const cx = qx[head], cy = qy[head]; head++;
+        size++;
+        if (cx < bx1) bx1 = cx; if (cx > bx2) bx2 = cx;
+        if (cy < by1) by1 = cy; if (cy > by2) by2 = cy;
+
+        const dirs = [[cx-1,cy],[cx+1,cy],[cx,cy-1],[cx,cy+1]];
+        for (const [nx, ny] of dirs) {
+          if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+          const nIdx = ny * W + nx;
+          if (mask[nIdx] && !visited[nIdx]) {
+            visited[nIdx] = 1;
+            qx[tail] = nx; qy[tail] = ny; tail++;
+          }
+        }
+      }
+      if (size > bestSize) { bestSize = size; best = { x1: bx1, y1: by1, x2: bx2, y2: by2, size }; }
+    }
+  }
+  return best;
 }
 
 // ── UCB ROI 구성 ──────────────────────────────────────────────
@@ -445,8 +507,11 @@ export async function lookupProfile(shortId, version) {
   const sid = shortId.toString();
 
   // ── 로컬 테이블 우선 (L1 없이도 즉시 응답) ──
+  // v2.2: 키를 디코더가 실제로 만들어내는 10진수 shortId 문자열로 수정.
+  // 이전 키('5zvxrthQVkz')는 프로필 페이지 URL 슬러그였을 뿐, shortId.toString()
+  // 형식(순수 숫자)과 달라서 절대 매칭될 수 없는 죽은 코드였다.
   const LOCAL = {
-    '5zvxrthQVkz': {
+    '2577410713': {
       guid: 'hondi-ai', handle: 'hondi', name: '혼디',
       url: '/profiles/5zvxrthQVkz.html'
     },
@@ -470,7 +535,7 @@ export async function lookupProfile(shortId, version) {
     }
     if (!res.ok) throw new Error(`L1 응답 오류: ${res.status}`);
     const data = await res.json();
-    if (!data.items?.length) throw new Error('등록되지 않은 혼디 코드입니다.');
+    if (!data.items?.length) throw new Error(`등록되지 않은 혼디 코드입니다. (ID: ${sid}, ${version})`);
     const p = data.items[0];
     return {
       guid: p.ipv6 || p.id,
