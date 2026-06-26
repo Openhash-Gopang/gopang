@@ -249,6 +249,63 @@ function _stripYRange(data, W, H, x1, x2) {
   return { y1, y2 };
 }
 
+
+// ── 캘리브레이션 패치 탐지 및 실제 팔레트 측정 ─────────────
+// 색상 막대 아래의 9개 패치를 읽어서 실제 카메라 환경의 색상값을 측정한다.
+// 패치가 없으면 기본 SCAN_PALETTE 사용.
+function _readCalibPatch(ctx, strip) {
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  const sw = strip.w;   // 패치 1개 너비 = 막대 너비
+  const gap = sw * 0.2; // 막대 하단과 패치 사이 간격 (비율)
+  const py  = strip.y2 + gap;
+  const ph  = sw;       // 패치 높이 = 막대 너비 (정사각형)
+
+  // 패치 오른쪽 끝 = 막대 왼쪽 끝
+  const patchEndX = strip.x1;
+  const patchStartX = patchEndX - sw * 9;
+
+  // 화면 밖이면 캘리브레이션 불가
+  if (py + ph > H || patchStartX < 0) return null;
+
+  const realPalette = [];
+  for (let i = 0; i < 9; i++) {
+    const px = patchStartX + i * sw;
+    // 패치 내부 중앙 60% 샘플 (경계선 제외)
+    const roi = {
+      x: px + sw * 0.1,
+      y: py + ph * 0.1,
+      w: sw * 0.8,
+      h: ph * 0.8,
+    };
+    const c = _avgColor(ctx, roi);
+    realPalette.push({ idx: i, r: c.r, g: c.g, b: c.b });
+  }
+
+  // 유효성 검사: 9개 패치가 서로 충분히 다른 색상인지
+  // (모두 같은 색이면 패치를 못 읽은 것)
+  const rVals = realPalette.map(c => c.r);
+  const rRange = Math.max(...rVals) - Math.min(...rVals);
+  const gVals = realPalette.map(c => c.g);
+  const gRange = Math.max(...gVals) - Math.min(...gVals);
+  const bVals = realPalette.map(c => c.b);
+  const bRange = Math.max(...bVals) - Math.min(...bVals);
+
+  // 색상 다양성이 충분하지 않으면 캘리브레이션 실패
+  if (rRange + gRange + bRange < 200) return null;
+
+  return realPalette;  // 측정된 실제 팔레트
+}
+
+// 실제 팔레트로 가장 가까운 색상 인덱스 찾기
+function _nearestWithCalib(pixel, palette) {
+  let best = 0, bestD = Infinity;
+  for (const c of palette) {
+    const d = (pixel.r-c.r)**2 + (pixel.g-c.g)**2 + (pixel.b-c.b)**2;
+    if (d < bestD) { bestD = d; best = c.idx; }
+  }
+  return best;
+}
+
 // ── 3·4단계: 10칸 분할 → 색상 읽기 ──────────────────────────
 function _decode(ctx, strip, anchor) {
   const { x1, x2, y1, y2, h } = strip;
@@ -285,6 +342,10 @@ function _decode(ctx, strip, anchor) {
   const version = (strip.w > cellH * 1.5) ? 'v2' : 'v1';
 
   // 각 셀 색상 읽기
+  // 캘리브레이션 패치 읽기 (성공하면 실제 팔레트 사용, 실패하면 기본 팔레트)
+  const realPalette = _readCalibPatch(ctx, strip);
+  const useCalib = !!realPalette;
+
   const indices = [];
   if (version === 'v1') {
     for (let row = 0; row < ROWS; row++) {
@@ -296,7 +357,11 @@ function _decode(ctx, strip, anchor) {
         h: cellH * CELL_SAMPLE,
       };
       const raw = _avgColor(ctx, roi);
-      indices.push(_nearestPalette(applyCalib(raw, matrix)));
+      // 캘리브레이션 패치가 있으면: 실제 측정 팔레트로 직접 비교
+      // 없으면: 기존 캘리브레이션 행렬 사용
+      indices.push(useCalib
+        ? _nearestWithCalib(raw, realPalette)
+        : _nearestPalette(applyCalib(raw, matrix)));
     }
   } else {
     const halfW = strip.w / 2;
@@ -310,7 +375,9 @@ function _decode(ctx, strip, anchor) {
           h: cellH * CELL_SAMPLE,
         };
         const raw = _avgColor(ctx, roi);
-        indices.push(_nearestPalette(applyCalib(raw, matrix)));
+        indices.push(useCalib
+          ? _nearestWithCalib(raw, realPalette)
+          : _nearestPalette(applyCalib(raw, matrix)));
       }
     }
   }

@@ -190,7 +190,11 @@ export function guidToShortId(guid, version = 'v1') {
 export const BASE_IMG_URL = '/icons/hondi-base-hond.png';
 export const BASE_IMG_W = 680, BASE_IMG_H = 542;
 export const STRIP_X = 705, STRIP_Y = 15, STRIP_W = 65, STRIP_H = 512;
-export const CANVAS_W = 785, CANVAS_H = 542;
+// ── 캘리브레이션 패치 (색상 막대 아래, 9색을 가로로 배열) ──
+export const PATCH_Y      = STRIP_Y + STRIP_H + 15;  // 542
+export const PATCH_H      = 65;                        // 정사각형 (STRIP_W와 동일)
+export const PATCH_START_X= 120;                       // 705 - 65×9
+export const CANVAS_W = 785, CANVAS_H = PATCH_Y + PATCH_H + 10;  // 622
 const ROWS = 10;
 const CELL_H = STRIP_H / ROWS;   // 51.2
 
@@ -244,6 +248,25 @@ export async function generateHondiCodeCanvas(shortId, version = 'v1') {
       ctx.strokeRect(STRIP_X, y, STRIP_W, CELL_H);
     }
   }
+
+  // ── 캘리브레이션 패치: 9색을 PATCH_Y에 가로로 배열 ──
+  // 스캐너가 이 패치를 읽어 실제 카메라 환경의 색상값을 측정한다.
+  const patchBorder = 1.5;
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.lineWidth = patchBorder;
+  PALETTE.forEach((c, i) => {
+    const px = PATCH_START_X + i * STRIP_W;
+    ctx.fillStyle = `rgb(${c.r},${c.g},${c.b})`;
+    ctx.fillRect(px, PATCH_Y, STRIP_W, PATCH_H);
+    ctx.strokeRect(px, PATCH_Y, STRIP_W, PATCH_H);
+  });
+  // 패치 영역 라벨 (작은 텍스트)
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(PATCH_START_X, PATCH_Y + PATCH_H + 2, STRIP_W * 9, 8);
+  ctx.fillStyle = '#fff';
+  ctx.font = '7px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('CALIB', PATCH_START_X + (STRIP_W * 9) / 2, PATCH_Y + PATCH_H + 8);
 
   return canvas;
 }
