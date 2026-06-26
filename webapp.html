@@ -48,6 +48,7 @@
 })();
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="혼디">
@@ -969,11 +970,11 @@ select.setting-field{appearance:none;-webkit-appearance:none;
 <div class="install-banner" id="install-banner">
   <div class="install-banner-icon"><img src="/icons/icon-192.png" alt="혼디"></div>
   <div class="install-banner-text">
-    <div class="install-banner-title">혼디 앱 설치</div>
-    <div class="install-banner-sub">홈 화면에 추가하면<br>주소창 없이 바로 실행됩니다</div>
+    <div class="install-banner-title">📲 혼디 앱으로 설치</div>
+    <div class="install-banner-sub">설치하면 카메라·위치가 자동 허용되고<br>주소창 없이 앱처럼 실행됩니다</div>
   </div>
   <div class="install-banner-actions">
-    <button class="install-btn install-btn-primary" onclick="installPWA()">설치</button>
+    <button class="install-btn install-btn-primary" onclick="installPWAWithPermission()">설치</button>
     <button class="install-btn install-btn-dismiss" onclick="dismissInstall()">나중에</button>
   </div>
 </div>
@@ -981,14 +982,26 @@ select.setting-field{appearance:none;-webkit-appearance:none;
 <div class="install-banner" id="ios-install-banner">
   <div class="install-banner-icon"><img src="/icons/icon-192.png" alt="혼디"></div>
   <div class="install-banner-text">
-    <div class="install-banner-title">홈 화면에 추가</div>
+    <div class="install-banner-title">📲 혼디 앱으로 설치</div>
     <div class="install-banner-sub" id="ios-install-text">
-      Safari 하단 <strong style="color:var(--green)">공유 버튼 →</strong>
+      하단 <strong style="color:var(--green)">공유 버튼</strong> →
       <strong style="color:var(--green)">홈 화면에 추가</strong>
     </div>
   </div>
   <div class="install-banner-actions">
     <button class="install-btn install-btn-dismiss" onclick="dismissIOSInstall()">확인</button>
+  </div>
+</div>
+
+<!-- ── Android 수동 설치 안내 (beforeinstallprompt 미지원 브라우저) ── -->
+<div class="install-banner" id="manual-install-banner" style="display:none">
+  <div class="install-banner-icon"><img src="/icons/icon-192.png" alt="혼디"></div>
+  <div class="install-banner-text">
+    <div class="install-banner-title">📲 혼디 앱으로 설치</div>
+    <div class="install-banner-sub">브라우저 메뉴 → <strong style="color:var(--green)">홈 화면에 추가</strong></div>
+  </div>
+  <div class="install-banner-actions">
+    <button class="install-btn install-btn-dismiss" onclick="dismissInstall()">확인</button>
   </div>
 </div>
 
@@ -1309,8 +1322,11 @@ select.setting-field{appearance:none;-webkit-appearance:none;
               </div>
             </div>
             <div id="gopang-id-register-box" style="padding:14px 16px;border-top:1px solid #f2f2f7">
-              <input class="setting-field" id="gopang-id-input" type="text" maxlength="20"
-                placeholder="휴대폰 뒷 8자리" type="tel" maxlength="8" inputmode="numeric" style="margin-bottom:10px">
+              <input class="setting-field" id="gopang-id-input" type="tel" maxlength="8"
+                placeholder="휴대폰 뒷 8자리" inputmode="numeric" style="margin-bottom:10px"
+                readonly
+                onfocus="this.removeAttribute('readonly')"
+                onblur="setTimeout(()=>this.setAttribute('readonly',''),100)">
               <button id="gopang-id-register-btn" onclick="_settingsRegisterHandle()"
                 style="width:100%;padding:13px;border-radius:10px;background:#16a34a;
                        color:#fff;border:none;font-size:15px;font-weight:600;
@@ -1518,14 +1534,15 @@ select.setting-field{appearance:none;-webkit-appearance:none;
         <div class="settings-block-label"><i class="ti ti-apps" aria-hidden="true"></i><span id="setting-label-cache">앱 관리</span></div>
         <div style="padding:0 16px">
           <div class="settings-card">
-            <div class="settings-card-row" id="btn-create-shortcut" onclick="requestInstall()" style="cursor:pointer">
+            <div class="settings-card-row" id="btn-create-shortcut" onclick="installPWAWithPermission()" style="cursor:pointer">
               <span class="settings-card-row-label" style="display:flex;align-items:center;gap:8px">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 2v13M7 11l5 5 5-5"/><path d="M3 19h18"/>
-                </svg>
-                <span>홈 화면에 바로가기 만들기</span>
+                <i class="ti ti-device-mobile-down" aria-hidden="true" style="font-size:17px;color:#1050DC;width:20px;text-align:center"></i>
+                <span id="label-pwa-install">앱으로 설치 (PWA)</span>
               </span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div style="padding:0 4px 8px;font-size:11px;color:var(--txt3);line-height:1.6">
+              설치하면 카메라·마이크·위치가 자동 허용되고 주소창 없이 앱처럼 실행됩니다
             </div>
             <div class="settings-card-row" id="btn-force-update" onclick="forceUpdateApp(this)" style="cursor:pointer">
               <span class="settings-card-row-label" style="display:flex;align-items:center;gap:8px">
@@ -2975,6 +2992,46 @@ window.hsTakePhoto = function () {
 };
 </script>
 
+
+<script>
+// ── 설정 드로어 스크롤 중 키패드 방지 ──
+(function() {
+  function preventScrollFocus() {
+    const drawer = document.querySelector('.settings-drawer');
+    if (!drawer) return;
+    let isScrolling = false;
+    let scrollTimer = null;
+
+    drawer.addEventListener('scroll', function() {
+      isScrolling = true;
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(function() {
+        isScrolling = false;
+      }, 150);
+    }, { passive: true });
+
+    // 스크롤 중 input focus 차단
+    drawer.addEventListener('touchstart', function(e) {
+      if (isScrolling) {
+        const target = e.target;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+          e.preventDefault();
+        }
+      }
+    }, { passive: false });
+  }
+
+  // 설정 패널 열릴 때마다 적용
+  document.addEventListener('DOMContentLoaded', function() {
+    preventScrollFocus();
+    // 동적으로 생성되는 경우 대비
+    const observer = new MutationObserver(function() {
+      preventScrollFocus();
+    });
+    observer.observe(document.body, { childList: true, subtree: false });
+  });
+})();
+</script>
 </body>
 </html>
 
