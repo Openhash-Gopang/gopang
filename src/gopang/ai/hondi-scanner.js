@@ -31,8 +31,8 @@ const LOCK_FRAMES   = 3;
 const ROWS          = 10;
 
 // 색상 막대 탐지 파라미터
-const SAT_THRESHOLD  = 80;   // 고채도 판정 (max-min > 이 값)
-const COL_VIVID_RATIO= 0.25; // 열의 25% 이상이 고채도면 막대 열 후보
+const SAT_THRESHOLD  = 60;   // 고채도 판정 (완화: 모니터 카메라 환경)
+const COL_VIVID_RATIO= 0.15; // 열의 15% 이상이 고채도면 막대 열 후보 (완화)
 const MIN_STRIP_RATIO= 3.0;  // 막대의 최소 세로/가로 비율
 const MIN_STRIP_W_RATIO = 0.01; // 막대 너비 최소 (이미지 너비의 1%)
 const MAX_STRIP_W_RATIO = 0.15; // 막대 너비 최대 (이미지 너비의 15%)
@@ -161,8 +161,8 @@ function _detectAnchors(ctx, W, H) {
   let blueCnt = 0, redCnt = 0;
   for (let i = 0; i < data.length; i += 4) {
     const r=data[i], g=data[i+1], b=data[i+2];
-    if (b>100 && r<110 && g<110 && b-Math.max(r,g)>40) blueCnt++;
-    if (r>100 && g<50  && b<110 && r-Math.max(g,b)>40) redCnt++;
+    if (b>80 && b-Math.max(r,g)>30) blueCnt++;   // 완화: 모니터 과노출 대응
+    if (r>100 && g<80  && b<130 && r-Math.max(g,b)>30) redCnt++;
   }
   if (blueCnt < MIN_ANCHOR_PX || redCnt < MIN_ANCHOR_PX) return null;
 
@@ -171,8 +171,8 @@ function _detectAnchors(ctx, W, H) {
   for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
     const i=(y*W+x)*4;
     const r=data[i],g=data[i+1],b=data[i+2];
-    if (b>100&&r<110&&g<110&&b-Math.max(r,g)>40) { bx+=x; by+=y; }
-    if (r>100&&g<50 &&b<110&&r-Math.max(g,b)>40) { rx+=x; ry+=y; }
+    if (b>80&&b-Math.max(r,g)>30) { bx+=x; by+=y; }
+    if (r>100&&g<80&&b<130&&r-Math.max(g,b)>30) { rx+=x; ry+=y; }
   }
   bx/=blueCnt; by/=blueCnt; rx/=redCnt; ry/=redCnt;
   const unit = Math.sqrt((rx-bx)**2+(ry-by)**2);
