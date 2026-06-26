@@ -3952,6 +3952,8 @@ async function handleDefaultKeyGet(request, env, corsHeaders) {
 // 관리자 토큰 검증 — HMAC-SHA256(timestamp, GOPANG_MASTER_KEY)
 // desktop.html에서 생성한 토큰: {ts}.{hmac}
 // GET /admin/stats?token=... — L1 PocketBase profiles 통계 프록시
+// l1-hanlim.hondi.net은 SSL 인증서 없음 → HTTP + 포트 직접 접근
+const L1_HTTP = 'http://168.110.123.175:8091';
 async function handleAdminStats(request, env, corsHeaders) {
   const url = new URL(request.url);
   const token = url.searchParams.get('token');
@@ -3960,7 +3962,7 @@ async function handleAdminStats(request, env, corsHeaders) {
   if (!isValid) return new Response(JSON.stringify({error:'INVALID_TOKEN'}), {status:403, headers:corsHeaders});
 
   try {
-    const l1Base = L1_DEFAULT + '/api/collections/profiles/records';
+    const l1Base = L1_HTTP + '/api/collections/profiles/records';
     const [r1, r2] = await Promise.all([
       fetch(`${l1Base}?perPage=1`, {signal: AbortSignal.timeout(6000)}),
       fetch(`${l1Base}?perPage=500&sort=-created`, {signal: AbortSignal.timeout(8000)})
