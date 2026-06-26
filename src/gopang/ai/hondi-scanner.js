@@ -448,7 +448,10 @@ function _status(msg){_onStatus?.(msg);}
 // ── L1 프로필 조회 ───────────────────────────────────────────
 export async function lookupProfile(shortId, version) {
   const sid=shortId.toString();
-  const LOCAL={'2577410713':{guid:'hondi-ai',handle:'hondi',name:'혼디',url:'/profiles/5zvxrthQVkz.html'}};
+  const LOCAL={
+    '2577410713':{guid:'hondi-ai',handle:'hondi',name:'혼디',url:'/profiles/5zvxrthQVkz.html'},
+    '2537012854':{guid:'hondi-ai',handle:'hondi',name:'혼디',url:'/profiles/2537012854.html'},
+  };
   if(LOCAL[sid]) return LOCAL[sid];
   try{
     const base=L1_URL.replace('/api/collections/profiles/records','');
