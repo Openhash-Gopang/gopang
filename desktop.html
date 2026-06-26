@@ -2543,11 +2543,17 @@ async function _createCFRecord(sub) {
   status.textContent=`⏳ ${sub}.hondi.net 추가 중...`;
   status.style.color='#92400e';
   try {
-    const body=JSON.stringify({type:'CNAME',name:sub,content:cred.target||'openhash-gopang.github.io',ttl:1,proxied:false});
-    const res=await fetch(
-      `https://api.cloudflare.com/client/v4/zones/${cred.zoneId}/dns_records`,
-      { method:'POST', headers:{'X-Auth-Email':cred.email,'X-Auth-Key':cred.apiKey,'Content-Type':'application/json'}, body }
-    );
+    // api.cloudflare.com CORS 차단 → Worker 프록시 경유
+    const token=await _buildAdminToken();
+    const res=await fetch(`${WORKER_URL}/admin/cf-dns`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        token, apiKey:cred.apiKey, email:cred.email,
+        zoneId:cred.zoneId, name:sub,
+        content:cred.target||'openhash-gopang.github.io'
+      })
+    });
     const data=await res.json();
     if(data.success){
       const subs=_getSubdomains();
