@@ -187,15 +187,75 @@ function _analyzeFrame(ctx, W, H) {
   const shortId  = indicesToId(indices);
 
   // v2.3: 진단용 — 모든 칸이 흑색(8)으로만 읽히면(캘리브레이션이 완전히
-  // 빗나간 전형적 증상) 측정값을 콘솔에 남긴다. 개발자 도구(F12) 또는
-  // chrome://inspect(폰 원격 디버깅)에서 확인 가능.
+  // 빗나간 전형적 증상) 측정값을 남긴다. USB 원격 디버깅이 안 되는 환경을
+  // 위해 콘솔 로그뿐 아니라 폰 화면에도 직접 표시(+클립보드 복사 버튼)한다 —
+  // 복사한 내용을 카카오톡 메모/문자 등으로 PC에 보내 확인할 수 있다.
   if (indices.every(i => i === 8)) {
-    console.warn('[혼디스캐너] 전체 흑색 디코딩 감지 — 캘리브레이션 측정값:', {
-      calib, matrix, roi: fullRoi, mode: roi.mode,
-    });
+    const debugInfo = { calib, matrix, roi: fullRoi, mode: roi.mode, ua: navigator.userAgent };
+    console.warn('[혼디스캐너] 전체 흑색 디코딩 감지 — 캘리브레이션 측정값:', debugInfo);
+    _showDebugDump(debugInfo);
   }
 
   return { shortId, version, roi: fullRoi };
+}
+
+// ── 진단 정보를 화면에 직접 표시 (+ 클립보드 복사) ────────────
+// USB/chrome://inspect 원격 디버깅이 안 되는 환경에서도, 폰 화면에 뜬
+// 내용을 그대로 복사해 다른 메신저나 메모 앱으로 PC에 전달할 수 있다.
+function _showDebugDump(data) {
+  try {
+    let el = document.getElementById('hs-debug-dump');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'hs-debug-dump';
+      el.style.cssText = [
+        'position:fixed', 'left:10px', 'right:10px', 'bottom:10px', 'z-index:999999',
+        'background:#111', 'color:#7CFC8A', 'font:11px/1.45 monospace',
+        'padding:12px 14px', 'border-radius:12px', 'max-height:42vh', 'overflow:auto',
+        'box-shadow:0 8px 28px rgba(0,0,0,.5)',
+      ].join(';');
+      document.body.appendChild(el);
+    }
+    el.innerHTML = '';
+
+    const title = document.createElement('div');
+    title.textContent = '🩺 혼디 스캐너 진단 정보 (전체 흑색 오인식)';
+    title.style.cssText = 'color:#fff;font-weight:bold;margin-bottom:8px;';
+
+    const text = JSON.stringify(data, (k, v) => (typeof v === 'bigint' ? v.toString() : v), 2);
+    const pre = document.createElement('pre');
+    pre.style.cssText = 'margin:0 0 10px;white-space:pre-wrap;word-break:break-all;';
+    pre.textContent = text;
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:8px;';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = '📋 복사하기';
+    copyBtn.style.cssText = 'flex:1;padding:9px;border-radius:9px;border:none;background:#7CFC8A;color:#102010;font-weight:bold;font-size:13px;';
+    copyBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = '✅ 복사됨! 카톡/메모에 붙여넣기 하세요';
+        setTimeout(() => { copyBtn.textContent = '📋 복사하기'; }, 2200);
+      } catch (e) {
+        copyBtn.textContent = '❌ 복사 실패: ' + e.message;
+      }
+    };
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '닫기';
+    closeBtn.style.cssText = 'padding:9px 16px;border-radius:9px;border:none;background:#333;color:#fff;font-size:13px;';
+    closeBtn.onclick = () => el.remove();
+
+    btnRow.appendChild(copyBtn);
+    btnRow.appendChild(closeBtn);
+    el.appendChild(title);
+    el.appendChild(pre);
+    el.appendChild(btnRow);
+  } catch (e) {
+    console.error('[혼디스캐너] 디버그 표시 실패:', e);
+  }
 }
 
 // ── 썸네일 생성 ───────────────────────────────────────────────
