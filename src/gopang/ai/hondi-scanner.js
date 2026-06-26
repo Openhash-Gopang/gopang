@@ -465,8 +465,13 @@ function _showDebugDump(data) {
 
 // ── 픽셀 유틸 ────────────────────────────────────────────────
 function _avgColor(ctx,{x,y,w,h}){
-  const ix=Math.round(x),iy=Math.round(y);
-  const iw=Math.max(1,Math.round(w)),ih=Math.max(1,Math.round(h));
+  // 캔버스 경계 클램핑 — 화면 밖 좌표는 getImageData가 (0,0,0,0)을
+  // 반환해 bg=(0,0,0)처럼 잘못 측정되는 것을 방지한다.
+  const cw=ctx.canvas.width, ch=ctx.canvas.height;
+  const ix=Math.max(0,Math.min(cw-1,Math.round(x)));
+  const iy=Math.max(0,Math.min(ch-1,Math.round(y)));
+  const iw=Math.max(1,Math.min(cw-ix,Math.round(w)));
+  const ih=Math.max(1,Math.min(ch-iy,Math.round(h)));
   const d=ctx.getImageData(ix,iy,iw,ih).data;
   let r=0,g=0,b=0,n=0;
   for(let i=0;i<d.length;i+=4){r+=d[i];g+=d[i+1];b+=d[i+2];n++;}

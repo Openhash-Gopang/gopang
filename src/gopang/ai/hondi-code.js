@@ -73,9 +73,21 @@ export function detectVersion(dSamples) {
 // 보정 계수를 채널별로 산출하여 데이터 픽셀에 적용
 export function buildCalibMatrix(measured) {
   // measured: { bg, hih, ho, n }
+  //
+  // G채널 보정 기준: 배경(bg) 흰색의 G채널을 사용한다.
+  // 단, bg 샘플이 (0,0,0) 또는 어두운 영역을 가리킬 경우
+  // (ROI가 화면 밖이거나 검정 배경) gScale이 255로 치솟아
+  // 모든 픽셀의 G채널을 포화시키는 치명적 오류가 발생한다.
+  //
+  // Fallback 전략: bg.g < 30이면 bg를 신뢰하지 않고
+  // 대신 "hih(파랑)의 R/G/B 비율"을 활용해 gScale을 추정한다.
+  //   파랑(0,0,220) 기준: 측정된 hih의 R·G 채널은 거의 0이어야 하므로,
+  //   hih.g ≈ 0 → G 보정 없이 1.0 사용 (보수적 기본값).
+  //   이 경우 gScale=1.0 → G채널 보정 생략 (색상 인식은 R·B로 충분).
+  const bg_g = measured.bg.g > 30 ? measured.bg.g : 255;
   return {
     rScale: CALIB_REF.ho.r  / Math.max(1, measured.ho.r),
-    gScale: CALIB_REF.bg.g  / Math.max(1, measured.bg.g),
+    gScale: CALIB_REF.bg.g  / Math.max(1, bg_g),
     bScale: CALIB_REF.hih.b / Math.max(1, measured.hih.b),
     darkOffset: measured.n.r,  // 암부 오프셋
   };
