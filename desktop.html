@@ -2467,12 +2467,28 @@ async function _saveAllKeys() {
 // JSON 전송: 문자열 직렬화 (개행문자 없게)
 // ══════════════════════════════════════════════════════════════
 
+// CF 기본값 — localStorage 없을 때 자동 채움
+const CF_DEFAULTS = {
+  email:  'Tensor.city@gmail.com',
+  zoneId: 'fd842cd737258a783e510e06fafbb07e',
+  target: 'openhash-gopang.github.io',
+};
+
 function _loadCFCredentials() {
   const s=JSON.parse(localStorage.getItem(LS_CF_CRED)||'{}');
-  if(s.apiKey) document.getElementById('cf-api-key').value =s.apiKey;
-  if(s.email)  document.getElementById('cf-email').value   =s.email;
-  if(s.zoneId) document.getElementById('cf-zone-id').value =s.zoneId;
-  if(s.target) document.getElementById('cf-target').value  =s.target;
+  // localStorage 값 우선, 없으면 기본값
+  document.getElementById('cf-api-key').value = s.apiKey  || '';
+  document.getElementById('cf-email').value   = s.email   || CF_DEFAULTS.email;
+  document.getElementById('cf-zone-id').value = s.zoneId  || CF_DEFAULTS.zoneId;
+  document.getElementById('cf-target').value  = s.target  || CF_DEFAULTS.target;
+  // email/zoneId가 기본값으로 채워진 경우 localStorage에도 저장
+  if(!s.email || !s.zoneId) {
+    const merged = {
+      apiKey: s.apiKey||'', email: CF_DEFAULTS.email,
+      zoneId: CF_DEFAULTS.zoneId, target: CF_DEFAULTS.target
+    };
+    localStorage.setItem(LS_CF_CRED, JSON.stringify(merged));
+  }
 }
 
 function _saveCFCredentials() {
