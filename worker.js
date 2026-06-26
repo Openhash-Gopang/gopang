@@ -198,6 +198,18 @@ async function _l1FindProfileByGuid(env, guid) {
   return data.items?.[0] || null;
 }
 
+// L1 profiles 컬렉션에서 handle로 레코드 조회 — 관리자 일괄삭제에서 @handle 입력을 guid로 환산할 때 사용
+async function _l1FindProfileByHandle(env, handle) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`handle='${handle}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`L1 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
 // L1 profiles 레코드 PATCH (Admin 토큰 필요 — Update rule이 Admins only이므로)
 async function _l1PatchProfile(env, recordId, patch) {
   const token = await _l1AdminToken(env);
@@ -430,6 +442,10 @@ export default {
     // POST /admin/cf-dns — Cloudflare DNS CNAME 추가 (CORS 우회 프록시)
     if (pathname === '/admin/cf-dns' && request.method === 'POST')
       return handleAdminCfDns(request, env, corsHeaders);
+
+    // POST /admin/users/bulk-delete — 관리자 일괄 삭제 (L1 + Supabase 9개 테이블 + KV)
+    if (pathname === '/admin/users/bulk-delete' && request.method === 'POST')
+      return handleAdminBulkDelete(request, env, corsHeaders);
 
     // ── 디폴트 LLM 키 관리 ──────────────────────────────────────
     // POST /admin/default-key  — 관리자가 KV에 저장 (HMAC 인증)
@@ -1763,6 +1779,18 @@ async function handleAccountFullReset(request, env, corsHeaders) {
     if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
   }
 
+  const results = await _deleteAllUserData(env, guid, l1Record);
+
+  console.info('[FullReset] 삭제 완료 | guid:', guid.slice(0, 16), '| 결과:', JSON.stringify(results));
+  return new Response(JSON.stringify({ ok: true, deleted: true, results }), { status: 200, headers: corsHeaders });
+}
+
+// ── 사용자 1명의 모든 서버측 데이터 삭제 (L1 + Supabase 9개 테이블 + KV) ──────
+// handleAccountFullReset(본인 요청)과 handleAdminBulkDelete(관리자 요청)이 공용으로 호출.
+// ⚠️ 호출 전 전제조건: user_profiles.casts_for(그림자 FK)가 이 guid를 가리키는 row가
+//    남아있으면 2번 단계(user_profiles 삭제)가 FK 위반으로 실패한다 — 호출자가 먼저
+//    그림자 정리를 끝내야 한다(handleAdminBulkDelete의 ① casts_for 일괄 정리 참고).
+async function _deleteAllUserData(env, guid, l1Record) {
   const results = {};
   const sbSvcH  = _sbServiceHeaders(env);
 
@@ -1855,8 +1883,86 @@ async function handleAccountFullReset(request, env, corsHeaders) {
     } catch (e) { results.kv_ai_seal = 'error:' + e.message; }
   }
 
-  console.info('[FullReset] 삭제 완료 | guid:', guid.slice(0, 16), '| 결과:', JSON.stringify(results));
-  return new Response(JSON.stringify({ ok: true, deleted: true, results }), { status: 200, headers: corsHeaders });
+  return results;
+}
+
+// ═══════════════════════════════════════════════════════════
+// POST /admin/users/bulk-delete — 관리자 일괄 삭제 (desktop.html 관리자 대시보드 전용)
+// body: { admin_token, identifiers: ['@KR-12345678', '2601:db80:...', ...] }
+// identifiers: '@'로 시작하면 handle로 보고 L1에서 guid를 조회, 아니면 그 값을 guid로 간주.
+// 절차:
+//   ① 식별자 → guid 해석 (handle인 경우 L1 조회)
+//   ② casts_for(그림자) 일괄 정리 — 대상 guid를 본체로 둔 그림자 row를 먼저 지워야
+//      2번 단계(user_profiles 삭제)가 자기참조 FK 위반으로 막히지 않는다.
+//   ③ guid별 _deleteAllUserData()로 L1 + Supabase 9개 테이블 + KV 삭제
+// 본인 서명(Ed25519) 검증 없음 — 관리자 HMAC 토큰(_verifyAdminToken)으로만 인증.
+// 1회 호출당 최대 100개 — 그 이상은 여러 번에 나눠 호출할 것.
+// ═══════════════════════════════════════════════════════════
+async function handleAdminBulkDelete(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { admin_token, identifiers } = body;
+  if (!admin_token) return _err(401, 'MISSING_TOKEN', 'admin_token 필수', corsHeaders);
+  const isValid = await _verifyAdminToken(env, admin_token);
+  if (!isValid) return _err(403, 'INVALID_TOKEN', '관리자 인증 실패', corsHeaders);
+
+  if (!Array.isArray(identifiers) || identifiers.length === 0)
+    return _err(400, 'MISSING_FIELD', 'identifiers(배열) 필수', corsHeaders);
+  if (identifiers.length > 100)
+    return _err(400, 'TOO_MANY', '한 번에 최대 100개까지 삭제할 수 있습니다', corsHeaders);
+
+  const sbSvcH   = _sbServiceHeaders(env);
+  const perItem  = {};
+
+  // ① 식별자 → guid 해석
+  const resolved = [];
+  for (const raw of identifiers) {
+    const id = (raw || '').trim();
+    if (!id) continue;
+    try {
+      if (id.startsWith('@')) {
+        const profile = await _l1FindProfileByHandle(env, id.slice(1));
+        if (!profile) { perItem[id] = { error: 'handle_not_found' }; continue; }
+        resolved.push({ key: id, guid: profile.guid });
+      } else {
+        resolved.push({ key: id, guid: id });
+      }
+    } catch (e) { perItem[id] = { error: 'resolve_failed:' + e.message }; }
+  }
+
+  if (!resolved.length) {
+    return new Response(JSON.stringify({ ok: true, count: 0, results: perItem }),
+      { status: 200, headers: corsHeaders });
+  }
+
+  // ② 그림자(casts_for) 일괄 정리 — 본체들 삭제 전에 먼저 처리
+  let shadowCleanup = 'skipped';
+  try {
+    const filter = resolved.map(r => encodeURIComponent(r.guid)).join(',');
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_profiles?casts_for=in.(${filter})`,
+      { method: 'DELETE', headers: sbSvcH }
+    );
+    shadowCleanup = r.ok ? 'deleted' : `error:${r.status}`;
+  } catch (e) { shadowCleanup = 'error:' + e.message; }
+
+  // ③ guid별 전체 삭제
+  for (const { key, guid } of resolved) {
+    let l1Record = null;
+    try {
+      l1Record = await _l1FindProfileByGuid(env, guid);
+    } catch (e) {
+      perItem[key] = { l1_profiles: 'error:' + e.message };
+      continue;
+    }
+    perItem[key] = await _deleteAllUserData(env, guid, l1Record);
+  }
+
+  console.info('[AdminBulkDelete] 완료 | 대상:', identifiers.length, '| shadow_cleanup:', shadowCleanup);
+  return new Response(JSON.stringify({
+    ok: true, count: resolved.length, shadow_cleanup: shadowCleanup, results: perItem,
+  }), { status: 200, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
