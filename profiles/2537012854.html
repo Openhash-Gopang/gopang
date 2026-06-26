@@ -146,6 +146,7 @@ async function send() {
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         provider:'deepseek',
+        model:'deepseek-v4-flash',
         system: SP,
         messages: hist,
         max_tokens: 300,

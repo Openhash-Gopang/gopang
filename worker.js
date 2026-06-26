@@ -54,7 +54,7 @@ const DEEPSEEK_URL   = 'https://api.deepseek.com/v1/chat/completions';
 // 클라이언트가 OR 키로 직접 OR에 접속하는 것과 별개.
 // env.OPENROUTER_API_KEY = wrangler secret put OPENROUTER_API_KEY 로 등록.
 const OR_URL         = 'https://openrouter.ai/api/v1/chat/completions';
-const OR_MODEL_FAST  = 'deepseek/deepseek-chat-v3-0324:free'; // 내부용 경량 모델
+const OR_MODEL_FAST  = 'deepseek/deepseek-v4-flash:free'; // 내부용 경량 모델 (v4-flash)
 const OR_MODEL_THINK = 'deepseek/deepseek-r1:free';           // 추론 필요 시
 const KAKAO_BASE     = 'https://dapi.kakao.com/v2/local/geo/coord2address.json';
 const OPENAI_MODEL   = 'gpt-4o-mini';
@@ -1950,7 +1950,7 @@ async function handleAiSetupGet(request, env, corsHeaders, guid) {
   const rows = await res.json().catch(() => []);
   if (!rows.length) {
     return new Response(JSON.stringify({
-      ai_active: false, provider: 'deepseek', model: 'deepseek-chat',
+      ai_active: false, provider: 'deepseek', model: 'deepseek-v4-flash',
       has_key: false, custom_prompt: '',
     }), { status: 200, headers: corsHeaders });
   }
@@ -2967,7 +2967,7 @@ async function handleAiSetupPost(request, env, corsHeaders) {
   }
 
   const {
-    provider = 'deepseek', model = 'deepseek-chat',
+    provider = 'deepseek', model = 'deepseek-v4-flash',
     ai_active = false, api_key,
     custom_prompt = '', welcome_message = '',
     off_hours_message = '', endpoint = '',
