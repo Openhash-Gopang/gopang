@@ -354,3 +354,59 @@ window._requestInstall = requestInstall;
 let _mpFaceLandmarker = null;
 let _mpLoading        = false;
 
+// ── PWA 설치 후 권한 자동 요청 ─────────────────────────────
+// ?pwa=1 파라미터로 진입하거나 standalone 모드일 때 즉시 요청
+async function _requestPWAPermissions() {
+  const results = {};
+  // 카메라
+  try {
+    const cam = await navigator.permissions.query({ name: 'camera' });
+    if (cam.state === 'prompt') {
+      const s = await navigator.mediaDevices.getUserMedia({ video: true });
+      s.getTracks().forEach(t => t.stop());
+      results.camera = 'granted';
+    } else { results.camera = cam.state; }
+  } catch(e) { results.camera = 'denied'; }
+
+  // 마이크
+  try {
+    const mic = await navigator.permissions.query({ name: 'microphone' });
+    if (mic.state === 'prompt') {
+      const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+      s.getTracks().forEach(t => t.stop());
+      results.microphone = 'granted';
+    } else { results.microphone = mic.state; }
+  } catch(e) { results.microphone = 'denied'; }
+
+  // 위치
+  try {
+    const geo = await navigator.permissions.query({ name: 'geolocation' });
+    if (geo.state === 'prompt') {
+      await new Promise((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 })
+      );
+      results.geolocation = 'granted';
+    } else { results.geolocation = geo.state; }
+  } catch(e) { results.geolocation = 'denied/timeout'; }
+
+  console.info('[PWA] 권한 요청 결과:', results);
+  localStorage.setItem('hondi_perm_requested', '1');
+  return results;
+}
+
+// 진입 시 자동 실행
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(location.search);
+  const isPWA  = _isInStandaloneMode() || params.get('pwa') === '1';
+  const alreadyAsked = localStorage.getItem('hondi_perm_requested');
+
+  if (isPWA && !alreadyAsked) {
+    // 약간의 지연 후 요청 (UI 완전 로드 후)
+    setTimeout(_requestPWAPermissions, 1500);
+  }
+
+  // ?scan=1 — 스캐너 바로 열기
+  if (params.get('scan') === '1') {
+    setTimeout(() => window.openHondiScanner?.(), 2000);
+  }
+});

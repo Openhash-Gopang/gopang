@@ -1,19 +1,24 @@
 {
-  "name": "혼디 — AI 비서",
+  "name": "혼디 (Hondi)",
   "short_name": "혼디",
-  "description": "혼디(Hondi) AI 법률·의료·생활 비서. 귀하의 모든 일상과 업무를 함께합니다.",
-  "start_url": "/",
+  "description": "혼디 AI 시민 플랫폼 — 카메라로 혼디 코드를 스캔하고 AI 비서와 대화하세요.",
+  "start_url": "/webapp.html?pwa=1",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "theme_color": "#1050DC",
   "lang": "ko",
   "dir": "ltr",
   "categories": [
     "productivity",
     "utilities",
     "lifestyle"
+  ],
+  "permissions": [
+    "camera",
+    "microphone",
+    "geolocation"
   ],
   "icons": [
     {
@@ -47,7 +52,7 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "혼디 AI 비서 홈"
+      "label": "혼디 AI 비서 — 카메라 스캔"
     }
   ],
   "shortcuts": [
@@ -55,7 +60,19 @@
       "name": "AI 비서 시작",
       "short_name": "AI",
       "description": "AI 비서를 바로 시작합니다",
-      "url": "/?ai=1",
+      "url": "/webapp.html?ai=1",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "혼디 코드 스캔",
+      "short_name": "스캔",
+      "description": "카메라로 혼디 코드를 스캔합니다",
+      "url": "/webapp.html?scan=1",
       "icons": [
         {
           "src": "/icons/icon-192.png",
@@ -64,5 +81,6 @@
       ]
     }
   ],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "handle_links": "preferred"
 }
