@@ -12,9 +12,13 @@ import { requestPushSubscription } from '../services/push.js';
 import { guidToShortId, generateHondiCodeDataURL } from '../ai/hondi-code.js';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ⚠️  DEV MODE — 프로덕션 배포 전 반드시 false로 변경
+// ⚠️  DEV MODE — 정식 운영 전환: false로 복원 (2026-06-27)
+//     - 가입자마다 _e164ToIPv6()로 고유 GUID 생성 (handle만으로 dev 합류 안 됨)
+//     - _issueSession() Ed25519 서명 검증 정상 작동
+//     - 기기 불일치 시 강제 통과 대신 백업 키 복구 폼(_showDeviceMismatchNotice) 노출
+//     다시 개발 모드가 필요하면 이 값만 true로 되돌리면 된다.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const DEV_MODE = true;
+const DEV_MODE = false;
 
 // DEV_MODE: _issueSession 서명 검증 우회 → 항상 ok
 // DEV_MODE: initAuth / initAuthWithPhone → handle만 있으면 즉시 로그인
