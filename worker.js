@@ -423,6 +423,10 @@ export default {
     if (pathname === '/admin/login' && request.method === 'POST')
       return handleAdminLogin(request, env, corsHeaders);
 
+    // GET /admin/stats — 대시보드 통계 (HMAC 인증, L1 PocketBase 프록시)
+    if (pathname === '/admin/stats' && request.method === 'GET')
+      return handleAdminStats(request, env, corsHeaders);
+
     // ── 디폴트 LLM 키 관리 ──────────────────────────────────────
     // POST /admin/default-key  — 관리자가 KV에 저장 (HMAC 인증)
     // GET  /default-key        — 앱이 체험기간 확인 후 키 수신
@@ -3947,6 +3951,30 @@ async function handleDefaultKeyGet(request, env, corsHeaders) {
 
 // 관리자 토큰 검증 — HMAC-SHA256(timestamp, GOPANG_MASTER_KEY)
 // desktop.html에서 생성한 토큰: {ts}.{hmac}
+// GET /admin/stats?token=... — L1 PocketBase profiles 통계 프록시
+async function handleAdminStats(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const token = url.searchParams.get('token');
+  if (!token) return new Response(JSON.stringify({error:'MISSING_TOKEN'}), {status:401, headers:corsHeaders});
+  const isValid = await _verifyAdminToken(env, token);
+  if (!isValid) return new Response(JSON.stringify({error:'INVALID_TOKEN'}), {status:403, headers:corsHeaders});
+
+  try {
+    const l1Base = L1_DEFAULT + '/api/collections/profiles/records';
+    const [r1, r2] = await Promise.all([
+      fetch(`${l1Base}?perPage=1`, {signal: AbortSignal.timeout(6000)}),
+      fetch(`${l1Base}?perPage=500&sort=-created`, {signal: AbortSignal.timeout(8000)})
+    ]);
+    const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+    return new Response(JSON.stringify({
+      total: d1.totalItems ?? 0,
+      items: (d2.items || []).map(u => ({created: u.created}))
+    }), {status:200, headers:{...corsHeaders,'Content-Type':'application/json'}});
+  } catch(e) {
+    return new Response(JSON.stringify({error: e.message}), {status:502, headers:corsHeaders});
+  }
+}
+
 async function _verifyAdminToken(env, token) {
   try {
     const [tsStr, hmacHex] = token.split('.');
