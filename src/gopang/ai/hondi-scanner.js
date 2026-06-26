@@ -186,6 +186,15 @@ function _analyzeFrame(ctx, W, H) {
   const indices  = _extractIndices(ctx, fullRoi.i, version, matrix);
   const shortId  = indicesToId(indices);
 
+  // v2.3: 진단용 — 모든 칸이 흑색(8)으로만 읽히면(캘리브레이션이 완전히
+  // 빗나간 전형적 증상) 측정값을 콘솔에 남긴다. 개발자 도구(F12) 또는
+  // chrome://inspect(폰 원격 디버깅)에서 확인 가능.
+  if (indices.every(i => i === 8)) {
+    console.warn('[혼디스캐너] 전체 흑색 디코딩 감지 — 캘리브레이션 측정값:', {
+      calib, matrix, roi: fullRoi, mode: roi.mode,
+    });
+  }
+
   return { shortId, version, roi: fullRoi };
 }
 
