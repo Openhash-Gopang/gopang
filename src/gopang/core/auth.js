@@ -11,6 +11,32 @@ import { appendBubble } from '../ui/bubble.js';
 import { requestPushSubscription } from '../services/push.js';
 import { guidToShortId, generateHondiCodeDataURL } from '../ai/hondi-code.js';
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ⚠️  DEV MODE — 프로덕션 배포 전 반드시 false로 변경
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const DEV_MODE = true;
+
+// DEV_MODE: _issueSession 서명 검증 우회 → 항상 ok
+// DEV_MODE: initAuth / initAuthWithPhone → handle만 있으면 즉시 로그인
+// DEV_MODE: 디폴트 LLM 키 자동 주입 (deepseek)
+if (DEV_MODE) {
+  // 디폴트 DeepSeek API 키를 gopang_cfg에 자동 주입
+  try {
+    const cfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
+    if (!cfg.llm_keys) cfg.llm_keys = [];
+    const hasDeepseek = cfg.llm_keys.some(k => k.provider === 'deepseek');
+    if (!hasDeepseek) {
+      cfg.llm_keys.unshift({
+        provider: 'deepseek',
+        model: 'deepseek-chat',
+        key: 'sk-b8cbc6d46c884e8faec110098365fcb9',
+      });
+      localStorage.setItem('gopang_cfg', JSON.stringify(cfg));
+      console.info('[DEV] DeepSeek 디폴트 키 주입 완료');
+    }
+  } catch(e) { console.warn('[DEV] 키 주입 실패:', e); }
+}
+
 const STORE_KEY = 'gopang_user_v4';
 const DEFAULT_COUNTRY = 'KR';
 
@@ -356,6 +382,11 @@ function _waitForWallet(timeoutMs = 15000) {
 // 그 계정의 정당한 기기가 아니라는 뜻이므로, 호출부는 절대 로그인으로
 // 폴백하지 말고 reason을 그대로 사용자에게 보여줘야 한다.
 async function _issueSession(guid, svc = 'gopang', level = 'L0') {
+  // DEV_MODE: 서명 검증 우회
+  if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
+    console.info('[DEV] _issueSession 우회 — guid:', guid);
+    return { ok: true };
+  }
   const wallet = await _waitForWallet();
   if (!wallet?.publicKeyB64u || typeof wallet.signPayload !== 'function') {
     return { ok: false, reason: 'wallet_not_ready' };
@@ -651,6 +682,19 @@ export async function initAuth() {
     setUser(stored);
     return stored;
   }
+  // DEV_MODE: 저장된 세션 없어도 팝업 없이 개발용 계정으로 통과
+  if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
+    const devUser = {
+      ipv6: '::1', handle: 'dev', nickname: 'dev',
+      e164: '', country_code: 'KR',
+      name: 'dev', isGuest: false, isTemp: false,
+      registeredAt: new Date().toISOString(),
+    };
+    try { localStorage.setItem('gopang_user_v4', JSON.stringify(devUser)); } catch {}
+    setUser(devUser);
+    console.info('[DEV] initAuth 우회 — 개발용 계정으로 자동 로그인');
+    return devUser;
+  }
   return new Promise((resolve) => { _showPhonePopup(resolve); });
 }
 
@@ -684,8 +728,13 @@ export async function initAuthWithPhone(digits, countryKey = 'KR') {
             btn.style.pointerEvents = '';
             return;
           }
-          _showDeviceMismatchNotice(found, resolve);
-          return;
+          // DEV_MODE: DeviceMismatch 무시하고 강제 로그인
+          if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
+            console.info('[DEV] DeviceMismatch 우회 — 강제 로그인:', found.handle);
+          } else {
+            _showDeviceMismatchNotice(found, resolve);
+            return;
+          }
         }
         const user = {
           ipv6: found.guid, handle: found.handle,
@@ -1007,9 +1056,14 @@ function _showPhonePopup(resolve) {
           errEl.style.display = 'block';
           return;
         }
-        overlay.remove();
-        _showDeviceMismatchNotice(found, resolve);
-        return;
+        // DEV_MODE: DeviceMismatch 무시하고 강제 통과
+        if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
+          console.info('[DEV] _showPhonePopup DeviceMismatch 우회:', found.handle);
+        } else {
+          overlay.remove();
+          _showDeviceMismatchNotice(found, resolve);
+          return;
+        }
       }
 
       // 기존 사용자 → 로그인 (서명 검증 통과)
