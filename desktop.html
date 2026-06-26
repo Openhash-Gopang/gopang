@@ -2480,9 +2480,20 @@ function _saveCFCredentials() {
     zoneId:document.getElementById('cf-zone-id').value.trim(),
     target:document.getElementById('cf-target').value.trim(),
   };
+  if(!c.apiKey||!c.email||!c.zoneId){
+    alert('API Key, Email, Zone ID는 필수입니다.');return;
+  }
   localStorage.setItem(LS_CF_CRED,JSON.stringify(c));
+  // 저장 직후 재확인
+  const saved=_getCFCred();
   const ok=document.getElementById('cf-cred-ok');
-  ok.style.display='inline'; setTimeout(()=>ok.style.display='none',2000);
+  if(saved.apiKey&&saved.email&&saved.zoneId){
+    ok.textContent='✓ 저장됨 (apiKey:'+saved.apiKey.slice(0,6)+'...)';
+    ok.style.display='inline';
+    setTimeout(()=>{ok.style.display='none';ok.textContent='✓ 저장됨';},4000);
+  } else {
+    alert('저장 실패: localStorage를 사용할 수 없습니다.');
+  }
 }
 
 function _getCFCred() { return JSON.parse(localStorage.getItem(LS_CF_CRED)||'{}'); }
@@ -2508,11 +2519,15 @@ function _renderSubdomainList() {
 }
 
 function _addSubdomainRow() {
-  const name=prompt('추가할 서브도메인 이름 입력\n(예: klaw → klaw.hondi.net)');
+  const cred=_getCFCred();
+  if(!cred.apiKey||!cred.email||!cred.zoneId){
+    alert('먼저 Cloudflare 자격증명을 입력하고 저장하세요.\n\nAPI Key, Email, Zone ID 모두 입력 후\n"자격증명 저장" 버튼을 클릭하세요.');return;
+  }
+  const name=prompt('추가할 서브도메인 이름 입력\n(예: klaw → klaw.hondi.net)\n\n여러 개: 쉼표로 구분 (예: qna,openhash,l1-ido1)');
   if(!name||!name.trim()) return;
-  const sub=name.trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
-  if(!sub){alert('유효하지 않은 이름입니다.');return;}
-  _createCFRecord(sub);
+  const names=name.split(',').map(n=>n.trim().toLowerCase().replace(/[^a-z0-9-]/g,'')).filter(Boolean);
+  if(!names.length){alert('유효하지 않은 이름입니다.');return;}
+  names.forEach(sub=>_createCFRecord(sub));
 }
 
 async function _createCFRecord(sub) {
