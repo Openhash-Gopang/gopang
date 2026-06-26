@@ -20,10 +20,10 @@ import { L1_URL } from '../core/state.js';
 const SCAN_FPS        = 15;                      // 초당 스캔 횟수
 const SCAN_MS         = Math.round(1000/SCAN_FPS);
 const THUMB_SCALE     = 0.25;                    // 탐지용 축소 비율
-const LOCK_FRAMES     = 4;    // 일반 환경; 야간은 _setNightMode()로 6으로 상향                       // 연속 N프레임 일치로 확정
-const MIN_GLYPH_H     = 16;   // 썸네일 기준 → 실제 64px → 최대 ~2.9m 인식                      // 썸네일 기준 최소 높이(px)
-const ASPECT_MIN      = 1.4;                     // "혼디" 글자 최소 가로/세로 비율
-const ASPECT_MAX      = 3.5;                     // 최대 가로/세로 비율
+const LOCK_FRAMES     = 3;    // v2.1: 3프레임으로 단축 (응답성 향상)
+const MIN_GLYPH_H     = 10;   // v2.1: 더 작은 글자도 인식 (썸네일 기준)
+const ASPECT_MIN      = 0.25; // v2.1: H형(세로>가로)도 인식하도록 완화
+const ASPECT_MAX      = 4.0;  // v2.1: 범위 확대
 
 // ── 상태 ──────────────────────────────────────────────────────
 let _stream    = null;
@@ -219,18 +219,18 @@ function _detectHondiROI(ctx, W, H) {
       const i = (y * W + x) * 4;
       const r = data[i], g = data[i+1], b = data[i+2];
 
-      // 파랑 픽셀: ㅎ 자모(혼디) 또는 위쪽 앵커 도트(UCB)
-      if (b > 120 && r < 90 && g < 90 && b - Math.max(r,g) > 60) {
+      // 파랑 픽셀: ㅎ 자모(혼디) 또는 위쪽 앵커 도트(UCB) — v2.1 임계값 완화
+      if (b > 100 && r < 110 && g < 110 && b - Math.max(r,g) > 40) {
         blueX.push(x); blueY.push(y);
       }
-      // 빨강 픽셀: ㅗ 자모(혼디) 또는 아래쪽 앵커 도트(UCB)
-      if (r > 120 && g < 90 && b < 90 && r - Math.max(g,b) > 60) {
+      // 빨강 픽셀: ㅗ 자모(혼디) 또는 아래쪽 앵커 도트(UCB) — v2.1 임계값 완화
+      if (r > 100 && g < 110 && b < 110 && r - Math.max(g,b) > 40) {
         redX.push(x); redY.push(y);
       }
     }
   }
 
-  if (blueX.length < 8 || redX.length < 8) return null;
+  if (blueX.length < 4 || redX.length < 4) return null;  // v2.1
 
   // 전체 바운딩 박스
   const allX = [...blueX, ...redX];
@@ -442,18 +442,44 @@ function _status(msg) { _onStatus?.(msg); }
 
 // ── L1 프로필 조회 ───────────────────────────────────────────
 export async function lookupProfile(shortId, version) {
+  const sid = shortId.toString();
+
+  // ── 로컬 테이블 우선 (L1 없이도 즉시 응답) ──
+  const LOCAL = {
+    '5zvxrthQVkz': {
+      guid: 'hondi-ai', handle: 'hondi', name: '혼디',
+      url: '/profiles/5zvxrthQVkz.html'
+    },
+  };
+  if (LOCAL[sid]) return LOCAL[sid];
+
+  // ── L1 조회 (hondi_code_id 컬럼 시도 → 없으면 handle 로 fallback) ──
   try {
     const base = L1_URL.replace('/api/collections/profiles/records', '');
-    const res = await fetch(
-      `${base}/api/collections/profiles/records?filter=(hondi_code_id='${shortId.toString()}')&perPage=1`,
+    // 시도 1: hondi_code_id 필드
+    let res = await fetch(
+      `${base}/api/collections/profiles/records?filter=(hondi_code_id='${sid}')&perPage=1`,
       { signal: AbortSignal.timeout(5000) }
     );
+    // 400 = 컬럼 없음 → handle 로 재시도
+    if (res.status === 400) {
+      res = await fetch(
+        `${base}/api/collections/profiles/records?filter=(handle='${sid}')&perPage=1`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+    }
     if (!res.ok) throw new Error(`L1 응답 오류: ${res.status}`);
     const data = await res.json();
     if (!data.items?.length) throw new Error('등록되지 않은 혼디 코드입니다.');
     const p = data.items[0];
-    return { guid:p.ipv6||p.id, handle:p.handle, name:p.name,
-             url:`https://hondi.net/profile?id=${p.id}` };
+    return {
+      guid: p.ipv6 || p.id,
+      handle: p.handle,
+      name: p.name || p.nickname || p.handle,
+      url: p.hondi_code_id
+        ? `/profiles/${p.hondi_code_id}.html`
+        : `https://hondi.net/profile?id=${p.id}`,
+    };
   } catch (e) {
     throw new Error(`프로필 조회 실패: ${e.message}`);
   }
