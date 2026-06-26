@@ -2329,21 +2329,24 @@ function _showAdminBody() {
 
 // ── 통계 ─────────────────────────────────────────────────────
 async function _loadStats() {
-  const L1 = 'https://l1-hanlim.hondi.net/api/collections/profiles/records';
   const trialDays = parseInt(localStorage.getItem(LS_TRIAL)||'7');
   const trialMs   = trialDays*86400000;
   const now = Date.now();
   try {
-    const d1 = await (await fetch(`${L1}?perPage=1`,{signal:AbortSignal.timeout(6000)})).json();
-    document.getElementById('stat-total').textContent = (d1.totalItems??0).toLocaleString();
-    const d2 = await (await fetch(`${L1}?perPage=200&sort=-created`,{signal:AbortSignal.timeout(8000)})).json();
-    let trial=0,expired=0;
-    (d2.items||[]).forEach(u => { (now-new Date(u.created).getTime()<=trialMs)?trial++:expired++; });
+    // Worker 경유 — L1 PocketBase 직접 접근 시 HTTPS 인증서 없음
+    const token = await _buildAdminToken();
+    const res = await fetch(`/admin/stats?token=${encodeURIComponent(token)}`, {signal:AbortSignal.timeout(10000)});
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById('stat-total').textContent = (data.total??0).toLocaleString();
+    let trial=0, expired=0;
+    (data.items||[]).forEach(u => { (now-new Date(u.created).getTime()<=trialMs)?trial++:expired++; });
     document.getElementById('stat-trial').textContent   = trial;
     document.getElementById('stat-expired').textContent = expired;
     document.getElementById('stat-paid').textContent    = '—';
-  } catch {
+  } catch(e) {
     ['stat-total','stat-trial','stat-expired','stat-paid'].forEach(id=>{ document.getElementById(id).textContent='?'; });
+    console.warn('[stats]', e.message);
   }
 }
 
