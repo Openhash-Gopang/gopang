@@ -648,7 +648,13 @@ body {
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.07-7.07-4.24 4.24M11.17 18.83l-4.24 4.24m12.14 0-4.24-4.24M7.93 7.93 3.69 3.69"/>
       </svg>
-      <span class="sb-item-label">AI 비서 설정</span>
+      <span class="sb-item-label">나만의 AI 비서</span>
+    </a>
+    <a class="sb-item" id="nav-professional-ai" onclick="loadPage('professional-ai');return false;" href="#">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
+      </svg>
+      <span class="sb-item-label">전문 분야 AI</span>
     </a>
     <a class="sb-item" id="nav-hondi-market" onclick="loadPage('hondi-market');return false;" href="#">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -2649,7 +2655,7 @@ function changeFontSize(delta) {
 // ── SPA 라우터 ────────────────────────────────────────────
 // overview는 desktop.html에 정적으로 포함되어 있으므로 더 이상 fetch 대상이 아님
 const PAGE_ORDER = [];
-const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','ai-setup','hondi-market','scenarios'];  // 모두 단독 오버레이로 표시
+const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','ai-setup','hondi-market','scenarios','professional-ai'];  // 모두 단독 오버레이로 표시
 const PAGES = {
   klaw:           '/pages/klaw.html',
   agents:         '/pages/agents.html',
@@ -2659,6 +2665,7 @@ const PAGES = {
   'ai-types':     '/pages/ai-types.html',
   'hondi-market': '/pages/hondi-market.html',
   scenarios:      '/pages/scenarios.html',
+  'professional-ai': '/pages/professional-ai.html',
 };
 
 // 로드 상태 추적
