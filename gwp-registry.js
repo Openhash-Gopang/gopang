@@ -60,8 +60,8 @@ const GWP_REGISTRY = [
     id: 'ksecurity', name: 'K-Security', category: 'JUS',
     type: 'inline',
     url: 'https://security.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-15_ksecurity_v1.0.txt',
-    status: 'active', priority: 2, threshold: 0.70,
+    sp_url: _RAW + 'SP-15_ksecurity_v1.0.txt', // ⚠️ 2026-06-28 확인: 이 파일이 prompts/에 존재하지 않음(SP-15는 vision 프롬프트뿐). SP 작성 전까지 pending 유지.
+    status: 'pending', priority: 2, threshold: 0.70,
     description: '사이버 보안·개인정보 침해 대응.',
     triggers: [
       '해킹','피싱','스미싱','보이스피싱','계정 탈취','랜섬웨어',
@@ -158,7 +158,7 @@ const GWP_REGISTRY = [
     id: 'kcommerce', name: 'K-Market', category: 'MKT',
     type: 'tab',
     url: 'https://market.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-05_kcommerce_v2.2.txt',
+    sp_url: _RAW + 'SP-05_kmarket_v2.0.txt', // 2026-06-24 K-Law v15.1 기반 전면 재작성판 (구 SP-05_kcommerce_v2.2.txt는 6/10 구버전 — 누락돼 있었음)
     status: 'active', priority: 7, threshold: 0.75,
     description: '판매자 이력 전용 수요 예측·주문.',
     triggers: [
@@ -275,7 +275,7 @@ const GWP_REGISTRY = [
 
 // ── L1 pending_agents 동적 로드 (앱 시작 시 1회) ───────────────
 // 다른 사용자가 임시 등록한 항목을 로드하여 GWP_REGISTRY에 병합
-export async function loadPendingAgents() {
+async function loadPendingAgents() {
   try {
     const L1_BASE = (typeof L1_URL !== 'undefined' ? L1_URL : '')
       .replace('/api/collections/profiles/records', '');
@@ -308,7 +308,7 @@ export async function loadPendingAgents() {
 
 // ── Tool fn 런타임 주입 ────────────────────────────────────────
 // routing-engine.js 로드 후 _webSearch 함수를 tool에 연결
-export function injectToolFns({ webSearch, calculator }) {
+function injectToolFns({ webSearch, calculator }) {
   const ws = GWP_REGISTRY.find(s => s.id === 'tool-web-search');
   if (ws && webSearch) ws.fn = webSearch;
 
@@ -332,8 +332,10 @@ function matchService(text) {
 }
 
 // ── 전역 노출 ──────────────────────────────────────────────────
-window.GWP_REGISTRY  = GWP_REGISTRY;
-window.getService    = getService;
-window.getByCategory = getByCategory;
-window.gwpMatch      = matchService;
-window.matchService  = matchService;
+window.GWP_REGISTRY    = GWP_REGISTRY;
+window.getService      = getService;
+window.getByCategory   = getByCategory;
+window.gwpMatch        = matchService;
+window.matchService    = matchService;
+window.loadPendingAgents = loadPendingAgents;
+window.injectToolFns     = injectToolFns;
