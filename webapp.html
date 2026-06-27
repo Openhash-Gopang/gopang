@@ -293,6 +293,28 @@ body.gopang-authed #gopang-auth-gate{display:none}
 }
 #ai-panel-send:disabled{opacity:.45;}
 
+/* AI 패널 입력 필드 왼쪽 보조 버튼(파일첨부·카메라·마이크) */
+.ai-panel-actions-left{
+  display:flex;align-items:center;gap:0;flex-shrink:0;align-self:flex-end;
+}
+.ai-panel-actions-left .ia-btn{
+  width:32px;height:32px; /* AI 패널 입력행(36px)에 맞춘 약간 축소된 크기 */
+}
+.ai-panel-actions-left .ia-btn svg{width:15.5px;height:15.5px}
+
+/* AI 패널 첨부(파일·사진) 미리보기 칩 */
+.ai-panel-attach-preview{
+  display:flex;align-items:center;gap:6px;
+  margin:0 12px 6px;padding:6px 10px;
+  background:rgba(255,255,255,.85);border:1px solid rgba(52,211,153,.4);
+  border-radius:10px;font-size:12.5px;color:#333;
+}
+.ai-panel-attach-preview span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ai-panel-attach-preview button{
+  flex-shrink:0;background:none;border:none;cursor:pointer;
+  color:var(--txt3);font-size:13px;line-height:1;padding:2px 4px;
+}
+
 /* ── 라우터 뱃지 ── */
 #router-badge{
   display:none;font-size:10px;font-weight:600;
@@ -492,19 +514,6 @@ body.gopang-authed #gopang-auth-gate{display:none}
 .send-btn.generating .icon-send{display:none}
 .send-btn.generating .icon-waveform{display:none}
 .send-btn.generating .icon-stop{display:block;color:#111}
-
-/* 입력 필드 내부 마이크 — 통화처럼 세션 내내 켜져 있는 연속 음성 입력
-   (왼쪽 가장자리의 일회용 마이크와는 별개) */
-.call-mic-btn{
-  width:23.22px;height:23.22px;border-radius:50%;background:none;
-  display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;border:none;cursor:pointer;color:var(--txt3);
-  margin-right:1px;align-self:flex-end;
-  transition:color .15s;
-}
-.call-mic-btn svg{width:14.4px;height:14.4px;stroke:currentColor;stroke-width:2.1;fill:none;
-  stroke-linecap:round;stroke-linejoin:round}
-.call-mic-btn.active{color:#ef4444;animation:mic-pulse .9s ease-in-out infinite}
 
 /* 검색 패널 버튼 — 기존 원형 스타일 그대로 유지 (전송 버튼과 분리) */
 .search-send-btn{
@@ -1089,7 +1098,32 @@ select.setting-field{appearance:none;-webkit-appearance:none;
     <div id="ai-panel-handle"></div>
     <div id="ai-panel-title">내 AI 비서</div>
     <div id="ai-panel-messages"></div>
+    <div id="ai-panel-attach-preview" class="ai-panel-attach-preview" style="display:none">
+      <span id="ai-panel-attach-name"></span>
+      <button type="button" id="ai-panel-attach-remove">✕</button>
+    </div>
     <div id="ai-panel-input-row">
+      <div class="ai-panel-actions-left">
+        <button class="ia-btn" id="ai-panel-attach-btn" type="button" title="파일 첨부">
+          <svg width="17.87" height="17.87" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+        </button>
+        <button class="ia-btn" id="ai-panel-camera-btn" type="button" title="카메라">
+          <svg width="16.87" height="16.87" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </button>
+        <button class="ia-btn" id="ai-panel-mic-btn" type="button" title="음성으로 대화">
+          <svg width="15.88" height="15.88" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="2" width="6" height="11" rx="3"/>
+            <path d="M5 10a7 7 0 0 0 14 0"/>
+            <line x1="12" y1="19" x2="12" y2="22"/>
+            <line x1="8" y1="22" x2="16" y2="22"/>
+          </svg>
+        </button>
+      </div>
       <textarea id="ai-panel-input" rows="1" placeholder="AI 비서에게 물어보세요…"></textarea>
       <button id="ai-panel-send">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -1150,14 +1184,6 @@ select.setting-field{appearance:none;-webkit-appearance:none;
       <!-- 입력 wrap -->
       <div class="input-wrap">
         <textarea id="msg-input" placeholder="메시지를 입력하세요…" rows="1"></textarea>
-        <button class="call-mic-btn" id="call-mic-btn" type="button" title="연속 음성 입력 (통화처럼 계속 켜짐)">
-          <svg viewBox="0 0 24 24">
-            <rect x="9" y="2" width="6" height="11" rx="3"/>
-            <path d="M5 10a7 7 0 0 0 14 0"/>
-            <line x1="12" y1="19" x2="12" y2="22"/>
-            <line x1="8" y1="22" x2="16" y2="22"/>
-          </svg>
-        </button>
         <button class="send-btn" id="send-btn" disabled>
           <svg class="icon-send" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
           <svg class="icon-stop" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="8" y="8" width="8" height="8" rx="1.5"/></svg>
@@ -1174,6 +1200,8 @@ select.setting-field{appearance:none;-webkit-appearance:none;
     <input type="file" id="file-input" style="display:none" accept="image/*,.pdf,.txt,.docx" onchange="handleFileSelect(event)">
     <input type="file" id="camera-input" style="display:none" accept="image/*" capture="environment" onchange="handleFileSelect(event)">
     <input type="file" id="camera-selfie" style="display:none" accept="image/*" capture="user" onchange="_authHandleSelfie(event)">
+    <input type="file" id="ai-panel-file-input" style="display:none" accept="image/*,.pdf,.txt,.docx">
+    <input type="file" id="ai-panel-camera-input" style="display:none" accept="image/*" capture="environment">
   </div>
 </div><!-- /#app -->
 
@@ -2209,181 +2237,6 @@ if (document.readyState === 'complete') _applyI18n();
 })();
 </script>
 
-<!-- ── 입력 필드 내부 마이크 — 통화처럼 세션 내내 켜져 있는 연속 음성 입력 ──
-     왼쪽 가장자리 마이크(src/gopang/ai/mic.js, toggleMic())는 1회용이고
-     건드리지 않는다. 이 마이크는 완전히 독립적으로 Web Speech API를
-     사용해, 사용자가 다시 누르거나 화면을 떠날 때까지 끊김 없이 계속
-     듣는다(전화 통화처럼). 두 마이크가 동시에 켜지지 않도록, 좌측
-     마이크 클릭 시 이쪽을 끄는 안전장치만 별도 리스너로 추가한다
-     (기존 mic.js의 클릭 핸들러는 그대로 둔 채 리스너를 하나 더 단다
-     — 충돌 없음).
-
-     ※ 설계를 바꾼 이유 — 같은 단어 반복 버그
-     처음에는 continuous:true + interimResults:true로 직접 누적했다.
-     안드로이드의 continuous 모드는 (a) 짧은 호흡을 새 발화로 잘못
-     끊어 직전 단어의 꼬리를 다시 캡처하거나, (b) onend 직후 재시작
-     시 오디오 버퍼가 덜 비워진 채 직전 발화의 꼬리를 다시 듣는 경우가
-     있어, 같은 말이 "새로운"(한 번도 안 쓴) 결과 인덱스로 반복
-     도착했다. resultIndex 기반 방어, 이어서 내용(텍스트) 비교 기반
-     방어까지 추가했지만 — 근본 원인이 continuous 모드 자체이므로
-     계속 다른 경로로 새어 나왔다.
-     → 이미 안정적으로 동작 중인 좌측 1회용 마이크를 그대로 가져왔다:
-     continuous:false, interimResults:false로 "한 발화 = 정확히 하나의
-     확정 결과"만 받고, 그 인식 객체가 끝나면(onend) active 상태일 때
-     마다 새 인식 객체로 다시 듣기를 시작한다. "연속"은 브라우저의
-     continuous 플래그가 아니라 우리가 만든 재시작 루프가 담당한다.
-     발화당 결과가 정확히 하나뿐이므로 중복 자체가 구조적으로 발생하지
-     않는다 — 인덱스 추적이나 내용 비교 같은 방어 로직이 더 이상
-     필요 없다. -->
-<script>
-(function () {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const btn = document.getElementById('call-mic-btn');
-  const input = document.getElementById('msg-input');
-  if (!btn || !input) return;
-
-  if (!SR) {
-    // 이 브라우저는 음성 인식 미지원 — 버튼을 눌러도 동작하지 않게 숨김
-    btn.style.display = 'none';
-    return;
-  }
-
-  const SILENCE_MS = 1000;     // 왼쪽 1회용 마이크(mic.js _micAutoSend)와 동일한 기준
-  const RESTART_DELAY_MS = 150; // 재시작 전 짧은 지연 — 안드로이드에서 직전 인식
-                                 // 세션의 오디오 핸들이 채 풀리지 않은 채 곧바로
-                                 // 다시 start()하면 가끔 오류가 나는 것을 방지
-
-  let recognition = null;
-  let active = false;      // 사용자가 의도적으로 켜둔 상태인지(끝나도 재시작해야 하는지)
-  let baseText = '';        // 이번 통화 동안 누적된 전체 텍스트
-  let errorStreak = 0;     // 연속 오류 횟수 — 너무 많으면 포기하고 끔
-  let silenceTimer = null; // 1초 무음 자동 전송 타이머
-
-  function setActiveVisual(on) {
-    btn.classList.toggle('active', on);
-  }
-
-  function clearSilenceTimer() {
-    if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
-  }
-
-  function scheduleAutoSend() {
-    clearSilenceTimer();
-    silenceTimer = setTimeout(() => {
-      silenceTimer = null;
-      if (!active) return; // 그 사이 통화 마이크가 꺼졌으면 무시
-      if (input.value.trim() && typeof window.sendMessage === 'function') {
-        window.sendMessage();
-        // 통화(재시작 루프)는 계속 — 다음 발화를 위해 이번 턴의 기준점만 초기화
-        baseText = '';
-      }
-    }, SILENCE_MS);
-  }
-
-  function createRecognition() {
-    const r = new SR();
-    r.lang = document.documentElement.lang === 'ko' ? 'ko-KR' : (navigator.language || 'ko-KR');
-    // 좌측 1회용 마이크와 동일 — 한 발화당 정확히 하나의 확정 결과만 받는다.
-    // (continuous:true의 불안정한 내부 재분절/버퍼 겹침을 원천적으로 피한다.)
-    r.continuous = false;
-    r.interimResults = false;
-
-    r.onresult = (event) => {
-      const text = event.results?.[0]?.[0]?.transcript || '';
-      if (text) {
-        baseText = baseText && !/\s$/.test(baseText) ? baseText + ' ' + text : baseText + text;
-        input.value = baseText;
-        if (typeof window.autoResize === 'function') window.autoResize(input);
-        if (typeof window.updateSendBtn === 'function') window.updateSendBtn();
-      }
-      errorStreak = 0;
-      scheduleAutoSend();
-    };
-
-    r.onerror = (e) => {
-      // 무음(no-speech)은 흔히 발생하는 정상적인 일시 정지 — 뒤따르는 onend에서
-      // 재시작되므로 여기서는 무시하고 계속한다.
-      if (e.error === 'no-speech' || e.error === 'aborted') return;
-      errorStreak++;
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || errorStreak >= 3) {
-        active = false; // 권한 거부 등 복구 불가능한 오류 — 포기
-        clearSilenceTimer();
-      }
-    };
-
-    r.onend = () => {
-      if (active) {
-        // continuous:false라 한 발화가 끝나면(성공이든 무음 오류든) 항상 onend가
-        // 온다 — active 상태면 짧은 지연 후 새 인식 객체로 다시 듣기를 시작한다.
-        setTimeout(() => { if (active) startListening(); }, RESTART_DELAY_MS);
-      } else {
-        setActiveVisual(false);
-      }
-    };
-
-    return r;
-  }
-
-  function startListening() {
-    recognition = createRecognition();
-    try {
-      recognition.start();
-      return true;
-    } catch (e) {
-      return false; // 이미 시작된 경우 등 무시 — 재시작 루프 중이면 다음 onend를 기다린다
-    }
-  }
-
-  function startCallMic() {
-    // 왼쪽 가장자리의 1회용 마이크가 켜져 있으면 충돌하지 않도록 먼저 끈다.
-    const otherMic = document.getElementById('btn-mic');
-    if (otherMic && otherMic.classList.contains('mic-recording') && typeof window.toggleMic === 'function') {
-      window.toggleMic();
-    }
-
-    baseText  = input.value;
-    errorStreak = 0;
-    active = true;
-    if (!startListening()) { active = false; return; }
-    setActiveVisual(true);
-  }
-
-  function stopCallMic() {
-    active = false;
-    setActiveVisual(false);
-    clearSilenceTimer();
-    try { recognition?.stop(); } catch (e) { /* 무시 */ }
-  }
-
-  btn.addEventListener('click', () => {
-    if (active) stopCallMic();
-    else startCallMic();
-  });
-
-  // 음성 모드가 켜진 동안 사용자가 직접 타이핑/편집하면(예: 발화 사이 손으로 수정)
-  // 그 시점의 전체 내용을 새 기준점(baseText)으로 흡수한다. (input.value를 코드로
-  // 대입하는 것은 input 이벤트를 일으키지 않으므로, 여기엔 진짜 사용자 타이핑만
-  // 걸린다.) 손으로 직접 입력하는 동안에는 자동 전송 타이머를 새로 걸지 않고
-  // 취소만 한다 — 전송 시점은 사용자가 직접 정한다.
-  input.addEventListener('input', () => {
-    if (!active) return;
-    baseText = input.value;
-    clearSilenceTimer();
-  });
-
-  // 왼쪽 가장자리 마이크가 눌리면(기존 mic.js 핸들러와 별개로) 이쪽도 정지 —
-  // 두 마이크가 동시에 마이크 장치를 점유하는 것을 방지.
-  document.getElementById('btn-mic')?.addEventListener('click', () => {
-    if (active) stopCallMic();
-  });
-
-  // 대화창을 떠나면(탭 전환·백그라운드) 통화 마이크도 종료
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && active) stopCallMic();
-  });
-  window.addEventListener('pagehide', () => { if (active) stopCallMic(); });
-})();
-</script>
 
 <!-- ── 좌/우 메뉴 열기·닫기 ──
      settings.js의 설정 시트(.settings-overlay)와는 완전히 별개.
@@ -2522,6 +2375,14 @@ window.closeTermsOfUse = closeTermsOfUse;
   const input    = document.getElementById('ai-panel-input');
   const sendBtn  = document.getElementById('ai-panel-send');
   const btnAI    = document.getElementById('btn-ai');
+  const attachBtn       = document.getElementById('ai-panel-attach-btn');
+  const cameraBtn       = document.getElementById('ai-panel-camera-btn');
+  const micBtn          = document.getElementById('ai-panel-mic-btn');
+  const fileInput       = document.getElementById('ai-panel-file-input');
+  const cameraInput     = document.getElementById('ai-panel-camera-input');
+  const attachPreview   = document.getElementById('ai-panel-attach-preview');
+  const attachNameEl    = document.getElementById('ai-panel-attach-name');
+  const attachRemoveBtn = document.getElementById('ai-panel-attach-remove');
   let _panelOpen = false;
 
   // ── 열기 / 닫기 ──────────────────────────────────────
@@ -2678,13 +2539,160 @@ window.closeTermsOfUse = closeTermsOfUse;
     if (!panel.contains(e.target) && e.target !== btnAI) closeAIPanel();
   });
 
-  // ── 입력창 자동 높이 ─────────────────────────────────
+  // ── 입력창 자동 높이 + 전송 버튼 활성화 ───────────────
+  function _updatePanelSendState() {
+    sendBtn.disabled = !(input.value.trim() || _aiPanelAttachedFile);
+  }
   input.addEventListener('input', () => {
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 100) + 'px';
-    sendBtn.disabled = !input.value.trim();
+    _updatePanelSendState();
   });
   sendBtn.disabled = true;
+
+  // ── 파일·사진 첨부 — 입력 필드 왼쪽 보조 버튼 ─────────
+  let _aiPanelAttachedFile = null; // { name, dataUrl, isImage }
+
+  function _clearAttachPreview() {
+    _aiPanelAttachedFile = null;
+    attachPreview.style.display = 'none';
+    if (fileInput)   fileInput.value = '';
+    if (cameraInput) cameraInput.value = '';
+    _updatePanelSendState();
+  }
+  function _readAttachedFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      _aiPanelAttachedFile = { name: file.name, dataUrl: reader.result, isImage: file.type.startsWith('image/') };
+      attachNameEl.textContent = (_aiPanelAttachedFile.isImage ? '📷 ' : '📎 ') + file.name;
+      attachPreview.style.display = 'flex';
+      _updatePanelSendState();
+    };
+    reader.readAsDataURL(file);
+  }
+  attachBtn?.addEventListener('click', () => fileInput?.click());
+  cameraBtn?.addEventListener('click', () => cameraInput?.click());
+  fileInput?.addEventListener('change', e => _readAttachedFile(e.target.files?.[0]));
+  cameraInput?.addEventListener('change', e => _readAttachedFile(e.target.files?.[0]));
+  attachRemoveBtn?.addEventListener('click', _clearAttachPreview);
+
+  // ── 마이크 — 음성으로 대화, 1초 무음 시 자동 전송 ─────
+  // 입력 필드 "외부"(좌측 보조 버튼)에 위치한다. webapp.html의 기존
+  // 좌측 1회용 마이크(mic.js)와 동일한 설계를 따른다: continuous:false +
+  // interimResults:false로 "한 발화 = 정확히 하나의 확정 결과"만 받고,
+  // 인식 객체가 끝나면(onend) 듣기 모드가 켜진 동안 새 인식 객체로
+  // 다시 듣기를 시작한다 — continuous:true에서 발생하는 동일 단어
+  // 중복 캡처 버그를 구조적으로 피하기 위함이다.
+  (function () {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR || !micBtn) { if (micBtn) micBtn.style.display = 'none'; return; }
+
+    const SILENCE_MS = 1000;      // 1초 무음 → 자동 전송
+    const RESTART_DELAY_MS = 150; // 재시작 전 짧은 지연(오디오 핸들 해제 대기)
+
+    let recognition = null;
+    let aiMicActive = false;
+    let baseText = '';
+    let errorStreak = 0;
+    let silenceTimer = null;
+
+    function setMicVisual(on) { micBtn.classList.toggle('mic-recording', on); }
+    function clearSilenceTimer() { if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; } }
+
+    function scheduleAutoSend() {
+      clearSilenceTimer();
+      silenceTimer = setTimeout(() => {
+        silenceTimer = null;
+        if (!aiMicActive) return;
+        if (input.value.trim() || _aiPanelAttachedFile) {
+          baseText = '';
+          _sendToAI();
+        }
+      }, SILENCE_MS);
+    }
+
+    function createRecognition() {
+      const r = new SR();
+      r.lang = document.documentElement.lang === 'ko' ? 'ko-KR' : (navigator.language || 'ko-KR');
+      r.continuous = false;
+      r.interimResults = false;
+
+      r.onresult = (event) => {
+        const text = event.results?.[0]?.[0]?.transcript || '';
+        if (text) {
+          baseText = baseText && !/\s$/.test(baseText) ? baseText + ' ' + text : baseText + text;
+          input.value = baseText;
+          input.style.height = 'auto';
+          input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+          _updatePanelSendState();
+        }
+        errorStreak = 0;
+        scheduleAutoSend();
+      };
+
+      r.onerror = (e) => {
+        // 무음(no-speech)은 흔히 발생하는 정상적인 일시 정지 — onend에서 재시작되므로 무시
+        if (e.error === 'no-speech' || e.error === 'aborted') return;
+        errorStreak++;
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || errorStreak >= 3) {
+          aiMicActive = false; // 권한 거부 등 복구 불가능한 오류 — 포기
+          clearSilenceTimer();
+        }
+      };
+
+      r.onend = () => {
+        if (aiMicActive) setTimeout(() => { if (aiMicActive) startListening(); }, RESTART_DELAY_MS);
+        else setMicVisual(false);
+      };
+
+      return r;
+    }
+
+    function startListening() {
+      recognition = createRecognition();
+      try { recognition.start(); return true; }
+      catch (e) { return false; } // 이미 시작된 경우 등 — 다음 onend를 기다린다
+    }
+
+    function startAIMic() {
+      // 메인 채팅창 좌측의 1회용 마이크(mic.js, btn-mic)가 켜져 있으면 충돌
+      // 방지를 위해 먼저 끈다 (mic.js 클릭 핸들러는 그대로 두고 리스너만 추가).
+      const otherMic = document.getElementById('btn-mic');
+      if (otherMic && otherMic.classList.contains('mic-recording') && typeof window.toggleMic === 'function') {
+        window.toggleMic();
+      }
+      baseText = input.value;
+      errorStreak = 0;
+      aiMicActive = true;
+      if (!startListening()) { aiMicActive = false; return; }
+      setMicVisual(true);
+    }
+
+    function stopAIMic() {
+      aiMicActive = false;
+      setMicVisual(false);
+      clearSilenceTimer();
+      try { recognition?.stop(); } catch (e) { /* 무시 */ }
+    }
+
+    micBtn.addEventListener('click', () => { if (aiMicActive) stopAIMic(); else startAIMic(); });
+
+    // 음성 모드 중 직접 타이핑/수정하면 그 내용을 새 기준점으로 흡수
+    input.addEventListener('input', () => {
+      if (!aiMicActive) return;
+      baseText = input.value;
+      clearSilenceTimer();
+    });
+
+    // 메인 채팅창 좌측 마이크가 눌리면 AI 패널 마이크도 정지 — 동시 점유 방지
+    document.getElementById('btn-mic')?.addEventListener('click', () => { if (aiMicActive) stopAIMic(); });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && aiMicActive) stopAIMic();
+    });
+    window.addEventListener('pagehide', () => { if (aiMicActive) stopAIMic(); });
+  })();
 
   // ── 메시지 렌더 헬퍼 ─────────────────────────────────
   function _appendPanelMsg(role, text) {
@@ -2707,7 +2715,7 @@ window.closeTermsOfUse = closeTermsOfUse;
   //  순서대로 다 두드리느라 응답이 10초 이상 걸리는 문제가 있었음 — 2026-06-24 수정)
   const _panelHistory = [];  // 패널 전용 대화 히스토리
 
-  async function _callPanelAI(userText, bubbleEl) {
+  async function _callPanelAI(userText, bubbleEl, attached) {
     const { PROVIDER_INFO, getPriorityOrder } = await import('./src/gopang/core/config.js');
     const { isModelOnCooldown, markModelFailed, getOpenRouterRemainingBudget, recordOpenRouterCall }
       = await import('./src/gopang/core/free-model-pool.js');
@@ -2723,7 +2731,17 @@ window.closeTermsOfUse = closeTermsOfUse;
       const effectiveSystem = system || _PA_SYSTEM_PROMPT;
       _panelHistory.push({ role: 'system', content: effectiveSystem });
     }
-    _panelHistory.push({ role: 'user', content: userText });
+    // 첨부파일 반영 — 사진은 멀티모달 image_url 블록, 그 외 파일은 파일명만 텍스트로 첨부
+    let userContent = userText;
+    if (attached?.isImage) {
+      userContent = [
+        { type: 'text', text: userText || '이 사진을 봐주세요.' },
+        { type: 'image_url', image_url: { url: attached.dataUrl } },
+      ];
+    } else if (attached) {
+      userContent = (userText ? userText + '\n' : '') + `[첨부파일: ${attached.name} — 본문 추출 미지원]`;
+    }
+    _panelHistory.push({ role: 'user', content: userContent });
 
     // ── 후보 생성: getPriorityOrder()로 정렬 + OR은 24h쿨다운·분당예산으로 사전 필터링 ──
     // (call-ai.js의 _buildCallCandidates와 동일한 원칙 — 실패가 뻔한 후보는
@@ -2810,20 +2828,22 @@ window.closeTermsOfUse = closeTermsOfUse;
   // ── 전송 ─────────────────────────────────────────────
   async function _sendToAI() {
     const text = input.value.trim();
-    if (!text) return;
+    const attached = _aiPanelAttachedFile;
+    if (!text && !attached) return;
     input.value = ''; input.style.height = 'auto';
     sendBtn.disabled = true;
-    _appendPanelMsg('user', text);
+    _appendPanelMsg('user', text || (attached.isImage ? '(사진 첨부)' : `(파일 첨부: ${attached.name})`));
+    _clearAttachPreview();
 
     const aiBubble = _appendPanelMsg('ai', '…');
     aiBubble.classList.add('streaming');
     try {
-      await _callPanelAI(text, aiBubble);
+      await _callPanelAI(text, aiBubble, attached);
     } catch(e) {
       aiBubble.textContent = 'AI 오류: ' + e.message;
     }
     aiBubble.classList.remove('streaming');
-    sendBtn.disabled = false;
+    _updatePanelSendState();
   }
 
   sendBtn.addEventListener('click', _sendToAI);
@@ -2832,6 +2852,94 @@ window.closeTermsOfUse = closeTermsOfUse;
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
       e.preventDefault(); _sendToAI();
     }
+  });
+})();
+</script>
+
+<!-- ── "혼디야" 음성 호출어(wake word) ──────────────────────
+     항상 듣고 있다가 "혼디야"가 들리면 AI 비서 패널을 열고 곧바로
+     이어지는 발화를 듣는다. 좌측 1회용 마이크(btn-mic)나 AI 패널
+     마이크(ai-panel-mic-btn)가 사용 중일 때는 마이크 장치 점유 충돌을
+     피하기 위해 잠시 멈추고, 두 마이크가 모두 꺼지면 다시 대기한다.
+     브라우저 정책상 마이크 권한이 허용된 뒤에만 상시 대기를 시작한다
+     (권한 요청 자체는 사용자 동작 없이 자동으로 띄우지 않는다). -->
+<script>
+(function () {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return; // 미지원 브라우저는 조용히 비활성화
+
+  const WAKE_PATTERN = /혼\s*디\s*야/; // "혼디야" — 사이 띄어쓰기 변형 허용
+  let recognition = null;
+  let wakeActive = false; // 호출어 대기 루프를 의도적으로 켜둔 상태인지
+  let suspended  = false; // 다른 마이크 사용 중이라 일시 정지된 상태인지
+
+  function isOtherMicBusy() {
+    const a = document.getElementById('btn-mic');
+    const b = document.getElementById('ai-panel-mic-btn');
+    return !!((a && a.classList.contains('mic-recording')) || (b && b.classList.contains('mic-recording')));
+  }
+
+  function createRecognition() {
+    const r = new SR();
+    r.lang = document.documentElement.lang === 'ko' ? 'ko-KR' : (navigator.language || 'ko-KR');
+    r.continuous = false;
+    r.interimResults = false;
+
+    r.onresult = (event) => {
+      const text = event.results?.[0]?.[0]?.transcript || '';
+      if (WAKE_PATTERN.test(text)) _onWakeDetected();
+    };
+    r.onerror = () => { /* no-speech 등은 흔한 일시 정지 — onend에서 재시작 */ };
+    r.onend = () => { if (wakeActive && !suspended) setTimeout(startListening, 150); };
+    return r;
+  }
+
+  function startListening() {
+    if (!wakeActive || suspended) return;
+    recognition = createRecognition();
+    try { recognition.start(); } catch (e) { /* 무시 */ }
+  }
+
+  function _onWakeDetected() {
+    if (typeof window.openAIPanel === 'function') window.openAIPanel();
+    // 패널이 열리는 애니메이션 시간(약 0.4s) 뒤 곧바로 다음 발화를 듣기 시작한다.
+    setTimeout(() => {
+      const micBtn = document.getElementById('ai-panel-mic-btn');
+      if (micBtn && !micBtn.classList.contains('mic-recording')) micBtn.click();
+    }, 450);
+  }
+
+  function pauseWake()  { suspended = true;  try { recognition?.stop(); } catch (e) {} }
+  function resumeWake() { suspended = false; if (wakeActive) startListening(); }
+
+  // 다른 마이크가 켜지면 호출어 대기를 잠시 멈추고, 꺼지면 다시 시작
+  ['btn-mic', 'ai-panel-mic-btn'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      setTimeout(() => { isOtherMicBusy() ? pauseWake() : resumeWake(); }, 50);
+    });
+  });
+
+  function startWake() {
+    if (wakeActive) return;
+    wakeActive = true;
+    if (!isOtherMicBusy()) startListening();
+  }
+
+  // 마이크 권한이 이미 허용된 상태(설치형 PWA 등)라면 즉시 대기를 시작하고,
+  // 아니라면 사용자가 마이크 버튼을 처음 눌러 권한을 허용한 직후 시작한다.
+  if (navigator.permissions?.query) {
+    navigator.permissions.query({ name: 'microphone' }).then(status => {
+      if (status.state === 'granted') startWake();
+      status.onchange = () => { if (status.state === 'granted') startWake(); };
+    }).catch(() => {});
+  }
+  ['btn-mic', 'ai-panel-mic-btn'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', () => setTimeout(startWake, 300));
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') pauseWake();
+    else resumeWake();
   });
 })();
 </script>
