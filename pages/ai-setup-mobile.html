@@ -123,12 +123,6 @@ html, body {
 .key-msg { font-size: 11.5px; min-height: 16px; color: var(--text3); }
 .key-msg.ok    { color: var(--brand); }
 .key-msg.error { color: var(--error); }
-.poll-status {
-  display: none; background: #fff8e1; border: 1px solid #ffe082;
-  border-radius: 6px; padding: 8px 12px;
-  font-size: 12px; color: #f57f17; margin-bottom: 8px; text-align: center;
-}
-.poll-status.active { display: block; }
 </style>
 </head>
 <body>
@@ -197,11 +191,8 @@ html, body {
         </ol>
         <div class="steps-note">⚡ Google 계정만 있으면 1분 내 발급 · 신용카드 불필요</div>
       </div>
-      <div class="poll-status" id="poll-gemini">🔍 새 탭에서 키를 복사하면 자동으로 입력됩니다…</div>
       <div class="key-row">
         <input class="key-input" id="key-gemini" type="password" placeholder="AIzaSy..." autocomplete="off">
-        <button class="btn-sm" onclick="_openTab('gemini','https://aistudio.google.com/apikey')">발급</button>
-        <button class="btn-sm" onclick="_paste('gemini')">붙여넣기</button>
       </div>
       <div class="key-msg" id="msg-gemini"></div>
     </div>
@@ -251,11 +242,8 @@ html, body {
         </ol>
         <div class="steps-note">🎁 신규 가입 시 5백만 토큰 무료 (약 3,000~5,000번 대화) · 신용카드 불필요</div>
       </div>
-      <div class="poll-status" id="poll-deepseek">🔍 새 탭에서 키를 복사하면 자동으로 입력됩니다…</div>
       <div class="key-row">
         <input class="key-input" id="key-deepseek" type="password" placeholder="sk-..." autocomplete="off">
-        <button class="btn-sm" onclick="_openTab('deepseek','https://platform.deepseek.com/api_keys')">발급</button>
-        <button class="btn-sm" onclick="_paste('deepseek')">붙여넣기</button>
       </div>
       <div class="key-msg" id="msg-deepseek"></div>
     </div>
@@ -305,11 +293,8 @@ html, body {
         </ol>
         <div class="steps-note">🎁 매월 $25 무료 크레딧 자동 지급 — X 계정 필요</div>
       </div>
-      <div class="poll-status" id="poll-grok">🔍 새 탭에서 키를 복사하면 자동으로 입력됩니다…</div>
       <div class="key-row">
         <input class="key-input" id="key-grok" type="password" placeholder="xai-..." autocomplete="off">
-        <button class="btn-sm" onclick="_openTab('grok','https://console.x.ai')">발급</button>
-        <button class="btn-sm" onclick="_paste('grok')">붙여넣기</button>
       </div>
       <div class="key-msg" id="msg-grok"></div>
     </div>
@@ -359,11 +344,8 @@ html, body {
         </ol>
         <div class="steps-note">⚡ 2분 내 발급 가능 · Llama·Gemma·DeepSeek 등 26개 무료 모델</div>
       </div>
-      <div class="poll-status" id="poll-or">🔍 새 탭에서 키를 복사하면 자동으로 입력됩니다…</div>
       <div class="key-row">
         <input class="key-input" id="key-or" type="password" placeholder="sk-or-v1-..." autocomplete="off">
-        <button class="btn-sm" onclick="_openTab('or','https://openrouter.ai/keys')">발급</button>
-        <button class="btn-sm" onclick="_paste('or')">붙여넣기</button>
       </div>
       <div class="key-msg" id="msg-or"></div>
     </div>
@@ -372,6 +354,18 @@ html, body {
 </div>
 
 <button id="_save-fab" onclick="_saveAll()">저장</button>
+<button id="_skip-btn" onclick="_skipSetup()" style="
+  display:block; margin:12px auto 0; background:none; border:none;
+  color:#9e9e9e; font-size:13px; font-family:inherit; cursor:pointer;
+  padding:8px 16px; text-decoration:underline; text-underline-offset:3px;
+">나중에 설정</button>
+
+<div id="_skip-toast" style="
+  display:none; position:fixed; bottom:96px; left:50%; transform:translateX(-50%);
+  background:rgba(33,33,33,.88); color:#fff; font-size:13px; font-weight:500;
+  padding:10px 20px; border-radius:20px; white-space:nowrap; z-index:300;
+  box-shadow:0 4px 16px rgba(0,0,0,.2);
+">설정 창에서 언제든 AI를 설정할 수 있습니다.</div>
 
   <!-- 5순위: Claude -->
   <div class="llm-card" id="card-claude">
@@ -417,11 +411,8 @@ html, body {
         </ol>
         <div class="steps-note">💡 신규 $5 테스트 크레딧 (신용카드 불필요) · 소진 후 유료 · 성능은 최상</div>
       </div>
-      <div class="poll-status" id="poll-claude">🔍 새 탭에서 키를 복사하면 자동으로 입력됩니다…</div>
       <div class="key-row">
         <input class="key-input" id="key-claude" type="password" placeholder="sk-ant-api03-..." autocomplete="off">
-        <button class="btn-sm" onclick="_openTab('claude','https://console.anthropic.com/settings/keys')">발급</button>
-        <button class="btn-sm" onclick="_paste('claude')">붙여넣기</button>
       </div>
       <div class="key-msg" id="msg-claude"></div>
     </div>
@@ -471,11 +462,8 @@ html, body {
         </ol>
         <div class="steps-note">💡 ChatGPT Plus 구독자도 API 키는 별도 발급 필요</div>
       </div>
-      <div class="poll-status" id="poll-openai">🔍 새 탭에서 키를 복사하면 자동으로 입력됩니다…</div>
       <div class="key-row">
         <input class="key-input" id="key-openai" type="password" placeholder="sk-proj-..." autocomplete="off">
-        <button class="btn-sm" onclick="_openTab('openai','https://platform.openai.com/api-keys')">발급</button>
-        <button class="btn-sm" onclick="_paste('openai')">붙여넣기</button>
       </div>
       <div class="key-msg" id="msg-openai"></div>
     </div>
@@ -501,59 +489,7 @@ function _updateBadge(id,key) {
   else { const free=['gemini','or','grok'].includes(id); badge.textContent=free?'무료':'유료'; badge.className='llm-badge '+(free?'badge-free':'badge-pay'); card?.classList.remove('has-key'); }
 }
 
-async function _paste(id) {
-  if(!navigator.clipboard?.readText){ _msg(id,'직접 입력칸을 길게 눌러 붙여넣어 주세요.','error'); return; }
-  try {
-    const text=(await navigator.clipboard.readText()).trim();
-    if(!text){ _msg(id,'클립보드가 비어 있습니다.','error'); return; }
-    const targetId=_detectLLM(text)||id;
-    const input=document.getElementById('key-'+targetId);
-    if(input){ input.value=text; input.classList.add('saved'); _updateBadge(targetId,text); _msg(targetId,'입력되었습니다. ✓','ok'); document.getElementById('card-'+targetId)?.classList.add('open'); }
-    if(targetId!==id) _msg(id,LLM.find(l=>l.id===targetId)?.name+' 키가 감지되어 해당 항목에 입력했습니다.','ok');
-  } catch { _msg(id,'클립보드 접근이 거부되었습니다.','error'); }
-}
 
-const _tabs={}, _polls={};
-let _lastClip='';
-function _stopPoll(id) { if(_polls[id]){clearInterval(_polls[id]);delete _polls[id];} document.getElementById('poll-'+id)?.classList.remove('active'); }
-
-async function _openTab(id,url) {
-  try{ _lastClip=(await navigator.clipboard.readText().catch(()=>'')).trim(); }catch{}
-  const tab=window.open(url,'_blank','noopener'); _tabs[id]=tab;
-  document.getElementById('poll-'+id)?.classList.add('active');
-  document.getElementById('card-'+id)?.classList.add('open');
-  let elapsed=0;
-  if(_polls[id]) clearInterval(_polls[id]);
-  _polls[id]=setInterval(async()=>{
-    elapsed+=100;
-    if(elapsed>600000||tab?.closed){ _stopPoll(id); return; }
-    if(!navigator.clipboard?.readText){ _stopPoll(id); return; }
-    try{
-      const text=(await navigator.clipboard.readText()).trim();
-      if(text===_lastClip||!text) return;
-      _lastClip=text;
-      const detected=_detectLLM(text);
-      if(detected){
-        _stopPoll(id);
-        const input=document.getElementById('key-'+detected);
-        if(input){ input.value=text; input.classList.add('saved'); _updateBadge(detected,text); _msg(detected,'키가 자동으로 입력되었습니다. ✓','ok'); document.getElementById('card-'+detected)?.classList.add('open'); }
-        try{ tab?.close(); }catch{}
-      }
-    }catch{ _stopPoll(id); }
-  },100);
-}
-
-document.addEventListener('visibilitychange',async()=>{
-  if(document.visibilityState!=='visible'||!navigator.clipboard?.readText) return;
-  try{
-    const text=(await navigator.clipboard.readText()).trim();
-    if(!text||text===_lastClip) return; _lastClip=text;
-    const detected=_detectLLM(text); if(!detected) return;
-    const input=document.getElementById('key-'+detected);
-    if(input&&!input.value){ input.value=text; input.classList.add('saved'); _updateBadge(detected,text); _msg(detected,'키가 자동으로 입력되었습니다. ✓','ok'); document.getElementById('card-'+detected)?.classList.add('open'); }
-    Object.keys(_polls).forEach(id=>_stopPoll(id));
-  }catch{}
-});
 
 async function _saveAll() {
   const fab=document.getElementById('_save-fab'); fab.disabled=true; fab.textContent='저장 중…';
@@ -578,6 +514,14 @@ async function _saveAll() {
   const tick=setInterval(()=>{ pct+=2; doneProg.style.width=pct+'%'; if(pct>=100){ clearInterval(tick); window.close(); setTimeout(()=>{ doneDesc.textContent+=' 이 탭을 직접 닫아 혼디로 돌아가세요.'; },300); } },40);
 }
 
+
+function _skipSetup() {
+  const toast = document.getElementById('_skip-toast');
+  if (!toast) return;
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 2000);
+}
+
 // 초기화: 기존 저장된 키 복원
 (function _init(){
   const cfg=JSON.parse(localStorage.getItem('gopang_cfg')||'{}');
@@ -587,8 +531,7 @@ async function _saveAll() {
     const input=document.getElementById('key-'+llm.id);
     if(input&&p.apiKey){ input.value=p.apiKey; input.classList.add('saved'); _updateBadge(llm.id,p.apiKey); }
   }
-  // 빈 카드 중 첫 번째 자동 열기
-  for(const llm of LLM){ const input=document.getElementById('key-'+llm.id); if(!input?.value){ document.getElementById('card-'+llm.id)?.classList.add('open'); break; } }
+  // 모든 카드는 닫힌 상태로 시작 (사용자가 직접 펼침)
 })();
 </script>
 </body>
