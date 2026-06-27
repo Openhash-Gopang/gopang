@@ -23,6 +23,14 @@ import { _recordPDV } from '../pdv/record.js';
 //   - RISK_NONE              → 무시
 // ══════════════════════════════════════════════════════════════════════
 
+// ── K-Law 백그라운드 감시 ON/OFF 스위치 ──────────────────────────────
+// 2026-06-27: 모든 대화·PDV 기록마다 자동으로 LLM을 호출해 토큰을
+// 과다 소모하는 것이 확인되어 일단 중단. 다시 켜려면 이 값만 true로.
+// (꺼도 K-Law 자체 서비스(판결예측, klaw.gopang.net)는 영향 없음 —
+//  이건 "사용자가 부르지 않아도 모든 대화를 미리 검토하는" 백그라운드
+//  파이프라인만 끄는 스위치다.)
+const KLAW_BACKGROUND_ENABLED = false;
+
 // ── K-Law 감시 상태 ────────────────────────────────────────────────
 
 // K-Law Monitor 프롬프트 캐시 (감시용 경량 프롬프트 — v15.1 판결예측과 별개)
@@ -53,6 +61,8 @@ const KLAW_RISK = {
 // source: 'conversation' | 'service'
 // payload: 검토할 텍스트 또는 서비스 데이터
 export async function _klawReview(source, payload) {
+  if (!KLAW_BACKGROUND_ENABLED) return;  // 2026-06-27 중단 — 토큰 낭비 방지
+
   // 쿨다운 및 중복 실행 방지
   const now = Date.now();
   if (_klawBusy) return;

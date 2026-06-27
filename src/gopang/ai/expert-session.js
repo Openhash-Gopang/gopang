@@ -104,12 +104,27 @@ export async function handleExpertTag(fullReply) {
   return true;
 }
 
+// ── CFG.system과 history[0]을 함께 갱신 ──────────────────────
+// ⚠️ call-ai.js는 history가 비어있지 않으면 history[0](캐시된 system)을
+// 그대로 보내고 CFG.system은 쳐다보지 않는다(캐시 최적화 설계 — 위
+// _callAIInner 주석 참조). 그래서 CFG.system만 바꾸면 실제 전송되는
+// 프롬프트는 안 바뀌는 버그가 있었다. 페르소나 전환 시점은 어차피
+// 캐시 프리픽스가 바뀌는 지점이므로(다른 SP로 진짜 전환하는 것이니
+// 캐시 재사용을 기대할 수 없다), history[0]도 같이 덮어써서 실제로도
+// 전환되게 한다.
+function _applySystemEverywhere(text) {
+  CFG.system = text;
+  if (history.length > 0 && history[0]?.role === 'system') {
+    history[0] = { role: 'system', content: text };
+  }
+}
+
 // ── 전문가 AI 세션 시작 ───────────────────────────────────────
 export async function startExpertSession(personaId, def) {
   if (_expert.active && _expert.personaId === personaId) return; // 이미 같은 페르소나 진행 중
 
   const prompt = await _composeExpertPrompt(def);
-  CFG.system = prompt;            // 같은 스레드 — history는 그대로 유지(맥락 보존)
+  _applySystemEverywhere(prompt);  // 같은 스레드 — history 대화 자체는 유지(맥락 보존), system만 교체
 
   _expert = {
     active: true, personaId, def,
@@ -145,7 +160,7 @@ export function applyExpertSystemIfActive() {
   if (!_expert.active) return false;
   // _composeExpertPrompt가 캐시돼 있으므로 동기적으로 즉시 적용 가능
   if (_promptCache.has(_expert.def.file)) {
-    CFG.system = _promptCache.get(_expert.def.file);
+    _applySystemEverywhere(_promptCache.get(_expert.def.file));
     return true;
   }
   return false;
@@ -190,7 +205,7 @@ export async function endExpertSession(reason = 'unknown') {
   }).catch(e => console.warn('[Expert] PDV 기록 실패:', e.message));
 
   // ── 그림자 AI(AGENT-COMMON)로 복원 ───────────────────────
-  CFG.system = CFG.system_base || CFG.system;
+  _applySystemEverywhere(CFG.system_base || CFG.system);
 
   const reasonLabel = reason === 'timeout' ? '(응답이 없어 자동 종료됨)' : '';
   appendBubble('ai',

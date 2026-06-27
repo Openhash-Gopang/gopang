@@ -139,7 +139,16 @@ export function loadSettings() {
 // ── 디폴트 LLM 키 fetch (체험 기간 사용자 전용) ─────────────
 // 사용자가 직접 키를 등록하지 않은 경우에만 호출
 // 등록된 키가 있으면 건너뜀 (사용자 키 우선)
+//
+// 2026-06-27: 공용 디폴트 키 제공을 전면 중단. 토큰 낭비(K-Market·
+// K-Insurance가 같은 공유 프록시로 deepseek-v4-pro를 기본/고정 호출)가
+// 확인되어, 이제 모든 사용자가 자신이 선택한 API 키를 직접 입력해야
+// 한다. 다시 켜려면 이 값만 true로 되돌리면 된다.
+const DEFAULT_KEY_PROVISIONING_ENABLED = false;
+
 export async function loadDefaultKeyIfNeeded() {
+  if (!DEFAULT_KEY_PROVISIONING_ENABLED) return;  // 2026-06-27 중단
+
   try {
     // 이미 사용자 키가 있으면 건너뜀
     const cfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');

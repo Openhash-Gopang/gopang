@@ -4005,7 +4005,23 @@ async function handleAdminDefaultKeySet(request, env, corsHeaders) {
 // GET /default-key?guid=...&registered_at=ISO8601
 // 체험기간 내이면 활성 키 중 첫 번째 반환 (key 값은 마스킹 안 함 — HTTPS 전용)
 // 체험기간 만료이면 expired_msg 반환
+//
+// 2026-06-27: 공용 디폴트 키 제공 전면 중단 (토큰 낭비 방지 — 모든
+// 사용자는 자신의 API 키를 직접 입력해야 한다). 클라이언트
+// (loadDefaultKeyIfNeeded)도 이미 막아뒀지만, KV에 남은 키가 있어도
+// 서버가 절대 내려주지 않도록 이중으로 차단한다. 되돌리려면
+// DEFAULT_KEY_PROVISIONING_ENABLED만 true로.
+const DEFAULT_KEY_PROVISIONING_ENABLED = false;
+
 async function handleDefaultKeyGet(request, env, corsHeaders) {
+  if (!DEFAULT_KEY_PROVISIONING_ENABLED) {
+    return new Response(JSON.stringify({
+      ok: false,
+      status: 'PROVISIONING_DISABLED',
+      message: '공용 체험 키 제공이 중단됐습니다. 설정에서 본인의 AI 키를 직접 입력해 주세요.',
+    }), { status: 200, headers: corsHeaders });
+  }
+
   const url  = new URL(request.url);
   const guid = url.searchParams.get('guid');
   const registeredAt = url.searchParams.get('registered_at');
