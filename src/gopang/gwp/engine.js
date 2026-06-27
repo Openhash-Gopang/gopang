@@ -8,6 +8,7 @@ import { appendBubble } from '../ui/bubble.js';
 import { _recordPDV } from '../pdv/record.js';
 import { _patchL1LedgerUserHash, _patchPdvChainHeight,
          _markPdvAnchored } from '../pdv/record.js';
+import { summarizeTranscript6W } from '../ai/report-utils.js';
 
 // Gopang Widget Protocol (GWP) 호스트 엔진 v2.0 — 새 탭 방식
 // iframe 방식 제거 → JS 전역 충돌·SyntaxError·CFG 미초기화 문제 원천 해결
@@ -17,6 +18,11 @@ import { _patchL1LedgerUserHash, _patchPdvChainHeight,
 // ── 서비스 레지스트리 ─────────────────────────────────────────────
 // gwp-registry.js 에서 동적 로드 (API 키 분리 목적)
 // GWP_REGISTRY 전역 변수는 gwp-registry.js 가 선언함
+
+// ── "예외 없이 보고" 추적용 상태 ────────────────────────────────
+// GWP_DONE을 한 번도 못 받고 탭이 닫히는 경우를 위한 폴백 요약 자료.
+let _gwpReported    = false;  // GWP_DONE 수신 여부 (true면 폴백 불필요)
+let _gwpMessageLog  = [];     // GWP_MESSAGE로 중계된 대화만 누적(전체 탭 내용은 알 수 없음)
 
 
 // ── 의도 → 서비스 매칭 ─────────────────────────────────────────
@@ -45,6 +51,8 @@ export function _gwpLaunch(service, context, _preTab = null) {
 
   _gwpActive  = true;
   _gwpService = service;
+  _gwpReported   = false;   // 새 세션 — 보고 수신 여부 초기화
+  _gwpMessageLog = [];       // 새 세션 — 대화 로그 초기화
 
   const svcName = service?.name || 'K-서비스';
   const svcIcon = service?.icon || '🤖';
@@ -104,8 +112,10 @@ function _gwpOnTabClose() {
   _gwpTabTimer = null;
   _gwpTab      = null;
 
-  const svcName = _gwpService?.name || 'K-서비스';
-  const svcIcon = _gwpService?.icon || '🤖';
+  const svc      = _gwpService;
+  const reported = _gwpReported;
+  const svcName  = _gwpService?.name || 'K-서비스';
+  const svcIcon  = _gwpService?.icon || '🤖';
 
   _gwpActive  = false;
   _gwpService = null;
@@ -113,11 +123,66 @@ function _gwpOnTabClose() {
   // 고팡 탭 포커스
   window.focus();
 
+  if (reported) {
+    appendBubble('ai',
+      `✅ <b>${svcIcon} ${svcName}</b> 탭이 닫혔습니다. 고팡으로 돌아왔습니다.`,
+      true
+    );
+    console.info('[GWP] 새 탭 닫힘 — 고팡 복귀(보고 수신됨)');
+  } else {
+    // ── "예외 없이 보고" 원칙 — GWP_DONE 없이 닫힌 경우 강제 폴백 ──
+    _gwpFallbackReport(svc).catch(e =>
+      console.warn('[GWP] 폴백 보고 실패(무시):', e.message)
+    );
+    console.info('[GWP] 새 탭 닫힘 — 보고 미수신, 폴백 처리 중');
+  }
+}
+
+// ── 보고 없이 종료된 경우의 강제 요약·PDV 기록 ───────────────────
+// GWP_MESSAGE로 중계된 대화가 있으면 LLM에게 6하원칙 요약을 강제 요청하고,
+// 중계된 내용이 전혀 없으면("탭 안에서 무슨 일이 있었는지 알 수 없음") 그
+// 사실 자체를 최소 기록으로 남긴다 — 어느 경우든 PDV 기록은 예외 없이 남는다.
+async function _gwpFallbackReport(svc) {
+  const svcName = svc?.name || 'K-서비스';
+  const log     = _gwpMessageLog.slice();
+  _gwpMessageLog = [];
+
+  const hasLog = log.length > 0;
+  let report6w = null;
+
+  if (hasLog) {
+    const transcript = log
+      .map(m => `[${m.role === 'user' ? '사용자' : svcName}] ${m.text}`)
+      .join('\n');
+    report6w = await summarizeTranscript6W(transcript);
+  }
+
+  const summaryText = report6w?.what || report6w?.result ||
+    (hasLog
+      ? `${svcName} 이용 중 탭이 보고 없이 종료됨(중계된 대화 ${log.length}건 — 요약 실패)`
+      : `${svcName} 탭이 보고 없이 종료되어 상세 대화 내용을 확인할 수 없습니다.`);
+
+  await _recordPDV({
+    type:      'agent_report_fallback',
+    serviceId: svc?.id   || null,
+    service:   svcName,
+    summary:   summaryText,
+    who:       report6w?.who   || _USER?.nickname || _USER?.ipv6 || null,
+    when:      report6w?.when  || new Date().toISOString(),
+    where:     report6w?.where || '혼디',
+    what:      report6w?.what  || summaryText,
+    how:       report6w?.how   || (hasLog ? 'gwp_tab_closed_llm_summary' : 'gwp_tab_closed_no_report'),
+    why:       report6w?.why   || '',
+    ts:        new Date().toISOString(),
+  });
+
   appendBubble('ai',
-    `✅ <b>${svcIcon} ${svcName}</b> 탭이 닫혔습니다. 고팡으로 돌아왔습니다.`,
+    hasLog
+      ? `📋 <b>${svcName}</b> 탭이 보고 없이 닫혀, 중계된 대화를 요약해 PDV에 기록했습니다.`
+      : `⚠️ <b>${svcName}</b> 탭이 보고 없이 닫혔습니다. 상세 내용 없이 이용 사실만 PDV에 기록했습니다.`,
     true
   );
-  console.info('[GWP] 새 탭 닫힘 — 고팡 복귀');
+  console.info('[GWP] 폴백 보고 완료 | hasLog:', hasLog, '| 요약:', summaryText);
 }
 
 // ── 탭 강제 종료 (고팡에서 직접 닫기) ─────────────────────────
@@ -131,11 +196,20 @@ export function _gwpClose(showReturn = true) {
   }
   _gwpTab = null;
 
-  const svcName = _gwpService?.name || 'K-서비스';
-  const svcIcon = _gwpService?.icon || '🤖';
+  const svc      = _gwpService;
+  const reported = _gwpReported;
+  const svcName  = _gwpService?.name || 'K-서비스';
+  const svcIcon  = _gwpService?.icon || '🤖';
 
   _gwpActive  = false;
   _gwpService = null;
+
+  if (!reported) {
+    // "예외 없이 보고" 원칙 — 직접 닫기에도 동일하게 적용
+    _gwpFallbackReport(svc).catch(e =>
+      console.warn('[GWP] 폴백 보고 실패(무시):', e.message)
+    );
+  }
 
   if (showReturn) {
     appendBubble('ai',
@@ -143,7 +217,7 @@ export function _gwpClose(showReturn = true) {
       true
     );
   }
-  console.info('[GWP] 탭 종료, 고팡 복귀');
+  console.info('[GWP] 탭 종료, 고팡 복귀 | 보고수신:', reported);
 }
 
 // ── postMessage 수신 (서비스 새 탭 → 고팡) ─────────────────────
@@ -182,10 +256,16 @@ window.addEventListener('message', (e) => {
     case 'GWP_MESSAGE': {
       // 서비스에서 고팡 채팅창에 메시지 추가
       appendBubble(msg.role === 'user' ? 'user' : 'ai', msg.html || msg.text || '', !!msg.html);
+      // 보고 없이 탭이 닫힐 경우의 폴백 요약 재료로 누적
+      _gwpMessageLog.push({
+        role: msg.role === 'user' ? 'user' : 'ai',
+        text: msg.text || (msg.html ? msg.html.replace(/<[^>]+>/g, ' ').trim() : ''),
+      });
       break;
     }
     case 'GWP_DONE': {
       // 작업 완료 — sessionId 확정 → redeemClaim → PDV 기록/소급 → 탭 자동 닫기
+      _gwpReported = true;  // 정식 보고 수신 — _gwpOnTabClose의 폴백을 막는다
       window._lastGwpDone = msg;  // T08 디버그
       if (msg.summary) appendBubble('ai', msg.summary, false);
 

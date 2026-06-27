@@ -19,6 +19,8 @@ import { _buildLocNote } from '../services/location.js';
 import { runRouter, applyRouterResult } from './router.js';
 import { _injectAuthConfirmButton } from '../core/auth.js';
 import { _klawReview } from '../services/klaw.js';
+import { maybeHandleExpertTurn, applyExpertSystemIfActive,
+         isExpertActive, handleExpertTag } from './expert-session.js';
 
 
 export let history_ref = history;  // 외부 참조용
@@ -397,9 +399,24 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
   //     (_buildEnhancedUserContent 참조)
   //   • 그림자 컨텍스트(_buildShadowContext): 제거 — user 메시지 병합 방식으로 대체
 
+  // ── 전문가 AI(페르소나) 세션 처리 ────────────────────────
+  // 명시적 종료 발화("끝났어" 등) 감지 시 endExpertSession()이 즉시 실행되어
+  // CFG.system을 그림자 AI(AGENT-COMMON)로 복원한다 — 이 경우 아래 SP 결정
+  // 로직을 정상적으로 통과시켜 그림자 AI가 이번 발화에 바로 응답하게 한다.
+  await maybeHandleExpertTurn(userText);
+
+  // ⚠️ _isOnboarding은 아래 if/else 밖(_buildEnhancedUserContent 등)에서도
+  //    참조되므로 반드시 블록 스코프 밖에서 선언한다.
   const _profileDone    = localStorage.getItem('hondi_profile_done')    === '1';
   const _profileSkipped = localStorage.getItem('hondi_profile_skipped') === '1';
   const _isOnboarding   = !_profileDone && !_profileSkipped;
+
+  if (isExpertActive()) {
+    // 전문가 세션이 이번 턴에도 유지됨 — PA/AGENT-COMMON 결정 로직을 건너뛰고
+    // 페르소나 System Prompt를 그대로 유지한다(history는 공유 — 맥락 보존,
+    // PA→AGENT-COMMON 전환과 달리 여기서는 history를 비우지 않는다).
+    applyExpertSystemIfActive();
+  } else {
 
   // AGENT-COMMON 최초 1회 로드 (이후 캐시)
   if (!CFG.system_base) {
@@ -430,6 +447,8 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     // 일반 비서 모드 또는 계속 진행 중인 온보딩 세션 — system 변경 없음
     if (!CFG.system) CFG.system = CFG.system_base || '';
   }
+
+  } // ← isExpertActive() else 블록 종료
 
   // ── 이미지 첨부 시: Gemini 범용 분석 → SP-00 컨텍스트 주입 ──
   if (imageFile && CFG.geminiKey) {
@@ -702,6 +721,15 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
         _preTab.close();
         console.info('[GWP] 직접 처리 — 예약 탭 닫힘');
       }
+    }
+
+    // ── EXPERT 태그 감지 → 전문가 AI(같은 스레드 페르소나) 세션 시작 ──
+    // 그림자 AI(AGENT-COMMON) 응답에서만 인식한다 — 페르소나 본인이 발급한
+    // 텍스트가 우연히 같은 패턴을 포함해도 재귀적으로 세션을 바꾸지 않도록.
+    if (!isExpertActive() && CFG.system?.includes('AGENT-COMMON v2.0')) {
+      handleExpertTag(fullReply).catch(e =>
+        console.warn('[Expert] 태그 처리 오류 (무시):', e.message)
+      );
     }
 
     // ── AUTH 태그 감지 → 인증 요구 ──────────────────────────
