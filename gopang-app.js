@@ -357,10 +357,37 @@ const _boot = async () => {
     import('./src/gopang/ui/settings.js').then(({ _autoApplyPcSyncedSetting }) => {
       if (typeof _autoApplyPcSyncedSetting !== 'function') return;
 
-      const _runSync = () => _autoApplyPcSyncedSetting().catch(e =>
-        console.warn('[AI설정] 자동 동기화 실패 (무시):', e.message));
+      // 무한 호출 방지 — 연속 실패 시 재시도 간격을 지수적으로 늘린다(최대 30분).
+      // 기존엔 setInterval(60초) 고정이라, L1 wallet/x25519가 526(서버 인증서
+      // 오류) 같은 지속적 장애일 때도 영원히 60초마다 같은 실패를 반복했다.
+      // (2026-06-27 — 사용량 폭증 원인 분석 중 발견)
+      const _SYNC_BASE_MS = 60_000;       // 기본 재시도 간격
+      const _SYNC_MAX_MS  = 30 * 60_000;  // 백오프 상한 30분
+      let _syncFailCount  = 0;
+      let _syncTimerId    = null;
 
-      _runSync(); // 앱 시작 시 1회 즉시 확인
+      const _runSync = async () => {
+        try {
+          const ok = await _autoApplyPcSyncedSetting();
+          _syncFailCount = ok ? 0 : _syncFailCount + 1;
+          return ok;
+        } catch (e) {
+          console.warn('[AI설정] 자동 동기화 실패 (무시):', e.message);
+          _syncFailCount++;
+          return false;
+        }
+      };
+
+      function _scheduleNextPoll() {
+        if (_syncTimerId) clearTimeout(_syncTimerId);
+        const delay = Math.min(_SYNC_BASE_MS * (2 ** _syncFailCount), _SYNC_MAX_MS);
+        _syncTimerId = setTimeout(async () => {
+          await _runSync();
+          _scheduleNextPoll(); // 성공/실패 결과에 따라 다음 간격을 다시 계산해 스스로 재예약
+        }, delay);
+      }
+
+      _runSync().then(_scheduleNextPoll); // 앱 시작 시 1회 즉시 확인 후 폴백 폴링 루프 시작
 
       // 메인 경로: PC가 키를 전송하면 서버가 즉시 푸시를 보내고, Service Worker가
       // 열려있는 탭에 SYNC_AI_SETTING을 postMessage로 전달한다 — 화면 무관 즉시 반응.
@@ -368,14 +395,12 @@ const _boot = async () => {
         navigator.serviceWorker.addEventListener('message', (event) => {
           if (event.data?.type === 'SYNC_AI_SETTING') {
             console.info('[AI설정] 푸시 신호 수신 — 즉시 동기화');
-            _runSync();
+            _runSync(); // 백오프 타이머는 그대로 두고 즉시 1회만 추가 확인(성공 시 실패 카운트도 초기화됨)
           }
         });
       }
-
-      // 폴백: 알림 권한 거부, 푸시 구독 미완료 등으로 push가 동작하지 않는
-      // 경우를 위해 60초 간격으로도 한 번씩 확인한다.
-      setInterval(_runSync, 60000);
+      // 폴백 폴링 주기는 위 _scheduleNextPoll()이 기본 60초 → 연속 실패 시
+      // 최대 30분까지 늘려가며 스스로 재예약한다 (고정 setInterval 제거).
     }).catch(e => console.warn('[AI설정] settings.js 로드 실패 (무시):', e.message));
   }
 

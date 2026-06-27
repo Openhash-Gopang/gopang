@@ -2597,6 +2597,18 @@ window.closeTermsOfUse = closeTermsOfUse;
     let errorStreak = 0;
     let silenceTimer = null;
 
+    // 오인식·하울링(스피커 소리를 마이크가 다시 인식) 등으로 자동전송이
+    // 무한히 반복되는 사고를 막기 위한 분당 상한. (2026-06-27 — 사용량
+    // 폭증 원인 분석 후 추가. 정상적인 대화 속도로는 분당 6회를 넘기 어렵다.)
+    const AUTO_SEND_MAX_PER_MINUTE = 6;
+    const AUTO_SEND_WINDOW_MS = 60_000;
+    let _autoSendTimestamps = [];
+    function _autoSendAllowed() {
+      const now = Date.now();
+      _autoSendTimestamps = _autoSendTimestamps.filter(t => now - t < AUTO_SEND_WINDOW_MS);
+      return _autoSendTimestamps.length < AUTO_SEND_MAX_PER_MINUTE;
+    }
+
     function setMicVisual(on) { micBtn.classList.toggle('mic-recording', on); }
     function clearSilenceTimer() { if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; } }
 
@@ -2606,6 +2618,13 @@ window.closeTermsOfUse = closeTermsOfUse;
         silenceTimer = null;
         if (!aiMicActive) return;
         if (input.value.trim() || _aiPanelAttachedFile) {
+          if (!_autoSendAllowed()) {
+            console.warn('[AI 마이크] 1분 내 자동전송 한도(' + AUTO_SEND_MAX_PER_MINUTE + '회) 초과 — 오작동 의심으로 마이크를 끕니다.');
+            _appendPanelMsg('ai', '음성 입력이 너무 자주 반복돼 마이크를 잠시 멈췄어요. 다시 누르면 켜져요.');
+            stopAIMic();
+            return;
+          }
+          _autoSendTimestamps.push(Date.now());
           baseText = '';
           _sendToAI();
         }
@@ -2715,6 +2734,21 @@ window.closeTermsOfUse = closeTermsOfUse;
   //  순서대로 다 두드리느라 응답이 10초 이상 걸리는 문제가 있었음 — 2026-06-24 수정)
   const _panelHistory = [];  // 패널 전용 대화 히스토리
 
+  // 대화가 길어질수록 매 턴마다 전체 히스토리를 그대로 다시 보내 비용이
+  // 누적적으로 커지는 문제를 막기 위해, system 프롬프트는 유지하고
+  // 나머지는 최근 N개 메시지(턴)만 남긴다. (2026-06-27 — 6/27 사용량 폭증
+  // 원인 분석에서 발견: 패널 세션이 길어질수록 요청당 토큰이 계속 불어남)
+  const _PANEL_HISTORY_MAX_MESSAGES = 20; // system 제외, user/assistant 약 10턴
+  function _trimPanelHistory() {
+    const hasSystem = _panelHistory[0]?.role === 'system';
+    const head = hasSystem ? _panelHistory.slice(0, 1) : [];
+    const rest = hasSystem ? _panelHistory.slice(1) : _panelHistory.slice(0);
+    if (rest.length <= _PANEL_HISTORY_MAX_MESSAGES) return;
+    const trimmed = rest.slice(rest.length - _PANEL_HISTORY_MAX_MESSAGES);
+    _panelHistory.length = 0;
+    _panelHistory.push(...head, ...trimmed);
+  }
+
   async function _callPanelAI(userText, bubbleEl, attached) {
     const { PROVIDER_INFO, getPriorityOrder } = await import('./src/gopang/core/config.js');
     const { isModelOnCooldown, markModelFailed, getOpenRouterRemainingBudget, recordOpenRouterCall }
@@ -2742,6 +2776,7 @@ window.closeTermsOfUse = closeTermsOfUse;
       userContent = (userText ? userText + '\n' : '') + `[첨부파일: ${attached.name} — 본문 추출 미지원]`;
     }
     _panelHistory.push({ role: 'user', content: userContent });
+    _trimPanelHistory(); // 실제 전송 직전에 잘라서, 이번 요청부터 바로 작아진 히스토리가 나간다
 
     // ── 후보 생성: getPriorityOrder()로 정렬 + OR은 24h쿨다운·분당예산으로 사전 필터링 ──
     // (call-ai.js의 _buildCallCandidates와 동일한 원칙 — 실패가 뻔한 후보는
@@ -2819,6 +2854,7 @@ window.closeTermsOfUse = closeTermsOfUse;
         }
         // 히스토리에 assistant 추가
         _panelHistory.push({ role: 'assistant', content: full });
+        _trimPanelHistory();
         return;
       } catch(e) { lastErr = e.message; }
     }
@@ -2869,6 +2905,8 @@ window.closeTermsOfUse = closeTermsOfUse;
   if (!SR) return; // 미지원 브라우저는 조용히 비활성화
 
   const WAKE_PATTERN = /혼\s*디\s*야/; // "혼디야" — 사이 띄어쓰기 변형 허용
+  const WAKE_RETRIGGER_COOLDOWN_MS = 8000; // 짧은 간격 재트리거 방지(되먹임·오인식 대비)
+  let _lastWakeAt = 0;
   let recognition = null;
   let wakeActive = false; // 호출어 대기 루프를 의도적으로 켜둔 상태인지
   let suspended  = false; // 다른 마이크 사용 중이라 일시 정지된 상태인지
@@ -2901,6 +2939,9 @@ window.closeTermsOfUse = closeTermsOfUse;
   }
 
   function _onWakeDetected() {
+    const now = Date.now();
+    if (now - _lastWakeAt < WAKE_RETRIGGER_COOLDOWN_MS) return; // 짧은 간격 재트리거 — 되먹임/오인식 방지
+    _lastWakeAt = now;
     if (typeof window.openAIPanel === 'function') window.openAIPanel();
     // 패널이 열리는 애니메이션 시간(약 0.4s) 뒤 곧바로 다음 발화를 듣기 시작한다.
     setTimeout(() => {

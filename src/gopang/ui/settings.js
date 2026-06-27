@@ -374,7 +374,7 @@ export async function _autoApplyPcSyncedSetting() {
     JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}')?.ipv6;
   if (!guid) {
     console.info('[AI설정][자동] guid 없음 — 미등록 사용자, 건너뜀');
-    return;
+    return true; // 재시도할 대상 자체가 없음 — 실패로 취급하지 않음 (백오프 누적 방지)
   }
 
   console.info('[AI설정][자동] 시작 — guid:', guid.slice(0, 12) + '...');
@@ -386,7 +386,7 @@ export async function _autoApplyPcSyncedSetting() {
     result = await ensureX25519Synced(guid);
     if (!result.ok) {
       console.error('[AI설정][자동] X25519 재시도도 실패:', result.reason, '— 자동 적용 중단');
-      return;
+      return false; // 호출부가 이 신호로 다음 재시도 간격을 늘림(백오프)
     }
   }
   console.info('[AI설정][자동] X25519 준비 완료');
@@ -396,7 +396,7 @@ export async function _autoApplyPcSyncedSetting() {
     const data = await res.json();
     if (!data.ok || !data.sealed) {
       console.info('[AI설정][자동] 대기 중인 PC 설정 없음 — 정상 종료');
-      return;
+      return true;
     }
 
     console.info('[AI설정][자동] PC 설정 발견 — 복호화 시도');
@@ -413,8 +413,10 @@ export async function _autoApplyPcSyncedSetting() {
 
     _enqueueBubble('ai', 'PC로부터 AI 키 도착 및 설정 완료. 상단 AI 버튼을 클릭하여, 자신 만의 AI 비서로 훈련하십시오.');
     console.info('[AI설정][자동] 적용 완료');
+    return true;
   } catch(e) {
     console.error('[AI설정][자동] 처리 중 오류:', e.message, e.stack);
+    return false; // 복호화·등록 단계 오류도 백오프 대상으로 취급
   }
 }
 
