@@ -2435,20 +2435,21 @@ window.closeTermsOfUse = closeTermsOfUse;
         aiBubble.classList.remove('streaming');
       }, 400);
     } else if (!_panelGreeted && msgList.children.length === 0) {
-      // 첫 실행 시 AI가 먼저 인사 (personal-assistant PHASE 1-INTRO)
+      // 첫 실행 시 AI가 먼저 말을 건다. v1.3 — 더 이상 "PHASE 1-INTRO를
+      // 실행하세요"를 강제 지정하지 않는다: 그렇게 고정해두면 PHASE -1(최초
+      // 인사·이름짓기)이 항상 건너뛰어진다. 어떤 PHASE로 시작할지는
+      // [CONTEXT]의 first_greeted/done/skipped/step만 보고 SP가 스스로
+      // 정확히 판단한다(_callPanelAI가 _buildProfileContext()로 주입).
       _panelGreeted = true;
       setTimeout(async () => {
         const user = (() => { try { return JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}'); } catch { return {}; } })();
         const nickname = user.nickname || '';
-        const greetTrigger = nickname
-          ? `사용자 닉네임: "${nickname}". PHASE 1-INTRO를 실행하세요.`
-          : 'PHASE 1-INTRO를 실행하세요.';
         const aiBubble = _appendPanelMsg('ai', '…');
         aiBubble.classList.add('streaming');
-        try { await _callPanelAI(greetTrigger, aiBubble); }
+        try { await _callPanelAI('[INTERNAL: 패널이 열렸습니다. 먼저 인사해 주세요.]', aiBubble); }
         catch(e) {
           const nick = nickname ? nickname + '님, ' : '';
-          aiBubble.textContent = nick + '안녕하세요! 😊 저와 함께할 첫걸음을 해볼까요? 먼저, 당신의 이름이나 어떻게 불리고 싶은지 알려주세요.';
+          aiBubble.textContent = nick + '안녕하세요! 😊 무엇을 도와드릴까요?';
         }
         aiBubble.classList.remove('streaming');
       }, 400);
@@ -2463,6 +2464,18 @@ window.closeTermsOfUse = closeTermsOfUse;
   }
   window.openAIPanel = openAIPanel;
   window.closeAIPanel = closeAIPanel;
+
+  // ── 바깥 탭 → AI 패널 즉시 닫고, 탭한 동작은 그대로 진행 ──────────
+  // capture 단계에서 먼저 패널만 닫고 이벤트는 막지 않는다(stopPropagation 안 함).
+  // 그래서 예를 들어 검색 버튼을 탭하면: ①AI 패널이 먼저 닫히고 ②그 직후 원래의
+  // openP2PSearch() 클릭 핸들러가 정상적으로 이어서 실행되어 검색 입력창이 뜬다.
+  document.addEventListener('click', (e) => {
+    if (!_panelOpen) return;
+    if (panel.contains(e.target)) return;                 // 패널 내부 탭 — 무시
+    if (btnAI && btnAI.contains(e.target)) return;         // AI 토글 버튼 — 자체 핸들러가 처리
+    if (triggerBtn && triggerBtn.contains(e.target)) return;
+    closeAIPanel();
+  }, true);
 
   // ── 핸들바 드래그 — 높이 조절 + 최소 이하로 내리면 닫기 ───────────
   // 패널 높이 범위: 최소 120px ~ 최대 화면 92%
@@ -2711,6 +2724,19 @@ window.closeTermsOfUse = closeTermsOfUse;
       if (document.visibilityState === 'hidden' && aiMicActive) stopAIMic();
     });
     window.addEventListener('pagehide', () => { if (aiMicActive) stopAIMic(); });
+
+    // ── 기본 활성화: 앱을 (비활성 상태에서) 열면 AI 대화창과 마이크를 기본으로 켠다 ──
+    // 패널 자체는 권한과 무관하게 항상 자동으로 열고, 마이크는 이미 권한이
+    // 허용돼 있을 때만 자동으로 켠다(처음 보는 사용자에게 권한 팝업을 임의로
+    // 띄우지 않는다 — 위쪽 "혼디야" 호출어 블록과 동일한 원칙).
+    setTimeout(() => {
+      openAIPanel();
+      if (navigator.permissions?.query) {
+        navigator.permissions.query({ name: 'microphone' }).then(status => {
+          if (status.state === 'granted') startAIMic();
+        }).catch(() => {});
+      }
+    }, 300);
   })();
 
   // ── 메시지 렌더 헬퍼 ─────────────────────────────────
@@ -2753,17 +2779,38 @@ window.closeTermsOfUse = closeTermsOfUse;
     const { PROVIDER_INFO, getPriorityOrder } = await import('./src/gopang/core/config.js');
     const { isModelOnCooldown, markModelFailed, getOpenRouterRemainingBudget, recordOpenRouterCall }
       = await import('./src/gopang/core/free-model-pool.js');
+    // v1.3 — 메인 채팅(call-ai.js)과 동일한 manifest 기반 SP 로더 + 온보딩 태그
+    // 처리를 패널에도 연결. 이전엔 패널이 독자적인 하드코딩 프롬프트(_PA_SYSTEM_PROMPT)
+    // 만 쓰고 PROFILE_SUBMIT/SKIP/PARTIAL_SAVE 등을 전혀 처리하지 않아서, 패널로만
+    // 온보딩을 진행하면 끝까지 끝나지도, 다음 단계로 넘어가지도 않는 문제가 있었음.
+    const {
+      _loadAgentCommonSP, _loadPersonalAssistantOnboardingSP,
+      _buildProfileContext, _handleProfileTags, _stripInternalTags,
+    } = await import('./src/gopang/ai/call-ai.js');
+
+    const _profileDone    = localStorage.getItem('hondi_profile_done')    === '1';
+    const _profileSkipped = localStorage.getItem('hondi_profile_skipped') === '1';
+    const isOnboarding     = !_profileDone && !_profileSkipped;
 
     // CFG에서 현재 설정 읽기
     const cfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
     const providers = Array.isArray(cfg.providers) ? cfg.providers : [];
     const endpoint = cfg.endpoint || 'https://hondi-proxy.tensor-city.workers.dev';
-    const system = cfg.system || '';
 
-    // 히스토리에 user 추가 (시스템 프롬프트: cfg.system 우선, 없으면 personal-assistant 기본)
+    // 히스토리에 system 추가 — manifest 기반 로더 우선, 전부 실패하면 마지막
+    // 안전장치로만 내장 _PA_SYSTEM_PROMPT 사용
     if (_panelHistory.length === 0) {
-      const effectiveSystem = system || _PA_SYSTEM_PROMPT;
-      _panelHistory.push({ role: 'system', content: effectiveSystem });
+      let effectiveSystem = cfg.system || '';
+      if (!effectiveSystem) {
+        try {
+          effectiveSystem = isOnboarding
+            ? (await _loadPersonalAssistantOnboardingSP()) || (await _loadAgentCommonSP())
+            : (await _loadAgentCommonSP());
+        } catch (e) {
+          console.warn('[Panel] manifest SP 로드 실패, 내장 폴백 사용:', e.message);
+        }
+      }
+      _panelHistory.push({ role: 'system', content: effectiveSystem || _PA_SYSTEM_PROMPT });
     }
     // 첨부파일 반영 — 사진은 멀티모달 image_url 블록, 그 외 파일은 파일명만 텍스트로 첨부
     let userContent = userText;
@@ -2774,6 +2821,11 @@ window.closeTermsOfUse = closeTermsOfUse;
       ];
     } else if (attached) {
       userContent = (userText ? userText + '\n' : '') + `[첨부파일: ${attached.name} — 본문 추출 미지원]`;
+    }
+    // 온보딩 중이면 [CONTEXT: PROFILE_ONBOARDING] 블록을 텍스트 메시지 앞에 병합
+    // (멀티모달 첨부가 있는 경우는 생략 — 이미지 자체가 핵심 입력이므로 단순화)
+    if (isOnboarding && typeof userContent === 'string') {
+      try { userContent = `${_buildProfileContext()}\n\n${userContent}`; } catch {}
     }
     _panelHistory.push({ role: 'user', content: userContent });
     _trimPanelHistory(); // 실제 전송 직전에 잘라서, 이번 요청부터 바로 작아진 히스토리가 나간다
@@ -2855,6 +2907,39 @@ window.closeTermsOfUse = closeTermsOfUse;
         // 히스토리에 assistant 추가
         _panelHistory.push({ role: 'assistant', content: full });
         _trimPanelHistory();
+
+        // v1.3 — PROFILE_SUBMIT/SKIP/PARTIAL_SAVE/FIRST_GREETED/NAME_CAPTURED 처리.
+        // bubble은 null로 넘겨 call-ai.js의 _updateStreamBubble(메인 채팅 버블 구조
+        // 전용)을 건드리지 않고, 패널 버블은 아래에서 직접 textContent로 정리한다.
+        // sendFn에 패널 전용 콜백을 넘겨 "인계 안착 인사"가 메인 채팅이 아니라
+        // 이 패널 안에 이어서 표시되게 한다.
+        // v1.3 — 화면 정리를 먼저 한다(원본 full은 그대로 _handleProfileTags에
+        // 넘기므로 태그 감지에는 영향 없음). 나중에 정리하면, 인계 안착 인사가
+        // 스트리밍되는 몇 초 동안 원래 버블에 PROFILE_SUBMIT 원문 JSON이 그대로
+        // 보이는 깜빡임이 생긴다.
+        bubbleEl.textContent = _stripInternalTags(full);
+
+        let handled = false;
+        try {
+          handled = await _handleProfileTags(full, null, async (handoffText) => {
+            // 인계 메시지를 보내기 전에 패널 히스토리부터 비워야 한다 — 그래야
+            // 재귀 호출이 _panelHistory.length===0 분기를 타서 새 system
+            // (AGENT-COMMON)을 다시 불러온다. 늦게 비우면 옛 PA 시스템
+            // 프롬프트가 깔린 채로 인계 메시지가 처리되는 버그가 생긴다.
+            _panelHistory.length = 0;
+            const handoffBubble = _appendPanelMsg('ai', '…');
+            handoffBubble.classList.add('streaming');
+            try { await _callPanelAI(handoffText, handoffBubble); }
+            finally { handoffBubble.classList.remove('streaming'); }
+          });
+        } catch (e) {
+          console.warn('[Panel] _handleProfileTags 처리 실패(무시):', e.message);
+        }
+        if (handled) {
+          // sendFn 콜백 안에서 이미 비웠지만, sendFn이 어떤 이유로든 호출되지
+          // 않았을 경우(예: callAI 쪽 변경)를 대비한 안전망 — 비어있으면 무해한 중복.
+          _panelHistory.length = 0;
+        }
         return;
       } catch(e) { lastErr = e.message; }
     }

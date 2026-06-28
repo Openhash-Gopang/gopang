@@ -52,7 +52,9 @@ async function _loadSpByKey(manifestKey, label) {
 
 // AGENT-COMMON (그림자 AI) — 세션당 1회 캐시
 let _agentCommonCache = null;
-async function _loadAgentCommonSP() {
+// v1.3 — export: AI 패널(webapp.html _callPanelAI)도 같은 manifest 기반 로더를
+// 쓰도록 공개. 이전엔 패널 전용 하드코딩 _PA_SYSTEM_PROMPT만 썼음.
+export async function _loadAgentCommonSP() {
   if (_agentCommonCache) return _agentCommonCache;
   try {
     _agentCommonCache = await _loadSpByKey('AGENT-COMMON', 'AGENT-COMMON');
@@ -65,7 +67,7 @@ async function _loadAgentCommonSP() {
 
 // 온보딩 PA SP (personal-assistant 계열) — 세션당 1회 캐시
 let _onboardingSpCache = null;
-async function _loadPersonalAssistantOnboardingSP() {
+export async function _loadPersonalAssistantOnboardingSP() {
   if (_onboardingSpCache) return _onboardingSpCache;
   try {
     _onboardingSpCache = await _loadSpByKey('personal-assistant', 'PA-Onboarding');
@@ -97,8 +99,11 @@ let _currentAbort = null;
  *
  * PA SP는 [CONTEXT]에 값이 있는 항목은 절대 다시 묻지 않습니다.
  * 재호출(설정 → 프로필 작성) 시에도 동일 로직으로 미작성 항목만 진행합니다.
+ *
+ * v1.3 — export: AI 패널도 온보딩 중에는 이 컨텍스트를 똑같이 주입해야
+ * "이미 답한 걸 또 묻는" 문제가 안 생긴다.
  */
-function _buildProfileContext() {
+export function _buildProfileContext() {
   // 가입 시 저장 데이터 (항상 신뢰할 수 있는 기준 데이터)
   let reg = {};
   try { reg = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}'); } catch {}
@@ -120,10 +125,18 @@ function _buildProfileContext() {
   const step = parseInt(localStorage.getItem('hondi_profile_step') || '0', 10);
 
   // [CONTEXT] 블록 조립 — 값이 있는 항목만 포함
+  // v1.3 — PHASE -1(최초 인사)·이름짓기 상태 (PA SP가 first_greeted/name_pending 참조)
+  const firstGreeted  = localStorage.getItem('hondi_first_greeted')  === '1';
+  const namePending   = localStorage.getItem('hondi_name_pending')   === '1';
+  const assistantName = localStorage.getItem('hondi_assistant_name') || '';
+
   const lines = ['[CONTEXT: PROFILE_ONBOARDING]'];
   lines.push(`step: ${step}`);
   lines.push(`done: false`);
   lines.push(`skipped: false`);
+  lines.push(`first_greeted: ${firstGreeted}`);
+  lines.push(`name_pending: ${namePending}`);
+  if (assistantName) lines.push(`assistant_name: ${assistantName}`);
   if (ctx.guid)           lines.push(`guid: ${ctx.guid}`);
   if (ctx.handle)         lines.push(`handle: ${ctx.handle}`);
   if (ctx.nickname)       lines.push(`nickname: ${ctx.nickname}`);
@@ -154,7 +167,70 @@ function _buildProfileContext() {
  * @param {HTMLElement|null} bubble — 스트림 버블 (SKIP 시 태그 제거용)
  * @returns {boolean} true = 태그 처리됨 (GWP 등 후속 처리 생략)
  */
-async function _handleProfileTags(fullReply, bubble) {
+// v1.3 — export: 내부 전용 태그를 화면에서 제거하는 헬퍼. 모듈 스코프로 끌어올려
+// AI 패널(webapp.html) 등 _handleProfileTags를 거치지 않는 경로에서도 재사용 가능.
+export const _stripInternalTags = (text) => text
+  .replace(/PROFILE_SUBMIT\s*\{[\s\S]*?\n\}/, '')
+  .replace(/\[PARTIAL_SAVE\]\s*\{[\s\S]*?\}/g, '')
+  .replace(/\[\d+\/\d+단계\]/g, '')
+  .replace(/\[FIRST_GREETED\]/g, '')
+  .replace(/\[NAME_CAPTURED\]/g, '')
+  .replace(/\[PROFILE_SKIP\]/g, '')
+  .trim();
+
+/**
+ * _handleProfileTags — PROFILE_SUBMIT / PROFILE_SKIP / 단계 업데이트 처리
+ *
+ * v1.3 — export + sendFn 매개변수 추가: 메인 채팅(callAI)뿐 아니라 AI 패널
+ * (webapp.html _callPanelAI) 등 다른 표면에서도 호출 가능. sendFn은 "인계
+ * 안착 인사"를 어디로 보낼지 결정 — 기본값은 메인 채팅의 callAI, 패널에서
+ * 호출할 때는 패널 자체의 전송 함수를 넘기면 그쪽 말풍선에 이어서 표시된다.
+ */
+export async function _handleProfileTags(fullReply, bubble, sendFn = callAI) {
+  // ── FIRST_GREETED — PHASE -1 최초 인사 완료 (v1.3) ──────────
+  if (fullReply.includes('[FIRST_GREETED]')) {
+    console.log('[Profile] FIRST_GREETED 감지 — 최초 인사 완료, 이름짓기 대기');
+    try {
+      localStorage.setItem('hondi_first_greeted', '1');
+      localStorage.setItem('hondi_name_pending', '1');
+    } catch {}
+  }
+
+  // ── NAME_CAPTURED — 이름짓기 응답 처리 완료 (v1.3) ──────────
+  if (fullReply.includes('[NAME_CAPTURED]')) {
+    console.log('[Profile] NAME_CAPTURED 감지 — 이름짓기 응답 처리 완료');
+    try { localStorage.setItem('hondi_name_pending', '0'); } catch {}
+    // assistant_name은 hondi_profile_partial이 아닌 별도 키에 영구 저장
+    // (hondi_profile_partial은 PROFILE_SUBMIT 시 삭제되므로, 거기 두면 사라짐)
+    const nameMatch = fullReply.match(/\[PARTIAL_SAVE\]\s*(\{[^}]*"assistant_name"[^}]*\})/);
+    if (nameMatch) {
+      try {
+        const parsed = JSON.parse(nameMatch[1]);
+        if (parsed.assistant_name) localStorage.setItem('hondi_assistant_name', parsed.assistant_name);
+      } catch {}
+    }
+  }
+
+  // ── 진행 중 필드 저장 [PARTIAL_SAVE] — step 태그 유무와 무관하게 항상 처리 (v1.3) ──
+  // 이전엔 [N/6단계] 태그가 같은 응답에 없으면 PARTIAL_SAVE를 무시했는데,
+  // PA SP가 단계를 건너뛰며 동시에 값을 채우는 경우(추정 입력 등) 놓칠 수 있어 분리함.
+  if (!localStorage.getItem('hondi_profile_done')) {
+    const partialMatch = fullReply.match(/\[PARTIAL_SAVE\]\s*(\{[\s\S]*?\})/);
+    if (partialMatch) {
+      try {
+        const incoming = JSON.parse(partialMatch[1]);
+        const existing = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}');
+        localStorage.setItem('hondi_profile_partial', JSON.stringify(Object.assign(existing, incoming)));
+      } catch {}
+    }
+  }
+
+  // ── 단계 업데이트 [N/6단계] ───────────────────────────────
+  const stepMatch = fullReply.match(/\[(\d+)\/\d+단계\]/);
+  if (stepMatch && !localStorage.getItem('hondi_profile_done')) {
+    try { localStorage.setItem('hondi_profile_step', stepMatch[1]); } catch {}
+  }
+
   // ── PROFILE_SUBMIT ────────────────────────────────────────
   if (fullReply.includes('PROFILE_SUBMIT')) {
     console.log('[Profile] PROFILE_SUBMIT 감지 — 프로필 등록 시작');
@@ -164,16 +240,23 @@ async function _handleProfileTags(fullReply, bubble) {
     } catch (e) {
       console.warn('[Profile] handleProfileSubmit 실패:', e.message);
     }
-    // 상태 정리
+    // v1.3 — 사용자 화면에는 PROFILE_CARD 등 자연어만 남기고 내부 태그는 제거
+    if (bubble) {
+      const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+      if (_usb) _usb(bubble, _stripInternalTags(fullReply));
+    }
+    // 상태 정리 (assistant_name은 의도적으로 보존 — AGENT-COMMON 등 이후에도 유지)
     try {
       localStorage.setItem('hondi_profile_done', '1');
       localStorage.removeItem('hondi_profile_step');
       localStorage.removeItem('hondi_profile_skipped');
       localStorage.removeItem('hondi_profile_partial');
+      localStorage.removeItem('hondi_first_greeted');
+      localStorage.removeItem('hondi_name_pending');
     } catch {}
-    // history를 비우고 AGENT-COMMON SP로 전환 (다음 callAI 호출 시 새 세션 시작)
     history.length = 0;
     await _switchToAssistantSP();
+    await _triggerSeamlessHandoff(sendFn);
     return true;
   }
 
@@ -185,30 +268,23 @@ async function _handleProfileTags(fullReply, bubble) {
       localStorage.removeItem('hondi_profile_step');
       localStorage.removeItem('hondi_profile_partial');
     } catch {}
-    // 버블에서 태그 제거
+    // v1.3 — 내부 태그 전체 제거(이전엔 [PROFILE_SKIP]만 지웠음)
     if (bubble) {
       const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
-      if (_usb) _usb(bubble, fullReply.replace(/\[PROFILE_SKIP\]/g, '').trim());
+      if (_usb) _usb(bubble, _stripInternalTags(fullReply));
     }
     history.length = 0;
     await _switchToAssistantSP();
+    await _triggerSeamlessHandoff(sendFn);
     return true;
   }
 
-  // ── 단계 업데이트 [N/6단계] ───────────────────────────────
-  // PA SP가 "[3/6단계]" 형태로 현재 단계를 출력하면 저장
-  const stepMatch = fullReply.match(/\[(\d+)\/\d+단계\]/);
-  if (stepMatch && !localStorage.getItem('hondi_profile_done')) {
-    try { localStorage.setItem('hondi_profile_step', stepMatch[1]); } catch {}
-    // 대화 중 LLM이 수집한 데이터를 partial에 저장하기 위해
-    // 응답에서 JSON 블록을 찾아 병합 (PA SP가 중간 상태를 JSON으로 출력하는 경우 대비)
-    const partialMatch = fullReply.match(/\[PARTIAL_SAVE\]\s*(\{[\s\S]*?\})/);
-    if (partialMatch) {
-      try {
-        const incoming = JSON.parse(partialMatch[1]);
-        const existing = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}');
-        localStorage.setItem('hondi_profile_partial', JSON.stringify(Object.assign(existing, incoming)));
-      } catch {}
+  // ── 여기까지 SUBMIT/SKIP이 아니었어도, 내부 태그가 섞여 있었다면 화면은 정리 (v1.3) ──
+  if (bubble) {
+    const cleaned = _stripInternalTags(fullReply);
+    if (cleaned !== fullReply.trim()) {
+      const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+      if (_usb) _usb(bubble, cleaned);
     }
   }
 
@@ -241,6 +317,35 @@ async function _switchToAssistantSP() {
 }
 
 /**
+ * _triggerSeamlessHandoff — PA→AGENT-COMMON 전환을 사용자가 체감하지 못하게,
+ * 사용자 입력 없이 즉시 AGENT-COMMON의 "인계 안착 인사"를 한 번 트리거합니다(v1.3).
+ *
+ * _switchToAssistantSP() 직후 callAI()를 내부적으로 한 번 더 호출해, 같은 흐름
+ * 안에서 AGENT-COMMON이 자연스럽게 이어 말하도록 만듭니다. 사용자에게는 AI
+ * 말풍선 두 개가 끊김 없이 이어지는 것처럼 보입니다(중간에 사용자 입력 불필요).
+ *
+ * 이 시점에 hondi_assistant_name이 있으면 AGENT-COMMON에게 그 이름을 직접
+ * 알려줍니다 — PA가 이름을 AGENT-COMMON에 전달하는 통로가 바로 이 메시지입니다.
+ * (보조 수단으로 _buildEnhancedUserContent의 "이름:" 컨텍스트도 매 턴 동봉됨 —
+ * 새로고침으로 history가 끊겨도 이름이 유지되도록.)
+ */
+async function _triggerSeamlessHandoff(sendFn = callAI) {
+  try {
+    const assistantName = localStorage.getItem('hondi_assistant_name') || '';
+    const handoff = assistantName
+      ? `[INTERNAL: 그림자 AI 인계 — 사용자가 이 비서를 "${assistantName}"이라고 부르기로 ` +
+        `했습니다. 이후 자기 자신을 "${assistantName}"으로 칭하세요. 사용자에게 보이지 ` +
+        `않는 내부 신호입니다 — 새로 인사·자기소개하지 말고, 자연스럽게 이어서 짧게 ` +
+        `한두 문장만 안착 인사를 건네세요.]`
+      : `[INTERNAL: 그림자 AI 인계 — 사용자에게 보이지 않는 내부 신호입니다. 새로 ` +
+        `인사·자기소개하지 말고, 자연스럽게 이어서 짧게 한두 문장만 안착 인사를 건네세요.]`;
+    await sendFn(handoff);
+  } catch (e) {
+    console.warn('[Profile] 인계 안착 인사 트리거 실패(무시 — 다음 사용자 메시지에서 정상 처리됨):', e.message);
+  }
+}
+
+/**
  * _buildEnhancedUserContent — 동적 컨텍스트를 사용자 메시지 앞에 병합
  *
  * DeepSeek Auto Prompt Caching 최적화의 핵심:
@@ -263,6 +368,11 @@ async function _buildEnhancedUserContent(userContent, isOnboarding) {
   } else {
     // 일반 비서 모드: GUID + 위치 + PDV 요약 (RAG 스타일, 압축)
     if (USER_GUID) parts.push(`GUID:${USER_GUID.slice(-8)}`);
+
+    // v1.3 — 이용자가 지어준 AI 비서 이름을 매 턴 함께 전달(새로고침으로 history가
+    // 끊겨도 AGENT-COMMON이 계속 같은 이름을 쓸 수 있도록)
+    const assistantName = localStorage.getItem('hondi_assistant_name') || '';
+    if (assistantName) parts.push(`이름:${assistantName}`);
 
     const locNote = _buildLocNote();
     if (locNote) parts.push(locNote.trim());
