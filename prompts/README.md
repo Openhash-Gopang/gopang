@@ -1,92 +1,260 @@
-# Gopang System Prompts — gopang/prompts/
+# 고팡 (Gopang) — AI 평행 세계 플랫폼
 
-고팡 AI 비서 폭포수 파이프라인의 시스템 프롬프트 모음입니다.
-모든 파일은 UTF-8 인코딩 · MIT 라이선스입니다.
-
----
-
-## 파일 목록
-
-| 파일명                        | 서비스      | 버전   | 설명                              |
-|-------------------------------|-------------|--------|-----------------------------------|
-| SP-00-ROUTER-v3.1.txt         | 라우터      | v3.1   | 14개 서비스 자동 분류 라우터      |
-| SP-01_klaw_v1.0.txt           | K-Law       | v1.0   | 대법원 판결 시뮬레이터            |
-| SP-02_k119_v1.0.txt           | K-119       | v1.0   | AI 응급출동 · 24시간 생명 감시    |
-| SP-03_kpolice_v1.0.txt        | K-Police    | v1.0   | AI 경찰관 · 치안·범죄 신고       |
-| SP-04_khealth_v1.0.txt        | K-Health    | v1.0   | AI 평행 병원 · 7단계 의료 워크플로|
-| SP-05_kcommerce_v1.0.txt      | K-Market    | v1.0   | AI 자율 시장 · 소비자 데이터 0%  |
-| SP-06_ktraffic_v1.0.txt       | K-Traffic   | v1.0   | AI 교통·물류 · 동선 겹침 매칭    |
-| SP-07_ktax_v1.0.txt           | K-Tax       | v1.0   | SP-TAX v2.0 · 세무 자동화        |
-| SP-08_gdc_v2.0.txt            | GDC         | v2.0   | 193개국 디지털 화폐 · 수수료 0%  |
-| SP-09_kschool_v1.0.txt        | K-School    | v1.0   | AI 교수 · 166개 과목 · 26개 언어 |
-| SP-10_kpublic_v1.0.txt        | K-Public    | v1.0   | AI 공무원 · 민원 자동화           |
-| SP-11_kstock_v1.0.txt         | K-Stock     | v1.0   | AI 자산관리 · 89개 자산군         |
-| SP-12_kdemocracy_v1.0.txt     | K-Democracy | v1.0   | DAWN · AI 직접 민주주의           |
-| SP-13_klogistics_v1.0.txt     | K-Logistics | v1.0   | 1~3차 산업 물류 통합              |
-| SP-14_kinsurance_v1.0.txt     | K-Insurance | v1.0   | AI 보험 · 비용 1/1,000           |
+> 현실 세계의 모든 기관·사물·전문직의 AI 쌍둥이로 구축한 평행 세계.
+> 하위 시스템 개발자를 위한 통합 진입점입니다.
 
 ---
 
-## 폭포수 파이프라인 구조
+## 빠른 시작 (하위 시스템 개발자)
+
+고팡의 하위 시스템(K-Law, K-Market, K-School 등)을 개발한다면
+**아래 순서대로** 읽으면 됩니다.
 
 ```
-사용자 입력
-    │
-    ▼
-SP-00-ROUTER (1단계)
-    │  서비스코드 + 신뢰도 반환
-    ▼
-전문 SP fetch (2단계)
-GitHub Raw URL → SP-{번호}_{코드}_v{버전}.txt
-    │
-    ▼
-전문 SP 기반 AI 응답 생성
-    │
-    ▼
-PDV 기록 + OpenHash 앵커링
+1단계  인증 통합    → #1-고팡-인증-통합
+2단계  보고서 전송  → #2-pdv-보고서-전송
+3단계  서비스 등록  → #3-서비스-등록
+4단계  상세 문서    → docs/ 폴더
 ```
 
 ---
 
-## 라우팅 코드표
+## 1. 고팡 인증 통합
 
-| 코드 | 서비스      | 임계값 |
-|------|-------------|--------|
-| LAW  | K-Law       | 0.70   |
-| EMG  | K-119       | 0.60   |
-| POL  | K-Police    | 0.65   |
-| HLT  | K-Health    | 0.70   |
-| MKT  | K-Market    | 0.75   |
-| TRF  | K-Traffic   | 0.75   |
-| TAX  | K-Tax       | 0.75   |
-| GDC  | GDC         | 0.75   |
-| SCH  | K-School    | 0.70   |
-| PUB  | K-Public    | 0.70   |
-| STK  | K-Stock     | 0.75   |
-| DEM  | K-Democracy | 0.70   |
-| LOG  | K-Logistics | 0.70   |
-| INS  | K-Insurance | 0.70   |
-| ECO  | 일반 대화   | -      |
+모든 하위 시스템은 **독자 인증 없이** 고팡 SSO를 사용합니다.
 
----
+### 필요한 파일
 
-## 네이밍 컨벤션
+| 파일 | 위치 | 역할 |
+|------|------|------|
+| `gopang-sso.js` | `https://gopang.net/auth/gopang-sso.js` | 인증 라이브러리 |
+| `silent-auth.html` | `https://gopang.net/auth/silent-auth.html` | 인증 엔드포인트 |
 
-```
-SP-{번호(2자리)}-{역할}-v{메이저}.{마이너}.txt   ← 라우터
-SP-{번호(2자리)}_{서비스코드}_v{메이저}.{마이너}.txt ← 전문 SP
+### 3줄 통합
+
+```html
+<script type="module">
+import { gopangAuth } from 'https://gopang.net/auth/gopang-sso.js';
+
+const user = await gopangAuth.require('L0');  // 미인증 시 자동 처리
+if (!user) return;                            // 리다이렉트 중
+
+console.log(user.ipv6);   // 사용자 정체성
+console.log(user.level);  // L0 | L1 | L2 | L3
+</script>
 ```
 
+### 인증 레벨
+
+| 레벨 | 수단 | 사용 시점 |
+|------|------|-----------|
+| L0 | 기기 자동 인식 | 일반 접속·조회 |
+| L1 | + 얼굴 (MediaPipe) | 개인정보 열람·소액 결제 |
+| L2 | + 지문 (WebAuthn) | 금융 거래·계약 서명 |
+| L3 | + 얼굴 + 지문 + 4단어 | 고액 거래·불가역 행위 |
+
+### 상세 문서
+
+📄 [`docs/gopang-auth-whitepaper.md`](docs/gopang-auth-whitepaper.md)
+— 인증 원리, 레벨 기준표, 보안 분석, 하위 시스템 구현 가이드(§12)
+
 ---
 
-## 기여 가이드
+## 2. PDV 보고서 전송
 
-1. 새 서비스 추가 시 → SP-15_ 이후 번호 사용
-2. 버전 업데이트 → 파일명 버전 변경 + SP-00-ROUTER 테이블 갱신
-3. PR 제출 전 → [OFP 표준](../../ofp_standard.html) 준수 여부 확인
-4. 테스트 → webapp.html 콘솔에서 라우팅 결과 확인
+하위 시스템은 사용자 활동을 주기적으로 고팡 PDV에 보고합니다.
+고팡은 이를 6하원칙(누가·언제·어디서·무엇을·어떻게·왜)으로 기록합니다.
+
+### 필요한 파일
+
+| 파일 | 위치 | 역할 |
+|------|------|------|
+| `gopang-report.js` | `https://gopang.net/report/gopang-report.js` | 보고서 전송 라이브러리 |
+
+### 3줄 전송
+
+```javascript
+import { buildReport, sendReportOnce }
+  from 'https://gopang.net/report/gopang-report.js';
+
+const report = buildReport({
+  svc:    'school',
+  type:   'weekly_progress',
+  ipv6:   user.ipv6,
+  what: { summary: '수학 2단원 완료, 영어 80% 진행', details: [...] },
+  how:  { method: 'AI 튜터 + 문제 풀이' },
+  why:  { goal: '1학기 선행 준비', triggered: 'weekly_schedule' },
+});
+
+const ack = await sendReportOnce(report);  // 중복 방지 자동 처리
+console.log(ack.pdv_entry);               // PDV 기록 ID
+```
+
+### API 엔드포인트
+
+```
+POST https://gopang-proxy.tensor-city.workers.dev/pdv/report
+GET  https://gopang-proxy.tensor-city.workers.dev/svc/verify?svc_id=school
+POST https://gopang-proxy.tensor-city.workers.dev/svc/register
+```
+
+### 상세 문서
+
+📄 [`docs/gopang-report-manual.md`](docs/gopang-report-manual.md)
+— 6하원칙 JSON 스키마, 보고서 유형, 전송 API, ACK, 오류 처리, school 예시
 
 ---
 
-*AI City Inc. · 팀 주피터 · gopang.net · github.com/Openhash-Gopang*
-*DAWN: Democracy is All We Need · MIT License*
+## 3. 서비스 등록
+
+고팡 인증·PDV를 사용하려면 **서비스 등록**이 필요합니다.
+
+### 등록 수준
+
+| 수준 | 조건 | 인증 | PDV 보고 |
+|------|------|------|----------|
+| Level 1 | `*.gopang.net` 서브도메인 | ✅ 자동 | ❌ |
+| Level 2 | 외부 도메인, 신원 확인 | ✅ | ✅ |
+| Level 3 | AI City Inc. 공식 파트너 | ✅ | ✅ |
+
+### 등록 방법
+
+**Level 1** — `*.gopang.net` 서브도메인이면 자동 승인:
+```
+하위 서비스 URL: https://myservice.gopang.net
+→ gopangAuth.require() 즉시 사용 가능
+```
+
+**Level 2 / 3** — 이 저장소에 Issue 등록:
+
+```
+제목: [서비스 등록] {서비스명}
+
+내용:
+- 서비스 ID:    myservice
+- 도메인:       https://myservice.example.com
+- 운영자 IPv6:  2601:db80:...
+- 서비스 설명:  (한 줄 설명)
+- 필요 기능:    인증만 / 인증 + PDV 보고
+```
+
+또는 API로 신청:
+```javascript
+await fetch('https://gopang-proxy.tensor-city.workers.dev/svc/register', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    svc_id:        'myservice',
+    domain:        'https://myservice.gopang.net',
+    operator_ipv6: user.ipv6,
+    description:   '서비스 설명',
+    min_auth:      'L0',
+  }),
+});
+```
+
+---
+
+## 4. 저장소 구조
+
+```
+gopang_v2/
+│
+│  ← gopang.net 배포 파일
+├── index.html          기기 감지 라우터
+├── webapp.html         모바일 PWA (AI 비서)
+├── desktop.html        PC 랜딩 페이지
+├── worker.js           Cloudflare Worker (API 서버)
+├── manifest.json       PWA 설정
+│
+│  ← 인증 라이브러리 (gopang.net/auth/*)
+├── auth/
+│   ├── gopang-sso.js       하위 시스템 SSO 라이브러리
+│   └── silent-auth.html    인증 엔드포인트 (리다이렉트·iframe)
+│
+│  ← 보고서 라이브러리 (gopang.net/report/*)
+├── report/
+│   └── gopang-report.js    PDV 보고서 전송 라이브러리
+│
+│  ← 문서
+├── docs/
+│   ├── gopang-auth-whitepaper.md   인증 백서 (§12: 하위 시스템 구현 가이드)
+│   ├── gopang-report-manual.md     보고서 전송 매뉴얼
+│   ├── supabase_webauthn.sql       WebAuthn 테이블 SQL
+│   └── ...기타 설계 문서
+│
+│  ← 고팡 앱 빌드 소스
+├── src/
+│   ├── app.js              부트스트랩
+│   ├── ai-secretary/       AI 비서 파이프라인
+│   ├── domains/k-law/      K-Law 플러그인
+│   ├── domains/k-health/   K-Health 플러그인
+│   └── ...
+│
+│  ← 개발 도구
+└── tools/
+    ├── build.py            빌드 스크립트
+    └── serve.py            로컬 서버
+```
+
+---
+
+## 5. 하위 시스템 도메인 요건
+
+```
+필수: *.gopang.net 서브도메인
+  klaw.gopang.net    ✅
+  school.gopang.net  ✅
+  myservice.gopang.net ✅
+
+  myservice.com      ❌ (WebAuthn L2 불가, 별도 신청 필요)
+
+필수: HTTPS
+  http:// 환경에서는 L2 이상 인증 불가
+```
+
+---
+
+## 6. Worker API 전체 목록
+
+`https://gopang-proxy.tensor-city.workers.dev`
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/auth/issue` | SSO 토큰 발급 |
+| GET  | `/auth/verify` | 토큰 검증 |
+| GET  | `/auth/refresh` | 토큰 갱신 |
+| POST | `/auth/webauthn/challenge` | WebAuthn 챌린지 발급 |
+| POST | `/auth/webauthn/register` | 지문 공개키 등록 |
+| POST | `/auth/webauthn/verify` | 지문 서명 검증 |
+| GET  | `/geocode` | 카카오 역지오코딩 |
+| POST | `/deepseek` | DeepSeek API 프록시 |
+| POST | `/gemini/*` | GPT-4o mini 프록시 |
+| POST | `/pdv/report` | **PDV 보고서 수신·기록** |
+| POST | `/svc/register` | **서비스 등록 신청** |
+| GET  | `/svc/verify` | **서비스 등록 상태 확인** |
+
+---
+
+## 7. 문의
+
+| 목적 | 연락처 |
+|------|--------|
+| 서비스 등록 신청 | GitHub Issue |
+| 기술 문의 | dev@gopang.net |
+| 법률·파트너십 | legal@gopang.net |
+| 일반 문의 | hello@gopang.net |
+
+---
+
+## 고팡이란
+
+고팡은 현실 세계의 모든 기관·사물·전문직의 AI 쌍둥이로 구축한 AI 평행 세계 플랫폼입니다.
+사용자는 단일 정체성(IPv6)으로 수백 개의 하위 시스템에 접근하며,
+전용 AI 비서가 각 기관과의 소통을 대행합니다.
+
+철학·비전·기술 상세: [`docs/GDC_Whitepaper_v1.5.md`](docs/GDC_Whitepaper_v1.5.md)
+
+---
+
+*© 2026 AI City Inc. — DAWN: Democracy is All We Need*

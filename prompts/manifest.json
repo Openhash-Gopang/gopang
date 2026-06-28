@@ -1,100 +1,86 @@
 {
-  "AGENT-COMMON": "AGENT-COMMON_v2_3.txt",
-  "SP-00-ROUTER": "SP-00-ROUTER-v5_0.txt",
-  "personal-assistant": "personal-assistant/personal-assistant-v1.3.txt",
-  "SP-01_klaw": "SP-01_klaw_v1.0.txt",
-  "SP-02_k119": "SP-02_k119_v2.0.txt",
-  "SP-03_kpolice": "SP-03_kpolice_v2.0.txt",
-  "SP-04_khealth": "SP-04_khealth_v2.0.txt",
-  "SP-05_kcommerce": "SP-05_kcommerce_v2.2.txt",
-  "SP-05_kmarket": "SP-05_kmarket_v2.0.txt",
-  "SP-06_ktraffic": "SP-06_ktraffic_v2.0.txt",
-  "SP-07_ktax": "SP-07_ktax_v2.0.txt",
-  "SP-08_gdc": "SP-08_gdc_v3.0.txt",
-  "SP-09_kschool": "SP-09_kschool_v2.0.txt",
-  "SP-10_kpublic": "SP-10_kpublic_v2.0.txt",
-  "SP-11_kstock": "SP-11_kstock_v2.0.txt",
-  "SP-12_kdemocracy": "SP-12_kdemocracy_v2.0.txt",
-  "SP-13_klogistics": "SP-13_klogistics_v1.0.txt",
-  "SP-14-IMG_kcleaner_vision_prompt": "SP-14-IMG_kcleaner_vision_prompt_v1.0.txt",
-  "SP-14_kcleaner": "SP-14_kcleaner_v1.2.txt",
-  "SP-14_kinsurance": "SP-14_kinsurance_v1.0.txt",
-  "SP-15-IMG_profile-scan_vision_prompt": "SP-15-IMG_profile-scan_vision_prompt_v1.0.txt",
-  "AGENT-SUPPLIER-01": "AGENT-SUPPLIER-01_agriculture_v1.0.txt",
-  "AGENT-SUPPLIER-02": "AGENT-SUPPLIER-02_forestry_v1.0.txt",
-  "AGENT-SUPPLIER-03": "AGENT-SUPPLIER-03_fisheries_v1.0.txt",
-  "AGENT-SUPPLIER-05": "AGENT-SUPPLIER-05_coal-oil-gas-mining_v1.0.txt",
-  "AGENT-SUPPLIER-06": "AGENT-SUPPLIER-06_metal-mining_v1.0.txt",
-  "AGENT-SUPPLIER-07": "AGENT-SUPPLIER-07_nonmetallic-mineral-mining_v1.0.txt",
-  "AGENT-SUPPLIER-08": "AGENT-SUPPLIER-08_mining-support-services_v1.0.txt",
-  "AGENT-SUPPLIER-10": "AGENT-SUPPLIER-10_food-manufacturing_v1.0.txt",
-  "AGENT-SUPPLIER-11": "AGENT-SUPPLIER-11_beverage-manufacturing_v1.0.txt",
-  "AGENT-SUPPLIER-12": "AGENT-SUPPLIER-12_tobacco-manufacturing_v1.0.txt",
-  "AGENT-SUPPLIER-13": "AGENT-SUPPLIER-13_textile-manufacturing_v1.0.txt",
-  "AGENT-SUPPLIER-14": "AGENT-SUPPLIER-14_apparel-manufacturing_v1.0.txt",
-  "AGENT-SUPPLIER-15": "AGENT-SUPPLIER-15_leather-bags-footwear_v1.0.txt",
-  "AGENT-SUPPLIER-16": "AGENT-SUPPLIER-16_wood-products_v1.0.txt",
-  "AGENT-SUPPLIER-17": "AGENT-SUPPLIER-17_pulp-paper_v1.0.txt",
-  "AGENT-SUPPLIER-18": "AGENT-SUPPLIER-18_printing-media-reproduction_v1.0.txt",
-  "AGENT-SUPPLIER-19": "AGENT-SUPPLIER-19_coke-petroleum-refining_v1.0.txt",
-  "AGENT-SUPPLIER-20": "AGENT-SUPPLIER-20_chemicals-manufacturing_v1.0.txt",
-  "AGENT-SUPPLIER-21": "AGENT-SUPPLIER-21_pharmaceuticals_v1.0.txt",
-  "AGENT-SUPPLIER-22": "AGENT-SUPPLIER-22_rubber-plastics_v1.0.txt",
-  "AGENT-SUPPLIER-23": "AGENT-SUPPLIER-23_nonmetallic-mineral-products_v1.0.txt",
-  "AGENT-SUPPLIER-24": "AGENT-SUPPLIER-24_primary-metals_v1.0.txt",
-  "AGENT-SUPPLIER-25": "AGENT-SUPPLIER-25_fabricated-metal-products_v1.0.txt",
-  "AGENT-SUPPLIER-26": "AGENT-SUPPLIER-26_electronics-computers-communication_v1.0.txt",
-  "AGENT-SUPPLIER-27": "AGENT-SUPPLIER-27_medical-precision-optical-instruments_v1.0.txt",
-  "AGENT-SUPPLIER-28": "AGENT-SUPPLIER-28_electrical-equipment_v1.0.txt",
-  "AGENT-SUPPLIER-29": "AGENT-SUPPLIER-29_other-machinery-equipment_v1.0.txt",
-  "AGENT-SUPPLIER-30": "AGENT-SUPPLIER-30_automobiles-trailers_v1.0.txt",
-  "AGENT-SUPPLIER-31": "AGENT-SUPPLIER-31_other-transport-equipment_v1.0.txt",
-  "AGENT-SUPPLIER-32": "AGENT-SUPPLIER-32_furniture-manufacturing_v1.0.txt",
-  "AGENT-SUPPLIER-33": "AGENT-SUPPLIER-33_other-products-manufacturing_v1.0.txt",
-  "AGENT-SUPPLIER-34": "AGENT-SUPPLIER-34_industrial-machinery-repair_v1.0.txt",
-  "AGENT-SUPPLIER-35": "AGENT-SUPPLIER-35_electricity-gas-steam-supply_v1.0.txt",
-  "AGENT-SUPPLIER-36": "AGENT-SUPPLIER-36_water-supply_v1.0.txt",
-  "AGENT-SUPPLIER-37": "AGENT-SUPPLIER-37_sewage-wastewater-treatment_v1.0.txt",
-  "AGENT-SUPPLIER-38": "AGENT-SUPPLIER-38_waste-collection-recycling_v1.0.txt",
-  "AGENT-SUPPLIER-39": "AGENT-SUPPLIER-39_environmental-remediation_v1.0.txt",
-  "AGENT-SUPPLIER-41": "AGENT-SUPPLIER-41_general-construction_v1.0.txt",
-  "AGENT-SUPPLIER-42": "AGENT-SUPPLIER-42_specialty-trade-construction_v1.0.txt",
-  "AGENT-SUPPLIER-45": "AGENT-SUPPLIER-45_automobile-parts-sales_v1.0.txt",
-  "AGENT-SUPPLIER-46": "AGENT-SUPPLIER-46_wholesale-trade-brokerage_v1.0.txt",
-  "AGENT-SUPPLIER-47": "AGENT-SUPPLIER-47_retail-trade_v1.0.txt",
-  "AGENT-SUPPLIER-49": "AGENT-SUPPLIER-49_land-transport-pipeline_v1.0.txt",
-  "AGENT-SUPPLIER-50": "AGENT-SUPPLIER-50_water-transport_v1.0.txt",
-  "AGENT-SUPPLIER-51": "AGENT-SUPPLIER-51_air-transport_v1.0.txt",
-  "AGENT-SUPPLIER-52": "AGENT-SUPPLIER-52_warehousing-transport-support_v1.0.txt",
-  "AGENT-SUPPLIER-55": "AGENT-SUPPLIER-55_accommodation_v1.0.txt",
-  "AGENT-SUPPLIER-56": "AGENT-SUPPLIER-56_restaurants-bars_v1.0.txt",
-  "AGENT-SUPPLIER-58": "AGENT-SUPPLIER-58_publishing_v1.0.txt",
-  "AGENT-SUPPLIER-59": "AGENT-SUPPLIER-59_film-video-audio-production_v1.0.txt",
-  "AGENT-SUPPLIER-60": "AGENT-SUPPLIER-60_broadcasting-streaming_v1.0.txt",
-  "AGENT-SUPPLIER-61": "AGENT-SUPPLIER-61_postal-telecommunications_v1.0.txt",
-  "AGENT-SUPPLIER-62": "AGENT-SUPPLIER-62_computer-programming-it_v1.0.txt",
-  "AGENT-SUPPLIER-63": "AGENT-SUPPLIER-63_information-services_v1.0.txt",
-  "AGENT-SUPPLIER-64": "AGENT-SUPPLIER-64_banking-finance_v1.0.txt",
-  "AGENT-SUPPLIER-65": "AGENT-SUPPLIER-65_insurance_v1.0.txt",
-  "AGENT-SUPPLIER-66": "AGENT-SUPPLIER-66_financial-insurance-support_v1.0.txt",
-  "AGENT-SUPPLIER-68": "AGENT-SUPPLIER-68_real-estate_v1.0.txt",
-  "AGENT-SUPPLIER-70": "AGENT-SUPPLIER-70_research-development_v1.0.txt",
-  "AGENT-SUPPLIER-71": "AGENT-SUPPLIER-71_professional-services_v1.0.txt",
-  "AGENT-SUPPLIER-72": "AGENT-SUPPLIER-72_architecture-engineering_v1.0.txt",
-  "AGENT-SUPPLIER-73": "AGENT-SUPPLIER-73_other-professional-scientific-services_v1.0.txt",
-  "AGENT-SUPPLIER-74": "AGENT-SUPPLIER-74_facilities-management-landscaping_v1.0.txt",
-  "AGENT-SUPPLIER-75": "AGENT-SUPPLIER-75_business-support-services_v1.0.txt",
-  "AGENT-SUPPLIER-76": "AGENT-SUPPLIER-76_rental-leasing_v1.0.txt",
-  "AGENT-SUPPLIER-84": "AGENT-SUPPLIER-84_public-administration-defense_v1.0.txt",
-  "AGENT-SUPPLIER-85": "AGENT-SUPPLIER-85_education-services_v1.0.txt",
-  "AGENT-SUPPLIER-86": "AGENT-SUPPLIER-86_health-care_v1.0.txt",
-  "AGENT-SUPPLIER-87": "AGENT-SUPPLIER-87_social-welfare-services_v1.0.txt",
-  "AGENT-SUPPLIER-90": "AGENT-SUPPLIER-90_creative-arts-leisure_v1.0.txt",
-  "AGENT-SUPPLIER-91": "AGENT-SUPPLIER-91_sports-recreation_v1.0.txt",
-  "AGENT-SUPPLIER-94": "AGENT-SUPPLIER-94_associations-organizations_v1.0.txt",
-  "AGENT-SUPPLIER-95": "AGENT-SUPPLIER-95_personal-goods-repair_v1.0.txt",
-  "AGENT-SUPPLIER-96": "AGENT-SUPPLIER-96_other-personal-services_v1.0.txt",
-  "AGENT-SUPPLIER-97": "AGENT-SUPPLIER-97_household-employment_v1.0.txt",
-  "AGENT-SUPPLIER-98": "AGENT-SUPPLIER-98_own-consumption-production_v1.0.txt",
-  "AGENT-SUPPLIER-99": "AGENT-SUPPLIER-99_international-foreign-organizations_v1.0.txt"
+  "name": "혼디 (Hondi)",
+  "short_name": "혼디",
+  "description": "혼디 AI 시민 플랫폼 — 카메라로 혼디 코드를 스캔하고 AI 비서와 대화하세요.",
+  "start_url": "/webapp.html?pwa=1",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#1050DC",
+  "lang": "ko",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "utilities",
+    "lifestyle"
+  ],
+  "permissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "혼디 AI 비서 — 카메라 스캔"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "AI 비서 시작",
+      "short_name": "AI",
+      "description": "AI 비서를 바로 시작합니다",
+      "url": "/webapp.html?ai=1",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "혼디 코드 스캔",
+      "short_name": "스캔",
+      "description": "카메라로 혼디 코드를 스캔합니다",
+      "url": "/webapp.html?scan=1",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false,
+  "handle_links": "preferred"
 }
