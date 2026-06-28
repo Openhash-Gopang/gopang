@@ -45,6 +45,68 @@ async function _signalDeleteDirect(id) {
   await fetch(`${_L1_SIGNAL}/${id}`, { method: 'DELETE' }).catch(() => {});
 }
 
+// ── L1 PocketBase 자체 Realtime(SSE) 구독 — Supabase WS 대체 ──────────
+// 2026-06-28: ERR_INCOMPLETE_CHUNKED_ENCODING 때문에 Supabase Realtime
+// WebSocket으로 임시 우회했던 기록이 있었으나, 실제로 서버(nginx
+// proxy_buffering off + PocketBase 자체)에서 curl로 직접 확인한 결과
+// SSE가 정상 동작했다(PB_CONNECT까지 정상 수신). 즉 막혔던 원인은 이미
+// 해결돼 있었고 클라이언트만 옛 방식(Supabase)에 남아있던 상태였다.
+// 이걸로 교체하면 "쓰기는 L1, 구독은 제3자"인 반쪽 이관 상태가 끝나고,
+// 오픈해시 탈중앙화 방향(Supabase 점진적 축소)과도 맞는다.
+//
+// PocketBase Realtime 프로토콜: SSE로 접속하면 먼저 PB_CONNECT 이벤트로
+// clientId를 받고, 그 clientId로 POST /api/realtime { clientId, subscriptions }
+// 해야 실제 구독이 시작된다. 이후 구독한 컬렉션명과 같은 이름의 이벤트로
+// { action: 'create'|'update'|'delete', record } 가 들어온다.
+// ※ PocketBase 구독은 Supabase의 postgres_changes filter처럼 서버에서
+//   to_guid로 걸러주지 않는다 — 컬렉션 전체 변경을 받고 클라이언트에서
+//   to_guid로 걸러야 한다(REST 폴링도 원래 그렇게 하고 있었으니 동일 신뢰모델).
+const _L1_BASE = 'https://l1-hanlim.gopang.net';
+
+function _watchL1Realtime(myGuid, onRow) {
+  let es = null, retryTimer = null, closed = false;
+
+  function _connect() {
+    es = new EventSource(`${_L1_BASE}/api/realtime`);
+
+    es.addEventListener('PB_CONNECT', async (e) => {
+      try {
+        const { clientId } = JSON.parse(e.data);
+        await fetch(`${_L1_BASE}/api/realtime`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ clientId, subscriptions: ['webrtc_signals'] }),
+        });
+        console.info('[P2P L1Realtime] 구독 완료 (대기 중)');
+      } catch (e) {
+        console.warn('[P2P L1Realtime] 구독 요청 실패:', e.message);
+      }
+    });
+
+    es.addEventListener('webrtc_signals', (e) => {
+      let msg; try { msg = JSON.parse(e.data); } catch { return; }
+      const row = msg?.record;
+      if (!row || row.to_guid !== myGuid) return;
+      onRow(row);
+    });
+
+    es.onerror = () => {
+      if (closed) return;
+      es.close();
+      // 짧은 대기 후 재연결 — 폴백 폴링이 그동안 메워준다
+      retryTimer = setTimeout(_connect, 3000);
+    };
+  }
+
+  _connect();
+
+  return function _stopL1Realtime() {
+    closed = true;
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    if (es) { es.close(); es = null; }
+  };
+}
+
 let _chatOverlay  = null;
 let _peerInfo     = null;  // { guid, handle, nickname }
 let _pollInterval = null;
@@ -121,64 +183,33 @@ export async function startP2PCall(targetUser) {
 
   _appendMsg('system', `📞 ${targetUser.nickname || targetUser.handle}님께 연결 요청을 보냈습니다...`);
 
-  // answer/ICE 수신 — Supabase WS Realtime (폴링 폴백 포함)
+  // answer/ICE 수신 — L1 PocketBase Realtime (폴링 폴백 포함)
   _watchAnswerRealtime(conn, targetUser.guid, callId);
 }
 
 // ── answer/ICE 실시간 수신 (발신측) ─────────────────────
 function _watchAnswerRealtime(conn, peerGuid, callId) {
-  const SB_WS  = 'wss://ebbecjfrwaswbdybbgiu.supabase.co/realtime/v1/websocket';
-  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
   const myGuid = _USER.ipv6;
 
-  let ws = null, hb = null, ref = 1, wsOk = false, done = false;
+  let wsOk = false, done = false, stopRealtime = null;
 
   // 더 새로운 통화 시도가 시작되면 이 watcher는 즉시 폐기
   function _stale() { return _activeCallId !== callId; }
 
   function _close() {
     done = true;
-    if (hb) { clearInterval(hb); hb = null; }
-    if (ws) { ws.close(1000); ws = null; }
+    if (stopRealtime) { stopRealtime(); stopRealtime = null; }
     _stopPoll();
   }
 
-  // Supabase WS로 answer/ICE 수신
-  ws = new WebSocket(`${SB_WS}?apikey=${SB_KEY}&vsn=1.0.0`);
-  const send = o => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(o)); };
-
-  ws.onopen = () => {
-    send({
-      topic: `realtime:public:webrtc_signals:to_guid=eq.${myGuid}`,
-      event: 'phx_join',
-      payload: {
-        config: {
-          broadcast: { self: false }, presence: { key: '' },
-          postgres_changes: [{ event: 'INSERT', schema: 'public',
-            table: 'webrtc_signals', filter: `to_guid=eq.${myGuid}` }],
-        },
-      },
-      ref: String(ref++),
-    });
-    hb = setInterval(() =>
-      send({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(ref++) }), 30000);
-  };
-
-  ws.onmessage = async ({ data }) => {
+  // L1 PocketBase Realtime(SSE)으로 answer/ICE 수신
+  stopRealtime = _watchL1Realtime(myGuid, async (row) => {
     if (done) return;
     if (_stale()) { console.info('[P2P] 오래된 통화 시도 — watcher 종료'); _close(); return; }
-    let msg; try { msg = JSON.parse(data); } catch { return; }
-
-    if (msg.event === 'phx_reply' && msg.payload?.status === 'ok') {
-      console.info('[P2P] 발신측 WS 구독 완료 (대기 중) — 실제 데이터 수신 시 폴링 비활성화');
-    }
-
-    const row = msg.payload?.data?.record ?? msg.payload?.record ?? null;
-    if (!row || row.to_guid !== myGuid) return;
 
     // 실제 매칭 시그널을 수신한 시점에만 폴백 폴링 비활성화.
-    // (L1 저장 구조에서는 Supabase Realtime이 구독은 성공해도 데이터가
-    //  오지 않으므로, 핸드셰이크 성공만으로 wsOk=true 하면 폴백이 영구 정지됨)
+    // (재연결 중처럼 SSE가 잠깐 끊겨도 핸드셰이크 성공만으로 wsOk=true 하면
+    //  안 되므로, 실제 데이터가 와야만 켠다 — 기존 Supabase 시절과 동일 원칙)
     wsOk = true;
 
     const _rowPayload = typeof row.payload === 'string'
@@ -193,7 +224,7 @@ function _watchAnswerRealtime(conn, peerGuid, callId) {
         await conn.setRemoteDescription(new RTCSessionDescription(answerSdp));
         _appendMsg('system', '✅ 연결됐습니다. 채널이 열리면 메시지를 입력하세요.');
         console.info('[P2P] answer 수신 완료');
-        // answer 수신 후 WS 닫기 (ICE는 ondatachannel onopen 후 불필요)
+        // answer 수신 후 realtime 닫기 (ICE는 ondatachannel onopen 후 불필요)
         setTimeout(_close, 10000);
       } catch(e) { console.warn('[P2P] answer setRemoteDescription 실패:', e.message); }
     }
@@ -207,15 +238,9 @@ function _watchAnswerRealtime(conn, peerGuid, callId) {
 
     // 처리 후 시그널 삭제
     _signalDeleteDirect(row.id);
-  };
+  });
 
-  ws.onerror = () => { wsOk = false; };
-  ws.onclose = () => {
-    if (hb) { clearInterval(hb); hb = null; }
-    wsOk = false;
-  };
-
-  // 폴백: WS 미작동 시 1.5초 폴링
+  // 폴백: realtime 미작동 시 1.5초 폴링
   _startPoll(myGuid, async signal => {
     if (wsOk || done) return;
     if (_stale()) { _close(); return; }
@@ -802,80 +827,31 @@ async function _saveP2PSession(messages, peer, startedAt) {
     '| layer:', layer ?? 'none');
 }
 
-// ── 앱 시작 시 incoming offer 감시 — _P2P_SUPABASE_WS_APPLIED_ ──
-// PocketBase SSE가 ERR_INCOMPLETE_CHUNKED_ENCODING으로 실패하므로
-// Supabase Realtime WebSocket으로 교체
+// ── 앱 시작 시 incoming offer 감시 ──────────────────────
+// 2026-06-28: L1 PocketBase Realtime(SSE)으로 복귀 — 아래 _watchL1Realtime
+// 정의부 주석 참고(ERR_INCOMPLETE_CHUNKED_ENCODING은 nginx 설정으로 이미 해결됨).
 export function startIncomingWatch(myGuid) {
   if (!myGuid) return;
 
-  const SB_WS  = 'wss://ebbecjfrwaswbdybbgiu.supabase.co/realtime/v1/websocket';
-  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
+  let wsOk = false;
 
-  let ws = null, hb = null, ref = 1, wsOk = false;
+  // L1 PocketBase 자체 Realtime(SSE)으로 incoming offer 감시.
+  // 이전엔 "PocketBase SSE가 ERR_INCOMPLETE_CHUNKED_ENCODING으로 실패"해서
+  // Supabase Realtime WebSocket으로 교체했었지만, 서버(nginx proxy_buffering
+  // off 적용됨)에서 curl로 직접 재확인한 결과 SSE가 정상 동작한다(2026-06-28).
+  // 막혔던 이유는 이미 해결돼 있었다 — 그래서 L1 자체 realtime으로 되돌린다.
+  _watchL1Realtime(myGuid, async (row) => {
+    // 실제 매칭 데이터 수신 시에만 폴백 폴링 비활성화
+    wsOk = true;
 
-  function _connectWS() {
-    ws = new WebSocket(`${SB_WS}?apikey=${SB_KEY}&vsn=1.0.0`);
-    const send = o => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(o)); };
+    if (row.type === 'offer' && !_chatOverlay) {
+      console.info('[P2P L1Realtime] offer 수신 → handleIncomingOffer');
+      await handleIncomingOffer(row);
+      _signalDeleteDirect(row.id);
+    }
+  });
 
-    ws.onopen = () => {
-      send({
-        topic:   `realtime:public:webrtc_signals:to_guid=eq.${myGuid}`,
-        event:   'phx_join',
-        payload: {
-          config: {
-            broadcast: { self: false }, presence: { key: '' },
-            postgres_changes: [{ event: 'INSERT', schema: 'public',
-              table: 'webrtc_signals', filter: `to_guid=eq.${myGuid}` }],
-          },
-        },
-        ref: String(ref++),
-      });
-      hb = setInterval(() =>
-        send({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(ref++) }), 30000);
-    };
-
-    ws.onmessage = async ({ data }) => {
-      let msg; try { msg = JSON.parse(data); } catch { return; }
-
-      if (msg.event === 'phx_reply' && msg.payload?.status === 'ok') {
-        console.info('[P2P Realtime] Supabase WS 구독 완료 (대기 중)');
-      }
-
-      const row = msg.payload?.data?.record ?? msg.payload?.record ?? null;
-      if (!row || row.to_guid !== myGuid) return;
-
-      // 실제 매칭 데이터 수신 시에만 폴백 폴링 비활성화
-      wsOk = true;
-
-      if (row.type === 'offer' && !_chatOverlay) {
-        console.info('[P2P Realtime] offer 수신 → handleIncomingOffer');
-        await handleIncomingOffer(row);
-        _signalDeleteDirect(row.id);
-      }
-    };
-
-    ws.onerror = () => { wsOk = false; };
-    ws.onclose = ({ code }) => {
-      if (hb) { clearInterval(hb); hb = null; }
-      wsOk = false;
-      if (code !== 1000 && code !== 1001) {
-        console.info('[P2P Realtime] WS 재연결 (5초)...');
-        setTimeout(_connectWS, 5000);
-      }
-    };
-  }
-
-  _connectWS();
-
-  // 폴백: WS 미작동 시 3초 폴링
-  // ※ 버그 수정: _signalPollDirect()는 배열을 직접 반환하는데(아래 정의 참고),
-  //   기존 코드는 그걸 { json: async () => signals_raw2 }로 감싼 뒤
-  //   `data.signals`(존재하지 않는 속성 — 항상 undefined)를 순회해서,
-  //   실제로 데이터가 와도 루프가 단 한 번도 안 돌았다. WS가 보는 Supabase
-  //   테이블에는 애초에 데이터가 안 들어오니(쓰기는 L1로 이관됨) WS도
-  //   못 잡고, 이 폴백도 위 버그로 못 잡아서 — incoming offer가 L1에는
-  //   정상 기록(GET으로 직접 확인됨)되는데도 받는 쪽 모달이 영영 안 뜨는
-  //   현상의 원인이었다.
+  // 폴백: realtime 미작동 시 3초 폴링
   setInterval(async () => {
     if (wsOk) return;
     try {
