@@ -2675,9 +2675,21 @@ async function _compileAgentSP(env, principalProfile) {
   const REPO_RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main';
   const headers  = { 'User-Agent': 'gopang-worker/4.9', 'Cache-Control': 'no-cache' };
 
-  // 1) AGENT-COMMON 로드
-  const commonRes = await fetch(`${REPO_RAW}/prompts/AGENT-COMMON_v1.0.txt`, { headers });
-  const commonSP  = commonRes.ok ? await commonRes.text() : '';
+  // 1) AGENT-COMMON 로드 — AGENT-COMMON-LATEST.txt 포인터 파일로 버전 결정
+  //    포인터 파일 갱신만으로 배포 없이 최신 버전 적용 가능
+  let commonSP = '';
+  try {
+    const ptrRes = await fetch(`${REPO_RAW}/prompts/AGENT-COMMON-LATEST.txt`, { ...headers, cache: 'no-cache' });
+    if (!ptrRes.ok) throw new Error('AGENT-COMMON 포인터 없음: ' + ptrRes.status);
+    const latestFile = (await ptrRes.text()).trim().replace(/[\n\r]/g, '');
+    if (!latestFile || !latestFile.endsWith('.txt')) throw new Error('포인터 내용 비정상: ' + latestFile);
+    const commonRes = await fetch(`${REPO_RAW}/prompts/${latestFile}`, { headers });
+    if (!commonRes.ok) throw new Error('AGENT-COMMON 로드 실패: ' + commonRes.status);
+    commonSP = await commonRes.text();
+    console.info('[Worker] AGENT-COMMON 로드 완료:', latestFile);
+  } catch (e) {
+    console.warn('[Worker] AGENT-COMMON 로드 오류, 빈 문자열로 계속:', e.message);
+  }
 
   // 2) AGENT-SUPPLIER-{ksic} 로드 (업종 불명이면 생략)
   const ksic = principalProfile?.extra?.public?.industry_fields?.schema_id || null;

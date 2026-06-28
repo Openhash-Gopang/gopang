@@ -10,7 +10,9 @@ import { _USER } from '../core/state.js';
 // 파일명이 바뀌면 webapp.html 수정 없이 자동 반영
 const _RAW_BASE    = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/';
 const _ROUTER_PTR  = _RAW_BASE + 'prompts/SP-00-ROUTER-LATEST.txt';
-const _ROUTER_FALLBACK = _RAW_BASE + 'prompts/SP-00-ROUTER-v3.0.txt';
+// 폴백: 포인터 파일 fetch 실패 시 현재 정본을 직접 로드
+// ※ 버전 갱신 시 SP-00-ROUTER-LATEST.txt 포인터만 수정하면 됨 — 여기는 비상용
+const _ROUTER_FALLBACK = _RAW_BASE + 'prompts/SP-00-ROUTER-v5_0.txt';
 
 let _routerPrompt      = null;   // 로드 완료 후 캐시
 let _routerPromptVer   = null;   // 버전명 (로그용)

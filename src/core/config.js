@@ -116,9 +116,11 @@ export function _modelSupportsVision(model) {
 
 
 // ── Personal Assistant SP 로더 ────────────────────────────────────
-// GitHub raw에서 personal-assistant-v1.0.txt를 로드하여 CFG.system에 적용
+// personal-assistant-LATEST.txt 포인터로 버전 결정 후 CFG.system에 적용
+// 버전 갱신 시 포인터 파일만 수정 — 코드 배포 불필요
 // 캐시: 세션당 1회 (페이지 리로드 시 재로드)
-const _PA_SP_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/personal-assistant/personal-assistant-v1.0.txt';
+const _RAW_BASE_CFG = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/';
+const _PA_PTR_URL   = _RAW_BASE_CFG + 'personal-assistant/personal-assistant-LATEST.txt';
 let _paSPLoaded = false;
 
 export async function loadPersonalAssistantSP() {
@@ -131,7 +133,13 @@ export async function loadPersonalAssistantSP() {
     return CFG.system;
   }
   try {
-    const res = await fetch(_PA_SP_URL, { cache: 'no-cache' });
+    // Step 1: 포인터 파일로 최신 버전 파일명 결정
+    const ptrRes = await fetch(_PA_PTR_URL, { cache: 'no-cache' });
+    if (!ptrRes.ok) throw new Error('PA 포인터 없음: ' + ptrRes.status);
+    const latestFile = (await ptrRes.text()).trim().replace(/[\n\r]/g, '');
+    if (!latestFile) throw new Error('PA 포인터 내용 비어있음');
+    // Step 2: 포인터가 가리키는 실제 SP 로드
+    const res = await fetch(_RAW_BASE_CFG + 'personal-assistant/' + latestFile, { cache: 'no-cache' });
     if (res.ok) {
       const sp = await res.text();
       if (sp && sp.length > 200) {
@@ -143,7 +151,7 @@ export async function loadPersonalAssistantSP() {
           cfg2.system = sp;
           localStorage.setItem('gopang_cfg', JSON.stringify(cfg2));
         } catch {}
-        console.info('[PA-SP] personal-assistant-v1.0 로드 완료:', sp.length, 'chars');
+        console.info('[PA-SP] SP 로드 완료:', latestFile, sp.length, 'chars');
       }
     }
   } catch (e) {

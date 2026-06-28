@@ -24,6 +24,49 @@ import { maybeHandleExpertTurn, applyExpertSystemIfActive,
 
 
 export let history_ref = history;  // 외부 참조용
+
+// ── SP 포인터 파일 기반 로더 ─────────────────────────────────────────
+// 버전 번호를 코드에 하드코딩하지 않고, *-LATEST.txt 포인터 파일로 결정.
+// 포인터 파일만 갱신하면 배포 없이 SP 버전 전환 가능.
+const _SP_PTR_BASE = '/prompts/';
+
+async function _loadSpByPointer(pointerFile, label) {
+  const ptrRes = await fetch(_SP_PTR_BASE + pointerFile, { cache: 'no-cache' });
+  if (!ptrRes.ok) throw new Error(`${label} 포인터 없음: ${ptrRes.status}`);
+  const latestFile = (await ptrRes.text()).trim().replace(/[\n\r]/g, '');
+  if (!latestFile) throw new Error(`${label} 포인터 내용 비어있음`);
+  const spRes = await fetch(_SP_PTR_BASE + latestFile);
+  if (!spRes.ok) throw new Error(`${label} SP 로드 실패: ${spRes.status} (${latestFile})`);
+  const sp = await spRes.text();
+  console.info(`[SP] ${label} 로드 완료: ${latestFile} (${sp.length} chars)`);
+  return sp;
+}
+
+// AGENT-COMMON (그림자 AI) — 세션당 1회 캐시
+let _agentCommonCache = null;
+async function _loadAgentCommonSP() {
+  if (_agentCommonCache) return _agentCommonCache;
+  try {
+    _agentCommonCache = await _loadSpByPointer('AGENT-COMMON-LATEST.txt', 'AGENT-COMMON');
+    return _agentCommonCache;
+  } catch (e) {
+    console.warn('[SP] AGENT-COMMON 로드 실패 (빈 문자열 사용):', e.message);
+    return '';
+  }
+}
+
+// 온보딩 PA SP (personal-assistant 최상위 계열) — 세션당 1회 캐시
+let _onboardingSpCache = null;
+async function _loadPersonalAssistantOnboardingSP() {
+  if (_onboardingSpCache) return _onboardingSpCache;
+  try {
+    _onboardingSpCache = await _loadSpByPointer('personal-assistant-LATEST.txt', 'PA-Onboarding');
+    return _onboardingSpCache;
+  } catch (e) {
+    console.warn('[SP] PA 온보딩 SP 로드 실패 (AGENT-COMMON 사용):', e.message);
+    return null;
+  }
+}
 // klaw.js 등이 배열 참조용으로 사용 (window.history와 구분)
 if (typeof window !== 'undefined') window._callAiHistoryRef = history;
 
@@ -172,11 +215,8 @@ async function _handleProfileTags(fullReply, bubble) {
 async function _switchToAssistantSP() {
   try {
     if (!CFG.system_base || CFG.system_base.includes('나만의 AI 비서')) {
-      // system_base가 아직 PA SP이거나 미로드 상태 → AGENT-COMMON 재로드
-      const res = await fetch('/prompts/AGENT-COMMON_v2.0.txt');
-      if (res.ok) {
-        CFG.system_base = await res.text();
-      }
+      // system_base가 아직 PA SP이거나 미로드 상태 → AGENT-COMMON-LATEST 포인터로 재로드
+      CFG.system_base = await _loadAgentCommonSP();
     }
     CFG.system = CFG.system_base;
     // 설정 저장 (다음 페이지 로드 시 복원)
@@ -418,31 +458,17 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     applyExpertSystemIfActive();
   } else {
 
-  // AGENT-COMMON 최초 1회 로드 (이후 캐시)
+  // AGENT-COMMON 최초 1회 로드 (이후 캐시) — AGENT-COMMON-LATEST.txt 포인터로 버전 결정
   if (!CFG.system_base) {
-    try {
-      const commonRes = await fetch('/prompts/AGENT-COMMON_v2.0.txt');
-      if (commonRes.ok) CFG.system_base = await commonRes.text();
-    } catch (e) {
-      console.warn('[SP] AGENT-COMMON 로드 실패:', e.message);
-    }
+    CFG.system_base = await _loadAgentCommonSP();
   }
 
   // PA SP는 신규 세션(history 비어있음)일 때만 적용
   // — 이미 대화 중인 세션에서는 history[0]의 system을 교체하지 않음 (캐시 보존)
   if (_isOnboarding && history.length === 0) {
-    try {
-      const paRes = await fetch('/prompts/personal-assistant-v1.1.txt');
-      if (paRes.ok) {
-        CFG.system = await paRes.text();
-        console.log('[SP] PA SP(v1.1) 로드 완료 — 온보딩 세션');
-      } else {
-        CFG.system = CFG.system_base || '';
-      }
-    } catch (e) {
-      console.warn('[SP] PA SP 로드 실패 (AGENT-COMMON 사용):', e.message);
-      CFG.system = CFG.system_base || '';
-    }
+    // personal-assistant-LATEST.txt 포인터로 버전 결정
+    const paSP = await _loadPersonalAssistantOnboardingSP();
+    CFG.system = paSP || CFG.system_base || '';
   } else {
     // 일반 비서 모드 또는 계속 진행 중인 온보딩 세션 — system 변경 없음
     if (!CFG.system) CFG.system = CFG.system_base || '';
