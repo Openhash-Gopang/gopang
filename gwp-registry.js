@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-// gwp-registry.js v2.0 — 혼디 서비스 레지스트리
+// gwp-registry.js v2.1 — 혼디 서비스 레지스트리
 //
 // v2.0 변경사항:
 //   - type 필드 추가: 'inline' | 'tab' | 'tool'
@@ -7,9 +7,46 @@
 //   - status 필드: 'active' | 'pending' (임시등록)
 //   - threshold 필드: 서비스별 매칭 임계값
 //   - pending_agents: L1에서 로드한 임시등록 항목 동적 병합
+// v2.1 변경사항:
+//   - sp_url 하드코딩 제거 → sp_key 필드로 대체
+//   - 빌드 시 자동 생성되는 prompts/manifest.json 을 런타임에 fetch
+//   - resolveSpUrls() 로 레지스트리 초기화 (앱 시작 시 1회)
 // ═══════════════════════════════════════════════════════════
 
 const _RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/';
+
+// ── manifest 기반 SP URL resolver ──────────────────────────
+// prompts/manifest.json 은 CI 빌드 시 tools/build_manifest.py 가 자동 생성.
+// 키 형식: "SP-NN_slug" (예: "SP-05_kmarket", "SP-14_kcleaner")
+let _manifest = null;
+
+async function _loadManifest() {
+  if (_manifest) return _manifest;
+  try {
+    const res = await fetch('/prompts/manifest.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error('manifest fetch 실패: ' + res.status);
+    _manifest = await res.json();
+    console.info('[Registry] manifest 로드 완료 (' + Object.keys(_manifest).length + '개 항목)');
+  } catch (e) {
+    console.warn('[Registry] manifest 로드 실패, sp_url 은 null 유지:', e.message);
+    _manifest = {};
+  }
+  return _manifest;
+}
+
+// 레지스트리의 sp_key → sp_url 를 manifest 기준으로 채운다.
+// 앱 초기화 시 한 번만 호출하면 됨 (loadPendingAgents 와 함께 호출 권장).
+async function resolveSpUrls() {
+  const manifest = await _loadManifest();
+  for (const entry of GWP_REGISTRY) {
+    if (!entry.sp_key) continue;
+    const fname = manifest[entry.sp_key];
+    entry.sp_url = fname ? _RAW + fname : null;
+    if (!fname) {
+      console.warn('[Registry] manifest 에 키 없음 (sp_url=null):', entry.sp_key);
+    }
+  }
+}
 
 const GWP_REGISTRY = [
 
@@ -18,7 +55,7 @@ const GWP_REGISTRY = [
     id: 'kemergency', name: 'K-Emergency', category: 'EMG',
     type: 'tab',      // 긴급은 반드시 새 탭 — 사용자가 직접 확인
     url: 'https://911.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-02_k119_v2.0.txt',
+    sp_key: 'SP-02_k119',
     status: 'active', priority: 0, threshold: 0.60,
     description: '긴급 구조·재난 대응. 119·112 연계.',
     triggers: [
@@ -32,7 +69,7 @@ const GWP_REGISTRY = [
     id: 'klaw', name: 'K-Law', category: 'JUS',
     type: 'inline',
     url: 'https://klaw.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-01_klaw_v1.0.txt',
+    sp_key: 'SP-01_klaw',
     status: 'active', priority: 1, threshold: 0.70,
     description: 'AI 가상 판결문. K-Law v20.0. 1초·1,000원.',
     triggers: [
@@ -47,7 +84,7 @@ const GWP_REGISTRY = [
     id: 'kpolice', name: 'K-Police', category: 'JUS',
     type: 'inline',
     url: 'https://police.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-03_kpolice_v2.0.txt',
+    sp_key: 'SP-03_kpolice',
     status: 'active', priority: 1, threshold: 0.65,
     description: '실시간 범죄 예측·대응. 경찰청 연동.',
     triggers: [
@@ -60,7 +97,7 @@ const GWP_REGISTRY = [
     id: 'ksecurity', name: 'K-Security', category: 'JUS',
     type: 'inline',
     url: 'https://security.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-15_ksecurity_v1.0.txt', // ⚠️ 2026-06-28 확인: 이 파일이 prompts/에 존재하지 않음(SP-15는 vision 프롬프트뿐). SP 작성 전까지 pending 유지.
+    sp_key: 'SP-15_ksecurity',
     status: 'pending', priority: 2, threshold: 0.70,
     description: '사이버 보안·개인정보 침해 대응.',
     triggers: [
@@ -74,7 +111,7 @@ const GWP_REGISTRY = [
     id: 'khealth', name: 'K-Health', category: 'MED',
     type: 'inline',
     url: 'https://health.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-04_khealth_v2.0.txt',
+    sp_key: 'SP-04_khealth',
     status: 'active', priority: 3, threshold: 0.70,
     description: '실거래 기반 건강 위험도 산정. 병원 연동.',
     triggers: [
@@ -89,7 +126,7 @@ const GWP_REGISTRY = [
     id: 'kedu', name: 'K-School', category: 'EDU',
     type: 'inline',
     url: 'https://school.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-09_kschool_v2.0.txt',
+    sp_key: 'SP-09_kschool',
     status: 'active', priority: 4, threshold: 0.70,
     description: 'AI 교수. 유치원~대학원 166개 과목.',
     triggers: [
@@ -103,7 +140,7 @@ const GWP_REGISTRY = [
     id: 'kgdc', name: 'GDC', category: 'ECO',
     type: 'tab',   // 결제·송금은 반드시 새 탭
     url: 'https://gdc.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-08_gdc_v3.0.txt',
+    sp_key: 'SP-08_gdc',
     status: 'active', priority: 5, threshold: 0.75,
     description: '무위험 자산 담보 디지털 화폐.',
     triggers: [
@@ -116,7 +153,7 @@ const GWP_REGISTRY = [
     id: 'kfinance', name: 'K-Stock', category: 'ECO',
     type: 'inline',
     url: 'https://stock.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-11_kstock_v2.0.txt',
+    sp_key: 'SP-11_kstock',
     status: 'active', priority: 5, threshold: 0.75,
     description: '89개 자산군 실시간 분석. 포트폴리오.',
     triggers: [
@@ -130,7 +167,7 @@ const GWP_REGISTRY = [
     id: 'kinsurance', name: 'K-Insurance', category: 'ECO',
     type: 'inline',
     url: 'https://insurance.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-14_kinsurance_v1.0.txt',
+    sp_key: 'SP-14_kinsurance',
     status: 'active', priority: 6, threshold: 0.70,
     description: '개인화 보험료 산정. 청구·심사 자동화.',
     triggers: [
@@ -143,7 +180,7 @@ const GWP_REGISTRY = [
     id: 'ktax', name: 'K-Tax', category: 'ECO',
     type: 'inline',
     url: 'https://tax.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-07_ktax_v2.0.txt',
+    sp_key: 'SP-07_ktax',
     status: 'active', priority: 6, threshold: 0.75,
     description: '재무제표 실시간 자동 생성·신고.',
     triggers: [
@@ -158,7 +195,7 @@ const GWP_REGISTRY = [
     id: 'kcommerce', name: 'K-Market', category: 'MKT',
     type: 'tab',
     url: 'https://market.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-05_kmarket_v2.0.txt', // 2026-06-24 K-Law v15.1 기반 전면 재작성판 (구 SP-05_kcommerce_v2.2.txt는 6/10 구버전 — 누락돼 있었음)
+    sp_key: 'SP-05_kmarket',
     status: 'active', priority: 7, threshold: 0.75,
     description: '판매자 이력 전용 수요 예측·주문.',
     triggers: [
@@ -172,7 +209,7 @@ const GWP_REGISTRY = [
     id: 'ktransport', name: 'K-Traffic', category: 'TRN',
     type: 'inline',
     url: 'https://traffic.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-06_ktraffic_v2.0.txt',
+    sp_key: 'SP-06_ktraffic',
     status: 'active', priority: 8, threshold: 0.75,
     description: '실시간 교통 흐름 예측·우회 경로.',
     triggers: [
@@ -185,7 +222,7 @@ const GWP_REGISTRY = [
     id: 'klogistics', name: 'K-Logistics', category: 'TRN',
     type: 'inline',
     url: 'https://logistics.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-13_klogistics_v1.0.txt',
+    sp_key: 'SP-13_klogistics',
     status: 'active', priority: 8, threshold: 0.70,
     description: '주문-출고-배송-반품 전 과정 자동화.',
     triggers: [
@@ -199,7 +236,7 @@ const GWP_REGISTRY = [
     id: 'kgov', name: 'K-Public', category: 'GOV',
     type: 'inline',
     url: 'https://public.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-10_kpublic_v2.0.txt',
+    sp_key: 'SP-10_kpublic',
     status: 'active', priority: 9, threshold: 0.70,
     description: '민원·행정·허가 AI 자동 처리.',
     triggers: [
@@ -213,7 +250,7 @@ const GWP_REGISTRY = [
     id: 'kdemocracy', name: 'K-Democracy', category: 'LEG',
     type: 'inline',
     url: 'https://democracy.gopang.net/webapp.html',
-    sp_url: _RAW + 'SP-12_kdemocracy_v2.0.txt',
+    sp_key: 'SP-12_kdemocracy',
     status: 'active', priority: 10, threshold: 0.70,
     description: '고팡 직접 민주주의 플랫폼 (DAWN).',
     triggers: [
@@ -227,7 +264,7 @@ const GWP_REGISTRY = [
     id: 'fiil-kcleaner', name: 'K-Cleaner', category: 'ENV',
     type: 'inline',
     url: 'https://fiil.kr/webapp.html',
-    sp_url: _RAW + 'SP-14_kcleaner_v1.2.txt',
+    sp_key: 'SP-14_kcleaner',
     status: 'active', priority: 11, threshold: 0.65,
     description: '해안·도심 쓰레기 AI 자동 분석·신고.',
     triggers: [
@@ -338,4 +375,5 @@ window.getByCategory   = getByCategory;
 window.gwpMatch        = matchService;
 window.matchService    = matchService;
 window.loadPendingAgents = loadPendingAgents;
+window.resolveSpUrls     = resolveSpUrls;
 window.injectToolFns     = injectToolFns;

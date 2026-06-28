@@ -1,4 +1,4 @@
-﻿// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // hondi-proxy — v4.9
 // v4.8: /biz/profile, /biz/order, /biz/review, /biz/product
 // v4.9: STEP 08 /biz/order L1 위임 (Worker 검증 제거)
@@ -2675,41 +2675,45 @@ async function _compileAgentSP(env, principalProfile) {
   const REPO_RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main';
   const headers  = { 'User-Agent': 'gopang-worker/4.9', 'Cache-Control': 'no-cache' };
 
-  // 1) AGENT-COMMON 로드 — AGENT-COMMON-LATEST.txt 포인터 파일로 버전 결정
-  //    포인터 파일 갱신만으로 배포 없이 최신 버전 적용 가능
+  // 1) AGENT-COMMON 로드 — manifest.json['AGENT-COMMON'] 키로 파일명 결정
+  //    CI 빌드 시 자동 갱신 — AGENT-COMMON-LATEST.txt 포인터 파일 방식 제거
   let commonSP = '';
   try {
-    const ptrRes = await fetch(`${REPO_RAW}/prompts/AGENT-COMMON-LATEST.txt`, { ...headers, cache: 'no-cache' });
-    if (!ptrRes.ok) throw new Error('AGENT-COMMON 포인터 없음: ' + ptrRes.status);
-    const latestFile = (await ptrRes.text()).trim().replace(/[\n\r]/g, '');
-    if (!latestFile || !latestFile.endsWith('.txt')) throw new Error('포인터 내용 비정상: ' + latestFile);
-    const commonRes = await fetch(`${REPO_RAW}/prompts/${latestFile}`, { headers });
+    const manifestRes = await fetch(`${REPO_RAW}/prompts/manifest.json`, { ...headers, cache: 'no-cache' });
+    if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
+    const manifest = await manifestRes.json();
+    const commonFile = manifest['AGENT-COMMON'];
+    if (!commonFile) throw new Error('manifest 에 AGENT-COMMON 키 없음');
+    const commonRes = await fetch(`${REPO_RAW}/prompts/${commonFile}`, { headers });
     if (!commonRes.ok) throw new Error('AGENT-COMMON 로드 실패: ' + commonRes.status);
     commonSP = await commonRes.text();
-    console.info('[Worker] AGENT-COMMON 로드 완료:', latestFile);
+    console.info('[Worker] AGENT-COMMON 로드 완료:', commonFile);
   } catch (e) {
     console.warn('[Worker] AGENT-COMMON 로드 오류, 빈 문자열로 계속:', e.message);
   }
 
   // 2) AGENT-SUPPLIER-{ksic} 로드 (업종 불명이면 생략)
+  // 파일명은 빌드 시 자동 생성된 prompts/manifest.json 에서 결정.
+  // SUPPLIER_FILE_MAP 하드코딩 제거 — manifest 갱신만으로 새 버전 자동 반영.
   const ksic = principalProfile?.extra?.public?.industry_fields?.schema_id || null;
   let supplierSP = '';
   if (ksic && VALID_INDUSTRY_SCHEMA_IDS.has(String(ksic))) {
-    // 파일명 규칙: AGENT-SUPPLIER-{code}_*_v1.0.txt — 전수 목록 대신 known map 사용
-    const SUPPLIER_FILE_MAP = {
-      '01':'01_agriculture_v1.0',       '03':'03_fisheries_v1.0',
-      '46':'46_wholesale-brokerage_v1.0','47':'47_retail-trade_v1.0',
-      '49':'49_land-transport-pipeline_v1.0','50':'50_water-transport_v1.0',
-      '51':'51_air-transport_v1.0',     '55':'55_accommodation_v1.0',
-      '56':'56_restaurants-bars_v1.0',  '62':'62_computer-programming-it_v1.0',
-      '63':'63_information-services_v1.0','76':'76_rental-leasing_v1.0',
-      '90':'90_creative-arts-leisure_v1.0','91':'91_sports-recreation_v1.0',
-      '96':'96_other-personal-services_v1.0',
-    };
-    const fname = SUPPLIER_FILE_MAP[String(ksic)];
-    if (fname) {
-      const supRes = await fetch(`${REPO_RAW}/prompts/AGENT-SUPPLIER-${fname}.txt`, { headers });
-      supplierSP = supRes.ok ? await supRes.text() : '';
+    try {
+      const manifestRes = await fetch(`${REPO_RAW}/prompts/manifest.json`, { ...headers, cache: 'no-cache' });
+      if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
+      const manifest = await manifestRes.json();
+      const ksicCode = String(ksic).padStart(2, '0');
+      const fname = manifest[`AGENT-SUPPLIER-${ksicCode}`];
+      if (fname) {
+        const supRes = await fetch(`${REPO_RAW}/prompts/${fname}`, { headers });
+        supplierSP = supRes.ok ? await supRes.text() : '';
+        if (supRes.ok) console.info('[Worker] AGENT-SUPPLIER 로드 완료:', fname);
+        else console.warn('[Worker] AGENT-SUPPLIER fetch 실패:', supRes.status, fname);
+      } else {
+        console.warn('[Worker] manifest 에 KSIC 없음 (supplierSP 생략):', ksicCode);
+      }
+    } catch (e) {
+      console.warn('[Worker] AGENT-SUPPLIER 로드 오류, 빈 문자열로 계속:', e.message);
     }
   }
 

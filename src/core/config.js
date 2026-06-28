@@ -116,11 +116,11 @@ export function _modelSupportsVision(model) {
 
 
 // ── Personal Assistant SP 로더 ────────────────────────────────────
-// personal-assistant-LATEST.txt 포인터로 버전 결정 후 CFG.system에 적용
-// 버전 갱신 시 포인터 파일만 수정 — 코드 배포 불필요
+// PA SP 파일명은 prompts/manifest.json 의 'personal-assistant' 키로 결정
+// CI 빌드 시 자동 갱신 — 포인터 파일 수동 관리 불필요
 // 캐시: 세션당 1회 (페이지 리로드 시 재로드)
-const _RAW_BASE_CFG = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/';
-const _PA_PTR_URL   = _RAW_BASE_CFG + 'personal-assistant/personal-assistant-LATEST.txt';
+// PA SP 파일명은 manifest.json['personal-assistant'] 에서 결정
+const _SP_BASE_CFG = '/prompts/';
 let _paSPLoaded = false;
 
 export async function loadPersonalAssistantSP() {
@@ -134,12 +134,13 @@ export async function loadPersonalAssistantSP() {
   }
   try {
     // Step 1: 포인터 파일로 최신 버전 파일명 결정
-    const ptrRes = await fetch(_PA_PTR_URL, { cache: 'no-cache' });
-    if (!ptrRes.ok) throw new Error('PA 포인터 없음: ' + ptrRes.status);
-    const latestFile = (await ptrRes.text()).trim().replace(/[\n\r]/g, '');
-    if (!latestFile) throw new Error('PA 포인터 내용 비어있음');
-    // Step 2: 포인터가 가리키는 실제 SP 로드
-    const res = await fetch(_RAW_BASE_CFG + 'personal-assistant/' + latestFile, { cache: 'no-cache' });
+    const manifestRes = await fetch(_SP_BASE_CFG + 'manifest.json', { cache: 'no-cache' });
+    if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
+    const manifest = await manifestRes.json();
+    const fname = manifest['personal-assistant'];
+    if (!fname) throw new Error('manifest 에 personal-assistant 키 없음');
+    // manifest 키가 가리키는 실제 SP 로드
+    const res = await fetch(_SP_BASE_CFG + fname, { cache: 'no-cache' });
     if (res.ok) {
       const sp = await res.text();
       if (sp && sp.length > 200) {

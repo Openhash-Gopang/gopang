@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ai/call-ai.js — LLM API 호출·스트리밍·GWP 태그 처리 + PA 온보딩 관리 v1.1
  *
  * PA 온보딩 흐름:
@@ -25,20 +25,28 @@ import { maybeHandleExpertTurn, applyExpertSystemIfActive,
 
 export let history_ref = history;  // 외부 참조용
 
-// ── SP 포인터 파일 기반 로더 ─────────────────────────────────────────
-// 버전 번호를 코드에 하드코딩하지 않고, *-LATEST.txt 포인터 파일로 결정.
-// 포인터 파일만 갱신하면 배포 없이 SP 버전 전환 가능.
-const _SP_PTR_BASE = '/prompts/';
+// ── manifest 기반 SP 로더 ────────────────────────────────────────────
+// prompts/manifest.json 은 CI 빌드 시 tools/build_manifest.py 가 자동 생성.
+// *-LATEST.txt 포인터 파일 방식을 완전 대체 — manifest 단일 체계로 통일.
+const _SP_BASE = '/prompts/';
+let _manifestCache = null;
 
-async function _loadSpByPointer(pointerFile, label) {
-  const ptrRes = await fetch(_SP_PTR_BASE + pointerFile, { cache: 'no-cache' });
-  if (!ptrRes.ok) throw new Error(`${label} 포인터 없음: ${ptrRes.status}`);
-  const latestFile = (await ptrRes.text()).trim().replace(/[\n\r]/g, '');
-  if (!latestFile) throw new Error(`${label} 포인터 내용 비어있음`);
-  const spRes = await fetch(_SP_PTR_BASE + latestFile);
-  if (!spRes.ok) throw new Error(`${label} SP 로드 실패: ${spRes.status} (${latestFile})`);
-  const sp = await spRes.text();
-  console.info(`[SP] ${label} 로드 완료: ${latestFile} (${sp.length} chars)`);
+async function _loadManifest() {
+  if (_manifestCache) return _manifestCache;
+  const res = await fetch(_SP_BASE + 'manifest.json', { cache: 'no-cache' });
+  if (!res.ok) throw new Error('manifest fetch 실패: ' + res.status);
+  _manifestCache = await res.json();
+  return _manifestCache;
+}
+
+async function _loadSpByKey(manifestKey, label) {
+  const manifest = await _loadManifest();
+  const fname = manifest[manifestKey];
+  if (!fname) throw new Error(`${label} manifest 키 없음: ${manifestKey}`);
+  const res = await fetch(_SP_BASE + fname);
+  if (!res.ok) throw new Error(`${label} SP 로드 실패: ${res.status} (${fname})`);
+  const sp = await res.text();
+  console.info(`[SP] ${label} 로드 완료: ${fname} (${sp.length} chars)`);
   return sp;
 }
 
@@ -47,7 +55,7 @@ let _agentCommonCache = null;
 async function _loadAgentCommonSP() {
   if (_agentCommonCache) return _agentCommonCache;
   try {
-    _agentCommonCache = await _loadSpByPointer('AGENT-COMMON-LATEST.txt', 'AGENT-COMMON');
+    _agentCommonCache = await _loadSpByKey('AGENT-COMMON', 'AGENT-COMMON');
     return _agentCommonCache;
   } catch (e) {
     console.warn('[SP] AGENT-COMMON 로드 실패 (빈 문자열 사용):', e.message);
@@ -55,12 +63,12 @@ async function _loadAgentCommonSP() {
   }
 }
 
-// 온보딩 PA SP (personal-assistant 최상위 계열) — 세션당 1회 캐시
+// 온보딩 PA SP (personal-assistant 계열) — 세션당 1회 캐시
 let _onboardingSpCache = null;
 async function _loadPersonalAssistantOnboardingSP() {
   if (_onboardingSpCache) return _onboardingSpCache;
   try {
-    _onboardingSpCache = await _loadSpByPointer('personal-assistant-LATEST.txt', 'PA-Onboarding');
+    _onboardingSpCache = await _loadSpByKey('personal-assistant', 'PA-Onboarding');
     return _onboardingSpCache;
   } catch (e) {
     console.warn('[SP] PA 온보딩 SP 로드 실패 (AGENT-COMMON 사용):', e.message);
@@ -215,7 +223,7 @@ async function _handleProfileTags(fullReply, bubble) {
 async function _switchToAssistantSP() {
   try {
     if (!CFG.system_base || CFG.system_base.includes('나만의 AI 비서')) {
-      // system_base가 아직 PA SP이거나 미로드 상태 → AGENT-COMMON-LATEST 포인터로 재로드
+      // system_base가 아직 PA SP이거나 미로드 상태 → AGENT-COMMON manifest 키로 재로드
       CFG.system_base = await _loadAgentCommonSP();
     }
     CFG.system = CFG.system_base;
@@ -458,7 +466,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     applyExpertSystemIfActive();
   } else {
 
-  // AGENT-COMMON 최초 1회 로드 (이후 캐시) — AGENT-COMMON-LATEST.txt 포인터로 버전 결정
+  // AGENT-COMMON 최초 1회 로드 (이후 캐시) — manifest["AGENT-COMMON"] 키로 버전 결정
   if (!CFG.system_base) {
     CFG.system_base = await _loadAgentCommonSP();
   }
@@ -466,7 +474,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
   // PA SP는 신규 세션(history 비어있음)일 때만 적용
   // — 이미 대화 중인 세션에서는 history[0]의 system을 교체하지 않음 (캐시 보존)
   if (_isOnboarding && history.length === 0) {
-    // personal-assistant-LATEST.txt 포인터로 버전 결정
+    // manifest["personal-assistant"] 키로 버전 결정
     const paSP = await _loadPersonalAssistantOnboardingSP();
     CFG.system = paSP || CFG.system_base || '';
   } else {

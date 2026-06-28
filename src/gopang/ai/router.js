@@ -5,14 +5,11 @@ import { CFG } from '../core/config.js';
 import { appendBubble } from '../ui/bubble.js';
 import { _USER } from '../core/state.js';
 
-// ── Router system prompt — GitHub 동적 로드 ──────────────────
-// prompts/SP-00-ROUTER-LATEST.txt 에 현재 버전 파일명이 기재됨
-// 파일명이 바뀌면 webapp.html 수정 없이 자동 반영
-const _RAW_BASE    = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/';
-const _ROUTER_PTR  = _RAW_BASE + 'prompts/SP-00-ROUTER-LATEST.txt';
-// 폴백: 포인터 파일 fetch 실패 시 현재 정본을 직접 로드
-// ※ 버전 갱신 시 SP-00-ROUTER-LATEST.txt 포인터만 수정하면 됨 — 여기는 비상용
-const _ROUTER_FALLBACK = _RAW_BASE + 'prompts/SP-00-ROUTER-v5_0.txt';
+// ── Router system prompt — manifest 기반 로드 ──────────────
+// 라우터 SP 파일명은 CI 빌드 시 자동 생성된 prompts/manifest.json 에서 결정.
+// manifest 키: "SP-00-ROUTER"
+// SP-00-ROUTER-LATEST.txt 포인터 파일 방식 제거 — manifest 단일 체계로 통일.
+const _SP_BASE = '/prompts/';
 
 let _routerPrompt      = null;   // 로드 완료 후 캐시
 let _routerPromptVer   = null;   // 버전명 (로그용)
@@ -27,38 +24,24 @@ export async function _loadRouterPrompt() {
 
   _routerLoadPromise = (async () => {
     try {
-      // Step 1: 포인터 파일 읽기 (SP-00-ROUTER-LATEST.txt)
-      // 포인터 파일 내용 예시: "SP-00-ROUTER-v3.0.txt"
-      const ptrRes = await fetch(_ROUTER_PTR, { cache: 'no-cache' });
-      if (!ptrRes.ok) throw new Error('포인터 파일 없음: ' + ptrRes.status);
+      // manifest.json 에서 라우터 SP 파일명 결정
+      const manifestRes = await fetch(_SP_BASE + 'manifest.json', { cache: 'no-cache' });
+      if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
+      const manifest = await manifestRes.json();
+      const fname = manifest['SP-00-ROUTER'];
+      if (!fname) throw new Error('manifest 에 SP-00-ROUTER 키 없음');
 
-      const latestFile = (await ptrRes.text()).trim().replace(/[\n\r]/g, '');
-      if (!latestFile || !latestFile.endsWith('.txt')) throw new Error('포인터 내용 비정상: ' + latestFile);
-
-      // Step 2: 실제 라우터 프롬프트 파일 로드
-      const promptRes = await fetch(_RAW_BASE + 'prompts/' + latestFile, { cache: 'no-cache' });
-      if (!promptRes.ok) throw new Error('라우터 프롬프트 로드 실패: ' + promptRes.status);
+      const promptRes = await fetch(_SP_BASE + fname, { cache: 'no-cache' });
+      if (!promptRes.ok) throw new Error('라우터 SP 로드 실패: ' + promptRes.status);
 
       _routerPrompt    = await promptRes.text();
-      _routerPromptVer = latestFile;
-      console.info('[Router] 프롬프트 로드 완료:', latestFile, '(' + _routerPrompt.length + ' chars)');
+      _routerPromptVer = fname;
+      console.info('[Router] 프롬프트 로드 완료:', fname, '(' + _routerPrompt.length + ' chars)');
       return _routerPrompt;
 
     } catch(e) {
-      console.warn('[Router] 최신 버전 로드 실패, 폴백 사용:', e.message);
-      try {
-        // Step 3: 폴백 — v3.0 직접 로드
-        const fbRes = await fetch(_ROUTER_FALLBACK, { cache: 'no-cache' });
-        if (fbRes.ok) {
-          _routerPrompt    = await fbRes.text();
-          _routerPromptVer = 'SP-00-ROUTER-v3.0.txt (폴백)';
-          console.info('[Router] 폴백 프롬프트 로드 완료');
-          return _routerPrompt;
-        }
-      } catch(e2) {
-        console.warn('[Router] 폴백도 실패:', e2.message);
-      }
-      // Step 4: 하드코딩 최소 프롬프트
+      console.warn('[Router] manifest 로드 실패, 하드코딩 최소 프롬프트 사용:', e.message);
+      // 폴백: manifest 실패 시에도 라우터 중단이 전파되지 않도록 내장 최소 프롬프트로
       _routerPrompt    = _ROUTER_MINIMAL;
       _routerPromptVer = 'minimal (내장)';
       return _routerPrompt;

@@ -264,11 +264,11 @@ export function _modelSupportsVision(model) {
 // 설계 원칙(2026-06-22 합의):
 //   1) 그림자(_ai)가 존재하면: Worker에서 그 Profile을 fresh fetch → system_prompt 사용
 //      (profile.html이 B의 Profile에서 system_prompt를 가져오는 것과 동일한 메커니즘)
-//   2) 그림자 없음(온보딩 미완료): personal-assistant-LATEST.txt 포인터로 버전 결정 후 로드
+//   2) 그림자 없음(온보딩 미완료): manifest['personal-assistant'] 키로 최신 SP 로드
 // 영구 localStorage 캐시 제거 — 매 세션 fresh fetch로 통일(갱신 자동 반영)
-// ※ 버전 갱신 시 prompts/personal-assistant/personal-assistant-LATEST.txt만 수정
-const _RAW_BASE_CFG = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/';
-const _PA_PTR_URL   = _RAW_BASE_CFG + 'personal-assistant/personal-assistant-LATEST.txt';
+// ※ 버전 갱신 시 SP 파일 추가 후 git push — CI가 manifest를 자동 갱신
+// PA SP 파일명은 manifest.json['personal-assistant'] 에서 결정
+const _SP_BASE_CFG = '/prompts/';
 const _PROXY_URL = 'https://hondi-proxy.tensor-city.workers.dev';
 let _paSPLoaded = false;
 
@@ -307,11 +307,12 @@ export async function loadPersonalAssistantSP() {
   // 2) 폴백: personal-assistant-LATEST.txt 포인터로 버전 결정 후 온보딩 SP 로드
   //    localStorage 영구 캐시 금지 — 항상 fresh fetch (그림자가 생기면 자동 전환됨)
   try {
-    const ptrRes = await fetch(_PA_PTR_URL, { cache: 'no-cache' });
-    if (!ptrRes.ok) throw new Error('PA 포인터 없음: ' + ptrRes.status);
-    const latestFile = (await ptrRes.text()).trim().replace(/[\n\r]/g, '');
-    if (!latestFile) throw new Error('PA 포인터 내용 비어있음');
-    const res = await fetch(_RAW_BASE_CFG + 'personal-assistant/' + latestFile, { cache: 'no-cache' });
+    const manifestRes = await fetch(_SP_BASE_CFG + 'manifest.json', { cache: 'no-cache' });
+    if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
+    const manifest = await manifestRes.json();
+    const fname = manifest['personal-assistant'];
+    if (!fname) throw new Error('manifest 에 personal-assistant 키 없음');
+    const res = await fetch(_SP_BASE_CFG + fname, { cache: 'no-cache' });
     if (res.ok) {
       const sp = await res.text();
       if (sp && sp.length > 200) {

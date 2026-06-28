@@ -5,7 +5,8 @@
 // 혼디 색상코드 스캔(src/gopang/gwp/engine.js)과 동일한 패턴을 따른다:
 //   캡처 → 인식(비전 AI) → 구조화(JSON) → 사용자 확인 → Profile 필드 병합
 //
-// 호출 비전 프롬프트: prompts/SP-15-IMG_profile-scan_vision_prompt_v1.0.txt
+// 호출 비전 프롬프트: prompts/manifest.json 의 "SP-15-IMG_profile-scan_vision_prompt" 키로 결정
+//   → 빌드 시 tools/build_manifest.py 가 prompts/ 를 스캔해 최신 파일명을 manifest 에 기록
 // 관련 문서: docs/user_profile_authoring_guidelines_v1_0.md §4
 //
 // 주의: callAI()의 정확한 시그니처(이미지 전달 방식 등)는 src/gopang/ai/call-ai.js의
@@ -15,21 +16,33 @@
 
 import { callAI } from '../ai/call-ai.js';
 
-const SCAN_PROMPT_PATH = '/prompts/SP-15-IMG_profile-scan_vision_prompt_v1.0.txt';
+// SP-15-IMG 파일명은 manifest.json 에서 결정 — 버전 하드코딩 없음
+const _SP15_MANIFEST_KEY = 'SP-15-IMG_profile-scan_vision_prompt';
 const VALID_PROFILE_FIELDS = ['name', 'products', 'phone', 'address', 'description', 'hours'];
 
 let _scanPromptCache = null;
 
 /**
  * 비전 프롬프트를 1회만 로드해 캐시한다.
+ * manifest.json 에서 최신 파일명을 결정한 뒤 실제 SP 를 fetch 한다.
  */
 async function loadScanPrompt() {
   if (_scanPromptCache) return _scanPromptCache;
-  const res = await fetch(SCAN_PROMPT_PATH);
+  const manifestRes = await fetch('/prompts/manifest.json', { cache: 'no-cache' });
+  if (!manifestRes.ok) {
+    throw new Error(`[physical-scan] manifest fetch 실패: ${manifestRes.status}`);
+  }
+  const manifest = await manifestRes.json();
+  const fname = manifest[_SP15_MANIFEST_KEY];
+  if (!fname) {
+    throw new Error(`[physical-scan] manifest 에 키 없음: ${_SP15_MANIFEST_KEY}`);
+  }
+  const res = await fetch('/prompts/' + fname);
   if (!res.ok) {
-    throw new Error(`[physical-scan] 비전 프롬프트 로드 실패: ${res.status}`);
+    throw new Error(`[physical-scan] 비전 프롬프트 로드 실패: ${res.status} (${fname})`);
   }
   _scanPromptCache = await res.text();
+  console.info('[physical-scan] SP-15-IMG 로드 완료:', fname);
   return _scanPromptCache;
 }
 
