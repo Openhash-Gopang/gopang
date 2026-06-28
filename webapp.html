@@ -2787,6 +2787,10 @@ window.closeTermsOfUse = closeTermsOfUse;
       _loadAgentCommonSP, _loadPersonalAssistantOnboardingSP,
       _buildProfileContext, _handleProfileTags, _stripInternalTags,
     } = await import('./src/gopang/ai/call-ai.js');
+    // 토큰 정책 — 패널도 메인 채팅과 "같은 종류의 응답"이므로 같은 예산을 쓴다.
+    // 이전엔 패널만 1500을 따로 썼는데(메인 채팅 800), 의도된 차이인지 알 수
+    // 없는 우연한 불일치였다 — 공통 정책으로 통일.
+    const { TOKEN_BUDGET } = await import('./src/gopang/core/token-policy.js');
 
     const _profileDone    = localStorage.getItem('hondi_profile_done')    === '1';
     const _profileSkipped = localStorage.getItem('hondi_profile_skipped') === '1';
@@ -2875,7 +2879,7 @@ window.closeTermsOfUse = closeTermsOfUse;
         const res = await fetch(c.url, {
           method: 'POST',
           headers,
-          body: JSON.stringify({ model: c.model, messages: _panelHistory, stream: true, max_tokens: 1500 }),
+          body: JSON.stringify({ model: c.model, messages: _panelHistory, stream: true, max_tokens: TOKEN_BUDGET.CHAT_REPLY }),
         });
         if (!res.ok) {
           lastErr = `HTTP ${res.status}`;

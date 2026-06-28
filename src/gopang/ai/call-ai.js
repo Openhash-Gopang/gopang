@@ -9,6 +9,7 @@
  *   3. 응답 처리 — PROFILE_SUBMIT / PROFILE_SKIP / [N/6단계] 감지 → 상태 갱신 + SP 전환
  */
 import { CFG, _modelSupportsVision, PROVIDER_INFO, getPriorityOrder } from '../core/config.js';
+import { TOKEN_BUDGET } from '../core/token-policy.js';
 import { isModelOnCooldown, markModelFailed, recordOpenRouterCall, getOpenRouterRemainingBudget }
   from '../core/free-model-pool.js';
 import { aiActive, history, _userLocation, _lastRouterResult,
@@ -530,6 +531,85 @@ function _buildCallCandidates() {
   return candidates;
 }
 
+/**
+ * _callLLM — 후보 페일오버 + SSE 스트리밍을 갖춘 범용 LLM 호출 헬퍼.
+ *
+ * routing-engine.js 등이 메인 채팅(history/스트림 버블)과 무관하게 자체적으로
+ * 구성한 messages로 LLM을 호출할 때 쓴다. _buildCallCandidates()를 그대로
+ * 재사용하므로, 메인 채팅(_callAIInner)과 동일한 페일오버 순서·OR 분당 예산·
+ * 24h 쿨다운 규칙을 따른다.
+ *
+ * (이전엔 routing-engine.js가 이 함수를 import하고 있었지만 정작 call-ai.js에
+ * export가 없어서 호출하는 즉시 깨졌습니다 — "기존 callAI의 내부 fetch 분리
+ * 버전"이라는 주석만 있고 실제 분리 작업이 빠져 있었습니다.)
+ *
+ * @param {Array<{role: string, content: any}>} messages — 이미 완성된 메시지 배열
+ * @param {{max_tokens?: number, temperature?: number, bubble?: HTMLElement}} options
+ *   bubble을 주면 스트리밍 중 실시간으로 그 엘리먼트에 렌더링한다(메인 채팅과
+ *   동일한 _updateStreamBubble 사용). bubble이 없으면 조용히 끝까지 모아서
+ *   한 번에 반환한다(streaming 여부는 API 호출 방식일 뿐, 반환값은 항상 완성된
+ *   문자열이라는 점에서 호출자 입장에선 동일하다).
+ * @returns {Promise<string>} 모델 응답 전체 텍스트
+ */
+export async function _callLLM(messages, options = {}) {
+  const { max_tokens = TOKEN_BUDGET.CHAT_REPLY, temperature = 0.6, bubble = null } = options;
+  const candidates = _buildCallCandidates();
+
+  let res = null, lastErr = null;
+  for (let i = 0; i < candidates.length; i++) {
+    const c = candidates[i];
+    if (c.provider === 'openrouter') recordOpenRouterCall();
+    try {
+      const reqBody = { model: c.model, messages, max_tokens, temperature, stream: true };
+      if (!PROVIDER_INFO[c.provider]?.noStreamOptions) {
+        reqBody.stream_options = { include_usage: true };
+      }
+      const attempt = await fetch(`${c.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(c.isProxy ? {} : { 'Authorization': `Bearer ${c.apiKey}` }),
+        },
+        body: JSON.stringify(reqBody),
+      });
+      if (attempt.ok) { res = attempt; break; }
+      const errBody = await attempt.text().catch(() => '');
+      lastErr = new Error(`API ${attempt.status}: ${errBody.slice(0, 300) || '응답없음'}`);
+      console.warn(`[_callLLM] ${c.provider}(${c.model}) 실패(${attempt.status}) — 다음 후보로 전환`);
+      if (c.provider === 'openrouter') markModelFailed(c.model, attempt.status);
+      continue;
+    } catch (fetchErr) {
+      lastErr = fetchErr;
+      continue;
+    }
+  }
+  if (!res) throw (lastErr || new Error('모든 LLM 호출에 실패했습니다.'));
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let fullReply = '', buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const payload = line.slice(6).trim();
+      if (payload === '[DONE]') break;
+      try {
+        const delta = JSON.parse(payload).choices?.[0]?.delta?.content ?? '';
+        if (delta) {
+          fullReply += delta;
+          if (bubble) _updateStreamBubble(bubble, fullReply);
+        }
+      } catch {}
+    }
+  }
+  return fullReply || '';
+}
+
 
 async function _callAIInner(userText, imageFile = null, _preTab = null) {
   showTyping();
@@ -741,7 +821,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
         const reqBody = {
           model: c.model,
           messages,
-          max_tokens:  800,
+          max_tokens:  TOKEN_BUDGET.CHAT_REPLY,
           temperature: 0.6,
           stream:      true,
         };
@@ -840,8 +920,12 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     const _profileHandled = await _handleProfileTags(fullReply, bubble);
     if (_profileHandled) return;
 
-    // ── 그림자 SP 실행 태그 파서 (AGENT-COMMON v2.0 §9) ─────
-    if (CFG.system?.includes('AGENT-COMMON v2.0')) {
+    // ── 그림자 SP 실행 태그 파서 (AGENT-COMMON §9) ─────────
+    // ※ 버전 번호로 체크하면 AGENT-COMMON이 버전업될 때마다(v2.0→v2.1→...)
+    //   조용히 깨진다(실제로 v2.3에서 한 번 그렇게 깨져 있었음). "나만의 AI
+    //   비서"는 PA SP에도 똑같이 나오는 문구라 오탐 위험이 있어, AGENT-COMMON
+    //   §0에만 있는 고유 문구로 체크한다.
+    if (CFG.system?.includes('§0. 정체성')) {
       _parseShadowTags(fullReply).catch(e =>
         console.warn('[Shadow] 태그 파서 오류 (무시):', e.message)
       );
@@ -870,7 +954,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     // ── EXPERT 태그 감지 → 전문가 AI(같은 스레드 페르소나) 세션 시작 ──
     // 그림자 AI(AGENT-COMMON) 응답에서만 인식한다 — 페르소나 본인이 발급한
     // 텍스트가 우연히 같은 패턴을 포함해도 재귀적으로 세션을 바꾸지 않도록.
-    if (!isExpertActive() && CFG.system?.includes('AGENT-COMMON v2.0')) {
+    if (!isExpertActive() && CFG.system?.includes('§0. 정체성')) {
       handleExpertTag(fullReply).catch(e =>
         console.warn('[Expert] 태그 처리 오류 (무시):', e.message)
       );

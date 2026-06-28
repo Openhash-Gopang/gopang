@@ -13,6 +13,7 @@
  */
 
 import { CFG }                          from '../core/config.js';
+import { TOKEN_BUDGET }                 from '../core/token-policy.js';
 import { _USER, history }               from '../core/state.js';
 import { appendBubble, _createStreamBubble,
          _updateStreamBubble }          from '../ui/bubble.js';
@@ -109,7 +110,7 @@ ${candidateList}`;
     const res = await _callLLM([
       { role: 'system', content: '너는 유사도 분류기다. id 값만 반환한다.' },
       { role: 'user',   content: prompt },
-    ], { max_tokens: 30, temperature: 0 });
+    ], { max_tokens: TOKEN_BUDGET.TRIVIAL_PICK, temperature: 0 });
     const similarId = res?.trim();
     return candidates.find(s => s.id === similarId) || candidates[0];
   } catch {
@@ -158,7 +159,7 @@ ${webContext.slice(0, 2000)}
   return await _callLLM([
     { role: 'system', content: '너는 혼디 Agent SP 작성 전문가다.' },
     { role: 'user',   content: prompt },
-  ], { max_tokens: 1200, temperature: 0.3 });
+  ], { max_tokens: TOKEN_BUDGET.SP_GENERATE, temperature: 0.3 });
 }
 
 // ── 임시 등록 (GWP_REGISTRY + L1 PocketBase pending 큐) ────────
@@ -241,7 +242,7 @@ async function _invokeInline(svc, userText) {
   ];
 
   const bubble = _createStreamBubble();
-  const reply  = await _callLLM(messages, { max_tokens: 1200, stream: true, bubble });
+  const reply  = await _callLLM(messages, { max_tokens: TOKEN_BUDGET.AGENT_INLINE, stream: true, bubble });
 
   // Agent 완료 → 6하 보고서 추출 + PDV 기록
   await _handleAgentReport(reply, svc);
@@ -294,7 +295,7 @@ async function _handleAgentReport(agentReply, svc) {
     const summary = await _callLLM([
       { role: 'system', content: '다음 Agent 응답을 6하 원칙(누가·언제·어디서·무엇을·어떻게·왜)으로 50자 이내 JSON으로 요약하라. 형식: {"who":"...","when":"...","where":"...","what":"...","how":"...","why":"...","result":"..."}' },
       { role: 'user',   content: agentReply?.slice(0, 1000) || '' },
-    ], { max_tokens: 200, temperature: 0 });
+    ], { max_tokens: TOKEN_BUDGET.SUMMARY_SHORT, temperature: 0 });
     try { report6w = JSON.parse(summary?.replace(/```json|```/g, '').trim()); } catch {}
   }
 

@@ -4,8 +4,10 @@
 import { _klawBusy, _klawLastCheck, KLAW_COOLDOWN_MS,
          setKlawBusy, setKlawLastCheck } from '../core/state.js';
 import { CFG } from '../core/config.js';
+import { TOKEN_BUDGET, FAST_MODEL } from '../core/token-policy.js';
 import { appendBubble } from '../ui/bubble.js';
 import { _recordPDV } from '../pdv/record.js';
+import { _gwpLaunch } from '../gwp/engine.js';
 
 // ══════════════════════════════════════════════════════════════════════
 // K-Law 백그라운드 감시 파이프라인 v1.0
@@ -101,14 +103,19 @@ export async function _klawReview(source, payload) {
 
     // ── K-Law API 호출 (백그라운드) ──────────────────────────
     // monitor_prompt.txt가 출력 형식을 완전히 정의하므로 추가 지시 불필요
+    // ※ 토큰 절약 정책: 분류/감시 전용 태스크는 사용자가 설정한(비쌀 수 있는)
+    //   CFG.model을 쓰지 않고, router.js와 동일한 고정 저가 모델을 쓴다.
+    //   이게 바로 2026-06-27에 "토큰 과다 소모"로 이 기능을 통째로 꺼야 했던
+    //   원인이었다 — 매 대화·PDV 기록마다 메인 모델(사용자가 고른 비싼 모델)을
+    //   호출했기 때문. 고정 저가 모델로 바꾸면 다시 켜도 안전하다.
     const klawSystemPrompt = klawPrompt;
 
     const res = await fetch(CFG.endpoint + '/deepseek', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model:       CFG.model,
-        max_tokens:  512,
+        model:       FAST_MODEL,  // 고정 저가 모델 — CFG.model(사용자 설정) 아님
+        max_tokens:  TOKEN_BUDGET.MONITOR_REVIEW,
         temperature: 0.1,   // 일관된 법적 판단을 위해 낮게 설정
         messages: [
           { role: 'system',  content: klawSystemPrompt },
@@ -158,6 +165,30 @@ export async function _klawReview(source, payload) {
         (result.action  ? `<div style="font-size:12px;font-weight:600;color:#0057A8">💡 ${result.action}</div>` : '') +
         `</div>`;
       appendBubble('ai', html, true);
+    }
+
+    // ── CRITICAL: K-Police/K-Emergency 탭을 미리 채워서 열되, 실제 신고
+    //   전송은 사용자가 직접 확인하고 눌러야 한다(자동 전송 금지 — 오탐
+    //   1건으로 진짜 신고가 나가버리는 사고를 막기 위함). 다른 GWP 서비스와
+    //   동일한 패턴: "탭을 열어 채워주는 것"까지만 자동, 전송은 사람이.
+    if (level === 'CRITICAL') {
+      try {
+        const svcId  = result.service_id || 'kpolice';  // monitor_prompt.txt가 지정하면 그 값, 없으면 기본 K-Police
+        const svcDef = (typeof window.getService === 'function') ? window.getService(svcId) : null;
+        if (svcDef) {
+          const ctxText = [result.summary, result.detail].filter(Boolean).join(' — ');
+          appendBubble('ai',
+            `<div style="font-size:12px;color:#4A5568">🔴 ${svcDef.name || svcId} 탭을 미리 채워서 열었습니다 — ` +
+            `내용을 확인하시고, 신고가 필요하면 그 탭에서 직접 눌러 전송해 주세요(자동으로 전송되지 않습니다).</div>`,
+            true
+          );
+          _gwpLaunch(svcDef, ctxText, null);
+        } else {
+          console.warn(`[K-Law] CRITICAL 감지했지만 서비스 정의를 찾지 못함(svcId=${svcId}) — 탭 자동 오픈 생략`);
+        }
+      } catch (e) {
+        console.warn('[K-Law] CRITICAL 탭 오픈 실패(무시, 경고 버블은 이미 표시됨):', e.message);
+      }
     }
 
   } catch(e) {

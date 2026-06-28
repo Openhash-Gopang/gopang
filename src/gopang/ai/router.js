@@ -2,6 +2,7 @@
  * ai/router.js — SP-00 라우터 (서비스 분류)
  */
 import { CFG } from '../core/config.js';
+import { TOKEN_BUDGET, FAST_MODEL } from '../core/token-policy.js';
 import { appendBubble } from '../ui/bubble.js';
 import { _USER } from '../core/state.js';
 
@@ -46,32 +47,7 @@ export async function _loadRouterPrompt() {
       _routerPromptVer = 'minimal (내장)';
       return _routerPrompt;
     }
-    // ── webapp.html onclick에서 호출되는 함수 전역 노출 ──────
-  window.openSearch    = openSearch;
-  window.closeSearch   = closeSearch;
-  window.runSearch     = runSearch;
-  window.openSettings  = openSettings;
-  window.toggleAI      = toggleAI;
-  window.sendMessage   = sendMessage;
-  window.handleKey     = handleKey;
-  window.updateSendBtn = updateSendBtn;
-  window.triggerAttach = triggerAttach;
-  window.removeAttach  = removeAttach;
-  window.setPeer       = setPeer;
-  window._clearPeer    = _clearPeer;
-  window.selectContact = selectContact;
-  window.openProfile              = openProfile;
-  window.handleSearchOverlayClick = handleSearchOverlayClick;
-  window.handleOverlayClick       = handleOverlayClick;
-  window._updateHandleChip        = _updateHandleChip;
-  window._settingsRegisterHandle  = _settingsRegisterHandle;
-  window.handleOverlayClick       = handleOverlayClick;
-  window._updateHandleChip        = _updateHandleChip;
-  window._settingsRegisterHandle  = _settingsRegisterHandle;
-  window.dismissInstall           = typeof dismissInstall   !== 'undefined' ? dismissInstall   : ()=>{};
-  window.dismissIOSInstall        = typeof dismissIOSInstall !== 'undefined' ? dismissIOSInstall : ()=>{};
-  window.requestInstall           = typeof requestInstall   !== 'undefined' ? requestInstall   : ()=>{};
-})();
+  })();
 
   return _routerLoadPromise;
 }
@@ -149,8 +125,8 @@ export async function runRouter(userText, hasImage = false) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model:       'deepseek-v4-flash',  // 라우터는 Flash 고정 (빠름·저렴, 분류 작업에 충분)
-        max_tokens:  256,
+        model:       FAST_MODEL,  // 라우터는 고정 저가 모델(빠름·저렴, 분류 작업에 충분)
+        max_tokens:  TOKEN_BUDGET.ROUTE_CLASSIFY,
         temperature: 0.0,               // 결정론적
         stream:      false,
         messages: [

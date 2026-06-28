@@ -304,7 +304,8 @@ export async function loadPersonalAssistantSP() {
     }
   }
 
-  // 2) 폴백: personal-assistant-LATEST.txt 포인터로 버전 결정 후 온보딩 SP 로드
+  // 2) 폴백: manifest.json['personal-assistant'] 키로 버전 결정 후 온보딩 SP 로드
+  //    (*-LATEST.txt 포인터 방식은 폐기됨 — manifest 단일 체계로 통일)
   //    localStorage 영구 캐시 금지 — 항상 fresh fetch (그림자가 생기면 자동 전환됨)
   try {
     const manifestRes = await fetch(_SP_BASE_CFG + 'manifest.json', { cache: 'no-cache' });
@@ -318,7 +319,11 @@ export async function loadPersonalAssistantSP() {
       if (sp && sp.length > 200) {
         CFG.system = sp;
         CFG.system_base = sp;
-        console.info('[SP] PA SP 로드 완료:', latestFile, sp.length, 'chars');
+        // ※ 이전엔 여기서 미선언 변수 latestFile을 참조해 ReferenceError가 났음
+        //   (catch에 잡혀 "SP 로드 실패"로 오인되는 로그가 남았으나, 위에서
+        //   CFG.system은 이미 정상적으로 설정된 뒤였음 — 동작엔 영향 없었지만
+        //   디버깅을 방해했음). fname으로 정정.
+        console.info('[SP] PA SP 로드 완료:', fname, sp.length, 'chars');
       }
     }
   } catch (e) {
