@@ -3000,6 +3000,17 @@ window.closeTermsOfUse = closeTermsOfUse;
   let wakeActive = false; // 호출어 대기 루프를 의도적으로 켜둔 상태인지
   let suspended  = false; // 다른 마이크 사용 중이라 일시 정지된 상태인지
 
+  // ※ 2026-06-28 수정: 끝난 이유(정상 침묵 vs 지속적 오류)를 가리지 않고
+  // 150ms마다 무조건 재시작하던 것이 버그였다. 네트워크가 끊긴 상태(비행기
+  // 모드 등)에서는 인식이 즉시 실패→onend→재시작을 무한 반복하는데, 매번
+  // recognition.start()를 새로 호출할 때마다 크롬이 "사이트에서 마이크를
+  // 사용 중입니다" 알림을 다시 띄워서, 사용자에게는 알 수 없는 알림이
+  // 몇 초 간격으로 영원히 반복되는 것처럼 보였다(실제로는 알림이 아니라
+  // 매번 새로 뜨는 같은 시스템 알림이었음).
+  let _consecutiveErrors = 0;
+  const _BASE_RESTART_DELAY_MS = 150;
+  const _MAX_RESTART_DELAY_MS  = 30000;
+
   function isOtherMicBusy() {
     const a = document.getElementById('btn-mic');
     const b = document.getElementById('ai-panel-mic-btn');
@@ -3013,11 +3024,36 @@ window.closeTermsOfUse = closeTermsOfUse;
     r.interimResults = false;
 
     r.onresult = (event) => {
+      _consecutiveErrors = 0; // 정상적으로 결과를 받았으니 실패 횟수 리셋
       const text = event.results?.[0]?.[0]?.transcript || '';
       if (WAKE_PATTERN.test(text)) _onWakeDetected();
     };
-    r.onerror = () => { /* no-speech 등은 흔한 일시 정지 — onend에서 재시작 */ };
-    r.onend = () => { if (wakeActive && !suspended) setTimeout(startListening, 150); };
+    r.onerror = (event) => {
+      // no-speech/aborted는 정상적인 일시 정지일 뿐 — 실패로 치지 않음
+      if (event?.error === 'no-speech' || event?.error === 'aborted') return;
+      _consecutiveErrors++;
+    };
+    r.onend = () => {
+      if (!wakeActive || suspended) return;
+
+      // 네트워크 자체가 끊겨 있으면(비행기 모드 등) 짧은 간격으로 재시도해도
+      // 매번 실패만 반복하며 마이크 알림만 계속 새로 띄운다 — 다시 온라인이
+      // 될 때까지 재시도를 멈추고 'online' 이벤트를 기다린다.
+      if (typeof navigator.onLine === 'boolean' && !navigator.onLine) {
+        window.addEventListener('online', () => {
+          _consecutiveErrors = 0;
+          startListening();
+        }, { once: true });
+        return;
+      }
+
+      // 온라인인데도 계속 실패하면(서버 일시 장애 등) 지수 백오프로 재시도
+      // 간격을 늘려 마이크 알림이 끝없이 반복되는 것을 막는다.
+      const delay = _consecutiveErrors > 3
+        ? Math.min(_BASE_RESTART_DELAY_MS * Math.pow(2, _consecutiveErrors - 3), _MAX_RESTART_DELAY_MS)
+        : _BASE_RESTART_DELAY_MS;
+      setTimeout(startListening, delay);
+    };
     return r;
   }
 
