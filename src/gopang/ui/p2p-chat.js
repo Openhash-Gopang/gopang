@@ -191,7 +191,16 @@ export async function startP2PCall(targetUser) {
 function _watchAnswerRealtime(conn, peerGuid, callId) {
   const myGuid = _USER.ipv6;
 
-  let wsOk = false, done = false, stopRealtime = null;
+  let done = false, stopRealtime = null;
+  // realtime과 폴백 폴링이 거의 동시에 같은 신호를 집어올 수 있어서(특히
+  // realtime이 막 켜진 순간), wsOk 같은 거친 on/off 플래그로는 둘 다 같은
+  // answer/ICE를 따로 처리하는 경쟁이 생긴다(같은 answer를 두 번
+  // setRemoteDescription하려다 두 번째가 "wrong state: stable"로 실패,
+  // 같은 ICE가 순서 뒤바뀌어 처리되는 등 — 2026-06-28 실제로 관찰됨).
+  // Supabase 시절엔 wsOk가 사실상 영원히 false였어서 이 경쟁이 드러난 적이
+  // 없었을 뿐, 원래부터 있던 설계 결함이었다. 신호 id 단위로 한 번만
+  // 처리되게 하여 어느 경로가 먼저 잡든 안전하게 만든다.
+  const _seenSignalIds = new Set();
 
   // 더 새로운 통화 시도가 시작되면 이 watcher는 즉시 폐기
   function _stale() { return _activeCallId !== callId; }
@@ -202,15 +211,11 @@ function _watchAnswerRealtime(conn, peerGuid, callId) {
     _stopPoll();
   }
 
-  // L1 PocketBase Realtime(SSE)으로 answer/ICE 수신
-  stopRealtime = _watchL1Realtime(myGuid, async (row) => {
+  async function _handleSignalRow(row) {
     if (done) return;
     if (_stale()) { console.info('[P2P] 오래된 통화 시도 — watcher 종료'); _close(); return; }
-
-    // 실제 매칭 시그널을 수신한 시점에만 폴백 폴링 비활성화.
-    // (재연결 중처럼 SSE가 잠깐 끊겨도 핸드셰이크 성공만으로 wsOk=true 하면
-    //  안 되므로, 실제 데이터가 와야만 켠다 — 기존 Supabase 시절과 동일 원칙)
-    wsOk = true;
+    if (_seenSignalIds.has(row.id)) return;  // 이미 처리한 신호 — realtime/폴링 중복 방지
+    _seenSignalIds.add(row.id);
 
     const _rowPayload = typeof row.payload === 'string'
       ? JSON.parse(row.payload) : (row.payload || {});
@@ -224,7 +229,7 @@ function _watchAnswerRealtime(conn, peerGuid, callId) {
         await conn.setRemoteDescription(new RTCSessionDescription(answerSdp));
         _appendMsg('system', '✅ 연결됐습니다. 채널이 열리면 메시지를 입력하세요.');
         console.info('[P2P] answer 수신 완료');
-        // answer 수신 후 realtime 닫기 (ICE는 ondatachannel onopen 후 불필요)
+        // answer 수신 후 잠시 뒤 watcher 종료 (ICE는 ondatachannel onopen 후 불필요)
         setTimeout(_close, 10000);
       } catch(e) { console.warn('[P2P] answer setRemoteDescription 실패:', e.message); }
     }
@@ -236,32 +241,18 @@ function _watchAnswerRealtime(conn, peerGuid, callId) {
       } catch(e) { console.warn('[P2P] ICE 추가 실패:', e.message); }
     }
 
-    // 처리 후 시그널 삭제
+    // 처리 후 시그널 삭제 — 중복 호출돼도(이미 지워졌으면) 404는 무해하므로 무시
     _signalDeleteDirect(row.id);
-  });
+  }
 
-  // 폴백: realtime 미작동 시 1.5초 폴링
-  _startPoll(myGuid, async signal => {
-    if (wsOk || done) return;
-    if (_stale()) { _close(); return; }
-    const _sigPayload = typeof signal.payload === 'string'
-      ? JSON.parse(signal.payload) : (signal.payload || {});
-    if (_sigPayload.callId && _sigPayload.callId !== callId) return;
+  // L1 PocketBase Realtime(SSE)으로 answer/ICE 수신
+  stopRealtime = _watchL1Realtime(myGuid, _handleSignalRow);
 
-    if (signal.type === 'answer' && signal.from_guid === peerGuid) {
-      try {
-        const answerSdp = _sigPayload.sdp || _sigPayload;
-        await conn.setRemoteDescription(new RTCSessionDescription(answerSdp));
-        _appendMsg('system', '✅ 연결됐습니다.');
-        _close();
-      } catch(e) { console.warn('[P2P] 폴백 answer 실패:', e.message); }
-    }
-    if (signal.type === 'ice' && signal.from_guid === peerGuid) {
-      try {
-        await conn.addIceCandidate(new RTCIceCandidate(_sigPayload.candidate || _sigPayload));
-      } catch {}
-    }
-  });
+  // 폴백: realtime이 못 잡은 신호를 1.5초 폴링으로 보완(같은 핸들러 재사용 —
+  // _seenSignalIds가 있어서 realtime이 이미 처리한 신호는 자동으로 건너뜀).
+  // autoDelete:false — _handleSignalRow가 이미 자기 책임으로 지우므로,
+  // _startPoll이 또 지우려다 404(이미 없음)가 나는 걸 막는다.
+  _startPoll(myGuid, _handleSignalRow, { autoDelete: false });
 }
 
 // ── P2P 수신측 처리 ──────────────────────────────────────
@@ -437,15 +428,17 @@ async function _signalSend(body) {
 }
 
 // ── 시그널 폴링 ───────────────────────────────────────────
-function _startPoll(myGuid, handler) {
+function _startPoll(myGuid, handler, { autoDelete = true } = {}) {
   _stopPoll();
   _pollInterval = setInterval(async () => {
     try {
       const signals = await _signalPollDirect(myGuid);
       for (const sig of signals) {
         await handler(sig);
-        // 처리 후 삭제 — L1 직접 DELETE
-        await _signalDeleteDirect(sig.id);
+        // 처리 후 삭제 — L1 직접 DELETE. autoDelete=false면 handler가
+        // 이미 자기 책임으로 지웠다는 뜻(_handleSignalRow 등) — 중복 DELETE로
+        // 404가 또 나는 걸 막기 위해 여기서는 건너뛴다.
+        if (autoDelete) await _signalDeleteDirect(sig.id);
       }
     } catch(e) { console.warn('[P2P] 폴링 오류:', e.message); }
   }, 1500);
@@ -833,36 +826,46 @@ async function _saveP2PSession(messages, peer, startedAt) {
 export function startIncomingWatch(myGuid) {
   if (!myGuid) return;
 
-  let wsOk = false;
+  // realtime과 폴백 폴링이 같은 offer 레코드를 동시에 집어올 수 있어서
+  // (_watchAnswerRealtime과 동일한 경쟁 — §주석 참고), 레코드 id 단위로
+  // 한 번만 처리되게 한다. handleIncomingOffer 안에 callId 기준 중복 체크가
+  // 이미 있지만, 그건 "같은 통화를 두 번 안 열기" 용도고 이건 "같은 레코드를
+  // 두 번 안 만지기"(중복 DELETE로 404 나던 것 등) 용도라 별개로 둔다.
+  const _seenSignalIds = new Set();
+
+  // startIncomingWatch는 앱 시작 시 1회 호출돼 세션 내내 살아있다 — _seenOfferIds
+  // (callId 기준, 캡 있음)와 달리 이 Set은 처음에 캡이 없어서, 받은 모든 신호
+  // id(offer뿐 아니라 무시한 ice/answer까지)가 무한정 쌓일 뻔했다. 동일하게
+  // 캡을 둔다(_watchAnswerRealtime 쪽은 통화 1건마다 새로 생기는 지역 변수라
+  // 통화 종료 시 자동 회수되므로 캡이 필요 없음 — 그쪽과는 다른 사정).
+  const _SEEN_SIGNAL_CAP = 100;
+  async function _handleSignalRow(row) {
+    if (_seenSignalIds.has(row.id)) return;
+    _seenSignalIds.add(row.id);
+    if (_seenSignalIds.size > _SEEN_SIGNAL_CAP) {
+      _seenSignalIds.delete(_seenSignalIds.values().next().value);
+    }
+    if (row.type === 'offer' && !_chatOverlay) {
+      await handleIncomingOffer(row);
+      _signalDeleteDirect(row.id);
+    }
+  }
 
   // L1 PocketBase 자체 Realtime(SSE)으로 incoming offer 감시.
   // 이전엔 "PocketBase SSE가 ERR_INCOMPLETE_CHUNKED_ENCODING으로 실패"해서
   // Supabase Realtime WebSocket으로 교체했었지만, 서버(nginx proxy_buffering
   // off 적용됨)에서 curl로 직접 재확인한 결과 SSE가 정상 동작한다(2026-06-28).
   // 막혔던 이유는 이미 해결돼 있었다 — 그래서 L1 자체 realtime으로 되돌린다.
-  _watchL1Realtime(myGuid, async (row) => {
-    // 실제 매칭 데이터 수신 시에만 폴백 폴링 비활성화
-    wsOk = true;
+  _watchL1Realtime(myGuid, _handleSignalRow);
 
-    if (row.type === 'offer' && !_chatOverlay) {
-      console.info('[P2P L1Realtime] offer 수신 → handleIncomingOffer');
-      await handleIncomingOffer(row);
-      _signalDeleteDirect(row.id);
-    }
-  });
-
-  // 폴백: realtime 미작동 시 3초 폴링
+  // 폴백: realtime이 못 잡은 offer를 3초 폴링으로 보완(같은 핸들러 재사용 —
+  // _seenSignalIds가 있어서 realtime이 이미 처리한 레코드는 자동으로 건너뜀)
   setInterval(async () => {
-    if (wsOk) return;
     try {
       if (_chatOverlay) return;
       const signals = await _signalPollDirect(myGuid);
       for (const sig of signals) {
-        if (sig.type === 'offer') {
-          await handleIncomingOffer(sig);
-          _signalDeleteDirect(sig.id);
-          break;
-        }
+        if (sig.type === 'offer') { await _handleSignalRow(sig); break; }
       }
     } catch {}
   }, 3000);
