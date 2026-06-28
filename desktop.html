@@ -2849,6 +2849,52 @@ window.closeHondiZoom = function() {
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
+/* AI 버블 내 마크다운 렌더링 스타일 */
+.cp-msg.ai .cp-bubble p {
+  margin: 0 0 8px;
+  line-height: 1.7;
+}
+.cp-msg.ai .cp-bubble p:last-child { margin-bottom: 0; }
+.cp-msg.ai .cp-bubble h3,
+.cp-msg.ai .cp-bubble h4 {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text, #0f172a);
+  margin: 10px 0 4px;
+  letter-spacing: -0.2px;
+}
+.cp-msg.ai .cp-bubble h3:first-child,
+.cp-msg.ai .cp-bubble h4:first-child { margin-top: 0; }
+.cp-msg.ai .cp-bubble strong { font-weight: 700; color: var(--text, #0f172a); }
+.cp-msg.ai .cp-bubble em { font-style: italic; }
+.cp-msg.ai .cp-bubble ul,
+.cp-msg.ai .cp-bubble ol {
+  margin: 6px 0 8px 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cp-msg.ai .cp-bubble ul { list-style: disc; }
+.cp-msg.ai .cp-bubble ol { list-style: decimal; }
+.cp-msg.ai .cp-bubble li { line-height: 1.65; }
+.cp-msg.ai .cp-bubble code {
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 12px;
+  background: rgba(0,0,0,0.07);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.cp-msg.ai .cp-bubble a {
+  color: var(--brand-dk, #1a9e6a);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cp-msg.ai .cp-bubble hr {
+  border: none;
+  border-top: 1px solid var(--border, #e5e7eb);
+  margin: 10px 0;
+}
 
 /* 로딩 dots */
 .cp-typing {
@@ -3016,12 +3062,74 @@ window.closeHondiZoom = function() {
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
   };
 
+  function cpMarkdown(text) {
+    // Escape HTML first
+    let s = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // Headers: ## → <h3>, ### → <h4>
+    s = s.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+    s = s.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+    s = s.replace(/^# (.+)$/gm, '<h3>$1</h3>');
+
+    // Bold + Italic: ***text*** or ___text___
+    s = s.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    // Bold: **text** or __text__
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    // Italic: *text* or _text_
+    s = s.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
+
+    // Inline code
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Horizontal rule
+    s = s.replace(/^[-*_]{3,}\s*$/gm, '<hr>');
+
+    // Numbered list items (process before paragraphs)
+    s = s.replace(/^(\d+)\. (.+)$/gm, '<li data-n="$1">$2</li>');
+    s = s.replace(/(<li data-n="\d+">.+<\/li>\n?)+/g, m => '<ol>' + m + '</ol>');
+
+    // Bullet list items (- or * at line start)
+    s = s.replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>');
+    s = s.replace(/(<li>.+<\/li>\n?)+/g, m => {
+      // skip if already wrapped in <ol>
+      return '<ul>' + m + '</ul>';
+    });
+    // Fix double-wrapping: <ol><ul>... → <ol>...
+    s = s.replace(/<ul>(<li data-n)/g, '$1');
+    s = s.replace(/<\/li>\n?<\/ul>(<\/ol>)/g, '</li>$1');
+
+    // Links
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+    // Paragraphs: split by blank lines
+    const blocks = s.split(/\n{2,}/);
+    s = blocks.map(block => {
+      block = block.trim();
+      if (!block) return '';
+      // Already block-level tags
+      if (/^<(h[1-6]|ul|ol|hr|blockquote|pre|code)/.test(block)) return block;
+      // Single line-breaks within a paragraph → <br>
+      block = block.replace(/\n/g, '<br>');
+      return '<p>' + block + '</p>';
+    }).join('\n');
+
+    return s;
+  }
+
   function appendMsg(role, text) {
     const wrap = document.createElement('div');
     wrap.className = 'cp-msg ' + role;
     const bubble = document.createElement('div');
     bubble.className = 'cp-bubble';
-    bubble.textContent = text;
+    if (role === 'ai') {
+      bubble.innerHTML = cpMarkdown(text);
+    } else {
+      bubble.textContent = text;
+    }
     wrap.appendChild(bubble);
     msgs.appendChild(wrap);
     msgs.scrollTop = msgs.scrollHeight;
