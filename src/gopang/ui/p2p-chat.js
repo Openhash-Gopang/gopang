@@ -868,14 +868,20 @@ export function startIncomingWatch(myGuid) {
   _connectWS();
 
   // 폴백: WS 미작동 시 3초 폴링
+  // ※ 버그 수정: _signalPollDirect()는 배열을 직접 반환하는데(아래 정의 참고),
+  //   기존 코드는 그걸 { json: async () => signals_raw2 }로 감싼 뒤
+  //   `data.signals`(존재하지 않는 속성 — 항상 undefined)를 순회해서,
+  //   실제로 데이터가 와도 루프가 단 한 번도 안 돌았다. WS가 보는 Supabase
+  //   테이블에는 애초에 데이터가 안 들어오니(쓰기는 L1로 이관됨) WS도
+  //   못 잡고, 이 폴백도 위 버그로 못 잡아서 — incoming offer가 L1에는
+  //   정상 기록(GET으로 직접 확인됨)되는데도 받는 쪽 모달이 영영 안 뜨는
+  //   현상의 원인이었다.
   setInterval(async () => {
     if (wsOk) return;
     try {
       if (_chatOverlay) return;
-      const signals_raw2 = await _signalPollDirect(myGuid);
-        const res  = { ok: true, _direct: true, json: async () => signals_raw2 };
-      const data = await res.json();
-      for (const sig of (data.signals || [])) {
+      const signals = await _signalPollDirect(myGuid);
+      for (const sig of signals) {
         if (sig.type === 'offer') {
           await handleIncomingOffer(sig);
           _signalDeleteDirect(sig.id);
