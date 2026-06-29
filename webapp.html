@@ -2677,6 +2677,11 @@ window.closeTermsOfUse = closeTermsOfUse;
           _autoSendTimestamps.push(Date.now());
           baseText = '';
           _sendToAI();
+          // 사용자가 켜고 한 번 입력하면 자동으로 끈다 — 계속 듣고 있는
+          // 동작은 마이크가 알 수 없는 이유로 계속 켜져 있는 것처럼 보여서
+          // (안드로이드 "마이크 사용 중" 알림이 반복됨) 사용자가 직접 다시
+          // 눌러야만 켜지는 1회성 동작으로 바꿈(2026-06-29).
+          stopAIMic();
         }
       }, SILENCE_MS);
     }
@@ -2762,17 +2767,14 @@ window.closeTermsOfUse = closeTermsOfUse;
     });
     window.addEventListener('pagehide', () => { if (aiMicActive) stopAIMic(); });
 
-    // ── 기본 활성화: 앱을 (비활성 상태에서) 열면 AI 대화창과 마이크를 기본으로 켠다 ──
-    // 패널 자체는 권한과 무관하게 항상 자동으로 열고, 마이크는 이미 권한이
-    // 허용돼 있을 때만 자동으로 켠다(처음 보는 사용자에게 권한 팝업을 임의로
-    // 띄우지 않는다 — 위쪽 "혼디야" 호출어 블록과 동일한 원칙).
+    // ── 기본 활성화: 앱을 (비활성 상태에서) 열면 AI 대화창을 기본으로 연다 ──
+    // ※ 2026-06-29: 마이크 자동 시작은 제거함 — 권한이 이미 허용된
+    // 상태였다면 매번 자동으로 마이크가 켜졌고, 그게 안드로이드의
+    // "마이크 사용 중" 알림을 계속 띄우는 원인이 됐다(사용자가 누른 적도
+    // 없는데 알림음이 반복됨). 이제는 사용자가 마이크 버튼을 직접 눌러야만
+    // 켜진다.
     setTimeout(() => {
       openAIPanel();
-      if (navigator.permissions?.query) {
-        navigator.permissions.query({ name: 'microphone' }).then(status => {
-          if (status.state === 'granted') startAIMic();
-        }).catch(() => {});
-      }
     }, 300);
   })();
 
@@ -3160,17 +3162,12 @@ window.closeTermsOfUse = closeTermsOfUse;
     if (!isOtherMicBusy()) startListening();
   }
 
-  // 마이크 권한이 이미 허용된 상태(설치형 PWA 등)라면 즉시 대기를 시작하고,
-  // 아니라면 사용자가 마이크 버튼을 처음 눌러 권한을 허용한 직후 시작한다.
-  if (navigator.permissions?.query) {
-    navigator.permissions.query({ name: 'microphone' }).then(status => {
-      if (status.state === 'granted') startWake();
-      status.onchange = () => { if (status.state === 'granted') startWake(); };
-    }).catch(() => {});
-  }
-  ['btn-mic', 'ai-panel-mic-btn'].forEach(id => {
-    document.getElementById(id)?.addEventListener('click', () => setTimeout(startWake, 300));
-  });
+  // ※ 2026-06-29: 자동 시작 트리거를 모두 제거함 — 권한이 이미 허용된
+  // 상태(설치형 PWA 등)거나 마이크 버튼을 누르기만 해도 호출어 대기가
+  // 자동으로 켜졌는데, 그게 몇 초 간격으로 끝없이 재시작하며 안드로이드의
+  // "마이크 사용 중" 알림을 반복적으로 띄우는 원인이었다. 이제 startWake()는
+  // 정의돼 있지만 아무 데서도 자동으로 호출되지 않는다 — 항시 대기하는
+  // 호출어("혼디야") 기능은 당분간 비활성 상태다.
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') pauseWake();
