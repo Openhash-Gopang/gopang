@@ -8,7 +8,7 @@
  *   2. _callAIInner() — profile 미완료 시 PA SP 로드 + 컨텍스트 주입
  *   3. 응답 처리 — PROFILE_SUBMIT / PROFILE_SKIP / [N/6단계] 감지 → 상태 갱신 + SP 전환
  */
-import { CFG, _modelSupportsVision, PROVIDER_INFO, getPriorityOrder } from '../core/config.js';
+import { CFG, _modelSupportsVision, PROVIDER_INFO, getPriorityOrder, MODEL_MIGRATION } from '../core/config.js';
 import { TOKEN_BUDGET } from '../core/token-policy.js';
 import { isModelOnCooldown, markModelFailed, recordOpenRouterCall, getOpenRouterRemainingBudget }
   from '../core/free-model-pool.js';
@@ -526,6 +526,14 @@ function _buildCallCandidates() {
       provider: 'gopang-proxy', baseUrl: 'https://gopang-proxy.tensor-city.workers.dev',
       model: CFG.model, apiKey: '', isProxy: true,
     });
+  }
+
+  // 모델명 교정 — config.js의 MODEL_MIGRATION을 여기 한 곳에서 일괄 적용한다.
+  // (desktop.html의 구형 선택값, DEV_MODE 주입값 등 출처가 어디든 상관없이
+  // 전부 통과하게 됨 — 만들어져 있었지만 아무 데서도 안 쓰이고 있던 맵이었음.
+  // 특히 deepseek-chat/reasoner는 2026-07-24 완전히 막히므로 시급함.)
+  for (const c of candidates) {
+    if (MODEL_MIGRATION[c.model]) c.model = MODEL_MIGRATION[c.model];
   }
 
   return candidates;

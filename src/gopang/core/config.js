@@ -251,7 +251,9 @@ export const VISION_MODELS = new Set([
   'gpt-4o', 'gpt-4o-mini', // 레거시
   // xAI
   'grok-4.1-fast', 'grok-4.3',
-  // 레거시
+  // DeepSeek (V4부터 비전 지원 — 이전엔 deepseek-chat(V3)만 가능했음)
+  'deepseek-v4-flash', 'deepseek-v4-pro',
+  // 레거시 — 2026-07-24 폐기 예정(deepseek-v4-flash로 자동 변환됨, MODEL_MIGRATION 참고)
   'deepseek-chat',
 ]);
 
