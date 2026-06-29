@@ -3,555 +3,402 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>혼디 프로필</title>
+
+<!-- ── SEO / OpenGraph (JS로 동적 교체) ── -->
+<title>고팡 프로필</title>
 <meta name="description" content="">
 <meta property="og:type"        content="profile">
 <meta property="og:title"       content="">
 <meta property="og:description" content="">
-<meta property="og:image"       content="https://hondi.net/icons/icon-512.png">
+<meta property="og:image"       content="https://gopang.net/icons/icon-512.png">
 <meta property="og:url"         content="">
 <meta name="twitter:card"       content="summary">
+
+<!-- JSON-LD Schema.org (JS로 삽입) -->
 <script id="jsonld" type="application/ld+json">{}</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{font-family:'Pretendard',-apple-system,sans-serif;background:#fff;color:#111;
-  height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:#111827;min-height:100dvh}
 
-/* ── 히어로 ── */
-.hero-wrap{
-  flex-shrink:0;height:200px;background:#4B7BE5;
-  position:relative;overflow:hidden;transition:height .18s;
-}
-.hero-city{position:absolute;bottom:0;left:0;right:0;height:160px;opacity:.25;pointer-events:none}
-.hero-city svg{width:100%;height:100%}
-.hero-edit-btn{
-  position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;
-  background:rgba(255,255,255,.22);border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;color:#fff;
-  z-index:2;transition:opacity .15s;
-}
-.hero-edit-btn svg{width:15px;height:15px;stroke:#fff;stroke-width:2;fill:none;
-  stroke-linecap:round;stroke-linejoin:round}
-.hero-avatar{
-  position:absolute;bottom:-38px;left:20px;
-  width:76px;height:76px;border-radius:50%;
-  border:3px solid #fff;background:#1A73E8;
-  display:flex;align-items:center;justify-content:center;
-  font-size:28px;font-weight:600;color:#fff;
-  box-shadow:0 2px 8px rgba(0,0,0,.18);z-index:2;overflow:hidden;transition:all .18s;
-}
-.hero-avatar img{width:100%;height:100%;object-fit:cover}
-.hero-chips{
-  position:absolute;bottom:14px;right:16px;
-  display:flex;gap:10px;z-index:2;transition:opacity .18s;
-}
-.hero-chip{display:flex;flex-direction:column;align-items:center;gap:4px;
-  cursor:pointer;background:none;border:none;font-family:inherit;padding:0}
-.hero-chip-icon{
-  width:40px;height:40px;border-radius:50%;
-  background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.45);
-  display:flex;align-items:center;justify-content:center;color:#fff;
-}
-.hero-chip-icon svg{width:17px;height:17px;stroke:#fff;stroke-width:2;fill:none;
-  stroke-linecap:round;stroke-linejoin:round}
-.hero-chip-label{font-size:10px;color:rgba(255,255,255,.9);font-weight:500}
+/* ── 헤더 ── */
+.top-bar{background:#fff;border-bottom:1px solid #e5e7eb;padding:14px 16px;
+  display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+.top-back{background:none;border:none;cursor:pointer;padding:4px;color:#374151;display:flex;align-items:center}
+.top-title{font-size:16px;font-weight:700;flex:1}
+.top-share{background:none;border:none;cursor:pointer;padding:4px;color:#374151;display:flex;align-items:center}
 
-/* ── 스크롤 본문 ── */
-.scroll-body{flex:1;overflow-y:auto;background:#fff;scrollbar-width:none}
-.scroll-body::-webkit-scrollbar{display:none}
-.body-inner{padding:52px 20px 20px}
-
-/* ── 텍스트 ── */
-.profile-name{font-size:17px;font-weight:700;color:#111;margin-bottom:2px}
-.profile-desc{font-size:14px;color:#374151;line-height:1.6;margin-top:10px}
-.profile-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.tag{padding:4px 10px;background:#f3f4f6;border-radius:20px;font-size:12px;color:#374151}
+/* ── 프로필 배너 + 헤더 (Google Maps 장소 카드 스타일) ── */
+.profile-banner{height:92px;background:linear-gradient(180deg,#456bb0 0%,#5b8be3 18%,#5b8be3 78%,#3569d7 100%);
+  position:relative;overflow:hidden}
+.profile-banner svg{position:absolute;bottom:-8px;left:0;width:100%;opacity:.32}
+.profile-hero{background:#fff;padding:0 20px 16px;margin-top:-34px;position:relative}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#007b8b,#3569d7);
+  display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;
+  color:#fff;flex-shrink:0;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.profile-name-block{padding-top:42px}
+.profile-name{font-size:21px;font-weight:700;color:#111827;margin-bottom:2px}
+.profile-type-sub{font-size:13.5px;color:#6b7280;margin-bottom:6px}
+.profile-handle{font-size:12.5px;color:#9ca3af;font-weight:500}
+.profile-handle b{color:#007b8b;font-weight:600}
+.profile-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .badge{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.badge-type{background:#eafcff;color:#014f5a;border:1px solid #b9eaf2}
 .badge-gdc{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.profile-desc{font-size:14px;color:#374151;line-height:1.6;margin-top:12px}
+.profile-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.tag{padding:4px 10px;background:#f3f4f6;border-radius:20px;font-size:12px;color:#374151}
 
-/* ── 섹션 타이틀 ── */
-.card-title{font-size:11px;font-weight:600;color:#9ca3af;
-  text-transform:uppercase;letter-spacing:.06em;margin:20px 0 8px}
-
-/* ── 정보 행 ── */
-.info-row{display:flex;align-items:center;gap:12px;padding:10px 0;
-  border-bottom:.5px solid #f0f0f0}
-.info-row:last-of-type{border-bottom:none}
-.info-icon{flex-shrink:0;color:#1A73E8;display:flex}
-.info-icon svg{width:17px;height:17px;stroke:currentColor;stroke-width:2;fill:none;
-  stroke-linecap:round;stroke-linejoin:round}
-.info-text{font-size:15px;color:#374151;flex:1;line-height:1.5}
-.info-text a{color:#1A73E8;text-decoration:none}
-
-/* ── 필드 추가 ── */
-.add-field-btn{
-  display:flex;align-items:center;gap:8px;padding:10px 0;
-  cursor:pointer;color:#1A73E8;background:none;border:none;
-  font-family:inherit;width:100%;
-}
-.add-field-btn svg{width:17px;height:17px;stroke:currentColor;stroke-width:2;fill:none;
-  stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-.add-field-btn span{font-size:14px;font-weight:500}
-
-/* ── 미디어 ── */
-.media-row{display:flex;gap:10px;margin-top:10px}
-.media-card{
-  flex:1;aspect-ratio:1;border-radius:12px;border:1px dashed #d1d5db;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:6px;cursor:pointer;background:#fafafa;overflow:hidden;
-}
-.media-card svg{width:22px;height:22px;stroke:#9ca3af;stroke-width:1.8;fill:none;
-  stroke-linecap:round;stroke-linejoin:round}
-.media-card span{font-size:11px;color:#9ca3af;font-weight:500}
-.media-card-sound{
-  flex:1;border-radius:12px;border:1px dashed #d1d5db;
-  display:flex;align-items:center;gap:10px;padding:14px;cursor:pointer;background:#fafafa;
-}
-.media-card-sound svg{width:20px;height:20px;stroke:#9ca3af;stroke-width:1.8;fill:none;
-  stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-.media-card-sound span{font-size:12px;color:#9ca3af;font-weight:500}
-
-/* ── 누락 정보 ── */
-.missing-section{margin-top:20px;padding:14px 16px;background:#f9fafb;
-  border-radius:12px;border:.5px solid #e5e7eb}
-.missing-row{
-  display:flex;align-items:center;gap:10px;padding:8px 0;
-  border-bottom:.5px solid #f0f0f0;cursor:pointer;
-  background:none;border-top:none;border-left:none;border-right:none;
-  width:100%;font-family:inherit;text-align:left;
-}
-.missing-row:last-child{border-bottom:none}
-.missing-row-icon svg{width:16px;height:16px;stroke:#9ca3af;stroke-width:2;fill:none;
-  stroke-linecap:round;stroke-linejoin:round}
-.missing-row span{font-size:13px;color:#6b7280}
-
-/* ── 퀵 액션 ── */
-.quick-actions{
-  display:flex;justify-content:space-around;
-  padding:12px 10px 16px;gap:2px;border-top:.5px solid #f3f4f6;
-}
-.qa-item{
-  display:flex;flex-direction:column;align-items:center;gap:7px;
-  background:none;border:none;cursor:pointer;font-family:inherit;flex:1;min-width:0;padding:0;
-}
-.qa-circle{
-  width:48px;height:48px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  background:#EEF4FF;color:#1A73E8;flex-shrink:0;transition:transform .12s;
-}
-.qa-circle svg{width:20px;height:20px;stroke:currentColor;stroke-width:2.2;fill:none;
-  stroke-linecap:round;stroke-linejoin:round}
+/* ── 퀵 액션 (원형 아이콘 행) ── */
+.quick-actions{display:flex;justify-content:space-around;padding:4px 10px 16px;gap:2px}
+.qa-item{display:flex;flex-direction:column;align-items:center;gap:7px;background:none;
+  border:none;cursor:pointer;font-family:inherit;flex:1;min-width:0;padding:0}
+.qa-circle{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;background:#d3f7ff;color:#007b8b;flex-shrink:0;transition:transform .12s}
 .qa-item:active .qa-circle{transform:scale(.92)}
-.qa-circle.primary{background:#1A73E8;color:#fff}
-.qa-label{font-size:11.5px;color:#374151;text-align:center;line-height:1.3;max-width:60px;font-weight:500}
+.qa-circle.primary{background:#007b8b;color:#fff}
+.qa-label{font-size:11.5px;color:#374151;text-align:center;line-height:1.3;
+  max-width:64px;font-weight:500}
 
-/* ── 상품/시간/커스텀 ── */
+/* ── 섹션 (플랫 리스트 — 박스 제거) ── */
+.card{background:#fff;margin:0;padding:6px 0 12px}
+.card + .card{border-top:1px solid #f1f3f5;margin-top:2px}
+.card-title{font-size:11.5px;font-weight:600;color:#9ca3af;padding:10px 20px 6px;
+  text-transform:uppercase;letter-spacing:.06em}
+.info-row{padding:9px 20px;display:flex;align-items:flex-start;gap:14px}
+.info-icon{width:18px;flex-shrink:0;color:#007b8b;margin-top:2px}
+.info-text{font-size:14.5px;color:#374151;line-height:1.5;flex:1}
+.info-text a{color:#007b8b;text-decoration:none}
+
+/* ── 영업시간 ── */
+.hours-table{width:100%;border-collapse:collapse}
+.hours-table td{padding:6px 20px;font-size:13px}
+.hours-table td:first-child{color:#6b7280;font-weight:600;width:32px}
+.hours-table td:last-child{color:#374151}
+.hours-closed{color:#9ca3af!important}
+.hours-today{background:#eafcff}
+.hours-today td{color:#014f5a!important;font-weight:600}
+
+/* ── 상품 목록 ── */
 .product-grid{display:flex;flex-direction:column;gap:1px;background:#f1f3f5}
-.product-item{background:#fff;padding:12px 0;display:flex;align-items:center;gap:12px}
-.product-img{width:56px;height:56px;border-radius:10px;background:#f3f4f6;
+.product-item{background:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px}
+.product-img{width:56px;height:56px;border-radius:10px;object-fit:cover;background:#f3f4f6;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
 .product-img img{width:100%;height:100%;object-fit:cover}
 .product-info{flex:1;min-width:0}
-.product-name{font-size:15px;font-weight:600;color:#111;margin-bottom:2px}
-.product-price{font-size:14px;color:#1A73E8;font-weight:700}
+.product-name{font-size:15px;font-weight:600;color:#111827;margin-bottom:2px}
+.product-price{font-size:14px;color:#007b8b;font-weight:700}
 .product-detail-btn{background:none;border:none;cursor:pointer;color:#9ca3af;padding:4px}
-.product-detail-text{font-size:13px;color:#6b7280;line-height:1.5;padding:0 0 12px;display:none}
+.product-detail-text{font-size:13px;color:#6b7280;line-height:1.5;
+  padding:0 20px 14px;display:none}
 .product-detail-text.open{display:block}
-.cf-row{padding:8px 0;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+
+/* ── 커스텀 필드 ── */
+.custom-field-row{padding:9px 20px;
+  display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .cf-key{font-size:13px;color:#9ca3af;flex-shrink:0}
 .cf-val{font-size:14px;color:#374151;text-align:right}
-.hours-table{width:100%;border-collapse:collapse}
-.hours-table td{padding:6px 0;font-size:13px}
-.hours-table td:first-child{color:#6b7280;font-weight:600;width:32px}
-.hours-closed{color:#9ca3af!important}
-.hours-today{background:#EEF4FF;border-radius:6px}
-.hours-today td{color:#1557B0!important;font-weight:600}
 
-/* ── AI 채팅 독 ── */
-.chat-dock{
-  background:#fff;border-top:.5px solid #e5e7eb;
-  padding:8px 12px 14px;flex-shrink:0;
-}
-.chat-input-row{
-  display:flex;align-items:flex-end;
-  background:#f3f4f6;border-radius:20px;
-  padding:7px 8px 7px 14px;
-  border:1.5px solid transparent;
-  transition:border-color .15s,background .15s;
-}
-.chat-input-row:focus-within{border-color:#1A73E8;background:#fff}
-.chat-textarea{
-  flex:1;border:none;background:transparent;
-  font-size:15px;color:#111;outline:none;resize:none;
-  line-height:1.5;min-height:22px;max-height:120px;
-  overflow-y:auto;font-family:inherit;padding:0;min-width:0;
-}
-.chat-textarea::placeholder{color:#9ca3af}
-.chat-right{display:flex;align-items:flex-end;flex-shrink:0}
-.chat-actions{
-  display:flex;align-items:center;
-  overflow:hidden;max-width:90px;opacity:1;
-  transition:max-width .2s ease,opacity .18s ease;
-}
-.chat-actions.hidden{max-width:0;opacity:0;pointer-events:none}
-.chat-action-btn{
-  width:28px;height:28px;border-radius:50%;
-  background:none;border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  color:#9ca3af;flex-shrink:0;
-}
-.chat-action-btn svg{width:17px;height:17px;stroke:currentColor;stroke-width:2;fill:none;
-  stroke-linecap:round;stroke-linejoin:round}
-.send-btn-inner{
-  width:26px;height:26px;border-radius:50%;
-  background:#1A73E8;border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;margin-left:4px;
-  transition:opacity .15s,transform .15s;
-}
-.send-btn-inner svg{width:13px;height:13px;stroke:#fff;stroke-width:2.5;fill:none;
-  stroke-linecap:round;stroke-linejoin:round}
-.send-btn-inner:disabled{opacity:0;transform:scale(.6);pointer-events:none}
-.send-btn-inner:not(:disabled){opacity:1;transform:scale(1)}
+/* ── 업종 정보 (industry_fields) ── */
+.ifield-row{padding:9px 20px;
+  display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.ifield-key{font-size:13px;color:#9ca3af;flex-shrink:0}
+.ifield-val{font-size:14px;color:#374151;text-align:right;word-break:break-all}
 
-/* ── AI 응답 버블 ── */
-@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.ai-reply{
-  position:fixed;bottom:80px;left:12px;right:12px;
-  background:#fff;border:.5px solid #e5e7eb;border-radius:16px;
-  padding:12px 36px 12px 16px;font-size:14px;color:#374151;line-height:1.6;
-  box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:100;
-  animation:slideUp .2s ease;
-}
-.ai-reply-close{
-  position:absolute;top:8px;right:10px;
-  background:none;border:none;cursor:pointer;color:#9ca3af;font-size:18px;line-height:1;
-}
-.ai-reply-from{font-size:11px;color:#9ca3af;margin-bottom:5px;font-weight:500}
+/* ── 필 버튼 (아웃라인 / 옅은 채움) ── */
+.pill-wrap{padding:14px 20px;text-align:center;border-top:1px solid #f1f3f5}
+.btn-pill-outline{display:inline-flex;align-items:center;gap:6px;padding:11px 22px;
+  border:none;border-radius:999px;background:#d3f7ff;color:#014f5a;
+  font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer}
+.btn-pill-filled{display:inline-flex;align-items:center;gap:6px;padding:11px 22px;
+  border:none;border-radius:999px;background:#d3f7ff;color:#014f5a;
+  font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer}
 
-/* ── 기타 ── */
+/* ── 누락된 정보 추가 (본인 프로필 전용) ── */
+.missing-info-head{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px 8px}
+.missing-info-title{font-size:15px;font-weight:700;color:#111827}
+.missing-info-hint{color:#c7c7cc;display:flex;align-items:center}
+.missing-row{display:flex;align-items:center;gap:14px;padding:10px 20px;
+  color:#111827;font-weight:500;font-size:14.5px;cursor:pointer;background:none;
+  border:none;width:100%;text-align:left;font-family:inherit}
+.missing-row-icon{color:#007b8b;display:flex;flex-shrink:0}
+
+/* ── AI 비서 채팅 ── */
+.ai-section{margin:12px 16px 0}
+.ai-toggle-btn{width:100%;padding:14px 20px;border:2px solid #007b8b;border-radius:16px;
+  background:linear-gradient(135deg,#eafcff,#d3f7ff);
+  display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.ai-toggle-left{display:flex;align-items:center;gap:10px}
+.ai-toggle-name{font-size:15px;font-weight:700;color:#014f5a}
+.ai-toggle-sub{font-size:12px;color:#5fb8c4;margin-top:2px}
+.ai-toggle-arrow{color:#007b8b;transition:transform .2s}
+.ai-toggle-arrow.open{transform:rotate(180deg)}
+
+.ai-chat-box{border:1.5px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px;
+  background:#fff;display:none;flex-direction:column;max-height:420px}
+.ai-chat-box.open{display:flex}
+.ai-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.ai-msg{max-width:80%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.55}
+.ai-msg-ai{background:#f3f4f6;color:#111827;align-self:flex-start;border-radius:4px 14px 14px 14px}
+.ai-msg-user{background:#007b8b;color:#fff;align-self:flex-end;border-radius:14px 14px 4px 14px}
+.ai-msg-typing{display:flex;gap:4px;align-items:center;padding:10px 14px}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:#9ca3af;
+  animation:bounce .8s infinite alternate}
+.ai-dot:nth-child(2){animation-delay:.2s}
+.ai-dot:nth-child(3){animation-delay:.4s}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+.ai-input-row{padding:10px 12px;border-top:1px solid #f3f4f6;display:flex;gap:8px}
+.ai-input{flex:1;border:1.5px solid #e5e7eb;border-radius:20px;padding:8px 14px;
+  font-size:14px;font-family:inherit;outline:none;resize:none;max-height:80px}
+.ai-input:focus{border-color:#007b8b}
+.ai-send{width:36px;height:36px;border:none;border-radius:50%;background:#007b8b;
+  color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:opacity .2s}
+.ai-send:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── 로딩 / 에러 ── */
 .skeleton{background:linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 50%,#f3f4f6 75%);
   background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:8px}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-.error-box{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  color:#9ca3af;padding:40px 20px;text-align:center}
-.hidden{display:none!important}
+.error-box{margin:40px 20px;text-align:center;color:#9ca3af}
+
+/* ── 반응형 ── */
 @media(min-width:480px){
-  .hero-wrap,.scroll-body,.chat-dock{max-width:480px;margin-left:auto;margin-right:auto}
+  .card,.ai-section{max-width:480px;margin-left:auto;margin-right:auto}
+  .profile-hero,.profile-banner,.quick-actions,.pill-wrap{max-width:480px;margin-left:auto;margin-right:auto}
 }
+.hidden{display:none!important}
 </style>
 </head>
 <body>
 
-<!-- 스켈레톤 -->
-<div id="skeleton" style="display:flex;flex-direction:column;flex:1">
-  <div style="height:200px;background:#4B7BE5;flex-shrink:0"></div>
-  <div style="padding:52px 20px 20px;display:flex;flex-direction:column;gap:14px">
-    <div class="skeleton" style="height:22px;width:45%"></div>
-    <div class="skeleton" style="height:15px;width:65%"></div>
-    <div class="skeleton" style="height:15px;width:50%"></div>
-  </div>
+<!-- 상단 바 -->
+<div class="top-bar">
+  <button class="top-back" onclick="history.back()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <span class="top-title" id="top-title">프로필</span>
+  <button class="top-share" onclick="shareProfile()" title="공유">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+  </button>
+</div>
+
+<!-- 로딩 스켈레톤 -->
+<div id="skeleton" style="padding:20px 16px;display:flex;flex-direction:column;gap:12px">
+  <div class="skeleton" style="height:72px;width:72px;border-radius:50%"></div>
+  <div class="skeleton" style="height:24px;width:60%"></div>
+  <div class="skeleton" style="height:16px;width:40%"></div>
+  <div class="skeleton" style="height:60px;width:100%"></div>
 </div>
 
 <!-- 에러 -->
 <div class="error-box hidden" id="error-box">
-  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5"
-    stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px">
-    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
-    <line x1="12" y1="16" x2="12.01" y2="16"/>
-  </svg>
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px;display:block"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
   <div style="font-size:16px;font-weight:600;color:#374151;margin-bottom:6px">프로필을 찾을 수 없습니다</div>
   <div style="font-size:13px">존재하지 않거나 비공개 프로필입니다.</div>
 </div>
 
-<!-- 메인 -->
-<div id="main" class="hidden" style="display:flex;flex-direction:column;height:100dvh">
-
-  <!-- 히어로 -->
-  <div class="hero-wrap" id="heroWrap">
-    <div class="hero-city">
-      <svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax meet">
-        <rect x="10" y="70" width="35" height="90" fill="white"/>
-        <rect x="13" y="78" width="6" height="8" fill="#4B7BE5" opacity=".6"/>
-        <rect x="22" y="78" width="6" height="8" fill="#4B7BE5" opacity=".6"/>
-        <rect x="31" y="78" width="6" height="8" fill="#4B7BE5" opacity=".6"/>
-        <rect x="13" y="90" width="6" height="8" fill="#4B7BE5" opacity=".6"/>
-        <rect x="22" y="90" width="6" height="8" fill="#4B7BE5" opacity=".6"/>
-        <rect x="31" y="90" width="6" height="8" fill="#4B7BE5" opacity=".6"/>
-        <rect x="19" y="48" width="16" height="22" fill="white"/>
-        <rect x="50" y="28" width="58" height="132" fill="white"/>
-        <rect x="72" y="16" width="12" height="14" fill="white"/>
-        <rect x="53" y="42" width="9" height="11" fill="#4B7BE5" opacity=".6"/>
-        <rect x="66" y="42" width="9" height="11" fill="#4B7BE5" opacity=".6"/>
-        <rect x="79" y="42" width="9" height="11" fill="#4B7BE5" opacity=".6"/>
-        <rect x="92" y="42" width="9" height="11" fill="#4B7BE5" opacity=".6"/>
-        <rect x="53" y="58" width="9" height="11" fill="#4B7BE5" opacity=".6"/>
-        <rect x="66" y="58" width="9" height="11" fill="#4B7BE5" opacity=".6"/>
-        <rect x="79" y="58" width="9" height="11" fill="#4B7BE5" opacity=".6"/>
-        <rect x="92" y="58" width="9" height="11" fill="#4B7BE5" opacity=".6"/>
-        <circle cx="78" cy="22" r="5" fill="#4B7BE5" opacity=".8"/>
-        <rect x="115" y="50" width="42" height="110" fill="white"/>
-        <rect x="118" y="60" width="8" height="9" fill="#4B7BE5" opacity=".6"/>
-        <rect x="130" y="60" width="8" height="9" fill="#4B7BE5" opacity=".6"/>
-        <rect x="142" y="60" width="8" height="9" fill="#4B7BE5" opacity=".6"/>
-        <rect x="118" y="74" width="8" height="9" fill="#4B7BE5" opacity=".6"/>
-        <rect x="130" y="74" width="8" height="9" fill="#4B7BE5" opacity=".6"/>
-        <rect x="142" y="74" width="8" height="9" fill="#4B7BE5" opacity=".6"/>
-        <rect x="165" y="68" width="32" height="92" fill="white"/>
-        <rect x="168" y="78" width="7" height="8" fill="#4B7BE5" opacity=".6"/>
-        <rect x="178" y="78" width="7" height="8" fill="#4B7BE5" opacity=".6"/>
-        <rect x="188" y="78" width="7" height="8" fill="#4B7BE5" opacity=".6"/>
-        <rect x="205" y="82" width="26" height="78" fill="white"/>
-        <rect x="238" y="88" width="22" height="72" fill="white"/>
-        <polygon points="268,92 286,52 304,92" fill="white"/>
-        <rect x="272" y="70" width="5" height="6" fill="#4B7BE5" opacity=".6"/>
-        <rect x="282" y="70" width="5" height="6" fill="#4B7BE5" opacity=".6"/>
-        <rect x="310" y="72" width="24" height="88" fill="white"/>
-        <rect x="313" y="82" width="6" height="7" fill="#4B7BE5" opacity=".6"/>
-        <rect x="323" y="82" width="6" height="7" fill="#4B7BE5" opacity=".6"/>
-        <polygon points="342,76 360,42 378,76" fill="white"/>
-        <rect x="347" y="56" width="6" height="7" fill="#4B7BE5" opacity=".5"/>
-        <rect x="382" y="80" width="18" height="80" fill="white"/>
-      </svg>
+<!-- 기본 프로필 (본인 보기 — 아직 사업자 등록 등 상세 프로필을 작성하지 않은 경우의 대체 화면) -->
+<div id="basic-main" class="hidden">
+  <div class="profile-banner">
+    <svg viewBox="0 0 400 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="14" width="22" height="26" fill="#fff"/><rect x="48" y="6" width="16" height="34" fill="#fff"/>
+      <rect x="70" y="18" width="20" height="22" fill="#fff"/><rect x="300" y="10" width="18" height="30" fill="#fff"/>
+      <rect x="324" y="20" width="14" height="20" fill="#fff"/><polygon points="360,40 380,8 400,40" fill="#fff"/>
+    </svg>
+  </div>
+  <div class="profile-hero">
+    <div class="profile-avatar" id="bp-avatar"></div>
+    <div class="profile-name-block">
+      <div class="profile-name" id="bp-name"></div>
+      <div class="profile-handle" id="bp-handle"></div>
     </div>
+    <div style="margin-top:10px;font-size:12.5px;color:#9ca3af;line-height:1.6">
+      아직 사업자·기관 등 상세 프로필을 작성하지 않았습니다. 본인에게만 보이는 기본 정보입니다.
+    </div>
+  </div>
 
-    <!-- 수정 버튼 (본인만) -->
-    <button class="hero-edit-btn hidden" id="heroEditBtn"
-      onclick="location.href='/register-profile.html'" aria-label="프로필 수정">
-      <svg viewBox="0 0 24 24"><path d="M12 20h9"/>
-        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+  <div class="pill-wrap" style="border-top:none">
+    <button class="btn-pill-outline" onclick="location.href='/register-profile.html'">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      프로필 등록 시작하기
     </button>
+  </div>
 
-    <!-- 아바타 -->
-    <div class="hero-avatar" id="heroAvatar">
-      <span id="heroAvatarLetter">?</span>
-    </div>
-
-    <!-- 혼디코드 + 공유 -->
-    <div class="hero-chips" id="heroChips">
-      <button class="hero-chip" onclick="openMyHondiCode()" aria-label="혼디코드">
-        <div class="hero-chip-icon">
-          <svg viewBox="0 0 24 24">
-            <rect x="3" y="3" width="7" height="7"/>
-            <rect x="14" y="3" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/>
-            <line x1="14" y1="14" x2="21" y2="14"/>
-            <line x1="14" y1="21" x2="21" y2="21"/>
-            <line x1="17.5" y1="14" x2="17.5" y2="21"/>
-          </svg>
-        </div>
-        <span class="hero-chip-label">혼디코드</span>
-      </button>
-      <button class="hero-chip" onclick="shareProfile()" aria-label="공유">
-        <div class="hero-chip-icon">
-          <svg viewBox="0 0 24 24">
-            <circle cx="18" cy="5" r="3"/>
-            <circle cx="6" cy="12" r="3"/>
-            <circle cx="18" cy="19" r="3"/>
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-          </svg>
-        </div>
-        <span class="hero-chip-label">공유</span>
-      </button>
+  <!-- 위치 -->
+  <div class="card hidden" id="bp-card-location">
+    <div class="card-title">현재 위치</div>
+    <div class="info-row">
+      <span class="info-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+      <span class="info-text" id="bp-region"></span>
     </div>
   </div>
 
-  <!-- 스크롤 본문 -->
-  <div class="scroll-body" id="scrollBody">
-    <div class="body-inner">
+  <!-- 혼디 색상 코드 -->
+  <div class="card hidden" id="bp-card-code">
+    <div class="card-title">내 혼디 코드</div>
+    <div style="padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px">
+      <img id="bp-code-img" alt="내 혼디 색상 코드" style="max-width:100%;width:280px;border:1px solid #f3f4f6;border-radius:10px;background:#fff">
+      <div style="font-size:11.5px;color:#9ca3af;text-align:center;line-height:1.6">
+        이 코드를 출입문이나 명함에 인쇄하면, 다른 사람이 카메라로 비추기만 해도<br>바로 이 프로필로 연결됩니다.
+      </div>
+      <button id="bp-code-download" style="padding:10px 20px;border:1px solid #e5e7eb;border-radius:99px;
+              background:#fff;color:#007b8b;font-weight:600;font-size:13px;cursor:pointer">
+        이미지로 저장
+      </button>
+    </div>
+  </div>
+</div>
 
+<!-- 메인 콘텐츠 (로드 후 표시) -->
+<div id="main" class="hidden">
+
+  <!-- 프로필 헤더 -->
+  <!-- 프로필 배너 + 헤더 -->
+  <div class="profile-banner">
+    <svg viewBox="0 0 400 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="14" width="22" height="26" fill="#fff"/><rect x="48" y="6" width="16" height="34" fill="#fff"/>
+      <rect x="70" y="18" width="20" height="22" fill="#fff"/><rect x="300" y="10" width="18" height="30" fill="#fff"/>
+      <rect x="324" y="20" width="14" height="20" fill="#fff"/><polygon points="360,40 380,8 400,40" fill="#fff"/>
+    </svg>
+  </div>
+  <div class="profile-hero">
+    <div class="profile-avatar" id="p-avatar"></div>
+    <div class="profile-name-block">
       <div class="profile-name" id="p-name"></div>
-      <div class="profile-desc hidden" id="p-desc"></div>
-      <div class="profile-tags hidden" id="p-tags"></div>
-      <div id="p-badges" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
-
-      <!-- 연락처 -->
-      <div id="card-contact" class="hidden">
-        <div class="card-title">연락처 및 위치</div>
-        <div id="contact-rows"></div>
-        <button class="add-field-btn hidden" id="addFieldBtn">
-          <svg viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="16"/>
-            <line x1="8" y1="12" x2="16" y2="12"/>
-          </svg>
-          <span>필드 추가</span>
-        </button>
-      </div>
-
-      <!-- 미디어 (본인만) -->
-      <div id="card-media" class="hidden">
-        <div class="card-title">미디어</div>
-        <div class="media-row">
-          <label class="media-card">
-            <input type="file" accept="image/*" style="display:none" onchange="handleMediaImg(this)">
-            <svg viewBox="0 0 24 24">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-              <line x1="12" y1="3" x2="12" y2="9"/>
-              <line x1="9" y1="6" x2="15" y2="6"/>
-            </svg>
-            <span>이미지 추가</span>
-          </label>
-          <label class="media-card">
-            <input type="file" accept="image/*" style="display:none" onchange="handleMediaImg(this)">
-            <svg viewBox="0 0 24 24">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-              <line x1="12" y1="3" x2="12" y2="9"/>
-              <line x1="9" y1="6" x2="15" y2="6"/>
-            </svg>
-            <span>이미지 추가</span>
-          </label>
-          <label class="media-card">
-            <input type="file" accept="image/*" style="display:none" onchange="handleMediaImg(this)">
-            <svg viewBox="0 0 24 24">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-              <line x1="12" y1="3" x2="12" y2="9"/>
-              <line x1="9" y1="6" x2="15" y2="6"/>
-            </svg>
-            <span>이미지 추가</span>
-          </label>
-        </div>
-        <div class="media-row">
-          <label class="media-card-sound">
-            <input type="file" accept="audio/*" style="display:none" onchange="handleMediaSound(this)">
-            <svg viewBox="0 0 24 24">
-              <path d="M9 18V5l12-2v13"/>
-              <circle cx="6" cy="18" r="3"/>
-              <circle cx="18" cy="16" r="3"/>
-              <line x1="9" y1="12" x2="21" y2="10"/>
-              <line x1="12" y1="9" x2="12" y2="15"/>
-            </svg>
-            <span>프로필 사운드 추가</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- 영업시간 -->
-      <div class="hidden" id="card-hours">
-        <div class="card-title">영업시간</div>
-        <table class="hours-table" id="hours-table"></table>
-      </div>
-
-      <!-- 판매 상품 -->
-      <div class="hidden" id="card-products">
-        <div class="card-title">판매 상품</div>
-        <div class="product-grid" id="product-grid"></div>
-      </div>
-
-      <!-- 업종 정보 -->
-      <div class="hidden" id="card-industry">
-        <div class="card-title">업종 정보</div>
-        <div id="industry-rows"></div>
-      </div>
-
-      <!-- 커스텀 필드 -->
-      <div class="hidden" id="card-custom">
-        <div class="card-title">추가 정보</div>
-        <div id="custom-rows"></div>
-      </div>
-
-      <!-- 누락된 정보 (본인만) -->
-      <div class="missing-section hidden" id="card-missing-info">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <span style="font-size:13px;font-weight:500;color:#374151">누락된 정보 추가</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 2-3 4"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-        </div>
-        <div id="missing-info-rows"></div>
-      </div>
-
-      <div style="height:20px"></div>
+      <div class="profile-type-sub" id="p-type-sub"></div>
+      <div class="profile-handle" id="p-handle"></div>
+      <div class="profile-badges" id="p-badges"></div>
     </div>
-
-    <!-- 퀵 액션 (타인 프로필) -->
-    <div class="quick-actions hidden" id="quick-actions">
-      <button class="qa-item" onclick="contactOwner()">
-        <span class="qa-circle primary">
-          <svg viewBox="0 0 24 24">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-        </span>
-        <span class="qa-label">메시지</span>
-      </button>
-      <button class="qa-item" onclick="startP2P()">
-        <span class="qa-circle">
-          <svg viewBox="0 0 24 24">
-            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 14a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 3.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-          </svg>
-        </span>
-        <span class="qa-label">P2P 연결</span>
-      </button>
-      <button class="qa-item" id="qa-save" onclick="toggleSaveProfile()">
-        <span class="qa-circle">
-          <svg viewBox="0 0 24 24">
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-          </svg>
-        </span>
-        <span class="qa-label" id="qa-save-label">저장</span>
-      </button>
-    </div>
+    <div class="profile-desc hidden" id="p-desc"></div>
+    <div class="profile-tags hidden" id="p-tags"></div>
   </div>
 
-  <!-- AI 채팅 독 -->
-  <div class="chat-dock">
-    <div class="chat-input-row">
-      <textarea class="chat-textarea" id="chatInput"
-        placeholder="무엇이 궁금하신가요?" rows="1"></textarea>
-      <div class="chat-right">
-        <div class="chat-actions" id="chatActions">
-          <button class="chat-action-btn" aria-label="파일 첨부"
-            onclick="document.getElementById('chatFileInput').click()">
-            <svg viewBox="0 0 24 24">
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-            </svg>
-          </button>
-          <button class="chat-action-btn" aria-label="카메라"
-            onclick="document.getElementById('chatCameraInput').click()">
-            <svg viewBox="0 0 24 24">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-              <circle cx="12" cy="13" r="4"/>
-            </svg>
-          </button>
-          <button class="chat-action-btn" aria-label="음성 입력" id="micBtn" onclick="toggleMic()">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-              <line x1="12" y1="19" x2="12" y2="23"/>
-              <line x1="8" y1="23" x2="16" y2="23"/>
-            </svg>
-          </button>
+  <!-- 퀵 액션 (메시지/P2P/공유/혼디코드/저장) -->
+  <div class="quick-actions" id="quick-actions">
+    <button class="qa-item" id="qa-msg" onclick="contactOwner()">
+      <span class="qa-circle primary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+      <span class="qa-label">메시지</span>
+    </button>
+    <button class="qa-item" id="qa-p2p" onclick="startP2P()">
+      <span class="qa-circle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 14a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 3.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+      <span class="qa-label">P2P 연결</span>
+    </button>
+    <button class="qa-item" id="qa-save" onclick="toggleSaveProfile()">
+      <span class="qa-circle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>
+      <span class="qa-label" id="qa-save-label">저장</span>
+    </button>
+    <button class="qa-item" id="qa-code" onclick="openMyHondiCode()">
+      <span class="qa-circle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="14" y1="21" x2="21" y2="21"/><line x1="17.5" y1="14" x2="17.5" y2="21"/></svg></span>
+      <span class="qa-label">혼디코드</span>
+    </button>
+    <button class="qa-item" onclick="shareProfile()">
+      <span class="qa-circle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></span>
+      <span class="qa-label">공유</span>
+    </button>
+  </div>
+
+  <!-- 프로필 수정 (본인 프로필일 때만 표시) -->
+  <div class="pill-wrap hidden" id="btn-edit-profile-wrap" style="border-top:none;padding-top:0">
+    <button class="btn-pill-outline" onclick="location.href='/register-profile.html'">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      프로필 수정
+    </button>
+  </div>
+
+  <!-- 연락처 / 위치 -->
+  <div class="card hidden" id="card-contact">
+    <div class="card-title">연락처 및 위치</div>
+    <div id="contact-rows"></div>
+  </div>
+
+  <!-- 영업시간 (사업자) -->
+  <div class="card hidden" id="card-hours">
+    <div class="card-title">영업시간</div>
+    <table class="hours-table" id="hours-table"></table>
+  </div>
+
+  <!-- 판매 상품 (사업자) -->
+  <div class="card hidden" id="card-products">
+    <div class="card-title">판매 상품</div>
+    <div class="product-grid" id="product-grid"></div>
+  </div>
+
+  <!-- 업종 정보 (industry_fields) -->
+  <div class="card hidden" id="card-industry">
+    <div class="card-title">업종 정보</div>
+    <div id="industry-rows"></div>
+  </div>
+
+  <!-- 커스텀 필드 -->
+  <div class="card hidden" id="card-custom">
+    <div class="card-title">추가 정보</div>
+    <div id="custom-rows"></div>
+  </div>
+
+  <!-- 누락된 정보 추가 (본인 프로필 + 비어있는 항목이 있을 때만) -->
+  <div class="card hidden" id="card-missing-info">
+    <div class="missing-info-head">
+      <span class="missing-info-title">누락된 정보 추가</span>
+      <span class="missing-info-hint" title="검색 노출과 신뢰도를 높이려면 항목을 채워주세요">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </span>
+    </div>
+    <div id="missing-info-rows"></div>
+  </div>
+
+  <!-- AI 비서 채팅 -->
+  <div class="ai-section hidden" id="ai-section">
+    <button class="ai-toggle-btn" onclick="toggleAIChat()">
+      <div class="ai-toggle-left">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#007b8b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-4 4 4 4 0 0 1-4-4V6a4 4 0 0 1 4-4z"/>
+          <path d="M8 13v1a4 4 0 0 0 8 0v-1"/>
+          <line x1="12" y1="18" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+        <div>
+          <div class="ai-toggle-name" id="ai-name">AI 비서와 대화</div>
+          <div class="ai-toggle-sub">질문이나 문의사항을 입력하세요</div>
         </div>
-        <button class="send-btn-inner" id="sendBtn" aria-label="전송" disabled onclick="sendChatMsg()">
-          <svg viewBox="0 0 24 24">
-            <line x1="12" y1="19" x2="12" y2="5"/>
-            <polyline points="5 12 12 5 19 12"/>
-          </svg>
+      </div>
+      <svg class="ai-toggle-arrow" id="ai-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="ai-chat-box" id="ai-chat-box">
+      <div class="ai-messages" id="ai-messages"></div>
+      <div class="ai-input-row">
+        <textarea class="ai-input" id="ai-input" placeholder="메시지를 입력하세요..." rows="1"
+          onkeydown="handleAIKey(event)" oninput="autoResizeAI(this)"></textarea>
+        <button class="ai-send" id="ai-send" onclick="sendAIMsg()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
     </div>
-    <input type="file" id="chatFileInput" accept="*/*" style="display:none" onchange="handleChatFile(this)">
-    <input type="file" id="chatCameraInput" accept="image/*" capture="environment"
-      style="display:none" onchange="handleChatFile(this)">
   </div>
 
+  <!-- 문의하기 (사업자 프로필 — AI 비서 채팅으로 연결) -->
+  <div class="pill-wrap hidden" id="btn-inquiry-wrap">
+    <button class="btn-pill-filled" onclick="document.getElementById('ai-section')?.scrollIntoView({behavior:'smooth'});if(!document.getElementById('ai-chat-box')?.classList.contains('open'))toggleAIChat();">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      AI 비서에게 문의하기
+    </button>
+  </div>
+
+  <div style="height:40px"></div>
 </div>
 
 <script>
-const PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
+const PROXY = 'https://gopang-proxy.tensor-city.workers.dev';
 
+// handle: URL 경로에서 추출 (/profile/@handle) 또는 쿼리스트링(?handle=@handle)
+// 주의: GitHub Pages는 서버 라우팅이 없어 /profile/@handle은 항상 404 →
+// 404.html이 /profile.html?handle=@handle로 리다이렉트한다. 즉 실제 접속은
+// 거의 항상 쿼리스트링 경로다. 이전엔 "/profile.html".replace(/\/profile\/?/,'')가
+// ".html"이라는 값을 남겨 쿼리스트링을 가려버리는 버그가 있었다 — 경로 전체가
+// 정확히 /profile/... 형태일 때만 path 값을 인정하도록 수정.
 const _handle = (() => {
   const m = location.pathname.match(/^\/profile\/(.+)$/);
   const p = m ? decodeURIComponent(m[1]) : '';
@@ -559,71 +406,146 @@ const _handle = (() => {
   return (p || q || '').replace(/^@/, '');
 })();
 
+// buyer_request: K-Market Agent가 [OPEN_SELLER_AI] 태그로 전달하는 구매 요청
+// 예: ?buyer_request={"item":"고기국수","qty":2,"delivery":"포장"}&buyer_guid=fe80::...
 const _buyerRequest = (() => {
   const q = new URLSearchParams(location.search);
   const raw = q.get('buyer_request');
   if (!raw) return null;
   try { return JSON.parse(decodeURIComponent(raw)); } catch { return null; }
 })();
-const _buyerGuid    = new URLSearchParams(location.search).get('buyer_guid') || '';
-const _openerOrigin = new URLSearchParams(location.search).get('opener_origin') || 'https://hondi.net';
+const _buyerGuid   = new URLSearchParams(location.search).get('buyer_guid') || '';
+const _gwpMode     = new URLSearchParams(location.search).get('gwp') === '1';
+const _openerOrigin = new URLSearchParams(location.search).get('opener_origin') || 'https://market.gopang.net';
 
-let _profile   = null;
-let _aiHistory = [];
-let _aiSystem  = '';
-let _isOwner   = false;
+let _profile    = null;
+let _aiHistory  = [];   // AI 채팅 대화 이력 (프록시 AI용)
+let _aiSystem   = '';   // 사업체 AI 비서 system prompt
 
 const DAYS_KO = {mon:'월',tue:'화',wed:'수',thu:'목',fri:'금',sat:'토',sun:'일'};
+const TYPE_KO = {person:'개인',business:'사업자',institution:'공공기관',org:'협회/단체',platform:'플랫폼'};
+
+// ── 로드 ─────────────────────────────────────────────────
+// inline 모드 (settings 패널 내 iframe): 최상단 스크롤 제거
+const _inlineMode = new URLSearchParams(location.search).get('inline') === '1';
 
 window.addEventListener('DOMContentLoaded', () => {
+  if (_inlineMode) {
+    document.documentElement.style.overflow = 'auto';
+    document.documentElement.style.height   = 'auto';
+    document.body.style.height   = 'auto';
+    document.body.style.overflow = 'auto';
+  }
   loadProfile();
-  _initInputDock();
-  _initAddField();
 });
 
-// ── 프로필 로드 ──────────────────────────────────────────
 async function loadProfile() {
   if (!_handle) { showError(); return; }
   try {
     const res  = await fetch(`${PROXY}/profile/@${_handle}`);
     const data = await res.json();
-    if (!res.ok || !data.ok) { showError(); return; }
+    if (!res.ok || !data.ok) { await renderBasicOrError(); return; }
     _profile = data.profile;
     render(_profile);
-  } catch { showError(); }
+  } catch(e) {
+    await renderBasicOrError();
+  }
 }
 
-// ── 렌더 ─────────────────────────────────────────────────
+// ── 상세 프로필(사업자 등록 등)이 아직 없을 때의 대체 화면 ──────
+// 조회 중인 handle이 "나 자신"의 계정일 때만 기본 정보(이름·핸들·위치·
+// 혼디 색상 코드)를 보여준다. 남의 미작성/비공개 프로필은 그대로 에러 표시.
+async function renderBasicOrError() {
+  let stored = null;
+  try {
+    stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+  } catch { stored = null; }
+
+  const myHandle = (stored?.handle || '').replace(/^@/, '');
+  if (!stored || !myHandle || myHandle !== _handle) { showError(); return; }
+
+  document.getElementById('skeleton').style.display = 'none';
+  document.getElementById('basic-main').classList.remove('hidden');
+
+  const nickname = stored.nickname || stored.name || '회원';
+  document.getElementById('top-title').textContent = nickname;
+  document.getElementById('bp-name').textContent   = nickname;
+  document.getElementById('bp-handle').textContent = stored.handle || '@' + _handle;
+  document.getElementById('bp-avatar').textContent = nickname[0] || '?';
+
+  if (stored.region) {
+    document.getElementById('bp-region').textContent = stored.region;
+    document.getElementById('bp-card-location').classList.remove('hidden');
+  }
+
+  // ── 혼디 색상 코드 — 캐시 우선, 없으면 guid로 즉시 재생성 ──
+  try {
+    let codeImg = localStorage.getItem('hondi_code_image_v1');
+    if (!codeImg && stored.ipv6) {
+      const { guidToShortId, generateHondiCodeDataURL } = await import('./src/gopang/ai/hondi-code.js');
+      const version = stored.hondi_code_version || 'v1';
+      const shortId = guidToShortId(stored.ipv6, version);
+      codeImg = await generateHondiCodeDataURL(shortId, version);
+    }
+    if (codeImg) {
+      const img = document.getElementById('bp-code-img');
+      img.src = codeImg;
+      document.getElementById('bp-card-code').classList.remove('hidden');
+      document.getElementById('bp-code-download').onclick = () => {
+        const a = document.createElement('a');
+        a.href = codeImg;
+        a.download = `hondi-code-${myHandle}.png`;
+        a.click();
+      };
+    }
+  } catch (e) {
+    console.warn('[프로필] 색상 코드 표시 실패:', e.message);
+  }
+}
+
+// ── 렌더링 ───────────────────────────────────────────────
 function render(p) {
   document.getElementById('skeleton').style.display = 'none';
-  const main = document.getElementById('main');
-  main.classList.remove('hidden');
-  main.style.display = 'flex';
+  document.getElementById('main').classList.remove('hidden');
 
   const pub   = p.extra?.public || {};
-  const ident = pub.identity  || {};
-  const loc   = pub.location  || {};
-  const cont  = pub.contact   || {};
+  const ident = pub.identity || {};
+  const loc   = pub.location || {};
+  const fin   = pub.finance  || {};
   const hrs   = pub.activity?.hours || {};
-  const fin   = pub.finance   || {};
+  const cont  = pub.contact  || {};
   const aiCfg = pub.ai_assistant || p.ai_assistant || null;
-  const tags  = ident.tags || p.search_tags || p.tags || [];
 
+  // ── 본인 프로필 여부 ──
   let stored = null;
-  try { stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch {}
+  try { stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { stored = null; }
   const myHandle = (stored?.handle || '').replace(/^@/, '');
-  _isOwner = !!myHandle && myHandle === (p.handle || '').replace(/^@/, '');
+  const _isOwner = !!myHandle && myHandle === (p.handle || '').replace(/^@/, '');
 
-  document.title = (p.name || '프로필') + ' — 혼디';
+  // ── 헤더 ──
+  document.getElementById('top-title').textContent = p.name || '프로필';
+  document.getElementById('p-name').textContent    = p.name || '';
+  document.getElementById('p-handle').textContent  = p.handle || '';
+  document.getElementById('p-type-sub').textContent = TYPE_KO[p.entity_type] || '';
 
-  // 아바타
-  document.getElementById('heroAvatarLetter').textContent = (p.name || '?')[0];
+  // 아바타: 이름 첫 글자
+  const av = document.getElementById('p-avatar');
+  av.textContent = (p.name || '?')[0];
 
-  // 수정 버튼
-  if (_isOwner) document.getElementById('heroEditBtn').classList.remove('hidden');
+  // 뱃지 (유형은 위에서 서브텍스트로 표시 — 뱃지에는 결제 등 특수 표시만)
+  const badges = document.getElementById('p-badges');
+  badges.innerHTML = '';
+  if (fin.gdc_accepted) {
+    badges.innerHTML += `<span class="badge badge-gdc">💰 GDC 결제</span>`;
+  }
 
-  // 이름
-  document.getElementById('p-name').textContent = p.name || '';
+  // ── 퀵 액션 / 수정 버튼 노출 제어 ──
+  document.getElementById('btn-edit-profile-wrap').classList.toggle('hidden', !_isOwner);
+  document.getElementById('qa-msg')?.classList.toggle('hidden', _isOwner);
+  document.getElementById('qa-p2p')?.classList.toggle('hidden', _isOwner);
+  document.getElementById('qa-save')?.classList.toggle('hidden', _isOwner);
+  if (!_isOwner) _initSaveButtonState(p.handle);
+  document.getElementById('btn-inquiry-wrap').classList.toggle('hidden', !(aiCfg?.system_prompt && !_isOwner));
 
   // 소개
   const desc = ident.description || p.description || '';
@@ -634,72 +556,72 @@ function render(p) {
   }
 
   // 태그
+  const tags = ident.tags || p.search_tags || p.tags || [];
   if (tags.length) {
     const el = document.getElementById('p-tags');
     el.innerHTML = tags.map(t => `<span class="tag">#${t}</span>`).join('');
     el.classList.remove('hidden');
   }
 
-  // 뱃지
-  if (fin.gdc_accepted)
-    document.getElementById('p-badges').innerHTML += '<span class="badge badge-gdc">GDC 결제</span>';
-
-  // 연락처
-  const cRows = [];
+  // ── 연락처 / 위치 ──
+  const contactRows = [];
   const phone = cont.phone_display || p.phone;
-  if (phone) cRows.push({
-    svg: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 14a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 3.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  if (phone) contactRows.push({
+    icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 14a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 3.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
     text: `<a href="tel:${phone}">${phone}</a>`
   });
   const website = cont.website || p.website;
-  if (website) cRows.push({
-    svg: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
-    text: `<a href="${website.startsWith('http') ? website : 'https://'+website}" target="_blank">${website}</a>`
+  if (website) contactRows.push({
+    icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+    text: `<a href="${website.startsWith('http')?website:'https://'+website}" target="_blank">${website}</a>`
   });
   const address = loc.address_short || p.address;
-  if (address) cRows.push({
-    svg: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+  if (address) contactRows.push({
+    icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
     text: address
   });
-
-  if (cRows.length || _isOwner) {
-    document.getElementById('contact-rows').innerHTML = cRows.map(r =>
-      `<div class="info-row">
-        <span class="info-icon"><svg viewBox="0 0 24 24">${r.svg}</svg></span>
-        <span class="info-text">${r.text}</span>
-      </div>`
+  if (contactRows.length) {
+    const card = document.getElementById('card-contact');
+    const rows = document.getElementById('contact-rows');
+    rows.innerHTML = contactRows.map(r =>
+      `<div class="info-row"><span class="info-icon">${r.icon}</span><span class="info-text">${r.text}</span></div>`
     ).join('');
-    document.getElementById('card-contact').classList.remove('hidden');
-    if (_isOwner) document.getElementById('addFieldBtn').classList.remove('hidden');
+    card.classList.remove('hidden');
   }
 
-  // 미디어 (본인만)
-  if (_isOwner) document.getElementById('card-media').classList.remove('hidden');
-
-  // 영업시간
-  if (Object.keys(hrs).length) {
+  // ── 영업시간 ──
+  const hrsKeys = Object.keys(hrs);
+  if (hrsKeys.length) {
     const today = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
-    document.getElementById('hours-table').innerHTML = Object.entries(hrs).map(([k,v]) => {
+    const tbl = document.getElementById('hours-table');
+    tbl.innerHTML = Object.entries(hrs).map(([k,v]) => {
+      const isToday = k === today;
       const val = v ? `${v.open||''} ~ ${v.close||''}` : '<span class="hours-closed">휴무</span>';
-      return `<tr class="${k===today?'hours-today':''}"><td>${DAYS_KO[k]||k}</td><td>${val}</td></tr>`;
+      return `<tr class="${isToday?'hours-today':''}">
+        <td>${DAYS_KO[k]||k}</td>
+        <td>${val}</td>
+      </tr>`;
     }).join('');
     document.getElementById('card-hours').classList.remove('hidden');
   }
 
-  // 상품
+  // ── 판매 상품 ──
   const products = p.products || pub.products || [];
   if (products.length) {
-    document.getElementById('product-grid').innerHTML = products.map((prod, i) => `
+    const grid = document.getElementById('product-grid');
+    grid.innerHTML = products.map((prod, i) => `
       <div class="product-item">
-        <div class="product-img">${prod.image
-          ? `<img src="${prod.image}" alt="${prod.name}" loading="lazy">`
-          : '<svg viewBox="0 0 24 24" width="24" height="24" stroke="#d1d5db" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'}</div>
+        <div class="product-img">
+          ${prod.image
+            ? `<img src="${prod.image}" alt="${prod.name}" loading="lazy">`
+            : `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`}
+        </div>
         <div class="product-info">
           <div class="product-name">${prod.name}</div>
           <div class="product-price">${prod.price||''}</div>
         </div>
-        ${prod.detail ? `<button class="product-detail-btn" onclick="toggleProductDetail(${i})">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        ${prod.detail ? `<button class="product-detail-btn" onclick="toggleProductDetail(${i})" title="상세보기">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>` : ''}
       </div>
       ${prod.detail ? `<div class="product-detail-text" id="pd-${i}">${prod.detail}</div>` : ''}
@@ -707,27 +629,50 @@ function render(p) {
     document.getElementById('card-products').classList.remove('hidden');
   }
 
-  // 업종 정보
+  // ── 업종 정보 (industry_fields 범용 렌더러) ──
   const iFields = pub.industry_fields;
   if (iFields && p.entity_type === 'business') {
-    const SKIP  = new Set(['schema_id','schema_version','envelope_version']);
-    const LABEL = {address:'주소',hours:'영업시간',delivery:'배달',biz_reg_no:'사업자번호',
-      price:'요금',location:'위치 유형',service_types:'서비스 유형',
-      cuisine_type:'요리 유형',seating_capacity:'좌석 수',
-      accom_type:'숙박 유형',amenities:'편의시설',genre:'장르',tools:'사용 도구'};
-    function fmtV(v) {
-      if (v===null||v===undefined) return null;
-      if (typeof v==='boolean') return v?'예':'아니오';
-      if (Array.isArray(v)) return v.length?v.join(', '):null;
-      if (typeof v==='object') return JSON.stringify(v);
+    const SKIP_KEYS = new Set(['schema_id','schema_version','envelope_version']);
+    const LABEL_MAP = {
+      address:'주소', hours:'영업시간', delivery:'배달', biz_reg_no:'사업자번호',
+      commission_rate:'수수료율', matching_categories:'중개 업종',
+      search_radius_km:'검색 반경(km)', settlement_currency:'정산 통화',
+      activity_type:'활동 유형', capacity:'수용 인원', max_participants:'최대 인원',
+      price:'요금', location:'위치 유형', service_types:'서비스 유형',
+      service_area:'서비스 지역', service_scope:'서비스 범위',
+      rental_items:'대여 품목', deposit_required:'보증금 필요',
+      license_required:'면허 필요', vehicle_type:'차량 유형',
+      cuisine_type:'요리 유형', seating_capacity:'좌석 수',
+      accom_type:'숙박 유형', room_types:'객실 유형', amenities:'편의시설',
+      fish_type:'어종', farming_method:'양식 방법', crop_type:'작물',
+      farming_type:'영농 유형', certification:'인증', genre:'장르',
+      format:'형식', tools:'사용 도구', dev_type:'개발 유형',
+    };
+    function _fmtVal(v) {
+      if (v === null || v === undefined) return null;
+      if (typeof v === 'boolean') return v ? '예' : '아니오';
+      if (Array.isArray(v)) return v.length ? v.join(', ') : null;
+      if (typeof v === 'object') {
+        if ('open' in v && 'close' in v) return `${v.open} ~ ${v.close}`;
+        if ('available' in v) {
+          if (!v.available) return '미제공';
+          return [v.zone && `지역: ${v.zone}`, v.min_order && `최소: ${v.min_order}`]
+            .filter(Boolean).join(' / ') || '제공';
+        }
+        return JSON.stringify(v);
+      }
       return String(v);
     }
     const rows = [];
-    for (const [k,v] of Object.entries(iFields)) {
-      if (SKIP.has(k)) continue;
-      const val = fmtV(v);
-      if (!val) continue;
-      rows.push(`<div class="cf-row"><span class="cf-key">${LABEL[k]||k}</span><span class="cf-val">${val}</span></div>`);
+    for (const [k, v] of Object.entries(iFields)) {
+      if (SKIP_KEYS.has(k)) continue;
+      const label = LABEL_MAP[k] || k;
+      const val   = _fmtVal(v);
+      if (val === null || val === '') continue;
+      rows.push(`<div class="ifield-row">
+        <span class="ifield-key">${label}</span>
+        <span class="ifield-val">${val}</span>
+      </div>`);
     }
     if (rows.length) {
       document.getElementById('industry-rows').innerHTML = rows.join('');
@@ -735,326 +680,359 @@ function render(p) {
     }
   }
 
-  // 커스텀 필드
-  const cf = (p.custom_fields||[]).filter(f=>f.public);
+  // ── 커스텀 필드 (공개 항목만) ──
+  const cf = (p.custom_fields || []).filter(f => f.public);
   if (cf.length) {
-    document.getElementById('custom-rows').innerHTML = cf.map(f=>
-      `<div class="cf-row"><span class="cf-key">${f.key}</span><span class="cf-val">${f.value}</span></div>`
+    const rows = document.getElementById('custom-rows');
+    rows.innerHTML = cf.map(f =>
+      `<div class="custom-field-row">
+        <span class="cf-key">${f.key}</span>
+        <span class="cf-val">${f.value}</span>
+      </div>`
     ).join('');
     document.getElementById('card-custom').classList.remove('hidden');
   }
 
-  // 퀵 액션 (타인)
-  if (!_isOwner) {
-    document.getElementById('quick-actions').classList.remove('hidden');
-    _initSaveState(p.handle);
-  }
-
-  // AI
+  // ── AI 비서 ──
   if (aiCfg?.system_prompt) {
     _aiSystem = aiCfg.system_prompt;
+    const sec = document.getElementById('ai-section');
+    sec.classList.remove('hidden');
+    // AI 비서 이름 표시
+    if (p.name) document.getElementById('ai-name').textContent = `${p.name} AI 비서`;
+
     if (_buyerRequest) {
+      // K-Market Agent가 buyer_request를 전달한 경우 → 채팅창 자동 열기 + 요청 주입
+      toggleAIChat();
+      const reqMsg = `[BUYER_REQUEST] ${_buyerGuid ? 'buyer_guid: ' + _buyerGuid + ' | ' : ''}` +
+        `품목: ${_buyerRequest.item}, 수량: ${_buyerRequest.qty}` +
+        (_buyerRequest.delivery ? `, 배달: ${_buyerRequest.delivery}` : '') +
+        (_buyerRequest.budget   ? `, 예산: ${_buyerRequest.budget}` : '');
+      // 판매자 AI 비서에게 자동 주입 (600ms 딜레이 — 채팅창 렌더 후)
       setTimeout(() => {
-        _aiHistory.push({role:'user', content:`[BUYER_REQUEST] 품목:${_buyerRequest.item},수량:${_buyerRequest.qty}`});
-        _callAI('');
-      }, 400);
+        _aiHistory.push({ role: 'user', content: reqMsg });
+        _callSellerAI('');  // 빈 user 메시지로 AI 응답만 유도
+      }, 600);
+    } else {
+      // 일반 방문자 → 인사말만 표시
+      addAIMsg('ai', aiCfg.greeting || `안녕하세요! ${p.name||'저희'}에 대해 궁금한 것이 있으시면 무엇이든 물어보세요. 😊`);
     }
   }
 
-  // 누락 정보
-  _renderMissing(p, ident, pub, cont, loc, tags);
+  // ── 누락된 정보 추가 (본인 프로필만) ──
+  renderMissingInfo(p, ident, pub, cont, loc, tags, _isOwner);
 
-  // SEO
-  _injectSEO(p, ident, tags);
-
-  // 스크롤 히어로
-  _initScroll();
+  // ── SEO ──
+  injectSEO(p, ident, tags);
 }
 
-// ── 히어로 스크롤 패럴랙스 ──────────────────────────────
-function _initScroll() {
-  const heroWrap = document.getElementById('heroWrap');
-  const avatar   = document.getElementById('heroAvatar');
-  const chips    = document.getElementById('heroChips');
-  const editBtn  = document.getElementById('heroEditBtn');
-  const body     = document.getElementById('scrollBody');
-  const FULL=200, MIN=64;
+// ── 누락된 정보 추가 (본인 프로필 전용) ──────────────────
+function renderMissingInfo(p, ident, pub, cont, loc, tags, isOwner) {
+  const card = document.getElementById('card-missing-info');
+  if (!isOwner) { card.classList.add('hidden'); return; }
 
-  body.addEventListener('scroll', () => {
-    const p = Math.min(body.scrollTop / (FULL-MIN), 1);
-    heroWrap.style.height = (FULL - (FULL-MIN)*p) + 'px';
-    const s = 76 - 24*p;
-    avatar.style.width = avatar.style.height = s+'px';
-    avatar.style.bottom = (-38+48*p)+'px';
-    avatar.style.left   = (20-4*p)+'px';
-    document.getElementById('heroAvatarLetter').style.fontSize = (28-10*p)+'px';
-    chips.style.opacity = Math.max(0, 1-p*2);
-    chips.style.pointerEvents = p>.5 ? 'none':'auto';
-    editBtn.style.opacity = Math.max(.3, 1-p*1.5);
-  }, {passive:true});
+  const ICONS = {
+    desc:  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+    web:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+    hours: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+    tags:  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 23 1 13l9.59-9.59A2 2 0 0 1 12 3h7a2 2 0 0 1 2 2v7a2 2 0 0 1-.41 1.41z"/><circle cx="16.5" cy="7.5" r="1.5"/></svg>`,
+    phone: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 14a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 3.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
+    addr:  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+  };
+
+  const rows = [];
+  if (!(ident.description || p.description))            rows.push({ label: '소개 추가',     icon: ICONS.desc  });
+  if (!tags.length)                                       rows.push({ label: '태그 추가',     icon: ICONS.tags  });
+  if (!(cont.website || p.website))                       rows.push({ label: '웹사이트 추가', icon: ICONS.web   });
+  if (!(cont.phone_display || p.phone))                   rows.push({ label: '전화번호 추가', icon: ICONS.phone });
+  if (!(loc.address_short || p.address))                  rows.push({ label: '주소 추가',     icon: ICONS.addr  });
+  if (p.entity_type === 'business' && !Object.keys(pub.activity?.hours || {}).length)
+    rows.push({ label: '영업시간 추가', icon: ICONS.hours });
+
+  if (!rows.length) { card.classList.add('hidden'); return; }
+
+  document.getElementById('missing-info-rows').innerHTML = rows.map(r => `
+    <button class="missing-row" onclick="location.href='/register-profile.html'">
+      <span class="missing-row-icon">${r.icon}</span><span>${r.label}</span>
+    </button>`).join('');
+  card.classList.remove('hidden');
 }
 
-// ── 입력 독 ─────────────────────────────────────────────
-function _initInputDock() {
-  const ta      = document.getElementById('chatInput');
-  const sb      = document.getElementById('sendBtn');
-  const actions = document.getElementById('chatActions');
-
-  ta.addEventListener('input', () => {
-    ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
-    const has = !!ta.value.trim();
-    sb.disabled = !has;
-    if (has) actions.classList.add('hidden');
-    else     actions.classList.remove('hidden');
-  });
-  ta.addEventListener('blur', () => {
-    if (!ta.value.trim()) actions.classList.remove('hidden');
-  });
-  ta.addEventListener('keydown', e => {
-    if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendChatMsg(); }
-  });
+// ── 프로필 저장(즐겨찾기) — 기기 로컬 저장, 서버 동기화 없음 ──
+const _SAVED_PROFILES_KEY = 'hondi_saved_profiles';
+function _getSavedProfiles() {
+  try { return JSON.parse(localStorage.getItem(_SAVED_PROFILES_KEY) || '[]'); } catch { return []; }
+}
+function _initSaveButtonState(handle) {
+  if (!handle) return;
+  const saved = _getSavedProfiles().includes(handle);
+  document.querySelector('#qa-save .qa-circle')?.classList.toggle('primary', saved);
+  const label = document.getElementById('qa-save-label');
+  if (label) label.textContent = saved ? '저장됨' : '저장';
+}
+function toggleSaveProfile() {
+  if (!_profile?.handle) return;
+  const saved = _getSavedProfiles();
+  const idx   = saved.indexOf(_profile.handle);
+  const circle = document.querySelector('#qa-save .qa-circle');
+  const label  = document.getElementById('qa-save-label');
+  if (idx >= 0) { saved.splice(idx, 1); circle?.classList.remove('primary'); if (label) label.textContent = '저장'; }
+  else          { saved.push(_profile.handle); circle?.classList.add('primary'); if (label) label.textContent = '저장됨'; }
+  try { localStorage.setItem(_SAVED_PROFILES_KEY, JSON.stringify(saved)); } catch {}
 }
 
-// ── 필드 추가 ────────────────────────────────────────────
-function _initAddField() {
-  const btn = document.getElementById('addFieldBtn');
-  if (!btn) return;
-  const FIELDS = [
-    {svg:'<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>', ph:'이메일'},
-    {svg:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>', ph:'직장'},
-    {svg:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>', ph:'링크'},
-    {svg:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>', ph:'생년월일'},
-  ];
-  btn.addEventListener('click', () => {
-    const f = FIELDS[document.querySelectorAll('.added-field').length % FIELDS.length];
-    const row = document.createElement('div');
-    row.className = 'info-row added-field';
-    row.innerHTML = `<span class="info-icon" style="color:#1A73E8"><svg viewBox="0 0 24 24">${f.svg}</svg></span>
-      <span class="info-text" style="color:#9ca3af">${f.ph} 입력...</span>`;
-    btn.before(row);
-  });
+// ── 혼디 색상 코드 보기 (이 프로필의 guid 기준) ──────────
+async function openMyHondiCode() {
+  if (!_profile?.guid) { alert('코드를 생성할 수 없습니다.'); return; }
+  try {
+    const { guidToShortId, generateHondiCodeDataURL } = await import('./src/gopang/ai/hondi-code.js');
+    const version = _profile.hondi_code_version || 'v1';
+    const shortId = guidToShortId(_profile.guid, version);
+    const dataURL = await generateHondiCodeDataURL(shortId, version);
+    _showHondiCodeModal(dataURL);
+  } catch (e) {
+    console.warn('[Profile] 혼디 코드 생성 실패:', e.message);
+    alert('코드를 불러오지 못했습니다.');
+  }
+}
+function _showHondiCodeModal(dataURL) {
+  let modal = document.getElementById('hondi-code-view-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'hondi-code-view-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);' +
+      'display:flex;align-items:center;justify-content:center';
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:16px;padding:24px;max-width:300px;width:90%;text-align:center">
+        <img id="hondi-code-view-img" style="width:100%;border-radius:8px;border:1px solid #f3f4f6">
+        <button onclick="document.getElementById('hondi-code-view-modal').remove()"
+          style="margin-top:14px;padding:10px 22px;border:none;border-radius:999px;
+                 background:#007b8b;color:#fff;font-weight:600;font-size:13.5px;cursor:pointer">닫기</button>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  document.getElementById('hondi-code-view-img').src = dataURL;
 }
 
-// ── AI 채팅 ──────────────────────────────────────────────
-async function sendChatMsg() {
-  const ta = document.getElementById('chatInput');
-  const text = ta.value.trim();
-  if (!text) return;
-  ta.value = ''; ta.style.height='auto';
-  document.getElementById('sendBtn').disabled = true;
-  document.getElementById('chatActions').classList.remove('hidden');
-  _aiHistory.push({role:'user', content:text});
-  await _callAI(text);
+// ── AI 비서 채팅 ─────────────────────────────────────────
+function toggleAIChat() {
+  const box   = document.getElementById('ai-chat-box');
+  const arrow = document.getElementById('ai-arrow');
+  const open  = box.classList.toggle('open');
+  arrow.classList.toggle('open', open);
+  if (open) document.getElementById('ai-input').focus();
 }
 
-async function _callAI(userText) {
-  const systemPrompt = _aiSystem ||
-    `당신은 ${_profile?.name||'이 프로필'}의 AI 비서입니다. 방문자의 질문에 친절하고 정확하게 답변해 주세요. 답변은 간결하게 해주세요.`;
+function addAIMsg(role, text) {
+  const el = document.createElement('div');
+  el.className = `ai-msg ai-msg-${role}`;
+  el.textContent = text;
+  document.getElementById('ai-messages').appendChild(el);
+  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return el;
+}
+
+function handleAIKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAIMsg(); }
+}
+function autoResizeAI(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 80) + 'px';
+}
+
+async function sendAIMsg() {
+  const input = document.getElementById('ai-input');
+  const text  = input.value.trim();
+  if (!text || !_aiSystem) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('ai-send').disabled = true;
+
+  addAIMsg('user', text);
+  _aiHistory.push({ role: 'user', content: text });
+  await _callSellerAI(text);
+}
+
+// 실제 LLM 호출 — buyer_request 자동 주입과 일반 대화 양쪽에서 사용
+async function _callSellerAI(userText) {
+  document.getElementById('ai-send').disabled = true;
+
+  const typingEl = document.createElement('div');
+  typingEl.className = 'ai-msg ai-msg-ai ai-msg-typing';
+  typingEl.innerHTML = '<div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>';
+  document.getElementById('ai-messages').appendChild(typingEl);
+  typingEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
   try {
     const res = await fetch(`${PROXY}/chat/completions`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'deepseek-v4-flash',
+        model:      'deepseek-v4-flash',
         max_tokens: 400,
-        temperature: .7,
-        stream: false,
+        temperature: 0.7,
+        stream:     false,
         messages: [
-          {role:'system', content: systemPrompt},
+          { role: 'system', content: _aiSystem },
           ..._aiHistory.slice(-10),
         ],
       }),
     });
     const data  = await res.json();
-    const reply = data?.choices?.[0]?.message?.content || '잠시 후 다시 시도해주세요.';
-    _aiHistory.push({role:'assistant', content:reply});
-    _showReply(reply);
+    const reply = data?.choices?.[0]?.message?.content
+               || data?.content
+               || '죄송합니다, 잠시 후 다시 시도해주세요.';
 
-    // SELLER_RESPONSE 포워딩
-    const srM = reply.match(/\[SELLER_RESPONSE:(\{[\s\S]*?\})\]/);
-    if (srM && window.opener && !window.opener.closed) {
-      try { window.opener.postMessage({type:'GWP_SELLER_RESPONSE', seller_response:JSON.parse(srM[1])}, _openerOrigin); } catch {}
+    typingEl.remove();
+    addAIMsg('ai', reply);
+    _aiHistory.push({ role: 'assistant', content: reply });
+
+    // ── SELLER_RESPONSE 감지 → Market/Gopang 탭에 포워딩 ──
+    if (reply.includes('[SELLER_RESPONSE:') || reply.includes('[SELLER_RESPONSE:{')) {
+      const srMatch = reply.match(/\[SELLER_RESPONSE:(\{[\s\S]*?\})\]/);
+      if (srMatch) {
+        const srData = JSON.parse(srMatch[1]);
+        // opener(market webapp)에 결과 전달
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage({
+            type:           'GWP_SELLER_RESPONSE',
+            seller_response: srData,
+          }, _openerOrigin);
+          console.log('[Profile] SELLER_RESPONSE → market 탭 포워딩:', srData);
+        }
+      }
     }
-  } catch {
-    _showReply('일시적 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+
+    // ── SELLER_PDV 감지 → 판매자 측 IndexedDB 기록 ──
+    if (reply.includes('[SELLER_PDV:') || reply.includes('[SELLER_PDV:{')) {
+      const pdvMatch = reply.match(/\[SELLER_PDV:(\{[\s\S]*?\})\]/);
+      if (pdvMatch) {
+        try {
+          const pdvData = JSON.parse(pdvMatch[1]);
+          await _writeSellerPDV(pdvData);
+        } catch (e) {
+          console.warn('[Profile] SELLER_PDV 파싱 오류:', e.message);
+        }
+      }
+    }
+
+  } catch(e) {
+    typingEl.remove();
+    addAIMsg('ai', '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
   } finally {
-    document.getElementById('sendBtn').disabled = true;
+    document.getElementById('ai-send').disabled = false;
+    document.getElementById('ai-input')?.focus();
   }
 }
 
-function _showReply(text) {
-  document.getElementById('aiReplyBubble')?.remove();
-  const el = document.createElement('div');
-  el.id = 'aiReplyBubble';
-  el.className = 'ai-reply';
-  el.innerHTML = `<div class="ai-reply-from">AI 비서</div>${text.replace(/\n/g,'<br>')}
-    <button class="ai-reply-close" onclick="document.getElementById('aiReplyBubble').remove()">×</button>`;
-  document.body.appendChild(el);
-  setTimeout(() => el?.remove(), 14000);
-}
-
-// ── 마이크 ───────────────────────────────────────────────
-let _recog = null;
-function toggleMic() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return;
-  const btn = document.getElementById('micBtn');
-  if (_recog) { _recog.stop(); _recog=null; btn.style.color=''; return; }
-  _recog = new SR();
-  _recog.lang = 'ko-KR'; _recog.continuous=false; _recog.interimResults=false;
-  _recog.onresult = e => {
-    const ta = document.getElementById('chatInput');
-    ta.value += e.results[0][0].transcript;
-    ta.dispatchEvent(new Event('input'));
+// 판매자 PDV IndexedDB 기록
+async function _writeSellerPDV(data) {
+  const DB_NAME = 'hondi-pdv';
+  const req = indexedDB.open(DB_NAME, 1);
+  req.onupgradeneeded = (e) => {
+    const db = e.target.result;
+    if (!db.objectStoreNames.contains('records')) {
+      const s = db.createObjectStore('records', { keyPath: 'id', autoIncrement: true });
+      s.createIndex('ts',   'ts',   { unique: false });
+      s.createIndex('type', 'type', { unique: false });
+    }
   };
-  _recog.onend = () => { _recog=null; btn.style.color=''; };
-  btn.style.color = '#1A73E8';
-  _recog.start();
+  const db = await new Promise((res, rej) => {
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+  const tx = db.transaction('records', 'readwrite');
+  tx.objectStore('records').add({
+    ts:      data.ts || new Date().toISOString(),
+    type:    data.type || 'sale',
+    summary: `판매: ${data.item} × ${data.qty} ₮${data.revenue}`,
+    content: data,
+  });
+  await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+  console.info('[Profile] SELLER_PDV 기록 완료:', data.item, data.revenue);
 }
 
-// ── 파일/미디어 ──────────────────────────────────────────
-function handleChatFile(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const ta = document.getElementById('chatInput');
-  if (!ta.value.trim()) ta.value = file.name;
-  ta.dispatchEvent(new Event('input'));
-  input.value = '';
-}
-function handleMediaImg(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const card = input.closest('.media-card');
-  const url  = URL.createObjectURL(file);
-  card.style.backgroundImage    = `url(${url})`;
-  card.style.backgroundSize     = 'cover';
-  card.style.backgroundPosition = 'center';
-  card.querySelector('svg').style.display  = 'none';
-  card.querySelector('span').style.display = 'none';
-  input.value = '';
-}
-function handleMediaSound(input) {
-  const file = input.files[0];
-  if (!file) return;
-  input.closest('.media-card-sound').querySelector('span').textContent = file.name;
-  input.value = '';
-}
-
-// ── 저장 ─────────────────────────────────────────────────
-const _SAVED_KEY = 'hondi_saved_profiles';
-function _getSaved() { try { return JSON.parse(localStorage.getItem(_SAVED_KEY)||'[]'); } catch { return []; } }
-function _initSaveState(handle) {
-  if (!handle) return;
-  const saved = _getSaved().includes(handle);
-  document.querySelector('#qa-save .qa-circle')?.classList.toggle('primary', saved);
-  const lbl = document.getElementById('qa-save-label');
-  if (lbl) lbl.textContent = saved ? '저장됨':'저장';
-}
-function toggleSaveProfile() {
-  if (!_profile?.handle) return;
-  const saved = _getSaved();
-  const idx   = saved.indexOf(_profile.handle);
-  const circ  = document.querySelector('#qa-save .qa-circle');
-  const lbl   = document.getElementById('qa-save-label');
-  if (idx>=0) { saved.splice(idx,1); circ?.classList.remove('primary'); if(lbl)lbl.textContent='저장'; }
-  else        { saved.push(_profile.handle); circ?.classList.add('primary'); if(lbl)lbl.textContent='저장됨'; }
-  try { localStorage.setItem(_SAVED_KEY, JSON.stringify(saved)); } catch {}
-}
-
-// ── 혼디코드 ─────────────────────────────────────────────
-async function openMyHondiCode() {
-  const guid = _profile?.guid;
-  if (!guid) return;
-  try {
-    const { guidToShortId, generateHondiCodeDataURL } = await import('./src/gopang/ai/hondi-code.js');
-    const ver   = _profile.hondi_code_version || 'v1';
-    const short = guidToShortId(guid, ver);
-    const url   = await generateHondiCodeDataURL(short, ver);
-    _showCodeModal(url);
-  } catch(e) { console.warn('[HondiCode]', e.message); }
-}
-function _showCodeModal(dataURL) {
-  let m = document.getElementById('hondi-code-modal');
-  if (!m) {
-    m = document.createElement('div');
-    m.id = 'hondi-code-modal';
-    m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center';
-    m.onclick = e => { if(e.target===m) m.remove(); };
-    m.innerHTML = `<div style="background:#fff;border-radius:16px;padding:24px;max-width:300px;width:90%;text-align:center">
-      <img id="hondi-code-img" style="width:100%;border-radius:8px;border:1px solid #f3f4f6">
-      <button onclick="document.getElementById('hondi-code-modal').remove()"
-        style="margin-top:14px;padding:10px 22px;border:none;border-radius:999px;
-               background:#1A73E8;color:#fff;font-weight:600;font-size:13.5px;cursor:pointer">닫기</button>
-    </div>`;
-    document.body.appendChild(m);
-  }
-  document.getElementById('hondi-code-img').src = dataURL;
+// ── 상품 상세 토글 ───────────────────────────────────────
+function toggleProductDetail(i) {
+  document.getElementById(`pd-${i}`)?.classList.toggle('open');
 }
 
 // ── 액션 ─────────────────────────────────────────────────
 function contactOwner() {
   if (!_profile?.guid) return;
+  // gopang P2P 채팅 열기
+  window.opener?.openP2PSearch?.(_profile.handle);
   location.href = `/webapp.html?connect=${encodeURIComponent(_profile.guid)}`;
 }
 function startP2P() {
   if (!_profile?.guid) return;
   location.href = `/webapp.html?p2p=${encodeURIComponent(_profile.guid)}`;
 }
+
+// ── 공유 ─────────────────────────────────────────────────
 async function shareProfile() {
-  const url = location.href, title = _profile?.name || '혼디 프로필';
-  if (navigator.share) await navigator.share({title, url}).catch(()=>{});
-  else { await navigator.clipboard.writeText(url).catch(()=>{}); alert('링크가 복사됐습니다.'); }
+  const url   = location.href;
+  const title = _profile?.name || '고팡 프로필';
+  if (navigator.share) {
+    await navigator.share({ title, url }).catch(()=>{});
+  } else {
+    await navigator.clipboard.writeText(url).catch(()=>{});
+    alert('링크가 복사됐습니다.');
+  }
 }
 
-// ── 누락 정보 ────────────────────────────────────────────
-function _renderMissing(p, ident, pub, cont, loc, tags) {
-  const card = document.getElementById('card-missing-info');
-  if (!_isOwner) { card.classList.add('hidden'); return; }
-  const mk = (svg, label) =>
-    `<button class="missing-row" onclick="location.href='/register-profile.html'">
-      <span class="missing-row-icon"><svg viewBox="0 0 24 24">${svg}</svg></span>
-      <span>${label}</span>
-    </button>`;
-  const rows = [];
-  if (!(ident.description||p.description))
-    rows.push(mk('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>', '소개 추가'));
-  if (!tags.length)
-    rows.push(mk('<path d="M20.59 13.41 11 23 1 13l9.59-9.59A2 2 0 0 1 12 3h7a2 2 0 0 1 2 2v7a2 2 0 0 1-.41 1.41z"/><circle cx="16.5" cy="7.5" r="1.5"/>', '태그 추가'));
-  if (!(cont.website||p.website))
-    rows.push(mk('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>', '웹사이트 추가'));
-  if (!(cont.phone_display||p.phone))
-    rows.push(mk('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 14a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 3.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>', '전화번호 추가'));
-  if (!(loc.address_short||p.address))
-    rows.push(mk('<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>', '주소 추가'));
-  if (!rows.length) { card.classList.add('hidden'); return; }
-  document.getElementById('missing-info-rows').innerHTML = rows.join('');
-  card.classList.remove('hidden');
-}
+// ── SEO: OpenGraph + JSON-LD ─────────────────────────────
+function injectSEO(p, ident, tags) {
+  const title = `${p.name||'프로필'} — 고팡`;
+  const desc  = (ident.description || p.description || tags.join(', ')).slice(0, 160);
+  const url   = location.href;
 
-// ── SEO ──────────────────────────────────────────────────
-function _injectSEO(p, ident, tags) {
-  const title = `${p.name||'프로필'} — 혼디`;
-  const desc  = (ident.description||p.description||tags.join(', ')).slice(0,160);
   document.title = title;
-  const sm = (n,v) => {
-    const el = document.querySelector(`meta[property="${n}"],meta[name="${n}"]`);
-    if (el) el.setAttribute('content', v);
-  };
-  sm('description',desc); sm('og:title',title); sm('og:description',desc); sm('og:url',location.href);
+  setMeta('description', desc);
+  setMeta('og:title',       title);
+  setMeta('og:description', desc);
+  setMeta('og:url',         url);
+  setMeta('twitter:title',  title);
+
+  // JSON-LD Schema.org
   const schema = {
     '@context': 'https://schema.org',
-    '@type': p.entity_type==='person'?'Person':p.entity_type==='business'?'LocalBusiness':'Organization',
-    name: p.name, url: location.href,
-    description: ident.description||p.description||'',
+    '@type':    p.entity_type === 'person' ? 'Person' :
+                p.entity_type === 'business' ? 'LocalBusiness' :
+                p.entity_type === 'institution' ? 'GovernmentOrganization' : 'Organization',
+    name:       p.name,
+    url,
+    description: ident.description || p.description || '',
+    identifier:  p.handle,
   };
-  const ld = document.getElementById('jsonld');
-  if (ld) ld.textContent = JSON.stringify(schema);
+  if (p.address) schema.address = { '@type': 'PostalAddress', streetAddress: p.address };
+  if (p.phone)   schema.telephone = p.phone;
+  if (tags.length) schema.keywords = tags.join(', ');
+  if (p.entity_type === 'business' && p.products?.length) {
+    schema.hasOfferCatalog = {
+      '@type': 'OfferCatalog',
+      itemListElement: p.products.map(prod => ({
+        '@type': 'Offer',
+        name:    prod.name,
+        price:   prod.price?.replace(/[^0-9]/g,'') || '',
+        priceCurrency: 'KRW',
+      }))
+    };
+  }
+  document.getElementById('jsonld').textContent = JSON.stringify(schema, null, 2);
+  document.getElementById('top-title').textContent = p.name || '프로필';
 }
 
-// ── 기타 ─────────────────────────────────────────────────
-function toggleProductDetail(i) { document.getElementById(`pd-${i}`)?.classList.toggle('open'); }
+function setMeta(name, content) {
+  const sel = name.startsWith('og:') || name.startsWith('twitter:')
+    ? `meta[property="${name}"]`
+    : `meta[name="${name}"]`;
+  const el = document.querySelector(sel);
+  if (el) el.setAttribute('content', content);
+}
+
 function showError() {
   document.getElementById('skeleton').style.display = 'none';
   document.getElementById('error-box').classList.remove('hidden');
