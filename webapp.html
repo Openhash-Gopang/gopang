@@ -2418,6 +2418,17 @@ window.closeTermsOfUse = closeTermsOfUse;
 
   function openAIPanel() {
     if (_panelOpen) { closeAIPanel(); return; }
+
+    // 4·5번 요구사항: LLM이 하나도 등록 안 됐으면 패널을 열지 않고 설정
+    // 화면으로 보낸다 — 혼디는 자체 제공하는 무료 LLM이 없으므로, 설정 전
+    // AI 패널을 열어봐야 어차피 아무 응답도 못 준다.
+    const _cfg = (() => { try { return JSON.parse(localStorage.getItem('gopang_cfg') || '{}'); } catch { return {}; } })();
+    const _hasLLM = Array.isArray(_cfg.providers) && _cfg.providers.length > 0;
+    if (!_hasLLM) {
+      window.open('/pages/ai-setup-mobile.html', '_blank');
+      return;
+    }
+
     _panelOpen = true;
     panel.classList.add('open');
     btnAI.classList.add('panel-open');
@@ -2864,8 +2875,19 @@ window.closeTermsOfUse = closeTermsOfUse;
         model: p.model, key: p.apiKey,
       });
     }
-    // 최종 안전망 — 고팡 프록시(키 불필요)
-    candidates.push({ provider: 'hondi-proxy', url: endpoint + '/chat/completions', model: cfg.model || 'deepseek-v4-flash', key: '' });
+    // ※ 2026-06-29: 고팡 프록시(deepseek-v4-flash) 무료 폴백 제거 — 무료로
+    // 제공하는 LLM이 없다는 제품 결정. 후보가 0개면 아래에서 명확히 안내한다.
+
+    if (candidates.length === 0) {
+      bubbleEl.textContent = '';
+      bubbleEl.innerHTML =
+        '🔑 AI 비서를 쓰려면 먼저 LLM을 설정해야 합니다. 혼디는 자체 제공하는 ' +
+        '무료 LLM이 없습니다.<br>' +
+        '<button onclick="window.open(\'/pages/ai-setup-mobile.html\',\'_blank\')" ' +
+        'style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;' +
+        'background:#16a34a;color:#fff;font-weight:600;cursor:pointer">LLM 설정하러 가기</button>';
+      return;
+    }
 
     // 모델명 교정 — deepseek-chat/reasoner는 2026-07-24 완전히 막힌다(현재는
     // deepseek-v4-flash로 투명 라우팅되는 별칭일 뿐). call-ai.js와 동일하게

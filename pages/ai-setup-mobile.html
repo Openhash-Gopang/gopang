@@ -133,6 +133,24 @@ html, body {
 .key-msg { font-size: 11.5px; min-height: 16px; color: var(--text3); }
 .key-msg.ok    { color: var(--brand); }
 .key-msg.error { color: var(--error); }
+.model-picker { margin-bottom: 12px; }
+.model-picker-label { font-size: 11px; color: var(--text4); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 6px; }
+.model-opt {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px;
+  margin-bottom: 6px; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.model-opt:hover { border-color: var(--brand); }
+.model-opt input[type="radio"] { margin-top: 2px; accent-color: var(--brand); flex-shrink: 0; }
+.model-opt.checked { border-color: var(--brand); background: #f0fdf4; }
+.model-opt-name { font-size: 12.5px; font-weight: 700; color: var(--text); }
+.model-opt-desc { font-size: 11.5px; color: var(--text3); margin-top: 1px; line-height: 1.5; }
+.no-llm-warning {
+  background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--r);
+  padding: 12px 14px; font-size: 12.5px; color: #991b1b; line-height: 1.7;
+  margin-bottom: 16px;
+}
+.no-llm-warning b { font-weight: 700; }
 </style>
 </head>
 <body>
@@ -157,9 +175,14 @@ html, body {
 <div id="_body">
 
   <div class="info-banner">
-    <b>무료 또는 유료 API 키로 혼디 AI 비서를 사용할 수 있습니다.</b><br>
-    아래 LLM 중 하나 이상의 키를 발급받아 입력하세요.<br>
-    여러 개 입력할수록 안정성이 높아집니다. 1순위부터 순서대로 시도됩니다.
+    <b>혼디 AI 비서를 쓰려면 LLM API 키가 필요합니다.</b><br>
+    아래 벤더 중 하나를 골라 키를 발급받고, 사용할 모델을 선택해 입력하세요.<br>
+    여러 개 입력할수록 안정성이 높아집니다(1순위부터 순서대로 시도).
+  </div>
+
+  <div class="no-llm-warning">
+    ⚠️ <b>LLM을 하나도 선택·입력하지 않으면 AI 비서 기능을 전혀 사용할 수 없습니다.</b><br>
+    혼디는 자체적으로 제공하는 무료 LLM이 없습니다 — 아래 벤더 중 최소 하나의 키가 반드시 필요합니다.
   </div>
 
   <!-- 1순위: Gemini -->
@@ -197,6 +220,7 @@ html, body {
           <div class="spec-note">구글 기반 우수한 한국어</div>
         </div>
       </div>
+      <div class="model-picker" id="model-picker-gemini"></div>
       <div class="steps">
         <ol>
           <li><a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> 접속</li>
@@ -248,6 +272,7 @@ html, body {
           <div class="spec-note">한국어 이해 양호</div>
         </div>
       </div>
+      <div class="model-picker" id="model-picker-deepseek"></div>
       <div class="steps">
         <ol>
           <li><a href="https://platform.deepseek.com/api_keys" target="_blank">platform.deepseek.com</a> 접속 → 이메일 회원가입</li>
@@ -299,6 +324,7 @@ html, body {
           <div class="spec-note">기본 한국어 지원</div>
         </div>
       </div>
+      <div class="model-picker" id="model-picker-grok"></div>
       <div class="steps">
         <ol>
           <li><a href="https://console.x.ai" target="_blank">console.x.ai</a> 접속</li>
@@ -401,6 +427,7 @@ html, body {
           <div class="spec-note">뉘앙스·존댓말 완벽 이해</div>
         </div>
       </div>
+      <div class="model-picker" id="model-picker-claude"></div>
       <div class="steps">
         <ol>
           <li><a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a> 접속 → 회원가입</li>
@@ -452,6 +479,7 @@ html, body {
           <div class="spec-note">자연스러운 한국어</div>
         </div>
       </div>
+      <div class="model-picker" id="model-picker-openai"></div>
       <div class="steps">
         <ol>
           <li><a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a> 접속</li>
@@ -477,12 +505,42 @@ html, body {
 
 <script>
 const LLM = [
-  { id:'gemini',   name:'Gemini',      provider:'google',      baseUrl:'https://generativelanguage.googleapis.com/v1beta/openai', model:'gemini-2.5-flash-preview-05-20', validate:k=>k.startsWith('AIza')&&k.length>20 },
-  { id:'deepseek', name:'DeepSeek',    provider:'deepseek',    baseUrl:'https://api.deepseek.com/v1',                           model:'deepseek-v4-flash',      validate:k=>k.startsWith('sk-')&&!k.startsWith('sk-ant-')&&!k.startsWith('sk-proj-')&&!k.startsWith('sk-or-')&&k.length>20 },
-  { id:'grok',     name:'Grok',        provider:'xai',         baseUrl:'https://api.x.ai/v1',                                   model:'grok-3-mini',            validate:k=>k.startsWith('xai-')&&k.length>10 },
-  { id:'or',       name:'OpenRouter',  provider:'openrouter',  baseUrl:'https://openrouter.ai/api/v1',                          model:'deepseek/deepseek-v4-flash', validate:k=>k.startsWith('sk-or-')&&k.length>20 },
-  { id:'claude',   name:'Claude',      provider:'anthropic',   baseUrl:'https://api.anthropic.com/v1',                          model:'claude-haiku-4-5-20251001', validate:k=>k.startsWith('sk-ant-')&&k.length>20 },
-  { id:'openai',   name:'OpenAI',      provider:'openai',      baseUrl:'https://api.openai.com/v1',                             model:'gpt-4o-mini',            validate:k=>(k.startsWith('sk-proj-')||k.startsWith('sk-'))&&!k.startsWith('sk-ant-')&&!k.startsWith('sk-or-')&&k.length>20 },
+  { id:'gemini',   name:'Gemini',      provider:'google',      baseUrl:'https://generativelanguage.googleapis.com/v1beta/openai',
+    models:[
+      { id:'gemini-3-flash',          label:'Gemini 3 Flash',     desc:'빠름·균형 · $0.50 / $3.00 (백만 토큰, 입력/출력) · 대부분 작업에 충분', def:true },
+      { id:'gemini-3.1-pro-preview',  label:'Gemini 3.1 Pro',     desc:'최고 성능(딥리서치·정밀분석) · $2.00 / $12.00 (백만 토큰)' },
+    ],
+    validate:k=>k.startsWith('AIza')&&k.length>20 },
+  { id:'deepseek', name:'DeepSeek',    provider:'deepseek',    baseUrl:'https://api.deepseek.com/v1',
+    models:[
+      { id:'deepseek-v4-flash', label:'DeepSeek V4 Flash', desc:'빠르고 매우 저렴 · $0.14 / $0.28 (백만 토큰) · 일상 대화에 충분', def:true },
+      { id:'deepseek-v4-pro',   label:'DeepSeek V4 Pro',   desc:'최고 성능(추론·코딩 Claude급) · $1.74 / $3.48 (백만 토큰)' },
+    ],
+    validate:k=>k.startsWith('sk-')&&!k.startsWith('sk-ant-')&&!k.startsWith('sk-proj-')&&!k.startsWith('sk-or-')&&k.length>20 },
+  { id:'grok',     name:'Grok',        provider:'xai',         baseUrl:'https://api.x.ai/v1',
+    models:[
+      { id:'grok-4.1-fast', label:'Grok 4.1 Fast', desc:'매우 빠르고 저렴 · $0.20 / $0.50 (백만 토큰) · 2M 컨텍스트', def:true },
+      { id:'grok-4.3',      label:'Grok 4.3',      desc:'최고 성능(정밀 추론) · $1.25 / $2.50 (백만 토큰)' },
+    ],
+    validate:k=>k.startsWith('xai-')&&k.length>10 },
+  { id:'or',       name:'OpenRouter',  provider:'openrouter',  baseUrl:'https://openrouter.ai/api/v1',
+    models:[
+      { id:'deepseek/deepseek-v4-flash', label:'DeepSeek V4 Flash (무료 풀)', desc:'OpenRouter 무료 모델 풀 자동 라우팅 · 가입 시 매일 한도 내 무료', def:true },
+    ],
+    validate:k=>k.startsWith('sk-or-')&&k.length>20 },
+  { id:'claude',   name:'Claude',      provider:'anthropic',   baseUrl:'https://api.anthropic.com/v1',
+    models:[
+      { id:'claude-haiku-4-5-20251001', label:'Claude Haiku 4.5', desc:'빠르고 저렴 · $1 / $5 (백만 토큰) · 일상 대화·간단 작업', def:true },
+      { id:'claude-sonnet-4-6',         label:'Claude Sonnet 4.6', desc:'성능·비용 균형 최선 · $3 / $15 (백만 토큰)' },
+      { id:'claude-opus-4-7',           label:'Claude Opus 4.7',   desc:'최고 성능(복잡한 추론·장문 작업) · $5 / $25 (백만 토큰)' },
+    ],
+    validate:k=>k.startsWith('sk-ant-')&&k.length>20 },
+  { id:'openai',   name:'OpenAI',      provider:'openai',      baseUrl:'https://api.openai.com/v1',
+    models:[
+      { id:'gpt-4.1-nano', label:'GPT-4.1 Nano', desc:'매우 빠르고 저렴 · $0.10 / $0.40 (백만 토큰) · 단순 작업에 충분', def:true },
+      { id:'gpt-4.1',      label:'GPT-4.1',      desc:'성능·비용 균형 · $2.00 / $8.00 (백만 토큰) · 1M 컨텍스트' },
+    ],
+    validate:k=>(k.startsWith('sk-proj-')||k.startsWith('sk-'))&&!k.startsWith('sk-ant-')&&!k.startsWith('sk-or-')&&k.length>20 },
 ];
 
 function _detectLLM(key) { for (const l of LLM) if (l.validate(key)) return l.id; return null; }
@@ -495,6 +553,30 @@ function _updateBadge(id,key) {
   else { const free=['gemini','or','grok'].includes(id); badge.textContent=free?'무료':'유료'; badge.className='llm-badge '+(free?'badge-free':'badge-pay'); card?.classList.remove('has-key'); }
 }
 
+// 카드마다 모델 선택 라디오를 동적으로 그린다(벤더 데이터를 LLM 배열 한 곳에만
+// 두고, HTML에 12개+ 라디오를 손으로 일일이 안 써도 되게 함)
+function _renderModelPicker(llm, selectedModelId) {
+  const el = document.getElementById('model-picker-' + llm.id);
+  if (!el || !llm.models?.length || llm.models.length < 2) return; // 모델이 1개뿐이면(OpenRouter 등) 선택기 자체를 안 보여줌
+  const sel = selectedModelId || llm.models.find(m => m.def)?.id || llm.models[0].id;
+  el.innerHTML =
+    '<div class="model-picker-label">사용할 모델</div>' +
+    llm.models.map(m => `
+      <label class="model-opt${m.id===sel?' checked':''}">
+        <input type="radio" name="model-${llm.id}" value="${m.id}" ${m.id===sel?'checked':''}
+               onchange="this.closest('.model-picker').querySelectorAll('.model-opt').forEach(o=>o.classList.remove('checked')); this.closest('.model-opt').classList.add('checked');">
+        <div>
+          <div class="model-opt-name">${m.label}</div>
+          <div class="model-opt-desc">${m.desc}</div>
+        </div>
+      </label>`).join('');
+}
+function _selectedModel(llm) {
+  return document.querySelector(`input[name="model-${llm.id}"]:checked`)?.value
+      || llm.models.find(m => m.def)?.id || llm.models[0].id;
+}
+
+
 
 
 async function _saveAll() {
@@ -504,7 +586,7 @@ async function _saveAll() {
     const key=document.getElementById('key-'+llm.id)?.value?.trim()||'';
     if(!key) continue;
     if(!llm.validate(key)){ _msg(llm.id,'키 형식이 올바르지 않습니다.','error'); document.getElementById('card-'+llm.id)?.classList.add('open'); continue; }
-    providers.push({ provider:llm.provider, model:llm.model, baseUrl:llm.baseUrl, apiKey:key }); savedCount++;
+    providers.push({ provider:llm.provider, model:_selectedModel(llm), baseUrl:llm.baseUrl, apiKey:key }); savedCount++;
   }
   if(savedCount===0){
     _msg('or','최소 하나의 키를 입력해 주세요.','error'); document.getElementById('card-or')?.classList.add('open');
@@ -526,7 +608,7 @@ function _skipSetup() {
   const doneEl=document.getElementById('_done'), doneDesc=document.getElementById('_done-desc'), doneProg=document.getElementById('_done-prog');
   document.getElementById('_done-icon').textContent='⏭️';
   document.getElementById('_done-title').textContent='나중에 설정할게요';
-  doneDesc.textContent='지금은 건너뛰었어요. 설정 창에서 언제든 다시 설정할 수 있습니다.';
+  doneDesc.textContent='지금은 건너뛰었어요. ⚠️ LLM을 설정하지 않으면 AI 비서 기능을 쓸 수 없습니다. 설정 창에서 언제든 다시 설정할 수 있습니다.';
   doneEl.classList.add('visible');
   let pct=0;
   const tick=setInterval(()=>{ pct+=2; doneProg.style.width=pct+'%'; if(pct>=100){ clearInterval(tick); window.close(); setTimeout(()=>{ doneDesc.textContent+=' 아래 버튼으로 혼디로 돌아가세요.'; document.getElementById('_done-close-btn').style.display='inline-block'; },300); } },40);
@@ -536,6 +618,10 @@ function _skipSetup() {
 (function _init(){
   const cfg=JSON.parse(localStorage.getItem('gopang_cfg')||'{}');
   const providers=Array.isArray(cfg.providers)?cfg.providers:[];
+  for(const llm of LLM){
+    const saved = providers.find(p => p.provider === llm.provider);
+    _renderModelPicker(llm, saved?.model || null);
+  }
   for(const p of providers){
     const llm=LLM.find(l=>l.provider===p.provider); if(!llm) continue;
     const input=document.getElementById('key-'+llm.id);

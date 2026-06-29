@@ -509,24 +509,9 @@ function _buildCallCandidates() {
     }
   }
 
-  // 3) 고팡 프록시 — 최후 폴백 (OR 키 전부 소진 후)
-  if (CFG.endpoint.includes('workers.dev')) {
-    candidates.push({
-      provider: 'gopang-proxy',
-      baseUrl:  CFG.endpoint.replace(/\/+$/, ''),
-      model:    CFG.model,
-      apiKey:   '',
-      isProxy:  true,
-    });
-  }
-
-  // 후보가 전혀 없으면 최소 프록시 1개는 항상 시도
-  if (candidates.length === 0) {
-    candidates.push({
-      provider: 'gopang-proxy', baseUrl: 'https://gopang-proxy.tensor-city.workers.dev',
-      model: CFG.model, apiKey: '', isProxy: true,
-    });
-  }
+  // ※ 2026-06-29: 고팡 프록시(deepseek-v4-flash) 무료 폴백을 완전히 제거함 —
+  // 제품 결정: 사용자에게 무료로 제공하는 LLM이 없다. 후보가 0개면(아무
+  // provider도 등록 안 함) callAI() 쪽에서 "LLM을 설정해주세요" 안내로 처리.
 
   // 모델명 교정 — config.js의 MODEL_MIGRATION을 여기 한 곳에서 일괄 적용한다.
   // (desktop.html의 구형 선택값, DEV_MODE 주입값 등 출처가 어디든 상관없이
@@ -816,6 +801,21 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
   const candidates = _buildCallCandidates();
   const activeModel = CFG.model;
   console.log(`[AI] 호출 후보 ${candidates.length}개 준비 — 1번부터 순차 시도`);
+
+  // ── LLM 미설정 시 — 더 이상 무료 폴백이 없으므로 명확히 안내하고 중단 ──
+  if (candidates.length === 0) {
+    hideTyping();
+    appendBubble('ai',
+      '🔑 <b>AI 비서를 쓰려면 먼저 LLM을 설정해야 합니다.</b><br>' +
+      '혼디는 자체 제공하는 무료 LLM이 없습니다 — Gemini·DeepSeek 등 ' +
+      '벤더 중 하나를 골라 키를 등록해 주세요.<br>' +
+      '<button onclick="window.open(\'/pages/ai-setup-mobile.html\',\'_blank\')" ' +
+      'style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;' +
+      'background:#16a34a;color:#fff;font-weight:600;cursor:pointer">LLM 설정하러 가기</button>',
+      true
+    );
+    return;
+  }
 
   // ── 스트리밍 호출 (페일오버 포함) ───────────────────────
   try {
