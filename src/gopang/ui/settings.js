@@ -955,6 +955,10 @@ function _openSheet(title, html) {
       <div id="_gopang-sheet-body" style="flex:1;overflow-y:auto"></div>`;
     document.body.appendChild(sheet);
     document.getElementById('_gopang-sheet-close').onclick = () => {
+      // 시트는 transform으로만 화면 밖으로 밀려날 뿐 DOM에서 제거되지 않으므로,
+      // 안에 입력 중이던 요소(예: 백업 키 textarea)가 그대로 포커스를 유지해서
+      // 키보드가 안 내려가는 버그가 있었다 — 닫을 때 포커스를 명시적으로 뺀다.
+      document.activeElement?.blur?.();
       sheet.style.transform = 'translateY(100%)';
     };
   }
