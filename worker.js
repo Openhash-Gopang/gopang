@@ -2407,10 +2407,17 @@ async function handleP2PRegister(request, env, corsHeaders) {
   const L1_PROFILES = L1_DEFAULT + '/api/collections/profiles/records';
   const now = new Date().toISOString();
 
-  // 기존 레코드 확인 (handle 기준)
+  // 기존 레코드 확인 (guid 우선, handle도 함께 — 둘 중 하나라도 일치하면 같은 사용자)
+  // ※ 이전엔 handle만으로 확인했는데, 가입 직후 다른 등록 경로(auth.js의
+  // 기본 가입)와 거의 동시에 호출되면 그 레코드가 아직 안 보일 수 있어서
+  // (조회 결과 미반영 — 인덱싱/replication 지연), 같은 guid인데도 "없음"으로
+  // 판단해 새 레코드를 또 만드는 경쟁 상태가 있었다. guid까지 같이 보면
+  // 더 안전하지만, 동시성 자체를 완전히 막는 건 아니다 — 근본 해결은
+  // PocketBase profiles 컬렉션의 guid 필드에 unique 제약을 거는 것.
   try {
+    const chkFilter = `handle='${handle}' || guid='${guid}'`;
     const chkRes = await fetch(
-      `${L1_PROFILES}?filter=${encodeURIComponent(`handle='${handle}'`)}&perPage=1`
+      `${L1_PROFILES}?filter=${encodeURIComponent(chkFilter)}&perPage=1`
     );
     const chkData = await chkRes.json().catch(() => ({ items: [] }));
     const existing = chkData.items?.[0];

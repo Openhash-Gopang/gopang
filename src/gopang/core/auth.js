@@ -574,10 +574,8 @@ function _showDeviceMismatchNotice(found, resolve) {
           이 기기는 등록된 기기가 아닙니다
         </p>
         <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 20px">
-          입력하신 번호(또는 닉네임)로 가입된 계정이 이미 있지만,<br>
-          이 계정의 암호키(GDC Wallet)는 이 기기에 없습니다.<br><br>
-          본인 계정이라면 백업 키로 이 기기를 등록할 수 있습니다.<br>
-          본인 계정이 아니라면 다른 번호로 가입해 주세요.
+          입력하신 번호(또는 닉네임)로 가입된 계정이 이미 있지만, 이 계정의 암호키(GDC Wallet)는 이 기기에 없습니다.<br><br>
+          본인 계정이라면 백업 키로 이 기기를 등록할 수 있습니다. 본인 계정이 아니라면 다른 번호로 가입해 주세요.
         </p>
         <button id="_dm_restore"
           style="width:100%;padding:13px;border:none;border-radius:10px;
