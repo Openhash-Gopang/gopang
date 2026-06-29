@@ -11,14 +11,14 @@
  * (저자 의도상 HEALTH가 아님) 의료 안전 모듈을 추가하지 않는다.
  */
 
-export const COMMON_GUARDRAILS_URL     = '/prompts/SP_common_guardrails_v2_3.md';
+export const COMMON_GUARDRAILS_URL     = '/prompts/SP_common_guardrails_v3_1.md';
 export const COMMON_MEDICAL_SAFETY_URL = '/prompts/SP_common_medical_safety_v1_1.md';
 
 export const EXPERT_REGISTRY = {
   // ── 법률 ──────────────────────────────────────────────
   lawyer: {
     label: '변호사', icon: '⚖️', category: 'LAW',
-    file: '/prompts/SP_lawyer_v2_0.md', needsMedicalSafety: false,
+    file: '/prompts/SP_lawyer_v3_1.md', needsMedicalSafety: false,
   },
 
   // ── 의료·보건 (SP-HEALTH-06~15) ──────────────────────
@@ -28,39 +28,39 @@ export const EXPERT_REGISTRY = {
   },
   nurse: {
     label: '간호사', icon: '👩‍⚕️', category: 'HEALTH',
-    file: '/prompts/SP_nurse_v2_2.md', needsMedicalSafety: true,
+    file: '/prompts/SP_nurse_v3_1.md', needsMedicalSafety: true,
   },
   'physical-therapist': {
     label: '물리치료사', icon: '💪', category: 'HEALTH',
-    file: '/prompts/SP_physical-therapist_v2_2.md', needsMedicalSafety: true,
+    file: '/prompts/SP_physical-therapist_v3_1.md', needsMedicalSafety: true,
   },
   'medical-lab-technologist': {
     label: '임상병리사', icon: '🔬', category: 'HEALTH',
-    file: '/prompts/SP_medical-lab-technologist_v2_2.md', needsMedicalSafety: true,
+    file: '/prompts/SP_medical-lab-technologist_v3_1.md', needsMedicalSafety: true,
   },
   'radiologic-technologist': {
     label: '방사선사', icon: '📡', category: 'HEALTH',
-    file: '/prompts/SP_radiologic-technologist_v2_2.md', needsMedicalSafety: true,
+    file: '/prompts/SP_radiologic-technologist_v3_1.md', needsMedicalSafety: true,
   },
   'dental-hygienist': {
     label: '치과위생사', icon: '🦷', category: 'HEALTH',
-    file: '/prompts/SP_dental-hygienist_v2_2.md', needsMedicalSafety: true,
+    file: '/prompts/SP_dental-hygienist_v3_1.md', needsMedicalSafety: true,
   },
   'occupational-therapist': {
     label: '작업치료사', icon: '🧠', category: 'HEALTH',
-    file: '/prompts/SP_occupational-therapist_v2_2.md', needsMedicalSafety: true,
+    file: '/prompts/SP_occupational-therapist_v3_1.md', needsMedicalSafety: true,
   },
   'dental-technician': {
     label: '치과기공사', icon: '🦷', category: 'HEALTH',
-    file: '/prompts/SP_dental-technician_v2_2.md', needsMedicalSafety: true,
+    file: '/prompts/SP_dental-technician_v3_1.md', needsMedicalSafety: true,
   },
   'advanced-practice-nurse': {
     label: '전문간호사', icon: '💉', category: 'HEALTH',
-    file: '/prompts/SP_advanced-practice-nurse_v2_2.md', needsMedicalSafety: true,
+    file: '/prompts/SP_advanced-practice-nurse_v3_1.md', needsMedicalSafety: true,
   },
   dietitian: {
     label: '영양사', icon: '🥗', category: 'HEALTH',
-    file: '/prompts/SP_dietitian_v2_2.md', needsMedicalSafety: true,
+    file: '/prompts/SP_dietitian_v3_1.md', needsMedicalSafety: true,
   },
 
   // ── 교육·상담·문화 (SP-EDU-01~06) ────────────────────

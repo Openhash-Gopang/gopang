@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-// gwp-registry.js v2.1 — 혼디 서비스 레지스트리
+// gwp-registry.js v2.2 — 혼디 서비스 레지스트리
 //
 // v2.0 변경사항:
 //   - type 필드 추가: 'inline' | 'tab' | 'tool'
@@ -11,6 +11,11 @@
 //   - sp_url 하드코딩 제거 → sp_key 필드로 대체
 //   - 빌드 시 자동 생성되는 prompts/manifest.json 을 런타임에 fetch
 //   - resolveSpUrls() 로 레지스트리 초기화 (앱 시작 시 1회)
+// v2.2 변경사항 (2026-06-29, manifest.json 정합화 점검 반영):
+//   - kinsurance.sp_key: 'SP-14_kinsurance' → 'SP-16_kinsurance'
+//     (K-Insurance가 K-Cleaner와의 SP-14 번호 충돌로 SP-16 재배정됨에 따라
+//      manifest.json 키가 바뀌었고, 이 파일의 sp_key가 그 변경을 따라가지
+//      못해 깨져 있었음 — resolveSpUrls() 호출 시 sp_url이 null이 되는 버그)
 // ═══════════════════════════════════════════════════════════
 
 const _RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/';
@@ -167,7 +172,7 @@ const GWP_REGISTRY = [
     id: 'kinsurance', name: 'K-Insurance', category: 'ECO',
     type: 'inline',
     url: 'https://insurance.gopang.net/webapp.html',
-    sp_key: 'SP-14_kinsurance',
+    sp_key: 'SP-16_kinsurance',  // v2.2 — SP-14에서 재배정됨 (K-Cleaner 번호충돌 해소)
     status: 'active', priority: 6, threshold: 0.70,
     description: '개인화 보험료 산정. 청구·심사 자동화.',
     triggers: [
