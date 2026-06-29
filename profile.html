@@ -30,74 +30,111 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
 .top-title{font-size:16px;font-weight:700;flex:1}
 .top-share{background:none;border:none;cursor:pointer;padding:4px;color:#374151;display:flex;align-items:center}
 
-/* ── 프로필 헤더 카드 ── */
-.profile-hero{background:#fff;padding:24px 20px 20px;border-bottom:1px solid #f3f4f6}
-.profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#4ade80);
+/* ── 프로필 배너 + 헤더 (Google Maps 장소 카드 스타일) ── */
+.profile-banner{height:92px;background:linear-gradient(180deg,#456bb0 0%,#5b8be3 18%,#5b8be3 78%,#3569d7 100%);
+  position:relative;overflow:hidden}
+.profile-banner svg{position:absolute;bottom:-8px;left:0;width:100%;opacity:.32}
+.profile-hero{background:#fff;padding:0 20px 16px;margin-top:-34px;position:relative}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#007b8b,#3569d7);
   display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;
-  color:#fff;margin-bottom:14px;flex-shrink:0}
-.profile-name{font-size:22px;font-weight:700;color:#111827;margin-bottom:4px}
-.profile-handle{font-size:14px;color:#16a34a;font-weight:600;margin-bottom:8px}
-.profile-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  color:#fff;flex-shrink:0;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.profile-name-block{padding-top:42px}
+.profile-name{font-size:21px;font-weight:700;color:#111827;margin-bottom:2px}
+.profile-type-sub{font-size:13.5px;color:#6b7280;margin-bottom:6px}
+.profile-handle{font-size:12.5px;color:#9ca3af;font-weight:500}
+.profile-handle b{color:#007b8b;font-weight:600}
+.profile-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .badge{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
-.badge-type{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+.badge-type{background:#eafcff;color:#014f5a;border:1px solid #b9eaf2}
 .badge-gdc{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
-.profile-desc{font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:12px}
-.profile-tags{display:flex;gap:6px;flex-wrap:wrap}
+.profile-desc{font-size:14px;color:#374151;line-height:1.6;margin-top:12px}
+.profile-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .tag{padding:4px 10px;background:#f3f4f6;border-radius:20px;font-size:12px;color:#374151}
 
-/* ── 섹션 카드 ── */
-.card{background:#fff;border-radius:14px;margin:12px 16px;overflow:hidden}
-.card-title{font-size:12px;font-weight:600;color:#9ca3af;padding:14px 16px 8px;
+/* ── 퀵 액션 (원형 아이콘 행) ── */
+.quick-actions{display:flex;justify-content:space-around;padding:4px 10px 16px;gap:2px}
+.qa-item{display:flex;flex-direction:column;align-items:center;gap:7px;background:none;
+  border:none;cursor:pointer;font-family:inherit;flex:1;min-width:0;padding:0}
+.qa-circle{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;background:#d3f7ff;color:#007b8b;flex-shrink:0;transition:transform .12s}
+.qa-item:active .qa-circle{transform:scale(.92)}
+.qa-circle.primary{background:#007b8b;color:#fff}
+.qa-label{font-size:11.5px;color:#374151;text-align:center;line-height:1.3;
+  max-width:64px;font-weight:500}
+
+/* ── 섹션 (플랫 리스트 — 박스 제거) ── */
+.card{background:#fff;margin:0;padding:6px 0 12px}
+.card + .card{border-top:1px solid #f1f3f5;margin-top:2px}
+.card-title{font-size:11.5px;font-weight:600;color:#9ca3af;padding:10px 20px 6px;
   text-transform:uppercase;letter-spacing:.06em}
-.info-row{padding:10px 16px;display:flex;align-items:flex-start;gap:12px;border-top:1px solid #f9fafb}
-.info-icon{width:18px;flex-shrink:0;color:#9ca3af;margin-top:2px}
-.info-text{font-size:14px;color:#374151;line-height:1.5;flex:1}
-.info-text a{color:#16a34a;text-decoration:none}
+.info-row{padding:9px 20px;display:flex;align-items:flex-start;gap:14px}
+.info-icon{width:18px;flex-shrink:0;color:#007b8b;margin-top:2px}
+.info-text{font-size:14.5px;color:#374151;line-height:1.5;flex:1}
+.info-text a{color:#007b8b;text-decoration:none}
 
 /* ── 영업시간 ── */
 .hours-table{width:100%;border-collapse:collapse}
-.hours-table td{padding:6px 16px;font-size:13px}
+.hours-table td{padding:6px 20px;font-size:13px}
 .hours-table td:first-child{color:#6b7280;font-weight:600;width:32px}
 .hours-table td:last-child{color:#374151}
 .hours-closed{color:#9ca3af!important}
-.hours-today{background:#f0fdf4}
-.hours-today td{color:#15803d!important;font-weight:600}
+.hours-today{background:#eafcff}
+.hours-today td{color:#014f5a!important;font-weight:600}
 
 /* ── 상품 목록 ── */
-.product-grid{display:flex;flex-direction:column;gap:1px;background:#f3f4f6}
-.product-item{background:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px}
+.product-grid{display:flex;flex-direction:column;gap:1px;background:#f1f3f5}
+.product-item{background:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px}
 .product-img{width:56px;height:56px;border-radius:10px;object-fit:cover;background:#f3f4f6;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
 .product-img img{width:100%;height:100%;object-fit:cover}
 .product-info{flex:1;min-width:0}
 .product-name{font-size:15px;font-weight:600;color:#111827;margin-bottom:2px}
-.product-price{font-size:14px;color:#16a34a;font-weight:700}
+.product-price{font-size:14px;color:#007b8b;font-weight:700}
 .product-detail-btn{background:none;border:none;cursor:pointer;color:#9ca3af;padding:4px}
 .product-detail-text{font-size:13px;color:#6b7280;line-height:1.5;
-  padding:0 16px 14px;display:none}
+  padding:0 20px 14px;display:none}
 .product-detail-text.open{display:block}
 
 /* ── 커스텀 필드 ── */
-.custom-field-row{padding:10px 16px;border-top:1px solid #f9fafb;
+.custom-field-row{padding:9px 20px;
   display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .cf-key{font-size:13px;color:#9ca3af;flex-shrink:0}
 .cf-val{font-size:14px;color:#374151;text-align:right}
 
 /* ── 업종 정보 (industry_fields) ── */
-.ifield-row{padding:10px 16px;border-top:1px solid #f9fafb;
+.ifield-row{padding:9px 20px;
   display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .ifield-key{font-size:13px;color:#9ca3af;flex-shrink:0}
 .ifield-val{font-size:14px;color:#374151;text-align:right;word-break:break-all}
 
+/* ── 필 버튼 (아웃라인 / 옅은 채움) ── */
+.pill-wrap{padding:14px 20px;text-align:center;border-top:1px solid #f1f3f5}
+.btn-pill-outline{display:inline-flex;align-items:center;gap:6px;padding:11px 22px;
+  border:none;border-radius:999px;background:#d3f7ff;color:#014f5a;
+  font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer}
+.btn-pill-filled{display:inline-flex;align-items:center;gap:6px;padding:11px 22px;
+  border:none;border-radius:999px;background:#d3f7ff;color:#014f5a;
+  font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer}
+
+/* ── 누락된 정보 추가 (본인 프로필 전용) ── */
+.missing-info-head{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px 8px}
+.missing-info-title{font-size:15px;font-weight:700;color:#111827}
+.missing-info-hint{color:#c7c7cc;display:flex;align-items:center}
+.missing-row{display:flex;align-items:center;gap:14px;padding:10px 20px;
+  color:#111827;font-weight:500;font-size:14.5px;cursor:pointer;background:none;
+  border:none;width:100%;text-align:left;font-family:inherit}
+.missing-row-icon{color:#007b8b;display:flex;flex-shrink:0}
+
 /* ── AI 비서 채팅 ── */
 .ai-section{margin:12px 16px 0}
-.ai-toggle-btn{width:100%;padding:14px 20px;border:2px solid #16a34a;border-radius:16px;
-  background:linear-gradient(135deg,#f0fdf4,#dcfce7);
+.ai-toggle-btn{width:100%;padding:14px 20px;border:2px solid #007b8b;border-radius:16px;
+  background:linear-gradient(135deg,#eafcff,#d3f7ff);
   display:flex;align-items:center;justify-content:space-between;cursor:pointer}
 .ai-toggle-left{display:flex;align-items:center;gap:10px}
-.ai-toggle-name{font-size:15px;font-weight:700;color:#15803d}
-.ai-toggle-sub{font-size:12px;color:#86efac;margin-top:2px}
-.ai-toggle-arrow{color:#16a34a;transition:transform .2s}
+.ai-toggle-name{font-size:15px;font-weight:700;color:#014f5a}
+.ai-toggle-sub{font-size:12px;color:#5fb8c4;margin-top:2px}
+.ai-toggle-arrow{color:#007b8b;transition:transform .2s}
 .ai-toggle-arrow.open{transform:rotate(180deg)}
 
 .ai-chat-box{border:1.5px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px;
@@ -106,7 +143,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
 .ai-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
 .ai-msg{max-width:80%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.55}
 .ai-msg-ai{background:#f3f4f6;color:#111827;align-self:flex-start;border-radius:4px 14px 14px 14px}
-.ai-msg-user{background:#16a34a;color:#fff;align-self:flex-end;border-radius:14px 14px 4px 14px}
+.ai-msg-user{background:#007b8b;color:#fff;align-self:flex-end;border-radius:14px 14px 4px 14px}
 .ai-msg-typing{display:flex;gap:4px;align-items:center;padding:10px 14px}
 .ai-dot{width:6px;height:6px;border-radius:50%;background:#9ca3af;
   animation:bounce .8s infinite alternate}
@@ -116,18 +153,11 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
 .ai-input-row{padding:10px 12px;border-top:1px solid #f3f4f6;display:flex;gap:8px}
 .ai-input{flex:1;border:1.5px solid #e5e7eb;border-radius:20px;padding:8px 14px;
   font-size:14px;font-family:inherit;outline:none;resize:none;max-height:80px}
-.ai-input:focus{border-color:#16a34a}
-.ai-send{width:36px;height:36px;border:none;border-radius:50%;background:#16a34a;
+.ai-input:focus{border-color:#007b8b}
+.ai-send{width:36px;height:36px;border:none;border-radius:50%;background:#007b8b;
   color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
   flex-shrink:0;transition:opacity .2s}
 .ai-send:disabled{opacity:.4;cursor:not-allowed}
-
-/* ── 액션 버튼 ── */
-.action-bar{padding:16px;display:flex;gap:10px}
-.btn-contact{flex:1;padding:13px;border:1.5px solid #16a34a;border-radius:12px;
-  background:#fff;color:#16a34a;font-size:14px;font-weight:700;cursor:pointer}
-.btn-p2p{flex:1;padding:13px;border:none;border-radius:12px;
-  background:#16a34a;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
 
 /* ── 로딩 / 에러 ── */
 .skeleton{background:linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 50%,#f3f4f6 75%);
@@ -137,8 +167,8 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
 
 /* ── 반응형 ── */
 @media(min-width:480px){
-  .card,.ai-section,.action-bar{max-width:480px;margin-left:auto;margin-right:auto}
-  .profile-hero{max-width:480px;margin:0 auto}
+  .card,.ai-section{max-width:480px;margin-left:auto;margin-right:auto}
+  .profile-hero,.profile-banner,.quick-actions,.pill-wrap{max-width:480px;margin-left:auto;margin-right:auto}
 }
 .hidden{display:none!important}
 </style>
@@ -173,17 +203,29 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
 
 <!-- 기본 프로필 (본인 보기 — 아직 사업자 등록 등 상세 프로필을 작성하지 않은 경우의 대체 화면) -->
 <div id="basic-main" class="hidden">
+  <div class="profile-banner">
+    <svg viewBox="0 0 400 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="14" width="22" height="26" fill="#fff"/><rect x="48" y="6" width="16" height="34" fill="#fff"/>
+      <rect x="70" y="18" width="20" height="22" fill="#fff"/><rect x="300" y="10" width="18" height="30" fill="#fff"/>
+      <rect x="324" y="20" width="14" height="20" fill="#fff"/><polygon points="360,40 380,8 400,40" fill="#fff"/>
+    </svg>
+  </div>
   <div class="profile-hero">
-    <div style="display:flex;align-items:flex-start;gap:16px">
-      <div class="profile-avatar" id="bp-avatar"></div>
-      <div style="flex:1;min-width:0">
-        <div class="profile-name" id="bp-name"></div>
-        <div class="profile-handle" id="bp-handle"></div>
-      </div>
+    <div class="profile-avatar" id="bp-avatar"></div>
+    <div class="profile-name-block">
+      <div class="profile-name" id="bp-name"></div>
+      <div class="profile-handle" id="bp-handle"></div>
     </div>
     <div style="margin-top:10px;font-size:12.5px;color:#9ca3af;line-height:1.6">
       아직 사업자·기관 등 상세 프로필을 작성하지 않았습니다. 본인에게만 보이는 기본 정보입니다.
     </div>
+  </div>
+
+  <div class="pill-wrap" style="border-top:none">
+    <button class="btn-pill-outline" onclick="location.href='/register-profile.html'">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      프로필 등록 시작하기
+    </button>
   </div>
 
   <!-- 위치 -->
@@ -204,7 +246,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
         이 코드를 출입문이나 명함에 인쇄하면, 다른 사람이 카메라로 비추기만 해도<br>바로 이 프로필로 연결됩니다.
       </div>
       <button id="bp-code-download" style="padding:10px 20px;border:1px solid #e5e7eb;border-radius:99px;
-              background:#fff;color:#16a34a;font-weight:600;font-size:13px;cursor:pointer">
+              background:#fff;color:#007b8b;font-weight:600;font-size:13px;cursor:pointer">
         이미지로 저장
       </button>
     </div>
@@ -215,17 +257,56 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
 <div id="main" class="hidden">
 
   <!-- 프로필 헤더 -->
+  <!-- 프로필 배너 + 헤더 -->
+  <div class="profile-banner">
+    <svg viewBox="0 0 400 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="14" width="22" height="26" fill="#fff"/><rect x="48" y="6" width="16" height="34" fill="#fff"/>
+      <rect x="70" y="18" width="20" height="22" fill="#fff"/><rect x="300" y="10" width="18" height="30" fill="#fff"/>
+      <rect x="324" y="20" width="14" height="20" fill="#fff"/><polygon points="360,40 380,8 400,40" fill="#fff"/>
+    </svg>
+  </div>
   <div class="profile-hero">
-    <div style="display:flex;align-items:flex-start;gap:16px">
-      <div class="profile-avatar" id="p-avatar"></div>
-      <div style="flex:1;min-width:0">
-        <div class="profile-name" id="p-name"></div>
-        <div class="profile-handle" id="p-handle"></div>
-        <div class="profile-badges" id="p-badges"></div>
-      </div>
+    <div class="profile-avatar" id="p-avatar"></div>
+    <div class="profile-name-block">
+      <div class="profile-name" id="p-name"></div>
+      <div class="profile-type-sub" id="p-type-sub"></div>
+      <div class="profile-handle" id="p-handle"></div>
+      <div class="profile-badges" id="p-badges"></div>
     </div>
     <div class="profile-desc hidden" id="p-desc"></div>
     <div class="profile-tags hidden" id="p-tags"></div>
+  </div>
+
+  <!-- 퀵 액션 (메시지/P2P/공유/혼디코드/저장) -->
+  <div class="quick-actions" id="quick-actions">
+    <button class="qa-item" id="qa-msg" onclick="contactOwner()">
+      <span class="qa-circle primary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+      <span class="qa-label">메시지</span>
+    </button>
+    <button class="qa-item" id="qa-p2p" onclick="startP2P()">
+      <span class="qa-circle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 14a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 3.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+      <span class="qa-label">P2P 연결</span>
+    </button>
+    <button class="qa-item" id="qa-save" onclick="toggleSaveProfile()">
+      <span class="qa-circle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>
+      <span class="qa-label" id="qa-save-label">저장</span>
+    </button>
+    <button class="qa-item" id="qa-code" onclick="openMyHondiCode()">
+      <span class="qa-circle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="14" y1="21" x2="21" y2="21"/><line x1="17.5" y1="14" x2="17.5" y2="21"/></svg></span>
+      <span class="qa-label">혼디코드</span>
+    </button>
+    <button class="qa-item" onclick="shareProfile()">
+      <span class="qa-circle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></span>
+      <span class="qa-label">공유</span>
+    </button>
+  </div>
+
+  <!-- 프로필 수정 (본인 프로필일 때만 표시) -->
+  <div class="pill-wrap hidden" id="btn-edit-profile-wrap" style="border-top:none;padding-top:0">
+    <button class="btn-pill-outline" onclick="location.href='/register-profile.html'">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      프로필 수정
+    </button>
   </div>
 
   <!-- 연락처 / 위치 -->
@@ -258,11 +339,22 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
     <div id="custom-rows"></div>
   </div>
 
+  <!-- 누락된 정보 추가 (본인 프로필 + 비어있는 항목이 있을 때만) -->
+  <div class="card hidden" id="card-missing-info">
+    <div class="missing-info-head">
+      <span class="missing-info-title">누락된 정보 추가</span>
+      <span class="missing-info-hint" title="검색 노출과 신뢰도를 높이려면 항목을 채워주세요">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </span>
+    </div>
+    <div id="missing-info-rows"></div>
+  </div>
+
   <!-- AI 비서 채팅 -->
   <div class="ai-section hidden" id="ai-section">
     <button class="ai-toggle-btn" onclick="toggleAIChat()">
       <div class="ai-toggle-left">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#007b8b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-4 4 4 4 0 0 1-4-4V6a4 4 0 0 1 4-4z"/>
           <path d="M8 13v1a4 4 0 0 0 8 0v-1"/>
           <line x1="12" y1="18" x2="12" y2="22"/>
@@ -287,15 +379,11 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
     </div>
   </div>
 
-  <!-- 액션 버튼 -->
-  <div class="action-bar">
-    <button class="btn-contact" onclick="contactOwner()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      메시지
-    </button>
-    <button class="btn-p2p" onclick="startP2P()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 14a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 3.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-      P2P 연결
+  <!-- 문의하기 (사업자 프로필 — AI 비서 채팅으로 연결) -->
+  <div class="pill-wrap hidden" id="btn-inquiry-wrap">
+    <button class="btn-pill-filled" onclick="document.getElementById('ai-section')?.scrollIntoView({behavior:'smooth'});if(!document.getElementById('ai-chat-box')?.classList.contains('open'))toggleAIChat();">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      AI 비서에게 문의하기
     </button>
   </div>
 
@@ -417,23 +505,36 @@ function render(p) {
   const cont  = pub.contact  || {};
   const aiCfg = pub.ai_assistant || p.ai_assistant || null;
 
+  // ── 본인 프로필 여부 ──
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { stored = null; }
+  const myHandle = (stored?.handle || '').replace(/^@/, '');
+  const _isOwner = !!myHandle && myHandle === (p.handle || '').replace(/^@/, '');
+
   // ── 헤더 ──
   document.getElementById('top-title').textContent = p.name || '프로필';
   document.getElementById('p-name').textContent    = p.name || '';
   document.getElementById('p-handle').textContent  = p.handle || '';
+  document.getElementById('p-type-sub').textContent = TYPE_KO[p.entity_type] || '';
 
   // 아바타: 이름 첫 글자
   const av = document.getElementById('p-avatar');
   av.textContent = (p.name || '?')[0];
 
-  // 뱃지
+  // 뱃지 (유형은 위에서 서브텍스트로 표시 — 뱃지에는 결제 등 특수 표시만)
   const badges = document.getElementById('p-badges');
-  if (p.entity_type) {
-    badges.innerHTML = `<span class="badge badge-type">${TYPE_KO[p.entity_type]||p.entity_type}</span>`;
-  }
+  badges.innerHTML = '';
   if (fin.gdc_accepted) {
     badges.innerHTML += `<span class="badge badge-gdc">💰 GDC 결제</span>`;
   }
+
+  // ── 퀵 액션 / 수정 버튼 노출 제어 ──
+  document.getElementById('btn-edit-profile-wrap').classList.toggle('hidden', !_isOwner);
+  document.getElementById('qa-msg')?.classList.toggle('hidden', _isOwner);
+  document.getElementById('qa-p2p')?.classList.toggle('hidden', _isOwner);
+  document.getElementById('qa-save')?.classList.toggle('hidden', _isOwner);
+  if (!_isOwner) _initSaveButtonState(p.handle);
+  document.getElementById('btn-inquiry-wrap').classList.toggle('hidden', !(aiCfg?.system_prompt && !_isOwner));
 
   // 소개
   const desc = ident.description || p.description || '';
@@ -607,8 +708,100 @@ function render(p) {
     }
   }
 
+  // ── 누락된 정보 추가 (본인 프로필만) ──
+  renderMissingInfo(p, ident, pub, cont, loc, tags, _isOwner);
+
   // ── SEO ──
   injectSEO(p, ident, tags);
+}
+
+// ── 누락된 정보 추가 (본인 프로필 전용) ──────────────────
+function renderMissingInfo(p, ident, pub, cont, loc, tags, isOwner) {
+  const card = document.getElementById('card-missing-info');
+  if (!isOwner) { card.classList.add('hidden'); return; }
+
+  const ICONS = {
+    desc:  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+    web:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+    hours: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+    tags:  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 23 1 13l9.59-9.59A2 2 0 0 1 12 3h7a2 2 0 0 1 2 2v7a2 2 0 0 1-.41 1.41z"/><circle cx="16.5" cy="7.5" r="1.5"/></svg>`,
+    phone: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 14a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 3.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
+    addr:  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+  };
+
+  const rows = [];
+  if (!(ident.description || p.description))            rows.push({ label: '소개 추가',     icon: ICONS.desc  });
+  if (!tags.length)                                       rows.push({ label: '태그 추가',     icon: ICONS.tags  });
+  if (!(cont.website || p.website))                       rows.push({ label: '웹사이트 추가', icon: ICONS.web   });
+  if (!(cont.phone_display || p.phone))                   rows.push({ label: '전화번호 추가', icon: ICONS.phone });
+  if (!(loc.address_short || p.address))                  rows.push({ label: '주소 추가',     icon: ICONS.addr  });
+  if (p.entity_type === 'business' && !Object.keys(pub.activity?.hours || {}).length)
+    rows.push({ label: '영업시간 추가', icon: ICONS.hours });
+
+  if (!rows.length) { card.classList.add('hidden'); return; }
+
+  document.getElementById('missing-info-rows').innerHTML = rows.map(r => `
+    <button class="missing-row" onclick="location.href='/register-profile.html'">
+      <span class="missing-row-icon">${r.icon}</span><span>${r.label}</span>
+    </button>`).join('');
+  card.classList.remove('hidden');
+}
+
+// ── 프로필 저장(즐겨찾기) — 기기 로컬 저장, 서버 동기화 없음 ──
+const _SAVED_PROFILES_KEY = 'hondi_saved_profiles';
+function _getSavedProfiles() {
+  try { return JSON.parse(localStorage.getItem(_SAVED_PROFILES_KEY) || '[]'); } catch { return []; }
+}
+function _initSaveButtonState(handle) {
+  if (!handle) return;
+  const saved = _getSavedProfiles().includes(handle);
+  document.querySelector('#qa-save .qa-circle')?.classList.toggle('primary', saved);
+  const label = document.getElementById('qa-save-label');
+  if (label) label.textContent = saved ? '저장됨' : '저장';
+}
+function toggleSaveProfile() {
+  if (!_profile?.handle) return;
+  const saved = _getSavedProfiles();
+  const idx   = saved.indexOf(_profile.handle);
+  const circle = document.querySelector('#qa-save .qa-circle');
+  const label  = document.getElementById('qa-save-label');
+  if (idx >= 0) { saved.splice(idx, 1); circle?.classList.remove('primary'); if (label) label.textContent = '저장'; }
+  else          { saved.push(_profile.handle); circle?.classList.add('primary'); if (label) label.textContent = '저장됨'; }
+  try { localStorage.setItem(_SAVED_PROFILES_KEY, JSON.stringify(saved)); } catch {}
+}
+
+// ── 혼디 색상 코드 보기 (이 프로필의 guid 기준) ──────────
+async function openMyHondiCode() {
+  if (!_profile?.guid) { alert('코드를 생성할 수 없습니다.'); return; }
+  try {
+    const { guidToShortId, generateHondiCodeDataURL } = await import('./src/gopang/ai/hondi-code.js');
+    const version = _profile.hondi_code_version || 'v1';
+    const shortId = guidToShortId(_profile.guid, version);
+    const dataURL = await generateHondiCodeDataURL(shortId, version);
+    _showHondiCodeModal(dataURL);
+  } catch (e) {
+    console.warn('[Profile] 혼디 코드 생성 실패:', e.message);
+    alert('코드를 불러오지 못했습니다.');
+  }
+}
+function _showHondiCodeModal(dataURL) {
+  let modal = document.getElementById('hondi-code-view-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'hondi-code-view-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);' +
+      'display:flex;align-items:center;justify-content:center';
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:16px;padding:24px;max-width:300px;width:90%;text-align:center">
+        <img id="hondi-code-view-img" style="width:100%;border-radius:8px;border:1px solid #f3f4f6">
+        <button onclick="document.getElementById('hondi-code-view-modal').remove()"
+          style="margin-top:14px;padding:10px 22px;border:none;border-radius:999px;
+                 background:#007b8b;color:#fff;font-weight:600;font-size:13.5px;cursor:pointer">닫기</button>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  document.getElementById('hondi-code-view-img').src = dataURL;
 }
 
 // ── AI 비서 채팅 ─────────────────────────────────────────
