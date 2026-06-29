@@ -476,7 +476,7 @@ export default {
     // DEEPSEEK_API_KEY 등 서버 보유 키로 무제한 호출이 가능했다.
     // (2026-06-28 — 기기를 모두 끈 상태에서도 DeepSeek 크레딧이
     // 소진된 사고의 원인 분석 후 추가)
-    const AI_PROXY_PATHS = ['/chat/completions', '/deepseek', '/ai/chat', '/gemini/'];
+    const AI_PROXY_PATHS = ['/chat/completions', '/deepseek', '/ai/chat', '/gemini/', '/llm/relay'];
     const isAiProxyPath = AI_PROXY_PATHS.some(p => pathname === p || pathname.startsWith(p));
     const _meta = {
       ip:     request.headers.get('cf-connecting-ip') || 'unknown',
@@ -491,6 +491,7 @@ export default {
 
     if (pathname === '/chat/completions')        return callDeepSeek(bodyText, env, corsHeaders, null, _meta);
     if (pathname.startsWith('/deepseek'))        return callDeepSeek(bodyText, env, corsHeaders, null, _meta);
+    if (pathname === '/llm/relay')               return handleLLMRelay(bodyText, env, corsHeaders, _meta);
     if (pathname.startsWith('/gemini/'))         return callOpenAIFromGeminiBody(bodyText, env, corsHeaders, _meta);
     if (pathname === '/ai/chat')                 return handleAIChat(bodyText, env, corsHeaders, _meta);
 
@@ -1263,6 +1264,82 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   let _modelForLog=''; try{_modelForLog=JSON.parse(bodyText)?.model||'';}catch{}
   console.log(JSON.stringify({tag:'AI_PROXY_CALL',fn:'callDeepSeek',ts:new Date().toISOString(),target:_useOR?'openrouter':'deepseek',model:_modelForLog,fallbackFrom,...meta}));
   const res=await fetch(_url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${_key}`,...(_useOR?{'HTTP-Referer':'https://hondi.net','X-Title':'Hondi'}:{})},body:bodyText});if(!res.ok){const errText=await res.text();let errMsg;try{errMsg=JSON.parse(errText)?.error?.message;}catch{}return new Response(JSON.stringify({error:errMsg||`HTTP ${res.status}`}),{status:res.status,headers:corsHeaders});}if(isStream){return new Response(res.body,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});}const data=await res.json();if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'DEEPSEEK_ERROR',e.message,corsHeaders);}}
+
+// ═══════════════════════════════════════════════════════════
+// /llm/relay — 사용자 본인 키(BYOK) 범용 중계 (2026-06-29)
+//
+// 배경: ai-setup-mobile.html에서 등록한 사용자 본인 키로 DeepSeek 등을
+// "브라우저에서 직접" 호출하던 기존 클라이언트 코드가 CORS에 막혔다(대부분
+// LLM 벤더 API는 브라우저발 요청을 허용하지 않음 — 서버 간 호출만 허용).
+// 무료 폴백(gopang-proxy)이 항상 마지막에 받아주던 시절엔 이게 안 드러났다.
+//
+// 이 엔드포인트는 "무료 모델을 제공"하는 게 아니다 — 사용자가 직접 등록한
+// 키를 그대로, 그 사용자가 고른 모델로, 서버를 한 번 거쳐서만 전달한다
+// (서버 간 호출은 CORS 대상이 아님). 비용은 여전히 사용자 본인의 키로 청구됨.
+//
+// 보안: baseUrl을 알려진 LLM 벤더 호스트로만 제한한다(그 외 호스트로의
+// 임의 중계를 막아 이 엔드포인트가 오픈 프록시/SSRF 통로가 되는 것을 방지).
+//
+// 범위: OpenAI 호환(/chat/completions, 같은 요청·응답 스키마) 벤더만 지원—
+// DeepSeek·Gemini(OpenAI 호환 레이어)·OpenAI·Grok·OpenRouter. Claude(Anthropic)는
+// 엔드포인트 경로(/v1/messages)와 요청·응답 스키마 자체가 달라서 이 범용
+// 중계로 안 된다 — 별도 작업 필요(지금은 일부러 손 안 댐).
+// ═══════════════════════════════════════════════════════════
+const ALLOWED_LLM_RELAY_HOSTS = new Set([
+  'generativelanguage.googleapis.com', // Gemini (OpenAI 호환 레이어)
+  'api.deepseek.com',
+  'api.x.ai',                          // Grok
+  'openrouter.ai',
+  'api.openai.com',
+  // 'api.anthropic.com' 의도적으로 제외 — OpenAI 호환 스키마가 아님
+]);
+
+async function handleLLMRelay(bodyText, env, corsHeaders, meta = null) {
+  let body;
+  try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
+
+  const { provider, baseUrl, apiKey, model, messages, max_tokens, temperature, stream } = body || {};
+  if (!baseUrl || !apiKey || !model || !Array.isArray(messages)) {
+    return _err(400, 'MISSING_FIELD', 'baseUrl/apiKey/model/messages 필수', corsHeaders);
+  }
+
+  let targetHost;
+  try { targetHost = new URL(baseUrl).host; } catch { return _err(400, 'INVALID_BASEURL', 'baseUrl 형식이 올바르지 않습니다', corsHeaders); }
+  if (!ALLOWED_LLM_RELAY_HOSTS.has(targetHost)) {
+    console.warn(JSON.stringify({ tag: 'LLM_RELAY_HOST_BLOCKED', host: targetHost, ts: new Date().toISOString(), ...meta }));
+    return _err(403, 'HOST_NOT_ALLOWED', `허용되지 않은 호스트: ${targetHost}`, corsHeaders);
+  }
+
+  const targetUrl = baseUrl.replace(/\/+$/, '') + '/chat/completions';
+  const isStream  = !!stream;
+
+  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
+  if (provider === 'openrouter') { headers['HTTP-Referer'] = 'https://hondi.net'; headers['X-Title'] = 'Hondi'; }
+
+  const payload = { model, messages, stream: isStream };
+  if (max_tokens  != null) payload.max_tokens  = max_tokens;
+  if (temperature != null) payload.temperature = temperature;
+
+  console.log(JSON.stringify({ tag: 'LLM_RELAY_CALL', provider: provider || targetHost, model, stream: isStream, ts: new Date().toISOString(), ...meta }));
+
+  try {
+    const res = await fetch(targetUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      return new Response(errText || JSON.stringify({ error: `HTTP ${res.status}` }), { status: res.status, headers: corsHeaders });
+    }
+    if (isStream) {
+      return new Response(res.body, {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' },
+      });
+    }
+    const data = await res.text();
+    return new Response(data, { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  } catch (e) {
+    return _err(502, 'RELAY_ERROR', e.message, corsHeaders);
+  }
+}
 
 // ═══════════════════════════════════════════════════════════
 // Phase 1 — OpenHash 앵커링 프록시 (/openhash/anchor)

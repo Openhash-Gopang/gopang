@@ -2871,6 +2871,7 @@ window.closeTermsOfUse = closeTermsOfUse;
       }
       candidates.push({
         provider: p.provider,
+        baseUrl: (p.baseUrl || info.baseUrl).replace(/\/+$/, ''),
         url: (p.baseUrl || info.baseUrl).replace(/\/+$/, '') + '/chat/completions',
         model: p.model, key: p.apiKey,
       });
@@ -2899,17 +2900,19 @@ window.closeTermsOfUse = closeTermsOfUse;
     let lastErr = '';
     for (const c of candidates) {
       try {
-        const headers = { 'Content-Type': 'application/json' };
-        if (c.key) {
-          headers['Authorization'] = 'Bearer ' + c.key;
-          if (c.provider === 'openrouter') headers['HTTP-Referer'] = 'https://hondi.net';
-        }
         if (c.provider === 'openrouter') recordOpenRouterCall(); // 분당 슬라이딩 윈도우에 기록
 
-        const res = await fetch(c.url, {
+        // ※ 2026-06-29: 벤더 직접 호출은 대부분 CORS에 막힌다(call-ai.js와
+        // 동일한 이유) — 서버(/llm/relay)를 한 번 거쳐서 보낸다. 여전히
+        // 사용자 본인 키·본인이 고른 모델 그대로(무료 모델 아님).
+        const res = await fetch(`${endpoint.replace(/\/+$/, '')}/llm/relay`, {
           method: 'POST',
-          headers,
-          body: JSON.stringify({ model: c.model, messages: _panelHistory, stream: true, max_tokens: TOKEN_BUDGET.CHAT_REPLY }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: c.provider, baseUrl: c.baseUrl, apiKey: c.key,
+            model: c.model, messages: _panelHistory, stream: true,
+            max_tokens: TOKEN_BUDGET.CHAT_REPLY,
+          }),
         });
         if (!res.ok) {
           lastErr = `HTTP ${res.status}`;

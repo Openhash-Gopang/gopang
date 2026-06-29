@@ -557,14 +557,26 @@ export async function _callLLM(messages, options = {}) {
       if (!PROVIDER_INFO[c.provider]?.noStreamOptions) {
         reqBody.stream_options = { include_usage: true };
       }
-      const attempt = await fetch(`${c.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(c.isProxy ? {} : { 'Authorization': `Bearer ${c.apiKey}` }),
-        },
-        body: JSON.stringify(reqBody),
-      });
+      // 'legacy'(사용자가 직접 운영하는 커스텀 엔드포인트)는 알려진 벤더가
+      // 아니므로 중계 허용목록에 없다 — 중계를 거치면 무조건 막힌다. 이
+      // 경로만 예외적으로 원래대로 직접 호출한다(원래도 사용자 본인이
+      // CORS를 직접 책임지는 시나리오였음).
+      const attempt = c.provider === 'legacy'
+        ? await fetch(`${c.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.apiKey}` },
+            body: JSON.stringify(reqBody),
+          })
+        : await fetch(`${CFG.endpoint.replace(/\/+$/, '')}/llm/relay`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              provider: c.provider, baseUrl: c.baseUrl, apiKey: c.apiKey,
+              model: reqBody.model, messages: reqBody.messages,
+              max_tokens: reqBody.max_tokens, temperature: reqBody.temperature,
+              stream: true,
+            }),
+          });
       if (attempt.ok) { res = attempt; break; }
       const errBody = await attempt.text().catch(() => '');
       lastErr = new Error(`API ${attempt.status}: ${errBody.slice(0, 300) || '응답없음'}`);
@@ -838,15 +850,31 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
         if (!PROVIDER_INFO[c.provider]?.noStreamOptions) {
           reqBody.stream_options = { include_usage: true };
         }
-        const attempt = await fetch(`${c.baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(c.isProxy ? {} : { 'Authorization': `Bearer ${c.apiKey}` }),
-          },
-          body: JSON.stringify(reqBody),
-          signal: _currentAbort?.signal,
-        });
+        // ※ 2026-06-29: 벤더에 브라우저에서 직접 fetch하면 대부분 CORS에
+        // 막힌다(서버 간 호출만 허용하는 게 일반적). 무료 폴백이 항상
+        // 마지막에 받아주던 시절엔 이게 안 드러났다 — 그게 사라진 지금은
+        // 직접 호출이 그냥 실패한다. 서버(/llm/relay)를 한 번 거쳐서 보낸다
+        // (여전히 사용자 본인 키·본인이 고른 모델 그대로 — 무료 모델이 아님).
+        // 'legacy'(사용자가 직접 운영하는 커스텀 엔드포인트)는 알려진 벤더가
+        // 아니므로 중계 허용목록에 없다 — 이 경로만 예외적으로 직접 호출한다.
+        const attempt = c.provider === 'legacy'
+          ? await fetch(`${c.baseUrl}/chat/completions`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.apiKey}` },
+              body: JSON.stringify(reqBody),
+              signal: _currentAbort?.signal,
+            })
+          : await fetch(`${CFG.endpoint.replace(/\/+$/, '')}/llm/relay`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                provider: c.provider, baseUrl: c.baseUrl, apiKey: c.apiKey,
+                model: reqBody.model, messages: reqBody.messages,
+                max_tokens: reqBody.max_tokens, temperature: reqBody.temperature,
+                stream: true,
+              }),
+              signal: _currentAbort?.signal,
+            });
 
         if (attempt.ok) { res = attempt; usedCandidate = c; break; }
 
