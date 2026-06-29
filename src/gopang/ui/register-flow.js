@@ -55,13 +55,13 @@ function _buildRegisterModal({ pendingPeer, subtitle, peerCard, btnLabel, onSucc
 
   const peerCardHTML = peerCard ? `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;
-                background:#f0fdf4;border-radius:12px;padding:12px 14px">
+                background:#EEF4FF;border-radius:12px;padding:12px 14px">
       <span style="font-size:22px">${peerCard.avatar_emoji || ''}</span>
       <div>
         <div style="font-size:14px;font-weight:700;color:#111">${peerCard.name || peerCard.handle}</div>
         <div style="font-size:11px;color:#6b7280">${peerCard.handle || ''}</div>
       </div>
-      <div style="margin-left:auto;font-size:11px;color:#16a34a;font-weight:600">← 대화 상대</div>
+      <div style="margin-left:auto;font-size:11px;color:#1A73E8;font-weight:600">← 대화 상대</div>
     </div>` : '';
 
   ov.innerHTML = `
@@ -69,10 +69,10 @@ function _buildRegisterModal({ pendingPeer, subtitle, peerCard, btnLabel, onSucc
                 width:100%;max-width:480px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))">
       <div style="width:36px;height:4px;background:#e5e7eb;border-radius:2px;margin:0 auto 20px"></div>
       ${peerCardHTML}
-      <p style="font-weight:700;font-size:18px;margin:0 0 6px;color:#111;display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> 고팡 아이디 등록</p>
+      <p style="font-weight:700;font-size:18px;margin:0 0 6px;color:#111;display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A73E8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> 고팡 아이디 등록</p>
       <p style="font-size:13px;color:#6b7280;margin:0 0 18px;line-height:1.6">${subtitle}</p>
       <div style="background:#f9fafb;border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:12px;color:#374151;line-height:1.7">
-        <b style="color:#16a34a">등록 사용자 혜택</b><br>
+        <b style="color:#1A73E8">등록 사용자 혜택</b><br>
         ✅ P2P 채팅 · AI 비서 사용<br>
         ✅ GDC 결제 수단 · 재무제표 자동 생성<br>
         ✅ 프로필 페이지 (사업체 → 쇼핑몰 활용)
@@ -104,7 +104,7 @@ function _buildRegisterModal({ pendingPeer, subtitle, peerCard, btnLabel, onSucc
                  background:none;cursor:pointer;font-size:14px;font-family:inherit">취소</button>
         <button id="_reg_ok"
           style="flex:2;padding:13px;border:none;border-radius:10px;
-                 background:#16a34a;color:#fff;cursor:pointer;
+                 background:#1A73E8;color:#fff;cursor:pointer;
                  font-size:14px;font-weight:700;font-family:inherit">${btnLabel}</button>
       </div>
     </div>`;
@@ -145,7 +145,7 @@ function _buildRegisterModal({ pendingPeer, subtitle, peerCard, btnLabel, onSucc
   // 모달 열리자마자 자동 시도
   _autoRegion();
 
-  inp.addEventListener('focus', () => inp.style.borderColor = '#16a34a');
+  inp.addEventListener('focus', () => inp.style.borderColor = '#1A73E8');
   inp.addEventListener('blur',  () => inp.style.borderColor = '#e5e7eb');
   ov.querySelector('#_reg_cancel').onclick = () => ov.remove();
 

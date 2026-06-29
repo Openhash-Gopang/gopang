@@ -63,8 +63,8 @@ function _renderFilterChips() {
   wrap.innerHTML = filters.map(f =>
     `<button class="search-chip${f.key === 'all' ? ' active' : ''}"
        data-filter="${f.key}" onclick="window._setSearchFilter('${f.key}')"
-       style="padding:5px 12px;border-radius:20px;border:1.5px solid ${f.key==='all'?'#16a34a':'#e5e7eb'};
-              background:${f.key==='all'?'#f0fdf4':'#fff'};color:${f.key==='all'?'#15803d':'#374151'};
+       style="padding:5px 12px;border-radius:20px;border:1.5px solid ${f.key==='all'?'#1A73E8':'#e5e7eb'};
+              background:${f.key==='all'?'#EEF4FF':'#fff'};color:${f.key==='all'?'#1557B0':'#374151'};
               font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
        ${f.label}
      </button>`
@@ -77,9 +77,9 @@ window._setSearchFilter = function(key) {
   // 칩 스타일 갱신
   document.querySelectorAll('.search-chip').forEach(c => {
     const active = c.dataset.filter === key;
-    c.style.borderColor  = active ? '#16a34a' : '#e5e7eb';
-    c.style.background   = active ? '#f0fdf4' : '#fff';
-    c.style.color        = active ? '#15803d' : '#374151';
+    c.style.borderColor  = active ? '#1A73E8' : '#e5e7eb';
+    c.style.background   = active ? '#EEF4FF' : '#fff';
+    c.style.color        = active ? '#1557B0' : '#374151';
   });
   if (key === 'nearby') {
     _loadNearby();
@@ -192,7 +192,7 @@ function _profileCard(r, q) {
          onmouseenter="this.style.background='#f9fafb'"
          onmouseleave="this.style.background=''">
       <!-- 아바타 -->
-      <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#4ade80);
+      <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#3B7FD4,#93C4F9);
                   display:flex;align-items:center;justify-content:center;
                   font-size:18px;font-weight:700;color:#fff;flex-shrink:0">
         ${(r.name||'?')[0]}
@@ -205,7 +205,7 @@ function _profileCard(r, q) {
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
           <span style="font-size:12px;color:#9ca3af">${r.handle||''}</span>
-          ${label ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:#16a34a;background:#f0fdf4;padding:2px 7px;border-radius:10px">${icon}${label}</span>` : ''}
+          ${label ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:#1A73E8;background:#EEF4FF;padding:2px 7px;border-radius:10px">${icon}${label}</span>` : ''}
         </div>
         ${tags.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap">${tags.map(t=>`<span style="font-size:11px;background:#f3f4f6;color:#6b7280;padding:2px 7px;border-radius:10px">#${t}</span>`).join('')}</div>` : ''}
         ${r.address ? `<div style="font-size:11px;color:#9ca3af;margin-top:3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${r.address}</div>` : ''}
@@ -229,7 +229,7 @@ function _setResultState(state, msg = '') {
   if (state === 'loading') {
     el.innerHTML = `
       <div style="display:flex;gap:6px;align-items:center;padding:20px 0;justify-content:center">
-        ${[0,1,2].map(i=>`<div style="width:7px;height:7px;border-radius:50%;background:#16a34a;animation:sb .8s ${i*.2}s infinite alternate"></div>`).join('')}
+        ${[0,1,2].map(i=>`<div style="width:7px;height:7px;border-radius:50%;background:#1A73E8;animation:sb .8s ${i*.2}s infinite alternate"></div>`).join('')}
       </div>
       <style>@keyframes sb{from{transform:translateY(0)}to{transform:translateY(-6px)}}</style>`;
   } else if (state === 'error') {

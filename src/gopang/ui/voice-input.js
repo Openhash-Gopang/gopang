@@ -55,7 +55,7 @@ function _ensureMicButton() {
   btn.style.cssText = [
     'position:fixed', 'right:16px', 'bottom:90px', 'z-index:150',
     'width:48px', 'height:48px', 'border-radius:50%', 'border:none',
-    'background:#1a9e6a', 'color:#fff', 'font-size:20px', 'cursor:pointer',
+    'background:#1A73E8', 'color:#fff', 'font-size:20px', 'cursor:pointer',
     'box-shadow:0 4px 12px rgba(0,0,0,.25)', 'transition:opacity .15s, background .15s'
   ].join(';');
   document.body.appendChild(btn);
@@ -66,7 +66,7 @@ function _setMicUI(state) {
   const btn = _ensureMicButton();
   btn.classList.toggle('mic-active', state === 'ON');
   btn.style.opacity    = state === 'ON' ? '1' : '.45';
-  btn.style.background = state === 'ON' ? '#1a9e6a' : '#9e9e9e';
+  btn.style.background = state === 'ON' ? '#1A73E8' : '#9e9e9e';
 }
 
 function _resetSilenceTimer() {

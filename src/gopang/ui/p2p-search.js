@@ -48,7 +48,7 @@ export function openSearch(prefillQuery) {
             autocomplete="off"/>
           <button id="_sq-btn"
             style="padding:0 16px;height:48px;border:none;background:transparent;
-                   cursor:pointer;color:#16a34a;font-size:14px;font-weight:600">
+                   cursor:pointer;color:#1A73E8;font-size:14px;font-weight:600">
             검색
           </button>
         </div>
@@ -104,7 +104,7 @@ export function openSearch(prefillQuery) {
   };
 
   // 포커스
-  input.addEventListener('focus', () => field.style.borderColor = '#16a34a');
+  input.addEventListener('focus', () => field.style.borderColor = '#1A73E8');
   input.addEventListener('blur',  () => field.style.borderColor = '#e5e7eb');
 
   // 실시간 검색 (300ms debounce)
@@ -235,7 +235,7 @@ function _renderUserCard(u) {
         </div>
       </div>
       <button data-connect="${data}"
-        style="padding:6px 14px;background:#16a34a;color:#fff;
+        style="padding:6px 14px;background:#1A73E8;color:#fff;
                border:none;border-radius:8px;font-size:13px;
                font-weight:600;cursor:pointer;flex-shrink:0">
         연결

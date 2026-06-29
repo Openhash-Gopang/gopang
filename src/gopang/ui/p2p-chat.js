@@ -480,7 +480,7 @@ function _showIncomingCallModal(fromHandle) {
                    font-weight:600;cursor:pointer;font-family:inherit">거절</button>
           <button id="_p2p-accept"
             style="flex:1;padding:11px;border:none;border-radius:10px;
-                   background:#16a34a;color:#fff;font-size:14px;
+                   background:#1A73E8;color:#fff;font-size:14px;
                    font-weight:600;cursor:pointer;font-family:inherit">수락</button>
         </div>
       </div>`;
@@ -546,7 +546,7 @@ function _openChatUI(peer, mode) {
                outline:none;background:#f9fafb;color:#111827"/>
       <button id="_p2p-send"
         style="width:40px;height:40px;border:none;border-radius:50%;
-               background:#16a34a;color:#fff;font-size:18px;
+               background:#1A73E8;color:#fff;font-size:18px;
                cursor:pointer;flex-shrink:0;display:flex;
                align-items:center;justify-content:center">
         ➤
@@ -608,7 +608,7 @@ function _appendMsg(role, text, ts) {
     el.innerHTML += `
       <div style="display:flex;justify-content:flex-end;align-items:flex-end;gap:6px">
         <span style="font-size:10px;color:#9ca3af">${time}</span>
-        <div style="background:#16a34a;color:#fff;padding:8px 12px;
+        <div style="background:#1A73E8;color:#fff;padding:8px 12px;
                     border-radius:16px 16px 4px 16px;max-width:70%;
                     font-size:14px;line-height:1.4;word-break:break-word">
           ${_esc(text)}

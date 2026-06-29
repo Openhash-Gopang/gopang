@@ -47,7 +47,7 @@ export function _updateHandleChip(h) {
   if (h) {
     const nickname = _USER?.nickname || _USER?.name || '';
     const nickPrefix = nickname ? `${nickname} ` : '';
-    if (s) s.innerHTML = `${nickPrefix}<b style="color:#007b8b">${h}</b>`;
+    if (s) s.innerHTML = `${nickPrefix}<b style="color:#1A73E8">${h}</b>`;
     if (b) b.style.display = 'none';
   } else {
     if (s) s.textContent = '등록되지 않았습니다.';
@@ -72,7 +72,7 @@ export function openSettings() {
     if (registered) {
       const s = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}');
       const nickPrefix = s.nickname ? `${s.nickname} ` : '';
-      idStatus.innerHTML = `${nickPrefix}<b style="color:#007b8b">${s.handle}</b>`;
+      idStatus.innerHTML = `${nickPrefix}<b style="color:#1A73E8">${s.handle}</b>`;
     } else {
       idStatus.textContent = '등록되지 않았습니다.';
     }
@@ -89,8 +89,8 @@ export function openSettings() {
       if (!document.getElementById('_id-section-guide')) {
         const g = document.createElement('p');
         g.id = '_id-section-guide';
-        g.style.cssText = 'font-size:12px;color:#007b8b;font-weight:600;margin-bottom:8px;' +
-                          'background:#d3f7ff;border-radius:8px;padding:8px 10px;line-height:1.5';
+        g.style.cssText = 'font-size:12px;color:#1A73E8;font-weight:600;margin-bottom:8px;' +
+                          'background:#EEF4FF;border-radius:8px;padding:8px 10px;line-height:1.5';
         g.innerHTML = '아이디를 등록하면 AI 비서와 P2P 채팅을 사용할 수 있습니다.';
         idSec.insertBefore(g, idSec.firstChild);
       }
@@ -205,7 +205,7 @@ export async function _refreshFreeModelPool() {
       validated
         ? `✅ 무료 모델 갱신 완료 — 현재 활성 모델 ${pool.length}개를 확인했습니다.`
         : `⚠️ 실시간 확인에 실패해 기존 목록(${pool.length}개)을 유지합니다. (${error || '알 수 없는 오류'})`,
-      validated ? '#007b8b' : '#d97706'
+      validated ? '#1A73E8' : '#d97706'
     );
   } catch (e) {
     setStatus(`⚠️ 모델 갱신 중 오류가 발생했습니다: ${e.message}`, '#dc2626');
@@ -321,12 +321,12 @@ function _renderPcSyncBanner(parsed, guid) {
     : (PROVIDER_INFO[parsed.provider]?.label || parsed.provider);
 
   banner.style.display = 'block';
-  banner.style.background = '#d3f7ff';
-  banner.style.color = '#166534';
+  banner.style.background = '#EEF4FF';
+  banner.style.color = '#1557B0';
   banner.innerHTML = `
     🔒 PC에서 <b>${_displayLabel}</b> 설정이 암호화되어 도착했습니다.${parsed.systemPrompt ? '<br>시스템 프롬프트도 함께 도착했습니다.' : ''}<br>
-    <button id="_pc-sync-accept" style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;background:#007b8b;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer">이 설정으로 등록하기</button>
-    <button id="_pc-sync-dismiss" style="margin-top:8px;margin-left:6px;padding:8px 14px;border:none;border-radius:8px;background:transparent;color:#166534;font-size:12.5px;cursor:pointer">무시</button>
+    <button id="_pc-sync-accept" style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;background:#1A73E8;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer">이 설정으로 등록하기</button>
+    <button id="_pc-sync-dismiss" style="margin-top:8px;margin-left:6px;padding:8px 14px;border:none;border-radius:8px;background:transparent;color:#1557B0;font-size:12.5px;cursor:pointer">무시</button>
   `;
 
   document.getElementById('_pc-sync-accept').onclick = async () => {
@@ -514,7 +514,7 @@ export function _updateSecuritySection() {
   }
 
   if (levelEl) levelEl.innerHTML =
-    `<span style="font-size:13px;color:#007b8b">${stored.handle || stored.ipv6}</span>`;
+    `<span style="font-size:13px;color:#1A73E8">${stored.handle || stored.ipv6}</span>`;
   if (idEl) idEl.textContent = '';
 }
 
@@ -576,7 +576,7 @@ function _renderHistoryList(sessions) {
   return sessions.map((s, i) => `
     <div onclick="_openChatDetail(${i})" data-idx="${i}"
          style="padding:14px 16px;border-bottom:1px solid #f2f2f7;cursor:pointer;display:flex;align-items:center;gap:12px">
-      <div style="width:40px;height:40px;border-radius:50%;background:#eafcff;
+      <div style="width:40px;height:40px;border-radius:50%;background:#f8faff;
                   display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">💬</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:15px;font-weight:500;color:#111827">${s.peerHandle || '알 수 없음'}</div>
@@ -620,13 +620,13 @@ window._openChatDetail = async function(idx) {
   const html = `
     <div style="padding:0">
       <div style="padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:10px">
-        <button onclick="openChatHistory()" style="border:none;background:none;color:#007b8b;font-size:15px;cursor:pointer;padding:0">← 목록</button>
+        <button onclick="openChatHistory()" style="border:none;background:none;color:#1A73E8;font-size:15px;cursor:pointer;padding:0">← 목록</button>
         <span style="font-size:15px;font-weight:600">${session.peerHandle || '대화'}</span>
       </div>
       <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
         ${messages.map(m => m.role === 'me' || m.role === 'user'
           ? `<div style="display:flex;justify-content:flex-end">
-               <div style="background:#007b8b;color:#fff;padding:8px 12px;border-radius:16px 16px 4px 16px;max-width:70%;font-size:14px">${m.content}</div>
+               <div style="background:#1A73E8;color:#fff;padding:8px 12px;border-radius:16px 16px 4px 16px;max-width:70%;font-size:14px">${m.content}</div>
              </div>`
           : `<div style="display:flex;justify-content:flex-start">
                <div style="background:#f3f4f6;color:#111827;padding:8px 12px;border-radius:16px 16px 16px 4px;max-width:70%;font-size:14px">${m.content}</div>
@@ -661,7 +661,7 @@ export function openHashChain() {
     : chains.map((c, i) => `
       <div style="padding:12px 16px;border-bottom:1px solid #f2f2f7">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <span style="font-size:11px;background:#eafcff;color:#007b8b;padding:2px 6px;border-radius:4px;font-weight:600">
+          <span style="font-size:11px;background:#f8faff;color:#1A73E8;padding:2px 6px;border-radius:4px;font-weight:600">
             ${i === chains.length - 1 ? 'Genesis' : 'L' + (i + 1)}
           </span>
           <span style="font-size:11px;color:#9ca3af">${new Date(c.ts).toLocaleString('ko-KR')}</span>
@@ -723,7 +723,7 @@ export async function openGopangWallet() {
           </div>
           <div style="width:1px;background:#f2f2f7"></div>
           <div style="text-align:center">
-            <div style="font-size:16px;font-weight:600;color:#007b8b">+₮${(fs['pl-revenue'] || 0).toLocaleString()}</div>
+            <div style="font-size:16px;font-weight:600;color:#1A73E8">+₮${(fs['pl-revenue'] || 0).toLocaleString()}</div>
             <div style="font-size:11px;color:#9ca3af">수입</div>
           </div>
         </div>
@@ -760,7 +760,7 @@ window._openWalletTxDetail = async function() {
   const html = `
     <div style="padding:0">
       <div style="padding:12px 16px;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;gap:10px">
-        <button onclick="openGopangWallet()" style="border:none;background:none;color:#007b8b;font-size:15px;cursor:pointer;padding:0">← 뒤로</button>
+        <button onclick="openGopangWallet()" style="border:none;background:none;color:#1A73E8;font-size:15px;cursor:pointer;padding:0">← 뒤로</button>
         <span style="font-size:15px;font-weight:600">거래 상세</span>
       </div>
       <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
@@ -809,13 +809,13 @@ export async function openFinancialStatement() {
     const _row = (label, val, cls='', bold=false) => `
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid #f2f2f7">
         <span style="font-size:13px;color:${bold?'#111827':'#6b7280'};font-weight:${bold?'600':'400'}">${label}</span>
-        <span style="font-size:13px;font-weight:${bold?'700':'500'};color:${cls==='green'?'#007b8b':cls==='red'?'#dc2626':'#111827'}">${val}</span>
+        <span style="font-size:13px;font-weight:${bold?'700':'500'};color:${cls==='green'?'#1A73E8':cls==='red'?'#dc2626':'#111827'}">${val}</span>
       </div>`;
 
     const _card = (rows) =>
       `<div style="background:#f9fafb;border-radius:10px;padding:4px 12px;margin-bottom:14px">${rows}</div>`;
 
-    const _title = (text, color='#007b8b') =>
+    const _title = (text, color='#1A73E8') =>
       `<div style="font-size:12px;font-weight:600;color:#374151;margin:12px 0 6px;
                    padding-bottom:4px;border-bottom:2px solid ${color}">${text}</div>`;
 
@@ -824,7 +824,7 @@ export async function openFinancialStatement() {
     // ── 탭별 콘텐츠 ──────────────────────────────────────────
     const tabs = {
       bs: `
-        ${_title('대차대조표 (Balance Sheet)', '#007b8b')}
+        ${_title('대차대조표 (Balance Sheet)', '#1A73E8')}
         ${_card(
           _row('자산 · 현금 (bs-cash)', '₮' + bsCash.toLocaleString()) +
           _row('자산 합계', '₮' + bsCash.toLocaleString(), 'green', true)
@@ -867,8 +867,8 @@ export async function openFinancialStatement() {
         ${_title('재무분석 (Financial Analysis)', '#f59e0b')}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
           ${[
-            ['수익률', plRevenue > 0 ? ((netIncome/plRevenue)*100).toFixed(1)+'%' : '0%', netIncome >= 0 ? '#007b8b' : '#dc2626'],
-            ['유동비율', '100%', '#007b8b'],
+            ['수익률', plRevenue > 0 ? ((netIncome/plRevenue)*100).toFixed(1)+'%' : '0%', netIncome >= 0 ? '#1A73E8' : '#dc2626'],
+            ['유동비율', '100%', '#1A73E8'],
             ['부채비율', '0%', '#111827'],
             ['총거래 횟수', (fs['last_tx_id'] ? '1건+' : '0건'), '#111827'],
           ].map(([label, val, color]) => `
@@ -893,8 +893,8 @@ export async function openFinancialStatement() {
           ${[['bs','대차대조표'],['pl','손익계산서'],['cf','현금흐름표'],['fa','재무분석']].map(([id,label],i) => `
             <button onclick="_fsSwitchTab('${id}')" id="_fs-tab-${id}"
               style="flex:1;padding:10px 2px;font-size:11px;font-weight:${i===0?'600':'400'};
-                     color:${i===0?'#007b8b':'#9ca3af'};background:${i===0?'#fff':'transparent'};
-                     border:none;border-bottom:${i===0?'2px solid #007b8b':'2px solid transparent'};
+                     color:${i===0?'#1A73E8':'#9ca3af'};background:${i===0?'#fff':'transparent'};
+                     border:none;border-bottom:${i===0?'2px solid #1A73E8':'2px solid transparent'};
                      cursor:pointer;font-family:inherit;transition:all .15s">
               ${label}
             </button>`).join('')}
@@ -913,10 +913,10 @@ export async function openFinancialStatement() {
         const el = document.getElementById('_fs-tab-' + t);
         if (!el) return;
         const active = t === id;
-        el.style.color      = active ? '#007b8b' : '#9ca3af';
+        el.style.color      = active ? '#1A73E8' : '#9ca3af';
         el.style.fontWeight = active ? '600' : '400';
         el.style.background = active ? '#fff' : 'transparent';
-        el.style.borderBottom = active ? '2px solid #007b8b' : '2px solid transparent';
+        el.style.borderBottom = active ? '2px solid #1A73E8' : '2px solid transparent';
       });
       const body = document.getElementById('_fs-body');
       if (body) body.innerHTML = tabData[id];
@@ -946,7 +946,7 @@ function _openSheet(title, html) {
     sheet.innerHTML = `
       <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid #f2f2f7;flex-shrink:0">
         <button id="_gopang-sheet-close"
-          style="border:none;background:none;font-size:15px;color:#007b8b;cursor:pointer;padding:0;font-family:inherit">
+          style="border:none;background:none;font-size:15px;color:#1A73E8;cursor:pointer;padding:0;font-family:inherit">
           닫기
         </button>
         <div id="_gopang-sheet-title" style="flex:1;text-align:center;font-size:16px;font-weight:600"></div>
@@ -992,11 +992,11 @@ export async function openBackupKey() {
            border-radius:8px;padding:12px;font-family:monospace;font-size:12px;
            word-break:break-all;color:#111827;margin-bottom:8px"></div>
       <button id="_bk-show-btn" style="width:100%;padding:13px;border:1px solid #e5e7eb;border-radius:10px;
-              background:none;color:#007b8b;font-weight:600;cursor:pointer;font-size:14px;margin-bottom:8px">
+              background:none;color:#1A73E8;font-weight:600;cursor:pointer;font-size:14px;margin-bottom:8px">
         키 표시
       </button>
       <button id="_bk-copy-btn" style="display:none;width:100%;padding:13px;border:none;border-radius:10px;
-              background:#007b8b;color:#fff;font-weight:600;cursor:pointer;font-size:14px;margin-bottom:28px">
+              background:#1A73E8;color:#fff;font-weight:600;cursor:pointer;font-size:14px;margin-bottom:28px">
         복사
       </button>
 
@@ -1011,7 +1011,7 @@ export async function openBackupKey() {
                font-size:13px;font-family:monospace;resize:none;box-sizing:border-box;
                margin-bottom:8px" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
       <div id="_bk-restore-err" style="display:none;font-size:12px;color:#dc2626;margin-bottom:8px"></div>
-      <div id="_bk-restore-ok" style="display:none;font-size:12px;color:#007b8b;margin-bottom:8px"></div>
+      <div id="_bk-restore-ok" style="display:none;font-size:12px;color:#1A73E8;margin-bottom:8px"></div>
       <button id="_bk-restore-btn" style="width:100%;padding:13px;border:none;border-radius:10px;
               background:#111827;color:#fff;font-weight:600;cursor:pointer;font-size:14px">
         이 기기에 적용
