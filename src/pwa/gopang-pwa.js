@@ -274,6 +274,11 @@ function _hideInstallBanner() {
   _installBannerVisible = false;  // 배너 해소 → GPS 요청 허용
   document.getElementById('install-banner')?.classList.remove('show');
   document.getElementById('ios-install-banner')?.classList.remove('show');
+  // manual-install-banner는 .show 클래스가 아니라 인라인 display:flex로 보여지므로
+  // (beforeinstallprompt 미지원 브라우저 안내용) 따로 꺼줘야 한다 — 이게 빠져있어서
+  // "확인"을 눌러도 배너가 화면에서 안 사라지는 버그가 있었다.
+  const manual = document.getElementById('manual-install-banner');
+  if (manual) manual.style.display = 'none';
 }
 
 // ── 설치 버튼 클릭 ────────────────────────────────────────
