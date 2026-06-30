@@ -844,6 +844,9 @@ select.setting-field{appearance:none;-webkit-appearance:none;
   box-shadow:0 4px 20px rgba(0,0,0,.1);
 }
 .install-banner.show{display:flex}
+/* v6.1: 가입/로그인 완료(body.gopang-authed) 전에는 설치 배너를 절대 노출하지 않음.
+   gopang-pwa.js가 인증 상태를 확인하지 않고 .show를 붙이는 경우에 대한 안전장치. */
+body:not(.gopang-authed) .install-banner.show{display:none!important}
 .install-banner-icon img{width:36px;height:36px;border-radius:8px}
 .install-banner-text{flex:1}
 .install-banner-title{font-size:13px;font-weight:700;color:#111;margin-bottom:2px}
@@ -1798,9 +1801,9 @@ select.setting-field{appearance:none;-webkit-appearance:none;
 
 <!-- 혼디 모듈 -->
 <script src="/src/pwa/gopang-pwa.js?v=20260624"></script>
-<script src="/src/auth/gopang-auth.js?v=20260624"></script>
+<script src="/src/auth/gopang-auth.js?v=20260630"></script>
 <!-- v3: ES Module 진입점 -->
-<script type="module" src="/gopang-app.js?v=20260624"></script>
+<script type="module" src="/gopang-app.js?v=20260630"></script>
 
 <script>
 // ── 알림 소리 설정 ────────────────────────────────────────
@@ -2914,7 +2917,7 @@ window.closeTermsOfUse = closeTermsOfUse;
         '무료 LLM이 없습니다.<br>' +
         '<button onclick="window.open(\'/pages/ai-setup-mobile.html\',\'_blank\')" ' +
         'style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;' +
-        'background:#16a34a;color:#fff;font-weight:600;cursor:pointer">LLM 설정하러 가기</button>';
+        'background:#1A73E8;color:#fff;font-weight:600;cursor:pointer">LLM 설정하러 가기</button>';
       return;
     }
 
