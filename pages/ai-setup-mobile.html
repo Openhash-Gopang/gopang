@@ -165,7 +165,7 @@ html, body {
   <div id="_done-title">저장 완료</div>
   <div id="_done-desc"></div>
   <div id="_done-bar"><div id="_done-prog"></div></div>
-  <button id="_done-close-btn" onclick="location.href='https://hondi.net/webapp.html'"
+  <button id="_done-close-btn" onclick="_returnToHondi()"
           style="display:none;margin-top:16px;padding:10px 20px;border:none;border-radius:8px;
                  background:#1A73E8;color:#fff;font-size:15px;font-weight:600;cursor:pointer">
     혼디로 돌아가기
@@ -579,6 +579,19 @@ function _selectedModel(llm) {
 
 
 
+// webapp.html에서 같은 탭으로 이동해 들어왔으므로, 저장/건너뛰기 후에도
+// window.close()가 아니라 같은 탭에서 webapp.html로 돌아간다.
+// (window.close()는 스크립트가 직접 연 탭이 아니면 브라우저가 무시하므로
+// 새 탭 시절의 흔적 — 더 이상 동작을 보장할 수 없어 제거했다.)
+function _returnToHondi() {
+  const url = '/webapp.html';
+  if (document.startViewTransition) {
+    document.startViewTransition(() => { location.href = url; });
+  } else {
+    location.href = url;
+  }
+}
+
 async function _saveAll() {
   const fab=document.getElementById('_save-fab'); fab.disabled=true; fab.textContent='저장 중…';
   const providers=[]; let savedCount=0;
@@ -599,7 +612,7 @@ async function _saveAll() {
   doneDesc.textContent=savedCount+'개 AI 키가 저장되었습니다. 1순위부터 순차 시도됩니다.';
   doneEl.classList.add('visible');
   let pct=0;
-  const tick=setInterval(()=>{ pct+=2; doneProg.style.width=pct+'%'; if(pct>=100){ clearInterval(tick); window.close(); setTimeout(()=>{ doneDesc.textContent+=' 아래 버튼으로 혼디로 돌아가세요.'; document.getElementById('_done-close-btn').style.display='inline-block'; },300); } },40);
+  const tick=setInterval(()=>{ pct+=2; doneProg.style.width=pct+'%'; if(pct>=100){ clearInterval(tick); document.getElementById('_done-close-btn').style.display='inline-block'; setTimeout(_returnToHondi,600); } },40);
 }
 
 
@@ -611,7 +624,7 @@ function _skipSetup() {
   doneDesc.textContent='지금은 건너뛰었어요. ⚠️ LLM을 설정하지 않으면 AI 비서 기능을 쓸 수 없습니다. 설정 창에서 언제든 다시 설정할 수 있습니다.';
   doneEl.classList.add('visible');
   let pct=0;
-  const tick=setInterval(()=>{ pct+=2; doneProg.style.width=pct+'%'; if(pct>=100){ clearInterval(tick); window.close(); setTimeout(()=>{ doneDesc.textContent+=' 아래 버튼으로 혼디로 돌아가세요.'; document.getElementById('_done-close-btn').style.display='inline-block'; },300); } },40);
+  const tick=setInterval(()=>{ pct+=2; doneProg.style.width=pct+'%'; if(pct>=100){ clearInterval(tick); document.getElementById('_done-close-btn').style.display='inline-block'; setTimeout(_returnToHondi,600); } },40);
 }
 
 // 초기화: 기존 저장된 키 복원

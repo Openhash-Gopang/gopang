@@ -1426,7 +1426,7 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
 
         <div style="padding:0 16px">
           <div class="settings-card" id="_ai-card" style="display:none">
-            <div class="settings-card-row" onclick="window.open('/pages/ai-setup-mobile.html','_blank')" id="btn-ai-settings" style="cursor:pointer">
+            <div class="settings-card-row" onclick="goToAISetup()" id="btn-ai-settings" style="cursor:pointer">
               <span class="settings-card-row-label" id="label-ai-settings">AI 설정</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
@@ -2449,6 +2449,20 @@ window.closeTermsOfUse = closeTermsOfUse;
 결제·잔액 → GDC | 주식·투자 → K-Stock | 의료·건강 → K-Health
 학교·교육 → K-School | 시장·거래 → K-Market | 응급·구조 → K-911`;
 
+  // AI 설정 페이지로 이동 — 기존엔 window.open(_blank)으로 새 탭에서 열었으나,
+  // 모바일에서 새 탭 전환은 불필요한 컨텍스트 스위치라 같은 탭 이동으로 변경.
+  // ai-setup.html은 PC 단독 접근(LLM 키 입력용)도 지원해야 하므로 SPA 패널로
+  // 흡수하지 않고 별도 페이지 유지 — 대신 같은 탭 네비게이션 + 가능하면
+  // View Transition API로 슬라이드 인 느낌만 흉내낸다.
+  window.goToAISetup = function goToAISetup() {
+    const url = '/pages/ai-setup-mobile.html';
+    if (document.startViewTransition) {
+      document.startViewTransition(() => { location.href = url; });
+    } else {
+      location.href = url;
+    }
+  };
+
   let _panelGreeted = false; // 패널 첫 인사 여부
 
   function openAIPanel() {
@@ -2460,7 +2474,7 @@ window.closeTermsOfUse = closeTermsOfUse;
     const _cfg = (() => { try { return JSON.parse(localStorage.getItem('gopang_cfg') || '{}'); } catch { return {}; } })();
     const _hasLLM = Array.isArray(_cfg.providers) && _cfg.providers.length > 0;
     if (!_hasLLM) {
-      window.open('/pages/ai-setup-mobile.html', '_blank');
+      goToAISetup();
       return;
     }
 
@@ -2921,7 +2935,7 @@ window.closeTermsOfUse = closeTermsOfUse;
       bubbleEl.innerHTML =
         '🔑 AI 비서를 쓰려면 먼저 LLM을 설정해야 합니다. 혼디는 자체 제공하는 ' +
         '무료 LLM이 없습니다.<br>' +
-        '<button onclick="window.open(\'/pages/ai-setup-mobile.html\',\'_blank\')" ' +
+        '<button onclick="goToAISetup()" ' +
         'style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;' +
         'background:#1A73E8;color:#fff;font-weight:600;cursor:pointer">LLM 설정하러 가기</button>';
       return;
