@@ -281,6 +281,44 @@ async function _l1PatchProfile(env, recordId, patch) {
   return res.json();
 }
 
+// ── L1 profiles upsert — 2026-06-30 user_profiles 이전 작업 ────────────
+// L1 profiles 컬렉션 스키마(2026-06-30 확장 후): guid, handle,
+// nickname_hash, native_lang, entity_type, is_public, fpHex, e164,
+// country_code, nickname, region, pubkey_ed25519, x25519_pubkey,
+// x25519_registered_at, push_subscription, push_sound, extra(json).
+// Supabase user_profiles에는 있지만 L1엔 컬럼이 없는 필드
+// (name/address/lat/lng/phone/website/casts_for)는 extra.core에 접어서
+// 같이 저장한다 — 이번 스키마 변경에서 컬럼을 더 늘리지 않기 위함.
+async function _l1UpsertProfile(env, { guid, handle, entityType, nativeLang, isPublic, pubkey, extra, core }) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const mergedExtra = { ...(extra || {}), core: { ...(extra?.core || {}), ...(core || {}) } };
+
+  const body = {
+    guid,
+    handle,
+    entity_type: entityType,
+    native_lang: nativeLang || 'ko',
+    is_public: isPublic !== false,
+    pubkey_ed25519: pubkey || undefined,
+    extra: mergedExtra,
+  };
+
+  const existing = await _l1FindProfileByGuid(env, guid).catch(() => null);
+  if (existing?.id) {
+    const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records/${existing.id}`, {
+      method: 'PATCH', headers, body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`L1 profiles PATCH 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+    return res.json();
+  }
+  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records`, {
+    method: 'POST', headers, body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`L1 profiles POST 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  return res.json();
+}
+
 // L1 profiles 중 push_subscription이 설정된 전체 레코드 조회 (배포 브로드캐스트용, 페이지네이션)
 async function _l1ListPushSubscribers(env) {
   const token = await _l1AdminToken(env);
@@ -2714,22 +2752,62 @@ async function handleProfileGet(request, env, corsHeaders) {
 
   const rawHandle = decodeURIComponent(url.pathname.replace('/profile/', '').replace('/profile', ''));
   const guidParam = url.searchParams.get('guid');
+  const normHandle = rawHandle ? (rawHandle.startsWith('@') ? rawHandle : '@' + rawHandle) : null;
 
-  // ── 표준 1단계: L1(분산 노드)에서 handle → guid 존재 확인 ──
-  // guid로 직접 조회하는 경우는 이미 신원이 확정된 상태이므로 이 단계 불필요
+  // ── 2026-06-30: L1 PocketBase 직접조회를 1차 경로로 — extra(json) 필드를
+  //    L1 자체에 추가했으므로(이전엔 guid 확인만 L1, 상세는 Supabase
+  //    "임시 경로"였음) 이제 L1 한 번 조회로 끝난다. 다만 L1의 listRule이
+  //    `is_public = true`라 비공개 레코드는 Admin 토큰으로 조회해야
+  //    한다 — _l1FindProfileByGuid/_l1FindProfileByHandle은 Admin 토큰을
+  //    쓰므로 공개·비공개 모두 조회 가능.
+  let l1Record = null;
+  try {
+    l1Record = guidParam
+      ? await _l1FindProfileByGuid(env, guidParam)
+      : (rawHandle ? await _l1FindProfileByHandle(env, normHandle) : null);
+  } catch (e) {
+    console.warn('[Profile] L1 조회 실패, Supabase로 폴백:', e.message);
+  }
+
+  if (l1Record) {
+    const core = l1Record.extra?.core || {};
+    const profile = {
+      guid: l1Record.guid,
+      current_ipv6: l1Record.guid,
+      handle: l1Record.handle,
+      entity_type: l1Record.entity_type,
+      native_lang: l1Record.native_lang,
+      is_public: l1Record.is_public,
+      pubkey_ed25519: l1Record.pubkey_ed25519,
+      name: core.name ?? null,
+      address: core.address ?? null,
+      lat: core.lat ?? null,
+      lng: core.lng ?? null,
+      phone: core.phone ?? null,
+      website: core.website ?? null,
+      casts_for: core.casts_for ?? null,
+      extra: l1Record.extra || {},
+      updated_at: l1Record.updated,
+      created_at: l1Record.created,
+    };
+    return new Response(JSON.stringify({
+      ok: true, profile,
+      identity_source: 'l1', detail_source: 'l1',
+    }), { status: 200, headers: corsHeaders });
+  }
+
+  // ── 레거시 폴백: L1로 아직 안 옮겨진 계정 — Supabase 직접 조회 ──
+  // ⚠️ 임시 경로 — user_profiles 전체가 L1로 옮겨지면 이 블록은 삭제 대상.
   let resolvedGuid = guidParam || null;
   if (!resolvedGuid && rawHandle) {
     resolvedGuid = await _resolveGuidFromL1(rawHandle);
   }
 
-  // ── ⚠️ 임시 경로: 본래는 여기서 B에게 P2P 요청을 보내야 하나,
-  //    그 채널이 아직 없어 Supabase 캐시를 대신 조회한다 (필드 테스트용) ──
   let query;
   if (resolvedGuid) {
     query = `guid=eq.${encodeURIComponent(resolvedGuid)}`;
   } else if (rawHandle) {
-    // L1에 없거나(아직 미동기화) L1 연결 실패 — Supabase에서 handle로 직접 폴백 조회
-    query = `handle=eq.${encodeURIComponent(rawHandle.startsWith('@') ? rawHandle : '@' + rawHandle)}`;
+    query = `handle=eq.${encodeURIComponent(normHandle)}`;
   } else {
     return _err(400, 'MISSING_FIELD', 'handle 또는 guid 필요', corsHeaders);
   }
@@ -2738,8 +2816,6 @@ async function handleProfileGet(request, env, corsHeaders) {
   try {
     res = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?${query}&limit=1`, { headers: sbH });
   } catch (e) {
-    // Supabase 연결 자체가 실패한 경우(타임아웃/DNS 등) — 처리되지 않은 예외가
-    // Cloudflare Workers 런타임까지 전파되면 503으로 노출되므로 여기서 명시적으로 잡는다.
     return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
   }
   if (!res.ok) {
@@ -2749,14 +2825,10 @@ async function handleProfileGet(request, env, corsHeaders) {
 
   const rows = await res.json().catch(() => []);
   if (!rows.length) {
-    // Supabase에 프로필 row가 없어도, L1에서 handle -> guid가 확인됐다면
-    // (즉 가입 자체는 되어 있다면) guid만 포함한 최소 응답을 반환한다.
-    // 가입(L1)과 프로필 생성(Supabase)은 별개 단계이므로 프로필 미생성을
-    // "가입 안 됨"으로 취급해 404를 던지면 안 된다.
     if (resolvedGuid) {
       return new Response(JSON.stringify({
         ok: true,
-        profile: { guid: resolvedGuid, handle: rawHandle?.startsWith('@') ? rawHandle : (rawHandle ? '@' + rawHandle : null) },
+        profile: { guid: resolvedGuid, handle: normHandle },
         identity_source: 'l1',
         detail_source: 'minimal-fallback',
       }), { status: 200, headers: corsHeaders });
@@ -2766,10 +2838,8 @@ async function handleProfileGet(request, env, corsHeaders) {
 
   return new Response(JSON.stringify({
     ok: true, profile: rows[0],
-    // identity_source: handle→guid 확인을 어디서 했는지 (L1 우선, 미동기화 시 Supabase 직접조회)
-    // detail_source: 상세 데이터는 항상 Supabase에서 옴 — 표준 P2P 직접요청 채널 구축 전까지의 임시 경로
     identity_source: resolvedGuid ? 'l1' : 'supabase-direct',
-    detail_source:   'supabase-temporary', // TODO: P2P 직접 요청/응답 채널 구축 후 제거
+    detail_source:   'supabase-legacy-fallback',
   }), { status: 200, headers: corsHeaders });
 }
 
@@ -2991,7 +3061,12 @@ async function _createAgentForPrincipal(env, principalProfile) {
   const agentGuid   = await _deriveAgentGuid(principalGuid);
   const sbSvc = _sbServiceHeaders(env);
 
-  // 이미 존재하면(재시도 등) 새로 만들지 않음 — 중복 생성 방지, idempotent
+  // 이미 존재하면(재시도 등) 새로 만들지 않음 — 중복 생성 방지, idempotent.
+  // 2026-06-30: L1을 1차로 확인하고, Supabase도 보조로 확인(레거시 대비).
+  const l1Existing = await _l1FindProfileByGuid(env, agentGuid).catch(() => null);
+  if (l1Existing) {
+    return { ok: true, guid: agentGuid, handle: agentHandle, created: false };
+  }
   const checkRes = await fetch(
     `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agentGuid)}&select=guid`,
     { headers: sbSvc }
@@ -3012,31 +3087,48 @@ async function _createAgentForPrincipal(env, principalProfile) {
 
   // 2) SP 두 변형 합성 — public(고객 응대, 누구나 GET /profile/@handle_ai로
   //    조회 가능 → extra.public에 저장) / internal(운영자 전용, 절대로
-  //    extra.public/Supabase user_profiles에 두지 않고 agent_internal_sp
-  //    테이블에만 저장 — handleProfileGet은 SELECT * 이므로 user_profiles
-  //    행에 두면 그대로 공개 유출된다. 2026-06-30 설계 합의 반영).
+  //    extra.public에 두지 않고 agent_internal_sp 컬렉션(L1, Admin 전용)
+  //    에만 저장 — handleProfileGet/handleProfileMySP가 SELECT * 류로
+  //    행 전체를 반환하므로, 같은 행에 두면 그대로 공개 유출된다.
+  //    2026-06-30 설계 합의 반영).
   const compiledPublic   = await _compileAgentSP(env, principalProfile, 'public').catch(() => null);
   const compiledInternal = await _compileAgentSP(env, principalProfile, 'internal').catch(() => null);
 
-  // 3) user_profiles에 그림자 행 생성 (entity_type='agent', casts_for=본체guid)
+  // 3) 그림자 행 생성 (entity_type='agent', casts_for=본체guid)
+  const agentExtra = {
+    public: {
+      identity: { _schema_version: '2.0', display_name: agentHandle, description: '', tags: [], entity_subtype: null },
+      ai_assistant: {
+        system_prompt: compiledPublic,
+        greeting: compiledPublic ? `안녕하세요! ${principalProfile.name || principalHandle} AI비서입니다.` : null,
+      },
+    },
+  };
+  const agentName = `${principalProfile.name || principalHandle} AI비서`;
+
+  // 2026-06-30: L1 PocketBase를 1차로 먼저 쓰고, 실패해도 그림자 생성
+  // 자체는 계속 진행한다(Supabase가 폴백 소스로 남음).
+  try {
+    await _l1UpsertProfile(env, {
+      guid: agentGuid, handle: agentHandle, entityType: 'agent',
+      nativeLang: principalProfile.native_lang || 'ko', isPublic: true,
+      pubkey: publicKeyB64, extra: agentExtra,
+      core: { name: agentName, casts_for: principalGuid },
+    });
+  } catch (e) {
+    console.warn('[Agent] L1 그림자 저장 실패 (Supabase는 계속 진행):', e.message);
+  }
+
   const agentRecord = {
     guid: agentGuid,
     pubkey_ed25519: publicKeyB64,
     entity_type: 'agent',
     casts_for: principalGuid,
-    name: `${principalProfile.name || principalHandle} AI비서`,
+    name: agentName,
     handle: agentHandle,
     native_lang: principalProfile.native_lang || 'ko',
     is_public: true,
-    extra: {
-      public: {
-        identity: { _schema_version: '2.0', display_name: agentHandle, description: '', tags: [], entity_subtype: null },
-        ai_assistant: {
-          system_prompt: compiledPublic,
-          greeting: compiledPublic ? `안녕하세요! ${principalProfile.name || principalHandle} AI비서입니다.` : null,
-        },
-      },
-    },
+    extra: agentExtra,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -3047,10 +3139,12 @@ async function _createAgentForPrincipal(env, principalProfile) {
   });
   if (!profRes.ok) {
     const errText = await profRes.text().catch(() => '');
-    return { ok: false, error: 'AGENT_PROFILE_SAVE_FAILED', detail: errText };
+    console.warn('[Agent] Supabase 그림자 저장 실패 (L1은 이미 저장됐을 수 있음):', errText);
+    // 2026-06-30: L1 저장이 이미 성공했을 수 있으므로, Supabase 실패만으로
+    // 전체를 실패 처리하지 않는다 — L1이 1차 소스이기 때문.
   }
 
-  // 4) internal 변형은 본체(principal)의 guid로 키잉해 별도 보안 테이블에
+  // 4) internal 변형은 본체(principal)의 guid로 키잉해 L1 별도 컬렉션에
   //    저장 — 본인 인증을 통과한 GET /profile/my-sp에서만 읽힘.
   if (compiledInternal) {
     await _storeInternalSP(env, principalGuid, compiledInternal).catch(e =>
@@ -3079,26 +3173,41 @@ async function _mergeIndividualSP(env, principalProfile) {
   const compiled = await _compileAgentSP(env, principalProfile, 'individual').catch(() => null);
   if (!compiled) return { ok: false, error: 'COMPILE_FAILED' };
 
+  const newExtra = {
+    ...(principalProfile.extra || {}),
+    public: {
+      ...((principalProfile.extra || {}).public || {}),
+      ai_assistant: { system_prompt: compiled, greeting: null },
+    },
+  };
+
+  // 2026-06-30: L1을 1차로 먼저 쓴다 — 실패해도 Supabase는 계속 진행.
+  try {
+    await _l1UpsertProfile(env, {
+      guid: principalProfile.guid, handle: principalProfile.handle,
+      entityType: principalProfile.entity_type, nativeLang: principalProfile.native_lang,
+      isPublic: principalProfile.is_public, pubkey: principalProfile.pubkey_ed25519,
+      extra: newExtra,
+    });
+  } catch (e) {
+    console.warn('[Profile] L1 개인 통합 SP 저장 실패 (Supabase는 계속 진행):', e.message);
+  }
+
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(principalProfile.guid)}`,
     {
       method: 'PATCH',
       headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=minimal' },
       body: JSON.stringify({
-        extra: {
-          ...(principalProfile.extra || {}),
-          public: {
-            ...((principalProfile.extra || {}).public || {}),
-            ai_assistant: { system_prompt: compiled, greeting: null },
-          },
-        },
+        extra: newExtra,
         updated_at: new Date().toISOString(),
       }),
     }
   );
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
-    return { ok: false, error: 'MERGE_SAVE_FAILED', detail: errText };
+    console.warn('[Profile] Supabase 개인 통합 SP 저장 실패 (L1은 이미 저장됐을 수 있음):', errText);
+    // L1이 1차 소스이므로 Supabase 실패만으로 전체 실패 처리하지 않는다.
   }
   return { ok: true, merged: true, guid: principalProfile.guid, sp_updated: true };
 }
@@ -3156,19 +3265,39 @@ async function handleProfilePost(request, env, corsHeaders) {
 
   const sbH = _sbHeaders(env);
 
-  // 기존 프로필 존재 여부 확인 (upsert 분기) — TOFU: pubkey 일치 확인
-  let existRes;
+  // 기존 프로필 존재 여부 확인 — 2026-06-30: L1 PocketBase를 1차 소스로 전환.
+  // L1에 없으면(아직 L1로 안 옮겨진 레거시 계정) Supabase로 폴백 조회한다.
+  // TOFU: pubkey 일치 확인은 어느 소스에서 찾았든 동일하게 적용.
+  let existing = null;
   try {
-    existRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=guid,handle,extra,pubkey_ed25519&limit=1`, { headers: sbH });
+    const l1Existing = await _l1FindProfileByGuid(env, guid);
+    if (l1Existing) {
+      existing = {
+        guid: l1Existing.guid,
+        handle: l1Existing.handle,
+        extra: l1Existing.extra || {},
+        pubkey_ed25519: l1Existing.pubkey_ed25519,
+        _l1id: l1Existing.id,
+      };
+    }
   } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+    console.warn('[Profile] L1 조회 실패, Supabase로 폴백:', e.message);
   }
-  if (!existRes.ok) {
-    const errText = await existRes.text().catch(() => '');
-    return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${existRes.status}): ${errText}`, corsHeaders);
+
+  if (!existing) {
+    let existRes;
+    try {
+      existRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=guid,handle,extra,pubkey_ed25519&limit=1`, { headers: sbH });
+    } catch (e) {
+      return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+    }
+    if (!existRes.ok) {
+      const errText = await existRes.text().catch(() => '');
+      return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${existRes.status}): ${errText}`, corsHeaders);
+    }
+    const existRows = await existRes.json().catch(() => []);
+    existing = existRows[0] || null;
   }
-  const existRows = await existRes.json().catch(() => []);
-  const existing  = existRows[0] || null;
 
   // v6.0: TOFU 복원. "guid는 전화번호 기반이라 안전하다"는 이전 가정은 틀렸다 —
   // 로그인 시점에 전화번호/닉네임만으로 기존 계정에 접근 가능했던 별도 결함이
@@ -3220,6 +3349,19 @@ async function handleProfilePost(request, env, corsHeaders) {
     updated_at: new Date().toISOString(),
   };
 
+  // 2026-06-30: L1 PocketBase 이중쓰기 — Supabase보다 먼저 시도하고,
+  // 실패해도 가입 자체는 막지 않는다(Supabase가 여전히 폴백 소스).
+  // L1엔 없는 컬럼(name/address/lat/lng/phone/website)은 extra.core에 접음.
+  try {
+    await _l1UpsertProfile(env, {
+      guid, handle: finalHandle, entityType: entity_type, nativeLang: native_lang,
+      isPublic: is_public, pubkey, extra: newExtra,
+      core: { name, address, lat, lng, phone, website },
+    });
+  } catch (e) {
+    console.warn('[Profile] L1 저장 실패 (Supabase는 계속 진행):', e.message);
+  }
+
   let saveRes;
   try {
     if (existing) {
@@ -3244,7 +3386,24 @@ async function handleProfilePost(request, env, corsHeaders) {
     const errText = await saveRes.text().catch(() => '');
     return _err(502, 'DB_ERROR', `프로필 저장 실패: ${errText}`, corsHeaders);
   }
-  const savedRows = await saveRes.json().catch(() => []);
+  let savedRows = await saveRes.json().catch(() => []);
+
+  // 2026-06-30: existing이 L1에서만 발견된 경우(Supabase엔 아직 없는 신규
+  // L1-우선 가입자) PATCH가 매칭 0건으로 조용히 끝날 수 있다 — 그 경우 POST로
+  // 재시도(Supabase 쪽도 이중쓰기 일관성 유지, 실패해도 가입은 막지 않음).
+  if (existing && Array.isArray(savedRows) && savedRows.length === 0) {
+    try {
+      record.created_at = new Date().toISOString();
+      const retryRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
+        method: 'POST',
+        headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
+        body: JSON.stringify(record),
+      });
+      if (retryRes.ok) savedRows = await retryRes.json().catch(() => []);
+    } catch (e) {
+      console.warn('[Profile] Supabase POST 재시도 실패 (L1은 이미 저장됨):', e.message);
+    }
+  }
   const savedProfile = savedRows[0] || record;
 
   // 2026-06-23: 그림자 생성 시점 — 가입 직후가 아니라 PROFILE_SUBMIT 완료 후.
@@ -3262,11 +3421,16 @@ async function handleProfilePost(request, env, corsHeaders) {
     });
   } else if (INSTITUTION_ENTITY_TYPES.has(entity_type)) {
     const agentGuid = await _deriveAgentGuid(guid);
-    const agentCheck = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agentGuid)}&select=guid`,
-      { headers: _sbHeaders(env) }
-    ).then(r => r.json()).catch(() => []);
-    const agentExists = Array.isArray(agentCheck) && agentCheck.length > 0;
+    // 2026-06-30: L1을 1차로 확인, 없으면 Supabase 보조 확인(레거시 대비)
+    const l1Agent = await _l1FindProfileByGuid(env, agentGuid).catch(() => null);
+    let agentExists = !!l1Agent;
+    if (!agentExists) {
+      const agentCheck = await fetch(
+        `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agentGuid)}&select=guid`,
+        { headers: _sbHeaders(env) }
+      ).then(r => r.json()).catch(() => []);
+      agentExists = Array.isArray(agentCheck) && agentCheck.length > 0;
+    }
 
     if (!agentExists) {
       agentResult = await _createAgentForPrincipal(env, savedProfile).catch(e => {
@@ -3281,6 +3445,20 @@ async function handleProfilePost(request, env, corsHeaders) {
       const compiledPublic   = await _compileAgentSP(env, savedProfile, 'public').catch(() => null);
       const compiledInternal = await _compileAgentSP(env, savedProfile, 'internal').catch(() => null);
       if (compiledPublic) {
+        // L1 — 기존 extra(특히 identity)를 보존하며 ai_assistant.system_prompt만 갱신
+        try {
+          const existingAgentExtra = l1Agent?.extra || {};
+          await _l1UpsertProfile(env, {
+            guid: agentGuid, handle: `${savedProfile.handle}_ai`, entityType: 'agent',
+            nativeLang: savedProfile.native_lang, isPublic: true,
+            extra: {
+              ...existingAgentExtra,
+              public: { ...(existingAgentExtra.public || {}), ai_assistant: { system_prompt: compiledPublic } },
+            },
+          });
+        } catch (e) {
+          console.warn('[Profile] L1 그림자 public SP 재합성 실패 (Supabase는 계속 진행):', e.message);
+        }
         await fetch(
           `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agentGuid)}`,
           {
@@ -3291,7 +3469,7 @@ async function handleProfilePost(request, env, corsHeaders) {
               updated_at: new Date().toISOString(),
             }),
           }
-        ).catch(e => console.warn('[Profile] 그림자 public SP 재합성 실패:', e.message));
+        ).catch(e => console.warn('[Profile] Supabase 그림자 public SP 재합성 실패:', e.message));
       }
       if (compiledInternal) {
         await _storeInternalSP(env, guid, compiledInternal).catch(e =>
@@ -3324,24 +3502,41 @@ async function handleProfileDelegate(request, env, corsHeaders) {
 
   // 1) 본체의 등록된 pubkey를 서버가 직접 조회(클라이언트가 pubkey를 또 보내게
   //    하면 위조 위험 — DB에 저장된 값만 권위 있는 기준으로 삼는다)
-  const pRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(principal_guid)}&select=guid,pubkey_ed25519`,
-    { headers: sbSvc }
-  );
-  const pRows = await pRes.json().catch(() => []);
-  if (!Array.isArray(pRows) || !pRows.length) return _err(404, 'PRINCIPAL_NOT_FOUND', '본체를 찾을 수 없습니다', corsHeaders);
-  const principalPubkey = pRows[0].pubkey_ed25519;
+  //    2026-06-30: L1을 1차로 확인, 없으면 Supabase로 폴백(레거시 대비)
+  let principalPubkey = null;
+  const l1Principal = await _l1FindProfileByGuid(env, principal_guid).catch(() => null);
+  if (l1Principal) {
+    principalPubkey = l1Principal.pubkey_ed25519;
+  } else {
+    const pRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(principal_guid)}&select=guid,pubkey_ed25519`,
+      { headers: sbSvc }
+    );
+    const pRows = await pRes.json().catch(() => []);
+    if (!Array.isArray(pRows) || !pRows.length) return _err(404, 'PRINCIPAL_NOT_FOUND', '본체를 찾을 수 없습니다', corsHeaders);
+    principalPubkey = pRows[0].pubkey_ed25519;
+  }
   if (!principalPubkey) return _err(409, 'NO_PUBKEY', '본체에 등록된 pubkey가 없습니다', corsHeaders);
 
   // 2) 그림자가 실제로 이 본체의 그림자인지 확인(엉뚱한 그림자 위임 시도 차단)
-  const aRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agent_guid)}&select=guid,casts_for,entity_type`,
-    { headers: sbSvc }
-  );
-  const aRows = await aRes.json().catch(() => []);
-  if (!Array.isArray(aRows) || !aRows.length) return _err(404, 'AGENT_NOT_FOUND', '그림자를 찾을 수 없습니다', corsHeaders);
-  const agent = aRows[0];
-  if (agent.entity_type !== 'agent' || agent.casts_for !== principal_guid) {
+  //    2026-06-30: casts_for는 L1엔 컬럼이 없어 extra.core.casts_for에 저장됨
+  let agentEntityType = null;
+  let agentCastsFor    = null;
+  const l1Agent = await _l1FindProfileByGuid(env, agent_guid).catch(() => null);
+  if (l1Agent) {
+    agentEntityType = l1Agent.entity_type;
+    agentCastsFor    = l1Agent.extra?.core?.casts_for ?? null;
+  } else {
+    const aRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agent_guid)}&select=guid,casts_for,entity_type`,
+      { headers: sbSvc }
+    );
+    const aRows = await aRes.json().catch(() => []);
+    if (!Array.isArray(aRows) || !aRows.length) return _err(404, 'AGENT_NOT_FOUND', '그림자를 찾을 수 없습니다', corsHeaders);
+    agentEntityType = aRows[0].entity_type;
+    agentCastsFor    = aRows[0].casts_for;
+  }
+  if (agentEntityType !== 'agent' || agentCastsFor !== principal_guid) {
     return _err(403, 'NOT_YOUR_AGENT', '본인의 그림자가 아닙니다', corsHeaders);
   }
 
