@@ -1,8 +1,8 @@
 {
-  "AGENT-COMMON": "AGENT-COMMON_v2_8.txt",
+  "AGENT-COMMON": "AGENT-COMMON_v2_9.txt",
   "AGENT-SUPPLIER-COMMON": "AGENT-SUPPLIER-COMMON_v2.0.txt",
   "SP-00-ROUTER": "SP-00-ROUTER-v5_0.txt",
-  "personal-assistant": "personal-assistant/personal-assistant-v1_4.txt",
+  "personal-assistant": "personal-assistant/personal-assistant-v1.6.txt",
   "SP-01_klaw": "SP-01_klaw_v15.1.txt",
   "SP-02_k119": "SP-02_k119_v2.2.txt",
   "SP-03_kpolice": "SP-03_kpolice_v2.1.txt",
