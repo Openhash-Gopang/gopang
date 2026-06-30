@@ -137,8 +137,18 @@ export function _buildProfileContext() {
 
   const lines = ['[CONTEXT: PROFILE_ONBOARDING]'];
   lines.push(`step: ${step}`);
-  lines.push(`done: false`);
-  lines.push(`skipped: false`);
+  // v1.6 — 이전엔 이 값을 항상 false로 하드코딩했다(당시엔 isOnboarding=
+  // !done&&!skipped 게이트를 통과했을 때만 이 함수가 불렸으므로 실제로
+  // 항상 false였음). 이제 settings.js의 프로필 작성 패널이 done=true(완료
+  // 후 수정)·skipped=true(재개) 상태에서도 이 함수를 직접 부르므로, PA SP가
+  // PHASE 0 분기를 정확히 타도록 실제 값을 그대로 전달해야 한다.
+  let doneFlag = false, skippedFlag = false;
+  try {
+    doneFlag    = localStorage.getItem('hondi_profile_done')    === '1';
+    skippedFlag = localStorage.getItem('hondi_profile_skipped') === '1';
+  } catch {}
+  lines.push(`done: ${doneFlag}`);
+  lines.push(`skipped: ${skippedFlag}`);
   lines.push(`first_greeted: ${firstGreeted}`);
   lines.push(`name_pending: ${namePending}`);
   if (assistantName) lines.push(`assistant_name: ${assistantName}`);
@@ -385,6 +395,56 @@ async function _triggerSeamlessHandoff(sendFn = callAI) {
 }
 
 /**
+ * _buildFirstContactContext — 최초 인사("이름을 지어주세요")와 프로필 작성
+ * 필요성 설명을 SP(시스템 프롬프트) 본문이 아니라, 꼭 필요한 1~2턴에만
+ * 사용자 메시지 앞에 붙는 1회성 컨텍스트로 주입합니다(v1.6).
+ *
+ * 왜 SP에 안 박아두는가: SP는 캐시되는 고정 prefix라도 매 호출마다 다시
+ * 전송·과금됩니다. "첫 인사 대본"은 평생 단 한 번만 쓰이는데 SP 본문에
+ * 넣으면 모든 사용자의 모든 대화에 영구히 죽은 무게로 따라다닙니다.
+ * 대신 여기서는 hondi_first_greeted/hondi_name_pending 플래그가 true인
+ * 정확히 그 1~2번의 호출에만 블록을 만들어 끼워 넣고, 끝나면 완전히
+ * 사라집니다 — AGENT-COMMON 본문은 첫 대화든 천 번째 대화든 완전히 동일.
+ *
+ * AGENT-COMMON §0-1(최초 접촉 처리)이 이 블록을 발견하면 그대로 따르고
+ * [FIRST_GREETED]/[NAME_CAPTURED]를 출력 — 이후 call-ai.js의
+ * _handleProfileTags()가 기존과 동일하게 처리합니다(PA SP 시절과 태그
+ * 체계 100% 동일, 출력 주체만 PA→AGENT-COMMON으로 바뀜).
+ *
+ * @returns {string} 끼워 넣을 컨텍스트 블록(없으면 빈 문자열)
+ */
+export function _buildFirstContactContext() {
+  let firstGreeted = false, namePending = false;
+  try {
+    firstGreeted = localStorage.getItem('hondi_first_greeted') === '1';
+    namePending  = localStorage.getItem('hondi_name_pending')  === '1';
+  } catch {}
+
+  if (!firstGreeted) {
+    let nickname = '';
+    try {
+      const reg = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}');
+      nickname = reg.nickname || '';
+    } catch {}
+    return `[FIRST_CONTACT: 아래 문구로만 인사하고 이번 턴은 거기서 멈추십시오. 다른 내용을 ` +
+      `덧붙이지 마십시오.\n"안녕하세요, ${nickname}님의 AI 비서입니다. 제 이름을 지어주세요. ` +
+      `'혼디'라고 부르셔도 됩니다.\n참고로 나중에 설정에서 프로필을 작성해 두시면 더 맞춤화된 ` +
+      `도움을 드릴 수 있고, 다른 이용자들이 ${nickname}님을 찾을 수도 있어요. 언제든 원하실 때 ` +
+      `하시면 됩니다."\n응답 끝에 [FIRST_GREETED]를 출력하십시오.]\n\n`;
+  }
+
+  if (namePending) {
+    return `[NAME_CAPTURE_PENDING: 직전 턴에서 비서 이름을 물었습니다. 이번 사용자 메시지에서 ` +
+      `이름을 지어줬는지 확인해 한 줄로 반응하십시오("{새이름}, 좋은 이름이네요! 😊" 또는 이름이 ` +
+      `없으면 조용히 넘어가고 "혼디" 유지). 다른 용건이 같이 있으면 자연스럽게 이어서 처리하십시오. ` +
+      `응답 끝에 [NAME_CAPTURED]를 출력하고, 새 이름을 지어줬다면 ` +
+      `[PARTIAL_SAVE] {"assistant_name": "새이름"}도 함께 출력하십시오.]\n\n`;
+  }
+
+  return '';
+}
+
+/**
  * _buildEnhancedUserContent — 동적 컨텍스트를 사용자 메시지 앞에 병합
  *
  * DeepSeek Auto Prompt Caching 최적화의 핵심:
@@ -392,44 +452,45 @@ async function _triggerSeamlessHandoff(sendFn = callAI) {
  *   • GUID·위치·PDV 요약은 ctxMsg(별도 메시지)가 아닌 현재 user 메시지 앞에 주입
  *   → 캐시 prefix(system)가 매 호출 동일 → DeepSeek 캐시 적중률 95%+
  *
- * PA 온보딩 중일 때는 [CONTEXT: PROFILE_ONBOARDING] 블록을 대신 삽입합니다.
+ * v1.6 — "PA 온보딩 중" 분기를 제거했습니다. 메인 채팅/AI 패널은 더 이상
+ * PA SP를 직접 로드하지 않고 항상 AGENT-COMMON을 씁니다(PA SP는 settings.js
+ * 의 프로필 작성 패널 전용 — _buildProfileContext()는 거기서 직접 부릅니다).
+ * 대신 _buildFirstContactContext()로 "최초 인사/이름짓기" 1회성 컨텍스트를
+ * 매 턴 검사해서, 필요한 딱 그 1~2턴에만 끼워 넣습니다.
  *
  * @param {string|Array} userContent — 현재 사용자 메시지 (텍스트 또는 multipart)
- * @param {boolean} isOnboarding — true이면 프로필 컨텍스트 블록 삽입
  * @returns {string|Array} 컨텍스트가 병합된 사용자 메시지
  */
-async function _buildEnhancedUserContent(userContent, isOnboarding) {
+async function _buildEnhancedUserContent(userContent) {
   const parts = [];
 
-  if (isOnboarding) {
-    // PA 온보딩: 이미 아는 항목 + 진행 단계를 PA SP에 알림
-    parts.push(_buildProfileContext());
-  } else {
-    // 일반 비서 모드: GUID + 위치 + PDV 요약 (RAG 스타일, 압축)
-    if (USER_GUID) parts.push(`GUID:${USER_GUID.slice(-8)}`);
+  // GUID + 위치 + PDV 요약 (RAG 스타일, 압축)
+  if (USER_GUID) parts.push(`GUID:${USER_GUID.slice(-8)}`);
 
-    // v1.3 — 이용자가 지어준 AI 비서 이름을 매 턴 함께 전달(새로고침으로 history가
-    // 끊겨도 AGENT-COMMON이 계속 같은 이름을 쓸 수 있도록)
-    const assistantName = localStorage.getItem('hondi_assistant_name') || '';
-    if (assistantName) parts.push(`이름:${assistantName}`);
+  // v1.3 — 이용자가 지어준 AI 비서 이름을 매 턴 함께 전달(새로고침으로 history가
+  // 끊겨도 AGENT-COMMON이 계속 같은 이름을 쓸 수 있도록)
+  const assistantName = localStorage.getItem('hondi_assistant_name') || '';
+  if (assistantName) parts.push(`이름:${assistantName}`);
 
-    const locNote = _buildLocNote();
-    if (locNote) parts.push(locNote.trim());
+  const locNote = _buildLocNote();
+  if (locNote) parts.push(locNote.trim());
 
-    // PDV 요약 — IndexedDB 대신 localStorage log 사용 (동기, 압축)
-    try {
-      const log = JSON.parse(localStorage.getItem('gopang_pdv_log') || '[]');
-      if (Array.isArray(log) && log.length) {
-        const summaries = log.slice(-8).reverse()
-          .map(r => r.summary || r.what || '').filter(Boolean);
-        if (summaries.length) parts.push(`[이력]${summaries.join('; ')}`);
-      }
-    } catch {}
-  }
+  // PDV 요약 — IndexedDB 대신 localStorage log 사용 (동기, 압축)
+  try {
+    const log = JSON.parse(localStorage.getItem('gopang_pdv_log') || '[]');
+    if (Array.isArray(log) && log.length) {
+      const summaries = log.slice(-8).reverse()
+        .map(r => r.summary || r.what || '').filter(Boolean);
+      if (summaries.length) parts.push(`[이력]${summaries.join('; ')}`);
+    }
+  } catch {}
 
-  if (!parts.length) return userContent;
+  // v1.6 — 최초 인사/이름짓기 1회성 블록(있을 때만, 평생 1~2턴)
+  const firstContact = _buildFirstContactContext();
 
-  const ctxBlock = `[ctx]\n${parts.join('\n')}\n\n`;
+  if (!parts.length && !firstContact) return userContent;
+
+  const ctxBlock = firstContact + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
 
   // multipart(이미지 포함) 메시지 처리
   if (Array.isArray(userContent)) {
@@ -746,12 +807,14 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     });
   }
 
-  // ── SP 결정 (캐시 최적화 v1.1) ───────────────────────────
+  // ── SP 결정 (캐시 최적화 v1.1, v1.6 — PA 자동 로드 분기 제거) ──────
   // 원칙: system 메시지는 세션 내 절대 변경하지 않는다 (DeepSeek 캐시 prefix 보존).
-  //   • AGENT-COMMON: system_base에 최초 1회 로드 후 고정
-  //   • PA SP: profile 미완료 세션에서만 사용 — history가 비어있을 때만 삽입
-  //   • 동적 데이터(GUID·위치·PDV): system이 아닌 user 메시지 앞에 병합
-  //     (_buildEnhancedUserContent 참조)
+  //   • AGENT-COMMON: system_base에 최초 1회 로드 후 고정 — 메인 채팅/AI 패널은
+  //     이제 항상 이것만 쓴다. PA SP는 더 이상 여기서 자동으로 끼어들지 않는다.
+  //   • PA SP는 settings.js의 프로필 작성 패널(openProfileComposer)에서만,
+  //     그 패널 전용의 독립된 history로 호출된다 — 메인 채팅 history와 무관.
+  //   • 동적 데이터(GUID·위치·PDV·최초 인사): system이 아닌 user 메시지 앞에 병합
+  //     (_buildEnhancedUserContent/_buildFirstContactContext 참조)
   //   • 그림자 컨텍스트(_buildShadowContext): 제거 — user 메시지 병합 방식으로 대체
 
   // ── 전문가 AI(페르소나) 세션 처리 ────────────────────────
@@ -760,14 +823,8 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
   // 로직을 정상적으로 통과시켜 그림자 AI가 이번 발화에 바로 응답하게 한다.
   await maybeHandleExpertTurn(userText);
 
-  // ⚠️ _isOnboarding은 아래 if/else 밖(_buildEnhancedUserContent 등)에서도
-  //    참조되므로 반드시 블록 스코프 밖에서 선언한다.
-  const _profileDone    = localStorage.getItem('hondi_profile_done')    === '1';
-  const _profileSkipped = localStorage.getItem('hondi_profile_skipped') === '1';
-  const _isOnboarding   = !_profileDone && !_profileSkipped;
-
   if (isExpertActive()) {
-    // 전문가 세션이 이번 턴에도 유지됨 — PA/AGENT-COMMON 결정 로직을 건너뛰고
+    // 전문가 세션이 이번 턴에도 유지됨 — AGENT-COMMON 결정 로직을 건너뛰고
     // 페르소나 System Prompt를 그대로 유지한다(history는 공유 — 맥락 보존,
     // PA→AGENT-COMMON 전환과 달리 여기서는 history를 비우지 않는다).
     applyExpertSystemIfActive();
@@ -777,17 +834,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
   if (!CFG.system_base) {
     CFG.system_base = await _loadAgentCommonSP();
   }
-
-  // PA SP는 신규 세션(history 비어있음)일 때만 적용
-  // — 이미 대화 중인 세션에서는 history[0]의 system을 교체하지 않음 (캐시 보존)
-  if (_isOnboarding && history.length === 0) {
-    // manifest["personal-assistant"] 키로 버전 결정
-    const paSP = await _loadPersonalAssistantOnboardingSP();
-    CFG.system = paSP || CFG.system_base || '';
-  } else {
-    // 일반 비서 모드 또는 계속 진행 중인 온보딩 세션 — system 변경 없음
-    if (!CFG.system) CFG.system = CFG.system_base || '';
-  }
+  if (!CFG.system) CFG.system = CFG.system_base || '';
 
   } // ← isExpertActive() else 블록 종료
 
@@ -898,7 +945,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
   //    ★ system prefix를 건드리지 않으므로 캐시 적중률 95%+ 유지
   //    온보딩 중: [CONTEXT: PROFILE_ONBOARDING] 블록 삽입
   //    일반 모드: GUID + 위치 + PDV 요약 (RAG 스타일, 압축)
-  const enhancedUserContent = await _buildEnhancedUserContent(userContent, _isOnboarding);
+  const enhancedUserContent = await _buildEnhancedUserContent(userContent);
 
   // 3) user 레코드는 원본(userContent)으로 history에 저장
   //    → enhancedUserContent(컨텍스트 포함)는 messages 전송용으로만 사용
@@ -1062,8 +1109,10 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     if (bubble) bubble.classList.remove('streaming');
 
 
-    // ── PROFILE 태그 처리 (SUBMIT / SKIP / 단계 업데이트) ───
-    // 온보딩 세션(_isOnboarding)에서만 실질적으로 동작.
+    // ── PROFILE 태그 처리 (SUBMIT / SKIP / 단계 업데이트 / 최초 인사·이름짓기) ──
+    // v1.6 — PROFILE_SUBMIT/SKIP/[N/4단계]는 이제 settings.js의 프로필 작성
+    // 패널(PA SP)에서만 나온다. 메인 채팅/AI 패널(AGENT-COMMON)에서는 보통
+    // FIRST_GREETED/NAME_CAPTURED만 감지된다 — 둘 다 같은 함수가 공통 처리.
     // SUBMIT/SKIP 감지 시 history 초기화 + SP 전환 후 true 반환 → 후속 처리 생략.
     const _profileHandled = await _handleProfileTags(fullReply, bubble);
     if (_profileHandled) return;

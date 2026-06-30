@@ -1,66 +1,28 @@
 /**
- * ui/welcome.js — 초기 환영 메시지 + Profile 온보딩 트리거
- * - Profile 미완성: AI 비서에게 온보딩 시작 메시지를 주입
- * - Profile 완성: 닉네임 표시 후 일상 비서 모드
+ * ui/welcome.js — PROFILE_SUBMIT 처리 + PDV 초기화 + 본인 검증 헬퍼
+ *
+ * v1.6 — "가입 직후 PA가 자동으로 끼어든다"는 기존 설계를 폐기했다.
+ * 이제 첫 대화의 이름짓기·프로필 작성 안내는 AGENT-COMMON이
+ * call-ai.js의 _buildFirstContactContext()를 통해 직접 처리하고,
+ * "프로필 작성"은 설정 화면에서 사용자가 자유 텍스트를 입력해 직접
+ * 시작하는 별도 흐름이다(settings.js의 openProfileComposer() 참조).
+ * 이 파일은 더 이상 온보딩을 트리거하지 않는다 — PROFILE_SUBMIT 처리와
+ * PDV 초기화, 핸드셰이크 본인 검증 헬퍼만 남는다.
  */
 import { appendBubble } from './bubble.js';
 import { _USER } from '../core/state.js';
-import { callAI } from '../ai/call-ai.js';
 import { loadPersonalAssistantSP, resetSPLoader } from '../core/config.js';
 
-// ── Profile 완성 여부 확인 ───────────────────────────────
-function _isProfileDone() {
-  try { return !!localStorage.getItem('hondi_profile_done'); } catch { return false; }
-}
-
-function _getProfileStep() {
-  try { return localStorage.getItem('hondi_profile_step') || null; } catch { return null; }
-}
-
-// v1.4 — 사용자가 명시적으로 "나중에 할게요"(PROFILE_SKIP)를 선택한 경우는
-// 자동 재오픈 대상에서 제외한다. 그 선택은 존중하고, 재개는 설정 화면의
-// "프로필 작성 재개" 버튼(resumeProfileSetup)을 눌렀을 때만 다시 연다.
-function _isProfileSkipped() {
-  try { return localStorage.getItem('hondi_profile_skipped') === '1'; } catch { return false; }
-}
-
-// ── 초기 환영 메시지 — 첫 접속 1회만 ──────────────────
+// ── 초기 환영 메시지 — 더 이상 아무 일도 하지 않음 (v1.6) ──────────
+// gopang-app.js가 부팅 시 호출하는 기존 진입점과의 호환을 위해 함수
+// 자체는 남겨둔다. PA 자동 트리거(window._aiPanelOnboardingMsg 설정,
+// openAIPanel() 강제 호출)는 전부 삭제했다 — 이제 "나만의 AI 비서"는
+// 항상 AGENT-COMMON으로 시작하고, 프로필 작성은 설정에서 사용자가
+// 명시적으로 시작한다.
 let _welcomeShown = false;
 export async function _showWelcomeMessage() {
   if (_welcomeShown) return;   // 중복 호출 방지
   _welcomeShown = true;
-  const list = document.getElementById('message-list');
-  if (!list) return;
-
-  // Personal Assistant SP 로드 (비동기, 캐시됨)
-  await loadPersonalAssistantSP();
-
-  const profileDone = _isProfileDone();
-  const profileStep = _getProfileStep();
-
-  // 첫 접속 안내 문구 — 삭제됨 (2026-06-24, 사용자 요청: 중복 표시 문제로 완전 제거)
-
-  // 온보딩이 필요한 경우 — AI 패널이 열릴 때 시작 (메인 대화창에 표시 안 함)
-  // v1.4 — skip한 경우는 제외(그 선택을 존중, 설정에서 직접 재개해야 함)
-  if (!profileDone && !_isProfileSkipped()) {
-    // AI 패널 첫 열기 시 온보딩 자동 시작 플래그 설정
-    const triggerMsg = profileStep
-      ? `[SYSTEM] 이용자가 Profile 작성을 ${profileStep}단계에서 중단했습니다. 해당 단계부터 재개해 주세요.`
-      : `[SYSTEM] 이용자의 Profile이 아직 없습니다. PHASE 1 온보딩을 시작해 주세요. STEP 1(이름 질문)부터 시작합니다.`;
-    window._aiPanelOnboardingMsg = triggerMsg;
-
-    // v1.4 — "가입을 완료하면 AI 대화창이 자동으로 펼쳐지고 PA가 먼저 말을
-    // 건다"는 게 의도된 동작인데, 지금까지는 사용자가 직접 AI 버튼을 눌러야만
-    // 위 트리거 플래그가 소비됐다(webapp.html openAIPanel() 내부에서만 읽음).
-    // 그래서 패널을 한 번도 열지 않으면 PA 온보딩이 영영 시작되지 않았다.
-    // 여기서 명시적으로 한 번 열어준다 — webapp.html의 인라인 부트 스크립트가
-    // gopang-app.js(모듈, defer 적용)보다 먼저 실행되므로 이 시점엔
-    // window.openAIPanel이 이미 정의돼 있다. 약간의 지연은 부트 애니메이션/
-    // DOM 안정화 여유를 위함(다른 자동 오픈 경로들과 동일한 패턴).
-    setTimeout(() => {
-      if (typeof window.openAIPanel === 'function') window.openAIPanel();
-    }, 600);
-  }
 }
 
 // ── PROFILE_SUBMIT 파서 ───────────────────────────────────

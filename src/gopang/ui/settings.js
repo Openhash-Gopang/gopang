@@ -4,7 +4,7 @@
 import { CFG, loadSettings, PROVIDER_INFO } from '../core/config.js';
 import { buildLiveFreeModelPool } from '../core/free-model-pool.js';
 import { _isRegistered, _isGDCUser, ensureX25519Synced } from '../core/auth.js';
-import { _USER, history } from '../core/state.js';
+import { _USER } from '../core/state.js';
 import { appendBubble } from './bubble.js';
 
 // ── 스킨 색상 (좌/우 슬라이드 메뉴 전용) ─────────────────
@@ -972,38 +972,178 @@ export function openMyProfile() {
   _openProfilePanel(handle);
 }
 
-// ── 프로필 작성 재개/시작 — 2026-06-30 신설 ─────────────────────────
-// personal-assistant SP 온보딩이 중단(PROFILE_SKIP)되거나 아직 시작되지
-// 않은 사용자가 설정 화면에서 직접 이어서 작성할 수 있는 진입점.
-// welcome.js의 _showWelcomeMessage()와 같은 트리거 메커니즘
-// (window._aiPanelOnboardingMsg → openAIPanel이 1회 소비)을 재사용한다.
-export function resumeProfileSetup() {
-  let profileStep = null;
-  try { profileStep = localStorage.getItem('hondi_profile_step'); } catch {}
+// ══════════════════════════════════════════════════════════════
+// 프로필 작성 — v1.6: 설정 화면에서 사용자가 직접 시작하는 전용 패널
+// ══════════════════════════════════════════════════════════════
+// "AI와 대화로 프로필 작성" 메뉴에서 자유 텍스트를 입력하면 PA SP가 그
+// 내용을 보고 정체성(개인/사업자/협회/공공기관)·업종을 스스로 판단하고,
+// 부족한 정보만 자연스럽게 하나씩 채워나간다(personal-assistant-v1.6).
+//
+// 메인 채팅/AI 패널(call-ai.js의 callAI, webapp.html의 _callPanelAI)과
+// 완전히 분리된 독립 history(_composerHistory)를 쓴다 — PA SP는 이제
+// 가입 직후에도, 메인 채팅에서도 절대 자동으로 끼어들지 않고 오직 이
+// 패널 안에서만 호출된다(call-ai.js _callAIInner 참조).
+let _composerHistory = [];
 
-  // v1.4 — PROFILE_SKIP 시 hondi_profile_skipped='1'이 남아있으면 call-ai.js의
-  // _isOnboarding(= !done && !skipped) 판정이 계속 false가 돼, PA SP가 다시는
-  // 로드되지 않는다(트리거 메시지를 보내도 AGENT-COMMON이 받게 됨). 재개를
-  // 요청하는 시점에는 이 잠금을 풀어줘야 한다.
-  try { localStorage.removeItem('hondi_profile_skipped'); } catch {}
+export function openProfileComposer() {
+  document.getElementById('_profile-composer-overlay')?.remove();
 
-  // history가 비어있을 때만 _callAIInner가 PA SP를 system에 새로 얹는다
-  // (캐시 보존 원칙). AGENT-COMMON으로 대화가 이어진 상태일 수 있으므로
-  // 명시적으로 비워서 다음 callAI() 호출이 PA SP를 강제로 다시 불러오게 한다.
-  history.length = 0;
+  const done = localStorage.getItem('hondi_profile_done') === '1';
+  let resumeNote = '';
+  try {
+    const step = localStorage.getItem('hondi_profile_step');
+    if (!done && step) resumeNote = `이전에 ${step}단계까지 작성하던 내용이 있어요 — 이어서 진행할게요.`;
+  } catch {}
 
-  const triggerMsg = profileStep
-    ? `[SYSTEM] 이용자가 Profile 작성을 ${profileStep}단계에서 중단했습니다. 해당 단계부터 재개해 주세요.`
-    : `[SYSTEM] 이용자가 설정 화면에서 Profile 작성을 직접 요청했습니다. PHASE 1 온보딩을 시작해 주세요. STEP 1(이름 질문)부터 시작합니다.`;
-  window._aiPanelOnboardingMsg = triggerMsg;
+  // v1.6 — PROFILE_SKIP 시 hondi_profile_skipped='1'이 남아있으면
+  // call-ai.js의 PA SP 로더가 막혀 있을 일은 이제 없지만(메인 채팅과 무관한
+  // 독립 패널이므로), 이 패널 자체의 [CONTEXT]에는 여전히 정확한 skipped/
+  // done 상태가 들어가야 하므로 따로 건드리지 않는다 — _buildProfileContext()
+  // 가 그대로 읽는다.
+  _composerHistory = [];
 
-  // 설정 시트가 열려 있으면 닫고 AI 패널을 연다
-  document.getElementById('_gopang-sheet-overlay')?.classList?.remove('open');
-  if (typeof window.openAIPanel === 'function') {
-    // 이미 열려있는 패널이면 토글로 닫혀버리므로, 닫혀있을 때만 연다
-    const panel = document.getElementById('ai-panel');
-    if (!panel?.classList?.contains('open')) window.openAIPanel();
+  const ov = document.createElement('div');
+  ov.id = '_profile-composer-overlay';
+  ov.style.cssText = [
+    'position:fixed;inset:0;z-index:1200',
+    'background:#fff',
+    'display:flex;flex-direction:column',
+    'transform:translateX(100%)',
+    'transition:transform .3s cubic-bezier(.32,1,.4,1)',
+    'will-change:transform',
+  ].join(';');
+
+  ov.innerHTML = `
+    <div style="background:#4B7BE5;padding:calc(env(safe-area-inset-top,0px)+12px) 16px 0;
+      display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button id="_pc-back" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.15);
+          border:none;cursor:pointer;color:#fff;font-size:20px;display:flex;
+          align-items:center;justify-content:center;flex-shrink:0">&#8592;</button>
+      <span style="font-size:17px;font-weight:600;color:#fff;flex:1">프로필 작성</span>
+    </div>
+    <div id="_pc-msglist" style="flex:1;overflow-y:auto;padding:16px;display:flex;
+         flex-direction:column;gap:10px;background:#f9fafb"></div>
+    <div style="display:flex;gap:8px;padding:10px 12px calc(env(safe-area-inset-bottom,0px)+10px);
+         border-top:1px solid #eee;background:#fff;flex-shrink:0">
+      <textarea id="_pc-input" rows="1"
+        placeholder="${done ? '수정하고 싶은 내용을 말씀해 주세요' : '예: 한림읍에서 중국집 해요, 상호명은 금능반점이에요'}"
+        style="flex:1;resize:none;border:1px solid #e5e7eb;border-radius:18px;padding:10px 14px;
+               font-size:14px;font-family:inherit;outline:none;max-height:100px;box-sizing:border-box"></textarea>
+      <button id="_pc-send" style="width:40px;height:40px;border-radius:50%;border:none;
+               background:#1A73E8;color:#fff;font-size:16px;cursor:pointer;flex-shrink:0">&#8593;</button>
+    </div>`;
+
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => requestAnimationFrame(() => { ov.style.transform = 'translateX(0)'; }));
+
+  const close = () => {
+    ov.style.transform = 'translateX(100%)';
+    setTimeout(() => ov.remove(), 300);
+  };
+  ov.querySelector('#_pc-back').onclick = close;
+
+  const list  = ov.querySelector('#_pc-msglist');
+  const input = ov.querySelector('#_pc-input');
+  const sendBtn = ov.querySelector('#_pc-send');
+
+  function appendMsg(role, text) {
+    const row = document.createElement('div');
+    row.style.cssText = `align-self:${role === 'user' ? 'flex-end' : 'flex-start'};max-width:80%`;
+    const bubble = document.createElement('div');
+    bubble.style.cssText = role === 'user'
+      ? 'background:#1A73E8;color:#fff;padding:10px 14px;border-radius:16px 16px 4px 16px;font-size:14px;line-height:1.5;white-space:pre-wrap'
+      : 'background:#fff;border:1px solid #eee;color:#111;padding:10px 14px;border-radius:16px 16px 16px 4px;font-size:14px;line-height:1.5;white-space:pre-wrap';
+    bubble.textContent = text;
+    row.appendChild(bubble);
+    list.appendChild(row);
+    list.scrollTop = list.scrollHeight;
+    return bubble;
   }
+
+  function appendSystemNote(text) {
+    const note = document.createElement('div');
+    note.style.cssText = 'align-self:center;font-size:11px;color:#9ca3af;padding:4px 10px;text-align:center';
+    note.textContent = text;
+    list.appendChild(note);
+    list.scrollTop = list.scrollHeight;
+  }
+
+  if (resumeNote) appendSystemNote(resumeNote);
+
+  async function send() {
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    input.style.height = 'auto';
+    sendBtn.disabled = true;
+    appendMsg('user', text);
+    const bubble = appendMsg('ai', '…');
+    try {
+      const finished = await _callComposerAI(text, bubble);
+      if (finished) appendSystemNote('✅ 프로필이 정리됐어요 — 여기서 닫으셔도 됩니다');
+    } catch (e) {
+      bubble.textContent = 'AI 오류: ' + e.message;
+    }
+    sendBtn.disabled = false;
+    input.focus();
+  }
+
+  sendBtn.onclick = send;
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+  });
+
+  // 설정 시트가 열려 있었다면 닫는다
+  document.getElementById('_gopang-sheet-overlay')?.classList?.remove('open');
+
+  setTimeout(() => input.focus(), 350);
+}
+
+/**
+ * _callComposerAI — 프로필 작성 패널 전용 LLM 호출.
+ *
+ * 메인 채팅(call-ai.js의 callAI)과 완전히 분리된 _composerHistory를 쓰고,
+ * system은 항상 PA SP(personal-assistant)다. _callLLM(범용 페일오버+스트리밍
+ * 헬퍼)을 재사용해 fetch/후보선정 로직을 중복 구현하지 않는다.
+ *
+ * @returns {Promise<boolean>} true면 PROFILE_SUBMIT/SKIP으로 이 세션이 끝남
+ */
+async function _callComposerAI(userText, bubble) {
+  const {
+    _loadPersonalAssistantOnboardingSP, _buildProfileContext,
+    _handleProfileTags, _stripInternalTags, _callLLM,
+  } = await import('../ai/call-ai.js');
+
+  if (_composerHistory.length === 0) {
+    const sys = await _loadPersonalAssistantOnboardingSP();
+    _composerHistory.push({ role: 'system', content: sys || '' });
+  }
+
+  let enhanced = userText;
+  try { enhanced = `${_buildProfileContext()}\n\n${userText}`; } catch {}
+  _composerHistory.push({ role: 'user', content: enhanced });
+
+  const fullReply = await _callLLM(_composerHistory, { bubble });
+  _composerHistory.push({ role: 'assistant', content: fullReply });
+  bubble.textContent = _stripInternalTags(fullReply);
+
+  let handled = false;
+  try {
+    // PROFILE_SUBMIT/SKIP 시 _handleProfileTags가 _switchToAssistantSP()로
+    // 메인 채팅(AGENT-COMMON)의 system_base를 갱신해 둔다. sendFn은 메인
+    // 채팅으로 "인계 안착 인사"를 보내는 용도인데, 이 패널은 메인 채팅이
+    // 아니므로 아무 일도 하지 않는 콜백을 넘긴다(불필요한 추가 호출 방지).
+    handled = await _handleProfileTags(fullReply, null, async () => {});
+  } catch (e) {
+    console.warn('[ProfileComposer] _handleProfileTags 처리 실패(무시):', e.message);
+  }
+
+  if (handled) _composerHistory.length = 0;
+  return handled;
 }
 
 export function _openProfilePanel(handle) {
