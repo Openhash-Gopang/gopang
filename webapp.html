@@ -108,9 +108,10 @@ html,body{height:100%;height:100dvh;overflow:hidden;
      구글/안드로이드 화면으로 빠져나가 버린다. */
   overscroll-behavior-x:none;overscroll-behavior-y:none;touch-action:pan-y}
 :root{
+  /* Google Maps 블루 계열 (#1A73E8) — 구글 맵스 동일 톤 */
   --green:#1A73E8;--green-lt:#EEF4FF;--green-dk:#1557B0;--green-bd:#93C4F9;
   --blue:#1A73E8;--blue-lt:#EEF4FF;--blue-dk:#1557B0;
-  --border:#e5e7eb;--txt2:#6b7280;--txt3:#9ca3af;
+  --border:#DADCE0;--txt2:#5F6368;--txt3:#9AA0A6;
   --chip-bg:#f9fafb;--chip-border:#e5e7eb;
   --safe-t:env(safe-area-inset-top,0px);
   --safe-b:env(safe-area-inset-bottom,0px);
@@ -221,39 +222,85 @@ body.gopang-authed #gopang-auth-gate{display:none}
 
 
 /* ── AI 비서 패널 (반투명 slide-up) ── */
+/* ── AI 패널 v2.0: 전체화면, 구글맵스 톤 ── */
 #ai-panel{
   position:fixed;
-  left:0;right:0;bottom:0;
-  height:62%;
-  z-index:400;
-  border-radius:20px 20px 0 0;
-  background:rgba(200,210,205,0.28);
-  backdrop-filter:blur(6px) saturate(1.1);
-  -webkit-backdrop-filter:blur(6px) saturate(1.1);
-  border-top:1px solid rgba(180,195,188,.4);
-  box-shadow:0 -4px 20px rgba(0,0,0,.08);
+  left:0;right:0;
+  top:0;bottom:0;        /* 전체화면 */
+  height:100%;
+  z-index:300;           /* 좌우 메뉴(z-index:998)보다 낮아야 메뉴가 위로 열림 */
+  background:#F8FAFF;
   display:flex;flex-direction:column;
   transform:translateY(100%);
   transition:transform .32s cubic-bezier(.32,1,.4,1);
   will-change:transform;
-  touch-action:none;
+  touch-action:pan-y;
 }
 #ai-panel.open{ transform:translateY(0); }
 
-/* 핸들바 */
-#ai-panel-handle{
-  width:36px;height:4px;border-radius:2px;
-  background:rgba(0,0,0,.18);
-  margin:10px auto 4px;
-  flex-shrink:0;cursor:grab;
+/* 상단 바 */
+#ai-panel-topbar{
+  position:relative;
+  display:flex;align-items:center;
+  background:#1A73E8;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;
+  flex-shrink:0;
+  min-height:52px;
 }
+/* 높이 조절 핸들 — 좌측 */
+#ai-panel-handle{
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(255,255,255,.18);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;cursor:grab;
+  border:none;
+}
+#ai-panel-handle svg{pointer-events:none}
+/* AI 비서 이름 — 중앙 (터치로 편집) */
+#ai-panel-name-wrap{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  gap:4px;cursor:pointer;min-width:0;padding:0 4px;
+}
+#ai-panel-name{
+  font-size:15px;font-weight:700;color:#fff;
+  letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+#ai-panel-name-edit-icon{
+  flex-shrink:0;opacity:.75;
+}
+/* 닫기 버튼 — 우측 */
+#ai-panel-close{
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(255,255,255,.18);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;cursor:pointer;border:none;
+}
+#ai-panel-close svg{pointer-events:none}
 
-/* 패널 타이틀 */
-#ai-panel-title{
-  font-size:12px;font-weight:700;
-  color:rgba(26,115,232,.85);
-  text-align:center;padding:2px 0 6px;
-  flex-shrink:0;letter-spacing:.04em;
+/* 이름 편집 인풋 (inline) */
+#ai-panel-name-input{
+  display:none;
+  background:rgba(255,255,255,.22);border:1.5px solid rgba(255,255,255,.5);
+  border-radius:8px;padding:4px 10px;font-size:14px;font-weight:600;color:#fff;
+  font-family:inherit;outline:none;width:140px;text-align:center;
+}
+#ai-panel-name-input::placeholder{color:rgba(255,255,255,.6)}
+
+/* 패널 타이틀 — 호환(숨김) */
+#ai-panel-title{ display:none; }
+
+/* 메시지 목록 */
+#ai-panel-messages{
+  flex:1;overflow-y:auto;
+  padding:12px 14px 8px;
+  display:flex;flex-direction:column;gap:10px;
+  scroll-behavior:smooth;
+  background:#F8FAFF;
+}
+#ai-panel-messages .bubble-ai{
+  background:#fff;
+  border:1px solid #E8F0FE;
+  box-shadow:0 1px 4px rgba(26,115,232,.06);
 }
 
 /* 패널 메시지 목록 */
@@ -269,29 +316,32 @@ body.gopang-authed #gopang-auth-gate{display:none}
 
 /* 패널 입력창 */
 #ai-panel-input-row{
-  display:flex;align-items:flex-end;gap:8px;
-  padding:8px 12px 12px;
-  border-top:1px solid rgba(26,115,232,.12);
+  display:flex;align-items:flex-end;gap:6px;
+  padding:8px 10px calc(env(safe-area-inset-bottom,0px) + 10px);
+  border-top:1px solid #E8F0FE;
+  background:#fff;
   flex-shrink:0;
 }
 #ai-panel-input{
-  flex:1;min-height:36px;max-height:100px;
-  border:1px solid rgba(26,115,232,.2);
-  border-radius:18px;
-  background:rgba(255,255,255,.85);
-  padding:8px 14px;font-size:14px;
+  flex:1;min-height:38px;max-height:110px;
+  border:1.5px solid #E8F0FE;
+  border-radius:20px;
+  background:#F8FAFF;
+  padding:9px 14px;font-size:14px;
   font-family:inherit;resize:none;outline:none;
   line-height:1.45;overflow-y:auto;
+  transition:border-color .15s;
 }
+#ai-panel-input:focus{border-color:#1A73E8;background:#fff}
 #ai-panel-send{
-  width:36px;height:36px;flex-shrink:0;
+  width:38px;height:38px;flex-shrink:0;
   border:none;border-radius:50%;
   background:#1A73E8;
   color:#fff;font-size:16px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  transition:opacity .15s;
+  transition:opacity .15s;box-shadow:0 2px 6px rgba(26,115,232,.28);
 }
-#ai-panel-send:disabled{opacity:.45;}
+#ai-panel-send:disabled{opacity:.35;box-shadow:none;}
 
 /* AI 패널 입력 필드 왼쪽 보조 버튼(파일첨부·카메라·마이크) */
 .ai-panel-actions-left{
@@ -1098,9 +1148,36 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
   <!-- ── 라우터 뱃지 ── -->
   <div id="router-badge"></div>
 
-  <!-- ── AI 비서 패널 (반투명 slide-up) ── -->
+  <!-- ── AI 비서 패널 v2.0 (전체화면) ── -->
   <div id="ai-panel">
-    <div id="ai-panel-handle"></div>
+    <!-- 상단 바 -->
+    <div id="ai-panel-topbar">
+      <!-- 높이조절 핸들 (좌) -->
+      <button id="ai-panel-handle" title="높이 조절">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+          <line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/>
+        </svg>
+      </button>
+      <!-- AI 비서 이름 (중앙, 터치로 편집) -->
+      <div id="ai-panel-name-wrap" onclick="_editAIName()" title="AI 비서 이름 변경">
+        <span id="ai-panel-name">혼디</span>
+        <svg id="ai-panel-name-edit-icon" width="12" height="12" viewBox="0 0 24 24"
+             fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        <input id="ai-panel-name-input" type="text" maxlength="16"
+               placeholder="AI 비서 이름" autocomplete="off">
+      </div>
+      <!-- 닫기 버튼 (우) -->
+      <button id="ai-panel-close" title="닫기" onclick="closeAIPanel()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
     <div id="ai-panel-title">내 AI 비서</div>
     <div id="ai-panel-messages"></div>
     <div id="ai-panel-attach-preview" class="ai-panel-attach-preview" style="display:none">
@@ -1129,7 +1206,9 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
           </svg>
         </button>
       </div>
-      <textarea id="ai-panel-input" rows="1" placeholder="AI 비서에게 물어보세요…"></textarea>
+      <textarea id="ai-panel-input" rows="1" placeholder="AI 비서에게 물어보세요…"
+        readonly onfocus="this.removeAttribute('readonly')"
+        onblur="setTimeout(()=>{if(this!==document.activeElement)this.setAttribute('readonly','')},200)"></textarea>
       <button id="ai-panel-send">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
@@ -2452,22 +2531,12 @@ window.closeTermsOfUse = closeTermsOfUse;
   let _panelGreeted = false; // 패널 첫 인사 여부
 
   function openAIPanel() {
-    if (_panelOpen) { closeAIPanel(); return; }
-
-    // LLM이 하나도 등록 안 됐으면 패널을 열지 않고 설정 화면으로 보낸다 —
-    // 혼디는 자체 제공하는 무료 LLM이 없으므로, 설정 전 AI 패널을 열어봐야
-    // 어차피 아무 응답도 못 준다.
-    const _cfg = (() => { try { return JSON.parse(localStorage.getItem('gopang_cfg') || '{}'); } catch { return {}; } })();
-    const _hasLLM = Array.isArray(_cfg.providers) && _cfg.providers.length > 0;
-    if (!_hasLLM) {
-      window.open('/pages/ai-setup-mobile.html', '_blank');
-      return;
-    }
+    if (_panelOpen) return;  // 이미 열림 — 토글로 닫히지 않음
 
     _panelOpen = true;
     panel.classList.add('open');
     btnAI.classList.add('panel-open');
-    setTimeout(() => input.focus(), 340);
+    // focus() 자동 호출 제거 — 사용자가 직접 탭해야만 키패드 열림
 
     // 온보딩 메시지가 대기 중이면 AI 패널에서 자동 시작 (1회)
     if (window._aiPanelOnboardingMsg) {
@@ -2492,7 +2561,13 @@ window.closeTermsOfUse = closeTermsOfUse;
         const nickname = user.nickname || '';
         const aiBubble = _appendPanelMsg('ai', '…');
         aiBubble.classList.add('streaming');
-        try { await _callPanelAI('[INTERNAL: 패널이 열렸습니다. 먼저 인사해 주세요.]', aiBubble); }
+        // 튜토리얼 단계 주입 — call-ai.js의 _buildFirstContactContext와 연동
+        const _tutStep = (() => { try { return localStorage.getItem('hondi_tutorial_step') || '0'; } catch { return '0'; } })();
+        const _tutDone = (() => { try { return localStorage.getItem('hondi_tutorial_done') === '1'; } catch { return false; } })();
+        const _greetMsg = _tutDone
+          ? '[INTERNAL: 패널이 열렸습니다. 먼저 인사해 주세요.]'
+          : `[INTERNAL: 패널이 열렸습니다. 튜토리얼 단계=${_tutStep}. 먼저 인사하고 튜토리얼을 진행해 주세요.]`;
+        try { await _callPanelAI(_greetMsg, aiBubble); }
         catch(e) {
           const nick = nickname ? nickname + '님, ' : '';
           aiBubble.textContent = nick + '안녕하세요! 😊 무엇을 도와드릴까요?';
@@ -2504,77 +2579,29 @@ window.closeTermsOfUse = closeTermsOfUse;
   function closeAIPanel() {
     _panelOpen = false;
     panel.classList.remove('open');
+    panel.style.height = '100%';  // 닫을 때 높이 초기화
     btnAI.classList.remove('panel-open');
     if (triggerBtn) triggerBtn.classList.remove('open');
     input.blur();
+    _panelHalf = false;
   }
+  // _panelHalf는 핸들 드래그 블록에서 선언되므로 여기서 전방 선언
+  let _panelHalf = false;
   window.openAIPanel = openAIPanel;
   window.closeAIPanel = closeAIPanel;
 
-  // ── 바깥 탭 → AI 패널 즉시 닫고, 탭한 동작은 그대로 진행 ──────────
-  // capture 단계에서 먼저 패널만 닫고 이벤트는 막지 않는다(stopPropagation 안 함).
-  // 그래서 예를 들어 검색 버튼을 탭하면: ①AI 패널이 먼저 닫히고 ②그 직후 원래의
-  // openP2PSearch() 클릭 핸들러가 정상적으로 이어서 실행되어 검색 입력창이 뜬다.
-  document.addEventListener('click', (e) => {
-    if (!_panelOpen) return;
-    if (panel.contains(e.target)) return;                 // 패널 내부 탭 — 무시
-    if (btnAI && btnAI.contains(e.target)) return;         // AI 토글 버튼 — 자체 핸들러가 처리
-    if (triggerBtn && triggerBtn.contains(e.target)) return;
-    closeAIPanel();
-  }, true);
+  // ── 외부 탭으로 AI 패널 닫기 — 비활성화 (X 버튼으로만 닫힘) ──
+  // document.addEventListener('click', ...) 제거됨 — 의도된 동작
 
-  // ── 핸들바 드래그 — 높이 조절 + 최소 이하로 내리면 닫기 ───────────
-  // 패널 높이 범위: 최소 120px ~ 최대 화면 92%
-  const PH_MIN = 120;
-  const PH_MAX = () => Math.floor(window.innerHeight * 0.92);
-  let _panelH = Math.floor(window.innerHeight * 0.62); // 초기 높이
-  let _dragY = 0, _dragging = false;
-
-  function _applyPanelH(h, animate) {
-    panel.style.transition = animate ? '' : 'none';
-    panel.style.height = h + 'px';
-    _panelH = h;
-  }
-
-  handle.addEventListener('pointerdown', e => {
-    _dragging = true;
-    _dragY = e.clientY;
-    handle.setPointerCapture(e.pointerId);
-    panel.style.transition = 'none';
+  // ── 핸들 버튼 — 50%/100% 높이 토글 ─────────────────────────────
+  // v2.0: 전체화면이 기본. 핸들 버튼 탭 시 50% ↔ 100% 토글
+  handle.addEventListener('click', () => {
+    _panelHalf = !_panelHalf;
+    panel.style.transition = 'height .28s ease, transform .32s cubic-bezier(.32,1,.4,1)';
+    panel.style.height = _panelHalf
+      ? Math.floor(window.innerHeight * 0.52) + 'px'
+      : '100%';
   });
-
-  handle.addEventListener('pointermove', e => {
-    if (!_dragging) return;
-    const dy = _dragY - e.clientY;          // 위로 드래그 → 양수
-    const newH = Math.max(0, Math.min(PH_MAX(), _panelH + dy));
-    panel.style.height = newH + 'px';
-  });
-
-  handle.addEventListener('pointerup', e => {
-    if (!_dragging) return;
-    _dragging = false;
-    panel.style.transition = '';
-    const dy = _dragY - e.clientY;
-    const newH = _panelH + dy;
-
-    if (newH < PH_MIN) {
-      // 최소 높이 아래 → 닫기
-      panel.style.height = _panelH + 'px';  // 복원 후 닫기 애니메이션
-      closeAIPanel();
-    } else {
-      // 유효 범위 내 → 높이 고정
-      _applyPanelH(Math.min(PH_MAX(), newH), false);
-      panel.style.transition = '';
-    }
-  });
-
-  // 열 때마다 저장된 높이 적용
-  const _origOpen = openAIPanel;
-  openAIPanel = function() {
-    panel.style.height = _panelH + 'px';
-    _origOpen();
-  };
-  window.openAIPanel = openAIPanel;
 
   // ── 하단 swipe-up 제스처 (메인 화면에서) ─────────────
   let _swipeY = 0, _swipeActive = false;
@@ -2592,11 +2619,7 @@ window.closeTermsOfUse = closeTermsOfUse;
   }, { passive: true });
   document.addEventListener('touchend', () => { _swipeActive = false; });
 
-  // ── 패널 외부 탭으로 닫기 ────────────────────────────
-  document.addEventListener('pointerdown', e => {
-    if (!_panelOpen) return;
-    if (!panel.contains(e.target) && e.target !== btnAI) closeAIPanel();
-  });
+  // ── 패널 외부 pointerdown 닫기 — 비활성화 (X 버튼으로만 닫힘) ──
 
   // ── 입력창 자동 높이 + 전송 버튼 활성화 ───────────────
   function _updatePanelSendState() {
@@ -2783,6 +2806,10 @@ window.closeTermsOfUse = closeTermsOfUse;
     // 없는데 알림음이 반복됨). 이제는 사용자가 마이크 버튼을 직접 눌러야만
     // 켜진다.
     setTimeout(() => {
+      // 가입 직후: 튜토리얼 단계 0으로 초기화 후 AI 패널 열기
+      if (!localStorage.getItem('hondi_tutorial_done')) {
+        localStorage.setItem('hondi_tutorial_step', '0');
+      }
       openAIPanel();
     }, 300);
   })();
@@ -2806,6 +2833,38 @@ window.closeTermsOfUse = closeTermsOfUse;
   // PRIORITY_ORDER 정렬·24h 쿨다운·분당 호출 제한 로직을 공유 모듈에서 가져와 쓴다.
   // (이전 버전은 이 로직이 전혀 없어 OR 한도 도달 시 등록된 모델 전부를
   //  순서대로 다 두드리느라 응답이 10초 이상 걸리는 문제가 있었음 — 2026-06-24 수정)
+  // ── AI 비서 이름 — 로컬에서 읽어 표시 ─────────────────────────────
+  (function _initAIName() {
+    const stored = localStorage.getItem('hondi_assistant_name') || '혼디';
+    document.getElementById('ai-panel-name').textContent = stored;
+  })();
+
+  window._editAIName = function() {
+    const nameEl  = document.getElementById('ai-panel-name');
+    const editIcon = document.getElementById('ai-panel-name-edit-icon');
+    const inp     = document.getElementById('ai-panel-name-input');
+    const wrap    = document.getElementById('ai-panel-name-wrap');
+    wrap.onclick  = null; // 재귀 방지
+    nameEl.style.display  = 'none';
+    editIcon.style.display = 'none';
+    inp.style.display = 'block';
+    inp.value = nameEl.textContent || '';
+    inp.focus();
+    inp.select();
+
+    function commit() {
+      const v = inp.value.trim() || '혼디';
+      nameEl.textContent = v;
+      try { localStorage.setItem('hondi_assistant_name', v); } catch {}
+      nameEl.style.display  = '';
+      editIcon.style.display = '';
+      inp.style.display = 'none';
+      wrap.onclick = _editAIName;
+    }
+    inp.onblur  = commit;
+    inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } };
+  };
+
   const _panelHistory = [];  // 패널 전용 대화 히스토리
 
   // 대화가 길어질수록 매 턴마다 전체 히스토리를 그대로 다시 보내 비용이
@@ -2813,6 +2872,38 @@ window.closeTermsOfUse = closeTermsOfUse;
   // 나머지는 최근 N개 메시지(턴)만 남긴다. (2026-06-27 — 6/27 사용량 폭증
   // 원인 분석에서 발견: 패널 세션이 길어질수록 요청당 토큰이 계속 불어남)
   const _PANEL_HISTORY_MAX_MESSAGES = 20; // system 제외, user/assistant 약 10턴
+
+  // ── 대화 연속성: 히스토리를 localStorage에 보관 (새로고침/재접속 후 이어가기) ─
+  const _HISTORY_STORE_KEY = 'hondi_panel_history_v1';
+
+  function _savePanelHistory() {
+    try {
+      // system 프롬프트(첫 항목)는 제외하고 저장 — 너무 길어 quota 초과 위험
+      const toSave = _panelHistory.filter(m => m.role !== 'system').slice(-20);
+      localStorage.setItem(_HISTORY_STORE_KEY, JSON.stringify(toSave));
+    } catch {}
+  }
+
+  function _restorePanelHistory() {
+    try {
+      const raw = localStorage.getItem(_HISTORY_STORE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!Array.isArray(saved) || saved.length === 0) return;
+      // system은 _callPanelAI가 첫 호출 시 다시 얹으므로 여기서는 넣지 않음
+      _panelHistory.push(...saved);
+      // 복원된 메시지를 패널 화면에 표시
+      for (const m of saved) {
+        if (m.role === 'user' || m.role === 'assistant') {
+          _appendPanelMsg(m.role === 'assistant' ? 'ai' : 'user',
+            (typeof m.content === 'string' ? m.content : '').replace(/\[INTERNAL:[^\]]*\]/g,'').trim()
+          );
+        }
+      }
+      _panelGreeted = true; // 복원됐으면 첫 인사 건너뜀
+    } catch {}
+  }
+  _restorePanelHistory();
   function _trimPanelHistory() {
     const hasSystem = _panelHistory[0]?.role === 'system';
     const head = hasSystem ? _panelHistory.slice(0, 1) : [];
@@ -2983,6 +3074,7 @@ window.closeTermsOfUse = closeTermsOfUse;
         // 히스토리에 assistant 추가
         _panelHistory.push({ role: 'assistant', content: full });
         _trimPanelHistory();
+        _savePanelHistory(); // 대화 연속성 — 응답마다 즉시 저장
 
         // v1.3 — PROFILE_SUBMIT/SKIP/PARTIAL_SAVE/FIRST_GREETED/NAME_CAPTURED 처리.
         // bubble은 null로 넘겨 call-ai.js의 _updateStreamBubble(메인 채팅 버블 구조

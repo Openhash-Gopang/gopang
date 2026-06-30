@@ -1117,64 +1117,29 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
         autocomplete="off"/>
     </div>
 
-    <!-- 지역 입력 (선택) -->
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-      <div style="flex:1;display:flex;align-items:center;
-                  border:1px solid #e5e7eb;border-radius:12px;
-                  background:#f9fafb;overflow:hidden"
-           id="_region-field">
-        <input id="_region-input" type="text" maxlength="60"
-          placeholder="예: 서울, New York"
-          style="flex:1;padding:0 14px;height:48px;border:none;background:transparent;
-                 font-size:14px;font-family:inherit;outline:none;color:#111827;min-width:0"
-          autocomplete="off"/>
-      </div>
-      <button id="_region-loc-btn"
-        style="height:48px;padding:0 12px;border:1px solid #e5e7eb;border-radius:12px;
-               background:#f9fafb;font-size:12px;color:#374151;cursor:pointer;
-               font-family:inherit;white-space:nowrap;flex-shrink:0">내 위치</button>
-    </div>
-
-    <!-- 프로필 공개 여부 -->
-    <div style="display:flex;align-items:center;justify-content:space-between;
-                padding:10px 14px;border:1px solid #e5e7eb;border-radius:12px;
-                background:#f9fafb;margin-bottom:8px">
-      <span style="font-size:14px;color:#374151">프로필 공개</span>
-      <label style="position:relative;display:inline-block;width:44px;height:26px">
-        <input type="checkbox" id="_is-public-chk" checked
-               style="opacity:0;width:0;height:0">
-        <span id="_is-public-slider"
-              style="position:absolute;inset:0;background:#16a34a;border-radius:13px;
-                     cursor:pointer;transition:background .2s"
-              onclick="this.style.background=document.getElementById('_is-public-chk').checked?'#d1d5db':'#16a34a'">
-          <span style="position:absolute;width:20px;height:20px;border-radius:50%;
-                       background:#fff;left:3px;top:3px;transition:transform .2s;
-                       box-shadow:0 1px 3px rgba(0,0,0,.2);
-                       transform:translateX(18px)" id="_is-public-knob"></span>
-        </span>
-      </label>
-    </div>
+    <!-- v2.0: 지역·공개여부 제거 — 닉네임만으로 가입 완료 -->
+    <input type="hidden" id="_region-input" value="">
 
     <div id="_nick-error" style="display:none;font-size:12px;color:#dc2626;padding:0 4px;margin-bottom:8px"></div>
 
     <!-- 이용 약정서 동의 -->
     <label style="display:flex;align-items:flex-start;gap:8px;padding:10px 4px;margin-bottom:6px;cursor:pointer">
-      <input type="checkbox" id="_terms-agree-chk" style="margin-top:2px;width:16px;height:16px;flex-shrink:0;accent-color:#16a34a">
+      <input type="checkbox" id="_terms-agree-chk" style="margin-top:2px;width:16px;height:16px;flex-shrink:0;accent-color:#1A73E8">
       <span style="font-size:12.5px;color:#374151;line-height:1.6">
-        <span onclick="event.preventDefault();window.openTermsOfUse&&window.openTermsOfUse()" style="color:#16a34a;font-weight:600;text-decoration:underline">이용 약정서</span>(베타 서비스 면책조항 포함)를 읽었으며 동의합니다.
+        <span onclick="event.preventDefault();window.openTermsOfUse&&window.openTermsOfUse()" style="color:#1A73E8;font-weight:600;text-decoration:underline">이용 약정서</span>(베타 서비스 면책조항 포함)를 읽었으며 동의합니다.
       </span>
     </label>
     <div id="_terms-error" style="display:none;font-size:12px;color:#dc2626;padding:0 4px;margin-bottom:8px">이용 약정서에 동의해야 가입을 완료할 수 있습니다.</div>
 
     <!-- 완료 버튼 -->
     <button id="_nick-btn"
-      style="width:100%;height:52px;background:#16a34a;color:#fff;
+      style="width:100%;height:52px;background:#1A73E8;color:#fff;
              border:none;border-radius:12px;font-size:16px;font-weight:600;
              cursor:pointer;font-family:inherit">
       가입 완료
     </button>
     <div style="font-size:12px;color:#9ca3af;text-align:center;margin-top:10px">
-      handle: <span style="color:#16a34a">${handle}</span>
+      handle: <span style="color:#1A73E8">${handle}</span>
     </div>`;
 
   const nickInput   = document.getElementById('_nick-input');
@@ -1380,14 +1345,9 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
         console.info('[가입][X25519] 키 등록 완료:', syncResult.publicKeyB64u?.slice(0, 16) + '...');
       }
 
-      // 필수 백업 확인 — 체크박스를 누르기 전까지 가입이 "완료"되지 않는다.
-      // 개인키는 서버에 사본이 없으므로, 이 단계가 사실상 마지막 안전망이다.
-      const backupKey = await _exportBackupKey();
-      if (backupKey) {
-        await _showMandatoryBackupStep(backupKey, handle);
-      } else {
-        console.warn('[가입] 백업 키를 내보내지 못함 — 지갑 준비 지연 가능성. 확인 단계 생략.');
-      }
+      // v2.0: 필수 백업 단계 제거 — 가입 즉시 AI 대화창으로 진입.
+      // 백업 키는 설정 화면에서 언제든 내보낼 수 있음.
+      console.info('[가입] 백업 단계 스킵(v2.0 간소화)');
 
       // ── 신규 가입 플래그 설정 — gopang-app.js가 대화창 열린 직후 감지 ──
       // resolve() 이후 auth-gate가 즉시 제거되므로, overlay에서 버튼을 만들면
