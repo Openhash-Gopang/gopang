@@ -97,6 +97,13 @@ const VALID_INDUSTRY_SCHEMA_IDS = new Set([
   '91','94','95','96','97','98','99',
 ]);
 
+// 2026-06-30: "개인은 나만의 AI비서=그림자가 하나, 기관은 운영자/고객
+// 청중에 따라 내부·공개 두 모드로 분리"라는 합의에 따라 신설.
+// person/consumer/individual → 별도 그림자 행 없이 본인 행에 SP 직접 기록.
+// business/org/institution/platform → 별도 그림자 행 + public/internal 분리.
+const INDIVIDUAL_ENTITY_TYPES   = new Set(['person', 'consumer', 'individual']);
+const INSTITUTION_ENTITY_TYPES  = new Set(['business', 'org', 'institution', 'platform']);
+
 // STEP 10: VALID_PDV_SCOPES 11개로 확장
 const VALID_PDV_SCOPES = [
   'ktraffic', 'khealth', 'pdv_general', 'kmarket', 'k119',
@@ -219,6 +226,47 @@ async function _l1FindProfileByHandle(env, handle) {
 }
 
 // L1 profiles 레코드 PATCH (Admin 토큰 필요 — Update rule이 Admins only이므로)
+// ── agent_internal_sp 컬렉션 (운영자 전용 internal SP) ────────────────
+// 2026-06-30: Supabase 별도 테이블 대신 L1 PocketBase로 이전.
+// "X25519/Ed25519 등 보안 필드는 L1이 소스, Supabase는 필드 테스트용"
+// 이라는 기존 설계 원칙(_l1AdminToken 주석 참조)과 일관성을 맞췄고,
+// PocketBase 컬렉션 자체를 List/View/Create/Update 규칙 전부 빈 문자열
+// (Admin 전용)로 만들면 Supabase RLS-미설정(deny-all)과 동일한 보안
+// 모델이 된다 — anon/공개 조회 경로가 원천적으로 없음.
+// 컬렉션 스키마: sql/phase11_agent_internal_sp.sql 대신
+// docs/pocketbase_agent_internal_sp_schema.json 참조(Admin UI에서 임포트).
+async function _l1FindInternalSP(env, principalGuid) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`principal_guid='${principalGuid}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/agent_internal_sp/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`L1 internal SP 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+async function _l1UpsertInternalSP(env, principalGuid, systemPrompt) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const existing = await _l1FindInternalSP(env, principalGuid).catch(() => null);
+
+  if (existing?.id) {
+    const res = await fetch(`${L1_DEFAULT}/api/collections/agent_internal_sp/records/${existing.id}`, {
+      method: 'PATCH', headers, body: JSON.stringify({ system_prompt: systemPrompt }),
+    });
+    if (!res.ok) throw new Error(`L1 internal SP 갱신 실패 (HTTP ${res.status})`);
+    return res.json();
+  }
+
+  const res = await fetch(`${L1_DEFAULT}/api/collections/agent_internal_sp/records`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ principal_guid: principalGuid, system_prompt: systemPrompt }),
+  });
+  if (!res.ok) throw new Error(`L1 internal SP 생성 실패 (HTTP ${res.status})`);
+  return res.json();
+}
+
 async function _l1PatchProfile(env, recordId, patch) {
   const token = await _l1AdminToken(env);
   const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records/${recordId}`, {
@@ -416,6 +464,12 @@ export default {
     if (pathname === '/profile/delegate' && request.method === 'POST') {
       return handleProfileDelegate(request, env, corsHeaders);
     }
+    // GET /profile/my-sp — 본인 인증된 운영자 전용 internal system_prompt
+    // (Ed25519 서명+TOFU 대조. 공개 GET /profile/@handle과 절대 같은
+    // 코드경로를 타지 않음 — 2026-06-30 internal/public 분리 설계)
+    if (pathname === '/profile/my-sp' && request.method === 'GET')
+      return handleProfileMySP(request, env, corsHeaders);
+
     if (pathname.startsWith('/profile')) {
       if (request.method === 'GET')  return handleProfileGet(request, env, corsHeaders);
       if (request.method === 'POST') return handleProfilePost(request, env, corsHeaders);
@@ -2610,6 +2664,50 @@ async function _resolveGuidFromL1(handle) {
   }
 }
 
+// GET /profile/my-sp?guid=&pubkey=&signature=&ts= — 본인 인증된 요청에만
+// internal(운영자 전용) system_prompt를 반환한다. 2026-06-30 신설.
+// 쿠키(gopang_token) 대신 /profile POST·/profile/delegate와 동일한
+// Ed25519 서명 + TOFU 대조 방식을 쓴다 — gopang_token 쿠키는 Domain=
+// .hondi.net으로 발급되는데 _PROXY_URL은 *.workers.dev 호스트라 브라우저가
+// 쿠키를 아예 첨부하지 않을 위험이 있어, 이미 검증된 서명 패턴으로 통일.
+// 개인(person/consumer/individual)은 internal/public 구분이 없으므로
+// 항상 404 — config.js는 이 경우 공개 경로(GET /profile/@handle)로
+// 폴백해 본인 행의 system_prompt를 그대로 쓴다(이미 본인용으로 합성됨).
+async function handleProfileMySP(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid      = url.searchParams.get('guid');
+  const pubkey    = url.searchParams.get('pubkey');
+  const signature = url.searchParams.get('signature');
+  const ts        = url.searchParams.get('ts') || '';
+  if (!guid || !pubkey || !signature)
+    return _err(400, 'MISSING_FIELD', 'guid, pubkey, signature 필수', corsHeaders);
+
+  // 리플레이 방지 — ts가 5분 이내인지 (다른 서명 엔드포인트들과 동일한 관용 범위)
+  const tsNum = parseInt(ts, 10);
+  if (!tsNum || Math.abs(Date.now() / 1000 - tsNum) > 300)
+    return _err(401, 'STALE_TIMESTAMP', 'ts가 만료되었거나 형식이 올바르지 않습니다', corsHeaders);
+
+  const sigMsg = `MY-SP:${guid}:${ts}`;
+  const sigOk  = await _verifyEd25519Simple(pubkey, signature, sigMsg);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+
+  // TOFU: 이 guid에 등록된 pubkey와 요청 pubkey가 일치해야 함.
+  // 2026-06-30: Supabase 대신 L1 PocketBase에서 대조 — _l1AdminToken
+  // 주석에 명시된 기존 원칙("X25519/Ed25519 등 보안 필드는 L1이 소스")과
+  // 일관성을 맞춤.
+  const ownerRecord = await _l1FindProfileByGuid(env, guid).catch(() => null);
+  const knownPubkey = ownerRecord?.pubkey_ed25519;
+  if (!knownPubkey || knownPubkey !== pubkey)
+    return _err(403, 'PUBKEY_MISMATCH', '등록된 본인 키와 일치하지 않습니다', corsHeaders);
+
+  const row = await _l1FindInternalSP(env, guid).catch(() => null);
+  if (!row?.system_prompt) {
+    return _err(404, 'NO_INTERNAL_SP', '운영자 전용 SP 없음 (개인 계정이거나 아직 미생성)', corsHeaders);
+  }
+  return new Response(JSON.stringify({ ok: true, system_prompt: row.system_prompt, updated_at: row.updated || row.updated_at }),
+    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+}
+
 async function handleProfileGet(request, env, corsHeaders) {
   const url = new URL(request.url);
   const sbH = _sbHeaders(env);
@@ -2763,9 +2861,32 @@ async function _deriveAgentGuid(principalGuid) {
 // 설계 원칙:
 //   - 합성 실패 시 null 반환(그림자 생성을 막지 않는다)
 //   - 향후 industry_fields 변경 시 /profile/sync-sp 엔드포인트로 재합성 가능하게 설계
-async function _compileAgentSP(env, principalProfile) {
+async function _compileAgentSP(env, principalProfile, variant = 'individual') {
   const REPO_RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main';
   const headers  = { 'User-Agent': 'gopang-worker/4.9', 'Cache-Control': 'no-cache' };
+
+  // 0) 청중 안내문 — variant에 따라 "지금 이 대화 상대가 누구인지"를
+  //    SP 맨 앞에 명시한다. AGENT-COMMON §4 [핸드셰이크 절차] 2단계
+  //    (권한 범위 고지)가 바로 이 변수를 참조해서 동작한다.
+  //    individual(개인)은 청중 구분이 없으므로 안내문 없음.
+  let audiencePreamble = '';
+  if (variant === 'internal') {
+    audiencePreamble =
+      `[운영자 모드 — 이 system_prompt는 본인 인증된 운영자 전용입니다]\n` +
+      `지금 대화 상대는 이 사업체·기관을 실제로 운영하는 본인입니다.\n` +
+      `원가·마진·거래처 단가·내부 재고관리 등 내부 데이터 질문에도\n` +
+      `정직하게 답합니다. 단, 이 내용을 외부에 그대로 공개해서는 안 된다는\n` +
+      `점을 항상 인지하고, 운영자가 "고객에게는 뭐라고 답해야 해?" 같은\n` +
+      `질문을 하면 공개 응대 모드의 표현으로 바꿔서 알려줍니다.`;
+  } else if (variant === 'public') {
+    audiencePreamble =
+      `[공개 응대 모드 — 이 system_prompt는 외부 고객·제3자에게 노출됩니다]\n` +
+      `지금 대화 상대는 외부 고객 또는 제3자입니다. 원가·마진·거래처 단가·\n` +
+      `내부 재고관리 디테일 등 영업기밀은 절대 제공하지 않습니다\n` +
+      `(AGENT-SUPPLIER-COMMON §0 고객 보호 원칙 우선).\n` +
+      `본 대화 전에 AGENT-COMMON §4 [핸드셰이크 절차]를 반드시 먼저\n` +
+      `수행합니다.`;
+  }
 
   // 1) AGENT-COMMON 로드 — manifest.json['AGENT-COMMON'] 키로 파일명 결정
   //    CI 빌드 시 자동 갱신 — AGENT-COMMON-LATEST.txt 포인터 파일 방식 제거
@@ -2786,8 +2907,10 @@ async function _compileAgentSP(env, principalProfile) {
 
   // 2) AGENT-SUPPLIER-COMMON 로드 (업종 SP 공통 모듈 — Type B 정체성·
   //    K-시스템 연계표·강제규칙 등. 77개 업종 파일이 전부 "상속"한다고
-  //    표기만 해두고 실제로는 한 번도 합성되지 않던 버그를 2026-06-30 수정.)
+  //    표기만 해두고 실제로는 한 번도 합성되지 않던 버그를 2026-06-30 수정.
+  //    개인(individual)은 Type B 정체성 자체가 해당 없으므로 생략.)
   let supplierCommonSP = '';
+  if (variant !== 'individual') {
   try {
     const manifestRes = await fetch(`${REPO_RAW}/prompts/manifest.json`, { ...headers, cache: 'no-cache' });
     if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
@@ -2803,6 +2926,7 @@ async function _compileAgentSP(env, principalProfile) {
     }
   } catch (e) {
     console.warn('[Worker] AGENT-SUPPLIER-COMMON 로드 오류, 빈 문자열로 계속:', e.message);
+  }
   }
 
   // 3) AGENT-SUPPLIER-{ksic} 로드 (업종 불명이면 생략)
@@ -2841,8 +2965,8 @@ ${JSON.stringify(iFields, null, 2)}
 \`\`\``
     : '';
 
-  // 5) 합성 — AGENT-COMMON → AGENT-SUPPLIER-COMMON → AGENT-SUPPLIER-{ksic} → industry_fields
-  const parts = [commonSP, supplierCommonSP, supplierSP, iFieldsBlock].filter(Boolean);
+  // 5) 합성 — 청중 안내문 → AGENT-COMMON → AGENT-SUPPLIER-COMMON → AGENT-SUPPLIER-{ksic} → industry_fields
+  const parts = [audiencePreamble, commonSP, supplierCommonSP, supplierSP, iFieldsBlock].filter(Boolean);
   if (!parts.length) return null;
 
   const compiled = parts.join('\n\n---\n\n').trim();
@@ -2850,7 +2974,10 @@ ${JSON.stringify(iFields, null, 2)}
 }
 
 /**
- * 본인(person/business) 신규가입 직후 그림자(_ai) 자동 생성.
+ * 본인(기관형: business/org/institution/platform) 신규가입 직후
+ * 그림자(_ai) 자동 생성. 2026-06-30: 개인은 이 함수를 타지 않는다
+ * (INDIVIDUAL_ENTITY_TYPES는 handleProfilePost에서 별도 분기로
+ * 본인 행에 직접 SP를 기록 — _mergeIndividualSP 참조).
  * 실패해도 본 가입 자체를 막지 않음(호출부에서 .catch로 흡수) — 그림자는
  * 나중에 재시도로도 만들 수 있지만 본인 가입 실패는 되돌릴 수 없는 손해라서.
  */
@@ -2883,12 +3010,15 @@ async function _createAgentForPrincipal(env, principalProfile) {
     console.warn('[Agent] signer 키 생성 실패 (계속 진행):', keypairResult?.error);
   }
 
-  // 3) user_profiles에 그림자 행 생성 (entity_type='agent', casts_for=본체guid)
-  // Phase 2: SP 합성 (AGENT-COMMON + AGENT-SUPPLIER-{ksic} + industry_fields 지식)
-  //   - GitHub raw에서 두 파일을 fetch해 합성한 뒤 system_prompt에 저장
-  //   - 실패해도 그림자 생성은 계속(system_prompt=null로 저장, 나중에 /profile/sync-sp로 재합성 가능)
-  const compiledSP = await _compileAgentSP(env, principalProfile).catch(() => null);
+  // 2) SP 두 변형 합성 — public(고객 응대, 누구나 GET /profile/@handle_ai로
+  //    조회 가능 → extra.public에 저장) / internal(운영자 전용, 절대로
+  //    extra.public/Supabase user_profiles에 두지 않고 agent_internal_sp
+  //    테이블에만 저장 — handleProfileGet은 SELECT * 이므로 user_profiles
+  //    행에 두면 그대로 공개 유출된다. 2026-06-30 설계 합의 반영).
+  const compiledPublic   = await _compileAgentSP(env, principalProfile, 'public').catch(() => null);
+  const compiledInternal = await _compileAgentSP(env, principalProfile, 'internal').catch(() => null);
 
+  // 3) user_profiles에 그림자 행 생성 (entity_type='agent', casts_for=본체guid)
   const agentRecord = {
     guid: agentGuid,
     pubkey_ed25519: publicKeyB64,
@@ -2902,8 +3032,8 @@ async function _createAgentForPrincipal(env, principalProfile) {
       public: {
         identity: { _schema_version: '2.0', display_name: agentHandle, description: '', tags: [], entity_subtype: null },
         ai_assistant: {
-          system_prompt: compiledSP,
-          greeting: compiledSP ? `안녕하세요! ${principalProfile.name || principalHandle} AI비서입니다.` : null,
+          system_prompt: compiledPublic,
+          greeting: compiledPublic ? `안녕하세요! ${principalProfile.name || principalHandle} AI비서입니다.` : null,
         },
       },
     },
@@ -2920,7 +3050,57 @@ async function _createAgentForPrincipal(env, principalProfile) {
     return { ok: false, error: 'AGENT_PROFILE_SAVE_FAILED', detail: errText };
   }
 
+  // 4) internal 변형은 본체(principal)의 guid로 키잉해 별도 보안 테이블에
+  //    저장 — 본인 인증을 통과한 GET /profile/my-sp에서만 읽힘.
+  if (compiledInternal) {
+    await _storeInternalSP(env, principalGuid, compiledInternal).catch(e =>
+      console.warn('[Agent] internal SP 저장 실패 (공개 SP는 정상 생성됨):', e.message)
+    );
+  }
+
   return { ok: true, guid: agentGuid, handle: agentHandle, created: true };
+}
+
+/**
+ * internal(운영자 전용) system_prompt를 L1 PocketBase agent_internal_sp
+ * 컬렉션에 upsert. Admin 전용 컬렉션이라 anon/공개 조회 경로 자체가 없음.
+ */
+async function _storeInternalSP(env, principalGuid, systemPrompt) {
+  await _l1UpsertInternalSP(env, principalGuid, systemPrompt);
+}
+
+/**
+ * 개인(person/consumer/individual)은 별도 그림자 행을 만들지 않고,
+ * 본인 user_profiles 행의 extra.public.ai_assistant.system_prompt에
+ * AGENT-COMMON(개인 variant)을 직접 기록한다. 2026-06-30 설계 합의:
+ * "개인은 나만의 AI비서가 곧 그림자 — 굳이 분리할 필요 없음".
+ */
+async function _mergeIndividualSP(env, principalProfile) {
+  const compiled = await _compileAgentSP(env, principalProfile, 'individual').catch(() => null);
+  if (!compiled) return { ok: false, error: 'COMPILE_FAILED' };
+
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(principalProfile.guid)}`,
+    {
+      method: 'PATCH',
+      headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        extra: {
+          ...(principalProfile.extra || {}),
+          public: {
+            ...((principalProfile.extra || {}).public || {}),
+            ai_assistant: { system_prompt: compiled, greeting: null },
+          },
+        },
+        updated_at: new Date().toISOString(),
+      }),
+    }
+  );
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    return { ok: false, error: 'MERGE_SAVE_FAILED', detail: errText };
+  }
+  return { ok: true, merged: true, guid: principalProfile.guid, sp_updated: true };
 }
 
 async function handleProfilePost(request, env, corsHeaders) {
@@ -3067,14 +3247,20 @@ async function handleProfilePost(request, env, corsHeaders) {
   const savedRows = await saveRes.json().catch(() => []);
   const savedProfile = savedRows[0] || record;
 
-  // 2026-06-23: 그림자 생성 시점 변경 — 가입 직후 -> PROFILE_SUBMIT 완료 후.
-  // 이유: SP2(그림자 전용 SP) 합성에 industry_fields가 필요한데,
-  //       최초 가입 시점엔 온보딩 대화가 끝나지 않아 industry_fields가 없음.
-  //       흐름: 가입 -> AI설정(OR키) -> SP1으로 온보딩 대화 -> PROFILE_SUBMIT ->
-  //             /profile POST(upsert, industry_fields 포함) -> 이때 그림자 생성.
-  // 조건: industry_fields가 있을 때만 (PROFILE_SUBMIT 완료 신호).
+  // 2026-06-23: 그림자 생성 시점 — 가입 직후가 아니라 PROFILE_SUBMIT 완료 후.
+  // 2026-06-30: 개인(person/consumer/individual)과 기관(business/org/
+  //   institution/platform)을 분기 — 개인은 별도 그림자 행 없이 본인 행에
+  //   직접 SP를 합치고(merge), 기관만 별도 그림자 행 + public/internal
+  //   두 변형을 만든다. (INDIVIDUAL_ENTITY_TYPES / INSTITUTION_ENTITY_TYPES
+  //   는 파일 상단에서 정의)
   let agentResult = null;
-  if ((entity_type === 'person' || entity_type === 'business') && body.industry_fields != null) {
+
+  if (INDIVIDUAL_ENTITY_TYPES.has(entity_type)) {
+    agentResult = await _mergeIndividualSP(env, savedProfile).catch(e => {
+      console.error('[Profile] 개인 통합 SP 기록 실패(본 저장은 정상 처리됨):', e.message);
+      return { ok: false, error: 'EXCEPTION', detail: e.message };
+    });
+  } else if (INSTITUTION_ENTITY_TYPES.has(entity_type)) {
     const agentGuid = await _deriveAgentGuid(guid);
     const agentCheck = await fetch(
       `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agentGuid)}&select=guid`,
@@ -3091,22 +3277,28 @@ async function handleProfilePost(request, env, corsHeaders) {
         console.warn('[Profile] 그림자 자동생성 실패:', JSON.stringify(agentResult));
       }
     } else {
-      // 그림자가 이미 있으면 SP만 재합성 (industry_fields 갱신 반영)
-      const compiledSP = await _compileAgentSP(env, savedProfile).catch(() => null);
-      if (compiledSP) {
+      // 그림자가 이미 있으면 public/internal SP만 재합성 (industry_fields 갱신 반영)
+      const compiledPublic   = await _compileAgentSP(env, savedProfile, 'public').catch(() => null);
+      const compiledInternal = await _compileAgentSP(env, savedProfile, 'internal').catch(() => null);
+      if (compiledPublic) {
         await fetch(
           `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agentGuid)}`,
           {
             method: 'PATCH',
             headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=minimal' },
             body: JSON.stringify({
-              extra: { public: { ai_assistant: { system_prompt: compiledSP } } },
+              extra: { public: { ai_assistant: { system_prompt: compiledPublic } } },
               updated_at: new Date().toISOString(),
             }),
           }
-        ).catch(e => console.warn('[Profile] 그림자 SP 재합성 실패:', e.message));
-        agentResult = { ok: true, guid: agentGuid, created: false, sp_updated: true };
+        ).catch(e => console.warn('[Profile] 그림자 public SP 재합성 실패:', e.message));
       }
+      if (compiledInternal) {
+        await _storeInternalSP(env, guid, compiledInternal).catch(e =>
+          console.warn('[Profile] internal SP 재합성 실패:', e.message)
+        );
+      }
+      agentResult = { ok: true, guid: agentGuid, created: false, sp_updated: !!(compiledPublic || compiledInternal) };
     }
   }
 
