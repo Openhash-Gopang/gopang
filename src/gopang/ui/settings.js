@@ -4,7 +4,7 @@
 import { CFG, loadSettings, PROVIDER_INFO } from '../core/config.js';
 import { buildLiveFreeModelPool } from '../core/free-model-pool.js';
 import { _isRegistered, _isGDCUser, ensureX25519Synced } from '../core/auth.js';
-import { _USER } from '../core/state.js';
+import { _USER, history } from '../core/state.js';
 import { appendBubble } from './bubble.js';
 
 // ── 스킨 색상 (좌/우 슬라이드 메뉴 전용) ─────────────────
@@ -980,6 +980,17 @@ export function openMyProfile() {
 export function resumeProfileSetup() {
   let profileStep = null;
   try { profileStep = localStorage.getItem('hondi_profile_step'); } catch {}
+
+  // v1.4 — PROFILE_SKIP 시 hondi_profile_skipped='1'이 남아있으면 call-ai.js의
+  // _isOnboarding(= !done && !skipped) 판정이 계속 false가 돼, PA SP가 다시는
+  // 로드되지 않는다(트리거 메시지를 보내도 AGENT-COMMON이 받게 됨). 재개를
+  // 요청하는 시점에는 이 잠금을 풀어줘야 한다.
+  try { localStorage.removeItem('hondi_profile_skipped'); } catch {}
+
+  // history가 비어있을 때만 _callAIInner가 PA SP를 system에 새로 얹는다
+  // (캐시 보존 원칙). AGENT-COMMON으로 대화가 이어진 상태일 수 있으므로
+  // 명시적으로 비워서 다음 callAI() 호출이 PA SP를 강제로 다시 불러오게 한다.
+  history.length = 0;
 
   const triggerMsg = profileStep
     ? `[SYSTEM] 이용자가 Profile 작성을 ${profileStep}단계에서 중단했습니다. 해당 단계부터 재개해 주세요.`

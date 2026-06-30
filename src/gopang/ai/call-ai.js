@@ -202,6 +202,7 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI) {
   }
 
   // ── NAME_CAPTURED — 이름짓기 응답 처리 완료 (v1.3) ──────────
+  let _justCapturedName = false;
   if (fullReply.includes('[NAME_CAPTURED]')) {
     console.log('[Profile] NAME_CAPTURED 감지 — 이름짓기 응답 처리 완료');
     try { localStorage.setItem('hondi_name_pending', '0'); } catch {}
@@ -214,6 +215,7 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI) {
         if (parsed.assistant_name) localStorage.setItem('hondi_assistant_name', parsed.assistant_name);
       } catch {}
     }
+    _justCapturedName = true;
   }
 
   // ── 진행 중 필드 저장 [PARTIAL_SAVE] — step 태그 유무와 무관하게 항상 처리 (v1.3) ──
@@ -267,11 +269,14 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI) {
 
   // ── PROFILE_SKIP ──────────────────────────────────────────
   if (fullReply.includes('[PROFILE_SKIP]')) {
-    console.log('[Profile] PROFILE_SKIP 감지 — 온보딩 건너뜀');
+    console.log('[Profile] PROFILE_SKIP 감지 — 온보딩 건너뜀 (재개를 위해 단계·작성분 보존)');
     try {
       localStorage.setItem('hondi_profile_skipped', '1');
-      localStorage.removeItem('hondi_profile_step');
-      localStorage.removeItem('hondi_profile_partial');
+      // v1.4 — hondi_profile_step / hondi_profile_partial은 더 이상 지우지 않는다.
+      // PA SP가 사용자에게 "나중에 설정 → 프로필에서 이어서 작성하실 수 있어요"라고
+      // 약속하는데, 여기서 지워버리면 settings.js의 resumeProfileSetup()이 어느
+      // 단계였는지도, 이미 입력한 값도 알 수 없게 돼 약속이 깨진다. 재개 시점
+      // (resumeProfileSetup)에서 hondi_profile_skipped를 다시 해제하는 식으로 처리한다.
     } catch {}
     // v1.3 — 내부 태그 전체 제거(이전엔 [PROFILE_SKIP]만 지웠음)
     if (bubble) {
@@ -291,6 +296,18 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI) {
       const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
       if (_usb) _usb(bubble, cleaned);
     }
+  }
+
+  // ── NAME_CAPTURED 자동 이어가기 (v1.4) ──────────────────────
+  // SP 사양(PHASE 0): "[P0-NAME-CAPTURE] 처리 후 아래 1~3 평가"는 같은 응답
+  // 안에서 모델이 스스로 이어 쓰는 것을 전제로 하지만, 모델이 이름 확인
+  // 한 줄만 내고 응답을 끝내버리면 대화가 그대로 멈춘다(실사용에서 확인됨).
+  // PROFILE_SUBMIT/SKIP과 동일하게, 모델의 판단에 맡기지 않고 클라이언트가
+  // 명시적으로 한 번 더 트리거해 PHASE 1로 이어지게 한다. SUBMIT/SKIP은 위에서
+  // 이미 return true로 빠지므로 여기 도달했다면 둘 다 아니었다는 뜻.
+  if (_justCapturedName) {
+    await _triggerProfileContinue(sendFn);
+    return true;
   }
 
   return false;
@@ -318,6 +335,23 @@ async function _switchToAssistantSP() {
     console.log('[Profile] AGENT-COMMON SP로 전환 완료');
   } catch (e) {
     console.warn('[Profile] SP 전환 실패 (무시):', e.message);
+  }
+}
+
+/**
+ * _triggerProfileContinue — NAME_CAPTURED 직후, SP를 바꾸지 않은 채(여전히 PA SP)
+ * "PHASE 0의 1~3 평가를 계속해서 PHASE 1로 이어가라"는 내부 신호를 한 번 더
+ * 보낸다. _triggerSeamlessHandoff와 달리 _switchToAssistantSP를 호출하지
+ * 않는다 — 아직 온보딩 중이므로 system은 PA SP 그대로 유지돼야 한다.
+ */
+async function _triggerProfileContinue(sendFn = callAI) {
+  try {
+    const handoff = `[INTERNAL: 방금 이름짓기(P0-NAME-CAPTURE)에 응답했습니다. 사용자에게 ` +
+      `보이지 않는 내부 신호입니다 — 다시 인사하지 말고, PHASE 0의 1~3 평가를 이어서 ` +
+      `진행해 해당하는 PHASE로 자연스럽게 이어가세요(예: step=0이면 PHASE 1-INTRO부터 시작).]`;
+    await sendFn(handoff);
+  } catch (e) {
+    console.warn('[Profile] PHASE 1 자동 이어가기 트리거 실패(무시 — 다음 사용자 메시지에서 정상 처리됨):', e.message);
   }
 }
 
