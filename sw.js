@@ -3,7 +3,7 @@
 // PWA 오프라인 지원 + 캐시 전략
 // ═══════════════════════════════════════════════════════════
 
-const CACHE_NAME    = 'gopang-20260624-0001';
+const CACHE_NAME    = 'gopang-20260630-0001';
 const CACHE_TIMEOUT = 5000; // 네트워크 타임아웃 5초
 
 // 설치 시 사전 캐시할 핵심 파일
@@ -112,8 +112,11 @@ self.addEventListener('fetch', (event) => {
     (async () => {
       try {
         // 네트워크 우선 시도 (타임아웃 포함)
+        // cache:'no-store' — 브라우저 HTTP 디스크 캐시까지 완전히 우회해야
+        // GitHub Pages의 Cache-Control(max-age)에 의해 "네트워크 우선"이
+        // 사실상 무력화되는 문제(구버전 파일이 계속 보이는 버그)를 막을 수 있다.
         const networkRes = await Promise.race([
-          fetch(event.request.clone()),
+          fetch(event.request.clone(), { cache: 'no-store' }),
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('timeout')), CACHE_TIMEOUT)
           ),
