@@ -13,6 +13,8 @@ let _searchTimer   = null;
 //   지정 시 입력란에 자동 채우고 즉시 검색을 실행한다(사용자 타이핑 불필요).
 export function openSearch(prefillQuery) {
   if (_searchOverlay) { _searchOverlay.remove(); _searchOverlay = null; }
+  // 튜토리얼 STEP 4: 검색 열기 감지
+  if (typeof window._tutorialSignal === 'function') window._tutorialSignal('search_open');
 
   const overlay = document.createElement('div');
   overlay.id = '_search-overlay';

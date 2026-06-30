@@ -2359,10 +2359,33 @@ if (document.readyState === 'complete') _applyI18n();
      두 iframe 모두 페이지 로드 시점에 미리 로드해 둔다(eager load) —
      처음 열 때 로딩과 슬라이드 애니메이션이 겹쳐 깜박이는 문제 방지. -->
 <script>
-function openLeftMenu()   { document.getElementById('left-menu-overlay')?.classList.add('open'); }
+function openLeftMenu() {
+  document.getElementById('left-menu-overlay')?.classList.add('open');
+  // 튜토리얼 단계 1: 왼쪽 메뉴 열기 완료 신호
+  _tutorialMenuAction('left');
+}
 function closeLeftMenu()  { document.getElementById('left-menu-overlay')?.classList.remove('open'); }
-function openRightMenu()  { document.getElementById('right-menu-overlay')?.classList.add('open'); }
+function openRightMenu() {
+  document.getElementById('right-menu-overlay')?.classList.add('open');
+  // 튜토리얼 단계 2: 오른쪽 메뉴 열기 완료 신호
+  _tutorialMenuAction('right');
+}
 function closeRightMenu() { document.getElementById('right-menu-overlay')?.classList.remove('open'); }
+
+// ── 튜토리얼 메뉴 동작 감지 ──────────────────────────────────────
+// AI 패널이 열려있고, 해당 튜토리얼 단계(1=왼쪽, 2=오른쪽)일 때만 신호를 보낸다.
+function _tutorialMenuAction(side) {
+  try {
+    const tutDone = localStorage.getItem('hondi_tutorial_done') === '1';
+    const tutStep = parseInt(localStorage.getItem('hondi_tutorial_step') || '-1', 10);
+    const expectedStep = side === 'left' ? 1 : 2;
+    if (tutDone || tutStep !== expectedStep) return;
+    // AI 패널이 열려있으면 튜토리얼 진행 신호 전송
+    if (typeof window._sendTutorialSignal === 'function') {
+      window._sendTutorialSignal(side);
+    }
+  } catch {}
+}
 function openUserManual()  { document.getElementById('manual-overlay')?.classList.add('open'); }
 function closeUserManual() { document.getElementById('manual-overlay')?.classList.remove('open'); }
 function openTermsOfUse()  { document.getElementById('terms-overlay')?.classList.add('open'); }
@@ -2827,12 +2850,100 @@ window.closeTermsOfUse = closeTermsOfUse;
     return b;
   }
 
+  // ── 튜토리얼 신호 시스템 (v2.0) ──────────────────────
+  // 각 동작(왼쪽메뉴·오른쪽메뉴·더블탭·검색·PDV)이 발생하면
+  // 해당 튜토리얼 단계일 때만 AI 패널로 신호를 보낸다.
+  const _TUT_STEP = { left_menu:1, right_menu:2, doubletap:3, search_open:4, pdv_open:5 };
+  const _TUT_MSG  = {
+    left_menu:   '[TUTORIAL_ACTION: left_menu_opened — 사용자가 왼쪽 메뉴를 열었습니다. "참, 잘했어요!"라고 칭찬하고 닫는 방법(손잡이 밀기 또는 바깥 터치)을 알려준 뒤 오른쪽 메뉴로 진행하십시오.]',
+    right_menu:  '[TUTORIAL_ACTION: right_menu_opened — 사용자가 오른쪽 메뉴를 열었습니다. "참, 잘했어요!"라고 칭찬하고 닫는 방법을 알려준 뒤 설정 아이콘·더블탭 안내로 진행하십시오.]',
+    doubletap:   '[TUTORIAL_ACTION: doubletap_done — 사용자가 더블탭을 실행했습니다. 성공했으면 "참, 잘했어요!" 칭찬, 어려웠다면 "탭 간격 0.3초" 추가 설명. 이어서 검색 버튼·다양한 이용자 안내로 진행하십시오.]',
+    search_open: '[TUTORIAL_ACTION: search_opened — 사용자가 검색을 열었습니다. "참, 잘했어요!" 칭찬 후 경찰이나 경찰청을 검색해 보도록 유도하고, 다음 단계(PDV)로 진행하십시오.]',
+    pdv_open:    '[TUTORIAL_ACTION: pdv_opened — 사용자가 PDV를 열었습니다. "참, 잘했어요!" 칭찬 후 PDV 설명과 혼디 소개·요금 안내까지 완료하십시오.]',
+  };
+
+  window._tutorialSignal = async function(action) {
+    try {
+      if (!_panelOpen) return;
+      if (localStorage.getItem('hondi_tutorial_done') === '1') return;
+      const step = parseInt(localStorage.getItem('hondi_tutorial_step') || '-1', 10);
+      if (_TUT_STEP[action] !== step) return;
+    } catch { return; }
+    const msg = _TUT_MSG[action];
+    if (!msg) return;
+    const bubble = _appendPanelMsg('ai', '…');
+    bubble.classList.add('streaming');
+    try { await _callPanelAI(msg, bubble); }
+    catch(e) { bubble.textContent = 'AI 오류: ' + e.message; }
+    bubble.classList.remove('streaming');
+  };
+
+  // ── 더블탭 감지 (설정·검색 아이콘, STEP 3) ───────────
+  (function() {
+    ['btn-settings', 'btn-search'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      let last = 0;
+      el.addEventListener('touchend', e => {
+        const now = Date.now();
+        if (now - last < 380) {          // 0.38초 이내 2회 탭
+          e.preventDefault();
+          window._tutorialSignal('doubletap');
+          last = 0;
+        } else { last = now; }
+      }, { passive: false });
+    });
+  })();
+
+  // ── PDV(Hash Chain) 열기 감지 (STEP 5) ───────────────
+  requestAnimationFrame(() => {
+    const orig = window.openHashChain;
+    if (typeof orig === 'function') {
+      window.openHashChain = function(...a) {
+        window._tutorialSignal('pdv_open');
+        return orig.apply(this, a);
+      };
+    }
+  });
+
   // ── AI 패널 전용 독립 fetch ──────────────────────────
   // callAI()는 항상 메인 #message-list에 결과를 씀 → 패널에서 직접 쓰면 중복 발생
   // 따라서 패널은 독립적으로 직접 호출하지만, call-ai.js와 동일한
   // PRIORITY_ORDER 정렬·24h 쿨다운·분당 호출 제한 로직을 공유 모듈에서 가져와 쓴다.
   // (이전 버전은 이 로직이 전혀 없어 OR 한도 도달 시 등록된 모델 전부를
   //  순서대로 다 두드리느라 응답이 10초 이상 걸리는 문제가 있었음 — 2026-06-24 수정)
+  // ── AI 비서 이름 — 로컬에서 읽어 표시 ─────────────────────────────
+  (function _initAIName() {
+    const stored = localStorage.getItem('hondi_assistant_name') || '혼디';
+    document.getElementById('ai-panel-name').textContent = stored;
+  })();
+
+  window._editAIName = function() {
+    const nameEl  = document.getElementById('ai-panel-name');
+    const editIcon = document.getElementById('ai-panel-name-edit-icon');
+    const inp     = document.getElementById('ai-panel-name-input');
+    const wrap    = document.getElementById('ai-panel-name-wrap');
+    wrap.onclick  = null; // 재귀 방지
+    nameEl.style.display  = 'none';
+    editIcon.style.display = 'none';
+    inp.style.display = 'block';
+    inp.value = nameEl.textContent || '';
+    inp.focus();
+    inp.select();
+
+    function commit() {
+      const v = inp.value.trim() || '혼디';
+      nameEl.textContent = v;
+      try { localStorage.setItem('hondi_assistant_name', v); } catch {}
+      nameEl.style.display  = '';
+      editIcon.style.display = '';
+      inp.style.display = 'none';
+      wrap.onclick = _editAIName;
+    }
+    inp.onblur  = commit;
+    inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } };
+  };
+
   // ── AI 비서 이름 — 로컬에서 읽어 표시 ─────────────────────────────
   (function _initAIName() {
     const stored = localStorage.getItem('hondi_assistant_name') || '혼디';
@@ -2872,6 +2983,55 @@ window.closeTermsOfUse = closeTermsOfUse;
   // 나머지는 최근 N개 메시지(턴)만 남긴다. (2026-06-27 — 6/27 사용량 폭증
   // 원인 분석에서 발견: 패널 세션이 길어질수록 요청당 토큰이 계속 불어남)
   const _PANEL_HISTORY_MAX_MESSAGES = 20; // system 제외, user/assistant 약 10턴
+
+  // ── 대화 연속성: 히스토리를 localStorage에 보관 (새로고침/재접속 후 이어가기) ─
+  const _HISTORY_STORE_KEY = 'hondi_panel_history_v1';
+
+  function _savePanelHistory() {
+    try {
+      // system 프롬프트(첫 항목)는 제외하고 저장 — 너무 길어 quota 초과 위험
+      const toSave = _panelHistory.filter(m => m.role !== 'system').slice(-20);
+      localStorage.setItem(_HISTORY_STORE_KEY, JSON.stringify(toSave));
+    } catch {}
+  }
+
+  // ── 튜토리얼 신호 송신 — 메뉴 동작 감지 시 AI에 알림 ──────────
+  window._sendTutorialSignal = async function(action) {
+    if (!_panelOpen) return;
+    const sigMap = {
+      left:  '[TUTORIAL_ACTION: left_menu_opened — 사용자가 왼쪽 메뉴를 열었습니다. "참, 잘했어요!"라고 칭찬하고 닫는 방법을 알려준 뒤 다음 단계로 진행하십시오.]',
+      right: '[TUTORIAL_ACTION: right_menu_opened — 사용자가 오른쪽 메뉴를 열었습니다. "참, 잘했어요!"라고 칭찬하고 닫는 방법을 알려준 뒤 다음 단계로 진행하십시오.]',
+      pdv:   '[TUTORIAL_ACTION: pdv_opened — 사용자가 PDV(Hash Chain)를 열었습니다. "참, 잘했어요!"라고 칭찬하고 PDV 설명을 마친 뒤 다음 단계(혼디 소개·요금)로 진행하십시오.]',
+    };
+    const msg = sigMap[action];
+    if (!msg) return;
+    const bubble = _appendPanelMsg('ai', '…');
+    bubble.classList.add('streaming');
+    try { await _callPanelAI(msg, bubble); }
+    catch(e) { bubble.textContent = 'AI 오류: ' + e.message; }
+    bubble.classList.remove('streaming');
+  };
+
+  function _restorePanelHistory() {
+    try {
+      const raw = localStorage.getItem(_HISTORY_STORE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!Array.isArray(saved) || saved.length === 0) return;
+      // system은 _callPanelAI가 첫 호출 시 다시 얹으므로 여기서는 넣지 않음
+      _panelHistory.push(...saved);
+      // 복원된 메시지를 패널 화면에 표시
+      for (const m of saved) {
+        if (m.role === 'user' || m.role === 'assistant') {
+          _appendPanelMsg(m.role === 'assistant' ? 'ai' : 'user',
+            (typeof m.content === 'string' ? m.content : '').replace(/\[INTERNAL:[^\]]*\]/g,'').trim()
+          );
+        }
+      }
+      _panelGreeted = true; // 복원됐으면 첫 인사 건너뜀
+    } catch {}
+  }
+  _restorePanelHistory();
 
   // ── 대화 연속성: 히스토리를 localStorage에 보관 (새로고침/재접속 후 이어가기) ─
   const _HISTORY_STORE_KEY = 'hondi_panel_history_v1';
@@ -3074,6 +3234,7 @@ window.closeTermsOfUse = closeTermsOfUse;
         // 히스토리에 assistant 추가
         _panelHistory.push({ role: 'assistant', content: full });
         _trimPanelHistory();
+        _savePanelHistory(); // 대화 연속성 — 응답마다 즉시 저장
         _savePanelHistory(); // 대화 연속성 — 응답마다 즉시 저장
 
         // v1.3 — PROFILE_SUBMIT/SKIP/PARTIAL_SAVE/FIRST_GREETED/NAME_CAPTURED 처리.

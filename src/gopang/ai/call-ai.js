@@ -191,6 +191,8 @@ export const _stripInternalTags = (text) => text
   .replace(/\[FIRST_GREETED\]/g, '')
   .replace(/\[NAME_CAPTURED\]/g, '')
   .replace(/\[PROFILE_SKIP\]/g, '')
+  .replace(/\[TUTORIAL_ADVANCE:\d+\]/g, '')   // 튜토리얼 단계 태그
+  .replace(/\[TUTORIAL_STEP:[^\]]*\]/g, '')    // 튜토리얼 컨텍스트 태그(실수로 AI가 출력하면)
   .trim();
 
 /**
@@ -204,10 +206,10 @@ export const _stripInternalTags = (text) => text
 export async function _handleProfileTags(fullReply, bubble, sendFn = callAI) {
   // ── FIRST_GREETED — PHASE -1 최초 인사 완료 (v1.3) ──────────
   if (fullReply.includes('[FIRST_GREETED]')) {
-    console.log('[Profile] FIRST_GREETED 감지 — 최초 인사 완료, 이름짓기 대기');
+    console.log('[Profile] FIRST_GREETED 감지 — 최초 인사 완료');
     try {
       localStorage.setItem('hondi_first_greeted', '1');
-      localStorage.setItem('hondi_name_pending', '1');
+      // v2.0: 이름짓기는 UI에서 직접 처리 — name_pending 플래그 불필요
     } catch {}
   }
 
@@ -275,6 +277,23 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI) {
     await _switchToAssistantSP();
     await _triggerSeamlessHandoff(sendFn);
     return true;
+  }
+
+  // ── TUTORIAL_ADVANCE — 튜토리얼 단계 진행 (v2.0) ─────────
+  const _tutAdvMatch = fullReply.match(/\[TUTORIAL_ADVANCE:(\d+)\]/);
+  if (_tutAdvMatch) {
+    const nextStep = parseInt(_tutAdvMatch[1], 10);
+    try {
+      if (nextStep >= 5) {
+        // 튜토리얼 완료
+        localStorage.setItem('hondi_tutorial_done', '1');
+        localStorage.removeItem('hondi_tutorial_step');
+        console.log('[Tutorial] 완료');
+      } else {
+        localStorage.setItem('hondi_tutorial_step', String(nextStep));
+        console.log('[Tutorial] 단계→', nextStep);
+      }
+    } catch {}
   }
 
   // ── PROFILE_SKIP ──────────────────────────────────────────
@@ -413,32 +432,62 @@ async function _triggerSeamlessHandoff(sendFn = callAI) {
  *
  * @returns {string} 끼워 넣을 컨텍스트 블록(없으면 빈 문자열)
  */
+/**
+ * _buildFirstContactContext v2.0
+ *
+ * 첫 인사(FIRST_CONTACT): 이름 묻기 없이 고정 환영 문구 + 앱 기본 사용법 안내.
+ *   → [FIRST_GREETED] 태그로 완료 기록.
+ *
+ * 튜토리얼 단계(TUTORIAL_STEP): hondi_tutorial_step 값에 따라 AGENT-COMMON에
+ *   현재 단계를 알려 해당 안내를 진행하도록 한다.
+ *   → AI가 [TUTORIAL_ADVANCE:N] 태그를 출력하면 call-ai.js가 step을 N으로 저장.
+ *   → hondi_tutorial_done='1' 이면 더 이상 주입하지 않는다.
+ *
+ * 이름짓기(NAME_CAPTURE_PENDING)는 v2.0에서 제거됨 — AI 비서 이름은 AI 패널
+ * 상단 이름 영역을 터치해 언제든 UI에서 직접 편집한다.
+ */
 export function _buildFirstContactContext() {
-  let firstGreeted = false, namePending = false;
+  let firstGreeted = false, tutStep = 0, tutDone = false;
   try {
     firstGreeted = localStorage.getItem('hondi_first_greeted') === '1';
-    namePending  = localStorage.getItem('hondi_name_pending')  === '1';
+    tutStep  = parseInt(localStorage.getItem('hondi_tutorial_step') || '0', 10);
+    tutDone  = localStorage.getItem('hondi_tutorial_done') === '1';
   } catch {}
 
+  // ── 최초 인사 (평생 1회) ──────────────────────────────────────
   if (!firstGreeted) {
     let nickname = '';
     try {
-      const reg = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}');
+      const reg = JSON.parse(
+        localStorage.getItem('gopang_user_v4') ||
+        sessionStorage.getItem('gopang_user_v4') || '{}'
+      );
       nickname = reg.nickname || '';
     } catch {}
-    return `[FIRST_CONTACT: 아래 문구로만 인사하고 이번 턴은 거기서 멈추십시오. 다른 내용을 ` +
-      `덧붙이지 마십시오.\n"안녕하세요, ${nickname}님의 AI 비서입니다. 제 이름을 지어주세요. ` +
-      `'혼디'라고 부르셔도 됩니다.\n참고로 나중에 설정에서 프로필을 작성해 두시면 더 맞춤화된 ` +
-      `도움을 드릴 수 있고, 다른 이용자들이 ${nickname}님을 찾을 수도 있어요. 언제든 원하실 때 ` +
-      `하시면 됩니다."\n응답 끝에 [FIRST_GREETED]를 출력하십시오.]\n\n`;
+    // 사용자 지정 환영 문구 — 한 글자도 바꾸지 말 것
+    return (
+      `[FIRST_CONTACT: 아래 문구를 토씨 하나 바꾸지 말고 그대로 출력하십시오.` +
+      ` **혼디** 는 마크다운 굵은 글씨(**혼디**)로 표시합니다.` +
+      ` 이번 턴은 아래 문구만 출력하고 반드시 거기서 멈추십시오 — 다른 내용 일절 금지.\n` +
+      `---\n` +
+      `저는 **${nickname}**님과 평생을 함께할 그림자 비서 **혼디**입니다.` +
+      ` 저는 오직 ${nickname}님만을 위해 일하며, ${nickname}님의 일상과 업무를 돕고,` +
+      ` 기록하며, 지시하신 각종 업무를 수행할 것입니다.\n\n` +
+      `먼저, 혼디 앱의 사용법을 간단히 설명드리겠습니다.` +
+      ` 좌측 하단의 마이크를 터치한 뒤 제 이름을 부르시거나,` +
+      ` 오른쪽 하단의 "AI" 버튼을 터치하면 제가 나타날 거예요.` +
+      ` 제게 무엇이든 지시하시면 됩니다.\n\n` +
+      `이해하셨으면 다음 항목을 말씀드릴게요. 준비되셨나요?\n` +
+      `---\n응답 끝에 반드시 [FIRST_GREETED]를 출력하십시오.]\n\n`
+    );
   }
 
-  if (namePending) {
-    return `[NAME_CAPTURE_PENDING: 직전 턴에서 비서 이름을 물었습니다. 이번 사용자 메시지에서 ` +
-      `이름을 지어줬는지 확인해 한 줄로 반응하십시오("{새이름}, 좋은 이름이네요! 😊" 또는 이름이 ` +
-      `없으면 조용히 넘어가고 "혼디" 유지). 다른 용건이 같이 있으면 자연스럽게 이어서 처리하십시오. ` +
-      `응답 끝에 [NAME_CAPTURED]를 출력하고, 새 이름을 지어줬다면 ` +
-      `[PARTIAL_SAVE] {"assistant_name": "새이름"}도 함께 출력하십시오.]\n\n`;
+  // ── 튜토리얼 단계 주입 (완료 전까지) ────────────────────────
+  if (!tutDone) {
+    return (
+      `[TUTORIAL_STEP:${tutStep} — 아래 단계별 안내를 진행하십시오(§0-1 참조).` +
+      ` 각 단계 완료 시 응답 끝에 [TUTORIAL_ADVANCE:${tutStep + 1}]를 출력하십시오.]\n\n`
+    );
   }
 
   return '';
