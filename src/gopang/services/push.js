@@ -10,7 +10,7 @@
  * - 실패해도 호출부의 다른 흐름(가입 등)을 막지 않도록
  *   항상 { ok, reason } 형태로만 반환하고 throw하지 않는다.
  */
-const WORKER_URL = 'https://gopang-proxy.tensor-city.workers.dev';
+const WORKER_URL = 'https://hondi-proxy.tensor-city.workers.dev';
 
 // ── 탈중앙화 이관 ①: VAPID 공개키 하드코딩 (2026-06-23) ─────────────────
 // 이전: Worker GET /push/vapid-public-key → env.VAPID_PUBLIC_KEY 반환

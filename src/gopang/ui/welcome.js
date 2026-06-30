@@ -63,7 +63,7 @@ export async function handleProfileSubmit(aiResponseText) {
 
   // 판매자 AI 비서 endpoint 설정 (사업자일 때)
   if (profile.entity_type === 'business' && profile.handle) {
-    const ep = `https://market.gopang.net/webapp.html?seller=${profile.handle}`;
+    const ep = `https://market.hondi.net/webapp.html?seller=${profile.handle}`;
     const aiCfg = profile.extra?.public?.ai_assistant;
     if (aiCfg) {
       aiCfg.seller_ai_endpoint = ep;
@@ -71,7 +71,7 @@ export async function handleProfileSubmit(aiResponseText) {
     }
   }
 
-  const PROXY = 'https://gopang-proxy.tensor-city.workers.dev';
+  const PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
 
   try {
     const res = await fetch(`${PROXY}/profile`, {
@@ -167,16 +167,23 @@ async function _initPDV(guid) {
 // PROFILE_SUBMIT 완료 후 본인 지갑 키로 그림자를 위임 서명한다.
 // window.gopangWallet.signPayload가 없으면 조용히 건너뜀.
 async function _triggerDelegationSignature(agentGuid, principalGuid) {
-  const PROXY = 'https://gopang-proxy.tensor-city.workers.dev';
+  const PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
   const wallet = window.gopangWallet;
   if (!wallet?.signPayload || typeof wallet.signPayload !== 'function') {
     console.warn('[Delegation] gopangWallet 미준비 — 위임 서명 건너뜀');
     return;
   }
 
-  const delegateMsg = `delegate:${agentGuid}:${principalGuid}`;
-  const signature   = await wallet.signPayload(delegateMsg);
-  const pubkey      = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+  // 서명 메시지 포맷은 worker.js의 handleProfileDelegate가 서버에서
+  // 직접 재구성하는 sigMsg와 1바이트도 다르면 안 된다(대소문자·순서·ts
+  // 포함 여부까지). 2026-06-30: 그동안 클라이언트가
+  // `delegate:${agentGuid}:${principalGuid}`(ts 없음)로 서명하고
+  // 서버는 `DELEGATE:${principal_guid}:${agent_guid}:${ts}`로 검증해서,
+  // 위임 서명이 한 번도 통과한 적이 없었을 가능성이 있는 버그를 발견·수정.
+  const ts = String(Math.floor(Date.now() / 1000));
+  const delegateMsg = `DELEGATE:${principalGuid}:${agentGuid}:${ts}`;
+  const signature    = await wallet.signPayload(delegateMsg);
+  const pubkey       = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
 
   const res = await fetch(`${PROXY}/profile/delegate`, {
     method: 'POST',
@@ -184,6 +191,7 @@ async function _triggerDelegationSignature(agentGuid, principalGuid) {
     body: JSON.stringify({
       principal_guid: principalGuid,
       agent_guid:     agentGuid,
+      ts,
       pubkey,
       signature,
     }),

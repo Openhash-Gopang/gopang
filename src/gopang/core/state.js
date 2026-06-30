@@ -33,7 +33,7 @@ export function setAttachFile(v)  { attachFile = v; }
 export function setRecognition(v) { recognition = v; }
 
 // ── P2P 상태 ─────────────────────────────────────────────
-export const PROXY      = 'https://gopang-proxy.tensor-city.workers.dev';
+export const PROXY      = 'https://hondi-proxy.tensor-city.workers.dev';
 
 // ── 탈중앙화 이관 ③: P2P 시그널링 L1 직접 엔드포인트 (2026-06-23) ──────
 // 이전: 단말 → PROXY /signal/* → Worker → L1 webrtc_signals

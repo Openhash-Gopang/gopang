@@ -12,7 +12,7 @@
  *   const ack = await sendReportOnce(report);
  */
 
-const _ENDPOINT  = 'https://gopang-proxy.tensor-city.workers.dev/pdv/report';
+const _ENDPOINT  = 'https://hondi-proxy.tensor-city.workers.dev/pdv/report';
 const _QUEUE_KEY = 'gopang_report_queue';    // localStorage — 재전송 큐
 const _ACK_PFX   = 'gopang_ack_';           // localStorage — ACK 저장 prefix
 

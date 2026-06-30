@@ -1,0 +1,30 @@
+[
+  {
+    "name": "agent_internal_sp",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "name": "principal_guid",
+        "type": "text",
+        "required": true,
+        "unique": true,
+        "options": { "min": null, "max": null, "pattern": "" }
+      },
+      {
+        "name": "system_prompt",
+        "type": "editor",
+        "required": false,
+        "options": {}
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_agent_internal_sp_principal ON agent_internal_sp (principal_guid)"
+    ],
+    "listRule": null,
+    "viewRule": null,
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  }
+]

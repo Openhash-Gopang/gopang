@@ -12,7 +12,7 @@
  */
 
 const _GOPANG_ORIGIN  = 'https://gopang.net';
-const _WORKER         = 'https://gopang-proxy.tensor-city.workers.dev';
+const _WORKER         = 'https://hondi-proxy.tensor-city.workers.dev';
 const _STORE_KEY      = 'gopang_user_v4';       // gopang_v2와 공유
 const _SSO_SESSION    = 'gopang_sso_token';     // sessionStorage 키
 const _LEVEL_ORDER    = { L0:0, L1:1, L2:2, L3:3 };

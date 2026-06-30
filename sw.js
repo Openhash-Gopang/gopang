@@ -244,7 +244,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
     self.registration.pushManager.subscribe({ userVisibleOnly: true })
       .then(sub => {
         // 새 구독을 서버에 재등록
-        return fetch('https://gopang-proxy.tensor-city.workers.dev/push/subscribe', {
+        return fetch('https://hondi-proxy.tensor-city.workers.dev/push/subscribe', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ subscription: sub }),
