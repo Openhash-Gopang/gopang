@@ -97,12 +97,10 @@ const VALID_INDUSTRY_SCHEMA_IDS = new Set([
   '91','94','95','96','97','98','99',
 ]);
 
-// 2026-06-30: "개인은 나만의 AI비서=그림자가 하나, 기관은 운영자/고객
-// 청중에 따라 내부·공개 두 모드로 분리"라는 합의에 따라 신설.
-// person/consumer/individual → 별도 그림자 행 없이 본인 행에 SP 직접 기록.
-// business/org/institution/platform → 별도 그림자 행 + public/internal 분리.
-const INDIVIDUAL_ENTITY_TYPES   = new Set(['person', 'consumer', 'individual']);
-const INSTITUTION_ENTITY_TYPES  = new Set(['business', 'org', 'institution', 'platform']);
+// 2026-07-01: INDIVIDUAL_ENTITY_TYPES/INSTITUTION_ENTITY_TYPES는
+// "개인은 별도 행 없이 병합, 기관은 별도 그림자 행"으로 나누던
+// 구설계의 분기 상수였다 — 모든 entity_type이 _mergeAgentSP 하나로
+// 통합되며 더 이상 분기가 필요 없어져 제거함.
 
 // STEP 10: VALID_PDV_SCOPES 11개로 확장
 const VALID_PDV_SCOPES = [
@@ -226,46 +224,6 @@ async function _l1FindProfileByHandle(env, handle) {
 }
 
 // L1 profiles 레코드 PATCH (Admin 토큰 필요 — Update rule이 Admins only이므로)
-// ── agent_internal_sp 컬렉션 (운영자 전용 internal SP) ────────────────
-// 2026-06-30: Supabase 별도 테이블 대신 L1 PocketBase로 이전.
-// "X25519/Ed25519 등 보안 필드는 L1이 소스, Supabase는 필드 테스트용"
-// 이라는 기존 설계 원칙(_l1AdminToken 주석 참조)과 일관성을 맞췄고,
-// PocketBase 컬렉션 자체를 List/View/Create/Update 규칙 전부 빈 문자열
-// (Admin 전용)로 만들면 Supabase RLS-미설정(deny-all)과 동일한 보안
-// 모델이 된다 — anon/공개 조회 경로가 원천적으로 없음.
-// 컬렉션 스키마: sql/phase11_agent_internal_sp.sql 대신
-// docs/pocketbase_agent_internal_sp_schema.json 참조(Admin UI에서 임포트).
-async function _l1FindInternalSP(env, principalGuid) {
-  const token = await _l1AdminToken(env);
-  const filter = encodeURIComponent(`principal_guid='${principalGuid}'`);
-  const res = await fetch(`${L1_DEFAULT}/api/collections/agent_internal_sp/records?filter=${filter}&perPage=1`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(`L1 internal SP 조회 실패 (HTTP ${res.status})`);
-  const data = await res.json().catch(() => ({ items: [] }));
-  return data.items?.[0] || null;
-}
-
-async function _l1UpsertInternalSP(env, principalGuid, systemPrompt) {
-  const token = await _l1AdminToken(env);
-  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
-  const existing = await _l1FindInternalSP(env, principalGuid).catch(() => null);
-
-  if (existing?.id) {
-    const res = await fetch(`${L1_DEFAULT}/api/collections/agent_internal_sp/records/${existing.id}`, {
-      method: 'PATCH', headers, body: JSON.stringify({ system_prompt: systemPrompt }),
-    });
-    if (!res.ok) throw new Error(`L1 internal SP 갱신 실패 (HTTP ${res.status})`);
-    return res.json();
-  }
-
-  const res = await fetch(`${L1_DEFAULT}/api/collections/agent_internal_sp/records`, {
-    method: 'POST', headers,
-    body: JSON.stringify({ principal_guid: principalGuid, system_prompt: systemPrompt }),
-  });
-  if (!res.ok) throw new Error(`L1 internal SP 생성 실패 (HTTP ${res.status})`);
-  return res.json();
-}
 
 async function _l1PatchProfile(env, recordId, patch) {
   const token = await _l1AdminToken(env);
@@ -499,14 +457,17 @@ export default {
     // ── profile (사용자/사업자 프로필 등록·조회 — v5.1) ──────
     //   GET  : 인증 불필요 — handle 또는 guid로 공개 조회
     //   POST : body={guid,pubkey,signature,...} — _verifyEd25519 + TOFU
-    if (pathname === '/profile/delegate' && request.method === 'POST') {
-      return handleProfileDelegate(request, env, corsHeaders);
-    }
-    // GET /profile/my-sp — 본인 인증된 운영자 전용 internal system_prompt
-    // (Ed25519 서명+TOFU 대조. 공개 GET /profile/@handle과 절대 같은
-    // 코드경로를 타지 않음 — 2026-06-30 internal/public 분리 설계)
-    if (pathname === '/profile/my-sp' && request.method === 'GET')
-      return handleProfileMySP(request, env, corsHeaders);
+    // 2026-07-01: /profile/delegate(위임 인증서) 폐기 — 별도 그림자
+    // 정체성이 없어졌으므로 "위임" 자체가 무의미해짐(_mergeAgentSP 참조).
+
+    // GET /profile/verify-owner — 핸드셰이크 실시간 본인 검증
+    // (Ed25519 서명+TOFU. gopang-wallet.js의 sign()/verify()와 동일한
+    // 서명 체계 — 전체 시스템이 서명 체계를 하나만 공유한다는 원칙.
+    // 2026-07-01: SP를 돌려주던 /profile/my-sp를 대체 — 이제 system_prompt는
+    // 단 하나뿐이라 "내려줄 internal SP"가 없고, "본인이 맞는지"만 매
+    // 핸드셰이크마다 실시간으로 묻는다. AGENT-COMMON §4 참조)
+    if (pathname === '/profile/verify-owner' && request.method === 'GET')
+      return handleProfileVerifyOwner(request, env, corsHeaders);
 
     if (pathname.startsWith('/profile')) {
       if (request.method === 'GET')  return handleProfileGet(request, env, corsHeaders);
@@ -2702,16 +2663,14 @@ async function _resolveGuidFromL1(handle) {
   }
 }
 
-// GET /profile/my-sp?guid=&pubkey=&signature=&ts= — 본인 인증된 요청에만
-// internal(운영자 전용) system_prompt를 반환한다. 2026-06-30 신설.
-// 쿠키(gopang_token) 대신 /profile POST·/profile/delegate와 동일한
-// Ed25519 서명 + TOFU 대조 방식을 쓴다 — gopang_token 쿠키는 Domain=
-// .hondi.net으로 발급되는데 _PROXY_URL은 *.workers.dev 호스트라 브라우저가
-// 쿠키를 아예 첨부하지 않을 위험이 있어, 이미 검증된 서명 패턴으로 통일.
-// 개인(person/consumer/individual)은 internal/public 구분이 없으므로
-// 항상 404 — config.js는 이 경우 공개 경로(GET /profile/@handle)로
-// 폴백해 본인 행의 system_prompt를 그대로 쓴다(이미 본인용으로 합성됨).
-async function handleProfileMySP(request, env, corsHeaders) {
+// GET /profile/verify-owner?guid=&pubkey=&signature=&ts= — 핸드셰이크
+// 중 "지금 상대가 본인(운영자)인가"를 실시간으로 검증한다. 2026-07-01
+// 신설(/profile/my-sp 대체). gopang-wallet.js의 sign()/verify()와
+// 동일한 Ed25519 서명 체계 + TOFU 대조 — 전체 시스템이 서명 체계를
+// 하나만 공유한다는 원칙(이전 /profile POST·/profile/delegate와도 동일).
+// SP를 돌려주지 않는다 — system_prompt는 이제 단 하나뿐이고 이미 클라이언트가
+// 갖고 있으므로(GET /profile/@handle), 여기선 verified 불리언만 반환한다.
+async function handleProfileVerifyOwner(request, env, corsHeaders) {
   const url = new URL(request.url);
   const guid      = url.searchParams.get('guid');
   const pubkey    = url.searchParams.get('pubkey');
@@ -2725,24 +2684,20 @@ async function handleProfileMySP(request, env, corsHeaders) {
   if (!tsNum || Math.abs(Date.now() / 1000 - tsNum) > 300)
     return _err(401, 'STALE_TIMESTAMP', 'ts가 만료되었거나 형식이 올바르지 않습니다', corsHeaders);
 
-  const sigMsg = `MY-SP:${guid}:${ts}`;
+  const sigMsg = `VERIFY-OWNER:${guid}:${ts}`;
   const sigOk  = await _verifyEd25519Simple(pubkey, signature, sigMsg);
-  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+  if (!sigOk) {
+    return new Response(JSON.stringify({ ok: true, verified: false, reason: 'INVALID_SIGNATURE' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+  }
 
   // TOFU: 이 guid에 등록된 pubkey와 요청 pubkey가 일치해야 함.
-  // 2026-06-30: Supabase 대신 L1 PocketBase에서 대조 — _l1AdminToken
-  // 주석에 명시된 기존 원칙("X25519/Ed25519 등 보안 필드는 L1이 소스")과
-  // 일관성을 맞춤.
+  // L1 PocketBase가 보안 필드(Ed25519 등)의 권위 있는 소스(_l1AdminToken 주석 참조).
   const ownerRecord = await _l1FindProfileByGuid(env, guid).catch(() => null);
   const knownPubkey = ownerRecord?.pubkey_ed25519;
-  if (!knownPubkey || knownPubkey !== pubkey)
-    return _err(403, 'PUBKEY_MISMATCH', '등록된 본인 키와 일치하지 않습니다', corsHeaders);
+  const verified = !!knownPubkey && knownPubkey === pubkey;
 
-  const row = await _l1FindInternalSP(env, guid).catch(() => null);
-  if (!row?.system_prompt) {
-    return _err(404, 'NO_INTERNAL_SP', '운영자 전용 SP 없음 (개인 계정이거나 아직 미생성)', corsHeaders);
-  }
-  return new Response(JSON.stringify({ ok: true, system_prompt: row.system_prompt, updated_at: row.updated || row.updated_at }),
+  return new Response(JSON.stringify({ ok: true, verified, reason: verified ? null : 'PUBKEY_MISMATCH' }),
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 }
 
@@ -2877,6 +2832,11 @@ function _bufToB64(buf)  { return btoa(String.fromCharCode(...new Uint8Array(buf
 //
 // env.AGENT_SIGNER: Service Binding 바인딩 이름 (wrangler.json에 선언)
 //                  binding이 없으면 graceful 실패(그림자 생성 자체는 계속).
+//
+// ⚠️ 2026-07-01: 현재 미사용(dead code). 별도 그림자 정체성·키쌍 생성을
+// 폐기(_mergeAgentSP로 통합)하면서 호출부가 사라졌다. wrangler.json의
+// AGENT_SIGNER 바인딩 자체는 향후 다른 용도(예: 본인 부재 시 자동
+// 서명·결제)로 재사용될 수 있어 함수는 남겨둔다.
 
 async function _signerKeypair(env, agentGuid, principalGuid) {
   if (!env.AGENT_SIGNER) {
@@ -2931,32 +2891,27 @@ async function _deriveAgentGuid(principalGuid) {
 // 설계 원칙:
 //   - 합성 실패 시 null 반환(그림자 생성을 막지 않는다)
 //   - 향후 industry_fields 변경 시 /profile/sync-sp 엔드포인트로 재합성 가능하게 설계
-async function _compileAgentSP(env, principalProfile, variant = 'individual') {
+async function _compileAgentSP(env, principalProfile) {
   const REPO_RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main';
   const headers  = { 'User-Agent': 'gopang-worker/4.9', 'Cache-Control': 'no-cache' };
 
-  // 0) 청중 안내문 — variant에 따라 "지금 이 대화 상대가 누구인지"를
-  //    SP 맨 앞에 명시한다. AGENT-COMMON §4 [핸드셰이크 절차] 2단계
-  //    (권한 범위 고지)가 바로 이 변수를 참조해서 동작한다.
-  //    individual(개인)은 청중 구분이 없으므로 안내문 없음.
-  let audiencePreamble = '';
-  if (variant === 'internal') {
-    audiencePreamble =
-      `[운영자 모드 — 이 system_prompt는 본인 인증된 운영자 전용입니다]\n` +
-      `지금 대화 상대는 이 사업체·기관을 실제로 운영하는 본인입니다.\n` +
-      `원가·마진·거래처 단가·내부 재고관리 등 내부 데이터 질문에도\n` +
-      `정직하게 답합니다. 단, 이 내용을 외부에 그대로 공개해서는 안 된다는\n` +
-      `점을 항상 인지하고, 운영자가 "고객에게는 뭐라고 답해야 해?" 같은\n` +
-      `질문을 하면 공개 응대 모드의 표현으로 바꿔서 알려줍니다.`;
-  } else if (variant === 'public') {
-    audiencePreamble =
-      `[공개 응대 모드 — 이 system_prompt는 외부 고객·제3자에게 노출됩니다]\n` +
-      `지금 대화 상대는 외부 고객 또는 제3자입니다. 원가·마진·거래처 단가·\n` +
-      `내부 재고관리 디테일 등 영업기밀은 절대 제공하지 않습니다\n` +
-      `(AGENT-SUPPLIER-COMMON §0 고객 보호 원칙 우선).\n` +
-      `본 대화 전에 AGENT-COMMON §4 [핸드셰이크 절차]를 반드시 먼저\n` +
-      `수행합니다.`;
-  }
+  // 0) 실시간 공개 범위 판단 안내문 — 2026-06-30 재설계: 가입 시점에
+  //    internal/public 두 변형을 미리 컴파일해 따로 저장하던 방식을 폐기.
+  //    SP는 이제 단 하나뿐이고, "지금 상대가 본인인지"는 매 대화의
+  //    핸드셰이크(AGENT-COMMON §4)에서 실시간으로 검증한다 — 검증 결과는
+  //    GET /profile/verify-owner(Ed25519 서명+TOFU, gopang-wallet.js의
+  //    sign()/verify()와 동일한 서명 체계)로 받는다.
+  const realtimeDisclosurePreamble =
+    `[실시간 공개 범위 판단 — 모든 사업체·기관형 그림자 AI 공통]\n` +
+    `이 system_prompt는 단 하나뿐이며, 운영자용/고객용으로 미리 나뉘어\n` +
+    `있지 않습니다. 상대가 본인(운영자)인지는 대화 시작 시 핸드셰이크\n` +
+    `(AGENT-COMMON §4)에서 GET /profile/verify-owner 서명 검증 결과로\n` +
+    `실시간 판단합니다.\n` +
+    `  - 검증 통과(verified=true) → 원가·마진·거래처 단가 등 내부\n` +
+    `    데이터 질문에도 정직하게 답합니다.\n` +
+    `  - 검증 미통과/미시도(verified=false 또는 핸드셰이크 생략) →\n` +
+    `    외부 고객·제3자로 간주해 영업기밀을 제공하지 않습니다\n` +
+    `    (AGENT-SUPPLIER-COMMON §0 고객 보호 원칙 우선).`;
 
   // 1) AGENT-COMMON 로드 — manifest.json['AGENT-COMMON'] 키로 파일명 결정
   //    CI 빌드 시 자동 갱신 — AGENT-COMMON-LATEST.txt 포인터 파일 방식 제거
@@ -2978,9 +2933,12 @@ async function _compileAgentSP(env, principalProfile, variant = 'individual') {
   // 2) AGENT-SUPPLIER-COMMON 로드 (업종 SP 공통 모듈 — Type B 정체성·
   //    K-시스템 연계표·강제규칙 등. 77개 업종 파일이 전부 "상속"한다고
   //    표기만 해두고 실제로는 한 번도 합성되지 않던 버그를 2026-06-30 수정.
-  //    개인(individual)은 Type B 정체성 자체가 해당 없으므로 생략.)
+  //    업종(schema_id)이 없는 사용자(개인 등)는 Type B 정체성 자체가
+  //    해당 없으므로 생략 — 2026-07-01: entity_type 분기 대신 ksic
+  //    존재 여부로 통일(개인/기관 별도 컴파일 경로를 없앤 재설계와 일관).
+  const ksic = principalProfile?.extra?.public?.industry_fields?.schema_id || null;
   let supplierCommonSP = '';
-  if (variant !== 'individual') {
+  if (ksic) {
   try {
     const manifestRes = await fetch(`${REPO_RAW}/prompts/manifest.json`, { ...headers, cache: 'no-cache' });
     if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
@@ -3002,7 +2960,6 @@ async function _compileAgentSP(env, principalProfile, variant = 'individual') {
   // 3) AGENT-SUPPLIER-{ksic} 로드 (업종 불명이면 생략)
   // 파일명은 빌드 시 자동 생성된 prompts/manifest.json 에서 결정.
   // SUPPLIER_FILE_MAP 하드코딩 제거 — manifest 갱신만으로 새 버전 자동 반영.
-  const ksic = principalProfile?.extra?.public?.industry_fields?.schema_id || null;
   let supplierSP = '';
   if (ksic && VALID_INDUSTRY_SCHEMA_IDS.has(String(ksic))) {
     try {
@@ -3036,7 +2993,11 @@ ${JSON.stringify(iFields, null, 2)}
     : '';
 
   // 5) 합성 — 청중 안내문 → AGENT-COMMON → AGENT-SUPPLIER-COMMON → AGENT-SUPPLIER-{ksic} → industry_fields
-  const parts = [audiencePreamble, commonSP, supplierCommonSP, supplierSP, iFieldsBlock].filter(Boolean);
+  // 5) 합성 — 실시간 공개범위 안내문(업종 SP가 있을 때만, 즉 사업체·기관
+  //    한정) → AGENT-COMMON → AGENT-SUPPLIER-COMMON → AGENT-SUPPLIER-{ksic}
+  //    → industry_fields. 개인은 안내문 없이 AGENT-COMMON만(영업기밀 같은
+  //    공개범위 구분 자체가 해당 없음).
+  const parts = [ksic ? realtimeDisclosurePreamble : '', commonSP, supplierCommonSP, supplierSP, iFieldsBlock].filter(Boolean);
   if (!parts.length) return null;
 
   const compiled = parts.join('\n\n---\n\n').trim();
@@ -3051,126 +3012,20 @@ ${JSON.stringify(iFields, null, 2)}
  * 실패해도 본 가입 자체를 막지 않음(호출부에서 .catch로 흡수) — 그림자는
  * 나중에 재시도로도 만들 수 있지만 본인 가입 실패는 되돌릴 수 없는 손해라서.
  */
-async function _createAgentForPrincipal(env, principalProfile) {
-  const principalGuid   = principalProfile.guid;
-  const principalHandle = principalProfile.handle;
-  if (!principalHandle) {
-    return { ok: false, error: 'NO_HANDLE', detail: '본인 handle이 없어 그림자 handle을 만들 수 없습니다' };
-  }
-  const agentHandle = `${principalHandle}_ai`;
-  const agentGuid   = await _deriveAgentGuid(principalGuid);
-  const sbSvc = _sbServiceHeaders(env);
-
-  // 이미 존재하면(재시도 등) 새로 만들지 않음 — 중복 생성 방지, idempotent.
-  // 2026-06-30: L1을 1차로 확인하고, Supabase도 보조로 확인(레거시 대비).
-  const l1Existing = await _l1FindProfileByGuid(env, agentGuid).catch(() => null);
-  if (l1Existing) {
-    return { ok: true, guid: agentGuid, handle: agentHandle, created: false };
-  }
-  const checkRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agentGuid)}&select=guid`,
-    { headers: sbSvc }
-  );
-  const existingAgent = await checkRes.json().catch(() => []);
-  if (Array.isArray(existingAgent) && existingAgent.length) {
-    return { ok: true, guid: agentGuid, handle: agentHandle, created: false };
-  }
-
-  // 1) 그림자 키쌍 생성 + 암호화 저장 (signer Worker에 위임)
-  //    AGENT_KEK는 이 Worker에 없음 — signer가 독점 보유.
-  //    실패해도 그림자 프로필 행은 만들어야 하므로 에러를 흡수하되 로그에 남김.
-  const keypairResult = await _signerKeypair(env, agentGuid, principalGuid);
-  const publicKeyB64  = keypairResult?.public_key_b64 || null;
-  if (!keypairResult?.ok) {
-    console.warn('[Agent] signer 키 생성 실패 (계속 진행):', keypairResult?.error);
-  }
-
-  // 2) SP 두 변형 합성 — public(고객 응대, 누구나 GET /profile/@handle_ai로
-  //    조회 가능 → extra.public에 저장) / internal(운영자 전용, 절대로
-  //    extra.public에 두지 않고 agent_internal_sp 컬렉션(L1, Admin 전용)
-  //    에만 저장 — handleProfileGet/handleProfileMySP가 SELECT * 류로
-  //    행 전체를 반환하므로, 같은 행에 두면 그대로 공개 유출된다.
-  //    2026-06-30 설계 합의 반영).
-  const compiledPublic   = await _compileAgentSP(env, principalProfile, 'public').catch(() => null);
-  const compiledInternal = await _compileAgentSP(env, principalProfile, 'internal').catch(() => null);
-
-  // 3) 그림자 행 생성 (entity_type='agent', casts_for=본체guid)
-  const agentExtra = {
-    public: {
-      identity: { _schema_version: '2.0', display_name: agentHandle, description: '', tags: [], entity_subtype: null },
-      ai_assistant: {
-        system_prompt: compiledPublic,
-        greeting: compiledPublic ? `안녕하세요! ${principalProfile.name || principalHandle} AI비서입니다.` : null,
-      },
-    },
-  };
-  const agentName = `${principalProfile.name || principalHandle} AI비서`;
-
-  // 2026-06-30: L1 PocketBase를 1차로 먼저 쓰고, 실패해도 그림자 생성
-  // 자체는 계속 진행한다(Supabase가 폴백 소스로 남음).
-  try {
-    await _l1UpsertProfile(env, {
-      guid: agentGuid, handle: agentHandle, entityType: 'agent',
-      nativeLang: principalProfile.native_lang || 'ko', isPublic: true,
-      pubkey: publicKeyB64, extra: agentExtra,
-      core: { name: agentName, casts_for: principalGuid },
-    });
-  } catch (e) {
-    console.warn('[Agent] L1 그림자 저장 실패 (Supabase는 계속 진행):', e.message);
-  }
-
-  const agentRecord = {
-    guid: agentGuid,
-    pubkey_ed25519: publicKeyB64,
-    entity_type: 'agent',
-    casts_for: principalGuid,
-    name: agentName,
-    handle: agentHandle,
-    native_lang: principalProfile.native_lang || 'ko',
-    is_public: true,
-    extra: agentExtra,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-  const profRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
-    method: 'POST',
-    headers: { ...sbSvc, 'Prefer': 'return=representation' },
-    body: JSON.stringify(agentRecord),
-  });
-  if (!profRes.ok) {
-    const errText = await profRes.text().catch(() => '');
-    console.warn('[Agent] Supabase 그림자 저장 실패 (L1은 이미 저장됐을 수 있음):', errText);
-    // 2026-06-30: L1 저장이 이미 성공했을 수 있으므로, Supabase 실패만으로
-    // 전체를 실패 처리하지 않는다 — L1이 1차 소스이기 때문.
-  }
-
-  // 4) internal 변형은 본체(principal)의 guid로 키잉해 L1 별도 컬렉션에
-  //    저장 — 본인 인증을 통과한 GET /profile/my-sp에서만 읽힘.
-  if (compiledInternal) {
-    await _storeInternalSP(env, principalGuid, compiledInternal).catch(e =>
-      console.warn('[Agent] internal SP 저장 실패 (공개 SP는 정상 생성됨):', e.message)
-    );
-  }
-
-  return { ok: true, guid: agentGuid, handle: agentHandle, created: true };
-}
-
 /**
- * internal(운영자 전용) system_prompt를 L1 PocketBase agent_internal_sp
- * 컬렉션에 upsert. Admin 전용 컬렉션이라 anon/공개 조회 경로 자체가 없음.
+ * 2026-07-01 전면 재설계: 개인/기관 구분 없이 단일 정체성으로 통합.
+ * "나만의 AI비서 = 그림자"이며, 별도 행·별도 guid·별도 키쌍을 만들지
+ * 않는다 — 본인 user_profiles 행에 단일 system_prompt를 직접 기록한다.
+ * 운영자/고객 공개범위 구분은 사전 컴파일(internal/public 두 변형)이
+ * 아니라, 대화 시작 시 [핸드셰이크 절차](AGENT-COMMON §4)에서
+ * GET /profile/verify-owner로 실시간 판단한다(_compileAgentSP의
+ * realtimeDisclosurePreamble 참조).
+ * 이전엔 _createAgentForPrincipal(기관 전용 별도 그림자 행+키쌍 생성)과
+ * _mergeIndividualSP(개인 전용 통합 기록)로 나뉘어 있었으나, 이 함수
+ * 하나로 합쳤다 — 기관도 더 이상 별도 행을 만들지 않는다.
  */
-async function _storeInternalSP(env, principalGuid, systemPrompt) {
-  await _l1UpsertInternalSP(env, principalGuid, systemPrompt);
-}
-
-/**
- * 개인(person/consumer/individual)은 별도 그림자 행을 만들지 않고,
- * 본인 user_profiles 행의 extra.public.ai_assistant.system_prompt에
- * AGENT-COMMON(개인 variant)을 직접 기록한다. 2026-06-30 설계 합의:
- * "개인은 나만의 AI비서가 곧 그림자 — 굳이 분리할 필요 없음".
- */
-async function _mergeIndividualSP(env, principalProfile) {
-  const compiled = await _compileAgentSP(env, principalProfile, 'individual').catch(() => null);
+async function _mergeAgentSP(env, principalProfile) {
+  const compiled = await _compileAgentSP(env, principalProfile).catch(() => null);
   if (!compiled) return { ok: false, error: 'COMPILE_FAILED' };
 
   const newExtra = {
@@ -3181,7 +3036,7 @@ async function _mergeIndividualSP(env, principalProfile) {
     },
   };
 
-  // 2026-06-30: L1을 1차로 먼저 쓴다 — 실패해도 Supabase는 계속 진행.
+  // L1을 1차로 먼저 쓴다 — 실패해도 Supabase는 계속 진행.
   try {
     await _l1UpsertProfile(env, {
       guid: principalProfile.guid, handle: principalProfile.handle,
@@ -3190,7 +3045,7 @@ async function _mergeIndividualSP(env, principalProfile) {
       extra: newExtra,
     });
   } catch (e) {
-    console.warn('[Profile] L1 개인 통합 SP 저장 실패 (Supabase는 계속 진행):', e.message);
+    console.warn('[Profile] L1 통합 SP 저장 실패 (Supabase는 계속 진행):', e.message);
   }
 
   const res = await fetch(
@@ -3206,7 +3061,7 @@ async function _mergeIndividualSP(env, principalProfile) {
   );
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
-    console.warn('[Profile] Supabase 개인 통합 SP 저장 실패 (L1은 이미 저장됐을 수 있음):', errText);
+    console.warn('[Profile] Supabase 통합 SP 저장 실패 (L1은 이미 저장됐을 수 있음):', errText);
     // L1이 1차 소스이므로 Supabase 실패만으로 전체 실패 처리하지 않는다.
   }
   return { ok: true, merged: true, guid: principalProfile.guid, sp_updated: true };
@@ -3243,10 +3098,10 @@ async function handleProfilePost(request, env, corsHeaders) {
   if (!entity_type) return _err(400, 'MISSING_FIELD', 'entity_type 필수', corsHeaders);
   if (!name)        return _err(400, 'MISSING_FIELD', 'name 필수', corsHeaders);
   // 2026-06-22: 'agent'(그림자)는 이 화이트리스트에 의도적으로 없다 — 보안 경계.
-  // 그림자는 본인 가입(/profile POST) 직후 _createAgentForPrincipal()이 서버
-  // 내부에서만 생성한다. 클라이언트가 entity_type:'agent'를 직접 보내 임의
-  // guid를 casts_for로 지정해 남의 그림자를 사칭 생성하는 걸 막는다 — 나중에
-  // "지원 추가"로 여기 'agent'를 넣지 말 것.
+  // 2026-07-01: 별도 그림자 행 생성 자체를 폐기했으므로(_mergeAgentSP가
+  // 본인 행에 직접 SP를 기록) 이제 'agent' entity_type은 어떤 경로로도
+  // 만들어지지 않는다. 그래도 화이트리스트엔 영구히 넣지 않는다 — 클라이언트가
+  // entity_type:'agent'를 직접 보내 사칭 행을 만들 길을 원천 차단하기 위함.
   if (!['person','consumer','individual','org','institution','business','platform'].includes(entity_type)) {
     return _err(400, 'INVALID_FIELD', 'entity_type 값이 올바르지 않습니다', corsHeaders);
   }
@@ -3406,187 +3261,20 @@ async function handleProfilePost(request, env, corsHeaders) {
   }
   const savedProfile = savedRows[0] || record;
 
-  // 2026-06-23: 그림자 생성 시점 — 가입 직후가 아니라 PROFILE_SUBMIT 완료 후.
-  // 2026-06-30: 개인(person/consumer/individual)과 기관(business/org/
-  //   institution/platform)을 분기 — 개인은 별도 그림자 행 없이 본인 행에
-  //   직접 SP를 합치고(merge), 기관만 별도 그림자 행 + public/internal
-  //   두 변형을 만든다. (INDIVIDUAL_ENTITY_TYPES / INSTITUTION_ENTITY_TYPES
-  //   는 파일 상단에서 정의)
-  let agentResult = null;
+  // 2026-06-23: SP 합성 시점 — 가입 직후가 아니라 PROFILE_SUBMIT 완료 후.
+  // 2026-07-01 전면 재설계: 개인/기관 구분 없이 _mergeAgentSP 하나로 통합
+  // (이전엔 INDIVIDUAL/INSTITUTION으로 나눠 기관만 별도 그림자 행+키쌍을
+  // 만들었으나, "나만의 AI비서=그림자, 별도 정체성 분리 불필요" 설계
+  // 합의에 따라 모든 entity_type이 본인 행에 단일 SP를 직접 기록한다).
+  const agentResult = await _mergeAgentSP(env, savedProfile).catch(e => {
+    console.error('[Profile] 통합 SP 기록 실패(본 저장은 정상 처리됨):', e.message);
+    return { ok: false, error: 'EXCEPTION', detail: e.message };
+  });
 
-  if (INDIVIDUAL_ENTITY_TYPES.has(entity_type)) {
-    agentResult = await _mergeIndividualSP(env, savedProfile).catch(e => {
-      console.error('[Profile] 개인 통합 SP 기록 실패(본 저장은 정상 처리됨):', e.message);
-      return { ok: false, error: 'EXCEPTION', detail: e.message };
-    });
-  } else if (INSTITUTION_ENTITY_TYPES.has(entity_type)) {
-    const agentGuid = await _deriveAgentGuid(guid);
-    // 2026-06-30: L1을 1차로 확인, 없으면 Supabase 보조 확인(레거시 대비)
-    const l1Agent = await _l1FindProfileByGuid(env, agentGuid).catch(() => null);
-    let agentExists = !!l1Agent;
-    if (!agentExists) {
-      const agentCheck = await fetch(
-        `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agentGuid)}&select=guid`,
-        { headers: _sbHeaders(env) }
-      ).then(r => r.json()).catch(() => []);
-      agentExists = Array.isArray(agentCheck) && agentCheck.length > 0;
-    }
-
-    if (!agentExists) {
-      agentResult = await _createAgentForPrincipal(env, savedProfile).catch(e => {
-        console.error('[Profile] 그림자 자동생성 실패(본 저장은 정상 처리됨):', e.message);
-        return { ok: false, error: 'EXCEPTION', detail: e.message };
-      });
-      if (!agentResult?.ok) {
-        console.warn('[Profile] 그림자 자동생성 실패:', JSON.stringify(agentResult));
-      }
-    } else {
-      // 그림자가 이미 있으면 public/internal SP만 재합성 (industry_fields 갱신 반영)
-      const compiledPublic   = await _compileAgentSP(env, savedProfile, 'public').catch(() => null);
-      const compiledInternal = await _compileAgentSP(env, savedProfile, 'internal').catch(() => null);
-      if (compiledPublic) {
-        // L1 — 기존 extra(특히 identity)를 보존하며 ai_assistant.system_prompt만 갱신
-        try {
-          const existingAgentExtra = l1Agent?.extra || {};
-          await _l1UpsertProfile(env, {
-            guid: agentGuid, handle: `${savedProfile.handle}_ai`, entityType: 'agent',
-            nativeLang: savedProfile.native_lang, isPublic: true,
-            extra: {
-              ...existingAgentExtra,
-              public: { ...(existingAgentExtra.public || {}), ai_assistant: { system_prompt: compiledPublic } },
-            },
-          });
-        } catch (e) {
-          console.warn('[Profile] L1 그림자 public SP 재합성 실패 (Supabase는 계속 진행):', e.message);
-        }
-        await fetch(
-          `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agentGuid)}`,
-          {
-            method: 'PATCH',
-            headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=minimal' },
-            body: JSON.stringify({
-              extra: { public: { ai_assistant: { system_prompt: compiledPublic } } },
-              updated_at: new Date().toISOString(),
-            }),
-          }
-        ).catch(e => console.warn('[Profile] Supabase 그림자 public SP 재합성 실패:', e.message));
-      }
-      if (compiledInternal) {
-        await _storeInternalSP(env, guid, compiledInternal).catch(e =>
-          console.warn('[Profile] internal SP 재합성 실패:', e.message)
-        );
-      }
-      agentResult = { ok: true, guid: agentGuid, created: false, sp_updated: !!(compiledPublic || compiledInternal) };
-    }
-  }
 
   return new Response(JSON.stringify({ ok: true, profile: savedProfile, agent: agentResult }), { status: 200, headers: corsHeaders });
 }
 
-// ═══════════════════════════════════════════════════════════
-// /profile/delegate — 본체 → 그림자 위임 인증서 (2026-06-22)
-// agent_profile_pdv_plan_v2.md Phase 0 보강.
-// 본체가 자기 개인키로 "이 그림자는 내 대리인이다"를 1회 서명, PDV 영구기록.
-// 서버는 절대 본체 키로 대신 서명하지 않는다(불가능 — non-extractable).
-// ═══════════════════════════════════════════════════════════
-async function handleProfileDelegate(request, env, corsHeaders) {
-  const body = await request.json().catch(() => null);
-  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-
-  const { principal_guid, agent_guid, ts = '', signature } = body;
-  if (!principal_guid) return _err(400, 'MISSING_FIELD', 'principal_guid 필수', corsHeaders);
-  if (!agent_guid)     return _err(400, 'MISSING_FIELD', 'agent_guid 필수', corsHeaders);
-  if (!signature)      return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
-
-  const sbSvc = _sbServiceHeaders(env);
-
-  // 1) 본체의 등록된 pubkey를 서버가 직접 조회(클라이언트가 pubkey를 또 보내게
-  //    하면 위조 위험 — DB에 저장된 값만 권위 있는 기준으로 삼는다)
-  //    2026-06-30: L1을 1차로 확인, 없으면 Supabase로 폴백(레거시 대비)
-  let principalPubkey = null;
-  const l1Principal = await _l1FindProfileByGuid(env, principal_guid).catch(() => null);
-  if (l1Principal) {
-    principalPubkey = l1Principal.pubkey_ed25519;
-  } else {
-    const pRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(principal_guid)}&select=guid,pubkey_ed25519`,
-      { headers: sbSvc }
-    );
-    const pRows = await pRes.json().catch(() => []);
-    if (!Array.isArray(pRows) || !pRows.length) return _err(404, 'PRINCIPAL_NOT_FOUND', '본체를 찾을 수 없습니다', corsHeaders);
-    principalPubkey = pRows[0].pubkey_ed25519;
-  }
-  if (!principalPubkey) return _err(409, 'NO_PUBKEY', '본체에 등록된 pubkey가 없습니다', corsHeaders);
-
-  // 2) 그림자가 실제로 이 본체의 그림자인지 확인(엉뚱한 그림자 위임 시도 차단)
-  //    2026-06-30: casts_for는 L1엔 컬럼이 없어 extra.core.casts_for에 저장됨
-  let agentEntityType = null;
-  let agentCastsFor    = null;
-  const l1Agent = await _l1FindProfileByGuid(env, agent_guid).catch(() => null);
-  if (l1Agent) {
-    agentEntityType = l1Agent.entity_type;
-    agentCastsFor    = l1Agent.extra?.core?.casts_for ?? null;
-  } else {
-    const aRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(agent_guid)}&select=guid,casts_for,entity_type`,
-      { headers: sbSvc }
-    );
-    const aRows = await aRes.json().catch(() => []);
-    if (!Array.isArray(aRows) || !aRows.length) return _err(404, 'AGENT_NOT_FOUND', '그림자를 찾을 수 없습니다', corsHeaders);
-    agentEntityType = aRows[0].entity_type;
-    agentCastsFor    = aRows[0].casts_for;
-  }
-  if (agentEntityType !== 'agent' || agentCastsFor !== principal_guid) {
-    return _err(403, 'NOT_YOUR_AGENT', '본인의 그림자가 아닙니다', corsHeaders);
-  }
-
-  // 3) 서명 검증 — 메시지 포맷은 서버가 고정 재구성(클라이언트가 임의 문자열에 서명 못 하게)
-  const sigMsg = `DELEGATE:${principal_guid}:${agent_guid}:${ts}`;
-  const sigOk = await _verifyEd25519Simple(principalPubkey, signature, sigMsg);
-  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '위임 서명 검증 실패', corsHeaders);
-
-  // 4) 중복 위임 기록 방지(재시도 등)
-  const dupRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/pdv_log?type=eq.agent_delegation&guid=eq.${encodeURIComponent(principal_guid)}&select=id&limit=1`,
-    { headers: sbSvc }
-  );
-  const dupRows = await dupRes.json().catch(() => []);
-  if (Array.isArray(dupRows) && dupRows.length) {
-    return new Response(JSON.stringify({ ok: true, skipped: true, reason: 'ALREADY_DELEGATED' }), { status: 200, headers: corsHeaders });
-  }
-
-  // 5) PDV에 영구 기록 — raw_hash에 위임 서명 자체를 보존(사후 무결성 증빙)
-  const now = new Date().toISOString();
-  const pdvId = `PDV-DELEGATE-${principal_guid.replace(/[^a-zA-Z0-9]/g,'').slice(0,12)}-${Date.now()}`;
-  const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/pdv_log`, {
-    method: 'POST',
-    headers: { ...sbSvc, 'Prefer': 'return=minimal' },
-    body: JSON.stringify({
-      id: pdvId,
-      guid: principal_guid,
-      source: 'gopang-core',
-      type: 'agent_delegation',
-      report_id: `DELEGATE-${agent_guid}`,
-      summary: `본체가 그림자(${agent_guid})를 자신의 대리인으로 위임함`,
-      summary_6w: JSON.stringify({
-        who: principal_guid, when: now, where: 'hondi.net',
-        what: `agent_guid=${agent_guid}`, how: 'Ed25519 위임서명(본인 키)', why: '나만의 AI비서 활성화',
-      }),
-      risk_level: 'low',
-      period: null,
-      raw_hash: signature,
-      reporter_svc: 'gopang-core',
-      via_worker: true,
-      created_at: now,
-    }),
-  });
-  if (!insertRes.ok) {
-    const errText = await insertRes.text().catch(() => '');
-    return _err(502, 'PDV_SAVE_FAILED', `위임 기록 저장 실패: ${errText}`, corsHeaders);
-  }
-
-  return new Response(JSON.stringify({ ok: true, principal_guid, agent_guid, delegated_at: now }), { status: 200, headers: corsHeaders });
-}
 
 // /ai-setup POST — AI 비서 설정 저장 (API 키 AES-256-GCM 암호화)
 // ═══════════════════════════════════════════════════════════

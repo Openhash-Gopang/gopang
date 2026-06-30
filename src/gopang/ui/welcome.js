@@ -87,17 +87,14 @@ export async function handleProfileSubmit(aiResponseText) {
     localStorage.removeItem('hondi_profile_step');
     console.info('[Profile] 등록 완료:', profile.handle);
 
-    // ── SP 로더 리셋 — 다음 loadPersonalAssistantSP() 호출 시 그림자 SP fresh fetch ──
+    // ── SP 로더 리셋 — 다음 loadPersonalAssistantSP() 호출 시 SP fresh fetch ──
     // _paSPLoaded=true가 유지되면 온보딩 SP가 세션 내내 고정되는 버그 방지
     resetSPLoader();
 
-    // ── 위임 인증서 서명 (본인 키로 그림자 위임) ──
-    // data.agent가 있을 때만 시도. 실패해도 가입 자체는 완료로 처리.
-    if (data.agent?.ok && data.agent?.guid) {
-      _triggerDelegationSignature(data.agent.guid, profile.guid || user?.ipv6).catch(
-        e => console.warn('[Delegation] 위임 서명 실패 (비치명적):', e.message)
-      );
-    }
+    // 2026-07-01: 위임 인증서 서명 단계 제거. 별도 그림자 정체성(별도
+    // guid·키쌍)을 더 이상 만들지 않으므로(worker.js _mergeAgentSP 참조),
+    // "위임"이라는 개념 자체가 무의미해졌다 — 단일 정체성이고, 운영자
+    // 본인인지는 핸드셰이크(GET /profile/verify-owner)로 실시간 확인한다.
 
     // ── PDV IndexedDB 초기화 ──
     await _initPDV(profile.guid);
@@ -163,44 +160,39 @@ async function _initPDV(guid) {
 }
 
 
-// ── 위임 인증서 서명 헬퍼 ─────────────────────────────────────────────
-// PROFILE_SUBMIT 완료 후 본인 지갑 키로 그림자를 위임 서명한다.
-// window.gopangWallet.signPayload가 없으면 조용히 건너뜀.
-async function _triggerDelegationSignature(agentGuid, principalGuid) {
+// ── 본인 검증 헬퍼 (핸드셰이크 실시간 판단용) ────────────────────────
+// 2026-07-01: 옛 _triggerDelegationSignature(위임 인증서 서명, 1회성)를
+// 대체. 별도 그림자 정체성이 없어졌으므로 "위임"은 더 이상 의미가 없고,
+// 대신 대화 시작 시(AGENT-COMMON §4 핸드셰이크) "지금 상대가 본인인지"를
+// 그때그때 묻는다. gopang-wallet.js의 sign()/verify()와 동일한 서명
+// 체계 — 전체 시스템이 서명 체계를 하나만 공유한다는 원칙을 그대로 따름.
+// 호출부(call-ai.js 등)에서 AI가 [VERIFY_OWNER] 태그를 출력하면 이 함수를
+// 불러 결과를 다시 AI에게 시스템 메시지로 전달하는 식으로 와이어링한다.
+export async function verifyOwnerHandshake(principalGuid) {
   const PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
   const wallet = window.gopangWallet;
   if (!wallet?.signPayload || typeof wallet.signPayload !== 'function') {
-    console.warn('[Delegation] gopangWallet 미준비 — 위임 서명 건너뜀');
-    return;
+    console.warn('[Handshake] gopangWallet 미준비 — 본인 검증 불가, false 처리');
+    return { verified: false, reason: 'WALLET_NOT_READY' };
   }
 
-  // 서명 메시지 포맷은 worker.js의 handleProfileDelegate가 서버에서
-  // 직접 재구성하는 sigMsg와 1바이트도 다르면 안 된다(대소문자·순서·ts
-  // 포함 여부까지). 2026-06-30: 그동안 클라이언트가
-  // `delegate:${agentGuid}:${principalGuid}`(ts 없음)로 서명하고
-  // 서버는 `DELEGATE:${principal_guid}:${agent_guid}:${ts}`로 검증해서,
-  // 위임 서명이 한 번도 통과한 적이 없었을 가능성이 있는 버그를 발견·수정.
   const ts = String(Math.floor(Date.now() / 1000));
-  const delegateMsg = `DELEGATE:${principalGuid}:${agentGuid}:${ts}`;
-  const signature    = await wallet.signPayload(delegateMsg);
-  const pubkey       = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+  const sigMsg    = `VERIFY-OWNER:${principalGuid}:${ts}`;
+  const signature = await wallet.signPayload(sigMsg);
+  const pubkey    = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
 
-  const res = await fetch(`${PROXY}/profile/delegate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      principal_guid: principalGuid,
-      agent_guid:     agentGuid,
-      ts,
-      pubkey,
-      signature,
-    }),
-  });
-
-  const result = await res.json().catch(() => ({}));
-  if (result.ok) {
-    console.info('[Delegation] 위임 인증서 등록 완료 ✅', agentGuid);
-  } else {
-    console.warn('[Delegation] 서버 거부:', result.error, result.detail);
+  const qs = new URLSearchParams({ guid: principalGuid, pubkey, signature, ts });
+  try {
+    const res = await fetch(`${PROXY}/profile/verify-owner?${qs.toString()}`, { cache: 'no-cache' });
+    const result = await res.json().catch(() => ({}));
+    if (result.ok) {
+      console.info('[Handshake] 본인 검증 결과:', result.verified);
+      return { verified: !!result.verified, reason: result.reason || null };
+    }
+    console.warn('[Handshake] 서버 거부:', result.error, result.detail);
+    return { verified: false, reason: result.error || 'SERVER_ERROR' };
+  } catch (e) {
+    console.warn('[Handshake] 본인 검증 요청 실패:', e.message);
+    return { verified: false, reason: 'NETWORK_ERROR' };
   }
 }

@@ -277,36 +277,56 @@ let _paSPLoaded = false;
 export async function loadPersonalAssistantSP() {
   if (_paSPLoaded) return CFG.system;
 
-  // 1) 그림자 우선 경로: hondi_profile_done + _USER.handle 이 있으면 시도
   const profileDone = _profileDone();
   const handle = _USER?.handle || null;
+
   if (profileDone && handle) {
+    const cleanHandle = handle.replace(/^@/, '');
+
+    // 2026-07-01: internal/public 두 변형을 가입 시 미리 컴파일해 따로
+    // 저장하던 방식을 폐기 — system_prompt는 이제 단 하나뿐이고, 운영자/
+    // 고객 공개범위 구분은 대화 시작 시 핸드셰이크(welcome.js의
+    // verifyOwnerHandshake → GET /profile/verify-owner)에서 실시간으로
+    // 판단한다. 그래서 여기선 그냥 본인 공개 행에서 바로 읽는다.
     try {
-      // ── 이관 ⑪: 그림자 SP fetch → L1 직접 (2026-06-23) ────────────
-      // 이전: PROXY /profile/@{handle}_ai → Worker → Supabase/L1
-      // 이후: L1 profiles 직접 GET (공개 컬렉션, 인증 불필요)
-      const agentHandle = handle.replace(/^@/, '') + '_ai';
-      const _L1_BASE = 'https://l1-hanlim.hondi.net/api/collections/profiles/records';
-      const _agentFilter = encodeURIComponent(`handle='${agentHandle}'`);
-      const res = await fetch(`${_L1_BASE}?filter=${_agentFilter}&perPage=1`, { cache: 'no-cache' });
+      const res = await fetch(`${_PROXY_URL}/profile/@${encodeURIComponent(cleanHandle)}`, { cache: 'no-cache' });
       if (res.ok) {
-        const _raw = await res.json();
-        const data = _raw.items?.[0] || null;
-        const sp = data?.extra?.public?.ai_assistant?.system_prompt;
+        const data = await res.json();
+        const sp = data?.profile?.extra?.public?.ai_assistant?.system_prompt;
         if (sp && sp.length > 200) {
           CFG.system = sp;
           CFG.system_base = sp;
           _paSPLoaded = true;
-          console.info('[SP] 그림자 system_prompt 로드 완료:', agentHandle, sp.length, 'chars');
+          console.info('[SP] 본인 system_prompt 로드 완료:', sp.length, 'chars');
           return CFG.system;
         }
       }
     } catch (e) {
-      console.warn('[SP] 그림자 SP 로드 실패 — 폴백:', e.message);
+      console.warn('[SP] 본인 공개 SP 로드 실패 — 폴백:', e.message);
+    }
+
+    // 레거시 안전망 — 2026-06-30 이전에 생성된 기관용 그림자(@handle_ai)가
+    // 아직 남아있는 계정 대비. 새 가입자에게는 해당 없음(더 이상 생성 안 함).
+    try {
+      const agentHandle = `${cleanHandle}_ai`;
+      const res = await fetch(`${_PROXY_URL}/profile/@${encodeURIComponent(agentHandle)}`, { cache: 'no-cache' });
+      if (res.ok) {
+        const data = await res.json();
+        const sp = data?.profile?.extra?.public?.ai_assistant?.system_prompt;
+        if (sp && sp.length > 200) {
+          CFG.system = sp;
+          CFG.system_base = sp;
+          _paSPLoaded = true;
+          console.info('[SP] 레거시 그림자 system_prompt 로드 완료:', agentHandle, sp.length, 'chars');
+          return CFG.system;
+        }
+      }
+    } catch (e) {
+      console.warn('[SP] 레거시 그림자 SP 로드 실패 — 폴백:', e.message);
     }
   }
 
-  // 2) 폴백: manifest.json['personal-assistant'] 키로 버전 결정 후 온보딩 SP 로드
+  // 4) 폴백: manifest.json['personal-assistant'] 키로 버전 결정 후 온보딩 SP 로드
   //    (*-LATEST.txt 포인터 방식은 폐기됨 — manifest 단일 체계로 통일)
   //    localStorage 영구 캐시 금지 — 항상 fresh fetch (그림자가 생기면 자동 전환됨)
   try {
