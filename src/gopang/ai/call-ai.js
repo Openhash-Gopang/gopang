@@ -20,6 +20,10 @@ import { _buildLocNote } from '../services/location.js';
 import { runRouter, applyRouterResult } from './router.js';
 import { _injectAuthConfirmButton } from '../core/auth.js';
 import { _klawReview } from '../services/klaw.js';
+import { openSearch } from '../ui/p2p-search.js';
+import { inviteByHandle } from '../ui/p2p-chat.js';
+import { _openProfilePanel } from '../ui/settings.js';
+import { _gwpLaunch } from '../gwp/engine.js';
 import { maybeHandleExpertTurn, applyExpertSystemIfActive,
          isExpertActive, handleExpertTag } from './expert-session.js';
 
@@ -615,6 +619,80 @@ export async function _callLLM(messages, options = {}) {
   return fullReply || '';
 }
 
+// ── §9 실행 태그 공용 디스패처 (Phase 0, 2026-07-01 신설) ──────
+// fullReply를 한 번만 스캔해 §9에 정의된 실행 태그를 찾아 처리한다.
+// 태그 하나의 처리 실패가 나머지 태그 처리를 막지 않도록 각각 독립적인
+// try/catch로 감싼다. 새 태그를 추가할 때는 이 함수 안에 블록 하나만
+// 더 붙이면 된다(0단계 설계 원칙).
+//
+// 현재 처리: GWP(기존 로직 그대로 이전, 동작 변경 없음),
+//            SEARCH / OPEN_PROFILE / P2P_INVITE(Phase 1 — 이미 존재하는
+//            실행 함수에 배선만 추가).
+// 아직 미처리(Phase 2~5 예정): PDV_STORE, HANDSHAKE, VERIFY_OWNER, ESCALATE, TRADE.
+function _parseAgentTags(fullReply, bubble, userText, _preTab) {
+  // [GWP: serviceId] — 하위 시스템 새 탭 오픈 (SP-00 v10.0, 기존 로직 그대로 이전)
+  try {
+    const gwpMatch = fullReply.match(/\[GWP:([\w-]+)\]/);
+    if (gwpMatch) {
+      const svcId  = gwpMatch[1];
+      const svcDef = (typeof getService === 'function') ? getService(svcId) : null;
+      if (svcDef) {
+        console.info('[GWP] LLM 판단 → 새 탭:', svcId);
+        if (bubble) _updateStreamBubble(bubble, fullReply.replace(/\[GWP:[\w-]+\]\s*/, ''));
+        _gwpLaunch(svcDef, userText, _preTab);
+      } else {
+        console.warn('[GWP] 알 수 없는 서비스 ID:', svcId);
+        if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
+      }
+    } else {
+      if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) {
+        _preTab.close();
+        console.info('[GWP] 직접 처리 — 예약 탭 닫힘');
+      }
+    }
+  } catch (e) {
+    console.warn('[Tags] GWP 처리 오류 (무시):', e.message);
+  }
+
+  // [SEARCH: query={검색어}, type=user] — 혼디 사용자 검색 패널 오픈
+  try {
+    const searchMatch = fullReply.match(/\[SEARCH:\s*query=([^,\]]+),\s*type=user\s*\]/);
+    if (searchMatch) {
+      const q = searchMatch[1].trim();
+      console.info('[Tags] SEARCH →', q);
+      openSearch(q);
+    }
+  } catch (e) {
+    console.warn('[Tags] SEARCH 처리 오류 (무시):', e.message);
+  }
+
+  // [OPEN_PROFILE: handle={@handle}] — 공급자 프로필 페이지 새 패널로 열기
+  try {
+    const openProfileMatch = fullReply.match(/\[OPEN_PROFILE:\s*handle=(@[\w.-]+)\s*\]/);
+    if (openProfileMatch) {
+      const handle = openProfileMatch[1];
+      console.info('[Tags] OPEN_PROFILE →', handle);
+      _openProfilePanel(handle);
+    }
+  } catch (e) {
+    console.warn('[Tags] OPEN_PROFILE 처리 오류 (무시):', e.message);
+  }
+
+  // [P2P_INVITE: handle={@handle}, message={...}] — P2P 채팅 초청 발송
+  try {
+    const inviteMatch = fullReply.match(/\[P2P_INVITE:\s*handle=(@[\w.-]+)/);
+    if (inviteMatch) {
+      const handle = inviteMatch[1];
+      console.info('[Tags] P2P_INVITE →', handle);
+      inviteByHandle(handle).catch(e =>
+        console.warn('[Tags] P2P_INVITE 호출 실패 (무시):', e.message)
+      );
+    }
+  } catch (e) {
+    console.warn('[Tags] P2P_INVITE 처리 오류 (무시):', e.message);
+  }
+}
+
 
 async function _callAIInner(userText, imageFile = null, _preTab = null) {
   showTyping();
@@ -956,36 +1034,13 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     const _profileHandled = await _handleProfileTags(fullReply, bubble);
     if (_profileHandled) return;
 
-    // ── 그림자 SP 실행 태그 파서 (AGENT-COMMON §9) ─────────
-    // ※ 버전 번호로 체크하면 AGENT-COMMON이 버전업될 때마다(v2.0→v2.1→...)
-    //   조용히 깨진다(실제로 v2.3에서 한 번 그렇게 깨져 있었음). "나만의 AI
-    //   비서"는 PA SP에도 똑같이 나오는 문구라 오탐 위험이 있어, AGENT-COMMON
-    //   §0에만 있는 고유 문구로 체크한다.
-    if (CFG.system?.includes('§0. 정체성')) {
-      _parseShadowTags(fullReply).catch(e =>
-        console.warn('[Shadow] 태그 파서 오류 (무시):', e.message)
-      );
-    }
-
-    // ── GWP 태그 감지 → 하위 시스템 새 탭 오픈 (SP-00 v10.0) ──
-    const gwpMatch = fullReply.match(/\[GWP:([\w-]+)\]/);
-    if (gwpMatch) {
-      const svcId  = gwpMatch[1];
-      const svcDef = (typeof getService === 'function') ? getService(svcId) : null;
-      if (svcDef) {
-        console.info('[GWP] LLM 판단 → 새 탭:', svcId);
-        if (bubble) _updateStreamBubble(bubble, fullReply.replace(/\[GWP:[\w-]+\]\s*/, ''));
-        _gwpLaunch(svcDef, userText, _preTab);
-      } else {
-        console.warn('[GWP] 알 수 없는 서비스 ID:', svcId);
-        if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
-      }
-    } else {
-      if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) {
-        _preTab.close();
-        console.info('[GWP] 직접 처리 — 예약 탭 닫힘');
-      }
-    }
+    // ── §9 실행 태그 공용 디스패처 (Phase 0) ────────────────
+    // 이전엔 GWP가 자체 정규식으로 fullReply를 스캔했고, 별도로
+    // _parseShadowTags(fullReply)라는 미정의 함수가 호출돼 매번
+    // ReferenceError를 던지며 이 지점 이후(GWP/EXPERT/AUTH/klaw 감시)를
+    // 통째로 막고 있었다(2026-07-01 발견, AGENT-COMMON §0 보유 응답마다
+    // 100% 재현). 이제 한 번만 스캔해서 발견된 태그를 순서대로 처리한다.
+    _parseAgentTags(fullReply, bubble, userText, _preTab);
 
     // ── EXPERT 태그 감지 → 전문가 AI(같은 스레드 페르소나) 세션 시작 ──
     // 그림자 AI(AGENT-COMMON) 응답에서만 인식한다 — 페르소나 본인이 발급한

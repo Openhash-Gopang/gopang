@@ -995,7 +995,7 @@ export function resumeProfileSetup() {
   }
 }
 
-function _openProfilePanel(handle) {
+export function _openProfilePanel(handle) {
   // 기존 패널이 있으면 제거
   document.getElementById('_profile-panel-overlay')?.remove();
 
