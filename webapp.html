@@ -1383,7 +1383,7 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
               <input class="setting-field" id="gopang-id-input" type="tel" maxlength="8"
                 placeholder="휴대폰 뒷 8자리" inputmode="numeric" style="margin-bottom:10px"
                 readonly
-                onfocus="this.removeAttribute('readonly')"
+                onclick="this.removeAttribute('readonly')"
                 onblur="setTimeout(()=>this.setAttribute('readonly',''),100)">
               <button id="gopang-id-register-btn" onclick="_settingsRegisterHandle()"
                 style="width:100%;padding:13px;border-radius:10px;background:#007b8b;
