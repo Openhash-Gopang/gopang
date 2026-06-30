@@ -2553,12 +2553,17 @@ window.closeTermsOfUse = closeTermsOfUse;
 
   let _panelGreeted = false; // 패널 첫 인사 여부
 
+  // edge-handle 요소 캐시 (BUG-7)
+  const _edgeHandles = document.querySelectorAll('.edge-handle, .edge-handle-top');
+
   function openAIPanel() {
     if (_panelOpen) return;  // 이미 열림 — 토글로 닫히지 않음
 
     _panelOpen = true;
     panel.classList.add('open');
     btnAI.classList.add('panel-open');
+    // BUG-7: AI 패널(z-index:300) 위로 edge-handle이 표시되도록 z-index 상향
+    _edgeHandles.forEach(el => el.style.zIndex = '400');
     // focus() 자동 호출 제거 — 사용자가 직접 탭해야만 키패드 열림
 
     // 온보딩 메시지가 대기 중이면 AI 패널에서 자동 시작 (1회)
@@ -2995,75 +3000,7 @@ window.closeTermsOfUse = closeTermsOfUse;
     } catch {}
   }
 
-  // ── 튜토리얼 신호 송신 — 메뉴 동작 감지 시 AI에 알림 ──────────
-  window._sendTutorialSignal = async function(action) {
-    if (!_panelOpen) return;
-    const sigMap = {
-      left:  '[TUTORIAL_ACTION: left_menu_opened — 사용자가 왼쪽 메뉴를 열었습니다. "참, 잘했어요!"라고 칭찬하고 닫는 방법을 알려준 뒤 다음 단계로 진행하십시오.]',
-      right: '[TUTORIAL_ACTION: right_menu_opened — 사용자가 오른쪽 메뉴를 열었습니다. "참, 잘했어요!"라고 칭찬하고 닫는 방법을 알려준 뒤 다음 단계로 진행하십시오.]',
-      pdv:   '[TUTORIAL_ACTION: pdv_opened — 사용자가 PDV(Hash Chain)를 열었습니다. "참, 잘했어요!"라고 칭찬하고 PDV 설명을 마친 뒤 다음 단계(혼디 소개·요금)로 진행하십시오.]',
-    };
-    const msg = sigMap[action];
-    if (!msg) return;
-    const bubble = _appendPanelMsg('ai', '…');
-    bubble.classList.add('streaming');
-    try { await _callPanelAI(msg, bubble); }
-    catch(e) { bubble.textContent = 'AI 오류: ' + e.message; }
-    bubble.classList.remove('streaming');
-  };
-
-  function _restorePanelHistory() {
-    try {
-      const raw = localStorage.getItem(_HISTORY_STORE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (!Array.isArray(saved) || saved.length === 0) return;
-      // system은 _callPanelAI가 첫 호출 시 다시 얹으므로 여기서는 넣지 않음
-      _panelHistory.push(...saved);
-      // 복원된 메시지를 패널 화면에 표시
-      for (const m of saved) {
-        if (m.role === 'user' || m.role === 'assistant') {
-          _appendPanelMsg(m.role === 'assistant' ? 'ai' : 'user',
-            (typeof m.content === 'string' ? m.content : '').replace(/\[INTERNAL:[^\]]*\]/g,'').trim()
-          );
-        }
-      }
-      _panelGreeted = true; // 복원됐으면 첫 인사 건너뜀
-    } catch {}
-  }
-  _restorePanelHistory();
-
-  // ── 대화 연속성: 히스토리를 localStorage에 보관 (새로고침/재접속 후 이어가기) ─
-  const _HISTORY_STORE_KEY = 'hondi_panel_history_v1';
-
-  function _savePanelHistory() {
-    try {
-      // system 프롬프트(첫 항목)는 제외하고 저장 — 너무 길어 quota 초과 위험
-      const toSave = _panelHistory.filter(m => m.role !== 'system').slice(-20);
-      localStorage.setItem(_HISTORY_STORE_KEY, JSON.stringify(toSave));
-    } catch {}
-  }
-
-  function _restorePanelHistory() {
-    try {
-      const raw = localStorage.getItem(_HISTORY_STORE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (!Array.isArray(saved) || saved.length === 0) return;
-      // system은 _callPanelAI가 첫 호출 시 다시 얹으므로 여기서는 넣지 않음
-      _panelHistory.push(...saved);
-      // 복원된 메시지를 패널 화면에 표시
-      for (const m of saved) {
-        if (m.role === 'user' || m.role === 'assistant') {
-          _appendPanelMsg(m.role === 'assistant' ? 'ai' : 'user',
-            (typeof m.content === 'string' ? m.content : '').replace(/\[INTERNAL:[^\]]*\]/g,'').trim()
-          );
-        }
-      }
-      _panelGreeted = true; // 복원됐으면 첫 인사 건너뜀
-    } catch {}
-  }
-  _restorePanelHistory();
+  // ── 구형 _sendTutorialSignal 제거됨 (BUG-2) — 신형 _tutorialSignal 사용
   function _trimPanelHistory() {
     const hasSystem = _panelHistory[0]?.role === 'system';
     const head = hasSystem ? _panelHistory.slice(0, 1) : [];
@@ -3246,7 +3183,13 @@ window.closeTermsOfUse = closeTermsOfUse;
         // 넘기므로 태그 감지에는 영향 없음). 나중에 정리하면, 인계 안착 인사가
         // 스트리밍되는 몇 초 동안 원래 버블에 PROFILE_SUBMIT 원문 JSON이 그대로
         // 보이는 깜빡임이 생긴다.
-        bubbleEl.textContent = _stripInternalTags(full);
+        // BUG-3 수정: textContent → innerHTML + 마크다운 렌더링 (**굵게**, \n→<br>)
+        const _clean = _stripInternalTags(full);
+        bubbleEl.innerHTML = _clean
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/\n/g,'<br>')
+          .replace(/`([^`]+)`/g,'<code>$1</code>')
+          .replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
 
         let handled = false;
         try {
