@@ -226,7 +226,7 @@ window.addEventListener('hondi:trial_expired', (e) => {
     'box-shadow:0 4px 20px rgba(0,0,0,.3)';
   banner.innerHTML = msg +
     '<br><a href="/pages/ai-setup-mobile.html" ' +
-    'style="color:#4ade80;text-decoration:underline;margin-top:6px;display:inline-block">' +
+    'style="color:#8ab4f8;text-decoration:underline;margin-top:6px;display:inline-block">' +
     '내 키 등록하기 →</a>';
   document.body.appendChild(banner);
   setTimeout(() => banner.remove(), 10000);
@@ -502,7 +502,7 @@ function _showWelcomePopup() {
 
       <!-- 헤더 (터치 후 아래로 스와이프하면 패널이 닫힘) -->
       <div id="_welcome_title" style="padding:20px 24px 16px;display:flex;align-items:center;gap:14px;border-bottom:1px solid #f3f4f6">
-        <div style="width:44px;height:44px;flex-shrink:0;background:#16a34a;border-radius:10px;display:flex;align-items:center;justify-content:center">
+        <div style="width:44px;height:44px;flex-shrink:0;background:#1A73E8;border-radius:10px;display:flex;align-items:center;justify-content:center">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
         </div>
         <div>
@@ -541,12 +541,12 @@ function _showWelcomePopup() {
       <div style="padding:0 24px 4px;display:flex;flex-direction:column;gap:10px">
         <button id="_welcome_ok" style="
           width:100%;padding:14px;
-          background:#16a34a;color:#fff;border:none;
+          background:#1A73E8;color:#fff;border:none;
           border-radius:12px;font-size:15px;font-weight:600;
           cursor:pointer;font-family:inherit;
         ">시작하기</button>
         <label style="display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;margin-top:10px">
-          <input type="checkbox" id="_welcome_no_show" style="width:14px;height:14px;accent-color:#16a34a;cursor:pointer">
+          <input type="checkbox" id="_welcome_no_show" style="width:14px;height:14px;accent-color:#1A73E8;cursor:pointer">
           <span style="font-size:12px;color:#9ca3af">이 메시지를 다시 표시하지 않음</span>
         </label>
       </div>
