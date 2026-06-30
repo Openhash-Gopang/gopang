@@ -86,7 +86,15 @@ const LAYER_REPOS = {
 // profile_pdv_schema_plan_v1.md Phase 6에서 Tier2/3가 추가될 때마다 이 목록도 같이 늘린다.
 // 클라이언트(또는 모델 출력)가 "{ksic}" 같은 미치환 리터럴이나 미정의 코드를 보내는 걸 막는 최소 방어선.
 const VALID_INDUSTRY_SCHEMA_IDS = new Set([
-  '01','03','46','47','49','50','51','55','56','62','63','76','90','91','96',
+  // 2026-06-30: manifest.json의 AGENT-SUPPLIER-* 77개 키 전체와 동기화.
+  // 기존엔 15개만 등록돼 있어 제조업·광업·건설·금융·의료 등 60개 이상
+  // 업종의 가입이 INVALID_SCHEMA_ID로 막혀 있었음(2026-06-30 발견·수정).
+  '01','02','03','05','06','07','08','10','11','12','13','14','15','16',
+  '17','18','19','20','21','22','23','24','25','26','27','28','29','30',
+  '31','32','33','34','35','36','37','38','39','41','42','45','46','47',
+  '49','50','51','52','55','56','58','59','60','61','62','63','64','65',
+  '66','68','70','71','72','73','74','75','76','84','85','86','87','90',
+  '91','94','95','96','97','98','99',
 ]);
 
 // STEP 10: VALID_PDV_SCOPES 11개로 확장
@@ -2776,7 +2784,28 @@ async function _compileAgentSP(env, principalProfile) {
     console.warn('[Worker] AGENT-COMMON 로드 오류, 빈 문자열로 계속:', e.message);
   }
 
-  // 2) AGENT-SUPPLIER-{ksic} 로드 (업종 불명이면 생략)
+  // 2) AGENT-SUPPLIER-COMMON 로드 (업종 SP 공통 모듈 — Type B 정체성·
+  //    K-시스템 연계표·강제규칙 등. 77개 업종 파일이 전부 "상속"한다고
+  //    표기만 해두고 실제로는 한 번도 합성되지 않던 버그를 2026-06-30 수정.)
+  let supplierCommonSP = '';
+  try {
+    const manifestRes = await fetch(`${REPO_RAW}/prompts/manifest.json`, { ...headers, cache: 'no-cache' });
+    if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
+    const manifest = await manifestRes.json();
+    const commonSupplierFile = manifest['AGENT-SUPPLIER-COMMON'];
+    if (!commonSupplierFile) throw new Error('manifest 에 AGENT-SUPPLIER-COMMON 키 없음');
+    const csRes = await fetch(`${REPO_RAW}/prompts/${commonSupplierFile}`, { headers });
+    if (csRes.ok) {
+      supplierCommonSP = await csRes.text();
+      console.info('[Worker] AGENT-SUPPLIER-COMMON 로드 완료:', commonSupplierFile);
+    } else {
+      console.warn('[Worker] AGENT-SUPPLIER-COMMON fetch 실패:', csRes.status);
+    }
+  } catch (e) {
+    console.warn('[Worker] AGENT-SUPPLIER-COMMON 로드 오류, 빈 문자열로 계속:', e.message);
+  }
+
+  // 3) AGENT-SUPPLIER-{ksic} 로드 (업종 불명이면 생략)
   // 파일명은 빌드 시 자동 생성된 prompts/manifest.json 에서 결정.
   // SUPPLIER_FILE_MAP 하드코딩 제거 — manifest 갱신만으로 새 버전 자동 반영.
   const ksic = principalProfile?.extra?.public?.industry_fields?.schema_id || null;
@@ -2801,7 +2830,7 @@ async function _compileAgentSP(env, principalProfile) {
     }
   }
 
-  // 3) industry_fields 지식 블록(본인 등록 데이터를 AI가 참조할 수 있게)
+  // 4) industry_fields 지식 블록(본인 등록 데이터를 AI가 참조할 수 있게)
   const iFields = principalProfile?.extra?.public?.industry_fields;
   const iFieldsBlock = iFields
     ? `
@@ -2812,8 +2841,8 @@ ${JSON.stringify(iFields, null, 2)}
 \`\`\``
     : '';
 
-  // 4) 합성
-  const parts = [commonSP, supplierSP, iFieldsBlock].filter(Boolean);
+  // 5) 합성 — AGENT-COMMON → AGENT-SUPPLIER-COMMON → AGENT-SUPPLIER-{ksic} → industry_fields
+  const parts = [commonSP, supplierCommonSP, supplierSP, iFieldsBlock].filter(Boolean);
   if (!parts.length) return null;
 
   const compiled = parts.join('\n\n---\n\n').trim();

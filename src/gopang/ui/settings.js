@@ -972,6 +972,29 @@ export function openMyProfile() {
   _openProfilePanel(handle);
 }
 
+// ── 프로필 작성 재개/시작 — 2026-06-30 신설 ─────────────────────────
+// personal-assistant SP 온보딩이 중단(PROFILE_SKIP)되거나 아직 시작되지
+// 않은 사용자가 설정 화면에서 직접 이어서 작성할 수 있는 진입점.
+// welcome.js의 _showWelcomeMessage()와 같은 트리거 메커니즘
+// (window._aiPanelOnboardingMsg → openAIPanel이 1회 소비)을 재사용한다.
+export function resumeProfileSetup() {
+  let profileStep = null;
+  try { profileStep = localStorage.getItem('hondi_profile_step'); } catch {}
+
+  const triggerMsg = profileStep
+    ? `[SYSTEM] 이용자가 Profile 작성을 ${profileStep}단계에서 중단했습니다. 해당 단계부터 재개해 주세요.`
+    : `[SYSTEM] 이용자가 설정 화면에서 Profile 작성을 직접 요청했습니다. PHASE 1 온보딩을 시작해 주세요. STEP 1(이름 질문)부터 시작합니다.`;
+  window._aiPanelOnboardingMsg = triggerMsg;
+
+  // 설정 시트가 열려 있으면 닫고 AI 패널을 연다
+  document.getElementById('_gopang-sheet-overlay')?.classList?.remove('open');
+  if (typeof window.openAIPanel === 'function') {
+    // 이미 열려있는 패널이면 토글로 닫혀버리므로, 닫혀있을 때만 연다
+    const panel = document.getElementById('ai-panel');
+    if (!panel?.classList?.contains('open')) window.openAIPanel();
+  }
+}
+
 function _openProfilePanel(handle) {
   // 기존 패널이 있으면 제거
   document.getElementById('_profile-panel-overlay')?.remove();

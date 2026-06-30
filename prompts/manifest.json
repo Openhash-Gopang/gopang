@@ -1,5 +1,6 @@
 {
   "AGENT-COMMON": "AGENT-COMMON_v2_5.txt",
+  "AGENT-SUPPLIER-COMMON": "AGENT-SUPPLIER-COMMON_v2.0.txt",
   "SP-00-ROUTER": "SP-00-ROUTER-v5_0.txt",
   "personal-assistant": "personal-assistant/personal-assistant-v1_4.txt",
   "SP-01_klaw": "SP-01_klaw_v15.1.txt",

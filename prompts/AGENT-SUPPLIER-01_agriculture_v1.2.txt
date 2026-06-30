@@ -1,6 +1,6 @@
 [공급자형 AI Agent · A01 · 농업]
 [고팡 산업 도메인 · 한국표준산업분류(KSIC) 11차 기준 · 대분류 A 농업, 임업 및 어업 > 중분류 01 농업]
-(AGENT-SUPPLIER-COMMON v1.2 상속 — Type B 정체성·공통흐름·§10 1차산업 운영패턴·K시스템 연계 참조)
+(AGENT-SUPPLIER-COMMON v2.0 상속 — Type B 정체성·공통흐름·§10 1차산업 운영패턴·K시스템 연계 참조)
 
 ## 스키마
 schema_id: "01"

@@ -55,6 +55,17 @@ agent_common_files = [
 if agent_common_files:
     manifest['AGENT-COMMON'] = best(agent_common_files)
 
+# 1-b) AGENT-SUPPLIER-COMMON — prompts/AGENT-SUPPLIER-COMMON_vX.Y.txt
+#      2026-06-30: 누락돼 있던 키. AGENT-SUPPLIER-NN 정규식은 '_' 뒤에
+#      숫자가 와야 매칭되므로(AGENT-SUPPLIER-(\d+)_) "COMMON"은 거기서
+#      잡히지 않는다 — 별도 스캔 필요.
+agent_supplier_common_files = [
+    f.name for f in PROMPTS.iterdir()
+    if re.match(r'^AGENT-SUPPLIER-COMMON_v', f.name) and f.name.endswith('.txt')
+]
+if agent_supplier_common_files:
+    manifest['AGENT-SUPPLIER-COMMON'] = best(agent_supplier_common_files)
+
 # 2) SP-00-ROUTER — prompts/SP-00-ROUTER-vX_Y.txt
 router_files = [
     f.name for f in PROMPTS.iterdir()
