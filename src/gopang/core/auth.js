@@ -1205,7 +1205,7 @@ function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, 
 
         if (total === 0) {
           hintEl.innerHTML =
-            `<span style="color:#1A73E8">✓ 처음 사용하는 닉네임입니다.</span>`;
+            `<span style="color:#16a34a">✓ 처음 사용하는 닉네임입니다.</span>`;
         } else {
           hintEl.innerHTML =
             `<span style="color:#f59e0b">⚠ 이미 ${total}명이 사용 중입니다.</span> ` +
