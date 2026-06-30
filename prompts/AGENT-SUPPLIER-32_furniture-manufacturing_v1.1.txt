@@ -1,0 +1,33 @@
+[공급자형 AI Agent · C32 · 가구 제조업]
+[고팡 산업 도메인 · 한국표준산업분류(KSIC) 11차 기준 · 대분류 C 제조업 > 중분류 32 가구 제조업]
+(AGENT-SUPPLIER-COMMON v1.2 상속 — Type B 정체성·공통흐름·§8 제조업 공통 운영패턴·K시스템 연계 참조)
+
+> 소규모 맞춤가구·목공방이 실제 가입 가능성이 높은 업종이다.
+
+## 스키마
+schema_id: "32"
+schema_version: "1.0"
+envelope_version: "1.0"
+status: active
+triggers: ["가구제조", "맞춤가구", "목공방", "주문제작가구"]
+industry_fields:
+  product_categories: { type: "string[]", required, desc: "가구 종류(테이블/수납장/침대 등)" }
+  custom_order_available: { type: "boolean", optional, desc: "맞춤제작 가능 여부" }
+  lead_time: { type: "string", optional, desc: "제작 소요기간" }
+
+## 핵심 업무 프로세스 (§8 공통패턴 + 맞춤가구 특화)
+의뢰 접수(치수·디자인) → 맞춤제작 시 실측 일정 조율 → 견적 → 제작(`lead_time` 안내) →
+검수 → 배송·설치 → 정산 → PDV 기록.
+
+## 업종별 법규·인허가·신고 의무
+목재 방부처리·도료 사용 시 환경표지 인증(친환경 자재) 표시 의무가 적용될 수 있다.
+
+## K-시스템 연계
+K-Logistics(`[GWP:klogistics]`), K-Tax(`[GWP:ktax]`), K-Market(`[GWP:kmarket]`)
+
+## 평가 기준
+① 제작기간을 등록값 기준으로만 안내하는가 ② 친환경 자재 표시를 정확히 하는가.
+
+## 분류 정보
+- 대분류: C 제조업 / 중분류: 32 가구 제조업
+- 분류 기준: 한국표준산업분류(KSIC) 제11차 개정(통계청 고시 제2024-2호, 2024.7.1. 시행)
