@@ -2515,8 +2515,17 @@ window.closeTermsOfUse = closeTermsOfUse;
     document.addEventListener('touchcancel', onTouchCancel, { passive: true });
   }
 
-  setupEdgeSwipe('left',  +1, openLeftMenu);    // 왼쪽 가장자리 → 오른쪽으로 스와이프
-  setupEdgeSwipe('right', -1, openRightMenu);   // 오른쪽 가장자리 → 왼쪽으로 스와이프
+  // BUG-FIX(2026-07-01): setupEdgeSwipe(..., openLeftMenu)처럼 함수를 직접
+  // 넘기면, 이 시점의 openLeftMenu(아직 튜토리얼 래퍼가 씌워지기 전의 원본)가
+  // 그대로 캡처된다. 이후 다른 스크립트 블록에서 window.openLeftMenu를
+  // "_tutorialSignal 호출까지 포함한 버전"으로 감싸도, 스와이프 경로는 이미
+  // 캡처해 둔 원본만 계속 호출하므로 튜토리얼 신호가 영원히 발동하지 않았다
+  // — 가장자리를 "눌러서(클릭)" 열 때만 우연히 정상 동작했다(onclick 속성은
+  // 호출 시점에 window.openLeftMenu를 새로 조회하기 때문). 화살표 함수로
+  // 감싸 호출 시점에 매번 최신 window.openLeftMenu/openRightMenu를 조회하도록
+  // 바꿔 스와이프로 열 때도 튜토리얼 신호가 정상 발동하게 한다.
+  setupEdgeSwipe('left',  +1, () => window.openLeftMenu());    // 왼쪽 가장자리 → 오른쪽으로 스와이프
+  setupEdgeSwipe('right', -1, () => window.openRightMenu());   // 오른쪽 가장자리 → 왼쪽으로 스와이프
   setupEdgeSwipe('top',   +1, openUserManual);  // 위쪽 가장자리 → 아래로 스와이프
 })();
 
@@ -2887,13 +2896,14 @@ window.closeTermsOfUse = closeTermsOfUse;
   };
 
   let _tutTimeoutTimer = null;
+  // BUG-FIX(2026-07-01): 30초마다 사용자 동작 없이도 AI가 스스로
+  // "혹시 잘 안 되시나요?" 안내를 반복 전송하던 워치독을 제거했다.
+  // 사용자 피드백 없이 AI가 일방적으로 튜토리얼을 계속 진행·재촉해서는
+  // 안 된다 — 이제 튜토리얼은 오직 실제 사용자 동작(메뉴 열기·롱프레스 등
+  // _tutorialSignal 명시적 호출)에만 반응하고, 시간이 지나도 먼저 말을
+  // 걸지 않는다.
   function _resetTutorialWatchdog() {
     if (_tutTimeoutTimer) { clearTimeout(_tutTimeoutTimer); _tutTimeoutTimer = null; }
-    try {
-      if (!_panelOpen) return;
-      if (localStorage.getItem('hondi_tutorial_done') === '1') return;
-    } catch { return; }
-    _tutTimeoutTimer = setTimeout(() => { window._tutorialSignal('timeout'); }, 30000);
   }
   function _clearTutorialWatchdog() {
     if (_tutTimeoutTimer) { clearTimeout(_tutTimeoutTimer); _tutTimeoutTimer = null; }
