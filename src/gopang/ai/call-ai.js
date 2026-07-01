@@ -24,6 +24,7 @@ import { _openProfilePanel } from '../ui/settings.js';
 import { _gwpLaunch } from '../gwp/engine.js';
 import { maybeHandleExpertTurn, applyExpertSystemIfActive,
          isExpertActive, handleExpertTag } from './expert-session.js';
+import { buildHondiFaqContext } from './hondi-faq-router.js';
 
 
 export let history_ref = history;  // 외부 참조용
@@ -570,9 +571,20 @@ async function _buildEnhancedUserContent(userContent) {
   // v1.6 — 최초 인사/이름짓기 1회성 블록(있을 때만, 평생 1~2턴)
   const firstContact = _buildFirstContactContext();
 
-  if (!parts.length && !firstContact) return userContent;
+  // HONDI-FAQ(2026-07-01 신설) — 혼디 생태계 지식(PDV·GDC·OpenHash 등)을
+  // AGENT-COMMON에 전부 넣는 대신, 사용자 발화 키워드가 매칭될 때만 해당
+  // 주제의 상세 설명을 이번 턴의 user 메시지에만 끼워 넣는다(system
+  // prefix는 그대로라 DeepSeek 캐시 적중률에 영향 없음). industry-router.js
+  // 와 동일한 "키워드 매칭 → 필요한 것만 로드" 패턴 — 자세한 설계 근거는
+  // hondi-faq-router.js 상단 주석 참조.
+  const plainText = typeof userContent === 'string'
+    ? userContent
+    : (Array.isArray(userContent) ? (userContent.find(c => c.type === 'text')?.text || '') : '');
+  const faqBlock = await buildHondiFaqContext(plainText);
 
-  const ctxBlock = firstContact + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
+  if (!parts.length && !firstContact && !faqBlock) return userContent;
+
+  const ctxBlock = firstContact + faqBlock + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
 
   // multipart(이미지 포함) 메시지 처리
   if (Array.isArray(userContent)) {
