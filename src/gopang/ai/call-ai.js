@@ -88,6 +88,42 @@ if (typeof window !== 'undefined') window._callAiHistoryRef = history;
 // 현재 진행 중인 스트리밍 fetch를 중단한다 (Claude의 정지 버튼과 동일한 동작).
 let _currentAbort = null;
 
+// ── 유휴(idle) 타임아웃 공용 헬퍼 (2026-07-01) ───────────────────
+// BUG-FIX: 아래 _callLLM/_callAIInner의 fetch()에는 타임아웃이 전혀 없어,
+// 서버가 무응답으로 멈추면 await가 영원히 반환되지 않았다(패널 쪽 동일 버그를
+// webapp.html에서 먼저 고쳤고, 메인 채팅 경로도 같은 문제가 있어 함께 고친다).
+// "마지막 진행(연결 시도 또는 청크 수신)으로부터 N초"를 재는 유휴 타임아웃이며,
+// linkedSignal(예: 사용자의 수동 "정지" 버튼용 _currentAbort.signal)이 먼저
+// 중단되면 그것도 즉시 반영한다 — 단, 어느 쪽이 중단시켰는지는 반환된
+// wasManualStop()으로 구분할 수 있어야 한다(수동 중지는 페일오버 없이 즉시
+// 종료해야 하고, 유휴 타임아웃은 다음 후보로 페일오버해야 하므로 의미가 다르다).
+function _makeIdleAbort(timeoutMs, linkedSignal) {
+  const ctl = new AbortController();
+  let timer = null;
+  const onLinkedAbort = () => ctl.abort();
+  if (linkedSignal) {
+    if (linkedSignal.aborted) ctl.abort();
+    else linkedSignal.addEventListener('abort', onLinkedAbort, { once: true });
+  }
+  const reset = () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => ctl.abort(), timeoutMs);
+  };
+  const cancel = () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (linkedSignal) linkedSignal.removeEventListener('abort', onLinkedAbort);
+  };
+  reset();
+  return {
+    signal: ctl.signal,
+    reset,
+    cancel,
+    // true면 유휴 타임아웃이 아니라 linkedSignal(사용자 수동 중지 등)이 원인
+    wasManualStop: () => !!(linkedSignal && linkedSignal.aborted),
+  };
+}
+const _LLM_IDLE_TIMEOUT_MS = 45000; // 45초 무진행 시 자동 중단(다음 후보로 페일오버)
+
 // ══════════════════════════════════════════════════════════════
 // PA 온보딩 관련 함수
 // ══════════════════════════════════════════════════════════════
@@ -751,9 +787,13 @@ export async function _callLLM(messages, options = {}) {
   const _lastUserText = typeof _lastUserMsg?.content === 'string' ? _lastUserMsg.content : '';
   const candidates = _buildCallCandidates(_lastUserText, messages);
 
-  let res = null, lastErr = null;
+  let res = null, lastErr = null, idle = null;
   for (let i = 0; i < candidates.length; i++) {
     const c = candidates[i];
+    // BUG-FIX(2026-07-01): 이 함수는 stopGeneration()과 무관한 별도 호출
+    // 경로(핸드오프·전문가 세션 등)라 사용자 수동 중지 신호가 없다 — 순수
+    // 유휴 타임아웃만 건다(45초 무진행 시 다음 후보로 페일오버).
+    idle = _makeIdleAbort(_LLM_IDLE_TIMEOUT_MS, null);
     try {
       const reqBody = { model: c.model, messages, max_tokens, temperature, stream: true };
       if (!PROVIDER_INFO[c.provider]?.noStreamOptions) {
@@ -768,12 +808,14 @@ export async function _callLLM(messages, options = {}) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.apiKey}` },
             body: JSON.stringify(reqBody),
+            signal: idle.signal,
           })
         : c.provider === 'deepseek-default'
         ? await fetch(`${c.baseUrl}/deepseek`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...reqBody, guid: _USER?.ipv6 || USER_GUID || null }),
+            signal: idle.signal,
           })
         : await fetch(`${CFG.endpoint.replace(/\/+$/, '')}/llm/relay`, {
             method: 'POST',
@@ -784,14 +826,18 @@ export async function _callLLM(messages, options = {}) {
               max_tokens: reqBody.max_tokens, temperature: reqBody.temperature,
               stream: true,
             }),
+            signal: idle.signal,
           });
+      idle.reset(); // 연결 응답 수신 — 스트리밍 구간 타이머로 리셋
       if (attempt.ok) { res = attempt; break; }
+      idle.cancel();
       const errBody = await attempt.text().catch(() => '');
       lastErr = new Error(`API ${attempt.status}: ${errBody.slice(0, 300) || '응답없음'}`);
       console.warn(`[_callLLM] ${c.provider}(${c.model}) 실패(${attempt.status}) — 다음 후보로 전환`);
       continue;
     } catch (fetchErr) {
-      lastErr = fetchErr;
+      idle.cancel();
+      lastErr = (fetchErr.name === 'AbortError') ? new Error('응답 시간 초과(45초)') : fetchErr;
       continue;
     }
   }
@@ -800,24 +846,33 @@ export async function _callLLM(messages, options = {}) {
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let fullReply = '', buf = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += decoder.decode(value, { stream: true });
-    const lines = buf.split('\n');
-    buf = lines.pop();
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const payload = line.slice(6).trim();
-      if (payload === '[DONE]') break;
-      try {
-        const delta = JSON.parse(payload).choices?.[0]?.delta?.content ?? '';
-        if (delta) {
-          fullReply += delta;
-          if (bubble) _updateStreamBubble(bubble, fullReply);
-        }
-      } catch {}
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      idle.reset(); // 청크(또는 종료)를 받을 때마다 유휴 타이머 리셋
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+        if (payload === '[DONE]') break;
+        try {
+          const delta = JSON.parse(payload).choices?.[0]?.delta?.content ?? '';
+          if (delta) {
+            fullReply += delta;
+            if (bubble) _updateStreamBubble(bubble, fullReply);
+          }
+        } catch {}
+      }
     }
+  } catch (streamErr) {
+    // 스트리밍 도중 유휴 타임아웃(45초 무응답)으로 중단된 경우 — 사용자가
+    // 읽기 힘든 "AbortError"보다 원인이 분명한 메시지로 바꿔 던진다.
+    throw (streamErr.name === 'AbortError') ? new Error('응답 시간 초과(45초, 스트리밍 중단)') : streamErr;
+  } finally {
+    idle.cancel();
   }
   return fullReply || '';
 }
@@ -1085,11 +1140,18 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
 
   // ── 스트리밍 호출 (페일오버 포함) ───────────────────────
   try {
-    let res = null, usedCandidate = null, lastErr = null;
+    let res = null, usedCandidate = null, lastErr = null, idle = null;
 
     for (let i = 0; i < candidates.length; i++) {
       const c = candidates[i];
       console.log(`[AI] 시도 ${i + 1}/${candidates.length} → ${c.baseUrl}/chat/completions | 모델: ${c.model} | ${c.isProxy ? '프록시(보안)' : 'provider: ' + c.provider}`);
+      // BUG-FIX(2026-07-01): 기존엔 _currentAbort?.signal(사용자 수동 "정지"
+      // 버튼)만 연결돼 있고 자동 타임아웃이 전혀 없어, 서버가 무응답으로
+      // 멈추면 사용자가 직접 정지 버튼을 누르기 전까지 영원히 대기했다.
+      // _currentAbort와 idle 타임아웃을 함께 연결하되, idle.wasManualStop()으로
+      // "사용자가 정지 버튼을 눌렀는지"와 "그냥 45초 무응답이었는지"를 구분해
+      // 후자는 기존처럼 다음 후보로 페일오버되게 한다.
+      idle = _makeIdleAbort(_LLM_IDLE_TIMEOUT_MS, _currentAbort?.signal);
       try {
         const reqBody = {
           model: c.model,
@@ -1115,14 +1177,14 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.apiKey}` },
               body: JSON.stringify(reqBody),
-              signal: _currentAbort?.signal,
+              signal: idle.signal,
             })
           : c.provider === 'deepseek-default'
           ? await fetch(`${c.baseUrl}/deepseek`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ ...reqBody, guid: _USER?.ipv6 || USER_GUID || null }),
-              signal: _currentAbort?.signal,
+              signal: idle.signal,
             })
           : await fetch(`${CFG.endpoint.replace(/\/+$/, '')}/llm/relay`, {
               method: 'POST',
@@ -1133,23 +1195,30 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
                 max_tokens: reqBody.max_tokens, temperature: reqBody.temperature,
                 stream: true,
               }),
-              signal: _currentAbort?.signal,
+              signal: idle.signal,
             });
 
+        idle.reset(); // 연결 응답 수신 — 스트리밍 구간 타이머로 리셋
         if (attempt.ok) { res = attempt; usedCandidate = c; break; }
 
         // 실패(429/402/404/400/5xx 등 모든 상황) → 다음 후보로 항상 페일오버
         // (단종된 모델일 때도, 한도 초과도, 일시 장애도 어떻든 다음 LLM을 시도한다)
+        idle.cancel();
         const errBody = await attempt.text().catch(() => '');
         lastErr = new Error(`API ${attempt.status}: ${errBody.slice(0, 300) || '응답없음'}`);
         console.warn(`[AI] ${c.provider}(${c.model}) 실패(${attempt.status}) — 다음 LLM으로 전환:`, errBody.slice(0, 150));
         continue;
       } catch (fetchErr) {
-        if (fetchErr.name === 'AbortError') throw fetchErr; // 사용자 중지 — 페일오버 없이 즉시 중단
-        lastErr = fetchErr;
-        // 네트워크 오류 등도 다음 후보가 있으면 계속 시도
+        if (fetchErr.name === 'AbortError' && idle.wasManualStop()) {
+          idle.cancel();
+          throw fetchErr; // 진짜 사용자 수동 중지 — 페일오버 없이 즉시 중단
+        }
+        idle.cancel();
+        // idle 타임아웃(45초 무응답)이거나 기타 네트워크 오류 — 다음 후보가
+        // 있으면 계속 시도(기존 정책과 동일하게 취급)
+        lastErr = (fetchErr.name === 'AbortError') ? new Error('응답 시간 초과(45초)') : fetchErr;
         if (i < candidates.length - 1) continue;
-        throw fetchErr;
+        throw lastErr;
       }
     }
 
@@ -1169,37 +1238,55 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     let   fullReply = '';
     let   buf       = '';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        idle.reset(); // 청크(또는 종료)를 받을 때마다 유휴 타이머 리셋
+        if (done) break;
 
-      buf += decoder.decode(value, { stream: true });
-      const lines = buf.split('\n');
-      buf = lines.pop();
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
 
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const payload = line.slice(6).trim();
-        if (payload === '[DONE]') break;
-        try {
-          const chunk = JSON.parse(payload);
-          if (chunk.usage) {
-            const u = chunk.usage;
-            const cached = u.prompt_tokens_details?.cached_tokens ?? 0;
-            console.log(`[Cache] prompt=${u.prompt_tokens} cached=${cached} completion=${u.completion_tokens} (절감율 ${cached ? Math.round(cached/u.prompt_tokens*100) : 0}%)`);
-          }
-          const delta = chunk.choices?.[0]?.delta?.content ?? '';
-          if (delta) {
-            fullReply += delta;
-            // CLN 신고가 아닐 때만 실시간 렌더링
-            if (bubble) _updateStreamBubble(bubble, fullReply);
-          }
-        } catch (parseErr) {
-          if (payload && payload !== '[DONE]') {
-            console.warn('[Stream] 파싱 실패:', payload.slice(0, 80));
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') break;
+          try {
+            const chunk = JSON.parse(payload);
+            if (chunk.usage) {
+              const u = chunk.usage;
+              const cached = u.prompt_tokens_details?.cached_tokens ?? 0;
+              console.log(`[Cache] prompt=${u.prompt_tokens} cached=${cached} completion=${u.completion_tokens} (절감율 ${cached ? Math.round(cached/u.prompt_tokens*100) : 0}%)`);
+            }
+            const delta = chunk.choices?.[0]?.delta?.content ?? '';
+            if (delta) {
+              fullReply += delta;
+              // CLN 신고가 아닐 때만 실시간 렌더링
+              if (bubble) _updateStreamBubble(bubble, fullReply);
+            }
+          } catch (parseErr) {
+            if (payload && payload !== '[DONE]') {
+              console.warn('[Stream] 파싱 실패:', payload.slice(0, 80));
+            }
           }
         }
       }
+    } catch (streamErr) {
+      // BUG-FIX(2026-07-01): 스트리밍 도중(연결은 됐지만 그 이후 청크가
+      // 끊긴 경우) 발생한 idle 타임아웃도 AbortError로 뜬다. 이걸 그대로
+      // 두면 바로 아래 바깥쪽 catch(err)의 "err.name==='AbortError' →
+      // 사용자가 정지 버튼을 눌렀다"는 분기를 타서, 실제로는 응답 시간
+      // 초과인데도 아무 안내 없이 조용히 종료돼 버린다. 진짜 수동 중지만
+      // AbortError로 그대로 올려보내고, idle 타임아웃은 이름이 다른 에러로
+      // 바꿔 아래에서 정상적으로 "⚠️ API 오류: 응답 시간 초과" 안내가
+      // 뜨도록 한다.
+      if (streamErr.name === 'AbortError' && !idle.wasManualStop()) {
+        throw new Error('응답 시간 초과(45초, 스트리밍 중단)');
+      }
+      throw streamErr;
+    } finally {
+      idle.cancel();
     }
 
     if (!fullReply) fullReply = '(응답 없음)';

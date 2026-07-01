@@ -27,7 +27,9 @@ const PRECACHE_URLS = [
 
   // ── 고팡 JS 모듈
   '/src/pwa/gopang-pwa.js',
-  '/src/auth/gopang-auth.js',
+  // src/auth/gopang-auth.js: 2026-07-01(20e267b) 죽은 중복 인증파일로 삭제됨.
+  // 이 목록에 남아있어도 Promise.allSettled+개별 catch 덕에 설치는 안 깨지지만
+  // (콘솔에 "사전 캐시 실패" 경고만 남음), 실제 없는 파일이라 정리한다.
   // gopang-app.js: 자주 변경되므로 PRECACHE 제외 — Network First로 항상 최신 로드
 
   // ── 인증

@@ -23,10 +23,6 @@ import { openSettings, closeSettings, handleOverlayClick,
          applySkinColor,
          openHondiCodeModal, closeHondiCodeModal, _downloadHondiCode,
 } from './src/gopang/ui/settings.js';
-import { openSearch, closeSearch,
-         handleSearchOverlayClick,
-         runSearch, selectContact,
-         openProfile }                          from './src/gopang/ui/search.js';
 import { _showRegisterFlow }                   from './src/gopang/ui/register-flow.js';
 
 // ── AI ───────────────────────────────────────────────────
@@ -165,13 +161,11 @@ window.dismissBackupWarn = function() {
   window._settingsRegisterFingerprint = window._settingsRegisterFingerprint || (() => {});
   window._settingsRegisterFace        = window._settingsRegisterFace        || (() => {});
 
-  // 검색
-  window.openSearch                = openSearch;
-  window.closeSearch               = closeSearch;
-  window.runSearch                 = runSearch;
-  window.selectContact             = selectContact;
-  window.openProfile               = openProfile;
-  window.handleSearchOverlayClick  = handleSearchOverlayClick;
+  // 검색 — btn-search는 p2p-search.js의 openSearch(별칭 openP2PSearch)를 쓴다.
+  // (2026-07-01 정리: search.js의 openSearch/closeSearch/runSearch/
+  //  handleSearchOverlayClick/selectContact/openProfile은 #search-overlay를
+  //  대상으로 하나, 그 오버레이를 여는 호출 지점이 코드베이스 어디에도 없어
+  //  전부 도달 불가능한 죽은 코드였다 — search.js 파일 자체와 함께 제거.)
 
   // AI
   window.toggleAI                  = toggleAI;
