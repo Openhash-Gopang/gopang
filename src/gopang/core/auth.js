@@ -724,10 +724,13 @@ export async function initAuthWithPhone(digits, countryKey = 'KR') {
         if (!session.ok) {
           console.warn('[Auth] 세션 검증 실패(통합팝업):', session.reason);
           if (session.reason === 'wallet_not_ready') {
-            errEl.textContent = '보안 키 준비 중입니다. 잠시 후 다시 시도해 주세요.';
-            errEl.style.display = 'block';
-            btn.style.opacity = '1';
-            btn.style.pointerEvents = '';
+            // BUG FIX: 이 함수(initAuthWithPhone) 스코프에는 errEl/btn DOM 요소가
+            // 존재하지 않는다(호출부가 자체 UI를 그리는 별도 팝업이라 여기선 참조할
+            // 방법이 없음) — 참조 시 ReferenceError로 즉시 죽어 재시도 안내조차
+            // 못 보여주고 조용히 멈추는 문제가 있었다. resolve(null)로 호출부에
+            // 알려 호출부가 자체적으로 재시도/안내를 하도록 한다.
+            console.warn('[Auth] 보안 키 준비 중 — 잠시 후 다시 시도 필요');
+            resolve(null);
             return;
           }
           // DEV_MODE: DeviceMismatch 무시하고 강제 로그인
@@ -782,6 +785,14 @@ export async function initAuthWithPhone(digits, countryKey = 'KR') {
 }
 
 // ── 전화번호 입력 팝업 ───────────────────────────────────
+// ── 전화번호+닉네임 통합 팝업 (v2.1) ─────────────────────────
+// 기존: 전화번호 팝업 → (신규자만) 별도 화면으로 전환되는 닉네임 팝업, 2단계.
+// 변경: 최초 접속 시 전화번호·닉네임을 한 카드에서 함께 받고 한 번에 제출한다.
+//   - 전화번호만 있고 닉네임이 비어있는 값이 "닉네임"란에 들어오면 기존 사용자의
+//     닉네임 로그인 단축 경로도 그대로 유지(전화번호 없이 닉네임만으로 로그인).
+//   - 전화번호가 이미 가입된 번호면 닉네임 입력값은 무시하고 로그인으로 처리.
+//   - 전화번호가 새 번호면 닉네임(+약관 동의)을 반드시 채운 뒤 그 자리에서 가입 완료.
+//   디자인은 기존 "닉네임 설정" 카드 스타일(둥근 카드·타이틀+부제·파란 버튼)을 그대로 사용.
 function _showPhonePopup(resolve) {
   let selectedCountry = DEFAULT_COUNTRY;
 
@@ -798,12 +809,15 @@ function _showPhonePopup(resolve) {
     <div style="background:#fff;border-radius:20px;padding:28px 20px;
                 width:100%;max-width:340px;box-sizing:border-box;">
 
+      <div style="margin-bottom:20px">
+        <div style="font-size:16px;font-weight:600;color:#111827;margin-bottom:4px">혼디 시작하기</div>
+        <div style="font-size:13px;color:#6b7280">전화번호와 닉네임만 있으면 바로 시작할 수 있어요</div>
+      </div>
+
       <!-- 국가 드롭다운 패널 -->
       <div id="_country-panel" style="display:none;margin-bottom:10px;
            border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;
            background:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.12)">
-
-        <!-- 검색 입력 -->
         <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0">
           <input id="_country-search" type="text" placeholder="국가 검색..."
             style="width:100%;border:1px solid #e5e7eb;border-radius:8px;
@@ -811,8 +825,6 @@ function _showPhonePopup(resolve) {
                    box-sizing:border-box;font-family:inherit"
             autocomplete="off"/>
         </div>
-
-        <!-- 국가 목록 -->
         <div id="_country-list"
           style="max-height:220px;overflow-y:auto;overscroll-behavior:contain">
         </div>
@@ -821,10 +833,8 @@ function _showPhonePopup(resolve) {
       <!-- 전화번호 입력 행 -->
       <div style="display:flex;align-items:center;
                   border:1px solid #e5e7eb;border-radius:12px;
-                  background:#f9fafb;overflow:hidden;margin-bottom:8px"
+                  background:#f9fafb;overflow:hidden;margin-bottom:6px"
            id="_phone-field">
-
-        <!-- 국기 버튼 -->
         <button id="_country-btn"
           style="padding:0 10px;height:52px;border:none;background:transparent;
                  cursor:pointer;border-right:1px solid #e5e7eb;
@@ -833,58 +843,78 @@ function _showPhonePopup(resolve) {
           <span id="_dial-code" style="font-size:11px;color:#6b7280">+82</span>
           <span style="font-size:9px;color:#9ca3af">▼</span>
         </button>
-
         <input id="_phone-input" type="tel" maxlength="8"
-          placeholder="뒷 8자리"
+          placeholder="전화번호 뒷 8자리"
           style="flex:1;padding:0 12px;height:52px;border:none;background:transparent;
                  font-size:16px;font-family:inherit;outline:none;color:#111827;
                  min-width:0;letter-spacing:2px"
           autocomplete="off" inputmode="numeric"/>
-
-        <button id="_phone-btn"
-          style="padding:0 14px;height:52px;border:none;background:transparent;
-                 cursor:pointer;display:flex;align-items:center;
-                 border-left:1px solid #e5e7eb;flex-shrink:0">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-               stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"/>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
       </div>
-
       <div id="_phone-error" style="display:none;font-size:12px;color:#dc2626;
            padding:0 4px;margin-bottom:4px"></div>
-      <div id="_phone-hint" style="font-size:12px;color:#9ca3af;padding:0 4px">
-        전화번호를 010과 대시(-)없이 기입(숫자 8자리)하세요.
+      <div id="_phone-hint" style="font-size:12px;color:#9ca3af;padding:0 4px;margin-bottom:14px">
+        기존 회원이면 닉네임만 입력해도 로그인돼요. 처음이면 둘 다 입력해 주세요.
+      </div>
+
+      <!-- 닉네임 입력 -->
+      <div style="display:flex;align-items:center;
+                  border:1px solid #e5e7eb;border-radius:12px;
+                  background:#f9fafb;overflow:hidden;margin-bottom:10px"
+           id="_nick-field">
+        <input id="_nick-input" type="text" maxlength="20"
+          placeholder="닉네임 (예: 홍길동, James)"
+          style="flex:1;padding:0 14px;height:52px;border:none;background:transparent;
+                 font-size:15px;font-family:inherit;outline:none;color:#111827;min-width:0"
+          autocomplete="off"/>
+      </div>
+      <div id="_nick-error" style="display:none;font-size:12px;color:#dc2626;padding:0 4px;margin-bottom:8px"></div>
+
+      <!-- 이용 약정서 동의 -->
+      <label style="display:flex;align-items:flex-start;gap:8px;padding:10px 4px;margin-bottom:6px;cursor:pointer">
+        <input type="checkbox" id="_terms-agree-chk" style="margin-top:2px;width:16px;height:16px;flex-shrink:0;accent-color:#1A73E8">
+        <span style="font-size:12.5px;color:#374151;line-height:1.6">
+          <span onclick="event.preventDefault();window.openTermsOfUse&&window.openTermsOfUse()" style="color:#1A73E8;font-weight:600;text-decoration:underline">이용 약정서</span>(베타 서비스 면책조항 포함)를 읽었으며 동의합니다. <span style="color:#9ca3af">(처음 가입할 때만 필요해요)</span>
+        </span>
+      </label>
+      <div id="_terms-error" style="display:none;font-size:12px;color:#dc2626;padding:0 4px;margin-bottom:8px">이용 약정서에 동의해야 가입을 완료할 수 있습니다.</div>
+
+      <button id="_auth-btn"
+        style="width:100%;height:52px;background:#1A73E8;color:#fff;
+               border:none;border-radius:12px;font-size:16px;font-weight:600;
+               cursor:pointer;font-family:inherit">
+        시작하기
+      </button>
+      <div style="font-size:12px;color:#9ca3af;text-align:center;margin-top:10px">
+        handle: <span id="_handle-preview" style="color:#1A73E8">@ · · · · · · · ·</span>
       </div>
     </div>`;
 
   document.body.appendChild(overlay);
 
-  const input      = document.getElementById('_phone-input');
-  const field      = document.getElementById('_phone-field');
-  const errEl      = document.getElementById('_phone-error');
+  const phoneInput = document.getElementById('_phone-input');
+  const phoneField = document.getElementById('_phone-field');
+  const phoneErr   = document.getElementById('_phone-error');
   const panel      = document.getElementById('_country-panel');
   const listEl     = document.getElementById('_country-list');
   const searchEl   = document.getElementById('_country-search');
   const flagIcon   = document.getElementById('_flag-icon');
   const dialCode   = document.getElementById('_dial-code');
   const hintEl     = document.getElementById('_phone-hint');
+  const nickInput  = document.getElementById('_nick-input');
+  const nickField  = document.getElementById('_nick-field');
+  const nickErr    = document.getElementById('_nick-error');
+  const handlePrev = document.getElementById('_handle-preview');
 
   // ── 국가 목록 렌더 ──────────────────────────────────────
   function _renderList(query = '') {
     const q = query.toLowerCase();
     const allEntries = Object.entries(COUNTRIES);
     const entries = !q ? allEntries : [
-      // 1순위: 국가코드 완전/전방 일치 (US, KR, JP)
       ...allEntries.filter(([key]) => key.toLowerCase() === q),
       ...allEntries.filter(([key]) => key.toLowerCase() !== q && key.toLowerCase().startsWith(q)),
-      // 2순위: 국가명 부분 일치
       ...allEntries.filter(([key, c]) =>
         !key.toLowerCase().startsWith(q) && c.name.toLowerCase().includes(q)
       ),
-      // 3순위: 전화코드 일치 (+1, +82)
       ...allEntries.filter(([key, c]) =>
         !key.toLowerCase().startsWith(q) && !c.name.toLowerCase().includes(q) && c.code.includes(q)
       ),
@@ -908,26 +938,32 @@ function _showPhonePopup(resolve) {
     });
   }
 
+  function _updateHandlePreview() {
+    const digits = phoneInput.value.trim();
+    const need = COUNTRIES[selectedCountry].digits;
+    if (digits.length === need) {
+      handlePrev.textContent = buildHandle(digits, selectedCountry);
+    } else {
+      handlePrev.textContent = '@' + '·'.repeat(Math.min(need, 8));
+    }
+  }
+
   function _selectCountry(key) {
     selectedCountry = key;
     const c = COUNTRIES[key];
     flagIcon.textContent = c.flag;
     dialCode.textContent = c.code;
-    input.maxLength = c.digits;
-    input.value = '';
-    input.placeholder = key === DEFAULT_COUNTRY ? '뒷 8자리' : `전화번호 (${c.digits}자리)`;
-    hintEl.textContent = key === DEFAULT_COUNTRY
-      ? '예: 010-9662-7170 → 96627170'
-      : `handle: @${key}-${'X'.repeat(Math.min(c.digits, 8))}...`;
+    phoneInput.maxLength = c.digits;
+    phoneInput.value = '';
+    phoneInput.placeholder = key === DEFAULT_COUNTRY ? '전화번호 뒷 8자리' : `전화번호 (${c.digits}자리)`;
     panel.style.display = 'none';
     searchEl.value = '';
-    input.focus();
+    _updateHandlePreview();
+    phoneInput.focus();
   }
 
-  // 초기 렌더
   _renderList();
 
-  // 국가 버튼 토글
   document.getElementById('_country-btn').onclick = (e) => {
     e.stopPropagation();
     const isOpen = panel.style.display !== 'none';
@@ -938,7 +974,6 @@ function _showPhonePopup(resolve) {
     }
   };
 
-  // 실시간 검색
   searchEl.addEventListener('input', () => _renderList(searchEl.value));
   searchEl.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') panel.style.display = 'none';
@@ -948,436 +983,301 @@ function _showPhonePopup(resolve) {
     }
   });
 
-  // 바깥 클릭 시 패널 닫기
   overlay.addEventListener('click', (e) => {
     if (!panel.contains(e.target) && e.target.id !== '_country-btn') {
       panel.style.display = 'none';
     }
   });
 
-  input.focus();
-  input.addEventListener('focus', () => field.style.borderColor = '#16a34a');
-  input.addEventListener('blur',  () => field.style.borderColor = '#e5e7eb');
-  input.addEventListener('input', () => {
-    // 닉네임 입력 시 숫자 제한 해제
-    const v = input.value;
-    if (!/^\d/.test(v) && v.length > 0) {
-      // 닉네임 모드 — 자유 입력
-    } else {
-      input.value = v.replace(/\D/g, '').slice(0, COUNTRIES[selectedCountry].digits);
-    }
-    errEl.style.display = 'none';
+  phoneInput.focus();
+  phoneInput.addEventListener('focus', () => phoneField.style.borderColor = '#16a34a');
+  phoneInput.addEventListener('blur',  () => phoneField.style.borderColor = '#e5e7eb');
+  phoneInput.addEventListener('input', () => {
+    phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, COUNTRIES[selectedCountry].digits);
+    phoneErr.style.display = 'none';
+    _updateHandlePreview();
   });
 
-  const _submit = async () => {
-    const val    = input.value.trim();
-    const digits = COUNTRIES[selectedCountry].digits;
-    const isNickname = val.length > 0 && !/^\d+$/.test(val);
-
-    if (!isNickname && !new RegExp(`^\\d{${digits}}$`).test(val)) {
-      errEl.textContent = `전화번호(${digits}자리) 또는 닉네임을 입력해 주세요.`;
-      errEl.style.display = 'block';
-      input.focus();
-      return;
-    }
-
-    const btn = document.getElementById('_phone-btn');
-    btn.style.opacity = '0.4';
-    btn.style.pointerEvents = 'none';
-    errEl.style.display = 'none';
-
-    try {
-      let found;
-
-      if (isNickname) {
-        // ── 닉네임으로 L1 PocketBase 검색 (정확 일치, 대소문자 무시) ──
-        // PocketBase = 연산자는 대소문자 구분 → 저장값과 동일한 케이스로 시도
-        // 1차: 입력값 그대로, 2차: toLowerCase(), 3차: 첫 글자 대문자
-        const nickLower = val.toLowerCase();
-        const nickTitle = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
-        let found3 = null;
-        for (const nick of [val, nickLower, nickTitle]) {
-          const f = encodeURIComponent(`nickname='${nick}'`);
-          const r = await fetch(`${L1_URL}?filter=${f}&perPage=1`);
-          const d = await r.json();
-          if (d.items?.[0]) { found3 = d.items[0]; break; }
-        }
-        found = found3;
-
-        if (!found) {
-          errEl.textContent = `닉네임 '${val}'을(를) 찾을 수 없습니다. 전화번호로 로그인해 주세요.`;
-          errEl.style.display = 'block';
-          btn.style.opacity = '1';
-          btn.style.pointerEvents = '';
-          return;
-        }
-      } else {
-        // ── 전화번호로 검색 (기존 로직) ────────────────
-        const e164   = buildE164(val, selectedCountry);
-        const handle = buildHandle(val, selectedCountry);
-        const filter = encodeURIComponent(`handle='${handle}'`);
-        const res    = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
-        const data   = await res.json();
-        found = data.items?.[0];
-
-        if (!found) {
-          // 신규 사용자 → 모바일 기기 확인 (암호키 생성은 휴대폰 전용)
-          if (!_isMobileDevice()) {
-            btn.style.opacity = '1';
-            btn.style.pointerEvents = '';
-            const ok = await _confirmMobileRegistration();
-            if (!ok) {
-              _showPcRegisterBlockedNotice();
-              overlay.remove();
-              resolve(null);
-              return;
-            }
-            btn.style.opacity = '0.4';
-            btn.style.pointerEvents = 'none';
-          }
-          // 신규 사용자 → 닉네임 입력 단계
-          const ipv6 = await _e164ToIPv6(e164);
-          btn.style.opacity = '1';
-          btn.style.pointerEvents = '';
-          _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, resolve });
-          return;
-        }
-      }
-
-      // v6.0: handle/닉네임 일치만으로 더 이상 즉시 로그인하지 않는다 —
-      // 이 기기가 그 guid에 핀(pin)된 Ed25519 키를 실제로 갖고 있다는 서명
-      // 증거가 있어야 한다. 전화번호나 닉네임은 비밀이 아니다(누구나 알 수 있음).
-      const session = await _issueSession(found.guid, 'gopang');
-      if (!session.ok) {
-        console.warn('[Auth] 세션 검증 실패:', session.reason);
-        btn.style.opacity = '1';
-        btn.style.pointerEvents = '';
-        if (session.reason === 'wallet_not_ready') {
-          // wallet 초기화 중 — 재시도 안내 (Device Mismatch 아님)
-          errEl.textContent = '보안 키 준비 중입니다. 잠시 후 다시 시도해 주세요.';
-          errEl.style.display = 'block';
-          return;
-        }
-        // DEV_MODE: DeviceMismatch 무시하고 강제 통과
-        if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
-          console.info('[DEV] _showPhonePopup DeviceMismatch 우회:', found.handle);
-        } else {
-          overlay.remove();
-          _showDeviceMismatchNotice(found, resolve);
-          return;
-        }
-      }
-
-      // 기존 사용자 → 로그인 (서명 검증 통과)
-      const user = {
-        ipv6: found.guid, handle: found.handle,
-        e164: found.e164 || '',
-        country_code: found.country_code || selectedCountry,
-        nickname: found.nickname || '',
-        region: found.region || '',
-        name: val, isGuest: false, isTemp: false,
-        registeredAt: found.created,
-      };
-      console.info('[Auth] 로그인:', found.handle, '(닉네임:', isNickname, ')');
-      localStorage.setItem(STORE_KEY, JSON.stringify(user));
-      setUser(user);
-      overlay.remove();
-      resolve(user);
-
-    } catch(e) {
-      errEl.textContent = '네트워크 오류. 다시 시도해 주세요.';
-      errEl.style.display = 'block';
-      btn.style.opacity = '1';
-      btn.style.pointerEvents = '';
-    }
-  };
-
-  document.getElementById('_phone-btn').onclick = _submit;
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') _submit(); });
-}
-
-// ── 닉네임 입력 단계 ─────────────────────────────────────
-function _showNicknameStep({ ipv6, handle, e164, selectedCountry, val, overlay, resolve }) {
-  const card = overlay.querySelector('div');
-  card.innerHTML = `
-    <div style="margin-bottom:20px">
-      <div style="font-size:16px;font-weight:600;color:#111827;margin-bottom:4px">닉네임 설정</div>
-      <div style="font-size:13px;color:#6b7280">다른 사용자가 검색할 때 사용됩니다</div>
-    </div>
-
-    <!-- 닉네임 입력 -->
-    <div style="display:flex;align-items:center;
-                border:1px solid #e5e7eb;border-radius:12px;
-                background:#f9fafb;overflow:hidden;margin-bottom:10px"
-         id="_nick-field">
-      <input id="_nick-input" type="text" maxlength="20"
-        placeholder="닉네임 (예: 홍길동, James)"
-        style="flex:1;padding:0 14px;height:52px;border:none;background:transparent;
-               font-size:15px;font-family:inherit;outline:none;color:#111827;min-width:0"
-        autocomplete="off"/>
-    </div>
-
-    <!-- v2.0: 지역·공개여부 제거 — 닉네임만으로 가입 완료 -->
-    <input type="hidden" id="_region-input" value="">
-
-    <div id="_nick-error" style="display:none;font-size:12px;color:#dc2626;padding:0 4px;margin-bottom:8px"></div>
-
-    <!-- 이용 약정서 동의 -->
-    <label style="display:flex;align-items:flex-start;gap:8px;padding:10px 4px;margin-bottom:6px;cursor:pointer">
-      <input type="checkbox" id="_terms-agree-chk" style="margin-top:2px;width:16px;height:16px;flex-shrink:0;accent-color:#1A73E8">
-      <span style="font-size:12.5px;color:#374151;line-height:1.6">
-        <span onclick="event.preventDefault();window.openTermsOfUse&&window.openTermsOfUse()" style="color:#1A73E8;font-weight:600;text-decoration:underline">이용 약정서</span>(베타 서비스 면책조항 포함)를 읽었으며 동의합니다.
-      </span>
-    </label>
-    <div id="_terms-error" style="display:none;font-size:12px;color:#dc2626;padding:0 4px;margin-bottom:8px">이용 약정서에 동의해야 가입을 완료할 수 있습니다.</div>
-
-    <!-- 완료 버튼 -->
-    <button id="_nick-btn"
-      style="width:100%;height:52px;background:#1A73E8;color:#fff;
-             border:none;border-radius:12px;font-size:16px;font-weight:600;
-             cursor:pointer;font-family:inherit">
-      가입 완료
-    </button>
-    <div style="font-size:12px;color:#9ca3af;text-align:center;margin-top:10px">
-      handle: <span style="color:#1A73E8">${handle}</span>
-    </div>`;
-
-  const nickInput   = document.getElementById('_nick-input');
-  const nickField   = document.getElementById('_nick-field');
-  const nickErr     = document.getElementById('_nick-error');
-
-  nickInput.focus();
+  nickInput.focus === undefined; // no-op (스타일 정리용)
   nickInput.addEventListener('focus', () => nickField.style.borderColor = '#16a34a');
   nickInput.addEventListener('blur',  () => nickField.style.borderColor = '#e5e7eb');
 
-  const regionInput  = document.getElementById('_region-input');
-  const regionLocBtn = document.getElementById('_region-loc-btn');
-
-  const _autoRegion = () => {
-    if (!navigator.geolocation) return;
-    regionLocBtn.textContent = '확인 중…'; regionLocBtn.disabled = true;
-    navigator.geolocation.getCurrentPosition(async pos => {
-      const { latitude: lat, longitude: lng } = pos.coords;
-      try {
-        const res  = await fetch(PROXY_URL + '/geocode?lat=' + lat + '&lng=' + lng);
-        const data = await res.json();
-        const doc  = data && data.documents && data.documents[0];
-        const addr = (doc && doc.road_address && doc.road_address.address_name)
-                  || (doc && doc.address && doc.address.address_name)
-                  || (lat.toFixed(5) + ', ' + lng.toFixed(5));
-        regionInput.value = addr;
-      } catch(e) {
-        regionInput.value = lat.toFixed(5) + ', ' + lng.toFixed(5);
-      }
-      regionLocBtn.textContent = '재검색'; regionLocBtn.disabled = false;
-    }, () => { regionLocBtn.textContent = '내 위치'; regionLocBtn.disabled = false; });
-  };
-  regionLocBtn.onclick = _autoRegion;
-  _autoRegion();
-
-  // ── 닉네임 실시간 동명이인 안내 ─────────────────────────
+  // ── 닉네임 실시간 동명이인 안내 (신규 가입 예정자에게만 의미 있음) ──
   let _nickTimer = null;
   nickInput.addEventListener('input', () => {
     nickErr.style.display = 'none';
     const nick = nickInput.value.trim();
     clearTimeout(_nickTimer);
 
-    // 힌트 초기화
-    let hintEl = document.getElementById('_nick-hint');
-    if (!hintEl) {
-      hintEl = document.createElement('div');
-      hintEl.id = '_nick-hint';
-      hintEl.style.cssText = 'font-size:12px;color:#9ca3af;padding:0 4px;margin-bottom:6px;line-height:1.6;min-height:18px';
-      nickErr.insertAdjacentElement('afterend', hintEl);
+    let nickHintEl = document.getElementById('_nick-hint');
+    if (!nickHintEl) {
+      nickHintEl = document.createElement('div');
+      nickHintEl.id = '_nick-hint';
+      nickHintEl.style.cssText = 'font-size:12px;color:#9ca3af;padding:0 4px;margin-bottom:6px;line-height:1.6;min-height:18px';
+      nickErr.insertAdjacentElement('afterend', nickHintEl);
     }
-
-    if (nick.length < 2) { hintEl.innerHTML = ''; return; }
-
-    hintEl.innerHTML = '<span style="color:#9ca3af">확인 중…</span>';
-
+    if (nick.length < 2) { nickHintEl.innerHTML = ''; return; }
+    nickHintEl.innerHTML = '<span style="color:#9ca3af">확인 중…</span>';
     _nickTimer = setTimeout(async () => {
       try {
-        // L1 PocketBase에서 동명이인 수 조회
-        const nickLower = encodeURIComponent(`nickname='${nick}'`);
-        const r = await fetch(`${L1_URL}?filter=${nickLower}&perPage=1`);
+        const nickFilter = encodeURIComponent(`nickname='${nick}'`);
+        const r = await fetch(`${L1_URL}?filter=${nickFilter}&perPage=1`);
         const d = await r.json();
         const total = d.totalItems ?? d.items?.length ?? 0;
-
         if (total === 0) {
-          hintEl.innerHTML =
-            `<span style="color:#16a34a">✓ 처음 사용하는 닉네임입니다.</span>`;
+          nickHintEl.innerHTML = `<span style="color:#16a34a">✓ 처음 사용하는 닉네임입니다.</span>`;
         } else {
-          hintEl.innerHTML =
+          nickHintEl.innerHTML =
             `<span style="color:#f59e0b">⚠ 이미 ${total}명이 사용 중입니다.</span> ` +
-            `<span style="color:#9ca3af">handle <b style="color:#16a34a">${handle}</b>로 구분됩니다.</span>`;
+            `<span style="color:#9ca3af">전화번호로 구분되니 그대로 진행하셔도 돼요.</span>`;
         }
-      } catch {
-        hintEl.innerHTML = '';
-      }
+      } catch { nickHintEl.innerHTML = ''; }
     }, 400);
   });
 
-  const _register = async () => {
+  const btn = document.getElementById('_auth-btn');
+
+  // ── 실제 신규 가입 처리 (기존 _register 로직 그대로, 지역 필드는 제거) ──
+  async function _completeRegistration({ ipv6, handle, e164, nickname }) {
+    const nickname_hash = await _sha256('phone:' + e164);
+    const region = '';
+
+    const hondiCodeVersion = 'v1';
+    let hondiShortId = null, hondiCodeImage = null;
+    try {
+      hondiShortId  = guidToShortId(ipv6, hondiCodeVersion);
+      hondiCodeImage = await generateHondiCodeDataURL(hondiShortId, hondiCodeVersion);
+      console.info('[가입][색상코드] 생성 완료 | short_id:', hondiShortId.toString(), '| version:', hondiCodeVersion);
+    } catch (e) {
+      console.warn('[가입][색상코드] 생성 실패 (가입은 계속 진행):', e.message);
+    }
+
+    const user = {
+      ipv6, handle, e164, country_code: selectedCountry,
+      nickname, region,
+      name: nickname, isGuest: false, isTemp: false,
+      registeredAt: new Date().toISOString(),
+      hondi_code_version: hondiCodeVersion,
+      hondi_code_id: hondiShortId ? hondiShortId.toString() : null,
+    };
+
+    await fetch(L1_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid: ipv6, nickname_hash, handle, nickname, region,
+        e164, country_code: selectedCountry,
+        native_lang: navigator.language?.slice(0,2) || 'ko',
+        is_public: true,
+        hondi_code_version: hondiCodeVersion,
+        hondi_code_id: hondiShortId ? hondiShortId.toString() : null,
+      })
+    });
+    console.info('[Auth] 신규 등록:', handle, nickname);
+
+    if (hondiCodeImage) {
+      try { localStorage.setItem('hondi_code_image_v1', hondiCodeImage); } catch {}
+    }
+
+    const nickLang = (navigator.language?.slice(0,2) || 'ko') + ':' + nickname;
+    const nickHash = await _sha256(nickLang);
+    const _L1_PROFILES_P2P = L1_URL.replace('/api/collections/profiles/records', '') + '/api/collections/profiles/records';
+    fetch(_L1_PROFILES_P2P, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid:     ipv6,
+        handle,
+        nickname: nickname || null,
+        region:   null,
+      })
+    }).catch(e => console.warn('[P2P] global_profiles 등록 실패:', e.message));
+
+    localStorage.setItem(STORE_KEY, JSON.stringify(user));
+    setUser(user);
+    overlay.remove();
+
+    _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountry }).catch(
+      e => console.warn('[PDV] 가입 초기 레코드 실패 (무시):', e.message)
+    );
+
+    let syncResult = await ensureX25519Synced(ipv6).catch(e => {
+      console.error('[가입][X25519] 예외:', e.message); return { ok: false };
+    });
+    if (!syncResult?.ok) {
+      console.warn('[가입][X25519] 1차 실패:', syncResult?.reason, '— 3초 후 재시도');
+      await new Promise(r => setTimeout(r, 3000));
+      syncResult = await ensureX25519Synced(ipv6).catch(e => {
+        console.error('[가입][X25519] 재시도 예외:', e.message); return { ok: false };
+      });
+      if (syncResult?.ok) {
+        console.info('[가입][X25519] 재시도 성공');
+      } else {
+        console.error('[가입][X25519] 재시도도 실패:', syncResult?.reason, '— 가입은 계속 진행');
+      }
+    } else {
+      console.info('[가입][X25519] 키 등록 완료:', syncResult.publicKeyB64u?.slice(0, 16) + '...');
+    }
+
+    console.info('[가입] 백업 단계 스킵(v2.0 간소화)');
+    localStorage.setItem('hondi_new_registration', '1');
+
+    resolve(user);
+
+    requestPushSubscription(ipv6).then(pushResult => {
+      if (!document.getElementById('message-list')) return;
+      if (pushResult.reason === 'permission_denied') {
+        appendBubble('ai', '🔔 알림 권한이 꺼져 있어요. PC에서 보낸 메시지를 실시간으로 받으려면 브라우저 설정 → 알림에서 고팡을 허용해 주세요.');
+      }
+    }).catch(() => {});
+  }
+
+  const _submit = async () => {
+    const digits   = phoneInput.value.trim();
     const nickname = nickInput.value.trim();
-    const region   = regionInput.value.trim();
+    const needDigits = COUNTRIES[selectedCountry].digits;
+    const digitsFilled = digits.length > 0;
+    const digitsValid  = new RegExp(`^\\d{${needDigits}}$`).test(digits);
 
-    if (!nickname) {
-      nickErr.textContent = '닉네임을 입력해 주세요.';
-      nickErr.style.display = 'block';
-      nickInput.focus();
+    phoneErr.style.display = 'none';
+    nickErr.style.display  = 'none';
+
+    if (!digitsFilled && !nickname) {
+      phoneErr.textContent = '전화번호 또는 닉네임을 입력해 주세요.';
+      phoneErr.style.display = 'block';
+      phoneInput.focus();
       return;
     }
 
-    const termsChk = document.getElementById('_terms-agree-chk');
-    const termsErr = document.getElementById('_terms-error');
-    if (!termsChk?.checked) {
-      termsErr.style.display = 'block';
-      termsChk?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (digitsFilled && !digitsValid) {
+      phoneErr.textContent = `전화번호 뒷자리는 숫자 ${needDigits}자리로 입력해 주세요.`;
+      phoneErr.style.display = 'block';
+      phoneInput.focus();
       return;
     }
-    termsErr.style.display = 'none';
 
-    const btn = document.getElementById('_nick-btn');
-    btn.textContent = '등록 중...';
-    btn.style.opacity = '0.6';
+    btn.style.opacity = '0.4';
     btn.style.pointerEvents = 'none';
 
     try {
-      const nickname_hash = await _sha256('phone:' + e164);
-
-      // ── 혼디 색상 코드 생성 (가입 ↔ AI 비서 설정 사이) ──────────────
-      // short_id는 guid로부터 결정적으로 도출되므로, 서버에 이미지 자체를
-      // 올리지 않아도 클라이언트가 언제든 동일한 코드를 재생성할 수 있다.
-      // 지금은 v1(세로 10칸)만 발급 — 주소 공간 소진 시 전체 v2로 전환.
-      const hondiCodeVersion = 'v1';
-      let hondiShortId = null, hondiCodeImage = null;
-      try {
-        hondiShortId  = guidToShortId(ipv6, hondiCodeVersion);
-        hondiCodeImage = await generateHondiCodeDataURL(hondiShortId, hondiCodeVersion);
-        console.info('[가입][색상코드] 생성 완료 | short_id:', hondiShortId.toString(), '| version:', hondiCodeVersion);
-      } catch (e) {
-        console.warn('[가입][색상코드] 생성 실패 (가입은 계속 진행):', e.message);
-      }
-
-      const user = {
-        ipv6, handle, e164, country_code: selectedCountry,
-        nickname, region,
-        name: val, isGuest: false, isTemp: false,
-        registeredAt: new Date().toISOString(),
-        hondi_code_version: hondiCodeVersion,
-        hondi_code_id: hondiShortId ? hondiShortId.toString() : null,
-      };
-
-      await fetch(L1_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          guid: ipv6, nickname_hash, handle, nickname, region,
-          e164, country_code: selectedCountry,
-          native_lang: navigator.language?.slice(0,2) || 'ko',
-          is_public: true,
-          hondi_code_version: hondiCodeVersion,
-          hondi_code_id: hondiShortId ? hondiShortId.toString() : null,
-        })
-      });
-      console.info('[Auth] 신규 등록:', handle, nickname);
-
-      // 색상 코드 이미지을 로컬에 보관 — 설정 화면 "내 혼디 코드 받기"에서
-      // 재계산 없이 즉시 보여주거나 다운로드할 수 있도록 캐시.
-      if (hondiCodeImage) {
-        try { localStorage.setItem('hondi_code_image_v1', hondiCodeImage); } catch {}
-      }
-
-      // L5 글로벌 디렉토리 등록 (GDUDA Phase 1 — HLR)
-      const nickLang = (navigator.language?.slice(0,2) || 'ko') + ':' + nickname;
-      const nickHash = await _sha256(nickLang);
-      // ── 탈중앙화 이관 ④: p2p/register → L1 직접 (2026-06-23) ────────────
-      // 이전: PROXY_URL /p2p/register → Worker → L1 profiles
-      // 이후: L1 profiles 직접 (Worker는 이미 L1을 직접 호출 중이었음)
-      const _L1_PROFILES_P2P = L1_URL.replace('/api/collections/profiles/records', '') + '/api/collections/profiles/records';
-      fetch(_L1_PROFILES_P2P, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          guid:     ipv6,
-          handle,
-          nickname: nickname || null,
-          region:   region   || null,
-        })
-      }).catch(e => console.warn('[P2P] global_profiles 등록 실패:', e.message));
-
-      localStorage.setItem(STORE_KEY, JSON.stringify(user));
-      setUser(user);
-      overlay.remove();
-
-      // ── 암호키 등록 (가입의 일부 — resolve 전 완료) ─────────────────────
-      // 정책: 가입 즉시 Ed25519·X25519 키가 L1에 등록 완료되어야 한다.
-      // ensureX25519Synced: L1 profiles에 X25519 공개키 등록
-      //
-      // _createMinimalProfile은 PROFILE_SUBMIT 완료 후 호출 (industry_fields 포함)
-      // 흐름: 가입 → AI설정(OR키) → SP1 온보딩 대화 → PROFILE_SUBMIT → /profile POST → 그림자 생성
-      // wallet은 OR 키 발급 3~5분 동안 백그라운드에서 초기화 완료되므로 타이밍 문제 없음.
-
-      // 세션 수립은 ai-setup 완료 후 혼디 대화창 복귀 시 자동 처리됨.
-      // 가입 직후는 wallet 초기화 전이라 _issueSession이 항상 wallet_not_ready로 실패하므로 생략.
-
-      // PDV 초기 레코드 (비동기 — 가입 흐름 차단 불필요)
-      _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountry }).catch(
-        e => console.warn('[PDV] 가입 초기 레코드 실패 (무시):', e.message)
-      );
-
-      // X25519 키 생성 + L1 등록 — 가입 완료 전 동기 처리
-      let syncResult = await ensureX25519Synced(ipv6).catch(e => {
-        console.error('[가입][X25519] 예외:', e.message); return { ok: false };
-      });
-      if (!syncResult?.ok) {
-        console.warn('[가입][X25519] 1차 실패:', syncResult?.reason, '— 3초 후 재시도');
-        await new Promise(r => setTimeout(r, 3000));
-        syncResult = await ensureX25519Synced(ipv6).catch(e => {
-          console.error('[가입][X25519] 재시도 예외:', e.message); return { ok: false };
-        });
-        if (syncResult?.ok) {
-          console.info('[가입][X25519] 재시도 성공');
-        } else {
-          console.error('[가입][X25519] 재시도도 실패:', syncResult?.reason, '— 가입은 계속 진행');
+      // ── 케이스 A: 전화번호 없이 닉네임만 — 기존 회원 닉네임 로그인 단축 경로 ──
+      if (!digitsFilled && nickname) {
+        const nickLower = nickname.toLowerCase();
+        const nickTitle = nickname.charAt(0).toUpperCase() + nickname.slice(1).toLowerCase();
+        let found = null;
+        for (const nick of [nickname, nickLower, nickTitle]) {
+          const f = encodeURIComponent(`nickname='${nick}'`);
+          const r = await fetch(`${L1_URL}?filter=${f}&perPage=1`);
+          const d = await r.json();
+          if (d.items?.[0]) { found = d.items[0]; break; }
         }
-      } else {
-        console.info('[가입][X25519] 키 등록 완료:', syncResult.publicKeyB64u?.slice(0, 16) + '...');
+        if (!found) {
+          nickErr.textContent = `닉네임 '${nickname}'을(를) 찾을 수 없습니다. 전화번호로 시작해 주세요.`;
+          nickErr.style.display = 'block';
+          btn.style.opacity = '1'; btn.style.pointerEvents = '';
+          return;
+        }
+        await _loginExisting(found, nickname);
+        return;
       }
 
-      // v2.0: 필수 백업 단계 제거 — 가입 즉시 AI 대화창으로 진입.
-      // 백업 키는 설정 화면에서 언제든 내보낼 수 있음.
-      console.info('[가입] 백업 단계 스킵(v2.0 간소화)');
+      // ── 전화번호 기준 조회 ──────────────────────────────
+      const e164   = buildE164(digits, selectedCountry);
+      const handle = buildHandle(digits, selectedCountry);
+      const filter = encodeURIComponent(`handle='${handle}'`);
+      const res    = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+      const data   = await res.json();
+      const found  = data.items?.[0];
 
-      // ── 신규 가입 플래그 설정 — gopang-app.js가 대화창 열린 직후 감지 ──
-      // resolve() 이후 auth-gate가 즉시 제거되므로, overlay에서 버튼을 만들면
-      // DOM이 사라져 동작 안 함. 대신 localStorage 플래그로 신호를 전달.
-      localStorage.setItem('hondi_new_registration', '1');
+      if (found) {
+        // ── 케이스 B: 이미 가입된 번호 — 닉네임 입력값은 무시하고 로그인 ──
+        await _loginExisting(found, digits);
+        return;
+      }
 
-      resolve(user);
+      // ── 케이스 C: 신규 번호 — 닉네임·약관 필요 ──────────────
+      if (!nickname) {
+        nickErr.textContent = '처음 오셨네요! 닉네임도 함께 입력해 주세요.';
+        nickErr.style.display = 'block';
+        nickInput.focus();
+        btn.style.opacity = '1'; btn.style.pointerEvents = '';
+        return;
+      }
+      const termsChk = document.getElementById('_terms-agree-chk');
+      const termsErr = document.getElementById('_terms-error');
+      if (!termsChk?.checked) {
+        termsErr.style.display = 'block';
+        termsChk?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        btn.style.opacity = '1'; btn.style.pointerEvents = '';
+        return;
+      }
+      termsErr.style.display = 'none';
 
-      // 가입 완료 시점에 푸시 알림 권한 요청 — 결과를 채팅에 안내
-      // (가입 완료를 막지 않도록 resolve 이후 비동기로 처리)
-      requestPushSubscription(ipv6).then(pushResult => {
-        if (!document.getElementById('message-list')) return; // 화면 전환 전이면 조용히 스킵
-        if (pushResult.reason === 'permission_denied') {
-          appendBubble('ai', '🔔 알림 권한이 꺼져 있어요. PC에서 보낸 메시지를 실시간으로 받으려면 브라우저 설정 → 알림에서 고팡을 허용해 주세요.');
+      if (!_isMobileDevice()) {
+        btn.style.opacity = '1'; btn.style.pointerEvents = '';
+        const ok = await _confirmMobileRegistration();
+        if (!ok) {
+          _showPcRegisterBlockedNotice();
+          overlay.remove();
+          resolve(null);
+          return;
         }
-        // 성공 시에는 별도 안내 없음(환영 메시지로 충분) — unsupported/guid_missing 등도 조용히 무시
-      }).catch(() => {});
+        btn.style.opacity = '0.4'; btn.style.pointerEvents = 'none';
+      }
+
+      btn.textContent = '등록 중...';
+      const ipv6 = await _e164ToIPv6(e164);
+      await _completeRegistration({ ipv6, handle, e164, nickname });
 
     } catch(e) {
-      nickErr.textContent = '네트워크 오류. 다시 시도해 주세요.';
-      nickErr.style.display = 'block';
-      btn.textContent = '가입 완료';
+      phoneErr.textContent = '네트워크 오류. 다시 시도해 주세요.';
+      phoneErr.style.display = 'block';
       btn.style.opacity = '1';
       btn.style.pointerEvents = '';
+      btn.textContent = '시작하기';
     }
   };
 
-  document.getElementById('_nick-btn').onclick = _register;
-  nickInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') regionInput.focus(); });
-  regionInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') _register(); });
+  // ── 기존 회원 로그인 공통 처리 (전화번호 경로·닉네임 경로 공용) ──
+  async function _loginExisting(found, valForDisplay) {
+    const session = await _issueSession(found.guid, 'gopang');
+    if (!session.ok) {
+      console.warn('[Auth] 세션 검증 실패:', session.reason);
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = '';
+      if (session.reason === 'wallet_not_ready') {
+        phoneErr.textContent = '보안 키 준비 중입니다. 잠시 후 다시 시도해 주세요.';
+        phoneErr.style.display = 'block';
+        return;
+      }
+      if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
+        console.info('[DEV] _showPhonePopup DeviceMismatch 우회:', found.handle);
+      } else {
+        overlay.remove();
+        _showDeviceMismatchNotice(found, resolve);
+        return;
+      }
+    }
+
+    const user = {
+      ipv6: found.guid, handle: found.handle,
+      e164: found.e164 || '',
+      country_code: found.country_code || selectedCountry,
+      nickname: found.nickname || '',
+      region: found.region || '',
+      name: valForDisplay, isGuest: false, isTemp: false,
+      registeredAt: found.created,
+    };
+    console.info('[Auth] 로그인:', found.handle);
+    localStorage.setItem(STORE_KEY, JSON.stringify(user));
+    setUser(user);
+    overlay.remove();
+    resolve(user);
+  }
+
+  btn.onclick = _submit;
+  phoneInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') nickInput.focus(); });
+  nickInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') _submit(); });
 }
 
 // ── 등록 여부 판별 ────────────────────────────────────────
