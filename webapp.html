@@ -2379,31 +2379,21 @@ if (document.readyState === 'complete') _applyI18n();
 <script>
 function openLeftMenu() {
   document.getElementById('left-menu-overlay')?.classList.add('open');
-  // 튜토리얼 단계 1: 왼쪽 메뉴 열기 완료 신호
-  _tutorialMenuAction('left');
+  // BUG-FIX(2026-07-01): 이 자리에서 직접 _tutorialSignal을 호출하는 코드가
+  // 있었으나(구 _tutorialMenuAction), 이후 다른 스크립트 블록(2976행 부근)의
+  // window.openLeftMenu 래퍼가 "신호가 안 나간다"는 오진단 아래 동일한
+  // 신호를 한 번 더 호출하도록 추가되면서, 메뉴를 열 때마다 튜토리얼 신호가
+  // 정확히 두 번씩 발동해 AI 응답이 통째로 중복되는 원인이 되었다.
+  // 신호 발동은 아래 래퍼(window.openLeftMenu/openRightMenu 재정의 지점)
+  // 한 곳에서만 담당하도록 통일하고, 여기서는 순수 UI 토글만 수행한다.
 }
 function closeLeftMenu()  { document.getElementById('left-menu-overlay')?.classList.remove('open'); }
 function openRightMenu() {
   document.getElementById('right-menu-overlay')?.classList.add('open');
-  // 튜토리얼 단계 2: 오른쪽 메뉴 열기 완료 신호
-  _tutorialMenuAction('right');
+  // BUG-FIX(2026-07-01): 위 openLeftMenu와 동일한 이유로 중복 신호 제거 — 상세 주석 참고.
 }
 function closeRightMenu() { document.getElementById('right-menu-overlay')?.classList.remove('open'); }
 
-// ── 튜토리얼 메뉴 동작 감지 ──────────────────────────────────────
-// AI 패널이 열려있고, 해당 튜토리얼 단계(1=왼쪽, 2=오른쪽)일 때만 신호를 보낸다.
-function _tutorialMenuAction(side) {
-  try {
-    const tutDone = localStorage.getItem('hondi_tutorial_done') === '1';
-    const tutStep = parseInt(localStorage.getItem('hondi_tutorial_step') || '-1', 10);
-    const expectedStep = side === 'left' ? 1 : 2;
-    if (tutDone || tutStep !== expectedStep) return;
-    // AI 패널이 열려있으면 튜토리얼 진행 신호 전송
-    if (typeof window._tutorialSignal === 'function') {
-      window._tutorialSignal(side === 'left' ? 'left_menu' : 'right_menu');
-    }
-  } catch {}
-}
 function openUserManual()  { document.getElementById('manual-overlay')?.classList.add('open'); }
 function closeUserManual() { document.getElementById('manual-overlay')?.classList.remove('open'); }
 function openTermsOfUse()  { document.getElementById('terms-overlay')?.classList.add('open'); }
@@ -2911,7 +2901,16 @@ window.closeTermsOfUse = closeTermsOfUse;
   window._resetTutorialWatchdog = _resetTutorialWatchdog;
   window._clearTutorialWatchdog = _clearTutorialWatchdog;
 
+  // BUG-FIX(2026-07-01): 근본 원인(openLeftMenu/openRightMenu 이중 신호 발동)은
+  // 별도로 제거했지만, 앞으로 다른 경로로 같은 action이 짧은 간격으로 중복
+  // 호출되더라도 AI 응답이 두 번 나가지 않도록 진행 중 잠금(lock)을 추가한다.
+  // _tutorialSignal은 await _callPanelAI(...)로 AI 응답을 기다리는 동안
+  // localStorage의 hondi_tutorial_step이 아직 갱신되지 않으므로, 락이 없으면
+  // 그 사이 들어온 동일/유효 action 호출이 그대로 통과해 버블을 하나 더
+  // 만들어 버린다.
+  let _tutSignalBusy = false;
   window._tutorialSignal = async function(action, detail) {
+    if (_tutSignalBusy) return; // 이전 신호에 대한 AI 응답을 기다리는 중 — 중복 호출 무시
     try {
       if (!_panelOpen) return;
       if (localStorage.getItem('hondi_tutorial_done') === '1') return;
@@ -2934,13 +2933,24 @@ window.closeTermsOfUse = closeTermsOfUse;
       msg = _TUT_MSG[action];
     }
     if (!msg) return;
+    _tutSignalBusy = true;
     _clearTutorialWatchdog();
     const bubble = _appendPanelMsg('ai', '…');
     bubble.classList.add('streaming');
-    try { await _callPanelAI(msg, bubble); }
-    catch(e) { bubble.textContent = 'AI 오류: ' + e.message; }
-    bubble.classList.remove('streaming');
-    _resetTutorialWatchdog();
+    try {
+      await _callPanelAI(msg, bubble);
+    } catch(e) {
+      bubble.textContent = 'AI 오류: ' + e.message;
+    } finally {
+      // BUG-FIX(2026-07-01): _callPanelAI의 fetch()에는 타임아웃/AbortController가
+      // 없어 네트워크가 무응답으로 멈추면 await가 영원히 반환되지 않을 수 있다.
+      // 리셋 코드가 try 바깥에 있으면 그 경우 _tutSignalBusy가 true로 영구
+      // 고정되어 이후 모든 튜토리얼 신호가 새로고침 전까지 막혀버린다.
+      // finally로 옮겨 어떤 경로로 끝나든 반드시 잠금이 풀리도록 한다.
+      bubble.classList.remove('streaming');
+      _tutSignalBusy = false;
+      _resetTutorialWatchdog();
+    }
   };
 
   // ── 튜토리얼 STEP 3 트리거 (설정·검색 아이콘) ───────────
