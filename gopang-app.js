@@ -445,9 +445,13 @@ const _boot = async () => {
 
   console.info('[Gopang v3] 부트스트랩 완료');
 
-  // 첫 접속자: 환영 팝업 (initAuth 포함)
-  // 매 접속마다 환영 팝업 표시 (체크박스로만 숨김)
-  _showWelcomePopup();
+  // BUG-FIX(2026-07-01): 사용자 요청으로 환영 인사 패널(_showWelcomePopup)
+  // 자체를 삭제한다. 다만 그 안에서 미등록 사용자를 번호 입력 화면으로
+  // 보내던 역할까지 함께 사라지면 신규 가입 진입로가 없어지므로, 그 부분만
+  // 그대로 남긴다.
+  if (!_isAlreadyRegistered()) {
+    _showRegisterGuide();
+  }
 };
 if (document.readyState === 'loading') {
   window.addEventListener('DOMContentLoaded', _boot);
@@ -455,171 +459,12 @@ if (document.readyState === 'loading') {
   _boot();
 }
 
-// ── 첫 접속 환영 팝업 (initAuth 포함) ──────────────────────
-function _showWelcomePopup() {
-  // 이 탭이 살아있는 동안(세션) 한 번만 표시 — 채팅 화면으로 돌아올 때마다
-  // 다시 뜨지 않게 한다. sessionStorage는 탭을 닫으면 사라지므로,
-  // 탭을 닫았다가 다시 열면(=새 세션) 자연스럽게 다시 표시된다.
-  if (sessionStorage.getItem('gopang_welcome_shown_session')) return;
-  sessionStorage.setItem('gopang_welcome_shown_session', '1');
-
-  const stored = (() => {
-    try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { return null; }
-  })();
-  const name = stored?.nickname || stored?.handle || null;
-
-  const ov = document.createElement('div');
-  ov.id = 'gopang-welcome-overlay';
-  ov.style.cssText = [
-    'position:fixed;inset:0;z-index:9999',
-    'background:rgba(0,0,0,.45)',
-    'display:flex;align-items:flex-end;justify-content:center',
-  ].join(';');
-
-  ov.innerHTML = `
-    <div id="_welcome_sheet" style="
-      background:#fff;border-radius:20px 20px 0 0;
-      width:100%;max-width:480px;
-      max-height:88dvh;overflow-y:auto;
-      padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
-      font-family:'Pretendard',-apple-system,sans-serif;
-    ">
-      <div style="width:36px;height:4px;background:#e5e7eb;border-radius:2px;margin:12px auto 0"></div>
-
-      <!-- 헤더 (터치 후 아래로 스와이프하면 패널이 닫힘) -->
-      <div id="_welcome_title" style="padding:20px 24px 16px;display:flex;align-items:center;gap:14px;border-bottom:1px solid #f3f4f6">
-        <div style="width:44px;height:44px;flex-shrink:0;background:#1A73E8;border-radius:10px;display:flex;align-items:center;justify-content:center">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-        </div>
-        <div>
-          <div style="font-size:16px;font-weight:600;color:#111827;line-height:1.3">
-            ${name ? name + '님, ' : ''}혼디에 오신 것을<br>환영합니다
-          </div>
-          <div style="font-size:12px;color:#9ca3af;margin-top:3px">카카오톡과 비슷해 보이지만 근본적으로 다릅니다</div>
-        </div>
-      </div>
-
-      <!-- 항목 목록 -->
-      <div style="padding:16px 24px;display:flex;flex-direction:column;gap:16px">
-
-        ${[
-          ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', '완전한 프라이버시', '주고받은 모든 문서와 대화는 스마트폰에 저장되며, 서버가 없습니다. 모든 기록은 본인만 볼 수 있습니다.'],
-          ['M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5', '위변조 불가', '모든 기록은 OpenHash 기술로 암호화되어 위조나 변조될 수 없습니다.'],
-          ['M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0 1 12 2.944a11.955 11.955 0 0 1-8.618 3.04A12.02 12.02 0 0 0 3 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', '합법성 보장', '주고받은 데이터의 합법성을 보장하며, 불법적 내용은 적절히 조치합니다(신고 등).'],
-          ['M3 6l3 1m0 0-3 9a5.002 5.002 0 0 0 6.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1-3 9a5.002 5.002 0 0 0 6.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3', '판결 추정', '모든 다툼에 대해 수 년 뒤의 대법원 판결문을 상당한 수준의 신뢰도로 예상할 수 있습니다. (자체 평가 일치도 99%)'],
-          ['M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M9 15h.01M15 15h.01M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', '정확한 세금', '모든 거래는 즉시 사용자의 장부(재무제표)에 반영되며, 세금은 단 1원도 더 내거나 덜내지 않습니다.'],
-          ['M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22', '자세한 정보', 'PC에서 hondi.net에 접속하세요.'],
-        ].map(([path, title, desc]) => `
-          <div style="display:flex;align-items:flex-start;gap:12px">
-            <div style="width:34px;height:34px;flex-shrink:0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>
-            </div>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:2px">${title}</div>
-              <div style="font-size:12px;color:#6b7280;line-height:1.6">${desc}</div>
-            </div>
-          </div>
-        `).join('')}
-
-      </div>
-
-      <!-- 버튼 -->
-      <div style="padding:0 24px 4px;display:flex;flex-direction:column;gap:10px">
-        <button id="_welcome_ok" style="
-          width:100%;padding:14px;
-          background:#1A73E8;color:#fff;border:none;
-          border-radius:12px;font-size:15px;font-weight:600;
-          cursor:pointer;font-family:inherit;
-        ">시작하기</button>
-        <label style="display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;margin-top:10px">
-          <input type="checkbox" id="_welcome_no_show" style="width:14px;height:14px;accent-color:#1A73E8;cursor:pointer">
-          <span style="font-size:12px;color:#9ca3af">이 메시지를 다시 표시하지 않음</span>
-        </label>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(ov);
-
-  // ── 제목을 터치해 위→아래로 스와이프하면 패널이 아래로 slide-in(닫힘) ──
-  // 기존 settings-overlay의 핸들 스와이프-닫기와 같은 패턴: 손가락을
-  // 따라 sheet를 끌어내리고, 일정 거리 이상이면 닫는다.
-  (() => {
-    const handle = document.getElementById('_welcome_title');
-    const sheet  = document.getElementById('_welcome_sheet');
-    if (!handle || !sheet) return;
-
-    let startY = 0, dragging = false;
-
-    const start = (e) => {
-      startY = e.touches[0].clientY;
-      dragging = true;
-      sheet.style.transition = 'none';
-    };
-    const move = (e) => {
-      if (!dragging) return;
-      const dy = e.touches[0].clientY - startY;
-      if (dy <= 0) return; // 위로 끌면 무시 — 아래 방향만 처리
-      e.preventDefault();
-      sheet.style.transform = `translateY(${dy}px)`;
-    };
-    const end = (e) => {
-      if (!dragging) return;
-      dragging = false;
-      const dy = e.changedTouches[0].clientY - startY;
-      sheet.style.transition = 'transform .25s ease';
-      if (dy > 100) {
-        sheet.style.transform = 'translateY(100%)';
-        setTimeout(() => _closeWelcome(ov), 180);
-      } else {
-        sheet.style.transform = ''; // 임계값 미달 — 원래 위치로 스냅백
-      }
-    };
-
-    handle.addEventListener('touchstart', start, { passive: true });
-    handle.addEventListener('touchmove',  move,  { passive: false });
-    handle.addEventListener('touchend',   end,   { passive: true });
-  })();
-
-  // 외부 클릭 닫힘
-  ov.addEventListener('click', e => {
-    const sheet = document.getElementById('_welcome_sheet');
-    if (sheet && !sheet.contains(e.target)) _closeWelcome(ov);
-  });
-
-  document.getElementById('_welcome_ok').onclick = () => {
-    // 체크박스가 체크된 경우에만 다시 표시 안 함
-    if (document.getElementById('_welcome_no_show')?.checked) {
-      localStorage.setItem('gopang_welcomed', '1');
-    }
-    ov.style.opacity = '0';
-    ov.style.transition = 'opacity .2s';
-    setTimeout(() => ov.remove(), 200);
-    // ── Bug Fix: 이미 등록된 사용자는 번호 입력 팝업 표시 안 함 ──
-    if (!_isAlreadyRegistered()) {
-      // 안내문구 + 번호 입력 통합 팝업
-      _showRegisterGuide();
-    }
-  };
-}
-
-// ── 등록 여부 확인 (Guest 모드 폐기 — 환영 팝업의 모든 닫기 경로에서 공통 사용) ──
+// ── 등록 여부 확인 (Guest 모드 폐기 — 부트 시 미등록 사용자 판별용) ──
 function _isAlreadyRegistered() {
   try {
     const s = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
     return !!(s?.handle && s?.ipv6);  // ipv6가 실제 저장 키
   } catch { return false; }
-}
-
-function _closeWelcome(ov) {
-  localStorage.setItem('gopang_welcomed', '1');
-  ov.style.opacity = '0';
-  ov.style.transition = 'opacity .2s';
-  setTimeout(() => ov.remove(), 200);
-  // Guest 모드는 폐기됨 — 배경 클릭으로 닫아도 미등록 사용자는 반드시 가입 안내로 이동
-  if (!_isAlreadyRegistered()) {
-    _showRegisterGuide();
-  }
 }
 
 // ── 오디오 자동재생 잠금 해제 (인스턴스 재사용) ──────────────────
