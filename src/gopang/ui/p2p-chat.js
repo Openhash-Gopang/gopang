@@ -641,6 +641,13 @@ function _closeP2P() {
   _stopPoll();
   _activeCallId = null;
 
+  // BUG-FIX(2026-07-01): 튜토리얼 STEP 4 — 사용자가 검색 결과에서 실제로
+  // 상대를 선택해 대화창을 열었다가 닫는 경우, p2p-search.js의
+  // _closeSearch()보다 이 시점이 "사용자가 실제로 해본 것"에 더 가깝다.
+  // 두 곳 모두 신호를 보내지만 _tutorialSignal 내부에서 이미 진행된
+  // 단계는 무시하므로 중복 호출로 인한 부작용은 없다.
+  if (typeof window._tutorialSignal === 'function') window._tutorialSignal('search_flow_done');
+
   // 상대방에게 종료 신호 전송 (DataChannel 우선, 실패 시 signal 경유)
   if (_peerInfo && _USER?.ipv6) {
     // ① DataChannel로 종료 메시지 전송

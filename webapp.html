@@ -2830,15 +2830,24 @@ window.closeTermsOfUse = closeTermsOfUse;
   }
 
   // ── 튜토리얼 신호 시스템 (v2.0) ──────────────────────
-  // 각 동작(왼쪽메뉴·오른쪽메뉴·더블탭·검색·PDV)이 발생하면
+  // 각 동작(왼쪽메뉴·오른쪽메뉴·롱프레스·검색·PDV)이 발생하면
   // 해당 튜토리얼 단계일 때만 AI 패널로 신호를 보낸다.
-  const _TUT_STEP = { left_menu:1, right_menu:2, doubletap:3, search_open:4, pdv_open:5 };
+  // BUG-FIX(2026-07-01, AGENT-COMMON v3.4와 함께): 아래 힌트 문구들이
+  // 전부 "참, 잘했어요!라고 칭찬하십시오"를 반복 지시하고 있었다 — SP
+  // 본문(§0-1-P)에서 칭찬 문구를 대화 전체 중 최초 1회로 제한했는데, 여기
+  // 힌트가 매 단계마다 다시 칭찬을 지시하면 서로 모순되어 SP 규칙이
+  // 무력화된다. 최초 성공(left_menu)에만 칭찬 지시를 남기고 나머지는
+  // 제거했다. search_open은 검색창을 "열기만" 해도 즉시 발동해 버그의
+  // 원인이 됐던 이름이라 search_flow_done으로 개명하고, 실제 트리거
+  // 시점(검색창을 닫음 — p2p-search.js _closeSearch(), 또는 검색해서
+  // 연결한 대화창을 닫음 — p2p-chat.js _closeP2P())에 맞게 설명도 고쳤다.
+  const _TUT_STEP = { left_menu:1, right_menu:2, doubletap:3, search_flow_done:4, pdv_open:5 };
   const _TUT_MSG  = {
-    left_menu:   '[TUTORIAL_ACTION: left_menu_opened — 사용자가 왼쪽 메뉴를 열었습니다. "참, 잘했어요!"라고 칭찬하고 닫는 방법(손잡이 밀기 또는 바깥 터치)을 알려준 뒤 오른쪽 메뉴로 진행하십시오.]',
-    right_menu:  '[TUTORIAL_ACTION: right_menu_opened — 사용자가 오른쪽 메뉴를 열었습니다. "참, 잘했어요!"라고 칭찬하고 닫는 방법을 알려준 뒤 설정 아이콘·길게 누르기 안내로 진행하십시오.]',
-    doubletap:   '[TUTORIAL_ACTION: doubletap_done — 사용자가 아이콘을 길게 눌러 설명을 확인했습니다. "참, 잘했어요!"라고 칭찬한 뒤, 이어서 검색 버튼·다양한 이용자 안내로 진행하십시오.]',
-    search_open: '[TUTORIAL_ACTION: search_opened — 사용자가 검색을 열었습니다. "참, 잘했어요!" 칭찬 후 경찰이나 경찰청을 검색해 보도록 유도하고, 다음 단계(PDV)로 진행하십시오.]',
-    pdv_open:    '[TUTORIAL_ACTION: pdv_opened — 사용자가 PDV를 열었습니다. "참, 잘했어요!" 칭찬 후 PDV 설명과 혼디 소개·요금 안내까지 완료하십시오.]',
+    left_menu:        '[TUTORIAL_ACTION: left_menu_opened — 사용자가 왼쪽 메뉴를 열었습니다. 이 대화에서 처음 성공한 동작이니 "참, 잘했어요!" 같은 표현으로 칭찬하고(이후 단계에서는 이 칭찬 문구를 반복하지 마십시오), 닫는 방법(손잡이 밀기 또는 바깥 터치)을 알려준 뒤 오른쪽 메뉴로 진행하십시오.]',
+    right_menu:       '[TUTORIAL_ACTION: right_menu_opened — 사용자가 오른쪽 메뉴를 열었습니다. 이미 이전 단계에서 칭찬했으므로 칭찬 문구를 반복하지 말고, 자연스럽게 이어서 설명한 뒤 설정 아이콘·길게 누르기 안내로 진행하십시오.]',
+    doubletap:        '[TUTORIAL_ACTION: doubletap_done — 사용자가 아이콘을 길게 눌러 설명을 확인했습니다. 칭찬 문구를 반복하지 말고, 짧게 자연스러운 반응만 보인 뒤 검색 버튼·다양한 이용자 안내로 진행하십시오.]',
+    search_flow_done: '[TUTORIAL_ACTION: search_flow_done — 사용자가 검색창을 열어보고 닫았거나(결과 유무 무관), 검색 결과에서 상대를 선택해 연 대화창을 닫았습니다. 칭찬 문구를 반복하지 마십시오. 검색 결과가 없었다고 해도 정상이라고 자연스럽게 안심시킨 뒤, 다음 단계(PDV)로 진행하십시오.]',
+    pdv_open:         '[TUTORIAL_ACTION: pdv_opened — 사용자가 PDV를 열었습니다. 칭찬 문구를 반복하지 말고, PDV 설명과 로컬 저장·오픈소스 안내, 혼디 소개·요금 안내까지 자연스럽게 완료하십시오.]',
   };
 
   let _tutTimeoutTimer = null;

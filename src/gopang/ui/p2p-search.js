@@ -13,8 +13,10 @@ let _searchTimer   = null;
 //   지정 시 입력란에 자동 채우고 즉시 검색을 실행한다(사용자 타이핑 불필요).
 export function openSearch(prefillQuery) {
   if (_searchOverlay) { _searchOverlay.remove(); _searchOverlay = null; }
-  // 튜토리얼 STEP 4: 검색 열기 감지
-  if (typeof window._tutorialSignal === 'function') window._tutorialSignal('search_open');
+  // BUG-FIX(2026-07-01): 검색창을 "여는" 순간 바로 튜토리얼 완료 신호를
+  // 보내던 것을 제거 — 실제 사용자 행동(검색해보고 닫음)이 끝난 시점인
+  // _closeSearch()로 옮겼다. 사용자가 검색 버튼만 눌러도 즉시 "참 잘했어요"
+  // 응답이 나오던 원인이었다.
 
   const overlay = document.createElement('div');
   overlay.id = '_search-overlay';
@@ -280,6 +282,14 @@ function _closeSearch() {
   _searchOverlay?.remove();
   _searchOverlay = null;
   clearTimeout(_searchTimer);
+  // BUG-FIX(2026-07-01): 튜토리얼 STEP 4 완료 신호 — "검색창을 열기만
+  // 해도" 완료 처리하던 것을 "검색해보고 닫음"으로 정정. 검색 결과가
+  // 있었는지와 무관하게(예: '경찰청'은 실제로는 우측 메뉴 GWP 기관
+  // 서비스이지 이 사용자검색 대상이 아니라 결과가 없을 수 있음) 검색창을
+  // 닫는 행위 자체를 완료 조건으로 삼아, 모든 사용자가 이 단계를 실제로
+  // 완료할 수 있게 한다. p2p-chat.js의 _closeP2P()에도 동일 신호가 있어,
+  // 실제로 대화 상대를 찾아 연결했다가 나간 경우도 동일하게 인정된다.
+  if (typeof window._tutorialSignal === 'function') window._tutorialSignal('search_flow_done');
 }
 
 // ── 전역 노출 ─────────────────────────────────────────────
