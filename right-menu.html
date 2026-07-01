@@ -127,6 +127,21 @@ html,body{height:100%;background:#fff;color:#111;
   padding:14px 18px calc(var(--safe-b) + 18px);
   font-size:11px;color:var(--txt3);text-align:center;line-height:1.6;
 }
+
+/* ── 롱프레스 설명 툴팁 ── */
+.hondi-explain-tip{
+  position:fixed;z-index:5000;max-width:min(86vw,320px);
+  background:#1A2B4C;color:#fff;border-radius:14px;
+  padding:14px 16px;font-size:16px;line-height:1.55;font-family:'Pretendard',-apple-system,sans-serif;
+  box-shadow:0 8px 28px rgba(0,0,0,.28);
+  opacity:0;transform:translateY(6px);
+  transition:opacity .18s,transform .18s;pointer-events:none;
+}
+.hondi-explain-tip.show{opacity:1;transform:translateY(0);pointer-events:auto}
+.hondi-explain-tip .tip-close{
+  display:block;margin-top:10px;text-align:right;font-size:14px;
+  color:#9FC2FF;font-weight:600;cursor:pointer;
+}
 </style>
 <script>
 /* ── 스킨 색상 적용 ── left-menu.html과 동일한 메커니즘.
@@ -162,7 +177,7 @@ html,body{height:100%;background:#fff;color:#111;
   <div>
     <div class="menu-title">전문 분야 AI 에이전트</div>
   </div>
-  <button class="menu-close" onclick="parent.closeRightMenu && parent.closeRightMenu()" title="닫기">
+  <button class="menu-close" id="mi-close" onclick="parent.closeRightMenu && parent.closeRightMenu()" title="닫기">
     <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
   </button>
 </div>
@@ -260,18 +275,100 @@ const searchSec   = document.getElementById('search-section');
 const searchInput = document.getElementById('search-input');
 const searchClear = document.getElementById('search-clear');
 
+// ── 롱프레스 설명 툴팁 (2026-07-01) ────────────────────────
+// 짧게 터치하면 기존 동작(펼치기/이동) 그대로, 길게 누르고 있으면
+// (약 0.5초) data-explain에 담긴 설명(항목의 이름+설명을 그대로
+// 재사용)이 풍선으로 뜬다. 렌더링될 때마다(카테고리 목록·검색 결과)
+// 새 DOM이 생기므로, 렌더 직후 매번 다시 바인딩해야 한다.
+let _explainTipEl = null;
+function _showExplainTip(text, anchorEl) {
+  if (!_explainTipEl) {
+    _explainTipEl = document.createElement('div');
+    _explainTipEl.className = 'hondi-explain-tip';
+    document.body.appendChild(_explainTipEl);
+  }
+  _explainTipEl.innerHTML = '';
+  const txt = document.createElement('div');
+  txt.textContent = text;
+  const close = document.createElement('span');
+  close.className = 'tip-close';
+  close.textContent = '알았어요';
+  close.onclick = _hideExplainTip;
+  _explainTipEl.appendChild(txt);
+  _explainTipEl.appendChild(close);
+
+  const r = anchorEl.getBoundingClientRect();
+  const vh = window.innerHeight;
+  _explainTipEl.style.left = '12px';
+  _explainTipEl.style.right = '12px';
+  _explainTipEl.style.top = '';
+  _explainTipEl.style.bottom = '';
+  if (r.top > vh * 0.55) _explainTipEl.style.bottom = (vh - r.top + 10) + 'px';
+  else _explainTipEl.style.top = (r.bottom + 10) + 'px';
+
+  requestAnimationFrame(() => _explainTipEl.classList.add('show'));
+  clearTimeout(_explainTipEl._autoHide);
+  _explainTipEl._autoHide = setTimeout(_hideExplainTip, 6000);
+}
+function _hideExplainTip() { if (_explainTipEl) _explainTipEl.classList.remove('show'); }
+document.addEventListener('touchstart', (e) => {
+  if (_explainTipEl && _explainTipEl.classList.contains('show') && !_explainTipEl.contains(e.target)) _hideExplainTip();
+}, { passive: true });
+
+function _bindLongPress(el, onPress, ms) {
+  ms = ms || 500;
+  let timer = null, longPressed = false, startX = 0, startY = 0;
+  function start(x, y) {
+    longPressed = false; startX = x; startY = y;
+    timer = setTimeout(() => { timer = null; longPressed = true; onPress(); }, ms);
+  }
+  function move(x, y) {
+    if (timer && (Math.abs(x - startX) > 10 || Math.abs(y - startY) > 10)) {
+      clearTimeout(timer); timer = null;
+    }
+  }
+  function cancel() { if (timer) { clearTimeout(timer); timer = null; } }
+  el.addEventListener('touchstart', e => start(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  el.addEventListener('touchmove',  e => move(e.touches[0].clientX, e.touches[0].clientY),  { passive: true });
+  el.addEventListener('touchend', cancel, { passive: true });
+  el.addEventListener('touchcancel', cancel, { passive: true });
+  el.addEventListener('mousedown', e => start(e.clientX, e.clientY));
+  el.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+  el.addEventListener('mouseup', cancel);
+  el.addEventListener('mouseleave', cancel);
+  el.addEventListener('click', e => {
+    if (longPressed) { e.preventDefault(); e.stopPropagation(); longPressed = false; }
+  }, { capture: true });
+}
+
+// container 안의 [data-explain] 요소 전부(K-Law 타일·카테고리·하위 항목)에
+// 롱프레스를 바인딩 — 새로 authored하는 문구 없이 이미 화면에 보이는
+// 이름+설명을 그대로 재사용한다.
+function _bindExplainTargets(container) {
+  container.querySelectorAll('[data-explain]').forEach(el => {
+    if (el.dataset.explainBound) return; // 중복 바인딩 방지
+    el.dataset.explainBound = '1';
+    _bindLongPress(el, () => _showExplainTip(el.dataset.explain, el));
+  });
+}
+_bindLongPress(document.getElementById('mi-close'), () => _showExplainTip('여기를 누르면 이 화면을 닫아요. 손잡이를 왼쪽으로 밀어도 똑같이 닫혀요.', document.getElementById('mi-close')));
+
+
 // 검색 대상 — K-Law + 모든 카테고리의 하위 항목을 한 줄로 펼친 목록
 const SEARCHABLE = [
   { ...KLAW, catLabel:'K-Law' },
   ...CATEGORIES.flatMap(cat => cat.items.map(it => ({ ...it, catLabel: cat.name })))
 ];
 
+// 롱프레스 설명 툴팁에 재사용할 텍스트 — data-explain 속성에 안전하게 넣기 위한 이스케이프
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
+
 function leafRowHtml(it, showCatBadge) {
   const desc = showCatBadge
     ? `${it.desc} · <span class="leaf-cat-badge">${it.catLabel}</span>`
     : it.desc;
   return `
-    <button class="leaf-item" data-goto="${it.url}">
+    <button class="leaf-item" data-goto="${it.url}" data-explain="${esc(it.name + ' — ' + it.desc)}">
       <span class="leaf-text">
         <span class="leaf-name">${it.name}</span>
         <span class="leaf-desc">${desc}</span>
@@ -283,7 +380,7 @@ function leafRowHtml(it, showCatBadge) {
 function renderCategories() {
   const klawTile = `
     <div class="acc-item klaw-special" data-id="klaw">
-      <button class="acc-header" data-goto="${KLAW.url}">
+      <button class="acc-header" data-goto="${KLAW.url}" data-explain="${esc(KLAW.name + ' — ' + KLAW.desc)}">
         <span class="sys-icon"><svg viewBox="0 0 24 24">${ICONS[KLAW.icon] || ''}</svg></span>
         <span class="acc-header-text">
           <span class="sys-name">${KLAW.name}</span>
@@ -295,7 +392,7 @@ function renderCategories() {
 
   const catTiles = CATEGORIES.map(cat => `
     <div class="acc-item" data-id="${cat.id}">
-      <button class="acc-header" onclick="toggleAcc('${cat.id}')">
+      <button class="acc-header" onclick="toggleAcc('${cat.id}')" data-explain="${esc(cat.name + ' — ' + cat.desc + ' (눌러서 펼치기)')}">
         <span class="sys-icon"><svg viewBox="0 0 24 24">${ICONS[cat.icon] || ''}</svg></span>
         <span class="acc-header-text">
           <span class="sys-name">${cat.name}</span>
@@ -311,6 +408,7 @@ function renderCategories() {
     </div>`).join('');
 
   accList.innerHTML = klawTile + catTiles;
+  _bindExplainTargets(accList);
 }
 renderCategories();
 
@@ -369,6 +467,7 @@ function runSearch() {
   searchList.innerHTML = matches.length
     ? matches.map(it => leafRowHtml(it, true)).join('')
     : `<div class="search-empty">'${searchInput.value}'와 일치하는 항목이 없습니다.</div>`;
+  _bindExplainTargets(searchList);
 }
 searchInput.addEventListener('input', runSearch);
 searchClear.addEventListener('click', () => {
