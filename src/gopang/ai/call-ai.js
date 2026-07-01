@@ -590,7 +590,70 @@ export async function callAI(userText, imageFile = null, _preTab = null) {
 // 등록된(키 입력된) provider만 후보가 되며, 한도 초과(429)·크레딧부족(402)·404 등
 // 모든 실패 상황에서 callAI()가 다음 후보로 자동 전환한다.
 // OR 후보는 추가로 (1) 24h 쿨다운 캐시, (2) 분당 호출 예산 두 가지 필터를 통과해야 한다.
-function _buildCallCandidates() {
+// ══════════════════════════════════════════════════════════
+// 자동 Pro 승격 판단 (v1, 2026-07-01)
+// ══════════════════════════════════════════════════════════
+// 사용자는 더 이상 Flash/Pro를 직접 고르지 않는다. 이번 턴의 질문이
+// "복잡하다"고 판단되면 그 턴 한 번만 자동으로 hondi-pro를 쓰고,
+// 나머지는 전부 hondi-flash를 쓴다 — 세션 전체를 Pro로 고정하는 것보다
+// 무료 한도를 훨씬 아낄 수 있다.
+//
+// K-Law·K-Tax 같은 전문 분야 계산/추론은 이미 router.js가 별도 SP로
+// 라우팅하므로, 여기서 잡아야 하는 "복잡함"은 그 라우팅 이전에
+// AGENT-COMMON 자신이 직접 처리해야 하는 것들이다: 여러 조건이 얽힌
+// 계획·일정, 코드 작성/디버깅, 여러 항목 비교, 명시적으로 "차근차근/
+// 단계별로" 를 요구하는 요청 등.
+//
+// 판단을 위해 LLM을 한 번 더 부르면 지연·비용이 배가되므로, 여기서는
+// 휴리스틱(키워드+구조적 신호) 점수제만 쓴다. 애매하면 Flash 쪽으로
+// 기운다(비용 보수적) — 임계값은 실사용 로그를 보면서 조정할 것.
+const _COMPLEXITY_PATTERNS = [
+  /코드|버그|디버그|에러|함수|변수|스크립트|알고리즘/,      // 코드/디버깅
+  /계산|환산|이자율|퍼센트|%|비율|합계|평균/,                // 수치 연산
+  /비교해|장단점|어느\s*게|뭐가\s*더|중\s*(뭐|어떤)/,        // 비교/선택
+  /만약|~라면|그리고\s*나서|단계별로|차근차근|순서대로/,      // 조건부·다단계
+  /일정.*예산|예산.*이내|계획.*세워|동선/,                   // 복수 제약 계획
+];
+const COMPLEXITY_PRO_THRESHOLD = 3; // 이 점수 이상이면 이번 턴만 Pro
+
+function _estimateQueryComplexity(userText, messages) {
+  if (typeof userText !== 'string' || !userText.trim()) return 0;
+  const text = userText.trim();
+  let score = 0;
+
+  // 1) 길이 — 길수록 여러 조건·맥락이 얽혀 있을 가능성이 높다
+  if (text.length > 400) score += 2;
+  else if (text.length > 180) score += 1;
+
+  // 2) 한 메시지에 여러 요청이 겹쳐 있는지(물음표 반복, 목록형 나열)
+  const qMarks = (text.match(/\?/g) || []).length;
+  if (qMarks >= 2) score += 1;
+  if (/\n\s*[-*\d]/.test(text)) score += 1;
+
+  // 3) 키워드 신호 — 패턴당 1점
+  for (const re of _COMPLEXITY_PATTERNS) {
+    if (re.test(text)) score += 1;
+  }
+
+  // 4) 같은 주제로 대화가 이미 길게 이어지는 중이면(복잡한 작업 진행 중일 가능성)
+  if (Array.isArray(messages) && messages.length >= 10) score += 1;
+
+  return score;
+}
+
+// _buildCallCandidates() 및 웹앱 AI 패널(webapp.html)이 공용으로 쓴다.
+// 반환값은 실제 벤더 모델명이 아니라 "hondi-flash"/"hondi-pro" 논리
+// 이름 — worker.js가 실제 백엔드로 매핑한다.
+export function _resolveHondiTier(userText, messages) {
+  const score = _estimateQueryComplexity(userText, messages);
+  if (score >= COMPLEXITY_PRO_THRESHOLD) {
+    console.log(`[Hondi Tier] 복잡도 점수 ${score} → hondi-pro 자동 승격`);
+    return 'hondi-pro';
+  }
+  return 'hondi-flash';
+}
+
+function _buildCallCandidates(userText, messages) {
   const candidates = [];
 
   // 1) 사용자가 등록한 provider 키들 (ai-setup-mobile.html에서 등록)
@@ -635,19 +698,18 @@ function _buildCallCandidates() {
     }
   }
 
-  // 3) 최종 안전망 — 혼디 제공 DeepSeek 기본 키 (v3.1, 2026-07-01)
+  // 3) 최종 안전망 — 혼디 제공 DeepSeek 기본 키 (v3.2, 2026-07-01)
   // 사용자 키 등록 여부와 무관하게 항상 마지막 후보로 추가된다. 서버가
   // 자신의 키로 호출하므로 클라이언트는 apiKey가 필요 없다 — "1,000원 무료
   // 제공" 정책의 실제 구현체. model은 실제 벤더 모델명이 아니라 "hondi-flash"/
   // "hondi-pro" 논리 티어 이름이며, worker.js가 실제 백엔드(공식 DeepSeek API
-  // 또는 나중에 붙을 혼디 자체 추론 서버)로 매핑한다 — CFG.hondiTier로 사용자가
-  // 설정 화면에서 고른다(기본값 'hondi-flash').
-  // free-model-pool.js(OpenRouter 무료 모델 26개 자동 순환)는 이 안전망으로
-  // 대체되어 삭제됨 — 미등록 사용자에게는 애초에 동작한 적이 없었다.
+  // 또는 나중에 붙을 혼디 자체 추론 서버)로 매핑한다.
+  // v3.2: 사용자가 직접 고르던 Flash/Pro 수동 선택을 제거하고, 이번 턴
+  // 질문의 복잡도를 보고 _resolveHondiTier()가 자동으로 고른다.
   candidates.push({
     provider: 'deepseek-default',
     baseUrl:  CFG.endpoint.replace(/\/+$/, ''),
-    model:    CFG.hondiTier === 'hondi-pro' ? 'hondi-pro' : 'hondi-flash',
+    model:    _resolveHondiTier(userText, messages),
     apiKey:   null,
     isProxy:  true,
   });
@@ -685,7 +747,9 @@ function _buildCallCandidates() {
  */
 export async function _callLLM(messages, options = {}) {
   const { max_tokens = TOKEN_BUDGET.CHAT_REPLY, temperature = 0.6, bubble = null } = options;
-  const candidates = _buildCallCandidates();
+  const _lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+  const _lastUserText = typeof _lastUserMsg?.content === 'string' ? _lastUserMsg.content : '';
+  const candidates = _buildCallCandidates(_lastUserText, messages);
 
   let res = null, lastErr = null;
   for (let i = 0; i < candidates.length; i++) {
@@ -1013,8 +1077,9 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
   // ── 호출 후보 목록 생성 (순차 페일오버) ──────────────────
   // 사용자가 등록한 BYOK provider들 순서대로 시도한 뒤, 마지막엔 항상
   // 혼디 제공 DeepSeek 기본 키(hondi-flash/hondi-pro)로 폴백한다 —
-  // 그래서 candidates는 절대 0개가 되지 않는다.
-  const candidates = _buildCallCandidates();
+  // 그래서 candidates는 절대 0개가 되지 않는다. 티어는 이번 턴 원본
+  // userText(가공 전)의 복잡도를 보고 자동으로 정해진다.
+  const candidates = _buildCallCandidates(typeof userText === 'string' ? userText : '', messages);
   const activeModel = CFG.model;
   console.log(`[AI] 호출 후보 ${candidates.length}개 준비 — 1번부터 순차 시도`);
 

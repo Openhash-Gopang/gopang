@@ -1,7 +1,7 @@
 /**
  * ui/settings.js — 설정 패널
  */
-import { CFG, loadSettings, PROVIDER_INFO, setHondiTier as _setHondiTierCfg } from '../core/config.js';
+import { CFG, loadSettings, PROVIDER_INFO } from '../core/config.js';
 import { _isRegistered, _isGDCUser, ensureX25519Synced } from '../core/auth.js';
 import { _USER } from '../core/state.js';
 import { appendBubble } from './bubble.js';
@@ -139,13 +139,9 @@ export function handleOverlayClick(e) {
 }
 
 // ── AI 설정 슬라이드 패널 ────────────────────────────────
-// 설정 화면의 Flash/Pro 버튼 클릭 핸들러 — config.js의 setHondiTier로 실제
-// 값을 저장한 뒤, 버튼 스타일과 무료 한도 표시를 즉시 다시 그린다.
-export function selectHondiTier(tier) {
-  _setHondiTierCfg(tier);
-  _refreshHondiTierUI();
-}
-
+// v2(2026-07-01): Flash/Pro 수동 선택 UI 제거. 이제 사용자는 모델을
+// 고를 필요가 없다 — call-ai.js의 _resolveHondiTier()가 매 턴 질문의
+// 복잡도를 스스로 판단해 hondi-flash/hondi-pro를 자동으로 고른다.
 export function openAISettings() {
   const sysEl = document.getElementById('setting-system');
   if (sysEl) sysEl.value = CFG.system;
@@ -156,28 +152,9 @@ export function openAISettings() {
   // 설정 창을 열 때마다 보장 — 이미 있으면 아무 일도 하지 않음
   _ensurePcSyncReady();
 
-  // ── 혼디 Flash/Pro 티어 선택 + 무료 한도 사용 현황 (2026-07-01 신설) ──
+  // ── 무료 한도 사용 현황 (2026-07-01 신설) ──
   // 본인 키를 등록하지 않은 사용자에게만 의미가 있으므로, 등록자는 숨긴다.
-  _refreshHondiTierUI();
   _loadFreeQuotaStatus();
-}
-
-// 티어 버튼 두 개 중 CFG.hondiTier에 해당하는 쪽을 활성 스타일로 표시.
-// 본인 키 등록자는 이 박스 자체를 숨긴다(무료 한도를 안 쓰므로 무의미).
-function _refreshHondiTierUI() {
-  const box = document.getElementById('hondi-tier-box');
-  if (!box) return;
-  const hasOwnKey = Array.isArray(CFG.providers) && CFG.providers.length > 0;
-  if (hasOwnKey) { box.style.display = 'none'; return; }
-  box.style.display = 'block';
-
-  const flashBtn = document.getElementById('btn-tier-flash');
-  const proBtn   = document.getElementById('btn-tier-pro');
-  const active   = 'border:1.5px solid #1A73E8;background:#1A73E8;color:#fff';
-  const inactive = 'border:1.5px solid #e5e7eb;background:#fff;color:#374151';
-  const baseStyle = 'flex:1;padding:12px;border-radius:var(--radius-lg);font-size:14px;font-weight:600;cursor:pointer;';
-  if (flashBtn) flashBtn.style.cssText = baseStyle + (CFG.hondiTier === 'hondi-pro' ? inactive : active);
-  if (proBtn)   proBtn.style.cssText   = baseStyle + (CFG.hondiTier === 'hondi-pro' ? active : inactive);
 }
 
 // 무료 한도(deepseek-default) 사용 현황 조회 — worker.js GET /free-quota-status

@@ -1829,26 +1829,6 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
 
     <div class="settings-body" id="ai-settings-body">
 
-      <!-- 혼디 제공 기본 AI 티어 선택 (2026-07-01 신설) — 본인 키 등록자는 JS에서 숨김 -->
-      <div id="hondi-tier-box" style="display:none;margin:0 16px 14px">
-        <div class="setting-label" style="margin-bottom:8px">혼디 기본 AI</div>
-        <div style="display:flex;gap:8px">
-          <button id="btn-tier-flash" type="button" onclick="selectHondiTier('hondi-flash')"
-            style="flex:1;padding:12px;border:1.5px solid #1A73E8;border-radius:var(--radius-lg);
-                   background:#1A73E8;color:#fff;font-size:14px;font-weight:600;cursor:pointer">
-            혼디 Flash <span style="font-weight:400;opacity:.85">· 빠르고 가벼움</span>
-          </button>
-          <button id="btn-tier-pro" type="button" onclick="selectHondiTier('hondi-pro')"
-            style="flex:1;padding:12px;border:1.5px solid #e5e7eb;border-radius:var(--radius-lg);
-                   background:#fff;color:#374151;font-size:14px;font-weight:600;cursor:pointer">
-            혼디 Pro <span style="font-weight:400;color:#9ca3af">· 더 똑똑함</span>
-          </button>
-        </div>
-        <div style="font-size:11.5px;color:#9ca3af;margin-top:6px">
-          Pro는 토큰당 비용이 더 커서 무료 한도가 더 빨리 줄어들어요.
-        </div>
-      </div>
-
       <!-- 혼디 제공 무료 한도 사용 현황 (2026-07-01 신설) — 본인 키 등록자는 JS에서 숨김 -->
       <div id="free-quota-status-box" style="display:none;margin:0 16px 14px;padding:12px 14px;
            border:1px solid #e5e7eb;border-radius:var(--radius-lg);background:#f9fafb"></div>
@@ -3189,6 +3169,7 @@ window.closeTermsOfUse = closeTermsOfUse;
     // 1~2턴짜리 컨텍스트로만 끼워 넣는다(SP 본문에 영구히 남지 않음).
     const {
       _loadAgentCommonSP, _handleProfileTags, _stripInternalTags, _buildFirstContactContext,
+      _resolveHondiTier,
     } = await import('./src/gopang/ai/call-ai.js');
     // 토큰 정책 — 패널도 메인 채팅과 "같은 종류의 응답"이므로 같은 예산을 쓴다.
     // 이전엔 패널만 1500을 따로 썼는데(메인 채팅 800), 의도된 차이인지 알 수
@@ -3255,12 +3236,12 @@ window.closeTermsOfUse = closeTermsOfUse;
 
     // 최종 안전망 — 혼디 제공 DeepSeek 기본 키(call-ai.js와 동일 원칙).
     // model은 실제 벤더 모델명이 아니라 "hondi-flash"/"hondi-pro" 논리 티어
-    // 이름이며, worker.js가 실제 백엔드로 매핑한다. CFG.hondiTier로 선택.
-    const { CFG: _panelCfg } = await import('./src/gopang/core/config.js');
+    // 이름이며, worker.js가 실제 백엔드로 매핑한다. 사용자가 직접 고르지 않고,
+    // 이번 턴 질문의 복잡도를 보고 call-ai.js가 자동으로 판단한다(§ 자동 승격).
     candidates.push({
       provider: 'deepseek-default',
       baseUrl: endpoint.replace(/\/+$/, ''),
-      model: _panelCfg.hondiTier === 'hondi-pro' ? 'hondi-pro' : 'hondi-flash',
+      model: _resolveHondiTier(userText, _panelHistory),
       key: null,
     });
 
