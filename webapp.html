@@ -2933,26 +2933,42 @@ window.closeTermsOfUse = closeTermsOfUse;
     _resetTutorialWatchdog();
   };
 
+  // ── 더블탭 감지 공용 헬퍼 (2026-07-01) ───────────────────
+  // BUG-FIX: touchend만 듣고 있어서 실제 터치스크린이 아닌 PC 마우스
+  // 클릭으로는 전혀 발동하지 않았다 — click도 함께 인식하되, 실제
+  // 터치스크린에서는 touchend 처리 직후 뒤따라오는 합성 click 이벤트로
+  // 두 번 중복 발동하지 않도록 짧은 가드를 둔다.
+  function _bindDoubleTap(el, onDouble, onFail) {
+    let last = 0, touchGuard = false;
+    function tap(now) {
+      const gap = now - last;
+      if (last && gap < 380) { last = 0; return { hit: 'double' }; }
+      if (last && gap < 2500) { const g = gap; last = now; return { hit: 'fail', gap: g }; }
+      last = now; return { hit: 'single' };
+    }
+    el.addEventListener('touchend', e => {
+      const r = tap(Date.now());
+      if (r.hit === 'double') { e.preventDefault(); touchGuard = true; setTimeout(() => touchGuard = false, 500); onDouble(); }
+      else if (r.hit === 'fail' && onFail) onFail(r.gap);
+    }, { passive: false });
+    el.addEventListener('click', () => {
+      if (touchGuard) return; // 터치스크린에서 touchend가 이미 처리함 — 중복 방지
+      const r = tap(Date.now());
+      if (r.hit === 'double') onDouble();
+      else if (r.hit === 'fail' && onFail) onFail(r.gap);
+    });
+  }
+
   // ── 더블탭 감지 (설정·검색 아이콘, STEP 3) ───────────
   (function() {
     ['btn-settings', 'btn-search'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-      let last = 0;
-      el.addEventListener('touchend', e => {
-        const now = Date.now();
-        const gap = now - last;
-        if (last && gap < 380) {
-          e.preventDefault();
-          window._tutorialSignal('doubletap');
-          last = 0;
-        } else if (last && gap < 2500) {
-          window._tutorialSignal('doubletap_failed', { gap });
-          last = now;
-        } else {
-          last = now;
-        }
-      }, { passive: false });
+      _bindDoubleTap(
+        el,
+        () => window._tutorialSignal('doubletap'),
+        (gap) => window._tutorialSignal('doubletap_failed', { gap }),
+      );
     });
   })();
 
@@ -3046,17 +3062,7 @@ window.closeTermsOfUse = closeTermsOfUse;
   Object.keys(_EXPLAIN_TEXT).forEach(id => {
     const el = document.getElementById(id) || document.querySelector('.' + id);
     if (!el) return;
-    let lastTap = 0;
-    el.addEventListener('touchend', (e) => {
-      const now = Date.now();
-      if (now - lastTap < 380) {
-        e.preventDefault();
-        _showExplainTip(_EXPLAIN_TEXT[id], el);
-        lastTap = 0;
-      } else {
-        lastTap = now;
-      }
-    }, { passive: false });
+    _bindDoubleTap(el, () => _showExplainTip(_EXPLAIN_TEXT[id], el));
   });
 
   // ── AI 패널 전용 독립 fetch ──────────────────────────
@@ -3129,7 +3135,19 @@ window.closeTermsOfUse = closeTermsOfUse;
     inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } };
   };
 
+  // ── 대화 연속성: 히스토리를 localStorage에 보관 (새로고침/재접속 후 이어가기) ─
+  const _HISTORY_STORE_KEY = 'hondi_panel_history_v1';
+
   const _panelHistory = [];  // 패널 전용 대화 히스토리
+
+  // BUG-FIX(2026-07-01): _savePanelHistory()가 저장만 하고 있었고, 그걸
+  // 다시 읽어오는 코드가 어디에도 없었다 — 그래서 AI 탭을 닫았다 열거나
+  // 페이지를 새로고침할 때마다 대화가 매번 초기화되고, AI도 이전에 어디까지
+  // 설명했는지 몰라 같은 안내를 반복했다. 여기서 실제로 복원한다.
+  try {
+    const saved = JSON.parse(localStorage.getItem(_HISTORY_STORE_KEY) || 'null');
+    if (Array.isArray(saved) && saved.length) _panelHistory.push(...saved);
+  } catch {}
 
   // 대화가 길어질수록 매 턴마다 전체 히스토리를 그대로 다시 보내 비용이
   // 누적적으로 커지는 문제를 막기 위해, system 프롬프트는 유지하고
@@ -3137,15 +3155,40 @@ window.closeTermsOfUse = closeTermsOfUse;
   // 원인 분석에서 발견: 패널 세션이 길어질수록 요청당 토큰이 계속 불어남)
   const _PANEL_HISTORY_MAX_MESSAGES = 20; // system 제외, user/assistant 약 10턴
 
-  // ── 대화 연속성: 히스토리를 localStorage에 보관 (새로고침/재접속 후 이어가기) ─
-  const _HISTORY_STORE_KEY = 'hondi_panel_history_v1';
-
   function _savePanelHistory() {
     try {
       // system 프롬프트(첫 항목)는 제외하고 저장 — 너무 길어 quota 초과 위험
       const toSave = _panelHistory.filter(m => m.role !== 'system').slice(-20);
       localStorage.setItem(_HISTORY_STORE_KEY, JSON.stringify(toSave));
     } catch {}
+  }
+
+  // 복원된 히스토리를 화면 말풍선으로도 재현 — msgList가 비어 있으면
+  // openAIPanel()이 "처음 여는 것"으로 오인해 인사말을 다시 시작하므로,
+  // 여기서 먼저 채워 그 오인식을 막는다. 사용자 메시지의 첨부파일(멀티모달
+  // image_url 블록)은 텍스트만 뽑아 표시한다. assistant 메시지는 원문에
+  // [PROFILE_SUBMIT ...] 같은 내부 태그가 섞여 저장돼 있으므로
+  // _stripInternalTags로 제거한 뒤 보여준다(실시간 스트리밍 응답과 동일 처리).
+  async function _replayPanelHistory() {
+    let _strip = (s) => s;
+    try {
+      const mod = await import('./src/gopang/ai/call-ai.js');
+      if (typeof mod._stripInternalTags === 'function') _strip = mod._stripInternalTags;
+    } catch {}
+    for (const m of _panelHistory) {
+      if (m.role === 'user') {
+        const text = typeof m.content === 'string'
+          ? m.content
+          : (Array.isArray(m.content) ? (m.content.find(c => c.type === 'text')?.text || '(첨부파일)') : '');
+        _appendPanelMsg('user', text);
+      } else if (m.role === 'assistant') {
+        _appendPanelMsg('ai', _strip(m.content));
+      }
+    }
+  }
+  if (_panelHistory.length) {
+    _replayPanelHistory();
+    _panelGreeted = true; // 복원된 대화가 있으면 이미 인사를 나눈 상태로 취급
   }
 
   // ── 구형 _sendTutorialSignal 제거됨 (BUG-2) — 신형 _tutorialSignal 사용
@@ -3183,14 +3226,18 @@ window.closeTermsOfUse = closeTermsOfUse;
     const endpoint = cfg.endpoint || 'https://hondi-proxy.tensor-city.workers.dev';
 
     // 히스토리에 system 추가 — manifest 기반 AGENT-COMMON 로더, 실패하면
-    // 마지막 안전장치로만 내장 _PA_SYSTEM_PROMPT 사용
-    if (_panelHistory.length === 0) {
+    // 마지막 안전장치로만 내장 _PA_SYSTEM_PROMPT 사용.
+    // BUG-FIX: 기존엔 _panelHistory.length===0으로 판단했는데, 복원된
+    // 히스토리(system 메시지는 저장하지 않으므로 항상 빠져 있음)가 있으면
+    // length가 0이 아니라서 system이 영영 주입되지 않는 문제가 있었다.
+    // "system 메시지가 있는지"로 직접 판단하고, unshift로 맨 앞에 둔다.
+    if (!_panelHistory.some(m => m.role === 'system')) {
       let effectiveSystem = cfg.system || '';
       if (!effectiveSystem) {
         try { effectiveSystem = await _loadAgentCommonSP(); }
         catch (e) { console.warn('[Panel] manifest SP 로드 실패, 내장 폴백 사용:', e.message); }
       }
-      _panelHistory.push({ role: 'system', content: effectiveSystem || _PA_SYSTEM_PROMPT });
+      _panelHistory.unshift({ role: 'system', content: effectiveSystem || _PA_SYSTEM_PROMPT });
     }
     // 첨부파일 반영 — 사진은 멀티모달 image_url 블록, 그 외 파일은 파일명만 텍스트로 첨부
     let userContent = userText;
@@ -3317,7 +3364,6 @@ window.closeTermsOfUse = closeTermsOfUse;
         // 히스토리에 assistant 추가
         _panelHistory.push({ role: 'assistant', content: full });
         _trimPanelHistory();
-        _savePanelHistory(); // 대화 연속성 — 응답마다 즉시 저장
         _savePanelHistory(); // 대화 연속성 — 응답마다 즉시 저장
 
         // v1.3 — PROFILE_SUBMIT/SKIP/PARTIAL_SAVE/FIRST_GREETED/NAME_CAPTURED 처리.
