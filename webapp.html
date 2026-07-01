@@ -96,7 +96,6 @@ function _updateLogoutBtn() {
 }
 </script>
 <script src="/gwp-registry.js?v=20260624"></script>
-<script src="/pdv-store.js"></script>
 <style>
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1339,6 +1338,48 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
   </div>
 </div>
 
+<!-- ── 계정 삭제 슬라이드아웃 — 설정 "위험 구역"에서 열림 (2026-07-02 신설) ──
+     기존 settings-overlay/settings-sheet 클래스를 그대로 재사용(검색 패널과
+     동일한 바텀시트 패턴) — 새 CSS 없이 기존 스타일에 맞춘다. -->
+<div class="settings-overlay" id="account-delete-overlay">
+  <div class="settings-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" style="color:#ef4444">계정 삭제</div>
+    <div style="padding:0 16px 4px;font-size:12px;color:#888;line-height:1.7">
+      서버에는 전화번호·아이디처럼 사용자를 서로 연결하는 정보만 있고,
+      대화·기록은 이 기기에만 저장돼 있어요. 계정을 삭제해도 이 기기의
+      기록은 지워지지 않으니, 같은 번호로 다시 가입하면 지금 상태로
+      자연스럽게 돌아올 수 있습니다.
+    </div>
+    <div style="padding:14px 16px 4px">
+      <input type="text" id="ad-input-id" placeholder="아이디(닉네임) 입력"
+        autocomplete="off" autocapitalize="off" spellcheck="false"
+        style="width:100%;box-sizing:border-box;padding:12px 14px;margin-bottom:8px;
+               border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;
+               font-family:inherit;outline:none;background:#f9fafb;color:#111"
+        oninput="_checkAccountDeleteInput()">
+      <input type="tel" id="ad-input-phone" placeholder="전화번호(예: 01012345678)"
+        autocomplete="off" inputmode="numeric" spellcheck="false"
+        style="width:100%;box-sizing:border-box;padding:12px 14px;margin-bottom:6px;
+               border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;
+               font-family:inherit;outline:none;background:#f9fafb;color:#111"
+        oninput="_checkAccountDeleteInput()">
+      <div id="ad-error" style="display:none;font-size:12px;color:#dc2626;margin:4px 4px 8px"></div>
+      <button id="btn-account-delete-confirm" onclick="_confirmAccountDelete()" disabled
+        style="width:100%;padding:14px;border:none;border-radius:10px;margin-top:6px;
+               background:#fca5a5;color:#fff;font-size:14px;font-weight:600;
+               cursor:not-allowed;font-family:inherit;transition:background .15s">
+        계정 삭제
+      </button>
+      <button onclick="closeAccountDelete()"
+        style="width:100%;padding:12px;margin:8px 0 4px;border:none;background:transparent;
+               color:#888;font-size:13px;font-family:inherit;cursor:pointer">
+        취소
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ── 우측 메뉴 — 하위 시스템 목록 (오른쪽 가장자리 스와이프) ── -->
 <div class="right-menu-overlay" id="right-menu-overlay">
   <div class="right-menu-backdrop" onclick="closeRightMenu()"></div>
@@ -1729,35 +1770,27 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
         </div>
       </div>
 
-      <!-- ⑧ 위험 구역 (계정 완전 삭제, 등록 사용자만) -->
+      <!-- ⑧ 위험 구역 (계정 삭제, 등록 사용자만) -->
       <div class="settings-block" id="btn-device-reset">
         <div class="settings-block-label danger"><i class="ti ti-alert-triangle" aria-hidden="true"></i><span id="setting-label-danger">위험 구역</span></div>
         <div style="padding:0 16px">
-          <div class="settings-card" style="display:none;border:1px solid #fecaca;background:#fef2f2" id="card-account-delete">
-            <div style="padding:14px 16px">
-              <div style="font-size:13px;color:#ef4444;font-weight:600;margin-bottom:4px" id="label-full-reset">계정 완전 삭제</div>
-              <div style="font-size:11px;color:#fca5a5;margin-bottom:12px;line-height:1.6" id="label-full-reset-sub">
-                서버·기기의 모든 기록이 삭제되며 복원할 수 없습니다. 실수 방지를 위해 아이디와 핸들을 직접 입력해야 삭제할 수 있습니다.
-              </div>
-              <input type="text" id="delete-confirm-nickname" placeholder="아이디 입력"
-                autocomplete="off" autocapitalize="off" spellcheck="false"
-                style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:8px;
-                       border:1px solid #fca5a5;border-radius:8px;font-size:13px;
-                       font-family:inherit;outline:none;background:#fff"
-                oninput="_checkDeleteConfirmInput()">
-              <input type="text" id="delete-confirm-handle" placeholder="핸들 입력 (예: @11112223)"
-                autocomplete="off" autocapitalize="off" spellcheck="false"
-                style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:10px;
-                       border:1px solid #fca5a5;border-radius:8px;font-size:13px;
-                       font-family:inherit;outline:none;background:#fff"
-                oninput="_checkDeleteConfirmInput()">
-              <button id="btn-device-full-reset" onclick="_deviceFullReset()" disabled
-                style="width:100%;padding:12px;border:none;border-radius:8px;
-                       background:#fca5a5;color:#fff;font-size:14px;font-weight:600;
-                       cursor:not-allowed;font-family:inherit;transition:background .15s">
-                계정 완전 삭제
-              </button>
+          <div class="settings-card" style="display:none" id="card-account-delete">
+            <div class="settings-card-row" onclick="openAccountDelete()" style="cursor:pointer">
+              <span class="settings-card-row-label" style="color:#ef4444">
+                <i class="ti ti-trash" aria-hidden="true" style="font-size:17px;width:20px;text-align:center"></i>
+                <span id="label-account-delete">계정 삭제</span>
+              </span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
+          </div>
+          <!-- BUG-FIX(2026-07-02): "계정 삭제"(위)를 만들며 이 버튼의 유일한
+               진입점을 없애 _deviceFullReset()이 도달 불가능해질 뻔했다.
+               "계정 삭제"는 서버 연결 정보만 지우고 이 기기 기록은 남기지만,
+               기기를 팔거나 남에게 줄 때는 반대로 이 기기 기록까지 함께
+               지워야 하므로 별도 기능으로 남겨둔다. -->
+          <div style="padding:10px 4px 2px;font-size:11.5px;color:var(--txt3);line-height:1.6">
+            기기를 팔거나 남에게 넘기실 예정인가요?
+            <a href="javascript:void(0)" onclick="_deviceFullReset()" style="color:#ef4444;text-decoration:underline">계정 + 이 기기 기록 함께 삭제</a>
           </div>
         </div>
       </div>
@@ -1774,18 +1807,42 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
         console.info('[Auth] 셀피 파일 선택:', event?.target?.files?.[0]?.name);
       }
 
-      function _checkDeleteConfirmInput() {
+      // ── 계정 삭제 슬라이드아웃 (2026-07-02 신설) ──────────
+      // 로컬 전화번호(e164, 예: +821012345678)와 사용자가 입력한 국내
+      // 형식(01012345678 등)을 비교하기 위한 정규화 — 뒷자리가 일치하면
+      // 통과시킨다(국가번호·맨 앞 0 유무를 신경 쓰지 않아도 되게).
+      function _normPhoneDigits(s) { return (s || '').replace(/\D/g, ''); }
+      function _phoneMatches(inputVal, storedE164) {
+        const a = _normPhoneDigits(inputVal).replace(/^0+/, '');
+        const b = _normPhoneDigits(storedE164);
+        return a.length >= 8 && b.endsWith(a);
+      }
+
+      function openAccountDelete() {
+        const idInput    = document.getElementById('ad-input-id');
+        const phoneInput = document.getElementById('ad-input-phone');
+        const errEl      = document.getElementById('ad-error');
+        if (idInput)    idInput.value = '';
+        if (phoneInput) phoneInput.value = '';
+        if (errEl)      errEl.style.display = 'none';
+        _checkAccountDeleteInput();
+        document.getElementById('account-delete-overlay')?.classList.add('open');
+      }
+      function closeAccountDelete() {
+        document.getElementById('account-delete-overlay')?.classList.remove('open');
+      }
+
+      function _checkAccountDeleteInput() {
         const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}');
-        const nickInput   = document.getElementById('delete-confirm-nickname');
-        const handleInput = document.getElementById('delete-confirm-handle');
-        const btn         = document.getElementById('btn-device-full-reset');
-        if (!nickInput || !handleInput || !btn) return;
+        const idInput    = document.getElementById('ad-input-id');
+        const phoneInput = document.getElementById('ad-input-phone');
+        const btn        = document.getElementById('btn-account-delete-confirm');
+        if (!idInput || !phoneInput || !btn) return;
 
-        const norm = (s) => (s || '').trim().replace(/^@/, '');
-        const nickMatch   = stored.nickname && norm(nickInput.value)   === norm(stored.nickname);
-        const handleMatch = stored.handle   && norm(handleInput.value) === norm(stored.handle);
+        const idMatch    = !!(stored.nickname && idInput.value.trim() === stored.nickname.trim());
+        const phoneMatch = !!(stored.e164 && _phoneMatches(phoneInput.value, stored.e164));
 
-        if (nickMatch && handleMatch) {
+        if (idMatch && phoneMatch) {
           btn.disabled = false;
           btn.style.background = '#dc2626';
           btn.style.cursor = 'pointer';
@@ -1795,6 +1852,42 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
           btn.style.cursor = 'not-allowed';
         }
       }
+
+      async function _confirmAccountDelete() {
+        const btn   = document.getElementById('btn-account-delete-confirm');
+        const errEl = document.getElementById('ad-error');
+        if (!btn || btn.disabled) return;
+        if (!confirm(
+          '정말 계정을 삭제하시겠어요?\n\n' +
+          '서버에 있던 전화번호·연결 정보만 지워집니다. 이 기기의 대화·기록은\n' +
+          '그대로 남아있으니, 같은 번호로 다시 가입하면 지금 상태로 이어서 쓰실 수 있어요.'
+        )) return;
+
+        const originalLabel = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '삭제 중...';
+        if (errEl) errEl.style.display = 'none';
+
+        try {
+          const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}');
+          const ok = await window._deleteMyProfile(stored.e164 || '');
+          if (ok) {
+            closeAccountDelete();
+            alert('계정이 삭제됐어요.\n\n이 기기의 기록은 남아있으니, 언제든 같은 번호로 다시 가입하시면 이어서 쓰실 수 있어요.');
+            location.reload();
+            return;
+          }
+        } catch (e) {
+          if (errEl) { errEl.textContent = '오류: ' + e.message; errEl.style.display = 'block'; }
+        }
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+        _checkAccountDeleteInput();
+      }
+      window.openAccountDelete  = openAccountDelete;
+      window.closeAccountDelete = closeAccountDelete;
+      window._checkAccountDeleteInput = _checkAccountDeleteInput;
+      window._confirmAccountDelete    = _confirmAccountDelete;
       </script>
 
     </div>
@@ -2052,8 +2145,8 @@ const _I18N = {
     s_cache_clear:    '앱 캐시 초기화',
     s_local_reset:    '재접속 시 복원 가능',
     s_local_reset_sub:'이 기기의 데이터만 삭제 — 계정은 유지됩니다',
-    s_full_reset:     '계정 완전 삭제',
-    s_full_reset_sub: '서버·기기의 모든 기록이 삭제되며 복원할 수 없습니다. 실수 방지를 위해 아이디와 핸들을 직접 입력해야 삭제할 수 있습니다.',
+    s_full_reset:     '계정 삭제',
+    s_full_reset_sub: '서버의 전화번호·연결 정보만 삭제됩니다. 이 기기의 기록은 남아있어 같은 번호로 다시 가입하면 이어서 쓸 수 있습니다.',
     s_logout:         '로그아웃',
     // 입력 안내
     ph_message:       '메시지를 입력하세요…',
@@ -2248,8 +2341,7 @@ function _applyI18n() {
     'label-cache-clear':       t('s_cache_clear'),
     'label-local-reset':       t('s_local_reset'),
     'label-local-reset-sub':   t('s_local_reset_sub'),
-    'label-full-reset':        t('s_full_reset'),
-    'label-full-reset-sub':    t('s_full_reset_sub'),
+    'label-account-delete':    t('s_full_reset'),
     // 소리 라벨
     'snd-label-ping':          t('snd_default'),
     'snd-label-bell':          t('snd_bell'),

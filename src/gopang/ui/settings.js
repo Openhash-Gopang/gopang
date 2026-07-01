@@ -110,15 +110,11 @@ export function openSettings() {
   if (aiCard)  aiCard.style.display  = registered ? 'block' : 'none';
   if (aiLabel) aiLabel.style.display = registered ? 'block' : 'none';
 
-  // 6. 계정 완전 삭제 카드: 등록 사용자만 표시 (열 때마다 입력값 초기화)
+  // 6. 계정 삭제 카드(위험 구역): 등록 사용자만 표시
+  // 입력값 초기화는 openAccountDelete()가 슬라이드아웃을 열 때마다 직접
+  // 처리하므로, 여기서는 카드 자체의 노출 여부만 관리한다.
   const deleteCard = document.getElementById('card-account-delete');
   if (deleteCard) deleteCard.style.display = registered ? 'block' : 'none';
-  const nickIn = document.getElementById('delete-confirm-nickname');
-  const hIn    = document.getElementById('delete-confirm-handle');
-  const delBtn = document.getElementById('btn-device-full-reset');
-  if (nickIn) nickIn.value = '';
-  if (hIn)    hIn.value = '';
-  if (delBtn) { delBtn.disabled = true; delBtn.style.background = '#fca5a5'; delBtn.style.cursor = 'not-allowed'; }
 
   _updateSecuritySection();
   _syncSkinSwatchSelection();
@@ -601,23 +597,42 @@ window._openChatDetail = async function(idx) {
 };
 
 // ══════════════════════════════════════════════════════════════
-// ② PDV(나의 기록 금고) 열기
+// ② Hash Chain 보기
 // ══════════════════════════════════════════════════════════════
-// 2026-07-01 개정: 예전엔 localStorage의 entryHash만 나열하는 얇은
-// Hash Chain 시트였다. pdv-store.js(4분류: 사람/사물/기관/공용AI 전문가,
-// summary_6w, risk_level 기반)가 생기면서 그쪽이 실제 PDV 데이터를 더
-// 풍부하게 보여주므로, 이 함수는 이제 그 전체화면 오버레이를 그대로 연다.
-// 함수명(openHashChain)과 window 바인딩은 하위 호환을 위해 그대로 둔다 —
-// 튜토리얼(AGENT-COMMON §0-1-T STEP4/5)이 "설정→나의 기록 금고" 클릭 시
-// pdv_open 신호를 이 함수 호출에 걸어두고 있어서(webapp.html의
-// window.openHashChain 래퍼), 이름을 바꾸면 그 배선이 끊어진다.
 export function openHashChain() {
-  closeSettings();
-  if (typeof window.openPDV === 'function') {
-    window.openPDV();
-  } else {
-    console.warn('[Settings] openPDV()를 찾을 수 없습니다 — webapp.html의 pdv-overlay가 로드되지 않았을 수 있습니다.');
+  const user = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
+  const guid = user.ipv6 || '';
+
+  // localStorage의 history에서 entryHash 수집
+  const chains = [];
+  for (const key of Object.keys(localStorage)) {
+    if (!key.startsWith(`gopang_history_${guid}`)) continue;
+    const entries = JSON.parse(localStorage.getItem(key) || '[]');
+    for (const e of entries) {
+      if (e.entryHash) chains.push(e);
+    }
   }
+  chains.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+
+  const html = chains.length === 0
+    ? '<div style="padding:40px 16px;text-align:center;color:#9ca3af;font-size:14px">Hash Chain 기록이 없습니다.</div>'
+    : chains.map((c, i) => `
+      <div style="padding:12px 16px;border-bottom:1px solid #f2f2f7">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:11px;background:#eafcff;color:#007b8b;padding:2px 6px;border-radius:4px;font-weight:600">
+            ${i === chains.length - 1 ? 'Genesis' : 'L' + (i + 1)}
+          </span>
+          <span style="font-size:11px;color:#9ca3af">${new Date(c.ts).toLocaleString('ko-KR')}</span>
+        </div>
+        <div style="font-family:monospace;font-size:11px;color:#374151;word-break:break-all;background:#f9fafb;padding:6px 8px;border-radius:6px">
+          ${c.entryHash}
+        </div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:4px">
+          ${c.peerHandle ? `P2P: ${c.peerHandle}` : c.domain || ''} · ${c.turns || 0}턴
+        </div>
+      </div>`).join('');
+
+  _openSheet('Hash Chain', html);
 }
 
 // ══════════════════════════════════════════════════════════════

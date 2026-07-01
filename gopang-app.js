@@ -8,7 +8,7 @@
  */
 
 // ── Core ─────────────────────────────────────────────────
-import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, gopangAuth, _hasConfirmedBackup } from './src/gopang/core/auth.js';
+import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, _deleteMyProfile, gopangAuth, _hasConfirmedBackup } from './src/gopang/core/auth.js';
 import { loadSettings, CFG, saveSettings, loadDefaultKeyIfNeeded } from './src/gopang/core/config.js';
 import { _USER, aiActive, setAiActive, setUser } from './src/gopang/core/state.js';
 
@@ -145,6 +145,7 @@ window.dismissBackupWarn = function() {
   window.openAISettings            = openAISettings;
   window._deviceFullReset          = _deviceFullReset;
   window._deviceLocalReset         = _deviceLocalReset;
+  window._deleteMyProfile          = _deleteMyProfile;
   window._isGDCUser                = _isGDCUser;
   window.closeAISettings           = closeAISettings;
   window.handleAISettingsOverlayClick = handleAISettingsOverlayClick;

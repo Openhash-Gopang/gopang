@@ -540,6 +540,9 @@ export default {
       if (request.method === 'GET')  return handleWalletX25519Get(request, env, corsHeaders);
       if (request.method === 'POST') return handleWalletX25519Post(request, env, corsHeaders);
     }
+    if (pathname === '/account/delete-profile' && request.method === 'POST') {
+      return handleAccountDeleteProfile(request, env, corsHeaders);
+    }
     // 계정 완전 삭제 시 Supabase user_profiles row도 함께 정리 (L1과 별도 저장소이므로 누락되면
     // pubkey_ed25519/x25519 TOFU 키가 남아 재가입 시 PUBKEY_MISMATCH 발생)
     if (pathname === '/account/full-reset' && request.method === 'POST') {
@@ -2093,6 +2096,71 @@ async function handleWalletX25519Post(request, env, corsHeaders) {
     { status: 200, headers: corsHeaders });
 }
 
+
+// POST /account/delete-profile — "계정 삭제"(경량) — L1 profiles 레코드만 삭제
+// body: { guid, phone, ed25519_pubkey, signature, ts }
+// 서명 대상: `delete-profile:${guid}:${ts}` — full-reset과 동일한 서명 검증 패턴
+//
+// full-reset과의 차이(2026-07-02 신설, 설정 화면 "계정 삭제" 슬라이드아웃 전용):
+//   - full-reset은 L1 + Supabase 9개 테이블 + KV까지 전부 지우고, 클라이언트도
+//     로컬 데이터(PDV·지갑)까지 전부 초기화한다 — "완전 초기화" 용도.
+//   - 이 엔드포인트는 L1 profiles(전화번호·guid 연결 정보) 딱 하나만 지운다.
+//     PDV·지갑 같은 로컬 데이터는 이용자 기기에 그대로 남아있으므로(혼디는
+//     서버에 원본 데이터를 두지 않는다는 설계 원칙), 나중에 같은 번호로
+//     다시 가입하면 로컬에 남아있던 기록과 함께 이전 상태로 자연스럽게
+//     이어진다 — 서버가 곧 원본인 기존 SNS와 근본적으로 다른 지점이다.
+async function handleAccountDeleteProfile(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, phone, ed25519_pubkey, signature, ts } = body;
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  let l1Record = null;
+  try {
+    l1Record = await _l1FindProfileByGuid(env, guid);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!l1Record) {
+    // 이미 없는 계정 — 삭제할 것도 없으므로 성공으로 취급(멱등성)
+    return new Response(JSON.stringify({ ok: true, deleted: true, already_gone: true }),
+      { status: 200, headers: corsHeaders });
+  }
+
+  // ── 본인 확인 1: 서명(핵심 보안 근거) ─────────────────────
+  const knownEdPubkey = l1Record.pubkey_ed25519;
+  if (knownEdPubkey) {
+    if (!ed25519_pubkey || !signature)
+      return _err(400, 'MISSING_FIELD', '본인 확인을 위해 ed25519_pubkey/signature가 필요합니다', corsHeaders);
+    if (knownEdPubkey !== ed25519_pubkey)
+      return _err(403, 'PUBKEY_MISMATCH', '등록된 공개키와 일치하지 않습니다', corsHeaders);
+    const sigOk = await _verifyEd25519Simple(ed25519_pubkey, signature, `delete-profile:${guid}:${ts || ''}`);
+    if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+  }
+
+  // ── 본인 확인 2: 전화번호(사용자가 화면에서 직접 재입력한 값) ──
+  // 서명만으로도 충분히 안전하지만, 실수로 잘못된 계정을 지우는 걸 한 번
+  // 더 막기 위한 보조 확인 — 저장된 값과 다르면 거부한다.
+  if (phone && l1Record.phone && phone !== l1Record.phone) {
+    return _err(403, 'PHONE_MISMATCH', '입력한 전화번호가 계정과 일치하지 않습니다', corsHeaders);
+  }
+
+  try {
+    const token = await _l1AdminToken(env);
+    const r = await fetch(
+      `${L1_DEFAULT}/api/collections/profiles/records/${l1Record.id}`,
+      { method: 'DELETE', headers: { 'Authorization': 'Admin ' + token } }
+    );
+    if (!r.ok && r.status !== 404) {
+      return _err(502, 'L1_DELETE_FAILED', `L1 삭제 실패 (HTTP ${r.status})`, corsHeaders);
+    }
+  } catch (e) {
+    return _err(502, 'L1_DELETE_FAILED', 'L1 삭제 실패: ' + e.message, corsHeaders);
+  }
+
+  console.info('[DeleteProfile] 삭제 완료 | guid:', guid.slice(0, 16));
+  return new Response(JSON.stringify({ ok: true, deleted: true }), { status: 200, headers: corsHeaders });
+}
 
 // POST /account/full-reset — 계정 완전 삭제 시 Supabase user_profiles row 삭제
 // body: { guid, ed25519_pubkey, signature, ts }

@@ -1348,6 +1348,57 @@ export async function _registerToL1(name) {
   }
 }
 
+// ── 계정 삭제(경량) — 서버 프로필(전화번호·guid)만 삭제, 로컬 PDV·지갑은 보존 ──
+// 2026-07-02 신설: 설정 화면 "계정 삭제" 슬라이드아웃 전용. _deviceFullReset()과
+// 달리 로컬 데이터를 지우지 않는다 — 혼디는 서버에 원본 데이터를 두지
+// 않으므로, 나중에 같은 번호로 다시 가입하면 로컬에 남아있던 PDV 기록·지갑과
+// 함께 자연스럽게 이전 상태로 돌아갈 수 있다 — 서버가 곧 원본인 기존 SNS와
+// 근본적으로 다른 지점이다.
+export async function _deleteMyProfile(phoneE164) {
+  const stored = _loadStored();
+  const guid = stored?.ipv6;
+  if (!guid) { alert('로그인 정보가 없습니다.'); return false; }
+
+  let body = { guid, phone: phoneE164 || stored.e164 || '' };
+  try {
+    if (typeof window.GopangWallet !== 'undefined') {
+      const wallet = await window.GopangWallet.load().catch(() => null);
+      if (wallet?.publicKeyB64u && typeof wallet.signPayload === 'function') {
+        const ts  = Date.now();
+        const sig = await wallet.signPayload(`delete-profile:${guid}:${ts}`);
+        body = { ...body, ed25519_pubkey: wallet.publicKeyB64u, signature: sig, ts };
+      }
+    }
+  } catch (e) {
+    console.warn('[DeleteProfile] 서명 생성 실패(서명 없이 진행):', e.message);
+  }
+
+  try {
+    const res  = await fetch(`${PROXY_URL}/account/delete-profile`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.ok) {
+      alert('계정 삭제에 실패했습니다: ' + (data?.message || `HTTP ${res.status}`));
+      return false;
+    }
+  } catch (e) {
+    alert('계정 삭제 요청 실패: ' + e.message);
+    return false;
+  }
+
+  // 서버 연결 정보(가입 상태)만 지운다 — PDV(gopang_pdv_log 등)와 지갑
+  // (GopangWallet IndexedDB)은 의도적으로 건드리지 않는다.
+  try {
+    localStorage.removeItem(STORE_KEY);
+    sessionStorage.removeItem(STORE_KEY);
+  } catch {}
+
+  return true;
+}
+
 // ── 기기 완전 초기화 ─────────────────────────────────────
 // ── 로컬 데이터만 초기화 (L1 레코드 유지 → 재접속 시 복원 가능) ──
 export async function _deviceLocalReset() {
@@ -1413,17 +1464,25 @@ export async function _deviceFullReset() {
     serverErrorMsg = 'guid 없음 (로컬에 등록 정보가 없음)';
   }
 
-  // 서버 삭제가 확인되지 않았다면, 모르고 넘어가지 않도록 명시적으로 경고하고
-  // 사용자가 직접 선택하게 한다 — 예전에는 여기서 조용히 로컬만 지우고 진행했음
+  // "계정 완전 삭제"는 서버(ID+전화번호)와 로컬 데이터 삭제가 반드시
+  // 동시에(원자적으로) 이뤄져야 한다 — 둘 중 하나만 지워지면 다음 두 문제가
+  // 생긴다: (1) 서버엔 전화번호가 그대로 남아 재가입이 막히거나 다른 사람과
+  // 충돌할 수 있고, (2) 사용자는 "완전 삭제했다"고 믿지만 실제로는 서버에
+  // 자신의 ID+전화번호가 살아있다. 그래서 서버 삭제가 확인되지 않으면
+  // 로컬은 절대 건드리지 않고 여기서 중단한다 — "로컬만이라도 지울까요"
+  // 같은 부분 완료 경로를 더 이상 제공하지 않는다. 기기 데이터만 지우고
+  // 싶다면(서버 계정은 유지) 별도 기능인 _deviceLocalReset()을 쓰면 된다.
+  // (2026-07-02: 다른 개발자의 검토를 반영해 "부분 완료 후 사용자 선택"
+  // 방식에서 "원자성 보장, 실패 시 전면 중단" 방식으로 변경)
   if (!serverDeleteOk) {
-    const proceedAnyway = confirm(
-      `⚠️ 서버 삭제가 완료되지 않았습니다 (${serverErrorMsg || '알 수 없는 오류'}).\n\n` +
-      '이대로 진행하면 이 기기의 기록만 지워지고 서버에는 계정이 그대로 남아,\n' +
-      '다음 접속 시 "백업 키 입력" 화면이 다시 나타날 수 있습니다.\n\n' +
-      '그래도 이 기기의 로컬 데이터만 초기화하시겠습니까?\n' +
-      '("취소"를 누르면 아무것도 삭제하지 않고 그대로 종료합니다.)'
+    alert(
+      `⚠️ 서버 삭제가 완료되지 않아 계정 완전 삭제를 중단했습니다 (${serverErrorMsg || '알 수 없는 오류'}).\n\n` +
+      '완전 삭제는 서버(전화번호·ID)와 이 기기의 기록이 함께 지워져야만 완료로 인정됩니다.\n' +
+      '이 기기의 데이터는 그대로 남아있습니다 — 아무것도 삭제되지 않았습니다.\n\n' +
+      '네트워크 상태를 확인한 뒤 다시 시도해 주세요. 계속 실패하면 문의해 주세요.\n' +
+      '(참고: 서버 계정은 그대로 두고 이 기기의 기록만 지우고 싶다면, "이 기기 데이터만 초기화" 메뉴를 따로 이용하실 수 있습니다.)'
     );
-    if (!proceedAnyway) return;
+    return;
   }
 
   // 스마트폰/PC 로컬 전체 삭제
