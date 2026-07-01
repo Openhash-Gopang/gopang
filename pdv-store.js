@@ -1,0 +1,171 @@
+/* ─────────────────────────────────────────────────────────────────────
+   pdv-store.js — PDV 로컬 IndexedDB 미러 + 4분류(사람/사물/기관/공용AI) 파생
+
+   위치: 이 파일은 webapp.html(부모)과 pdv.html(iframe) 양쪽에서 각각 로드된다.
+   - webapp.html 쪽 인스턴스: 'gopang:pdv-recorded' 이벤트를 실제로 받아
+     IndexedDB에 기록한다. 이 이벤트는 src/gopang/pdv/record.js의
+     _recordPDV()가 기존 localStorage 기록 직후 발행한다(기존 로직은
+     건드리지 않고 한 줄만 추가함 — 2026-07-01).
+   - pdv.html 쪽 인스턴스: 이벤트 리스너는 그냥 놀고 있고(이 프레임에서는
+     _recordPDV가 호출되지 않으므로), list()/listByCategory()로 같은
+     오리진의 IndexedDB를 읽기만 한다. IndexedDB는 window가 아니라
+     오리진 단위라 이게 가능하다.
+
+   분류 근거 (2026-07-01 저장소 실사 결과 — SP-PDV보다 이 주석이 최신 진실):
+   - 실제 _recordPDV() 호출부(expert-session.js, routing-engine.js,
+     gwp/engine.js, klaw.js)를 전수 확인한 결과, 지금 기록되는 PDV는
+     전부 "Hondi 자체 AI 서브시스템/에이전트와의 상호작용"이다.
+     GWP_REGISTRY(gwp-registry.js)에 svc/serviceId가 존재하면 무조건
+     공용 AI 전문가로 분류한다 — 신뢰도 높음, 실제 데이터 있음.
+   - "기관"은 GWP_REGISTRY category가 MKT(K-Market 등 실거래)인 경우로
+     근사한다 — 근사치다. 실제 판매자(seller_guid) 같은 진짜 상대방
+     식별자가 레코드에 안 실려 있어서, 지금은 "상거래 유형이었다" 정도만
+     알 수 있고 "어느 사업자였는지"는 모른다.
+   - "사람"(1:1 대화 상대)과 "사물"(기기)은 지금 이 레포 어디에도
+     _recordPDV() 호출부가 없다 — 즉 실제 데이터가 전혀 없다. 탭은
+     만들어 두되, 채워지지 않는 게 정상이라는 걸 빈 상태 문구로 명시한다.
+     (1:1 채팅에 _recordPDV 훅을 추가하는 건 이 파일의 책임 밖 — 별도 작업.)
+   ───────────────────────────────────────────────────────────────────── */
+(function (global) {
+  'use strict';
+
+  const DB_NAME = 'gopang_pdv_store';
+  const DB_VERSION = 1;
+  const STORE = 'records';
+  const LS_LOG_KEY = 'gopang_pdv_log';
+  const LS_MIGRATED_KEY = 'gopang_pdv_store_migrated_v1';
+
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) {
+          const os = db.createObjectStore(STORE, { keyPath: '_id', autoIncrement: true });
+          os.createIndex('serviceId', 'serviceId', { unique: false });
+          os.createIndex('type', 'type', { unique: false });
+          os.createIndex('ts', 'ts', { unique: false });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function putRecord(record) {
+    if (!record) return;
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).add(record); // add — autoIncrement라 중복 걱정 없음(레코드에 안정적 unique id가 없음)
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async function getAllRecords() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  // 최초 1회: 기존 localStorage.gopang_pdv_log(최대 1000건)를 IndexedDB로 이전.
+  // 이후로는 'gopang:pdv-recorded' 이벤트로만 채워진다.
+  async function migrateFromLocalStorageOnce() {
+    try {
+      if (localStorage.getItem(LS_MIGRATED_KEY)) return;
+      const raw = localStorage.getItem(LS_LOG_KEY);
+      const log = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(log) && log.length) {
+        for (const r of log) await putRecord(r);
+        console.info('[pdv-store] localStorage → IndexedDB 이전 완료:', log.length, '건');
+      }
+      localStorage.setItem(LS_MIGRATED_KEY, '1');
+    } catch (e) {
+      console.warn('[pdv-store] localStorage 이전 실패:', e.message);
+    }
+  }
+
+  // 실제 기록 이벤트 구독 (webapp.html 쪽 인스턴스에서만 의미 있음)
+  global.addEventListener('gopang:pdv-recorded', (e) => {
+    putRecord(e.detail).catch(err => console.warn('[pdv-store] 기록 실패:', err.message));
+  });
+
+  // ── 4분류 파생 ──────────────────────────────────────────────────
+  // GWP_REGISTRY는 top window(webapp.html)에만 로드돼 있다. pdv.html(iframe)에서는
+  // parent.GWP_REGISTRY로 접근해야 한다 — 두 경우 다 시도.
+  function _registry() {
+    return global.GWP_REGISTRY || (global.parent && global.parent !== global && global.parent.GWP_REGISTRY) || [];
+  }
+
+  const CATEGORY_LABEL = {
+    person: '사람',
+    thing: '사물',
+    org: '기관',
+    ai: '공용 AI 전문가',
+    uncategorized: '미분류',
+  };
+
+  function classify(record) {
+    const svcId = record.serviceId || record.svc || record.source || null;
+    if (!svcId) return 'uncategorized';
+    const entry = _registry().find(s => s.id === svcId);
+    if (!entry) {
+      // klaw_monitor 등 registry에 없어도 known service명이 있으면 AI로 간주
+      if (svcId === 'klaw' || record.type === 'klaw_monitor') return 'ai';
+      return 'uncategorized';
+    }
+    if (entry.category === 'MKT') return 'org'; // 근사치 — 위 파일 헤더 주석 참고
+    return 'ai'; // GWP_REGISTRY 항목은 전부 Hondi 자체 AI 서브시스템
+  }
+
+  function normalizeSummary6w(record) {
+    // worker.js 경유 레코드는 summary_6w가 JSON 문자열, record.js 직접 기록은
+    // when/where/who/what/how/why가 레코드 최상위 필드로 흩어져 있다 — 둘 다 흡수.
+    if (record.summary_6w) {
+      if (typeof record.summary_6w === 'string') {
+        try { return JSON.parse(record.summary_6w); } catch { /* fallthrough */ }
+      } else if (typeof record.summary_6w === 'object') {
+        return record.summary_6w;
+      }
+    }
+    const { who, when, where, what, how, why } = record;
+    return { who, when, where, what, how, why };
+  }
+
+  function toView(record) {
+    const category = classify(record);
+    return {
+      ...record,
+      category,
+      category_label: CATEGORY_LABEL[category],
+      summary_6w_view: normalizeSummary6w(record),
+      risk_level: record.risk_level || record.data?.risk_level || null,
+    };
+  }
+
+  async function list() {
+    await migrateFromLocalStorageOnce();
+    const all = await getAllRecords();
+    return all.map(toView).sort((a, b) => {
+      const ta = new Date(a.ts || a.when || 0).getTime();
+      const tb = new Date(b.ts || b.when || 0).getTime();
+      return tb - ta;
+    });
+  }
+
+  async function listByCategory(category) {
+    const all = await list();
+    return category === 'all' ? all : all.filter(r => r.category === category);
+  }
+
+  global.GopangPDV = {
+    list,
+    listByCategory,
+    CATEGORY_LABEL,
+  };
+})(window);
