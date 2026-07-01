@@ -2983,12 +2983,18 @@ window.closeTermsOfUse = closeTermsOfUse;
     }
   });
 
+  // BUG-FIX(2026-07-01): 워치독 타이머만 리셋할 뿐, 실제로 '참 잘했어요'
+  // 진행 메시지를 보내는 window._tutorialSignal('left_menu'/'right_menu')를
+  // 호출하는 코드가 여기 어디에도 없었다 — 메뉴를 열어도 튜토리얼이
+  // 절대 다음 단계로 넘어가지 못하던 원인.
+  const _MENU_TUT_ACTION = { openLeftMenu: 'left_menu', openRightMenu: 'right_menu' };
   ['openLeftMenu', 'openRightMenu'].forEach(fnName => {
     const orig = window[fnName];
     if (typeof orig === 'function') {
       window[fnName] = function(...a) {
         const r = orig.apply(this, a);
         if (typeof window._resetTutorialWatchdog === 'function') window._resetTutorialWatchdog();
+        if (typeof window._tutorialSignal === 'function') window._tutorialSignal(_MENU_TUT_ACTION[fnName]);
         return r;
       };
     }
@@ -3163,6 +3169,29 @@ window.closeTermsOfUse = closeTermsOfUse;
     } catch {}
   }
 
+  // 사용자 메시지 앞에는 _buildFirstContactContext()가 붙인
+  // [FIRST_CONTACT: ...]/[TUTORIAL_STEP: ... [TUTORIAL_ADVANCE:N] ...] 같은
+  // 내부 지시문이 실제 입력 앞에 그대로 저장돼 있다(안에 대괄호가 중첩됨).
+  // BUG-FIX: _stripInternalTags의 정규식은 중첩 대괄호를 고려하지 않아
+  // 첫 ']'에서 멈춰버리므로, 여기서는 괄호 깊이를 세어 가장 바깥쪽
+  // '['...']' 블록을 통째로 정확히 벗겨낸다. 벗기고 나서 아무것도 안
+  // 남으면(예: [INTERNAL: ...] 같은 순수 트리거 메시지) 그 자체가 표시할
+  // 실제 사용자 입력이 아니었다는 뜻이므로 말풍선을 만들지 않는다.
+  function _stripLeadingInternalTag(text) {
+    if (typeof text !== 'string') return text;
+    let s = text;
+    while (s.startsWith('[')) {
+      let depth = 0, i = 0;
+      for (; i < s.length; i++) {
+        if (s[i] === '[') depth++;
+        else if (s[i] === ']') { depth--; if (depth === 0) { i++; break; } }
+      }
+      if (depth !== 0) break; // 괄호가 안 닫히면 원본을 건드리지 않고 중단(안전장치)
+      s = s.slice(i).replace(/^\n+/, '');
+    }
+    return s.trim();
+  }
+
   // 복원된 히스토리를 화면 말풍선으로도 재현 — msgList가 비어 있으면
   // openAIPanel()이 "처음 여는 것"으로 오인해 인사말을 다시 시작하므로,
   // 여기서 먼저 채워 그 오인식을 막는다. 사용자 메시지의 첨부파일(멀티모달
@@ -3177,10 +3206,11 @@ window.closeTermsOfUse = closeTermsOfUse;
     } catch {}
     for (const m of _panelHistory) {
       if (m.role === 'user') {
-        const text = typeof m.content === 'string'
+        const raw = typeof m.content === 'string'
           ? m.content
           : (Array.isArray(m.content) ? (m.content.find(c => c.type === 'text')?.text || '(첨부파일)') : '');
-        _appendPanelMsg('user', text);
+        const text = _stripLeadingInternalTag(raw);
+        if (text) _appendPanelMsg('user', text); // 순수 내부 트리거(정리 후 빈 문자열)는 화면에 표시하지 않음
       } else if (m.role === 'assistant') {
         _appendPanelMsg('ai', _strip(m.content));
       }
