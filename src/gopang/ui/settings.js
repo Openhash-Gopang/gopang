@@ -1,8 +1,7 @@
 /**
  * ui/settings.js — 설정 패널
  */
-import { CFG, loadSettings, PROVIDER_INFO } from '../core/config.js';
-import { buildLiveFreeModelPool } from '../core/free-model-pool.js';
+import { CFG, loadSettings, PROVIDER_INFO, setHondiTier as _setHondiTierCfg } from '../core/config.js';
 import { _isRegistered, _isGDCUser, ensureX25519Synced } from '../core/auth.js';
 import { _USER } from '../core/state.js';
 import { appendBubble } from './bubble.js';
@@ -140,6 +139,13 @@ export function handleOverlayClick(e) {
 }
 
 // ── AI 설정 슬라이드 패널 ────────────────────────────────
+// 설정 화면의 Flash/Pro 버튼 클릭 핸들러 — config.js의 setHondiTier로 실제
+// 값을 저장한 뒤, 버튼 스타일과 무료 한도 표시를 즉시 다시 그린다.
+export function selectHondiTier(tier) {
+  _setHondiTierCfg(tier);
+  _refreshHondiTierUI();
+}
+
 export function openAISettings() {
   const sysEl = document.getElementById('setting-system');
   if (sysEl) sysEl.value = CFG.system;
@@ -149,68 +155,64 @@ export function openAISettings() {
   // PC(ai-setup.html)가 이 공개키로 API 설정을 암호화해 보낼 수 있도록
   // 설정 창을 열 때마다 보장 — 이미 있으면 아무 일도 하지 않음
   _ensurePcSyncReady();
+
+  // ── 혼디 Flash/Pro 티어 선택 + 무료 한도 사용 현황 (2026-07-01 신설) ──
+  // 본인 키를 등록하지 않은 사용자에게만 의미가 있으므로, 등록자는 숨긴다.
+  _refreshHondiTierUI();
+  _loadFreeQuotaStatus();
 }
 
-// ── "모델 갱신" 버튼 — 이미 등록된 OpenRouter 무료 모델 풀을
-// 현재 시점 기준으로 다시 검증해 단종된 모델을 빼고 새 무료 모델을 채운다.
-// PC에서 최초 등록할 때(ai-setup.html)뿐 아니라, 이미 등록을 마친 사용자도
-// 폰에서 직접 갱신할 수 있도록 한다 — OpenRouter Key는 폰에 이미 저장돼 있으므로
-// PC 재등록 없이 이 화면에서 바로 처리 가능.
-// 결과 메시지는 대화창이 아니라 AI 설정 창의 #model-refresh-status에 표시한다
-// (대화창 버블은 설정 시트 뒤에 가려져 사용자가 결과를 못 보는 문제가 있었음).
-export async function _refreshFreeModelPool() {
-  const btn = document.getElementById('btn-refresh-free-models');
-  const statusEl = document.getElementById('model-refresh-status');
-  const setStatus = (msg, color) => {
-    if (statusEl) { statusEl.textContent = msg; statusEl.style.color = color || '#6b7280'; }
-  };
+// 티어 버튼 두 개 중 CFG.hondiTier에 해당하는 쪽을 활성 스타일로 표시.
+// 본인 키 등록자는 이 박스 자체를 숨긴다(무료 한도를 안 쓰므로 무의미).
+function _refreshHondiTierUI() {
+  const box = document.getElementById('hondi-tier-box');
+  if (!box) return;
+  const hasOwnKey = Array.isArray(CFG.providers) && CFG.providers.length > 0;
+  if (hasOwnKey) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
 
-  const openrouterEntries = Array.isArray(CFG.providers)
-    ? CFG.providers.filter(p => p?.provider === 'openrouter' && p?.apiKey)
-    : [];
+  const flashBtn = document.getElementById('btn-tier-flash');
+  const proBtn   = document.getElementById('btn-tier-pro');
+  const active   = 'border:1.5px solid #1A73E8;background:#1A73E8;color:#fff';
+  const inactive = 'border:1.5px solid #e5e7eb;background:#fff;color:#374151';
+  const baseStyle = 'flex:1;padding:12px;border-radius:var(--radius-lg);font-size:14px;font-weight:600;cursor:pointer;';
+  if (flashBtn) flashBtn.style.cssText = baseStyle + (CFG.hondiTier === 'hondi-pro' ? inactive : active);
+  if (proBtn)   proBtn.style.cssText   = baseStyle + (CFG.hondiTier === 'hondi-pro' ? active : inactive);
+}
 
-  if (openrouterEntries.length === 0) {
-    setStatus('⚠️ 등록된 OpenRouter 무료 모델이 없습니다. PC에서 "나만의 AI 비서 설정"으로 먼저 등록해 주세요.', '#dc2626');
-    return;
-  }
+// 무료 한도(deepseek-default) 사용 현황 조회 — worker.js GET /free-quota-status
+async function _loadFreeQuotaStatus() {
+  const box = document.getElementById('free-quota-status-box');
+  if (!box) return;
+  const hasOwnKey = Array.isArray(CFG.providers) && CFG.providers.length > 0;
+  if (hasOwnKey) { box.style.display = 'none'; return; }
 
-  const apiKey = openrouterEntries[0].apiKey;
-  const firstIdx = CFG.providers.findIndex(p => p?.provider === 'openrouter' && p?.apiKey === apiKey);
-  const wasUsingOpenrouter = typeof CFG.model === 'string' && CFG.model.includes('/');
-
-  if (btn) { btn.disabled = true; btn.textContent = '확인 중…'; }
-  setStatus('🔄 OpenRouter에서 현재 가용한 무료 모델을 확인하는 중…');
+  const guid = _USER?.ipv6 ||
+    JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}')?.ipv6;
+  if (!guid) { box.style.display = 'none'; return; }
 
   try {
-    const { pool, validated, error } = await buildLiveFreeModelPool();
+    const res = await fetch(`${CFG.endpoint.replace(/\/+$/, '')}/free-quota-status?guid=${encodeURIComponent(guid)}`);
+    const d = await res.json();
+    if (!d.ok) { box.style.display = 'none'; return; }
 
-    // 기존 openrouter 항목들을 제거하고, 같은 위치에 새 풀로 교체
-    // (다른 provider 항목의 순서·우선순위는 그대로 유지)
-    const others = CFG.providers.filter(p => !(p?.provider === 'openrouter' && p?.apiKey === apiKey));
-    const insertAt = Math.min(firstIdx, others.length);
-    const newEntries = pool.map(model => ({ provider: 'openrouter', model, apiKey }));
-    CFG.providers = [...others.slice(0, insertAt), ...newEntries, ...others.slice(insertAt)];
-
-    if (wasUsingOpenrouter) CFG.model = pool[0];
-
-    try {
-      localStorage.setItem('gopang_cfg', JSON.stringify({
-        model: CFG.model, endpoint: CFG.endpoint,
-        apiKey: CFG.apiKey, geminiKey: CFG.geminiKey,
-        system: CFG.system, providers: CFG.providers,
-      }));
-    } catch {}
-
-    setStatus(
-      validated
-        ? `✅ 무료 모델 갱신 완료 — 현재 활성 모델 ${pool.length}개를 확인했습니다.`
-        : `⚠️ 실시간 확인에 실패해 기존 목록(${pool.length}개)을 유지합니다. (${error || '알 수 없는 오류'})`,
-      validated ? '#007b8b' : '#d97706'
-    );
+    box.style.display = 'block';
+    const pct = Math.min(Math.round((d.spent_krw / d.limit_krw) * 100), 100);
+    box.innerHTML = `
+      <div style="font-size:12.5px;color:#374151;margin-bottom:6px">
+        혼디 무료 제공분 <b>${d.spent_krw.toLocaleString()}원</b> / ${d.limit_krw.toLocaleString()}원 사용
+      </div>
+      <div style="height:6px;border-radius:3px;background:#eee;overflow:hidden;margin-bottom:8px">
+        <div style="height:100%;width:${pct}%;background:${pct >= 90 ? '#dc2626' : '#1A73E8'}"></div>
+      </div>
+      ${d.estimated_monthly_krw > 0
+        ? `<div style="font-size:12px;color:#6b7280">지금 쓰시는 속도라면 한 달에 대략 <b>${d.estimated_monthly_krw.toLocaleString()}원</b> 정도예요.
+           본인 키를 등록하시면 이 한도 없이 계속 쓰실 수 있어요.</div>`
+        : `<div style="font-size:12px;color:#6b7280">아직 대화를 시작하기 전이에요.</div>`}
+    `;
   } catch (e) {
-    setStatus(`⚠️ 모델 갱신 중 오류가 발생했습니다: ${e.message}`, '#dc2626');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🔄 모델 갱신'; }
+    box.style.display = 'none';
+    console.warn('[FreeQuota] 조회 실패:', e.message);
   }
 }
 
@@ -276,7 +278,7 @@ async function _pollPcSealedSetting(guid, wallet) {
 
 // ── "PC에서 입력하세요" 안내 / "PC에서 보낸 설정이 있습니다" 배너 렌더링 ──
 function _renderPcSyncBanner(parsed, guid) {
-  const host = document.getElementById('btn-refresh-free-models')?.closest('.settings-body') || document.body;
+  const host = document.getElementById('ai-settings-body') || document.body;
   let banner = document.getElementById('_pc-sync-banner');
   if (!banner) {
     banner = document.createElement('div');

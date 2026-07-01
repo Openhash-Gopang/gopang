@@ -61,6 +61,133 @@ const OPENAI_MODEL   = 'gpt-4o-mini';
 const DEEPSEEK_MODEL = 'deepseek/deepseek-r1:free'; // OR 무료 최상위 모델 (프록시 폴백용)
 const SUPABASE_URL   = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
 
+// ══════════════════════════════════════════════════════════
+// 혼디 제공 무료 기본 키(deepseek-default) — Flash/Pro 티어 + 비용 산정
+// ══════════════════════════════════════════════════════════
+//
+// [자체 서버 전환 설계 — 2026-07-01]
+// 현재는 두 티어 모두 api.deepseek.com(공식 API)을 그대로 호출하며,
+// "혼디 Flash"="deepseek-chat"(비사고), "혼디 Pro"="deepseek-reasoner"(사고)
+// 라는 모델 파라미터 차이만으로 구분한다. 나중에 혼디 자체 GPU 추론 서버
+// (한국어 파인튜닝 패치 모델)가 준비되면, 아래 두 시크릿만 등록하면 자동
+// 전환된다 — 클라이언트 코드는 전혀 안 건드려도 됨:
+//   wrangler secret put HONDI_SELFHOST_URL       (예: https://infer.hondi.net/v1/chat/completions)
+//   wrangler secret put HONDI_SELFHOST_API_KEY
+// 두 시크릿이 모두 설정되면 자체 서버로, 아니면 지금처럼 공식 API로 나간다.
+// 자체 서버의 실제 모델 파라미터명이 deepseek-chat/-reasoner와 다르다면
+// HONDI_TIER_MODELS의 backendModel만 바꾸면 된다.
+function _selfHostReady(env) { return !!(env.HONDI_SELFHOST_URL && env.HONDI_SELFHOST_API_KEY); }
+
+// 클라이언트는 실제 벤더 모델명 대신 "hondi-flash" / "hondi-pro" 논리 이름만
+// 보낸다 — 어느 백엔드(공식 API vs 자체 서버)를 쓰든 클라이언트는 안 바뀐다.
+const HONDI_TIER_MODELS = {
+  'hondi-flash': {
+    backendModel: 'deepseek-chat',      // deepseek-v4-flash 비사고 모드 별칭
+    price: { cacheHit: 0.0028, cacheMiss: 0.14, output: 0.28 }, // $/1M tokens
+  },
+  'hondi-pro': {
+    backendModel: 'deepseek-reasoner',  // deepseek-v4-flash 사고 모드 별칭
+    // V4 Pro 프로모션가 기준(2026-06) — 자체 서버 전환 후 실제 원가로 재조정 필요
+    price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 },
+  },
+};
+const USD_TO_KRW = 1500; // 실시간 조회 없이 보수적 고정값(1,000원 한도 안에서 오차 무시 가능)
+// "첫 사용자(가입 직후 키 미등록 상태) 1,000원 무료 한도" — guid당 평생 1회
+// 누적 한도(일일 리셋 아님). AGENT-COMMON 튜토리얼(§0-1-T STEP 5) "기본
+// 1,000원어치는 무료"와 반드시 같은 값으로 유지할 것(2026-07-01 통일).
+const FREE_QUOTA_KRW_LIMIT = 1000;
+
+function _deepseekUsageToKRW(usage, tierKey) {
+  if (!usage) return 0;
+  const price = HONDI_TIER_MODELS[tierKey]?.price || HONDI_TIER_MODELS['hondi-flash'].price;
+  // DeepSeek 응답의 usage 필드명: prompt_cache_hit_tokens / prompt_cache_miss_tokens
+  // (없으면 prompt_tokens 전체를 캐시 미스로 간주 — 보수적 상한 추정)
+  const hit  = usage.prompt_cache_hit_tokens ?? 0;
+  const miss = usage.prompt_cache_miss_tokens ?? (usage.prompt_tokens ?? 0) - hit;
+  const out  = usage.completion_tokens ?? 0;
+  const usd =
+    (hit  / 1e6) * price.cacheHit +
+    (Math.max(miss, 0) / 1e6) * price.cacheMiss +
+    (out  / 1e6) * price.output;
+  return usd * USD_TO_KRW;
+}
+
+// 스트리밍 응답 본문에서 마지막 usage 청크를 파싱(스트림은 tee()로 복제해
+// 클라이언트에게는 그대로 전달하면서 이 쪽에서만 소비한다 — 지연 없음).
+async function _parseUsageFromStream(stream) {
+  try {
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+    let buf = '', usage = null;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+        if (payload === '[DONE]') continue;
+        try { const chunk = JSON.parse(payload); if (chunk.usage) usage = chunk.usage; } catch {}
+      }
+    }
+    return usage;
+  } catch { return null; }
+}
+
+// guid별 누적 지출(원)과 "첫 지출 시각"을 함께 기록한다. 첫 지출 시각은
+// /free-quota-status가 "이 사용 속도라면 한 달에 얼마"를 추정하는 기준이 된다.
+async function _recordFreeSpend(env, guid, usageKRW) {
+  if (!guid || !usageKRW) return;
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv) return;
+  try {
+    const spendKey = `hondi:free_spend:${guid}`;
+    const sinceKey = `hondi:free_spend_since:${guid}`;
+    const prev = parseFloat(await kv.get(spendKey) || '0');
+    await kv.put(spendKey, String(prev + usageKRW)); // TTL 없음 — 평생 누적
+    if (prev === 0) {
+      const existing = await kv.get(sinceKey);
+      if (!existing) await kv.put(sinceKey, new Date().toISOString());
+    }
+  } catch (e) { console.warn('[FreeQuota] 기록 실패:', e.message); }
+}
+
+// GET /free-quota-status?guid=... — 지금까지 쓴 금액 + 사용 속도 기반
+// "이대로 쓰면 한 달에 대략 얼마" 추정치.
+async function handleFreeQuotaStatus(request, env, corsHeaders) {
+  const url  = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv) return _err(500, 'KV_UNAVAILABLE', 'KV 바인딩 없음', corsHeaders);
+
+  const spent = parseFloat(await kv.get(`hondi:free_spend:${guid}`) || '0');
+  const since = await kv.get(`hondi:free_spend_since:${guid}`);
+
+  let daysElapsed = 0, dailyAvgKrw = 0, estimatedMonthlyKrw = 0;
+  if (since) {
+    daysElapsed = Math.max((Date.now() - new Date(since).getTime()) / 86400000, 1 / 24);
+    dailyAvgKrw = spent / daysElapsed;
+    estimatedMonthlyKrw = dailyAvgKrw * 30;
+  }
+
+  return new Response(JSON.stringify({
+    ok: true,
+    guid,
+    spent_krw: Math.round(spent),
+    limit_krw: FREE_QUOTA_KRW_LIMIT,
+    remaining_krw: Math.max(Math.round(FREE_QUOTA_KRW_LIMIT - spent), 0),
+    since,
+    days_elapsed: Math.round(daysElapsed * 10) / 10,
+    estimated_monthly_krw: Math.round(estimatedMonthlyKrw),
+    projected_days_to_limit: dailyAvgKrw > 0 ? Math.round(((FREE_QUOTA_KRW_LIMIT - spent) / dailyAvgKrw) * 10) / 10 : null,
+  }), { status: 200, headers: corsHeaders });
+}
+
+
 // ── GitHub (Prompt Editor PR 워크플로) ──────────────────────
 const GITHUB_OWNER          = 'Openhash-Gopang';
 const GITHUB_REPO_NAME      = 'gopang';
@@ -308,7 +435,7 @@ export default {
     ctx.waitUntil(anchorL1MerkleRoot(env));
   },
 
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const corsOrigin = getCorsOrigin(request);
 
     if (request.method === 'OPTIONS') {
@@ -515,6 +642,8 @@ export default {
       return handleAdminDefaultKeySet(request, env, corsHeaders);
     if (pathname === '/default-key' && request.method === 'GET')
       return handleDefaultKeyGet(request, env, corsHeaders);
+    if (pathname === '/free-quota-status' && request.method === 'GET')
+      return handleFreeQuotaStatus(request, env, corsHeaders);
     if (pathname === '/prompt' && request.method === 'GET')
       return handlePromptGet(request, env, corsHeaders);
     if (pathname === '/admin/prompt' && request.method === 'POST')
@@ -550,8 +679,8 @@ export default {
       return _err(403, 'FORBIDDEN_NO_ORIGIN', 'AI 프록시 호출에는 브라우저 Origin이 필요합니다.', corsHeaders);
     }
 
-    if (pathname === '/chat/completions')        return callDeepSeek(bodyText, env, corsHeaders, null, _meta);
-    if (pathname.startsWith('/deepseek'))        return callDeepSeek(bodyText, env, corsHeaders, null, _meta);
+    if (pathname === '/chat/completions')        return callDeepSeek(bodyText, env, corsHeaders, null, _meta, ctx);
+    if (pathname.startsWith('/deepseek'))        return callDeepSeek(bodyText, env, corsHeaders, null, _meta, ctx);
     if (pathname === '/llm/relay')               return handleLLMRelay(bodyText, env, corsHeaders, _meta);
     if (pathname.startsWith('/gemini/'))         return callOpenAIFromGeminiBody(bodyText, env, corsHeaders, _meta);
     if (pathname === '/ai/chat')                 return handleAIChat(bodyText, env, corsHeaders, _meta);
@@ -1317,14 +1446,63 @@ try{if(provider!=='anthropic'){
 async function callOpenAIFromGeminiBody(bodyText,env,corsHeaders,meta=null){const apiKey=env.OpenAI;if(!apiKey)return _err(500,'CONFIG_ERROR','OpenAI key not configured',corsHeaders);let geminiBody;try{geminiBody=JSON.parse(bodyText);}catch{return _err(400,'INVALID_JSON','Invalid JSON body',corsHeaders);}const systemPrompt=geminiBody.system_instruction?.parts?.[0]?.text||'';const parts=geminiBody.contents?.[0]?.parts||[];const textPart=parts.find(p=>p.text)?.text||'';const imagePart=parts.find(p=>p.inline_data);const maxTokens=geminiBody.generationConfig?.maxOutputTokens||1500;const messages=[];if(systemPrompt)messages.push({role:'system',content:systemPrompt});if(imagePart?.inline_data){messages.push({role:'user',content:[{type:'image_url',image_url:{url:`data:${imagePart.inline_data.mime_type};base64,${imagePart.inline_data.data}`}},{type:'text',text:textPart||'이미지를 분석하여 JSON으로만 출력하라.'}]});}else{messages.push({role:'user',content:textPart});}
 console.log(JSON.stringify({tag:'AI_PROXY_CALL',fn:'callOpenAIFromGeminiBody',ts:new Date().toISOString(),...meta}));
 try{const res=await fetch(OPENAI_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},body:JSON.stringify({model:OPENAI_MODEL,messages,max_tokens:maxTokens,temperature:geminiBody.generationConfig?.temperature??0.1})});const data=await res.json();if(!res.ok)throw new Error(data.error?.message||`HTTP ${res.status}`);const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'openai',_model:OPENAI_MODEL}),{headers:corsHeaders});}catch(e){const fbBody=JSON.stringify({model:DEEPSEEK_MODEL,messages,max_tokens:maxTokens,temperature:0.1,stream:false});return callDeepSeek(fbBody,env,corsHeaders,e.message,meta);}}
-async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null){try{let isStream=false;try{isStream=!!JSON.parse(bodyText)?.stream;}catch{}
-  // OR 키가 있으면 OR API 사용, 없으면 기존 DeepSeek API 폴백
-  const _useOR = !!env.OPENROUTER_API_KEY;
-  const _url   = _useOR ? OR_URL : DEEPSEEK_URL;
-  const _key   = _useOR ? env.OPENROUTER_API_KEY : env.DEEPSEEK_API_KEY;
-  let _modelForLog=''; try{_modelForLog=JSON.parse(bodyText)?.model||'';}catch{}
-  console.log(JSON.stringify({tag:'AI_PROXY_CALL',fn:'callDeepSeek',ts:new Date().toISOString(),target:_useOR?'openrouter':'deepseek',model:_modelForLog,fallbackFrom,...meta}));
-  const res=await fetch(_url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${_key}`,...(_useOR?{'HTTP-Referer':'https://hondi.net','X-Title':'Hondi'}:{})},body:bodyText});if(!res.ok){const errText=await res.text();let errMsg;try{errMsg=JSON.parse(errText)?.error?.message;}catch{}return new Response(JSON.stringify({error:errMsg||`HTTP ${res.status}`}),{status:res.status,headers:corsHeaders});}if(isStream){return new Response(res.body,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});}const data=await res.json();if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'DEEPSEEK_ERROR',e.message,corsHeaders);}}
+async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null,ctx=null){try{
+  let parsedBody = null; try { parsedBody = JSON.parse(bodyText); } catch {}
+  const isStream = !!parsedBody?.stream;
+  const guid = parsedBody?.guid || null;
+
+  // ── 티어 해석: 클라이언트는 "hondi-flash"/"hondi-pro" 논리 이름만 보낸다.
+  // 알려진 티어 이름이면 실제 벤더 모델명으로 치환하고, 아니면(레거시 호출 등)
+  // 받은 model 값을 그대로 쓴다 — 하위 호환.
+  const requestedModel = parsedBody?.model || '';
+  const tierKey = HONDI_TIER_MODELS[requestedModel] ? requestedModel : null;
+  const backendModel = tierKey ? HONDI_TIER_MODELS[tierKey].backendModel : requestedModel;
+
+  // guid가 실려 있으면(=call-ai.js의 deepseek-default 경로) 1,000원 누적 한도 체크.
+  let outboundBody = parsedBody ? { ...parsedBody, model: backendModel } : null;
+  if (outboundBody) delete outboundBody.guid; // 벤더 API는 guid 필드를 모름
+  let outboundBodyText = outboundBody ? JSON.stringify(outboundBody) : bodyText;
+
+  if (guid) {
+    const kv = env.AI_SETUP_SEALS_KV;
+    if (kv) {
+      const spendKey = `hondi:free_spend:${guid}`;
+      const spent = parseFloat(await kv.get(spendKey) || '0');
+      if (spent >= FREE_QUOTA_KRW_LIMIT) {
+        console.warn(JSON.stringify({ tag: 'FREE_QUOTA_EXCEEDED', guid, spent, ts: new Date().toISOString(), ...meta }));
+        return new Response(JSON.stringify({ error: 'FREE_QUOTA_EXCEEDED', message: `무료 한도(${FREE_QUOTA_KRW_LIMIT}원)를 모두 사용했습니다.`, spent_krw: Math.round(spent) }), { status: 429, headers: corsHeaders });
+      }
+    }
+  }
+
+  // ── 백엔드 선택: 혼디 자체 서버(준비되면) > OpenRouter > 공식 DeepSeek API ──
+  const _useSelfHost = _selfHostReady(env);
+  const _useOR = !_useSelfHost && !!env.OPENROUTER_API_KEY;
+  const _url = _useSelfHost ? env.HONDI_SELFHOST_URL : (_useOR ? OR_URL : DEEPSEEK_URL);
+  const _key = _useSelfHost ? env.HONDI_SELFHOST_API_KEY : (_useOR ? env.OPENROUTER_API_KEY : env.DEEPSEEK_API_KEY);
+  console.log(JSON.stringify({tag:'AI_PROXY_CALL',fn:'callDeepSeek',ts:new Date().toISOString(),target:_useSelfHost?'hondi-selfhost':(_useOR?'openrouter':'deepseek'),tier:tierKey,model:backendModel,guid,fallbackFrom,...meta}));
+  const res=await fetch(_url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${_key}`,...(_useOR?{'HTTP-Referer':'https://hondi.net','X-Title':'Hondi'}:{})},body:outboundBodyText});
+  if(!res.ok){const errText=await res.text();let errMsg;try{errMsg=JSON.parse(errText)?.error?.message;}catch{}return new Response(JSON.stringify({error:errMsg||`HTTP ${res.status}`}),{status:res.status,headers:corsHeaders});}
+
+  const spendTier = tierKey || 'hondi-flash'; // 레거시 호출은 flash 단가로 보수적 계산
+  if(isStream){
+    if (guid && env.AI_SETUP_SEALS_KV) {
+      const [forClient, forUsage] = res.body.tee();
+      const usageTask = _parseUsageFromStream(forUsage).then(usage => _recordFreeSpend(env, guid, _deepseekUsageToKRW(usage, spendTier)));
+      if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
+      return new Response(forClient,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});
+    }
+    return new Response(res.body,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});
+  }
+  const data=await res.json();
+  if (guid && env.AI_SETUP_SEALS_KV && data?.usage) {
+    const recordTask = _recordFreeSpend(env, guid, _deepseekUsageToKRW(data.usage, spendTier));
+    if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
+  }
+  if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}
+  return new Response(JSON.stringify(data),{headers:corsHeaders});
+}catch(e){return _err(502,'DEEPSEEK_ERROR',e.message,corsHeaders);}}
+
 
 // ═══════════════════════════════════════════════════════════
 // /llm/relay — 사용자 본인 키(BYOK) 범용 중계 (2026-06-29)

@@ -10,8 +10,6 @@
  */
 import { CFG, _modelSupportsVision, PROVIDER_INFO, getPriorityOrder, MODEL_MIGRATION } from '../core/config.js';
 import { TOKEN_BUDGET } from '../core/token-policy.js';
-import { isModelOnCooldown, markModelFailed, recordOpenRouterCall, getOpenRouterRemainingBudget }
-  from '../core/free-model-pool.js';
 import { aiActive, history, _userLocation, _lastRouterResult,
          setLastRouterResult, _USER, USER_GUID, _locationPending, _locationReady } from '../core/state.js';
 import { appendBubble, showTyping, hideTyping,
@@ -598,11 +596,7 @@ function _buildCallCandidates() {
   // 1) 사용자가 등록한 provider 키들 (ai-setup-mobile.html에서 등록)
   //    저장 순서와 무관하게 PRIORITY_ORDER(OR→Claude→Gemini→DeepSeek→ChatGPT→Grok)로
   //    항상 재정렬 — 키가 등록된 provider만 그 순서대로 호출된다.
-  //    OR 슬롯은 무료 모델 풀 전체(여러 model 항목)가 들어있으므로,
-  //    같은 provider 내부 상대 순서는 stable sort로 보존된다(OR 풀 자체의 우선순위 유지).
   if (Array.isArray(CFG.providers)) {
-    // 사용자가 ai-setup-mobile.html에서 드래그로 순서를 바꿨으면 그 순서를,
-    // 아니면 기본 순서(OR→Claude→Gemini→DeepSeek→ChatGPT→Grok)를 사용한다.
     const priorityOrder = getPriorityOrder();
     const sorted = [...CFG.providers].sort((a, b) => {
       const ia = priorityOrder.indexOf(a?.provider);
@@ -610,25 +604,10 @@ function _buildCallCandidates() {
       return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
     });
 
-    // OR 분당 호출 예산 — 이번 callAI() 호출에서 추가로 시도 가능한 OR 후보 수.
-    // 0이면 OR 후보를 전부 건너뛰고 곧장 사용자 직접등록 키(또는 프록시)로 넘어간다.
-    let orBudget = getOpenRouterRemainingBudget();
-    // 분당 예산이 충분히 남아있어도 한 메시지당 시도 횟수는 별도로 상한을 둔다
-    // — 그래야 "분당 한도 미달이지만 26개 중 앞쪽 여러 개가 동시에 막힌" 최악의
-    //   경우에도 응답 지연이 일정 수준 이상으로 길어지지 않는다.
-    const MAX_OR_TRIES_PER_MESSAGE = 6;
-    let orTriesLeft = MAX_OR_TRIES_PER_MESSAGE;
-
     for (const p of sorted) {
       if (!p?.apiKey || !p?.model) continue;
       const info = PROVIDER_INFO[p.provider];
       if (!info) continue;
-
-      if (p.provider === 'openrouter') {
-        if (isModelOnCooldown(p.model)) continue; // 24h 쿨다운 중 — 건너뜀
-        if (orBudget <= 0 || orTriesLeft <= 0) continue; // 분당 한도 또는 메시지당 상한 초과
-        orBudget--; orTriesLeft--;
-      }
 
       candidates.push({
         provider: p.provider,
@@ -656,9 +635,22 @@ function _buildCallCandidates() {
     }
   }
 
-  // ※ 2026-06-29: 고팡 프록시(deepseek-v4-flash) 무료 폴백을 완전히 제거함 —
-  // 제품 결정: 사용자에게 무료로 제공하는 LLM이 없다. 후보가 0개면(아무
-  // provider도 등록 안 함) callAI() 쪽에서 "LLM을 설정해주세요" 안내로 처리.
+  // 3) 최종 안전망 — 혼디 제공 DeepSeek 기본 키 (v3.1, 2026-07-01)
+  // 사용자 키 등록 여부와 무관하게 항상 마지막 후보로 추가된다. 서버가
+  // 자신의 키로 호출하므로 클라이언트는 apiKey가 필요 없다 — "1,000원 무료
+  // 제공" 정책의 실제 구현체. model은 실제 벤더 모델명이 아니라 "hondi-flash"/
+  // "hondi-pro" 논리 티어 이름이며, worker.js가 실제 백엔드(공식 DeepSeek API
+  // 또는 나중에 붙을 혼디 자체 추론 서버)로 매핑한다 — CFG.hondiTier로 사용자가
+  // 설정 화면에서 고른다(기본값 'hondi-flash').
+  // free-model-pool.js(OpenRouter 무료 모델 26개 자동 순환)는 이 안전망으로
+  // 대체되어 삭제됨 — 미등록 사용자에게는 애초에 동작한 적이 없었다.
+  candidates.push({
+    provider: 'deepseek-default',
+    baseUrl:  CFG.endpoint.replace(/\/+$/, ''),
+    model:    CFG.hondiTier === 'hondi-pro' ? 'hondi-pro' : 'hondi-flash',
+    apiKey:   null,
+    isProxy:  true,
+  });
 
   // 모델명 교정 — config.js의 MODEL_MIGRATION을 여기 한 곳에서 일괄 적용한다.
   // (desktop.html의 구형 선택값, DEV_MODE 주입값 등 출처가 어디든 상관없이
@@ -698,21 +690,26 @@ export async function _callLLM(messages, options = {}) {
   let res = null, lastErr = null;
   for (let i = 0; i < candidates.length; i++) {
     const c = candidates[i];
-    if (c.provider === 'openrouter') recordOpenRouterCall();
     try {
       const reqBody = { model: c.model, messages, max_tokens, temperature, stream: true };
       if (!PROVIDER_INFO[c.provider]?.noStreamOptions) {
         reqBody.stream_options = { include_usage: true };
       }
       // 'legacy'(사용자가 직접 운영하는 커스텀 엔드포인트)는 알려진 벤더가
-      // 아니므로 중계 허용목록에 없다 — 중계를 거치면 무조건 막힌다. 이
-      // 경로만 예외적으로 원래대로 직접 호출한다(원래도 사용자 본인이
-      // CORS를 직접 책임지는 시나리오였음).
+      // 아니므로 중계 허용목록에 없다 — 이 경로만 예외적으로 직접 호출한다.
+      // 'deepseek-default'는 혼디 제공 무료 기본 키(hondi-flash/hondi-pro) —
+      // apiKey 없이 /deepseek(서버가 자체 키·티어별 모델 매핑 처리)로 직행한다.
       const attempt = c.provider === 'legacy'
         ? await fetch(`${c.baseUrl}/chat/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.apiKey}` },
             body: JSON.stringify(reqBody),
+          })
+        : c.provider === 'deepseek-default'
+        ? await fetch(`${c.baseUrl}/deepseek`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...reqBody, guid: _USER?.ipv6 || USER_GUID || null }),
           })
         : await fetch(`${CFG.endpoint.replace(/\/+$/, '')}/llm/relay`, {
             method: 'POST',
@@ -728,7 +725,6 @@ export async function _callLLM(messages, options = {}) {
       const errBody = await attempt.text().catch(() => '');
       lastErr = new Error(`API ${attempt.status}: ${errBody.slice(0, 300) || '응답없음'}`);
       console.warn(`[_callLLM] ${c.provider}(${c.model}) 실패(${attempt.status}) — 다음 후보로 전환`);
-      if (c.provider === 'openrouter') markModelFailed(c.model, attempt.status);
       continue;
     } catch (fetchErr) {
       lastErr = fetchErr;
@@ -1015,26 +1011,12 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
   ];
 
   // ── 호출 후보 목록 생성 (순차 페일오버) ──────────────────
-  // 1순위: 고팡 프록시(키 불필요, 기본) → 등록된 BYOK provider들 순서대로
-  // 한도 초과(429) 또는 크레딧 부족(402) 시 다음 후보로 자동 전환
+  // 사용자가 등록한 BYOK provider들 순서대로 시도한 뒤, 마지막엔 항상
+  // 혼디 제공 DeepSeek 기본 키(hondi-flash/hondi-pro)로 폴백한다 —
+  // 그래서 candidates는 절대 0개가 되지 않는다.
   const candidates = _buildCallCandidates();
   const activeModel = CFG.model;
   console.log(`[AI] 호출 후보 ${candidates.length}개 준비 — 1번부터 순차 시도`);
-
-  // ── LLM 미설정 시 — 더 이상 무료 폴백이 없으므로 명확히 안내하고 중단 ──
-  if (candidates.length === 0) {
-    hideTyping();
-    appendBubble('ai',
-      '🔑 <b>AI 비서를 쓰려면 먼저 LLM을 설정해야 합니다.</b><br>' +
-      '혼디는 자체 제공하는 무료 LLM이 없습니다 — Gemini·DeepSeek 등 ' +
-      '벤더 중 하나를 골라 키를 등록해 주세요.<br>' +
-      '<button onclick="window.open(\'/pages/ai-setup-mobile.html\',\'_blank\')" ' +
-      'style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;' +
-      'background:#16a34a;color:#fff;font-weight:600;cursor:pointer">LLM 설정하러 가기</button>',
-      true
-    );
-    return;
-  }
 
   // ── 스트리밍 호출 (페일오버 포함) ───────────────────────
   try {
@@ -1043,7 +1025,6 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     for (let i = 0; i < candidates.length; i++) {
       const c = candidates[i];
       console.log(`[AI] 시도 ${i + 1}/${candidates.length} → ${c.baseUrl}/chat/completions | 모델: ${c.model} | ${c.isProxy ? '프록시(보안)' : 'provider: ' + c.provider}`);
-      if (c.provider === 'openrouter') recordOpenRouterCall(); // 분당 슬라이딩 윈도우에 기록
       try {
         const reqBody = {
           model: c.model,
@@ -1058,17 +1039,24 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
           reqBody.stream_options = { include_usage: true };
         }
         // ※ 2026-06-29: 벤더에 브라우저에서 직접 fetch하면 대부분 CORS에
-        // 막힌다(서버 간 호출만 허용하는 게 일반적). 무료 폴백이 항상
-        // 마지막에 받아주던 시절엔 이게 안 드러났다 — 그게 사라진 지금은
-        // 직접 호출이 그냥 실패한다. 서버(/llm/relay)를 한 번 거쳐서 보낸다
-        // (여전히 사용자 본인 키·본인이 고른 모델 그대로 — 무료 모델이 아님).
+        // 막힌다(서버 간 호출만 허용하는 게 일반적). 서버(/llm/relay)를
+        // 한 번 거쳐서 보낸다(여전히 사용자 본인 키·본인이 고른 모델 그대로).
         // 'legacy'(사용자가 직접 운영하는 커스텀 엔드포인트)는 알려진 벤더가
         // 아니므로 중계 허용목록에 없다 — 이 경로만 예외적으로 직접 호출한다.
+        // 'deepseek-default'는 혼디 제공 무료 기본 키(hondi-flash/hondi-pro) —
+        // apiKey 없이 /deepseek(서버가 자체 키·티어별 모델 매핑 처리)로 직행한다.
         const attempt = c.provider === 'legacy'
           ? await fetch(`${c.baseUrl}/chat/completions`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.apiKey}` },
               body: JSON.stringify(reqBody),
+              signal: _currentAbort?.signal,
+            })
+          : c.provider === 'deepseek-default'
+          ? await fetch(`${c.baseUrl}/deepseek`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...reqBody, guid: _USER?.ipv6 || USER_GUID || null }),
               signal: _currentAbort?.signal,
             })
           : await fetch(`${CFG.endpoint.replace(/\/+$/, '')}/llm/relay`, {
@@ -1090,7 +1078,6 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
         const errBody = await attempt.text().catch(() => '');
         lastErr = new Error(`API ${attempt.status}: ${errBody.slice(0, 300) || '응답없음'}`);
         console.warn(`[AI] ${c.provider}(${c.model}) 실패(${attempt.status}) — 다음 LLM으로 전환:`, errBody.slice(0, 150));
-        if (c.provider === 'openrouter') markModelFailed(c.model, attempt.status); // 24h 쿨다운
         continue;
       } catch (fetchErr) {
         if (fetchErr.name === 'AbortError') throw fetchErr; // 사용자 중지 — 페일오버 없이 즉시 중단
@@ -1207,29 +1194,27 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     }
     const existingBubble = document.querySelector('.bubble-ai.streaming');
     let userMsg = `⚠️ API 오류: ${err.message}`;
-    if (err.message.includes('402') || err.message.includes('Insufficient Balance')) {
-      // 402는 프록시 크레딧 부족 — 사용자에게 노출하지 않음
-      // OR 키가 등록돼 있으면 자동 페일오버로 이미 처리됐어야 하고,
-      // 없으면 AI 설정 유도 메시지만 표시
-      const hasUserKey = Array.isArray(CFG?.providers) && CFG.providers.length > 0;
-      if (!hasUserKey) {
-        // OR 키 미등록 — 메시지 대신 ai-setup 페이지로 즉시 이동
-        if (existingBubble) existingBubble.remove();
-        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        if (isMobile) {
-          window.location.href = '/pages/ai-setup-mobile.html';
-        } else {
-          window.open('/pages/ai-setup-mobile.html', '_blank');
-        }
-        return;
-      }
-      userMsg = '⚠️ 모든 AI 모델 한도가 일시적으로 초과됐습니다. 잠시 후 다시 시도해 주세요.';
+    const _isQuotaMsg = err.message.includes('402') || err.message.includes('Insufficient Balance') ||
+      err.message.includes('FREE_QUOTA_EXCEEDED');
+    if (_isQuotaMsg) {
+      // BUG FIX(2026-07-01): 이전엔 사용자 키 미등록 시 대화창을 벗어나
+      // ai-setup-mobile.html로 강제 이동시켰다 — 가입 직후 강제 LLM 설정
+      // 이동을 없앤 것과 정면으로 모순되는 잔재였다. deepseek-default(혼디
+      // 제공 무료 기본 키)가 항상 마지막 안전망으로 있으므로, 여기 도달했다는
+      // 건 "무료 한도까지 다 썼다"는 뜻이다. 페이지 이동 없이 대화창 안에서
+      // 안내하고, 설정으로 가는 버튼만 제공한다.
+      userMsg =
+        '🔑 무료로 제공되는 1,000원어치 AI 사용량을 모두 사용했어요.<br>' +
+        '설정에서 본인의 AI 키를 등록하시면 제한 없이 계속 쓰실 수 있어요.<br>' +
+        '<button onclick="window.open(\'/pages/ai-setup-mobile.html\',\'_blank\')" ' +
+        'style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;' +
+        'background:#1A73E8;color:#fff;font-weight:600;cursor:pointer">AI 설정하러 가기</button>';
     }
     if (existingBubble) {
       existingBubble.classList.remove('streaming');
       existingBubble.innerHTML = userMsg.replace(/\n/g, '<br>');
     } else {
-      appendBubble('ai', userMsg);
+      appendBubble('ai', userMsg, true);
     }
     console.error('[AI]', err);
   }

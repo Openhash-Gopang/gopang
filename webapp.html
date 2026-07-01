@@ -1827,18 +1827,31 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
       <div style="width:52px"></div>
     </div>
 
-    <div class="settings-body">
+    <div class="settings-body" id="ai-settings-body">
 
-      <!-- 무료 모델 갱신 (PC가 보낸 OpenRouter 키 기준으로 실시간 재검증) -->
-      <div style="padding:0 16px">
-        <button id="btn-refresh-free-models" type="button" onclick="_refreshFreeModelPool()"
-          style="width:100%;padding:14px;border:none;border-radius:var(--radius-lg);
-                 background:#007b8b;color:#fff;font-size:15px;font-weight:600;cursor:pointer">
-          🔄 모델 갱신
-        </button>
-        <div id="model-refresh-status" style="font-size:12.5px;color:#6b7280;text-align:center;margin-top:10px;min-height:16px"></div>
+      <!-- 혼디 제공 기본 AI 티어 선택 (2026-07-01 신설) — 본인 키 등록자는 JS에서 숨김 -->
+      <div id="hondi-tier-box" style="display:none;margin:0 16px 14px">
+        <div class="setting-label" style="margin-bottom:8px">혼디 기본 AI</div>
+        <div style="display:flex;gap:8px">
+          <button id="btn-tier-flash" type="button" onclick="selectHondiTier('hondi-flash')"
+            style="flex:1;padding:12px;border:1.5px solid #1A73E8;border-radius:var(--radius-lg);
+                   background:#1A73E8;color:#fff;font-size:14px;font-weight:600;cursor:pointer">
+            혼디 Flash <span style="font-weight:400;opacity:.85">· 빠르고 가벼움</span>
+          </button>
+          <button id="btn-tier-pro" type="button" onclick="selectHondiTier('hondi-pro')"
+            style="flex:1;padding:12px;border:1.5px solid #e5e7eb;border-radius:var(--radius-lg);
+                   background:#fff;color:#374151;font-size:14px;font-weight:600;cursor:pointer">
+            혼디 Pro <span style="font-weight:400;color:#9ca3af">· 더 똑똑함</span>
+          </button>
+        </div>
+        <div style="font-size:11.5px;color:#9ca3af;margin-top:6px">
+          Pro는 토큰당 비용이 더 커서 무료 한도가 더 빨리 줄어들어요.
+        </div>
       </div>
 
+      <!-- 혼디 제공 무료 한도 사용 현황 (2026-07-01 신설) — 본인 키 등록자는 JS에서 숨김 -->
+      <div id="free-quota-status-box" style="display:none;margin:0 16px 14px;padding:12px 14px;
+           border:1px solid #e5e7eb;border-radius:var(--radius-lg);background:#f9fafb"></div>
 
       <!-- 시스템 프롬프트 (PC에서 설정 — 휴대폰은 읽기 전용) -->
       <div style="padding:0 16px">
@@ -3168,8 +3181,8 @@ window.closeTermsOfUse = closeTermsOfUse;
 
   async function _callPanelAI(userText, bubbleEl, attached) {
     const { PROVIDER_INFO, getPriorityOrder } = await import('./src/gopang/core/config.js');
-    const { isModelOnCooldown, markModelFailed, getOpenRouterRemainingBudget, recordOpenRouterCall }
-      = await import('./src/gopang/core/free-model-pool.js');
+    // free-model-pool.js 삭제(2026-07-01) — OR 24h쿨다운·분당예산 관리 대신
+    // 혼디 제공 DeepSeek 기본 키(hondi-flash/hondi-pro)가 항상 마지막 안전망으로 붙는다.
     // v1.6 — "AI 비서" 패널은 이제 항상 AGENT-COMMON만 쓴다. PA SP는 더 이상
     // 이 패널에서 자동으로 끼어들지 않는다(설정 화면의 프로필 작성 패널
     // 전용으로 분리됨). 최초 인사·이름짓기는 _buildFirstContactContext()가
@@ -3219,9 +3232,7 @@ window.closeTermsOfUse = closeTermsOfUse;
     _panelHistory.push({ role: 'user', content: userContent });
     _trimPanelHistory(); // 실제 전송 직전에 잘라서, 이번 요청부터 바로 작아진 히스토리가 나간다
 
-    // ── 후보 생성: getPriorityOrder()로 정렬 + OR은 24h쿨다운·분당예산으로 사전 필터링 ──
-    // (call-ai.js의 _buildCallCandidates와 동일한 원칙 — 실패가 뻔한 후보는
-    //  애초에 시도하지 않아야 응답이 느려지지 않는다.)
+    // ── 후보 생성: getPriorityOrder()로 정렬 ──────────────────────
     const priorityOrder = getPriorityOrder();
     const sorted = [...providers].sort((a, b) => {
       const ia = priorityOrder.indexOf(a?.provider);
@@ -3229,19 +3240,11 @@ window.closeTermsOfUse = closeTermsOfUse;
       return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
     });
 
-    let orBudget = getOpenRouterRemainingBudget();
-    const MAX_OR_TRIES_PER_MESSAGE = 6; // 분당 예산이 남아있어도 한 메시지당 이 이상은 안 시도 — 최악의 경우 지연시간 상한
-    let orTriesLeft = MAX_OR_TRIES_PER_MESSAGE;
     const candidates = [];
     for (const p of sorted) {
       if (!p?.apiKey || !p?.model) continue;
       const info = PROVIDER_INFO[p.provider];
       if (!info) continue;
-      if (p.provider === 'openrouter') {
-        if (isModelOnCooldown(p.model)) continue; // 24h 내 실패한 모델 — 건너뜀
-        if (orBudget <= 0 || orTriesLeft <= 0) continue; // 분당 한도 또는 메시지당 상한 초과
-        orBudget--; orTriesLeft--;
-      }
       candidates.push({
         provider: p.provider,
         baseUrl: (p.baseUrl || info.baseUrl).replace(/\/+$/, ''),
@@ -3249,19 +3252,17 @@ window.closeTermsOfUse = closeTermsOfUse;
         model: p.model, key: p.apiKey,
       });
     }
-    // ※ 고팡 프록시(deepseek-v4-flash) 무료 폴백 제거 — 무료로 제공하는
-    // LLM이 없다는 제품 결정. 후보가 0개면 아래에서 명확히 안내한다.
 
-    if (candidates.length === 0) {
-      bubbleEl.textContent = '';
-      bubbleEl.innerHTML =
-        '🔑 AI 비서를 쓰려면 먼저 LLM을 설정해야 합니다. 혼디는 자체 제공하는 ' +
-        '무료 LLM이 없습니다.<br>' +
-        '<button onclick="window.open(\'/pages/ai-setup-mobile.html\',\'_blank\')" ' +
-        'style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;' +
-        'background:#1A73E8;color:#fff;font-weight:600;cursor:pointer">LLM 설정하러 가기</button>';
-      return;
-    }
+    // 최종 안전망 — 혼디 제공 DeepSeek 기본 키(call-ai.js와 동일 원칙).
+    // model은 실제 벤더 모델명이 아니라 "hondi-flash"/"hondi-pro" 논리 티어
+    // 이름이며, worker.js가 실제 백엔드로 매핑한다. CFG.hondiTier로 선택.
+    const { CFG: _panelCfg } = await import('./src/gopang/core/config.js');
+    candidates.push({
+      provider: 'deepseek-default',
+      baseUrl: endpoint.replace(/\/+$/, ''),
+      model: _panelCfg.hondiTier === 'hondi-pro' ? 'hondi-pro' : 'hondi-flash',
+      key: null,
+    });
 
     // 모델명 교정 — deepseek-chat/reasoner는 2026-07-24 완전히 막힌다(현재는
     // deepseek-v4-flash로 투명 라우팅되는 별칭일 뿐).
@@ -3272,23 +3273,32 @@ window.closeTermsOfUse = closeTermsOfUse;
     let lastErr = '';
     for (const c of candidates) {
       try {
-        if (c.provider === 'openrouter') recordOpenRouterCall(); // 분당 슬라이딩 윈도우에 기록
-
-        // 벤더 직접 호출은 대부분 CORS에 막힌다 — 서버(/llm/relay)를 한 번
-        // 거쳐서 보낸다. 여전히 사용자 본인 키·본인이 고른 모델 그대로
-        // (무료 모델 아님).
-        const res = await fetch(`${endpoint.replace(/\/+$/, '')}/llm/relay`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            provider: c.provider, baseUrl: c.baseUrl, apiKey: c.key,
-            model: c.model, messages: _panelHistory, stream: true,
-            max_tokens: TOKEN_BUDGET.CHAT_REPLY,
-          }),
-        });
+        // 벤더 직접 호출은 대부분 CORS에 막힌다 — 서버를 한 번 거쳐서 보낸다.
+        // 'deepseek-default'는 혼디 제공 무료 기본 키(hondi-flash/hondi-pro) —
+        // key 없이 /deepseek로 직행한다(서버가 자체 키·티어별 모델 매핑 처리).
+        // 그 외는 /llm/relay(BYOK).
+        const res = c.provider === 'deepseek-default'
+          ? await fetch(`${c.baseUrl}/deepseek`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: c.model, messages: _panelHistory, stream: true,
+                max_tokens: TOKEN_BUDGET.CHAT_REPLY,
+                guid: (JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}')?.ipv6) || null,
+              }),
+            })
+          : await fetch(`${endpoint.replace(/\/+$/, '')}/llm/relay`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                provider: c.provider, baseUrl: c.baseUrl, apiKey: c.key,
+                model: c.model, messages: _panelHistory, stream: true,
+                max_tokens: TOKEN_BUDGET.CHAT_REPLY,
+              }),
+            });
         if (!res.ok) {
-          lastErr = `HTTP ${res.status}`;
-          if (c.provider === 'openrouter') markModelFailed(c.model, res.status); // 24h 쿨다운
+          const errBody = await res.text().catch(() => '');
+          lastErr = errBody.includes('FREE_QUOTA_EXCEEDED') ? 'FREE_QUOTA_EXCEEDED' : `HTTP ${res.status}`;
           continue;
         }
 
@@ -3370,7 +3380,16 @@ window.closeTermsOfUse = closeTermsOfUse;
         return;
       } catch(e) { lastErr = e.message; }
     }
-    bubbleEl.textContent = 'AI 오류: ' + lastErr;
+    if (lastErr === 'FREE_QUOTA_EXCEEDED') {
+      bubbleEl.innerHTML =
+        '🔑 무료로 제공되는 1,000원어치 AI 사용량을 모두 사용했어요.<br>' +
+        '설정에서 본인의 AI 키를 등록하시면 제한 없이 계속 쓰실 수 있어요.<br>' +
+        '<button onclick="window.open(\'/pages/ai-setup-mobile.html\',\'_blank\')" ' +
+        'style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;' +
+        'background:#1A73E8;color:#fff;font-weight:600;cursor:pointer">AI 설정하러 가기</button>';
+    } else {
+      bubbleEl.textContent = 'AI 오류: ' + lastErr;
+    }
   }
 
   // ── 전송 ─────────────────────────────────────────────
