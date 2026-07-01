@@ -644,12 +644,6 @@ body {
       </svg>
       <span class="sb-item-label">OpenHash</span>
     </a>
-    <a class="sb-item" id="nav-ai-setup" onclick="loadPage('ai-setup');return false;" href="#">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.07-7.07-4.24 4.24M11.17 18.83l-4.24 4.24m12.14 0-4.24-4.24M7.93 7.93 3.69 3.69"/>
-      </svg>
-      <span class="sb-item-label">시스템 프롬프트</span>
-    </a>
     <a class="sb-item" id="nav-professional-ai" onclick="loadPage('professional-ai');return false;" href="#">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
@@ -770,12 +764,6 @@ body {
 
   <!-- 하단: 앱 실행 -->
   <div class="sb-section bottom">
-    <button class="sb-cta" onclick="loadPage('ai-setup')" style="background:var(--brand);margin-bottom:8px">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.07-7.07-4.24 4.24M11.17 18.83l-4.24 4.24m12.14 0-4.24-4.24M7.93 7.93 3.69 3.69"/>
-      </svg>
-      <span class="sb-cta-label">AI 비서 활성화</span>
-    </button>
     <div class="sb-cta-row">
       <button class="sb-cta" onclick="openWebApp()" style="flex:1;min-width:0">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -801,7 +789,6 @@ body {
     <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGsAAAAgCAYAAAAVIIajAAAPcklEQVR42u1bfXAVVZb/3e5+/fJeQpIX8iDGfExcGEkoClkLt0RZCFh8OVQNYkkxCoKCi6LFOEW5Wqi762J0FgpE0QJB/tCqXRmKLylFLSYloOsHyGeABJFPiwmEkO+8vO6+9+wf/e6lO++9hCmDs1XMqep6ne5zb58+555zfufcDiMigpdIAEIATP4NQNMApiEdOeQkXdOZDqYmuTmpu2olMcaui7c7H6N0M/6d/t+R4TEtwBhw4QjozCHATHiSJYBfDQMrGXGNBwCBwMDQzjuw7S/bwIn7nPE3A+9Hf7O/4rsZybIsOI6jPISIYBgGTNP08XHOEY/HwRhTHsYYQygUSmMswQHdAPb9D9j7rwM5iestAH63CCgZcY0n8WDGGBqsy5h1+BGAwxc6vx3zjWusBN/NRI7jwDAMPP/889i4cSMMw1DXZ8+ejddee00ZUdd17NmzB4888gh0XQcRQQiBwsJCfPnllwgGg0qHRvcHxQPZiIdCYBkBV++WjaCRg2AawTTSkWnlIO7EwbTEChIEQ5g3fdi6cuUKLl686LvW2NiYxNfZ2ZnExzlPymPKWA50GADWd/4O/9nwT+hvu7camx0811mGP3h4XIsw15Mac+As+Fc4lsfdhQB9UQBEPHw3IQUCAWiaBl3XlQECgUAyGNN1GIbh86zuIdAfBhPUJKK45ATR6ri3Yo6Dq6JfeomEDjQWAdzxxEEBOH/3LKl4TXPzvxAiJepzHEcdkjo6OtIbS6o5P1yP0vxaRHLcFdBk2IiGfw1gUBoHcYDAWUDYCnyABMDiPwvu3ug815e59OfOlZ2djSFDhviMWlBQkDSncc0VOQAD88b+Nx69498BLeGuwoaR8zyApYrnGuZjAFqgowo64gr1uQjwtwAKPXw9rz4igq7rPuSU6npPlCrOe8fK+71dux7inLs5W9N8c/01JMPj6NGjcfTo0WRPSgATOX9SGDSy4jBCHC68k7N2pY+CBHRa5MJ6pSeCQ9f3wrquK6GlkYjIF+slr1cxPb18Om/13pfhKdW1nqincfKa4zj4a8pXxpgyzHXVWUQMjAGNdcW4fGQYDMNMPNhCdGgp8odd4/FSyADGFQFWPNHkIDcK5pi9hzpd19HW1oadO3di165dOH78OBobG8E5R25uLgYPHozKykpMnToVAwcOTBty5LUtW7bg1KlT0HUdQggwxvDoo48iGo0CAHbu3InNmzfjyJEjaGlpQUZGBgYPHowpU6Zg5syZCIVCPRrMe2/Hjh3YsmULampq0NrailAohIqKCkyfPh3Tpk0DY6xXT5NynzlzBps2bfKFwezsbMybN89vREoQtwUREe19uZ5exj76Iw7RH3GIXsY+ql78E9m2TfGYTbadOKw42bZN/NKPRE8FieaD6F8Y0ROM6HEQnd2fmJiTl4QQ6nz16tVUWlpKiViZ9ohGo7R06VJyHCcxpX9OeX306NFJY8+dO0cXL16kCRMm9PiM8vJy+vrrr1PO77128uRJGjt2bI9zjRkzhi5evEjPPPMMASDDMMgwDAJATz75JBER2bat5N6+fXvSHP369aPOzk6fzpJ9z7EAdACQENNGOOBCS6Ty1LwIoJMbNTVPKGTpPSoWi+Hhhx/G1q1bfXml+4qWIbGhoQEvvvgiqqursWnTJuTl5aX0gNzcXBiGAcMw4DgOQqEQampqsGjRIpw6dQqmaapiVNM0cM7V+YkTJzB58mQcPHgQpaWlSShO0zQcO3YM9913H+rr630r3utFgUAAu3fvRmVlJQoKCq4rvJqmmQTd8/Pz0wMM2aeN3pWBYbMiCAZ0kCA4RDgXqMGR9TtgGqanS0HgjCGzvRGjfwhB5wGQBAcOR35cQyBFGGGMYcaMGdixYwcCgQAcx0kLab0J3DAMVFdX4/7770d1dTVM00wKiZxzlS8457AsCzNnzkRra6tq/0hDekMU5xymaaK5uRmvvPIKNmzYACGEb4G1t7fjgQceQH19PQKBAGzb9rWH5KKLx10UXFdXh7q6uusyFhEpuaWxvDA+KQx6ApXnsIhI0IpV/0UAKDsnm8LhMIXDYcoMh8kIh2lQVj+qKfoH+qF4ENUWD6K6ksFUe0spxY4c9YVB6fIrV64kAGSaJgEgxpj6e+7cufTee+/R+++/T4sWLaK8vDwCQJqm+cbIUCLnlL9TpkwhAKTrelJYGT9+PH300Ud08uRJOnjwID377LO+uTVNI8YY3XLLLdTR0aHCj23bRET06quvEgAKBAI+uQsLC+ntt9+mmpoaqqurow8++IBuv/32JDl6CoOffPKJ4pfyFBcXUywW84XBFMby5IKEyVa/u576ZWXRbbfdRiUlJVRSUkKlxcVUUFJCI2+9lY7lZNOpnH5Ul9OPTuZmU11miLoOHlTGkg+7cuUKRSIR0jRNHYwxKiwspO+++y7p+adPn6YRI0b4lCoVcODAAWWodMaSv7NmzUr5fgsWLEhSqqZpVFdXp+YWQlAsFqOSkhJijPnkLi4uptOnTyfN29DQQBUVFYq/r4x1DQ0KAaZpaPniC1z9+GPoWVngjoNMTcPVQ4dAwSBsywJPhAeNMTeE5eUhvHgxTF2HSMRv4hxaYaEM6OCcwzAMfPjhh2hqalKhSNM0aJqGjRs3YuTIkbAsy5cnysrKsG3bNgwfPhwtLS1gjKmw984772DdunVpC1KZRyKRCFatWuVmX9uGruuqDJg/fz7WrFmjwrN8blNTkzrXdR0HDhzA+fPnoWmauiaEwLJly1BWVoZ4PK7aSLZtIz8/HytWrMCkSZP6tLj3dN0FoGkQ330La/lyGP3z4DgOsgCQGYQeDkMjAiWUqWkamGUhEImg6Pe/h5G+iFAG2L59u4rzUmmTJ0/GvffeC9u2k7YObNtGSUkJ5syZgzfeeAOGYahcsmvXLliWBdM0U0JkCSDuuusuRCKRpL6cpmkYMGAAMjIy0NXVpRYCEam8I5914MABBURkPhwwYACmTp0KIQRM01RGkbm0srISxcXFuHDhQq+12/VS0iwiGIaTFQHPjsJJHF0sgNbWVrS1t6Otrc13dLS3gqHTbTvBTvw6kLBQFrixWAzHjx9XCVS+3KRJk9J6h1TOhAkTfOgQAH766SecP3/ep9RUu6ylpaW+cd574XAY4XA4ZT3lpTNnzqjxUvFDhgxRY72yS4ObpomKioo+bZ0ZHgcAAGQMaEPeP7ZCy7XdzbJOjofHzMD40XOgcw4kqnQigEiA2nT86TcnIDgDg7s5SUSY/GY58gaHIQRB1xmamppUePGirLKyMl94665wxhiKiooUapMr3HEcXL58GYMGDeqxW5Cbm5tWWRIu90ZeuVXFkpeXdjteoj9ZyPe5sSRlZtvI/BUHsjvdYqmFI39kKYaOHZu6ZdQArPztt7BBnp47wWqiay3ERAvGG67kSwaDwV6FlGGmu2Js2+51bEZGRo9tHukpPSk0JYy+Duoe1vvcWMQZRBxgcc3VswWgwwI4d7dB5E6xcGuz1rY4WBDQ4p6mOwHQ/bVxOBxGRkaGygdSOe3t7WlXqHe7wBsqJW9mZmavir4ez+mNUoVKKXe6ZxMROjs7b4yxOLn6facWWPUJQ8B0hbAthgUVDH+YroMngIGrBQFAQ3ZhE2Z8NgvELXf1J6yV9+sdAIaB6aTCUTQaTUJ1x44dw7Rp09L24gDg5MmTKl/IAjocDqvweKO3U2QnwrtQLly4kLbYlR2Zs2fP9ul2zDXonvi91CnwQxslQIJ75y+dwsfjEyzDRtGoH5JvBrpULpTQfejQofjxxx+V0gFg27ZteOmll1K+lBAChmFg8+bNPtAhhEB5eTkGDhz4i3zjIYGCBCqy+Xru3DkFYOQilu/V0NCAw4cP+0qAPkeDgUAGNCMLwVAugqFcaEYWzEAo/TaHo+PSmSjqz2Sj/kxO4siGHQ+oJqFcjVOnTlXn3hpm7dq1MAxDtV1kfjNNE9XV1di6dauvl0dEePDBB6+rs/2zlJPwmrvvvhvBYFA9S9d1WJaFFStWKMQq5ZbetmLFCnR0dKh+X9/mLOZa3iybBTHqn5GVk/gGo8WBOajEx+PuY2nQGFDfNBBj/uNjdFkCesL0tkP4bNlgDLsNEEKDrrsKnj59Ol544QU0NjYqD9E0DU8//TQ453jiiSd8DdKtW7fiscceU6tVjsnLy8Pjjz+uVnQq6N5XxuKco7i4GOPGjcOnn34KXddVQb969WqUl5fjqaee8o1bs2YNli1bpor/GwYwNC0C6Do0qTTdgaal/waDk4H6eBliFvmMZVMwqZuQm5uLqqoqzJ8/H6ZpwrZtCCEghMDChQvx1ltvYeTIkQgEAjh8+DC+//57X07SdR22bWPlypWIRqNq8/KXoCVLlmDnzp1KHlkrLly4EBs3bsTYBFrevXs3du/erYx6g9Cgu/3OM84DuTVwcq5tkfCMCgAVKbfoTXRhhP6/sHQOLfEpmkMCYYwDkKvGyI7FvHnzsG/fPrz77ruq3SRfvLa2FrW1tUnFqww1tm3jueeew+zZs38xQ0m577nnHixevBjLly9XuwWy4N+zZw/27NnjSSVuV3748OE4duxYnxntmrE0F905Q/8EY9a/IRZ0bxmWA6f8BQBVisdNdu55gd6Avf0fAuw4oDHXNpwAYz+AO6F5DCwNs3btWvTv3x+vv/66L8SZpunrDcqtApmrli5diiVLlqQ1lESZ3Y/ettS9fOk6KZxzLFu2DM3NzVi/fr0P9RmGoeTu6uqCbduYO3cu5syZg8rKSsXXkzzdZUgpR1L9wGNwLKDLdtBlO3AsoJ33UC+QANrjQBuAdgLayD0XTtoiVAiBqqoqfPXVV3jooYeQmZmp9p+6urrQ1dWlPj3WdR2TJk3C3r17sWTJkh6RVTweV8netm3ljT1RLBZT/T758Uz3HOiVe926dXjzzTdRUFCg9s+8ckejUVRVVWHDhg3gnEMIAc65kseyrJQlipRbyhCLxZL1J/8xQZCAxjT8+cqf8dmlz2HIjz84x/gB4zAxOlHxqMqXMaCzGfhsuWsclvAsImD8M0DkVt/38ak+lpE1yzfffIOjR4+ivr5eda7Ly8sxatQoDBkyJGlMqm8Zamtr0dTU5Cuei4uLUVRUlBLic85x6NAhWJblGzN06FBkZ2enHCNB0dWrV/H5559j//79aGxsRCQSwZ133omJEyciPz8fRISWlhacOHHCN3dBQQHKysp8n9w1Nzcn8QWDQdxxxx2+Ou5v+l8kXijc2xdF3lrmb0295csblU//DxRdcp6VpAyQAAAAAElFTkSuQmCC" alt="혼디" style="height:32px;width:auto;display:block">
   </div>
   <div style="display:flex;gap:6px">
-    <button style="background:none;color:var(--brand);border:1px solid var(--brand);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer" onclick="loadPage('ai-setup')">AI 비서</button>
     <button style="background:var(--brand);color:white;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer" onclick="openWebApp()">웹앱 열기</button>
     <button style="background:none;color:var(--text3);border:1px solid var(--border2);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer" onclick="window.open('/docs/gopang_whitepaper.html','_blank')">Whitepaper</button>
   </div>
@@ -3441,13 +3428,12 @@ function changeFontSize(delta) {
 // ── SPA 라우터 ────────────────────────────────────────────
 // overview는 desktop.html에 정적으로 포함되어 있으므로 더 이상 fetch 대상이 아님
 const PAGE_ORDER = [];
-const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','ai-setup','hondi-market','scenarios','professional-ai','scenario-test'];  // 모두 단독 오버레이로 표시
+const STANDALONE_PAGES = ['klaw','openhash','agents','ai-types','teasers','hondi-market','scenarios','professional-ai','scenario-test'];  // 모두 단독 오버레이로 표시
 const PAGES = {
   klaw:           '/pages/klaw.html',
   agents:         '/pages/agents.html',
   openhash:       '/pages/openhash.html',
   teasers:        '/pages/teasers.html',
-  'ai-setup':     '/pages/ai-setup.html',
   'ai-types':     '/pages/ai-types.html',
   'hondi-market': '/pages/hondi-market.html',
   scenarios:      '/pages/scenarios.html',

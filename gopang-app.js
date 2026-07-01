@@ -76,19 +76,14 @@ while (!_isRegistered()) {
 document.getElementById('gopang-auth-gate')?.remove();
 document.body.classList.add('gopang-authed');
 
-// ── 신규 가입 직후 AI 설정 페이지로 이동 ──────────────────────────────
-// auth.js가 resolve() 전에 localStorage 플래그를 설정해두면
-// 대화창이 열린 이 시점(gopang-authed 추가 직후)에 감지해서 이동.
-// 이 시점은 사용자가 실제로 본 화면이 전환되는 순간이므로
-// window.open/location.href 모두 팝업 차단 없이 동작함.
+// ── 신규 가입 직후 처리 ────────────────────────────────────────────
+// v3.3(2026-07-01): LLM 선택 창(ai-setup-mobile.html)으로 강제 이동시키던
+// 로직을 완전히 제거했다. 이제 혼디는 가입 즉시 DeepSeek V4 Flash를
+// 무료 한도(1,000원) 내에서 기본 제공한다(call-ai.js _buildCallCandidates()의
+// 'deepseek-default' 안전망) — 사용자가 LLM을 고르거나 키를 입력할 필요가
+// 전혀 없다. 플래그만 정리하고 그대로 대화창을 보여준다.
 if (localStorage.getItem('hondi_new_registration') === '1') {
   localStorage.removeItem('hondi_new_registration');
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (isMobile) {
-    window.location.href = '/pages/ai-setup-mobile.html';
-  } else {
-    window.open('/pages/ai-setup-mobile.html', '_blank');
-  }
 }
 
 // ★ 버그 수정 — 이미 등록된 사용자(흔한 "재방문" 케이스)는 위 while 루프의
@@ -224,10 +219,7 @@ window.addEventListener('hondi:trial_expired', (e) => {
     'background:#1e293b;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;' +
     'z-index:9999;max-width:90vw;text-align:center;line-height:1.5;' +
     'box-shadow:0 4px 20px rgba(0,0,0,.3)';
-  banner.innerHTML = msg +
-    '<br><a href="/pages/ai-setup-mobile.html" ' +
-    'style="color:#8ab4f8;text-decoration:underline;margin-top:6px;display:inline-block">' +
-    '내 키 등록하기 →</a>';
+  banner.innerHTML = msg;
   document.body.appendChild(banner);
   setTimeout(() => banner.remove(), 10000);
 });

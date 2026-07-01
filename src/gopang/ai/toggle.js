@@ -10,14 +10,11 @@ import { _showRegisterFlow } from '../ui/register-flow.js';
 // 마지막 토글 상태 저장 키 — 화면을 닫기 전 상태를 기억하기 위함
 const _AI_TOGGLE_KEY = 'gopang_ai_toggle_state';
 
-// OpenRouter 키 또는 기타 provider가 하나라도 등록돼 있는지 — 모든 활성화
-// 경로(toggleAI/activateAI/initAIToggleState)가 반드시 이 함수를 통해서만
-// 판단하도록 일원화. 이게 없으면 activateAI()를 직접 호출하는 다른 진입점
-// (예: AI 비서 카드의 "AI 비서 시작" 버튼)이 키 체크를 우회할 수 있다.
-function _hasApiKey() {
-  const providerCount = Array.isArray(CFG.providers) ? CFG.providers.length : 0;
-  return !!(CFG.apiKey || CFG.geminiKey || providerCount > 0);
-}
+// v3.3(2026-07-01): 본인 키 등록 여부를 확인해 ai-setup-mobile.html로
+// 강제 이동시키던 게이트(_hasApiKey)를 제거했다. call-ai.js의
+// _buildCallCandidates()가 'deepseek-default'(DeepSeek V4 Flash, 무료
+// 한도 1,000원)를 항상 최종 안전망으로 제공하므로, 등록된 키가 없어도
+// AI 비서는 즉시 정상 동작한다 — LLM 선택 자체가 더 이상 필요 없다.
 
 // ── AI 토글 (버튼 클릭) ──────────────────────────────────
 export function toggleAI() {
@@ -26,14 +23,7 @@ export function toggleAI() {
     return;
   }
 
-  const hasKey = _hasApiKey();
-  // ai-setup.html(PC용, 핸들 입력 후 암호화 전송)과는 별개의 파일.
-  if (!hasKey) {
-    window.open('/pages/ai-setup-mobile.html', '_blank');
-    return;
-  }
-
-  // 설정 완료 사용자 → 단순 토글 (켬 ↔ 끔)
+  // 설정 완료 여부와 무관하게 단순 토글 (켬 ↔ 끔)
   if (aiActive) {
     setAiActive(false); // 버튼 화면도 setAiActive() 안에서 같이 갱신됨
     localStorage.setItem(_AI_TOGGLE_KEY, '0');
@@ -50,13 +40,6 @@ export function activateAI(silent = false) {
     if (!silent) _showRegisterFlow();
     return;
   }
-  // ★ 키 체크 — 이게 없으면 toggleAI()를 거치지 않고 activateAI()를 직접
-  //   호출하는 다른 진입점(예: AI 비서 카드의 "AI 비서 시작" 버튼)이
-  //   OpenRouter 키 등록 없이도 AI를 활성화시킬 수 있다.
-  if (!_hasApiKey()) {
-    if (!silent) window.open('/pages/ai-setup-mobile.html', '_blank');
-    return;
-  }
   setAiActive(true); // 버튼 화면도 setAiActive() 안에서 같이 갱신됨
   localStorage.setItem(_AI_TOGGLE_KEY, '1');
   const sub = document.getElementById('ai-card-sub');
@@ -68,14 +51,12 @@ export function closeAI() {
 }
 
 // ── 부팅 시점 토글 상태 복원 ──────────────────────────────
-// - AI 미설정(키 없음) → 항상 꺼짐 (최초 방문자 기본값)
-// - 설정은 했지만 켬/끔을 기록한 적 없음(설정 직후 첫 부팅) → 켬 (기존 자동 활성화 동작과 동일)
-// - 마지막으로 명시적으로 끔/켬을 선택한 기록이 있음 → 그 상태를 그대로 복원
+// - 마지막으로 명시적으로 끔을 선택한 기록이 있음 → 꺼짐 유지
+// - 그 외(기록 없음 또는 켬 기록) → 켬 (deepseek-default가 항상 사용 가능하므로
+//   키 등록 여부와 무관하게 기본적으로 켜진 상태로 시작)
 export function initAIToggleState() {
-  if (!_hasApiKey()) return; // 미설정 — 꺼짐 유지
-
   const stored = localStorage.getItem(_AI_TOGGLE_KEY);
   if (stored === '0') return; // 마지막에 명시적으로 꺼둔 상태 → 유지
 
-  activateAI(true); // stored === '1' 이거나 기록 없음(설정 직후 첫 부팅) → 켬
+  activateAI(true);
 }

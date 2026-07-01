@@ -120,10 +120,6 @@ export function openSettings() {
   if (hIn)    hIn.value = '';
   if (delBtn) { delBtn.disabled = true; delBtn.style.background = '#fca5a5'; delBtn.style.cursor = 'not-allowed'; }
 
-  // 8. LLM 섹션: 항상 숨김
-  const llmSec = document.getElementById('llm-settings-section');
-  if (llmSec) llmSec.style.display = 'none';
-
   _updateSecuritySection();
   _syncSkinSwatchSelection();
   document.getElementById('settings-overlay')?.classList.add('open');
@@ -274,24 +270,11 @@ function _renderPcSyncBanner(parsed, guid) {
     return;
   }
 
-  // PC가 아직 아무것도 보내지 않은 기본 상태 — 단, 이미 LLM Key가 등록되어
-  // 있다면(CFG.providers/apiKey/geminiKey 중 하나라도 있으면) 더 이상
-  // "PC에서 등록하세요" 안내가 필요 없으므로 띄우지 않는다.
+  // PC가 아직 아무것도 보내지 않은 기본 상태. v3.3(2026-07-01)부터는
+  // DeepSeek V4 Flash가 가입 즉시 무료 한도 내에서 자동 제공되므로,
+  // "PC에서 키를 등록하라"는 안내 자체가 불필요하다 — 조용히 숨긴다.
   if (parsed._idle) {
-    const alreadyRegistered =
-      (Array.isArray(CFG.providers) && CFG.providers.length > 0) ||
-      !!CFG.apiKey || !!CFG.geminiKey;
-    if (alreadyRegistered) {
-      banner.style.display = 'none';
-      return;
-    }
-    banner.style.display = 'block';
-    banner.style.background = '#eff6ff';
-    banner.style.color = '#1e3a8a';
-    banner.innerHTML =
-      `💻 API Key 입력은 PC에서 하는 것이 편리합니다.<br>` +
-      `PC에서 <b>hondi.net</b> 접속 후, <b>"나만의 AI 비서 설정"</b> 버튼을 누르고,<br>` +
-      `페이지의 지시대로 이행하십시오.`;
+    banner.style.display = 'none';
     return;
   }
 

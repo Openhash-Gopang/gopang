@@ -1271,7 +1271,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
       userMsg =
         '🔑 무료로 제공되는 1,000원어치 AI 사용량을 모두 사용했어요.<br>' +
         '설정에서 본인의 AI 키를 등록하시면 제한 없이 계속 쓰실 수 있어요.<br>' +
-        '<button onclick="window.open(\'/pages/ai-setup-mobile.html\',\'_blank\')" ' +
+        '<button onclick="window.openAISettings && window.openAISettings()" ' +
         'style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;' +
         'background:#1A73E8;color:#fff;font-weight:600;cursor:pointer">AI 설정하러 가기</button>';
     }
