@@ -284,8 +284,7 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI) {
   if (_tutAdvMatch) {
     const nextStep = parseInt(_tutAdvMatch[1], 10);
     try {
-      if (nextStep >= 5) {
-        // 튜토리얼 완료
+      if (nextStep >= 7) {
         localStorage.setItem('hondi_tutorial_done', '1');
         localStorage.removeItem('hondi_tutorial_step');
         console.log('[Tutorial] 완료');

@@ -598,6 +598,9 @@ body.gopang-authed #gopang-auth-gate{display:none}
   background:rgba(17,17,17,.14);
   transition:background .15s,width .15s;
 }
+.edge-handle::before{
+  content:'';position:absolute;top:0;bottom:0;left:-14px;right:-14px;
+}
 .edge-handle:active{background:rgba(17,17,17,.32);width:7px}
 .edge-handle-left{left:0;border-radius:0 7px 7px 0}
 .edge-handle-right{right:0;border-radius:7px 0 0 7px}
@@ -606,6 +609,9 @@ body.gopang-authed #gopang-auth-gate{display:none}
   width:56px;height:5px;z-index:60;
   background:rgba(17,17,17,.14);border-radius:0 0 7px 7px;
   transition:background .15s,height .15s;
+}
+.edge-handle-top::before{
+  content:'';position:absolute;top:-2px;bottom:-14px;left:-14px;right:-14px;
 }
 .edge-handle-top:active{background:rgba(17,17,17,.32);height:7px}
 
@@ -1036,6 +1042,20 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
 .search-item-badge{flex-shrink:0;font-size:10px;font-weight:600;
   padding:2px 7px;border-radius:10px;background:var(--tint-dim);
   color:var(--tint)}
+/* ── 보편 설명 툴팁 (두 번 탭 → 설명, 어린이·고령자 친화 크기) ── */
+.hondi-explain-tip{
+  position:fixed;z-index:5000;max-width:min(86vw,320px);
+  background:#1A2B4C;color:#fff;border-radius:14px;
+  padding:14px 16px;font-size:16px;line-height:1.55;font-family:'Pretendard',-apple-system,sans-serif;
+  box-shadow:0 8px 28px rgba(0,0,0,.28);
+  opacity:0;transform:translateY(6px);
+  transition:opacity .18s,transform .18s;pointer-events:none;
+}
+.hondi-explain-tip.show{opacity:1;transform:translateY(0);pointer-events:auto}
+.hondi-explain-tip .tip-close{
+  display:block;margin-top:10px;text-align:right;font-size:14px;
+  color:#9FC2FF;font-weight:600;cursor:pointer;
+}
 </style>
 </head>
 <body>
@@ -1244,7 +1264,7 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
     <div class="input-row">
       <!-- 좌측 보조 버튼 — 입력 시 숨김 -->
       <div class="input-actions-left" id="input-aux-btns">
-        <button class="ia-btn" onclick="triggerAttach()" title="파일 첨부">
+        <button class="ia-btn" id="btn-attach" onclick="triggerAttach()" title="파일 첨부">
           <svg width="17.87" height="17.87" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
           </svg>
@@ -1545,7 +1565,7 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
             <div class="settings-card-row" onclick="openHashChain()" style="cursor:pointer">
-              <span class="settings-card-row-label"><i class="ti ti-link" aria-hidden="true" style="font-size:17px;color:#007b8b;width:20px;text-align:center"></i id="label-hash-chain"> Hash Chain</span>
+              <span class="settings-card-row-label"><i class="ti ti-link" aria-hidden="true" style="font-size:17px;color:#007b8b;width:20px;text-align:center"></i id="label-hash-chain"> 나의 기록 금고 (PDV)</span>
               <div style="display:flex;align-items:center;gap:6px">
                 <span style="font-size:11px;background:#eafcff;color:#007b8b;padding:2px 6px;border-radius:4px">통합</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -2381,8 +2401,8 @@ function _tutorialMenuAction(side) {
     const expectedStep = side === 'left' ? 1 : 2;
     if (tutDone || tutStep !== expectedStep) return;
     // AI 패널이 열려있으면 튜토리얼 진행 신호 전송
-    if (typeof window._sendTutorialSignal === 'function') {
-      window._sendTutorialSignal(side);
+    if (typeof window._tutorialSignal === 'function') {
+      window._tutorialSignal(side === 'left' ? 'left_menu' : 'right_menu');
     }
   } catch {}
 }
@@ -2601,6 +2621,7 @@ window.closeTermsOfUse = closeTermsOfUse;
           aiBubble.textContent = nick + '안녕하세요! 😊 무엇을 도와드릴까요?';
         }
         aiBubble.classList.remove('streaming');
+        if (typeof window._resetTutorialWatchdog === 'function') window._resetTutorialWatchdog();
       }, 400);
     }
   }
@@ -2612,6 +2633,7 @@ window.closeTermsOfUse = closeTermsOfUse;
     if (triggerBtn) triggerBtn.classList.remove('open');
     input.blur();
     _panelHalf = false;
+    if (typeof window._clearTutorialWatchdog === 'function') window._clearTutorialWatchdog();
   }
   // _panelHalf는 핸들 드래그 블록에서 선언되므로 여기서 전방 선언
   let _panelHalf = false;
@@ -2867,20 +2889,51 @@ window.closeTermsOfUse = closeTermsOfUse;
     pdv_open:    '[TUTORIAL_ACTION: pdv_opened — 사용자가 PDV를 열었습니다. "참, 잘했어요!" 칭찬 후 PDV 설명과 혼디 소개·요금 안내까지 완료하십시오.]',
   };
 
-  window._tutorialSignal = async function(action) {
+  let _tutTimeoutTimer = null;
+  function _resetTutorialWatchdog() {
+    if (_tutTimeoutTimer) { clearTimeout(_tutTimeoutTimer); _tutTimeoutTimer = null; }
+    try {
+      if (!_panelOpen) return;
+      if (localStorage.getItem('hondi_tutorial_done') === '1') return;
+    } catch { return; }
+    _tutTimeoutTimer = setTimeout(() => { window._tutorialSignal('timeout'); }, 30000);
+  }
+  function _clearTutorialWatchdog() {
+    if (_tutTimeoutTimer) { clearTimeout(_tutTimeoutTimer); _tutTimeoutTimer = null; }
+  }
+  window._resetTutorialWatchdog = _resetTutorialWatchdog;
+  window._clearTutorialWatchdog = _clearTutorialWatchdog;
+
+  window._tutorialSignal = async function(action, detail) {
     try {
       if (!_panelOpen) return;
       if (localStorage.getItem('hondi_tutorial_done') === '1') return;
       const step = parseInt(localStorage.getItem('hondi_tutorial_step') || '-1', 10);
-      if (_TUT_STEP[action] !== step) return;
+      if (action === 'timeout') {
+      } else if (action === 'doubletap_failed') {
+        if (step !== 3) return;
+      } else {
+        if (_TUT_STEP[action] !== step) return;
+      }
     } catch { return; }
-    const msg = _TUT_MSG[action];
+
+    let msg;
+    if (action === 'doubletap_failed') {
+      const gapSec = detail && detail.gap ? (detail.gap / 1000).toFixed(1) : '?';
+      msg = `[TUTORIAL_ACTION: doubletap_failed — 사용자가 두 번 탭을 시도했지만 간격(${gapSec}초)이 너무 길어 인식되지 않았습니다. ADVANCE 태그는 출력하지 말고, "${gapSec}초는 조금 느렸어요. 또독또독, 더 빠르게 두 번 톡톡 두드려보세요" 처럼 실제 간격을 짚어 다정하게 다시 시도하도록 안내하십시오.]`;
+    } else if (action === 'timeout') {
+      msg = `[TUTORIAL_ACTION: timeout — 사용자가 30초 넘게 다음 동작을 하지 않았습니다. ADVANCE 태그는 출력하지 말고, "혹시 잘 안 되시나요? 어디서 막히셨는지 말씀해 주시면 제가 도와드릴게요" 처럼 부드럽게 먼저 말을 걸고, 직전 단계 안내를 짧고 쉬운 말로 한 번 더 풀어주십시오.]`;
+    } else {
+      msg = _TUT_MSG[action];
+    }
     if (!msg) return;
+    _clearTutorialWatchdog();
     const bubble = _appendPanelMsg('ai', '…');
     bubble.classList.add('streaming');
     try { await _callPanelAI(msg, bubble); }
     catch(e) { bubble.textContent = 'AI 오류: ' + e.message; }
     bubble.classList.remove('streaming');
+    _resetTutorialWatchdog();
   };
 
   // ── 더블탭 감지 (설정·검색 아이콘, STEP 3) ───────────
@@ -2891,11 +2944,17 @@ window.closeTermsOfUse = closeTermsOfUse;
       let last = 0;
       el.addEventListener('touchend', e => {
         const now = Date.now();
-        if (now - last < 380) {          // 0.38초 이내 2회 탭
+        const gap = now - last;
+        if (last && gap < 380) {
           e.preventDefault();
           window._tutorialSignal('doubletap');
           last = 0;
-        } else { last = now; }
+        } else if (last && gap < 2500) {
+          window._tutorialSignal('doubletap_failed', { gap });
+          last = now;
+        } else {
+          last = now;
+        }
       }, { passive: false });
     });
   })();
@@ -2909,6 +2968,98 @@ window.closeTermsOfUse = closeTermsOfUse;
         return orig.apply(this, a);
       };
     }
+  });
+
+  ['openLeftMenu', 'openRightMenu'].forEach(fnName => {
+    const orig = window[fnName];
+    if (typeof orig === 'function') {
+      window[fnName] = function(...a) {
+        const r = orig.apply(this, a);
+        if (typeof window._resetTutorialWatchdog === 'function') window._resetTutorialWatchdog();
+        return r;
+      };
+    }
+  });
+
+  // ── 보편 "두 번 탭 → 설명" 시스템 (v3.3 신설) ──────────────────
+  // 튜토리얼 STEP 2에서 "메뉴 항목을 두 번 탭하면 설명이 열린다"고 안내하지만
+  // 실제로는 설정·검색 아이콘의 더블탭이 튜토리얼 진행 신호로만 쓰이고,
+  // 일반 사용 중에는 어떤 아이콘도 설명을 보여주지 않았다(약속과 실제 동작 불일치).
+  // 어린이·고령자는 안내를 까먹고 나중에 "이게 뭐였지?" 하며 다시 두 번 탭해볼 가능성이
+  // 높으므로, 핵심 아이콘들에 실제 설명 툴팁을 연결한다.
+  const _EXPLAIN_TEXT = {
+    'btn-attach':       '여기를 누르면 사진이나 문서 파일을 골라서 보낼 수 있어요.',
+    'btn-camera':       '여기를 누르면 카메라가 바로 켜져서, 사진을 찍어 보낼 수 있어요.',
+    'btn-mic':          '여기를 누르면 글자를 안 쓰고 말로 이야기할 수 있어요. 말이 끝나면 자동으로 전송돼요.',
+    'btn-ai':           '여기를 누르면 언제든 혼디(나만의 AI 비서)와 대화창이 열려요. 다른 사람과 대화 중에도 누를 수 있어요.',
+    'btn-search':       '여기를 누르면 다른 사람·기관·사물을 찾을 수 있어요. 예: 친구 이름, 경찰청 같은 기관도 찾을 수 있어요.',
+    'btn-settings':     '여기를 누르면 내 정보, 알림, 기록 보관함 같은 설정을 볼 수 있어요.',
+    'edge-handle-left': '화면 가장자리의 이 막대를 살짝 눌러도 왼쪽 메뉴가 열려요. 살짝 밀어도 똑같이 열려요.',
+    'edge-handle-right':'화면 가장자리의 이 막대를 살짝 눌러도 오른쪽 전문가 목록이 열려요.',
+    'edge-handle-top':  '화면 위쪽의 이 막대를 누르면 사용법 설명서가 열려요.',
+  };
+
+  let _explainTipEl = null;
+  function _showExplainTip(text, anchorEl) {
+    if (!_explainTipEl) {
+      _explainTipEl = document.createElement('div');
+      _explainTipEl.className = 'hondi-explain-tip';
+      document.body.appendChild(_explainTipEl);
+    }
+    _explainTipEl.innerHTML = '';
+    const txt = document.createElement('div');
+    txt.textContent = text;
+    const close = document.createElement('span');
+    close.className = 'tip-close';
+    close.textContent = '알았어요';
+    close.onclick = _hideExplainTip;
+    _explainTipEl.appendChild(txt);
+    _explainTipEl.appendChild(close);
+
+    const r = anchorEl.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    _explainTipEl.style.left = '';
+    _explainTipEl.style.right = '';
+    _explainTipEl.style.top = '';
+    _explainTipEl.style.bottom = '';
+    // 화면 안에 들어오도록 앵커 기준 위/아래·좌/우 자동 보정
+    if (r.top > vh * 0.55) {
+      _explainTipEl.style.bottom = (vh - r.top + 10) + 'px';
+    } else {
+      _explainTipEl.style.top = (r.bottom + 10) + 'px';
+    }
+    if (r.left < vw * 0.5) {
+      _explainTipEl.style.left = Math.max(12, r.left) + 'px';
+    } else {
+      _explainTipEl.style.right = Math.max(12, vw - r.right) + 'px';
+    }
+    requestAnimationFrame(() => _explainTipEl.classList.add('show'));
+    clearTimeout(_explainTipEl._autoHide);
+    _explainTipEl._autoHide = setTimeout(_hideExplainTip, 6000);
+  }
+  function _hideExplainTip() {
+    if (_explainTipEl) _explainTipEl.classList.remove('show');
+  }
+  document.addEventListener('touchstart', (e) => {
+    if (_explainTipEl && _explainTipEl.classList.contains('show') &&
+        !_explainTipEl.contains(e.target)) _hideExplainTip();
+  }, { passive: true });
+
+  // 더블탭 감지를 설명-아이콘 전체로 확장(기존 설정·검색의 튜토리얼 더블탭과 공존)
+  Object.keys(_EXPLAIN_TEXT).forEach(id => {
+    const el = document.getElementById(id) || document.querySelector('.' + id);
+    if (!el) return;
+    let lastTap = 0;
+    el.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - lastTap < 380) {
+        e.preventDefault();
+        _showExplainTip(_EXPLAIN_TEXT[id], el);
+        lastTap = 0;
+      } else {
+        lastTap = now;
+      }
+    }, { passive: false });
   });
 
   // ── AI 패널 전용 독립 fetch ──────────────────────────
