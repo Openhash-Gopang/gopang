@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="/pdv-backup.js"></script>
+<style>
+:root{
+  --blue:#1A73E8;--blue-lt:#EEF4FF;--blue-dk:#1557B0;
+  --border:#DADCE0;--txt2:#5F6368;--txt3:#9AA0A6;
+  --font:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+  --safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);
+  --person:#712B13;--person-bg:#FAECE7;
+  --thing:#085041;--thing-bg:#E1F5EE;
+  --org:#633806;--org-bg:#FAEEDA;
+  --ai:#3C3489;--ai-bg:#EEEDFE;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);color:#111;background:#fff;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.header{display:flex;align-items:center;gap:10px;padding:calc(var(--safe-t) + 14px) 16px 14px;border-bottom:1px solid var(--border)}
+.icon-btn{width:32px;height:32px;border-radius:50%;border:none;background:none;color:var(--txt2);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.header h1{flex:1;font-size:16px;font-weight:700}
+.tabbar{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;border-bottom:1px solid var(--border);-ms-overflow-style:none;scrollbar-width:none}
+.tabbar::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:7px 13px;border-radius:16px;font-size:12.5px;border:1px solid var(--border);color:var(--txt2);background:#fff;white-space:nowrap}
+.tab.active{background:var(--blue-lt);color:var(--blue-dk);border-color:var(--blue)}
+.list{padding-bottom:calc(var(--safe-b) + 12px)}
+.card{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--border);padding:13px 16px;font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.card:active{background:#f9fafb}
+.card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:8px}
+.card-who{display:flex;align-items:center;gap:6px;min-width:0}
+.badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;flex-shrink:0}
+.badge.person{background:var(--person-bg);color:var(--person)}
+.badge.thing{background:var(--thing-bg);color:var(--thing)}
+.badge.org{background:var(--org-bg);color:var(--org)}
+.badge.ai{background:var(--ai-bg);color:var(--ai)}
+.name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.date{font-size:11px;color:var(--txt3);flex-shrink:0}
+.what{font-size:13px;color:#333;line-height:1.5}
+.why{font-size:11.5px;color:var(--txt3);margin-top:2px}
+.locked{opacity:.7}
+.locked .what{color:var(--txt3)}
+.empty{padding:60px 24px;text-align:center;color:var(--txt3);font-size:13px;line-height:1.7}
+
+.detail{position:fixed;inset:0;background:#fff;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;z-index:5}
+.detail.open{transform:translateX(0)}
+.detail-body{padding:18px 16px;overflow-y:auto}
+.detail-name{font-size:19px;font-weight:700;margin:2px 0 4px}
+.detail-field{border-top:1px solid var(--border);padding:13px 0}
+.detail-field:first-of-type{border-top:none;margin-top:8px}
+.field-label{font-size:11.5px;color:var(--txt3);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.field-value{font-size:14.5px;line-height:1.6;color:#111}
+.field-value.muted{color:var(--txt3)}
+.sensitive-note{margin-top:16px;padding:12px 14px;border-radius:10px;background:#FAEEDA;color:#633806;font-size:12.5px;line-height:1.6;display:flex;gap:8px;align-items:flex-start}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(var(--safe-b) + 16px);background:#1A2B4C;color:#fff;padding:12px 16px;border-radius:12px;font-size:13px;line-height:1.5;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+.toast.show{opacity:1}
+.pending-tag{font-size:10.5px;color:var(--org);background:var(--org-bg);padding:1px 6px;border-radius:8px;margin-left:6px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="icon-btn" onclick="parent.closePDV && parent.closePDV()" aria-label="닫기"><i class="ti ti-arrow-left"></i></button>
+  <h1>PDV · 대화 이력</h1>
+  <button class="icon-btn" onclick="handleBackupClick()" aria-label="백업"><i class="ti ti-cloud-upload"></i></button>
+  <button class="icon-btn" aria-label="검색"><i class="ti ti-search"></i></button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="tabbar" id="tabbar">
+  <button class="tab active" data-cat="all">전체 (시간순)</button>
+  <button class="tab" data-cat="person">사람</button>
+  <button class="tab" data-cat="thing">사물</button>
+  <button class="tab" data-cat="org">기관</button>
+  <button class="tab" data-cat="ai">공용 AI 전문가</button>
+</div>
+
+<div class="list" id="list"></div>
+
+<div class="detail" id="detail">
+  <div class="header">
+    <button class="icon-btn" onclick="closeDetail()" aria-label="목록으로"><i class="ti ti-arrow-left"></i></button>
+    <h1 id="detail-title">대화 상세</h1>
+  </div>
+  <div class="detail-body" id="detail-body"></div>
+</div>
+
+<script>
+/* ── SP-PDV v1.0 §2 분류 규칙: counterpart_id 네임스페이스로 결정론적 분류 ── */
+function classifyCategory(counterpartId) {
+  if (!counterpartId) return 'uncategorized';
+  if (counterpartId.startsWith('device:')) return 'thing';
+  if (counterpartId.startsWith('org:') || counterpartId.startsWith('gov:')) return 'org';
+  if (counterpartId.startsWith('ksys:')) return 'ai';
+  // uuidv5(phone_number) 형태 — 별도 접두사가 없는 표준 개인 GUID
+  if (/^[0-9a-f-]{36}$/i.test(counterpartId)) return 'person';
+  return 'uncategorized';
+}
+
+const CAT_LABEL = { person:'사람', thing:'사물', org:'기관', ai:'공용 AI' };
+
+/* ── 현재 인증 등급 — 백엔드 L2/L3 인증 미구현 상태이므로 항상 L0/L1로 취급한다.
+   SP-PDV v1.0 §5 C3 (fail-safe): 민감정보는 L2 이상만 열람 가능 → 지금은 전부 마스킹. */
+function currentUserTier() {
+  return (window.GopangAuth && window.GopangAuth.tier) || 'L0';
+}
+function canViewSensitive() {
+  const t = currentUserTier();
+  return t === 'L2' || t === 'L3';
+}
+
+/* ── 데이터 소스 ──
+   실제 로컬 저장은 pdv-backup.js가 노출하는 window.GopangPDV(IndexedDB
+   래퍼)를 사용한다. 진짜 빈 상태와 데모용 더미 데이터를 혼동하지 않도록,
+   더미 데이터는 로컬이 비어 있고 ?demo=1일 때만 보여준다. */
+const DEMO_RECORDS = [
+    { record_id:'r1', counterpart_id:'a1b2c3d4-0000-4000-8000-000000000001', counterpart_ref:null, counterpart_name:'김민준', when:'2026-06-28', where:'제주', who:'친구 김민준', what:'제주 여행 일정 공유, 렌터카 예약 확인', how:'텍스트', why:'여행 준비', sensitive:false, backup_tier:'summary_only' },
+    { record_id:'r2', counterpart_id:'org:1178612345', counterpart_ref:'1178612345', counterpart_name:'국세청', when:'2026-06-25', where:null, who:'국세청', what:'부가세 신고 문의에 대한 답변 수신', how:'문서첨부', why:'세금 신고 마감 대응', sensitive:true, backup_tier:'summary_only' },
+    { record_id:'r3', counterpart_id:'device:shuttle-a12', counterpart_ref:'shuttle-a12', counterpart_name:'자율주행 셔틀 A-12', when:'2026-06-20', where:'제주공항', who:'자율주행 셔틀 A-12', what:'탑승 예약 확정 및 도착 알림 수신', how:'GWP', why:'공항 이동', sensitive:false, backup_tier:'summary_only' },
+    { record_id:'r4', counterpart_id:'ksys:klaw', counterpart_ref:null, counterpart_name:'K-Law', when:'2026-06-18', where:null, who:'K-Law (공용 AI 전문가)', what:'임대차 분쟁 관련 법률 자문 대화', how:'텍스트', why:'계약 분쟁 검토', sensitive:true, backup_tier:'summary_only' },
+    { record_id:'r5', counterpart_id:'a1b2c3d4-0000-4000-8000-000000000002', counterpart_ref:null, counterpart_name:'박서연', when:'2026-06-15', where:'한림읍', who:'이웃 박서연', what:'동네 벼룩시장 물품 거래 협의', how:'텍스트', why:'중고 거래', sensitive:false, backup_tier:'summary_only' },
+];
+
+async function loadPDVRecords() {
+  if (window.GopangPDV && typeof window.GopangPDV.list === 'function') {
+    const local = await window.GopangPDV.list();
+    if (local.length > 0) return local;
+    const isDemo = new URLSearchParams(location.search).get('demo') === '1';
+    return isDemo ? DEMO_RECORDS : [];
+  }
+  return DEMO_RECORDS;
+}
+
+let RECORDS = [];
+let activeCat = 'all';
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return (d.getMonth()+1).toString().padStart(2,'0') + '.' + d.getDate().toString().padStart(2,'0');
+}
+
+function renderList() {
+  const listEl = document.getElementById('list');
+  const filtered = RECORDS
+    .filter(r => activeCat === 'all' || classifyCategory(r.counterpart_id) === activeCat)
+    .sort((a,b) => new Date(b.when) - new Date(a.when));
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="empty">표시할 대화 이력이 없습니다.</div>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(r => {
+    const cat = classifyCategory(r.counterpart_id);
+    const locked = r.sensitive && !canViewSensitive();
+    const badge = cat !== 'uncategorized' ? `<span class="badge ${cat}">${CAT_LABEL[cat]}</span>` : '';
+    const pending = r.reconciliation_pending ? '<span class="pending-tag">상대방 확인 필요</span>' : '';
+    const what = locked ? '민감정보 — 인증 후 열람 가능' : r.what;
+    const why  = locked ? '' : `<div class="why">왜: ${r.why || '확인불가'}</div>`;
+    return `
+      <button class="card ${locked ? 'locked' : ''}" data-id="${r.record_id}">
+        <div class="card-top">
+          <div class="card-who">${badge}<span class="name">${r.counterpart_name}</span>${pending}</div>
+          <span class="date">${fmtDate(r.when)}</span>
+        </div>
+        <div class="what">${locked ? '<i class="ti ti-lock" style="font-size:12px;margin-right:4px"></i>' : ''}${what}</div>
+        ${why}
+      </button>`;
+  }).join('');
+
+  listEl.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', () => openDetail(card.getAttribute('data-id')));
+  });
+}
+
+function openDetail(recordId) {
+  const r = RECORDS.find(x => x.record_id === recordId);
+  if (!r) return;
+  const locked = r.sensitive && !canViewSensitive();
+  const cat = classifyCategory(r.counterpart_id);
+
+  document.getElementById('detail-title').textContent = r.counterpart_name;
+
+  if (locked) {
+    document.getElementById('detail-body').innerHTML = `
+      <div class="detail-name">${r.counterpart_name}</div>
+      <div class="sensitive-note"><i class="ti ti-lock"></i>이 기록은 민감정보로 분류되어 있습니다. 인증 등급이 올라간 뒤(L2 이상) 열람할 수 있습니다.</div>`;
+  } else {
+    const rows = [
+      ['ti-calendar','언제', r.when],
+      ['ti-map-pin','어디서', r.where || '확인불가'],
+      ['ti-user','누가', r.who],
+      ['ti-message','무엇을', r.what],
+      ['ti-route','어떻게', r.how || '확인불가'],
+      ['ti-help-circle','왜', r.why || '확인불가'],
+    ];
+    document.getElementById('detail-body').innerHTML = `
+      <div class="detail-name">${r.counterpart_name}</div>
+      ${rows.map(([icon,label,val]) => `
+        <div class="detail-field">
+          <div class="field-label"><i class="ti ${icon}"></i>${label}</div>
+          <div class="field-value ${val==='확인불가' ? 'muted' : ''}">${val}</div>
+        </div>`).join('')}
+      ${r.sensitive ? '<div class="sensitive-note"><i class="ti ti-alert-triangle"></i>민감정보 포함 — 요약에는 세부 식별정보를 담지 않습니다.</div>' : ''}
+      ${r.reconciliation_pending ? '<div class="sensitive-note"><i class="ti ti-help-circle"></i>이 상대방의 식별 키가 이전 기록과 달라 자동으로 병합하지 않았습니다. 같은 상대방이 맞는지 확인이 필요합니다. (SP-PDV §2-보론, C2)</div>' : ''}`;
+  }
+
+  document.getElementById('detail').classList.add('open');
+}
+function closeDetail() {
+  document.getElementById('detail').classList.remove('open');
+}
+
+document.getElementById('tabbar').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  activeCat = btn.getAttribute('data-cat');
+  renderList();
+});
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+// TODO: guid/seedPhrase는 실제로는 GopangWallet/온보딩 플로우가 들고 있어야
+// 한다. 여기서는 연동 전이라 window.GopangAuth 훅을 우선 찾고, 없으면
+// prompt()로 임시 입력받는다 — GDC 지갑 등 다른 미구현 기능과 동일하게
+// "준비 중" 수준의 임시 처리다.
+function getGuidAndSeed() {
+  const guid = (window.GopangAuth && window.GopangAuth.guid) || null;
+  const seed = (window.GopangAuth && window.GopangAuth.seedPhrase) || null;
+  if (guid && seed) return { guid, seed };
+  const guidIn = guid || prompt('GUID (임시 입력 — 실제 연동 전)');
+  const seedIn = seed || prompt('4단어 백업 시드 (임시 입력 — 실제 연동 전)');
+  return { guid: guidIn, seed: seedIn };
+}
+
+async function handleBackupClick() {
+  if (!window.GopangPDV) { showToast('백업 모듈이 로드되지 않았습니다.'); return; }
+  const { guid, seed } = getGuidAndSeed();
+  if (!guid || !seed) return;
+  try {
+    showToast('백업 중…');
+    const r = await window.GopangPDV.backupNow(guid, seed);
+    showToast(`백업 완료 — 요약 ${r.count}건`);
+  } catch (err) {
+    console.error('[pdv] backup failed', err);
+    showToast('백업에 실패했습니다.');
+  }
+}
+
+async function tryAutoRestore() {
+  if (!window.GopangPDV || !window.GopangAuth) return;
+  const guid = window.GopangAuth.guid;
+  const seed = window.GopangAuth.seedPhrase;
+  if (!guid || !seed) return; // seed 미보유 시 조용히 건너뜀 — 사용자에게 강제하지 않음
+  try {
+    const r = await window.GopangPDV.autoRestoreIfEmpty(guid, seed);
+    if (r && (r.restored || r.pending)) {
+      showToast(`백업에서 ${r.restored}건 복원됨${r.pending ? `, 확인 필요 ${r.pending}건` : ''}`);
+      RECORDS = await loadPDVRecords();
+      renderList();
+    }
+  } catch (err) {
+    console.error('[pdv] auto restore failed', err);
+  }
+}
+
+loadPDVRecords().then(records => { RECORDS = records; renderList(); tryAutoRestore(); });
+</script>
+
+</body>
+</html>

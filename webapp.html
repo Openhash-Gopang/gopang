@@ -682,6 +682,32 @@ body.gopang-authed #gopang-auth-gate{display:none}
   flex:1;width:100%;height:100%;border:none;background:#fff;
 }
 
+/* ── PDV(개인 데이터 볼트) — 좌측 메뉴 "PDV" 항목에서 열리는 전체화면 오버레이 ──
+   left/right-menu, manual과 동일한 pointer-events 패턴을 따르되, 내용(탭+리스트+상세)이
+   많아 좌/우 드로어 폭(340px)보다 넓은 전체화면 시트로 띄운다. 좌측 메뉴 드로어 안에
+   중첩시키지 않는 이유는 SP_PDV_v1_0.md §0-2 참조 — 독립 상태(탭 선택/스크롤/상세뷰)를
+   좌측 메뉴와 분리해서 가져가기 위함. */
+.pdv-overlay{
+  position:fixed;inset:0;z-index:999;display:flex;align-items:flex-end;justify-content:center;
+  pointer-events:none;
+}
+.pdv-overlay.open{pointer-events:auto}
+.pdv-backdrop{
+  position:absolute;inset:0;background:rgba(0,0,0,.25);
+  opacity:0;transition:opacity .25s;
+}
+.pdv-overlay.open .pdv-backdrop{opacity:1}
+.pdv-sheet{
+  position:relative;width:100%;height:100%;
+  background:#fff;
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.pdv-overlay.open .pdv-sheet{transform:translateY(0)}
+.pdv-sheet iframe{
+  flex:1;width:100%;height:100%;border:none;background:#fff;
+}
+
 /* ── 이용 약정서 — 가입 단계(z-index 9999~10004)보다 항상 위에 떠야 하므로
    더 높은 z-index(10005) 사용. 구조는 manual-overlay와 동일. ── */
 .terms-overlay{
@@ -1301,6 +1327,14 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
   <div class="left-menu-backdrop" onclick="closeLeftMenu()"></div>
   <div class="left-menu-drawer">
     <iframe id="left-menu-frame" src="/left-menu.html" title="메뉴"></iframe>
+  </div>
+</div>
+
+<!-- ── PDV — 좌측 메뉴 "PDV" 항목에서 전체화면으로 열림 ── -->
+<div class="pdv-overlay" id="pdv-overlay">
+  <div class="pdv-backdrop" onclick="closePDV()"></div>
+  <div class="pdv-sheet">
+    <iframe id="pdv-frame" src="/pdv.html" title="PDV 대화 이력"></iframe>
   </div>
 </div>
 
@@ -2355,6 +2389,14 @@ function closeUserManual() { document.getElementById('manual-overlay')?.classLis
 function openTermsOfUse()  { document.getElementById('terms-overlay')?.classList.add('open'); }
 function closeTermsOfUse() { document.getElementById('terms-overlay')?.classList.remove('open'); }
 
+// PDV — 좌측 메뉴(left-menu.html)에서 parent.openPDV() 형태로 직접 호출된다.
+// (좌/우 메뉴, 매뉴얼 iframe과 동일하게 same-origin이므로 postMessage 대신 부모 함수 직접 호출)
+function openPDV()  {
+  document.getElementById('left-menu-overlay')?.classList.remove('open');
+  document.getElementById('pdv-overlay')?.classList.add('open');
+}
+function closePDV() { document.getElementById('pdv-overlay')?.classList.remove('open'); }
+
 window.openLeftMenu   = openLeftMenu;
 window.closeLeftMenu  = closeLeftMenu;
 window.openRightMenu  = openRightMenu;
@@ -2363,6 +2405,8 @@ window.openUserManual  = openUserManual;
 window.closeUserManual = closeUserManual;
 window.openTermsOfUse  = openTermsOfUse;
 window.closeTermsOfUse = closeTermsOfUse;
+window.openPDV  = openPDV;
+window.closePDV = closePDV;
 </script>
 
 <!-- ── 가장자리 스와이프로 메뉴 열기 (좌/우/위) ──
@@ -2385,7 +2429,7 @@ window.closeTermsOfUse = closeTermsOfUse;
     // settings-overlay: 설정/검색/진행상황/AI설정 시트 공유 클래스
     // ai-overlay: AI 비서 카드, left/right-menu-overlay: 좌/우 메뉴, manual-overlay: 사용자 매뉴얼
     return !!document.querySelector(
-      '.settings-overlay.open, .ai-overlay.open, .left-menu-overlay.open, .right-menu-overlay.open, .manual-overlay.open'
+      '.settings-overlay.open, .ai-overlay.open, .left-menu-overlay.open, .right-menu-overlay.open, .manual-overlay.open, .pdv-overlay.open'
     );
   }
 
