@@ -42,7 +42,7 @@ export const HONDI_FAQ_REGISTRY = [
     triggers: ['PDV', 'pdv', '기록 금고', '나의 기록', '내 데이터 어디',
                '데이터 어디 저장', '어디에 저장', '어디 저장', '대화 저장', '대화 어디',
                '삭제하고 싶어', 'Private Data Vault', '개인정보 어디', '유출',
-               '서버에 남', '서버에 저장'],
+               '서버에 남', '서버에 저장', '내 번호 저장', '번호 저장되는'],
   },
   {
     id: 'openhash', label: 'OpenHash(위변조 불가 원장)', file: 'openhash.txt',
@@ -62,7 +62,9 @@ export const HONDI_FAQ_REGISTRY = [
   {
     id: 'governance', label: '오픈소스·비영리·거버넌스', file: 'governance.txt',
     triggers: ['오픈소스', '비영리', '주주', '투자자', '거버넌스', 'DAWN',
-               '투표', '회사냐', '회사야', '회사인가', '기업이야', '누가 운영'],
+               '투표', '회사냐', '회사야', '회사인가', '기업이야', '누가 운영',
+               '누가 만들', '만든 사람', '딴데 파는', '데이터 파는', '데이터 판매',
+               '정보 파는', '광고에 활용'],
   },
   {
     id: 'hondi-code', label: '혼디코드', file: 'hondi-code.txt',
@@ -76,7 +78,8 @@ export const HONDI_FAQ_REGISTRY = [
   {
     id: 'quota', label: '무료 사용량(1,000원 한도)', file: 'quota.txt',
     triggers: ['1000원', '1,000원', '무료 한도', '사용량', '얼마나 썼',
-               '전기료', '한도 다 썼', 'FREE_QUOTA'],
+               '전기료', '한도 다 썼', 'FREE_QUOTA', '돈 내야', '돈 내나요',
+               '유료예요', '무료예요', '공짜예요', '요금 나가'],
   },
   {
     id: 'search-vs-menu', label: '검색과 오른쪽 메뉴 차이', file: 'search-vs-menu.txt',
@@ -119,6 +122,21 @@ export const HONDI_FAQ_REGISTRY = [
                '기기 바꾸면', '휴대폰 잃어버렸', '핸드폰 잃어버렸', '폰 잃어버렸',
                '폰 바꾸면'],
   },
+  {
+    id: 'overview', label: '혼디가 뭐하는 앱인가요', file: 'overview.txt',
+    triggers: ['뭐하는 앱', '뭐 하는 앱', '무슨 앱', '뭐하는 서비스', '카톡이랑',
+               '카카오톡이랑', '어떤 앱이', '처음이라'],
+  },
+  {
+    id: 'signup', label: '회원가입 방법', file: 'signup.txt',
+    triggers: ['회원가입', '가입 어떻게', '가입은 어떻게', '가입 방법',
+               '어떻게 가입', '어떻게 시작'],
+  },
+  {
+    id: 'withdrawal', label: '탈퇴·계정 삭제', file: 'withdrawal.txt',
+    triggers: ['탈퇴', '계정 삭제', '계정 지우고', '계정 지울', '회원 탈퇴',
+               '가입 취소'],
+  },
 ];
 
 const MAX_INJECT = 2; // 한 턴에 최대 몇 개 주제까지 주입할지
@@ -157,8 +175,24 @@ function _matchFaqEntries(text) {
   // 안전하게 내부 신호를 걸러낼 수 있다.
   if (text.trim().startsWith('[')) return [];
   const t = text.toLowerCase();
+  // BUG-FIX(2026-07-01, 신규 사용자 질문 사고실험 중 발견): 'PDV'·'GDC'·
+  // 'SEOM' 같은 짧은 영문 약어를 단순 부분 문자열로 매칭하면, "PDVD플레이어"
+  // (PDV를 포함) 나 "GDCC 코인"(GDC를 포함) 처럼 전혀 무관한 단어 안에
+  // 우연히 그 글자들이 들어있어도 매칭돼 버린다. 순수 영숫자·하이픈으로만
+  // 이루어진 트리거(예: PDV, GDC, K-Law)는 단어 경계(\b)를 확인해 "그
+  // 단어 자체"로 쓰였을 때만 매칭하고, 한글 구문 트리거(예: '기록 금고')는
+  // 이런 부분 문자열 오탐 위험이 훨씬 낮으므로 기존처럼 단순 포함 검사를
+  // 유지한다.
+  const _ALNUM_ONLY = /^[a-z0-9-]+$/i;
+  function _hit(kw) {
+    const kwLower = kw.toLowerCase();
+    if (_ALNUM_ONLY.test(kw)) {
+      return new RegExp(`(?:^|[^a-z0-9])${kwLower.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}(?:[^a-z0-9]|$)`, 'i').test(t);
+    }
+    return t.includes(kwLower);
+  }
   return HONDI_FAQ_REGISTRY.filter(entry =>
-    entry.triggers.some(kw => t.includes(kw.toLowerCase()))
+    entry.triggers.some(_hit)
   );
 }
 
