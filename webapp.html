@@ -221,15 +221,18 @@ body.gopang-authed #gopang-auth-gate{display:none}
 
 
 /* ── AI 비서 패널 (반투명 slide-up) ── */
-/* ── AI 패널 v2.0: 전체화면, 구글맵스 톤 ── */
+/* ── AI 패널 v3.0: 기본 높이 2/3 화면 — 상단 바 버튼이 가려지지 않도록.
+   핸들 버튼으로 전체화면과 토글 가능(2026-07-01, 사용자 요청). ── */
 #ai-panel{
   position:fixed;
   left:0;right:0;
-  top:0;bottom:0;        /* 전체화면 */
-  height:100%;
+  bottom:0;
+  height:66.6667dvh;      /* 기본 2/3 화면 — 상단 바 노출 유지 */
   z-index:300;           /* 좌우 메뉴(z-index:998)보다 낮아야 메뉴가 위로 열림 */
   background:#F8FAFF;
   display:flex;flex-direction:column;
+  border-radius:20px 20px 0 0;
+  box-shadow:0 -4px 24px rgba(0,0,0,.12);
   transform:translateY(100%);
   transition:transform .32s cubic-bezier(.32,1,.4,1);
   will-change:transform;
@@ -2623,29 +2626,28 @@ window.closeTermsOfUse = closeTermsOfUse;
   function closeAIPanel() {
     _panelOpen = false;
     panel.classList.remove('open');
-    panel.style.height = '100%';  // 닫을 때 높이 초기화
+    panel.style.height = '';  // 닫을 때 인라인 높이 해제 → CSS 기본값(2/3)으로 복귀
     btnAI.classList.remove('panel-open');
     if (triggerBtn) triggerBtn.classList.remove('open');
     input.blur();
-    _panelHalf = false;
+    _panelFull = false;
     if (typeof window._clearTutorialWatchdog === 'function') window._clearTutorialWatchdog();
   }
-  // _panelHalf는 핸들 드래그 블록에서 선언되므로 여기서 전방 선언
-  let _panelHalf = false;
+  // _panelFull은 핸들 드래그 블록에서 선언되므로 여기서 전방 선언
+  let _panelFull = false;
   window.openAIPanel = openAIPanel;
   window.closeAIPanel = closeAIPanel;
 
   // ── 외부 탭으로 AI 패널 닫기 — 비활성화 (X 버튼으로만 닫힘) ──
   // document.addEventListener('click', ...) 제거됨 — 의도된 동작
 
-  // ── 핸들 버튼 — 50%/100% 높이 토글 ─────────────────────────────
-  // v2.0: 전체화면이 기본. 핸들 버튼 탭 시 50% ↔ 100% 토글
+  // ── 핸들 버튼 — 2/3(기본)·전체화면 높이 토글 ─────────────────────
+  // v3.0: 기본 높이는 화면의 2/3(상단 바 노출 유지). 핸들 버튼 탭 시
+  // 전체화면 ↔ 2/3 토글.
   handle.addEventListener('click', () => {
-    _panelHalf = !_panelHalf;
+    _panelFull = !_panelFull;
     panel.style.transition = 'height .28s ease, transform .32s cubic-bezier(.32,1,.4,1)';
-    panel.style.height = _panelHalf
-      ? Math.floor(window.innerHeight * 0.52) + 'px'
-      : '100%';
+    panel.style.height = _panelFull ? '100%' : '';
   });
 
   // ── 하단 swipe-up 제스처 (메인 화면에서) ─────────────
