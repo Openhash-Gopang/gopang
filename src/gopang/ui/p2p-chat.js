@@ -118,6 +118,8 @@ let _pollInterval = null;
 let _p2pMessages  = [];    // P2P 대화 원문 누적 (PDV 저장용)
 let _sessionStart = null;  // 세션 시작 시각
 let _activeCallId = null;  // 현재 유효한 통화 시도 ID — 재연결 시 이전 watcher 자동 무력화
+let _activeCallIdCallee = null;  // 수신측(폰) 연결 타임아웃용 — 최신 수락한 callId만 유효
+const _calleeConnectTimers = new Map();  // callId → timer, onopen 시 정리
 const _seenOfferIds = new Set();  // 처리한 offer callId — 중복 confirm() 방지
 
 // ── 메인 채팅 통합 (2026-07-02 리팩터링) ──────────────────────────────
@@ -308,10 +310,20 @@ function _watchAnswerRealtime(conn, targetUser, callId) {
     }
 
     if (row.type === 'ice' && row.from_guid === peerGuid) {
-      try {
-        const candidate = _rowPayload.candidate || _rowPayload;
-        await conn.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch(e) { console.warn('[P2P] ICE 추가 실패:', e.message); }
+      // BUG-FIX(2026-07-02): remoteDescription이 아직 없거나(answer를
+      // 못 받았거나 무응답 타임아웃으로 이미 포기한 상태) connection이
+      // 이미 닫혔으면 addIceCandidate 자체가 예외를 던진다("remote
+      // description was null" 등) — 실제로 관찰된 콘솔 에러. 두 경우
+      // 다 이 통화 시도가 이미 끝났다는 뜻이므로, 예외로 시끄럽게 떠들
+      // 필요 없이 조용히 건너뛴다.
+      if (!conn.remoteDescription || conn.signalingState === 'closed') {
+        console.info('[P2P] ICE 후보 무시 — 이미 종료된 통화 시도');
+      } else {
+        try {
+          const candidate = _rowPayload.candidate || _rowPayload;
+          await conn.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch(e) { console.warn('[P2P] ICE 추가 실패:', e.message); }
+      }
     }
 
     // 처리 후 시그널 삭제 — 중복 호출돼도(이미 지워졌으면) 404는 무해하므로 무시
@@ -440,6 +452,28 @@ export async function handleIncomingOffer(signal) {
   // _activatePeerInMainChat()이 메인 대화창으로 전환한다.
   _notify(`✅ ${fromHandle}님과 연결됐습니다.`);
 
+  // BUG-FIX(2026-07-02): 실제로 관찰된 버그 — 발신측(PC)이 25초 무응답
+  // 타임아웃으로 이미 포기했는데 그 사실을 수신측(폰)에 전혀 알리지
+  // 않았다. 폰이 그 뒤에 늦게 "수락"을 누르면 _peerInfo가 세팅된 채로
+  // (발신측은 이미 안 듣고 있으니) 연결이 영원히 안 되고, _peerInfo를
+  //되돌릴 타임아웃도 없어서 startIncomingWatch()의 `!_peerInfo` 가드가
+  // 이후의 모든 새 offer(재통화 시도 포함)를 통째로 무시하게 됐다 —
+  // "재차 연결 요청했는데 폰에 전달 안 됨" 증상의 정확한 원인.
+  // answer를 보낸 뒤 20초 안에 datachannel이 안 열리면(=_setupChannel.onopen
+  // 미발동) 강제로 정리해 다음 통화를 받을 수 있는 상태로 되돌린다.
+  const _calleeCallId = callId;
+  const calleeConnectTimer = setTimeout(() => {
+    if (_rtcChannel && _rtcChannel.readyState === 'open') return; // 이미 정상 연결됨 — 아무 것도 안 함
+    if (_activeCallIdCallee !== _calleeCallId) return; // 이미 다른 통화로 넘어갔음
+    console.warn('[P2P] 수신측 연결 타임아웃 — 상태 초기화');
+    appendBubble('system', '⚠️ 연결이 시간 초과됐습니다. 상대방이 이미 통화를 종료했을 수 있어요.');
+    if (_rtcChannel) { try { _rtcChannel.close(); } catch {} setRtcChannel(null); }
+    if (_rtcConn)    { try { _rtcConn.close(); }    catch {} setRtcConn(null); }
+    _peerInfo = null;
+  }, 20000);
+  _activeCallIdCallee = _calleeCallId;
+  _calleeConnectTimers.set(_calleeCallId, calleeConnectTimer);
+
   // ICE 폴링
   _startPoll(_USER.ipv6, async sig => {
     if (sig.type === 'ice' && sig.from_guid === fromGuid) {
@@ -484,6 +518,10 @@ function _setupChannel(channel) {
     // BUG-FIX(2026-07-02): 데이터채널이 실제로 열리는 이 순간이 "진짜
     // 연결됨" — 여기서만 메인 대화창으로 전환하고 AI 패널을 닫는다
     // (사용자 요청 사양: 무응답/연결 중에는 AI 패널이 살아있어야 함).
+    // 수신측 연결 타임아웃도 여기서 전부 해제 — 정상 연결됐으니 더 이상
+    // 필요 없다.
+    for (const t of _calleeConnectTimers.values()) clearTimeout(t);
+    _calleeConnectTimers.clear();
     if (_peerInfo) _activatePeerInMainChat(_peerInfo);
   };
 
@@ -608,6 +646,9 @@ function _showIncomingCallModal(fromHandle) {
 function _closeP2P() {
   _stopPoll();
   _activeCallId = null;
+  _activeCallIdCallee = null;
+  for (const t of _calleeConnectTimers.values()) clearTimeout(t);
+  _calleeConnectTimers.clear();
 
   // BUG-FIX(2026-07-01): 튜토리얼 STEP 4 — 사용자가 검색 결과에서 실제로
   // 상대를 선택해 대화창을 열었다가 닫는 경우, p2p-search.js의
