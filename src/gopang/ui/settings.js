@@ -600,6 +600,17 @@ window._openChatDetail = async function(idx) {
 // ② Hash Chain 보기
 // ══════════════════════════════════════════════════════════════
 export function openHashChain() {
+  // BUG-FIX(2026-07-02): webapp.html에서 window.openHashChain을 나중에
+  // wrapping해서 튜토리얼 신호(_tutorialSignal('pdv_open'))를 붙이려던
+  // 방식은 구조적으로 항상 실패했다 — webapp.html의 classic 스크립트가
+  // gopang-app.js(type=module, 게다가 top-level await로 initAuth()까지
+  // 기다림)보다 먼저 실행되어 wrapping 시점엔 window.openHashChain이
+  // 아직 없고, 이후 gopang-app.js의 exposeGlobals()가 원본 함수로 그냥
+  // 덮어써버려 wrapping이 무효화됐다. wrapping 대신 여기서 직접 신호를
+  // 보낸다 — 순서 문제 자체가 발생할 수 없다.
+  if (typeof window._tutorialSignal === 'function') window._tutorialSignal('pdv_open');
+  if (typeof window._resetTutorialWatchdog === 'function') window._resetTutorialWatchdog();
+
   const user = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
   const guid = user.ipv6 || '';
 

@@ -2467,17 +2467,19 @@ if (document.readyState === 'complete') _applyI18n();
 function openLeftMenu() {
   document.getElementById('left-menu-overlay')?.classList.add('open');
   // BUG-FIX(2026-07-01): 이 자리에서 직접 _tutorialSignal을 호출하는 코드가
-  // 있었으나(구 _tutorialMenuAction), 이후 다른 스크립트 블록(2976행 부근)의
+  // 있었으나(구 _tutorialMenuAction), 이후 다른 스크립트 블록의
   // window.openLeftMenu 래퍼가 "신호가 안 나간다"는 오진단 아래 동일한
   // 신호를 한 번 더 호출하도록 추가되면서, 메뉴를 열 때마다 튜토리얼 신호가
   // 정확히 두 번씩 발동해 AI 응답이 통째로 중복되는 원인이 되었다.
-  // 신호 발동은 아래 래퍼(window.openLeftMenu/openRightMenu 재정의 지점)
-  // 한 곳에서만 담당하도록 통일하고, 여기서는 순수 UI 토글만 수행한다.
+  // BUG-FIX(2026-07-02): 신호 발동 시점 자체도 "연다" 시점이라 메뉴가 화면을
+  // 가린 채로 AI 피드백이 나오는 문제가 있어, 아래 래퍼를 closeLeftMenu/
+  // closeRightMenu 쪽으로 옮겼다(메뉴를 "닫을 때" 발동). 여기 open*은
+  // 순수 UI 토글만 수행한다.
 }
 function closeLeftMenu()  { document.getElementById('left-menu-overlay')?.classList.remove('open'); }
 function openRightMenu() {
   document.getElementById('right-menu-overlay')?.classList.add('open');
-  // BUG-FIX(2026-07-01): 위 openLeftMenu와 동일한 이유로 중복 신호 제거 — 상세 주석 참고.
+  // BUG-FIX(2026-07-01/07-02): 위 openLeftMenu와 동일한 이유 — 상세 주석 참고.
 }
 function closeRightMenu() { document.getElementById('right-menu-overlay')?.classList.remove('open'); }
 
@@ -3095,22 +3097,32 @@ window.closePDV = closePDV;
   })();
 
   // ── PDV(Hash Chain) 열기 감지 (STEP 5) ───────────────
-  requestAnimationFrame(() => {
-    const orig = window.openHashChain;
-    if (typeof orig === 'function') {
-      window.openHashChain = function(...a) {
-        window._tutorialSignal('pdv_open');
-        return orig.apply(this, a);
-      };
-    }
-  });
+  // BUG-FIX(2026-07-02): window.openHashChain을 여기서 wrapping하는 방식은
+  // 구조적으로 항상 실패했다 — 이 classic 스크립트(webapp.html)는 문서
+  // 파싱 도중 동기 실행되지만, window.openHashChain을 실제로 할당하는
+  // gopang-app.js의 exposeGlobals()는 type="module" 스크립트 안에 있고
+  // 그마저도 top-level await(initAuth() 대기)로 더 늦게 실행된다. 그
+  // 결과 (1) wrapping 시점엔 window.openHashChain이 아직 undefined라
+  // typeof 체크를 통과 못 해 래핑 자체가 무시되거나, (2) 설사 래핑됐다
+  // 해도 이후 exposeGlobals()가 원본 함수로 덮어써 무효화된다. 신호는
+  // 이제 src/gopang/ui/settings.js의 openHashChain() 함수 안에서 직접
+  // 보낸다 — 별도 조치 불필요.
 
   // BUG-FIX(2026-07-01): 워치독 타이머만 리셋할 뿐, 실제로 '참 잘했어요'
   // 진행 메시지를 보내는 window._tutorialSignal('left_menu'/'right_menu')를
   // 호출하는 코드가 여기 어디에도 없었다 — 메뉴를 열어도 튜토리얼이
   // 절대 다음 단계로 넘어가지 못하던 원인.
-  const _MENU_TUT_ACTION = { openLeftMenu: 'left_menu', openRightMenu: 'right_menu' };
-  ['openLeftMenu', 'openRightMenu'].forEach(fnName => {
+  //
+  // BUG-FIX(2026-07-02): 위 최초 수정은 open* 함수(openLeftMenu/
+  // openRightMenu)를 감쌌기 때문에, 사용자가 메뉴를 "여는" 순간 곧바로
+  // AI 피드백 버블이 쌓였다. 이 시점엔 메뉴 드로어가 화면을 덮고 있어
+  // 피드백 내용을 볼 수 없다. 지시받은 동작(메뉴 확인)을 마치고 메뉴를
+  // "닫은" 뒤에 피드백이 나와야 하므로, open*이 아니라 close*
+  // (closeLeftMenu/closeRightMenu)를 감싸도록 변경한다. 이 두 함수는
+  // openHashChain과 달리 이 같은 webapp.html 파일 안에서 동기적으로
+  // 정의·노출되므로(2477/2482행) 모듈 로딩 순서 문제가 없다.
+  const _MENU_TUT_ACTION = { closeLeftMenu: 'left_menu', closeRightMenu: 'right_menu' };
+  ['closeLeftMenu', 'closeRightMenu'].forEach(fnName => {
     const orig = window[fnName];
     if (typeof orig === 'function') {
       window[fnName] = function(...a) {
