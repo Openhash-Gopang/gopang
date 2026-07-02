@@ -1335,8 +1335,56 @@ async function handlePdvReport(request,env,corsHeaders){
 // 이하 v4.8과 동일 — PDV Query, SSO, WebAuthn, AI, Geocode
 // ═══════════════════════════════════════════════════════════
 async function handlePdvQuery(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const origin=request.headers.get('Origin')||'';try{const body=await request.json().catch(()=>null);const query=body?.query;if(!query?.svc||!query?.ipv6||!query?.scope||!query?.period)return _err(400,'SCHEMA_ERROR','필수 필드 누락: svc, ipv6, scope, period',corsHeaders);if(!Array.isArray(query.scope)||query.scope.length===0)return _err(400,'SCOPE_INVALID','scope는 비어있지 않은 배열이어야 합니다',corsHeaders);const invalidScope=query.scope.find(s=>!VALID_PDV_SCOPES.includes(s));if(invalidScope)return _err(400,'SCOPE_INVALID',`허용되지 않은 scope: ${invalidScope}`,corsHeaders);if(!query.period?.start||!query.period?.end)return _err(400,'SCHEMA_ERROR','period.start, period.end 필수',corsHeaders);const periodMs=new Date(query.period.end)-new Date(query.period.start);if(periodMs>365*24*60*60*1000)return _err(400,'PERIOD_TOO_LONG','조회 기간은 12개월을 초과할 수 없습니다',corsHeaders);const svcReg=_getSvcRegistration(origin,query.svc);if(!svcReg||!svcReg.pdv)return _err(403,'SVC_NOT_REGISTERED',`미등록 또는 PDV 권한 없는 서비스: ${query.svc}`,corsHeaders);const authToken=query.auth_token;if(!authToken?.exp||Math.floor(Date.now()/1000)>authToken.exp)return _err(401,'AUTH_EXPIRED','인증 토큰이 만료되었습니다',corsHeaders);const LEVEL_ORDER={L0:0,L1:1,L2:2,L3:3};const userLevel=LEVEL_ORDER[authToken.level]??0;for(const scope of query.scope){const required=LEVEL_ORDER[SCOPE_MIN_LEVEL[scope]||'L1'];if(userLevel<required)return _err(403,'LEVEL_INSUFFICIENT',`${scope} 조회는 ${SCOPE_MIN_LEVEL[scope]} 이상 필요`,corsHeaders);}if(!query.consent_token||!query.request_id){const reqId=`CNSREQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const expiresAt=Math.floor(Date.now()/1000)+300;await _storeConsentRequest(env,reqId,query,expiresAt);const consentUrl='https://hondi.net/consent'+`?req=${encodeURIComponent(reqId)}&svc=${encodeURIComponent(query.svc)}`+`&scope=${encodeURIComponent(query.scope.join(','))}`+`&purpose=${encodeURIComponent(query.purpose||'')}`+`&ipv6_hash=${encodeURIComponent(await _sha256Hex(query.ipv6))}`;return new Response(JSON.stringify({ok:false,status:'CONSENT_REQUIRED',consent:{request_id:reqId,expires_at:expiresAt,consent_url:consentUrl,message:'사용자가 고팡 앱에서 PDV 조회에 동의해야 합니다.'}}),{status:202,headers:corsHeaders});}const consentOk=await _verifyConsentToken(env,query.consent_token,query.request_id,query.ipv6);if(!consentOk)return _err(401,'CONSENT_INVALID','동의 토큰이 유효하지 않습니다',corsHeaders);const withinLimit=await _checkRateLimit(env,query.ipv6,'pdv_query');if(!withinLimit)return _err(429,'RATE_LIMITED','PDV 조회 한도 초과',corsHeaders);const pdvSummary=await _fetchPdvByScope(env,query.ipv6,query.scope,query.period);const queryId=`PDVQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const pdvEntryId=await _recordConsentEvent(env,query,queryId);return new Response(JSON.stringify({ok:true,query_id:queryId,ipv6:query.ipv6,period:query.period,pdv_summary:pdvSummary,consent:{granted_at:new Date().toISOString(),expires_at:new Date(authToken.exp*1000).toISOString(),pdv_entry_id:pdvEntryId}}),{status:200,headers:corsHeaders});}catch(e){return _err(500,'INTERNAL_ERROR',e.message,corsHeaders);}}
-async function _storeConsentRequest(env,reqId,query,expiresAt){const key=env.SUPABASE_KEY||_supabaseAnonKey();try{await fetch(SUPABASE_URL+'/rest/v1/pdv_consent_requests',{method:'POST',headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({id:reqId,ipv6:query.ipv6,svc:_resolveSvcId(query.svc),scope:query.scope,purpose:query.purpose||'',period:query.period,status:'pending',expires_at:new Date(expiresAt*1000).toISOString()})});}catch(e){console.warn('[PDVQuery] 동의 요청 저장 실패:',e.message);}}
-async function _verifyConsentToken(env,consentToken,requestId,ipv6){try{const key=env.SUPABASE_KEY||_supabaseAnonKey();const res=await fetch(SUPABASE_URL+`/rest/v1/pdv_consent_requests?id=eq.${encodeURIComponent(requestId)}&ipv6=eq.${encodeURIComponent(ipv6)}&select=status,expires_at,consent_token`,{headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'}});const rows=await res.json().catch(()=>[]);if(!rows?.length)return false;const row=rows[0];if(new Date(row.expires_at)<new Date())return false;if(row.status!=='granted')return false;if(row.consent_token!==consentToken)return false;return true;}catch(e){return _verifyConsentHmac(env,consentToken,requestId,ipv6);}}
+async function _storeConsentRequest(env,reqId,query,expiresAt){
+  // BUG-FIX(2026-07-02): Supabase pdv_consent_requests 테이블이 실제로는
+  // 한 번도 생성된 적이 없었다(HTTP 404 PGRST205 확인됨). Supabase→L1
+  // 마이그레이션 방향에 맞춰 Supabase 대신 L1(hanlim) PocketBase에
+  // 새로 만든 pdv_consent_requests 컬렉션(id: p1tketkfid3uup8)을 쓴다.
+  // 이 컬렉션은 consent_token을 담으므로 listRule/createRule 등을 전부
+  // null(관리자 전용)로 잠갔다 — 그래서 anon key가 아니라 _l1AdminToken()
+  // 관리자 토큰이 필요하다. 원래 Supabase 스키마의 PK "id"(CNSREQ-... 문자열)는
+  // PocketBase의 자동생성 15자 id와 충돌하므로 별도 "request_id" 필드에 담는다
+  // (pdv_records가 report_id를 별도 필드로 쓰는 것과 동일 패턴).
+  try{
+    const token=await _l1AdminToken(env);
+    const res=await fetch(`${L1_DEFAULT}/api/collections/pdv_consent_requests/records`,{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        request_id: reqId,
+        ipv6:       query.ipv6,
+        svc:        _resolveSvcId(query.svc),
+        scope:      query.scope,
+        purpose:    query.purpose||'',
+        period:     query.period,
+        status:     'pending',
+        expires_at: new Date(expiresAt*1000).toISOString(),
+      }),
+    });
+    if(!res.ok) console.warn('[PDVQuery] 동의 요청 저장 실패(L1):', res.status, await res.text().catch(()=>''));
+  }catch(e){console.warn('[PDVQuery] 동의 요청 저장 실패:',e.message);}
+}
+async function _verifyConsentToken(env,consentToken,requestId,ipv6){
+  // BUG-FIX(2026-07-02): _storeConsentRequest와 동일한 이유로 L1로 전환.
+  // PocketBase filter 문법(작은따옴표 문자열 리터럴) — requestId/ipv6에
+  // 작은따옴표가 섞일 가능성은 낮지만 방어적으로 이스케이프한다.
+  const esc = s => String(s).replace(/'/g, "\\'");
+  try{
+    const token=await _l1AdminToken(env);
+    const filter=encodeURIComponent(`request_id='${esc(requestId)}' && ipv6='${esc(ipv6)}'`);
+    const res=await fetch(`${L1_DEFAULT}/api/collections/pdv_consent_requests/records?filter=${filter}&perPage=1`,{
+      headers:{'Authorization':'Bearer '+token},
+    });
+    if(!res.ok) return _verifyConsentHmac(env,consentToken,requestId,ipv6);
+    const data=await res.json().catch(()=>({items:[]}));
+    const row=data.items?.[0];
+    if(!row)return false;
+    if(new Date(row.expires_at)<new Date())return false;
+    if(row.status!=='granted')return false;
+    if(row.consent_token!==consentToken)return false;
+    return true;
+  }catch(e){return _verifyConsentHmac(env,consentToken,requestId,ipv6);}
+}
 async function _verifyConsentHmac(env,consentToken,requestId,ipv6){try{const masterKey=env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1';const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(masterKey),{name:'HMAC',hash:'SHA-256'},false,['verify']);const data=new TextEncoder().encode(`${requestId}.${ipv6}`);const sigBytes=Uint8Array.from(atob(consentToken.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));return crypto.subtle.verify('HMAC',key,sigBytes,data);}catch{return false;}}
 async function _checkRateLimit(env,ipv6,action){if(env.RATE_LIMIT_KV){const kvKey=`rl:${action}:${ipv6}`;const current=parseInt(await env.RATE_LIMIT_KV.get(kvKey)||'0');if(current>=3)return false;await env.RATE_LIMIT_KV.put(kvKey,String(current+1),{expirationTtl:300});return true;}return true;}
 async function _fetchPdvByScope(env,ipv6,scopes,period){const key=env.SUPABASE_KEY||_supabaseAnonKey();const result={};for(const scope of scopes){const source=SCOPE_SOURCE_MAP[scope];let queryUrl=SUPABASE_URL+'/rest/v1/pdv_log'+`?guid=eq.${encodeURIComponent(ipv6)}`+`&created_at=gte.${period.start}T00:00:00Z&created_at=lte.${period.end}T23:59:59Z`+`&select=summary,summary_6w,risk_level,created_at,source&order=created_at.desc&limit=50`;if(source)queryUrl+=`&source=eq.${encodeURIComponent(source)}`;try{const res=await fetch(queryUrl,{headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'}});const rows=await res.json().catch(()=>[]);if(!rows?.length){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{}};continue;}const RISK_ORDER={low:0,medium:1,high:2};const maxRisk=rows.reduce((max,r)=>{const lvl=r.risk_level||'low';return RISK_ORDER[lvl]>RISK_ORDER[max]?lvl:max;},'low');let summary6w=null;for(const row of rows){try{summary6w=JSON.parse(row.summary_6w);break;}catch{}}result[scope]={available:true,entry_count:rows.length,risk_level:maxRisk,summary_6w:summary6w,risk_factors:_aggregateRiskFactors(scope,rows)};}catch(e){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{},error:'fetch_failed'};}}return result;}
@@ -2243,33 +2291,37 @@ async function _deleteAllUserData(env, guid, l1Record) {
     results.sb_pdv_log = r.ok ? 'deleted' : `error:${r.status}`;
   } catch (e) { results.sb_pdv_log = 'error:' + e.message; }
 
-  // ── 5. Supabase: pdv_consent_requests ────────────────────
-  // BUG-FIX(2026-07-02): 실제 배포된 Supabase 프로젝트에 이 테이블이 아예
-  // 생성되어 있지 않다(docs/PDV_QUERY_PROTOCOL_v1_0.md엔 스키마만 문서화돼
-  // 있고 CREATE TABLE이 적용된 적 없음 — SSH로 직접 REST API를 찔러
-  // HTTP 404 + PGRST205("Could not find the table 'public.pdv_consent_requests'")
-  // 확인됨). 이 상태에서 DELETE는 항상 404로 실패하고, _deviceFullReset()은
-  // 원자성 정책상 서버 삭제 중 하나라도 실패하면 계정 완전 삭제 전체를
-  // 중단시키므로 — 존재하지도 않는 테이블 때문에 사용자가 영원히 계정을
-  // 완전 삭제할 수 없게 되는 결과가 나온다. "테이블이 없음"은 "지울 데이터가
-  // 원천적으로 없음"과 같으므로 실패로 集계하지 않는다.
-  // ※ 별개 문제: _verifyConsentToken()(1339행 부근)도 같은 테이블을 쓰는데,
-  // 404 응답 body({code:"PGRST205",...})가 배열이 아니라 rows?.length가
-  // undefined가 되어 항상 false(동의 거부)로 처리된다 — PDV 조회 동의
-  // 시스템 자체가 현재 조용히 전혀 작동하지 않고 있을 가능성이 있다.
-  // 이건 테이블을 실제로 만들지 여부와 함께 별도로 확인이 필요하다.
+  // ── 5. L1(hanlim): pdv_consent_requests ──────────────────
+  // BUG-FIX(2026-07-02): 원래 Supabase pdv_consent_requests 테이블이 한 번도
+  // 생성된 적이 없어(HTTP 404 PGRST205 확인됨) 여기서 항상 실패해 계정 완전
+  // 삭제 전체가 막혔다. Supabase→L1 마이그레이션 방향에 맞춰 테이블을 새로
+  // 만드는 대신 L1(hanlim) PocketBase에 pdv_consent_requests 컬렉션을 신설했다
+  // (id: p1tketkfid3uup8, listRule 등 전부 관리자 전용). PocketBase REST API는
+  // Supabase처럼 필터 조건으로 여러 row를 한 번에 지우는 벌크 DELETE가 없어서,
+  // 먼저 ipv6로 목록 조회한 뒤 각 record id로 개별 DELETE한다.
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/pdv_consent_requests?ipv6=eq.${encodeURIComponent(guid)}`,
-      { method: 'DELETE', headers: sbSvcH });
-    if (r.ok) {
-      results.sb_pdv_consent = 'deleted';
-    } else if (r.status === 404) {
-      const body = await r.json().catch(() => null);
-      results.sb_pdv_consent = (body?.code === 'PGRST205') ? 'table_not_created' : `error:${r.status}`;
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`ipv6='${String(guid).replace(/'/g, "\\'")}'`);
+    const listRes = await fetch(
+      `${L1_DEFAULT}/api/collections/pdv_consent_requests/records?filter=${filter}&perPage=200`,
+      { headers: { 'Authorization': 'Admin ' + token } }
+    );
+    if (!listRes.ok) {
+      results.l1_pdv_consent = `error:${listRes.status}`;
     } else {
-      results.sb_pdv_consent = `error:${r.status}`;
+      const listData = await listRes.json().catch(() => ({ items: [] }));
+      const items = listData.items || [];
+      let failCount = 0;
+      for (const item of items) {
+        const delRes = await fetch(
+          `${L1_DEFAULT}/api/collections/pdv_consent_requests/records/${item.id}`,
+          { method: 'DELETE', headers: { 'Authorization': 'Admin ' + token } }
+        );
+        if (!delRes.ok && delRes.status !== 404) failCount++;
+      }
+      results.l1_pdv_consent = failCount === 0 ? 'deleted' : `error:${failCount}/${items.length}_failed`;
     }
-  } catch (e) { results.sb_pdv_consent = 'error:' + e.message; }
+  } catch (e) { results.l1_pdv_consent = 'error:' + e.message; }
 
   // ── 6. Supabase: biz_products (판매자) ───────────────────
   try {
