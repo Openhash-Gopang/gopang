@@ -120,6 +120,8 @@ let _sessionStart = null;  // 세션 시작 시각
 let _activeCallId = null;  // 현재 유효한 통화 시도 ID — 재연결 시 이전 watcher 자동 무력화
 let _activeCallIdCallee = null;  // 수신측(폰) 연결 타임아웃용 — 최신 수락한 callId만 유효
 const _calleeConnectTimers = new Map();  // callId → timer, onopen 시 정리
+let _pendingModalCallId = null;  // 지금 수락/거절 모달이 떠 있는 offer의 callId
+let _activeModalDismiss = null;  // 그 모달을 외부에서 강제로 닫는 함수 (취소 신호 수신용)
 const _seenOfferIds = new Set();  // 처리한 offer callId — 중복 confirm() 방지
 
 // ── 메인 채팅 통합 (2026-07-02 리팩터링) ──────────────────────────────
@@ -282,7 +284,7 @@ function _watchAnswerRealtime(conn, targetUser, callId) {
   let noAnswerTimer = setTimeout(() => {
     if (done || _stale()) return;
     _close();
-    _handleNoAnswer(targetUser);
+    _handleNoAnswer(targetUser, callId);
   }, NO_ANSWER_MS);
 
   async function _handleSignalRow(row) {
@@ -345,8 +347,16 @@ function _watchAnswerRealtime(conn, targetUser, callId) {
 // 메인 대화창)에 "OO님이 응답하지 않습니다. OO님의 AI 비서에게 대화
 // 초대 메시지를 남겼습니다"를 띄운다. "메시지를 남겼다"는 문구는 실제로
 // 남기기가 성공했을 때만 붙인다 — 실패하면 그 사실은 숨기지 않는다.
-async function _handleNoAnswer(targetUser) {
+async function _handleNoAnswer(targetUser, callId) {
   const name = targetUser.nickname || targetUser.handle || '상대방';
+
+  // BUG-FIX(2026-07-02, 2차): 20초 수신측 자체 타임아웃(방어망)만으로는
+  // 상대가 늦게 수락했을 때 최대 20초를 그냥 날린다. 여기서 포기하는
+  // "바로 그 순간" 상대에게 취소 신호를 쏴서, 아직 수락 모달이 떠 있든
+  // 막 수락해서 연결 시도 중이든 즉시 반응하게 한다(수신측 타임아웃은
+  // 이 신호가 유실됐을 때 대비한 최후 방어망으로 계속 남겨둔다).
+  _signalSendDirect(_USER.ipv6, targetUser.guid, 'ice', { cancel: true, callId }).catch(() => {});
+
   let left = false;
   try {
     await _leaveInviteForPeerAI(targetUser);
@@ -415,10 +425,21 @@ export async function handleIncomingOffer(signal) {
 
   // 수락 확인 — confirm()은 메인 스레드를 동기적으로 막기 때문에 막지
   // 않는 커스텀 모달을 사용한다.
+  // BUG-FIX(2026-07-02): _pendingModalCallId를 세팅해둬야 그 사이 발신측이
+  // 포기했을 때(_handleIncomingCancel) 이 모달을 정확히 찾아서 강제로
+  // 닫을 수 있다.
+  _pendingModalCallId = callId;
   const accepted = await _showIncomingCallModal(fromHandle);
+  _pendingModalCallId = null;
   if (!accepted) return;
 
   _peerInfo = { guid: fromGuid, handle: fromHandle, nickname: fromHandle };
+  // BUG-FIX(2026-07-02): 원래 이 아래 SDP 생성·전송 과정(await 여러 번)이
+  // 끝난 뒤에야 _activeCallIdCallee를 세팅했는데, 그 사이(비동기 처리
+  // 중)에 취소 신호가 도착하면 _handleIncomingCancel의 케이스 B 검사
+  // (`_activeCallIdCallee === callId`)가 아직 불일치라 놓쳤다. _peerInfo와
+  // 동시에 세팅해 그 레이스 윈도우를 없앤다.
+  _activeCallIdCallee = callId;
 
   const conn = new RTCPeerConnection(RTC_CONFIG);
   setRtcConn(conn);
@@ -471,7 +492,6 @@ export async function handleIncomingOffer(signal) {
     if (_rtcConn)    { try { _rtcConn.close(); }    catch {} setRtcConn(null); }
     _peerInfo = null;
   }, 20000);
-  _activeCallIdCallee = _calleeCallId;
   _calleeConnectTimers.set(_calleeCallId, calleeConnectTimer);
 
   // ICE 폴링
@@ -631,7 +651,19 @@ function _showIncomingCallModal(fromHandle) {
 
     document.body.appendChild(overlay);
 
-    const cleanup = (result) => { overlay.remove(); resolve(result); };
+    const cleanup = (result) => {
+      if (_activeModalDismiss === dismiss) _activeModalDismiss = null;
+      overlay.remove();
+      resolve(result);
+    };
+    // 발신측이 통화를 취소했을 때(_handleIncomingCancel) 사용자가 버튼을
+    // 누르지 않아도 이 모달을 강제로 닫기 위한 훅 (2026-07-02 신설)
+    const dismiss = (reason) => {
+      cleanup(false);
+      if (reason) appendBubble('system', reason);
+    };
+    _activeModalDismiss = dismiss;
+
     overlay.querySelector('#_p2p-accept').onclick  = () => cleanup(true);
     overlay.querySelector('#_p2p-decline').onclick = () => cleanup(false);
   });
@@ -840,6 +872,46 @@ async function _saveP2PSession(messages, peer, startedAt) {
     '| layer:', layer ?? 'none');
 }
 
+// ── 발신측 취소 신호 처리 (2026-07-02 신설) ──────────────
+// _handleNoAnswer()가 무응답으로 포기하는 즉시 보내는 신호를 받아서,
+// 20초 수신측 자체 타임아웃(최후 방어망)까지 기다리지 않고 바로 반응한다.
+// 두 케이스를 구분해야 한다:
+//   케이스 A — 아직 "수락하시겠습니까?" 모달이 떠 있는 중
+//   케이스 B — 이미 수락해서 연결 시도 중(_peerInfo 세팅됨, datachannel 미개통)
+function _handleIncomingCancel(callId) {
+  if (!callId) return;
+
+  if (_pendingModalCallId === callId && _activeModalDismiss) {
+    _pendingModalCallId = null;
+    _activeModalDismiss('상대방이 연결 요청을 취소했습니다.');
+    return;
+  }
+
+  if (_activeCallIdCallee === callId && _peerInfo) {
+    // BUG-FIX(2026-07-02): 취소 신호가 지연 도착해서, 그 사이 실제로는
+    // 연결이 이미 성공(datachannel open)했을 수도 있다 — 그 경우엔
+    // 절대 끊으면 안 된다. onopen이 이미 타이머를 전부 지웠으므로
+    // readyState로 직접 판별한다.
+    if (_rtcChannel && _rtcChannel.readyState === 'open') {
+      console.info('[P2P] 지연 취소 신호 무시 — 이미 정상 연결됨');
+      return;
+    }
+    // 타이머가 아직 등록 전(_peerInfo 세팅 직후~SDP 처리 중 사이의 좁은
+    // 레이스 윈도우)이어도 정리는 그대로 진행한다 — clearTimeout할
+    // 대상만 없을 뿐, 나중에 그 타이머가 실제로 fire되더라도
+    // `_activeCallIdCallee !== _calleeCallId`(아래서 null로 초기화됨)
+    // 가드에 걸려 스스로 no-op된다.
+    const t = _calleeConnectTimers.get(callId);
+    if (t) { clearTimeout(t); _calleeConnectTimers.delete(callId); }
+    console.info('[P2P] 발신측 취소 수신 — 즉시 정리 (callId:', callId, ')');
+    appendBubble('system', '상대방이 연결을 취소했습니다.');
+    if (_rtcChannel) { try { _rtcChannel.close(); } catch {} setRtcChannel(null); }
+    if (_rtcConn)    { try { _rtcConn.close(); }    catch {} setRtcConn(null); }
+    _peerInfo = null;
+    _activeCallIdCallee = null;
+  }
+}
+
 // ── 앱 시작 시 incoming offer 감시 ──────────────────────
 // 2026-06-28: L1 PocketBase Realtime(SSE)으로 복귀 — 아래 _watchL1Realtime
 // 정의부 주석 참고(ERR_INCOMPLETE_CHUNKED_ENCODING은 nginx 설정으로 이미 해결됨).
@@ -865,6 +937,21 @@ export function startIncomingWatch(myGuid) {
     if (_seenSignalIds.size > _SEEN_SIGNAL_CAP) {
       _seenSignalIds.delete(_seenSignalIds.values().next().value);
     }
+
+    // ── 발신측 취소 신호 (2026-07-02 신설) ──────────────
+    // _handleNoAnswer()가 무응답 포기 시점에 즉시 보내는 신호. 여기서
+    // 처리해야 하는 이유: 이 시점엔 아직 handleIncomingOffer가 시작도
+    // 안 됐을 수 있고(모달 표시 중), 이미 수락해서 연결 시도 중일 수도
+    // 있다 — 두 경우 다 이 최상위 감시자에서만 한 곳에서 처리 가능하다.
+    if (row.type === 'ice') {
+      const _p = typeof row.payload === 'string' ? JSON.parse(row.payload) : (row.payload || {});
+      if (_p.cancel) {
+        _handleIncomingCancel(_p.callId);
+        _signalDeleteDirect(row.id);
+        return;
+      }
+    }
+
     if (row.type === 'offer' && !_peerInfo) {
       await handleIncomingOffer(row);
       _signalDeleteDirect(row.id);
@@ -880,12 +967,20 @@ export function startIncomingWatch(myGuid) {
 
   // 폴백: realtime이 못 잡은 offer를 3초 폴링으로 보완(같은 핸들러 재사용 —
   // _seenSignalIds가 있어서 realtime이 이미 처리한 레코드는 자동으로 건너뜀)
+  // BUG-FIX(2026-07-02): 기존엔 _peerInfo가 세팅돼 있으면(=막 수락해서
+  // 연결 시도 중) 이 폴링 전체를 건너뛰었다 — 그런데 그 상태에서 발신측이
+  // 보내는 취소 신호도 'ice' 타입 시그널이라, 하필 그걸 가장 받아야 할
+  // 때 못 받는 모순이 있었다. 취소 신호는 _peerInfo 여부와 무관하게 항상
+  // 처리하고, 새 offer 수락만 계속 막는다.
   setInterval(async () => {
     try {
-      if (_peerInfo) return;
       const signals = await _signalPollDirect(myGuid);
       for (const sig of signals) {
-        if (sig.type === 'offer') { await _handleSignalRow(sig); break; }
+        if (sig.type === 'ice') {
+          const _p = typeof sig.payload === 'string' ? JSON.parse(sig.payload) : (sig.payload || {});
+          if (_p.cancel) { await _handleSignalRow(sig); continue; }
+        }
+        if (sig.type === 'offer' && !_peerInfo) { await _handleSignalRow(sig); break; }
       }
     } catch {}
   }, 3000);
