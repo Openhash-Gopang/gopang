@@ -13,7 +13,7 @@
 5. 전송 API 규격
 6. 수신 확인(ACK) 메커니즘
 7. PDV 기록 규칙
-8. school.gopang.net 구현 예시
+8. school.hondi.net 구현 예시
 9. 하위 시스템별 필드 정의
 10. 오류 처리 및 재전송
 11. 보안 및 개인정보
@@ -27,7 +27,7 @@
 
 ```
 하위 시스템                      고팡 (PDV)
-K-School ──보고서 전송──▶ gopang.net/api/report ──▶ 사용자 PDV 기록
+K-School ──보고서 전송──▶ hondi.net/api/report ──▶ 사용자 PDV 기록
 K-Health                                           ──▶ AI 비서 업데이트
 K-Law                                              ──▶ 수신 확인 반환
 K-Market ◀──────────────── ACK (기록 완료 통지) ──────────────────
@@ -88,7 +88,7 @@ K-Market ◀──────────────── ACK (기록 완료 
     },
 
     "where": {
-      "svc_url":    "https://school.gopang.net",
+      "svc_url":    "https://school.hondi.net",
       "svc_id":     "school",
       "session_ids": ["sess-001", "sess-002"]
     },
@@ -227,7 +227,7 @@ Authorization: Bearer {gwp_token}        ← SSO 토큰
 
 ```javascript
 // gopang-report.js — 모든 하위 시스템 공통 라이브러리
-import { gopangAuth } from 'https://gopang.net/auth/gopang-sso.js';
+import { gopangAuth } from 'https://hondi.net/auth/gopang-sso.js';
 
 const REPORT_ENDPOINT =
   'https://gopang-proxy.tensor-city.workers.dev/pdv/report';
@@ -396,7 +396,7 @@ async function sendReportOnce(report) {
     "6w": {
       "who":   "학습자 본인 (2601:db80:...)",
       "when":  "2026년 5월 4주차 (05-24 ~ 05-30)",
-      "where": "school.gopang.net",
+      "where": "school.hondi.net",
       "what":  "수학 2단원 완료(점수 92), 영어 독해 80% 진행",
       "how":   "AI 튜터 + 문제 풀이, 총 300분 학습",
       "why":   "1학기 수학·영어 목표 달성 (선행 준비)"
@@ -417,7 +417,7 @@ async function sendReportOnce(report) {
 |------|-----------|------|
 | **WHO** | 사용자 역할 + IPv6 약식 | "학습자 (2601:db80:...)" |
 | **WHEN** | 기간 또는 시각 (한국어) | "2026년 5월 4주차" |
-| **WHERE** | 서비스 이름 + URL | "school.gopang.net" |
+| **WHERE** | 서비스 이름 + URL | "school.hondi.net" |
 | **WHAT** | 핵심 결과 1~3문장 | "수학 완료(92점), 영어 80%" |
 | **HOW** | 방법·도구·소요시간 | "AI 튜터, 300분" |
 | **WHY** | 목표·동기·맥락 | "1학기 선행 준비" |
@@ -441,14 +441,14 @@ function generate6WSummary(report) {
 
 ---
 
-## 8. school.gopang.net 구현 예시
+## 8. school.hondi.net 구현 예시
 
 ### 8.1 주간 보고서 생성 및 전송
 
 ```javascript
 // school/js/weekly-report.js
-import { sendReportOnce } from 'https://gopang.net/report/gopang-report.js';
-import { gopangAuth }     from 'https://gopang.net/auth/gopang-sso.js';
+import { sendReportOnce } from 'https://hondi.net/report/gopang-report.js';
+import { gopangAuth }     from 'https://hondi.net/auth/gopang-sso.js';
 
 async function generateWeeklyReport(learnerIpv6, weekData) {
   const now      = new Date();
@@ -478,7 +478,7 @@ async function generateWeeklyReport(learnerIpv6, weekData) {
       },
 
       where: {
-        svc_url:     'https://school.gopang.net',
+        svc_url:     'https://school.hondi.net',
         svc_id:      'school',
         session_ids: weekData.sessionIds,
       },
@@ -569,7 +569,7 @@ async function notifyRecipients(report, pdvEntryId) {
         await sendPushNotification(report.report.who.ipv6, {
           title:   `📚 ${getWeekLabel()} 학습 보고서`,
           body:    report.report.what.summary,
-          url:     `https://school.gopang.net/report/${report.report.id}`,
+          url:     `https://school.hondi.net/report/${report.report.id}`,
           channel: 'parent',
         });
         break;
@@ -578,7 +578,7 @@ async function notifyRecipients(report, pdvEntryId) {
         await sendPushNotification(report.report.who.ipv6, {
           title:   `학생 주간 보고서`,
           body:    `진도율 ${report.report.what.metrics.completion_rate}%`,
-          url:     `https://school.gopang.net/teacher/report/${report.report.id}`,
+          url:     `https://school.hondi.net/teacher/report/${report.report.id}`,
           channel: 'teacher',
         });
         break;
@@ -856,14 +856,14 @@ async function _sha256(text) {
 ## 부록 B — gopang-report.js 배포 위치
 
 ```
-https://gopang.net/report/gopang-report.js
+https://hondi.net/report/gopang-report.js
 ```
 
 하위 시스템에서 import:
 
 ```javascript
 import { sendReport, sendReportOnce, flushReportQueue }
-  from 'https://gopang.net/report/gopang-report.js';
+  from 'https://hondi.net/report/gopang-report.js';
 ```
 
 ---

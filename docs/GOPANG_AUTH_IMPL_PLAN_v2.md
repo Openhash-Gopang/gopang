@@ -29,7 +29,7 @@
 ---
 
 ## Phase 6-A. L1 스키마 변경 [선행 필수]
-**대상:** L1 PocketBase Admin (`l1-hanlim.gopang.net/_/`)  
+**대상:** L1 PocketBase Admin (`l1-hanlim.hondi.net/_/`)  
 **컬렉션:** `profiles`
 
 ### 추가 필드
@@ -101,7 +101,7 @@ async function gopangLogout() {
   try {
     const stored = JSON.parse(localStorage.getItem('gopang_user_v3') || 'null');
     if (stored?.fpHex) {
-      const L1_URL = 'https://l1-hanlim.gopang.net/api/collections/profiles/records';
+      const L1_URL = 'https://l1-hanlim.hondi.net/api/collections/profiles/records';
       const filter = encodeURIComponent(`fpHex='${stored.fpHex}'`);
       const res = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
       if (res.ok) {

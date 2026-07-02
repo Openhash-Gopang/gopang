@@ -669,7 +669,7 @@ await test('M-11', "p2p-search.js ⑨ — /p2p/search → L1 직접", async () =
 
 await test('M-12', "config.js ⑪ — 그림자 SP fetch → L1 직접", async () => {
   const src = await readFile('./src/gopang/core/config.js', 'utf8')
-  assert(src.includes('l1-hanlim.gopang.net'), 'L1 URL 없음')
+  assert(src.includes('l1-hanlim.hondi.net'), 'L1 URL 없음')
   assert(src.includes('_agentFilter'), '핸들 필터 없음')
   assert(!src.includes("PROXY_URL}/profile/@"), 'Worker profile 잔존')
   // L1 응답: items[0]

@@ -59,7 +59,7 @@ const GWP_REGISTRY = [
   {
     id: 'kemergency', name: 'K-Emergency', category: 'EMG',
     type: 'tab',      // 긴급은 반드시 새 탭 — 사용자가 직접 확인
-    url: 'https://911.gopang.net/webapp.html',
+    url: 'https://911.hondi.net/webapp.html',
     sp_key: 'SP-02_k119',
     status: 'active', priority: 0, threshold: 0.60,
     description: '긴급 구조·재난 대응. 119·112 연계.',
@@ -73,7 +73,7 @@ const GWP_REGISTRY = [
   {
     id: 'klaw', name: 'K-Law', category: 'JUS',
     type: 'inline',
-    url: 'https://klaw.gopang.net/webapp.html',
+    url: 'https://klaw.hondi.net/webapp.html',
     sp_key: 'SP-01_klaw',
     status: 'active', priority: 1, threshold: 0.70,
     description: 'AI 가상 판결문. K-Law v20.0. 1초·1,000원.',
@@ -88,7 +88,7 @@ const GWP_REGISTRY = [
   {
     id: 'kpolice', name: 'K-Police', category: 'JUS',
     type: 'inline',
-    url: 'https://police.gopang.net/webapp.html',
+    url: 'https://police.hondi.net/webapp.html',
     sp_key: 'SP-03_kpolice',
     status: 'active', priority: 1, threshold: 0.65,
     description: '실시간 범죄 예측·대응. 경찰청 연동.',
@@ -101,7 +101,7 @@ const GWP_REGISTRY = [
   {
     id: 'ksecurity', name: 'K-Security', category: 'JUS',
     type: 'inline',
-    url: 'https://security.gopang.net/webapp.html',
+    url: 'https://security.hondi.net/webapp.html',
     sp_key: 'SP-15_ksecurity',
     status: 'pending', priority: 2, threshold: 0.70,
     description: '사이버 보안·개인정보 침해 대응.',
@@ -115,7 +115,7 @@ const GWP_REGISTRY = [
   {
     id: 'khealth', name: 'K-Health', category: 'MED',
     type: 'inline',
-    url: 'https://health.gopang.net/webapp.html',
+    url: 'https://health.hondi.net/webapp.html',
     sp_key: 'SP-04_khealth',
     status: 'active', priority: 3, threshold: 0.70,
     description: '실거래 기반 건강 위험도 산정. 병원 연동.',
@@ -130,7 +130,7 @@ const GWP_REGISTRY = [
   {
     id: 'kedu', name: 'K-School', category: 'EDU',
     type: 'inline',
-    url: 'https://school.gopang.net/webapp.html',
+    url: 'https://school.hondi.net/webapp.html',
     sp_key: 'SP-09_kschool',
     status: 'active', priority: 4, threshold: 0.70,
     description: 'AI 교수. 유치원~대학원 166개 과목.',
@@ -144,7 +144,7 @@ const GWP_REGISTRY = [
   {
     id: 'kgdc', name: 'GDC', category: 'ECO',
     type: 'tab',   // 결제·송금은 반드시 새 탭
-    url: 'https://gdc.gopang.net/webapp.html',
+    url: 'https://gdc.hondi.net/webapp.html',
     sp_key: 'SP-08_gdc',
     status: 'active', priority: 5, threshold: 0.75,
     description: '무위험 자산 담보 디지털 화폐.',
@@ -157,7 +157,7 @@ const GWP_REGISTRY = [
   {
     id: 'kfinance', name: 'K-Stock', category: 'ECO',
     type: 'inline',
-    url: 'https://stock.gopang.net/webapp.html',
+    url: 'https://stock.hondi.net/webapp.html',
     sp_key: 'SP-11_kstock',
     status: 'active', priority: 5, threshold: 0.75,
     description: '89개 자산군 실시간 분석. 포트폴리오.',
@@ -171,7 +171,7 @@ const GWP_REGISTRY = [
   {
     id: 'kinsurance', name: 'K-Insurance', category: 'ECO',
     type: 'inline',
-    url: 'https://insurance.gopang.net/webapp.html',
+    url: 'https://insurance.hondi.net/webapp.html',
     sp_key: 'SP-16_kinsurance',  // v2.2 — SP-14에서 재배정됨 (K-Cleaner 번호충돌 해소)
     status: 'active', priority: 6, threshold: 0.70,
     description: '개인화 보험료 산정. 청구·심사 자동화.',
@@ -184,7 +184,7 @@ const GWP_REGISTRY = [
   {
     id: 'ktax', name: 'K-Tax', category: 'ECO',
     type: 'inline',
-    url: 'https://tax.gopang.net/webapp.html',
+    url: 'https://tax.hondi.net/webapp.html',
     sp_key: 'SP-07_ktax',
     status: 'active', priority: 6, threshold: 0.75,
     description: '재무제표 실시간 자동 생성·신고.',
@@ -199,7 +199,7 @@ const GWP_REGISTRY = [
   {
     id: 'kcommerce', name: 'K-Market', category: 'MKT',
     type: 'tab',
-    url: 'https://market.gopang.net/webapp.html',
+    url: 'https://market.hondi.net/webapp.html',
     sp_key: 'SP-05_kmarket',
     status: 'active', priority: 7, threshold: 0.75,
     description: '판매자 이력 전용 수요 예측·주문.',
@@ -213,7 +213,7 @@ const GWP_REGISTRY = [
   {
     id: 'ktransport', name: 'K-Traffic', category: 'TRN',
     type: 'inline',
-    url: 'https://traffic.gopang.net/webapp.html',
+    url: 'https://traffic.hondi.net/webapp.html',
     sp_key: 'SP-06_ktraffic',
     status: 'active', priority: 8, threshold: 0.75,
     description: '실시간 교통 흐름 예측·우회 경로.',
@@ -226,7 +226,7 @@ const GWP_REGISTRY = [
   {
     id: 'klogistics', name: 'K-Logistics', category: 'TRN',
     type: 'inline',
-    url: 'https://logistics.gopang.net/webapp.html',
+    url: 'https://logistics.hondi.net/webapp.html',
     sp_key: 'SP-13_klogistics',
     status: 'active', priority: 8, threshold: 0.70,
     description: '주문-출고-배송-반품 전 과정 자동화.',
@@ -240,7 +240,7 @@ const GWP_REGISTRY = [
   {
     id: 'kgov', name: 'K-Public', category: 'GOV',
     type: 'inline',
-    url: 'https://public.gopang.net/webapp.html',
+    url: 'https://public.hondi.net/webapp.html',
     sp_key: 'SP-10_kpublic',
     status: 'active', priority: 9, threshold: 0.70,
     description: '민원·행정·허가 AI 자동 처리.',
@@ -254,7 +254,7 @@ const GWP_REGISTRY = [
   {
     id: 'kdemocracy', name: 'K-Democracy', category: 'LEG',
     type: 'inline',
-    url: 'https://democracy.gopang.net/webapp.html',
+    url: 'https://democracy.hondi.net/webapp.html',
     sp_key: 'SP-12_kdemocracy',
     status: 'active', priority: 10, threshold: 0.70,
     description: '고팡 직접 민주주의 플랫폼 (DAWN).',

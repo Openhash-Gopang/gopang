@@ -76,7 +76,7 @@ global.fetch = async (url, opts) => {
 };
 
 function makeRequest(params) {
-  const url = new URL('https://gopang.net/heatmap');
+  const url = new URL('https://hondi.net/heatmap');
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   return { url: url.toString() };
 }

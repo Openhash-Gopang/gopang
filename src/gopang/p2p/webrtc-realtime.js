@@ -4,7 +4,7 @@
  * 이 모듈은 webrtc.js _startSignalPoll의 폴백 Realtime용으로 유지.
  */
 
-const L1_BASE = 'https://l1-hanlim.gopang.net';
+const L1_BASE = 'https://l1-hanlim.hondi.net';
 const SB_WS   = 'wss://ebbecjfrwaswbdybbgiu.supabase.co/realtime/v1/websocket';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
 

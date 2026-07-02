@@ -133,7 +133,7 @@ console.log('[Market] GWP_DONE 수신:', summary);
 
 // GWP_DONE → gopang 탭 포워딩 (redeemClaim 트리거)
 if (window.opener && !window.opener.closed) {
-  window.opener.postMessage(e.data, 'https://gopang.net');
+  window.opener.postMessage(e.data, 'https://hondi.net');
   console.log('[Market] GWP_DONE → gopang 포워딩 완료');
 }
 ```
@@ -244,7 +244,7 @@ if (msg.block_hash && window.gopangWallet?.redeemClaim) {
 
 **미호출이었던 실제 원인**: market webapp의 GWP_DONE 포워딩 누락 (P4 참조)
 
-**redeemClaim() 검증 방법** (gopang.net 콘솔):
+**redeemClaim() 검증 방법** (hondi.net 콘솔):
 ```javascript
 const req = indexedDB.open('gopang-wallet');
 req.onsuccess = e => {
@@ -401,17 +401,17 @@ body: JSON.stringify({
 
 ### P11.1 메시지 전달 토폴로지
 
-고팡 GWP는 세 도메인(gopang.net / market.gopang.net / users.gopang.net)이 `window.postMessage`로 통신한다. 브라우저 Same-Origin 정책상 탭 간 직접 통신이 불가하므로 **market webapp이 중계자(relay)** 역할을 한다.
+고팡 GWP는 세 도메인(hondi.net / market.hondi.net / users.hondi.net)이 `window.postMessage`로 통신한다. 브라우저 Same-Origin 정책상 탭 간 직접 통신이 불가하므로 **market webapp이 중계자(relay)** 역할을 한다.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ 탭 구조                                                  │
 │                                                          │
-│  gopang.net (iframe: webapp.html)                        │
+│  hondi.net (iframe: webapp.html)                        │
 │       ↑↓ postMessage                                     │
-│  market.gopang.net/webapp.html   ← 중계자               │
+│  market.hondi.net/webapp.html   ← 중계자               │
 │       ↑↓ postMessage                                     │
-│  users.gopang.net/profile.html   ← window.open() 팝업   │
+│  users.hondi.net/profile.html   ← window.open() 팝업   │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -435,27 +435,27 @@ body: JSON.stringify({
 ```
 1. profile.html: requestSign()
    └─ window.opener.postMessage({ type:'GWP_SIGN_REQUEST', tx }, OPENER_ORIGIN)
-      └─ OPENER_ORIGIN = 'https://market.gopang.net'
+      └─ OPENER_ORIGIN = 'https://market.hondi.net'
 
 2. market/webapp.html: window.addEventListener('message')
-   └─ e.origin === 'https://users.gopang.net' 검증
+   └─ e.origin === 'https://users.hondi.net' 검증
    └─ e.data.type === 'GWP_SIGN_REQUEST' 확인
-   └─ window.opener.postMessage(e.data, 'https://gopang.net')  ← gopang으로 포워딩
+   └─ window.opener.postMessage(e.data, 'https://hondi.net')  ← gopang으로 포워딩
 
-3. gopang.net/webapp.html: window.addEventListener('message')
-   └─ e.origin === 'https://market.gopang.net' 검증
+3. hondi.net/webapp.html: window.addEventListener('message')
+   └─ e.origin === 'https://market.hondi.net' 검증
    └─ _gwpSignExecute(e.data.tx)  ← gopang-wallet.js sign() 호출
    └─ GWP_SIGN_RESPONSE 전송 (아래 참조)
 ```
 
 #### 서명 응답 흐름 (GWP_SIGN_RESPONSE)
 ```
-1. gopang.net/gopang-app.js: _gwpSignExecute() 완료
+1. hondi.net/gopang-app.js: _gwpSignExecute() 완료
    └─ _gwpTab.postMessage({ type:'GWP_SIGN_RESPONSE', signedTx, success:true }, marketOrigin)
       └─ _gwpTab = market 탭 참조
 
 2. market/webapp.html: _gwpSignResponseHandler
-   └─ e.origin === 'https://gopang.net' 검증
+   └─ e.origin === 'https://hondi.net' 검증
    └─ profileSource.postMessage(ev.data, profileOrigin)  ← profile로 포워딩
       └─ profileSource = GWP_SIGN_REQUEST 수신 시 저장한 e.source
 
@@ -473,13 +473,13 @@ body: JSON.stringify({
         tx_hash:     result.tx_hash,
         buyer_claim: result.buyer_claim,
         pdvData:     { who, when, where, what, how, why },
-      }, OPENER_ORIGIN)  ← OPENER_ORIGIN = 'https://market.gopang.net'
+      }, OPENER_ORIGIN)  ← OPENER_ORIGIN = 'https://market.hondi.net'
 
 2. market/webapp.html: gwpHandler
    └─ 자체 처리 (appendBubble, recordPDV)
-   └─ window.opener.postMessage(e.data, 'https://gopang.net')  ← gopang 포워딩 (P4 추가)
+   └─ window.opener.postMessage(e.data, 'https://hondi.net')  ← gopang 포워딩 (P4 추가)
 
-3. gopang.net/webapp.html: GWP_DONE 핸들러 (gopang-app.js 3584행)
+3. hondi.net/webapp.html: GWP_DONE 핸들러 (gopang-app.js 3584행)
    └─ appendBubble('ai', '✅ ' + msg.summary)
    └─ PDV 기록 (중복 방지 포함)
    └─ window.gopangWallet.redeemClaim({ block_hash, claims })  ← wallet 갱신
@@ -492,12 +492,12 @@ body: JSON.stringify({
 
 | 수신자 | 허용 origin |
 |--------|-------------|
-| gopang (GWP_SIGN_REQUEST) | `https://market.gopang.net` |
-| gopang (GWP_DONE) | `https://market.gopang.net` |
-| market (GWP_SIGN_REQUEST 중계) | `https://users.gopang.net` |
-| market (GWP_SIGN_RESPONSE 중계) | `https://gopang.net` |
-| market (GWP_DONE 수신) | `https://users.gopang.net` |
-| profile (GWP_SIGN_RESPONSE) | `https://market.gopang.net` 또는 `https://gopang.net` |
+| gopang (GWP_SIGN_REQUEST) | `https://market.hondi.net` |
+| gopang (GWP_DONE) | `https://market.hondi.net` |
+| market (GWP_SIGN_REQUEST 중계) | `https://users.hondi.net` |
+| market (GWP_SIGN_RESPONSE 중계) | `https://hondi.net` |
+| market (GWP_DONE 수신) | `https://users.hondi.net` |
+| profile (GWP_SIGN_RESPONSE) | `https://market.hondi.net` 또는 `https://hondi.net` |
 
 ### P11.5 메시지 전달 실패 시나리오 및 대응
 
@@ -512,14 +512,14 @@ body: JSON.stringify({
 ### P11.6 메시지 전달 디버깅
 
 ```javascript
-// gopang.net 콘솔 — 수신 메시지 모니터링
+// hondi.net 콘솔 — 수신 메시지 모니터링
 window.addEventListener('message', e => {
   if (e.data?.type?.startsWith('GWP_')) {
     console.log('[MSG 수신]', e.origin, e.data.type, e.data);
   }
 });
 
-// market.gopang.net 콘솔 — 중계 모니터링
+// market.hondi.net 콘솔 — 중계 모니터링
 window.addEventListener('message', e => {
   if (e.data?.type?.startsWith('GWP_')) {
     console.log('[MSG 중계]', e.origin, '→', e.data.type);
@@ -750,7 +750,7 @@ for b in d['items']:
 
 **Step 2 — wallet block_hash null 초기화** (Step 1과 반드시 함께):
 ```javascript
-// gopang.net 콘솔
+// hondi.net 콘솔
 const req = indexedDB.open('gopang-wallet');
 req.onsuccess = e => {
   const db = e.target.result;

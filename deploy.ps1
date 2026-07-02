@@ -44,7 +44,7 @@ else {
     $purgeHeaders = @{}
     $purgeHeaders["Authorization"] = "Bearer " + $cfToken
     $purgeHeaders["Content-Type"] = "application/json"
-    $purgeFiles = @("https://gopang.net/sw.js", "https://www.gopang.net/sw.js")
+    $purgeFiles = @("https://hondi.net/sw.js", "https://www.hondi.net/sw.js")
     $purgeBodyObj = @{}
     $purgeBodyObj["files"] = $purgeFiles
     $purgeBody = $purgeBodyObj | ConvertTo-Json

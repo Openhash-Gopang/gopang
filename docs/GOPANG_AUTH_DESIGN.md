@@ -32,7 +32,7 @@
 ### 3-1. 첫 접속 (미등록 기기)
 
 ```
-기기로 gopang.net 접속
+기기로 hondi.net 접속
   └─ initAuth() 실행
        ├─ 기기 핑거프린트 생성 (SHA-256)
        ├─ IPv6 형식 GUID 파생
@@ -44,7 +44,7 @@
 ### 3-2. 재접속 (등록 사용자, 동일 기기)
 
 ```
-동일 기기로 gopang.net 재접속
+동일 기기로 hondi.net 재접속
   └─ initAuth() 실행
        ├─ localStorage['gopang_user_v3'] 읽기
        ├─ stored.fpHex === 현재 fpHex ✅
@@ -55,7 +55,7 @@
 ### 3-3. 기기 교체 (본인, 새 기기)
 
 ```
-새 기기로 gopang.net 접속
+새 기기로 hondi.net 접속
   └─ initAuth() 실행
        ├─ localStorage 없음 (새 기기) → Guest 상태
        └─ 설정 창: "기존 아이디 복구" 버튼 표시
@@ -87,7 +87,7 @@
 
 - 설정 창에서 **표시될 이름** 입력 후 **아이디 등록** 버튼 클릭.
 - 핸들 형식: `@이름#GUID끝4자리` (예: `@금능#0996`)
-- L1 PocketBase(`l1-hanlim.gopang.net`)에 등록.
+- L1 PocketBase(`l1-hanlim.hondi.net`)에 등록.
 - 등록 완료 후 `localStorage['gopang_user_v3']`에 `ipv6`, `fpHex`, `handle`, `name` 전체 저장.
 - **등록 즉시 자동 로그인** — 별도 로그인 절차 없음.
 
@@ -262,7 +262,7 @@ groups[2..7] = fpHex.slice(8, 32)  // 기기 고유값
 **타 브라우저 접속 시 L1 조회 흐름:**
 
 ```
-내 기기에서 타 브라우저로 gopang.net 접속
+내 기기에서 타 브라우저로 hondi.net 접속
   └─ initAuth() 실행
        ├─ fpHex 생성 (하드웨어 동일 → 기존과 동일한 fpHex)
        ├─ localStorage 없음
@@ -463,7 +463,7 @@ handle = "@금능#0996"
 
 ### 11-3. L1 PocketBase
 
-**위치:** `https://l1-hanlim.gopang.net`  
+**위치:** `https://l1-hanlim.hondi.net`  
 **컬렉션:** `profiles`  
 **특성:** 경량 서버, 기기·사용자 등록 원장, 한림읍 로컬 노드
 

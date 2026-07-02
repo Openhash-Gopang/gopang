@@ -709,7 +709,7 @@ ORDER BY p.chain_height DESC;
 ### 7.1 오프라인 Hash Chain 검증 (자기완결)
 
 ```javascript
-// gopang.net 콘솔 — 외부 DB 없이 완전 검증 (결함 1 수정)
+// hondi.net 콘솔 — 외부 DB 없이 완전 검증 (결함 1 수정)
 const result = await window.gopangWallet.verifyChain();
 // { valid: true, broken_at: null }
 //   ↑ Supabase 조회 없이 IDB만으로 검증 가능

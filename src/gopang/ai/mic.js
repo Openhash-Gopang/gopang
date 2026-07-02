@@ -157,7 +157,7 @@ async function _micStartMediaRecorder() {
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (e) {
-    appendBubble('ai', '⚠️ 마이크 권한이 거부되었습니다. 설정 → Safari → 마이크에서 gopang.net을 허용하세요.');
+    appendBubble('ai', '⚠️ 마이크 권한이 거부되었습니다. 설정 → Safari → 마이크에서 hondi.net을 허용하세요.');
     return;
   }
 

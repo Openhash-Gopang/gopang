@@ -366,7 +366,7 @@ navigator.credentials.get() [인증]
 | GDC 화폐 | L1 (잔액) | L2 (100만원↓), L3 (100만원↑) |
 | K-Health | L1 (기록 조회) | L2 (처방·진단) |
 | PDV 접근 | L1 (요약) | L2 (전체 열람) |
-| **users.gopang.net (프로필 조회/등록)** | **L0 (Ed25519 서명만, §6)** | — |
+| **users.hondi.net (프로필 조회/등록)** | **L0 (Ed25519 서명만, §6)** | — |
 
 ---
 
@@ -416,7 +416,7 @@ navigator.credentials.get() [인증]
   public.users upsert
     { guid: ipv6, device_fp, registered_at, last_seen_at, gduda_registered: true }
 
-[Step 4] 온보딩 완료 → gopang.net/webapp.html 진입
+[Step 4] 온보딩 완료 → hondi.net/webapp.html 진입
 ```
 
 ### 4.3 전화번호 → GUID 변환 알고리즘
@@ -483,7 +483,7 @@ gopang-wallet.js 로드
 
 ### 5.1 핵심 원칙 — 고팡이 유일한 인증 포털
 
-하위 서비스(K-Law, K-Market, K-Tax, K-Security 등)는 **독자적인 인증 시스템을 구현하지 않습니다.** 모든 인증은 `gopang.net`에 위임합니다.
+하위 서비스(K-Law, K-Market, K-Tax, K-Security 등)는 **독자적인 인증 시스템을 구현하지 않습니다.** 모든 인증은 `hondi.net`에 위임합니다.
 
 ```
 [금지]
@@ -499,26 +499,26 @@ gopang_user_v4 읽기 전용 참조 (L0 기기 일치 확인만)
 
 ### 5.2 도메인 요건 (서브도메인 · HTTPS)
 
-하위 서비스는 반드시 `*.gopang.net` 서브도메인을 사용해야 합니다.
+하위 서비스는 반드시 `*.hondi.net` 서브도메인을 사용해야 합니다.
 
 ```
-허용: klaw.gopang.net / market.gopang.net / security.gopang.net
+허용: klaw.hondi.net / market.hondi.net / security.hondi.net
 금지: klaw.kr / gopang-market.com / ksecurity.net
 ```
 
 **이유**:
-1. **WebAuthn rp.id 공유** — `rp.id: 'gopang.net'`에 바인딩된 credential은 `*.gopang.net`에서만 사용 가능. 별도 도메인 사용 시 L2 지문 인증 완전 불가.
-2. **Silent iframe SSO** — `*.gopang.net`이어야 Same-Site 쿠키가 자동 전송됨.
+1. **WebAuthn rp.id 공유** — `rp.id: 'hondi.net'`에 바인딩된 credential은 `*.hondi.net`에서만 사용 가능. 별도 도메인 사용 시 L2 지문 인증 완전 불가.
+2. **Silent iframe SSO** — `*.hondi.net`이어야 Same-Site 쿠키가 자동 전송됨.
 3. **SameSite=None 쿠키** — `Domain=.gopang.net` 설정이 모든 서브도메인에 자동 적용.
 
 WebAuthn, SameSite=None 쿠키, Service Worker는 모두 **HTTPS 환경에서만** 동작합니다. `http://` 서빙 시 L2 이상 인증이 불가능합니다.
 
 ### 5.3 1단계 — subsystem-auth.js 한 줄 삽입
 
-`gopang.net/auth/` 디렉토리에는 인증 관련 파일이 다음 3개만 존재합니다 — 하위 시스템에 별도 `auth.js` 파일을 두지 않습니다.
+`hondi.net/auth/` 디렉토리에는 인증 관련 파일이 다음 3개만 존재합니다 — 하위 시스템에 별도 `auth.js` 파일을 두지 않습니다.
 
 ```
-gopang.net/auth/
+hondi.net/auth/
   ├── gopang-sso.js        ← 중앙 인증 라이브러리 (핵심)
   ├── subsystem-auth.js    ← 하위 시스템 공용 인증 모듈
   └── silent-auth.html     ← 크로스도메인 토큰 발급기
@@ -529,7 +529,7 @@ gopang.net/auth/
 
 ```html
 <script type="module"
-  src="https://gopang.net/auth/subsystem-auth.js">
+  src="https://hondi.net/auth/subsystem-auth.js">
 </script>
 ```
 
@@ -549,22 +549,22 @@ gopang.net/auth/
 경로 2-B: 로컬스토어 직접 대조 (same-device, gopang_user_v4 + fpHex 일치)
    → Silent iframe 없이 즉시 토큰 생성
 
-경로 2-B(iframe): Silent iframe (gopang.net/auth/silent-auth.html)
+경로 2-B(iframe): Silent iframe (hondi.net/auth/silent-auth.html)
    → 서드파티 쿠키 차단 환경에서도 postMessage로 토큰 수신 (3초 타임아웃)
 
 경로 2-C: 리다이렉트
-   → gopang.net/auth/silent-auth.html?return=...&svc=...&level=...
+   → hondi.net/auth/silent-auth.html?return=...&svc=...&level=...
    → 4단어 입력 또는 신규 등록 → ?gopang_token=... 으로 복귀
 ```
 
-레벨이 부족하면(`_checkLevel`) `gopangAuth.verify(level)`이 팝업(`gopang.net/auth/upgrade`)으로 상향 인증을 요청합니다.
+레벨이 부족하면(`_checkLevel`) `gopangAuth.verify(level)`이 팝업(`hondi.net/auth/upgrade`)으로 상향 인증을 요청합니다.
 
 ### 5.5 3단계 — silent-auth.html 크로스도메인 토큰 발급
 
 `silent-auth.html`은 두 가지 모드로 동작합니다.
 
 - **Silent 모드** (`window.parent !== window`, iframe): `gopang_user_v4`를 읽어 기기 일치 확인 후 `issueToken(user, svc)`로 토큰을 발급하고 `postMessage({type:'GOPANG_SSO_TOKEN', token})`으로 부모 창에 전달
-- **리다이렉트 모드**: 4단어 시드 입력 UI(`#auth-card`) 표시. 시드 일치 시 토큰 발급 후 `return` URL로 `?gopang_token=...` 부착 리다이렉트. `gopang_user_v4`가 없는 미등록 기기는 전화번호 입력 온보딩(`gopang.net?onboard=1`)으로 이동 (§4.2)
+- **리다이렉트 모드**: 4단어 시드 입력 UI(`#auth-card`) 표시. 시드 일치 시 토큰 발급 후 `return` URL로 `?gopang_token=...` 부착 리다이렉트. `gopang_user_v4`가 없는 미등록 기기는 전화번호 입력 온보딩(`hondi.net?onboard=1`)으로 이동 (§4.2)
 
 `issueToken(user, svcId)`는 `{ ver, ipv6, level, svc, iat, exp }` payload를 만들고, `user.seedHex`가 있으면 HMAC-SHA256(seedHex)로 서명합니다. 시드가 없는 사용자는 `sig: 'unsigned'`로 반환됩니다 — 이 토큰은 §6의 Ed25519 서명과는 **별개의 메커니즘**입니다 (§6.5 참조).
 
@@ -675,9 +675,9 @@ global.gopangWallet = wallet;
 
 ### 6.5 SSO(§5)와의 관계 — 별도 인증 경로인 이유
 
-§5의 SSO는 **"고팡 계정으로 다른 *.gopang.net 서비스에 로그인"**하는 시나리오를 위한 것이고, §6의 Ed25519 인증은 **"users.gopang.net 자체에서 본인 프로필을 쓰기(write)"**하는 시나리오를 위한 것입니다.
+§5의 SSO는 **"고팡 계정으로 다른 *.hondi.net 서비스에 로그인"**하는 시나리오를 위한 것이고, §6의 Ed25519 인증은 **"users.hondi.net 자체에서 본인 프로필을 쓰기(write)"**하는 시나리오를 위한 것입니다.
 
-- `register-profile.html`은 `users.gopang.net` 자체 페이지이므로 크로스도메인 SSO(silent-auth.html, iframe, 리다이렉트)가 필요 없습니다 — `window.gopangWallet`을 직접 사용
+- `register-profile.html`은 `users.hondi.net` 자체 페이지이므로 크로스도메인 SSO(silent-auth.html, iframe, 리다이렉트)가 필요 없습니다 — `window.gopangWallet`을 직접 사용
 - `/profile`, `/ai-setup`의 쓰기 요청은 "이 요청이 정말 이 guid의 개인키 소유자가 보낸 것인가"를 증명해야 하며, 이는 SSO 토큰(HMAC, 세션 캐시 가능)보다 **매 요청 서명(Ed25519)**이 더 강한 보장을 제공합니다
 - 두 체계는 공통적으로 `gopang_user_v4.ipv6`를 정체성의 근거로 사용하므로 **상호 호환**되며, 충돌하지 않습니다
 
@@ -936,7 +936,7 @@ AI 비서 (1차 판단)
 | 잘못 선택된 B가 실수로 서명 | B가 동의한 가치 교환 → 법적으로 유효한 거래 성립 |
 | A가 서명 전 수신자 GUID 확인 | 페이로드에 pguid 명시 → 선택 오류 인지 가능 |
 
-세부 구현(수신자 신원 카드, QR 기반 확정, 지연 실행, 사후 구제)은 `gdc.gopang.net`(거래 프로토콜), `market.gopang.net`(거래 UI·수신자 확인), `security.gopang.net`(이상 거래 탐지·사후 구제) 각 하위 시스템에서 정의합니다. 본 문서는 **닉네임 검색 결과의 오인이 거래 완결로 이어지지 않음을 구조적으로 보장한다**는 원칙만 명시합니다.
+세부 구현(수신자 신원 카드, QR 기반 확정, 지연 실행, 사후 구제)은 `gdc.hondi.net`(거래 프로토콜), `market.hondi.net`(거래 UI·수신자 확인), `security.hondi.net`(이상 거래 탐지·사후 구제) 각 하위 시스템에서 정의합니다. 본 문서는 **닉네임 검색 결과의 오인이 거래 완결로 이어지지 않음을 구조적으로 보장한다**는 원칙만 명시합니다.
 
 ---
 
@@ -1111,9 +1111,9 @@ Phase 3 — 고도화
 | `/auth/webauthn/challenge` | GET | — | WebAuthn 챌린지 발급 (L2 등록용) |
 | `/auth/webauthn/register` | POST | — | WebAuthn 공개키 등록 |
 | `/auth/webauthn/verify` | POST | — | WebAuthn 서명 검증 → L2 토큰 |
-| `gopang.net/auth/gopang-sso.js` | (모듈) | — | §5.4 — `gopangAuth.require(level)` |
-| `gopang.net/auth/subsystem-auth.js` | (모듈) | — | §5.3 — 하위 시스템 1줄 삽입 |
-| `gopang.net/auth/silent-auth.html` | (페이지) | — | §5.5 — 크로스도메인 토큰 발급 |
+| `hondi.net/auth/gopang-sso.js` | (모듈) | — | §5.4 — `gopangAuth.require(level)` |
+| `hondi.net/auth/subsystem-auth.js` | (모듈) | — | §5.3 — 하위 시스템 1줄 삽입 |
+| `hondi.net/auth/silent-auth.html` | (페이지) | — | §5.5 — 크로스도메인 토큰 발급 |
 | `GET /profile?guid=` 또는 `/profile/{handle}` | GET | 불필요 | §6.2 — 공개 프로필 조회 |
 | `POST /profile` | POST | Ed25519+TOFU | §6.2 — 프로필 등록/갱신 |
 | `GET /ai-setup?guid=` | GET | 불필요 | §6.4 — AI 비서 설정 조회 |

@@ -39,7 +39,7 @@
 
 **`worker.js`** (2506줄) — Cloudflare Worker. **외부 모듈을 import하지 않는 완전한 단일 파일**이며 31개 이상의 `/경로` 라우트를 직접 처리한다. 주요 라우트 그룹: 인증(`/auth/*`, `/svc/*`), 시그널링(`/signal/send`·`/signal/poll`·`/signal/delete`), TURN(`/turn/credential`), P2P 검색(`/p2p/register`·`/p2p/search`), 지갑(`/wallet/x25519`), AI(`/ai/chat`·`/chat/completions`·`/ai-setup*`), 비즈니스(`/biz/*`), PDV(`/pdv/*`), 푸시(`/push/*`), 검색(`/search*`), 피드백(`/feedback*`). 시그널 저장은 L1(PocketBase) 우선·Supabase 폴백 구조(`_l1SignalSend`/`_l1SignalPoll`/`_l1SignalDelete`, 부록 C-2·C-8 참고).
 
-**`report/gopang-report.js`** — 고팡 하위 서비스(K-Law 등)가 `/pdv/report`로 보고서를 전송하는 독립 배포 라이브러리(`gopang.net/report/`에서 import해서 씀). `sendReportOnce`, `flushReportQueue`(오프라인 큐 재전송), `getReportStatus`, `buildReport`.
+**`report/gopang-report.js`** — 고팡 하위 서비스(K-Law 등)가 `/pdv/report`로 보고서를 전송하는 독립 배포 라이브러리(`hondi.net/report/`에서 import해서 씀). `sendReportOnce`, `flushReportQueue`(오프라인 큐 재전송), `getReportStatus`, `buildReport`.
 
 ---
 

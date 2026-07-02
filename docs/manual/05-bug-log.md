@@ -68,7 +68,7 @@
 
 ### BUG-011 ⭐ 가장 중요 (배포 오류)
 - **증상:** `SyntaxError: does not provide an export named 'AIPipeline'`
-- **발생:** gopang.net 최초 배포 시 흰 화면
+- **발생:** hondi.net 최초 배포 시 흰 화면
 - **원인:** `app.js`가 존재하지 않는 export 이름으로 static import
   - `AIPipeline` → 실제: `runPipeline` (함수)
   - `PluginRegistry` → 실제: `registry` (싱글톤)

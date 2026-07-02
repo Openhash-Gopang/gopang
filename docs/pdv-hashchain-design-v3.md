@@ -523,7 +523,7 @@ async verifyWithMerkle(height) {
   if (!rec) return { valid: false, reason: 'height_not_found' };
 
   const res = await fetch(
-    `https://l1-hanlim.gopang.net/merkle?prove=${rec.block_hash}`
+    `https://l1-hanlim.hondi.net/merkle?prove=${rec.block_hash}`
   );
   if (!res.ok) return { valid: false, reason: 'l1_unavailable' };
 
@@ -860,7 +860,7 @@ function verifyOutputConsistency(l1Response, outputs) {
 
 ```javascript
 async function anchorL1MerkleRoot(env, supabase) {
-  const res = await fetch('https://l1-hanlim.gopang.net/merkle');
+  const res = await fetch('https://l1-hanlim.hondi.net/merkle');
   if (!res.ok) return;
 
   const { merkle_root, block_count, latest_height } = await res.json();

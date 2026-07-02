@@ -2,7 +2,7 @@
 > 작성일: 2026-06-15
 > 버전: profile-register v2.0 (온보딩 단일화 반영)
 > 저장소: https://github.com/Openhash-Gopang/gopang
-> 배포: https://gopang.net (GitHub Pages)
+> 배포: https://hondi.net (GitHub Pages)
 
 ---
 
@@ -13,13 +13,13 @@
 ### 사용자 흐름
 ```
 [첫 접속]
-gopang.net/webapp.html
+hondi.net/webapp.html
   └─ gopang_user_v4 없음 감지
        └─ 온보딩: 전화번호 입력 → 즉시 GDC 사용자 등록 (게스트 없음)
-            └─ gopang.net/webapp.html 진입 (등록 완료)
+            └─ hondi.net/webapp.html 진입 (등록 완료)
 
 [프로필 등록 — 선택]
-gopang.net/webapp.html
+hondi.net/webapp.html
   └─ 설정 → "프로필 등록" 버튼
        └─ register-profile.html 이동
             ├─ 1단계: entity_type 선택
@@ -254,7 +254,7 @@ platform_type, api_endpoint
 
 ### 파일 위치
 ```
-gopang.net/register-profile.html  (루트)
+hondi.net/register-profile.html  (루트)
 ```
 
 ### 의존 파일
@@ -331,7 +331,7 @@ await fetch('https://gopang-proxy.tensor-city.workers.dev/p2p/register', {
 ```javascript
 PROXY = 'https://gopang-proxy.tensor-city.workers.dev'
 SUPABASE_URL = 'https://ebbecjfrwaswbdybbgiu.supabase.co'
-L1_URL = 'https://l1-hanlim.gopang.net/api/collections/profiles/records'
+L1_URL = 'https://l1-hanlim.hondi.net/api/collections/profiles/records'
 ```
 
 ---

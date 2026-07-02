@@ -120,7 +120,7 @@ function _showPcRegisterBlockedNotice() {
       </p>
       <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 20px">
         사용자 등록(암호키 생성)은 스마트폰에서만 가능합니다.<br>
-        스마트폰으로 <b>gopang.net</b>에 접속해 등록해 주세요.<br><br>
+        스마트폰으로 <b>hondi.net</b>에 접속해 등록해 주세요.<br><br>
         등록을 마친 후에는 PC에서도 로그인할 수 있습니다.
       </p>
       <button id="_pc_blocked_close"
@@ -1758,7 +1758,7 @@ async function _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountr
     block_hash:   entryHash,
     who:  { ipv6, handle },
     when: now,
-    where: 'https://gopang.net',
+    where: 'https://hondi.net',
     what: `신규 사용자 가입: ${nickname} (${handle})`,
     how:  '전화번호 입력 → 즉시 등록 (테스트 모드, 상용화 시 SMS 2FA)',
     why:  '고팡 서비스 최초 가입',

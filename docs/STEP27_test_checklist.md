@@ -9,7 +9,7 @@
 
 ```powershell
 # 1) L1 노드 Health 확인
-curl https://l1-hanlim.gopang.net/health
+curl https://l1-hanlim.hondi.net/health
 
 # 2) Worker 확인
 curl https://gopang-proxy.tensor-city.workers.dev/health
@@ -22,7 +22,7 @@ ssh -i gopang-l1.key -L 9091:127.0.0.1:8091 ubuntu@168.110.123.175
 # SQL Editor: SELECT COUNT(*) FROM fs_ledger;
 
 # 5) 테스트용 구매자·판매자 계정 준비
-# 구매자: gopang.net 접속 → 지갑 생성 확인 (window.gopangWallet 확인)
+# 구매자: hondi.net 접속 → 지갑 생성 확인 (window.gopangWallet 확인)
 # 판매자: @보영반점#BOY1 — extra.menu SQL 실행 완료 확인
 ```
 
@@ -34,10 +34,10 @@ ssh -i gopang-l1.key -L 9091:127.0.0.1:8091 ubuntu@168.110.123.175
 
 ### 실행 절차
 ```
-1. gopang.net 접속 → 채팅창에 "짜장면 두 그릇 주문해줘" 입력
+1. hondi.net 접속 → 채팅창에 "짜장면 두 그릇 주문해줘" 입력
 2. 브라우저 개발자 도구 → Network 탭 → /pdv/query 요청 확인
 3. AI 응답에 [GWP:kcommerce] 태그 포함 확인
-4. market.gopang.net 새 탭 자동 오픈 확인
+4. market.hondi.net 새 탭 자동 오픈 확인
 5. GWP 토큰(gwp=1) URL 파라미터 확인
 6. 고팡 채팅창에 "K-Market을 연결합니다" 문구 확인
 ```
@@ -91,8 +91,8 @@ market 탭에 한림읍 근처 중식당 목록 (보영반점 포함) 표시
 
 ### 실행 절차
 ```
-1. gopang.net 탭 열어둔 상태에서
-   users.gopang.net/@보영반점#BOY1 접속 (새 탭)
+1. hondi.net 탭 열어둔 상태에서
+   users.hondi.net/@보영반점#BOY1 접속 (새 탭)
 2. 메뉴 섹션 표시 확인 (짜장면·짬뽕·볶음밥·탕수육)
 3. 짜장면 +2, 짬뽕 +1 선택 → 하단 주문 바 "₮ 37,000" 표시 확인
 4. [🛒 주문하기] 클릭
@@ -151,7 +151,7 @@ market 탭에 한림읍 근처 중식당 목록 (보영반점 포함) 표시
 ```javascript
 // 서명 위조 테스트 — L1 콘솔에서 직접
 const fakeTx = { ...validTx, buyer_sig: 'AAAA' };
-const res = await fetch('https://l1-hanlim.gopang.net/api/tx', {
+const res = await fetch('https://l1-hanlim.hondi.net/api/tx', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(fakeTx)
@@ -213,7 +213,7 @@ LIMIT 3;
 
 ### 실행 절차
 ```
-1. 테스트 04 완료 후 gopang.net 탭에서
+1. 테스트 04 완료 후 hondi.net 탭에서
 2. 브라우저 개발자 도구 → Application → Storage → IndexedDB
    → gopang-wallet → hash_chain store 확인
 3. 콘솔에서 직접 확인:
@@ -311,7 +311,7 @@ LIMIT 5;
 
 ```javascript
 // 2) 판매자 기기에서 미수신 청구권 처리 시뮬레이션
-// (판매자 gopang.net 접속 후 콘솔에서)
+// (판매자 hondi.net 접속 후 콘솔에서)
 const claims = await fetch('https://ebbecjfrwaswbdybbgiu.supabase.co/rest/v1/gdc_claims'
   + '?claimant=eq.pguid-BOYOUNG&redeemed=eq.false', {
   headers: { apikey: SUPABASE_KEY }
@@ -352,7 +352,7 @@ ORDER BY issued_at DESC LIMIT 3;
 ### 실행 절차
 ```
 1. 테스트 03~04 완료 후
-2. gopang.net 탭 콘솔에서 확인:
+2. hondi.net 탭 콘솔에서 확인:
    GWP_DONE 수신 로그 확인
    → [GWP_DONE] PDV 중복 방지 — reporter_svc: kmarket | session_id: ...
    → _recordPDV() 호출 없음 확인 (로그 없음)

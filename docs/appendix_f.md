@@ -58,7 +58,7 @@ STEP 7  확인 → PROFILE_SUBMIT 출력 → Worker POST → PDV 초기화
 
 각 단계에서 AI 비서는 `[N/7단계]` 표시를 포함해 응답하며, `call-ai.js`가 이 패턴을 감지해 `hondi_profile_step`을 갱신한다. 브라우저를 닫고 재접속하면 `hondi_profile_step` 값을 읽어 해당 단계부터 재개한다.
 
-`PROFILE_SUBMIT` 블록은 Supabase `user_profiles` 테이블에 저장된다. 사업자의 경우 `extra.public.ai_assistant.system_prompt` 필드에 SP-SELLER-I56-v1_0을 해당 사업자 데이터로 인스턴스화한 버전이 내장되어, `gopang.net/profile/@handle`에서 판매자 AI 비서로 즉시 구동된다.
+`PROFILE_SUBMIT` 블록은 Supabase `user_profiles` 테이블에 저장된다. 사업자의 경우 `extra.public.ai_assistant.system_prompt` 필드에 SP-SELLER-I56-v1_0을 해당 사업자 데이터로 인스턴스화한 버전이 내장되어, `hondi.net/profile/@handle`에서 판매자 AI 비서로 즉시 구동된다.
 
 ---
 
@@ -106,9 +106,9 @@ KSIC 분류 기준으로 SP-SELLER-I56-v1_0은 중분류 56(음식점 및 주점
 
 전체 흐름을 하나의 시나리오로 추적한다.
 
-이제주가 혼디 대화창에 "고기국수 두 그릇 주문해 줘"를 입력하면, 이제주의 AI 비서가 `시장·물가·거래 → K-Market` 라우팅 판단을 내려 `[GWP:kcommerce]` 태그를 출력한다. 화면이 `market.gopang.net/webapp.html`로 전환되며, Market Agent가 이제주의 현재 위치(한림읍)를 기반으로 고기국수 판매 음식점을 검색한다.
+이제주가 혼디 대화창에 "고기국수 두 그릇 주문해 줘"를 입력하면, 이제주의 AI 비서가 `시장·물가·거래 → K-Market` 라우팅 판단을 내려 `[GWP:kcommerce]` 태그를 출력한다. 화면이 `market.hondi.net/webapp.html`로 전환되며, Market Agent가 이제주의 현재 위치(한림읍)를 기반으로 고기국수 판매 음식점을 검색한다.
 
-검색 결과에서 이제주가 한림국수를 선택하면, Market Agent가 `[OPEN_SELLER_AI]` 태그를 출력한다. `gopang.net/profile/@hallim_guksu` 팝업이 열리고, URL 파라미터로 전달된 `buyer_request`(고기국수 2그릇, 포장)가 한림국수 AI 비서에게 자동 주입된다.
+검색 결과에서 이제주가 한림국수를 선택하면, Market Agent가 `[OPEN_SELLER_AI]` 태그를 출력한다. `hondi.net/profile/@hallim_guksu` 팝업이 열리고, URL 파라미터로 전달된 `buyer_request`(고기국수 2그릇, 포장)가 한림국수 AI 비서에게 자동 주입된다.
 
 한림국수 AI 비서는 재고를 확인하고 포장 5% 할인을 적용한 최종 가격 ₮17,100을 제시한다. 이제주가 확정하면 `[SELLER_RESPONSE]`가 Market Agent에 전달되고, `[TRADE]` 블록이 자동 생성된다. 이제주의 `gopang-wallet.js`가 서명하면 Worker `POST /biz/order`를 거쳐 L1 PocketBase에 블록이 기록되고 `block_hash`가 발급된다.
 
@@ -168,5 +168,5 @@ KSIC 분류 기준으로 SP-SELLER-I56-v1_0은 중분류 56(음식점 및 주점
 | `src/gopang/ui/welcome.js` | Profile 온보딩 트리거 + `handleProfileSubmit()` + PDV IndexedDB 초기화 |
 | `src/gopang/ai/call-ai.js` | `PROFILE_SUBMIT` 감지 훅 + `hondi_profile_step` 갱신 |
 | `src/gopang/core/free-model-pool.js` | 16K+ 컨텍스트 모델 우선 정렬 (COMMON-01 v4.0 704 tokens 대응) |
-| `gopang.net/profile.html` | `buyer_request` 파라미터 파싱 + `_callSellerAI()` 분리 + `SELLER_RESPONSE`/`SELLER_PDV` 파서 |
-| `market.gopang.net/webapp.html` | `OPEN_SELLER_AI` 태그 처리 + `GWP_SELLER_RESPONSE` 수신 리스너 + `OPEN_PROFILE` 통합 |
+| `hondi.net/profile.html` | `buyer_request` 파라미터 파싱 + `_callSellerAI()` 분리 + `SELLER_RESPONSE`/`SELLER_PDV` 파서 |
+| `market.hondi.net/webapp.html` | `OPEN_SELLER_AI` 태그 처리 + `GWP_SELLER_RESPONSE` 수신 리스너 + `OPEN_PROFILE` 통합 |

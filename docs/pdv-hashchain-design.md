@@ -510,7 +510,7 @@ ALTER TABLE l1_ledger
 ### 7.1 Hash Chain 연속성 검증 (논문 정리 1 적용)
 
 ```javascript
-// gopang.net 콘솔 — Hash Chain + PDV 무결성 검증
+// hondi.net 콘솔 — Hash Chain + PDV 무결성 검증
 async function verifyPdvChain() {
   const chain = await window.gopangWallet.getHashChain();
 

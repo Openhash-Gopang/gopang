@@ -65,7 +65,7 @@ return clients.openWindow(url).then(w => {
 E-3, E-4를 수정한 뒤 "사고 실험을 진행하라"는 요청에 따라, 수정된 코드가 실제로 모든 시나리오에서 버티는지 시나리오별로 추적하는 과정에서 별도의 잠재 버그가 발견됐다. `notificationclick`이 기존 열린 탭을 찾는 조건이 다음과 같았다.
 
 ```js
-if (client.url.includes('gopang.net') && 'focus' in client) {
+if (client.url.includes('hondi.net') && 'focus' in client) {
 ```
 
 이 문자열이 하드코딩되어 있어, 별도로 진행 중인 `hondi.org`/`.net`/`.kr` 도메인 마이그레이션이 완료되면 이 조건이 더 이상 일치하지 않게 된다. 그 시점부터는 이미 열려 있는 탭이 있어도 "없음"으로 오판해 매번 새 창을 추가로 열게 되어, 사용자가 같은 앱이 중복 실행되는 것을 보게 된다.

@@ -6,8 +6,8 @@
 > **작성일:** 2026-06-05  
 > **작성자:** AI City Inc. (팀 주피터)  
 > **관련 문서:** `gopang_pdv_rules.md` · `gopang-auth-whitepaper.md` · `Gopang_Developer_Manual_v2_0.docx`  
-> **적용 대상:** K-Insurance (insurance.gopang.net) 및 PDV 데이터를 읽어야 하는 모든 하위 서비스  
-> **문의:** dev@gopang.net
+> **적용 대상:** K-Insurance (insurance.hondi.net) 및 PDV 데이터를 읽어야 하는 모든 하위 서비스  
+> **문의:** dev@hondi.net
 
 ---
 
@@ -48,16 +48,16 @@ K-Insurance는 사용자의 PDV에 **이미 축적된** K-Traffic · K-Health ·
 ## 전체 소통 흐름
 
 ```
-K-Insurance (insurance.gopang.net)
+K-Insurance (insurance.hondi.net)
       │
       │  ① POST /pdv/query  (consent_token 없이 — 동의 요청 단계)
       ▼
 gopang-proxy Worker
       │
       │  ② 사용자 고팡 앱에 동의 팝업 요청
-      │     (postMessage 또는 gopang.net/consent UI)
+      │     (postMessage 또는 hondi.net/consent UI)
       ▼
-사용자 고팡 AI 비서 (gopang.net)
+사용자 고팡 AI 비서 (hondi.net)
       │
       │  ③ 사용자가 동의 확인 → consent_token 발급
       │     (HMAC-SHA256, TTL 300초)
@@ -90,7 +90,7 @@ insurance_reports 테이블 저장 + pdv_log 기록
 ```
 URL:     https://gopang-proxy.tensor-city.workers.dev/pdv/query
 Method:  POST
-Origin:  https://insurance.gopang.net  (CORS 검증 필수)
+Origin:  https://insurance.hondi.net  (CORS 검증 필수)
 ```
 
 ---
@@ -133,7 +133,7 @@ Origin:  https://insurance.gopang.net  (CORS 검증 필수)
   "consent": {
     "request_id":   "CNSREQ-a3f8b2c1-1749012345",
     "expires_at":   1749012645,
-    "consent_url":  "https://gopang.net/consent?req=CNSREQ-a3f8b2c1-...",
+    "consent_url":  "https://hondi.net/consent?req=CNSREQ-a3f8b2c1-...",
     "message":      "사용자가 고팡 앱에서 PDV 조회에 동의해야 합니다."
   }
 }
@@ -184,7 +184,7 @@ Origin:  https://insurance.gopang.net  (CORS 검증 필수)
 | `scope` | string[] | ✅ | 조회할 데이터 소스 목록. 아래 scope 코드 참조 |
 | `period` | object | ✅ | 조회 기간. `start`, `end` 모두 `YYYY-MM-DD` |
 | `auth_token` | object | ✅ | `subsystem-auth.js` 발급 토큰. `level`, `exp` 포함 |
-| `consent_token` | string | 단계B만 | 사용자 동의 후 gopang.net이 발급한 HMAC 토큰 |
+| `consent_token` | string | 단계B만 | 사용자 동의 후 hondi.net이 발급한 HMAC 토큰 |
 | `request_id` | string | 단계B만 | 단계A 응답에서 수신한 동의 요청 ID |
 
 ### `scope` 코드
@@ -291,7 +291,7 @@ Origin:  https://insurance.gopang.net  (CORS 검증 필수)
 | 401 | `AUTH_EXPIRED` | `auth_token.exp` 만료 | `gopangAuth.require()` 재호출 |
 | 401 | `CONSENT_EXPIRED` | `consent_token` TTL(300초) 초과 | 단계A부터 재시작 |
 | 401 | `CONSENT_INVALID` | HMAC 서명 불일치 | 단계A부터 재시작 |
-| 403 | `SVC_NOT_REGISTERED` | `REGISTERED_SERVICES`에 미등록 | `dev@gopang.net` 등록 요청 |
+| 403 | `SVC_NOT_REGISTERED` | `REGISTERED_SERVICES`에 미등록 | `dev@hondi.net` 등록 요청 |
 | 403 | `LEVEL_INSUFFICIENT` | scope 대비 인증 레벨 부족 | `gopangAuth.require('L1')` 호출 |
 | 403 | `ORIGIN_DENIED` | CORS Origin 불일치 | `ALLOWED_ORIGINS` 등록 확인 |
 | 404 | `NO_PDV_DATA` | 해당 scope · 기간 데이터 없음 | 기간 또는 scope 조정 |
@@ -350,7 +350,7 @@ async function handlePdvQuery(request, env, corsHeaders) {
       // 단계A: 동의 요청 생성
       const reqId      = `CNSREQ-${query.ipv6.slice(-8)}-${Date.now()}`;
       const expiresAt  = Math.floor(Date.now() / 1000) + 300;
-      const consentUrl = `https://gopang.net/consent?req=${reqId}&svc=${query.svc}`
+      const consentUrl = `https://hondi.net/consent?req=${reqId}&svc=${query.svc}`
                        + `&ipv6=${encodeURIComponent(query.ipv6)}`
                        + `&scope=${query.scope.join(',')}`
                        + `&purpose=${encodeURIComponent(query.purpose || '')}`;
@@ -445,7 +445,7 @@ CREATE INDEX ON public.pdv_consent_requests (ipv6, status);
 -- {
 --   "who":   "kinsurance",
 --   "when":  "2026-06-05T10:30:00Z",
---   "where": "insurance.gopang.net",
+--   "where": "insurance.hondi.net",
 --   "what":  "PDV 조회 동의: scope=[ktraffic,khealth] / 보험료 산출 목적",
 --   "how":   "사용자 명시적 동의 (고팡 앱 팝업)",
 --   "why":   "월별 보험료 자동 산출"
@@ -553,7 +553,7 @@ requestPdvConsent() 호출
         │
         ▼
 Worker → 202 CONSENT_REQUIRED
-  consent_url: https://gopang.net/consent?req=CNSREQ-...
+  consent_url: https://hondi.net/consent?req=CNSREQ-...
         │
         ▼
 [방법 1 — 팝업]
@@ -578,7 +578,7 @@ Worker → 202 CONSENT_REQUIRED
 ## worker.js 등록 체크리스트
 
 ```
-□ ALLOWED_ORIGINS에 'https://insurance.gopang.net' 추가 확인
+□ ALLOWED_ORIGINS에 'https://insurance.hondi.net' 추가 확인
 □ REGISTERED_SERVICES에 'kinsurance' 등록 확인
 □ /pdv/query 라우트를 /pdv/report 이전에 추가
 □ handlePdvQuery() 함수에 try-catch + corsHeaders 적용

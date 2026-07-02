@@ -3,7 +3,7 @@
 
 ## 1. L1 PocketBase 신설 컬렉션: `pdv_records`
 
-PocketBase Admin UI (https://l1-hanlim.gopang.net/_/) 에서 생성:
+PocketBase Admin UI (https://l1-hanlim.hondi.net/_/) 에서 생성:
 
 ```
 Collection name: pdv_records
@@ -55,7 +55,7 @@ await fetch(`${PROXY}/pdv/report`, {
 })
 
 // 이후 (L1 직접)
-const L1_PDV = 'https://l1-hanlim.gopang.net/api/collections/pdv_records/records'
+const L1_PDV = 'https://l1-hanlim.hondi.net/api/collections/pdv_records/records'
 await fetch(L1_PDV, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },

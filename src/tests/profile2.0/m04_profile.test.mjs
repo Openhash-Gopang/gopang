@@ -72,7 +72,7 @@ function buildOGMeta(profile, reviewSummary) {
     'og:title':       `${profile.name} — 고팡`,
     'og:description': `${profile.address || ''} ${ratingStr}`.trim(),
     'og:image':       `https://gopang-proxy.tensor-city.workers.dev/qr/${profile.handle}`,
-    'og:url':         `https://users.gopang.net/profile.html?handle=${profile.handle}`,
+    'og:url':         `https://users.hondi.net/profile.html?handle=${profile.handle}`,
   };
 }
 

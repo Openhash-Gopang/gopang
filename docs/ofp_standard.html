@@ -323,21 +323,21 @@ footer{border-top:1px solid var(--border);background:#fff;padding:36px 24px}
       </div>
       <pre><span class="c-gray"># 요청 — 플랫폼 B에서 고팡 사용자 탐색</span>
 <span class="c-blue">GET</span> /.well-known/webfinger
-    ?resource=acct:<span class="c-green">kim_cheolsu@gopang.net</span>
-    &rel=http://ofp.gopang.net/ns/user
+    ?resource=acct:<span class="c-green">kim_cheolsu@hondi.net</span>
+    &rel=http://ofp.hondi.net/ns/user
 
 <span class="c-gray"># 응답 JSON</span>
 {
-  <span class="c-yellow">"subject"</span>: <span class="c-green">"acct:kim_cheolsu@gopang.net"</span>,
+  <span class="c-yellow">"subject"</span>: <span class="c-green">"acct:kim_cheolsu@hondi.net"</span>,
   <span class="c-yellow">"links"</span>: [
     {
-      <span class="c-yellow">"rel"</span>:  <span class="c-green">"http://ofp.gopang.net/ns/user"</span>,
+      <span class="c-yellow">"rel"</span>:  <span class="c-green">"http://ofp.hondi.net/ns/user"</span>,
       <span class="c-yellow">"type"</span>: <span class="c-green">"application/ofp+json"</span>,
-      <span class="c-yellow">"href"</span>: <span class="c-green">"https://gopang.net/ofp/users/kim_cheolsu"</span>
+      <span class="c-yellow">"href"</span>: <span class="c-green">"https://hondi.net/ofp/users/kim_cheolsu"</span>
     },
     {
-      <span class="c-yellow">"rel"</span>:  <span class="c-green">"http://ofp.gopang.net/ns/inbox"</span>,
-      <span class="c-yellow">"href"</span>: <span class="c-green">"https://gopang.net/ofp/inbox/kim_cheolsu"</span>
+      <span class="c-yellow">"rel"</span>:  <span class="c-green">"http://ofp.hondi.net/ns/inbox"</span>,
+      <span class="c-yellow">"href"</span>: <span class="c-green">"https://hondi.net/ofp/inbox/kim_cheolsu"</span>
     }
   ]
 }</pre>
@@ -362,7 +362,7 @@ footer{border-top:1px solid var(--border);background:#fff;padding:36px 24px}
       <pre>{
   <span class="c-yellow">"ofp_version"</span>: <span class="c-green">"1.0"</span>,
   <span class="c-yellow">"type"</span>:        <span class="c-green">"Create"</span>,
-  <span class="c-yellow">"actor"</span>:       <span class="c-green">"https://gopang.net/ofp/users/kim_cheolsu"</span>,
+  <span class="c-yellow">"actor"</span>:       <span class="c-green">"https://hondi.net/ofp/users/kim_cheolsu"</span>,
   <span class="c-yellow">"to"</span>:          [<span class="c-green">"https://nova-ai.kr/ofp/users/park_yeonghui"</span>],
 
   <span class="c-yellow">"object"</span>: {
@@ -505,7 +505,7 @@ footer{border-top:1px solid var(--border);background:#fff;padding:36px 24px}
         <div class="rm-content">
           <h3>OFP v1.0 정식 릴리즈</h3>
           <ul class="rm-list">
-            <li>디렉토리 서비스 공개 — ofp-registry.gopang.net</li>
+            <li>디렉토리 서비스 공개 — ofp-registry.hondi.net</li>
             <li>SDK 4개 언어 배포 (JS · Python · Go · Rust)</li>
             <li>OFP 거버넌스 위원회 공식 출범</li>
           </ul>
@@ -593,7 +593,7 @@ footer{border-top:1px solid var(--border);background:#fff;padding:36px 24px}
       <a href="./bizplan.html">사업화 계획서</a>
       <a href="https://github.com/Openhash-Gopang/gopang_v2" target="_blank">GitHub ↗</a>
       <a href="https://klaw.hondi.net" target="_blank">K-Law ↗</a>
-      <a href="https://democracy.gopang.net/desktop.html" target="_blank" style="color:var(--brand-dk)">K-Democracy ↗</a>
+      <a href="https://democracy.hondi.net/desktop.html" target="_blank" style="color:var(--brand-dk)">K-Democracy ↗</a>
     </div>
   </div>
 </footer>

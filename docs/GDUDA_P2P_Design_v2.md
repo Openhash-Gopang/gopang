@@ -52,7 +52,7 @@ handle: "@US-1234567890"
   handle:        '@US-1234567890',         // 전세계 유일 식별자
   nickname:      'James',                  // 검색용 평문
   nickname_hash: SHA-256('en:James'),      // DHT 라우팅 키
-  current_l1:    'manhattan-01.gopang.net',// 현재 접속 L1 ← 단말 이동 시 갱신
+  current_l1:    'manhattan-01.hondi.net',// 현재 접속 L1 ← 단말 이동 시 갱신
   country_code:  'US',
   region:        'New York',
   updated_at:    timestamp
@@ -100,7 +100,7 @@ handle: "@US-1234567890"
        └─ 결과: [
             { handle: '@US-1234567890', nickname: 'James',
               region: 'New York', country_code: 'US',
-              current_l1: 'manhattan-01.gopang.net' },
+              current_l1: 'manhattan-01.hondi.net' },
             { handle: '@US-9876543210', nickname: 'James',
               region: 'Los Angeles', ... },
             ...  ← 동명이인 다수
@@ -116,7 +116,7 @@ handle '@US-1234567890' → E.164 → GUID (서버 불필요)
 [Step 4: P2P 연결]
 from: '@12345678'
 to:   '@US-1234567890'
-  └─ current_l1 'manhattan-01.gopang.net' → James 단말 연결
+  └─ current_l1 'manhattan-01.hondi.net' → James 단말 연결
 ```
 
 ### 연결 요청 패킷

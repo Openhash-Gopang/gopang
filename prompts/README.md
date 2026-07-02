@@ -27,14 +27,14 @@
 
 | 파일 | 위치 | 역할 |
 |------|------|------|
-| `gopang-sso.js` | `https://gopang.net/auth/gopang-sso.js` | 인증 라이브러리 |
-| `silent-auth.html` | `https://gopang.net/auth/silent-auth.html` | 인증 엔드포인트 |
+| `gopang-sso.js` | `https://hondi.net/auth/gopang-sso.js` | 인증 라이브러리 |
+| `silent-auth.html` | `https://hondi.net/auth/silent-auth.html` | 인증 엔드포인트 |
 
 ### 3줄 통합
 
 ```html
 <script type="module">
-import { gopangAuth } from 'https://gopang.net/auth/gopang-sso.js';
+import { gopangAuth } from 'https://hondi.net/auth/gopang-sso.js';
 
 const user = await gopangAuth.require('L0');  // 미인증 시 자동 처리
 if (!user) return;                            // 리다이렉트 중
@@ -69,13 +69,13 @@ console.log(user.level);  // L0 | L1 | L2 | L3
 
 | 파일 | 위치 | 역할 |
 |------|------|------|
-| `gopang-report.js` | `https://gopang.net/report/gopang-report.js` | 보고서 전송 라이브러리 |
+| `gopang-report.js` | `https://hondi.net/report/gopang-report.js` | 보고서 전송 라이브러리 |
 
 ### 3줄 전송
 
 ```javascript
 import { buildReport, sendReportOnce }
-  from 'https://gopang.net/report/gopang-report.js';
+  from 'https://hondi.net/report/gopang-report.js';
 
 const report = buildReport({
   svc:    'school',
@@ -113,15 +113,15 @@ POST https://gopang-proxy.tensor-city.workers.dev/svc/register
 
 | 수준 | 조건 | 인증 | PDV 보고 |
 |------|------|------|----------|
-| Level 1 | `*.gopang.net` 서브도메인 | ✅ 자동 | ❌ |
+| Level 1 | `*.hondi.net` 서브도메인 | ✅ 자동 | ❌ |
 | Level 2 | 외부 도메인, 신원 확인 | ✅ | ✅ |
 | Level 3 | AI City Inc. 공식 파트너 | ✅ | ✅ |
 
 ### 등록 방법
 
-**Level 1** — `*.gopang.net` 서브도메인이면 자동 승인:
+**Level 1** — `*.hondi.net` 서브도메인이면 자동 승인:
 ```
-하위 서비스 URL: https://myservice.gopang.net
+하위 서비스 URL: https://myservice.hondi.net
 → gopangAuth.require() 즉시 사용 가능
 ```
 
@@ -145,7 +145,7 @@ await fetch('https://gopang-proxy.tensor-city.workers.dev/svc/register', {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     svc_id:        'myservice',
-    domain:        'https://myservice.gopang.net',
+    domain:        'https://myservice.hondi.net',
     operator_ipv6: user.ipv6,
     description:   '서비스 설명',
     min_auth:      'L0',
@@ -160,19 +160,19 @@ await fetch('https://gopang-proxy.tensor-city.workers.dev/svc/register', {
 ```
 gopang_v2/
 │
-│  ← gopang.net 배포 파일
+│  ← hondi.net 배포 파일
 ├── index.html          기기 감지 라우터
 ├── webapp.html         모바일 PWA (AI 비서)
 ├── desktop.html        PC 랜딩 페이지
 ├── worker.js           Cloudflare Worker (API 서버)
 ├── manifest.json       PWA 설정
 │
-│  ← 인증 라이브러리 (gopang.net/auth/*)
+│  ← 인증 라이브러리 (hondi.net/auth/*)
 ├── auth/
 │   ├── gopang-sso.js       하위 시스템 SSO 라이브러리
 │   └── silent-auth.html    인증 엔드포인트 (리다이렉트·iframe)
 │
-│  ← 보고서 라이브러리 (gopang.net/report/*)
+│  ← 보고서 라이브러리 (hondi.net/report/*)
 ├── report/
 │   └── gopang-report.js    PDV 보고서 전송 라이브러리
 │
@@ -202,10 +202,10 @@ gopang_v2/
 ## 5. 하위 시스템 도메인 요건
 
 ```
-필수: *.gopang.net 서브도메인
-  klaw.gopang.net    ✅
-  school.gopang.net  ✅
-  myservice.gopang.net ✅
+필수: *.hondi.net 서브도메인
+  klaw.hondi.net    ✅
+  school.hondi.net  ✅
+  myservice.hondi.net ✅
 
   myservice.com      ❌ (WebAuthn L2 불가, 별도 신청 필요)
 
@@ -241,9 +241,9 @@ gopang_v2/
 | 목적 | 연락처 |
 |------|--------|
 | 서비스 등록 신청 | GitHub Issue |
-| 기술 문의 | dev@gopang.net |
-| 법률·파트너십 | legal@gopang.net |
-| 일반 문의 | hello@gopang.net |
+| 기술 문의 | dev@hondi.net |
+| 법률·파트너십 | legal@hondi.net |
+| 일반 문의 | hello@hondi.net |
 
 ---
 

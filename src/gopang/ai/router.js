@@ -71,11 +71,11 @@ export async function runRouter(userText, hasImage = false) {
   const gwpCtx  = params.get('ctx') ? decodeURIComponent(params.get('ctx')) : null;
 
   const GWP_SVC_MAP = {
-    stock:      { category:'ECO', service_id:'kfinance',    service_url:'https://stock.gopang.net' },
-    klaw:       { category:'JUS', service_id:'klaw',        service_url:'https://klaw.gopang.net' },
-    school:     { category:'EDU', service_id:'kedu',        service_url:'https://school.gopang.net' },
-    health:     { category:'MED', service_id:'khealth',     service_url:'https://health.gopang.net' },
-    democracy:  { category:'LEG', service_id:'kdemocracy',  service_url:'https://democracy.gopang.net' },
+    stock:      { category:'ECO', service_id:'kfinance',    service_url:'https://stock.hondi.net' },
+    klaw:       { category:'JUS', service_id:'klaw',        service_url:'https://klaw.hondi.net' },
+    school:     { category:'EDU', service_id:'kedu',        service_url:'https://school.hondi.net' },
+    health:     { category:'MED', service_id:'khealth',     service_url:'https://health.hondi.net' },
+    democracy:  { category:'LEG', service_id:'kdemocracy',  service_url:'https://democracy.hondi.net' },
     fiil:       { category:'ENV', service_id:'fiil-kcleaner', service_url:'https://fiil.kr' },
   };
   if (gwpSvc && GWP_SVC_MAP[gwpSvc]) {
@@ -87,7 +87,7 @@ export async function runRouter(userText, hasImage = false) {
   // 긴급 키워드 즉시 판단 (LLM 호출 없이)
   if (/긴급|응급|119|112|쓰러|부상|화재|불이났|구조|살려줘|심정지/.test(userText)) {
     return { category:'EMG', service_id:'kemergency',
-             service_url:'https://911.gopang.net', confidence:0.99,
+             service_url:'https://911.hondi.net', confidence:0.99,
              reason:'긴급 상황 감지. K-Emergency 즉시 연결.',
              secondary:null, urgent:true, gwp_ctx:gwpCtx };
   }
@@ -165,7 +165,7 @@ export function applyRouterResult(result) {
   if (result.urgent) {
     appendBubble('ai',
       '🚨 **긴급 상황 감지**\n' +
-      `K-Emergency(911.gopang.net)에 연결합니다.\n` +
+      `K-Emergency(911.hondi.net)에 연결합니다.\n` +
       '📞 119/112 자동 디스패치 준비 중...'
     );
   }

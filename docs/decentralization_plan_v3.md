@@ -31,7 +31,7 @@
 ## 2. 잔여 작업 (순서대로)
 
 ### Step 1: T-A — L1 PocketBase 스키마 확장
-**작업 위치**: L1 Admin UI (https://l1-hanlim.gopang.net/_/)  
+**작업 위치**: L1 Admin UI (https://l1-hanlim.hondi.net/_/)  
 **근거 문서**: `docs/tc_pdv_l1_migration.md`
 
 **신설 컬렉션 2개**:
@@ -103,7 +103,7 @@ onRecordAfterCreate('pdv_records', async (e) => {
 
 단말 호출 형식:
 ```javascript
-const L1_PDV = 'https://l1-hanlim.gopang.net/api/collections/pdv_records/records'
+const L1_PDV = 'https://l1-hanlim.hondi.net/api/collections/pdv_records/records'
 await fetch(L1_PDV, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },

@@ -173,7 +173,7 @@ await test('R04', '기관 등록 — institution extra 구성', async () => {
 // ─────────────────────────────────────────────
 await test('R05', 'QR SVG — 형식 및 핵심 요소 검증', async () => {
   const handle = '@hallim_geumneung';
-  const profileUrl = `https://users.gopang.net/profile.html?handle=${encodeURIComponent(handle)}`;
+  const profileUrl = `https://users.hondi.net/profile.html?handle=${encodeURIComponent(handle)}`;
 
   // SVG 생성 인라인
   const encoded = encodeURIComponent(profileUrl);
@@ -192,7 +192,7 @@ await test('R05', 'QR SVG — 형식 및 핵심 요소 검증', async () => {
   assert(svg.includes('width="300"'), '너비 300 아님');
   assert(svg.includes('height="340"'), '높이 340 아님');
   assert(svg.includes(handle), 'handle 텍스트 없음');
-  assert(svg.includes('users.gopang.net'), '도메인 없음');
+  assert(svg.includes('users.hondi.net'), '도메인 없음');
   assert(svg.includes('qrserver.com'), 'QR 이미지 URL 없음');
 });
 
@@ -214,7 +214,7 @@ await test('R06', 'QR Cache-Control — max-age=86400 설정', async () => {
 await test('R07', 'return_to — pending_pay_url 복귀 로직', async () => {
   // localStorage 시뮬레이션
   const store = {};
-  const payUrl = 'https://users.gopang.net/pay.html?to=@hallim_geumneung&amount=22000&expires=300&created_at=1718000000';
+  const payUrl = 'https://users.hondi.net/pay.html?to=@hallim_geumneung&amount=22000&expires=300&created_at=1718000000';
 
   // pay.html 진입 시 저장
   store['pending_pay_url'] = payUrl;

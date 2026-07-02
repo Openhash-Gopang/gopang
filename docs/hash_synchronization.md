@@ -183,7 +183,7 @@ appendMsg('ai', '✅ ' + summary + '\n\n재무제표가 갱신되었습니다.')
 
 // 추가된 1줄 — e.data 그대로 전달하므로 모든 필드 보존
 if (window.opener && !window.opener.closed) {
-  window.opener.postMessage(e.data, 'https://gopang.net');
+  window.opener.postMessage(e.data, 'https://hondi.net');
 }
 
 recordPDV({ ... });
@@ -308,7 +308,7 @@ OpenHash의 핵심 요구사항:
 ### 7.1 T04 통과 기준
 
 ```
-1차 주문 완료 후 gopang.net 콘솔:
+1차 주문 완료 후 hondi.net 콘솔:
 [GWP_DONE] redeemClaim 완료 — block_hash: <8자리> | applied: 1 | bs-cash: 994000
 
 2차 주문 시도:
@@ -318,7 +318,7 @@ OpenHash의 핵심 요구사항:
 ### 7.2 콘솔 검증 스크립트
 
 ```javascript
-// 1차 거래 완료 후 gopang.net 콘솔에서 실행
+// 1차 거래 완료 후 hondi.net 콘솔에서 실행
 const req = indexedDB.open('gopang-wallet');
 req.onsuccess = e => {
   const db = e.target.result;

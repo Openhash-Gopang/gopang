@@ -317,7 +317,7 @@ generateEvidencePackage(msgId) → {
   openHashProof:   hashChain.getProof(msgId), // ③ OpenHash 해시 체인
   merkleProof:     hashChain.getMerkle(msgId),
   aiWarningLog:    msg.aiWarningLog,
-  verificationUrl: `https://verify.gopang.net/${msgId}`
+  verificationUrl: `https://verify.hondi.net/${msgId}`
 }
 // 목표: PERF.EVIDENCE_PACKAGE_MS (1200ms) 이내
 ```

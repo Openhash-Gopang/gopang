@@ -230,7 +230,7 @@ await test('P07', 'buyer_claim expires_at — 7일 후 설정', () => {
 // ─────────────────────────────────────────────
 await test('P08', '초방문자 pay.html — pending_pay_url 저장 + 리다이렉트', () => {
   const store   = {};
-  const payUrl  = 'https://users.gopang.net/pay.html?to=@hallim_geumneung&amount=22000&expires=300&created_at=1718000000';
+  const payUrl  = 'https://users.hondi.net/pay.html?to=@hallim_geumneung&amount=22000&expires=300&created_at=1718000000';
   const hasToken = false; // 미등록 사용자
 
   // pay.html 진입 시 토큰 없으면 저장 후 리다이렉트

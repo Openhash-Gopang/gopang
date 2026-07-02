@@ -172,7 +172,7 @@ await test('E-06', '법원 요약 보고서 필수 필드 존재', async () => {
     victimPDV:  { senderId:'alice', timestamp:'t', riskLevel:'S2', legalFlags:['CV-2'] },
     openHashProof: { layer:'L1', blockHeight:12345, entryHash:'a'.repeat(64) },
     proofWeight: { grade:'STANDARD', description:'표준' },
-    verificationUrl: 'https://verify.gopang.net/test-e06',
+    verificationUrl: 'https://verify.hondi.net/test-e06',
   }
 
   const summary = generateCourtSummary(mockPkg)

@@ -218,7 +218,7 @@ html,body{height:100%;background:#fff;color:#111;
 // K-Law — 하위 항목 없이 단독으로 곧바로 이동하는 특별 메뉴 (연한 회색 타일)
 const KLAW = {
   id:'klaw', name:'K-Law', desc:'법률 상담·소송',
-  url:'https://klaw.gopang.net/webapp.html', icon:'scale'
+  url:'https://klaw.hondi.net/webapp.html', icon:'scale'
 };
 
 // 전문직 — 직업(역할) 기준 AI 에이전트. 변호사는 K-Law와 동일한 목적지로 연결됩니다.
@@ -226,37 +226,37 @@ const CATEGORIES = [
   {
     id:'pro', name:'전문직', desc:'직업별 전문가 AI 에이전트', icon:'briefcase',
     items:[
-      { id:'lawyer',      name:'변호사',     desc:'법률 상담·소송',        url:'https://klaw.gopang.net/webapp.html' },
-      { id:'tax-pro',     name:'세무사',     desc:'세금 신고·절세 상담',     url:'https://tax.gopang.net/webapp.html' },
-      { id:'accountant',  name:'회계사',     desc:'재무제표·회계 자문',      url:'https://tax.gopang.net/webapp.html?mode=accounting' },
-      { id:'doctor',      name:'의사',       desc:'증상 상담·진료 안내',     url:'https://health.gopang.net/webapp.html' },
-      { id:'pharmacist',  name:'약사',       desc:'복약 안내·의약품 상담',   url:'https://health.gopang.net/webapp.html?mode=pharmacy' },
-      { id:'patent-atty', name:'변리사',     desc:'특허·상표·디자인 출원',   url:'https://patent.gopang.net/webapp.html' },
-      { id:'ins-agent',   name:'보험설계사', desc:'보험 비교·청구 상담',     url:'https://insurance.gopang.net/webapp.html' },
-      { id:'broker',      name:'증권전문가', desc:'투자 자문·시장 분석',     url:'https://stock.gopang.net/webapp.html' },
-      { id:'realtor',     name:'공인중개사', desc:'부동산 중개·시세 상담',   url:'https://realty.gopang.net/webapp.html' },
+      { id:'lawyer',      name:'변호사',     desc:'법률 상담·소송',        url:'https://klaw.hondi.net/webapp.html' },
+      { id:'tax-pro',     name:'세무사',     desc:'세금 신고·절세 상담',     url:'https://tax.hondi.net/webapp.html' },
+      { id:'accountant',  name:'회계사',     desc:'재무제표·회계 자문',      url:'https://tax.hondi.net/webapp.html?mode=accounting' },
+      { id:'doctor',      name:'의사',       desc:'증상 상담·진료 안내',     url:'https://health.hondi.net/webapp.html' },
+      { id:'pharmacist',  name:'약사',       desc:'복약 안내·의약품 상담',   url:'https://health.hondi.net/webapp.html?mode=pharmacy' },
+      { id:'patent-atty', name:'변리사',     desc:'특허·상표·디자인 출원',   url:'https://patent.hondi.net/webapp.html' },
+      { id:'ins-agent',   name:'보험설계사', desc:'보험 비교·청구 상담',     url:'https://insurance.hondi.net/webapp.html' },
+      { id:'broker',      name:'증권전문가', desc:'투자 자문·시장 분석',     url:'https://stock.hondi.net/webapp.html' },
+      { id:'realtor',     name:'공인중개사', desc:'부동산 중개·시세 상담',   url:'https://realty.hondi.net/webapp.html' },
     ]
   },
   {
     id:'org', name:'기관', desc:'정부·공공기관 AI 에이전트', icon:'building',
     items:[
-      { id:'nts',          name:'국세청',         desc:'국세·세무 행정',         url:'https://tax.gopang.net/webapp.html' },
-      { id:'kipo',         name:'특허청',         desc:'특허·상표·디자인 행정',   url:'https://patent.gopang.net/webapp.html' },
-      { id:'hospital',     name:'병원',           desc:'진료 예약·의료 상담',     url:'https://health.gopang.net/webapp.html' },
-      { id:'police-stn',   name:'경찰서',         desc:'민원·신고 접수',         url:'https://police.gopang.net/webapp.html' },
-      { id:'fire-stn',     name:'소방서',         desc:'화재 신고·구급 요청',     url:'https://911.gopang.net/webapp.html' },
-      { id:'school-org',   name:'학교·교육청',     desc:'학사·교육 행정',         url:'https://school.gopang.net/webapp.html' },
-      { id:'jeju-city',    name:'제주도청',       desc:'행정·민원 처리',         url:'https://public.gopang.net/webapp.html' },
-      { id:'nec',          name:'선거관리위원회', desc:'청원·투표',             url:'https://democracy.gopang.net/webapp.html' },
-      { id:'customs',      name:'관세청',         desc:'통관·수출입 신고',       url:'https://customs.gopang.net/webapp.html' },
+      { id:'nts',          name:'국세청',         desc:'국세·세무 행정',         url:'https://tax.hondi.net/webapp.html' },
+      { id:'kipo',         name:'특허청',         desc:'특허·상표·디자인 행정',   url:'https://patent.hondi.net/webapp.html' },
+      { id:'hospital',     name:'병원',           desc:'진료 예약·의료 상담',     url:'https://health.hondi.net/webapp.html' },
+      { id:'police-stn',   name:'경찰서',         desc:'민원·신고 접수',         url:'https://police.hondi.net/webapp.html' },
+      { id:'fire-stn',     name:'소방서',         desc:'화재 신고·구급 요청',     url:'https://911.hondi.net/webapp.html' },
+      { id:'school-org',   name:'학교·교육청',     desc:'학사·교육 행정',         url:'https://school.hondi.net/webapp.html' },
+      { id:'jeju-city',    name:'제주도청',       desc:'행정·민원 처리',         url:'https://public.hondi.net/webapp.html' },
+      { id:'nec',          name:'선거관리위원회', desc:'청원·투표',             url:'https://democracy.hondi.net/webapp.html' },
+      { id:'customs',      name:'관세청',         desc:'통관·수출입 신고',       url:'https://customs.hondi.net/webapp.html' },
     ]
   },
   {
     id:'social', name:'소셜', desc:'게임·SNS', icon:'users',
     items:[
-      { id:'game-zone',  name:'게임존',     desc:'미니게임·이벤트',     url:'https://games.gopang.net/webapp.html' },
-      { id:'sns-feed',   name:'고팡 SNS',  desc:'소셜 피드·친구',      url:'https://sns.gopang.net/webapp.html' },
-      { id:'community',  name:'커뮤니티',   desc:'게시판·동네 소식',    url:'https://community.gopang.net/webapp.html' },
+      { id:'game-zone',  name:'게임존',     desc:'미니게임·이벤트',     url:'https://games.hondi.net/webapp.html' },
+      { id:'sns-feed',   name:'고팡 SNS',  desc:'소셜 피드·친구',      url:'https://sns.hondi.net/webapp.html' },
+      { id:'community',  name:'커뮤니티',   desc:'게시판·동네 소식',    url:'https://community.hondi.net/webapp.html' },
     ]
   }
 ];

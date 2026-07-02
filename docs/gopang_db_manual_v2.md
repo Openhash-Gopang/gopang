@@ -1268,7 +1268,7 @@ FROM ktax_balance_anomalies;
 
 ### 409 STALE_STATE
 ```javascript
-// gopang.net 콘솔
+// hondi.net 콘솔
 const req = indexedDB.open('gopang-wallet');
 req.onsuccess = e => e.target.result.transaction('keys')
   .objectStore('keys').get('financial_state')

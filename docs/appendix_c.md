@@ -25,7 +25,7 @@
 
 ### C-2. 시그널 전달 경로 — L1 PocketBase 우선, Supabase 폴백
 
-Worker는 offer/answer/ICE 시그널을 저장할 때 L1(PocketBase, `l1-hanlim.gopang.net`)을 1차 저장소로, Supabase를 장애 시 폴백으로 쓴다.
+Worker는 offer/answer/ICE 시그널을 저장할 때 L1(PocketBase, `l1-hanlim.hondi.net`)을 1차 저장소로, Supabase를 장애 시 폴백으로 쓴다.
 
 ```js
 // worker.js — handleSignalSend (개념 요약)
@@ -199,7 +199,7 @@ $date = Get-Date -Format "yyyyMMdd-HHmm"
 $swContent = $swContent -replace "const CACHE_NAME\s+=\s+'gopang-[\w-]+'", "const CACHE_NAME    = 'gopang-$date'"
 ```
 
-오늘 수십 차례 배포했으니 `sw.js` 바이트는 매번 실제로 달라졌다. 그런데 `gopang.net`은 GitHub Pages(origin)를 Cloudflare가 앞단에서 CDN으로 감싸는 구조라, push 후 GitHub Pages 자체 CDN(Fastly)에 전체 전파되는 데 30~90초가 걸린다. 이 전파 기간 동안 `/sw.js` 요청은 어느 edge가 응답하느냐에 따라 신/구 버전이 섞여서 돌아올 수 있다.
+오늘 수십 차례 배포했으니 `sw.js` 바이트는 매번 실제로 달라졌다. 그런데 `hondi.net`은 GitHub Pages(origin)를 Cloudflare가 앞단에서 CDN으로 감싸는 구조라, push 후 GitHub Pages 자체 CDN(Fastly)에 전체 전파되는 데 30~90초가 걸린다. 이 전파 기간 동안 `/sw.js` 요청은 어느 edge가 응답하느냐에 따라 신/구 버전이 섞여서 돌아올 수 있다.
 
 한편 `gopang-pwa.js`의 자동 업데이트 로직(`_autoApplyUpdate`)은 새 버전을 감지하면 무조건 5초 후 `SKIP_WAITING` → `controllerchange` → `location.reload()`를 실행하며, **직전에 이미 자동 재시작했는지 확인하는 안전장치가 없었다.** 전파 지연 동안 캐시 플래핑이 "새 버전"으로 거듭 오인되면서, 5초 대기 + 재초기화 오버헤드로 약 10초 주기의 자동 새로고침 루프가 자체적으로 지속됐다.
 

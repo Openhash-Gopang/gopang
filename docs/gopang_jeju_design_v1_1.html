@@ -215,7 +215,7 @@
 
 <h3>전체 구성</h3>
 <pre>┌─────────────────────────────────────────────────────────────┐
-│                   users.gopang.net                            │
+│                   users.hondi.net                            │
 │  register-consumer.html  — 소비자 최소 등록                  │
 │  register.html           — 사업자/기관 등록 (3-step)         │
 │  profile.html             — 프로필 + 주문 + AI 비서 + 리뷰    │
@@ -250,7 +250,7 @@
 <h3>기술 스택</h3>
 <table>
 <tr><th>구성요소</th><th>기술</th><th>비고</th></tr>
-<tr><td>Frontend</td><td>GitHub Pages</td><td>users.gopang.net</td></tr>
+<tr><td>Frontend</td><td>GitHub Pages</td><td>users.hondi.net</td></tr>
 <tr><td>Proxy</td><td>Cloudflare Worker v4.9+</td><td>gopang-proxy</td></tr>
 <tr><td>DB</td><td>Supabase (PostgreSQL)</td><td>ebbecjfrwaswbdybbgiu</td></tr>
 <tr><td>L1 Node</td><td>PocketBase 0.22.14</td><td>한림읍 노드</td></tr>
@@ -403,10 +403,10 @@ GUID:          uuidv5("8613800130000", GOPANG_NS)
 
 <h3>5.1 QR URL 구조</h3>
 <pre>단순 프로필 접속 (메뉴 선택 방식):
-  https://users.gopang.net/profile.html?handle=@hallim_geumneung
+  https://users.hondi.net/profile.html?handle=@hallim_geumneung
 
 금액 지정 즉시 결제 (계산대 방식):
-  https://users.gopang.net/pay.html
+  https://users.hondi.net/pay.html
     ?to=@hallim_geumneung
     &amount=22000
     &items=짜장면×2,짬뽕×1
@@ -421,7 +421,7 @@ GUID:          uuidv5("8613800130000", GOPANG_NS)
 <h3>5.3 결제 파이프라인 (변경 없음)</h3>
 <pre>서명버튼 클릭
   → gopangWallet.sign(tx)       브라우저 내 ED25519 서명
-  → GWP_SIGN_REQUEST            gopang.net 전달
+  → GWP_SIGN_REQUEST            hondi.net 전달
   → GWP_SIGN_RESPONSE           서명 완료
   → /biz/order POST             Worker → L1
   → GWP_DONE                    PDV 기록

@@ -1,6 +1,6 @@
 # 고팡 (Gopang) 파일 명세서
 > 저장소: https://github.com/Openhash-Gopang/gopang  
-> 배포: https://gopang.net (GitHub Pages)  
+> 배포: https://hondi.net (GitHub Pages)  
 > 작성일: 2026-06-14
 
 ---
@@ -191,7 +191,7 @@
 |------|-----|
 | Supabase URL | `https://ebbecjfrwaswbdybbgiu.supabase.co` |
 | CF Worker Proxy | `gopang-proxy.tensor-city.workers.dev` |
-| L1 PocketBase | `https://l1-hanlim.gopang.net` |
+| L1 PocketBase | `https://l1-hanlim.hondi.net` |
 | 브랜드 색상 | `#16a34a` (green) |
 | 사용자 스토리지 키 | `localStorage: 'gopang_user_v3'` |
 | GUID 기반 | `user.ipv6` (SHA-256 기기 핑거프린트 → IPv6 형식) |

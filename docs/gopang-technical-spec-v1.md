@@ -30,13 +30,13 @@
 
 | 서비스 | 도메인 | GitHub 저장소 | 로컬 경로 |
 |---|---|---|---|
-| 고팡 메인 | gopang.net | Openhash-Gopang/gopang | C:\Users\주피터\Downloads\gopang\ |
-| K-Market | market.gopang.net | Openhash-Gopang/market | C:\Users\주피터\Downloads\market\ |
-| 사용자 프로필 | users.gopang.net | Openhash-Gopang/users | C:\Users\주피터\Downloads\users\ |
+| 고팡 메인 | hondi.net | Openhash-Gopang/gopang | C:\Users\주피터\Downloads\gopang\ |
+| K-Market | market.hondi.net | Openhash-Gopang/market | C:\Users\주피터\Downloads\market\ |
+| 사용자 프로필 | users.hondi.net | Openhash-Gopang/users | C:\Users\주피터\Downloads\users\ |
 
 **배포** GitHub Pages — 모든 서브도메인 → CNAME → openhash-gopang.github.io  
 **DNS** Cloudflare 관리  
-**l1-hanlim.gopang.net** → A → 168.110.123.175 (DNS only, Cloudflare 프록시 없음)
+**l1-hanlim.hondi.net** → A → 168.110.123.175 (DNS only, Cloudflare 프록시 없음)
 
 ### 2.2 백엔드 서비스
 
@@ -44,7 +44,7 @@
 |---|---|---|
 | Cloudflare Worker | gopang-proxy.tensor-city.workers.dev | v4.9, API 프록시 |
 | Supabase | ebbecjfrwaswbdybbgiu.supabase.co | 주 DB (anon key 사용) |
-| L1 노드 (PocketBase) | l1-hanlim.gopang.net / 168.110.123.175:8091 | OpenHash L1 |
+| L1 노드 (PocketBase) | l1-hanlim.hondi.net / 168.110.123.175:8091 | OpenHash L1 |
 | Oracle Cloud VM | 168.110.123.175 Ubuntu 22.04 | L1 서버 |
 
 ### 2.3 L1 노드 구성
@@ -57,7 +57,7 @@
 설정:       /opt/gopang/config/
 포트:       8091 (0.0.0.0 바인딩)
 nginx:      443 → 8091 리버스 프록시
-SSL:        Let's Encrypt (l1-hanlim.gopang.net)
+SSL:        Let's Encrypt (l1-hanlim.hondi.net)
 NODE_ID:    KR-JEJU-JEJU-HANLIM
 Admin:      tensor.city@gmail.com / automatic25
 ```
@@ -289,13 +289,13 @@ kinsurance, ktax, kcommerce, ktransport, klogistics, fiil-kcleaner, kgov, kdemoc
 ### 5.2 K-Market 주문 전체 플로우
 
 ```
-gopang.net (gopang-app.js)
+hondi.net (gopang-app.js)
   ├─ 사용자: "짜장면 두 그릇 주문해줘"
   ├─ SP-00: [GWP:kcommerce] 태그 출력
   ├─ callAI() → [GWP:kcommerce] 감지 → getService('kcommerce') → _gwpLaunch()
-  └─ market.gopang.net/webapp.html?gwp=1&token=&origin=...&ctx={b64}&ctx_enc=b64 오픈
+  └─ market.hondi.net/webapp.html?gwp=1&token=&origin=...&ctx={b64}&ctx_enc=b64 오픈
 
-market.gopang.net (webapp.html)
+market.hondi.net (webapp.html)
   ├─ gwp=1 감지 → ctx b64 디코딩 → 입력창 주입 → setTimeout(sendMessage, 100)
   ├─ sendMessage() → gwp=1이면 gwpMatch 건너뜀 → callAI()
   ├─ SP-KMARKET: [SEARCH]{"keyword":"짜장면","occupation":"중식","address":""} 출력
@@ -304,27 +304,27 @@ market.gopang.net (webapp.html)
   │   └─ 결과: 금능반점 1건
   ├─ AI 재호출 → [OPEN_PROFILE:{"handle":"@geumneung","guid":"dummy-hanlim-003"}] 출력
   ├─ OPEN_PROFILE 태그 감지
-  └─ users.gopang.net/profile.html?gwp=1&guid=dummy-hanlim-003&opener_origin=https://market.gopang.net 팝업
+  └─ users.hondi.net/profile.html?gwp=1&guid=dummy-hanlim-003&opener_origin=https://market.hondi.net 팝업
 
-users.gopang.net (profile.html)
+users.hondi.net (profile.html)
   ├─ /biz/profile/{guid} → Worker → Supabase user_profiles 조회
   ├─ 메뉴 표시 (extra.menu) → 사용자 선택 → [주문하기]
   ├─ GWP_SIGN_REQUEST → window.opener(market), targetOrigin=OPENER_ORIGIN
   │
-market.gopang.net
-  ├─ GWP_SIGN_REQUEST 수신 → window.opener(gopang), targetOrigin='https://gopang.net'
+market.hondi.net
+  ├─ GWP_SIGN_REQUEST 수신 → window.opener(gopang), targetOrigin='https://hondi.net'
   │   (핸들러 중복 방지: _gwpSignResponseHandler 전역 플래그)
   │
-gopang.net (gopang-app.js)
+hondi.net (gopang-app.js)
   ├─ GWP_SIGN_REQUEST 수신 → 서명 확인 UI 표시
   ├─ 사용자: [서명하여 결제] 클릭
   ├─ _gwpSignExecute() → window.gopangWallet.sign(tx) → Ed25519 서명
   ├─ GWP_SIGN_RESPONSE → sourceWin(market).postMessage
   │
-market.gopang.net
+market.hondi.net
   ├─ GWP_SIGN_RESPONSE 수신 → profileSource.postMessage → profile
   │
-users.gopang.net (profile.html)
+users.hondi.net (profile.html)
   ├─ GWP_SIGN_RESPONSE 수신
   ├─ /biz/order POST → Worker
   │   body: { tx, tx_hash, buyer_sig, buyer_public_key, from_guid,
@@ -334,10 +334,10 @@ Worker (/biz/order)
   ├─ L1 /api/tx POST
   └─ L1 응답 → fs_ledger RPC → PDV 기록 → 클라이언트 반환
 
-users.gopang.net
+users.hondi.net
   ├─ result.ok → GWP_DONE → window.opener(market)
   │
-market.gopang.net
+market.hondi.net
   └─ GWP_DONE → window.opener(gopang)
 ```
 
@@ -355,10 +355,10 @@ market          → GWP_DONE → window.opener (gopang)
 ### 5.4 OPEN_PROFILE URL 파라미터
 
 ```
-https://users.gopang.net/profile.html
+https://users.hondi.net/profile.html
   ?gwp=1
   &guid={primary_guid}
-  &opener_origin={market.gopang.net URL encoded}
+  &opener_origin={market.hondi.net URL encoded}
 ```
 
 **주의**: `params` 선언이 반드시 `OPENER_ORIGIN` 선언보다 앞에 있어야 함 (TDZ 오류 방지)
@@ -477,11 +477,11 @@ const statusMap = {
 
 ### 7.2 도메인 격리 문제
 
-`gopang.net`과 `users.gopang.net`은 **도메인이 달라 IndexedDB가 완전히 분리**됨.  
-- `gopang.net`의 `gopang-wallet` DB에 저장된 키: `ed25519-main`
-- `users.gopang.net`에서 `gopang-wallet.js`가 로드되면 **별도 DB에 새 키 생성**
+`hondi.net`과 `users.hondi.net`은 **도메인이 달라 IndexedDB가 완전히 분리**됨.  
+- `hondi.net`의 `gopang-wallet` DB에 저장된 키: `ed25519-main`
+- `users.hondi.net`에서 `gopang-wallet.js`가 로드되면 **별도 DB에 새 키 생성**
 
-따라서 **서명은 반드시 gopang.net에서** 수행해야 함 (GWP_SIGN_REQUEST → GWP_SIGN_RESPONSE 경로).
+따라서 **서명은 반드시 hondi.net에서** 수행해야 함 (GWP_SIGN_REQUEST → GWP_SIGN_RESPONSE 경로).
 
 ### 7.3 주요 메서드
 
@@ -519,7 +519,7 @@ guid 없으면 `'[Wallet] guid(IPv6)가 설정되지 않았습니다.'` 에러.
 ### 7.5 콘솔 디버깅
 
 ```javascript
-// gopang.net 콘솔 — gopangWallet 공개 속성만 접근 가능
+// hondi.net 콘솔 — gopangWallet 공개 속성만 접근 가능
 Object.keys(window.gopangWallet)
 // ['_pubKey', '_privKey', 'publicKeyB64u', 'publicKeyHex', 'handle', 'guid']
 
@@ -590,16 +590,16 @@ market_purchase(
 
 ```javascript
 [
-  'https://gopang.net', 'https://www.gopang.net',
-  'https://klaw.gopang.net', 'https://market.gopang.net',
-  'https://tax.gopang.net', 'https://gdc.gopang.net',
-  'https://health.gopang.net', 'https://school.gopang.net',
-  'https://public.gopang.net', 'https://security.gopang.net',
-  'https://democracy.gopang.net', 'https://police.gopang.net',
-  'https://insurance.gopang.net', 'https://911.gopang.net',
-  'https://stock.gopang.net', 'https://traffic.gopang.net',
-  'https://logistics.gopang.net', 'https://users.gopang.net',
-  'https://l1-hanlim.gopang.net', 'https://fiil.kr',
+  'https://hondi.net', 'https://www.hondi.net',
+  'https://klaw.hondi.net', 'https://market.hondi.net',
+  'https://tax.hondi.net', 'https://gdc.hondi.net',
+  'https://health.hondi.net', 'https://school.hondi.net',
+  'https://public.hondi.net', 'https://security.hondi.net',
+  'https://democracy.hondi.net', 'https://police.hondi.net',
+  'https://insurance.hondi.net', 'https://911.hondi.net',
+  'https://stock.hondi.net', 'https://traffic.hondi.net',
+  'https://logistics.hondi.net', 'https://users.hondi.net',
+  'https://l1-hanlim.hondi.net', 'https://fiil.kr',
   'https://openhash.kr', 'https://nounweb.github.io',
   'http://localhost', 'http://127.0.0.1',
 ]
@@ -646,14 +646,14 @@ market_purchase(
 
 ```javascript
 REGISTERED_SERVICES = {
-  'market': { level:3, domain:'market.gopang.net', pdv:true },
-  'klaw':   { level:3, domain:'klaw.gopang.net',   pdv:true },
-  'users':  { level:3, domain:'users.gopang.net',  pdv:false },
+  'market': { level:3, domain:'market.hondi.net', pdv:true },
+  'klaw':   { level:3, domain:'klaw.hondi.net',   pdv:true },
+  'users':  { level:3, domain:'users.hondi.net',  pdv:false },
   // ... 등 16개
 }
 ```
 
-`users.gopang.net`은 `pdv:false` → PDV 보고 불가.
+`users.hondi.net`은 `pdv:false` → PDV 보고 불가.
 
 ---
 
@@ -681,7 +681,7 @@ userAddress = {
 **subsystem-auth.js**: 모든 하위 시스템에 one-line으로 추가 (`<script src="...subsystem-auth.js">`)  
 **security-agent.js**: 하위 시스템 로드 시 자동으로 K-Security 에이전트 시작  
 ```
-[K-Security Agent:market] 시작 — market.gopang.net — 접검 간격 86400s
+[K-Security Agent:market] 시작 — market.hondi.net — 접검 간격 86400s
 ```
 
 ---
@@ -720,7 +720,7 @@ userAddress = {
 SUPABASE_URL  = https://ebbecjfrwaswbdybbgiu.supabase.co
 SUPABASE_KEY  = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA
 WORKER_URL    = https://gopang-proxy.tensor-city.workers.dev
-L1_URL        = https://l1-hanlim.gopang.net
+L1_URL        = https://l1-hanlim.hondi.net
 L1_LOCAL      = http://168.110.123.175:8091
 L1_NODE_ID    = KR-JEJU-JEJU-HANLIM
 DEEPSEEK_MODEL = deepseek-v4-flash (기본), deepseek-chat (V3)
@@ -746,21 +746,21 @@ DEEPSEEK_MODEL = deepseek-v4-flash (기본), deepseek-chat (V3)
 
 | # | 오류/증상 | 위치 | 원인 | 해결 방법 |
 |---|---|---|---|---|
-| E1 | `[Router] 최신 버전 로드 실패, 폴백 사용: 포인터 내용 비정상` | gopang.net 콘솔 | SP-00-ROUTER-LATEST.txt에 SP 본문 전체가 들어있었음 | 파일 내용을 `SP-00-ROUTER-v4_1.txt` 1줄로 교체 후 push |
-| E2 | `GWP_REGISTRY` 두 번 `undefined` (콘솔) | gopang.net 콘솔 | 캐시 삭제 직후 gwp-registry.js 재로드 전에 콘솔 확인 | 타이밍 문제, 실제 오류 아님. 세 번째 확인 시 'object' |
-| E3 | `window.gopangWallet.getState is not a function` | gopang.net 콘솔 | getState() 메서드 없음. 올바른 API는 `getFinancialState()` | `await window.gopangWallet.getFinancialState()` 사용 |
-| E4 | `IDBDatabase: One of the specified object stores was not found` (`financial` store) | gopang.net 콘솔 | 존재하지 않는 store 이름. 실제 store는 `keys`와 `hash_chain` 뿐 | `db.transaction('keys', ...)` 사용 |
-| E5 | `financial_state` 저장 후 `getFinancialState()` 빈 객체 반환 | gopang.net 콘솔 | `store.put({bs-cash:...}, key)` → state 래퍼 없이 저장 → `rec?.state`가 undefined | `store.put({ state: {...}, updatedAt, block_hash }, 'financial_state')` 형태로 저장 |
+| E1 | `[Router] 최신 버전 로드 실패, 폴백 사용: 포인터 내용 비정상` | hondi.net 콘솔 | SP-00-ROUTER-LATEST.txt에 SP 본문 전체가 들어있었음 | 파일 내용을 `SP-00-ROUTER-v4_1.txt` 1줄로 교체 후 push |
+| E2 | `GWP_REGISTRY` 두 번 `undefined` (콘솔) | hondi.net 콘솔 | 캐시 삭제 직후 gwp-registry.js 재로드 전에 콘솔 확인 | 타이밍 문제, 실제 오류 아님. 세 번째 확인 시 'object' |
+| E3 | `window.gopangWallet.getState is not a function` | hondi.net 콘솔 | getState() 메서드 없음. 올바른 API는 `getFinancialState()` | `await window.gopangWallet.getFinancialState()` 사용 |
+| E4 | `IDBDatabase: One of the specified object stores was not found` (`financial` store) | hondi.net 콘솔 | 존재하지 않는 store 이름. 실제 store는 `keys`와 `hash_chain` 뿐 | `db.transaction('keys', ...)` 사용 |
+| E5 | `financial_state` 저장 후 `getFinancialState()` 빈 객체 반환 | hondi.net 콘솔 | `store.put({bs-cash:...}, key)` → state 래퍼 없이 저장 → `rec?.state`가 undefined | `store.put({ state: {...}, updatedAt, block_hash }, 'financial_state')` 형태로 저장 |
 | E6 | `/biz/order` 403 (처음 진단 시) | profile.html 콘솔 | worker.js 로컬 파일에 syntax error(outputs 중복 선언) 있었으나 Cloudflare 실제 배포본은 정상 | 로컬 파일과 Cloudflare 대시보드 불일치 확인. 실제 403 원인은 별도(공개키 불일치) |
 | E7 | `/biz/order` 403 UNREGISTERED_KEY | profile.html 콘솔 | L1 gdc_keys에 등록된 키(`kvm4r_...`)와 wallet 실제 서명 키(`JXTgy...`)가 다름 | L1 gdc_keys PATCH: `public_key = IndexedDB ed25519-main.publicKeyB64u` |
-| E8 | buyer_public_key 3개 키 불일치 | 진단 중 발견 | ① L1 등록: kvm4r_... ② gopang.net IDB ed25519-main: JXTgy... ③ users.gopang.net IDB 별도 키 | gopang.net IDB ed25519-main 키를 L1에 등록, users.gopang.net은 서명 안 함 |
+| E8 | buyer_public_key 3개 키 불일치 | 진단 중 발견 | ① L1 등록: kvm4r_... ② hondi.net IDB ed25519-main: JXTgy... ③ users.hondi.net IDB 별도 키 | hondi.net IDB ed25519-main 키를 L1에 등록, users.hondi.net은 서명 안 함 |
 | E9 | `/biz/order` 409 STALE_STATE | profile.html 콘솔 | `prev_settle_hash`(fs SHA-256)가 L1 최신 블록 content_hash와 불일치 | IndexedDB financial_state.block_hash를 L1 최신 content_hash로 수동 동기화 |
 | E10 | Supabase PATCH 400 `bs_cash column not found` | PowerShell | `user_profiles` 테이블에 `bs_cash` 컬럼 없음. 잔액은 IndexedDB에만 존재 | SQL Editor에서 컬럼 구조 확인 후 올바른 테이블/컬럼 사용 |
 | E11 | PowerShell Invoke-RestMethod 400 (IPv6 URL) | PowerShell | `-Uri`에 IPv6 콜론 포함 시 URL 파싱 오류 | Supabase SQL Editor 직접 사용 권장 |
 | E12 | PocketBase curl `&` 백그라운드 실행 오류 | SSH 터미널 | URL의 `&`가 셸에서 백그라운드 프로세스로 해석됨 | URL을 따옴표로 감쌈: `curl "...?sort=...&perPage=1"` |
 | E13 | PocketBase Admin API 403 `Only admins can perform this action` | SSH 터미널 | `Authorization: Admin password` 헤더 형식 오류 | 먼저 `/api/admins/auth-with-password`로 토큰 발급 후 `Bearer {token}` 사용 |
 | E14 | `[GopangWallet] guid: 미연결` | market 콘솔 | market webapp SSO 완료 후 wallet.setIdentity() 미호출 | market webapp init()에서 SSO 완료 콜백에 wallet.setIdentity({guid, handle}) 추가 (미수정) |
-| E15 | `openWebApp is not defined` desktop.html:709 | gopang.net 콘솔 | desktop.html에 openWebApp 함수 미정의 또는 미로드 | 일시적 오류로 재현 안 됨. 미수정 |
+| E15 | `openWebApp is not defined` desktop.html:709 | hondi.net 콘솔 | desktop.html에 openWebApp 함수 미정의 또는 미로드 | 일시적 오류로 재현 안 됨. 미수정 |
 | E16 | `<meta name="apple-mobile-web-app-capable">` deprecated 경고 | market/profile 콘솔 | 구형 메타 태그 사용 | `<meta name="mobile-web-app-capable" content="yes">` 추가 권장 (비긴급) |
 | E17 | `_recordPDV: _USER.guid undefined` | gopang-app.js | 신규 사용자는 guid 없이 ipv6만 있음 | `_USER.guid || _USER.ipv6` fallback 추가 (미수정) |
 
@@ -799,7 +799,7 @@ DEEPSEEK_MODEL = deepseek-v4-flash (기본), deepseek-chat (V3)
 
 4. **GWP 재귀 패턴**: gwp=1로 열린 하위 시스템이 내부에서 gwpMatch를 실행하면 자기 자신을 재귀 호출. 모든 하위 시스템은 gwp=1 모드에서 gwpMatch 건너뛰어야 함.
 
-5. **wallet 공개키 일치 필수**: L1 gdc_keys의 public_key는 gopang.net IndexedDB `ed25519-main.publicKeyB64u`와 정확히 일치해야 함. users.gopang.net이 별도 키를 생성하면 UNREGISTERED_KEY 오류.
+5. **wallet 공개키 일치 필수**: L1 gdc_keys의 public_key는 hondi.net IndexedDB `ed25519-main.publicKeyB64u`와 정확히 일치해야 함. users.hondi.net이 별도 키를 생성하면 UNREGISTERED_KEY 오류.
 
 6. **Supabase vs IndexedDB 잔액**: bs-cash 잔액은 Supabase에 없고 wallet IndexedDB에만 있음. Supabase는 거래 내역(fs_ledger)만 저장.
 
@@ -816,8 +816,8 @@ DEEPSEEK_MODEL = deepseek-v4-flash (기본), deepseek-chat (V3)
 **반드시 webapp.html iframe 컨텍스트에서 확인해야 함.**
 
 ```
-F12 → Console → 상단 드롭다운 'top' → 'gopang.net/webapp.html' 선택
-location.href        // 'https://gopang.net/webapp.html' 확인
+F12 → Console → 상단 드롭다운 'top' → 'hondi.net/webapp.html' 선택
+location.href        // 'https://hondi.net/webapp.html' 확인
 typeof GWP_REGISTRY  // 'object'
 typeof getService    // 'function'
 ```
@@ -880,7 +880,7 @@ req.onsuccess = e => {
 │   → ALLOWED_ORIGINS에 origin 추가 필요
 ├─ L1 UNREGISTERED_KEY: {"ok":false,"error":"UNREGISTERED_KEY"}
 │   → L1 gdc_keys에 buyer_public_key 등록 필요
-│   → gopang.net IndexedDB ed25519-main.publicKeyB64u 확인 후 PB에 PATCH
+│   → hondi.net IndexedDB ed25519-main.publicKeyB64u 확인 후 PB에 PATCH
 └─ L1 기타: L1 /api/tx에 직접 curl로 확인
 ```
 
@@ -929,10 +929,10 @@ gopang-wallet.js (redeemClaim)
 | Supabase | `fs_ledger.prev_settle_hash` | 거래 당시의 prev_settle_hash | 감사 추적 |
 | Supabase | `pdv_log.block_hash` | L1 content_hash | OpenHash 앵커링 증거 |
 
-**users.gopang.net (profile.html)**:
+**users.hondi.net (profile.html)**:
 - hash 값을 저장하지 않음
 - `/biz/order` POST → Worker → L1으로 전달만 함
-- 서명은 gopang.net wallet에서 수행 (GWP 경로)
+- 서명은 hondi.net wallet에서 수행 (GWP 경로)
 - profile.html 자체의 IndexedDB에는 hash 관련 데이터 없음
 
 ### 18.3 일관성 불변 조건
@@ -955,7 +955,7 @@ IndexedDB financial_state.block_hash
 | 페이지 새로고침 (캐시 삭제 포함) | IndexedDB는 유지, 별도 영향 없음 | 해당 없음 | - |
 | 다른 기기/브라우저에서 접속 | 해당 기기에 financial_state 없음 | 첫 거래는 통과, 이후 STALE_STATE | redeemClaim() 자동화로 해결 |
 | L1에서 테스트 블록 직접 삽입 | L1 블록은 생겼지만 wallet 미갱신 | STALE_STATE | 수동 동기화 |
-| users.gopang.net에서 서명 시도 | 별도 IndexedDB에 다른 키 생성 | UNREGISTERED_KEY (403) | 반드시 gopang.net 경로로 서명 |
+| users.hondi.net에서 서명 시도 | 별도 IndexedDB에 다른 키 생성 | UNREGISTERED_KEY (403) | 반드시 hondi.net 경로로 서명 |
 
 ### 18.5 setFinancialState() 호출 위험
 
@@ -983,7 +983,7 @@ curl -s "http://127.0.0.1:8091/api/collections/blocks/records?filter=(buyer_guid
   -H "Authorization: Bearer $TOKEN" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['items'][0]['content_hash'])"
 ```
 
-**Step 2**: gopang.net 콘솔에서 IndexedDB 동기화
+**Step 2**: hondi.net 콘솔에서 IndexedDB 동기화
 ```javascript
 const LATEST_CONTENT_HASH = '{Step1에서 조회한 값}';
 const req = indexedDB.open('gopang-wallet');

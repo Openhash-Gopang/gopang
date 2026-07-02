@@ -153,12 +153,12 @@ function makeEnv() {
     SUPABASE_KEY:         'anon',
     SUPABASE_SERVICE_KEY: 'service',
     GOPANG_MASTER_KEY:    MASTER_KEY,
-    WORKER_BASE_URL:      'https://mock.gopang.net',
+    WORKER_BASE_URL:      'https://mock.hondi.net',
   };
 }
 
 function makeRequest(method, path, body = null, token = null) {
-  const url  = `https://mock.gopang.net${path}`;
+  const url  = `https://mock.hondi.net${path}`;
   const headers = new Map();
   headers.set('content-type', 'application/json');
   if (token) headers.set('authorization', `Bearer ${token}`);

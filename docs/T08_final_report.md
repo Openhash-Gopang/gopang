@@ -47,7 +47,7 @@ block_hash:    일치 ✅
 
 **증상**
 ```
-gopang.net 콘솔:
+hondi.net 콘솔:
   window._lastGwpDone?.buyer_claim  →  undefined
   redeemClaim applied: 0  (청구권 미적용)
 ```

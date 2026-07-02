@@ -411,7 +411,7 @@ window.opener.postMessage({
     how:   'GDC 결제 7,000원',
     why:   '사용자 지시: "짜장면 한 그릇 시켜 줘"',
   }
-}, 'https://gopang.net');
+}, 'https://hondi.net');
 ```
 
 | 메시지 타입 | 동작 |
@@ -1047,5 +1047,5 @@ function clearChat() {
 
 ---
 
-*AI City Inc. · 팀 주피터 · gopang.net · github.com/Openhash-Gopang/gopang*
+*AI City Inc. · 팀 주피터 · hondi.net · github.com/Openhash-Gopang/gopang*
 *DAWN: Democracy is All We Need · MIT License*

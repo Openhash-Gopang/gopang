@@ -39,7 +39,7 @@
                        │ Ed25519 서명
                        ↓
 ┌─────────────────────────────────────────────────────┐
-│  OpenHash L1 PocketBase (l1-hanlim.gopang.net)      │
+│  OpenHash L1 PocketBase (l1-hanlim.hondi.net)      │
 │  Hash 기록 주체 = OpenHash Network                   │
 │    · entryHash (체인 앵커)                           │
 │    · block_hash                                      │
@@ -535,7 +535,7 @@ timestamp    = ISO 8601
 ```
 bucket = doubleSHA256(msgId) mod 1000
 
-L1: 0~599   (60%)  ← l1-hanlim.gopang.net (현재 운영)
+L1: 0~599   (60%)  ← l1-hanlim.hondi.net (현재 운영)
 L2: 600~799 (20%)  ← 준비 중
 L3: 800~899 (10%)  ← 준비 중
 L4: 900~959  (6%)  ← 준비 중

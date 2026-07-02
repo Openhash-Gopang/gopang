@@ -20,7 +20,7 @@
                            │ Ed25519 서명
                            ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  OpenHash L1 PocketBase (l1-hanlim.gopang.net)                  │
+│  OpenHash L1 PocketBase (l1-hanlim.hondi.net)                  │
 │                                                                  │
 │  Hash 기록 주체 = OpenHash Network                               │
 │    - entryHash (= SHA-256(prevHash + contentHash + sigs + ...))  │
@@ -233,7 +233,7 @@ seller는 **상품 등록 시 사전 서명**. 거래 시 실시간 서명 불�
 ```
 bucket = doubleSHA256(msgId) mod 1000
 
-L1: 0~599   (60%)  ← l1-hanlim.gopang.net (현재 운영 중)
+L1: 0~599   (60%)  ← l1-hanlim.hondi.net (현재 운영 중)
 L2: 600~799 (20%)  ← 추후 운영
 L3: 800~899 (10%)  ← 추후 운영
 L4: 900~959  (6%)  ← 추후 운영
@@ -346,5 +346,5 @@ node --experimental-vm-modules src/tests/phase_anchor_integration.test.js
 | 원문 저장 | ❌ (Hash만) | ❌ (Hash만) |
 | 사용자 검색 | ❌ | ✅ (global_profiles) |
 | P2P 시그널링 | ❌ | ✅ (webrtc_signals, 휘발성) |
-| 운영 상태 | ✅ l1-hanlim.gopang.net | ✅ ebbecjfrwaswbdybbgiu.supabase.co |
+| 운영 상태 | ✅ l1-hanlim.hondi.net | ✅ ebbecjfrwaswbdybbgiu.supabase.co |
 | 장기 목표 | L1~L5 분산 노드 | 점진적 축소 |

@@ -124,6 +124,6 @@ EventBus.listenerCount('ai:msg_risk_assessed')
 
 또는 `index.html` DevTools Console에서:
 ```javascript
-// gopang.net에서 열린 후
+// hondi.net에서 열린 후
 window._eventBusDebug = true   // (구현 예정)
 ```

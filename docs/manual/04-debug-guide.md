@@ -180,7 +180,7 @@ grep -r "import.*gdc" src/network/
 
 ---
 
-## 🟢 유형 9: gopang.net 흰 화면 (완전 무응답)
+## 🟢 유형 9: hondi.net 흰 화면 (완전 무응답)
 
 **체크리스트:**
 

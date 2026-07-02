@@ -37,7 +37,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        Frontend (GitHub Pages)                       │
-│                        users.gopang.net                              │
+│                        users.hondi.net                              │
 │                                                                      │
 │  [M02]           [M03]      [M04]        [M05]    [M06]             │
 │  register*.html  pay.html   profile.html ai-setup  (profile 내 탭)  │

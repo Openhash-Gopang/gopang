@@ -41,7 +41,7 @@ export const PROXY      = 'https://hondi-proxy.tensor-city.workers.dev';
 // Worker는 이미 "L1 우선, Supabase 폴백" 구조로 L1을 직접 호출 중.
 // 단말이 같은 L1 URL을 직접 호출하면 Worker 경유가 불필요.
 // L1 PocketBase webrtc_signals 컬렉션 Rule: 인증 없음 (guid 기반 필터링으로 충분)
-export const L1_SIGNAL_BASE = 'https://l1-hanlim.gopang.net/api/collections/webrtc_signals/records';
+export const L1_SIGNAL_BASE = 'https://l1-hanlim.hondi.net/api/collections/webrtc_signals/records';
 // RTC_CONFIG — 기본값 (STUN 전용)
 // fetchRtcConfig() 호출 시 TURN credential 포함 버전으로 교체됨
 export const RTC_CONFIG_STUN_ONLY = { iceServers: [
@@ -135,13 +135,13 @@ export const _SUPABASE_URL = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
 export const _SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
 
 // ── L1 ───────────────────────────────────────────────────
-export const L1_URL = 'https://l1-hanlim.gopang.net/api/collections/profiles/records';
+export const L1_URL = 'https://l1-hanlim.hondi.net/api/collections/profiles/records';
 
 // ── T-C: PDV/OpenHash 앵커링 L1 직접 (2026-06-23) ──────────
 // 이전: 단말 → PROXY /pdv/report → Worker → Supabase pdv_log
 // 이후: 단말 → L1_PDV_URL 직접 POST (+ block_hash 있으면 L1_ANCHOR_URL도 직접 POST)
-export const L1_PDV_URL    = 'https://l1-hanlim.gopang.net/api/collections/pdv_records/records';
-export const L1_ANCHOR_URL = 'https://l1-hanlim.gopang.net/api/collections/anchor_records/records';
+export const L1_PDV_URL    = 'https://l1-hanlim.hondi.net/api/collections/pdv_records/records';
+export const L1_ANCHOR_URL = 'https://l1-hanlim.hondi.net/api/collections/anchor_records/records';
 
 // ── 기타 ─────────────────────────────────────────────────
 export let _lastPipelineResult = null;

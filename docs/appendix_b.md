@@ -58,7 +58,7 @@ PC에서 `@11111112` 핸들을 검색할 때 503 오류가 반환됐다. 워커 
 
 `handleProfileGet`이 핸들로 사용자를 검색할 때 Supabase만 조회하고 L1 PocketBase는 전혀 거치지 않는다는 사실이 코드 분석으로 확인됐다. 이는 "OpenHash에서 검색은 L1이 기본, Supabase는 임시 보조"라는 시스템 설계 원칙과 정면으로 배치됐다.
 
-원칙 재확인과 함께 `handleProfileGet`을 재설계했다. `_resolveGuidFromL1(handle)` 함수를 새로 추가해 L1 PocketBase(`l1-hanlim.gopang.net`)에 핸들로 먼저 조회하고, 성공하면 그 guid를 기반으로 Supabase에서 상세 프로필을 가져오는 구조로 변경했다. L1 조회가 실패하면 Supabase 핸들 직접 조회로 폴백한다. 응답에는 `identity_source: 'l1' | 'supabase-direct'`와 `detail_source: 'supabase-temporary'` 필드를 추가해, 현재 경로가 표준인지 임시 우회인지를 응답 자체에 명시했다.
+원칙 재확인과 함께 `handleProfileGet`을 재설계했다. `_resolveGuidFromL1(handle)` 함수를 새로 추가해 L1 PocketBase(`l1-hanlim.hondi.net`)에 핸들로 먼저 조회하고, 성공하면 그 guid를 기반으로 Supabase에서 상세 프로필을 가져오는 구조로 변경했다. L1 조회가 실패하면 Supabase 핸들 직접 조회로 폴백한다. 응답에는 `identity_source: 'l1' | 'supabase-direct'`와 `detail_source: 'supabase-temporary'` 필드를 추가해, 현재 경로가 표준인지 임시 우회인지를 응답 자체에 명시했다.
 
 **교훈:** 조회 경로가 설계 원칙과 다르게 구현되어도, 기능 자체는 동작하기 때문에 테스트만으로 발견하기 어렵다. 응답에 `identity_source` 같은 진단 필드를 포함하면 프로덕션 환경에서도 실제 경로를 추적할 수 있어 유용하다.
 

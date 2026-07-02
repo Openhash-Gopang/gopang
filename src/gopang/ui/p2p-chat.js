@@ -61,7 +61,7 @@ async function _signalDeleteDirect(id) {
 // ※ PocketBase 구독은 Supabase의 postgres_changes filter처럼 서버에서
 //   to_guid로 걸러주지 않는다 — 컬렉션 전체 변경을 받고 클라이언트에서
 //   to_guid로 걸러야 한다(REST 폴링도 원래 그렇게 하고 있었으니 동일 신뢰모델).
-const _L1_BASE = 'https://l1-hanlim.gopang.net';
+const _L1_BASE = 'https://l1-hanlim.hondi.net';
 
 function _watchL1Realtime(myGuid, onRow) {
   let es = null, retryTimer = null, closed = false;
@@ -782,7 +782,7 @@ async function _saveP2PSession(messages, peer, startedAt) {
   {
     const _who   = { ipv6: _USER.ipv6, handle: _USER.handle };
     const _when  = { period_start: startedAt || now, period_end: now };
-    const _where = { svc_url: 'https://gopang.net' };
+    const _where = { svc_url: 'https://hondi.net' };
     const _what  = { summary: `P2P 대화 종료 — ${peer.handle}와 ${messages.length}턴` };
     const _how   = { method: 'WebRTC P2P DataChannel' };
     const _why   = { goal: 'P2P 대화 PDV 기록' };

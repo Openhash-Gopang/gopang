@@ -20,7 +20,7 @@
 
 | 저장소 | URL | 역할 |
 |---|---|---|
-| gopang_v2 | github.com/Openhash-Gopang/gopang_v2 | 고팡 포털 (gopang.net) |
+| gopang_v2 | github.com/Openhash-Gopang/gopang_v2 | 고팡 포털 (hondi.net) |
 | fiil | github.com/nounweb/fiil | K-Cleaner 서비스 (fiil.kr) |
 
 ---
@@ -132,7 +132,7 @@ target origin을 명시하여 보안을 유지합니다.
 ### 전체 통신 흐름도
 
 ```
-고팡 (gopang.net)                    서비스 webapp (fiil.kr 등)
+고팡 (hondi.net)                    서비스 webapp (fiil.kr 등)
 ─────────────────────                ──────────────────────────
 gwpLaunch(svc, ctx, extra)
   └─ window.open(url)  ──────────→  새 탭 로드
@@ -438,6 +438,6 @@ git push origin main
 - [ ] K-Law 판결 예측 GWP 위젯
 - [ ] K-Health 서비스 추가
 - [ ] GWP_REGISTRY 원격 JSON 전환 (서비스 재배포 없이 등록)
-- [ ] `gwp-sdk.js` CDN 배포 (gopang.net/gwp-sdk.js)
+- [ ] `gwp-sdk.js` CDN 배포 (hondi.net/gwp-sdk.js)
 - [ ] Gemini 코드 제거 (OpenAI로 통일)
 - [ ] 고팡 SP-00 1단계 라우터 고도화

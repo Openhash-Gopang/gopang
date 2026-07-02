@@ -62,7 +62,7 @@
 ### 전체 구성
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                   users.gopang.net                           │
+│                   users.hondi.net                           │
 │  register-consumer.html  — 소비자 최소 등록                  │
 │  register.html           — 사업자/기관 등록 (3-step)         │
 │  profile.html            — 프로필 + 주문 + AI 비서 + 리뷰    │
@@ -103,7 +103,7 @@
 ### 기술 스택
 | 구성요소 | 기술 | 비고 |
 |----------|------|------|
-| Frontend | GitHub Pages | users.gopang.net |
+| Frontend | GitHub Pages | users.hondi.net |
 | Proxy | Cloudflare Worker v4.9+ | gopang-proxy |
 | DB | Supabase (PostgreSQL) | ebbecjfrwaswbdybbgiu |
 | L1 Node | PocketBase 0.22.14 | 한림읍 노드 |
@@ -320,10 +320,10 @@ GUID:          uuidv5("8613800130000", GOPANG_NS)
 ### 5.1 QR URL 구조
 ```
 단순 프로필 접속 (메뉴 선택 방식):
-  https://users.gopang.net/profile.html?handle=@hallim_geumneung
+  https://users.hondi.net/profile.html?handle=@hallim_geumneung
 
 금액 지정 즉시 결제 (계산대 방식):
-  https://users.gopang.net/pay.html
+  https://users.hondi.net/pay.html
     ?to=@hallim_geumneung
     &amount=22000
     &items=짜장면×2,짬뽕×1
@@ -348,7 +348,7 @@ Alipay (4단계): 앱실행 → QR스캔 → 확인 → 비밀번호
 ```
 서명버튼 클릭
   → gopangWallet.sign(tx)       브라우저 내 ED25519 서명
-  → GWP_SIGN_REQUEST            gopang.net 전달
+  → GWP_SIGN_REQUEST            hondi.net 전달
   → GWP_SIGN_RESPONSE           서명 완료
   → /biz/order POST             Worker → L1
   → GWP_DONE                    PDV 기록

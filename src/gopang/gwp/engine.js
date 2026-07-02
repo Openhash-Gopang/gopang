@@ -228,12 +228,12 @@ window.addEventListener('message', (e) => {
 
   // ── GWP_SIGN_REQUEST: 서명 요청은 _gwpActive 무관하게 처리 ──
   // market 탭이 구매자 서명을 고팡에 위임. gopang-wallet.js가 서명 수행.
-  // origin: market.gopang.net 또는 gopang.net 계열만 허용
+  // origin: market.hondi.net 또는 hondi.net 계열만 허용
   if (msg.type === 'GWP_SIGN_REQUEST') {
     const ALLOWED_ORIGINS = [
-      'https://market.gopang.net',
-      'https://users.gopang.net',
-      'https://gopang.net',
+      'https://market.hondi.net',
+      'https://users.hondi.net',
+      'https://hondi.net',
       'https://openhash-gopang.github.io',
       location.origin,  // 개발 환경 (localhost 등)
     ];

@@ -42,7 +42,7 @@
 ```javascript
 // GWP_DONE → gopang 탭 포워딩 (redeemClaim 트리거)
 if (window.opener && !window.opener.closed) {
-  window.opener.postMessage(e.data, 'https://gopang.net');
+  window.opener.postMessage(e.data, 'https://hondi.net');
   console.log('[Market] GWP_DONE → gopang 포워딩 완료 (OPEN_PROFILE 경로)');
 }
 ```

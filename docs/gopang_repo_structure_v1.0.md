@@ -12,19 +12,19 @@
 GitHub Organization: Openhash-Gopang (22개)
 │
 ├── [인프라 코어]
-│   ├── gopang          ← 메인 플랫폼 (gopang.net) + Worker (API 서버)
-│   ├── GDC             ← Gopang Digital Currency (gdc.gopang.net)
-│   └── OpenHash        ← L1 블록체인 노드 스냅샷 (l1-hanlim.gopang.net)
+│   ├── gopang          ← 메인 플랫폼 (hondi.net) + Worker (API 서버)
+│   ├── GDC             ← Gopang Digital Currency (gdc.hondi.net)
+│   └── OpenHash        ← L1 블록체인 노드 스냅샷 (l1-hanlim.hondi.net)
 │
 ├── [사용자 서비스]
-│   ├── users           ← 사용자 포털 (users.gopang.net) ← Profile 2.0 구축 대상
-│   └── market          ← K-Market 프론트엔드 (market.gopang.net)
+│   ├── users           ← 사용자 포털 (users.hondi.net) ← Profile 2.0 구축 대상
+│   └── market          ← K-Market 프론트엔드 (market.hondi.net)
 │
 ├── [K-시리즈 하위 시스템]
-│   ├── traffic         ← K-Traffic (traffic.gopang.net)
-│   ├── insurance       ← K-Insurance (insurance.gopang.net)
-│   ├── democracy       ← K-Democracy (democracy.gopang.net)
-│   ├── qna             ← Gopang QnA (qna.gopang.net)
+│   ├── traffic         ← K-Traffic (traffic.hondi.net)
+│   ├── insurance       ← K-Insurance (insurance.hondi.net)
+│   ├── democracy       ← K-Democracy (democracy.hondi.net)
+│   ├── qna             ← Gopang QnA (qna.hondi.net)
 │   └── [미발견 7개]    ← K-Law, K-Health, K-School, K-Security,
 │                          K-Public, K-911, fiil 등 추정
 │
@@ -37,13 +37,13 @@ GitHub Organization: Openhash-Gopang (22개)
 ## 1. gopang — 메인 플랫폼 저장소
 
 **URL**: `https://github.com/Openhash-Gopang/gopang`  
-**배포**: `gopang.net` (GitHub Pages)  
+**배포**: `hondi.net` (GitHub Pages)  
 **역할**: 플랫폼 진입점, Worker API 서버, 공유 라이브러리, 하위 시스템 통합 문서
 
 ```
 gopang/                              ← C:\Users\주피터\Downloads\gopang\
 │
-├── [루트 — gopang.net 배포]
+├── [루트 — hondi.net 배포]
 │   ├── index.html                   기기 감지 라우터 (모바일↔데스크톱)
 │   ├── webapp.html                  모바일 PWA (AI 비서 + GWP 런처)
 │   ├── desktop.html                 PC 랜딩 페이지 (마케팅)
@@ -52,11 +52,11 @@ gopang/                              ← C:\Users\주피터\Downloads\gopang\
 │   ├── gopang-app.js                GWP_DONE 핸들러, PDV 연동
 │   └── manifest.json                PWA 매니페스트
 │
-├── auth/                            ← gopang.net/auth/* (하위 시스템 공유)
+├── auth/                            ← hondi.net/auth/* (하위 시스템 공유)
 │   ├── gopang-sso.js                SSO 라이브러리 (gopangAuth.require())
 │   └── silent-auth.html             인증 엔드포인트 (리다이렉트·iframe)
 │
-├── report/                          ← gopang.net/report/*
+├── report/                          ← hondi.net/report/*
 │   └── gopang-report.js             PDV 보고서 전송 라이브러리
 │
 ├── src/                             ← 빌드 소스 (gopang 앱 도메인별 플러그인)
@@ -121,7 +121,7 @@ worker.js
 ## 2. users — 사용자 포털 저장소
 
 **URL**: `https://github.com/Openhash-Gopang/users`  
-**배포**: `users.gopang.net` (GitHub Pages)  
+**배포**: `users.hondi.net` (GitHub Pages)  
 **역할**: Profile 2.0 전체 프론트엔드  
 **현재**: webapp.html, index.html, profile.html, register.html 존재
 
@@ -159,7 +159,7 @@ users/                               ← C:\Users\주피터\Downloads\users\
 ## 3. market — K-Market 프론트엔드
 
 **URL**: `https://github.com/Openhash-Gopang/market`  
-**배포**: `market.gopang.net` (GitHub Pages)  
+**배포**: `market.hondi.net` (GitHub Pages)  
 **역할**: K-Market 업체용 주문 관리, GWP 결제 게이트웨이  
 **현재**: webapp.html, index.html 존재  
 **태그**: v0.4.0-T10 (T01~T10 완료)
@@ -179,7 +179,7 @@ market/                              ← C:\Users\주피터\Downloads\market\
 ## 4. GDC — Gopang Digital Currency
 
 **URL**: `https://github.com/Openhash-Gopang/GDC`  
-**배포**: `gdc.gopang.net`  
+**배포**: `gdc.hondi.net`  
 **역할**: GDC 지갑, 충전/환불, 금융 대시보드
 
 ```
@@ -233,7 +233,7 @@ OpenHash/
 
 **하위 시스템 통합 3원칙** (모든 K-시리즈 공통)
 ```
-1. 인증: import { gopangAuth } from 'https://gopang.net/auth/gopang-sso.js'
+1. 인증: import { gopangAuth } from 'https://hondi.net/auth/gopang-sso.js'
 2. PDV:  import { buildReport, sendReportOnce } from '...gopang-report.js'
 3. 배포: {name}.gopang.net → Cloudflare Pages or GitHub Pages
 ```

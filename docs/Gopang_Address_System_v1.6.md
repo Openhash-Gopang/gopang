@@ -418,7 +418,7 @@ Value = {
 ### 14.2 다중 부트스트랩 소스
 
 ```
-1. https://gopang.net/.well-known/gopang-bootstrap.json
+1. https://hondi.net/.well-known/gopang-bootstrap.json
 2. https://bootstrap1.openhash.org/gopang-bootstrap.json
 3. https://bootstrap2.opensociety.net/gopang-bootstrap.json
 4. IPFS: /ipns/k2k4r8...gopang-bootstrap (게이트웨이 5개)
@@ -763,7 +763,7 @@ Trust Level L3 사용자가 자발적으로 활성화하는 옵션입니다.
 ### 20.9 법원 전용 Verification API
 
 ```
-기본 URL: https://court-api.gopang.net/v1/
+기본 URL: https://court-api.hondi.net/v1/
 인증: 법원 공개키로 서명된 JWT
 TLS: 1.3, 양방향 인증서 검증
 수수료: 0.01 GDC / 1회 검증 (자동 차감)
