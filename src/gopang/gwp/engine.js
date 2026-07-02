@@ -40,17 +40,17 @@ export function _gwpLaunch(service, context, _preTab = null) {
   // 기존 탭이 열려있으면 닫고 새 ctx로 재시작
   if (_gwpTab && !_gwpTab.closed) {
     _gwpTab.close();
-    _gwpTab = null;
+    setGwpTab(null);
   }
   if (_gwpTabTimer) {
     clearInterval(_gwpTabTimer);
-    _gwpTabTimer = null;
+    setGwpTabTimer(null);
   }
-  _gwpActive  = false;
-  _gwpService = null;
+  setGwpActive(false);
+  setGwpService(null);
 
-  _gwpActive  = true;
-  _gwpService = service;
+  setGwpActive(true);
+  setGwpService(service);
   _gwpReported   = false;   // 새 세션 — 보고 수신 여부 초기화
   _gwpMessageLog = [];       // 새 세션 — 대화 로그 초기화
 
@@ -74,9 +74,9 @@ export function _gwpLaunch(service, context, _preTab = null) {
   // window.open() 대신 그 탭의 URL을 교체 (비동기 맥락에서도 차단 없음)
   if (_preTab && !_preTab.closed) {
     _preTab.location.href = svcUrl.toString();
-    _gwpTab = _preTab;
+    setGwpTab(_preTab);
   } else {
-    _gwpTab = window.open(svcUrl.toString(), '_blank');
+    setGwpTab(window.open(svcUrl.toString(), '_blank'));
   }
 
   if (!_gwpTab) {
@@ -86,8 +86,8 @@ export function _gwpLaunch(service, context, _preTab = null) {
       `<a href="${svcUrl}" target="_blank" style="color:var(--tint);font-weight:600;text-decoration:underline;">탭하여 연결</a>`,
       true
     );
-    _gwpActive  = false;
-    _gwpService = null;
+    setGwpActive(false);
+    setGwpService(null);
     return;
   }
 
@@ -99,26 +99,26 @@ export function _gwpLaunch(service, context, _preTab = null) {
   console.info('[GWP] 새 탭 실행:', service.id, svcUrl.toString());
 
   // ── 탭 닫힘 감지 — 200ms 폴링 ─────────────────────────────
-  _gwpTabTimer = setInterval(() => {
+  setGwpTabTimer(setInterval(() => {
     if (_gwpTab && _gwpTab.closed) {
       _gwpOnTabClose();
     }
-  }, 200);
+  }, 200));
 }
 
 // ── 새 탭이 닫혔을 때 → 고팡 복귀 처리 ─────────────────────────
 function _gwpOnTabClose() {
   clearInterval(_gwpTabTimer);
-  _gwpTabTimer = null;
-  _gwpTab      = null;
+  setGwpTabTimer(null);
+  setGwpTab(null);
 
   const svc      = _gwpService;
   const reported = _gwpReported;
   const svcName  = _gwpService?.name || 'K-서비스';
   const svcIcon  = _gwpService?.icon || '🤖';
 
-  _gwpActive  = false;
-  _gwpService = null;
+  setGwpActive(false);
+  setGwpService(null);
 
   // 고팡 탭 포커스
   window.focus();
@@ -189,20 +189,20 @@ async function _gwpFallbackReport(svc) {
 export function _gwpClose(showReturn = true) {
   if (!_gwpActive) return;
   clearInterval(_gwpTabTimer);
-  _gwpTabTimer = null;
+  setGwpTabTimer(null);
 
   if (_gwpTab && !_gwpTab.closed) {
     _gwpTab.close();
   }
-  _gwpTab = null;
+  setGwpTab(null);
 
   const svc      = _gwpService;
   const reported = _gwpReported;
   const svcName  = _gwpService?.name || 'K-서비스';
   const svcIcon  = _gwpService?.icon || '🤖';
 
-  _gwpActive  = false;
-  _gwpService = null;
+  setGwpActive(false);
+  setGwpService(null);
 
   if (!reported) {
     // "예외 없이 보고" 원칙 — 직접 닫기에도 동일하게 적용
@@ -228,12 +228,12 @@ window.addEventListener('message', (e) => {
 
   // ── GWP_SIGN_REQUEST: 서명 요청은 _gwpActive 무관하게 처리 ──
   // market 탭이 구매자 서명을 고팡에 위임. gopang-wallet.js가 서명 수행.
-  // origin: market.hondi.net 또는 hondi.net 계열만 허용
+  // origin: market.gopang.net 또는 gopang.net 계열만 허용
   if (msg.type === 'GWP_SIGN_REQUEST') {
     const ALLOWED_ORIGINS = [
-      'https://market.hondi.net',
-      'https://users.hondi.net',
-      'https://hondi.net',
+      'https://market.gopang.net',
+      'https://users.gopang.net',
+      'https://gopang.net',
       'https://openhash-gopang.github.io',
       location.origin,  // 개발 환경 (localhost 등)
     ];
