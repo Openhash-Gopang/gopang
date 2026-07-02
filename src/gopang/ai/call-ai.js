@@ -229,6 +229,8 @@ export const _stripInternalTags = (text) => text
   .replace(/\[TUTORIAL_ADVANCE:\d+\]/g, '')   // 튜토리얼 단계 태그
   .replace(/\[TUTORIAL_STEP:[^\]]*\]/g, '')    // 튜토리얼 컨텍스트 태그(실수로 AI가 출력하면)
   .replace(/\[PANEL_ACTION:close\]/g, '')      // AI 패널 닫기 지시 태그 (2026-07-02 신설)
+  .replace(/\[GWP:\s*[\w-]+\]/g, '')           // 하위 시스템 라우팅 태그 (방어적 — 정상 경로는 _parseAgentTags가 처리)
+  .replace(/\[EXPERT:\s*[@\w-]+\]/g, '')       // 전문가 세션 라우팅 태그 (방어적 — 정상 경로는 handleExpertTag가 처리)
   .trim();
 
 /**
@@ -917,13 +919,20 @@ export async function _callLLM(messages, options = {}) {
 function _parseAgentTags(fullReply, bubble, userText, _preTab) {
   // [GWP: serviceId] — 하위 시스템 새 탭 오픈 (SP-00 v10.0, 기존 로직 그대로 이전)
   try {
-    const gwpMatch = fullReply.match(/\[GWP:([\w-]+)\]/);
+    // BUG-FIX(2026-07-02): AGENT-COMMON 프롬프트는 "[GWP: klaw]"처럼 콜론
+    // 뒤에 공백을 넣는 형식으로 일관되게 지시하는데(289/368/886~889행),
+    // 이 정규식은 공백을 허용하지 않아 실제 모델 출력과 100% 어긋났다.
+    // 그 결과 (1) 서비스가 전혀 열리지 않고 (2) 매칭 실패 시엔 태그
+    // 제거(strip)도 안 일어나 원문 그대로("[GWP: klaw]") 채팅창에
+    // 노출됐다 — 사용자가 실제로 겪은 증상과 정확히 일치. 콜론 뒤 공백을
+    // 선택적으로 허용하도록 \s*를 추가한다.
+    const gwpMatch = fullReply.match(/\[GWP:\s*([\w-]+)\]/);
     if (gwpMatch) {
       const svcId  = gwpMatch[1];
       const svcDef = (typeof getService === 'function') ? getService(svcId) : null;
       if (svcDef) {
         console.info('[GWP] LLM 판단 → 새 탭:', svcId);
-        if (bubble) _updateStreamBubble(bubble, fullReply.replace(/\[GWP:[\w-]+\]\s*/, ''));
+        if (bubble) _updateStreamBubble(bubble, fullReply.replace(/\[GWP:\s*[\w-]+\]\s*/, ''));
         _gwpLaunch(svcDef, userText, _preTab);
       } else {
         console.warn('[GWP] 알 수 없는 서비스 ID:', svcId);
