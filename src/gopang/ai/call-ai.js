@@ -228,6 +228,7 @@ export const _stripInternalTags = (text) => text
   .replace(/\[PROFILE_SKIP\]/g, '')
   .replace(/\[TUTORIAL_ADVANCE:\d+\]/g, '')   // 튜토리얼 단계 태그
   .replace(/\[TUTORIAL_STEP:[^\]]*\]/g, '')    // 튜토리얼 컨텍스트 태그(실수로 AI가 출력하면)
+  .replace(/\[PANEL_ACTION:close\]/g, '')      // AI 패널 닫기 지시 태그 (2026-07-02 신설)
   .trim();
 
 /**
@@ -327,6 +328,20 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI) {
         localStorage.setItem('hondi_tutorial_step', String(nextStep));
         console.log('[Tutorial] 단계→', nextStep);
       }
+    } catch {}
+  }
+
+  // ── PANEL_ACTION:close — 튜토리얼 마지막에 "닫을까요?"라고 물은 뒤
+  // 사용자가 동의하면 AI가 이 태그를 출력해 실제로 패널을 닫는다
+  // (2026-07-02 신설). closeAIPanel()은 webapp.html의 AI 패널 IIFE에서
+  // window.closeAIPanel로 노출돼 있다 — 여기선 브라우저 전역이므로 그대로 호출.
+  if (fullReply.includes('[PANEL_ACTION:close]')) {
+    try {
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && typeof window.closeAIPanel === 'function') {
+          window.closeAIPanel();
+        }
+      }, 900); // 마지막 인사 버블을 사용자가 읽을 시간을 살짝 준 뒤 닫는다
     } catch {}
   }
 
