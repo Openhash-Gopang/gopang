@@ -38,7 +38,7 @@ import { loadChainFromIDB }                    from './src/openhash/hashChain.js
 
 // ── P2P 검색/채팅 (GDUDA Phase 1) ────────────────────────
 import { openSearch as openP2PSearch }         from './src/gopang/ui/p2p-search.js';
-import { startIncomingWatch }                  from './src/gopang/ui/p2p-chat.js';
+import { startIncomingWatch, checkPendingInvites } from './src/gopang/ui/p2p-chat.js';
 
 // ════════════════════════════════════════════════════════
 // 1. 사용자 초기화 — v6.0: Guest 모드 완전 폐지
@@ -336,6 +336,9 @@ const _boot = async () => {
 
     // GDUDA Phase 1 — incoming offer 감시
     if (_USER?.ipv6) startIncomingWatch(_USER.ipv6);
+
+    // 무응답으로 남겨진 P2P 초대 확인 (2026-07-02 신설)
+    if (_USER?.ipv6) checkPendingInvites(_USER.ipv6);
 
     // PC→휴대폰 LLM Key 자동 동기화 — AI 설정 화면을 열지 않아도
     // 앱 시작 시점에 X25519 키를 보장하고, PC가 보낸 대기 설정이 있으면

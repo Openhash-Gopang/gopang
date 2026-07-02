@@ -175,6 +175,12 @@ export async function _sendP2P(text) {
   const msg = { text, ts: new Date().toISOString() };
   _rtcChannel.send(JSON.stringify(msg));
   await _saveMsgPDV({ dir:'out', to: _peer?.guid, text, ts: msg.ts });
+  // p2p-chat.js가 세션 종료 시 통째로 저장/OpenHash 앵커링하는 원문
+  // 누적 배열에도 기록 (2026-07-02 — 메인 채팅 통합 리팩터링의 일부)
+  try {
+    const { _recordOutgoingP2PMsg } = await import('../ui/p2p-chat.js');
+    _recordOutgoingP2PMsg(text, msg.ts);
+  } catch (e) { console.warn('[WebRTC] P2P 세션 기록 실패(무시):', e.message); }
 }
 
 // ── RTC 연결 종료 ────────────────────────────────────────

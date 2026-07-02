@@ -5,10 +5,16 @@
  * - from/to 모두 handle 기준 (전세계 유일)
  */
 import {
-  PROXY, L1_SIGNAL_BASE, L1_PDV_URL, L1_ANCHOR_URL, L1_URL, RTC_CONFIG, _USER,
-  setRtcConn, setRtcChannel, setSignalPoll,
+  PROXY, L1_SIGNAL_BASE, L1_PDV_URL, L1_ANCHOR_URL, L1_URL, L1_P2P_INVITES_URL, RTC_CONFIG, _USER,
+  setRtcConn, setRtcChannel, setSignalPoll, setPeerState,
   _rtcConn, _rtcChannel, _signalPoll,
 } from '../core/state.js';
+import { appendBubble } from './bubble.js';
+// _clearPeer는 webrtc.js가 정의(peer-bar 숨기기·입력창 placeholder 복원·
+// "AI 비서와 대화합니다" 안내까지 이미 다 되어있다 — 여기서 새로 안 만들고
+// 재사용한다). webrtc.js→p2p-chat.js는 동적 import(순환 없음)이므로 반대
+// 방향(정적 import)은 안전하다.
+import { _clearPeer } from '../p2p/webrtc.js';
 
 // ── 탈중앙화 이관 ③: 시그널링 전송/수신/삭제를 L1 직접으로 ──────────────
 // Worker가 이미 L1 webrtc_signals 컬렉션을 직접 쓰는 구조이므로,
@@ -61,7 +67,7 @@ async function _signalDeleteDirect(id) {
 // ※ PocketBase 구독은 Supabase의 postgres_changes filter처럼 서버에서
 //   to_guid로 걸러주지 않는다 — 컬렉션 전체 변경을 받고 클라이언트에서
 //   to_guid로 걸러야 한다(REST 폴링도 원래 그렇게 하고 있었으니 동일 신뢰모델).
-const _L1_BASE = 'https://l1-hanlim.hondi.net';
+const _L1_BASE = 'https://l1-hanlim.gopang.net';
 
 function _watchL1Realtime(myGuid, onRow) {
   let es = null, retryTimer = null, closed = false;
@@ -107,13 +113,58 @@ function _watchL1Realtime(myGuid, onRow) {
   };
 }
 
-let _chatOverlay  = null;
 let _peerInfo     = null;  // { guid, handle, nickname }
 let _pollInterval = null;
 let _p2pMessages  = [];    // P2P 대화 원문 누적 (PDV 저장용)
 let _sessionStart = null;  // 세션 시작 시각
 let _activeCallId = null;  // 현재 유효한 통화 시도 ID — 재연결 시 이전 watcher 자동 무력화
 const _seenOfferIds = new Set();  // 처리한 offer callId — 중복 confirm() 방지
+
+// ── 메인 채팅 통합 (2026-07-02 리팩터링) ──────────────────────────────
+// 기존엔 이 파일이 #_p2p-overlay라는 완전히 별도의 풀스크린 UI를 직접
+// 그려서 썼다 — AI 패널도, 메인 대화창(#message-list)도 아닌 제3의
+// 화면이었다. 그런데 webrtc.js/send-message.js/state.js에는 이미
+// "_peer 상태가 있으면 메인 입력창이 자동으로 P2P 전송으로 라우팅되고,
+// peer-bar에 상대 정보가 뜨는" 통합 구조가 먼저 만들어져 있었다(webrtc.js
+// setPeer()의 주석: "UI(오버레이)는 p2p-chat.js가 담당"이라며 위임했지만,
+// 정작 p2p-chat.js는 그 통합 구조(_peer 공유state)를 쓰지 않고 자기 것을
+// 새로 만들어서 — 결과적으로 메인 채팅 쪽 통합 코드가 통째로 고아가 됐다.
+// 이번 리팩터링은 그 고아가 된 기존 통합 구조(_peer state · peer-bar ·
+// appendBubble · _clearPeer)를 그대로 되살려 쓰는 것 — 새로 설계하지 않는다.
+
+// "지금 뭘 보여줄지" 판단: AI 패널이 열려있으면 거기(사용자가 방금 그
+// 맥락에서 호출을 시켰을 가능성이 높음), 아니면 메인 채팅에 시스템 메시지로.
+function _notify(text) {
+  if (typeof window._appendPanelSystemMsg === 'function' && window._isAIPanelOpen?.()) {
+    window._appendPanelSystemMsg(text);
+  } else {
+    appendBubble('system', text);
+  }
+}
+
+// 연결 실제 완료(datachannel open) 시점에만 호출 — peer-bar를 띄우고
+// AI 패널을 닫아 메인 대화창으로 넘긴다. "전화 거는 중" 단계에서는
+// 호출하지 않는다(사용자가 요청한 그대로 — 무응답이면 AI 패널이 계속
+// 살아있어야 하므로).
+function _activatePeerInMainChat(peer) {
+  setPeerState({
+    guid: peer.guid, handle: peer.handle,
+    name: peer.nickname || peer.handle,
+    avatar_emoji: peer.avatar_emoji || '🙂',
+  });
+  const bar  = document.getElementById('peer-bar');
+  const av   = document.getElementById('peer-avatar');
+  const nm   = document.getElementById('peer-name');
+  const hd   = document.getElementById('peer-handle');
+  if (av) av.textContent = peer.avatar_emoji || '🙂';
+  if (nm) nm.textContent = peer.nickname || peer.handle || '상대방';
+  if (hd) hd.textContent = peer.handle ? '@' + peer.handle.replace(/^@/, '') : '';
+  if (bar) bar.style.display = 'flex';
+  const mainInput = document.getElementById('msg-input');
+  if (mainInput) mainInput.placeholder = `${peer.nickname || peer.handle || '상대방'}에게 메시지…`;
+  if (typeof window.closeAIPanel === 'function') window.closeAIPanel();
+  appendBubble('system', `🔗 ${peer.nickname || peer.handle}님과 연결됐습니다.`);
+}
 
 // ── handle로 즉시 초대 (발신측) ──────────────────────────
 // 그림자 AI가 [P2P_INVITE: handle=@xxx] 태그를 출력했을 때 호출됨.
@@ -156,7 +207,6 @@ export async function startP2PCall(targetUser) {
   _peerInfo     = targetUser;
   _p2pMessages  = [];
   _sessionStart = new Date().toISOString();
-  _openChatUI(targetUser, 'calling');
 
   const conn    = new RTCPeerConnection(RTC_CONFIG);
   const channel = conn.createDataChannel('chat', { ordered: true });
@@ -181,14 +231,24 @@ export async function startP2PCall(targetUser) {
     payload:   { sdp: conn.localDescription, from_handle: _USER.handle, callId },
   });
 
-  _appendMsg('system', `📞 ${targetUser.nickname || targetUser.handle}님께 연결 요청을 보냈습니다...`);
+  // BUG-FIX(2026-07-02): 예전엔 여기서 _openChatUI()로 완전히 별도의
+  // 풀스크린 오버레이를 띄웠다 — AI 패널도 메인 대화창도 아닌 제3의 화면.
+  // "전화 거는 중"에는 아무 UI 전환도 하지 않는다 — AI 패널을 통해 통화를
+  // 시작했다면 그 패널이 계속 살아있어야, 무응답일 때 거기에 안내를 띄울
+  // 수 있다(사용자 요청 사양). 실제로 연결됐을 때만
+  // _activatePeerInMainChat()이 메인 대화창으로 전환한다.
+  _notify(`📞 ${targetUser.nickname || targetUser.handle}님께 연결 요청을 보냈습니다...`);
 
   // answer/ICE 수신 — L1 PocketBase Realtime (폴링 폴백 포함)
-  _watchAnswerRealtime(conn, targetUser.guid, callId);
+  _watchAnswerRealtime(conn, targetUser, callId);
 }
 
 // ── answer/ICE 실시간 수신 (발신측) ─────────────────────
-function _watchAnswerRealtime(conn, peerGuid, callId) {
+// BUG-FIX(2026-07-02): peerGuid만 받던 걸 targetUser 전체로 바꿨다 —
+// 무응답 타임아웃 안내 메시지("OO님이 응답하지 않습니다")에 닉네임이
+// 필요해서다.
+function _watchAnswerRealtime(conn, targetUser, callId) {
+  const peerGuid = targetUser.guid;
   const myGuid = _USER.ipv6;
 
   let done = false, stopRealtime = null;
@@ -207,9 +267,21 @@ function _watchAnswerRealtime(conn, peerGuid, callId) {
 
   function _close() {
     done = true;
+    if (noAnswerTimer) { clearTimeout(noAnswerTimer); noAnswerTimer = null; }
     if (stopRealtime) { stopRealtime(); stopRealtime = null; }
     _stopPoll();
   }
+
+  // ── 무응답 타임아웃 (2026-07-02 신설) ─────────────────
+  // offer를 보낸 지 25초 안에 answer가 안 오면 "무응답"으로 간주한다.
+  // 서버 시그널 TTL(60초)보다 짧게 잡아, 상대가 아예 안 받는 상황을
+  // TTL 만료까지 기다리지 않고 사용자에게 먼저 알린다.
+  const NO_ANSWER_MS = 25000;
+  let noAnswerTimer = setTimeout(() => {
+    if (done || _stale()) return;
+    _close();
+    _handleNoAnswer(targetUser);
+  }, NO_ANSWER_MS);
 
   async function _handleSignalRow(row) {
     if (done) return;
@@ -227,7 +299,8 @@ function _watchAnswerRealtime(conn, peerGuid, callId) {
       try {
         const answerSdp = _rowPayload.sdp || _rowPayload;
         await conn.setRemoteDescription(new RTCSessionDescription(answerSdp));
-        _appendMsg('system', '✅ 연결됐습니다. 채널이 열리면 메시지를 입력하세요.');
+        if (noAnswerTimer) { clearTimeout(noAnswerTimer); noAnswerTimer = null; } // 응답 왔으니 무응답 타이머 해제
+        _notify('✅ 연결됐습니다. 채널이 열리면 메시지를 입력하세요.');
         console.info('[P2P] answer 수신 완료');
         // answer 수신 후 잠시 뒤 watcher 종료 (ICE는 ondatachannel onopen 후 불필요)
         setTimeout(_close, 10000);
@@ -253,6 +326,30 @@ function _watchAnswerRealtime(conn, peerGuid, callId) {
   // autoDelete:false — _handleSignalRow가 이미 자기 책임으로 지우므로,
   // _startPoll이 또 지우려다 404(이미 없음)가 나는 걸 막는다.
   _startPoll(myGuid, _handleSignalRow, { autoDelete: false });
+}
+
+// ── 무응답 처리 (2026-07-02 신설) ────────────────────────
+// 사용자 요청 사양: 무응답이면 AI 대화창은 그대로 살아있고, 거기(또는
+// 메인 대화창)에 "OO님이 응답하지 않습니다. OO님의 AI 비서에게 대화
+// 초대 메시지를 남겼습니다"를 띄운다. "메시지를 남겼다"는 문구는 실제로
+// 남기기가 성공했을 때만 붙인다 — 실패하면 그 사실은 숨기지 않는다.
+async function _handleNoAnswer(targetUser) {
+  const name = targetUser.nickname || targetUser.handle || '상대방';
+  let left = false;
+  try {
+    await _leaveInviteForPeerAI(targetUser);
+    left = true;
+  } catch (e) {
+    console.warn('[P2P] 초대 메시지 남기기 실패:', e.message);
+  }
+  _notify(`${name}님이 응답하지 않습니다.` +
+    (left ? ` ${name}님의 AI 비서에게 대화 초대 메시지를 남겼습니다.`
+          : ` (상대방 AI 비서에게 메시지를 남기지 못했습니다 — 잠시 후 다시 시도해 주세요.)`));
+
+  // 실패한 통화 시도 정리 — 다음 시도에 깨끗한 상태로 시작하도록
+  if (_rtcChannel) { try { _rtcChannel.close(); } catch {} setRtcChannel(null); }
+  if (_rtcConn)    { try { _rtcConn.close(); }    catch {} setRtcConn(null); }
+  _peerInfo = null;
 }
 
 // ── P2P 수신측 처리 ──────────────────────────────────────
@@ -310,7 +407,6 @@ export async function handleIncomingOffer(signal) {
   if (!accepted) return;
 
   _peerInfo = { guid: fromGuid, handle: fromHandle, nickname: fromHandle };
-  _openChatUI(_peerInfo, 'answering');
 
   const conn = new RTCPeerConnection(RTC_CONFIG);
   setRtcConn(conn);
@@ -339,7 +435,10 @@ export async function handleIncomingOffer(signal) {
     payload:   { sdp: conn.localDescription, from_handle: _USER.handle, callId },
   });
 
-  _appendMsg('system', `✅ ${fromHandle}님과 연결됐습니다.`);
+  // BUG-FIX(2026-07-02): 여기서도 발신측과 동일한 이유로 _openChatUI()를
+  // 없앴다 — 실제 datachannel이 열릴 때(_setupChannel.onopen)만
+  // _activatePeerInMainChat()이 메인 대화창으로 전환한다.
+  _notify(`✅ ${fromHandle}님과 연결됐습니다.`);
 
   // ICE 폴링
   _startPoll(_USER.ipv6, async sig => {
@@ -367,11 +466,13 @@ function _setupConn(conn, peer, callId) {
     const state = conn.connectionState;
     console.info('[P2P] 연결 상태:', state);
     if (state === 'connected') {
-      _appendMsg('system', '🔒 암호화 채널 개설됨.');
       _stopPoll();
+      // 실제 메인 대화창 전환은 datachannel이 열릴 때(_setupChannel.onopen)
+      // 하지만, ICE 레벨에서도 이미 연결됐다는 저수준 신호를 남겨둔다.
+      _notify('🔒 암호화 채널 개설됨.');
     }
     if (state === 'disconnected' || state === 'failed' || state === 'closed') {
-      _appendMsg('system', '🔴 연결이 끊어졌습니다.');
+      appendBubble('system', '🔴 연결이 끊어졌습니다.');
       _stopPoll();
     }
   };
@@ -380,16 +481,17 @@ function _setupConn(conn, peer, callId) {
 // ── DataChannel 공통 설정 ─────────────────────────────────
 function _setupChannel(channel) {
   channel.onopen = () => {
-    _appendMsg('system', '💬 채팅 채널 열림. 메시지를 입력하세요.');
-    const input = document.getElementById('_p2p-input');
-    if (input) input.disabled = false;
+    // BUG-FIX(2026-07-02): 데이터채널이 실제로 열리는 이 순간이 "진짜
+    // 연결됨" — 여기서만 메인 대화창으로 전환하고 AI 패널을 닫는다
+    // (사용자 요청 사양: 무응답/연결 중에는 AI 패널이 살아있어야 함).
+    if (_peerInfo) _activatePeerInMainChat(_peerInfo);
   };
 
   channel.onmessage = e => {
     try {
       const msg = JSON.parse(e.data);
       if (msg.type === 'bye') {
-        _appendMsg('system', '🔴 상대방이 대화를 종료했습니다.');
+        appendBubble('system', '🔴 상대방이 대화를 종료했습니다.');
         // James 쪽도 PDV 저장 후 종료
         if (_p2pMessages.length > 0 && _peerInfo) {
           _saveP2PSession(_p2pMessages, _peerInfo, _sessionStart)
@@ -398,14 +500,18 @@ function _setupChannel(channel) {
         setTimeout(() => _closeP2P(), 1500);
         return;
       }
-      _appendMsg('peer', msg.text, msg.ts);
+      const peerName = _peerInfo?.nickname || _peerInfo?.handle || '상대방';
+      appendBubble('peer', msg.text, false, peerName);
+      _p2pMessages.push({ role: 'peer', content: msg.text, ts: msg.ts || new Date().toISOString() });
     } catch {
-      _appendMsg('peer', e.data);
+      const peerName = _peerInfo?.nickname || _peerInfo?.handle || '상대방';
+      appendBubble('peer', String(e.data), false, peerName);
+      _p2pMessages.push({ role: 'peer', content: String(e.data), ts: new Date().toISOString() });
     }
   };
 
   channel.onclose = () => {
-    _appendMsg('system', '채널이 닫혔습니다.');
+    appendBubble('system', '채널이 닫혔습니다.');
   };
 }
 
@@ -493,148 +599,10 @@ function _showIncomingCallModal(fromHandle) {
   });
 }
 
-function _openChatUI(peer, mode) {
-  if (_chatOverlay) _chatOverlay.remove();
-
-  const overlay = document.createElement('div');
-  overlay.id = '_p2p-overlay';
-  overlay.style.cssText = [
-    'position:fixed;inset:0;z-index:9997',
-    'background:#fff',
-    'display:flex;flex-direction:column',
-  ].join(';');
-
-  overlay.innerHTML = `
-    <!-- 헤더 -->
-    <div style="display:flex;align-items:center;padding:14px 16px;
-                border-bottom:1px solid #f0f0f0;background:#fff;flex-shrink:0">
-      <button id="_p2p-back"
-        style="border:none;background:none;font-size:20px;cursor:pointer;
-               color:#6b7280;margin-right:10px">←</button>
-      <div style="flex:1">
-        <div style="font-size:15px;font-weight:600;color:#111827">
-          ${peer.nickname || peer.handle}
-        </div>
-        <div style="font-size:11px;color:#9ca3af">${peer.handle}</div>
-      </div>
-      <div id="_p2p-status"
-        style="font-size:12px;color:#9ca3af">
-        ${mode === 'calling' ? '연결 중...' : '수락됨'}
-      </div>
-      <button id="_p2p-leave"
-        style="border:none;background:#fee2e2;color:#dc2626;
-               font-size:12px;font-weight:600;padding:6px 12px;
-               border-radius:8px;cursor:pointer;margin-left:8px;
-               font-family:inherit">나가기</button>
-    </div>
-
-    <!-- 메시지 목록 -->
-    <div id="_p2p-messages"
-      style="flex:1;overflow-y:auto;padding:16px;
-             display:flex;flex-direction:column;gap:8px;
-             background:#f9fafb">
-    </div>
-
-    <!-- 입력창 -->
-    <div style="display:flex;align-items:center;padding:10px 12px;
-                border-top:1px solid #f0f0f0;background:#fff;flex-shrink:0;gap:8px">
-      <input id="_p2p-input" type="text"
-        placeholder="메시지 입력..."
-        disabled
-        style="flex:1;padding:10px 14px;border:1px solid #e5e7eb;
-               border-radius:20px;font-size:14px;font-family:inherit;
-               outline:none;background:#f9fafb;color:#111827"/>
-      <button id="_p2p-send"
-        style="width:40px;height:40px;border:none;border-radius:50%;
-               background:#1A73E8;color:#fff;font-size:18px;
-               cursor:pointer;flex-shrink:0;display:flex;
-               align-items:center;justify-content:center">
-        ➤
-      </button>
-    </div>`;
-
-  document.body.appendChild(overlay);
-  _chatOverlay = overlay;
-
-  // 뒤로가기 (← 버튼)
-  document.getElementById('_p2p-back').onclick = () => {
-    if (confirm('채팅을 종료하시겠습니까?')) _closeP2P();
-  };
-
-  // 나가기 버튼
-  document.getElementById('_p2p-leave').onclick = () => {
-    if (confirm('대화방에서 나가시겠습니까?\n대화 내용이 PDV에 저장됩니다.')) _closeP2P();
-  };
-
-  // 메시지 전송
-  const input   = document.getElementById('_p2p-input');
-  const sendBtn = document.getElementById('_p2p-send');
-
-  const _send = () => {
-    const text = input.value.trim();
-    if (!text || !_rtcChannel || _rtcChannel.readyState !== 'open') return;
-    const msg = { text, ts: new Date().toISOString() };
-    _rtcChannel.send(JSON.stringify(msg));
-    _appendMsg('me', text);
-    input.value = '';
-  };
-
-  sendBtn.onclick = _send;
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') _send(); });
-}
-
-// ── 메시지 추가 ───────────────────────────────────────────
-function _appendMsg(role, text, ts) {
-  const el = document.getElementById('_p2p-messages');
-  if (!el) return;
-
-  // PDV 저장용 메시지 누적 (system 메시지 제외)
-  if (role !== 'system') {
-    _p2pMessages.push({
-      role,
-      content: text,
-      ts: ts || new Date().toISOString(),
-    });
-  }
-
-  const time = ts ? new Date(ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
-
-  if (role === 'system') {
-    el.innerHTML += `
-      <div style="text-align:center;font-size:12px;color:#9ca3af;padding:4px 0">
-        ${text}
-      </div>`;
-  } else if (role === 'me') {
-    el.innerHTML += `
-      <div style="display:flex;justify-content:flex-end;align-items:flex-end;gap:6px">
-        <span style="font-size:10px;color:#9ca3af">${time}</span>
-        <div style="background:#1A73E8;color:#fff;padding:8px 12px;
-                    border-radius:16px 16px 4px 16px;max-width:70%;
-                    font-size:14px;line-height:1.4;word-break:break-word">
-          ${_esc(text)}
-        </div>
-      </div>`;
-  } else {
-    el.innerHTML += `
-      <div style="display:flex;justify-content:flex-start;align-items:flex-end;gap:6px">
-        <div style="background:#fff;color:#111827;padding:8px 12px;
-                    border:1px solid #e5e7eb;
-                    border-radius:16px 16px 16px 4px;max-width:70%;
-                    font-size:14px;line-height:1.4;word-break:break-word">
-          ${_esc(text)}
-        </div>
-        <span style="font-size:10px;color:#9ca3af">${time}</span>
-      </div>`;
-  }
-
-  el.scrollTop = el.scrollHeight;
-}
-
-function _esc(str) {
-  return String(str)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+// BUG-FIX(2026-07-02): _openChatUI()(별도 풀스크린 오버레이 #_p2p-overlay
+// 생성), _appendMsg(#_p2p-messages에 직접 innerHTML+= 렌더링), _esc()는
+// 전부 그 별도 오버레이 전용이었다 — 메인 채팅 통합(appendBubble/peer-bar/
+// _activatePeerInMainChat) 리팩터링으로 완전히 대체되어 삭제한다.
 
 // ── P2P 종료 ─────────────────────────────────────────────
 function _closeP2P() {
@@ -663,15 +631,19 @@ function _closeP2P() {
 
   if (_rtcChannel) { _rtcChannel.close(); setRtcChannel(null); }
   if (_rtcConn)    { _rtcConn.close();    setRtcConn(null);    }
-  _chatOverlay?.remove();
-  _chatOverlay = null;
 
   // ── PDV 저장 + OpenHash 앵커링 ───────────────────────
   // P2P 세션 종료 시 대화 원문을 vault에 저장하고 OpenHash에 앵커링
+  // (_clearPeer()보다 먼저 — _peerInfo가 아직 남아있어야 세션 메타에 쓸 수 있음)
   if (_p2pMessages.length > 0 && _peerInfo) {
     _saveP2PSession(_p2pMessages, _peerInfo, _sessionStart)
       .catch(e => console.warn('[P2P] PDV 저장 실패 (무시):', e.message));
   }
+
+  // BUG-FIX(2026-07-02): 별도 오버레이 제거 대신, 메인 채팅 통합 리팩터링의
+  // 일부로 webrtc.js의 _clearPeer()를 재사용 — peer-bar 숨기기, msg-input
+  // placeholder 복원, "🤖 AI 비서와 대화합니다" 안내까지 한 번에 처리된다.
+  _clearPeer();
 
   _peerInfo     = null;
   _p2pMessages  = [];
@@ -782,7 +754,7 @@ async function _saveP2PSession(messages, peer, startedAt) {
   {
     const _who   = { ipv6: _USER.ipv6, handle: _USER.handle };
     const _when  = { period_start: startedAt || now, period_end: now };
-    const _where = { svc_url: 'https://hondi.net' };
+    const _where = { svc_url: 'https://gopang.net' };
     const _what  = { summary: `P2P 대화 종료 — ${peer.handle}와 ${messages.length}턴` };
     const _how   = { method: 'WebRTC P2P DataChannel' };
     const _why   = { goal: 'P2P 대화 PDV 기록' };
@@ -852,7 +824,7 @@ export function startIncomingWatch(myGuid) {
     if (_seenSignalIds.size > _SEEN_SIGNAL_CAP) {
       _seenSignalIds.delete(_seenSignalIds.values().next().value);
     }
-    if (row.type === 'offer' && !_chatOverlay) {
+    if (row.type === 'offer' && !_peerInfo) {
       await handleIncomingOffer(row);
       _signalDeleteDirect(row.id);
     }
@@ -869,7 +841,7 @@ export function startIncomingWatch(myGuid) {
   // _seenSignalIds가 있어서 realtime이 이미 처리한 레코드는 자동으로 건너뜀)
   setInterval(async () => {
     try {
-      if (_chatOverlay) return;
+      if (_peerInfo) return;
       const signals = await _signalPollDirect(myGuid);
       for (const sig of signals) {
         if (sig.type === 'offer') { await _handleSignalRow(sig); break; }
@@ -877,4 +849,63 @@ export function startIncomingWatch(myGuid) {
     } catch {}
   }, 3000);
 }
+// ── 발신 메시지 기록 (2026-07-02 신설) ───────────────────
+// 메인 입력창(#msg-input)으로 보낸 메시지는 이제 send-message.js →
+// webrtc.js _sendP2P()를 거친다 — 그 경로는 이 파일의 _p2pMessages(세션
+// 종료 시 _saveP2PSession()이 PDV/OpenHash에 통째로 저장하는 원문 누적
+// 배열)를 모른다. webrtc.js가 전송 성공 직후 이 함수를 호출해 채운다.
+export function _recordOutgoingP2PMsg(text, ts) {
+  _p2pMessages.push({ role: 'me', content: text, ts: ts || new Date().toISOString() });
+}
+
 window._closeP2P = _closeP2P;
+
+// ── "상대방 AI 비서에게 메시지 남기기" (2026-07-02 신설, 3단계) ─────────
+// L1(hanlim)에 새로 만든 p2p_pending_invites 컬렉션에 기록한다.
+// pdv_records와 동일한 신뢰 모델(공개 create/list — 이 앱 전체가 그렇듯
+// 실제 PocketBase 계정 인증이 아니라 guid 자체를 식별자로 쓰기 때문에,
+// 다른 L1 컬렉션들과 다른 잣대를 적용할 이유가 없다)을 따른다.
+async function _leaveInviteForPeerAI(targetUser) {
+  const myName = _USER?.nickname || _USER?.handle || '누군가';
+  const res = await fetch(L1_P2P_INVITES_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from_guid:     _USER.ipv6,
+      from_handle:   _USER.handle || '',
+      from_nickname: myName,
+      to_guid:       targetUser.guid,
+      message:       `${myName}님이 대화를 시도했습니다.`,
+      status:        'pending',
+    }),
+  });
+  if (!res.ok) throw new Error(`invite 저장 실패: HTTP ${res.status}`);
+}
+
+// ── 받은 초대 확인 (앱 시작 시 1회) ──────────────────────
+// 무응답으로 남겨진 초대를 내가 다시 접속했을 때 알려준다. LLM(AGENT-COMMON)
+// 프롬프트에 끼워 넣는 방식 대신, 신뢰성이 더 높은 결정적(deterministic)
+// 방식 — 발견 즉시 메인 채팅에 시스템 메시지로 바로 띄우고 status를
+// 'seen'으로 표시해 다음 접속 때 중복 표시되지 않게 한다.
+export async function checkPendingInvites(myGuid) {
+  if (!myGuid) return;
+  try {
+    const filter = encodeURIComponent(`to_guid='${myGuid}' && status='pending'`);
+    const res = await fetch(`${L1_P2P_INVITES_URL}?filter=${filter}&sort=created&perPage=20`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const items = data.items || [];
+    for (const inv of items) {
+      appendBubble('system', `💬 ${inv.message || (inv.from_nickname + '님이 대화를 시도했습니다.')}`);
+      // 다시 알리지 않도록 seen 처리 (실패해도 치명적이지 않음 — 다음
+      // 접속 때 한 번 더 보이는 정도)
+      fetch(`${L1_P2P_INVITES_URL}/${inv.id}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ status: 'seen' }),
+      }).catch(() => {});
+    }
+  } catch (e) {
+    console.warn('[P2P] 받은 초대 확인 실패 (무시):', e.message);
+  }
+}

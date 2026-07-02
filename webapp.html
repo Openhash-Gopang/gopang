@@ -1210,7 +1210,7 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
       <div id="peer-handle" style="font-size:11px;color:var(--txt3);
            white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
     </div>
-    <button onclick="_clearPeer()"
+    <button onclick="_closeP2P()"
       style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:8px;
              padding:5px 10px;font-size:12px;color:var(--txt2);cursor:pointer">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> 종료
@@ -2821,6 +2821,18 @@ window.closePDV = closePDV;
   let _panelFull = false;
   window.openAIPanel = openAIPanel;
   window.closeAIPanel = closeAIPanel;
+
+  // ── 외부 ES 모듈(p2p-chat.js 등)용 브릿지 (2026-07-02 신설) ──
+  // _appendPanelMsg/_panelOpen은 이 IIFE 안의 클로저 변수라 밖에서 직접
+  // 못 건드린다. P2P 통화 상태(무응답 등)를 "지금 AI 패널이 열려있으면
+  // 거기에, 아니면 메인 채팅에" 표시하려면 아래 두 개가 필요하다.
+  window._isAIPanelOpen = () => _panelOpen;
+  window._appendPanelSystemMsg = (text) => {
+    if (!_panelOpen) return false;
+    const b = _appendPanelMsg('ai', text);
+    if (b) b.classList.remove('streaming');
+    return true;
+  };
 
   // ── 외부 탭으로 AI 패널 닫기 — 비활성화 (X 버튼으로만 닫힘) ──
   // document.addEventListener('click', ...) 제거됨 — 의도된 동작
