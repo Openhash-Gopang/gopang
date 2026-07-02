@@ -2,8 +2,8 @@
  * gopang-sso.js  v1.0
  * 고팡 중앙 인증 라이브러리 — 하위 서비스 전용
  *
- * 배포 위치 : https://gopang.net/auth/gopang-sso.js
- * 하위 서비스: import { gopangAuth } from 'https://gopang.net/auth/gopang-sso.js'
+ * 배포 위치 : https://hondi.net/auth/gopang-sso.js
+ * 하위 서비스: import { gopangAuth } from 'https://hondi.net/auth/gopang-sso.js'
  *
  * 백서 §12 준수
  * ─ 하위 서비스는 독자 인증 구현 금지
@@ -11,7 +11,7 @@
  * ─ 4가지 경로 자동 처리: GWP토큰 → sessionStorage → Silent iframe → 리다이렉트
  */
 
-const _GOPANG_ORIGIN  = 'https://gopang.net';
+const _GOPANG_ORIGIN  = 'https://hondi.net';
 const _WORKER         = 'https://hondi-proxy.tensor-city.workers.dev';
 const _STORE_KEY      = 'gopang_user_v4';       // gopang_v2와 공유
 const _SSO_SESSION    = 'gopang_sso_token';     // sessionStorage 키
@@ -48,7 +48,7 @@ export async function issueToken(user, svcId) {
     ver:   '1.0',
     ipv6:  user.ipv6,
     level: user.authLevel || user.level || 'L0',
-    svc:   svcId || (location.hostname.replace(/\.gopang\.net$/, '') || 'dev'),
+    svc:   svcId || (location.hostname.replace(/\.hondi\.net$/, '') || 'dev'),
     iat:   Math.floor(Date.now() / 1000),
     exp:   Math.floor(Date.now() / 1000) + 3600,
   };
@@ -58,12 +58,14 @@ export async function issueToken(user, svcId) {
 }
 // ── 서비스 ID 추출 (hostname에서 자동) ──────────────────
 function _detectServiceId() {
-  // security.gopang.net → 'security'
-  // klaw.gopang.net     → 'klaw'
+  // security.hondi.net → 'security'
+  // klaw.hondi.net     → 'klaw'
+  // hondi.net (루트)    → 'gopang'
   // localhost           → 'dev'
   const host = location.hostname;
   if (host === 'localhost' || host === '127.0.0.1') return 'dev';
-  const sub = host.replace(/\.gopang\.net$/, '');
+  if (host === 'hondi.net') return 'gopang';
+  const sub = host.replace(/\.hondi\.net$/, '');
   return sub !== host ? sub : 'unknown';
 }
 
@@ -138,7 +140,7 @@ function _trySession() {
   } catch { return null; }
 }
 
-// ── 경로 2-B: Silent iframe (gopang.net 동일 기기 확인) ──
+// ── 경로 2-B: Silent iframe (hondi.net 동일 기기 확인) ──
 function _trySilentIframe(requiredLevel) {
   return new Promise(resolve => {
     const TIMEOUT = 3000; // 3초 내 응답 없으면 포기
@@ -187,7 +189,7 @@ function _trySilentIframe(requiredLevel) {
 // 이 경로는 폐기하고, 항상 Silent iframe(_trySilentIframe → Worker /auth/issue의
 // 실제 서명+TOFU 검증)을 거치도록 한다 — 느리지만 거짓 양성이 없다.
 
-// ── 경로 2-C/D: gopang.net 리다이렉트 ────────────────────
+// ── 경로 2-C/D: hondi.net 리다이렉트 ────────────────────
 // silent-auth.html이 리다이렉트 모드(return 파라미터 있을 때)도 처리
 function _redirectToGopang(requiredLevel) {
   const returnUrl = encodeURIComponent(location.href);
@@ -257,7 +259,7 @@ export const gopangAuth = {
   /**
    * verify(level)
    * 이미 인증된 사용자의 레벨을 상향할 때
-   * gopang.net/auth/upgrade?level=L2 팝업 → postMessage 결과 수신
+   * hondi.net/auth/upgrade?level=L2 팝업 → postMessage 결과 수신
    */
   async verify(level) {
     const session = _trySession();
