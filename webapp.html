@@ -3451,7 +3451,7 @@ window.closePDV = closePDV;
     _panelHistory.push(...head, ...trimmed);
   }
 
-  async function _callPanelAI(userText, bubbleEl, attached) {
+  async function _callPanelAI(userText, bubbleEl, attached, _preTab) {
     const { PROVIDER_INFO, getPriorityOrder } = await import('./src/gopang/core/config.js');
     // free-model-pool.js 삭제(2026-07-01) — OR 24h쿨다운·분당예산 관리 대신
     // 혼디 제공 DeepSeek 기본 키(hondi-flash/hondi-pro)가 항상 마지막 안전망으로 붙는다.
@@ -3461,8 +3461,18 @@ window.closePDV = closePDV;
     // 1~2턴짜리 컨텍스트로만 끼워 넣는다(SP 본문에 영구히 남지 않음).
     const {
       _loadAgentCommonSP, _handleProfileTags, _stripInternalTags, _buildFirstContactContext,
-      _resolveHondiTier,
+      _resolveHondiTier, _parseAgentTags,
     } = await import('./src/gopang/ai/call-ai.js');
+    // BUG-FIX(2026-07-02): _callPanelAI(AI 패널 — 실제로 쓰이는 주 경로)가
+    // 지금까지 _parseAgentTags를 호출한 적이 없었다. 메인 채팅 전용
+    // _callAIInner만 호출하고 있었고, 패널은 _stripInternalTags로 화면
+    // 표시용 텍스트에서 [GWP: ...] 등을 지우기만 했을 뿐 실제로 태그를
+    // "실행"하는 코드가 전혀 없었다 — GWP(K-Law 등 새 탭), SEARCH,
+    // OPEN_PROFILE, P2P_INVITE 전부 AI가 말로만 하고 실제로는 아무 일도
+    // 안 일어나던 근본 원인. handleExpertTag는 CFG.system 기반 게이팅이
+    // 메인 채팅 전용 상태라 패널의 system(=_panelHistory[0])과 안 맞으므로
+    // 별도로 판단한다.
+    const { handleExpertTag, isExpertActive } = await import('./src/gopang/ai/expert-session.js');
     // HONDI-FAQ(2026-07-01 신설) — 메인 채팅과 동일한 라우터를 그대로 재사용.
     // 자세한 설계 근거는 src/gopang/ai/hondi-faq-router.js 상단 주석 참조.
     const { buildHondiFaqContext } = await import('./src/gopang/ai/hondi-faq-router.js');
@@ -3680,6 +3690,22 @@ window.closePDV = closePDV;
           // sendFn 콜백 안에서 이미 비웠지만, sendFn이 어떤 이유로든 호출되지
           // 않았을 경우(예: callAI 쪽 변경)를 대비한 안전망 — 비어있으면 무해한 중복.
           _panelHistory.length = 0;
+          return;
+        }
+
+        // ── GWP/SEARCH/OPEN_PROFILE/P2P_INVITE 태그 실행 (2026-07-02 신설) ──
+        try { _parseAgentTags(full, null, userText, _preTab); }
+        catch (e) { console.warn('[Panel] _parseAgentTags 처리 실패(무시):', e.message); }
+
+        // ── EXPERT 태그 감지 → 전문가 세션 시작 ──────────────
+        // _callAIInner의 CFG.system 기반 게이팅은 메인 채팅 전용 상태를
+        // 보므로 그대로 재사용할 수 없다 — 패널은 항상 AGENT-COMMON만
+        // 쓰므로(§0-1 상단 주석 참조) 이미 전문가 세션이 활성화돼 있지만
+        // 않다면 그냥 감지를 시도한다.
+        if (!isExpertActive()) {
+          handleExpertTag(full).catch(e =>
+            console.warn('[Panel] EXPERT 태그 처리 실패(무시):', e.message)
+          );
         }
         return;
       } catch(e) {

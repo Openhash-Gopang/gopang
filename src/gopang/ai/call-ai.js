@@ -916,7 +916,7 @@ export async function _callLLM(messages, options = {}) {
 //            SEARCH / OPEN_PROFILE / P2P_INVITE(Phase 1 — 이미 존재하는
 //            실행 함수에 배선만 추가).
 // 아직 미처리(Phase 2~5 예정): PDV_STORE, HANDSHAKE, VERIFY_OWNER, ESCALATE, TRADE.
-function _parseAgentTags(fullReply, bubble, userText, _preTab) {
+export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
   // [GWP: serviceId] — 하위 시스템 새 탭 오픈 (SP-00 v10.0, 기존 로직 그대로 이전)
   try {
     // BUG-FIX(2026-07-02): AGENT-COMMON 프롬프트는 "[GWP: klaw]"처럼 콜론
