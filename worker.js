@@ -477,6 +477,10 @@ export default {
     if (pathname === '/pdv/report')              return handlePdvReport(request, env, corsHeaders);
     if (pathname.startsWith('/pdv/page/'))       return handlePdvPage(request, env, corsHeaders);
 
+    // ── PDV 조회 동의 승인 페이지 (consent.html 전용, 2026-07-02 신설) ──
+    if (pathname === '/consent/info')            return handleConsentInfo(request, env, corsHeaders);
+    if (pathname === '/consent/respond')         return handleConsentRespond(request, env, corsHeaders);
+
     // ── 서비스 등록 ───────────────────────────────────────
     if (pathname === '/svc/register')            return handleSvcRegister(request, env, corsHeaders);
     if (pathname === '/svc/verify')              return handleSvcVerify(request, env, corsHeaders);
@@ -1334,7 +1338,7 @@ async function handlePdvReport(request,env,corsHeaders){
 // ═══════════════════════════════════════════════════════════
 // 이하 v4.8과 동일 — PDV Query, SSO, WebAuthn, AI, Geocode
 // ═══════════════════════════════════════════════════════════
-async function handlePdvQuery(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const origin=request.headers.get('Origin')||'';try{const body=await request.json().catch(()=>null);const query=body?.query;if(!query?.svc||!query?.ipv6||!query?.scope||!query?.period)return _err(400,'SCHEMA_ERROR','필수 필드 누락: svc, ipv6, scope, period',corsHeaders);if(!Array.isArray(query.scope)||query.scope.length===0)return _err(400,'SCOPE_INVALID','scope는 비어있지 않은 배열이어야 합니다',corsHeaders);const invalidScope=query.scope.find(s=>!VALID_PDV_SCOPES.includes(s));if(invalidScope)return _err(400,'SCOPE_INVALID',`허용되지 않은 scope: ${invalidScope}`,corsHeaders);if(!query.period?.start||!query.period?.end)return _err(400,'SCHEMA_ERROR','period.start, period.end 필수',corsHeaders);const periodMs=new Date(query.period.end)-new Date(query.period.start);if(periodMs>365*24*60*60*1000)return _err(400,'PERIOD_TOO_LONG','조회 기간은 12개월을 초과할 수 없습니다',corsHeaders);const svcReg=_getSvcRegistration(origin,query.svc);if(!svcReg||!svcReg.pdv)return _err(403,'SVC_NOT_REGISTERED',`미등록 또는 PDV 권한 없는 서비스: ${query.svc}`,corsHeaders);const authToken=query.auth_token;if(!authToken?.exp||Math.floor(Date.now()/1000)>authToken.exp)return _err(401,'AUTH_EXPIRED','인증 토큰이 만료되었습니다',corsHeaders);const LEVEL_ORDER={L0:0,L1:1,L2:2,L3:3};const userLevel=LEVEL_ORDER[authToken.level]??0;for(const scope of query.scope){const required=LEVEL_ORDER[SCOPE_MIN_LEVEL[scope]||'L1'];if(userLevel<required)return _err(403,'LEVEL_INSUFFICIENT',`${scope} 조회는 ${SCOPE_MIN_LEVEL[scope]} 이상 필요`,corsHeaders);}if(!query.consent_token||!query.request_id){const reqId=`CNSREQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const expiresAt=Math.floor(Date.now()/1000)+300;await _storeConsentRequest(env,reqId,query,expiresAt);const consentUrl='https://hondi.net/consent'+`?req=${encodeURIComponent(reqId)}&svc=${encodeURIComponent(query.svc)}`+`&scope=${encodeURIComponent(query.scope.join(','))}`+`&purpose=${encodeURIComponent(query.purpose||'')}`+`&ipv6_hash=${encodeURIComponent(await _sha256Hex(query.ipv6))}`;return new Response(JSON.stringify({ok:false,status:'CONSENT_REQUIRED',consent:{request_id:reqId,expires_at:expiresAt,consent_url:consentUrl,message:'사용자가 고팡 앱에서 PDV 조회에 동의해야 합니다.'}}),{status:202,headers:corsHeaders});}const consentOk=await _verifyConsentToken(env,query.consent_token,query.request_id,query.ipv6);if(!consentOk)return _err(401,'CONSENT_INVALID','동의 토큰이 유효하지 않습니다',corsHeaders);const withinLimit=await _checkRateLimit(env,query.ipv6,'pdv_query');if(!withinLimit)return _err(429,'RATE_LIMITED','PDV 조회 한도 초과',corsHeaders);const pdvSummary=await _fetchPdvByScope(env,query.ipv6,query.scope,query.period);const queryId=`PDVQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const pdvEntryId=await _recordConsentEvent(env,query,queryId);return new Response(JSON.stringify({ok:true,query_id:queryId,ipv6:query.ipv6,period:query.period,pdv_summary:pdvSummary,consent:{granted_at:new Date().toISOString(),expires_at:new Date(authToken.exp*1000).toISOString(),pdv_entry_id:pdvEntryId}}),{status:200,headers:corsHeaders});}catch(e){return _err(500,'INTERNAL_ERROR',e.message,corsHeaders);}}
+async function handlePdvQuery(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const origin=request.headers.get('Origin')||'';try{const body=await request.json().catch(()=>null);const query=body?.query;if(!query?.svc||!query?.ipv6||!query?.scope||!query?.period)return _err(400,'SCHEMA_ERROR','필수 필드 누락: svc, ipv6, scope, period',corsHeaders);if(!Array.isArray(query.scope)||query.scope.length===0)return _err(400,'SCOPE_INVALID','scope는 비어있지 않은 배열이어야 합니다',corsHeaders);const invalidScope=query.scope.find(s=>!VALID_PDV_SCOPES.includes(s));if(invalidScope)return _err(400,'SCOPE_INVALID',`허용되지 않은 scope: ${invalidScope}`,corsHeaders);if(!query.period?.start||!query.period?.end)return _err(400,'SCHEMA_ERROR','period.start, period.end 필수',corsHeaders);const periodMs=new Date(query.period.end)-new Date(query.period.start);if(periodMs>365*24*60*60*1000)return _err(400,'PERIOD_TOO_LONG','조회 기간은 12개월을 초과할 수 없습니다',corsHeaders);const svcReg=_getSvcRegistration(origin,query.svc);if(!svcReg||!svcReg.pdv)return _err(403,'SVC_NOT_REGISTERED',`미등록 또는 PDV 권한 없는 서비스: ${query.svc}`,corsHeaders);const authToken=query.auth_token;if(!authToken?.exp||Math.floor(Date.now()/1000)>authToken.exp)return _err(401,'AUTH_EXPIRED','인증 토큰이 만료되었습니다',corsHeaders);const LEVEL_ORDER={L0:0,L1:1,L2:2,L3:3};const userLevel=LEVEL_ORDER[authToken.level]??0;for(const scope of query.scope){const required=LEVEL_ORDER[SCOPE_MIN_LEVEL[scope]||'L1'];if(userLevel<required)return _err(403,'LEVEL_INSUFFICIENT',`${scope} 조회는 ${SCOPE_MIN_LEVEL[scope]} 이상 필요`,corsHeaders);}if(!query.consent_token||!query.request_id){const reqId=`CNSREQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const expiresAt=Math.floor(Date.now()/1000)+300;await _storeConsentRequest(env,reqId,query,expiresAt);const consentUrl='https://hondi.net/consent'+`?req=${encodeURIComponent(reqId)}&svc=${encodeURIComponent(query.svc)}`+`&scope=${encodeURIComponent(query.scope.join(','))}`+`&purpose=${encodeURIComponent(query.purpose||'')}`+`&ipv6_hash=${encodeURIComponent(await _sha256Hex(query.ipv6))}`+`&return_to=${encodeURIComponent(origin)}`;return new Response(JSON.stringify({ok:false,status:'CONSENT_REQUIRED',consent:{request_id:reqId,expires_at:expiresAt,consent_url:consentUrl,message:'사용자가 고팡 앱에서 PDV 조회에 동의해야 합니다.'}}),{status:202,headers:corsHeaders});}const consentOk=await _verifyConsentToken(env,query.consent_token,query.request_id,query.ipv6);if(!consentOk)return _err(401,'CONSENT_INVALID','동의 토큰이 유효하지 않습니다',corsHeaders);const withinLimit=await _checkRateLimit(env,query.ipv6,'pdv_query');if(!withinLimit)return _err(429,'RATE_LIMITED','PDV 조회 한도 초과',corsHeaders);const pdvSummary=await _fetchPdvByScope(env,query.ipv6,query.scope,query.period);const queryId=`PDVQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const pdvEntryId=await _recordConsentEvent(env,query,queryId);return new Response(JSON.stringify({ok:true,query_id:queryId,ipv6:query.ipv6,period:query.period,pdv_summary:pdvSummary,consent:{granted_at:new Date().toISOString(),expires_at:new Date(authToken.exp*1000).toISOString(),pdv_entry_id:pdvEntryId}}),{status:200,headers:corsHeaders});}catch(e){return _err(500,'INTERNAL_ERROR',e.message,corsHeaders);}}
 async function _storeConsentRequest(env,reqId,query,expiresAt){
   // BUG-FIX(2026-07-02): Supabase pdv_consent_requests 테이블이 실제로는
   // 한 번도 생성된 적이 없었다(HTTP 404 PGRST205 확인됨). Supabase→L1
@@ -1386,6 +1390,95 @@ async function _verifyConsentToken(env,consentToken,requestId,ipv6){
   }catch(e){return _verifyConsentHmac(env,consentToken,requestId,ipv6);}
 }
 async function _verifyConsentHmac(env,consentToken,requestId,ipv6){try{const masterKey=env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1';const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(masterKey),{name:'HMAC',hash:'SHA-256'},false,['verify']);const data=new TextEncoder().encode(`${requestId}.${ipv6}`);const sigBytes=Uint8Array.from(atob(consentToken.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));return crypto.subtle.verify('HMAC',key,sigBytes,data);}catch{return false;}}
+
+// ── 동의 토큰 발급 — _verifyConsentHmac의 역함수 (2026-07-02 신설) ──────
+// "동의 승인 페이지 미구현" 문제의 핵심: _verifyConsentHmac(검증)는 있었지만
+// 이 서명 함수가 없어서 사용자가 승인해도 유효한 consent_token을 만들 방법이
+// 없었다. _verifyConsentHmac의 정확한 역과정(같은 HMAC 키·같은 base64url
+// 변환)을 따라야 두 함수가 서로 맞물린다.
+async function _signConsentHmac(env,requestId,ipv6){
+  const masterKey=env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1';
+  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(masterKey),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  const data=new TextEncoder().encode(`${requestId}.${ipv6}`);
+  const sigBuf=await crypto.subtle.sign('HMAC',key,data);
+  let bin='';
+  for(const b of new Uint8Array(sigBuf)) bin+=String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_'); // '=' 패딩은 유지 — _verifyConsentHmac이 '+'/'/'만 되돌리므로
+}
+
+// L1(hanlim) pdv_consent_requests에서 request_id로 단일 레코드 조회 (Admin 토큰)
+async function _l1FindConsentRequest(env,requestId){
+  const token=await _l1AdminToken(env);
+  const filter=encodeURIComponent(`request_id='${String(requestId).replace(/'/g,"\\'")}'`);
+  const res=await fetch(`${L1_DEFAULT}/api/collections/pdv_consent_requests/records?filter=${filter}&perPage=1`,
+    {headers:{'Authorization':'Bearer '+token}});
+  if(!res.ok) return null;
+  const data=await res.json().catch(()=>({items:[]}));
+  return data.items?.[0]||null;
+}
+
+// GET/POST /consent/info?req=... — 동의 승인 페이지(consent.html)가 요청 상세를 표시하기 위해 호출.
+// 관리자 토큰이 필요한 L1 컬렉션을 안전하게 프록시 — svc/scope/purpose/expires_at/status만 노출,
+// consent_token·ipv6 원문은 절대 클라이언트에 반환하지 않는다.
+async function handleConsentInfo(request,env,corsHeaders){
+  const url=new URL(request.url);
+  const reqId=(request.method==='POST'?(await request.json().catch(()=>({})))?.req:url.searchParams.get('req'))||'';
+  if(!reqId) return _err(400,'MISSING_FIELD','req 필수',corsHeaders);
+  let record;
+  try{ record=await _l1FindConsentRequest(env,reqId); }
+  catch(e){ return _err(502,'L1_UNREACHABLE','L1 연결 실패: '+e.message,corsHeaders); }
+  if(!record) return _err(404,'NOT_FOUND','존재하지 않는 동의 요청입니다',corsHeaders);
+  if(new Date(record.expires_at)<new Date()) return _err(410,'EXPIRED','동의 요청이 만료됐습니다',corsHeaders);
+  return new Response(JSON.stringify({
+    ok:true,
+    request_id: record.request_id,
+    svc:        record.svc,
+    scope:      record.scope,
+    purpose:    record.purpose||'',
+    period:     record.period,
+    status:     record.status,
+    expires_at: record.expires_at,
+  }),{status:200,headers:corsHeaders});
+}
+
+// POST /consent/respond — body: { req, ipv6, decision:'grant'|'deny' }
+// consent.html에서 사용자가 동의/거부 버튼을 눌렀을 때 호출. ipv6는 사용자
+// 로컬 기기(localStorage gopang_user_v4)에서 읽은 "본인의" 값 — 원 요청이
+// 저장해 둔 ipv6와 정확히 일치해야만 승인/거부를 처리한다(다른 사람이 링크만
+// 보고 남의 요청에 응답하는 것을 막는 핵심 검증).
+async function handleConsentRespond(request,env,corsHeaders){
+  if(request.method!=='POST') return new Response('Method Not Allowed',{status:405});
+  const body=await request.json().catch(()=>null);
+  const reqId=body?.req, ipv6=body?.ipv6, decision=body?.decision;
+  if(!reqId||!ipv6||!['grant','deny'].includes(decision))
+    return _err(400,'SCHEMA_ERROR','req, ipv6, decision(grant|deny) 필수',corsHeaders);
+
+  let record;
+  try{ record=await _l1FindConsentRequest(env,reqId); }
+  catch(e){ return _err(502,'L1_UNREACHABLE','L1 연결 실패: '+e.message,corsHeaders); }
+  if(!record) return _err(404,'NOT_FOUND','존재하지 않는 동의 요청입니다',corsHeaders);
+  if(new Date(record.expires_at)<new Date()) return _err(410,'EXPIRED','동의 요청이 만료됐습니다',corsHeaders);
+  if(record.status!=='pending') return _err(409,'ALREADY_RESPONDED',`이미 처리된 요청입니다(${record.status})`,corsHeaders);
+  if(record.ipv6!==ipv6) return _err(403,'IPV6_MISMATCH','본인의 요청이 아닙니다',corsHeaders);
+
+  const token=await _l1AdminToken(env);
+  const patch = decision==='grant'
+    ? { status:'granted', consent_token: await _signConsentHmac(env,record.request_id,ipv6) }
+    : { status:'denied' };
+
+  const patchRes=await fetch(`${L1_DEFAULT}/api/collections/pdv_consent_requests/records/${record.id}`,{
+    method:'PATCH',
+    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify(patch),
+  });
+  if(!patchRes.ok) return _err(502,'L1_UPDATE_FAILED','동의 상태 갱신 실패: HTTP '+patchRes.status,corsHeaders);
+
+  return new Response(JSON.stringify({
+    ok:true,
+    decision,
+    consent_token: patch.consent_token || null,
+  }),{status:200,headers:corsHeaders});
+}
 async function _checkRateLimit(env,ipv6,action){if(env.RATE_LIMIT_KV){const kvKey=`rl:${action}:${ipv6}`;const current=parseInt(await env.RATE_LIMIT_KV.get(kvKey)||'0');if(current>=3)return false;await env.RATE_LIMIT_KV.put(kvKey,String(current+1),{expirationTtl:300});return true;}return true;}
 async function _fetchPdvByScope(env,ipv6,scopes,period){const key=env.SUPABASE_KEY||_supabaseAnonKey();const result={};for(const scope of scopes){const source=SCOPE_SOURCE_MAP[scope];let queryUrl=SUPABASE_URL+'/rest/v1/pdv_log'+`?guid=eq.${encodeURIComponent(ipv6)}`+`&created_at=gte.${period.start}T00:00:00Z&created_at=lte.${period.end}T23:59:59Z`+`&select=summary,summary_6w,risk_level,created_at,source&order=created_at.desc&limit=50`;if(source)queryUrl+=`&source=eq.${encodeURIComponent(source)}`;try{const res=await fetch(queryUrl,{headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'}});const rows=await res.json().catch(()=>[]);if(!rows?.length){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{}};continue;}const RISK_ORDER={low:0,medium:1,high:2};const maxRisk=rows.reduce((max,r)=>{const lvl=r.risk_level||'low';return RISK_ORDER[lvl]>RISK_ORDER[max]?lvl:max;},'low');let summary6w=null;for(const row of rows){try{summary6w=JSON.parse(row.summary_6w);break;}catch{}}result[scope]={available:true,entry_count:rows.length,risk_level:maxRisk,summary_6w:summary6w,risk_factors:_aggregateRiskFactors(scope,rows)};}catch(e){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{},error:'fetch_failed'};}}return result;}
 function _aggregateRiskFactors(scope,rows){if(scope==='ktraffic')return{accident_count:rows.filter(r=>{try{return JSON.parse(r.summary_6w)?.what?.includes('사고');}catch{return false;}}).length,entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,accident_free_months:0};if(scope==='khealth')return{total_records:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,medium_risk_count:rows.filter(r=>r.risk_level==='medium').length};return{entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length};}
@@ -2304,7 +2397,7 @@ async function _deleteAllUserData(env, guid, l1Record) {
     const filter = encodeURIComponent(`ipv6='${String(guid).replace(/'/g, "\\'")}'`);
     const listRes = await fetch(
       `${L1_DEFAULT}/api/collections/pdv_consent_requests/records?filter=${filter}&perPage=200`,
-      { headers: { 'Authorization': 'Admin ' + token } }
+      { headers: { 'Authorization': 'Bearer ' + token } }
     );
     if (!listRes.ok) {
       results.l1_pdv_consent = `error:${listRes.status}`;
@@ -2315,7 +2408,7 @@ async function _deleteAllUserData(env, guid, l1Record) {
       for (const item of items) {
         const delRes = await fetch(
           `${L1_DEFAULT}/api/collections/pdv_consent_requests/records/${item.id}`,
-          { method: 'DELETE', headers: { 'Authorization': 'Admin ' + token } }
+          { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } }
         );
         if (!delRes.ok && delRes.status !== 404) failCount++;
       }

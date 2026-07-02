@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>PDV 조회 동의 — 혼디</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+:root{
+  --tint:#007b8b;--tint-lt:#eafcff;--tint-dk:#005f6b;
+  --border:#e5e7eb;--txt2:#5f6368;--txt3:#9aa0a6;
+  --font:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+  --safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);
+  --danger:#dc2626;--danger-bg:#fee2e2;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);color:#111;background:#f9fafb;-webkit-font-smoothing:antialiased;min-height:100dvh;display:flex;flex-direction:column}
+.wrap{flex:1;display:flex;flex-direction:column;max-width:480px;margin:0 auto;width:100%;padding:calc(var(--safe-t) + 20px) 20px calc(var(--safe-b) + 20px)}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:24px}
+.brand-dot{width:28px;height:28px;border-radius:8px;background:var(--tint);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px}
+.brand-name{font-size:15px;font-weight:700;color:var(--tint-dk)}
+
+.card{background:#fff;border-radius:16px;padding:22px 20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.title{font-size:17px;font-weight:700;line-height:1.5;margin-bottom:6px}
+.subtitle{font-size:13px;color:var(--txt2);line-height:1.6;margin-bottom:20px}
+
+.row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:12px 0;border-top:1px solid var(--border)}
+.row:first-of-type{border-top:none}
+.row-label{font-size:12.5px;color:var(--txt3);flex-shrink:0;padding-top:1px}
+.row-value{font-size:13.5px;color:#111;text-align:right;line-height:1.6}
+.scope-chip{display:inline-block;background:var(--tint-lt);color:var(--tint-dk);font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:10px;margin:2px 0 2px 4px}
+
+.expiry{margin-top:16px;padding:10px 12px;border-radius:10px;background:#fffbeb;color:#b45309;font-size:12px;text-align:center}
+
+.btns{margin-top:22px;display:flex;flex-direction:column;gap:8px}
+.btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:14.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity .15s}
+.btn:active{opacity:.7}
+.btn-grant{background:var(--tint);color:#fff}
+.btn-deny{background:#f3f4f6;color:#444}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px;gap:14px}
+.state-icon{font-size:42px}
+.state-title{font-size:16px;font-weight:700}
+.state-desc{font-size:13px;color:var(--txt2);line-height:1.7}
+.spinner{width:26px;height:26px;border:3px solid var(--tint-lt);border-top-color:var(--tint);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.hidden{display:none}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="brand">
+    <div class="brand-dot"><i class="ti ti-shield-lock"></i></div>
+    <div class="brand-name">혼디 · PDV 조회 동의</div>
+  </div>
+
+  <!-- 로딩 -->
+  <div id="state-loading" class="state">
+    <div class="spinner"></div>
+    <div class="state-desc">요청 정보를 확인하는 중...</div>
+  </div>
+
+  <!-- 오류(만료·존재하지않음·다른계정 등) -->
+  <div id="state-error" class="state hidden">
+    <div class="state-icon">⚠️</div>
+    <div class="state-title" id="error-title">문제가 발생했습니다</div>
+    <div class="state-desc" id="error-desc"></div>
+  </div>
+
+  <!-- 완료(승인/거부 이후) -->
+  <div id="state-done" class="state hidden">
+    <div class="state-icon" id="done-icon">✅</div>
+    <div class="state-title" id="done-title"></div>
+    <div class="state-desc" id="done-desc"></div>
+  </div>
+
+  <!-- 본 동의 카드 -->
+  <div id="card" class="card hidden">
+    <div class="title" id="card-title"></div>
+    <div class="subtitle" id="card-purpose"></div>
+
+    <div class="row">
+      <div class="row-label">요청 서비스</div>
+      <div class="row-value" id="row-svc"></div>
+    </div>
+    <div class="row">
+      <div class="row-label">조회 범위</div>
+      <div class="row-value" id="row-scope"></div>
+    </div>
+    <div class="row">
+      <div class="row-label">조회 기간</div>
+      <div class="row-value" id="row-period"></div>
+    </div>
+
+    <div class="expiry" id="expiry-note"></div>
+
+    <div class="btns">
+      <button class="btn btn-grant" id="btn-grant">동의하고 계속하기</button>
+      <button class="btn btn-deny" id="btn-deny">거부</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const PROXY_URL = 'https://hondi-proxy.tensor-city.workers.dev';
+
+  const SCOPE_LABEL = {
+    ktraffic:    'K-Traffic (운행 이력)',
+    khealth:     'K-Health (진료 이력)',
+    pdv_general: '일반 PDV (생활 패턴)',
+    kmarket:     'K-Market (주문 이력)',
+    k119:        'K-119 (응급 출동 이력)',
+  };
+
+  const qs = new URLSearchParams(location.search);
+  const reqId    = qs.get('req')       || '';
+  const svcParam = qs.get('svc')       || '';
+  const ipv6Hash = qs.get('ipv6_hash') || '';
+  const returnTo = qs.get('return_to') || '';
+
+  const $ = id => document.getElementById(id);
+  function showState(name){
+    ['loading','error','done'].forEach(s => $('state-'+s).classList.toggle('hidden', s!==name));
+    $('card').classList.toggle('hidden', name!=='card');
+  }
+  function showCard(){
+    ['state-loading','state-error','state-done'].forEach(el => el.classList.add('hidden'));
+    $('card').classList.remove('hidden');
+  }
+  function showError(title, desc){
+    showState('error');
+    $('error-title').textContent = title;
+    $('error-desc').textContent  = desc;
+  }
+  function showDone(icon, title, desc){
+    showState('done');
+    $('done-icon').textContent  = icon;
+    $('done-title').textContent = title;
+    $('done-desc').textContent  = desc;
+  }
+
+  async function sha256Hex(text){
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  function fmtScope(scope){
+    return (scope||[]).map(s => `<span class="scope-chip">${SCOPE_LABEL[s]||s}</span>`).join('');
+  }
+  function fmtCountdown(expiresAtIso){
+    const ms = new Date(expiresAtIso).getTime() - Date.now();
+    if (ms <= 0) return '만료됨';
+    const min = Math.floor(ms/60000), sec = Math.floor((ms%60000)/1000);
+    return `${min}분 ${sec}초 후 만료`;
+  }
+
+  async function respond(decision){
+    $('btn-grant').disabled = true;
+    $('btn-deny').disabled  = true;
+    try{
+      const res = await fetch(`${PROXY_URL}/consent/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ req: reqId, ipv6: myIpv6, decision }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        showError('처리 실패', data?.message || `서버 오류 (HTTP ${res.status})`);
+        return;
+      }
+      if (decision === 'grant') {
+        showDone('✅', '동의 완료', '요청하신 서비스로 이동합니다...');
+        if (returnTo) {
+          const cb = new URL(returnTo);
+          cb.searchParams.set('consent_token', data.consent_token);
+          cb.searchParams.set('req', reqId);
+          setTimeout(() => { location.href = cb.toString(); }, 900);
+        } else {
+          $('done-desc').textContent = '이 창은 닫으셔도 됩니다.';
+        }
+      } else {
+        showDone('🚫', '거부됨', 'PDV 조회 요청을 거부했습니다.');
+        if (returnTo) {
+          const cb = new URL(returnTo);
+          cb.searchParams.set('consent_denied', '1');
+          cb.searchParams.set('req', reqId);
+          setTimeout(() => { location.href = cb.toString(); }, 900);
+        } else {
+          $('done-desc').textContent = '이 창은 닫으셔도 됩니다.';
+        }
+      }
+    } catch(e) {
+      showError('네트워크 오류', e.message);
+      $('btn-grant').disabled = false;
+      $('btn-deny').disabled  = false;
+    }
+  }
+
+  let myIpv6 = '';
+
+  (async function init(){
+    if (!reqId) { showError('잘못된 링크', '요청 정보(req)가 없습니다.'); return; }
+
+    // ── 본인 확인: 로컬 등록 정보의 ipv6를 해시해 URL의 ipv6_hash와 대조 ──
+    // (실제 최종 검증은 서버의 /consent/respond가 record.ipv6와 직접 비교하지만,
+    //  화면을 보여주기 전에 "남의 요청 링크"임을 먼저 걸러내기 위한 1차 방어)
+    let stored;
+    try { stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { stored = null; }
+    myIpv6 = stored?.ipv6 || '';
+    if (!myIpv6) {
+      showError('로그인이 필요합니다', '혼디 앱에서 먼저 로그인한 뒤 이 링크를 다시 열어주세요.');
+      return;
+    }
+    if (ipv6Hash) {
+      const myHash = await sha256Hex(myIpv6);
+      if (myHash !== ipv6Hash) {
+        showError('본인 계정이 아닙니다', '이 동의 요청은 다른 계정으로 로그인된 기기에서 열어야 합니다.');
+        return;
+      }
+    }
+
+    // ── 서버에서 요청 상세 조회(신뢰 소스) ──
+    let info;
+    try {
+      const res = await fetch(`${PROXY_URL}/consent/info?req=${encodeURIComponent(reqId)}`);
+      info = await res.json().catch(() => null);
+      if (!res.ok || !info?.ok) {
+        showError('요청을 찾을 수 없습니다', info?.message || '만료됐거나 존재하지 않는 동의 요청입니다.');
+        return;
+      }
+    } catch(e) {
+      showError('네트워크 오류', e.message);
+      return;
+    }
+
+    if (info.status !== 'pending') {
+      showDone(info.status === 'granted' ? '✅' : '🚫',
+        info.status === 'granted' ? '이미 동의했습니다' : '이미 거부했습니다',
+        '이 요청은 이미 처리됐습니다.');
+      return;
+    }
+
+    $('card-title').textContent   = (svcParam || info.svc) + ' 에서 PDV 조회 동의를 요청합니다';
+    $('card-purpose').textContent = info.purpose || '조회 목적이 명시되지 않았습니다.';
+    $('row-svc').textContent      = info.svc;
+    $('row-scope').innerHTML      = fmtScope(info.scope);
+    $('row-period').textContent   = `${info.period?.start || '-'} ~ ${info.period?.end || '-'}`;
+    $('expiry-note').textContent  = fmtCountdown(info.expires_at);
+
+    showCard();
+
+    $('btn-grant').addEventListener('click', () => respond('grant'));
+    $('btn-deny').addEventListener('click',  () => respond('deny'));
+  })();
+})();
+</script>
+</body>
+</html>
