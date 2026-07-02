@@ -690,6 +690,7 @@ export default {
     if (pathname.startsWith('/deepseek'))        return callDeepSeek(bodyText, env, corsHeaders, null, _meta, ctx);
     if (pathname === '/llm/relay')               return handleLLMRelay(bodyText, env, corsHeaders, _meta);
     if (pathname === '/klaw/relay')               return handleKlawRelay(bodyText, env, corsHeaders, _meta, ctx);
+    if (pathname === '/klaw/relay')               return handleKlawRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname.startsWith('/gemini/'))         return callOpenAIFromGeminiBody(bodyText, env, corsHeaders, _meta);
     if (pathname === '/ai/chat')                 return handleAIChat(bodyText, env, corsHeaders, _meta);
 
@@ -1723,6 +1724,113 @@ async function handleLLMRelay(bodyText, env, corsHeaders, meta = null) {
   } catch (e) {
     return _err(502, 'RELAY_ERROR', e.message, corsHeaders);
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// /klaw/relay — K-Law 전용 공유 계정 릴레이 (2026-07-02)
+//
+// 배경: DeepSeek 계정 1개(guid 무관, K-Law 전용 발급 키 — 없으면 공용
+// DEEPSEEK_API_KEY로 폴백)를 100여 명이 동시에 공유하며 API 비용을 나눠
+// 부담한다. gopang 일반 무료 챗(FREE_QUOTA_KRW_LIMIT=1000원, 평생 누적)과는
+// 별개의 예산으로 관리한다 — K-Law 판결 시뮬레이션은 호출당 비용이 훨씬
+// 크므로 같은 버킷을 쓰면 사용자의 일반 무료 챗 한도를 잠식한다.
+// 방어선 3중: (1) 1인 1일 KRW 한도 (2) 계정 전체 1일 예산 상한
+// (3) 1인 1일 "판결 생성"(STEP 0~C 풀사이클) 횟수 한도.
+// ═══════════════════════════════════════════════════════════
+const KLAW_TIER_MODELS = {
+  'klaw-flash': { backendModel: 'deepseek-chat',     price: { cacheHit: 0.0028, cacheMiss: 0.14,  output: 0.28 } }, // 인터뷰·분석 — 경량
+  'klaw-pro':   { backendModel: 'deepseek-reasoner', price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 } }, // STEP 0~C 판결 생성 — 추론
+};
+const KLAW_USER_DAILY_KRW_LIMIT   = 300;    // 1인 1일 한도(원)
+const KLAW_GLOBAL_DAILY_KRW_LIMIT = 30000;  // 계정 전체 1일 예산 상한(원) — 공유 계정 보호
+const KLAW_USER_DAILY_STEP_LIMIT  = 3;      // 1인 1일 "판결 생성"(STEP 0~C) 횟수 한도
+
+function _todayKey() { return new Date().toISOString().slice(0, 10); } // YYYY-MM-DD (UTC 기준 일 단위 리셋)
+const _KLAW_KV_TTL = 60 * 60 * 30; // 30시간 — 자정 경계 안전마진을 둔 1일 리셋
+
+async function _klawSpendGet(env, key) {
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv) return 0;
+  return parseFloat(await kv.get(key) || '0');
+}
+async function _klawSpendAdd(env, key, amount) {
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv || !amount) return;
+  try {
+    const prev = await _klawSpendGet(env, key);
+    await kv.put(key, String(prev + amount), { expirationTtl: _KLAW_KV_TTL });
+  } catch (e) { console.warn('[KLaw] 지출 기록 실패:', e.message); }
+}
+
+async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = null) {
+  let body;
+  try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
+
+  const { guid, tier, messages, max_tokens, stream, step_cycle } = body || {};
+  if (!guid || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/messages 필수', corsHeaders);
+
+  const tierKey = KLAW_TIER_MODELS[tier] ? tier : 'klaw-flash';
+  const backendModel = KLAW_TIER_MODELS[tierKey].backendModel;
+
+  const day       = _todayKey();
+  const userKey   = `klaw:spend:${guid}:${day}`;
+  const globalKey = `klaw:spend:global:${day}`;
+  const stepKey   = `klaw:steps:${guid}:${day}`;
+
+  const [userSpent, globalSpent, stepCount] = await Promise.all([
+    _klawSpendGet(env, userKey), _klawSpendGet(env, globalKey), _klawSpendGet(env, stepKey)
+  ]);
+
+  if (globalSpent >= KLAW_GLOBAL_DAILY_KRW_LIMIT) {
+    return _err(429, 'KLAW_GLOBAL_QUOTA_EXCEEDED', '오늘 K-Law 전체 이용자의 사용량이 한도에 도달했습니다. 내일 다시 이용해 주세요.', corsHeaders);
+  }
+  if (userSpent >= KLAW_USER_DAILY_KRW_LIMIT) {
+    return _err(429, 'KLAW_USER_QUOTA_EXCEEDED', '오늘 사용 가능한 K-Law 한도를 모두 사용했습니다. 내일 다시 이용해 주세요.', corsHeaders);
+  }
+  if (step_cycle && stepCount >= KLAW_USER_DAILY_STEP_LIMIT) {
+    return _err(429, 'KLAW_STEP_LIMIT_EXCEEDED', `오늘 판결 시뮬레이션 생성 한도(${KLAW_USER_DAILY_STEP_LIMIT}회)를 모두 사용했습니다. 내일 다시 이용해 주세요.`, corsHeaders);
+  }
+
+  const isStream = !!stream;
+  const payload = { model: backendModel, messages, stream: isStream };
+  if (max_tokens != null) payload.max_tokens = max_tokens;
+
+  console.log(JSON.stringify({ tag:'KLAW_RELAY_CALL', guid, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
+
+  let res;
+  try {
+    res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${env.KLAW_DEEPSEEK_API_KEY || env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) { return _err(502, 'KLAW_RELAY_ERROR', e.message, corsHeaders); }
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    return new Response(errText || JSON.stringify({ error:`HTTP ${res.status}` }), { status: res.status, headers: corsHeaders });
+  }
+
+  const priceTier = tierKey === 'klaw-pro' ? 'hondi-pro' : 'hondi-flash'; // _deepseekUsageToKRW는 hondi-* 가격표를 조회하므로 매핑
+  const recordStep = async () => { if (step_cycle) await _klawSpendAdd(env, stepKey, 1); };
+
+  if (isStream) {
+    const [forClient, forUsage] = res.body.tee();
+    const usageTask = _parseUsageFromStream(forUsage).then(async usage => {
+      const krw = _deepseekUsageToKRW(usage, priceTier);
+      await Promise.all([_klawSpendAdd(env, userKey, krw), _klawSpendAdd(env, globalKey, krw), recordStep()]);
+    });
+    if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
+    return new Response(forClient, { status:200, headers:{ ...corsHeaders, 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache', 'X-Accel-Buffering':'no' } });
+  }
+
+  const data = await res.json();
+  if (data?.usage) {
+    const krw = _deepseekUsageToKRW(data.usage, priceTier);
+    const recordTask = Promise.all([_klawSpendAdd(env, userKey, krw), _klawSpendAdd(env, globalKey, krw), recordStep()]);
+    if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
+  }
+  return new Response(JSON.stringify(data), { headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
