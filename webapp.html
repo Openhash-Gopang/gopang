@@ -261,16 +261,29 @@ body.gopang-authed #gopang-auth-gate{display:none}
   flex-shrink:0;cursor:grab;
   border:none;
 }
-#ai-panel-handle svg{pointer-events:none}
+#ai-panel-handle svg{pointer-events:none;transition:transform .25s ease}
+/* 창이 최대 크기일 때 핸들 아이콘을 180도 돌려 위쪽(▲, 펼치기 가능) →
+   아래쪽(▼, 접기 가능) 화살표로 바꿔, 높이를 다시 줄일 수 있음을 알려준다
+   (2026-07-02 신설) */
+#ai-panel-handle.full svg{transform:rotate(180deg)}
 /* AI 비서 이름 — 중앙 (터치로 편집) */
 #ai-panel-name-wrap{
   flex:1;display:flex;align-items:center;justify-content:center;
   gap:4px;cursor:pointer;min-width:0;padding:0 4px;
 }
 #ai-panel-name{
-  font-size:15px;font-weight:700;color:#fff;
+  font-size:14px;font-weight:600;color:#fff;
   letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  /* 2026-07-02 신설: 평소에도 "여기를 누르면 바로 고칠 수 있다"는 느낌을
+     주기 위해, 아래 #ai-panel-name-input(실제 편집 모드)과 거의 같은
+     테두리·배경·둥근 모서리를 입혀 항상 초소형 입력 필드처럼 보이게 한다. */
+  background:rgba(255,255,255,.16);
+  border:1.5px solid rgba(255,255,255,.4);
+  border-radius:8px;
+  padding:4px 10px;
+  max-width:140px;
 }
+#ai-panel-name-wrap:active #ai-panel-name{background:rgba(255,255,255,.26)}
 #ai-panel-name-edit-icon{
   flex-shrink:0;opacity:.75;
 }
@@ -1213,9 +1226,9 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
     <div id="ai-panel-topbar">
       <!-- 높이조절 핸들 (좌) -->
       <button id="ai-panel-handle" title="높이 조절">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-             stroke="#fff" stroke-width="2.5" stroke-linecap="round">
-          <line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/>
+        <svg id="ai-panel-handle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 15 12 9 18 15"/>
         </svg>
       </button>
       <!-- AI 비서 이름 (중앙, 터치로 편집) -->
@@ -2801,6 +2814,7 @@ window.closePDV = closePDV;
     if (triggerBtn) triggerBtn.classList.remove('open');
     input.blur();
     _panelFull = false;
+    handle.classList.remove('full'); // 다음에 열 땐 항상 2/3 높이(▲)로 시작
     if (typeof window._clearTutorialWatchdog === 'function') window._clearTutorialWatchdog();
   }
   // _panelFull은 핸들 드래그 블록에서 선언되므로 여기서 전방 선언
@@ -2818,6 +2832,7 @@ window.closePDV = closePDV;
     _panelFull = !_panelFull;
     panel.style.transition = 'height .28s ease, transform .32s cubic-bezier(.32,1,.4,1)';
     panel.style.height = _panelFull ? '100%' : '';
+    handle.classList.toggle('full', _panelFull); // 위(▲)/아래(▼) 화살표 전환
   });
 
   // ── 하단 swipe-up 제스처 (메인 화면에서) ─────────────
@@ -3301,38 +3316,6 @@ window.closePDV = closePDV;
   // PRIORITY_ORDER 정렬·24h 쿨다운·분당 호출 제한 로직을 공유 모듈에서 가져와 쓴다.
   // (이전 버전은 이 로직이 전혀 없어 OR 한도 도달 시 등록된 모델 전부를
   //  순서대로 다 두드리느라 응답이 10초 이상 걸리는 문제가 있었음 — 2026-06-24 수정)
-  // ── AI 비서 이름 — 로컬에서 읽어 표시 ─────────────────────────────
-  (function _initAIName() {
-    const stored = localStorage.getItem('hondi_assistant_name') || '혼디';
-    document.getElementById('ai-panel-name').textContent = stored;
-  })();
-
-  window._editAIName = function() {
-    const nameEl  = document.getElementById('ai-panel-name');
-    const editIcon = document.getElementById('ai-panel-name-edit-icon');
-    const inp     = document.getElementById('ai-panel-name-input');
-    const wrap    = document.getElementById('ai-panel-name-wrap');
-    wrap.onclick  = null; // 재귀 방지
-    nameEl.style.display  = 'none';
-    editIcon.style.display = 'none';
-    inp.style.display = 'block';
-    inp.value = nameEl.textContent || '';
-    inp.focus();
-    inp.select();
-
-    function commit() {
-      const v = inp.value.trim() || '혼디';
-      nameEl.textContent = v;
-      try { localStorage.setItem('hondi_assistant_name', v); } catch {}
-      nameEl.style.display  = '';
-      editIcon.style.display = '';
-      inp.style.display = 'none';
-      wrap.onclick = _editAIName;
-    }
-    inp.onblur  = commit;
-    inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } };
-  };
-
   // ── AI 비서 이름 — 로컬에서 읽어 표시 ─────────────────────────────
   (function _initAIName() {
     const stored = localStorage.getItem('hondi_assistant_name') || '혼디';
