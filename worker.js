@@ -112,6 +112,36 @@ function _deepseekUsageToKRW(usage, tierKey) {
   return usd * USD_TO_KRW;
 }
 
+// ═══════════════════════════════════════════════════════════
+// 통합 과금 배수 — gopang 기본 챗, K-Law, 향후 K-Tax·K-Public 등 모든
+// 서브시스템이 공유하는 단일 마진 정책 (2026-07-03).
+//
+// 청구액 = 실제 DeepSeek API 비용 × BILLING_MULTIPLIER.
+// "대화 길이"(컨텍스트 토큰)와 "연산량"(추론 토큰 등)은 이미 DeepSeek 자체
+// usage에 반영되어 있으므로 이것으로 충분하다 — 별도로 벽시계 경과시간을
+// 더해서 청구하면, 네트워크 지연·Worker 콜드스타트처럼 사용자 책임이 아닌
+// 우리 쪽 인프라 요인까지 사용자에게 전가하게 된다. "초당 X원" 식의 요금은
+// 이 방식과 수학적으로 동일하다(청구액 ÷ 경과초 = 그 호출의 초당 요율)—
+// 다만 모델·티어별로 실제 비용이 다르므로, 매 호출 실비를 그대로 쓰는 편이
+// 고정 초당 요율을 추정하는 것보다 정확하다.
+//
+// 기본 배수 2 = 청구액의 50%는 API 비용 충당, 50%는 개발자 보상.
+// 배수 조정은 재배포 없이 가능하도록 env var를 최우선으로 읽는다:
+//   wrangler secret put BILLING_MULTIPLIER   (예: "2.5")
+// ═══════════════════════════════════════════════════════════
+const BILLING_MULTIPLIER_DEFAULT = 2;
+function _billingMultiplier(env) {
+  const v = parseFloat(env?.BILLING_MULTIPLIER);
+  return Number.isFinite(v) && v > 0 ? v : BILLING_MULTIPLIER_DEFAULT;
+}
+// usage: DeepSeek 응답의 usage 필드 그대로. priceTier: 'hondi-flash' | 'hondi-pro' 가격표 키.
+// 반환: apiCostKRW(실비) / billedKRW(실제 청구·예산 차감액) / multiplier(적용된 배수)
+function computeBilledKRW(env, usage, priceTier) {
+  const apiCostKRW = _deepseekUsageToKRW(usage, priceTier);
+  const multiplier = _billingMultiplier(env);
+  return { apiCostKRW, billedKRW: apiCostKRW * multiplier, multiplier };
+}
+
 // 스트리밍 응답 본문에서 마지막 usage 청크를 파싱(스트림은 tee()로 복제해
 // 클라이언트에게는 그대로 전달하면서 이 쪽에서만 소비한다 — 지연 없음).
 async function _parseUsageFromStream(stream) {
@@ -689,6 +719,7 @@ export default {
     if (pathname === '/chat/completions')        return callDeepSeek(bodyText, env, corsHeaders, null, _meta, ctx);
     if (pathname.startsWith('/deepseek'))        return callDeepSeek(bodyText, env, corsHeaders, null, _meta, ctx);
     if (pathname === '/llm/relay')               return handleLLMRelay(bodyText, env, corsHeaders, _meta);
+    if (pathname === '/klaw/relay')               return handleKlawRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname === '/klaw/relay')               return handleKlawRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname === '/klaw/relay')               return handleKlawRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname === '/klaw/relay')               return handleKlawRelay(bodyText, env, corsHeaders, _meta, ctx);
@@ -1636,7 +1667,17 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   if(isStream){
     if (guid && env.AI_SETUP_SEALS_KV) {
       const [forClient, forUsage] = res.body.tee();
-      const usageTask = _parseUsageFromStream(forUsage).then(usage => _recordFreeSpend(env, guid, _deepseekUsageToKRW(usage, spendTier)));
+      const usageTask = _parseUsageFromStream(forUsage).then(usage => {
+        const bill = computeBilledKRW(env, usage, spendTier);
+        console.log(JSON.stringify({
+          tag: 'HONDI_CHAT_COST', guid, tier: spendTier,
+          promptTokens: usage?.prompt_tokens, cacheHitTokens: usage?.prompt_cache_hit_tokens,
+          completionTokens: usage?.completion_tokens,
+          apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier,
+          ts: new Date().toISOString(), ...meta,
+        }));
+        return _recordFreeSpend(env, guid, bill.billedKRW);
+      });
       if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
       return new Response(forClient,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});
     }
@@ -1644,7 +1685,15 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   }
   const data=await res.json();
   if (guid && env.AI_SETUP_SEALS_KV && data?.usage) {
-    const recordTask = _recordFreeSpend(env, guid, _deepseekUsageToKRW(data.usage, spendTier));
+    const bill = computeBilledKRW(env, data.usage, spendTier);
+    console.log(JSON.stringify({
+      tag: 'HONDI_CHAT_COST', guid, tier: spendTier,
+      promptTokens: data.usage?.prompt_tokens, cacheHitTokens: data.usage?.prompt_cache_hit_tokens,
+      completionTokens: data.usage?.completion_tokens,
+      apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier,
+      ts: new Date().toISOString(), ...meta,
+    }));
+    const recordTask = _recordFreeSpend(env, guid, bill.billedKRW);
     if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
   }
   if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}
@@ -2170,6 +2219,121 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
     const load = _computeLoadKRW(data.usage, priceTier, Date.now() - t0);
     console.log(JSON.stringify({ tag:'KLAW_RELAY_COST', guid, tier: tierKey, tokenKRW: load.tokenKRW, timeKRW: load.timeKRW, totalKRW: load.total, elapsedMs: Date.now() - t0, ts: new Date().toISOString(), ...meta }));
     const recordTask = Promise.all([_klawSpendAdd(env, userKey, load.total), _klawSpendAdd(env, globalKey, load.total), recordStep()]);
+    if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
+  }
+  return new Response(JSON.stringify(data), { headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// /klaw/relay — K-Law 전용 공유 계정 릴레이 (2026-07-02)
+//
+// 배경: DeepSeek 계정 1개(guid 무관, K-Law 전용 발급 키 — 없으면 공용
+// DEEPSEEK_API_KEY로 폴백)를 100여 명이 동시에 공유하며 API 비용을 나눠
+// 부담한다. gopang 일반 무료 챗(FREE_QUOTA_KRW_LIMIT=1000원, 평생 누적)과는
+// 별개의 예산으로 관리한다 — K-Law 판결 시뮬레이션은 호출당 비용이 훨씬
+// 크므로 같은 버킷을 쓰면 사용자의 일반 무료 챗 한도를 잠식한다.
+// 방어선 3중: (1) 1인 1일 KRW 한도 (2) 계정 전체 1일 예산 상한
+// (3) 1인 1일 "판결 생성"(STEP 0~C 풀사이클) 횟수 한도.
+// ═══════════════════════════════════════════════════════════
+const KLAW_TIER_MODELS = {
+  'klaw-flash': { backendModel: 'deepseek-chat',     price: { cacheHit: 0.0028, cacheMiss: 0.14,  output: 0.28 } }, // 인터뷰·분석 — 경량
+  'klaw-pro':   { backendModel: 'deepseek-reasoner', price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 } }, // STEP 0~C 판결 생성 — 추론
+};
+const KLAW_USER_DAILY_KRW_LIMIT   = 300;    // 1인 1일 한도(원)
+const KLAW_GLOBAL_DAILY_KRW_LIMIT = 30000;  // 계정 전체 1일 예산 상한(원) — 공유 계정 보호
+const KLAW_USER_DAILY_STEP_LIMIT  = 3;      // 1인 1일 "판결 생성"(STEP 0~C) 횟수 한도
+
+function _todayKey() { return new Date().toISOString().slice(0, 10); } // YYYY-MM-DD (UTC 기준 일 단위 리셋)
+const _KLAW_KV_TTL = 60 * 60 * 30; // 30시간 — 자정 경계 안전마진을 둔 1일 리셋
+
+async function _klawSpendGet(env, key) {
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv) return 0;
+  return parseFloat(await kv.get(key) || '0');
+}
+async function _klawSpendAdd(env, key, amount) {
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv || !amount) return;
+  try {
+    const prev = await _klawSpendGet(env, key);
+    await kv.put(key, String(prev + amount), { expirationTtl: _KLAW_KV_TTL });
+  } catch (e) { console.warn('[KLaw] 지출 기록 실패:', e.message); }
+}
+
+async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = null) {
+  let body;
+  try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
+
+  const { guid, tier, messages, max_tokens, stream, step_cycle } = body || {};
+  if (!guid || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/messages 필수', corsHeaders);
+
+  const tierKey = KLAW_TIER_MODELS[tier] ? tier : 'klaw-flash';
+  const backendModel = KLAW_TIER_MODELS[tierKey].backendModel;
+
+  const day       = _todayKey();
+  const userKey   = `klaw:spend:${guid}:${day}`;
+  const globalKey = `klaw:spend:global:${day}`;
+  const stepKey   = `klaw:steps:${guid}:${day}`;
+
+  const [userSpent, globalSpent, stepCount] = await Promise.all([
+    _klawSpendGet(env, userKey), _klawSpendGet(env, globalKey), _klawSpendGet(env, stepKey)
+  ]);
+
+  if (globalSpent >= KLAW_GLOBAL_DAILY_KRW_LIMIT) {
+    return _err(429, 'KLAW_GLOBAL_QUOTA_EXCEEDED', '오늘 K-Law 전체 이용자의 사용량이 한도에 도달했습니다. 내일 다시 이용해 주세요.', corsHeaders);
+  }
+  if (userSpent >= KLAW_USER_DAILY_KRW_LIMIT) {
+    return _err(429, 'KLAW_USER_QUOTA_EXCEEDED', '오늘 사용 가능한 K-Law 한도를 모두 사용했습니다. 내일 다시 이용해 주세요.', corsHeaders);
+  }
+  if (step_cycle && stepCount >= KLAW_USER_DAILY_STEP_LIMIT) {
+    return _err(429, 'KLAW_STEP_LIMIT_EXCEEDED', `오늘 판결 시뮬레이션 생성 한도(${KLAW_USER_DAILY_STEP_LIMIT}회)를 모두 사용했습니다. 내일 다시 이용해 주세요.`, corsHeaders);
+  }
+
+  const isStream = !!stream;
+  const payload = { model: backendModel, messages, stream: isStream };
+  if (max_tokens != null) payload.max_tokens = max_tokens;
+
+  console.log(JSON.stringify({ tag:'KLAW_RELAY_CALL', guid, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
+
+  const t0 = Date.now(); // 과금에는 쓰지 않음 — 로그 진단(지연 모니터링) 용도로만 유지
+  let res;
+  try {
+    res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      // ★ SP-COMMON-05 H6: 모든 서브시스템이 반드시 같은 API 키를 공유해야
+      // 캐시 공유(계층 상속의 토큰 절약 전제)가 성립한다. 과거엔 전용 키
+      // KLAW_DEEPSEEK_API_KEY가 있으면 그걸 우선 쓰는 폴백이 있었는데,
+      // 이게 실수로라도 등록되면 조용히(에러 없이) K-Law만 캐시 공유에서
+      // 이탈하는 위험이 있어 폴백 자체를 제거했다 — 정책을 코드로 강제.
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) { return _err(502, 'KLAW_RELAY_ERROR', e.message, corsHeaders); }
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    return new Response(errText || JSON.stringify({ error:`HTTP ${res.status}` }), { status: res.status, headers: corsHeaders });
+  }
+
+  const priceTier = tierKey === 'klaw-pro' ? 'hondi-pro' : 'hondi-flash'; // _deepseekUsageToKRW는 hondi-* 가격표를 조회하므로 매핑
+  const recordStep = async () => { if (step_cycle) await _klawSpendAdd(env, stepKey, 1); };
+
+  if (isStream) {
+    const [forClient, forUsage] = res.body.tee();
+    const usageTask = _parseUsageFromStream(forUsage).then(async usage => {
+      const bill = computeBilledKRW(env, usage, priceTier);
+      console.log(JSON.stringify({ tag:'KLAW_RELAY_COST', guid, tier: tierKey, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier, elapsedMs: Date.now() - t0, ts: new Date().toISOString(), ...meta }));
+      await Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW), recordStep()]);
+    });
+    if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
+    return new Response(forClient, { status:200, headers:{ ...corsHeaders, 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache', 'X-Accel-Buffering':'no' } });
+  }
+
+  const data = await res.json();
+  if (data?.usage) {
+    const bill = computeBilledKRW(env, data.usage, priceTier);
+    console.log(JSON.stringify({ tag:'KLAW_RELAY_COST', guid, tier: tierKey, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier, elapsedMs: Date.now() - t0, ts: new Date().toISOString(), ...meta }));
+    const recordTask = Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW), recordStep()]);
     if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
   }
   return new Response(JSON.stringify(data), { headers: corsHeaders });
