@@ -2692,6 +2692,27 @@ window.closePDV = closePDV;
         aiBubble.classList.remove('streaming');
       }, 400);
     } else if (!_panelGreeted && msgList.children.length === 0) {
+      // BUG-FIX(2026-07-02): nickname이 아직 비어 있는 상태(가입 직후
+      // localStorage 반영 전/guest·temp 상태 등)에서 첫 인사가 트리거되면
+      // "****님"처럼 닉네임이 빈 문자열로 치환된 응답이 그대로 LLM에 의해
+      // 생성되고, _savePanelHistory()가 그 완성된 문자열을 그대로
+      // hondi_panel_history_v1에 저장한다. 이후 hondi_first_greeted='1'로
+      // 고정되고 히스토리는 재생성 없이 그대로 재렌더링되므로, 한번 비어
+      // 있으면 사용자가 콘솔로 직접 초기화하기 전까진 영구히 고정된다.
+      // → nickname이 없으면 이번 오픈에서는 인사를 건너뛰고 _panelGreeted를
+      //   true로 만들지 않아, 다음 패널 오픈 때(닉네임이 채워진 뒤) 재시도한다.
+      const _greetUser = (() => {
+        try {
+          return JSON.parse(
+            localStorage.getItem('gopang_user_v4') ||
+            sessionStorage.getItem('gopang_user_v4') || '{}'
+          );
+        } catch { return {}; }
+      })();
+      if (!_greetUser.nickname) {
+        console.warn('[Panel] nickname 미준비 — 첫 인사 보류, 다음 openAIPanel() 호출 때 재시도');
+        return;
+      }
       // 첫 실행 시 AI가 먼저 말을 건다. v1.6 — 이제 항상 AGENT-COMMON이
       // 응답한다. 최초 인사("이름을 지어주세요" + 프로필 작성 안내)는
       // PA SP가 아니라 _callPanelAI 안의 _buildFirstContactContext()가
