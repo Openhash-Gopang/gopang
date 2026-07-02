@@ -81,6 +81,16 @@ export async function _recordPDV(record) {
     if (log.length > 1000) log.splice(0, log.length - 1000);
     localStorage.setItem('gopang_pdv_log', JSON.stringify(log));
 
+    // ── IndexedDB 미러 갱신 트리거 (2026-07-02) ─────────────
+    // pdv-store.js가 이 이벤트를 받아 gopang_pdv_store(IndexedDB)에 반영한다.
+    // webapp.html에서만 의미 있음(그쪽에만 실제 record 이벤트가 흐름) —
+    // pdv-store.js 쪽 리스너는 이미 구현돼 있었고 발행부만 빠져 있었음.
+    try {
+      window.dispatchEvent(new CustomEvent('gopang:pdv-recorded', { detail: record }));
+    } catch (e) {
+      console.warn('[PDV] gopang:pdv-recorded 이벤트 발행 실패:', e.message);
+    }
+
     // ── 6하 원칙 필드 구성 ─────────────────────────────────
     // 누가 (Who) — P17: guid 방어코드
     const _effectiveGuid = _USER?.guid || _USER?.ipv6 || null;

@@ -96,6 +96,10 @@ function _updateLogoutBtn() {
 }
 </script>
 <script src="/gwp-registry.js?v=20260624"></script>
+<!-- pdv-store.js는 GWP_REGISTRY(위 스크립트) 로드 이후여야 classify()가 서비스 분류를
+     제대로 찾는다. record.js의 _recordPDV()가 발행하는 'gopang:pdv-recorded' 이벤트를
+     이 인스턴스가 직접 받아 IndexedDB(gopang_pdv_store)에 기록한다. -->
+<script src="/pdv-store.js?v=20260702"></script>
 <style>
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
