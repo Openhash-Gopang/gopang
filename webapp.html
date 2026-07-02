@@ -1034,29 +1034,33 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
   box-shadow:none;height:auto;
 }
 #settings-overlay.open .settings-sheet{transform:translateY(0)}
-/* BUG-FIX(2026-07-02): #account-delete-overlay는 class="settings-overlay"만
-   재사용하고 있었으나, 같은 클래스를 쓰는 다른 3개(#progress-overlay,
-   #settings-overlay, #ai-settings-overlay)는 전부 이렇게 자기 전용 ID CSS로
-   position:fixed·z-index·visibility 토글을 갖고 있다. 이 블록이 빠져있어서
-   openAccountDelete()가 .open 클래스를 붙여도 대응하는 CSS가 전혀 없어
-   시각적으로 아무 일도 일어나지 않았다(클릭이 씹힌 것처럼 보임) — 아래
-   #settings-overlay 패턴을 그대로 복제해 추가한다. */
-#account-delete-overlay{
-  position:fixed;inset:0;z-index:999;
-  background:rgba(0,0,0,.45);
-  display:flex;align-items:flex-end;justify-content:center;
-  visibility:hidden;opacity:0;transition:opacity .2s,visibility .2s;
+/* BUG-FIX(2026-07-02, 3차): 바텀시트 팝업 방식은 이미 열려있는
+   #settings-overlay와 같은 화면 하단에 겹쳐 뜨는 모양이라 "설정 창이
+   가려서 안 보인다"는 혼동을 유발했다(1차: CSS 자체가 없어 아예 안 보임 —
+   2차: z-index를 999→1000으로 올려 보이게는 했지만 여전히 설정 시트 위에
+   포개지는 팝업 느낌 — 3차: 좌/우 메뉴(.left-menu-overlay/-drawer,
+   .right-menu-overlay/-drawer)와 동일한 우측 슬라이드아웃 패널 구조로
+   전면 교체. backdrop과 drawer를 별도 요소로 분리하고 pointer-events
+   트릭을 쓰는 것도 좌/우 메뉴와 동일 — visibility 전환이 필요 없어 더
+   단순하다. */
+.account-delete-overlay{
+  position:fixed;inset:0;z-index:1000;display:flex;justify-content:flex-end;
+  pointer-events:none;
 }
-#account-delete-overlay.open{visibility:visible;opacity:1}
-#account-delete-overlay .settings-sheet{
-  width:100%;max-width:480px;background:#fff;
-  border-radius:20px 20px 0 0;
-  padding:0 0 calc(16px + var(--safe-b));
-  max-height:90dvh;overflow-y:auto;
-  transform:translateY(100%);transition:transform .25s;
-  box-shadow:none;height:auto;
+.account-delete-overlay.open{pointer-events:auto}
+.account-delete-backdrop{
+  position:absolute;inset:0;background:rgba(0,0,0,.25);
+  opacity:0;transition:opacity .25s;
 }
-#account-delete-overlay.open .settings-sheet{transform:translateY(0)}
+.account-delete-overlay.open .account-delete-backdrop{opacity:1}
+.account-delete-drawer{
+  position:relative;width:88%;max-width:380px;height:100%;
+  background:#fff;box-shadow:-2px 0 24px rgba(0,0,0,.12);
+  transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow-y:auto;
+  padding:calc(var(--safe-t) + 20px) 0 calc(var(--safe-b) + 16px);
+}
+.account-delete-overlay.open .account-delete-drawer{transform:translateX(0)}
 #ai-settings-overlay{position:fixed;inset:0;z-index:1000;visibility:hidden;background:rgba(0,0,0,.25);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .25s}
 #ai-settings-overlay.open{visibility:visible;opacity:1}
 #ai-settings-overlay .settings-sheet{width:100%;max-width:430px;height:auto;max-height:90dvh;overflow-y:auto;transform:translateY(100%);transition:transform .25s;box-shadow:none;border-radius:16px 16px 0 0}
@@ -1366,13 +1370,18 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
 </div>
 
 <!-- ── 계정 삭제 슬라이드아웃 — 설정 "위험 구역"에서 열림 (2026-07-02 신설) ──
-     기존 settings-overlay/settings-sheet 클래스를 그대로 재사용(검색 패널과
-     동일한 바텀시트 패턴) — 새 CSS 없이 기존 스타일에 맞춘다. -->
-<div class="settings-overlay" id="account-delete-overlay">
-  <div class="settings-sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title" style="color:#ef4444">계정 삭제</div>
-    <div style="padding:0 16px 4px;font-size:12px;color:#888;line-height:1.7">
+     BUG-FIX(2026-07-02, 3차): 기존엔 settings-overlay/settings-sheet(바텀시트
+     팝업) 클래스를 재사용했는데, 이미 열려있는 #settings-overlay와 같은 화면
+     하단에서 겹쳐 뜨는 모양이라 "기존 settings.js 창이 가려서 안 보인다"는
+     혼동을 유발했다(z-index를 올려도 시각적으로 설정 시트 위에 포개지는
+     느낌은 여전함). 좌/우 메뉴(.left-menu-overlay/.right-menu-drawer)와
+     동일한 우측 슬라이드아웃 패널 구조(backdrop+drawer 분리, translateX)로
+     바꿔 명확히 별도 레이어로 보이게 한다. -->
+<div class="account-delete-overlay" id="account-delete-overlay">
+  <div class="account-delete-backdrop" onclick="closeAccountDelete()"></div>
+  <div class="account-delete-drawer">
+    <div class="sheet-title" style="color:#ef4444;padding:0 16px">계정 삭제</div>
+    <div style="padding:8px 16px 4px;font-size:12px;color:#888;line-height:1.7">
       서버에는 전화번호·아이디처럼 사용자를 서로 연결하는 정보만 있고,
       대화·기록은 이 기기에만 저장돼 있어요. 계정을 삭제해도 이 기기의
       기록은 지워지지 않으니, 같은 번호로 다시 가입하면 지금 상태로
@@ -2551,7 +2560,7 @@ window.closePDV = closePDV;
     // settings-overlay: 설정/검색/진행상황/AI설정 시트 공유 클래스
     // ai-overlay: AI 비서 카드, left/right-menu-overlay: 좌/우 메뉴, manual-overlay: 사용자 매뉴얼
     return !!document.querySelector(
-      '.settings-overlay.open, .ai-overlay.open, .left-menu-overlay.open, .right-menu-overlay.open, .manual-overlay.open, .pdv-overlay.open'
+      '.settings-overlay.open, .ai-overlay.open, .left-menu-overlay.open, .right-menu-overlay.open, .manual-overlay.open, .pdv-overlay.open, .account-delete-overlay.open'
     );
   }
 
