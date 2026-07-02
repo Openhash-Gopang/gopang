@@ -1034,6 +1034,29 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
   box-shadow:none;height:auto;
 }
 #settings-overlay.open .settings-sheet{transform:translateY(0)}
+/* BUG-FIX(2026-07-02): #account-delete-overlay는 class="settings-overlay"만
+   재사용하고 있었으나, 같은 클래스를 쓰는 다른 3개(#progress-overlay,
+   #settings-overlay, #ai-settings-overlay)는 전부 이렇게 자기 전용 ID CSS로
+   position:fixed·z-index·visibility 토글을 갖고 있다. 이 블록이 빠져있어서
+   openAccountDelete()가 .open 클래스를 붙여도 대응하는 CSS가 전혀 없어
+   시각적으로 아무 일도 일어나지 않았다(클릭이 씹힌 것처럼 보임) — 아래
+   #settings-overlay 패턴을 그대로 복제해 추가한다. */
+#account-delete-overlay{
+  position:fixed;inset:0;z-index:999;
+  background:rgba(0,0,0,.45);
+  display:flex;align-items:flex-end;justify-content:center;
+  visibility:hidden;opacity:0;transition:opacity .2s,visibility .2s;
+}
+#account-delete-overlay.open{visibility:visible;opacity:1}
+#account-delete-overlay .settings-sheet{
+  width:100%;max-width:480px;background:#fff;
+  border-radius:20px 20px 0 0;
+  padding:0 0 calc(16px + var(--safe-b));
+  max-height:90dvh;overflow-y:auto;
+  transform:translateY(100%);transition:transform .25s;
+  box-shadow:none;height:auto;
+}
+#account-delete-overlay.open .settings-sheet{transform:translateY(0)}
 #ai-settings-overlay{position:fixed;inset:0;z-index:1000;visibility:hidden;background:rgba(0,0,0,.25);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .25s}
 #ai-settings-overlay.open{visibility:visible;opacity:1}
 #ai-settings-overlay .settings-sheet{width:100%;max-width:430px;height:auto;max-height:90dvh;overflow-y:auto;transform:translateY(100%);transition:transform .25s;box-shadow:none;border-radius:16px 16px 0 0}
