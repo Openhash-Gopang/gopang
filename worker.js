@@ -703,7 +703,7 @@ export default {
     // DEEPSEEK_API_KEY 등 서버 보유 키로 무제한 호출이 가능했다.
     // (2026-06-28 — 기기를 모두 끈 상태에서도 DeepSeek 크레딧이
     // 소진된 사고의 원인 분석 후 추가)
-    const AI_PROXY_PATHS = ['/chat/completions', '/deepseek', '/ai/chat', '/gemini/', '/llm/relay', '/klaw/relay'];
+    const AI_PROXY_PATHS = ['/chat/completions', '/deepseek', '/ai/chat', '/gemini/', '/llm/relay', '/klaw/relay', '/gov/relay'];
     const isAiProxyPath = AI_PROXY_PATHS.some(p => pathname === p || pathname.startsWith(p));
     const _meta = {
       ip:     request.headers.get('cf-connecting-ip') || 'unknown',
@@ -720,6 +720,7 @@ export default {
     if (pathname.startsWith('/deepseek'))        return callDeepSeek(bodyText, env, corsHeaders, null, _meta, ctx);
     if (pathname === '/llm/relay')               return handleLLMRelay(bodyText, env, corsHeaders, _meta);
     if (pathname === '/klaw/relay')               return handleKlawRelay(bodyText, env, corsHeaders, _meta, ctx);
+    if (pathname === '/gov/relay')                return handleGovRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname.startsWith('/gemini/'))         return callOpenAIFromGeminiBody(bodyText, env, corsHeaders, _meta);
     if (pathname === '/ai/chat')                 return handleAIChat(bodyText, env, corsHeaders, _meta);
 
@@ -1889,6 +1890,125 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
 }
 
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// /gov/relay — K-Public 산하 모든 국가기관 AI 공용 릴레이 (2026-07-03)
+//
+// SP-COMMON-05 H2/H6 강제 조치: 클라이언트는 시스템 메시지를 직접 조립하지
+// 않는다. 서버가 K-Public_common_v1_0.md를 GitHub에서 캐시 fetch해 항상
+// system 맨 앞에 붙이고, 클라이언트가 보낸 messages 중 role:'system'은
+// 전부 무시한다 — 클라이언트 코드가 실수(또는 고의)로 공통 규칙을
+// 빠뜨리거나 조작할 수 있는 여지를 구조적으로 없앤다.
+// ═══════════════════════════════════════════════════════════
+const K_PUBLIC_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/K-Public_common_v1_0.md';
+let _kPublicCommonCache = null;
+let _kPublicCommonCacheAt = 0;
+const _K_PUBLIC_COMMON_TTL_MS = 10 * 60 * 1000; // 10분 — 문서 갱신 반영 최대 지연
+
+async function _fetchKPublicCommon() {
+  const now = Date.now();
+  if (_kPublicCommonCache && (now - _kPublicCommonCacheAt) < _K_PUBLIC_COMMON_TTL_MS) return _kPublicCommonCache;
+  try {
+    const res = await fetch(K_PUBLIC_COMMON_URL, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    _kPublicCommonCache = await res.text();
+    _kPublicCommonCacheAt = now;
+  } catch (e) {
+    console.warn('[GovRelay] K-Public 공통 규칙 로드 실패:', e.message);
+    if (!_kPublicCommonCache) _kPublicCommonCache = ''; // 완전 실패해도 서비스 자체는 지속(경고만)
+  }
+  return _kPublicCommonCache;
+}
+
+// agency 식별자 허용 목록 — K-Law는 다음 개정 때 이 경로로 통합 예정(현재는 /klaw/relay 유지)
+const GOV_AGENCIES = new Set([
+  'k-public', 'k-province', 'k-city', 'k-county', 'k-tax', 'k-health',
+  'police', '911', 'democracy', 'k-insurance',
+]);
+
+const GOV_TIER_MODELS = {
+  'gov-flash': { backendModel: 'deepseek-chat',     price: { cacheHit: 0.0028, cacheMiss: 0.14,  output: 0.28 } },
+  'gov-pro':   { backendModel: 'deepseek-reasoner', price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 } },
+};
+const GOV_USER_DAILY_KRW_LIMIT   = 300;
+const GOV_GLOBAL_DAILY_KRW_LIMIT = 30000;
+
+async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = null) {
+  let body;
+  try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
+
+  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier } = body || {};
+  if (!guid || !agency || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/agency/messages 필수', corsHeaders);
+  if (!GOV_AGENCIES.has(agency)) return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 기관: ${agency}`, corsHeaders);
+
+  // 클라이언트가 보낸 messages 중 system 역할은 전부 제거 — 서버가 직접 조립한
+  // system(K-Public 공통 + agencyPrompt)만 유효하다.
+  const dialogOnly = (messages || []).filter(m => m.role !== 'system');
+
+  const tierKey = GOV_TIER_MODELS[tier] ? tier : 'gov-flash';
+  const backendModel = GOV_TIER_MODELS[tierKey].backendModel;
+
+  const day       = _todayKey();
+  const userKey   = `gov:${agency}:spend:${guid}:${day}`;
+  const globalKey = `gov:${agency}:spend:global:${day}`;
+
+  const [userSpent, globalSpent] = await Promise.all([
+    _klawSpendGet(env, userKey), _klawSpendGet(env, globalKey)
+  ]);
+  if (globalSpent >= GOV_GLOBAL_DAILY_KRW_LIMIT) {
+    return _err(429, 'GOV_GLOBAL_QUOTA_EXCEEDED', `오늘 ${agency} 전체 이용자의 사용량이 한도에 도달했습니다. 내일 다시 이용해 주세요.`, corsHeaders);
+  }
+  if (userSpent >= GOV_USER_DAILY_KRW_LIMIT) {
+    return _err(429, 'GOV_USER_QUOTA_EXCEEDED', '오늘 사용 가능한 한도를 모두 사용했습니다. 내일 다시 이용해 주세요.', corsHeaders);
+  }
+
+  const kPublicCommon = await _fetchKPublicCommon();
+  const systemContent = kPublicCommon
+    ? `${kPublicCommon}\n\n---\n\n${agencyPrompt || ''}`
+    : (agencyPrompt || ''); // 공통 규칙 로드 실패해도 기관 고유 규칙만으로 서비스 지속
+
+  const isStream = !!stream;
+  const payload = { model: backendModel, messages: [{ role: 'system', content: systemContent }, ...dialogOnly], stream: isStream };
+  if (max_tokens != null) payload.max_tokens = max_tokens;
+
+  console.log(JSON.stringify({ tag: 'GOV_RELAY_CALL', guid, agency, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
+
+  let res;
+  try {
+    res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) { return _err(502, 'GOV_RELAY_ERROR', e.message, corsHeaders); }
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    return new Response(errText || JSON.stringify({ error:`HTTP ${res.status}` }), { status: res.status, headers: corsHeaders });
+  }
+
+  const priceTier = tierKey === 'gov-pro' ? 'hondi-pro' : 'hondi-flash'; // computeBilledKRW는 hondi-* 가격표를 조회
+
+  if (isStream) {
+    const [forClient, forUsage] = res.body.tee();
+    const usageTask = _parseUsageFromStream(forUsage).then(async usage => {
+      const bill = computeBilledKRW(env, usage, priceTier);
+      console.log(JSON.stringify({ tag:'GOV_RELAY_COST', guid, agency, tier: tierKey, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier, ts: new Date().toISOString(), ...meta }));
+      await Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW)]);
+    });
+    if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
+    return new Response(forClient, { status:200, headers:{ ...corsHeaders, 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache', 'X-Accel-Buffering':'no' } });
+  }
+
+  const data = await res.json();
+  if (data?.usage) {
+    const bill = computeBilledKRW(env, data.usage, priceTier);
+    console.log(JSON.stringify({ tag:'GOV_RELAY_COST', guid, agency, tier: tierKey, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier, ts: new Date().toISOString(), ...meta }));
+    const recordTask = Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW)]);
+    if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
+  }
+  return new Response(JSON.stringify(data), { headers: corsHeaders });
+}
+
 // Phase 1 — OpenHash 앵커링 프록시 (/openhash/anchor)
 // buildout_plan_v2 Phase 1: _submitToLayer 교체
 //
