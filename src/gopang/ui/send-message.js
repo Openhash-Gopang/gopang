@@ -67,6 +67,13 @@ export async function sendMessage() {
   updateSendBtn();
   removeAttach();
 
+  // BUG-FIX(2026-07-02): blur() 호출이 없어서 전송 후에도 입력창에 포커스가
+  // 그대로 남아있었다 — 모바일에서 키패드가 계속 확장된 채로 안 내려가던
+  // 원인. PC는 애초에 가상 키패드가 없으니 이 blur()가 있어도 아무 영향
+  // 없다(정상). AI 패널의 #ai-panel-input(readonly + onblur 트릭)과 동일한
+  // 의도 — 여긴 훨씬 단순하게 전송 시점에 명시적으로 포커스만 놓으면 된다.
+  inp.blur();
+
   // ── 대화 상대 분기 ─────────────────────────────────────
   if (text) {
     if (_peer) {
