@@ -226,7 +226,7 @@
 └──────────────────────┬────────────────────────────────────────┘
                        │ HTTPS
 ┌──────────────────────▼────────────────────────────────────────┐
-│              Cloudflare Worker (gopang-proxy)                 │
+│              Cloudflare Worker (hondi-proxy)                  │
 │  /register-consumer   /register      /qr/:handle             │
 │  /biz/profile/:handle /biz/order     /review                 │
 │  /ai-chat             /interpret     /ai-setup                │
@@ -251,7 +251,7 @@
 <table>
 <tr><th>구성요소</th><th>기술</th><th>비고</th></tr>
 <tr><td>Frontend</td><td>GitHub Pages</td><td>users.hondi.net</td></tr>
-<tr><td>Proxy</td><td>Cloudflare Worker v4.9+</td><td>gopang-proxy</td></tr>
+<tr><td>Proxy</td><td>Cloudflare Worker v4.9+</td><td>hondi-proxy</td></tr>
 <tr><td>DB</td><td>Supabase (PostgreSQL)</td><td>ebbecjfrwaswbdybbgiu</td></tr>
 <tr><td>L1 Node</td><td>PocketBase 0.22.14</td><td>한림읍 노드</td></tr>
 <tr><td>서명</td><td>ED25519</td><td>브라우저 내 keypair</td></tr>

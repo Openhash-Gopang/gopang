@@ -997,7 +997,7 @@ payload.signature = btoa(String.fromCharCode(...new Uint8Array(sigBuf)))
 <p><strong>오류 2 — Cloudflare Worker 자동 배포 미지원</strong></p>
 <p>GitHub에 <code>worker.js</code>를 push해도 Cloudflare Worker에 자동 배포되지 않습니다. GitHub Actions CI/CD를 별도로 구성하거나 <code>wrangler deploy</code> 명령어로 수동 배포해야 합니다.</p>
 <pre><code class="language-powershell"># Cloudflare Worker 수동 배포
-npx wrangler deploy worker.js --name gopang-proxy
+npx wrangler deploy worker.js --name hondi-proxy
 </code></pre>
 <p><strong>오류 3 — gopang-app.js _boot() 중단으로 인한 연쇄 오류</strong></p>
 <p><code>webapp.html</code>에 <code>status-text</code>, <code>status-dot</code> 요소가 없는 상태에서 <code>_boot()</code> catch 블록이 해당 요소에 접근하면 <code>TypeError</code>가 발생해 <code>_boot()</code>가 완전히 중단됩니다. 이로 인해 이후에 실행될 <code>window.closeAISettings</code>, <code>window.openSettings</code>, <code>window.openMyProfile</code> 등 모든 전역 함수 노출이 누락됩니다.</p>
@@ -1569,7 +1569,7 @@ K-Law 성능
 </tr>
 <tr>
 <td>프록시</td>
-<td>Cloudflare Worker (gopang-proxy v4.3)</td>
+<td>Cloudflare Worker (hondi-proxy v4.3)</td>
 </tr>
 <tr>
 <td>데이터베이스</td>

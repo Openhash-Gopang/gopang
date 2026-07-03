@@ -17,7 +17,7 @@ import worker from '../../../worker.js';
 
 const L1_BASE      = 'https://l1-hanlim.hondi.net';
 const ADMIN_TOKEN   = 'fake-admin-token';
-const ORIGIN        = 'https://gopang-proxy.tensor-city.workers.dev';
+const ORIGIN        = 'https://hondi-proxy.tensor-city.workers.dev';
 
 // ── 헬퍼 ──────────────────────────────────────────────────────
 function b64uEncodeBytes(bytes) {

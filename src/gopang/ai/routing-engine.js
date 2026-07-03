@@ -25,7 +25,7 @@ import { _callLLM }                     from './call-ai.js';   // 내부 LLM 호
 // LLM이 웹검색 기능을 내장하지 않을 경우 이 함수로 대체
 export async function _webSearch(query) {
   // 1순위: 등록된 LLM의 내장 웹검색 (Grok, GPT-4o w/ search 등)
-  // 2순위: SerpAPI / Brave Search / Tavily API (gopang-proxy 경유)
+  // 2순위: SerpAPI / Brave Search / Tavily API (hondi-proxy 경유)
   // 3순위: 폴백 — DuckDuckGo instant answer (무료, 제한적)
   try {
     const res = await fetch(

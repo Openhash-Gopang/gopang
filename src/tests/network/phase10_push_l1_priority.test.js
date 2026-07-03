@@ -6,7 +6,7 @@ import worker from '../../../worker.js';
 
 const L1_BASE = 'https://l1-hanlim.hondi.net';
 const SB_BASE = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
-const ORIGIN  = 'https://gopang-proxy.tensor-city.workers.dev';
+const ORIGIN  = 'https://hondi-proxy.tensor-city.workers.dev';
 
 function b64uEncodeBytes(bytes) {
   return Buffer.from(bytes).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
