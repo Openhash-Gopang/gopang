@@ -30,6 +30,7 @@ const ALLOWED_ORIGINS = [
   'https://logistics.hondi.net',
   'https://users.hondi.net',
   'https://l1-hanlim.hondi.net',
+  'https://jeju.hondi.net',
   'https://fiil.kr',
   'https://openhash.kr',
   'https://nounweb.github.io',
