@@ -1922,7 +1922,7 @@ async function _fetchKPublicCommon() {
 // agency 식별자 허용 목록 — K-Law는 다음 개정 때 이 경로로 통합 예정(현재는 /klaw/relay 유지)
 const GOV_AGENCIES = new Set([
   'k-public', 'k-province', 'k-city', 'k-county', 'k-tax', 'k-health',
-  'police', '911', 'democracy', 'k-insurance',
+  'police', '911', 'democracy', 'k-insurance', 'k-traffic', 'k-logistics',
 ]);
 
 const GOV_TIER_MODELS = {
