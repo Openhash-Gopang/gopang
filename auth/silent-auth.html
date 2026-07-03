@@ -240,7 +240,7 @@ const SERVICE   = params.get('svc')    || '*';
 const ORIGIN    = params.get('origin') || '*';
 const RETURN    = params.get('return') || null;
 const IS_SILENT = (window.parent !== window);   // iframe 여부
-const WORKER    = 'https://gopang-proxy.tensor-city.workers.dev';
+const WORKER    = 'https://hondi-proxy.tensor-city.workers.dev';
 
 window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('svc-label').textContent = SERVICE;
