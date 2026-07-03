@@ -1352,7 +1352,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     // 그림자 AI(AGENT-COMMON) 응답에서만 인식한다 — 페르소나 본인이 발급한
     // 텍스트가 우연히 같은 패턴을 포함해도 재귀적으로 세션을 바꾸지 않도록.
     if (!isExpertActive() && CFG.system?.includes('§0. 정체성')) {
-      handleExpertTag(fullReply).catch(e =>
+      handleExpertTag(fullReply, userText, _preTab).catch(e =>
         console.warn('[Expert] 태그 처리 오류 (무시):', e.message)
       );
     }

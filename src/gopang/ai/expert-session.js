@@ -19,8 +19,10 @@ import { history, _USER } from '../core/state.js';
 import { appendBubble } from '../ui/bubble.js';
 import { _recordPDV } from '../pdv/record.js';
 import { summarizeTranscript6W } from './report-utils.js';
-import { EXPERT_REGISTRY, COMMON_GUARDRAILS_URL, COMMON_MEDICAL_SAFETY_URL }
+import { EXPERT_REGISTRY, COMMON_GUARDRAILS_URL, COMMON_MEDICAL_SAFETY_URL,
+         getExpertGwpDef, resolveExpertId }
   from './expert-registry.js';
+import { _gwpLaunch } from '../gwp/engine.js';
 
 const EXPERT_TIMEOUT_MS = 10 * 60 * 1000; // 10분 무응답 → 자동 종료
 const TERMINATION_RE = /끝났|그만|종료|돌아가|그림자\s*AI(로|에게)?\s*(돌아|연결)/;
@@ -89,27 +91,40 @@ function _clearTimeoutTimer() {
   if (_expert.timer) { clearTimeout(_expert.timer); _expert.timer = null; }
 }
 
-// ── [EXPERT:personaId] 태그 감지 → 세션 시작 ─────────────────
+// ── [EXPERT:personaId] 태그 감지 → 새 탭에서 전문가 페르소나 시작 ──
 // call-ai.js의 GWP 태그 파서 옆에서 같이 호출한다.
-export async function handleExpertTag(fullReply) {
+//
+// BUG-FIX(2026-07-03): 기존에는 같은 스레드 안에서 System Prompt만 교체하는
+// startExpertSession()을 호출했다(아래에 정의는 남겨뒀지만 이 경로에서는
+// 더 이상 호출하지 않는다 — 참고용/향후 필요시 재사용 대비). 이제 GWP
+// 기관 서비스와 동일하게 새 탭으로 연다: pages/expert-chat.html이 persona
+// 쿼리 파라미터로 SP를 갈아끼워 서빙하고, _gwpLaunch()가 ctx(사용자 발화
+// 원문)를 그대로 전달한다 — GWP와 완전히 동일한 핸드오프 규약을 쓴다.
+export async function handleExpertTag(fullReply, userText, _preTab) {
   // BUG-FIX(2026-07-02): AGENT-COMMON 프롬프트가 "[EXPERT: SP-LAW-01]"처럼
   // 콜론 뒤 공백을 넣는 형식으로 지시하는데(316/368/893~896행), 이 정규식은
   // 공백을 허용하지 않아 실제 출력과 어긋나 있었다 — GWP와 동일한 원인,
   // 동일한 수정(\s* 추가).
-  //
-  // ※ 별개 미구현 사항: 프롬프트 896행은 "[EXPERT: @handle]"로 특정 인물을
-  // handle로 직접 지목하는 사용법도 예시로 들고 있으나, EXPERT_REGISTRY는
-  // lawyer/nurse 같은 정적 직업군 키만 갖고 있고 @handle 조회 로직 자체가
-  // 없다 — 이건 정규식 문제가 아니라 아직 만들어지지 않은 기능이다.
-  const m = fullReply?.match(/\[EXPERT:\s*([\w-]+)\]/);
+  const m = fullReply?.match(/\[EXPERT:\s*([@\w-]+)\]/);
   if (!m) return false;
-  const personaId = m[1];
-  const def = EXPERT_REGISTRY[personaId];
-  if (!def) {
-    console.warn('[Expert] 알 수 없는 전문가 ID:', personaId);
+  const raw = m[1];
+
+  // @handle 직접 지목은 아직 미구현(별도 기능) — 조용히 무시하고 진행하지 않는다.
+  if (raw.startsWith('@')) {
+    console.warn('[Expert] @handle 직접 연결은 아직 미구현:', raw);
     return false;
   }
-  await startExpertSession(personaId, def);
+
+  const personaId = resolveExpertId(raw);
+  if (!personaId) {
+    console.warn('[Expert] 알 수 없는 전문가 ID:', raw);
+    return false;
+  }
+  const gwpDef = getExpertGwpDef(personaId);
+  if (!gwpDef) return false;
+
+  console.info('[Expert] LLM 판단 → 새 탭:', personaId);
+  _gwpLaunch(gwpDef, userText, _preTab);
   return true;
 }
 

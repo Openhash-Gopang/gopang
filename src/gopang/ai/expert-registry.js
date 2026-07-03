@@ -131,3 +131,48 @@ export const EXPERT_REGISTRY = {
 export function getExpertDef(personaId) {
   return EXPERT_REGISTRY[personaId] || null;
 }
+
+// BUG-FIX(2026-07-03): GWP_REGISTRY와 동일한 문제 — AGENT-COMMON SP는
+// [EXPERT: SP-LAW-01] 같은 형식을 예시로 가르쳤지만 실제 키는 'lawyer'
+// 같은 kebab-case 직업군 슬러그다. SP는 이제 정답 표를 갖도록 고쳤지만
+// (아래 §9), 모델이 그래도 실수로 흔한 오표기를 낼 가능성에 대비해
+// 별칭 해석 안전망을 둔다.
+const EXPERT_ID_ALIAS = {
+  'SP-LAW-01': 'lawyer',
+  lawyer_ai: 'lawyer', attorney: 'lawyer',
+  vet: 'veterinarian',
+  pt: 'physical-therapist',
+  physicaltherapist: 'physical-therapist',
+  nutritionist: 'dietitian',
+  psychologist: 'clinical-psychologist',
+  counselor: 'school-counselor',
+};
+
+export function resolveExpertId(personaId) {
+  if (!personaId) return null;
+  if (EXPERT_REGISTRY[personaId]) return personaId;
+  return EXPERT_ID_ALIAS[personaId] || null;
+}
+
+// ── 2026-07-03: 전문가 페르소나도 GWP 서비스처럼 "별도 새 탭"으로 연다 ──
+// 이전에는 별도 서비스가 없다는 이유로 "같은 스레드 안에서 System Prompt만
+// 교체"하는 방식(expert-session.js의 startExpertSession)을 썼다. 문제는:
+// (1) 사용자가 그림자 AI와 나누던 대화 스레드 자체가 전문가 페르소나로
+// 바뀌어버려서, 세션이 끝나고 그림자 AI로 복원되기 전까지는 사용자가 지금
+// 누구와 대화 중인지 UI상 구분이 흐릿했다. (2) GWP 기관 서비스와 호출
+// 경험이 이원화되어 있었다(하나는 새 탭, 하나는 같은 창) — 사용자 입장에서
+// 일관성이 없다. 이제 모든 전문가 페르소나를 하나의 공용 페이지
+// (pages/expert-chat.html)에서 persona 쿼리 파라미터로 SP만 갈아끼워
+// 서빙하고, GWP와 동일하게 _gwpLaunch()로 새 탭을 연다.
+const EXPERT_CHAT_BASE_URL = 'https://hondi.net/pages/expert-chat.html';
+
+export function getExpertGwpDef(personaId) {
+  const def = EXPERT_REGISTRY[personaId];
+  if (!def) return null;
+  return {
+    id:   personaId,
+    name: def.label,
+    icon: def.icon,
+    url:  `${EXPERT_CHAT_BASE_URL}?persona=${encodeURIComponent(personaId)}`,
+  };
+}

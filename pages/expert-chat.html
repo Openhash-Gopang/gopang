@@ -1,0 +1,359 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<title>전문가 AI 상담</title>
+<meta name="description" content="자격직 전문가 AI 페르소나와의 1:1 상담 — GWP 방식 새 탭.">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --gov:#1F2937; --pri:#2563EB; --pri-bg:#EFF6FF; --sur:#FFFFFF; --bg:#F4F6FB;
+  --bdr:#E2E8F0; --txt:#1A202C; --sub:#4A5568; --hint:#94A3B8;
+  --font:'Pretendard',-apple-system,'Apple SD Gothic Neo',sans-serif;
+  --r:12px; --sh:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.05);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  position:fixed;inset:0;margin:0;padding:0;font-family:var(--font);font-size:15px;color:var(--txt);
+  background:var(--bg);display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased;
+}
+#top-bar{
+  flex-shrink:0;display:flex;align-items:center;gap:10px;
+  padding:12px 14px;padding-top:calc(12px + env(safe-area-inset-top));
+  background:var(--gov);color:#fff;box-shadow:var(--sh);z-index:5;
+}
+#tb-icon{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+#tb-title{font-weight:800;font-size:15px;line-height:1.2}
+#tb-sub{font-size:11px;opacity:.7;font-weight:400}
+#tb-back{margin-left:auto;flex-shrink:0;background:rgba(255,255,255,.14);border:none;color:#fff;
+  border-radius:8px;padding:7px 12px;font-size:12.5px;cursor:pointer;font-family:var(--font)}
+#tb-back:active{background:rgba(255,255,255,.24)}
+
+#chat-thread{flex:1;overflow-y:auto;padding:16px 14px 90px;display:flex;flex-direction:column;gap:10px}
+.bubble{max-width:86%;padding:11px 14px;border-radius:var(--r);line-height:1.55;font-size:14.5px;white-space:normal}
+.bubble-ai{align-self:flex-start;background:var(--sur);border:1px solid var(--bdr);box-shadow:var(--sh)}
+.bubble-user{align-self:flex-end;background:var(--pri);color:#fff}
+.bubble-user i{opacity:.75;font-style:normal;font-size:12px;display:block;margin-bottom:2px}
+.bubble-typing{align-self:flex-start;display:flex;align-items:center;gap:8px;padding:9px 14px;
+  background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);font-size:13px;color:var(--sub)}
+.spinner{width:14px;height:14px;border:2px solid rgba(37,99,235,.2);border-top-color:var(--pri);
+  border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#input-bar{
+  position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;padding:10px 12px;
+  padding-bottom:calc(10px + env(safe-area-inset-bottom));
+  background:var(--sur);border-top:1px solid var(--bdr);
+}
+#chat-input{
+  flex:1;resize:none;border:1px solid var(--bdr);border-radius:20px;padding:10px 16px;
+  font-family:var(--font);font-size:14.5px;max-height:120px;line-height:1.4;
+}
+#chat-input:focus{outline:none;border-color:var(--pri)}
+#send-btn{
+  flex-shrink:0;width:42px;height:42px;border-radius:50%;border:none;background:var(--pri);color:#fff;
+  font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+#send-btn:disabled{opacity:.4;cursor:default}
+
+#err-banner{display:none;padding:8px 14px;background:#FEE2E2;color:#991B1B;font-size:12.5px;text-align:center}
+</style>
+</head>
+<body>
+
+<div id="top-bar">
+  <div id="tb-icon">🤝</div>
+  <div>
+    <div id="tb-title">전문가 AI</div>
+    <div id="tb-sub">로딩 중…</div>
+  </div>
+  <button id="tb-back">고팡으로</button>
+</div>
+
+<div id="err-banner"></div>
+<div id="chat-thread"></div>
+
+<div id="input-bar">
+  <textarea id="chat-input" rows="1" placeholder="메시지를 입력하세요…"></textarea>
+  <button id="send-btn">➤</button>
+</div>
+
+<script type="module">
+import { EXPERT_REGISTRY, COMMON_GUARDRAILS_URL, COMMON_MEDICAL_SAFETY_URL, resolveExpertId }
+  from '/src/gopang/ai/expert-registry.js';
+
+// ══════════════════════════════════════════════════════════════
+// GWP 파라미터 파싱 — klaw 등 기관 서비스와 완전히 동일한 규약
+// ══════════════════════════════════════════════════════════════
+const _qs       = new URLSearchParams(location.search);
+const PERSONA   = resolveExpertId(_qs.get('persona') || '');
+const GWP_TOKEN = _qs.get('token')  || '';
+const RETURN    = _qs.get('return') || 'https://hondi.net';
+let   GWP_CTX   = '';
+if (_qs.get('ctx')) {
+  try {
+    GWP_CTX = (_qs.get('ctx_enc') === 'b64')
+      ? decodeURIComponent(escape(atob(_qs.get('ctx'))))
+      : decodeURIComponent(_qs.get('ctx'));
+  } catch (e) { GWP_CTX = ''; }
+}
+let _gwpSeedUsed = false;
+
+document.getElementById('tb-back').onclick = () => { location.href = RETURN; };
+
+const def = EXPERT_REGISTRY[PERSONA];
+if (!def) {
+  document.getElementById('tb-sub').textContent = '알 수 없는 전문가입니다';
+  const banner = document.getElementById('err-banner');
+  banner.style.display = 'block';
+  banner.textContent = `전문가 페르소나를 찾을 수 없습니다 (persona=${_qs.get('persona') || '(없음)'}). 고팡으로 돌아가 다시 시도해 주세요.`;
+  throw new Error('unknown persona: ' + _qs.get('persona'));
+}
+document.getElementById('tb-icon').textContent  = def.icon || '🤝';
+document.getElementById('tb-title').textContent = def.label + ' AI';
+document.getElementById('tb-sub').textContent   = '자격직 전문가 페르소나 · 최종 법적/의료적 행위는 인간 전속';
+document.title = def.label + ' AI 상담';
+
+// ══════════════════════════════════════════════════════════════
+// 채팅 UI 헬퍼
+// ══════════════════════════════════════════════════════════════
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function appendBubble(role, html) {
+  const thread = document.getElementById('chat-thread');
+  const div = document.createElement('div');
+  div.className = 'bubble ' + (role === 'ai' ? 'bubble-ai' : 'bubble-user');
+  div.innerHTML = html;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+  return div;
+}
+function appendTyping() {
+  const thread = document.getElementById('chat-thread');
+  const div = document.createElement('div');
+  div.className = 'bubble-typing';
+  div.innerHTML = `<div class="spinner"></div><span>${escHtml(def.label)} AI가 답변을 준비하고 있습니다…</span>`;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+  return div;
+}
+
+// ══════════════════════════════════════════════════════════════
+// 시스템 프롬프트 합성 — 공통 가드레일 + (의료시) 안전모듈 + 페르소나
+// ══════════════════════════════════════════════════════════════
+async function composeExpertPrompt() {
+  const parts = [];
+  try {
+    const r = await fetch(COMMON_GUARDRAILS_URL);
+    if (r.ok) parts.push(await r.text());
+  } catch (e) { console.warn('[Expert] 공통 가드레일 로드 실패:', e.message); }
+
+  if (def.needsMedicalSafety) {
+    try {
+      const r = await fetch(COMMON_MEDICAL_SAFETY_URL);
+      if (r.ok) parts.push(await r.text());
+    } catch (e) { console.warn('[Expert] 의료 안전모듈 로드 실패:', e.message); }
+  }
+
+  try {
+    const r = await fetch(def.file);
+    parts.push(r.ok ? await r.text() : `[${def.label} SP 로드 실패 — 일반 전문가 모드로 응답]`);
+  } catch (e) {
+    parts.push(`[${def.label} SP 로드 실패 — 일반 전문가 모드로 응답]`);
+  }
+  return parts.join('\n\n---\n\n');
+}
+
+// ══════════════════════════════════════════════════════════════
+// AI 호출 — call-ai.js의 후보 폴백 로직을 그대로 이식(legacy → BYOK relay
+// → 혼디 무료 기본 키). 같은 오리진(hondi.net)이라 localStorage를 그대로
+// 공유해서 읽을 수 있다.
+// ══════════════════════════════════════════════════════════════
+const RELAY_ENDPOINT = 'https://hondi-proxy.tensor-city.workers.dev';
+function _loadCfg() {
+  try { return JSON.parse(localStorage.getItem('gopang_cfg') || '{}'); } catch { return {}; }
+}
+function _loadUser() {
+  try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { return null; }
+}
+function _buildCandidates() {
+  const cfg = _loadCfg();
+  const candidates = [];
+  if (Array.isArray(cfg.providers)) {
+    for (const p of cfg.providers) {
+      if (!p?.apiKey || !p?.model || !p?.baseUrl) continue;
+      candidates.push({ provider: p.provider, baseUrl: p.baseUrl.replace(/\/+$/,''), model: p.model, apiKey: p.apiKey });
+    }
+  }
+  if (!candidates.length && cfg.apiKey && cfg.endpoint && !cfg.endpoint.includes('workers.dev')) {
+    candidates.push({ provider: 'legacy', baseUrl: cfg.endpoint.replace(/\/+$/,''), model: cfg.model || 'gpt-4o-mini', apiKey: cfg.apiKey });
+  }
+  // 최종 안전망 — 혼디 제공 무료 기본 키
+  candidates.push({ provider: 'deepseek-default', baseUrl: RELAY_ENDPOINT, model: 'hondi-flash', apiKey: null });
+  return candidates;
+}
+
+async function _pumpSSE(response, onJson) {
+  if (!response.ok) {
+    let msg = `HTTP ${response.status}`;
+    try { const b = await response.json(); msg = b.message || b.error?.message || b.error || msg; } catch (e) {}
+    throw new Error(msg);
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buf = '';
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t.startsWith('data:')) continue;
+      const payload = t.slice(5).trim();
+      if (payload === '[DONE]') continue;
+      let json;
+      try { json = JSON.parse(payload); } catch (e) { continue; }
+      onJson(json);
+    }
+  }
+}
+
+async function callExpertAI(messages, onChunk) {
+  const candidates = _buildCandidates();
+  const user = _loadUser();
+  let lastErr = null;
+  for (const c of candidates) {
+    try {
+      const reqBody = { model: c.model, messages, max_tokens: 1200, temperature: 0.4, stream: true };
+      const resp = c.provider === 'legacy'
+        ? await fetch(`${c.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.apiKey}` },
+            body: JSON.stringify(reqBody),
+          })
+        : c.provider === 'deepseek-default'
+        ? await fetch(`${c.baseUrl}/deepseek`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...reqBody, guid: user?.ipv6 || null }),
+          })
+        : await fetch(`${RELAY_ENDPOINT}/llm/relay`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: c.provider, baseUrl: c.baseUrl, apiKey: c.apiKey, ...reqBody }),
+          });
+
+      let fullText = '';
+      await _pumpSSE(resp, (json) => {
+        const delta = json.choices?.[0]?.delta?.content || '';
+        if (delta) { fullText += delta; onChunk && onChunk(delta, fullText); }
+      });
+      return fullText;
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[Expert] ${c.provider} 실패 — 다음 후보로 전환:`, e.message);
+      continue;
+    }
+  }
+  throw lastErr || new Error('모든 호출 후보 실패');
+}
+
+// ══════════════════════════════════════════════════════════════
+// 대화 상태 및 흐름
+// ══════════════════════════════════════════════════════════════
+let messages = [];
+let systemPrompt = null;
+const TERMINATION_RE = /끝났|그만|종료|돌아가|그림자\s*AI(로|에게)?\s*(돌아|연결)/;
+
+async function ensureSystemPrompt() {
+  if (systemPrompt) return systemPrompt;
+  systemPrompt = await composeExpertPrompt();
+  messages = [{ role: 'system', content: systemPrompt }];
+  return systemPrompt;
+}
+
+async function sendTurn(text) {
+  await ensureSystemPrompt();
+  messages.push({ role: 'user', content: text });
+  const typing = appendTyping();
+  const aiBubble = appendBubble('ai', '');
+  aiBubble.style.display = 'none';
+  try {
+    let shown = false;
+    const full = await callExpertAI(messages, (delta, fullText) => {
+      if (!shown) { typing.remove(); aiBubble.style.display = ''; shown = true; }
+      aiBubble.innerHTML = escHtml(fullText).replace(/\n/g, '<br>');
+      document.getElementById('chat-thread').scrollTop = 1e9;
+    });
+    messages.push({ role: 'assistant', content: full });
+    if (TERMINATION_RE.test(text)) {
+      appendBubble('ai', `상담을 종료합니다. 고팡 화면으로 돌아갑니다…`);
+      setTimeout(() => { location.href = RETURN; }, 1200);
+    }
+  } catch (e) {
+    typing.remove();
+    aiBubble.remove();
+    appendBubble('ai', `⚠️ 응답 중 오류가 발생했습니다: ${escHtml(e.message)}. 잠시 후 다시 시도해 주세요.`);
+  }
+}
+
+function startGreeting() {
+  // GWP_CTX(그림자 AI로부터 전달된, 사용자가 방금 한 발화 원문)가 있으면
+  // 정적 인사·재질문 없이 그 발화를 곧바로 첫 턴으로 사용한다 — klaw 등
+  // 기관 서비스와 완전히 동일한 원칙.
+  if (GWP_CTX && !_gwpSeedUsed) {
+    _gwpSeedUsed = true;
+    appendBubble('user', `<i>(AI 비서로부터 전달됨)</i><br>${escHtml(GWP_CTX).replace(/\n/g,'<br>')}`);
+    sendTurn(GWP_CTX);
+    return;
+  }
+  appendBubble('ai', `안녕하세요. 저는 ${escHtml(def.label)} AI입니다. 무엇을 도와드릴까요?`);
+}
+
+// ══════════════════════════════════════════════════════════════
+// 입력 바
+// ══════════════════════════════════════════════════════════════
+const input   = document.getElementById('chat-input');
+const sendBtn = document.getElementById('send-btn');
+function updateSendBtn() { sendBtn.disabled = !input.value.trim(); }
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  updateSendBtn();
+});
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
+});
+sendBtn.addEventListener('click', doSend);
+function doSend() {
+  const text = input.value.trim();
+  if (!text) return;
+  appendBubble('user', escHtml(text).replace(/\n/g,'<br>'));
+  input.value = ''; input.style.height = 'auto'; updateSendBtn();
+  sendTurn(text);
+}
+updateSendBtn();
+
+// 10분 무응답 자동 종료(전문가 세션 관례와 동일)
+let _idleTimer = null;
+function _resetIdle() {
+  if (_idleTimer) clearTimeout(_idleTimer);
+  _idleTimer = setTimeout(() => {
+    appendBubble('ai', '10분간 응답이 없어 상담을 종료합니다. 고팡 화면으로 돌아갑니다…');
+    setTimeout(() => { location.href = RETURN; }, 1500);
+  }, 10 * 60 * 1000);
+}
+document.addEventListener('click', _resetIdle);
+document.addEventListener('keydown', _resetIdle);
+_resetIdle();
+
+startGreeting();
+</script>
+</body>
+</html>
