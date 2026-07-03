@@ -1,0 +1,2402 @@
+[
+  {
+    "id": 1,
+    "track": "gov",
+    "sp_file": "Jejudo/00-common/JEJU-GOV-COMMON_v1_5.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "본 파일 자체가 원칙 정의 문서."
+  },
+  {
+    "id": 2,
+    "track": "kservice",
+    "sp_file": "SP-01_klaw_v15.1.txt",
+    "category": "단순정보요청",
+    "verdict": "FAIL",
+    "reason": "별도 /klaw/relay 유지 (K-Public_common 미상속, 다음 개정 때 편입 예정)"
+  },
+  {
+    "id": 3,
+    "track": "persona",
+    "sp_file": "SP_advanced-practice-nurse_v3_1.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 4,
+    "track": "gov",
+    "sp_file": "Jejudo/00-common/JEJU-GOV-COMMON_v1_5.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS",
+    "reason": "본 파일 자체가 원칙 정의 문서."
+  },
+  {
+    "id": 5,
+    "track": "kservice",
+    "sp_file": "SP-01_klaw_v15.1.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "FAIL",
+    "reason": "별도 /klaw/relay 유지 (K-Public_common 미상속, 다음 개정 때 편입 예정)"
+  },
+  {
+    "id": 6,
+    "track": "persona",
+    "sp_file": "SP_advanced-practice-nurse_v3_1.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 7,
+    "track": "gov",
+    "sp_file": "Jejudo/00-common/JEJU-GOV-COMMON_v1_5.md",
+    "category": "권한경계테스트",
+    "verdict": "PASS",
+    "reason": "본 파일 자체가 원칙 정의 문서."
+  },
+  {
+    "id": 8,
+    "track": "kservice",
+    "sp_file": "SP-01_klaw_v15.1.txt",
+    "category": "권한경계테스트",
+    "verdict": "FAIL",
+    "reason": "별도 /klaw/relay 유지 (K-Public_common 미상속, 다음 개정 때 편입 예정)"
+  },
+  {
+    "id": 9,
+    "track": "persona",
+    "sp_file": "SP_advanced-practice-nurse_v3_1.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 10,
+    "track": "gov",
+    "sp_file": "Jejudo/01-do/JEJU-DO-SP_v1.0.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 11,
+    "track": "kservice",
+    "sp_file": "SP-01_klaw_v15.1.txt",
+    "category": "데이터연동공백",
+    "verdict": "FAIL",
+    "reason": "별도 /klaw/relay 유지 (K-Public_common 미상속, 다음 개정 때 편입 예정)"
+  },
+  {
+    "id": 12,
+    "track": "persona",
+    "sp_file": "SP_architect_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 13,
+    "track": "gov",
+    "sp_file": "Jejudo/01-do/JEJU-DO-SP_v1.0.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 14,
+    "track": "kservice",
+    "sp_file": "SP-01_klaw_v15.1.txt",
+    "category": "응급/시급성",
+    "verdict": "FAIL",
+    "reason": "별도 /klaw/relay 유지 (K-Public_common 미상속, 다음 개정 때 편입 예정)"
+  },
+  {
+    "id": 15,
+    "track": "persona",
+    "sp_file": "SP_architect_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 16,
+    "track": "gov",
+    "sp_file": "Jejudo/01-do/JEJU-DO-SP_v1.0.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 17,
+    "track": "kservice",
+    "sp_file": "SP-02_k119_v2.2.txt",
+    "category": "단순정보요청",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='911'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 18,
+    "track": "persona",
+    "sp_file": "SP_architect_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 19,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-AGRI_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 20,
+    "track": "kservice",
+    "sp_file": "SP-02_k119_v2.2.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='911'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 21,
+    "track": "persona",
+    "sp_file": "SP_clinical-psychologist_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 22,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-AGRI_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 23,
+    "track": "kservice",
+    "sp_file": "SP-02_k119_v2.2.txt",
+    "category": "권한경계테스트",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='911'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 24,
+    "track": "persona",
+    "sp_file": "SP_clinical-psychologist_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 25,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-AGRI_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 26,
+    "track": "kservice",
+    "sp_file": "SP-02_k119_v2.2.txt",
+    "category": "데이터연동공백",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='911'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 27,
+    "track": "persona",
+    "sp_file": "SP_clinical-psychologist_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 28,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-CLIMATE_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 29,
+    "track": "kservice",
+    "sp_file": "SP-02_k119_v2.2.txt",
+    "category": "응급/시급성",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='911'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 30,
+    "track": "persona",
+    "sp_file": "SP_curator_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 31,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-CLIMATE_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 32,
+    "track": "kservice",
+    "sp_file": "SP-03_kpolice_v2.1.txt",
+    "category": "단순정보요청",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='police'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 33,
+    "track": "persona",
+    "sp_file": "SP_curator_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 34,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-CLIMATE_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 35,
+    "track": "kservice",
+    "sp_file": "SP-03_kpolice_v2.1.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='police'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 36,
+    "track": "persona",
+    "sp_file": "SP_curator_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 37,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-CULTURE_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 38,
+    "track": "kservice",
+    "sp_file": "SP-03_kpolice_v2.1.txt",
+    "category": "권한경계테스트",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='police'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 39,
+    "track": "persona",
+    "sp_file": "SP_dental-hygienist_v3_1.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 40,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-CULTURE_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 41,
+    "track": "kservice",
+    "sp_file": "SP-03_kpolice_v2.1.txt",
+    "category": "데이터연동공백",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='police'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 42,
+    "track": "persona",
+    "sp_file": "SP_dental-hygienist_v3_1.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 43,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-CULTURE_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 44,
+    "track": "kservice",
+    "sp_file": "SP-03_kpolice_v2.1.txt",
+    "category": "응급/시급성",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='police'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 45,
+    "track": "persona",
+    "sp_file": "SP_dental-hygienist_v3_1.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 46,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-ECON_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 47,
+    "track": "kservice",
+    "sp_file": "SP-04_khealth_v2.1.txt",
+    "category": "단순정보요청",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='health'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 48,
+    "track": "persona",
+    "sp_file": "SP_dental-technician_v3_1.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 49,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-ECON_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 50,
+    "track": "kservice",
+    "sp_file": "SP-04_khealth_v2.1.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='health'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 51,
+    "track": "persona",
+    "sp_file": "SP_dental-technician_v3_1.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 52,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-ECON_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 53,
+    "track": "kservice",
+    "sp_file": "SP-04_khealth_v2.1.txt",
+    "category": "권한경계테스트",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='health'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 54,
+    "track": "persona",
+    "sp_file": "SP_dental-technician_v3_1.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 55,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-HOUSING_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 56,
+    "track": "kservice",
+    "sp_file": "SP-04_khealth_v2.1.txt",
+    "category": "데이터연동공백",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='health'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 57,
+    "track": "persona",
+    "sp_file": "SP_dietitian_v3_1.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 58,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-HOUSING_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 59,
+    "track": "kservice",
+    "sp_file": "SP-04_khealth_v2.1.txt",
+    "category": "응급/시급성",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='health'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 60,
+    "track": "persona",
+    "sp_file": "SP_dietitian_v3_1.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 61,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-HOUSING_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 62,
+    "track": "kservice",
+    "sp_file": "SP-05_kcommerce_v2.2.txt",
+    "category": "단순정보요청",
+    "verdict": "FAIL",
+    "reason": "gwp-registry.js/worker.js에서 이 파일의 로딩 경로를 찾지 못함(범위 밖 또는 미사용 추정)."
+  },
+  {
+    "id": 63,
+    "track": "persona",
+    "sp_file": "SP_dietitian_v3_1.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 64,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-INNOV_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 65,
+    "track": "kservice",
+    "sp_file": "SP-05_kcommerce_v2.2.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "FAIL",
+    "reason": "gwp-registry.js/worker.js에서 이 파일의 로딩 경로를 찾지 못함(범위 밖 또는 미사용 추정)."
+  },
+  {
+    "id": 66,
+    "track": "persona",
+    "sp_file": "SP_fire-safety-manager_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 67,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-INNOV_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 68,
+    "track": "kservice",
+    "sp_file": "SP-05_kcommerce_v2.2.txt",
+    "category": "권한경계테스트",
+    "verdict": "FAIL",
+    "reason": "gwp-registry.js/worker.js에서 이 파일의 로딩 경로를 찾지 못함(범위 밖 또는 미사용 추정)."
+  },
+  {
+    "id": 69,
+    "track": "persona",
+    "sp_file": "SP_fire-safety-manager_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 70,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-INNOV_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 71,
+    "track": "kservice",
+    "sp_file": "SP-05_kcommerce_v2.2.txt",
+    "category": "데이터연동공백",
+    "verdict": "FAIL",
+    "reason": "gwp-registry.js/worker.js에서 이 파일의 로딩 경로를 찾지 못함(범위 밖 또는 미사용 추정)."
+  },
+  {
+    "id": 72,
+    "track": "persona",
+    "sp_file": "SP_fire-safety-manager_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 73,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-JACHI_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 74,
+    "track": "kservice",
+    "sp_file": "SP-05_kcommerce_v2.2.txt",
+    "category": "응급/시급성",
+    "verdict": "FAIL",
+    "reason": "gwp-registry.js/worker.js에서 이 파일의 로딩 경로를 찾지 못함(범위 밖 또는 미사용 추정)."
+  },
+  {
+    "id": 75,
+    "track": "persona",
+    "sp_file": "SP_industrial-safety-consultant_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 76,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-JACHI_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 77,
+    "track": "kservice",
+    "sp_file": "SP-05_kmarket_v2.1.txt",
+    "category": "단순정보요청",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 78,
+    "track": "persona",
+    "sp_file": "SP_industrial-safety-consultant_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 79,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-JACHI_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 80,
+    "track": "kservice",
+    "sp_file": "SP-05_kmarket_v2.1.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 81,
+    "track": "persona",
+    "sp_file": "SP_industrial-safety-consultant_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 82,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-OCEAN_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 83,
+    "track": "kservice",
+    "sp_file": "SP-05_kmarket_v2.1.txt",
+    "category": "권한경계테스트",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 84,
+    "track": "persona",
+    "sp_file": "SP_lawyer_v3_1.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 85,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-OCEAN_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 86,
+    "track": "kservice",
+    "sp_file": "SP-05_kmarket_v2.1.txt",
+    "category": "데이터연동공백",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 87,
+    "track": "persona",
+    "sp_file": "SP_lawyer_v3_1.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 88,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-OCEAN_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 89,
+    "track": "kservice",
+    "sp_file": "SP-05_kmarket_v2.1.txt",
+    "category": "응급/시급성",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 90,
+    "track": "persona",
+    "sp_file": "SP_lawyer_v3_1.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 91,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-PLAN_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 92,
+    "track": "kservice",
+    "sp_file": "SP-06_ktraffic_v2.2.txt",
+    "category": "단순정보요청",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='traffic'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 93,
+    "track": "persona",
+    "sp_file": "SP_librarian_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 94,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-PLAN_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 95,
+    "track": "kservice",
+    "sp_file": "SP-06_ktraffic_v2.2.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='traffic'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 96,
+    "track": "persona",
+    "sp_file": "SP_librarian_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 97,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-PLAN_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 98,
+    "track": "kservice",
+    "sp_file": "SP-06_ktraffic_v2.2.txt",
+    "category": "권한경계테스트",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='traffic'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 99,
+    "track": "persona",
+    "sp_file": "SP_librarian_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 100,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-SAFETY_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 101,
+    "track": "kservice",
+    "sp_file": "SP-06_ktraffic_v2.2.txt",
+    "category": "데이터연동공백",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='traffic'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 102,
+    "track": "persona",
+    "sp_file": "SP_marine-engineer_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 103,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-SAFETY_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 104,
+    "track": "kservice",
+    "sp_file": "SP-06_ktraffic_v2.2.txt",
+    "category": "응급/시급성",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='traffic'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 105,
+    "track": "persona",
+    "sp_file": "SP_marine-engineer_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 106,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-SAFETY_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 107,
+    "track": "kservice",
+    "sp_file": "SP-07_ktax_v2.2.txt",
+    "category": "단순정보요청",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='tax'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 108,
+    "track": "persona",
+    "sp_file": "SP_marine-engineer_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 109,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-TOURISM_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 110,
+    "track": "kservice",
+    "sp_file": "SP-07_ktax_v2.2.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='tax'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 111,
+    "track": "persona",
+    "sp_file": "SP_marine-pilot_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 112,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-TOURISM_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 113,
+    "track": "kservice",
+    "sp_file": "SP-07_ktax_v2.2.txt",
+    "category": "권한경계테스트",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='tax'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 114,
+    "track": "persona",
+    "sp_file": "SP_marine-pilot_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 115,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-TOURISM_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 116,
+    "track": "kservice",
+    "sp_file": "SP-07_ktax_v2.2.txt",
+    "category": "데이터연동공백",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='tax'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 117,
+    "track": "persona",
+    "sp_file": "SP_marine-pilot_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 118,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-TRANSPORT_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 119,
+    "track": "kservice",
+    "sp_file": "SP-07_ktax_v2.2.txt",
+    "category": "응급/시급성",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='tax'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 120,
+    "track": "persona",
+    "sp_file": "SP_medical-lab-technologist_v3_1.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 121,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-TRANSPORT_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 122,
+    "track": "kservice",
+    "sp_file": "SP-08_gdc_v3.1.txt",
+    "category": "단순정보요청",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 123,
+    "track": "persona",
+    "sp_file": "SP_medical-lab-technologist_v3_1.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 124,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-TRANSPORT_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 125,
+    "track": "kservice",
+    "sp_file": "SP-08_gdc_v3.1.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 126,
+    "track": "persona",
+    "sp_file": "SP_medical-lab-technologist_v3_1.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 127,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-WELFARE_v1.2.md",
+    "category": "단순정보요청",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 128,
+    "track": "kservice",
+    "sp_file": "SP-08_gdc_v3.1.txt",
+    "category": "권한경계테스트",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 129,
+    "track": "persona",
+    "sp_file": "SP_mental-health-professional_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 130,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-WELFARE_v1.2.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 131,
+    "track": "kservice",
+    "sp_file": "SP-08_gdc_v3.1.txt",
+    "category": "데이터연동공백",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 132,
+    "track": "persona",
+    "sp_file": "SP_mental-health-professional_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 133,
+    "track": "gov",
+    "sp_file": "Jejudo/02-do-dept/SP-DO-WELFARE_v1.2.md",
+    "category": "권한경계테스트",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 134,
+    "track": "kservice",
+    "sp_file": "SP-08_gdc_v3.1.txt",
+    "category": "응급/시급성",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 135,
+    "track": "persona",
+    "sp_file": "SP_mental-health-professional_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 136,
+    "track": "gov",
+    "sp_file": "Jejudo/04-city/jeju/SP-CITY-JEJU_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 137,
+    "track": "kservice",
+    "sp_file": "SP-09_kschool_v2.2.txt",
+    "category": "단순정보요청",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 138,
+    "track": "persona",
+    "sp_file": "SP_naval-architect_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 139,
+    "track": "gov",
+    "sp_file": "Jejudo/04-city/jeju/SP-CITY-JEJU_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 140,
+    "track": "kservice",
+    "sp_file": "SP-09_kschool_v2.2.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 141,
+    "track": "persona",
+    "sp_file": "SP_naval-architect_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 142,
+    "track": "gov",
+    "sp_file": "Jejudo/04-city/jeju/SP-CITY-JEJU_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 143,
+    "track": "kservice",
+    "sp_file": "SP-09_kschool_v2.2.txt",
+    "category": "권한경계테스트",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 144,
+    "track": "persona",
+    "sp_file": "SP_naval-architect_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 145,
+    "track": "gov",
+    "sp_file": "Jejudo/04-city/seogwipo/SP-CITY-SEOGWIPO_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 146,
+    "track": "kservice",
+    "sp_file": "SP-09_kschool_v2.2.txt",
+    "category": "데이터연동공백",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 147,
+    "track": "persona",
+    "sp_file": "SP_navigation-officer_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 148,
+    "track": "gov",
+    "sp_file": "Jejudo/04-city/seogwipo/SP-CITY-SEOGWIPO_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 149,
+    "track": "kservice",
+    "sp_file": "SP-09_kschool_v2.2.txt",
+    "category": "응급/시급성",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 150,
+    "track": "persona",
+    "sp_file": "SP_navigation-officer_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 151,
+    "track": "gov",
+    "sp_file": "Jejudo/04-city/seogwipo/SP-CITY-SEOGWIPO_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 152,
+    "track": "kservice",
+    "sp_file": "SP-10_kpublic_v2.2.txt",
+    "category": "단순정보요청",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='public'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 153,
+    "track": "persona",
+    "sp_file": "SP_navigation-officer_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 154,
+    "track": "gov",
+    "sp_file": "Jejudo/05-emd/SP-EMD-TEMPLATE_v1.2.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 155,
+    "track": "kservice",
+    "sp_file": "SP-10_kpublic_v2.2.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='public'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 156,
+    "track": "persona",
+    "sp_file": "SP_nurse_v3_1.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 157,
+    "track": "gov",
+    "sp_file": "Jejudo/05-emd/SP-EMD-TEMPLATE_v1.2.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 158,
+    "track": "kservice",
+    "sp_file": "SP-10_kpublic_v2.2.txt",
+    "category": "권한경계테스트",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='public'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 159,
+    "track": "persona",
+    "sp_file": "SP_nurse_v3_1.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 160,
+    "track": "gov",
+    "sp_file": "Jejudo/05-emd/SP-EMD-TEMPLATE_v1.2.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 161,
+    "track": "kservice",
+    "sp_file": "SP-10_kpublic_v2.2.txt",
+    "category": "데이터연동공백",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='public'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 162,
+    "track": "persona",
+    "sp_file": "SP_nurse_v3_1.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 163,
+    "track": "gov",
+    "sp_file": "Jejudo/05-emd/hallim/SP-EMD-HALLIM_v1.0.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 164,
+    "track": "kservice",
+    "sp_file": "SP-10_kpublic_v2.2.txt",
+    "category": "응급/시급성",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='public'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 165,
+    "track": "persona",
+    "sp_file": "SP_occupational-therapist_v3_1.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 166,
+    "track": "gov",
+    "sp_file": "Jejudo/05-emd/hallim/SP-EMD-HALLIM_v1.0.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 167,
+    "track": "kservice",
+    "sp_file": "SP-11_kstock_v2.2.txt",
+    "category": "단순정보요청",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 168,
+    "track": "persona",
+    "sp_file": "SP_occupational-therapist_v3_1.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 169,
+    "track": "gov",
+    "sp_file": "Jejudo/05-emd/hallim/SP-EMD-HALLIM_v1.0.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 170,
+    "track": "kservice",
+    "sp_file": "SP-11_kstock_v2.2.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 171,
+    "track": "persona",
+    "sp_file": "SP_occupational-therapist_v3_1.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 172,
+    "track": "gov",
+    "sp_file": "Jejudo/06-expert/SP-EXP-EMERGENCY_v1.0.md",
+    "category": "단순정보요청",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 173,
+    "track": "kservice",
+    "sp_file": "SP-11_kstock_v2.2.txt",
+    "category": "권한경계테스트",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 174,
+    "track": "persona",
+    "sp_file": "SP_physical-therapist_v3_1.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 175,
+    "track": "gov",
+    "sp_file": "Jejudo/06-expert/SP-EXP-EMERGENCY_v1.0.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 176,
+    "track": "kservice",
+    "sp_file": "SP-11_kstock_v2.2.txt",
+    "category": "데이터연동공백",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 177,
+    "track": "persona",
+    "sp_file": "SP_physical-therapist_v3_1.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 178,
+    "track": "gov",
+    "sp_file": "Jejudo/06-expert/SP-EXP-EMERGENCY_v1.0.md",
+    "category": "권한경계테스트",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 179,
+    "track": "kservice",
+    "sp_file": "SP-11_kstock_v2.2.txt",
+    "category": "응급/시급성",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — 배선 불명"
+  },
+  {
+    "id": 180,
+    "track": "persona",
+    "sp_file": "SP_physical-therapist_v3_1.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 181,
+    "track": "gov",
+    "sp_file": "Jejudo/06-expert/SP-EXP-WATER_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 182,
+    "track": "kservice",
+    "sp_file": "SP-12_kdemocracy_v2.1.txt",
+    "category": "단순정보요청",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='democracy'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 183,
+    "track": "persona",
+    "sp_file": "SP_professional-engineer_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 184,
+    "track": "gov",
+    "sp_file": "Jejudo/06-expert/SP-EXP-WATER_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 185,
+    "track": "kservice",
+    "sp_file": "SP-12_kdemocracy_v2.1.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='democracy'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 186,
+    "track": "persona",
+    "sp_file": "SP_professional-engineer_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 187,
+    "track": "gov",
+    "sp_file": "Jejudo/06-expert/SP-EXP-WATER_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 188,
+    "track": "kservice",
+    "sp_file": "SP-12_kdemocracy_v2.1.txt",
+    "category": "권한경계테스트",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='democracy'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 189,
+    "track": "persona",
+    "sp_file": "SP_professional-engineer_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 190,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/JEJU-NATIONAL-SP_v1.0.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 191,
+    "track": "kservice",
+    "sp_file": "SP-12_kdemocracy_v2.1.txt",
+    "category": "데이터연동공백",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='democracy'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 192,
+    "track": "persona",
+    "sp_file": "SP_radiologic-technologist_v3_1.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 193,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/JEJU-NATIONAL-SP_v1.0.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 194,
+    "track": "kservice",
+    "sp_file": "SP-12_kdemocracy_v2.1.txt",
+    "category": "응급/시급성",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='democracy'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 195,
+    "track": "persona",
+    "sp_file": "SP_radiologic-technologist_v3_1.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 196,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/JEJU-NATIONAL-SP_v1.0.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 197,
+    "track": "kservice",
+    "sp_file": "SP-13_klogistics_v2.1.txt",
+    "category": "단순정보요청",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='logistics'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 198,
+    "track": "persona",
+    "sp_file": "SP_radiologic-technologist_v3_1.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 199,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-AGROQUALITY_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 200,
+    "track": "kservice",
+    "sp_file": "SP-13_klogistics_v2.1.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='logistics'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 201,
+    "track": "persona",
+    "sp_file": "SP_school-counselor_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 202,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-AGROQUALITY_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 203,
+    "track": "kservice",
+    "sp_file": "SP-13_klogistics_v2.1.txt",
+    "category": "권한경계테스트",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='logistics'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 204,
+    "track": "persona",
+    "sp_file": "SP_school-counselor_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 205,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-AGROQUALITY_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 206,
+    "track": "kservice",
+    "sp_file": "SP-13_klogistics_v2.1.txt",
+    "category": "데이터연동공백",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='logistics'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 207,
+    "track": "persona",
+    "sp_file": "SP_school-counselor_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 208,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-AIRPORT_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 209,
+    "track": "kservice",
+    "sp_file": "SP-13_klogistics_v2.1.txt",
+    "category": "응급/시급성",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='logistics'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 210,
+    "track": "persona",
+    "sp_file": "SP_teacher_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 211,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-AIRPORT_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 212,
+    "track": "kservice",
+    "sp_file": "SP-14_kcleaner_v1.4.txt",
+    "category": "단순정보요청",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — fiil.kr 별도 도메인, 배선 불명"
+  },
+  {
+    "id": 213,
+    "track": "persona",
+    "sp_file": "SP_teacher_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 214,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-AIRPORT_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 215,
+    "track": "kservice",
+    "sp_file": "SP-14_kcleaner_v1.4.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — fiil.kr 별도 도메인, 배선 불명"
+  },
+  {
+    "id": 216,
+    "track": "persona",
+    "sp_file": "SP_teacher_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 217,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-ANIMALQUARANTINE_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 218,
+    "track": "kservice",
+    "sp_file": "SP-14_kcleaner_v1.4.txt",
+    "category": "권한경계테스트",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — fiil.kr 별도 도메인, 배선 불명"
+  },
+  {
+    "id": 219,
+    "track": "persona",
+    "sp_file": "SP_veterinarian_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 220,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-ANIMALQUARANTINE_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 221,
+    "track": "kservice",
+    "sp_file": "SP-14_kcleaner_v1.4.txt",
+    "category": "데이터연동공백",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — fiil.kr 별도 도메인, 배선 불명"
+  },
+  {
+    "id": 222,
+    "track": "persona",
+    "sp_file": "SP_veterinarian_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 223,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-ANIMALQUARANTINE_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 224,
+    "track": "kservice",
+    "sp_file": "SP-14_kcleaner_v1.4.txt",
+    "category": "응급/시급성",
+    "verdict": "FAIL",
+    "reason": "GOV_AGENCIES 목록에 없음 — fiil.kr 별도 도메인, 배선 불명"
+  },
+  {
+    "id": 225,
+    "track": "persona",
+    "sp_file": "SP_veterinarian_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 226,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-COASTGUARD_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 227,
+    "track": "kservice",
+    "sp_file": "SP-14_kinsurance_v1.0.txt",
+    "category": "단순정보요청",
+    "verdict": "FAIL",
+    "reason": "gwp-registry.js/worker.js에서 이 파일의 로딩 경로를 찾지 못함(범위 밖 또는 미사용 추정)."
+  },
+  {
+    "id": 228,
+    "track": "persona",
+    "sp_file": "SP_weather-forecaster_v2_3.md",
+    "category": "단순정보요청",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 229,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-COASTGUARD_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 230,
+    "track": "kservice",
+    "sp_file": "SP-14_kinsurance_v1.0.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "FAIL",
+    "reason": "gwp-registry.js/worker.js에서 이 파일의 로딩 경로를 찾지 못함(범위 밖 또는 미사용 추정)."
+  },
+  {
+    "id": 231,
+    "track": "persona",
+    "sp_file": "SP_weather-forecaster_v2_3.md",
+    "category": "권한경계테스트(C23)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 232,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-COASTGUARD_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 233,
+    "track": "kservice",
+    "sp_file": "SP-14_kinsurance_v1.0.txt",
+    "category": "권한경계테스트",
+    "verdict": "FAIL",
+    "reason": "gwp-registry.js/worker.js에서 이 파일의 로딩 경로를 찾지 못함(범위 밖 또는 미사용 추정)."
+  },
+  {
+    "id": 234,
+    "track": "persona",
+    "sp_file": "SP_weather-forecaster_v2_3.md",
+    "category": "복잡수행요구(초안작성)",
+    "verdict": "PASS",
+    "reason": "expert-session.js가 SP_common_guardrails_v3_2.md를 실제로 fetch+prepend(런타임 확인됨). C35 적용."
+  },
+  {
+    "id": 235,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-COURT_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 236,
+    "track": "kservice",
+    "sp_file": "SP-14_kinsurance_v1.0.txt",
+    "category": "데이터연동공백",
+    "verdict": "FAIL",
+    "reason": "gwp-registry.js/worker.js에서 이 파일의 로딩 경로를 찾지 못함(범위 밖 또는 미사용 추정)."
+  },
+  {
+    "id": 237,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-COURT_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 238,
+    "track": "kservice",
+    "sp_file": "SP-14_kinsurance_v1.0.txt",
+    "category": "응급/시급성",
+    "verdict": "FAIL",
+    "reason": "gwp-registry.js/worker.js에서 이 파일의 로딩 경로를 찾지 못함(범위 밖 또는 미사용 추정)."
+  },
+  {
+    "id": 239,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-COURT_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 240,
+    "track": "kservice",
+    "sp_file": "SP-16_kinsurance_v2.1.txt",
+    "category": "단순정보요청",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='insurance'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 241,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-DATA_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 242,
+    "track": "kservice",
+    "sp_file": "SP-16_kinsurance_v2.1.txt",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='insurance'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 243,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-DATA_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 244,
+    "track": "kservice",
+    "sp_file": "SP-16_kinsurance_v2.1.txt",
+    "category": "권한경계테스트",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='insurance'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 245,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-DATA_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 246,
+    "track": "kservice",
+    "sp_file": "SP-16_kinsurance_v2.1.txt",
+    "category": "데이터연동공백",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='insurance'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 247,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-ENV_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 248,
+    "track": "kservice",
+    "sp_file": "SP-16_kinsurance_v2.1.txt",
+    "category": "응급/시급성",
+    "verdict": "PASS(배포 완료)",
+    "reason": "K-Public_common_v1_1.md으로 개정 완료, worker.js /gov/relay가 agency='insurance'로 실제 fetch(소스 확인됨). 단 Cloudflare Worker 실배포(wrangler)는 이번 세션에서 실행/확인하지 못함 — 소스 갱신과 배포는 별개. [2026-07-04 wrangler deploy 확인, Version ID 5b6927cc-8b25-481f-8a83-f1019e7979c5]"
+  },
+  {
+    "id": 249,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-ENV_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 250,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-ENV_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 251,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-FISHQUALITY_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 252,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-FISHQUALITY_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 253,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-FISHQUALITY_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 254,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-FOODIMPORT_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 255,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-FOODIMPORT_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 256,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-FOODIMPORT_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 257,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-HUMANQUARANTINE_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 258,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-HUMANQUARANTINE_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 259,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-HUMANQUARANTINE_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 260,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-IMMIGRATION_v1.2.md",
+    "category": "단순정보요청",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 261,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-IMMIGRATION_v1.2.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 262,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-IMMIGRATION_v1.2.md",
+    "category": "권한경계테스트",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 263,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-INTERNET_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 264,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-INTERNET_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 265,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-INTERNET_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 266,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABORIMPROVE_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 267,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABORIMPROVE_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 268,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABORIMPROVE_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 269,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABORREL_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 270,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABORREL_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 271,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABORREL_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 272,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABOR_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 273,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABOR_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 274,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABOR_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 275,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-MMA_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 276,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-MMA_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 277,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-MMA_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 278,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-NHIS_v1.2.md",
+    "category": "단순정보요청",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 279,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-NHIS_v1.2.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 280,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-NHIS_v1.2.md",
+    "category": "권한경계테스트",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 281,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-NPS_v1.2.md",
+    "category": "단순정보요청",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 282,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-NPS_v1.2.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 283,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-NPS_v1.2.md",
+    "category": "권한경계테스트",
+    "verdict": "PASS(조건부)",
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+  },
+  {
+    "id": 284,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-POLICE_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 285,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-POLICE_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 286,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-POLICE_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 287,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PORT_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 288,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PORT_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 289,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PORT_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 290,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-POST_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 291,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-POST_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 292,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-POST_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 293,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PPS_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 294,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PPS_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 295,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PPS_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 296,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PROBATION_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 297,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PROBATION_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 298,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PROBATION_v1.1.md",
+    "category": "권한경계테스트",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 299,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PROSECUTION_v1.1.md",
+    "category": "단순정보요청",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  },
+  {
+    "id": 300,
+    "track": "gov",
+    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PROSECUTION_v1.1.md",
+    "category": "복잡수행요구(초안/접수준비)",
+    "verdict": "PARTIAL",
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+  }
+]
