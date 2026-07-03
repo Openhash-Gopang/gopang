@@ -1908,7 +1908,7 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
 // 전부 무시한다 — 클라이언트 코드가 실수(또는 고의)로 공통 규칙을
 // 빠뜨리거나 조작할 수 있는 여지를 구조적으로 없앤다.
 // ═══════════════════════════════════════════════════════════
-const K_PUBLIC_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/K-Public_common_v1_0.md';
+const K_PUBLIC_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/K-Public_common_v1_1.md';
 let _kPublicCommonCache = null;
 let _kPublicCommonCacheAt = 0;
 const _K_PUBLIC_COMMON_TTL_MS = 10 * 60 * 1000; // 10분 — 문서 갱신 반영 최대 지연
