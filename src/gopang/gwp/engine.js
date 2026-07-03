@@ -325,6 +325,27 @@ window.addEventListener('message', (e) => {
             _patchPdvChainHeight(sessionId, chainRec.height, chainRec.local_hash);
           }
         }).catch(err => console.warn('[GWP_DONE] redeemClaim 실패:', err.message));
+      } else if (msg.pdvData) {
+        // ★ 신설(2026-07-03) — 결제(block_hash)가 없는 서비스(K-Law, K-Public
+        // 계열 등)도 사용자 PDV에 기록한다. 지금까지는 이 분기가 없어서
+        // 비결제 서비스가 GWP_DONE을 정상적으로 보내도 gopang이 아무것도
+        // 기록하지 않는 조용한 누락이 있었다.
+        const p = msg.pdvData;
+        _recordPDV({
+          type:       'service_task',
+          serviceId:  _gwpService?.id   || null,
+          service:    _gwpService?.name || null,
+          summary:    msg.summary       || null,
+          who:        p.who   || _USER?.ipv6 || null,
+          when:       p.when  || null,
+          where:      p.where || null,
+          what:       p.what  || msg.summary || null,
+          how:        p.how   || 'gwp',
+          why:        p.why   || ((_gwpService?.name || '') + ' 서비스 이용'),
+          session_id: sessionId,
+          reporter_svc: reporterSvc || null,
+          ts:         new Date().toISOString(),
+        }).catch(err => console.warn('[GWP_DONE] 비결제 PDV 기록 실패(무시):', err.message));
       }
 
       // 하위 시스템 탭 자동 닫기 → gopang 탭 포커스 복귀

@@ -279,6 +279,14 @@ const SVC_ALIAS = {
   'kinsurance':'insurance','ktax':'tax','kcommerce':'market',
   'ktransport':'traffic','klogistics':'logistics','fiil-kcleaner':'fiil',
   'kgov':'public','kdemocracy':'democracy',
+  // ── 백업 별칭(2026-07-03) — GOV_AGENCIES/AGENCY_ID를 REGISTERED_SERVICES
+  // 키와 통일했지만, 혹시 남은 캐시된 클라이언트나 실수로 하이픈형을 보내는
+  // 경우에도 /pdv/report가 조용히 실패하지 않도록 하는 안전망. GOV_AGENCIES
+  // 자체는 별칭 해석을 안 거치므로 이걸로 /gov/relay까지 고쳐지진 않는다 —
+  // 그쪽은 반드시 (a) 방식(직접 통일)으로만 해결된다.
+  'k-public':'public', 'k-province':'public', 'k-city':'public', 'k-county':'public',
+  'k-tax':'tax', 'k-health':'health', 'k-insurance':'insurance',
+  'k-logistics':'logistics', 'k-traffic':'traffic',
 };
 
 function _resolveSvcId(svcId) { return SVC_ALIAS[svcId] || svcId; }
@@ -1920,9 +1928,14 @@ async function _fetchKPublicCommon() {
 }
 
 // agency 식별자 허용 목록 — K-Law는 다음 개정 때 이 경로로 통합 예정(현재는 /klaw/relay 유지)
+// REGISTERED_SERVICES 키와 완전히 동일하게 통일(하이픈 접두어 제거) —
+// /pdv/report의 _getSvcRegistration()이 이 값을 그대로 svc 키로 쓰기 때문에
+// 여기서 어긋나면 PDV 저장이 조용히 실패한다. province/city/county는 별도
+// 서비스로 등록돼 있지 않고(모두 'public' 하나로 처리) 실제 코드에서 보낸
+// 적도 없어 제거.
 const GOV_AGENCIES = new Set([
-  'k-public', 'k-province', 'k-city', 'k-county', 'k-tax', 'k-health',
-  'police', '911', 'democracy', 'k-insurance', 'k-traffic', 'k-logistics',
+  'public', 'tax', 'health', 'police', '911', 'democracy', 'insurance',
+  'traffic', 'logistics',
 ]);
 
 const GOV_TIER_MODELS = {
