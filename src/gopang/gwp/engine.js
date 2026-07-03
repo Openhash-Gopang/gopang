@@ -220,6 +220,67 @@ export function _gwpClose(showReturn = true) {
   console.info('[GWP] 탭 종료, 고팡 복귀 | 보고수신:', reported);
 }
 
+// ── PDV 중개 접근 (JEJU-GOV-COMMON §13) ─────────────────────────
+// PDV는 나만의 AI 비서(이 탭, hondi.net)만 직접 읽는다. 다른 GWP 서비스 탭이
+// GWP_PDV_REQUEST로 필드를 요청하면, 사용자에게 승인/거부를 확인한 뒤에만
+// 응답한다. PDV에 실제로 없는 필드는 지어내지 않고 not_in_pdv로 답한다.
+
+// 지금 PDV(localStorage 프로필)에 실제로 존재하는 필드만 매핑한다.
+// 가구원수/월소득/재산 등은 PDV 스키마 자체에 아직 없다(§13-4) — 정직하게
+// not_in_pdv로 응답해야지, 빈 문자열이나 추정치로 채우면 안 된다.
+function _readPdvField(field) {
+  try {
+    const user = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+    const addr = localStorage.getItem('gopang_profile_address');
+    const KNOWN = {
+      '주소': addr || null,
+      '이름': user?.name || null,
+      '연락처': user?.phone || null,
+      '유형': user?.type || null,
+      '업종': user?.industry || null,
+    };
+    return field in KNOWN ? (KNOWN[field] ?? { not_in_pdv: true }) : { not_in_pdv: true };
+  } catch {
+    return { not_in_pdv: true };
+  }
+}
+
+function _handlePdvRequest(msg, source, origin) {
+  const { request_id, requesting_sp, fields = [], reason } = msg;
+  const svcName = _gwpService?.name || origin;
+
+  const bubbleId = 'pdv-req-' + request_id;
+  appendBubble('ai',
+    `<div id="${bubbleId}">` +
+    `🔒 <b>${svcName}</b>이(가) 다음 정보를 요청합니다: <b>${fields.join(', ')}</b><br>` +
+    `<span style="color:var(--sub,#6b7280);font-size:13px">사유: ${reason || '(사유 미제공)'}</span><br><br>` +
+    `<button onclick="window._pdvRequestRespond('${request_id}', true)" style="margin-right:8px">제공하기</button>` +
+    `<button onclick="window._pdvRequestRespond('${request_id}', false)">거부하기</button>` +
+    `</div>`,
+    true
+  );
+
+  window._pdvRequestRespond = (reqId, approved) => {
+    if (reqId !== request_id) return; // 다른 요청의 버튼 오클릭 방지
+    const el = document.getElementById(bubbleId);
+    if (el) el.innerHTML = approved
+      ? `✅ ${fields.join(', ')} 정보를 제공했습니다.`
+      : `🚫 정보 제공을 거부했습니다.`;
+
+    let values = null;
+    if (approved) {
+      values = {};
+      for (const f of fields) values[f] = _readPdvField(f);
+    }
+    source.postMessage({
+      type: 'GWP_PDV_RESPONSE',
+      request_id,
+      approved,
+      values, // approved=false면 null
+    }, origin);
+  };
+}
+
 // ── postMessage 수신 (서비스 새 탭 → 고팡) ─────────────────────
 // 새 탭에서 작업 완료·오류·서명 요청 시 고팡에 결과 전달
 window.addEventListener('message', (e) => {
@@ -253,6 +314,12 @@ window.addEventListener('message', (e) => {
   if (svcOrigin && e.origin !== svcOrigin) return;
 
   switch (msg.type) {
+    case 'GWP_PDV_REQUEST': {
+      // JEJU-GOV-COMMON §13 — PDV는 나만의 AI 비서만 읽는다. 다른 SP(새 탭)는
+      // 이 메시지로 필드를 요청하고, 사용자 승인 후에만 값을 돌려받는다.
+      _handlePdvRequest(msg, e.source, e.origin);
+      break;
+    }
     case 'GWP_MESSAGE': {
       // 서비스에서 고팡 채팅창에 메시지 추가
       appendBubble(msg.role === 'user' ? 'user' : 'ai', msg.html || msg.text || '', !!msg.html);
