@@ -269,38 +269,35 @@ const VALID_INDUSTRY_SCHEMA_IDS = new Set([
 // LLM이 'k911'로 추측하기 쉬운데 실제 등록값은 k119이므로 같은 위험군 —
 // 이건 handleGovRelay의 서버측 치환(GOV_AGENCY_PDV_SCOPE)으로 근본 해결한다.
 //
-// 2026-07-04c(제주 전국 확장 설계, 2026-07-04d에 최종 정정): jeju 저장소
-// 실사 결과, jeju의 "28개 국가기관"은 세무서(ktax)·경찰서(kpolice) 2개만
-// 기존 scope와 겹치고 나머지 26개(출입국관리소, 해양경찰, 법원, 검찰청,
-// 조달청, NHIS, NPS 등)는 기존에 없던 신규 도메인이었다. 한때 "jeju가
-// 최초 구현체니까 jeju_ 접두어"로 정정했었으나 — 이 26개는 제주만의
-// 조직이 아니라 전국 모든 시도에 동일하게 존재하는 국가기관 유형이다
-// (서울에도 출입국관리소·법원·해양경찰이 있다). 즉 ktax/kpolice와
-// 성격이 다르지 않다 — 지금 jeju 하나만 구현했다는 사실이 이름을 지역화
-// 해야 할 이유는 아니다. 그래서 최종적으로 k 접두어(전국 scope)로
-// 등록하고, SCOPE_SOURCE_MAP에서 jeju를 그 scope의 (현재는 유일한)
-// reporter_svc로 등록한다 — 나중에 서울이 자기 지역 출입국관리소 AI를
-// 만들면 같은 scope에 'seoul'을 추가하기만 하면 된다.
-// "13개 도 자체 부서"(농축산식품국·관광교류국 등)는 이것과 다르다 —
-// 이건 국가기관이 아니라 제주도청 내부 조직 명칭이라 타 시도가 똑같은
-// 이름·구조로 갖고 있다는 보장이 없다. 그래서 이 13개만 jeju_ 접두어를
-// 유지한다(타 지역이 유사 부서를 만들면 그때 일반화 여부를 재검토).
+// 2026-07-04c~e(제주 전국 확장 설계, 여러 차례 정정 끝에 확정): jeju
+// 저장소 실사 결과, jeju가 다루는 39개 부서/기관(국가기관 26개 + 세무서·
+// 경찰서 + 도 자체 부서 13개) 중 기존 scope와 겹치는 건 ktax·kpolice
+// 뿐이었다. 처음엔 "국가기관 26개는 전국 scope, 도 자체 부서 13개는
+// jeju_ 지역 scope"로 나눴었으나, 도 자체 부서도 대부분 다른 도(경상남도,
+// 충청북도 등)가 유사한 조직(농정국·관광국·복지국 등)을 갖고 있다는
+// 지적을 받고 재정정했다 — 국가기관이든 도 조직이든, "여러 시도가 같은
+// 종류의 부서/기관을 가질 것"이라는 전제가 성립하면 scope는 지역 접두어
+// 없이 국가 단위(k 접두어)로 등록하고, 지금 jeju가 유일한 구현체라는
+// 사실은 SCOPE_SOURCE_MAP의 reporter_svc 배열에만 반영한다. 결과적으로
+// jeju 관련 신규 scope 39개 전부 지역 접두어가 없다 — 나중에 다른 도가
+// 자기 지역판 서비스를 만들면 해당 scope의 source 배열에 이름만 추가하면
+// 된다(예: kagri: ['jeju'] → ['jeju', 'gyeongnam']).
 const VALID_PDV_SCOPES = [
   'ktraffic', 'khealth', 'pdv_general', 'kmarket', 'k119',
   'klaw', 'ktax', 'kinsurance', 'kgdc', 'kdemocracy', 'klogistics',
   'kschool', 'kstock', // 2026-07-04: PDV_HISTORY_REQUEST 파일럿 확장 — 이전엔 미등록
   'kpolice', 'kpublic', // 2026-07-04b: GOV_AGENCIES 9개 중 누락됐던 나머지 2개
-  // 2026-07-04d: 전국 국가기관 26개(jeju가 현재의 유일한 reporter_svc)
+  // 2026-07-04e: jeju발 신규 국가기관 26개(jeju가 현재의 유일한 reporter_svc)
   'kagroquality', 'kairport', 'kanimalquarantine', 'kcoastguard', 'kcourt',
   'kdata', 'kenv', 'kfishquality', 'kfoodimport', 'khumanquarantine',
   'kimmigration', 'kinternet', 'klabor', 'klaborimprove', 'klaborrel',
   'kmma', 'knhis', 'knps', 'kport', 'kpost', 'kpps', 'kprobation',
   'kprosecution', 'kradio', 'kveterans', 'kweather',
-  // 2026-07-04c: jeju 도 자체 부서(13개, 제주 고유 — 타 지역 확장 시 재검토)
-  'jeju_agri', 'jeju_climate', 'jeju_culture', 'jeju_econ', 'jeju_housing',
-  'jeju_innov', 'jeju_jachi', 'jeju_ocean', 'jeju_plan', 'jeju_safety',
-  'jeju_tourism', 'jeju_transport', 'jeju_welfare',
-
+  // 2026-07-04e: jeju발 신규 도 자체 부서 13개(마찬가지로 전국 scope —
+  // 다른 도도 유사 조직을 가질 것으로 상정)
+  'kagri', 'kclimate', 'kculture', 'kecon', 'khousing',
+  'kinnov', 'kjachi', 'kocean', 'kplan', 'ksafety',
+  'ktourism', 'ktransport', 'kwelfare',
 ];
 const SCOPE_MIN_LEVEL = {
   ktraffic:'L1', khealth:'L1', pdv_general:'L1', k119:'L1', kmarket:'L0',
@@ -317,9 +314,9 @@ const SCOPE_MIN_LEVEL = {
   kimmigration:'L1', kinternet:'L1', klabor:'L1', klaborimprove:'L1', klaborrel:'L1',
   kmma:'L1', knhis:'L1', knps:'L1', kport:'L1', kpost:'L1', kpps:'L1', kprobation:'L1',
   kprosecution:'L1', kradio:'L1', kveterans:'L1', kweather:'L0', // 날씨는 낮은 민감도
-  jeju_agri:'L1', jeju_climate:'L1', jeju_culture:'L0', jeju_econ:'L1', jeju_housing:'L1',
-  jeju_innov:'L1', jeju_jachi:'L1', jeju_ocean:'L1', jeju_plan:'L1', jeju_safety:'L1',
-  jeju_tourism:'L0', jeju_transport:'L0', jeju_welfare:'L1',
+  kagri:'L1', kclimate:'L1', kculture:'L0', kecon:'L1', khousing:'L1',
+  kinnov:'L1', kjachi:'L1', kocean:'L1', kplan:'L1', ksafety:'L1',
+  ktourism:'L0', ktransport:'L0', kwelfare:'L1',
 };
 // 2026-07-04c: scope → source 배열(1:다)로 변경. 이전엔 scope 하나당 저장소
 // 하나만 가능했는데, 같은 종류의 데이터(예: 세무 상담)를 여러 지역/서비스가
@@ -335,9 +332,9 @@ const SCOPE_SOURCE_MAP = {
   kimmigration:['jeju'], kinternet:['jeju'], klabor:['jeju'], klaborimprove:['jeju'], klaborrel:['jeju'],
   kmma:['jeju'], knhis:['jeju'], knps:['jeju'], kport:['jeju'], kpost:['jeju'], kpps:['jeju'], kprobation:['jeju'],
   kprosecution:['jeju'], kradio:['jeju'], kveterans:['jeju'], kweather:['jeju'],
-  jeju_agri:['jeju'], jeju_climate:['jeju'], jeju_culture:['jeju'], jeju_econ:['jeju'], jeju_housing:['jeju'],
-  jeju_innov:['jeju'], jeju_jachi:['jeju'], jeju_ocean:['jeju'], jeju_plan:['jeju'], jeju_safety:['jeju'],
-  jeju_tourism:['jeju'], jeju_transport:['jeju'], jeju_welfare:['jeju'],
+  kagri:['jeju'], kclimate:['jeju'], kculture:['jeju'], kecon:['jeju'], khousing:['jeju'],
+  kinnov:['jeju'], kjachi:['jeju'], kocean:['jeju'], kplan:['jeju'], ksafety:['jeju'],
+  ktourism:['jeju'], ktransport:['jeju'], kwelfare:['jeju'],
 };
 
 const SVC_ALIAS = {
