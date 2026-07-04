@@ -1826,6 +1826,17 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   const { guid, tier, messages, max_tokens, stream, step_cycle } = body || {};
   if (!guid || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/messages 필수', corsHeaders);
 
+  // UNIVERSAL-INTEGRITY 서버측 강제 주입(2026-07-04) — K-Law는 클라이언트가
+  // 시스템 메시지를 직접 조립해 보내는 구조(/gov/relay와 다름)라, 클라이언트의
+  // system 메시지를 대체하지는 않되 그 앞에 별도 system 메시지로 추가한다.
+  // K-Law 자체(SP-01_klaw_v15.1)가 이미 이 문서보다 훨씬 정교한 자체 확신도
+  // 메커니즘을 갖고 있으므로 중복이지만, "모든 SP가 이 문서를 상속한다"는
+  // 원칙을 예외 없이 지키기 위해 형식적으로도 주입한다.
+  const universalIntegrity = await _fetchUniversalIntegrity();
+  const messagesWithIntegrity = universalIntegrity
+    ? [{ role: 'system', content: universalIntegrity }, ...messages]
+    : messages;
+
   const tierKey = KLAW_TIER_MODELS[tier] ? tier : 'klaw-flash';
   const backendModel = KLAW_TIER_MODELS[tierKey].backendModel;
 
@@ -1849,7 +1860,7 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   }
 
   const isStream = !!stream;
-  const payload = { model: backendModel, messages, stream: isStream };
+  const payload = { model: backendModel, messages: messagesWithIntegrity, stream: isStream };
   if (max_tokens != null) payload.max_tokens = max_tokens;
 
   console.log(JSON.stringify({ tag:'KLAW_RELAY_CALL', guid, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
@@ -1913,6 +1924,32 @@ let _kPublicCommonCache = null;
 let _kPublicCommonCacheAt = 0;
 const _K_PUBLIC_COMMON_TTL_MS = 10 * 60 * 1000; // 10분 — 문서 갱신 반영 최대 지연
 
+// ═══════════════════════════════════════════════════════════
+// UNIVERSAL-INTEGRITY — 트랙 무관 전체 SP 최상위 공통 원칙 (2026-07-04 신설)
+// K-Law v15.1의 확신도 이원화·불확실 식별자 생성 차단 메커니즘을 일반화한
+// 문서. K-Public_common보다도 먼저 로드되어야 한다(§U5 — "어떻게 판단
+// 하는가"가 "누구로서 응답하는가"보다 앞선다).
+// ═══════════════════════════════════════════════════════════
+const UNIVERSAL_INTEGRITY_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/UNIVERSAL-INTEGRITY_v1_0.md';
+let _universalIntegrityCache = null;
+let _universalIntegrityCacheAt = 0;
+const _UNIVERSAL_INTEGRITY_TTL_MS = 10 * 60 * 1000;
+
+async function _fetchUniversalIntegrity() {
+  const now = Date.now();
+  if (_universalIntegrityCache && (now - _universalIntegrityCacheAt) < _UNIVERSAL_INTEGRITY_TTL_MS) return _universalIntegrityCache;
+  try {
+    const res = await fetch(UNIVERSAL_INTEGRITY_URL, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    _universalIntegrityCache = await res.text();
+    _universalIntegrityCacheAt = now;
+  } catch (e) {
+    console.warn('[UniversalIntegrity] 로드 실패:', e.message);
+    if (!_universalIntegrityCache) _universalIntegrityCache = '';
+  }
+  return _universalIntegrityCache;
+}
+
 async function _fetchKPublicCommon() {
   const now = Date.now();
   if (_kPublicCommonCache && (now - _kPublicCommonCacheAt) < _K_PUBLIC_COMMON_TTL_MS) return _kPublicCommonCache;
@@ -1975,9 +2012,10 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
     return _err(429, 'GOV_USER_QUOTA_EXCEEDED', '오늘 사용 가능한 한도를 모두 사용했습니다. 내일 다시 이용해 주세요.', corsHeaders);
   }
 
-  const kPublicCommon = await _fetchKPublicCommon();
-  const systemContent = kPublicCommon
-    ? `${kPublicCommon}\n\n---\n\n${agencyPrompt || ''}`
+  const [universalIntegrity, kPublicCommon] = await Promise.all([_fetchUniversalIntegrity(), _fetchKPublicCommon()]);
+  const systemParts = [universalIntegrity, kPublicCommon, agencyPrompt || ''].filter(Boolean);
+  const systemContent = systemParts.length
+    ? systemParts.join('\n\n---\n\n')
     : (agencyPrompt || ''); // 공통 규칙 로드 실패해도 기관 고유 규칙만으로 서비스 지속
 
   const isStream = !!stream;
@@ -3707,7 +3745,8 @@ ${JSON.stringify(iFields, null, 2)}
   //    한정) → AGENT-COMMON → AGENT-SUPPLIER-COMMON → AGENT-SUPPLIER-{ksic}
   //    → industry_fields. 개인은 안내문 없이 AGENT-COMMON만(영업기밀 같은
   //    공개범위 구분 자체가 해당 없음).
-  const parts = [ksic ? realtimeDisclosurePreamble : '', commonSP, supplierCommonSP, supplierSP, iFieldsBlock].filter(Boolean);
+  const universalIntegrity = await _fetchUniversalIntegrity();
+  const parts = [universalIntegrity, ksic ? realtimeDisclosurePreamble : '', commonSP, supplierCommonSP, supplierSP, iFieldsBlock].filter(Boolean);
   if (!parts.length) return null;
 
   const compiled = parts.join('\n\n---\n\n').trim();

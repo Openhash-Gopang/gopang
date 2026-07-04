@@ -19,7 +19,7 @@ import { history, _USER } from '../core/state.js';
 import { appendBubble } from '../ui/bubble.js';
 import { _recordPDV } from '../pdv/record.js';
 import { summarizeTranscript6W } from './report-utils.js';
-import { EXPERT_REGISTRY, COMMON_GUARDRAILS_URL, COMMON_MEDICAL_SAFETY_URL,
+import { EXPERT_REGISTRY, UNIVERSAL_INTEGRITY_URL, COMMON_GUARDRAILS_URL, COMMON_MEDICAL_SAFETY_URL,
          getExpertGwpDef, resolveExpertId }
   from './expert-registry.js';
 import { _gwpLaunch } from '../gwp/engine.js';
@@ -52,6 +52,11 @@ async function _composeExpertPrompt(def) {
   if (_promptCache.has(def.file)) return _promptCache.get(def.file);
 
   const parts = [];
+  try {
+    const uniRes = await fetch(UNIVERSAL_INTEGRITY_URL);
+    if (uniRes.ok) parts.push(await uniRes.text());
+  } catch (e) { console.warn('[Expert] UNIVERSAL-INTEGRITY 로드 실패:', e.message); }
+
   try {
     const commonRes = await fetch(COMMON_GUARDRAILS_URL);
     if (commonRes.ok) parts.push(await commonRes.text());

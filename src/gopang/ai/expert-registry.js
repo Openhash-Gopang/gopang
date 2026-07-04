@@ -11,6 +11,7 @@
  * (저자 의도상 HEALTH가 아님) 의료 안전 모듈을 추가하지 않는다.
  */
 
+export const UNIVERSAL_INTEGRITY_URL   = '/prompts/UNIVERSAL-INTEGRITY_v1_0.md';
 export const COMMON_GUARDRAILS_URL     = '/prompts/SP_common_guardrails_v3_2.md';
 export const COMMON_MEDICAL_SAFETY_URL = '/prompts/SP_common_medical_safety_v1_1.md';
 
