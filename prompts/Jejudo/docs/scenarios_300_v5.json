@@ -1298,10 +1298,12 @@
   {
     "id": 163,
     "track": "gov",
-    "sp_file": "Jejudo/05-emd/hallim/SP-EMD-HALLIM_v1.0.md",
+    "sp_file": "Jejudo/05-emd/SP-EMD-TEMPLATE_v1.2.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-04 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 파일이었음. 실제 서비스는 SP-EMD-TEMPLATE_v1.2.md를 hallim-data.json(도코드=hallim) 레코드로 렌더링한 결과물임. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용을 기준으로 평가된 것이라 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 164,
@@ -1322,10 +1324,12 @@
   {
     "id": 166,
     "track": "gov",
-    "sp_file": "Jejudo/05-emd/hallim/SP-EMD-HALLIM_v1.0.md",
+    "sp_file": "Jejudo/05-emd/SP-EMD-TEMPLATE_v1.2.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-04 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 파일이었음. 실제 서비스는 SP-EMD-TEMPLATE_v1.2.md를 hallim-data.json(도코드=hallim) 레코드로 렌더링한 결과물임. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용을 기준으로 평가된 것이라 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 167,
@@ -1346,10 +1350,12 @@
   {
     "id": 169,
     "track": "gov",
-    "sp_file": "Jejudo/05-emd/hallim/SP-EMD-HALLIM_v1.0.md",
+    "sp_file": "Jejudo/05-emd/SP-EMD-TEMPLATE_v1.2.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-04 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 파일이었음. 실제 서비스는 SP-EMD-TEMPLATE_v1.2.md를 hallim-data.json(도코드=hallim) 레코드로 렌더링한 결과물임. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용을 기준으로 평가된 것이라 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 170,
