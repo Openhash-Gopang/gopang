@@ -1382,7 +1382,89 @@ async function handlePdvReport(request,env,corsHeaders){
 // ═══════════════════════════════════════════════════════════
 // 이하 v4.8과 동일 — PDV Query, SSO, WebAuthn, AI, Geocode
 // ═══════════════════════════════════════════════════════════
-async function handlePdvQuery(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const origin=request.headers.get('Origin')||'';try{const body=await request.json().catch(()=>null);const query=body?.query;if(!query?.svc||!query?.ipv6||!query?.scope||!query?.period)return _err(400,'SCHEMA_ERROR','필수 필드 누락: svc, ipv6, scope, period',corsHeaders);if(!Array.isArray(query.scope)||query.scope.length===0)return _err(400,'SCOPE_INVALID','scope는 비어있지 않은 배열이어야 합니다',corsHeaders);const invalidScope=query.scope.find(s=>!VALID_PDV_SCOPES.includes(s));if(invalidScope)return _err(400,'SCOPE_INVALID',`허용되지 않은 scope: ${invalidScope}`,corsHeaders);if(!query.period?.start||!query.period?.end)return _err(400,'SCHEMA_ERROR','period.start, period.end 필수',corsHeaders);const periodMs=new Date(query.period.end)-new Date(query.period.start);if(periodMs>365*24*60*60*1000)return _err(400,'PERIOD_TOO_LONG','조회 기간은 12개월을 초과할 수 없습니다',corsHeaders);const svcReg=_getSvcRegistration(origin,query.svc);if(!svcReg||!svcReg.pdv)return _err(403,'SVC_NOT_REGISTERED',`미등록 또는 PDV 권한 없는 서비스: ${query.svc}`,corsHeaders);const authToken=query.auth_token;if(!authToken?.exp||Math.floor(Date.now()/1000)>authToken.exp)return _err(401,'AUTH_EXPIRED','인증 토큰이 만료되었습니다',corsHeaders);const LEVEL_ORDER={L0:0,L1:1,L2:2,L3:3};const userLevel=LEVEL_ORDER[authToken.level]??0;for(const scope of query.scope){const required=LEVEL_ORDER[SCOPE_MIN_LEVEL[scope]||'L1'];if(userLevel<required)return _err(403,'LEVEL_INSUFFICIENT',`${scope} 조회는 ${SCOPE_MIN_LEVEL[scope]} 이상 필요`,corsHeaders);}if(!query.consent_token||!query.request_id){const reqId=`CNSREQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const expiresAt=Math.floor(Date.now()/1000)+300;await _storeConsentRequest(env,reqId,query,expiresAt);const consentUrl='https://hondi.net/consent'+`?req=${encodeURIComponent(reqId)}&svc=${encodeURIComponent(query.svc)}`+`&scope=${encodeURIComponent(query.scope.join(','))}`+`&purpose=${encodeURIComponent(query.purpose||'')}`+`&ipv6_hash=${encodeURIComponent(await _sha256Hex(query.ipv6))}`+`&return_to=${encodeURIComponent(origin)}`;return new Response(JSON.stringify({ok:false,status:'CONSENT_REQUIRED',consent:{request_id:reqId,expires_at:expiresAt,consent_url:consentUrl,message:'사용자가 고팡 앱에서 PDV 조회에 동의해야 합니다.'}}),{status:202,headers:corsHeaders});}const consentOk=await _verifyConsentToken(env,query.consent_token,query.request_id,query.ipv6);if(!consentOk)return _err(401,'CONSENT_INVALID','동의 토큰이 유효하지 않습니다',corsHeaders);const withinLimit=await _checkRateLimit(env,query.ipv6,'pdv_query');if(!withinLimit)return _err(429,'RATE_LIMITED','PDV 조회 한도 초과',corsHeaders);const pdvSummary=await _fetchPdvByScope(env,query.ipv6,query.scope,query.period);const queryId=`PDVQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;const pdvEntryId=await _recordConsentEvent(env,query,queryId);return new Response(JSON.stringify({ok:true,query_id:queryId,ipv6:query.ipv6,period:query.period,pdv_summary:pdvSummary,consent:{granted_at:new Date().toISOString(),expires_at:new Date(authToken.exp*1000).toISOString(),pdv_entry_id:pdvEntryId}}),{status:200,headers:corsHeaders});}catch(e){return _err(500,'INTERNAL_ERROR',e.message,corsHeaders);}}
+// ═══════════════════════════════════════════════════════════
+// 2026-07-04b(긴급 보안수정): handlePdvQuery — 인증 레벨 자칭 신뢰 제거
+//
+// 이전엔 query.auth_token(클라이언트가 만든 {exp,level} JSON)을 서명 검증
+// 없이 그대로 믿었다. 지금은 모든 VALID_PDV_SCOPES가 L1 이하만 요구해
+// 당장 악용 가치는 없었지만, L2/L3 scope가 하나라도 추가되는 순간 이미
+// 배포된 12개 서비스 전체가 동시에(그리고 조용히) 뚫리는 구조였다 —
+// "level:'L3'"라고 우기기만 하면 통과됐다.
+//
+// 고친 방식: Authorization: Bearer <token> 헤더가 있으면 parseToken()
+// (buildToken/handleVerify/handleRefresh와 동일한 HMAC-SHA256 서명 검증,
+// env.GOPANG_MASTER_KEY)으로 실제 레벨을 확인해 사용한다. 헤더가 없거나
+// 검증에 실패하거나 ipv6가 query.ipv6와 다르면 — 즉 "검증된 신원을 확인할
+// 수 없으면" — 클라이언트가 뭐라고 주장하든 레벨을 무조건 L1로 강등한다.
+//
+// 왜 이 방식이 지금 당장 안전하게 배포 가능한가: 오늘 등록된 12개 scope는
+// 전부 최대 요구 레벨이 L1이므로(SCOPE_MIN_LEVEL 참조), 아직 어느 클라
+// 이언트도 진짜 Bearer 토큰을 보내지 않는 상태에서도 강등 결과는 지금
+// 동작과 완전히 동일하다 — 기능 회귀가 없다. 다만 이후 L2/L3 scope가
+// 추가되면, 그 scope는 실제 검증된 Bearer 토큰 없이는 항상 403으로
+// 막힌다(조용히 뚫리는 대신 눈에 보이게 실패한다) — 그게 핵심 개선점이다.
+//
+// TODO(플랫폼 전체 후속 과제, 이번 수정 범위 밖): 지금은 handleIssue가
+// 응답 JSON에 token 필드를 추가로 내려주기 시작했을 뿐, gopang-sso.js/
+// subsystem-auth.js가 이 토큰을 캡처해 하위 서비스에 노출하고, 각
+// K-서비스가 그걸 Authorization 헤더로 실어 보내는 배선은 아직 없다.
+// 그 배선이 완성되기 전까지는 위 "검증 불가 → L1 강등" 경로가 항상
+// 타므로 기능은 그대로 동작하되 L2/L3 scope는 아직 아무도 통과 못한다.
+// ═══════════════════════════════════════════════════════════
+async function _verifiedPdvSession(request,env){
+  const auth=request.headers.get('Authorization')||'';
+  const m=auth.match(/^Bearer\s+(.+)$/i);
+  if(!m)return null;
+  const payload=await parseToken(env,m[1].trim());
+  return payload; // null이면 서명 불일치/만료 — 호출부가 검증 실패로 처리
+}
+
+async function handlePdvQuery(request,env,corsHeaders){
+  if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});
+  const origin=request.headers.get('Origin')||'';
+  try{
+    const body=await request.json().catch(()=>null);
+    const query=body?.query;
+    if(!query?.svc||!query?.ipv6||!query?.scope||!query?.period)return _err(400,'SCHEMA_ERROR','필수 필드 누락: svc, ipv6, scope, period',corsHeaders);
+    if(!Array.isArray(query.scope)||query.scope.length===0)return _err(400,'SCOPE_INVALID','scope는 비어있지 않은 배열이어야 합니다',corsHeaders);
+    const invalidScope=query.scope.find(s=>!VALID_PDV_SCOPES.includes(s));
+    if(invalidScope)return _err(400,'SCOPE_INVALID',`허용되지 않은 scope: ${invalidScope}`,corsHeaders);
+    if(!query.period?.start||!query.period?.end)return _err(400,'SCHEMA_ERROR','period.start, period.end 필수',corsHeaders);
+    const periodMs=new Date(query.period.end)-new Date(query.period.start);
+    if(periodMs>365*24*60*60*1000)return _err(400,'PERIOD_TOO_LONG','조회 기간은 12개월을 초과할 수 없습니다',corsHeaders);
+    const svcReg=_getSvcRegistration(origin,query.svc);
+    if(!svcReg||!svcReg.pdv)return _err(403,'SVC_NOT_REGISTERED',`미등록 또는 PDV 권한 없는 서비스: ${query.svc}`,corsHeaders);
+
+    const LEVEL_ORDER={L0:0,L1:1,L2:2,L3:3};
+    const verified=await _verifiedPdvSession(request,env);
+    // 검증된 세션의 ipv6가 조회 대상 ipv6와 다르면 "검증 안 됨"과 동일하게
+    // 취급한다 — 타인 명의로 검증된 토큰을 자기 자신의 조회에 갖다 붙이는
+    // 것을 막는다(본인 데이터만 조회 가능해야 한다는 설계 의도).
+    const effectiveLevel=(verified && verified.ipv6===query.ipv6) ? (verified.level||'L1') : 'L1';
+    const userLevel=LEVEL_ORDER[effectiveLevel]??1;
+    for(const scope of query.scope){
+      const required=LEVEL_ORDER[SCOPE_MIN_LEVEL[scope]||'L1'];
+      if(userLevel<required)return _err(403,'LEVEL_INSUFFICIENT',`${scope} 조회는 ${SCOPE_MIN_LEVEL[scope]} 이상 필요 — 검증된 인증 토큰(Authorization: Bearer)이 필요합니다`,corsHeaders);
+    }
+
+    if(!query.consent_token||!query.request_id){
+      const reqId=`CNSREQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;
+      const expiresAt=Math.floor(Date.now()/1000)+300;
+      await _storeConsentRequest(env,reqId,query,expiresAt);
+      const consentUrl='https://hondi.net/consent'+`?req=${encodeURIComponent(reqId)}&svc=${encodeURIComponent(query.svc)}`+`&scope=${encodeURIComponent(query.scope.join(','))}`+`&purpose=${encodeURIComponent(query.purpose||'')}`+`&ipv6_hash=${encodeURIComponent(await _sha256Hex(query.ipv6))}`+`&return_to=${encodeURIComponent(origin)}`;
+      return new Response(JSON.stringify({ok:false,status:'CONSENT_REQUIRED',consent:{request_id:reqId,expires_at:expiresAt,consent_url:consentUrl,message:'사용자가 고팡 앱에서 PDV 조회에 동의해야 합니다.'}}),{status:202,headers:corsHeaders});
+    }
+    const consentOk=await _verifyConsentToken(env,query.consent_token,query.request_id,query.ipv6);
+    if(!consentOk)return _err(401,'CONSENT_INVALID','동의 토큰이 유효하지 않습니다',corsHeaders);
+    const withinLimit=await _checkRateLimit(env,query.ipv6,'pdv_query');
+    if(!withinLimit)return _err(429,'RATE_LIMITED','PDV 조회 한도 초과',corsHeaders);
+    const pdvSummary=await _fetchPdvByScope(env,query.ipv6,query.scope,query.period);
+    const queryId=`PDVQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;
+    const pdvEntryId=await _recordConsentEvent(env,query,queryId);
+    const expOut=verified?.exp ? new Date(verified.exp*1000).toISOString() : new Date(Date.now()+3600*1000).toISOString();
+    return new Response(JSON.stringify({ok:true,query_id:queryId,ipv6:query.ipv6,period:query.period,pdv_summary:pdvSummary,consent:{granted_at:new Date().toISOString(),expires_at:expOut,pdv_entry_id:pdvEntryId}}),{status:200,headers:corsHeaders});
+  }catch(e){return _err(500,'INTERNAL_ERROR',e.message,corsHeaders);}
+}
 async function _storeConsentRequest(env,reqId,query,expiresAt){
   // BUG-FIX(2026-07-02): Supabase pdv_consent_requests 테이블이 실제로는
   // 한 번도 생성된 적이 없었다(HTTP 404 PGRST205 확인됨). Supabase→L1
@@ -1615,7 +1697,12 @@ async function handleIssue(request,env,corsHeaders){
   // 통과시키며, 곧이어 /profile 호출이 이 pubkey를 핀으로 기록한다.
 
   const token=await buildToken(env,guid,level,svc);
-  return new Response(JSON.stringify({ok:true,guid,level}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(token)}});
+  // 2026-07-04b: 쿠키(HttpOnly, .hondi.net)는 그대로 유지하되, 같은 토큰
+  // 문자열을 JSON 본문에도 내려준다 — 쿠키는 워커의 실제 도메인이
+  // *.hondi.net과 다르면(현재 wrangler.json에 커스텀 도메인 라우트가
+  // 없다) 브라우저가 전송하지 않을 수 있다. 본문의 token은 클라이언트가
+  // 직접 Authorization: Bearer 헤더로 실어 보낼 수 있어 도메인에 무관하다.
+  return new Response(JSON.stringify({ok:true,guid,level,token}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(token)}});
 }
 
 async function handleVerify(request,env,corsHeaders){const cookieHeader=request.headers.get('Cookie')||'';const raw=parseCookie(cookieHeader,'gopang_token');if(!raw)return _err(401,'NO_TOKEN','no_token',corsHeaders);const payload=await parseToken(env,raw);if(!payload)return _err(401,'INVALID_TOKEN','expired_or_invalid',corsHeaders);return new Response(JSON.stringify({valid:true,ipv6:payload.ipv6,level:payload.level,svc:payload.svc,exp:payload.exp}),{status:200,headers:corsHeaders});}
