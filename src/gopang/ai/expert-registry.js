@@ -21,6 +21,12 @@ export const EXPERT_REGISTRY = {
     file: '/prompts/SP_lawyer_v3_1.md', needsMedicalSafety: false,
   },
 
+  // ── 재무·세무 (SP-FIN-01, 2026-07-04 신설) ────────────
+  'tax-accountant': {
+    label: '세무사', icon: '🧾', category: 'FIN',
+    file: '/prompts/SP_tax-accountant_v1_0.md', needsMedicalSafety: false,
+  },
+
   // ── 의료·보건 (SP-HEALTH-06~15) ──────────────────────
   veterinarian: {
     label: '수의사', icon: '🐾', category: 'HEALTH',
