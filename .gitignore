@@ -7,3 +7,5 @@ fix*.py
 .wrangler/
 *.patch
 *.lnk
+tools/__pycache__/
+*.pyc
