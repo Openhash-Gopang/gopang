@@ -1503,8 +1503,19 @@ async function handleConsentRespond(request,env,corsHeaders){
   if(record.ipv6!==ipv6) return _err(403,'IPV6_MISMATCH','본인의 요청이 아닙니다',corsHeaders);
 
   const token=await _l1AdminToken(env);
+  // 2026-07-04: 기존엔 승인(grant) 후에도 expires_at을 최초 요청 생성 시점의
+  // 5분짜리 값(_storeConsentRequest의 300초) 그대로 뒀다 — 즉 "5분 안에
+  // 동의 안 하면 무효"뿐 아니라 "동의해도 5분 지나면 어차피 무효"였다.
+  // PDV_HISTORY_REQUEST(K-Public_common P11) 같은 연속성 조회는 수일~수개월
+  // 뒤에도 재사용돼야 하므로, 승인 시점에 expires_at을 STANDING_CONSENT_TTL_SEC
+  // 만큼 연장한다. 거부(deny)는 연장할 이유가 없으므로 그대로 둔다.
+  const STANDING_CONSENT_TTL_SEC = 90*24*60*60; // 90일
   const patch = decision==='grant'
-    ? { status:'granted', consent_token: await _signConsentHmac(env,record.request_id,ipv6) }
+    ? {
+        status:'granted',
+        consent_token: await _signConsentHmac(env,record.request_id,ipv6),
+        expires_at: new Date(Date.now()+STANDING_CONSENT_TTL_SEC*1000).toISOString(),
+      }
     : { status:'denied' };
 
   const patchRes=await fetch(`${L1_DEFAULT}/api/collections/pdv_consent_requests/records/${record.id}`,{
@@ -1919,7 +1930,7 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
 // 전부 무시한다 — 클라이언트 코드가 실수(또는 고의)로 공통 규칙을
 // 빠뜨리거나 조작할 수 있는 여지를 구조적으로 없앤다.
 // ═══════════════════════════════════════════════════════════
-const K_PUBLIC_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/K-Public_common_v1_1.md';
+const K_PUBLIC_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/K-Public_common_v1_2.md';
 let _kPublicCommonCache = null;
 let _kPublicCommonCacheAt = 0;
 const _K_PUBLIC_COMMON_TTL_MS = 10 * 60 * 1000; // 10분 — 문서 갱신 반영 최대 지연
