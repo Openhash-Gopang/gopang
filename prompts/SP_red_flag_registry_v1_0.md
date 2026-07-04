@@ -51,8 +51,8 @@
 
 | 신호 | 의미 | 참조 SP |
 |---|---| ---|
-| 자살 사고·자해 계획 언급 | 즉시 위기개입 필요 | SP-HEALTH-14(정신전문간호 모듈) |
-| 급성 정신병적 증상(환각·심한 혼란) | 안전 확보 우선, 진단은 의사 영역 | SP-HEALTH-14 |
+| 자살 사고·자해 계획 언급 | 즉시 위기개입 필요 | mental-health-professional·clinical-psychologist·school-counselor (M5, 2026-07-04 실존 페르소나로 수정) |
+| 급성 정신병적 증상(환각·심한 혼란) | 안전 확보 우선, 진단은 의사 영역 | mental-health-professional·clinical-psychologist |
 
 ## 분류 6. 섭식·영양 응급 (nutrition/eating disorder)
 
