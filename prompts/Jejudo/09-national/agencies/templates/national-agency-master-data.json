@@ -1,0 +1,174 @@
+{
+  "_schema_설명": "국가기관(중앙정부 지역사무소) 데이터. 하나의 domain(예: tax)에 여러 도(도코드)가 각자 레코드를 등록한다. jeju-router.js의 _renderNatTemplate()이 domain으로 template을 찾고, 도코드로 이 배열에서 해당 레코드를 찾아 자리표시자를 채운다. do-dept-master-data.json과 동일 철학. 이 파일은 09-national/agencies/templates/ 아래 있지만 향후 도별 프로젝트가 늘면 공용 위치로 옮기는 것을 검토할 것.",
+  "기관목록": [
+    {
+      "domain": "agroquality",
+      "template": "SP-NAT-AGROQUALITY-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "국립농산물품질관리원 제주지원"
+    },
+    {
+      "domain": "airport",
+      "template": "SP-NAT-AIRPORT-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "한국공항공사 제주공항"
+    },
+    {
+      "domain": "animalquarantine",
+      "template": "SP-NAT-ANIMALQUARANTINE-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "농림축산검역본부 제주지역본부"
+    },
+    {
+      "domain": "coastguard",
+      "template": "SP-NAT-COASTGUARD-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주해양경찰서"
+    },
+    {
+      "domain": "court",
+      "template": "SP-NAT-COURT-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주지방법원",
+      "대표전화": "064-729-2000"
+    },
+    {
+      "domain": "data",
+      "template": "SP-NAT-DATA-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "호남지방데이터청 제주사무소"
+    },
+    {
+      "domain": "env",
+      "template": "SP-NAT-ENV-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "영산강유역환경청 제주주재사무실"
+    },
+    {
+      "domain": "fishquality",
+      "template": "SP-NAT-FISHQUALITY-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "국립수산물품질관리원 제주지원"
+    },
+    {
+      "domain": "foodimport",
+      "template": "SP-NAT-FOODIMPORT-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "광주지방식품의약품안전청 제주수입식품검사소"
+    },
+    {
+      "domain": "humanquarantine",
+      "template": "SP-NAT-HUMANQUARANTINE-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "국립제주검역소"
+    },
+    {
+      "domain": "immigration",
+      "template": "SP-NAT-IMMIGRATION-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주출입국·외국인청"
+    },
+    {
+      "domain": "internet",
+      "template": "SP-NAT-INTERNET-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "한국지능정보사회진흥원 제주스마트쉼센터"
+    },
+    {
+      "domain": "labor",
+      "template": "SP-NAT-LABOR-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "근로복지공단 제주지사"
+    },
+    {
+      "domain": "laborimprove",
+      "template": "SP-NAT-LABORIMPROVE-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "광주지방고용노동청 제주근로개선지도센터"
+    },
+    {
+      "domain": "laborrel",
+      "template": "SP-NAT-LABORREL-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주지방노동위원회"
+    },
+    {
+      "domain": "mma",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주지방병무청"
+    },
+    {
+      "domain": "nhis",
+      "template": "SP-NAT-NHIS-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "국민건강보험공단 제주지사"
+    },
+    {
+      "domain": "nps",
+      "template": "SP-NAT-NPS-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "국민연금공단 제주지역본부"
+    },
+    {
+      "domain": "police",
+      "template": "SP-NAT-POLICE-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주지방경찰청"
+    },
+    {
+      "domain": "port",
+      "template": "SP-NAT-PORT-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주지방해양수산청"
+    },
+    {
+      "domain": "post",
+      "template": "SP-NAT-POST-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주지방우정청"
+    },
+    {
+      "domain": "pps",
+      "template": "SP-NAT-PPS-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주지방조달청"
+    },
+    {
+      "domain": "probation",
+      "template": "SP-NAT-PROBATION-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주준법지원센터"
+    },
+    {
+      "domain": "prosecution",
+      "template": "SP-NAT-PROSECUTION-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주지방검찰청"
+    },
+    {
+      "domain": "radio",
+      "template": "SP-NAT-RADIO-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주전파관리소"
+    },
+    {
+      "domain": "tax",
+      "template": "SP-NAT-TAX-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주세무서"
+    },
+    {
+      "domain": "veterans",
+      "template": "SP-NAT-VETERANS-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주보훈청"
+    },
+    {
+      "domain": "weather",
+      "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "지사명": "제주지방기상청"
+    }
+  ]
+}
