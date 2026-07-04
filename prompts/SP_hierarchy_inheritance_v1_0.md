@@ -1,5 +1,11 @@
 # SP-COMMON-05 · SP 계층 구조 및 상속 설계 원칙 v1.0
 
+> **2026-07-04 추가**: 아래 "배경 — 확정된 조직 구조"는 2026-07-03 시점의
+> 설계 스케치이며, 이후 실제 구현·검증된 최신 상태는
+> `SP-ARCHITECTURE-MAP_v1_0.md`를 참조한다(UNIVERSAL-INTEGRITY 신설,
+> GOV_AGENCIES 9개 확정, 미편입 서비스 5개 확인 등). 이 문서 자체의
+> 원칙(H1~H8, 상속=캐시공유라는 것과 그 성립 조건)은 그대로 유효하다.
+
 > **적용 대상**: K-Public을 최상위로 하는 모든 국가/공공기관 대변 AI의
 > SP(K-Tax, K-Health, police, 911, K-Public/Province/City/County, 대법원·
 > 헌법재판소 대변 AI, democracy, K-Insurance 등) 및 향후 유사한 계층
