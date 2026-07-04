@@ -1,0 +1,36 @@
+name: Check stale SP references
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prompts/**'
+      - 'worker.js'
+      - 'gwp-registry.js'
+      - 'src/gopang/ai/expert-registry.js'
+      - 'src/gopang/ai/expert-session.js'
+      - 'tools/check_stale_refs.py'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check-refs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ── registry/router 참조가 실제 최신 파일과 일치하는지 검사 ──────
+      # 실패 시(참조 누락 또는 구버전 참조) 워크플로 자체가 실패한다 —
+      # 2026-07-04에 3회 반복 발견된 "내용은 개정됐는데 참조는 안 바뀜"
+      # 패턴(jeju-router.js 404, K-Public_common 미배포, 페르소나 16개
+      # 버전낙후)을 병합 전에 잡기 위함.
+      - name: Run stale reference check
+        run: python3 tools/check_stale_refs.py
