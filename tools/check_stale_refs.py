@@ -6,18 +6,29 @@ worker.js·expert-registry.js·expert-session.js·gwp-registry.js(및 필요시
 추가 파일)가 참조하는 prompts/ 파일 경로가 (1) 실제로 존재하는지,
 (2) 존재한다면 그게 진짜 최신 버전인지 검사한다.
 
-이 스크립트가 잡아내려는 정확한 사고 패턴(2026-07-04 세션에서 3회 반복
+2026-07-05부터는 여기에 더해 (3) GWP_REGISTRY에 등록된 서비스가
+SP-00-ROUTER 프롬프트의 서비스 표에도 실제로 등재돼 있는지(=그 서비스로
+라우팅될 방법이 존재하는지)도 검사한다 — 아래 "이 스크립트가 잡아내려는
+사고 패턴" 목록의 네 번째 항목 참고.
+
+이 스크립트가 잡아내려는 정확한 사고 패턴(2026-07-04~05 세션에서 반복
 발견됨):
   - jeju-router.js가 존재하지 않는 SP-EXP-EMERGENCY_v1.1.md를 참조(404)
   - worker.js의 K_PUBLIC_COMMON_URL이 v1.0을 가리키는 동안 v1.1이 이미
     존재(staleness — 새 내용이 반영 안 됨)
   - expert-registry.js 27개 페르소나 중 16개가 v2.2를 참조하는 동안
     v2.3이 이미 존재(staleness)
+  - gwp-registry.js에는 'jeju'(제주도청 AI) 서비스가 등록돼 있었지만
+    SP-00-ROUTER-v5_0.txt의 서비스 표엔 없어서, 실제 LLM 라우터가 이
+    서비스의 존재 자체를 몰라 어떤 시민 질의도 그리로 보낼 수 없는
+    상태로 방치돼 있었다(2026-07-05, 정적 코드 분석으로 발견 —
+    UNROUTABLE 클래스, 기존 MISSING/STALE과는 다른 새 실패 유형)
 
 ■ 종료 코드
   0: 문제 없음
-  1: 하나 이상의 MISSING(존재하지 않는 파일 참조, 404 위험) 또는
-     STALE(최신 버전이 아닌 참조) 발견
+  1: 하나 이상의 MISSING(존재하지 않는 파일 참조, 404 위험),
+     STALE(최신 버전이 아닌 참조), 또는 UNROUTABLE(등록된 서비스가
+     라우터 서비스 표에 없어 도달 불가능) 발견
 
 ■ 범위
   gopang 저장소 내부 .js 파일이 gopang 저장소 내부 prompts/ 파일을
@@ -74,6 +85,75 @@ def parse_version(fname: str) -> tuple:
     if not m:
         return (0, 0, 0)
     return (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0))
+
+
+# ── 검사 2: GWP_REGISTRY ↔ SP-00-ROUTER 동기화 (2026-07-05 신설) ──────
+# 배경: jeju(제주도청 AI) 서비스가 gwp-registry.js의 GWP_REGISTRY에는
+# 등록돼 있었지만, 실제 LLM 라우터가 읽는 SP-00-ROUTER 프롬프트의 서비스
+# 표에는 빠져 있어서 — 그 서비스로 갈 방법 자체가 없는 상태로 방치돼
+# 있었다(정적 코드 분석으로 발견, 2026-07-05). 두 파일이 서로 다른 시점에
+# 독립적으로 손으로 유지되는 게 근본 원인이므로, "새 서비스 추가 → 라우터
+# 갱신 누락"이 다시 발생하면 이 검사가 CI에서 반드시 잡아낸다.
+#
+# 검사 대상은 실제로 "여기로 보낼 수 있는 목적지"인 type: 'inline'/'tab'
+# 항목만이다. type: 'tool'(웹검색·계산기 등 function calling)은 라우팅
+# 목적지가 아니라 항상 사용 가능한 도구라서 SP-00-ROUTER의 서비스 표에
+# 나열될 필요가 없다 — 이 검사에서 의도적으로 제외한다.
+REGISTRY_ENTRY_RE = re.compile(r'\{([^{}]*)\}')
+
+
+def extract_registry_entries(text: str) -> list[dict]:
+    entries = []
+    for block in REGISTRY_ENTRY_RE.findall(text):
+        id_m     = re.search(r"id:\s*'([\w-]+)'", block)
+        status_m = re.search(r"status:\s*'(\w+)'", block)
+        type_m   = re.search(r"type:\s*'(\w+)'", block)
+        name_m   = re.search(r"name:\s*'([^']+)'", block)
+        if id_m and status_m and type_m:
+            entries.append({
+                'id': id_m.group(1), 'status': status_m.group(1),
+                'type': type_m.group(1), 'name': name_m.group(1) if name_m else id_m.group(1),
+            })
+    return entries
+
+
+def check_router_registry_sync(results: list):
+    registry_path = ROOT / 'gwp-registry.js'
+    if not registry_path.exists():
+        return
+
+    manifest_path = PROMPTS / 'manifest.json'
+    if not manifest_path.exists():
+        print("[경고] prompts/manifest.json 없음 — 라우터 동기화 검사 건너뜀", file=sys.stderr)
+        return
+    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+    router_fname = manifest.get('SP-00-ROUTER')
+    if not router_fname:
+        print("[경고] manifest에 SP-00-ROUTER 키 없음 — 라우터 동기화 검사 건너뜀", file=sys.stderr)
+        return
+    router_path = PROMPTS / router_fname
+    if not router_path.exists():
+        results.append(('MISSING', 'SP-00-ROUTER manifest 참조', router_fname, '(파일 없음)'))
+        return
+
+    router_text = router_path.read_text(encoding='utf-8')
+    registry_text = registry_path.read_text(encoding='utf-8')
+    entries = extract_registry_entries(registry_text)
+
+    for e in entries:
+        if e['status'] != 'active':
+            continue          # pending 항목은 아직 정식 노출 전이라 제외
+        if e['type'] == 'tool':
+            continue          # function-calling 도구는 라우팅 목적지가 아님
+        marker = f"### {e['id']}"
+        if marker not in router_text:
+            results.append((
+                'UNROUTABLE', 'gwp-registry.js → SP-00-ROUTER',
+                f"id={e['id']} ({e['name']})",
+                f"{router_fname}에 '### {e['id']}' 섹션 없음 — 라우터가 이 서비스를 모름",
+            ))
+        else:
+            results.append(('OK', 'gwp-registry.js → SP-00-ROUTER', e['id'], router_fname))
 
 
 def base_key(path: str) -> str:
@@ -135,12 +215,14 @@ def main():
         except Exception as e:
             print(f"[경고] {label} 원격 fetch 실패, 건너뜀: {e}", file=sys.stderr)
 
+    check_router_registry_sync(results)
+
     problems = [r for r in results if r[0] != 'OK']
     ok_count = len(results) - len(problems)
 
     print(f"검사한 참조: {len(results)}건 (정상 {ok_count}건, 문제 {len(problems)}건)\n")
     for status, label, ref, latest_file in problems:
-        icon = '🔴' if status == 'MISSING' else '🟡'
+        icon = {'MISSING': '🔴', 'STALE': '🟡', 'UNROUTABLE': '🟠'}.get(status, '⚠️')
         print(f"{icon} [{status}] {label}")
         print(f"    참조: {ref}")
         print(f"    실제 최신: {latest_file}\n")
