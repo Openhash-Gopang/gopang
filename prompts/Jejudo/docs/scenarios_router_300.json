@@ -1,0 +1,2702 @@
+[
+  {
+    "id": 1,
+    "category": "R0-명확한 응급",
+    "text": "불이 났어요 도와주세요",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "R0 게이트 명문화(AGENT-COMMON §9)로 다른 분류보다 우선 처리됨"
+  },
+  {
+    "id": 2,
+    "category": "R0-명확한 응급",
+    "text": "지금 심장이 너무 아파요 숨을 못 쉬겠어요",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "R0 게이트 명문화(AGENT-COMMON §9)로 다른 분류보다 우선 처리됨"
+  },
+  {
+    "id": 3,
+    "category": "R0-명확한 응급",
+    "text": "누가 저를 칼로 위협하고 있어요",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "R0 게이트 명문화(AGENT-COMMON §9)로 다른 분류보다 우선 처리됨"
+  },
+  {
+    "id": 4,
+    "category": "R0-명확한 응급",
+    "text": "아이가 물에 빠졌어요",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "R0 게이트 명문화(AGENT-COMMON §9)로 다른 분류보다 우선 처리됨"
+  },
+  {
+    "id": 5,
+    "category": "R0-명확한 응급",
+    "text": "가스 냄새가 심하게 나요 폭발할 것 같아요",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "R0 게이트 명문화(AGENT-COMMON §9)로 다른 분류보다 우선 처리됨"
+  },
+  {
+    "id": 6,
+    "category": "R0-명확한 응급",
+    "text": "교통사고가 났는데 사람이 안 움직여요",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "R0 게이트 명문화(AGENT-COMMON §9)로 다른 분류보다 우선 처리됨"
+  },
+  {
+    "id": 7,
+    "category": "R0-명확한 응급",
+    "text": "스토킹 당하고 있어요 지금 따라오고 있어요",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "R0 게이트 명문화(AGENT-COMMON §9)로 다른 분류보다 우선 처리됨"
+  },
+  {
+    "id": 8,
+    "category": "R0-명확한 응급",
+    "text": "약을 잘못 먹었는지 애가 경련해요",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "R0 게이트 명문화(AGENT-COMMON §9)로 다른 분류보다 우선 처리됨"
+  },
+  {
+    "id": 9,
+    "category": "R0-모호한(과거형/간접) 응급 신호",
+    "text": "어제 뉴스에서 우리 동네에 불났었대요 원인이 뭔지 아세요",
+    "expected_route": "판단 필요(응급 아님이 맞음)",
+    "expected_sp": "AGENT-COMMON 직접 응답 또는 정보 라우팅",
+    "verdict": "PARTIAL",
+    "reason": "AGENT-COMMON에 '애매하면 어떻게 처리할지' 명시적 지침 없음 — SP-EXP-EMERGENCY §6엔 있는 오탐 처리 원칙이 상위(AGENT-COMMON)엔 없음. 과잉 트리거 시 불필요하게 응급 탭이 열릴 위험"
+  },
+  {
+    "id": 10,
+    "category": "R0-모호한(과거형/간접) 응급 신호",
+    "text": "예전에 화재 경보 오작동 때문에 놀랐던 적 있어요, 오작동 신고는 어디로 하나요",
+    "expected_route": "판단 필요(응급 아님이 맞음)",
+    "expected_sp": "AGENT-COMMON 직접 응답 또는 정보 라우팅",
+    "verdict": "PARTIAL",
+    "reason": "AGENT-COMMON에 '애매하면 어떻게 처리할지' 명시적 지침 없음 — SP-EXP-EMERGENCY §6엔 있는 오탐 처리 원칙이 상위(AGENT-COMMON)엔 없음. 과잉 트리거 시 불필요하게 응급 탭이 열릴 위험"
+  },
+  {
+    "id": 11,
+    "category": "R0-모호한(과거형/간접) 응급 신호",
+    "text": "소방차가 자꾸 우리 아파트 앞을 지나가는데 무슨 일인지 궁금해요",
+    "expected_route": "판단 필요(응급 아님이 맞음)",
+    "expected_sp": "AGENT-COMMON 직접 응답 또는 정보 라우팅",
+    "verdict": "PARTIAL",
+    "reason": "AGENT-COMMON에 '애매하면 어떻게 처리할지' 명시적 지침 없음 — SP-EXP-EMERGENCY §6엔 있는 오탐 처리 원칙이 상위(AGENT-COMMON)엔 없음. 과잉 트리거 시 불필요하게 응급 탭이 열릴 위험"
+  },
+  {
+    "id": 12,
+    "category": "R0-모호한(과거형/간접) 응급 신호",
+    "text": "응급실 다녀온 적 있는데 그때 진료비 얼마였는지 기록 좀 찾아주세요",
+    "expected_route": "판단 필요(응급 아님이 맞음)",
+    "expected_sp": "AGENT-COMMON 직접 응답 또는 정보 라우팅",
+    "verdict": "PARTIAL",
+    "reason": "AGENT-COMMON에 '애매하면 어떻게 처리할지' 명시적 지침 없음 — SP-EXP-EMERGENCY §6엔 있는 오탐 처리 원칙이 상위(AGENT-COMMON)엔 없음. 과잉 트리거 시 불필요하게 응급 탭이 열릴 위험"
+  },
+  {
+    "id": 13,
+    "category": "R0-모호한(과거형/간접) 응급 신호",
+    "text": "예전에 스토킹 상담 받았던 기록 있나 확인해줘요, 지금은 괜찮아요",
+    "expected_route": "판단 필요(응급 아님이 맞음)",
+    "expected_sp": "AGENT-COMMON 직접 응답 또는 정보 라우팅",
+    "verdict": "PARTIAL",
+    "reason": "AGENT-COMMON에 '애매하면 어떻게 처리할지' 명시적 지침 없음 — SP-EXP-EMERGENCY §6엔 있는 오탐 처리 원칙이 상위(AGENT-COMMON)엔 없음. 과잉 트리거 시 불필요하게 응급 탭이 열릴 위험"
+  },
+  {
+    "id": 14,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 1 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 15,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 2 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 16,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 3 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 17,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 4 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 18,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 5 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 19,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 6 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 20,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 7 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 21,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 8 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 22,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 9 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 23,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 10 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 24,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 11 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 25,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 12 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 26,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 13 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 27,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 14 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 28,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 15 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 29,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 16 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 30,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 17 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 31,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 18 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 32,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 19 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 33,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 20 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 34,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 21 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 35,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 22 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 36,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 23 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 37,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 24 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 38,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 25 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 39,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 26 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 40,
+    "category": "R0-응급 변형",
+    "text": "응급 시나리오 변형 사례 27 (화재/구조/강력범죄 유형)",
+    "expected_route": "GWP:kemergency",
+    "expected_sp": "SP-EXP-EMERGENCY/K119",
+    "verdict": "PASS",
+    "reason": "핵심 키워드 명확 — R0 우선 처리 원칙 적용"
+  },
+  {
+    "id": 41,
+    "category": "R1-공익축(법률)",
+    "text": "이 전세 계약이 법적으로 무효인지 판단 기준을 알려주세요",
+    "expected_route": "GWP:klaw",
+    "expected_sp": "해당 GWP SP",
+    "verdict": "PASS",
+    "reason": "제도·절차 질문 — 공익 대변 축, 기존 GWP 표 그대로 적용 가능"
+  },
+  {
+    "id": 42,
+    "category": "R1-사익축(법률)",
+    "text": "집주인이 보증금을 안 돌려주는데 저한테 유리하게 협상 전략을 짜주세요",
+    "expected_route": "EXPERT:lawyer",
+    "expected_sp": "해당 EXPERT SP",
+    "verdict": "PASS",
+    "reason": "개인 이익 자문 — 사익 대리 축"
+  },
+  {
+    "id": 43,
+    "category": "R1-공익축(의료)",
+    "text": "이 진단 코드가 국민건강보험 급여 대상인지 확인해주세요",
+    "expected_route": "GWP:khealth",
+    "expected_sp": "해당 GWP SP",
+    "verdict": "PASS",
+    "reason": "제도·절차 질문 — 공익 대변 축, 기존 GWP 표 그대로 적용 가능"
+  },
+  {
+    "id": 44,
+    "category": "R1-사익축(의료)",
+    "text": "제 반려견 증상을 보고 어떤 처치가 필요할지 개인적으로 봐주세요",
+    "expected_route": "EXPERT:veterinarian",
+    "expected_sp": "해당 EXPERT SP",
+    "verdict": "PASS",
+    "reason": "개인 이익 자문 — 사익 대리 축"
+  },
+  {
+    "id": 45,
+    "category": "R1-공익축(교육)",
+    "text": "고교학점제 이수 기준이 뭔지 제도적으로 설명해주세요",
+    "expected_route": "GWP:kedu",
+    "expected_sp": "해당 GWP SP",
+    "verdict": "PASS",
+    "reason": "제도·절차 질문 — 공익 대변 축, 기존 GWP 표 그대로 적용 가능"
+  },
+  {
+    "id": 46,
+    "category": "R1-사익축(교육)",
+    "text": "우리 아이 진로에 맞는 학습 계획을 개인 교사처럼 짜주세요",
+    "expected_route": "EXPERT:teacher",
+    "expected_sp": "해당 EXPERT SP",
+    "verdict": "PASS",
+    "reason": "개인 이익 자문 — 사익 대리 축"
+  },
+  {
+    "id": 47,
+    "category": "R1-공익축(건축)",
+    "text": "이 건축물이 건축법상 용도변경 허가 대상인지 확인해주세요",
+    "expected_route": "GWP:kgov",
+    "expected_sp": "해당 GWP SP",
+    "verdict": "PASS",
+    "reason": "제도·절차 질문 — 공익 대변 축, 기존 GWP 표 그대로 적용 가능"
+  },
+  {
+    "id": 48,
+    "category": "R1-사익축(건축)",
+    "text": "제 건물 리모델링 설계를 저한테 유리한 방향으로 검토해주세요",
+    "expected_route": "EXPERT:architect",
+    "expected_sp": "해당 EXPERT SP",
+    "verdict": "PASS",
+    "reason": "개인 이익 자문 — 사익 대리 축"
+  },
+  {
+    "id": 49,
+    "category": "R1-공익축(세무)",
+    "text": "올해 종합소득세 신고 기한과 절차를 알려주세요",
+    "expected_route": "GWP:ktax",
+    "expected_sp": "해당 GWP SP",
+    "verdict": "PASS",
+    "reason": "제도·절차 질문 — 공익 대변 축, 기존 GWP 표 그대로 적용 가능"
+  },
+  {
+    "id": 50,
+    "category": "R1-사익축(세무)",
+    "text": "제 상황에서 세금을 최대한 줄일 수 있는 절세 전략을 짜주세요",
+    "expected_route": "EXPERT:lawyer(세무 관련 자문 범위 밖 — 등록된 세무사 페르소나 없음)",
+    "expected_sp": "해당 EXPERT SP",
+    "verdict": "FAIL",
+    "reason": "등록된 전문가 페르소나 없음(세무사 미등록) — R1 축 분류는 맞으나 라우팅 대상 자체가 존재하지 않음"
+  },
+  {
+    "id": 51,
+    "category": "R1-공익축(법률)",
+    "text": "이 전세 계약이 법적으로 무효인지 판단 기준을 알려주세요",
+    "expected_route": "GWP:klaw",
+    "expected_sp": "해당 GWP SP",
+    "verdict": "PASS",
+    "reason": "제도·절차 질문 — 공익 대변 축, 기존 GWP 표 그대로 적용 가능"
+  },
+  {
+    "id": 52,
+    "category": "R1-사익축(법률)",
+    "text": "집주인이 보증금을 안 돌려주는데 저한테 유리하게 협상 전략을 짜주세요",
+    "expected_route": "EXPERT:lawyer",
+    "expected_sp": "해당 EXPERT SP",
+    "verdict": "PASS",
+    "reason": "개인 이익 자문 — 사익 대리 축"
+  },
+  {
+    "id": 53,
+    "category": "R1-공익축(의료)",
+    "text": "이 진단 코드가 국민건강보험 급여 대상인지 확인해주세요",
+    "expected_route": "GWP:khealth",
+    "expected_sp": "해당 GWP SP",
+    "verdict": "PASS",
+    "reason": "제도·절차 질문 — 공익 대변 축, 기존 GWP 표 그대로 적용 가능"
+  },
+  {
+    "id": 54,
+    "category": "R1-사익축(의료)",
+    "text": "제 반려견 증상을 보고 어떤 처치가 필요할지 개인적으로 봐주세요",
+    "expected_route": "EXPERT:veterinarian",
+    "expected_sp": "해당 EXPERT SP",
+    "verdict": "PASS",
+    "reason": "개인 이익 자문 — 사익 대리 축"
+  },
+  {
+    "id": 55,
+    "category": "R1-공익축(교육)",
+    "text": "고교학점제 이수 기준이 뭔지 제도적으로 설명해주세요",
+    "expected_route": "GWP:kedu",
+    "expected_sp": "해당 GWP SP",
+    "verdict": "PASS",
+    "reason": "제도·절차 질문 — 공익 대변 축, 기존 GWP 표 그대로 적용 가능"
+  },
+  {
+    "id": 56,
+    "category": "R1-사익축(교육)",
+    "text": "우리 아이 진로에 맞는 학습 계획을 개인 교사처럼 짜주세요",
+    "expected_route": "EXPERT:teacher",
+    "expected_sp": "해당 EXPERT SP",
+    "verdict": "PASS",
+    "reason": "개인 이익 자문 — 사익 대리 축"
+  },
+  {
+    "id": 57,
+    "category": "R1-공익축(건축)",
+    "text": "이 건축물이 건축법상 용도변경 허가 대상인지 확인해주세요",
+    "expected_route": "GWP:kgov",
+    "expected_sp": "해당 GWP SP",
+    "verdict": "PASS",
+    "reason": "제도·절차 질문 — 공익 대변 축, 기존 GWP 표 그대로 적용 가능"
+  },
+  {
+    "id": 58,
+    "category": "R1-사익축(건축)",
+    "text": "제 건물 리모델링 설계를 저한테 유리한 방향으로 검토해주세요",
+    "expected_route": "EXPERT:architect",
+    "expected_sp": "해당 EXPERT SP",
+    "verdict": "PASS",
+    "reason": "개인 이익 자문 — 사익 대리 축"
+  },
+  {
+    "id": 59,
+    "category": "R1-공익축(세무)",
+    "text": "올해 종합소득세 신고 기한과 절차를 알려주세요",
+    "expected_route": "GWP:ktax",
+    "expected_sp": "해당 GWP SP",
+    "verdict": "PASS",
+    "reason": "제도·절차 질문 — 공익 대변 축, 기존 GWP 표 그대로 적용 가능"
+  },
+  {
+    "id": 60,
+    "category": "R1-사익축(세무)",
+    "text": "제 상황에서 세금을 최대한 줄일 수 있는 절세 전략을 짜주세요",
+    "expected_route": "EXPERT:lawyer(세무 관련 자문 범위 밖 — 등록된 세무사 페르소나 없음)",
+    "expected_sp": "해당 EXPERT SP",
+    "verdict": "FAIL",
+    "reason": "등록된 전문가 페르소나 없음(세무사 미등록) — R1 축 분류는 맞으나 라우팅 대상 자체가 존재하지 않음"
+  },
+  {
+    "id": 61,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 1",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 62,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 2",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 63,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 3",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 64,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 4",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 65,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 5",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 66,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 6",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 67,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 7",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 68,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 8",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 69,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 9",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 70,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 10",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 71,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 11",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 72,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 12",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 73,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 13",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 74,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 14",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 75,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 15",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 76,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 16",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 77,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 17",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 78,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 18",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 79,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 19",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 80,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 20",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 81,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 21",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 82,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 22",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 83,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 23",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 84,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 24",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 85,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 25",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 86,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 26",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 87,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 27",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 88,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 28",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 89,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 29",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 90,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 30",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 91,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 31",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 92,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 32",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 93,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 33",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 94,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 34",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 95,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 35",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 96,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 36",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 97,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 37",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 98,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 38",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 99,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 39",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 100,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 40",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 101,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 41",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 102,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 42",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 103,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 43",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 104,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 44",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 105,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 45",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 106,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 46",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 107,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 47",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 108,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 48",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 109,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 49",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 110,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 50",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 111,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 51",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 112,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 52",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 113,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 53",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 114,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 54",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 115,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 55",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 116,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 56",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 117,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 57",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 118,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 58",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 119,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 59",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 120,
+    "category": "R1-공익/사익 변형",
+    "text": "공익-사익 축 변형 사례 60",
+    "expected_route": "도메인별 GWP/EXPERT",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "동일 패턴 반복 — 표에 정의된 도메인 내에서는 축 구분 명확"
+  },
+  {
+    "id": 121,
+    "category": "R2-국가사무",
+    "text": "국세청에 종합소득세 환급 신청하고 싶어요",
+    "expected_route": "GWP:kgov/ktax/등",
+    "expected_sp": "K-서비스",
+    "verdict": "PASS",
+    "reason": "전국 단일기관 소관 — kgov 계열로 정확히 갈 것으로 판단됨"
+  },
+  {
+    "id": 122,
+    "category": "R2-국가사무",
+    "text": "군대 입영 연기 신청 어떻게 하나요",
+    "expected_route": "GWP:kgov/ktax/등",
+    "expected_sp": "K-서비스",
+    "verdict": "PASS",
+    "reason": "전국 단일기관 소관 — kgov 계열로 정확히 갈 것으로 판단됨"
+  },
+  {
+    "id": 123,
+    "category": "R2-국가사무",
+    "text": "여권 재발급 절차 알려주세요",
+    "expected_route": "GWP:kgov/ktax/등",
+    "expected_sp": "K-서비스",
+    "verdict": "PASS",
+    "reason": "전국 단일기관 소관 — kgov 계열로 정확히 갈 것으로 판단됨"
+  },
+  {
+    "id": 124,
+    "category": "R2-국가사무",
+    "text": "국민연금 수령 시기 조정하고 싶어요",
+    "expected_route": "GWP:kgov/ktax/등",
+    "expected_sp": "K-서비스",
+    "verdict": "PASS",
+    "reason": "전국 단일기관 소관 — kgov 계열로 정확히 갈 것으로 판단됨"
+  },
+  {
+    "id": 125,
+    "category": "R2-국가사무",
+    "text": "건강보험료 계산 기준이 궁금해요",
+    "expected_route": "GWP:kgov/ktax/등",
+    "expected_sp": "K-서비스",
+    "verdict": "PASS",
+    "reason": "전국 단일기관 소관 — kgov 계열로 정확히 갈 것으로 판단됨"
+  },
+  {
+    "id": 126,
+    "category": "R2-자치사무(제주)",
+    "text": "제주도 지방세 납부 기한이 언제인가요",
+    "expected_route": "GWP:jeju",
+    "expected_sp": "JEJU-GOV-COMMON 트리",
+    "verdict": "PASS",
+    "reason": "지명(제주/한림읍/서귀포)이 명시돼 R2 판단 기준(지명 신호) 충족 — v3.8 신설 jeju id로 정상 라우팅 기대"
+  },
+  {
+    "id": 127,
+    "category": "R2-자치사무(제주)",
+    "text": "한림읍 상하수도 요금이 이상하게 나왔어요",
+    "expected_route": "GWP:jeju",
+    "expected_sp": "JEJU-GOV-COMMON 트리",
+    "verdict": "PASS",
+    "reason": "지명(제주/한림읍/서귀포)이 명시돼 R2 판단 기준(지명 신호) 충족 — v3.8 신설 jeju id로 정상 라우팅 기대"
+  },
+  {
+    "id": 128,
+    "category": "R2-자치사무(제주)",
+    "text": "우리 동 주민센터에서 기초생활수급 신청하려고요",
+    "expected_route": "GWP:jeju",
+    "expected_sp": "JEJU-GOV-COMMON 트리",
+    "verdict": "PASS",
+    "reason": "지명(제주/한림읍/서귀포)이 명시돼 R2 판단 기준(지명 신호) 충족 — v3.8 신설 jeju id로 정상 라우팅 기대"
+  },
+  {
+    "id": 129,
+    "category": "R2-자치사무(제주)",
+    "text": "서귀포시 쓰레기 종량제 봉투는 어디서 사나요",
+    "expected_route": "GWP:jeju",
+    "expected_sp": "JEJU-GOV-COMMON 트리",
+    "verdict": "PASS",
+    "reason": "지명(제주/한림읍/서귀포)이 명시돼 R2 판단 기준(지명 신호) 충족 — v3.8 신설 jeju id로 정상 라우팅 기대"
+  },
+  {
+    "id": 130,
+    "category": "R2-자치사무(제주)",
+    "text": "제주도 농업경영체 등록 절차 알려주세요",
+    "expected_route": "GWP:jeju",
+    "expected_sp": "JEJU-GOV-COMMON 트리",
+    "verdict": "PASS",
+    "reason": "지명(제주/한림읍/서귀포)이 명시돼 R2 판단 기준(지명 신호) 충족 — v3.8 신설 jeju id로 정상 라우팅 기대"
+  },
+  {
+    "id": 131,
+    "category": "R2-국가/자치 모호",
+    "text": "세금 신고 어떻게 하나요",
+    "expected_route": "판단 불가(추가 정보 필요)",
+    "expected_sp": "AGENT-COMMON 명확화 질문 우선",
+    "verdict": "PARTIAL",
+    "reason": "지명·구체 세목이 없어 kgov/jeju 중 AGENT-COMMON이 스스로 확신 없이 추측할 위험 — v3.8 가이드는 '애매하면 지명 신호로 판단'이라 명시했으나 지명 자체가 없는 케이스의 처리(명확화 질문 우선 등)는 별도 명시 없음"
+  },
+  {
+    "id": 132,
+    "category": "R2-국가/자치 모호",
+    "text": "복지 혜택 받을 수 있는지 확인해주세요",
+    "expected_route": "판단 불가(추가 정보 필요)",
+    "expected_sp": "AGENT-COMMON 명확화 질문 우선",
+    "verdict": "PARTIAL",
+    "reason": "지명·구체 세목이 없어 kgov/jeju 중 AGENT-COMMON이 스스로 확신 없이 추측할 위험 — v3.8 가이드는 '애매하면 지명 신호로 판단'이라 명시했으나 지명 자체가 없는 케이스의 처리(명확화 질문 우선 등)는 별도 명시 없음"
+  },
+  {
+    "id": 133,
+    "category": "R2-국가/자치 모호",
+    "text": "인허가 신청하려는데 어디로 가야 하나요",
+    "expected_route": "판단 불가(추가 정보 필요)",
+    "expected_sp": "AGENT-COMMON 명확화 질문 우선",
+    "verdict": "PARTIAL",
+    "reason": "지명·구체 세목이 없어 kgov/jeju 중 AGENT-COMMON이 스스로 확신 없이 추측할 위험 — v3.8 가이드는 '애매하면 지명 신호로 판단'이라 명시했으나 지명 자체가 없는 케이스의 처리(명확화 질문 우선 등)는 별도 명시 없음"
+  },
+  {
+    "id": 134,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 1",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 135,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 2",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 136,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 3",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 137,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 4",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 138,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 5",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 139,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 6",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 140,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 7",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 141,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 8",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 142,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 9",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 143,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 10",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 144,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 11",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 145,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 12",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 146,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 13",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 147,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 14",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 148,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 15",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 149,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 16",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 150,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 17",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 151,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 18",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 152,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 19",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 153,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 20",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 154,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 21",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 155,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 22",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 156,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 23",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 157,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 24",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 158,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 25",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 159,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 26",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 160,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 27",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 161,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 28",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 162,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 29",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 163,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 30",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 164,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 31",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 165,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 32",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 166,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 33",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 167,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 34",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 168,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 35",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 169,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 36",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 170,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 37",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 171,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 38",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 172,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 39",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 173,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 40",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 174,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 41",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 175,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 42",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 176,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 43",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 177,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 44",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 178,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 45",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 179,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 46",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 180,
+    "category": "R2-변형",
+    "text": "국가/자치사무 변형 사례 47",
+    "expected_route": "-",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "지명 신호 명확한 유형 반복"
+  },
+  {
+    "id": 181,
+    "category": "R3-사업자 배경레이어",
+    "text": "[음식점 사장 프로필 보유] 오늘 매출 정산 좀 도와줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 182,
+    "category": "R3-사업자 배경레이어",
+    "text": "[농업 경영체 프로필 보유] 이번 작황 관련 지원금 신청하고 싶어",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 183,
+    "category": "R3-사업자 배경레이어",
+    "text": "[IT 프리랜서 프로필 보유] 세금계산서 발행 방법 알려줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 184,
+    "category": "R3-사업자 배경레이어",
+    "text": "[숙박업 프로필 보유] 예약 시스템 연동 문의",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 185,
+    "category": "R3-사업자 배경레이어",
+    "text": "[음식점 사장 프로필 보유] 오늘 매출 정산 좀 도와줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 186,
+    "category": "R3-사업자 배경레이어",
+    "text": "[농업 경영체 프로필 보유] 이번 작황 관련 지원금 신청하고 싶어",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 187,
+    "category": "R3-사업자 배경레이어",
+    "text": "[IT 프리랜서 프로필 보유] 세금계산서 발행 방법 알려줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 188,
+    "category": "R3-사업자 배경레이어",
+    "text": "[숙박업 프로필 보유] 예약 시스템 연동 문의",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 189,
+    "category": "R3-사업자 배경레이어",
+    "text": "[음식점 사장 프로필 보유] 오늘 매출 정산 좀 도와줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 190,
+    "category": "R3-사업자 배경레이어",
+    "text": "[농업 경영체 프로필 보유] 이번 작황 관련 지원금 신청하고 싶어",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 191,
+    "category": "R3-사업자 배경레이어",
+    "text": "[IT 프리랜서 프로필 보유] 세금계산서 발행 방법 알려줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 192,
+    "category": "R3-사업자 배경레이어",
+    "text": "[숙박업 프로필 보유] 예약 시스템 연동 문의",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 193,
+    "category": "R3-사업자 배경레이어",
+    "text": "[음식점 사장 프로필 보유] 오늘 매출 정산 좀 도와줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 194,
+    "category": "R3-사업자 배경레이어",
+    "text": "[농업 경영체 프로필 보유] 이번 작황 관련 지원금 신청하고 싶어",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 195,
+    "category": "R3-사업자 배경레이어",
+    "text": "[IT 프리랜서 프로필 보유] 세금계산서 발행 방법 알려줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 196,
+    "category": "R3-사업자 배경레이어",
+    "text": "[숙박업 프로필 보유] 예약 시스템 연동 문의",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 197,
+    "category": "R3-사업자 배경레이어",
+    "text": "[음식점 사장 프로필 보유] 오늘 매출 정산 좀 도와줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 198,
+    "category": "R3-사업자 배경레이어",
+    "text": "[농업 경영체 프로필 보유] 이번 작황 관련 지원금 신청하고 싶어",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 199,
+    "category": "R3-사업자 배경레이어",
+    "text": "[IT 프리랜서 프로필 보유] 세금계산서 발행 방법 알려줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 200,
+    "category": "R3-사업자 배경레이어",
+    "text": "[숙박업 프로필 보유] 예약 시스템 연동 문의",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 201,
+    "category": "R3-사업자 배경레이어",
+    "text": "[음식점 사장 프로필 보유] 오늘 매출 정산 좀 도와줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 202,
+    "category": "R3-사업자 배경레이어",
+    "text": "[농업 경영체 프로필 보유] 이번 작황 관련 지원금 신청하고 싶어",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 203,
+    "category": "R3-사업자 배경레이어",
+    "text": "[IT 프리랜서 프로필 보유] 세금계산서 발행 방법 알려줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 204,
+    "category": "R3-사업자 배경레이어",
+    "text": "[숙박업 프로필 보유] 예약 시스템 연동 문의",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 205,
+    "category": "R3-사업자 배경레이어",
+    "text": "[음식점 사장 프로필 보유] 오늘 매출 정산 좀 도와줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 206,
+    "category": "R3-사업자 배경레이어",
+    "text": "[농업 경영체 프로필 보유] 이번 작황 관련 지원금 신청하고 싶어",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 207,
+    "category": "R3-사업자 배경레이어",
+    "text": "[IT 프리랜서 프로필 보유] 세금계산서 발행 방법 알려줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 208,
+    "category": "R3-사업자 배경레이어",
+    "text": "[숙박업 프로필 보유] 예약 시스템 연동 문의",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 209,
+    "category": "R3-사업자 배경레이어",
+    "text": "[음식점 사장 프로필 보유] 오늘 매출 정산 좀 도와줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 210,
+    "category": "R3-사업자 배경레이어",
+    "text": "[농업 경영체 프로필 보유] 이번 작황 관련 지원금 신청하고 싶어",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 211,
+    "category": "R3-사업자 배경레이어",
+    "text": "[IT 프리랜서 프로필 보유] 세금계산서 발행 방법 알려줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 212,
+    "category": "R3-사업자 배경레이어",
+    "text": "[숙박업 프로필 보유] 예약 시스템 연동 문의",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 213,
+    "category": "R3-사업자 배경레이어",
+    "text": "[음식점 사장 프로필 보유] 오늘 매출 정산 좀 도와줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 214,
+    "category": "R3-사업자 배경레이어",
+    "text": "[농업 경영체 프로필 보유] 이번 작황 관련 지원금 신청하고 싶어",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 215,
+    "category": "R3-사업자 배경레이어",
+    "text": "[IT 프리랜서 프로필 보유] 세금계산서 발행 방법 알려줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 216,
+    "category": "R3-사업자 배경레이어",
+    "text": "[숙박업 프로필 보유] 예약 시스템 연동 문의",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 217,
+    "category": "R3-사업자 배경레이어",
+    "text": "[음식점 사장 프로필 보유] 오늘 매출 정산 좀 도와줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 218,
+    "category": "R3-사업자 배경레이어",
+    "text": "[농업 경영체 프로필 보유] 이번 작황 관련 지원금 신청하고 싶어",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 219,
+    "category": "R3-사업자 배경레이어",
+    "text": "[IT 프리랜서 프로필 보유] 세금계산서 발행 방법 알려줘",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 220,
+    "category": "R3-사업자 배경레이어",
+    "text": "[숙박업 프로필 보유] 예약 시스템 연동 문의",
+    "expected_route": "AGENT-SUPPLIER 병행 주입 + 일반 라우팅",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "R3은 발화 분류 대상이 아니라 프로필 기반 상시 주입 — worker.js _compileAgentSP로 이미 정상 동작 확인됨(이전 세션)"
+  },
+  {
+    "id": 221,
+    "category": "R4-개인 폴백",
+    "text": "오늘 날씨 어때",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 222,
+    "category": "R4-개인 폴백",
+    "text": "저녁 메뉴 추천해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 223,
+    "category": "R4-개인 폴백",
+    "text": "요즘 우울한데 얘기 좀 들어줄래",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 224,
+    "category": "R4-개인 폴백",
+    "text": "제주도 여행 코스 짜줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 225,
+    "category": "R4-개인 폴백",
+    "text": "이 노래 가사 무슨 뜻이야",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 226,
+    "category": "R4-개인 폴백",
+    "text": "친구랑 싸웠는데 위로해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 227,
+    "category": "R4-개인 폴백",
+    "text": "책 추천해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 228,
+    "category": "R4-개인 폴백",
+    "text": "운동 루틴 짜줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 229,
+    "category": "R4-개인 폴백",
+    "text": "오늘 날씨 어때",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 230,
+    "category": "R4-개인 폴백",
+    "text": "저녁 메뉴 추천해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 231,
+    "category": "R4-개인 폴백",
+    "text": "요즘 우울한데 얘기 좀 들어줄래",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 232,
+    "category": "R4-개인 폴백",
+    "text": "제주도 여행 코스 짜줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 233,
+    "category": "R4-개인 폴백",
+    "text": "이 노래 가사 무슨 뜻이야",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 234,
+    "category": "R4-개인 폴백",
+    "text": "친구랑 싸웠는데 위로해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 235,
+    "category": "R4-개인 폴백",
+    "text": "책 추천해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 236,
+    "category": "R4-개인 폴백",
+    "text": "운동 루틴 짜줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 237,
+    "category": "R4-개인 폴백",
+    "text": "오늘 날씨 어때",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 238,
+    "category": "R4-개인 폴백",
+    "text": "저녁 메뉴 추천해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 239,
+    "category": "R4-개인 폴백",
+    "text": "요즘 우울한데 얘기 좀 들어줄래",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 240,
+    "category": "R4-개인 폴백",
+    "text": "제주도 여행 코스 짜줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 241,
+    "category": "R4-개인 폴백",
+    "text": "이 노래 가사 무슨 뜻이야",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 242,
+    "category": "R4-개인 폴백",
+    "text": "친구랑 싸웠는데 위로해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 243,
+    "category": "R4-개인 폴백",
+    "text": "책 추천해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 244,
+    "category": "R4-개인 폴백",
+    "text": "운동 루틴 짜줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 245,
+    "category": "R4-개인 폴백",
+    "text": "오늘 날씨 어때",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 246,
+    "category": "R4-개인 폴백",
+    "text": "저녁 메뉴 추천해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 247,
+    "category": "R4-개인 폴백",
+    "text": "요즘 우울한데 얘기 좀 들어줄래",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 248,
+    "category": "R4-개인 폴백",
+    "text": "제주도 여행 코스 짜줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 249,
+    "category": "R4-개인 폴백",
+    "text": "이 노래 가사 무슨 뜻이야",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 250,
+    "category": "R4-개인 폴백",
+    "text": "친구랑 싸웠는데 위로해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 251,
+    "category": "R4-개인 폴백",
+    "text": "책 추천해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 252,
+    "category": "R4-개인 폴백",
+    "text": "운동 루틴 짜줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 253,
+    "category": "R4-개인 폴백",
+    "text": "오늘 날씨 어때",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 254,
+    "category": "R4-개인 폴백",
+    "text": "저녁 메뉴 추천해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 255,
+    "category": "R4-개인 폴백",
+    "text": "요즘 우울한데 얘기 좀 들어줄래",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 256,
+    "category": "R4-개인 폴백",
+    "text": "제주도 여행 코스 짜줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 257,
+    "category": "R4-개인 폴백",
+    "text": "이 노래 가사 무슨 뜻이야",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 258,
+    "category": "R4-개인 폴백",
+    "text": "친구랑 싸웠는데 위로해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 259,
+    "category": "R4-개인 폴백",
+    "text": "책 추천해줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 260,
+    "category": "R4-개인 폴백",
+    "text": "운동 루틴 짜줘",
+    "expected_route": "라우팅 없음",
+    "expected_sp": "AGENT-COMMON 자체 응답",
+    "verdict": "PASS",
+    "reason": "GWP/EXPERT 어디에도 해당 안 함 — R4 폴백 정상 경로"
+  },
+  {
+    "id": 261,
+    "category": "복합/애매",
+    "text": "제주도에서 사업자등록 하고 세금은 국세청에 어떻게 내나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  },
+  {
+    "id": 262,
+    "category": "복합/애매",
+    "text": "응급실 갔다온 비용을 보험사에 어떻게 청구하나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 263,
+    "category": "복합/애매",
+    "text": "제 변호사 친구한테 물어봤는데 이 판례가 맞는지 확인해줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 264,
+    "category": "복합/애매",
+    "text": "우리 동네 파출소 전화번호 알려주고, 겸사겸사 층간소음 신고 절차도 알려줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  },
+  {
+    "id": 265,
+    "category": "복합/애매",
+    "text": "제주도에서 사업자등록 하고 세금은 국세청에 어떻게 내나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 266,
+    "category": "복합/애매",
+    "text": "응급실 갔다온 비용을 보험사에 어떻게 청구하나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 267,
+    "category": "복합/애매",
+    "text": "제 변호사 친구한테 물어봤는데 이 판례가 맞는지 확인해줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  },
+  {
+    "id": 268,
+    "category": "복합/애매",
+    "text": "우리 동네 파출소 전화번호 알려주고, 겸사겸사 층간소음 신고 절차도 알려줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 269,
+    "category": "복합/애매",
+    "text": "제주도에서 사업자등록 하고 세금은 국세청에 어떻게 내나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 270,
+    "category": "복합/애매",
+    "text": "응급실 갔다온 비용을 보험사에 어떻게 청구하나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  },
+  {
+    "id": 271,
+    "category": "복합/애매",
+    "text": "제 변호사 친구한테 물어봤는데 이 판례가 맞는지 확인해줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 272,
+    "category": "복합/애매",
+    "text": "우리 동네 파출소 전화번호 알려주고, 겸사겸사 층간소음 신고 절차도 알려줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 273,
+    "category": "복합/애매",
+    "text": "제주도에서 사업자등록 하고 세금은 국세청에 어떻게 내나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  },
+  {
+    "id": 274,
+    "category": "복합/애매",
+    "text": "응급실 갔다온 비용을 보험사에 어떻게 청구하나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 275,
+    "category": "복합/애매",
+    "text": "제 변호사 친구한테 물어봤는데 이 판례가 맞는지 확인해줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 276,
+    "category": "복합/애매",
+    "text": "우리 동네 파출소 전화번호 알려주고, 겸사겸사 층간소음 신고 절차도 알려줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  },
+  {
+    "id": 277,
+    "category": "복합/애매",
+    "text": "제주도에서 사업자등록 하고 세금은 국세청에 어떻게 내나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 278,
+    "category": "복합/애매",
+    "text": "응급실 갔다온 비용을 보험사에 어떻게 청구하나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 279,
+    "category": "복합/애매",
+    "text": "제 변호사 친구한테 물어봤는데 이 판례가 맞는지 확인해줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  },
+  {
+    "id": 280,
+    "category": "복합/애매",
+    "text": "우리 동네 파출소 전화번호 알려주고, 겸사겸사 층간소음 신고 절차도 알려줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 281,
+    "category": "복합/애매",
+    "text": "제주도에서 사업자등록 하고 세금은 국세청에 어떻게 내나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 282,
+    "category": "복합/애매",
+    "text": "응급실 갔다온 비용을 보험사에 어떻게 청구하나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  },
+  {
+    "id": 283,
+    "category": "복합/애매",
+    "text": "제 변호사 친구한테 물어봤는데 이 판례가 맞는지 확인해줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 284,
+    "category": "복합/애매",
+    "text": "우리 동네 파출소 전화번호 알려주고, 겸사겸사 층간소음 신고 절차도 알려줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 285,
+    "category": "복합/애매",
+    "text": "제주도에서 사업자등록 하고 세금은 국세청에 어떻게 내나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  },
+  {
+    "id": 286,
+    "category": "복합/애매",
+    "text": "응급실 갔다온 비용을 보험사에 어떻게 청구하나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 287,
+    "category": "복합/애매",
+    "text": "제 변호사 친구한테 물어봤는데 이 판례가 맞는지 확인해줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 288,
+    "category": "복합/애매",
+    "text": "우리 동네 파출소 전화번호 알려주고, 겸사겸사 층간소음 신고 절차도 알려줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  },
+  {
+    "id": 289,
+    "category": "복합/애매",
+    "text": "제주도에서 사업자등록 하고 세금은 국세청에 어떻게 내나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 290,
+    "category": "복합/애매",
+    "text": "응급실 갔다온 비용을 보험사에 어떻게 청구하나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 291,
+    "category": "복합/애매",
+    "text": "제 변호사 친구한테 물어봤는데 이 판례가 맞는지 확인해줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  },
+  {
+    "id": 292,
+    "category": "복합/애매",
+    "text": "우리 동네 파출소 전화번호 알려주고, 겸사겸사 층간소음 신고 절차도 알려줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 293,
+    "category": "복합/애매",
+    "text": "제주도에서 사업자등록 하고 세금은 국세청에 어떻게 내나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 294,
+    "category": "복합/애매",
+    "text": "응급실 갔다온 비용을 보험사에 어떻게 청구하나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  },
+  {
+    "id": 295,
+    "category": "복합/애매",
+    "text": "제 변호사 친구한테 물어봤는데 이 판례가 맞는지 확인해줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 296,
+    "category": "복합/애매",
+    "text": "우리 동네 파출소 전화번호 알려주고, 겸사겸사 층간소음 신고 절차도 알려줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 297,
+    "category": "복합/애매",
+    "text": "제주도에서 사업자등록 하고 세금은 국세청에 어떻게 내나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  },
+  {
+    "id": 298,
+    "category": "복합/애매",
+    "text": "응급실 갔다온 비용을 보험사에 어떻게 청구하나요",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 299,
+    "category": "복합/애매",
+    "text": "제 변호사 친구한테 물어봤는데 이 판례가 맞는지 확인해줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PASS",
+    "reason": "주된 의도가 명확해 단일 축으로 분류 가능"
+  },
+  {
+    "id": 300,
+    "category": "복합/애매",
+    "text": "우리 동네 파출소 전화번호 알려주고, 겸사겸사 층간소음 신고 절차도 알려줘",
+    "expected_route": "복수 태그 또는 순차 처리 필요",
+    "expected_sp": "-",
+    "verdict": "PARTIAL",
+    "reason": "여러 축이 한 문장에 섞여 있어 단일 태그로 못 담을 가능성 — AGENT-COMMON에 '한 발화, 복수 라우팅 필요 시' 처리 원칙 없음"
+  }
+]
