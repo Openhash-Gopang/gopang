@@ -5,170 +5,198 @@
       "domain": "agroquality",
       "template": "SP-NAT-AGROQUALITY-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "국립농산물품질관리원 제주지원"
+      "지사명": "국립농산물품질관리원 제주지원",
+      "소속부처": "농림축산식품부"
     },
     {
       "domain": "airport",
       "template": "SP-NAT-AIRPORT-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "한국공항공사 제주공항"
+      "지사명": "한국공항공사 제주공항",
+      "소속부처": "국토교통부 산하 공기업"
     },
     {
       "domain": "animalquarantine",
       "template": "SP-NAT-ANIMALQUARANTINE-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "농림축산검역본부 제주지역본부"
+      "지사명": "농림축산검역본부 제주지역본부",
+      "소속부처": "농림축산식품부"
     },
     {
       "domain": "coastguard",
       "template": "SP-NAT-COASTGUARD-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주해양경찰서"
+      "지사명": "제주해양경찰서",
+      "소속부처": "해양경찰청"
     },
     {
       "domain": "court",
       "template": "SP-NAT-COURT-TEMPLATE_v1.0.md",
       "도코드": "jeju",
       "지사명": "제주지방법원",
-      "대표전화": "064-729-2000"
+      "대표전화": "064-729-2000",
+      "소속부처": "법원행정처(사법부)"
     },
     {
       "domain": "data",
       "template": "SP-NAT-DATA-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "호남지방데이터청 제주사무소"
+      "지사명": "호남지방데이터청 제주사무소",
+      "소속부처": "국가데이터처"
     },
     {
       "domain": "env",
       "template": "SP-NAT-ENV-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "영산강유역환경청 제주주재사무실"
+      "지사명": "영산강유역환경청 제주주재사무실",
+      "소속부처": "기후에너지환경부"
     },
     {
       "domain": "fishquality",
       "template": "SP-NAT-FISHQUALITY-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "국립수산물품질관리원 제주지원"
+      "지사명": "국립수산물품질관리원 제주지원",
+      "소속부처": "해양수산부"
     },
     {
       "domain": "foodimport",
       "template": "SP-NAT-FOODIMPORT-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "광주지방식품의약품안전청 제주수입식품검사소"
+      "지사명": "광주지방식품의약품안전청 제주수입식품검사소",
+      "소속부처": "식품의약품안전처"
     },
     {
       "domain": "humanquarantine",
       "template": "SP-NAT-HUMANQUARANTINE-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "국립제주검역소"
+      "지사명": "국립제주검역소",
+      "소속부처": "질병관리청"
     },
     {
       "domain": "immigration",
       "template": "SP-NAT-IMMIGRATION-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주출입국·외국인청"
+      "지사명": "제주출입국·외국인청",
+      "소속부처": "법무부"
     },
     {
       "domain": "internet",
       "template": "SP-NAT-INTERNET-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "한국지능정보사회진흥원 제주스마트쉼센터"
+      "지사명": "한국지능정보사회진흥원 제주스마트쉼센터",
+      "소속부처": "과학기술정보통신부/행정안전부"
     },
     {
       "domain": "labor",
       "template": "SP-NAT-LABOR-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "근로복지공단 제주지사"
+      "지사명": "근로복지공단 제주지사",
+      "소속부처": "고용노동부"
     },
     {
       "domain": "laborimprove",
       "template": "SP-NAT-LABORIMPROVE-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "광주지방고용노동청 제주근로개선지도센터"
+      "지사명": "광주지방고용노동청 제주근로개선지도센터",
+      "소속부처": "고용노동부"
     },
     {
       "domain": "laborrel",
       "template": "SP-NAT-LABORREL-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주지방노동위원회"
+      "지사명": "제주지방노동위원회",
+      "소속부처": "고용노동부"
     },
     {
       "domain": "mma",
       "template": "SP-NAT-MMA-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주지방병무청"
+      "지사명": "제주지방병무청",
+      "소속부처": "병무청"
     },
     {
       "domain": "nhis",
       "template": "SP-NAT-NHIS-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "국민건강보험공단 제주지사"
+      "지사명": "국민건강보험공단 제주지사",
+      "소속부처": "보건복지부"
     },
     {
       "domain": "nps",
       "template": "SP-NAT-NPS-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "국민연금공단 제주지역본부"
+      "지사명": "국민연금공단 제주지역본부",
+      "소속부처": "보건복지부"
     },
     {
       "domain": "police",
       "template": "SP-NAT-POLICE-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주지방경찰청"
+      "지사명": "제주지방경찰청",
+      "소속부처": "경찰청(국가경찰)"
     },
     {
       "domain": "port",
       "template": "SP-NAT-PORT-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주지방해양수산청"
+      "지사명": "제주지방해양수산청",
+      "소속부처": "해양수산부"
     },
     {
       "domain": "post",
       "template": "SP-NAT-POST-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주지방우정청"
+      "지사명": "제주지방우정청",
+      "소속부처": "우정사업본부(과학기술정보통신부)"
     },
     {
       "domain": "pps",
       "template": "SP-NAT-PPS-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주지방조달청"
+      "지사명": "제주지방조달청",
+      "소속부처": "조달청"
     },
     {
       "domain": "probation",
       "template": "SP-NAT-PROBATION-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주준법지원센터"
+      "지사명": "제주준법지원센터",
+      "소속부처": "법무부(범죄예방정책국)"
     },
     {
       "domain": "prosecution",
       "template": "SP-NAT-PROSECUTION-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주지방검찰청"
+      "지사명": "제주지방검찰청",
+      "소속부처": "법무부(대검찰청)"
     },
     {
       "domain": "radio",
       "template": "SP-NAT-RADIO-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주전파관리소"
+      "지사명": "제주전파관리소",
+      "소속부처": "과학기술정보통신부"
     },
     {
       "domain": "tax",
       "template": "SP-NAT-TAX-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주세무서"
+      "지사명": "제주세무서",
+      "소속부처": "국세청"
     },
     {
       "domain": "veterans",
       "template": "SP-NAT-VETERANS-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주보훈청"
+      "지사명": "제주보훈청",
+      "소속부처": "국가보훈부"
     },
     {
       "domain": "weather",
       "template": "SP-NAT-WEATHER-TEMPLATE_v1.0.md",
       "도코드": "jeju",
-      "지사명": "제주지방기상청"
+      "지사명": "제주지방기상청",
+      "소속부처": "기상청"
     }
   ]
 }

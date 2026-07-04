@@ -1,0 +1,9 @@
+{
+  "_schema_설명": "NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md의 자리표시자를 채우는 도별 데이터. gov-common-overlay-master-data.json과 동일 철학.",
+  "도목록": [
+    {
+      "도코드": "jeju",
+      "도이름": "제주특별자치도"
+    }
+  ]
+}
