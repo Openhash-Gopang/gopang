@@ -263,15 +263,18 @@ const VALID_INDUSTRY_SCHEMA_IDS = new Set([
 // STEP 10: VALID_PDV_SCOPES 11개로 확장
 const VALID_PDV_SCOPES = [
   'ktraffic', 'khealth', 'pdv_general', 'kmarket', 'k119',
-  'klaw', 'ktax', 'kinsurance', 'kgdc', 'kdemocracy', 'klogistics'
+  'klaw', 'ktax', 'kinsurance', 'kgdc', 'kdemocracy', 'klogistics',
+  'kschool', 'kstock', // 2026-07-04: PDV_HISTORY_REQUEST 파일럿 확장 — 이전엔 미등록
 ];
 const SCOPE_MIN_LEVEL = {
   ktraffic:'L1', khealth:'L1', pdv_general:'L1', k119:'L1', kmarket:'L0',
-  klaw:'L0', ktax:'L1', kinsurance:'L1', kgdc:'L1', kdemocracy:'L1', klogistics:'L0'
+  klaw:'L0', ktax:'L1', kinsurance:'L1', kgdc:'L1', kdemocracy:'L1', klogistics:'L0',
+  kschool:'L1', kstock:'L1', // 학습기록·투자정보는 L1(본인 확인) 이상 요구
 };
 const SCOPE_SOURCE_MAP = {
   ktraffic:'traffic', khealth:'health', pdv_general:null, kmarket:'market', k119:'911',
-  klaw:'klaw', ktax:'tax', kinsurance:'insurance', kgdc:'gdc', kdemocracy:'democracy', klogistics:'logistics'
+  klaw:'klaw', ktax:'tax', kinsurance:'insurance', kgdc:'gdc', kdemocracy:'democracy', klogistics:'logistics',
+  kschool:'school', kstock:'stock',
 };
 
 const SVC_ALIAS = {
