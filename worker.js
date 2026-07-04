@@ -260,21 +260,74 @@ const VALID_INDUSTRY_SCHEMA_IDS = new Set([
 // 구설계의 분기 상수였다 — 모든 entity_type이 _mergeAgentSP 하나로
 // 통합되며 더 이상 분기가 필요 없어져 제거함.
 
-// STEP 10: VALID_PDV_SCOPES 11개로 확장
+// STEP 10: VALID_PDV_SCOPES 확장
+// 2026-07-04b: kpolice·kpublic 신규 등록 — GOV_AGENCIES 9개 중 이 둘만
+// VALID_PDV_SCOPES에 없었다. K-Public_common의 P11 예시엔 "K-Tax는 ktax"
+// 식으로 몇몇만 명시돼 있어서, LLM이 police/public에 대해서는 근거 없이
+// 'police'나 'kpolice'를 추측했을 가능성이 높다 — 어느 쪽이든 이 목록에
+// 없었으므로 SCOPE_INVALID로 항상 실패했을 것이다. 911도 명명 패턴상
+// LLM이 'k911'로 추측하기 쉬운데 실제 등록값은 k119이므로 같은 위험군 —
+// 이건 handleGovRelay의 서버측 치환(GOV_AGENCY_PDV_SCOPE)으로 근본 해결한다.
+//
+// 2026-07-04c(제주 전국 확장 설계): jeju 저장소 실사 결과, jeju의 "28개
+// 국가기관"은 세무서(ktax)·경찰서(kpolice) 2개만 기존 scope와 겹치고
+// 나머지 26개는 기존에 없던 전국 단위 신규 도메인이었다(출입국관리소,
+// 해양경찰, 법원, 검찰청, 조달청, NHIS, NPS 등 — 제주만의 것이 아니라
+// 다른 지역에도 동일하게 존재하는 국가기관이므로 지역 접두어 없이 등록).
+// "13개 도 부서"는 전부 제주 고유 부서라 아직은 jeju_ 접두어로 등록한다
+// (다른 지역이 동일 범주 부서를 만들면 그때 일반화 여부를 재검토한다).
 const VALID_PDV_SCOPES = [
   'ktraffic', 'khealth', 'pdv_general', 'kmarket', 'k119',
   'klaw', 'ktax', 'kinsurance', 'kgdc', 'kdemocracy', 'klogistics',
   'kschool', 'kstock', // 2026-07-04: PDV_HISTORY_REQUEST 파일럿 확장 — 이전엔 미등록
+  'kpolice', 'kpublic', // 2026-07-04b: GOV_AGENCIES 9개 중 누락됐던 나머지 2개
+  // 2026-07-04c: jeju 국가기관 지사(26개, 세무서·경찰서 제외 — 위 ktax/kpolice 재사용)
+  'kagroquality', 'kairport', 'kanimalquarantine', 'kcoastguard', 'kcourt',
+  'kdata', 'kenv', 'kfishquality', 'kfoodimport', 'khumanquarantine',
+  'kimmigration', 'kinternet', 'klabor', 'klaborimprove', 'klaborrel',
+  'kmma', 'knhis', 'knps', 'kport', 'kpost', 'kpps', 'kprobation',
+  'kprosecution', 'kradio', 'kveterans', 'kweather',
+  // 2026-07-04c: jeju 도 자체 부서(13개, 제주 고유 — 타 지역 확장 시 재검토)
+  'jeju_agri', 'jeju_climate', 'jeju_culture', 'jeju_econ', 'jeju_housing',
+  'jeju_innov', 'jeju_jachi', 'jeju_ocean', 'jeju_plan', 'jeju_safety',
+  'jeju_tourism', 'jeju_transport', 'jeju_welfare',
 ];
 const SCOPE_MIN_LEVEL = {
   ktraffic:'L1', khealth:'L1', pdv_general:'L1', k119:'L1', kmarket:'L0',
   klaw:'L0', ktax:'L1', kinsurance:'L1', kgdc:'L1', kdemocracy:'L1', klogistics:'L0',
   kschool:'L1', kstock:'L1', // 학습기록·투자정보는 L1(본인 확인) 이상 요구
+  kpolice:'L1', kpublic:'L0',
+  // jeju 신규 scope — 전부 잠정 L1(기본값)로 등록. TODO(피터 확인 필요):
+  // kcourt·kprosecution·kprobation·kimmigration·khumanquarantine은 성격상
+  // L2 이상이 맞아 보이지만, Bearer 토큰 검증 배선이 아직 없는 상태에서
+  // L2로 걸면(handlePdvQuery의 "검증 불가 → L1 강등" 정책상) 그 즉시 아무도
+  // 통과 못 하는 scope가 된다 — 배선 완성 후에 올리는 걸 권장.
+  kagroquality:'L1', kairport:'L1', kanimalquarantine:'L1', kcoastguard:'L1', kcourt:'L1',
+  kdata:'L1', kenv:'L1', kfishquality:'L1', kfoodimport:'L1', khumanquarantine:'L1',
+  kimmigration:'L1', kinternet:'L1', klabor:'L1', klaborimprove:'L1', klaborrel:'L1',
+  kmma:'L1', knhis:'L1', knps:'L1', kport:'L1', kpost:'L1', kpps:'L1', kprobation:'L1',
+  kprosecution:'L1', kradio:'L1', kveterans:'L1', kweather:'L0', // 날씨는 낮은 민감도
+  jeju_agri:'L1', jeju_climate:'L1', jeju_culture:'L0', jeju_econ:'L1', jeju_housing:'L1',
+  jeju_innov:'L1', jeju_jachi:'L1', jeju_ocean:'L1', jeju_plan:'L1', jeju_safety:'L1',
+  jeju_tourism:'L0', jeju_transport:'L0', jeju_welfare:'L1',
 };
+// 2026-07-04c: scope → source 배열(1:다)로 변경. 이전엔 scope 하나당 저장소
+// 하나만 가능했는데, 같은 종류의 데이터(예: 세무 상담)를 여러 지역/서비스가
+// 보고할 수 있어야 한다 — jeju가 대표 사례(ktax·kpolice에 'jeju' 추가).
+// _fetchPdvByScope가 이 배열을 Supabase `source=in.(...)` 필터로 사용한다.
 const SCOPE_SOURCE_MAP = {
-  ktraffic:'traffic', khealth:'health', pdv_general:null, kmarket:'market', k119:'911',
-  klaw:'klaw', ktax:'tax', kinsurance:'insurance', kgdc:'gdc', kdemocracy:'democracy', klogistics:'logistics',
-  kschool:'school', kstock:'stock',
+  ktraffic:['traffic'], khealth:['health'], pdv_general:null, kmarket:['market'], k119:['911'],
+  klaw:['klaw'], ktax:['tax','jeju'], kinsurance:['insurance'], kgdc:['gdc'], kdemocracy:['democracy'],
+  klogistics:['logistics'], kschool:['school'], kstock:['stock'],
+  kpolice:['police','jeju'], kpublic:['public'],
+  kagroquality:['jeju'], kairport:['jeju'], kanimalquarantine:['jeju'], kcoastguard:['jeju'], kcourt:['jeju'],
+  kdata:['jeju'], kenv:['jeju'], kfishquality:['jeju'], kfoodimport:['jeju'], khumanquarantine:['jeju'],
+  kimmigration:['jeju'], kinternet:['jeju'], klabor:['jeju'], klaborimprove:['jeju'], klaborrel:['jeju'],
+  kmma:['jeju'], knhis:['jeju'], knps:['jeju'], kport:['jeju'], kpost:['jeju'], kpps:['jeju'], kprobation:['jeju'],
+  kprosecution:['jeju'], kradio:['jeju'], kveterans:['jeju'], kweather:['jeju'],
+  jeju_agri:['jeju'], jeju_climate:['jeju'], jeju_culture:['jeju'], jeju_econ:['jeju'], jeju_housing:['jeju'],
+  jeju_innov:['jeju'], jeju_jachi:['jeju'], jeju_ocean:['jeju'], jeju_plan:['jeju'], jeju_safety:['jeju'],
+  jeju_tourism:['jeju'], jeju_transport:['jeju'], jeju_welfare:['jeju'],
 };
 
 const SVC_ALIAS = {
@@ -1617,7 +1670,7 @@ async function handleConsentRespond(request,env,corsHeaders){
   }),{status:200,headers:corsHeaders});
 }
 async function _checkRateLimit(env,ipv6,action){if(env.RATE_LIMIT_KV){const kvKey=`rl:${action}:${ipv6}`;const current=parseInt(await env.RATE_LIMIT_KV.get(kvKey)||'0');if(current>=3)return false;await env.RATE_LIMIT_KV.put(kvKey,String(current+1),{expirationTtl:300});return true;}return true;}
-async function _fetchPdvByScope(env,ipv6,scopes,period){const key=env.SUPABASE_KEY||_supabaseAnonKey();const result={};for(const scope of scopes){const source=SCOPE_SOURCE_MAP[scope];let queryUrl=SUPABASE_URL+'/rest/v1/pdv_log'+`?guid=eq.${encodeURIComponent(ipv6)}`+`&created_at=gte.${period.start}T00:00:00Z&created_at=lte.${period.end}T23:59:59Z`+`&select=summary,summary_6w,risk_level,created_at,source&order=created_at.desc&limit=50`;if(source)queryUrl+=`&source=eq.${encodeURIComponent(source)}`;try{const res=await fetch(queryUrl,{headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'}});const rows=await res.json().catch(()=>[]);if(!rows?.length){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{}};continue;}const RISK_ORDER={low:0,medium:1,high:2};const maxRisk=rows.reduce((max,r)=>{const lvl=r.risk_level||'low';return RISK_ORDER[lvl]>RISK_ORDER[max]?lvl:max;},'low');let summary6w=null;for(const row of rows){try{summary6w=JSON.parse(row.summary_6w);break;}catch{}}result[scope]={available:true,entry_count:rows.length,risk_level:maxRisk,summary_6w:summary6w,risk_factors:_aggregateRiskFactors(scope,rows)};}catch(e){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{},error:'fetch_failed'};}}return result;}
+async function _fetchPdvByScope(env,ipv6,scopes,period){const key=env.SUPABASE_KEY||_supabaseAnonKey();const result={};for(const scope of scopes){const sources=SCOPE_SOURCE_MAP[scope];let queryUrl=SUPABASE_URL+'/rest/v1/pdv_log'+`?guid=eq.${encodeURIComponent(ipv6)}`+`&created_at=gte.${period.start}T00:00:00Z&created_at=lte.${period.end}T23:59:59Z`+`&select=summary,summary_6w,risk_level,created_at,source&order=created_at.desc&limit=50`;if(sources&&sources.length===1){queryUrl+=`&source=eq.${encodeURIComponent(sources[0])}`;}else if(sources&&sources.length>1){queryUrl+=`&source=in.(${sources.map(encodeURIComponent).join(',')})`;}try{const res=await fetch(queryUrl,{headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'}});const rows=await res.json().catch(()=>[]);if(!rows?.length){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{}};continue;}const RISK_ORDER={low:0,medium:1,high:2};const maxRisk=rows.reduce((max,r)=>{const lvl=r.risk_level||'low';return RISK_ORDER[lvl]>RISK_ORDER[max]?lvl:max;},'low');let summary6w=null;for(const row of rows){try{summary6w=JSON.parse(row.summary_6w);break;}catch{}}result[scope]={available:true,entry_count:rows.length,risk_level:maxRisk,summary_6w:summary6w,risk_factors:_aggregateRiskFactors(scope,rows),sources:[...new Set(rows.map(r=>r.source).filter(Boolean))]};}catch(e){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{},error:'fetch_failed'};}}return result;}
 function _aggregateRiskFactors(scope,rows){if(scope==='ktraffic')return{accident_count:rows.filter(r=>{try{return JSON.parse(r.summary_6w)?.what?.includes('사고');}catch{return false;}}).length,entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,accident_free_months:0};if(scope==='khealth')return{total_records:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,medium_risk_count:rows.filter(r=>r.risk_level==='medium').length};return{entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length};}
 async function _recordConsentEvent(env,query,queryId){const key=env.SUPABASE_KEY||_supabaseAnonKey();const svcId=_resolveSvcId(query.svc);const pdvId=`PDV-${query.ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;const summary6w=JSON.stringify({who:svcId,when:new Date().toISOString(),where:`https://${svcId}.hondi.net`,what:`PDV 조회 동의: scope=[${query.scope.join(',')}]`,how:'사용자 명시적 동의',why:query.purpose||'PDV 데이터 조회'});try{await fetch(SUPABASE_URL+'/rest/v1/pdv_log',{method:'POST',headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({id:pdvId,guid:query.ipv6,source:svcId,type:'consent_event',report_id:queryId,summary:`PDV 조회 동의: ${svcId} → [${query.scope.join(',')}]`,summary_6w:summary6w,risk_level:'low',period:query.period,raw_hash:null,created_at:new Date().toISOString()})});}catch(e){console.warn('[PDVQuery] consent_event 기록 실패:',e.message);}return pdvId;}
 async function _sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
@@ -2077,6 +2130,20 @@ const GOV_AGENCIES = new Set([
   'traffic', 'logistics',
 ]);
 
+// 2026-07-04b: K-Public_common의 P11(PDV_HISTORY_REQUEST) 절엔
+// "scope={본인 서비스의 VALID_PDV_SCOPES 값}"라는 자리표시자만 있고,
+// 어느 agency도 자기 몫의 구체적 값을 프롬프트에 명시하지 않고 있었다.
+// 본문엔 "K-Tax는 ktax" 식 예시가 일부만 있어 LLM이 나머지(특히 police·
+// public·911)는 근거 없이 추측해야 했다 — 911은 패턴상 'k911'로 추측하기
+// 쉬운데 실제 등록값은 'k119'라 100% 어긋난다. 서버가 agency를 이미 알고
+// 있으므로, 여기서 결정적으로 치환해 추측 자체를 없앤다.
+const GOV_AGENCY_PDV_SCOPE = {
+  tax:'ktax', health:'khealth', police:'kpolice', '911':'k119',
+  democracy:'kdemocracy', insurance:'kinsurance', traffic:'ktraffic',
+  logistics:'klogistics', public:'kpublic',
+};
+const _PDV_SCOPE_PLACEHOLDER_RE = /\{본인 서비스의 VALID_PDV_SCOPES 값\}/g;
+
 const GOV_TIER_MODELS = {
   'gov-flash': { backendModel: 'deepseek-chat',     price: { cacheHit: 0.0028, cacheMiss: 0.14,  output: 0.28 } },
   'gov-pro':   { backendModel: 'deepseek-reasoner', price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 } },
@@ -2113,7 +2180,11 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
     return _err(429, 'GOV_USER_QUOTA_EXCEEDED', '오늘 사용 가능한 한도를 모두 사용했습니다. 내일 다시 이용해 주세요.', corsHeaders);
   }
 
-  const [universalIntegrity, kPublicCommon] = await Promise.all([_fetchUniversalIntegrity(), _fetchKPublicCommon()]);
+  const [universalIntegrity, kPublicCommonRaw] = await Promise.all([_fetchUniversalIntegrity(), _fetchKPublicCommon()]);
+  const pdvScope = GOV_AGENCY_PDV_SCOPE[agency];
+  const kPublicCommon = pdvScope
+    ? kPublicCommonRaw.replace(_PDV_SCOPE_PLACEHOLDER_RE, pdvScope)
+    : kPublicCommonRaw;
   const systemParts = [universalIntegrity, kPublicCommon, agencyPrompt || ''].filter(Boolean);
   const systemContent = systemParts.length
     ? systemParts.join('\n\n---\n\n')
