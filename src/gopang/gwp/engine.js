@@ -9,6 +9,8 @@ import { _recordPDV } from '../pdv/record.js';
 import { _patchL1LedgerUserHash, _patchPdvChainHeight,
          _markPdvAnchored } from '../pdv/record.js';
 import { summarizeTranscript6W } from '../ai/report-utils.js';
+import { _handleGwpSignRequest } from './sign.js';
+import { GWP_ALLOWED_ORIGINS } from './allowed-origins.js';
 
 // Gopang Widget Protocol (GWP) 호스트 엔진 v2.0 — 새 탭 방식
 // iframe 방식 제거 → JS 전역 충돌·SyntaxError·CFG 미초기화 문제 원천 해결
@@ -300,14 +302,7 @@ window.addEventListener('message', (e) => {
   // market 탭이 구매자 서명을 고팡에 위임. gopang-wallet.js가 서명 수행.
   // origin: market.gopang.net 또는 gopang.net 계열만 허용
   if (msg.type === 'GWP_SIGN_REQUEST') {
-    const ALLOWED_ORIGINS = [
-      'https://market.gopang.net',
-      'https://users.gopang.net',
-      'https://gopang.net',
-      'https://openhash-gopang.github.io',
-      location.origin,  // 개발 환경 (localhost 등)
-    ];
-    if (!ALLOWED_ORIGINS.includes(e.origin)) {
+    if (!GWP_ALLOWED_ORIGINS.includes(e.origin)) {
       console.warn('[GWP_SIGN] 허용되지 않은 origin 차단:', e.origin);
       return;
     }

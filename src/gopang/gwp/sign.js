@@ -3,6 +3,12 @@
  */
 import { appendBubble } from '../ui/bubble.js';
 import { _USER } from '../core/state.js';
+import { GWP_ALLOWED_ORIGINS } from './allowed-origins.js';
+
+// 하위 호환: 기존에 './sign.js'에서 GWP_ALLOWED_ORIGINS를 import하던 코드가
+// 있을 수 있으므로 re-export. 실제 정의는 allowed-origins.js (의존성 없는
+// 순수 모듈, silent-sign.html 같은 독립 페이지에서도 재사용 가능).
+export { GWP_ALLOWED_ORIGINS };
 
 // ── GWP_SIGN_REQUEST 핸들러 (STEP 22) ────────────────────────
 // 흐름: market 탭 → GWP_SIGN_REQUEST → 고팡 서명 확인 UI

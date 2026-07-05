@@ -1,0 +1,283 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고팡 서명 확인</title>
+<script src="/gopang-wallet.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background: transparent; }
+  body {
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  #overlay-bg {
+    position: fixed; inset: 0;
+    background: rgba(17,24,39,0.45);
+    display: none;
+  }
+  #confirm-card {
+    display: none;
+    position: relative;
+    z-index: 1;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 28px 26px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+  }
+  .sign-logo {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 18px;
+  }
+  .sign-logo-icon {
+    width: 30px; height: 30px;
+    background: #3ecf8e; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700; color: white; font-family: monospace;
+  }
+  .sign-logo-text { font-size: 15px; font-weight: 600; color: #111827; }
+  .sign-svc {
+    font-size: 11px; color: #6b7280;
+    background: #f3f4f6; border: 1px solid #e5e7eb;
+    border-radius: 99px; padding: 2px 10px; font-family: monospace;
+  }
+  h2 { font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 6px; }
+  .sign-desc { font-size: 13px; color: #6b7280; line-height: 1.6; margin-bottom: 16px; }
+  #payload-summary {
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 12px 14px; font-size: 13px; color: #374151;
+    margin-bottom: 18px; line-height: 1.6; word-break: break-word;
+  }
+  .btn-row { display: flex; gap: 8px; }
+  .btn-primary {
+    flex: 1; padding: 11px;
+    background: #3ecf8e; color: white; border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .btn-primary:hover { background: #29a374; }
+  .btn-primary:disabled { background: #d1d5db; cursor: not-allowed; }
+  .btn-secondary {
+    flex: 0 0 76px; padding: 11px;
+    background: transparent; color: #6b7280;
+    border: 1px solid #e5e7eb; border-radius: 8px;
+    font-size: 13px; cursor: pointer;
+  }
+  .btn-secondary:hover { border-color: #9ca3af; color: #374151; }
+  #status-msg {
+    display: none; font-size: 13px; text-align: center; margin-top: 4px;
+  }
+  #status-msg.error   { color: #ef4444; }
+  #status-msg.success { color: #059669; }
+</style>
+</head>
+<body>
+
+<div id="overlay-bg"></div>
+<div id="confirm-card">
+  <div class="sign-logo">
+    <div class="sign-logo-icon">G</div>
+    <span class="sign-logo-text">고팡</span>
+    <span class="sign-svc" id="svc-label"></span>
+  </div>
+  <h2>서명 요청</h2>
+  <p class="sign-desc" id="sign-desc">아래 내용에 서명하려고 합니다. 본인이 요청한 작업인지 확인하세요.</p>
+  <div id="payload-summary"></div>
+  <div class="btn-row">
+    <button class="btn-primary" id="approve-btn">서명하고 계속</button>
+    <button class="btn-secondary" id="reject-btn">취소</button>
+  </div>
+  <p id="status-msg"></p>
+</div>
+
+<script type="module">
+// ══════════════════════════════════════════════════════════
+// auth/silent-sign.html — v1.0 (2026-07-05 신설)
+//
+// silent-auth.html(§5.5)은 "이 사람이 진짜 그 guid의 개인키를 갖고 있다"를
+// SSO 토큰(HMAC, 저위험 L0)으로 증명해 하위 서비스에 로그인 여부만 알려준다.
+// 이 파일은 그와 다르다 — 실제 상태를 바꾸는 쓰기 요청(예: 사업자 프로필
+// 등록)에 대해 §6.2의 Ed25519 서명을 대리 수행한다. 서명은 곧 "내가 이
+// 요청을 승인했다"는 법적 의미를 가지므로, silent-auth.html처럼 완전
+// 무인(無人)으로 처리하지 않고 반드시 이 확인 UI를 거친다.
+//
+// 배경 문제: market.hondi.net처럼 hondi.net과 다른 origin에서 직접 접속한
+// 하위 서비스는 자체적으로 새 Ed25519 키를 만들면 users_profiles.guid에
+// 이미 핀(pin)된 pubkey와 어긋나 PUBKEY_MISMATCH가 난다(TOFU, §6.2).
+// 이 페이지를 hondi.net/auth/silent-sign.html에 두고 하위 서비스가 iframe
+// 으로 열면, 진짜 개인키(hondi.net origin의 IndexedDB)로 서명한 결과만
+// postMessage로 돌려줄 수 있다 — 키 자체는 이 origin 밖으로 나가지 않는다.
+// 서명 대상은 실제 worker.js(handleProfilePost)가 검증하는 'guid:pubkey:ts'
+// 고정 문자열이다(JSON.stringify 방식이 아님 — §6.2 문서는 구버전 설명).
+//
+// 호출 측(예: market/desktop.html) 계약:
+//   1) <iframe src="https://hondi.net/auth/silent-sign.html?svc=market"> 를
+//      화면에 보이는 위치(모달 오버레이 등)에 삽입한다 — 사용자가 확인
+//      UI를 봐야 하므로 display:none 금지.
+//   2) iframe load 이후 postMessage({
+//        type: 'GWP_PROFILE_SIGN_REQUEST',
+//        session_id, payload            // payload: 서명할 필드들 (guid/pubkey/ts는 이 페이지가 채움)
+//      }, 'https://hondi.net') 를 전송한다.
+//   3) 응답 postMessage({
+//        type: 'GWP_PROFILE_SIGN_RESPONSE', session_id,
+//        ok, guid, pubkey, ts, signature,   // ok===true일 때
+//        error                                // ok===false일 때 ('NOT_REGISTERED'|'WALLET_NOT_READY'|'USER_CANCELLED'|'SIGN_FAILED')
+//      }, callerOrigin) 를 수신 후 iframe을 제거한다.
+// ══════════════════════════════════════════════════════════
+
+import { GWP_ALLOWED_ORIGINS } from '/src/gopang/gwp/allowed-origins.js';
+
+const params  = new URLSearchParams(location.search);
+const SERVICE = params.get('svc') || '*';
+const IS_SILENT = (window.parent !== window);
+
+document.getElementById('svc-label').textContent = SERVICE;
+
+let _pending = null; // { msg, sourceOrigin, wallet }
+
+window.addEventListener('message', async (e) => {
+  if (e.data?.type !== 'GWP_PROFILE_SIGN_REQUEST') return;
+
+  // 반드시 iframe으로 열려야 한다 — 직접 주소창으로 접속해 임의 origin이
+  // 흉내내는 것을 막는다 (window.parent === window 면 부모가 없다는 뜻).
+  if (!IS_SILENT) {
+    console.warn('[SILENT_SIGN] iframe이 아닌 컨텍스트에서 서명 요청 무시');
+    return;
+  }
+  if (!GWP_ALLOWED_ORIGINS.includes(e.origin)) {
+    console.warn('[SILENT_SIGN] 허용되지 않은 origin 차단:', e.origin);
+    return;
+  }
+  await _handleRequest(e.data, e.origin);
+});
+
+async function _handleRequest(msg, sourceOrigin) {
+  const user = _getLocalUser();
+  if (!user?.ipv6) {
+    _reply({ ok: false, error: 'NOT_REGISTERED' }, sourceOrigin, msg.session_id);
+    return;
+  }
+
+  const wallet = await _waitForWallet();
+  if (!wallet?.guid || !wallet?.publicKeyB64u || wallet.guid !== user.ipv6) {
+    _reply({ ok: false, error: 'WALLET_NOT_READY' }, sourceOrigin, msg.session_id);
+    return;
+  }
+
+  _pending = { msg, sourceOrigin, wallet };
+  _renderConfirmUI(msg);
+}
+
+function _renderConfirmUI(msg) {
+  document.getElementById('overlay-bg').style.display = 'block';
+  document.getElementById('confirm-card').style.display = 'block';
+  document.getElementById('payload-summary').textContent = _summarize(msg.payload || {});
+}
+
+function _summarize(payload) {
+  if (payload.entity_type === 'business') {
+    const bits = [payload.name, payload.address, payload.phone].filter(Boolean);
+    return `사업자 프로필 등록/갱신: ${bits.join(' · ') || '(정보 없음)'}`;
+  }
+  try {
+    const s = JSON.stringify(payload);
+    return s.length > 220 ? s.slice(0, 220) + '…' : s;
+  } catch (_) {
+    return '(요청 내용을 표시할 수 없음)';
+  }
+}
+
+document.getElementById('approve-btn').addEventListener('click', async () => {
+  if (!_pending) return;
+  const { msg, sourceOrigin, wallet } = _pending;
+
+  const approveBtn = document.getElementById('approve-btn');
+  const rejectBtn  = document.getElementById('reject-btn');
+  approveBtn.disabled = true;
+  rejectBtn.disabled  = true;
+  _setStatus('서명 중…', null);
+
+  try {
+    const ts   = String(Date.now());
+    // ⚠️ 서명 대상은 worker.js handleProfilePost가 실제로 검증하는 형식과
+    // 반드시 일치해야 한다: 'guid:pubkey:ts' 고정 문자열(JSON.stringify가
+    // 아님 — worker.js 주석: "JSON 직렬화 불일치 원천 차단"). §6.2 문서는
+    // JSON.stringify(rest) 방식으로 적혀 있으나 이는 실제 배포본과 어긋난
+    // 구버전 설명이다(2026-07-05 실사로 발견). 다른 엔드포인트를 이 페이지로
+    // 중계하게 될 경우 해당 엔드포인트의 서명 형식을 다시 확인해야 한다.
+    const sigMsg = `${wallet.guid}:${wallet.publicKeyB64u}:${ts}`;
+    const sigBuf = await crypto.subtle.sign(
+      'Ed25519', wallet._privKey, new TextEncoder().encode(sigMsg)
+    );
+    const signature = btoa(String.fromCharCode(...new Uint8Array(sigBuf)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+    _reply({
+      ok: true, guid: wallet.guid, pubkey: wallet.publicKeyB64u, ts, signature,
+    }, sourceOrigin, msg.session_id);
+
+    _setStatus('✅ 서명 완료', 'success');
+    setTimeout(_closeCard, 600);
+  } catch (err) {
+    console.error('[SILENT_SIGN] 서명 실패:', err.message);
+    _reply({ ok: false, error: err.message || 'SIGN_FAILED' }, sourceOrigin, msg.session_id);
+    _setStatus('⚠️ 서명 실패: ' + err.message, 'error');
+    approveBtn.disabled = false;
+    rejectBtn.disabled  = false;
+  }
+});
+
+document.getElementById('reject-btn').addEventListener('click', () => {
+  if (!_pending) return;
+  const { msg, sourceOrigin } = _pending;
+  _reply({ ok: false, error: 'USER_CANCELLED' }, sourceOrigin, msg.session_id);
+  _closeCard();
+});
+
+function _setStatus(text, kind) {
+  const el = document.getElementById('status-msg');
+  el.textContent = text;
+  el.className = kind || '';
+  el.style.display = text ? 'block' : 'none';
+}
+
+function _closeCard() {
+  document.getElementById('overlay-bg').style.display = 'none';
+  document.getElementById('confirm-card').style.display = 'none';
+  _pending = null;
+}
+
+function _reply(result, targetOrigin, sessionId) {
+  window.parent.postMessage({
+    type: 'GWP_PROFILE_SIGN_RESPONSE',
+    session_id: sessionId,
+    ...result,
+  }, targetOrigin);
+}
+
+// ── window.gopangWallet 준비 대기 (gopang-wallet.js 싱글턴은 비동기 초기화) ──
+function _waitForWallet(timeoutMs = 4000) {
+  return new Promise((resolve) => {
+    if (window.gopangWallet?.guid) { resolve(window.gopangWallet); return; }
+    const start = Date.now();
+    const t = setInterval(() => {
+      if (window.gopangWallet?.guid) { clearInterval(t); resolve(window.gopangWallet); }
+      else if (Date.now() - start > timeoutMs) { clearInterval(t); resolve(window.gopangWallet || null); }
+    }, 100);
+  });
+}
+
+function _getLocalUser() {
+  try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); }
+  catch { return null; }
+}
+</script>
+</body>
+</html>
