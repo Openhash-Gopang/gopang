@@ -90,7 +90,12 @@ export async function runRouter(userText, hasImage = false) {
   // "campfire"(캠프파이어), "dying of laughter"(웃겨죽겠다) 같은 문장까지
   // 오탐(false positive)되는 걸 재검증 중 실제 정규식 테스트로 확인함.
   // 구(phrase) 단위로 좁혀 오탐을 없앤다.
-  if (/긴급|응급|119|112|쓰러|부상|화재|불이났|구조|살려줘|심정지|emergency|collapsed|can'?t breathe|not breathing|on fire|heart attack|unconscious|drowning|call (an )?ambulance|severe bleeding|bleeding (heavily|badly|a lot)/i.test(userText)) {
+  // 2026-07-05c: 실제 라우팅 테스트 하네스(router-category.test.mjs)로
+  // "건물에 불났어요 살려주세요"를 돌려보니 이 fast-path에 안 걸리는 걸
+  // 발견했다 — "불이났"은 있는데 조사 생략형 구어체 "불났"은 없었고,
+  // "살려줘"(반말)만 있고 존댓말 "살려주세요"는 없었다. 둘 다 일상 응급
+  // 발화에서 오히려 더 흔한 형태라 보완한다.
+  if (/긴급|응급|119|112|쓰러|부상|화재|불(이\s*)?났|구조|살려주(세요|십시오)?|심정지|emergency|collapsed|can'?t breathe|not breathing|on fire|heart attack|unconscious|drowning|call (an )?ambulance|severe bleeding|bleeding (heavily|badly|a lot)/i.test(userText)) {
     return { category:'EMG', service_id:'kemergency',
              service_url:'https://911.hondi.net', confidence:0.99,
              reason:'긴급 상황 감지. K-Emergency 즉시 연결.',
