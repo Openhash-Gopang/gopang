@@ -85,10 +85,25 @@ export async function runRouter(userText, hasImage = false) {
   }
 
   // 긴급 키워드 즉시 판단 (LLM 호출 없이)
-  if (/긴급|응급|119|112|쓰러|부상|화재|불이났|구조|살려줘|심정지/.test(userText)) {
+  // 2026-07-05 보완: 한국어 키워드만 있어 영어 발화 시 이 fast-path를
+  // 타지 못하고 Step 5(LLM)까지 넘어가는 지연이 발견됨 — 응급 상황에서는
+  // 이 지연 자체가 위험하므로 영어 키워드도 함께 매칭.
+  if (/긴급|응급|119|112|쓰러|부상|화재|불이났|구조|살려줘|심정지|emergency|collapsed|can'?t breathe|fire|bleeding|dying|help me/i.test(userText)) {
     return { category:'EMG', service_id:'kemergency',
              service_url:'https://911.hondi.net', confidence:0.99,
              reason:'긴급 상황 감지. K-Emergency 즉시 연결.',
+             secondary:null, urgent:true, gwp_ctx:gwpCtx };
+  }
+
+  // 2026-07-05 신설: 즉각적 신변 위험(진행 중인 범죄) fast-path.
+  // 기존엔 SP-00-ROUTER 프롬프트에만 "즉시 kpolice 반환" 지시가 있었을 뿐
+  // 실제 코드에는 EMG만 즉시판단 되고 이 케이스는 LLM 호출(Step 5)까지
+  // 넘어가고 있었다 — 프롬프트의 "즉시"라는 표현과 실제 동작이 어긋나
+  // 있었으므로 EMG와 동일한 방식의 fast-path를 추가한다.
+  if (/지금\s*위험|쫓아오|가정폭력|칼\s*들고|흉기|납치|강도|성폭행/.test(userText)) {
+    return { category:'JUS', service_id:'kpolice',
+             service_url:'https://police.hondi.net', confidence:0.95,
+             reason:'진행 중인 범죄·신변 위험 감지. K-Police 즉시 연결.',
              secondary:null, urgent:true, gwp_ctx:gwpCtx };
   }
 
@@ -101,8 +116,13 @@ export async function runRouter(userText, hasImage = false) {
   }
 
   // 입력이 짧거나 일상 대화이면 라우터 LLM 호출 생략
+  // 2026-07-05 수정: 이전엔 "userText.length < 3"만으로 무조건 DIRECT
+  // 처리해서 "아파"(2자), "돈"(1자) 같은 도메인 관련 초단문까지 LLM 분류
+  // 기회조차 없이 gopang-direct로 오분류되던 버그가 있었다. 길이가 아니라
+  // 실제로 일상대화·인사 패턴에 매칭될 때만 DIRECT로 보낸다(빈 입력만
+  // 별도 예외).
   const DIRECT_RE = /^(안녕|고마워|감사|ㅋ|ㅎ|ㅇ|네|예|아니|몇시|날씨|시간|1\+1|계산|번역|요약).{0,20}$/;
-  if (!userText || userText.length < 3 || DIRECT_RE.test(userText.trim())) {
+  if (!userText || DIRECT_RE.test(userText.trim())) {
     return { category:'DIRECT', service_id:'gopang-direct',
              service_url:null, confidence:0.98,
              reason:'일상 대화 또는 단순 질의. 고팡 AI 비서 직접 처리.',
