@@ -358,9 +358,12 @@ const KSIC_KEYWORD_MAP = {
   '해산물': '03',
   '어업': '03',
   '생선': '03',
-  '정육': '10',
-  '축산물': '10',
-  '육류': '10',
+  // 2026-07-05 정정: 합성 테스트(catalog_sync_test.js)로 발견됨 —
+  // "정육/축산물/육류"를 10(식료품 제조업, 공장 가공)으로 잘못 매핑해
+  // 흑돼지 농장 직판 같은 흔한 K-Market 케이스가 제조업으로 오분류됐음.
+  // K-Market은 소비자 대상 마켓이므로 이 세 키워드는 47(소매업)이 기본값에
+  // 더 맞다 — 실제 식품 "가공"을 명시한 경우만 10으로 남긴다.
+  '정육': '47', '축산물': '47', '육류': '47',
   '가공식품': '10',
   '음료': '11',
   '도매': '46',
@@ -1377,14 +1380,37 @@ function _generatePdvHtml(p) {
 // ═══════════════════════════════════════════════════════════
 // v4.7 — /search
 // ═══════════════════════════════════════════════════════════
+// 2026-07-05: 상품명/설명/카테고리 자체로 검색 — search_entities(Supabase)는
+// 엔티티 레벨(이름/태그/업종/주소)만 보므로, 판매자 태그에 없는 상품명으로
+// 검색하면(예: 소개엔 "정육점"만 있고 상품명은 "이베리코 등심") 그 판매자
+// 자체가 검색 결과에서 아예 빠지는 문제가 있었다. seller_products를
+// 직접 훑어 매칭된 seller_guid를 찾아내고, 그 판매자의 엔티티 정보를
+// L1에서 보강해 entity-level 검색 결과와 합친다.
+async function _l1SearchProductsByKeyword(env, keyword, limit = 20) {
+  if (!keyword) return [];
+  const token = await _l1AdminToken(env);
+  const esc = String(keyword).replace(/'/g, "\\'");
+  const filter = encodeURIComponent(
+    `is_public=true && (name~'${esc}' || desc~'${esc}' || category~'${esc}')`
+  );
+  const res = await fetch(
+    `${L1_DEFAULT}/api/collections/seller_products/records?filter=${filter}&perPage=${limit * 3}`,
+    { headers: { 'Authorization': `Bearer ${token}` } }
+  );
+  if (!res.ok) throw new Error(`L1 상품검색 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items || [];
+}
+
 async function handleSearch(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
   const sbH = _sbHeaders(env);
+  const keyword = body.p_keyword || body.q || null;
 
   // 파라미터 정규화: q/limit → p_keyword/p_limit
   const rpcBody = {
-    p_keyword:      body.p_keyword     || body.q           || null,
+    p_keyword:      keyword,
     p_entity_type:  body.p_entity_type || body.entity_type || null,
     p_occupation:   body.p_occupation  || body.occupation  || null,
     p_address:      body.p_address     || body.address     || null,
@@ -1407,20 +1433,52 @@ async function handleSearch(request, env, corsHeaders) {
 
   const res  = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_entities`, { method: 'POST', headers: sbH, body: JSON.stringify(rpcBody) });
   const data = await res.json().catch(() => ({ error: 'parse failed' }));
+  if (!res.ok || !Array.isArray(data)) {
+    return new Response(JSON.stringify(data), { status: res.status, headers: corsHeaders });
+  }
 
-  // 2026-07-05: K-Market [SEARCH] 태그가 실제 상품/가격을 받을 수 있도록
-  // L1 seller_products(로컬 IndexedDB의 백업/공개미러)를 join한다.
-  // 실패해도 검색 자체는 정상 응답(join은 부가 정보일 뿐).
-  if (res.ok && Array.isArray(data)) {
-    await Promise.all(data.map(async (entity) => {
-      if (!entity?.primary_guid) return;
-      try {
-        entity.products = await _l1ListSellerProducts(env, entity.primary_guid)
-          .then(list => list.filter(p => p.is_public !== false).slice(0, 10));
-      } catch (e) {
-        entity.products = [];
-      }
-    }));
+  // 2026-07-05: L1 seller_products를 join(엔티티 레벨 매칭 결과 보강)하고,
+  // 상품명/설명/카테고리로만 매칭되는(엔티티 검색으론 못 찾는) 판매자를
+  // 추가로 찾아 결과에 합친다.
+  const byGuid = new Map(data.filter(e => e?.primary_guid).map(e => [e.primary_guid, e]));
+
+  await Promise.all(data.map(async (entity) => {
+    if (!entity?.primary_guid) return;
+    try {
+      entity.products = await _l1ListSellerProducts(env, entity.primary_guid)
+        .then(list => list.filter(p => p.is_public !== false).slice(0, 10));
+    } catch (e) {
+      entity.products = [];
+    }
+  }));
+
+  if (keyword) {
+    try {
+      const productMatches = await _l1SearchProductsByKeyword(env, keyword, rpcBody.p_limit);
+      const newGuids = [...new Set(productMatches.map(p => p.seller_guid))].filter(g => !byGuid.has(g));
+
+      await Promise.all(newGuids.map(async (guid) => {
+        try {
+          const profile = await _l1FindProfileByGuid(env, guid);
+          if (!profile || profile.is_public === false) return;
+          const entity = {
+            primary_guid: guid,
+            name: profile.name,
+            entity_type: profile.entity_type,
+            occupation: profile.extra?.core?.occupation ?? null,
+            address: profile.extra?.core?.address ?? null,
+            matched_via: 'product', // entity-level 필드가 아니라 상품으로 매칭됐음을 표시
+            products: productMatches.filter(p => p.seller_guid === guid).slice(0, 10),
+          };
+          data.push(entity);
+          byGuid.set(guid, entity);
+        } catch (e) {
+          console.warn('[Search] product-match 판매자 프로필 조회 실패(무시):', e.message);
+        }
+      }));
+    } catch (e) {
+      console.warn('[Search] 상품 레벨 검색 실패(엔티티 검색 결과는 정상 반환):', e.message);
+    }
   }
 
   return new Response(JSON.stringify(data), { status: res.status, headers: corsHeaders });
@@ -5048,11 +5106,27 @@ async function handleCatalogSync(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
 
-  const { guid, pubkey, signature, products } = body;
+  const { guid, pubkey, signature, products, industry_fields } = body;
   if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
   if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
   if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
   if (!Array.isArray(products)) return _err(400, 'MISSING_FIELD', 'products 배열 필수(빈 배열 허용)', corsHeaders);
+
+  // 2026-07-05: 업종은 키워드 매칭이나 별도 분류용 API 호출로 이 함수가
+  // 직접 "결정"하지 않는다 — "모든 사용자는 나만의 AI비서를 정의한다"는
+  // 설계 원칙에 따라, 판매자와 대화하며 상품을 등록시킨 그 AI비서
+  // (SP-MKT_seller_site 등)가 이미 판단해서 industry_fields.schema_id로
+  // 실어 보낸다. 이 함수는 그 판단을 검증(화이트리스트)하고 저장만 한다
+  // — 다른 모든 도메인에서 "판단은 호출한 쪽 AI가, 백엔드는 검증·저장만"
+  // 하는 패턴과 동일하다.
+  if (industry_fields != null) {
+    const sid = industry_fields.schema_id;
+    if (!sid || !VALID_INDUSTRY_SCHEMA_IDS.has(String(sid))) {
+      return _err(400, 'INVALID_SCHEMA_ID',
+        `industry_fields.schema_id가 유효하지 않습니다: ${JSON.stringify(sid)} (허용: ${[...VALID_INDUSTRY_SCHEMA_IDS].join(',')})`,
+        corsHeaders);
+    }
+  }
 
   // TOFU: L1에 이미 등록된 pubkey와 일치해야 함 — /profile 가입이 선행돼야 함
   let l1Record;
@@ -5082,16 +5156,21 @@ async function handleCatalogSync(request, env, corsHeaders) {
     return _err(502, 'L1_SYNC_FAILED', '카탈로그 동기화 실패: ' + e.message, corsHeaders);
   }
 
-  // 업종 자동 파생 — 사용자가 직접 고르지 않는다(요청사항). 상품 카테고리
-  // 다수결로 KSIC를 유도해 프로필의 occupation/industry_fields를 갱신한다.
-  const derived = _deriveOccupationFromCategories(products.map(p => p.category));
+  // 업종 갱신 — 1순위: AI비서가 보낸 industry_fields(검증됨). 2순위(폴백):
+  // AI비서를 안 거친 구버전 클라이언트를 위해 카테고리 키워드 매칭을
+  // 최후 수단으로만 쓴다(정확도가 떨어짐을 알고 쓰는 안전망일 뿐,
+  // 이걸로 이미 있는 AI비서 판단을 덮어쓰지 않는다).
+  const derived = (industry_fields?.schema_id && VALID_INDUSTRY_SCHEMA_IDS.has(String(industry_fields.schema_id)))
+    ? { schema_id: String(industry_fields.schema_id), occupation: KSIC_LABELS[String(industry_fields.schema_id)] || null, source: 'agent' }
+    : { ..._deriveOccupationFromCategories(products.map(p => p.category)), source: 'keyword_fallback' };
+
   let occupationUpdated = false;
-  if (derived) {
+  if (derived?.schema_id) {
     try {
       const prevExtra = l1Record.extra || {};
       const newExtraPublic = {
         ...(prevExtra.public || {}),
-        industry_fields: { schema_id: derived.schema_id, _derived_from: 'seller_products.category', _derived_at: new Date().toISOString() },
+        industry_fields: { schema_id: derived.schema_id, _source: derived.source, _updated_at: new Date().toISOString() },
       };
       await _l1UpsertProfile(env, {
         guid, handle: l1Record.handle, entityType: l1Record.entity_type, nativeLang: l1Record.native_lang,
@@ -5105,7 +5184,7 @@ async function handleCatalogSync(request, env, corsHeaders) {
       }).catch(e => console.warn('[Catalog] Supabase occupation 동기화 실패(L1은 반영됨):', e.message));
       occupationUpdated = true;
     } catch (e) {
-      console.warn('[Catalog] 업종 자동파생 반영 실패(카탈로그 동기화 자체는 성공):', e.message);
+      console.warn('[Catalog] 업종 갱신 실패(카탈로그 동기화 자체는 성공):', e.message);
     }
   }
 
