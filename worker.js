@@ -255,6 +255,186 @@ const VALID_INDUSTRY_SCHEMA_IDS = new Set([
   '91','94','95','96','97','98','99',
 ]);
 
+// 2026-07-05: KSIC 코드 → 한글 업종명 단일 소스.
+// AGENT-SUPPLIER-{code}_*.txt 파일 첫 줄("[공급자형 AI Agent · X00 · 업종명]")에서
+// 자동 추출 — VALID_INDUSTRY_SCHEMA_IDS와 정확히 동일한 77개 코드를 커버한다.
+// register-profile.html의 업종 선택 UI와 occupation 자동 파생(아래 handleProfilePost)이
+// 이 하나의 맵만 참조하도록 통일 — tags(자유태그)/occupation(검색컬럼)/
+// industry_fields.schema_id(KSIC, B2B 페르소나용)로 3중 분리돼 있던 업종 분류를
+// industry_fields.schema_id를 단일 진실 소스로 하나로 합친다.
+const KSIC_LABELS = {
+  '01': '농업',
+  '02': '임업',
+  '03': '어업',
+  '05': '석탄, 원유 및 천연가스 광업',
+  '06': '금속 광업',
+  '07': '비금속광물 광업; 연료용 제외',
+  '08': '광업 지원 서비스업',
+  '10': '식료품 제조업',
+  '11': '음료 제조업',
+  '12': '담배 제조업',
+  '13': '섬유제품 제조업; 의복 제외',
+  '14': '의복 제조업',
+  '15': '가죽, 가방 및 신발 제조업',
+  '16': '목재 및 나무제품 제조업; 가구 제외',
+  '17': '펄프, 종이 및 종이제품 제조업',
+  '18': '인쇄 및 기록매체 복제업',
+  '19': '코크스, 연탄 및 석유정제품 제조업',
+  '20': '화학물질 및 화학제품 제조업; 의약품 제외',
+  '21': '의료용 물질 및 의약품 제조업',
+  '22': '고무 및 플라스틱제품 제조업',
+  '23': '비금속 광물제품 제조업',
+  '24': '1차 금속 제조업',
+  '25': '금속가공제품 제조업; 기계 및 가구 제외',
+  '26': '전자부품, 컴퓨터, 영상, 음향 및 통신장비 제조업',
+  '27': '의료, 정밀, 광학기기 및 시계 제조업',
+  '28': '전기장비 제조업',
+  '29': '기타 기계 및 장비 제조업',
+  '30': '자동차 및 트레일러 제조업',
+  '31': '기타 운송장비 제조업',
+  '32': '가구 제조업',
+  '33': '그 외 기타 제품 제조업',
+  '34': '산업용 기계 및 장비 수리업',
+  '35': '전기, 가스, 증기 및 공기조절 공급업',
+  '36': '수도업',
+  '37': '하수, 폐수 및 분뇨 처리업',
+  '38': '폐기물 수집, 운반, 처리 및 원료 재생업',
+  '39': '환경 정화 및 복원업',
+  '41': '종합건설업',
+  '42': '전문직별 공사업',
+  '45': '자동차 판매업 및 부품 소매업',
+  '46': '도매 및 상품중개업',
+  '47': '소매업(자동차 제외)',
+  '49': '육상운송 및 파이프라인 운송업',
+  '50': '수상운송업',
+  '51': '항공운송업',
+  '52': '창고 및 운송관련 서비스업',
+  '55': '숙박업',
+  '56': '음식점 및 주점업',
+  '58': '출판업',
+  '59': '영화, 비디오물, 방송프로그램 제작 및 배급업',
+  '60': '방송업',
+  '61': '우편 및 통신업',
+  '62': '컴퓨터 프로그래밍, 시스템 통합 및 관리업',
+  '63': '정보서비스업',
+  '64': '금융업(은행 및 저축기관 등)',
+  '65': '보험업',
+  '66': '금융 및 보험관련 서비스업',
+  '68': '부동산업',
+  '70': '연구개발업',
+  '71': '전문서비스업(법무·회계·세무·디자인 등)',
+  '72': '건축기술, 엔지니어링 및 관련 기술서비스업',
+  '73': '기타 전문, 과학 및 기술 서비스업',
+  '74': '사업시설 관리 및 조경 서비스업',
+  '75': '사업지원 서비스업',
+  '76': '임대업(부동산 제외)',
+  '84': '공공행정, 국방 및 사회보장 행정',
+  '85': '교육 서비스업',
+  '86': '보건업',
+  '87': '사회복지 서비스업',
+  '90': '창작, 예술 및 여가관련 서비스업',
+  '91': '스포츠 및 오락관련 서비스업',
+  '94': '협회 및 단체',
+  '95': '개인 및 가정용품 수리업',
+  '96': '기타 개인 서비스업',
+  '97': '가구 내 고용활동',
+  '98': '자가소비를 위한 가구의 재화 생산활동',
+  '99': '국제 및 외국기관',
+};
+
+// 2026-07-05: 카테고리 키워드 → KSIC 코드 결정적 매핑. LLM이 업종을
+// '추측'하게 하지 않는다 — 판매자가 등록한 상품 카테고리(seller_products.category,
+// 아래 handleCatalogSync 참조)에서 이 표로 다수결 매핑해 occupation을
+// 자동으로 채운다. 매칭 실패 시 occupation은 null로 남고, 판매자가 카테고리를
+// 더 구체적으로 쓰면 다음 동기화 때 자동으로 채워진다(사용자가 업종을 직접
+// 고르게 하지 않는다 — market 시스템이 상품 등록으로부터 판단한다).
+const KSIC_KEYWORD_MAP = {
+  '농산물': '01',
+  '농업': '01',
+  '감귤': '01',
+  '채소': '01',
+  '과일': '01',
+  '수산물': '03',
+  '해산물': '03',
+  '어업': '03',
+  '생선': '03',
+  '정육': '10',
+  '축산물': '10',
+  '육류': '10',
+  '가공식품': '10',
+  '음료': '11',
+  '도매': '46',
+  '소매': '47',
+  '잡화': '47',
+  '편의점': '47',
+  '마트': '47',
+  '숙박': '55',
+  '펜션': '55',
+  '호텔': '55',
+  '게스트하우스': '55',
+  '음식점': '56',
+  '식당': '56',
+  '중식': '56',
+  '한식': '56',
+  '일식': '56',
+  '양식': '56',
+  '카페': '56',
+  '커피': '56',
+  '주점': '56',
+  '배달음식': '56',
+  '베이커리': '56',
+  '디저트': '56',
+  '렌터카': '49',
+  '택시': '49',
+  '퀵서비스': '49',
+  '택배': '49',
+  '유람선': '50',
+  '페리': '50',
+  '항공': '51',
+  'it': '62',
+  '프로그래밍': '62',
+  '앱개발': '62',
+  '웹개발': '62',
+  '정보서비스': '63',
+  '렌탈': '76',
+  '대여': '76',
+  '스쿠터대여': '76',
+  '캠핑용품대여': '76',
+  '공연': '90',
+  '체험': '90',
+  '예술': '90',
+  '다이빙': '91',
+  '골프': '91',
+  '레저': '91',
+  '액티비티': '91',
+  '스포츠': '91',
+  '미용': '96',
+  '네일': '96',
+  '세탁': '96',
+  '이발': '96',
+  '수리': '95',
+};
+
+function _deriveOccupationFromCategories(categories) {
+  const votes = {};
+  for (const raw of categories || []) {
+    const cat = String(raw || '').trim();
+    if (!cat) continue;
+    for (const [kw, code] of Object.entries(KSIC_KEYWORD_MAP)) {
+      if (cat.includes(kw) || kw.includes(cat)) {
+        votes[code] = (votes[code] || 0) + 1;
+        break;
+      }
+    }
+  }
+  const entries = Object.entries(votes);
+  if (!entries.length) return null;
+  entries.sort((a, b) => b[1] - a[1]);
+  const bestCode = entries[0][0];
+  return { schema_id: bestCode, occupation: KSIC_LABELS[bestCode] || null };
+}
+
+
 // 2026-07-01: INDIVIDUAL_ENTITY_TYPES/INSTITUTION_ENTITY_TYPES는
 // "개인은 별도 행 없이 병합, 기관은 별도 그림자 행"으로 나누던
 // 구설계의 분기 상수였다 — 모든 entity_type이 _mergeAgentSP 하나로
@@ -731,6 +911,14 @@ export default {
       if (request.method === 'GET')  return handleProfileGet(request, env, corsHeaders);
       if (request.method === 'POST') return handleProfilePost(request, env, corsHeaders);
     }
+
+    // ── K-Market 판매자 카탈로그(로컬 IndexedDB 원본 + L1 백업/공개미러) ──
+    if (pathname === '/biz/catalog/sync' && request.method === 'POST')
+      return handleCatalogSync(request, env, corsHeaders);
+    if (pathname === '/biz/catalog/hydrate' && request.method === 'POST')
+      return handleCatalogHydrate(request, env, corsHeaders);
+    if (pathname === '/biz/catalog' && request.method === 'GET')
+      return handleCatalogGet(request, env, corsHeaders);
 
     // ── Feedback ─────────────────────────────────────────────
     if (pathname === '/feedback' && request.method === 'POST')
@@ -1219,6 +1407,22 @@ async function handleSearch(request, env, corsHeaders) {
 
   const res  = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_entities`, { method: 'POST', headers: sbH, body: JSON.stringify(rpcBody) });
   const data = await res.json().catch(() => ({ error: 'parse failed' }));
+
+  // 2026-07-05: K-Market [SEARCH] 태그가 실제 상품/가격을 받을 수 있도록
+  // L1 seller_products(로컬 IndexedDB의 백업/공개미러)를 join한다.
+  // 실패해도 검색 자체는 정상 응답(join은 부가 정보일 뿐).
+  if (res.ok && Array.isArray(data)) {
+    await Promise.all(data.map(async (entity) => {
+      if (!entity?.primary_guid) return;
+      try {
+        entity.products = await _l1ListSellerProducts(env, entity.primary_guid)
+          .then(list => list.filter(p => p.is_public !== false).slice(0, 10));
+      } catch (e) {
+        entity.products = [];
+      }
+    }));
+  }
+
   return new Response(JSON.stringify(data), { status: res.status, headers: corsHeaders });
 }
 
@@ -4566,6 +4770,12 @@ async function handleProfilePost(request, env, corsHeaders) {
     region = '', directions = '', parking = false,
     gdc_accepted = false, currencies = ['KRW'], price_range = '',
     phone_visible = false,
+    // 2026-07-05: search_entities RPC의 p_occupation, /pdv/page 표시 페이지의
+    // p.occupation이 참조하는 컬럼이지만, 지금까지 이 함수의 destructuring
+    // 목록에 없어 저장 경로 자체가 없었다(실사로 발견 — 상시 null이었음).
+    // 명시적으로 보내면 그 값을 쓰되, 안 보내면 아래에서 industry_fields.schema_id
+    // (KSIC)로부터 자동 파생한다 — 손으로 두 번 입력하게 하지 않는다.
+    occupation = null,
   } = body;
 
   if (!entity_type) return _err(400, 'MISSING_FIELD', 'entity_type 필수', corsHeaders);
@@ -4590,6 +4800,14 @@ async function handleProfilePost(request, env, corsHeaders) {
         corsHeaders);
     }
   }
+
+  // 2026-07-05: occupation 자동 파생(3중 분류 통합) — 클라이언트가 occupation을
+  // 명시적으로 안 보내면 industry_fields.schema_id(KSIC)에서 KSIC_LABELS로
+  // 라벨을 끌어와 채운다. 둘 다 없으면 null(예: person/institution 등
+  // 업종 개념이 없는 entity_type) — search_entities의 p_occupation 필터는
+  // 그런 경우 애초에 매칭 대상이 아니므로 문제 없다.
+  const resolvedOccupation = occupation
+    || (body.industry_fields?.schema_id ? (KSIC_LABELS[String(body.industry_fields.schema_id)] || null) : null);
 
   const sbH = _sbHeaders(env);
 
@@ -4672,6 +4890,7 @@ async function handleProfilePost(request, env, corsHeaders) {
     lng,
     phone,
     website,
+    occupation: resolvedOccupation,
     is_public,
     extra: newExtra,
     updated_at: new Date().toISOString(),
@@ -4684,7 +4903,7 @@ async function handleProfilePost(request, env, corsHeaders) {
     await _l1UpsertProfile(env, {
       guid, handle: finalHandle, entityType: entity_type, nativeLang: native_lang,
       isPublic: is_public, pubkey, extra: newExtra,
-      core: { name, address, lat, lng, phone, website },
+      core: { name, address, lat, lng, phone, website, occupation: resolvedOccupation },
     });
   } catch (e) {
     console.warn('[Profile] L1 저장 실패 (Supabase는 계속 진행):', e.message);
@@ -4746,6 +4965,206 @@ async function handleProfilePost(request, env, corsHeaders) {
 
 
   return new Response(JSON.stringify({ ok: true, profile: savedProfile, agent: agentResult }), { status: 200, headers: corsHeaders });
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-05 — K-Market 판매자 카탈로그 (seller_products)
+//
+// 오픈해시 철학: 로컬(IndexedDB, 판매자 기기)이 원본(source of truth)이고
+// L1 PocketBase는 판매자가 로컬에서 상품을 등록/수정할 때마다 자동으로
+// 반영되는 "백업이자 공개 검색용 미러"다. 판매자가 직접 여기(서버)에
+// CRUD하는 관리자 패널이 아니다 — 클라이언트(gopang-seller-catalog.js)가
+// 로컬 변경 즉시(디바운스) 전체 스냅샷을 이 엔드포인트로 밀어넣고,
+// 서버는 그 guid 소유 레코드를 스냅샷 기준으로 통째로 교체한다.
+//
+// 업종(occupation/industry_fields.schema_id)은 사용자가 직접 고르지 않는다.
+// 상품 카테고리(seller_products.category)에서 KSIC_KEYWORD_MAP으로
+// 결정적으로 유도한다(_deriveOccupationFromCategories) — "market 시스템이
+// 업종을 판단하고, 사용자는 상품·서비스만 등록한다"는 원칙.
+// ═══════════════════════════════════════════════════════════
+
+// L1 seller_products 컬렉션에서 guid 소유 레코드 전체 조회
+async function _l1ListSellerProducts(env, guid) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`seller_guid='${guid}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/seller_products/records?filter=${filter}&perPage=200`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`L1 seller_products 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items || [];
+}
+
+// 로컬 스냅샷 기준으로 서버 미러를 통째로 교체(삭제 후 재삽입) — PocketBase엔
+// 벌크 upsert가 없어 건별 처리. 상품 수가 보통 수십 개 수준이라 무리 없음.
+async function _l1SyncSellerProducts(env, guid, products) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const existing = await _l1ListSellerProducts(env, guid);
+  const existingByProductId = new Map(existing.map(r => [r.product_id, r]));
+  const incomingIds = new Set(products.map(p => p.id));
+
+  // 스냅샷에 없는 기존 레코드 삭제(판매자가 로컬에서 삭제한 상품)
+  for (const rec of existing) {
+    if (!incomingIds.has(rec.product_id)) {
+      await fetch(`${L1_DEFAULT}/api/collections/seller_products/records/${rec.id}`, {
+        method: 'DELETE', headers,
+      }).catch(e => console.warn('[Catalog] 삭제 실패(무시하고 계속):', e.message));
+    }
+  }
+
+  // upsert
+  for (const p of products) {
+    const body = {
+      seller_guid: guid,
+      product_id: p.id,
+      name: p.name || '',
+      desc: p.desc || '',
+      price: typeof p.price === 'number' ? p.price : null,
+      unit: p.unit || '',
+      category: p.category || '',
+      stock: p.stock || 'in',
+      image_url: p.image_url || '',
+      is_public: p.is_public !== false,
+      updated_at: p.updated_at || new Date().toISOString(),
+    };
+    const existingRec = existingByProductId.get(p.id);
+    if (existingRec) {
+      await fetch(`${L1_DEFAULT}/api/collections/seller_products/records/${existingRec.id}`, {
+        method: 'PATCH', headers, body: JSON.stringify(body),
+      }).catch(e => console.warn('[Catalog] 갱신 실패(무시하고 계속):', e.message));
+    } else {
+      await fetch(`${L1_DEFAULT}/api/collections/seller_products/records`, {
+        method: 'POST', headers, body: JSON.stringify(body),
+      }).catch(e => console.warn('[Catalog] 신규 저장 실패(무시하고 계속):', e.message));
+    }
+  }
+}
+
+// POST /biz/catalog/sync — 로컬 IndexedDB 전체 스냅샷을 서버 백업/공개미러에 반영
+async function handleCatalogSync(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { guid, pubkey, signature, products } = body;
+  if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+  if (!Array.isArray(products)) return _err(400, 'MISSING_FIELD', 'products 배열 필수(빈 배열 허용)', corsHeaders);
+
+  // TOFU: L1에 이미 등록된 pubkey와 일치해야 함 — /profile 가입이 선행돼야 함
+  let l1Record;
+  try {
+    l1Record = await _l1FindProfileByGuid(env, guid);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!l1Record) return _err(404, 'PROFILE_NOT_FOUND', '프로필 등록이 먼저 필요합니다', corsHeaders);
+  if (l1Record.pubkey_ed25519 && l1Record.pubkey_ed25519 !== pubkey) {
+    return _err(403, 'PUBKEY_MISMATCH', '공개키가 이 계정에 등록된 키와 일치하지 않습니다', corsHeaders);
+  }
+
+  const sigOk = await _verifyEd25519(pubkey, signature, body);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+
+  // 상품 스키마 최소 검증 — RULE-01급 원칙(허위/불완전 데이터로 검색 오염 방지)
+  for (const p of products) {
+    if (!p.id || !p.name) {
+      return _err(400, 'INVALID_PRODUCT', `상품에 id/name 필수: ${JSON.stringify(p).slice(0, 100)}`, corsHeaders);
+    }
+  }
+
+  try {
+    await _l1SyncSellerProducts(env, guid, products);
+  } catch (e) {
+    return _err(502, 'L1_SYNC_FAILED', '카탈로그 동기화 실패: ' + e.message, corsHeaders);
+  }
+
+  // 업종 자동 파생 — 사용자가 직접 고르지 않는다(요청사항). 상품 카테고리
+  // 다수결로 KSIC를 유도해 프로필의 occupation/industry_fields를 갱신한다.
+  const derived = _deriveOccupationFromCategories(products.map(p => p.category));
+  let occupationUpdated = false;
+  if (derived) {
+    try {
+      const prevExtra = l1Record.extra || {};
+      const newExtraPublic = {
+        ...(prevExtra.public || {}),
+        industry_fields: { schema_id: derived.schema_id, _derived_from: 'seller_products.category', _derived_at: new Date().toISOString() },
+      };
+      await _l1UpsertProfile(env, {
+        guid, handle: l1Record.handle, entityType: l1Record.entity_type, nativeLang: l1Record.native_lang,
+        isPublic: l1Record.is_public, pubkey: l1Record.pubkey_ed25519,
+        extra: { ...prevExtra, public: newExtraPublic },
+        core: { ...(prevExtra.core || {}), occupation: derived.occupation },
+      });
+      await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
+        method: 'PATCH', headers: _sbServiceHeaders(env),
+        body: JSON.stringify({ occupation: derived.occupation }),
+      }).catch(e => console.warn('[Catalog] Supabase occupation 동기화 실패(L1은 반영됨):', e.message));
+      occupationUpdated = true;
+    } catch (e) {
+      console.warn('[Catalog] 업종 자동파생 반영 실패(카탈로그 동기화 자체는 성공):', e.message);
+    }
+  }
+
+  return new Response(JSON.stringify({
+    ok: true, synced: products.length,
+    occupation: derived?.occupation || null, occupation_updated: occupationUpdated,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// GET /biz/catalog?guid=... — 공개 상품 목록 조회(구매자·K-Market 검색 전용)
+// 항상 is_public=true인 상품만 반환한다 — 비공개 상품은 여기서 절대 노출되지 않는다.
+async function handleCatalogGet(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 쿼리 파라미터 필수', corsHeaders);
+
+  let products;
+  try {
+    products = await _l1ListSellerProducts(env, guid);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+  const publicOnly = products.filter(p => p.is_public !== false);
+  return new Response(JSON.stringify({ ok: true, guid, products: publicOnly }), { status: 200, headers: corsHeaders });
+}
+
+// POST /biz/catalog/hydrate — 판매자 본인이 새 기기에서 로컬 IndexedDB를 처음
+// 채울 때 쓰는 인증된 조회. 비공개 상품을 포함한 전체 목록을 서명 검증 후 반환한다
+// (오픈해시 원칙: 로컬이 원본이지만, 기기를 새로 시작할 땐 서버 백업에서
+// 복원해야 하므로 이 엔드포인트가 그 유일한 합법적 경로다).
+async function handleCatalogHydrate(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { guid, pubkey, signature } = body;
+  if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+
+  let l1Record;
+  try {
+    l1Record = await _l1FindProfileByGuid(env, guid);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!l1Record) return _err(404, 'PROFILE_NOT_FOUND', '프로필이 없습니다', corsHeaders);
+  if (l1Record.pubkey_ed25519 && l1Record.pubkey_ed25519 !== pubkey) {
+    return _err(403, 'PUBKEY_MISMATCH', '공개키가 이 계정에 등록된 키와 일치하지 않습니다', corsHeaders);
+  }
+  const sigOk = await _verifyEd25519(pubkey, signature, body);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+
+  let products;
+  try {
+    products = await _l1ListSellerProducts(env, guid);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+  return new Response(JSON.stringify({ ok: true, guid, products }), { status: 200, headers: corsHeaders });
 }
 
 
