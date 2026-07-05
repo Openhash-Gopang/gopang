@@ -95,7 +95,11 @@ export async function runRouter(userText, hasImage = false) {
   // 발견했다 — "불이났"은 있는데 조사 생략형 구어체 "불났"은 없었고,
   // "살려줘"(반말)만 있고 존댓말 "살려주세요"는 없었다. 둘 다 일상 응급
   // 발화에서 오히려 더 흔한 형태라 보완한다.
-  if (/긴급|응급|119|112|쓰러|부상|화재|불(이\s*)?났|구조|살려주(세요|십시오)?|심정지|emergency|collapsed|can'?t breathe|not breathing|on fire|heart attack|unconscious|drowning|call (an )?ambulance|severe bleeding|bleeding (heavily|badly|a lot)/i.test(userText)) {
+  // 2026-07-05d: 100건 페르소나 분류 검토 중 "아이가 물에 빠졌어요"가
+  // fast-path를 놓치는 걸 발견 — "drowning"은 영어로만 있고 한국어
+  // "물에 빠지다" 표현이 없었다. 익사는 응급 중에서도 최우선 처리가
+  // 필요한 범주라 반드시 보완한다.
+  if (/긴급|응급|119|112|쓰러|부상|화재|불(이\s*)?났|구조|살려주(세요|십시오)?|심정지|물에\s*빠(지|졌)|emergency|collapsed|can'?t breathe|not breathing|on fire|heart attack|unconscious|drowning|call (an )?ambulance|severe bleeding|bleeding (heavily|badly|a lot)/i.test(userText)) {
     return { category:'EMG', service_id:'kemergency',
              service_url:'https://911.hondi.net', confidence:0.99,
              reason:'긴급 상황 감지. K-Emergency 즉시 연결.',
@@ -136,7 +140,14 @@ export async function runRouter(userText, hasImage = false) {
   // 기회조차 없이 gopang-direct로 오분류되던 버그가 있었다. 길이가 아니라
   // 실제로 일상대화·인사 패턴에 매칭될 때만 DIRECT로 보낸다(빈 입력만
   // 별도 예외).
-  const DIRECT_RE = /^(안녕|고마워|감사|ㅋ|ㅎ|ㅇ|네|예|아니|몇시|날씨|시간|1\+1|계산|번역|요약).{0,20}$/;
+  // 2026-07-05e: 100건 페르소나 분류 검토 중 "예방접종 스케줄 확인하고
+  // 싶어요"가 이 fast-path에 걸려 LLM 분류 기회도 없이 DIRECT로 즉시
+  // 처리되는 걸 발견 — "예"(짧은 긍정 응답 의도)가 뒤에 오는 임의 텍스트와
+  // 접두어로 겹쳐 "예방접종"·"예산"·"예약"·"예측" 같은 도메인 단어 전체를
+  // 삼켜버렸다. "몇시"·"안녕" 등 다른 토큰은 뒤에 조사·서술어가 붙는 게
+  // 정상 패턴이라 그대로 두되(예: "몇시야","안녕하세요"), "예"만 뒤에 한글이
+  // 곧바로 이어지지 않을 때(공백·문장부호·끝)로 좁힌다.
+  const DIRECT_RE = /^(안녕|고마워|감사|ㅋ|ㅎ|ㅇ|네|예(?![가-힣])|아니|몇시|날씨|시간|1\+1|계산|번역|요약).{0,20}$/;
   if (!userText || DIRECT_RE.test(userText.trim())) {
     return { category:'DIRECT', service_id:'gopang-direct',
              service_url:null, confidence:0.98,
