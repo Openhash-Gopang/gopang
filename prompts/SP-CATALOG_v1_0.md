@@ -39,7 +39,7 @@ UNIVERSAL-INTEGRITY도 클라이언트에서 별도로 fetch해 앞에 붙인다
 (서버 강제 주입은 아니라 아래 표의 ❌ 표기는 유효하지만, 로딩 경로
 자체는 이 절의 "대부분 sp_key" 설명의 예외임에 유의). gopang 레포의
 `SP-05_kmarket`/`SP-05_kcommerce` manifest 키는 죽은 참조이며
-`SP-05_kmarket_DEPRECATED.txt`를 가리킨다.
+`DEPRECATED_SP-05_kmarket-kcommerce.txt`를 가리킨다.
 
 | id | 이름 | 분야 | UNIVERSAL 서버 강제 주입 |
 |---|---|---|---|

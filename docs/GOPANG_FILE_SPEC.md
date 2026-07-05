@@ -119,7 +119,7 @@
 | `SP-02_k119_v1.0.txt` | K-119 (소방/응급) |
 | `SP-03_kpolice_v1.0.txt` | K-Police |
 | `SP-04_khealth_v1.0.txt` | K-Health |
-| `SP-05_kcommerce_v2.2.txt` | ⚠️ 2026-07-05 정정: 죽은 참조. 실제 K-Market SP는 market 레포의 `SP-KMARKET-v2_5.txt`(자체 raw fetch). gopang 쪽 SP-05_* 파일은 `SP-05_kmarket_DEPRECATED.txt` 참조 |
+| `SP-05_kcommerce_v2.2.txt` | ⚠️ 2026-07-05 정정: 죽은 참조. 실제 K-Market SP는 market 레포의 `SP-KMARKET-v2_5.txt`(자체 raw fetch). gopang 쪽 SP-05_* 파일은 `DEPRECATED_SP-05_kmarket-kcommerce.txt` 참조 |
 | `SP-06_ktraffic_v1.0.txt` | K-Traffic |
 | `SP-07_ktax_v1.0.txt` | K-Tax |
 | `SP-08_gdc_v2.0.txt` | GDC 결제 |
