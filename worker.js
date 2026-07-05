@@ -1380,6 +1380,31 @@ function _generatePdvHtml(p) {
 // ═══════════════════════════════════════════════════════════
 // v4.7 — /search
 // ═══════════════════════════════════════════════════════════
+// 2026-07-05: SP-KMARKET RULE-02 [2-D]("품목 동의어 자동 확장")와 동일한
+// 목록. 지금까지 이 확장은 AI([SEARCH] 태그를 낼 때 스스로 동의어를
+// 떠올리는 것)에게만 맡겨져 있었다 — AI가 매번 동의어를 다 챙기지
+// 못하면 검색이 조용히 좁아지는 위험이 있어, 서버 쪽에도 동일한
+// 목록을 이중으로 걸어 최소 커버리지를 보장한다.
+// ★ 유지보수 주의 ★ SP-KMARKET-v2_5.txt RULE-02 [2-D]를 고칠 때
+// 이 목록도 같이 갱신할 것 — 현재 두 곳에 중복 관리됨(단일소스화는
+// 추후 과제로 남김).
+const PRODUCT_SEARCH_SYNONYMS = {
+  '짜장면': ['자장면', '중식', '짜장'],
+  '커피':   ['아메리카노', '라떼', '카페'],
+  '치킨':   ['닭', '후라이드', '양념'],
+  '흑돼지': ['삼겹살', '오겹살', '돼지고기'],
+};
+
+function _expandSearchTerms(keyword) {
+  const terms = new Set([keyword]);
+  for (const [key, syns] of Object.entries(PRODUCT_SEARCH_SYNONYMS)) {
+    if (keyword.includes(key)) syns.forEach(s => terms.add(s));
+    // 역방향(동의어로 검색했을 때 대표어·다른 동의어도 함께 포함)
+    if (syns.some(s => keyword.includes(s))) { terms.add(key); syns.forEach(s => terms.add(s)); }
+  }
+  return [...terms];
+}
+
 // 2026-07-05: 상품명/설명/카테고리 자체로 검색 — search_entities(Supabase)는
 // 엔티티 레벨(이름/태그/업종/주소)만 보므로, 판매자 태그에 없는 상품명으로
 // 검색하면(예: 소개엔 "정육점"만 있고 상품명은 "이베리코 등심") 그 판매자
@@ -1389,17 +1414,32 @@ function _generatePdvHtml(p) {
 async function _l1SearchProductsByKeyword(env, keyword, limit = 20) {
   if (!keyword) return [];
   const token = await _l1AdminToken(env);
-  const esc = String(keyword).replace(/'/g, "\\'");
-  const filter = encodeURIComponent(
-    `is_public=true && (name~'${esc}' || desc~'${esc}' || category~'${esc}')`
-  );
+  const terms = _expandSearchTerms(String(keyword));
+  const orClauses = terms.flatMap(t => {
+    const esc = t.replace(/'/g, "\\'");
+    return [`name~'${esc}'`, `desc~'${esc}'`, `category~'${esc}'`];
+  });
+  const filter = encodeURIComponent(`is_public=true && (${orClauses.join(' || ')})`);
   const res = await fetch(
     `${L1_DEFAULT}/api/collections/seller_products/records?filter=${filter}&perPage=${limit * 3}`,
     { headers: { 'Authorization': `Bearer ${token}` } }
   );
   if (!res.ok) throw new Error(`L1 상품검색 실패 (HTTP ${res.status})`);
   const data = await res.json().catch(() => ({ items: [] }));
-  return data.items || [];
+  const items = data.items || [];
+
+  // 관련도 랭킹: 원래 키워드(동의어 확장 전) 기준 — 상품명 완전일치 >
+  // 상품명 부분일치 > 카테고리 일치 > 설명만 일치 순.
+  const kw = String(keyword).trim();
+  function score(p) {
+    const name = String(p.name || '');
+    if (name === kw) return 4;
+    if (name.includes(kw)) return 3;
+    if (String(p.category || '').includes(kw)) return 2;
+    if (terms.some(t => name.includes(t))) return 2; // 동의어로 이름 매칭
+    return 1; // desc만 매칭되거나 동의어로만 매칭
+  }
+  return items.sort((a, b) => score(b) - score(a)).slice(0, limit);
 }
 
 async function handleSearch(request, env, corsHeaders) {
