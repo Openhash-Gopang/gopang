@@ -104,7 +104,13 @@ export async function runRouter(userText, hasImage = false) {
   // 표현만 남긴다("흉기"는 요리 맥락에서 거의 쓰이지 않음). "강도"·
   // "칼" 단독은 fast-path 없이 Step 5 LLM 판단(문맥 활용)에 맡긴다 —
   // GWP_REGISTRY의 kpolice triggers에는 그대로 남아있어 LLM 매칭은 가능.
-  if (/지금\s*위험|쫓아오|가정폭력|흉기로|흉기\s*들고|흉기\s*위협|납치|성폭행/.test(userText)) {
+  // 2026-07-05 신설, 2026-07-05b 정밀화, 2026-07-05c 재정밀화:
+  // 2차 100건 재평가에서 "흉기를 들고 쫓아와요"(자연스러운 실제 표현)가
+  // 매치되지 않는 걸 발견 — "쫓아오"는 활용형(쫓아와요·쫓아옵니다)을
+  // 커버 못했고, "흉기\s*들고"는 조사("를") 삽입을 커버 못했다. 또한
+  // "가정폭력"이라는 법률 용어 자체를 쓰지 않고 "때리고 있어요"처럼
+  // 상황을 그대로 서술하는 표현도 커버되지 않았다. 전부 보완.
+  if (/지금\s*위험|쫓아\s*(오|와|옵|온)|가정폭력|때리고\s*있어|맞고\s*있어|폭행당하|흉기\s*(를\s*)?\s*(들고|위협|로)|납치|성폭행/.test(userText)) {
     return { category:'JUS', service_id:'kpolice',
              service_url:'https://police.hondi.net', confidence:0.95,
              reason:'진행 중인 범죄·신변 위험 감지. K-Police 즉시 연결.',
