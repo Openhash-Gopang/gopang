@@ -205,9 +205,17 @@ const GWP_REGISTRY = [
     id: 'kcommerce', name: 'K-Market', category: 'MKT',
     type: 'tab',
     url: 'https://market.hondi.net/webapp.html',
+    // sp_key: 'SP-05_kmarket' — 2026-07-05 실사 결과 죽은 참조로 확인됨.
+    // resolveSpUrls()/entry.sp_url을 실제로 읽는 호출부가 코드베이스
+    // 어디에도 없고(엔진 주석 언급뿐), market/webapp.html은 이 레지스트리를
+    // 거치지 않고 market 레포 자체의 raw.githubusercontent.com URL을
+    // 직접 fetch한다(현재 SP-KMARKET-v2_5.txt). 진짜 SP는 market 레포가
+    // 정본이며, gopang의 SP-05_kmarket_*.txt/SP-05_kcommerce_*.txt는
+    // 전부 사용되지 않는 레거시 문서로 정리됨(SP-05_kmarket_DEPRECATED.txt
+    // 참조). sp_key 필드 자체는 하위호환을 위해 남겨두되 신뢰하지 말 것.
     sp_key: 'SP-05_kmarket',
     status: 'active', priority: 7, threshold: 0.75,
-    description: '판매자 이력 전용 수요 예측·주문.',
+    description: '자율 구매대행 에이전트 — 판매자 탐색·비교·거래·환불/반품/예약 처리 전담.',
     triggers: [
       '주문','배달','음식','쇼핑','구매','상점','시장','시켜','맛집',
       '식당','상품','가격','예약','반품','교환','거래','마켓',

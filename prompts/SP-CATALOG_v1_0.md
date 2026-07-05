@@ -31,6 +31,16 @@
 전부 **평면 구조** — 대부분 SP 파일 1개(`sp_key`)를 그대로 로드하며,
 jeju처럼 다단계 하위 조직으로 갈라지지 않는다.
 
+※ 예외: `kcommerce`(K-Market)는 `sp_key`/manifest.json 경로를 타지
+않는 유일한 항목이다(2026-07-05 확인). market 레포 자체의
+`webapp.html`이 `https://raw.githubusercontent.com/Openhash-Gopang/
+market/main/prompts/SP-KMARKET-v2_5.txt`를 직접 fetch하고,
+UNIVERSAL-INTEGRITY도 클라이언트에서 별도로 fetch해 앞에 붙인다
+(서버 강제 주입은 아니라 아래 표의 ❌ 표기는 유효하지만, 로딩 경로
+자체는 이 절의 "대부분 sp_key" 설명의 예외임에 유의). gopang 레포의
+`SP-05_kmarket`/`SP-05_kcommerce` manifest 키는 죽은 참조이며
+`SP-05_kmarket_DEPRECATED.txt`를 가리킨다.
+
 | id | 이름 | 분야 | UNIVERSAL 서버 강제 주입 |
 |---|---|---|---|
 | kemergency | K-Emergency | 긴급·재난(R0, 최우선 게이트) | ❌ 미적용 |
@@ -43,7 +53,7 @@ jeju처럼 다단계 하위 조직으로 갈라지지 않는다.
 | kfinance | K-Stock | 투자 | ❌ 미적용 |
 | kinsurance | K-Insurance | 보험 | ❌ 미적용 |
 | ktax | K-Tax | 세금(국세) | ❌ 미적용 |
-| kcommerce | K-Market | 주문·거래 | ❌ 미적용 |
+| kcommerce | K-Market | 주문·거래(자율 구매대행 에이전트) | ❌ 미적용(클라이언트 자체 fetch) |
 | ktransport | K-Traffic | 교통 | ❌ 미적용 |
 | klogistics | K-Logistics | 물류 | ❌ 미적용 |
 | kgov | K-Public | 민원·행정(국가사무) | ✅ `/gov/relay` |

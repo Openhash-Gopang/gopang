@@ -1,0 +1,44 @@
+================================================================
+SP-05_kmarket / SP-05_kcommerce — 폐기 안내 (2026-07-05)
+================================================================
+
+이 파일은 아래 4개 레거시 파일을 대체하는 포인터 문서다:
+  - SP-05_kmarket_v2.0.txt
+  - SP-05_kmarket_v2.1.txt
+  - SP-05_kcommerce_v2.2.txt
+  - prompts/archive/SP-05_kcommerce_v1.0.txt
+
+[왜 폐기되었나]
+2026-07-05 K-Market 100건 시뮬레이션 실사 중, 위 4개 파일이 실제
+서비스 어디에서도 로드되지 않는 죽은 문서로 확인되었다:
+  - manifest.json의 sp_key 매핑을 읽는 코드가 코드베이스 전체에서
+    발견되지 않았다(gwp-registry.js resolveSpUrls()를 호출하는 곳이
+    없음 — 주석으로만 언급됨).
+  - 실제 K-Market 웹앱(market.hondi.net/webapp.html)은 이 레지스트리를
+    거치지 않고, market 레포 자체의 다음 URL을 하드코딩해 직접
+    fetch한다:
+      https://raw.githubusercontent.com/Openhash-Gopang/market/main/prompts/SP-KMARKET-v2_5.txt
+
+또한 이 4개 파일 중 SP-05_kmarket_v2.0/v2.1(검증 전용 설계)과
+SP-05_kcommerce_v2.2(전체 탐색·구매 대행 설계)은 서로 정반대의
+철학을 담고 있어 실제 배포본 확인 없이는 어느 쪽이 맞는지 판단이
+불가능했다 — 이런 혼동을 재발시키지 않기 위해 정본을 하나로 못박는다.
+
+[정본 (Source of Truth)]
+K-Market의 실제 시스템 프롬프트는 오직 아래 위치 하나뿐이다:
+  레포: Openhash-Gopang/market
+  파일: prompts/SP-KMARKET-v2_5.txt (버전은 계속 올라갈 수 있음 —
+        market/webapp.html의 CFG.systemPromptURL이 가리키는 파일을
+        항상 최신 정본으로 간주한다)
+
+설계 요지: K-Market은 "검증 전용"이 아니라, 판매자 탐색·비교·추천·
+연결·거래·환불/반품/예약 사후처리까지 전담하는 자율 구매대행
+에이전트다. AGENT-COMMON_v3_14.txt §5도 이 사실에 맞춰 정정되었다.
+
+[남겨둔 이유]
+아래 4개 원본 파일은 삭제하지 않고 그대로 보존한다(git 히스토리 및
+scenarios_300*.json 등 기존 사고실험 문서가 파일명을 참조하고 있어
+삭제 시 링크가 깨짐). 다만 manifest.json은 더 이상 이 파일들을
+"SP-05_kmarket"/"SP-05_kcommerce" 키로 가리키지 않으며, 이 포인터
+문서를 대신 가리킨다.
+================================================================
