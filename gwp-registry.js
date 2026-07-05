@@ -285,6 +285,27 @@ const GWP_REGISTRY = [
     ],
   },
 
+  // ── 사업체 지원 (BIZ) — tab: K-Market 관리자 대시보드 내 어드바이저 ──
+  // 2026-07-05 신설. k-business(글로벌 표준)+business-kr(한국모듈) 상속.
+  // sp_key 없음 — /business/relay(worker.js)가 UNIVERSAL-INTEGRITY+
+  // UNIVERSAL-common+k-business+business-kr을 서버에서 직접 조립한다
+  // (jeju와 동일하게 manifest 방식이 아닌 자체 relay 엔드포인트 방식).
+  // 이 항목이 없으면 "재무제표 작성해줘" 같은 발화가 라우터에서 매칭될
+  // 서비스가 없어 gopang-direct로만 빠지는 사각지대가 있었음(실사로 확인).
+  {
+    id: 'kbusiness', name: 'K-Business', category: 'BIZ',
+    type: 'tab',
+    url: 'https://market.hondi.net/kmarket_admin_dashboard.html',
+    status: 'active', priority: 9, threshold: 0.70,
+    description: '사업체 재무제표·세금·고용(4대보험) 보조. K-Market 판매자 연동.',
+    triggers: [
+      '재무제표','손익계산서','대차대조표','사업자 세금','부가세 신고',
+      '사업자 세무','법인세','4대보험','급여 계산','직원 급여',
+      '고용보험 신고','인건비','경영 분석','매출 분석','사업 자금',
+      '노란우산공제','사업자 회계','원천세','판매자 정산',
+    ],
+  },
+
   // ── 환경 (ENV) — inline (신고) ────────────────────────────
   {
     id: 'fiil-kcleaner', name: 'K-Cleaner', category: 'ENV',
@@ -414,6 +435,8 @@ const SVC_ID_ALIAS = {
   'k-public':    'kgov',
   'k-119':       'kemergency',
   'k-emergency': 'kemergency',
+  'k-business':  'kbusiness',
+  'business':    'kbusiness',
 };
 
 function getService(id) {
