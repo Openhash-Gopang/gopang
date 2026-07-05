@@ -1385,7 +1385,7 @@ function _generatePdvHtml(p) {
 // 떠올리는 것)에게만 맡겨져 있었다 — AI가 매번 동의어를 다 챙기지
 // 못하면 검색이 조용히 좁아지는 위험이 있어, 서버 쪽에도 동일한
 // 목록을 이중으로 걸어 최소 커버리지를 보장한다.
-// ★ 유지보수 주의 ★ SP-KMARKET-v2_6.txt RULE-02 [2-D]를 고칠 때
+// ★ 유지보수 주의 ★ SP-KMARKET-v2_7.txt RULE-02 [2-D]를 고칠 때
 // 이 목록도 같이 갱신할 것 — 현재 두 곳에 중복 관리됨(단일소스화는
 // 추후 과제로 남김).
 const PRODUCT_SEARCH_SYNONYMS = {

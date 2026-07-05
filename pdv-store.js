@@ -163,11 +163,25 @@
     return category === 'all' ? all : all.filter(r => r.category === category);
   }
 
-  // ── 하위 서비스용 요약 (2026-07-05 신설) ─────────────────────────
+  // ── 하위 서비스용 요약 (2026-07-05 신설, 2026-07-06 화이트리스트 추가) ──
   // market 등 다른 origin에 원본 레코드를 넘기지 않고, 이 함수가 만든
   // 압축 텍스트만 auth/silent-pref.html을 통해 postMessage로 내보낸다.
   // record.js의 _buildPDVNote()(자기 자신의 AI 컨텍스트 주입용)와 같은
   // 원칙 — 정적으로 굽지 않고 호출 시점마다 새로 계산.
+  //
+  // ⚠️ 카테고리 화이트리스트 (2026-07-06, 사고실험 실사로 발견) ⚠️
+  // classify()는 GWP_REGISTRY category==='MKT'(K-Market 하나뿐)만 'org'로
+  // 분류하고, K-Health/K-Law/K-Finance/K-Insurance/K-Tax/K-Democracy/
+  // K-Security/K-Police/K-Emergency 등 나머지 전부는 'ai'라는 하나의
+  // 통 바구니에 뭉친다. 즉 category='ai'나 'all'을 외부에 허용하면
+  // 건강·법률·금융 상담 기록까지 market 같은 상거래 서비스로 통째로
+  // 새어나간다 — "취향 요약"이라는 이름과 전혀 다른 민감정보 유출
+  // 경로가 된다. 그래서 이 함수는 외부 relay 용도로는 category를
+  // 무조건 'org'로 강제한다('person'/'thing'은 현재 실제 데이터가
+  // 없어 포함해도 무해하므로 같이 허용). 'ai'/'all'이 필요한 경우는
+  // 이 함수(외부 relay)가 아니라 record.js의 _buildPDVNote()(자기 자신
+  // 즉 hondi.net 본체의 AI 컨텍스트에만 주입, 외부로 안 나감)를 써야 한다.
+  const _RELAY_ALLOWED_CATEGORIES = new Set(['org', 'person', 'thing']);
   const _PREF_MAX_ITEMS = 12;
   const _PREF_MAX_CHARS = 400;
   const _PREF_MAX_AGE_DAYS = 90; // 90일 지난 상호작용은 취향 신호로 안 씀
@@ -177,16 +191,19 @@
     return [record.summary, s6?.what, s6?.why].filter(Boolean).join(' ').toLowerCase();
   }
 
-  // category: 'org'(=MKT 근사) 등 classify()가 반환하는 4분류 중 하나, 또는 'all'
+  // category: 화이트리스트(_RELAY_ALLOWED_CATEGORIES) 밖의 값('ai','all' 등)이
+  // 들어오면 조용히 'org'로 강제 다운그레이드한다 — 호출측(market 등)이
+  // 뭘 요청하든 이 함수가 최종 방어선이다.
   // keywords: 있으면 텍스트에 하나라도 매칭되는 레코드만 남김(예: ['중식','배달'])
   async function summarizeForRelay(category, keywords) {
+    const safeCategory = _RELAY_ALLOWED_CATEGORIES.has(category) ? category : 'org';
     const all = await list(); // 내부에서 migrateFromLocalStorageOnce() 포함
     const cutoff = Date.now() - _PREF_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
     let rows = all.filter(r => {
       const t = new Date(r.ts || r.when || 0).getTime();
       return t >= cutoff;
     });
-    if (category && category !== 'all') rows = rows.filter(r => r.category === category);
+    rows = rows.filter(r => r.category === safeCategory);
     if (Array.isArray(keywords) && keywords.length) {
       const kws = keywords.map(k => String(k).toLowerCase());
       rows = rows.filter(r => {
@@ -210,6 +227,7 @@
     return {
       count: rows.length,
       summary_text: lines.length ? lines.join('\n') : null,
+      category: safeCategory, // 실제로 적용된 카테고리 — 호출측이 다운그레이드 여부를 알 수 있게
       // 원본 레코드/구체적 날짜/서비스ID는 절대 포함하지 않는다 — 텍스트 요약뿐.
     };
   }
