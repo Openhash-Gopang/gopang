@@ -1045,6 +1045,14 @@ SELECT * FROM reconstruct_balances('2601:db80:...');
 
 `user_profiles` 복합 검색. GIN 트라이그램 인덱스 활용.
 
+> **2026-07-05 진행 중**: market 검색과 "나만의 AI비서"(PDV 보유)의 역할
+> 분담 재정의에 따라, 이 함수에 `p_taste_tags`/`p_budget_max` 등 개인화
+> 파라미터를 추가하는 확장이 설계 단계에 있다(이 함수 자체는 여전히
+> Supabase에 남는다 — 카탈로그 검색이므로). 개인화 신호를 만드는 쪽(PDV
+> 선호 요약)은 별도로 **L1 PocketBase 네이티브**로 신설 중이며 세부는
+> `supabase_to_l1_migration_plan.md`의 "2026-07-05 추가 결정" 참조.
+> `p_taste_tags` 등의 실제 SQL 마이그레이션은 아직 적용 전이다.
+
 ### 13.3 search_by_attributes(...)
 
 `user_attributes` 기반 속성 검색.
