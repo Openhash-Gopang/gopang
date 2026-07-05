@@ -815,6 +815,7 @@ export default {
     if (pathname === '/llm/relay')               return handleLLMRelay(bodyText, env, corsHeaders, _meta);
     if (pathname === '/klaw/relay')               return handleKlawRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname === '/gov/relay')                return handleGovRelay(bodyText, env, corsHeaders, _meta, ctx);
+    if (pathname === '/business/relay')           return handleBusinessRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname.startsWith('/gemini/'))         return callOpenAIFromGeminiBody(bodyText, env, corsHeaders, _meta);
     if (pathname === '/ai/chat')                 return handleAIChat(bodyText, env, corsHeaders, _meta);
 
@@ -2214,6 +2215,137 @@ const GOV_AGENCIES = new Set([
   'public', 'tax', 'health', 'police', '911', 'democracy', 'insurance',
   'traffic', 'logistics',
 ]);
+
+// ═══════════════════════════════════════════════════════════
+// k-business / business-kr — 사업체 보조 AI (2026-07-05 신설)
+// K-Market 판매자 관리 대시보드(kmarket_admin_dashboard.html)의 AI
+// 경영 어드바이저가 이 릴레이를 통해 재무·세금·고용 업무를 보조한다.
+// GOV_AGENCIES와 별개 축(사업체 모듈)이라 agency 개념 대신 국가모듈
+// 하나(business-kr)만 우선 지원 — 다른 국가 확장 시 BUSINESS_COUNTRY_MODULES
+// 에 추가한다.
+// ═══════════════════════════════════════════════════════════
+const K_BUSINESS_URL   = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/k-business_v1_0.md';
+const BUSINESS_KR_URL  = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/business-kr_v1_0.md';
+let _kBusinessCache = null, _kBusinessCacheAt = 0;
+let _businessKrCache = null, _businessKrCacheAt = 0;
+const _BUSINESS_TTL_MS = 10 * 60 * 1000;
+
+async function _fetchKBusiness() {
+  const now = Date.now();
+  if (_kBusinessCache && (now - _kBusinessCacheAt) < _BUSINESS_TTL_MS) return _kBusinessCache;
+  try {
+    const res = await fetch(K_BUSINESS_URL, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    _kBusinessCache = await res.text();
+    _kBusinessCacheAt = now;
+  } catch (e) {
+    console.warn('[k-business] 로드 실패:', e.message);
+    if (!_kBusinessCache) _kBusinessCache = '';
+  }
+  return _kBusinessCache;
+}
+
+async function _fetchBusinessKr() {
+  const now = Date.now();
+  if (_businessKrCache && (now - _businessKrCacheAt) < _BUSINESS_TTL_MS) return _businessKrCache;
+  try {
+    const res = await fetch(BUSINESS_KR_URL, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    _businessKrCache = await res.text();
+    _businessKrCacheAt = now;
+  } catch (e) {
+    console.warn('[business-kr] 로드 실패:', e.message);
+    if (!_businessKrCache) _businessKrCache = '';
+  }
+  return _businessKrCache;
+}
+
+const BUSINESS_TIER_MODELS = {
+  'biz-flash': { backendModel: 'deepseek-chat',     price: { cacheHit: 0.0028, cacheMiss: 0.14,  output: 0.28 } },
+  'biz-pro':   { backendModel: 'deepseek-reasoner', price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 } },
+};
+const BUSINESS_USER_DAILY_KRW_LIMIT   = 300;
+const BUSINESS_GLOBAL_DAILY_KRW_LIMIT = 30000;
+
+async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx = null) {
+  let body;
+  try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
+
+  const { guid, business_id, agencyPrompt, messages, max_tokens, stream, tier } = body || {};
+  if (!guid || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/messages 필수', corsHeaders);
+
+  // 클라이언트가 보낸 messages 중 system 역할은 전부 제거 — 서버가 직접
+  // 조립한 system(k-business 공통 + business-kr + agencyPrompt)만 유효.
+  const dialogOnly = (messages || []).filter(m => m.role !== 'system');
+
+  const tierKey = BUSINESS_TIER_MODELS[tier] ? tier : 'biz-flash';
+  const backendModel = BUSINESS_TIER_MODELS[tierKey].backendModel;
+
+  const day       = _todayKey();
+  const bizKey    = business_id || guid; // 사업체 단위 식별자, 없으면 guid로 대체
+  const userKey   = `biz:spend:${bizKey}:${day}`;
+  const globalKey = `biz:spend:global:${day}`;
+
+  const [userSpent, globalSpent] = await Promise.all([
+    _klawSpendGet(env, userKey), _klawSpendGet(env, globalKey)
+  ]);
+  if (globalSpent >= BUSINESS_GLOBAL_DAILY_KRW_LIMIT) {
+    return _err(429, 'BIZ_GLOBAL_QUOTA_EXCEEDED', '오늘 전체 이용자의 사용량이 한도에 도달했습니다. 내일 다시 이용해 주세요.', corsHeaders);
+  }
+  if (userSpent >= BUSINESS_USER_DAILY_KRW_LIMIT) {
+    return _err(429, 'BIZ_USER_QUOTA_EXCEEDED', '오늘 사용 가능한 한도를 모두 사용했습니다. 내일 다시 이용해 주세요.', corsHeaders);
+  }
+
+  const [universalIntegrity, universalCommon, kBusiness, businessKr] = await Promise.all([
+    _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchKBusiness(), _fetchBusinessKr(),
+  ]);
+  const systemParts = [universalIntegrity, universalCommon, kBusiness, businessKr, agencyPrompt || ''].filter(Boolean);
+  const systemContent = systemParts.length
+    ? systemParts.join('\n\n---\n\n')
+    : (agencyPrompt || '');
+
+  const isStream = !!stream;
+  const payload = { model: backendModel, messages: [{ role: 'system', content: systemContent }, ...dialogOnly], stream: isStream };
+  if (max_tokens != null) payload.max_tokens = max_tokens;
+
+  console.log(JSON.stringify({ tag: 'BUSINESS_RELAY_CALL', guid, business_id: bizKey, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
+
+  let res;
+  try {
+    res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) { return _err(502, 'BUSINESS_RELAY_ERROR', e.message, corsHeaders); }
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    return new Response(errText || JSON.stringify({ error:`HTTP ${res.status}` }), { status: res.status, headers: corsHeaders });
+  }
+
+  const priceTier = tierKey === 'biz-pro' ? 'hondi-pro' : 'hondi-flash';
+
+  if (isStream) {
+    const [forClient, forUsage] = res.body.tee();
+    const usageTask = _parseUsageFromStream(forUsage).then(async usage => {
+      const bill = computeBilledKRW(env, usage, priceTier);
+      console.log(JSON.stringify({ tag:'BUSINESS_RELAY_COST', guid, business_id: bizKey, tier: tierKey, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier, ts: new Date().toISOString(), ...meta }));
+      await Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW)]);
+    });
+    if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
+    return new Response(forClient, { status:200, headers:{ ...corsHeaders, 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache', 'X-Accel-Buffering':'no' } });
+  }
+
+  const data = await res.json();
+  if (data?.usage) {
+    const bill = computeBilledKRW(env, data.usage, priceTier);
+    console.log(JSON.stringify({ tag:'BUSINESS_RELAY_COST', guid, business_id: bizKey, tier: tierKey, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier, ts: new Date().toISOString(), ...meta }));
+    const recordTask = Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW)]);
+    if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
+  }
+  return new Response(JSON.stringify(data), { headers: corsHeaders });
+}
 
 // 2026-07-04b: K-Public_common의 P11(PDV_HISTORY_REQUEST) 절엔
 // "scope={본인 서비스의 VALID_PDV_SCOPES 값}"라는 자리표시자만 있고,
