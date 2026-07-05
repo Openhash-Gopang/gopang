@@ -209,7 +209,7 @@ const GWP_REGISTRY = [
     // resolveSpUrls()/entry.sp_url을 실제로 읽는 호출부가 코드베이스
     // 어디에도 없고(엔진 주석 언급뿐), market/webapp.html은 이 레지스트리를
     // 거치지 않고 market 레포 자체의 raw.githubusercontent.com URL을
-    // 직접 fetch한다(현재 SP-KMARKET-v2_5.txt). 진짜 SP는 market 레포가
+    // 직접 fetch한다(현재 SP-KMARKET-v2_6.txt). 진짜 SP는 market 레포가
     // 정본이며, gopang의 SP-05_kmarket_*.txt/SP-05_kcommerce_*.txt는
     // 전부 사용되지 않는 레거시 문서로 정리됨(DEPRECATED_SP-05_kmarket-kcommerce.txt
     // 참조). sp_key 필드 자체는 하위호환을 위해 남겨두되 신뢰하지 말 것.

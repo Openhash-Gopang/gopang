@@ -1,0 +1,204 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고팡 개인화 동의</title>
+<script src="/pdv-store.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background: transparent; }
+  body {
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 24px;
+  }
+  #overlay-bg { position: fixed; inset: 0; background: rgba(17,24,39,0.45); display: none; }
+  #consent-card {
+    display: none; position: relative; z-index: 1;
+    background: white; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 26px 24px; width: 100%; max-width: 340px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+  }
+  .pref-logo { display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+  .pref-logo-icon {
+    width:28px; height:28px; background:#3ecf8e; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:700; color:white; font-family:monospace;
+  }
+  .pref-logo-text { font-size:14px; font-weight:600; color:#111827; }
+  .pref-svc {
+    font-size:11px; color:#6b7280; background:#f3f4f6; border:1px solid #e5e7eb;
+    border-radius:99px; padding:2px 10px; font-family:monospace;
+  }
+  h2 { font-size:15px; font-weight:600; color:#111827; margin-bottom:8px; }
+  .pref-desc { font-size:12.5px; color:#6b7280; line-height:1.6; margin-bottom:14px; }
+  .btn-row { display:flex; gap:8px; }
+  .btn-primary {
+    flex:1; padding:10px; background:#3ecf8e; color:white; border:none;
+    border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .btn-primary:hover { background:#29a374; }
+  .btn-secondary {
+    flex:0 0 68px; padding:10px; background:transparent; color:#6b7280;
+    border:1px solid #e5e7eb; border-radius:8px; font-size:12.5px; cursor:pointer;
+  }
+  .btn-secondary:hover { border-color:#9ca3af; color:#374151; }
+  .pref-remember {
+    display:flex; align-items:center; gap:6px; font-size:11.5px; color:#6b7280;
+    margin-top:12px;
+  }
+</style>
+</head>
+<body>
+
+<div id="overlay-bg"></div>
+<div id="consent-card">
+  <div class="pref-logo">
+    <div class="pref-logo-icon">G</div>
+    <span class="pref-logo-text">고팡</span>
+    <span class="pref-svc" id="svc-label"></span>
+  </div>
+  <h2>취향 요약 전달 동의</h2>
+  <p class="pref-desc">
+    <span id="svc-label2"></span>이(가) 더 나은 추천을 위해 이 기기에 기록된
+    최근 이용 패턴의 <b>압축 요약</b>을 요청했습니다. 원본 기록은 이 기기
+    밖으로 나가지 않고, 요약 문장만 전달됩니다.
+  </p>
+  <div class="btn-row">
+    <button class="btn-primary" id="approve-btn">요약 전달</button>
+    <button class="btn-secondary" id="reject-btn">거절</button>
+  </div>
+  <label class="pref-remember">
+    <input type="checkbox" id="remember-chk" checked>
+    이 세션 동안 다시 묻지 않기
+  </label>
+</div>
+
+<script type="module">
+// ══════════════════════════════════════════════════════════
+// auth/silent-pref.html — v1.0 (2026-07-05 신설)
+//
+// silent-sign.html(Ed25519 서명 대리 — 상태를 바꾸는 쓰기 요청용)과
+// 짝을 이루는 파일이지만, 이 페이지는 서명하지 않는다 — 그냥 이 기기의
+// 로컬 PDV(IndexedDB gopang_pdv_store, pdv-store.js가 관리)를 읽어
+// 압축 요약 텍스트만 돌려주는 읽기 전용 중계다.
+//
+// 배경: "나만의 AI비서"가 가진 PDV(나이·주소·성향·취향·구매 이력)는
+// 서버(L1도 Supabase도) 어디에도 원본이 없다 — 오직 이 기기의 브라우저
+// IndexedDB에만 있다(2026-07-05 실사로 확인, supabase_to_l1_migration_plan.md
+// 참고). 그래서 market 같은 하위 서비스가 "이 사람 취향에 맞는 걸
+// 추천"하려면, 서버 DB를 아무리 뒤져도 소용없고 반드시 이 페이지처럼
+// hondi.net origin에서 로컬로 계산한 요약을 받아가야 한다.
+//
+// 호출 측 계약 (silent-sign.html과 동일한 형태):
+//   1) <iframe src="https://hondi.net/auth/silent-pref.html?svc=market">
+//      화면에 보이는 위치에 삽입 (동의 UI가 뜰 수 있으므로 display:none 금지)
+//   2) iframe load 후 postMessage({
+//        type: 'GWP_PREF_REQUEST', session_id,
+//        category,   // 'org'|'ai'|'person'|'thing'|'all' — 생략 시 'all'
+//        keywords    // string[], 생략 가능
+//      }, 'https://hondi.net')
+//   3) 응답 postMessage({
+//        type: 'GWP_PREF_RESPONSE', session_id,
+//        ok, count, summary_text,   // ok===true. summary_text는 null일 수 있음(신호 없음)
+//        error                      // ok===false ('USER_REJECTED'|'NO_SIGNAL'|'FAILED')
+//      }, callerOrigin)
+// ══════════════════════════════════════════════════════════
+
+import { GWP_ALLOWED_ORIGINS } from '/src/gopang/gwp/allowed-origins.js';
+
+const params    = new URLSearchParams(location.search);
+const SERVICE   = params.get('svc') || '*';
+const IS_SILENT = (window.parent !== window);
+const REMEMBER_KEY = `gopang_pref_consent:${SERVICE}`;
+
+document.getElementById('svc-label').textContent  = SERVICE;
+document.getElementById('svc-label2').textContent = SERVICE;
+
+let _pending = null; // { msg, sourceOrigin }
+
+window.addEventListener('message', async (e) => {
+  if (e.data?.type !== 'GWP_PREF_REQUEST') return;
+  if (!IS_SILENT) {
+    console.warn('[SILENT_PREF] iframe이 아닌 컨텍스트에서 요청 무시');
+    return;
+  }
+  if (!GWP_ALLOWED_ORIGINS.includes(e.origin)) {
+    console.warn('[SILENT_PREF] 허용되지 않은 origin 차단:', e.origin);
+    return;
+  }
+  await _handleRequest(e.data, e.origin);
+});
+
+async function _handleRequest(msg, sourceOrigin) {
+  if (sessionStorage.getItem(REMEMBER_KEY) === '1') {
+    await _computeAndReply(msg, sourceOrigin);
+    return;
+  }
+  _pending = { msg, sourceOrigin };
+  document.getElementById('overlay-bg').style.display = 'block';
+  document.getElementById('consent-card').style.display = 'block';
+}
+
+document.getElementById('approve-btn').addEventListener('click', async () => {
+  if (!_pending) return;
+  const { msg, sourceOrigin } = _pending;
+  if (document.getElementById('remember-chk').checked) {
+    sessionStorage.setItem(REMEMBER_KEY, '1');
+  }
+  _closeCard();
+  await _computeAndReply(msg, sourceOrigin);
+});
+
+document.getElementById('reject-btn').addEventListener('click', () => {
+  if (!_pending) return;
+  const { msg, sourceOrigin } = _pending;
+  _reply({ ok: false, error: 'USER_REJECTED' }, sourceOrigin, msg.session_id);
+  _closeCard();
+});
+
+function _closeCard() {
+  document.getElementById('overlay-bg').style.display = 'none';
+  document.getElementById('consent-card').style.display = 'none';
+  _pending = null;
+}
+
+async function _computeAndReply(msg, sourceOrigin) {
+  try {
+    const wait = await _waitForPdvStore();
+    if (!wait) {
+      _reply({ ok: false, error: 'FAILED' }, sourceOrigin, msg.session_id);
+      return;
+    }
+    const result = await window.GopangPDV.summarizeForRelay(
+      msg.category || 'all', msg.keywords || null
+    );
+    if (!result.summary_text) {
+      _reply({ ok: true, count: result.count, summary_text: null }, sourceOrigin, msg.session_id);
+      return;
+    }
+    _reply({ ok: true, count: result.count, summary_text: result.summary_text }, sourceOrigin, msg.session_id);
+  } catch (err) {
+    console.error('[SILENT_PREF] 요약 실패:', err.message);
+    _reply({ ok: false, error: 'FAILED' }, sourceOrigin, msg.session_id);
+  }
+}
+
+function _reply(result, targetOrigin, sessionId) {
+  window.parent.postMessage({ type: 'GWP_PREF_RESPONSE', session_id: sessionId, ...result }, targetOrigin);
+}
+
+function _waitForPdvStore(timeoutMs = 4000) {
+  return new Promise((resolve) => {
+    if (window.GopangPDV) { resolve(true); return; }
+    const start = Date.now();
+    const t = setInterval(() => {
+      if (window.GopangPDV) { clearInterval(t); resolve(true); }
+      else if (Date.now() - start > timeoutMs) { clearInterval(t); resolve(!!window.GopangPDV); }
+    }, 100);
+  });
+}
+</script>
+</body>
+</html>

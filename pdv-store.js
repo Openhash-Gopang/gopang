@@ -163,9 +163,61 @@
     return category === 'all' ? all : all.filter(r => r.category === category);
   }
 
+  // ── 하위 서비스용 요약 (2026-07-05 신설) ─────────────────────────
+  // market 등 다른 origin에 원본 레코드를 넘기지 않고, 이 함수가 만든
+  // 압축 텍스트만 auth/silent-pref.html을 통해 postMessage로 내보낸다.
+  // record.js의 _buildPDVNote()(자기 자신의 AI 컨텍스트 주입용)와 같은
+  // 원칙 — 정적으로 굽지 않고 호출 시점마다 새로 계산.
+  const _PREF_MAX_ITEMS = 12;
+  const _PREF_MAX_CHARS = 400;
+  const _PREF_MAX_AGE_DAYS = 90; // 90일 지난 상호작용은 취향 신호로 안 씀
+
+  function _textOf(record) {
+    const s6 = normalizeSummary6w(record);
+    return [record.summary, s6?.what, s6?.why].filter(Boolean).join(' ').toLowerCase();
+  }
+
+  // category: 'org'(=MKT 근사) 등 classify()가 반환하는 4분류 중 하나, 또는 'all'
+  // keywords: 있으면 텍스트에 하나라도 매칭되는 레코드만 남김(예: ['중식','배달'])
+  async function summarizeForRelay(category, keywords) {
+    const all = await list(); // 내부에서 migrateFromLocalStorageOnce() 포함
+    const cutoff = Date.now() - _PREF_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+    let rows = all.filter(r => {
+      const t = new Date(r.ts || r.when || 0).getTime();
+      return t >= cutoff;
+    });
+    if (category && category !== 'all') rows = rows.filter(r => r.category === category);
+    if (Array.isArray(keywords) && keywords.length) {
+      const kws = keywords.map(k => String(k).toLowerCase());
+      rows = rows.filter(r => {
+        const text = _textOf(r);
+        return kws.some(k => text.includes(k));
+      });
+    }
+    rows = rows.slice(0, _PREF_MAX_ITEMS);
+
+    const lines = [];
+    let used = 0;
+    for (const r of rows) {
+      const s6 = r.summary_6w_view || {};
+      const bit = (s6.what || r.summary || '').toString().slice(0, 60);
+      if (!bit) continue;
+      const line = `· ${bit}`;
+      if (used + line.length > _PREF_MAX_CHARS) break;
+      lines.push(line);
+      used += line.length;
+    }
+    return {
+      count: rows.length,
+      summary_text: lines.length ? lines.join('\n') : null,
+      // 원본 레코드/구체적 날짜/서비스ID는 절대 포함하지 않는다 — 텍스트 요약뿐.
+    };
+  }
+
   global.GopangPDV = {
     list,
     listByCategory,
+    summarizeForRelay,
     CATEGORY_LABEL,
   };
 })(window);
