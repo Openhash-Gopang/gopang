@@ -1,0 +1,43 @@
+name: Archive old prompt versions (periodic)
+
+# push 트리거(manifest.yml)를 놓치는 경우의 안전망 — 매주 월요일 03:00 UTC에
+# 무조건 한 번 더 정리한다. 정상적으로는 manifest.yml이 push마다 이미
+# 처리하므로 이 워크플로우는 대부분 "정리할 파일 없음"으로 조용히 끝난다.
+on:
+  schedule:
+    - cron: '0 3 * * 1'   # 매주 월요일 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: manifest
+  cancel-in-progress: false
+
+jobs:
+  archive-old-prompts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Archive old prompt versions
+        run: python3 tools/archive_old_prompts.py
+
+      - name: Regenerate manifest.json
+        run: python3 tools/build_manifest.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A prompts/
+          git diff --cached --quiet || git commit -m "ci(periodic): archive old prompt versions + regenerate manifest.json [skip ci]"
+          git diff --cached --quiet || git push

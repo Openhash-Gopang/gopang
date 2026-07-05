@@ -6,6 +6,7 @@ on:
     paths:
       - 'prompts/**'
       - 'tools/build_manifest.py'
+      - 'tools/archive_old_prompts.py'
   workflow_dispatch:
 
 permissions:
@@ -28,15 +29,22 @@ jobs:
         with:
           python-version: '3.12'
 
+      # ── 오래된 버전 정리 (2026-07-05 신설) ───────────────────────────
+      # manifest 생성보다 먼저 실행 — 계열당 최신 KEEP_LATEST개만 남기고
+      # prompts/archive/로 이동. 최신본(manifest가 참조할 파일)은 항상
+      # KEEP_LATEST 안에 들어가므로 manifest 결과에 영향 없음.
+      - name: Archive old prompt versions
+        run: python3 tools/archive_old_prompts.py
+
       # ── manifest.json 생성 ──────────────────────────────────────────
       - name: Generate prompts/manifest.json
         run: python3 tools/build_manifest.py
 
       # ── 변경이 있을 때만 커밋 (없으면 조용히 종료) ──────────────────
-      - name: Commit generated manifest
+      - name: Commit generated manifest and archive moves
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add prompts/manifest.json
-          git diff --cached --quiet || git commit -m "ci: regenerate manifest.json [skip ci]"
+          git add -A prompts/
+          git diff --cached --quiet || git commit -m "ci: regenerate manifest.json + archive old prompt versions [skip ci]"
           git push
