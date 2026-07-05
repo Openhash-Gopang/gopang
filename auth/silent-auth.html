@@ -211,6 +211,20 @@
     고팡 계정으로 로그인하면 모든 하위 서비스를 이용할 수 있습니다.
   </p>
 
+  <!-- 폰(개인 기기)으로 QR을 스캔해 이 PC/기기에 로그인 승인 -->
+  <div id="qr-sso-box" style="margin:20px 0;text-align:center">
+    <div id="qr-sso-img" style="width:180px;height:180px;margin:0 auto 10px;
+         border:1px solid #e5e7eb;border-radius:10px;display:flex;
+         align-items:center;justify-content:center;background:#fafafa">
+      <span style="font-size:11px;color:#9ca3af">QR 생성 중…</span>
+    </div>
+    <div id="qr-sso-status" style="font-size:12px;color:#9ca3af">
+      혼디 앱이 설치된 내 스마트폰으로 스캔하세요
+    </div>
+  </div>
+
+  <div style="text-align:center;font-size:12px;color:#9ca3af;margin:12px 0">또는</div>
+
   <!-- hondi.net 가입/복구로 이동 -->
   <button class="btn-primary" id="register-btn" onclick="goRegister()">
     hondi.net에서 계속하기
@@ -339,17 +353,71 @@ async function _runRedirectMode() {
     return;
   }
 
-  // 미가입/기기 불일치 — 진짜 가입 흐름이 있는 hondi.net으로 보낸다
+  // 미가입/기기 불일치 — 이 기기(PC 등)엔 개인키가 없다.
+  // 열쇠는 폰(개인 기기)에 있으므로, QR로 폰의 서명을 받아온다.
+  // (백업 키를 직접 붙여넣는 방법은 hondi.net 설정에도 남아 있다 — 대안일 뿐.)
   document.getElementById('auth-card').style.display = 'block';
   const title = document.getElementById('auth-title');
   const desc  = document.getElementById('auth-desc');
   if (result.reason === 'PUBKEY_MISMATCH') {
     title.textContent = '이 기기는 등록된 기기가 아닙니다';
-    desc.textContent  = '이 계정은 다른 기기에서 가입되었습니다. hondi.net 설정에서 백업 키로 복구하거나, 새로 가입해 주세요.';
+    desc.textContent  = '내 스마트폰으로 QR을 스캔해 이 기기를 승인하세요.';
   } else {
-    title.textContent = '고팡 가입이 필요합니다';
-    desc.textContent  = 'hondi.net에서 먼저 가입해 주세요. 가입을 마치면 이 서비스도 자동으로 이용할 수 있습니다.';
+    title.textContent = '고팡 로그인이 필요합니다';
+    desc.textContent  = '내 스마트폰으로 QR을 스캔해 로그인하세요.';
   }
+  _startQrSso();
+}
+
+// ── QR SSO — 폰(개인 기기, 이미 로그인됨)이 이 세션을 대신 승인 ──────────
+async function _startQrSso() {
+  const imgBox = document.getElementById('qr-sso-img');
+  const statusEl = document.getElementById('qr-sso-status');
+  let sid;
+  try {
+    const res = await fetch(`${WORKER}/auth/qr/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ svc: SERVICE, level: params.get('level') || 'L0' }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error('create_failed');
+    sid = data.sid;
+  } catch (e) {
+    imgBox.innerHTML = '<span style="font-size:11px;color:#dc2626">QR 생성 실패</span>';
+    return;
+  }
+
+  const scanUrl = `https://hondi.net/auth/qr-scan.html?sid=${encodeURIComponent(sid)}`;
+  const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(scanUrl)}`;
+  imgBox.innerHTML = `<img src="${qrImgUrl}" style="width:100%;height:100%;border-radius:10px" alt="QR">`;
+
+  const startedAt = Date.now();
+  const poll = setInterval(async () => {
+    if (Date.now() - startedAt > 180000) {
+      clearInterval(poll);
+      statusEl.textContent = 'QR이 만료되었습니다. 새로고침 해주세요.';
+      return;
+    }
+    try {
+      const res = await fetch(`${WORKER}/auth/qr/status?sid=${encodeURIComponent(sid)}`);
+      const data = await res.json();
+      if (data.status === 'approved') {
+        clearInterval(poll);
+        statusEl.textContent = '승인됨 — 이동 중…';
+        if (RETURN) {
+          const returnUrl = new URL(decodeURIComponent(RETURN));
+          returnUrl.searchParams.set('gopang_token', data.token);
+          location.href = returnUrl.toString();
+        } else {
+          location.href = 'https://hondi.net';
+        }
+      } else if (data.status === 'expired') {
+        clearInterval(poll);
+        statusEl.textContent = 'QR이 만료되었습니다. 새로고침 해주세요.';
+      }
+    } catch (e) { /* 다음 폴링에서 재시도 */ }
+  }, 2000);
 }
 
 window.goRegister = function() {

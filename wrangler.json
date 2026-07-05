@@ -6,6 +6,10 @@
 		{
 			"binding": "AI_SETUP_SEALS_KV",
 			"id": "e1ae4dd08b344f9c9208ea4235e17d3e"
+		},
+		{
+			"binding": "QR_SESSIONS_KV",
+			"id": "REPLACE_WITH_REAL_KV_ID"
 		}
 	],
 	"services": [
