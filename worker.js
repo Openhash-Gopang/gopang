@@ -1830,6 +1830,28 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   // guid가 실려 있으면(=call-ai.js의 deepseek-default 경로) 1,000원 누적 한도 체크.
   let outboundBody = parsedBody ? { ...parsedBody, model: backendModel } : null;
   if (outboundBody) delete outboundBody.guid; // 벤더 API는 guid 필드를 모름
+
+  // UNIVERSAL 레이어 서버 강제 주입 (2026-07-05, handleLLMRelay와 동일 목록/원칙).
+  // 이 경로(callDeepSeek)는 gdc처럼 messages 배열이 아니라 별도 system
+  // 필드를 쓰는 클라이언트도 있어(client-shape 불일치), 두 형태 모두 지원한다.
+  if (outboundBody && parsedBody?.service_id && UNIVERSAL_FORCED_K_SERVICES.has(parsedBody.service_id)) {
+    delete outboundBody.service_id; // 벤더 API는 이 필드를 모름
+    const [universalIntegrity, universalCommon] = await Promise.all([
+      _fetchUniversalIntegrity(), _fetchUniversalCommon(),
+    ]);
+    const injected = [universalIntegrity, universalCommon].filter(Boolean).join('\n\n---\n\n');
+    if (injected) {
+      if (Array.isArray(outboundBody.messages)) {
+        outboundBody.messages = [{ role: 'system', content: injected }, ...outboundBody.messages];
+      } else if (typeof outboundBody.system === 'string') {
+        outboundBody.system = injected + '\n\n---\n\n' + outboundBody.system;
+      }
+    }
+    console.log(JSON.stringify({ tag: 'DEEPSEEK_UNIVERSAL_INJECTED', service_id: parsedBody.service_id, ts: new Date().toISOString(), ...meta }));
+  } else if (outboundBody) {
+    delete outboundBody.service_id; // 강제대상 아니어도 벤더 API로 그대로 넘기지 않음
+  }
+
   let outboundBodyText = outboundBody ? JSON.stringify(outboundBody) : bodyText;
 
   if (guid) {
@@ -1920,13 +1942,41 @@ const ALLOWED_LLM_RELAY_HOSTS = new Set([
   // 'api.anthropic.com' 의도적으로 제외 — OpenAI 호환 스키마가 아님
 ]);
 
+// K서비스 중 전용 relay(klaw/gov/business)가 없는 14개 — 이 id로 호출하면
+// UNIVERSAL-INTEGRITY+UNIVERSAL-common을 서버가 강제로 앞에 붙인다.
+// (2026-07-05 신설 — SP-CATALOG_v1_0.md에서 발견한 불일치 해소: 이 목록
+// 밖의 klaw/gov/business는 이미 각자 전용 relay에서 처리하므로 제외.
+// jeju/kgov는 'gov' 하나로 이미 처리되지만, 클라이언트가 실수로 이
+// 목록에 'kgov'를 넣어 보내도 중복 주입만 될 뿐 해는 없다.)
+const UNIVERSAL_FORCED_K_SERVICES = new Set([
+  'kemergency', 'kpolice', 'ksecurity', 'khealth', 'kedu', 'kgdc',
+  'kfinance', 'kinsurance', 'ktax', 'kcommerce', 'ktransport',
+  'klogistics', 'kdemocracy', 'fiil-kcleaner',
+]);
+
 async function handleLLMRelay(bodyText, env, corsHeaders, meta = null) {
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
-  const { provider, baseUrl, apiKey, model, messages, max_tokens, temperature, stream } = body || {};
+  const { provider, baseUrl, apiKey, model, messages, max_tokens, temperature, stream, service_id } = body || {};
   if (!baseUrl || !apiKey || !model || !Array.isArray(messages)) {
     return _err(400, 'MISSING_FIELD', 'baseUrl/apiKey/model/messages 필수', corsHeaders);
+  }
+
+  // UNIVERSAL 레이어 서버 강제 주입 — 클라이언트가 service_id를 보내지
+  // 않거나 목록 밖이면 기존 동작 그대로(주입 없음, 예: 메인 AGENT-COMMON
+  // 채팅·BYOK 일반 호출). 클라이언트가 조립한 system 메시지를 대체하지
+  // 않고 그 앞에 별도 system 메시지로 추가한다(klaw/relay와 동일 방식 —
+  // 각 K서비스 SP가 이미 갖고 있을 수도 있는 자체 규칙과 중복되더라도
+  // "모든 SP가 이 문서를 상속한다"는 원칙을 예외 없이 지키기 위함).
+  let relayMessages = messages;
+  if (service_id && UNIVERSAL_FORCED_K_SERVICES.has(service_id)) {
+    const [universalIntegrity, universalCommon] = await Promise.all([
+      _fetchUniversalIntegrity(), _fetchUniversalCommon(),
+    ]);
+    const injected = [universalIntegrity, universalCommon].filter(Boolean).join('\n\n---\n\n');
+    if (injected) relayMessages = [{ role: 'system', content: injected }, ...messages];
+    console.log(JSON.stringify({ tag: 'LLM_RELAY_UNIVERSAL_INJECTED', service_id, ts: new Date().toISOString(), ...meta }));
   }
 
   let targetHost;
@@ -1942,7 +1992,7 @@ async function handleLLMRelay(bodyText, env, corsHeaders, meta = null) {
   const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
   if (provider === 'openrouter') { headers['HTTP-Referer'] = 'https://hondi.net'; headers['X-Title'] = 'Hondi'; }
 
-  const payload = { model, messages, stream: isStream };
+  const payload = { model, messages: relayMessages, stream: isStream };
   if (max_tokens  != null) payload.max_tokens  = max_tokens;
   if (temperature != null) payload.temperature = temperature;
 
