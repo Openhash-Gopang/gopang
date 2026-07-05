@@ -186,12 +186,6 @@ export async function _buildFieldReport(lat, lng, exif, isMarine = false) {
 
 
 
-
-// ════════════════════════════════════════════════════════════════
-// SP-00-ROUTER v3.0 — 1단계 서비스 라우팅
-// 역할: 사용자 입력을 분석 → 어느 하위 서비스로 보낼지 결정
-// 호출: callAI() 진입 직전에 runRouter()를 실행
-// 출력: { category, service_id, service_url, confidence,
-//         reason, secondary, urgent, gwp_ctx }
-// ════════════════════════════════════════════════════════════════
-
+// ※ 여기 있던 "SP-00-ROUTER 1단계 라우팅" 설계 메모는 2026-07-05 제거됨 —
+// 실제로 구현되지 않은 채 router.js가 죽은 코드로 방치됐던 설계였다.
+// 실제 라우팅은 AGENT-COMMON이 담당한다(prompts/archive/SP-00-ROUTER-DEPRECATED.md 참조).

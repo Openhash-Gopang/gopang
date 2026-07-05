@@ -157,17 +157,9 @@ export function _renderProgressSteps() {
   el.innerHTML = html;
 }
 
-// ── SP-00-ROUTER 프리로드 (DOMContentLoaded 이후 백그라운드 fetch) ────
-// _routerPrompt 변수 초기화 완료 후 실행 — TDZ 오류 방지
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(async () => {
-    try {
-      await _loadRouterPrompt();
-      console.info('[Router] 프리로드 완료 — 버전:', _routerPromptVer);
-    } catch(e) {
-      console.warn('[Router] 프리로드 실패 (나중에 재시도):', e.message);
-    }
-  }, 0);
-});
+// ※ SP-00-ROUTER 프리로드 블록은 2026-07-05 제거됨 — _loadRouterPrompt가
+// import 없이 호출되고 있어 매 페이지 로드마다 ReferenceError가
+// try/catch로 조용히 삼켜지고 있었다(router.js 자체가 죽은 코드였음).
+// 자세한 경위는 prompts/archive/SP-00-ROUTER-DEPRECATED.md 참조.
 
 // ── 초기 AI 비서 환영 메시지 ────────────────────────────

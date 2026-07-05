@@ -256,11 +256,10 @@ const _boot = async () => {
     { _scheduleLocation, _updateLocationInPrompt, _buildLocNote },
     { _showWelcomeMessage },
     { _onLogoTap, _closeProgressSheet, _progressStart },
-    { _gwpLaunch, _gwpClose, _gwpMatch },
+    { _gwpLaunch, _gwpClose },
     { _handleGwpSignRequest },
     { _klawReview },
     { callAI, stopGeneration },
-    { runRouter, applyRouterResult },
   ] = await Promise.all([
     import('./src/gopang/ui/send-message.js'),
     import('./src/gopang/ui/file-attach.js'),
@@ -278,7 +277,6 @@ const _boot = async () => {
     import('./src/gopang/gwp/sign.js'),
     import('./src/gopang/services/klaw.js'),
     import('./src/gopang/ai/call-ai.js'),
-    import('./src/gopang/ai/router.js'),
   ]);
 
   // 4-4. 동적 로드 함수 전역 노출
@@ -288,7 +286,7 @@ const _boot = async () => {
     toggleMic,
     _onLogoTap, _closeProgressSheet,
     _gwpLaunch, _gwpClose,
-    callAI, runRouter,
+    callAI,
   });
 
 

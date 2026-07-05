@@ -147,11 +147,11 @@ export const L1_P2P_INVITES_URL = 'https://l1-hanlim.gopang.net/api/collections/
 
 // ── 기타 ─────────────────────────────────────────────────
 export let _lastPipelineResult = null;
-export let _lastRouterResult   = null;
+
 export let _lastFiilReportId   = null;
 export let _installBannerVisible = false;
 
 export function setLastPipelineResult(v)   { _lastPipelineResult   = v; }
-export function setLastRouterResult(v)     { _lastRouterResult     = v; }
+
 export function setLastFiilReportId(v)     { _lastFiilReportId     = v; }
 export function setInstallBannerVisible(v) { _installBannerVisible = v; }

@@ -448,20 +448,15 @@ function getService(id) {
 function getByCategory(cat) {
   return GWP_REGISTRY.filter(s => s.category === cat);
 }
-function matchService(text) {
-  if (!text) return null;
-  for (const svc of GWP_REGISTRY) {
-    if ((svc.triggers || []).some(t => text.includes(t))) return svc;
-  }
-  return null;
-}
+// ※ matchService()(구 window.gwpMatch/window.matchService)는 2026-07-05
+// 제거됨 — 호출부 0건 확인(SP-00-ROUTER와 함께 죽은 코드였음). 실제
+// 라우팅은 AGENT-COMMON이 [GWP:]/[EXPERT:] 태그로 직접 수행한다.
+// 자세한 경위는 prompts/archive/SP-00-ROUTER-DEPRECATED.md 참조.
 
 // ── 전역 노출 ──────────────────────────────────────────────────
 window.GWP_REGISTRY    = GWP_REGISTRY;
 window.getService      = getService;
 window.getByCategory   = getByCategory;
-window.gwpMatch        = matchService;
-window.matchService    = matchService;
 window.loadPendingAgents = loadPendingAgents;
 window.resolveSpUrls     = resolveSpUrls;
 window.injectToolFns     = injectToolFns;

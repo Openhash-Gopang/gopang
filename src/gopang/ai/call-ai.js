@@ -10,12 +10,11 @@
  */
 import { CFG, _modelSupportsVision, PROVIDER_INFO, getPriorityOrder, MODEL_MIGRATION } from '../core/config.js';
 import { TOKEN_BUDGET } from '../core/token-policy.js';
-import { aiActive, history, _userLocation, _lastRouterResult,
-         setLastRouterResult, _USER, USER_GUID, _locationPending, _locationReady } from '../core/state.js';
+import { aiActive, history, _userLocation,
+         _USER, USER_GUID, _locationPending, _locationReady } from '../core/state.js';
 import { appendBubble, showTyping, hideTyping,
          _createStreamBubble, _updateStreamBubble } from '../ui/bubble.js';
 import { _buildLocNote, _buildRoutingFacts } from '../services/location.js';
-import { runRouter, applyRouterResult } from './router.js';
 import { _injectAuthConfirmButton } from '../core/auth.js';
 import { _klawReview } from '../services/klaw.js';
 import { openSearch } from '../ui/p2p-search.js';
