@@ -85,22 +85,26 @@ export async function runRouter(userText, hasImage = false) {
   }
 
   // 긴급 키워드 즉시 판단 (LLM 호출 없이)
-  // 2026-07-05 보완: 한국어 키워드만 있어 영어 발화 시 이 fast-path를
-  // 타지 못하고 Step 5(LLM)까지 넘어가는 지연이 발견됨 — 응급 상황에서는
-  // 이 지연 자체가 위험하므로 영어 키워드도 함께 매칭.
-  if (/긴급|응급|119|112|쓰러|부상|화재|불이났|구조|살려줘|심정지|emergency|collapsed|can'?t breathe|fire|bleeding|dying|help me/i.test(userText)) {
+  // 2026-07-05 보완, 2026-07-05b 정밀화: 최초 수정에서 "fire"·"dying"·
+  // "bleeding"·"help me" 단독 단어를 썼더니 "I was fired"(해고),
+  // "campfire"(캠프파이어), "dying of laughter"(웃겨죽겠다) 같은 문장까지
+  // 오탐(false positive)되는 걸 재검증 중 실제 정규식 테스트로 확인함.
+  // 구(phrase) 단위로 좁혀 오탐을 없앤다.
+  if (/긴급|응급|119|112|쓰러|부상|화재|불이났|구조|살려줘|심정지|emergency|collapsed|can'?t breathe|not breathing|on fire|heart attack|unconscious|drowning|call (an )?ambulance|severe bleeding|bleeding (heavily|badly|a lot)/i.test(userText)) {
     return { category:'EMG', service_id:'kemergency',
              service_url:'https://911.hondi.net', confidence:0.99,
              reason:'긴급 상황 감지. K-Emergency 즉시 연결.',
              secondary:null, urgent:true, gwp_ctx:gwpCtx };
   }
 
-  // 2026-07-05 신설: 즉각적 신변 위험(진행 중인 범죄) fast-path.
-  // 기존엔 SP-00-ROUTER 프롬프트에만 "즉시 kpolice 반환" 지시가 있었을 뿐
-  // 실제 코드에는 EMG만 즉시판단 되고 이 케이스는 LLM 호출(Step 5)까지
-  // 넘어가고 있었다 — 프롬프트의 "즉시"라는 표현과 실제 동작이 어긋나
-  // 있었으므로 EMG와 동일한 방식의 fast-path를 추가한다.
-  if (/지금\s*위험|쫓아오|가정폭력|칼\s*들고|흉기|납치|강도|성폭행/.test(userText)) {
+  // 2026-07-05 신설, 2026-07-05b 정밀화: 최초 수정의 "칼\s*들고"는
+  // "칼 들고 요리하다가"(주방 상황)까지 잡았고, "강도"는 "운동 강도"·
+  // "필라테스 강도"(동음이의어, 세기/intensity 의미) 문장까지 오탐됨 —
+  // 재검증 테스트로 확인. 둘 다 fast-path에서 제거하고, 모호성이 적은
+  // 표현만 남긴다("흉기"는 요리 맥락에서 거의 쓰이지 않음). "강도"·
+  // "칼" 단독은 fast-path 없이 Step 5 LLM 판단(문맥 활용)에 맡긴다 —
+  // GWP_REGISTRY의 kpolice triggers에는 그대로 남아있어 LLM 매칭은 가능.
+  if (/지금\s*위험|쫓아오|가정폭력|흉기로|흉기\s*들고|흉기\s*위협|납치|성폭행/.test(userText)) {
     return { category:'JUS', service_id:'kpolice',
              service_url:'https://police.hondi.net', confidence:0.95,
              reason:'진행 중인 범죄·신변 위험 감지. K-Police 즉시 연결.',
