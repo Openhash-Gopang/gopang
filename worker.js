@@ -2102,10 +2102,66 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
 // 전부 무시한다 — 클라이언트 코드가 실수(또는 고의)로 공통 규칙을
 // 빠뜨리거나 조작할 수 있는 여지를 구조적으로 없앤다.
 // ═══════════════════════════════════════════════════════════
-const K_PUBLIC_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/K-Public_common_v1_2.md';
+const K_PUBLIC_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/K-Public_common_v1_3.md';
 let _kPublicCommonCache = null;
 let _kPublicCommonCacheAt = 0;
 const _K_PUBLIC_COMMON_TTL_MS = 10 * 60 * 1000; // 10분 — 문서 갱신 반영 최대 지연
+
+// ═══════════════════════════════════════════════════════════
+// UNIVERSAL-common — 정체성 무관 절차·원칙(U1~U8) (2026-07-05 신설)
+// K-Public_common v1.2의 P2~P11을 정체성 무관 공통부로 추출한 문서.
+// 국가기관(K-Public_common)·전문가 보조 모듈(PROFESSIONAL-common)
+// 양쪽 모두 이 문서를 상속한다.
+// ═══════════════════════════════════════════════════════════
+const UNIVERSAL_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/UNIVERSAL-common_v1_0.md';
+let _universalCommonCache = null;
+let _universalCommonCacheAt = 0;
+const _UNIVERSAL_COMMON_TTL_MS = 10 * 60 * 1000;
+
+async function _fetchUniversalCommon() {
+  const now = Date.now();
+  if (_universalCommonCache && (now - _universalCommonCacheAt) < _UNIVERSAL_COMMON_TTL_MS) return _universalCommonCache;
+  try {
+    const res = await fetch(UNIVERSAL_COMMON_URL, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    _universalCommonCache = await res.text();
+    _universalCommonCacheAt = now;
+  } catch (e) {
+    console.warn('[UniversalCommon] 로드 실패:', e.message);
+    if (!_universalCommonCache) _universalCommonCache = '';
+  }
+  return _universalCommonCache;
+}
+
+// ═══════════════════════════════════════════════════════════
+// PROFESSIONAL-common — 전문가 보조 모듈(K-Doctor 등) 정체성 레이어
+// (2026-07-05 신설). khealth는 K-Public_common(국가기관 정체성) 대신
+// 이 문서를 상속한다 — "국가기관을 대신한다"고 잘못 자기소개하던
+// 버그를 구조적으로 해소.
+// ═══════════════════════════════════════════════════════════
+const PROFESSIONAL_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/PROFESSIONAL-common_v1_0.md';
+let _professionalCommonCache = null;
+let _professionalCommonCacheAt = 0;
+const _PROFESSIONAL_COMMON_TTL_MS = 10 * 60 * 1000;
+
+async function _fetchProfessionalCommon() {
+  const now = Date.now();
+  if (_professionalCommonCache && (now - _professionalCommonCacheAt) < _PROFESSIONAL_COMMON_TTL_MS) return _professionalCommonCache;
+  try {
+    const res = await fetch(PROFESSIONAL_COMMON_URL, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    _professionalCommonCache = await res.text();
+    _professionalCommonCacheAt = now;
+  } catch (e) {
+    console.warn('[ProfessionalCommon] 로드 실패:', e.message);
+    if (!_professionalCommonCache) _professionalCommonCache = '';
+  }
+  return _professionalCommonCache;
+}
+
+// agency별로 어떤 "정체성 레이어"를 상속하는지 — health는 국가기관이
+// 아니라 전문가(의사) 보조 모듈이므로 PROFESSIONAL-common을 쓴다.
+const PROFESSIONAL_IDENTITY_AGENCIES = new Set(['health']);
 
 // ═══════════════════════════════════════════════════════════
 // UNIVERSAL-INTEGRITY — 트랙 무관 전체 SP 최상위 공통 원칙 (2026-07-04 신설)
@@ -2209,12 +2265,18 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
     return _err(429, 'GOV_USER_QUOTA_EXCEEDED', '오늘 사용 가능한 한도를 모두 사용했습니다. 내일 다시 이용해 주세요.', corsHeaders);
   }
 
-  const [universalIntegrity, kPublicCommonRaw] = await Promise.all([_fetchUniversalIntegrity(), _fetchKPublicCommon()]);
+  const usesProfessionalIdentity = PROFESSIONAL_IDENTITY_AGENCIES.has(agency);
+  const [universalIntegrity, universalCommonRaw, identityDocRaw] = await Promise.all([
+    _fetchUniversalIntegrity(),
+    _fetchUniversalCommon(),
+    usesProfessionalIdentity ? _fetchProfessionalCommon() : _fetchKPublicCommon(),
+  ]);
   const pdvScope = GOV_AGENCY_PDV_SCOPE[agency];
-  const kPublicCommon = pdvScope
-    ? kPublicCommonRaw.replace(_PDV_SCOPE_PLACEHOLDER_RE, pdvScope)
-    : kPublicCommonRaw;
-  const systemParts = [universalIntegrity, kPublicCommon, agencyPrompt || ''].filter(Boolean);
+  // PDV_HISTORY_REQUEST(U8) scope 자리표시자는 이제 UNIVERSAL-common에 있다.
+  const universalCommon = pdvScope
+    ? universalCommonRaw.replace(_PDV_SCOPE_PLACEHOLDER_RE, pdvScope)
+    : universalCommonRaw;
+  const systemParts = [universalIntegrity, universalCommon, identityDocRaw, agencyPrompt || ''].filter(Boolean);
   const systemContent = systemParts.length
     ? systemParts.join('\n\n---\n\n')
     : (agencyPrompt || ''); // 공통 규칙 로드 실패해도 기관 고유 규칙만으로 서비스 지속
