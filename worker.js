@@ -2214,7 +2214,22 @@ async function _fetchKPublicCommon() {
 const GOV_AGENCIES = new Set([
   'public', 'tax', 'health', 'police', '911', 'democracy', 'insurance',
   'traffic', 'logistics',
+  // 2026-07-05 추가: jeju_do/jeju_national을 SP_DELEGATION_ORIGINATORS에
+  // 넣었으나 정작 GOV_AGENCIES에 없어 /gov/relay 최상위 호출 자체가
+  // UNKNOWN_AGENCY로 즉시 거부되는 결함을 실제 테스트 하네스
+  // (src/tests/sp-intercall.test.mjs 시나리오 3)로 발견해 수정.
+  // 현재 jeju-router.js는 /gov/relay가 아니라 /ai/chat을 직접 호출하고
+  // 있어(UNIVERSAL-INTEGRITY 미적용) 이 두 값은 아직 실제 트래픽에서
+  // 쓰이지 않는다 — 프론트엔드 마이그레이션은 별도 작업.
+  'jeju_do', 'jeju_national',
 ]);
+
+// jeju_do/jeju_national의 agencyPrompt는 이미 JEJU-GOV-COMMON을 통해
+// 자체 정체성 레이어를 포함하고 있다(Jejudo 트리는 K-Public_common을
+// 상속하지 않는 독립 계통). 이 agency들에는 K-Public_common/
+// PROFESSIONAL-common을 추가로 덧씌우지 않는다 — 덧씌우면 정체성이
+// 이중으로 겹치는(khealth 때와 같은 유형의) 버그가 난다.
+const NO_IDENTITY_LAYER_AGENCIES = new Set(['jeju_do', 'jeju_national']);
 
 // ═══════════════════════════════════════════════════════════
 // k-business / business-kr — 사업체 보조 AI (2026-07-05 신설)
@@ -2555,10 +2570,11 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   }
 
   const usesProfessionalIdentity = PROFESSIONAL_IDENTITY_AGENCIES.has(agency);
+  const noIdentityLayer = NO_IDENTITY_LAYER_AGENCIES.has(agency);
   const [universalIntegrity, universalCommonRaw, identityDocRaw] = await Promise.all([
     _fetchUniversalIntegrity(),
     _fetchUniversalCommon(),
-    usesProfessionalIdentity ? _fetchProfessionalCommon() : _fetchKPublicCommon(),
+    noIdentityLayer ? Promise.resolve('') : (usesProfessionalIdentity ? _fetchProfessionalCommon() : _fetchKPublicCommon()),
   ]);
   const pdvScope = GOV_AGENCY_PDV_SCOPE[agency];
   // PDV_HISTORY_REQUEST(U8) scope 자리표시자는 이제 UNIVERSAL-common에 있다.
