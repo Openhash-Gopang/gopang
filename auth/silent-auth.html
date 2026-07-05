@@ -279,6 +279,29 @@ function _waitForWallet(timeoutMs = 4000) {
 
 // ── 로컬 정체성 + 지갑 서명으로 /auth/issue 호출 (공통) ──────────────
 async function _issueViaWorker(svc, level = 'L0') {
+  // 0) QR 세션(지갑 없는 PC 등) — 같은 origin(hondi.net)의 sessionStorage에
+  //    남아있으면 지갑 서명 없이 즉시 통과시킨다. 폰(개인 기기, 지갑 보유)은
+  //    이 값이 없으므로 그대로 아래 지갑 경로로 진행된다.
+  const qrToken = sessionStorage.getItem('gopang_qr_token');
+  if (qrToken) {
+    try {
+      const res = await fetch(`${WORKER}/auth/verify`, {
+        headers: { 'Authorization': `Bearer ${qrToken}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.valid && (data.svc === '*' || data.svc === svc)) {
+          return { ok: true, ipv6: data.ipv6, level: data.level, exp: data.exp, token: qrToken };
+        }
+      } else {
+        // 만료/무효 — 다음 방문 때 다시 뜨도록 정리
+        sessionStorage.removeItem('gopang_qr_token');
+        sessionStorage.removeItem('gopang_user_v4');
+      }
+    } catch (e) { /* 네트워크 오류 — 지갑 경로로 폴백 */ }
+  }
+
+  // 1) 지갑(폰 등 개인 기기) 경로 — 기존 로직
   const user = _getLocalUser();
   if (!user?.ipv6 || !user?.handle) return { ok: false, reason: 'NOT_REGISTERED' };
 

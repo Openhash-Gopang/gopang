@@ -47,7 +47,14 @@ async function startQrLogin() {
 
   let sid;
   try {
-    const res = await fetch(`${PROXY_URL}/auth/qr/create`, { method: 'POST' });
+    // svc:'*' — 특정 하위서비스가 아니라 hondi.net 자체 로그인이므로
+    // 전 서비스에 유효한 토큰을 요청한다. 이래야 klaw/k-tax 등에 갈 때
+    // 다시 QR을 띄우지 않고 자동 로그인된다.
+    const res = await fetch(`${PROXY_URL}/auth/qr/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ svc: '*', level: 'L0' }),
+    });
     const data = await res.json();
     if (!data.ok) throw new Error('create_failed');
     sid = data.sid;
@@ -86,7 +93,10 @@ async function startQrLogin() {
           isGuest: false, isTemp: false,
           registeredAt: new Date().toISOString(),
         };
-        localStorage.setItem(STORE_KEY, JSON.stringify(user));
+        // sessionStorage — 이 PC는 개인 기기가 아닐 수 있다. 로그인 정보는
+        // 이 탭/브라우저가 닫히면 자동으로 사라져야 한다(localStorage 금지).
+        sessionStorage.setItem(STORE_KEY, JSON.stringify(user));
+        sessionStorage.setItem('gopang_qr_token', data.token);
         statusEl.className = 'approved';
         statusEl.textContent = `로그인 완료 (${data.handle}) — 이동 중…`;
         setTimeout(() => { location.href = '/webapp.html'; }, 800);
