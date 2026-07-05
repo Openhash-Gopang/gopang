@@ -36,7 +36,10 @@ export function _gwpMatch(text) {
 }
 
 // ── 서비스 실행 (새 탭) ─────────────────────────────────────────
-export function _gwpLaunch(service, context, _preTab = null) {
+// @param {object|null} facts — services/location.js의 _buildRoutingFacts()
+//   결과. 민감 정보(PDV 이력 등)를 담지 않는다는 전제로 URL에 실린다 —
+//   호출부에서 이 계약을 위반하는 값을 넣지 않도록 주의.
+export function _gwpLaunch(service, context, _preTab = null, facts = null) {
   // 기존 탭이 열려있으면 닫고 새 ctx로 재시작
   if (_gwpTab && !_gwpTab.closed) {
     _gwpTab.close();
@@ -68,6 +71,19 @@ export function _gwpLaunch(service, context, _preTab = null) {
   svcUrl.searchParams.set('origin',   location.origin);
   svcUrl.searchParams.set('ctx',      safeCtx);
   svcUrl.searchParams.set('ctx_enc',  'b64');  // 수신 측에 인코딩 방식 명시
+
+  // facts: 메인 비서가 이미 확보한 부가 정보(현재는 currentLocation만) —
+  // ctx와 동일한 이유로 base64 인코딩. null/빈 객체면 아예 파라미터를
+  // 생략해 URL을 불필요하게 늘리지 않는다.
+  if (facts && Object.keys(facts).length) {
+    try {
+      const safeFacts = btoa(unescape(encodeURIComponent(JSON.stringify(facts))));
+      svcUrl.searchParams.set('facts',     safeFacts);
+      svcUrl.searchParams.set('facts_enc', 'b64');
+    } catch (e) {
+      console.warn('[GWP] facts 인코딩 실패 (무시하고 계속):', e.message);
+    }
+  }
 
   // 새 탭으로 열기
   // 모바일 팝업 차단 우회: 사용자 탭 직후 예약한 빈 탭(_preTab)이 있으면

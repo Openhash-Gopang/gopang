@@ -23,6 +23,7 @@ import { EXPERT_REGISTRY, UNIVERSAL_INTEGRITY_URL, COMMON_GUARDRAILS_URL, COMMON
          getExpertGwpDef, resolveExpertId }
   from './expert-registry.js';
 import { _gwpLaunch } from '../gwp/engine.js';
+import { _buildRoutingFacts } from '../services/location.js';
 
 const EXPERT_TIMEOUT_MS = 10 * 60 * 1000; // 10분 무응답 → 자동 종료
 const TERMINATION_RE = /끝났|그만|종료|돌아가|그림자\s*AI(로|에게)?\s*(돌아|연결)/;
@@ -129,7 +130,7 @@ export async function handleExpertTag(fullReply, userText, _preTab) {
   if (!gwpDef) return false;
 
   console.info('[Expert] LLM 판단 → 새 탭:', personaId);
-  _gwpLaunch(gwpDef, userText, _preTab);
+  _gwpLaunch(gwpDef, userText, _preTab, _buildRoutingFacts());
   return true;
 }
 

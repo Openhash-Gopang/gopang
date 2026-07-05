@@ -14,7 +14,7 @@ import { aiActive, history, _userLocation, _lastRouterResult,
          setLastRouterResult, _USER, USER_GUID, _locationPending, _locationReady } from '../core/state.js';
 import { appendBubble, showTyping, hideTyping,
          _createStreamBubble, _updateStreamBubble } from '../ui/bubble.js';
-import { _buildLocNote } from '../services/location.js';
+import { _buildLocNote, _buildRoutingFacts } from '../services/location.js';
 import { runRouter, applyRouterResult } from './router.js';
 import { _injectAuthConfirmButton } from '../core/auth.js';
 import { _klawReview } from '../services/klaw.js';
@@ -933,7 +933,7 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
       if (svcDef) {
         console.info('[GWP] LLM 판단 → 새 탭:', svcId);
         if (bubble) _updateStreamBubble(bubble, fullReply.replace(/\[GWP:\s*[\w-]+\]\s*/, ''));
-        _gwpLaunch(svcDef, userText, _preTab);
+        _gwpLaunch(svcDef, userText, _preTab, _buildRoutingFacts());
       } else {
         console.warn('[GWP] 알 수 없는 서비스 ID:', svcId);
         if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
