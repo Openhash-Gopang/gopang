@@ -566,10 +566,20 @@ async function _buildEnhancedUserContent(userContent) {
   // GUID + 위치 + PDV 요약 (RAG 스타일, 압축)
   if (USER_GUID) parts.push(`GUID:${USER_GUID.slice(-8)}`);
 
+  // 2026-07-05 신설 — 사용자 본인의 닉네임/handle. 라우팅 확정 시
+  // "{사용자}님, {대상}을 호출하겠습니다" 같은 확인 문구에 필요.
+  // 아래 '비서이름'과 반드시 구분할 것 — 이건 이용자 자신을 가리키는
+  // 값이고, '비서이름'은 이용자가 지어준 그림자 AI(자기 자신)의 이름이다.
+  const userLabel = _USER?.nickname || _USER?.handle || '';
+  if (userLabel) parts.push(`사용자:${userLabel}`);
+
   // v1.3 — 이용자가 지어준 AI 비서 이름을 매 턴 함께 전달(새로고침으로 history가
   // 끊겨도 AGENT-COMMON이 계속 같은 이름을 쓸 수 있도록)
+  // 2026-07-05: 키를 '이름'→'비서이름'으로 명확화(위 '사용자' 필드와 혼동 방지 —
+  // 과거엔 이 값 하나만 있어서 AGENT-COMMON이 자기소개용인지 호칭용인지
+  // 헷갈릴 여지가 있었음).
   const assistantName = localStorage.getItem('hondi_assistant_name') || '';
-  if (assistantName) parts.push(`이름:${assistantName}`);
+  if (assistantName) parts.push(`비서이름:${assistantName}`);
 
   const locNote = _buildLocNote();
   if (locNote) parts.push(locNote.trim());
