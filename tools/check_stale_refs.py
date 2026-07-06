@@ -171,9 +171,16 @@ def check_router_registry_sync(results: list):
 
 def base_key(path: str) -> str:
     """디렉터리 + 버전 제거한 파일명 기준 키. 'Jejudo/00-common/JEJU-GOV-COMMON_v1_5.md'
-    -> 'Jejudo/00-common/JEJU-GOV-COMMON'"""
-    d = str(Path(path).parent)
-    name = Path(path).name
+    -> 'Jejudo/00-common/JEJU-GOV-COMMON'
+    2026-07-06: Path(path).parent를 쓰지 않는다 — Windows에서 str(Path(...))가
+    입력 구분자와 무관하게 항상 백슬래시로 렌더링해서, index_prompts_dir()에서
+    슬래시로 정규화해도 여기서 다시 깨진다(실사로 확인). 순수 문자열 split만
+    쓰면 플랫폼과 무관하게 항상 슬래시를 유지한다."""
+    path = path.replace('\\', '/')
+    if '/' in path:
+        d, name = path.rsplit('/', 1)
+    else:
+        d, name = '.', path
     name = re.sub(r'_v\d+[._]\d+(?:[._]\d+)?\.(md|txt|json)$', '', name)
     return f"{d}/{name}" if d != '.' else name
 
@@ -186,7 +193,12 @@ def index_prompts_dir() -> dict:
             continue
         if 'archive' in p.parts:
             continue  # 아카이브는 의도적 구버전 — 검사 제외
-        rel = str(p.relative_to(PROMPTS))
+        # 2026-07-06: Windows에서 str(Path.relative_to(...))가 백슬래시(\)를
+        # 쓰는데, 소스 코드(worker.js, jeju-router.js 등)의 참조는 항상
+        # URL 스타일 슬래시(/)다. 정규화 안 하면 Windows에서만 "같은 파일인데
+        # 문자열이 달라서" 전부 STALE로 오탐된다(실사로 확인 — Jejudo 하위
+        # 폴더 참조 18건 전부 이 버그였음, 실제 내용 문제는 0건).
+        rel = str(p.relative_to(PROMPTS)).replace('\\', '/')
         idx.setdefault(base_key(rel), []).append(rel)
     latest = {k: max(v, key=lambda f: (parse_version(Path(f).name), len(f))) for k, v in idx.items()}
     return latest
