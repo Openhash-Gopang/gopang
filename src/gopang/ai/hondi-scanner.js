@@ -157,30 +157,32 @@ function _analyzeFrame(ctx, W, H) {
 // ── 1단계: 파랑+빨강 앵커 탐지 (혼디 코드 존재 확인) ─────────
 function _detectAnchors(ctx, W, H) {
   const data = ctx.getImageData(0, 0, W, H).data;
-  let blueCnt = 0, redCnt = 0;
+  let blueCnt = 0, redCnt = 0, greenCnt = 0;
   for (let i = 0; i < data.length; i += 4) {
     const r=data[i], g=data[i+1], b=data[i+2];
     if (b>80 && b-Math.max(r,g)>30) blueCnt++;   // 완화: 모니터 과노출 대응
     if (r>100 && g<80  && b<130 && r-Math.max(g,b)>30) redCnt++;
+    if (g>100 && g-Math.max(r,b)>30) greenCnt++;
   }
-  if (blueCnt < MIN_ANCHOR_PX || redCnt < MIN_ANCHOR_PX) return null;
+  if (blueCnt < MIN_ANCHOR_PX || redCnt < MIN_ANCHOR_PX || greenCnt < MIN_ANCHOR_PX) return null;
 
-  // 파랑/빨강 중심 계산
-  let bx=0,by=0,rx=0,ry=0;
+  // 파랑/초록/빨강 중심 계산 (원형 앵커 안의 3밴드)
+  let bx=0,by=0,rx=0,ry=0,gx=0,gy=0;
   for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
     const i=(y*W+x)*4;
     const r=data[i],g=data[i+1],b=data[i+2];
     if (b>80&&b-Math.max(r,g)>30) { bx+=x; by+=y; }
     if (r>100&&g<80&&b<130&&r-Math.max(g,b)>30) { rx+=x; ry+=y; }
+    if (g>100&&g-Math.max(r,b)>30) { gx+=x; gy+=y; }
   }
-  bx/=blueCnt; by/=blueCnt; rx/=redCnt; ry/=redCnt;
+  bx/=blueCnt; by/=blueCnt; rx/=redCnt; ry/=redCnt; gx/=greenCnt; gy/=greenCnt;
   const unit = Math.sqrt((rx-bx)**2+(ry-by)**2);
   if (unit < MIN_UNIT_PX) return null;
 
-  // 파랑이 위, 빨강이 아래인지 확인 (UCB는 반대일 수 있음)
-  const mode = (by < ry) ? 'hondi' : 'ucb';
-  return { mode, blueCenter:{x:bx,y:by}, redCenter:{x:rx,y:ry}, unit,
-           blueCnt, redCnt };
+  // 파랑이 왼쪽, 빨강이 오른쪽인지 확인 (좌우 반전 시 'ucb')
+  const mode = (bx < rx) ? 'hondi' : 'ucb';
+  return { mode, blueCenter:{x:bx,y:by}, greenCenter:{x:gx,y:gy}, redCenter:{x:rx,y:ry},
+           unit, blueCnt, redCnt, greenCnt };
 }
 
 // ── 2단계: 색상 막대 탐지 ────────────────────────────────────
@@ -409,29 +411,37 @@ function _decode(ctx, strip, anchor) {
   const cellH = h / rows;
   const W = ctx.canvas.width, H = ctx.canvas.height;
 
-  // 캘리브레이션: 파랑·빨강 클러스터 직접 평균 (원본 크기로 스케일)
+  // 캘리브레이션: 원형 앵커의 파랑·초록·빨강 3밴드를 직접 평균
+  // (박스 크기는 unit 전체가 아니라 unit*0.35 — 3밴드가 한 원 안에
+  //  붙어있으므로 unit 크기 그대로 쓰면 옆 밴드/구분선까지 섞여 들어간다.
+  //  실측: unit≈62px 기준 밴드 폭이 편측 약 15px이므로 0.35 계수면
+  //  가장자리에서 약 3~4px 여유를 두고 안전하게 밴드 내부만 샘플한다.)
   const scale = 1 / THUMB_SCALE;
+  const boxSide = anchor.unit * scale * 0.35;
+  const half = boxSide * 0.5;
   const bBox = {
-    x1: anchor.blueCenter.x*scale - anchor.unit*scale*0.5,
-    y1: anchor.blueCenter.y*scale - anchor.unit*scale*0.5,
-    x2: anchor.blueCenter.x*scale + anchor.unit*scale*0.5,
-    y2: anchor.blueCenter.y*scale + anchor.unit*scale*0.5,
+    x1: anchor.blueCenter.x*scale - half,
+    y1: anchor.blueCenter.y*scale - half,
+    x2: anchor.blueCenter.x*scale + half,
+    y2: anchor.blueCenter.y*scale + half,
+  };
+  const gBox = {
+    x1: anchor.greenCenter.x*scale - half,
+    y1: anchor.greenCenter.y*scale - half,
+    x2: anchor.greenCenter.x*scale + half,
+    y2: anchor.greenCenter.y*scale + half,
   };
   const rBox = {
-    x1: anchor.redCenter.x*scale - anchor.unit*scale*0.5,
-    y1: anchor.redCenter.y*scale - anchor.unit*scale*0.5,
-    x2: anchor.redCenter.x*scale + anchor.unit*scale*0.5,
-    y2: anchor.redCenter.y*scale + anchor.unit*scale*0.5,
+    x1: anchor.redCenter.x*scale - half,
+    y1: anchor.redCenter.y*scale - half,
+    x2: anchor.redCenter.x*scale + half,
+    y2: anchor.redCenter.y*scale + half,
   };
-  const blueAvg = _clusterAvg(ctx, bBox, true);
-  const redAvg  = _clusterAvg(ctx, rBox, false);
+  const blueAvg  = _clusterAvg(ctx, bBox, 'blue');
+  const greenAvg = _clusterAvg(ctx, gBox, 'green');
+  const redAvg   = _clusterAvg(ctx, rBox, 'red');
 
-  // 배경(흰색)은 막대 바깥 우측에서 샘플
-  const bgX = Math.min(W-5, x2 + Math.max(10, strip.w));
-  const bgY = y1;
-  const bgAvg = _avgColor(ctx, { x:bgX, y:bgY, w:10, h:10 });
-
-  const calib = { hih:blueAvg, ho:redAvg, n:{r:30,g:30,b:30}, bg:bgAvg };
+  const calib = { anchorBlue:blueAvg, anchorGreen:greenAvg, anchorRed:redAvg, n:{r:30,g:30,b:30} };
   const matrix = buildCalibMatrix(calib);
 
 
@@ -532,7 +542,7 @@ function _avgColor(ctx, {x,y,w,h}) {
   return n?{r:r/n,g:g/n,b:b/n}:{r:128,g:128,b:128};
 }
 
-function _clusterAvg(ctx, box, isBlue) {
+function _clusterAvg(ctx, box, kind) {
   const cw=ctx.canvas.width, ch=ctx.canvas.height;
   const x=Math.max(0,Math.round(box.x1)), y=Math.max(0,Math.round(box.y1));
   const w=Math.max(1,Math.min(cw-x,Math.round(box.x2-box.x1)));
@@ -541,10 +551,12 @@ function _clusterAvg(ctx, box, isBlue) {
   let r=0,g=0,b=0,n=0;
   for(let i=0;i<d.length;i+=4){
     const pr=d[i],pg=d[i+1],pb=d[i+2];
-    if(isBlue){if(pb>100&&pr<110&&pg<110&&pb-Math.max(pr,pg)>40){r+=pr;g+=pg;b+=pb;n++;}}
-    else      {if(pr>100&&pg<50 &&pb<110&&pr-Math.max(pg,pb)>40){r+=pr;g+=pg;b+=pb;n++;}}
+    if(kind==='blue'){ if(pb>100&&pr<110&&pg<110&&pb-Math.max(pr,pg)>40){r+=pr;g+=pg;b+=pb;n++;} }
+    else if(kind==='green'){ if(pg>100&&pr<110&&pb<110&&pg-Math.max(pr,pb)>40){r+=pr;g+=pg;b+=pb;n++;} }
+    else { if(pr>100&&pg<50 &&pb<110&&pr-Math.max(pg,pb)>40){r+=pr;g+=pg;b+=pb;n++;} }
   }
-  return n?{r:r/n,g:g/n,b:b/n}:(isBlue?{r:0,g:0,b:220}:{r:220,g:0,b:0});
+  const fallback = kind==='blue' ? {r:0,g:0,b:220} : kind==='green' ? {r:0,g:185,b:0} : {r:220,g:0,b:0};
+  return n?{r:r/n,g:g/n,b:b/n}:fallback;
 }
 
 function _playBeep() {
