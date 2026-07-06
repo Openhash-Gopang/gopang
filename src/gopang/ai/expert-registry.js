@@ -27,7 +27,7 @@ export const EXPERT_REGISTRY = {
   // 업무범위(등기·경매·소액사건 등) 초과 시 lawyer로 안내하도록 SP 본문에 명시.
   'judicial-scrivener': {
     label: '법무사', icon: '📜', category: 'LAW',
-    file: '/prompts/SP_judicial-scrivener_v1_0.md', needsMedicalSafety: false,
+    file: '/prompts/SP_judicial-scrivener_v1_1.md', needsMedicalSafety: false,
   },
 
   // ── 재무·세무 (SP-FIN-01, 2026-07-04 신설) ────────────
@@ -39,7 +39,7 @@ export const EXPERT_REGISTRY = {
   // #40에서 세무사로 오매핑될 위험이 확인된 항목.
   accountant: {
     label: '공인회계사', icon: '📊', category: 'FIN',
-    file: '/prompts/SP_accountant_v1_0.md', needsMedicalSafety: false,
+    file: '/prompts/SP_accountant_v1_1.md', needsMedicalSafety: false,
   },
 
   // ── 의료·보건 (SP-HEALTH-06~15) ──────────────────────
@@ -48,19 +48,19 @@ export const EXPERT_REGISTRY = {
   // 정의하는 이 4개는 특히 신중한 검토가 필요함(SP 본문 상단 주석 참조).
   physician: {
     label: '의사', icon: '🩺', category: 'HEALTH',
-    file: '/prompts/SP_physician_v1_0.md', needsMedicalSafety: true,
+    file: '/prompts/SP_physician_v1_2.md', needsMedicalSafety: true,
   },
   dentist: {
     label: '치과의사', icon: '🦷', category: 'HEALTH',
-    file: '/prompts/SP_dentist_v1_0.md', needsMedicalSafety: true,
+    file: '/prompts/SP_dentist_v1_1.md', needsMedicalSafety: true,
   },
   'traditional-medicine-doctor': {
     label: '한의사', icon: '🌿', category: 'HEALTH',
-    file: '/prompts/SP_traditional-medicine-doctor_v1_0.md', needsMedicalSafety: true,
+    file: '/prompts/SP_traditional-medicine-doctor_v1_1.md', needsMedicalSafety: true,
   },
   pharmacist: {
     label: '약사', icon: '💊', category: 'HEALTH',
-    file: '/prompts/SP_pharmacist_v1_0.md', needsMedicalSafety: true,
+    file: '/prompts/SP_pharmacist_v1_1.md', needsMedicalSafety: true,
   },
   veterinarian: {
     label: '수의사', icon: '🐾', category: 'HEALTH',
@@ -125,7 +125,7 @@ export const EXPERT_REGISTRY = {
   // 행위는 아니지만, 위기 신호 대응 원칙은 동일하게 필요).
   'social-worker': {
     label: '사회복지사', icon: '🤝', category: 'EDU',
-    file: '/prompts/SP_social-worker_v1_0.md', needsMedicalSafety: true,
+    file: '/prompts/SP_social-worker_v1_1.md', needsMedicalSafety: true,
   },
   curator: {
     label: '학예사(큐레이터)', icon: '🎨', category: 'EDU',
@@ -179,7 +179,7 @@ export const EXPERT_REGISTRY = {
   // 감사에서 확인된 가장 큰 신규 카테고리 공백.
   'real-estate-agent': {
     label: '공인중개사', icon: '🏠', category: 'REAL_ESTATE',
-    file: '/prompts/SP_real-estate-agent_v1_0.md', needsMedicalSafety: false,
+    file: '/prompts/SP_real-estate-agent_v1_1.md', needsMedicalSafety: false,
   },
 };
 
