@@ -51,7 +51,7 @@
 
   <div class="card">
     <h2>2. 사진으로 디코딩 테스트</h2>
-    <p class="sub" style="margin-bottom:10px">위에서 생성한 코드를 인쇄하거나 화면에 띄운 뒤, 폰카메라로 찍은 사진을 올려보세요. 사진이 돌아가 있어도(가로/세로 무관) "ㄷ" 기준점으로 자동 보정됩니다.</p>
+    <p class="sub" style="margin-bottom:10px">위에서 생성한 코드를 인쇄하거나 화면에 띄운 뒤, 폰카메라로 찍은 사진을 올려보세요.</p>
     <div id="dropzone">사진을 여기 놓거나 클릭해서 선택</div>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
     <img id="decodePreview">
@@ -119,8 +119,7 @@ async function handleFile(file) {
         resultEl.innerHTML =
           `<span class="ok">인식 성공</span>\n` +
           `<div class="digitsBig">${digitStr}</div>` +
-          `확신도 격차: ${detail.avgMargin.toFixed(1)}\n` +
-          `ㄷ 기준점: ${detail.bracketFound ? `인식됨 (열림=${detail.bracketOpenSide}, 보정=${detail.correctionAngle}°)` : '미인식(기본방향 가정)'}`;
+          `확신도 격차: ${detail.avgMargin.toFixed(1)}`;
       },
       (statusMsg) => {
         resultEl.innerHTML = `<span class="err">${statusMsg}</span>`;
