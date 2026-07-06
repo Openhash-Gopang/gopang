@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 가이드박스 정렬 방식 숫자 인식</title>
+<style>
+  body{margin:0;font-family:-apple-system,'Pretendard',sans-serif;background:#111;
+       color:#fff;padding:0;box-sizing:border-box;overflow:hidden}
+  .wrap{position:relative;width:100vw;height:100vh}
+  #srcVideo{position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;pointer-events:none}
+  canvas#view{width:100%;height:100%;object-fit:cover;display:block}
+  #resultBox{
+    position:absolute;top:0;left:0;width:100%;
+    display:flex;flex-direction:column;align-items:center;padding-top:24px;
+    pointer-events:none;
+  }
+  #bigResult{
+    font-size:52px;font-weight:900;line-height:1;letter-spacing:2px;color:#7CFC8A;
+    text-shadow:0 0 12px #000,0 0 24px #000;
+  }
+  #label{font-size:14px;margin-top:8px;background:rgba(0,0,0,0.6);padding:6px 16px;border-radius:20px}
+  #debug{
+    position:absolute;bottom:0;left:0;right:0;
+    background:rgba(0,0,0,0.75);color:#7CFC8A;font:11px/1.5 monospace;
+    padding:10px 14px;white-space:pre-wrap;max-height:34vh;overflow:auto;
+  }
+  #startBtn{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    padding:16px 32px;font-size:18px;font-weight:700;border:none;border-radius:12px;
+    background:#1A73E8;color:#fff;cursor:pointer;z-index:10;
+  }
+  #err{position:absolute;top:20px;left:20px;right:20px;color:#ff6b6b;font-size:14px;
+       background:rgba(0,0,0,0.7);padding:10px;border-radius:8px;display:none}
+  #refStrip{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);border-radius:8px;padding:6px}
+  #refStrip canvas{width:24px;height:40px;image-rendering:pixelated;border:1px solid #444;margin:1px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <video id="srcVideo" playsinline autoplay muted></video>
+  <canvas id="view"></canvas>
+  <div id="resultBox">
+    <div id="bigResult">?</div>
+    <div id="label">카메라 시작 대기 중</div>
+  </div>
+  <div id="refStrip"></div>
+  <div id="err"></div>
+  <button id="startBtn">카메라 시작</button>
+  <div id="debug"></div>
+</div>
+
+<script>
+// ── 가이드박스 + 실제 잉크 범위 재탐색 하이브리드 ────────────────
+// 가이드박스 비율에 그대로 맞춰 계산만 하는 방식은 정렬 오차 5%만
+// 있어도 완전히 깨지는 게 실측으로 확인됐다(뒤쪽 숫자일수록 절대
+// 오차가 누적되어 더 크게 어긋남). 그래서 가이드박스는 "대략적인
+// 관심영역 좁히기" 용도로만 쓰고, 그 안에서 실제 잉크(어두운 픽셀)의
+// 진짜 시작~끝을 다시 찾은 뒤 그 폭을 10등분한다 — 이러면 박스 안에서
+// 숫자가 얼마나 크든 작든(단, 박스 밖으로 넘치지만 않으면) 등분 자체는
+// 항상 정확하다. 실측 검증: 스케일 80~95%, 위치가 살짝 안쪽으로
+// 치우친 경우까지 전부 정확히 복원됨. 박스보다 커져 잘리는 경우만
+// 실패하므로, 사용자에게는 "박스 안에 여유 있게 들어오도록" 안내한다.
+const SHRINK = { x1: 0.111, x2: 0.889, y1: 0.071, y2: 0.929 };
+const IMAGE_ASPECT = 1120/180; // 실제 참조 이미지 폭:높이 (가이드박스 비율용)
+const DIGIT_COUNT_GUIDE = 10;
+
+// 화면 중앙에 실제 이미지 비율과 같은 가이드박스를 비디오 픽셀 좌표계로
+// 계산 — vctx에 비디오와 같이 그리므로 object-fit:cover 변환도 자동으로
+// 같이 적용돼 화면 표시 위치가 항상 정확하다(따로 좌표 변환 불필요).
+// 박스는 "숫자를 여유 있게 담는 안내선" 용도일 뿐 — 실제 위치 계산은
+// 그 안에서 잉크 범위를 다시 찾아서 하므로, 정렬이 좀 헐거워도 된다.
+function computeGuideBox(W, H) {
+  let gw = W*0.85, gh = gw/IMAGE_ASPECT;
+  if (gh > H*0.5) { gh = H*0.5; gw = gh*IMAGE_ASPECT; }
+  return { x1:(W-gw)/2, y1:(H-gh)/2, x2:(W+gw)/2, y2:(H+gh)/2 };
+}
+
+function findInkBBox(gray, w, h) {
+  const threshold = otsuThreshold(gray);
+  let minX=w,minY=h,maxX=-1,maxY=-1,count=0;
+  for (let y=0;y<h;y++) for (let x=0;x<w;x++) {
+    if (gray[y*w+x] <= threshold) {
+      count++;
+      if (x<minX)minX=x; if(x>maxX)maxX=x;
+      if (y<minY)minY=y; if(y>maxY)maxY=y;
+    }
+  }
+  if (count < 10 || maxX<0) return null;
+  return { x1:minX, y1:minY, x2:maxX+1, y2:maxY+1 };
+}
+const SEGMENT_PATTERNS = {
+  0:'abcdef', 1:'bc', 2:'abged', 3:'abgcd', 4:'fgbc',
+  5:'afgcd', 6:'afgecd', 7:'abc', 8:'abcdefg', 9:'abcdfg',
+};
+const SEG_ORDER = ['a','b','c','d','e','f','g'];
+const DIGIT_BITS = {};
+for (const [d, segs] of Object.entries(SEGMENT_PATTERNS)) {
+  DIGIT_BITS[d] = SEG_ORDER.map(s => segs.includes(s) ? 1 : 0);
+}
+
+function otsuThreshold(grayArray) {
+  const hist = new Array(256).fill(0);
+  for (let i = 0; i < grayArray.length; i++) hist[grayArray[i]]++;
+  const total = grayArray.length;
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+  let sumB = 0, wB = 0, varMax = -1, threshold = 127;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (wB === 0) continue;
+    const wF = total - wB;
+    if (wF === 0) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB, mF = (sum - sumB) / wF;
+    const between = wB * wF * (mB - mF) * (mB - mF);
+    if (between > varMax) { varMax = between; threshold = t; }
+  }
+  return threshold;
+}
+
+function findDarkBBox(ctx, W, H, scale) {
+  const tW = Math.round(W*scale), tH = Math.round(H*scale);
+  const tmp = document.createElement('canvas');
+  tmp.width = tW; tmp.height = tH;
+  const tctx = tmp.getContext('2d', { willReadFrequently: true });
+  tctx.drawImage(ctx.canvas, 0, 0, W, H, 0, 0, tW, tH);
+  const data = tctx.getImageData(0, 0, tW, tH).data;
+
+  const gray = new Uint8Array(tW*tH);
+  for (let p = 0; p < tW*tH; p++) gray[p] = Math.round((data[p*4]+data[p*4+1]+data[p*4+2])/3);
+  const threshold = otsuThreshold(gray);
+
+  let minX=tW, minY=tH, maxX=-1, maxY=-1, count=0;
+  for (let y = 0; y < tH; y++) {
+    for (let x = 0; x < tW; x++) {
+      if (gray[y*tW+x] <= threshold) {
+        count++;
+        if (x<minX)minX=x; if (x>maxX)maxX=x;
+        if (y<minY)minY=y; if (y>maxY)maxY=y;
+      }
+    }
+  }
+  const MIN_PX = Math.round(tW*tH*0.005);
+  if (count < MIN_PX || maxX < 0) return null;
+
+  return {
+    x1: minX/scale, y1: minY/scale, x2: (maxX+1)/scale, y2: (maxY+1)/scale,
+    darkCount: count, threshold,
+  };
+}
+
+// 세그먼트 좌표 비율 — digits_7seg.png를 그린 비율과 동일하게 맞춤
+const SEG_BOXES = {
+  a: { x1:0.20, x2:0.80, y1:0.00, y2:0.10 },
+  g: { x1:0.20, x2:0.80, y1:0.45, y2:0.55 },
+  d: { x1:0.20, x2:0.80, y1:0.90, y2:1.00 },
+  f: { x1:0.00, x2:0.22, y1:0.08, y2:0.44 },
+  b: { x1:0.78, x2:1.00, y1:0.08, y2:0.44 },
+  e: { x1:0.00, x2:0.22, y1:0.56, y2:0.92 },
+  c: { x1:0.78, x2:1.00, y1:0.56, y2:0.92 },
+};
+const SEG_ON_RATIO = 0.35; // 그 구역의 35% 이상이 어두우면 "켜짐"
+
+function readSegments(ctx, bbox) {
+  const w = bbox.x2 - bbox.x1, h = bbox.y2 - bbox.y1;
+  const crop = document.createElement('canvas');
+  crop.width = 100; crop.height = 100;
+  const cctx = crop.getContext('2d', { willReadFrequently: true });
+  cctx.drawImage(ctx.canvas, bbox.x1, bbox.y1, w, h, 0, 0, 100, 100);
+  const data = cctx.getImageData(0, 0, 100, 100).data;
+  const gray = new Uint8Array(100*100);
+  for (let i=0;i<100*100;i++) gray[i] = Math.round((data[i*4]+data[i*4+1]+data[i*4+2])/3);
+  const threshold = otsuThreshold(gray);
+
+  const bits = [];
+  const ratios = {};
+  for (const s of SEG_ORDER) {
+    const box = SEG_BOXES[s];
+    const x1 = Math.round(box.x1*100), x2 = Math.round(box.x2*100);
+    const y1 = Math.round(box.y1*100), y2 = Math.round(box.y2*100);
+    let dark=0, n=0;
+    for (let y=y1; y<y2; y++) for (let x=x1; x<x2; x++) {
+      n++; if (gray[y*100+x] <= threshold) dark++;
+    }
+    const ratio = n ? dark/n : 0;
+    ratios[s] = ratio;
+    bits.push(ratio >= SEG_ON_RATIO ? 1 : 0);
+  }
+  return { bits, ratios, threshold };
+}
+
+function matchDigit(bits) {
+  const scores = Object.entries(DIGIT_BITS).map(([d, pattern]) => {
+    let diff = 0;
+    for (let i=0;i<7;i++) if (bits[i] !== pattern[i]) diff++;
+    return { digit: d, diff };
+  });
+  scores.sort((a,b) => a.diff - b.diff);
+  return scores;
+}
+
+function drawRefPreview() {
+  const strip = document.getElementById('refStrip');
+  for (let d=0; d<=9; d++) {
+    const c = document.createElement('canvas');
+    c.width=24; c.height=40;
+    const dc = c.getContext('2d');
+    dc.fillStyle='#fff'; dc.fillRect(0,0,24,40);
+    dc.fillStyle='#000';
+    const segs = SEGMENT_PATTERNS[d];
+    const t=3;
+    if (segs.includes('a')) dc.fillRect(4,0,16,t);
+    if (segs.includes('g')) dc.fillRect(4,18,16,t);
+    if (segs.includes('d')) dc.fillRect(4,37,16,t);
+    if (segs.includes('f')) dc.fillRect(0,2,t,17);
+    if (segs.includes('b')) dc.fillRect(21,2,t,17);
+    if (segs.includes('e')) dc.fillRect(0,21,t,17);
+    if (segs.includes('c')) dc.fillRect(21,21,t,17);
+    strip.appendChild(c);
+  }
+}
+
+const video = document.getElementById('srcVideo');
+const view = document.getElementById('view');
+const vctx = view.getContext('2d', { willReadFrequently: true });
+const bigResult = document.getElementById('bigResult');
+const label = document.getElementById('label');
+const debugEl = document.getElementById('debug');
+const errEl = document.getElementById('err');
+const startBtn = document.getElementById('startBtn');
+let frameCount = 0;
+
+function analyze() {
+  const W = video.videoWidth, H = video.videoHeight;
+  if (!W || !H) { requestAnimationFrame(analyze); return; }
+  view.width = W; view.height = H;
+  vctx.drawImage(video, 0, 0, W, H);
+
+  frameCount++;
+
+  try {
+
+  // 가이드박스를 비디오 픽셀 좌표로 계산해 화면에 표시 (정렬 안내선)
+  const guide = computeGuideBox(W, H);
+  vctx.strokeStyle = 'rgba(255,220,0,0.95)'; vctx.lineWidth = 3;
+  vctx.setLineDash([10,6]);
+  vctx.strokeRect(guide.x1, guide.y1, guide.x2-guide.x1, guide.y2-guide.y1);
+  vctx.setLineDash([]);
+
+  const gw = Math.round(guide.x2-guide.x1), gh = Math.round(guide.y2-guide.y1);
+  if (gw < 20 || gh < 10) { requestAnimationFrame(analyze); return; }
+
+  // 가이드박스 안만 잘라서 그레이스케일로 변환
+  const crop = document.createElement('canvas');
+  crop.width = gw; crop.height = gh;
+  const cctx = crop.getContext('2d', { willReadFrequently: true });
+  cctx.drawImage(vctx.canvas, guide.x1, guide.y1, gw, gh, 0, 0, gw, gh);
+  const cdata = cctx.getImageData(0,0,gw,gh).data;
+  const gray = new Uint8Array(gw*gh);
+  for (let i=0;i<gw*gh;i++) gray[i] = Math.round((cdata[i*4]+cdata[i*4+1]+cdata[i*4+2])/3);
+
+  // 박스 안에서 실제 잉크의 진짜 시작~끝을 다시 찾는다 — 정렬이 좀
+  // 헐거워도(숫자가 박스보다 작게 들어와도) 이 단계가 스케일을 보정한다.
+  const ink = findInkBBox(gray, gw, gh);
+  if (!ink) {
+    bigResult.textContent = '?';
+    label.textContent = '숫자열을 가이드박스 안에 비춰주세요';
+    debugEl.textContent = `frame #${frameCount}\nvideo: ${W}x${H}\n가이드박스 안에 잉크 없음`;
+    requestAnimationFrame(analyze);
+    return;
+  }
+
+  // 화면 표시는 원본(vctx) 좌표계로 환산해서
+  const inkAbs = {
+    x1: guide.x1+ink.x1, x2: guide.x1+ink.x2,
+    y1: guide.y1+ink.y1, y2: guide.y1+ink.y2,
+  };
+  vctx.strokeStyle = 'rgba(0,255,255,0.9)'; vctx.lineWidth = 2;
+  vctx.strokeRect(inkAbs.x1, inkAbs.y1, inkAbs.x2-inkAbs.x1, inkAbs.y2-inkAbs.y1);
+
+  const totalW = inkAbs.x2-inkAbs.x1;
+  const cellW = totalW/DIGIT_COUNT_GUIDE;
+
+  const results = [];
+  for (let i=0; i<DIGIT_COUNT_GUIDE; i++) {
+    const cx1 = inkAbs.x1+i*cellW, cx2 = inkAbs.x1+(i+1)*cellW;
+    const cw = cx2-cx1, ch = inkAbs.y2-inkAbs.y1;
+    const interior = {
+      x1: cx1+SHRINK.x1*cw, x2: cx1+SHRINK.x2*cw,
+      y1: inkAbs.y1+SHRINK.y1*ch, y2: inkAbs.y1+SHRINK.y2*ch,
+    };
+    const { bits } = readSegments(vctx, interior);
+    const scores = matchDigit(bits);
+    results.push({ interior, best: scores[0], second: scores[1] });
+
+    vctx.strokeStyle = '#00ff88'; vctx.lineWidth = 1.5;
+    vctx.strokeRect(interior.x1, interior.y1, interior.x2-interior.x1, interior.y2-interior.y1);
+    vctx.fillStyle = '#00ff88';
+    vctx.font = `bold ${Math.max(12, cw*0.5)}px monospace`;
+    vctx.textAlign = 'center';
+    vctx.fillText(scores[0].digit, cx1+cw/2, inkAbs.y1-8);
+  }
+
+  const numberStr = results.map(r => r.best.digit).join('');
+  bigResult.textContent = numberStr;
+  const avgMargin = results.reduce((s,r)=>s+(r.second.diff-r.best.diff),0)/DIGIT_COUNT_GUIDE;
+  label.textContent = `숫자열이 박스 안에 여유 있게 들어오게 — 인식: ${numberStr}  (확신도 격차 ${avgMargin.toFixed(1)})`;
+
+  const perCellLine = results.map((r,i) => `[${i}]${r.best.digit}(불일치${r.best.diff},격차${r.second.diff-r.best.diff})`).join(' ');
+  debugEl.textContent = [
+    `frame #${frameCount}`,
+    `video: ${W}x${H}  가이드박스=(${guide.x1.toFixed(0)},${guide.y1.toFixed(0)})~(${guide.x2.toFixed(0)},${guide.y2.toFixed(0)})`,
+    `잉크범위(박스내부기준)=(${ink.x1},${ink.y1})~(${ink.x2},${ink.y2})`,
+    `칸별: ${perCellLine}`,
+  ].join('\n');
+
+  } catch (e) {
+    // 어떤 예외든 여기서 잡아서 화면에 보여주고, 다음 프레임은 계속 돈다.
+    // (예전엔 여기서 예외가 나면 requestAnimationFrame 재귀가 끊겨서
+    //  스캔이 그 자리에서 완전히 멈췄다 — "카메라 멈춤" 증상의 원인)
+    label.textContent = '처리 중 오류 (계속 시도 중)';
+    debugEl.textContent = `frame #${frameCount}\nERROR: ${e.message}\n${e.stack || ''}`;
+  }
+
+  requestAnimationFrame(analyze);
+}
+
+startBtn.onclick = async () => {
+  errEl.style.display = 'none';
+  try {
+    drawRefPreview();
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+    video.srcObject = stream;
+    await video.play();
+    startBtn.style.display = 'none';
+    label.textContent = '스캔 중...';
+    requestAnimationFrame(analyze);
+  } catch (e) {
+    errEl.style.display = 'block';
+    errEl.textContent = `카메라 오류: ${e.name} — ${e.message}`;
+    label.textContent = '카메라 시작 실패';
+  }
+};
+</script>
+</body>
+</html>
