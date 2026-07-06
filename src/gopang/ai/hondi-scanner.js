@@ -152,14 +152,21 @@ function _processFrame(video, canvas) {
 
 // ── 프레임 분석 ───────────────────────────────────────────────
 function _analyzeFrame(ctx, W, H) {
-  const grid = _detectCodeGrid(ctx, W, H);
-  if (!grid) return null;
-  return _decode(ctx, grid);
+  const grids = _detectCodeGrid(ctx, W, H);
+  for (const grid of grids) {
+    const result = _decode(ctx, grid);
+    if (result) return result;
+  }
+  return null;
 }
 
 // ── 1단계: 데이터 그리드(정사각형 셀들) 탐지 ─────────────────
 // 고채도 픽셀이 많은 "행"들을 찾아 밴드로 묶고, 밴드들의 바운딩 박스를
-// 그리드 영역으로 본다. 세로로 가까운 밴드 2개는 v2(10칸, 2행)로 병합.
+// 그리드 후보로 본다. 세로로 가까운 밴드 2개는 v2(10칸, 2행) 후보로 병합.
+//
+// 실사용 사진에는 진짜 코드보다 더 큰 색색 물체(옷, 포스터 등)가 같이
+// 잡힐 수 있다. 그런 잡음이 면적이 더 크다고 그것만 검사하고 포기하면
+// 안 되므로, 후보 전부를 면적 내림차순으로 모아 하나씩 검증한다.
 function _detectCodeGrid(ctx, W, H) {
   const data = ctx.getImageData(0, 0, W, H).data;
 
@@ -186,7 +193,7 @@ function _detectCodeGrid(ctx, W, H) {
       if (start >= 0) { bands.push({ y1: start, y2: y-1 }); start = -1; }
     }
   }
-  if (!bands.length) return null;
+  if (!bands.length) return [];
 
   // 각 밴드의 X 범위(그 밴드 내 고채도 픽셀의 최소/최대 x) 계산
   for (const band of bands) {
@@ -203,12 +210,11 @@ function _detectCodeGrid(ctx, W, H) {
     band.x1 = x1; band.x2 = x2;
   }
 
-  // 세로로 가까이 붙어있고 x범위가 비슷한 밴드들을 하나의 그리드로 병합
-  bands.sort((a,b) => a.y1-b.y1);
+  // 세로로 가까이 붙어있고 x범위가 비슷한 밴드들을 하나의 그룹(그리드 후보)으로 병합
+  const sorted = bands.filter(b => b.x2 >= b.x1).sort((a,b) => a.y1-b.y1);
   const groups = [];
   let cur = null;
-  for (const band of bands) {
-    if (band.x2 < band.x1) continue;
+  for (const band of sorted) {
     if (!cur) { cur = { bands:[band] }; groups.push(cur); continue; }
     const last = cur.bands[cur.bands.length-1];
     const lastH = last.y2 - last.y1 + 1;
@@ -220,36 +226,45 @@ function _detectCodeGrid(ctx, W, H) {
       cur = { bands:[band] }; groups.push(cur);
     }
   }
-  if (!groups.length) return null;
+  if (!groups.length) return [];
 
-  // 가장 큰(면적) 그룹을 그리드 후보로 선택
-  let best = null, bestArea = 0;
-  for (const g of groups) {
+  // 후보를 면적 내림차순으로 정렬 — 가장 큰 것부터 검증해서 순서대로 시도한다.
+  const candidates = groups.map(g => {
     const x1 = Math.min(...g.bands.map(b=>b.x1));
     const x2 = Math.max(...g.bands.map(b=>b.x2));
     const y1 = g.bands[0].y1, y2 = g.bands[g.bands.length-1].y2;
-    const area = (x2-x1) * (y2-y1);
-    if (area > bestArea) { bestArea = area; best = { x1, y1, x2, y2, rows: g.bands.length }; }
-  }
-  if (!best) return null;
+    return { x1, y1, x2, y2, rows: g.bands.length, area: (x2-x1)*(y2-y1) };
+  }).sort((a,b) => b.area - a.area);
 
-  const { x1, y1, x2, y2, rows } = best;
+  const validGrids = [];
+
+  for (const cand of candidates) {
+    const grid = _validateGrid(ctx, cand);
+    if (grid) validGrids.push(grid);
+  }
+  return validGrids;
+}
+
+// 후보 하나를 실제 그리드로 확정할 수 있는지 검증한다.
+// (cols,rows) 조합이 설계된 형태(6→1×6, 10→2×5)와 정확히 일치해야 한다 —
+// 단순히 "총 칸 수가 6 또는 10"이라는 조건만으로는, 예컨대 우연히
+// "10열×1행"처럼 실제로 만들어지지 않는 형태가 나와도 통과시켜 버리고,
+// 그 형태를 전제로 계산하는 캘리브레이션 ROI 위치 역산이 전부 틀어진다.
+function _validateGrid(ctx, cand) {
+  const { x1, y1, x2, y2, rows } = cand;
   const w = x2 - x1, h = y2 - y1;
   if (w <= 0 || h <= 0) return null;
 
-  // 열 수 세기: 첫 번째 밴드(첫 행) 세로 중앙을 가로로 훑어 흰 경계선으로
-  // 구분되는 색상 구간 개수를 센다.
-  const firstBandH = (h) / rows;
+  const firstBandH = h / rows;
   const yc = Math.round(y1 + firstBandH/2);
   const cols = _countRunsHoriz(ctx, x1, x2, yc);
   if (cols < 2) return null;
 
-  const total = cols * rows;
-  if (total !== 6 && total !== 10) return null;   // v1(6) 또는 v2(10)만 허용
+  const validShape = (cols === 6 && rows === 1) || (cols === 5 && rows === 2);
+  if (!validShape) return null;
 
   const cellW = w / cols;
   const cellH = h / rows;
-  // 셀이 대략 정사각형인지 확인(디자인상 CODE_CELL은 정사각형)
   const squareness = Math.max(cellW, cellH) / Math.min(cellW, cellH);
   if (squareness > 1.6) return null;
 
