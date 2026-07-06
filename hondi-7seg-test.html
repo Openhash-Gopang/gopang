@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 7세그먼트 숫자 인식</title>
+<style>
+  body{margin:0;font-family:-apple-system,'Pretendard',sans-serif;background:#111;
+       color:#fff;padding:0;box-sizing:border-box;overflow:hidden}
+  .wrap{position:relative;width:100vw;height:100vh}
+  #srcVideo{position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;pointer-events:none}
+  canvas#view{width:100%;height:100%;object-fit:cover;display:block}
+  #resultBox{
+    position:absolute;top:0;left:0;width:100%;
+    display:flex;flex-direction:column;align-items:center;padding-top:24px;
+    pointer-events:none;
+  }
+  #bigResult{
+    font-size:140px;font-weight:900;line-height:1;color:#7CFC8A;
+    text-shadow:0 0 12px #000,0 0 24px #000;
+  }
+  #label{font-size:14px;margin-top:8px;background:rgba(0,0,0,0.6);padding:6px 16px;border-radius:20px}
+  #debug{
+    position:absolute;bottom:0;left:0;right:0;
+    background:rgba(0,0,0,0.75);color:#7CFC8A;font:11px/1.5 monospace;
+    padding:10px 14px;white-space:pre-wrap;max-height:34vh;overflow:auto;
+  }
+  #startBtn{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    padding:16px 32px;font-size:18px;font-weight:700;border:none;border-radius:12px;
+    background:#1A73E8;color:#fff;cursor:pointer;z-index:10;
+  }
+  #err{position:absolute;top:20px;left:20px;right:20px;color:#ff6b6b;font-size:14px;
+       background:rgba(0,0,0,0.7);padding:10px;border-radius:8px;display:none}
+  #refStrip{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);border-radius:8px;padding:6px}
+  #refStrip canvas{width:24px;height:40px;image-rendering:pixelated;border:1px solid #444;margin:1px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <video id="srcVideo" playsinline autoplay muted></video>
+  <canvas id="view"></canvas>
+  <div id="resultBox">
+    <div id="bigResult">?</div>
+    <div id="label">카메라 시작 대기 중</div>
+  </div>
+  <div id="refStrip"></div>
+  <div id="err"></div>
+  <button id="startBtn">카메라 시작</button>
+  <div id="debug"></div>
+</div>
+
+<script>
+// ── 7세그먼트 숫자 인식 — 세그먼트 on/off 판정 방식 ─────────────
+// 템플릿 전체를 픽셀 단위로 비교하던 이전 방식(임의 폰트에 매우 취약)
+// 대신, 숫자 자체를 우리가 직접 그리는 7세그먼트로 통제한다.
+// 인식도 같은 원리로 뒤집는다: 세그먼트 7곳(a~g)의 좌표는 우리가
+// 이미 알고 있으니, 그 7곳 각각이 "어두운지 아닌지"만 판정한다.
+// 7번의 단순 이진 판정 vs 수백 픽셀 비교 — 훨씬 견고하다.
+
+// a=위, b=우상, c=우하, d=아래, e=좌하, f=좌상, g=중간
+const SEGMENT_PATTERNS = {
+  0:'abcdef', 1:'bc', 2:'abged', 3:'abgcd', 4:'fgbc',
+  5:'afgcd', 6:'afgecd', 7:'abc', 8:'abcdefg', 9:'abcdfg',
+};
+const SEG_ORDER = ['a','b','c','d','e','f','g'];
+const DIGIT_BITS = {};
+for (const [d, segs] of Object.entries(SEGMENT_PATTERNS)) {
+  DIGIT_BITS[d] = SEG_ORDER.map(s => segs.includes(s) ? 1 : 0);
+}
+
+function otsuThreshold(grayArray) {
+  const hist = new Array(256).fill(0);
+  for (let i = 0; i < grayArray.length; i++) hist[grayArray[i]]++;
+  const total = grayArray.length;
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+  let sumB = 0, wB = 0, varMax = -1, threshold = 127;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (wB === 0) continue;
+    const wF = total - wB;
+    if (wF === 0) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB, mF = (sum - sumB) / wF;
+    const between = wB * wF * (mB - mF) * (mB - mF);
+    if (between > varMax) { varMax = between; threshold = t; }
+  }
+  return threshold;
+}
+
+function findDarkBBox(ctx, W, H, scale) {
+  const tW = Math.round(W*scale), tH = Math.round(H*scale);
+  const tmp = document.createElement('canvas');
+  tmp.width = tW; tmp.height = tH;
+  const tctx = tmp.getContext('2d', { willReadFrequently: true });
+  tctx.drawImage(ctx.canvas, 0, 0, W, H, 0, 0, tW, tH);
+  const data = tctx.getImageData(0, 0, tW, tH).data;
+
+  const gray = new Uint8Array(tW*tH);
+  for (let p = 0; p < tW*tH; p++) gray[p] = Math.round((data[p*4]+data[p*4+1]+data[p*4+2])/3);
+  const threshold = otsuThreshold(gray);
+
+  let minX=tW, minY=tH, maxX=-1, maxY=-1, count=0;
+  for (let y = 0; y < tH; y++) {
+    for (let x = 0; x < tW; x++) {
+      if (gray[y*tW+x] <= threshold) {
+        count++;
+        if (x<minX)minX=x; if (x>maxX)maxX=x;
+        if (y<minY)minY=y; if (y>maxY)maxY=y;
+      }
+    }
+  }
+  const MIN_PX = Math.round(tW*tH*0.005);
+  if (count < MIN_PX || maxX < 0) return null;
+
+  return {
+    x1: minX/scale, y1: minY/scale, x2: (maxX+1)/scale, y2: (maxY+1)/scale,
+    darkCount: count, threshold,
+  };
+}
+
+// 세그먼트 좌표 비율 — digits_7seg.png를 그린 비율과 동일하게 맞춤
+const SEG_BOXES = {
+  a: { x1:0.20, x2:0.80, y1:0.00, y2:0.10 },
+  g: { x1:0.20, x2:0.80, y1:0.45, y2:0.55 },
+  d: { x1:0.20, x2:0.80, y1:0.90, y2:1.00 },
+  f: { x1:0.00, x2:0.22, y1:0.08, y2:0.44 },
+  b: { x1:0.78, x2:1.00, y1:0.08, y2:0.44 },
+  e: { x1:0.00, x2:0.22, y1:0.56, y2:0.92 },
+  c: { x1:0.78, x2:1.00, y1:0.56, y2:0.92 },
+};
+const SEG_ON_RATIO = 0.35; // 그 구역의 35% 이상이 어두우면 "켜짐"
+
+function readSegments(ctx, bbox) {
+  const w = bbox.x2 - bbox.x1, h = bbox.y2 - bbox.y1;
+  const crop = document.createElement('canvas');
+  crop.width = 100; crop.height = 100;
+  const cctx = crop.getContext('2d', { willReadFrequently: true });
+  cctx.drawImage(ctx.canvas, bbox.x1, bbox.y1, w, h, 0, 0, 100, 100);
+  const data = cctx.getImageData(0, 0, 100, 100).data;
+  const gray = new Uint8Array(100*100);
+  for (let i=0;i<100*100;i++) gray[i] = Math.round((data[i*4]+data[i*4+1]+data[i*4+2])/3);
+  const threshold = otsuThreshold(gray);
+
+  const bits = [];
+  const ratios = {};
+  for (const s of SEG_ORDER) {
+    const box = SEG_BOXES[s];
+    const x1 = Math.round(box.x1*100), x2 = Math.round(box.x2*100);
+    const y1 = Math.round(box.y1*100), y2 = Math.round(box.y2*100);
+    let dark=0, n=0;
+    for (let y=y1; y<y2; y++) for (let x=x1; x<x2; x++) {
+      n++; if (gray[y*100+x] <= threshold) dark++;
+    }
+    const ratio = n ? dark/n : 0;
+    ratios[s] = ratio;
+    bits.push(ratio >= SEG_ON_RATIO ? 1 : 0);
+  }
+  return { bits, ratios, threshold };
+}
+
+function matchDigit(bits) {
+  const scores = Object.entries(DIGIT_BITS).map(([d, pattern]) => {
+    let diff = 0;
+    for (let i=0;i<7;i++) if (bits[i] !== pattern[i]) diff++;
+    return { digit: d, diff };
+  });
+  scores.sort((a,b) => a.diff - b.diff);
+  return scores;
+}
+
+function drawRefPreview() {
+  const strip = document.getElementById('refStrip');
+  for (let d=0; d<=9; d++) {
+    const c = document.createElement('canvas');
+    c.width=24; c.height=40;
+    const dc = c.getContext('2d');
+    dc.fillStyle='#fff'; dc.fillRect(0,0,24,40);
+    dc.fillStyle='#000';
+    const segs = SEGMENT_PATTERNS[d];
+    const t=3;
+    if (segs.includes('a')) dc.fillRect(4,0,16,t);
+    if (segs.includes('g')) dc.fillRect(4,18,16,t);
+    if (segs.includes('d')) dc.fillRect(4,37,16,t);
+    if (segs.includes('f')) dc.fillRect(0,2,t,17);
+    if (segs.includes('b')) dc.fillRect(21,2,t,17);
+    if (segs.includes('e')) dc.fillRect(0,21,t,17);
+    if (segs.includes('c')) dc.fillRect(21,21,t,17);
+    strip.appendChild(c);
+  }
+}
+
+const video = document.getElementById('srcVideo');
+const view = document.getElementById('view');
+const vctx = view.getContext('2d', { willReadFrequently: true });
+const bigResult = document.getElementById('bigResult');
+const label = document.getElementById('label');
+const debugEl = document.getElementById('debug');
+const errEl = document.getElementById('err');
+const startBtn = document.getElementById('startBtn');
+let frameCount = 0;
+
+function analyze() {
+  const W = video.videoWidth, H = video.videoHeight;
+  if (!W || !H) { requestAnimationFrame(analyze); return; }
+  view.width = W; view.height = H;
+  vctx.drawImage(video, 0, 0, W, H);
+
+  frameCount++;
+  const bbox = findDarkBBox(vctx, W, H, 0.25);
+
+  if (!bbox) {
+    bigResult.textContent = '?';
+    label.textContent = '숫자를 화면에 비춰주세요 (검정 글자, 흰 배경)';
+    debugEl.textContent = `frame #${frameCount}\nvideo: ${W}x${H}\n어두운 덩어리 없음`;
+    requestAnimationFrame(analyze);
+    return;
+  }
+
+  vctx.strokeStyle = '#00ff88'; vctx.lineWidth = 3;
+  vctx.strokeRect(bbox.x1, bbox.y1, bbox.x2-bbox.x1, bbox.y2-bbox.y1);
+
+  const { bits, ratios, threshold } = readSegments(vctx, bbox);
+  const scores = matchDigit(bits);
+  const best = scores[0], second = scores[1];
+
+  bigResult.textContent = best.digit;
+  label.textContent = `숫자 ${best.digit}  (세그먼트 불일치 ${best.diff}개, 2위와 격차 ${second.diff-best.diff})`;
+
+  const segLine = SEG_ORDER.map((s,i) => `${s}:${bits[i]}(${(ratios[s]*100).toFixed(0)}%)`).join(' ');
+  const top3 = scores.slice(0,3).map(s => `${s.digit}(${s.diff})`).join(' ');
+  debugEl.textContent = [
+    `frame #${frameCount}`,
+    `video: ${W}x${H}  otsu임계값=${threshold}`,
+    `세그먼트: ${segLine}`,
+    `순위: ${top3}`,
+  ].join('\n');
+
+  requestAnimationFrame(analyze);
+}
+
+startBtn.onclick = async () => {
+  errEl.style.display = 'none';
+  try {
+    drawRefPreview();
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+    video.srcObject = stream;
+    await video.play();
+    startBtn.style.display = 'none';
+    label.textContent = '스캔 중...';
+    requestAnimationFrame(analyze);
+  } catch (e) {
+    errEl.style.display = 'block';
+    errEl.textContent = `카메라 오류: ${e.name} — ${e.message}`;
+    label.textContent = '카메라 시작 실패';
+  }
+};
+</script>
+</body>
+</html>
