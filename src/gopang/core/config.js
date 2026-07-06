@@ -67,13 +67,11 @@ export const CFG = {
   providers: [],
   // personal-assistant-v1.0 — Profile 온보딩 + 일상 비서 + P2P 대리 응대
   // GitHub raw에서 동적 로드 (loadPersonalAssistantSP 참조)
-  // 로드 실패 시 아래 인라인 폴백 사용
-  system: `당신은 혼디(Hondi) 나만의 AI 비서입니다. 한국어 해요체.
-세션 시작 시: localStorage 'hondi_profile_done'이 없으면 Profile 작성을 시작합니다.
-Profile 작성: 이름 → 유형(개인/사업자/기관) → 업종·상품 → 주소 → 연락처 → GDC결제 → 확인 순서로 한 번에 하나씩 질문합니다.
-완성 시 PROFILE_SUBMIT {...} 출력 후 PDV_STORE를 출력합니다.
-완성 후: 일상 대화 직접 처리, 전문 분야는 라우팅(K-Law/K-Tax/K-Market 등).
-P2P 채널에서 상대방 문의 시: 내 Profile 기반으로 대신 응대합니다.`,
+  // 2026-07-05: 로드 실패 시 쓰던 인라인 폴백(라우팅 표에 표시명을 그대로
+  // 써서 실제 레지스트리 id와 어긋났고, 안전장치도 전혀 없었음)을 완전히
+  // 제거했다. loadPersonalAssistantSP()는 이제 모든 시도가 실패하면 조용히
+  // 이 빈 문자열을 반환하는 대신 명시적으로 예외를 던진다.
+  system: '',
   system_base: null,
   locationStr: '',
 };
@@ -349,9 +347,16 @@ export async function loadPersonalAssistantSP() {
       }
     }
   } catch (e) {
-    console.warn('[SP] SP 로드 실패 — 인라인 폴백 사용:', e.message);
+    console.error('[SP] personal-assistant SP 로드 실패:', e.message);
   }
   _paSPLoaded = true;
+  if (!CFG.system) {
+    // 2026-07-05: 예전엔 여기서 조용히 빈 문자열(사실상 하드코딩 폴백)을
+    // 반환했다. 이제 정본이 없으면 명확히 실패한다 — 유일한 호출부인
+    // welcome.js가 이미 try/catch로 감싸고 있어 사용자에게 오류 버블을
+    // 보여준다.
+    throw new Error('personal-assistant SP를 어디서도 불러오지 못했습니다');
+  }
   return CFG.system;
 }
 

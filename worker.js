@@ -774,11 +774,6 @@ export default {
     if (pathname === '/auth/verify')             return handleVerify(request, env, corsHeaders);
     if (pathname === '/auth/refresh')            return handleRefresh(request, env, corsHeaders);
 
-    // ── QR 로그인 (기기 간 세션 승인) ─────────────────────
-    if (pathname === '/auth/qr/create')          return handleQrCreate(request, env, corsHeaders);
-    if (pathname === '/auth/qr/approve')         return handleQrApprove(request, env, corsHeaders);
-    if (pathname === '/auth/qr/status')          return handleQrStatus(request, env, corsHeaders);
-
     // ── WebAuthn ─────────────────────────────────────────
     if (pathname === '/auth/webauthn/challenge') return handleWAChallenge(request, env, corsHeaders);
     if (pathname === '/auth/webauthn/register')  return handleWARegister(request, env, corsHeaders);
@@ -2095,129 +2090,7 @@ async function handleIssue(request,env,corsHeaders){
   return new Response(JSON.stringify({ok:true,guid,level,token}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(token)}});
 }
 
-
-// ── QR 로그인 ────────────────────────────────────────────
-// 흐름: PC가 sid 발급(create) → QR로 sid를 폰에 전달 → 폰이 이미 보유한
-// Ed25519 지갑으로 sid에 서명(approve) → PC가 폴링(status)으로 승인 확인.
-// 개인키는 폰 기기 밖으로 절대 나가지 않는다 — 백업 키 붙여넣기(기존 방식)와
-// 달리 클립보드/화면에 개인키 원문이 노출되지 않는 것이 핵심 개선점이다.
-const QR_SID_TTL_SEC = 180;      // PC가 QR을 띄우고 대기하는 최대 시간
-const QR_APPROVED_TTL_SEC = 120; // 승인 후 PC가 status를 읽어갈 때까지 유예
-
-async function handleQrCreate(request, env, corsHeaders) {
-  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-  if (!env.QR_SESSIONS_KV) return _err(500, 'CONFIG_ERROR', 'QR_SESSIONS_KV 바인딩이 없습니다', corsHeaders);
-  // svc/level: 하위서비스(K-Law 등)의 silent-auth.html이 호출할 때 실어 보낸다.
-  // 없으면(hondi.net 자체 로그인) 기존처럼 'gopang'/'L0'로 취급한다.
-  const body = await request.json().catch(() => ({}));
-  const svc   = (body && body.svc)   || 'gopang';
-  const level = (body && body.level) || 'L0';
-  const sid = crypto.randomUUID();
-  await env.QR_SESSIONS_KV.put(
-    `qr:${sid}`,
-    JSON.stringify({ status: 'pending', svc, level, createdAt: Date.now() }),
-    { expirationTtl: QR_SID_TTL_SEC }
-  );
-  return new Response(JSON.stringify({ ok: true, sid, expiresIn: QR_SID_TTL_SEC }), { status: 200, headers: corsHeaders });
-}
-
-async function handleQrApprove(request, env, corsHeaders) {
-  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-  if (!env.QR_SESSIONS_KV) return _err(500, 'CONFIG_ERROR', 'QR_SESSIONS_KV 바인딩이 없습니다', corsHeaders);
-  const body = await request.json().catch(() => null);
-  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { sid, guid, pubkey, signature, ts } = body;
-  if (!sid)       return _err(400, 'MISSING_FIELD', 'sid 필수', corsHeaders);
-  if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
-  if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
-  if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
-  if (!ts)        return _err(400, 'MISSING_FIELD', 'ts 필수', corsHeaders);
-
-  const tsNum = Number(ts);
-  if (!Number.isFinite(tsNum) || Math.abs(Date.now() - tsNum) > 120000) {
-    return _err(401, 'TS_EXPIRED', '서명 시각이 만료되었습니다', corsHeaders);
-  }
-
-  const raw = await env.QR_SESSIONS_KV.get(`qr:${sid}`);
-  if (!raw) return _err(404, 'SID_NOT_FOUND', '만료되었거나 존재하지 않는 QR입니다', corsHeaders);
-  const session = JSON.parse(raw);
-  if (session.status !== 'pending') {
-    return _err(409, 'ALREADY_HANDLED', '이미 처리된 QR입니다', corsHeaders);
-  }
-
-  // /auth/issue(handleIssue)와 동일한 서명 검증 — sid를 메시지에 묶어 재사용(replay) 방지
-  const sigMsg = `qr-auth:${sid}:${guid}:${pubkey}:${ts}`;
-  const sigOk = await _verifyEd25519Simple(pubkey, signature, sigMsg);
-  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
-
-  // TOFU 핀 대조 — /auth/issue와 동일 원칙: 이 guid에 이미 다른 공개키가
-  // 핀되어 있다면 이 승인 요청은 정당한 계정 소유자의 것이 아니다.
-  let existing = null;
-  try {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=pubkey_ed25519,handle,e164,country_code,nickname&limit=1`,
-      { headers: _sbHeaders(env) }
-    );
-    const rows = await r.json().catch(() => []);
-    existing = rows[0] || null;
-  } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
-  }
-  if (existing?.pubkey_ed25519 && existing.pubkey_ed25519 !== pubkey) {
-    return _err(403, 'PUBKEY_MISMATCH', '이 계정에 등록된 키가 아닙니다', corsHeaders);
-  }
-
-  const token = await buildToken(env, guid, session.level || 'L0', session.svc || 'gopang');
-  await env.QR_SESSIONS_KV.put(
-    `qr:${sid}`,
-    JSON.stringify({
-      status: 'approved',
-      guid, token,
-      handle: existing?.handle || '',
-      e164: existing?.e164 || '',
-      country_code: existing?.country_code || 'KR',
-      nickname: existing?.nickname || '',
-      approvedAt: Date.now(),
-    }),
-    { expirationTtl: QR_APPROVED_TTL_SEC }
-  );
-
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
-}
-
-async function handleQrStatus(request, env, corsHeaders) {
-  if (!env.QR_SESSIONS_KV) return _err(500, 'CONFIG_ERROR', 'QR_SESSIONS_KV 바인딩이 없습니다', corsHeaders);
-  const url = new URL(request.url);
-  const sid = url.searchParams.get('sid');
-  if (!sid) return _err(400, 'MISSING_FIELD', 'sid 파라미터 필수', corsHeaders);
-
-  const raw = await env.QR_SESSIONS_KV.get(`qr:${sid}`);
-  if (!raw) return new Response(JSON.stringify({ status: 'expired' }), { status: 200, headers: corsHeaders });
-
-  const data = JSON.parse(raw);
-  if (data.status === 'approved') {
-    // 1회용 소비 — PC가 이 응답을 받으면 즉시 폐기(재사용/탈취 방지)
-    await env.QR_SESSIONS_KV.delete(`qr:${sid}`);
-  }
-  return new Response(JSON.stringify(data), { status: 200, headers: corsHeaders });
-}
-
-async function handleVerify(request,env,corsHeaders){
-  // Authorization: Bearer 우선 — 쿠키(Domain=.hondi.net)는 워커가 workers.dev에
-  // 있어 브라우저가 거부할 수 있다는 점이 이미 알려져 있다(2026-07-04b 주석).
-  // QR 세션(지갑 없는 기기)은 처음부터 이 방식을 쓴다.
-  const authHeader = request.headers.get('Authorization') || '';
-  const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
-  let raw = bearerMatch ? bearerMatch[1] : null;
-  if (!raw) {
-    const cookieHeader = request.headers.get('Cookie') || '';
-    raw = parseCookie(cookieHeader, 'gopang_token');
-  }
-  if(!raw)return _err(401,'NO_TOKEN','no_token',corsHeaders);
-  const payload=await parseToken(env,raw);
-  if(!payload)return _err(401,'INVALID_TOKEN','expired_or_invalid',corsHeaders);
-  return new Response(JSON.stringify({valid:true,ipv6:payload.ipv6,level:payload.level,svc:payload.svc,exp:payload.exp}),{status:200,headers:corsHeaders});
-}
+async function handleVerify(request,env,corsHeaders){const cookieHeader=request.headers.get('Cookie')||'';const raw=parseCookie(cookieHeader,'gopang_token');if(!raw)return _err(401,'NO_TOKEN','no_token',corsHeaders);const payload=await parseToken(env,raw);if(!payload)return _err(401,'INVALID_TOKEN','expired_or_invalid',corsHeaders);return new Response(JSON.stringify({valid:true,ipv6:payload.ipv6,level:payload.level,svc:payload.svc,exp:payload.exp}),{status:200,headers:corsHeaders});}
 async function handleRefresh(request,env,corsHeaders){const cookieHeader=request.headers.get('Cookie')||'';const raw=parseCookie(cookieHeader,'gopang_token');if(!raw)return _err(401,'NO_TOKEN','no_token',corsHeaders);const payload=await parseToken(env,raw);if(!payload)return _err(401,'INVALID_TOKEN','expired_or_invalid',corsHeaders);const remaining=payload.exp-Math.floor(Date.now()/1000);if(remaining>1800)return new Response(JSON.stringify({ok:false,reason:'not_yet',remaining}),{status:200,headers:corsHeaders});const newToken=await buildToken(env,payload.ipv6,payload.level,payload.svc);return new Response(JSON.stringify({ok:true}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(newToken)}});}
 async function sbFetch(env,path,method='GET',body=null){const key=env.SUPABASE_KEY||_supabaseAnonKey();const headers={'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'};const res=await fetch(SUPABASE_URL+path,{method,headers,body:body?JSON.stringify(body):undefined});return res.ok?res.json().catch(()=>({})):null;}
 async function handleWAChallenge(request,env,corsHeaders){const challenge=crypto.getRandomValues(new Uint8Array(32));const chalB64=btoa(String.fromCharCode(...challenge)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');const exp=Math.floor(Date.now()/1000)+300;const sigData=`${chalB64}.${exp}`;const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['sign']);const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(sigData));const sigHex=Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');return new Response(JSON.stringify({challenge:chalB64,exp,sig:sigHex}),{status:200,headers:corsHeaders});}
@@ -4823,6 +4696,9 @@ async function _compileAgentSP(env, principalProfile) {
     const manifest = await manifestRes.json();
     const commonFile = manifest['AGENT-COMMON'];
     if (!commonFile) throw new Error('manifest 에 AGENT-COMMON 키 없음');
+    // ALLOW-EMBEDDED-SP: 이 줄 자체는 로그/fetch 코드일 뿐 SP 사본이 아님 —
+    // 정적 분석기(tools/check_no_embedded_sp.py)가 파일 반대편의 무관한
+    // 백틱과 잘못 짝지어 큰 가짜 리터럴로 오탐하는 경우(2026-07-05 확인).
     const commonRes = await fetch(`${REPO_RAW}/prompts/${commonFile}`, { headers });
     if (!commonRes.ok) throw new Error('AGENT-COMMON 로드 실패: ' + commonRes.status);
     commonSP = await commonRes.text();

@@ -56,14 +56,19 @@ async function _loadSpByKey(manifestKey, label) {
 // AGENT-COMMON (그림자 AI) — 세션당 1회 캐시
 let _agentCommonCache = null;
 // v1.3 — export: AI 패널(webapp.html _callPanelAI)도 같은 manifest 기반 로더를
-// 쓰도록 공개. 이전엔 패널 전용 하드코딩 _PA_SYSTEM_PROMPT만 썼음.
+// 쓰도록 공개.
+// v1.4(2026-07-05) — 실패 시 빈 문자열을 반환하는 건 그대로지만, 호출자가
+// 이걸 "폴백으로 대체해도 되는 신호"로 쓰면 안 된다 — webapp.html에 있던
+// 내장 _PA_SYSTEM_PROMPT 폴백(안전장치 전혀 없는 742자 축약판)을 완전히
+// 제거하면서, 호출자는 빈 문자열을 받으면 명확한 오류를 보여주고 중단해야
+// 한다. AGENT-COMMON은 유일한 정본이며, 그 대체물은 존재하지 않는다.
 export async function _loadAgentCommonSP() {
   if (_agentCommonCache) return _agentCommonCache;
   try {
     _agentCommonCache = await _loadSpByKey('AGENT-COMMON', 'AGENT-COMMON');
     return _agentCommonCache;
   } catch (e) {
-    console.warn('[SP] AGENT-COMMON 로드 실패 (빈 문자열 사용):', e.message);
+    console.error('[SP] AGENT-COMMON 로드 실패:', e.message);
     return '';
   }
 }

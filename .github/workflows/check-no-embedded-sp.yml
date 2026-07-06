@@ -1,0 +1,28 @@
+name: Check no embedded SP copies
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check-embedded-sp:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ── SP는 prompts/ 파일 하나만 정본이어야 한다 — .html/.js 안에 내장된
+      # 사본(예: 2026-07-05에 발견된 webapp.html의 _PA_SYSTEM_PROMPT, 742자
+      # 폴백. manifest 로드 실패 시 조용히 대체되어 안전장치가 전부 빠진 채
+      # 대화가 이어졌다)이 재발하면 병합 전에 잡는다.
+      - name: Run embedded-SP check
+        run: python3 tools/check_no_embedded_sp.py

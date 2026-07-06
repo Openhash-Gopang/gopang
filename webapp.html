@@ -2686,32 +2686,6 @@ window.closePDV = closePDV;
   // ── 열기 / 닫기 ──────────────────────────────────────
   const triggerBtn = document.getElementById('ai-panel-trigger');
 
-  // personal-assistant v1.2 기본 시스템 프롬프트 (cfg.system이 비어있을 때 폴백)
-  const _PA_SYSTEM_PROMPT = `당신은 혼디(Hondi) 나만의 AI 비서입니다.
-
-[필수 언어 규칙 — 반드시 준수]
-- 반드시 표준 한국어 해요체로 답변하세요.
-- 맞춤법·문법을 엄격히 지키세요. 틀린 표현 예시:
-  × "어떻게리고" → ○ "어떻게 불리고"
-  × "알려주실나요" → ○ "알려주세요"
-  × "당의" → ○ "당신의"
-  × "감습니다" → ○ "감사합니다"
-- 마크다운 볼드(**텍스트**)·헤더(##) 절대 사용 금지. 자연스러운 문장으로만 작성하세요.
-- STEP 번호·레이블(예: **STEP 1: 알려주기**) 출력 금지.
-- 답변은 200 토큰 이내로 간결하게 작성하세요.
-- 이모지를 적절히 사용해 친근한 느낌을 유지하세요.
-
-[첫 인사 — PHASE 1-INTRO 요청 시]
-사용자 닉네임이 있으면: "{닉네임}님, 안녕하세요! 😊 저는 혼디, {닉네임}님의 전용 AI 비서예요.
-저와 더 잘 소통하려면 몇 가지 여쭤봐도 될까요? 언제든 '나중에 할게요'라고 하시면 바로 멈출게요.
-먼저, 어떤 유형에 해당하시나요? 1. 개인 2. 사업자/기관/단체"
-닉네임이 없으면: "안녕하세요! 😊 저는 혼디 AI 비서예요. 무엇이든 도와드릴게요!"
-
-[라우팅]
-법률·판례 → K-Law | 세금·신고 → K-Tax | 보험 → K-Insurance
-결제·잔액 → GDC | 주식·투자 → K-Stock | 의료·건강 → K-Health
-학교·교육 → K-School | 시장·거래 → K-Market | 응급·구조 → K-911`;
-
   let _panelGreeted = false; // 패널 첫 인사 여부
 
   // edge-handle 요소 캐시 (BUG-7)
@@ -3503,8 +3477,14 @@ window.closePDV = closePDV;
     const providers = Array.isArray(cfg.providers) ? cfg.providers : [];
     const endpoint = cfg.endpoint || 'https://hondi-proxy.tensor-city.workers.dev';
 
-    // 히스토리에 system 추가 — manifest 기반 AGENT-COMMON 로더, 실패하면
-    // 마지막 안전장치로만 내장 _PA_SYSTEM_PROMPT 사용.
+    // 히스토리에 system 추가 — manifest 기반 AGENT-COMMON이 유일한 정본이다.
+    // 2026-07-05: 예전에 있던 내장 _PA_SYSTEM_PROMPT 폴백(742자짜리 축약판,
+    // R0/확신도 게이트 등 안전장치가 전혀 없고 라우팅도 "K-Market" 같은
+    // 표시명을 써서 실제 레지스트리 id와 어긋났음)을 완전히 제거했다.
+    // manifest fetch가 실패했을 때 조용히 그 폴백으로 대체하면, 사용자는
+    // 오늘까지 쌓아온 모든 안전장치가 빠진 채 그 사실도 모르고 대화하게
+    // 된다 — 이건 "SP가 여러 군데 동시에 존재"하는 것 중 가장 나쁜
+    // 형태였다. 실패하면 조용히 저하되지 말고 명확히 실패한다.
     // BUG-FIX: 기존엔 _panelHistory.length===0으로 판단했는데, 복원된
     // 히스토리(system 메시지는 저장하지 않으므로 항상 빠져 있음)가 있으면
     // length가 0이 아니라서 system이 영영 주입되지 않는 문제가 있었다.
@@ -3512,10 +3492,18 @@ window.closePDV = closePDV;
     if (!_panelHistory.some(m => m.role === 'system')) {
       let effectiveSystem = cfg.system || '';
       if (!effectiveSystem) {
-        try { effectiveSystem = await _loadAgentCommonSP(); }
-        catch (e) { console.warn('[Panel] manifest SP 로드 실패, 내장 폴백 사용:', e.message); }
+        try {
+          effectiveSystem = await _loadAgentCommonSP();
+        } catch (e) {
+          console.error('[Panel] AGENT-COMMON 로드 실패:', e.message);
+          effectiveSystem = '';
+        }
+        if (!effectiveSystem) {
+          bubbleEl.textContent = 'AI비서를 불러오지 못했습니다. 네트워크 상태를 확인하시고 새로고침해 주세요.';
+          return;
+        }
       }
-      _panelHistory.unshift({ role: 'system', content: effectiveSystem || _PA_SYSTEM_PROMPT });
+      _panelHistory.unshift({ role: 'system', content: effectiveSystem });
     }
     // 첨부파일 반영 — 사진은 멀티모달 image_url 블록, 그 외 파일은 파일명만 텍스트로 첨부
     let userContent = userText;
