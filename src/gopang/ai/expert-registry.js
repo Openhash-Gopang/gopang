@@ -76,7 +76,7 @@ export const EXPERT_REGISTRY = {
   },
   'medical-lab-technologist': {
     label: '임상병리사', icon: '🔬', category: 'HEALTH',
-    file: '/prompts/SP_medical-lab-technologist_v3_1.md', needsMedicalSafety: true,
+    file: '/prompts/SP_medical-lab-technologist_v3_2.md', needsMedicalSafety: true,
   },
   'radiologic-technologist': {
     label: '방사선사', icon: '📡', category: 'HEALTH',
