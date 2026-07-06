@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 숫자 코드 결과</title>
+<style>
+  body{margin:0;font-family:-apple-system,'Pretendard',sans-serif;background:#f9fafb;
+       padding:24px;box-sizing:border-box;min-height:100vh}
+  .wrap{max-width:480px;margin:60px auto 0;text-align:center}
+  .badge{display:inline-block;background:#eff6ff;color:#1A73E8;font-size:12px;font-weight:700;
+         padding:6px 14px;border-radius:20px;margin-bottom:18px}
+  h1{font-size:15px;color:#6b7280;margin:0 0 8px;font-weight:500}
+  .idBig{font-size:40px;font-weight:900;color:#111827;letter-spacing:3px;margin:8px 0 24px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;text-align:left}
+  .card p{font-size:13px;color:#6b7280;line-height:1.7;margin:0 0 6px}
+  .card b{color:#111827}
+  .actions{margin-top:24px}
+  button{padding:11px 20px;border:none;border-radius:8px;background:#1A73E8;color:#fff;
+         font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+  button.secondary{background:#f3f4f6;color:#374151;margin-right:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="badge">숫자 코드 인식 완료</div>
+  <h1>인식된 코드</h1>
+  <div class="idBig" id="idDisplay">—</div>
+
+  <div class="card">
+    <p><b>잠정 결과 페이지입니다.</b></p>
+    <p>이 코드에 연결된 프로필/서비스가 아직 등록되지 않았습니다.
+       실제 서비스 연동 전까지, 스캐너가 숫자열을 정상적으로 확정(잠금)하고
+       이 페이지로 이동하는지 확인하는 용도입니다.</p>
+    <p style="margin-top:12px">잠금 기준: 확신도 격차 평균 1.5 이상 + 동일 숫자열 3프레임 연속 유지</p>
+  </div>
+
+  <div class="actions">
+    <button class="secondary" onclick="location.href='/hondi-7seg-guide.html'">다시 스캔</button>
+    <button onclick="copyId()">코드 복사</button>
+  </div>
+</div>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id') || '(없음)';
+  document.getElementById('idDisplay').textContent = id;
+
+  function copyId() {
+    navigator.clipboard?.writeText(id).then(() => {
+      alert('복사됨: ' + id);
+    }).catch(() => {});
+  }
+</script>
+</body>
+</html>
