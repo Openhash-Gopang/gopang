@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 숫자 인식 테스트 (템플릿 매칭, 단일 숫자)</title>
+<style>
+  body{margin:0;font-family:-apple-system,'Pretendard',sans-serif;background:#111;
+       color:#fff;padding:0;box-sizing:border-box;overflow:hidden}
+  .wrap{position:relative;width:100vw;height:100vh}
+  #srcVideo{position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;pointer-events:none}
+  canvas#view{width:100%;height:100%;object-fit:cover;display:block}
+  #resultBox{
+    position:absolute;top:0;left:0;width:100%;
+    display:flex;flex-direction:column;align-items:center;padding-top:24px;
+    pointer-events:none;
+  }
+  #bigResult{
+    font-size:140px;font-weight:900;line-height:1;color:#7CFC8A;
+    text-shadow:0 0 12px #000,0 0 24px #000;
+  }
+  #label{font-size:14px;margin-top:8px;background:rgba(0,0,0,0.6);padding:6px 16px;border-radius:20px}
+  #debug{
+    position:absolute;bottom:0;left:0;right:0;
+    background:rgba(0,0,0,0.75);color:#7CFC8A;font:11px/1.5 monospace;
+    padding:10px 14px;white-space:pre-wrap;max-height:34vh;overflow:auto;
+  }
+  #startBtn{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    padding:16px 32px;font-size:18px;font-weight:700;border:none;border-radius:12px;
+    background:#1A73E8;color:#fff;cursor:pointer;z-index:10;
+  }
+  #err{position:absolute;top:20px;left:20px;right:20px;color:#ff6b6b;font-size:14px;
+       background:rgba(0,0,0,0.7);padding:10px;border-radius:8px;display:none}
+  #templateStrip{position:absolute;top:8px;right:8px;display:flex;gap:2px;background:rgba(0,0,0,0.5);padding:4px;border-radius:6px}
+  #templateStrip canvas{width:18px;height:24px;image-rendering:pixelated;border:1px solid #444}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <video id="srcVideo" playsinline autoplay muted></video>
+  <canvas id="view"></canvas>
+  <div id="resultBox">
+    <div id="bigResult">?</div>
+    <div id="label">카메라 시작 대기 중</div>
+  </div>
+  <div id="templateStrip"></div>
+  <div id="err"></div>
+  <button id="startBtn">카메라 시작</button>
+  <div id="debug"></div>
+</div>
+
+<script>
+// ── 단일 숫자 인식 — 템플릿 매칭 ────────────────────────────────
+// 색상 코드와 완전히 다른 접근: 채도/색상각을 전혀 안 쓰고 흑백
+// 대비(검정 글자 vs 흰 배경)만 본다. 조명·화이트밸런스에 흔들리던
+// 색상 코드 문제에서 구조적으로 자유롭다.
+//
+// [파이프라인]
+//   1. 0~9 템플릿을 canvas 폰트 렌더링으로 직접 만든다 (24×32, 이진화)
+//   2. 카메라 프레임에서 "검정 픽셀 덩어리"의 바운딩박스를 찾는다
+//      (숫자 하나만 있다고 가정 — 다음 단계에서 여러 자리로 확장)
+//   3. 그 영역을 잘라 템플릿과 같은 크기(24×32)로 리사이즈·이진화
+//   4. 10개 템플릿과 픽셀 단위로 비교(다른 픽셀 수가 적을수록 가까움)
+//      해서 최적/차점 점수를 함께 보여준다(확신도 판단용)
+
+const TW = 24, TH = 32; // 템플릿 크기(가로x세로)
+const DARK_THRESHOLD = 110; // 그레이스케일 이 값보다 어두우면 "잉크"로 판정
+
+// ── 1단계: 0~9 템플릿 생성 (canvas 폰트 렌더링) ────────────────
+function buildTemplates() {
+  const templates = [];
+  const strip = document.getElementById('templateStrip');
+  for (let d = 0; d <= 9; d++) {
+    // 여유 있게 크게 그린 뒤 다운스케일 — 작은 캔버스에 직접 그리면 안티에일리어싱이 거칠다
+    const BIG = 8;
+    const big = document.createElement('canvas');
+    big.width = TW*BIG; big.height = TH*BIG;
+    const bctx = big.getContext('2d');
+    bctx.fillStyle = '#fff';
+    bctx.fillRect(0, 0, big.width, big.height);
+    bctx.fillStyle = '#000';
+    bctx.font = `900 ${TH*BIG*0.85}px -apple-system, Arial, sans-serif`;
+    bctx.textAlign = 'center';
+    bctx.textBaseline = 'middle';
+    bctx.fillText(String(d), big.width/2, big.height/2 + TH*BIG*0.03);
+
+    const small = document.createElement('canvas');
+    small.width = TW; small.height = TH;
+    const sctx = small.getContext('2d');
+    sctx.drawImage(big, 0, 0, TW, TH);
+    const imgData = sctx.getImageData(0, 0, TW, TH).data;
+
+    const bits = new Uint8Array(TW*TH);
+    for (let i = 0; i < TW*TH; i++) {
+      const gray = (imgData[i*4] + imgData[i*4+1] + imgData[i*4+2]) / 3;
+      bits[i] = gray < DARK_THRESHOLD ? 1 : 0;
+    }
+    templates.push({ digit: d, bits });
+
+    // 화면 우상단에 만든 템플릿 미리보기 (디버그용)
+    const preview = document.createElement('canvas');
+    preview.width = TW; preview.height = TH;
+    preview.getContext('2d').putImageData(sctx.getImageData(0,0,TW,TH), 0, 0);
+    strip.appendChild(preview);
+  }
+  return templates;
+}
+
+// ── 2단계: 프레임에서 검정 덩어리 바운딩박스 찾기 ───────────────
+function findDarkBBox(ctx, W, H, scale) {
+  const tW = Math.round(W*scale), tH = Math.round(H*scale);
+  const tmp = document.createElement('canvas');
+  tmp.width = tW; tmp.height = tH;
+  const tctx = tmp.getContext('2d', { willReadFrequently: true });
+  tctx.drawImage(ctx.canvas, 0, 0, W, H, 0, 0, tW, tH);
+  const data = tctx.getImageData(0, 0, tW, tH).data;
+
+  let minX=tW, minY=tH, maxX=-1, maxY=-1, count=0;
+  for (let y = 0; y < tH; y++) {
+    for (let x = 0; x < tW; x++) {
+      const i = (y*tW+x)*4;
+      const gray = (data[i]+data[i+1]+data[i+2])/3;
+      if (gray < DARK_THRESHOLD) {
+        count++;
+        if (x<minX)minX=x; if (x>maxX)maxX=x;
+        if (y<minY)minY=y; if (y>maxY)maxY=y;
+      }
+    }
+  }
+  const MIN_PX = Math.round(tW*tH*0.005); // 전체의 0.5% 이상 어두워야 "뭔가 있다"로 침
+  if (count < MIN_PX || maxX < 0) return null;
+
+  return {
+    x1: minX/scale, y1: minY/scale, x2: (maxX+1)/scale, y2: (maxY+1)/scale,
+    darkCount: count,
+  };
+}
+
+// ── 3단계: 잘라서 템플릿 크기로 정규화 + 이진화 ────────────────
+function extractBits(ctx, bbox) {
+  const w = Math.max(1, bbox.x2 - bbox.x1), h = Math.max(1, bbox.y2 - bbox.y1);
+  // 숫자 주변에 10% 여백을 둬서 획이 경계에 딱 붙어 잘리지 않게 한다
+  const padX = w*0.1, padY = h*0.1;
+  const sx = Math.max(0, bbox.x1-padX), sy = Math.max(0, bbox.y1-padY);
+  const sw = w+padX*2, sh = h+padY*2;
+
+  const small = document.createElement('canvas');
+  small.width = TW; small.height = TH;
+  const sctx = small.getContext('2d');
+  sctx.fillStyle = '#fff';
+  sctx.fillRect(0,0,TW,TH);
+  sctx.drawImage(ctx.canvas, sx, sy, sw, sh, 0, 0, TW, TH);
+  const data = sctx.getImageData(0,0,TW,TH).data;
+
+  const bits = new Uint8Array(TW*TH);
+  for (let i = 0; i < TW*TH; i++) {
+    const gray = (data[i*4]+data[i*4+1]+data[i*4+2])/3;
+    bits[i] = gray < DARK_THRESHOLD ? 1 : 0;
+  }
+  return bits;
+}
+
+// ── 4단계: 템플릿과 비교 ────────────────────────────────────────
+// 점수 = 서로 다른 픽셀 수 (작을수록 비슷함). 최적/차점 점수를 같이
+// 봐야 "확실히 이거다"인지 "애매하다"인지 알 수 있다.
+function matchTemplate(bits, templates) {
+  const scores = templates.map(t => {
+    let diff = 0;
+    for (let i = 0; i < bits.length; i++) if (bits[i] !== t.bits[i]) diff++;
+    return { digit: t.digit, diff };
+  });
+  scores.sort((a,b) => a.diff - b.diff);
+  return scores; // scores[0]=최적, scores[1]=차점
+}
+
+// ── 상태/카메라 배선 (기존 동작 확인된 패턴 그대로) ─────────────
+const video = document.getElementById('srcVideo');
+const view = document.getElementById('view');
+const vctx = view.getContext('2d', { willReadFrequently: true });
+const bigResult = document.getElementById('bigResult');
+const label = document.getElementById('label');
+const debugEl = document.getElementById('debug');
+const errEl = document.getElementById('err');
+const startBtn = document.getElementById('startBtn');
+
+let templates = null;
+let frameCount = 0;
+
+function analyze() {
+  const W = video.videoWidth, H = video.videoHeight;
+  if (!W || !H) { requestAnimationFrame(analyze); return; }
+  view.width = W; view.height = H;
+  vctx.drawImage(video, 0, 0, W, H);
+
+  frameCount++;
+  const bbox = findDarkBBox(vctx, W, H, 0.25);
+
+  if (!bbox) {
+    bigResult.textContent = '?';
+    label.textContent = '숫자를 화면에 비춰주세요 (검정 글자, 흰 배경)';
+    debugEl.textContent = `frame #${frameCount}\nvideo: ${W}x${H}\n어두운 덩어리 없음`;
+    requestAnimationFrame(analyze);
+    return;
+  }
+
+  // 바운딩박스 표시
+  vctx.strokeStyle = '#00ff88'; vctx.lineWidth = 3;
+  vctx.strokeRect(bbox.x1, bbox.y1, bbox.x2-bbox.x1, bbox.y2-bbox.y1);
+
+  const bits = extractBits(vctx, bbox);
+  const scores = matchTemplate(bits, templates);
+  const best = scores[0], second = scores[1];
+  const margin = second.diff - best.diff; // 클수록 확신도 높음
+
+  bigResult.textContent = String(best.digit);
+  label.textContent = `숫자 ${best.digit} (차이 ${best.diff}, 2위와 격차 ${margin})`;
+
+  const top5 = scores.slice(0,5).map(s => `${s.digit}:${s.diff}`).join('  ');
+  debugEl.textContent = [
+    `frame #${frameCount}`,
+    `video: ${W}x${H}`,
+    `bbox: (${bbox.x1.toFixed(0)},${bbox.y1.toFixed(0)}) ~ (${bbox.x2.toFixed(0)},${bbox.y2.toFixed(0)})  darkPx=${bbox.darkCount}`,
+    `순위(낮을수록 유사): ${top5}`,
+  ].join('\n');
+
+  requestAnimationFrame(analyze);
+}
+
+startBtn.onclick = async () => {
+  errEl.style.display = 'none';
+  try {
+    templates = buildTemplates();
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+    video.srcObject = stream;
+    await video.play();
+    startBtn.style.display = 'none';
+    label.textContent = '스캔 중...';
+    requestAnimationFrame(analyze);
+  } catch (e) {
+    errEl.style.display = 'block';
+    errEl.textContent = `카메라 오류: ${e.name} — ${e.message}`;
+    label.textContent = '카메라 시작 실패';
+  }
+};
+</script>
+</body>
+</html>
