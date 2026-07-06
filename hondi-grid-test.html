@@ -10,6 +10,10 @@
   h1{font-size:16px;margin:0 0 6px;color:#fff}
   .sub{font-size:12px;color:#9ca3af;margin:0 0 14px;text-align:center;line-height:1.6}
   #canvas{width:100%;max-width:480px;border-radius:12px;background:#000}
+  /* video는 화면엔 안 보이지만 반드시 DOM에 붙어있어야 한다 —
+     display:none이면 일부 모바일 브라우저에서 프레임 디코딩 자체가
+     멈춘다. opacity:0 + 작은 크기로 "존재는 하되 안 보이게"만 한다. */
+  #srcVideo{position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;pointer-events:none}
   button{margin-top:14px;padding:12px 22px;border:none;border-radius:10px;background:#1A73E8;
          color:#fff;font-size:15px;font-weight:700;cursor:pointer}
   button:disabled{background:#374151;color:#9ca3af}
@@ -27,6 +31,7 @@
     가이드 박스 6칸을 그대로 잘라서 raw RGB로 가장 가까운 팔레트색만 매칭합니다.
   </p>
   <canvas id="canvas"></canvas>
+  <video id="srcVideo" playsinline autoplay muted></video>
   <button id="startBtn">카메라 시작</button>
   <div id="status">대기 중</div>
   <div id="cellsInfo"></div>
@@ -63,8 +68,7 @@ const GUIDE = { xRatio: 0.08, yRatio: 0.42, wRatio: 0.84, hRatio: 0.16 };
 const CELLS = 6;
 const SAMPLE_RATIO = 0.6; // 칸 내부 60%만 샘플 (경계 제외)
 
-let video = document.createElement('video');
-video.setAttribute('playsinline', '');
+let video = document.getElementById('srcVideo');
 let stream = null;
 let rafId = null;
 
