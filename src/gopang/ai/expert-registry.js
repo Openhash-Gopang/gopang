@@ -1,14 +1,16 @@
 /**
- * ai/expert-registry.js — 전문가 AI(26개 페르소나) 정적 레지스트리
+ * ai/expert-registry.js — 전문가 AI 정적 레지스트리
  *
  * 전문 분야(기관) AI(K-Law·K-Tax 등)는 별도 URL을 가진 새 탭 서비스이지만,
  * 전문가 AI(변호사·간호사 등 개별 자격직)는 별도 서비스가 없는 "순수 System
  * Prompt" 페르소나다. 따라서 GWP_REGISTRY(새 탭 방식)에 넣지 않고, 이 레지스트리를
  * 통해 "같은 스레드 내 System Prompt 교체" 방식(expert-session.js)으로 호출한다.
  *
- * 분류(LAW/HEALTH/EDU/ENG)는 각 SP 파일 1행에 적힌 코드(SP-LAW-01 등)를 그대로
- * 따른다 — 임상심리사·정신건강전문요원·전문상담교사는 SP-EDU 코드를 부여받았으므로
- * (저자 의도상 HEALTH가 아님) 의료 안전 모듈을 추가하지 않는다.
+ * 분류(LAW/HEALTH/EDU/ENG/FIN/REAL_ESTATE)는 각 SP 파일 1행에 적힌 코드(SP-LAW-01
+ * 등)를 그대로 따른다. 임상심리사·정신건강전문요원·전문상담교사는 SP-EDU 코드를
+ * 부여받아 category는 EDU를 유지하지만, needsMedicalSafety는 true다 — 2026-07-04에
+ * 위기개입 프로토콜(SP-COMMON-03 M5, 자살·자해 대응)을 상속받도록 수정됐다(카테고리
+ * 분류와 안전모듈 상속은 별개 기준).
  */
 
 export const UNIVERSAL_INTEGRITY_URL   = '/prompts/UNIVERSAL-INTEGRITY_v1_0.md';
@@ -21,14 +23,45 @@ export const EXPERT_REGISTRY = {
     label: '변호사', icon: '⚖️', category: 'LAW',
     file: '/prompts/SP_lawyer_v3_1.md', needsMedicalSafety: false,
   },
+  // 2026-07-06 신설(전문가 페르소나 누락 감사 결과) — 변호사와 다른 자격.
+  // 업무범위(등기·경매·소액사건 등) 초과 시 lawyer로 안내하도록 SP 본문에 명시.
+  'judicial-scrivener': {
+    label: '법무사', icon: '📜', category: 'LAW',
+    file: '/prompts/SP_judicial-scrivener_v1_0.md', needsMedicalSafety: false,
+  },
 
   // ── 재무·세무 (SP-FIN-01, 2026-07-04 신설) ────────────
   'tax-accountant': {
     label: '세무사', icon: '🧾', category: 'FIN',
     file: '/prompts/SP_tax-accountant_v1_0.md', needsMedicalSafety: false,
   },
+  // 2026-07-06 신설 — 세무사와 다른 자격(회계감사·재무제표 중심). 사고실험
+  // #40에서 세무사로 오매핑될 위험이 확인된 항목.
+  accountant: {
+    label: '공인회계사', icon: '📊', category: 'FIN',
+    file: '/prompts/SP_accountant_v1_0.md', needsMedicalSafety: false,
+  },
 
   // ── 의료·보건 (SP-HEALTH-06~15) ──────────────────────
+  // 2026-07-06 신설(SP-HEALTH-16~19) — 의사·치과의사·한의사·약사. 다른 10개
+  // 의료직이 전부 "확진·처방은 의사 영역"이라고 선을 긋는 구조라, 그 반대편을
+  // 정의하는 이 4개는 특히 신중한 검토가 필요함(SP 본문 상단 주석 참조).
+  physician: {
+    label: '의사', icon: '🩺', category: 'HEALTH',
+    file: '/prompts/SP_physician_v1_0.md', needsMedicalSafety: true,
+  },
+  dentist: {
+    label: '치과의사', icon: '🦷', category: 'HEALTH',
+    file: '/prompts/SP_dentist_v1_0.md', needsMedicalSafety: true,
+  },
+  'traditional-medicine-doctor': {
+    label: '한의사', icon: '🌿', category: 'HEALTH',
+    file: '/prompts/SP_traditional-medicine-doctor_v1_0.md', needsMedicalSafety: true,
+  },
+  pharmacist: {
+    label: '약사', icon: '💊', category: 'HEALTH',
+    file: '/prompts/SP_pharmacist_v1_0.md', needsMedicalSafety: true,
+  },
   veterinarian: {
     label: '수의사', icon: '🐾', category: 'HEALTH',
     file: '/prompts/SP_veterinarian_v2_3.md', needsMedicalSafety: true,
@@ -87,6 +120,13 @@ export const EXPERT_REGISTRY = {
     label: '정신건강전문요원', icon: '💬', category: 'EDU',
     file: '/prompts/SP_mental-health-professional_v2_3.md', needsMedicalSafety: true, // 2026-07-04: 상동
   },
+  // 2026-07-06 신설(SP-EDU-04) — 상담직 3개와 마찬가지로 위기개입 프로토콜(M5)
+  // 상속 위해 needsMedicalSafety:true. category는 EDU 유지(복지 상담이 의료
+  // 행위는 아니지만, 위기 신호 대응 원칙은 동일하게 필요).
+  'social-worker': {
+    label: '사회복지사', icon: '🤝', category: 'EDU',
+    file: '/prompts/SP_social-worker_v1_0.md', needsMedicalSafety: true,
+  },
   curator: {
     label: '학예사(큐레이터)', icon: '🎨', category: 'EDU',
     file: '/prompts/SP_curator_v2_3.md', needsMedicalSafety: false,
@@ -133,6 +173,14 @@ export const EXPERT_REGISTRY = {
     label: '소방시설관리사', icon: '🧯', category: 'ENG',
     file: '/prompts/SP_fire-safety-manager_v2_3.md', needsMedicalSafety: false,
   },
+
+  // ── 부동산 (SP-RE-01, 2026-07-06 신설) ────────────────
+  // 2026-07-06 이전엔 이 카테고리 자체가 없었음 — 전문가 페르소나 누락
+  // 감사에서 확인된 가장 큰 신규 카테고리 공백.
+  'real-estate-agent': {
+    label: '공인중개사', icon: '🏠', category: 'REAL_ESTATE',
+    file: '/prompts/SP_real-estate-agent_v1_0.md', needsMedicalSafety: false,
+  },
 };
 
 export function getExpertDef(personaId) {
@@ -153,6 +201,14 @@ const EXPERT_ID_ALIAS = {
   nutritionist: 'dietitian',
   psychologist: 'clinical-psychologist',
   counselor: 'school-counselor',
+  // 2026-07-06 신설 8개의 흔한 대체 표기
+  doctor: 'physician', 'medical-doctor': 'physician', physician_ai: 'physician',
+  dentist_ai: 'dentist',
+  'tcm-doctor': 'traditional-medicine-doctor', 'oriental-medicine-doctor': 'traditional-medicine-doctor',
+  pharmacist_ai: 'pharmacist',
+  cpa: 'accountant', 'certified-public-accountant': 'accountant',
+  'realtor': 'real-estate-agent', 'real-estate': 'real-estate-agent',
+  'social-worker-ai': 'social-worker',
 };
 
 export function resolveExpertId(personaId) {
