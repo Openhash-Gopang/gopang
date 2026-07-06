@@ -310,7 +310,10 @@ function analyze() {
   const perCellLine = results.map((r,i) => `[${i}]${r.best.digit}(불일치${r.best.diff},격차${r.second.diff-r.best.diff})`).join(' ');
   debugEl.textContent = [
     `frame #${frameCount}`,
-    `video: ${W}x${H}  가이드박스=(${guide.x1.toFixed(0)},${guide.y1.toFixed(0)})~(${guide.x2.toFixed(0)},${guide.y2.toFixed(0)})`,
+    `video(카메라 프레임)=${W}x${H}`,
+    `window(화면 뷰포트)=${window.innerWidth}x${window.innerHeight}`,
+    `screen.orientation=${screen.orientation ? screen.orientation.type : '(미지원)'}  window.orientation=${window.orientation ?? '(미지원)'}`,
+    `가이드박스=(${guide.x1.toFixed(0)},${guide.y1.toFixed(0)})~(${guide.x2.toFixed(0)},${guide.y2.toFixed(0)})`,
     `잉크범위(박스내부기준)=(${ink.x1},${ink.y1})~(${ink.x2},${ink.y2})`,
     `칸별: ${perCellLine}`,
   ].join('\n');
