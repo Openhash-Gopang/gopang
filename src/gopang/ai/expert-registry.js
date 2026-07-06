@@ -72,7 +72,7 @@ export const EXPERT_REGISTRY = {
   },
   'physical-therapist': {
     label: '물리치료사', icon: '💪', category: 'HEALTH',
-    file: '/prompts/SP_physical-therapist_v3_1.md', needsMedicalSafety: true,
+    file: '/prompts/SP_physical-therapist_v3_2.md', needsMedicalSafety: true,
   },
   'medical-lab-technologist': {
     label: '임상병리사', icon: '🔬', category: 'HEALTH',
