@@ -1,0 +1,31 @@
+name: Check GWP service table sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'gwp-registry.js'
+      - 'prompts/**'
+      - 'tools/check_service_table_sync.py'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check-service-table-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ── gwp-registry.js(실제 라우팅 대상)와 AGENT-COMMON §9 표(AI가 배우는
+      # 목록)가 서로 다른 파일에 손으로 따로 관리되다 보니 어긋났었다
+      # (2026-07-05~06: kbusiness 누락). 이 검사가 재발을 병합 전에 잡는다.
+      - name: Run service table sync check
+        run: python3 tools/check_service_table_sync.py
