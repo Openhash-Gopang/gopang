@@ -66,7 +66,7 @@
 // 비율은 실제 참조 이미지를 실측해서 얻었다(파랑-빨강 중심거리를
 // unit으로 삼음): 숫자열 = 빨강 중심에서 x:[-0.52,+3.25]·unit,
 // y:[+1.50,+2.07]·unit 위치.
-const ANCHOR_MIN_PX = 20; // 썸네일 기준 최소 픽셀 수(파랑/빨강 각각)
+const ANCHOR_MIN_RATIO = 0.003; // 썸네일 면적의 0.3% 이상이어야 진짜 앵커로 인정 (노이즈 배제)
 const DIGIT_REGION_RATIO = { x1: -0.515, x2: 3.249, y1: 1.498, y2: 2.066 };
 
 function findAnchor(ctx, W, H, scale) {
@@ -86,7 +86,7 @@ function findAnchor(ctx, W, H, scale) {
     if (b>100 && b-Math.max(r,g)>50) { bn++; bx+=x; by+=y; }
     else if (r>100 && r-Math.max(g,b)>50) { rn++; rx+=x; ry+=y; }
   }
-  if (bn < ANCHOR_MIN_PX || rn < ANCHOR_MIN_PX) return null;
+  if (bn < tW*tH*ANCHOR_MIN_RATIO || rn < tW*tH*ANCHOR_MIN_RATIO) return null;
 
   const blue = { x:(bx/bn)/scale, y:(by/bn)/scale };
   const red  = { x:(rx/rn)/scale, y:(ry/rn)/scale };
@@ -113,7 +113,7 @@ function expectedDigitRegion(anchor, W, H) {
 // 좁은 영역 안에서만 하므로 다른 물체에 낚일 위험이 없다)
 function refineDigitBBox(ctx, region) {
   const rw = region.x2-region.x1, rh = region.y2-region.y1;
-  if (rw <= 0 || rh <= 0) return null;
+  if (rw < 10 || rh < 5) return null; // 너무 작으면(계산 오차) 크래시 방지 위해 포기
   const crop = document.createElement('canvas');
   crop.width = Math.round(rw); crop.height = Math.round(rh);
   const cctx = crop.getContext('2d', { willReadFrequently: true });
@@ -291,6 +291,8 @@ function analyze() {
 
   frameCount++;
 
+  try {
+
   // 1) 앵커(혼디 로고의 파랑·빨강) 찾기
   const anchor = findAnchor(vctx, W, H, 0.25);
   if (!anchor) {
@@ -361,8 +363,15 @@ function analyze() {
     `frame #${frameCount}`,
     `video: ${W}x${H}  전체bbox=(${bbox.x1.toFixed(0)},${bbox.y1.toFixed(0)})~(${bbox.x2.toFixed(0)},${bbox.y2.toFixed(0)})`,
     `칸별: ${perCellLine}`,
-    `순위: ${top3}`,
   ].join('\n');
+
+  } catch (e) {
+    // 어떤 예외든 여기서 잡아서 화면에 보여주고, 다음 프레임은 계속 돈다.
+    // (예전엔 여기서 예외가 나면 requestAnimationFrame 재귀가 끊겨서
+    //  스캔이 그 자리에서 완전히 멈췄다 — "카메라 멈춤" 증상의 원인)
+    label.textContent = '처리 중 오류 (계속 시도 중)';
+    debugEl.textContent = `frame #${frameCount}\nERROR: ${e.message}\n${e.stack || ''}`;
+  }
 
   requestAnimationFrame(analyze);
 }
