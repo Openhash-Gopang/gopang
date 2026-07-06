@@ -21,7 +21,7 @@ export const EXPERT_REGISTRY = {
   // ── 법률 ──────────────────────────────────────────────
   lawyer: {
     label: '변호사', icon: '⚖️', category: 'LAW',
-    file: '/prompts/SP_lawyer_v3_1.md', needsMedicalSafety: false,
+    file: '/prompts/SP_lawyer_v3_2.md', needsMedicalSafety: false,
   },
   // 2026-07-06 신설(전문가 페르소나 누락 감사 결과) — 변호사와 다른 자격.
   // 업무범위(등기·경매·소액사건 등) 초과 시 lawyer로 안내하도록 SP 본문에 명시.
