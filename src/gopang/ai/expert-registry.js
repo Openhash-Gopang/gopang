@@ -14,7 +14,7 @@
  */
 
 export const UNIVERSAL_INTEGRITY_URL   = '/prompts/UNIVERSAL-INTEGRITY_v1_0.md';
-export const COMMON_GUARDRAILS_URL     = '/prompts/SP_common_guardrails_v3_2.md';
+export const COMMON_GUARDRAILS_URL     = '/prompts/SP_common_guardrails_v3_3.md';
 export const COMMON_MEDICAL_SAFETY_URL = '/prompts/SP_common_medical_safety_v1_2.md';
 
 export const EXPERT_REGISTRY = {
