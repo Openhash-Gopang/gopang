@@ -60,7 +60,7 @@ export const EXPERT_REGISTRY = {
   },
   pharmacist: {
     label: '약사', icon: '💊', category: 'HEALTH',
-    file: '/prompts/SP_pharmacist_v1_0.md', needsMedicalSafety: true,
+    file: '/prompts/SP_pharmacist_v1_1.md', needsMedicalSafety: true,
   },
   veterinarian: {
     label: '수의사', icon: '🐾', category: 'HEALTH',
