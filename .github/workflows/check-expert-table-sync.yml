@@ -1,0 +1,32 @@
+name: Check EXPERT persona table sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/gopang/ai/expert-registry.js'
+      - 'prompts/**'
+      - 'tools/check_expert_table_sync.py'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check-expert-table-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ── expert-registry.js(실제 전문가 페르소나 목록)와 AGENT-COMMON §9의
+      # EXPERT 표(AI가 배우는 목록)가 어긋나지 않는지 검증. GWP 서비스 쪽의
+      # kbusiness 누락(2026-07-05~06)과 같은 종류의 드리프트가 재발하면
+      # 병합 전에 잡는다.
+      - name: Run expert table sync check
+        run: python3 tools/check_expert_table_sync.py
