@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 숫자 코드 테스트</title>
+<style>
+  body{margin:0;font-family:-apple-system,'Pretendard',sans-serif;background:#f9fafb;
+       padding:24px;box-sizing:border-box}
+  .wrap{max-width:640px;margin:0 auto}
+  h1{font-size:20px;color:#111827;margin:0 0 4px}
+  .sub{font-size:13px;color:#6b7280;margin:0 0 24px}
+  .card{background:#fff;border-radius:16px;padding:20px;margin-bottom:20px;
+        border:1px solid #e5e7eb}
+  .card h2{font-size:15px;margin:0 0 14px;color:#111827}
+  label{display:block;font-size:12px;color:#6b7280;margin-bottom:4px}
+  input[type=text], input[type=number]{
+    width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;
+    font-size:14px;box-sizing:border-box;margin-bottom:12px;font-family:inherit;
+  }
+  button{padding:11px 18px;border:none;border-radius:8px;background:#1A73E8;color:#fff;
+         font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-right:8px}
+  button.secondary{background:#f3f4f6;color:#374151}
+  #genImg{max-width:100%;border:1px solid #e5e7eb;border-radius:8px;margin-top:14px;display:none}
+  #genInfo{font-size:13px;color:#374151;margin-top:10px;line-height:1.7}
+  #genInfo b{color:#111827}
+  #dropzone{border:2px dashed #d1d5db;border-radius:12px;padding:28px;text-align:center;
+            color:#9ca3af;font-size:13px;cursor:pointer;margin-bottom:14px}
+  #dropzone.dragover{border-color:#1A73E8;color:#1A73E8;background:#eff6ff}
+  #decodeResult{font-size:13px;color:#374151;line-height:1.8;white-space:pre-wrap}
+  #decodePreview{max-width:100%;border-radius:8px;margin-top:10px;display:none}
+  .err{color:#dc2626;font-weight:600}
+  .ok{color:#16a34a;font-weight:600}
+  .digitsBig{font-size:28px;font-weight:800;letter-spacing:2px;color:#111827;margin:4px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>혼디 숫자 코드 테스트</h1>
+  <p class="sub">실제 코드(hondi-digit-code.js / hondi-digit-scanner.js)를 그대로 불러와 동작합니다 — 목업 아님</p>
+
+  <div class="card">
+    <h2>1. 코드 생성</h2>
+    <label>short_id (10진수, 10자리, 0 ~ 9999999999)</label>
+    <input type="number" id="shortId" value="4600010008" min="0">
+    <button onclick="generateCode()">코드 생성</button>
+    <button class="secondary" onclick="randomCode()">무작위 생성</button>
+    <img id="genImg">
+    <div id="genInfo"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. 사진으로 디코딩 테스트</h2>
+    <p class="sub" style="margin-bottom:10px">위에서 생성한 코드를 인쇄하거나 화면에 띄운 뒤, 폰카메라로 찍은 사진을 올려보세요. 사진이 돌아가 있어도(가로/세로 무관) "ㄷ" 기준점으로 자동 보정됩니다.</p>
+    <div id="dropzone">사진을 여기 놓거나 클릭해서 선택</div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+    <img id="decodePreview">
+    <div id="decodeResult"></div>
+  </div>
+</div>
+
+<script type="module">
+import { generateDigitCodeDataURL, MAX_DIGIT_ID, DIGIT_COUNT } from '/src/gopang/ai/hondi-digit-code.js';
+import { analyzePhoto } from '/src/gopang/ai/hondi-digit-scanner.js';
+
+window.generateCode = async function() {
+  const raw = document.getElementById('shortId').value || '0';
+  const shortId = BigInt(raw);
+  const info = document.getElementById('genInfo');
+  if (shortId < 0n || shortId >= MAX_DIGIT_ID) {
+    info.innerHTML = `<span class="err">범위 초과: 0 ~ ${(MAX_DIGIT_ID-1n)}까지만 가능합니다.</span>`;
+    return;
+  }
+  const dataUrl = await generateDigitCodeDataURL(shortId);
+  const img = document.getElementById('genImg');
+  img.src = dataUrl;
+  img.style.display = 'block';
+  info.innerHTML = `<b>칸 수:</b> ${DIGIT_COUNT} &nbsp; <b>short_id:</b> ${shortId.toString().padStart(DIGIT_COUNT,'0')} &nbsp; <b>최대:</b> ${MAX_DIGIT_ID-1n}`;
+};
+
+window.randomCode = function() {
+  const rand = BigInt(Math.floor(Math.random() * Number(MAX_DIGIT_ID)));
+  document.getElementById('shortId').value = rand.toString();
+  generateCode();
+};
+
+// ── 디코딩 테스트 ──────────────────────────────────────────
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+dropzone.onclick = () => fileInput.click();
+dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add('dragover'); };
+dropzone.ondragleave = () => dropzone.classList.remove('dragover');
+dropzone.ondrop = (e) => {
+  e.preventDefault(); dropzone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+};
+fileInput.onchange = () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); };
+
+async function handleFile(file) {
+  const resultEl = document.getElementById('decodeResult');
+  const previewEl = document.getElementById('decodePreview');
+  resultEl.textContent = '분석 중…';
+
+  const imgUrl = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = async () => {
+    previewEl.src = imgUrl;
+    previewEl.style.display = 'block';
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width; canvas.height = img.height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    analyzePhoto(
+      imageData,
+      (digitStr, detail) => {
+        resultEl.innerHTML =
+          `<span class="ok">인식 성공</span>\n` +
+          `<div class="digitsBig">${digitStr}</div>` +
+          `확신도 격차: ${detail.avgMargin.toFixed(1)}\n` +
+          `ㄷ 기준점: ${detail.bracketFound ? `인식됨 (열림=${detail.bracketOpenSide}, 보정=${detail.correctionAngle}°)` : '미인식(기본방향 가정)'}`;
+      },
+      (statusMsg) => {
+        resultEl.innerHTML = `<span class="err">${statusMsg}</span>`;
+      }
+    );
+  };
+  img.src = imgUrl;
+}
+</script>
+</body>
+</html>
