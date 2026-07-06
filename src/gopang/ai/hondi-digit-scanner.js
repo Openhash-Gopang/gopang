@@ -31,6 +31,7 @@
  */
 
 import { SEGMENT_PATTERNS, SEG_ORDER, DIGIT_COUNT } from './hondi-digit-code.js';
+import { L1_URL } from '../core/state.js';
 
 // ── 상수 ──────────────────────────────────────────────────────
 const SHRINK = { x1: 0.111, x2: 0.889, y1: 0.071, y2: 0.929 };
@@ -311,4 +312,32 @@ function _analyze(canvas, ctx) {
     inkAbs,
     cellResults,
   };
+}
+
+// ── L1 프로필 조회 ───────────────────────────────────────────
+// 색상 코드(hondi-scanner.js)의 lookupProfile과 동일 구조이되,
+// 색상 코드와 구분되는 전용 필드 digit_code_id로 조회한다.
+export async function lookupDigitProfile(shortId) {
+  const sid = shortId.toString();
+  try {
+    const base = L1_URL.replace('/api/collections/profiles/records', '');
+    const res = await fetch(
+      `${base}/api/collections/profiles/records?filter=(digit_code_id='${sid}')&perPage=1`,
+      { signal: AbortSignal.timeout(5000) },
+    );
+    if (!res.ok) throw new Error(`L1 오류: ${res.status}`);
+    const data = await res.json();
+    if (!data.items?.length) throw new Error(`등록되지 않은 코드 (${sid})`);
+    const p = data.items[0];
+    return {
+      guid: p.ipv6 || p.id,
+      handle: p.handle,
+      name: p.name || p.nickname || p.handle,
+      url: p.digit_code_id
+        ? `/profiles/${p.digit_code_id}.html`
+        : `https://hondi.net/profile?id=${p.id}`,
+    };
+  } catch (e) {
+    throw new Error(`프로필 조회 실패: ${e.message}`);
+  }
 }

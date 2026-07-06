@@ -28,10 +28,7 @@
   <div class="idBig" id="idDisplay">—</div>
 
   <div class="card">
-    <p><b>잠정 결과 페이지입니다.</b></p>
-    <p>이 코드에 연결된 프로필/서비스가 아직 등록되지 않았습니다.
-       실제 서비스 연동 전까지, 스캐너가 숫자열을 정상적으로 확정(잠금)하고
-       이 페이지로 이동하는지 확인하는 용도입니다.</p>
+    <p id="status"><b>조회 중…</b></p>
     <p style="margin-top:12px">잠금 기준: 확신도 격차 평균 1.5 이상 + 동일 숫자열 3프레임 연속 유지</p>
   </div>
 
@@ -41,16 +38,29 @@
   </div>
 </div>
 
-<script>
-  const params = new URLSearchParams(location.search);
-  const id = params.get('id') || '(없음)';
-  document.getElementById('idDisplay').textContent = id;
+<script type="module">
+import { lookupDigitProfile } from '/src/gopang/ai/hondi-digit-scanner.js';
 
-  function copyId() {
-    navigator.clipboard?.writeText(id).then(() => {
-      alert('복사됨: ' + id);
-    }).catch(() => {});
+const params = new URLSearchParams(location.search);
+const id = params.get('id') || '';
+document.getElementById('idDisplay').textContent = id || '(없음)';
+
+const statusEl = document.getElementById('status');
+
+(async () => {
+  if (!id) { statusEl.innerHTML = '<b style="color:#dc2626">코드가 없습니다.</b>'; return; }
+  try {
+    const profile = await lookupDigitProfile(id);
+    statusEl.innerHTML = `<b style="color:#16a34a">등록된 코드 — ${profile.name}</b><br>잠시 후 프로필 페이지로 이동합니다…`;
+    setTimeout(() => { location.href = profile.url; }, 600);
+  } catch (e) {
+    statusEl.innerHTML = `<b>등록되지 않은 코드입니다.</b><br>${e.message}`;
   }
+})();
+
+window.copyId = function() {
+  navigator.clipboard?.writeText(id).then(() => alert('복사됨: ' + id)).catch(() => {});
+};
 </script>
 </body>
 </html>
