@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 6색 순서 인식 테스트</title>
+<style>
+  body{margin:0;font-family:-apple-system,'Pretendard',sans-serif;background:#111;
+       color:#fff;padding:0;box-sizing:border-box;overflow:hidden}
+  .wrap{position:relative;width:100vw;height:100vh}
+  video{width:100%;height:100%;object-fit:cover}
+  #overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+  #resultBox{
+    position:absolute;top:0;left:0;width:100%;
+    display:flex;flex-direction:column;align-items:center;padding-top:24px;
+  }
+  #bigResult{
+    font-size:64px;font-weight:900;line-height:1;letter-spacing:4px;
+    text-shadow:0 0 12px #000,0 0 24px #000;
+    transition:color 0.1s;
+  }
+  #label{font-size:16px;margin-top:8px;background:rgba(0,0,0,0.6);padding:6px 16px;border-radius:20px}
+  #debug{
+    position:absolute;bottom:0;left:0;right:0;
+    background:rgba(0,0,0,0.75);color:#7CFC8A;font:11px/1.5 monospace;
+    padding:10px 14px;white-space:pre-wrap;max-height:30vh;overflow:auto;
+  }
+  #startBtn{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    padding:16px 32px;font-size:18px;font-weight:700;border:none;border-radius:12px;
+    background:#1A73E8;color:#fff;cursor:pointer;z-index:10;
+  }
+  #err{position:absolute;top:20px;left:20px;right:20px;color:#ff6b6b;font-size:14px;
+       background:rgba(0,0,0,0.7);padding:10px;border-radius:8px;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <video id="video" playsinline autoplay muted></video>
+  <canvas id="overlay"></canvas>
+  <div id="resultBox">
+    <div id="bigResult">?</div>
+    <div id="label">카메라 시작 대기 중</div>
+  </div>
+  <div id="err"></div>
+  <button id="startBtn">카메라 시작</button>
+  <div id="debug"></div>
+</div>
+
+<script>
+// ── 2색(빨강·노랑) 순서 인식 코드를 6색으로 확장 ────────────────
+// 가이드 박스 없음, 사용자가 맞출 필요 없음 — 그대로 화면 전체에서
+// 6색(빨강·초록·파랑·노랑·자홍·시안) 각각의 덩어리를 찾아 중심좌표를
+// 구하고, 실제로 감지된 색들만 x좌표 오름차순으로 정렬해서 그 순서를
+// 결과로 낸다. 로직은 2색 버전과 완전히 동일 — 색 판정 함수와 결과
+// 조립 부분만 6개로 늘렸다.
+
+const video = document.getElementById('video');
+const overlay = document.getElementById('overlay');
+const octx = overlay.getContext('2d');
+const bigResult = document.getElementById('bigResult');
+const label = document.getElementById('label');
+const debugEl = document.getElementById('debug');
+const errEl = document.getElementById('err');
+const startBtn = document.getElementById('startBtn');
+
+let workCanvas = document.createElement('canvas');
+let wctx = workCanvas.getContext('2d', { willReadFrequently: true });
+let rafId = null;
+let frameCount = 0;
+
+// 색 판정 — 기존 빨강/노랑 판정과 동일한 스타일(단순 RGB 임계값)로
+// 나머지 4색을 추가. 원색(빨강·초록·파랑)은 "한 채널만 튀는" 조건,
+// 혼합색(노랑·자홍·시안)은 "두 채널이 같이 튀고 나머지 하나만 낮은" 조건.
+function isRedPixel(r,g,b)     { return r > 130 && (r - Math.max(g,b)) > 50; }
+function isGreenPixel(r,g,b)   { return g > 130 && (g - Math.max(r,b)) > 50; }
+function isBluePixel(r,g,b)    { return b > 130 && (b - Math.max(r,g)) > 50; }
+function isYellowPixel(r,g,b)  { return r > 130 && g > 110 && (r - b) > 60 && (g - b) > 40; }
+function isMagentaPixel(r,g,b) { return r > 130 && b > 110 && (r - g) > 50 && (b - g) > 40; }
+function isCyanPixel(r,g,b)    { return g > 130 && b > 110 && (g - r) > 40 && (b - r) > 40; }
+
+// idx는 hondi-code.js의 PALETTE 인덱스와 동일(빨강=0…시안=5)
+// margin: 그 색으로 판정되기 위한 핵심 부등식의 여유값. 임계값을 못
+// 넘어도(test=false) margin이 얼마나 모자랐는지 보면 원인이 바로 보인다.
+const COLORS = [
+  { idx: 0, name: '빨강', hex: '#ff4444', test: isRedPixel,     margin: (r,g,b) => r - Math.max(g,b) },
+  { idx: 1, name: '초록', hex: '#44ff44', test: isGreenPixel,   margin: (r,g,b) => g - Math.max(r,b) },
+  { idx: 2, name: '파랑', hex: '#5588ff', test: isBluePixel,    margin: (r,g,b) => b - Math.max(r,g) },
+  { idx: 3, name: '노랑', hex: '#ffe14d', test: isYellowPixel,  margin: (r,g,b) => Math.min(r,g) - b },
+  { idx: 4, name: '자홍', hex: '#ff44ff', test: isMagentaPixel, margin: (r,g,b) => Math.min(r,b) - g },
+  { idx: 5, name: '시안', hex: '#44ffff', test: isCyanPixel,    margin: (r,g,b) => Math.min(g,b) - r },
+];
+
+function analyze() {
+  const W = video.videoWidth, H = video.videoHeight;
+  if (!W || !H) { rafId = requestAnimationFrame(analyze); return; }
+
+  // 성능을 위해 축소본에서 픽셀 스캔 (여기선 정밀도보다 "되는지 여부"가 중요)
+  const scale = 0.25;
+  const tW = Math.round(W*scale), tH = Math.round(H*scale);
+  workCanvas.width = tW; workCanvas.height = tH;
+  wctx.drawImage(video, 0, 0, tW, tH);
+  const data = wctx.getImageData(0, 0, tW, tH).data;
+
+  // 색상별 누적치 + "가장 근접했던 픽셀"(margin 최댓값과 그 RGB) 추적.
+  // 후자는 test()가 실패해도 실제로 얼마나 모자랐는지 보여준다.
+  const stats = COLORS.map(() => ({ count: 0, sx: 0, sy: 0, bestMargin: -Infinity, bestRgb: null }));
+  for (let y = 0; y < tH; y++) {
+    for (let x = 0; x < tW; x++) {
+      const i = (y*tW+x)*4;
+      const r=data[i], g=data[i+1], b=data[i+2];
+      let matched = false;
+      for (let c = 0; c < COLORS.length; c++) {
+        const s = stats[c];
+        const m = COLORS[c].margin(r,g,b);
+        if (m > s.bestMargin) { s.bestMargin = m; s.bestRgb = [r,g,b]; }
+        if (!matched && COLORS[c].test(r,g,b)) {
+          s.count++; s.sx += x; s.sy += y;
+          matched = true; // 한 픽셀은 한 색으로만 카운트 (기존 else-if 체인과 동일한 취지)
+        }
+      }
+    }
+  }
+
+  const MIN_PX = Math.round(tW*tH*0.01); // 전체 화면의 1% 이상 차지해야 "인식"으로 침
+  overlay.width = W; overlay.height = H;
+  octx.clearRect(0,0,W,H);
+
+  frameCount++;
+
+  // 기준을 넘긴 색들만 추려서, 중심 x좌표 오름차순으로 정렬 — 이게 곧 "순서"다
+  const detected = COLORS.map((c, i) => ({ ...c, ...stats[i] }))
+    .filter(c => c.count >= MIN_PX)
+    .map(c => ({ ...c, cx: (c.sx/c.count)/scale, cy: (c.sy/c.count)/scale }))
+    .sort((a,b) => a.cx - b.cx);
+
+  const dbgLines = [
+    `frame #${frameCount}`,
+    `video: ${W}x${H}  scan: ${tW}x${tH}  (기준 ${MIN_PX}px)`,
+    ...COLORS.map((c,i) => {
+      const s = stats[i];
+      const rgbStr = s.bestRgb ? `(${s.bestRgb[0]},${s.bestRgb[1]},${s.bestRgb[2]})` : '-';
+      const ok = s.count >= MIN_PX ? '✓' : ' ';
+      return `${ok} ${c.name}: n=${s.count}  margin최고=${s.bestMargin.toFixed(0)}  그때RGB=${rgbStr}`;
+    }),
+  ];
+
+  if (detected.length === 0) {
+    bigResult.textContent = '?';
+    bigResult.style.color = '#888';
+    label.textContent = '색상 인식 안 됨';
+  } else {
+    bigResult.textContent = detected.map(c => c.idx).join('');
+    bigResult.style.color = '#7CFC8A';
+    label.textContent = `${detected.length}개 인식: ` + detected.map(c => c.name).join(' → ');
+    dbgLines.push(`순서: ${detected.map(c => c.name).join(',')}`);
+
+    // 감지된 색마다 박스, 순서대로 선으로 연결
+    detected.forEach(c => {
+      octx.strokeStyle = c.hex; octx.lineWidth = 4;
+      octx.strokeRect(c.cx-50, c.cy-50, 100, 100);
+    });
+    if (detected.length > 1) {
+      octx.strokeStyle = '#00ff88'; octx.lineWidth = 3;
+      octx.beginPath();
+      octx.moveTo(detected[0].cx, detected[0].cy);
+      for (let i = 1; i < detected.length; i++) octx.lineTo(detected[i].cx, detected[i].cy);
+      octx.stroke();
+    }
+  }
+
+  debugEl.textContent = dbgLines.join('\n');
+  rafId = requestAnimationFrame(analyze);
+}
+
+startBtn.onclick = async () => {
+  errEl.style.display = 'none';
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+    video.srcObject = stream;
+    await video.play();
+    startBtn.style.display = 'none';
+    label.textContent = '스캔 중...';
+    rafId = requestAnimationFrame(analyze);
+  } catch (e) {
+    errEl.style.display = 'block';
+    errEl.textContent = `카메라 오류: ${e.name} — ${e.message}`;
+    label.textContent = '카메라 시작 실패';
+  }
+};
+</script>
+</body>
+</html>
