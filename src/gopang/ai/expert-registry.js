@@ -64,7 +64,7 @@ export const EXPERT_REGISTRY = {
   },
   veterinarian: {
     label: '수의사', icon: '🐾', category: 'HEALTH',
-    file: '/prompts/SP_veterinarian_v2_3.md', needsMedicalSafety: true,
+    file: '/prompts/SP_veterinarian_v2_4.md', needsMedicalSafety: true,
   },
   nurse: {
     label: '간호사', icon: '👩‍⚕️', category: 'HEALTH',
