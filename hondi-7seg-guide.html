@@ -34,10 +34,6 @@
        background:rgba(0,0,0,0.7);padding:10px;border-radius:8px;display:none}
   #refStrip{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);border-radius:8px;padding:6px}
   #refStrip canvas{width:24px;height:40px;image-rendering:pixelated;border:1px solid #444;margin:1px}
-  #correctedWrap{position:absolute;top:8px;left:8px;background:rgba(0,0,0,0.7);border-radius:8px;
-    padding:6px;display:flex;flex-direction:column;align-items:center}
-  #correctedWrap .cw-label{font-size:10px;color:#7CFC8A;margin-bottom:4px}
-  #correctedPreview{image-rendering:pixelated;border:1px solid #555;max-width:70px;max-height:200px}
 </style>
 </head>
 <body>
@@ -49,52 +45,25 @@
     <div id="label">카메라 시작 대기 중</div>
   </div>
   <div id="refStrip"></div>
-  <div id="correctedWrap">
-    <div class="cw-label">보정 미리보기</div>
-    <canvas id="correctedPreview"></canvas>
-  </div>
   <div id="err"></div>
   <button id="startBtn">카메라 시작</button>
   <div id="debug"></div>
 </div>
 
 <script>
-// ── 세로 숫자열 + "혼ㄷ" 기준점(앵커) 방식 ──────────────────────
-// 기존 가로 버전은 숫자 10개만 단독으로 찍는 것을 전제로, 가이드박스
-// 안의 잉크 전체를 시작~끝으로 보고 10등분했다. 이번 레이아웃은
-// 카메라에 로고("혼")+검정 ㄷ자 브래킷+세로 숫자열이 함께 잡히므로,
-// 잉크 범위를 그대로 10등분하면 로고까지 포함돼 등분이 깨진다.
-//
-// 해결: 가이드박스 안에서 컬럼(세로줄) 단위로 "내용이 있는 블록"을
-// 찾는다. 로고/ㄷ브래킷/숫자열은 서로 흰 여백으로 떨어져 있으므로
-// 컬럼 프로파일(각 x열의 어두운 픽셀 수)만 봐도 블록 경계가 나온다.
-//   - 가장 오른쪽 블록 = 숫자열 (실제 인식 대상)
-//   - 그 바로 왼쪽 블록 = "ㄷ" 기준점(앵커) — 존재 확인만으로
-//     "숫자열을 제대로 찾았다"는 검증 신호로 쓴다. 로고까지 포함해서
-//     통째로 잉크 범위를 잡던 이전 방식보다 훨씬 안정적이고,
-//     숫자열 폭만 골라내므로 이후 단계(행 단위 스캔)도 그만큼 좁은
-//     영역만 처리해 더 빠르다.
-// 숫자열 내부에서는 세로로 10등분(위→아래 순서가 첫째~열째 자리)한다.
+// ── 가이드박스 + 실제 잉크 범위 재탐색 하이브리드 ────────────────
+// 가이드박스 비율에 그대로 맞춰 계산만 하는 방식은 정렬 오차 5%만
+// 있어도 완전히 깨지는 게 실측으로 확인됐다(뒤쪽 숫자일수록 절대
+// 오차가 누적되어 더 크게 어긋남). 그래서 가이드박스는 "대략적인
+// 관심영역 좁히기" 용도로만 쓰고, 그 안에서 실제 잉크(어두운 픽셀)의
+// 진짜 시작~끝을 다시 찾은 뒤 그 폭을 10등분한다 — 이러면 박스 안에서
+// 숫자가 얼마나 크든 작든(단, 박스 밖으로 넘치지만 않으면) 등분 자체는
+// 항상 정확하다. 실측 검증: 스케일 80~95%, 위치가 살짝 안쪽으로
+// 치우친 경우까지 전부 정확히 복원됨. 박스보다 커져 잘리는 경우만
+// 실패하므로, 사용자에게는 "박스 안에 여유 있게 들어오도록" 안내한다.
 const SHRINK = { x1: 0.111, x2: 0.889, y1: 0.071, y2: 0.929 };
-const IMAGE_ASPECT = 340/247; // 참조 레이아웃(로고+ㄷ+숫자열 전체) 폭:높이
+const IMAGE_ASPECT = 1120/180; // 실제 참조 이미지 폭:높이 (가이드박스 비율용)
 const DIGIT_COUNT_GUIDE = 10;
-const MIN_BLOB_WIDTH_RATIO = 0.03;   // 가이드박스 폭 대비, 블록으로 인정할 최소 폭
-const MIN_COL_DARK_RATIO = 0.02;     // 해당 컬럼이 "내용 있음"으로 인정될 최소 어두운 픽셀 비율(세로 기준)
-
-// ── "ㄷ" 기준점(앵커) 자동 회전 보정 ──────────────────────────
-// 폰을 가로로 눕히거나 스티커가 돌아간 채로 찍히면, 로고/ㄷ브래킷/
-// 숫자열 전체가 화면 안에서 90°/180°/270° 돌아간 채로 잡힌다.
-// "ㄷ"은 정확히 한쪽 면만 뚫린 모양이라, 뚫린 방향만 알아내면
-// 전체가 몇 도 돌아갔는지 바로 알 수 있다 — QR코드의 파인더 패턴과
-// 같은 역할. 뚫린 방향을 찾은 뒤, 그 방향이 "오른쪽"이 되도록 이미지
-// 전체를 되돌려 회전시키면, 그 다음부터는 기존 세로 인식 로직을
-// 그대로 재사용할 수 있다(숫자열은 항상 ㄷ의 열린 방향 쪽에 있다).
-const BRACKET_ASPECT_MIN = 0.8, BRACKET_ASPECT_MAX = 2.6; // ㄷ 블록의 가로:세로(긴변/짧은변) 허용 범위
-const BRACKET_FILL_MIN = 0.40, BRACKET_FILL_MAX = 0.82;   // ㄷ 블록 내부 어두운 픽셀 비율 허용 범위
-const BRACKET_SOLID_EDGE_MIN = 0.75; // 막힌 3면은 이 이상 어두워야 함
-const BRACKET_OPEN_EDGE_MAX = 0.55;  // 뚫린 1면은 이 이하로 밝아야 함
-const EDGE_STRIP_RATIO = 0.18;       // 네 변 각각을 판정할 때 볼 테두리 두께 비율
-const OPEN_SIDE_CORRECTION = { right: 0, bottom: 90, top: -90, left: 180 }; // 열린방향→보정회전각(도, CCW+)
 
 // 화면 중앙에 실제 이미지 비율과 같은 가이드박스를 비디오 픽셀 좌표계로
 // 계산 — vctx에 비디오와 같이 그리므로 object-fit:cover 변환도 자동으로
@@ -120,196 +89,6 @@ function findInkBBox(gray, w, h) {
   if (count < 10 || maxX<0) return null;
   return { x1:minX, y1:minY, x2:maxX+1, y2:maxY+1 };
 }
-// 가이드박스 내부를 컬럼(세로줄) 단위로 스캔해서 "내용 블록"들을 찾는다.
-// 로고 / ㄷ브래킷 / 숫자열이 서로 흰 여백으로 떨어져 있다는 전제.
-function findColumnBlobs(gray, w, h) {
-  const threshold = otsuThreshold(gray);
-  const colDark = new Uint32Array(w);
-  for (let y=0; y<h; y++) {
-    const row = y*w;
-    for (let x=0; x<w; x++) if (gray[row+x] <= threshold) colDark[x]++;
-  }
-  const minDark = Math.max(1, Math.round(h*MIN_COL_DARK_RATIO));
-  const minWidth = Math.max(1, Math.round(w*MIN_BLOB_WIDTH_RATIO));
-  const blobs = [];
-  let x = 0;
-  while (x < w) {
-    if (colDark[x] >= minDark) {
-      let x2 = x;
-      while (x2 < w && colDark[x2] >= minDark) x2++;
-      if (x2 - x >= minWidth) blobs.push({ x1: x, x2 });
-      x = x2;
-    } else {
-      x++;
-    }
-  }
-  return { blobs, threshold };
-}
-
-// 특정 컬럼 구간(x1~x2) 안에서만 위/아래 잉크 범위를 찾는다 —
-// 숫자열 블록 폭만큼만 훑으므로 가이드박스 전체를 훑는 것보다 가볍다.
-function findRowExtentInColumns(gray, w, h, x1, x2, threshold) {
-  let minY = h, maxY = -1;
-  for (let y = 0; y < h; y++) {
-    const row = y*w;
-    let dark = false;
-    for (let x = x1; x < x2; x++) {
-      if (gray[row+x] <= threshold) { dark = true; break; }
-    }
-    if (dark) { if (y < minY) minY = y; if (y > maxY) maxY = y; }
-  }
-  if (maxY < 0) return null;
-  return { y1: minY, y2: maxY+1 };
-}
-
-// 방향을 모르는 상태에서 블록을 찾기 위해 x축(컬럼) 또는 y축(행)
-// 어느 쪽으로든 투영해서 블록을 찾을 수 있게 일반화한 버전.
-function findAxisBlobs(gray, w, h, axis, threshold) {
-  const primaryLen = axis === 'x' ? w : h;
-  const otherLen = axis === 'x' ? h : w;
-  const darkCount = new Uint32Array(primaryLen);
-  if (axis === 'x') {
-    for (let y=0; y<h; y++) { const row=y*w; for (let x=0; x<w; x++) if (gray[row+x] <= threshold) darkCount[x]++; }
-  } else {
-    for (let y=0; y<h; y++) { const row=y*w; let c=0; for (let x=0; x<w; x++) if (gray[row+x] <= threshold) c++; darkCount[y]=c; }
-  }
-  const minDark = Math.max(1, Math.round(otherLen*MIN_COL_DARK_RATIO));
-  const minSize = Math.max(1, Math.round(primaryLen*MIN_BLOB_WIDTH_RATIO));
-  const blobs = [];
-  let i = 0;
-  while (i < primaryLen) {
-    if (darkCount[i] >= minDark) {
-      let j = i;
-      while (j < primaryLen && darkCount[j] >= minDark) j++;
-      if (j - i >= minSize) blobs.push({ p1: i, p2: j });
-      i = j;
-    } else { i++; }
-  }
-  return blobs;
-}
-
-// 찾은 블록의 1차원 범위(p1~p2) 안에서, 수직 방향의 실제 범위를 찾는다.
-function perpExtent(gray, w, h, axis, p1, p2, threshold) {
-  let min = Infinity, max = -1;
-  if (axis === 'x') {
-    for (let y=0; y<h; y++) {
-      const row=y*w; let dark=false;
-      for (let x=p1; x<p2; x++) if (gray[row+x] <= threshold) { dark=true; break; }
-      if (dark) { if (y<min) min=y; if (y>max) max=y; }
-    }
-  } else {
-    for (let x=0; x<w; x++) {
-      let dark=false;
-      for (let y=p1; y<p2; y++) if (gray[y*w+x] <= threshold) { dark=true; break; }
-      if (dark) { if (x<min) min=x; if (x>max) max=x; }
-    }
-  }
-  if (max < 0) return null;
-  return { min, max: max+1 };
-}
-
-// bbox의 위/아래/왼/오 네 변 각각의 어두운 픽셀 비율 — "ㄷ"처럼 한
-// 면만 뚫린 도형은 뚫린 쪽만 확연히 밝게(낮은 비율로) 나온다.
-function edgeRatios(gray, w, h, bbox, threshold) {
-  const { x1, x2, y1, y2 } = bbox;
-  const bw = x2-x1, bh = y2-y1;
-  const ts = Math.max(1, Math.round(bh*EDGE_STRIP_RATIO));
-  const ls = Math.max(1, Math.round(bw*EDGE_STRIP_RATIO));
-  function darkRatio(xa,xb,ya,yb) {
-    let d=0, n=0;
-    for (let y=ya; y<yb; y++) { const row=y*w; for (let x=xa; x<xb; x++) { n++; if (gray[row+x] <= threshold) d++; } }
-    return n ? d/n : 0;
-  }
-  return {
-    top: darkRatio(x1,x2,y1,y1+ts),
-    bottom: darkRatio(x1,x2,y2-ts,y2),
-    left: darkRatio(x1,x1+ls,y1,y2),
-    right: darkRatio(x2-ls,x2,y1,y2),
-  };
-}
-
-// 가이드박스 안에서 "ㄷ" 기준점을 찾는다. x축/y축 두 방향 모두
-// 시도해서(로고+ㄷ+숫자열이 어느 방향으로 늘어서 있든 상관없이),
-// 정사각형에 가깝고 + 내부 채움비율이 중간이고 + 정확히 한 면만
-// 뚫린 블록을 찾으면 그것이 ㄷ이다.
-function tryFindBracket(gray, w, h, threshold) {
-  for (const axis of ['x','y']) {
-    const blobs = findAxisBlobs(gray, w, h, axis, threshold);
-    if (blobs.length < 2) continue; // 이 축으로는 블록이 안 갈라짐 -> 다른 축 시도
-    for (const b of blobs) {
-      const ext = perpExtent(gray, w, h, axis, b.p1, b.p2, threshold);
-      if (!ext) continue;
-      const bbox = axis === 'x'
-        ? { x1:b.p1, x2:b.p2, y1:ext.min, y2:ext.max }
-        : { x1:ext.min, x2:ext.max, y1:b.p1, y2:b.p2 };
-      const bw = bbox.x2-bbox.x1, bh = bbox.y2-bbox.y1;
-      if (bw<=0 || bh<=0) continue;
-      const aspect = Math.max(bw,bh)/Math.min(bw,bh);
-      if (aspect < BRACKET_ASPECT_MIN || aspect > BRACKET_ASPECT_MAX) continue;
-      let dark=0, n=0;
-      for (let y=bbox.y1; y<bbox.y2; y++) { const row=y*w; for (let x=bbox.x1; x<bbox.x2; x++) { n++; if (gray[row+x] <= threshold) dark++; } }
-      const fill = n ? dark/n : 0;
-      if (fill < BRACKET_FILL_MIN || fill > BRACKET_FILL_MAX) continue;
-      const edges = edgeRatios(gray, w, h, bbox, threshold);
-      const entries = Object.entries(edges).sort((a,c) => a[1]-c[1]);
-      const [openSide, openVal] = entries[0];
-      const minOther = Math.min(entries[1][1], entries[2][1], entries[3][1]);
-      if (openVal <= BRACKET_OPEN_EDGE_MAX && minOther >= BRACKET_SOLID_EDGE_MIN) {
-        return { bbox, openSide };
-      }
-    }
-  }
-  return null;
-}
-
-// 그레이스케일 배열(Uint8Array) 90/180도 회전 — PIL Image.rotate()와
-// 동일한 규약(양수 각도 = 반시계, 이미지 좌표계 y축 아래방향 기준).
-// 실측 검증: rotate(90)->반시계, rotate(-90)->시계, rotate(180) 모두
-// Python PIL 결과와 픽셀 단위로 일치 확인.
-function rotateGrayCCW90(gray, w, h) {
-  const newW = h, newH = w;
-  const out = new Uint8Array(newW*newH);
-  for (let ny=0; ny<newH; ny++) for (let nx=0; nx<newW; nx++) out[ny*newW+nx] = gray[nx*w + (w-1-ny)];
-  return { gray: out, w: newW, h: newH };
-}
-function rotateGrayCW90(gray, w, h) {
-  const newW = h, newH = w;
-  const out = new Uint8Array(newW*newH);
-  for (let ny=0; ny<newH; ny++) for (let nx=0; nx<newW; nx++) out[ny*newW+nx] = gray[(h-1-nx)*w + ny];
-  return { gray: out, w: newW, h: newH };
-}
-function rotateGray180(gray, w, h) {
-  const out = new Uint8Array(w*h);
-  for (let y=0; y<h; y++) for (let x=0; x<w; x++) out[y*w+x] = gray[(h-1-y)*w + (w-1-x)];
-  return { gray: out, w, h };
-}
-
-// 실제 화면에 보이는 캔버스(픽셀 이미지)를 같은 각도로 회전시켜
-// 세그먼트 판독용 작업 캔버스를 만든다 — 그레이스케일 배열 회전과
-// 항상 같은 결과가 되도록 표준 캔버스 회전 공식을 그대로 사용.
-function buildRotatedCanvas(srcCanvas, angle) {
-  const W = srcCanvas.width, H = srcCanvas.height;
-  const out = document.createElement('canvas');
-  const octx = out.getContext('2d', { willReadFrequently: true });
-  if (angle === 180) {
-    out.width = W; out.height = H;
-    octx.translate(W, H); octx.rotate(Math.PI);
-    octx.drawImage(srcCanvas, 0, 0);
-  } else if (angle === 90) { // 반시계
-    out.width = H; out.height = W;
-    octx.translate(0, W); octx.rotate(-Math.PI/2);
-    octx.drawImage(srcCanvas, 0, 0);
-  } else if (angle === -90) { // 시계
-    out.width = H; out.height = W;
-    octx.translate(H, 0); octx.rotate(Math.PI/2);
-    octx.drawImage(srcCanvas, 0, 0);
-  } else {
-    out.width = W; out.height = H;
-    octx.drawImage(srcCanvas, 0, 0);
-  }
-  return out;
-}
-
 const SEGMENT_PATTERNS = {
   0:'abcdef', 1:'bc', 2:'abged', 3:'abgcd', 4:'fgbc',
   5:'afgcd', 6:'afgecd', 7:'abc', 8:'abcdefg', 9:'abcdfg',
@@ -445,8 +224,6 @@ function drawRefPreview() {
 const video = document.getElementById('srcVideo');
 const view = document.getElementById('view');
 const vctx = view.getContext('2d', { willReadFrequently: true });
-const correctedPreview = document.getElementById('correctedPreview');
-const cpCtx = correctedPreview.getContext('2d', { willReadFrequently: true });
 const bigResult = document.getElementById('bigResult');
 const label = document.getElementById('label');
 const debugEl = document.getElementById('debug');
@@ -483,92 +260,52 @@ function analyze() {
   const gray = new Uint8Array(gw*gh);
   for (let i=0;i<gw*gh;i++) gray[i] = Math.round((cdata[i*4]+cdata[i*4+1]+cdata[i*4+2])/3);
 
-  // ── 1단계: ㄷ 기준점을 찾아서 전체가 몇 도 돌아갔는지 판단 ──────
-  const threshold0 = otsuThreshold(gray);
-  const bracketInfo = tryFindBracket(gray, gw, gh, threshold0);
-  const correctionAngle = bracketInfo ? (OPEN_SIDE_CORRECTION[bracketInfo.openSide] ?? 0) : 0;
-
-  // 보정이 필요하면(90/180/270도) 가이드박스 크롭 자체를 돌려서
-  // "작업 캔버스"를 만든다 — 이후 모든 처리는 이 작업 캔버스 기준으로
-  // 하므로, 기존 세로 인식 로직을 그대로 재사용할 수 있다.
-  let workCanvas = crop, workCtx = cctx, workGray = gray, workW = gw, workH = gh;
-  if (correctionAngle !== 0) {
-    workCanvas = buildRotatedCanvas(crop, correctionAngle);
-    workCtx = workCanvas.getContext('2d', { willReadFrequently: true });
-    const wdata = workCtx.getImageData(0,0,workCanvas.width, workCanvas.height).data;
-    workW = workCanvas.width; workH = workCanvas.height;
-    workGray = new Uint8Array(workW*workH);
-    for (let i=0;i<workW*workH;i++) workGray[i] = Math.round((wdata[i*4]+wdata[i*4+1]+wdata[i*4+2])/3);
-  }
-
-  // ── 2단계: 작업 캔버스 위에서 컬럼 블록 탐지(로고/ㄷ/숫자열 분리) ──
-  // 보정이 제대로 됐다면 ㄷ의 열린 방향은 항상 "오른쪽"이 되고,
-  // 숫자열은 항상 가장 오른쪽 블록으로 잡힌다.
-  const { blobs, threshold } = findColumnBlobs(workGray, workW, workH);
-  if (blobs.length === 0) {
+  // 박스 안에서 실제 잉크의 진짜 시작~끝을 다시 찾는다 — 정렬이 좀
+  // 헐거워도(숫자가 박스보다 작게 들어와도) 이 단계가 스케일을 보정한다.
+  const ink = findInkBBox(gray, gw, gh);
+  if (!ink) {
     bigResult.textContent = '?';
     label.textContent = '숫자열을 가이드박스 안에 비춰주세요';
-    debugEl.textContent = `frame #${frameCount}\nvideo: ${W}x${H}\n가이드박스 안에 내용 블록 없음`;
+    debugEl.textContent = `frame #${frameCount}\nvideo: ${W}x${H}\n가이드박스 안에 잉크 없음`;
     requestAnimationFrame(analyze);
     return;
   }
 
-  const digitBlob = blobs[blobs.length-1];
-  const anchorBlob = blobs.length >= 2 ? blobs[blobs.length-2] : null;
+  // 화면 표시는 원본(vctx) 좌표계로 환산해서
+  const inkAbs = {
+    x1: guide.x1+ink.x1, x2: guide.x1+ink.x2,
+    y1: guide.y1+ink.y1, y2: guide.y1+ink.y2,
+  };
+  vctx.strokeStyle = 'rgba(0,255,255,0.9)'; vctx.lineWidth = 2;
+  vctx.strokeRect(inkAbs.x1, inkAbs.y1, inkAbs.x2-inkAbs.x1, inkAbs.y2-inkAbs.y1);
 
-  const yExtent = findRowExtentInColumns(workGray, workW, workH, digitBlob.x1, digitBlob.x2, threshold);
-  if (!yExtent) {
-    bigResult.textContent = '?';
-    label.textContent = '숫자열을 가이드박스 안에 비춰주세요';
-    debugEl.textContent = `frame #${frameCount}\nvideo: ${W}x${H}\n숫자열 블록은 찾았지만 세로 범위 없음`;
-    requestAnimationFrame(analyze);
-    return;
-  }
-
-  // 작업 캔버스 좌표계 그대로 사용 (더 이상 비디오 절대좌표 아님)
-  const inkAbs = { x1: digitBlob.x1, x2: digitBlob.x2, y1: yExtent.y1, y2: yExtent.y2 };
-  workCtx.strokeStyle = 'rgba(0,255,255,0.9)'; workCtx.lineWidth = 2;
-  workCtx.strokeRect(inkAbs.x1, inkAbs.y1, inkAbs.x2-inkAbs.x1, inkAbs.y2-inkAbs.y1);
-
-  if (anchorBlob) {
-    workCtx.strokeStyle = 'rgba(255,140,0,0.9)'; workCtx.lineWidth = 2;
-    workCtx.strokeRect(anchorBlob.x1, inkAbs.y1, anchorBlob.x2-anchorBlob.x1, inkAbs.y2-inkAbs.y1);
-  }
-
-  // 숫자열 내부는 세로로 10등분 — 위에서부터 첫째자리~열째자리 순서.
-  const totalH = inkAbs.y2-inkAbs.y1;
-  const cellH = totalH/DIGIT_COUNT_GUIDE;
-  const colW = inkAbs.x2-inkAbs.x1;
+  const totalW = inkAbs.x2-inkAbs.x1;
+  const cellW = totalW/DIGIT_COUNT_GUIDE;
 
   const results = [];
   for (let i=0; i<DIGIT_COUNT_GUIDE; i++) {
-    const cy1 = inkAbs.y1+i*cellH, cy2 = inkAbs.y1+(i+1)*cellH;
-    const ch = cy2-cy1;
+    const cx1 = inkAbs.x1+i*cellW, cx2 = inkAbs.x1+(i+1)*cellW;
+    const cw = cx2-cx1, ch = inkAbs.y2-inkAbs.y1;
     const interior = {
-      x1: inkAbs.x1+SHRINK.x1*colW, x2: inkAbs.x1+SHRINK.x2*colW,
-      y1: cy1+SHRINK.y1*ch, y2: cy1+SHRINK.y2*ch,
+      x1: cx1+SHRINK.x1*cw, x2: cx1+SHRINK.x2*cw,
+      y1: inkAbs.y1+SHRINK.y1*ch, y2: inkAbs.y1+SHRINK.y2*ch,
     };
-    const { bits } = readSegments(workCtx, interior);
+    const { bits } = readSegments(vctx, interior);
     const scores = matchDigit(bits);
     results.push({ interior, best: scores[0], second: scores[1] });
 
-    workCtx.strokeStyle = '#00ff88'; workCtx.lineWidth = 1.5;
-    workCtx.strokeRect(interior.x1, interior.y1, interior.x2-interior.x1, interior.y2-interior.y1);
-    workCtx.fillStyle = '#00ff88';
-    workCtx.font = `bold ${Math.max(10, ch*0.4)}px monospace`;
-    workCtx.textAlign = 'left';
-    workCtx.fillText(scores[0].digit, inkAbs.x2+4, cy1+ch/2+4);
+    vctx.strokeStyle = '#00ff88'; vctx.lineWidth = 1.5;
+    vctx.strokeRect(interior.x1, interior.y1, interior.x2-interior.x1, interior.y2-interior.y1);
+    vctx.fillStyle = '#00ff88';
+    vctx.font = `bold ${Math.max(12, cw*0.5)}px monospace`;
+    vctx.textAlign = 'center';
+    vctx.fillText(scores[0].digit, cx1+cw/2, inkAbs.y1-8);
   }
-
-  // 보정된 작업 캔버스를 화면 좌상단 "보정 미리보기"에 그대로 표시
-  correctedPreview.width = workW; correctedPreview.height = workH;
-  cpCtx.drawImage(workCanvas, 0, 0);
 
   const numberStr = results.map(r => r.best.digit).join('');
   bigResult.textContent = numberStr;
   const avgMargin = results.reduce((s,r)=>s+(r.second.diff-r.best.diff),0)/DIGIT_COUNT_GUIDE;
-  const bracketMsg = bracketInfo ? `[ㄷ 인식, 열림=${bracketInfo.openSide}, 보정=${correctionAngle}°]` : '[ㄷ 미인식]';
-  label.textContent = `숫자열이 박스 안에 여유 있게 들어오게 — 인식: ${numberStr}  (확신도 격차 ${avgMargin.toFixed(1)}) ${bracketMsg}`;
+  label.textContent = `숫자열이 박스 안에 여유 있게 들어오게 — 인식: ${numberStr}  (확신도 격차 ${avgMargin.toFixed(1)})`;
 
   const perCellLine = results.map((r,i) => `[${i}]${r.best.digit}(불일치${r.best.diff},격차${r.second.diff-r.best.diff})`).join(' ');
   debugEl.textContent = [
@@ -577,9 +314,7 @@ function analyze() {
     `window(화면 뷰포트)=${window.innerWidth}x${window.innerHeight}`,
     `screen.orientation=${screen.orientation ? screen.orientation.type : '(미지원)'}  window.orientation=${window.orientation ?? '(미지원)'}`,
     `가이드박스=(${guide.x1.toFixed(0)},${guide.y1.toFixed(0)})~(${guide.x2.toFixed(0)},${guide.y2.toFixed(0)})`,
-    `ㄷ기준점=${bracketInfo ? `열림=${bracketInfo.openSide} bbox=(${bracketInfo.bbox.x1},${bracketInfo.bbox.y1})~(${bracketInfo.bbox.x2},${bracketInfo.bbox.y2})` : '미인식(기본방향 가정)'}  보정회전=${correctionAngle}°`,
-    `작업캔버스=${workW}x${workH}  컬럼블록 수=${blobs.length}  숫자열블록=(${digitBlob.x1},${digitBlob.x2})`,
-    `숫자열 세로범위(작업캔버스 기준)=(${yExtent.y1},${yExtent.y2})`,
+    `잉크범위(박스내부기준)=(${ink.x1},${ink.y1})~(${ink.x2},${ink.y2})`,
     `칸별: ${perCellLine}`,
   ].join('\n');
 
