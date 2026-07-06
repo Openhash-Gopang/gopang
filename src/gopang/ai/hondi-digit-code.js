@@ -44,9 +44,17 @@ export const LOGO_IMG_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAicAA
 export const LOGO_IMG_W = 551, LOGO_IMG_H = 335;
 
 // ── 숫자열 그리드 치수 (가로 배치) ────────────────────────────
-// 총 10칸의 가로 폭이 로고 폭과 비슷하도록 박스 크기를 잡는다.
-export const DIGIT_BOX_W = 55;
-export const DIGIT_BOX_H = 90;
+// 각 숫자가 차지하는 "슬롯" 폭은 SLOT_W로 고정(로고 폭과 맞춘 값,
+// 스캐너의 "전체 폭을 10등분" 가정과 무관 — 스캐너는 간격 유무와
+// 상관없이 항상 잉크 전체 폭을 10등분하므로 이 값을 바꿔도 스캐너
+// 수정은 필요 없다). 실제 숫자 박스는 그 슬롯 안에서 GAP_RATIO만큼
+// 안쪽으로 줄여 그려서, 옆 숫자와 테두리가 맞닿지 않도록 한다 —
+// 화면/인쇄 시 인접 테두리가 겹쳐 보이는 문제(무아레 현상) 방지 및
+// 카메라가 숫자 하나하나를 더 뚜렷이 구분하도록 함.
+export const SLOT_W = 55;
+export const DIGIT_BOX_H = 90;       // 세로 높이는 그대로 유지 — 세그먼트 해상도(가독성)에 더 중요
+export const GAP_RATIO = 0.12;       // 슬롯 폭 대비 숫자 사이 간격 비율(양쪽 합산)
+export const DIGIT_BOX_W = SLOT_W * (1 - GAP_RATIO);
 export const DIGIT_GAP_Y = 24;   // 로고 아래쪽과 숫자열 사이 간격
 
 let _logoPromise = null;
@@ -93,7 +101,7 @@ export async function generateDigitCodeCanvas(shortId) {
   const logo = await _loadLogo();
   const digits = idToDigits(shortId);
 
-  const stripW = DIGIT_BOX_W * DIGIT_COUNT;
+  const stripW = SLOT_W * DIGIT_COUNT;
   const PAD = 16;
   const CANVAS_W = PAD + Math.max(LOGO_IMG_W, stripW) + PAD;
   const CANVAS_H = PAD + LOGO_IMG_H + DIGIT_GAP_Y + DIGIT_BOX_H + PAD;
@@ -110,8 +118,10 @@ export async function generateDigitCodeCanvas(shortId) {
 
   const stripX = PAD + Math.round((Math.max(LOGO_IMG_W, stripW) - stripW) / 2);
   const stripY = PAD + LOGO_IMG_H + DIGIT_GAP_Y;
+  const insetX = (SLOT_W - DIGIT_BOX_W) / 2; // 슬롯 안에서 박스를 가운데 정렬(양옆이 간격이 됨)
   digits.forEach((d, i) => {
-    _drawDigitBox(ctx, stripX + i*DIGIT_BOX_W, stripY, DIGIT_BOX_W, DIGIT_BOX_H, d);
+    const slotX = stripX + i*SLOT_W;
+    _drawDigitBox(ctx, slotX + insetX, stripY, DIGIT_BOX_W, DIGIT_BOX_H, d);
   });
 
   return canvas;
