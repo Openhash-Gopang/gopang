@@ -155,34 +155,93 @@ function _analyzeFrame(ctx, W, H) {
 }
 
 // ── 1단계: 파랑+빨강 앵커 탐지 (혼디 코드 존재 확인) ─────────
+// ── 색상별 연결요소(덩어리) 탐지 ──────────────────────────────
+// 같은 색으로 판정되는 픽셀들 중 서로 붙어있는 덩어리를 전부 찾는다.
+// (썸네일 크기라 BFS 비용은 무시할 만하다 — THUMB_SCALE 참고)
+function _findComponents(data, W, H, testFn, minPixels) {
+  const visited = new Uint8Array(W * H);
+  const comps = [];
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const idx = y * W + x;
+      if (visited[idx]) continue;
+      const i4 = idx * 4;
+      if (!testFn(data[i4], data[i4+1], data[i4+2])) { visited[idx] = 1; continue; }
+
+      const queue = [idx];
+      visited[idx] = 1;
+      let qi = 0, n = 0, sx = 0, sy = 0;
+      while (qi < queue.length) {
+        const cur = queue[qi++];
+        const cx = cur % W, cy = (cur / W) | 0;
+        n++; sx += cx; sy += cy;
+        const neigh = [[cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]];
+        for (const [nx, ny] of neigh) {
+          if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+          const nidx = ny * W + nx;
+          if (visited[nidx]) continue;
+          const ni4 = nidx * 4;
+          if (testFn(data[ni4], data[ni4+1], data[ni4+2])) {
+            visited[nidx] = 1;
+            queue.push(nidx);
+          } else {
+            visited[nidx] = 1;
+          }
+        }
+      }
+      if (n >= minPixels) comps.push({ n, cx: sx / n, cy: sy / n });
+    }
+  }
+  return comps;
+}
+
+const _isBlueAnchor  = (r,g,b) => b>80 && b-Math.max(r,g)>30;
+const _isRedAnchor   = (r,g,b) => r>100 && g<80 && b<130 && r-Math.max(g,b)>30;
+const _isGreenAnchor = (r,g,b) => g>100 && g-Math.max(r,b)>30;
+
 function _detectAnchors(ctx, W, H) {
   const data = ctx.getImageData(0, 0, W, H).data;
-  let blueCnt = 0, redCnt = 0, greenCnt = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    const r=data[i], g=data[i+1], b=data[i+2];
-    if (b>80 && b-Math.max(r,g)>30) blueCnt++;   // 완화: 모니터 과노출 대응
-    if (r>100 && g<80  && b<130 && r-Math.max(g,b)>30) redCnt++;
-    if (g>100 && g-Math.max(r,b)>30) greenCnt++;
-  }
-  if (blueCnt < MIN_ANCHOR_PX || redCnt < MIN_ANCHOR_PX || greenCnt < MIN_ANCHOR_PX) return null;
 
-  // 파랑/초록/빨강 중심 계산 (원형 앵커 안의 3밴드)
-  let bx=0,by=0,rx=0,ry=0,gx=0,gy=0;
-  for (let y=0; y<H; y++) for (let x=0; x<W; x++) {
-    const i=(y*W+x)*4;
-    const r=data[i],g=data[i+1],b=data[i+2];
-    if (b>80&&b-Math.max(r,g)>30) { bx+=x; by+=y; }
-    if (r>100&&g<80&&b<130&&r-Math.max(g,b)>30) { rx+=x; ry+=y; }
-    if (g>100&&g-Math.max(r,b)>30) { gx+=x; gy+=y; }
+  const blueComps  = _findComponents(data, W, H, _isBlueAnchor,  MIN_ANCHOR_PX);
+  const greenComps = _findComponents(data, W, H, _isGreenAnchor, MIN_ANCHOR_PX);
+  const redComps   = _findComponents(data, W, H, _isRedAnchor,   MIN_ANCHOR_PX);
+  if (!blueComps.length || !greenComps.length || !redComps.length) return null;
+
+  // 캘리브레이션 앵커(파랑·초록·빨강)가 데이터 팔레트 색과 겹친다 —
+  // 색상막대의 파랑/초록/빨강 "칸"도 같은 색 덩어리로 잡힌다. 진짜
+  // 앵커는 세 밴드가 한 원 안에 붙어있으므로, "세 색 덩어리가 서로
+  // 가장 가깝게 모인 조합"만 앵커로 인정한다 — 막대 칸들은 서로 훨씬
+  // 멀리 떨어져 있어(칸 간격 >> 앵커 지름) 자동으로 걸러진다.
+  let best = null;
+  for (const bC of blueComps) {
+    for (const gC of greenComps) {
+      for (const rC of redComps) {
+        const dBG = Math.hypot(bC.cx-gC.cx, bC.cy-gC.cy);
+        const dBR = Math.hypot(bC.cx-rC.cx, bC.cy-rC.cy);
+        const dGR = Math.hypot(gC.cx-rC.cx, gC.cy-rC.cy);
+        const maxD = Math.max(dBG, dBR, dGR);
+        if (!best || maxD < best.maxD) best = { maxD, bC, gC, rC };
+      }
+    }
   }
-  bx/=blueCnt; by/=blueCnt; rx/=redCnt; ry/=redCnt; gx/=greenCnt; gy/=greenCnt;
-  const unit = Math.sqrt((rx-bx)**2+(ry-by)**2);
+  if (!best) return null;
+
+  const { bC, gC, rC } = best;
+  const unit = Math.hypot(rC.cx - bC.cx, rC.cy - bC.cy);
   if (unit < MIN_UNIT_PX) return null;
+  // 그래도 세 덩어리가 너무 멀리 떨어져 있으면(우연히 막대 칸들이 가장
+  // 가까운 조합이 된 경우) 앵커가 아니라고 판단해 오탐을 막는다.
+  if (best.maxD > unit * 1.5) return null;
 
   // 파랑이 왼쪽, 빨강이 오른쪽인지 확인 (좌우 반전 시 'ucb')
-  const mode = (bx < rx) ? 'hondi' : 'ucb';
-  return { mode, blueCenter:{x:bx,y:by}, greenCenter:{x:gx,y:gy}, redCenter:{x:rx,y:ry},
-           unit, blueCnt, redCnt, greenCnt };
+  const mode = (bC.cx < rC.cx) ? 'hondi' : 'ucb';
+  return {
+    mode,
+    blueCenter:  { x: bC.cx, y: bC.cy },
+    greenCenter: { x: gC.cx, y: gC.cy },
+    redCenter:   { x: rC.cx, y: rC.cy },
+    unit, blueCnt: bC.n, redCnt: rC.n, greenCnt: gC.n,
+  };
 }
 
 // ── 2단계: 색상 막대 탐지 ────────────────────────────────────
