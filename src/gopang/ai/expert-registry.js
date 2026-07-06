@@ -157,8 +157,23 @@ const EXPERT_ID_ALIAS = {
 
 export function resolveExpertId(personaId) {
   if (!personaId) return null;
+  // 1) 원문 그대로 매치 — SP-LAW-01처럼 원래 대문자인 별칭 키를 우선 존중
   if (EXPERT_REGISTRY[personaId]) return personaId;
-  return EXPERT_ID_ALIAS[personaId] || null;
+  if (EXPERT_ID_ALIAS[personaId]) return EXPERT_ID_ALIAS[personaId];
+
+  // 2) 대소문자 무관 매치 (2026-07-06 — 사고실험 100건 #98~100에서 실증된
+  //    버그 수정: 'ATTORNEY'/'Vet'/'Counselor' 같은 변형이 일반 객체 키
+  //    조회라 조용히 null이 되던 것. registry/alias 키를 소문자로도 한 번
+  //    더 비교한다 — 값(personaId 자체)은 이미 소문자 kebab-case이므로
+  //    별도 변환 불필요.)
+  const lower = personaId.toLowerCase();
+  for (const key of Object.keys(EXPERT_REGISTRY)) {
+    if (key.toLowerCase() === lower) return key;
+  }
+  for (const key of Object.keys(EXPERT_ID_ALIAS)) {
+    if (key.toLowerCase() === lower) return EXPERT_ID_ALIAS[key];
+  }
+  return null;
 }
 
 // ── 2026-07-03: 전문가 페르소나도 GWP 서비스처럼 "별도 새 탭"으로 연다 ──
