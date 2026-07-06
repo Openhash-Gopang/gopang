@@ -18,8 +18,8 @@
  */
 
 import {
-  detectVersion, buildCalibMatrix, applyCalib,
-  rgbToIndex, indicesToId,
+  buildCalibMatrix, applyCalib,
+  rgbToIndex, indicesToId, PALETTE,
 } from './hondi-code.js';
 import { L1_URL } from '../core/state.js';
 
@@ -28,7 +28,6 @@ const SCAN_FPS      = 15;
 const SCAN_MS       = Math.round(1000 / SCAN_FPS);
 const THUMB_SCALE   = 0.25;
 const LOCK_FRAMES   = 3;
-const ROWS          = 10;
 
 // 색상 막대 탐지 파라미터
 const SAT_THRESHOLD  = 60;   // 고채도 판정 (완화: 모니터 카메라 환경)
@@ -262,13 +261,13 @@ function _readCalibPatch(ctx, strip) {
 
   // 패치 오른쪽 끝 = 막대 왼쪽 끝
   const patchEndX = strip.x1;
-  const patchStartX = patchEndX - sw * 9;
+  const patchStartX = patchEndX - sw * PALETTE.length;
 
   // 화면 밖이면 캘리브레이션 불가
   if (py + ph > H || patchStartX < 0) return null;
 
   const realPalette = [];
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < PALETTE.length; i++) {
     const px = patchStartX + i * sw;
     // 패치 내부 중앙 60% 샘플 (경계선 제외)
     const roi = {
@@ -358,7 +357,34 @@ function _detectMarkers(ctx, strip) {
   return { topY, botY, markerDist };
 }
 
-// ── 3·4단계: 10칸 분할 → 색상 읽기 ──────────────────────────
+
+// ── 경계선 개수로 칸 수 판별 ─────────────────────────────────
+// 칸 사이에는 항상 흰 경계선이 그려진다(generateHondiCodeCanvas 참고).
+// 막대 중앙을 세로로 훑어 "흰색이 아닌 연속 구간"의 개수를 세면 그게 곧
+// 칸 수(6 또는 10)다 — 별도 버전 표식(ㄷ 표식·OCR 등) 없이 막대 자체로
+// 자기서술적으로 판별한다.
+function _countCells(ctx, { x1, x2, y1, y2 }) {
+  const xc = Math.round((x1 + x2) / 2);
+  const H = ctx.canvas.height;
+  const yStart = Math.max(0, Math.round(y1));
+  const yEnd   = Math.min(H - 1, Math.round(y2));
+  if (yEnd <= yStart) return 0;
+
+  const col = ctx.getImageData(xc, yStart, 1, yEnd - yStart + 1).data;
+  let runs = 0, inRun = false;
+  for (let i = 0; i < col.length; i += 4) {
+    const r = col[i], g = col[i+1], b = col[i+2];
+    const isWhite = r > 220 && g > 220 && b > 220;
+    if (!isWhite) {
+      if (!inRun) { runs++; inRun = true; }
+    } else {
+      inRun = false;
+    }
+  }
+  return runs;
+}
+
+// ── 3·4단계: 칸 분할(6 또는 10) → 색상 읽기 ─────────────────
 function _decode(ctx, strip, anchor) {
   let { x1, x2, y1, y2, h } = strip;
 
@@ -371,7 +397,16 @@ function _decode(ctx, strip, anchor) {
     h  = y2 - y1;
   }
 
-  const cellH = h / ROWS;
+  // 경계선(흰색) 개수로 칸 수를 직접 센다 — 6칸(v1, 기관/사업체) 또는
+  // 10칸(v2, 개인/부서/직책) 중 가까운 쪽으로 스냅. 그 외 값이면 인식 실패
+  // (부분 가림·잡음 등). OCR이나 별도 표식 없이 막대 자체로 자기서술적 판별.
+  const cellCount = _countCells(ctx, { x1, x2, y1, y2 });
+  let rows;
+  if (Math.abs(cellCount - 6) <= 1) rows = 6;
+  else if (Math.abs(cellCount - 10) <= 1) rows = 10;
+  else return null;
+  const version = rows === 6 ? 'v1' : 'v2';
+  const cellH = h / rows;
   const W = ctx.canvas.width, H = ctx.canvas.height;
 
   // 캘리브레이션: 파랑·빨강 클러스터 직접 평균 (원본 크기로 스케일)
@@ -399,59 +434,33 @@ function _decode(ctx, strip, anchor) {
   const calib = { hih:blueAvg, ho:redAvg, n:{r:30,g:30,b:30}, bg:bgAvg };
   const matrix = buildCalibMatrix(calib);
 
-  // 버전 판별: v2는 셀이 좌우 2열, v1은 단열
-  // 막대 너비가 높이/10의 2배 이상이면 v2
-  const version = (strip.w > cellH * 1.5) ? 'v2' : 'v1';
 
   // 각 셀 색상 읽기
   // 캘리브레이션 패치 읽기 (성공하면 실제 팔레트 사용, 실패하면 기본 팔레트)
   const realPalette = _readCalibPatch(ctx, strip);
   const useCalib = !!realPalette;
 
+  // v1(6칸)/v2(10칸) 모두 단열이므로 분기 없이 동일한 방식으로 읽는다.
   const indices = [];
-  if (version === 'v1') {
-    for (let row = 0; row < ROWS; row++) {
-      const sy = y1 + cellH * row;
-      const roi = {
-        x: x1 + 1,
-        y: sy + cellH * (1-CELL_SAMPLE) / 2,
-        w: strip.w - 2,
-        h: cellH * CELL_SAMPLE,
-      };
-      const raw = _avgColor(ctx, roi);
-      // 캘리브레이션 패치가 있으면: 실제 측정 팔레트로 직접 비교
-      // 없으면: 기존 캘리브레이션 행렬 사용
-      indices.push(useCalib
-        ? _nearestWithCalib(raw, realPalette)
-        : _nearestPalette(applyCalib(raw, matrix)));
-    }
-  } else {
-    const halfW = strip.w / 2;
-    for (let row = 0; row < ROWS; row++) {
-      const sy = y1 + cellH * row;
-      for (let col = 0; col < 2; col++) {
-        const roi = {
-          x: x1 + col*halfW + 1,
-          y: sy + cellH * (1-CELL_SAMPLE) / 2,
-          w: halfW - 2,
-          h: cellH * CELL_SAMPLE,
-        };
-        const raw = _avgColor(ctx, roi);
-        indices.push(useCalib
-          ? _nearestWithCalib(raw, realPalette)
-          : _nearestPalette(applyCalib(raw, matrix)));
-      }
-    }
+  for (let row = 0; row < rows; row++) {
+    const sy = y1 + cellH * row;
+    const roi = {
+      x: x1 + 1,
+      y: sy + cellH * (1-CELL_SAMPLE) / 2,
+      w: strip.w - 2,
+      h: cellH * CELL_SAMPLE,
+    };
+    const raw = _avgColor(ctx, roi);
+    // 캘리브레이션 패치가 있으면: 실제 측정 팔레트로 직접 비교
+    // 없으면: 기존 캘리브레이션 행렬 사용
+    indices.push(useCalib
+      ? _nearestWithCalib(raw, realPalette)
+      : _nearestPalette(applyCalib(raw, matrix)));
   }
 
   const shortId = indicesToId(indices);
 
-  // 전체 흑색 오인식 진단
-  if (indices.every(i => i===8)) {
-    _showDebugDump({ calib, matrix, strip, version, ua:navigator.userAgent });
-  }
-
-  return { shortId, version, strip, anchor };
+  return { shortId, version, rows, strip, anchor };
 }
 
 // ── 팔레트 매칭 (캘리브레이션 적용 후) ───────────────────────
@@ -492,11 +501,12 @@ function _drawOverlay(result, W, H) {
   oc.lineWidth=2; oc.shadowBlur=0;
   oc.strokeRect(strip.x1, strip.y1, strip.w, strip.h);
 
-  // 10칸 경계선
+  // 칸 경계선 (6칸 또는 10칸 — 판독 결과에 저장된 실제 칸 수 사용)
   oc.strokeStyle='rgba(255,255,255,0.5)';
   oc.lineWidth=1;
-  const cellH = strip.h / ROWS;
-  for (let row=1; row<ROWS; row++) {
+  const rows = result.rows || 6;
+  const cellH = strip.h / rows;
+  for (let row=1; row<rows; row++) {
     const y = strip.y1 + cellH*row;
     oc.beginPath(); oc.moveTo(strip.x1,y); oc.lineTo(strip.x2,y); oc.stroke();
   }

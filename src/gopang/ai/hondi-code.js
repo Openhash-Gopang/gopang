@@ -24,16 +24,17 @@
  */
 
 // ── 색상 팔레트 ────────────────────────────────────────────────
+// v2(2026-07) 6색 체계 — R/G/B 채널 on/off 조합만 사용.
+// 흑·백 계열은 글자(ㅗ·ㄴ·ㄷ)·배경·구분선과 겹쳐 전부 제외했다.
+// 색상각이 서로 60도씩 균등 분리되어 있어(CMYK 6각형과 동일 원리)
+// 화이트밸런스 오차에 가장 강하다 — 자세한 근거는 대화 로그 참고.
 export const PALETTE = [
-  { idx: 0, name: '무색', r: 255, g: 255, b: 255 },
-  { idx: 1, name: '빨강', r: 220, g:   0, b:   0 },
-  { idx: 2, name: '주황', r: 255, g: 110, b:   0 },
-  { idx: 3, name: '노랑', r: 255, g: 235, b:   0 },
-  { idx: 4, name: '초록', r:   0, g: 185, b:   0 },
-  { idx: 5, name: '파랑', r:   0, g:   0, b: 220 },
-  { idx: 6, name: '남색', r:   0, g:   0, b: 180 },  // (0,0,100)→(0,0,180): 흑색과 거리 확보
-  { idx: 7, name: '보라', r: 180, g:   0, b: 180 },  // (150,0,150)→(180,0,180): 더 선명
-  { idx: 8, name: '흑색', r:  30, g:  30, b:  30 },  // (0,0,0)→(30,30,30): 흰 경계선과 구분
+  { idx: 0, name: '빨강', r: 220, g:   0, b:   0 },
+  { idx: 1, name: '초록', r:   0, g: 185, b:   0 },
+  { idx: 2, name: '파랑', r:   0, g:   0, b: 220 },
+  { idx: 3, name: '노랑', r: 220, g: 220, b:   0 },
+  { idx: 4, name: '자홍', r: 220, g:   0, b: 220 },
+  { idx: 5, name: '시안', r:   0, g: 185, b: 185 },
 ];
 
 // ── 캘리브레이션 기준색 ────────────────────────────────────────
@@ -121,19 +122,20 @@ export function rgbToIndex(pixel) {
 export function indicesToId(indices) {
   let id = 0n;
   for (const idx of indices) {
-    id = id * 9n + BigInt(idx);
+    id = id * 6n + BigInt(idx);
   }
   return id;
 }
 
 // ── short_id (BigInt) → 인덱스 배열 ──────────────────────────
 export function idToIndices(id, version = 'v1') {
-  const len = version === 'v2' ? 20 : 10;
+  // v1(기관/사업체) = 6칸, v2(개인/부서/직책) = 10칸 — 둘 다 단열.
+  const len = version === 'v2' ? 10 : 6;
   const result = new Array(len).fill(0);
   let n = BigInt(id);
   for (let i = len - 1; i >= 0; i--) {
-    result[i] = Number(n % 9n);
-    n = n / 9n;
+    result[i] = Number(n % 6n);
+    n = n / 6n;
   }
   return result;
 }
@@ -145,20 +147,20 @@ export function indexToRgb(idx) {
 }
 
 // ── 정보량 상수 ───────────────────────────────────────────────
-export const MAX_V1 = 9n ** 10n;   // 3,486,784,401
-export const MAX_V2 = 9n ** 20n;   // 12,157,665,459,056,928,801
+export const MAX_V1 = 6n ** 6n;    // 46,656 (기관/사업체 — 6칸)
+export const MAX_V2 = 6n ** 10n;   // 60,466,176 (개인/부서/직책 — 10칸)
 
 // ── 유틸: short_id ↔ 표시용 문자열 ──────────────────────────
 // 9진법 문자열로 표현 (디버그·인쇄용)
-export function idToBase9String(id, version = 'v1') {
+export function idToBase6String(id, version = 'v1') {
   const indices = idToIndices(id, version);
   return indices.join('');
 }
 
-export function base9StringToId(str) {
+export function base6StringToId(str) {
   let id = 0n;
   for (const ch of str) {
-    id = id * 9n + BigInt(parseInt(ch, 10));
+    id = id * 6n + BigInt(parseInt(ch, 10));
   }
   return id;
 }
@@ -193,10 +195,10 @@ export const STRIP_X = 705, STRIP_Y = 15, STRIP_W = 65, STRIP_H = 512;
 // ── 캘리브레이션 패치 (색상 막대 아래, 9색을 가로로 배열) ──
 export const PATCH_Y      = STRIP_Y + STRIP_H + 15;  // 542
 export const PATCH_H      = 65;                        // 정사각형 (STRIP_W와 동일)
-export const PATCH_START_X= 120;                       // 705 - 65×9
+// 패치 행이 항상 막대 왼쪽 끝(STRIP_X)에 딱 맞게 끝나도록 팔레트 개수에서 역산.
+// (9색일 때 120이었던 값과 동일한 공식 — 팔레트가 6색으로 줄면서 자동으로 우측 이동)
+export const PATCH_START_X= STRIP_X - STRIP_W * PALETTE.length;
 export const CANVAS_W = 785, CANVAS_H = PATCH_Y + PATCH_H + 10;  // 622
-const ROWS = 10;
-const CELL_H = STRIP_H / ROWS;   // 51.2
 
 let _baseImgPromise = null;
 function _loadBaseImage() {
@@ -224,29 +226,20 @@ export async function generateHondiCodeCanvas(shortId, version = 'v1', { markers
 
   // 색상 코드("ㅣ") — 정확한 픽셀 좌표(STRIP_X, STRIP_Y, STRIP_W, STRIP_H)에 덧그림
   // 칸 순서는 idToIndices와 동일: 배열 첫 원소(최상위 자릿수)가 맨 위 칸.
+  // v1(기관/사업체)=6칸, v2(개인/부서/직책)=10칸 — 둘 다 단열로 통일.
+  // 칸 수 자체가 버전 구분 신호다: 스캐너는 흰 경계선 개수를 세어 6칸/10칸을
+  // 직접 판별하므로(자기서술적), 별도 버전 표식이 필요 없다.
   const indices = idToIndices(BigInt(shortId), version);
-  ctx.strokeStyle = 'rgba(255,255,255,0.9)';  // 흰색 경계선 — 흑색 셀과 충돌 방지
+  const rows = indices.length;
+  const cellH = STRIP_H / rows;
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';  // 흰색 경계선 — 셀 색상과 충돌 방지
   ctx.lineWidth = 1.5;
 
-  if (version === 'v1') {
-    for (let row = 0; row < ROWS; row++) {
-      const c = PALETTE[indices[row]];
-      ctx.fillStyle = `rgb(${c.r},${c.g},${c.b})`;
-      ctx.fillRect(STRIP_X, STRIP_Y + row * CELL_H, STRIP_W, CELL_H);
-      ctx.strokeRect(STRIP_X, STRIP_Y + row * CELL_H, STRIP_W, CELL_H);
-    }
-  } else {
-    const halfW = STRIP_W / 2;
-    for (let row = 0; row < ROWS; row++) {
-      const y = STRIP_Y + row * CELL_H;
-      const cL = PALETTE[indices[row * 2]];
-      const cR = PALETTE[indices[row * 2 + 1]];
-      ctx.fillStyle = `rgb(${cL.r},${cL.g},${cL.b})`;
-      ctx.fillRect(STRIP_X, y, halfW, CELL_H);
-      ctx.fillStyle = `rgb(${cR.r},${cR.g},${cR.b})`;
-      ctx.fillRect(STRIP_X + halfW, y, halfW, CELL_H);
-      ctx.strokeRect(STRIP_X, y, STRIP_W, CELL_H);
-    }
+  for (let row = 0; row < rows; row++) {
+    const c = PALETTE[indices[row]];
+    ctx.fillStyle = `rgb(${c.r},${c.g},${c.b})`;
+    ctx.fillRect(STRIP_X, STRIP_Y + row * cellH, STRIP_W, cellH);
+    ctx.strokeRect(STRIP_X, STRIP_Y + row * cellH, STRIP_W, cellH);
   }
 
   // ── 기준점 마커: 모니터 표시용 (markers=true 시에만) ──
