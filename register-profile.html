@@ -607,46 +607,21 @@ async function submitProfile() {
   showAIOverlay('AI가 분석 중입니다', '유형과 분류를 판단하고 있습니다...');
 
   try {
-    // ALLOW-EMBEDDED-SP: 2026-07-05 — "SP 통합" 논의에서 이 프롬프트는
-    // AGENT-COMMON 계열 중복이 아니라 프로필→JSON 변환 전용의 좁은
-    // 1회성 프롬프트로 확인됨. prompts/로 옮겨 관리할지 이대로 둘지는
-    // 사용자 결정 대기 중 — 결정되면 이 주석과 함께 재검토할 것.
-    const systemPrompt = `당신은 혼디 플랫폼의 프로필 분류 AI입니다.
-사용자가 입력한 프로필 정보를 분석하여 정확한 JSON 구조로 변환해야 합니다.
-
-entity_type 분류 기준:
-- person: 개인 사용자 (일반인, 프리랜서 등)
-- business: 사업자 (가게, 회사, 법인 등)
-- institution: 공공기관 (정부, 공기업 등)
-- org: 협회/단체 (비영리, 클럽 등)
-- platform: 플랫폼/서비스 (앱, SaaS 등)
-
-반드시 아래 형식으로만 응답하세요:
-PROFILE_SUBMIT {
-  "name": "...",
-  "entity_type": "...",
-  "handle": "${_handle}",
-  "guid": "${_guid}",
-  "phone": "...",
-  "address": "...",
-  "extra": {
-    "public": {
-      "identity": {
-        "description": "...",
-        "tags": []
-      },
-      "contact": {
-        "phone_display": "...",
-        "website": "..."
-      },
-      "location": {
-        "address_short": "..."
-      }
-    }
-  },
-  "custom_fields": [],
-  "search_tags": []
-}`;
+    // 2026-07-05: 내장 리터럴(systemPrompt 하드코딩) 제거 — 이제
+    // prompts/SP-17_profile-classifier_*.txt(manifest.json 경유)가
+    // 유일한 정본이다. {{HANDLE}}/{{GUID}} 플레이스홀더는 여기서 치환한다
+    // (원래 코드의 ${_handle}/${_guid} 보간과 동일한 효과).
+    const manifestRes = await fetch('/prompts/manifest.json', { cache: 'no-cache' });
+    if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
+    const manifest = await manifestRes.json();
+    const spFile = manifest['SP-17_profile-classifier'];
+    if (!spFile) throw new Error('manifest 에 SP-17_profile-classifier 키 없음');
+    const spRes = await fetch('/prompts/' + spFile);
+    if (!spRes.ok) throw new Error('SP-17 로드 실패: ' + spRes.status);
+    const spTemplate = await spRes.text();
+    const systemPrompt = spTemplate
+      .replace('{{HANDLE}}', _handle)
+      .replace('{{GUID}}', _guid);
 
     const userMsg = `다음 프로필 정보를 분류해 주세요:
 

@@ -3,6 +3,7 @@
   "AGENT-SUPPLIER-COMMON": "AGENT-SUPPLIER-COMMON_v2.0.txt",
   "personal-assistant": "personal-assistant/personal-assistant-v1.6.txt",
   "SP-15-IMG_profile-scan_vision_prompt": "SP-15-IMG_profile-scan_vision_prompt_v1.0.txt",
+  "SP-17_profile-classifier": "SP-17_profile-classifier_v1.0.txt",
   "AGENT-SUPPLIER-01": "AGENT-SUPPLIER-01_agriculture_v3.0.txt",
   "AGENT-SUPPLIER-02": "AGENT-SUPPLIER-02_forestry_v3.0.txt",
   "AGENT-SUPPLIER-03": "AGENT-SUPPLIER-03_fisheries_v3.0.txt",
