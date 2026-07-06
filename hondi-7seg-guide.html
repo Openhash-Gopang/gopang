@@ -51,19 +51,27 @@
 </div>
 
 <script>
-// ── 가이드박스 + 실제 잉크 범위 재탐색 하이브리드 ────────────────
-// 가이드박스 비율에 그대로 맞춰 계산만 하는 방식은 정렬 오차 5%만
-// 있어도 완전히 깨지는 게 실측으로 확인됐다(뒤쪽 숫자일수록 절대
-// 오차가 누적되어 더 크게 어긋남). 그래서 가이드박스는 "대략적인
-// 관심영역 좁히기" 용도로만 쓰고, 그 안에서 실제 잉크(어두운 픽셀)의
-// 진짜 시작~끝을 다시 찾은 뒤 그 폭을 10등분한다 — 이러면 박스 안에서
-// 숫자가 얼마나 크든 작든(단, 박스 밖으로 넘치지만 않으면) 등분 자체는
-// 항상 정확하다. 실측 검증: 스케일 80~95%, 위치가 살짝 안쪽으로
-// 치우친 경우까지 전부 정확히 복원됨. 박스보다 커져 잘리는 경우만
-// 실패하므로, 사용자에게는 "박스 안에 여유 있게 들어오도록" 안내한다.
+// ── 세로 숫자열 + "혼ㄷ" 기준점(앵커) 방식 ──────────────────────
+// 기존 가로 버전은 숫자 10개만 단독으로 찍는 것을 전제로, 가이드박스
+// 안의 잉크 전체를 시작~끝으로 보고 10등분했다. 이번 레이아웃은
+// 카메라에 로고("혼")+검정 ㄷ자 브래킷+세로 숫자열이 함께 잡히므로,
+// 잉크 범위를 그대로 10등분하면 로고까지 포함돼 등분이 깨진다.
+//
+// 해결: 가이드박스 안에서 컬럼(세로줄) 단위로 "내용이 있는 블록"을
+// 찾는다. 로고/ㄷ브래킷/숫자열은 서로 흰 여백으로 떨어져 있으므로
+// 컬럼 프로파일(각 x열의 어두운 픽셀 수)만 봐도 블록 경계가 나온다.
+//   - 가장 오른쪽 블록 = 숫자열 (실제 인식 대상)
+//   - 그 바로 왼쪽 블록 = "ㄷ" 기준점(앵커) — 존재 확인만으로
+//     "숫자열을 제대로 찾았다"는 검증 신호로 쓴다. 로고까지 포함해서
+//     통째로 잉크 범위를 잡던 이전 방식보다 훨씬 안정적이고,
+//     숫자열 폭만 골라내므로 이후 단계(행 단위 스캔)도 그만큼 좁은
+//     영역만 처리해 더 빠르다.
+// 숫자열 내부에서는 세로로 10등분(위→아래 순서가 첫째~열째 자리)한다.
 const SHRINK = { x1: 0.111, x2: 0.889, y1: 0.071, y2: 0.929 };
-const IMAGE_ASPECT = 1120/180; // 실제 참조 이미지 폭:높이 (가이드박스 비율용)
+const IMAGE_ASPECT = 340/247; // 참조 레이아웃(로고+ㄷ+숫자열 전체) 폭:높이
 const DIGIT_COUNT_GUIDE = 10;
+const MIN_BLOB_WIDTH_RATIO = 0.03;   // 가이드박스 폭 대비, 블록으로 인정할 최소 폭
+const MIN_COL_DARK_RATIO = 0.02;     // 해당 컬럼이 "내용 있음"으로 인정될 최소 어두운 픽셀 비율(세로 기준)
 
 // 화면 중앙에 실제 이미지 비율과 같은 가이드박스를 비디오 픽셀 좌표계로
 // 계산 — vctx에 비디오와 같이 그리므로 object-fit:cover 변환도 자동으로
@@ -89,6 +97,48 @@ function findInkBBox(gray, w, h) {
   if (count < 10 || maxX<0) return null;
   return { x1:minX, y1:minY, x2:maxX+1, y2:maxY+1 };
 }
+// 가이드박스 내부를 컬럼(세로줄) 단위로 스캔해서 "내용 블록"들을 찾는다.
+// 로고 / ㄷ브래킷 / 숫자열이 서로 흰 여백으로 떨어져 있다는 전제.
+function findColumnBlobs(gray, w, h) {
+  const threshold = otsuThreshold(gray);
+  const colDark = new Uint32Array(w);
+  for (let y=0; y<h; y++) {
+    const row = y*w;
+    for (let x=0; x<w; x++) if (gray[row+x] <= threshold) colDark[x]++;
+  }
+  const minDark = Math.max(1, Math.round(h*MIN_COL_DARK_RATIO));
+  const minWidth = Math.max(1, Math.round(w*MIN_BLOB_WIDTH_RATIO));
+  const blobs = [];
+  let x = 0;
+  while (x < w) {
+    if (colDark[x] >= minDark) {
+      let x2 = x;
+      while (x2 < w && colDark[x2] >= minDark) x2++;
+      if (x2 - x >= minWidth) blobs.push({ x1: x, x2 });
+      x = x2;
+    } else {
+      x++;
+    }
+  }
+  return { blobs, threshold };
+}
+
+// 특정 컬럼 구간(x1~x2) 안에서만 위/아래 잉크 범위를 찾는다 —
+// 숫자열 블록 폭만큼만 훑으므로 가이드박스 전체를 훑는 것보다 가볍다.
+function findRowExtentInColumns(gray, w, h, x1, x2, threshold) {
+  let minY = h, maxY = -1;
+  for (let y = 0; y < h; y++) {
+    const row = y*w;
+    let dark = false;
+    for (let x = x1; x < x2; x++) {
+      if (gray[row+x] <= threshold) { dark = true; break; }
+    }
+    if (dark) { if (y < minY) minY = y; if (y > maxY) maxY = y; }
+  }
+  if (maxY < 0) return null;
+  return { y1: minY, y2: maxY+1 };
+}
+
 const SEGMENT_PATTERNS = {
   0:'abcdef', 1:'bc', 2:'abged', 3:'abgcd', 4:'fgbc',
   5:'afgcd', 6:'afgecd', 7:'abc', 8:'abcdefg', 9:'abcdfg',
@@ -260,35 +310,66 @@ function analyze() {
   const gray = new Uint8Array(gw*gh);
   for (let i=0;i<gw*gh;i++) gray[i] = Math.round((cdata[i*4]+cdata[i*4+1]+cdata[i*4+2])/3);
 
-  // 박스 안에서 실제 잉크의 진짜 시작~끝을 다시 찾는다 — 정렬이 좀
-  // 헐거워도(숫자가 박스보다 작게 들어와도) 이 단계가 스케일을 보정한다.
-  const ink = findInkBBox(gray, gw, gh);
-  if (!ink) {
+  // 가이드박스 안을 컬럼(세로줄) 단위로 스캔해서 블록들을 찾는다.
+  // 로고 / ㄷ브래킷 / 숫자열이 흰 여백으로 분리돼 있다는 전제.
+  const { blobs, threshold } = findColumnBlobs(gray, gw, gh);
+  if (blobs.length === 0) {
     bigResult.textContent = '?';
     label.textContent = '숫자열을 가이드박스 안에 비춰주세요';
-    debugEl.textContent = `frame #${frameCount}\nvideo: ${W}x${H}\n가이드박스 안에 잉크 없음`;
+    debugEl.textContent = `frame #${frameCount}\nvideo: ${W}x${H}\n가이드박스 안에 내용 블록 없음`;
     requestAnimationFrame(analyze);
     return;
   }
 
-  // 화면 표시는 원본(vctx) 좌표계로 환산해서
+  // 가장 오른쪽 블록 = 숫자열(인식 대상). 그 왼쪽 블록이 있으면
+  // "ㄷ" 기준점으로 간주 — 실제 계산에는 안 쓰고 검증/표시용으로만
+  // 쓴다(오탐 방지: 숫자열 폭이 로고까지 통째로 잡히는 사고를 막는다).
+  const digitBlob = blobs[blobs.length-1];
+  const anchorBlob = blobs.length >= 2 ? blobs[blobs.length-2] : null;
+
+  // 숫자열 블록 폭 안에서만 위/아래 잉크 범위를 찾는다 — 가이드박스
+  // 전체를 훑던 이전 방식보다 훑는 면적이 훨씬 좁아서 더 가볍다.
+  const yExtent = findRowExtentInColumns(gray, gw, gh, digitBlob.x1, digitBlob.x2, threshold);
+  if (!yExtent) {
+    bigResult.textContent = '?';
+    label.textContent = '숫자열을 가이드박스 안에 비춰주세요';
+    debugEl.textContent = `frame #${frameCount}\nvideo: ${W}x${H}\n숫자열 블록은 찾았지만 세로 범위 없음`;
+    requestAnimationFrame(analyze);
+    return;
+  }
+
+  // 화면 표시는 원본(vctx) 좌표계로 환산
   const inkAbs = {
-    x1: guide.x1+ink.x1, x2: guide.x1+ink.x2,
-    y1: guide.y1+ink.y1, y2: guide.y1+ink.y2,
+    x1: guide.x1+digitBlob.x1, x2: guide.x1+digitBlob.x2,
+    y1: guide.y1+yExtent.y1, y2: guide.y1+yExtent.y2,
   };
   vctx.strokeStyle = 'rgba(0,255,255,0.9)'; vctx.lineWidth = 2;
   vctx.strokeRect(inkAbs.x1, inkAbs.y1, inkAbs.x2-inkAbs.x1, inkAbs.y2-inkAbs.y1);
 
-  const totalW = inkAbs.x2-inkAbs.x1;
-  const cellW = totalW/DIGIT_COUNT_GUIDE;
+  // ㄷ 기준점이 잡혔으면 화면에 표시(주황색) — 사용자에게 "기준점
+  // 인식됨"을 시각적으로 알려준다.
+  let anchorAbs = null;
+  if (anchorBlob) {
+    anchorAbs = {
+      x1: guide.x1+anchorBlob.x1, x2: guide.x1+anchorBlob.x2,
+      y1: inkAbs.y1, y2: inkAbs.y2,
+    };
+    vctx.strokeStyle = 'rgba(255,140,0,0.9)'; vctx.lineWidth = 2;
+    vctx.strokeRect(anchorAbs.x1, anchorAbs.y1, anchorAbs.x2-anchorAbs.x1, anchorAbs.y2-anchorAbs.y1);
+  }
+
+  // 숫자열 내부는 세로로 10등분 — 위에서부터 첫째자리~열째자리 순서.
+  const totalH = inkAbs.y2-inkAbs.y1;
+  const cellH = totalH/DIGIT_COUNT_GUIDE;
+  const colW = inkAbs.x2-inkAbs.x1;
 
   const results = [];
   for (let i=0; i<DIGIT_COUNT_GUIDE; i++) {
-    const cx1 = inkAbs.x1+i*cellW, cx2 = inkAbs.x1+(i+1)*cellW;
-    const cw = cx2-cx1, ch = inkAbs.y2-inkAbs.y1;
+    const cy1 = inkAbs.y1+i*cellH, cy2 = inkAbs.y1+(i+1)*cellH;
+    const ch = cy2-cy1;
     const interior = {
-      x1: cx1+SHRINK.x1*cw, x2: cx1+SHRINK.x2*cw,
-      y1: inkAbs.y1+SHRINK.y1*ch, y2: inkAbs.y1+SHRINK.y2*ch,
+      x1: inkAbs.x1+SHRINK.x1*colW, x2: inkAbs.x1+SHRINK.x2*colW,
+      y1: cy1+SHRINK.y1*ch, y2: cy1+SHRINK.y2*ch,
     };
     const { bits } = readSegments(vctx, interior);
     const scores = matchDigit(bits);
@@ -297,15 +378,15 @@ function analyze() {
     vctx.strokeStyle = '#00ff88'; vctx.lineWidth = 1.5;
     vctx.strokeRect(interior.x1, interior.y1, interior.x2-interior.x1, interior.y2-interior.y1);
     vctx.fillStyle = '#00ff88';
-    vctx.font = `bold ${Math.max(12, cw*0.5)}px monospace`;
-    vctx.textAlign = 'center';
-    vctx.fillText(scores[0].digit, cx1+cw/2, inkAbs.y1-8);
+    vctx.font = `bold ${Math.max(12, ch*0.5)}px monospace`;
+    vctx.textAlign = 'left';
+    vctx.fillText(scores[0].digit, inkAbs.x2+6, cy1+ch/2+5);
   }
 
   const numberStr = results.map(r => r.best.digit).join('');
   bigResult.textContent = numberStr;
   const avgMargin = results.reduce((s,r)=>s+(r.second.diff-r.best.diff),0)/DIGIT_COUNT_GUIDE;
-  label.textContent = `숫자열이 박스 안에 여유 있게 들어오게 — 인식: ${numberStr}  (확신도 격차 ${avgMargin.toFixed(1)})`;
+  label.textContent = `숫자열이 박스 안에 여유 있게 들어오게 — 인식: ${numberStr}  (확신도 격차 ${avgMargin.toFixed(1)})${anchorBlob ? '  [ㄷ 기준점 인식됨]' : ''}`;
 
   const perCellLine = results.map((r,i) => `[${i}]${r.best.digit}(불일치${r.best.diff},격차${r.second.diff-r.best.diff})`).join(' ');
   debugEl.textContent = [
@@ -314,7 +395,8 @@ function analyze() {
     `window(화면 뷰포트)=${window.innerWidth}x${window.innerHeight}`,
     `screen.orientation=${screen.orientation ? screen.orientation.type : '(미지원)'}  window.orientation=${window.orientation ?? '(미지원)'}`,
     `가이드박스=(${guide.x1.toFixed(0)},${guide.y1.toFixed(0)})~(${guide.x2.toFixed(0)},${guide.y2.toFixed(0)})`,
-    `잉크범위(박스내부기준)=(${ink.x1},${ink.y1})~(${ink.x2},${ink.y2})`,
+    `컬럼블록 수=${blobs.length}  숫자열블록=(${digitBlob.x1},${digitBlob.x2})  ㄷ기준점=${anchorBlob ? `(${anchorBlob.x1},${anchorBlob.x2})` : '없음'}`,
+    `숫자열 세로범위(박스내부기준)=(${yExtent.y1},${yExtent.y2})`,
     `칸별: ${perCellLine}`,
   ].join('\n');
 
