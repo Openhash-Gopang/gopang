@@ -52,6 +52,12 @@ JS_FILES_TO_SCAN = [
     ROOT / 'gwp-registry.js',
     ROOT / 'src' / 'gopang' / 'ai' / 'expert-registry.js',
     ROOT / 'src' / 'gopang' / 'ai' / 'expert-session.js',
+    # 2026-07-06 추가 — pages/professional-ai.html(전문가 AI 소개 페이지)의
+    # System Prompt 링크 26개가 전부 구버전(v2.2/v2.0)을 가리키고 있었고,
+    # 세무사(tax-accountant, 2026-07-04 신설)는 이 페이지에 아예 없었던
+    # 사고를 계기로 스캔 대상에 추가. 이 스크립트는 .js/.html을 구분하지
+    # 않고 텍스트 패턴만 본다.
+    ROOT / 'pages' / 'professional-ai.html',
 ]
 
 # jeju-router.js는 별도 저장소 — 공개 raw 엔드포인트에서 fetch해 함께 검사.
@@ -71,6 +77,13 @@ FILE_REF_RE = re.compile(
 # raw.githubusercontent.com 형태의 절대 URL도 함께 매칭
 RAW_URL_RE = re.compile(
     r"https://raw\.githubusercontent\.com/Openhash-Gopang/gopang/main/prompts/([\w./-]+\.(?:md|txt|json))"
+)
+# 2026-07-06 추가 — github.com/.../blob/main/... 형태(웹 뷰어용 URL, raw가
+# 아님)도 매칭. pages/professional-ai.html이 이 형식을 쓰는데, 기존
+# RAW_URL_RE는 raw.githubusercontent.com만 잡아 26개 링크가 전부 감시
+# 사각지대였다.
+BLOB_URL_RE = re.compile(
+    r"https://github\.com/Openhash-Gopang/gopang/blob/main/prompts/([\w./-]+\.(?:md|txt|json))"
 )
 # jeju-router.js 전용: _fetchText('00-common/JEJU-GOV-COMMON_v1_5.md')처럼
 # 접두사 없는 상대경로(_RAW가 이미 prompts/Jejudo/를 포함하므로 문자열
@@ -181,7 +194,8 @@ def index_prompts_dir() -> dict:
 
 def check_refs(label: str, text: str, latest_map: dict, results: list, jeju_relative: bool = False):
     refs = set(m.group(1) for m in FILE_REF_RE.finditer(text)) | \
-           set(m.group(1) for m in RAW_URL_RE.finditer(text))
+           set(m.group(1) for m in RAW_URL_RE.finditer(text)) | \
+           set(m.group(1) for m in BLOB_URL_RE.finditer(text))
     if jeju_relative:
         refs |= set(f"Jejudo/{m.group(1)}" for m in JEJU_RELATIVE_RE.finditer(text))
     for ref in refs:
