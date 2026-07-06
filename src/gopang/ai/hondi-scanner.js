@@ -36,6 +36,7 @@ import {
   buildCalibMatrix, applyCalib,
   BASE_IMG_W, BASE_IMG_H, CODE_CELL, CODE_GAP, CODE_MAX_COLS,
   CALIB_RED_ROI, CALIB_BLUE_ROI, CALIB_BLACK_ROI, CALIB_WHITE_ROI,
+  BRACKET_LEN, BRACKET_W, BRACKET_MARGIN,
 } from './hondi-code.js';
 import { L1_URL } from '../core/state.js';
 
@@ -53,7 +54,8 @@ const CELL_SAMPLE     = 0.6;  // 셀 내부 샘플 비율(경계선 제외)
 // 디자인 좌표계(hondi-code.js와 동일 기준: 베이스 이미지 원점 (0,0))에서
 // 그리드 시작 X좌표를 계산 — generateHondiCodeCanvas와 동일한 공식.
 function _designGridStartX(cols) {
-  return Math.round((BASE_IMG_W - cols * CODE_CELL) / 2);
+  const gridW = cols * CODE_CELL;
+  return Math.max(BRACKET_MARGIN + 2, Math.round((BASE_IMG_W - gridW) / 2));
 }
 const DESIGN_GRID_Y = BASE_IMG_H + CODE_GAP * 2;
 
@@ -151,9 +153,15 @@ function _processFrame(video, canvas) {
 }
 
 // ── 프레임 분석 ───────────────────────────────────────────────
+// 1차: 채도 투영 기반 탐지(빠름, 대부분의 경우 충분).
+// 2차: 실패 시에만 브래킷 기반 탐지(느리지만, 코드와 같은 높이에
+//      다른 색색 물체가 겹치는 등 1차가 원천적으로 못 가르는 상황에 강함).
 function _analyzeFrame(ctx, W, H) {
-  const grids = _detectCodeGrid(ctx, W, H);
-  for (const grid of grids) {
+  for (const grid of _detectCodeGrid(ctx, W, H)) {
+    const result = _decode(ctx, grid);
+    if (result) return result;
+  }
+  for (const grid of _detectCodeGridByBrackets(ctx, W, H)) {
     const result = _decode(ctx, grid);
     if (result) return result;
   }
@@ -245,7 +253,138 @@ function _detectCodeGrid(ctx, W, H) {
   return validGrids;
 }
 
-// 후보 하나를 실제 그리드로 확정할 수 있는지 검증한다.
+// ── 2차 탐지: 코너 브래킷 기반(느리지만 잡음에 강함) ─────────
+// 1차(채도 투영)가 실패했을 때만 호출된다. 검정 L자 브래킷 4개를
+// 연결요소로 찾아 그 기하학적 배치(사각형)로 그리드 위치를 직접
+// 역산한다 — 코드와 같은 높이에 다른 색색 물체가 겹쳐서 채도 투영이
+// 행을 못 가르는 상황에도 브래킷은 "검정 + L자 모양"이라는 별개
+// 특징으로 찾아낼 수 있다.
+const BR_THUMB_SCALE = 0.35;   // 성능을 위해 축소본에서 탐색(느린 경로이므로 허용)
+const BR_MIN_PX      = 6;      // 축소본 기준 브래킷 연결요소 최소 픽셀 수
+const BR_MAX_PX      = 400;    // 축소본 기준 최대 픽셀 수(로고 획 등 큰 덩어리 배제)
+
+const _isBracketBlack = (r,g,b) => r<70 && g<70 && b<70;
+
+function _findBlackComponents(data, W, H) {
+  const visited = new Uint8Array(W*H);
+  const comps = [];
+  for (let y=0; y<H; y++) {
+    for (let x=0; x<W; x++) {
+      const idx = y*W+x;
+      if (visited[idx]) continue;
+      const i4 = idx*4;
+      if (!_isBracketBlack(data[i4],data[i4+1],data[i4+2])) { visited[idx]=1; continue; }
+
+      const queue=[idx]; visited[idx]=1;
+      let qi=0, n=0, sx=0, sy=0, minX=x, maxX=x, minY=y, maxY=y;
+      while (qi < queue.length) {
+        const cur = queue[qi++];
+        const cx = cur % W, cy = (cur / W) | 0;
+        n++; sx+=cx; sy+=cy;
+        if (cx<minX) minX=cx; if (cx>maxX) maxX=cx;
+        if (cy<minY) minY=cy; if (cy>maxY) maxY=cy;
+        const neigh = [[cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]];
+        for (const [nx,ny] of neigh) {
+          if (nx<0||nx>=W||ny<0||ny>=H) continue;
+          const nidx = ny*W+nx;
+          if (visited[nidx]) continue;
+          const ni4 = nidx*4;
+          if (_isBracketBlack(data[ni4],data[ni4+1],data[ni4+2])) { visited[nidx]=1; queue.push(nidx); }
+          else visited[nidx] = 1;
+        }
+      }
+      if (n < BR_MIN_PX || n > BR_MAX_PX) continue;
+
+      // L자는 꽉 찬 사각형보다 성기다(대략 30~65% 채움) — 로고 획처럼
+      // 꽉 찬 검정 덩어리(ㄴ·ㄷ·ㅣ, 캘리브레이션 검정 ROI 등)는 fillRatio가
+      // 훨씬 높아서 자동으로 걸러진다.
+      const bboxW = maxX-minX+1, bboxH = maxY-minY+1;
+      const fillRatio = n / (bboxW*bboxH);
+      const squareness = Math.max(bboxW,bboxH) / Math.min(bboxW,bboxH);
+      if (fillRatio > 0.15 && fillRatio < 0.75 && squareness < 2.2) {
+        comps.push({ cx: sx/n, cy: sy/n, n });
+      }
+    }
+  }
+  return comps;
+}
+
+// 4점 조합이 (근사) 직사각형(TL/TR/BL/BR)을 이루는지 검사한다.
+function _tryRect(pts) {
+  const byY = [...pts].sort((a,b) => a.cy-b.cy);
+  const top = [byY[0], byY[1]].sort((a,b) => a.cx-b.cx);
+  const bot = [byY[2], byY[3]].sort((a,b) => a.cx-b.cx);
+  const [tl,tr] = top, [bl,br] = bot;
+
+  const w1 = tr.cx-tl.cx, w2 = br.cx-bl.cx;
+  const h1 = bl.cy-tl.cy, h2 = br.cy-tr.cy;
+  if (w1 < 20 || h1 < 20) return null;
+
+  const TOL = 0.10;
+  const wOk    = Math.abs(w1-w2) < Math.max(w1,w2)*TOL;
+  const hOk    = Math.abs(h1-h2) < Math.max(h1,h2)*TOL;
+  const topOk  = Math.abs(tl.cy-tr.cy) < h1*0.15;
+  const botOk  = Math.abs(bl.cy-br.cy) < h1*0.15;
+  const leftOk = Math.abs(tl.cx-bl.cx) < w1*0.15;
+  const rightOk= Math.abs(tr.cx-br.cx) < w1*0.15;
+  if (!(wOk && hOk && topOk && botOk && leftOk && rightOk)) return null;
+
+  return {
+    x1: (tl.cx+bl.cx)/2, y1: (tl.cy+tr.cy)/2,
+    x2: (tr.cx+br.cx)/2, y2: (bl.cy+br.cy)/2,
+  };
+}
+
+// 브래킷 후보들 중 사각형을 이루는 4개 조합을 찾는다(면적이 가장 큰 것 우선).
+function _findBracketRect(comps) {
+  const MAX_CANDIDATES = 24;  // 조합 폭발 방지
+  const list = comps.slice(0, MAX_CANDIDATES);
+  let best = null, bestArea = 0;
+  for (let i=0; i<list.length; i++)
+    for (let j=i+1; j<list.length; j++)
+      for (let k=j+1; k<list.length; k++)
+        for (let l=k+1; l<list.length; l++) {
+          const rect = _tryRect([list[i],list[j],list[k],list[l]]);
+          if (!rect) continue;
+          const area = (rect.x2-rect.x1) * (rect.y2-rect.y1);
+          if (area > bestArea) { bestArea = area; best = rect; }
+        }
+  return best;
+}
+
+function _detectCodeGridByBrackets(ctx, W, H) {
+  const tW = Math.max(1, Math.round(W*BR_THUMB_SCALE));
+  const tH = Math.max(1, Math.round(H*BR_THUMB_SCALE));
+  const off = new OffscreenCanvas(tW, tH);
+  const octx = off.getContext('2d', { willReadFrequently:true });
+  octx.drawImage(ctx.canvas, 0, 0, W, H, 0, 0, tW, tH);
+  const data = octx.getImageData(0, 0, tW, tH).data;
+
+  const comps = _findBlackComponents(data, tW, tH);
+  if (comps.length < 4) return [];
+
+  const rect = _findBracketRect(comps);
+  if (!rect) return [];
+
+  const scale = 1 / BR_THUMB_SCALE;
+  let x1 = rect.x1*scale, y1 = rect.y1*scale, x2 = rect.x2*scale, y2 = rect.y2*scale;
+
+  // 브래킷 코너점은 그리드 가장자리에서 BRACKET_MARGIN만큼 바깥에 있으므로
+  // 안쪽으로 살짝 당긴다(정밀한 스케일을 몰라도 되는 근사치 — MARGIN이
+  // 그리드 전체 크기에 비해 작아서 오차 영향이 미미하다).
+  const shrinkX = (x2-x1) * 0.02, shrinkY = (y2-y1) * 0.02;
+  x1 += shrinkX; x2 -= shrinkX; y1 += shrinkY; y2 -= shrinkY;
+
+  // 브래킷만으로는 1행(v1)인지 2행(v2)인지 알 수 없으므로 둘 다 시도한다.
+  const results = [];
+  for (const rows of [1, 2]) {
+    const grid = _validateGrid(ctx, { x1, y1, x2, y2, rows });
+    if (grid) results.push(grid);
+  }
+  return results;
+}
+
+
 // (cols,rows) 조합이 설계된 형태(6→1×6, 10→2×5)와 정확히 일치해야 한다 —
 // 단순히 "총 칸 수가 6 또는 10"이라는 조건만으로는, 예컨대 우연히
 // "10열×1행"처럼 실제로 만들어지지 않는 형태가 나와도 통과시켜 버리고,
