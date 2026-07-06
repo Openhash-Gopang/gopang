@@ -56,7 +56,7 @@ export const EXPERT_REGISTRY = {
   },
   'traditional-medicine-doctor': {
     label: '한의사', icon: '🌿', category: 'HEALTH',
-    file: '/prompts/SP_traditional-medicine-doctor_v1_0.md', needsMedicalSafety: true,
+    file: '/prompts/SP_traditional-medicine-doctor_v1_1.md', needsMedicalSafety: true,
   },
   pharmacist: {
     label: '약사', icon: '💊', category: 'HEALTH',
