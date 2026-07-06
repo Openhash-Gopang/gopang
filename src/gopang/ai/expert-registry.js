@@ -52,7 +52,7 @@ export const EXPERT_REGISTRY = {
   },
   dentist: {
     label: '치과의사', icon: '🦷', category: 'HEALTH',
-    file: '/prompts/SP_dentist_v1_0.md', needsMedicalSafety: true,
+    file: '/prompts/SP_dentist_v1_1.md', needsMedicalSafety: true,
   },
   'traditional-medicine-doctor': {
     label: '한의사', icon: '🌿', category: 'HEALTH',
