@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 최소단위 색상 인식 테스트</title>
+<style>
+  body{margin:0;font-family:-apple-system,'Pretendard',sans-serif;background:#111;
+       color:#fff;padding:0;box-sizing:border-box;overflow:hidden}
+  .wrap{position:relative;width:100vw;height:100vh}
+  video{width:100%;height:100%;object-fit:cover}
+  #overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+  #resultBox{
+    position:absolute;top:0;left:0;width:100%;
+    display:flex;flex-direction:column;align-items:center;padding-top:24px;
+  }
+  #bigResult{
+    font-size:120px;font-weight:900;line-height:1;
+    text-shadow:0 0 12px #000,0 0 24px #000;
+    transition:color 0.1s;
+  }
+  #label{font-size:16px;margin-top:8px;background:rgba(0,0,0,0.6);padding:6px 16px;border-radius:20px}
+  #debug{
+    position:absolute;bottom:0;left:0;right:0;
+    background:rgba(0,0,0,0.75);color:#7CFC8A;font:11px/1.5 monospace;
+    padding:10px 14px;white-space:pre-wrap;max-height:30vh;overflow:auto;
+  }
+  #startBtn{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    padding:16px 32px;font-size:18px;font-weight:700;border:none;border-radius:12px;
+    background:#1A73E8;color:#fff;cursor:pointer;z-index:10;
+  }
+  #err{position:absolute;top:20px;left:20px;right:20px;color:#ff6b6b;font-size:14px;
+       background:rgba(0,0,0,0.7);padding:10px;border-radius:8px;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <video id="video" playsinline autoplay muted></video>
+  <canvas id="overlay"></canvas>
+  <div id="resultBox">
+    <div id="bigResult">?</div>
+    <div id="label">카메라 시작 대기 중</div>
+  </div>
+  <div id="err"></div>
+  <button id="startBtn">카메라 시작</button>
+  <div id="debug"></div>
+</div>
+
+<script>
+// ── 완전히 독립적인 최소 단위 테스트 ──────────────────────────
+// 그리드·캘리브레이션·브래킷·팔레트 매칭 전부 배제하고, 딱 하나만 본다:
+// "화면에서 가장 두드러진 빨강 또는 노랑 덩어리가 뭔가?"
+// 이것조차 안 되면 문제는 색상코드 알고리즘이 아니라 카메라 파이프라인
+// 자체(권한/스트림/프레임 접근)에 있다는 뜻이다.
+
+const video = document.getElementById('video');
+const overlay = document.getElementById('overlay');
+const octx = overlay.getContext('2d');
+const bigResult = document.getElementById('bigResult');
+const label = document.getElementById('label');
+const debugEl = document.getElementById('debug');
+const errEl = document.getElementById('err');
+const startBtn = document.getElementById('startBtn');
+
+let workCanvas = document.createElement('canvas');
+let wctx = workCanvas.getContext('2d', { willReadFrequently: true });
+let rafId = null;
+let frameCount = 0;
+
+// 빨강/노랑 판정 — 단순 RGB 임계값만 사용 (색 공간 변환도, 캘리브레이션도 없음)
+function isRedPixel(r,g,b) {
+  return r > 130 && (r - Math.max(g,b)) > 50;
+}
+function isYellowPixel(r,g,b) {
+  return r > 130 && g > 110 && (r - b) > 60 && (g - b) > 40;
+}
+
+function analyze() {
+  const W = video.videoWidth, H = video.videoHeight;
+  if (!W || !H) { rafId = requestAnimationFrame(analyze); return; }
+
+  // 성능을 위해 축소본에서 픽셀 스캔 (여기선 정밀도보다 "되는지 여부"가 중요)
+  const scale = 0.25;
+  const tW = Math.round(W*scale), tH = Math.round(H*scale);
+  workCanvas.width = tW; workCanvas.height = tH;
+  wctx.drawImage(video, 0, 0, tW, tH);
+  const data = wctx.getImageData(0, 0, tW, tH).data;
+
+  let redCount = 0, yellowCount = 0;
+  let redSx=0, redSy=0, yelSx=0, yelSy=0;
+  for (let y = 0; y < tH; y++) {
+    for (let x = 0; x < tW; x++) {
+      const i = (y*tW+x)*4;
+      const r=data[i], g=data[i+1], b=data[i+2];
+      if (isRedPixel(r,g,b)) { redCount++; redSx+=x; redSy+=y; }
+      else if (isYellowPixel(r,g,b)) { yellowCount++; yelSx+=x; yelSy+=y; }
+    }
+  }
+
+  const MIN_PX = Math.round(tW*tH*0.01); // 전체 화면의 1% 이상 차지해야 "인식"으로 침
+  overlay.width = W; overlay.height = H;
+  octx.clearRect(0,0,W,H);
+
+  frameCount++;
+  const dbgLines = [
+    `frame #${frameCount}`,
+    `video: ${W}x${H}  scan: ${tW}x${tH}`,
+    `redCount=${redCount} (기준 ${MIN_PX})`,
+    `yellowCount=${yellowCount} (기준 ${MIN_PX})`,
+  ];
+
+  if (redCount >= MIN_PX && redCount > yellowCount) {
+    bigResult.textContent = '0';
+    bigResult.style.color = '#ff4444';
+    label.textContent = `빨간색 인식됨 (픽셀 ${redCount})`;
+    const cx = (redSx/redCount)/scale, cy = (redSy/redCount)/scale;
+    octx.strokeStyle = '#00ff88'; octx.lineWidth = 4;
+    octx.strokeRect(cx-60, cy-60, 120, 120);
+  } else if (yellowCount >= MIN_PX && yellowCount > redCount) {
+    bigResult.textContent = '1';
+    bigResult.style.color = '#ffe14d';
+    label.textContent = `노란색 인식됨 (픽셀 ${yellowCount})`;
+    const cx = (yelSx/yellowCount)/scale, cy = (yelSy/yellowCount)/scale;
+    octx.strokeStyle = '#00ff88'; octx.lineWidth = 4;
+    octx.strokeRect(cx-60, cy-60, 120, 120);
+  } else {
+    bigResult.textContent = '?';
+    bigResult.style.color = '#888';
+    label.textContent = '빨강·노랑 둘 다 인식 안 됨';
+  }
+
+  debugEl.textContent = dbgLines.join('\n');
+  rafId = requestAnimationFrame(analyze);
+}
+
+startBtn.onclick = async () => {
+  errEl.style.display = 'none';
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+    video.srcObject = stream;
+    await video.play();
+    startBtn.style.display = 'none';
+    label.textContent = '스캔 중...';
+    rafId = requestAnimationFrame(analyze);
+  } catch (e) {
+    errEl.style.display = 'block';
+    errEl.textContent = `카메라 오류: ${e.name} — ${e.message}`;
+    label.textContent = '카메라 시작 실패';
+  }
+};
+</script>
+</body>
+</html>
