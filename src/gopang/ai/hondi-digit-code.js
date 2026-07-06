@@ -44,17 +44,21 @@ export const LOGO_IMG_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAicAA
 export const LOGO_IMG_W = 551, LOGO_IMG_H = 335;
 
 // ── 숫자열 그리드 치수 (가로 배치) ────────────────────────────
-// 각 숫자가 차지하는 "슬롯" 폭은 SLOT_W로 고정(로고 폭과 맞춘 값,
-// 스캐너의 "전체 폭을 10등분" 가정과 무관 — 스캐너는 간격 유무와
-// 상관없이 항상 잉크 전체 폭을 10등분하므로 이 값을 바꿔도 스캐너
-// 수정은 필요 없다). 실제 숫자 박스는 그 슬롯 안에서 GAP_RATIO만큼
-// 안쪽으로 줄여 그려서, 옆 숫자와 테두리가 맞닿지 않도록 한다 —
-// 화면/인쇄 시 인접 테두리가 겹쳐 보이는 문제(무아레 현상) 방지 및
-// 카메라가 숫자 하나하나를 더 뚜렷이 구분하도록 함.
-export const SLOT_W = 55;
-export const DIGIT_BOX_H = 90;       // 세로 높이는 그대로 유지 — 세그먼트 해상도(가독성)에 더 중요
+// "숫자열 전체 가로 폭"을 로고 캔버스 폭(551, 우측에 빈 여백 포함)이
+// 아니라 "혼디" 글자가 실제로 차지하는 잉크 폭에 맞춘다 — 그래야
+// 숫자열이 로고 글자와 시각적으로 나란히 정렬되어 보인다. 세로 높이는
+// 이전 설계의 박스 비율(높이:폭)을 그대로 유지한 채 같은 비율로
+// 줄어든다(글자 크기 자체는 인쇄 시 결정되므로, 여기서는 상대 비율만
+// 맞춘다).
+const LOGO_INK_X1 = 53;   // "혼디" 글자가 시작되는 x좌표(로고 이미지 기준)
+const LOGO_INK_X2 = 469;  // "혼디" 글자가 끝나는 x좌표(로고 이미지 기준)
+export const LOGO_INK_W = LOGO_INK_X2 - LOGO_INK_X1; // 416 — 숫자열 전체 폭을 여기 맞춤
+
+const BOX_ASPECT = 90 / 48.4; // 이전 설계의 박스 세로:가로 비율 — 그대로 유지
 export const GAP_RATIO = 0.12;       // 슬롯 폭 대비 숫자 사이 간격 비율(양쪽 합산)
+export const SLOT_W = LOGO_INK_W / DIGIT_COUNT;
 export const DIGIT_BOX_W = SLOT_W * (1 - GAP_RATIO);
+export const DIGIT_BOX_H = DIGIT_BOX_W * BOX_ASPECT; // 폭이 줄어든 만큼 높이도 같은 비율로 축소
 export const DIGIT_GAP_Y = 24;   // 로고 아래쪽과 숫자열 사이 간격
 
 let _logoPromise = null;
@@ -101,9 +105,11 @@ export async function generateDigitCodeCanvas(shortId) {
   const logo = await _loadLogo();
   const digits = idToDigits(shortId);
 
-  const stripW = SLOT_W * DIGIT_COUNT;
   const PAD = 16;
-  const CANVAS_W = PAD + Math.max(LOGO_IMG_W, stripW) + PAD;
+  // 숫자열 폭(LOGO_INK_W)은 항상 로고 캔버스 폭보다 작으므로(로고
+  // 우측 여백 제외한 실제 글자 폭 기준), 전체 캔버스 폭은 로고
+  // 캔버스 폭 그대로 사용하면 된다.
+  const CANVAS_W = PAD + LOGO_IMG_W + PAD;
   const CANVAS_H = PAD + LOGO_IMG_H + DIGIT_GAP_Y + DIGIT_BOX_H + PAD;
 
   const canvas = document.createElement('canvas');
@@ -113,10 +119,12 @@ export async function generateDigitCodeCanvas(shortId) {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-  const logoX = PAD + Math.round((Math.max(LOGO_IMG_W, stripW) - LOGO_IMG_W) / 2);
+  const logoX = PAD;
   ctx.drawImage(logo, logoX, PAD, LOGO_IMG_W, LOGO_IMG_H);
 
-  const stripX = PAD + Math.round((Math.max(LOGO_IMG_W, stripW) - stripW) / 2);
+  // 숫자열 시작 x좌표를 로고 글자 시작 위치와 맞춤 — 숫자열 끝도
+  // 자동으로 로고 글자 끝(LOGO_INK_X2)과 일치하게 된다.
+  const stripX = logoX + LOGO_INK_X1;
   const stripY = PAD + LOGO_IMG_H + DIGIT_GAP_Y;
   const insetX = (SLOT_W - DIGIT_BOX_W) / 2; // 슬롯 안에서 박스를 가운데 정렬(양옆이 간격이 됨)
   digits.forEach((d, i) => {
