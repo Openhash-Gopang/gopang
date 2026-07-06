@@ -65,7 +65,31 @@
 //      해서 최적/차점 점수를 함께 보여준다(확신도 판단용)
 
 const TW = 24, TH = 32; // 템플릿 크기(가로x세로)
-const DARK_THRESHOLD = 110; // 그레이스케일 이 값보다 어두우면 "잉크"로 판정
+
+// ── Otsu 자동 임계값 ────────────────────────────────────────────
+// 고정값(예: 110)은 조명마다 카메라가 찍는 "검정"의 실제 밝기가 달라서
+// 늘 어긋난다 — 그래서 경계 상자가 아예 안 만들어지는 문제가 있었다.
+// Otsu's method는 그 프레임 자체의 밝기 분포(히스토그램)에서 흑/백
+// 두 무리를 가장 잘 가르는 경계값을 자동으로 계산한다.
+function otsuThreshold(grayArray) {
+  const hist = new Array(256).fill(0);
+  for (let i = 0; i < grayArray.length; i++) hist[grayArray[i]]++;
+  const total = grayArray.length;
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+  let sumB = 0, wB = 0, varMax = -1, threshold = 127;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (wB === 0) continue;
+    const wF = total - wB;
+    if (wF === 0) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB, mF = (sum - sumB) / wF;
+    const between = wB * wF * (mB - mF) * (mB - mF);
+    if (between > varMax) { varMax = between; threshold = t; }
+  }
+  return threshold;
+}
 
 // ── 1단계: 0~9 템플릿 생성 (canvas 폰트 렌더링) ────────────────
 function buildTemplates() {
@@ -94,7 +118,7 @@ function buildTemplates() {
     const bits = new Uint8Array(TW*TH);
     for (let i = 0; i < TW*TH; i++) {
       const gray = (imgData[i*4] + imgData[i*4+1] + imgData[i*4+2]) / 3;
-      bits[i] = gray < DARK_THRESHOLD ? 1 : 0;
+      bits[i] = gray < 128 ? 1 : 0; // 순수 렌더링(카메라 아님) — 고정값으로 충분
     }
     templates.push({ digit: d, bits });
 
@@ -116,12 +140,17 @@ function findDarkBBox(ctx, W, H, scale) {
   tctx.drawImage(ctx.canvas, 0, 0, W, H, 0, 0, tW, tH);
   const data = tctx.getImageData(0, 0, tW, tH).data;
 
+  // 그레이스케일 배열을 먼저 만들고 Otsu로 이 프레임 자체의 최적 임계값을 구한다
+  const gray = new Uint8Array(tW*tH);
+  for (let p = 0; p < tW*tH; p++) {
+    gray[p] = Math.round((data[p*4]+data[p*4+1]+data[p*4+2])/3);
+  }
+  const threshold = otsuThreshold(gray);
+
   let minX=tW, minY=tH, maxX=-1, maxY=-1, count=0;
   for (let y = 0; y < tH; y++) {
     for (let x = 0; x < tW; x++) {
-      const i = (y*tW+x)*4;
-      const gray = (data[i]+data[i+1]+data[i+2])/3;
-      if (gray < DARK_THRESHOLD) {
+      if (gray[y*tW+x] <= threshold) {
         count++;
         if (x<minX)minX=x; if (x>maxX)maxX=x;
         if (y<minY)minY=y; if (y>maxY)maxY=y;
@@ -133,7 +162,7 @@ function findDarkBBox(ctx, W, H, scale) {
 
   return {
     x1: minX/scale, y1: minY/scale, x2: (maxX+1)/scale, y2: (maxY+1)/scale,
-    darkCount: count,
+    darkCount: count, threshold,
   };
 }
 
@@ -153,11 +182,14 @@ function extractBits(ctx, bbox) {
   sctx.drawImage(ctx.canvas, sx, sy, sw, sh, 0, 0, TW, TH);
   const data = sctx.getImageData(0,0,TW,TH).data;
 
+  // 크롭된 영역만 놓고 다시 Otsu — 전체 프레임과 이 부분의 국소 조명이
+  // 다를 수 있어서, 여기서 다시 계산하는 게 더 정확하다.
+  const gray = new Uint8Array(TW*TH);
+  for (let i = 0; i < TW*TH; i++) gray[i] = Math.round((data[i*4]+data[i*4+1]+data[i*4+2])/3);
+  const threshold = otsuThreshold(gray);
+
   const bits = new Uint8Array(TW*TH);
-  for (let i = 0; i < TW*TH; i++) {
-    const gray = (data[i*4]+data[i*4+1]+data[i*4+2])/3;
-    bits[i] = gray < DARK_THRESHOLD ? 1 : 0;
-  }
+  for (let i = 0; i < TW*TH; i++) bits[i] = gray[i] <= threshold ? 1 : 0;
   return bits;
 }
 
@@ -220,7 +252,7 @@ function analyze() {
   debugEl.textContent = [
     `frame #${frameCount}`,
     `video: ${W}x${H}`,
-    `bbox: (${bbox.x1.toFixed(0)},${bbox.y1.toFixed(0)}) ~ (${bbox.x2.toFixed(0)},${bbox.y2.toFixed(0)})  darkPx=${bbox.darkCount}`,
+    `bbox: (${bbox.x1.toFixed(0)},${bbox.y1.toFixed(0)}) ~ (${bbox.x2.toFixed(0)},${bbox.y2.toFixed(0)})  darkPx=${bbox.darkCount}  otsu임계값=${bbox.threshold}`,
     `순위(낮을수록 유사): ${top5}`,
   ].join('\n');
 
