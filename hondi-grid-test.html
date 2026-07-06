@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 6칸 최근접색 테스트</title>
+<style>
+  body{margin:0;background:#111;color:#fff;font-family:-apple-system,'Pretendard',sans-serif;
+       display:flex;flex-direction:column;align-items:center;padding:16px;box-sizing:border-box}
+  h1{font-size:16px;margin:0 0 6px;color:#fff}
+  .sub{font-size:12px;color:#9ca3af;margin:0 0 14px;text-align:center;line-height:1.6}
+  #canvas{width:100%;max-width:480px;border-radius:12px;background:#000}
+  button{margin-top:14px;padding:12px 22px;border:none;border-radius:10px;background:#1A73E8;
+         color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+  button:disabled{background:#374151;color:#9ca3af}
+  #status{margin-top:10px;font-size:13px;color:#d1d5db;text-align:center}
+  #cellsInfo{margin-top:14px;width:100%;max-width:480px;font-size:12px;color:#d1d5db}
+  .cellRow{display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px solid #222}
+  .swatch{width:14px;height:14px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:middle;border:1px solid #444}
+</style>
+</head>
+<body>
+  <h1>6칸 최근접색 테스트 (캘리브레이션·브래킷 없음)</h1>
+  <p class="sub">
+    화면에 뜨는 노란 가이드 박스 안에 실제 혼디 6색 코드(빨강·초록·파랑·노랑·자홍·시안 순서)를<br>
+    맞춰서 비춰주세요. 그리드 자동탐지·캘리브레이션 전혀 없이,<br>
+    가이드 박스 6칸을 그대로 잘라서 raw RGB로 가장 가까운 팔레트색만 매칭합니다.
+  </p>
+  <canvas id="canvas"></canvas>
+  <button id="startBtn">카메라 시작</button>
+  <div id="status">대기 중</div>
+  <div id="cellsInfo"></div>
+
+<script>
+// 6색 팔레트 — hondi-code.js와 동일 값 (이 페이지는 독립 실행, import 없음)
+const PALETTE = [
+  { idx: 0, name: '빨강', r: 220, g:   0, b:   0 },
+  { idx: 1, name: '초록', r:   0, g: 185, b:   0 },
+  { idx: 2, name: '파랑', r:   0, g:   0, b: 220 },
+  { idx: 3, name: '노랑', r: 220, g: 220, b:   0 },
+  { idx: 4, name: '자홍', r: 220, g:   0, b: 220 },
+  { idx: 5, name: '시안', r:   0, g: 185, b: 185 },
+];
+
+function nearestPalette(r, g, b) {
+  let best = -1, bestD = Infinity;
+  for (const c of PALETTE) {
+    const d = (r-c.r)**2 + (g-c.g)**2 + (b-c.b)**2;
+    if (d < bestD) { bestD = d; best = c.idx; }
+  }
+  return PALETTE[best];
+}
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const statusEl = document.getElementById('status');
+const cellsInfoEl = document.getElementById('cellsInfo');
+const startBtn = document.getElementById('startBtn');
+
+// 가이드 박스: 캔버스(=영상 원본 해상도) 기준 비율 좌표.
+// 가로로 긴 6칸 — 실제 hondi 6칸 코드 막대와 같은 배치(가로 나열).
+const GUIDE = { xRatio: 0.08, yRatio: 0.42, wRatio: 0.84, hRatio: 0.16 };
+const CELLS = 6;
+const SAMPLE_RATIO = 0.6; // 칸 내부 60%만 샘플 (경계 제외)
+
+let video = document.createElement('video');
+video.setAttribute('playsinline', '');
+let stream = null;
+let rafId = null;
+
+async function start() {
+  startBtn.disabled = true;
+  statusEl.textContent = '카메라 요청 중…';
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+    video.srcObject = stream;
+    await video.play();
+    statusEl.textContent = '가이드 박스에 6색 코드를 맞춰주세요';
+    loop();
+  } catch (e) {
+    statusEl.textContent = '카메라 오류: ' + e.message;
+    startBtn.disabled = false;
+  }
+}
+
+function loop() {
+  if (video.readyState >= 2) {
+    const W = video.videoWidth, H = video.videoHeight;
+    canvas.width = W; canvas.height = H;
+    ctx.drawImage(video, 0, 0, W, H);
+
+    const gx = GUIDE.xRatio * W, gy = GUIDE.yRatio * H;
+    const gw = GUIDE.wRatio * W, gh = GUIDE.hRatio * H;
+    const cellW = gw / CELLS;
+
+    // 가이드 박스 테두리
+    ctx.strokeStyle = 'rgba(255,220,0,0.9)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(gx, gy, gw, gh);
+
+    const results = [];
+    for (let i = 0; i < CELLS; i++) {
+      const cx = gx + i * cellW;
+      const sampleW = cellW * SAMPLE_RATIO;
+      const sampleX = cx + (cellW - sampleW) / 2;
+      const sampleH = gh * SAMPLE_RATIO;
+      const sampleY = gy + (gh - sampleH) / 2;
+
+      const roi = ctx.getImageData(
+        Math.round(sampleX), Math.round(sampleY),
+        Math.max(1, Math.round(sampleW)), Math.max(1, Math.round(sampleH))
+      ).data;
+      let r=0, g=0, b=0, n=0;
+      for (let p = 0; p < roi.length; p += 4) { r+=roi[p]; g+=roi[p+1]; b+=roi[p+2]; n++; }
+      r = n ? r/n : 0; g = n ? g/n : 0; b = n ? b/n : 0;
+
+      const match = nearestPalette(r, g, b);
+      results.push({ raw: {r,g,b}, match });
+
+      // 칸 구분선
+      if (i > 0) {
+        ctx.strokeStyle = 'rgba(255,220,0,0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(cx, gy); ctx.lineTo(cx, gy+gh); ctx.stroke();
+      }
+      // 칸마다 판별된 숫자 오버레이
+      ctx.fillStyle = '#000';
+      ctx.fillRect(cx + cellW/2 - 16, gy + gh + 4, 32, 22);
+      ctx.fillStyle = '#7CFC8A';
+      ctx.font = 'bold 16px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(String(match.idx), cx + cellW/2, gy + gh + 20);
+    }
+
+    // 하단 텍스트 패널: 칸별 raw RGB + 매칭 결과
+    cellsInfoEl.innerHTML = results.map((res, i) => `
+      <div class="cellRow">
+        <span>칸 ${i+1}</span>
+        <span>raw(${Math.round(res.raw.r)},${Math.round(res.raw.g)},${Math.round(res.raw.b)})</span>
+        <span><span class="swatch" style="background:rgb(${res.match.r},${res.match.g},${res.match.b})"></span>${res.match.idx} ${res.match.name}</span>
+      </div>
+    `).join('');
+  }
+  rafId = requestAnimationFrame(loop);
+}
+
+startBtn.onclick = start;
+</script>
+</body>
+</html>
