@@ -68,7 +68,7 @@ export const EXPERT_REGISTRY = {
   },
   nurse: {
     label: '간호사', icon: '👩‍⚕️', category: 'HEALTH',
-    file: '/prompts/SP_nurse_v3_1.md', needsMedicalSafety: true,
+    file: '/prompts/SP_nurse_v3_2.md', needsMedicalSafety: true,
   },
   'physical-therapist': {
     label: '물리치료사', icon: '💪', category: 'HEALTH',
