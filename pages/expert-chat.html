@@ -85,6 +85,8 @@ body{
 import { EXPERT_REGISTRY, COMMON_GUARDRAILS_URL, COMMON_MEDICAL_SAFETY_URL, resolveExpertId }
   from '/src/gopang/ai/expert-registry.js';
 
+const RELAY_ENDPOINT = 'https://hondi-proxy.tensor-city.workers.dev';
+
 // ══════════════════════════════════════════════════════════════
 // GWP 파라미터 파싱 — klaw 등 기관 서비스와 완전히 동일한 규약
 // ══════════════════════════════════════════════════════════════
@@ -110,6 +112,29 @@ if (!def) {
   const banner = document.getElementById('err-banner');
   banner.style.display = 'block';
   banner.textContent = `전문가 페르소나를 찾을 수 없습니다 (persona=${_qs.get('persona') || '(없음)'}). 고팡으로 돌아가 다시 시도해 주세요.`;
+
+  // 2026-07-06: "초안 작성 + 검토 대기열" 원칙 — 존재하지 않는 전문가를
+  // 자동으로 만들어 즉시 배포하지 않는다(자격·법적 책임이 걸린 분야에서
+  // 검토 없는 페르소나가 실사용자에게 나가는 위험). 대신 기존
+  // /feedback 시스템(자동 category 분류, feedback.html 관리자 검토
+  // 화면 이미 존재)에 요청만 기록한다 — 새 백엔드를 만들지 않고 이미
+  // 검증된 인프라를 재사용.
+  try {
+    const user = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+    if (user?.ipv6 && user?.handle) {
+      const requestedName = _qs.get('persona') || '(없음)';
+      const contentLines = [
+        `[전문가 요청] 등록되지 않은 전문가 페르소나가 요청됨: "${requestedName}"`,
+        GWP_CTX ? `사용자 발화: ${GWP_CTX}` : null,
+      ].filter(Boolean);
+      fetch(`${RELAY_ENDPOINT}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guid: user.ipv6, handle: user.handle, content: contentLines.join('\n') }),
+      }).catch(e => console.warn('[Expert] 전문가 요청 기록 실패(무해함, 배너는 그대로 표시됨):', e.message));
+    }
+  } catch (e) { /* 로그인 정보 없거나 파싱 실패 — 조용히 건너뜀, 배너는 이미 표시됨 */ }
+
   throw new Error('unknown persona: ' + _qs.get('persona'));
 }
 document.getElementById('tb-icon').textContent  = def.icon || '🤝';
@@ -144,27 +169,30 @@ function appendTyping() {
 
 // ══════════════════════════════════════════════════════════════
 // 시스템 프롬프트 합성 — 공통 가드레일 + (의료시) 안전모듈 + 페르소나
-// ══════════════════════════════════════════════════════════════
+// 2026-07-06: 셋 중 하나라도 실패하면 조용히 저하되지 않고 명시적으로
+// 실패한다. 이전엔 가드레일/의료안전모듈은 실패해도 아무 표시 없이
+// 그냥 스킵됐고(페르소나 파일보다 오히려 더 위험 — 안전장치가 빠진
+// 채 티도 안 나고 진행됨), 페르소나 SP만 실패 시 "[일반 전문가
+// 모드로 응답]"이라는 문구를 얹어 부분 저하 상태로 계속 진행했다.
+// AGENT-COMMON/webapp.html에 적용한 "실패하면 하드 실패" 원칙과
+// 통일한다 — 없는 안전장치를 있는 것처럼 굴지 않는다.
 async function composeExpertPrompt() {
   const parts = [];
-  try {
-    const r = await fetch(COMMON_GUARDRAILS_URL);
-    if (r.ok) parts.push(await r.text());
-  } catch (e) { console.warn('[Expert] 공통 가드레일 로드 실패:', e.message); }
+
+  const guardrailsRes = await fetch(COMMON_GUARDRAILS_URL).catch(e => { throw new Error('공통 가드레일 로드 실패: ' + e.message); });
+  if (!guardrailsRes.ok) throw new Error('공통 가드레일 로드 실패: HTTP ' + guardrailsRes.status);
+  parts.push(await guardrailsRes.text());
 
   if (def.needsMedicalSafety) {
-    try {
-      const r = await fetch(COMMON_MEDICAL_SAFETY_URL);
-      if (r.ok) parts.push(await r.text());
-    } catch (e) { console.warn('[Expert] 의료 안전모듈 로드 실패:', e.message); }
+    const safetyRes = await fetch(COMMON_MEDICAL_SAFETY_URL).catch(e => { throw new Error('의료 안전모듈 로드 실패: ' + e.message); });
+    if (!safetyRes.ok) throw new Error('의료 안전모듈 로드 실패: HTTP ' + safetyRes.status);
+    parts.push(await safetyRes.text());
   }
 
-  try {
-    const r = await fetch(def.file);
-    parts.push(r.ok ? await r.text() : `[${def.label} SP 로드 실패 — 일반 전문가 모드로 응답]`);
-  } catch (e) {
-    parts.push(`[${def.label} SP 로드 실패 — 일반 전문가 모드로 응답]`);
-  }
+  const personaRes = await fetch(def.file).catch(e => { throw new Error(`${def.label} SP 로드 실패: ` + e.message); });
+  if (!personaRes.ok) throw new Error(`${def.label} SP 로드 실패: HTTP ` + personaRes.status);
+  parts.push(await personaRes.text());
+
   return parts.join('\n\n---\n\n');
 }
 
@@ -173,7 +201,6 @@ async function composeExpertPrompt() {
 // → 혼디 무료 기본 키). 같은 오리진(hondi.net)이라 localStorage를 그대로
 // 공유해서 읽을 수 있다.
 // ══════════════════════════════════════════════════════════════
-const RELAY_ENDPOINT = 'https://hondi-proxy.tensor-city.workers.dev';
 function _loadCfg() {
   try { return JSON.parse(localStorage.getItem('gopang_cfg') || '{}'); } catch { return {}; }
 }
@@ -279,12 +306,12 @@ async function ensureSystemPrompt() {
 }
 
 async function sendTurn(text) {
-  await ensureSystemPrompt();
-  messages.push({ role: 'user', content: text });
   const typing = appendTyping();
   const aiBubble = appendBubble('ai', '');
   aiBubble.style.display = 'none';
   try {
+    await ensureSystemPrompt();
+    messages.push({ role: 'user', content: text });
     let shown = false;
     const full = await callExpertAI(messages, (delta, fullText) => {
       if (!shown) { typing.remove(); aiBubble.style.display = ''; shown = true; }
