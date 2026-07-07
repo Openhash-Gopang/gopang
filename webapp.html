@@ -198,29 +198,33 @@ body.gopang-authed #gopang-auth-gate{display:none}
   stroke-linecap:round;stroke-linejoin:round}
 
 /* AI 버튼 — 입력 필드 오른쪽, "AI" 텍스트 + 둥근 사각 테두리
-   좌측 카메라·마이크·파일첨부 아이콘과 비슷한 크기로 축소, 차분한 파란색,
-   input-row 안에서 세로 중앙 정렬 (기존엔 align-items:flex-end 상속으로 바닥에 붙어 있었음) */
+   좌측 카메라·마이크·파일첨부 아이콘과 비슷한 크기로 축소, input-row 안에서
+   세로 중앙 정렬.
+   2026-07-07: PDV(개인 데이터 금고) 누적량에 따라 배경색이 연한 하늘색→
+   짙은 청색으로 점점 진해지도록 변경 — "데이터가 쌓일수록 AI가 사용자를
+   더 정확히 대신할 수 있다"는 것을 색으로 보여준다. 색상 자체는 JS
+   (_updateAIButtonPdvColor, 아래 AI 패널 스크립트 안)가 --ai-btn-bg /
+   --ai-btn-fg CSS 변수를 갱신하는 방식으로 적용한다. */
 .btn-ai{
   display:inline-flex;align-items:center;justify-content:center;
   min-width:26px;height:22px;flex-shrink:0;
   align-self:center;
   border-radius:6px;
-  border:1.2px solid var(--blue);
-  background:transparent;
-  color:var(--blue);
+  border:1.2px solid transparent;
+  background:var(--ai-btn-bg, #c9daf8);
+  color:var(--ai-btn-fg, #000);
   font-size:9.5px;font-weight:700;letter-spacing:.04em;
   font-family:inherit;
   cursor:pointer;padding:0 5px;
-  transition:border-color .15s, color .15s, background .15s;
+  transition:background .4s ease, color .4s ease;
   user-select:none;
 }
-.btn-ai:hover{ border-color:var(--blue-dk); color:var(--blue-dk); background:var(--blue-lt); }
+.btn-ai:hover{ filter:brightness(0.94); }
 .btn-ai:active{ transform:scale(.94); }
 /* 패널 열린 상태 — 초록 강조 (활성 피드백은 기존대로 유지) */
 .btn-ai.panel-open{
   border-color:#1A73E8;
-  color:#1A73E8;
-  background:rgba(26,115,232,.06);
+  box-shadow:0 0 0 2px rgba(26,115,232,.25);
 }
 
 
@@ -2683,6 +2687,42 @@ window.closePDV = closePDV;
   const attachRemoveBtn = document.getElementById('ai-panel-attach-remove');
   let _panelOpen = false;
 
+  // ── PDV 누적량 → AI 버튼 색상 (2026-07-07 신설) ──────────────────
+  // "데이터가 많을수록 AI가 사용자를 더 정확히 대신할 수 있다"는 것을
+  // 색으로 보여준다. 연한 하늘색(#c9daf8)에서 시작해 기록이 쌓일수록
+  // 짙은 청색(#1c4587)까지 6단계로 진해진다. 뒤 2단계는 배경이 어두워
+  // 검정 글자 대비가 부족해지므로 글자색만 흰색으로 전환한다.
+  const _AI_BTN_TIERS = [
+    { min: 0,   bg: '#c9daf8', fg: '#000' },
+    { min: 1,   bg: '#a4c2f4', fg: '#000' },
+    { min: 5,   bg: '#6d9eeb', fg: '#000' },
+    { min: 15,  bg: '#3c78d8', fg: '#fff' },
+    { min: 40,  bg: '#1155cc', fg: '#fff' },
+    { min: 100, bg: '#1c4587', fg: '#fff' },
+  ];
+  function _aiButtonTierFor(count) {
+    let tier = _AI_BTN_TIERS[0];
+    for (const t of _AI_BTN_TIERS) { if (count >= t.min) tier = t; }
+    return tier;
+  }
+  async function _updateAIButtonPdvColor() {
+    try {
+      if (!window.GopangPDV?.list) return; // pdv-store.js 아직 로드 전이면 스킵(다음 이벤트 때 재시도)
+      const records = await window.GopangPDV.list();
+      const count = records.length;
+      const tier = _aiButtonTierFor(count);
+      btnAI.style.setProperty('--ai-btn-bg', tier.bg);
+      btnAI.style.setProperty('--ai-btn-fg', tier.fg);
+      btnAI.title = `기록 ${count}건 — 데이터가 쌓일수록 AI 비서가 회원님을 더 정확히 대신할 수 있어요.`;
+    } catch (e) {
+      console.warn('[AI버튼] PDV 색상 갱신 실패:', e.message);
+    }
+  }
+  _updateAIButtonPdvColor();
+  // 새 PDV 기록이 쌓일 때마다(대화 종료, 거래 등) 즉시 재계산
+  window.addEventListener('gopang:pdv-recorded', _updateAIButtonPdvColor);
+
+
   // ── 열기 / 닫기 ──────────────────────────────────────
   const triggerBtn = document.getElementById('ai-panel-trigger');
 
@@ -3202,7 +3242,7 @@ window.closePDV = closePDV;
     'btn-attach':       '여기를 누르면 사진이나 문서 파일을 골라서 보낼 수 있어요.',
     'btn-camera':       '여기를 누르면 카메라가 바로 켜져서, 사진을 찍어 보낼 수 있어요.',
     'btn-mic':          '여기를 누르면 글자를 안 쓰고 말로 이야기할 수 있어요. 말이 끝나면 자동으로 전송돼요.',
-    'btn-ai':           '여기를 누르면 언제든 혼디(나만의 AI 비서)와 대화창이 열려요. 다른 사람과 대화 중에도 누를 수 있어요.',
+    'btn-ai':           '여기를 누르면 언제든 혼디(나만의 AI 비서)와 대화창이 열려요. 다른 사람과 대화 중에도 누를 수 있어요. 버튼 색이 연한 하늘색에서 짙은 파란색으로 진해질수록 회원님에 대해 더 많이 알고 있다는 뜻이에요 — 데이터가 많을수록 AI가 회원님을 대신해 더 정확하게 답할 수 있어요. 사진이나 문서를 파일 첨부나 카메라 촬영으로 보내주시면 더 빨리 진해져요.',
     'btn-search':       '여기를 누르면 다른 사람·기관·사물을 찾을 수 있어요. 예: 친구 이름, 경찰청 같은 기관도 찾을 수 있어요.',
     'btn-settings':     '여기를 누르면 내 정보, 알림, 기록 보관함 같은 설정을 볼 수 있어요.',
     'edge-handle-left': '화면 가장자리의 이 막대를 살짝 눌러도 왼쪽 메뉴가 열려요. 살짝 밀어도 똑같이 열려요.',
