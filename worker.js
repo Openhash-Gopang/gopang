@@ -3504,13 +3504,26 @@ async function _computeUserHash(txHash, blockHash, height) {
  * C-2a: L1 응답 vs outputs 일관성 검증
  * 감시 모드 — 불일치 시 로그만 기록, 거래 차단 안 함 (T10까지)
  */
+// 2026-07-07 수정: 이전엔 구매자 쪽(buyer_claim.amount vs 전체 outputs
+// 합계)만 봤다 — "판매자와 구매자의 재무제표 변동 사항 일치 검증"이라는
+// 요청에 정확히 맞추려면 판매자 쪽도 봐야 한다. L1이 독립적으로 계산해
+// 돌려준 seller_claim.amount가, 원래 보내려던 판매자 몫(outputs 중
+// gopang-platform이 아닌 첫 수취인)과 정확히 일치하는지도 검증한다.
 function verifyOutputConsistency(l1Response, outputs) {
-  const l1Total   = l1Response.buyer_claim?.amount || 0;
-  const calcTotal = outputs.reduce((s, o) => s + (o.amount || 0), 0);
-  const consistent = Math.abs(l1Total - calcTotal) < 0.01;
+  const l1BuyerTotal  = l1Response.buyer_claim?.amount  || 0;
+  const l1SellerTotal = l1Response.seller_claim?.amount || 0;
+  const calcTotal     = outputs.reduce((s, o) => s + (o.amount || 0), 0);
+  const calcSellerNet = outputs.find(o => o.recipient_guid !== 'gopang-platform')?.amount || 0;
+
+  const buyerConsistent  = Math.abs(l1BuyerTotal  - calcTotal)     < 0.01;
+  const sellerConsistent = Math.abs(l1SellerTotal - calcSellerNet) < 0.01;
+  const consistent = buyerConsistent && sellerConsistent;
+
   if (!consistent) {
-    console.error('[BIVM] L1 응답 vs outputs 불일치!',
-      JSON.stringify({ l1Total, calcTotal, diff: l1Total - calcTotal }));
+    console.error('[BIVM] L1 응답 vs outputs 불일치!', JSON.stringify({
+      buyer:  { l1: l1BuyerTotal,  calc: calcTotal,     diff: l1BuyerTotal  - calcTotal },
+      seller: { l1: l1SellerTotal, calc: calcSellerNet, diff: l1SellerTotal - calcSellerNet },
+    }));
   }
   return consistent;
 }
@@ -3531,10 +3544,17 @@ function verifyDeltaZero(outputs, balanceClaimed) {
       JSON.stringify({ buyerDebit, sellerNet, platformFee, sigmaDelta }));
     return { valid: false, sigmaDelta };
   }
-  if (balanceClaimed < buyerDebit) {
-    console.error('[BIVM] balance_claimed < txTotal — 잔액 부족!',
+  // 2026-07-07 제거: 여기 있던 "balanceClaimed < buyerDebit → 잔액 부족"
+  // 판정을 걷어냈다. balance_claimed는 클라이언트 자체 신고값이라 더 이상
+  // 신뢰하지 않기로 했고(L1의 computeBalance가 유일한 권위) — 이 시점에
+  // 이미 L1이 잔액을 승인했으니(그러지 않았으면 handleBizOrder가 여기까지
+  // 오지도 못했다) 거래는 실제로 정상이다. 그런데 이 체크가 남아있으면
+  // balance_claimed를 정확히 안 보낸(이제 그럴 필요가 없어진) 모든 정상
+  // 거래를 매번 "불일치"로 잘못 표시해서, 감사 기록(consistency_check)
+  // 자체를 오염시킨다. balanceClaimed 인자는 참고 로그용으로만 남긴다.
+  if (balanceClaimed != null) {
+    console.log('[BIVM] balance_claimed(참고용, 판정에 미사용):',
       JSON.stringify({ balanceClaimed, buyerDebit }));
-    return { valid: false, reason: 'insufficient_balance' };
   }
   return { valid: true, sigmaDelta: 0 };
 }
