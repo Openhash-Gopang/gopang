@@ -185,11 +185,20 @@ def main():
 
         if args.dry_run:
             print(f"  [dry-run] mkdir -p {args.base_dir}/{folder}")
+            print(f"  [dry-run] chown -R {args.run_user}:{args.run_user} {args.base_dir}/{folder}")
             print(f"  [dry-run] write {unit_path}")
             print(f"  [dry-run] systemctl enable --now gopang-pb-{folder}")
             continue
 
         subprocess.run(["mkdir", "-p", f"{args.base_dir}/{folder}"], check=True)
+        # 2026-07-08 수정: 이 스크립트는 systemd unit 파일 쓰기(/etc/systemd/system/)
+        # 때문에 sudo(root)로 실행된다. mkdir도 root 권한으로 실행되므로 방금 만든
+        # 디렉토리가 root:root 소유가 되는데, systemd 유닛은 run_user(기본 ubuntu)로
+        # PocketBase를 돌리기 때문에 "unable to open database file: out of memory (14)"
+        # + "types.d.ts: permission denied"로 크래시 루프에 빠진다(실제로는 메모리가
+        # 아니라 권한 문제 — SQLite의 오해 소지 있는 에러 메시지).
+        # jocheon/gujwa/hangyeong/chuja/udo 5개 노드 배포 중 매번 반복 발생해 확인됨.
+        subprocess.run(["chown", "-R", f"{args.run_user}:{args.run_user}", f"{args.base_dir}/{folder}"], check=True)
         with open(unit_path, "w") as f:
             f.write(unit)
         subprocess.run(["systemctl", "daemon-reload"], check=True)
