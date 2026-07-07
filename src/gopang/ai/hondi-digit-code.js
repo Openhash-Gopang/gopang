@@ -37,6 +37,113 @@ export function digitsToId(digits) {
   return BigInt(digits.join(''));
 }
 
+// ── 전화번호(휴대폰 또는 유선 지역번호) ↔ 10자리 숫자 코드 ──────
+//
+// 가입 시점에 "휴대폰" 또는 "지역번호(유선)" 중 하나를 선택한다는
+// 전제 하에, 10칸을 다음과 같이 채운다 — 칸 수는 항상 고정 10이므로
+// 스캐너는 손댈 필요 없이 그대로 재사용한다.
+//
+//   · 휴대폰: "10"(식별자) 생략, 가입자번호 8자리만 사용
+//             → "00" + 가입자번호(8자리) = 10자리
+//   · 지역번호(유선): 맨 앞 "0"(트렁크 접두) 제외한 지역번호 + 가입자번호
+//             서울(02→"2", 1자리)+가입자 8자리 = 9자리 → 앞에 "0" 채워 10자리
+//             그 외(031~064 → "31~64", 2자리)+가입자 7자리 = 9자리 → 앞에 "0" 채워 10자리
+//             (드물게 가입자 8자리인 예외 지역은 이미 10자리라 패딩 없음)
+//
+// 지역번호는 서울("2")만 1자리이고 나머지는 전부 2자리(31~64)이며,
+// 어떤 지역번호도 "0"으로 시작하지 않으므로, 인코딩된 10자리의 앞
+// 한두 자리만 보고도 네 가지 경우가 서로 겹치지 않게 구분된다:
+//   · s[0]!='0'            → 예외적 10자리 유선 (앞 2자리가 지역번호)
+//   · s[0]=='0', s[1]=='0' → 휴대폰
+//   · s[0]=='0', s[1]=='2' → 서울 유선
+//   · s[0]=='0', s[1]∈{3,4,5,6} → 그 외 유선(2자리 지역번호)
+export const VALID_AREA_CODES = [
+  '2',                                   // 서울 (02) — 유일한 1자리 지역번호
+  '31','32','33',                        // 경기·인천·강원
+  '41','42','43','44',                   // 충남·대전·충북·세종
+  '51','52','53','54','55',              // 부산·울산·대구·경북·경남
+  '61','62','63','64',                   // 전남·광주·전북·제주
+];
+
+function _onlyDigits(s, label) {
+  if (!/^\d+$/.test(s)) throw new Error(`${label}은 숫자만 가능합니다: "${s}"`);
+  return s;
+}
+
+export function phoneToDigits({ type, areaCode, subscriberNumber }) {
+  if (type === 'mobile') {
+    _onlyDigits(subscriberNumber, '휴대폰 가입자번호');
+    if (subscriberNumber.length !== 8) {
+      throw new Error(`휴대폰 가입자번호는 8자리여야 합니다(현재 ${subscriberNumber.length}자리).`);
+    }
+    return ('00' + subscriberNumber).split('').map(Number);
+  }
+
+  if (type === 'landline') {
+    _onlyDigits(areaCode, '지역번호');
+    _onlyDigits(subscriberNumber, '가입자번호');
+    if (!VALID_AREA_CODES.includes(areaCode)) {
+      throw new Error(`유효하지 않은 지역번호입니다: "${areaCode}"`);
+    }
+    const raw = areaCode + subscriberNumber; // 트렁크 "0" 제외한 형태
+    if (raw.length !== 9 && raw.length !== 10) {
+      throw new Error(`지역번호+가입자번호 길이가 올바르지 않습니다(9 또는 10자리, 현재 ${raw.length}자리).`);
+    }
+    const padded = raw.length === 9 ? ('0' + raw) : raw;
+    return padded.split('').map(Number);
+  }
+
+  throw new Error(`type은 "mobile" 또는 "landline"이어야 합니다: "${type}"`);
+}
+
+// 10자리 숫자 배열(또는 숫자 코드 문자열)을 다시 전화번호 구조로 해석.
+// 스캐너가 인식한 결과(숫자 배열)를 실제 전화번호로 되돌릴 때 사용.
+export function digitsToPhone(digits) {
+  const s = Array.isArray(digits) ? digits.join('') : String(digits).padStart(DIGIT_COUNT, '0');
+  if (s.length !== DIGIT_COUNT || !/^\d+$/.test(s)) {
+    throw new Error(`숫자 코드는 ${DIGIT_COUNT}자리 숫자여야 합니다: "${s}"`);
+  }
+
+  // 앞자리가 "0"이 아니면: 예외적 10자리 유선(패딩 없이 지역번호 2자리 그대로)
+  if (s[0] !== '0') {
+    const areaCode = s.slice(0, 2);
+    if (!VALID_AREA_CODES.includes(areaCode)) {
+      throw new Error(`인식할 수 없는 지역번호 조합입니다: "${areaCode}"`);
+    }
+    const subscriberNumber = s.slice(2); // 8자리
+    return {
+      type: 'landline', areaCode, subscriberNumber,
+      display: `0${areaCode}-${subscriberNumber.slice(0,4)}-${subscriberNumber.slice(4,8)}`,
+    };
+  }
+
+  // s[0] === '0' — 휴대폰, 서울 유선, 그 외 유선 중 하나
+  if (s[1] === '0') {
+    const subscriberNumber = s.slice(2); // 8자리
+    return {
+      type: 'mobile', areaCode: null, subscriberNumber,
+      display: `010-${subscriberNumber.slice(0,4)}-${subscriberNumber.slice(4,8)}`,
+    };
+  }
+  if (s[1] === '2') {
+    const subscriberNumber = s.slice(2); // 8자리
+    return {
+      type: 'landline', areaCode: '2', subscriberNumber,
+      display: `02-${subscriberNumber.slice(0,4)}-${subscriberNumber.slice(4,8)}`,
+    };
+  }
+  const areaCode2 = s.slice(1, 3);
+  if (VALID_AREA_CODES.includes(areaCode2)) {
+    const subscriberNumber = s.slice(3); // 7자리
+    return {
+      type: 'landline', areaCode: areaCode2, subscriberNumber,
+      display: `0${areaCode2}-${subscriberNumber.slice(0,3)}-${subscriberNumber.slice(3,7)}`,
+    };
+  }
+
+  throw new Error(`인식할 수 없는 코드 형식입니다: "${s}"`);
+}
+
 // ── 로고("혼디" 완전한 형태) 베이스 이미지 — 색상 코드와 동일 자산 재사용.
 // 이번 레이아웃은 로고 아래에 숫자열을 배치하므로(옆이 아니라), 색상
 // 코드용 원본(551×335, 혼+ㄷ+ㅣ 전부 포함)을 그대로 쓴다.
