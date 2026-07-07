@@ -1105,7 +1105,11 @@ export default {
     if (pathname === '/biz/order'   && request.method === 'POST') return handleBizOrder(request, env, corsHeaders, ctx);
     if (pathname === '/biz/balance' && request.method === 'GET')  return handleBizBalance(request, env, corsHeaders);
     if (pathname === '/biz/supply'  && request.method === 'GET')  return handleBizSupply(request, env, corsHeaders);
-    if (pathname === '/biz/review'  && request.method === 'POST') return handleBizReview(request, env, corsHeaders);
+    // 2026-07-07: /biz/review(Supabase biz_reviews, 5점 척도) → 완전 대체.
+    // 실거래(tx_hash) 기반 trade_ratings(PocketBase, polarity+온도)로 이전.
+    // handleBizReview는 하단에 DEPRECATED로 남겨두되 라우팅에서 제거함.
+    if (pathname === '/biz/trade-rating' && request.method === 'POST') return handleTradeRatingSubmit(request, env, corsHeaders);
+    if (pathname === '/biz/temperature'  && request.method === 'GET')  return handleTemperatureQuery(request, env, corsHeaders);
     if (pathname === '/biz/product' && request.method === 'POST') return handleBizProduct(request, env, corsHeaders);
 
     // ── ai-setup (AI 비서 설정) ─────────────────────────────
@@ -1974,7 +1978,11 @@ async function handleBizProfile(request, env, corsHeaders) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// v4.8 — /biz/review
+// [DEPRECATED 2026-07-07] v4.8 — /biz/review (Supabase biz_reviews)
+// 라우팅에서 제거됨 — trade_ratings(PocketBase, polarity+온도)로 완전 대체.
+// 백필/마이그레이션 스크립트가 biz_reviews 과거 데이터를 참조할 수 있어
+// 함수 자체는 즉시 삭제하지 않고 남겨둔다. 마이그레이션 완료 확인 후
+// 이 함수와 Supabase biz_reviews/biz_products 테이블을 함께 제거할 것.
 // ═══════════════════════════════════════════════════════════
 async function handleBizReview(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
@@ -5534,6 +5542,166 @@ async function _l1SyncSellerProducts(env, guid, products, mode = 'replace') {
       }).catch(e => console.warn('[Catalog] 신규 저장 실패(무시하고 계속):', e.message));
     }
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-07 신설 — trade_ratings / 온도(temperature)
+// /biz/review(Supabase, 5점 척도)를 완전 대체. 실거래(tx_hash) 당사자만
+// 평가 가능 — 대화 중 합의된 설계 원칙:
+//   1) 세금계산서/현금영수증이 걸리는 실거래라 허위 평가 자체가 비용을 짐
+//   2) polarity 3단계(자유서술 아님) — comment는 온도 계산과 분리
+//   3) 금액 비례(카테고리 중앙값 정규화) + 평가자 신뢰도(온도 스냅샷) 가중
+//   4) rater_temp_snapshot 고정 — 시간순 DAG, 순환 재계산 없음
+// ═══════════════════════════════════════════════════════════
+const POLARITY_WEIGHT       = { positive: 0.3, neutral: 0.0, negative: -0.7 };
+const RATING_DECAY           = 0.97;
+const RATING_DELTA_CLAMP     = 8.0;
+const MIN_RATINGS_FOR_TEMP   = 5;
+const DEFAULT_TEMP           = 36.5;
+const TEMP_MIN               = 0;
+const TEMP_MAX               = 99;
+
+// Δ_i 계산 — 합의된 최종 산식
+function _computeRatingDelta({ polarity, decayIndex, repeatIndex, amount, categoryMedian, raterTempSnapshot }) {
+  const polarityWeight   = POLARITY_WEIGHT[polarity];
+  const decay            = Math.pow(RATING_DECAY, decayIndex);
+  const repeatDampening  = repeatIndex > 3 ? Math.pow(0.5, repeatIndex - 3) : 1.0;
+  const amountRatio      = categoryMedian > 0 ? amount / categoryMedian : 1.0;
+  const raterCredibility = 0.5 + (raterTempSnapshot - DEFAULT_TEMP) / 62.5; // 36.5→0.5, 99→1.5
+  const raw = polarityWeight * decay * repeatDampening * amountRatio * raterCredibility;
+  return Math.max(-RATING_DELTA_CLAMP, Math.min(RATING_DELTA_CLAMP, raw));
+}
+
+// 업종별 최근 90일 L1 중앙값 거래액 캐시 조회 (category_medians 컬렉션,
+// 일 1회 배치 갱신은 scheduled() 크론에 별도 등록 — 이 함수는 조회 전용)
+async function _getCategoryMedianAmount(l1Base, token, category) {
+  const filter = encodeURIComponent(`category='${category}'`);
+  const res = await fetch(`${l1Base}/api/collections/category_medians/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) return 1; // 캐시 미존재 시 정규화 비율 1.0으로 폴백
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0]?.median_amount ?? 1;
+}
+
+// POST /biz/trade-rating — tx_hash 실거래 당사자만 평가 가능
+async function handleTradeRatingSubmit(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { tx_hash, rater_guid, ratee_guid, rater_role, polarity, comment, amount, category } = body;
+  if (!tx_hash)     return _err(400, 'MISSING_FIELD', 'tx_hash 필수', corsHeaders);
+  if (!rater_guid)  return _err(400, 'MISSING_FIELD', 'rater_guid 필수', corsHeaders);
+  if (!ratee_guid)  return _err(400, 'MISSING_FIELD', 'ratee_guid 필수', corsHeaders);
+  if (!/^[0-9a-f]{64}$/.test(tx_hash)) return _err(400, 'INVALID_TX_HASH', 'tx_hash 형식 오류', corsHeaders);
+  if (!['positive', 'neutral', 'negative'].includes(polarity)) return _err(400, 'INVALID_POLARITY', 'polarity는 positive/neutral/negative만 허용', corsHeaders);
+  if (!['buyer', 'seller'].includes(rater_role)) return _err(400, 'INVALID_ROLE', 'rater_role은 buyer/seller만 허용', corsHeaders);
+  if (typeof amount !== 'number' || amount <= 0) return _err(400, 'MISSING_FIELD', 'amount 필수(양수)', corsHeaders);
+  if (!category) return _err(400, 'MISSING_FIELD', 'category 필수', corsHeaders);
+
+  // 판매자(ratee) 소속 L1 조회 — seller_products와 동일 패턴(§4 guid_home_l1)
+  const homeNodeId = (await _resolveHomeL1Node(env, ratee_guid)) || 'KR-JEJU-JEJU-HANLIM';
+  const l1Base = L1_NODE_MAP[homeNodeId] || L1_DEFAULT;
+  const token = await _l1AdminTokenFor(env, l1Base);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  // 1) 거래 실재성 + 당사자 일치 검증 — blocks 컬렉션에서 tx_hash로 조회
+  const blockFilter = encodeURIComponent(`tx_hash='${tx_hash}'`);
+  const blockRes = await fetch(`${l1Base}/api/collections/blocks/records?filter=${blockFilter}&perPage=1`, { headers });
+  if (!blockRes.ok) return _err(502, 'L1_UNREACHABLE', 'blocks 조회 실패: ' + blockRes.status, corsHeaders);
+  const blockData = await blockRes.json().catch(() => ({ items: [] }));
+  const blockRecord = blockData.items?.[0];
+  if (!blockRecord) return _err(404, 'TX_NOT_FOUND', '해당 tx_hash의 거래를 찾을 수 없습니다', corsHeaders);
+  if (rater_guid !== blockRecord.buyer_guid && rater_guid !== blockRecord.seller_guid) {
+    return _err(403, 'NOT_A_PARTICIPANT', '거래 당사자만 평가할 수 있습니다', corsHeaders);
+  }
+  if (ratee_guid !== blockRecord.buyer_guid && ratee_guid !== blockRecord.seller_guid) {
+    return _err(400, 'RATEE_MISMATCH', 'ratee_guid가 해당 거래의 당사자가 아닙니다', corsHeaders);
+  }
+
+  // 2) 중복 방지 — (tx_hash, rater_guid) 복합 유니크
+  const dupFilter = encodeURIComponent(`tx_hash='${tx_hash}'&&rater_guid='${rater_guid}'`);
+  const dupRes = await fetch(`${l1Base}/api/collections/trade_ratings/records?filter=${dupFilter}&perPage=1`, { headers });
+  const dupData = await dupRes.json().catch(() => ({ items: [] }));
+  if (dupData.items?.length > 0) return _err(409, 'ALREADY_RATED', '이미 이 거래를 평가했습니다', corsHeaders);
+
+  // 3) rater 온도 스냅샷 고정 (미래 rater 온도 변화가 과거 Δ에 소급 전파되지 않도록)
+  const raterFilter = encodeURIComponent(`guid='${rater_guid}'`);
+  const raterRes = await fetch(`${l1Base}/api/collections/profiles/records?filter=${raterFilter}&perPage=1`, { headers });
+  const raterData = await raterRes.json().catch(() => ({ items: [] }));
+  const raterTempSnapshot = raterData.items?.[0]?.temp_score ?? DEFAULT_TEMP;
+
+  // 4) 동일 (rater, ratee) 쌍 반복거래 횟수 조회 (감쇠 계산용)
+  const pairFilter = encodeURIComponent(`rater_guid='${rater_guid}'&&ratee_guid='${ratee_guid}'`);
+  const pairRes = await fetch(`${l1Base}/api/collections/trade_ratings/records?filter=${pairFilter}&perPage=1`, { headers });
+  const pairData = await pairRes.json().catch(() => ({ items: [] }));
+  const repeatIndex = (pairData.totalItems ?? 0) + 1;
+
+  // 5) decay 인덱스 — ratee 기준 현재까지의 평가 건수
+  const raterCountRes = await fetch(`${l1Base}/api/collections/trade_ratings/records?filter=${encodeURIComponent(`ratee_guid='${ratee_guid}'`)}&perPage=1`, { headers });
+  const raterCountData = await raterCountRes.json().catch(() => ({ totalItems: 0 }));
+  const decayIndex = raterCountData.totalItems ?? 0;
+
+  // 6) 업종 중앙값 조회
+  const categoryMedian = await _getCategoryMedianAmount(l1Base, token, category);
+
+  // 7) insert (append-only — update/delete 경로 없음)
+  const insRes = await fetch(`${l1Base}/api/collections/trade_ratings/records`, {
+    method: 'POST', headers,
+    body: JSON.stringify({
+      tx_hash, rater_guid, ratee_guid, rater_role, polarity,
+      comment: comment || '', amount, category,
+      rater_temp_snapshot: raterTempSnapshot,
+      created_at: new Date().toISOString(),
+    }),
+  });
+  if (!insRes.ok) return _err(500, 'INSERT_FAILED', await insRes.text(), corsHeaders);
+  const inserted = await insRes.json().catch(() => null);
+
+  // 8) Δ 계산 후 profiles.temp_score 증분 업데이트
+  const delta = _computeRatingDelta({ polarity, decayIndex, repeatIndex, amount, categoryMedian, raterTempSnapshot });
+  const rateeFilter = encodeURIComponent(`guid='${ratee_guid}'`);
+  const rateeRes = await fetch(`${l1Base}/api/collections/profiles/records?filter=${rateeFilter}&perPage=1`, { headers });
+  const rateeData = await rateeRes.json().catch(() => ({ items: [] }));
+  const rateeProfile = rateeData.items?.[0];
+  if (rateeProfile) {
+    const currentTemp = rateeProfile.temp_score ?? DEFAULT_TEMP;
+    const currentCount = rateeProfile.temp_rating_count ?? 0;
+    const nextTemp = Math.max(TEMP_MIN, Math.min(TEMP_MAX, currentTemp + delta));
+    await fetch(`${l1Base}/api/collections/profiles/records/${rateeProfile.id}`, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({
+        temp_score: nextTemp,
+        temp_rating_count: currentCount + 1,
+        temp_updated_at: new Date().toISOString(),
+      }),
+    }).catch(e => console.warn('[TradeRating] 온도 갱신 실패:', e.message));
+  }
+
+  return new Response(JSON.stringify({ ok: true, record_id: inserted?.id || null, delta }), { status: 200, headers: corsHeaders });
+}
+
+// GET /biz/temperature?guid=... — 공개 조회(온도 + 배지). 5건 미만이면 "신규 판매자" 배지.
+async function handleTemperatureQuery(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const homeNodeId = (await _resolveHomeL1Node(env, guid)) || 'KR-JEJU-JEJU-HANLIM';
+  const l1Base = L1_NODE_MAP[homeNodeId] || L1_DEFAULT;
+  const token = await _l1AdminTokenFor(env, l1Base);
+  const filter = encodeURIComponent(`guid='${guid}'`);
+  const res = await fetch(`${l1Base}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  const data = await res.json().catch(() => ({ items: [] }));
+  const profile = data.items?.[0];
+  const count = profile?.temp_rating_count ?? 0;
+
+  if (count < MIN_RATINGS_FOR_TEMP) {
+    return new Response(JSON.stringify({ ok: true, temp_score: null, badge: 'new_seller', count }), { status: 200, headers: corsHeaders });
+  }
+  return new Response(JSON.stringify({ ok: true, temp_score: profile.temp_score ?? DEFAULT_TEMP, badge: null, count }), { status: 200, headers: corsHeaders });
 }
 
 // POST /biz/catalog/sync — 로컬 IndexedDB 전체 스냅샷을 서버 백업/공개미러에 반영
