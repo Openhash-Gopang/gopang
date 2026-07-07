@@ -5182,12 +5182,21 @@ async function handleCatalogSync(request, env, corsHeaders) {
   // 실어 보낸다. 이 함수는 그 판단을 검증(화이트리스트)하고 저장만 한다
   // — 다른 모든 도메인에서 "판단은 호출한 쪽 AI가, 백엔드는 검증·저장만"
   // 하는 패턴과 동일하다.
+  // 2026-07-07 수정(사고실험 #3): 이전엔 schema_id 형식이 안 맞으면 상품
+  // 동기화 요청 전체를 400으로 거부했다 — 코드 주석은 "그 필드만 무시하고
+  // 계속 진행된다"고 돼 있었는데 실제 동작과 달랐다(설명 오류). PA SP가
+  // 정확한 형식(숫자 2자리 문자열)을 강제받은 적이 없어 형식 불일치가
+  // 흔히 발생할 수 있는데, 그 때문에 정상 상품 동기화 자체가 막히는 건
+  // 손해가 더 크다. 이제 실제로 주석대로 동작하도록 고친다 — 형식이
+  // 안 맞으면 이 필드만 버리고(업종 판단은 아래 keyword_fallback에 위임),
+  // 상품 동기화는 계속 진행한다.
+  let industryFieldsValid = null;
   if (industry_fields != null) {
     const sid = industry_fields.schema_id;
-    if (!sid || !VALID_INDUSTRY_SCHEMA_IDS.has(String(sid))) {
-      return _err(400, 'INVALID_SCHEMA_ID',
-        `industry_fields.schema_id가 유효하지 않습니다: ${JSON.stringify(sid)} (허용: ${[...VALID_INDUSTRY_SCHEMA_IDS].join(',')})`,
-        corsHeaders);
+    if (sid && VALID_INDUSTRY_SCHEMA_IDS.has(String(sid))) {
+      industryFieldsValid = { schema_id: String(sid) };
+    } else {
+      console.warn('[Catalog] industry_fields.schema_id 무효, 무시:', JSON.stringify(sid));
     }
   }
 
@@ -5206,15 +5215,25 @@ async function handleCatalogSync(request, env, corsHeaders) {
   const sigOk = await _verifyEd25519(pubkey, signature, body);
   if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
 
-  // 상품 스키마 최소 검증 — RULE-01급 원칙(허위/불완전 데이터로 검색 오염 방지)
-  for (const p of products) {
-    if (!p.id || !p.name) {
-      return _err(400, 'INVALID_PRODUCT', `상품에 id/name 필수: ${JSON.stringify(p).slice(0, 100)}`, corsHeaders);
-    }
+  // 상품 스키마 최소 검증 — RULE-01급 원칙(허위/불완전 데이터로 검색 오염 방지).
+  // 2026-07-07 수정(사고실험 #2): 이전엔 배열 중 하나라도 id/name이 없으면
+  // 요청 전체를 400으로 거부했다 — 상품 여러 개 중 하나가 이름 없이 왔다고
+  // (LLM 환각 등) 나머지 정상 상품까지 전부 버려지는 건 손해가 크다.
+  // 이제 무효한 항목만 걸러내고 유효한 것만 동기화한다. 걸러진 항목은
+  // 응답의 skipped에 실어 클라이언트가 알 수 있게 한다. 원본이 비어있지
+  // 않은데 전부 걸러졌으면(=완전히 잘못된 요청) 여전히 에러로 처리한다.
+  const validProducts = products.filter(p => p && p.id && p.name);
+  const skippedCount = products.length - validProducts.length;
+  if (skippedCount > 0) {
+    console.warn(`[Catalog] id/name 누락 상품 ${skippedCount}개 제외:`,
+      products.filter(p => !p || !p.id || !p.name).slice(0, 3).map(p => JSON.stringify(p).slice(0, 100)));
+  }
+  if (products.length > 0 && validProducts.length === 0) {
+    return _err(400, 'INVALID_PRODUCT', '유효한 상품이 하나도 없습니다(모두 id/name 누락)', corsHeaders);
   }
 
   try {
-    await _l1SyncSellerProducts(env, guid, products, syncMode);
+    await _l1SyncSellerProducts(env, guid, validProducts, syncMode);
   } catch (e) {
     return _err(502, 'L1_SYNC_FAILED', '카탈로그 동기화 실패: ' + e.message, corsHeaders);
   }
@@ -5223,9 +5242,9 @@ async function handleCatalogSync(request, env, corsHeaders) {
   // AI비서를 안 거친 구버전 클라이언트를 위해 카테고리 키워드 매칭을
   // 최후 수단으로만 쓴다(정확도가 떨어짐을 알고 쓰는 안전망일 뿐,
   // 이걸로 이미 있는 AI비서 판단을 덮어쓰지 않는다).
-  const derived = (industry_fields?.schema_id && VALID_INDUSTRY_SCHEMA_IDS.has(String(industry_fields.schema_id)))
-    ? { schema_id: String(industry_fields.schema_id), occupation: KSIC_LABELS[String(industry_fields.schema_id)] || null, source: 'agent' }
-    : { ..._deriveOccupationFromCategories(products.map(p => p.category)), source: 'keyword_fallback' };
+  const derived = industryFieldsValid?.schema_id
+    ? { schema_id: industryFieldsValid.schema_id, occupation: KSIC_LABELS[industryFieldsValid.schema_id] || null, source: 'agent' }
+    : { ..._deriveOccupationFromCategories(validProducts.map(p => p.category)), source: 'keyword_fallback' };
 
   let occupationUpdated = false;
   if (derived?.schema_id) {
@@ -5252,7 +5271,7 @@ async function handleCatalogSync(request, env, corsHeaders) {
   }
 
   return new Response(JSON.stringify({
-    ok: true, synced: products.length, mode: syncMode,
+    ok: true, synced: validProducts.length, skipped: skippedCount, mode: syncMode,
     occupation: derived?.occupation || null, occupation_updated: occupationUpdated,
   }), { status: 200, headers: corsHeaders });
 }

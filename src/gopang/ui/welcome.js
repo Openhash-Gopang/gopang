@@ -164,25 +164,52 @@ async function _forwardProductsToMarket(profile, wallet, pubkey) {
     return;
   }
 
-  const products = items.map((p, i) => ({
-    id: p.id || _slugifyProductName(p.name, i),
-    name: p.name || '',
-    desc: p.desc || '',
-    price: typeof p.price === 'number' ? p.price : null,
-    unit: p.unit || '',
-    category: p.category || profile.entity_subtype || profile.schema_id || '',
-    stock: p.stock || 'in',
-    image_url: p.image_url || '',
-    is_public: p.is_public !== false,
-    updated_at: new Date().toISOString(),
-  }));
+  // 2026-07-07 수정(사고실험 #2): name이 없는 항목이 하나라도 섞이면 서버가
+  // 배치 전체를 400으로 거부한다(handleCatalogSync의 for-loop 검증). 상품
+  // 여러 개 중 하나가 LLM 환각 등으로 이름을 못 냈다고 나머지 정상 상품까지
+  // 전부 버려지는 건 손해가 크므로, 클라이언트에서 미리 걸러 유효한 것만
+  // 보낸다 — 서버는 여전히 최종 방어선(같은 검증)으로 남겨둔다.
+  const validItems = items.filter(p => p && String(p.name || '').trim());
+  const skipped = items.length - validItems.length;
+  if (skipped > 0) {
+    console.warn('[Catalog] name 누락 상품', skipped, '개 제외하고 전달');
+  }
+  if (!validItems.length) {
+    console.info('[Catalog] 유효한 상품 없음 — Market 전달 생략');
+    return;
+  }
+
+  const products = validItems.map(p => {
+    const category = p.category || profile.entity_subtype || profile.schema_id || '';
+    return {
+      id: p.id || _slugifyProductName(p.name, category),
+      name: p.name,
+      desc: p.desc || '',
+      price: typeof p.price === 'number' ? p.price : null,
+      unit: p.unit || '',
+      category,
+      stock: p.stock || 'in',
+      image_url: p.image_url || '',
+      is_public: p.is_public !== false,
+      updated_at: new Date().toISOString(),
+    };
+  });
 
   const payload = { guid: profile.guid, pubkey, products, mode: 'merge' };
-  // industry_fields: PA가 KSIC 코드(schema_id)를 이미 판단해 뒀으면 그대로
-  // 실어 보낸다 — worker.js가 VALID_INDUSTRY_SCHEMA_IDS로 다시 검증하므로,
-  // 여기서 잘못된 값이어도 서버가 그 필드만 거부하고 상품 동기화 자체는
-  // 계속 진행된다(handleCatalogSync 참조).
-  if (profile.schema_id) payload.industry_fields = { schema_id: String(profile.schema_id) };
+  // industry_fields: PA가 KSIC 코드(schema_id)를 이미 판단해 뒀으면 실어
+  // 보낸다. 2026-07-07 수정(사고실험 #3): 이전엔 "형식이 안 맞아도 서버가
+  // 그 필드만 무시하고 동기화는 계속된다"고 설명했는데 이건 착각이었다 —
+  // 실제로는 handleCatalogSync가 형식이 안 맞으면 요청 전체를 400으로
+  // 거부한다. PA SP 어디에도 "정확히 숫자 2자리 문자열"이라는 형식이
+  // 명시된 적이 없어 언제든 어긋날 수 있으므로, 여기서 미리 형식
+  // (숫자 2자리)을 검증하고 안 맞으면 아예 생략한다 — 서버의
+  // keyword_fallback(카테고리 키워드 매칭)에 업종 판단을 맡긴다.
+  const sid = profile.schema_id != null ? String(profile.schema_id) : '';
+  if (/^\d{2}$/.test(sid)) {
+    payload.industry_fields = { schema_id: sid };
+  } else if (sid) {
+    console.warn('[Catalog] schema_id 형식 불일치, 생략(keyword_fallback에 위임):', sid);
+  }
 
   const signature = await wallet.signPayload(JSON.stringify(payload));
 
@@ -209,10 +236,20 @@ async function _forwardProductsToMarket(profile, wallet, pubkey) {
   // 확장하는 별도 작업이 필요하다 — 이번 패치 범위 밖으로 남겨둔다.
 }
 
-function _slugifyProductName(name, i) {
-  const base = String(name || 'item').trim().toLowerCase()
+// 2026-07-07 수정: id를 name(+category)만으로 결정적(deterministic)으로 생성한다.
+// 이전엔 Date.now()를 섞어 매 제출마다 새 id가 나왔고, mode='merge'는 삭제를
+// 하지 않으므로 판매자가 프로필을 재제출할 때마다(예: 가격 수정) Market에
+// 같은 상품이 계속 쌓였다(중복 버그, 2026-07-07 사고실험 #1). name(+category)이
+// 같으면 항상 같은 id를 만들어 upsert가 "같은 상품 갱신"으로 수렴하도록 한다.
+// i(배열 인덱스)는 제외 — 인덱스는 재제출 시 순서가 바뀔 수 있어 오히려
+// 결정성을 해친다. 같은 이름의 상품이 여러 개면(category까지 같음) 그건
+// 실제로 하나로 합쳐지는 게 맞다고 보고 의도된 동작으로 남긴다.
+function _slugifyProductName(name, category) {
+  const norm = s => String(s || '').trim().toLowerCase()
     .replace(/\s+/g, '-').replace(/[^a-z0-9가-힣-]/g, '');
-  return `${base || 'item'}-${Date.now().toString(36)}-${i}`;
+  const base = norm(name) || 'item';
+  const cat  = norm(category);
+  return cat ? `${base}--${cat}` : base;
 }
 
 // ── PA(personal-assistant) 수집 데이터 → PDV 기록 (2026-07-07 신설) ──────
