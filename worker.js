@@ -1136,22 +1136,13 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
 
   let l1Result;
   try {
-
-    // ── Phase 4: 잔액 조회 + BIVM 검증 (L1 호출 전) ─────────────────────
-    // 양쪽 잔액을 Supabase에서 권위있게 조회 — 클라이언트 balance_claimed 불신뢰
-    // 병렬 조회로 레이턴시 최소화
-    const [fromBal, toBal] = await Promise.all([
-      _fetchUserBalance(env, from_guid),
-      _fetchUserBalance(env, seller_guid),
-    ]);
-    const txAmount = (seller_net || 0) + (fee || 0) || _actualAmount;
-    const bivmResult = _bivmVerify(fromBal, toBal, txAmount);
-    if (!bivmResult.valid) {
-      console.warn('[BIVM] 검증 실패:', bivmResult.error,
-        `| from=${fromBal} to=${toBal} amount=${txAmount}`);
-      return _err(402, 'BIVM_VIOLATION', bivmResult.error, corsHeaders);
-    }
-    console.log(`[BIVM] 검증 통과 | from=${fromBal} to=${toBal} amount=${txAmount}`);
+    // 2026-07-07 제거: 여기 있던 Supabase user_profiles.extra.fs 기반
+    // BIVM 사전검증(_fetchUserBalance/_bivmVerify)을 걷어냈다. L1의
+    // /api/tx가 이제 balance_claimed를 신뢰하지 않고 자기 blocks 원장을
+    // 재생(computeBalance)해서 직접 잔액을 검증하므로, Worker가 별도로
+    // (그것도 이제 갱신되지 않는 Supabase 값으로) 사전 검증하는 건
+    // 중복일 뿐 아니라 유해하다 — Supabase 쪽 값이 실제 L1 잔액과
+    // 어긋나면 정상 거래가 여기서 먼저 잘못 막힐 수 있었다.
 
     const l1Res = await fetch(l1Url, {
       method:  'POST',
@@ -1176,26 +1167,12 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
   }
 
   const { block_id, block_hash, height } = l1Result;
-  // L1은 buyer_claim을 반환하지 않음 → Worker가 직접 생성 (T08)
-  const _txTotal = txPayload.outputs.reduce((s, o) => s + (o.amount || 0), 0);
-  const _buyerBalAfter = (txPayload.input?.balance_claimed || balance_claimed || 0) - _txTotal;
-  const buyer_claim = {
-    direction:   'debit',
-    amount:      _txTotal,
-    fs_account:  'pl-purchase',
-    balance_after: _buyerBalAfter,
-    block_hash,
-    tx_hash,
-    expires_at:  new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7일
-  };
-  const seller_claim = {
-    direction:  'credit',
-    amount:     txPayload.outputs.find(o => o.recipient_guid !== 'gopang-platform')?.amount || 0,
-    fs_account: 'pl-revenue',
-    block_hash,
-    tx_hash,
-    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-  };
+  // 2026-07-07 수정: buyer_claim/seller_claim을 Worker가 다시 만들지
+  // 않는다 — 이전엔 (신뢰하면 안 되는) balance_claimed로 balance_after를
+  // 자체 계산했었다. 이제 L1이 자기 원장 재생 결과(computeBalance)로
+  // 계산한 진짜 claim을 돌려주므로 그걸 그대로 쓴다.
+  const buyer_claim  = l1Result.buyer_claim  || null;
+  const seller_claim = l1Result.seller_claim || null;
 
   // ── Module 5.5: verifyOutputConsistency + verifyDeltaZero (감시 모드) ──
   const _outputs = txPayload.outputs;
@@ -1233,87 +1210,14 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
   ).catch(e => console.warn('[BizOrder] nodeChainPromise 실패:', e.message));
   if (ctx?.waitUntil) ctx.waitUntil(nodeChainPromise);
 
-  
-  // ── fs_ledger 기록 (market_purchase RPC) ─────────────────
-  const sbServiceH  = _sbServiceHeaders(env);
+  // 2026-07-07 제거: 여기 있던 Supabase market_purchase RPC 호출과
+  // _patchFs(buyer/seller extra.fs 메타데이터 병합)를 걷어냈다. 잔액의
+  // 유일한 진실은 이제 L1의 blocks 원장이고(computeBalance), L1이
+  // 응답으로 돌려주는 block_id/block_hash/buyer_claim/seller_claim만
+  // 있으면 충분하다 — 별도로 Supabase에 사본을 만들 필요가 없어졌다.
+  // (item_name/quantity 등 상품 메타데이터는 여전히 PDV 기록에 쓰인다 —
+  // 아래 _recordOrderPdv 참조.)
   const totalOutput = txPayload.outputs.reduce((s, o) => s + (o.amount || 0), 0);
-  const _sellerNet  = txPayload.outputs.find(o => o.recipient_guid !== 'gopang-platform')?.amount || 0;
-  const _fee        = txPayload.outputs.find(o => o.recipient_guid === 'gopang-platform')?.amount  || 0;
-
-  const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/market_purchase`, {
-    method:  'POST',
-    headers: sbServiceH,
-    body:    JSON.stringify({
-      p_tx_id:            tx_hash,
-      p_buyer_guid:       from_guid,
-      p_seller_guid:      seller_guid,
-      p_item_name:        item_name || memo || '상품',
-      p_item_id:          item_id   || null,
-      p_quantity:         quantity  || 1,
-      p_total:            totalOutput,
-      p_seller_net:       _sellerNet,
-      p_fee:              _fee,
-      p_prev_settle_hash: prev_settle_hash || null,
-      p_block_hash:       block_hash,
-      p_block_id:         block_id,
-      p_memo:             memo || null,
-    }),
-  });
-  const rpcResult = await rpcRes.json().catch(() => ({ error: 'RPC_PARSE_FAILED' }));
-
-  // ── extra.fs 갱신 — 기존 값 병합 후 추적 필드 추가 ────────
-  // 설계 원칙:
-  //   기존 bs-cash, pl-purchase, pl-revenue 값 보존 (RPC가 갱신)
-  //   last_tx_id, last_block_hash, last_tx_record 추가
-  const sellerItemSig = body.item_sig || body.seller_item_sig || null;
-  const now_fs = new Date().toISOString();
-  const txRecord = JSON.stringify({
-    tx_id:       tx_hash,
-    buyer_guid:  from_guid,
-    seller_guid: seller_guid,
-    item_name:   item_name || memo || '상품',
-    total:       totalOutput,
-    fee:         _fee,
-    seller_net:  _sellerNet,
-    block_hash,
-    block_id,
-    timestamp:   now_fs,
-    buyer_sig:   body.signature    || null,
-    seller_sig:  sellerItemSig,
-  });
-
-  // buyer: 기존 extra 조회 후 fs 병합
-  const _patchFs = async (guid, fsPatch) => {
-    const existing = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=extra&limit=1`,
-      { headers: sbServiceH }
-    ).then(r => r.json()).catch(() => []);
-    const prevExtra = existing?.[0]?.extra || {};
-    const prevFs    = prevExtra?.public?.finance?.fs || {};
-    const newFs     = { ...prevFs, ...fsPatch };  // 기존 값 보존 + 신규 필드 추가
-    return fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
-      method: 'PATCH',
-      headers: { ...sbServiceH, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({
-        extra: { ...prevExtra, public: { ...(prevExtra.public||{}), finance: { ...(prevExtra.public?.finance||{}), fs: newFs } } }
-      }),
-    });
-  };
-
-  const fsPatch = {
-    'last_tx_id':      tx_hash,
-    'last_block_hash': block_hash,
-    'last_updated_at': now_fs,
-    'last_tx_record':  txRecord,
-  };
-  // 2026-07-07 수정: await 없이 던져지던 두 호출을 ctx.waitUntil로 등록한다.
-  // 이 필드(last_tx_id 등)는 실제 잔액(bs-cash 등)이 아니라 추적 메타데이터
-  // 지만, 응답 반환 후 Cloudflare Workers가 실행 환경을 정리하면 이 fetch가
-  // 완료 전에 끊길 수 있었다 — ctx가 없으면(로컬 테스트 등) 기존처럼
-  // catch만 걸고 넘어간다.
-  const buyerFsTask  = _patchFs(from_guid,   fsPatch).catch(e => console.warn('[BizOrder] buyer fs 갱신 실패:', e.message));
-  const sellerFsTask = _patchFs(seller_guid, fsPatch).catch(e => console.warn('[BizOrder] seller fs 갱신 실패:', e.message));
-  if (ctx?.waitUntil) { ctx.waitUntil(buyerFsTask); ctx.waitUntil(sellerFsTask); }
 
   // ── STEP 11: reporter_svc 없을 때만 Worker가 PDV 기록 ────
   // reporter_svc가 있으면 하위 시스템이 이미 기록했으므로 중복 방지
@@ -1339,7 +1243,9 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
     openhash:     l1Result.openhash,
     buyer_claim,
     seller_claim,
-    ledger:       rpcResult,
+    // 2026-07-07 수정: rpcResult(Supabase market_purchase RPC 응답) 제거 —
+    // 이제 L1이 재생 계산한 진짜 잔액을 그대로 노출한다.
+    balance_after: l1Result.balance_after ?? null,
     reporter_svc: reporter_svc || 'hondi-proxy',
     importance: {
       score: parseFloat(importance_score.toFixed(4)),
@@ -3426,64 +3332,10 @@ function computeLCAT(buyerRegion, sellerRegion) {
   return 'C';                        // 국제
 }
 
-// ── Phase 4: 사용자 잔액 조회 ────────────────────────────────────────────
-// Supabase user_profiles.extra.public.finance.fs['bs-cash']에서 조회
-// BIVM이 fromBalance/toBalance 둘 다 필요하므로 worker.js가 권위있게 조회
-// 클라이언트 제출 balance_claimed를 신뢰하지 않음
-/**
- * @param {Object} env
- * @param {string} guid - 사용자 GUID (IPv6 형식)
- * @returns {Promise<number>} bs-cash 잔액 (없으면 0)
- */
-async function _fetchUserBalance(env, guid) {
-  try {
-    const sbH = _sbServiceHeaders(env);
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=extra&limit=1`,
-      { headers: sbH }
-    );
-    const rows = await res.json().catch(() => []);
-    const fs = rows?.[0]?.extra?.public?.finance?.fs;
-    const bal = parseFloat(fs?.['bs-cash'] ?? 0);
-    return isNaN(bal) ? 0 : bal;
-  } catch (e) {
-    console.warn('[BIVM] 잔액 조회 실패:', guid?.slice(0, 20), e.message);
-    return 0;
-  }
-}
-
-// ── Phase 4: 인라인 BIVM 검증 (processTx 로직 worker.js 포팅) ──────────
-// transactionPipeline.js는 브라우저 전용(IndexedDB) 의존 없이 Web Crypto만 사용하나
-// worker.js는 단일 파일 구조라 import 불가 → 핵심 BIVM 검증만 인라인 포팅
-// Stage1(잔액확인) + BIVM(Σδ=0 + BMI) 두 단계 — 나머지 Stage는 L1이 담당
-const _BIVM_EPSILON = 1e-9;
-
-/**
- * BIVM 검증 (논문 §4.2)
- * @param {number} fromBalance - 발신자 실제 잔액 (Supabase 조회값)
- * @param {number} toBalance   - 수신자 실제 잔액 (Supabase 조회값)
- * @param {number} amount      - 거래 금액
- * @returns {{ valid: boolean, error: string|null }}
- */
-function _bivmVerify(fromBalance, toBalance, amount) {
-  // Stage 1: 잔액 확인
-  if (fromBalance < amount) {
-    return { valid: false, error: `BIVM_INSUFFICIENT: 잔액 ${fromBalance} < 요청 ${amount}` };
-  }
-  // Σδ = 0 검증: 발신 delta(-amount) + 수신 delta(+amount) = 0
-  const sigmaDelta = (-amount) + amount;
-  if (Math.abs(sigmaDelta) > _BIVM_EPSILON) {
-    return { valid: false, error: `BIVM_SET_VIOLATION: Σδ=${sigmaDelta}` };
-  }
-  // BMI: balanceBefore + delta = balanceAfter
-  const fromAfter = fromBalance - amount;
-  const toAfter   = toBalance   + amount;
-  if (Math.abs((fromBalance + (-amount)) - fromAfter) > _BIVM_EPSILON ||
-      Math.abs((toBalance   + amount)    - toAfter)   > _BIVM_EPSILON) {
-    return { valid: false, error: 'BIVM_BMI_VIOLATION' };
-  }
-  return { valid: true, error: null };
-}
+// 2026-07-07 제거: _fetchUserBalance()(Supabase user_profiles.extra.fs 조회)와
+// _bivmVerify()(그 값 기반 사전검증)를 삭제했다 — handleBizOrder에서 이미
+// 호출부를 걷어내 완전히 죽은 코드가 됐다. 잔액 검증은 이제 L1의
+// computeBalance()(blocks 원장 재생)가 전담한다.
 
 /**
  * C-1: L1 노드 Hash Chain H_N 기록
