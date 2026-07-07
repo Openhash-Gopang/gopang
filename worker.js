@@ -5099,22 +5099,35 @@ async function _l1ListSellerProducts(env, guid) {
 
 // 로컬 스냅샷 기준으로 서버 미러를 통째로 교체(삭제 후 재삽입) — PocketBase엔
 // 벌크 upsert가 없어 건별 처리. 상품 수가 보통 수십 개 수준이라 무리 없음.
-async function _l1SyncSellerProducts(env, guid, products) {
+//
+// @param {string} mode — 'replace'(기본값) | 'merge' (2026-07-07 신설)
+//   'replace': 기존 동작 그대로 — 스냅샷에 없는 기존 레코드는 삭제한다.
+//     gopang-seller-catalog.js(판매자 본인이 로컬 IndexedDB를 원본으로
+//     운영하며 전체 스냅샷을 보내는 경우)가 쓰는 모드 — 그 판매자의
+//     전체 카탈로그를 이 호출 하나로 완전히 대체하고 싶을 때 맞다.
+//   'merge': 삭제 단계를 건너뛰고 upsert만 한다. 호출자가 그 판매자의
+//     "전체" 카탈로그를 모르는 채로(예: CA/PA가 프로필에서 파악한 상품
+//     일부만 들고 있는 경우) 보낼 때 쓴다 — 여기 없는 기존 상품을
+//     실수로 지우면 안 되는 경우.
+async function _l1SyncSellerProducts(env, guid, products, mode = 'replace') {
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 
   const existing = await _l1ListSellerProducts(env, guid);
   const existingByProductId = new Map(existing.map(r => [r.product_id, r]));
-  const incomingIds = new Set(products.map(p => p.id));
 
-  // 스냅샷에 없는 기존 레코드 삭제(판매자가 로컬에서 삭제한 상품)
-  for (const rec of existing) {
-    if (!incomingIds.has(rec.product_id)) {
-      await fetch(`${L1_DEFAULT}/api/collections/seller_products/records/${rec.id}`, {
-        method: 'DELETE', headers,
-      }).catch(e => console.warn('[Catalog] 삭제 실패(무시하고 계속):', e.message));
+  if (mode === 'replace') {
+    const incomingIds = new Set(products.map(p => p.id));
+    // 스냅샷에 없는 기존 레코드 삭제(판매자가 로컬에서 삭제한 상품)
+    for (const rec of existing) {
+      if (!incomingIds.has(rec.product_id)) {
+        await fetch(`${L1_DEFAULT}/api/collections/seller_products/records/${rec.id}`, {
+          method: 'DELETE', headers,
+        }).catch(e => console.warn('[Catalog] 삭제 실패(무시하고 계속):', e.message));
+      }
     }
   }
+  // mode === 'merge'면 삭제 단계 전체를 건너뛴다 — 아래 upsert만 수행.
 
   // upsert
   for (const p of products) {
@@ -5149,11 +5162,18 @@ async function handleCatalogSync(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
 
-  const { guid, pubkey, signature, products, industry_fields } = body;
+  const { guid, pubkey, signature, products, industry_fields, mode } = body;
   if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
   if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
   if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
   if (!Array.isArray(products)) return _err(400, 'MISSING_FIELD', 'products 배열 필수(빈 배열 허용)', corsHeaders);
+  // 2026-07-07: mode 검증 — 잘못된 값이면 안전한 쪽(merge, 삭제 없음)으로 폴백하지
+  // 않고 명시적으로 거부한다. 'replace'의 삭제 동작은 되돌릴 수 없으므로, 오탈자로
+  // 인한 의도치 않은 replace를 막기 위해 화이트리스트 밖 값은 에러로 처리한다.
+  const syncMode = mode || 'replace';
+  if (!['replace', 'merge'].includes(syncMode)) {
+    return _err(400, 'INVALID_MODE', `mode는 replace 또는 merge만 허용됩니다: ${JSON.stringify(mode)}`, corsHeaders);
+  }
 
   // 2026-07-05: 업종은 키워드 매칭이나 별도 분류용 API 호출로 이 함수가
   // 직접 "결정"하지 않는다 — "모든 사용자는 나만의 AI비서를 정의한다"는
@@ -5194,7 +5214,7 @@ async function handleCatalogSync(request, env, corsHeaders) {
   }
 
   try {
-    await _l1SyncSellerProducts(env, guid, products);
+    await _l1SyncSellerProducts(env, guid, products, syncMode);
   } catch (e) {
     return _err(502, 'L1_SYNC_FAILED', '카탈로그 동기화 실패: ' + e.message, corsHeaders);
   }
@@ -5232,7 +5252,7 @@ async function handleCatalogSync(request, env, corsHeaders) {
   }
 
   return new Response(JSON.stringify({
-    ok: true, synced: products.length,
+    ok: true, synced: products.length, mode: syncMode,
     occupation: derived?.occupation || null, occupation_updated: occupationUpdated,
   }), { status: 200, headers: corsHeaders });
 }

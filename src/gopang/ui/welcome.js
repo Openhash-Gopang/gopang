@@ -57,10 +57,28 @@ export async function handleProfileSubmit(aiResponseText) {
   const PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
 
   try {
+    // ── Ed25519 서명 (2026-07-07 버그 수정) ──
+    // worker.js의 handleProfilePost()는 v6.0(TOFU 복원)부터 pubkey·signature를
+    // 필수로 요구하는데(서명 대상: `${guid}:${pubkey}:${ts}`,
+    // _verifyEd25519Simple로 검증), 이 함수는 그 뒤로 한 번도 갱신되지 않아
+    // 서명 없이 profile만 그대로 보내고 있었다 — 즉 지금까지 모든
+    // PROFILE_SUBMIT이 서버에서 400 MISSING_FIELD(pubkey 필수)로 거부되고
+    // 있었을 가능성이 높다(실사용 로그로 최종 확인 필요). gopangWallet이
+    // 이미 이 오리진(hondi.net)에 떠 있으므로 auth.js의 verifyOwnerHandshake와
+    // 동일한 패턴(signPayload)으로 서명해 함께 보낸다.
+    const wallet = window.gopangWallet;
+    if (!wallet?.signPayload || !wallet.publicKeyB64u) {
+      throw new Error('지갑이 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+    }
+    const ts = String(Math.floor(Date.now() / 1000));
+    const pubkey = wallet.publicKeyB64u;
+    const sigMsg = `${profile.guid}:${pubkey}:${ts}`;
+    const signature = await wallet.signPayload(sigMsg);
+
     const res = await fetch(`${PROXY}/profile`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(profile),
+      body: JSON.stringify({ ...profile, pubkey, signature, ts }),
     });
     const data = await res.json();
     if (!data.ok) throw new Error(data.detail || data.error || 'Profile 등록 실패');
@@ -103,6 +121,17 @@ export async function handleProfileSubmit(aiResponseText) {
       console.warn('[Profile] PDV 기록 실패 (무시):', e.message)
     );
 
+    // ── CA → Market 상품·서비스 전달 (2026-07-07 신설) ──
+    // PA가 프로필 대화 중 파악한 상품(products_structured)이 있으면, 판매자가
+    // market.hondi.net에서 SP-KMARKET과 처음부터 다시 대화하지 않아도 검색에
+    // 뜨도록 이 자리에서(CA와 같은 오리진 = hondi.net) 곧바로 Market의
+    // seller_products에 반영한다. mode='merge'로 보내 — CA는 이 판매자의
+    // "전체" 카탈로그를 알지 못하므로(market 쪽에서 직접 등록한 상품이
+    // 따로 있을 수 있음), 여기 없는 기존 상품을 실수로 지우지 않는다.
+    await _forwardProductsToMarket(profile, wallet, pubkey).catch(e =>
+      console.warn('[Profile] Market 상품 전달 실패 (무시):', e.message)
+    );
+
     // ── 그림자 SP 즉시 로드 (플래그 리셋 직후) ──
     await loadPersonalAssistantSP();
 
@@ -112,6 +141,78 @@ export async function handleProfileSubmit(aiResponseText) {
     appendBubble('ai', `⚠️ 프로필 등록 중 오류가 발생했습니다: ${e.message}\n잠시 후 다시 시도해 주세요.`);
     return false;
   }
+}
+
+// ── CA → Market 상품·서비스 전달 (2026-07-07 신설) ────────────────────
+// PA가 [products_structured]로 파악한 개별 상품을 Market의 seller_products
+// 스키마(name/desc/price/unit/category/stock/image_url/is_public)에 맞춰
+// 그대로 /biz/catalog/sync에 넘긴다. 서명은 gopang-seller-catalog.js의
+// _runSync()와 동일한 방식 — payload를 JSON.stringify한 바이트를 그대로
+// 서명한다(worker.js의 _verifyEd25519가 시그니처만 떼고 나머지를 다시
+// JSON.stringify해 대조하므로, 클라이언트가 보낼 객체와 서명 대상 객체의
+// 키 순서가 반드시 같아야 한다 — 아래에서 한 객체(payload)를 만들고
+// 그대로 서명 → {...payload, signature}로 전송하는 순서를 지킨다).
+//
+// entity_type이 'person'이면 상품이 있을 수 없으므로 호출하지 않는다.
+// products_structured가 없으면(자유 텍스트만 있는 구버전 PA 응답 등)
+// 아무 것도 보내지 않는다 — 잘못 파싱해서 억지로 구조화하지 않는다.
+async function _forwardProductsToMarket(profile, wallet, pubkey) {
+  if (profile.entity_type === 'person') return;
+  const items = Array.isArray(profile.products_structured) ? profile.products_structured : [];
+  if (!items.length) {
+    console.info('[Catalog] products_structured 없음 — Market 전달 생략');
+    return;
+  }
+
+  const products = items.map((p, i) => ({
+    id: p.id || _slugifyProductName(p.name, i),
+    name: p.name || '',
+    desc: p.desc || '',
+    price: typeof p.price === 'number' ? p.price : null,
+    unit: p.unit || '',
+    category: p.category || profile.entity_subtype || profile.schema_id || '',
+    stock: p.stock || 'in',
+    image_url: p.image_url || '',
+    is_public: p.is_public !== false,
+    updated_at: new Date().toISOString(),
+  }));
+
+  const payload = { guid: profile.guid, pubkey, products, mode: 'merge' };
+  // industry_fields: PA가 KSIC 코드(schema_id)를 이미 판단해 뒀으면 그대로
+  // 실어 보낸다 — worker.js가 VALID_INDUSTRY_SCHEMA_IDS로 다시 검증하므로,
+  // 여기서 잘못된 값이어도 서버가 그 필드만 거부하고 상품 동기화 자체는
+  // 계속 진행된다(handleCatalogSync 참조).
+  if (profile.schema_id) payload.industry_fields = { schema_id: String(profile.schema_id) };
+
+  const signature = await wallet.signPayload(JSON.stringify(payload));
+
+  const res = await fetch('https://hondi-proxy.tensor-city.workers.dev/biz/catalog/sync', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...payload, signature }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!data.ok) {
+    console.warn('[Catalog] Market 전달 실패:', data.detail || data.error || res.status);
+    return;
+  }
+  console.info('[Catalog] Market 전달 완료 |', products.length, '개 상품 | mode: merge' +
+    (data.occupation_updated ? ` | 업종 자동판단: ${data.occupation}` : ''));
+
+  // ⚠️ 알려진 한계(2026-07-07): market.hondi.net은 별도 오리진이라 이 호출이
+  // 그쪽의 로컬 IndexedDB(gopang_seller_catalog_v1)까지 갱신하지는 못한다.
+  // 판매자가 나중에 market.hondi.net에서 자기 카탈로그를 직접 열어 로컬
+  // 스냅샷을 다시 sync하면(그쪽은 mode 기본값 'replace'), 로컬에 없는
+  // 이 상품들이 삭제될 수 있다 — 양쪽을 진짜 일관되게 유지하려면
+  // gopang-seller-catalog.js의 hydrateFromServerIfEmpty()가 "로컬이
+  // 비었을 때만"이 아니라 서버 쪽 최신 항목도 주기적으로 끌어오도록
+  // 확장하는 별도 작업이 필요하다 — 이번 패치 범위 밖으로 남겨둔다.
+}
+
+function _slugifyProductName(name, i) {
+  const base = String(name || 'item').trim().toLowerCase()
+    .replace(/\s+/g, '-').replace(/[^a-z0-9가-힣-]/g, '');
+  return `${base || 'item'}-${Date.now().toString(36)}-${i}`;
 }
 
 // ── PA(personal-assistant) 수집 데이터 → PDV 기록 (2026-07-07 신설) ──────
