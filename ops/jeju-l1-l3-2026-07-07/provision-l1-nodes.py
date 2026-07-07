@@ -126,25 +126,45 @@ def ensure_superuser(base_url, email, password):
         print(f"  [.] superuser 이미 존재하거나 스킵({status}): {base_url}")
 
 
+def _collection_exists(base_url, token, name):
+    """실제 존재 여부를 직접 조회해서 확정한다 — POST 응답(특히 과부하
+    상황에서의 오류/타임아웃)을 그대로 신뢰하지 않기 위한 안전장치.
+    (2026-07-08: 36개 노드 동시 provisioning 중 서버 과부하로 실제로는
+    커밋됐지만 클라이언트가 400/실패로 오인한 사례가 다수 확인됨.)"""
+    status, _ = http_json("GET", f"{base_url}/api/collections/{name}", token=token)
+    return status == 200
+
+
 def clone_collection_schema(source_base, target_base, token_src, token_dst, name):
     status, data = http_json("GET", f"{source_base}/api/collections/{name}", token=token_src)
     if status != 200:
         print(f"  [!] {name} 스키마 조회 실패({source_base}): {status}")
-        return
+        return False
     payload = {"name": data["name"], "type": data.get("type", "base"), "schema": data.get("schema", [])}
     status2, data2 = http_json("POST", f"{target_base}/api/collections", token=token_dst, body=payload)
     if status2 in (200, 201):
         print(f"  [+] {name} 컬렉션 생성 완료 @ {target_base}")
-    else:
-        print(f"  [.] {name} 생성 스킵/실패({status2}) @ {target_base}: {data2.get('message','')}")
+        return True
+    # 2026-07-08 수정: POST 응답이 실패로 보여도 곧바로 "실패"로 단정하지
+    # 않고, 실제 존재 여부를 GET으로 재확인한다(과부하 시 응답 유실 대응).
+    if _collection_exists(target_base, token_dst, name):
+        print(f"  [=] {name} 이미 존재함(확인됨) @ {target_base}")
+        return True
+    print(f"  [X] {name} 실제로 생성 실패({status2}) @ {target_base}: {data2.get('message','')}")
+    return False
 
 
 def create_collection(base_url, token, schema_def):
     status, data = http_json("POST", f"{base_url}/api/collections", token=token, body=schema_def)
+    name = schema_def["name"]
     if status in (200, 201):
-        print(f"  [+] {schema_def['name']} 신설 완료 @ {base_url}")
-    else:
-        print(f"  [.] {schema_def['name']} 신설 스킵/실패({status}) @ {base_url}: {data.get('message','')}")
+        print(f"  [+] {name} 신설 완료 @ {base_url}")
+        return True
+    if _collection_exists(base_url, token, name):
+        print(f"  [=] {name} 이미 존재함(확인됨) @ {base_url}")
+        return True
+    print(f"  [X] {name} 실제로 생성 실패({status}) @ {base_url}: {data.get('message','')}")
+    return False
 
 
 def main():
@@ -171,6 +191,8 @@ def main():
     print(f"대상 신규 L1: {len(new_l1)}개")
 
     src_token = admin_token(args.source_base, args.admin_email, args.admin_password)
+
+    real_failures = []  # 2026-07-08 신설: 응답 오탐 걸러낸 뒤에도 남는 진짜 실패만 여기 쌓는다
 
     for folder, cfg in sorted(new_l1.items(), key=lambda kv: kv[1]["port"]):
         port = cfg["port"]
@@ -216,24 +238,40 @@ def main():
         dst_token = admin_token(base_url, args.admin_email, args.admin_password)
 
         for name in SOURCE_COLLECTIONS:
-            clone_collection_schema(args.source_base, base_url, src_token, dst_token, name)
-        create_collection(base_url, dst_token, BRIDGE_OUT_SCHEMA)
-        create_collection(base_url, dst_token, BRIDGE_IN_SCHEMA)
+            ok = clone_collection_schema(args.source_base, base_url, src_token, dst_token, name)
+            if not ok:
+                real_failures.append(f"{folder}: {name} (clone)")
+        for schema_def in (BRIDGE_OUT_SCHEMA, BRIDGE_IN_SCHEMA):
+            ok = create_collection(base_url, dst_token, schema_def)
+            if not ok:
+                real_failures.append(f"{folder}: {schema_def['name']} (create)")
 
     # ── hanlim 자신에도 bridge_out/bridge_in이 없으면 추가 ──────────────
     print("\n=== hanlim(기존)에 bridge_out/bridge_in 추가 확인 ===")
     if not args.dry_run:
-        create_collection(args.source_base, src_token, BRIDGE_OUT_SCHEMA)
-        create_collection(args.source_base, src_token, BRIDGE_IN_SCHEMA)
+        for schema_def in (BRIDGE_OUT_SCHEMA, BRIDGE_IN_SCHEMA):
+            ok = create_collection(args.source_base, src_token, schema_def)
+            if not ok:
+                real_failures.append(f"hanlim: {schema_def['name']} (create)")
 
     # ── L3에 guid_home_l1 추가 ───────────────────────────────────────
     print("\n=== l3-jejudo에 guid_home_l1 레지스트리 컬렉션 추가 ===")
     if not args.dry_run:
         l3_token = admin_token(args.l3_base, args.admin_email, args.admin_password)
-        create_collection(args.l3_base, l3_token, GUID_HOME_L1_SCHEMA)
+        ok = create_collection(args.l3_base, l3_token, GUID_HOME_L1_SCHEMA)
+        if not ok:
+            real_failures.append("l3-jejudo: guid_home_l1 (create)")
 
     print("\n완료. 각 인스턴스 상태는 systemctl status 'gopang-pb-l1-*' 로 확인하고,"
           "\nnginx-l1-routes.conf(별도 생성분)를 nginx에 include한 뒤 reload할 것.")
+
+    print("\n=== 진짜 실패 요약 (응답 오탐 제외, GET 재확인까지 거친 결과) ===")
+    if not real_failures:
+        print("✅ 없음 — 전부 성공(또는 이미 존재 확인됨)")
+    else:
+        for f in real_failures:
+            print(f"  ❌ {f}")
+        print(f"\n총 {len(real_failures)}건 — verify-collections.py로 한 번 더 교차 확인 권장")
 
 
 if __name__ == "__main__":
