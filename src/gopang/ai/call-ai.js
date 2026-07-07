@@ -235,6 +235,7 @@ export const _stripInternalTags = (text) => text
   .replace(/\[PANEL_ACTION:close\]/g, '')      // AI 패널 닫기 지시 태그 (2026-07-02 신설)
   .replace(/\[GWP:\s*[\w-]+\]/g, '')           // 하위 시스템 라우팅 태그 (방어적 — 정상 경로는 _parseAgentTags가 처리)
   .replace(/\[EXPERT:\s*[@\w-]+\]/g, '')       // 전문가 세션 라우팅 태그 (방어적 — 정상 경로는 handleExpertTag가 처리)
+  .replace(/\[OPEN_MANUAL\]/g, '')             // 사용법 매뉴얼 오버레이 오픈 태그 (2026-07-07 신설, 방어적 — 정상 경로는 _parseAgentTags가 처리)
   .trim();
 
 /**
@@ -998,6 +999,23 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
     }
   } catch (e) {
     console.warn('[Tags] P2P_INVITE 처리 오류 (무시):', e.message);
+  }
+
+  // [OPEN_MANUAL] — 사용법 매뉴얼 오버레이 열기 (2026-07-07 신설)
+  // 이용자가 특정 기능 하나를 짧게 물었을 때는 HONDI-FAQ 라우터가 주입한
+  // 참고자료로 이 대화창에서 바로 답하고(§9 안내 참조), "매뉴얼 자체를
+  // 보고 싶다"는 의도일 때만 이 태그로 기존 사용법 설명서 오버레이
+  // (edge-handle-top과 동일한 #manual-overlay)를 연다 — 새 탭이 아니라
+  // 같은 화면 위에 열리는 오버레이이므로 대화가 이어지는 느낌을 유지한다.
+  try {
+    if (/\[OPEN_MANUAL\]/.test(fullReply)) {
+      console.info('[Tags] OPEN_MANUAL → 매뉴얼 오버레이 오픈');
+      if (typeof window !== 'undefined' && typeof window.openUserManual === 'function') {
+        window.openUserManual();
+      }
+    }
+  } catch (e) {
+    console.warn('[Tags] OPEN_MANUAL 처리 오류 (무시):', e.message);
   }
 }
 
