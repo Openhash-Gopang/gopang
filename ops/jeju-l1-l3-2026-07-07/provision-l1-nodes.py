@@ -137,6 +137,13 @@ def _collection_exists(base_url, token, name):
 
 def clone_collection_schema(source_base, target_base, token_src, token_dst, name):
     status, data = http_json("GET", f"{source_base}/api/collections/{name}", token=token_src)
+    if status == 404:
+        # 2026-07-08 수정: 소스(hanlim)에 애초에 존재하지 않는 컬렉션(예: node_ledger)은
+        # "조회 실패"가 아니라 "복제할 대상이 없어 스킵"이 맞는 상태다 — 매 노드마다
+        # 반복 출력되며 진짜 실패처럼 보이던 노이즈를 제거한다. 이 경우는
+        # real_failures 집계에도 포함하지 않는다(target 쪽 문제가 아니므로).
+        print(f"  [-] {name} 소스({source_base})에 존재하지 않아 스킵(정상)")
+        return True
     if status != 200:
         print(f"  [!] {name} 스키마 조회 실패({source_base}): {status}")
         return False
