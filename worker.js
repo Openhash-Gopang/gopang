@@ -1017,6 +1017,13 @@ export default {
 // ═══════════════════════════════════════════════════════════
 // v4.9 STEP 08 — /biz/order (L1 위임, Worker 검증 제거)
 // ═══════════════════════════════════════════════════════════
+// 2026-07-07 신설: 플랫폼 수수료율 — 지금까지 서버 어디에도 정해진 값이
+// 없어(worker.js/ledger.js/payment.js 세 초안이 각각 다른 값을 가정)
+// 클라이언트가 보낸 seller_net/fee 분할을 그대로 신뢰하고 있었다. 이제
+// 이 값이 유일한 정본이다 — profile.html의 _PLATFORM_FEE_RATE도 반드시
+// 이 값과 같아야 한다(다르면 매 결제가 PRICE_MISMATCH로 거부됨).
+const PLATFORM_FEE_RATE = 0.03; // 3%
+
 async function handleBizOrder(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
@@ -1041,6 +1048,60 @@ async function handleBizOrder(request, env, corsHeaders) {
   if (!buyer_public_key) return _err(400, 'MISSING_FIELD', 'buyer_public_key 필수', corsHeaders);
   if (!from_guid)        return _err(400, 'MISSING_FIELD', 'from_guid 필수', corsHeaders);
   if (!seller_guid)      return _err(400, 'MISSING_FIELD', 'seller_guid 필수', corsHeaders);
+
+  // ── 2026-07-07 신설: 카탈로그 가격 검증(사고실험 G 대응) ──────────────
+  // 지금까지는 tx.items에 담긴 price/quantity, 그리고 seller_net/fee를
+  // 전부 클라이언트가 보낸 그대로 신뢰했다 — 즉 잔액만 충분하면 임의의
+  // 금액으로 "구매"를 만들 수 있었다. 이제 tx.items가 있으면(=Market
+  // 카탈로그 구매) 판매자의 실제 seller_products를 서버가 직접 재조회해
+  // 가격을 재계산하고, 클라이언트가 주장한 금액과 대조한다.
+  // items가 비어 있으면(= P2P 송금 등 카탈로그와 무관한 거래) 이 검증은
+  // 건너뛴다 — 애초에 대조할 카탈로그가 없는 케이스이기 때문이다.
+  const txItems = Array.isArray(tx?.items) ? tx.items : [];
+  if (txItems.length) {
+    let catalog;
+    try {
+      catalog = await _l1ListSellerProducts(env, seller_guid);
+    } catch (e) {
+      return _err(502, 'L1_UNREACHABLE', '카탈로그 조회 실패: ' + e.message, corsHeaders);
+    }
+    const byId = new Map(catalog.map(r => [r.id, r]));
+
+    let authoritativeTotal = 0;
+    for (const item of txItems) {
+      const rec = byId.get(item.id);
+      if (!rec) {
+        return _err(404, 'ITEM_NOT_FOUND', `카탈로그에 없는 상품입니다: ${item.id}`, corsHeaders);
+      }
+      if (rec.is_public === false) {
+        return _err(403, 'ITEM_NOT_PUBLIC', `비공개 상품은 구매할 수 없습니다: ${item.id}`, corsHeaders);
+      }
+      if (typeof rec.price !== 'number') {
+        return _err(400, 'ITEM_PRICE_UNSET', `가격 미정 상품은 이 경로로 구매할 수 없습니다: ${item.id}`, corsHeaders);
+      }
+      const qty = Number(item.quantity) > 0 ? Number(item.quantity) : 1;
+      authoritativeTotal += rec.price * qty;
+    }
+
+    const claimedTotal = (seller_net || 0) + (fee || 0);
+    // 정수 원 단위 반올림 오차 허용(1원) — 그 이상 차이는 위조/버그로 간주
+    if (Math.abs(claimedTotal - authoritativeTotal) > 1) {
+      return _err(409, 'PRICE_MISMATCH',
+        `가격 불일치: 서버 계산 ₮${authoritativeTotal} vs 요청 ₮${claimedTotal}`,
+        corsHeaders);
+    }
+    // 총액만 맞추고 seller_net/fee 분할을 임의로 조작하는 걸 막는다(예:
+    // fee=0, seller_net=total로 보내 플랫폼 수수료를 가로채거나, 반대로
+    // seller_net을 깎고 fee를 부풀리는 경우) — 분할도 서버가 강제한다.
+    const authoritativeFee = Math.round(authoritativeTotal * PLATFORM_FEE_RATE);
+    const authoritativeSellerNet = authoritativeTotal - authoritativeFee;
+    if (Math.abs((fee || 0) - authoritativeFee) > 1 ||
+        Math.abs((seller_net || 0) - authoritativeSellerNet) > 1) {
+      return _err(409, 'FEE_SPLIT_MISMATCH',
+        `수수료 분할 불일치: 서버 계산 seller_net=₮${authoritativeSellerNet}/fee=₮${authoritativeFee} vs 요청 seller_net=₮${seller_net || 0}/fee=₮${fee || 0}`,
+        corsHeaders);
+    }
+  }
 
   // ── STEP 08: L1 위임 — Worker는 검증 로직 없음 ───────────
   const l1Base = l1_node ? (L1_NODE_MAP[l1_node] || L1_DEFAULT) : L1_DEFAULT;
