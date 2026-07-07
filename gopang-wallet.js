@@ -771,6 +771,16 @@
       const now = Date.now();
       let applied = 0;
       for (const claim of claims) {
+        // 2026-07-07 수정(실제 이중 계상 버그): 이 필터가 없었다 — GWP_DONE
+        // 메시지에는 buyer_claim/seller_claim이 함께 실려 오는데(profile.html
+        // _submitOrder 참고), 그동안 이 함수가 claimant 확인 없이 배열의
+        // 모든 claim을 그대로 적용해서, 구매자의 로컬 재무제표에 판매자
+        // 몫(seller_claim)까지 잘못 반영되고 있었다. claimant가 없는 옛날
+        // claim(하위호환)은 그대로 허용한다.
+        if (claim.claimant && this.guid && claim.claimant !== this.guid) {
+          console.warn('[Wallet] 내 claim 아님, 건너뜀:', claim.claimant?.slice(0, 20));
+          continue;
+        }
         if (claim.expires_at && new Date(claim.expires_at).getTime() < now) {
           console.warn('[Wallet] 만료된 청구권 무시:', claim);
           continue;
@@ -1269,30 +1279,20 @@
         wallet.setIdentity({ guid: stored.ipv6, handle: stored.handle || null });
       }
 
-      // 로컬 재무 상태가 비어있으면 서버에서 초기 동기화 시도
+      // 로컬 재무 상태가 비어있으면 서버(L1)에서 초기 동기화 시도
+      // 2026-07-07 수정: 여기서 예전엔 Supabase user_profiles.extra.fs를
+      // 직접 조회했다(anon key 하드코딩까지 돼 있었음) — 그런데 지난주
+      // Supabase→L1 이관으로 그 테이블은 더 이상 갱신되지 않는 죽은
+      // 데이터가 됐다. hydrateFromServer()(→ Worker /biz/balance → L1
+      // /api/balance)로 교체한다. 이건 신규 가입자에게도 의미가 있다 —
+      // 서버 잔액이 0이면 그대로 0을 받아와서, "비어있음"과 "0으로 확인된
+      // 초기화 완료 상태"를 구분해서 기록한다.
       const fs = await wallet.getFinancialState();
-      if (!fs || Object.keys(fs).length === 0) {
-        if (stored?.ipv6) {
-          try {
-            const sbKey = localStorage.getItem('_sbkey')
-                        || localStorage.getItem('gopang_supabase_key')
-                        || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
-            const res = await fetch(
-              `https://ebbecjfrwaswbdybbgiu.supabase.co/rest/v1/user_profiles`
-              + `?current_ipv6=eq.${stored.ipv6}&select=extra&limit=1`,
-              { headers: { apikey: sbKey, 'Authorization': `Bearer ${sbKey}` } }
-            );
-            if (res.ok) {
-              const rows = await res.json();
-              const serverFs = rows[0]?.extra?.fs;
-              if (serverFs) {
-                await wallet.setFinancialState(serverFs);
-                console.info('[GopangWallet] 서버 재무 상태 초기 동기화 완료');
-              }
-            }
-          } catch(e) {
-            console.warn('[GopangWallet] 서버 동기화 실패 (무시):', e.message);
-          }
+      if ((!fs || Object.keys(fs).length === 0) && stored?.ipv6) {
+        try {
+          await wallet.hydrateFromServer();
+        } catch(e) {
+          console.warn('[GopangWallet] 서버 동기화 실패 (무시):', e.message);
         }
       }
 

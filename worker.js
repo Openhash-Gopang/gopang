@@ -838,6 +838,7 @@ export default {
 
     // ── biz (v4.8+) ──────────────────────────────────────
     if (pathname.startsWith('/biz/profile/'))   return handleBizProfile(request, env, corsHeaders);
+    if (pathname === '/gwp/register-key' && request.method === 'POST') return handleRegisterKey(request, env, corsHeaders);
     if (pathname === '/biz/order'   && request.method === 'POST') return handleBizOrder(request, env, corsHeaders, ctx);
     if (pathname === '/biz/balance' && request.method === 'GET')  return handleBizBalance(request, env, corsHeaders);
     if (pathname === '/biz/review'  && request.method === 'POST') return handleBizReview(request, env, corsHeaders);
@@ -1175,10 +1176,26 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
   const buyer_claim  = l1Result.buyer_claim  || null;
   const seller_claim = l1Result.seller_claim || null;
 
-  // ── Module 5.5: verifyOutputConsistency + verifyDeltaZero (감시 모드) ──
+  // ── Module 5.5: verifyOutputConsistency + verifyDeltaZero ──────────
+  // 2026-07-07 수정: 이전엔 결과를 로그만 찍고 버렸다("감시 모드") —
+  // 사용자가 요청한 "매 거래마다 판매자·구매자 재무제표 변동 일치
+  // 검증"을 실제로 기록에 남기려면 결과를 어딘가에 보존해야 한다.
+  // 이제 PDV(_recordOrderPdv)와 API 응답 양쪽에 결과를 남긴다 — 검증
+  // 자체는 여전히 거래를 막지 않는다(블록은 L1에 이미 저장된 뒤라
+  // 여기서 "막는다"는 게 의미가 없다 — 대신 불일치 시 크게 로그를
+  // 남기고 응답에도 명시해서, 이상 거래로 추적·감사할 수 있게 한다).
   const _outputs = txPayload.outputs;
-  verifyOutputConsistency(l1Result, _outputs);
-  verifyDeltaZero(_outputs, txPayload.input?.balance_claimed || balance_claimed || 0);
+  const outputConsistent = verifyOutputConsistency(l1Result, _outputs);
+  const deltaZeroResult  = verifyDeltaZero(_outputs, txPayload.input?.balance_claimed || balance_claimed || 0);
+  const consistencyCheck = {
+    output_consistent: outputConsistent,
+    delta_zero_valid:  deltaZeroResult.valid,
+    sigma_delta:       deltaZeroResult.sigmaDelta ?? null,
+    reason:            deltaZeroResult.reason || (outputConsistent ? null : 'output_mismatch'),
+  };
+  if (!outputConsistent || !deltaZeroResult.valid) {
+    console.error('[BizOrder] 재무제표 변동 일치 검증 실패:', JSON.stringify(consistencyCheck));
+  }
 
   // ── Phase 4: 차등 검증 레이어 (refactor_plan_v2 §Phase1 차등 레이어) ─────
   // baseline(카탈로그+수수료 검증)은 항상 실행됨 — ILMV-100% 대응
@@ -1231,6 +1248,7 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
       risk_tier: importance_mode === 'ENHANCED' ? 'high'
                : importance_mode === 'STANDARD' ? 'standard'
                : 'low',
+      consistency_check: consistencyCheck,
     });
   }
   console.log('[BizOrder] 성공:', JSON.stringify({ ok: true, block_hash, height, buyer_claim: !!buyer_claim }));
@@ -1247,6 +1265,7 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
     // 2026-07-07 수정: rpcResult(Supabase market_purchase RPC 응답) 제거 —
     // 이제 L1이 재생 계산한 진짜 잔액을 그대로 노출한다.
     balance_after: l1Result.balance_after ?? null,
+    consistency_check: consistencyCheck,
     reporter_svc: reporter_svc || 'hondi-proxy',
     importance: {
       score: parseFloat(importance_score.toFixed(4)),
@@ -1276,11 +1295,71 @@ async function handleBizBalance(request, env, corsHeaders) {
   }
 }
 
+// ── POST /gwp/register-key — 가입 시점 지갑 공개키 등록 ─────────────
+// 2026-07-07 신설. 지금까지 GopangWallet이 로컬에서 Ed25519 키페어를
+// 자동 생성하긴 했지만, 그 공개키를 L1의 gdc_keys 컬렉션에 등록하는
+// 코드가 어디에도 없었다 — 즉 신규 가입자의 첫 실거래가 L1의 2단계
+// (공개키 확인)에서 무조건 UNREGISTERED_KEY(403)로 막히는 상태였다.
+//
+// TOFU(Trust On First Use) 방식: guid+timestamp를 그 공개키에 대응하는
+// 개인키로 서명하게 해서, "이 공개키를 실제로 갖고 있다"는 걸 증명한
+// 뒤에만 등록한다 — 서명 없이 아무 공개키나 등록 요청할 수 있으면 안
+// 되기 때문이다. 이미 등록된 guid면(기기 교체 등) 갱신(PATCH)한다.
+async function handleRegisterKey(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { guid, public_key, signature, ts } = body;
+  if (!guid)       return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!public_key) return _err(400, 'MISSING_FIELD', 'public_key 필수', corsHeaders);
+  if (!signature)  return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+  if (!ts)         return _err(400, 'MISSING_FIELD', 'ts 필수', corsHeaders);
+
+  const sigMsg = `register-key:${guid}:${ts}`;
+  const sigOk  = await _verifyEd25519Simple(public_key, signature, sigMsg);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패 — 이 공개키의 개인키로 서명한 게 맞는지 확인하세요', corsHeaders);
+
+  try {
+    const token  = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`guid='${guid}'`);
+    const existingRes  = await fetch(`${L1_DEFAULT}/api/collections/gdc_keys/records?filter=${filter}&perPage=1`,
+      { headers: { 'Authorization': `Bearer ${token}` } });
+    const existingData = await existingRes.json().catch(() => ({ items: [] }));
+    const existing = existingData.items?.[0];
+
+    if (existing) {
+      // 2026-07-07 수정: 기존 공개키와 다른 값으로 덮어쓰는 걸 거부한다.
+      // 이전엔 "제출한 공개키의 개인키를 갖고 있다"만 증명하면 통과했는데,
+      // 이건 "이 guid의 원래 주인이다"를 증명하는 게 아니다 — guid만 알면
+      // 누구나 새 키페어를 만들어 서명해서 등록을 가로챌 수 있었다.
+      // 기기 교체 등 정당한 키 교체는 이미 검증된 별도 경로
+      // (_restoreFromBackupKey — 백업 키로 복구)를 쓰게 한다. 같은 키로
+      // 다시 등록 요청하는 건(멱등) 그대로 허용한다.
+      if (existing.public_key !== public_key) {
+        return _err(409, 'KEY_ALREADY_REGISTERED',
+          '이 guid는 이미 다른 공개키로 등록돼 있습니다 — 기기 교체는 백업 키 복구 절차를 사용하세요', corsHeaders);
+      }
+      console.info('[RegisterKey] 이미 동일 키로 등록됨(멱등):', guid.slice(0, 20));
+    } else {
+      await fetch(`${L1_DEFAULT}/api/collections/gdc_keys/records`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guid, public_key, created_at: new Date().toISOString() }),
+      });
+      console.info('[RegisterKey] 신규 등록:', guid.slice(0, 20));
+    }
+    return new Response(JSON.stringify({ ok: true, guid }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 키 등록 실패: ' + e.message, corsHeaders);
+  }
+}
+
 // ── STEP 09: PDV 기록 헬퍼 (동기 앵커링) ─────────────────
 async function _recordOrderPdv(env, {
   from_guid, seller_guid, tx_hash, block_hash, block_id,
   session_id, item_name, total,
   importance_score = 0, importance_mode = 'LIGHTWEIGHT', lcat = 'B', risk_tier = 'low',
+  consistency_check = null,
 }) {
   const pdvKey   = env.SUPABASE_KEY || _supabaseAnonKey();
   const pdvId    = `PDV-${from_guid.replace(/:/g, '').slice(0, 12)}-${Date.now()}`;
@@ -1326,11 +1405,15 @@ async function _recordOrderPdv(env, {
       via_worker:           true,
       created_at:           now,
       // Phase 4: 중요도·LCAT·risk_tier (OpenHash PLSM 입력 추적)
+      // 2026-07-07 추가: consistency_check — 판매자·구매자 재무제표 변동
+      // 일치 검증 결과. 이전엔 로그에만 찍히고 사라졌다 — 이제 거래마다
+      // 감사 가능한 기록으로 남긴다.
       extra: {
         importance_score: parseFloat(importance_score.toFixed(4)),
         importance_mode,
         lcat,
         risk_tier,
+        consistency_check,
       },
     }),
   }).catch(e => console.warn('[PDV] 기록 실패:', e.message));

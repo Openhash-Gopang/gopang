@@ -1514,10 +1514,82 @@ export async function _registerToL1(name) {
     user.isGuest = false; user.isTemp = false;
     localStorage.setItem(STORE_KEY, JSON.stringify(user));
     console.info('[L1] 등록 완료:', handle, e164);
+
+    // ── 2026-07-07 신설: GDC 지갑·재무제표 가입 시점 초기화 ─────────
+    // 이전엔 지갑(키페어)만 로컬에서 자동 생성되고, ①L1의 gdc_keys에
+    // 공개키를 등록하는 절차가 아예 없어 첫 실거래가 무조건
+    // UNREGISTERED_KEY로 막혔고, ②재무제표는 "생성 이벤트" 없이
+    // 그냥 비어있다가 첫 거래 때 암묵적으로 0 취급되는 식이었다.
+    // 실패해도(오프라인 등) 가입 자체는 막지 않는다 — 다음 접속 시
+    // wallet-init IIFE의 hydrateFromServer()가 재시도 격으로 동작한다.
+    _initGdcWalletAndFs(guid).catch(e =>
+      console.warn('[L1] GDC 지갑/재무제표 초기화 실패(가입은 유지):', e.message)
+    );
+
     return handle;
   } catch(e) {
     console.warn('[L1] 등록 실패:', e.message);
     return null;
+  }
+}
+
+// ── GDC 지갑·재무제표 가입 시점 초기화 (2026-07-07 신설) ──────────────
+// ① L1 gdc_keys에 이 계정 지갑의 공개키를 등록(TOFU — 개인키로 서명해
+//    소유권 증명) — 없으면 첫 실거래가 UNREGISTERED_KEY로 막힌다.
+// ② 로컬 재무제표를 명시적으로 0으로 초기화 — IASB 5대 요소 기준
+//    (자산/부채/자본/수익/비용) 매핑: bs-cash=자산(현금성자산),
+//    pl-purchase=비용(누적 매입), pl-revenue=수익(누적 매출).
+//    부채는 이 개인 지갑 모델에 없고, 자본=자산-부채=bs-cash로 항상
+//    일치(부채가 없으므로) — 그래서 별도 필드로 자본을 저장하지 않고
+//    bs-cash를 그대로 자본으로도 해석한다(회계등식 자산=부채+자본,
+//    부채=0이므로 자산=자본).
+// ③ "재무제표 생성" 이벤트를 PDV에 남겨 감사 추적을 남긴다.
+async function _initGdcWalletAndFs(guid) {
+  const wallet = await _waitForWallet();
+  if (!wallet || typeof wallet.signPayload !== 'function') {
+    throw new Error('wallet_not_ready');
+  }
+
+  // ① 공개키 등록 (TOFU)
+  const ts  = Date.now();
+  const sigMsg = `register-key:${guid}:${ts}`;
+  const signature = await wallet.signPayload(sigMsg);
+  const regRes = await fetch(`${PROXY_URL}/gwp/register-key`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ guid, public_key: wallet.publicKeyB64u, signature, ts }),
+  });
+  const regData = await regRes.json().catch(() => ({}));
+  if (!regRes.ok || !regData.ok) {
+    throw new Error('register-key 실패: ' + (regData.error || regRes.status));
+  }
+  console.info('[GDC] 지갑 공개키 등록 완료:', guid.slice(0, 20));
+
+  // ② 재무제표 명시적 0 초기화 — 이미 거래 이력이 있는 재가입 등은
+  // 덮어쓰지 않는다(로컬에 이미 뭔가 있으면 건드리지 않음).
+  const existingFs = await wallet.getFinancialState();
+  if (!existingFs || Object.keys(existingFs).length === 0) {
+    await wallet.setFinancialState({ 'bs-cash': 0, 'pl-purchase': 0, 'pl-revenue': 0 });
+    console.info('[GDC] 재무제표 초기화 완료(IASB: 자산/비용/수익 각 0)');
+
+    // ③ 감사 추적 — 재무제표 생성 사실을 PDV에 남긴다
+    try {
+      const { recordPDV } = await import('../pdv/record.js');
+      await recordPDV({
+        report: {
+          svc: 'gdc', reporter_svc: 'gopang',
+          type: 'fs_genesis',
+          who:  { ipv6: guid, role: 'user', level: 'L0', recipients: ['gopang-pdv'] },
+          when: { period_start: new Date().toISOString(), period_end: new Date().toISOString() },
+          where:{ svc_url: 'https://hondi.net' },
+          what: { summary: 'GDC 지갑·재무제표 초기화(자산 0 / 비용 0 / 수익 0)' },
+          how:  { method: 'signup_auto_init' },
+          why:  { goal: 'IASB 기준 재무제표 최초 생성' },
+        },
+      });
+    } catch (e) {
+      console.warn('[GDC] 재무제표 생성 PDV 기록 실패(무시):', e.message);
+    }
   }
 }
 
