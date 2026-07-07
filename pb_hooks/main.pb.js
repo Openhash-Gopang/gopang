@@ -857,10 +857,19 @@ const NODE_CONFIG = {
 routerAdd("POST", "/api/bridge-in", (c) => {
   try {
     const body = $apis.requestInfo(c).data;
-    const { tx_hash, source_node, guid, amount } = body;
+    const { tx_hash, source_node, guid, amount, bridge_secret } = body;
     if (!tx_hash || !source_node || !guid || !(Number(amount) > 0)) {
       return c.json(400, { ok: false, error: "MISSING_FIELD" });
     }
+    // ── 2026-07-07 신설: 인증 없이 열려 있던 구멍 — 시뮬레이션 중 발견 ──
+    // 대응하는 bridge_out 없이도 누구나 임의 guid에 임의 금액을 크레딧할
+    // 수 있었다(sentinel 설계상 로컬 발행==잔액 불변식은 깨지지 않아
+    // supply/verify로는 못 잡아냄 — "정당한 거래인가"는 별개 문제).
+    const BRIDGE_SECRET = "hondi-dev-bridge-2026"; // 콜백 내부 선언(MINT_SECRET과 동일 관례)
+    if (bridge_secret !== BRIDGE_SECRET) {
+      return c.json(403, { ok: false, error: "FORBIDDEN", detail: "bridge_secret 불일치 — 이 엔드포인트는 Worker(허브)만 호출할 수 있습니다" });
+    }
+    delete body.bridge_secret; // 로그/응답에 새어나가지 않게
 
     try {
       const existing = $app.dao().findFirstRecordByFilter("bridge_in", "tx_hash = '" + tx_hash + "'");
@@ -967,6 +976,11 @@ routerAdd("POST", "/api/bridge-in", (c) => {
 // Worker 쪽 책임이다 — 이 엔드포인트는 그 폴링을 위한 조회 창구일 뿐이다.
 routerAdd("GET", "/api/bridge-out/pending", (c) => {
   try {
+    const bridge_secret = $apis.requestInfo(c).query.bridge_secret;
+    const BRIDGE_SECRET = "hondi-dev-bridge-2026"; // 콜백 내부 선언(MINT_SECRET과 동일 관례)
+    if (bridge_secret !== BRIDGE_SECRET) {
+      return c.json(403, { ok: false, error: "FORBIDDEN", detail: "bridge_secret 불일치 — 이 엔드포인트는 Worker(허브)만 호출할 수 있습니다" });
+    }
     const recs = $app.dao().findRecordsByFilter("bridge_out", "status = 'pending'", "-created", 500, 0);
     const pending = recs.map(r => ({
       tx_hash:     r.getString("tx_hash"),
@@ -986,8 +1000,13 @@ routerAdd("GET", "/api/bridge-out/pending", (c) => {
 routerAdd("POST", "/api/bridge-out/complete", (c) => {
   try {
     const body = $apis.requestInfo(c).data;
-    const { tx_hash } = body;
+    const { tx_hash, bridge_secret } = body;
     if (!tx_hash) return c.json(400, { ok: false, error: "MISSING_FIELD" });
+    const BRIDGE_SECRET = "hondi-dev-bridge-2026"; // 콜백 내부 선언(MINT_SECRET과 동일 관례)
+    if (bridge_secret !== BRIDGE_SECRET) {
+      return c.json(403, { ok: false, error: "FORBIDDEN", detail: "bridge_secret 불일치 — 이 엔드포인트는 Worker(허브)만 호출할 수 있습니다" });
+    }
+
     const rec = $app.dao().findFirstRecordByFilter("bridge_out", "tx_hash = '" + tx_hash + "'");
     if (!rec) return c.json(404, { ok: false, error: "NOT_FOUND" });
     rec.set("status", "completed");
@@ -1006,8 +1025,13 @@ routerAdd("POST", "/api/bridge-out/complete", (c) => {
 routerAdd("POST", "/api/bridge-out/refund", (c) => {
   try {
     const body = $apis.requestInfo(c).data;
-    const { tx_hash, buyer_guid } = body;
+    const { tx_hash, buyer_guid, bridge_secret } = body;
     if (!tx_hash || !buyer_guid) return c.json(400, { ok: false, error: "MISSING_FIELD" });
+    const BRIDGE_SECRET = "hondi-dev-bridge-2026"; // 콜백 내부 선언(MINT_SECRET과 동일 관례)
+    if (bridge_secret !== BRIDGE_SECRET) {
+      return c.json(403, { ok: false, error: "FORBIDDEN", detail: "bridge_secret 불일치 — 이 엔드포인트는 Worker(허브)만 호출할 수 있습니다" });
+    }
+
     const rec = $app.dao().findFirstRecordByFilter("bridge_out", "tx_hash = '" + tx_hash + "'");
     if (!rec) return c.json(404, { ok: false, error: "NOT_FOUND" });
     if (rec.getString("status") === "completed") {

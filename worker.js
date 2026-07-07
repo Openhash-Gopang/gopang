@@ -102,6 +102,16 @@ const L1_DEFAULT = 'https://l1-hanlim.hondi.net';
 // L3(제주도 전체) — guid_home_l1 레지스트리(§4)의 단일 소스
 const L3_BASE = L1_NODE_MAP['KR-JEJU'];
 
+// 2026-07-07 신설: 시뮬레이션 중 /api/bridge-in이 무인증이라 대응하는
+// bridge_out 없이도 임의 크레딧이 가능했던 걸 발견 — L1의 4개 브릿지
+// 엔드포인트에 공유 비밀키를 추가했다. main.pb.js의 하드코딩값(개발 단계,
+// MINT_SECRET과 동일 관례)과 반드시 일치해야 한다. 운영 전환 시
+// env.BRIDGE_SECRET(wrangler secret)으로 교체할 것 — 지금은 개발 단계라
+// 기본값 폴백을 둔다.
+function _bridgeSecret(env) {
+  return env.BRIDGE_SECRET || 'hondi-dev-bridge-2026';
+}
+
 const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions';
 const DEEPSEEK_URL   = 'https://api.deepseek.com/v1/chat/completions';
 // OpenRouter — Worker 내부 AI 호출 (내부 Agent, 피드백 분류 등)
@@ -798,7 +808,7 @@ async function _relayBridge(env, { sourceBase, targetNodeId, tx_hash, guid, amou
     const res = await fetch(`${targetBase}/api/bridge-in`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tx_hash, source_node: L1_NODE_MAP_ID_OF(sourceBase), guid, amount }),
+      body: JSON.stringify({ tx_hash, source_node: L1_NODE_MAP_ID_OF(sourceBase), guid, amount, bridge_secret: _bridgeSecret(env) }),
     });
     const data = await res.json().catch(() => ({ ok: false }));
     if (!data.ok) {
@@ -810,7 +820,7 @@ async function _relayBridge(env, { sourceBase, targetNodeId, tx_hash, guid, amou
     await fetch(`${sourceBase}/api/bridge-out/complete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tx_hash }),
+      body: JSON.stringify({ tx_hash, bridge_secret: _bridgeSecret(env) }),
     }).catch(e => console.warn('[Bridge] complete 통지 실패(다음 스윕에서 재시도):', e.message));
     console.info('[Bridge] 완료:', tx_hash, '→', targetNodeId);
     return true;
@@ -943,7 +953,7 @@ async function _sweepBridgeOutbox(env) {
     if (!base) continue;
     let pending;
     try {
-      const res = await fetch(`${base}/api/bridge-out/pending`);
+      const res = await fetch(`${base}/api/bridge-out/pending?bridge_secret=${encodeURIComponent(_bridgeSecret(env))}`);
       const data = await res.json().catch(() => ({ ok: false }));
       if (!data.ok) continue;
       pending = data.pending || [];
@@ -969,7 +979,7 @@ async function _sweepBridgeOutbox(env) {
           await fetch(`${base}/api/bridge-out/refund`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tx_hash: item.tx_hash, buyer_guid: buyerGuid }),
+            body: JSON.stringify({ tx_hash: item.tx_hash, buyer_guid: buyerGuid, bridge_secret: _bridgeSecret(env) }),
           });
           console.warn(`[BridgeSweep] 유예시간 초과 환불 처리:`, item.tx_hash, '→', buyerGuid);
         } catch (e) {
