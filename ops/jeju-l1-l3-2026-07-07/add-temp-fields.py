@@ -100,7 +100,10 @@ def backfill_defaults(base_url, token, dry_run):
         if not items:
             break
         for rec in items:
-            if rec.get("temp_score") is None:
+            # PocketBase는 기존 레코드에 신규 number 필드를 추가하면 null이 아니라
+            # 0으로 채운다(2026-07-07 실측 확인) — 그래서 None 체크만으로는
+            # "아직 값이 안 채워진" 레코드를 못 잡는다. 0도 미설정으로 간주.
+            if rec.get("temp_score") in (None, 0):
                 if dry_run:
                     patched += 1
                     continue
