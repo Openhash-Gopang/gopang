@@ -538,6 +538,11 @@ if ('serviceWorker' in navigator) {
 
 // ── 사용자 등록 안내 팝업 (한국 사용자 전화번호 안내) ───────────
 function _showRegisterGuide() {
+  // BUG-FIX: 이 팝업이 직접 "010 제외 8자리"만 입력받아 initAuthWithPhone을
+  // 호출하던 방식은, 실제 가입 화면(_showPhonePopup)이 이미 하는 일(국가 선택,
+  // 휴대폰/지역번호 선택, 닉네임, 약관 동의, 색상·숫자 코드 생성)을 못 하는
+  // 축소판이었다 — 특히 유선 지역번호(7자리)는 여기서 아예 입력이 안 됐다.
+  // 안내만 보여주고, 실제 입력은 검증된 가입 팝업 하나로 통일한다.
   const ov = document.createElement('div');
   ov.id = 'gopang-register-guide-overlay';
   ov.style.cssText = [
@@ -562,35 +567,10 @@ function _showRegisterGuide() {
         border-left:3px solid #111;
         padding:12px 14px;
         font-size:13.5px;color:#333;line-height:1.8;
-        margin-bottom:12px;
+        margin-bottom:20px;
       ">
-        <code style="font-size:13px;font-weight:600;">010</code>을 제외한 나머지
-        <strong>8자</strong>를 대시(<code>-</code>)없이 입력하세요.
-      </div>
-
-      <div style="font-size:12px;color:#888;margin-bottom:16px;line-height:1.6">
-        귀하의 고유 로그인 + 패스워드입니다.
-      </div>
-
-      <!-- 번호 입력 필드 -->
-      <div style="display:flex;align-items:center;
-                  border:1.5px solid #e5e7eb;border-radius:10px;
-                  background:#f9fafb;overflow:hidden;margin-bottom:8px"
-           id="_rg-field">
-        <span style="padding:0 12px;font-size:13px;color:#555;
-                     border-right:1px solid #e5e7eb;height:50px;
-                     display:flex;align-items:center;white-space:nowrap">
-          🇰🇷 010 -
-        </span>
-        <input id="_rg-input" type="tel" maxlength="8" inputmode="numeric"
-          placeholder="12345678"
-          style="flex:1;padding:0 14px;height:50px;border:none;background:transparent;
-                 font-size:18px;font-family:inherit;outline:none;color:#111;
-                 letter-spacing:3px;min-width:0"/>
-      </div>
-      <div id="_rg-error" style="display:none;font-size:12px;color:#dc2626;margin-bottom:8px;padding:0 4px"></div>
-      <div style="font-size:11px;color:#aaa;margin-bottom:20px;padding:0 4px">
-        예) 010-1234-5678 → <code style="font-weight:600;color:#555">12345678</code>
+        휴대폰 번호 또는 유선 지역번호로 등록할 수 있습니다.<br>
+        번호는 귀하의 고유 로그인 + 패스워드입니다.
       </div>
 
       <button id="_rg-ok" style="
@@ -604,34 +584,13 @@ function _showRegisterGuide() {
 
   document.body.appendChild(ov);
 
-  const inp   = ov.querySelector('#_rg-input');
   const okBtn = ov.querySelector('#_rg-ok');
-  const errEl = ov.querySelector('#_rg-error');
-  const field = ov.querySelector('#_rg-field');
-
-  inp.focus();
-  inp.addEventListener('focus', () => field.style.borderColor = '#111');
-  inp.addEventListener('blur',  () => field.style.borderColor = '#e5e7eb');
-  inp.addEventListener('input', () => {
-    inp.value = inp.value.replace(/\D/g, '').slice(0, 8);
-    errEl.style.display = 'none';
-  });
 
   const doSubmit = async () => {
-    const val = inp.value.trim();
-    if (val.length !== 8) {
-      errEl.textContent = '8자리를 모두 입력해 주세요.';
-      errEl.style.display = 'block';
-      inp.focus();
-      return;
-    }
     okBtn.disabled = true;
     okBtn.textContent = '확인 중…';
-    // 번호를 localStorage에 임시 저장 후 initAuth 호출
-    // initAuth는 내부적으로 번호 입력 팝업을 띄우므로
-    // 여기서는 직접 _phone-input에 값을 주입하는 방식 사용
     ov.remove();
-    await initAuthWithPhone(val);
+    await initAuth();
     const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
     if (stored?.handle && typeof _updateHandleChip === 'function') {
       _updateHandleChip(stored.nickname || stored.handle);
@@ -641,5 +600,5 @@ function _showRegisterGuide() {
   };
 
   okBtn.onclick = doSubmit;
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') doSubmit(); });
 }
+

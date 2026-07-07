@@ -10,6 +10,7 @@ const PROXY_URL = PROXY;
 import { appendBubble } from '../ui/bubble.js';
 import { requestPushSubscription } from '../services/push.js';
 import { guidToShortId, generateHondiCodeDataURL } from '../ai/hondi-code.js';
+import { phoneToDigits } from '../ai/hondi-digit-code.js';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ⚠️  DEV MODE — 정식 운영 전환: false로 복원 (2026-06-27)
@@ -135,6 +136,29 @@ function _showPcRegisterBlockedNotice() {
 }
 
 // 194개국
+// ── 한국 유선 지역번호 목록 (서울만 1자리, 나머지 전부 2자리) ──────
+// hondi-digit-code.js의 VALID_AREA_CODES와 반드시 동일한 코드 값을
+// 유지해야 한다(숫자 코드 인코딩/디코딩과 짝이 맞아야 하므로).
+const KR_AREA_CODES = [
+  { code: '2',  name: '서울' },
+  { code: '31', name: '경기' },
+  { code: '32', name: '인천' },
+  { code: '33', name: '강원' },
+  { code: '41', name: '충남' },
+  { code: '42', name: '대전' },
+  { code: '43', name: '충북' },
+  { code: '44', name: '세종' },
+  { code: '51', name: '부산' },
+  { code: '52', name: '울산' },
+  { code: '53', name: '대구' },
+  { code: '54', name: '경북' },
+  { code: '55', name: '경남' },
+  { code: '61', name: '전남' },
+  { code: '62', name: '광주' },
+  { code: '63', name: '전북' },
+  { code: '64', name: '제주' },
+];
+
 const COUNTRIES = {
   AF: { flag: "🇦🇫", name: "Afghanistan", code: "+93", prefix: "", digits: 9 },
   AL: { flag: "🇦🇱", name: "Albania", code: "+355", prefix: "0", digits: 9 },
@@ -342,6 +366,21 @@ export function buildHandle(phoneDigits, countryKey = DEFAULT_COUNTRY) {
   return countryKey === DEFAULT_COUNTRY
     ? `@${phoneDigits}`
     : `@${countryKey}-${phoneDigits}`;
+}
+
+// ── 한국 휴대폰/지역번호 전용 e164·handle 빌더 ────────────────
+// 휴대폰인 경우 기존 buildE164/buildHandle과 완전히 동일한 결과를
+// 내야 한다(기존 가입자와의 호환성) — 그래서 그대로 위임한다.
+// 지역번호(유선)인 경우는 새 포맷이며, handle에 "-"를 포함시켜
+// 순수 숫자로만 이뤄진 휴대폰 handle과 절대 겹치지 않게 한다.
+export function _buildKrE164(phoneType, areaCode, digits) {
+  if (phoneType === 'mobile') return buildE164(digits, 'KR');
+  return `+82` + `0${areaCode}` + digits;
+}
+
+export function _buildKrHandle(phoneType, areaCode, digits) {
+  if (phoneType === 'mobile') return buildHandle(digits, 'KR');
+  return `@0${areaCode}-${digits}`;
 }
 
 // ── SHA-256 헬퍼 ─────────────────────────────────────────
@@ -701,15 +740,21 @@ export async function initAuth() {
 }
 
 // ── 번호를 직접 받아 처리 (통합 팝업용) ─────────────────
-export async function initAuthWithPhone(digits, countryKey = 'KR') {
+// BUG-FIX: 기존 신규가입 분기가 어디에도 정의되지 않은 _showNicknameStep을
+// 호출하고 있어(리팩터링 중 삭제된 것으로 보임) 신규 사용자가 이 경로로
+// 들어오면 ReferenceError로 조용히 실패했다. 신규가입 완료 로직을 별도로
+// 다시 만드는 대신, 이미 검증된 _showPhonePopup(닉네임·약관·색상코드·
+// 숫자코드 생성까지 전부 포함)에 그대로 위임한다 — 전화번호를 다시 입력해야
+// 하는 약간의 불편은 있지만, 그 전에는 신규가입 자체가 100% 실패했다.
+export async function initAuthWithPhone(digits, countryKey = 'KR', phoneType = 'mobile', areaCode = null) {
   const stored = _loadStored();
   if (stored?.ipv6) {
     setUser(stored);
     return stored;
   }
   return new Promise(async (resolve) => {
-    const e164   = buildE164(digits, countryKey);
-    const handle = buildHandle(digits, countryKey);
+    const e164   = countryKey === 'KR' ? _buildKrE164(phoneType, areaCode, digits)   : buildE164(digits, countryKey);
+    const handle = countryKey === 'KR' ? _buildKrHandle(phoneType, areaCode, digits) : buildHandle(digits, countryKey);
     try {
       const filter = encodeURIComponent(`handle='${handle}'`);
       const res    = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
@@ -755,27 +800,9 @@ export async function initAuthWithPhone(digits, countryKey = 'KR') {
         setUser(user);
         resolve(user);
       } else {
-        // 신규 사용자 → 모바일 기기 확인 (암호키 생성은 휴대폰 전용)
-        if (!_isMobileDevice()) {
-          const ok = await _confirmMobileRegistration();
-          if (!ok) {
-            _showPcRegisterBlockedNotice();
-            resolve(null);
-            return;
-          }
-        }
-        // 신규 사용자 → 닉네임 입력 단계 (더미 overlay 생성)
-        const ipv6 = await _e164ToIPv6(e164);
-        const dummyOverlay = document.createElement('div');
-        dummyOverlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:24px';
-        const dummyCard = document.createElement('div');
-        dummyCard.style.cssText = 'background:#fff;border-radius:20px;padding:28px 20px;width:100%;max-width:340px;box-sizing:border-box';
-        dummyOverlay.appendChild(dummyCard);
-        document.body.appendChild(dummyOverlay);
-        // _showNicknameStep은 overlay.querySelector('div')로 card를 찾으므로
-        // DOM 삽입 완료 후 다음 틱에 호출
-        await new Promise(r => setTimeout(r, 0));
-        _showNicknameStep({ ipv6, handle, e164, selectedCountry: countryKey, val: digits, overlay: dummyOverlay, resolve });
+        // 신규 사용자 → 검증된 전체 가입 플로우(_showPhonePopup)로 위임
+        console.info('[Auth] 신규 번호 — 통합 가입 팝업으로 전환');
+        _showPhonePopup(resolve);
       }
     } catch(e) {
       console.warn('[Auth] initAuthWithPhone 실패:', e.message);
@@ -828,6 +855,31 @@ function _showPhonePopup(resolve) {
         <div id="_country-list"
           style="max-height:220px;overflow-y:auto;overscroll-behavior:contain">
         </div>
+      </div>
+
+      <!-- 한국 전용: 휴대폰/지역번호 선택 (검색 가능 드롭다운) -->
+      <div id="_kr-areatype-panel" style="display:none;margin-bottom:10px;
+           border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;
+           background:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.12)">
+        <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0">
+          <input id="_kr-areatype-search" type="text" placeholder="예: 06 (지역번호 검색)..."
+            style="width:100%;border:1px solid #e5e7eb;border-radius:8px;
+                   padding:8px 12px;font-size:14px;outline:none;
+                   box-sizing:border-box;font-family:inherit"
+            autocomplete="off"/>
+        </div>
+        <div id="_kr-areatype-list"
+          style="max-height:220px;overflow-y:auto;overscroll-behavior:contain">
+        </div>
+      </div>
+      <div id="_kr-areatype-row" style="display:none;margin-bottom:10px">
+        <button id="_kr-areatype-btn" type="button"
+          style="width:100%;text-align:left;padding:12px 14px;border:1.5px solid #e5e7eb;
+                 border-radius:10px;background:#f9fafb;cursor:pointer;font-family:inherit;
+                 font-size:14px;color:#111827;display:flex;align-items:center;gap:8px">
+          <span id="_kr-areatype-label">📱 휴대폰 (010)</span>
+          <span style="margin-left:auto;font-size:9px;color:#9ca3af">▼</span>
+        </button>
       </div>
 
       <!-- 전화번호 입력 행 -->
@@ -905,6 +957,83 @@ function _showPhonePopup(resolve) {
   const nickErr    = document.getElementById('_nick-error');
   const handlePrev = document.getElementById('_handle-preview');
 
+  // ── 한국 전용: 휴대폰/지역번호 선택 상태 ──────────────────
+  // phoneType: 'mobile' | 'landline'. landline일 때만 areaCode 사용.
+  let phoneType = 'mobile';
+  let areaCode  = null;
+  const krRow        = document.getElementById('_kr-areatype-row');
+  const krBtn         = document.getElementById('_kr-areatype-btn');
+  const krLabel       = document.getElementById('_kr-areatype-label');
+  const krPanel       = document.getElementById('_kr-areatype-panel');
+  const krListEl      = document.getElementById('_kr-areatype-list');
+  const krSearchEl    = document.getElementById('_kr-areatype-search');
+
+  // 휴대폰 또는 지역번호 선택 시 필요한 가입자번호 자릿수
+  // (서울만 8자리, 그 외 지역은 7자리, 휴대폰은 8자리 — 이전 대화에서
+  // 정한 혼디 숫자 코드 인코딩 규칙과 반드시 일치해야 한다)
+  function _krNeededDigits() {
+    if (phoneType === 'mobile') return 8;
+    return areaCode === '2' ? 8 : 7;
+  }
+
+  function _renderKrAreaList(query = '') {
+    const q = query.trim().replace(/\D/g, '');
+    const items = [{ code: null, name: '휴대폰', label: '📱 휴대폰 (010)' },
+      ...KR_AREA_CODES.map(a => ({ code: a.code, name: a.name, label: `☎️ ${a.name} (0${a.code})` }))];
+    const filtered = !q ? items : items.filter(it => it.code && ('0' + it.code).startsWith(q));
+    krListEl.innerHTML = (q && filtered.length === 0 ? items : filtered).map(it => `
+      <div data-code="${it.code ?? ''}"
+           style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;
+                  border-bottom:1px solid #f9f9f9;
+                  ${(it.code === areaCode && phoneType==='landline') || (it.code===null && phoneType==='mobile') ? 'background:#f0fdf4;' : ''}">
+        <span style="flex:1;color:#111827;font-size:14px">${it.label}</span>
+      </div>`).join('');
+
+    krListEl.querySelectorAll('[data-code]').forEach(el => {
+      el.onmouseenter = () => el.style.background = '#f0fdf4';
+      el.onmouseleave = () => el.style.background = '';
+      el.onclick = () => _selectKrAreaType(el.dataset.code || null);
+    });
+  }
+
+  function _selectKrAreaType(code) {
+    if (code === null || code === '') {
+      phoneType = 'mobile'; areaCode = null;
+      krLabel.textContent = '📱 휴대폰 (010)';
+    } else {
+      phoneType = 'landline'; areaCode = code;
+      const found = KR_AREA_CODES.find(a => a.code === code);
+      krLabel.textContent = `☎️ ${found ? found.name : ''} (0${code})`;
+    }
+    krPanel.style.display = 'none';
+    krSearchEl.value = '';
+    const need = _krNeededDigits();
+    phoneInput.maxLength = need;
+    phoneInput.value = '';
+    phoneInput.placeholder = phoneType === 'mobile' ? '전화번호 뒷 8자리' : `가입자번호 ${need}자리`;
+    _updateHandlePreview();
+    phoneInput.focus();
+  }
+
+  krBtn.onclick = (e) => {
+    e.stopPropagation();
+    const isOpen = krPanel.style.display !== 'none';
+    krPanel.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) {
+      _renderKrAreaList();
+      setTimeout(() => krSearchEl.focus(), 50);
+    }
+  };
+  krSearchEl.addEventListener('input', () => _renderKrAreaList(krSearchEl.value));
+  krSearchEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') krPanel.style.display = 'none';
+    if (e.key === 'Enter') {
+      const first = krListEl.querySelector('[data-code]');
+      if (first) _selectKrAreaType(first.dataset.code || null);
+    }
+  });
+
+
   // ── 국가 목록 렌더 ──────────────────────────────────────
   function _renderList(query = '') {
     const q = query.toLowerCase();
@@ -940,9 +1069,13 @@ function _showPhonePopup(resolve) {
 
   function _updateHandlePreview() {
     const digits = phoneInput.value.trim();
-    const need = COUNTRIES[selectedCountry].digits;
+    const need = selectedCountry === 'KR' ? _krNeededDigits() : COUNTRIES[selectedCountry].digits;
     if (digits.length === need) {
-      handlePrev.textContent = buildHandle(digits, selectedCountry);
+      if (selectedCountry === 'KR') {
+        handlePrev.textContent = _buildKrHandle(phoneType, areaCode, digits);
+      } else {
+        handlePrev.textContent = buildHandle(digits, selectedCountry);
+      }
     } else {
       handlePrev.textContent = '@' + '·'.repeat(Math.min(need, 8));
     }
@@ -953,14 +1086,23 @@ function _showPhonePopup(resolve) {
     const c = COUNTRIES[key];
     flagIcon.textContent = c.flag;
     dialCode.textContent = c.code;
-    phoneInput.maxLength = c.digits;
-    phoneInput.value = '';
-    phoneInput.placeholder = key === DEFAULT_COUNTRY ? '전화번호 뒷 8자리' : `전화번호 (${c.digits}자리)`;
     panel.style.display = 'none';
     searchEl.value = '';
+
+    // 국가를 바꾸면 한국 전용 휴대폰/지역번호 선택 상태를 초기화한다.
+    phoneType = 'mobile'; areaCode = null;
+    krLabel.textContent = '📱 휴대폰 (010)';
+    krRow.style.display = key === 'KR' ? 'block' : 'none';
+
+    const need = key === 'KR' ? _krNeededDigits() : c.digits;
+    phoneInput.maxLength = need;
+    phoneInput.value = '';
+    phoneInput.placeholder = key === DEFAULT_COUNTRY ? '전화번호 뒷 8자리' : `전화번호 (${c.digits}자리)`;
     _updateHandlePreview();
     phoneInput.focus();
   }
+
+  krRow.style.display = selectedCountry === 'KR' ? 'block' : 'none';
 
   _renderList();
 
@@ -987,13 +1129,17 @@ function _showPhonePopup(resolve) {
     if (!panel.contains(e.target) && e.target.id !== '_country-btn') {
       panel.style.display = 'none';
     }
+    if (!krPanel.contains(e.target) && e.target.id !== '_kr-areatype-btn' && !krBtn.contains(e.target)) {
+      krPanel.style.display = 'none';
+    }
   });
 
   phoneInput.focus();
   phoneInput.addEventListener('focus', () => phoneField.style.borderColor = '#16a34a');
   phoneInput.addEventListener('blur',  () => phoneField.style.borderColor = '#e5e7eb');
   phoneInput.addEventListener('input', () => {
-    phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, COUNTRIES[selectedCountry].digits);
+    const need = selectedCountry === 'KR' ? _krNeededDigits() : COUNTRIES[selectedCountry].digits;
+    phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, need);
     phoneErr.style.display = 'none';
     _updateHandlePreview();
   });
@@ -1038,7 +1184,7 @@ function _showPhonePopup(resolve) {
   const btn = document.getElementById('_auth-btn');
 
   // ── 실제 신규 가입 처리 (기존 _register 로직 그대로, 지역 필드는 제거) ──
-  async function _completeRegistration({ ipv6, handle, e164, nickname }) {
+  async function _completeRegistration({ ipv6, handle, e164, nickname, digits }) {
     const nickname_hash = await _sha256('phone:' + e164);
     const region = '';
 
@@ -1052,6 +1198,24 @@ function _showPhonePopup(resolve) {
       console.warn('[가입][색상코드] 생성 실패 (가입은 계속 진행):', e.message);
     }
 
+    // ── 숫자 코드(digit_code_id) 생성 — 한국(휴대폰/지역번호)만 해당 ──
+    // phoneToDigits()가 휴대폰/지역번호를 10자리로 인코딩한다(이전 대화에서
+    // 정한 규칙: 휴대폰="00"+8자리, 서울="0"+"2"+8자리, 그 외 지역=
+    // "0"+지역번호(2자리)+7자리). 색상 코드와 마찬가지로 실패해도 가입
+    // 자체는 계속 진행한다.
+    let digitCodeId = null;
+    if (selectedCountry === 'KR' && digits) {
+      try {
+        const digitsArr = phoneType === 'mobile'
+          ? phoneToDigits({ type: 'mobile', subscriberNumber: digits })
+          : phoneToDigits({ type: 'landline', areaCode, subscriberNumber: digits });
+        digitCodeId = digitsArr.join('');
+        console.info('[가입][숫자코드] 생성 완료:', digitCodeId);
+      } catch (e) {
+        console.warn('[가입][숫자코드] 생성 실패 (가입은 계속 진행):', e.message);
+      }
+    }
+
     const user = {
       ipv6, handle, e164, country_code: selectedCountry,
       nickname, region,
@@ -1059,6 +1223,7 @@ function _showPhonePopup(resolve) {
       registeredAt: new Date().toISOString(),
       hondi_code_version: hondiCodeVersion,
       hondi_code_id: hondiShortId ? hondiShortId.toString() : null,
+      digit_code_id: digitCodeId,
     };
 
     await fetch(L1_URL, {
@@ -1071,6 +1236,7 @@ function _showPhonePopup(resolve) {
         is_public: true,
         hondi_code_version: hondiCodeVersion,
         hondi_code_id: hondiShortId ? hondiShortId.toString() : null,
+        digit_code_id: digitCodeId,
       })
     });
     console.info('[Auth] 신규 등록:', handle, nickname);
@@ -1079,19 +1245,14 @@ function _showPhonePopup(resolve) {
       try { localStorage.setItem('hondi_code_image_v1', hondiCodeImage); } catch {}
     }
 
-    const nickLang = (navigator.language?.slice(0,2) || 'ko') + ':' + nickname;
-    const nickHash = await _sha256(nickLang);
-    const _L1_PROFILES_P2P = L1_URL.replace('/api/collections/profiles/records', '') + '/api/collections/profiles/records';
-    fetch(_L1_PROFILES_P2P, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        guid:     ipv6,
-        handle,
-        nickname: nickname || null,
-        region:   null,
-      })
-    }).catch(e => console.warn('[P2P] global_profiles 등록 실패:', e.message));
+    // BUG-FIX: 여기 있던 2차 POST(_L1_PROFILES_P2P)는 "global_profiles"라는
+    // 별도 컬렉션을 겨냥한 것으로 보였으나, URL 조합 결과가 우연히 바로 위
+    // 본POST와 완전히 같은 엔드포인트(profiles 컬렉션)를 가리키고 있었다.
+    // profiles 컬렉션에는 unique 제약이 없어서, 매 가입마다 e164·hondi_code_id·
+    // digit_code_id 등이 빠진 불완전한 중복 레코드가 하나 더 생기고 있었다
+    // (숫자/색상 코드 조회 시 어느 레코드가 먼저 잡히느냐에 따라 코드가 비어
+    //보일 위험이 있었음). 실제로 존재하지 않는 컬렉션을 겨냥한 죽은 코드였으므로
+    // 제거했다 — 본 POST(위)로 이미 완전한 레코드가 등록된다.
 
     localStorage.setItem(STORE_KEY, JSON.stringify(user));
     setUser(user);
@@ -1135,7 +1296,7 @@ function _showPhonePopup(resolve) {
   const _submit = async () => {
     const digits   = phoneInput.value.trim();
     const nickname = nickInput.value.trim();
-    const needDigits = COUNTRIES[selectedCountry].digits;
+    const needDigits = selectedCountry === 'KR' ? _krNeededDigits() : COUNTRIES[selectedCountry].digits;
     const digitsFilled = digits.length > 0;
     const digitsValid  = new RegExp(`^\\d{${needDigits}}$`).test(digits);
 
@@ -1182,8 +1343,8 @@ function _showPhonePopup(resolve) {
       }
 
       // ── 전화번호 기준 조회 ──────────────────────────────
-      const e164   = buildE164(digits, selectedCountry);
-      const handle = buildHandle(digits, selectedCountry);
+      const e164   = selectedCountry === 'KR' ? _buildKrE164(phoneType, areaCode, digits)   : buildE164(digits, selectedCountry);
+      const handle = selectedCountry === 'KR' ? _buildKrHandle(phoneType, areaCode, digits) : buildHandle(digits, selectedCountry);
       const filter = encodeURIComponent(`handle='${handle}'`);
       const res    = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
       const data   = await res.json();
@@ -1227,7 +1388,7 @@ function _showPhonePopup(resolve) {
 
       btn.textContent = '등록 중...';
       const ipv6 = await _e164ToIPv6(e164);
-      await _completeRegistration({ ipv6, handle, e164, nickname });
+      await _completeRegistration({ ipv6, handle, e164, nickname, digits });
 
     } catch(e) {
       phoneErr.textContent = '네트워크 오류. 다시 시도해 주세요.';
