@@ -12,6 +12,7 @@
 import { appendBubble } from './bubble.js';
 import { _USER } from '../core/state.js';
 import { loadPersonalAssistantSP, resetSPLoader } from '../core/config.js';
+import { _recordPDV } from '../pdv/record.js';
 
 // ── 초기 환영 메시지 — 더 이상 아무 일도 하지 않음 (v1.6) ──────────
 // gopang-app.js가 부팅 시 호출하는 기존 진입점과의 호환을 위해 함수
@@ -81,6 +82,16 @@ export async function handleProfileSubmit(aiResponseText) {
     // ── PDV IndexedDB 초기화 ──
     await _initPDV(profile.guid);
 
+    // ── PA(personal-assistant)가 수집한 데이터를 PDV에 기록 (2026-07-07) ──
+    // 이전에는 프로필이 /profile에만 등록되고 _recordPDV()를 한 번도
+    // 거치지 않아 PDV 파이프라인(gopang_pdv_log → _buildPDVNote()가 매 턴
+    // 컨텍스트에 넣는 최근 기록)에 전혀 반영되지 않았다. GWP/EXPERT/P2P가
+    // 쓰는 것과 동일한 _recordPDV()를 그대로 재사용해, PA가 얻은 정보도
+    // 같은 단일 경로로 기록되도록 한다.
+    await _recordProfileToPDV(profile).catch(e =>
+      console.warn('[Profile] PDV 기록 실패 (무시):', e.message)
+    );
+
     // ── 그림자 SP 즉시 로드 (플래그 리셋 직후) ──
     await loadPersonalAssistantSP();
 
@@ -90,6 +101,81 @@ export async function handleProfileSubmit(aiResponseText) {
     appendBubble('ai', `⚠️ 프로필 등록 중 오류가 발생했습니다: ${e.message}\n잠시 후 다시 시도해 주세요.`);
     return false;
   }
+}
+
+// ── PA(personal-assistant) 수집 데이터 → PDV 기록 (2026-07-07 신설) ──────
+// PA는 PDV를 직접 쓰지 않는다 — 수집한 데이터를 여기서 _recordPDV()로
+// 넘기는 것이 유일한 경로다(AGENT-COMMON_v3_26.txt §2-2 원칙과 동일한
+// 정신을 실제 코드에서는 "같은 탭이므로 함수 호출로 직접 넘긴다"는
+// 형태로 구현한다 — 별도 탭이 아니므로 postMessage/큐가 필요 없다).
+// 필드 하나하나를 6하원칙 관점(누가/언제/어디서/무엇을/어떻게/왜)으로
+// 구조화해 개별 기록한다 — "프로필을 등록했다"는 사실 하나로 뭉치지 않는다.
+async function _recordProfileToPDV(profile) {
+  const now      = new Date().toISOString();
+  const who      = profile.guid || profile.handle || null;
+  const isBiz    = profile.entity_type && profile.entity_type !== 'person';
+  const label    = profile.name || profile.nickname || '(이름 미상)';
+
+  // ① 요약 레코드 — GWP_DONE/폴백 보고와 동일한 톤의 최상위 이벤트
+  await _recordPDV({
+    type:    'profile_registered',
+    guid:    who,
+    who,
+    when:    now,
+    where:   isBiz ? (profile.address || '미상') : '설정 → 프로필 작성',
+    what:    isBiz
+      ? `${label} 프로필 등록(${profile.entity_subtype || profile.schema_id || '업종 미상'})`
+      : `개인 프로필 등록 — ${label}`,
+    how:     'personal_assistant',
+    why:     isBiz ? 'K-Market 등에서 검색·연결되기 위함' : '개인화된 응대를 위함',
+    summary: isBiz
+      ? `${label} 프로필 등록 완료`
+      : `${label}님 개인 프로필 등록 완료`,
+  });
+
+  // ② 개별 필드 — 존재하는 것만, 6하원칙 taxonomy에 맞춰 분류
+  const fieldRecords = [];
+  if (profile.address) {
+    fieldRecords.push({
+      type: 'location', key: '주소', value: profile.address,
+      summary: `${label}의 주소: ${profile.address}`.slice(0, 60),
+    });
+  }
+  if (profile.phone) {
+    fieldRecords.push({
+      type: 'relation', key: '연락처', value: profile.phone,
+      summary: `${label}의 연락처 등록`.slice(0, 60),
+    });
+  }
+  if (profile.products) {
+    fieldRecords.push({
+      type: 'preference', key: '취급 상품·서비스', value: profile.products,
+      summary: `${label} 취급 품목: ${profile.products}`.slice(0, 60),
+    });
+  }
+  if (profile.entity_subtype || profile.schema_id) {
+    fieldRecords.push({
+      type: 'preference', key: '업종', value: profile.entity_subtype || profile.schema_id,
+      summary: `${label} 업종: ${profile.entity_subtype || profile.schema_id}`.slice(0, 60),
+    });
+  }
+
+  for (const f of fieldRecords) {
+    await _recordPDV({
+      type:    f.type,
+      guid:    who,
+      who,
+      when:    now,
+      where:   profile.address || '설정 → 프로필 작성',
+      what:    `${f.key}: ${f.value}`,
+      how:     'personal_assistant',
+      why:     '프로필 작성 중 PA에게 직접 제공',
+      summary: f.summary,
+      data:    { field: f.key, value: f.value, data_source: profile.data_sources?.[f.key] || 'pa_dialogue' },
+    });
+  }
+
+  console.info('[Profile] PDV 기록 완료 | 필드 수:', fieldRecords.length + 1);
 }
 
 // ── PDV IndexedDB 초기화 ─────────────────────────────────
