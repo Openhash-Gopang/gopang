@@ -206,7 +206,11 @@ body.gopang-authed #gopang-auth-gate{display:none}
    (_updateAIButtonPdvColor, 아래 AI 패널 스크립트 안)가 --ai-btn-bg /
    --ai-btn-fg CSS 변수를 갱신하는 방식으로 적용한다. */
 .btn-ai{
-  display:inline-flex;align-items:center;justify-content:center;
+  /* 2026-07-07: AI 비서 대화창이 디폴트 화면이 되면서 별도 진입 버튼이
+     더 이상 필요 없어짐 — 요소·ID는 PDV 색상 로직 등 기존 JS가 계속
+     참조하므로 DOM에는 남기고 화면에서만 숨긴다. */
+  display:none;
+  align-items:center;justify-content:center;
   min-width:26px;height:22px;flex-shrink:0;
   align-self:center;
   border-radius:6px;
@@ -232,36 +236,40 @@ body.gopang-authed #gopang-auth-gate{display:none}
 /* ── AI 패널 v3.0: 기본 높이 2/3 화면 — 상단 바 버튼이 가려지지 않도록.
    핸들 버튼으로 전체화면과 토글 가능(2026-07-01, 사용자 요청). ── */
 #ai-panel{
-  position:fixed;
-  left:0;right:0;
-  bottom:0;
-  height:66.6667dvh;      /* 기본 2/3 화면 — 상단 바 노출 유지 */
-  z-index:300;           /* 좌우 메뉴(z-index:998)보다 낮아야 메뉴가 위로 열림 */
+  /* 2026-07-07: AI 비서 대화창을 디폴트 화면으로 전환 — 기존엔 하단에서
+     슬라이드업되는 반투명 오버레이 모달이었지만, 이제 이 창이 유일한
+     메인 대화창이므로 상단 바 아래 남는 공간을 항상 채우는 일반 레이아웃
+     요소로 바꾼다(더 이상 열고 닫는 개념이 없음 — 늘 열려 있는 상태). */
+  position:relative;
+  flex:1 1 auto;min-height:0;
+  z-index:auto;
   background:#F8FAFF;
   display:flex;flex-direction:column;
-  border-radius:20px 20px 0 0;
-  box-shadow:0 -4px 24px rgba(0,0,0,.12);
-  transform:translateY(100%);
-  transition:transform .32s cubic-bezier(.32,1,.4,1);
-  will-change:transform;
+  border-radius:0;
+  box-shadow:none;
+  transform:none;
   touch-action:pan-y;
 }
-#ai-panel.open{ transform:translateY(0); }
 
-/* 상단 바 */
+/* 상단 바 — 2026-07-07: AI 비서 대화창이 곧 메인 대화창이 되어, 앱
+   자체의 상단 바(.top-bar)만으로 충분하므로 이 패널 전용 상단 바는
+   완전히 숨긴다(요소·JS는 남기고 화면에서만 제거). */
 #ai-panel-topbar{
+  display:none;
   position:relative;
-  display:flex;align-items:center;
+  align-items:center;
   background:#1A73E8;
   padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;
   flex-shrink:0;
   min-height:52px;
 }
-/* 높이 조절 핸들 — 좌측 */
+/* 높이 조절 핸들 — 좌측 (2026-07-07: 패널이 항상 전체 높이로 고정되면서
+   높이 조절 개념이 사라짐 — 요소·JS는 남기고 화면에서만 숨김) */
 #ai-panel-handle{
+  display:none;
   width:32px;height:32px;border-radius:50%;
   background:rgba(255,255,255,.18);
-  display:flex;align-items:center;justify-content:center;
+  align-items:center;justify-content:center;
   flex-shrink:0;cursor:grab;
   border:none;
 }
@@ -291,11 +299,13 @@ body.gopang-authed #gopang-auth-gate{display:none}
 #ai-panel-name-edit-icon{
   flex-shrink:0;opacity:.75;
 }
-/* 닫기 버튼 — 우측 */
+/* 닫기 버튼 — 우측 (2026-07-07: 이 창이 디폴트 메인 화면이 되어 "닫을 곳"이
+   없어짐 — 요소·JS는 남기고 화면에서만 숨김) */
 #ai-panel-close{
+  display:none;
   width:32px;height:32px;border-radius:50%;
   background:rgba(255,255,255,.18);
-  display:flex;align-items:center;justify-content:center;
+  align-items:center;justify-content:center;
   flex-shrink:0;cursor:pointer;border:none;
 }
 #ai-panel-close svg{pointer-events:none}
@@ -337,43 +347,92 @@ body.gopang-authed #gopang-auth-gate{display:none}
   background:rgba(255,255,255,.82);
 }
 
-/* 패널 입력창 */
+/* 패널 입력창 — 2026-07-07: 참고 이미지 스타일로 개편.
+   textarea가 윗줄 전체를 차지하고, 아랫줄 툴바에 좌측(첨부·카메라)/
+   우측(마이크·전송) 아이콘을 배치하는 2단 구성 + 카드형 pill 컨테이너. */
 #ai-panel-input-row{
-  display:flex;align-items:flex-end;gap:6px;
-  padding:8px 10px calc(env(safe-area-inset-bottom,0px) + 10px);
-  border-top:1px solid #E8F0FE;
+  display:flex;flex-direction:column;gap:6px;
+  margin:0 10px calc(env(safe-area-inset-bottom,0px) + 10px);
+  padding:10px 12px 8px;
+  border:1px solid #e5e7eb;
+  border-radius:22px;
   background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);
   flex-shrink:0;
-}
-#ai-panel-input{
-  flex:1;min-height:38px;max-height:110px;
-  border:1.5px solid #E8F0FE;
-  border-radius:20px;
-  background:#F8FAFF;
-  padding:9px 14px;font-size:14px;
-  font-family:inherit;resize:none;outline:none;
-  line-height:1.45;overflow-y:auto;
   transition:border-color .15s;
 }
-#ai-panel-input:focus{border-color:#1A73E8;background:#fff}
+#ai-panel-input-row:focus-within{border-color:#d1d5db}
+#ai-panel-input{
+  width:100%;min-height:24px;max-height:110px;
+  border:none;background:transparent;
+  padding:2px 2px;font-size:14px;
+  font-family:inherit;resize:none;outline:none;
+  line-height:1.45;overflow-y:auto;
+}
+/* 아랫줄 툴바 — 좌측 첨부/카메라, 우측 마이크/전송 */
+.ai-panel-input-toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:6px;
+}
+.ai-panel-actions-right{
+  display:flex;align-items:center;gap:2px;flex-shrink:0;
+}
+/* 전송 버튼 — 크기 10% 축소(30px→27px), 모양은 원형이 아닌 모서리가
+   둥근 사각형으로 통일. 상태별 구성:
+   1) 비어있음(대기): 박스 없이 음성 파형 아이콘만 — 마이크 녹음 중엔 움직임
+   2) 입력 있음: 주황빛 둥근 사각형 버튼 + 흰색 화살표
+   3) 생성 중: 테두리만 있는 둥근 사각형 + 어두운 정지 사각형(중단 버튼) */
 #ai-panel-send{
-  width:38px;height:38px;flex-shrink:0;
-  border:none;border-radius:50%;
-  background:#1A73E8;
-  color:#fff;font-size:16px;cursor:pointer;
+  width:27px;height:27px;flex-shrink:0;
+  border:1.5px solid transparent;border-radius:9px;
+  background:#CC785C;
+  color:#fff;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  transition:opacity .15s;box-shadow:0 2px 6px rgba(26,115,232,.28);
+  transition:background .15s,border-color .15s,box-shadow .15s,opacity .15s;
+  box-shadow:none;
 }
-#ai-panel-send:disabled{opacity:.35;box-shadow:none;}
+#ai-panel-send:hover:not(:disabled):not(.generating){background:#B96847}
+#ai-panel-send svg{stroke:currentColor;fill:none}
+#ai-panel-send .icon-stop{display:none;fill:currentColor;stroke:none}
+#ai-panel-send .icon-waveform{display:none}
+/* 대기(비어있음) — 박스 없이 음성 파형 아이콘만 */
+#ai-panel-send:disabled{
+  background:transparent;border-color:transparent;
+  box-shadow:none;opacity:1;cursor:not-allowed;
+}
+#ai-panel-send:disabled .icon-send{display:none}
+#ai-panel-send:disabled .icon-waveform{display:block;stroke:#9ca3af}
+/* 생성 중 — 테두리만 있는 둥근 사각형 + 정지 아이콘 (중단 버튼 역할) */
+#ai-panel-send.generating{
+  background:#fff;border-color:#d1d5db;
+  box-shadow:none;opacity:1;cursor:pointer;
+}
+#ai-panel-send.generating .icon-send{display:none}
+#ai-panel-send.generating .icon-stop{display:block;color:#111}
+/* 음성 입력 중 — 대기 상태의 파형 아이콘이 오디오 이퀄라이저처럼 움직임 */
+#ai-panel-send.mic-active .icon-waveform{display:block;stroke:#CC785C}
+#ai-panel-send.mic-active .icon-waveform line{
+  transform-box:fill-box;transform-origin:center;
+  animation:ai-panel-wave-bar .8s ease-in-out infinite;
+}
+#ai-panel-send.mic-active .icon-waveform line:nth-child(1){animation-delay:0s}
+#ai-panel-send.mic-active .icon-waveform line:nth-child(2){animation-delay:.12s}
+#ai-panel-send.mic-active .icon-waveform line:nth-child(3){animation-delay:.24s}
+#ai-panel-send.mic-active .icon-waveform line:nth-child(4){animation-delay:.36s}
+#ai-panel-send.mic-active .icon-waveform line:nth-child(5){animation-delay:.48s}
+#ai-panel-send.mic-active .icon-waveform line:nth-child(6){animation-delay:.6s}
+@keyframes ai-panel-wave-bar{
+  0%,100%{transform:scaleY(.4)}
+  50%{transform:scaleY(1)}
+}
 
-/* AI 패널 입력 필드 왼쪽 보조 버튼(파일첨부·카메라·마이크) */
+/* AI 패널 입력 필드 좌측(첨부·카메라)/우측(마이크) 보조 버튼 */
 .ai-panel-actions-left{
-  display:flex;align-items:center;gap:0;flex-shrink:0;align-self:flex-end;
+  display:flex;align-items:center;gap:0;flex-shrink:0;
 }
-.ai-panel-actions-left .ia-btn{
-  width:32px;height:32px; /* AI 패널 입력행(36px)에 맞춘 약간 축소된 크기 */
+.ai-panel-actions-left .ia-btn,.ai-panel-actions-right .ia-btn{
+  width:32px;height:32px; /* AI 패널 입력행에 맞춘 약간 축소된 크기 */
 }
-.ai-panel-actions-left .ia-btn svg{width:15.5px;height:15.5px}
+.ai-panel-actions-left .ia-btn svg,.ai-panel-actions-right .ia-btn svg{width:15.5px;height:15.5px}
 
 /* AI 패널 첨부(파일·사진) 미리보기 칩 */
 .ai-panel-attach-preview{
@@ -397,10 +456,14 @@ body.gopang-authed #gopang-auth-gate{display:none}
   margin:6px 16px 0;text-align:center;letter-spacing:.3px;
 }
 
-/* ── 메시지 목록 ── */
+/* ── 메시지 목록 (구 메인 대화창) ── */
+/* 2026-07-07: AI 비서 대화창이 디폴트가 되면서 이 메인 대화창은 화면에서
+   숨긴다. 요소·관련 JS(callAI 등)는 그대로 두어, 추후 AI 비서가 사용자
+   요청에 따라 별도 탭에서 이 대화창을 열 때 재사용할 수 있게 한다. */
 #message-list{
+  display:none;
   flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding:12px 16px;display:flex;flex-direction:column;gap:10px;
+  padding:12px 16px;flex-direction:column;gap:10px;
   background:#fff;
 }
 
@@ -492,8 +555,12 @@ body.gopang-authed #gopang-auth-gate{display:none}
 .chip svg{width:12px;height:12px;stroke:currentColor;stroke-width:2;fill:none;flex-shrink:0}
 .chip:hover,.chip:active{background:var(--green-lt);border-color:var(--green);color:var(--green-dk)}
 
-/* ── 하단 입력 ── */
+/* ── 하단 입력 (구 메인 대화창 입력줄) ── */
+/* 2026-07-07: AI 비서 입력창(#ai-panel-input-row)이 디폴트 입력창이 되어
+   이 입력줄은 화면에서 숨긴다. 요소·JS는 그대로 두어 별도 탭 대화창에서
+   재사용할 수 있게 한다. */
 .input-dock{
+  display:none;
   background:#fff;border-top:1px solid var(--border);
   padding:8px 0 calc(8px + var(--safe-b));
   flex-shrink:0;
@@ -1261,33 +1328,46 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
       <button type="button" id="ai-panel-attach-remove">✕</button>
     </div>
     <div id="ai-panel-input-row">
-      <div class="ai-panel-actions-left">
-        <button class="ia-btn" id="ai-panel-attach-btn" type="button" title="파일 첨부">
-          <svg width="17.87" height="17.87" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
-          </svg>
-        </button>
-        <button class="ia-btn" id="ai-panel-camera-btn" type="button" title="카메라">
-          <svg width="16.87" height="16.87" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-          </svg>
-        </button>
-        <button class="ia-btn" id="ai-panel-mic-btn" type="button" title="음성으로 대화">
-          <svg width="15.88" height="15.88" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="9" y="2" width="6" height="11" rx="3"/>
-            <path d="M5 10a7 7 0 0 0 14 0"/>
-            <line x1="12" y1="19" x2="12" y2="22"/>
-            <line x1="8" y1="22" x2="16" y2="22"/>
-          </svg>
-        </button>
-      </div>
       <textarea id="ai-panel-input" rows="1" placeholder="AI 비서에게 물어보세요…"
         readonly onfocus="this.removeAttribute('readonly')"
         onblur="setTimeout(()=>{if(this!==document.activeElement)this.setAttribute('readonly','')},200)"></textarea>
-      <button id="ai-panel-send">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-      </button>
+      <div class="ai-panel-input-toolbar">
+        <div class="ai-panel-actions-left">
+          <button class="ia-btn" id="ai-panel-attach-btn" type="button" title="파일 첨부">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+          <button class="ia-btn" id="ai-panel-camera-btn" type="button" title="카메라">
+            <svg width="16.87" height="16.87" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </button>
+        </div>
+        <div class="ai-panel-actions-right">
+          <button class="ia-btn" id="ai-panel-mic-btn" type="button" title="음성으로 대화">
+            <svg width="15.88" height="15.88" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="2" width="6" height="11" rx="3"/>
+              <path d="M5 10a7 7 0 0 0 14 0"/>
+              <line x1="12" y1="19" x2="12" y2="22"/>
+              <line x1="8" y1="22" x2="16" y2="22"/>
+            </svg>
+          </button>
+          <button id="ai-panel-send" type="button" title="전송 / 중단">
+            <svg class="icon-send" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            <svg class="icon-stop" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            <svg class="icon-waveform" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="2"  y1="8.5" x2="2"  y2="15.5"/>
+              <line x1="6"  y1="6.5" x2="6"  y2="17.5"/>
+              <line x1="10" y1="3"   x2="10" y2="21"/>
+              <line x1="14" y1="3"   x2="14" y2="21"/>
+              <line x1="18" y1="6.5" x2="18" y2="17.5"/>
+              <line x1="22" y1="8.5" x2="22" y2="15.5"/>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2686,6 +2766,14 @@ window.closePDV = closePDV;
   const attachNameEl    = document.getElementById('ai-panel-attach-name');
   const attachRemoveBtn = document.getElementById('ai-panel-attach-remove');
   let _panelOpen = false;
+  // ── 응답 중단(stop) 기능 — 2026-07-07 신설 ──────────────
+  // 전송 버튼이 생성 중에는 "중단" 버튼으로 바뀌고, 클릭 시 진행 중인
+  // fetch를 AbortController로 취소한다. _callPanelAI 안에서 매 candidate
+  // 시도마다 새 AbortController가 만들어지므로, 그 참조를 이 바깥 스코프
+  // 변수에 최신 상태로 계속 갱신해 둔다.
+  let _panelGenerating  = false;
+  let _panelAbortCtl    = null;
+  let _panelUserAborted = false;
 
   // ── PDV 누적량 → AI 버튼 색상 (2026-07-07 신설) ──────────────────
   // "데이터가 많을수록 AI가 사용자를 더 정확히 대신할 수 있다"는 것을
@@ -2887,6 +2975,9 @@ window.closePDV = closePDV;
 
   // ── 입력창 자동 높이 + 전송 버튼 활성화 ───────────────
   function _updatePanelSendState() {
+    // 생성 중일 때는 이 버튼이 "중단" 역할이므로 항상 눌러야 하고
+    // (disabled 금지) 입력값 유무와 무관하다.
+    if (_panelGenerating) { sendBtn.disabled = false; return; }
     sendBtn.disabled = !(input.value.trim() || _aiPanelAttachedFile);
   }
   input.addEventListener('input', () => {
@@ -2955,7 +3046,11 @@ window.closePDV = closePDV;
       return _autoSendTimestamps.length < AUTO_SEND_MAX_PER_MINUTE;
     }
 
-    function setMicVisual(on) { micBtn.classList.toggle('mic-recording', on); }
+    function setMicVisual(on) {
+      micBtn.classList.toggle('mic-recording', on);
+      // 음성 입력 중에는 전송 버튼의 대기 상태 아이콘(파형)이 움직이는 것으로 표시
+      sendBtn.classList.toggle('mic-active', on);
+    }
     function clearSilenceTimer() { if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; } }
 
     function scheduleAutoSend() {
@@ -3482,6 +3577,7 @@ window.closePDV = closePDV;
   }
 
   async function _callPanelAI(userText, bubbleEl, attached, _preTab) {
+    _panelUserAborted = false; // 새 요청 시작 — 이전 취소 플래그 초기화
     const { PROVIDER_INFO, getPriorityOrder } = await import('./src/gopang/core/config.js');
     // free-model-pool.js 삭제(2026-07-01) — OR 24h쿨다운·분당예산 관리 대신
     // 혼디 제공 DeepSeek 기본 키(hondi-flash/hondi-pro)가 항상 마지막 안전망으로 붙는다.
@@ -3623,6 +3719,7 @@ window.closePDV = closePDV;
       // 느리게 스트리밍되는 응답은 끊기지 않는다.
       const _IDLE_TIMEOUT_MS = 45000;
       const _abortCtl = new AbortController();
+      _panelAbortCtl = _abortCtl; // 중단 버튼이 이 candidate를 취소할 수 있도록 바깥 스코프에 노출
       let _idleTimer = setTimeout(() => _abortCtl.abort(), _IDLE_TIMEOUT_MS);
       const _resetIdle = () => { clearTimeout(_idleTimer); _idleTimer = setTimeout(() => _abortCtl.abort(), _IDLE_TIMEOUT_MS); };
       try {
@@ -3692,6 +3789,7 @@ window.closePDV = closePDV;
           }
         }
         clearTimeout(_idleTimer);
+        _panelAbortCtl = null; // 스트리밍 정상 종료 — 더 이상 중단할 대상 없음
         // 히스토리에 assistant 추가
         _panelHistory.push({ role: 'assistant', content: full });
         _trimPanelHistory();
@@ -3754,10 +3852,16 @@ window.closePDV = closePDV;
         return;
       } catch(e) {
         clearTimeout(_idleTimer); // 타임아웃/오류 어느 경로든 타이머 누수 방지
+        // 사용자가 중단(stop) 버튼을 눌러 취소한 경우 — 다음 candidate로
+        // 재시도하지 않고 바로 빠져나간다(에러가 아니라 의도된 취소).
+        if (e.name === 'AbortError' && _panelUserAborted) { lastErr = '__USER_CANCELLED__'; break; }
         lastErr = (e.name === 'AbortError') ? '응답 시간 초과(45초)' : e.message;
       }
     }
-    if (lastErr === 'FREE_QUOTA_EXCEEDED') {
+    _panelAbortCtl = null;
+    if (lastErr === '__USER_CANCELLED__') {
+      // 이미 스트리밍되던 부분 응답이 bubbleEl에 표시돼 있으므로 그대로 둔다.
+    } else if (lastErr === 'FREE_QUOTA_EXCEEDED') {
       bubbleEl.innerHTML =
         '🔑 무료로 제공되는 1,000원어치 AI 사용량을 모두 사용했어요.<br>' +
         '설정에서 본인의 AI 키를 등록하시면 제한 없이 계속 쓰실 수 있어요.<br>' +
@@ -3770,12 +3874,18 @@ window.closePDV = closePDV;
   }
 
   // ── 전송 ─────────────────────────────────────────────
+  function _setPanelGenerating(on) {
+    _panelGenerating = on;
+    sendBtn.classList.toggle('generating', on);
+    _updatePanelSendState();
+  }
+
   async function _sendToAI() {
     const text = input.value.trim();
     const attached = _aiPanelAttachedFile;
     if (!text && !attached) return;
     input.value = ''; input.style.height = 'auto';
-    sendBtn.disabled = true;
+    _setPanelGenerating(true);
     _appendPanelMsg('user', text || (attached.isImage ? '(사진 첨부)' : `(파일 첨부: ${attached.name})`));
     _clearAttachPreview();
 
@@ -3787,14 +3897,25 @@ window.closePDV = closePDV;
       aiBubble.textContent = 'AI 오류: ' + e.message;
     }
     aiBubble.classList.remove('streaming');
-    _updatePanelSendState();
+    _setPanelGenerating(false);
   }
 
-  sendBtn.addEventListener('click', _sendToAI);
+  // 중단(stop) — 응답 생성 중 전송 버튼을 누르면 진행 중인 요청을 취소한다.
+  function _stopPanelGeneration() {
+    if (!_panelGenerating) return;
+    _panelUserAborted = true;
+    if (_panelAbortCtl) _panelAbortCtl.abort();
+  }
+
+  sendBtn.addEventListener('click', () => {
+    if (_panelGenerating) _stopPanelGeneration();
+    else _sendToAI();
+  });
   input.addEventListener('keydown', e => {
     // 한글 IME 조합 확정 Enter와 실제 전송 Enter가 겹쳐 이중 전송되는 것을 방지
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
-      e.preventDefault(); _sendToAI();
+      e.preventDefault();
+      if (!_panelGenerating) _sendToAI();
     }
   });
 })();
