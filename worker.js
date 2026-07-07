@@ -839,6 +839,7 @@ export default {
     // ── biz (v4.8+) ──────────────────────────────────────
     if (pathname.startsWith('/biz/profile/'))   return handleBizProfile(request, env, corsHeaders);
     if (pathname === '/biz/order'   && request.method === 'POST') return handleBizOrder(request, env, corsHeaders, ctx);
+    if (pathname === '/biz/balance' && request.method === 'GET')  return handleBizBalance(request, env, corsHeaders);
     if (pathname === '/biz/review'  && request.method === 'POST') return handleBizReview(request, env, corsHeaders);
     if (pathname === '/biz/product' && request.method === 'POST') return handleBizProduct(request, env, corsHeaders);
 
@@ -1253,6 +1254,26 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
       lcat,
     },
   }), { status: 200, headers: corsHeaders });
+}
+
+// ── GET /biz/balance?guid=... — 재대사(reconcile) 지원 ────────────
+// 2026-07-07 신설. 클라이언트(gopang-wallet.js) 로컬 IndexedDB가 서버
+// 원장과 어긋났을 때(새 기기, 스토리지 초기화 등) 복구용으로 L1의
+// /api/balance를 그대로 프록시한다 — 이 리포의 다른 모든 L1 접근과
+// 마찬가지로 클라이언트는 L1을 직접 부르지 않고 Worker를 거친다.
+async function handleBizBalance(request, env, corsHeaders) {
+  const url  = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 쿼리 파라미터 필수', corsHeaders);
+
+  try {
+    const res  = await fetch(`${L1_DEFAULT}/api/balance?guid=${encodeURIComponent(guid)}`);
+    const data = await res.json().catch(() => ({ ok: false, error: 'L1_PARSE_FAILED' }));
+    if (!data.ok) return _err(502, data.error || 'L1_ERROR', data.detail || 'L1 잔액 조회 실패', corsHeaders);
+    return new Response(JSON.stringify(data), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
 }
 
 // ── STEP 09: PDV 기록 헬퍼 (동기 앵커링) ─────────────────

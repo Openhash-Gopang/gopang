@@ -823,6 +823,62 @@
     }
 
     /**
+     * 2026-07-07 신설 — 재대사(reconcile). 로컬 IndexedDB(financial_state)가
+     * 서버(L1) 실제 원장과 어긋났을 때(새 기기, 스토리지 초기화, 앱 재설치
+     * 등) 서버 값으로 교정한다. 지금까지는 이 복구 경로가 아예 없었다 —
+     * 로컬이 틀리면 영영 못 고치고, prev_settle_hash도 계속 틀려서 다음
+     * 거래가 STALE_STATE로 막혔다.
+     *
+     * bs-cash(실잔액)와 block_hash(다음 prev_settle_hash 기준)만 서버 값
+     *으로 덮어쓴다 — pl-purchase/pl-revenue(누적 통계)는 서버가 더 이상
+     * 추적하지 않으므로(2026-07-07 L1 이관 이후) 로컬 이력을 그대로 둔다.
+     *
+     * 호출 시점 권장: 앱/지갑 초기화 직후(로그인 직후), 그리고 STALE_STATE
+     * 오류를 받았을 때 재시도 전.
+     *
+     * @returns {{ drift: boolean, localBalance: number, serverBalance: number, blockHash: string|null }}
+     */
+    async hydrateFromServer() {
+      if (!this.guid) throw new Error('[Wallet] guid(IPv6)가 설정되지 않았습니다.');
+
+      const res  = await fetch(`${WORKER_URL}/biz/balance?guid=${encodeURIComponent(this.guid)}`);
+      const data = await res.json().catch(() => null);
+      if (!data?.ok) {
+        throw new Error('[Wallet] 서버 잔액 조회 실패: ' + (data?.error || res.status));
+      }
+
+      const db  = await openDB();
+      const rec = await idbGet(db, IDB_FS_KEY);
+      const localFs = rec?.state || {};
+      const localBsCash = parseFloat(localFs['bs-cash'] ?? '0') || 0;
+
+      const drift = Math.abs(localBsCash - data.balance) > 0.01;
+      if (drift) {
+        console.warn('[Wallet] 로컬-서버 잔액 불일치 감지 — 서버 값으로 교정',
+          '| local:', localBsCash, '| server:', data.balance);
+      }
+
+      const newFs = { ...localFs, 'bs-cash': data.balance };
+      await idbPut(db, IDB_FS_KEY, {
+        state:     newFs,
+        updatedAt: new Date().toISOString(),
+        // latest_block_hash가 없으면(지불 이력 없음) 기존 값 유지 —
+        // main.pb.js 3단계는 prev_settle_hash:null을 "첫 거래"로 처리한다.
+        block_hash: data.latest_block_hash || rec?.block_hash || null,
+      });
+
+      console.info('[Wallet] hydrateFromServer 완료',
+        '| drift:', drift, '| balance:', data.balance);
+
+      return {
+        drift,
+        localBalance:  localBsCash,
+        serverBalance: data.balance,
+        blockHash:     data.latest_block_hash || null,
+      };
+    }
+
+    /**
      * Hash Chain 전체 조회
      * @returns {Array} chain 이력 배열 (height 오름차순)
      */

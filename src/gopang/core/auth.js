@@ -581,6 +581,18 @@ export async function _restoreFromBackupKey(privKeyB64u, guid = null, svc = 'gop
   if (guid) wallet.setIdentity({ guid, handle: null });
   window.gopangWallet = wallet; // 싱글턴 교체 — 이후 서명은 전부 복원된 키로
 
+  // 2026-07-07 신설: 백업 키로 지갑을 복원한다는 건 곧 이 기기의 로컬
+  // IndexedDB(financial_state)가 비어있거나 낡았다는 뜻이다(새 기기,
+  // 재설치 등) — 재대사가 필요한 바로 그 시나리오다. 서버(L1)의 실제
+  // 잔액/prev_settle_hash로 로컬을 교정한다. 실패해도 복구 흐름 자체를
+  // 막지는 않는다(다음 거래 시도에서 어차피 STALE_STATE 등으로 다시
+  // 드러날 수 있으니 여기서 굳이 전체를 실패시키지 않는다).
+  if (guid && typeof wallet.hydrateFromServer === 'function') {
+    wallet.hydrateFromServer().catch(e =>
+      console.warn('[Wallet] hydrateFromServer 실패(무시하고 복구 계속):', e.message)
+    );
+  }
+
   // 백업 키를 직접 입력했다는 것 자체가 "이미 어딘가에 저장해 뒀다"는 증거다 —
   // 이 기기에서 다시 백업 안내로 귀찮게 하지 않는다.
   try { localStorage.setItem(BACKUP_CONFIRMED_KEY, '1'); } catch {}
