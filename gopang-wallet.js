@@ -1279,16 +1279,16 @@
         wallet.setIdentity({ guid: stored.ipv6, handle: stored.handle || null });
       }
 
-      // 로컬 재무 상태가 비어있으면 서버(L1)에서 초기 동기화 시도
-      // 2026-07-07 수정: 여기서 예전엔 Supabase user_profiles.extra.fs를
-      // 직접 조회했다(anon key 하드코딩까지 돼 있었음) — 그런데 지난주
-      // Supabase→L1 이관으로 그 테이블은 더 이상 갱신되지 않는 죽은
-      // 데이터가 됐다. hydrateFromServer()(→ Worker /biz/balance → L1
-      // /api/balance)로 교체한다. 이건 신규 가입자에게도 의미가 있다 —
-      // 서버 잔액이 0이면 그대로 0을 받아와서, "비어있음"과 "0으로 확인된
-      // 초기화 완료 상태"를 구분해서 기록한다.
-      const fs = await wallet.getFinancialState();
-      if ((!fs || Object.keys(fs).length === 0) && stored?.ipv6) {
+      // 2026-07-07 재수정: "fs가 비어있으면 동기화"였던 조건을 없앤다.
+      // 오늘 가입 시점에 fs를 명시적으로 {bs-cash:0,...}로 초기화하도록
+      // 바꿨는데(_initGdcWalletAndFs), 그 결과 fs가 가입 직후부터 절대
+      // "비어있지" 않게 돼서 — 이 hydrateFromServer() 호출이 가입 이후
+      // 평생 단 한 번도 다시 실행되지 않는 상태가 됐다(사고실험으로 발견).
+      // 판매자처럼 거래에 실시간으로 참여하지 않는 기기는 이게 사실상
+      // 유일한 재대사 경로인데, 그게 막혀 있었다는 뜻이다. 이제 guid가
+      // 있으면 매 앱 실행마다 무조건 서버 값으로 재대사한다 — 실패해도
+      // (오프라인 등) 로컬 값을 그대로 쓰면 되므로 앱 시작을 막지 않는다.
+      if (stored?.ipv6) {
         try {
           await wallet.hydrateFromServer();
         } catch(e) {

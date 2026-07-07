@@ -67,3 +67,76 @@ read-modify-write 경쟁상태 자체가 존재하지 않는다.
 
 `docs/l1-balance-ledger-migration-2026-07-07.md` — L1 잔액/원장 아키텍처
 전체 설계, `/api/mint` 사용법, PocketBase Goja 제약 재확인 내용.
+
+---
+
+## 추가 세션 — 가입 시점 초기화 + 재무제표 갱신/일치검증 (같은 날 이어서)
+
+"가입 시점 GDC wallet·재무제표 초기화, 매 거래 양측 재무제표 갱신, 매
+거래 재무제표 변동 일치 검증"을 점검해 달라는 요청으로 이어졌다.
+
+### 점검 결과 — 세 가지 다 실제로 비어 있거나 결함이 있었음
+
+1. **가입 시점 초기화가 사실상 안 되고 있었음**: 지갑(Ed25519 키페어)은
+   로컬에서 자동 생성됐지만, **그 공개키를 L1의 `gdc_keys`에 등록하는
+   코드가 리포 전체에 단 한 줄도 없었다** — 신규 가입자의 첫 실거래가
+   무조건 `UNREGISTERED_KEY(403)`로 막히는 상태였음. 재무제표도 "생성
+   이벤트" 없이 그냥 비어있다가 암묵적으로 0 취급되는 식이었고, 지갑
+   자동 초기화 코드가 **이미 폐기한 Supabase 테이블을 하드코딩된 anon
+   key로 직접 조회**하고 있었다(지난 이관 작업 때 놓친 부분).
+2. **거래마다 갱신 — 구매자 로직에 실제 이중 계상 버그**: `redeemClaim()`이
+   `claim.claimant`를 확인하지 않고 배열의 모든 claim을 적용해서, 구매자의
+   로컬 재무제표에 판매자 몫(seller_claim)까지 잘못 반영되고 있었다.
+   판매자 쪽 기기는 거래에 참여하지 않으므로 애초에 갱신될 방법이 없었음.
+3. **일치 검증 — 있지만 감시만 하고 기록을 안 남김, 그리고 판매자 쪽
+   검증이 아예 없음**: `verifyOutputConsistency`가 구매자쪽(buyer_claim.amount
+   vs outputs 합계)만 봤고, 결과가 로그에만 찍히고 사라졌다.
+
+### 보완 내용
+
+| 항목 | 파일 |
+|---|---|
+| `POST /gwp/register-key` 신설 — TOFU 서명 기반 L1 `gdc_keys` 등록(기존 키와 다른 값으로 덮어쓰기는 거부, 기기교체는 백업키 복구로 유도) | `worker.js` |
+| `_registerToL1()` 직후 `_initGdcWalletAndFs()` 실행 — 키 등록 + 재무제표 명시적 0 초기화(IASB 매핑: bs-cash=자산, pl-purchase=비용, pl-revenue=수익, 부채 없어 자본=자산) + PDV `fs_genesis` 감사 기록 | `src/gopang/core/auth.js` |
+| `redeemClaim()`에 `claim.claimant === this.guid` 필터 추가 — 이중 계상 버그 수정 | `gopang-wallet.js` |
+| 지갑 자동초기화의 죽은 Supabase 동기화를 `hydrateFromServer()`로 교체 | `gopang-wallet.js` |
+| `verifyOutputConsistency` — 판매자 쪽(seller_claim.amount vs 의도한 seller_net) 검증 추가, 결과를 PDV(`extra.consistency_check`)와 API 응답에 영속화 | `worker.js` |
+| `verifyDeltaZero`의 `balance_claimed` 기반 오검증 제거 | `worker.js` |
+
+### 실제 E2E로 잡은 버그들 (기록용)
+
+1. 배포 직후 `consistency_check.delta_zero_valid`가 정상 거래인데도
+   `false`로 뜸 — `verifyDeltaZero`가 여전히 신뢰 안 하기로 한
+   `balance_claimed`를 기준으로 판정하고 있었다. 즉시 제거.
+2. **재무제표 변동 일치검증까지 마친 뒤 다시 돌린 사고실험에서 발견**:
+   가입 시점에 fs를 `{bs-cash:0,...}`로 명시 초기화하게 만든 결과,
+   지갑 자동초기화 IIFE의 "fs가 비어있으면 hydrateFromServer() 호출"
+   조건이 **가입 이후 평생 다시는 참이 되지 않는** 자기모순 상태가
+   됐다 — 판매자처럼 거래에 실시간으로 참여하지 않는 기기가 로컬 상태를
+   갱신할 사실상 유일한 경로였는데, 그게 막혀 있었다. "fs 비어있으면"
+   조건을 없애고 **guid가 있으면 매 앱 실행마다 무조건 재대사**하도록
+   수정.
+
+### E2E 검증 완료 (신규 guid 전 과정)
+
+1. 신규 Ed25519 키페어 생성(openssl) → `/gwp/register-key`로 TOFU 등록 성공
+2. `/biz/balance` — 등록 직후 잔액 0 확인
+3. `/api/mint`로 50,000 발행 → 잔액 50,000 확인
+4. `/biz/order`(Worker 경유) 1차 구매(10,000) → `balance_after: 40,000` 확인
+5. `/biz/order` 2차 구매(5,000, `prev_settle_hash` 체인 정상 연결) →
+   `consistency_check: {output_consistent:true, delta_zero_valid:true, sigma_delta:0}`,
+   `buyer_claim.balance_after:35,000`, `seller_claim.balance_after:14,550`
+   (1차+2차 누적과 정확히 일치) 확인
+
+### 알려진 한계 (다음에 다룰 만한 것, 새로 추가)
+
+- **손익계산서(수익/비용) 재대사 불가**: `/api/balance`(→`computeBalance`)는
+  순수 잔액(자산)만 반환하고 수익/비용을 분리 추적하지 않는다.
+  `hydrateFromServer()`도 `bs-cash`만 덮어쓰고 `pl-purchase`/`pl-revenue`는
+  로컬 값을 그대로 둔다 — 로컬 이력이 어떤 이유로든 틀어지면(과거
+  이중계상 버그의 잔재 등) 그 계정들은 서버로 복구할 방법이 없다.
+  L1 쪽에 수취/지불을 분리 집계하는 기능을 추가해야 완전히 해소된다.
+- **개인키 완전 분실 시 복구 경로 없음**: `/gwp/register-key`가 기존
+  키와 다른 값이면 무조건 거부(탈취 방지로 의도된 동작)라서, 백업 키를
+  안 만들어둔 사용자가 기기를 잃으면 그 guid는 영구히 거래 불가능해진다.
+
