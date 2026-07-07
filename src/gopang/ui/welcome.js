@@ -79,8 +79,19 @@ export async function handleProfileSubmit(aiResponseText) {
     // "위임"이라는 개념 자체가 무의미해졌다 — 단일 정체성이고, 운영자
     // 본인인지는 핸드셰이크(GET /profile/verify-owner)로 실시간 확인한다.
 
-    // ── PDV IndexedDB 초기화 ──
-    await _initPDV(profile.guid);
+    // ── PDV IndexedDB 사전 초기화 제거 (2026-07-07) ──
+    // 예전엔 여기서 _initPDV()가 'hondi-pdv'라는 별도 IndexedDB를 열어
+    // pdv_init 레코드 하나만 남겼다. 이 DB는 실제로는 profile.html의
+    // _writeSellerPDV()([SELLER_PDV:] 태그 수신 시 판매자 매출 기록)가
+    // 쓰는 저장소인데, 그쪽은 필요할 때 자체적으로 open()해서 스키마를
+    // 만든다(IndexedDB onupgradeneeded는 스토어가 없으면 알아서 생성) —
+    // 즉 여기서 미리 만들어 둘 필요가 없었다. 게다가 "이제 모든 대화와
+    // 거래가 안전하게 기록됩니다"라는 안내 문구는 실제로는 대화 기록
+    // (gopang_pdv_log/gopang_pdv_store)과 무관한 DB를 열어놓고 하는
+    // 말이라 부정확했다. _writeSellerPDV()로 기록된 매출 데이터를 다시
+    // 읽어서 보여주는 화면이 현재 어디에도 없다는 별도 문제가 있으니
+    // (판매 내역 대시보드 부재), 그 기능이 실제로 필요할 때 profile.html
+    // 쪽에서 다루기로 하고 이 사전 초기화 호출은 제거한다.
 
     // ── PA(personal-assistant)가 수집한 데이터를 PDV에 기록 (2026-07-07) ──
     // 이전에는 프로필이 /profile에만 등록되고 _recordPDV()를 한 번도
@@ -177,56 +188,6 @@ async function _recordProfileToPDV(profile) {
 
   console.info('[Profile] PDV 기록 완료 | 필드 수:', fieldRecords.length + 1);
 }
-
-// ── PDV IndexedDB 초기화 ─────────────────────────────────
-async function _initPDV(guid) {
-  try {
-    const DB_NAME    = 'hondi-pdv';
-    const DB_VERSION = 1;
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-
-    req.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      // 대화·거래·Agent 보고서 저장소
-      if (!db.objectStoreNames.contains('records')) {
-        const store = db.createObjectStore('records', { keyPath: 'id', autoIncrement: true });
-        store.createIndex('ts',   'ts',   { unique: false });
-        store.createIndex('type', 'type', { unique: false });
-        store.createIndex('guid', 'guid', { unique: false });
-      }
-      // Hash Chain 저장소
-      if (!db.objectStoreNames.contains('hash_chain')) {
-        db.createObjectStore('hash_chain', { keyPath: 'entryHash' });
-      }
-    };
-
-    await new Promise((resolve, reject) => {
-      req.onsuccess = resolve;
-      req.onerror   = reject;
-    });
-
-    // 초기화 레코드 삽입
-    const db = req.result;
-    const tx  = db.transaction('records', 'readwrite');
-    tx.objectStore('records').add({
-      ts:      new Date().toISOString(),
-      type:    'pdv_init',
-      guid:    guid || '',
-      summary: 'PDV IndexedDB 초기화 완료',
-      content: { db: DB_NAME, version: DB_VERSION },
-    });
-    await new Promise((resolve, reject) => {
-      tx.oncomplete = resolve;
-      tx.onerror    = reject;
-    });
-
-    console.info('[PDV] IndexedDB 초기화 완료 | DB:', DB_NAME, '| GUID:', guid?.slice(0, 16));
-    appendBubble('ai', '✅ 로컬 데이터 저장소(PDV)가 준비되었습니다. 이제 모든 대화와 거래가 이 기기에 안전하게 기록됩니다.');
-  } catch (e) {
-    console.warn('[PDV] IndexedDB 초기화 실패:', e.message);
-  }
-}
-
 
 // ── 본인 검증 헬퍼 (핸드셰이크 실시간 판단용) ────────────────────────
 // 2026-07-01: 옛 _triggerDelegationSignature(위임 인증서 서명, 1회성)를
