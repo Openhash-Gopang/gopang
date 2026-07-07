@@ -838,7 +838,7 @@ export default {
 
     // ── biz (v4.8+) ──────────────────────────────────────
     if (pathname.startsWith('/biz/profile/'))   return handleBizProfile(request, env, corsHeaders);
-    if (pathname === '/biz/order'   && request.method === 'POST') return handleBizOrder(request, env, corsHeaders);
+    if (pathname === '/biz/order'   && request.method === 'POST') return handleBizOrder(request, env, corsHeaders, ctx);
     if (pathname === '/biz/review'  && request.method === 'POST') return handleBizReview(request, env, corsHeaders);
     if (pathname === '/biz/product' && request.method === 'POST') return handleBizProduct(request, env, corsHeaders);
 
@@ -1024,7 +1024,7 @@ export default {
 // 이 값과 같아야 한다(다르면 매 결제가 PRICE_MISMATCH로 거부됨).
 const PLATFORM_FEE_RATE = 0.03; // 3%
 
-async function handleBizOrder(request, env, corsHeaders) {
+async function handleBizOrder(request, env, corsHeaders, ctx) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
 
@@ -1215,6 +1215,11 @@ async function handleBizOrder(request, env, corsHeaders) {
 
   // ── Module 5.5: l1_ledger H_N 기록 (updateNodeHashChain) ──
   // await는 fs_ledger RPC와 병렬 실행 — 거래 응답 차단 안 함
+  // 2026-07-07 수정: 이전엔 이 promise가 만들어진 뒤 어디서도 참조되지
+  // 않아 .catch()조차 없었다(unhandled rejection 위험) + ctx.waitUntil로
+  // 등록도 안 돼 있어 응답 반환 후 Cloudflare Workers가 격리 실행 환경을
+  // 종료하면 완료 전에 중단될 수 있었다. 다른 곳(2195/2211행 등)에 이미
+  // 확립된 패턴을 그대로 적용한다.
   const userHashPromise = _computeUserHash(tx_hash, block_hash, height);
   const nodeChainPromise = userHashPromise.then(userHash =>
     updateNodeHashChain(env, {
@@ -1225,7 +1230,8 @@ async function handleBizOrder(request, env, corsHeaders) {
       sellerGuid:      seller_guid,
       balanceClaimed:  txPayload.input?.balance_claimed || balance_claimed || 0,
     })
-  );
+  ).catch(e => console.warn('[BizOrder] nodeChainPromise 실패:', e.message));
+  if (ctx?.waitUntil) ctx.waitUntil(nodeChainPromise);
 
   
   // ── fs_ledger 기록 (market_purchase RPC) ─────────────────
@@ -1300,8 +1306,14 @@ async function handleBizOrder(request, env, corsHeaders) {
     'last_updated_at': now_fs,
     'last_tx_record':  txRecord,
   };
-  _patchFs(from_guid,   fsPatch).catch(e => console.warn('[BizOrder] buyer fs 갱신 실패:', e.message));
-  _patchFs(seller_guid, fsPatch).catch(e => console.warn('[BizOrder] seller fs 갱신 실패:', e.message));
+  // 2026-07-07 수정: await 없이 던져지던 두 호출을 ctx.waitUntil로 등록한다.
+  // 이 필드(last_tx_id 등)는 실제 잔액(bs-cash 등)이 아니라 추적 메타데이터
+  // 지만, 응답 반환 후 Cloudflare Workers가 실행 환경을 정리하면 이 fetch가
+  // 완료 전에 끊길 수 있었다 — ctx가 없으면(로컬 테스트 등) 기존처럼
+  // catch만 걸고 넘어간다.
+  const buyerFsTask  = _patchFs(from_guid,   fsPatch).catch(e => console.warn('[BizOrder] buyer fs 갱신 실패:', e.message));
+  const sellerFsTask = _patchFs(seller_guid, fsPatch).catch(e => console.warn('[BizOrder] seller fs 갱신 실패:', e.message));
+  if (ctx?.waitUntil) { ctx.waitUntil(buyerFsTask); ctx.waitUntil(sellerFsTask); }
 
   // ── STEP 11: reporter_svc 없을 때만 Worker가 PDV 기록 ────
   // reporter_svc가 있으면 하위 시스템이 이미 기록했으므로 중복 방지
