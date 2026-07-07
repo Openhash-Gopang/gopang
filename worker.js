@@ -62,7 +62,6 @@ const L1_NODE_MAP = {
   'KR-JEJU-JEJU-GEONIP': L1_BASE_HOST + '/n/l1-geonip',
   'KR-JEJU-JEJU-GUJWA': L1_BASE_HOST + '/n/l1-gujwa',
   'KR-JEJU-JEJU-HANGYEONG': L1_BASE_HOST + '/n/l1-hangyeong',
-  'KR-JEJU-JEJU-HANLIM': L1_BASE_HOST + '/n/hanlim',
   'KR-JEJU-JEJU-HWABUK': L1_BASE_HOST + '/n/l1-hwabuk',
   'KR-JEJU-JEJU-IDO1': L1_BASE_HOST + '/n/l1-ido1',
   'KR-JEJU-JEJU-IDO2': L1_BASE_HOST + '/n/l1-ido2',
