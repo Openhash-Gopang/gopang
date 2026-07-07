@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<title>사용자 검색</title>
+<meta name="description" content="혼디 사용자 검색 — 상세 필터 포함, 새 탭 전용 화면.">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --gov:#1F2937; --pri:#2563EB; --bg:#F4F6FB;
+  --font:'Pretendard',-apple-system,'Apple SD Gothic Neo',sans-serif;
+  --sh:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.05);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--font);font-size:15px;color:#1A202C;background:var(--bg);
+  -webkit-font-smoothing:antialiased;min-height:100dvh;
+}
+#top-bar{
+  display:flex;align-items:center;gap:10px;padding:14px 16px;
+  padding-top:calc(14px + env(safe-area-inset-top));
+  background:var(--gov);color:#fff;box-shadow:var(--sh);position:sticky;top:0;z-index:5;
+}
+#tb-icon{font-size:20px}
+#tb-title{font-weight:800;font-size:16px}
+#tb-sub{font-size:11.5px;opacity:.7;font-weight:400;margin-top:1px}
+#tb-close{margin-left:auto;background:rgba(255,255,255,.14);border:none;color:#fff;
+  border-radius:8px;padding:7px 12px;font-size:12.5px;cursor:pointer;font-family:var(--font)}
+#tb-close:active{background:rgba(255,255,255,.24)}
+#load-err{text-align:center;color:#b91c1c;padding:40px 20px;font-size:13.5px}
+
+/* p2p-search.js가 만드는 오버레이(#_search-overlay)는 원래 다른 화면 위에
+   반투명 배경으로 덮이도록 설계됐다 — 이 탭에서는 이 화면이 전부이므로
+   상단 바 아래 나머지 공간을 그대로 채우게 살짝 보정한다. */
+#_search-overlay{
+  position:static !important;padding:24px 16px !important;
+  background:transparent !important;display:block !important;
+}
+#_search-overlay > div{ max-width:480px !important; margin:0 auto; }
+</style>
+</head>
+<body>
+
+<div id="top-bar">
+  <div id="tb-icon">🔍</div>
+  <div>
+    <div id="tb-title">사용자 검색</div>
+    <div id="tb-sub">닉네임·handle·국가·지역 상세 필터</div>
+  </div>
+  <button id="tb-close">닫기</button>
+</div>
+
+<script type="module">
+import { setUser } from '/src/gopang/core/state.js';
+import { openSearch } from '/src/gopang/ui/p2p-search.js';
+
+// ── 로그인 상태 복원 (expert-chat.html의 _loadUser()와 동일한 규약) ──
+// 이 탭은 webapp.html의 auth 초기화 흐름을 거치지 않으므로, 같은 오리진
+// (hondi.net) localStorage에서 직접 읽어 재현한다.
+function _loadUser() {
+  try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); }
+  catch { return null; }
+}
+const stored = _loadUser();
+if (stored) setUser(stored);
+
+document.getElementById('tb-close').onclick = () => {
+  if (window.opener && !window.opener.closed) window.close();
+  else location.href = '/webapp.html';
+};
+
+const params = new URLSearchParams(location.search);
+const prefill = params.get('q') || '';
+
+try {
+  openSearch(prefill);
+
+  // ── 검색 오버레이의 자체 닫기 동작(X 버튼·배경 클릭·Esc)에 새 탭
+  // 닫기를 덧붙인다 — p2p-search.js 내부의 _closeSearch는 export되지
+  // 않아 직접 호출할 수 없으므로, 같은 DOM 요소에 addEventListener로
+  // "추가" 리스너를 붙인다(기존 onclick 할당과 충돌하지 않는다).
+  const _closeTab = () => setTimeout(() => {
+    if (window.opener && !window.opener.closed) window.close();
+  }, 150);
+  document.getElementById('_search-close')?.addEventListener('click', _closeTab);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') _closeTab(); });
+} catch (e) {
+  document.body.insertAdjacentHTML('beforeend',
+    `<div id="load-err">검색 화면을 여는 중 오류가 발생했습니다: ${String(e.message || e)}</div>`);
+  console.error('[SearchTab] openSearch 실패:', e);
+}
+</script>
+
+</body>
+</html>

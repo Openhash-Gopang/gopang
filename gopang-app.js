@@ -38,7 +38,7 @@ import { loadChainFromIDB }                    from './src/openhash/hashChain.js
 
 // ── P2P 검색/채팅 (GDUDA Phase 1) ────────────────────────
 import { openSearch as openP2PSearch }         from './src/gopang/ui/p2p-search.js';
-import { startIncomingWatch, checkPendingInvites } from './src/gopang/ui/p2p-chat.js';
+import { startIncomingWatch, checkPendingInvites, startP2PCall } from './src/gopang/ui/p2p-chat.js';
 
 // ════════════════════════════════════════════════════════
 // 1. 사용자 초기화 — v6.0: Guest 모드 완전 폐지
@@ -525,6 +525,55 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// ── 새 탭 딥링크(?panel=settings|search) — 2026-07-07 신설 ──────────
+// AGENT-COMMON의 [OPEN_SETTINGS_TAB]/[OPEN_SEARCH_TAB: query=...] 태그가
+// window.open('/webapp.html?panel=...')로 여는 새 탭에서, 이 앱의 나머지
+// 초기화(auth 등)를 그대로 다 거친 뒤 해당 패널을 자동으로 연다 — 설정
+// 패널은 webapp.html에 이미 존재하는 정적 DOM(수십 개 요소)에 강하게
+// 결합돼 있어(openSettings() 참조), 그 마크업을 새 페이지에 복제하는 대신
+// webapp.html 자체를 재사용하는 쪽이 훨씬 안전하다(중복 마크업 드리프트
+// 위험 없음). 검색은 이미 pages/search-tab.html이라는 전용 새 탭 페이지가
+// 있으므로 이 분기 대상이 아니다 — query=search가 오더라도 그쪽으로
+// 리다이렉트한다(사용자가 옛 링크를 쓸 경우의 방어적 처리).
+(() => {
+  const params = new URLSearchParams(location.search);
+  const panel = params.get('panel');
+  if (!panel) return;
+
+  params.delete('panel');
+  const qs = params.toString();
+  history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+
+  if (panel === 'settings') {
+    // openSettings()는 exposeGlobals() 직후(동기) 이미 window에 노출돼
+    // 있으나, _USER 등 auth 상태가 완전히 준비된 뒤 열어야 계정 관련
+    // 섹션(등록 상태 등)이 정확히 표시된다 — DOMContentLoaded 이후
+    // 한 틱 더 기다려 안전하게 호출한다.
+    const _tryOpen = () => {
+      if (typeof window.openSettings === 'function') window.openSettings();
+      else setTimeout(_tryOpen, 100);
+    };
+    if (document.readyState === 'complete') setTimeout(_tryOpen, 50);
+    else window.addEventListener('load', () => setTimeout(_tryOpen, 50));
+  } else if (panel === 'search') {
+    location.replace('/pages/search-tab.html' + (qs ? '?' + qs : ''));
+  }
+})();
+
+// ── P2P 연결 위임 수신 — 검색 새 탭(pages/search-tab.html)이 이 탭에게
+// 위임한 연결 요청을 실제로 수행 (2026-07-07 신설, p2p-search.js의
+// _sendConnectRequest() 참조). P2P 자체를 새 탭에서 여는 기능이 완성되면
+// 이 경로는 필요 없어진다 — 그 전까지의 임시 가교.
+window.addEventListener('message', (e) => {
+  if (e.origin !== location.origin) return;
+  if (e.data?.type !== 'HONDI_P2P_CONNECT_REQUEST') return;
+  const targetUser = e.data.targetUser;
+  if (!targetUser?.guid) return;
+  startP2PCall(targetUser).catch(err =>
+    console.warn('[P2P] 새 탭 위임 연결 실패:', err.message)
+  );
+});
+
 // 알림 클릭으로 새 창이 열린 경우 — URL 쿼리 파라미터(?playSound=...) 존재
 // 여부만 보고 무조건 강제 재생 (sound 값/none 체크 등 조건 전부 제거)
 (() => {
@@ -538,11 +587,6 @@ if ('serviceWorker' in navigator) {
 
 // ── 사용자 등록 안내 팝업 (한국 사용자 전화번호 안내) ───────────
 function _showRegisterGuide() {
-  // BUG-FIX: 이 팝업이 직접 "010 제외 8자리"만 입력받아 initAuthWithPhone을
-  // 호출하던 방식은, 실제 가입 화면(_showPhonePopup)이 이미 하는 일(국가 선택,
-  // 휴대폰/지역번호 선택, 닉네임, 약관 동의, 색상·숫자 코드 생성)을 못 하는
-  // 축소판이었다 — 특히 유선 지역번호(7자리)는 여기서 아예 입력이 안 됐다.
-  // 안내만 보여주고, 실제 입력은 검증된 가입 팝업 하나로 통일한다.
   const ov = document.createElement('div');
   ov.id = 'gopang-register-guide-overlay';
   ov.style.cssText = [
@@ -567,10 +611,35 @@ function _showRegisterGuide() {
         border-left:3px solid #111;
         padding:12px 14px;
         font-size:13.5px;color:#333;line-height:1.8;
-        margin-bottom:20px;
+        margin-bottom:12px;
       ">
-        휴대폰 번호 또는 유선 지역번호로 등록할 수 있습니다.<br>
-        번호는 귀하의 고유 로그인 + 패스워드입니다.
+        <code style="font-size:13px;font-weight:600;">010</code>을 제외한 나머지
+        <strong>8자</strong>를 대시(<code>-</code>)없이 입력하세요.
+      </div>
+
+      <div style="font-size:12px;color:#888;margin-bottom:16px;line-height:1.6">
+        귀하의 고유 로그인 + 패스워드입니다.
+      </div>
+
+      <!-- 번호 입력 필드 -->
+      <div style="display:flex;align-items:center;
+                  border:1.5px solid #e5e7eb;border-radius:10px;
+                  background:#f9fafb;overflow:hidden;margin-bottom:8px"
+           id="_rg-field">
+        <span style="padding:0 12px;font-size:13px;color:#555;
+                     border-right:1px solid #e5e7eb;height:50px;
+                     display:flex;align-items:center;white-space:nowrap">
+          🇰🇷 010 -
+        </span>
+        <input id="_rg-input" type="tel" maxlength="8" inputmode="numeric"
+          placeholder="12345678"
+          style="flex:1;padding:0 14px;height:50px;border:none;background:transparent;
+                 font-size:18px;font-family:inherit;outline:none;color:#111;
+                 letter-spacing:3px;min-width:0"/>
+      </div>
+      <div id="_rg-error" style="display:none;font-size:12px;color:#dc2626;margin-bottom:8px;padding:0 4px"></div>
+      <div style="font-size:11px;color:#aaa;margin-bottom:20px;padding:0 4px">
+        예) 010-1234-5678 → <code style="font-weight:600;color:#555">12345678</code>
       </div>
 
       <button id="_rg-ok" style="
@@ -584,13 +653,34 @@ function _showRegisterGuide() {
 
   document.body.appendChild(ov);
 
+  const inp   = ov.querySelector('#_rg-input');
   const okBtn = ov.querySelector('#_rg-ok');
+  const errEl = ov.querySelector('#_rg-error');
+  const field = ov.querySelector('#_rg-field');
+
+  inp.focus();
+  inp.addEventListener('focus', () => field.style.borderColor = '#111');
+  inp.addEventListener('blur',  () => field.style.borderColor = '#e5e7eb');
+  inp.addEventListener('input', () => {
+    inp.value = inp.value.replace(/\D/g, '').slice(0, 8);
+    errEl.style.display = 'none';
+  });
 
   const doSubmit = async () => {
+    const val = inp.value.trim();
+    if (val.length !== 8) {
+      errEl.textContent = '8자리를 모두 입력해 주세요.';
+      errEl.style.display = 'block';
+      inp.focus();
+      return;
+    }
     okBtn.disabled = true;
     okBtn.textContent = '확인 중…';
+    // 번호를 localStorage에 임시 저장 후 initAuth 호출
+    // initAuth는 내부적으로 번호 입력 팝업을 띄우므로
+    // 여기서는 직접 _phone-input에 값을 주입하는 방식 사용
     ov.remove();
-    await initAuth();
+    await initAuthWithPhone(val);
     const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
     if (stored?.handle && typeof _updateHandleChip === 'function') {
       _updateHandleChip(stored.nickname || stored.handle);
@@ -600,5 +690,5 @@ function _showRegisterGuide() {
   };
 
   okBtn.onclick = doSubmit;
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') doSubmit(); });
 }
-

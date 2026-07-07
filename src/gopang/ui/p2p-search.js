@@ -267,6 +267,28 @@ async function _sendConnectRequest(targetUser) {
   );
   if (!confirmed) return;
 
+  // 2026-07-07: 검색을 새 탭(pages/search-tab.html)에서 여는 경우, P2P
+  // 채팅은 아직 메인 창(webapp.html)의 DOM(#peer-bar·#msg-input 등)에
+  // 결합돼 있어 이 탭 자체에서는 startP2PCall()을 바로 쓸 수 없다(P2P
+  // 자체를 새 탭에서 여는 기능은 별도 엔지니어링 작업으로 진행 중).
+  // 그래서 이 탭이 메인 창의 팝업(window.opener)으로 열린 경우엔 실제
+  // 연결 수행을 메인 창에 위임하고, 그 결과가 준비되면 메인 창이 스스로
+  // 대화를 이어간다 — 이 탭에서 조용히 실패하는 대신 정직하게 위임한다.
+  if (!document.getElementById('peer-bar') && window.opener && !window.opener.closed) {
+    try {
+      window.opener.postMessage(
+        { type: 'HONDI_P2P_CONNECT_REQUEST', targetUser },
+        window.opener.location.origin
+      );
+      window.opener.focus();
+      alert(`메인 창에서 ${targetUser.nickname || targetUser.handle}님과 연결을 시작합니다.`);
+      _closeSearch();
+    } catch (e) {
+      alert('메인 창 연결 요청 실패: ' + e.message);
+    }
+    return;
+  }
+
   try {
     // WebRTC offer 생성
     const { startP2PCall } = await import('./p2p-chat.js');
