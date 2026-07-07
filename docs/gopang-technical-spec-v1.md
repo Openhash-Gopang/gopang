@@ -568,6 +568,11 @@ search_entities(
 )
 
 -- 거래 기록
+-- ⚠️ 2026-07-07 폐기: GDC 잔액/거래 원장 역할을 L1 PocketBase(blocks
+-- 컬렉션 재생, main.pb.js computeBalance())로 완전히 이관했다. worker.js는
+-- 더 이상 이 RPC를 호출하지 않는다 — 아래 시그니처는 과거 기록용으로만
+-- 남긴다. 새로 이 흐름을 볼 사람은 /opt/gopang/pb_hooks/main.pb.js의
+-- /api/tx, /api/mint를 참고할 것.
 market_purchase(
   p_tx_id, p_buyer_guid, p_seller_guid,
   p_item_name, p_item_id, p_quantity,
