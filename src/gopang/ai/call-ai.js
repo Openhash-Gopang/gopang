@@ -235,7 +235,16 @@ export const _stripInternalTags = (text) => text
   .replace(/\[PANEL_ACTION:close\]/g, '')      // AI 패널 닫기 지시 태그 (2026-07-02 신설)
   .replace(/\[GWP:\s*[\w-]+\]/g, '')           // 하위 시스템 라우팅 태그 (방어적 — 정상 경로는 _parseAgentTags가 처리)
   .replace(/\[EXPERT:\s*[@\w-]+\]/g, '')       // 전문가 세션 라우팅 태그 (방어적 — 정상 경로는 handleExpertTag가 처리)
-  .replace(/\[OPEN_MANUAL\]/g, '')             // 사용법 매뉴얼 오버레이 오픈 태그 (2026-07-07 신설, 방어적 — 정상 경로는 _parseAgentTags가 처리)
+  // 2026-07-07 신설 — 아래 5개는 이전부터 _parseAgentTags가 실제 동작은
+  // 처리해왔지만 이 스트립 목록에는 빠져있어, 태그 원문이 채팅 버블에
+  // 그대로 노출되던 기존 결함이었다(SEARCH/OPEN_PROFILE/P2P_INVITE).
+  // 새로 추가한 3개(OPEN_SETTINGS_TAB/OPEN_K_SERVICES_TAB/SEARCH의
+  // mode=tab 변형)와 함께 한 번에 정리한다.
+  .replace(/\[SEARCH:\s*query=[^,\]]+,\s*type=user(?:,\s*mode=tab)?\s*\]/g, '')
+  .replace(/\[OPEN_PROFILE:\s*handle=@[\w.-]+\s*\]/g, '')
+  .replace(/\[P2P_INVITE:\s*handle=@[\w.-]+(?:,\s*message=[^\]]*)?\]/g, '')
+  .replace(/\[OPEN_SETTINGS_TAB\]/g, '')
+  .replace(/\[OPEN_K_SERVICES_TAB\]/g, '')
   .trim();
 
 /**
@@ -964,15 +973,58 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
   }
 
   // [SEARCH: query={검색어}, type=user] — 혼디 사용자 검색 패널 오픈
+  // (같은 탭 오버레이 — 그림자 AI가 대화 맥락 안에서 후보를 잠깐 보여줄 때)
+  //
+  // [SEARCH: query={검색어}, type=user, mode=tab] — 2026-07-07 신설
+  // 이용자가 "검색 창을 열어줘"처럼 검색 자체를 목적으로 명시적으로
+  // 요청한 경우, 상세 필터가 포함된 전용 새 탭(pages/search-tab.html)을
+  // 연다. mode=tab이 없으면 기존과 동일하게 같은 탭 오버레이로 처리한다.
   try {
-    const searchMatch = fullReply.match(/\[SEARCH:\s*query=([^,\]]+),\s*type=user\s*\]/);
+    const searchMatch = fullReply.match(
+      /\[SEARCH:\s*query=([^,\]]+),\s*type=user(?:,\s*mode=(tab))?\s*\]/
+    );
     if (searchMatch) {
-      const q = searchMatch[1].trim();
-      console.info('[Tags] SEARCH →', q);
-      openSearch(q);
+      const q    = searchMatch[1].trim();
+      const mode = searchMatch[2];
+      console.info('[Tags] SEARCH →', q, mode === 'tab' ? '(새 탭)' : '(같은 탭)');
+      if (mode === 'tab') {
+        const url = '/pages/search-tab.html' + (q ? '?q=' + encodeURIComponent(q) : '');
+        if (_preTab && !_preTab.closed) _preTab.location.href = url;
+        else window.open(url, '_blank');
+      } else {
+        openSearch(q);
+      }
     }
   } catch (e) {
     console.warn('[Tags] SEARCH 처리 오류 (무시):', e.message);
+  }
+
+  // [OPEN_SETTINGS_TAB] — 2026-07-07 신설. 설정 페이지를 새 탭에서 연다.
+  // webapp.html?panel=settings 딥링크로 여는 이유는 gopang-app.js 상단
+  // 주석 참조(설정 패널이 webapp.html 정적 마크업에 강하게 결합돼 있어
+  // 그 마크업 자체를 재사용하는 쪽이 안전함).
+  try {
+    if (/\[OPEN_SETTINGS_TAB\]/.test(fullReply)) {
+      console.info('[Tags] OPEN_SETTINGS_TAB');
+      const url = '/webapp.html?panel=settings';
+      if (_preTab && !_preTab.closed) _preTab.location.href = url;
+      else window.open(url, '_blank');
+    }
+  } catch (e) {
+    console.warn('[Tags] OPEN_SETTINGS_TAB 처리 오류 (무시):', e.message);
+  }
+
+  // [OPEN_K_SERVICES_TAB] — 2026-07-07 신설. K 서비스(GWP_REGISTRY) 전체
+  // 목록을 새 탭(pages/k-services.html)에 표시한다.
+  try {
+    if (/\[OPEN_K_SERVICES_TAB\]/.test(fullReply)) {
+      console.info('[Tags] OPEN_K_SERVICES_TAB');
+      const url = '/pages/k-services.html';
+      if (_preTab && !_preTab.closed) _preTab.location.href = url;
+      else window.open(url, '_blank');
+    }
+  } catch (e) {
+    console.warn('[Tags] OPEN_K_SERVICES_TAB 처리 오류 (무시):', e.message);
   }
 
   // [OPEN_PROFILE: handle={@handle}] — 공급자 프로필 페이지 새 패널로 열기
@@ -999,23 +1051,6 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
     }
   } catch (e) {
     console.warn('[Tags] P2P_INVITE 처리 오류 (무시):', e.message);
-  }
-
-  // [OPEN_MANUAL] — 사용법 매뉴얼 오버레이 열기 (2026-07-07 신설)
-  // 이용자가 특정 기능 하나를 짧게 물었을 때는 HONDI-FAQ 라우터가 주입한
-  // 참고자료로 이 대화창에서 바로 답하고(§9 안내 참조), "매뉴얼 자체를
-  // 보고 싶다"는 의도일 때만 이 태그로 기존 사용법 설명서 오버레이
-  // (edge-handle-top과 동일한 #manual-overlay)를 연다 — 새 탭이 아니라
-  // 같은 화면 위에 열리는 오버레이이므로 대화가 이어지는 느낌을 유지한다.
-  try {
-    if (/\[OPEN_MANUAL\]/.test(fullReply)) {
-      console.info('[Tags] OPEN_MANUAL → 매뉴얼 오버레이 오픈');
-      if (typeof window !== 'undefined' && typeof window.openUserManual === 'function') {
-        window.openUserManual();
-      }
-    }
-  } catch (e) {
-    console.warn('[Tags] OPEN_MANUAL 처리 오류 (무시):', e.message);
   }
 }
 
