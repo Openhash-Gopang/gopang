@@ -78,14 +78,14 @@ GUID_HOME_L1_SCHEMA = {
 }
 
 SYSTEMD_TEMPLATE = """[Unit]
-Description=OpenHash PocketBase L1 node ({folder}, port {port})
+Description=Gopang PocketBase - {folder}
 After=network.target
 
 [Service]
 Type=simple
 User={run_user}
-WorkingDirectory={base_dir}/{folder}
-ExecStart={pb_bin} serve --http=127.0.0.1:{port} --dir={base_dir}/{folder}/pb_data --hooksDir={hooks_dir}
+WorkingDirectory=/opt/gopang
+ExecStart={pb_bin} serve --http=127.0.0.1:{port} --dir={base_dir}/{folder} --hooksDir={hooks_dir}
 Restart=always
 RestartSec=5
 
@@ -149,7 +149,7 @@ def create_collection(base_url, token, schema_def):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base-dir", default="/opt/gopang/l1-nodes")
+    ap.add_argument("--base-dir", default="/opt/gopang/pb")
     ap.add_argument("--pb-bin", default="/opt/gopang/pocketbase")
     ap.add_argument("--hooks-dir", default="/opt/gopang/pb_hooks")
     ap.add_argument("--run-user", default="ubuntu")
@@ -181,24 +181,24 @@ def main():
             folder=folder, port=port, run_user=args.run_user,
             base_dir=args.base_dir, pb_bin=args.pb_bin, hooks_dir=args.hooks_dir,
         )
-        unit_path = f"/etc/systemd/system/openhash-l1-{folder}.service"
+        unit_path = f"/etc/systemd/system/gopang-pb-{folder}.service"
 
         if args.dry_run:
-            print(f"  [dry-run] mkdir -p {args.base_dir}/{folder}/pb_data")
+            print(f"  [dry-run] mkdir -p {args.base_dir}/{folder}")
             print(f"  [dry-run] write {unit_path}")
-            print(f"  [dry-run] systemctl enable --now openhash-l1-{folder}")
+            print(f"  [dry-run] systemctl enable --now gopang-pb-{folder}")
             continue
 
-        subprocess.run(["mkdir", "-p", f"{args.base_dir}/{folder}/pb_data"], check=True)
+        subprocess.run(["mkdir", "-p", f"{args.base_dir}/{folder}"], check=True)
         with open(unit_path, "w") as f:
             f.write(unit)
         subprocess.run(["systemctl", "daemon-reload"], check=True)
-        subprocess.run(["systemctl", "enable", "--now", f"openhash-l1-{folder}"], check=True)
+        subprocess.run(["systemctl", "enable", "--now", f"gopang-pb-{folder}"], check=True)
 
         # 기동 대기
         for _ in range(20):
             try:
-                urllib.request.urlopen(f"{base_url}/api/health", timeout=2)
+                urllib.request.urlopen(f"{base_url}/health", timeout=2)
                 break
             except Exception:
                 time.sleep(1)
@@ -223,7 +223,7 @@ def main():
         l3_token = admin_token(args.l3_base, args.admin_email, args.admin_password)
         create_collection(args.l3_base, l3_token, GUID_HOME_L1_SCHEMA)
 
-    print("\n완료. 각 인스턴스 상태는 systemctl status openhash-l1-* 로 확인하고,"
+    print("\n완료. 각 인스턴스 상태는 systemctl status 'gopang-pb-l1-*' 로 확인하고,"
           "\nnginx-l1-routes.conf(별도 생성분)를 nginx에 include한 뒤 reload할 것.")
 
 
