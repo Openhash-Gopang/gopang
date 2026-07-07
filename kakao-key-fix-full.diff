@@ -1,0 +1,850 @@
+--- worker.js.orig	2026-07-07 12:02:09.077899058 +0000
++++ worker.js	2026-07-07 20:13:44.195655218 +0000
+@@ -101,6 +101,75 @@
+ // L3(제주도 전체) — guid_home_l1 레지스트리(§4)의 단일 소스
+ const L3_BASE = L1_NODE_MAP['KR-JEJU'];
+ 
++// ── 2026-07-07 신설: signup 시점 GPS → 소속 읍면동(L1 노드) 결정 ──────────
++// emd-master-data.json/hallim-data.json(prompts/Jejudo/05-emd/)의 읍면동명
++// 43개 전부와 L1_NODE_MAP을 대조해서 만든 테이블. 기계적으로 emd_code
++// 접미사를 그대로 조인하면 안 된다 — 한림읍만 emd_code가 "HALLIM"인데
++// L1_NODE_MAP은 "HANLIM"이라 어긋난다(43개 중 유일하게 확인된 표기 불일치,
++// 하필 지금 유일하게 살아있는 파일럿 노드라 반드시 수동 교정 필요).
++const EMD_NAME_TO_NODE_ID = {
++  '애월읍': 'KR-JEJU-JEJU-AEWOL', '조천읍': 'KR-JEJU-JEJU-JOCHEON',
++  '구좌읍': 'KR-JEJU-JEJU-GUJWA', '한경면': 'KR-JEJU-JEJU-HANGYEONG',
++  '추자면': 'KR-JEJU-JEJU-CHUJA', '우도면': 'KR-JEJU-JEJU-UDO',
++  '대정읍': 'KR-JEJU-SGP-DAEJEONG', '남원읍': 'KR-JEJU-SGP-NAMWON',
++  '성산읍': 'KR-JEJU-SGP-SEONGSAN', '안덕면': 'KR-JEJU-SGP-ANDEOK',
++  '표선면': 'KR-JEJU-SGP-PYOSEON', '일도1동': 'KR-JEJU-JEJU-ILDO1',
++  '일도2동': 'KR-JEJU-JEJU-ILDO2', '이도1동': 'KR-JEJU-JEJU-IDO1',
++  '이도2동': 'KR-JEJU-JEJU-IDO2', '삼도1동': 'KR-JEJU-JEJU-SAMDO1',
++  '삼도2동': 'KR-JEJU-JEJU-SAMDO2', '용담1동': 'KR-JEJU-JEJU-YONGDAM1',
++  '용담2동': 'KR-JEJU-JEJU-YONGDAM2', '건입동': 'KR-JEJU-JEJU-GEONIP',
++  '화북동': 'KR-JEJU-JEJU-HWABUK', '삼양동': 'KR-JEJU-JEJU-SAMYANG',
++  '봉개동': 'KR-JEJU-JEJU-BONGGAE', '아라동': 'KR-JEJU-JEJU-ARA',
++  '오라동': 'KR-JEJU-JEJU-ORA', '연동': 'KR-JEJU-JEJU-YEONDONG',
++  '노형동': 'KR-JEJU-JEJU-NOHYEONG', '외도동': 'KR-JEJU-JEJU-OEDO',
++  '이호동': 'KR-JEJU-JEJU-IHO', '도두동': 'KR-JEJU-JEJU-DODU',
++  '송산동': 'KR-JEJU-SGP-SONGSAN', '정방동': 'KR-JEJU-SGP-JEONGBANG',
++  '중앙동': 'KR-JEJU-SGP-JUNGANG-SGP', '천지동': 'KR-JEJU-SGP-CHEONJI',
++  '효돈동': 'KR-JEJU-SGP-HYODON', '영천동': 'KR-JEJU-SGP-YEONGCHEON',
++  '동홍동': 'KR-JEJU-SGP-DONGHONG', '서홍동': 'KR-JEJU-SGP-SEOHONG',
++  '대륜동': 'KR-JEJU-SGP-DAERYUN', '대천동': 'KR-JEJU-SGP-DAECHEON',
++  '중문동': 'KR-JEJU-SGP-JUNGMUN', '예래동': 'KR-JEJU-SGP-YERAE',
++  '한림읍': 'KR-JEJU-JEJU-HANLIM', // emd_code상 HALLIM이지만 L1_NODE_MAP은 HANLIM — 수동 교정
++};
++
++// Kakao 로컬 API(coord2regioncode)로 좌표→행정동명 역지오코딩 후 노드ID 조회.
++// env.KAKAO_REST_KEY 시크릿 필요(Cloudflare 대시보드에 이미 등록돼 있음 — 이름 KAKAO_REST_KEY).
++// 실패(키 미설정/API 오류/제주 밖 좌표 등)하면 null 반환 — 호출부가 hanlim으로 폴백.
++async function _resolveNodeIdFromGPS(env, lat, lng) {
++  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
++  if (!env.KAKAO_REST_KEY) {
++    console.warn('[EMD] KAKAO_REST_KEY 미설정 — GPS 기반 L1 배정 불가, hanlim 폴백');
++    return null;
++  }
++  try {
++    const res = await fetch(
++      `https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=${lng}&y=${lat}`,
++      { headers: { Authorization: `KakaoAK ${env.KAKAO_REST_KEY}` } }
++    );
++    if (!res.ok) {
++      console.warn('[EMD] Kakao 역지오코딩 실패:', res.status);
++      return null;
++    }
++    const data = await res.json().catch(() => null);
++    // region_type 'H'(행정동) 우선 — EMD_NAME_TO_NODE_ID가 행정동/읍면 이름 기준
++    const doc = data?.documents?.find(d => d.region_type === 'H') || data?.documents?.[0];
++    if (!doc) return null;
++    if (doc.region_2depth_name !== '제주시' && doc.region_2depth_name !== '서귀포시') {
++      console.warn('[EMD] 제주 밖 좌표 — GPS 기반 L1 배정 불가:', doc.region_2depth_name);
++      return null;
++    }
++    const nodeId = EMD_NAME_TO_NODE_ID[doc.region_3depth_name];
++    if (!nodeId) {
++      console.warn('[EMD] 매핑 테이블에 없는 읍면동명:', doc.region_3depth_name);
++      return null;
++    }
++    return nodeId;
++  } catch (e) {
++    console.warn('[EMD] GPS 해석 실패:', e.message);
++    return null;
++  }
++}
++
+ // 2026-07-07 신설: 시뮬레이션 중 /api/bridge-in이 무인증이라 대응하는
+ // bridge_out 없이도 임의 크레딧이 가능했던 걸 발견 — L1의 4개 브릿지
+ // 엔드포인트에 공유 비밀키를 추가했다. main.pb.js의 하드코딩값(개발 단계,
+@@ -836,35 +905,73 @@
+   return 'UNKNOWN';
+ }
+ 
++// 2026-07-07 신설: guid의 소속 L1을 "해석하고 없으면 hanlim"까지 한 번에 —
++// _l1UpsertProfile/_l1FindProfileByGuid/_l1PatchProfile/_l1ListSellerProducts/
++// _l1SyncSellerProducts가 전부 이걸 쓴다(이전엔 전부 L1_DEFAULT 하드코딩이었음
++// — profiles/seller_products가 guid_home_l1 분산 체계와 따로 놀던 버그).
++async function _resolveOrDefaultHomeL1(env, guid) {
++  return (await _resolveHomeL1Node(env, guid)) || 'KR-JEJU-JEJU-HANLIM';
++}
++
+ // L1 profiles 컬렉션에서 guid로 레코드 조회 (Admin 토큰 필요 — is_public=false인 레코드도 봐야 하므로)
++// 소속 L1을 먼저 찾고, 없으면 hanlim에서 찾는다 — 이 fallback은 이번 수정
++// 이전에 만들어진 레코드(전부 hanlim에 있음)를 계속 찾을 수 있게 하는
++// 전환기 장치다. guid_home_l1에 등록된 이후로는 fallback을 안 타게 된다.
+ async function _l1FindProfileByGuid(env, guid) {
+-  const token = await _l1AdminToken(env);
++  const homeNodeId = await _resolveOrDefaultHomeL1(env, guid);
++  const homeBase = L1_NODE_MAP[homeNodeId] || L1_DEFAULT;
++  const token = await _l1AdminTokenFor(env, homeBase);
+   const filter = encodeURIComponent(`guid='${guid}'`);
+-  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
++  const res = await fetch(`${homeBase}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
+     headers: { 'Authorization': `Bearer ${token}` },
+   });
+   if (!res.ok) throw new Error(`L1 조회 실패 (HTTP ${res.status})`);
+   const data = await res.json().catch(() => ({ items: [] }));
+-  return data.items?.[0] || null;
++  if (data.items?.[0]) return { ...data.items[0], _l1Base: homeBase };
++
++  if (homeBase !== L1_DEFAULT) {
++    // 전환기 fallback — 마이그레이션 전 hanlim 잔재 조회
++    const hToken = await _l1AdminToken(env);
++    const hRes = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
++      headers: { 'Authorization': `Bearer ${hToken}` },
++    });
++    const hData = await hRes.json().catch(() => ({ items: [] }));
++    if (hData.items?.[0]) return { ...hData.items[0], _l1Base: L1_DEFAULT };
++  }
++  return null;
+ }
+ 
+-// L1 profiles 컬렉션에서 handle로 레코드 조회 — 관리자 일괄삭제에서 @handle 입력을 guid로 환산할 때 사용
++// L1 profiles 컬렉션에서 handle로 레코드 조회 — 관리자 일괄삭제에서 @handle 입력을 guid로 환산할 때 사용.
++// handle만으로는 어느 L1 소속인지 알 수 없으므로(guid_home_l1은 guid로만 색인)
++// 살아있는 L1 노드 전체에 팬아웃해서 찾는다. 노드 수가 늘어나면(43개 전체
++// 프로비저닝 후) 순차가 아니라 Promise.allSettled로 병렬 조회한다 — 지금은
++// hanlim+애월 2개뿐이라 순차든 병렬이든 체감차 없음.
+ async function _l1FindProfileByHandle(env, handle) {
+-  const token = await _l1AdminToken(env);
+   const filter = encodeURIComponent(`handle='${handle}'`);
+-  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
+-    headers: { 'Authorization': `Bearer ${token}` },
+-  });
+-  if (!res.ok) throw new Error(`L1 조회 실패 (HTTP ${res.status})`);
+-  const data = await res.json().catch(() => ({ items: [] }));
+-  return data.items?.[0] || null;
++  const results = await Promise.allSettled(
++    L1_ONLY_NODE_IDS.map(async (nodeId) => {
++      const base = L1_NODE_MAP[nodeId];
++      if (!base) return null;
++      const token = await _l1AdminTokenFor(env, base);
++      const res = await fetch(`${base}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
++        headers: { 'Authorization': `Bearer ${token}` },
++      });
++      if (!res.ok) return null;
++      const data = await res.json().catch(() => ({ items: [] }));
++      const rec = data.items?.[0];
++      return rec ? { ...rec, _l1Base: base } : null;
++    })
++  );
++  const found = results.find(r => r.status === 'fulfilled' && r.value);
++  return found ? found.value : null;
+ }
+ 
+ // L1 profiles 레코드 PATCH (Admin 토큰 필요 — Update rule이 Admins only이므로)
+-
+-async function _l1PatchProfile(env, recordId, patch) {
+-  const token = await _l1AdminToken(env);
+-  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records/${recordId}`, {
++// l1Base는 호출부가 _l1FindProfileByGuid로 얻은 record._l1Base를 그대로 넘겨야
++// 한다 — recordId만으로는 어느 L1에 있는 레코드인지 알 수 없다.
++async function _l1PatchProfile(env, l1Base, recordId, patch) {
++  const token = await _l1AdminTokenFor(env, l1Base);
++  const res = await fetch(`${l1Base}/api/collections/profiles/records/${recordId}`, {
+     method: 'PATCH',
+     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+     body: JSON.stringify(patch),
+@@ -884,9 +991,12 @@
+ // Supabase user_profiles에는 있지만 L1엔 컬럼이 없는 필드
+ // (name/address/lat/lng/phone/website/casts_for)는 extra.core에 접어서
+ // 같이 저장한다 — 이번 스키마 변경에서 컬럼을 더 늘리지 않기 위함.
+-async function _l1UpsertProfile(env, { guid, handle, entityType, nativeLang, isPublic, pubkey, extra, core }) {
+-  const token = await _l1AdminToken(env);
+-  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
++// homeNodeId: 신규 생성 시 어느 L1에 만들지(signup 시 GPS로 결정된 값을
++// 호출부가 넘겨줌). 미지정 시 hanlim — GPS 없이 가입하는 개인/기관 등.
++// 기존 레코드가 있으면(개명/정보수정 등) 그게 실제로 위치한 L1(_l1FindProfileByGuid가
++// 돌려주는 record._l1Base)에 PATCH한다 — homeNodeId와 달라도 레코드를
++// 이동시키지 않는다(이동은 별도 명시적 작업, 여기서 암묵적으로 하지 않음).
++async function _l1UpsertProfile(env, { guid, handle, entityType, nativeLang, isPublic, pubkey, extra, core, homeNodeId }) {
+   const mergedExtra = { ...(extra || {}), core: { ...(extra?.core || {}), ...(core || {}) } };
+ 
+   const body = {
+@@ -901,37 +1011,71 @@
+ 
+   const existing = await _l1FindProfileByGuid(env, guid).catch(() => null);
+   if (existing?.id) {
+-    const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records/${existing.id}`, {
+-      method: 'PATCH', headers, body: JSON.stringify(body),
++    const token = await _l1AdminTokenFor(env, existing._l1Base);
++    const res = await fetch(`${existing._l1Base}/api/collections/profiles/records/${existing.id}`, {
++      method: 'PATCH',
++      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
++      body: JSON.stringify(body),
+     });
+     if (!res.ok) throw new Error(`L1 profiles PATCH 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+     return res.json();
+   }
+-  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records`, {
+-    method: 'POST', headers, body: JSON.stringify(body),
++
++  const targetBase = L1_NODE_MAP[homeNodeId] || L1_DEFAULT;
++  const token = await _l1AdminTokenFor(env, targetBase);
++  const res = await fetch(`${targetBase}/api/collections/profiles/records`, {
++    method: 'POST',
++    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
++    body: JSON.stringify(body),
+   });
+   if (!res.ok) throw new Error(`L1 profiles POST 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
++  // 신규 생성이면 L3 레지스트리에도 즉시 기록 — register-key를 기다리지 않는다
++  // (GPS로 이미 확정됐으므로 register-key는 이후 이 값을 재확인/재사용만 함).
++  if (homeNodeId) {
++    await _writeHomeL1Node(env, guid, homeNodeId).catch(e =>
++      console.error('[Profile] guid_home_l1 기록 실패(감사 필요):', guid, e.message));
++  }
+   return res.json();
+ }
+ 
+-// L1 profiles 중 push_subscription이 설정된 전체 레코드 조회 (배포 브로드캐스트용, 페이지네이션)
++// L1 profiles 중 push_subscription이 설정된 전체 레코드 조회 (배포 브로드캐스트용, 페이지네이션).
++// 2026-07-07: profiles가 더 이상 hanlim 전용이 아니므로 L1_ONLY_NODE_IDS
++// 전체를 순회한다 — 노드 하나가 응답 없어도(아직 미프로비저닝) 나머지는
++// 계속 진행(로그만 남김). 43개 다 살아있으면 순차 호출 비용이 커지니
++// 그때 가서 Promise.allSettled 병렬화를 고려할 것(지금은 2개뿐이라 보류).
+ async function _l1ListPushSubscribers(env) {
+-  const token = await _l1AdminToken(env);
+   const filter = encodeURIComponent("push_subscription != ''");
+   const out = [];
+-  let page = 1;
+-  const perPage = 200;
+-  while (true) {
+-    const res = await fetch(
+-      `${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=${perPage}&page=${page}`,
+-      { headers: { 'Authorization': `Bearer ${token}` } }
+-    );
+-    if (!res.ok) throw new Error(`L1 조회 실패 (HTTP ${res.status})`);
+-    const data = await res.json().catch(() => ({ items: [] }));
+-    out.push(...(data.items || []));
+-    if (!data.items?.length || data.items.length < perPage) break;
+-    page++;
+-    if (page > 50) break; // 안전장치
++  for (const nodeId of L1_ONLY_NODE_IDS) {
++    const base = L1_NODE_MAP[nodeId];
++    if (!base) continue;
++    let token;
++    try {
++      token = await _l1AdminTokenFor(env, base);
++    } catch (e) {
++      console.warn(`[PushList] ${nodeId} 인증 실패, 건너뜀:`, e.message);
++      continue;
++    }
++    let page = 1;
++    const perPage = 200;
++    while (true) {
++      let res;
++      try {
++        res = await fetch(
++          `${base}/api/collections/profiles/records?filter=${filter}&perPage=${perPage}&page=${page}`,
++          { headers: { 'Authorization': `Bearer ${token}` } }
++        );
++      } catch (e) {
++        console.warn(`[PushList] ${nodeId} 조회 실패, 건너뜀:`, e.message);
++        break;
++      }
++      if (!res.ok) { console.warn(`[PushList] ${nodeId} HTTP ${res.status}, 건너뜀`); break; }
++      const data = await res.json().catch(() => ({ items: [] }));
++      out.push(...(data.items || []));
++      if (!data.items?.length || data.items.length < perPage) break;
++      page++;
++      if (page > 50) break; // 안전장치
++    }
+   }
+   return out;
+ }
+@@ -1003,6 +1147,7 @@
+   async scheduled(event, env, ctx) {
+     ctx.waitUntil(anchorL1MerkleRoot(env));
+     ctx.waitUntil(_sweepBridgeOutbox(env).catch(e => console.error('[BridgeSweep] 전체 실패:', e.message)));
++    ctx.waitUntil(_refreshCategoryMedians(env).catch(e => console.error('[CategoryMedian] 전체 실패:', e.message)));
+   },
+ 
+   async fetch(request, env, ctx) {
+@@ -1105,7 +1250,12 @@
+     if (pathname === '/biz/order'   && request.method === 'POST') return handleBizOrder(request, env, corsHeaders, ctx);
+     if (pathname === '/biz/balance' && request.method === 'GET')  return handleBizBalance(request, env, corsHeaders);
+     if (pathname === '/biz/supply'  && request.method === 'GET')  return handleBizSupply(request, env, corsHeaders);
+-    if (pathname === '/biz/review'  && request.method === 'POST') return handleBizReview(request, env, corsHeaders);
++    // 2026-07-07: /biz/review(Supabase biz_reviews, 5점 척도) → 완전 대체.
++    // 실거래(tx_hash) 기반 trade_ratings(PocketBase, polarity+온도)로 이전.
++    // handleBizReview는 하단에 DEPRECATED로 남겨두되 라우팅에서 제거함.
++    if (pathname === '/biz/trade-rating' && request.method === 'POST') return handleTradeRatingSubmit(request, env, corsHeaders);
++    if (pathname === '/biz/trade-rating/list' && request.method === 'GET') return handleTradeRatingList(request, env, corsHeaders);
++    if (pathname === '/biz/temperature'  && request.method === 'GET')  return handleTemperatureQuery(request, env, corsHeaders);
+     if (pathname === '/biz/product' && request.method === 'POST') return handleBizProduct(request, env, corsHeaders);
+ 
+     // ── ai-setup (AI 비서 설정) ─────────────────────────────
+@@ -1824,22 +1974,33 @@
+ // 자체가 검색 결과에서 아예 빠지는 문제가 있었다. seller_products를
+ // 직접 훑어 매칭된 seller_guid를 찾아내고, 그 판매자의 엔티티 정보를
+ // L1에서 보강해 entity-level 검색 결과와 합친다.
++// 2026-07-07: seller_products가 더 이상 hanlim 전용이 아니므로, 전체 카탈로그
++// 키워드 검색은 살아있는 L1 노드 전체에 팬아웃해서 병합해야 한다. 이전엔
++// L1_DEFAULT만 봐서 애월 등 다른 L1의 상품은 검색 결과에서 아예 빠졌었다.
+ async function _l1SearchProductsByKeyword(env, keyword, limit = 20) {
+   if (!keyword) return [];
+-  const token = await _l1AdminToken(env);
+   const terms = _expandSearchTerms(String(keyword));
+   const orClauses = terms.flatMap(t => {
+     const esc = t.replace(/'/g, "\\'");
+     return [`name~'${esc}'`, `desc~'${esc}'`, `category~'${esc}'`];
+   });
+   const filter = encodeURIComponent(`is_public=true && (${orClauses.join(' || ')})`);
+-  const res = await fetch(
+-    `${L1_DEFAULT}/api/collections/seller_products/records?filter=${filter}&perPage=${limit * 3}`,
+-    { headers: { 'Authorization': `Bearer ${token}` } }
++
++  const perNode = await Promise.allSettled(
++    L1_ONLY_NODE_IDS.map(async (nodeId) => {
++      const base = L1_NODE_MAP[nodeId];
++      if (!base) return [];
++      const token = await _l1AdminTokenFor(env, base);
++      const res = await fetch(
++        `${base}/api/collections/seller_products/records?filter=${filter}&perPage=${limit * 3}`,
++        { headers: { 'Authorization': `Bearer ${token}` } }
++      );
++      if (!res.ok) return [];
++      const data = await res.json().catch(() => ({ items: [] }));
++      return data.items || [];
++    })
+   );
+-  if (!res.ok) throw new Error(`L1 상품검색 실패 (HTTP ${res.status})`);
+-  const data = await res.json().catch(() => ({ items: [] }));
+-  const items = data.items || [];
++  const items = perNode.flatMap(r => (r.status === 'fulfilled' ? r.value : []));
+ 
+   // 관련도 랭킹: 원래 키워드(동의어 확장 전) 기준 — 상품명 완전일치 >
+   // 상품명 부분일치 > 카테고리 일치 > 설명만 일치 순.
+@@ -1974,7 +2135,11 @@
+ }
+ 
+ // ═══════════════════════════════════════════════════════════
+-// v4.8 — /biz/review
++// [DEPRECATED 2026-07-07] v4.8 — /biz/review (Supabase biz_reviews)
++// 라우팅에서 제거됨 — trade_ratings(PocketBase, polarity+온도)로 완전 대체.
++// 백필/마이그레이션 스크립트가 biz_reviews 과거 데이터를 참조할 수 있어
++// 함수 자체는 즉시 삭제하지 않고 남겨둔다. 마이그레이션 완료 확인 후
++// 이 함수와 Supabase biz_reviews/biz_products 테이블을 함께 제거할 것.
+ // ═══════════════════════════════════════════════════════════
+ async function handleBizReview(request, env, corsHeaders) {
+   const body = await request.json().catch(() => null);
+@@ -3965,7 +4130,7 @@
+   // (앱 업데이트 후 IDB 유지 등) Ed25519가 일치하면 X25519도 갱신 허용.
+   const alreadyRegistered = !!record.x25519_pubkey;
+   try {
+-    await _l1PatchProfile(env, record.id, {
++    await _l1PatchProfile(env, record._l1Base, record.id, {
+       pubkey_ed25519: knownEdPubkey || ed25519_pubkey,
+       x25519_pubkey,
+       x25519_registered_at: new Date().toISOString(),
+@@ -5379,11 +5544,21 @@
+   // 2026-06-30: L1 PocketBase 이중쓰기 — Supabase보다 먼저 시도하고,
+   // 실패해도 가입 자체는 막지 않는다(Supabase가 여전히 폴백 소스).
+   // L1엔 없는 컬럼(name/address/lat/lng/phone/website)은 extra.core에 접음.
++  // 2026-07-07 신설: 신규 프로필이면 GPS(lat/lng)로 소속 읍면동(L1)을 결정한다.
++  // 기존 프로필 수정이면 homeNodeId를 넘기지 않는다 — _l1UpsertProfile이
++  // existing._l1Base(실제 위치)에 PATCH하므로 무관하고, 좌표가 나중에
++  // 바뀌었다고 레코드를 암묵적으로 이동시키지 않기 위함(이동은 별도 절차).
++  const isNewProfile = !existing;
++  const homeNodeId = isNewProfile ? await _resolveNodeIdFromGPS(env, lat, lng) : null;
++  if (isNewProfile && !homeNodeId) {
++    console.warn('[Profile] GPS 해석 실패 — hanlim으로 폴백:', guid.slice(0, 20), lat, lng);
++  }
+   try {
+     await _l1UpsertProfile(env, {
+       guid, handle: finalHandle, entityType: entity_type, nativeLang: native_lang,
+       isPublic: is_public, pubkey, extra: newExtra,
+       core: { name, address, lat, lng, phone, website, occupation: resolvedOccupation },
++      homeNodeId,
+     });
+   } catch (e) {
+     console.warn('[Profile] L1 저장 실패 (Supabase는 계속 진행):', e.message);
+@@ -5464,11 +5639,15 @@
+ // 업종을 판단하고, 사용자는 상품·서비스만 등록한다"는 원칙.
+ // ═══════════════════════════════════════════════════════════
+ 
+-// L1 seller_products 컬렉션에서 guid 소유 레코드 전체 조회
++// L1 seller_products 컬렉션에서 guid 소유 레코드 전체 조회.
++// 2026-07-07: seller_guid 소속 L1(guid_home_l1)에서 조회 — 이전엔 L1_DEFAULT
++// 하드코딩이라 애월 등 non-hanlim 판매자의 카탈로그가 조용히 안 잡혔다.
+ async function _l1ListSellerProducts(env, guid) {
+-  const token = await _l1AdminToken(env);
++  const homeNodeId = await _resolveOrDefaultHomeL1(env, guid);
++  const l1Base = L1_NODE_MAP[homeNodeId] || L1_DEFAULT;
++  const token = await _l1AdminTokenFor(env, l1Base);
+   const filter = encodeURIComponent(`seller_guid='${guid}'`);
+-  const res = await fetch(`${L1_DEFAULT}/api/collections/seller_products/records?filter=${filter}&perPage=200`, {
++  const res = await fetch(`${l1Base}/api/collections/seller_products/records?filter=${filter}&perPage=200`, {
+     headers: { 'Authorization': `Bearer ${token}` },
+   });
+   if (!res.ok) throw new Error(`L1 seller_products 조회 실패 (HTTP ${res.status})`);
+@@ -5489,7 +5668,9 @@
+ //     일부만 들고 있는 경우) 보낼 때 쓴다 — 여기 없는 기존 상품을
+ //     실수로 지우면 안 되는 경우.
+ async function _l1SyncSellerProducts(env, guid, products, mode = 'replace') {
+-  const token = await _l1AdminToken(env);
++  const homeNodeId = await _resolveOrDefaultHomeL1(env, guid);
++  const l1Base = L1_NODE_MAP[homeNodeId] || L1_DEFAULT;
++  const token = await _l1AdminTokenFor(env, l1Base);
+   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+ 
+   const existing = await _l1ListSellerProducts(env, guid);
+@@ -5500,7 +5681,7 @@
+     // 스냅샷에 없는 기존 레코드 삭제(판매자가 로컬에서 삭제한 상품)
+     for (const rec of existing) {
+       if (!incomingIds.has(rec.product_id)) {
+-        await fetch(`${L1_DEFAULT}/api/collections/seller_products/records/${rec.id}`, {
++        await fetch(`${l1Base}/api/collections/seller_products/records/${rec.id}`, {
+           method: 'DELETE', headers,
+         }).catch(e => console.warn('[Catalog] 삭제 실패(무시하고 계속):', e.message));
+       }
+@@ -5525,17 +5706,409 @@
+     };
+     const existingRec = existingByProductId.get(p.id);
+     if (existingRec) {
+-      await fetch(`${L1_DEFAULT}/api/collections/seller_products/records/${existingRec.id}`, {
++      await fetch(`${l1Base}/api/collections/seller_products/records/${existingRec.id}`, {
+         method: 'PATCH', headers, body: JSON.stringify(body),
+       }).catch(e => console.warn('[Catalog] 갱신 실패(무시하고 계속):', e.message));
+     } else {
+-      await fetch(`${L1_DEFAULT}/api/collections/seller_products/records`, {
++      await fetch(`${l1Base}/api/collections/seller_products/records`, {
+         method: 'POST', headers, body: JSON.stringify(body),
+       }).catch(e => console.warn('[Catalog] 신규 저장 실패(무시하고 계속):', e.message));
+     }
+   }
+ }
+ 
++// ═══════════════════════════════════════════════════════════
++// 2026-07-07 신설 — trade_ratings / 온도(temperature)
++// /biz/review(Supabase, 5점 척도)를 완전 대체. 실거래(tx_hash) 당사자만
++// 평가 가능 — 대화 중 합의된 설계 원칙:
++//   1) 세금계산서/현금영수증이 걸리는 실거래라 허위 평가 자체가 비용을 짐
++//   2) polarity 3단계(자유서술 아님) — comment는 온도 계산과 분리
++//   3) 금액 비례(카테고리 중앙값 정규화) + 평가자 신뢰도(온도 스냅샷) 가중
++//   4) rater_temp_snapshot 고정 — 시간순 DAG, 순환 재계산 없음
++// ═══════════════════════════════════════════════════════════
++const POLARITY_WEIGHT       = { positive: 0.3, neutral: 0.0, negative: -0.7 };
++const RATING_DECAY           = 0.97;
++const RATING_DELTA_CLAMP     = 8.0;
++const MIN_RATINGS_FOR_TEMP   = 5;
++const DEFAULT_TEMP           = 36.5;
++const TEMP_MIN               = 0;
++const TEMP_MAX               = 99;
++
++// Δ_i 계산 — 합의된 최종 산식
++function _computeRatingDelta({ polarity, decayIndex, repeatIndex, amount, categoryMedian, raterTempSnapshot }) {
++  const polarityWeight   = POLARITY_WEIGHT[polarity];
++  const decay            = Math.pow(RATING_DECAY, decayIndex);
++  const repeatDampening  = repeatIndex > 3 ? Math.pow(0.5, repeatIndex - 3) : 1.0;
++  const amountRatio      = categoryMedian > 0 ? amount / categoryMedian : 1.0;
++  const raterCredibility = 0.5 + (raterTempSnapshot - DEFAULT_TEMP) / 62.5; // 36.5→0.5, 99→1.5
++  const raw = polarityWeight * decay * repeatDampening * amountRatio * raterCredibility;
++  return Math.max(-RATING_DELTA_CLAMP, Math.min(RATING_DELTA_CLAMP, raw));
++}
++
++// 업종별 최근 90일 L1 중앙값 거래액 캐시 조회 (category_medians 컬렉션,
++// 일 1회 배치 갱신은 scheduled() 크론에 별도 등록 — 이 함수는 조회 전용)
++async function _getCategoryMedianAmount(l1Base, token, category) {
++  const filter = encodeURIComponent(`category='${category}'`);
++  const res = await fetch(`${l1Base}/api/collections/category_medians/records?filter=${filter}&perPage=1`, {
++    headers: { 'Authorization': `Bearer ${token}` },
++  });
++  if (!res.ok) return 1; // 캐시 미존재 시 정규화 비율 1.0으로 폴백
++  const data = await res.json().catch(() => ({ items: [] }));
++  return data.items?.[0]?.median_amount ?? 1;
++}
++
++// ── category_medians 배치 갱신 — scheduled()가 10분마다 호출하지만 실제
++// 재계산은 노드당 하루 한 번 정도로 자체 제한한다(마지막 computed_at 확인).
++// trade_ratings.amount를 category별로 모아 중앙값을 구해 upsert.
++const CATEGORY_MEDIAN_REFRESH_INTERVAL_MS = 20 * 60 * 60 * 1000; // 20시간
++
++function _median(sortedNums) {
++  const n = sortedNums.length;
++  if (!n) return 0;
++  const mid = Math.floor(n / 2);
++  return n % 2 ? sortedNums[mid] : (sortedNums[mid - 1] + sortedNums[mid]) / 2;
++}
++
++async function _refreshCategoryMedians(env) {
++  for (const nodeId of L1_ONLY_NODE_IDS) {
++    const base = L1_NODE_MAP[nodeId];
++    if (!base) continue;
++    let token;
++    try {
++      token = await _l1AdminTokenFor(env, base);
++    } catch (e) {
++      console.warn(`[CategoryMedian] ${nodeId} 인증 실패, 건너뜀:`, e.message);
++      continue;
++    }
++
++    // 자체 제한 — 최근 갱신이 20시간 이내면 스킵
++    try {
++      const checkRes = await fetch(
++        `${base}/api/collections/category_medians/records?perPage=1&sort=-computed_at`,
++        { headers: { 'Authorization': `Bearer ${token}` } }
++      );
++      const checkData = await checkRes.json().catch(() => ({ items: [] }));
++      const last = checkData.items?.[0]?.computed_at;
++      if (last && (Date.now() - new Date(last).getTime()) < CATEGORY_MEDIAN_REFRESH_INTERVAL_MS) {
++        continue;
++      }
++    } catch (e) { /* category_medians 컬렉션이 아직 없을 수도 있음 — 아래에서 어차피 실패하고 건너뜀 */ }
++
++    const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
++    const byCategory = {};
++    let page = 1;
++    while (true) {
++      const filter = encodeURIComponent(`created_at>='${since}'`);
++      let res;
++      try {
++        res = await fetch(
++          `${base}/api/collections/trade_ratings/records?filter=${filter}&perPage=200&page=${page}`,
++          { headers: { 'Authorization': `Bearer ${token}` } }
++        );
++      } catch (e) {
++        console.warn(`[CategoryMedian] ${nodeId} trade_ratings 조회 실패:`, e.message);
++        break;
++      }
++      if (!res.ok) break;
++      const data = await res.json().catch(() => ({ items: [] }));
++      const items = data.items || [];
++      for (const r of items) {
++        if (!r.category || typeof r.amount !== 'number') continue;
++        if (!byCategory[r.category]) byCategory[r.category] = [];
++        byCategory[r.category].push(r.amount);
++      }
++      if (items.length < 200) break;
++      page++;
++      if (page > 100) break; // 안전장치
++    }
++
++    for (const [category, amounts] of Object.entries(byCategory)) {
++      amounts.sort((a, b) => a - b);
++      const median = _median(amounts);
++      const existFilter = encodeURIComponent(`category='${category}'`);
++      const existRes = await fetch(
++        `${base}/api/collections/category_medians/records?filter=${existFilter}&perPage=1`,
++        { headers: { 'Authorization': `Bearer ${token}` } }
++      );
++      const existData = await existRes.json().catch(() => ({ items: [] }));
++      const existing = existData.items?.[0];
++      const patchBody = {
++        category, median_amount: median, l1_node: nodeId,
++        sample_size: amounts.length, computed_at: new Date().toISOString(),
++      };
++      const writeHeaders = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
++      if (existing) {
++        await fetch(`${base}/api/collections/category_medians/records/${existing.id}`, {
++          method: 'PATCH', headers: writeHeaders, body: JSON.stringify(patchBody),
++        }).catch(e => console.warn('[CategoryMedian] 갱신 실패:', category, e.message));
++      } else {
++        await fetch(`${base}/api/collections/category_medians/records`, {
++          method: 'POST', headers: writeHeaders, body: JSON.stringify(patchBody),
++        }).catch(e => console.warn('[CategoryMedian] 생성 실패:', category, e.message));
++      }
++    }
++    console.info(`[CategoryMedian] ${nodeId} 갱신 완료 — ${Object.keys(byCategory).length}개 카테고리`);
++  }
++}
++
++// POST /biz/trade-rating — tx_hash 실거래 당사자만 평가 가능
++async function handleTradeRatingSubmit(request, env, corsHeaders) {
++  const body = await request.json().catch(() => null);
++  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
++
++  const { tx_hash, rater_guid, ratee_guid, rater_role, polarity, comment, amount, category } = body;
++  if (!tx_hash)     return _err(400, 'MISSING_FIELD', 'tx_hash 필수', corsHeaders);
++  if (!rater_guid)  return _err(400, 'MISSING_FIELD', 'rater_guid 필수', corsHeaders);
++  if (!ratee_guid)  return _err(400, 'MISSING_FIELD', 'ratee_guid 필수', corsHeaders);
++  if (!/^[0-9a-f]{64}$/.test(tx_hash)) return _err(400, 'INVALID_TX_HASH', 'tx_hash 형식 오류', corsHeaders);
++  if (!['positive', 'neutral', 'negative'].includes(polarity)) return _err(400, 'INVALID_POLARITY', 'polarity는 positive/neutral/negative만 허용', corsHeaders);
++  if (!['buyer', 'seller'].includes(rater_role)) return _err(400, 'INVALID_ROLE', 'rater_role은 buyer/seller만 허용', corsHeaders);
++  if (typeof amount !== 'number' || amount <= 0) return _err(400, 'MISSING_FIELD', 'amount 필수(양수)', corsHeaders);
++  if (!category) return _err(400, 'MISSING_FIELD', 'category 필수', corsHeaders);
++
++  // 2026-07-07: profiles/seller_products가 이제 실제로 guid_home_l1 기준
++  // 분산되므로(_l1UpsertProfile 등 라우팅 버그 수정 완료), ratee(판매자)
++  // 소속 L1을 기본으로 쓴다 — 거래도 보통 그 판매자의 카탈로그가 있는 L1에
++  // 제출되므로 blocks/trade_ratings도 여기 같이 둔다. 다른 L1에 제출된
++  // 거래(드문 경우)는 클라이언트가 body.l1_node로 명시 오버라이드 가능.
++  const homeNodeId = body.l1_node || (await _resolveHomeL1Node(env, ratee_guid)) || 'KR-JEJU-JEJU-HANLIM';
++  const l1Base = L1_NODE_MAP[homeNodeId] || L1_DEFAULT;
++  const token = await _l1AdminTokenFor(env, l1Base);
++  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
++
++  // 1) 거래 실재성 + 당사자 일치 검증 — blocks 컬렉션에서 tx_hash로 조회
++  const blockFilter = encodeURIComponent(`tx_hash='${tx_hash}'`);
++  const blockRes = await fetch(`${l1Base}/api/collections/blocks/records?filter=${blockFilter}&perPage=1`, { headers });
++  if (!blockRes.ok) return _err(502, 'L1_UNREACHABLE', 'blocks 조회 실패: ' + blockRes.status, corsHeaders);
++  const blockData = await blockRes.json().catch(() => ({ items: [] }));
++  const blockRecord = blockData.items?.[0];
++  if (!blockRecord) return _err(404, 'TX_NOT_FOUND', '해당 tx_hash의 거래를 찾을 수 없습니다', corsHeaders);
++  if (rater_guid !== blockRecord.buyer_guid && rater_guid !== blockRecord.seller_guid) {
++    return _err(403, 'NOT_A_PARTICIPANT', '거래 당사자만 평가할 수 있습니다', corsHeaders);
++  }
++  if (ratee_guid !== blockRecord.buyer_guid && ratee_guid !== blockRecord.seller_guid) {
++    return _err(400, 'RATEE_MISMATCH', 'ratee_guid가 해당 거래의 당사자가 아닙니다', corsHeaders);
++  }
++
++  // 2) 중복 방지 — (tx_hash, rater_guid) 복합 유니크
++  const dupFilter = encodeURIComponent(`tx_hash='${tx_hash}'&&rater_guid='${rater_guid}'`);
++  const dupRes = await fetch(`${l1Base}/api/collections/trade_ratings/records?filter=${dupFilter}&perPage=1`, { headers });
++  const dupData = await dupRes.json().catch(() => ({ items: [] }));
++  if (dupData.items?.length > 0) return _err(409, 'ALREADY_RATED', '이미 이 거래를 평가했습니다', corsHeaders);
++
++  // 3) rater 온도 스냅샷 고정 (미래 rater 온도 변화가 과거 Δ에 소급 전파되지 않도록)
++  // + rater_lang 스냅샷 — M06(국적별 편향 감지)이 이 값을 쓴다.
++  const raterFilter = encodeURIComponent(`guid='${rater_guid}'`);
++  const raterRes = await fetch(`${l1Base}/api/collections/profiles/records?filter=${raterFilter}&perPage=1`, { headers });
++  const raterData = await raterRes.json().catch(() => ({ items: [] }));
++  const raterProfile = raterData.items?.[0];
++  const raterTempSnapshot = raterProfile?.temp_score ?? DEFAULT_TEMP;
++  const raterLang = raterProfile?.native_lang || 'ko';
++
++  // 4) 동일 (rater, ratee) 쌍 반복거래 횟수 조회 (감쇠 계산용)
++  const pairFilter = encodeURIComponent(`rater_guid='${rater_guid}'&&ratee_guid='${ratee_guid}'`);
++  const pairRes = await fetch(`${l1Base}/api/collections/trade_ratings/records?filter=${pairFilter}&perPage=1`, { headers });
++  const pairData = await pairRes.json().catch(() => ({ items: [] }));
++  const repeatIndex = (pairData.totalItems ?? 0) + 1;
++
++  // 5) decay 인덱스 — ratee 기준 현재까지의 평가 건수
++  const raterCountRes = await fetch(`${l1Base}/api/collections/trade_ratings/records?filter=${encodeURIComponent(`ratee_guid='${ratee_guid}'`)}&perPage=1`, { headers });
++  const raterCountData = await raterCountRes.json().catch(() => ({ totalItems: 0 }));
++  const decayIndex = raterCountData.totalItems ?? 0;
++
++  // 6) 업종 중앙값 조회
++  const categoryMedian = await _getCategoryMedianAmount(l1Base, token, category);
++
++  // 7) comment 자동 번역(M06 이관) — 한국어가 아니면 한국어 번역본을 같이 저장.
++  //    review.js의 translate()와 동일 패턴(DeepSeek). 실패해도 원문은 이미
++  //    있으니 평가 등록 자체를 막지 않는다(translate() 내부에서 실패 시 원문 반환).
++  const commentTranslated = (raterLang !== 'ko' && comment)
++    ? await _translateText(comment, raterLang, 'ko', env.DEEPSEEK_API_KEY)
++    : (comment || '');
++
++  // 8) insert (append-only — update/delete 경로 없음)
++  const insRes = await fetch(`${l1Base}/api/collections/trade_ratings/records`, {
++    method: 'POST', headers,
++    body: JSON.stringify({
++      tx_hash, rater_guid, ratee_guid, rater_role, polarity,
++      comment: comment || '', comment_translated: commentTranslated, comment_lang: raterLang,
++      amount, category,
++      rater_temp_snapshot: raterTempSnapshot, rater_lang: raterLang,
++      created_at: new Date().toISOString(),
++    }),
++  });
++  if (!insRes.ok) return _err(500, 'INSERT_FAILED', await insRes.text(), corsHeaders);
++  const inserted = await insRes.json().catch(() => null);
++
++  // 9) Δ 계산 후 profiles.temp_score 증분 업데이트
++  const delta = _computeRatingDelta({ polarity, decayIndex, repeatIndex, amount, categoryMedian, raterTempSnapshot });
++  const rateeFilter = encodeURIComponent(`guid='${ratee_guid}'`);
++  const rateeRes = await fetch(`${l1Base}/api/collections/profiles/records?filter=${rateeFilter}&perPage=1`, { headers });
++  const rateeData = await rateeRes.json().catch(() => ({ items: [] }));
++  const rateeProfile = rateeData.items?.[0];
++  if (rateeProfile) {
++    const currentTemp = rateeProfile.temp_score ?? DEFAULT_TEMP;
++    const currentCount = rateeProfile.temp_rating_count ?? 0;
++    const nextTemp = Math.max(TEMP_MIN, Math.min(TEMP_MAX, currentTemp + delta));
++    await fetch(`${l1Base}/api/collections/profiles/records/${rateeProfile.id}`, {
++      method: 'PATCH', headers,
++      body: JSON.stringify({
++        temp_score: nextTemp,
++        temp_rating_count: currentCount + 1,
++        temp_updated_at: new Date().toISOString(),
++      }),
++    }).catch(e => console.warn('[TradeRating] 온도 갱신 실패:', e.message));
++  }
++
++  return new Response(JSON.stringify({ ok: true, record_id: inserted?.id || null, delta }), { status: 200, headers: corsHeaders });
++}
++
++// ═══════════════════════════════════════════════════════════
++// 2026-07-07 신설 — M06(국적별 평점 편향 감지 + 자동번역) 재구현.
++// src/profile2.0/review.js(고아 코드, worker.js가 import한 적 없음)의
++// 로직을 trade_ratings 위로 이관. 원본은 1~5점 rating 기준이었지만
++// trade_ratings는 polarity(positive/neutral/negative) 3단계라 척도가
++// 다르다 — 그대로 못 옮기고 폴라리티를 -1~+1 점수로 환산해 같은 원리
++// (언어별 평균 vs 전체 평균 격차)로 재구현한다.
++// ═══════════════════════════════════════════════════════════
++const POLARITY_SCORE = { positive: 1, neutral: 0, negative: -1 };
++// 원본 BIAS_THRESHOLD=1.0은 1~5점(범위4) 척도 기준. -1~+1(범위2)로 축소했으니
++// 비례해서 절반(0.5)으로 낮춘다 — 같은 "상대적 격차"를 의미하게 하기 위함.
++const BIAS_THRESHOLD = 0.5;
++const BIAS_MESSAGES = {
++  ko: '국적별 평가에 차이가 있습니다. 다양한 시각을 함께 참고해 주세요.',
++  zh: '不同国籍的评价存在差异，请综合参考多方观点。',
++  en: 'Ratings vary by nationality. Please consider diverse perspectives.',
++  ja: '国籍別の評価に差があります。様々な視点を参考にしてください。',
++  vi: 'Đánh giá khác nhau theo quốc tịch. Vui lòng tham khảo nhiều góc nhìn.',
++  th: 'การประเมินแตกต่างกันตามสัญชาติ โปรดพิจารณาจากหลายมุมมอง',
++};
++const LANG_LABEL = {
++  ko: '한국인', zh: '中国旅行者', en: 'English speakers',
++  ja: '日本人旅行者', vi: 'Du khách Việt Nam', th: 'นักท่องเที่ยวไทย',
++};
++
++function _detectRatingBias(viewerAvg, overallAvg) {
++  if (viewerAvg === null || overallAvg === null) return false;
++  return Math.abs(viewerAvg - overallAvg) >= BIAS_THRESHOLD;
++}
++
++// DeepSeek 번역 (M05/구 review.js와 동일 패턴) — 실패하면 원문 그대로 반환.
++async function _translateText(text, fromLang, toLang, apiKey) {
++  if (!text || fromLang === toLang) return text;
++  if (!apiKey) return text; // 키 미설정 — 조용히 원문 유지(번역은 부가 기능이라 등록 자체를 막지 않음)
++  try {
++    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
++      method: 'POST',
++      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
++      body: JSON.stringify({
++        model: 'deepseek-chat',
++        max_tokens: 512,
++        messages: [{ role: 'user', content: `Translate from ${fromLang} to ${toLang}. Return only the translation.\n\n${text}` }],
++      }),
++    });
++    const data = await res.json();
++    return data.choices?.[0]?.message?.content?.trim() || text;
++  } catch { return text; }
++}
++
++// trade_ratings 레코드 배열(한 ratee 기준) → 언어별 집계 + 편향 경고.
++// 온도(temp_score)와는 완전히 별개 지표다 — 온도는 금액가중·평가자신뢰도까지
++// 반영한 신뢰지표, 이건 "언어권별 만족도 체감 차이"를 보여주는 별도 관점.
++function _buildRatingSummaryByLang(items, viewerLang) {
++  if (!items.length) {
++    return { overall: { count: 0, avg: null }, by_lang: [], viewer_highlight: null, bias_warning: null };
++  }
++  const grouped = {};
++  for (const r of items) {
++    const lang = r.rater_lang || 'ko';
++    (grouped[lang] = grouped[lang] || []).push(POLARITY_SCORE[r.polarity] ?? 0);
++  }
++  const totalCount = items.length;
++  const overallAvg = Math.round((items.reduce((s, r) => s + (POLARITY_SCORE[r.polarity] ?? 0), 0) / totalCount) * 100) / 100;
++
++  const by_lang = Object.entries(grouped).map(([lang, scores]) => ({
++    lang, label: LANG_LABEL[lang] || lang,
++    count: scores.length,
++    avg: Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100,
++    positive: scores.filter(s => s === 1).length,
++    negative: scores.filter(s => s === -1).length,
++  }));
++
++  const highlight = by_lang.find(b => b.lang === viewerLang) || null;
++  const viewerAvg = highlight?.avg ?? null;
++  const hasBias = _detectRatingBias(viewerAvg, overallAvg);
++
++  return {
++    overall: { count: totalCount, avg: overallAvg },
++    by_lang,
++    viewer_highlight: highlight,
++    bias_warning: hasBias ? (BIAS_MESSAGES[viewerLang] || BIAS_MESSAGES.en) : null,
++  };
++}
++
++// GET /biz/trade-rating/list?ratee_guid=&lang=&viewer_lang=&limit=&offset=&l1_node=
++// 목록 + 언어별 편향 요약. l1_node 미지정 시 ratee 소속 L1로 조회(§ handleTradeRatingSubmit과 동일 기본값).
++async function handleTradeRatingList(request, env, corsHeaders) {
++  const url = new URL(request.url);
++  const ratee_guid = url.searchParams.get('ratee_guid');
++  const langFilter = url.searchParams.get('lang'); // 특정 언어권만 보기(선택)
++  const viewerLang = url.searchParams.get('viewer_lang') || 'ko';
++  const limit = Math.min(Number(url.searchParams.get('limit') || 20), 50);
++  const offset = Number(url.searchParams.get('offset') || 0);
++  if (!ratee_guid) return _err(400, 'MISSING_FIELD', 'ratee_guid 필수', corsHeaders);
++
++  const homeNodeId = url.searchParams.get('l1_node') || (await _resolveHomeL1Node(env, ratee_guid)) || 'KR-JEJU-JEJU-HANLIM';
++  const l1Base = L1_NODE_MAP[homeNodeId] || L1_DEFAULT;
++  const token = await _l1AdminTokenFor(env, l1Base);
++  const headers = { 'Authorization': `Bearer ${token}` };
++
++  // 요약은 전체(페이지네이션 무시)로 계산 — 목록만 lang 필터/페이지 적용
++  const allRes = await fetch(
++    `${l1Base}/api/collections/trade_ratings/records?filter=${encodeURIComponent(`ratee_guid='${ratee_guid}'`)}&perPage=500&sort=-created_at`,
++    { headers }
++  );
++  if (!allRes.ok) return _err(502, 'L1_UNREACHABLE', 'trade_ratings 조회 실패: ' + allRes.status, corsHeaders);
++  const allData = await allRes.json().catch(() => ({ items: [] }));
++  const allItems = allData.items || [];
++  const summary = _buildRatingSummaryByLang(allItems, viewerLang);
++
++  const filtered = langFilter ? allItems.filter(r => (r.rater_lang || 'ko') === langFilter) : allItems;
++  const page = filtered.slice(offset, offset + limit).map(r => ({
++    rater_guid: r.rater_guid, polarity: r.polarity,
++    comment: r.comment, comment_translated: r.comment_translated, comment_lang: r.comment_lang,
++    rater_lang: r.rater_lang, amount: r.amount, category: r.category, created_at: r.created_at,
++  }));
++
++  return new Response(JSON.stringify({
++    ok: true, items: page, rating_summary: summary,
++    filter_lang: langFilter || null, pagination: { limit, offset },
++  }), { status: 200, headers: corsHeaders });
++}
++
++// GET /biz/temperature?guid=... — 공개 조회(온도 + 배지). 5건 미만이면 "신규 판매자" 배지.
++async function handleTemperatureQuery(request, env, corsHeaders) {
++  const url = new URL(request.url);
++  const guid = url.searchParams.get('guid');
++  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
++
++  const homeNodeId = (await _resolveHomeL1Node(env, guid)) || 'KR-JEJU-JEJU-HANLIM';
++  const l1Base = L1_NODE_MAP[homeNodeId] || L1_DEFAULT;
++  const token = await _l1AdminTokenFor(env, l1Base);
++  const filter = encodeURIComponent(`guid='${guid}'`);
++  const res = await fetch(`${l1Base}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
++    headers: { 'Authorization': `Bearer ${token}` },
++  });
++  const data = await res.json().catch(() => ({ items: [] }));
++  const profile = data.items?.[0];
++  const count = profile?.temp_rating_count ?? 0;
++
++  if (count < MIN_RATINGS_FOR_TEMP) {
++    return new Response(JSON.stringify({ ok: true, temp_score: null, badge: 'new_seller', count }), { status: 200, headers: corsHeaders });
++  }
++  return new Response(JSON.stringify({ ok: true, temp_score: profile.temp_score ?? DEFAULT_TEMP, badge: null, count }), { status: 200, headers: corsHeaders });
++}
++
+ // POST /biz/catalog/sync — 로컬 IndexedDB 전체 스냅샷을 서버 백업/공개미러에 반영
+ async function handleCatalogSync(request, env, corsHeaders) {
+   const body = await request.json().catch(() => null);
+@@ -6043,7 +6616,7 @@
+ 
+   // 구독 취소: L1 row는 삭제 불가 → 빈 문자열로 PATCH
+   if (body.unsubscribe) {
+-    try { await _l1PatchProfile(env, record.id, { push_subscription: '', push_sound: '' }); }
++    try { await _l1PatchProfile(env, record._l1Base, record.id, { push_subscription: '', push_sound: '' }); }
+     catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
+     _backupPushSubscriptionToSupabase(env, body.guid, null).catch(() => {});
+     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
+@@ -6051,7 +6624,7 @@
+ 
+   // 구독 등록/갱신: 프로필 row는 가입 시 이미 존재 → 항상 PATCH
+   try {
+-    await _l1PatchProfile(env, record.id, {
++    await _l1PatchProfile(env, record._l1Base, record.id, {
+       push_subscription: JSON.stringify(body.subscription),
+       push_sound:        body.sound || 'ping',
+     });
