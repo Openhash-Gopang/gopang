@@ -39,15 +39,68 @@ const ALLOWED_ORIGINS = [
 ];
 
 
+// ══════════════════════════════════════════════════════════════
+// 2026-07-07 신설(제주 L1~L3 필드 테스트) — 43개 L1(읍면동) 노드맵
+// jeju-l1-l3-field-test-plan-2026-07-07.md §2.4 참고: 노드마다 서브도메인/
+// 인증서를 새로 만들지 않고, l1-hanlim.hondi.net 하나를 nginx 경로 기반
+// 라우팅(/n/{folder} → 127.0.0.1:{port})으로 확장해 전부 처리한다.
+const L1_BASE_HOST = 'https://l1-hanlim.hondi.net';
+
 const L1_NODE_MAP = {
-  'KR-JEJU-JEJU-HANLIM':  'https://l1-hanlim.hondi.net',
-  'KR-JEJU-JEJU-IDO1':    'https://openhash-l1-ido1.hondi.net',
-  'KR-JEJU-JEJU':         'https://openhash-l2-jeju-city.hondi.net',
-  'KR-JEJU':              'https://openhash-l3-jeju.hondi.net',
-  'KR':                   'https://openhash-l4-kr.hondi.net',
-  'GLOBAL':               'https://openhash-l5-global.hondi.net',
+  'KR-JEJU-JEJU-HANLIM':  L1_BASE_HOST, // 기존 그대로 — 이미 8091 직결
+  'KR-JEJU-JEJU-SI':      L1_BASE_HOST + '/n/l2-jeju',
+  'KR-JEJU-SGP-SI':       L1_BASE_HOST + '/n/l2-seogwipo',
+  'KR-JEJU':              L1_BASE_HOST + '/n/l3-jejudo',
+  'KR':                   'https://openhash-l4-kr.hondi.net', // 이번 계획 범위 밖(§10), 기존 값 유지
+  'GLOBAL':               'https://openhash-l5-global.hondi.net', // 이번 계획 범위 밖(§10), 기존 값 유지
+  // ── 43개 L1(읍면동) — provision-l1-nodes.py 생성분과 반드시 일치할 것 ──
+  'KR-JEJU-JEJU-AEWOL': L1_BASE_HOST + '/n/l1-aewol',
+  'KR-JEJU-JEJU-ARA': L1_BASE_HOST + '/n/l1-ara',
+  'KR-JEJU-JEJU-BONGGAE': L1_BASE_HOST + '/n/l1-bonggae',
+  'KR-JEJU-JEJU-CHUJA': L1_BASE_HOST + '/n/l1-chuja',
+  'KR-JEJU-JEJU-DODU': L1_BASE_HOST + '/n/l1-dodu',
+  'KR-JEJU-JEJU-GEONIP': L1_BASE_HOST + '/n/l1-geonip',
+  'KR-JEJU-JEJU-GUJWA': L1_BASE_HOST + '/n/l1-gujwa',
+  'KR-JEJU-JEJU-HANGYEONG': L1_BASE_HOST + '/n/l1-hangyeong',
+  'KR-JEJU-JEJU-HANLIM': L1_BASE_HOST + '/n/hanlim',
+  'KR-JEJU-JEJU-HWABUK': L1_BASE_HOST + '/n/l1-hwabuk',
+  'KR-JEJU-JEJU-IDO1': L1_BASE_HOST + '/n/l1-ido1',
+  'KR-JEJU-JEJU-IDO2': L1_BASE_HOST + '/n/l1-ido2',
+  'KR-JEJU-JEJU-IHO': L1_BASE_HOST + '/n/l1-iho',
+  'KR-JEJU-JEJU-ILDO1': L1_BASE_HOST + '/n/l1-ildo1',
+  'KR-JEJU-JEJU-ILDO2': L1_BASE_HOST + '/n/l1-ildo2',
+  'KR-JEJU-JEJU-JOCHEON': L1_BASE_HOST + '/n/l1-jocheon',
+  'KR-JEJU-JEJU-NOHYEONG': L1_BASE_HOST + '/n/l1-nohyeong',
+  'KR-JEJU-JEJU-OEDO': L1_BASE_HOST + '/n/l1-oedo',
+  'KR-JEJU-JEJU-ORA': L1_BASE_HOST + '/n/l1-ora',
+  'KR-JEJU-JEJU-SAMDO1': L1_BASE_HOST + '/n/l1-samdo1',
+  'KR-JEJU-JEJU-SAMDO2': L1_BASE_HOST + '/n/l1-samdo2',
+  'KR-JEJU-JEJU-SAMYANG': L1_BASE_HOST + '/n/l1-samyang',
+  'KR-JEJU-JEJU-UDO': L1_BASE_HOST + '/n/l1-udo',
+  'KR-JEJU-JEJU-YEONDONG': L1_BASE_HOST + '/n/l1-yeondong',
+  'KR-JEJU-JEJU-YONGDAM1': L1_BASE_HOST + '/n/l1-yongdam1',
+  'KR-JEJU-JEJU-YONGDAM2': L1_BASE_HOST + '/n/l1-yongdam2',
+  'KR-JEJU-SGP-ANDEOK': L1_BASE_HOST + '/n/l1-andeok',
+  'KR-JEJU-SGP-CHEONJI': L1_BASE_HOST + '/n/l1-cheonji',
+  'KR-JEJU-SGP-DAECHEON': L1_BASE_HOST + '/n/l1-daecheon',
+  'KR-JEJU-SGP-DAEJEONG': L1_BASE_HOST + '/n/l1-daejeong',
+  'KR-JEJU-SGP-DAERYUN': L1_BASE_HOST + '/n/l1-daeryun',
+  'KR-JEJU-SGP-DONGHONG': L1_BASE_HOST + '/n/l1-donghong',
+  'KR-JEJU-SGP-HYODON': L1_BASE_HOST + '/n/l1-hyodon',
+  'KR-JEJU-SGP-JEONGBANG': L1_BASE_HOST + '/n/l1-jeongbang',
+  'KR-JEJU-SGP-JUNGANG-SGP': L1_BASE_HOST + '/n/l1-jungang-sgp',
+  'KR-JEJU-SGP-JUNGMUN': L1_BASE_HOST + '/n/l1-jungmun',
+  'KR-JEJU-SGP-NAMWON': L1_BASE_HOST + '/n/l1-namwon',
+  'KR-JEJU-SGP-PYOSEON': L1_BASE_HOST + '/n/l1-pyoseon',
+  'KR-JEJU-SGP-SEOHONG': L1_BASE_HOST + '/n/l1-seohong',
+  'KR-JEJU-SGP-SEONGSAN': L1_BASE_HOST + '/n/l1-seongsan',
+  'KR-JEJU-SGP-SONGSAN': L1_BASE_HOST + '/n/l1-songsan',
+  'KR-JEJU-SGP-YEONGCHEON': L1_BASE_HOST + '/n/l1-yeongcheon',
+  'KR-JEJU-SGP-YERAE': L1_BASE_HOST + '/n/l1-yerae',
 };
 const L1_DEFAULT = 'https://l1-hanlim.hondi.net';
+// L3(제주도 전체) — guid_home_l1 레지스트리(§4)의 단일 소스
+const L3_BASE = L1_NODE_MAP['KR-JEJU'];
 
 const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions';
 const DEEPSEEK_URL   = 'https://api.deepseek.com/v1/chat/completions';
@@ -604,12 +657,16 @@ function _sbServiceHeaders(env) {
 // Supabase는 필드 테스트/시뮬레이션 용도이므로 신원 관련 핵심 키는 L1에 둔다.
 // 토큰은 Worker 인스턴스 생애 동안 메모리에 캐싱 (PocketBase 토큰 기본 유효기간 길음).
 // ═══════════════════════════════════════════════════════════
-let _l1AdminTokenCache = null;
-let _l1AdminTokenExp = 0;
+// 2026-07-07 수정(제주 L1~L3 필드 테스트): 43개 L1 + L2 + L3가 전부 별개
+// PocketBase 프로세스라, admin 토큰도 노드(base URL)별로 따로 받아야 한다
+// — 예전처럼 L1_DEFAULT(hanlim) 토큰 하나를 전역 캐싱해 재사용하면, 다른
+// 노드 호출 시 그 인스턴스가 서명하지 않은 토큰이라 인증에 실패한다.
+const _l1AdminTokenCache = {}; // base URL → { token, exp }
 
-async function _l1AdminToken(env) {
+async function _l1AdminTokenFor(env, base) {
   const now = Date.now();
-  if (_l1AdminTokenCache && now < _l1AdminTokenExp) return _l1AdminTokenCache;
+  const cached = _l1AdminTokenCache[base];
+  if (cached && now < cached.exp) return cached.token;
 
   const email = env.L1_ADMIN_EMAIL;
   const password = env.L1_ADMIN_PASSWORD;
@@ -617,20 +674,157 @@ async function _l1AdminToken(env) {
 
   // 이 L1 인스턴스(PocketBase 구버전)는 /api/admins/auth-with-password 경로 사용
   // (※ /api/collections/_superusers/auth-with-password는 이 인스턴스에서 404)
-  const res = await fetch(`${L1_DEFAULT}/api/admins/auth-with-password`, {
+  const res = await fetch(`${base}/api/admins/auth-with-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ identity: email, password }),
   });
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
-    throw new Error(`L1 admin auth ${res.status}: ${errText.slice(0, 200)}`);
+    throw new Error(`L1 admin auth(${base}) ${res.status}: ${errText.slice(0, 200)}`);
   }
   const data = await res.json().catch(() => null);
-  if (!data?.token) throw new Error('L1 admin auth: token 없음');
-  _l1AdminTokenCache = data.token;
-  _l1AdminTokenExp = now + 25 * 60 * 1000; // 25분 캐시
-  return _l1AdminTokenCache;
+  if (!data?.token) throw new Error(`L1 admin auth(${base}): token 없음`);
+  _l1AdminTokenCache[base] = { token: data.token, exp: now + 25 * 60 * 1000 }; // 25분 캐시
+  return data.token;
+}
+
+// 기존 호출부(hanlim 고정) 하위호환용 래퍼 — 신규 코드는 _l1AdminTokenFor를 직접 쓸 것
+async function _l1AdminToken(env) {
+  return _l1AdminTokenFor(env, L1_DEFAULT);
+}
+
+// ── §4 guid→L1 소속 레지스트리 (L3 guid_home_l1 컬렉션) ──────────────
+const L1_ONLY_NODE_IDS = [
+  'KR-JEJU-JEJU-AEWOL',
+  'KR-JEJU-JEJU-ARA',
+  'KR-JEJU-JEJU-BONGGAE',
+  'KR-JEJU-JEJU-CHUJA',
+  'KR-JEJU-JEJU-DODU',
+  'KR-JEJU-JEJU-GEONIP',
+  'KR-JEJU-JEJU-GUJWA',
+  'KR-JEJU-JEJU-HANGYEONG',
+  'KR-JEJU-JEJU-HANLIM',
+  'KR-JEJU-JEJU-HWABUK',
+  'KR-JEJU-JEJU-IDO1',
+  'KR-JEJU-JEJU-IDO2',
+  'KR-JEJU-JEJU-IHO',
+  'KR-JEJU-JEJU-ILDO1',
+  'KR-JEJU-JEJU-ILDO2',
+  'KR-JEJU-JEJU-JOCHEON',
+  'KR-JEJU-JEJU-NOHYEONG',
+  'KR-JEJU-JEJU-OEDO',
+  'KR-JEJU-JEJU-ORA',
+  'KR-JEJU-JEJU-SAMDO1',
+  'KR-JEJU-JEJU-SAMDO2',
+  'KR-JEJU-JEJU-SAMYANG',
+  'KR-JEJU-JEJU-UDO',
+  'KR-JEJU-JEJU-YEONDONG',
+  'KR-JEJU-JEJU-YONGDAM1',
+  'KR-JEJU-JEJU-YONGDAM2',
+  'KR-JEJU-SGP-ANDEOK',
+  'KR-JEJU-SGP-CHEONJI',
+  'KR-JEJU-SGP-DAECHEON',
+  'KR-JEJU-SGP-DAEJEONG',
+  'KR-JEJU-SGP-DAERYUN',
+  'KR-JEJU-SGP-DONGHONG',
+  'KR-JEJU-SGP-HYODON',
+  'KR-JEJU-SGP-JEONGBANG',
+  'KR-JEJU-SGP-JUNGANG-SGP',
+  'KR-JEJU-SGP-JUNGMUN',
+  'KR-JEJU-SGP-NAMWON',
+  'KR-JEJU-SGP-PYOSEON',
+  'KR-JEJU-SGP-SEOHONG',
+  'KR-JEJU-SGP-SEONGSAN',
+  'KR-JEJU-SGP-SONGSAN',
+  'KR-JEJU-SGP-YEONGCHEON',
+  'KR-JEJU-SGP-YERAE',
+];
+
+// 판매자(또는 임의 guid)의 소속 L1을 L3 레지스트리에서 조회.
+// 없으면 null 반환 — 호출부는 null을 "기본값(hanlim)"으로 처리한다.
+async function _resolveHomeL1Node(env, guid) {
+  try {
+    const token = await _l1AdminTokenFor(env, L3_BASE);
+    const filter = encodeURIComponent(`guid='${guid}'`);
+    const res = await fetch(`${L3_BASE}/api/collections/guid_home_l1/records?filter=${filter}&perPage=1`,
+      { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json().catch(() => ({ items: [] }));
+    return data.items?.[0]?.node_id || null;
+  } catch (e) {
+    console.warn('[HomeL1] 조회 실패(기본값으로 폴백):', e.message);
+    return null;
+  }
+}
+
+// guid의 소속 L1을 L3 레지스트리에 기록(가입/키등록 시점). 이미 있으면 갱신.
+async function _writeHomeL1Node(env, guid, nodeId) {
+  try {
+    const token = await _l1AdminTokenFor(env, L3_BASE);
+    const filter = encodeURIComponent(`guid='${guid}'`);
+    const existingRes = await fetch(`${L3_BASE}/api/collections/guid_home_l1/records?filter=${filter}&perPage=1`,
+      { headers: { 'Authorization': `Bearer ${token}` } });
+    const existingData = await existingRes.json().catch(() => ({ items: [] }));
+    const existing = existingData.items?.[0];
+    if (existing) {
+      if (existing.node_id === nodeId) return; // 이미 같은 값 — 갱신 불필요
+      await fetch(`${L3_BASE}/api/collections/guid_home_l1/records/${existing.id}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ node_id: nodeId }),
+      });
+    } else {
+      await fetch(`${L3_BASE}/api/collections/guid_home_l1/records`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guid, node_id: nodeId, registered_at: new Date().toISOString() }),
+      });
+    }
+  } catch (e) {
+    console.error('[HomeL1] 레지스트리 기록 실패(guid가 어느 L1 소속인지 못 찾게 될 수 있음):', e.message);
+  }
+}
+
+// ── §5 브릿지 릴레이 — Worker가 허브로서 두 L1을 중개(P1: L1끼리 직접 통신 금지) ──
+// bridge-in 성공 시 소스 L1에 completed로 갱신, 실패 시 그대로 두어(pending)
+// scheduled() 크론 스윕이 재시도하게 한다.
+async function _relayBridge(env, { sourceBase, targetNodeId, tx_hash, guid, amount }) {
+  const targetBase = L1_NODE_MAP[targetNodeId] || null;
+  if (!targetBase) {
+    console.error('[Bridge] 대상 L1 URL을 못 찾음:', targetNodeId);
+    return false;
+  }
+  try {
+    const res = await fetch(`${targetBase}/api/bridge-in`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tx_hash, source_node: L1_NODE_MAP_ID_OF(sourceBase), guid, amount }),
+    });
+    const data = await res.json().catch(() => ({ ok: false }));
+    if (!data.ok) {
+      console.warn('[Bridge] bridge-in 실패:', tx_hash, JSON.stringify(data));
+      return false;
+    }
+    // 완료 처리 — 실패해도 치명적이지 않음(다음 스윕 때 재조회하면 이미
+    // ok:true였던 tx_hash는 bridge-in의 멱등성이 지켜주므로 중복 크레딧 없음)
+    await fetch(`${sourceBase}/api/bridge-out/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tx_hash }),
+    }).catch(e => console.warn('[Bridge] complete 통지 실패(다음 스윕에서 재시도):', e.message));
+    console.info('[Bridge] 완료:', tx_hash, '→', targetNodeId);
+    return true;
+  } catch (e) {
+    console.warn('[Bridge] 릴레이 실패(재시도 대상으로 남음):', tx_hash, e.message);
+    return false;
+  }
+}
+
+// sourceBase(URL)로부터 L1_NODE_MAP 역조회 — bridge-in 호출 시 "어느 L1에서
+// 왔는지"를 상대 L1에 알려주기 위한 보조 함수.
+function L1_NODE_MAP_ID_OF(base) {
+  for (const [id, url] of Object.entries(L1_NODE_MAP)) if (url === base) return id;
+  return 'UNKNOWN';
 }
 
 // L1 profiles 컬렉션에서 guid로 레코드 조회 (Admin 토큰 필요 — is_public=false인 레코드도 봐야 하므로)
@@ -736,10 +930,70 @@ async function _l1ListPushSubscribers(env) {
 // ═══════════════════════════════════════════════════════════
 // 메인 fetch 핸들러
 // ═══════════════════════════════════════════════════════════
+// ── §5.1 브릿지 아웃박스 스윕 — cron이 주기적으로 호출 ────────────────
+// 각 L1의 pending bridge_out을 조회해 재릴레이 시도하고, REFUND_TIMEOUT_MS
+// (기본 1시간)을 넘긴 건은 보상 트랜잭션(환불)으로 마감한다. tx_hash가
+// buyer_guid를 담고 있지 않으므로, 환불 대상 buyer_guid는 pending 레코드
+// 자체엔 없다 — PDV 감사 로그(pdv_log)에서 tx_hash로 역조회한다.
+const BRIDGE_REFUND_TIMEOUT_MS = 60 * 60 * 1000; // 1시간(§5.1 유예시간)
+
+async function _sweepBridgeOutbox(env) {
+  for (const nodeId of L1_ONLY_NODE_IDS) {
+    const base = L1_NODE_MAP[nodeId];
+    if (!base) continue;
+    let pending;
+    try {
+      const res = await fetch(`${base}/api/bridge-out/pending`);
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!data.ok) continue;
+      pending = data.pending || [];
+    } catch (e) {
+      console.warn(`[BridgeSweep] ${nodeId} 폴링 실패:`, e.message);
+      continue;
+    }
+    for (const item of pending) {
+      const ageMs = Date.now() - new Date(item.created_at).getTime();
+      if (ageMs > BRIDGE_REFUND_TIMEOUT_MS) {
+        // 유예시간 초과 — 원 구매자를 PDV 로그(tx_hash 기준)에서 역조회해 환불
+        try {
+          const sbH = _sbHeaders(env);
+          const pdvRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/pdv_log?raw_hash=eq.${encodeURIComponent(item.tx_hash)}&select=guid&limit=1`,
+            { headers: sbH });
+          const pdvRows = await pdvRes.json().catch(() => []);
+          const buyerGuid = pdvRows?.[0]?.guid;
+          if (!buyerGuid) {
+            console.error(`[BridgeSweep] ${item.tx_hash} 환불 대상(구매자) 조회 실패 — 수동 감사 필요`);
+            continue;
+          }
+          await fetch(`${base}/api/bridge-out/refund`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tx_hash: item.tx_hash, buyer_guid: buyerGuid }),
+          });
+          console.warn(`[BridgeSweep] 유예시간 초과 환불 처리:`, item.tx_hash, '→', buyerGuid);
+        } catch (e) {
+          console.error(`[BridgeSweep] 환불 처리 실패:`, item.tx_hash, e.message);
+        }
+      } else {
+        // 아직 유예시간 안 — 재시도
+        await _relayBridge(env, {
+          sourceBase:   base,
+          targetNodeId: item.target_node,
+          tx_hash:      item.tx_hash,
+          guid:         item.guid,
+          amount:       item.amount,
+        }).catch(e => console.warn('[BridgeSweep] 재시도 실패(다음 스윕에 재시도):', item.tx_hash, e.message));
+      }
+    }
+  }
+}
+
 export default {
-  // ── Cron 트리거 (10분마다 머클 앵커링) ──────────────────
+  // ── Cron 트리거 (10분마다 머클 앵커링 + 브릿지 아웃박스 스윕) ────────
   async scheduled(event, env, ctx) {
     ctx.waitUntil(anchorL1MerkleRoot(env));
+    ctx.waitUntil(_sweepBridgeOutbox(env).catch(e => console.error('[BridgeSweep] 전체 실패:', e.message)));
   },
 
   async fetch(request, env, ctx) {
@@ -1107,8 +1361,20 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
   }
 
   // ── STEP 08: L1 위임 — Worker는 검증 로직 없음 ───────────
-  const l1Base = l1_node ? (L1_NODE_MAP[l1_node] || L1_DEFAULT) : L1_DEFAULT;
+  const buyerNodeId = l1_node || 'KR-JEJU-JEJU-HANLIM';
+  const l1Base = L1_NODE_MAP[buyerNodeId] || L1_DEFAULT;
   const l1Url  = l1Base + '/api/tx';
+
+  // ── 2026-07-07 신설(제주 L1~L3 필드 테스트, §4/§5): 판매자 소속 L1 조회 ──
+  // 판매자가 구매자와 다른 L1 소속이면, 그 사실을 L1의 /api/tx에 미리
+  // 알려줘야 L1이 판매자 몫 output을 sentinel(bridge-out)로 리디렉션할 수
+  // 있다. L1은 다른 L1을 직접 조회하지 않으므로(P1), 이 조회는 반드시
+  // Worker(허브)가 대신 해서 넘겨준다.
+  const sellerHomeNode = await _resolveHomeL1Node(env, seller_guid);
+  const isCrossL1 = sellerHomeNode && sellerHomeNode !== buyerNodeId;
+  if (isCrossL1) {
+    console.log(`[BizOrder] 크로스-L1 거래 감지: ${buyerNodeId} → ${sellerHomeNode}`);
+  }
 
   // ── Phase 3/4: 중요도 점수 + LCAT 계산 ──────────────────────────────────
   // importanceVerifier.js와 동일 공식(단일 정의 원칙) — refactor_plan_v2 §Phase1 참조
@@ -1136,6 +1402,9 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
     score: importance_score,
     lcat,
   };
+  // §5 브릿지 트리거 — cross-L1일 때만 넘긴다(같은 L1이면 undefined로 두어
+  // L1의 기존 로컬 처리 경로를 그대로 탄다).
+  const bridgeBody = isCrossL1 ? { seller_home_node: sellerHomeNode } : {};
 
   let l1Result;
   try {
@@ -1150,7 +1419,7 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
     const l1Res = await fetch(l1Url, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: (() => { const p = { tx: txPayload, tx_hash, buyer_sig, buyer_public_key }; console.log('[L1] tx:', JSON.stringify(p.tx)); return JSON.stringify(p); })(),
+      body: (() => { const p = { tx: txPayload, tx_hash, buyer_sig, buyer_public_key, ...bridgeBody }; console.log('[L1] tx:', JSON.stringify(p.tx)); return JSON.stringify(p); })(),
     });
     l1Result = await l1Res.json().catch(() => ({ ok: false, error: 'L1_PARSE_FAILED' }));
   } catch (e) {
@@ -1176,6 +1445,21 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
   // 계산한 진짜 claim을 돌려주므로 그걸 그대로 쓴다.
   const buyer_claim  = l1Result.buyer_claim  || null;
   const seller_claim = l1Result.seller_claim || null;
+
+  // ── §5 브릿지 릴레이 트리거 — L1이 bridge_out을 outbox에 남겼으면
+  // (l1Result.bridge.status === 'pending'), Worker가 허브로서 대상 L1의
+  // /api/bridge-in을 호출하고 성공하면 소스 L1에 완료 통지한다. 실패해도
+  // 여기서 거래 자체를 막지 않는다 — scheduled() 크론 스윕이 재시도한다.
+  if (l1Result.bridge && l1Result.bridge.status === 'pending') {
+    const bridgePromise = _relayBridge(env, {
+      sourceBase:   l1Base,
+      targetNodeId: l1Result.bridge.target_node,
+      tx_hash,
+      guid:         seller_guid,
+      amount:       seller_net || 0,
+    }).catch(e => console.warn('[BizOrder] 브릿지 릴레이 예외:', e.message));
+    if (ctx?.waitUntil) ctx.waitUntil(bridgePromise);
+  }
 
   // ── Module 5.5: verifyOutputConsistency + verifyDeltaZero ──────────
   // 2026-07-07 수정: 이전엔 결과를 로그만 찍고 버렸다("감시 모드") —
@@ -1333,7 +1617,7 @@ async function handleRegisterKey(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
 
-  const { guid, public_key, signature, ts } = body;
+  const { guid, public_key, signature, ts, home_l1 } = body;
   if (!guid)       return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
   if (!public_key) return _err(400, 'MISSING_FIELD', 'public_key 필수', corsHeaders);
   if (!signature)  return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
@@ -1343,10 +1627,16 @@ async function handleRegisterKey(request, env, corsHeaders) {
   const sigOk  = await _verifyEd25519Simple(public_key, signature, sigMsg);
   if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패 — 이 공개키의 개인키로 서명한 게 맞는지 확인하세요', corsHeaders);
 
+  // 2026-07-07 신설(제주 L1~L3 필드 테스트, §4): 클라이언트가 위치 기반으로
+  // 확정한 읍면동 소속 L1 노드 ID(home_l1, 예: "KR-JEJU-JEJU-AEWOL")를
+  // 받는다. 안 보내면(기존 클라이언트 하위호환) hanlim으로 폴백한다.
+  const homeNodeId = (home_l1 && L1_NODE_MAP[home_l1]) ? home_l1 : 'KR-JEJU-JEJU-HANLIM';
+  const homeBase    = L1_NODE_MAP[homeNodeId] || L1_DEFAULT;
+
   try {
-    const token  = await _l1AdminToken(env);
+    const token  = await _l1AdminTokenFor(env, homeBase);
     const filter = encodeURIComponent(`guid='${guid}'`);
-    const existingRes  = await fetch(`${L1_DEFAULT}/api/collections/gdc_keys/records?filter=${filter}&perPage=1`,
+    const existingRes  = await fetch(`${homeBase}/api/collections/gdc_keys/records?filter=${filter}&perPage=1`,
       { headers: { 'Authorization': `Bearer ${token}` } });
     const existingData = await existingRes.json().catch(() => ({ items: [] }));
     const existing = existingData.items?.[0];
@@ -1365,14 +1655,21 @@ async function handleRegisterKey(request, env, corsHeaders) {
       }
       console.info('[RegisterKey] 이미 동일 키로 등록됨(멱등):', guid.slice(0, 20));
     } else {
-      await fetch(`${L1_DEFAULT}/api/collections/gdc_keys/records`, {
+      await fetch(`${homeBase}/api/collections/gdc_keys/records`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ guid, public_key, created_at: new Date().toISOString() }),
       });
-      console.info('[RegisterKey] 신규 등록:', guid.slice(0, 20));
+      console.info('[RegisterKey] 신규 등록:', guid.slice(0, 20), '@', homeNodeId);
     }
-    return new Response(JSON.stringify({ ok: true, guid }), { status: 200, headers: corsHeaders });
+
+    // §4 레지스트리 — 이 guid가 어느 L1 소속인지 L3에 기록(브릿지 거래 시
+    // 상대방 소속 L1을 조회할 수 있어야 한다). 등록 실패해도 키 등록
+    // 자체는 이미 끝났으므로 여기서 전체 요청을 실패시키지 않는다 —
+    // 다만 로그는 크게 남겨 감사 가능하게 한다(_writeHomeL1Node 내부에서 처리).
+    await _writeHomeL1Node(env, guid, homeNodeId);
+
+    return new Response(JSON.stringify({ ok: true, guid, home_l1: homeNodeId }), { status: 200, headers: corsHeaders });
   } catch (e) {
     return _err(502, 'L1_UNREACHABLE', 'L1 키 등록 실패: ' + e.message, corsHeaders);
   }

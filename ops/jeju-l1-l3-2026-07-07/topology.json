@@ -1,0 +1,433 @@
+{
+  "hanlim": {
+    "id": "KR-JEJU-JEJU-HANLIM",
+    "layer": 1,
+    "port": 8091,
+    "city": "제주시",
+    "name": "한림읍",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-aewol": {
+    "id": "KR-JEJU-JEJU-AEWOL",
+    "layer": 1,
+    "port": 8101,
+    "city": "제주시",
+    "name": "애월읍",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-jocheon": {
+    "id": "KR-JEJU-JEJU-JOCHEON",
+    "layer": 1,
+    "port": 8102,
+    "city": "제주시",
+    "name": "조천읍",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-gujwa": {
+    "id": "KR-JEJU-JEJU-GUJWA",
+    "layer": 1,
+    "port": 8103,
+    "city": "제주시",
+    "name": "구좌읍",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-hangyeong": {
+    "id": "KR-JEJU-JEJU-HANGYEONG",
+    "layer": 1,
+    "port": 8104,
+    "city": "제주시",
+    "name": "한경면",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-chuja": {
+    "id": "KR-JEJU-JEJU-CHUJA",
+    "layer": 1,
+    "port": 8105,
+    "city": "제주시",
+    "name": "추자면",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-udo": {
+    "id": "KR-JEJU-JEJU-UDO",
+    "layer": 1,
+    "port": 8106,
+    "city": "제주시",
+    "name": "우도면",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-ildo1": {
+    "id": "KR-JEJU-JEJU-ILDO1",
+    "layer": 1,
+    "port": 8107,
+    "city": "제주시",
+    "name": "일도1동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-ildo2": {
+    "id": "KR-JEJU-JEJU-ILDO2",
+    "layer": 1,
+    "port": 8108,
+    "city": "제주시",
+    "name": "일도2동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-ido1": {
+    "id": "KR-JEJU-JEJU-IDO1",
+    "layer": 1,
+    "port": 8109,
+    "city": "제주시",
+    "name": "이도1동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-ido2": {
+    "id": "KR-JEJU-JEJU-IDO2",
+    "layer": 1,
+    "port": 8110,
+    "city": "제주시",
+    "name": "이도2동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-samdo1": {
+    "id": "KR-JEJU-JEJU-SAMDO1",
+    "layer": 1,
+    "port": 8111,
+    "city": "제주시",
+    "name": "삼도1동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-samdo2": {
+    "id": "KR-JEJU-JEJU-SAMDO2",
+    "layer": 1,
+    "port": 8112,
+    "city": "제주시",
+    "name": "삼도2동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-yongdam1": {
+    "id": "KR-JEJU-JEJU-YONGDAM1",
+    "layer": 1,
+    "port": 8113,
+    "city": "제주시",
+    "name": "용담1동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-yongdam2": {
+    "id": "KR-JEJU-JEJU-YONGDAM2",
+    "layer": 1,
+    "port": 8114,
+    "city": "제주시",
+    "name": "용담2동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-geonip": {
+    "id": "KR-JEJU-JEJU-GEONIP",
+    "layer": 1,
+    "port": 8115,
+    "city": "제주시",
+    "name": "건입동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-hwabuk": {
+    "id": "KR-JEJU-JEJU-HWABUK",
+    "layer": 1,
+    "port": 8116,
+    "city": "제주시",
+    "name": "화북동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-samyang": {
+    "id": "KR-JEJU-JEJU-SAMYANG",
+    "layer": 1,
+    "port": 8117,
+    "city": "제주시",
+    "name": "삼양동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-bonggae": {
+    "id": "KR-JEJU-JEJU-BONGGAE",
+    "layer": 1,
+    "port": 8118,
+    "city": "제주시",
+    "name": "봉개동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-ara": {
+    "id": "KR-JEJU-JEJU-ARA",
+    "layer": 1,
+    "port": 8119,
+    "city": "제주시",
+    "name": "아라동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-ora": {
+    "id": "KR-JEJU-JEJU-ORA",
+    "layer": 1,
+    "port": 8120,
+    "city": "제주시",
+    "name": "오라동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-yeondong": {
+    "id": "KR-JEJU-JEJU-YEONDONG",
+    "layer": 1,
+    "port": 8121,
+    "city": "제주시",
+    "name": "연동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-nohyeong": {
+    "id": "KR-JEJU-JEJU-NOHYEONG",
+    "layer": 1,
+    "port": 8122,
+    "city": "제주시",
+    "name": "노형동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-oedo": {
+    "id": "KR-JEJU-JEJU-OEDO",
+    "layer": 1,
+    "port": 8123,
+    "city": "제주시",
+    "name": "외도동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-iho": {
+    "id": "KR-JEJU-JEJU-IHO",
+    "layer": 1,
+    "port": 8124,
+    "city": "제주시",
+    "name": "이호동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-dodu": {
+    "id": "KR-JEJU-JEJU-DODU",
+    "layer": 1,
+    "port": 8125,
+    "city": "제주시",
+    "name": "도두동",
+    "parentFolder": "l2-jeju"
+  },
+  "l1-daejeong": {
+    "id": "KR-JEJU-SGP-DAEJEONG",
+    "layer": 1,
+    "port": 8126,
+    "city": "서귀포시",
+    "name": "대정읍",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-namwon": {
+    "id": "KR-JEJU-SGP-NAMWON",
+    "layer": 1,
+    "port": 8127,
+    "city": "서귀포시",
+    "name": "남원읍",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-seongsan": {
+    "id": "KR-JEJU-SGP-SEONGSAN",
+    "layer": 1,
+    "port": 8128,
+    "city": "서귀포시",
+    "name": "성산읍",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-andeok": {
+    "id": "KR-JEJU-SGP-ANDEOK",
+    "layer": 1,
+    "port": 8129,
+    "city": "서귀포시",
+    "name": "안덕면",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-pyoseon": {
+    "id": "KR-JEJU-SGP-PYOSEON",
+    "layer": 1,
+    "port": 8130,
+    "city": "서귀포시",
+    "name": "표선면",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-songsan": {
+    "id": "KR-JEJU-SGP-SONGSAN",
+    "layer": 1,
+    "port": 8131,
+    "city": "서귀포시",
+    "name": "송산동",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-jeongbang": {
+    "id": "KR-JEJU-SGP-JEONGBANG",
+    "layer": 1,
+    "port": 8132,
+    "city": "서귀포시",
+    "name": "정방동",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-jungang-sgp": {
+    "id": "KR-JEJU-SGP-JUNGANG-SGP",
+    "layer": 1,
+    "port": 8133,
+    "city": "서귀포시",
+    "name": "중앙동",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-cheonji": {
+    "id": "KR-JEJU-SGP-CHEONJI",
+    "layer": 1,
+    "port": 8134,
+    "city": "서귀포시",
+    "name": "천지동",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-hyodon": {
+    "id": "KR-JEJU-SGP-HYODON",
+    "layer": 1,
+    "port": 8135,
+    "city": "서귀포시",
+    "name": "효돈동",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-yeongcheon": {
+    "id": "KR-JEJU-SGP-YEONGCHEON",
+    "layer": 1,
+    "port": 8136,
+    "city": "서귀포시",
+    "name": "영천동",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-donghong": {
+    "id": "KR-JEJU-SGP-DONGHONG",
+    "layer": 1,
+    "port": 8137,
+    "city": "서귀포시",
+    "name": "동홍동",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-seohong": {
+    "id": "KR-JEJU-SGP-SEOHONG",
+    "layer": 1,
+    "port": 8138,
+    "city": "서귀포시",
+    "name": "서홍동",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-daeryun": {
+    "id": "KR-JEJU-SGP-DAERYUN",
+    "layer": 1,
+    "port": 8139,
+    "city": "서귀포시",
+    "name": "대륜동",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-daecheon": {
+    "id": "KR-JEJU-SGP-DAECHEON",
+    "layer": 1,
+    "port": 8140,
+    "city": "서귀포시",
+    "name": "대천동",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-jungmun": {
+    "id": "KR-JEJU-SGP-JUNGMUN",
+    "layer": 1,
+    "port": 8141,
+    "city": "서귀포시",
+    "name": "중문동",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l1-yerae": {
+    "id": "KR-JEJU-SGP-YERAE",
+    "layer": 1,
+    "port": 8142,
+    "city": "서귀포시",
+    "name": "예래동",
+    "parentFolder": "l2-seogwipo"
+  },
+  "l2-jeju": {
+    "id": "KR-JEJU-JEJU-SI",
+    "layer": 2,
+    "port": 8092,
+    "city": "제주시",
+    "name": "제주시(L2)",
+    "parentFolder": "l3-jejudo",
+    "children": [
+      "hanlim",
+      "l1-aewol",
+      "l1-jocheon",
+      "l1-gujwa",
+      "l1-hangyeong",
+      "l1-chuja",
+      "l1-udo",
+      "l1-ildo1",
+      "l1-ildo2",
+      "l1-ido1",
+      "l1-ido2",
+      "l1-samdo1",
+      "l1-samdo2",
+      "l1-yongdam1",
+      "l1-yongdam2",
+      "l1-geonip",
+      "l1-hwabuk",
+      "l1-samyang",
+      "l1-bonggae",
+      "l1-ara",
+      "l1-ora",
+      "l1-yeondong",
+      "l1-nohyeong",
+      "l1-oedo",
+      "l1-iho",
+      "l1-dodu"
+    ]
+  },
+  "l2-seogwipo": {
+    "id": "KR-JEJU-SGP-SI",
+    "layer": 2,
+    "port": 8093,
+    "city": "서귀포시",
+    "name": "서귀포시(L2)",
+    "parentFolder": "l3-jejudo",
+    "children": [
+      "l1-daejeong",
+      "l1-namwon",
+      "l1-seongsan",
+      "l1-andeok",
+      "l1-pyoseon",
+      "l1-songsan",
+      "l1-jeongbang",
+      "l1-jungang-sgp",
+      "l1-cheonji",
+      "l1-hyodon",
+      "l1-yeongcheon",
+      "l1-donghong",
+      "l1-seohong",
+      "l1-daeryun",
+      "l1-daecheon",
+      "l1-jungmun",
+      "l1-yerae"
+    ]
+  },
+  "l3-jejudo": {
+    "id": "KR-JEJU",
+    "layer": 3,
+    "port": 8094,
+    "city": null,
+    "name": "제주도(L3)",
+    "parentFolder": "l4-kr",
+    "children": [
+      "l2-jeju",
+      "l2-seogwipo"
+    ]
+  },
+  "l4-kr": {
+    "id": "KR",
+    "layer": 4,
+    "port": 8095,
+    "parentFolder": "l5-global"
+  },
+  "l5-global": {
+    "id": "GLOBAL",
+    "layer": 5,
+    "port": 8096,
+    "parentFolder": null
+  }
+}
