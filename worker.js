@@ -841,6 +841,7 @@ export default {
     if (pathname === '/gwp/register-key' && request.method === 'POST') return handleRegisterKey(request, env, corsHeaders);
     if (pathname === '/biz/order'   && request.method === 'POST') return handleBizOrder(request, env, corsHeaders, ctx);
     if (pathname === '/biz/balance' && request.method === 'GET')  return handleBizBalance(request, env, corsHeaders);
+    if (pathname === '/biz/supply'  && request.method === 'GET')  return handleBizSupply(request, env, corsHeaders);
     if (pathname === '/biz/review'  && request.method === 'POST') return handleBizReview(request, env, corsHeaders);
     if (pathname === '/biz/product' && request.method === 'POST') return handleBizProduct(request, env, corsHeaders);
 
@@ -1289,6 +1290,29 @@ async function handleBizBalance(request, env, corsHeaders) {
     const res  = await fetch(`${L1_DEFAULT}/api/balance?guid=${encodeURIComponent(guid)}`);
     const data = await res.json().catch(() => ({ ok: false, error: 'L1_PARSE_FAILED' }));
     if (!data.ok) return _err(502, data.error || 'L1_ERROR', data.detail || 'L1 잔액 조회 실패', corsHeaders);
+    return new Response(JSON.stringify(data), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+}
+
+// ── GET /biz/supply — GDC 발행 총량 보존 검증 프록시 ──────────────
+// 2026-07-07 신설. L1의 /api/supply/verify를 그대로 프록시한다 —
+// 발행 총량(mint 누적) == 이 L1에 등장한 모든 guid 잔액 합, 이 두 값이
+// 항상 같아야 한다는 불변식을 확인한다. verify=0 쿼리로 가벼운 총량만
+// 조회할 수도 있다(대시보드 등 자주 호출하는 곳용).
+async function handleBizSupply(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const verifyOnly = url.searchParams.get('verify') !== '0';
+  const path = verifyOnly ? '/api/supply/verify' : '/api/supply';
+
+  try {
+    const res  = await fetch(`${L1_DEFAULT}${path}`);
+    const data = await res.json().catch(() => ({ ok: false, error: 'L1_PARSE_FAILED' }));
+    if (!data.ok) return _err(502, data.error || 'L1_ERROR', data.detail || 'L1 총량 조회 실패', corsHeaders);
+    if (verifyOnly && !data.valid) {
+      console.error('[Supply] 보존 검증 실패!', JSON.stringify({ minted: data.total_minted, balance: data.total_balance, diff: data.diff }));
+    }
     return new Response(JSON.stringify(data), { status: 200, headers: corsHeaders });
   } catch (e) {
     return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
