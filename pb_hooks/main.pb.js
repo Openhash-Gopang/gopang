@@ -674,30 +674,39 @@ const CHILDREN_PORTS = {
 
   if (_self.layer >= 2) {
     const childPorts = CHILDREN_PORTS[_selfFolder] || [];
-    let totalMinted = 0, totalBalance = 0, allValid = true;
+    let totalMinted = 0, totalBalance = 0, childConsistencyValid = true;
     const children = [];
     const unreachable = [];
     for (const port of childPorts) {
       try {
         const resp = $http.send({ url: "http://127.0.0.1:" + port + "/api/supply/verify", method: "GET" });
         const data = JSON.parse(resp.raw);
-        if (!data || !data.ok) { allValid = false; unreachable.push(port); continue; }
+        if (!data || !data.ok) { unreachable.push(port); continue; }
         totalMinted  += (data.total_minted  || 0);
         totalBalance += (data.total_balance || 0);
-        if (!data.valid) allValid = false;
+        // ── 2026-07-08 수정: 도달 불가(topology)와 잔액 불일치(consistency)를
+        // 분리한다. 미배포 노드가 많은 파일럿 단계에서 valid가 항상 false로
+        // 뜨는 문제(애월 파일럿 시나리오5) — unreachable은 더 이상 consistency
+        // 판정에 영향을 주지 않는다. topology_complete가 그 역할을 대신한다.
+        if (!data.valid) childConsistencyValid = false;
         children.push({ node: data.node, port, layer: data.layer || 1,
           total_minted: data.total_minted, total_balance: data.total_balance, valid: data.valid });
       } catch (e) {
-        allValid = false;
         unreachable.push(port);
         children.push({ port, error: e.message });
       }
     }
-    const diff  = Math.abs(totalMinted - totalBalance);
-    const valid = allValid && diff < 0.01;
-    if (!valid) {
-      console.error("[SUPPLY][" + _self.id + "] 상위 계층 보존 검증 실패!",
-        JSON.stringify({ totalMinted, totalBalance, diff, unreachable }));
+    const diff = Math.abs(totalMinted - totalBalance);
+    const consistencyValid = childConsistencyValid && diff < 0.01;
+    const topologyComplete = unreachable.length === 0;
+    const valid = consistencyValid && topologyComplete; // 기존 호출부 호환 — 계산식 동일, 의미 변경 없음
+    if (!consistencyValid) {
+      console.error("[SUPPLY][" + _self.id + "] 보존 검증 실패(consistency)!",
+        JSON.stringify({ totalMinted, totalBalance, diff }));
+    }
+    if (!topologyComplete) {
+      console.warn("[SUPPLY][" + _self.id + "] 토폴로지 미완성 — 도달 불가 노드 존재(파일럿 단계에서는 정상일 수 있음)",
+        JSON.stringify({ unreachable }));
     }
     return c.json(200, {
       ok: true,
@@ -706,7 +715,9 @@ const CHILDREN_PORTS = {
       total_minted: totalMinted,
       total_balance: totalBalance,
       diff,
-      valid,
+      valid,                          // 기존 필드 — 계산식 동일(consistency && topology)
+      consistency_valid: consistencyValid,   // 신규 — 잔액 보존만 판정
+      topology_complete: topologyComplete,   // 신규 — 전 노드 도달 여부만 판정
       child_count: childPorts.length,
       unreachable_children: unreachable,
       children,
