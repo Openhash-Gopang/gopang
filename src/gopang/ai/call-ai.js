@@ -17,7 +17,7 @@
 import { CFG, _modelSupportsVision, PROVIDER_INFO, getPriorityOrder, MODEL_MIGRATION } from '../core/config.js';
 import { TOKEN_BUDGET } from '../core/token-policy.js';
 import { aiActive, history, _userLocation,
-         _USER, USER_GUID, _locationPending, _locationReady } from '../core/state.js';
+         _USER, USER_GUID, _locationPending, _locationReady, PROXY } from '../core/state.js';
 import { appendBubble, showTyping, hideTyping,
          _createStreamBubble, _updateStreamBubble } from '../ui/bubble.js';
 import { _buildLocNote, _buildRoutingFacts } from '../services/location.js';
@@ -93,6 +93,22 @@ export async function _loadProfileAssistantSP() {
     return _profileAssistantSpCache;
   } catch (e) {
     console.warn('[SP] profile-assistant SP 로드 실패:', e.message);
+    return null;
+  }
+}
+
+// K-Search SP (2026-07-08 신설, SP-18_ksearch) — 세션당 1회 캐시.
+// AC가 [KSEARCH_HANDOFF]로 호출할 때 쓴다(사용자 검색·호출 위임 —
+// §0-C 역할4의 실제 구현체. 기존 §9의 "★ 미구현 — 사용 금지 ★" 대화
+// 상대 호출 절을 이걸로 대체한다).
+let _kSearchSpCache = null;
+export async function _loadKSearchSP() {
+  if (_kSearchSpCache) return _kSearchSpCache;
+  try {
+    _kSearchSpCache = await _loadSpByKey('SP-18_ksearch', 'K-Search');
+    return _kSearchSpCache;
+  } catch (e) {
+    console.warn('[SP] K-Search SP 로드 실패:', e.message);
     return null;
   }
 }
@@ -256,9 +272,17 @@ export const _stripInternalTags = (text) => text
   .replace(/\[P2P_INVITE:\s*handle=@[\w.-]+(?:,\s*message=[^\]]*)?\]/g, '')
   .replace(/\[OPEN_SETTINGS_TAB\]/g, '')
   .replace(/\[OPEN_K_SERVICES_TAB\]/g, '')
+  .replace(/\[OPEN_MANUAL_TAB\]/g, '')
   // 2026-07-08 신설 — AC↔profile-assistant 핸드오프 태그(§0-E)
   .replace(/\[CALL_PROFILE_ASSISTANT\]/g, '')
   .replace(/\[PROFILE_INTERRUPT_HANDOFF\]/g, '')
+  // 2026-07-08 신설 — AC↔K-Search 핸드오프 및 K-Search 내부 태그(SP-18)
+  .replace(/\[KSEARCH_HANDOFF:\s*query=[^\]]+\]/g, '')
+  .replace(/\[SEARCH\]\s*\{[\s\S]*?\}\s*\[\/SEARCH\]/g, '')
+  .replace(/\[KSEARCH_CLARIFY:[^\]]*\]/g, '')
+  .replace(/\[KSEARCH_CANDIDATES:\s*items=\[[\s\S]*?\]\]/g, '')
+  .replace(/\[KSEARCH_RESULT:[^\]]*\]/g, '')
+  .replace(/\[KSEARCH_HANDOFF_BACK:\s*reason=[\w-]+\]/g, '')
   .trim();
 
 /**
@@ -307,6 +331,80 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI, use
     // 신호 자체가 무관 판정된 극히 예외적 경우) 조용히 건너뛴다.
     if (userText) await sendFn(userText);
     return true;
+  }
+
+  // ── KSEARCH_HANDOFF — AC가 사람/AI비서 찾기·연결을 K-Search에 위임
+  // (2026-07-08 신설, §9. AGENT-COMMON의 출력에서만 나온다) ──
+  {
+    const ksHandoffMatch = fullReply.match(/\[KSEARCH_HANDOFF:\s*query=([^\]]+)\]/);
+    if (ksHandoffMatch) {
+      console.log('[Search] KSEARCH_HANDOFF 감지 — K-Search로 전환');
+      if (bubble) {
+        const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+        if (_usb) _usb(bubble, _stripInternalTags(fullReply));
+      }
+      history.length = 0;
+      await _switchToKSearchSP();
+      await _triggerKSearchHandoff(sendFn, ksHandoffMatch[1].trim());
+      return true;
+    }
+  }
+
+  // ── [SEARCH]{...}[/SEARCH] — K-Search의 실제 조회 요청. CALL_PROFILE_
+  // ASSISTANT 등과 달리 SP를 전환하지 않고(이미 K-Search가 활성 상태),
+  // 결과만 조회해 재주입한다(2026-07-08 신설). CFG.system이 K-Search일
+  // 때만 반응 — 다른 SP가 우연히 같은 문자열을 출력해도(사실상 불가능한
+  // 태그 형식이지만 방어적으로) 오동작하지 않도록 가드.
+  if (CFG.system?.includes('너는 K-Search')) {
+    const handled = await _handleKSearchQuery(fullReply, sendFn);
+    if (handled) {
+      if (bubble) {
+        const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+        if (_usb) _usb(bubble, _stripInternalTags(fullReply));
+      }
+      return true;
+    }
+  }
+
+  // ── KSEARCH_RESULT — K-Search의 최종 결과. AC로 복귀 후 결과를 그대로
+  // 전달해 AC가 [OPEN_PROFILE]/[P2P_INVITE] 등 후속 처리를 잇는다
+  // (2026-07-08 신설) ──
+  {
+    const ksResultMatch = fullReply.match(/\[KSEARCH_RESULT:([^\]]*)\]/);
+    if (ksResultMatch) {
+      console.log('[Search] KSEARCH_RESULT 감지 — AGENT-COMMON으로 복귀:', ksResultMatch[1].trim());
+      if (bubble) {
+        const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+        if (_usb) _usb(bubble, _stripInternalTags(fullReply));
+      }
+      history.length = 0;
+      await _switchToAssistantSP();
+      await sendFn(`[INTERNAL: K-Search→AGENT-COMMON 인계 — 사용자에게 보이지 ` +
+        `않는 내부 신호입니다. K-Search가 다음 결과를 반환했습니다: ` +
+        `${ksResultMatch[1].trim()}. matched면 결과를 안내하고 필요시 ` +
+        `[OPEN_PROFILE]/[P2P_INVITE]를 이어서 출력하세요. not_found/` +
+        `insufficient면 솔직히 못 찾았다고 안내하세요.]`);
+      return true;
+    }
+  }
+
+  // ── KSEARCH_HANDOFF_BACK — K-Search가 자기 소관이 아니라고 판단해
+  // 즉시 반환(자기 자신 검색·공적 기관 오인·응급 등, 2026-07-08 신설) ──
+  {
+    const ksBackMatch = fullReply.match(/\[KSEARCH_HANDOFF_BACK:\s*reason=([\w-]+)\]/);
+    if (ksBackMatch) {
+      console.log('[Search] KSEARCH_HANDOFF_BACK 감지(reason=' + ksBackMatch[1] + ') — AGENT-COMMON으로 즉시 복귀');
+      if (bubble) {
+        const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+        if (_usb) _usb(bubble, _stripInternalTags(fullReply));
+      }
+      history.length = 0;
+      await _switchToAssistantSP();
+      // reason=emergency는 R0 응급 게이트와 동일한 우선순위 — 원 발화를
+      // 그대로 넘겨 AC가 즉시 kemergency/kpolice 판단을 하게 한다.
+      if (userText) await sendFn(userText);
+      return true;
+    }
   }
 
   // ── FIRST_GREETED — PHASE -1 최초 인사 완료 (v1.3) ──────────
@@ -526,6 +624,95 @@ async function _triggerProfileAssistantHandoff(sendFn = callAI) {
   } catch (e) {
     console.warn('[Profile] profile-assistant 핸드오프 트리거 실패(무시 — 다음 사용자 메시지에서 정상 처리됨):', e.message);
   }
+}
+
+/**
+ * _switchToKSearchSP — K-Search(SP-18_ksearch) SP를 CFG.system_base /
+ * CFG.system에 적용 (2026-07-08 신설). AGENT-COMMON이
+ * [KSEARCH_HANDOFF]를 출력한 직후 호출됩니다. _switchToProfileAssistantSP와
+ * 동일 구조.
+ */
+async function _switchToKSearchSP() {
+  try {
+    CFG.system_base = await _loadKSearchSP();
+    if (!CFG.system_base) throw new Error('K-Search SP 로드 결과 비어있음');
+    CFG.system = CFG.system_base;
+    try {
+      const cfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
+      cfg.system = CFG.system;
+      cfg.system_base = CFG.system_base;
+      localStorage.setItem('gopang_cfg', JSON.stringify(cfg));
+    } catch {}
+    console.log('[Search] K-Search SP로 전환 완료');
+  } catch (e) {
+    console.warn('[Search] K-Search SP 전환 실패 (무시):', e.message);
+  }
+}
+
+/**
+ * _triggerKSearchHandoff — AC→K-Search 전환 직후, 이용자 발화 원문을
+ * 내부 신호에 실어 K-Search STEP1(의도 파싱)이 곧바로 시작하도록 한다
+ * (2026-07-08 신설). K-Search SP는 "요약·재구성이 아니라 원문 그대로"를
+ * 요구하므로(RULE-02 STEP1) query를 가공하지 않고 그대로 전달한다.
+ */
+async function _triggerKSearchHandoff(sendFn = callAI, query = '') {
+  try {
+    const handoff = `[INTERNAL: AGENT-COMMON→K-Search 인계 — 사용자에게 보이지 ` +
+      `않는 내부 신호입니다. 재인사하지 말고 STEP1부터 시작하세요. ` +
+      `이용자 발화 원문: "${query}"]`;
+    await sendFn(handoff);
+  } catch (e) {
+    console.warn('[Search] K-Search 핸드오프 트리거 실패(무시):', e.message);
+  }
+}
+
+/**
+ * _handleKSearchQuery — K-Search가 출력한 [SEARCH]{...}[/SEARCH] JSON을
+ * 실제 POST /search(worker.js handleSearch)로 조회하고, 결과를 내부
+ * 메시지로 재주입해 K-Search STEP4(후보 평가·확정)를 이어가게 한다
+ * (2026-07-08 신설 — SP-18_ksearch.txt [구현 격차] 항목(1)(2) 해소).
+ * market 레포의 [SEARCH]{"keyword":...}[/SEARCH] ↔ 재주입 패턴과 동일한
+ * 층위의 배선을 gopang에 이식한 것.
+ *
+ * @returns {boolean} true면 이 턴에서 SEARCH 태그를 감지해 처리했음
+ *   (호출부가 후속 일반 처리를 생략해야 함)
+ */
+async function _handleKSearchQuery(fullReply, sendFn = callAI) {
+  const m = fullReply.match(/\[SEARCH\]\s*(\{[\s\S]*?\})\s*\[\/SEARCH\]/);
+  if (!m) return false;
+
+  let params;
+  try {
+    params = JSON.parse(m[1]);
+  } catch (e) {
+    console.warn('[Search] [SEARCH] JSON 파싱 실패 — K-Search에 재질의:', e.message);
+    await sendFn(`[INTERNAL: 방금 낸 [SEARCH] 태그의 JSON 형식이 올바르지 않아 ` +
+      `조회하지 못했습니다. 형식을 정확히 다시 출력해 주세요.]`);
+    return true;
+  }
+
+  try {
+    const res = await fetch(`${PROXY}/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    if (!res.ok) throw new Error('search API ' + res.status);
+    const data = await res.json();
+    // search_entities RPC 반환 형식 그대로(각 항목 guid/handle/name/
+    // entity_type/address/search_tags/rank 등) K-Search STEP4에 넘긴다 —
+    // call-ai.js가 대신 판단하지 않는다(판단은 K-Search의 몫).
+    const resultsJson = JSON.stringify(data).slice(0, 4000); // 토큰 보호용 상한
+    await sendFn(`[INTERNAL: 방금 낸 [SEARCH] 조회 결과입니다. ` +
+      `STEP4(후보 평가·확정)를 이어서 진행하세요. 결과에 없는 정보는 ` +
+      `지어내지 마세요.\n결과: ${resultsJson}]`);
+  } catch (e) {
+    console.warn('[Search] /search 호출 실패:', e.message);
+    await sendFn(`[INTERNAL: 방금 낸 [SEARCH] 조회가 서버 오류로 실패했습니다 ` +
+      `(${e.message}). 이용자에게 검색을 지금은 완료할 수 없다고 솔직히 ` +
+      `안내하고 [KSEARCH_RESULT: status=insufficient]로 마무리하세요.]`);
+  }
+  return true;
 }
 
 /**
@@ -1121,6 +1308,23 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
     }
   } catch (e) {
     console.warn('[Tags] OPEN_K_SERVICES_TAB 처리 오류 (무시):', e.message);
+  }
+
+  // [OPEN_MANUAL_TAB] — 2026-07-08 신설. 사용자 매뉴얼을 새 탭에서 연다.
+  // 기존엔 위쪽 가장자리 스와이프(edge-handle-top → openUserManual())로만
+  // 열렸고, AGENT-COMMON §0-C/§0-D는 "매뉴얼 보여줘"가 §9 태그로 새 탭을
+  // 연다고 서술했지만 실제 태그가 없던 상태였다(사고실험 300건 중 G섹션
+  // 갭으로 발견) — 이 태그로 그 갭을 메운다. OPEN_SETTINGS_TAB과 동일하게
+  // 기존 정적 페이지(user-manual.html)를 그대로 새 탭에 띄운다.
+  try {
+    if (/\[OPEN_MANUAL_TAB\]/.test(fullReply)) {
+      console.info('[Tags] OPEN_MANUAL_TAB');
+      const url = '/user-manual.html';
+      if (_preTab && !_preTab.closed) _preTab.location.href = url;
+      else window.open(url, '_blank');
+    }
+  } catch (e) {
+    console.warn('[Tags] OPEN_MANUAL_TAB 처리 오류 (무시):', e.message);
   }
 
   // [OPEN_PROFILE: handle={@handle}] — 공급자 프로필 페이지 새 패널로 열기

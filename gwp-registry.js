@@ -333,6 +333,32 @@ const GWP_REGISTRY = [
     ],
   },
 
+  // ── 플랫폼 유틸리티 (UTL) — 2026-07-08 신설 ────────────────
+  // ★ 표준 [GWP: id] 새 탭 방식이 아니라 [KSEARCH_HANDOFF]로 동일
+  // 스레드 안에서 system을 전환하는 방식(call-ai.js _switchToKSearchSP)
+  // — 다른 항목과 달리 _gwpLaunch()가 이 id로 새 탭을 열 일은 없다.
+  // 여기 등록하는 목적은 트리거 키워드 참고·문서 일관성용이며, status는
+  // RULE-03 후반부(미청구 프로필 생성)가 아직 미구현이라 'pending'으로
+  // 둔다(RULE-02는 2026-07-08부로 배선 완료 — SP-18_ksearch_v1.0.txt 참조).
+  {
+    id: 'ksearch', name: 'K-Search', category: 'UTL',
+    type: 'inline',
+    url: null,
+    sp_key: 'SP-18_ksearch',
+    status: 'pending', priority: 9, threshold: 0.70,
+    // v1.1(2026-07-08): "검색은 K-Search만 전담" 원칙이 K-Market 등
+    // 생태계 전체로 확정 — 다만 이 항목은 AC→K-Search 직접 위임(RULE-06
+    // 6-A, [KSEARCH_HANDOFF])만을 위한 것이고, K-Market의 nested 위임
+    // (RULE-06 6-B, [CALL_KSEARCH])은 market 레포 자체 구현이라 여기
+    // 등록과 무관하다. AC 자신의 라우팅(예: [GWP: kcommerce])은 이
+    // 변경으로 바뀌지 않는다 — AGENT-COMMON v3.34 참조.
+    description: '혼디 생태계 전체의 유일한 검색 실행 에이전트 — 사람·AI비서 식별은 물론 K-Market 등 타 SP가 위임하는 판매자·상품 탐색까지 전담. 모호하면 되묻고, 없으면 솔직히 안내.',
+    triggers: [
+      '찾아줘','연결해줘','불러줘','아는 사람','그분','그 사람',
+      '누구였지','아이디 찾','핸들 찾','프로필 찾',
+    ],
+  },
+
   // ── Tool 목록 ──────────────────────────────────────────────
   // type: 'tool' — function calling 방식, url 없음
   {
