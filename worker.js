@@ -45,6 +45,10 @@ const ALLOWED_ORIGINS = [
 // 인증서를 새로 만들지 않고, l1-hanlim.hondi.net 하나를 nginx 경로 기반
 // 라우팅(/n/{folder} → 127.0.0.1:{port})으로 확장해 전부 처리한다.
 const L1_BASE_HOST = 'https://l1-hanlim.hondi.net';
+// 2026-07-08 신설: 서귀포시 관할 17개 읍면동(L1) 전용 물리 호스트.
+// hanlim(AMD Micro, 1GB) 메모리 한계로 별도 서버로 이전(jeju-l1-l3
+// 필드테스트 후속 조치). L2(l2-seogwipo)는 여전히 hanlim에 있음.
+const SEOGWIPO_L1_BASE_HOST = 'https://seogwipo-l1-nodes.hondi.net';
 
 const L1_NODE_MAP = {
   'KR-JEJU-JEJU-HANLIM':  L1_BASE_HOST, // 기존 그대로 — 이미 8091 직결
@@ -79,23 +83,23 @@ const L1_NODE_MAP = {
   'KR-JEJU-JEJU-YEONDONG': L1_BASE_HOST + '/n/l1-yeondong',
   'KR-JEJU-JEJU-YONGDAM1': L1_BASE_HOST + '/n/l1-yongdam1',
   'KR-JEJU-JEJU-YONGDAM2': L1_BASE_HOST + '/n/l1-yongdam2',
-  'KR-JEJU-SGP-ANDEOK': L1_BASE_HOST + '/n/l1-andeok',
-  'KR-JEJU-SGP-CHEONJI': L1_BASE_HOST + '/n/l1-cheonji',
-  'KR-JEJU-SGP-DAECHEON': L1_BASE_HOST + '/n/l1-daecheon',
-  'KR-JEJU-SGP-DAEJEONG': L1_BASE_HOST + '/n/l1-daejeong',
-  'KR-JEJU-SGP-DAERYUN': L1_BASE_HOST + '/n/l1-daeryun',
-  'KR-JEJU-SGP-DONGHONG': L1_BASE_HOST + '/n/l1-donghong',
-  'KR-JEJU-SGP-HYODON': L1_BASE_HOST + '/n/l1-hyodon',
-  'KR-JEJU-SGP-JEONGBANG': L1_BASE_HOST + '/n/l1-jeongbang',
-  'KR-JEJU-SGP-JUNGANG-SGP': L1_BASE_HOST + '/n/l1-jungang-sgp',
-  'KR-JEJU-SGP-JUNGMUN': L1_BASE_HOST + '/n/l1-jungmun',
-  'KR-JEJU-SGP-NAMWON': L1_BASE_HOST + '/n/l1-namwon',
-  'KR-JEJU-SGP-PYOSEON': L1_BASE_HOST + '/n/l1-pyoseon',
-  'KR-JEJU-SGP-SEOHONG': L1_BASE_HOST + '/n/l1-seohong',
-  'KR-JEJU-SGP-SEONGSAN': L1_BASE_HOST + '/n/l1-seongsan',
-  'KR-JEJU-SGP-SONGSAN': L1_BASE_HOST + '/n/l1-songsan',
-  'KR-JEJU-SGP-YEONGCHEON': L1_BASE_HOST + '/n/l1-yeongcheon',
-  'KR-JEJU-SGP-YERAE': L1_BASE_HOST + '/n/l1-yerae',
+  'KR-JEJU-SGP-ANDEOK': SEOGWIPO_L1_BASE_HOST + '/n/l1-andeok',
+  'KR-JEJU-SGP-CHEONJI': SEOGWIPO_L1_BASE_HOST + '/n/l1-cheonji',
+  'KR-JEJU-SGP-DAECHEON': SEOGWIPO_L1_BASE_HOST + '/n/l1-daecheon',
+  'KR-JEJU-SGP-DAEJEONG': SEOGWIPO_L1_BASE_HOST + '/n/l1-daejeong',
+  'KR-JEJU-SGP-DAERYUN': SEOGWIPO_L1_BASE_HOST + '/n/l1-daeryun',
+  'KR-JEJU-SGP-DONGHONG': SEOGWIPO_L1_BASE_HOST + '/n/l1-donghong',
+  'KR-JEJU-SGP-HYODON': SEOGWIPO_L1_BASE_HOST + '/n/l1-hyodon',
+  'KR-JEJU-SGP-JEONGBANG': SEOGWIPO_L1_BASE_HOST + '/n/l1-jeongbang',
+  'KR-JEJU-SGP-JUNGANG-SGP': SEOGWIPO_L1_BASE_HOST + '/n/l1-jungang-sgp',
+  'KR-JEJU-SGP-JUNGMUN': SEOGWIPO_L1_BASE_HOST + '/n/l1-jungmun',
+  'KR-JEJU-SGP-NAMWON': SEOGWIPO_L1_BASE_HOST + '/n/l1-namwon',
+  'KR-JEJU-SGP-PYOSEON': SEOGWIPO_L1_BASE_HOST + '/n/l1-pyoseon',
+  'KR-JEJU-SGP-SEOHONG': SEOGWIPO_L1_BASE_HOST + '/n/l1-seohong',
+  'KR-JEJU-SGP-SEONGSAN': SEOGWIPO_L1_BASE_HOST + '/n/l1-seongsan',
+  'KR-JEJU-SGP-SONGSAN': SEOGWIPO_L1_BASE_HOST + '/n/l1-songsan',
+  'KR-JEJU-SGP-YEONGCHEON': SEOGWIPO_L1_BASE_HOST + '/n/l1-yeongcheon',
+  'KR-JEJU-SGP-YERAE': SEOGWIPO_L1_BASE_HOST + '/n/l1-yerae',
 };
 const L1_DEFAULT = 'https://l1-hanlim.hondi.net';
 // L3(제주도 전체) — guid_home_l1 레지스트리(§4)의 단일 소스
