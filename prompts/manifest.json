@@ -3,7 +3,7 @@
   "AGENT-SUPPLIER-COMMON": "AGENT-SUPPLIER-COMMON_v2.0.txt",
   "HONDI_VISITOR_SP": "hondi_visitor_sp_v1_2.txt",
   "profile-assistant": "profile-assistant/profile-assistant-v1_1.txt",
-  "SP-10_kpublic": "SP-10_kpublic_v3.3.txt",
+  "SP-10_kpublic": "SP-10_kpublic_v3.4.txt",
   "SP-15-IMG_profile-scan_vision_prompt": "SP-15-IMG_profile-scan_vision_prompt_v1.0.txt",
   "SP-17_profile-classifier": "SP-17_profile-classifier_v1.0.txt",
   "SP-18_ksearch": "SP-18_ksearch_v1.1.txt",
