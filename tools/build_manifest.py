@@ -74,6 +74,17 @@ router_files = [
 if router_files:
     manifest['SP-00-ROUTER'] = best(router_files)
 
+# 2-b) HONDI_VISITOR_SP — prompts/hondi_visitor_sp_vX_Y.txt
+#      2026-07-08 신설: 기존엔 이 SP가 manifest 체계 밖에 있어서 desktop.html
+#      에 전문이 직접 박혀 있었다(check_no_embedded_sp.py 사각지대). 다른
+#      SP들과 동일하게 manifest 기반 fetch로 전환하며 스캔 대상에 추가.
+visitor_files = [
+    f.name for f in PROMPTS.iterdir()
+    if re.match(r'^hondi_visitor_sp_v', f.name) and f.name.endswith('.txt')
+]
+if visitor_files:
+    manifest['HONDI_VISITOR_SP'] = best(visitor_files)
+
 # 3) personal-assistant — prompts/personal-assistant/personal-assistant-vX.Y.txt
 pa_dir = PROMPTS / 'personal-assistant'
 if pa_dir.is_dir():
