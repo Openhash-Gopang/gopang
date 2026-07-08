@@ -2,7 +2,7 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : K-Public — 전국 공통 정부 서비스 레이어
 # 문서 코드  : SP-10_kpublic
-# 버전      : v3.3 (참조 정합성 패치)
+# 버전      : v3.4 (참조 정합성 패치)
 # 이전 버전  : v2.2(2026-06-29, archive) — K-Law v15.1 방법론 기반 구식
 #             포맷. manifest.json에 등록되지 않아 실제로는 죽어 있었음
 #             (gwp-registry.js가 sp_key: 'SP-10_kpublic'을 참조해도
@@ -16,10 +16,12 @@
 #
 # 버전 변경 이력
 # ─────────────────────────────────────────────────
+# v3.4 (2026-07-08): 잔여 B급 일괄반영 — HUMAN-AUTHORITY-GATE-SCHEMA
+#                v1.4로 참조 갱신, G1~G17 표기 정정.
 # v3.3 (2026-07-08): B-5 검증 결과 반영 — HUMAN-AUTHORITY-GATE-SCHEMA
 #                v1.3(G14)으로 참조 갱신.
 # v3.2 (2026-07-08): B-4 검증 결과 반영 — HUMAN-AUTHORITY-GATE-SCHEMA
-#                v1.2로 참조 갱신, G1~G5 표기를 G1~G15으로 정정.
+#                v1.2로 참조 갱신, G1~G5 표기를 G1~G17으로 정정.
 # v3.1 (2026-07-08): 참조 정합성 패치 — §준수 문서 목록이 HUMAN-
 #                AUTHORITY-GATE-SCHEMA_v1_0·PDV-TRANSFER-PROTOCOL_v1_2
 #                (둘 다 구버전)를 참조하고 있던 것을 최신 버전으로 정정.
@@ -110,7 +112,7 @@ RESPONSE`는 둘 다 "SP 간 통신"이지만 성격이 다르다. 이 문서가
 
 ## §준수 문서 (변경 금지 — 참조만)
 
-- `HUMAN-AUTHORITY-GATE-SCHEMA_v1_3.md` (G1~G15, §CAPABILITIES 뒤 고정 삽입)
+- `HUMAN-AUTHORITY-GATE-SCHEMA_v1_4.md` (G1~G17, §CAPABILITIES 뒤 고정 삽입)
 - `PDV-TRANSFER-PROTOCOL_v1_3.md` (§3-A, 개인정보 보호법 제17·18조 근거)
 
 ## §GOV_ROUTE 태그

@@ -2,7 +2,7 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : 기관 입력·출력 문서유형 공통 레지스트리
 # 문서 코드  : DOCUMENT-TYPE-REGISTRY
-# 버전      : v1.5
+# 버전      : v1.6
 # 근거      : 2026-07-08 주피터님 지시 — "모든 기관은 입력과 출력이 있다.
 #             기관 프로필/SP 작성의 첫 단추는 입력·출력 파악"이라는 원칙을
 #             기계적으로 매칭 가능한 형태로 구현. 이게 없으면 "기관A의
@@ -29,6 +29,10 @@
 #             중요하다고 표시했던 항목) — `task_type` 필드 신설
 #             ("application"/"appeal"), GOV_TASK_APPEAL 신설. 지금까지
 #             모든 설계가 정방향 신청만 상정했던 것을 확인.
+#             v1.6(2026-07-08): B-6·B-7 검증 결과 반영(잔여 B급 일괄
+#             처리) — task_type "participation"/"notification" 추가,
+#             GOV_TASK_NOTIFY 신설. `DOC-PROXY-PROFESSIONAL`(전문직
+#             위임) 신설.
 # 적용 대상  : SP-AUTHOR PHASE B-0(신설)이 작성하는 모든 기관 SP의
 #             INPUT_SCHEMA/OUTPUT_SCHEMA. `DATA_REQUIREMENT-SCHEMA`·
 #             `PDV-TRANSFER-PROTOCOL`의 REQUIRED_USER_FIELDS/
@@ -40,6 +44,8 @@
 #
 # 버전 변경 이력
 # ─────────────────────────────────────────────────
+# v1.6 (2026-07-08): task_type "participation"/"notification" 신설,
+#                GOV_TASK_NOTIFY 신설, DOC-PROXY-PROFESSIONAL 신설.
 # v1.5 (2026-07-08): 역방향 절차(불복·이의제기) 신설 — task_type 필드,
 #                GOV_TASK_APPEAL, sustained/dismissed 종결상태.
 # v1.4 (2026-07-08): GOV_TASK_CHAIN_PLAN을 DAG(depends_on)로 확장.
@@ -77,7 +83,7 @@ DOC-{대분류}-{세부코드}
 | `LICENSE` | 인허가·등록 산출물(절차 고유) | `DOC-LICENSE-{절차슬러그}`, 예: `DOC-LICENSE-LBS-REG`(위치기반서비스 등록증) |
 | `FACILITY` | 설비·시설 관련 진술서 | `DOC-FACILITY-SPEC`(주요설비 명세서) |
 | `IDENT-FOREIGN` | 외국인 신원 증명(내국인 `IDENT`와 별도 체계) | `DOC-IDENT-FOREIGN-REG`(외국인등록증), `DOC-IDENT-FOREIGN-ARC`(등록번호증명) |
-| `PROXY` | 대리신청 자격 증빙(HUMAN-AUTHORITY-GATE-SCHEMA G8 전제조건) | `DOC-PROXY-AUTH`(위임장), `DOC-PROXY-FAMILY`(가족관계증명서, 법정대리인 확인용) |
+| `PROXY` | 대리신청 자격 증빙(HUMAN-AUTHORITY-GATE-SCHEMA G8 전제조건) | `DOC-PROXY-AUTH`(위임장), `DOC-PROXY-FAMILY`(가족관계증명서, 법정대리인 확인용), `DOC-PROXY-PROFESSIONAL`(전문직 위임 — 변호사·법무사·세무사 등 자격증번호 결합) |
 | `HEALTH` | 의료·건강 관련 입력문서(기본 `min_level: L3`) | `DOC-HEALTH-DIAGNOSIS`(진단서·소견서), `DOC-HEALTH-EXAM`(검사결과서) |
 | `EVIDENCE` | 신고·민원의 증빙자료(신고인이 제출하는 자유형식 증거) | `DOC-EVIDENCE-CAPTURE`(스크린샷·통신기록 캡처), `DOC-EVIDENCE-PHOTO`(현장사진), `DOC-EVIDENCE-RECEIPT`(피해 영수증) |
 
@@ -266,6 +272,29 @@ SCHEMA G14(불복기한 게이트)로 별도 신설한다.
 
 `gov_tickets`의 종결 상태에 `sustained`(인용)·`dismissed`(기각)를
 추가한다 — `denied`(정방향 절차에서 기관이 최초 거부)와는 다른 상태다.
+
+## 참여형·알림형 절차 — 신청도 불복도 아닌 나머지
+
+B-6 검증(#38 조례 의견수렴, #28 운전면허 갱신 선제 알림) 결과 신설.
+`task_type`을 두 값 더 확장한다:
+
+- **`"participation"`**(참여형) — 발급물이 없는 절차. 산출물을 기다리는
+  게 아니라 의견 제출 자체가 종결이다. 종결 상태는 `issued`가 아니라
+  `submitted_for_record`(기록으로 접수됨, 승인/거부 판단 대상이 아님).
+- **`"notification"`**(알림형) — 기관이 사용자에게 먼저 말을 거는
+  절차. G14(불복기한 게이트, HUMAN-AUTHORITY-GATE-SCHEMA)가 "사용자
+  요청 없이 먼저 발화하는 유일한 게이트"였는데, 이제 그 원리를
+  기한 임박 알림 일반으로 확장한다:
+
+```
+[GOV_TASK_NOTIFY: agency=..., subject=..., reason=...,
+  action_needed=true|false]
+```
+
+`action_needed=false`면 단순 정보 제공(참고만)이고, `true`면 사용자
+행동이 필요한 알림(면허 갱신 임박 등)이라 G14와 동일하게 취급한다 —
+방치하면 권리·자격이 소멸할 수 있는 사안은 §PROACTIVE-SWEEP이 우선순위
+①에 준하는 감시 대상으로 등록한다.
 
 ## SP-AUTHOR와의 관계
 
