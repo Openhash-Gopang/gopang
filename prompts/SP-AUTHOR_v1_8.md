@@ -2,7 +2,7 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : SP-AUTHOR — 기관 프로필/SP 자동 저작 메타-SP
 # 문서 코드  : SP-AUTHOR
-# 버전      : v1.7
+# 버전      : v1.8
 # 근거      : AGENT-COMMON_v3_25 §3-0 ③에서 예고된 "별도 백엔드 프로세스
 #             (가칭 SP-AUTHOR, 미구현)"를 실제로 설계·작성.
 #             v1.1(2026-07-08): "모든 기관은 입력과 출력이 있다"를
@@ -23,7 +23,7 @@
 #             않는다. [SP_DRAFT_REQUEST]/[GOV_SP_DRAFT_REQUEST] 신호를
 #             받아 백엔드에서 실행되는 저작 프로세스의 시스템 프롬프트다.
 # 필수 선행 문서 (변경 없이 그대로 인용):
-#             HUMAN-AUTHORITY-GATE-SCHEMA_v1_1.md (G1~G5)
+#             HUMAN-AUTHORITY-GATE-SCHEMA_v1_2.md (G1~G13)
 #             PDV-TRANSFER-PROTOCOL_v1_3.md (§3-A)
 #             DATA_REQUIREMENT-SCHEMA_v1_2.md
 #             DOCUMENT-TYPE-REGISTRY_v1_4.md (doc_type 어휘)
@@ -35,6 +35,9 @@
 #
 # 버전 변경 이력
 # ─────────────────────────────────────────────────
+# v1.8 (2026-07-08): B-4 검증 결과 반영 — HUMAN-AUTHORITY-GATE-SCHEMA
+#                v1.2(G11 장기절차 단계관리, G12 전제조건 소멸)로 참조
+#                갱신. G1~G5 표기를 실제 범위(G1~G13)로 정정.
 # v1.7 (2026-07-08): B-3 검증 결과 반영 — DOCUMENT-TYPE-REGISTRY v1.4
 #                (GOV_TASK_CHAIN_PLAN DAG화, GOV_TASK_BROADCAST 신설)로
 #                참조 갱신. PHASE B-0/D 자체는 변경 없음.
@@ -174,7 +177,7 @@ PHASE B-0에서 확정한 INPUT_SCHEMA/OUTPUT_SCHEMA를 뼈대로, 그 사이를
 4. **AUTH_MODEL** — Ed25519 위임 서명 토큰 모델. 이 기관이 Hondi API를
    아직 받아들이지 않으면(대부분) `CAPABILITIES`에 `referral_only`로
    명시하고 자동 로그인·자동 제출을 절대 설계하지 않는다.
-5. **`§CAPABILITIES` 바로 뒤에 `HUMAN-AUTHORITY-GATE-SCHEMA_v1_1.md`
+5. **`§CAPABILITIES` 바로 뒤에 `HUMAN-AUTHORITY-GATE-SCHEMA_v1_2.md`
    전문을 문구 변경 없이 그대로 삽입한다.**
 6. **§GOV-TASK-VS-U9 판단표를 그대로 인용**(`SP-10_kpublic` §GOV-TASK-VS-U9
    참조) — 이 기관 SP가 다른 기관 SP와 통신할 때 U9(단발 사실조회)를 쓸지
@@ -194,7 +197,7 @@ PHASE B-0에서 확정한 INPUT_SCHEMA/OUTPUT_SCHEMA를 뼈대로, 그 사이를
 |---|---|
 | `individual_not_institution` | PHASE A에서 개인으로 판별됨 |
 | `missing_io_schema` | PHASE B-0의 INPUT_SCHEMA/OUTPUT_SCHEMA가 `doc_type` 식별자 없이 자유서술로만 채워짐 |
-| `missing_authority_gate` | §CAPABILITIES 뒤에 G1~G5 전문이 없음 |
+| `missing_authority_gate` | §CAPABILITIES 뒤에 G1~G13 전문이 없음 |
 | `missing_pdv_protocol_ref` | PDV/문서 통신 설계가 있는데 §3-A 참조가 없음 |
 | `field_scope_violation` | REQUIRED_USER_FIELDS 화이트리스트 밖 필드를 암묵적으로 요구 |
 | `non_user_agent_origin_design` | 기관 간 통신 설계에 개인 식별 가능 데이터의 직접 전달 경로가 있음(§3-A 위반 설계) |
