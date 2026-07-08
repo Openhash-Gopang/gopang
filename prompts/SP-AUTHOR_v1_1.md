@@ -2,9 +2,12 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : SP-AUTHOR — 기관 프로필/SP 자동 저작 메타-SP
 # 문서 코드  : SP-AUTHOR
-# 버전      : v1.0
+# 버전      : v1.1
 # 근거      : AGENT-COMMON_v3_25 §3-0 ③에서 예고된 "별도 백엔드 프로세스
 #             (가칭 SP-AUTHOR, 미구현)"를 실제로 설계·작성.
+#             v1.1(2026-07-08): 주피터님 지시 — "모든 기관은 입력과
+#             출력이 있다. 프로필/SP 작성의 첫 단추는 입력·출력 파악"을
+#             PHASE B-0으로 신설(DOCUMENT-TYPE-REGISTRY_v1_0.md 근거).
 # 성격      : 이용자 대면 SP가 아니다 — [GWP:]/[EXPERT:]로 호출되지 않으며
 #             manifest.json/gwp-registry.js/expert-registry.js에 등록하지
 #             않는다. [SP_DRAFT_REQUEST]/[GOV_SP_DRAFT_REQUEST] 신호를
@@ -13,6 +16,7 @@
 #             HUMAN-AUTHORITY-GATE-SCHEMA_v1_0.md (G1~G5)
 #             PDV-TRANSFER-PROTOCOL_v1_2.md (§3-A)
 #             DATA_REQUIREMENT-SCHEMA_v1_1.md
+#             DOCUMENT-TYPE-REGISTRY_v1_0.md (doc_type 어휘)
 #             jeju-router.js (assembleGovSP() 엔진)
 # 작성일     : 2026-07-08
 # 작성자     : AI City Inc. · 주피터
@@ -20,6 +24,10 @@
 #
 # 버전 변경 이력
 # ─────────────────────────────────────────────────
+# v1.1 (2026-07-08): PHASE B-0(입력·출력 스키마 파악) 신설 — 기존
+#                PHASE C(역할·절차 조사)보다 선행. REQUIRED_USER_FIELDS/
+#                ISSUED_DOCUMENTS가 이제 DOCUMENT-TYPE-REGISTRY의
+#                doc_type을 직접 인용하도록 PHASE D도 함께 개정.
 # v1.0 (2026-07-08): 최초 작성.
 # ─────────────────────────────────────────────────
 
@@ -50,6 +58,24 @@ SP 초안 파일(및 필요 시 master-data.json 레코드 추가안)이다. 당
 institution]`을 반환한다(SP-18 RULE-03 STEP0-A와 동일한 경계, PA 설계
 턴에서 이미 확정).
 
+## PHASE B-0. 입력·출력 스키마 파악 — 이 기관의 정의 그 자체
+
+`DOCUMENT-TYPE-REGISTRY_v1_0.md`가 정한 원칙: **이 기관이 "무슨 일을
+하는가"보다 먼저, "무엇을 받아서 무엇을 내주는가"부터 확정한다.** 웹검색
++ data.go.kr로 다음 두 목록을 만든다 — 산문이 아니라 `doc_type` 식별자로:
+
+```
+INPUT_SCHEMA  = [이 기관이 신청인에게 요구하는 문서/데이터 목록]
+OUTPUT_SCHEMA = [이 기관이 처리 결과로 발급하는 문서/데이터 목록]
+```
+
+각 항목은 먼저 레지스트리 전체를 검색해 기존 `doc_type`(또는 `aliases`)과
+일치하는지 확인하고, 없을 때만 신규 등재한다(등재 시 `registered_by_
+sp_draft`에 이번 요청 id 기록 — 어느 SP가 이 어휘를 처음 만들었는지
+추적 가능하게). 이 단계가 끝나기 전에는 PHASE B(기존 템플릿 조회)로
+넘어가지 않는다 — I/O 스키마가 확정돼야 "이미 있는 템플릿과 같은
+기관인지"도 정확히 비교할 수 있기 때문이다.
+
 ## PHASE B. 기존 템플릿 조회 — 새로 짓기 전에 있는지부터 확인
 
 ```javascript
@@ -68,24 +94,26 @@ try {
 이 분기가 SP-AUTHOR의 존재 이유다 — `jeju-router.js`가 이미 아는 기관을
 또 새로 작성하는 중복 생산을 여기서 차단한다.
 
-## PHASE C. 역할·절차 조사 (신규 기관에 한함)
+## PHASE C. 세부 절차 조사 (신규 기관에 한함, PHASE B-0의 나머지)
 
-웹검색 + data.go.kr(인증키 등록 완료, `docs/worker_datagokr_integration_patch.md`
-참조)로 조사하되, 산문으로 녹이지 않고 `DATA_REQUIREMENT-SCHEMA` 형식으로만
-기록한다 — 확인된 것은 `connected:true`+`source_ref`, 안 된 것은
-`connected:false`+`unavailable_reason`+`fallback_contact`. 지어내지 않는다.
+PHASE B-0에서 확정한 INPUT_SCHEMA/OUTPUT_SCHEMA를 뼈대로, 그 사이를 채우는
+절차(처리기간·수수료·접수처 등)를 조사한다. 산문으로 녹이지 않고
+`DATA_REQUIREMENT-SCHEMA` 형식으로만 기록한다 — 확인된 것은
+`connected:true`+`source_ref`, 안 된 것은 `connected:false`+
+`unavailable_reason`+`fallback_contact`. 지어내지 않는다.
 
 ## PHASE D. 4대 표준 섹션 + 3종 헌법 삽입
 
 새로 작성하는 모든 기관 SP는 다음을 예외 없이 포함한다:
 
 1. **PROCEDURE** — PHASE C 결과 (DATA_REQUIREMENT 형식)
-2. **REQUIRED_USER_FIELDS** — 필요 정보/서류. Hondi 기존 스키마에 최대한
-   매핑, `min_level`(L0~L3, `DATA_REQUIREMENT-SCHEMA` 어휘 재사용)로
-   민감도 표시. L3는 `PDV-TRANSFER-PROTOCOL` §2에 따라 매 건 동의 필수로
-   자동 표시한다(SP-AUTHOR가 이 표시를 빠뜨리면 §7 검수에서 반려).
-3. **ISSUED_DOCUMENTS** — 이 기관이 발급하는 산출물 목록과 `gov_tickets`
-   컬렉션 저장 스펙.
+2. **REQUIRED_USER_FIELDS** — PHASE B-0의 `INPUT_SCHEMA`를 그대로 인용한다
+   (자유서술 재작성 금지). Hondi 기존 스키마에 최대한 매핑, `min_level`은
+   `DOCUMENT-TYPE-REGISTRY`에 등재된 값을 그대로 쓴다. L3는 `PDV-TRANSFER-
+   PROTOCOL` §2에 따라 매 건 동의 필수로 자동 표시한다(SP-AUTHOR가 이
+   표시를 빠뜨리면 §7 검수에서 반려).
+3. **ISSUED_DOCUMENTS** — PHASE B-0의 `OUTPUT_SCHEMA`를 그대로 인용한다.
+   각 `doc_type`은 `gov_tickets` 컬렉션 저장 스펙과 함께 기록한다.
 4. **AUTH_MODEL** — Ed25519 위임 서명 토큰 모델. 이 기관이 Hondi API를
    아직 받아들이지 않으면(대부분) `CAPABILITIES`에 `referral_only`로
    명시하고 자동 로그인·자동 제출을 절대 설계하지 않는다.
@@ -107,6 +135,7 @@ try {
 | reason | 조건 |
 |---|---|
 | `individual_not_institution` | PHASE A에서 개인으로 판별됨 |
+| `missing_io_schema` | PHASE B-0의 INPUT_SCHEMA/OUTPUT_SCHEMA가 `doc_type` 식별자 없이 자유서술로만 채워짐 |
 | `missing_authority_gate` | §CAPABILITIES 뒤에 G1~G5 전문이 없음 |
 | `missing_pdv_protocol_ref` | PDV/문서 통신 설계가 있는데 §3-A 참조가 없음 |
 | `field_scope_violation` | REQUIRED_USER_FIELDS 화이트리스트 밖 필드를 암묵적으로 요구 |
