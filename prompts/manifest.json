@@ -5,6 +5,7 @@
   "profile-assistant": "profile-assistant/profile-assistant-v1_0.txt",
   "SP-15-IMG_profile-scan_vision_prompt": "SP-15-IMG_profile-scan_vision_prompt_v1.0.txt",
   "SP-17_profile-classifier": "SP-17_profile-classifier_v1.0.txt",
+  "SP-18_ksearch_v1_0": "SP-18_ksearch_v1_0.txt",
   "AGENT-SUPPLIER-01": "AGENT-SUPPLIER-01_agriculture_v3.0.txt",
   "AGENT-SUPPLIER-02": "AGENT-SUPPLIER-02_forestry_v3.0.txt",
   "AGENT-SUPPLIER-03": "AGENT-SUPPLIER-03_fisheries_v3.0.txt",
