@@ -2,7 +2,7 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : 기관 입력·출력 문서유형 공통 레지스트리
 # 문서 코드  : DOCUMENT-TYPE-REGISTRY
-# 버전      : v1.4
+# 버전      : v1.5
 # 근거      : 2026-07-08 주피터님 지시 — "모든 기관은 입력과 출력이 있다.
 #             기관 프로필/SP 작성의 첫 단추는 입력·출력 파악"이라는 원칙을
 #             기계적으로 매칭 가능한 형태로 구현. 이게 없으면 "기관A의
@@ -25,6 +25,10 @@
 #             순수 선형(order)에서 DAG(depends_on)로 확장(#26·#33 병렬
 #             AND-join). GOV_TASK_BROADCAST 신설(#37 팬아웃 통지 — 체인과
 #             무관한 별도 메커니즘임을 확인).
+#             v1.5(2026-07-08): B-5 검증 결과 반영(GAP-LIST-50에서 가장
+#             중요하다고 표시했던 항목) — `task_type` 필드 신설
+#             ("application"/"appeal"), GOV_TASK_APPEAL 신설. 지금까지
+#             모든 설계가 정방향 신청만 상정했던 것을 확인.
 # 적용 대상  : SP-AUTHOR PHASE B-0(신설)이 작성하는 모든 기관 SP의
 #             INPUT_SCHEMA/OUTPUT_SCHEMA. `DATA_REQUIREMENT-SCHEMA`·
 #             `PDV-TRANSFER-PROTOCOL`의 REQUIRED_USER_FIELDS/
@@ -36,6 +40,8 @@
 #
 # 버전 변경 이력
 # ─────────────────────────────────────────────────
+# v1.5 (2026-07-08): 역방향 절차(불복·이의제기) 신설 — task_type 필드,
+#                GOV_TASK_APPEAL, sustained/dismissed 종결상태.
 # v1.4 (2026-07-08): GOV_TASK_CHAIN_PLAN을 DAG(depends_on)로 확장.
 #                GOV_TASK_BROADCAST(팬아웃 통지) 신설.
 # v1.3 (2026-07-08): §경로 해석 신설. `issuing_gov_task` 필드로
@@ -232,6 +238,34 @@ PROTOCOL §5)에 **완벽한 대조군 데이터**가 자동으로 쌓인다 —
 `PDV-TRANSFER-PROTOCOL` §3-A(기관 간 직접 전달 예외 없이 금지)를 우회하지
 않는다 — 승계 후보 판정이 "무엇을 갖고 있는지 아는 것"이라면, 실제 전송은
 여전히 §1~§3의 화이트리스트·동의 절차를 그대로 거친다.
+
+## 역방향 절차 — 불복·이의제기
+
+B-5 검증(#49 세액 부과 이의신청, 원처분기관≠심사기관)에서 확인된 것:
+지금까지 모든 GOV_TASK는 암묵적으로 `task_type="application"`(정방향
+신청) 하나만 상정했다. `gov_tickets`에 `task_type` 필드를 신설하고,
+`"appeal"`(불복·이의제기)을 두 번째 값으로 추가한다:
+
+```
+[GOV_TASK_APPEAL: disputed_decision={원처분 gov_tickets 레코드 ID,
+    doc_type=DOC-TAX-ASSESSMENT-NOTICE}, original_agency="세무서",
+  review_agency="조세심판원", grounds=..., filing_deadline={원처분
+    발급일+법정기간}]
+```
+
+**재사용되는 부분**: 다투는 대상인 원처분 문서(`disputed_decision`)는
+새로 제출받을 필요가 없다 — 이미 `gov_tickets`에 있는 기존 발급 이력이므로
+§승계 후보 판정이 그대로 적용된다. 결과 통지(인용 시 원처분기관에 정정
+반영)는 새 메커니즘이 필요 없다 — `GOV_TASK_BROADCAST`(원처분기관 1곳
+대상, 정정 통지)를 그대로 쓴다.
+
+**새로 필요한 부분**: `filing_deadline`(불복기한)은 정방향 절차에 없던
+개념이다 — 기관이 처리하는 데 걸리는 시간(G11)이 아니라, **사용자가
+행동하지 않으면 권리가 소멸하는** 시한이다. 이건 HUMAN-AUTHORITY-GATE-
+SCHEMA G14(불복기한 게이트)로 별도 신설한다.
+
+`gov_tickets`의 종결 상태에 `sustained`(인용)·`dismissed`(기각)를
+추가한다 — `denied`(정방향 절차에서 기관이 최초 거부)와는 다른 상태다.
 
 ## SP-AUTHOR와의 관계
 
