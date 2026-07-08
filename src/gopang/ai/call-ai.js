@@ -1,12 +1,18 @@
 /**
- * ai/call-ai.js — LLM API 호출·스트리밍·GWP 태그 처리 + PA 온보딩 관리 v1.1
+ * ai/call-ai.js — LLM API 호출·스트리밍·GWP 태그 처리 + profile-assistant 온보딩 관리 v2.0
  *
- * PA 온보딩 흐름:
+ * (2026-07-08: PA/personal-assistant를 profile-assistant로 개명·역할 분리.
+ *  "PA"라는 약칭은 이제 쓰지 않는다 — 프로필 작성만 다루는 SP가 됐다.)
+ *
+ * profile-assistant 온보딩 흐름:
  *   1. _buildProfileContext() — gopang_user_v4(가입 데이터) + hondi_profile_partial(진행 중 데이터)를
- *      읽어 [CONTEXT: PROFILE_ONBOARDING] 블록 생성 → PA SP에 주입
- *      → 이미 아는 항목은 PA가 다시 묻지 않음
- *   2. _callAIInner() — profile 미완료 시 PA SP 로드 + 컨텍스트 주입
- *   3. 응답 처리 — PROFILE_SUBMIT / PROFILE_SKIP / [N/6단계] 감지 → 상태 갱신 + SP 전환
+ *      읽어 [CONTEXT: PROFILE_ONBOARDING] 블록 생성 → profile-assistant SP에 주입
+ *      → 이미 아는 항목은 다시 묻지 않음
+ *   2. 호출 경로 둘 — ① settings.js 프로필 작성 패널(직접 호출)
+ *      ② AGENT-COMMON의 [CALL_PROFILE_ASSISTANT] 위임(§0-E) → 이 창의
+ *      system을 그대로 profile-assistant로 바꿔치기(_switchToProfileAssistantSP())
+ *   3. 응답 처리 — PROFILE_SUBMIT / PROFILE_SKIP / [N/6단계] 감지 → 상태 갱신 + AC로 SP 전환
+ *      / [PROFILE_INTERRUPT_HANDOFF] 감지 → 무관한 요청을 AC에게 즉시 반환
  */
 import { CFG, _modelSupportsVision, PROVIDER_INFO, getPriorityOrder, MODEL_MIGRATION } from '../core/config.js';
 import { TOKEN_BUDGET } from '../core/token-policy.js';
@@ -73,15 +79,20 @@ export async function _loadAgentCommonSP() {
   }
 }
 
-// 온보딩 PA SP (personal-assistant 계열) — 세션당 1회 캐시
-let _onboardingSpCache = null;
-export async function _loadPersonalAssistantOnboardingSP() {
-  if (_onboardingSpCache) return _onboardingSpCache;
+// profile-assistant SP (2026-07-08: personal-assistant에서 프로필 작성
+// 기능만 분리 독립 — 함수명도 개명. manifest 키도 'personal-assistant'→
+// 'profile-assistant'로 변경(build_manifest.py 참조). 세션당 1회 캐시.
+// 호출 경로 둘 다 이 함수를 공유한다: ① settings.js의 프로필 작성 패널
+// (직접 호출) ② AC의 [CALL_PROFILE_ASSISTANT] 위임(§0-E) — 아래
+// _switchToProfileAssistantSP()가 이 함수를 재사용.
+let _profileAssistantSpCache = null;
+export async function _loadProfileAssistantSP() {
+  if (_profileAssistantSpCache) return _profileAssistantSpCache;
   try {
-    _onboardingSpCache = await _loadSpByKey('personal-assistant', 'PA-Onboarding');
-    return _onboardingSpCache;
+    _profileAssistantSpCache = await _loadSpByKey('profile-assistant', 'Profile-Assistant');
+    return _profileAssistantSpCache;
   } catch (e) {
-    console.warn('[SP] PA 온보딩 SP 로드 실패 (AGENT-COMMON 사용):', e.message);
+    console.warn('[SP] profile-assistant SP 로드 실패:', e.message);
     return null;
   }
 }
@@ -245,6 +256,9 @@ export const _stripInternalTags = (text) => text
   .replace(/\[P2P_INVITE:\s*handle=@[\w.-]+(?:,\s*message=[^\]]*)?\]/g, '')
   .replace(/\[OPEN_SETTINGS_TAB\]/g, '')
   .replace(/\[OPEN_K_SERVICES_TAB\]/g, '')
+  // 2026-07-08 신설 — AC↔profile-assistant 핸드오프 태그(§0-E)
+  .replace(/\[CALL_PROFILE_ASSISTANT\]/g, '')
+  .replace(/\[PROFILE_INTERRUPT_HANDOFF\]/g, '')
   .trim();
 
 /**
@@ -254,8 +268,47 @@ export const _stripInternalTags = (text) => text
  * (webapp.html _callPanelAI) 등 다른 표면에서도 호출 가능. sendFn은 "인계
  * 안착 인사"를 어디로 보낼지 결정 — 기본값은 메인 채팅의 callAI, 패널에서
  * 호출할 때는 패널 자체의 전송 함수를 넘기면 그쪽 말풍선에 이어서 표시된다.
+ *
+ * v2.0 (2026-07-08) — userText 매개변수 추가: [PROFILE_INTERRUPT_HANDOFF]
+ * 처리 시 "방금 사용자가 한 말"을 AC에게 그대로 재전달해야 하는데, 이
+ * 함수는 fullReply(AI 응답)만 받고 있어서 그 원문에 접근할 방법이
+ * 없었다. 호출부(_callAIInner)는 이미 userText를 갖고 있으므로 그대로
+ * 넘겨받는다 — 기본값 ''은 하위 호환용(다른 호출부가 안 넘겨도 에러 안 남).
  */
-export async function _handleProfileTags(fullReply, bubble, sendFn = callAI) {
+export async function _handleProfileTags(fullReply, bubble, sendFn = callAI, userText = '') {
+  // ── CALL_PROFILE_ASSISTANT — AC가 프로필 작성/수정으로 바톤 전달 (v2.0 신설, §0-E) ──
+  // AGENT-COMMON의 출력에서만 나오는 태그이지만, 이 함수는 모든 응답 뒤에
+  // 공통으로 호출되므로 여기서 함께 감지한다(어느 SP가 활성 상태든 상관없이
+  // 동일한 디스패처를 거치는 기존 구조와 일관성 유지).
+  if (fullReply.includes('[CALL_PROFILE_ASSISTANT]')) {
+    console.log('[Profile] CALL_PROFILE_ASSISTANT 감지 — profile-assistant로 전환');
+    if (bubble) {
+      const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+      if (_usb) _usb(bubble, _stripInternalTags(fullReply));
+    }
+    history.length = 0;
+    await _switchToProfileAssistantSP();
+    await _triggerProfileAssistantHandoff(sendFn);
+    return true;
+  }
+
+  // ── PROFILE_INTERRUPT_HANDOFF — profile-assistant가 무관한 요청을 받아
+  // AC로 즉시 반환 (v2.0 신설, profile-assistant SP §PROFILE-INTERRUPT-HANDOFF) ──
+  if (fullReply.includes('[PROFILE_INTERRUPT_HANDOFF]')) {
+    console.log('[Profile] PROFILE_INTERRUPT_HANDOFF 감지 — AGENT-COMMON으로 즉시 복귀');
+    if (bubble) {
+      const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+      if (_usb) _usb(bubble, _stripInternalTags(fullReply));
+    }
+    history.length = 0;
+    await _switchToAssistantSP();
+    // 원래 사용자 발화를 AC에게 그대로 재전달 — 사용자가 같은 말을
+    // 두 번 입력할 필요가 없도록. userText가 없으면(예: 내부 인계
+    // 신호 자체가 무관 판정된 극히 예외적 경우) 조용히 건너뛴다.
+    if (userText) await sendFn(userText);
+    return true;
+  }
+
   // ── FIRST_GREETED — PHASE -1 최초 인사 완료 (v1.3) ──────────
   if (fullReply.includes('[FIRST_GREETED]')) {
     console.log('[Profile] FIRST_GREETED 감지 — 최초 인사 완료');
@@ -429,6 +482,49 @@ async function _switchToAssistantSP() {
     console.log('[Profile] AGENT-COMMON SP로 전환 완료');
   } catch (e) {
     console.warn('[Profile] SP 전환 실패 (무시):', e.message);
+  }
+}
+
+/**
+ * _switchToProfileAssistantSP — profile-assistant SP를 CFG.system_base /
+ * CFG.system에 적용 (2026-07-08 신설, §0-E). AGENT-COMMON이
+ * [CALL_PROFILE_ASSISTANT]를 출력한 직후 호출됩니다. _switchToAssistantSP()의
+ * 반대 방향 — 구조는 동일(system_base/system 교체 + localStorage 저장),
+ * 대상만 다르다.
+ */
+async function _switchToProfileAssistantSP() {
+  try {
+    CFG.system_base = await _loadProfileAssistantSP();
+    if (!CFG.system_base) throw new Error('profile-assistant SP 로드 결과 비어있음');
+    CFG.system = CFG.system_base;
+    try {
+      const cfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
+      cfg.system = CFG.system;
+      cfg.system_base = CFG.system_base;
+      localStorage.setItem('gopang_cfg', JSON.stringify(cfg));
+    } catch {}
+    console.log('[Profile] profile-assistant SP로 전환 완료');
+  } catch (e) {
+    console.warn('[Profile] profile-assistant SP 전환 실패 (무시):', e.message);
+  }
+}
+
+/**
+ * _triggerProfileAssistantHandoff — AC→profile-assistant 전환 직후, 사용자
+ * 입력 없이 내부 인계 신호를 한 번 보내 profile-assistant가 곧바로
+ * PHASE 0부터 이어가도록 한다(2026-07-08 신설). _triggerSeamlessHandoff와
+ * 대칭 구조(반대 방향) — AC는 이미 프로필 작성 취지를 설명하고 동의를
+ * 받은 뒤이므로, profile-assistant는 재인사하지 않고 바로 시작해야 한다.
+ */
+async function _triggerProfileAssistantHandoff(sendFn = callAI) {
+  try {
+    const handoff = `[INTERNAL: AGENT-COMMON→profile-assistant 인계 — 사용자에게 ` +
+      `보이지 않는 내부 신호입니다. AC가 이미 프로필 작성 취지를 설명했고 ` +
+      `사용자가 방금 동의했습니다. 재인사하지 말고, [CONTEXT]를 읽어 PHASE 0 ` +
+      `분기부터 자연스럽게 이어서 시작하세요.]`;
+    await sendFn(handoff);
+  } catch (e) {
+    console.warn('[Profile] profile-assistant 핸드오프 트리거 실패(무시 — 다음 사용자 메시지에서 정상 처리됨):', e.message);
   }
 }
 
@@ -1399,12 +1495,15 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     if (bubble) bubble.classList.remove('streaming');
 
 
-    // ── PROFILE 태그 처리 (SUBMIT / SKIP / 단계 업데이트 / 최초 인사·이름짓기) ──
-    // v1.6 — PROFILE_SUBMIT/SKIP/[N/4단계]는 이제 settings.js의 프로필 작성
-    // 패널(PA SP)에서만 나온다. 메인 채팅/AI 패널(AGENT-COMMON)에서는 보통
-    // FIRST_GREETED/NAME_CAPTURED만 감지된다 — 둘 다 같은 함수가 공통 처리.
-    // SUBMIT/SKIP 감지 시 history 초기화 + SP 전환 후 true 반환 → 후속 처리 생략.
-    const _profileHandled = await _handleProfileTags(fullReply, bubble);
+    // ── PROFILE 태그 처리 (SUBMIT / SKIP / 단계 업데이트 / 최초 인사·이름짓기 /
+    //    CALL_PROFILE_ASSISTANT / PROFILE_INTERRUPT_HANDOFF) ──
+    // v2.0(2026-07-08) — CALL_PROFILE_ASSISTANT는 AGENT-COMMON 쪽에서,
+    // PROFILE_INTERRUPT_HANDOFF는 profile-assistant 쪽에서 나온다. 나머지는
+    // 이전과 동일하게 profile-assistant SP에서만 나온다. 어느 SP가 활성
+    // 상태든 이 함수 하나가 공통 처리한다.
+    // SUBMIT/SKIP/CALL_PROFILE_ASSISTANT/PROFILE_INTERRUPT_HANDOFF 감지 시
+    // history 초기화 + SP 전환 후 true 반환 → 후속 처리 생략.
+    const _profileHandled = await _handleProfileTags(fullReply, bubble, callAI, userText);
     if (_profileHandled) return;
 
     // ── §9 실행 태그 공용 디스패처 (Phase 0) ────────────────

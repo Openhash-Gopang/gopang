@@ -264,10 +264,14 @@ export function _modelSupportsVision(model) {
 // 설계 원칙(2026-06-22 합의):
 //   1) 그림자(_ai)가 존재하면: Worker에서 그 Profile을 fresh fetch → system_prompt 사용
 //      (profile.html이 B의 Profile에서 system_prompt를 가져오는 것과 동일한 메커니즘)
-//   2) 그림자 없음(온보딩 미완료): manifest['personal-assistant'] 키로 최신 SP 로드
+//   2) 그림자 없음(온보딩 미완료): manifest['profile-assistant'] 키로 최신 SP 로드
 // 영구 localStorage 캐시 제거 — 매 세션 fresh fetch로 통일(갱신 자동 반영)
 // ※ 버전 갱신 시 SP 파일 추가 후 git push — CI가 manifest를 자동 갱신
-// PA SP 파일명은 manifest.json['personal-assistant'] 에서 결정
+// SP 파일명은 manifest.json['profile-assistant'] 에서 결정
+// (2026-07-08: manifest 키를 'personal-assistant'→'profile-assistant'로
+//  개명 — 프로필 작성 기능만 다루는 별도 SP로 분리됐다. 함수명
+//  loadPersonalAssistantSP는 welcome.js 등 기존 호출부와의 호환을 위해
+//  그대로 유지한다 — 내부에서 참조하는 manifest 키만 바뀐다.)
 const _SP_BASE_CFG = '/prompts/';
 const _PROXY_URL = 'https://hondi-proxy.tensor-city.workers.dev';
 let _paSPLoaded = false;
@@ -324,15 +328,15 @@ export async function loadPersonalAssistantSP() {
     }
   }
 
-  // 4) 폴백: manifest.json['personal-assistant'] 키로 버전 결정 후 온보딩 SP 로드
+  // 4) 폴백: manifest.json['profile-assistant'] 키로 버전 결정 후 온보딩 SP 로드
   //    (*-LATEST.txt 포인터 방식은 폐기됨 — manifest 단일 체계로 통일)
   //    localStorage 영구 캐시 금지 — 항상 fresh fetch (그림자가 생기면 자동 전환됨)
   try {
     const manifestRes = await fetch(_SP_BASE_CFG + 'manifest.json', { cache: 'no-cache' });
     if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
     const manifest = await manifestRes.json();
-    const fname = manifest['personal-assistant'];
-    if (!fname) throw new Error('manifest 에 personal-assistant 키 없음');
+    const fname = manifest['profile-assistant'];
+    if (!fname) throw new Error('manifest 에 profile-assistant 키 없음');
     const res = await fetch(_SP_BASE_CFG + fname, { cache: 'no-cache' });
     if (res.ok) {
       const sp = await res.text();
@@ -343,11 +347,11 @@ export async function loadPersonalAssistantSP() {
         //   (catch에 잡혀 "SP 로드 실패"로 오인되는 로그가 남았으나, 위에서
         //   CFG.system은 이미 정상적으로 설정된 뒤였음 — 동작엔 영향 없었지만
         //   디버깅을 방해했음). fname으로 정정.
-        console.info('[SP] PA SP 로드 완료:', fname, sp.length, 'chars');
+        console.info('[SP] profile-assistant SP 로드 완료:', fname, sp.length, 'chars');
       }
     }
   } catch (e) {
-    console.error('[SP] personal-assistant SP 로드 실패:', e.message);
+    console.error('[SP] profile-assistant SP 로드 실패:', e.message);
   }
   _paSPLoaded = true;
   if (!CFG.system) {
@@ -355,7 +359,7 @@ export async function loadPersonalAssistantSP() {
     // 반환했다. 이제 정본이 없으면 명확히 실패한다 — 유일한 호출부인
     // welcome.js가 이미 try/catch로 감싸고 있어 사용자에게 오류 버블을
     // 보여준다.
-    throw new Error('personal-assistant SP를 어디서도 불러오지 못했습니다');
+    throw new Error('profile-assistant SP를 어디서도 불러오지 못했습니다');
   }
   return CFG.system;
 }

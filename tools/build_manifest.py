@@ -8,7 +8,10 @@ CI(GitHub Actions)가 push 마다 실행 — 개발자는 SP 파일만 추가하
 ■ manifest 키 규칙
   · "AGENT-COMMON"          → prompts/AGENT-COMMON_*.txt 중 최신
   · "SP-00-ROUTER"          → prompts/SP-00-ROUTER-v*.txt 중 최신
-  · "personal-assistant"    → prompts/personal-assistant/personal-assistant-v*.txt 중 최신
+  · "profile-assistant"     → prompts/profile-assistant/profile-assistant-v*.txt 중 최신
+                               (2026-07-08: personal-assistant에서 개명·분리 — 프로필
+                               작성 기능만 다루는 SP. 구 폴더 prompts/personal-assistant/
+                               는 더 이상 스캔하지 않음 — 죽은 폴더로 남음, 수동 정리 대상)
   · "SP-NN_slug"            → prompts/SP-NN_slug_v*.txt 중 최신
                                같은 번호라도 slug 가 다르면 독립 키 (SP-14 중복 대응)
   · "AGENT-SUPPLIER-NN"     → prompts/AGENT-SUPPLIER-NN_*.txt 중 최신
@@ -85,16 +88,17 @@ visitor_files = [
 if visitor_files:
     manifest['HONDI_VISITOR_SP'] = best(visitor_files)
 
-# 3) personal-assistant — prompts/personal-assistant/personal-assistant-vX.Y.txt
-pa_dir = PROMPTS / 'personal-assistant'
+# 3) profile-assistant — prompts/profile-assistant/profile-assistant-vX.Y.txt
+#    (2026-07-08: personal-assistant → profile-assistant 개명·분리)
+pa_dir = PROMPTS / 'profile-assistant'
 if pa_dir.is_dir():
     pa_files = [
         f.name for f in pa_dir.iterdir()
-        if re.match(r'^personal-assistant-v', f.name) and f.name.endswith('.txt')
+        if re.match(r'^profile-assistant-v', f.name) and f.name.endswith('.txt')
     ]
     if pa_files:
         # 값은 하위 디렉터리 포함 경로로 저장
-        manifest['personal-assistant'] = 'personal-assistant/' + best(pa_files)
+        manifest['profile-assistant'] = 'profile-assistant/' + best(pa_files)
 
 # 4) SP-NN 계열 — prompts/SP-NN_slug_vX.Y.txt
 sp_groups: dict[str, list[str]] = defaultdict(list)

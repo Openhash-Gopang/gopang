@@ -1076,19 +1076,20 @@ export function openProfileComposer() {
  * _callComposerAI — 프로필 작성 패널 전용 LLM 호출.
  *
  * 메인 채팅(call-ai.js의 callAI)과 완전히 분리된 _composerHistory를 쓰고,
- * system은 항상 PA SP(personal-assistant)다. _callLLM(범용 페일오버+스트리밍
+ * system은 항상 profile-assistant SP다(2026-07-08: personal-assistant에서
+ * 개명·분리 — 프로필 작성만 다루는 SP). _callLLM(범용 페일오버+스트리밍
  * 헬퍼)을 재사용해 fetch/후보선정 로직을 중복 구현하지 않는다.
  *
  * @returns {Promise<boolean>} true면 PROFILE_SUBMIT/SKIP으로 이 세션이 끝남
  */
 async function _callComposerAI(userText, bubble) {
   const {
-    _loadPersonalAssistantOnboardingSP, _buildProfileContext,
+    _loadProfileAssistantSP, _buildProfileContext,
     _handleProfileTags, _stripInternalTags, _callLLM,
   } = await import('../ai/call-ai.js');
 
   if (_composerHistory.length === 0) {
-    const sys = await _loadPersonalAssistantOnboardingSP();
+    const sys = await _loadProfileAssistantSP();
     _composerHistory.push({ role: 'system', content: sys || '' });
   }
 
