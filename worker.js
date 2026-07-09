@@ -980,6 +980,40 @@ async function _l1CreateAtomRow(env, record) {
   return res.json();
 }
 
+// ★ 2026-07-09 추가 — N-08 통합테스트에서 발견된 구멍을 메운다.
+// draft로 심은 org_profiles/atom_rows는 항상 pending_review로 시작하는데
+// (핸들러가 이미 그렇게 강제함), 그걸 active로 승격할 방법이 procedure_maps
+// 와 달리 없어서 관리자 패널 수동 조작에 의존해야 했다. _l1PatchProcedureMap
+// 과 동일 패턴으로 채운다.
+
+async function _l1PatchOrgProfile(env, recordId, patch) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/org_profiles/records/${recordId}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`org_profiles PATCH 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+async function _l1PatchAtomRow(env, recordId, patch) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/atom_rows/records/${recordId}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`atom_rows PATCH 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
 // ── 오케스트레이션 HTTP 핸들러 (2026-07-08 신설) ────────────────────
 // status:active인 항목만 실제 라우팅에 안전하게 쓸 수 있다고 간주한다
 // — draft/pending_review는 조회는 되지만 호출자(K-Compose)가 이용자에게
@@ -1175,6 +1209,59 @@ async function handleAtomRowDraft(request, env, corsHeaders) {
       status: 'pending_review', // ★ 절대 draft 생성 시점에 active로 두지 않는다
     });
     return new Response(JSON.stringify({ status: 'created', id: rec.id }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+// POST /orchestration/org-profile/update  (body: {org_id, changes: [{field, value}, ...]})
+// handleProcedureMapUpdate와 동일한 changes-배열 PATCH 형태. org_profiles는
+// procedure_maps의 'steps'처럼 뚜렷한 "구조 변경 필드"가 없어서 자동
+// pending_review 강등 로직은 두지 않는다 — status 전이는 항상 changes에
+// status 필드를 명시적으로 넣어야만 일어난다(승인자가 의도적으로 눌러야
+// active가 된다는 원칙 유지, 부수효과로 승격되지 않음).
+async function handleOrgProfileUpdate(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  if (!payload.org_id) return new Response(JSON.stringify({ error: 'org_id required' }), { status: 400, headers: corsHeaders });
+
+  const existing = await _l1FindOrgProfile(env, payload.org_id).catch(() => null);
+  if (!existing) return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: corsHeaders });
+
+  const patch = {};
+  for (const change of (payload.changes || [])) {
+    patch[change.field] = change.value;
+  }
+  patch.as_of_date = new Date().toISOString().slice(0, 10);
+
+  try {
+    const rec = await _l1PatchOrgProfile(env, existing.id, patch);
+    return new Response(JSON.stringify({ status: 'updated', record: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+// POST /orchestration/atom-row/update  (body: {atom_id, changes: [{field, value}, ...]})
+// atom_rows도 org_profiles와 같은 원칙 — 자동 강등 없음, status 전이는
+// changes에 명시해야만 일어난다. atom_rows 스키마에는 as_of_date가 없어서
+// (procedure_maps/org_profiles와 달리) 자동 갱신 필드도 없다.
+async function handleAtomRowUpdate(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  if (!payload.atom_id) return new Response(JSON.stringify({ error: 'atom_id required' }), { status: 400, headers: corsHeaders });
+
+  const existing = await _l1FindAtomRow(env, payload.atom_id).catch(() => null);
+  if (!existing) return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: corsHeaders });
+
+  const patch = {};
+  for (const change of (payload.changes || [])) {
+    patch[change.field] = change.value;
+  }
+
+  try {
+    const rec = await _l1PatchAtomRow(env, existing.id, patch);
+    return new Response(JSON.stringify({ status: 'updated', record: rec }), { headers: corsHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
   }
@@ -1525,8 +1612,12 @@ export default {
       return handleOrgProfileLookup(request, env, corsHeaders);
     if (pathname === '/orchestration/org-profile/draft' && request.method === 'POST')
       return handleOrgProfileDraft(request, env, corsHeaders);
+    if (pathname === '/orchestration/org-profile/update' && request.method === 'POST')
+      return handleOrgProfileUpdate(request, env, corsHeaders);
     if (pathname === '/orchestration/atom-row/draft' && request.method === 'POST')
       return handleAtomRowDraft(request, env, corsHeaders);
+    if (pathname === '/orchestration/atom-row/update' && request.method === 'POST')
+      return handleAtomRowUpdate(request, env, corsHeaders);
     if (pathname === '/orchestration/execute-atom' && request.method === 'POST')
       return handleExecuteAtom(request, env, corsHeaders);
 

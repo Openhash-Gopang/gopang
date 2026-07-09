@@ -230,9 +230,68 @@ describe('N-08: 방금 심은 atom은 execute-atom에서 바로 실행되면 안
     const exec = await call('/orchestration/execute-atom', {
       method: 'POST', body: { atom_id: 'fresh-atom', atom_input: {} },
     });
-    assert.equal(exec.json.status, 'not_active',
-      '★ 발견: atom_rows에는 procedure_maps 같은 /update 승격 엔드포인트가 없다 — ' +
-      'pending_review → active로 올릴 방법이 관리자 패널 수동 조작뿐이다');
+    assert.equal(exec.json.status, 'not_active');
+  });
+
+  it('★ 2026-07-09 메움: atom-row/update로 active 승격 후에는 execute-atom이 정상 실행됨', async () => {
+    await call('/orchestration/atom-row/draft', {
+      method: 'POST', body: { atom_id: 'promotable-atom', pattern: 'QUERY' },
+    });
+    const notYet = await call('/orchestration/execute-atom', {
+      method: 'POST', body: { atom_id: 'promotable-atom' },
+    });
+    assert.equal(notYet.json.status, 'not_active', '승격 전에는 여전히 막혀야 함');
+
+    const updated = await call('/orchestration/atom-row/update', {
+      method: 'POST',
+      body: { atom_id: 'promotable-atom', changes: [{ field: 'status', value: 'active' }] },
+    });
+    assert.equal(updated.status, 200);
+    assert.equal(updated.json.status, 'updated');
+    assert.equal(updated.json.record.status, 'active');
+
+    const nowExec = await call('/orchestration/execute-atom', {
+      method: 'POST', body: { atom_id: 'promotable-atom' },
+    });
+    assert.equal(nowExec.json.status, 'requires_user_action', '승격 후에는 실제 패턴 로직까지 도달해야 함');
+    assert.equal(nowExec.json.pattern, 'QUERY');
+  });
+
+  it('atom-row/update — 존재하지 않는 atom_id는 404', async () => {
+    const { status, json } = await call('/orchestration/atom-row/update', {
+      method: 'POST', body: { atom_id: 'no-such-atom', changes: [{ field: 'status', value: 'active' }] },
+    });
+    assert.equal(status, 404);
+    assert.equal(json.error, 'not found');
+  });
+});
+
+describe('N-16: org-profile/update — 승격 + 일반 필드 갱신, as_of_date 자동 갱신', () => {
+  it('changes로 status를 active로 올리고 as_of_date가 오늘 날짜로 갱신됨', async () => {
+    await call('/orchestration/org-profile/draft', {
+      method: 'POST', body: { org_id: 'promotable-org', org_name: '원래이름', branch: 'admin_local' },
+    });
+    const today = new Date().toISOString().slice(0, 10);
+
+    const updated = await call('/orchestration/org-profile/update', {
+      method: 'POST',
+      body: {
+        org_id: 'promotable-org',
+        changes: [{ field: 'status', value: 'active' }, { field: 'org_name', value: '검토후이름' }],
+      },
+    });
+    assert.equal(updated.status, 200);
+    assert.equal(updated.json.record.status, 'active');
+    assert.equal(updated.json.record.org_name, '검토후이름');
+    assert.equal(updated.json.record.as_of_date, today);
+  });
+
+  it('org-profile/update — 존재하지 않는 org_id는 404', async () => {
+    const { status, json } = await call('/orchestration/org-profile/update', {
+      method: 'POST', body: { org_id: 'no-such-org', changes: [] },
+    });
+    assert.equal(status, 404);
+    assert.equal(json.error, 'not found');
   });
 });
 
