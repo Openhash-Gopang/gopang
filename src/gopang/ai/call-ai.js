@@ -28,7 +28,8 @@ import { inviteByHandle } from '../ui/p2p-chat.js';
 import { _openProfilePanel } from '../ui/settings.js';
 import { _gwpLaunch } from '../gwp/engine.js';
 import { maybeHandleExpertTurn, applyExpertSystemIfActive,
-         isExpertActive, handleExpertTag } from './expert-session.js';
+         isExpertActive, handleExpertTag, _composeExpertPrompt } from './expert-session.js';
+import { getExpertDef, resolveExpertId } from './expert-registry.js';
 import { buildHondiFaqContext } from './hondi-faq-router.js';
 
 
@@ -37,12 +38,27 @@ export let history_ref = history;  // 외부 참조용
 // ── manifest 기반 SP 로더 ────────────────────────────────────────────
 // prompts/manifest.json 은 CI 빌드 시 tools/build_manifest.py 가 자동 생성.
 // *-LATEST.txt 포인터 파일 방식을 완전 대체 — manifest 단일 체계로 통일.
-// 2026-07-09: _loadManifest()/_loadSpByKey() 실제 정의는 manifest-loader.js로
-// 이전(expert-session.js와 공유하기 위함 — 순환 참조 방지, 그 파일 헤더 주석
-// 참조). 이 파일은 재수출(re-export)만 한다 — 기존 import 하던 다른 파일이
-// 있으면 깨지지 않도록.
-export { _loadManifest, _loadSpByKey } from './manifest-loader.js';
-import { _loadSpByKey } from './manifest-loader.js';
+const _SP_BASE = '/prompts/';
+let _manifestCache = null;
+
+async function _loadManifest() {
+  if (_manifestCache) return _manifestCache;
+  const res = await fetch(_SP_BASE + 'manifest.json', { cache: 'no-cache' });
+  if (!res.ok) throw new Error('manifest fetch 실패: ' + res.status);
+  _manifestCache = await res.json();
+  return _manifestCache;
+}
+
+async function _loadSpByKey(manifestKey, label) {
+  const manifest = await _loadManifest();
+  const fname = manifest[manifestKey];
+  if (!fname) throw new Error(`${label} manifest 키 없음: ${manifestKey}`);
+  const res = await fetch(_SP_BASE + fname);
+  if (!res.ok) throw new Error(`${label} SP 로드 실패: ${res.status} (${fname})`);
+  const sp = await res.text();
+  console.info(`[SP] ${label} 로드 완료: ${fname} (${sp.length} chars)`);
+  return sp;
+}
 
 // AGENT-COMMON (그림자 AI) — 세션당 1회 캐시
 let _agentCommonCache = null;
@@ -117,6 +133,22 @@ export async function _loadKDeliverSP() {
     return _kDeliverSpCache;
   } catch (e) {
     console.warn('[Orchestration] K-Deliver SP 로드 실패:', e.message);
+    return null;
+  }
+}
+// K-Search(SP-18) 로더 — 2026-07-09 신설. §0-F(AGENT-COMMON)가 오래전부터
+// [KSEARCH_HANDOFF]를 문서화하고 있었지만, 실제 로더가 없어 이 태그
+// 자체가 조용히 실패하는 상태였다(K-Compose의 nested 호출 스텁이
+// `import('./call-ai.js')`로 자기 자신을 재귀 import해 존재하지도 않는
+// 이름을 찾던 것도 이 공백의 증상이었다 — 아래에서 함께 정리).
+let _kSearchSpCache = null;
+export async function _loadKSearchSP() {
+  if (_kSearchSpCache) return _kSearchSpCache;
+  try {
+    _kSearchSpCache = await _loadSpByKey('SP-18_ksearch', 'K-Search');
+    return _kSearchSpCache;
+  } catch (e) {
+    console.warn('[Orchestration] K-Search SP 로드 실패:', e.message);
     return null;
   }
 }
@@ -326,7 +358,31 @@ export function _buildProfileContext() {
  */
 // v1.3 — export: 내부 전용 태그를 화면에서 제거하는 헬퍼. 모듈 스코프로 끌어올려
 // AI 패널(webapp.html) 등 _handleProfileTags를 거치지 않는 경로에서도 재사용 가능.
-export const _stripInternalTags = (text) => text
+// 2026-07-09 신설 — steps=[...] 같은 중첩 배열/객체를 값으로 갖는 태그는
+// 단순 정규식([^\]]*)으로 안전하게 못 지운다(배열 안쪽 첫 ']'에서 멈춰
+// 태그 뒷부분이 그대로 노출되는 버그가 실제로 있었다). 대괄호 깊이를
+// 세어 정확한 짝을 찾는 헬퍼를 별도로 둔다.
+function _stripBracketTag(text, tagName) {
+  let out = text;
+  let idx;
+  while ((idx = out.indexOf(`[${tagName}:`)) !== -1) {
+    let depth = 0, end = -1;
+    for (let i = idx; i < out.length; i++) {
+      if (out[i] === '[') depth++;
+      else if (out[i] === ']') {
+        depth--;
+        if (depth === 0) { end = i + 1; break; }
+      }
+    }
+    if (end === -1) break; // 짝이 안 맞으면(응답이 잘림 등) 더 이상 진행 안 함
+    out = out.slice(0, idx) + out.slice(end);
+  }
+  return out;
+}
+
+export const _stripInternalTags = (text) => _stripBracketTag(
+  _stripBracketTag(_stripBracketTag(text,
+    'PROCEDURE_MAP_DRAFT'), 'PROCEDURE_MAP_UPDATE'), 'KSEARCH_CANDIDATES')
   .replace(/PROFILE_SUBMIT\s*\{[\s\S]*?\n\}/, '')
   .replace(/\[PARTIAL_SAVE\]\s*\{[\s\S]*?\}/g, '')
   .replace(/\[\d+\/\d+단계\]/g, '')
@@ -359,8 +415,17 @@ export const _stripInternalTags = (text) => text
   .replace(/\[ORCHESTRATION_HANDOFF_BACK:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_SUBTASK_RESULT:[^\]]*\]/g, '')
   .replace(/\[PROCEDURE_MAP_LOOKUP:[^\]]*\]/g, '')
-  .replace(/\[PROCEDURE_MAP_DRAFT:[^\]]*\]/g, '')
-  .replace(/\[PROCEDURE_MAP_UPDATE:[^\]]*\]/g, '')
+  // 2026-07-09 정정 — DRAFT/UPDATE·KSEARCH_CANDIDATES는 steps=[...] 같은
+  // 중첩 배열을 값으로 가져 위 _stripBracketTag()가 이미 먼저 처리했다
+  // (이 체인에 들어오기 전에 적용됨) — 여기서 다시 정규식으로 지우지
+  // 않는다(이중 처리 방지).
+  // 2026-07-09 신설 — K-Search 계열 태그(§0-F, 지금까지 strip 목록에
+  // 빠져 있어 K-Search가 실제로 응답하면 사용자에게 대괄호 태그 원문이
+  // 그대로 노출될 뻔했다).
+  .replace(/\[KSEARCH_HANDOFF:[^\]]*\]/g, '')
+  .replace(/\[KSEARCH_RESULT:[^\]]*\]/g, '')
+  .replace(/\[KSEARCH_CLARIFY:[^\]]*\]/g, '')
+  .replace(/\[KSEARCH_HANDOFF_BACK:[^\]]*\]/g, '')
   .trim();
 
 /**
@@ -612,9 +677,9 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     return true;
   }
 
-  // ── K-Compose 내부에서의 중첩 위임(nested) — K-Search ──
+  // ── K-Search 위임 — 두 갈래(§0-F 최상위 vs K-Compose 중첩) ──
   // 기존 [KSEARCH_HANDOFF]는 AC 전용으로 설계됐었지만(§0-F), K-Compose도
-  // 동일 태그를 재사용한다(RULE-06 그대로). 다만 AC에서 나올 때는 forward
+  // 동일 태그를 재사용한다(RULE-06 그대로). AC에서 나올 때는 forward
   // (K-Search 완료 후 AC로 안 돌아가고 K-Search가 직접 이용자와 계속
   // 주고받다가 필요시 결과만 통보), K-Compose에서 나올 때는 반드시
   // K-Compose로 복귀해야 하므로 push를 쓴다 — 현재 활성 SP가 K-Compose
@@ -624,13 +689,22 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     console.log('[Orchestration] K-Compose 내부 KSEARCH_HANDOFF 감지 — 위임(push) 전환');
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
-    await _pushAndSwitchSP(async () => {
-      const { _loadKSearchSP } = await import('./call-ai.js').catch(() => ({}));
-      return _loadKSearchSP ? _loadKSearchSP() : null; // ★ K-Search 로더 자체가
-      // 아직 미구현(★ 별도 과제 — §0-F 문서에 이미 명시된 기존 공백★)이므로
-      // 이 시점엔 null이 반환되고 _pushAndSwitchSP가 안전하게 실패 처리한다.
-    }, 'K-Search');
+    await _pushAndSwitchSP(_loadKSearchSP, 'K-Search');
     await sendFn(`[INTERNAL: K-Compose→K-Search 위임 — 조회 후 결과를 반환하세요: ${kSearchMatch[1].trim()}]`);
+    return true;
+  }
+  if (kSearchMatch) {
+    // 2026-07-09 신설 — §0-F가 오래전부터 문서화하고 있었지만 실제
+    // 로더·전환 로직이 없어 AC가 이 태그를 내도 아무 일도 안 일어나던
+    // 공백을 해소한다(최상위 경로, K-Compose를 거치지 않은 AC 자체
+    // 판단). forward 전환 — K-Search가 이후 이용자와 직접 주고받다가
+    // 필요할 때만 AC로 돌아온다(아래 "K-Search 최상위 결과 반환" 참조).
+    console.log('[Orchestration] AC 최상위 KSEARCH_HANDOFF 감지 — K-Search로 전달 전환');
+    await _updateBubble(_stripInternalTags(fullReply));
+    history.length = 0;
+    await _forwardSwitchSP(_loadKSearchSP, 'K-Search');
+    await sendFn(`[INTERNAL: AC→K-Search 위임 — 사용자에게 보이지 않는 내부 신호입니다. ` +
+      `다음 발화를 그대로 이어받아 대상을 특정하세요: "${kSearchMatch[1].trim()}"]`);
     return true;
   }
 
@@ -643,11 +717,18 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     history.length = 0;
     const personaId = kExpertSubtaskMatch[1];
     await _pushAndSwitchSP(async () => {
-      const { getExpertGwpDef, resolveExpertId } = await import('../services/expert-registry.js').catch(() => ({}));
-      if (!getExpertGwpDef || !resolveExpertId) return null;
+      // 2026-07-09 정정 — getExpertGwpDef(새 탭 URL 빌더, .url만 반환)와
+      // .systemPromptLoader라는 존재하지 않는 필드를 쓰던 버그를 고쳤다.
+      // 실제로 필요한 건 getExpertDef(원본 def 객체, .key 보유)이고,
+      // EXPERT 프롬프트는 페르소나 파일 하나만이 아니라 UNIVERSAL-
+      // INTEGRITY+공통가드레일(+의료안전모듈)까지 합성해야 하므로
+      // expert-session.js의 _composeExpertPrompt()를 그대로 재사용한다
+      // (로직 중복 구현 방지 — 그 파일 상단 2026-07-09 주석 참조).
       const resolvedId = resolveExpertId(personaId);
-      const def = getExpertGwpDef(resolvedId);
-      return def?.systemPromptLoader ? def.systemPromptLoader() : null;
+      if (!resolvedId) return null;
+      const def = getExpertDef(resolvedId);
+      if (!def) return null;
+      return _composeExpertPrompt(def);
     }, `EXPERT:${personaId}`);
     await sendFn(`[INTERNAL: K-Compose→EXPERT(${personaId}) 위임(scope=orchestration_subtask) — ` +
       `STEP 0-(-1)을 따라 전체 파이프라인을 생략하고 다음 질문에만 짧게 답하세요: ` +
@@ -658,9 +739,12 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
 
   // ── 중첩 위임 완료 → 스택 복귀(pop) ──
   // K-Search·EXPERT(scope=orchestration_subtask) 세션이 각자의 결과 태그를
-  // 냈을 때, K-Compose로 정확히 복귀한다.
+  // 냈을 때, K-Compose로 정확히 복귀한다. 스택이 비어 있으면(=K-Compose를
+  // 거치지 않고 AC가 직접 K-Search를 부른 최상위 경로) 아래 "K-Search
+  // 최상위 결과 반환" 블록이 대신 처리한다.
   const subtaskResultMatch = fullReply.match(/\[ORCHESTRATION_SUBTASK_RESULT:([^\]]*)\]/);
   const kSearchResultMatch = fullReply.match(/\[KSEARCH_RESULT:([^\]]*)\]/);
+  const kSearchHandoffBackMatch = fullReply.match(/\[KSEARCH_HANDOFF_BACK:\s*reason=(\w+)\]/);
   if ((subtaskResultMatch || kSearchResultMatch) && CFG.systemStack?.length > 0) {
     console.log('[Orchestration] 중첩 위임 결과 감지 — K-Compose로 스택 복귀(pop)');
     await _updateBubble(_stripInternalTags(fullReply));
@@ -670,6 +754,29 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await sendFn(`[INTERNAL: 위임 결과 수신 — 다음 결과를 이어받아 진행하세요: ${resultPayload}]`);
     return true;
   }
+
+  // ── K-Search 최상위 결과 반환 — AC로 forward 복귀 (2026-07-09 신설) ──
+  // §0-F: "K-Search가 대상을 확정하면 [KSEARCH_RESULT: ...]로 나에게
+  // 돌아옵니다" / "[KSEARCH_HANDOFF_BACK: reason=...]으로 즉시 돌려보내면
+  // 그 사유대로 처리합니다". 스택이 비어 있다는 건 AC가 직접 부른
+  // 최상위 호출이었다는 뜻이므로(K-Compose 경유였다면 위에서 이미 pop
+  // 처리됨), K-Search를 다시 쓸 일이 없어 forward로 AC에 되돌린다.
+  if ((kSearchResultMatch || kSearchHandoffBackMatch) && CFG.system?.includes('K-Search')
+      && !(CFG.systemStack?.length > 0)) {
+    console.log('[Orchestration] AC 최상위 K-Search 결과/반환 감지 — AC로 전달 전환');
+    await _updateBubble(_stripInternalTags(fullReply));
+    history.length = 0;
+    await _forwardSwitchSP(_loadAgentCommonSP, 'AGENT-COMMON');
+    const payload = kSearchResultMatch ? kSearchResultMatch[1].trim()
+      : `reason=${kSearchHandoffBackMatch[1]}`;
+    await sendFn(`[INTERNAL: K-Search 결과 수신 — §0-F에 따라 처리하세요: ${payload}]`);
+    return true;
+  }
+  // [KSEARCH_CLARIFY]/[KSEARCH_CANDIDATES]는 여기서 가로채지 않는다 —
+  // §0-F: "K-Search가 되묻거나 후보를 제시하는 동안은 나를 거치지 않고
+  // K-Search가 직접 이용자와 주고받습니다". 즉 이 두 태그는 전환을
+  // 유발하지 않고, 그냥 K-Search 자신의 자연스러운 응답으로 흘러간다
+  // (_stripInternalTags가 대괄호 원문만 감춘다).
 
   // ── K-Deliver → AC (완료, 스택 pop) ──
   const orchestrationCompleteMatch = fullReply.match(/\[ORCHESTRATION_COMPLETE:([^\]]*)\]/);

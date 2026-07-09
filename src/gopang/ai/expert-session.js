@@ -54,7 +54,13 @@ export function currentExpertLabel() {
 // 전환. manifest.json은 CI가 매 push마다 최신 버전으로 자동 갱신하므로,
 // 이제 새 SP 버전을 만들면 이 파일을 손대지 않아도 자동으로 반영된다
 // (SP_lawyer가 v3.2에 몇 주간 고정돼 있던 문제의 재발 방지).
-async function _composeExpertPrompt(def) {
+// 2026-07-09: export 추가 — call-ai.js의 K-Compose→EXPERT(scope=
+// orchestration_subtask) nested 호출(§0-H)이 이 합성 로직을 그대로
+// 재사용한다. 페르소나 SP 파일 하나만 달랑 로드하면 UNIVERSAL-INTEGRITY·
+// 공통 가드레일(C1~C41)·의료 안전모듈이 빠진 반쪽 프롬프트가 되므로,
+// 오케스트레이션 하위 호출이라고 해서 이 합성 과정을 생략하면 안 된다
+// — 로직을 중복 구현하지 않고 여기 하나만 있게 유지한다.
+export async function _composeExpertPrompt(def) {
   if (_promptCache.has(def.key)) return _promptCache.get(def.key);
 
   const parts = [];

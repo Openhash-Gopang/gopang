@@ -1065,6 +1065,151 @@ async function handleOrgProfileLookup(request, env, corsHeaders) {
   return new Response(JSON.stringify({ status: rec.status === 'active' ? 'hit' : 'hit_pending_review', org: rec }), { headers: corsHeaders });
 }
 
+// ── ATOM_PATTERN 실행 엔진 (2026-07-09 신설) ────────────────────────
+// 3~4차 라운드(개인파산·창업 준비 사고실험)에서 확정한 5개 실행 패턴을
+// 실제로 구현한다. 지금 시점에 실제로 자동화된 automation_sp는 거의
+// 없다는 걸 전제로 정직하게 설계했다 — "자동화됐다"고 지어내지 않고,
+// connected/automation_sp 상태에 따라 (a) 실제 GOVSYS-* 프록시 호출을
+// 시도하거나 (b) 이용자가 직접 해야 할 일을 구조화해 반환한다. K-Compose
+// (SP-20)가 이 결과를 받아 이용자에게 자연스럽게 풀어 전달한다.
+
+async function _callGovSys(env, automationSp, atomInput) {
+  // GOVSYS-* 자동화 SP는 대부분 아직 실제 구현이 없다(profile-assistant
+  // LBS 사례·worker_datagokr_integration_patch.md에서 이미 밝힌 상태).
+  // 같은 worker.js 프로세스 안에서 실행되므로 HTTP로 자기 자신을 다시
+  // 호출하지 않고 함수 참조를 직접 매핑한다(SP-DO-TOURISM의
+  // fetchJejuTourismBasicInfo()처럼 실제 GOVSYS 함수가 추가되면 아래
+  // 표에 등록만 하면 된다). 표가 비어 있는 동안은 전부 정직하게
+  // "미구현"으로 떨어진다 — 없는 자동화를 있는 것처럼 만들지 않는다.
+  const GOVSYS_FUNCTIONS = {
+    // 'GOVSYS-GOV24-FAMILY-CERT': (env, input) => fetchGov24FamilyCert(env, input),
+    // 'GOVSYS-WETAX-LICENSE':     (env, input) => fetchWetaxLicenseTax(env, input),
+  };
+  const fn = GOVSYS_FUNCTIONS[automationSp];
+  if (!fn) {
+    return { status: 'automation_not_implemented', automation_sp: automationSp };
+  }
+  try {
+    const result = await fn(env, atomInput);
+    return { status: 'automated', result };
+  } catch (e) {
+    return { status: 'automation_failed', error: e.message };
+  }
+}
+
+function _requiresUserAction(atomRow, reasonKo) {
+  return {
+    status: 'requires_user_action',
+    atom_id: atomRow.atom_id,
+    pattern: atomRow.pattern,
+    reason: reasonKo,
+    unavailable_reason: atomRow.unavailable_reason || null,
+  };
+}
+
+async function _execReport(env, atomRow, atomInput) {
+  // 신고형 — 접수 즉시 수리, 결정 절차 없음. creates_new_status가
+  // true면(창설적 신고, 예: 혼인신고) 그 자체로 법률관계가 발생하므로
+  // 자동화 여부와 무관하게 최종 접수는 항상 이용자 확인이 필요하다는
+  // 점을 결과에 명시한다.
+  if (atomRow.connected && atomRow.automation_sp) {
+    const r = await _callGovSys(env, atomRow.automation_sp, atomInput);
+    if (r.status === 'automated') return { ...r, creates_new_status: !!atomRow.creates_new_status };
+  }
+  return _requiresUserAction(atomRow,
+    atomRow.creates_new_status
+      ? '창설적 신고입니다 — 접수 창구에서 본인이 직접 신고해야 법률관계가 발생합니다.'
+      : '보고적 신고입니다 — 접수 창구(온라인 가능한 경우 포함)에서 접수해야 합니다.');
+}
+
+async function _execDecision(env, atomRow, atomInput) {
+  // 심사형(구 APPLY+REGISTER 통합, 4차 라운드 결정) — 재량 심사가
+  // 끼면(regulatory_intensity=permit) AI가 결과를 보장할 수 없다는 걸
+  // 명시한다(SP-LAW-01 확신도 체계와 결합 지점, ★ 아직 미결합 — 다음
+  // 순서 후보로 남김 ★).
+  if (atomRow.connected && atomRow.automation_sp) {
+    const r = await _callGovSys(env, atomRow.automation_sp, atomInput);
+    if (r.status === 'automated') return { ...r, outcome_type: atomRow.outcome_type || null };
+  }
+  const permitNote = atomRow.regulatory_intensity === 'permit'
+    ? ' 재량 심사 대상이라 결과를 보장할 수 없습니다.' : '';
+  return _requiresUserAction(atomRow, `심사 절차입니다 — 신청 후 결과를 기다려야 합니다.${permitNote}`);
+}
+
+async function _execPay(env, atomRow, atomInput) {
+  // 납부형 — self_assessed(신고납부)는 세액 자동계산 자동화 가치가 크고,
+  // assessed(부과고지)는 이미 관청이 계산해줘서 "고지서 조회"만 필요하다
+  // (4차 라운드 결정, 방향이 반대이므로 분기 유지).
+  if (atomRow.connected && atomRow.automation_sp) {
+    const r = await _callGovSys(env, atomRow.automation_sp, atomInput);
+    if (r.status === 'automated') return { ...r, pay_subtype: atomRow.pay_subtype || null };
+  }
+  return _requiresUserAction(atomRow,
+    atomRow.pay_subtype === 'assessed'
+      ? '부과고지형 — 관청이 계산한 고지서를 조회해 납부해야 합니다.'
+      : '신고납부형 — 세액을 직접(또는 자동계산 지원으로) 계산해 신고·납부해야 합니다.');
+}
+
+async function _execQuery(env, atomRow, atomInput) {
+  // 조회형 — 결정 절차가 없어 자동화 가치가 가장 크다(신원확인만 되면
+  // 즉시 발급). 그럼에도 지금 connected:true인 조회형 atom은 아직 없다
+  // (2026-07-09 기준 — gov24-family-cert 등 전부 connected:false).
+  if (atomRow.connected && atomRow.automation_sp) {
+    const r = await _callGovSys(env, atomRow.automation_sp, atomInput);
+    if (r.status === 'automated') return r;
+  }
+  return _requiresUserAction(atomRow, '조회·발급 절차입니다 — 본인인증 후 직접 발급받아야 합니다.');
+}
+
+async function _execAdjudicate(env, atomRow, atomInput) {
+  // 심판형 — 법원(judicial)이든 행정심판위원회(administrative_appeal)든
+  // 본인인증이 필수라 완전자동화 대상이 아니다(RULE-01 금지-2류 원칙과
+  // 동일 — 인간 전속 경계). escalation_to가 있으면 불복 시 다음 단계
+  // atom_id를 K-Compose에게 알려준다(4차 라운드에서 설계한 승계관계).
+  return {
+    ..._requiresUserAction(atomRow, '심판 절차입니다 — 본인인증 후 직접 접수해야 하며, 완전자동화 대상이 아닙니다.'),
+    adjudicate_subtype: atomRow.adjudicate_subtype || null,
+    escalation_to: atomRow.escalation_to || null,
+  };
+}
+
+async function _executeAtom(env, atomRow, atomInput) {
+  switch (atomRow.pattern) {
+    case 'REPORT':     return _execReport(env, atomRow, atomInput);
+    case 'DECISION':   return _execDecision(env, atomRow, atomInput);
+    case 'PAY':        return _execPay(env, atomRow, atomInput);
+    case 'QUERY':      return _execQuery(env, atomRow, atomInput);
+    case 'ADJUDICATE': return _execAdjudicate(env, atomRow, atomInput);
+    default:
+      return { status: 'unknown_pattern', pattern: atomRow.pattern };
+  }
+}
+
+// POST /orchestration/execute-atom  (body: {atom_id, atom_input})
+// K-Compose(SP-20)가 각 step 실행 시 호출한다.
+async function handleExecuteAtom(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  if (!payload.atom_id) return new Response(JSON.stringify({ error: 'atom_id required' }), { status: 400, headers: corsHeaders });
+
+  let atomRow;
+  try {
+    atomRow = await _l1FindAtomRow(env, payload.atom_id);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+  if (!atomRow) return new Response(JSON.stringify({ status: 'miss' }), { headers: corsHeaders });
+  if (atomRow.status !== 'active') {
+    return new Response(JSON.stringify({
+      status: 'not_active', atom_status: atomRow.status,
+      note: '이 atom은 아직 검토 완료 상태(active)가 아닙니다 — K-Compose가 이용자에게 고지 후 진행해야 합니다.',
+    }), { headers: corsHeaders });
+  }
+
+  const result = await _executeAtom(env, atomRow, payload.atom_input || {});
+  return new Response(JSON.stringify(result), { headers: corsHeaders });
+}
+
 // ── L1 profiles upsert — 2026-06-30 user_profiles 이전 작업 ────────────
 // L1 profiles 컬렉션 스키마(2026-06-30 확장 후): guid, handle,
 // nickname_hash, native_lang, entity_type, is_public, fpHex, e164,
@@ -1264,6 +1409,8 @@ export default {
       return handleProcedureMapUpdate(request, env, corsHeaders);
     if (pathname === '/orchestration/org-profile' && request.method === 'GET')
       return handleOrgProfileLookup(request, env, corsHeaders);
+    if (pathname === '/orchestration/execute-atom' && request.method === 'POST')
+      return handleExecuteAtom(request, env, corsHeaders);
 
     // ── merkle (T10) ─────────────────────────────────────────
     if (pathname === '/merkle/verify')           return handleMerkleVerify(request, env, corsHeaders);
@@ -3145,8 +3292,39 @@ const PROFESSIONAL_IDENTITY_AGENCIES = new Set(['health']);
 // K-Law v15.1의 확신도 이원화·불확실 식별자 생성 차단 메커니즘을 일반화한
 // 문서. K-Public_common보다도 먼저 로드되어야 한다(§U5 — "어떻게 판단
 // 하는가"가 "누구로서 응답하는가"보다 앞선다).
-// ═══════════════════════════════════════════════════════════
-const UNIVERSAL_INTEGRITY_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/UNIVERSAL-INTEGRITY_v1_0.md';
+//
+// 2026-07-09 정정: 파일명(_v1_0)을 하드코딩하고 있었다 — 클라이언트 쪽
+// expert-chat.html이 COMMON_GUARDRAILS_URL을 하드코딩해 SP_lawyer가
+// v3.2에 몇 주간 고정돼 있던 것과 정확히 같은 종류의 위험이다(실사로
+// 발견·수정한 사례, manifest-loader.js 참조). 여기도 같은 원리로
+// GitHub raw의 manifest.json을 먼저 읽어 최신 파일명을 알아낸 뒤 그
+// 파일을 가져오도록 바꾼다 — UNIVERSAL-INTEGRITY는 지금 버전이 1개뿐이라
+// 당장 깨진 상태는 아니었지만, v2가 생기는 순간 조용히 stale해질
+// 뻔한 걸 미리 막는다.
+const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main';
+let _githubManifestCache = null;
+let _githubManifestCacheAt = 0;
+const _GITHUB_MANIFEST_TTL_MS = 10 * 60 * 1000;
+
+async function _fetchGithubManifest() {
+  const now = Date.now();
+  if (_githubManifestCache && (now - _githubManifestCacheAt) < _GITHUB_MANIFEST_TTL_MS) return _githubManifestCache;
+  const res = await fetch(`${GITHUB_RAW_BASE}/prompts/manifest.json`, { cache: 'no-cache' });
+  if (!res.ok) throw new Error(`manifest.json fetch 실패: HTTP ${res.status}`);
+  _githubManifestCache = await res.json();
+  _githubManifestCacheAt = now;
+  return _githubManifestCache;
+}
+
+async function _fetchByManifestKeyFromGithub(manifestKey) {
+  const manifest = await _fetchGithubManifest();
+  const fname = manifest[manifestKey];
+  if (!fname) throw new Error(`manifest 키 없음: ${manifestKey}`);
+  const res = await fetch(`${GITHUB_RAW_BASE}/prompts/${fname}`, { cache: 'no-cache' });
+  if (!res.ok) throw new Error(`${manifestKey} 로드 실패: HTTP ${res.status} (${fname})`);
+  return res.text();
+}
+
 let _universalIntegrityCache = null;
 let _universalIntegrityCacheAt = 0;
 const _UNIVERSAL_INTEGRITY_TTL_MS = 10 * 60 * 1000;
@@ -3155,9 +3333,7 @@ async function _fetchUniversalIntegrity() {
   const now = Date.now();
   if (_universalIntegrityCache && (now - _universalIntegrityCacheAt) < _UNIVERSAL_INTEGRITY_TTL_MS) return _universalIntegrityCache;
   try {
-    const res = await fetch(UNIVERSAL_INTEGRITY_URL, { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    _universalIntegrityCache = await res.text();
+    _universalIntegrityCache = await _fetchByManifestKeyFromGithub('UNIVERSAL-INTEGRITY');
     _universalIntegrityCacheAt = now;
   } catch (e) {
     console.warn('[UniversalIntegrity] 로드 실패:', e.message);
