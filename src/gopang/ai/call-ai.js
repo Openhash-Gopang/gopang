@@ -36,29 +36,12 @@ import { buildHondiFaqContext } from './hondi-faq-router.js';
 export let history_ref = history;  // 외부 참조용
 
 // ── manifest 기반 SP 로더 ────────────────────────────────────────────
-// prompts/manifest.json 은 CI 빌드 시 tools/build_manifest.py 가 자동 생성.
-// *-LATEST.txt 포인터 파일 방식을 완전 대체 — manifest 단일 체계로 통일.
-const _SP_BASE = '/prompts/';
-let _manifestCache = null;
-
-async function _loadManifest() {
-  if (_manifestCache) return _manifestCache;
-  const res = await fetch(_SP_BASE + 'manifest.json', { cache: 'no-cache' });
-  if (!res.ok) throw new Error('manifest fetch 실패: ' + res.status);
-  _manifestCache = await res.json();
-  return _manifestCache;
-}
-
-async function _loadSpByKey(manifestKey, label) {
-  const manifest = await _loadManifest();
-  const fname = manifest[manifestKey];
-  if (!fname) throw new Error(`${label} manifest 키 없음: ${manifestKey}`);
-  const res = await fetch(_SP_BASE + fname);
-  if (!res.ok) throw new Error(`${label} SP 로드 실패: ${res.status} (${fname})`);
-  const sp = await res.text();
-  console.info(`[SP] ${label} 로드 완료: ${fname} (${sp.length} chars)`);
-  return sp;
-}
+// _loadManifest/_loadSpByKey 는 manifest-loader.js 로 이미 분리돼 있었으나
+// (2026-07-09 신설, expert-session.js는 그쪽을 사용 중) call-ai.js만 자체
+// 사본을 그대로 갖고 있어 manifest.json을 두 번 fetch하고 있었다(W-16 발견,
+// 2026-07-09). manifest-loader.js는 call-ai.js/expert-session.js 어느 쪽도
+// import하지 않는 독립 모듈이라 순환 참조 없이 바로 가져다 쓸 수 있다.
+import { _loadSpByKey } from './manifest-loader.js';
 
 // AGENT-COMMON (그림자 AI) — 세션당 1회 캐시
 let _agentCommonCache = null;
