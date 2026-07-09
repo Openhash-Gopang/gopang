@@ -880,6 +880,191 @@ async function _l1PatchProfile(env, recordId, patch) {
   return res.json();
 }
 
+// ── 오케스트레이션 레지스트리 L1 헬퍼 (2026-07-08 신설) ─────────────
+// _l1FindProfileByGuid 등 기존 함수와 동일 패턴(컬렉션별 전용 함수,
+// 범용 _l1Find/_l1Create 같은 건 이 코드베이스에 없다 — 이전 설계
+// 문서(worker_orchestration_registry_patch_2026-07-08.md)가 가정했던
+// 범용 헬퍼는 실제 코드와 안 맞아 이번에 컬렉션별 전용 함수로 정정함).
+
+async function _l1FindProcedureMap(env, goal) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`goal='${goal.replace(/'/g, "\\'")}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/procedure_maps/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`procedure_maps 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+async function _l1CreateProcedureMap(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/procedure_maps/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`procedure_maps 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+async function _l1PatchProcedureMap(env, recordId, patch) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/procedure_maps/records/${recordId}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`procedure_maps PATCH 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+async function _l1FindOrgProfile(env, orgId) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`org_id='${orgId.replace(/'/g, "\\'")}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/org_profiles/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`org_profiles 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+async function _l1FindAtomRow(env, atomId) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`atom_id='${atomId.replace(/'/g, "\\'")}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/atom_rows/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`atom_rows 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+// ── 오케스트레이션 HTTP 핸들러 (2026-07-08 신설) ────────────────────
+// status:active인 항목만 실제 라우팅에 안전하게 쓸 수 있다고 간주한다
+// — draft/pending_review는 조회는 되지만 호출자(K-Compose)가 이용자에게
+// "아직 검토 중"이라고 고지해야 한다(AGENT-COMMON §3-0 SP_DRAFT_REQUEST와
+// 동일한 승인 원칙, 여기서도 그대로 적용).
+
+const ORCHESTRATION_STALE_THRESHOLD_DAYS = 90; // 신선도 경고 임계값(임의값, 운영 중 조정 필요)
+
+function _daysSince(dateStr) {
+  if (!dateStr) return Infinity;
+  return (Date.now() - new Date(dateStr).getTime()) / 86400000;
+}
+
+async function handleProcedureMapLookup(request, env, corsHeaders) {
+  const { searchParams } = new URL(request.url);
+  const goal = searchParams.get('goal');
+  if (!goal) return new Response(JSON.stringify({ error: 'goal required' }), { status: 400, headers: corsHeaders });
+
+  let rec;
+  try {
+    rec = await _l1FindProcedureMap(env, goal);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+  if (!rec) return new Response(JSON.stringify({ status: 'miss' }), { headers: corsHeaders });
+
+  const steps = rec.steps || [];
+  // steps 각 항목의 atom_id를 실제 atom_rows로 조인 — sub_goal 항목은
+  // atom이 아니므로 조인하지 않고 그대로 둔다(K-Compose가 재귀 조회).
+  const resolvedSteps = await Promise.all(steps.map(async (s) => {
+    if (s.sub_goal) return s;
+    try {
+      const atom = await _l1FindAtomRow(env, s.atom_id);
+      return { ...s, atom };
+    } catch {
+      return { ...s, atom: null };
+    }
+  }));
+
+  const body = {
+    status: rec.status === 'active' ? 'hit' : 'hit_pending_review',
+    procedure: { ...rec, steps: resolvedSteps },
+  };
+  if (_daysSince(rec.as_of_date) > ORCHESTRATION_STALE_THRESHOLD_DAYS) {
+    body.freshness_warning = `이 절차 정보는 ${rec.as_of_date} 기준입니다 — 재검증 권장`;
+  }
+  return new Response(JSON.stringify(body), { headers: corsHeaders });
+}
+
+async function handleProcedureMapDraft(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  if (!payload.goal) return new Response(JSON.stringify({ error: 'goal required' }), { status: 400, headers: corsHeaders });
+
+  const existing = await _l1FindProcedureMap(env, payload.goal).catch(() => null);
+  if (existing) {
+    return new Response(JSON.stringify({ error: 'already exists', status: existing.status }), { status: 409, headers: corsHeaders });
+  }
+  try {
+    const rec = await _l1CreateProcedureMap(env, {
+      goal: payload.goal,
+      domain: payload.domain || '',
+      steps: payload.steps || [],
+      eligibility_gate: payload.eligibility_gate || [],
+      free_alternative: payload.free_alternative || null,
+      as_of_date: payload.as_of_date || new Date().toISOString().slice(0, 10),
+      orchestrator: 'AC',
+      status: 'pending_review', // ★ 절대 draft 생성 시점에 active로 두지 않는다
+    });
+    return new Response(JSON.stringify({ status: 'created', id: rec.id }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+async function handleProcedureMapUpdate(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  if (!payload.goal) return new Response(JSON.stringify({ error: 'goal required' }), { status: 400, headers: corsHeaders });
+
+  const existing = await _l1FindProcedureMap(env, payload.goal).catch(() => null);
+  if (!existing) return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: corsHeaders });
+
+  // 구조 변경(steps 자체를 바꾸는 것)만 다시 pending_review로 내린다.
+  // 단순 사실 갱신(연락처 등)은 기존 status를 유지한다 — 매번 재검토를
+  // 강제하면 배보다 배꼽이 크다는 판단(2026-07-08 결정, 사고실험으로
+  // 재검증 필요 — 이 기준이 너무 느슨한지 빡빡한지는 운영 데이터로 확인).
+  const patch = {};
+  let structuralChange = false;
+  for (const change of (payload.changes || [])) {
+    patch[change.field] = change.value;
+    if (change.field === 'steps') structuralChange = true;
+  }
+  patch.as_of_date = new Date().toISOString().slice(0, 10);
+  if (structuralChange && existing.status === 'active') patch.status = 'pending_review';
+
+  try {
+    const rec = await _l1PatchProcedureMap(env, existing.id, patch);
+    return new Response(JSON.stringify({ status: 'updated', record: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+async function handleOrgProfileLookup(request, env, corsHeaders) {
+  const { searchParams } = new URL(request.url);
+  const orgId = searchParams.get('org_id');
+  if (!orgId) return new Response(JSON.stringify({ error: 'org_id required' }), { status: 400, headers: corsHeaders });
+  let rec;
+  try {
+    rec = await _l1FindOrgProfile(env, orgId);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+  if (!rec) return new Response(JSON.stringify({ status: 'miss' }), { headers: corsHeaders });
+  return new Response(JSON.stringify({ status: rec.status === 'active' ? 'hit' : 'hit_pending_review', org: rec }), { headers: corsHeaders });
+}
+
 // ── L1 profiles upsert — 2026-06-30 user_profiles 이전 작업 ────────────
 // L1 profiles 컬렉션 스키마(2026-06-30 확장 후): guid, handle,
 // nickname_hash, native_lang, entity_type, is_public, fpHex, e164,
@@ -1065,6 +1250,20 @@ export default {
 
     // ── search (v4.7) ────────────────────────────────────
     if (pathname === '/search' && request.method === 'POST') return handleSearch(request, env, corsHeaders);
+    // ── 오케스트레이션 레지스트리 (2026-07-08 신설 — AGENT-COMMON §0-H v3.40 /
+    //    K-Compose SP-20이 참조. PROCEDURE_MAP·ORG_PROFILE·ATOM_ROW를 실제
+    //    L1 PocketBase 컬렉션에 저장한다. 컬렉션 자체(procedure_maps·
+    //    org_profiles·atom_rows)는 이 패치 범위 밖 — 관리자 패널에서 별도
+    //    생성 필요(★ 미구현 — 배포 전 필수 ★, 아래 함수들은 컬렉션이
+    //    존재한다는 전제로 작성됨) ──
+    if (pathname === '/orchestration/procedure-map' && request.method === 'GET')
+      return handleProcedureMapLookup(request, env, corsHeaders);
+    if (pathname === '/orchestration/procedure-map/draft' && request.method === 'POST')
+      return handleProcedureMapDraft(request, env, corsHeaders);
+    if (pathname === '/orchestration/procedure-map/update' && request.method === 'POST')
+      return handleProcedureMapUpdate(request, env, corsHeaders);
+    if (pathname === '/orchestration/org-profile' && request.method === 'GET')
+      return handleOrgProfileLookup(request, env, corsHeaders);
 
     // ── merkle (T10) ─────────────────────────────────────────
     if (pathname === '/merkle/verify')           return handleMerkleVerify(request, env, corsHeaders);
