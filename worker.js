@@ -3794,11 +3794,19 @@ const SP_DELEGATION_REGISTRY = {
     via: 'url',
     url: 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/Jejudo/01-do/JEJU-DO-SP_v1.0.md',
     identity: null, label: '제주도청(총괄)',
+    // ★ 2026-07-09 추가 — JEJU-DO-SP_v1.0.md 자신의 헤더가 "반드시
+    // 상위 공통 레이어 뒤에 고정 삽입, 단독 사용 금지"라고 명시하는데
+    // 지금까지 이 위임 경로가 그 상위 체인(kgov+OVERLAY+TREE-PROTOCOL)을
+    // 전혀 안 붙이고 있었다(2026-07-09 GOV_COMMON 조사 중 발견). 이
+    // 필드가 있으면 _fetchDelegationPrompt가 해당 도코드로 체인을
+    // 조립해 앞에 붙인다.
+    govCommonDoCode: 'jeju',
   },
   jeju_national: {
     via: 'url',
     url: 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/Jejudo/09-national/JEJU-NATIONAL-SP_v1.0.md',
     identity: null, label: '제주 소재 국가기관(총괄)',
+    govCommonDoCode: 'jeju',
   },
   // tax: sp-catalog.json에 SP-XX_ktax 없음 — 등록 전까지 위임 대상에서 제외.
 };
@@ -3813,6 +3821,52 @@ const SP_DELEGATION_ORIGINATORS = new Set(['public', 'jeju_do', 'jeju_national']
 
 let _spDelegationCache = new Map();
 const _SP_DELEGATION_TTL_MS = 10 * 60 * 1000;
+
+// ★ 2026-07-09 신설 — kgov(SP-10_kpublic) + <PROVINCE>-GOV-COMMON-OVERLAY +
+// JEJU-TREE-PROTOCOL을 조립한다. jeju.hondi.net(독립 jeju 저장소)의
+// jeju-router.js `_loadGovCommon()`과 정확히 같은 로직을 worker.js
+// 서버사이드에도 이식했다 — 지금까지 /gov/relay의 jeju_do/jeju_national
+// 위임 경로만 이 상위 체인 없이 JEJU-DO-SP/JEJU-NATIONAL-SP를 단독으로
+// 보내고 있었다(발견 경위: GOV_COMMON 조사, 2026-07-09).
+let _govCommonChainCache = new Map(); // 도코드 -> { text, at }
+const _GOV_COMMON_CHAIN_TTL_MS = 10 * 60 * 1000;
+
+async function _loadGovCommonChain(doCode) {
+  const cached = _govCommonChainCache.get(doCode);
+  const now = Date.now();
+  if (cached && (now - cached.at) < _GOV_COMMON_CHAIN_TTL_MS) return cached.text;
+
+  const [kgov, overlayTemplate, overlayDataRaw, treeProtocol] = await Promise.all([
+    _fetchDelegationPrompt('public'), // kgov == SP-10_kpublic, 'public' 항목과 동일 소스 재사용
+    fetch(GITHUB_RAW_BASE + '/prompts/Jejudo/00-common/overlays/GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md', { cache: 'no-cache' }).then(r => {
+      if (!r.ok) throw new Error(`GOV-COMMON-OVERLAY-TEMPLATE fetch 실패: HTTP ${r.status}`);
+      return r.text();
+    }),
+    fetch(GITHUB_RAW_BASE + '/prompts/Jejudo/00-common/overlays/gov-common-overlay-master-data.json', { cache: 'no-cache' }).then(r => {
+      if (!r.ok) throw new Error(`gov-common-overlay-master-data.json fetch 실패: HTTP ${r.status}`);
+      return r.json();
+    }),
+    fetch(GITHUB_RAW_BASE + '/prompts/Jejudo/00-common/JEJU-TREE-PROTOCOL_v1.0.md', { cache: 'no-cache' }).then(r => {
+      if (!r.ok) throw new Error(`JEJU-TREE-PROTOCOL fetch 실패: HTTP ${r.status}`);
+      return r.text();
+    }),
+  ]);
+
+  const rec = (overlayDataRaw.도목록 || []).find(r => r['도코드'] === doCode);
+  if (!rec) throw new Error(`GOV-COMMON-OVERLAY 데이터 없음(도코드=${doCode}) — gov-common-overlay-master-data.json에 레코드 추가 필요`);
+
+  const overlay = overlayTemplate
+    .replaceAll('{도이름}', rec['도이름'] || '')
+    .replaceAll('{콜센터명}', rec['콜센터명'] || '')
+    .replaceAll('{콜센터번호}', rec['콜센터번호'] || '')
+    .replaceAll('{출자기관예시_문구}', rec['출자기관예시_문구'] || '')
+    .replaceAll('{행정시목록_문구}', rec['행정시목록_문구'] || '')
+    .replaceAll('{관할예시_문구}', rec['관할예시_문구'] || '');
+
+  const text = kgov + '\n\n---\n\n' + overlay + '\n\n---\n\n' + treeProtocol;
+  _govCommonChainCache.set(doCode, { text, at: now });
+  return text;
+}
 
 async function _fetchDelegationPrompt(regKey) {
   const entry = SP_DELEGATION_REGISTRY[regKey];
@@ -3835,7 +3889,19 @@ async function _fetchDelegationPrompt(regKey) {
 
   const res = await fetch(url, { cache: 'no-cache' });
   if (!res.ok) throw new Error(`위임 대상 SP 로드 실패(${regKey}): HTTP ${res.status}`);
-  const text = await res.text();
+  let text = await res.text();
+
+  // ★ 2026-07-09 — 이 항목이 상위 공통 체인을 필요로 하면(JEJU-DO-SP/
+  // JEJU-NATIONAL-SP처럼 "단독 사용 금지"가 명시된 문서) kgov+OVERLAY+
+  // TREE-PROTOCOL을 앞에 붙인다. entry.govCommonDoCode가 없는 항목(대부분의
+  // K-서비스 SP)은 원래도 자기 완결형 단일 SP라 이 로직을 타지 않는다 —
+  // 'public'(kgov 자기 자신) 항목도 govCommonDoCode가 없으므로 무한
+  // 재귀로 자기 자신을 앞에 붙이는 일은 없다.
+  if (entry.govCommonDoCode) {
+    const chain = await _loadGovCommonChain(entry.govCommonDoCode);
+    text = chain + '\n\n---\n\n' + text;
+  }
+
   _spDelegationCache.set(regKey, { text, at: now });
   return text;
 }

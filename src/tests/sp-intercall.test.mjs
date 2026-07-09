@@ -15,10 +15,22 @@ const PROMPT_FILES = {
   'UNIVERSAL-common_v1_1.md':    '[UNIVERSAL-common v1.1 텍스트 — U9 포함]',
   'K-Public_common_v1_3.md':     '[K-Public_common 텍스트]',
   'PROFESSIONAL-common_v1_0.md': '[PROFESSIONAL-common 텍스트]',
-  'sp-catalog.json': JSON.stringify({ 'SP-04_khealth': 'SP-04_khealth_v2.1.txt' }),
+  'sp-catalog.json': JSON.stringify({ 'SP-04_khealth': 'SP-04_khealth_v2.1.txt', 'SP-10_kpublic': 'SP-10_kpublic_v3.4.txt' }),
   'SP-04_khealth_v2.1.txt': '[K-Health SP 텍스트]',
-  'JEJU-DO-SP_v1.0.md':       '[제주도청 총괄 SP 텍스트 — JEJU-GOV-COMMON 포함]',
-  'JEJU-NATIONAL-SP_v1.0.md': '[제주 국가기관 총괄 SP 텍스트 — JEJU-GOV-COMMON 포함]',
+  // ★ 2026-07-09 추가 — jeju_do/jeju_national이 이제 kgov+OVERLAY+
+  // TREE-PROTOCOL 상위 체인을 fetch한다(worker.js _loadGovCommonChain).
+  // 'public' 항목과 동일 소스(SP-10_kpublic)를 kgov로 재사용하므로
+  // 실제 파일명과 맞춰뒀다.
+  'SP-10_kpublic_v3.4.txt': '[kgov(SP-10_kpublic) 텍스트]',
+  'GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md':
+    '[오버레이 템플릿] {도이름} {콜센터명} {콜센터번호} {출자기관예시_문구} {행정시목록_문구} {관할예시_문구}',
+  'gov-common-overlay-master-data.json': JSON.stringify({
+    도목록: [{ 도코드: 'jeju', 도이름: '제주특별자치도', 콜센터명: '제주콜센터', 콜센터번호: '064-120',
+      출자기관예시_문구: '(테스트)', 행정시목록_문구: '제주시와 서귀포시', 관할예시_문구: '(테스트)' }],
+  }),
+  'JEJU-TREE-PROTOCOL_v1.0.md': '[JEJU-TREE-PROTOCOL 텍스트]',
+  'JEJU-DO-SP_v1.0.md':       '[제주도청 총괄 SP 텍스트]',
+  'JEJU-NATIONAL-SP_v1.0.md': '[제주 국가기관 총괄 SP 텍스트]',
 };
 
 global.fetch = async (url, opts = {}) => {
@@ -26,7 +38,7 @@ global.fetch = async (url, opts = {}) => {
 
   if (u.includes('api.deepseek.com')) {
     const body = JSON.parse(opts.body);
-    deepseekCallLog.push({ model: body.model, lastMsg: body.messages[body.messages.length - 1] });
+    deepseekCallLog.push({ model: body.model, lastMsg: body.messages[body.messages.length - 1], messages: body.messages });
     const next = deepseekQueue.shift();
     if (!next) throw new Error('deepseekQueue 고갈 — 예상보다 LLM 호출이 많음(무한루프 의심)');
     return {
@@ -196,6 +208,37 @@ async function run(name, queue, payload) {
   check('실사용 B: LLM 호출 3회', calls.length === 3, `실제 ${calls.length}회`);
   check('실사용 B: 위임 방향이 역방향(국가기관→도청)으로 정상 작동', calls[1]?.lastMsg?.content === '제주 전입신고는 어디서 어떻게 하나요');
   check('실사용 B: 최종 답변에 도청 확인 결과 반영', data.choices[0].message.content.includes('도청'));
+}
+
+// ═══════════════════════════════════════════════════════════
+// 시나리오 9 — ★ 2026-07-09 신설: jeju_do/jeju_national로 위임될 때
+// worker.js가 실제로 kgov+OVERLAY+TREE-PROTOCOL 상위 체인을 앞에
+// 붙이는지 검증(GOV_COMMON 조사에서 발견한 갭의 회귀 방지). 위임
+// 대상의 시스템 메시지(messages[0])에 세 마커가 순서대로 들어있어야
+// 한다 — JEJU-DO-SP_v1.0.md 헤더가 "반드시 상위 문서 뒤에 고정 삽입"
+// 이라고 요구하는 바로 그 요건.
+// ═══════════════════════════════════════════════════════════
+{
+  const { calls } = await run('GOV-COMMON 체인이 jeju_do 위임 프롬프트 앞에 붙음', [
+    JSON.stringify({ sp_call: { target: 'jeju_do', purpose: '테스트', query: '테스트 질의' } }),
+    '위임 결과 반영한 최종 답변',
+  ], { guid: 'gc1', agency: 'public', agencyPrompt: '[도청]', messages: [{ role: 'user', content: 'x' }], stream: false });
+
+  const delegatedCall = calls[1]; // 0=판단 호출(public), 1=위임 대상(jeju_do) 호출
+  const sysMsg = delegatedCall?.messages?.find(m => m.role === 'system')?.content
+    ?? delegatedCall?.messages?.[0]?.content ?? '';
+  const idxKgov = sysMsg.indexOf('kgov(SP-10_kpublic)');
+  const idxOverlay = sysMsg.indexOf('[오버레이 템플릿] 제주특별자치도');
+  const idxTree = sysMsg.indexOf('[JEJU-TREE-PROTOCOL 텍스트]');
+  const idxDoSp = sysMsg.indexOf('[제주도청 총괄 SP 텍스트]');
+
+  check('kgov(SP-10_kpublic) 마커가 위임 프롬프트에 포함됨', idxKgov !== -1, `sysMsg 앞 200자: ${sysMsg.slice(0, 200)}`);
+  check('오버레이(제주특별자치도 렌더링 결과)가 포함됨', idxOverlay !== -1);
+  check('JEJU-TREE-PROTOCOL이 포함됨', idxTree !== -1);
+  check('JEJU-DO-SP 본문이 포함됨', idxDoSp !== -1);
+  check('네 조각이 kgov→오버레이→TREE-PROTOCOL→JEJU-DO-SP 순서로 이어붙여짐',
+    idxKgov !== -1 && idxOverlay > idxKgov && idxTree > idxOverlay && idxDoSp > idxTree,
+    `순서: kgov=${idxKgov}, overlay=${idxOverlay}, tree=${idxTree}, doSp=${idxDoSp}`);
 }
 
 console.log(`\n총 ${pass + fail}개 검증 — 통과 ${pass} / 실패 ${fail}`);
