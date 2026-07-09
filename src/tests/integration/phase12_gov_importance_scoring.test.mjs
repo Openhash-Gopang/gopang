@@ -110,3 +110,62 @@ describe('N-17: _estimateGovImportance / _selectGovVerificationMode', () => {
     assert.equal(_selectGovVerificationMode(60), 'ENHANCED');
   });
 });
+
+// ══════════════════════════════════════════════════════════════════
+// N-18: 2단계(해시 앵커링) — _sha256Hex 순수함수 검증 + _anchorGovChain
+// 구조 일관성 검증(브라우저/동적임포트 의존이 커서 전체 동작 테스트는
+// p2p-chat.js _saveP2PSession()도 마찬가지로 기존에 없음 — 같은 기준
+// 적용. 대신 소스 자체를 규칙 기반으로 검사해 오타·경로착오를 잡는다 —
+// IMPORTANCE import 경로를 한 번 잘못 썼다가 잡았던 전례가 있어 특히
+// import 경로는 반드시 검사한다).
+// ══════════════════════════════════════════════════════════════════
+describe('N-18: _sha256Hex 및 _anchorGovChain 구조 검증', () => {
+  const raw = readFileSync(path.join(REPO_ROOT, 'src/gopang/ai/call-ai.js'), 'utf-8').replace(/\r\n/g, '\n');
+
+  it('_sha256Hex — 알려진 SHA-256 벡터와 일치(빈 문자열, "abc")', async () => {
+    const fnMatch = raw.match(/async function _sha256Hex\(text\) \{[\s\S]*?\n\}\n/);
+    assert.ok(fnMatch, '_sha256Hex를 call-ai.js에서 찾지 못함');
+    const body = fnMatch[0].replace('async function', 'return async function') + 'return _sha256Hex;\n';
+    // eslint-disable-next-line no-new-func
+    const _sha256Hex = new Function(body.replace('return async function _sha256Hex', 'const _sha256Hex = async function'))();
+    const emptyHash = await _sha256Hex('');
+    assert.equal(emptyHash, 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      '빈 문자열의 SHA-256 표준값과 불일치');
+    const abcHash = await _sha256Hex('abc');
+    assert.equal(abcHash, 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+      '"abc"의 SHA-256 표준값과 불일치');
+  });
+
+  it('_anchorGovChain — hashChain.js를 올바른 상대경로로 import함(src/gopang/ai/ 기준)', () => {
+    assert.match(raw, /await import\('\.\.\/\.\.\/openhash\/hashChain\.js'\)/,
+      '경로가 틀리면(예: ../core/constants.js 사례처럼) 조용히 런타임에만 실패한다 — 반드시 정적으로 검사');
+  });
+
+  it('_anchorGovChain — anchor()를 lcat/score 포함 5개 인자로 호출함(PLSM 계층분포 연동)', () => {
+    assert.match(raw, /anchor\(contentHash,\s*\[userSig\],\s*msgId,\s*'gov_chat',\s*score\)/,
+      'score를 안 넘기면 plsm.js selectLayer()가 폴백 단일분포로 빠져 이번 신설의 핵심(중요도 기반 계층분포)이 무의미해짐');
+  });
+
+  it('_anchorGovChain — 원문(userText/fullReply)을 앵커 envelope에 직접 포함하지 않음(PDV §5 원칙)', () => {
+    const fnMatch = raw.match(/async function _anchorGovChain\([\s\S]*?\n\}\n/);
+    assert.ok(fnMatch, '_anchorGovChain을 call-ai.js에서 찾지 못함');
+    const body = fnMatch[0];
+    const envelopeMatch = body.match(/const envelope = \{[\s\S]*?\};/);
+    assert.ok(envelopeMatch, 'envelope 객체를 찾지 못함');
+    assert.ok(!/userText\s*,|fullReply\s*,|content:\s*userText|content:\s*fullReply/.test(envelopeMatch[0]),
+      'envelope에 원문이 그대로 들어가면 PDV 원칙(원문 아닌 해시만 저장) 위반');
+    assert.match(envelopeMatch[0], /userTextHash/);
+    assert.match(envelopeMatch[0], /replyHash/);
+  });
+
+  it('_anchorGovChain — 게스트(비등록, _USER.ipv6 없음)는 앵커링을 생략함', () => {
+    const fnMatch = raw.match(/async function _anchorGovChain\([\s\S]*?\n\}\n/);
+    assert.match(fnMatch[0], /if \(!_USER\?\.ipv6\) return;/,
+      '서명 주체 없이 앵커링을 시도하면 안 됨');
+  });
+
+  it('_anchorGovChain — 실패해도 채팅 흐름을 막지 않음(호출부가 .catch로 감싸져 있음)', () => {
+    assert.match(raw, /_anchorGovChain\(userText, fullReply\)\.catch\(/,
+      'await로 직접 기다리면 앵커링 실패/지연이 사용자 응답을 막게 됨 — fire-and-forget이어야 함');
+  });
+});

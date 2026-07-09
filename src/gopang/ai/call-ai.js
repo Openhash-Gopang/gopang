@@ -1379,6 +1379,82 @@ export function _selectGovVerificationMode(score) {
   return GOV_VERIFICATION_MODE.ENHANCED;
 }
 
+// ══════════════════════════════════════════════════════════
+// 2단계 — LIGHTWEIGHT 등급 대화도 검증 가능하게 앵커링 (2026-07-09 신설)
+// ══════════════════════════════════════════════════════════
+// "막지는 않지만 나중에 누구나 검증 가능하게" — 오픈해시 철학의 핵심.
+// p2p-chat.js _saveP2PSession()의 앵커링 패턴(contentHash=SHA-256(JSON)
+// → gopangWallet.sign → hashChain.anchor)을 그대로 따르되, 두 가지를
+// 더한다:
+//   1) systemHash — 이번 턴에 실제로 전송된 system 프롬프트(CFG.system)의
+//      해시. UNIVERSAL-INTEGRITY/AGENT-COMMON 원문은 공개 GitHub 저장소에
+//      있으므로, 누구든 그 시점 버전의 해시를 직접 계산해 이 앵커와
+//      대조하면 "그 세션에 정말 그 내용이 포함됐는지"를 검증할 수 있다
+//      (서버가 강제하는 게 아니라 사후 검증 가능하게 만드는 것 — GWP의
+//      /gov/relay처럼 서버가 막는 방식과는 다른 신뢰 모델).
+//   2) govScore/govMode — _estimateGovImportance()/_selectGovVerificationMode()
+//      결과를 anchor()의 lcat/score 인자로 그대로 전달한다. PLSM
+//      selectLayer()가 이미 score<IMPORTANCE.LIGHTWEIGHT_MAX 기준으로
+//      계층을 나누도록 설계돼 있어(plsm.js), 대화 앵커링에 score를 넘긴
+//      건 이번이 처음이지만 인프라 자체는 이미 이 용도로 설계돼 있었다.
+//
+// PDV 원칙(§5)과 동일하게 원문이 아니라 해시만 남긴다 — userText/fullReply
+// 원문은 앵커에 포함하지 않는다.
+async function _anchorGovChain(userText, fullReply) {
+  // [GWP: id] 태그가 있으면 그 서비스를 gwpEntry로 사용 — _parseAgentTags의
+  // 매칭 정규식과 동일(따로 만들지 않음, 하나 바뀌면 둘 다 갱신해야
+  // 하는 문제 방지 목적으로 여기서도 같은 패턴을 그대로 재사용).
+  const gwpMatch = fullReply.match(/\[GWP:\s*([\w-]+)\]/);
+  const gwpEntry = gwpMatch && typeof getService === 'function' ? getService(gwpMatch[1]) : null;
+
+  const score = _estimateGovImportance(userText, gwpEntry);
+  const mode = _selectGovVerificationMode(score);
+
+  if (!_USER?.ipv6) return; // 미등록/게스트는 서명 주체가 없어 앵커링 생략
+
+  const msgId = `GOVCHAT-${_USER.ipv6.replace(/:/g, '').slice(0, 12)}-${Date.now()}`;
+
+  const systemHash = CFG.system
+    ? await _sha256Hex(CFG.system)
+    : null;
+  const userTextHash = userText ? await _sha256Hex(userText) : null;
+  const replyHash = await _sha256Hex(fullReply);
+
+  const envelope = {
+    msgId,
+    ts: new Date().toISOString(),
+    gwpId: gwpEntry?.id ?? null,
+    systemHash,
+    userTextHash,
+    replyHash,
+    govScore: score,
+    govMode: mode,
+  };
+  const envelopeRaw = JSON.stringify(envelope);
+  const contentHash = await _sha256Hex(envelopeRaw);
+
+  let userSig = _USER.ipv6;
+  try {
+    if (window.gopangWallet?.sign) {
+      userSig = await window.gopangWallet.sign(contentHash);
+    }
+  } catch (e) {
+    console.warn('[GovChain] Ed25519 서명 실패, guid로 대체:', e.message);
+  }
+
+  const { anchor } = await import('../../openhash/hashChain.js');
+  const result = await anchor(contentHash, [userSig], msgId, 'gov_chat', score);
+  console.info('[GovChain] 앵커링 완료',
+    '| mode:', mode, '| score:', score.toFixed(1),
+    '| entryHash:', result.entryHash?.slice(0, 16), '| layer:', result.layer);
+  return result;
+}
+
+async function _sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 function _buildCallCandidates(userText, messages) {
   const candidates = [];
 
@@ -2035,6 +2111,12 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     history.push({ role: 'assistant', content: fullReply });
     if (bubble) bubble.classList.remove('streaming');
 
+    // ── OpenHash 앵커링 (2단계, 2026-07-09 신설 — 관찰 전용) ──────────
+    // fire-and-forget: 실패해도 채팅 흐름을 절대 막지 않는다(p2p-chat.js
+    // _saveP2PSession과 동일 원칙 — try/catch로 감싸고 결과를 기다리지 않음).
+    _anchorGovChain(userText, fullReply).catch(e =>
+      console.warn('[GovChain] 앵커링 실패 (무시):', e.message)
+    );
 
     // ── PROFILE 태그 처리 (SUBMIT / SKIP / 단계 업데이트 / 최초 인사·이름짓기 /
     //    CALL_PROFILE_ASSISTANT / PROFILE_INTERRUPT_HANDOFF) ──
