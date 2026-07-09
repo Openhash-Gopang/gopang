@@ -14,14 +14,22 @@
  */
 
 export const UNIVERSAL_INTEGRITY_URL   = '/prompts/UNIVERSAL-INTEGRITY_v1_0.md';
-export const COMMON_GUARDRAILS_URL     = '/prompts/SP_common_guardrails_v3_3.md';
+// 2026-07-09: v3.3 → v3.6 갱신. v3.4~v3.6이 실제로는 이 상수가 안 바뀌어서
+// 한 번도 로드된 적이 없었다(실사로 확인 — expert-session.js가 이 URL을
+// fetch()로 직접 읽고, manifest.json을 거치지 않는 별도 체계이기 때문).
+// C40(공익·사익 재분류 게이트)·C41(오케스트레이션 하위 판단 요청)이 이제야
+// 실제로 로드된다.
+export const COMMON_GUARDRAILS_URL     = '/prompts/SP_common_guardrails_v3_6.md';
 export const COMMON_MEDICAL_SAFETY_URL = '/prompts/SP_common_medical_safety_v1_3.md';
 
 export const EXPERT_REGISTRY = {
   // ── 법률 ──────────────────────────────────────────────
   lawyer: {
+    // 2026-07-09: v3.2 → v4.1 갱신. v4.0(STEP R 오케스트레이션)·v4.1(C41
+    // scope=orchestration_subtask 대응)이 이 줄이 안 바뀌어서 한 번도
+    // 실제로 로드된 적이 없었다(실사로 확인).
     label: '변호사', icon: '⚖️', category: 'LAW',
-    file: '/prompts/SP_lawyer_v3_2.md', needsMedicalSafety: false,
+    file: '/prompts/SP_lawyer_v4_1.md', needsMedicalSafety: false,
   },
   // 2026-07-06 신설(전문가 페르소나 누락 감사 결과) — 변호사와 다른 자격.
   // 업무범위(등기·경매·소액사건 등) 초과 시 lawyer로 안내하도록 SP 본문에 명시.
