@@ -947,6 +947,39 @@ async function _l1FindAtomRow(env, atomId) {
   return data.items?.[0] || null;
 }
 
+// ★ 2026-07-09 추가 — org_profiles/atom_rows에는 지금까지 조회(Find)
+// 함수만 있고 생성(Create) 함수가 없어서, 개인파산 사고실험 데이터를
+// 시딩할 방법 자체가 없었다(procedure_maps만 draft POST가 있었음).
+// _l1CreateProcedureMap과 동일 패턴으로 나머지 둘도 채운다.
+
+async function _l1CreateOrgProfile(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/org_profiles/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`org_profiles 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+async function _l1CreateAtomRow(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/atom_rows/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`atom_rows 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
 // ── 오케스트레이션 HTTP 핸들러 (2026-07-08 신설) ────────────────────
 // status:active인 항목만 실제 라우팅에 안전하게 쓸 수 있다고 간주한다
 // — draft/pending_review는 조회는 되지만 호출자(K-Compose)가 이용자에게
@@ -1063,6 +1096,88 @@ async function handleOrgProfileLookup(request, env, corsHeaders) {
   }
   if (!rec) return new Response(JSON.stringify({ status: 'miss' }), { headers: corsHeaders });
   return new Response(JSON.stringify({ status: rec.status === 'active' ? 'hit' : 'hit_pending_review', org: rec }), { headers: corsHeaders });
+}
+
+// POST /orchestration/org-profile/draft  (body: {org_id, org_name, branch, ...})
+// handleProcedureMapDraft와 동일 원칙 — 생성 시점에 절대 active로 두지
+// 않는다. 중복 org_id는 409로 거부(procedure_maps와 동일하게 update
+// 경로를 따로 두지 않은 이유: org_profiles는 필드 대부분이 정적 사실
+// 정보라 지금은 "이미 있으면 draft 재작성 없이 owner가 관리자 패널에서
+// 직접 고친다"는 원칙 — update 엔드포인트가 필요해지면 그때 추가).
+async function handleOrgProfileDraft(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  if (!payload.org_id) return new Response(JSON.stringify({ error: 'org_id required' }), { status: 400, headers: corsHeaders });
+  if (!payload.org_name) return new Response(JSON.stringify({ error: 'org_name required' }), { status: 400, headers: corsHeaders });
+  if (!payload.branch) return new Response(JSON.stringify({ error: 'branch required' }), { status: 400, headers: corsHeaders });
+
+  const existing = await _l1FindOrgProfile(env, payload.org_id).catch(() => null);
+  if (existing) {
+    return new Response(JSON.stringify({ error: 'already exists', status: existing.status }), { status: 409, headers: corsHeaders });
+  }
+  try {
+    const rec = await _l1CreateOrgProfile(env, {
+      org_id: payload.org_id,
+      org_name: payload.org_name,
+      branch: payload.branch,
+      jurisdiction: payload.jurisdiction || '',
+      as_of_date: payload.as_of_date || new Date().toISOString().slice(0, 10),
+      guid_model: payload.guid_model || 'none',
+      resolution_strategy: payload.resolution_strategy || 'single_national_instance',
+      input: payload.input || {},
+      output: payload.output || {},
+      automation: payload.automation || {},
+      connected: !!payload.connected,
+      unavailable_reason: payload.unavailable_reason || '',
+      status: 'pending_review', // ★ 절대 draft 생성 시점에 active로 두지 않는다
+    });
+    return new Response(JSON.stringify({ status: 'created', id: rec.id }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+// POST /orchestration/atom-row/draft  (body: {atom_id, pattern, ...})
+// atom_rows도 procedure_maps와 동일한 pending_review 원칙을 따른다.
+// connected는 명시적으로 넘기지 않는 한 항상 false로 시작한다 —
+// _callGovSys의 GOVSYS_FUNCTIONS 표가 비어 있는 지금 시점에
+// connected:true로 시딩하면 _execReport 등이 거짓으로 "자동화됨"을
+// 전제하고 GOVSYS 함수를 찾다가 automation_not_implemented로 조용히
+// 폴백하게 된다 — 데이터 시딩 단계에서부터 정직하게 false로 둔다.
+async function handleAtomRowDraft(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  if (!payload.atom_id) return new Response(JSON.stringify({ error: 'atom_id required' }), { status: 400, headers: corsHeaders });
+  const VALID_PATTERNS = ['REPORT', 'DECISION', 'PAY', 'QUERY', 'ADJUDICATE'];
+  if (!VALID_PATTERNS.includes(payload.pattern)) {
+    return new Response(JSON.stringify({ error: `pattern must be one of ${VALID_PATTERNS.join('/')}` }), { status: 400, headers: corsHeaders });
+  }
+
+  const existing = await _l1FindAtomRow(env, payload.atom_id).catch(() => null);
+  if (existing) {
+    return new Response(JSON.stringify({ error: 'already exists', status: existing.status }), { status: 409, headers: corsHeaders });
+  }
+  try {
+    const rec = await _l1CreateAtomRow(env, {
+      atom_id: payload.atom_id,
+      pattern: payload.pattern,
+      org_class: payload.org_class || '',
+      required_docs: payload.required_docs || [],
+      automation_sp: payload.automation_sp || '',
+      connected: payload.connected === true, // 명시적 true만 인정, 기본 false
+      unavailable_reason: payload.unavailable_reason || '',
+      pay_subtype: payload.pay_subtype || null,
+      regulatory_intensity: payload.regulatory_intensity || null,
+      creates_new_status: !!payload.creates_new_status,
+      outcome_type: payload.outcome_type || null,
+      adjudicate_subtype: payload.adjudicate_subtype || '',
+      escalation_to: payload.escalation_to || '',
+      status: 'pending_review', // ★ 절대 draft 생성 시점에 active로 두지 않는다
+    });
+    return new Response(JSON.stringify({ status: 'created', id: rec.id }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
 }
 
 // ── ATOM_PATTERN 실행 엔진 (2026-07-09 신설) ────────────────────────
@@ -1395,12 +1510,11 @@ export default {
 
     // ── search (v4.7) ────────────────────────────────────
     if (pathname === '/search' && request.method === 'POST') return handleSearch(request, env, corsHeaders);
-    // ── 오케스트레이션 레지스트리 (2026-07-08 신설 — AGENT-COMMON §0-H v3.40 /
-    //    K-Compose SP-20이 참조. PROCEDURE_MAP·ORG_PROFILE·ATOM_ROW를 실제
-    //    L1 PocketBase 컬렉션에 저장한다. 컬렉션 자체(procedure_maps·
-    //    org_profiles·atom_rows)는 이 패치 범위 밖 — 관리자 패널에서 별도
-    //    생성 필요(★ 미구현 — 배포 전 필수 ★, 아래 함수들은 컬렉션이
-    //    존재한다는 전제로 작성됨) ──
+    // ── 오케스트레이션 레지스트리 (2026-07-08 신설, 2026-07-09 확장 —
+    //    AGENT-COMMON §0-H v3.40 / K-Compose SP-20이 참조. PROCEDURE_MAP·
+    //    ORG_PROFILE·ATOM_ROW를 실제 L1 PocketBase 컬렉션에 저장한다.
+    //    컬렉션 자체는 pb_migrations/1783500001~003로 생성됨(더 이상
+    //    관리자 패널 수동 생성 불필요) ──
     if (pathname === '/orchestration/procedure-map' && request.method === 'GET')
       return handleProcedureMapLookup(request, env, corsHeaders);
     if (pathname === '/orchestration/procedure-map/draft' && request.method === 'POST')
@@ -1409,6 +1523,10 @@ export default {
       return handleProcedureMapUpdate(request, env, corsHeaders);
     if (pathname === '/orchestration/org-profile' && request.method === 'GET')
       return handleOrgProfileLookup(request, env, corsHeaders);
+    if (pathname === '/orchestration/org-profile/draft' && request.method === 'POST')
+      return handleOrgProfileDraft(request, env, corsHeaders);
+    if (pathname === '/orchestration/atom-row/draft' && request.method === 'POST')
+      return handleAtomRowDraft(request, env, corsHeaders);
     if (pathname === '/orchestration/execute-atom' && request.method === 'POST')
       return handleExecuteAtom(request, env, corsHeaders);
 
