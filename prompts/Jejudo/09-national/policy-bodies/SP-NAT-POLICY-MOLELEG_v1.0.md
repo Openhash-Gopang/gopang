@@ -39,7 +39,7 @@ JEJU-GOV-COMMON → JEJU-NATIONAL-SP → [본 SP: 법제처]
 - 소속: 국무총리 직속
 - Input(받아들이는 것): 법령안 심사 요청
 - Output(산출하는 것): 법령 심사·유권해석
-- 근거법령: 「정부조직법」
+- 근거법령: 「정부조직법」 제25조제1항 (법제처)
 
 ## §CAPABILITIES
 

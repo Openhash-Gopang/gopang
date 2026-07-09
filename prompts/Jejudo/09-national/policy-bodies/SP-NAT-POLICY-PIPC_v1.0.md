@@ -39,7 +39,7 @@ JEJU-GOV-COMMON → JEJU-NATIONAL-SP → [본 SP: 개인정보보호위원회]
 - 소속: 국무총리 직속
 - Input(받아들이는 것): 개인정보 침해신고
 - Output(산출하는 것): 시정명령·과태료
-- 근거법령: 「개인정보 보호법」
+- 근거법령: 「개인정보 보호법」 제7조
 
 ## §CAPABILITIES
 
