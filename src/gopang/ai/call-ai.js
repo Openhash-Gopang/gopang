@@ -643,6 +643,112 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     if (_usb) _usb(bubble, text);
   };
 
+  // ── worker.js 오케스트레이션 레지스트리 실제 배선 (2026-07-09 신설) ──
+  // ★ 통합 사고실험에서 발견된 가장 심각한 공백 ★ — SP-20(K-Compose)이
+  // [PROCEDURE_MAP_LOOKUP]/[PROCEDURE_MAP_DRAFT]/[PROCEDURE_MAP_UPDATE]/
+  // [CALL_GOVSYS] 태그를 내도록 설계돼 있고, worker.js에도 해당 엔드포인트가
+  // 실제로 구현돼 있었는데, 이 둘을 잇는 fetch 코드가 지금까지 하나도
+  // 없었다 — 태그는 strip 목록에서 대괄호만 지워질 뿐 아무 일도 안
+  // 일어나던 상태였다. K-Market/market웹앱의 [SEARCH] 재주입 패턴(질의→
+  // RPC→결과를 시스템 메시지로 주입→같은 세션에서 재호출)을 그대로
+  // 재사용한다 — system은 K-Compose로 유지한 채 결과만 받는다.
+  if (CFG.system?.includes('K-Compose') || CFG.system?.includes('K-Deliver')) {
+    const base = (CFG.endpoint || '').replace(/\/+$/, '');
+
+    const updateMatch = fullReply.match(/\[PROCEDURE_MAP_UPDATE:\s*goal=([^,\]]+)/);
+    if (updateMatch && fullReply.includes('[PROCEDURE_MAP_UPDATE:')) {
+      // ★ K-Deliver도 이 태그를 낸다(SP-21 STEP 4) — K-Compose만 게이트에
+      // 있어 놓치고 있던 공백. DRAFT와 동일한 한계(자유 텍스트 바디,
+      // goal 필드만 안전하게 추출)를 그대로 갖는다.
+      console.log('[Orchestration] PROCEDURE_MAP_UPDATE 감지 — worker.js 갱신 요청');
+      await _updateBubble(_stripInternalTags(fullReply));
+      history.push({ role: 'assistant', content: fullReply });
+      let resultText;
+      try {
+        const res = await fetch(`${base}/orchestration/procedure-map/update`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ goal: updateMatch[1].trim(), changes: [] }),
+        });
+        resultText = JSON.stringify(await res.json().catch(() => ({ status: res.status })));
+      } catch (e) {
+        resultText = `{"error":"${e.message}"}`;
+      }
+      await sendFn(`[PROCEDURE_MAP_UPDATE 결과] ${resultText}`);
+      return true;
+    }
+
+    const lookupMatch = fullReply.match(/\[PROCEDURE_MAP_LOOKUP:\s*goal=([^\]]+)\]/);
+    if (lookupMatch) {
+      console.log('[Orchestration] PROCEDURE_MAP_LOOKUP 감지 — worker.js 조회');
+      await _updateBubble(_stripInternalTags(fullReply));
+      history.push({ role: 'assistant', content: fullReply });
+      let resultText;
+      try {
+        const res = await fetch(`${base}/orchestration/procedure-map?goal=${encodeURIComponent(lookupMatch[1].trim())}`);
+        resultText = res.ok ? JSON.stringify(await res.json()) : `{"error":"HTTP ${res.status}"}`;
+      } catch (e) {
+        resultText = `{"error":"${e.message}"}`;
+      }
+      await sendFn(`[PROCEDURE_MAP_LOOKUP 결과] ${resultText}\n\n위 결과를 이어받아 RULE-02를 계속 진행하세요.`);
+      return true;
+    }
+
+    const draftMatch = fullReply.match(/\[PROCEDURE_MAP_DRAFT:([\s\S]*)\]$/m);
+    if (draftMatch && fullReply.includes('[PROCEDURE_MAP_DRAFT:')) {
+      console.log('[Orchestration] PROCEDURE_MAP_DRAFT 감지 — worker.js 등재 요청');
+      await _updateBubble(_stripInternalTags(fullReply));
+      history.push({ role: 'assistant', content: fullReply });
+      // ★ 정직한 한계 ★ 이 태그의 바디는 goal=..., steps=[...] 같은
+      // 준-JSON 자유 텍스트라 완전한 파서가 아직 없다 — 최소한의 goal
+      // 필드만 뽑아 draft 생성을 "시도"하고, 나머지 구조화된 필드
+      // (steps 등)는 이번 배선에서 전달하지 않는다(다음 순서 후보:
+      // K-Compose가 애초에 JSON 블록으로 태그 바디를 내도록 SP 문서
+      // 정정, 그래야 안전하게 파싱 가능).
+      const goalM = draftMatch[1].match(/goal=([^,\]]+)/);
+      let resultText;
+      if (!goalM) {
+        resultText = '{"error":"goal 필드를 이 태그 바디에서 못 찾음 — 등재 생략"}';
+      } else {
+        try {
+          const res = await fetch(`${base}/orchestration/procedure-map/draft`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ goal: goalM[1].trim(), domain: '', steps: [] }),
+          });
+          resultText = JSON.stringify(await res.json().catch(() => ({ status: res.status })));
+        } catch (e) {
+          resultText = `{"error":"${e.message}"}`;
+        }
+      }
+      await sendFn(`[PROCEDURE_MAP_DRAFT 결과] ${resultText}`);
+      return true;
+    }
+
+    const govsysMatch = fullReply.match(/\[CALL_GOVSYS:\s*id=([\w-]+),\s*mode=([\w-]+),\s*caller=([\w-]+)\]/);
+    if (govsysMatch) {
+      // ★ 정정 ★ SP-20 문서는 이 태그의 id를 "automation_sp 식별자"처럼
+      // 서술했지만, worker.js execute-atom은 atom_id로 조회한 뒤 그
+      // 안의 automation_sp를 내부적으로 쓰는 구조다(3~4차 라운드에서
+      // "원자=패턴+데이터"로 확정한 설계 그대로). 그래서 여기서는 id를
+      // atom_id로 취급해 호출한다 — K-Compose가 PROCEDURE_MAP의 steps
+      // 에서 얻는 값이 원래 atom_id이므로 실제 사용과도 맞아떨어진다.
+      console.log('[Orchestration] CALL_GOVSYS 감지 — /orchestration/execute-atom 호출(id=atom_id로 취급)');
+      await _updateBubble(_stripInternalTags(fullReply));
+      history.push({ role: 'assistant', content: fullReply });
+      let resultText;
+      try {
+        const res = await fetch(`${base}/orchestration/execute-atom`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ atom_id: govsysMatch[1], atom_input: {} }),
+        });
+        resultText = JSON.stringify(await res.json().catch(() => ({ status: res.status })));
+      } catch (e) {
+        resultText = `{"error":"${e.message}"}`;
+      }
+      await sendFn(`[CALL_GOVSYS 결과] ${resultText}\n\n결과가 requires_user_action이면 그 사유를 이용자에게 자연스럽게 전달하세요.`);
+      return true;
+    }
+  }
+
   // ── AC → K-Intent (§0-H 트리거, forward — AC는 이후 관여 안 함) ──
   const kIntentMatch = fullReply.match(/\[CALL_KINTENT:\s*query=([^\]]+)\]/);
   if (kIntentMatch) {
