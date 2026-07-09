@@ -52,6 +52,18 @@ const TIER_CONFIG = {
     fixedTemplate: 'SP-EMD-TEMPLATE_v1.2.md',
     matchFn: (rec, { emdCode }) => rec.emd_code === emdCode,
   },
+  // 2026-07-09 신설 — 전국 단일 창구형 정책기관(19부·4헌법기관·6대통령직속·
+  // 12총리직속, 총 41개). 기존 'national' 계층(도별 지사, domain별 별도
+  // 템플릿)과 달리 도코드 개념이 없다 — 국민권익위원회에 "제주지사"는
+  // 없으므로, city/emd 계층과 같은 fixedTemplate 패턴을 쓴다. matchFn이
+  // domain만으로 매칭하는 게 city(cityCode)·emd(emdCode)와의 유일한 차이다.
+  'policy': {
+    masterDataPath: 'prompts/Jejudo/09-national/policy-bodies/templates/policy-bodies-master-data.json',
+    listKey: '기관목록',
+    templateDir: 'prompts/Jejudo/09-national/policy-bodies/templates/',
+    fixedTemplate: 'SP-NAT-POLICY-TEMPLATE_v1.0.md',
+    matchFn: (rec, { domain }) => rec.domain === domain,
+  },
 };
 
 // ── 캐시 ──────────────────────────────────────────────────
@@ -174,6 +186,18 @@ export async function _renderCityTemplate(cityCode) {
 /** 05-emd 계층 조립 — emd_code(예: SP-EMD-AEWOL) 단일 매칭 */
 export async function _renderEmdTemplate(emdCode) {
   return _assemble('emd', { emdCode });
+}
+
+/**
+ * 정책기관(전국 단일 창구) 계층 조립 — domain만으로 매칭, 도코드 없음.
+ * 예: _renderPolicyTemplate('acrc') → 국민권익위원회 SP 조립.
+ * 'national' 계층과 혼동 주의 — 그쪽은 도별 지사(도코드 필수), 이쪽은
+ * 전국에 인스턴스가 하나뿐인 기관이다. 사용자 요청이 어느 계층 소관인지
+ * 판별하는 라우팅 규칙 자체는 이 파일의 책임이 아니다(POLICY-BODIES-
+ * WORK-LOG_2026-07-09.md §4-4, 다음 과제로 남겨둠).
+ */
+export async function _renderPolicyTemplate(domain) {
+  return _assemble('policy', { domain });
 }
 
 /**
