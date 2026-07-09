@@ -169,3 +169,107 @@ describe('N-18: _sha256Hex 및 _anchorGovChain 구조 검증', () => {
       'await로 직접 기다리면 앵커링 실패/지연이 사용자 응답을 막게 됨 — fire-and-forget이어야 함');
   });
 });
+
+// ══════════════════════════════════════════════════════════════════
+// N-19: 3단계(동적 UNIVERSAL-INTEGRITY 주입) — _buildUniversalIntegrityContext
+// 실제 동작 검증. _estimateGovImportance/IMPORTANCE/_loadSpByKey를 함께
+// 추출해 결합, mock _loadSpByKey로 실제 게이트 로직(점수 임계값 통과 시만
+// 로드+주입)을 끝까지 실행해본다.
+// ══════════════════════════════════════════════════════════════════
+function loadUniversalIntegrityFn() {
+  const raw = readFileSync(path.join(REPO_ROOT, 'src/gopang/ai/call-ai.js'), 'utf-8').replace(/\r\n/g, '\n');
+
+  const scoringStart = raw.indexOf('export const GOV_VERIFICATION_MODE = Object.freeze({');
+  assert.ok(scoringStart !== -1);
+  const selectModeStart = raw.indexOf('export function _selectGovVerificationMode(score) {', scoringStart);
+  const selectModeBodyEnd = raw.indexOf('\n}\n', selectModeStart) + '\n}\n'.length;
+  const scoringBlock = raw.slice(scoringStart, selectModeBodyEnd);
+
+  const uiStart = raw.indexOf('let _universalIntegrityCache = null;');
+  assert.ok(uiStart !== -1, '_universalIntegrityCache를 찾지 못함');
+  const uiFnStart = raw.indexOf('async function _buildUniversalIntegrityContext(userText) {', uiStart);
+  const uiFnEnd = raw.indexOf('\n}\n', uiFnStart) + '\n}\n'.length;
+  const uiBlock = raw.slice(uiStart, uiFnEnd);
+
+  const body = `
+    const IMPORTANCE = __IMPORTANCE__;
+    let getService = __getService__;
+    let _loadSpByKey = __loadSpByKey__;
+    ${scoringBlock.replace(/^export /gm, '')}
+    ${uiBlock}
+    return { _buildUniversalIntegrityContext, _estimateGovImportance };
+  `;
+  // eslint-disable-next-line no-new-func
+  return new Function('__IMPORTANCE__', '__getService__', '__loadSpByKey__', body);
+}
+
+describe('N-19: _buildUniversalIntegrityContext — 점수 게이트 기반 동적 주입', () => {
+  const factory = loadUniversalIntegrityFn();
+
+  it('처분성 키워드 없는 일반 잡담 — 주입 안 함(빈 문자열)', async () => {
+    let loadCalls = 0;
+    const { _buildUniversalIntegrityContext } = factory(
+      IMPORTANCE_MOCK, () => null,
+      async () => { loadCalls++; return '[UNIVERSAL-INTEGRITY 본문]'; },
+    );
+    const result = await _buildUniversalIntegrityContext('오늘 날씨 어때');
+    assert.equal(result, '');
+    assert.equal(loadCalls, 0, '점수 미달인데 fetch를 시도하면 안 됨(불필요한 네트워크 호출)');
+  });
+
+  it('처분성 키워드 있음 — UNIVERSAL-INTEGRITY 본문을 포함해 블록으로 반환', async () => {
+    const { _buildUniversalIntegrityContext } = factory(
+      IMPORTANCE_MOCK, () => null,
+      async () => '[UNIVERSAL-INTEGRITY 본문 원문]',
+    );
+    const result = await _buildUniversalIntegrityContext('전입신고 접수 확정해주세요');
+    assert.match(result, /\[UNIVERSAL-INTEGRITY 참고/);
+    assert.match(result, /\[UNIVERSAL-INTEGRITY 본문 원문\]/);
+    assert.match(result, /\]\s*$/, '블록이 대괄호로 닫혀야 함(HONDI-FAQ와 동일한 감싸기 규칙)');
+  });
+
+  it('응급 신호 — 처분성 키워드 없어도 주입됨(응급은 항상 최고 점수)', async () => {
+    const { _buildUniversalIntegrityContext } = factory(
+      IMPORTANCE_MOCK,
+      (id) => id === 'kemergency' ? { id: 'kemergency', triggers: ['살려줘', '화재'] } : null,
+      async () => '[UNIVERSAL-INTEGRITY 본문]',
+    );
+    const result = await _buildUniversalIntegrityContext('지금 화재 났어요 살려줘');
+    assert.notEqual(result, '');
+  });
+
+  it('같은 세션에서 두 번째 호출부터는 캐시 재사용 — fetch 1회만', async () => {
+    let loadCalls = 0;
+    const { _buildUniversalIntegrityContext } = factory(
+      IMPORTANCE_MOCK, () => null,
+      async () => { loadCalls++; return '[본문]'; },
+    );
+    await _buildUniversalIntegrityContext('신청서 제출 확정');
+    await _buildUniversalIntegrityContext('과세 처분 관련 문의');
+    assert.equal(loadCalls, 1, 'UNIVERSAL-INTEGRITY는 세션당 1회만 fetch해야 함(AGENT-COMMON 캐싱과 동일 원칙)');
+  });
+
+  it('로드 실패 시 예외를 던지지 않고 빈 문자열로 조용히 무시', async () => {
+    const { _buildUniversalIntegrityContext } = factory(
+      IMPORTANCE_MOCK, () => null,
+      async () => { throw new Error('네트워크 오류(시뮬레이션)'); },
+    );
+    const result = await _buildUniversalIntegrityContext('신청서 제출 확정');
+    assert.equal(result, '', '로드 실패가 채팅 흐름을 막으면 안 됨');
+  });
+});
+
+describe('N-20: _buildUniversalIntegrityContext가 실제로 ctxBlock 조립에 연결됐는지(정적 검사)', () => {
+  const raw = readFileSync(path.join(REPO_ROOT, 'src/gopang/ai/call-ai.js'), 'utf-8').replace(/\r\n/g, '\n');
+
+  it('_buildEnhancedUserContent 안에서 integrityBlock을 계산하고 ctxBlock에 포함시킴', () => {
+    assert.match(raw, /const integrityBlock = await _buildUniversalIntegrityContext\(plainText\);/);
+    assert.match(raw, /const ctxBlock = integrityBlock \+ firstContact \+ faqBlock/,
+      'integrityBlock이 조립 순서 맨 앞이어야 함(§U5 — 판단원칙이 정체성보다 먼저 와야 한다는 UNIVERSAL-INTEGRITY 자신의 설계 원칙)');
+  });
+
+  it('gwpEntry는 항상 null로 호출 — matchService() 재도입 방지(2026-07-05 제거 결정 존중)', () => {
+    assert.match(raw, /_estimateGovImportance\(userText, null\);/,
+      '사전 판단 시점엔 [GWP:] 태그가 없어 카테고리를 알 수 없다 — 키워드로 추정하면 죽은 코드였던 matchService()를 되살리는 셈');
+  });
+});

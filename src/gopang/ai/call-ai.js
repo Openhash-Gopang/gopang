@@ -1096,6 +1096,42 @@ export function _buildFirstContactContext() {
   return '';
 }
 
+// ══════════════════════════════════════════════════════════
+// 3단계 — 점수 기반 UNIVERSAL-INTEGRITY 동적 주입 (2026-07-09 신설)
+// ══════════════════════════════════════════════════════════
+// buildHondiFaqContext()와 완전히 동일한 패턴(세션 캐시 + 이번 턴 user
+// 메시지에만 병합, system prefix 불변 — DeepSeek 캐시 보존)을 따른다.
+// ★ 의도적으로 하지 않은 것: userText만으로 GWP 카테고리를 키워드
+// 매칭해서 추정하는 것. matchService()(구 window.gwpMatch)가 2026-07-05
+// "호출부 0건, 죽은 코드"로 이미 제거됐고, 그 커밋의 원칙이 "실제
+// 라우팅은 AGENT-COMMON이 [GWP:]/[EXPERT:] 태그로 직접 수행한다"였다 —
+// 이 사전 판단 시점엔 그 태그가 아직 없으므로, _estimateGovImportance를
+// gwpEntry=null로 호출해 카테고리 가중치는 항상 기본값(10)만 쓰고
+// 처분성 키워드·응급 신호만으로 판단한다(제거된 라우팅 방식을 다른
+// 이름으로 되살리지 않기 위함).
+let _universalIntegrityCache = null;
+
+async function _buildUniversalIntegrityContext(userText) {
+  const score = _estimateGovImportance(userText, null);
+  if (score < IMPORTANCE.LIGHTWEIGHT_MAX) return '';
+
+  if (!_universalIntegrityCache) {
+    try {
+      _universalIntegrityCache = await _loadSpByKey('UNIVERSAL-INTEGRITY', 'UNIVERSAL-INTEGRITY');
+    } catch (e) {
+      console.warn('[GovImportance] UNIVERSAL-INTEGRITY 로드 실패(무시):', e.message);
+      return '';
+    }
+  }
+  console.info('[GovImportance] UNIVERSAL-INTEGRITY 이번 턴 주입 — score:', score.toFixed(1));
+  return (
+    `[UNIVERSAL-INTEGRITY 참고 — 이번 질문에서 처분성/기관 관련 신호가 감지되어,` +
+    ` 전체 SP 공통 정직성·확신도 원칙을 이번 턴에 한해 함께 적용합니다.\n` +
+    _universalIntegrityCache +
+    `]\n\n`
+  );
+}
+
 /**
  * _buildEnhancedUserContent — 동적 컨텍스트를 사용자 메시지 앞에 병합
  *
@@ -1161,9 +1197,19 @@ async function _buildEnhancedUserContent(userContent) {
     : (Array.isArray(userContent) ? (userContent.find(c => c.type === 'text')?.text || '') : '');
   const faqBlock = await buildHondiFaqContext(plainText);
 
-  if (!parts.length && !firstContact && !faqBlock) return userContent;
+  // 3단계(2026-07-09) — 처분성/기관 신호가 감지된 턴에만 UNIVERSAL-
+  // INTEGRITY를 이번 턴의 user 메시지에만 끼워 넣는다(system prefix는
+  // 그대로 — HONDI-FAQ와 완전히 동일한 캐시 보존 원칙). "트랙 무관 전체
+  // SP 최상위 공통 원칙"이라는 UNIVERSAL-INTEGRITY 자신의 설명과 달리
+  // 지금까지 메인 채팅(AGENT-COMMON)에는 한 번도 주입된 적이 없었다
+  // (2026-07-09 발견) — 매 턴 무조건 넣으면 토큰비용이 전체 트래픽의
+  // 압도적 다수인 메인 채팅에 계속 붙고, 아예 안 넣으면 그 선언이
+  // 거짓이 된다. _estimateGovImportance의 점수 게이트로 절충한다.
+  const integrityBlock = await _buildUniversalIntegrityContext(plainText);
 
-  const ctxBlock = firstContact + faqBlock + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
+  if (!parts.length && !firstContact && !faqBlock && !integrityBlock) return userContent;
+
+  const ctxBlock = integrityBlock + firstContact + faqBlock + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
 
   // multipart(이미지 포함) 메시지 처리
   if (Array.isArray(userContent)) {
