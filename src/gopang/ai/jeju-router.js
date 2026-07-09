@@ -76,6 +76,21 @@ const TIER_CONFIG = {
     fixedTemplate: 'SP-NAT-POLICY-TEMPLATE_v1.0.md',
     matchFn: (rec, { domain }) => rec.domain === domain,
   },
+  // 2026-07-09 신설 — 광역자치단체(도·특별시·광역시) 계층. 지금까지
+  // 이 파일은 "제주"라는 단일 광역단체 안의 하위 계층(부서/시/읍면동/
+  // 정책기관)만 다뤘는데, 이번에 광역단체 자기 자신을 템플릿화하는
+  // 최상위 계층을 신설한다 — GOV-TIER-IO-SCHEMA_v1_0 Tier A 대응.
+  // city 계층과 같은 fixedTemplate 패턴(도코드 하나로 단순 매칭,
+  // domain 개념 없음). ★ 파일럿 단계 — 경기도 1건만 실제 레코드 있음,
+  // 나머지 16개 광역시도는 미등재(레코드 없음 에러 → SP-AUTHOR PHASE B
+  // 진행 신호, 기존 원칙 그대로).
+  'province': {
+    masterDataPath: 'prompts/Jejudo/01-do/templates/province-master-data.json',
+    listKey: '도목록',
+    templateDir: 'prompts/Jejudo/01-do/templates/',
+    fixedTemplate: 'SP-PROVINCE-TEMPLATE_v1.0.md',
+    matchFn: (rec, { doCode }) => rec['도코드'] === doCode,
+  },
 };
 
 // ── 캐시 ──────────────────────────────────────────────────
@@ -210,6 +225,18 @@ export async function _renderEmdTemplate(emdCode) {
  */
 export async function _renderPolicyTemplate(domain) {
   return _assemble('policy', { domain });
+}
+
+/**
+ * 광역자치단체(도청/특별시청/광역시청) 계층 조립 — 도코드 단일 매칭,
+ * domain 개념 없음(city 계층과 동일 패턴).
+ * 예: _renderProvinceTemplate('gyeonggi') → 경기도청 SP 조립.
+ * ★ 2026-07-09 파일럿 — province-master-data.json에 경기도 1건만
+ * 등재돼 있다. 다른 도코드로 호출하면 "레코드 없음" 에러가 나는 게
+ * 정상이다(SP-AUTHOR가 신규 조사 신호로 해석).
+ */
+export async function _renderProvinceTemplate(doCode) {
+  return _assemble('province', { doCode });
 }
 
 /**
