@@ -360,7 +360,13 @@ describe('N-12: org-profile 전체 왕복 — draft 생성 후 GET 조회', () =
 // ══════════════════════════════════════════════════════════════════
 
 function loadStripFns() {
-  const src = readFileSync(path.join(REPO_ROOT, 'src/gopang/ai/call-ai.js'), 'utf-8');
+  // ★ 2026-07-09 수정 — Windows에서 git core.autocrlf가 LF를 CRLF로
+  // 바꿔 체크아웃하면 아래 정규식의 하드코딩된 \n이 매칭에 실패해
+  // "함수를 못 찾음"으로 오판했다(실제 call-ai.js는 멀쩡했음 — 순전히
+  // 이 테스트의 CRLF 취약점). 매칭 전에 \r\n을 \n으로 정규화해서 OS
+  // 무관하게 동작하도록 고쳤다.
+  const raw = readFileSync(path.join(REPO_ROOT, 'src/gopang/ai/call-ai.js'), 'utf-8');
+  const src = raw.replace(/\r\n/g, '\n');
   const fnMatch = src.match(/function _stripBracketTag\(text, tagName\) \{[\s\S]*?\n\}\n/);
   const chainMatch = src.match(/export const _stripInternalTags = [\s\S]*?\n  \.trim\(\);\n/);
   assert.ok(fnMatch, '_stripBracketTag를 call-ai.js에서 찾지 못함 — 함수 시그니처가 바뀌었나?');
