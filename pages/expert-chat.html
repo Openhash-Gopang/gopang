@@ -125,8 +125,14 @@ body{
 </div>
 
 <script type="module">
-import { EXPERT_REGISTRY, COMMON_GUARDRAILS_URL, COMMON_MEDICAL_SAFETY_URL, resolveExpertId }
+import { EXPERT_REGISTRY, COMMON_GUARDRAILS_KEY, COMMON_MEDICAL_SAFETY_KEY, resolveExpertId }
   from '/src/gopang/ai/expert-registry.js';
+// 2026-07-09: fetch(하드코딩 URL) 직접 호출 -> _loadSpByKey(manifest 키)로
+// 전환. 이 페이지가 실제 EXPERT 페르소나 라이브 경로다(expert-session.js의
+// _composeExpertPrompt는 2026-07-03 이후 더 이상 호출되지 않는 참고용
+// 코드로 남아 있을 뿐 — 실사로 확인). SP_lawyer가 v3.2에 몇 주간 고정돼
+// 있던 실제 버그가 바로 이 파일의 하드코딩 때문이었다.
+import { _loadSpByKey } from '/src/gopang/ai/manifest-loader.js';
 
 const RELAY_ENDPOINT = 'https://hondi-proxy.tensor-city.workers.dev';
 
@@ -222,19 +228,16 @@ function appendTyping() {
 async function composeExpertPrompt() {
   const parts = [];
 
-  const guardrailsRes = await fetch(COMMON_GUARDRAILS_URL).catch(e => { throw new Error('공통 가드레일 로드 실패: ' + e.message); });
-  if (!guardrailsRes.ok) throw new Error('공통 가드레일 로드 실패: HTTP ' + guardrailsRes.status);
-  parts.push(await guardrailsRes.text());
+  parts.push(await _loadSpByKey(COMMON_GUARDRAILS_KEY, '공통 가드레일')
+    .catch(e => { throw new Error('공통 가드레일 로드 실패: ' + e.message); }));
 
   if (def.needsMedicalSafety) {
-    const safetyRes = await fetch(COMMON_MEDICAL_SAFETY_URL).catch(e => { throw new Error('의료 안전모듈 로드 실패: ' + e.message); });
-    if (!safetyRes.ok) throw new Error('의료 안전모듈 로드 실패: HTTP ' + safetyRes.status);
-    parts.push(await safetyRes.text());
+    parts.push(await _loadSpByKey(COMMON_MEDICAL_SAFETY_KEY, '의료 안전모듈')
+      .catch(e => { throw new Error('의료 안전모듈 로드 실패: ' + e.message); }));
   }
 
-  const personaRes = await fetch(def.file).catch(e => { throw new Error(`${def.label} SP 로드 실패: ` + e.message); });
-  if (!personaRes.ok) throw new Error(`${def.label} SP 로드 실패: HTTP ` + personaRes.status);
-  parts.push(await personaRes.text());
+  parts.push(await _loadSpByKey(def.key, def.label)
+    .catch(e => { throw new Error(`${def.label} SP 로드 실패: ` + e.message); }));
 
   return parts.join('\n\n---\n\n');
 }

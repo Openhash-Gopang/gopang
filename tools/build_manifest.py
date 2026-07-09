@@ -88,6 +88,39 @@ visitor_files = [
 if visitor_files:
     manifest['HONDI_VISITOR_SP'] = best(visitor_files)
 
+# 2-c) UNIVERSAL-INTEGRITY — prompts/UNIVERSAL-INTEGRITY_vX_Y.md
+#      2026-07-09 신설: expert-registry.js가 하드코딩된 URL로 이 파일을
+#      직접 fetch()하던 것을 manifest 체계로 통합(SP_lawyer가 v3.2에
+#      몇 주간 고정돼 있던 것과 동일한 종류의 staleness 위험 방지).
+universal_integrity_files = [
+    f.name for f in PROMPTS.iterdir()
+    if re.match(r'^UNIVERSAL-INTEGRITY_v', f.name) and f.name.endswith('.md')
+]
+if universal_integrity_files:
+    manifest['UNIVERSAL-INTEGRITY'] = best(universal_integrity_files)
+
+# 2-d) SP_{slug} 계열(.md) — EXPERT 페르소나(SP_lawyer 등) + 공통 가드레일
+#      (SP_common_guardrails·SP_common_medical_safety) — prompts/SP_{slug}_v{ver}.md
+#      2026-07-09 신설: expert-registry.js/expert-session.js가 이 파일들을
+#      전부 하드코딩 경로로 직접 fetch()하고 있어, 새 버전을 만들어도 이
+#      경로를 안 고치면 조용히 구버전을 계속 쓰는 문제가 실제로 있었다
+#      (SP_lawyer v3.2 고정 사례로 발견). 아래 4)의 "SP-NN_slug"(하이픈+숫자,
+#      .txt) 계열과는 별개 명명 규칙(SP_slug, 밑줄, .md)이라 정규식을
+#      공유하지 않는다 — slug 자체에 밑줄이 들어갈 수 있어(예:
+#      SP_common_guardrails) 비탐욕(non-greedy) 매칭으로 마지막
+#      "_v숫자[_숫자...]" 조각만 버전으로 떼어낸다.
+sp_underscore_groups: dict[str, list[str]] = defaultdict(list)
+for f in PROMPTS.iterdir():
+    name = f.name
+    if not name.endswith('.md') or 'LATEST' in name:
+        continue
+    m = re.match(r'^(SP_.+?)_v[\d_]+\.md$', name)
+    if m:
+        sp_underscore_groups[m.group(1)].append(name)
+
+for key in sorted(sp_underscore_groups):
+    manifest[key] = best(sp_underscore_groups[key])
+
 # 3) profile-assistant — prompts/profile-assistant/profile-assistant-vX.Y.txt
 #    (2026-07-08: personal-assistant → profile-assistant 개명·분리)
 pa_dir = PROMPTS / 'profile-assistant'

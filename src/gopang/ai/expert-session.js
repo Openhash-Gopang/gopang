@@ -19,9 +19,10 @@ import { history, _USER } from '../core/state.js';
 import { appendBubble } from '../ui/bubble.js';
 import { _recordPDV } from '../pdv/record.js';
 import { summarizeTranscript6W } from './report-utils.js';
-import { EXPERT_REGISTRY, UNIVERSAL_INTEGRITY_URL, COMMON_GUARDRAILS_URL, COMMON_MEDICAL_SAFETY_URL,
+import { EXPERT_REGISTRY, UNIVERSAL_INTEGRITY_KEY, COMMON_GUARDRAILS_KEY, COMMON_MEDICAL_SAFETY_KEY,
          getExpertGwpDef, resolveExpertId }
   from './expert-registry.js';
+import { _loadSpByKey } from './manifest-loader.js';
 import { _gwpLaunch } from '../gwp/engine.js';
 import { _buildRoutingFacts } from '../services/location.js';
 
@@ -49,38 +50,37 @@ export function currentExpertLabel() {
 }
 
 // ── 합성 System Prompt 로드 (공통 가드레일 + (의료시) 안전모듈 + 페르소나) ──
+// 2026-07-09: fetch(하드코딩 URL) 직접 호출 -> _loadSpByKey(manifest 키)로
+// 전환. manifest.json은 CI가 매 push마다 최신 버전으로 자동 갱신하므로,
+// 이제 새 SP 버전을 만들면 이 파일을 손대지 않아도 자동으로 반영된다
+// (SP_lawyer가 v3.2에 몇 주간 고정돼 있던 문제의 재발 방지).
 async function _composeExpertPrompt(def) {
-  if (_promptCache.has(def.file)) return _promptCache.get(def.file);
+  if (_promptCache.has(def.key)) return _promptCache.get(def.key);
 
   const parts = [];
   try {
-    const uniRes = await fetch(UNIVERSAL_INTEGRITY_URL);
-    if (uniRes.ok) parts.push(await uniRes.text());
+    parts.push(await _loadSpByKey(UNIVERSAL_INTEGRITY_KEY, 'UNIVERSAL-INTEGRITY'));
   } catch (e) { console.warn('[Expert] UNIVERSAL-INTEGRITY 로드 실패:', e.message); }
 
   try {
-    const commonRes = await fetch(COMMON_GUARDRAILS_URL);
-    if (commonRes.ok) parts.push(await commonRes.text());
+    parts.push(await _loadSpByKey(COMMON_GUARDRAILS_KEY, '공통 가드레일'));
   } catch (e) { console.warn('[Expert] 공통 가드레일 로드 실패:', e.message); }
 
   if (def.needsMedicalSafety) {
     try {
-      const medRes = await fetch(COMMON_MEDICAL_SAFETY_URL);
-      if (medRes.ok) parts.push(await medRes.text());
+      parts.push(await _loadSpByKey(COMMON_MEDICAL_SAFETY_KEY, '의료 안전모듈'));
     } catch (e) { console.warn('[Expert] 의료 안전모듈 로드 실패:', e.message); }
   }
 
   try {
-    const personaRes = await fetch(def.file);
-    parts.push(personaRes.ok ? await personaRes.text() :
-      `[${def.label} 페르소나 SP 로드 실패 — 일반 전문가 모드로 응답]`);
+    parts.push(await _loadSpByKey(def.key, def.label));
   } catch (e) {
     console.warn('[Expert] 페르소나 SP 로드 실패:', e.message);
     parts.push(`[${def.label} 페르소나 SP 로드 실패 — 일반 전문가 모드로 응답]`);
   }
 
   const composed = parts.join('\n\n---\n\n');
-  _promptCache.set(def.file, composed);
+  _promptCache.set(def.key, composed);
   return composed;
 }
 
@@ -189,8 +189,8 @@ export async function maybeHandleExpertTurn(userText) {
 export function applyExpertSystemIfActive() {
   if (!_expert.active) return false;
   // _composeExpertPrompt가 캐시돼 있으므로 동기적으로 즉시 적용 가능
-  if (_promptCache.has(_expert.def.file)) {
-    _applySystemEverywhere(_promptCache.get(_expert.def.file));
+  if (_promptCache.has(_expert.def.key)) {
+    _applySystemEverywhere(_promptCache.get(_expert.def.key));
     return true;
   }
   return false;

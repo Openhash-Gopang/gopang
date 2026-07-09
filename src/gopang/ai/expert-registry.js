@@ -13,14 +13,14 @@
  * 분류와 안전모듈 상속은 별개 기준).
  */
 
-export const UNIVERSAL_INTEGRITY_URL   = '/prompts/UNIVERSAL-INTEGRITY_v1_0.md';
+export const UNIVERSAL_INTEGRITY_KEY   = 'UNIVERSAL-INTEGRITY'; // 2026-07-09: 하드코딩 경로 -> manifest 키로 전환
 // 2026-07-09: v3.3 → v3.6 갱신. v3.4~v3.6이 실제로는 이 상수가 안 바뀌어서
 // 한 번도 로드된 적이 없었다(실사로 확인 — expert-session.js가 이 URL을
 // fetch()로 직접 읽고, manifest.json을 거치지 않는 별도 체계이기 때문).
 // C40(공익·사익 재분류 게이트)·C41(오케스트레이션 하위 판단 요청)이 이제야
 // 실제로 로드된다.
-export const COMMON_GUARDRAILS_URL     = '/prompts/SP_common_guardrails_v3_6.md';
-export const COMMON_MEDICAL_SAFETY_URL = '/prompts/SP_common_medical_safety_v1_3.md';
+export const COMMON_GUARDRAILS_KEY     = 'SP_common_guardrails'; // 2026-07-09: 하드코딩 경로 -> manifest 키로 전환
+export const COMMON_MEDICAL_SAFETY_KEY = 'SP_common_medical_safety'; // 2026-07-09: 상동
 
 export const EXPERT_REGISTRY = {
   // ── 법률 ──────────────────────────────────────────────
@@ -29,25 +29,25 @@ export const EXPERT_REGISTRY = {
     // scope=orchestration_subtask 대응)이 이 줄이 안 바뀌어서 한 번도
     // 실제로 로드된 적이 없었다(실사로 확인).
     label: '변호사', icon: '⚖️', category: 'LAW',
-    file: '/prompts/SP_lawyer_v4_1.md', needsMedicalSafety: false,
+    key: 'SP_lawyer', needsMedicalSafety: false,
   },
   // 2026-07-06 신설(전문가 페르소나 누락 감사 결과) — 변호사와 다른 자격.
   // 업무범위(등기·경매·소액사건 등) 초과 시 lawyer로 안내하도록 SP 본문에 명시.
   'judicial-scrivener': {
     label: '법무사', icon: '📜', category: 'LAW',
-    file: '/prompts/SP_judicial-scrivener_v1_1.md', needsMedicalSafety: false,
+    key: 'SP_judicial-scrivener', needsMedicalSafety: false,
   },
 
   // ── 재무·세무 (SP-FIN-01, 2026-07-04 신설) ────────────
   'tax-accountant': {
     label: '세무사', icon: '🧾', category: 'FIN',
-    file: '/prompts/SP_tax-accountant_v1_1.md', needsMedicalSafety: false,
+    key: 'SP_tax-accountant', needsMedicalSafety: false,
   },
   // 2026-07-06 신설 — 세무사와 다른 자격(회계감사·재무제표 중심). 사고실험
   // #40에서 세무사로 오매핑될 위험이 확인된 항목.
   accountant: {
     label: '공인회계사', icon: '📊', category: 'FIN',
-    file: '/prompts/SP_accountant_v1_1.md', needsMedicalSafety: false,
+    key: 'SP_accountant', needsMedicalSafety: false,
   },
 
   // ── 의료·보건 (SP-HEALTH-06~15) ──────────────────────
@@ -56,130 +56,130 @@ export const EXPERT_REGISTRY = {
   // 정의하는 이 4개는 특히 신중한 검토가 필요함(SP 본문 상단 주석 참조).
   physician: {
     label: '의사', icon: '🩺', category: 'HEALTH',
-    file: '/prompts/SP_physician_v1_2.md', needsMedicalSafety: true,
+    key: 'SP_physician', needsMedicalSafety: true,
   },
   dentist: {
     label: '치과의사', icon: '🦷', category: 'HEALTH',
-    file: '/prompts/SP_dentist_v1_1.md', needsMedicalSafety: true,
+    key: 'SP_dentist', needsMedicalSafety: true,
   },
   'traditional-medicine-doctor': {
     label: '한의사', icon: '🌿', category: 'HEALTH',
-    file: '/prompts/SP_traditional-medicine-doctor_v1_1.md', needsMedicalSafety: true,
+    key: 'SP_traditional-medicine-doctor', needsMedicalSafety: true,
   },
   pharmacist: {
     label: '약사', icon: '💊', category: 'HEALTH',
-    file: '/prompts/SP_pharmacist_v1_1.md', needsMedicalSafety: true,
+    key: 'SP_pharmacist', needsMedicalSafety: true,
   },
   veterinarian: {
     label: '수의사', icon: '🐾', category: 'HEALTH',
-    file: '/prompts/SP_veterinarian_v2_4.md', needsMedicalSafety: true,
+    key: 'SP_veterinarian', needsMedicalSafety: true,
   },
   nurse: {
     label: '간호사', icon: '👩‍⚕️', category: 'HEALTH',
-    file: '/prompts/SP_nurse_v3_2.md', needsMedicalSafety: true,
+    key: 'SP_nurse', needsMedicalSafety: true,
   },
   'physical-therapist': {
     label: '물리치료사', icon: '💪', category: 'HEALTH',
-    file: '/prompts/SP_physical-therapist_v3_2.md', needsMedicalSafety: true,
+    key: 'SP_physical-therapist', needsMedicalSafety: true,
   },
   'medical-lab-technologist': {
     label: '임상병리사', icon: '🔬', category: 'HEALTH',
-    file: '/prompts/SP_medical-lab-technologist_v3_2.md', needsMedicalSafety: true,
+    key: 'SP_medical-lab-technologist', needsMedicalSafety: true,
   },
   'radiologic-technologist': {
     label: '방사선사', icon: '📡', category: 'HEALTH',
-    file: '/prompts/SP_radiologic-technologist_v3_2.md', needsMedicalSafety: true,
+    key: 'SP_radiologic-technologist', needsMedicalSafety: true,
   },
   'dental-hygienist': {
     label: '치과위생사', icon: '🦷', category: 'HEALTH',
-    file: '/prompts/SP_dental-hygienist_v3_2.md', needsMedicalSafety: true,
+    key: 'SP_dental-hygienist', needsMedicalSafety: true,
   },
   'occupational-therapist': {
     label: '작업치료사', icon: '🧠', category: 'HEALTH',
-    file: '/prompts/SP_occupational-therapist_v3_2.md', needsMedicalSafety: true,
+    key: 'SP_occupational-therapist', needsMedicalSafety: true,
   },
   'dental-technician': {
     label: '치과기공사', icon: '🦷', category: 'HEALTH',
-    file: '/prompts/SP_dental-technician_v3_2.md', needsMedicalSafety: true,
+    key: 'SP_dental-technician', needsMedicalSafety: true,
   },
   'advanced-practice-nurse': {
     label: '전문간호사', icon: '💉', category: 'HEALTH',
-    file: '/prompts/SP_advanced-practice-nurse_v3_2.md', needsMedicalSafety: true,
+    key: 'SP_advanced-practice-nurse', needsMedicalSafety: true,
   },
   dietitian: {
     label: '영양사', icon: '🥗', category: 'HEALTH',
-    file: '/prompts/SP_dietitian_v3_2.md', needsMedicalSafety: true,
+    key: 'SP_dietitian', needsMedicalSafety: true,
   },
 
   // ── 교육·상담·문화 (SP-EDU-01~06) ────────────────────
   teacher: {
     label: '교사(정교사)', icon: '👩‍🏫', category: 'EDU',
-    file: '/prompts/SP_teacher_v2_4.md', needsMedicalSafety: false,
+    key: 'SP_teacher', needsMedicalSafety: false,
   },
   'clinical-psychologist': {
     label: '임상심리사', icon: '🧑‍⚕️', category: 'EDU',
-    file: '/prompts/SP_clinical-psychologist_v2_4.md', needsMedicalSafety: true, // 2026-07-04: 위기개입(M5) 상속 위해 true로 수정
+    key: 'SP_clinical-psychologist', needsMedicalSafety: true, // 2026-07-04: 위기개입(M5) 상속 위해 true로 수정
   },
   'school-counselor': {
     label: '전문상담교사', icon: '🛋️', category: 'EDU',
-    file: '/prompts/SP_school-counselor_v2_4.md', needsMedicalSafety: true, // 2026-07-04: 상동
+    key: 'SP_school-counselor', needsMedicalSafety: true, // 2026-07-04: 상동
   },
   'mental-health-professional': {
     label: '정신건강전문요원', icon: '💬', category: 'EDU',
-    file: '/prompts/SP_mental-health-professional_v2_4.md', needsMedicalSafety: true, // 2026-07-04: 상동
+    key: 'SP_mental-health-professional', needsMedicalSafety: true, // 2026-07-04: 상동
   },
   // 2026-07-06 신설(SP-EDU-04) — 상담직 3개와 마찬가지로 위기개입 프로토콜(M5)
   // 상속 위해 needsMedicalSafety:true. category는 EDU 유지(복지 상담이 의료
   // 행위는 아니지만, 위기 신호 대응 원칙은 동일하게 필요).
   'social-worker': {
     label: '사회복지사', icon: '🤝', category: 'EDU',
-    file: '/prompts/SP_social-worker_v1_1.md', needsMedicalSafety: true,
+    key: 'SP_social-worker', needsMedicalSafety: true,
   },
   curator: {
     label: '학예사(큐레이터)', icon: '🎨', category: 'EDU',
-    file: '/prompts/SP_curator_v2_4.md', needsMedicalSafety: false,
+    key: 'SP_curator', needsMedicalSafety: false,
   },
   librarian: {
     label: '사서', icon: '📖', category: 'EDU',
-    file: '/prompts/SP_librarian_v2_4.md', needsMedicalSafety: false,
+    key: 'SP_librarian', needsMedicalSafety: false,
   },
 
   // ── 공학·건설·해사 (SP-ENG-01~09) ────────────────────
   architect: {
     label: '건축사', icon: '🏗️', category: 'ENG',
-    file: '/prompts/SP_architect_v2_4.md', needsMedicalSafety: false,
+    key: 'SP_architect', needsMedicalSafety: false,
   },
   'professional-engineer': {
     label: '기술사', icon: '📐', category: 'ENG',
-    file: '/prompts/SP_professional-engineer_v2_4.md', needsMedicalSafety: false,
+    key: 'SP_professional-engineer', needsMedicalSafety: false,
   },
   'marine-pilot': {
     label: '도선사', icon: '⚓', category: 'ENG',
-    file: '/prompts/SP_marine-pilot_v2_4.md', needsMedicalSafety: false,
+    key: 'SP_marine-pilot', needsMedicalSafety: false,
   },
   'naval-architect': {
     label: '조선사', icon: '🚢', category: 'ENG',
-    file: '/prompts/SP_naval-architect_v2_4.md', needsMedicalSafety: false,
+    key: 'SP_naval-architect', needsMedicalSafety: false,
   },
   'navigation-officer': {
     label: '항해사', icon: '🧭', category: 'ENG',
-    file: '/prompts/SP_navigation-officer_v2_4.md', needsMedicalSafety: false,
+    key: 'SP_navigation-officer', needsMedicalSafety: false,
   },
   'marine-engineer': {
     label: '기관사(선박)', icon: '⚙️', category: 'ENG',
-    file: '/prompts/SP_marine-engineer_v2_4.md', needsMedicalSafety: false,
+    key: 'SP_marine-engineer', needsMedicalSafety: false,
   },
   'industrial-safety-consultant': {
     label: '산업안전·보건지도사', icon: '🦺', category: 'ENG',
-    file: '/prompts/SP_industrial-safety-consultant_v2_4.md', needsMedicalSafety: false,
+    key: 'SP_industrial-safety-consultant', needsMedicalSafety: false,
   },
   'weather-forecaster': {
     label: '기상예보사', icon: '🌤️', category: 'ENG',
-    file: '/prompts/SP_weather-forecaster_v2_4.md', needsMedicalSafety: false,
+    key: 'SP_weather-forecaster', needsMedicalSafety: false,
   },
   'fire-safety-manager': {
     label: '소방시설관리사', icon: '🧯', category: 'ENG',
-    file: '/prompts/SP_fire-safety-manager_v2_4.md', needsMedicalSafety: false,
+    key: 'SP_fire-safety-manager', needsMedicalSafety: false,
   },
 
   // ── 부동산 (SP-RE-01, 2026-07-06 신설) ────────────────
@@ -187,7 +187,7 @@ export const EXPERT_REGISTRY = {
   // 감사에서 확인된 가장 큰 신규 카테고리 공백.
   'real-estate-agent': {
     label: '공인중개사', icon: '🏠', category: 'REAL_ESTATE',
-    file: '/prompts/SP_real-estate-agent_v1_1.md', needsMedicalSafety: false,
+    key: 'SP_real-estate-agent', needsMedicalSafety: false,
   },
 };
 

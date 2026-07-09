@@ -37,27 +37,12 @@ export let history_ref = history;  // 외부 참조용
 // ── manifest 기반 SP 로더 ────────────────────────────────────────────
 // prompts/manifest.json 은 CI 빌드 시 tools/build_manifest.py 가 자동 생성.
 // *-LATEST.txt 포인터 파일 방식을 완전 대체 — manifest 단일 체계로 통일.
-const _SP_BASE = '/prompts/';
-let _manifestCache = null;
-
-async function _loadManifest() {
-  if (_manifestCache) return _manifestCache;
-  const res = await fetch(_SP_BASE + 'manifest.json', { cache: 'no-cache' });
-  if (!res.ok) throw new Error('manifest fetch 실패: ' + res.status);
-  _manifestCache = await res.json();
-  return _manifestCache;
-}
-
-async function _loadSpByKey(manifestKey, label) {
-  const manifest = await _loadManifest();
-  const fname = manifest[manifestKey];
-  if (!fname) throw new Error(`${label} manifest 키 없음: ${manifestKey}`);
-  const res = await fetch(_SP_BASE + fname);
-  if (!res.ok) throw new Error(`${label} SP 로드 실패: ${res.status} (${fname})`);
-  const sp = await res.text();
-  console.info(`[SP] ${label} 로드 완료: ${fname} (${sp.length} chars)`);
-  return sp;
-}
+// 2026-07-09: _loadManifest()/_loadSpByKey() 실제 정의는 manifest-loader.js로
+// 이전(expert-session.js와 공유하기 위함 — 순환 참조 방지, 그 파일 헤더 주석
+// 참조). 이 파일은 재수출(re-export)만 한다 — 기존 import 하던 다른 파일이
+// 있으면 깨지지 않도록.
+export { _loadManifest, _loadSpByKey } from './manifest-loader.js';
+import { _loadSpByKey } from './manifest-loader.js';
 
 // AGENT-COMMON (그림자 AI) — 세션당 1회 캐시
 let _agentCommonCache = null;
