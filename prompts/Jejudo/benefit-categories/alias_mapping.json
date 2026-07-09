@@ -1,0 +1,65 @@
+{
+  "_schema_설명": "카테고리ID -> 흡수된 정규화 클래스명 배열. K-Search가 사용자 질의어를 이 목록과 매칭해 카테고리 SP로 라우팅한다. 상위 30개 시범 분류분만 포함 - living registry로 지속 확장 예정.",
+  "카테고리목록": {
+    "GEN-FEE": {
+      "name": "공공시설 이용료 감면",
+      "target": "GEN", "mechanism": "FEE",
+      "aliases": ["체육시설 이용요금 감면", "문화시설 이용요금 감면", "공영주차장 이용요금 감면", "상수도요금 감면", "하수도요금 감면", "장사시설 이용요금 감면", "거주자우선주차 요금감면"]
+    },
+    "PREG-CASH": {
+      "name": "임신·출산 현금지원",
+      "target": "PREG", "mechanism": "CASH",
+      "aliases": ["출산장려금 지원", "출산지원금 지원", "출산축하금 지원", "산후조리비 지원", "장애인가정 출산지원금 지원"]
+    },
+    "GEN-INSURANCE": {
+      "name": "주민 안전보험",
+      "target": "GEN", "mechanism": "INSURANCE",
+      "aliases": ["시민안전보험", "군민안전보험", "민안전보험"]
+    },
+    "GEN-VOUCHER": {
+      "name": "지역화폐·상품권",
+      "target": "GEN", "mechanism": "VOUCHER",
+      "aliases": ["지역화폐", "지역사랑상품권"]
+    },
+    "PREG-SERVICE": {
+      "name": "산모·신생아 건강관리 서비스",
+      "target": "PREG", "mechanism": "SERVICE",
+      "aliases": ["산모·신생아 건강관리 지원", "산모·신생아 건강관리 본인부담금 지원"]
+    },
+    "GEN-SERVICE": {
+      "name": "생활·법률 지원 서비스",
+      "target": "GEN", "mechanism": "SERVICE",
+      "aliases": ["무료 소송대리 서비스", "지역사회서비스 투자사업"]
+    },
+    "LOW-CASH": {
+      "name": "저소득층 건강보험료 지원",
+      "target": "LOW", "mechanism": "CASH",
+      "aliases": ["저소득 주민 국민건강보험료 지원", "저소득층 국민건강보험료 지원"]
+    },
+    "VET-CASH": {
+      "name": "보훈대상자 현금지원",
+      "target": "VET", "mechanism": "CASH",
+      "aliases": ["보훈명예수당", "국가보훈대상자 지원", "참전유공자 사망위로금 지원"]
+    },
+    "DIS-SERVICE": {
+      "name": "장애인 활동지원 서비스",
+      "target": "DIS", "mechanism": "SERVICE",
+      "aliases": ["장애인 활동지원"]
+    },
+    "FOSTER-CASH": {
+      "name": "위탁아동 양육비 지원",
+      "target": "FOSTER", "mechanism": "CASH",
+      "aliases": ["가정위탁아동 양육보조금 지원"]
+    },
+    "DIS-VOUCHER": {
+      "name": "장애인 교육이용권",
+      "target": "DIS", "mechanism": "VOUCHER",
+      "aliases": ["장애인 평생교육이용권 지원"]
+    },
+    "FARM-MATERIAL": {
+      "name": "농업 자재 지원",
+      "target": "FARM", "mechanism": "MATERIAL",
+      "aliases": ["유기질비료 지원"]
+    }
+  }
+}
