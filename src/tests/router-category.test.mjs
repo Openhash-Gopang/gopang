@@ -26,7 +26,7 @@ const { matchService, GWP_REGISTRY, getService } = globalThis;
 const ROUTER_PROMPT_TEXT = '[SP-00-ROUTER 프롬프트 — 테스트 목]';
 globalThis.fetch = async (url, opts = {}) => {
   const u = String(url);
-  if (u.includes('manifest.json')) {
+  if (u.includes('sp-catalog.json')) {
     return { ok: true, json: async () => ({ 'SP-00-ROUTER': 'SP-00-ROUTER-test.txt' }) };
   }
   if (u.includes('SP-00-ROUTER-test.txt')) {

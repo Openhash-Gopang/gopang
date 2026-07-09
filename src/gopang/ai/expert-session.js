@@ -51,7 +51,7 @@ export function currentExpertLabel() {
 
 // ── 합성 System Prompt 로드 (공통 가드레일 + (의료시) 안전모듈 + 페르소나) ──
 // 2026-07-09: fetch(하드코딩 URL) 직접 호출 -> _loadSpByKey(manifest 키)로
-// 전환. manifest.json은 CI가 매 push마다 최신 버전으로 자동 갱신하므로,
+// 전환. sp-catalog.json은 CI가 매 push마다 최신 버전으로 자동 갱신하므로,
 // 이제 새 SP 버전을 만들면 이 파일을 손대지 않아도 자동으로 반영된다
 // (SP_lawyer가 v3.2에 몇 주간 고정돼 있던 문제의 재발 방지).
 // 2026-07-09: export 추가 — call-ai.js의 K-Compose→EXPERT(scope=

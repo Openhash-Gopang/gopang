@@ -135,9 +135,9 @@ def check_router_registry_sync(results: list):
     if not registry_path.exists():
         return
 
-    manifest_path = PROMPTS / 'manifest.json'
+    manifest_path = PROMPTS / 'sp-catalog.json'
     if not manifest_path.exists():
-        print("[경고] prompts/manifest.json 없음 — 라우터 동기화 검사 건너뜀", file=sys.stderr)
+        print("[경고] prompts/sp-catalog.json 없음 — 라우터 동기화 검사 건너뜀", file=sys.stderr)
         return
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
     router_fname = manifest.get('SP-00-ROUTER')

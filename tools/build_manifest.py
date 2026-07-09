@@ -2,7 +2,7 @@
 """
 tools/build_manifest.py
 -----------------------
-prompts/ 디렉터리를 스캔해 prompts/manifest.json 을 자동 생성한다.
+prompts/ 디렉터리를 스캔해 prompts/sp-catalog.json 을 자동 생성한다.
 CI(GitHub Actions)가 push 마다 실행 — 개발자는 SP 파일만 추가하면 된다.
 
 ■ manifest 키 규칙
@@ -34,7 +34,7 @@ from pathlib import Path
 
 ROOT    = Path(__file__).parent.parent   # 저장소 루트
 PROMPTS = ROOT / 'prompts'
-OUT     = PROMPTS / 'manifest.json'
+OUT     = PROMPTS / 'sp-catalog.json'
 
 # ── 버전 파싱 ──────────────────────────────────────────────────────────
 def parse_version(fname: str) -> tuple:

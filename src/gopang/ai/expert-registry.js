@@ -16,7 +16,7 @@
 export const UNIVERSAL_INTEGRITY_KEY   = 'UNIVERSAL-INTEGRITY'; // 2026-07-09: 하드코딩 경로 -> manifest 키로 전환
 // 2026-07-09: v3.3 → v3.6 갱신. v3.4~v3.6이 실제로는 이 상수가 안 바뀌어서
 // 한 번도 로드된 적이 없었다(실사로 확인 — expert-session.js가 이 URL을
-// fetch()로 직접 읽고, manifest.json을 거치지 않는 별도 체계이기 때문).
+// fetch()로 직접 읽고, sp-catalog.json을 거치지 않는 별도 체계이기 때문).
 // C40(공익·사익 재분류 게이트)·C41(오케스트레이션 하위 판단 요청)이 이제야
 // 실제로 로드된다.
 export const COMMON_GUARDRAILS_KEY     = 'SP_common_guardrails'; // 2026-07-09: 하드코딩 경로 -> manifest 키로 전환

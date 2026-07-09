@@ -9,26 +9,27 @@
 //   - pending_agents: L1에서 로드한 임시등록 항목 동적 병합
 // v2.1 변경사항:
 //   - sp_url 하드코딩 제거 → sp_key 필드로 대체
-//   - 빌드 시 자동 생성되는 prompts/manifest.json 을 런타임에 fetch
+//   - 빌드 시 자동 생성되는 prompts/sp-catalog.json 을 런타임에 fetch
 //   - resolveSpUrls() 로 레지스트리 초기화 (앱 시작 시 1회)
 // v2.2 변경사항 (2026-06-29, manifest.json 정합화 점검 반영):
+//   (2026-07-09: prompts/manifest.json → prompts/sp-catalog.json 개명, W-16)
 //   - kinsurance.sp_key: 'SP-14_kinsurance' → 'SP-16_kinsurance'
 //     (K-Insurance가 K-Cleaner와의 SP-14 번호 충돌로 SP-16 재배정됨에 따라
-//      manifest.json 키가 바뀌었고, 이 파일의 sp_key가 그 변경을 따라가지
+//      manifest.json(현 sp-catalog.json) 키가 바뀌었고, 이 파일의 sp_key가 그 변경을 따라가지
 //      못해 깨져 있었음 — resolveSpUrls() 호출 시 sp_url이 null이 되는 버그)
 // ═══════════════════════════════════════════════════════════
 
 const _RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/';
 
 // ── manifest 기반 SP URL resolver ──────────────────────────
-// prompts/manifest.json 은 CI 빌드 시 tools/build_manifest.py 가 자동 생성.
+// prompts/sp-catalog.json 은 CI 빌드 시 tools/build_manifest.py 가 자동 생성.
 // 키 형식: "SP-NN_slug" (예: "SP-05_kmarket", "SP-14_kcleaner")
 let _manifest = null;
 
 async function _loadManifest() {
   if (_manifest) return _manifest;
   try {
-    const res = await fetch('/prompts/manifest.json', { cache: 'no-cache' });
+    const res = await fetch('/prompts/sp-catalog.json', { cache: 'no-cache' });
     if (!res.ok) throw new Error('manifest fetch 실패: ' + res.status);
     _manifest = await res.json();
     console.info('[Registry] manifest 로드 완료 (' + Object.keys(_manifest).length + '개 항목)');

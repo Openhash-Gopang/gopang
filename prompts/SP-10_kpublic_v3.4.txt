@@ -4,7 +4,7 @@
 # 문서 코드  : SP-10_kpublic
 # 버전      : v3.4 (참조 정합성 패치)
 # 이전 버전  : v2.2(2026-06-29, archive) — K-Law v15.1 방법론 기반 구식
-#             포맷. manifest.json에 등록되지 않아 실제로는 죽어 있었음
+#             포맷. sp-catalog.json(구 manifest.json)에 등록되지 않아 실제로는 죽어 있었음
 #             (gwp-registry.js가 sp_key: 'SP-10_kpublic'을 참조해도
 #             sp_url이 null이 되는 상태, 2026-07-08 확인).
 # 상위 상속  : UNIVERSAL-INTEGRITY_v1_0 → UNIVERSAL-common_v1_1(U1~U9)

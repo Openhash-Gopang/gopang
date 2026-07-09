@@ -106,7 +106,7 @@ SP-ID          : SP-19_kintent_v1_0
                동일 메커니즘)
 반환 대상      : K-Compose(정상 완료) 또는 AC([ORCHESTRATION_HANDOFF_BACK])
 GWP ID(제안)   : 'kintent'
-manifest 등록  : prompts/manifest.json에 "SP-19_kintent":
+manifest 등록  : prompts/sp-catalog.json에 "SP-19_kintent":
                "SP-19_kintent_v1_0.txt" 추가 필요(★ 미구현 ★)
 의존 SP        : AGENT-COMMON(발신측, §0-H v3.40), K-Compose(수신측)
 최종 수정      : 2026-07-08

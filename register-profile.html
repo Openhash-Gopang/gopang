@@ -608,10 +608,10 @@ async function submitProfile() {
 
   try {
     // 2026-07-05: 내장 리터럴(systemPrompt 하드코딩) 제거 — 이제
-    // prompts/SP-17_profile-classifier_*.txt(manifest.json 경유)가
+    // prompts/SP-17_profile-classifier_*.txt(sp-catalog.json 경유)가
     // 유일한 정본이다. {{HANDLE}}/{{GUID}} 플레이스홀더는 여기서 치환한다
     // (원래 코드의 ${_handle}/${_guid} 보간과 동일한 효과).
-    const manifestRes = await fetch('/prompts/manifest.json', { cache: 'no-cache' });
+    const manifestRes = await fetch('/prompts/sp-catalog.json', { cache: 'no-cache' });
     if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
     const manifest = await manifestRes.json();
     const spFile = manifest['SP-17_profile-classifier'];

@@ -267,7 +267,8 @@ export function _modelSupportsVision(model) {
 //   2) 그림자 없음(온보딩 미완료): manifest['profile-assistant'] 키로 최신 SP 로드
 // 영구 localStorage 캐시 제거 — 매 세션 fresh fetch로 통일(갱신 자동 반영)
 // ※ 버전 갱신 시 SP 파일 추가 후 git push — CI가 manifest를 자동 갱신
-// SP 파일명은 manifest.json['profile-assistant'] 에서 결정
+// SP 파일명은 sp-catalog.json['profile-assistant'] 에서 결정
+//   (2026-07-09: prompts/manifest.json → prompts/sp-catalog.json 개명, W-16)
 // (2026-07-08: manifest 키를 'personal-assistant'→'profile-assistant'로
 //  개명 — 프로필 작성 기능만 다루는 별도 SP로 분리됐다. 함수명
 //  loadPersonalAssistantSP는 welcome.js 등 기존 호출부와의 호환을 위해
@@ -328,11 +329,12 @@ export async function loadPersonalAssistantSP() {
     }
   }
 
-  // 4) 폴백: manifest.json['profile-assistant'] 키로 버전 결정 후 온보딩 SP 로드
+  // 4) 폴백: sp-catalog.json['profile-assistant'] 키로 버전 결정 후 온보딩 SP 로드
+  //    (2026-07-09: prompts/manifest.json → prompts/sp-catalog.json 개명, W-16)
   //    (*-LATEST.txt 포인터 방식은 폐기됨 — manifest 단일 체계로 통일)
   //    localStorage 영구 캐시 금지 — 항상 fresh fetch (그림자가 생기면 자동 전환됨)
   try {
-    const manifestRes = await fetch(_SP_BASE_CFG + 'manifest.json', { cache: 'no-cache' });
+    const manifestRes = await fetch(_SP_BASE_CFG + 'sp-catalog.json', { cache: 'no-cache' });
     if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
     const manifest = await manifestRes.json();
     const fname = manifest['profile-assistant'];

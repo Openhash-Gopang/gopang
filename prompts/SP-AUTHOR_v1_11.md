@@ -19,7 +19,7 @@
 #             법규·인허가·신고 의무" 섹션을 조사 없이 추출 가능한
 #             리버스 인덱스로 재사용.
 # 성격      : 이용자 대면 SP가 아니다 — [GWP:]/[EXPERT:]로 호출되지 않으며
-#             manifest.json/gwp-registry.js/expert-registry.js에 등록하지
+#             sp-catalog.json/gwp-registry.js/expert-registry.js에 등록하지
 #             않는다. [SP_DRAFT_REQUEST]/[GOV_SP_DRAFT_REQUEST] 신호를
 #             받아 백엔드에서 실행되는 저작 프로세스의 시스템 프롬프트다.
 # 필수 선행 문서 (변경 없이 그대로 인용):

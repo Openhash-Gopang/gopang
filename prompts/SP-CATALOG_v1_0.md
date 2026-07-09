@@ -31,7 +31,7 @@
 전부 **평면 구조** — 대부분 SP 파일 1개(`sp_key`)를 그대로 로드하며,
 jeju처럼 다단계 하위 조직으로 갈라지지 않는다.
 
-※ 예외: `kcommerce`(K-Market)는 `sp_key`/manifest.json 경로를 타지
+※ 예외: `kcommerce`(K-Market)는 `sp_key`/sp-catalog.json 경로를 타지
 않는 유일한 항목이다(2026-07-05 확인). market 레포 자체의
 `webapp.html`이 `https://raw.githubusercontent.com/Openhash-Gopang/
 market/main/prompts/SP-KMARKET-v2_5.txt`를 직접 fetch하고,

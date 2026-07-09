@@ -1,6 +1,18 @@
 // ═══════════════════════════════════════════════════════════
 // jeju-router.js v1.0 — 제주 기관 SP 조립 엔진
 //
+// ★ 2026-07-09 명확화(K-21 조사 중 발견) — Openhash-Gopang/jeju 독립
+// 저장소에도 동일한 파일명 "jeju-router.js"가 있는데, 그건 완전히
+// 다른 시스템이다: jeju.hondi.net이 실제로 서빙하는 프론트엔드 라우터
+// (resolveJejuAgency/assembleJejuSystemPrompt, /ai/chat 직접 호출,
+// UNIVERSAL-INTEGRITY 미적용, 2026-07-05 마지막 수정)이고, 아직
+// /gov/relay로 마이그레이션 전이다(아래 GOV_AGENCIES 관련 worker.js
+// 주석 참고). 이 파일(gopang 저장소 쪽)은 그것과 무관하게 SP-AUTHOR
+// 템플릿 렌더링 파이프라인용으로 새로 만들어진 별개 엔진이다
+// (_renderTemplate 등, 2026-07-08 신설). 이름이 같다고 서로 동기화
+// 하면 안 된다 — 목적과 export 함수 자체가 다르다. 혼동 방지를 위해
+// 향후 파일명 분리를 검토할 것(예: gov-template-renderer.js).
+//
 // 여러 문서(national-agency-master-data.json 주석 등)가 "_renderNatTemplate()이
 // domain으로 template을 찾고 도코드로 레코드를 찾아 자리표시자를 채운다"고
 // 전제해왔으나 실제 구현 파일이 존재하지 않았다(2026-07-08 확인). 이 파일이

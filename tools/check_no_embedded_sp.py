@@ -2,7 +2,7 @@
 """
 tools/check_no_embedded_sp.py
 ------------------------------
-SP(시스템 프롬프트)는 반드시 prompts/ 아래 파일 하나(그리고 manifest.json이
+SP(시스템 프롬프트)는 반드시 prompts/ 아래 파일 하나(그리고 sp-catalog.json이
 가리키는 raw URL)로만 존재해야 한다. 2026-07-05에 webapp.html의
 `_PA_SYSTEM_PROMPT`(manifest 로드 실패 시 조용히 대체되던 742자짜리 내장
 사본 — 안전장치가 전혀 없고 라우팅 id도 틀려 있었음)가 발견된 뒤 신설.

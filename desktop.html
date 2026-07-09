@@ -3020,13 +3020,14 @@ window.closeHondiZoom = function() {
   // 이전엔 SP 전문(약 220줄)이 이 파일에 직접 박혀 있었음(check_no_embedded_sp.py의
   // MAX_SPAN_LINES=80 컷오프를 넘겨 검사망에 걸리지 않던 사각지대 — SP는
   // prompts/ 파일 하나만 정본이어야 한다는 원칙 위반). 다른 SP 로더
-  // (config.js의 loadPersonalAssistantSP)와 동일한 패턴으로 manifest.json→
+  // (config.js의 loadPersonalAssistantSP)와 동일한 패턴으로 sp-catalog.json→
+  // (2026-07-09: prompts/manifest.json → prompts/sp-catalog.json 개명, W-16)
   // 실제 파일 fetch. 세션당 1회만 fetch하고 이후엔 캐시 재사용.
   let _visitorSPCache = null;
   async function _loadVisitorSP() {
     if (_visitorSPCache) return _visitorSPCache;
     try {
-      const manifestRes = await fetch('/prompts/manifest.json', { cache: 'no-cache' });
+      const manifestRes = await fetch('/prompts/sp-catalog.json', { cache: 'no-cache' });
       if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
       const manifest = await manifestRes.json();
       const fname = manifest['HONDI_VISITOR_SP'];

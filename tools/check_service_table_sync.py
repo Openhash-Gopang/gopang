@@ -15,7 +15,7 @@ AGENT-COMMON은 "표 밖의 id는 존재하지 않는다"고 스스로 명시하
      추출한다. url이 없는 항목(예: tool-web-search, tool-calculator)은
      [GWP: id] 태그가 아니라 함수 호출로 invoke되는 별도 메커니즘이므로
      비교 대상에서 제외한다.
-  2. AGENT-COMMON(prompts/manifest.json이 가리키는 최신 파일)의 §9 표에서
+  2. AGENT-COMMON(prompts/sp-catalog.json이 가리키는 최신 파일)의 §9 표에서
      id 목록을 추출한다.
   3. (1)에는 있는데 (2)에는 없는 id가 하나라도 있으면 실패(exit 1) —
      "한 곳에서 빠짐없이 관리"를 코드로 강제한다.
@@ -45,10 +45,10 @@ def registry_ids_with_url() -> set[str]:
 
 
 def agent_common_table_ids() -> set[str]:
-    manifest = json.loads((ROOT / 'prompts' / 'manifest.json').read_text(encoding='utf-8'))
+    manifest = json.loads((ROOT / 'prompts' / 'sp-catalog.json').read_text(encoding='utf-8'))
     fname = manifest.get('AGENT-COMMON')
     if not fname:
-        print("✗ manifest.json에 AGENT-COMMON 키가 없음")
+        print("✗ sp-catalog.json에 AGENT-COMMON 키가 없음")
         sys.exit(1)
     text = (ROOT / 'prompts' / fname).read_text(encoding='utf-8')
 

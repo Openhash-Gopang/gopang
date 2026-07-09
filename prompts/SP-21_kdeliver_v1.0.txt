@@ -105,7 +105,7 @@ SP-ID          : SP-21_kdeliver_v1_0
 반환 대상      : AC([ORCHESTRATION_COMPLETE] 또는 [ORCHESTRATION_
                HANDOFF_BACK])
 GWP ID(제안)   : 'kdeliver'
-manifest 등록  : prompts/manifest.json에 "SP-21_kdeliver":
+manifest 등록  : prompts/sp-catalog.json에 "SP-21_kdeliver":
                "SP-21_kdeliver_v1_0.txt" 추가 필요(★ 미구현 ★)
 최종 수정      : 2026-07-08
 버전 이력      :

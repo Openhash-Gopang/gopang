@@ -15,7 +15,7 @@ const PROMPT_FILES = {
   'UNIVERSAL-common_v1_1.md':    '[UNIVERSAL-common v1.1 텍스트 — U9 포함]',
   'K-Public_common_v1_3.md':     '[K-Public_common 텍스트]',
   'PROFESSIONAL-common_v1_0.md': '[PROFESSIONAL-common 텍스트]',
-  'manifest.json': JSON.stringify({ 'SP-04_khealth': 'SP-04_khealth_v2.1.txt' }),
+  'sp-catalog.json': JSON.stringify({ 'SP-04_khealth': 'SP-04_khealth_v2.1.txt' }),
   'SP-04_khealth_v2.1.txt': '[K-Health SP 텍스트]',
   'JEJU-DO-SP_v1.0.md':       '[제주도청 총괄 SP 텍스트 — JEJU-GOV-COMMON 포함]',
   'JEJU-NATIONAL-SP_v1.0.md': '[제주 국가기관 총괄 SP 텍스트 — JEJU-GOV-COMMON 포함]',

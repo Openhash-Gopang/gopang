@@ -41,10 +41,10 @@ def registry_files_exist() -> list[str]:
 
 
 def agent_common_table_ids() -> set[str]:
-    manifest = json.loads((ROOT / 'prompts' / 'manifest.json').read_text(encoding='utf-8'))
+    manifest = json.loads((ROOT / 'prompts' / 'sp-catalog.json').read_text(encoding='utf-8'))
     fname = manifest.get('AGENT-COMMON')
     if not fname:
-        print("✗ manifest.json에 AGENT-COMMON 키가 없음")
+        print("✗ sp-catalog.json에 AGENT-COMMON 키가 없음")
         sys.exit(1)
     text = (ROOT / 'prompts' / fname).read_text(encoding='utf-8')
 

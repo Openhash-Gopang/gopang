@@ -200,7 +200,7 @@ SP-ID          : SP-20_kcompose_v1_0
 반환 대상      : K-Deliver(정상 완료) 또는 AC([ORCHESTRATION_HANDOFF_
                BACK])
 GWP ID(제안)   : 'kcompose'
-manifest 등록  : prompts/manifest.json에 "SP-20_kcompose":
+manifest 등록  : prompts/sp-catalog.json에 "SP-20_kcompose":
                "SP-20_kcompose_v1_0.txt" 추가 필요(★ 미구현 ★)
 최종 수정      : 2026-07-08
 버전 이력      :

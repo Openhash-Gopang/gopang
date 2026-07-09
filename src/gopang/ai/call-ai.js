@@ -38,7 +38,7 @@ export let history_ref = history;  // 외부 참조용
 // ── manifest 기반 SP 로더 ────────────────────────────────────────────
 // _loadManifest/_loadSpByKey 는 manifest-loader.js 로 이미 분리돼 있었으나
 // (2026-07-09 신설, expert-session.js는 그쪽을 사용 중) call-ai.js만 자체
-// 사본을 그대로 갖고 있어 manifest.json을 두 번 fetch하고 있었다(W-16 발견,
+// 사본을 그대로 갖고 있어 manifest.json(현 sp-catalog.json)을 두 번 fetch하고 있었다(W-16 발견,
 // 2026-07-09). manifest-loader.js는 call-ai.js/expert-session.js 어느 쪽도
 // import하지 않는 독립 모듈이라 순환 참조 없이 바로 가져다 쓸 수 있다.
 import { _loadSpByKey } from './manifest-loader.js';

@@ -31,7 +31,7 @@ jobs:
       - name: Archive old prompt versions
         run: python3 tools/archive_old_prompts.py
 
-      - name: Regenerate manifest.json
+      - name: Regenerate sp-catalog.json
         run: python3 tools/build_manifest.py
 
       - name: Commit if changed
@@ -39,5 +39,5 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A prompts/
-          git diff --cached --quiet || git commit -m "ci(periodic): archive old prompt versions + regenerate manifest.json [skip ci]"
+          git diff --cached --quiet || git commit -m "ci(periodic): archive old prompt versions + regenerate sp-catalog.json [skip ci]"
           git diff --cached --quiet || git push

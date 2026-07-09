@@ -310,7 +310,7 @@ const LAYER_REPOS = {
 // profile_pdv_schema_plan_v1.md Phase 6에서 Tier2/3가 추가될 때마다 이 목록도 같이 늘린다.
 // 클라이언트(또는 모델 출력)가 "{ksic}" 같은 미치환 리터럴이나 미정의 코드를 보내는 걸 막는 최소 방어선.
 const VALID_INDUSTRY_SCHEMA_IDS = new Set([
-  // 2026-06-30: manifest.json의 AGENT-SUPPLIER-* 77개 키 전체와 동기화.
+  // 2026-06-30: sp-catalog.json의 AGENT-SUPPLIER-* 77개 키 전체와 동기화.
   // 기존엔 15개만 등록돼 있어 제조업·광업·건설·금융·의료 등 60개 이상
   // 업종의 가입이 INVALID_SCHEMA_ID로 막혀 있었음(2026-06-30 발견·수정).
   '01','02','03','05','06','07','08','10','11','12','13','14','15','16',
@@ -3506,7 +3506,7 @@ const PROFESSIONAL_IDENTITY_AGENCIES = new Set(['health']);
 // expert-chat.html이 COMMON_GUARDRAILS_URL을 하드코딩해 SP_lawyer가
 // v3.2에 몇 주간 고정돼 있던 것과 정확히 같은 종류의 위험이다(실사로
 // 발견·수정한 사례, manifest-loader.js 참조). 여기도 같은 원리로
-// GitHub raw의 manifest.json을 먼저 읽어 최신 파일명을 알아낸 뒤 그
+// GitHub raw의 sp-catalog.json을 먼저 읽어 최신 파일명을 알아낸 뒤 그
 // 파일을 가져오도록 바꾼다 — UNIVERSAL-INTEGRITY는 지금 버전이 1개뿐이라
 // 당장 깨진 상태는 아니었지만, v2가 생기는 순간 조용히 stale해질
 // 뻔한 걸 미리 막는다.
@@ -3518,8 +3518,8 @@ const _GITHUB_MANIFEST_TTL_MS = 10 * 60 * 1000;
 async function _fetchGithubManifest() {
   const now = Date.now();
   if (_githubManifestCache && (now - _githubManifestCacheAt) < _GITHUB_MANIFEST_TTL_MS) return _githubManifestCache;
-  const res = await fetch(`${GITHUB_RAW_BASE}/prompts/manifest.json`, { cache: 'no-cache' });
-  if (!res.ok) throw new Error(`manifest.json fetch 실패: HTTP ${res.status}`);
+  const res = await fetch(`${GITHUB_RAW_BASE}/prompts/sp-catalog.json`, { cache: 'no-cache' });
+  if (!res.ok) throw new Error(`sp-catalog.json fetch 실패: HTTP ${res.status}`);
   _githubManifestCache = await res.json();
   _githubManifestCacheAt = now;
   return _githubManifestCache;
@@ -3770,11 +3770,12 @@ const MAX_SP_HOPS = 2;
 const MAX_LLM_CALLS_PER_TURN = 3;
 
 // target 식별자 → 시스템 프롬프트 로드 방법.
-//   via:'manifest' — prompts/manifest.json의 키를 그대로 재사용
-//     (SP-00-ROUTER 로더와 동일 인프라). manifest.json에 등록되지 않은
-//     agency(예: tax — 현재 manifest에 SP-XX_ktax 키가 없음)는 절대
+//   via:'manifest' — prompts/sp-catalog.json의 키를 그대로 재사용
+//     (SP-00-ROUTER 로더와 동일 인프라, 2026-07-09 prompts/manifest.json
+//     에서 개명, W-16). sp-catalog.json에 등록되지 않은
+//     agency(예: tax — 현재 카탈로그에 SP-XX_ktax 키가 없음)는 절대
 //     여기 넣지 않는다. 넣으면 fetch가 항상 실패해 위임이 조용히
-//     죽는다 — 위임 대상으로 열려면 manifest.json에 해당 agency의
+//     죽는다 — 위임 대상으로 열려면 sp-catalog.json에 해당 agency의
 //     안정적 "총괄" SP 키 등록이 선행돼야 한다.
 //   via:'url' — Jeju 트리처럼 manifest 밖에서 직접 raw URL로 관리되는
 //     문서.
@@ -3799,7 +3800,7 @@ const SP_DELEGATION_REGISTRY = {
     url: 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/Jejudo/09-national/JEJU-NATIONAL-SP_v1.0.md',
     identity: null, label: '제주 소재 국가기관(총괄)',
   },
-  // tax: manifest.json에 SP-XX_ktax 없음 — 등록 전까지 위임 대상에서 제외.
+  // tax: sp-catalog.json에 SP-XX_ktax 없음 — 등록 전까지 위임 대상에서 제외.
 };
 
 // v1.0 파일럿: 이 목록에 속한 agency만 위임을 "시작"할 수 있다(originate).
@@ -3822,7 +3823,7 @@ async function _fetchDelegationPrompt(regKey) {
 
   let url;
   if (entry.via === 'manifest') {
-    const manifestRes = await fetch('https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/manifest.json', { cache: 'no-cache' });
+    const manifestRes = await fetch('https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/sp-catalog.json', { cache: 'no-cache' });
     if (!manifestRes.ok) throw new Error(`manifest fetch 실패: ${manifestRes.status}`);
     const manifest = await manifestRes.json();
     const fname = manifest[entry.key];
@@ -5662,11 +5663,12 @@ async function _compileAgentSP(env, principalProfile) {
     `    외부 고객·제3자로 간주해 영업기밀을 제공하지 않습니다\n` +
     `    (AGENT-SUPPLIER-COMMON §0 고객 보호 원칙 우선).`;
 
-  // 1) AGENT-COMMON 로드 — manifest.json['AGENT-COMMON'] 키로 파일명 결정
+  // 1) AGENT-COMMON 로드 — sp-catalog.json['AGENT-COMMON'] 키로 파일명 결정
+  //    (2026-07-09: prompts/manifest.json → prompts/sp-catalog.json 개명, W-16)
   //    CI 빌드 시 자동 갱신 — AGENT-COMMON-LATEST.txt 포인터 파일 방식 제거
   let commonSP = '';
   try {
-    const manifestRes = await fetch(`${REPO_RAW}/prompts/manifest.json`, { ...headers, cache: 'no-cache' });
+    const manifestRes = await fetch(`${REPO_RAW}/prompts/sp-catalog.json`, { ...headers, cache: 'no-cache' });
     if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
     const manifest = await manifestRes.json();
     const commonFile = manifest['AGENT-COMMON'];
@@ -5692,7 +5694,7 @@ async function _compileAgentSP(env, principalProfile) {
   let supplierCommonSP = '';
   if (ksic) {
   try {
-    const manifestRes = await fetch(`${REPO_RAW}/prompts/manifest.json`, { ...headers, cache: 'no-cache' });
+    const manifestRes = await fetch(`${REPO_RAW}/prompts/sp-catalog.json`, { ...headers, cache: 'no-cache' });
     if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
     const manifest = await manifestRes.json();
     const commonSupplierFile = manifest['AGENT-SUPPLIER-COMMON'];
@@ -5710,12 +5712,13 @@ async function _compileAgentSP(env, principalProfile) {
   }
 
   // 3) AGENT-SUPPLIER-{ksic} 로드 (업종 불명이면 생략)
-  // 파일명은 빌드 시 자동 생성된 prompts/manifest.json 에서 결정.
+  // 파일명은 빌드 시 자동 생성된 prompts/sp-catalog.json 에서 결정.
+  //    (2026-07-09: prompts/manifest.json → prompts/sp-catalog.json 개명, W-16)
   // SUPPLIER_FILE_MAP 하드코딩 제거 — manifest 갱신만으로 새 버전 자동 반영.
   let supplierSP = '';
   if (ksic && VALID_INDUSTRY_SCHEMA_IDS.has(String(ksic))) {
     try {
-      const manifestRes = await fetch(`${REPO_RAW}/prompts/manifest.json`, { ...headers, cache: 'no-cache' });
+      const manifestRes = await fetch(`${REPO_RAW}/prompts/sp-catalog.json`, { ...headers, cache: 'no-cache' });
       if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
       const manifest = await manifestRes.json();
       const ksicCode = String(ksic).padStart(2, '0');

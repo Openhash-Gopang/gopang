@@ -538,7 +538,8 @@ body {
 // 2026-07-09 근본수정 — "System Prompt 보기" 링크가 버전을 하드코딩해서
 // SP가 개정될 때마다 반복적으로 낡은 버전을 가리키던 문제(2026-07-04,
 // 2026-07-06, 2026-07-09 세 차례 재발) 해결. 페이지 로드 시 실제
-// manifest.json 기준 최신 파일명으로 href를 다시 쓴다. 실패해도 정적
+// sp-catalog.json 기준 최신 파일명으로 href를 다시 쓴다. 실패해도 정적
+// (2026-07-09: prompts/manifest.json → prompts/sp-catalog.json 개명, W-16)
 // href(배포 시점 최신값)가 그대로 남으므로 페이지는 항상 정상 동작한다.
 (async function syncSpPromptLinks() {
   const RE = /\/prompts\/(SP_[A-Za-z0-9-]+)_v\d+_\d+\.md$/;
@@ -547,7 +548,7 @@ body {
   if (!links.length) return;
 
   try {
-    const res = await fetch('/prompts/manifest.json', { cache: 'no-cache' });
+    const res = await fetch('/prompts/sp-catalog.json', { cache: 'no-cache' });
     if (!res.ok) throw new Error('manifest fetch 실패: ' + res.status);
     const manifest = await res.json();
 

@@ -876,7 +876,7 @@ SP-ID          : SP-18_ksearch_v1_2
                realtime-ops-data|safety-concern]
 GWP ID(제안)   : 'ksearch' — gwp-registry.js에 신규 항목 추가 필요
                (아래 [gwp-registry.js 반영 제안] 참조)
-manifest 등록  : prompts/manifest.json에 "SP-18_ksearch":
+manifest 등록  : prompts/sp-catalog.json에 "SP-18_ksearch":
                "SP-18_ksearch_v1_2.txt" 추가 필요
 의존/연동 SP   : profile-assistant(RULE-03, 현재 third_party_draft
                모드 없음 — 선행 작업 필요), AGENT-COMMON(RULE-06 6-A
