@@ -1,3 +1,14 @@
+# ★★★ 2026-07-09 폐기(DEPRECATED) — 이 문서는 더 이상 살아있는 문서가 아닙니다 ★★★
+# 2026-07-05 리팩터링으로 이 문서의 내용 전부가 다음 세 문서로 분산·재배치됐습니다:
+#   - kgov(SP-10_kpublic, 전국 공통 원칙 — 정직성·능동적역량·요청파이프라인·PDV동의·위험등급)
+#   - prompts/Jejudo/00-common/overlays/GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md (도별 사실 — 정체성·콜센터·관할예시)
+#   - prompts/Jejudo/00-common/JEJU-TREE-PROTOCOL_v1.0.md (다단 SP 체인 기술 프로토콜)
+# jeju.hondi.net(독립 jeju 저장소)은 이미 위 세 문서만 조립해서 쓰고, 이 파일은 fetch하지 않습니다.
+# ★ 다만 gopang worker.js의 jeju_do/jeju_national 위임 경로가 이 사실을 반영 못한 채
+# JEJU-DO-SP_v1.0.md만 단독 fetch하고 있는 별도 문제가 2026-07-09에 발견됐습니다(수정 여부 결정 대기).
+# 이 파일 자체는 보존용으로만 남기며, 실사용 세션에서 이 파일을 직접 참조하지 마십시오.
+# ═══════════════════════════════════════════════════
+
 # JEJU-GOV-COMMON
 # ═══════════════════════════════════════════════════
 # 문서명    : Jeju Government Domain — Common System Prompt

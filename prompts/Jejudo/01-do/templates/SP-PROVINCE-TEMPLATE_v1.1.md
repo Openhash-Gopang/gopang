@@ -2,28 +2,42 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : 광역자치단체(도·특별시·광역시) — System Prompt 템플릿
 # 문서 코드  : SP-PROVINCE-TEMPLATE
-# 버전      : v1.0 (2026-07-09, GOV-TIER-IO-SCHEMA_v1_0 Tier A를 SP-CITY-
-#             TEMPLATE_v1.0과 동일한 렌더링 구조로 템플릿화)
-# 상위 상속  : {GOV_COMMON}  ← ★ 미해결(아래 "알려진 한계" 참조)
+# 버전      : v1.1 (2026-07-09, GOV_COMMON 삽입 문제 정정 — 아래 "v1.0의
+#             착오 정정" 참조. v1.0은 GOV-TIER-IO-SCHEMA_v1_0 Tier A를
+#             SP-CITY-TEMPLATE_v1.0과 동일한 렌더링 구조로 템플릿화)
+# 상위 상속  : kgov(SP-10_kpublic, 전국 공통) → <PROVINCE>-GOV-COMMON-
+#             OVERLAY(00-common/overlays/, 도별 사실) → JEJU-TREE-
+#             PROTOCOL_v1.0.md(다단 SP 체인 기술 프로토콜 — 이름은
+#             "JEJU"지만 <PROVINCE> 어디에나 쓰도록 범용 설계됨, §0
+#             참조. 이름과 실제 범용성이 안 맞는 건 이미 알려진 별도
+#             과제 — jeju-router.js와 같은 종류의 이름 문제)
 # 작성일     : 2026-07-09
 # 작성자     : AI City Inc. · Claude(설계 지원)
 # 적용 대상  : GWP 라우터가 특정 광역자치단체(도청/특별시청/광역시청)로
 #             판단한 세션
 #
 # ═══════════════════════════════════════════════════
-# ★ 알려진 한계 — 정직하게 남김 ★
-# SP-CITY-TEMPLATE은 {GOV_COMMON} 자리에 실제로 JEJU-GOV-COMMON이 고정
-# 삽입되는 구조였다(제주 하나만 다루면 됐으므로). 이 템플릿을 경기도 등
-# 제주 밖 16개 광역시도로 확장하면서 같은 방식을 그대로 쓸 수 없다 —
-# JEJU-GOV-COMMON은 "제주 행정 도메인" 전용으로 명시적으로 작성된
-# 문서라 경기도 세션에 그대로 삽입하면 내용이 틀린다. 즉 "전국 공통
-# 지방행정 상위 레이어"(가칭 GOV-COMMON, JEJU-GOV-COMMON에서 제주 특화
-# 조항만 뺀 버전)가 아직 존재하지 않는다 — 이 문서는 그 상위 레이어가
-# 나중에 만들어진다는 전제로 {GOV_COMMON} 자리표시자를 남겨둔 채
-# 작성됐다. 지금 이 템플릿을 경기도에 렌더링해도 광역단체 자체의
-# 정체성·입출력 스키마는 정확하지만, 상위 삽입 문서가 없어 PDV 중개
-# 프로토콜(§13급)·GWP 태그 체계 같은 전역 규칙은 AGENT-COMMON에서
-# 바로 상속해야 하는 임시 상태다 — 다음 과제로 명시적으로 남긴다.
+# ★ v1.0의 착오 정정(v1.1, 같은 날 발견) ★
+# v1.0은 "전국 공통 지방행정 상위 레이어가 아직 없다"고 적고
+# "GOV_COMMON" 자리표시자를 미해결 상태로 남겼는데, 이건 틀린 전제였다 —
+# 그 레이어는 2026-07-05에 이미 만들어져 있었다(kgov + GOV-COMMON-
+# OVERLAY-TEMPLATE + JEJU-TREE-PROTOCOL, 위 "상위 상속" 참조).
+# 심지어 이 문서의 원본이었던 JEJU-GOV-COMMON_v1_1~v1_5.md 자체가 그
+# 재설계 과정에서 내용이 전부 위 세 문서로 분산·재배치되고 폐기된
+# 죽은 파일이다 — v1.0을 쓸 때 이걸 몰랐다. GOV-COMMON-OVERLAY-
+# TEMPLATE_v1.1.md는 SP-CITY-TEMPLATE과 완전히 같은 도코드 매칭
+# 템플릿 방식이라 경기도 레코드를 gov-common-overlay-master-data.json에
+# 추가하는 것만으로 바로 재사용된다(2026-07-09 실제로 추가·렌더링
+# 검증 완료 — 경기도/서울/전남광주통합특별시 3건, unresolved 0건).
+#
+# ★ 별도로 발견된, 아직 미해결인 진짜 문제 ★
+# gopang worker.js의 SP_DELEGATION_REGISTRY(jeju_do/jeju_national)는
+# JEJU-DO-SP_v1.0.md 한 파일만 fetch하고 위 상위 체인(kgov+overlay+
+# tree-protocol)을 전혀 붙이지 않는다 — JEJU-DO-SP_v1.0.md 자신의
+# 헤더가 "반드시 JEJU-GOV-COMMON 뒤에 고정 삽입, 단독 사용 금지"라고
+# 명시하는데도. jeju.hondi.net(독립 jeju 저장소)은 이 체인을 올바르게
+# 조립하지만, gopang의 /gov/relay 경로는 그렇지 않다 — 의도된
+# 경량화인지 버그인지 확인 필요(사용자 판단 대기, 이 문서 범위 밖).
 #
 # 자리표시자 목록: 도이름, 도코드, 통치구조_문구, 이원화_문구,
 #                 인접기관_문구, 광역출력_문구, 위임사무_문구,
@@ -33,7 +47,7 @@
 ## §0. 상속 및 삽입 위치
 
 ```
-{GOV_COMMON}(★ 미해결, 위 한계 참조) → [본 SP: {도이름}청] → (SP-DO-{부서} | SP-CITY-{시군} | SP-PROVINCE-POLICY-{정책})?
+kgov → <PROVINCE>-GOV-COMMON-OVERLAY → JEJU-TREE-PROTOCOL → [본 SP: {도이름}청] → (SP-DO-{부서} | SP-CITY-{시군} | SP-PROVINCE-POLICY-{정책})?
 ```
 
 ## §1. 정체성

@@ -88,7 +88,7 @@ const TIER_CONFIG = {
     masterDataPath: 'prompts/Jejudo/01-do/templates/province-master-data.json',
     listKey: '도목록',
     templateDir: 'prompts/Jejudo/01-do/templates/',
-    fixedTemplate: 'SP-PROVINCE-TEMPLATE_v1.0.md',
+    fixedTemplate: 'SP-PROVINCE-TEMPLATE_v1.1.md',
     matchFn: (rec, { doCode }) => rec['도코드'] === doCode,
   },
 };
