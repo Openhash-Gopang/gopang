@@ -16,6 +16,7 @@
  */
 import { CFG, _modelSupportsVision, PROVIDER_INFO, getPriorityOrder, MODEL_MIGRATION } from '../core/config.js';
 import { TOKEN_BUDGET } from '../core/token-policy.js';
+import { IMPORTANCE } from '../../core/constants.js';
 import { aiActive, history, _userLocation,
          _USER, USER_GUID, _locationPending, _locationReady } from '../core/state.js';
 import { appendBubble, showTyping, hideTyping,
@@ -1277,6 +1278,105 @@ export function _resolveHondiTier(userText, messages) {
     return 'hondi-pro';
   }
   return 'hondi-flash';
+}
+
+// ══════════════════════════════════════════════════════════
+// 대화 중요도 기반 무결성 검증 등급 (v0.1, 2026-07-09 신설 — 관찰 전용)
+// ══════════════════════════════════════════════════════════
+// 배경: "메인 채팅은 클라이언트가 조립 → 서버는 프록시만" vs "GWP 서비스는
+// 서버가 직접 조립·위임"이라는 신뢰경계 이원화가 원칙 없이 역사적으로
+// 갈라져 있었다(2026-07-09 발견). src/openhash/importanceVerifier.js가
+// GDC 거래에 이미 쓰고 있는 "중요도 점수 → LIGHTWEIGHT/STANDARD/ENHANCED
+// 3단 검증" 패턴을 그대로 재사용해, 대화의 위험/이해관계 크기에 따라
+// 검증 비용을 달리 매기는 쪽으로 통일한다 — 오픈해시 철학(탈중앙화·
+// 검증가능성 우선, 항상 서버가 통제하지 않음)과 GWP 수준 보안(고위험
+// 사안은 서버가 직접 통제)을 동시에 만족시키는 절충안.
+//
+// ★ 이번 커밋은 "1단계: 점수 함수만" — 실제 라우팅/서버 검증 게이트에는
+// 아직 연결하지 않는다(2단계: hashChain.js 앵커링, 3단계: worker.js
+// 검증 게이트는 별도 작업). 지금은 콘솔 로그로만 관찰 가능하다.
+//
+// 점수 공식(importanceVerifier.js와 동일한 가중합 스타일):
+//   score = w1·f_category + w2·f_disposition + w3·f_delegation
+//   w1=0.5, w2=0.3, w3=0.2
+//   응급 신호(kemergency 트리거)는 다른 모든 계산을 생략하고 즉시 100점
+//   (jeju-router.js의 _isEmergency가 다른 모든 매칭보다 최우선인 것과
+//   동일한 원칙 — 응급은 예외 없이 최고 등급)
+//
+// 임계값은 IMPORTANCE(core/constants.js)를 그대로 재사용한다 — GDC
+// 거래용으로 이미 실측 조정된 값(25/60)을 대화에도 동일 기준으로
+// 적용해, 나중에 하나의 "중요도 사상"으로 합칠 여지를 남긴다.
+
+export const GOV_VERIFICATION_MODE = Object.freeze({
+  LIGHTWEIGHT: 'LIGHTWEIGHT', // 지금의 메인 채팅과 동일 — 클라이언트 조립, 서버는 프록시
+  STANDARD:    'STANDARD',    // 서버가 system 메시지 중 UNIVERSAL-INTEGRITY 부분만 해시 대조(2단계 예정)
+  ENHANCED:    'ENHANCED',    // 지금의 /gov/relay와 동일 — 서버가 직접 조립·위임까지 통제
+});
+
+// 카테고리별 기본 위험 가중치(0~100) — GWP_REGISTRY의 category 필드 기준.
+// EMG는 별도로 즉시 100점 처리하므로 여기엔 없다(도달 안 함).
+const _GOV_CATEGORY_WEIGHT = Object.freeze({
+  GOV: 90, JUS: 85, MED: 80,           // 행정/사법/의료 — 처분성·법적효력 가능성 높음
+  ECO: 60, LEG: 55,                     // 금융/입법 — 중간
+  BIZ: 40, EDU: 35, TRN: 30,            // 사업/교육/교통 — 낮은 편
+  ENV: 20, MKT: 15,                     // 환경신고/거래 — 더 낮음
+  UTL: 5, TOOL: 5,                      // 검색·도구성 — 거의 무위험
+});
+const _GOV_CATEGORY_DEFAULT_WEIGHT = 10; // 매칭된 GWP 서비스가 없는 일반 잡담
+
+// 처분성(법적 확정 효력) 신호 — GOV-COMMON-OVERLAY §3/JEJU-TREE-PROTOCOL이
+// 이미 "처분성 있는 사안"이라 부르는 것과 같은 개념을 텍스트 신호로 근사.
+const _DISPOSITION_PATTERN =
+  /확정|승인|발급|접수(?:번호)?|신청서?\s*제출|과세|처분|허가|지급\s*결정|자격\s*판정|등록\s*완료/;
+
+// SP_DELEGATION_ORIGINATORS(worker.js)와 동일한 3개 — 이미 서버측
+// 위임 오케스트레이션 대상으로 지정된 agency는 그 자체로 "이해관계가
+// 크다"는 신호로 본다(worker.js 목록과 이름을 반드시 맞출 것 — 어긋나면
+// 이 신호가 조용히 무의미해진다).
+const _GOV_DELEGATION_AGENCIES = new Set(['public', 'jeju_do', 'jeju_national']);
+
+/**
+ * 대화 한 턴의 중요도 점수를 매긴다(0~100).
+ * @param {string} userText - 사용자 발화
+ * @param {object|null} gwpEntry - gwp-registry.js의 매칭된 서비스 항목(getService(id) 결과) 또는 null
+ * @returns {number} 0~100
+ */
+export function _estimateGovImportance(userText, gwpEntry = null) {
+  const text = typeof userText === 'string' ? userText : '';
+
+  // 응급은 예외 없이 최우선 — jeju-router.js _isEmergency와 동일 원칙.
+  // kemergency의 실제 triggers 배열을 그대로 재사용(새 키워드 목록을
+  // 따로 만들지 않는다 — 하나가 갱신되면 다른 하나가 낡는 문제 방지).
+  if (typeof getService === 'function') {
+    const emg = getService('kemergency');
+    if (emg && Array.isArray(emg.triggers) && emg.triggers.some(t => text.includes(t))) {
+      return 100;
+    }
+  }
+
+  const category = gwpEntry?.category;
+  const fCategory = category != null
+    ? (_GOV_CATEGORY_WEIGHT[category] ?? _GOV_CATEGORY_DEFAULT_WEIGHT)
+    : _GOV_CATEGORY_DEFAULT_WEIGHT;
+
+  const fDisposition = _DISPOSITION_PATTERN.test(text) ? 100 : 0;
+
+  const fDelegation = gwpEntry?.id && _GOV_DELEGATION_AGENCIES.has(gwpEntry.id) ? 100 : 0;
+
+  const score = 0.5 * fCategory + 0.3 * fDisposition + 0.2 * fDelegation;
+  return Math.min(100, Math.max(0, score));
+}
+
+/**
+ * 점수 → 검증 등급. importanceVerifier.js의 selectMode()와 완전히 동일한
+ * 임계값(IMPORTANCE.LIGHTWEIGHT_MAX=25, STANDARD_MAX=60)을 재사용한다.
+ * @param {number} score
+ * @returns {'LIGHTWEIGHT'|'STANDARD'|'ENHANCED'}
+ */
+export function _selectGovVerificationMode(score) {
+  if (score < IMPORTANCE.LIGHTWEIGHT_MAX) return GOV_VERIFICATION_MODE.LIGHTWEIGHT;
+  if (score < IMPORTANCE.STANDARD_MAX) return GOV_VERIFICATION_MODE.STANDARD;
+  return GOV_VERIFICATION_MODE.ENHANCED;
 }
 
 function _buildCallCandidates(userText, messages) {
