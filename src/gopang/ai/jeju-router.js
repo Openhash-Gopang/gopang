@@ -38,6 +38,30 @@
 const _RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/';
 
 const TIER_CONFIG = {
+  // 2026-07-10 신설 — 시청 국(局) 계층. jeju-gov-sp-hierarchy.md가 SP-JEJUSI-*/
+  // SP-SGP-*로 예정해뒀으나 실제로 만들어진 적 없던 계층. city 계층과 같은
+  // fixedTemplate 패턴(제주시/서귀포시 모두 같은 국 원형을 공유) — 국코드로
+  // 시별 실제 조직명·소관을 구분한다.
+  'city-dept': {
+    masterDataPath: 'prompts/Jejudo/04-city/templates/city-dept-master-data.json',
+    listKey: '국목록',
+    templateDir: 'prompts/Jejudo/04-city/templates/',
+    fixedTemplate: 'SP-CITYDEPT-TEMPLATE_v1.0.md',
+    matchFn: (rec, { cityCode, deptCode }) => rec['시코드'] === cityCode && rec['국코드'] === deptCode,
+  },
+  // 2026-07-10 신설 — 읍면동 팀 계층. jeju-gov-sp-hierarchy.md가 SP-TEAM-*로
+  // 예정해뒀으나 실제로 만들어진 적 없던 계층. team_type(총무/산업/복지/민원)
+  // 4종만 원형으로 두고, 읍면동 개별 인스턴스는 만들지 않는다(43개 x 4팀 =
+  // 172개까지 늘리는 건 이 시점에 과도 — jeju-gov-sp-hierarchy.md §6 유지보수
+  // 전략과 동일 판단). {읍면동이름}/{시이름}/{도이름}은 이 tier 혼자서는
+  // 못 채운다 — 호출 시 emd 레코드와 함께 별도로 채워야 한다(§0 주석 참고).
+  'team': {
+    masterDataPath: 'prompts/Jejudo/05-emd/templates/team-master-data.json',
+    listKey: '팀목록',
+    templateDir: 'prompts/Jejudo/05-emd/templates/',
+    fixedTemplate: 'SP-TEAM-TEMPLATE_v1.0.md',
+    matchFn: (rec, { teamType }) => rec.team_type === teamType,
+  },
   'do-dept': {
     masterDataPath: 'prompts/Jejudo/02-do-dept/templates/do-dept-master-data.json',
     listKey: '부서목록',
@@ -193,6 +217,24 @@ async function _assemble(tier, matchParams) {
   const templateText = await _loadTemplate(tier, templateFilename);
   const { text, unresolved } = _renderTemplate(templateText, record);
   return { text, unresolved, record, templateFilename, tier };
+}
+
+/**
+ * 시청 국(局) 계층 조립 — 시코드+국코드 매칭.
+ * 예: _renderCityDeptTemplate('jejusi', 'welfare') → 제주시 복지위생국 SP 조립.
+ */
+export async function _renderCityDeptTemplate(cityCode, deptCode) {
+  return _assemble('city-dept', { cityCode, deptCode });
+}
+
+/**
+ * 읍면동 팀 계층 조립 — team_type만 매칭(읍면동 개별 구분 없음).
+ * {읍면동이름}/{시이름}/{도이름}은 이 함수 혼자서는 못 채운다 — 실제
+ * 사용 시 emd 레코드를 별도로 조회해 결과 텍스트에 추가 치환이 필요하다.
+ * 예: _renderTeamTemplate('civil') → 민원팀 SP 원형 조립(읍면동명 미채움).
+ */
+export async function _renderTeamTemplate(teamType) {
+  return _assemble('team', { teamType });
 }
 
 /** do-dept 계층 조립 — {부서명} 등 자리표시자를 도코드+domain으로 채움 */
