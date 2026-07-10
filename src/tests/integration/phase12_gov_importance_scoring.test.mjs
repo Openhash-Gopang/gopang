@@ -264,7 +264,7 @@ describe('N-20: _buildUniversalIntegrityContext가 실제로 ctxBlock 조립에 
 
   it('_buildEnhancedUserContent 안에서 integrityBlock을 계산하고 ctxBlock에 포함시킴', () => {
     assert.match(raw, /const integrityBlock = await _buildUniversalIntegrityContext\(plainText\);/);
-    assert.match(raw, /const ctxBlock = integrityBlock \+ firstContact \+ faqBlock/,
+    assert.match(raw, /const ctxBlock = integrityBlock \+ shareBlock \+ firstContact \+ faqBlock/,
       'integrityBlock이 조립 순서 맨 앞이어야 함(§U5 — 판단원칙이 정체성보다 먼저 와야 한다는 UNIVERSAL-INTEGRITY 자신의 설계 원칙)');
   });
 

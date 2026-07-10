@@ -438,4 +438,33 @@ window.addEventListener('DOMContentLoaded', () => {
   if (params.get('scan') === '1') {
     setTimeout(() => window.openHondiScanner?.(), 2000);
   }
+
+  // ── ?shared=<id> — Web Share Target으로 받은 문서(2026-07-09 신설) ──
+  // 정부24 등에서 "공유하기"로 보낸 문서를 감지해, call-ai.js의
+  // _buildShareInboxContext()가 다음 AI 턴에 자연스럽게 물어보도록
+  // sessionStorage에 "확인 대기" 플래그만 남긴다 — 여기서 직접 자동
+  // 확정하지 않는다(_buildFirstContactContext와 동일한 1회성 주입
+  // 패턴, PDV 문서용도 확인 원칙 그대로).
+  const sharedId = params.get('shared');
+  if (sharedId) {
+    (async () => {
+      try {
+        const { getSharedDocument } = await import('/src/gopang/pdv/share-inbox.js');
+        const { guessDocumentMatch, BANKRUPTCY_REQUIRED_DOCS } = await import('/src/gopang/pdv/procedure-docs.js');
+        const doc = await getSharedDocument(sharedId);
+        if (!doc) return; // 이미 처리됐거나 만료됨 — 조용히 무시
+        const guesses = guessDocumentMatch(doc, BANKRUPTCY_REQUIRED_DOCS);
+        sessionStorage.setItem('hondi_share_pending', JSON.stringify({
+          id: sharedId,
+          filename: doc.filename,
+          title: doc.title,
+          guesses,
+          procedureId: 'court-filing',
+        }));
+        console.info('[Share] 공유 문서 대기 등록:', doc.filename, '추정:', guesses);
+      } catch (e) {
+        console.warn('[Share] 공유 문서 처리 실패:', e.message);
+      }
+    })();
+  }
 });

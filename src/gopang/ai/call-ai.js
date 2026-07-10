@@ -375,6 +375,9 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[PROFILE_SKIP\]/g, '')
   .replace(/\[TUTORIAL_ADVANCE:\d+\]/g, '')   // 튜토리얼 단계 태그
   .replace(/\[TUTORIAL_STEP:[^\]]*\]/g, '')    // 튜토리얼 컨텍스트 태그(실수로 AI가 출력하면)
+  .replace(/\[SHARE_DOC_PENDING:[\s\S]*?\]/g, '')  // 공유문서 확인 지시 컨텍스트(2026-07-09 신설, 실수로 출력되면 방어)
+  .replace(/\[SHARE_DOC_CONFIRMED:[^\]]+\]/g, '')  // 공유문서 확인 완료 태그
+  .replace(/\[SHARE_DOC_REJECTED\]/g, '')          // 공유문서 거부 태그
   .replace(/\[PANEL_ACTION:close\]/g, '')      // AI 패널 닫기 지시 태그 (2026-07-02 신설)
   .replace(/\[GWP:\s*[\w-]+\]/g, '')           // 하위 시스템 라우팅 태그 (방어적 — 정상 경로는 _parseAgentTags가 처리)
   .replace(/\[EXPERT:\s*[@\w-]+\]/g, '')       // 전문가 세션 라우팅 태그 (방어적 — 정상 경로는 handleExpertTag가 처리)
@@ -468,6 +471,9 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI, use
       // v2.0: 이름짓기는 UI에서 직접 처리 — name_pending 플래그 불필요
     } catch {}
   }
+
+  // ── SHARE_DOC_CONFIRMED/REJECTED — 정부24 공유문서 확인 완료(2026-07-09) ──
+  await _processShareDocTags(fullReply);
 
   // ── NAME_CAPTURED — 이름짓기 응답 처리 완료 (v1.3) ──────────
   let _justCapturedName = false;
@@ -1036,6 +1042,39 @@ async function _triggerSeamlessHandoff(sendFn = callAI) {
  * @returns {string} 끼워 넣을 컨텍스트 블록(없으면 빈 문자열)
  */
 /**
+ * SHARE_DOC_CONFIRMED/REJECTED 태그를 처리한다 — 사람이 실제로 확답한
+ * 뒤에만 markDocumentProvided를 호출한다(guessDocumentMatch의 추정만으로는
+ * 절대 자동 기록하지 않는다는 원칙을 여기서 마지막으로 강제).
+ * deps로 procedure-docs.js/share-inbox.js 모듈을 주입받는다(기본값은
+ * 동적 import — 테스트에서 mock 주입 가능하게 하기 위함).
+ */
+export async function _processShareDocTags(fullReply, deps = {}) {
+  const shareConfirmMatch = fullReply.match(/\[SHARE_DOC_CONFIRMED:([^\]]+)\]/);
+  const shareRejected = fullReply.includes('[SHARE_DOC_REJECTED]');
+  if (!shareConfirmMatch && !shareRejected) return;
+
+  try {
+    const raw = sessionStorage.getItem('hondi_share_pending');
+    const pending = raw ? JSON.parse(raw) : null;
+    if (pending) {
+      if (shareConfirmMatch) {
+        const label = shareConfirmMatch[1].trim();
+        const { markDocumentProvided } = deps.procedureDocsModule || await import('../pdv/procedure-docs.js');
+        markDocumentProvided(pending.procedureId, label, { filename: pending.filename, sourceTitle: pending.title });
+        console.log('[Share] 필요서류 확인 기록:', label);
+      } else {
+        console.log('[Share] 사용자가 문서 용도를 거부 — 기록하지 않음');
+      }
+      const { clearSharedDocument } = deps.shareInboxModule || await import('../pdv/share-inbox.js');
+      await clearSharedDocument(pending.id);
+    }
+    sessionStorage.removeItem('hondi_share_pending');
+  } catch (e) {
+    console.warn('[Share] 공유문서 확인 처리 실패:', e.message);
+  }
+}
+
+/**
  * _buildFirstContactContext v2.0
  *
  * 첫 인사(FIRST_CONTACT): 이름 묻기 없이 고정 환영 문구 + 앱 기본 사용법 안내.
@@ -1094,6 +1133,39 @@ export function _buildFirstContactContext() {
   }
 
   return '';
+}
+
+// ══════════════════════════════════════════════════════════
+// 정부24 공유문서 확인 컨텍스트 (2026-07-09 신설)
+// ══════════════════════════════════════════════════════════
+// gopang-pwa.js가 ?shared=<id>를 감지하면 sessionStorage에
+// "hondi_share_pending" 플래그만 남긴다(자동 확정 안 함). 이 함수가
+// _buildFirstContactContext와 동일한 1회성 주입 패턴으로 다음 AI
+// 턴에 사람에게 직접 확인을 물어보게 만들고, AI가 [SHARE_DOC_CONFIRMED:
+// 라벨] 또는 [SHARE_DOC_REJECTED]를 출력하면 그 결과만 call-ai.js가
+// 기록한다 — "문서 용도는 AI가 단정하지 않고 항상 사람이 확정한다"는
+// extract.js/share-inbox.js와 동일한 원칙을 대화 흐름에도 그대로 적용.
+export function _buildShareInboxContext() {
+  let pending = null;
+  try {
+    const raw = sessionStorage.getItem('hondi_share_pending');
+    pending = raw ? JSON.parse(raw) : null;
+  } catch {}
+  if (!pending) return '';
+
+  const name = pending.filename || pending.title || '공유받은 문서';
+  const guessLine = pending.guesses && pending.guesses.length
+    ? ` 파일명으로 미루어 "${pending.guesses.join(', ')}"일 가능성이 있습니다만, 반드시 사용자에게 직접 확인하세요 — 절대 임의로 단정하지 마세요.`
+    : ' 어떤 서류인지 짐작할 단서가 부족합니다 — 사용자에게 직접 물어보세요.';
+
+  return (
+    `[SHARE_DOC_PENDING: 방금 정부24(또는 다른 앱)에서 공유받은 문서가 있습니다 — "${name}".` +
+    `${guessLine}` +
+    ` 개인파산 신청에 필요한 서류(파산·면책신청서/진술서/채권자목록/재산목록/수입및지출목록) 중 어느 것인지,` +
+    ` 또는 다른 용도인지 사용자에게 물어보세요.` +
+    ` 사용자가 특정 서류로 확답하면 응답 끝에 [SHARE_DOC_CONFIRMED:그 서류명]을,` +
+    ` 관련 없다고 하면 [SHARE_DOC_REJECTED]를 정확히 한 번만 출력하세요.]\n\n`
+  );
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1207,9 +1279,13 @@ async function _buildEnhancedUserContent(userContent) {
   // 거짓이 된다. _estimateGovImportance의 점수 게이트로 절충한다.
   const integrityBlock = await _buildUniversalIntegrityContext(plainText);
 
-  if (!parts.length && !firstContact && !faqBlock && !integrityBlock) return userContent;
+  // 정부24 공유문서 확인(2026-07-09 신설) — firstContact와 마찬가지로
+  // 1회성 이벤트 트리거형 컨텍스트라 같은 우선순위대에 둔다.
+  const shareBlock = _buildShareInboxContext();
 
-  const ctxBlock = integrityBlock + firstContact + faqBlock + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
+  if (!parts.length && !firstContact && !faqBlock && !integrityBlock && !shareBlock) return userContent;
+
+  const ctxBlock = integrityBlock + shareBlock + firstContact + faqBlock + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
 
   // multipart(이미지 포함) 메시지 처리
   if (Array.isArray(userContent)) {
