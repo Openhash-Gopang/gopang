@@ -38,6 +38,17 @@
 const _RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/';
 
 const TIER_CONFIG = {
+  // 2026-07-10 신설 — 과(課) 계층. 도청 실·국(do-dept)/시청 국(city-dept)
+  // 산하에 공통으로 존재하는 가장 세부적인 처분 단위. "소속기관코드"는
+  // city-dept의 (시코드-국코드) 또는 do-dept의 (도코드-domain)을 하이픈으로
+  // 이어붙인 값을 그대로 재사용해 상위 계층과 매칭한다.
+  'division': {
+    masterDataPath: 'prompts/Jejudo/00-common/templates/division-master-data.json',
+    listKey: '과목록',
+    templateDir: 'prompts/Jejudo/00-common/templates/',
+    fixedTemplate: 'SP-DIV-TEMPLATE_v1.0.md',
+    matchFn: (rec, { orgCode, divCode }) => rec['소속기관코드'] === orgCode && rec['과코드'] === divCode,
+  },
   // 2026-07-10 신설 — 시청 국(局) 계층. jeju-gov-sp-hierarchy.md가 SP-JEJUSI-*/
   // SP-SGP-*로 예정해뒀으나 실제로 만들어진 적 없던 계층. city 계층과 같은
   // fixedTemplate 패턴(제주시/서귀포시 모두 같은 국 원형을 공유) — 국코드로
@@ -217,6 +228,14 @@ async function _assemble(tier, matchParams) {
   const templateText = await _loadTemplate(tier, templateFilename);
   const { text, unresolved } = _renderTemplate(templateText, record);
   return { text, unresolved, record, templateFilename, tier };
+}
+
+/**
+ * 과(課) 계층 조립 — 소속기관코드+과코드 매칭.
+ * 예: _renderDivisionTemplate('jejusi-welfare', 'elderly') → 제주시 복지위생국 노인복지과 SP 조립.
+ */
+export async function _renderDivisionTemplate(orgCode, divCode) {
+  return _assemble('division', { orgCode, divCode });
 }
 
 /**
