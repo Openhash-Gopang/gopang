@@ -5,7 +5,7 @@
 #              jeju-router.js가 메타키로 취급해 본문 치환 대상이 아니므로
 #              {} 표기 대신 이렇게 적는다)
 # 버전      : v1.0
-# 상위 상속  : JEJU-GOV-COMMON > JEJU-NATIONAL-SP (필수 선행 삽입)
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common > JEJU-NATIONAL-SP (필수 선행 삽입) [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 작성일     : 2026-07-09
 # 작성자     : AI City Inc. · Claude(설계 지원)
 # ═══════════════════════════════════════════════════

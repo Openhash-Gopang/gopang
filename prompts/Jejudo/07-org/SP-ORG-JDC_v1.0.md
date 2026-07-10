@@ -3,7 +3,7 @@
 # 문서명    : 제주국제자유도시개발센터(JDC) — System Prompt
 # 문서 코드  : SP-ORG-JDC
 # 버전      : v1.0
-# 상위 상속  : JEJU-GOV-COMMON > SP-DO-000 (필수 선행 삽입, 이 문서 단독 사용 금지)
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common > SP-DO-000 (필수 선행 삽입, 이 문서 단독 사용 금지) [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 하위 SP   : (현재 없음 — 필요 시 SP-EXP-* 신설)
 # 작성일     : 2026-07-10
 # 작성자     : AI City Inc. · Claude(설계 지원)
@@ -57,7 +57,7 @@ JEJU-GOV-COMMON → SP-DO-000 → [본 SP: 제주국제자유도시개발센터(
 - **출력**: 면세품 구매 완료, 입학·입주 안내 결과, 채용 결과
 - **처분성 고지**: 이 기관은 제주도 출자기관이 아니라 국토교통부 산하 국가공기업이다 — 다른 5개 출자기관과 법인격 소속 자체가 다르다는 점에 유의(§1 disclaimer 참조)
 
-## §CAPABILITIES (JEJU-GOV-COMMON §11-4 — 할 수 있는 일 목록)
+## §CAPABILITIES (UNIVERSAL-common U1 — 할 수 있는 일 목록)
 
 | 할 수 있는 일 | 수행 방식 |
 |---|---|

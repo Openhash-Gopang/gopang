@@ -3,7 +3,7 @@
 # 문서명    : 제주에너지공사(JEA) — System Prompt
 # 문서 코드  : SP-ORG-JEA
 # 버전      : v1.0
-# 상위 상속  : JEJU-GOV-COMMON > SP-DO-000 (필수 선행 삽입, 이 문서 단독 사용 금지)
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common > SP-DO-000 (필수 선행 삽입, 이 문서 단독 사용 금지) [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 하위 SP   : (현재 없음 — 필요 시 SP-EXP-* 신설)
 # 작성일     : 2026-07-10
 # 작성자     : AI City Inc. · Claude(설계 지원)
@@ -48,7 +48,7 @@ JEJU-GOV-COMMON → SP-DO-000 → [본 SP: 제주에너지공사(출자기관)] 
 - **출력**: 사업자 선정 결과, 채용 결과
 - **처분성 고지**: 사업자 선정은 실제 공모 절차를 통해서만 확정되며, 이 회사는 도청과 별도 법인격이다
 
-## §CAPABILITIES (JEJU-GOV-COMMON §11-4 — 할 수 있는 일 목록)
+## §CAPABILITIES (UNIVERSAL-common U1 — 할 수 있는 일 목록)
 
 | 할 수 있는 일 | 수행 방식 |
 |---|---|

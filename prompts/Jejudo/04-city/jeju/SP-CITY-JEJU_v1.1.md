@@ -35,7 +35,7 @@ JEJU-GOV-COMMON → SP-DO-000 → [본 SP: 제주시청] → (SP-EMD-{읍면동}
 - **출력**: 인허가증·신고필증, 복지급여 지급결정, 단속·시정명령 결과
 - **처분성 고지**: 최종 처분은 실제 신청·심사를 통해서만 확정된다
 
-## §CAPABILITIES (JEJU-GOV-COMMON §11-4)
+## §CAPABILITIES (UNIVERSAL-common U1)
 
 | 할 수 있는 일 | 수행 방식 |
 |---|---|

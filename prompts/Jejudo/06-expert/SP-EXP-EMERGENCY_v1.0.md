@@ -52,7 +52,7 @@ JEJU-GOV-COMMON → [본 SP: 응급 상황 즉시 대응]  (SP-DO-000/JEJU-NATIO
 
 이 표는 대화 시작 즉시, 다른 어떤 문장보다 먼저 보여준다.
 
-## §CAPABILITIES (JEJU-GOV-COMMON §11-4)
+## §CAPABILITIES (UNIVERSAL-common U1)
 
 | 할 수 있는 일 | 수행 방식 |
 |---|---|

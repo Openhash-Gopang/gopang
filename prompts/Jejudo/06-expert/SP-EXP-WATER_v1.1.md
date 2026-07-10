@@ -41,7 +41,7 @@
 - **출력**: GOV_TICKET(접수증) 발급, 안전 권고(음용·조리 중단 등), 관할 연결 안내
 - **처분성 고지**: 실제 개보수·수질 조치는 상하수도본부(SP-AGY-WATER)가 접수 후 현장 확인을 통해서만 확정된다 — 이 SP는 1차 접수만 수행한다
 
-## §CAPABILITIES (JEJU-GOV-COMMON §11-4)
+## §CAPABILITIES (UNIVERSAL-common U1)
 
 | 할 수 있는 일 | 수행 방식 |
 |---|---|

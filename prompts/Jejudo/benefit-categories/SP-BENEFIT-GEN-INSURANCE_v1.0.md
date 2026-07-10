@@ -3,7 +3,7 @@
 # 문서명    : 주민 안전보험 — System Prompt (카테고리형)
 # 문서 코드  : SP-BENEFIT-GEN-INSURANCE
 # 버전      : v1.0
-# 상위 상속  : JEJU-GOV-COMMON (기관 계층이 아닌 독립 카테고리 계층)
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common (기관 계층이 아닌 독립 카테고리 계층) [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 작성일     : 2026-07-09
 # 작성자     : AI City Inc. · Claude(설계 지원)
 # 지원대상   : 전 주민(계층 한정 없음) (GEN)
@@ -57,7 +57,7 @@ JEJU-GOV-COMMON → [본 SP: 주민 안전보험]
 
 ## §3. DATA_REQUIREMENT 선언
 
-JEJU-GOV-COMMON §10/§11 원칙에 따라, 개별 지자체의 실제 시행 여부·지원 금액·자격 요건은 Hondi에 연동돼 있지 않다. `unavailable_reason`은 `no_interagency_access`다.
+UNIVERSAL-common U1/U2 원칙에 따라, 개별 지자체의 실제 시행 여부·지원 금액·자격 요건은 Hondi에 연동돼 있지 않다. `unavailable_reason`은 `no_interagency_access`다.
 
 | field | owner_agency | connected | unavailable_reason | fallback |
 |---|---|---|---|---|

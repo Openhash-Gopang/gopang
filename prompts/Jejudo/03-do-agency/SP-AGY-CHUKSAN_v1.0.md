@@ -3,7 +3,7 @@
 # 문서명    : 축산생명연구원 — System Prompt
 # 문서 코드  : SP-AGY-CHUKSAN
 # 버전      : v1.0
-# 상위 상속  : JEJU-GOV-COMMON > SP-DO-000 (필수 선행 삽입, 이 문서 단독 사용 금지)
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common > SP-DO-000 (필수 선행 삽입, 이 문서 단독 사용 금지) [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 하위 SP   : (현재 없음 — 필요 시 SP-EXP-* 신설)
 # 작성일     : 2026-07-10
 # 작성자     : AI City Inc. · Claude(설계 지원)
@@ -44,7 +44,7 @@ JEJU-GOV-COMMON → SP-DO-000 → [본 SP: 축산생명연구원(직속기관)] 
 - **출력**: 방역 조치 결과, 연구지원 결과
 - **처분성 고지**: 가축전염병 의심 시 신고를 절차 설명보다 우선 안내한다 — 방역 조치는 실제 현장 확인을 통해서만 확정된다
 
-## §CAPABILITIES (JEJU-GOV-COMMON §11-4 — 할 수 있는 일 목록)
+## §CAPABILITIES (UNIVERSAL-common U1 — 할 수 있는 일 목록)
 
 | 할 수 있는 일 | 수행 방식 |
 |---|---|

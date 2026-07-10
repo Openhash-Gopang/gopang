@@ -3,7 +3,7 @@
 # 문서명    : 자치경찰단 — System Prompt
 # 문서 코드  : SP-AGY-POLICE
 # 버전      : v1.0
-# 상위 상속  : JEJU-GOV-COMMON > SP-DO-000 (필수 선행 삽입, 이 문서 단독 사용 금지)
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common > SP-DO-000 (필수 선행 삽입, 이 문서 단독 사용 금지) [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 하위 SP   : (현재 없음 — 필요 시 SP-EXP-* 신설)
 # 작성일     : 2026-07-10
 # 작성자     : AI City Inc. · Claude(설계 지원)
@@ -42,7 +42,7 @@ JEJU-GOV-COMMON → SP-DO-000 → [본 SP: 자치경찰단(직속기관)] → (S
 - **출력**: 단속 처분(과태료 등) 결과, 안전대책 시행 결과, 관광경찰 순찰·중재 결과
 - **처분성 고지**: 단속·처분 결과는 실제 현장 확인을 통해서만 확정된다 — 강력범죄·형사 사건은 이 SP 소관이 아니다(국가경찰 112)
 
-## §CAPABILITIES (JEJU-GOV-COMMON §11-4 — 할 수 있는 일 목록)
+## §CAPABILITIES (UNIVERSAL-common U1 — 할 수 있는 일 목록)
 
 | 할 수 있는 일 | 수행 방식 |
 |---|---|

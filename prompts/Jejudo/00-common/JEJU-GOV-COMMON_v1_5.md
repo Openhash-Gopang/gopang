@@ -4,8 +4,17 @@
 #   - prompts/Jejudo/00-common/overlays/GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md (도별 사실 — 정체성·콜센터·관할예시)
 #   - prompts/Jejudo/00-common/JEJU-TREE-PROTOCOL_v1.0.md (다단 SP 체인 기술 프로토콜)
 # jeju.hondi.net(독립 jeju 저장소)은 이미 위 세 문서만 조립해서 쓰고, 이 파일은 fetch하지 않습니다.
-# ★ 다만 gopang worker.js의 jeju_do/jeju_national 위임 경로가 이 사실을 반영 못한 채
-# JEJU-DO-SP_v1.0.md만 단독 fetch하고 있는 별도 문제가 2026-07-09에 발견됐습니다(수정 여부 결정 대기).
+# ★ gopang worker.js의 jeju_do/jeju_national 위임 경로도 한때 이 사실을 반영 못한 채
+# JEJU-DO-SP_v1.0.md만 단독 fetch하던 별도 문제가 있었으나, 2026-07-09 커밋(GOV_COMMON
+# 미해결 문제 정정)으로 kgov+OVERLAY+TREE-PROTOCOL 상위체인을 붙이도록 이미 수정·테스트
+# 완료됐습니다(sp-intercall.test.mjs 26/26 통과 확인, 2026-07-10 재검증).
+# ★ 2026-07-10 추가 확인: 이 문서 §10(정직성)·§11(능동적역량)·§13(PDV프로토콜)·§14(적극적
+# 보조원칙)에 해당하는 실제 행동원칙은 UNIVERSAL-common_v1_1.md(U1~U9)에 재구현돼 있고,
+# handleGovRelay()가 서버측에서 항상 최상단에 강제로 붙입니다 — 원칙 자체가 유실된 게
+# 아니라 위치만 옮겨졌음을 확인했습니다.
+# ★ 저장소 내 206개 파일이 여전히 "상위 상속: JEJU-GOV-COMMON"이라고 헤더에 적어두고
+# 있으나, 이는 "위에 공통 레이어가 있다"는 개념적 서술로서 여전히 유효합니다(구현 위치만
+# kgov+UNIVERSAL-common으로 바뀜) — 206개를 전부 정정할 실익이 없어 그대로 둡니다.
 # 이 파일 자체는 보존용으로만 남기며, 실사용 세션에서 이 파일을 직접 참조하지 마십시오.
 # ═══════════════════════════════════════════════════
 

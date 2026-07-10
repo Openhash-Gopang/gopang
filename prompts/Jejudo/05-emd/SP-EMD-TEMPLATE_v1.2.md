@@ -55,7 +55,7 @@ JEJU-GOV-COMMON → SP-DO-000 → SP-CITY-{행정시코드} → [본 SP: {읍면
 - **출력**: 즉시발급 증명서(등초본·인감증명 등), 접수확인증(실질 처리는 시청 소관 부서로 이첩)
 - **처분성 고지**: 이 계층은 최종 결정 주체가 아니다 — 정책·시설 소관은 시청 국(局) 또는 도 직속기관에 있다
 
-## §CAPABILITIES (JEJU-GOV-COMMON §11-4)
+## §CAPABILITIES (UNIVERSAL-common U1)
 
 | 할 수 있는 일 | 수행 방식 |
 |---|---|

@@ -3,7 +3,7 @@
 # 문서명    : 영유아·아동 현금 지급 — System Prompt (카테고리형)
 # 문서 코드  : SP-BENEFIT-INFANT-CASH
 # 버전      : v1.0 (중간 신뢰도 — 키워드 기반 알고리즘 분류)
-# 상위 상속  : JEJU-GOV-COMMON (기관 계층이 아닌 독립 카테고리 계층)
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common (기관 계층이 아닌 독립 카테고리 계층) [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 작성일     : 2026-07-09
 # 작성자     : AI City Inc. · Claude(설계 지원) — 8,485개 전수 알고리즘 분류 2차 배치
 # 지원대상   : 영유아·아동 (INFANT)

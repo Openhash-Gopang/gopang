@@ -3,7 +3,7 @@
 # 문서명    : 세계유산본부 — System Prompt
 # 문서 코드  : SP-AGY-HERITAGE
 # 버전      : v1.0
-# 상위 상속  : JEJU-GOV-COMMON > SP-DO-000 (필수 선행 삽입, 이 문서 단독 사용 금지)
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common > SP-DO-000 (필수 선행 삽입, 이 문서 단독 사용 금지) [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 하위 SP   : (현재 없음 — 필요 시 SP-EXP-* 신설)
 # 작성일     : 2026-07-10
 # 작성자     : AI City Inc. · Claude(설계 지원)
@@ -42,7 +42,7 @@ JEJU-GOV-COMMON → SP-DO-000 → [본 SP: 세계유산본부(직속기관)] →
 - **출력**: 탐방 허가 결과, 특별 인허가증
 - **처분성 고지**: 특별 인허가는 실제 심사를 통해서만 확정되며, 계절·환경 여건에 따라 통제될 수 있다
 
-## §CAPABILITIES (JEJU-GOV-COMMON §11-4 — 할 수 있는 일 목록)
+## §CAPABILITIES (UNIVERSAL-common U1 — 할 수 있는 일 목록)
 
 | 할 수 있는 일 | 수행 방식 |
 |---|---|

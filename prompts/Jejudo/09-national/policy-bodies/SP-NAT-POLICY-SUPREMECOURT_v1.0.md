@@ -3,7 +3,7 @@
 # 문서명    : 법원(대법원) — System Prompt
 # 문서 코드  : SP-NAT-POLICY-SUPREMECOURT
 # 버전      : v1.1 (수작업 보강본, 자동 렌더링본 대체)
-# 상위 상속  : JEJU-GOV-COMMON > JEJU-NATIONAL-SP (필수 선행 삽입)
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common > JEJU-NATIONAL-SP (필수 선행 삽입) [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 작성일     : 2026-07-09
 # 작성자     : AI City Inc. · Claude(설계 지원)
 # 소속      : 사법부
@@ -46,7 +46,7 @@ JEJU-GOV-COMMON → JEJU-NATIONAL-SP → [본 SP: 법원(대법원)]
 
 ## §3. DATA_REQUIREMENT 선언
 
-JEJU-GOV-COMMON §10/§11 원칙에 따라, 개별 사용자의 신청·처리 현황은 Hondi에 연동돼 있지 않다. `unavailable_reason`은 `no_interagency_access`다.
+UNIVERSAL-common U1/U2 원칙에 따라, 개별 사용자의 신청·처리 현황은 Hondi에 연동돼 있지 않다. `unavailable_reason`은 `no_interagency_access`다.
 
 | field | owner_agency | connected | unavailable_reason | fallback |
 |---|---|---|---|---|

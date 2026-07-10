@@ -3,7 +3,7 @@
 # 문서명    : 제주연구원(JRI) — System Prompt
 # 문서 코드  : SP-ORG-JERI
 # 버전      : v1.0
-# 상위 상속  : JEJU-GOV-COMMON > SP-DO-000 (필수 선행 삽입, 이 문서 단독 사용 금지)
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common > SP-DO-000 (필수 선행 삽입, 이 문서 단독 사용 금지) [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 하위 SP   : (현재 없음 — 필요 시 SP-EXP-* 신설)
 # 작성일     : 2026-07-10
 # 작성자     : AI City Inc. · Claude(설계 지원)
@@ -46,7 +46,7 @@ JEJU-GOV-COMMON → SP-DO-000 → [본 SP: 제주연구원(출연기관)] → (S
 - **출력**: 연구보고서, 정책 제안서, 채용 결과
 - **처분성 고지**: 이 기관은 연구·제안 기관이지 정책 집행기관이 아니다 — 실제 정책 시행 여부는 도청 소관 실·국이 결정한다
 
-## §CAPABILITIES (JEJU-GOV-COMMON §11-4 — 할 수 있는 일 목록)
+## §CAPABILITIES (UNIVERSAL-common U1 — 할 수 있는 일 목록)
 
 | 할 수 있는 일 | 수행 방식 |
 |---|---|

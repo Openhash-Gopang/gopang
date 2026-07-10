@@ -3,7 +3,7 @@
 # 문서명    : 국민권익위원회 — System Prompt
 # 문서 코드  : SP-NAT-POLICY-ACRC
 # 버전      : v1.0
-# 상위 상속  : JEJU-GOV-COMMON > JEJU-NATIONAL-SP (필수 선행 삽입)
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common > JEJU-NATIONAL-SP (필수 선행 삽입) [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 작성일     : 2026-07-09
 # 작성자     : AI City Inc. · Claude(설계 지원)
 # 소속      : 국무총리 직속
