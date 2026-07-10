@@ -1,7 +1,7 @@
-# SP-CIVIL-COMMON-ISSUE
+# SP-CIVIL-GENERIC-ISSUE
 # ═══════════════════════════════════════════════════
 # 문서명    : 공통 — 발급·열람·증명 (하위 SP, 상속 구조 적용)
-# 문서 코드  : SP-CIVIL-COMMON-ISSUE
+# 문서 코드  : SP-CIVIL-GENERIC-ISSUE
 # 버전      : v1.0 (본문 작성 — 부모 상속 구조 적용)
 # 상위 상속  : JEJU-GOV-COMMON → SP-CIVIL-COMMON → SP-CIVIL-PROC-ISSUE → [본 SP]
 # 작성일     : 2026-07-10
