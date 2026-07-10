@@ -3,7 +3,7 @@
 # 문서명    : 처리유형 — 조회·확인 (중간 부모 SP)
 # 문서 코드  : SP-CIVIL-PROC-INQUIRY
 # 버전      : v1.0 (본문 최초 작성)
-# 상위 상속  : JEJU-GOV-COMMON → SP-CIVIL-COMMON → [본 SP]
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common → SP-CIVIL-COMMON → [본 SP] [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 하위 SP   : SP-CIVIL-{도메인}-INQUIRY (분야별 하위 SP 전체)
 # 작성일     : 2026-07-10
 # 작성자     : AI City Inc. · Claude(설계 지원)
@@ -18,7 +18,7 @@
 ## §0. 상속 위치
 
 ```
-JEJU-GOV-COMMON → SP-CIVIL-COMMON → [SP-CIVIL-PROC-INQUIRY] → SP-CIVIL-{도메인}-INQUIRY
+kgov(SP-10_kpublic)+UNIVERSAL-common → SP-CIVIL-COMMON → [SP-CIVIL-PROC-INQUIRY] → SP-CIVIL-{도메인}-INQUIRY
 ```
 
 ## §1. 입력·출력 (이 처리유형 공통 — 하위 SP 전체가 상속)

@@ -3,7 +3,7 @@
 # 문서명    : 온라인 민원 카테고리 — 공통 SP (최상위 부모)
 # 문서 코드  : SP-CIVIL-COMMON
 # 버전      : v1.0 (본문 최초 작성 — 상속 구조 신설)
-# 상위 상속  : JEJU-GOV-COMMON
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 하위 SP   : SP-CIVIL-PROC-{ISSUE|APPLY|REPORT|CHANGE|INQUIRY} (5개 중간 부모)
 # 작성일     : 2026-07-10
 # 작성자     : AI City Inc. · Claude(설계 지원)
@@ -18,7 +18,7 @@
 ## §0. 상속 위치 및 구조
 
 ```
-JEJU-GOV-COMMON → [SP-CIVIL-COMMON] → SP-CIVIL-PROC-{처리유형} → SP-CIVIL-{도메인}-{처리유형}
+kgov(SP-10_kpublic)+UNIVERSAL-common → [SP-CIVIL-COMMON] → SP-CIVIL-PROC-{처리유형} → SP-CIVIL-{도메인}-{처리유형}
 ```
 
 **이 SP는 기관 계층이 아니다.** JEJU-NATIONAL-SP나 SP-DO-*가 "특정 기관 하나"를 대표하는 것과 달리, 이 계열은 "정부24라는 통합 창구를 거치는 민원의 유형"을 대표한다. 실제 처리 주체는 각 민원마다 다른 중앙부처·지자체·공공기관이다.
@@ -46,7 +46,7 @@ JEJU-GOV-COMMON → [SP-CIVIL-COMMON] → SP-CIVIL-PROC-{처리유형} → SP-CI
 
 ## §3. DATA_REQUIREMENT 선언 (공통 — 모든 하위 SP가 상속)
 
-JEJU-GOV-COMMON §10/§11 원칙에 따라, 개별 사용자의 신청·처리 현황은 Hondi에 연동돼 있지 않다.
+UNIVERSAL-common U1/U2 원칙에 따라, 개별 사용자의 신청·처리 현황은 Hondi에 연동돼 있지 않다.
 
 | field | owner_agency | connected | unavailable_reason | fallback |
 |---|---|---|---|---|

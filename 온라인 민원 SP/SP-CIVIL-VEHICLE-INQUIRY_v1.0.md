@@ -3,7 +3,7 @@
 # 문서명    : 차량 및 운송 — 조회·확인 (하위 SP, 상속 구조 적용)
 # 문서 코드  : SP-CIVIL-VEHICLE-INQUIRY
 # 버전      : v1.0 (본문 작성 — 부모 상속 구조 적용)
-# 상위 상속  : JEJU-GOV-COMMON → SP-CIVIL-COMMON → SP-CIVIL-PROC-INQUIRY → [본 SP]
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common → SP-CIVIL-COMMON → SP-CIVIL-PROC-INQUIRY → [본 SP] [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
 # 작성일     : 2026-07-10
 # 작성자     : AI City Inc. · Claude(설계 지원)
 # ═══════════════════════════════════════════════════
@@ -17,7 +17,7 @@
 ## §0. 상속 위치
 
 ```
-JEJU-GOV-COMMON → SP-CIVIL-COMMON → SP-CIVIL-PROC-INQUIRY → [본 SP: 차량 및 운송]
+kgov(SP-10_kpublic)+UNIVERSAL-common → SP-CIVIL-COMMON → SP-CIVIL-PROC-INQUIRY → [본 SP: 차량 및 운송]
 ```
 
 ## §1. 도메인 정체성
