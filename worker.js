@@ -12,7 +12,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { handleAiChat, handleEscalate } from './src/worker/ai-chat-handler.js';
-
+import { handleDeliveryRequest } from './src/worker/delivery-handler.js';
 
 const ALLOWED_ORIGINS = [
   'https://hondi.net',
@@ -1685,6 +1685,10 @@ export default {
       return handleAiChat(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, _l1ListSellerProducts, sbFetch });
     if (pathname === '/biz/escalate' && request.method === 'POST')
       return handleEscalate(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, sbFetch });
+    // ★ 2026-07-09 신설 — 짜장면 주문 사고실험 7·8단계: 배송업체 검색+
+    // 요청. LLM 없이 search_entities RPC + 순수 산술(ETA)로 처리.
+    if (pathname === '/biz/delivery-request' && request.method === 'POST')
+      return handleDeliveryRequest(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, _searchEntitiesRaw, _l1CreateDeliveryRequest });
 
     // ── ai-setup (AI 비서 설정) ─────────────────────────────
     // v5.1: 토큰 기반 폐기 — Ed25519 서명(/biz/product와 동일 패턴)으로 전환
@@ -6154,6 +6158,49 @@ async function _l1ListSellerProducts(env, guid) {
   if (!res.ok) throw new Error(`L1 seller_products 조회 실패 (HTTP ${res.status})`);
   const data = await res.json().catch(() => ({ items: [] }));
   return data.items || [];
+}
+
+// ★ 2026-07-09 신설 — 짜장면 주문 사고실험 7·8번(배송업체 검색, 배송
+// 요청)용. handleSearch(/search)는 seller_products 조인 등 로직이
+// 얽혀 있어 그대로 재사용하지 않고, search_entities RPC 호출부만
+// 최소로 분리했다 — handleSearch를 건드릴 위험 없이 같은 RPC를 공유.
+// ★ 발견(별도 이슈, 이번 커밋에서 고치지 않음) — sql/search_index.sql에
+// 적힌 search_entities 시그니처(q,etype,lat,lng,lim,ofst)가 handleSearch/
+// docs/STEP27_test_checklist.md가 실제로 쓰는 파라미터명(p_keyword,
+// p_occupation 등)과 다르다. handleSearch가 이미 라이브로 도는 걸 보면
+// 실제 배포된 함수는 최신(p_* 이름) 시그니처로 보이고, 저장소 안 SQL
+// 소스 파일이 낡은 채 방치된 것으로 보인다 — handleSearch와 동일
+// 관례를 그대로 따라 구현했다.
+async function _searchEntitiesRaw(env, params) {
+  const sbH = _sbHeaders(env);
+  const rpcBody = {
+    p_keyword: null, p_entity_type: null,
+    p_occupation: params.occupation || null,
+    p_address: null, p_gdc_only: false, p_trust_min: null,
+    p_lat: params.lat ?? null, p_lng: params.lng ?? null,
+    p_sort: params.lat != null ? 'distance' : 'rank',
+    p_limit: params.limit || 10, p_offset: 0,
+    p_exclude_guid: params.exclude_guid || null,
+    p_l1_node: null, p_l2_node: null, p_primary_guid: null,
+    p_handle: null, p_nickname: null, p_lang_code: null, p_l3_node: null,
+  };
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_entities`, { method: 'POST', headers: sbH, body: JSON.stringify(rpcBody) });
+  const data = await res.json().catch(() => []);
+  return (res.ok && Array.isArray(data)) ? data : [];
+}
+
+async function _l1CreateDeliveryRequest(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/delivery_requests/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`delivery_requests 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
 }
 
 // 로컬 스냅샷 기준으로 서버 미러를 통째로 교체(삭제 후 재삽입) — PocketBase엔
