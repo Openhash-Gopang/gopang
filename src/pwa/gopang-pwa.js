@@ -450,10 +450,10 @@ window.addEventListener('DOMContentLoaded', () => {
     (async () => {
       try {
         const { getSharedDocument } = await import('/src/gopang/pdv/share-inbox.js');
-        const { guessDocumentMatch, BANKRUPTCY_REQUIRED_DOCS } = await import('/src/gopang/pdv/procedure-docs.js');
+        const { guessDocumentMatch, BANKRUPTCY_REQUIRED_DOCS, BANKRUPTCY_EVIDENCE_DOCS } = await import('/src/gopang/pdv/procedure-docs.js');
         const doc = await getSharedDocument(sharedId);
         if (!doc) return; // 이미 처리됐거나 만료됨 — 조용히 무시
-        const guesses = guessDocumentMatch(doc, BANKRUPTCY_REQUIRED_DOCS);
+        const guesses = guessDocumentMatch(doc, [...BANKRUPTCY_REQUIRED_DOCS, ...BANKRUPTCY_EVIDENCE_DOCS]);
         sessionStorage.setItem('hondi_share_pending', JSON.stringify({
           id: sharedId,
           filename: doc.filename,

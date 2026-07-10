@@ -121,3 +121,54 @@ export function buildGov24LaunchInfo(platform, docName) {
     guidance,
   };
 }
+
+// ── 국민연금공단 앱 실행 도움 (2026-07-09 신설, 은행/보험 사례 조사 중 추가) ──
+// ★ 검색으로 실사 확인한 값 — Android 패키지명 kr.or.nps.smart(Google Play
+// URL: play.google.com/store/apps/details?id=kr.or.nps.smart), 공식 앱명
+// "내 곁에 국민연금". ★ iOS App Store ID는 검색으로 확인 못 했다 —
+// 지어내지 않고 iOS는 모바일 웹(minwon.nps.or.kr)으로 안전하게 폴백한다.
+const NPS_ANDROID_PACKAGE = 'kr.or.nps.smart';
+const NPS_WEB_FALLBACK = 'https://minwon.nps.or.kr/';
+
+export function buildNpsLaunchInfo(platform, docName) {
+  const guidance = docName
+    ? `국민연금공단 앱("내 곁에 국민연금")에서 "${docName}"을(를) 발급받은 뒤 "공유하기"로 혼디로 보내주세요. 정부24 앱에서도 발급 가능합니다.`
+    : '국민연금공단 앱("내 곁에 국민연금")에서 필요한 증명서를 발급받은 뒤 "공유하기"로 혼디로 보내주세요.';
+
+  if (platform === 'android') {
+    return {
+      launchUrl: `intent://#Intent;package=${NPS_ANDROID_PACKAGE};end`,
+      fallbackUrl: `https://play.google.com/store/apps/details?id=${NPS_ANDROID_PACKAGE}`,
+      guidance,
+    };
+  }
+  // iOS/불명 — App Store ID를 실사로 확인 못 해 지어내지 않고 모바일
+  // 웹으로 폴백한다(정부24와 달리 이쪽은 모바일 웹 이용이 가능해 보임 —
+  // NPS 자체 안내 페이지 기준, 정부24만큼 강하게 앱 전용을 요구하지
+  // 않는 것으로 보였다).
+  return { launchUrl: NPS_WEB_FALLBACK, fallbackUrl: NPS_WEB_FALLBACK, guidance };
+}
+
+/**
+ * 문서 출처(procedure-docs.js의 DOCUMENT_SOURCES.source 값)에 따라
+ * 적절한 실행 정보를 돌려주는 디스패처. 'bank'/'insurance-assoc'처럼
+ * 특정 앱을 안내할 수 없는 출처는 launchUrl 없이 안내문만 준다 —
+ * procedure-docs.js의 buildDocumentGuidance가 이미 만든 안내문을 그대로
+ * 전달한다(중복 문구 생성 안 함).
+ * @param {string} source - 'gov24' | 'gov24-or-nps' | 'bank' | 'insurance-assoc' | 기타
+ * @param {'android'|'ios'|'unknown'} platform
+ * @param {string} docName
+ * @param {string} [fallbackGuidance] - source가 앱 실행형이 아닐 때 쓸 안내문(보통 DOCUMENT_SOURCES의 guidance)
+ */
+export function buildAppLaunchInfo(source, platform, docName, fallbackGuidance) {
+  if (source === 'gov24') return buildGov24LaunchInfo(platform, docName);
+  if (source === 'gov24-or-nps') {
+    // 정부24를 우선 제시 — 국민연금 전용 앱보다 이미 안내한 정부24 쪽이
+    // 사용자 입장에서 한 앱으로 여러 서류를 처리할 수 있어 더 편함.
+    return buildGov24LaunchInfo(platform, docName);
+  }
+  if (source === 'nps') return buildNpsLaunchInfo(platform, docName);
+  // 'bank', 'insurance-assoc', 'unknown' 등 — 앱을 특정할 수 없는 출처.
+  // 잘못된 링크(예: 민간 마케팅 앱)를 주는 것보다 안내문만 주는 게 안전.
+  return { launchUrl: null, fallbackUrl: null, guidance: fallbackGuidance || '' };
+}

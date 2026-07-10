@@ -1,14 +1,29 @@
 /**
  * pdv/procedure-docs.js — 절차별 필요서류 정의 및 진행상황 추적
  *
- * 2026-07-09 신설 — Web Share Target으로 받은 문서를 실제 절차(개인파산
- * 등)의 필요서류와 연결하는 계층. atom_rows의 court-filing 레코드가
- * 이미 정의한 required_docs(파산·면책신청서/진술서/채권자목록/재산목록/
- * 수입및지출목록)를 클라이언트에서도 참조할 수 있게 복사해뒀다 —
- * atom_rows는 L1(PocketBase) 서버 데이터라 클라이언트가 오프라인/사전
- * 로드 없이 즉시 참조할 상수가 필요했다. ★ 서버 쪽 court-filing 레코드가
- * 나중에 바뀌면 이 상수도 같이 갱신해야 한다는 걸 명시해둔다(단일
- * 진실공급원 아님 — 알려진 한계).
+ * 2026-07-09 신설, 같은 날 확장(사용자 지적 반영) — Web Share Target으로
+ * 받은 문서를 실제 절차(개인파산 등)의 필요서류와 연결하는 계층.
+ *
+ * atom_rows의 court-filing 레코드가 정의한 5개 공식 필요서류
+ * (파산·면책신청서/진술서/채권자목록/재산목록/수입및지출목록)와, 그
+ * 서류들을 실제로 작성할 때 첨부 증빙으로 필요한 3개(은행잔고증명서/
+ * 보험가입확인서/국민연금증명원)를 구분해서 관리한다 — 후자는 atom_rows
+ * 시딩 데이터에는 없던 항목이라 별도 EVIDENCE 상수로 분리했다(atom_rows
+ * 갱신 시 공식 목록에 편입될 수도 있음, 지금은 실무 지식으로만 보충).
+ *
+ * ★ 서버 쪽 court-filing 레코드가 나중에 바뀌면 이 상수도 같이 갱신해야
+ * 한다 — 단일 진실공급원 아님(알려진 한계).
+ *
+ * ★ 소스별 실사 확인(2026-07-09) —
+ *   - 국민연금증명원: 정부24로도 발급 가능(gov.kr 민원안내 확인) + 국민연금
+ *     공단 공식 앱 "내 곁에 국민연금"(Android: kr.or.nps.smart)도 가능.
+ *   - 은행잔고증명서: 은행마다 앱이 달라 단일 앱을 안내할 수 없음 — 은행
+ *     앱 일반 안내로 그친다(정직하게 한계 명시).
+ *   - 보험가입확인서: 생명보험협회 "내보험찾아줌"(cont.insure.or.kr,
+ *     공식)과 금융감독원 "내보험다보여"가 공식 서비스다. 검색해보니 이름이
+ *     비슷한 민간 보험비교/마케팅 앱(내보험조회, 보험다모아 등)이 다수
+ *     섞여 있어 — 잘못 안내하면 사용자를 민간 마케팅 앱으로 유도할 위험이
+ *     있다고 판단, 앱스토어 링크 대신 공식 협회 웹사이트 URL만 안내한다.
  */
 
 // atom_rows의 court-filing.required_docs와 동일(2026-07-08 시딩 데이터 기준)
@@ -20,8 +35,53 @@ export const BANKRUPTCY_REQUIRED_DOCS = [
   '수입및지출목록',
 ];
 
+// 실무상 필요한 첨부 증빙(atom_rows 공식 목록엔 아직 없음 — 알려진 한계)
+export const BANKRUPTCY_EVIDENCE_DOCS = [
+  '은행잔고증명서',
+  '보험가입확인서',
+  '국민연금증명원',
+];
+
+// 증빙이 어느 공식 서류를 뒷받침하는지(UI 그룹핑용)
+export const EVIDENCE_PARENT = {
+  '은행잔고증명서': '재산목록',
+  '보험가입확인서': '재산목록',
+  '국민연금증명원': '수입및지출목록',
+};
+
 export const PROCEDURE_REQUIRED_DOCS = {
   'court-filing': BANKRUPTCY_REQUIRED_DOCS,
+};
+
+export const PROCEDURE_EVIDENCE_DOCS = {
+  'court-filing': BANKRUPTCY_EVIDENCE_DOCS,
+};
+
+// 문서 출처 정보 — 어느 앱/서비스에서 받아야 하는지, 앱 실행 정보가
+// 있으면 그것도 같이 둔다. source가 'bank'/'insurance-assoc'인 항목은
+// buildDocumentGuidance가 launchUrl 없이 안내문만 준다(정직하게 앱을
+// 특정 못 한다고 밝히는 게 잘못된 링크를 주는 것보다 낫다).
+export const DOCUMENT_SOURCES = {
+  '가족관계증명서': {
+    source: 'gov24',
+    guidance: '정부24 앱에서 발급받아 "공유하기"로 보내주세요.',
+  },
+  '주민등록등본': {
+    source: 'gov24',
+    guidance: '정부24 앱에서 발급받아 "공유하기"로 보내주세요.',
+  },
+  '국민연금증명원': {
+    source: 'gov24-or-nps',
+    guidance: '정부24 앱 또는 국민연금공단 공식 앱 "내 곁에 국민연금"에서 발급받아 공유해주세요.',
+  },
+  '은행잔고증명서': {
+    source: 'bank',
+    guidance: '이용하시는 은행 앱에서 잔고증명서를 발급받아 공유해주세요. 은행마다 앱이 달라 특정 앱을 바로 안내해드리기는 어렵습니다 — 어느 은행을 이용하시는지 알려주시면 더 구체적으로 안내해드릴 수 있습니다.',
+  },
+  '보험가입확인서': {
+    source: 'insurance-assoc',
+    guidance: '생명보험협회 "내보험찾아줌"(cont.insure.or.kr) 또는 금융감독원 "내보험다보여" 공식 서비스에서 가입내역을 조회·발급받아 공유해주세요. 이름이 비슷한 민간 보험비교 앱들과 혼동하지 않도록 위 공식 서비스만 이용해주세요.',
+  },
 };
 
 // 문서명 → 매칭용 키워드(파일명/제목/공유텍스트에 이 키워드가 있으면
@@ -33,16 +93,18 @@ const _MATCH_KEYWORDS = {
   '채권자목록': ['채권자'],
   '재산목록': ['재산목록', '재산 목록'],
   '수입및지출목록': ['수입', '지출', '소득'],
-  // 정부24에서 흔히 오는 문서 — court-filing 자체보다 그 하위 증빙
   '가족관계증명서': ['가족관계증명서', '가족관계'],
   '주민등록등본': ['주민등록등본', '등본'],
+  '국민연금증명원': ['국민연금', '연금증명', '연금 증명'],
+  '은행잔고증명서': ['잔고증명', '잔액증명', '예금잔액'],
+  '보험가입확인서': ['보험가입', '보험 가입', '보험증권'],
 };
 
 /**
  * 공유받은 문서(파일명/제목/텍스트)로 필요서류 후보를 추정한다.
  * 절대 자동 확정하지 않는다 — 항상 사람 확인용 후보 목록만 반환.
  * @param {{filename?: string, title?: string, text?: string}} doc
- * @param {string[]} requiredDocs - 후보를 좁힐 필요서류 목록(예: BANKRUPTCY_REQUIRED_DOCS)
+ * @param {string[]} requiredDocs - 후보를 좁힐 필요서류 목록(공식+증빙 합쳐서 넘겨도 됨)
  * @returns {string[]} 매칭된 필요서류 라벨 목록(매칭 안 되면 빈 배열)
  */
 export function guessDocumentMatch(doc, requiredDocs) {
@@ -56,6 +118,18 @@ export function guessDocumentMatch(doc, requiredDocs) {
   return matched;
 }
 
+/**
+ * 문서 하나를 어디서 받아야 하는지 안내 정보를 만든다. 앱을 특정할 수
+ * 없는 항목(은행 등)은 launchUrl 없이 안내문만 준다 — 잘못된 링크를
+ * 주느니 정직하게 모른다고 하는 쪽을 택했다.
+ */
+export function buildDocumentGuidance(docLabel) {
+  return DOCUMENT_SOURCES[docLabel] || {
+    source: 'unknown',
+    guidance: `"${docLabel}"을(를) 어디서 받아야 하는지 아직 정리된 안내가 없습니다 — 직접 확인이 필요합니다.`,
+  };
+}
+
 const _STORAGE_KEY_PREFIX = 'hondi_procedure_progress_';
 
 function _getStorage(opts) {
@@ -63,7 +137,8 @@ function _getStorage(opts) {
 }
 
 /**
- * 절차의 진행상황(어떤 필요서류가 제공됐는지)을 읽는다.
+ * 절차의 진행상황(어떤 필요서류가 제공됐는지)을 읽는다. 공식/증빙 구분
+ * 없이 같은 저장소에 함께 기록된다(둘 다 "제공됨" 여부만 추적하면 되므로).
  * @returns {{procedureId: string, provided: Record<string,{ts:number, sourceTitle?:string}>}}
  */
 export function getProcedureProgress(procedureId, opts = {}) {
@@ -79,8 +154,8 @@ export function getProcedureProgress(procedureId, opts = {}) {
 }
 
 /**
- * 필요서류 하나가 제공됐음을 기록한다. 사람이 확인을 마친 뒤에만
- * 호출해야 한다(guessDocumentMatch의 추정만으로 자동 호출 금지).
+ * 필요서류(공식 또는 증빙) 하나가 제공됐음을 기록한다. 사람이 확인을
+ * 마친 뒤에만 호출해야 한다(guessDocumentMatch의 추정만으로 자동 호출 금지).
  */
 export function markDocumentProvided(procedureId, docLabel, meta = {}, opts = {}) {
   const storage = _getStorage(opts);
@@ -96,10 +171,22 @@ export function markDocumentProvided(procedureId, docLabel, meta = {}, opts = {}
 }
 
 /**
- * 아직 제공 안 된 필요서류 목록(다음에 뭘 더 받아야 하는지).
+ * 아직 제공 안 된 "공식" 필요서류 목록(atom_rows 기준 5개 중 남은 것).
  */
 export function getMissingDocuments(procedureId, opts = {}) {
   const required = PROCEDURE_REQUIRED_DOCS[procedureId] || [];
   const { provided } = getProcedureProgress(procedureId, opts);
   return required.filter(label => !provided[label]);
+}
+
+/**
+ * 아직 제공 안 된 "증빙" 목록(은행잔고증명서 등 3개 중 남은 것).
+ * getMissingDocuments와 분리한 이유 — 공식 목록(atom_rows 근거)과
+ * 실무 보충 지식(이번에 추가)의 신뢰 수준이 다르다는 걸 API로도 구분
+ * 해두는 게 나중에 atom_rows가 갱신될 때 헷갈리지 않는다.
+ */
+export function getMissingEvidence(procedureId, opts = {}) {
+  const evidence = PROCEDURE_EVIDENCE_DOCS[procedureId] || [];
+  const { provided } = getProcedureProgress(procedureId, opts);
+  return evidence.filter(label => !provided[label]);
 }

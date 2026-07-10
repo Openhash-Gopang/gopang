@@ -14,8 +14,11 @@ import path from 'node:path';
 
 import {
   BANKRUPTCY_REQUIRED_DOCS, PROCEDURE_REQUIRED_DOCS,
-  guessDocumentMatch, getProcedureProgress, markDocumentProvided, getMissingDocuments,
+  BANKRUPTCY_EVIDENCE_DOCS, EVIDENCE_PARENT, PROCEDURE_EVIDENCE_DOCS, DOCUMENT_SOURCES,
+  guessDocumentMatch, buildDocumentGuidance,
+  getProcedureProgress, markDocumentProvided, getMissingDocuments, getMissingEvidence,
 } from '../../gopang/pdv/procedure-docs.js';
+import { buildGov24LaunchInfo, buildNpsLaunchInfo, buildAppLaunchInfo } from '../../gopang/pdv/share-inbox.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '../../..');
@@ -39,6 +42,124 @@ describe('N-52: BANKRUPTCY_REQUIRED_DOCS — atom_rows court-filing과 동일한
 
   it('PROCEDURE_REQUIRED_DOCS에 court-filing 키로 등록됨', () => {
     assert.equal(PROCEDURE_REQUIRED_DOCS['court-filing'], BANKRUPTCY_REQUIRED_DOCS);
+  });
+});
+
+describe('N-58: BANKRUPTCY_EVIDENCE_DOCS — 은행/보험/연금 증빙 3종(사용자 지적 반영)', () => {
+  it('은행잔고증명서/보험가입확인서/국민연금증명원 3개', () => {
+    assert.deepEqual(BANKRUPTCY_EVIDENCE_DOCS, ['은행잔고증명서', '보험가입확인서', '국민연금증명원']);
+  });
+
+  it('공식 목록(BANKRUPTCY_REQUIRED_DOCS)과는 별개 상수 — 신뢰수준 구분', () => {
+    assert.ok(!BANKRUPTCY_REQUIRED_DOCS.includes('은행잔고증명서'), 'atom_rows 공식 목록에 증빙이 섞이면 안 됨(atom_rows 근거 없음)');
+  });
+
+  it('EVIDENCE_PARENT — 각 증빙이 어느 공식서류를 뒷받침하는지 매핑됨', () => {
+    assert.equal(EVIDENCE_PARENT['은행잔고증명서'], '재산목록');
+    assert.equal(EVIDENCE_PARENT['보험가입확인서'], '재산목록');
+    assert.equal(EVIDENCE_PARENT['국민연금증명원'], '수입및지출목록');
+  });
+
+  it('PROCEDURE_EVIDENCE_DOCS에 court-filing 키로 등록됨', () => {
+    assert.equal(PROCEDURE_EVIDENCE_DOCS['court-filing'], BANKRUPTCY_EVIDENCE_DOCS);
+  });
+});
+
+describe('N-59: buildDocumentGuidance — 소스별 정직한 안내(은행/보험은 앱 특정 안 함)', () => {
+  it('가족관계증명서/주민등록등본 — 정부24 안내', () => {
+    assert.equal(buildDocumentGuidance('가족관계증명서').source, 'gov24');
+    assert.equal(buildDocumentGuidance('주민등록등본').source, 'gov24');
+  });
+
+  it('국민연금증명원 — 정부24 또는 국민연금공단 앱 둘 다 안내(실사로 둘 다 확인됨)', () => {
+    const g = buildDocumentGuidance('국민연금증명원');
+    assert.equal(g.source, 'gov24-or-nps');
+    assert.match(g.guidance, /정부24/);
+    assert.match(g.guidance, /국민연금공단/);
+  });
+
+  it('은행잔고증명서 — 특정 앱 안 정함(은행마다 다름을 정직하게 명시)', () => {
+    const g = buildDocumentGuidance('은행잔고증명서');
+    assert.equal(g.source, 'bank');
+    assert.match(g.guidance, /은행마다 앱이 달라/);
+  });
+
+  it('보험가입확인서 — 공식 서비스만 안내, 민간 유사앱과 혼동 주의 문구 포함', () => {
+    const g = buildDocumentGuidance('보험가입확인서');
+    assert.equal(g.source, 'insurance-assoc');
+    assert.match(g.guidance, /내보험찾아줌/);
+    assert.match(g.guidance, /내보험다보여/);
+    assert.match(g.guidance, /민간.*혼동/, '유사 이름 민간앱 혼동 방지 안내가 있어야 함(실사 중 발견한 리스크)');
+  });
+
+  it('등록 안 된 문서는 unknown, 지어내지 않고 정직하게 모른다고 답함', () => {
+    const g = buildDocumentGuidance('존재하지않는서류');
+    assert.equal(g.source, 'unknown');
+    assert.match(g.guidance, /정리된 안내가 없습니다/);
+  });
+});
+
+describe('N-60: getMissingEvidence — 증빙 진행상황(공식목록과 분리 추적)', () => {
+  it('처음엔 3개 전부 미제공', () => {
+    const storage = makeMockStorage();
+    assert.deepEqual(getMissingEvidence('court-filing', { storage }), BANKRUPTCY_EVIDENCE_DOCS);
+  });
+
+  it('markDocumentProvided로 증빙도 동일하게 기록/제외됨', () => {
+    const storage = makeMockStorage();
+    markDocumentProvided('court-filing', '은행잔고증명서', {}, { storage });
+    const missing = getMissingEvidence('court-filing', { storage });
+    assert.deepEqual(missing, ['보험가입확인서', '국민연금증명원']);
+  });
+
+  it('getMissingDocuments(공식)와 getMissingEvidence(증빙)는 서로 영향 안 줌', () => {
+    const storage = makeMockStorage();
+    markDocumentProvided('court-filing', '채권자목록', {}, { storage }); // 공식 서류 하나 제공
+    assert.equal(getMissingEvidence('court-filing', { storage }).length, 3, '공식서류 제공이 증빙 목록에 영향 주면 안 됨');
+  });
+});
+
+describe('N-61: buildNpsLaunchInfo — 실사 확인된 국민연금공단 앱 정보(iOS는 지어내지 않음)', () => {
+  it('android는 실제 확인된 패키지명(kr.or.nps.smart) 사용', () => {
+    const info = buildNpsLaunchInfo('android', '국민연금증명원');
+    assert.match(info.launchUrl, /kr\.or\.nps\.smart/);
+    assert.match(info.fallbackUrl, /play\.google\.com.*kr\.or\.nps\.smart/);
+  });
+
+  it('ios는 App Store ID를 검색으로 확인 못 해 지어내지 않고 모바일 웹으로 폴백', () => {
+    const info = buildNpsLaunchInfo('ios', '국민연금증명원');
+    assert.match(info.launchUrl, /minwon\.nps\.or\.kr/);
+    assert.ok(!info.launchUrl.includes('apps.apple.com'), '확인 안 된 App Store ID를 지어내면 안 됨');
+  });
+});
+
+describe('N-62: buildAppLaunchInfo — 출처별 디스패치(핵심: 앱 특정 못하는 출처는 링크 안 줌)', () => {
+  it("source='gov24' → buildGov24LaunchInfo와 동일 결과", () => {
+    const viaDispatch = buildAppLaunchInfo('gov24', 'android', '등본');
+    const direct = buildGov24LaunchInfo('android', '등본');
+    assert.deepEqual(viaDispatch, direct);
+  });
+
+  it("source='gov24-or-nps' → 정부24 우선 제시", () => {
+    const info = buildAppLaunchInfo('gov24-or-nps', 'android', '국민연금증명원');
+    assert.match(info.launchUrl, /kr\.go\.minwon\.m/);
+  });
+
+  it("source='nps' → buildNpsLaunchInfo와 동일 결과", () => {
+    const viaDispatch = buildAppLaunchInfo('nps', 'android', '국민연금증명원');
+    const direct = buildNpsLaunchInfo('android', '국민연금증명원');
+    assert.deepEqual(viaDispatch, direct);
+  });
+
+  it("source='bank' → launchUrl 없이 전달받은 안내문만 반환(잘못된 링크 방지)", () => {
+    const info = buildAppLaunchInfo('bank', 'android', '은행잔고증명서', '은행 앱 안내 문구');
+    assert.equal(info.launchUrl, null);
+    assert.equal(info.guidance, '은행 앱 안내 문구');
+  });
+
+  it("source='insurance-assoc' → 마찬가지로 launchUrl 없음", () => {
+    const info = buildAppLaunchInfo('insurance-assoc', 'ios', '보험가입확인서', '보험 안내 문구');
+    assert.equal(info.launchUrl, null);
   });
 });
 
@@ -166,6 +287,8 @@ describe('N-55: _buildShareInboxContext — 대기중 공유문서가 있을 때
     assert.match(ctx, /절대 임의로 단정하지 마세요/, '추정은 AI가 확정하면 안 됨을 명시해야 함');
     assert.match(ctx, /SHARE_DOC_CONFIRMED/);
     assert.match(ctx, /SHARE_DOC_REJECTED/);
+    assert.match(ctx, /은행잔고증명서/, '증빙서류(사용자 지적 반영분)도 후보로 언급돼야 함');
+    assert.match(ctx, /국민연금증명원/);
   });
 
   it('추정 후보가 없으면 "짐작할 단서가 부족" 문구로 대체', () => {
