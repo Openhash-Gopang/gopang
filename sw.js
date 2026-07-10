@@ -69,11 +69,16 @@ self.addEventListener('install', (event) => {
 // ── 활성화 ─────────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
   console.log('[SW] 활성화 — 이전 캐시 정리');
+  // ★ 2026-07-09 — 'hondi-share-inbox'는 CACHE_NAME(버전 캐시)과 별개로
+  // 계속 살아있어야 한다. 공유받은 문서를 사용자가 아직 안 열어봤는데
+  // SW가 업데이트되면서 통째로 지워지면 안 됨 — 원래 필터가 CACHE_NAME
+  // 외 전부를 지우던 걸 여기서 명시적으로 예외처리했다.
+  const KEEP_CACHES = new Set([CACHE_NAME, 'hondi-share-inbox']);
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME)
+          .filter((key) => !KEEP_CACHES.has(key))
           .map((key) => {
             console.log('[SW] 삭제:', key);
             return caches.delete(key);
@@ -105,6 +110,17 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('raw.githubusercontent.com')
   ) {
     return; // 기본 fetch 사용
+  }
+
+  // ── Web Share Target (2026-07-09 신설) ──────────────────
+  // 정부24 등 다른 앱에서 "공유하기"로 보낸 문서(PDF/이미지)를 받는다.
+  // PDV 원칙(원본은 클라이언트에만, 서버 전송 없음)과 동일하게, 받은
+  // 파일은 Cache Storage에만 저장하고 어디로도 업로드하지 않는다 —
+  // _parseShareTargetForm은 순수 함수로 분리해 별도 테스트한다
+  // (phase17_share_target.test.mjs).
+  if (url.pathname === '/share-receive.html' && event.request.method === 'POST') {
+    event.respondWith(_handleShareTarget(event.request));
+    return;
   }
 
   // ── 고팡 자체 리소스: Network First ─────────────────────
@@ -239,6 +255,53 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+// ── Web Share Target 처리 (2026-07-09 신설) ───────────────────
+// manifest.json의 share_target 설정과 짝을 이룬다. 정부24 등이 공유한
+// 파일을 받아 "hondi-share-inbox"라는 별도 Cache Storage 이름공간에만
+// 저장한다(일반 PWA 리소스 캐시와 섞이지 않게 분리) — 서버로는 절대
+// 전송하지 않는다(PDV 원칙과 동일).
+
+/**
+ * FormData에서 공유된 파일과 메타데이터를 뽑아내는 순수(에 가까운) 함수.
+ * Cache Storage에는 안 건드리므로 Node 환경(FormData/File은 Node 18+
+ * 전역 제공)에서도 그대로 테스트 가능하다.
+ * @param {FormData} formData
+ * @returns {{file: File, title: string, text: string} | null}
+ */
+function _parseShareTargetForm(formData) {
+  const file = formData.get('govdoc');
+  if (!file || typeof file.arrayBuffer !== 'function') return null; // 파일 없이 텍스트만 공유된 경우
+  const title = formData.get('title') || '';
+  const text = formData.get('text') || '';
+  return { file, title, text };
+}
+
+async function _handleShareTarget(request) {
+  const origin = new URL(request.url).origin;
+  try {
+    const formData = await request.formData();
+    const parsed = _parseShareTargetForm(formData);
+    if (!parsed) return Response.redirect(`${origin}/webapp.html`, 303);
+
+    const { file, title, text } = parsed;
+    const id = `share-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const cache = await caches.open('hondi-share-inbox');
+    await cache.put(`/_share-inbox/${id}`, new Response(file, {
+      headers: {
+        'Content-Type': file.type || 'application/octet-stream',
+        'X-Share-Filename': encodeURIComponent(file.name || ''),
+        'X-Share-Title': encodeURIComponent(title),
+        'X-Share-Text': encodeURIComponent(text),
+        'X-Share-Ts': String(Date.now()),
+      },
+    }));
+    return Response.redirect(`${origin}/webapp.html?shared=${id}`, 303);
+  } catch (e) {
+    console.warn('[SW] Share Target 처리 실패:', e.message);
+    return Response.redirect(`${origin}/webapp.html`, 303);
+  }
+}
 
 // ── Push 구독 변경 감지 ────────────────────────────────────
 self.addEventListener('pushsubscriptionchange', (event) => {

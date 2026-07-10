@@ -82,5 +82,20 @@
     }
   ],
   "prefer_related_applications": false,
-  "handle_links": "preferred"
+  "handle_links": "preferred",
+  "share_target": {
+    "action": "/share-receive.html",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "files": [
+        {
+          "name": "govdoc",
+          "accept": ["application/pdf", "image/*"]
+        }
+      ]
+    }
+  }
 }
