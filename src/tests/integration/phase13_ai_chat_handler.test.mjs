@@ -10,7 +10,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   handleAiChat, handleEscalate,
-  buildSystemPrompt, detectEscalationKeyword, countRecentFails, extractOrderDraft,
+  buildSystemPrompt, detectEscalationKeyword, countRecentFails, extractOrderDraft, priceOrderItems,
   aesEncrypt, aesDecrypt,
   FAIL_THRESHOLD,
 } from '../../worker/ai-chat-handler.js';
@@ -22,6 +22,7 @@ function makeDeps(overrides = {}) {
     }),
     _verifyEd25519: async () => true,
     _l1FindProfileByGuid: async (env, guid) => ({ guid, pubkey_ed25519: 'PUBKEY', name: '테스트 상점', address: '제주시 어딘가' }),
+    _l1ListSellerProducts: async () => [],
     sbFetch: async () => ({}),
     ...overrides,
   };
@@ -136,7 +137,7 @@ describe('N-24: handleAiChat — ai_active=false면 사람에게 전달(mode:hum
 });
 
 describe('N-25: handleAiChat — 정상 AI 응답 경로(전체 파이프라인)', () => {
-  it('대상 프로필의 메뉴/영업시간이 실제로 system 프롬프트에 반영되어 LLM에 전달됨', async () => {
+  it('대상의 seller_products 카탈로그가 실제로 system 프롬프트에 반영되어 LLM에 전달됨', async () => {
     const rawKey = 'test-encryption-key-32bytes-long!!';
     const apiKeyEnc = await aesEncrypt('sk-test-api-key', rawKey);
 
@@ -154,14 +155,13 @@ describe('N-25: handleAiChat — 정상 AI 응답 경로(전체 파이프라인)
       const deps = makeDeps({
         _l1FindProfileByGuid: async (env, guid) => {
           if (guid === 'TARGET') {
-            return {
-              guid, pubkey_ed25519: 'PUBKEY', name: '동네 중국집',
-              address: '제주시 어딘가',
-              extra: { business_hours: '11:00~21:00', menu: [{ name: '짜장면', price: 7000 }] },
-            };
+            return { guid, pubkey_ed25519: 'PUBKEY', name: '동네 중국집', address: '제주시 어딘가', extra: { business_hours: '11:00~21:00' } };
           }
           return { guid, pubkey_ed25519: 'PUBKEY' };
         },
+        _l1ListSellerProducts: async (env, guid) => guid === 'TARGET'
+          ? [{ product_id: 'P1', name: '짜장면', price: 7000, is_public: true }]
+          : [],
         sbFetch: async (env, path) => {
           if (path.includes('/ai_sessions?')) return [{ mode: 'ai', messages: [] }];
           if (path.includes('/user_llm_keys')) return [{ ai_active: true, provider: 'deepseek', model: 'deepseek-chat', api_key_enc: apiKeyEnc }];
@@ -180,9 +180,19 @@ describe('N-25: handleAiChat — 정상 AI 응답 경로(전체 파이프라인)
       assert.match(systemMsg, /동네 중국집/);
       assert.match(systemMsg, /11:00~21:00/);
       assert.match(systemMsg, /짜장면/);
+      assert.match(systemMsg, /P1/, '상품 ID가 프롬프트에 노출돼야 LLM이 ORDER_DRAFT에 정확히 쓸 수 있음');
     } finally {
       globalThis.fetch = realFetch;
     }
+  });
+
+  it('비공개(is_public:false) 상품은 메뉴에서 제외됨', () => {
+    const prompt = buildSystemPrompt({ name: '가게', extra: {} }, null, [
+      { product_id: 'P1', name: '보이는거', price: 1000, is_public: true },
+      { product_id: 'P2', name: '숨긴거', price: 2000, is_public: false },
+    ]);
+    assert.match(prompt, /보이는거/);
+    assert.ok(!prompt.includes('숨긴거'), '비공개 상품이 노출되면 안 됨(handleBizOrder의 ITEM_NOT_PUBLIC 규칙과 일관성)');
   });
 });
 
@@ -204,12 +214,18 @@ describe('N-26: handleEscalate — 필수 필드 및 서명 검증', () => {
 
 describe('N-27: 순수 함수 — buildSystemPrompt/detectEscalationKeyword/countRecentFails', () => {
   it('buildSystemPrompt — 2단계: 메뉴 항목 주문은 직접 접수 가능, 가격흥정/환불만 사람 연결', () => {
-    const prompt = buildSystemPrompt({ name: '가게', extra: {} }, null);
+    const prompt = buildSystemPrompt({ name: '가게', extra: {} }, null, []);
     assert.match(prompt, /메뉴 목록.*있는 항목의 주문은 직접 접수할 수 있습니다/s);
     assert.match(prompt, /가격 흥정이나 환불 요청은 여전히 사람 연결을 안내/);
     assert.match(prompt, /ORDER_DRAFT/);
     assert.match(prompt, /이 SP는 "지금 조리 가능한지·주문을 받을 여력이 있는지"는 판단하지 않습니다/,
       '주문 큐/용량 판단까지 이 SP가 하는 것처럼 프롬프트가 과잉 약속하면 안 됨 — 5·6번은 별도 작업');
+  });
+
+  it('buildSystemPrompt — 3단계: 가격·합계는 LLM이 태그에 넣지 말라고 명시(가격조작 방지)', () => {
+    const prompt = buildSystemPrompt({ name: '가게', extra: {} }, null, []);
+    assert.match(prompt, /가격·합계는 이 태그에 넣지 마세요/);
+    assert.match(prompt, /product_id/);
   });
 
   it('detectEscalationKeyword — 다국어 키워드 인식', () => {
@@ -232,18 +248,17 @@ describe('N-27: 순수 함수 — buildSystemPrompt/detectEscalationKeyword/coun
   });
 });
 
-describe('N-29: extractOrderDraft — [ORDER_DRAFT: ...] 태그 파싱', () => {
+describe('N-29: extractOrderDraft — [ORDER_DRAFT: ...] 태그 파싱(3단계: product_id+qty만)', () => {
   it('정상 형식을 정확히 파싱', () => {
-    const text = '짜장면 2그릇 주문 접수했습니다. [ORDER_DRAFT: items=[{"name":"짜장면","qty":2,"unit_price":7000}], total=14000, currency=GDC]';
+    const text = '짜장면 2그릇 주문 접수했습니다(₮14,000). [ORDER_DRAFT: items=[{"product_id":"P1","qty":2}]]';
     const order = extractOrderDraft(text);
-    assert.deepEqual(order, { items: [{ name: '짜장면', qty: 2, unit_price: 7000 }], total: 14000, currency: 'GDC' });
+    assert.deepEqual(order, { items: [{ product_id: 'P1', qty: 2 }] });
   });
 
   it('여러 항목도 파싱', () => {
-    const text = '[ORDER_DRAFT: items=[{"name":"짜장면","qty":1,"unit_price":7000},{"name":"탕수육","qty":1,"unit_price":15000}], total=22000, currency=GDC]';
+    const text = '[ORDER_DRAFT: items=[{"product_id":"P1","qty":1},{"product_id":"P2","qty":1}]]';
     const order = extractOrderDraft(text);
     assert.equal(order.items.length, 2);
-    assert.equal(order.total, 22000);
   });
 
   it('태그가 없으면 null(일반 응답·안내성 답변)', () => {
@@ -251,18 +266,26 @@ describe('N-29: extractOrderDraft — [ORDER_DRAFT: ...] 태그 파싱', () => {
   });
 
   it('items JSON이 깨져 있으면 null로 조용히 무시(사람 텍스트 응답은 안 깨뜨림)', () => {
-    const text = '[ORDER_DRAFT: items=[{broken json, total=1000, currency=GDC]';
-    assert.equal(extractOrderDraft(text), null);
+    assert.equal(extractOrderDraft('[ORDER_DRAFT: items=[{broken json]'), null);
   });
 
   it('items가 빈 배열이면 null(빈 주문은 주문이 아님)', () => {
-    const text = '[ORDER_DRAFT: items=[], total=0, currency=GDC]';
-    assert.equal(extractOrderDraft(text), null);
+    assert.equal(extractOrderDraft('[ORDER_DRAFT: items=[]]'), null);
+  });
+
+  it('product_id가 문자열이 아니거나 qty가 없으면 전체를 신뢰하지 않음(부분 유효 주문 방지)', () => {
+    assert.equal(extractOrderDraft('[ORDER_DRAFT: items=[{"product_id":"P1","qty":1},{"name":"이상한형식"}]]'), null);
+  });
+
+  it('LLM이 옛 형식(unit_price/total 포함)을 실수로 내도 파싱은 되되 가격 필드는 무시됨(product_id/qty만 취함)', () => {
+    const order = extractOrderDraft('[ORDER_DRAFT: items=[{"product_id":"P1","qty":2,"unit_price":99999}]]');
+    assert.deepEqual(order.items[0], { product_id: 'P1', qty: 2, unit_price: 99999 });
+    // unit_price가 파싱 결과엔 남아있어도 priceOrderItems가 이걸 절대 안 씀(N-31에서 검증)
   });
 });
 
-describe('N-30: handleAiChat — 주문 접수 전체 파이프라인(2단계)', () => {
-  it('메뉴 항목 주문 시 order 필드가 채워지고, translate() 대상은 responseKo(번역 전)에서 뽑음', async () => {
+describe('N-30: handleAiChat — 주문 접수 전체 파이프라인(3단계: 서버측 권위 가격산정)', () => {
+  it('LLM이 가격을 안 내도(product_id만) 서버가 seller_products로 정확한 총액을 계산', async () => {
     const rawKey = 'test-encryption-key-32bytes-long!!';
     const apiKeyEnc = await aesEncrypt('sk-test-api-key', rawKey);
 
@@ -272,11 +295,11 @@ describe('N-30: handleAiChat — 주문 접수 전체 파이프라인(2단계)',
         const body = JSON.parse(opts.body);
         const isTranslateCall = body.messages.some(m => typeof m.content === 'string' && m.content.startsWith('Translate from'));
         if (isTranslateCall) {
-          // 번역 호출은 태그 JSON을 일부러 뭉개서 반환 — "번역 후가 아니라
-          // 번역 전(responseKo)에서 뽑는다"는 설계를 실제로 검증하기 위함.
+          // 번역 호출은 태그를 일부러 뭉개서 반환 — "번역 후가 아니라 번역
+          // 전(responseKo)에서 뽑는다"는 설계를 실제로 검증하기 위함.
           return { ok: true, json: async () => ({ choices: [{ message: { content: 'ORDER CONFIRMED (translation garbled the tag)' } }] }) };
         }
-        return { ok: true, json: async () => ({ choices: [{ message: { content: '짜장면 2그릇 주문 접수했습니다. [ORDER_DRAFT: items=[{"name":"짜장면","qty":2,"unit_price":7000}], total=14000, currency=GDC]' } }] }) };
+        return { ok: true, json: async () => ({ choices: [{ message: { content: '짜장면 2그릇 주문 접수했습니다. [ORDER_DRAFT: items=[{"product_id":"P1","qty":2}]]' } }] }) };
       }
       return realFetch(url, opts);
     };
@@ -284,24 +307,25 @@ describe('N-30: handleAiChat — 주문 접수 전체 파이프라인(2단계)',
     try {
       const deps = makeDeps({
         _l1FindProfileByGuid: async (env, guid) => ({
-          guid, pubkey_ed25519: 'PUBKEY', name: '동네 중국집', address: '제주시 어딘가',
-          extra: { business_hours: '11:00~21:00', menu: [{ name: '짜장면', price: 7000 }] },
+          guid, pubkey_ed25519: 'PUBKEY', name: '동네 중국집', address: '제주시 어딘가', extra: { business_hours: '11:00~21:00' },
         }),
+        _l1ListSellerProducts: async () => [{ product_id: 'P1', name: '짜장면', price: 7000, is_public: true }],
         sbFetch: async (env, path) => {
           if (path.includes('/ai_sessions?')) return [{ mode: 'ai', messages: [] }];
           if (path.includes('/user_llm_keys')) return [{ ai_active: true, provider: 'deepseek', model: 'deepseek-chat', api_key_enc: apiKeyEnc }];
           return {};
         },
       });
-      // caller_lang='en' → translate()가 호출되도록(태그 뭉개짐 시뮬레이션이 실제로 발동하게)
       const body = { ...BASE_BODY, message: '2 jjajangmyeon please', caller_lang: 'en' };
       const res = await handleAiChat(req(body), { AES_ENCRYPTION_KEY: rawKey }, {}, deps);
       const data = await res.json();
 
       assert.ok(data.order, 'order 필드가 채워져야 함');
-      assert.deepEqual(data.order, { items: [{ name: '짜장면', qty: 2, unit_price: 7000 }], total: 14000, currency: 'GDC' });
-      // 번역된 응답 텍스트 자체는 뭉개져 있어도(테스트가 일부러 그렇게 만듦) order는 영향 없어야 함
-      assert.match(data.response, /garbled/);
+      assert.deepEqual(data.order, {
+        items: [{ product_id: 'P1', name: '짜장면', unit_price: 7000, qty: 2, line_total: 14000 }],
+        unresolved: [], total: 14000, currency: 'GDC',
+      });
+      assert.match(data.response, /garbled/, '번역된 화면 텍스트가 망가져도 order 필드 정확도엔 영향 없어야 함');
     } finally {
       globalThis.fetch = realFetch;
     }
@@ -319,10 +343,8 @@ describe('N-30: handleAiChat — 주문 접수 전체 파이프라인(2단계)',
     };
     try {
       const deps = makeDeps({
-        _l1FindProfileByGuid: async (env, guid) => ({
-          guid, pubkey_ed25519: 'PUBKEY', name: '동네 중국집',
-          extra: { menu: [{ name: '짜장면', price: 7000 }] },
-        }),
+        _l1FindProfileByGuid: async (env, guid) => ({ guid, pubkey_ed25519: 'PUBKEY', name: '동네 중국집' }),
+        _l1ListSellerProducts: async () => [{ product_id: 'P1', name: '짜장면', price: 7000, is_public: true }],
         sbFetch: async (env, path) => {
           if (path.includes('/ai_sessions?')) return [{ mode: 'ai', messages: [] }];
           if (path.includes('/user_llm_keys')) return [{ ai_active: true, provider: 'deepseek', model: 'deepseek-chat', api_key_enc: apiKeyEnc }];
@@ -336,6 +358,37 @@ describe('N-30: handleAiChat — 주문 접수 전체 파이프라인(2단계)',
     } finally {
       globalThis.fetch = realFetch;
     }
+  });
+});
+
+describe('N-31: priceOrderItems — LLM 숫자를 절대 신뢰하지 않고 서버가 직접 계산', () => {
+  const catalog = [
+    { product_id: 'P1', name: '짜장면', price: 7000, is_public: true },
+    { product_id: 'P2', name: '탕수육', price: 15000, is_public: true },
+    { product_id: 'P3', name: '비공개메뉴', price: 99999, is_public: false },
+  ];
+
+  it('LLM이 unit_price를 조작해서 냈어도 서버 계산 결과에 전혀 반영되지 않음', () => {
+    const result = priceOrderItems([{ product_id: 'P1', qty: 2, unit_price: 1 }], catalog);
+    assert.equal(result.items[0].unit_price, 7000, '카탈로그 가격만 써야 함 — LLM이 준 1은 무시');
+    assert.equal(result.total, 14000);
+  });
+
+  it('여러 항목 합산이 정확함', () => {
+    const result = priceOrderItems([{ product_id: 'P1', qty: 1 }, { product_id: 'P2', qty: 2 }], catalog);
+    assert.equal(result.total, 7000 + 15000 * 2);
+  });
+
+  it('카탈로그에 없는 product_id는 unresolved에 담기고 total 계산에서 제외', () => {
+    const result = priceOrderItems([{ product_id: 'P1', qty: 1 }, { product_id: 'GHOST', qty: 1 }], catalog);
+    assert.deepEqual(result.unresolved, ['GHOST']);
+    assert.equal(result.total, 7000, '유효 항목만 합산 — 없는 상품 때문에 전체를 버리지 않음');
+  });
+
+  it('비공개(is_public:false) 상품은 unresolved 처리(handleBizOrder의 ITEM_NOT_PUBLIC과 동일 원칙)', () => {
+    const result = priceOrderItems([{ product_id: 'P3', qty: 1 }], catalog);
+    assert.deepEqual(result.unresolved, ['P3']);
+    assert.equal(result.total, 0);
   });
 });
 

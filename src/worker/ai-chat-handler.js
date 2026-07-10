@@ -55,15 +55,25 @@ function countRecentFails(messages) {
 
 // 원본(ai_assistant.js)과 동일 — 아직 안 바꾼 부분(2단계에서 주문접수
 // 규칙 추가 예정).
-function buildSystemPrompt(profile, distanceM) {
-  const menu = profile?.extra?.menu || [];
+// ★ 2026-07-09 3단계 — profile.extra.menu 대신 seller_products(L1,
+// K-Market이 이미 쓰는 실제 카탈로그)를 메뉴 소스로 바꿨다. 이유:
+// handleBizOrder(/biz/order, 실제 GDC 결제 처리)는 seller_products를
+// 권위 있는 가격 소스로 재조회해서 클라이언트 주장 금액과 대조한다
+// (2026-07-07 신설된 가격조작 방지 로직). profile.extra.menu는 그
+// 검증 경로와 완전히 무관한 별도 데이터라, 거기 있는 가격으로
+// ORDER_DRAFT를 내봤자 /biz/order가 참조할 상품 자체가 없어 결제가
+// 안 됐다 — 이번에 두 데이터를 하나로 합쳤다(K-Market 카탈로그가
+// 곧 이 AI 점원의 메뉴가 됨). 식당이 새로 K-Market 셀러 등록을 해야
+// 하는 게 이 통합의 실질적 비용이다.
+function buildSystemPrompt(profile, distanceM, sellerProducts = []) {
   const hours = profile?.extra?.business_hours || '정보 없음';
   const name = profile?.name || '업체';
   const address = profile?.address || '';
 
-  const menuText = menu.length > 0
-    ? menu.map(m => `- ${m.name}: ₮${m.price?.toLocaleString() || '?'} ${m.description || ''}`).join('\n')
-    : '(메뉴 정보 없음)';
+  const publicItems = sellerProducts.filter(p => p.is_public !== false && typeof p.price === 'number');
+  const menuText = publicItems.length > 0
+    ? publicItems.map(p => `- [${p.product_id ?? p.id}] ${p.name}: ₮${p.price.toLocaleString()} ${p.desc || ''}`).join('\n')
+    : '(메뉴 정보 없음 — 이 상점은 아직 K-Market 상품을 등록하지 않았습니다)';
 
   const locationText = distanceM !== null
     ? `현재 방문자와의 거리: 약 ${distanceM}m (도보 약 ${Math.round(distanceM / 67)}분)`
@@ -74,29 +84,34 @@ function buildSystemPrompt(profile, distanceM) {
 영업시간: ${hours}
 ${locationText}
 
-[메뉴 목록]
+[메뉴 목록 — 대괄호 안은 상품 ID]
 ${menuText}
 
 [필수 규칙]
 1. 메뉴, 영업시간, 위치 외 정보는 "죄송합니다, 해당 정보는 제공하기 어렵습니다"라고 답하세요.
 2. 위 [메뉴 목록]에 있는 항목의 주문은 직접 접수할 수 있습니다. 가격 흥정이나 환불 요청은 여전히 사람 연결을 안내하세요.
-3. 주문을 접수할 때는(모든 항목이 메뉴에 있고 수량이 명확할 때만) 손님에게 보여줄 확인 문장 뒤에 아래 형식의 태그를 정확히 한 번만 덧붙이세요 — 단가는 반드시 위 [메뉴 목록]의 가격을 그대로 쓰고 임의로 계산하지 마세요:
-   [ORDER_DRAFT: items=[{"name":"항목명","qty":수량,"unit_price":단가}], total=합계, currency=GDC]
+3. 주문을 접수할 때는(모든 항목이 메뉴에 있고 수량이 명확할 때만) 손님에게 보여줄 확인 문장(가격 언급해도 좋음) 뒤에 아래 형식의 태그를 정확히 한 번만 덧붙이세요 — product_id는 반드시 위 [메뉴 목록]의 대괄호 안 ID를 정확히 그대로 쓰세요. 가격·합계는 이 태그에 넣지 마세요(결제 시점에 시스템이 실제 상품 가격으로 다시 계산합니다 — 당신이 계산한 숫자는 쓰이지 않습니다):
+   [ORDER_DRAFT: items=[{"product_id":"상품ID","qty":수량}]]
 4. 메뉴에 없는 항목을 주문하려 하면 ORDER_DRAFT를 내지 말고 "죄송합니다, 그 메뉴는 없습니다"라고 답한 뒤 대안을 물어보세요. 수량이 불명확하면(예: "몇 개 드릴까요") 먼저 되묻고, 확답을 받기 전에는 ORDER_DRAFT를 내지 마세요.
 5. 이 SP는 "지금 조리 가능한지·주문을 받을 여력이 있는지"는 판단하지 않습니다 — 그건 이 응답을 받는 쪽(주문 큐/용량 시스템)의 몫입니다. ORDER_DRAFT는 어디까지나 초안이며 최종 확정이 아닙니다.
 6. 답변은 간결하게 2~3문장 이내로 유지하세요.
 7. 항상 친절하고 정중한 어조를 유지하세요.`;
 }
 
-// ★ 2026-07-09 신설(2단계) — 응답 텍스트에서 [ORDER_DRAFT: ...] 태그를
-// 파싱해 정형 데이터로 분리한다. 사람이 읽는 텍스트(cleanText)와 기계가
-// 바로 쓸 수 있는 구조화 데이터(order)를 병행 반환하는 건 이 저장소
-// 전반의 확립된 패턴이다(PROCEDURE_MAP_DRAFT 등과 동일 원칙) — 호출한
-// 쪽(손님의 AI)이 정규식으로 다시 파싱할 필요가 없게 한다.
-// 태그 자체는 텍스트에서 제거하지 않는다 — 사람이 최종 화면에서 원문
-// 그대로 보고 싶을 수 있고(예: 주문 확인서), 사람 승인 게이트(§14)를
-// 거치기 전까지는 "이게 초안임"이 눈에 보이는 게 오히려 안전하다.
-const _ORDER_DRAFT_RE = /\[ORDER_DRAFT:\s*items=(\[[\s\S]*?\]),\s*total=([\d.]+),\s*currency=(\w+)\]/;
+// ★ 2026-07-09 신설(2단계, 3단계에서 형식 단순화) — 응답 텍스트에서
+// [ORDER_DRAFT: ...] 태그를 파싱해 정형 데이터로 분리한다. 사람이
+// 읽는 텍스트와 기계가 바로 쓸 수 있는 구조화 데이터를 병행 반환하는
+// 건 이 저장소 전반의 확립된 패턴이다(PROCEDURE_MAP_DRAFT 등과 동일
+// 원칙) — 호출한 쪽(손님의 AI)이 정규식으로 다시 파싱할 필요가 없게
+// 한다. 태그 자체는 텍스트에서 제거하지 않는다.
+//
+// ★ 3단계에서 total/currency를 태그에서 뺐다 — LLM이 계산한 합계를
+// 그대로 믿는 건 handleBizOrder가 2026-07-07에 고친 바로 그 취약점
+// (가격을 클라이언트 주장대로 신뢰)을 다른 자리에서 재현하는 것이다.
+// 가격의 유일한 권위 소스는 seller_products(L1)이고, 그건 handleAiChat
+// 안에서 이미 fetch해둔 sellerProducts로 서버가 직접 계산한다
+// (_priceOrderItems).
+const _ORDER_DRAFT_RE = /\[ORDER_DRAFT:\s*items=(\[[\s\S]*?\])\]/;
 
 function extractOrderDraft(text) {
   const m = typeof text === 'string' ? text.match(_ORDER_DRAFT_RE) : null;
@@ -108,7 +123,41 @@ function extractOrderDraft(text) {
     return null; // 형식이 깨졌으면 조용히 무시 — 사람 텍스트 응답은 그대로 살려둔다
   }
   if (!Array.isArray(items) || !items.length) return null;
-  return { items, total: Number(m[2]), currency: m[3] };
+  // product_id/qty가 없는 항목이 섞여 있으면 이 초안 전체를 신뢰하지
+  // 않는다 — 부분적으로만 유효한 주문을 그대로 넘기면 나중에 조용히
+  // 항목이 누락된 채 결제될 위험이 있다.
+  const valid = items.every(it => it && typeof it.product_id === 'string' && it.product_id &&
+    typeof it.qty === 'number' && it.qty > 0);
+  if (!valid) return null;
+  return { items };
+}
+
+// ★ 2026-07-09 3단계 신설 — ORDER_DRAFT의 product_id들을 handleAiChat이
+// 이미 fetch해둔 sellerProducts(L1, 권위 있는 소스)로 대조해 실제 가격을
+// 매긴다. LLM이 계산한 숫자는 여기서 전혀 쓰지 않는다 — handleBizOrder의
+// 2026-07-07 가격조작 방지 로직과 동일한 원칙을 여기서도 적용한 것이다.
+// 메뉴에 없는 product_id가 섞여 있으면(LLM 환각 또는 카탈로그가 그 사이
+// 바뀐 경우) 그 항목만 unresolved에 담고 계속 진행한다 — 전체를 버리면
+// 정상 항목까지 못 쓰게 되니, "이 항목은 실패했다"는 걸 정직하게 알리는
+// 쪽이 낫다.
+function priceOrderItems(items, sellerProducts) {
+  const byId = new Map(sellerProducts.map(p => [String(p.product_id ?? p.id), p]));
+  const priced = [];
+  const unresolved = [];
+  let total = 0;
+
+  for (const it of items) {
+    const rec = byId.get(String(it.product_id));
+    if (!rec || typeof rec.price !== 'number' || rec.is_public === false) {
+      unresolved.push(it.product_id);
+      continue;
+    }
+    const lineTotal = rec.price * it.qty;
+    priced.push({ product_id: it.product_id, name: rec.name, unit_price: rec.price, qty: it.qty, line_total: lineTotal });
+    total += lineTotal;
+  }
+
+  return { items: priced, unresolved, total, currency: 'GDC' };
 }
 
 async function callLLM({ provider, apiKey, model, systemPrompt, userMessage }) {
@@ -230,7 +279,7 @@ async function aesDecrypt(b64, rawKey) {
  *   전체를 끌어올 필요가 없다).
  */
 async function handleAiChat(request, env, corsHeaders, deps) {
-  const { _err, _verifyEd25519, _l1FindProfileByGuid, sbFetch } = deps;
+  const { _err, _verifyEd25519, _l1FindProfileByGuid, _l1ListSellerProducts, sbFetch } = deps;
 
   let body;
   try { body = await request.json(); } catch {
@@ -312,15 +361,18 @@ async function handleAiChat(request, env, corsHeaders, deps) {
 
     const msgKo = caller_lang === 'ko' ? message : await translate(message, caller_lang, 'ko', env.DEEPSEEK_API_KEY);
 
-    let targetProfile;
+    let targetProfile, sellerProducts;
     try {
-      targetProfile = await _l1FindProfileByGuid(env, target_guid);
+      [targetProfile, sellerProducts] = await Promise.all([
+        _l1FindProfileByGuid(env, target_guid),
+        _l1ListSellerProducts(env, target_guid),
+      ]);
     } catch (e) {
-      return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패(대상 프로필): ' + e.message, corsHeaders);
+      return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패(대상 프로필/카탈로그): ' + e.message, corsHeaders);
     }
     if (!targetProfile) return _err(404, 'TARGET_NOT_FOUND', '대상 프로필이 L1에 없습니다', corsHeaders);
 
-    const systemPrompt = buildSystemPrompt(targetProfile, distance_m);
+    const systemPrompt = buildSystemPrompt(targetProfile, distance_m, sellerProducts);
 
     let apiKey;
     try {
@@ -345,7 +397,14 @@ async function handleAiChat(request, env, corsHeaders, deps) {
     // 한 번 더 거치는 과정이라 [ORDER_DRAFT: ...] 안의 JSON 구조가
     // 번역 중 깨질 위험이 있다 — 구조화 데이터는 항상 신뢰 가능한
     // 원본(한국어, 시스템 프롬프트가 이 형식을 지시한 언어)에서만 뽑는다.
-    const order = extractOrderDraft(responseKo);
+    // ★ 3단계 — 추출한 product_id/qty를 이미 fetch해둔 sellerProducts로
+    // 서버가 직접 가격을 매긴다(priceOrderItems) — LLM이 낸 숫자는 아예
+    // 안 쓴다. 이 order는 그대로 /biz/order 요청의 tx.items로 넘길 수
+    // 있는 형태다(product_id 기준 재조회는 handleBizOrder가 자기 쪽에서
+    // 또 한 번 하므로 이중 방어가 된다 — 여기서 가격을 매겼다고 해서
+    // handleBizOrder의 검증이 생략되는 건 아니다).
+    const draft = extractOrderDraft(responseKo);
+    const order = draft ? priceOrderItems(draft.items, sellerProducts) : null;
 
     const updatedMessages = [
       ...sessionMessages,
@@ -405,7 +464,7 @@ async function handleEscalate(request, env, corsHeaders, deps) {
 export {
   handleAiChat, handleEscalate,
   buildSystemPrompt, callLLM, translate,
-  detectEscalationKeyword, countRecentFails, extractOrderDraft,
+  detectEscalationKeyword, countRecentFails, extractOrderDraft, priceOrderItems,
   aesEncrypt, aesDecrypt,
   ESCALATION_KEYWORDS, FAIL_THRESHOLD, FAIL_WINDOW_MS,
 };

@@ -1682,7 +1682,7 @@ export default {
     // 슬래시)와 이름이 헷갈리지 않도록 /biz/ 네임스페이스로 통일 —
     // /ai/chat은 범용 LLM 프로바이더 프록시고 이건 완전히 다른 기능이다.
     if (pathname === '/biz/ai-chat' && request.method === 'POST')
-      return handleAiChat(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, sbFetch });
+      return handleAiChat(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, _l1ListSellerProducts, sbFetch });
     if (pathname === '/biz/escalate' && request.method === 'POST')
       return handleEscalate(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, sbFetch });
 
