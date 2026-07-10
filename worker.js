@@ -1028,6 +1028,138 @@ async function _l1PatchAtomRow(env, recordId, patch) {
 // "아직 검토 중"이라고 고지해야 한다(AGENT-COMMON §3-0 SP_DRAFT_REQUEST와
 // 동일한 승인 원칙, 여기서도 그대로 적용).
 
+// ★ 2026-07-11 추가 — SP-Author 자동화(신호 큐잉 + ESCALATE 최소구현).
+// 지금까지 [SP_DRAFT_REQUEST]/[GOV_SP_DRAFT_REQUEST]/[ESCALATE] 태그가
+// 나가도 그걸 받아 저장하는 곳이 없어(call-ai.js 주석: "아직 미처리") 신호가
+// 허공으로 사라졌다. sp_draft_requests(큐)·escalations(알림)를 채운다.
+// SP-Author 자체(실제 조사·작성)는 여전히 사람이 수행하지만, 최소한
+// "무엇을 검토해야 하는지"가 유실되지 않고 대시보드에서 조회 가능해진다.
+
+async function _l1CreateDraftRequest(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_draft_requests/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`sp_draft_requests 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+async function _l1FindOpenDraftRequest(env, institution, task) {
+  // 같은 (institution, task) 조합의 queued/assigned 요청이 이미 있으면
+  // 새로 만들지 않고 그 레코드를 재사용한다(중복 신호 누적 방지 — 같은
+  // 기관 공백을 여러 이용자가 같은 날 건드리면 큐가 도배될 수 있다).
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(
+    `institution='${(institution || '').replace(/'/g, "\\'")}' && task='${(task || '').replace(/'/g, "\\'")}' && (status='queued' || status='assigned')`
+  );
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_draft_requests/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) return null; // 조회 실패는 중복확인 스킵으로 처리(신규 생성 진행)
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+async function _l1ListDraftRequests(env, status) {
+  const token = await _l1AdminToken(env);
+  const filter = status ? encodeURIComponent(`status='${status}'`) : '';
+  const url = `${L1_DEFAULT}/api/collections/sp_draft_requests/records?perPage=200&sort=-created` +
+    (filter ? `&filter=${filter}` : '');
+  const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`sp_draft_requests 목록 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items || [];
+}
+
+async function _l1PatchDraftRequest(env, recordId, patch) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_draft_requests/records/${recordId}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`sp_draft_requests PATCH 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+async function _l1CreateEscalation(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/escalations/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`escalations 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+async function _l1ListEscalations(env, unreadOnly) {
+  const token = await _l1AdminToken(env);
+  const filter = unreadOnly ? encodeURIComponent(`read=false`) : '';
+  const url = `${L1_DEFAULT}/api/collections/escalations/records?perPage=200&sort=-created` +
+    (filter ? `&filter=${filter}` : '');
+  const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`escalations 목록 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items || [];
+}
+
+async function _l1FindRefreshSchedule(env, spId) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`sp_id='${spId.replace(/'/g, "\\'")}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_refresh_schedule/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`sp_refresh_schedule 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+async function _l1UpsertRefreshSchedule(env, spId, patch) {
+  const existing = await _l1FindRefreshSchedule(env, spId);
+  const token = await _l1AdminToken(env);
+  if (existing) {
+    const res = await fetch(`${L1_DEFAULT}/api/collections/sp_refresh_schedule/records/${existing.id}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) throw new Error(`sp_refresh_schedule PATCH 실패 (HTTP ${res.status})`);
+    return res.json();
+  }
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_refresh_schedule/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sp_id: spId, ...patch }),
+  });
+  if (!res.ok) throw new Error(`sp_refresh_schedule 생성 실패 (HTTP ${res.status})`);
+  return res.json();
+}
+
+async function _l1ListDueRefreshSchedules(env) {
+  // next_due_at <= 오늘인 항목 — 갱신 대상 조회(§SP-REFRESH-METHODOLOGY 참조)
+  const token = await _l1AdminToken(env);
+  const today = new Date().toISOString().slice(0, 10);
+  const filter = encodeURIComponent(`next_due_at <= '${today}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_refresh_schedule/records?filter=${filter}&perPage=200`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`sp_refresh_schedule 마감목록 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items || [];
+}
+
 const ORCHESTRATION_STALE_THRESHOLD_DAYS = 90; // 신선도 경고 임계값(임의값, 운영 중 조정 필요)
 
 function _daysSince(dateStr) {
@@ -1270,6 +1402,178 @@ async function handleAtomRowUpdate(request, env, corsHeaders) {
   try {
     const rec = await _l1PatchAtomRow(env, existing.id, patch);
     return new Response(JSON.stringify({ status: 'updated', record: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+// ── SP-Author 자동화: 큐잉 + ESCALATE + 갱신스케줄 (2026-07-11 신설) ──
+// [SP_DRAFT_REQUEST]/[GOV_SP_DRAFT_REQUEST]/[ESCALATE] 태그를 call-ai.js가
+// 파싱해 여기로 POST한다(§SP-AUTHOR-AUTOMATION_v1_0.md 참조). SP-Author의
+// 실제 조사·작성은 여전히 사람이 수행하지만, 신호가 유실되지 않고
+// 큐/알림에 정직하게 남는다.
+
+// POST /sp-author/queue
+// body: {request_type, signal_source, institution?, task?, tier_hint?,
+//        target_sp_id?, source_conversation?, priority?}
+async function handleSPAuthorQueue(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  if (!payload.request_type || !payload.signal_source) {
+    return new Response(JSON.stringify({ error: 'request_type, signal_source required' }), { status: 400, headers: corsHeaders });
+  }
+
+  // 중복 신호 병합 — 같은 (institution, task)로 이미 queued/assigned인
+  // 요청이 있으면 새로 만들지 않고 그 레코드를 재사용한다.
+  const dup = await _l1FindOpenDraftRequest(env, payload.institution, payload.task).catch(() => null);
+  if (dup) {
+    return new Response(JSON.stringify({ status: 'merged_into_existing', record: dup }), { headers: corsHeaders });
+  }
+
+  const record = {
+    request_type: payload.request_type,
+    signal_source: payload.signal_source,
+    institution: payload.institution || '',
+    task: payload.task || '',
+    tier_hint: payload.tier_hint || '',
+    target_sp_id: payload.target_sp_id || '',
+    source_conversation: (payload.source_conversation || '').slice(0, 4000),
+    priority: payload.priority || 'normal',
+    status: 'queued',
+  };
+
+  let rec;
+  try {
+    rec = await _l1CreateDraftRequest(env, record);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+
+  // 큐잉과 동시에 최소 ESCALATE 알림도 함께 남긴다 — 별도로 [ESCALATE]
+  // 태그가 안 나가도(호출부가 깜빡해도) 최소 신호는 보장한다.
+  try {
+    await _l1CreateEscalation(env, {
+      to: '@owner',
+      reason: 'sp_draft_request',
+      ref_collection: 'sp_draft_requests',
+      ref_id: rec.id,
+      summary: `[${record.priority}] ${record.request_type}: ${record.institution || record.target_sp_id || '(미상)'} — ${record.task}`.slice(0, 2000),
+      read: false,
+    });
+  } catch (e) {
+    // 알림 실패가 큐잉 자체를 실패시키지 않는다 — 큐 레코드는 이미 저장됨.
+    console.error('[sp-author] escalation 생성 실패(큐잉은 성공):', e.message);
+  }
+
+  return new Response(JSON.stringify({ status: 'queued', record: rec }), { headers: corsHeaders });
+}
+
+// GET /sp-author/queue?status=queued
+async function handleSPAuthorQueueList(request, env, corsHeaders) {
+  const { searchParams } = new URL(request.url);
+  const status = searchParams.get('status') || '';
+  try {
+    const items = await _l1ListDraftRequests(env, status);
+    return new Response(JSON.stringify({ items }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+// POST /sp-author/queue/:id/status  body: {status, duplicate_of?}
+async function handleSPAuthorQueueStatus(request, env, corsHeaders, recordId) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  const allowed = ['queued', 'assigned', 'drafted', 'pending_review', 'approved', 'rejected', 'duplicate'];
+  if (!allowed.includes(payload.status)) {
+    return new Response(JSON.stringify({ error: `status must be one of ${allowed.join('|')}` }), { status: 400, headers: corsHeaders });
+  }
+  const patch = { status: payload.status };
+  if (payload.status === 'duplicate' && payload.duplicate_of) patch.duplicate_of = payload.duplicate_of;
+  if (['approved', 'rejected'].includes(payload.status)) patch.resolved_at = new Date().toISOString();
+  try {
+    const rec = await _l1PatchDraftRequest(env, recordId, patch);
+    return new Response(JSON.stringify({ status: 'updated', record: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+// POST /sp-author/escalate  body: {to?, reason, ref_collection?, ref_id?, summary}
+// AGENT-COMMON [ESCALATE: to=..., ...] 태그가 이걸 호출한다(최소 구현 —
+// 실제 알림 채널(이메일/슬랙 등) 연동은 이 함수를 확장하면 된다).
+async function handleSPAuthorEscalate(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  if (!payload.reason || !payload.summary) {
+    return new Response(JSON.stringify({ error: 'reason, summary required' }), { status: 400, headers: corsHeaders });
+  }
+  try {
+    const rec = await _l1CreateEscalation(env, {
+      to: payload.to || '@owner',
+      reason: payload.reason,
+      ref_collection: payload.ref_collection || '',
+      ref_id: payload.ref_id || '',
+      summary: (payload.summary || '').slice(0, 2000),
+      read: false,
+    });
+    return new Response(JSON.stringify({ status: 'escalated', record: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+// GET /sp-author/escalations?unread=true
+async function handleSPAuthorEscalationList(request, env, corsHeaders) {
+  const { searchParams } = new URL(request.url);
+  const unreadOnly = searchParams.get('unread') === 'true';
+  try {
+    const items = await _l1ListEscalations(env, unreadOnly);
+    return new Response(JSON.stringify({ items }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+// GET /sp-author/refresh-due
+// §SP-AUTHOR-AUTOMATION_v1_0.md의 정기 갱신 방법론이 참조하는 조회
+// 엔드포인트 — next_due_at이 지난 SP 목록을 반환한다. 실제 스케줄 실행
+// (cron)은 이 저장소 밖(예: GitHub Actions 정기 워크플로)에서 이 엔드포인트를
+// 주기적으로 호출해 [SP_DRAFT_REQUEST: ..., signal_source=refresh_schedule]
+// 큐잉으로 이어가는 방식을 권장한다 — worker.js 자체에는 스케줄러가 없다.
+async function handleSPAuthorRefreshDue(request, env, corsHeaders) {
+  try {
+    const items = await _l1ListDueRefreshSchedules(env);
+    return new Response(JSON.stringify({ items }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+// POST /sp-author/refresh-schedule  body: {sp_id, call_count_30d?, tier?}
+// 갱신 완료 후 next_due_at을 tier에 따라 재계산해 기록한다(멱등 — upsert).
+async function handleSPAuthorRefreshScheduleUpsert(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  if (!payload.sp_id) return new Response(JSON.stringify({ error: 'sp_id required' }), { status: 400, headers: corsHeaders });
+
+  const tier = payload.tier || 'monthly';
+  const daysByTier = { weekly: 7, monthly: 30, quarterly: 90 };
+  const days = daysByTier[tier] || 30;
+  const next = new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+
+  const patch = {
+    tier,
+    last_refreshed_at: new Date().toISOString().slice(0, 10),
+    next_due_at: next,
+  };
+  if (typeof payload.call_count_30d === 'number') patch.call_count_30d = payload.call_count_30d;
+  if (typeof payload.drift_flag === 'boolean') patch.drift_flag = payload.drift_flag;
+  if (payload.drift_reason) patch.drift_reason = payload.drift_reason;
+
+  try {
+    const rec = await _l1UpsertRefreshSchedule(env, payload.sp_id, patch);
+    return new Response(JSON.stringify({ status: 'scheduled', record: rec }), { headers: corsHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
   }
@@ -1628,6 +1932,22 @@ export default {
       return handleAtomRowUpdate(request, env, corsHeaders);
     if (pathname === '/orchestration/execute-atom' && request.method === 'POST')
       return handleExecuteAtom(request, env, corsHeaders);
+
+    // ── SP-Author 자동화 (2026-07-11 신설) ─────────────────────────
+    if (pathname === '/sp-author/queue' && request.method === 'POST')
+      return handleSPAuthorQueue(request, env, corsHeaders);
+    if (pathname === '/sp-author/queue' && request.method === 'GET')
+      return handleSPAuthorQueueList(request, env, corsHeaders);
+    if (pathname.match(/^\/sp-author\/queue\/[^/]+\/status$/) && request.method === 'POST')
+      return handleSPAuthorQueueStatus(request, env, corsHeaders, pathname.split('/')[3]);
+    if (pathname === '/sp-author/escalate' && request.method === 'POST')
+      return handleSPAuthorEscalate(request, env, corsHeaders);
+    if (pathname === '/sp-author/escalations' && request.method === 'GET')
+      return handleSPAuthorEscalationList(request, env, corsHeaders);
+    if (pathname === '/sp-author/refresh-due' && request.method === 'GET')
+      return handleSPAuthorRefreshDue(request, env, corsHeaders);
+    if (pathname === '/sp-author/refresh-schedule' && request.method === 'POST')
+      return handleSPAuthorRefreshScheduleUpsert(request, env, corsHeaders);
 
     // ── merkle (T10) ─────────────────────────────────────────
     if (pathname === '/merkle/verify')           return handleMerkleVerify(request, env, corsHeaders);

@@ -1023,6 +1023,128 @@ async function _triggerSeamlessHandoff(sendFn = callAI) {
 }
 
 /**
+ * _handleSPAuthorTags — [SP_DRAFT_REQUEST]/[GOV_SP_DRAFT_REQUEST]/[ESCALATE]
+ * 태그를 worker.js /sp-author/* 엔드포인트로 실제 배선한다(2026-07-11 신설).
+ *
+ * 지금까지 이 세 태그는 "아직 미처리(Phase 2~5 예정)"로 남아 있어 AC(§3-0)나
+ * K-Compose(STEP 4-A)가 태그를 내도 대괄호만 strip되고 아무 일도 일어나지
+ * 않았다 — SP-Author로 가는 신호가 전부 유실되던 상태. _handleOrchestrationTags
+ * 와 달리 특정 SP(K-Compose/K-Deliver)로 게이트하지 않는다 — AGENT-COMMON
+ * 본인도 §3-0 ③에서 [SP_DRAFT_REQUEST]를 직접 낼 수 있기 때문이다.
+ *
+ * SP-Author 자체(실제 조사·작성)는 여전히 사람이 수행한다 — 이 함수는
+ * "신호가 큐/알림에 정직하게 남는다"까지만 보장한다.
+ */
+export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, userText = '') {
+  const _updateBubble = async (text) => {
+    if (!bubble) return;
+    const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+    if (_usb) _usb(bubble, text);
+  };
+  const base = (CFG.endpoint || '').replace(/\/+$/, '');
+
+  // [GOV_SP_DRAFT_REQUEST: institution=..., task=..., tier_hint=...,
+  //  source_conversation=...] — K-Compose STEP 4-A 매칭 실패 또는 AC가
+  // 직접 정부·공공기관 공백을 발견했을 때.
+  const govMatch = fullReply.match(/\[GOV_SP_DRAFT_REQUEST:([\s\S]*?)\]/);
+  if (govMatch) {
+    const body = govMatch[1];
+    const get = (field) => {
+      const m = body.match(new RegExp(`${field}=([^,\\]]+)`));
+      return m ? m[1].trim() : '';
+    };
+    console.log('[SP-Author] GOV_SP_DRAFT_REQUEST 감지 — 큐잉 요청');
+    await _updateBubble(_stripInternalTags(fullReply));
+    history.push({ role: 'assistant', content: fullReply });
+    let resultText;
+    try {
+      const res = await fetch(`${base}/sp-author/queue`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          request_type: 'create',
+          signal_source: CFG.system?.includes('K-Compose') ? 'kcompose_match_fail' : 'realtime_ac',
+          institution: get('institution'),
+          task: get('task'),
+          tier_hint: get('tier_hint'),
+          source_conversation: get('source_conversation') || userText,
+          priority: 'normal',
+        }),
+      });
+      resultText = JSON.stringify(await res.json().catch(() => ({ status: res.status })));
+    } catch (e) {
+      resultText = `{"error":"${e.message}"}`;
+    }
+    await sendFn(`[GOV_SP_DRAFT_REQUEST 결과] ${resultText}`);
+    return true;
+  }
+
+  // [SP_DRAFT_REQUEST: domain=..., request=..., suggested_slug=...] —
+  // AGENT-COMMON §3-0 ③(완전히 새로운 서비스 카테고리, 정부기관이 아닌 경우).
+  const draftMatch = fullReply.match(/\[SP_DRAFT_REQUEST:([\s\S]*?)\]/);
+  if (draftMatch) {
+    const body = draftMatch[1];
+    const get = (field) => {
+      const m = body.match(new RegExp(`${field}=([^,\\]]+)`));
+      return m ? m[1].trim() : '';
+    };
+    console.log('[SP-Author] SP_DRAFT_REQUEST 감지 — 큐잉 요청');
+    await _updateBubble(_stripInternalTags(fullReply));
+    history.push({ role: 'assistant', content: fullReply });
+    let resultText;
+    try {
+      const res = await fetch(`${base}/sp-author/queue`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          request_type: 'create',
+          signal_source: 'realtime_ac',
+          institution: get('suggested_slug') || get('domain'),
+          task: get('request') || get('domain'),
+          source_conversation: userText,
+          priority: 'normal',
+        }),
+      });
+      resultText = JSON.stringify(await res.json().catch(() => ({ status: res.status })));
+    } catch (e) {
+      resultText = `{"error":"${e.message}"}`;
+    }
+    await sendFn(`[SP_DRAFT_REQUEST 결과] ${resultText}`);
+    return true;
+  }
+
+  // [ESCALATE: to=..., reason=..., summary=...] — 응급이 아닌 일반 에스컬레이션
+  // (응급은 §0-G가 별도 경로로 처리 — 이 핸들러는 SP-Author/검토 알림 용도).
+  const escMatch = fullReply.match(/\[ESCALATE:([\s\S]*?)\]/);
+  if (escMatch) {
+    const body = escMatch[1];
+    const get = (field) => {
+      const m = body.match(new RegExp(`${field}=([^,\\]]+)`));
+      return m ? m[1].trim() : '';
+    };
+    console.log('[SP-Author] ESCALATE 감지 — 알림 생성');
+    await _updateBubble(_stripInternalTags(fullReply));
+    history.push({ role: 'assistant', content: fullReply });
+    let resultText;
+    try {
+      const res = await fetch(`${base}/sp-author/escalate`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: get('to') || '@owner',
+          reason: get('reason') || 'other',
+          summary: get('summary') || userText,
+        }),
+      });
+      resultText = JSON.stringify(await res.json().catch(() => ({ status: res.status })));
+    } catch (e) {
+      resultText = `{"error":"${e.message}"}`;
+    }
+    await sendFn(`[ESCALATE 결과] ${resultText}`);
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * _buildFirstContactContext — 최초 인사("이름을 지어주세요")와 프로필 작성
  * 필요성 설명을 SP(시스템 프롬프트) 본문이 아니라, 꼭 필요한 1~2턴에만
  * 사용자 메시지 앞에 붙는 1회성 컨텍스트로 주입합니다(v1.6).
@@ -1775,7 +1897,8 @@ export async function _callLLM(messages, options = {}) {
 // 현재 처리: GWP(기존 로직 그대로 이전, 동작 변경 없음),
 //            SEARCH / OPEN_PROFILE / P2P_INVITE(Phase 1 — 이미 존재하는
 //            실행 함수에 배선만 추가).
-// 아직 미처리(Phase 2~5 예정): PDV_STORE, HANDSHAKE, VERIFY_OWNER, ESCALATE, TRADE.
+// 아직 미처리(Phase 2~5 예정): PDV_STORE, HANDSHAKE, VERIFY_OWNER, TRADE.
+// (ESCALATE는 2026-07-11 _handleSPAuthorTags()로 처리됨 — 이 목록에서 제외)
 export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
   // [GWP: serviceId] — 하위 시스템 새 탭 오픈 (SP-00 v10.0, 기존 로직 그대로 이전)
   try {
@@ -2257,6 +2380,12 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     //    동일한 위치·동일한 조기 반환 패턴을 따른다.
     const _orchestrationHandled = await _handleOrchestrationTags(fullReply, bubble, callAI, userText);
     if (_orchestrationHandled) return;
+
+    // ── SP-Author 자동화 태그 처리 (2026-07-11 신설) ──
+    // K-Compose/K-Deliver 게이트 없이 어느 SP에서든(특히 AGENT-COMMON
+    // §3-0 ③) 처리한다 — _handleOrchestrationTags 바로 다음 위치.
+    const _spAuthorHandled = await _handleSPAuthorTags(fullReply, bubble, callAI, userText);
+    if (_spAuthorHandled) return;
 
     // ── §9 실행 태그 공용 디스패처 (Phase 0) ────────────────
     // 이전엔 GWP가 자체 정규식으로 fullReply를 스캔했고, 별도로
