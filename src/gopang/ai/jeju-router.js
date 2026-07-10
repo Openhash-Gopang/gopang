@@ -60,18 +60,17 @@ const TIER_CONFIG = {
     fixedTemplate: 'SP-CITYDEPT-TEMPLATE_v1.0.md',
     matchFn: (rec, { cityCode, deptCode }) => rec['시코드'] === cityCode && rec['국코드'] === deptCode,
   },
-  // 2026-07-10 신설 — 읍면동 팀 계층. jeju-gov-sp-hierarchy.md가 SP-TEAM-*로
-  // 예정해뒀으나 실제로 만들어진 적 없던 계층. team_type(총무/산업/복지/민원)
-  // 4종만 원형으로 두고, 읍면동 개별 인스턴스는 만들지 않는다(43개 x 4팀 =
-  // 172개까지 늘리는 건 이 시점에 과도 — jeju-gov-sp-hierarchy.md §6 유지보수
-  // 전략과 동일 판단). {읍면동이름}/{시이름}/{도이름}은 이 tier 혼자서는
-  // 못 채운다 — 호출 시 emd 레코드와 함께 별도로 채워야 한다(§0 주석 참고).
+  // 2026-07-10 신설, 같은 날 184개 실제 인스턴스로 확장 — 읍면동 팀 계층.
+  // jeju-gov-sp-hierarchy.md가 SP-TEAM-*로 예정해뒀으나 실제로 만들어진
+  // 적 없던 계층. 처음엔 team_type 4종만 원형화했으나, emd-master-data.json/
+  // hallim-data.json에 이미 읍면동별 실제 팀구성 데이터가 있어 43개
+  // 읍면동 전체를 (emd_code, team_code) 실제 인스턴스로 확장했다.
   'team': {
     masterDataPath: 'prompts/Jejudo/05-emd/templates/team-master-data.json',
     listKey: '팀목록',
     templateDir: 'prompts/Jejudo/05-emd/templates/',
     fixedTemplate: 'SP-TEAM-TEMPLATE_v1.0.md',
-    matchFn: (rec, { teamType }) => rec.team_type === teamType,
+    matchFn: (rec, { emdCode, teamCode }) => rec.emd_code === emdCode && rec.team_code === teamCode,
   },
   'do-dept': {
     masterDataPath: 'prompts/Jejudo/02-do-dept/templates/do-dept-master-data.json',
@@ -247,13 +246,13 @@ export async function _renderCityDeptTemplate(cityCode, deptCode) {
 }
 
 /**
- * 읍면동 팀 계층 조립 — team_type만 매칭(읍면동 개별 구분 없음).
- * {읍면동이름}/{시이름}/{도이름}은 이 함수 혼자서는 못 채운다 — 실제
- * 사용 시 emd 레코드를 별도로 조회해 결과 텍스트에 추가 치환이 필요하다.
- * 예: _renderTeamTemplate('civil') → 민원팀 SP 원형 조립(읍면동명 미채움).
+ * 읍면동 팀 계층 조립 — (emd_code, team_code) 매칭, 43개 읍면동 전체
+ * 실제 인스턴스(2026-07-10 확장, 184건). {읍면동이름}/{시이름}/{도이름}
+ * 전부 생성 시점에 emd-master-data.json에서 미리 채워져 있다.
+ * 예: _renderTeamTemplate('SP-EMD-HALLIM', 'civil') → 한림읍 민원팀 SP 조립.
  */
-export async function _renderTeamTemplate(teamType) {
-  return _assemble('team', { teamType });
+export async function _renderTeamTemplate(emdCode, teamCode) {
+  return _assemble('team', { emdCode, teamCode });
 }
 
 /** do-dept 계층 조립 — {부서명} 등 자리표시자를 도코드+domain으로 채움 */
