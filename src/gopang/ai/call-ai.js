@@ -1043,6 +1043,36 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
   };
   const base = (CFG.endpoint || '').replace(/\/+$/, '');
 
+  // [GWP_REGISTRY_SEARCH: q=..., category=..., tier=...] — K-Compose
+  // v1.2 STEP 4-A. GOV_SP_DRAFT_REQUEST보다 먼저 확인해야 하므로 이
+  // 함수 안에서도 가장 먼저 매칭한다 — gwp-registry.js(core 21개)에
+  // 없다고 바로 "생태계에 없다"고 단정하지 않고, SP-Author가 이미
+  // 승인해둔 확장 레지스트리(gwp_registry)를 먼저 재확인한다.
+  const searchMatch = fullReply.match(/\[GWP_REGISTRY_SEARCH:([\s\S]*?)\]/);
+  if (searchMatch) {
+    const body = searchMatch[1];
+    const get = (field) => {
+      const m = body.match(new RegExp(`${field}=([^,\\]]+)`));
+      return m ? m[1].trim() : '';
+    };
+    console.log('[gwp-registry] GWP_REGISTRY_SEARCH 감지 — 확장 레지스트리 검색');
+    await _updateBubble(_stripInternalTags(fullReply));
+    history.push({ role: 'assistant', content: fullReply });
+    let resultText;
+    try {
+      const qs = new URLSearchParams();
+      if (get('q')) qs.set('q', get('q'));
+      if (get('category')) qs.set('category', get('category'));
+      if (get('tier')) qs.set('tier', get('tier'));
+      const res = await fetch(`${base}/gwp-registry/search?${qs.toString()}`);
+      resultText = res.ok ? JSON.stringify(await res.json()) : `{"error":"HTTP ${res.status}"}`;
+    } catch (e) {
+      resultText = `{"error":"${e.message}"}`;
+    }
+    await sendFn(`[GWP_REGISTRY_SEARCH 결과] ${resultText}\n\n결과가 있으면 그 gwp_id로 STEP 4를 이어가고(match_score 재평가), 없으면 매칭 실패 처리로 진행하세요.`);
+    return true;
+  }
+
   // [GOV_SP_DRAFT_REQUEST: institution=..., task=..., tier_hint=...,
   //  source_conversation=...] — K-Compose STEP 4-A 매칭 실패 또는 AC가
   // 직접 정부·공공기관 공백을 발견했을 때.

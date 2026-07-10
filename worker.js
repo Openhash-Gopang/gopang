@@ -1407,6 +1407,80 @@ async function handleAtomRowUpdate(request, env, corsHeaders) {
   }
 }
 
+// ── gwp_registry: 무제한 확장 가능한 SP 등록소 (2026-07-11 신설) ──────
+// 문제의식: gwp-registry.js는 ~21개 하드코딩 배열을 브라우저에 통째로
+// 로드하는 구조라 SP-Author 자동화로 기관 SP가 수백~수백만 개로
+// 늘어나면 깨진다. 이 컬렉션은 core(gwp-registry.js와 동기화된 소수
+// 핵심 서비스)부터 institutional/business/expert(SP-Author가 계속
+// 만들어내는 장기 꼬리)까지 전부 같은 스키마로 담고, "전부 로드"가
+// 아니라 "필요한 만큼만 검색·조회"하는 방식으로 규모를 감당한다.
+// 상세 설계는 docs/GWP-REGISTRY-SCALING_v1_0.md 참조.
+
+async function _l1FindGwpRegistryEntry(env, gwpId) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`gwp_id='${gwpId.replace(/'/g, "\\'")}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/gwp_registry/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`gwp_registry 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+async function _l1CreateGwpRegistryEntry(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/gwp_registry/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`gwp_registry 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+async function _l1PatchGwpRegistryEntry(env, recordId, patch) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/gwp_registry/records/${recordId}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`gwp_registry PATCH 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+async function _l1SearchGwpRegistry(env, { q, category, tier, jurisdiction, limit }) {
+  // ★ 정직한 한계 ★ PocketBase(SQLite) LIKE 기반 검색이다 — 수백만
+  // 레코드·복잡한 자연어 질의에서는 성능·재현율이 떨어진다. 그
+  // 규모에 실제로 도달하면 외부 전문 검색(예: Typesense·Meilisearch)
+  // 또는 임베딩 기반 의미검색으로 교체가 필요하다(docs/GWP-REGISTRY-
+  // SCALING_v1_0.md §4 업그레이드 경로 참조) — 지금은 그 단계가 아니다.
+  const token = await _l1AdminToken(env);
+  const clauses = [`status='active'`];
+  if (q) {
+    const esc = q.replace(/'/g, "\\'").replace(/%/g, '');
+    clauses.push(`(name ~ '${esc}' || keywords ~ '${esc}' || description ~ '${esc}')`);
+  }
+  if (category) clauses.push(`category='${category.replace(/'/g, "\\'")}'`);
+  if (tier) clauses.push(`tier='${tier.replace(/'/g, "\\'")}'`);
+  if (jurisdiction) clauses.push(`jurisdiction='${jurisdiction.replace(/'/g, "\\'")}'`);
+  const filter = encodeURIComponent(clauses.join(' && '));
+  const perPage = Math.min(Number(limit) || 20, 100);
+  const res = await fetch(
+    `${L1_DEFAULT}/api/collections/gwp_registry/records?filter=${filter}&perPage=${perPage}&sort=-call_count_30d`,
+    { headers: { 'Authorization': `Bearer ${token}` } }
+  );
+  if (!res.ok) throw new Error(`gwp_registry 검색 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items || [];
+}
+
 // ── SP-Author 자동화: 큐잉 + ESCALATE + 갱신스케줄 (2026-07-11 신설) ──
 // [SP_DRAFT_REQUEST]/[GOV_SP_DRAFT_REQUEST]/[ESCALATE] 태그를 call-ai.js가
 // 파싱해 여기로 POST한다(§SP-AUTHOR-AUTOMATION_v1_0.md 참조). SP-Author의
@@ -1493,7 +1567,41 @@ async function handleSPAuthorQueueStatus(request, env, corsHeaders, recordId) {
   if (['approved', 'rejected'].includes(payload.status)) patch.resolved_at = new Date().toISOString();
   try {
     const rec = await _l1PatchDraftRequest(env, recordId, patch);
-    return new Response(JSON.stringify({ status: 'updated', record: rec }), { headers: corsHeaders });
+
+    // ★ 2026-07-11 신설 — 승인되면 gwp_registry에 자동 등록한다.
+    // "SP 승인 = gwp_registry 등재"를 사람이 매번 손으로 안 해도 되게
+    // 만드는 게 이번 확장의 핵심이다(수동 등록에 의존하면 승인 건수가
+    // 늘어날수록 등록 누락이 반드시 생긴다). gwp_id는 target_sp_id가
+    // 있으면 그대로, 없으면(신규 기관) institution을 slug화해 만든다 —
+    // 이미 있으면 register 자체가 멱등(갱신)이라 중복 문제 없다.
+    let registration = null;
+    if (payload.status === 'approved') {
+      const gwpId = rec.target_sp_id || rec.institution || `draft-${recordId}`;
+      const registerBody = {
+        gwp_id: gwpId,
+        name: rec.institution || gwpId,
+        tier: 'institutional',
+        description: rec.task || '',
+        keywords: `${rec.institution || ''} ${rec.task || ''}`.trim(),
+        jurisdiction: rec.tier_hint || '',
+        file_ref: rec.target_sp_id || gwpId,
+        status: 'active',
+      };
+      try {
+        const existing = await _l1FindGwpRegistryEntry(env, gwpId);
+        registration = existing
+          ? await _l1PatchGwpRegistryEntry(env, existing.id, registerBody)
+          : await _l1CreateGwpRegistryEntry(env, registerBody);
+      } catch (e) {
+        // 등록 실패가 승인 자체를 실패시키지 않는다 — draft_requests의
+        // status는 이미 approved로 저장됐다. 수동 보완이 필요하다는
+        // 사실만 응답에 남긴다.
+        console.error('[gwp-registry] 자동 등록 실패(승인은 유지됨):', e.message);
+        registration = { error: e.message };
+      }
+    }
+
+    return new Response(JSON.stringify({ status: 'updated', record: rec, gwp_registry: registration }), { headers: corsHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
   }
@@ -1574,6 +1682,76 @@ async function handleSPAuthorRefreshScheduleUpsert(request, env, corsHeaders) {
   try {
     const rec = await _l1UpsertRefreshSchedule(env, payload.sp_id, patch);
     return new Response(JSON.stringify({ status: 'scheduled', record: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+// ── gwp_registry HTTP 핸들러 (2026-07-11 신설) ──────────────────────
+
+// GET /gwp-registry/lookup?id=klaw — 정확한 gwp_id 단건 조회(핫패스)
+async function handleGwpRegistryLookup(request, env, corsHeaders) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+  if (!id) return new Response(JSON.stringify({ error: 'id required' }), { status: 400, headers: corsHeaders });
+  try {
+    const rec = await _l1FindGwpRegistryEntry(env, id);
+    if (!rec) return new Response(JSON.stringify({ status: 'miss' }), { headers: corsHeaders });
+    return new Response(JSON.stringify({ status: 'hit', entry: rec }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+// GET /gwp-registry/search?q=축산분뇨&category=GOV&tier=institutional&limit=10
+// AC/K-Compose가 core 21개(gwp-registry.js)에서 못 찾았을 때, "정말
+// 없는지" 확정하기 전에 여기부터 확인한다(§0-H·K-Compose STEP 4-A가
+// 참조 — docs/GWP-REGISTRY-SCALING_v1_0.md §3).
+async function handleGwpRegistrySearch(request, env, corsHeaders) {
+  const { searchParams } = new URL(request.url);
+  const q = searchParams.get('q') || '';
+  const category = searchParams.get('category') || '';
+  const tier = searchParams.get('tier') || '';
+  const jurisdiction = searchParams.get('jurisdiction') || '';
+  const limit = searchParams.get('limit') || '20';
+  try {
+    const items = await _l1SearchGwpRegistry(env, { q, category, tier, jurisdiction, limit });
+    return new Response(JSON.stringify({ items, count: items.length }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+// POST /gwp-registry/register
+// body: {gwp_id, name, tier, category?, description?, keywords?, jurisdiction?, file_ref?}
+// SP-Author 승인 시(handleSPAuthorQueueStatus의 approved 분기) 자동 호출되고,
+// 필요하면 관리자가 직접 호출할 수도 있다. 이미 있는 gwp_id면 갱신(멱등).
+async function handleGwpRegistryRegister(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  if (!payload.gwp_id || !payload.name || !payload.tier) {
+    return new Response(JSON.stringify({ error: 'gwp_id, name, tier required' }), { status: 400, headers: corsHeaders });
+  }
+  const record = {
+    gwp_id: payload.gwp_id,
+    name: payload.name,
+    tier: payload.tier,
+    category: payload.category || '',
+    description: payload.description || '',
+    keywords: payload.keywords || '',
+    jurisdiction: payload.jurisdiction || '',
+    file_ref: payload.file_ref || payload.gwp_id,
+    status: payload.status || 'active',
+  };
+  try {
+    const existing = await _l1FindGwpRegistryEntry(env, payload.gwp_id);
+    let rec;
+    if (existing) {
+      rec = await _l1PatchGwpRegistryEntry(env, existing.id, record);
+      return new Response(JSON.stringify({ status: 'updated', entry: rec }), { headers: corsHeaders });
+    }
+    rec = await _l1CreateGwpRegistryEntry(env, record);
+    return new Response(JSON.stringify({ status: 'registered', entry: rec }), { headers: corsHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
   }
@@ -1948,6 +2126,14 @@ export default {
       return handleSPAuthorRefreshDue(request, env, corsHeaders);
     if (pathname === '/sp-author/refresh-schedule' && request.method === 'POST')
       return handleSPAuthorRefreshScheduleUpsert(request, env, corsHeaders);
+
+    // ── gwp_registry (2026-07-11 신설) ──────────────────────────────
+    if (pathname === '/gwp-registry/lookup' && request.method === 'GET')
+      return handleGwpRegistryLookup(request, env, corsHeaders);
+    if (pathname === '/gwp-registry/search' && request.method === 'GET')
+      return handleGwpRegistrySearch(request, env, corsHeaders);
+    if (pathname === '/gwp-registry/register' && request.method === 'POST')
+      return handleGwpRegistryRegister(request, env, corsHeaders);
 
     // ── merkle (T10) ─────────────────────────────────────────
     if (pathname === '/merkle/verify')           return handleMerkleVerify(request, env, corsHeaders);
