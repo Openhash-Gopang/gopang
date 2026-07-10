@@ -21,9 +21,12 @@
 // import가 지원된다. 지금까지 worker.js가 7600줄 넘는 단일 파일이었던
 // 건 "못 쪼개서"가 아니라 "안 쪼개서"였다 — 이 파일이 그 증명이다.
 //
-// ★ 이번 단계에서 안 한 것 — buildSystemPrompt의 "가격 흥정·환불·예약
-// 외 업무는 사람 연결 안내" 규칙은 그대로 뒀다. 주문 접수 로직 추가는
-// 합의된 다음 단계(2단계)이지 이번 배선 단계 범위가 아니다.
+// ★ 2026-07-09 2단계 추가 — buildSystemPrompt에 주문 접수 규칙과
+// [ORDER_DRAFT: ...] 태그 형식을 추가했다(extractOrderDraft로 파싱).
+// 여전히 안 한 것: 주문 큐/주방 용량 판단(규칙 5에서 명시적으로 "이
+// SP의 몫이 아니다"라고 선언 — 원래 사고실험의 5·6번, 훨씬 큰 별도
+// 작업으로 분리해뒀다), 배송업체 매칭(7·8번), createEscrow 실결제
+// 연결(3단계 예정).
 
 const LLM_TIMEOUT_MS = 15000;
 
@@ -76,9 +79,36 @@ ${menuText}
 
 [필수 규칙]
 1. 메뉴, 영업시간, 위치 외 정보는 "죄송합니다, 해당 정보는 제공하기 어렵습니다"라고 답하세요.
-2. 가격 흥정, 환불, 예약 외 업무는 사람 연결을 안내하세요.
-3. 답변은 간결하게 2~3문장 이내로 유지하세요.
-4. 항상 친절하고 정중한 어조를 유지하세요.`;
+2. 위 [메뉴 목록]에 있는 항목의 주문은 직접 접수할 수 있습니다. 가격 흥정이나 환불 요청은 여전히 사람 연결을 안내하세요.
+3. 주문을 접수할 때는(모든 항목이 메뉴에 있고 수량이 명확할 때만) 손님에게 보여줄 확인 문장 뒤에 아래 형식의 태그를 정확히 한 번만 덧붙이세요 — 단가는 반드시 위 [메뉴 목록]의 가격을 그대로 쓰고 임의로 계산하지 마세요:
+   [ORDER_DRAFT: items=[{"name":"항목명","qty":수량,"unit_price":단가}], total=합계, currency=GDC]
+4. 메뉴에 없는 항목을 주문하려 하면 ORDER_DRAFT를 내지 말고 "죄송합니다, 그 메뉴는 없습니다"라고 답한 뒤 대안을 물어보세요. 수량이 불명확하면(예: "몇 개 드릴까요") 먼저 되묻고, 확답을 받기 전에는 ORDER_DRAFT를 내지 마세요.
+5. 이 SP는 "지금 조리 가능한지·주문을 받을 여력이 있는지"는 판단하지 않습니다 — 그건 이 응답을 받는 쪽(주문 큐/용량 시스템)의 몫입니다. ORDER_DRAFT는 어디까지나 초안이며 최종 확정이 아닙니다.
+6. 답변은 간결하게 2~3문장 이내로 유지하세요.
+7. 항상 친절하고 정중한 어조를 유지하세요.`;
+}
+
+// ★ 2026-07-09 신설(2단계) — 응답 텍스트에서 [ORDER_DRAFT: ...] 태그를
+// 파싱해 정형 데이터로 분리한다. 사람이 읽는 텍스트(cleanText)와 기계가
+// 바로 쓸 수 있는 구조화 데이터(order)를 병행 반환하는 건 이 저장소
+// 전반의 확립된 패턴이다(PROCEDURE_MAP_DRAFT 등과 동일 원칙) — 호출한
+// 쪽(손님의 AI)이 정규식으로 다시 파싱할 필요가 없게 한다.
+// 태그 자체는 텍스트에서 제거하지 않는다 — 사람이 최종 화면에서 원문
+// 그대로 보고 싶을 수 있고(예: 주문 확인서), 사람 승인 게이트(§14)를
+// 거치기 전까지는 "이게 초안임"이 눈에 보이는 게 오히려 안전하다.
+const _ORDER_DRAFT_RE = /\[ORDER_DRAFT:\s*items=(\[[\s\S]*?\]),\s*total=([\d.]+),\s*currency=(\w+)\]/;
+
+function extractOrderDraft(text) {
+  const m = typeof text === 'string' ? text.match(_ORDER_DRAFT_RE) : null;
+  if (!m) return null;
+  let items;
+  try {
+    items = JSON.parse(m[1]);
+  } catch {
+    return null; // 형식이 깨졌으면 조용히 무시 — 사람 텍스트 응답은 그대로 살려둔다
+  }
+  if (!Array.isArray(items) || !items.length) return null;
+  return { items, total: Number(m[2]), currency: m[3] };
 }
 
 async function callLLM({ provider, apiKey, model, systemPrompt, userMessage }) {
@@ -311,6 +341,12 @@ async function handleAiChat(request, env, corsHeaders, deps) {
 
     const responseLang = caller_lang === 'ko' ? responseKo : await translate(responseKo, 'ko', caller_lang, env.DEEPSEEK_API_KEY);
 
+    // ★ 2단계 — 번역 전(responseKo)에서 추출한다. translate()가 LLM을
+    // 한 번 더 거치는 과정이라 [ORDER_DRAFT: ...] 안의 JSON 구조가
+    // 번역 중 깨질 위험이 있다 — 구조화 데이터는 항상 신뢰 가능한
+    // 원본(한국어, 시스템 프롬프트가 이 형식을 지시한 언어)에서만 뽑는다.
+    const order = extractOrderDraft(responseKo);
+
     const updatedMessages = [
       ...sessionMessages,
       { type: 'user', ts: Date.now(), lang: caller_lang, content: message },
@@ -319,7 +355,7 @@ async function handleAiChat(request, env, corsHeaders, deps) {
     await sbFetch(env, `/ai_sessions?id=eq.${session_id}`, 'PATCH',
       { messages: updatedMessages, updated_at: new Date().toISOString() });
 
-    return new Response(JSON.stringify({ ok: true, mode: 'ai', response: responseLang, lang: caller_lang }), {
+    return new Response(JSON.stringify({ ok: true, mode: 'ai', response: responseLang, lang: caller_lang, order }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
@@ -369,7 +405,7 @@ async function handleEscalate(request, env, corsHeaders, deps) {
 export {
   handleAiChat, handleEscalate,
   buildSystemPrompt, callLLM, translate,
-  detectEscalationKeyword, countRecentFails,
+  detectEscalationKeyword, countRecentFails, extractOrderDraft,
   aesEncrypt, aesDecrypt,
   ESCALATION_KEYWORDS, FAIL_THRESHOLD, FAIL_WINDOW_MS,
 };

@@ -10,7 +10,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   handleAiChat, handleEscalate,
-  buildSystemPrompt, detectEscalationKeyword, countRecentFails,
+  buildSystemPrompt, detectEscalationKeyword, countRecentFails, extractOrderDraft,
   aesEncrypt, aesDecrypt,
   FAIL_THRESHOLD,
 } from '../../worker/ai-chat-handler.js';
@@ -203,10 +203,13 @@ describe('N-26: handleEscalate — 필수 필드 및 서명 검증', () => {
 });
 
 describe('N-27: 순수 함수 — buildSystemPrompt/detectEscalationKeyword/countRecentFails', () => {
-  it('buildSystemPrompt — 규칙 2(예약 외 업무는 사람 연결)가 그대로 살아있음(2단계 전이라 아직 안 바뀜)', () => {
+  it('buildSystemPrompt — 2단계: 메뉴 항목 주문은 직접 접수 가능, 가격흥정/환불만 사람 연결', () => {
     const prompt = buildSystemPrompt({ name: '가게', extra: {} }, null);
-    assert.match(prompt, /예약 외 업무는 사람 연결을 안내/,
-      '이번 1단계는 배선만 — 주문접수 규칙 추가는 합의된 2단계 범위');
+    assert.match(prompt, /메뉴 목록.*있는 항목의 주문은 직접 접수할 수 있습니다/s);
+    assert.match(prompt, /가격 흥정이나 환불 요청은 여전히 사람 연결을 안내/);
+    assert.match(prompt, /ORDER_DRAFT/);
+    assert.match(prompt, /이 SP는 "지금 조리 가능한지·주문을 받을 여력이 있는지"는 판단하지 않습니다/,
+      '주문 큐/용량 판단까지 이 SP가 하는 것처럼 프롬프트가 과잉 약속하면 안 됨 — 5·6번은 별도 작업');
   });
 
   it('detectEscalationKeyword — 다국어 키워드 인식', () => {
@@ -226,6 +229,113 @@ describe('N-27: 순수 함수 — buildSystemPrompt/detectEscalationKeyword/coun
 
   it(`FAIL_THRESHOLD는 ${3}(원본과 동일 유지)`, () => {
     assert.equal(FAIL_THRESHOLD, 3);
+  });
+});
+
+describe('N-29: extractOrderDraft — [ORDER_DRAFT: ...] 태그 파싱', () => {
+  it('정상 형식을 정확히 파싱', () => {
+    const text = '짜장면 2그릇 주문 접수했습니다. [ORDER_DRAFT: items=[{"name":"짜장면","qty":2,"unit_price":7000}], total=14000, currency=GDC]';
+    const order = extractOrderDraft(text);
+    assert.deepEqual(order, { items: [{ name: '짜장면', qty: 2, unit_price: 7000 }], total: 14000, currency: 'GDC' });
+  });
+
+  it('여러 항목도 파싱', () => {
+    const text = '[ORDER_DRAFT: items=[{"name":"짜장면","qty":1,"unit_price":7000},{"name":"탕수육","qty":1,"unit_price":15000}], total=22000, currency=GDC]';
+    const order = extractOrderDraft(text);
+    assert.equal(order.items.length, 2);
+    assert.equal(order.total, 22000);
+  });
+
+  it('태그가 없으면 null(일반 응답·안내성 답변)', () => {
+    assert.equal(extractOrderDraft('영업시간은 11시부터 21시까지입니다.'), null);
+  });
+
+  it('items JSON이 깨져 있으면 null로 조용히 무시(사람 텍스트 응답은 안 깨뜨림)', () => {
+    const text = '[ORDER_DRAFT: items=[{broken json, total=1000, currency=GDC]';
+    assert.equal(extractOrderDraft(text), null);
+  });
+
+  it('items가 빈 배열이면 null(빈 주문은 주문이 아님)', () => {
+    const text = '[ORDER_DRAFT: items=[], total=0, currency=GDC]';
+    assert.equal(extractOrderDraft(text), null);
+  });
+});
+
+describe('N-30: handleAiChat — 주문 접수 전체 파이프라인(2단계)', () => {
+  it('메뉴 항목 주문 시 order 필드가 채워지고, translate() 대상은 responseKo(번역 전)에서 뽑음', async () => {
+    const rawKey = 'test-encryption-key-32bytes-long!!';
+    const apiKeyEnc = await aesEncrypt('sk-test-api-key', rawKey);
+
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async (url, opts) => {
+      if (String(url).includes('api.deepseek.com')) {
+        const body = JSON.parse(opts.body);
+        const isTranslateCall = body.messages.some(m => typeof m.content === 'string' && m.content.startsWith('Translate from'));
+        if (isTranslateCall) {
+          // 번역 호출은 태그 JSON을 일부러 뭉개서 반환 — "번역 후가 아니라
+          // 번역 전(responseKo)에서 뽑는다"는 설계를 실제로 검증하기 위함.
+          return { ok: true, json: async () => ({ choices: [{ message: { content: 'ORDER CONFIRMED (translation garbled the tag)' } }] }) };
+        }
+        return { ok: true, json: async () => ({ choices: [{ message: { content: '짜장면 2그릇 주문 접수했습니다. [ORDER_DRAFT: items=[{"name":"짜장면","qty":2,"unit_price":7000}], total=14000, currency=GDC]' } }] }) };
+      }
+      return realFetch(url, opts);
+    };
+
+    try {
+      const deps = makeDeps({
+        _l1FindProfileByGuid: async (env, guid) => ({
+          guid, pubkey_ed25519: 'PUBKEY', name: '동네 중국집', address: '제주시 어딘가',
+          extra: { business_hours: '11:00~21:00', menu: [{ name: '짜장면', price: 7000 }] },
+        }),
+        sbFetch: async (env, path) => {
+          if (path.includes('/ai_sessions?')) return [{ mode: 'ai', messages: [] }];
+          if (path.includes('/user_llm_keys')) return [{ ai_active: true, provider: 'deepseek', model: 'deepseek-chat', api_key_enc: apiKeyEnc }];
+          return {};
+        },
+      });
+      // caller_lang='en' → translate()가 호출되도록(태그 뭉개짐 시뮬레이션이 실제로 발동하게)
+      const body = { ...BASE_BODY, message: '2 jjajangmyeon please', caller_lang: 'en' };
+      const res = await handleAiChat(req(body), { AES_ENCRYPTION_KEY: rawKey }, {}, deps);
+      const data = await res.json();
+
+      assert.ok(data.order, 'order 필드가 채워져야 함');
+      assert.deepEqual(data.order, { items: [{ name: '짜장면', qty: 2, unit_price: 7000 }], total: 14000, currency: 'GDC' });
+      // 번역된 응답 텍스트 자체는 뭉개져 있어도(테스트가 일부러 그렇게 만듦) order는 영향 없어야 함
+      assert.match(data.response, /garbled/);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it('메뉴에 없는 항목이면 order는 null(LLM이 ORDER_DRAFT를 안 냄)', async () => {
+    const rawKey = 'test-encryption-key-32bytes-long!!';
+    const apiKeyEnc = await aesEncrypt('sk-test-api-key', rawKey);
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async (url, opts) => {
+      if (String(url).includes('api.deepseek.com')) {
+        return { ok: true, json: async () => ({ choices: [{ message: { content: '죄송합니다, 그 메뉴는 없습니다. 짜장면은 어떠세요?' } }] }) };
+      }
+      return realFetch(url, opts);
+    };
+    try {
+      const deps = makeDeps({
+        _l1FindProfileByGuid: async (env, guid) => ({
+          guid, pubkey_ed25519: 'PUBKEY', name: '동네 중국집',
+          extra: { menu: [{ name: '짜장면', price: 7000 }] },
+        }),
+        sbFetch: async (env, path) => {
+          if (path.includes('/ai_sessions?')) return [{ mode: 'ai', messages: [] }];
+          if (path.includes('/user_llm_keys')) return [{ ai_active: true, provider: 'deepseek', model: 'deepseek-chat', api_key_enc: apiKeyEnc }];
+          return {};
+        },
+      });
+      const body = { ...BASE_BODY, message: '초밥 두 개 주세요' };
+      const res = await handleAiChat(req(body), { AES_ENCRYPTION_KEY: rawKey }, {}, deps);
+      const data = await res.json();
+      assert.equal(data.order, null);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 });
 
