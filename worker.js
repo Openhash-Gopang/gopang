@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { handleAiChat, handleEscalate } from './src/worker/ai-chat-handler.js';
+import { handleOrderQueue } from './src/worker/order-queue-handler.js';
 import { handleDeliveryRequest } from './src/worker/delivery-handler.js';
 
 const ALLOWED_ORIGINS = [
@@ -1685,6 +1686,11 @@ export default {
       return handleAiChat(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, _l1ListSellerProducts, sbFetch });
     if (pathname === '/biz/escalate' && request.method === 'POST')
       return handleEscalate(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, sbFetch });
+    // ★ 2026-07-09 신설 — 짜장면 주문 사고실험 5·6단계: 주문 큐/주방
+    // 용량 판단 + 조리시간 추정. buildSystemPrompt가 명시적으로 "이 SP
+    // 몫이 아니다"라고 선언해뒀던 부분 — LLM 없이 순수 서버 로직으로 처리.
+    if (pathname === '/biz/order-queue' && request.method === 'POST')
+      return handleOrderQueue(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, _l1CountActiveOrders, _l1CreateOrderQueueEntry });
     // ★ 2026-07-09 신설 — 짜장면 주문 사고실험 7·8단계: 배송업체 검색+
     // 요청. LLM 없이 search_entities RPC + 순수 산술(ETA)로 처리.
     if (pathname === '/biz/delivery-request' && request.method === 'POST')
@@ -6158,6 +6164,33 @@ async function _l1ListSellerProducts(env, guid) {
   if (!res.ok) throw new Error(`L1 seller_products 조회 실패 (HTTP ${res.status})`);
   const data = await res.json().catch(() => ({ items: [] }));
   return data.items || [];
+}
+
+// ★ 2026-07-09 신설 — 짜장면 주문 사고실험 5·6번(주문 큐/주방 용량 판단,
+// 조리시간 파악)용. seller_products와 동일한 _l1AdminToken 인증 패턴.
+async function _l1CountActiveOrders(env, sellerGuid) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`seller_guid='${sellerGuid}' && (status='accepted' || status='preparing')`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/order_queue/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`L1 order_queue 카운트 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ totalItems: 0 }));
+  return data.totalItems || 0;
+}
+
+async function _l1CreateOrderQueueEntry(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/order_queue/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`order_queue 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
 }
 
 // ★ 2026-07-09 신설 — 짜장면 주문 사고실험 7·8번(배송업체 검색, 배송
