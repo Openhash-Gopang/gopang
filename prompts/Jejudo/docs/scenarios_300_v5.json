@@ -866,10 +866,12 @@
   {
     "id": 109,
     "track": "gov",
-    "sp_file": "Jejudo/02-do-dept/SP-DO-TOURISM_v1.1.md",
+    "sp_file": "Jejudo/02-do-dept/templates/SP-DEPT-TOURISM-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/02-do-dept/templates/SP-DEPT-TOURISM-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 110,
@@ -890,10 +892,12 @@
   {
     "id": 112,
     "track": "gov",
-    "sp_file": "Jejudo/02-do-dept/SP-DO-TOURISM_v1.1.md",
+    "sp_file": "Jejudo/02-do-dept/templates/SP-DEPT-TOURISM-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/02-do-dept/templates/SP-DEPT-TOURISM-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 113,
@@ -914,10 +918,12 @@
   {
     "id": 115,
     "track": "gov",
-    "sp_file": "Jejudo/02-do-dept/SP-DO-TOURISM_v1.1.md",
+    "sp_file": "Jejudo/02-do-dept/templates/SP-DEPT-TOURISM-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/02-do-dept/templates/SP-DEPT-TOURISM-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 116,
@@ -1592,10 +1598,12 @@
   {
     "id": 199,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-AGROQUALITY_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-AGROQUALITY-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-AGROQUALITY-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 200,
@@ -1616,10 +1624,12 @@
   {
     "id": 202,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-AGROQUALITY_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-AGROQUALITY-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-AGROQUALITY-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 203,
@@ -1640,10 +1650,12 @@
   {
     "id": 205,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-AGROQUALITY_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-AGROQUALITY-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-AGROQUALITY-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 206,
@@ -1664,10 +1676,12 @@
   {
     "id": 208,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-AIRPORT_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-AIRPORT-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-AIRPORT-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 209,
@@ -1688,10 +1702,12 @@
   {
     "id": 211,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-AIRPORT_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-AIRPORT-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-AIRPORT-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 212,
@@ -1712,10 +1728,12 @@
   {
     "id": 214,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-AIRPORT_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-AIRPORT-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-AIRPORT-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 215,
@@ -1736,10 +1754,12 @@
   {
     "id": 217,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-ANIMALQUARANTINE_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-ANIMALQUARANTINE-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-ANIMALQUARANTINE-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 218,
@@ -1760,10 +1780,12 @@
   {
     "id": 220,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-ANIMALQUARANTINE_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-ANIMALQUARANTINE-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-ANIMALQUARANTINE-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 221,
@@ -1784,10 +1806,12 @@
   {
     "id": 223,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-ANIMALQUARANTINE_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-ANIMALQUARANTINE-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-ANIMALQUARANTINE-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 224,
@@ -1808,10 +1832,12 @@
   {
     "id": 226,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-COASTGUARD_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-COASTGUARD-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-COASTGUARD-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 227,
@@ -1832,10 +1858,12 @@
   {
     "id": 229,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-COASTGUARD_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-COASTGUARD-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-COASTGUARD-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 230,
@@ -1856,10 +1884,12 @@
   {
     "id": 232,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-COASTGUARD_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-COASTGUARD-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-COASTGUARD-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 233,
@@ -1880,10 +1910,12 @@
   {
     "id": 235,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-COURT_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-COURT-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-COURT-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 236,
@@ -1896,10 +1928,12 @@
   {
     "id": 237,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-COURT_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-COURT-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-COURT-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 238,
@@ -1912,10 +1946,12 @@
   {
     "id": 239,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-COURT_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-COURT-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-COURT-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 240,
@@ -1928,10 +1964,12 @@
   {
     "id": 241,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-DATA_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-DATA-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-DATA-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 242,
@@ -1944,10 +1982,12 @@
   {
     "id": 243,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-DATA_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-DATA-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-DATA-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 244,
@@ -1960,10 +2000,12 @@
   {
     "id": 245,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-DATA_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-DATA-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-DATA-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 246,
@@ -1976,10 +2018,12 @@
   {
     "id": 247,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-ENV_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-ENV-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-ENV-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 248,
@@ -1992,417 +2036,521 @@
   {
     "id": 249,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-ENV_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-ENV-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-ENV-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 250,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-ENV_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-ENV-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-ENV-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 251,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-FISHQUALITY_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-FISHQUALITY-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-FISHQUALITY-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 252,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-FISHQUALITY_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-FISHQUALITY-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-FISHQUALITY-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 253,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-FISHQUALITY_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-FISHQUALITY-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-FISHQUALITY-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 254,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-FOODIMPORT_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-FOODIMPORT-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-FOODIMPORT-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 255,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-FOODIMPORT_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-FOODIMPORT-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-FOODIMPORT-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 256,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-FOODIMPORT_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-FOODIMPORT-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-FOODIMPORT-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 257,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-HUMANQUARANTINE_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-HUMANQUARANTINE-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-HUMANQUARANTINE-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 258,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-HUMANQUARANTINE_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-HUMANQUARANTINE-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-HUMANQUARANTINE-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 259,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-HUMANQUARANTINE_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-HUMANQUARANTINE-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-HUMANQUARANTINE-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 260,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-IMMIGRATION_v1.2.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-IMMIGRATION-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PASS(조건부)",
-    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-IMMIGRATION-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 261,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-IMMIGRATION_v1.2.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-IMMIGRATION-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PASS(조건부)",
-    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-IMMIGRATION-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 262,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-IMMIGRATION_v1.2.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-IMMIGRATION-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PASS(조건부)",
-    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-IMMIGRATION-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 263,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-INTERNET_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-INTERNET-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-INTERNET-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 264,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-INTERNET_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-INTERNET-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-INTERNET-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 265,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-INTERNET_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-INTERNET-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-INTERNET-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 266,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABORIMPROVE_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-LABORIMPROVE-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-LABORIMPROVE-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 267,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABORIMPROVE_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-LABORIMPROVE-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-LABORIMPROVE-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 268,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABORIMPROVE_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-LABORIMPROVE-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-LABORIMPROVE-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 269,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABORREL_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-LABORREL-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-LABORREL-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 270,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABORREL_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-LABORREL-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-LABORREL-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 271,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABORREL_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-LABORREL-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-LABORREL-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 272,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABOR_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-LABOR-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-LABOR-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 273,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABOR_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-LABOR-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-LABOR-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 274,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-LABOR_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-LABOR-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-LABOR-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 275,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-MMA_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-MMA-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-MMA-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 276,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-MMA_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-MMA-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-MMA-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 277,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-MMA_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-MMA-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-MMA-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 278,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-NHIS_v1.2.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-NHIS-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PASS(조건부)",
-    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-NHIS-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 279,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-NHIS_v1.2.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-NHIS-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PASS(조건부)",
-    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-NHIS-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 280,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-NHIS_v1.2.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-NHIS-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PASS(조건부)",
-    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-NHIS-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 281,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-NPS_v1.2.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-NPS-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PASS(조건부)",
-    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-NPS-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 282,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-NPS_v1.2.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-NPS-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PASS(조건부)",
-    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-NPS-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 283,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-NPS_v1.2.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-NPS-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PASS(조건부)",
-    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인."
+    "reason": "상속 선언 확인 + 자체 실행 예시 보유. 단 jeju 리포의 버전 고정 여부는 미확인.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-NPS-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 284,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-POLICE_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-POLICE-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-POLICE-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 285,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-POLICE_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-POLICE-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-POLICE-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 286,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-POLICE_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-POLICE-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-POLICE-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 287,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PORT_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-PORT-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-PORT-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 288,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PORT_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-PORT-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-PORT-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 289,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PORT_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-PORT-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-PORT-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 290,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-POST_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-POST-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-POST-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 291,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-POST_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-POST-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-POST-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 292,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-POST_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-POST-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-POST-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 293,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PPS_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-PPS-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-PPS-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 294,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PPS_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-PPS-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-PPS-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 295,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PPS_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-PPS-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-PPS-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 296,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PROBATION_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-PROBATION-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-PROBATION-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 297,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PROBATION_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-PROBATION-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-PROBATION-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 298,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PROBATION_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-PROBATION-TEMPLATE_v1.0.md",
     "category": "권한경계테스트",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-PROBATION-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 299,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PROSECUTION_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-PROSECUTION-TEMPLATE_v1.0.md",
     "category": "단순정보요청",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-PROSECUTION-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   },
   {
     "id": 300,
     "track": "gov",
-    "sp_file": "Jejudo/09-national/agencies/SP-NAT-PROSECUTION_v1.1.md",
+    "sp_file": "Jejudo/09-national/agencies/templates/SP-NAT-PROSECUTION-TEMPLATE_v1.0.md",
     "category": "복잡수행요구(초안/접수준비)",
     "verdict": "PARTIAL",
-    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가."
+    "reason": "JEJU-GOV-COMMON §14 상속은 되나(헤더 선언 확인), 이 파일 자체엔 §14 실행 예시가 없어 LLM이 일관되게 적용할지 미검증. 또한 jeju 리포(별도 저장소)가 실제로 v1.5를 로드하는지 이번 세션에서 확인 불가.",
+    "verdict_needs_reverify": true,
+    "reverify_note": "2026-07-10 정정: 원래 sp_file은 코드가 실제로 fetch하지 않는 죽은 구버전 파일이었음(템플릿화 리팩터링 이후 잔존, 입력/출력 섹션 보완 감사 중 발견). 실제 서비스는 Jejudo/09-national/agencies/templates/SP-NAT-PROSECUTION-TEMPLATE_v1.0.md(마스터데이터 렌더링)를 사용함. sp_file 경로는 정정했으나, 기존 verdict/reason은 죽은 파일의 정적 내용 기준 평가였으므로 그대로 두고 렌더링된 실제 콘텐츠 기준 재검증이 필요함(미검증)."
   }
 ]
