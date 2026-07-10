@@ -5,7 +5,14 @@
 //       STEP 09 handlePdvReport 동기 앵커링
 //       STEP 10 VALID_PDV_SCOPES 11개 확장
 //       STEP 11 reporter_svc 중복 PDV 방지
+// v4.10 (2026-07-09): /biz/ai-chat, /biz/escalate 신설 — src/worker/
+//       ai-chat-handler.js를 import(worker.js가 처음으로 로컬 모듈을
+//       import한 사례 — wrangler.json이 export default 형태라 ES
+//       modules 포맷이 이미 지원되고 있었음, 그동안 안 쓰였을 뿐).
 // ═══════════════════════════════════════════════════════════
+
+import { handleAiChat, handleEscalate } from './src/worker/ai-chat-handler.js';
+
 
 const ALLOWED_ORIGINS = [
   'https://hondi.net',
@@ -1670,6 +1677,14 @@ export default {
     if (pathname === '/biz/trade-rating' && request.method === 'POST') return handleTradeRatingSubmit(request, env, corsHeaders);
     if (pathname === '/biz/temperature'  && request.method === 'GET')  return handleTemperatureQuery(request, env, corsHeaders);
     if (pathname === '/biz/product' && request.method === 'POST') return handleBizProduct(request, env, corsHeaders);
+    // ★ 2026-07-09 신설 — 짜장면 주문 사고실험 1단계: 프로필-to-프로필
+    // AI 메시징(예: 손님의 AI가 식당의 AI에게 주문을 전달). /ai/chat(기존,
+    // 슬래시)와 이름이 헷갈리지 않도록 /biz/ 네임스페이스로 통일 —
+    // /ai/chat은 범용 LLM 프로바이더 프록시고 이건 완전히 다른 기능이다.
+    if (pathname === '/biz/ai-chat' && request.method === 'POST')
+      return handleAiChat(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, sbFetch });
+    if (pathname === '/biz/escalate' && request.method === 'POST')
+      return handleEscalate(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, sbFetch });
 
     // ── ai-setup (AI 비서 설정) ─────────────────────────────
     // v5.1: 토큰 기반 폐기 — Ed25519 서명(/biz/product와 동일 패턴)으로 전환

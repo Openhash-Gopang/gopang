@@ -1,0 +1,375 @@
+// ═══════════════════════════════════════════════════════════
+// src/worker/ai-chat-handler.js — 업체/기관 프로필의 "AI 점원" 핸들러
+// ═══════════════════════════════════════════════════════════
+// 2026-07-09 신설 — 짜장면 주문 사고실험(음식배달 시나리오)에서 발견한
+// 갭 메우기 1단계. src/profile2.0/ai_assistant.js가 원안이었으나
+// (1) requireAuth가 "worker.js 인라인 시 src/auth/auth.js 사용"이라는
+//     자기 자신의 주석과 달리 실제로는 항상 null을 반환하는 스텁이었고
+// (2) Supabase URL을 env.SUPABASE_PROJECT_ID로 조립하는데 worker.js는
+//     이 환경변수를 어디서도 안 씀(SUPABASE_URL 상수를 씀)
+// (3) 프로필 조회가 Supabase user_profiles였는데 실제 라이브 프로필은
+//     L1 PocketBase profiles 컬렉션(extra JSON 필드 확인됨, 2026-07-09)
+// 이 세 가지 때문에 그대로 못 썼다. 이 파일은 그 세 가지만 worker.js의
+// 실제 라이브 패턴(Ed25519/TOFU, SUPABASE_URL 상수 재사용, L1 프로필
+// 조회)에 맞춰 고친 버전이다. ai_sessions/messages/user_llm_keys는
+// docs/supabase_to_l1_migration_plan.md가 "가장 마지막으로 미룰 것"을
+// 명시한 테이블이라 Supabase에 그대로 둔다(의도적 — 마이그레이션
+// 우선순위를 앞지르지 않음).
+//
+// worker.js가 이 파일을 import한다 — Cloudflare Workers는 wrangler.json
+// (main: worker.js, export default 형태 = ES modules 포맷)이라 로컬
+// import가 지원된다. 지금까지 worker.js가 7600줄 넘는 단일 파일이었던
+// 건 "못 쪼개서"가 아니라 "안 쪼개서"였다 — 이 파일이 그 증명이다.
+//
+// ★ 이번 단계에서 안 한 것 — buildSystemPrompt의 "가격 흥정·환불·예약
+// 외 업무는 사람 연결 안내" 규칙은 그대로 뒀다. 주문 접수 로직 추가는
+// 합의된 다음 단계(2단계)이지 이번 배선 단계 범위가 아니다.
+
+const LLM_TIMEOUT_MS = 15000;
+
+const ESCALATION_KEYWORDS = [
+  '사람 연결', '사람이랑', '직원', '상담원', '연결해줘', '사람과',
+  '人工', '转人工', '真人', '客服',
+  'human', 'person', 'agent', 'staff', 'real person', 'talk to someone',
+  '人間', 'スタッフ', '担当者',
+  'người thật', 'nhân viên',
+  'คนจริง', 'พนักงาน',
+];
+
+const FAIL_WINDOW_MS = 10 * 60 * 1000;
+const FAIL_THRESHOLD = 3;
+
+function detectEscalationKeyword(message) {
+  const lower = message.toLowerCase();
+  return ESCALATION_KEYWORDS.some(kw => lower.includes(kw.toLowerCase()));
+}
+
+function countRecentFails(messages) {
+  const now = Date.now();
+  const cutoff = now - FAIL_WINDOW_MS;
+  return messages.filter(m => m.type === 'fail' && m.ts > cutoff).length;
+}
+
+// 원본(ai_assistant.js)과 동일 — 아직 안 바꾼 부분(2단계에서 주문접수
+// 규칙 추가 예정).
+function buildSystemPrompt(profile, distanceM) {
+  const menu = profile?.extra?.menu || [];
+  const hours = profile?.extra?.business_hours || '정보 없음';
+  const name = profile?.name || '업체';
+  const address = profile?.address || '';
+
+  const menuText = menu.length > 0
+    ? menu.map(m => `- ${m.name}: ₮${m.price?.toLocaleString() || '?'} ${m.description || ''}`).join('\n')
+    : '(메뉴 정보 없음)';
+
+  const locationText = distanceM !== null
+    ? `현재 방문자와의 거리: 약 ${distanceM}m (도보 약 ${Math.round(distanceM / 67)}분)`
+    : '';
+
+  return `당신은 "${name}"의 AI 비서입니다.
+주소: ${address}
+영업시간: ${hours}
+${locationText}
+
+[메뉴 목록]
+${menuText}
+
+[필수 규칙]
+1. 메뉴, 영업시간, 위치 외 정보는 "죄송합니다, 해당 정보는 제공하기 어렵습니다"라고 답하세요.
+2. 가격 흥정, 환불, 예약 외 업무는 사람 연결을 안내하세요.
+3. 답변은 간결하게 2~3문장 이내로 유지하세요.
+4. 항상 친절하고 정중한 어조를 유지하세요.`;
+}
+
+async function callLLM({ provider, apiKey, model, systemPrompt, userMessage }) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
+
+  try {
+    let url, headers, body;
+
+    if (provider === 'deepseek') {
+      url = 'https://api.deepseek.com/v1/chat/completions';
+      headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` };
+      body = JSON.stringify({
+        model: model || 'deepseek-chat',
+        max_tokens: 512,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+      });
+    } else if (provider === 'anthropic') {
+      url = 'https://api.anthropic.com/v1/messages';
+      headers = {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      };
+      body = JSON.stringify({
+        model: model || 'claude-sonnet-4-6',
+        max_tokens: 512,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
+      });
+    } else if (provider === 'openai') {
+      url = 'https://api.openai.com/v1/chat/completions';
+      headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` };
+      body = JSON.stringify({
+        model: model || 'gpt-4o-mini',
+        max_tokens: 512,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+      });
+    } else {
+      throw new Error(`UNSUPPORTED_PROVIDER: ${provider}`);
+    }
+
+    const res = await fetch(url, { method: 'POST', headers, body, signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`LLM_HTTP_${res.status}`);
+    const data = await res.json();
+
+    if (provider === 'anthropic') {
+      return data.content?.[0]?.text || '';
+    }
+    return data.choices?.[0]?.message?.content || '';
+  } catch (e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('LLM_TIMEOUT');
+    throw e;
+  }
+}
+
+async function translate(text, fromLang, toLang, apiKey) {
+  if (!text || fromLang === toLang) return text;
+  try {
+    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        max_tokens: 256,
+        messages: [{
+          role: 'user',
+          content: `Translate from ${fromLang} to ${toLang}. Return only the translation, no explanation.\n\n${text}`,
+        }],
+      }),
+    });
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || text;
+  } catch { return text; }
+}
+
+async function aesEncrypt(plaintext, rawKey) {
+  const keyBuf = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(rawKey.padEnd(32, '0').slice(0, 32)),
+    { name: 'AES-GCM' }, false, ['encrypt']
+  );
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encoded = new TextEncoder().encode(plaintext);
+  const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, keyBuf, encoded);
+  const combined = new Uint8Array(12 + cipher.byteLength);
+  combined.set(iv);
+  combined.set(new Uint8Array(cipher), 12);
+  return btoa(String.fromCharCode(...combined));
+}
+
+async function aesDecrypt(b64, rawKey) {
+  const combined = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const iv = combined.slice(0, 12);
+  const cipher = combined.slice(12);
+  const keyBuf = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(rawKey.padEnd(32, '0').slice(0, 32)),
+    { name: 'AES-GCM' }, false, ['decrypt']
+  );
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, keyBuf, cipher);
+  return new TextDecoder().decode(plain);
+}
+
+/**
+ * POST /ai-chat — 다른 프로필(사람 또는 업체)의 AI 비서에게 메시지 전달.
+ * 원본 대비 변경점: JWT(requireAuth) → Ed25519+TOFU(worker.js 실제 라이브
+ * 패턴), Supabase user_profiles → L1 profiles(_l1FindProfileByGuid).
+ *
+ * @param deps - worker.js가 주입하는 실제 함수들(순환 의존 없이 이 파일이
+ *   worker.js 내부 헬퍼를 직접 import하지 않고 인자로 받는 방식 — 이러면
+ *   이 파일을 다른 프로젝트에서도 재사용하거나 단위테스트할 때 worker.js
+ *   전체를 끌어올 필요가 없다).
+ */
+async function handleAiChat(request, env, corsHeaders, deps) {
+  const { _err, _verifyEd25519, _l1FindProfileByGuid, sbFetch } = deps;
+
+  let body;
+  try { body = await request.json(); } catch {
+    return _err(400, 'INVALID_JSON', '요청 본문이 올바르지 않습니다.', corsHeaders);
+  }
+
+  const { guid, pubkey, signature, session_id, message, caller_lang = 'ko', target_guid, distance_m = null } = body;
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!pubkey) return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+  if (!session_id || !message || !target_guid) {
+    return _err(400, 'MISSING_FIELD', 'session_id, message, target_guid 필수', corsHeaders);
+  }
+
+  const sigOk = await _verifyEd25519(pubkey, signature, body);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+
+  let callerRecord;
+  try {
+    callerRecord = await _l1FindProfileByGuid(env, guid);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!callerRecord) return _err(404, 'PROFILE_NOT_FOUND', '가입(L1 등록)이 먼저 완료되어야 합니다', corsHeaders);
+  if (callerRecord.pubkey_ed25519 && callerRecord.pubkey_ed25519 !== pubkey) {
+    return _err(401, 'PUBKEY_MISMATCH', '등록된 공개키와 일치하지 않습니다', corsHeaders);
+  }
+
+  try {
+    let sessions = await sbFetch(env, `/ai_sessions?id=eq.${session_id}&select=*`);
+    let session = sessions?.[0];
+
+    if (!session) {
+      await sbFetch(env, '/ai_sessions', 'POST', {
+        id: session_id, caller_guid: guid, caller_lang,
+        target_guid, mode: 'ai', messages: [], is_active: true,
+        created_at: new Date().toISOString(),
+      });
+      session = { mode: 'ai', messages: [] };
+    }
+
+    const sessionMessages = Array.isArray(session.messages) ? session.messages : [];
+    const failCount = countRecentFails(sessionMessages);
+    const hasKeyword = detectEscalationKeyword(message);
+
+    if (session.mode === 'escalated' || failCount >= FAIL_THRESHOLD || hasKeyword) {
+      await sbFetch(env, `/ai_sessions?id=eq.${session_id}`, 'PATCH',
+        { mode: 'escalated', escalated_at: new Date().toISOString() });
+
+      return new Response(JSON.stringify({
+        ok: true, mode: 'escalated',
+        message: '사람 상담원에게 연결합니다. 잠시만 기다려주세요.',
+        reason: hasKeyword ? 'keyword' : failCount >= FAIL_THRESHOLD ? 'fail_count' : 'already_escalated',
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const llmRows = await sbFetch(env, `/user_llm_keys?guid=eq.${encodeURIComponent(target_guid)}&select=*`);
+    const llmKey = llmRows?.[0];
+
+    if (!llmKey || !llmKey.ai_active) {
+      await sbFetch(env, '/messages', 'POST', {
+        session_id,
+        sender_guid: guid,
+        receiver_guid: target_guid,
+        content_original: message,
+        content_translated: await translate(message, caller_lang, 'ko', env.DEEPSEEK_API_KEY),
+        lang_from: caller_lang,
+        lang_to: 'ko',
+        content_type: 'text',
+        created_at: new Date().toISOString(),
+      });
+      await sbFetch(env, `/ai_sessions?id=eq.${session_id}`, 'PATCH', { mode: 'human' });
+
+      return new Response(JSON.stringify({
+        ok: true, mode: 'human',
+        message: '업체에 메시지를 전달했습니다. 곧 답변이 도착합니다.',
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const msgKo = caller_lang === 'ko' ? message : await translate(message, caller_lang, 'ko', env.DEEPSEEK_API_KEY);
+
+    let targetProfile;
+    try {
+      targetProfile = await _l1FindProfileByGuid(env, target_guid);
+    } catch (e) {
+      return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패(대상 프로필): ' + e.message, corsHeaders);
+    }
+    if (!targetProfile) return _err(404, 'TARGET_NOT_FOUND', '대상 프로필이 L1에 없습니다', corsHeaders);
+
+    const systemPrompt = buildSystemPrompt(targetProfile, distance_m);
+
+    let apiKey;
+    try {
+      apiKey = await aesDecrypt(llmKey.api_key_enc, env.AES_ENCRYPTION_KEY);
+    } catch {
+      return _err(500, 'DECRYPT_ERROR', 'LLM API 키 복호화 실패', corsHeaders);
+    }
+
+    let responseKo;
+    try {
+      responseKo = await callLLM({ provider: llmKey.provider, apiKey, model: llmKey.model, systemPrompt, userMessage: msgKo });
+    } catch (e) {
+      const updated = [...sessionMessages, { type: 'fail', ts: Date.now(), reason: e.message }];
+      await sbFetch(env, `/ai_sessions?id=eq.${session_id}`, 'PATCH',
+        { messages: updated, updated_at: new Date().toISOString() });
+      return _err(502, 'LLM_ERROR', `AI 응답 실패: ${e.message}`, corsHeaders);
+    }
+
+    const responseLang = caller_lang === 'ko' ? responseKo : await translate(responseKo, 'ko', caller_lang, env.DEEPSEEK_API_KEY);
+
+    const updatedMessages = [
+      ...sessionMessages,
+      { type: 'user', ts: Date.now(), lang: caller_lang, content: message },
+      { type: 'assistant', ts: Date.now(), lang: caller_lang, content: responseLang },
+    ];
+    await sbFetch(env, `/ai_sessions?id=eq.${session_id}`, 'PATCH',
+      { messages: updatedMessages, updated_at: new Date().toISOString() });
+
+    return new Response(JSON.stringify({ ok: true, mode: 'ai', response: responseLang, lang: caller_lang }), {
+      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (e) {
+    return _err(500, 'AI_CHAT_ERROR', e.message, corsHeaders);
+  }
+}
+
+/**
+ * POST /escalate — 수동 에스컬레이션. 원본 대비 동일 변경(JWT→Ed25519/TOFU).
+ */
+async function handleEscalate(request, env, corsHeaders, deps) {
+  const { _err, _verifyEd25519, _l1FindProfileByGuid, sbFetch } = deps;
+
+  let body;
+  try { body = await request.json(); } catch {
+    return _err(400, 'INVALID_JSON', '요청 본문이 올바르지 않습니다.', corsHeaders);
+  }
+
+  const { guid, pubkey, signature, session_id } = body;
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!pubkey) return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+  if (!session_id) return _err(400, 'MISSING_FIELD', 'session_id 필수', corsHeaders);
+
+  const sigOk = await _verifyEd25519(pubkey, signature, body);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+
+  let callerRecord;
+  try {
+    callerRecord = await _l1FindProfileByGuid(env, guid);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!callerRecord) return _err(404, 'PROFILE_NOT_FOUND', '가입(L1 등록)이 먼저 완료되어야 합니다', corsHeaders);
+  if (callerRecord.pubkey_ed25519 && callerRecord.pubkey_ed25519 !== pubkey) {
+    return _err(401, 'PUBKEY_MISMATCH', '등록된 공개키와 일치하지 않습니다', corsHeaders);
+  }
+
+  await sbFetch(env, `/ai_sessions?id=eq.${session_id}`, 'PATCH',
+    { mode: 'escalated', escalated_at: new Date().toISOString() });
+
+  return new Response(JSON.stringify({ ok: true, mode: 'escalated', session_id }), {
+    status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+export {
+  handleAiChat, handleEscalate,
+  buildSystemPrompt, callLLM, translate,
+  detectEscalationKeyword, countRecentFails,
+  aesEncrypt, aesDecrypt,
+  ESCALATION_KEYWORDS, FAIL_THRESHOLD, FAIL_WINDOW_MS,
+};
