@@ -32,6 +32,12 @@ import { maybeHandleExpertTurn, applyExpertSystemIfActive,
          isExpertActive, handleExpertTag, _composeExpertPrompt } from './expert-session.js';
 import { getExpertDef, resolveExpertId } from './expert-registry.js';
 import { buildHondiFaqContext } from './hondi-faq-router.js';
+// ★ 2026-07-11 추가: _callGeminiGeneral 등 5개 함수가 vision.js에 정의는
+// 돼 있는데 여기서 import가 빠져 있었다 — 이미지 첨부 후 Gemini 분석
+// 경로를 탈 때마다 ReferenceError로 죽고 있었을 것(실사로 확인, 아래
+// import 없이 호출부만 있었음).
+import { _fileToBase64, _showGeminiProgress, _hideGeminiProgress,
+         _callGeminiGeneral, _geminiResultToText } from './vision.js';
 
 
 export let history_ref = history;  // 외부 참조용
@@ -1122,6 +1128,7 @@ export async function _handleWebSearchTag(fullReply, bubble, sendFn = callAI, us
 }
 
 
+export async function _handleKSearchExecutionTag(fullReply, bubble, sendFn = callAI, userText = '') {
   const m = fullReply.match(/\[SEARCH\](.+?)\[\/SEARCH\]/s);
   if (!m) return false;
 
@@ -1186,6 +1193,7 @@ export async function _handleWebSearchTag(fullReply, bubble, sendFn = callAI, us
 }
 
 
+export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, userText = '') {
   const _updateBubble = async (text) => {
     if (!bubble) return;
     const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
