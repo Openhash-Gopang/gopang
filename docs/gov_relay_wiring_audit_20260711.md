@@ -98,10 +98,35 @@ gh repo delete Openhash-Gopang/jejudo --yes
 ```
 
 
+## ★★ 2026-07-11 추가 발견 — GDC(desktop.html)도 같은 유형의 실제 결함
+
+전체 K서비스를 실배포 검증하면서 school/stock과 **완전히 같은 패턴의 버그**를
+`gdc` 저장소의 `desktop.html`(GDC의 실제 AI 채팅 화면 — `webapp.html`이 아니라
+`desktop.html`에 있었습니다)에서 새로 발견했습니다.
+
+`chatHistory` 배열에는 `user`/`assistant` role만 쌓이고 `system` role이 전혀 없는
+상태에서, `GDC_SYSTEM_PROMPT`(클라이언트가 로드한 UNIVERSAL-INTEGRITY + GDC 고유
+지시문)를 별도 `system` 최상위 필드로 보내고 있었습니다. `callDeepSeek`는 `messages`가
+배열이면 그 필드를 아예 안 읽으므로, **GDC의 AI 채팅은 지금까지 페르소나·공통규칙이
+전혀 실리지 않은 채로 서비스되고 있었을 가능성이 높습니다**(서버가 강제 주입하는
+UNIVERSAL-INTEGRITY/common만 실렸을 수는 있음 — `service_id:'kgdc'`는 정상 전송 중이라
+그 부분만은 별개로 붙었을 것). `gdc_fix.diff`로 수정본을 제공합니다 — `system` 필드를
+없애고 `messages` 배열 맨 앞에 `role:'system'`으로 직접 넣는 동일한 해법입니다.
+
+이걸로 미루어, **"messages 배열과 함께 별도 system 필드를 보내면서 /deepseek를 쓰는"
+패턴 자체가 이 생태계에 반복적으로 나타나는 결함 유형**으로 보입니다(school, stock,
+gdc 3곳에서 동일 패턴 발견). `market`, `security`는 애초에 `system` 필드 없이
+`messages` 배열 안에 `role:'system'`을 직접 넣는 올바른 패턴이라 문제 없었습니다.
+**나머지 미확인 K서비스 저장소(qna, users 등)에도 같은 점검이 필요할 수 있습니다** —
+`grep -n "system\s*:\s*\w" webapp.html desktop.html` 로 top-level `system` 필드
+사용 여부를 먼저 훑어보는 걸 권장합니다.
+
+## 스크립트 사용법
+
 ```bash
 python3 tools/check_gov_relay_wiring.py
 ```
 네트워크로 각 저장소를 얕은 클론해 임시 디렉터리에서 검사 후 자동 삭제합니다.
 종료 코드 1은 "LEGACY 또는 NO_RELAY가 하나 이상 있다"는 뜻일 뿐, 위 표처럼 사람이
-해석해야 진짜 결함(school/stock)과 정상 설계(market/gdc/security)를 구분할 수
+해석해야 진짜 결함(school/stock/gdc)과 정상 설계(market/security)를 구분할 수
 있습니다 — CI에 그대로 게이트로 걸지 말고 참고 리포트로만 쓸 것을 권장합니다.
