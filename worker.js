@@ -1729,6 +1729,30 @@ async function handleGwpRegistrySearch(request, env, corsHeaders) {
 async function handleGwpRegistryRegister(request, env, corsHeaders) {
   let payload;
   try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+
+  // ★ 2026-07-11 Phase 0 신설 — 증분 전용 호출. gwp/engine.js가 GWP 탭
+  // 종료(PDV 기록)마다 이 모드로 호출해 call_count_30d를 +1 한다.
+  // 정식 등록(name/tier 필수)과 달리, gwp_id만으로 기존 레코드를 찾아
+  // 갱신만 한다 — 레코드가 아직 없으면(core 시딩 누락 등) 조용히
+  // 스킵한다(증분 실패로 탭 종료 자체를 막지 않는다는 원칙, 호출부와
+  // 동일 — 파이프라인 사고실험 미비점4/Phase0 참조).
+  if (payload.increment_call_count === true) {
+    if (!payload.gwp_id) {
+      return new Response(JSON.stringify({ error: 'gwp_id required' }), { status: 400, headers: corsHeaders });
+    }
+    try {
+      const existing = await _l1FindGwpRegistryEntry(env, payload.gwp_id);
+      if (!existing) {
+        return new Response(JSON.stringify({ status: 'skipped', reason: 'not_registered' }), { headers: corsHeaders });
+      }
+      const next = (Number(existing.call_count_30d) || 0) + 1;
+      const rec = await _l1PatchGwpRegistryEntry(env, existing.id, { call_count_30d: next });
+      return new Response(JSON.stringify({ status: 'incremented', entry: rec }), { headers: corsHeaders });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+    }
+  }
+
   if (!payload.gwp_id || !payload.name || !payload.tier) {
     return new Response(JSON.stringify({ error: 'gwp_id, name, tier required' }), { status: 400, headers: corsHeaders });
   }
@@ -1743,6 +1767,7 @@ async function handleGwpRegistryRegister(request, env, corsHeaders) {
     file_ref: payload.file_ref || payload.gwp_id,
     status: payload.status || 'active',
   };
+  if (typeof payload.call_count_30d === 'number') record.call_count_30d = payload.call_count_30d;
   try {
     const existing = await _l1FindGwpRegistryEntry(env, payload.gwp_id);
     let rec;

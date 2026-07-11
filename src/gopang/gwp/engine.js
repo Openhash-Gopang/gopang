@@ -3,7 +3,7 @@
  */
 import { _gwpActive, _gwpService, _gwpTab, _gwpTabTimer,
          setGwpActive, setGwpService, setGwpTab, setGwpTabTimer,
-         _USER } from '../core/state.js';
+         _USER, PROXY } from '../core/state.js';
 import { appendBubble } from '../ui/bubble.js';
 import { _recordPDV } from '../pdv/record.js';
 import { _patchL1LedgerUserHash, _patchPdvChainHeight,
@@ -11,6 +11,26 @@ import { _patchL1LedgerUserHash, _patchPdvChainHeight,
 import { summarizeTranscript6W } from '../ai/report-utils.js';
 import { _handleGwpSignRequest } from './sign.js';
 import { GWP_ALLOWED_ORIGINS } from './allowed-origins.js';
+
+// ★ 2026-07-11 Phase 0 신설(파이프라인 사고실험 미비점4) — PDV 기록과
+// 함께 gwp_registry.call_count_30d를 증분한다. 정기 갱신 방법론
+// (docs/SP-AUTHOR-AUTOMATION_v1_0.md §2)의 데이터 소스가 지금까지
+// 비어 있었던 걸 채운다. 증분 실패가 PDV 기록 자체를 막으면 안 되므로
+// _recordPDV를 먼저 기다리고, 증분은 fire-and-forget으로 뒤에 붙인다.
+async function _recordPDVAndBumpRegistry(record) {
+  const result = await _recordPDV(record);
+  const svcId = record?.serviceId;
+  if (svcId) {
+    fetch(`${PROXY}/gwp-registry/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gwp_id: svcId, increment_call_count: true }),
+    }).catch((e) => {
+      console.warn('[gwp-registry] call_count_30d 증분 실패(PDV 기록은 정상 완료됨):', e.message);
+    });
+  }
+  return result;
+}
 
 // Gopang Widget Protocol (GWP) 호스트 엔진 v2.0 — 새 탭 방식
 // iframe 방식 제거 → JS 전역 충돌·SyntaxError·CFG 미초기화 문제 원천 해결
@@ -173,7 +193,7 @@ async function _gwpFallbackReport(svc) {
       ? `${svcName} 이용 중 탭이 보고 없이 종료됨(중계된 대화 ${log.length}건 — 요약 실패)`
       : `${svcName} 탭이 보고 없이 종료되어 상세 대화 내용을 확인할 수 없습니다.`);
 
-  await _recordPDV({
+  await _recordPDVAndBumpRegistry({
     type:      'agent_report_fallback',
     serviceId: svc?.id   || null,
     service:   svcName,
@@ -372,7 +392,7 @@ window.addEventListener('message', (e) => {
           if (!reporterSvc) {
             // 고팡이 직접 PDV 기록
             const p = msg.pdvData || {};
-            _recordPDV({
+            _recordPDVAndBumpRegistry({
               type:             'service_task',
               serviceId:        _gwpService?.id   || null,
               service:          _gwpService?.name || null,
@@ -402,7 +422,7 @@ window.addEventListener('message', (e) => {
         // 비결제 서비스가 GWP_DONE을 정상적으로 보내도 gopang이 아무것도
         // 기록하지 않는 조용한 누락이 있었다.
         const p = msg.pdvData;
-        _recordPDV({
+        _recordPDVAndBumpRegistry({
           type:       'service_task',
           serviceId:  _gwpService?.id   || null,
           service:    _gwpService?.name || null,

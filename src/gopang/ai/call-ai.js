@@ -387,6 +387,9 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   // 새로 추가한 3개(OPEN_SETTINGS_TAB/OPEN_K_SERVICES_TAB/SEARCH의
   // mode=tab 변형)와 함께 한 번에 정리한다.
   .replace(/\[SEARCH:\s*query=[^,\]]+,\s*type=user(?:,\s*mode=tab)?\s*\]/g, '')
+  // K-Search RULE-02 STEP3의 JSON 본문 형([SEARCH]{...}[/SEARCH]) —
+  // 위 type=user 형과 이름만 같고 문법이 다르다(2026-07-11 Phase 1).
+  .replace(/\[SEARCH\][\s\S]*?\[\/SEARCH\]/g, '')
   .replace(/\[OPEN_PROFILE:\s*handle=@[\w.-]+\s*\]/g, '')
   .replace(/\[P2P_INVITE:\s*handle=@[\w.-]+(?:,\s*message=[^\]]*)?\]/g, '')
   .replace(/\[OPEN_SETTINGS_TAB\]/g, '')
@@ -1035,7 +1038,88 @@ async function _triggerSeamlessHandoff(sendFn = callAI) {
  * SP-Author 자체(실제 조사·작성)는 여전히 사람이 수행한다 — 이 함수는
  * "신호가 큐/알림에 정직하게 남는다"까지만 보장한다.
  */
-export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, userText = '') {
+/**
+ * _handleKSearchExecutionTag — K-Search(SP-18) RULE-02 STEP3의
+ * [SEARCH]{...}[/SEARCH](JSON 본문) 태그를 실제로 실행한다(2026-07-11
+ * Phase 1 신설, 파이프라인 사고실험 미비점1).
+ *
+ * ★ 이 태그는 기존 [SEARCH: query=X, type=user](P2P 사람검색 UI 오버레이,
+ * openSearch() 처리)와 이름만 같고 문법이 완전히 다르다 — 이쪽은 JSON
+ * 본문이고, worker.js POST /search(handleSearch)를 호출해 결과를
+ * history에 재주입하고 sendFn으로 재귀 호출한다. market/webapp.html의
+ * 이미 검증된(사고실험 11회) "[SEARCH] 감지→RPC→재주입→재귀호출" 패턴을
+ * gopang 공용 모듈로 이식한 것 — 로직을 새로 설계하지 않았다.
+ *
+ * K-Search가 시스템으로 활성화된 상태(§0-F [KSEARCH_HANDOFF] 이후, 또는
+ * K-Compose 내부 위임 이후)에서만 의미가 있으므로, 호출부(§9 파서)에서
+ * CFG.system?.includes('K-Search')로 게이트하는 걸 전제로 한다 — 이
+ * 함수 자체는 게이트하지 않고 태그 존재 여부만 본다(호출부 책임).
+ */
+export async function _handleKSearchExecutionTag(fullReply, bubble, sendFn = callAI, userText = '') {
+  const m = fullReply.match(/\[SEARCH\](.+?)\[\/SEARCH\]/s);
+  if (!m) return false;
+
+  let params;
+  try {
+    params = JSON.parse(m[1].trim());
+  } catch (e) {
+    // 태그는 있는데 JSON이 깨진 경우 — RULE-01 금지-8(존재하지 않는
+    // 필드를 지어내지 않는다) 정신에 따라 조용히 넘기지 않고 정직하게
+    // 재질의를 유도한다.
+    await sendFn(`[SEARCH 결과] {"error":"태그 본문 JSON 파싱 실패 — RULE-02 STEP3 형식을 다시 확인하세요: ${e.message}"}`);
+    return true;
+  }
+
+  const _updateBubble = async (text) => {
+    if (!bubble) return;
+    const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+    if (_usb) _usb(bubble, text);
+  };
+  await _updateBubble(_stripInternalTags(fullReply).replace(/\[SEARCH\][\s\S]*?\[\/SEARCH\]/, '\n검색 중…'));
+  history.push({ role: 'assistant', content: fullReply });
+
+  const base = (CFG.endpoint || '').replace(/\/+$/, '');
+  let resultText;
+  try {
+    const res = await fetch(`${base}/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params), // worker.js handleSearch가 q/p_* 필드를 그대로 정규화
+    });
+    if (!res.ok) {
+      resultText = `검색 실패 (HTTP ${res.status})`;
+    } else {
+      const rows = await res.json();
+      resultText = (Array.isArray(rows) && rows.length > 0)
+        ? rows.map((r, i) => {
+            const svc = r.services?.[0] || '';
+            const price = svc ? ` | ${svc}` : '';
+            const gdc = r.gdc_accepted ? ' | GDC' : ' | GDC 미지원';
+            const trust = r.trust_level ? ` | ${r.trust_level}` : '';
+            const rating = r.rating_avg ? ` | ★${r.rating_avg}` : '';
+            const handleStr = r.handle ? ` [handle:${r.handle}]` : '';
+            return `${i + 1}. ${r.name} (${r.address || ''})${price}${rating}${trust}${gdc}${handleStr} [guid:${r.primary_guid}]`;
+          }).join('\n')
+        : '검색 결과 없음';
+    }
+  } catch (e) {
+    resultText = `검색 오류: ${e.message}`;
+  }
+
+  // RULE-02 STEP4/5 — 후보 평가는 K-Search 자신(다음 턴)의 몫이다. 여기서는
+  // 결과만 정직하게 넘긴다(임의로 후보를 만들어내지 않음 — RULE-01 금지-2).
+  const searchInject =
+    `[검색결과] ${resultText}\n\n` +
+    `위 결과만 근거로 STEP4(후보 평가·확정)를 진행하세요. 결과가 없으면 ` +
+    `주소 범위를 넓혀 1회 재검색하거나(STEP3-C), person/institution이면 RULE-03으로, ` +
+    `product_seller면 대안 제안으로 넘어가세요 — 없는 후보를 지어내지 마세요.`;
+  history.push({ role: 'user', content: searchInject });
+
+  await sendFn(searchInject);
+  return true;
+}
+
+
   const _updateBubble = async (text) => {
     if (!bubble) return;
     const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
@@ -2416,6 +2500,16 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     // §3-0 ③) 처리한다 — _handleOrchestrationTags 바로 다음 위치.
     const _spAuthorHandled = await _handleSPAuthorTags(fullReply, bubble, callAI, userText);
     if (_spAuthorHandled) return;
+
+    // ── K-Search STEP3 실행 태그 처리 (2026-07-11 Phase 1 신설) ──
+    // K-Search가 활성 system일 때만 의미 있다(§0-F 핸드오프 이후 —
+    // _forwardSwitchSP/_pushAndSwitchSP로 이미 전환된 상태). 게이트를
+    // 안 걸면 다른 SP가 우연히 같은 태그명을 다른 용도로 써도(예:
+    // 기존 [SEARCH: type=user]) 오작동할 위험이 있다.
+    if (CFG.system?.includes('K-Search')) {
+      const _kSearchHandled = await _handleKSearchExecutionTag(fullReply, bubble, callAI, userText);
+      if (_kSearchHandled) return;
+    }
 
     // ── §9 실행 태그 공용 디스패처 (Phase 0) ────────────────
     // 이전엔 GWP가 자체 정규식으로 fullReply를 스캔했고, 별도로

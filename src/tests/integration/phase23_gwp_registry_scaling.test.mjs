@@ -205,3 +205,36 @@ describe('GWP-04: SP-Author 승인 → gwp_registry 자동 등록', () => {
     assert.equal(db.gwp_registry.length, 0);
   });
 });
+
+describe('GWP-05: /gwp-registry/register — increment_call_count 모드(Phase 0)', () => {
+  it('기존 레코드가 있으면 call_count_30d를 +1 하고 다른 필드는 안 건드림', async () => {
+    await call('/gwp-registry/register', {
+      method: 'POST',
+      body: { gwp_id: 'khealth', name: 'K-Health', tier: 'core', call_count_30d: 5 },
+    });
+    const res = await call('/gwp-registry/register', {
+      method: 'POST', body: { gwp_id: 'khealth', increment_call_count: true },
+    });
+    assert.equal(res.json.status, 'incremented');
+    assert.equal(db.gwp_registry[0].call_count_30d, 6);
+    assert.equal(db.gwp_registry[0].name, 'K-Health', '증분 모드는 다른 필드를 건드리면 안 됨');
+  });
+
+  it('call_count_30d가 없던 레코드는 1로 시작', async () => {
+    await call('/gwp-registry/register', { method: 'POST', body: { gwp_id: 'ktax', name: 'K-Tax', tier: 'core' } });
+    const res = await call('/gwp-registry/register', { method: 'POST', body: { gwp_id: 'ktax', increment_call_count: true } });
+    assert.equal(res.json.entry.call_count_30d, 1);
+  });
+
+  it('등록 안 된 gwp_id는 skipped — 탭 종료(PDV 기록)를 막으면 안 되므로 에러 아님', async () => {
+    const res = await call('/gwp-registry/register', { method: 'POST', body: { gwp_id: 'does-not-exist', increment_call_count: true } });
+    assert.equal(res.status, 200);
+    assert.equal(res.json.status, 'skipped');
+    assert.equal(res.json.reason, 'not_registered');
+  });
+
+  it('gwp_id 없이 증분 모드 호출하면 400', async () => {
+    const res = await call('/gwp-registry/register', { method: 'POST', body: { increment_call_count: true } });
+    assert.equal(res.status, 400);
+  });
+});
