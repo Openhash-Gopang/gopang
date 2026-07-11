@@ -1238,7 +1238,18 @@ function _showPhonePopup(resolve) {
       digit_code_id: digitCodeId,
     };
 
-    await fetch(L1_URL, {
+    // ★ 2026-07-11 수정: 기존엔 이 POST의 응답을 전혀 확인하지 않고 바로
+    // 아래에서 localStorage.setItem()·setUser()로 "가입 완료" 상태를
+    // 무조건 만들었다 — L1 서버가 콜드스타트·일시적 오류 등으로 이 요청을
+    // 실제로 처리 못 해도 클라이언트는 그걸 모른 채 정상 가입 화면을 그대로
+    // 보여줬다. 그 결과 서버엔 프로필이 없는데 클라이언트는 "가입됨"으로
+    // 믿는 상태가 되어, 이후 X25519 지갑 키 등록을 포함한 모든 프로필
+    // 의존 호출이 PROFILE_NOT_FOUND(404)로 영구히 실패했다(실사로 확인).
+    // 1회 짧게 재시도하고, 그래도 실패하면 예외를 던져 호출부(위쪽
+    // _submit 핸들러)의 기존 catch 블록이 "네트워크 오류. 다시 시도해
+    // 주세요"를 정직하게 보여주도록 한다 — 가입을 "일단 완료"로 밀어붙이지
+    // 않는다.
+    const _postL1Profile = () => fetch(L1_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1251,6 +1262,15 @@ function _showPhonePopup(resolve) {
         digit_code_id: digitCodeId,
       })
     });
+    let _l1Res = await _postL1Profile().catch(e => { console.warn('[가입][L1] 1차 요청 실패(네트워크):', e.message); return null; });
+    if (!_l1Res || !_l1Res.ok) {
+      console.warn('[가입][L1] 1차 등록 실패(status:', _l1Res?.status, ') — 1.5초 후 재시도');
+      await new Promise(r => setTimeout(r, 1500));
+      _l1Res = await _postL1Profile().catch(e => { console.warn('[가입][L1] 재시도 요청 실패(네트워크):', e.message); return null; });
+    }
+    if (!_l1Res || !_l1Res.ok) {
+      throw new Error(`L1 프로필 등록 실패(status: ${_l1Res?.status ?? '네트워크 오류'}) — 서버에 프로필이 생성되지 않았습니다`);
+    }
     console.info('[Auth] 신규 등록:', handle, nickname);
 
     if (hondiCodeImage) {
