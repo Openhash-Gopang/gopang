@@ -1,13 +1,15 @@
 // ═══════════════════════════════════════════════════════════
 // jeju-router.js v1.0 — 제주 기관 SP 조립 엔진
 //
-// ★ 2026-07-09 명확화(K-21 조사 중 발견) — Openhash-Gopang/jeju 독립
-// 저장소에도 동일한 파일명 "jeju-router.js"가 있는데, 그건 완전히
-// 다른 시스템이다: jeju.hondi.net이 실제로 서빙하는 프론트엔드 라우터
-// (resolveJejuAgency/assembleJejuSystemPrompt, /ai/chat 직접 호출,
-// UNIVERSAL-INTEGRITY 미적용, 2026-07-05 마지막 수정)이고, 아직
-// /gov/relay로 마이그레이션 전이다(아래 GOV_AGENCIES 관련 worker.js
-// 주석 참고). 이 파일(gopang 저장소 쪽)은 그것과 무관하게 SP-AUTHOR
+// ★ 2026-07-09 명확화(K-21 조사 중 발견), ★★ 2026-07-11 정정 —
+// Openhash-Gopang/jeju 독립 저장소에도 동일한 파일명 "jeju-router.js"가
+// 있는데, 그건 완전히 다른 시스템이다: jeju.hondi.net이 실제로 서빙하는
+// 프론트엔드 라우터(resolveJejuAgency/assembleJejuSystemPrompt)다.
+// 2026-07-09 시점 이 주석은 그 파일이 "아직 /ai/chat 직접 호출이고
+// /gov/relay 마이그레이션 전"이라고 적었으나 이는 부정확했다 — jeju
+// 저장소는 2026-07-05에 이미 /gov/relay(_govRelayCompletion)로
+// 마이그레이션 완료된 상태였다(worker.js GOV_AGENCIES 주석도 함께 정정,
+// 2026-07-11). 이 파일(gopang 저장소 쪽)은 그것과 무관하게 SP-AUTHOR
 // 템플릿 렌더링 파이프라인용으로 새로 만들어진 별개 엔진이다
 // (_renderTemplate 등, 2026-07-08 신설). 이름이 같다고 서로 동기화
 // 하면 안 된다 — 목적과 export 함수 자체가 다르다. 혼동 방지를 위해

@@ -4298,9 +4298,15 @@ const GOV_AGENCIES = new Set([
   // 넣었으나 정작 GOV_AGENCIES에 없어 /gov/relay 최상위 호출 자체가
   // UNKNOWN_AGENCY로 즉시 거부되는 결함을 실제 테스트 하네스
   // (src/tests/sp-intercall.test.mjs 시나리오 3)로 발견해 수정.
-  // 현재 jeju-router.js는 /gov/relay가 아니라 /ai/chat을 직접 호출하고
-  // 있어(UNIVERSAL-INTEGRITY 미적용) 이 두 값은 아직 실제 트래픽에서
-  // 쓰이지 않는다 — 프론트엔드 마이그레이션은 별도 작업.
+  // ★ 2026-07-11 정정: 이전 주석은 "jeju-router.js가 /ai/chat을 직접
+  // 호출해 이 두 값이 아직 실트래픽에 안 쓰인다"고 적혀 있었으나 이는
+  // 2026-07-05 시점에 이미 낡은 정보였다. 실제로 jeju.hondi.net을
+  // 서빙하는 독립 저장소 Openhash-Gopang/jeju의 jeju-router.js는
+  // 2026-07-05부로 /gov/relay 호출(_govRelayCompletion)로 마이그레이션
+  // 완료된 상태다 — 즉 이 agency들은 정상적으로 실트래픽에서 쓰이고
+  // 있다. (혼동 방지: gopang 모노레포의 src/gopang/ai/jeju-router.js는
+  // 이름만 같은 별개 파일 — 2026-07-08 SP-AUTHOR 템플릿 렌더링 전용
+  // 엔진이며 jeju.hondi.net과 무관. 아래쪽 해당 파일 주석 참고.)
   'jeju_do', 'jeju_national',
 ]);
 
