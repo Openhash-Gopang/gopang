@@ -1687,6 +1687,49 @@ async function handleSPAuthorRefreshScheduleUpsert(request, env, corsHeaders) {
   }
 }
 
+// ── 웹검색(Serper.dev) 예산 카운터 (2026-07-11 신설) ──────────────────
+// 캐시 미스로 실제 API를 호출할 때만 증분한다(캐시 히트는 무료이므로
+// 카운트 안 함). WEB_SEARCH_DAILY_CAP(env, 기본 500)을 넘으면 그날은
+// 더 이상 실제 호출하지 않고 정직하게 한도 초과를 알린다.
+
+function _todayKST() {
+  // KST = UTC+9, 날짜 경계만 필요하므로 9시간 더한 뒤 UTC 날짜로 자른다.
+  const d = new Date(Date.now() + 9 * 3600 * 1000);
+  return d.toISOString().slice(0, 10);
+}
+
+async function _l1GetWebSearchUsage(env, date) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`date='${date}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/web_search_usage/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`web_search_usage 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+async function _l1IncrementWebSearchUsage(env, date) {
+  const existing = await _l1GetWebSearchUsage(env, date);
+  const token = await _l1AdminToken(env);
+  if (existing) {
+    const res = await fetch(`${L1_DEFAULT}/api/collections/web_search_usage/records/${existing.id}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ count: (Number(existing.count) || 0) + 1 }),
+    });
+    if (!res.ok) throw new Error(`web_search_usage PATCH 실패 (HTTP ${res.status})`);
+    return res.json();
+  }
+  const res = await fetch(`${L1_DEFAULT}/api/collections/web_search_usage/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date, count: 1 }),
+  });
+  if (!res.ok) throw new Error(`web_search_usage 생성 실패 (HTTP ${res.status})`);
+  return res.json();
+}
+
 // ── gwp_registry HTTP 핸들러 (2026-07-11 신설) ──────────────────────
 
 // GET /gwp-registry/lookup?id=klaw — 정확한 gwp_id 단건 조회(핫패스)
@@ -1780,6 +1823,94 @@ async function handleGwpRegistryRegister(request, env, corsHeaders) {
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
   }
+}
+
+// ── POST /web-search (Serper.dev 연동, 2026-07-11 신설) ────────────
+// K-Search RULE-07 "대체형"([WEB_SEARCH: query=...] 태그, call-ai.js가
+// 파싱)이 호출한다. §0-B 경로1(웹검색)이 이번까지는 원칙 서술뿐이고
+// 실제 실행 수단이 없었다 — 이 엔드포인트가 그 실행 수단이다.
+// 키는 서버(WEB_SEARCH_API_KEY env secret)에만 있고 클라이언트에
+// 노출되지 않는다(SUPABASE_KEY와 동일 원칙).
+//
+// 비용 통제 2단: (1) Cloudflare Cache API로 동일 쿼리 1시간 캐시
+// (캐시 히트는 예산 카운트 안 함), (2) 일일 예산(WEB_SEARCH_DAILY_CAP,
+// 기본 500회) 초과 시 실제 호출을 막고 정직하게 한도 초과를 반환한다.
+async function handleWebSearch(request, env, corsHeaders, ctx) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  const query = (payload.query || payload.q || '').trim();
+  if (!query) return new Response(JSON.stringify({ error: 'query required' }), { status: 400, headers: corsHeaders });
+
+  const cacheKey = new Request(`https://web-search-cache.internal/?q=${encodeURIComponent(query.toLowerCase())}`);
+  const cache = caches.default;
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    const body = await cached.json();
+    return new Response(JSON.stringify({ ...body, cache: 'hit' }), { headers: corsHeaders });
+  }
+
+  if (!env.WEB_SEARCH_API_KEY) {
+    return new Response(JSON.stringify({
+      error: 'WEB_SEARCH_NOT_CONFIGURED',
+      message: 'WEB_SEARCH_API_KEY가 설정되지 않았습니다 — wrangler secret put WEB_SEARCH_API_KEY로 등록하세요.',
+    }), { status: 503, headers: corsHeaders });
+  }
+
+  const today = _todayKST();
+  const cap = Number(env.WEB_SEARCH_DAILY_CAP) || 500;
+  let usage;
+  try {
+    usage = await _l1GetWebSearchUsage(env, today);
+  } catch (e) {
+    usage = null; // 예산 조회 실패는 안전하게 "아직 0회"로 간주(과금 폭주보다 검색 실패가 낫다는 판단)
+  }
+  if (usage && Number(usage.count) >= cap) {
+    return new Response(JSON.stringify({
+      error: 'DAILY_BUDGET_EXCEEDED',
+      message: `오늘 웹검색 한도(${cap}회)를 초과했습니다. 내일 다시 시도해주세요.`,
+      count: usage.count,
+    }), { status: 429, headers: corsHeaders });
+  }
+
+  let searchRes;
+  try {
+    searchRes = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: { 'X-API-KEY': env.WEB_SEARCH_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: query, gl: 'kr', hl: 'ko' }),
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'FETCH_FAILED', message: e.message }), { status: 502, headers: corsHeaders });
+  }
+
+  // 예산 증분은 API 호출 성공 여부와 무관하게(Serper.dev 쪽에서 이미
+  // 과금됐을 가능성이 있는 요청이므로) 시도했다는 사실 자체로 센다.
+  ctx?.waitUntil?.(_l1IncrementWebSearchUsage(env, today).catch((e) => {
+    console.warn('[web-search] 예산 카운터 증분 실패:', e.message);
+  }));
+
+  if (!searchRes.ok) {
+    const errText = await searchRes.text().catch(() => '');
+    return new Response(JSON.stringify({ error: 'SERPER_ERROR', status: searchRes.status, detail: errText }), { status: 502, headers: corsHeaders });
+  }
+
+  const raw = await searchRes.json().catch(() => ({}));
+  const organic = Array.isArray(raw.organic) ? raw.organic.slice(0, 5) : [];
+  const result = {
+    query,
+    answer_box: raw.answerBox ? { title: raw.answerBox.title, snippet: raw.answerBox.snippet } : null,
+    knowledge_graph: raw.knowledgeGraph ? { title: raw.knowledgeGraph.title, description: raw.knowledgeGraph.description } : null,
+    organic: organic.map(r => ({ title: r.title, link: r.link, snippet: r.snippet })),
+    source: 'serper.dev',
+    cache: 'miss',
+  };
+
+  const cacheResponse = new Response(JSON.stringify(result), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=3600' },
+  });
+  ctx?.waitUntil?.(cache.put(cacheKey, cacheResponse.clone()));
+
+  return new Response(JSON.stringify(result), { headers: corsHeaders });
 }
 
 // ── ATOM_PATTERN 실행 엔진 (2026-07-09 신설) ────────────────────────
@@ -2159,6 +2290,10 @@ export default {
       return handleGwpRegistrySearch(request, env, corsHeaders);
     if (pathname === '/gwp-registry/register' && request.method === 'POST')
       return handleGwpRegistryRegister(request, env, corsHeaders);
+
+    // ── 웹검색(Serper.dev) (2026-07-11 신설) ────────────────────────
+    if (pathname === '/web-search' && request.method === 'POST')
+      return handleWebSearch(request, env, corsHeaders, ctx);
 
     // ── merkle (T10) ─────────────────────────────────────────
     if (pathname === '/merkle/verify')           return handleMerkleVerify(request, env, corsHeaders);

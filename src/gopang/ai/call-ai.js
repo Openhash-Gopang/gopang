@@ -1055,7 +1055,73 @@ async function _triggerSeamlessHandoff(sendFn = callAI) {
  * CFG.system?.includes('K-Search')로 게이트하는 걸 전제로 한다 — 이
  * 함수 자체는 게이트하지 않고 태그 존재 여부만 본다(호출부 책임).
  */
-export async function _handleKSearchExecutionTag(fullReply, bubble, sendFn = callAI, userText = '') {
+/**
+ * _handleWebSearchTag — §0-B 경로1(공개정보: tool-web-search)과 K-Search
+ * RULE-07(대체형, [WEB_SEARCH: query=...])의 실제 실행부(2026-07-11 신설).
+ *
+ * 지금까지 "웹검색 경로"는 AGENT-COMMON·K-Search SP에 원칙 서술만
+ * 있고 실행 수단이 없었다(callDeepSeek에 tool-calling 자체가 없음 —
+ * 이번 세션 사고실험으로 확인) — 이 함수가 그 실행 수단이다.
+ * worker.js POST /web-search(Serper.dev 프록시, 캐시+일일예산 통제)를
+ * 호출하고 결과를 history에 재주입한다. K-Search든 AC 자신이든 이
+ * 태그를 낼 수 있으므로 특정 system으로 게이트하지 않는다.
+ */
+export async function _handleWebSearchTag(fullReply, bubble, sendFn = callAI, userText = '') {
+  const m = fullReply.match(/\[WEB_SEARCH:\s*query=([^\]]+)\]/);
+  if (!m) return false;
+  const query = m[1].trim();
+
+  const _updateBubble = async (text) => {
+    if (!bubble) return;
+    const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+    if (_usb) _usb(bubble, text);
+  };
+  await _updateBubble(_stripInternalTags(fullReply).replace(/\[WEB_SEARCH:[^\]]*\]/, '\n웹 검색 중…'));
+  history.push({ role: 'assistant', content: fullReply });
+
+  const base = (CFG.endpoint || '').replace(/\/+$/, '');
+  let resultText;
+  try {
+    const res = await fetch(`${base}/web-search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      // 429(일일예산 초과)·503(키 미설정) 등도 조용히 감추지 않고
+      // 사용자에게 정직하게 전달할 수 있도록 그대로 넘긴다.
+      resultText = `검색 불가: ${data.message || data.error || `HTTP ${res.status}`}`;
+    } else {
+      const parts = [];
+      if (data.answer_box) parts.push(`[요약] ${data.answer_box.title}: ${data.answer_box.snippet}`);
+      if (data.knowledge_graph) parts.push(`[정보] ${data.knowledge_graph.title} — ${data.knowledge_graph.description}`);
+      (data.organic || []).forEach((r, i) => {
+        parts.push(`${i + 1}. ${r.title} — ${r.snippet} (${r.link})`);
+      });
+      resultText = parts.length > 0 ? parts.join('\n') : '검색 결과 없음';
+    }
+  } catch (e) {
+    resultText = `검색 오류: ${e.message}`;
+  }
+
+  // RULE-07 [7-A] 대체형 — Hondi 검증 필드(guid 등)와 구분해 "웹 참고정보"
+  // 임을 명시하고, K-Search가 [KSEARCH_RESULT: status=external_info_only,
+  // source=..., info=...] 형식으로 위임자에게 반환하도록 안내한다.
+  const searchInject =
+    `[웹 검색결과 — 미검증, 출처: 웹] ${resultText}\n\n` +
+    `이 정보는 Hondi 내부에서 검증된 게 아닙니다(guid 없음). ` +
+    `K-Search RULE-07 [7-A] 대체형에 따라 이용자에게는 "Hondi에 등록된 ` +
+    `업체가 아니라 웹 검색 결과"임을 분명히 밝히고, [KSEARCH_RESULT: ` +
+    `status=external_info_only, source=웹검색, info=...] 형식으로 ` +
+    `위임자에게 반환하세요.`;
+  history.push({ role: 'user', content: searchInject });
+
+  await sendFn(searchInject);
+  return true;
+}
+
+
   const m = fullReply.match(/\[SEARCH\](.+?)\[\/SEARCH\]/s);
   if (!m) return false;
 
@@ -2510,6 +2576,12 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
       const _kSearchHandled = await _handleKSearchExecutionTag(fullReply, bubble, callAI, userText);
       if (_kSearchHandled) return;
     }
+
+    // ── 웹검색 태그 처리 (2026-07-11 신설, §0-B 경로1 실행부) ──
+    // K-Search든 AC 자신(§0-B)이든 낼 수 있어 system 게이트를 안 건다 —
+    // [WEB_SEARCH: query=...]는 다른 태그와 이름이 겹치지 않는다.
+    const _webSearchHandled = await _handleWebSearchTag(fullReply, bubble, callAI, userText);
+    if (_webSearchHandled) return;
 
     // ── §9 실행 태그 공용 디스패처 (Phase 0) ────────────────
     // 이전엔 GWP가 자체 정규식으로 fullReply를 스캔했고, 별도로
