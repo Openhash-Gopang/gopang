@@ -1157,7 +1157,15 @@ export async function _handleKSearchExecutionTag(fullReply, bubble, sendFn = cal
     const res = await fetch(`${base}/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params), // worker.js handleSearch가 q/p_* 필드를 그대로 정규화
+      // worker.js handleSearch가 q/p_* 필드를 그대로 정규화 — SP가 안 보낸
+      // p_lat/p_lng은 이용자 GPS로 보정(주소 문자열은 Kakao region depth
+      // 불일치로 신뢰 불가할 수 있어, market/webapp.html의 검증된 보정
+      // 로직과 동일 원칙 — 2026-07-12 추가).
+      body: JSON.stringify({
+        p_lat: _userLocation?.lat ?? null,
+        p_lng: _userLocation?.lng ?? null,
+        ...params,
+      }),
     });
     if (!res.ok) {
       resultText = `검색 실패 (HTTP ${res.status})`;
@@ -1171,7 +1179,11 @@ export async function _handleKSearchExecutionTag(fullReply, bubble, sendFn = cal
             const trust = r.trust_level ? ` | ${r.trust_level}` : '';
             const rating = r.rating_avg ? ` | ★${r.rating_avg}` : '';
             const handleStr = r.handle ? ` [handle:${r.handle}]` : '';
-            return `${i + 1}. ${r.name} (${r.address || ''})${price}${rating}${trust}${gdc}${handleStr} [guid:${r.primary_guid}]`;
+            // ★ 2026-07-12: entity_type 추가 — STEP4가 person/institution/
+            // product_seller 구분을 매칭 근거로 쓰는데(SP-18 STEP4), 이
+            // 필드가 빠져 있으면 사람/기관 검색 시 판단 근거가 부족해진다.
+            const etype = r.entity_type ? ` [type:${r.entity_type}]` : '';
+            return `${i + 1}. ${r.name} (${r.address || ''})${etype}${price}${rating}${trust}${gdc}${handleStr} [guid:${r.primary_guid}]`;
           }).join('\n')
         : '검색 결과 없음';
     }
