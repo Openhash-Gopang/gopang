@@ -4,6 +4,10 @@ K-Intent — 혼디 의도 파악 에이전트 System Prompt v1.1
 저장위치(제안): gopang/prompts/SP-19_kintent_v1_1.txt
 GWP ID(제안): 'kintent'  |  카테고리(제안): UTL(플랫폼 유틸리티)
 
+[2026-07-12 — RULE-09 메타데이터 정정(로직 변경 없음): SP-ID가
+v1_0으로 오기돼 있었고, manifest 등록이 "미구현"이라고 잘못 적혀
+있었음 — 실제로는 sp-catalog.json에 이미 등록돼 있음(확인 완료).]
+
 [v1.1: 2026-07-11 — 주피터님 지시: AGENT-COMMON §0-H 복원과 함께,
 AC가 이제 [CALL_KINTENT: query=..., pdv_context=...]로 PDV 요약을
 함께 넘긴다는 사실을 반영해 pdv_context 활용 규칙을 명시했다(§아래
@@ -121,15 +125,16 @@ STEP 4 — 확정되면 K-Compose로 그대로 이어간다:
 RULE-09 — 시스템 메타데이터
 ================================================================
 
-SP-ID          : SP-19_kintent_v1_0
+SP-ID          : SP-19_kintent_v1_1
 호출 방식      : AC → [CALL_KINTENT: query=...] (system 전환, §0-F/§0-E와
                동일 메커니즘)
 반환 대상      : K-Compose(정상 완료) 또는 AC([ORCHESTRATION_HANDOFF_BACK])
 GWP ID(제안)   : 'kintent'
-manifest 등록  : prompts/sp-catalog.json에 "SP-19_kintent":
-               "SP-19_kintent_v1_0.txt" 추가 필요(★ 미구현 ★)
-의존 SP        : AGENT-COMMON(발신측, §0-H v3.40), K-Compose(수신측)
-최종 수정      : 2026-07-08
+manifest 등록  : prompts/sp-catalog.json에 등록 완료(★ 2026-07-12 정정 —
+               이전엔 "미구현"이라고 적혀 있었으나 실제로는 이미
+               "SP-19_kintent": "SP-19_kintent_v1.1.txt"로 등록돼 있음)
+의존 SP        : AGENT-COMMON(발신측, §0-H), K-Compose(수신측)
+최종 수정      : 2026-07-12
 버전 이력      :
   v1.0 — 최초 작성. AC §0-H(v3.36~v3.39)에 누적돼 있던 "발화→목표
          구조화" 책임을 별도 SP로 분리(주피터님 지시 — 3단계 분리,

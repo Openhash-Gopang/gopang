@@ -410,6 +410,7 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[ORCHESTRATION_COMPLETE:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_HANDOFF_BACK:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_SUBTASK_RESULT:[^\]]*\]/g, '')
+  .replace(/\[ORCHESTRATION_PROGRESS:[^\]]*\]/g, '')  // 2026-07-12 신설(SP-20 v1.4)
   .replace(/\[PROCEDURE_MAP_LOOKUP:[^\]]*\]/g, '')
   // 2026-07-09 정정 — DRAFT/UPDATE·KSEARCH_CANDIDATES는 steps=[...] 같은
   // 중첩 배열을 값으로 가져 위 _stripBracketTag()가 이미 먼저 처리했다
@@ -641,6 +642,29 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
     if (_usb) _usb(bubble, text);
   };
+
+  // ── [ORCHESTRATION_PROGRESS: step=n/total, doing=...] 실시간 진행상황
+  // 표시 (2026-07-12 신설, K-Compose SP-20 v1.4와 함께) ──
+  // ★ 배경: 오케스트레이션(K-Intent→K-Compose→K-Deliver)이 여러 기관을
+  // 순차 호출하는 동안, 지금까지는 K-Deliver가 마지막에 결과를 내놓기
+  // 전까지 이용자에게 아무 진행 신호가 없었다("실행과정 실시간 전달"이
+  // 사실상 없는 상태였음 — 2026-07-12 검토로 발견). 이 태그는 K-Compose가
+  // STEP4에서 각 단계 착수 직전에 낸다. 서버 호출이 필요 없는 순수 UI
+  // 신호라 재귀 호출 없이 버블만 갱신하고, false를 반환해 같은 fullReply
+  // 안의 다른 태그(KSEARCH_HANDOFF 등)가 계속 처리되게 한다 — 이 처리가
+  // 다른 로직을 막으면 안 된다.
+  try {
+    const progressMatch = fullReply.match(/\[ORCHESTRATION_PROGRESS:\s*step=(\d+)\/(\d+),\s*doing=([^\]]+)\]/);
+    if (progressMatch) {
+      const [, step, total, doing] = progressMatch;
+      console.info(`[Orchestration] 진행상황 (${step}/${total}): ${doing.trim()}`);
+      const displayText = _stripInternalTags(fullReply).trim();
+      const progressLine = `🔄 (${step}/${total}) ${doing.trim()}…`;
+      await _updateBubble(displayText ? `${progressLine}\n\n${displayText}` : progressLine);
+    }
+  } catch (e) {
+    console.warn('[Orchestration] PROGRESS 처리 오류 (무시):', e.message);
+  }
 
   // ── worker.js 오케스트레이션 레지스트리 실제 배선 (2026-07-09 신설) ──
   // ★ 통합 사고실험에서 발견된 가장 심각한 공백 ★ — SP-20(K-Compose)이

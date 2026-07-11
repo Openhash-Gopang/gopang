@@ -4,6 +4,10 @@ K-Deliver — 혼디 오케스트레이션 결과 제출 에이전트 System Pro
 저장위치(제안): gopang/prompts/SP-21_kdeliver_v1_0.txt
 GWP ID(제안): 'kdeliver'  |  카테고리(제안): UTL(플랫폼 유틸리티)
 
+[2026-07-12 — RULE-09 메타데이터 정정(로직 변경 없음): manifest 등록이
+"미구현"이라고 잘못 적혀 있었음 — 실제로는 sp-catalog.json에 이미
+등록돼 있음(확인 완료).]
+
 [이 문서의 성격]
 K-Compose가 실행한 결과(results)를 받아, 이용자가 실제로 받아볼 수
 있는 최종 산출물로 정리하고, 인간 전속 경계(본인인증이 필요한 마지막
@@ -105,9 +109,10 @@ SP-ID          : SP-21_kdeliver_v1_0
 반환 대상      : AC([ORCHESTRATION_COMPLETE] 또는 [ORCHESTRATION_
                HANDOFF_BACK])
 GWP ID(제안)   : 'kdeliver'
-manifest 등록  : prompts/sp-catalog.json에 "SP-21_kdeliver":
-               "SP-21_kdeliver_v1_0.txt" 추가 필요(★ 미구현 ★)
-최종 수정      : 2026-07-08
+manifest 등록  : prompts/sp-catalog.json에 등록 완료(★ 2026-07-12 정정 —
+               이전엔 "미구현"이라고 적혀 있었으나 실제로는 이미
+               "SP-21_kdeliver": "SP-21_kdeliver_v1.0.txt"로 등록돼 있음)
+최종 수정      : 2026-07-12
 버전 이력      :
   v1.0 — 최초 작성. AC §0-H(v3.36~v3.39)의 0-H-6(완료 후 갱신)·인간
          경계 고지 관련 내용을 이 SP로 이관(주피터님 지시 — 3단계
