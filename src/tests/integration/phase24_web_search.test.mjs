@@ -20,6 +20,7 @@ function resetDb() {
   idSeq = 0;
   serperCallCount = 0;
   cacheStore = new Map();
+  _pendingWaitUntil = [];
 }
 
 function evalFilter(rec, filter) {
@@ -92,7 +93,16 @@ function installMockCache() {
 let worker;
 const ENV_WITH_KEY = { L1_ADMIN_EMAIL: 'a', L1_ADMIN_PASSWORD: 'p', WEB_SEARCH_API_KEY: 'test-key' };
 const ENV_NO_KEY = { L1_ADMIN_EMAIL: 'a', L1_ADMIN_PASSWORD: 'p' };
-const CTX = { waitUntil: (p) => p }; // 테스트에서는 즉시 await 가능하도록 그대로 반환
+// ★ 수정(간헐적 실패 원인) — handleWebSearch는 실제 Cloudflare Workers와
+// 동일하게 ctx.waitUntil(...)을 fire-and-forget으로 호출한다(응답을
+// 기다리지 않음, 프로덕션에서 맞는 동작). 이전 mock은 그 프라미스를
+// 그냥 반환만 하고 아무도 기다리지 않아서, call() 헬퍼가 응답을 받은
+// 직후 곧바로 db 상태를 검증하면 예산증분·캐시저장이 아직 안 끝났을
+// 수 있었다(타이밍에 따라 간헐적으로 실패 — 이번에 Windows에서 재현됨).
+// waitUntil로 넘어온 프라미스를 배열에 모아두고, call()이 응답을 받은
+// 뒤 전부 await하도록 고쳐 결정적(deterministic)으로 만든다.
+let _pendingWaitUntil;
+const CTX = { waitUntil: (p) => { _pendingWaitUntil.push(p); return p; } };
 
 before(async () => {
   installMockFetch();
@@ -113,6 +123,10 @@ function req(pathname, body) {
 async function call(env, body) {
   const res = await worker.fetch(req('/web-search', body), env, CTX);
   const json = await res.json().catch(() => null);
+  // 백그라운드로 넘어간 waitUntil 작업(예산 카운터 증분·캐시 저장)이
+  // 전부 끝난 뒤에야 테스트 검증으로 넘어간다 — 실제 Workers는 응답을
+  // 안 기다리지만(성능), 테스트는 결정적 검증을 위해 기다려야 한다.
+  await Promise.allSettled(_pendingWaitUntil);
   return { status: res.status, json };
 }
 
