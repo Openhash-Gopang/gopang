@@ -1,0 +1,434 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<title>혼디 프로필 작성</title>
+<meta name="description" content="앱 사용법 튜토리얼 + 프로필 작성 — profile-assistant, GWP 방식 새 탭 (2026-07-11 신설, 구 CALL_PROFILE_ASSISTANT 같은 창 전환 방식에서 이관).">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --gov:#1A9E6A; --pri:#16A34A; --pri-bg:#F0FDF8; --sur:#FFFFFF; --bg:#F4F6FB;
+  --bdr:#E2E8F0; --txt:#1A202C; --sub:#4A5568; --hint:#94A3B8;
+  --font:'Pretendard',-apple-system,'Apple SD Gothic Neo',sans-serif;
+  --r:12px; --sh:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.05);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  position:fixed;inset:0;margin:0;padding:0;font-family:var(--font);font-size:15px;color:var(--txt);
+  background:var(--bg);display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased;
+}
+#top-bar{
+  flex-shrink:0;display:flex;align-items:center;gap:10px;
+  padding:12px 14px;padding-top:calc(12px + env(safe-area-inset-top));
+  background:var(--gov);color:#fff;box-shadow:var(--sh);z-index:5;
+}
+#tb-icon{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+#tb-title{font-weight:800;font-size:15px;line-height:1.2}
+#tb-sub{font-size:11px;opacity:.8;font-weight:400}
+#tb-back{margin-left:auto;flex-shrink:0;background:rgba(255,255,255,.14);border:none;color:#fff;
+  border-radius:8px;padding:7px 12px;font-size:12.5px;cursor:pointer;font-family:var(--font)}
+#tb-back:active{background:rgba(255,255,255,.24)}
+
+#chat-thread{flex:1;overflow-y:auto;padding:16px 14px 90px;display:flex;flex-direction:column;gap:10px}
+.bubble{max-width:86%;padding:11px 14px;border-radius:var(--r);line-height:1.55;font-size:14.5px;white-space:normal}
+.bubble-ai{align-self:flex-start;background:var(--sur);border:1px solid var(--bdr);box-shadow:var(--sh)}
+.bubble-user{align-self:flex-end;background:var(--pri);color:#fff}
+.bubble-user i{opacity:.75;font-style:normal;font-size:12px;display:block;margin-bottom:2px}
+.bubble-typing{align-self:flex-start;display:flex;align-items:center;gap:8px;padding:9px 14px;
+  background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);font-size:13px;color:var(--sub)}
+.spinner{width:14px;height:14px;border:2px solid rgba(22,163,74,.2);border-top-color:var(--pri);
+  border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#input-bar{
+  position:fixed;left:0;right:0;bottom:0;display:flex;align-items:flex-end;gap:6px;padding:10px 12px;
+  padding-bottom:calc(10px + env(safe-area-inset-bottom));
+  background:var(--sur);border-top:1px solid var(--bdr);
+}
+#chat-input{
+  flex:1;resize:none;border:1px solid var(--bdr);border-radius:20px;padding:10px 16px;
+  font-family:var(--font);font-size:14.5px;max-height:120px;line-height:1.4;
+}
+#chat-input:focus{outline:none;border-color:var(--pri)}
+#send-btn{
+  flex-shrink:0;width:42px;height:42px;border-radius:50%;border:none;background:var(--pri);color:#fff;
+  font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+#send-btn:disabled{opacity:.4;cursor:default}
+#err-banner{display:none;padding:8px 14px;background:#FEE2E2;color:#991B1B;font-size:12.5px;text-align:center}
+</style>
+</head>
+<body>
+
+<div id="top-bar">
+  <div id="tb-icon">🧭</div>
+  <div>
+    <div id="tb-title">혼디 안내</div>
+    <div id="tb-sub">앱 사용법 · 프로필 작성</div>
+  </div>
+  <button id="tb-back">닫기</button>
+</div>
+<div id="err-banner"></div>
+<div id="chat-thread"></div>
+<div id="input-bar">
+  <textarea id="chat-input" rows="1" placeholder="메시지를 입력하세요…"></textarea>
+  <button id="send-btn" disabled>↑</button>
+</div>
+
+<script type="module" src="/gopang-wallet.js"></script>
+<script type="module">
+// ══════════════════════════════════════════════════════════════
+// profile-assistant 전용 탭 (2026-07-11 신설)
+//
+// ★ 설계 배경: 기존엔 AC가 [CALL_PROFILE_ASSISTANT]로 "같은 창"의
+// system을 profile-assistant로 바꿔치기했다(call-ai.js
+// _switchToProfileAssistantSP()). 이 방식은 (a) 튜토리얼이 AC 자신의
+// 대본(§0-1-T)에도 섞여 있어 AC가 실제 사용자 지시를 대본으로 착각하고
+// 가로채는 사고가 실사로 확인됐고, (b) "탭을 닫으면 중단 지점이 남는다"
+// 같은 GWP 방식 서비스(K-Law 등)와 다른 이질적인 UX였다. 이 페이지는
+// K-Law·K-Market과 완전히 동일한 "새 탭 + GWP_DONE 보고" 패턴으로
+// 재설계한 것이다 — AC는 이제 다른 GWP 서비스와 똑같이
+// [GWP: profile-assistant] 태그만 내면 된다(gwp-registry.js 등록,
+// _gwpLaunch() 재사용 — 이 페이지 쪽에 새 백엔드 불필요).
+//
+// ★ 재개(resume) 원리: 이 탭과 원래 창(hondi.net)은 반드시 같은
+// 오리진이므로 localStorage를 그대로 공유한다. 튜토리얼/프로필 진행
+// 상태(hondi_tutorial_step·hondi_tutorial_done·hondi_profile_step·
+// hondi_profile_partial 등)는 매 단계 완료 즉시(AI 응답 태그를 감지하는
+// 순간) localStorage에 기록한다 — "정상 종료 이벤트"에 의존하지 않으므로
+// 탭이 강제로 닫히거나 브라우저가 죽어도 마지막으로 완료된 단계까지는
+// 항상 보존된다. 다음에 이 탭이 다시 열리면 그 상태를 읽어 정확히
+// 중단 지점부터 이어간다.
+// ══════════════════════════════════════════════════════════════
+import { _loadSpByKey } from '/src/gopang/ai/manifest-loader.js';
+import { handleProfileSubmit } from '/src/gopang/ui/welcome.js';
+
+const RELAY_ENDPOINT = 'https://hondi-proxy.tensor-city.workers.dev';
+const _qs    = new URLSearchParams(location.search);
+const RETURN = _qs.get('return') || 'https://hondi.net';
+
+document.getElementById('tb-back').onclick = () => { window.close(); location.href = RETURN; };
+
+// ── 채팅 UI 헬퍼 ────────────────────────────────────────────
+function escHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function appendBubble(role, html) {
+  const thread = document.getElementById('chat-thread');
+  const div = document.createElement('div');
+  div.className = 'bubble ' + (role === 'ai' ? 'bubble-ai' : 'bubble-user');
+  div.innerHTML = html;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+  return div;
+}
+function appendTyping() {
+  const thread = document.getElementById('chat-thread');
+  const div = document.createElement('div');
+  div.className = 'bubble-typing';
+  div.innerHTML = `<div class="spinner"></div><span>답변을 준비하고 있습니다…</span>`;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+  return div;
+}
+
+// ── 상태 판독(진입 시 1회) ──────────────────────────────────
+function _loadUser() { try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { return null; } }
+const _tutDone = () => { try { return localStorage.getItem('hondi_tutorial_done') === '1'; } catch { return false; } };
+const _tutStep = () => { try { return parseInt(localStorage.getItem('hondi_tutorial_step') || '0', 10); } catch { return 0; } };
+
+// _buildProfileContext — call-ai.js의 동명 함수를 그대로 이식(순수 함수,
+// localStorage만 읽으므로 call-ai.js 전체를 이 독립 탭에 끌어들이지 않고
+// 여기 복제한다 — manifest-loader.js를 별도 파일로 뺀 것과 같은 이유).
+function _buildProfileContext() {
+  let reg = {};
+  try { reg = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}'); } catch {}
+  let partial = {};
+  try { partial = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}'); } catch {}
+  const ctx = Object.assign({}, {
+    guid: reg.ipv6 || reg.guid || '', handle: reg.handle || '',
+    nickname: reg.nickname || '', region: reg.region || '', e164: reg.e164 || '',
+  }, partial);
+  const step = parseInt(localStorage.getItem('hondi_profile_step') || '0', 10);
+  const firstGreeted  = localStorage.getItem('hondi_first_greeted')  === '1';
+  const namePending   = localStorage.getItem('hondi_name_pending')   === '1';
+  const assistantName = localStorage.getItem('hondi_assistant_name') || '';
+  let doneFlag = false, skippedFlag = false;
+  try {
+    doneFlag    = localStorage.getItem('hondi_profile_done')    === '1';
+    skippedFlag = localStorage.getItem('hondi_profile_skipped') === '1';
+  } catch {}
+  const lines = ['[CONTEXT: PROFILE_ONBOARDING]'];
+  lines.push(`step: ${step}`, `done: ${doneFlag}`, `skipped: ${skippedFlag}`,
+             `first_greeted: ${firstGreeted}`, `name_pending: ${namePending}`);
+  if (assistantName)      lines.push(`assistant_name: ${assistantName}`);
+  if (ctx.guid)           lines.push(`guid: ${ctx.guid}`);
+  if (ctx.handle)         lines.push(`handle: ${ctx.handle}`);
+  if (ctx.nickname)       lines.push(`nickname: ${ctx.nickname}`);
+  if (ctx.region)         lines.push(`region: ${ctx.region}`);
+  if (ctx.e164)           lines.push(`e164: ${ctx.e164}`);
+  if (ctx.name)           lines.push(`name: ${ctx.name}`);
+  if (ctx.address)        lines.push(`address: ${ctx.address}`);
+  if (ctx.phone)          lines.push(`phone: ${ctx.phone}`);
+  if (ctx.entity_type)    lines.push(`entity_type: ${ctx.entity_type}`);
+  if (ctx.entity_subtype) lines.push(`entity_subtype: ${ctx.entity_subtype}`);
+  if (ctx.schema_id)      lines.push(`schema_id: ${ctx.schema_id}`);
+  if (ctx.products)       lines.push(`products: ${JSON.stringify(ctx.products)}`);
+  if (ctx.description)    lines.push(`description: ${ctx.description}`);
+  lines.push('[/CONTEXT]');
+  return lines.join('\n');
+}
+
+// ── SP 로드 ──────────────────────────────────────────────
+let systemPrompt = null, messages = [];
+async function ensureSystemPrompt() {
+  if (systemPrompt) return systemPrompt;
+  systemPrompt = await _loadSpByKey('profile-assistant', 'Profile-Assistant')
+    .catch(e => { throw new Error('profile-assistant SP 로드 실패: ' + e.message); });
+  messages = [{ role: 'system', content: systemPrompt }];
+  return systemPrompt;
+}
+
+// ── AI 호출 (expert-chat.html과 동일한 후보 폴백 패턴) ──────
+function _loadCfg() { try { return JSON.parse(localStorage.getItem('gopang_cfg') || '{}'); } catch { return {}; } }
+function _buildCandidates() {
+  const cfg = _loadCfg();
+  const candidates = [];
+  if (Array.isArray(cfg.providers)) {
+    for (const p of cfg.providers) {
+      if (!p?.apiKey || !p?.model || !p?.baseUrl) continue;
+      candidates.push({ provider: p.provider, baseUrl: p.baseUrl.replace(/\/+$/,''), model: p.model, apiKey: p.apiKey });
+    }
+  }
+  if (!candidates.length && cfg.apiKey && cfg.endpoint && !cfg.endpoint.includes('workers.dev')) {
+    candidates.push({ provider: 'legacy', baseUrl: cfg.endpoint.replace(/\/+$/,''), model: cfg.model || 'gpt-4o-mini', apiKey: cfg.apiKey });
+  }
+  candidates.push({ provider: 'deepseek-default', baseUrl: RELAY_ENDPOINT, model: 'hondi-flash', apiKey: null });
+  return candidates;
+}
+async function _pumpSSE(response, onJson) {
+  if (!response.ok) {
+    let msg = `HTTP ${response.status}`;
+    try { const b = await response.json(); msg = b.message || b.error?.message || b.error || msg; } catch (e) {}
+    throw new Error(msg);
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buf = '';
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t.startsWith('data:')) continue;
+      const payload = t.slice(5).trim();
+      if (payload === '[DONE]') continue;
+      let json;
+      try { json = JSON.parse(payload); } catch (e) { continue; }
+      onJson(json);
+    }
+  }
+}
+async function callPaAI(msgs, onChunk) {
+  const candidates = _buildCandidates();
+  const user = _loadUser();
+  let lastErr = null;
+  for (const c of candidates) {
+    try {
+      const reqBody = { model: c.model, messages: msgs, max_tokens: 1200, temperature: 0.5, stream: true };
+      const resp = c.provider === 'legacy'
+        ? await fetch(`${c.baseUrl}/chat/completions`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.apiKey}` },
+            body: JSON.stringify(reqBody),
+          })
+        : c.provider === 'deepseek-default'
+        ? await fetch(`${c.baseUrl}/deepseek`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...reqBody, guid: user?.ipv6 || null }),
+          })
+        : await fetch(`${RELAY_ENDPOINT}/llm/relay`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: c.provider, baseUrl: c.baseUrl, apiKey: c.apiKey, ...reqBody }),
+          });
+      let fullText = '';
+      await _pumpSSE(resp, (json) => {
+        const delta = json.choices?.[0]?.delta?.content || '';
+        if (delta) { fullText += delta; onChunk && onChunk(delta, fullText); }
+      });
+      return fullText;
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[PA] ${c.provider} 실패 — 다음 후보로 전환:`, e.message);
+      continue;
+    }
+  }
+  throw lastErr || new Error('모든 호출 후보 실패');
+}
+
+// ── 태그 처리 (call-ai.js _handleProfileTags에서 이식 — 탭 종료 방식만 다름) ──
+function _stripInternalTags(s) {
+  return String(s ?? '')
+    .replace(/\[TUTORIAL_STEP:[^\]]*\]/g, '')
+    .replace(/\[TUTORIAL_ADVANCE:\d+\]/g, '')
+    .replace(/\[PANEL_ACTION:close\]/g, '')
+    .replace(/PROFILE_SUBMIT\s*\{[\s\S]*?\n\}/, '')
+    .replace(/\[PROFILE_SKIP\]/g, '')
+    .replace(/\[PARTIAL_SAVE\][\s\S]*?\}/g, '')
+    .replace(/\[\d+\/\d+단계\]/g, '')
+    .replace(/\[PROFILE_INTERRUPT_HANDOFF\]/g, '')
+    .trim();
+}
+
+let _closing = false;
+function _closeTabSoon(delayMs = 900) {
+  if (_closing) return;
+  _closing = true;
+  setTimeout(() => { window.close(); location.href = RETURN; }, delayMs);
+}
+
+async function _handleReplyTags(fullReply) {
+  // 진행 중 필드 저장 [PARTIAL_SAVE]
+  if (!localStorage.getItem('hondi_profile_done')) {
+    const partialMatch = fullReply.match(/\[PARTIAL_SAVE\]\s*(\{[\s\S]*?\})/);
+    if (partialMatch) {
+      try {
+        const incoming = JSON.parse(partialMatch[1]);
+        const existing = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}');
+        localStorage.setItem('hondi_profile_partial', JSON.stringify(Object.assign(existing, incoming)));
+      } catch {}
+    }
+  }
+  // 단계 업데이트 [N/6단계]
+  const stepMatch = fullReply.match(/\[(\d+)\/\d+단계\]/);
+  if (stepMatch && !localStorage.getItem('hondi_profile_done')) {
+    try { localStorage.setItem('hondi_profile_step', stepMatch[1]); } catch {}
+  }
+  // TUTORIAL_ADVANCE — 매 단계 즉시 저장(탭 강제종료에도 보존)
+  const tutAdv = fullReply.match(/\[TUTORIAL_ADVANCE:(\d+)\]/);
+  if (tutAdv) {
+    const nextStep = parseInt(tutAdv[1], 10);
+    try {
+      if (nextStep >= 7) {
+        localStorage.setItem('hondi_tutorial_done', '1');
+        localStorage.removeItem('hondi_tutorial_step');
+      } else {
+        localStorage.setItem('hondi_tutorial_step', String(nextStep));
+      }
+    } catch {}
+  }
+  // PROFILE_SUBMIT — 실제 서버 등록(welcome.js 그대로 재사용)
+  if (fullReply.includes('PROFILE_SUBMIT')) {
+    try { await handleProfileSubmit(fullReply); }
+    catch (e) { console.warn('[PA] handleProfileSubmit 실패:', e.message); }
+    try {
+      localStorage.setItem('hondi_profile_done', '1');
+      localStorage.removeItem('hondi_profile_step');
+      localStorage.removeItem('hondi_profile_skipped');
+      localStorage.removeItem('hondi_profile_partial');
+    } catch {}
+    _closeTabSoon();
+    return;
+  }
+  // PROFILE_SKIP — 재개를 위해 단계·작성분 보존, 탭만 닫는다
+  if (fullReply.includes('[PROFILE_SKIP]')) {
+    try { localStorage.setItem('hondi_profile_skipped', '1'); } catch {}
+    _closeTabSoon();
+    return;
+  }
+  // PROFILE_INTERRUPT_HANDOFF — 프로필과 무관한 요청, AC에게 돌려보낸다
+  // (같은 창 전환 시절엔 AC SP로 바꿔치기했지만, 새 탭 구조에서는 그냥
+  // 이 탭을 닫아 원래 창의 AC가 이어받게 하면 된다 — AC는 이미 그 창에서
+  // 대기 중이다.)
+  if (fullReply.includes('[PROFILE_INTERRUPT_HANDOFF]')) {
+    _closeTabSoon(300);
+    return;
+  }
+  // PANEL_ACTION:close — 튜토리얼 종료 후 "닫을까요?"에 사용자가 동의
+  if (fullReply.includes('[PANEL_ACTION:close]')) {
+    _closeTabSoon();
+    return;
+  }
+}
+
+async function sendTurn(text) {
+  const typing = appendTyping();
+  const aiBubble = appendBubble('ai', '');
+  aiBubble.style.display = 'none';
+  try {
+    await ensureSystemPrompt();
+    messages.push({ role: 'user', content: text });
+    let shown = false;
+    const full = await callPaAI(messages, (delta, fullText) => {
+      if (!shown) { typing.remove(); aiBubble.style.display = ''; shown = true; }
+      aiBubble.innerHTML = escHtml(_stripInternalTags(fullText)).replace(/\n/g, '<br>');
+      document.getElementById('chat-thread').scrollTop = 1e9;
+    });
+    messages.push({ role: 'assistant', content: full });
+    aiBubble.innerHTML = escHtml(_stripInternalTags(full)).replace(/\n/g, '<br>');
+    await _handleReplyTags(full);
+  } catch (e) {
+    typing.remove();
+    aiBubble.remove();
+    appendBubble('ai', `⚠️ 응답 중 오류가 발생했습니다: ${escHtml(e.message)}. 잠시 후 다시 시도해 주세요.`);
+  }
+}
+
+// ── 진입 트리거 — 튜토리얼 미완료면 PHASE -1부터, 완료면 PHASE 0부터 ──
+async function startGreeting() {
+  const ctxBlock = _buildProfileContext();
+  if (!_tutDone()) {
+    document.getElementById('tb-sub').textContent = '앱 사용법 안내 중…';
+    await sendTurn(
+      `[INTERNAL: AGENT-COMMON→profile-assistant 인계(튜토리얼부터) — ` +
+      `사용자에게 보이지 않는 내부 신호입니다. AC가 이미 첫 인사를 마쳤고 ` +
+      `사용자가 방금 준비됐다고 답했습니다. 재인사하지 말고, PHASE -1 STEP 0부터 ` +
+      `곧바로 시작하세요.]\n\n${ctxBlock}`
+    );
+  } else {
+    document.getElementById('tb-sub').textContent = '프로필 작성 중…';
+    await sendTurn(
+      `[INTERNAL: AGENT-COMMON→profile-assistant 인계 — 사용자에게 보이지 않는 ` +
+      `내부 신호입니다. 앱 사용법 튜토리얼은 이미 완료된 상태입니다. 재인사하지 ` +
+      `말고, [CONTEXT]를 읽어 PHASE 0 분기부터 자연스럽게 이어서 시작하세요.]\n\n${ctxBlock}`
+    );
+  }
+}
+
+// ── 입력 바 ──────────────────────────────────────────────
+const input = document.getElementById('chat-input');
+const sendBtn = document.getElementById('send-btn');
+function updateSendBtn() { sendBtn.disabled = !input.value.trim(); }
+input.addEventListener('input', () => {
+  input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  updateSendBtn();
+});
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
+});
+sendBtn.addEventListener('click', doSend);
+function doSend() {
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = ''; input.style.height = 'auto'; updateSendBtn();
+  appendBubble('user', escHtml(text).replace(/\n/g, '<br>'));
+  sendTurn(text);
+}
+
+// ── 탭 종료 시 최소 기록(정상 종료 못 해도 안전망) ──────────
+// 위 _handleReplyTags에서 이미 매 단계 즉시 저장하므로 이건 사실상
+// 이중 안전망이다 — 스트리밍 도중 탭이 닫히는 극단적 타이밍에도
+// 마지막으로 완료된 단계는 이미 저장돼 있다.
+window.addEventListener('pagehide', () => {
+  console.info('[PA] 탭 종료 — 마지막 저장 단계: 튜토리얼=' +
+    (localStorage.getItem('hondi_tutorial_step') || (localStorage.getItem('hondi_tutorial_done')==='1'?'완료':'0')) +
+    ', 프로필=' + (localStorage.getItem('hondi_profile_step') || '0'));
+});
+
+startGreeting();
+</script>
+</body>
+</html>

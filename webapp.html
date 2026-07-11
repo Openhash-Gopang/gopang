@@ -2878,12 +2878,30 @@ window.closePDV = closePDV;
           const nickname = user.nickname || '';
           const aiBubble = _appendPanelMsg('ai', '…');
           aiBubble.classList.add('streaming');
-          // 튜토리얼 단계 주입 — call-ai.js의 _buildFirstContactContext와 연동
-          const _tutStep = (() => { try { return localStorage.getItem('hondi_tutorial_step') || '0'; } catch { return '0'; } })();
+          // ★ 2026-07-11 수정: 튜토리얼 대본이 AC에서 profile-assistant로
+          // 이관됐다(§0-1-T 삭제, PHASE -1 신설) — 그래서 이 트리거가
+          // AC에게 "튜토리얼을 진행해 주세요"라고 직접 지시하면 안 된다
+          // (AC는 더 이상 그 대본을 갖고 있지 않다). 첫 방문(firstGreeted
+          // 미완료)이면 call-ai.js의 _buildFirstContactContext()가 붙이는
+          // [FIRST_CONTACT] 블록이 인사를 전담하고, 그 인사의 마지막
+          // 질문("준비되셨나요?")에 사용자가 답하면 AC 자신의 지침(§0-1)에
+          // 따라 [CALL_PROFILE_ASSISTANT]로 넘어가 PA가 튜토리얼을
+          // 시작한다 — 그래서 이 경우엔 트리거를 중립적으로만 보낸다.
+          // 반면 이미 인사는 마쳤는데 튜토리얼을 중간에 그만둔 재방문자
+          // (firstGreeted=true, tutDone=false)에게는 AC가 재인사 후
+          // "이어서 하시겠어요?"라고 자연스럽게 물어보고 동의 시 같은
+          // 방식으로 넘기도록 별도로 알려준다.
           const _tutDone = (() => { try { return localStorage.getItem('hondi_tutorial_done') === '1'; } catch { return false; } })();
+          const _firstGreetedFlag = (() => { try { return localStorage.getItem('hondi_first_greeted') === '1'; } catch { return false; } })();
           const _greetMsg = _tutDone
             ? '[INTERNAL: 패널이 열렸습니다. 먼저 인사해 주세요.]'
-            : `[INTERNAL: 패널이 열렸습니다. 튜토리얼 단계=${_tutStep}. 먼저 인사하고 튜토리얼을 진행해 주세요.]`;
+            : (_firstGreetedFlag
+                ? '[INTERNAL: 패널이 열렸습니다. 이전에 시작한 앱 사용법 ' +
+                  '튜토리얼이 아직 끝나지 않았습니다. 자연스럽게 인사한 뒤, ' +
+                  '이어서 진행하시겠는지 여쭤보고, 동의하면 ' +
+                  '[CALL_PROFILE_ASSISTANT]로 넘기세요(§0-1 참조). 거절하면 ' +
+                  '평소처럼 대화를 이어가세요.]'
+                : '[INTERNAL: 패널이 열렸습니다. 먼저 인사해 주세요.]');
           try { await _callPanelAI(_greetMsg, aiBubble); }
           catch(e) {
             const nick = nickname ? nickname + '님, ' : '';

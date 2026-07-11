@@ -320,6 +320,26 @@ const GWP_REGISTRY = [
     ],
   },
 
+  // ── profile-assistant — 앱 사용법 튜토리얼 + 프로필 작성 (2026-07-11 신설) ──
+  // AC(§0-1)가 첫 인사 뒤 사용자가 준비됐다고 하면, 또는(§0-E) 자연스러운
+  // 시점에 프로필 작성을 제안해 사용자가 동의하면 [GWP: profile-assistant]를
+  // 낸다 — 다른 GWP 서비스와 동일한 새 탭 방식(구 CALL_PROFILE_ASSISTANT
+  // 같은 창 전환 방식에서 이관, 튜토리얼이 AC 자신의 대본과 섞여 실제
+  // 사용자 지시를 가로채던 문제 해결). threshold를 의도적으로 높게 잡아
+  // 애매한 발화로 오발동하지 않게 하고, AC의 명시적 판단(§0-1/§0-E)에
+  // 주로 의존한다.
+  {
+    id: 'profile-assistant', name: '혼디 안내(튜토리얼·프로필)', category: 'ONB',
+    type: 'tab',
+    url: '/pages/profile-assistant.html',
+    status: 'active', priority: 5, threshold: 0.85,
+    description: '앱 사용법 튜토리얼(PHASE -1) 및 프로필 작성/수정(PHASE 0/1). 중단해도 다음 호출 시 이어서 진행.',
+    triggers: [
+      '프로필 작성', '프로필 수정', '사용법 알려줘', '앱 사용법',
+      '튜토리얼', '튜토리얼 다시', '이용법 안내',
+    ],
+  },
+
   // ── 환경 (ENV) — inline (신고) ────────────────────────────
   {
     id: 'fiil-kcleaner', name: 'K-Cleaner', category: 'ENV',

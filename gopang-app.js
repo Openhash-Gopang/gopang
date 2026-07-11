@@ -80,6 +80,23 @@ document.body.classList.add('gopang-authed');
 // 전혀 없다. 플래그만 정리하고 그대로 대화창을 보여준다.
 if (localStorage.getItem('hondi_new_registration') === '1') {
   localStorage.removeItem('hondi_new_registration');
+  // ★ 2026-07-11 수정: 이 시점은 while(!_isRegistered()) 루프를 이미
+  // 통과한 뒤라 gopang_user_v4.nickname이 100% 보장된다(_isRegistered()가
+  // handle을 확인하고, handle은 nickname과 같은 시점에 같은 객체로
+  // localStorage에 쓰인다). 반면 webapp.html의 기존 "페이지 로드 후
+  // 고정 300ms" 타이머는 가입 자체가 언제 끝나는지 전혀 모른 채 독립적으로
+  // 돌아서, 사용자가 전화번호·OTP 입력에 4초 넘게(실제로는 흔함) 걸리면
+  // 닉네임이 준비되기 전에 폴링을 포기하고 빈 이름으로 첫 인사를
+  // 내보내던 경합조건이 실사로 확인됐다. 여기서 닉네임이 보장된 시점에
+  // 명시적으로 패널을 열면 그 경합 자체가 없어진다 — 기존 타이머가
+  // 나중에 한 번 더 openAIPanel()을 불러도 내부 가드(_panelOpen)로
+  // 안전하게 무시되므로 중복 트리거 걱정도 없다.
+  if (typeof window.openAIPanel === 'function') {
+    window.openAIPanel();
+  } else {
+    // 극히 드문 로드 순서 문제 대비 — 다음 이벤트 루프에서 한 번 더 시도.
+    setTimeout(() => { if (typeof window.openAIPanel === 'function') window.openAIPanel(); }, 0);
+  }
 }
 
 // ★ 버그 수정 — 이미 등록된 사용자(흔한 "재방문" 케이스)는 위 while 루프의

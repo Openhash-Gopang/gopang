@@ -975,10 +975,23 @@ async function _switchToProfileAssistantSP() {
  */
 async function _triggerProfileAssistantHandoff(sendFn = callAI) {
   try {
-    const handoff = `[INTERNAL: AGENT-COMMON→profile-assistant 인계 — 사용자에게 ` +
-      `보이지 않는 내부 신호입니다. AC가 이미 프로필 작성 취지를 설명했고 ` +
-      `사용자가 방금 동의했습니다. 재인사하지 말고, [CONTEXT]를 읽어 PHASE 0 ` +
-      `분기부터 자연스럽게 이어서 시작하세요.]`;
+    // ★ 2026-07-11 수정: 튜토리얼 대본이 AC에서 profile-assistant로
+    // 이관됐다(§0-1-T 삭제, PHASE -1 신설). AC는 튜토리얼 완료 여부를
+    // 모르니(그 상태는 hondi_tutorial_done에 있고 §0-1-T가 없어져
+    // AC가 더 이상 참조하지 않음), 여기 클라이언트 코드가 대신 확인해
+    // 인계 신호에 명시적으로 적어준다.
+    let tutDone = false;
+    try { tutDone = localStorage.getItem('hondi_tutorial_done') === '1'; } catch {}
+    const handoff = tutDone
+      ? `[INTERNAL: AGENT-COMMON→profile-assistant 인계 — 사용자에게 ` +
+        `보이지 않는 내부 신호입니다. AC가 이미 프로필 작성 취지를 설명했고 ` +
+        `사용자가 방금 동의했습니다. 앱 사용법 튜토리얼은 이미 완료된 ` +
+        `상태입니다 — 재인사하지 말고, [CONTEXT]를 읽어 PHASE 0 분기부터 ` +
+        `자연스럽게 이어서 시작하세요.]`
+      : `[INTERNAL: AGENT-COMMON→profile-assistant 인계(튜토리얼부터) — ` +
+        `사용자에게 보이지 않는 내부 신호입니다. AC가 이미 첫 인사를 ` +
+        `마쳤고 사용자가 방금 준비됐다고 답했습니다. 재인사하지 말고, ` +
+        `PHASE -1(앱 사용법 튜토리얼) STEP 0부터 곧바로 시작하세요.]`;
     await sendFn(handoff);
   } catch (e) {
     console.warn('[Profile] profile-assistant 핸드오프 트리거 실패(무시 — 다음 사용자 메시지에서 정상 처리됨):', e.message);
@@ -1397,13 +1410,17 @@ export async function _processShareDocTags(fullReply, deps = {}) {
 }
 
 /**
- * _buildFirstContactContext v2.0
+ * _buildFirstContactContext v2.1 (2026-07-11 — 튜토리얼 PA 이관 반영)
  *
- * 첫 인사(FIRST_CONTACT): 이름 묻기 없이 고정 환영 문구 + 앱 기본 사용법 안내.
- *   → [FIRST_GREETED] 태그로 완료 기록.
+ * 첫 인사(FIRST_CONTACT): 이름 포함 고정 환영 문구 + 앱 기본 사용법 안내.
+ *   → [FIRST_GREETED] 태그로 완료 기록(단, 닉네임이 아직 없으면 이번 턴엔
+ *     [FIRST_GREETED]를 내지 말라고 지시해 슬롯을 아낀다 — 아래 참조).
  *
- * 튜토리얼 단계(TUTORIAL_STEP): hondi_tutorial_step 값에 따라 AGENT-COMMON에
- *   현재 단계를 알려 해당 안내를 진행하도록 한다.
+ * 튜토리얼 단계(TUTORIAL_STEP): 대본은 더 이상 AGENT-COMMON에 없다
+ *   (profile-assistant PHASE -1로 이관). 그래서 CFG.system이 실제로
+ *   profile-assistant일 때만 hondi_tutorial_step 값을 주입한다 — AC가
+ *   아직 활성 상태인 턴에 주입하면 AC가 갖고 있지 않은 대본을 진행하라는
+ *   혼란스러운 지시가 된다.
  *   → AI가 [TUTORIAL_ADVANCE:N] 태그를 출력하면 call-ai.js가 step을 N으로 저장.
  *   → hondi_tutorial_done='1' 이면 더 이상 주입하지 않는다.
  *
@@ -1428,6 +1445,26 @@ export function _buildFirstContactContext() {
       );
       nickname = reg.nickname || '';
     } catch {}
+
+    // ★ 2026-07-11 수정: 기존엔 닉네임이 준비 안 된 상태(가입 폼 작성·OTP
+    // 대기 등으로 패널의 "페이지 로드 후 최대 4.3초" 대기가 실제 가입
+    // 완료보다 먼저 끝나버리는 경우가 실사로 흔함 — "닉네임 끝내 미준비"
+    // 로그로 확인됨)에서도 그대로 진행해 "저는 **님과..." 같은 빈 이름
+    // 인사가 나갔고, [FIRST_GREETED]가 그 응답으로 영구 소비되어 이후
+    // 다시는 제대로 된 이름으로 인사할 기회가 없었다. 닉네임이 없으면
+    // 모델에게 [FIRST_GREETED]를 이번엔 내지 말라고 지시해, 다음
+    // 기회(닉네임이 채워진 뒤)에 정상적으로 재시도되게 한다 — 사용자에게
+    // 보여줄 인사말 자체는 그대로 내보내되(무한 침묵 방지), "평생 1회"
+    // 슬롯만 아껴둔다.
+    if (!nickname) {
+      return (
+        `[FIRST_CONTACT_PENDING_NAME: 닉네임이 아직 준비되지 않았습니다.` +
+        ` 이번 턴엔 일반적인 환영 인사와 간단한 사용법 안내만 하고,` +
+        ` 절대 [FIRST_GREETED]를 출력하지 마십시오 — 이름이 준비되는 대로` +
+        ` 다음 대화에서 정식으로 다시 인사할 것입니다.]\n\n`
+      );
+    }
+
     // 사용자 지정 환영 문구 — 한 글자도 바꾸지 말 것
     return (
       `[FIRST_CONTACT: 아래 문구를 토씨 하나 바꾸지 말고 그대로 출력하십시오.` +
@@ -1446,10 +1483,15 @@ export function _buildFirstContactContext() {
     );
   }
 
-  // ── 튜토리얼 단계 주입 (완료 전까지) ────────────────────────
-  if (!tutDone) {
+  // ── 튜토리얼 단계 주입 (완료 전까지, PA가 활성 상태일 때만) ──────
+  // ★ 2026-07-11 수정: 튜토리얼은 이제 profile-assistant의 PHASE -1이다
+  // (구 AC §0-1-T 이관). AC가 아직 인계하기 전 턴(예: 첫인사 뒤 사용자의
+  // "준비됐어요" 응답을 AC 자신이 받는 턴)에 이 블록이 끼어들면 AC가
+  // 갖고 있지도 않은 "§0-1-T"를 진행하라는 혼란스러운 지시를 받게 되므로,
+  // CFG.system이 실제로 profile-assistant로 전환된 뒤에만 주입한다.
+  if (!tutDone && CFG.system?.includes('profile-assistant')) {
     return (
-      `[TUTORIAL_STEP:${tutStep} — 아래 단계별 안내를 진행하십시오(§0-1 참조).` +
+      `[TUTORIAL_STEP:${tutStep} — 아래 단계별 안내를 진행하십시오(PHASE -1 참조).` +
       ` 각 단계 완료 시 응답 끝에 [TUTORIAL_ADVANCE:${tutStep + 1}]를 출력하십시오.]\n\n`
     );
   }
