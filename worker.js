@@ -1049,14 +1049,29 @@ async function _l1CreateDraftRequest(env, record) {
   return res.json();
 }
 
-async function _l1FindOpenDraftRequest(env, institution, task) {
+async function _l1FindOpenDraftRequest(env, institution, task, targetSpId) {
   // 같은 (institution, task) 조합의 queued/assigned 요청이 이미 있으면
   // 새로 만들지 않고 그 레코드를 재사용한다(중복 신호 누적 방지 — 같은
   // 기관 공백을 여러 이용자가 같은 날 건드리면 큐가 도배될 수 있다).
+  //
+  // ★ 2026-07-11 Phase 4 버그 수정 ★ request_type=update(정기 갱신 등)
+  // 신호는 institution이 비어 있고 task가 전부 같은 정형 문구("정기
+  // 갱신 — tier 스케줄 도래...")라서, 원래 필터로는 서로 다른 SP의
+  // 갱신 요청이 전부 같은 (institution='', task='정기 갱신...')으로
+  // 매칭돼 첫 번째 요청 하나로 뭉개지는 버그가 있었다(로컬 통합테스트로
+  // 재현). target_sp_id가 있으면 그걸로 식별하고, 없으면(신규 기관
+  // 발굴 등) 기존 institution+task 방식을 그대로 쓴다.
   const token = await _l1AdminToken(env);
-  const filter = encodeURIComponent(
-    `institution='${(institution || '').replace(/'/g, "\\'")}' && task='${(task || '').replace(/'/g, "\\'")}' && (status='queued' || status='assigned')`
-  );
+  let filter;
+  if (targetSpId) {
+    filter = encodeURIComponent(
+      `target_sp_id='${targetSpId.replace(/'/g, "\\'")}' && (status='queued' || status='assigned')`
+    );
+  } else {
+    filter = encodeURIComponent(
+      `institution='${(institution || '').replace(/'/g, "\\'")}' && task='${(task || '').replace(/'/g, "\\'")}' && (status='queued' || status='assigned')`
+    );
+  }
   const res = await fetch(`${L1_DEFAULT}/api/collections/sp_draft_requests/records?filter=${filter}&perPage=1`, {
     headers: { 'Authorization': `Bearer ${token}` },
   });
@@ -1497,9 +1512,9 @@ async function handleSPAuthorQueue(request, env, corsHeaders) {
     return new Response(JSON.stringify({ error: 'request_type, signal_source required' }), { status: 400, headers: corsHeaders });
   }
 
-  // 중복 신호 병합 — 같은 (institution, task)로 이미 queued/assigned인
-  // 요청이 있으면 새로 만들지 않고 그 레코드를 재사용한다.
-  const dup = await _l1FindOpenDraftRequest(env, payload.institution, payload.task).catch(() => null);
+  // 중복 신호 병합 — request_type=update면 target_sp_id로, 그 외에는
+  // (institution, task)로 식별한다(위 _l1FindOpenDraftRequest 주석 참조).
+  const dup = await _l1FindOpenDraftRequest(env, payload.institution, payload.task, payload.target_sp_id).catch(() => null);
   if (dup) {
     return new Response(JSON.stringify({ status: 'merged_into_existing', record: dup }), { headers: corsHeaders });
   }
@@ -1670,18 +1685,31 @@ async function handleSPAuthorRefreshScheduleUpsert(request, env, corsHeaders) {
   const days = daysByTier[tier] || 30;
   const next = new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
 
-  const patch = {
-    tier,
-    last_refreshed_at: new Date().toISOString().slice(0, 10),
-    next_due_at: next,
-  };
+  // ★ 2026-07-11 Phase 4 버그 수정 ★ 원래 이 엔드포인트가 호출될 때마다
+  // next_due_at을 무조건 "오늘+tier일수"로 재계산했다 — tier 재분류만
+  // 하려고 호출해도(실제 갱신은 안 했는데) 마감일이 매번 미래로 밀려나서,
+  // 스케줄러(tools/sp_refresh_scheduler.py)가 매일 tier를 재계산할 때마다
+  // due 항목이 영원히 안 생기는 버그였다(로컬 통합테스트로 재현·확인).
+  // 이제 next_due_at은 (a) 이 sp_id가 처음 등록되거나, (b)
+  // refresh_completed:true(실제 갱신이 방금 끝났다는 명시적 신호)일 때만
+  // 갱신한다. 단순 tier 재분류는 tier·call_count_30d만 바꾸고 기존
+  // next_due_at은 그대로 둔다 — 그래야 due 판정이 실제로 의미를 가진다.
+  const existing = await _l1FindRefreshSchedule(env, payload.sp_id).catch(() => null);
+  const isNew = !existing;
+  const refreshCompleted = payload.refresh_completed === true;
+
+  const patch = { tier };
   if (typeof payload.call_count_30d === 'number') patch.call_count_30d = payload.call_count_30d;
   if (typeof payload.drift_flag === 'boolean') patch.drift_flag = payload.drift_flag;
   if (payload.drift_reason) patch.drift_reason = payload.drift_reason;
+  if (isNew || refreshCompleted) {
+    patch.next_due_at = next;
+    if (refreshCompleted) patch.last_refreshed_at = new Date().toISOString().slice(0, 10);
+  }
 
   try {
     const rec = await _l1UpsertRefreshSchedule(env, payload.sp_id, patch);
-    return new Response(JSON.stringify({ status: 'scheduled', record: rec }), { headers: corsHeaders });
+    return new Response(JSON.stringify({ status: 'scheduled', record: rec, next_due_at_changed: isNew || refreshCompleted }), { headers: corsHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
   }

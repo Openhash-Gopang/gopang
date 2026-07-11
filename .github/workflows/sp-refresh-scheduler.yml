@@ -1,0 +1,46 @@
+name: SP refresh scheduler (Phase 4)
+
+# 저장소 안에는 크론이 없다는 원칙(docs/SP-AUTHOR-AUTOMATION_v1_0.md,
+# GWP-REGISTRY-SCALING_v1_0.md) — 이 워크플로가 "저장소 밖 스케줄러"
+# 역할을 대신한다. 매일 1회 tier를 재계산하고, 마감 도래한 SP를
+# SP-Author 큐에 올린다(실제 조사·갱신은 여전히 사람이 수행).
+
+on:
+  schedule:
+    # 매일 00:00 UTC(KST 09:00) — 업무시간 시작에 맞춰 그날 검토할
+    # 갱신 목록이 쌓여있도록 한다.
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '실제로 반영하지 않고 계획만 출력'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+jobs:
+  refresh-schedule:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ── tier 재계산 + 갱신 큐잉 ──────────────────────────────────
+      # worker.js는 공개 엔드포인트라 별도 시크릿 없이 호출 가능
+      # (POST /gwp-registry/register·/sp-author/queue 등은 인증 없는
+      # 내부 API다 — 실서비스 확장 시 별도 인증 도입 여지는 있으나
+      # 이번 범위 밖).
+      - name: Run SP refresh scheduler
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            python3 tools/sp_refresh_scheduler.py --dry-run
+          else
+            python3 tools/sp_refresh_scheduler.py
+          fi
