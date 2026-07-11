@@ -2803,6 +2803,34 @@ window.closePDV = closePDV;
         aiBubble.classList.remove('streaming');
       }, 400);
     } else if (!_panelGreeted && msgList.children.length === 0) {
+      // ★ BUG-FIX(2026-07-11): closeAIPanel()은 화면만 지우고 _panelHistory는
+      // 의도적으로 유지하는데(아래 closeAIPanel 주석 참조), 이 분기는
+      // "화면이 비어 있으면 = 처음 여는 것"으로만 판단해서 매번
+      // [INTERNAL: 패널이 열렸습니다...] 트리거를 다시 보내고 있었다.
+      // 그 결과 사용자가 패널을 닫았다 열기만 반복해도(실제 발화 없이)
+      // _panelHistory(최근 20개 캡)가 의미 없는 인사 왕복으로 계속
+      // 채워지고, 한 번이라도 깨진 응답(예: {ASSISTANT_NAME} 미치환)이
+      // 끼어들면 모델이 자기 과거 발화에 anchoring되어 그 패턴을 계속
+      // 반복 재생하는 사고가 실사로 확인됐다. "새 대화 시작 시 이전 맥락을
+      // 참고해 자연스럽게 이어서 인사한다"는 원래 설계 의도(§0-1-P 3번
+      // 원칙)는 유지하되, 직전에 이미 같은 인사 트리거만 있고 그 사이
+      // 사용자의 실제 발화가 없었다면 트리거를 또 보내지 않는다.
+      const _lastUserMsg = [..._panelHistory].reverse().find(m => m.role === 'user');
+      const _lastWasGreetTrigger = _lastUserMsg && typeof _lastUserMsg.content === 'string'
+        && _lastUserMsg.content.startsWith('[INTERNAL: 패널이 열렸습니다');
+      if (_lastWasGreetTrigger) {
+        // 새 LLM 호출·새 히스토리 항목 없이, 마지막으로 실제 생성됐던
+        // AI 응답을 화면에만 조용히 복원한다(히스토리 오염 방지).
+        _panelGreeted = true;
+        const _lastAiMsg = [..._panelHistory].reverse().find(m => m.role === 'assistant');
+        if (_lastAiMsg && typeof _lastAiMsg.content === 'string') {
+          import('./src/gopang/ai/call-ai.js').then(mod => {
+            const strip = typeof mod._stripInternalTags === 'function' ? mod._stripInternalTags : (s => s);
+            _appendPanelMsg('ai', strip(_lastAiMsg.content));
+          }).catch(() => { _appendPanelMsg('ai', _lastAiMsg.content); });
+        }
+        return;
+      }
       // BUG-FIX(2026-07-02): nickname이 아직 비어 있는 상태(가입 직후
       // localStorage 반영 전/guest·temp 상태 등)에서 첫 인사가 트리거되면
       // "****님"처럼 닉네임이 빈 문자열로 치환된 응답이 그대로 LLM에 의해
