@@ -1,4 +1,4 @@
-﻿{
+{
   "AGENT-COMMON": "AGENT-COMMON_v3_40.txt",
   "AGENT-SUPPLIER-COMMON": "AGENT-SUPPLIER-COMMON_v2.1.txt",
   "HONDI_VISITOR_SP": "hondi_visitor_sp_v1_2.txt",
@@ -134,4 +134,3 @@
   "AGENT-SUPPLIER-98": "AGENT-SUPPLIER-98_own-consumption-production_v2.0.txt",
   "AGENT-SUPPLIER-99": "AGENT-SUPPLIER-99_international-foreign-organizations_v2.0.txt"
 }
-
