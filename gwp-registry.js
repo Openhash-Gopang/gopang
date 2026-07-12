@@ -381,7 +381,13 @@ const GWP_REGISTRY = [
     url: 'https://democracy.hondi.net/webapp.html',
     sp_key: 'SP-12_kdemocracy',
     status: 'active', priority: 10, threshold: 0.70,
-    description: '고팡 직접 민주주의 플랫폼 (DAWN).',
+    // ★ 2026-07-12 정정 — "국민동의청원에 서명해줘"·"입법예고에 의견
+    // 제출해줘"(750건 사고실험 #611/612)가 "청원"·"의견 제출"이라는
+    // 단어 때문에 이 서비스의 "안건 제안"과 혼동될 위험을 발견해 경계를
+    // 명시한다. K-Democracy는 혼디 자체 거버넌스(DAWN) 전용이지 국회·
+    // 정부의 실제 청원·입법예고 시스템이 아니다 — 그건 kgov(K-Public)
+    // 소관이다.
+    description: '고팡 직접 민주주의 플랫폼(DAWN) 전용 — 국민동의청원·입법예고 등 실제 국가기관 청원/의견 시스템은 kgov 소관.',
     triggers: [
       '투표','안건','민주주의','정책','DAWN','의결',
       '안건 제안','고팡 운영','배심원','찬성','반대','발의',
