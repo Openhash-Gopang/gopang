@@ -1,19 +1,19 @@
 // ═══════════════════════════════════════════════════════════
-// jeju-router.js v1.0 — 제주 기관 SP 조립 엔진
+// gov-template-renderer.js v1.1 — 제주 기관 SP 조립 엔진 (SP-AUTHOR 템플릿 렌더러)
 //
-// ★ 2026-07-09 명확화(K-21 조사 중 발견), ★★ 2026-07-11 정정 —
-// Openhash-Gopang/jeju 독립 저장소에도 동일한 파일명 "jeju-router.js"가
-// 있는데, 그건 완전히 다른 시스템이다: jeju.hondi.net이 실제로 서빙하는
-// 프론트엔드 라우터(resolveJejuAgency/assembleJejuSystemPrompt)다.
-// 2026-07-09 시점 이 주석은 그 파일이 "아직 /ai/chat 직접 호출이고
-// /gov/relay 마이그레이션 전"이라고 적었으나 이는 부정확했다 — jeju
-// 저장소는 2026-07-05에 이미 /gov/relay(_govRelayCompletion)로
-// 마이그레이션 완료된 상태였다(worker.js GOV_AGENCIES 주석도 함께 정정,
-// 2026-07-11). 이 파일(gopang 저장소 쪽)은 그것과 무관하게 SP-AUTHOR
-// 템플릿 렌더링 파이프라인용으로 새로 만들어진 별개 엔진이다
-// (_renderTemplate 등, 2026-07-08 신설). 이름이 같다고 서로 동기화
-// 하면 안 된다 — 목적과 export 함수 자체가 다르다. 혼동 방지를 위해
-// 향후 파일명 분리를 검토할 것(예: gov-template-renderer.js).
+// ★ 2026-07-12 파일명 분리 — 이 파일은 2026-07-08 신설 당시 "jeju-router.js"라는
+// 이름을 썼으나, Openhash-Gopang/jeju 독립 저장소의 jeju-router.js(실제
+// jeju.hondi.net을 서빙하는 프론트엔드 라우터, resolveJejuAgency/
+// assembleJejuSystemPrompt)와 이름이 겹쳐 혼동 위험이 있었다. 두 파일은
+// 목적·export 함수가 완전히 다르다(이 파일은 jeju.hondi.net 실트래픽과
+// 무관 — SP-AUTHOR PHASE A~E가 "기존 템플릿 조립" 경로를 택했을 때만
+// 호출되는 오프라인/관리자용 렌더링 엔진). 2026-07-09/07-11에 두 차례
+// 정정 주석을 남긴 뒤, 2026-07-12에 예고했던 대로 파일명을
+// gov-template-renderer.js로 분리했다 — 이제 이름만으로 jeju 저장소의
+// jeju-router.js와 구분된다. import/require 경로로 이 파일을 참조하는
+// 코드는 없었음을 확인(2026-07-12, gopang 모노레포 전체 grep)했으므로
+// 이 이름 변경 자체는 파괴적 변경이 아니다 — 단, 이 파일을 수동으로
+// fetch·복사해 쓰던 외부 스크립트가 있다면 경로를 갱신해야 한다.
 //
 // 여러 문서(national-agency-master-data.json 주석 등)가 "_renderNatTemplate()이
 // domain으로 template을 찾고 도코드로 레코드를 찾아 자리표시자를 채운다"고

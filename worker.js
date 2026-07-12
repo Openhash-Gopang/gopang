@@ -4304,9 +4304,11 @@ const GOV_AGENCIES = new Set([
   // 서빙하는 독립 저장소 Openhash-Gopang/jeju의 jeju-router.js는
   // 2026-07-05부로 /gov/relay 호출(_govRelayCompletion)로 마이그레이션
   // 완료된 상태다 — 즉 이 agency들은 정상적으로 실트래픽에서 쓰이고
-  // 있다. (혼동 방지: gopang 모노레포의 src/gopang/ai/jeju-router.js는
-  // 이름만 같은 별개 파일 — 2026-07-08 SP-AUTHOR 템플릿 렌더링 전용
-  // 엔진이며 jeju.hondi.net과 무관. 아래쪽 해당 파일 주석 참고.)
+  // 있다. (2026-07-12: 과거엔 gopang 모노레포의 src/gopang/ai/jeju-router.js가
+  // 이름만 같은 별개 파일이라 혼동 위험이 있었으나, 이제
+  // src/gopang/ai/gov-template-renderer.js로 파일명이 분리되어 이름
+  // 충돌 자체가 해소됐다 — 2026-07-08 SP-AUTHOR 템플릿 렌더링 전용
+  // 엔진이며 jeju.hondi.net과는 여전히 무관. 해당 파일 주석 참고.)
   'jeju_do', 'jeju_national',
 ]);
 
