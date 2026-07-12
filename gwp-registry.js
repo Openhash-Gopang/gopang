@@ -109,7 +109,15 @@ const GWP_REGISTRY = [
     type: 'inline',
     url: 'https://security.hondi.net/webapp.html',
     sp_key: 'SP-15_ksecurity',
-    status: 'pending', priority: 2, threshold: 0.70,
+    // ★ 2026-07-12 정정 — status가 특별한 이유 없이 'pending'으로 방치돼
+    // 있었다(관련 커밋 이력 없음). security.hondi.net에 실제로 배포된
+    // 웹앱이 있고 정상 응답함을 실사로 확인(HTTP 200, K-Security 타이틀의
+    // 실제 챗봇 UI, /deepseek 호출 확인) — active로 정정. 스미싱·
+    // 보이스피싱 신고(750건 사고실험 #831/832) 같은 시급한 요청이 이
+    // 서비스로 못 가고 있었을 가능성이 있다. 단, /deepseek 직결 방식
+    // (school/stock과 같은 구형 패턴)이라 최신 서비스들의 /gov/relay
+    // 패턴으로의 현대화는 별도 과제로 남긴다.
+    status: 'active', priority: 2, threshold: 0.70,
     description: '사이버 보안·개인정보 침해 대응.',
     triggers: [
       '해킹','피싱','스미싱','보이스피싱','계정 탈취','랜섬웨어',
