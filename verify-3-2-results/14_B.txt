@@ -1,0 +1,12 @@
+﻿GROUP: B
+UTTERANCE: 우리 가게 몇 시부터 몇 시까지 해?
+
+--- RESPONSE ---
+```json
+{"sp_call": {"target": "AGENT-SUPPLIER-47", "purpose": "í¸ìì  ì¬ê³  ì¡°í", "query": "í¸ìì (AGENT-SUPPLIER-47)ìì SKU-001(í¬ì¹´ì¹©ì´ëì¸)ì íì¬ ì¬ê³ ì ê°ê²©ì ìë ¤ì¤"}}
+```
+
+--- HEURISTIC FLAGS ---
+SP_DRAFT_REQUEST tag present: False
+Starts with apology word: False
+Contains a question mark: False

@@ -1,0 +1,33 @@
+﻿# fix-escrow-notice.ps1 (pure ASCII, BOM only)
+# Adds an honest disclaimer to /biz/order responses when
+# contract_type is 'escrow' or 'conditional': no actual fund-hold
+# logic exists in the codebase (confirmed via full-file search for
+# release/hold - zero matches). Users must not be misled into
+# thinking escrow protection is active. Verified via node --check
+# against a live-fetched copy of worker.js before delivery.
+
+$ErrorActionPreference = 'Stop'
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+function _b64d($s) { [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($s)) }
+$path = ".\worker.js"
+if (-not (Test-Path $path)) { throw "worker.js not found - run from repo root." }
+$encRead  = [System.Text.Encoding]::UTF8
+$encWrite = New-Object System.Text.UTF8Encoding($false)
+$rawContent = [System.IO.File]::ReadAllText((Resolve-Path $path), $encRead)
+$content = $rawContent -replace "`r`n", "`n"
+$backupPath = ".\worker.js.bak-$(Get-Date -Format yyyyMMdd-HHmmss)"
+Copy-Item $path $backupPath
+Write-Host "Backup created: $backupPath"
+
+$oldB64 = "ICByZXR1cm4gbmV3IFJlc3BvbnNlKEpTT04uc3RyaW5naWZ5KHsKICAgIG9rOiAgICAgICAgICAgdHJ1ZSwKICAgIHR4X2hhc2gsCiAgICBibG9ja19pZCwKICAgIGJsb2NrX2hhc2gsCiAgICBoZWlnaHQsCiAgICBvcGVuaGFzaDogICAgIGwxUmVzdWx0Lm9wZW5oYXNoLAogICAgYnV5ZXJfY2xhaW0sCiAgICBzZWxsZXJfY2xhaW0sCiAgICAvLyAyMDI2LTA3LTA3IOyImOyglTogcnBjUmVzdWx0KFN1cGFiYXNlIG1hcmtldF9wdXJjaGFzZSBSUEMg7J2R64u1KSDsoJzqsbAg4oCUCiAgICAvLyDsnbTsoJwgTDHsnbQg7J6s7IOdIOqzhOyCsO2VnCDsp4Tsp5wg7J6U7JWh7J2EIOq3uOuMgOuhnCDrhbjstpztlZzri6QuCiAgICBiYWxhbmNlX2FmdGVyOiBsMVJlc3VsdC5iYWxhbmNlX2FmdGVyID8/IG51bGwsCiAgICBjb25zaXN0ZW5jeV9jaGVjazogY29uc2lzdGVuY3lDaGVjaywKICAgIHJlcG9ydGVyX3N2YzogcmVwb3J0ZXJfc3ZjIHx8ICdob25kaS1wcm94eScsCiAgICBpbXBvcnRhbmNlOiB7CiAgICAgIHNjb3JlOiBwYXJzZUZsb2F0KGltcG9ydGFuY2Vfc2NvcmUudG9GaXhlZCg0KSksCiAgICAgIG1vZGU6ICBpbXBvcnRhbmNlX21vZGUsCiAgICAgIGxjYXQsCiAgICB9LAogIH0pLCB7IHN0YXR1czogMjAwLCBoZWFkZXJzOiBjb3JzSGVhZGVycyB9KTsKfQ=="
+$newB64 = "ICAvLyDimIUgMjAyNi0wNy0xMiDsi6DshKQg4oCUIGNvbnRyYWN0X3R5cGXsnbQgJ2VzY3JvdycvJ2NvbmRpdGlvbmFsJ+ydtOyWtOuPhAogIC8vIOyLpOygnCDsnpDquIgg67O066WYwrfsobDqsbTrtoAg7ZW07KCcIOuhnOyngeydtCDqtaztmITrj7wg7J6I7KeAIOyViuuLpCjsgqzqs6Dsi6Ttl5jsnLzroZwKICAvLyDtmZXsnbgg4oCUIHJlbGVhc2UvaG9sZCDqtIDroKgg7L2U65Oc6rCAIOyghOyytCDtjIzsnbzsl5Ag7JeG7J2MLCBGX0NPTlRSQUNU64qUCiAgLy8g7JyE7ZeY64+EIOygkOyImCDqs4TsgrDsmqkg7J6F66Cl7J28IOu/kCkuIOyCrOyaqeyekOqwgCAi7JeQ7Iqk7YGs66Gc6528IOyViOyghO2VmOuLpCLqs6AKICAvLyDsmKTsnbjtlZjsp4Ag7JWK64+E66GdLCBpbnN0YW506rCAIOyVhOuLjCDqsbDrnpjsl5DripQg66qF7Iuc7KCB7Jy866GcIOqzoOyngO2VnOuLpCDigJQKICAvLyBHT1ZfVEFTS+ydmCAi6rO17IudIOygkeyImOuyiO2YuCDslYTri5giIGRpc2NsYWltZXLsmYAg64+Z7J287ZWcIOybkOy5mS4KICBjb25zdCBjb250cmFjdF9ub3RpY2UgPSBjb250cmFjdF90eXBlICE9PSAnaW5zdGFudCcKICAgID8gYOydtCDqsbDrnpjripQgJyR7Y29udHJhY3RfdHlwZX0n66GcIO2RnOyLnOuQkOyngOunjCwg7ZiE7J6sIOyLnOyKpO2FnOydgCDsobDqsbTrtoAg7J6Q6riIIGAgKwogICAgICBg67O066WYwrftlbTsoJwo7JeQ7Iqk7YGs66GcKSDquLDriqXsnYQg7Iuk7KCc66GcIOyImO2Wie2VmOyngCDslYrsirXri4jri6Qg4oCUIEdEQ+uKlCDsponsi5wg7J207LK065Cp64uI64ukLiBgICsKICAgICAgYOu2hOyfgSDrsJzsg50g7IucIOuzhOuPhCDtmZjrtogg7KCI7LCo6rCAIOyXhuycvOuLiCDqsbDrnpgg7KCEIOyDgeuMgOuwqeqzvCDsp4HsoJEg7ZmV7J247ZWY7Iut7Iuc7JikLmAKICAgIDogbnVsbDsKCiAgcmV0dXJuIG5ldyBSZXNwb25zZShKU09OLnN0cmluZ2lmeSh7CiAgICBvazogICAgICAgICAgIHRydWUsCiAgICB0eF9oYXNoLAogICAgYmxvY2tfaWQsCiAgICBibG9ja19oYXNoLAogICAgaGVpZ2h0LAogICAgb3Blbmhhc2g6ICAgICBsMVJlc3VsdC5vcGVuaGFzaCwKICAgIGJ1eWVyX2NsYWltLAogICAgc2VsbGVyX2NsYWltLAogICAgLy8gMjAyNi0wNy0wNyDsiJjsoJU6IHJwY1Jlc3VsdChTdXBhYmFzZSBtYXJrZXRfcHVyY2hhc2UgUlBDIOydkeuLtSkg7KCc6rGwIOKAlAogICAgLy8g7J207KCcIEwx7J20IOyerOyDnSDqs4TsgrDtlZwg7KeE7KecIOyelOyVoeydhCDqt7jrjIDroZwg64W47Lac7ZWc64ukLgogICAgYmFsYW5jZV9hZnRlcjogbDFSZXN1bHQuYmFsYW5jZV9hZnRlciA/PyBudWxsLAogICAgY29uc2lzdGVuY3lfY2hlY2s6IGNvbnNpc3RlbmN5Q2hlY2ssCiAgICByZXBvcnRlcl9zdmM6IHJlcG9ydGVyX3N2YyB8fCAnaG9uZGktcHJveHknLAogICAgaW1wb3J0YW5jZTogewogICAgICBzY29yZTogcGFyc2VGbG9hdChpbXBvcnRhbmNlX3Njb3JlLnRvRml4ZWQoNCkpLAogICAgICBtb2RlOiAgaW1wb3J0YW5jZV9tb2RlLAogICAgICBsY2F0LAogICAgfSwKICAgIGNvbnRyYWN0X25vdGljZSwKICB9KSwgeyBzdGF0dXM6IDIwMCwgaGVhZGVyczogY29yc0hlYWRlcnMgfSk7Cn0="
+$old = _b64d $oldB64
+$new = _b64d $newB64
+
+if ($content.Contains($old)) {
+  $content = $content.Replace($old, $new)
+  [System.IO.File]::WriteAllText((Resolve-Path $path), $content, $encWrite)
+  Write-Host "OK: contract_notice field added to handleBizOrder response"
+} else {
+  Write-Warning "NOT FOUND: anchor block did not match - worker.js may have changed since this was written. No changes made."
+}
