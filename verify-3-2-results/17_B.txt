@@ -1,0 +1,14 @@
+﻿GROUP: B
+UTTERANCE: 지금 품절된 상품 있어?
+
+--- RESPONSE ---
+ì£ì¡í©ëë¤. ì´ ì¡°ê°ë§ì¼ë¡ë ì íí ë§¥ë½ì íìíê¸° ì´ë µìµëë¤. 
+
+
+
+ì´ë¤ ë´ì©ì ëí´ ê³ì ì´ì¼ê¸°íê³  ì¶ì¼ì ê°ì? ì¢ ë êµ¬ì²´ì ì¼ë¡ ìë ¤ì£¼ìë©´ ëìëë¦¬ê² ìµëë¤.
+
+--- HEURISTIC FLAGS ---
+SP_DRAFT_REQUEST tag present: False
+Starts with apology word: False
+Contains a question mark: True
