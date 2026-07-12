@@ -1,4 +1,4 @@
-﻿// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // hondi-proxy — v4.9
 // v4.8: /biz/profile, /biz/order, /biz/review, /biz/product
 // v4.9: STEP 08 /biz/order L1 위임 (Worker 검증 제거)
@@ -2498,6 +2498,12 @@ export default {
     if (pathname === '/admin/stats' && request.method === 'GET')
       return handleAdminStats(request, env, corsHeaders);
 
+    // GET /admin/gov-task-drafts — 대기중 GOV_TASK draft 목록 (2026-07-12 위치 정정
+    // — 기존엔 POST 전용 게이트 뒤에 있어서 GET 요청이 그 게이트에서 먼저
+    // 405로 막히는 죽은 코드였다. admin/stats와 동일하게 게이트 앞으로 이동)
+    if (pathname === '/admin/gov-task-drafts' && request.method === 'GET')
+      return handleGovTaskDraftList(request, env, corsHeaders);
+
     // POST /admin/cf-dns — Cloudflare DNS CNAME 추가 (CORS 우회 프록시)
     if (pathname === '/admin/cf-dns' && request.method === 'POST')
       return handleAdminCfDns(request, env, corsHeaders);
@@ -2555,10 +2561,9 @@ export default {
     if (pathname === '/llm/relay')               return handleLLMRelay(bodyText, env, corsHeaders, _meta);
     if (pathname === '/klaw/relay')               return handleKlawRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname === '/gov/relay')                return handleGovRelay(bodyText, env, corsHeaders, _meta, ctx);
-    if (pathname === '/gov/task/submit')          return handleGovTaskSubmit(request, env, corsHeaders);
-    if (pathname === '/gov/task/schema/draft')    return handleGovTaskSchemaDraft(request, env, corsHeaders);
-    if (pathname === '/admin/gov-task-drafts' && request.method === 'GET') return handleGovTaskDraftList(request, env, corsHeaders);
-    if (pathname === '/admin/gov-task-drafts/review') return handleGovTaskDraftReview(request, env, corsHeaders);
+    if (pathname === '/gov/task/submit')          return handleGovTaskSubmit(bodyText, env, corsHeaders);
+    if (pathname === '/gov/task/schema/draft')    return handleGovTaskSchemaDraft(bodyText, env, corsHeaders);
+    if (pathname === '/admin/gov-task-drafts/review') return handleGovTaskDraftReview(request, bodyText, env, corsHeaders);
     if (pathname === '/business/relay')           return handleBusinessRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname.startsWith('/gemini/'))         return callOpenAIFromGeminiBody(bodyText, env, corsHeaders, _meta);
     if (pathname === '/ai/chat')                 return handleAIChat(bodyText, env, corsHeaders, _meta);
@@ -4838,9 +4843,13 @@ async function _resolveDocSchema(env, agency, taskKey, requesterGuid) {
 
 // POST /gov/task/schema/draft — kgov가 웹검색으로 조사한 결과를 pending으로 저장
 // body: { guid, agency, task_key, agency_name, task_name, legal_basis, documents, source_urls }
-async function handleGovTaskSchemaDraft(request, env, corsHeaders) {
-  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-  const body = await request.json().catch(() => null);
+async function handleGovTaskSchemaDraft(bodyText, env, corsHeaders) {
+  // ★ 2026-07-12 정정 — 라우터가 이미 bodyText = await request.text()로 본문을
+  // 소진한 뒤 이 함수를 호출한다. request.json()을 다시 부르면 스트림이
+  // 이미 비어 있어 항상 실패한다(사고실험으로 발견한 진짜 원인). bodyText를
+  // 직접 파싱하는 것으로 교체.
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
   if (!body) return _err(400, 'INVALID_JSON', '', corsHeaders);
   const { guid, agency, task_key, agency_name, task_name, legal_basis, documents, source_urls } = body;
   if (!guid || !agency || !task_key || !task_name || !Array.isArray(documents) || !documents.length) {
@@ -4887,10 +4896,12 @@ async function handleGovTaskDraftList(request, env, corsHeaders) {
   return new Response(JSON.stringify({ ok: true, items: res?.items || [] }), { status: 200, headers: corsHeaders });
 }
 
-async function handleGovTaskDraftReview(request, env, corsHeaders) {
+async function handleGovTaskDraftReview(request, bodyText, env, corsHeaders) {
   const admin = await _requireAdmin(request, env);
   if (!admin) return _err(401, 'UNAUTHORIZED', 'admin 토큰 필요', corsHeaders);
-  const body = await request.json().catch(() => null);
+  // ★ 2026-07-12 정정 — schemaDraft와 동일한 이유로 request.json() 대신 bodyText 파싱.
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
   const { draft_id, decision } = body || {};
   if (!draft_id || !['approve', 'reject'].includes(decision)) {
     return _err(400, 'MISSING_FIELD', 'draft_id/decision(approve|reject) 필수', corsHeaders);
@@ -4911,10 +4922,11 @@ function _isValidSha256Hex(s) {
   return typeof s === 'string' && /^[a-f0-9]{64}$/i.test(s);
 }
 
-async function handleGovTaskSubmit(request, env, corsHeaders) {
-  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-
-  const body = await request.json().catch(() => null);
+async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
+  // ★ 2026-07-12 정정 — 라우터가 이미 bodyText로 본문을 읽어놓은 뒤 호출되므로
+  // request.json()이 아니라 bodyText를 직접 파싱한다(handleGovTaskSchemaDraft와 동일 원인).
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
   if (!body) return _err(400, 'INVALID_JSON', '', corsHeaders);
 
   const { guid, agency, task_key, documents, notes } = body;
