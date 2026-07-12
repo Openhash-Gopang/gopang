@@ -1,4 +1,4 @@
-﻿{
+{
   "AGENT-COMMON": "AGENT-COMMON_v3_40.txt",
   "AGENT-SUPPLIER-COMMON": "AGENT-SUPPLIER-COMMON_v2.0.txt",
   "HONDI_VISITOR_SP": "hondi_visitor_sp_v1_2.txt",
@@ -46,7 +46,7 @@
   "SP_veterinarian": "SP_veterinarian_v2_4.md",
   "SP_weather-forecaster": "SP_weather-forecaster_v2_5.md",
   "profile-assistant": "profile-assistant/profile-assistant-v1_1.txt",
-  "SP-10_kpublic": "SP-10_kpublic_v3.7.txt",
+  "SP-10_kpublic": "SP-10_kpublic_v3.9.txt",
   "SP-15-IMG_profile-scan_vision_prompt": "SP-15-IMG_profile-scan_vision_prompt_v1.0.txt",
   "SP-17_profile-classifier": "SP-17_profile-classifier_v1.0.txt",
   "SP-18_ksearch": "SP-18_ksearch_v1.3.txt",
@@ -131,4 +131,3 @@
   "AGENT-SUPPLIER-98": "AGENT-SUPPLIER-98_own-consumption-production_v2.0.txt",
   "AGENT-SUPPLIER-99": "AGENT-SUPPLIER-99_international-foreign-organizations_v2.0.txt"
 }
-
