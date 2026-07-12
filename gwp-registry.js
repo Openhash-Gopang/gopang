@@ -222,6 +222,24 @@ const GWP_REGISTRY = [
     ],
   },
 
+  // ── 2026-07-12(2차) 신설 — 부동산 커버리지 갭(250건 사고실험 105-117번
+  // 구간에서 발견). klaw(계약서 법률검토)·ktax(취득세)·kgov(전입신고·
+  // 확정일자·등기부등본)·kbank(자동이체 설정)와 겹치지 않도록 범위를
+  // 매물 탐색·중개연결·임대차관리로 좁힘. SP 초안은
+  // prompts/SP-24_kestate_v1_0.md 참조.
+  {
+    id: 'kestate', name: 'K-Estate', category: 'ECO',
+    type: 'inline',
+    url: 'https://estate.hondi.net/webapp.html',  // ★ 미배포 — 저장소 없음
+    sp_key: 'SP-24_kestate',
+    status: 'pending_review', priority: 6, threshold: 0.70,
+    description: '부동산 매물 탐색·등록·중개연결·임대차 계약관리 — 계약서 법률검토(klaw)·세금(ktax)·전입신고 등 행정(kgov)·자동이체 설정(kbank)은 각 소관 서비스로.',
+    triggers: [
+      '전세','월세','매매 매물','부동산','공인중개사','임대차',
+      '계약 갱신','재건축','조합원','매물 등록','이사 갈 집',
+    ],
+  },
+
   // ── 2026-07-12 신설 — "판매자로 등록하고 싶다"(중고거래 매물 등록,
   // 서비스 제공자 등록 등)는 kcommerce(구매자용 webapp.html)로 보내면
   // 안 된다 — 250건 사고실험(#48/#57)에서 발견. 조사 결과 판매자 등록
