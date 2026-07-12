@@ -2859,6 +2859,19 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
   }
   console.log('[BizOrder] 성공:', JSON.stringify({ ok: true, block_hash, height, buyer_claim: !!buyer_claim }));
 
+  // ── 2026-07-12 신설 — contract_type이 'escrow'/'conditional'이어도 실제
+  // 자금 보류·조건부 해제 로직은 구현돼 있지 않다(사고실험으로 확인 —
+  // release/hold 관련 코드가 이 파일 어디에도 없음, F_CONTRACT는 위험도
+  // 점수 계산용 입력일 뿐 실제 자금 흐름을 바꾸지 않는다). 사용자가
+  // "에스크로라 안전하다"고 오인하지 않도록, instant가 아닌 거래에는
+  // 명시적으로 고지한다 — GOV_TASK의 "공식 접수번호 아님" disclaimer와
+  // 동일한 원칙(있는 것처럼 보이는 기능을 없다고 정직하게 밝힌다).
+  const contract_notice = contract_type !== 'instant'
+    ? `이 거래는 '${contract_type}'로 표시됐지만, 현재 시스템은 조건부 자금 ` +
+      `보류·해제(에스크로) 기능을 실제로 수행하지 않습니다 — GDC는 즉시 이체됩니다. ` +
+      `분쟁 발생 시 별도 환불 절차가 없으니 거래 전 상대방과 직접 확인하십시오.`
+    : null;
+
   return new Response(JSON.stringify({
     ok:           true,
     tx_hash,
@@ -2878,6 +2891,7 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
       mode:  importance_mode,
       lcat,
     },
+    contract_notice,
   }), { status: 200, headers: corsHeaders });
 }
 
@@ -3167,55 +3181,116 @@ async function _l1SearchProductsByKeyword(env, keyword, limit = 20) {
   return items.sort((a, b) => score(b) - score(a)).slice(0, limit);
 }
 
+// ═══════════════════════════════════════════════════════════
+// ★ 2026-07-12 — Supabase→L1 이관 완성 작업(2단계): search_entities
+// (Supabase RPC, sql/search_index.sql)를 L1 PocketBase 기반으로
+// 재구현. 완전히 동일하지는 않다 — 알려진 차이:
+//   1. PostgreSQL tsvector 가중치 순위(A/B/C/D)를 정확히 재현하지
+//      못한다. 대신 Worker에서 name/handle 매칭=3점, occupation
+//      매칭=2점, address/search_text 매칭=1점으로 근사 채점한다.
+//   2. entity_type의 institution/org/platform 서브타입 별칭
+//      (extra.public.identity.entity_subtype)은 이번 1차 이관에서는
+//      지원하지 않는다 — entity_type 필드 자체가 정확히 일치하는
+//      경우만 매칭한다(알려진 한계, 필요시 후속 작업).
+//   3. 거리 정렬(distance_km)은 Haversine 공식으로 Worker에서 직접
+//      계산 — PocketBase는 지리공간 연산자가 없다.
+// 여러 단어 검색어는 공백으로 나눠 AND 매칭한다(전부 포함해야 함) —
+// websearch_to_tsquery의 OR 동작과는 다르다(더 엄격함, 알려진 차이).
+// ═══════════════════════════════════════════════════════════
+function _haversineKm(lat1, lng1, lat2, lng2) {
+  if ([lat1, lng1, lat2, lng2].some(v => typeof v !== 'number' || Number.isNaN(v))) return null;
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+async function _l1SearchEntities(env, { q, etype, occupation, address, lat, lng, lim = 20, ofst = 0 }) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+
+  const words = (q || '').trim().split(/\s+/).filter(Boolean);
+  const filterParts = ['is_public = true'];
+  if (etype) filterParts.push(`entity_type = ${JSON.stringify(etype)}`);
+  if (occupation) filterParts.push(`occupation ~ ${JSON.stringify(occupation)}`);
+  if (address) filterParts.push(`address ~ ${JSON.stringify(address)}`);
+  for (const w of words) {
+    const wj = JSON.stringify(w);
+    filterParts.push(
+      `(name ~ ${wj} || handle ~ ${wj} || occupation ~ ${wj} || address ~ ${wj} || search_text ~ ${wj})`
+    );
+  }
+  const filter = filterParts.join(' && ');
+
+  // rank/거리로 재정렬해야 하므로, 요청한 limit보다 넉넉히 가져온 뒤
+  // Worker에서 정렬·페이징한다(최대 200 — 폭주 방지).
+  const fetchCount = Math.min(Math.max((lim + ofst) * 3, 60), 200);
+  const res = await fetch(
+    `${L1_DEFAULT}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=${fetchCount}&sort=-updated`,
+    { headers }
+  );
+  if (!res.ok) throw new Error(`L1 검색 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  const data = await res.json().catch(() => ({ items: [] }));
+
+  const qLower = (q || '').toLowerCase();
+  const scored = (data.items || []).map(p => {
+    let rank = 1.0;
+    if (qLower) {
+      rank = 0;
+      if ((p.name || '').toLowerCase().includes(qLower) || (p.handle || '').toLowerCase().includes(qLower)) rank += 3;
+      if ((p.occupation || '').toLowerCase().includes(qLower)) rank += 2;
+      if ((p.address || '').toLowerCase().includes(qLower) || (p.search_text || '').toLowerCase().includes(qLower)) rank += 1;
+      if (rank === 0) rank = 0.5; // 단어별 매칭은 됐지만 원문 전체는 안 겹치는 경우(AND 필터를 통과했으므로 최소 점수는 준다)
+    }
+    const distance_km = _haversineKm(lat, lng, p.lat, p.lng);
+    return {
+      guid: p.guid, name: p.name, handle: p.handle, entity_type: p.entity_type,
+      address: p.address, phone: p.extra?.core?.phone ?? null,
+      website: p.extra?.core?.website ?? null, extra: p.extra,
+      primary_guid: p.guid, occupation: p.occupation,
+      rank, distance_km,
+    };
+  });
+
+  scored.sort((a, b) => {
+    if (b.rank !== a.rank) return b.rank - a.rank;
+    if (a.distance_km != null && b.distance_km != null) return a.distance_km - b.distance_km;
+    if (a.distance_km != null) return -1;
+    if (b.distance_km != null) return 1;
+    return 0;
+  });
+
+  return scored.slice(ofst, ofst + lim);
+}
+
 async function handleSearch(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const sbH = _sbHeaders(env);
   const keyword = body.p_keyword || body.q || null;
 
-  // 파라미터 정규화: q/limit → p_keyword/p_limit
-  const rpcBody = {
-    p_keyword:      keyword,
-    p_entity_type:  body.p_entity_type || body.entity_type || null,
-    p_occupation:   body.p_occupation  || body.occupation  || null,
-    p_address:      body.p_address     || body.address     || null,
-    p_gdc_only:     body.p_gdc_only    ?? false,
-    p_trust_min:    body.p_trust_min   || null,
-    p_lat:          body.p_lat         || body.lat         || null,
-    p_lng:          body.p_lng         || body.lng         || null,
-    p_sort:         body.p_sort        || 'rank',
-    p_limit:        body.p_limit       || body.limit       || body.lim || 20,
-    p_offset:       body.p_offset      || body.offset      || body.ofst || 0,
-    p_exclude_guid: body.p_exclude_guid|| null,
-    p_l1_node:      body.p_l1_node     || null,
-    p_l2_node:      body.p_l2_node     || null,
-    p_primary_guid: body.p_primary_guid|| null,
-    p_handle:       body.p_handle      || body.handle      || null,
-    p_nickname:     body.p_nickname    || body.nickname    || null,
-    p_lang_code:    body.p_lang_code   || null,
-    p_l3_node:      body.p_l3_node     || null,
+  // ★ 2026-07-12 — Supabase→L1 이관 완성(3단계). 이전엔 Supabase RPC
+  // search_entities를 호출했으나, 이제 L1 PocketBase 기반
+  // _l1SearchEntities로 대체한다(위 함수 정의부 주석에 알려진 차이점
+  // 명시). 파라미터 정규화(p_* 별칭 허용)는 기존 클라이언트 호환을
+  // 위해 그대로 유지.
+  const searchParams = {
+    q:          keyword,
+    etype:      body.p_entity_type || body.entity_type || null,
+    occupation: body.p_occupation  || body.occupation  || null,
+    address:    body.p_address     || body.address     || null,
+    lat:        body.p_lat         || body.lat         || null,
+    lng:        body.p_lng         || body.lng         || null,
+    lim:        body.p_limit       || body.limit       || body.lim || 20,
+    ofst:       body.p_offset      || body.offset      || body.ofst || 0,
   };
 
-  const res  = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_entities`, { method: 'POST', headers: sbH, body: JSON.stringify(rpcBody) });
-  const data = await res.json().catch(() => ({ error: 'parse failed' }));
-  if (!res.ok || !Array.isArray(data)) {
-    return new Response(JSON.stringify(data), { status: res.status, headers: corsHeaders });
-  }
-
-  // 2026-07-12 신설 — SP-18 STEP3(unclaimed) 마스킹. RPC 자체(search_entities)는
-  // 이 저장소 밖(Supabase, 실사 결과 sql/search_index.sql은 낡아 실제
-  // 시그니처와 다름 — worker.js 7261행 주석 참고)이라 여기서 수정 못 한다.
-  // 대신 응답 후처리에서 claim_status를 본다 — 단, 이게 동작하려면 RPC가
-  // 각 행에 extra(또는 최소 claim_status)를 반환해야 한다. 반환 안 하면
-  // 아래는 아무 것도 마스킹하지 않고 조용히 통과한다(방어적 — 필드 부재를
-  // 에러로 취급하지 않음). ★ RPC가 실제로 extra/claim_status를 반환하는지는
-  // 이 저장소 안에서 확인 불가 — 다음 세션에서 라이브 응답으로 검증 필요.
-  for (const entity of data) {
-    const claimStatus = entity?.claim_status ?? entity?.extra?.claim_status;
-    if (claimStatus === 'unclaimed') {
-      entity.phone = null;
-      entity.provisional = true;
-    }
+  let data;
+  try {
+    data = await _l1SearchEntities(env, searchParams);
+  } catch (e) {
+    return _err(502, 'L1_SEARCH_FAILED', 'L1 검색 실패: ' + e.message, corsHeaders);
   }
 
   // 2026-07-05: L1 seller_products를 join(엔티티 레벨 매칭 결과 보강)하고,
@@ -3235,7 +3310,7 @@ async function handleSearch(request, env, corsHeaders) {
 
   if (keyword) {
     try {
-      const productMatches = await _l1SearchProductsByKeyword(env, keyword, rpcBody.p_limit);
+      const productMatches = await _l1SearchProductsByKeyword(env, keyword, searchParams.lim);
       const newGuids = [...new Set(productMatches.map(p => p.seller_guid))].filter(g => !byGuid.has(g));
 
       await Promise.all(newGuids.map(async (guid) => {
@@ -3246,8 +3321,8 @@ async function handleSearch(request, env, corsHeaders) {
             primary_guid: guid,
             name: profile.name,
             entity_type: profile.entity_type,
-            occupation: profile.extra?.core?.occupation ?? null,
-            address: profile.extra?.core?.address ?? null,
+            occupation: profile.occupation ?? profile.extra?.core?.occupation ?? null,
+            address: profile.address ?? profile.extra?.core?.address ?? null,
             matched_via: 'product', // entity-level 필드가 아니라 상품으로 매칭됐음을 표시
             products: productMatches.filter(p => p.seller_guid === guid).slice(0, 10),
           };
@@ -3262,8 +3337,9 @@ async function handleSearch(request, env, corsHeaders) {
     }
   }
 
-  return new Response(JSON.stringify(data), { status: res.status, headers: corsHeaders });
+  return new Response(JSON.stringify(data), { status: 200, headers: corsHeaders });
 }
+
 
 // ═══════════════════════════════════════════════════════════
 // v4.8 — /biz/profile/{handle}
@@ -7256,20 +7332,6 @@ async function handleProfilePost(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
 
-  // ── 2026-07-12 신설 — 미청구(unclaimed) 프로필 제출 분기 ──────────
-  // SP-18_ksearch STEP3(K-Search가 웹검색으로 확인한 제3자 업체를
-  // 본인 동의 없이 등록)의 선행조건 (a)(c) 구현. 일반 제출과 달리:
-  //   - pubkey/signature 없이 허용한다(본인이 직접 서명한 게 아니므로
-  //     TOFU 서명 검증 자체가 성립하지 않음 — 대신 guid를 서버가 발급).
-  //   - entity_type은 사업체 성격만 허용(person/individual/consumer는
-  //     제3자가 임의로 실존 인물 프로필을 만드는 걸 막기 위해 배제).
-  //   - phone은 저장은 하되 phone_visible을 무조건 false로 강제한다 —
-  //     본인이 공개 동의한 적 없는 번호를 그대로 노출하지 않는다
-  //     (SP-18 STEP3 절차 3 "민감 필드는 자동 마스킹" 반영).
-  if (body.claim_status === 'unclaimed') {
-    return _handleUnclaimedProfilePost(body, env, corsHeaders);
-  }
-
   const { guid, pubkey, signature } = body;
   if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
   if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
@@ -7418,62 +7480,44 @@ async function handleProfilePost(request, env, corsHeaders) {
     updated_at: new Date().toISOString(),
   };
 
-  // 2026-06-30: L1 PocketBase 이중쓰기 — Supabase보다 먼저 시도하고,
-  // 실패해도 가입 자체는 막지 않는다(Supabase가 여전히 폴백 소스).
-  // L1엔 없는 컬럼(name/address/lat/lng/phone/website)은 extra.core에 접음.
+  // ★ 2026-07-12 — Supabase→L1 이관 완성(4단계). 우선순위를 뒤집는다.
+  // 이전: L1 먼저 시도(실패해도 무시) → Supabase 필수(실패하면 가입
+  // 자체가 502로 막힘) — 즉 지금까지는 "이관 중"이라면서도 실제로는
+  // Supabase가 여전히 최종 관문이었다(250건 사고실험 중 발견).
+  // 이제:   L1 필수(실패하면 가입 자체가 502) → Supabase는 best-effort
+  // (실패해도 가입은 성공 처리, 로그만 남김 — 다른 레거시 읽기 경로가
+  // 아직 Supabase를 참조할 수 있어 당분간 병행 쓰기는 유지한다).
+  let l1Result;
   try {
-    await _l1UpsertProfile(env, {
+    l1Result = await _l1UpsertProfile(env, {
       guid, handle: finalHandle, entityType: entity_type, nativeLang: native_lang,
       isPublic: is_public, pubkey, extra: newExtra,
       core: { name, address, lat, lng, phone, website, occupation: resolvedOccupation },
     });
   } catch (e) {
-    console.warn('[Profile] L1 저장 실패 (Supabase는 계속 진행):', e.message);
+    return _err(502, 'L1_SAVE_FAILED', 'L1 프로필 저장 실패: ' + e.message, corsHeaders);
   }
 
-  let saveRes;
   try {
     if (existing) {
-      saveRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
         method: 'PATCH',
         headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
         body: JSON.stringify(record),
       });
     } else {
       record.created_at = new Date().toISOString();
-      saveRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
         method: 'POST',
         headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
         body: JSON.stringify(record),
       });
     }
   } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+    console.warn('[Profile] Supabase 병행쓰기 실패 (L1은 이미 저장됨, 가입은 정상 처리):', e.message);
   }
 
-  if (!saveRes.ok) {
-    const errText = await saveRes.text().catch(() => '');
-    return _err(502, 'DB_ERROR', `프로필 저장 실패: ${errText}`, corsHeaders);
-  }
-  let savedRows = await saveRes.json().catch(() => []);
-
-  // 2026-06-30: existing이 L1에서만 발견된 경우(Supabase엔 아직 없는 신규
-  // L1-우선 가입자) PATCH가 매칭 0건으로 조용히 끝날 수 있다 — 그 경우 POST로
-  // 재시도(Supabase 쪽도 이중쓰기 일관성 유지, 실패해도 가입은 막지 않음).
-  if (existing && Array.isArray(savedRows) && savedRows.length === 0) {
-    try {
-      record.created_at = new Date().toISOString();
-      const retryRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
-        method: 'POST',
-        headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
-        body: JSON.stringify(record),
-      });
-      if (retryRes.ok) savedRows = await retryRes.json().catch(() => []);
-    } catch (e) {
-      console.warn('[Profile] Supabase POST 재시도 실패 (L1은 이미 저장됨):', e.message);
-    }
-  }
-  const savedProfile = savedRows[0] || record;
+  const savedProfile = { ...record, id: l1Result?.id };
 
   // 2026-06-23: SP 합성 시점 — 가입 직후가 아니라 PROFILE_SUBMIT 완료 후.
   // 2026-07-01 전면 재설계: 개인/기관 구분 없이 _mergeAgentSP 하나로 통합
