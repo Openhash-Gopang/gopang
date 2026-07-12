@@ -2187,7 +2187,17 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
     if (gwpMatch) {
       const svcId  = gwpMatch[1];
       const svcDef = (typeof getService === 'function') ? getService(svcId) : null;
-      if (svcDef) {
+      // ★ 2026-07-12 신설 — status 가드. 지금까지 getService()가 status를
+      // 전혀 체크하지 않아, pending_review(승인 전 초안, 예: kbank/
+      // ktelecom — 250건 사고실험 중 SP-Author 대행으로 등록된 미배포
+      // 서비스)나 pending 상태 서비스도 id만 맞으면 그대로 _gwpLaunch()
+      // 되어 존재하지 않는 도메인으로 이동을 시도할 뻔했다(AGENT-COMMON
+      // §3-0 ③ "승인 전까지는 어떤 이용자에게도 서빙되지 않는다" 원칙
+      // 위반). status가 'active'인 것만 실제로 라우팅한다.
+      if (svcDef && svcDef.status !== 'active') {
+        console.warn(`[GWP] 서비스 '${svcId}'는 status='${svcDef.status}'라 아직 서빙 대상이 아님 — 라우팅 차단`);
+        if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
+      } else if (svcDef) {
         console.info('[GWP] LLM 판단 → 새 탭:', svcId);
         if (bubble) _updateStreamBubble(bubble, fullReply.replace(/\[GWP:\s*[\w-]+\]\s*/, ''));
         _gwpLaunch(svcDef, userText, _preTab, _buildRoutingFacts());
