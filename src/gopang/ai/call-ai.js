@@ -143,6 +143,50 @@ export async function _loadKSearchSP() {
   }
 }
 
+// K-Bank/K-Telecom/K-Estate 로더 — 2026-07-12 신설. 처음엔 새 저장소
+// (bank.hondi.net 등)를 전제로 만들었다가, "모든 SP가 별도 저장소가
+// 필요한 것은 아니다"(주피터님 지적)를 반영해 K-Search와 같은
+// 시스템 전환형으로 재설계 — gwp-registry.js의 type:'switch' 참조.
+let _kBankSpCache = null;
+export async function _loadKBankSP() {
+  if (_kBankSpCache) return _kBankSpCache;
+  try {
+    _kBankSpCache = await _loadSpByKey('SP-22_kbank', 'K-Bank');
+    return _kBankSpCache;
+  } catch (e) {
+    console.warn('[Orchestration] K-Bank SP 로드 실패:', e.message);
+    return null;
+  }
+}
+let _kTelecomSpCache = null;
+export async function _loadKTelecomSP() {
+  if (_kTelecomSpCache) return _kTelecomSpCache;
+  try {
+    _kTelecomSpCache = await _loadSpByKey('SP-23_ktelecom', 'K-Telecom');
+    return _kTelecomSpCache;
+  } catch (e) {
+    console.warn('[Orchestration] K-Telecom SP 로드 실패:', e.message);
+    return null;
+  }
+}
+let _kEstateSpCache = null;
+export async function _loadKEstateSP() {
+  if (_kEstateSpCache) return _kEstateSpCache;
+  try {
+    _kEstateSpCache = await _loadSpByKey('SP-24_kestate', 'K-Estate');
+    return _kEstateSpCache;
+  } catch (e) {
+    console.warn('[Orchestration] K-Estate SP 로드 실패:', e.message);
+    return null;
+  }
+}
+// switch 타입 GWP id → 로더 매핑(아래 _parseAgentTags의 GWP 분기가 참조)
+const SWITCH_SP_LOADERS = {
+  kbank: _loadKBankSP,
+  ktelecom: _loadKTelecomSP,
+  kestate: _loadKEstateSP,
+};
+
 // ── SP 전환 스택 (2026-07-08 신설) ───────────────────────────────
 // 기존 _switchToAssistantSP()/_switchToProfileAssistantSP()는 CFG.system을
 // 그냥 덮어쓰기만 했다 — "이전 SP로 돌아간다"는 개념 자체가 없는 단순
@@ -835,6 +879,29 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await sendFn(`[INTERNAL: AC→K-Search 위임 — 사용자에게 보이지 않는 내부 신호입니다. ` +
       `다음 발화를 그대로 이어받아 대상을 특정하세요: "${kSearchMatch[1].trim()}"]`);
     return true;
+  }
+
+  // ── K-Bank/K-Telecom/K-Estate 위임 — 2026-07-12 신설 ──
+  // K-Search와 동일한 시스템 전환형("모든 SP가 별도 저장소가 필요한
+  // 것은 아니다" — 주피터님 지적으로 재설계). 셋 다 "최종 실행은
+  // 본인 몫, AI는 정보수집·안내까지만"이라 새 탭이나 별도 도메인 없이
+  // 이 세션 안에서 시스템 프롬프트만 바꾸는 것으로 충분하다. 하나의
+  // 정규식으로 세 태그를 함께 매칭 — 로더는 SWITCH_SP_LOADERS에서
+  // 조회(새 서비스 추가 시 이 배열에 한 줄만 추가하면 됨).
+  const switchMatch = fullReply.match(/\[CALL_(KBANK|KTELECOM|KESTATE):\s*query=([^\]]+)\]/);
+  if (switchMatch) {
+    const svcId = switchMatch[1].toLowerCase();
+    const loader = SWITCH_SP_LOADERS[svcId];
+    const label = { kbank: 'K-Bank', ktelecom: 'K-Telecom', kestate: 'K-Estate' }[svcId];
+    if (loader) {
+      console.log(`[Orchestration] AC 최상위 CALL_${switchMatch[1]} 감지 — ${label}로 전달 전환`);
+      await _updateBubble(_stripInternalTags(fullReply));
+      history.length = 0;
+      await _forwardSwitchSP(loader, label);
+      await sendFn(`[INTERNAL: AC→${label} 위임 — 사용자에게 보이지 않는 내부 신호입니다. ` +
+        `다음 발화를 그대로 이어받아 상담을 시작하세요: "${switchMatch[2].trim()}"]`);
+      return true;
+    }
   }
 
   // ── K-Compose 내부에서의 중첩 위임(nested) — EXPERT scope=orchestration_subtask ──
@@ -2220,6 +2287,16 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
       // 위반). status가 'active'인 것만 실제로 라우팅한다.
       if (svcDef && svcDef.status !== 'active') {
         console.warn(`[GWP] 서비스 '${svcId}'는 status='${svcDef.status}'라 아직 서빙 대상이 아님 — 라우팅 차단`);
+        if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
+      } else if (svcDef && svcDef.type === 'switch') {
+        // ★ 2026-07-12 신설 — K-Bank/K-Telecom/K-Estate처럼 url 없는
+        // 시스템전환형 서비스가 구식 [GWP: id] 문법으로 잘못 불렸을 때의
+        // 안전장치. 이 함수(_parseAgentTags)는 동기라 _forwardSwitchSP를
+        // 직접 못 부른다 — 정상 경로는 [CALL_KBANK: query=...] 등 전용
+        // 태그(_handleOrchestrationTags가 처리)를 쓰는 것이므로, 여기서는
+        // url 없는 서비스로 _gwpLaunch가 깨지는 것만 막고 경고 로그만
+        // 남긴다(AGENT-COMMON SP 문구 오류 진단용).
+        console.warn(`[GWP] '${svcId}'는 시스템전환형(type:switch) 서비스라 [GWP:] 태그로는 못 엽니다 — [CALL_${svcId.toUpperCase()}: query=...] 태그를 써야 합니다.`);
         if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
       } else if (svcDef) {
         console.info('[GWP] LLM 판단 → 새 탭:', svcId);

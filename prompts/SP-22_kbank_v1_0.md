@@ -93,17 +93,22 @@ K-Bank는 최종 실행을 대신하지 않으므로 별도 실행 태그가 없
 RULE-09 — 시스템 메타데이터
 ================================================================
 SP-ID          : SP-22_kbank_v1_0
-호출 방식      : AC → [GWP: kbank] (신형 /gov/relay 패턴, agency='bank')
+호출 방식      : AC → [CALL_KBANK: query=...] (시스템 전환형, K-Search와
+               동일 패턴 — call-ai.js _forwardSwitchSP. 새 탭·별도
+               도메인 없음)
 GWP ID         : 'kbank'
-manifest 등록  : gwp-registry.js에 등록(status: pending_review — 배포
-               저장소 미생성). worker.js GOV_AGENCIES에 'bank' 추가 필요
-               (★ 미구현 — gopang worker.js 배선은 별도 커밋).
-배포 필요사항  : bank.hondi.net 저장소 신규 생성 + webapp.html(health/
-               traffic 패턴 복제) + CNAME + worker.js ALLOWED_ORIGINS
-               추가 — 전부 GitHub 조직 관리자(주피터님) 권한 필요, 이
-               세션에서는 gopang 저장소 내 등록·문서 준비까지만 가능.
+manifest 등록  : gwp-registry.js에 등록(status: active, type: 'switch').
+               prompts/sp-catalog.json에 "SP-22_kbank" 등록 완료.
+배포 필요사항  : ★ 2026-07-12 정정 — 없음. 처음엔 새 저장소(bank.hondi.net)
+               가 필요한 것으로 설계했었으나, "모든 SP가 별도 저장소가
+               필요한 것은 아니다"(주피터님 지적)에 따라 K-Search와
+               같은 시스템 전환형으로 재설계 — gopang 저장소 안의 이
+               SP 파일만으로 즉시 작동한다.
 최종 수정      : 2026-07-12
 버전 이력      :
+  v1.0(2차) — 시스템 전환형으로 재설계. 호출 태그를 [GWP: kbank]에서
+         [CALL_KBANK: query=...]로 변경, status를 active로, 배포
+         저장소 요구사항 제거.
   v1.0 — 최초 작성. 250건 사고실험에서 발견된 은행업무 커버리지 갭
          해소를 위해 SP-Author 프로세스를 대행해 초안 작성(주피터님
          지시). K-Traffic AGENCY_PROMPT 패턴(정체성+방법론+STATE

@@ -187,23 +187,32 @@ const GWP_REGISTRY = [
     ],
   },
 
-  // ── 2026-07-12 신설 — 250건 사고실험에서 발견된 커버리지 갭 해소
-  // (SP-Author 프로세스 대행, 주피터님 지시). 은행상품(예적금·대출·
-  // 카드·펀드상담)과 통신(요금제·인터넷·유심)을 다루는 SP가 21개
-  // 목록 어디에도 없었다 — K-Stock(kfinance)은 투자·주식만,
-  // GDC(kgdc)는 결제·송금만 담당. status: pending_review — 실제
-  // 배포 저장소(bank.hondi.net/telecom.hondi.net)가 아직 없으므로
-  // url은 예정 도메인만 적어두고, getService()가 이 status를 보고
-  // 실제 라우팅에는 쓰지 않도록 해야 한다(AGENT-COMMON §3-0 ③ 원칙
-  // — 승인·배포 전까지 이용자에게 서빙되지 않음). SP 초안은
-  // prompts/SP-22_kbank_v1_0.md, prompts/SP-23_ktelecom_v1_0.md 참조.
+  // ── 2026-07-12 신설 → 재설계(같은 날) — 250건 사고실험에서 발견된
+  // 커버리지 갭 해소(SP-Author 프로세스 대행, 주피터님 지시). 은행상품
+  // (예적금·대출·카드·펀드상담)과 통신(요금제·인터넷·유심)을 다루는
+  // SP가 21개 목록 어디에도 없었다 — K-Stock(kfinance)은 투자·주식만,
+  // GDC(kgdc)는 결제·송금만 담당.
+  // ★ 재설계 경위 — 처음엔 K-Health/K-Traffic처럼 "새 저장소+새 도메인+
+  // /gov/relay" 패턴(type:'inline', url 있음)으로 만들고 status를
+  // pending_review로 뒀었다. 그런데 "모든 SP가 별도 저장소가 필요한
+  // 것은 아니다"(주피터님 지적)를 재검토한 결과, K-Bank/Telecom/Estate는
+  // 세 SP 모두 "최종 실행(계좌이체·개통·계약)은 본인 몫, AI는 정보
+  // 수집·안내까지만" 이라고 스스로 설계돼 있어 — 이건 K-Search/
+  // K-Intent/K-Compose/K-Deliver가 이미 쓰는 시스템 전환형(별도 탭·
+  // 도메인 없이 _forwardSwitchSP로 같은 세션 안에서 시스템 프롬프트만
+  // 바꾸는 방식, call-ai.js)과 정확히 같은 성격이다. 저장소 배포를
+  // 기다릴 필요 없이 gopang 저장소 안의 SP 파일만으로 즉시 active로
+  // 켤 수 있다. type:'switch'는 이 셋을 위해 신설한 값 — _parseAgentTags
+  // (call-ai.js)가 이 타입을 보면 _gwpLaunch(새 탭) 대신
+  // _forwardSwitchSP(시스템 전환)로 분기한다. SP 초안은
+  // prompts/SP-22_kbank_v1_0.md, SP-23_ktelecom_v1_0.md,
+  // SP-24_kestate_v1_0.md 참조(RULE-09도 이 재설계에 맞춰 갱신됨).
   {
     id: 'kbank', name: 'K-Bank', category: 'ECO',
-    type: 'inline',
-    url: 'https://bank.hondi.net/webapp.html',  // ★ 미배포 — 저장소 없음
+    type: 'switch',  // 시스템 전환형 — 새 탭 없음, url 불필요
     sp_key: 'SP-22_kbank',
-    status: 'pending_review', priority: 6, threshold: 0.70,
-    description: '은행상품 안내(예적금·대출·신용카드·자동이체·청약) — 증권 매매체결은 kfinance 소관.',
+    status: 'active', priority: 6, threshold: 0.70,
+    description: '은행상품 안내(예적금·대출·신용카드·자동이체·청약) — 증권 매매체결은 kfinance 소관. 최종 실행(계좌이체 등)은 본인이 은행 앱에서.',
     triggers: [
       '적금','예금','대출','신용카드','체크카드','자동이체',
       '청약통장','환전','인증서','한도','상환','펀드 상담',
@@ -211,29 +220,21 @@ const GWP_REGISTRY = [
   },
   {
     id: 'ktelecom', name: 'K-Telecom', category: 'UTL',
-    type: 'inline',
-    url: 'https://telecom.hondi.net/webapp.html',  // ★ 미배포 — 저장소 없음
+    type: 'switch',
     sp_key: 'SP-23_ktelecom',
-    status: 'pending_review', priority: 6, threshold: 0.70,
-    description: '통신 서비스 안내(요금제·인터넷·유심·로밍·결합상품·분실신고) — 단말기 자체 구매는 kcommerce 소관.',
+    status: 'active', priority: 6, threshold: 0.70,
+    description: '통신 서비스 안내(요금제·인터넷·유심·로밍·결합상품·분실신고) — 단말기 자체 구매는 kcommerce 소관. 최종 실행(개통 등)은 본인이 통신사 앱에서.',
     triggers: [
       '요금제','인터넷 설치','유심','로밍','결합상품','통신사',
       '휴대폰 분실','기기변경','와이파이','공유기','IPTV',
     ],
   },
-
-  // ── 2026-07-12(2차) 신설 — 부동산 커버리지 갭(250건 사고실험 105-117번
-  // 구간에서 발견). klaw(계약서 법률검토)·ktax(취득세)·kgov(전입신고·
-  // 확정일자·등기부등본)·kbank(자동이체 설정)와 겹치지 않도록 범위를
-  // 매물 탐색·중개연결·임대차관리로 좁힘. SP 초안은
-  // prompts/SP-24_kestate_v1_0.md 참조.
   {
     id: 'kestate', name: 'K-Estate', category: 'ECO',
-    type: 'inline',
-    url: 'https://estate.hondi.net/webapp.html',  // ★ 미배포 — 저장소 없음
+    type: 'switch',
     sp_key: 'SP-24_kestate',
-    status: 'pending_review', priority: 6, threshold: 0.70,
-    description: '부동산 매물 탐색·등록·중개연결·임대차 계약관리 — 계약서 법률검토(klaw)·세금(ktax)·전입신고 등 행정(kgov)·자동이체 설정(kbank)은 각 소관 서비스로.',
+    status: 'active', priority: 6, threshold: 0.70,
+    description: '부동산 매물 탐색·등록·중개연결·임대차 계약관리 — 계약서 법률검토(klaw)·세금(ktax)·전입신고 등 행정(kgov)·자동이체 설정(kbank)은 각 소관 서비스로. 최종 계약 체결은 본인·공인중개사·법무사 몫.',
     triggers: [
       '전세','월세','매매 매물','부동산','공인중개사','임대차',
       '계약 갱신','재건축','조합원','매물 등록','이사 갈 집',
