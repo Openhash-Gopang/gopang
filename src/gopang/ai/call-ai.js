@@ -1625,6 +1625,19 @@ export async function _handleGovTaskTags(fullReply, bubble, sendFn = callAI, use
 //   "requester_label":"제주도청 기획조정실", "target_type":"dept",
 //   "target_id":"do-dept:welfare", "task_type":"budget_execution_report",
 //   "directive":"하반기 복지예산 집행실적 취합해서 보내" }[/DEPT_TASK_REQUEST]
+/**
+ * _handleDeptTaskTag — call-ai.js(gopang 시민 채팅 클라이언트) 전용 경로.
+ *
+ * ★ 2026-07-12 재설계 — jeju_do/jeju_national SP는 실제로 jeju.hondi.net
+ * (별도 저장소 Openhash-Gopang/jeju)에서 서빙되고, 그 클라이언트는 이
+ * call-ai.js를 쓰지 않는다. 그래서 DEPT_TASK_REQUEST의 "진짜" 처리 경로는
+ * worker.js handleGovRelay/handleBusinessRelay 안에 서버측으로 새로 만들었다
+ * (sp_call과 동일한 원칙 — 클라이언트 무관하게 서버가 직접 감지·처리).
+ * 이 함수는 혹시 AGENT-COMMON(시민용) 쪽에서 이 태그가 나올 경우를 위한
+ * 보조 경로로 남겨두지만, dept/org 요청자는 authoritativeAgency 없이는
+ * 서버가 거부하므로(dept-task-handler.js _authoritativeCheck) 이 경로로는
+ * business/citizen 요청만 실제로 성공한다.
+ */
 export async function _handleDeptTaskTag(fullReply, bubble, sendFn = callAI, userText = '') {
   const m = fullReply.match(/\[DEPT_TASK_REQUEST\]([\s\S]*?)\[\/DEPT_TASK_REQUEST\]/);
   if (!m) return false;
@@ -1668,7 +1681,8 @@ export async function _handleDeptTaskTag(fullReply, bubble, sendFn = callAI, use
   return true;
 }
 
- — 최초 인사("이름을 지어주세요")와 프로필 작성
+/**
+ * _buildFirstContactContext — 최초 인사("이름을 지어주세요")와 프로필 작성
  * 필요성 설명을 SP(시스템 프롬프트) 본문이 아니라, 꼭 필요한 1~2턴에만
  * 사용자 메시지 앞에 붙는 1회성 컨텍스트로 주입합니다(v1.6).
  *

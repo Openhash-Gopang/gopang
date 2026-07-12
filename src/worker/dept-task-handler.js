@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════
 // src/worker/dept-task-handler.js — 부서/기관/사업자 간 업무지시 큐
-// (2026-07-12 신설, B그룹 100건 사고실험 대응)
+// (2026-07-12 신설, B그룹 100건 사고실험 대응 / 2026-07-12 재설계)
 // ═══════════════════════════════════════════════════════════
 //
 // 설계 배경은 pb_migrations/1784200001_created_dept_tasks.js 상단 주석
@@ -9,6 +9,31 @@
 // 부서에 지시", "민간사업자가 행정기관에 지시" 같은 흐름을 표현할 수
 // 없었다(100건 사고실험 B-1/B-4/B-5, 30건 중 18건·60%). 이 파일이 그
 // 간극을 메운다.
+//
+// ★★ 2026-07-12 재설계 — 처음 버전은 이 파일을 call-ai.js(gopang 저장소
+// 시민용 채팅 클라이언트)가 호출하는 걸 전제로 짰는데, jeju_do/
+// jeju_national SP는 실제로 jeju.hondi.net(별도 저장소 Openhash-Gopang/
+// jeju)에서 서빙되고, 그 클라이언트는 call-ai.js를 전혀 쓰지 않는다
+// (webapp.html의 _govRelayCompletion이 /gov/relay를 직접 호출하고, U9
+// sp_call만 서버가 처리 — DEPT_TASK_REQUEST 처리 로직은 클라이언트
+// 어디에도 없었다). 즉 이전 버전은 실제 기관 세션에서는 절대 실행될
+// 수 없는 죽은 경로였다. sp_call과 동일하게 handleGovRelay/
+// handleBusinessRelay가 LLM 응답에서 태그를 직접 감지해 **서버 안에서**
+// 처리하도록 바꿨다 — 어떤 클라이언트를 쓰든(jeju.hondi.net이든 gopang
+// 웹앱이든) 동작한다.
+//
+// 이 재설계는 부수 효과로 B-6(#99, 서명 위조) 문제도 상당 부분 해소한다
+// — dept/org 요청자는 이제 "서명"이 아니라 "이 요청이 실제로 서버가
+// 그 agency/bizKey로 로드해준 /gov/relay·/gov/business-relay 세션
+// 안에서 나왔다"는 사실로 인증된다(requireAuthoritative=true 경로만
+// dept/org 요청을 받아들인다 — 아래 createDeptTaskCore 참고). 순수
+// HTTP POST(/gov/dept-task 직접 호출)로는 dept/org 요청자를 자칭할 수
+// 없도록 막았다. 단, 이걸로도 못 막는 잔여 위험은 여전히 있다 —
+// jeju_do 세션 "안"에서 실제로 도청과 대화하던 사람이 JEJU_CHAIN을
+// 특정 부서(예: jachi)로 유도한 뒤 그 부서를 자칭해 부적절한 지시를
+// 내리는 것까지는 막지 못한다(그 세부 부서 배정 자체가 클라이언트
+// 쪽에서 검증 없이 결정되기 때문 — jeju-router.js resolveJejuAgency).
+// 이건 더 깊은 구조 변경이 필요해 이번 범위 밖으로 남긴다.
 //
 // ★ 범위를 분명히 해 둔다 — 이 구현이 "하는 일"과 "안 하는 일":
 //   하는 일: 지시를 영속 레코드로 남기고(요청자→대상, 상태), 순환 위임을
@@ -92,81 +117,120 @@ async function _validateTarget(env, targetType, targetId, deps) {
   return { ok: true };
 }
 
+// authoritativeAgency가 주어지면(=handleGovRelay/handleBusinessRelay가
+// 서버 안에서 직접 호출) requester가 그 세션과 실제로 일치하는지 검사한다.
+// null이면(=순수 HTTP POST) dept/org 요청자는 아예 거부한다 — 이 경로로는
+// "부서를 자칭"할 신뢰 근거가 전혀 없기 때문(위 상단 주석 참고).
+function _authoritativeCheck(requesterType, requesterId, authoritativeAgency) {
+  if (requesterType !== 'dept' && requesterType !== 'org') return { ok: true }; // business/citizen은 서명으로 별도 검증
+  if (!authoritativeAgency) {
+    return { ok: false, reason: 'DEPT_ORG_REQUIRES_RELAY_SESSION' };
+  }
+  if (authoritativeAgency === 'jeju_do') {
+    const ok = requesterType === 'dept' &&
+      (requesterId.startsWith('do-dept:') || requesterId.startsWith('do-agency:') || requesterId.startsWith('city-dept:'));
+    return ok ? { ok: true } : { ok: false, reason: 'REQUESTER_AGENCY_MISMATCH' };
+  }
+  if (authoritativeAgency === 'jeju_national') {
+    const ok = requesterType === 'dept' && requesterId.startsWith('national:');
+    return ok ? { ok: true } : { ok: false, reason: 'REQUESTER_AGENCY_MISMATCH' };
+  }
+  // handleBusinessRelay — authoritativeAgency는 bizKey 문자열 그대로.
+  const ok = requesterType === 'org' && requesterId === `org:${authoritativeAgency}`;
+  return ok ? { ok: true } : { ok: false, reason: 'REQUESTER_AGENCY_MISMATCH' };
+}
+
 /**
- * POST /gov/dept-task — 업무지시 생성
- * body: { requester_type, requester_id, requester_label?, target_type, target_id,
- *         task_type, directive, payload?, origin_chain? }
+ * createDeptTaskCore — 실제 생성 로직(taxonomy·순환·인증 검사 전부 포함).
+ * HTTP 핸들러(handleDeptTaskCreate)와 서버 내부 호출(worker.js
+ * handleGovRelay/handleBusinessRelay의 태그 감지) 양쪽에서 공유한다.
  *
- * ★ 서명 검증: business/citizen 요청자는 Ed25519 서명을 요구한다(guid 소유
- * 증명). dept/org 요청자는 개인 키페어 개념이 없으므로(제주도청 자체가
- * 서명 주체가 아님 — worker.js jeju_do delegation과 동일하게 "누구나
- * 접근 가능한 관할 SP"로 취급) 서명을 요구하지 않는다. 이건 알려진
- * 한계다 — 지금은 "요청 출처가 실제 그 부서 시스템인지"를 서버가
- * 검증할 방법이 없다(아래 KNOWN_LIMITATIONS 참조).
+ * params: { requesterType, requesterId, requesterLabel, targetType, targetId,
+ *           taskType, directive, payload, originChain, pubkey, signature }
+ * opts:   { authoritativeAgency } — 서버 내부 호출일 때만 agency/bizKey를 넘긴다.
+ * 반환: { ok:true, taskId, status } | { ok:false, reason, httpStatus }
  */
-async function handleDeptTaskCreate(request, env, corsHeaders, deps) {
-  const { _err, _verifyEd25519, _l1FindProfileByGuid, _l1CreateDeptTask } = deps;
-  let body;
-  try { body = await request.json(); } catch {
-    return _err(400, 'INVALID_JSON', '요청 본문이 올바르지 않습니다.', corsHeaders);
-  }
-
+async function createDeptTaskCore(env, params, deps, opts = {}) {
   const {
-    requester_type, requester_id, requester_label = '',
-    target_type, target_id, task_type, directive, payload = {},
-    origin_chain = [],
-    pubkey = null, signature = null,
-  } = body;
+    requesterType, requesterId, requesterLabel = '',
+    targetType, targetId, taskType, directive, payload = {},
+    originChain = [], pubkey = null, signature = null,
+  } = params;
+  const { authoritativeAgency = null } = opts;
+  const { _verifyEd25519, _l1FindProfileByGuid, _l1CreateDeptTask } = deps;
 
-  if (!requester_type || !requester_id) return _err(400, 'MISSING_FIELD', 'requester_type/requester_id 필수', corsHeaders);
-  if (!target_type || !target_id)       return _err(400, 'MISSING_FIELD', 'target_type/target_id 필수', corsHeaders);
-  if (!task_type)                       return _err(400, 'MISSING_FIELD', 'task_type 필수', corsHeaders);
-  if (!directive || !directive.trim())  return _err(400, 'MISSING_FIELD', 'directive 필수', corsHeaders);
+  if (!requesterType || !requesterId) return { ok: false, reason: 'MISSING_FIELD', httpStatus: 400, detail: 'requester_type/requester_id 필수' };
+  if (!targetType || !targetId)       return { ok: false, reason: 'MISSING_FIELD', httpStatus: 400, detail: 'target_type/target_id 필수' };
+  if (!taskType)                       return { ok: false, reason: 'MISSING_FIELD', httpStatus: 400, detail: 'task_type 필수' };
+  if (!directive || !String(directive).trim()) return { ok: false, reason: 'MISSING_FIELD', httpStatus: 400, detail: 'directive 필수' };
 
-  if (['business', 'citizen'].includes(requester_type)) {
-    if (!pubkey || !signature) return _err(400, 'MISSING_FIELD', 'business/citizen 요청자는 pubkey/signature 필수', corsHeaders);
-    const sigOk = await _verifyEd25519(pubkey, signature, body);
-    if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
-    const requesterProfile = await _l1FindProfileByGuid(env, requester_id).catch(() => null);
-    if (!requesterProfile) return _err(404, 'REQUESTER_NOT_FOUND', '요청자 프로필이 없습니다', corsHeaders);
+  if (requesterType === 'business' || requesterType === 'citizen') {
+    if (!pubkey || !signature) return { ok: false, reason: 'MISSING_FIELD', httpStatus: 400, detail: 'business/citizen 요청자는 pubkey/signature 필수' };
+    const sigOk = await _verifyEd25519(pubkey, signature, params);
+    if (!sigOk) return { ok: false, reason: 'INVALID_SIGNATURE', httpStatus: 401 };
+    const requesterProfile = await _l1FindProfileByGuid(env, requesterId).catch(() => null);
+    if (!requesterProfile) return { ok: false, reason: 'REQUESTER_NOT_FOUND', httpStatus: 404 };
     if (requesterProfile.pubkey_ed25519 && requesterProfile.pubkey_ed25519 !== pubkey) {
-      return _err(401, 'PUBKEY_MISMATCH', '공개키가 일치하지 않습니다', corsHeaders);
+      return { ok: false, reason: 'PUBKEY_MISMATCH', httpStatus: 401 };
     }
+  } else {
+    const authCheck = _authoritativeCheck(requesterType, requesterId, authoritativeAgency);
+    if (!authCheck.ok) return { ok: false, reason: authCheck.reason, httpStatus: 401 };
   }
 
-  // 순환 위임 방지(SP-INTERCALL-PROTOCOL 원칙3과 동일 사상) — 이 target이
-  // 이미 origin_chain에 있으면 거부. 상한(MAX_DEPT_TASK_CHAIN)도 강제한다.
-  if (origin_chain.includes(target_id)) {
-    return _err(409, 'CIRCULAR_DELEGATION', `이미 경유한 대상입니다(순환 위임): ${target_id}`, corsHeaders);
+  if (originChain.includes(targetId)) {
+    return { ok: false, reason: 'CIRCULAR_DELEGATION', httpStatus: 409, detail: `이미 경유한 대상입니다: ${targetId}` };
   }
-  if (origin_chain.length >= MAX_DEPT_TASK_CHAIN) {
-    return _err(429, 'CHAIN_LIMIT_EXCEEDED', `업무지시 연쇄 한도(${MAX_DEPT_TASK_CHAIN}단계)를 초과했습니다`, corsHeaders);
+  if (originChain.length >= MAX_DEPT_TASK_CHAIN) {
+    return { ok: false, reason: 'CHAIN_LIMIT_EXCEEDED', httpStatus: 429, detail: `업무지시 연쇄 한도(${MAX_DEPT_TASK_CHAIN}단계) 초과` };
   }
 
-  const targetCheck = await _validateTarget(env, target_type, target_id, deps);
+  const targetCheck = await _validateTarget(env, targetType, targetId, deps);
   if (!targetCheck.ok) {
-    return _err(400, targetCheck.reason, `등록되지 않았거나 지시를 받을 수 없는 대상입니다: ${target_type}:${target_id}`, corsHeaders);
+    return { ok: false, reason: targetCheck.reason, httpStatus: 400, detail: `등록되지 않았거나 지시를 받을 수 없는 대상: ${targetType}:${targetId}` };
   }
 
   let record;
   try {
     record = await _l1CreateDeptTask(env, {
-      requester_type, requester_id, requester_label,
-      target_type, target_id, task_type, directive, payload,
+      requester_type: requesterType, requester_id: requesterId, requester_label: requesterLabel,
+      target_type: targetType, target_id: targetId, task_type: taskType, directive, payload,
       status: 'requested',
-      origin_chain: [...origin_chain, target_id],
+      origin_chain: [...originChain, targetId],
     });
   } catch (e) {
-    return _err(502, 'DEPT_TASK_CREATE_FAILED', e.message, corsHeaders);
+    return { ok: false, reason: 'DEPT_TASK_CREATE_FAILED', httpStatus: 502, detail: e.message };
   }
 
-  return new Response(JSON.stringify({ ok: true, task_id: record.id, status: 'requested' }),
+  return { ok: true, taskId: record.id, status: 'requested' };
+}
+
+/**
+ * POST /gov/dept-task — 순수 HTTP 경로. dept/org 요청자는 이제 이 경로로는
+ * 절대 만들 수 없다(authoritativeAgency가 없어 _authoritativeCheck가 항상
+ * 거부) — business/citizen(서명 있음)만 이 경로로 직접 생성 가능하다.
+ * dept/org는 handleGovRelay/handleBusinessRelay 내부에서만 생성된다.
+ */
+async function handleDeptTaskCreate(request, env, corsHeaders, deps) {
+  const { _err } = deps;
+  let body;
+  try { body = await request.json(); } catch {
+    return _err(400, 'INVALID_JSON', '요청 본문이 올바르지 않습니다.', corsHeaders);
+  }
+  const result = await createDeptTaskCore(env, {
+    requesterType: body.requester_type, requesterId: body.requester_id, requesterLabel: body.requester_label,
+    targetType: body.target_type, targetId: body.target_id, taskType: body.task_type, directive: body.directive,
+    payload: body.payload, originChain: body.origin_chain || [], pubkey: body.pubkey, signature: body.signature,
+  }, deps /* opts 없음 = authoritativeAgency null */);
+
+  if (!result.ok) return _err(result.httpStatus || 400, result.reason, result.detail || '', corsHeaders);
+  return new Response(JSON.stringify({ ok: true, task_id: result.taskId, status: result.status }),
     { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
 /**
  * PATCH /gov/dept-task/:id — 상태 전환(대상 측만 호출). AC가 자동으로
- * completed를 호출하는 경로는 이 파일 어디에도 없다 — 위 상단 주석의
+ * completed를 호출하는 경로는 이 파일 어디에도 없다 — 상단 주석의
  * "안 하는 일" 원칙을 코드로도 강제한다.
  */
 async function handleDeptTaskUpdate(request, env, corsHeaders, taskId, deps) {
@@ -189,4 +253,4 @@ async function handleDeptTaskUpdate(request, env, corsHeaders, taskId, deps) {
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
-export { handleDeptTaskCreate, handleDeptTaskUpdate, DEPT_TASK_TAXONOMY };
+export { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY };

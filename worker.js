@@ -14,7 +14,7 @@
 import { handleAiChat, handleEscalate } from './src/worker/ai-chat-handler.js';
 import { handleOrderQueue } from './src/worker/order-queue-handler.js';
 import { handleDeliveryRequest } from './src/worker/delivery-handler.js';
-import { handleDeptTaskCreate, handleDeptTaskUpdate } from './src/worker/dept-task-handler.js';
+import { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore } from './src/worker/dept-task-handler.js';
 
 const ALLOWED_ORIGINS = [
   'https://hondi.net',
@@ -4211,7 +4211,7 @@ const _K_PUBLIC_COMMON_TTL_MS = 10 * 60 * 1000; // 10분 — 문서 갱신 반�
 // 국가기관(K-Public_common)·전문가 보조 모듈(PROFESSIONAL-common)
 // 양쪽 모두 이 문서를 상속한다.
 // ═══════════════════════════════════════════════════════════
-const UNIVERSAL_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/UNIVERSAL-common_v1_2.md';
+const UNIVERSAL_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/UNIVERSAL-common_v1_3.md';
 let _universalCommonCache = null;
 let _universalCommonCacheAt = 0;
 const _UNIVERSAL_COMMON_TTL_MS = 10 * 60 * 1000;
@@ -4493,6 +4493,37 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
     const recordTask = Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW)]);
     if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
   }
+
+  // ── DEPT_TASK_REQUEST 서버측 처리 (2026-07-12 신설) ──────────────
+  // handleGovRelay와 동일 원칙 — bizKey를 authoritativeAgency로 그대로
+  // 넘겨 requester_id가 org:{bizKey}와 일치하는지 서버가 직접 검증한다.
+  {
+    const firstContent = data?.choices?.[0]?.message?.content;
+    const deptTaskMatch = typeof firstContent === 'string'
+      ? firstContent.match(/\[DEPT_TASK_REQUEST\]([\s\S]*?)\[\/DEPT_TASK_REQUEST\]/)
+      : null;
+    if (deptTaskMatch) {
+      let taskPayload = null;
+      try { taskPayload = JSON.parse(deptTaskMatch[1].trim()); } catch (e) { /* ok:false로 처리 */ }
+      const result = taskPayload
+        ? await createDeptTaskCore(env, {
+            requesterType: taskPayload.requester_type, requesterId: taskPayload.requester_id,
+            requesterLabel: taskPayload.requester_label, targetType: taskPayload.target_type,
+            targetId: taskPayload.target_id, taskType: taskPayload.task_type, directive: taskPayload.directive,
+            payload: taskPayload.payload, originChain: taskPayload.origin_chain || [],
+          }, {
+            _l1FindProfileByGuid, _l1CreateDeptTask,
+            _verifyEd25519: async () => true,
+          }, { authoritativeAgency: bizKey })
+        : { ok: false, reason: 'INVALID_JSON' };
+
+      const cleanedText = firstContent.replace(/\[DEPT_TASK_REQUEST\][\s\S]*?\[\/DEPT_TASK_REQUEST\]/, '').trim();
+      const noticeText = result.ok
+        ? `\n\n(업무지시가 접수됐습니다 — 접수번호 ${result.taskId}. 처리 완료 여부는 대상 기관이 별도로 갱신합니다.)`
+        : `\n\n(업무지시 접수에 실패했습니다: ${result.reason}${result.detail ? ' — ' + result.detail : ''})`;
+      data.choices[0].message.content = (cleanedText || '요청하신 업무지시를 처리했습니다.') + noticeText;
+    }
+  }
   return new Response(JSON.stringify(data), { headers: corsHeaders });
 }
 
@@ -4565,7 +4596,7 @@ const SP_DELEGATION_REGISTRY = {
   public:     { via: 'manifest', key: 'SP-10_kpublic',    identity: 'kpublic',       pdvScope: 'kpublic' },
   jeju_do: {
     via: 'url',
-    url: 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/Jejudo/01-do/JEJU-DO-SP_v1.0.md',
+    url: 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/Jejudo/01-do/JEJU-DO-SP_v1.1.md',
     identity: null, label: '제주도청(총괄)',
     // ★ 2026-07-09 추가 — JEJU-DO-SP_v1.0.md 자신의 헤더가 "반드시
     // 상위 공통 레이어 뒤에 고정 삽입, 단독 사용 금지"라고 명시하는데
@@ -5191,6 +5222,40 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   // 클라이언트 조작에 노출되지 않는다.
   if (canDelegate) {
     const firstContent = data?.choices?.[0]?.message?.content;
+
+    // ── DEPT_TASK_REQUEST 서버측 처리 (2026-07-12 재설계) ──────────
+    // sp_call과 달리 "이번 턴 답을 완성하기 위한 재귀 호출"이 아니라
+    // 부수효과(레코드 생성)만 있으면 되므로, 감지되면 그 자리에서 바로
+    // 처리하고 sp_call 분기로 내려가지 않는다. authoritativeAgency로
+    // 이 요청이 실제로 어느 agency 세션에서 나왔는지 서버가 직접
+    // 넘겨준다 — LLM이 자기 신원을 자유 텍스트로 자칭하게 두지 않는다
+    // (dept-task-handler.js _authoritativeCheck 참고).
+    const deptTaskMatch = typeof firstContent === 'string'
+      ? firstContent.match(/\[DEPT_TASK_REQUEST\]([\s\S]*?)\[\/DEPT_TASK_REQUEST\]/)
+      : null;
+    if (deptTaskMatch) {
+      let payload = null;
+      try { payload = JSON.parse(deptTaskMatch[1].trim()); } catch (e) { /* 아래 result.ok=false로 처리 */ }
+      const result = payload
+        ? await createDeptTaskCore(env, {
+            requesterType: payload.requester_type, requesterId: payload.requester_id,
+            requesterLabel: payload.requester_label, targetType: payload.target_type,
+            targetId: payload.target_id, taskType: payload.task_type, directive: payload.directive,
+            payload: payload.payload, originChain: payload.origin_chain || [],
+          }, {
+            _l1FindProfileByGuid, _l1CreateDeptTask,
+            _verifyEd25519: async () => true, // dept/org만 이 경로를 타므로 서명 분기는 사실상 미사용
+          }, { authoritativeAgency: agency })
+        : { ok: false, reason: 'INVALID_JSON' };
+
+      const cleanedText = firstContent.replace(/\[DEPT_TASK_REQUEST\][\s\S]*?\[\/DEPT_TASK_REQUEST\]/, '').trim();
+      const noticeText = result.ok
+        ? `\n\n(업무지시가 접수됐습니다 — 접수번호 ${result.taskId}. 처리 완료 여부는 대상 기관이 별도로 갱신합니다.)`
+        : `\n\n(업무지시 접수에 실패했습니다: ${result.reason}${result.detail ? ' — ' + result.detail : ''})`;
+      data.choices[0].message.content = (cleanedText || '요청하신 업무지시를 처리했습니다.') + noticeText;
+      return new Response(JSON.stringify(data), { headers: corsHeaders });
+    }
+
     const call = _parseSpCallRequest(firstContent);
 
     if (call) {
