@@ -2986,7 +2986,7 @@ window.closePDV = closePDV;
     // 생성 중일 때는 이 버튼이 "중단" 역할이므로 항상 눌러야 하고
     // (disabled 금지) 입력값 유무와 무관하다.
     if (_panelGenerating) { sendBtn.disabled = false; return; }
-    sendBtn.disabled = !(input.value.trim() || _aiPanelAttachedFile);
+    sendBtn.disabled = !(input.value.trim() || _aiPanelAttachedFiles.length);
   }
   input.addEventListener('input', () => {
     input.style.height = 'auto';
@@ -2996,7 +2996,6 @@ window.closePDV = closePDV;
   sendBtn.disabled = true;
 
   // ── 파일·사진 첨부 — 입력 필드 왼쪽 보조 버튼 ─────────
-  let _aiPanelAttachedFile = null; // { name, dataUrl, isImage }
 
   function _clearAttachPreview() {
     _aiPanelAttachedFiles = [];
@@ -3138,7 +3137,7 @@ window.closePDV = closePDV;
       silenceTimer = setTimeout(() => {
         silenceTimer = null;
         if (!aiMicActive) return;
-        if (input.value.trim() || _aiPanelAttachedFile) {
+        if (input.value.trim() || _aiPanelAttachedFiles.length) {
           if (!_autoSendAllowed()) {
             console.warn('[AI 마이크] 1분 내 자동전송 한도(' + AUTO_SEND_MAX_PER_MINUTE + '회) 초과 — 오작동 의심으로 마이크를 끕니다.');
             _appendPanelMsg('ai', '음성 입력이 너무 자주 반복돼 마이크를 잠시 멈췄어요. 다시 누르면 켜져요.');
