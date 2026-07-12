@@ -1,6 +1,6 @@
-{
+﻿{
   "AGENT-COMMON": "AGENT-COMMON_v3_40.txt",
-  "AGENT-SUPPLIER-COMMON": "AGENT-SUPPLIER-COMMON_v2.1.txt",
+  "AGENT-SUPPLIER-COMMON": "AGENT-SUPPLIER-COMMON_v2.2.txt",
   "HONDI_VISITOR_SP": "hondi_visitor_sp_v1_2.txt",
   "UNIVERSAL-INTEGRITY": "UNIVERSAL-INTEGRITY_v1_0.md",
   "SP_PDV": "SP_PDV_v1_1.md",
@@ -134,3 +134,4 @@
   "AGENT-SUPPLIER-98": "AGENT-SUPPLIER-98_own-consumption-production_v2.0.txt",
   "AGENT-SUPPLIER-99": "AGENT-SUPPLIER-99_international-foreign-organizations_v2.0.txt"
 }
+
