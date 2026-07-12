@@ -1293,7 +1293,16 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
     console.log('[SP-Author] GOV_SP_DRAFT_REQUEST 감지 — 큐잉 요청');
     await _updateBubble(_stripInternalTags(fullReply));
     history.push({ role: 'assistant', content: fullReply });
-    let resultText;
+    // ★ 2026-07-11 추가(실사로 확인된 문제): 기존엔 큐잉 결과를 [GOV_SP_
+    // DRAFT_REQUEST 결과] 태그로 모델에게만 돌려주고, 그걸 모델이 다음
+    // 턴에서 잘 narration해주길 기대했다 — 근데 그 두 번째 턴이 사용자
+    // 눈에 안 보이거나(매우 짧게 지나가거나), 모델이 결과를 그냥 침묵
+    // 처리하면 사용자는 "초안 작성을 요청해 두겠습니다"라는 말만 보고
+    // 실제로 등록됐는지 알 길이 없었다. Claude가 도구 호출 진행상황을
+    // 보여주듯, 여기서도 사실관계(등록 성공/실패)는 모델의 서술 품질에
+    // 기대지 않고 별도의 눈에 보이는 상태 말풍선으로 직접 보장한다.
+    const _progBubble = appendBubble('ai', '⏳ SP 초안 작성 요청을 서버에 등록하는 중…');
+    let resultText, _queueOk = false, _queueId = '';
     try {
       const res = await fetch(`${base}/sp-author/queue`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1307,10 +1316,16 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
           priority: 'normal',
         }),
       });
-      resultText = JSON.stringify(await res.json().catch(() => ({ status: res.status })));
+      const data = await res.json().catch(() => ({ status: res.status }));
+      resultText = JSON.stringify(data);
+      _queueOk = res.ok && !data.error;
+      _queueId = data.id || data.request_id || '';
     } catch (e) {
       resultText = `{"error":"${e.message}"}`;
     }
+    _progBubble.textContent = _queueOk
+      ? `✅ SP 초안 작성 요청이 등록됐습니다${_queueId ? ` (요청 ID: ${_queueId})` : ''} — 검토·승인 후 이용하실 수 있어요.`
+      : `⚠️ SP 초안 작성 요청 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.`;
     await sendFn(`[GOV_SP_DRAFT_REQUEST 결과] ${resultText}`);
     return true;
   }
@@ -1327,7 +1342,10 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
     console.log('[SP-Author] SP_DRAFT_REQUEST 감지 — 큐잉 요청');
     await _updateBubble(_stripInternalTags(fullReply));
     history.push({ role: 'assistant', content: fullReply });
-    let resultText;
+    // ★ 2026-07-11 추가 — 위 GOV_SP_DRAFT_REQUEST와 동일한 이유로 진행
+    // 상태를 모델 서술에만 맡기지 않고 별도 말풍선으로 직접 보장한다.
+    const _progBubble = appendBubble('ai', '⏳ SP 초안 작성 요청을 서버에 등록하는 중…');
+    let resultText, _queueOk = false, _queueId = '';
     try {
       const res = await fetch(`${base}/sp-author/queue`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1340,10 +1358,16 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
           priority: 'normal',
         }),
       });
-      resultText = JSON.stringify(await res.json().catch(() => ({ status: res.status })));
+      const data = await res.json().catch(() => ({ status: res.status }));
+      resultText = JSON.stringify(data);
+      _queueOk = res.ok && !data.error;
+      _queueId = data.id || data.request_id || '';
     } catch (e) {
       resultText = `{"error":"${e.message}"}`;
     }
+    _progBubble.textContent = _queueOk
+      ? `✅ SP 초안 작성 요청이 등록됐습니다${_queueId ? ` (요청 ID: ${_queueId})` : ''} — 검토·승인 후 이용하실 수 있어요.`
+      : `⚠️ SP 초안 작성 요청 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.`;
     await sendFn(`[SP_DRAFT_REQUEST 결과] ${resultText}`);
     return true;
   }
