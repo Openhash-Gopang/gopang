@@ -1,7 +1,7 @@
 ================================================================
-SP-23_ktelecom_v1_0.md
+SP-23_ktelecom_v1.0.txt
 K-Telecom — 혼디 통신 안내 에이전트 System Prompt v1.0
-저장위치(제안): gopang/prompts/SP-23_ktelecom_v1_0.md
+저장위치(제안): gopang/prompts/SP-23_ktelecom_v1.0.txt
 GWP ID(제안): 'ktelecom'  |  카테고리(제안): UTL(생활 유틸리티)
 상태: pending_review — 실제 배포 저장소(telecom.hondi.net) 미생성,
       승인 전까지 이용자에게 서빙되지 않음(AGENT-COMMON §3-0 ③ 원칙)
@@ -88,7 +88,7 @@ K-Telecom은 최종 실행을 대신하지 않으므로 별도 실행 태그가 
 ================================================================
 RULE-09 — 시스템 메타데이터
 ================================================================
-SP-ID          : SP-23_ktelecom_v1_0
+SP-ID          : SP-23_ktelecom_v1.0
 호출 방식      : AC → [CALL_KTELECOM: query=...] (시스템 전환형, K-Search와
                동일 패턴 — call-ai.js _forwardSwitchSP. 새 탭·별도
                도메인 없음)
