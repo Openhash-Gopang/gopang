@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1400,7 +1400,7 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
     <input type="file" id="file-input" style="display:none" accept="image/*,.pdf,.txt,.docx" onchange="handleFileSelect(event)">
     <input type="file" id="camera-input" style="display:none" accept="image/*" capture="environment" onchange="handleFileSelect(event)">
     <input type="file" id="camera-selfie" style="display:none" accept="image/*" capture="user" onchange="_authHandleSelfie(event)">
-    <input type="file" id="ai-panel-file-input" style="display:none" accept="image/*,.pdf,.txt,.docx">
+    <input type="file" id="ai-panel-file-input" style="display:none" accept="image/*,.pdf,.txt,.docx" multiple>
     <input type="file" id="ai-panel-camera-input" style="display:none" accept="image/*" capture="environment">
   </div>
 </div><!-- /#app -->
@@ -2999,7 +2999,7 @@ window.closePDV = closePDV;
   let _aiPanelAttachedFile = null; // { name, dataUrl, isImage }
 
   function _clearAttachPreview() {
-    _aiPanelAttachedFile = null;
+    _aiPanelAttachedFiles = [];
     attachPreview.style.display = 'none';
     if (fileInput)   fileInput.value = '';
     if (cameraInput) cameraInput.value = '';
