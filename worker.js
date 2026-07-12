@@ -14,6 +14,7 @@
 import { handleAiChat, handleEscalate } from './src/worker/ai-chat-handler.js';
 import { handleOrderQueue } from './src/worker/order-queue-handler.js';
 import { handleDeliveryRequest } from './src/worker/delivery-handler.js';
+import { handleDeptTaskCreate, handleDeptTaskUpdate } from './src/worker/dept-task-handler.js';
 
 const ALLOWED_ORIGINS = [
   'https://hondi.net',
@@ -2095,7 +2096,7 @@ async function handleExecuteAtom(request, env, corsHeaders) {
 // Supabase user_profiles에는 있지만 L1엔 컬럼이 없는 필드
 // (name/address/lat/lng/phone/website/casts_for)는 extra.core에 접어서
 // 같이 저장한다 — 이번 스키마 변경에서 컬럼을 더 늘리지 않기 위함.
-async function _l1UpsertProfile(env, { guid, handle, entityType, nativeLang, isPublic, pubkey, extra, core }) {
+async function _l1UpsertProfile(env, { guid, handle, entityType, nativeLang, isPublic, pubkey, extra, core, claimStatus }) {
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   const mergedExtra = { ...(extra || {}), core: { ...(extra?.core || {}), ...(core || {}) } };
@@ -2108,6 +2109,11 @@ async function _l1UpsertProfile(env, { guid, handle, entityType, nativeLang, isP
     is_public: isPublic !== false,
     pubkey_ed25519: pubkey || undefined,
     extra: mergedExtra,
+    // 2026-07-12 신설 — SP-18 STEP3(unclaimed). 안 보내면(undefined) 기존
+    // 값을 건드리지 않는다(PATCH 시 필드 생략은 PocketBase가 무변경으로
+    // 처리) — 일반 가입 경로가 이 파라미터를 안 넘겨도 기존 claimed
+    // 레코드가 실수로 초기화되지 않는다.
+    ...(claimStatus ? { claim_status: claimStatus } : {}),
   };
 
   const existing = await _l1FindProfileByGuid(env, guid).catch(() => null);
@@ -2391,6 +2397,14 @@ export default {
     if (pathname === '/biz/delivery-request' && request.method === 'POST')
       return handleDeliveryRequest(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, _searchEntitiesRaw, _l1CreateDeliveryRequest });
 
+    // ── 부서/기관/사업자 간 업무지시 큐 (2026-07-12 신설, B그룹 대응) ──
+    if (pathname === '/gov/dept-task' && request.method === 'POST')
+      return handleDeptTaskCreate(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, _l1CreateDeptTask });
+    if (pathname.startsWith('/gov/dept-task/') && request.method === 'PATCH') {
+      const taskId = pathname.replace('/gov/dept-task/', '');
+      return handleDeptTaskUpdate(request, env, corsHeaders, taskId, { _err, _l1UpdateDeptTask });
+    }
+
     // ── ai-setup (AI 비서 설정) ─────────────────────────────
     // v5.1: 토큰 기반 폐기 — Ed25519 서명(/biz/product와 동일 패턴)으로 전환
     //   GET  : ?guid=... 만으로 조회 (저장값은 암호화되어 있어 평문 키 노출 없음)
@@ -2458,6 +2472,12 @@ export default {
     // 핸드셰이크마다 실시간으로 묻는다. AGENT-COMMON §4 참조)
     if (pathname === '/profile/verify-owner' && request.method === 'GET')
       return handleProfileVerifyOwner(request, env, corsHeaders);
+
+    // 2026-07-12 — SP-18_ksearch STEP3 선행조건 (c): claim(정식 전환) 절차.
+    // /profile POST보다 먼저 체크해야 한다 — startsWith('/profile')이
+    // '/profile/claim'도 매칭해버리므로, 더 구체적인 경로를 먼저 분기.
+    if (pathname === '/profile/claim' && request.method === 'POST')
+      return handleProfileClaim(request, env, corsHeaders);
 
     if (pathname.startsWith('/profile')) {
       if (request.method === 'GET')  return handleProfileGet(request, env, corsHeaders);
@@ -3180,6 +3200,22 @@ async function handleSearch(request, env, corsHeaders) {
   const data = await res.json().catch(() => ({ error: 'parse failed' }));
   if (!res.ok || !Array.isArray(data)) {
     return new Response(JSON.stringify(data), { status: res.status, headers: corsHeaders });
+  }
+
+  // 2026-07-12 신설 — SP-18 STEP3(unclaimed) 마스킹. RPC 자체(search_entities)는
+  // 이 저장소 밖(Supabase, 실사 결과 sql/search_index.sql은 낡아 실제
+  // 시그니처와 다름 — worker.js 7261행 주석 참고)이라 여기서 수정 못 한다.
+  // 대신 응답 후처리에서 claim_status를 본다 — 단, 이게 동작하려면 RPC가
+  // 각 행에 extra(또는 최소 claim_status)를 반환해야 한다. 반환 안 하면
+  // 아래는 아무 것도 마스킹하지 않고 조용히 통과한다(방어적 — 필드 부재를
+  // 에러로 취급하지 않음). ★ RPC가 실제로 extra/claim_status를 반환하는지는
+  // 이 저장소 안에서 확인 불가 — 다음 세션에서 라이브 응답으로 검증 필요.
+  for (const entity of data) {
+    const claimStatus = entity?.claim_status ?? entity?.extra?.claim_status;
+    if (claimStatus === 'unclaimed') {
+      entity.phone = null;
+      entity.provisional = true;
+    }
   }
 
   // 2026-07-05: L1 seller_products를 join(엔티티 레벨 매칭 결과 보강)하고,
@@ -4175,7 +4211,7 @@ const _K_PUBLIC_COMMON_TTL_MS = 10 * 60 * 1000; // 10분 — 문서 갱신 반�
 // 국가기관(K-Public_common)·전문가 보조 모듈(PROFESSIONAL-common)
 // 양쪽 모두 이 문서를 상속한다.
 // ═══════════════════════════════════════════════════════════
-const UNIVERSAL_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/UNIVERSAL-common_v1_1.md';
+const UNIVERSAL_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/UNIVERSAL-common_v1_2.md';
 let _universalCommonCache = null;
 let _universalCommonCacheAt = 0;
 const _UNIVERSAL_COMMON_TTL_MS = 10 * 60 * 1000;
@@ -6978,9 +7014,196 @@ async function _mergeAgentSP(env, principalProfile) {
   return { ok: true, merged: true, guid: principalProfile.guid, sp_updated: true };
 }
 
+// ═══════════════════════════════════════════════════════════
+// 2026-07-12 신설 — SP-18_ksearch STEP3(미청구 프로필) 구현
+// ═══════════════════════════════════════════════════════════
+//
+// 설계를 원안(SP-18 STEP3 절차안)에서 단순화한 지점 한 가지를 밝혀둔다:
+// 원안은 [CALL_PROFILE_ASSISTANT: mode=third_party_draft]로 profile-
+// assistant SP를 거치는 대화형 경로였다. 이 구현은 그 대신 K-Search가
+// STEP1~2(웹검색 수집 + 이용자 확인)를 마친 뒤 이 엔드포인트를 한 번에
+// 직접 호출하는 단일 요청형으로 단순화했다 — profile-assistant는 "본인
+// 온보딩"(멀티턴 질문)을 위해 설계된 SP라 "이미 확인된 필드를 그대로
+// 저장"하는 이 케이스에는 대화 단계 자체가 불필요하다. call-ai.js의
+// _handleCreateUnclaimedProfileTag가 이 엔드포인트를 호출한다.
+const UNCLAIMED_ALLOWED_ENTITY_TYPES = new Set(['business', 'org', 'institution', 'platform']);
+
+async function _handleUnclaimedProfilePost(body, env, corsHeaders) {
+  const {
+    entity_type, name, native_lang = 'ko',
+    address = '', lat = null, lng = null,
+    phone = null, website = '',
+    description = '', tags = [],
+    occupation = null,
+    claim_source = 'ai_web_search',
+  } = body;
+
+  if (!entity_type) return _err(400, 'MISSING_FIELD', 'entity_type 필수', corsHeaders);
+  if (!name)        return _err(400, 'MISSING_FIELD', 'name 필수', corsHeaders);
+  if (!UNCLAIMED_ALLOWED_ENTITY_TYPES.has(entity_type)) {
+    // person/individual/consumer 배제 — 제3자가 서명 없이 "실존 인물"
+    // 프로필을 만드는 사칭 경로가 되는 걸 원천 차단(RULE-01 금지-4와
+    // 동일한 취지 — SP-18 자신도 STEP1에서 person 대상은 이 STEP으로
+    // 오면 안 된다고 전제).
+    return _err(400, 'INVALID_FIELD',
+      `unclaimed 프로필은 사업체 성격 entity_type만 허용됩니다(허용: ${[...UNCLAIMED_ALLOWED_ENTITY_TYPES].join(',')})`,
+      corsHeaders);
+  }
+
+  // guid 서버 발급 — 본인이 서명한 게 아니므로 클라이언트가 보낸 guid를
+  // 신뢰하지 않는다(기존 정식 가입 경로의 pubkey:guid 바인딩과 동일한
+  // TOFU 원칙 — 여기선 "아직 아무도 이 guid를 소유하지 않는다"가 불변식).
+  const guid = 'unclaimed_' + crypto.randomUUID();
+  const finalHandle = '@' + String(name).trim().toLowerCase()
+    .replace(/\s+/g, '_').replace(/[^a-z0-9가-힣_]/g, '') + '_unclaimed_' + guid.slice(-6);
+
+  const resolvedOccupation = occupation
+    || (body.industry_fields?.schema_id ? (KSIC_LABELS[String(body.industry_fields.schema_id)] || null) : null);
+
+  const newExtra = {
+    claim_status: 'unclaimed',
+    claim_source,
+    claimed_at: null,
+    public: {
+      identity: { _schema_version: '2.0', display_name: name, description, tags, entity_subtype: body.entity_subtype || null },
+      // phone_visible을 무조건 false로 강제 — 본인 동의 없는 번호 노출 방지.
+      // phone_display는 claim 이후 소유자가 원하면 켤 수 있도록 값 자체는 보존.
+      contact:  { phone_display: phone, phone_visible: false, website, sns_public: {}, languages_spoken: [] },
+      location: { region: '', address_short: address, directions: '', parking: false },
+      finance:  { gdc_accepted: false, currencies: ['KRW'], price_range: '' },
+      industry_fields: body.industry_fields ?? null,
+    },
+  };
+
+  const record = {
+    guid, current_ipv6: guid,
+    pubkey_ed25519: null, // claim 전까지 소유자 없음
+    entity_type, name, handle: finalHandle, native_lang,
+    address, lat, lng, phone, website,
+    occupation: resolvedOccupation,
+    is_public: true, // 검색엔 노출하되 phone 등은 위에서 마스킹
+    claim_status: 'unclaimed',
+    extra: newExtra,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  try {
+    await _l1UpsertProfile(env, {
+      guid, handle: finalHandle, entityType: entity_type, nativeLang: native_lang,
+      isPublic: true, pubkey: null, extra: newExtra,
+      core: { name, address, lat, lng, phone, website, occupation: resolvedOccupation },
+      claimStatus: 'unclaimed',
+    });
+  } catch (e) {
+    console.warn('[Profile/Unclaimed] L1 저장 실패 (Supabase는 계속 진행):', e.message);
+  }
+
+  let saveRes;
+  try {
+    saveRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
+      method: 'POST',
+      headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
+      body: JSON.stringify(record),
+    });
+  } catch (e) {
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!saveRes.ok) {
+    const errText = await saveRes.text().catch(() => '');
+    return _err(502, 'DB_ERROR', `미청구 프로필 저장 실패: ${errText}`, corsHeaders);
+  }
+  const savedRows = await saveRes.json().catch(() => []);
+  const savedProfile = savedRows[0] || record;
+
+  // ★ 정식 가입과 달리 _mergeAgentSP(그림자 AI SP 합성)는 호출하지 않는다
+  // — 이 프로필엔 아직 서명 소유자가 없어 "본인의 AI 비서"라는 전제가
+  // 성립하지 않는다. claim 완료 후 handleProfileClaim에서 수행한다.
+
+  return new Response(JSON.stringify({
+    ok: true,
+    guid: savedProfile.guid,
+    handle: savedProfile.handle,
+    claim_status: 'unclaimed',
+    confidence: 'provisional',
+  }), { status: 201, headers: corsHeaders });
+}
+
+// SP-18 STEP3 선행조건 (c) — 미청구 프로필을 실제 소유자가 서명 계정으로
+// 정식 전환. 서명 대상 문자열은 일반 가입(guid:pubkey:ts)과 겹치지 않게
+// 접두어를 둬 재생공격(다른 목적으로 만든 서명을 여기 재사용)을 막는다.
+async function handleProfileClaim(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, pubkey, signature, ts = '' } = body;
+  if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+
+  const sigMsg = `claim:${guid}:${pubkey}:${ts}`;
+  const sigOk  = await _verifyEd25519Simple(pubkey, signature, sigMsg);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+
+  const existing = await _l1FindProfileByGuid(env, guid).catch(() => null);
+  const claimStatus = existing?.claim_status ?? existing?.extra?.claim_status;
+  if (!existing || claimStatus !== 'unclaimed') {
+    return _err(404, 'NOT_CLAIMABLE', '미청구 상태의 프로필이 아니거나 존재하지 않습니다', corsHeaders);
+  }
+
+  const newExtra = { ...(existing.extra || {}), claim_status: 'claimed', claimed_at: new Date().toISOString() };
+
+  try {
+    await _l1UpsertProfile(env, {
+      guid, handle: existing.handle, entityType: existing.entity_type, nativeLang: existing.native_lang,
+      isPublic: existing.is_public, pubkey, extra: newExtra, claimStatus: 'claimed',
+    });
+  } catch (e) {
+    return _err(502, 'L1_ERROR', 'L1 claim 반영 실패: ' + e.message, corsHeaders);
+  }
+
+  let saveRes;
+  try {
+    saveRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
+      method: 'PATCH',
+      headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
+      body: JSON.stringify({ pubkey_ed25519: pubkey, claim_status: 'claimed', extra: newExtra, updated_at: new Date().toISOString() }),
+    });
+  } catch (e) {
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!saveRes.ok) {
+    const errText = await saveRes.text().catch(() => '');
+    return _err(502, 'DB_ERROR', `claim 반영 실패: ${errText}`, corsHeaders);
+  }
+  const savedRows = await saveRes.json().catch(() => []);
+  const savedProfile = savedRows[0] || { guid, pubkey_ed25519: pubkey };
+
+  // 정식 소유자가 생겼으니 이제 그림자 AI SP를 합성한다(일반 가입과 동일 처리).
+  const agentResult = await _mergeAgentSP(env, savedProfile).catch(e => {
+    console.error('[Profile/Claim] 통합 SP 기록 실패(claim 자체는 정상 처리됨):', e.message);
+    return { ok: false, error: 'EXCEPTION', detail: e.message };
+  });
+
+  return new Response(JSON.stringify({ ok: true, guid, claim_status: 'claimed', agent: agentResult }), { status: 200, headers: corsHeaders });
+}
+
 async function handleProfilePost(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  // ── 2026-07-12 신설 — 미청구(unclaimed) 프로필 제출 분기 ──────────
+  // SP-18_ksearch STEP3(K-Search가 웹검색으로 확인한 제3자 업체를
+  // 본인 동의 없이 등록)의 선행조건 (a)(c) 구현. 일반 제출과 달리:
+  //   - pubkey/signature 없이 허용한다(본인이 직접 서명한 게 아니므로
+  //     TOFU 서명 검증 자체가 성립하지 않음 — 대신 guid를 서버가 발급).
+  //   - entity_type은 사업체 성격만 허용(person/individual/consumer는
+  //     제3자가 임의로 실존 인물 프로필을 만드는 걸 막기 위해 배제).
+  //   - phone은 저장은 하되 phone_visible을 무조건 false로 강제한다 —
+  //     본인이 공개 동의한 적 없는 번호를 그대로 노출하지 않는다
+  //     (SP-18 STEP3 절차 3 "민감 필드는 자동 마스킹" 반영).
+  if (body.claim_status === 'unclaimed') {
+    return _handleUnclaimedProfilePost(body, env, corsHeaders);
+  }
 
   const { guid, pubkey, signature } = body;
   if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
@@ -7253,6 +7476,35 @@ async function _l1CreateOrderQueueEntry(env, record) {
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
     throw new Error(`order_queue 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+// ── dept_tasks(부서/기관/사업자 간 업무지시 큐) L1 헬퍼 (2026-07-12 신설) ──
+async function _l1CreateDeptTask(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/dept_tasks/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`dept_tasks 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+async function _l1UpdateDeptTask(env, taskId, patch) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/dept_tasks/records/${taskId}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`dept_tasks 갱신 실패 (HTTP ${res.status}): ${errText}`);
   }
   return res.json();
 }

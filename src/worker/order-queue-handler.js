@@ -83,6 +83,24 @@ async function handleOrderQueue(request, env, corsHeaders, deps) {
   }
   if (!sellerProfile) return _err(404, 'TARGET_NOT_FOUND', '대상 프로필이 L1에 없습니다', corsHeaders);
 
+  // ── 2026-07-12 신설 — SP-18 STEP3(미청구 프로필) 도입에 따른 필수 가드.
+  // unclaimed 프로필은 실제 업체 관계자가 아직 아무도 서명하지 않은
+  // "AI가 웹검색으로 확인만 한 잠정 정보"다. 검색 결과에 노출되는 것과
+  // 거기에 돈을 보내도 되는 것은 완전히 다른 문제인데, 지금까지 이 둘을
+  // 구분하는 코드가 여기 없었다 — 그대로 두면 "AI가 만든 가짜 업체
+  // 프로필에 선입금 유도"라는 사기 벡터가 열린다(2026-07-12 100건
+  // 사고실험 #95~96에서 지적). claimed 전환 전까지는 주문 자체를
+  // 원천 차단한다 — 부분 허용(예: 소액만 허용)은 하지 않는다, 소유자가
+  // 실존하는지 자체가 미확인 상태이기 때문.
+  const sellerClaimStatus = sellerProfile.claim_status ?? sellerProfile.extra?.claim_status;
+  if (sellerClaimStatus === 'unclaimed') {
+    return new Response(JSON.stringify({
+      ok: true, accepted: false, reason: 'SELLER_UNCLAIMED',
+      message: '이 업체는 아직 Hondi 정식 가입자가 아니에요(AI가 검색으로 확인만 한 정보예요). ' +
+        '주문·결제는 지원되지 않으니, 안내된 연락처로 직접 문의해 보시겠어요?',
+    }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
   const capacity = Number(sellerProfile?.extra?.max_concurrent_orders) || DEFAULT_CAPACITY;
 
   if (activeCount >= capacity) {

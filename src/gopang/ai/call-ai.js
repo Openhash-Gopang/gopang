@@ -1287,7 +1287,8 @@ export async function _handleKSearchExecutionTag(fullReply, bubble, sendFn = cal
             // product_seller 구분을 매칭 근거로 쓰는데(SP-18 STEP4), 이
             // 필드가 빠져 있으면 사람/기관 검색 시 판단 근거가 부족해진다.
             const etype = r.entity_type ? ` [type:${r.entity_type}]` : '';
-            return `${i + 1}. ${r.name} (${r.address || ''})${etype}${price}${rating}${trust}${gdc}${handleStr} [guid:${r.primary_guid}]`;
+            const provisional = r.provisional ? ' [미청구/provisional]' : '';
+            return `${i + 1}. ${r.name} (${r.address || ''})${etype}${provisional}${price}${rating}${trust}${gdc}${handleStr} [guid:${r.primary_guid}]`;
           }).join('\n')
         : '검색 결과 없음';
     }
@@ -1305,6 +1306,70 @@ export async function _handleKSearchExecutionTag(fullReply, bubble, sendFn = cal
   history.push({ role: 'user', content: searchInject });
 
   await sendFn(searchInject);
+  return true;
+}
+
+
+/**
+ * _handleCreateUnclaimedProfileTag — K-Search(SP-18) STEP3의 실제 배선.
+ * (2026-07-12 신설)
+ *
+ * K-Search가 STEP1(웹검색으로 대상 정보 수집)·STEP2(이용자에게 "이 업체가
+ * 맞습니까?" 확인) 를 마친 뒤, 원안(profile-assistant 대화형 위임)을
+ * 단순화해 이 태그 하나로 /profile POST(claim_status=unclaimed)까지
+ * 직행한다 — 이미 STEP1~2에서 확인이 끝난 필드를 다시 여러 턴에 걸쳐
+ * 되묻을 이유가 없기 때문(설계 변경 근거는 worker.js
+ * _handleUnclaimedProfilePost 상단 주석과 동일).
+ *
+ * [CREATE_UNCLAIMED_PROFILE]{"entity_type":"business","name":"...","address":"...",...}[/CREATE_UNCLAIMED_PROFILE]
+ *
+ * CFG.system?.includes('K-Search') 게이트를 건다 — 다른 SP가 우연히
+ * 같은 이름의 태그를 다른 용도로 낼 위험을 차단(기존 _handleKSearchExecutionTag와
+ * 동일한 원칙, call-ai.js 2865행 참고).
+ */
+export async function _handleCreateUnclaimedProfileTag(fullReply, bubble, sendFn = callAI, userText = '') {
+  const m = fullReply.match(/\[CREATE_UNCLAIMED_PROFILE\](.+?)\[\/CREATE_UNCLAIMED_PROFILE\]/s);
+  if (!m) return false;
+
+  let params;
+  try {
+    params = JSON.parse(m[1].trim());
+  } catch (e) {
+    await sendFn(`[CREATE_UNCLAIMED_PROFILE 결과] {"error":"태그 본문 JSON 파싱 실패: ${e.message}"}`);
+    return true;
+  }
+
+  const _updateBubble = async (text) => {
+    if (!bubble) return;
+    const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+    if (_usb) _usb(bubble, text);
+  };
+  await _updateBubble(_stripInternalTags(fullReply).replace(/\[CREATE_UNCLAIMED_PROFILE\][\s\S]*?\[\/CREATE_UNCLAIMED_PROFILE\]/, '\n등록 중…'));
+  history.push({ role: 'assistant', content: fullReply });
+
+  const base = (CFG.endpoint || '').replace(/\/+$/, '');
+  let resultText;
+  try {
+    const res = await fetch(`${base}/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...params, claim_status: 'unclaimed' }),
+    });
+    const payload = await res.json().catch(() => ({}));
+    resultText = res.ok
+      ? JSON.stringify(payload)
+      : `등록 실패 (HTTP ${res.status}): ${JSON.stringify(payload)}`;
+  } catch (e) {
+    resultText = `등록 오류: ${e.message}`;
+  }
+
+  const inject =
+    `[CREATE_UNCLAIMED_PROFILE 결과] ${resultText}\n\n` +
+    `성공했다면 이 guid로 [KSEARCH_RESULT: status=matched, confidence=provisional, ...]를 ` +
+    `구성하고, 이용자에게 "정식 가입자가 아니라 검색으로 확인한 정보"라는 점을 반드시 함께 안내하세요.`;
+  history.push({ role: 'user', content: inject });
+
+  await sendFn(inject);
   return true;
 }
 
@@ -1551,8 +1616,59 @@ export async function _handleGovTaskTags(fullReply, bubble, sendFn = callAI, use
   return false;
 }
 
-/**
- * _buildFirstContactContext — 최초 인사("이름을 지어주세요")와 프로필 작성
+// ── DEPT_TASK 태그 처리 (2026-07-12 신설, B그룹 100건 사고실험 대응) ──
+// GOV_TASK와 같은 위치·같은 게이트-없음 원칙(institutional SP가 낼 때만
+// 실제로 등장하는 태그라 system 게이트가 불필요) — _handleGovTaskTags
+// 바로 다음 위치에서 호출한다(_callAIInner 디스패치 체인 참고).
+//
+// [DEPT_TASK_REQUEST]{ "requester_type":"dept", "requester_id":"do-dept:plan",
+//   "requester_label":"제주도청 기획조정실", "target_type":"dept",
+//   "target_id":"do-dept:welfare", "task_type":"budget_execution_report",
+//   "directive":"하반기 복지예산 집행실적 취합해서 보내" }[/DEPT_TASK_REQUEST]
+export async function _handleDeptTaskTag(fullReply, bubble, sendFn = callAI, userText = '') {
+  const m = fullReply.match(/\[DEPT_TASK_REQUEST\]([\s\S]*?)\[\/DEPT_TASK_REQUEST\]/);
+  if (!m) return false;
+
+  const _updateBubble = async (text) => {
+    if (!bubble) return;
+    const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+    if (_usb) _usb(bubble, text);
+  };
+  await _updateBubble(_stripInternalTags(fullReply));
+  history.push({ role: 'assistant', content: fullReply });
+
+  let payload;
+  try {
+    payload = JSON.parse(m[1].trim());
+  } catch (e) {
+    await sendFn(`[INTERNAL: DEPT_TASK_REQUEST의 JSON 파싱 실패(${e.message}) — ` +
+      `형식을 맞춰 재시도하세요. 업무지시는 등록되지 않았습니다.]`);
+    return true;
+  }
+
+  const base = (CFG.endpoint || '').replace(/\/+$/, '');
+  let resultText;
+  try {
+    const res = await fetch(`${base}/gov/dept-task`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    resultText = res.ok
+      ? JSON.stringify(data)
+      : `등록 실패 (HTTP ${res.status}): ${JSON.stringify(data)}`;
+  } catch (e) {
+    resultText = `등록 오류: ${e.message}`;
+  }
+
+  await sendFn(`[INTERNAL: DEPT_TASK_REQUEST 결과 — 등록된 task_id/status를 그대로 안내하고, ` +
+    `절대 "처리 완료됐다"고 말하지 마세요(이 큐는 지시가 접수됐다는 기록만 남길 뿐, 실제 이행은 ` +
+    `대상 기관이 별도로 status를 갱신해야 완료됩니다): ${resultText}`);
+  return true;
+}
+
+ — 최초 인사("이름을 지어주세요")와 프로필 작성
  * 필요성 설명을 SP(시스템 프롬프트) 본문이 아니라, 꼭 필요한 1~2턴에만
  * 사용자 메시지 앞에 붙는 1회성 컨텍스트로 주입합니다(v1.6).
  *
@@ -2857,6 +2973,11 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     const _govTaskHandled = await _handleGovTaskTags(fullReply, bubble, callAI, userText);
     if (_govTaskHandled) return;
 
+    // ── DEPT_TASK 태그 처리 (2026-07-12 신설, B그룹 대응) ──
+    // GOV_TASK 바로 다음 위치 — 마찬가지로 게이트 없음.
+    const _deptTaskHandled = await _handleDeptTaskTag(fullReply, bubble, callAI, userText);
+    if (_deptTaskHandled) return;
+
     // ── K-Search STEP3 실행 태그 처리 (2026-07-11 Phase 1 신설) ──
     // K-Search가 활성 system일 때만 의미 있다(§0-F 핸드오프 이후 —
     // _forwardSwitchSP/_pushAndSwitchSP로 이미 전환된 상태). 게이트를
@@ -2865,6 +2986,11 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     if (CFG.system?.includes('K-Search')) {
       const _kSearchHandled = await _handleKSearchExecutionTag(fullReply, bubble, callAI, userText);
       if (_kSearchHandled) return;
+
+      // ── K-Search STEP3(미청구 프로필 생성) 태그 처리 (2026-07-12 신설) ──
+      // STEP3 실행 태그 바로 다음 위치 — 같은 K-Search 활성 게이트 재사용.
+      const _unclaimedHandled = await _handleCreateUnclaimedProfileTag(fullReply, bubble, callAI, userText);
+      if (_unclaimedHandled) return;
     }
 
     // ── 웹검색 태그 처리 (2026-07-11 신설, §0-B 경로1 실행부) ──
