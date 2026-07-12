@@ -1472,6 +1472,85 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
   return false;
 }
 
+// ── GOV_TASK 태그 처리 (2026-07-12 신설) ──
+// K-Compose/K-Deliver 게이트 없이 어느 SP에서든(kgov/SP-10 활성화된
+// 대화에서만 실제 출력되는 태그라 게이트 불필요) 처리한다 —
+// _handleSPAuthorTags 바로 다음 위치.
+export async function _handleGovTaskTags(fullReply, bubble, sendFn = callAI, userText = '') {
+  const _updateBubble = async (text) => {
+    if (!bubble) return;
+    const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+    if (_usb) _usb(bubble, text);
+  };
+
+  const govTaskDraftMatch = fullReply.match(
+    /\[GOV_TASK_DRAFT_REQUEST\]([\s\S]*?)\[\/GOV_TASK_DRAFT_REQUEST\]/);
+  if (govTaskDraftMatch) {
+    console.log('[GovTask] GOV_TASK_DRAFT_REQUEST 감지 — /gov/task/schema/draft 호출');
+    await _updateBubble(_stripInternalTags(fullReply));
+    let payload = null;
+    try {
+      payload = JSON.parse(govTaskDraftMatch[1].trim());
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_TASK_DRAFT_REQUEST의 JSON 파싱 실패(${e.message}) — ` +
+        `형식을 맞춰 재시도하거나, 저장 없이 조사 내용만 사용자에게 텍스트로 안내하고 ` +
+        `"사람 검토 전이라 다른 사용자에게는 공유되지 않는 임시 정보"라는 점을 밝히세요.]`);
+      return true;
+    }
+    const base = (CFG.endpoint || '').replace(/\/+$/, '');
+    try {
+      const res  = await fetch(`${base}/gov/task/schema/draft`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, guid: _USER?.ipv6 || USER_GUID || null }),
+      });
+      const data = await res.json().catch(() => null);
+      await sendFn(`[INTERNAL: GOV_TASK_DRAFT_REQUEST 결과 수신 — 이 결과를 바탕으로 ` +
+        `§REQUIRED-DOCUMENTS 3단계 지시(verified 여부에 따른 경고 문구 포함)대로 ` +
+        `사용자에게 자연스럽게 안내하세요: ${JSON.stringify(data)}]`);
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_TASK_DRAFT_REQUEST 서버 호출 실패(${e.message}) — ` +
+        `저장이 안 됐음을 사용자에게 알리고, 지금 조사한 내용은 이번 대화에서만 ` +
+        `유효한 임시 안내임을 명확히 하세요.]`);
+    }
+    return true;
+  }
+
+  const govTaskSubmitMatch = fullReply.match(
+    /\[GOV_TASK_SUBMIT_REQUEST\]([\s\S]*?)\[\/GOV_TASK_SUBMIT_REQUEST\]/);
+  if (govTaskSubmitMatch) {
+    console.log('[GovTask] GOV_TASK_SUBMIT_REQUEST 감지 — /gov/task/submit 호출');
+    await _updateBubble(_stripInternalTags(fullReply));
+    let payload = null;
+    try {
+      payload = JSON.parse(govTaskSubmitMatch[1].trim());
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_TASK_SUBMIT_REQUEST의 JSON 파싱 실패(${e.message}) — ` +
+        `형식을 맞춰 재시도하세요. 접수는 되지 않았습니다.]`);
+      return true;
+    }
+    const base = (CFG.endpoint || '').replace(/\/+$/, '');
+    try {
+      const res  = await fetch(`${base}/gov/task/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, guid: _USER?.ipv6 || USER_GUID || null }),
+      });
+      const data = await res.json().catch(() => null);
+      await sendFn(`[INTERNAL: GOV_TASK_SUBMIT_REQUEST 결과 수신 — receipt_no와 disclaimer, ` +
+        `schema_verified 필드는 절대 요약·생략하지 말고 그 의미를 온전히 사용자에게 전달하세요 ` +
+        `(§접수번호 면책문구 참조): ${JSON.stringify(data)}]`);
+    } catch (e) {
+      await sendFn(`[INTERNAL: GOV_TASK_SUBMIT_REQUEST 서버 호출 실패(${e.message}) — ` +
+        `접수가 실제로 이루어지지 않았음을 사용자에게 명확히 알리세요. ` +
+        `"접수했습니다"라고 말하면 안 됩니다.]`);
+    }
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * _buildFirstContactContext — 최초 인사("이름을 지어주세요")와 프로필 작성
  * 필요성 설명을 SP(시스템 프롬프트) 본문이 아니라, 꼭 필요한 1~2턴에만
@@ -2771,6 +2850,12 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     // §3-0 ③) 처리한다 — _handleOrchestrationTags 바로 다음 위치.
     const _spAuthorHandled = await _handleSPAuthorTags(fullReply, bubble, callAI, userText);
     if (_spAuthorHandled) return;
+
+
+    // ── GOV_TASK 태그 처리 (2026-07-12 신설) ──
+    // _handleSPAuthorTags 바로 다음 위치 — K-Compose 게이트 없음.
+    const _govTaskHandled = await _handleGovTaskTags(fullReply, bubble, callAI, userText);
+    if (_govTaskHandled) return;
 
     // ── K-Search STEP3 실행 태그 처리 (2026-07-11 Phase 1 신설) ──
     // K-Search가 활성 system일 때만 의미 있다(§0-F 핸드오프 이후 —
