@@ -21,7 +21,7 @@
 // SP-INTERCALL-PROTOCOL 원칙3(순환 방지)을 이 비동기 큐에도 적용한다.
 migrate((db) => {
   const collection = new Collection({
-    "id": "dtq7f2k9m3xh01",
+    "id": "dtq7f2k9m3xh010",
     "created": "2026-07-12 00:00:00.000Z",
     "updated": "2026-07-12 00:00:00.000Z",
     "name": "dept_tasks",
@@ -66,7 +66,7 @@ migrate((db) => {
       {
         "system": false, "id": "dtf008payload", "name": "payload",
         "type": "json", "required": false, "presentable": false, "unique": false,
-        "options": {}
+        "options": { "maxSize": 2000000 }
       },
       {
         "system": false, "id": "dtf009status", "name": "status",
@@ -76,7 +76,7 @@ migrate((db) => {
       {
         "system": false, "id": "dtf010origin_chain", "name": "origin_chain",
         "type": "json", "required": false, "presentable": false, "unique": false,
-        "options": {}
+        "options": { "maxSize": 2000000 }
       },
       {
         "system": false, "id": "dtf011result_note", "name": "result_note",
