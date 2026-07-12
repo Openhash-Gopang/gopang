@@ -222,6 +222,27 @@ const GWP_REGISTRY = [
     ],
   },
 
+  // ── 2026-07-12 신설 — "판매자로 등록하고 싶다"(중고거래 매물 등록,
+  // 서비스 제공자 등록 등)는 kcommerce(구매자용 webapp.html)로 보내면
+  // 안 된다 — 250건 사고실험(#48/#57)에서 발견. 조사 결과 판매자 등록
+  // 기능 자체는 이미 완비돼 있었다(desktop.html#seller — 서술형 입력→
+  // SP-MKT_seller_site_v3.1이 구조화→/biz/catalog/sync로 TOFU+Ed25519
+  // 서명 검증 후 라이브 등록). 빠진 건 AC가 이 경로로 갈 방법뿐이었다
+  // — 별도 GWP id로 등록해 방향(구매 vs 판매)에 따라 다른 URL로 가게
+  // 한다.
+  {
+    id: 'kcommerce_seller', name: 'K-Market(판매자 등록)', category: 'MKT',
+    type: 'tab',
+    url: 'https://market.hondi.net/desktop.html#seller',
+    sp_key: null,  // AI가 아니라 desktop.html 자체의 서술형 입력폼 UI — GWP는 탭 오픈까지만
+    status: 'active', priority: 7, threshold: 0.70,
+    description: '판매자 등록(중고물품·서비스 판매 시작) — 구매가 아니라 "내가 판매자가 되고 싶다"는 요청 전용. 일반 구매/탐색은 kcommerce로.',
+    triggers: [
+      '판매자로 등록','물건을 팔고','매물로 등록','팔고 싶어',
+      '중고 거래로 등록','판매 시작','내 상품 올리기','셀러 등록',
+    ],
+  },
+
   {
     id: 'ktax', name: 'K-Tax', category: 'ECO',
     type: 'inline',
