@@ -1,4 +1,4 @@
-// ═══════════════════════════════════════════════════════════
+﻿// ═══════════════════════════════════════════════════════════
 // hondi-proxy — v4.9
 // v4.8: /biz/profile, /biz/order, /biz/review, /biz/product
 // v4.9: STEP 08 /biz/order L1 위임 (Worker 검증 제거)
@@ -36,6 +36,7 @@ const ALLOWED_ORIGINS = [
   'https://stock.hondi.net',
   'https://traffic.hondi.net',
   'https://logistics.hondi.net',
+
   'https://users.hondi.net',
   'https://l1-hanlim.hondi.net',
   'https://jeju.hondi.net',
@@ -2094,24 +2095,10 @@ async function handleExecuteAtom(request, env, corsHeaders) {
 // Supabase user_profiles에는 있지만 L1엔 컬럼이 없는 필드
 // (name/address/lat/lng/phone/website/casts_for)는 extra.core에 접어서
 // 같이 저장한다 — 이번 스키마 변경에서 컬럼을 더 늘리지 않기 위함.
-//
-// ★ 2026-07-12 — Supabase→L1 이관 완성 작업(1단계). search_entities
-// RPC(Supabase 전용)를 대체하려면 name/address/lat/lng/occupation이
-// extra.core 안에 접혀 있는 것만으론 안 된다 — PocketBase는 JSON 내부
-// 경로 필터가 인덱스를 안 타 성능이 나쁘고, 이 프로젝트에서 그런 필터를
-// 쓴 전례도 없다. pb_migrations/1784000001로 톱레벨 필드(name/address/
-// lat/lng/occupation/search_text)를 새로 만들고, 여기서 extra.core와
-// 동시에(하위호환 유지) 채운다. search_text는 전문검색(tsvector) 대체품
-// — name+handle+occupation+address를 공백으로 이어붙여 `~` 필터가
-// 여러 키워드를 한 번에 매칭할 수 있게 한다.
 async function _l1UpsertProfile(env, { guid, handle, entityType, nativeLang, isPublic, pubkey, extra, core }) {
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   const mergedExtra = { ...(extra || {}), core: { ...(extra?.core || {}), ...(core || {}) } };
-  const c = mergedExtra.core || {};
-
-  const searchText = [c.name, handle, c.occupation, c.address]
-    .filter(Boolean).join(' ').trim() || undefined;
 
   const body = {
     guid,
@@ -2121,15 +2108,6 @@ async function _l1UpsertProfile(env, { guid, handle, entityType, nativeLang, isP
     is_public: isPublic !== false,
     pubkey_ed25519: pubkey || undefined,
     extra: mergedExtra,
-    // ★ 톱레벨 검색 필드(2026-07-12 신설) — core에 값이 있을 때만 갱신,
-    // 없으면 undefined로 보내 기존 값을 건드리지 않는다(부분 갱신 시
-    // 이미 있던 name을 실수로 지우는 것 방지).
-    name:       c.name       ?? undefined,
-    address:    c.address    ?? undefined,
-    lat:        typeof c.lat === 'number' ? c.lat : undefined,
-    lng:        typeof c.lng === 'number' ? c.lng : undefined,
-    occupation: c.occupation ?? undefined,
-    search_text: searchText,
   };
 
   const existing = await _l1FindProfileByGuid(env, guid).catch(() => null);
@@ -2577,6 +2555,10 @@ export default {
     if (pathname === '/llm/relay')               return handleLLMRelay(bodyText, env, corsHeaders, _meta);
     if (pathname === '/klaw/relay')               return handleKlawRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname === '/gov/relay')                return handleGovRelay(bodyText, env, corsHeaders, _meta, ctx);
+    if (pathname === '/gov/task/submit')          return handleGovTaskSubmit(request, env, corsHeaders);
+    if (pathname === '/gov/task/schema/draft')    return handleGovTaskSchemaDraft(request, env, corsHeaders);
+    if (pathname === '/admin/gov-task-drafts' && request.method === 'GET') return handleGovTaskDraftList(request, env, corsHeaders);
+    if (pathname === '/admin/gov-task-drafts/review') return handleGovTaskDraftReview(request, env, corsHeaders);
     if (pathname === '/business/relay')           return handleBusinessRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname.startsWith('/gemini/'))         return callOpenAIFromGeminiBody(bodyText, env, corsHeaders, _meta);
     if (pathname === '/ai/chat')                 return handleAIChat(bodyText, env, corsHeaders, _meta);
@@ -3160,116 +3142,39 @@ async function _l1SearchProductsByKeyword(env, keyword, limit = 20) {
   return items.sort((a, b) => score(b) - score(a)).slice(0, limit);
 }
 
-// ═══════════════════════════════════════════════════════════
-// ★ 2026-07-12 — Supabase→L1 이관 완성 작업(2단계): search_entities
-// (Supabase RPC, sql/search_index.sql)를 L1 PocketBase 기반으로
-// 재구현. 완전히 동일하지는 않다 — 알려진 차이:
-//   1. PostgreSQL tsvector 가중치 순위(A/B/C/D)를 정확히 재현하지
-//      못한다. 대신 Worker에서 name/handle 매칭=3점, occupation
-//      매칭=2점, address/search_text 매칭=1점으로 근사 채점한다.
-//   2. entity_type의 institution/org/platform 서브타입 별칭
-//      (extra.public.identity.entity_subtype)은 이번 1차 이관에서는
-//      지원하지 않는다 — entity_type 필드 자체가 정확히 일치하는
-//      경우만 매칭한다(알려진 한계, 필요시 후속 작업).
-//   3. 거리 정렬(distance_km)은 Haversine 공식으로 Worker에서 직접
-//      계산 — PocketBase는 지리공간 연산자가 없다.
-// 여러 단어 검색어는 공백으로 나눠 AND 매칭한다(전부 포함해야 함) —
-// websearch_to_tsquery의 OR 동작과는 다르다(더 엄격함, 알려진 차이).
-// ═══════════════════════════════════════════════════════════
-function _haversineKm(lat1, lng1, lat2, lng2) {
-  if ([lat1, lng1, lat2, lng2].some(v => typeof v !== 'number' || Number.isNaN(v))) return null;
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-async function _l1SearchEntities(env, { q, etype, occupation, address, lat, lng, lim = 20, ofst = 0 }) {
-  const token = await _l1AdminToken(env);
-  const headers = { 'Authorization': `Bearer ${token}` };
-
-  const words = (q || '').trim().split(/\s+/).filter(Boolean);
-  const filterParts = ['is_public = true'];
-  if (etype) filterParts.push(`entity_type = ${JSON.stringify(etype)}`);
-  if (occupation) filterParts.push(`occupation ~ ${JSON.stringify(occupation)}`);
-  if (address) filterParts.push(`address ~ ${JSON.stringify(address)}`);
-  for (const w of words) {
-    const wj = JSON.stringify(w);
-    filterParts.push(
-      `(name ~ ${wj} || handle ~ ${wj} || occupation ~ ${wj} || address ~ ${wj} || search_text ~ ${wj})`
-    );
-  }
-  const filter = filterParts.join(' && ');
-
-  // rank/거리로 재정렬해야 하므로, 요청한 limit보다 넉넉히 가져온 뒤
-  // Worker에서 정렬·페이징한다(최대 200 — 폭주 방지).
-  const fetchCount = Math.min(Math.max((lim + ofst) * 3, 60), 200);
-  const res = await fetch(
-    `${L1_DEFAULT}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=${fetchCount}&sort=-updated`,
-    { headers }
-  );
-  if (!res.ok) throw new Error(`L1 검색 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
-  const data = await res.json().catch(() => ({ items: [] }));
-
-  const qLower = (q || '').toLowerCase();
-  const scored = (data.items || []).map(p => {
-    let rank = 1.0;
-    if (qLower) {
-      rank = 0;
-      if ((p.name || '').toLowerCase().includes(qLower) || (p.handle || '').toLowerCase().includes(qLower)) rank += 3;
-      if ((p.occupation || '').toLowerCase().includes(qLower)) rank += 2;
-      if ((p.address || '').toLowerCase().includes(qLower) || (p.search_text || '').toLowerCase().includes(qLower)) rank += 1;
-      if (rank === 0) rank = 0.5; // 단어별 매칭은 됐지만 원문 전체는 안 겹치는 경우(AND 필터를 통과했으므로 최소 점수는 준다)
-    }
-    const distance_km = _haversineKm(lat, lng, p.lat, p.lng);
-    return {
-      guid: p.guid, name: p.name, handle: p.handle, entity_type: p.entity_type,
-      address: p.address, phone: p.extra?.core?.phone ?? null,
-      website: p.extra?.core?.website ?? null, extra: p.extra,
-      primary_guid: p.guid, occupation: p.occupation,
-      rank, distance_km,
-    };
-  });
-
-  scored.sort((a, b) => {
-    if (b.rank !== a.rank) return b.rank - a.rank;
-    if (a.distance_km != null && b.distance_km != null) return a.distance_km - b.distance_km;
-    if (a.distance_km != null) return -1;
-    if (b.distance_km != null) return 1;
-    return 0;
-  });
-
-  return scored.slice(ofst, ofst + lim);
-}
-
 async function handleSearch(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const sbH = _sbHeaders(env);
   const keyword = body.p_keyword || body.q || null;
 
-  // ★ 2026-07-12 — Supabase→L1 이관 완성(3단계). 이전엔 Supabase RPC
-  // search_entities를 호출했으나, 이제 L1 PocketBase 기반
-  // _l1SearchEntities로 대체한다(위 함수 정의부 주석에 알려진 차이점
-  // 명시). 파라미터 정규화(p_* 별칭 허용)는 기존 클라이언트 호환을
-  // 위해 그대로 유지.
-  const searchParams = {
-    q:          keyword,
-    etype:      body.p_entity_type || body.entity_type || null,
-    occupation: body.p_occupation  || body.occupation  || null,
-    address:    body.p_address     || body.address     || null,
-    lat:        body.p_lat         || body.lat         || null,
-    lng:        body.p_lng         || body.lng         || null,
-    lim:        body.p_limit       || body.limit       || body.lim || 20,
-    ofst:       body.p_offset      || body.offset      || body.ofst || 0,
+  // 파라미터 정규화: q/limit → p_keyword/p_limit
+  const rpcBody = {
+    p_keyword:      keyword,
+    p_entity_type:  body.p_entity_type || body.entity_type || null,
+    p_occupation:   body.p_occupation  || body.occupation  || null,
+    p_address:      body.p_address     || body.address     || null,
+    p_gdc_only:     body.p_gdc_only    ?? false,
+    p_trust_min:    body.p_trust_min   || null,
+    p_lat:          body.p_lat         || body.lat         || null,
+    p_lng:          body.p_lng         || body.lng         || null,
+    p_sort:         body.p_sort        || 'rank',
+    p_limit:        body.p_limit       || body.limit       || body.lim || 20,
+    p_offset:       body.p_offset      || body.offset      || body.ofst || 0,
+    p_exclude_guid: body.p_exclude_guid|| null,
+    p_l1_node:      body.p_l1_node     || null,
+    p_l2_node:      body.p_l2_node     || null,
+    p_primary_guid: body.p_primary_guid|| null,
+    p_handle:       body.p_handle      || body.handle      || null,
+    p_nickname:     body.p_nickname    || body.nickname    || null,
+    p_lang_code:    body.p_lang_code   || null,
+    p_l3_node:      body.p_l3_node     || null,
   };
 
-  let data;
-  try {
-    data = await _l1SearchEntities(env, searchParams);
-  } catch (e) {
-    return _err(502, 'L1_SEARCH_FAILED', 'L1 검색 실패: ' + e.message, corsHeaders);
+  const res  = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_entities`, { method: 'POST', headers: sbH, body: JSON.stringify(rpcBody) });
+  const data = await res.json().catch(() => ({ error: 'parse failed' }));
+  if (!res.ok || !Array.isArray(data)) {
+    return new Response(JSON.stringify(data), { status: res.status, headers: corsHeaders });
   }
 
   // 2026-07-05: L1 seller_products를 join(엔티티 레벨 매칭 결과 보강)하고,
@@ -3289,7 +3194,7 @@ async function handleSearch(request, env, corsHeaders) {
 
   if (keyword) {
     try {
-      const productMatches = await _l1SearchProductsByKeyword(env, keyword, searchParams.lim);
+      const productMatches = await _l1SearchProductsByKeyword(env, keyword, rpcBody.p_limit);
       const newGuids = [...new Set(productMatches.map(p => p.seller_guid))].filter(g => !byGuid.has(g));
 
       await Promise.all(newGuids.map(async (guid) => {
@@ -3300,8 +3205,8 @@ async function handleSearch(request, env, corsHeaders) {
             primary_guid: guid,
             name: profile.name,
             entity_type: profile.entity_type,
-            occupation: profile.occupation ?? profile.extra?.core?.occupation ?? null,
-            address: profile.address ?? profile.extra?.core?.address ?? null,
+            occupation: profile.extra?.core?.occupation ?? null,
+            address: profile.extra?.core?.address ?? null,
             matched_via: 'product', // entity-level 필드가 아니라 상품으로 매칭됐음을 표시
             products: productMatches.filter(p => p.seller_guid === guid).slice(0, 10),
           };
@@ -3316,7 +3221,7 @@ async function handleSearch(request, env, corsHeaders) {
     }
   }
 
-  return new Response(JSON.stringify(data), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify(data), { status: res.status, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -4794,6 +4699,351 @@ async function _callDelegationTarget(env, regKey, query, backendModel) {
   const raw  = data?.choices?.[0]?.message?.content || '';
   return { ok: true, content: raw, usage: data?.usage || null, label: entry.label || regKey };
 }
+
+// ═══════════════════════════════════════════════════════════
+// /gov/task/submit — GOV_TASK 서류접수·처리결과 기록 (2026-07-12 신설)
+//
+// SP-10_kpublic v3.6 §REQUIRED-DOCUMENTS가 프롬프트로 선언한 원칙
+// ("기관 SP가 서류를 요구→접수→처리")을 실제로 검증·기록하는 서버 코드가
+// 없었다(2026-07-12 사고실험으로 확인). 이 블록이 그 간극을 메운다.
+//
+// 설계 제약(중요): 이 워커에는 파일 바이너리 저장소(R2 등) 바인딩이 없다
+// (worker.js 전체에서 확인 — 2026-07-12). 따라서 원본 파일 자체는 받지
+// 않고, 클라이언트가 계산한 SHA-256 해시 + 파일명 + 크기만 "서류 소지
+// 증명"으로 받아 REQUIRED_DOCUMENTS-SCHEMA와 대조한다. 실제 서류 내용
+// 검증(위변조·진위 확인)은 이 구현 범위 밖이다 — 아래 KNOWN_LIMITATIONS
+// 참조.
+// ═══════════════════════════════════════════════════════════
+
+// ── 기관별 REQUIRED_DOCUMENTS-SCHEMA 레지스트리 ────────────────────
+// SP-10_kpublic §DATA_REQUIREMENT 예시(위치기반서비스사업_등록절차,
+// 방송통신위원회)를 실제 스키마로 옮긴 최초 항목. 신규 기관/업무 추가 시
+// 이 객체에 키를 추가하면 된다 — 키 형식: "{agency}:{task_key}".
+const REQUIRED_DOCUMENTS_REGISTRY = {
+  'kcc:location_service_registration': {
+    agency:      'kcc',
+    agency_name: '방송통신위원회',
+    task_name:   '위치기반서비스사업 등록(신고)',
+    legal_basis: '위치정보의 보호 및 이용 등에 관한 법률 제9조',
+    documents: [
+      { id: 'biz_reg',         name: '사업자등록증 사본',                 required: true,  acquisition: 'gov24' },
+      { id: 'biz_plan',        name: '위치기반서비스사업 사업계획서',       required: true,  acquisition: 'user_authored' },
+      { id: 'privacy_policy',  name: '개인위치정보 처리방침',              required: true,  acquisition: 'user_authored' },
+      { id: 'protection_plan', name: '개인위치정보 보호조치 이행계획서',    required: true,  acquisition: 'user_authored' },
+      { id: 'insurance_proof', name: '손해배상책임 이행보증보험 가입증서', required: false, acquisition: 'external_insurer' },
+    ],
+  },
+  // ★ 2026-07-12 추가 — 두 번째 검증 사례(법원, 개인파산·면책 신청).
+  // 근거: 채무자 회생 및 파산에 관한 법률 §302, 채무자회생법 규칙 §72
+  // (웹검색 확인, 2026-07-12). ⚠ 아래 목록은 대표적 필수서류이며,
+  // 개별 사건 특성(재산 처분 이력 등)에 따라 법원이 추가자료를 요구할
+  // 수 있다(예규 제1조의2 제3항) — kgov는 이 목록으로 접수를 "완결"로
+  // 판단하되, 반드시 "법원이 사건별로 추가서류를 요구할 수 있다"는
+  // 문구를 함께 안내해야 한다(아래 disclaimer와 별개로 SP 차원에서 필요).
+  'court:personal_bankruptcy_filing': {
+    agency:      'court',
+    agency_name: '관할 지방법원(파산부)',
+    task_name:   '개인파산·면책 신청',
+    legal_basis: '채무자 회생 및 파산에 관한 법률 제302조, 동법 규칙 제72조',
+    documents: [
+      { id: 'petition',          name: '파산 및 면책신청서',                required: true,  acquisition: 'user_authored' },
+      { id: 'statement',         name: '진술서',                           required: true,  acquisition: 'user_authored' },
+      { id: 'creditor_list',     name: '채권자목록',                        required: true,  acquisition: 'user_authored' },
+      { id: 'asset_list',        name: '재산목록',                          required: true,  acquisition: 'user_authored' },
+      { id: 'resident_cert',     name: '주민등록초본(주소변동내역 포함)',    required: true,  acquisition: 'gov24' },
+      { id: 'family_cert',       name: '가족관계증명서',                    required: true,  acquisition: 'gov24' },
+      { id: 'tax_cert',          name: '지방세 세목별 과세증명서(5년)',     required: true,  acquisition: 'gov24' },
+      { id: 'income_proof',      name: '소득 관련 소명자료(급여명세서 등)', required: true,  acquisition: 'user_authored' },
+    ],
+    note: '법원이 사건별로 추가 소명자료를 요구할 수 있음(개인파산 및 면책신청사건의 처리에 관한 예규 §1의2③) — 접수 후에도 보완 요청 가능성을 반드시 안내할 것.',
+  },
+};
+
+// ── 신규 기관/업무 판단절차 (agency/task_key 미등록 시) ──────────────
+// kgov(SP-10_kpublic)가 REQUIRED_DOCUMENTS_REGISTRY에 없는 요청을 받으면:
+//   1. 웹검색 도구(SP-10_kpublic 상위 UNIVERSAL-common U8 원칙에 따라
+//      의무 사용)로 담당기관·법적 근거·필요서류를 조사한다.
+//   2. 조사 결과를 REQUIRED_DOCUMENTS_REGISTRY 형식의 초안으로 만들어
+//      '/gwp-registry/register' 또는 이에 준하는 큐(SP-AUTHOR의
+//      pending_agents 패턴과 동일)에 status:'pending'으로 임시 등록한다.
+//   3. 즉시 그 초안 스키마로 사용자 요청을 처리하되, 응답에 "이 기관은
+//      방금 조사해 임시로 준비한 것이라 실제 요건과 다를 수 있다"는
+//      경고를 disclaimer와 별도로 덧붙인다.
+//   4. 사람 검토(승인) 전까지 다른 사용자에게는 이 임시 스키마가 자동
+//      노출되지 않도록 별도 심사 경로를 거친다 — pending_agents가
+//      즉시 병합되는 현재의 알려진 결함(2026-07-11 확인)을 이 신규
+//      경로에는 그대로 물려받지 않도록 별도 검토 필요.
+
+
+// acquisition 값 의미:
+//   'gov24'           — 정부24에서 발급 가능(§공문서 발급 안내로 유도)
+//   'user_authored'   — 정부기관이 발급하는 게 아니라 사용자(사업자)가 직접
+//                        작성해야 하는 문서. 정부24 안내 대상이 아님 —
+//                        AC가 작성을 도와줄 수는 있지만(K-Business 연계 등)
+//                        "발급받아 오세요"로 안내하면 틀린 안내가 된다.
+//   'external_insurer'— 정부기관도 정부24도 아닌 제3자(보험사)에게서 받는
+//                        서류.
+
+function _findDocSchema(agency, taskKey) {
+  return REQUIRED_DOCUMENTS_REGISTRY[`${agency}:${taskKey}`] || null;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 승인 게이트 (2026-07-12 신설) — "귀하의 의견대로 진행" 지시 반영
+//
+// REQUIRED_DOCUMENTS_REGISTRY(하드코딩, 사람이 직접 검토해 커밋한 항목)에
+// 없는 agency:task_key를 kgov가 웹검색으로 조사해 즉시 쓸 수 있게 하되,
+// pending_agents의 "즉시 병합" 결함을 반복하지 않도록 최소 게이트를 둔다:
+//
+//   - 임시 조사 결과는 L1 PocketBase 'gov_task_schema_drafts' 컬렉션에
+//     status:'pending' + created_by_guid로 저장된다.
+//   - 조회 시(_resolveDocSchema) 'pending' 항목은 **created_by_guid가
+//     일치하는 요청자 본인에게만** 반환된다. 다른 사용자가 같은
+//     agency:task_key를 요청하면 이 draft를 보지 못하고 새로 조사한다
+//     (중복 조사가 비효율이긴 하나, 검증 안 된 법적 요건이 여러 사용자에게
+//     자동 확산되는 것보다 안전 쪽을 택함).
+//   - status:'active'(주피터 승인 완료)가 되면 모든 사용자에게 반환된다.
+//   - 승인/반려는 handleGovTaskSchemaReview()가 담당하며, 기존
+//     prompt_admins/ADMIN_MASTER_KEY 인증(_requireAdmin, 8102줄)을
+//     그대로 재사용한다 — 새 인증 체계를 만들지 않는다.
+// ═══════════════════════════════════════════════════════════
+
+async function _fetchDraftSchema(env, agency, taskKey, requesterGuid) {
+  // 1) 이미 승인된(active) draft가 있으면 누구에게나 반환
+  const activeUrl = `${L1_DEFAULT}/api/collections/gov_task_schema_drafts/records`
+    + `?filter=${encodeURIComponent(`agency='${agency}' && task_key='${taskKey}' && status='active'`)}`
+    + `&perPage=1&sort=-created`;
+  const activeRes = await fetch(activeUrl).then(r => r.json()).catch(() => null);
+  if (activeRes?.items?.length) return { schema: JSON.parse(activeRes.items[0].schema_json), verified: true, draftId: activeRes.items[0].id };
+
+  // 2) 본인이 만든 pending draft가 있으면 재사용(중복 조사 방지)
+  const pendingUrl = `${L1_DEFAULT}/api/collections/gov_task_schema_drafts/records`
+    + `?filter=${encodeURIComponent(`agency='${agency}' && task_key='${taskKey}' && status='pending' && created_by_guid='${requesterGuid}'`)}`
+    + `&perPage=1&sort=-created`;
+  const pendingRes = await fetch(pendingUrl).then(r => r.json()).catch(() => null);
+  if (pendingRes?.items?.length) return { schema: JSON.parse(pendingRes.items[0].schema_json), verified: false, draftId: pendingRes.items[0].id };
+
+  return null;
+}
+
+// 하드코딩 레지스트리 → DB draft(승인분 우선, 본인 pending 다음) 순으로 조회.
+// 둘 다 없으면 null 반환 — 호출측(handleGovTaskSchemaDraft)이 새 조사를 트리거해야 함.
+async function _resolveDocSchema(env, agency, taskKey, requesterGuid) {
+  const curated = _findDocSchema(agency, taskKey);
+  if (curated) return { schema: curated, verified: true, draftId: null, source: 'curated' };
+  const draft = await _fetchDraftSchema(env, agency, taskKey, requesterGuid);
+  if (draft) return { ...draft, source: 'draft' };
+  return null;
+}
+
+// POST /gov/task/schema/draft — kgov가 웹검색으로 조사한 결과를 pending으로 저장
+// body: { guid, agency, task_key, agency_name, task_name, legal_basis, documents, source_urls }
+async function handleGovTaskSchemaDraft(request, env, corsHeaders) {
+  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', '', corsHeaders);
+  const { guid, agency, task_key, agency_name, task_name, legal_basis, documents, source_urls } = body;
+  if (!guid || !agency || !task_key || !task_name || !Array.isArray(documents) || !documents.length) {
+    return _err(400, 'MISSING_FIELD', 'guid/agency/task_key/task_name/documents 필수', corsHeaders);
+  }
+  // 이미 curated거나 본인 pending/전체 active가 있으면 새로 만들지 않고 그걸 반환
+  const existing = await _resolveDocSchema(env, agency, task_key, guid);
+  if (existing) {
+    return new Response(JSON.stringify({ ok: true, reused: true, verified: existing.verified, schema: existing.schema }), { status: 200, headers: corsHeaders });
+  }
+
+  const schemaJson = JSON.stringify({ agency, agency_name: agency_name || agency, task_name, legal_basis: legal_basis || null, documents });
+  const draftRes = await fetch(`${L1_DEFAULT}/api/collections/gov_task_schema_drafts/records`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      agency, task_key,
+      schema_json: schemaJson,
+      source_urls: JSON.stringify(source_urls || []),
+      status: 'pending',
+      created_by_guid: guid,
+    }),
+  }).then(r => r.json()).catch(e => { console.warn('[GovTaskSchemaDraft] 저장 실패:', e.message); return null; });
+
+  if (!draftRes?.id) return _err(500, 'DRAFT_SAVE_FAILED', 'gov_task_schema_drafts 저장 실패', corsHeaders);
+
+  return new Response(JSON.stringify({
+    ok: true,
+    reused: false,
+    verified: false,
+    draft_id: draftRes.id,
+    warning: '방금 웹검색으로 조사해 임시로 준비한 서류 목록입니다. 실제 요건과 다를 수 있으니 최종 제출 전 관할 기관 공식 안내로 다시 확인해 주세요. 사람 검토가 끝나기 전까지는 다른 사용자에게 이 목록이 공유되지 않습니다.',
+    schema: JSON.parse(schemaJson),
+  }), { status: 200, headers: corsHeaders });
+}
+
+// GET  /admin/gov-task-drafts        — 대기중 draft 목록 (Authorization: Bearer <admin token>)
+// POST /admin/gov-task-drafts/review — body: { draft_id, decision: 'approve'|'reject' }
+async function handleGovTaskDraftList(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', 'admin 토큰 필요', corsHeaders);
+  const url = `${L1_DEFAULT}/api/collections/gov_task_schema_drafts/records?filter=${encodeURIComponent("status='pending'")}&sort=-created&perPage=50`;
+  const res = await fetch(url).then(r => r.json()).catch(() => null);
+  return new Response(JSON.stringify({ ok: true, items: res?.items || [] }), { status: 200, headers: corsHeaders });
+}
+
+async function handleGovTaskDraftReview(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', 'admin 토큰 필요', corsHeaders);
+  const body = await request.json().catch(() => null);
+  const { draft_id, decision } = body || {};
+  if (!draft_id || !['approve', 'reject'].includes(decision)) {
+    return _err(400, 'MISSING_FIELD', 'draft_id/decision(approve|reject) 필수', corsHeaders);
+  }
+  const newStatus = decision === 'approve' ? 'active' : 'rejected';
+  const patchRes = await fetch(`${L1_DEFAULT}/api/collections/gov_task_schema_drafts/records/${draft_id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: newStatus, reviewed_by: admin.admin, reviewed_at: new Date().toISOString() }),
+  }).catch(() => null);
+  if (!patchRes?.ok) return _err(500, 'REVIEW_FAILED', 'draft 상태 갱신 실패', corsHeaders);
+  return new Response(JSON.stringify({ ok: true, draft_id, status: newStatus }), { status: 200, headers: corsHeaders });
+}
+
+// SubtleCrypto로 서버측에서도 해시 형식만 검증(진짜 파일 해시인지는 확인
+// 불가 — 클라이언트가 보낸 값을 신뢰하는 구조). 64자 hex(SHA-256)인지만 검사.
+function _isValidSha256Hex(s) {
+  return typeof s === 'string' && /^[a-f0-9]{64}$/i.test(s);
+}
+
+async function handleGovTaskSubmit(request, env, corsHeaders) {
+  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', '', corsHeaders);
+
+  const { guid, agency, task_key, documents, notes } = body;
+  if (!guid || !agency || !task_key) {
+    return _err(400, 'MISSING_FIELD', 'guid/agency/task_key 필수', corsHeaders);
+  }
+  // ★ 2026-07-12 정정 — GOV_AGENCIES.has(agency) 검증을 제거했다.
+  // GOV_AGENCIES는 /gov/relay의 라우팅·정체성 목록(public/jeju_do/
+  // jeju_national/health/police 등)이고, 여기서 쓰는 agency는
+  // REQUIRED_DOCUMENTS_REGISTRY의 키 접두어(kcc, court, 342개 기관 코드
+  // 등)로 완전히 다른 네임스페이스다. 실제로 /gov/relay에 도달하는
+  // agency 값은 국가기관 전체에 대해 언제나 'public' 하나뿐이며(client
+  // 쪽 gwp-registry.js에 기관별 개별 GWP 엔트리가 없음), kcc/court가
+  // /gov/relay의 agency로 넘어올 경로 자체가 없다 — 이 둘을 같은 Set으로
+  // 검증한 것은 개념 혼동이었다(사고실험으로 발견, 2026-07-12).
+  // 이 스키마 키의 유효성은 _resolveDocSchema()가 curated 레지스트리 또는
+  // 승인된/본인 pending draft로 대신 검증하므로 별도 화이트리스트가
+  // 필요 없다.
+
+  const resolved = await _resolveDocSchema(env, agency, task_key, guid);
+  if (!resolved) {
+    return _err(404, 'TASK_SCHEMA_NOT_FOUND',
+      `${agency}:${task_key}에 대한 서류 스키마가 없습니다 — 먼저 /gov/task/schema/draft로 조사·등록하십시오`,
+      corsHeaders);
+  }
+  const { schema, verified } = resolved;
+
+  const submitted = Array.isArray(documents) ? documents : [];
+
+  // 제출된 서류 각각의 형식 검증(해시 형식만 — 내용 진위는 검증 불가)
+  const invalidEntries = submitted.filter(d => !d?.doc_id || !_isValidSha256Hex(d?.sha256));
+  if (invalidEntries.length) {
+    return _err(400, 'INVALID_DOCUMENT_ENTRY', '각 서류는 doc_id와 유효한 sha256(64자 hex)이 필요합니다', corsHeaders);
+  }
+
+  const submittedIds = new Set(submitted.map(d => d.doc_id));
+  const requiredDocs  = schema.documents.filter(d => d.required);
+  const missingDocs   = requiredDocs.filter(d => !submittedIds.has(d.id));
+  const matchedDocs   = schema.documents.filter(d => submittedIds.has(d.id));
+
+  const status     = missingDocs.length === 0 ? 'accepted' : 'pending_documents';
+  const receiptNo  = status === 'accepted'
+    ? `GOV-${agency}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
+    : null;
+  const now = new Date().toISOString();
+
+  // ── 구조화 PDV 기록 — handlePdvReport와 동일한 L1 pdv_records 컬렉션에
+  // type:'gov_task_submission'으로 남긴다. 스키마리스 확장은 summary_6w에. ──
+  const summary6wFull = {
+    who:   `사용자(${guid.slice(0, 20)}...)`,
+    when:  now,
+    where: `${schema.agency_name}(${agency}) AI비서`,
+    what:  `${schema.task_name} — ${status === 'accepted' ? '서류 접수 완료' : '서류 보완 필요'}`,
+    how:   'REQUIRED_DOCUMENTS-SCHEMA 대조(해시 기반 소지 증명)',
+    why:   notes || schema.legal_basis,
+    // 구조화 필드 — 이 GOV_TASK 전용
+    gov_task: {
+      agency, task_key,
+      task_name:   schema.task_name,
+      legal_basis: schema.legal_basis,
+      status,
+      schema_verified: verified,
+      receipt_no:  receiptNo,
+      documents_required: requiredDocs.map(d => d.id),
+      documents_matched:  matchedDocs.map(d => ({ id: d.id, name: d.name, sha256: submitted.find(s => s.doc_id === d.id)?.sha256 })),
+      documents_missing:  missingDocs.map(d => ({ id: d.id, name: d.name, acquisition: d.acquisition })),
+    },
+  };
+
+  const pdvId = `PDV-${guid.replace(/:/g, '').slice(0, 12)}-${Date.now()}`;
+  const pdvReportId = `govtask:${agency}:${task_key}:${guid}:${Date.now()}`;
+
+  const pdvFetch = await fetch(`${L1_DEFAULT}/api/collections/pdv_records/records`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      guid,
+      report_id:    pdvReportId,
+      reporter_svc: agency,
+      svc:          agency,
+      type:         'gov_task_submission',
+      summary:      summary6wFull.what,
+      summary_6w:   JSON.stringify(summary6wFull),
+      block_hash:   null,
+      risk_level:   'low',
+      source:       agency,
+      openhash_anchored: false,
+    }),
+  }).catch(e => { console.warn('[GovTaskSubmit] PDV 기록 실패:', e.message); return null; });
+
+  if (!pdvFetch || !pdvFetch.ok) {
+    console.warn('[GovTaskSubmit] PDV 기록 실패 — 접수 판정 자체는 반환하되 감사로그 없이 진행됨을 로그로 남김');
+  }
+
+  return new Response(JSON.stringify({
+    ok: true,
+    status,
+    receipt_no: receiptNo,
+    // ★ 2026-07-12 신설 — 강제 면책 필드. AC가 사용자에게 언급하는 걸
+    // "잊을 수 있는" 방식(프롬프트 지시만으로는 누락 가능)이 아니라,
+    // 이 응답을 읽는 모든 클라이언트 코드가 항상 이 필드를 받도록 만든다.
+    // 프론트엔드(각 기관 webapp.html)는 이 disclaimer를 receipt_no와
+    // 분리해서 보여주지 말고 항상 같은 말풍선에 이어붙여야 한다
+    // (아래 KNOWN_LIMITATIONS #3 참조 — 실제 기관 시스템 미연동).
+    disclaimer: receiptNo
+      ? `${receiptNo}는 혼디 내부 접수번호이며, ${schema.agency_name}이(가) 발급한 공식 접수번호가 아닙니다. 실제 기관 시스템과의 연동 전까지는 사용자님이 직접 제출하거나 별도 확인이 필요합니다.`
+         + (verified ? '' : ' 아울러 이 서류 목록 자체가 아직 사람 검토를 거치지 않은 임시 조사 결과이니, 최종 제출 전 관할 기관 공식 안내로 다시 확인해 주세요.')
+      : null,
+    schema_verified: verified,
+    task_name:  schema.task_name,
+    documents_missing: missingDocs.map(d => ({ id: d.id, name: d.name, acquisition: d.acquisition })),
+    pdv_id: pdvId,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// KNOWN_LIMITATIONS (2026-07-12) — 이 구현이 아직 하지 않는 것
+// ═══════════════════════════════════════════════════════════
+// 1. 원본 파일을 저장하지 않는다(R2 등 바인딩 없음) — 해시만 대조하므로
+//    "정말 이직확인서/사업계획서 맞는지"는 검증 불가. 사용자가 아무
+//    파일이나 올려도 doc_id만 맞으면 통과한다.
+// 2. sha256 값 자체를 서버가 재계산하지 않는다 — 클라이언트(브라우저/새 탭)가
+//    계산해 보낸 값을 그대로 신뢰한다. 위변조 방지가 아니라 "같은 파일을
+//    나중에 다시 봤을 때 동일本인지" 정도의 무결성 체크에 가깝다.
+// 3. 실제 방송통신위원회 시스템(예: 위치정보관리시스템)에 아무것도
+//    전송하지 않는다 — receipt_no는 이 시스템이 자체 발급한 내부 접수번호일
+//    뿐, 기관이 발급한 공식 접수번호가 아니다. AC가 사용자에게 이 차이를
+//    반드시 명확히 알려야 한다(아래 방송통신위원회 역할수행 참조).
+// ═══════════════════════════════════════════════════════════
 
 async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = null) {
   let body;
@@ -6868,44 +7118,62 @@ async function handleProfilePost(request, env, corsHeaders) {
     updated_at: new Date().toISOString(),
   };
 
-  // ★ 2026-07-12 — Supabase→L1 이관 완성(4단계). 우선순위를 뒤집는다.
-  // 이전: L1 먼저 시도(실패해도 무시) → Supabase 필수(실패하면 가입
-  // 자체가 502로 막힘) — 즉 지금까지는 "이관 중"이라면서도 실제로는
-  // Supabase가 여전히 최종 관문이었다(250건 사고실험 중 발견).
-  // 이제:   L1 필수(실패하면 가입 자체가 502) → Supabase는 best-effort
-  // (실패해도 가입은 성공 처리, 로그만 남김 — 다른 레거시 읽기 경로가
-  // 아직 Supabase를 참조할 수 있어 당분간 병행 쓰기는 유지한다).
-  let l1Result;
+  // 2026-06-30: L1 PocketBase 이중쓰기 — Supabase보다 먼저 시도하고,
+  // 실패해도 가입 자체는 막지 않는다(Supabase가 여전히 폴백 소스).
+  // L1엔 없는 컬럼(name/address/lat/lng/phone/website)은 extra.core에 접음.
   try {
-    l1Result = await _l1UpsertProfile(env, {
+    await _l1UpsertProfile(env, {
       guid, handle: finalHandle, entityType: entity_type, nativeLang: native_lang,
       isPublic: is_public, pubkey, extra: newExtra,
       core: { name, address, lat, lng, phone, website, occupation: resolvedOccupation },
     });
   } catch (e) {
-    return _err(502, 'L1_SAVE_FAILED', 'L1 프로필 저장 실패: ' + e.message, corsHeaders);
+    console.warn('[Profile] L1 저장 실패 (Supabase는 계속 진행):', e.message);
   }
 
+  let saveRes;
   try {
     if (existing) {
-      await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
+      saveRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
         method: 'PATCH',
         headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
         body: JSON.stringify(record),
       });
     } else {
       record.created_at = new Date().toISOString();
-      await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
+      saveRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
         method: 'POST',
         headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
         body: JSON.stringify(record),
       });
     }
   } catch (e) {
-    console.warn('[Profile] Supabase 병행쓰기 실패 (L1은 이미 저장됨, 가입은 정상 처리):', e.message);
+    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
   }
 
-  const savedProfile = { ...record, id: l1Result?.id };
+  if (!saveRes.ok) {
+    const errText = await saveRes.text().catch(() => '');
+    return _err(502, 'DB_ERROR', `프로필 저장 실패: ${errText}`, corsHeaders);
+  }
+  let savedRows = await saveRes.json().catch(() => []);
+
+  // 2026-06-30: existing이 L1에서만 발견된 경우(Supabase엔 아직 없는 신규
+  // L1-우선 가입자) PATCH가 매칭 0건으로 조용히 끝날 수 있다 — 그 경우 POST로
+  // 재시도(Supabase 쪽도 이중쓰기 일관성 유지, 실패해도 가입은 막지 않음).
+  if (existing && Array.isArray(savedRows) && savedRows.length === 0) {
+    try {
+      record.created_at = new Date().toISOString();
+      const retryRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
+        method: 'POST',
+        headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
+        body: JSON.stringify(record),
+      });
+      if (retryRes.ok) savedRows = await retryRes.json().catch(() => []);
+    } catch (e) {
+      console.warn('[Profile] Supabase POST 재시도 실패 (L1은 이미 저장됨):', e.message);
+    }
+  }
+  const savedProfile = savedRows[0] || record;
 
   // 2026-06-23: SP 합성 시점 — 가입 직후가 아니라 PROFILE_SUBMIT 완료 후.
   // 2026-07-01 전면 재설계: 개인/기관 구분 없이 _mergeAgentSP 하나로 통합
