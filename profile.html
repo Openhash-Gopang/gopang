@@ -38,6 +38,27 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
 .profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#007b8b,#3569d7);
   display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;
   color:#fff;flex-shrink:0;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+
+/* ── 신뢰도 온도 배지 — 우측 상단, 당근마켓 매너온도 스타일 차용 (2026-07-13) ── */
+.hero-top-row{display:flex;justify-content:space-between;align-items:flex-start}
+.temp-badge{display:flex;flex-direction:column;align-items:flex-end;gap:5px;margin-top:10px}
+.temp-value{font-size:16px;font-weight:700;color:#212529;line-height:1;letter-spacing:-.2px}
+.temp-track{width:66px;height:7px;border-radius:999px;background:#f1f3f5;overflow:hidden}
+.temp-fill{height:100%;border-radius:999px;
+  background:linear-gradient(90deg,#ffd8a8 0%,#ffa94d 45%,#ff8c3d 75%,#fa5252 100%)}
+
+/* ── Claim this business (claim_status='unclaimed' 전용) ── */
+.claim-row{padding:9px 20px;display:flex;align-items:flex-start;gap:14px;cursor:pointer;
+  background:none;border:none;width:100%;text-align:left;font-family:inherit}
+.claim-row .info-icon{color:#0f6e56}
+.claim-row .info-text{color:#0f6e56;font-weight:600}
+.claim-sub{font-size:12.5px;color:#9ca3af;font-weight:400;margin-top:2px}
+.badge-unclaimed{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+
+/* ── Suggest an edit / 신고 (비소유자 전용) ── */
+.btn-pill-ghost{display:inline-flex;align-items:center;gap:6px;padding:11px 20px;
+  border:1px solid #e5e7eb;border-radius:999px;background:#fff;color:#374151;
+  font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer}
 .profile-name-block{padding-top:42px}
 .profile-name{font-size:21px;font-weight:700;color:#111827;margin-bottom:2px}
 .profile-type-sub{font-size:13.5px;color:#6b7280;margin-bottom:6px}
@@ -266,7 +287,13 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
     </svg>
   </div>
   <div class="profile-hero">
-    <div class="profile-avatar" id="p-avatar"></div>
+    <div class="hero-top-row">
+      <div class="profile-avatar" id="p-avatar"></div>
+      <div class="temp-badge hidden" id="temp-badge">
+        <span class="temp-value" id="temp-value">36.5°</span>
+        <div class="temp-track"><div class="temp-fill" id="temp-fill" style="width:37%"></div></div>
+      </div>
+    </div>
     <div class="profile-name-block">
       <div class="profile-name" id="p-name"></div>
       <div class="profile-type-sub" id="p-type-sub"></div>
@@ -275,6 +302,17 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
     </div>
     <div class="profile-desc hidden" id="p-desc"></div>
     <div class="profile-tags hidden" id="p-tags"></div>
+  </div>
+
+  <!-- Claim this business (claim_status='unclaimed' 전용, 2026-07-13 신설) -->
+  <div class="card hidden" id="card-claim">
+    <button class="claim-row" onclick="_startClaimFlow()">
+      <span class="info-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11V5l-8-3-8 3v6c0 6.5 8 11 8 11z"/><path d="m9 12 2 2 4-4"/></svg></span>
+      <div>
+        <div class="info-text">이 업체를 인증하시겠어요?</div>
+        <div class="claim-sub">K-Search가 자동으로 만든 미청구 프로필입니다 — 실제 운영자가 인증하면 정보를 직접 관리할 수 있어요</div>
+      </div>
+    </button>
   </div>
 
   <!-- 퀵 액션 (메시지/P2P/공유/혼디코드/저장) -->
@@ -306,6 +344,18 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
     <button class="btn-pill-outline" onclick="location.href='/register-profile.html'">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       프로필 수정
+    </button>
+  </div>
+
+  <!-- Suggest an edit / 신고 (비소유자 전용, 2026-07-13 신설) -->
+  <div class="pill-wrap hidden" id="btn-suggest-edit-wrap" style="border-top:none;padding-top:0">
+    <button class="btn-pill-outline" onclick="_suggestEdit()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      정보 수정 제안
+    </button>
+    <button class="btn-pill-ghost" onclick="_reportProfile()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      신고
     </button>
   </div>
 
@@ -573,6 +623,14 @@ function render(p) {
   document.getElementById('qa-save')?.classList.toggle('hidden', _isOwner);
   if (!_isOwner) _initSaveButtonState(p.handle);
   document.getElementById('btn-inquiry-wrap').classList.toggle('hidden', !(aiCfg?.system_prompt && !_isOwner));
+
+  // ── Claim this business / Suggest an edit 노출 제어 (2026-07-13 신설) ──
+  const claimStatus = p.claim_status ?? p.extra?.claim_status ?? null;
+  document.getElementById('card-claim').classList.toggle('hidden', claimStatus !== 'unclaimed');
+  document.getElementById('btn-suggest-edit-wrap').classList.toggle('hidden', _isOwner);
+
+  // ── 신뢰도 온도 배지 (2026-07-13 신설) ──
+  _renderTempBadge(p.guid);
 
   // 소개
   const desc = ident.description || p.description || '';
@@ -1061,6 +1119,67 @@ function _renderCartSummary() {
 }
 
 // ── 결제 시작: GWP_SIGN_REQUEST 조립·전송 ────────────────────
+// ── 신뢰도 온도 배지 렌더 (2026-07-13 신설) ──────────────────
+// GET /biz/temperature는 평가 5건 미만이면 temp_score를 null로 감춘다
+// (소수 평가로 온도가 왜곡되는 걸 막기 위한 백엔드 설계, worker.js
+// handleTemperatureQuery 참조). 다만 화면 표시 규칙은 당근마켓과 동일하게
+// null이어도 DEFAULT_TEMP(36.5)를 그대로 보여준다 — 신규 사용자도 항상
+// 36.5°에서 출발한다는 사실 자체가 신뢰의 기준점이므로 감출 필요가 없다.
+const _DEFAULT_TEMP = 36.5;
+const _TEMP_MAX     = 99;
+async function _renderTempBadge(guid) {
+  const badge = document.getElementById('temp-badge');
+  const valEl = document.getElementById('temp-value');
+  const fillEl = document.getElementById('temp-fill');
+  if (!guid) { badge.classList.add('hidden'); return; }
+  let temp = _DEFAULT_TEMP;
+  try {
+    const res = await fetch(`${PROXY}/biz/temperature?guid=${encodeURIComponent(guid)}`);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok && typeof data.temp_score === 'number') {
+      temp = data.temp_score;
+    }
+  } catch (e) {
+    console.warn('[Temp] 온도 조회 실패 (기본값 표시):', e.message);
+  }
+  valEl.textContent = `${temp.toFixed(1)}°`;
+  fillEl.style.width = `${Math.max(0, Math.min(100, (temp / _TEMP_MAX) * 100))}%`;
+  badge.classList.remove('hidden');
+}
+
+// ── Claim this business (2026-07-13 신설) ──────────────────
+// 실제 서명(POST /profile/claim)은 guid:pubkey:ts 서명 검증이 필요해
+// 별도 프로토콜 설계가 필요하다 — 여기서는 우선 AI 비서 대화로 안내해
+// 안전하게 흐름을 시작한다(추후 서명 릴레이 연동은 별도 패치).
+function _startClaimFlow() {
+  const input = document.getElementById('ai-input');
+  if (!input) return;
+  input.value = `이 업체(${_profile?.name || ''})가 제 소유예요. 인증하고 싶어요.`;
+  if (!document.getElementById('ai-chat-box')?.classList.contains('open')) toggleAIChat();
+  document.getElementById('ai-section')?.scrollIntoView({ behavior: 'smooth' });
+  sendAIMsg();
+}
+
+// ── Suggest an edit (2026-07-13 신설) ──────────────────────
+function _suggestEdit() {
+  const input = document.getElementById('ai-input');
+  if (!input) return;
+  input.value = `이 프로필(${_profile?.name || ''})의 정보 중 잘못된 부분이 있어서 알려드리고 싶어요.`;
+  if (!document.getElementById('ai-chat-box')?.classList.contains('open')) toggleAIChat();
+  document.getElementById('ai-section')?.scrollIntoView({ behavior: 'smooth' });
+  input.focus();
+}
+
+// ── 신고 (2026-07-13 신설) ──────────────────────────────────
+function _reportProfile() {
+  const input = document.getElementById('ai-input');
+  if (!input) return;
+  input.value = `이 프로필(${_profile?.name || ''})을 신고하고 싶어요.`;
+  if (!document.getElementById('ai-chat-box')?.classList.contains('open')) toggleAIChat();
+  document.getElementById('ai-section')?.scrollIntoView({ behavior: 'smooth' });
+  input.focus();
+}
+
 function _startCheckout() {
   const statusEl = document.getElementById('checkout-status');
   // window.opener가 없으면(=market 팝업이 아니라 profile.html에 직접
