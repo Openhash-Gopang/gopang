@@ -523,7 +523,17 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI, use
     try {
       localStorage.setItem('hondi_first_greeted', '1');
       // v2.0: 이름짓기는 UI에서 직접 처리 — name_pending 플래그 불필요
+      // 2026-07-13 신설 — 계정 나이 기준점(주기적 PDV 검토 간격 계산용).
+      // 최초 인사는 가입당 정확히 1회만 발생하므로 신뢰할 수 있는 마커.
+      if (!localStorage.getItem('hondi_signup_at')) {
+        localStorage.setItem('hondi_signup_at', new Date().toISOString());
+      }
     } catch {}
+  }
+
+  // ── PDV_REVIEWED — 주기적 PDV 검토 완료 기록 (2026-07-13 신설) ──
+  if (fullReply.includes('[PDV_REVIEWED]')) {
+    try { localStorage.setItem('hondi_pdv_review_last', new Date().toISOString()); } catch {}
   }
 
   // ── SHARE_DOC_CONFIRMED/REJECTED — 정부24 공유문서 확인 완료(2026-07-09) ──
@@ -1848,6 +1858,51 @@ export function _buildFirstContactContext() {
 // 라벨] 또는 [SHARE_DOC_REJECTED]를 출력하면 그 결과만 call-ai.js가
 // 기록한다 — "문서 용도는 AI가 단정하지 않고 항상 사람이 확정한다"는
 // extract.js/share-inbox.js와 동일한 원칙을 대화 흐름에도 그대로 적용.
+// ══════════════════════════════════════════════════════════
+// 주기적 PDV 검토 트리거 (2026-07-13 신설, 3단계 롤아웃 중 ①)
+// ══════════════════════════════════════════════════════════
+// 계정 나이에 따라 검토 간격을 늘린다 — 신규 계정은 활동 패턴이
+// 아직 안 잡혀 매일 봐도 새로운 단서가 나올 가능성이 높고, 오래된
+// 계정은 프로필이 이미 안정화됐을 가능성이 높아 자주 볼 필요가 준다.
+function _pdvReviewIntervalDays() {
+  let signupAt = null;
+  try { signupAt = localStorage.getItem('hondi_signup_at'); } catch {}
+  if (!signupAt) return null; // 가입 시점을 아직 모르면 검토 보류
+  const ageDays = (Date.now() - new Date(signupAt).getTime()) / 86400000;
+  if (ageDays < 100) return 1;   // ~3~4개월: 매일
+  if (ageDays < 365) return 7;   // ~1년: 매주
+  return 30;                     // 1년 이후: 매월
+}
+
+export function _buildPdvReviewContext() {
+  try {
+    // 프로필이 이미 완성된 사용자는 이 트리거 대상이 아니다(§0-1-P[6]의
+    // "프로필:미완성" 게이트와 동일한 전제 — 완성본을 계속 흔들지 않음).
+    if (localStorage.getItem('hondi_profile_done') === '1') return '';
+
+    const intervalDays = _pdvReviewIntervalDays();
+    if (intervalDays == null) return '';
+
+    let lastReview = null;
+    try { lastReview = localStorage.getItem('hondi_pdv_review_last'); } catch {}
+    const dueMs = intervalDays * 86400000;
+    if (lastReview && (Date.now() - new Date(lastReview).getTime()) < dueMs) return '';
+
+    return (
+      `[PDV_REVIEW_DUE: 지금이 이 세션에서 PDV 검토 시점입니다(계정 나이 기준` +
+      ` ${intervalDays}일 주기). 이번 응답은 평소처럼 사용자 요청에 정상적으로` +
+      ` 답하되, 이번 턴의 [이력] 블록(최근 PDV 요약)에서 프로필에 추가할 만한` +
+      ` 단서(반복되는 상품·업무·활동 패턴 등)가 보이면 응답 끝에 §0-1-P[6]과` +
+      ` 같은 톤으로 딱 한 가지만 자연스럽게 언급하십시오 — 강요하지 않습니다.` +
+      ` 뚜렷한 단서가 없으면 아무 말도 덧붙이지 않아도 됩니다. 어느 경우든` +
+      ` 이번 응답 끝에 [PDV_REVIEWED]를 반드시 출력해 검토를 기록하십시오` +
+      ` (사용자에게는 보이지 않는 내부 태그 — 다음 검토 시점 계산용).]\n\n`
+    );
+  } catch {
+    return '';
+  }
+}
+
 export function _buildShareInboxContext() {
   let pending = null;
   try {
@@ -1996,9 +2051,13 @@ async function _buildEnhancedUserContent(userContent) {
   // 1회성 이벤트 트리거형 컨텍스트라 같은 우선순위대에 둔다.
   const shareBlock = _buildShareInboxContext();
 
-  if (!parts.length && !firstContact && !faqBlock && !integrityBlock && !shareBlock) return userContent;
+  // 주기적 PDV 검토(2026-07-13 신설) — firstContact/shareBlock과 동일한
+  // 1회성(이번엔 "주기적 1회") 트리거 패턴.
+  const pdvReviewBlock = _buildPdvReviewContext();
 
-  const ctxBlock = integrityBlock + shareBlock + firstContact + faqBlock + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
+  if (!parts.length && !firstContact && !faqBlock && !integrityBlock && !shareBlock && !pdvReviewBlock) return userContent;
+
+  const ctxBlock = integrityBlock + shareBlock + pdvReviewBlock + firstContact + faqBlock + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
 
   // multipart(이미지 포함) 메시지 처리
   if (Array.isArray(userContent)) {
