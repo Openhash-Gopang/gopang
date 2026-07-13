@@ -6,6 +6,7 @@
 <title>프로필 등록</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap">
+<script src="/gopang-wallet.js?v=20260624"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -674,8 +675,27 @@ async function submitProfile() {
   }
 }
 
+// ── 프로필 서명 부착 (2026-07-13 신설) ──────────────────────
+// handleProfilePost(POST /profile)는 pubkey/signature 없이는 항상
+// 400(MISSING_FIELD)으로 거부한다 — 지금까지 이 페이지 어디서도
+// 서명을 붙이지 않고 있었다(발견된 버그, gopang-wallet.js 미로드가 원인).
+async function _signAndAttachProfile(profile) {
+  const wallet = window.gopangWallet;
+  if (!wallet?.signPayload) {
+    throw new Error('지갑을 사용할 수 없습니다 — 앱에서 다시 시도해 주세요.');
+  }
+  const pubkey = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+  if (!pubkey) throw new Error('지갑 공개키를 찾을 수 없습니다.');
+  const ts = Date.now().toString();
+  // handleProfilePost가 검증하는 서명 대상 문자열과 정확히 일치해야 한다.
+  const sigMsg = `${profile.guid}:${pubkey}:${ts}`;
+  const signature = await wallet.signPayload(sigMsg);
+  return { ...profile, pubkey, signature, ts };
+}
+
 // ── POST (신규 등록) ──────────────────────────────────────
 async function postProfile(profile) {
+  profile = await _signAndAttachProfile(profile);
   const res  = await fetch(`${PROXY}/profile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -697,10 +717,14 @@ async function postProfile(profile) {
   setTimeout(() => { location.href = '/webapp.html'; }, 1200);
 }
 
-// ── PATCH (수정) ──────────────────────────────────────────
+// ── 수정 (2026-07-13 수정 — PATCH /profile/@handle은 서버 라우팅이
+//    아예 없어 항상 실패했다. handleProfilePost가 이미 guid 존재
+//    여부로 upsert를 수행하므로, 수정도 같은 POST 엔드포인트를
+//    그대로 쓴다 — 새 서버 핸들러를 만들 필요가 없다) ──────────
 async function patchProfile(profile) {
-  const res  = await fetch(`${PROXY}/profile/@${_handle}`, {
-    method: 'PATCH',
+  profile = await _signAndAttachProfile(profile);
+  const res  = await fetch(`${PROXY}/profile`, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(profile),
   });
