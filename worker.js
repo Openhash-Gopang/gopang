@@ -2902,13 +2902,41 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
   // 실패해도 결제 자체는 이미 끝났으므로 주문을 되돌리지 않는다.
   if (seller_claim) {
     try {
+      // 2026-07-13 신설 — GDC-재무제표-재고 연동 4단계(매출원가 인식).
+      // 판매된 항목 중 cost_price(매입원가)가 알려진 것만 골라 매출원가
+      // (pl-cogs)를 계산한다 — 모르면(cost_price=null) 그 항목은 그냥
+      // 제외한다(억지로 추정하지 않음). 재고자산(bs-inventory) 계정으로
+      // 매입 단계부터 자산 계상하는 정식 발생주의 회계는 매입 쪽에
+      // "재고용 매입 의도" 추적이 별도로 필요해 범위가 훨씬 커진다 —
+      // 이번 단계는 "판매 시점에 원가를 얼마나 아는가"만으로 매출총이익
+      // (매출-매출원가) 가시성을 주는 것으로 의도적으로 범위를 좁혔다.
+      let totalCogs = 0;
+      if (orderCatalog && txItems.length) {
+        const byIdForCogs = new Map(orderCatalog.map(r => [r.id, r]));
+        for (const item of txItems) {
+          const rec = byIdForCogs.get(item.id);
+          if (!rec || typeof rec.cost_price !== 'number') continue;
+          const qty = Number(item.quantity) > 0 ? Number(item.quantity) : 1;
+          totalCogs += rec.cost_price * qty;
+        }
+      }
+      const claimsToStore = [seller_claim];
+      if (totalCogs > 0) {
+        claimsToStore.push({
+          claimant: seller_guid,
+          fs_account: 'pl-cogs',
+          direction: 'debit',
+          amount: totalCogs,
+        });
+      }
+
       const claimToken = await _l1AdminToken(env);
       await fetch(`${L1_DEFAULT}/api/collections/pending_claims/records`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${claimToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           claimant: seller_guid,
-          claim_data: seller_claim,
+          claim_data: claimsToStore,
           block_hash, block_id, tx_hash,
           session_id: session_id || null,
           source: reporter_svc || 'kmarket_order',
@@ -8001,6 +8029,10 @@ async function _l1SyncSellerProducts(env, guid, products, mode = 'replace', dele
       name: p.name || '',
       desc: p.desc || '',
       price: typeof p.price === 'number' ? p.price : null,
+      // 2026-07-13 신설 — GDC-재무제표-재고 연동 4단계(매출원가/COGS).
+      // 절대 공개 카탈로그에 포함하지 않는다(handleCatalogGet에서 명시
+      // 제외 — 원가는 사업자 본인 외 누구에게도 노출되면 안 됨).
+      cost_price: typeof p.cost_price === 'number' ? p.cost_price : null,
       unit: p.unit || '',
       category: p.category || '',
       stock: derivedStock,
@@ -8531,7 +8563,28 @@ async function handleCatalogGet(request, env, corsHeaders) {
   } catch (e) {
     return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
   }
-  const publicOnly = products.filter(p => p.is_public !== false);
+  // 2026-07-13 신설 — cost_price(매입원가)는 절대 공개 응답에 포함하지
+  // 않는다. 원래 이 함수는 원본 레코드를 그대로(publicOnly) 반환하고
+  // 있었는데, cost_price 필드가 새로 생기면서 그대로 두면 방문자 누구나
+  // 사업자의 원가·마진을 그대로 볼 수 있는 상태가 될 뻔했다 — 명시적
+  // 화이트리스트로 바꿔 필요한 필드만 내보낸다.
+  const publicOnly = products
+    .filter(p => p.is_public !== false)
+    .map(p => ({
+      id: p.id,
+      product_id: p.product_id,
+      name: p.name,
+      desc: p.desc,
+      price: p.price,
+      unit: p.unit,
+      category: p.category,
+      stock: p.stock,
+      stock_qty: p.stock_qty,
+      image_url: p.image_url,
+      is_public: p.is_public,
+      updated_at: p.updated_at,
+      // cost_price 의도적으로 제외
+    }));
   return new Response(JSON.stringify({ ok: true, guid, products: publicOnly }), { status: 200, headers: corsHeaders });
 }
 

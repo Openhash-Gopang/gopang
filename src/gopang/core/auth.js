@@ -1589,7 +1589,7 @@ async function _initGdcWalletAndFs(guid) {
   // 덮어쓰지 않는다(로컬에 이미 뭔가 있으면 건드리지 않음).
   const existingFs = await wallet.getFinancialState();
   if (!existingFs || Object.keys(existingFs).length === 0) {
-    await wallet.setFinancialState({ 'bs-cash': 0, 'pl-purchase': 0, 'pl-revenue': 0 });
+    await wallet.setFinancialState({ 'bs-cash': 0, 'pl-purchase': 0, 'pl-revenue': 0, 'pl-cogs': 0 });
     console.info('[GDC] 재무제표 초기화 완료(IASB: 자산/비용/수익 각 0)');
 
     // ③ 감사 추적 — 재무제표 생성 사실을 PDV에 남긴다
@@ -2070,6 +2070,7 @@ async function _recordRegisterPdv({ ipv6, handle, nickname, e164, selectedCountr
     'bs-cash':          0,
     'pl-purchase':      0,
     'pl-revenue':       0,
+    'pl-cogs':          0,
     'last_tx_id':       null,
     'last_block_hash':  null,
     'last_updated_at':  now,

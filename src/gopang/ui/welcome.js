@@ -198,6 +198,10 @@ async function _forwardProductsToMarket(profile, wallet, pubkey) {
       // worker.js handleCatalogSync가 이 값으로 legacy stock(위 필드)도
       // 자동 파생하므로 여기선 원본 그대로만 전달한다.
       stock_qty: typeof p.stock_qty === 'number' ? p.stock_qty : null,
+      // 2026-07-13 신설 — GDC-재무제표-재고 연동 4단계(매출원가). 절대
+      // 공개 카탈로그에 노출되지 않는다(worker.js handleCatalogGet에서
+      // 명시 제외) — 원가는 사업자 본인만 봐야 하는 정보.
+      cost_price: typeof p.cost_price === 'number' ? p.cost_price : null,
       image_url: p.image_url || '',
       is_public: p.is_public !== false,
       updated_at: new Date().toISOString(),

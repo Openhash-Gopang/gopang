@@ -787,19 +787,24 @@
         }
         const acc = claim.fs_account || 'bs-cash';
         const cur = parseFloat(fs[acc] ?? '0') || 0;
+        // 2026-07-13 신설 — pl-cogs(매출원가)는 실제 현금 흐름이 아니라,
+        // 이미 매입 시점(pl-purchase)에 지출된 현금을 사후적으로 매출과
+        // 대응시키는 정보성 재분류일 뿐이다. bs-cash를 또 건드리면 같은
+        // 지출을 두 번 차감하는 이중계상이 된다 — 반드시 제외해야 한다.
+        const NON_CASH_ACCOUNTS = new Set(['pl-cogs']);
         if (claim.direction === 'credit') {
           fs[acc] = cur + (claim.amount || 0);
         } else if (claim.direction === 'debit') {
-          // pl-purchase: 누적 지출액(양수) — cur + amount
+          // pl-purchase·pl-cogs: 누적 비용(양수) — cur + amount
           // bs-cash: 잔액 감소 — 별도 처리
-          if (acc === 'pl-purchase') {
+          if (acc === 'pl-purchase' || acc === 'pl-cogs') {
             fs[acc] = cur + (claim.amount || 0);
           } else {
             fs[acc] = cur - (claim.amount || 0);
           }
         }
-        // bs-cash 동기화 (pl 계정 변동 시)
-        if (acc !== 'bs-cash') {
+        // bs-cash 동기화 (pl 계정 변동 시) — 비현금 계정은 제외
+        if (acc !== 'bs-cash' && !NON_CASH_ACCOUNTS.has(acc)) {
           const bsCash = parseFloat(fs['bs-cash'] ?? '0') || 0;
           if (claim.direction === 'credit') fs['bs-cash'] = bsCash + (claim.amount || 0);
           else                              fs['bs-cash'] = bsCash - (claim.amount || 0);

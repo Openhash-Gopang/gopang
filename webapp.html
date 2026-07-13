@@ -4469,7 +4469,10 @@ window.hsSendAsAttachment = function () {
             block_hash: c.block_hash,
             block_id: c.block_id || null,
             tx_hash: c.tx_hash || null,
-            claims: [c.claim_data],
+            // 2026-07-13 신설 — 4단계(매출원가)부터 claim_data가 배열
+            // (매출+매출원가 2건)일 수 있다. 이전 방식(단일 객체)과의
+            // 하위호환을 위해 배열 여부를 확인해 처리한다.
+            claims: Array.isArray(c.claim_data) ? c.claim_data : [c.claim_data],
             pdv_session_id: c.session_id || crypto.randomUUID(),
             pdv_type: 'service_task',
           });
