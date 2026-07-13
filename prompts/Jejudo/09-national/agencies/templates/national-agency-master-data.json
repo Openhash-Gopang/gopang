@@ -1,5 +1,5 @@
 {
-  "_schema_설명": "국가기관(중앙정부 지역사무소) 데이터. 하나의 domain(예: tax)에 여러 도(도코드)가 각자 레코드를 등록한다. jeju-router.js의 _renderNatTemplate()이 domain으로 template을 찾고, 도코드로 이 배열에서 해당 레코드를 찾아 자리표시자를 채운다. do-dept-master-data.json과 동일 철학. 이 파일은 09-national/agencies/templates/ 아래 있지만 향후 도별 프로젝트가 늘면 공용 위치로 옮기는 것을 검토할 것. 2026-07-13 추가: bok(한국은행 제주본부)·stat(통계청 제주사무소) 2개 domain 신규 등록 — JEJU-NATIONAL-AGENCIES-LIST 조사에서 기존 28건에 누락돼 있음을 발견해 추가함(총 30건).",
+  "_schema_설명": "국가기관(중앙정부 지역사무소) 데이터. 하나의 domain(예: tax)에 여러 도(도코드)가 각자 레코드를 등록한다. jeju-router.js의 _renderNatTemplate()이 domain으로 template을 찾고, 도코드로 이 배열에서 해당 레코드를 찾아 자리표시자를 채운다. do-dept-master-data.json과 동일 철학. 이 파일은 09-national/agencies/templates/ 아래 있지만 향후 도별 프로젝트가 늘면 공용 위치로 옮기는 것을 검토할 것. 2026-07-13 추가: bok(한국은행 제주본부)·stat(통계청 제주사무소) 2개 domain 신규 등록 — JEJU-NATIONAL-AGENCIES-LIST 조사에서 기존 28건에 누락돼 있음을 발견해 추가함(총 30건). 2026-07-13 2차 추가: customs(제주세관)·forestresearch(난대·아열대산림연구소)·forestseed(국립산림품종관리센터 제주지소)·forestcoop(산림조합중앙회 제주지역본부) 4개 domain 신규 등록(총 34건). forestcoop은 협동조합(특수법인)이라 국가기관 트리 소속이 맞는지 재검토 대상으로 별도 표기.",
   "기관목록": [
     {
       "domain": "agroquality",
@@ -211,6 +211,34 @@
       "도코드": "jeju",
       "소속부처": "통계청 → 호남지방통계청",
       "지사명": "통계청 제주사무소"
+    },
+    {
+      "domain": "customs",
+      "template": "SP-NAT-CUSTOMS-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "소속부처": "관세청",
+      "지사명": "제주세관"
+    },
+    {
+      "domain": "forestresearch",
+      "template": "SP-NAT-FORESTRESEARCH-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "소속부처": "산림청 국립산림과학원",
+      "지사명": "난대·아열대산림연구소"
+    },
+    {
+      "domain": "forestseed",
+      "template": "SP-NAT-FORESTSEED-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "소속부처": "산림청 국립산림품종관리센터",
+      "지사명": "국립산림품종관리센터 제주지소"
+    },
+    {
+      "domain": "forestcoop",
+      "template": "SP-NAT-FORESTCOOP-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "소속부처": "산림조합중앙회(특수법인·조합 형태 — 국가기관 아님, 재분류 검토 대상)",
+      "지사명": "산림조합중앙회 제주지역본부"
     }
   ]
 }
