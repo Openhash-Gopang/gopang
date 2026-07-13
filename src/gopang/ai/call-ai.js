@@ -1946,6 +1946,15 @@ async function _buildEnhancedUserContent(userContent) {
   const assistantName = localStorage.getItem('hondi_assistant_name') || '';
   if (assistantName) parts.push(`비서이름:${assistantName}`);
 
+  // 2026-07-13 신설 — 프로필 완성도 신호. §0-1-P[6](은연중 프로필 작성
+  // 유도)이 참조하는 근거. 완성되면(done='1') 신호 자체를 빼서, 더 이상
+  // 언급할 대상이 아님을 자연스럽게 전달한다(별도 "완성됨" 신호 불필요).
+  try {
+    if (localStorage.getItem('hondi_profile_done') !== '1') {
+      parts.push('프로필:미완성');
+    }
+  } catch {}
+
   const locNote = _buildLocNote();
   if (locNote) parts.push(locNote.trim());
 
