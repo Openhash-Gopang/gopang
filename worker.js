@@ -7858,6 +7858,13 @@ async function _l1SyncSellerProducts(env, guid, products, mode = 'replace') {
 
   // upsert
   for (const p of products) {
+    // 2026-07-13 신설 — stock_qty(숫자)가 오면 legacy stock(select
+    // in/low/out)을 여기서 자동 파생한다. 클라이언트가 stock_qty 없이
+    // stock만 보내는 기존 방식도 그대로 지원(하위호환).
+    const hasQty = typeof p.stock_qty === 'number';
+    const derivedStock = hasQty
+      ? (p.stock_qty <= 0 ? 'out' : (p.stock_qty <= 3 ? 'low' : 'in'))
+      : (p.stock || 'in');
     const body = {
       seller_guid: guid,
       product_id: p.id,
@@ -7866,7 +7873,8 @@ async function _l1SyncSellerProducts(env, guid, products, mode = 'replace') {
       price: typeof p.price === 'number' ? p.price : null,
       unit: p.unit || '',
       category: p.category || '',
-      stock: p.stock || 'in',
+      stock: derivedStock,
+      stock_qty: hasQty ? p.stock_qty : null,
       image_url: p.image_url || '',
       is_public: p.is_public !== false,
       updated_at: p.updated_at || new Date().toISOString(),

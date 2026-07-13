@@ -193,6 +193,11 @@ async function _forwardProductsToMarket(profile, wallet, pubkey) {
       unit: p.unit || '',
       category,
       stock: p.stock || 'in',
+      // 2026-07-13 신설 — GDC-재무제표-재고 연동 1단계. profile-assistant가
+      // 사용자가 자발적으로 언급한 수량만 채워 보낸다(강제 질문 아님) —
+      // worker.js handleCatalogSync가 이 값으로 legacy stock(위 필드)도
+      // 자동 파생하므로 여기선 원본 그대로만 전달한다.
+      stock_qty: typeof p.stock_qty === 'number' ? p.stock_qty : null,
       image_url: p.image_url || '',
       is_public: p.is_public !== false,
       updated_at: new Date().toISOString(),
