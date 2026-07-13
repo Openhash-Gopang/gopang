@@ -282,4 +282,4 @@ async function handleDeptTaskUpdate(request, env, corsHeaders, taskId, deps) {
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
-export { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY };
+export { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck };

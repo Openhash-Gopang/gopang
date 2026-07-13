@@ -32,6 +32,7 @@ import { maybeHandleExpertTurn, applyExpertSystemIfActive,
          isExpertActive, handleExpertTag, _composeExpertPrompt } from './expert-session.js';
 import { getExpertDef, resolveExpertId } from './expert-registry.js';
 import { buildHondiFaqContext } from './hondi-faq-router.js';
+import { setPdvDomain } from '../pdv/record.js';
 // ★ 2026-07-11 추가: _callGeminiGeneral 등 5개 함수가 vision.js에 정의는
 // 돼 있는데 여기서 import가 빠져 있었다 — 이미지 첨부 후 Gemini 분석
 // 경로를 탈 때마다 ReferenceError로 죽고 있었을 것(실사로 확인, 아래
@@ -429,6 +430,7 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[SHARE_DOC_CONFIRMED:[^\]]+\]/g, '')  // 공유문서 확인 완료 태그
   .replace(/\[SHARE_DOC_REJECTED\]/g, '')          // 공유문서 거부 태그
   .replace(/\[PANEL_ACTION:close\]/g, '')      // AI 패널 닫기 지시 태그 (2026-07-02 신설)
+  .replace(/\[PDV_DOMAIN_SET:[^\]]*\]/g, '')    // PDV 일상/업무 전환 태그 (2026-07-13 신설)
   .replace(/\[GWP:\s*[\w-]+\]/g, '')           // 하위 시스템 라우팅 태그 (방어적 — 정상 경로는 _parseAgentTags가 처리)
   .replace(/\[EXPERT:\s*[@\w-]+\]/g, '')       // 전문가 세션 라우팅 태그 (방어적 — 정상 경로는 handleExpertTag가 처리)
   // 2026-07-07 신설 — 아래 5개는 이전부터 _parseAgentTags가 실제 동작은
@@ -554,6 +556,14 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI, use
       } catch {}
     }
     _justCapturedName = true;
+  }
+
+  // ── PDV 일상/업무 영역 전환 [PDV_DOMAIN_SET] (2026-07-13 신설,
+  // AC-EVOLUTION_v1_1.md §PDV-SPLIT) — 시간대 자동전환이 아니라 사용자의
+  // 명시적 발화("업무 시작"/"퇴근했어요" 등)를 AC가 감지했을 때만 바뀐다.
+  const domainSetMatch = fullReply.match(/\[PDV_DOMAIN_SET:\s*mode=(work|personal)(?:,\s*org=([\w:.-]+))?\]/);
+  if (domainSetMatch) {
+    setPdvDomain(domainSetMatch[1], domainSetMatch[2] || null);
   }
 
   // ── 진행 중 필드 저장 [PARTIAL_SAVE] — step 태그 유무와 무관하게 항상 처리 (v1.3) ──

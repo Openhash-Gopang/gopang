@@ -4,6 +4,34 @@
 import { _SUPABASE_URL, _SUPABASE_KEY, USER_GUID, _USER } from '../core/state.js';
 import { CFG } from '../core/config.js';
 
+// ── PDV 일상/업무 영역 모드 — AC-EVOLUTION_v1_1.md §PDV-SPLIT ──────────
+// 시간대 기반 자동전환은 쓰지 않는다(AC-EVOLUTION-GAPS #13 — 자동전환은
+// 근무시간이 불규칙한 대부분의 직종에서 틀리기 쉽고, 조용히 틀리면
+// 사고(#12류 정보 혼입)로 이어진다). 오직 명시적 전환만 인정 —
+// AGENT-COMMON이 사용자의 "업무 시작"/"퇴근했어요" 류 발화를 감지해
+// [PDV_DOMAIN_SET: mode=work|personal] 태그로 알려주면 그때만 바뀐다.
+// 세션을 새로 열면 항상 personal로 리셋(다음 세션에 이전 업무모드가
+// 새어나가지 않도록 — 과소분류가 과다노출보다 안전하다는 원칙 재적용).
+const _PDV_DOMAIN_KEY = 'gopang_pdv_domain_mode'; // sessionStorage — 세션 종료 시 자동 초기화
+
+export function getPdvDomain() {
+  try { return sessionStorage.getItem(_PDV_DOMAIN_KEY) === 'work' ? 'work' : 'personal'; }
+  catch { return 'personal'; }
+}
+
+export function setPdvDomain(mode, affiliationOrgId = null) {
+  const m = mode === 'work' ? 'work' : 'personal';
+  try {
+    sessionStorage.setItem(_PDV_DOMAIN_KEY, m);
+    sessionStorage.setItem(_PDV_DOMAIN_KEY + '_org', m === 'work' ? (affiliationOrgId || '') : '');
+  } catch (e) { console.warn('[PDV] 도메인 모드 저장 실패:', e.message); }
+}
+
+function _currentAffiliationOrgId() {
+  try { return sessionStorage.getItem(_PDV_DOMAIN_KEY + '_org') || null; }
+  catch { return null; }
+}
+
 // ── recordPDV — 하위 시스템 공통 PDV 표준 함수 (STEP 20) ────────
 // 설계 원칙 P2: 모든 하위 시스템 PDV는 Worker /pdv/report 경유 필수
 // 하위 시스템(market, gdc 등)이 window.recordPDV()를 호출하면
@@ -19,6 +47,13 @@ export async function recordPDV({ report }) {
   if (!report) {
     console.warn('[recordPDV] report 객체 누락 — 호출 무시');
     return;
+  }
+  // AC-EVOLUTION_v1_1.md §PDV-SPLIT — 호출부가 명시하지 않으면 현재
+  // 세션 모드를 그대로 태깅한다(하위 시스템이 매번 신경 쓰지 않아도
+  // 되도록 기본값을 여기서 채움).
+  if (!report.domain) report.domain = getPdvDomain();
+  if (report.domain === 'work' && !report.affiliation_org_id) {
+    report.affiliation_org_id = _currentAffiliationOrgId();
   }
   try {
     const res = await fetch(CFG.endpoint + '/pdv/report', {
@@ -56,7 +91,22 @@ export function _buildPDVNote() {
   catch { return ''; }
   if (!Array.isArray(log) || !log.length) return '';
 
-  const recent = log.slice(-_PDV_NOTE_MAX_ITEMS).reverse(); // 최신순
+  // AC-EVOLUTION-GAPS #12 패치 — 현재 모드와 다른 도메인의 기록은 애초에
+  // 이 턴의 컨텍스트에 넣지 않는다. domain 미기재 항목(패치 이전 기록)은
+  // 'personal'로 취급 — 과거 데이터가 업무모드에 새어 들어가는 것보다
+  // 개인모드에 남는 쪽이 안전하다.
+  const mode = getPdvDomain();
+  const curOrg = mode === 'work' ? _currentAffiliationOrgId() : null;
+  const scoped = log.filter(r => {
+    const d = r.domain === 'work' ? 'work' : 'personal';
+    if (d !== mode) return false;
+    // 업무모드에서도 "지금 이 소속" 기록만 보여준다 — 겸직 시 다른
+    // 소속의 업무 기록이 섞여 들어가는 것도 막는다(AC-EVOLUTION §1 겸직 지원).
+    if (mode === 'work' && curOrg && r.affiliation_org_id && r.affiliation_org_id !== curOrg) return false;
+    return true;
+  });
+
+  const recent = scoped.slice(-_PDV_NOTE_MAX_ITEMS).reverse(); // 최신순
   const lines = [];
   let used = 0;
   for (const r of recent) {
@@ -68,13 +118,19 @@ export function _buildPDVNote() {
     used += line.length;
   }
   if (!lines.length) return '';
-  return `\n\n[PDV 최근 기록 — 참고용, 추측 금지]\n` + lines.join('\n');
+  const domainLabel = mode === 'work' ? '업무' : '일상';
+  return `\n\n[PDV 최근 기록(${domainLabel} 영역) — 참고용, 추측 금지]\n` + lines.join('\n');
 }
 
 
 // 고팡 내부 전용. 직접 Supabase INSERT. 하위 시스템은 위 recordPDV() 사용.
 export async function _recordPDV(record) {
   try {
+    // AC-EVOLUTION_v1_1.md §PDV-SPLIT — 호출부가 명시 안 하면 현재 모드로.
+    if (!record.domain) record.domain = getPdvDomain();
+    if (record.domain === 'work' && !record.affiliation_org_id) {
+      record.affiliation_org_id = _currentAffiliationOrgId();
+    }
     // ── 로컬 PDV 캐시 (localStorage) ──────────────────────
     const log = JSON.parse(localStorage.getItem('gopang_pdv_log') || '[]');
     log.push(record);
@@ -138,6 +194,8 @@ export async function _recordPDV(record) {
         // (pdv_log에 location 컬럼 없음 — summary_6w에 포함)
         // Hash Chain 연동 (v3.0)
         session_id:        record.session_id        ?? null,
+        domain:            record.domain             ?? 'personal',
+        affiliation_org_id: record.affiliation_org_id ?? null,
         chain_height:      record.chain_height       ?? null,
         chain_local_hash:  record.chain_local_hash   ?? null,
         openhash_anchored: false,

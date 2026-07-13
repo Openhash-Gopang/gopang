@@ -14,7 +14,7 @@
 import { handleAiChat, handleEscalate } from './src/worker/ai-chat-handler.js';
 import { handleOrderQueue } from './src/worker/order-queue-handler.js';
 import { handleDeliveryRequest } from './src/worker/delivery-handler.js';
-import { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore } from './src/worker/dept-task-handler.js';
+import { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck } from './src/worker/dept-task-handler.js';
 
 const ALLOWED_ORIGINS = [
   'https://hondi.net',
@@ -909,7 +909,148 @@ async function _l1PatchProfile(env, recordId, patch) {
   return res.json();
 }
 
-// ── 오케스트레이션 레지스트리 L1 헬퍼 (2026-07-08 신설) ─────────────
+// ── 소속(affiliation) 승인 — AC-EVOLUTION_v1_1.md §3 ─────────────────
+// createDeptTaskCore와 정확히 같은 신뢰 모델: authoritativeAgency가 없으면
+// (=순수 HTTP POST) dept/org 승인자는 무조건 거부한다. "내가 위생과
+// 관리자다"를 자유 텍스트로 자칭해서 통과할 방법이 없다 — 반드시
+// handleGovRelay/handleBusinessRelay가 실제로 그 agency/bizKey 세션 안에서
+// 감지한 [AFFILIATION_APPROVE] 태그를 통해서만 호출된다.
+//
+// 2026-07-13 — 전 직종 확대 반영. org_id가 07-org 고정목록(org:JTO 등)이
+// 아니어도, handleBusinessRelay와 동일한 규칙(DEPT_TASK_REQUEST가 이미
+// org:{bizKey} 형식을 쓴다)으로 민간기업도 org_id="org:{bizKey}" 형태로
+// 그대로 받는다 — 고정 목록이 아니라 _validateTarget의 business 분기와
+// 동일하게 L1에 실존하고 claim된 사업자인지로 검증한다(신규 사업자는
+// 매일 생기므로 하드코딩 목록이 성립하지 않는다는 dept-task-handler.js의
+// 기존 원칙을 그대로 계승).
+async function approveAffiliationCore(env, { orgId, targetGuid, approverLabel = '' }, opts = {}) {
+  const { authoritativeAgency = null } = opts;
+  if (!orgId || !targetGuid) return { ok: false, reason: 'MISSING_FIELD' };
+
+  const orgType = orgId.startsWith('city-dept:') || orgId.startsWith('do-dept:') || orgId.startsWith('do-agency:')
+    ? 'dept' : orgId.startsWith('org:') ? 'org' : orgId.startsWith('national:') ? 'national' : null;
+  if (!orgType) return { ok: false, reason: 'UNKNOWN_ORG_TYPE' };
+
+  if (orgType === 'org') {
+    const fixedOrgSet = DEPT_TASK_TAXONOMY.org;
+    if (!fixedOrgSet.has(orgId)) {
+      // 07-org 고정목록에 없으면 "org:{bizKey}" 형태의 민간기업으로 간주 —
+      // _validateTarget(dept-task-handler.js)의 business 분기와 동일 검증.
+      const bizGuid = orgId.slice('org:'.length);
+      const bizProfile = await _l1FindProfileByGuid(env, bizGuid).catch(() => null);
+      if (!bizProfile) return { ok: false, reason: 'ORG_NOT_REGISTERED' };
+      const claimStatus = bizProfile.claim_status ?? bizProfile.extra?.claim_status;
+      if (claimStatus === 'unclaimed') return { ok: false, reason: 'ORG_BUSINESS_UNCLAIMED' };
+    }
+  } else {
+    const taxonomySet = DEPT_TASK_TAXONOMY[orgType === 'national' ? 'national' : orgType];
+    if (!taxonomySet || !taxonomySet.has(orgId)) return { ok: false, reason: 'ORG_NOT_REGISTERED' };
+  }
+
+  // 이 승인 행위 자체가 "그 기관을 대표해 하는 행동"이므로, dept-task
+  // 요청과 동일한 강도로 authoritativeAgency를 요구한다 — 여기서
+  // requesterType은 항상 'dept'|'org'로 취급(승인자는 곧 그 기관이므로).
+  const authCheck = _authoritativeCheck(orgType === 'national' ? 'dept' : orgType, orgId, authoritativeAgency);
+  if (!authCheck.ok) return { ok: false, reason: authCheck.reason };
+
+  const profile = await _l1FindProfileByGuid(env, targetGuid).catch(() => null);
+  if (!profile) return { ok: false, reason: 'TARGET_NOT_FOUND' };
+
+  const prevExtra = profile.extra || {};
+  const prevIdentity = (prevExtra.public || {}).identity || {};
+  const affList = Array.isArray(prevIdentity.affiliation) ? prevIdentity.affiliation : [];
+  const idx = affList.findIndex(a => a.org_id === orgId);
+  if (idx === -1) {
+    return { ok: false, reason: 'AFFILIATION_NOT_REQUESTED', detail: '해당 org_id로 신청된 소속 레코드가 없습니다 — 사용자가 먼저 프로필에서 소속을 신고해야 합니다' };
+  }
+
+  const now = new Date().toISOString();
+  // AC-EVOLUTION-GAPS #4 — 재확인 주기. AC-AUTHOR §7과 동일하게 30일로
+  // 통일(공무원 소속은 job_ksco보다 변경 빈도가 낮을 수 있지만, 퇴직·전보
+  // 누락 위험이 더 크므로 더 짧은 주기를 우선한다).
+  const reviewDue = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  affList[idx] = { ...affList[idx], verified: true, verified_at: now, verified_by: approverLabel || orgId, review_due: reviewDue };
+
+  const newExtra = {
+    ...prevExtra,
+    public: { ...(prevExtra.public || {}), identity: { ...prevIdentity, affiliation: affList } },
+  };
+  await _l1PatchProfile(env, profile.id, { extra: newExtra });
+  return { ok: true, org_id: orgId, target_guid: targetGuid, review_due: reviewDue };
+}
+
+// ── 업무영역 PDV 조회 요청 게이트 — AC-EVOLUTION_v1_1.md §PDV-SPLIT ──────
+// "업무 영역은 명시적으로 권한을 부여받은 사람이나 기관, 또는 에이전트만
+// 데이터 제출을 요청할 수 있다"(주피터님 지시)를 코드로 강제한다.
+// approveAffiliationCore와 동일한 신뢰 모델 재사용 — authoritativeAgency
+// 없이는(순수 HTTP POST) 무조건 거부한다.
+//
+// ★ 2026-07-13 재설계 — 주피터님 지시로 "풀(pull)"에서 "요청(request)"
+// 모델로 전면 수정. 이전 버전은 verified:true인 소속만 있으면 서버가
+// 곧바로 데이터를 반환했는데, 이건 AGENCY-AC-COMMON v1.3 공리 0-4("부서
+// SP는 소속 직원 개인의 AC를 관리·감독하지 않는다")와 정면으로 배치된다.
+// 지금 버전은 기관/에이전트가 "요청"만 할 수 있고, 실제로 데이터를
+// 내줄지는 대상자 본인(AC 사용자)이 매번 결정한다 — 의사가 환자의
+// 과거 병력을 요청할 수 있어도 제공 여부는 환자 본인 결정인 것과
+// 동일한 구조(주피터님 예시). 그래서 기존 handlePdvQuery가 이미 갖고
+// 있던 동의 요청 인프라(_storeConsentRequest)를 그대로 재사용한다 —
+// 새 동의 메커니즘을 또 만들지 않는다.
+//
+// 요청 허용 기준도 "대상자와 사전에 verified 소속이 있어야 한다"에서
+// "요청자 자신이 실제로 존재가 검증된 기관/사업자/에이전트다"로
+// 완화했다 — 의사·부서 둘 다 "이 특정 환자/직원과 이미 소속 관계가
+// 있어야 요청 가능"이 아니라 "등록된 정당한 기관이면 누구든 요청은
+// 할 수 있고, 승인 여부만 당사자가 정한다"는 게 지시받은 원칙이다.
+async function requestWorkDomainPdvCore(env, { orgId, targetGuid, purpose = '' }, opts = {}) {
+  const { authoritativeAgency = null } = opts;
+  if (!orgId || !targetGuid) return { ok: false, reason: 'MISSING_FIELD' };
+
+  const orgType = orgId.startsWith('city-dept:') || orgId.startsWith('do-dept:') || orgId.startsWith('do-agency:')
+    ? 'dept' : orgId.startsWith('org:') ? 'org' : orgId.startsWith('national:') ? 'national' : null;
+  if (!orgType) return { ok: false, reason: 'UNKNOWN_ORG_TYPE' };
+
+  if (orgType === 'org' && !DEPT_TASK_TAXONOMY.org.has(orgId)) {
+    // 07-org 고정목록 밖이면 민간기업(org:{bizKey}) — approveAffiliationCore와
+    // 동일하게 L1 실존+claimed 여부로 검증.
+    const bizGuid = orgId.slice('org:'.length);
+    const bizProfile = await _l1FindProfileByGuid(env, bizGuid).catch(() => null);
+    if (!bizProfile) return { ok: false, reason: 'ORG_NOT_REGISTERED' };
+    const claimStatus = bizProfile.claim_status ?? bizProfile.extra?.claim_status;
+    if (claimStatus === 'unclaimed') return { ok: false, reason: 'ORG_BUSINESS_UNCLAIMED' };
+  } else if (orgType !== 'org') {
+    const taxonomySet = DEPT_TASK_TAXONOMY[orgType === 'national' ? 'national' : orgType];
+    if (!taxonomySet || !taxonomySet.has(orgId)) return { ok: false, reason: 'ORG_NOT_REGISTERED' };
+  }
+
+  // 요청자 신원 자체는 검증하되(자칭 방지), 이 특정 대상자와 사전에
+  // verified 소속이 있어야 한다는 요구는 하지 않는다(위 설명 참고).
+  const authCheck = _authoritativeCheck(orgType === 'national' ? 'dept' : orgType, orgId, authoritativeAgency);
+  if (!authCheck.ok) return { ok: false, reason: authCheck.reason };
+
+  const profile = await _l1FindProfileByGuid(env, targetGuid).catch(() => null);
+  if (!profile) return { ok: false, reason: 'TARGET_NOT_FOUND' };
+
+  // 기존 handlePdvQuery와 동일한 동의요청 레코드를 그대로 재사용한다 —
+  // scope를 "work_pdv:{orgId}"로 지정해, 승인 후 실제 데이터 조회 시
+  // handlePdvQuery가 L1 기반 조회 경로로 분기하도록 표시해 둔다(아래
+  // handlePdvQuery 수정 참고 — 일반 scope는 여전히 레거시 Supabase
+  // pdv_log를 읽지만, work_pdv:*는 L1 pdv_records를 읽는다).
+  const reqId = `WPDVREQ-${targetGuid.replace(/:/g, '').slice(0, 8)}-${Date.now()}`;
+  const expiresAt = Math.floor(Date.now() / 1000) + 3600; // 업무 요청은 즉답 압박이 없어 1시간으로 여유
+  await _storeConsentRequest(env, reqId, {
+    ipv6: targetGuid, svc: orgId, scope: [`work_pdv:${orgId}`],
+    purpose: purpose || '(목적 미기재)',
+    period: { start: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), end: new Date().toISOString().slice(0, 10) },
+  }, expiresAt);
+
+  const consentUrl = 'https://hondi.net/consent' +
+    `?req=${encodeURIComponent(reqId)}&svc=${encodeURIComponent(orgId)}` +
+    `&scope=work_pdv&purpose=${encodeURIComponent(purpose || '')}`;
+
+  return { ok: true, status: 'PENDING_USER_APPROVAL', request_id: reqId, consent_url: consentUrl };
+}
+
+
 // _l1FindProfileByGuid 등 기존 함수와 동일 패턴(컬렉션별 전용 함수,
 // 범용 _l1Find/_l1Create 같은 건 이 코드베이스에 없다 — 이전 설계
 // 문서(worker_orchestration_registry_patch_2026-07-08.md)가 가정했던
@@ -3740,6 +3881,13 @@ async function handlePdvReport(request,env,corsHeaders){
       risk_level:   r.analysis?.risk_level || 'low',
       source:       resolvedSvcId,
       openhash_anchored: isAnchored,
+      // 2026-07-13 신설 — PDV 일상/업무 영역 분할(AC-EVOLUTION_v1_1.md §PDV-SPLIT).
+      // 클라이언트(pdv/record.js)가 현재 모드를 태깅해 보내며, 안 보내면
+      // 'personal'로 안전하게 기본값 처리한다(과소 노출보다 과소 분류가 낫다
+      // — work로 잘못 태깅되면 본인도 못 보는 사고가 나고, personal로 기본
+      // 처리되면 최악의 경우 work 스코프 조회에 안 걸릴 뿐이다).
+      domain: (r.domain === 'work') ? 'work' : 'personal',
+      affiliation_org_id: (r.domain === 'work' && typeof r.affiliation_org_id === 'string') ? r.affiliation_org_id : null,
     }),
   });
 
@@ -3823,7 +3971,7 @@ async function handlePdvQuery(request,env,corsHeaders){
     const query=body?.query;
     if(!query?.svc||!query?.ipv6||!query?.scope||!query?.period)return _err(400,'SCHEMA_ERROR','필수 필드 누락: svc, ipv6, scope, period',corsHeaders);
     if(!Array.isArray(query.scope)||query.scope.length===0)return _err(400,'SCOPE_INVALID','scope는 비어있지 않은 배열이어야 합니다',corsHeaders);
-    const invalidScope=query.scope.find(s=>!VALID_PDV_SCOPES.includes(s));
+    const invalidScope=query.scope.find(s=>!VALID_PDV_SCOPES.includes(s)&&!/^work_pdv:/.test(s));
     if(invalidScope)return _err(400,'SCOPE_INVALID',`허용되지 않은 scope: ${invalidScope}`,corsHeaders);
     if(!query.period?.start||!query.period?.end)return _err(400,'SCHEMA_ERROR','period.start, period.end 필수',corsHeaders);
     const periodMs=new Date(query.period.end)-new Date(query.period.start);
@@ -3854,7 +4002,17 @@ async function handlePdvQuery(request,env,corsHeaders){
     if(!consentOk)return _err(401,'CONSENT_INVALID','동의 토큰이 유효하지 않습니다',corsHeaders);
     const withinLimit=await _checkRateLimit(env,query.ipv6,'pdv_query');
     if(!withinLimit)return _err(429,'RATE_LIMITED','PDV 조회 한도 초과',corsHeaders);
-    const pdvSummary=await _fetchPdvByScope(env,query.ipv6,query.scope,query.period);
+    // 2026-07-13 신설 — work_pdv:{orgId} scope는 레거시 Supabase pdv_log가
+    // 아니라 L1 pdv_records(실제 쓰기가 이뤄지는 테이블)에서 조회한다
+    // (AC-EVOLUTION_v1_1.md §5-6 — 기존 _fetchPdvByScope 경로가 최신
+    // 데이터를 못 읽고 있을 가능성이 있어 이 신규 경로는 우회한다).
+    const normalScopes=query.scope.filter(s=>!s.startsWith('work_pdv:'));
+    const workScopes=query.scope.filter(s=>s.startsWith('work_pdv:'));
+    const pdvSummary=normalScopes.length?await _fetchPdvByScope(env,query.ipv6,normalScopes,query.period):{};
+    for(const ws of workScopes){
+      const orgId=ws.slice('work_pdv:'.length);
+      pdvSummary[ws]=await _fetchWorkPdvRecordsL1(env,query.ipv6,orgId);
+    }
     const queryId=`PDVQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;
     const pdvEntryId=await _recordConsentEvent(env,query,queryId);
     const expOut=verified?.exp ? new Date(verified.exp*1000).toISOString() : new Date(Date.now()+3600*1000).toISOString();
@@ -4015,7 +4173,21 @@ async function handleConsentRespond(request,env,corsHeaders){
 async function _checkRateLimit(env,ipv6,action){if(env.RATE_LIMIT_KV){const kvKey=`rl:${action}:${ipv6}`;const current=parseInt(await env.RATE_LIMIT_KV.get(kvKey)||'0');if(current>=3)return false;await env.RATE_LIMIT_KV.put(kvKey,String(current+1),{expirationTtl:300});return true;}return true;}
 async function _fetchPdvByScope(env,ipv6,scopes,period){const key=env.SUPABASE_KEY||_supabaseAnonKey();const result={};for(const scope of scopes){const sources=SCOPE_SOURCE_MAP[scope];let queryUrl=SUPABASE_URL+'/rest/v1/pdv_log'+`?guid=eq.${encodeURIComponent(ipv6)}`+`&created_at=gte.${period.start}T00:00:00Z&created_at=lte.${period.end}T23:59:59Z`+`&select=summary,summary_6w,risk_level,created_at,source&order=created_at.desc&limit=50`;if(sources&&sources.length===1){queryUrl+=`&source=eq.${encodeURIComponent(sources[0])}`;}else if(sources&&sources.length>1){queryUrl+=`&source=in.(${sources.map(encodeURIComponent).join(',')})`;}try{const res=await fetch(queryUrl,{headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'}});const rows=await res.json().catch(()=>[]);if(!rows?.length){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{}};continue;}const RISK_ORDER={low:0,medium:1,high:2};const maxRisk=rows.reduce((max,r)=>{const lvl=r.risk_level||'low';return RISK_ORDER[lvl]>RISK_ORDER[max]?lvl:max;},'low');let summary6w=null;for(const row of rows){try{summary6w=JSON.parse(row.summary_6w);break;}catch{}}result[scope]={available:true,entry_count:rows.length,risk_level:maxRisk,summary_6w:summary6w,risk_factors:_aggregateRiskFactors(scope,rows),sources:[...new Set(rows.map(r=>r.source).filter(Boolean))]};}catch(e){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{},error:'fetch_failed'};}}return result;}
 function _aggregateRiskFactors(scope,rows){if(scope==='ktraffic')return{accident_count:rows.filter(r=>{try{return JSON.parse(r.summary_6w)?.what?.includes('사고');}catch{return false;}}).length,entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,accident_free_months:0};if(scope==='khealth')return{total_records:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,medium_risk_count:rows.filter(r=>r.risk_level==='medium').length};return{entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length};}
-async function _recordConsentEvent(env,query,queryId){const key=env.SUPABASE_KEY||_supabaseAnonKey();const svcId=_resolveSvcId(query.svc);const pdvId=`PDV-${query.ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;const summary6w=JSON.stringify({who:svcId,when:new Date().toISOString(),where:`https://${svcId}.hondi.net`,what:`PDV 조회 동의: scope=[${query.scope.join(',')}]`,how:'사용자 명시적 동의',why:query.purpose||'PDV 데이터 조회'});try{await fetch(SUPABASE_URL+'/rest/v1/pdv_log',{method:'POST',headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({id:pdvId,guid:query.ipv6,source:svcId,type:'consent_event',report_id:queryId,summary:`PDV 조회 동의: ${svcId} → [${query.scope.join(',')}]`,summary_6w:summary6w,risk_level:'low',period:query.period,raw_hash:null,created_at:new Date().toISOString()})});}catch(e){console.warn('[PDVQuery] consent_event 기록 실패:',e.message);}return pdvId;}
+async function _fetchWorkPdvRecordsL1(env,ipv6,orgId){
+  try{
+    const token=await _l1AdminToken(env);
+    const filter=encodeURIComponent(`guid='${ipv6}' && domain='work' && affiliation_org_id='${orgId}'`);
+    const res=await fetch(`${L1_DEFAULT}/api/collections/pdv_records/records?filter=${filter}&sort=-created&perPage=50`,{headers:{'Authorization':'Bearer '+token}});
+    if(!res.ok)return{available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{},error:'fetch_failed'};
+    const json=await res.json().catch(()=>null);
+    const items=json?.items||[];
+    if(!items.length)return{available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{}};
+    const RISK_ORDER={low:0,medium:1,high:2};
+    const maxRisk=items.reduce((max,r)=>{const lvl=r.risk_level||'low';return RISK_ORDER[lvl]>RISK_ORDER[max]?lvl:max;},'low');
+    return{available:true,entry_count:items.length,risk_level:maxRisk,summary_6w:items.slice(0,10).map(it=>({summary:it.summary,type:it.type,created_at:it.created})),risk_factors:{},sources:[orgId]};
+  }catch(e){return{available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{},error:'fetch_failed'};}
+}
+const key=env.SUPABASE_KEY||_supabaseAnonKey();const svcId=_resolveSvcId(query.svc);const pdvId=`PDV-${query.ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;const summary6w=JSON.stringify({who:svcId,when:new Date().toISOString(),where:`https://${svcId}.hondi.net`,what:`PDV 조회 동의: scope=[${query.scope.join(',')}]`,how:'사용자 명시적 동의',why:query.purpose||'PDV 데이터 조회'});try{await fetch(SUPABASE_URL+'/rest/v1/pdv_log',{method:'POST',headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({id:pdvId,guid:query.ipv6,source:svcId,type:'consent_event',report_id:queryId,summary:`PDV 조회 동의: ${svcId} → [${query.scope.join(',')}]`,summary_6w:summary6w,risk_level:'low',period:query.period,raw_hash:null,created_at:new Date().toISOString()})});}catch(e){console.warn('[PDVQuery] consent_event 기록 실패:',e.message);}return pdvId;}
 async function _sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
 function buildCookie(token){return[`gopang_token=${token}`,'Path=/','Domain=.hondi.net','Max-Age=3600','SameSite=None','Secure','HttpOnly'].join('; ');}
 function parseCookie(header,name){const match=header.match(new RegExp(`(?:^|;)\\s*${name}=([^;]+)`));return match?decodeURIComponent(match[1]):null;}
@@ -4816,6 +4988,54 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
       data.choices[0].message.content = (cleanedText || '요청하신 업무지시를 처리했습니다.') + noticeText;
     }
   }
+
+  // ── AFFILIATION_APPROVE 서버측 처리 (2026-07-13 신설, AC-EVOLUTION_v1_1.md §3) ──
+  // DEPT_TASK_REQUEST와 동일하게 authoritativeAgency=bizKey를 서버가 직접
+  // 넘긴다 — LLM이 "나는 이 회사 관리자다"를 자유 텍스트로 자칭해서
+  // 통과할 방법이 없다.
+  {
+    const firstContent = data?.choices?.[0]?.message?.content;
+    const affMatch = typeof firstContent === 'string'
+      ? firstContent.match(/\[AFFILIATION_APPROVE\]([\s\S]*?)\[\/AFFILIATION_APPROVE\]/)
+      : null;
+    if (affMatch) {
+      let affPayload = null;
+      try { affPayload = JSON.parse(affMatch[1].trim()); } catch (e) { /* ok:false로 처리 */ }
+      const result = affPayload
+        ? await approveAffiliationCore(env, {
+            orgId: affPayload.org_id, targetGuid: affPayload.target_guid,
+            approverLabel: affPayload.approver_label,
+          }, { authoritativeAgency: bizKey })
+        : { ok: false, reason: 'INVALID_JSON' };
+      const cleanedText = firstContent.replace(/\[AFFILIATION_APPROVE\][\s\S]*?\[\/AFFILIATION_APPROVE\]/, '').trim();
+      const noticeText = result.ok
+        ? `\n\n(소속 승인이 완료됐습니다 — 다음 재확인 예정일 ${result.review_due}.)`
+        : `\n\n(소속 승인에 실패했습니다: ${result.reason}${result.detail ? ' — ' + result.detail : ''})`;
+      data.choices[0].message.content = (cleanedText || '소속 승인 요청을 처리했습니다.') + noticeText;
+    }
+  }
+
+  // ── WORK_PDV_REQUEST 서버측 처리 (2026-07-13 신설, AC-EVOLUTION_v1_1.md §PDV-SPLIT) ──
+  {
+    const firstContent = data?.choices?.[0]?.message?.content;
+    const wpMatch = typeof firstContent === 'string'
+      ? firstContent.match(/\[WORK_PDV_REQUEST\]([\s\S]*?)\[\/WORK_PDV_REQUEST\]/)
+      : null;
+    if (wpMatch) {
+      let wpPayload = null;
+      try { wpPayload = JSON.parse(wpMatch[1].trim()); } catch (e) { /* ok:false로 처리 */ }
+      const result = wpPayload
+        ? await requestWorkDomainPdvCore(env, {
+            orgId: wpPayload.org_id, targetGuid: wpPayload.target_guid, purpose: wpPayload.purpose,
+          }, { authoritativeAgency: bizKey })
+        : { ok: false, reason: 'INVALID_JSON' };
+      const cleanedText = firstContent.replace(/\[WORK_PDV_REQUEST\][\s\S]*?\[\/WORK_PDV_REQUEST\]/, '').trim();
+      const noticeText = result.ok
+        ? `\n\n(업무영역 데이터 제공을 요청했습니다 — 승인 여부는 해당 직원 본인이 결정합니다. 요청 ID: ${result.request_id})`
+        : `\n\n(업무영역 데이터 요청 실패: ${result.reason}${result.detail ? ' — ' + result.detail : ''})`;
+      data.choices[0].message.content = (cleanedText || '') + noticeText;
+    }
+  }
   return new Response(JSON.stringify(data), { headers: corsHeaders });
 }
 
@@ -5373,6 +5593,10 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
       risk_level:   'low',
       source:       agency,
       openhash_anchored: false,
+      // 2026-07-13 — 시민이 기관에 제출하는 개인 민원이지 그 시민의
+      // "업무"가 아니다(위생과 "직원"의 업무 대행과는 다른 축) —
+      // 명시적으로 personal로 태깅해 혼동을 막는다.
+      domain: 'personal',
     }),
   }).catch(e => { console.warn('[GovTaskSubmit] PDV 기록 실패:', e.message); return null; });
 
@@ -5545,6 +5769,47 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
         ? `\n\n(업무지시가 접수됐습니다 — 접수번호 ${result.taskId}. 처리 완료 여부는 대상 기관이 별도로 갱신합니다.)`
         : `\n\n(업무지시 접수에 실패했습니다: ${result.reason}${result.detail ? ' — ' + result.detail : ''})`;
       data.choices[0].message.content = (cleanedText || '요청하신 업무지시를 처리했습니다.') + noticeText;
+      return new Response(JSON.stringify(data), { headers: corsHeaders });
+    }
+
+    // ── AFFILIATION_APPROVE 서버측 처리 (2026-07-13 신설, AC-EVOLUTION_v1_1.md §3) ──
+    const affMatch = typeof firstContent === 'string'
+      ? firstContent.match(/\[AFFILIATION_APPROVE\]([\s\S]*?)\[\/AFFILIATION_APPROVE\]/)
+      : null;
+    if (affMatch) {
+      let affPayload = null;
+      try { affPayload = JSON.parse(affMatch[1].trim()); } catch (e) { /* ok:false로 처리 */ }
+      const result = affPayload
+        ? await approveAffiliationCore(env, {
+            orgId: affPayload.org_id, targetGuid: affPayload.target_guid,
+            approverLabel: affPayload.approver_label,
+          }, { authoritativeAgency: agency })
+        : { ok: false, reason: 'INVALID_JSON' };
+      const cleanedText = firstContent.replace(/\[AFFILIATION_APPROVE\][\s\S]*?\[\/AFFILIATION_APPROVE\]/, '').trim();
+      const noticeText = result.ok
+        ? `\n\n(소속 승인이 완료됐습니다 — 다음 재확인 예정일 ${result.review_due}.)`
+        : `\n\n(소속 승인에 실패했습니다: ${result.reason}${result.detail ? ' — ' + result.detail : ''})`;
+      data.choices[0].message.content = (cleanedText || '소속 승인 요청을 처리했습니다.') + noticeText;
+      return new Response(JSON.stringify(data), { headers: corsHeaders });
+    }
+
+    // ── WORK_PDV_REQUEST 서버측 처리 (2026-07-13 신설, AC-EVOLUTION_v1_1.md §PDV-SPLIT) ──
+    const wpMatch = typeof firstContent === 'string'
+      ? firstContent.match(/\[WORK_PDV_REQUEST\]([\s\S]*?)\[\/WORK_PDV_REQUEST\]/)
+      : null;
+    if (wpMatch) {
+      let wpPayload = null;
+      try { wpPayload = JSON.parse(wpMatch[1].trim()); } catch (e) { /* ok:false로 처리 */ }
+      const result = wpPayload
+        ? await requestWorkDomainPdvCore(env, {
+            orgId: wpPayload.org_id, targetGuid: wpPayload.target_guid, purpose: wpPayload.purpose,
+          }, { authoritativeAgency: agency })
+        : { ok: false, reason: 'INVALID_JSON' };
+      const cleanedText = firstContent.replace(/\[WORK_PDV_REQUEST\][\s\S]*?\[\/WORK_PDV_REQUEST\]/, '').trim();
+      const noticeText = result.ok
+        ? `\n\n(업무영역 데이터 제공을 요청했습니다 — 승인 여부는 해당 직원 본인이 결정합니다. 요청 ID: ${result.request_id})`
+        : `\n\n(업무영역 데이터 요청 실패: ${result.reason}${result.detail ? ' — ' + result.detail : ''})`;
+      data.choices[0].message.content = (cleanedText || '') + noticeText;
       return new Response(JSON.stringify(data), { headers: corsHeaders });
     }
 
@@ -7598,6 +7863,14 @@ async function handleProfilePost(request, env, corsHeaders) {
     // data/ksco_2024_v8.json)의 몫이고, 서버는 형식만 검증한다 — 아래
     // job_ksco != null 처리부 참조.
     job_ksco = null,
+    // 2026-07-13 신설 — AC-EVOLUTION_v1_1.md §2(소속·업무 도메인). 배열인
+    // 이유는 겸직 가능성(AC-EVOLUTION-GAPS #5) 때문. verified는 클라이언트가
+    // 뭐라고 보내든 서버가 절대 그대로 믿지 않는다 — 항상 false로
+    // 강제하고, 실제 검증(true 전환)은 별도 관리자 승인 경로
+    // (POST /affiliation/approve, authoritativeAgency 세션 필요)로만
+    // 가능하다. 자기 신고만으로 권한이 생기면 안 된다는 게 AC-EVOLUTION
+    // §3의 핵심 결론이었다.
+    affiliation = null,
     // 2026-07-13 신설 — products_structured가 여태 이 함수 destructure에
     // 없어 저장 경로 자체가 없었다(실사로 발견 — welcome.js
     // _forwardProductsToMarket()이 Market의 seller_products로는 보냈지만,
@@ -7762,6 +8035,33 @@ async function handleProfilePost(request, env, corsHeaders) {
     // 등록 실패의 사유가 되기엔 너무 지엽적인 필드(§0 U0: 실패보다 진행).
   }
 
+  // 2026-07-13 신설 — affiliation 검증(AC-EVOLUTION_v1_1.md §3).
+  // DEPT_TASK_TAXONOMY(dept-task-handler.js)를 재사용해 org_id 형식이라도
+  // 걸러낸다 — 완전히 임의의 문자열을 소속으로 자칭하는 것만은 막는다
+  // (그 자체가 verified를 true로 만들진 않는다, 아래 참조).
+  let resolvedAffiliation = null;
+  if (entity_type === 'person' && Array.isArray(affiliation)) {
+    const prevAffList = (prevExtra.public || {}).identity?.affiliation || [];
+    resolvedAffiliation = affiliation.slice(0, 5).map(a => { // 겸직 상한 5(과도한 배열 남용 방지, 임의값)
+      const orgId = typeof a?.org_id === 'string' ? a.org_id.trim().slice(0, 100) : null;
+      const prevMatch = prevAffList.find(p => p.org_id === orgId);
+      return {
+        org_type:  typeof a?.org_type === 'string' ? a.org_type.slice(0, 30) : null,
+        org_id:    orgId,
+        role:      ['staff', 'manager'].includes(a?.role) ? a.role : 'staff',
+        active:    a?.active !== false, // 은퇴·퇴직 시 클라이언트가 false로 명시(§ work_domain.active와 별개, 소속 단위)
+        // ★ 핵심: verified는 이전 값을 그대로 이어받을 뿐, 이번 요청의
+        // affiliation 배열에 담긴 verified 값(사용자가 뭘 보내든)은
+        // 절대 참조하지 않는다 — 자기 신고로는 권한이 생기지 않는다.
+        verified:      prevMatch?.verified || false,
+        verified_at:   prevMatch?.verified_at || null,
+        // AC-EVOLUTION-GAPS #4 — 재확인 주기. verified=true가 된 시점에
+        // approve 엔드포인트가 채운다(아래 handleAffiliationApprove).
+        review_due:    prevMatch?.review_due || null,
+      };
+    }).filter(a => a.org_id);
+  }
+
   const newExtraPublic = {
     ...(prevExtra.public || {}),
     identity: {
@@ -7769,6 +8069,7 @@ async function handleProfilePost(request, env, corsHeaders) {
       entity_subtype: body.entity_subtype || null,
       // 'job_ksco' in body로 "안 보냄(기존값 보존)"과 "null 명시(비움)"를 구분.
       job_ksco: ('job_ksco' in body) ? resolvedJobKsco : ((prevExtra.public || {}).identity?.job_ksco ?? null),
+      affiliation: ('affiliation' in body) ? resolvedAffiliation : ((prevExtra.public || {}).identity?.affiliation ?? null),
     },
     activity: { timezone: 'Asia/Seoul', hours, holidays },
     contact:  { phone_display: phone, phone_visible: !!phone_visible, website, sns_public, languages_spoken },
