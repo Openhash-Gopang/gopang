@@ -433,6 +433,17 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
     <div class="resv-status hidden" id="resv-status"></div>
   </div>
 
+  <!-- 예약 설정 요약 (2026-07-13 신설, 소유자 + 예약 활성화 시만 노출) -->
+  <div class="card hidden" id="card-reservation-settings">
+    <div class="card-title">예약 설정</div>
+    <div class="ifield-row"><span class="ifield-key">방식</span><span class="ifield-val" id="rs-mode"></span></div>
+    <div class="ifield-row"><span class="ifield-key">확정 방식</span><span class="ifield-val" id="rs-confirm"></span></div>
+    <div class="ifield-row"><span class="ifield-key">보증금 기준 온도</span><span class="ifield-val" id="rs-threshold"></span></div>
+    <div class="pill-wrap" style="border-top:none">
+      <button class="btn-pill-outline" onclick="_editReservationSettings()">설정 변경</button>
+    </div>
+  </div>
+
   <!-- 업종 정보 (industry_fields) -->
   <div class="card hidden" id="card-industry">
     <div class="card-title">업종 정보</div>
@@ -673,6 +684,20 @@ function render(p) {
     document.getElementById('resv-slot-field').classList.toggle('hidden', rc.mode === 'range');
     document.getElementById('resv-range-field').classList.toggle('hidden', rc.mode !== 'range' && rc.mode !== 'both');
     _checkDepositNotice(p.guid, rc);
+  }
+
+  // ── 예약 설정 요약 카드 노출 제어 (2026-07-13 신설, 소유자 전용) ──
+  const rsCard = document.getElementById('card-reservation-settings');
+  if (rc && rc.enabled && _isOwner) {
+    const MODE_KO = { slot: '시간대 예약', range: '날짜 단위 예약', both: '둘 다' };
+    const CONFIRM_KO = { auto: '자동 확정', manual: '사업자 승인 필요' };
+    document.getElementById('rs-mode').textContent = MODE_KO[rc.mode] || rc.mode || '-';
+    document.getElementById('rs-confirm').textContent = CONFIRM_KO[rc.confirm_mode] || rc.confirm_mode || '-';
+    document.getElementById('rs-threshold').textContent =
+      (typeof rc.deposit_temp_threshold === 'number' ? rc.deposit_temp_threshold : _DEFAULT_TEMP) + '°';
+    rsCard.classList.remove('hidden');
+  } else {
+    rsCard.classList.add('hidden');
   }
 
   // 소개
@@ -1296,6 +1321,19 @@ async function _submitReservation() {
     statusEl.textContent = `⚠️ 오류: ${e.message}`;
     document.getElementById('resv-submit-btn').disabled = false;
   }
+}
+
+// ── 예약 설정 변경 (2026-07-13 신설) ────────────────────────
+// worker.js에 PATCH /profile 라우팅이 확인되지 않아(발견된 이슈,
+// 별도 확인 필요) 직접 폼 저장 대신 AI 비서 대화로 안내한다 — 이미
+// 검증된 프로필 수정 대화 경로(profile-assistant 수정 모드)를 그대로 탄다.
+function _editReservationSettings() {
+  const input = document.getElementById('ai-input');
+  if (!input) return;
+  input.value = '예약 설정을 바꾸고 싶어요 — 확정 방식이나 보증금 기준 온도를 조정하고 싶어요.';
+  if (!document.getElementById('ai-chat-box')?.classList.contains('open')) toggleAIChat();
+  document.getElementById('ai-section')?.scrollIntoView({ behavior: 'smooth' });
+  sendAIMsg();
 }
 
 function _startCheckout() {
