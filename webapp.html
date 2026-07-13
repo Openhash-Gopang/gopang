@@ -4456,9 +4456,18 @@ window.hsSendAsAttachment = function () {
       const guid = stored?.ipv6 || stored?.guid || null;
       if (!guid) return;
       const wallet = window.gopangWallet;
-      if (!wallet?.redeemClaim) return;
+      if (!wallet?.redeemClaim || !wallet?.signPayload) return;
+      const pubkey = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+      if (!pubkey) return;
 
-      const res = await fetch(`https://hondi-proxy.tensor-city.workers.dev/biz/claims?guid=${encodeURIComponent(guid)}`);
+      // 2026-07-13 신설 — 서명 인증(서버가 요구하도록 강화됨 — 사고실험에서
+      // guid만으로 남의 claim을 조회·수령확인 처리할 수 있던 구멍 발견).
+      const listTs = Date.now().toString();
+      const listSig = await wallet.signPayload(`claims:${guid}:${pubkey}:${listTs}`);
+      const listUrl = `https://hondi-proxy.tensor-city.workers.dev/biz/claims` +
+        `?guid=${encodeURIComponent(guid)}&pubkey=${encodeURIComponent(pubkey)}` +
+        `&signature=${encodeURIComponent(listSig)}&ts=${encodeURIComponent(listTs)}`;
+      const res = await fetch(listUrl);
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok || !Array.isArray(data.claims) || !data.claims.length) return;
 
@@ -4482,10 +4491,15 @@ window.hsSendAsAttachment = function () {
         }
       }
       if (ackedIds.length) {
+        // 2026-07-13 신설 — ack도 claim_ids에 정확히 바인딩된 서명이
+        // 필요하다(서버 handleClaimsAck 강화와 짝을 맞춤).
+        const ackTs = Date.now().toString();
+        const sortedIds = [...ackedIds].sort().join(',');
+        const ackSig = await wallet.signPayload(`claims_ack:${guid}:${pubkey}:${ackTs}:${sortedIds}`);
         await fetch('https://hondi-proxy.tensor-city.workers.dev/biz/claims/ack', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ guid, claim_ids: ackedIds }),
+          body: JSON.stringify({ guid, claim_ids: ackedIds, pubkey, signature: ackSig, ts: ackTs }),
         }).catch(() => {});
         console.info(`[Claims] 미청구 판매대금 ${ackedIds.length}건 반영 완료`);
       }

@@ -3344,6 +3344,22 @@ function _filterProfileByVisibility({ address, phone, website, extra }) {
 // 자체는 걸러진 적이 없었음). 서명 기반으로 "본인이 자기 프로필을
 // 보는 경우"만 가려내 그때만 필터링을 건너뛴다 — POST /profile과
 // 동일한 TOFU 원칙(등록된 pubkey와 일치해야 함)을 재사용.
+// 2026-07-13 신설 — /biz/claims 요청자 인증 공용 헬퍼. handleClaimsList/
+// handleClaimsAck가 지금까지 guid를 자기주장으로만 받고 있었다(사고실험
+// 발견 — 공개 정보인 guid만 알면 누구든 남의 미청구 claim을 조회하거나
+// "수령 완료"로 표시해 실제 소유자가 영영 못 받게 만들 수 있었다).
+// _isAuthenticatedOwnerRequest와 동일한 서명+TOFU 원칙을 재사용하되,
+// sigMsg를 호출부가 지정하게 해 GET 조회와 POST 확인(claim_ids 바인딩
+// 필요)에서 다른 문구를 쓸 수 있게 한다.
+async function _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg }) {
+  if (!guid || !pubkey || !signature) return false;
+  const sigOk = await _verifyEd25519Simple(pubkey, signature, sigMsg).catch(() => false);
+  if (!sigOk) return false;
+  const profile = await _l1FindProfileByGuid(env, guid).catch(() => null);
+  if (!profile?.pubkey_ed25519 || profile.pubkey_ed25519 !== pubkey) return false;
+  return true;
+}
+
 async function _isAuthenticatedOwnerRequest(env, targetGuid, url) {
   const viewerGuid   = url.searchParams.get('viewer_guid');
   const viewerPubkey = url.searchParams.get('viewer_pubkey');
@@ -8375,11 +8391,21 @@ async function handleReservationStatus(request, env, corsHeaders) {
 //   조회해 로컬에서 redeemClaim()한 뒤 서버에 수령 처리한다.
 // ═══════════════════════════════════════════════════════════
 
-// GET /biz/claims?guid=... — 미청구 claim 목록 조회
+// GET /biz/claims?guid=...&pubkey=...&signature=...&ts=... — 미청구 claim 목록 조회
 async function handleClaimsList(request, env, corsHeaders) {
   const url = new URL(request.url);
-  const guid = url.searchParams.get('guid');
+  const guid      = url.searchParams.get('guid');
+  const pubkey    = url.searchParams.get('pubkey');
+  const signature = url.searchParams.get('signature');
+  const ts        = url.searchParams.get('ts') || '';
   if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  // 2026-07-13 신설 — 서명 인증 필수. guid는 공개 정보라 자기주장만으로는
+  // 남의 claim 목록(거래 금액 등 민감 정보 포함)을 볼 수 있었다.
+  const authOk = await _verifyClaimsRequester(env, {
+    guid, pubkey, signature, sigMsg: `claims:${guid}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
 
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}` };
@@ -8406,11 +8432,22 @@ async function handleClaimsList(request, env, corsHeaders) {
 async function handleClaimsAck(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { guid, claim_ids } = body;
+  const { guid, claim_ids, pubkey, signature, ts = '' } = body;
   if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
   if (!Array.isArray(claim_ids) || !claim_ids.length) {
     return _err(400, 'MISSING_FIELD', 'claim_ids 배열 필수', corsHeaders);
   }
+
+  // 2026-07-13 신설 — 서명 인증 필수. 지금까지 guid만 body에 넣으면
+  // 누구든 남의 claim을 "수령 완료"로 표시해 실제 소유자가 영영 못
+  // 받게 만들 수 있었다(사고실험 발견 — DoS성 공격). 서명을 이번
+  // claim_ids 목록에 정확히 바인딩해, 다른 claim_ids로 재사용(replay)
+  // 하는 것도 함께 막는다.
+  const sortedIds = [...claim_ids].sort().join(',');
+  const authOk = await _verifyClaimsRequester(env, {
+    guid, pubkey, signature, sigMsg: `claims_ack:${guid}:${pubkey}:${ts}:${sortedIds}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
 
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
