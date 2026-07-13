@@ -60,9 +60,18 @@ const DEPT_TASK_TAXONOMY = {
     'do-agency:FIRE', 'do-agency:POLICE', 'do-agency:WATER', 'do-agency:AGRITECH',
     'do-agency:BOHWAN', 'do-agency:CHUKSAN', 'do-agency:LIBRARY', 'do-agency:ARTMUSEUM',
     'do-agency:FOLKMUSEUM', 'do-agency:HERITAGE',
-    // city-dept — 제주시/서귀포시 × 12개 domain(do-dept와 동일 domain 체계 공유)
+    // city-dept — 제주시/서귀포시 × 13개 domain(do-dept와 공유하는 13개) +
+    // 서귀포시 전용 3개(agrieconomy/construction/health, 2026-07-13 등록
+    // — city-dept-master-data.json 실사 결과 서귀포시 조직도에는 있으나
+    // 기존 do-dept 13개 domain 크로스곱에는 없어 U10 DEPT_TASK_REQUEST가
+    // 조용히 실패하던 것을 발견·수정. 제주시에는 해당 3개 부서가 없어
+    // city-dept:jeju:agrieconomy 등은 등록은 되지만 실사용은 없음 — 기존
+    // 크로스곱 방식과 동일하게 "안 쓰는 조합도 등록만 해둔다"는 원칙 유지)
     ...['jeju', 'seogwipo'].flatMap(city =>
       ['welfare','plan','safety','jachi','econ','innov','climate','housing','transport','culture','tourism','agri','ocean']
+        .map(d => `city-dept:${city}:${d}`)),
+    ...['jeju', 'seogwipo'].flatMap(city =>
+      ['agrieconomy','construction','health']
         .map(d => `city-dept:${city}:${d}`)),
   ]),
   org: new Set([
