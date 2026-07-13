@@ -74,6 +74,26 @@ const DEPT_TASK_TAXONOMY = {
       ['agrieconomy','construction','health']
         .map(d => `city-dept:${city}:${d}`)),
   ]),
+  emd: new Set([
+    // 05-emd 43개 읍면동 × 6개 코드(general/civil/welfare/outreach/
+    // industry/agent) — emd-master-data.json(42개) + hallim(1개) 실사,
+    // 2026-07-13 신설(기존에는 emd 계층 자체가 U10-5/여기 어디에도
+    // 등록돼 있지 않아 이 계층의 DEPT_TASK_REQUEST가 원천적으로
+    // 불가능했음). 최초 등록 시 git add 목록에서 이 파일이 누락돼
+    // push가 안 됐던 것을 2026-07-13 최종 감사에서 재발견, 재적용함.
+    // industry는 12개 읍·면 인스턴스만 실사용하지만, do-dept/city-dept
+    // 크로스곱과 동일하게 "안 쓰는 조합도 등록만 해둔다" 원칙을 유지해
+    // 43개 전체 × 6개를 등록한다.
+    ...['aewol','jocheon','gujwa','hangyeong','chuja','udo','daejeong','namwon',
+        'seongsan','andeok','pyoseon','ildo1','ildo2','ido1','ido2','samdo1',
+        'samdo2','yongdam1','yongdam2','geonip','hwabuk','samyang','bonggae',
+        'ara','ora','yeondong','nohyeong','oedo','iho','dodu','songsan',
+        'jeongbang','jungang-sgp','cheonji','hyodon','yeongcheon','donghong',
+        'seohong','daeryun','daecheon','jungmun','yerae','hallim']
+      .flatMap(emd =>
+        ['general','civil','welfare','outreach','industry','agent']
+          .map(t => `emd:${emd}:${t}`)),
+  ]),
   org: new Set([
     // 07-org 27개 (prompts/Jejudo/07-org/*.md 실사)
     'org:JTO', 'org:JFAC', 'org:JPASS', 'org:IPF', 'org:JTP', 'org:JCPA', 'org:SGPMED',
