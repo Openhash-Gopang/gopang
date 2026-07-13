@@ -1,5 +1,5 @@
 {
-  "_schema_설명": "국가기관(중앙정부 지역사무소) 데이터. 하나의 domain(예: tax)에 여러 도(도코드)가 각자 레코드를 등록한다. jeju-router.js의 _renderNatTemplate()이 domain으로 template을 찾고, 도코드로 이 배열에서 해당 레코드를 찾아 자리표시자를 채운다. do-dept-master-data.json과 동일 철학. 이 파일은 09-national/agencies/templates/ 아래 있지만 향후 도별 프로젝트가 늘면 공용 위치로 옮기는 것을 검토할 것.",
+  "_schema_설명": "국가기관(중앙정부 지역사무소) 데이터. 하나의 domain(예: tax)에 여러 도(도코드)가 각자 레코드를 등록한다. jeju-router.js의 _renderNatTemplate()이 domain으로 template을 찾고, 도코드로 이 배열에서 해당 레코드를 찾아 자리표시자를 채운다. do-dept-master-data.json과 동일 철학. 이 파일은 09-national/agencies/templates/ 아래 있지만 향후 도별 프로젝트가 늘면 공용 위치로 옮기는 것을 검토할 것. 2026-07-13 추가: bok(한국은행 제주본부)·stat(통계청 제주사무소) 2개 domain 신규 등록 — JEJU-NATIONAL-AGENCIES-LIST 조사에서 기존 28건에 누락돼 있음을 발견해 추가함(총 30건).",
   "기관목록": [
     {
       "domain": "agroquality",
@@ -182,7 +182,7 @@
       "template": "SP-NAT-TAX-TEMPLATE_v1.0.md",
       "도코드": "jeju",
       "지사명": "제주세무서",
-      "소속부처": "국세청"
+      "소속부처": "국세청(부산지방국세청 관할 — 1972년 광주지방국세청에서 이관, '제주지방국세청'은 존재하지 않음)"
     },
     {
       "domain": "veterans",
@@ -197,6 +197,20 @@
       "도코드": "jeju",
       "지사명": "제주지방기상청",
       "소속부처": "기상청"
+    },
+    {
+      "domain": "bok",
+      "template": "SP-NAT-BOK-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "소속부처": "한국은행(중앙은행)",
+      "지사명": "한국은행 제주본부"
+    },
+    {
+      "domain": "stat",
+      "template": "SP-NAT-STAT-TEMPLATE_v1.0.md",
+      "도코드": "jeju",
+      "소속부처": "통계청 → 호남지방통계청",
+      "지사명": "통계청 제주사무소"
     }
   ]
 }
