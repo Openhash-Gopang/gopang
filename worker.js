@@ -2399,6 +2399,8 @@ export default {
     if (pathname === '/biz/temperature'  && request.method === 'GET')  return handleTemperatureQuery(request, env, corsHeaders);
     if (pathname === '/biz/reservation'        && request.method === 'POST')  return handleReservationCreate(request, env, corsHeaders);
     if (pathname === '/biz/reservation/status' && request.method === 'PATCH') return handleReservationStatus(request, env, corsHeaders);
+    if (pathname === '/biz/claims'     && request.method === 'GET')  return handleClaimsList(request, env, corsHeaders);
+    if (pathname === '/biz/claims/ack' && request.method === 'POST') return handleClaimsAck(request, env, corsHeaders);
     if (pathname === '/biz/product' && request.method === 'POST') return handleBizProduct(request, env, corsHeaders);
     // ★ 2026-07-09 신설 — 짜장면 주문 사고실험 1단계: 프로필-to-프로필
     // AI 메시징(예: 손님의 AI가 식당의 AI에게 주문을 전달). /ai/chat(기존,
@@ -2890,6 +2892,33 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
     });
   }
   console.log('[BizOrder] 성공:', JSON.stringify({ ok: true, block_hash, height, buyer_claim: !!buyer_claim }));
+
+  // 2026-07-13 신설 — 판매자 claim 전달 큐 적재. seller_claim은 지금까지
+  // 구매자의 opener 창에만 postMessage로 전달되고, redeemClaim()의
+  // claimant 필터에 걸려 조용히 버려지고 있었다(실사로 발견 — 판매자
+  // 재무제표가 실제 거래에도 갱신된 적이 없었을 가능성이 높음). 여기서
+  // pending_claims에 저장해두면, 판매자가 다음에 앱을 열 때
+  // GET /biz/claims로 조회해 직접 redeemClaim()할 수 있다. 이 저장이
+  // 실패해도 결제 자체는 이미 끝났으므로 주문을 되돌리지 않는다.
+  if (seller_claim) {
+    try {
+      const claimToken = await _l1AdminToken(env);
+      await fetch(`${L1_DEFAULT}/api/collections/pending_claims/records`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${claimToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          claimant: seller_guid,
+          claim_data: seller_claim,
+          block_hash, block_id, tx_hash,
+          session_id: session_id || null,
+          source: reporter_svc || 'kmarket_order',
+          redeemed: false,
+        }),
+      });
+    } catch (e) {
+      console.warn('[Claims] pending_claims 적재 실패(무시, 결제 자체는 정상 처리됨):', e.message);
+    }
+  }
 
   // 2026-07-13 신설 — 재고 자동 차감(②단계). 결제 자체는 이미 완료됐으므로
   // 여기서 실패해도(네트워크 등) 주문을 되돌리지 않는다 — try/catch로
@@ -8303,6 +8332,71 @@ async function handleReservationStatus(request, env, corsHeaders) {
   if (!patchRes.ok) return _err(500, 'UPDATE_FAILED', await patchRes.text(), corsHeaders);
 
   return new Response(JSON.stringify({ ok: true, reservation_id, status: new_status }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-13 신설 — 판매자 claim 전달 큐(pending_claims)
+//   redeemClaim()의 claimant 필터(2026-07-07, 이중계상 방지) 때문에
+//   구매자 opener 창에만 전달되던 seller_claim이 판매자에게 도달할
+//   방법이 전혀 없었다(실사로 발견). order_queue와 동일한 "확인 후
+//   처리" 패턴 — 판매자가 앱을 열 때 자기 앞으로 온 미청구 claim을
+//   조회해 로컬에서 redeemClaim()한 뒤 서버에 수령 처리한다.
+// ═══════════════════════════════════════════════════════════
+
+// GET /biz/claims?guid=... — 미청구 claim 목록 조회
+async function handleClaimsList(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+  const filter = encodeURIComponent(`claimant='${guid}' && redeemed=false`);
+  const res = await fetch(
+    `${L1_DEFAULT}/api/collections/pending_claims/records?filter=${filter}&sort=created&perPage=50`,
+    { headers }
+  );
+  if (!res.ok) return _err(502, 'L1_UNREACHABLE', 'claim 조회 실패', corsHeaders);
+  const data = await res.json().catch(() => ({ items: [] }));
+  const claims = (data.items || []).map(r => ({
+    id: r.id,
+    claim_data: r.claim_data,
+    block_hash: r.block_hash,
+    block_id: r.block_id,
+    tx_hash: r.tx_hash,
+    session_id: r.session_id,
+    source: r.source,
+  }));
+  return new Response(JSON.stringify({ ok: true, claims }), { status: 200, headers: corsHeaders });
+}
+
+// POST /biz/claims/ack — 로컬 redeemClaim() 성공 후 수령 확인(중복 적용 방지)
+async function handleClaimsAck(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, claim_ids } = body;
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!Array.isArray(claim_ids) || !claim_ids.length) {
+    return _err(400, 'MISSING_FIELD', 'claim_ids 배열 필수', corsHeaders);
+  }
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  let acked = 0;
+  for (const id of claim_ids) {
+    // claimant 재확인 — 다른 사람의 claim_id를 추측해 남의 것을 ack
+    // 처리하지 못하도록 조회 후 소유자를 대조한다.
+    const getRes = await fetch(`${L1_DEFAULT}/api/collections/pending_claims/records/${id}`, { headers });
+    if (!getRes.ok) continue;
+    const rec = await getRes.json().catch(() => null);
+    if (!rec || rec.claimant !== guid) continue;
+    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/pending_claims/records/${id}`, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ redeemed: true, redeemed_at: new Date().toISOString() }),
+    });
+    if (patchRes.ok) acked++;
+  }
+  return new Response(JSON.stringify({ ok: true, acked }), { status: 200, headers: corsHeaders });
 }
 
 // POST /biz/catalog/sync — 로컬 IndexedDB 전체 스냅샷을 서버 백업/공개미러에 반영

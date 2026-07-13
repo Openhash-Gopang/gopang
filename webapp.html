@@ -4444,6 +4444,59 @@ window.hsSendAsAttachment = function () {
   }
 
   // 설정 패널 열릴 때마다 적용
+  // ── 판매자 claim 자동 수령 (2026-07-13 신설) ────────────────
+  // seller_claim이 지금까지 구매자 opener 창에만 전달되고 redeemClaim()의
+  // claimant 필터에 걸려 조용히 버려지고 있었다(실사로 발견). 앱을 열
+  // 때마다 내 앞으로 온 미청구 claim이 있는지 확인해 로컬 재무제표에
+  // 반영한다 — order_queue와 동일한 "확인 후 처리" 패턴.
+  async function _checkPendingClaims() {
+    try {
+      let stored = null;
+      try { stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { return; }
+      const guid = stored?.ipv6 || stored?.guid || null;
+      if (!guid) return;
+      const wallet = window.gopangWallet;
+      if (!wallet?.redeemClaim) return;
+
+      const res = await fetch(`https://hondi-proxy.tensor-city.workers.dev/biz/claims?guid=${encodeURIComponent(guid)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok || !Array.isArray(data.claims) || !data.claims.length) return;
+
+      const ackedIds = [];
+      for (const c of data.claims) {
+        try {
+          await wallet.redeemClaim({
+            block_hash: c.block_hash,
+            block_id: c.block_id || null,
+            tx_hash: c.tx_hash || null,
+            claims: [c.claim_data],
+            pdv_session_id: c.session_id || crypto.randomUUID(),
+            pdv_type: 'service_task',
+          });
+          ackedIds.push(c.id);
+        } catch (e) {
+          console.warn('[Claims] 개별 claim 적용 실패(무시, 다음 확인 때 재시도):', c.id, e.message);
+        }
+      }
+      if (ackedIds.length) {
+        await fetch('https://hondi-proxy.tensor-city.workers.dev/biz/claims/ack', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guid, claim_ids: ackedIds }),
+        }).catch(() => {});
+        console.info(`[Claims] 미청구 판매대금 ${ackedIds.length}건 반영 완료`);
+      }
+    } catch (e) {
+      console.warn('[Claims] 판매자 claim 확인 실패(무시):', e.message);
+    }
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    // 지갑이 IndexedDB에서 자기 guid를 로드할 여유시간을 준다(기존
+    // 코드베이스에 명시적 wallet.ready() 신호가 없어, 다른 곳들처럼
+    // 짧은 지연 후 존재 여부만 확인하는 방식을 그대로 따름).
+    setTimeout(_checkPendingClaims, 2000);
+  });
+
   document.addEventListener('DOMContentLoaded', function() {
     preventScrollFocus();
     // 동적으로 생성되는 경우 대비
