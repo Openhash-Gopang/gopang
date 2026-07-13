@@ -1248,17 +1248,41 @@ async function _renderTempBadge(guid) {
   badge.classList.remove('hidden');
 }
 
-// ── Claim this business (2026-07-13 신설) ──────────────────
-// 실제 서명(POST /profile/claim)은 guid:pubkey:ts 서명 검증이 필요해
-// 별도 프로토콜 설계가 필요하다 — 여기서는 우선 AI 비서 대화로 안내해
-// 안전하게 흐름을 시작한다(추후 서명 릴레이 연동은 별도 패치).
-function _startClaimFlow() {
-  const input = document.getElementById('ai-input');
-  if (!input) return;
-  input.value = `이 업체(${_profile?.name || ''})가 제 소유예요. 인증하고 싶어요.`;
-  if (!document.getElementById('ai-chat-box')?.classList.contains('open')) toggleAIChat();
-  document.getElementById('ai-section')?.scrollIntoView({ behavior: 'smooth' });
-  sendAIMsg();
+// ── Claim this business (2026-07-13 신설, 2026-07-13 재구현) ──
+// gopang-wallet.js가 이제 이 페이지에 로드돼 있어(뷰어 인증 패치에서
+// 추가됨), 별도 서명 릴레이 없이 직접 서명해 POST /profile/claim을
+// 호출할 수 있다 — 지갑 미준비 시에만 기존 AI 채팅 우회로 폴백한다.
+async function _startClaimFlow() {
+  const wallet = window.gopangWallet;
+  if (!wallet?.signPayload || !_profile?.guid) {
+    const input = document.getElementById('ai-input');
+    if (input) {
+      input.value = `이 업체(${_profile?.name || ''})가 제 소유예요. 인증하고 싶어요.`;
+      if (!document.getElementById('ai-chat-box')?.classList.contains('open')) toggleAIChat();
+      document.getElementById('ai-section')?.scrollIntoView({ behavior: 'smooth' });
+      sendAIMsg();
+    }
+    return;
+  }
+  if (!confirm(`"${_profile.name || '이 업체'}"를 본인 소유로 인증하시겠습니까?`)) return;
+
+  const pubkey = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+  const ts = Date.now().toString();
+  const sigMsg = `claim:${_profile.guid}:${pubkey}:${ts}`;
+  try {
+    const sig = await wallet.signPayload(sigMsg);
+    const res = await fetch(`${PROXY}/profile/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guid: _profile.guid, pubkey, signature: sig, ts }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.detail || data.error || '인증 실패');
+    alert('✅ 인증 완료! 이제 이 프로필을 직접 관리할 수 있습니다.');
+    location.reload();
+  } catch (e) {
+    alert('⚠️ 인증 실패: ' + e.message);
+  }
 }
 
 // ── Suggest an edit (2026-07-13 신설) ──────────────────────
@@ -1356,17 +1380,99 @@ async function _submitReservation() {
   }
 }
 
-// ── 예약 설정 변경 (2026-07-13 신설) ────────────────────────
-// worker.js에 PATCH /profile 라우팅이 확인되지 않아(발견된 이슈,
-// 별도 확인 필요) 직접 폼 저장 대신 AI 비서 대화로 안내한다 — 이미
-// 검증된 프로필 수정 대화 경로(profile-assistant 수정 모드)를 그대로 탄다.
-function _editReservationSettings() {
-  const input = document.getElementById('ai-input');
-  if (!input) return;
-  input.value = '예약 설정을 바꾸고 싶어요 — 확정 방식이나 보증금 기준 온도를 조정하고 싶어요.';
-  if (!document.getElementById('ai-chat-box')?.classList.contains('open')) toggleAIChat();
-  document.getElementById('ai-section')?.scrollIntoView({ behavior: 'smooth' });
-  sendAIMsg();
+// ── 현재 프로필 → POST /profile 페이로드 역매핑 (2026-07-13 신설) ──
+// handleProfilePost는 전체 교체 방식이라(PATCH 라우팅이 아예 없었던
+// register-profile.html 버그와 같은 근본 원인), 일부 필드만 보내면
+// 나머지가 기본값으로 초기화되는 위험이 있다. 그래서 항상 현재 전체
+// 프로필을 이 형태로 복원한 뒤 필요한 부분만 덮어써서 통째로
+// 재제출한다.
+function _buildProfilePostBodyFromCurrent(overrides = {}) {
+  const p = _profile || {};
+  const pub = p.extra?.public || {};
+  const identity = pub.identity || {};
+  const activity = pub.activity || {};
+  const contact = pub.contact || {};
+  const location = pub.location || {};
+  const finance = pub.finance || {};
+  return {
+    guid: p.guid, handle: p.handle,
+    entity_type: p.entity_type, native_lang: p.native_lang || 'ko',
+    name: p.name, address: p.address, lat: p.lat, lng: p.lng,
+    phone: p.phone, website: p.website, is_public: !!p.is_public,
+    description: identity.description || '', tags: identity.tags || [],
+    entity_subtype: identity.entity_subtype || null,
+    hours: activity.hours || [], holidays: activity.holidays || [],
+    phone_visible: !!contact.phone_visible,
+    sns_public: contact.sns_public || {}, languages_spoken: contact.languages_spoken || [],
+    region: location.region || '', directions: location.directions || '',
+    parking: !!location.parking,
+    gdc_accepted: !!finance.gdc_accepted, currencies: finance.currencies || ['KRW'],
+    price_range: finance.price_range || '',
+    products_structured: pub.products || [],
+    field_visibility: pub.field_visibility || {},
+    industry_fields: pub.industry_fields || null,
+    ...overrides,
+  };
+}
+
+async function _submitProfileUpdate(overrides) {
+  const wallet = window.gopangWallet;
+  if (!wallet?.signPayload || !_profile?.guid) throw new Error('지갑이 준비되지 않았습니다.');
+  const pubkey = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+  const ts = Date.now().toString();
+  const sigMsg = `${_profile.guid}:${pubkey}:${ts}`; // POST /profile 기존 서명 형식과 동일
+  const sig = await wallet.signPayload(sigMsg);
+  const body = _buildProfilePostBodyFromCurrent(overrides);
+  const res = await fetch(`${PROXY}/profile`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, pubkey, signature: sig, ts }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) throw new Error(data.detail || data.error || '저장 실패');
+  return data;
+}
+
+// ── 예약 설정 변경 (2026-07-13 신설, 2026-07-13 재구현) ──────
+// register-profile.html의 PATCH 라우팅 누락 버그를 POST 업서트로
+// 근본 수정했으므로, 이제 이 버튼도 AI 채팅 우회 없이 직접 저장할 수
+// 있다. 다만 위 _submitProfileUpdate가 항상 "현재 전체 프로필 + 덮어쓸
+// 부분"을 함께 보내 부분 수정으로 인한 데이터 유실을 막는다.
+async function _editReservationSettings() {
+  const wallet = window.gopangWallet;
+  if (!wallet?.signPayload) {
+    const input = document.getElementById('ai-input');
+    if (input) {
+      input.value = '예약 설정을 바꾸고 싶어요 — 확정 방식이나 보증금 기준 온도를 조정하고 싶어요.';
+      if (!document.getElementById('ai-chat-box')?.classList.contains('open')) toggleAIChat();
+      document.getElementById('ai-section')?.scrollIntoView({ behavior: 'smooth' });
+      sendAIMsg();
+    }
+    return;
+  }
+  const currentRc = _profile?.extra?.public?.industry_fields?.reservation_config || {};
+  const wantsAuto = confirm('예약을 자동으로 확정할까요?\n(취소를 누르면 사업자 승인이 필요한 방식으로 설정됩니다)');
+  const thresholdStr = prompt('보증금을 요구할 신뢰도 온도 기준을 입력하세요(기본 36.5)', String(currentRc.deposit_temp_threshold ?? 36.5));
+  if (thresholdStr === null) return; // 사용자 취소
+  const newThreshold = parseFloat(thresholdStr);
+  if (isNaN(newThreshold)) { alert('숫자를 입력해 주세요.'); return; }
+
+  try {
+    await _submitProfileUpdate({
+      industry_fields: {
+        ...(_profile?.extra?.public?.industry_fields || {}),
+        reservation_config: {
+          ...currentRc,
+          confirm_mode: wantsAuto ? 'auto' : 'manual',
+          deposit_temp_threshold: newThreshold,
+        },
+      },
+    });
+    alert('✅ 예약 설정이 저장됐습니다.');
+    location.reload();
+  } catch (e) {
+    alert('⚠️ 저장 실패: ' + e.message);
+  }
 }
 
 function _startCheckout() {
