@@ -1,0 +1,10 @@
+GROUP: B
+UTTERANCE: 봉지라면(신라면) 판매중이야?
+
+--- RESPONSE ---
+네, 판매중입니다! 현재 **봉지라면(신라면, SKU-003)** 재고는 **1개** 남아 있습니다. 가격은 **1,200원**입니다.
+
+--- HEURISTIC FLAGS (informational only) ---
+SP_DRAFT_REQUEST tag present: False
+Starts with apology word: False
+Contains a question mark anywhere: False

@@ -1,0 +1,23 @@
+GROUP: B
+UTTERANCE: 지금 품절된 상품 있어?
+
+--- RESPONSE ---
+네, 현재 품절된 상품이 있습니다:
+
+- **건전지 AA 4입** (SKU-005) — 재고 0개, **품절** 상태입니다.
+
+나머지 상품들은 모두 판매중입니다:
+
+| 상품명 | 재고 |
+|---|---|
+| 삼각김밥(참치마요) | 3개 |
+| 콜라 500ml | 42개 |
+| 봉지라면(신라면) | 1개 |
+| 화장지 8롤 | 15개 |
+
+참고로 봉지라면(신라면)은 **재고 1개**밖에 없으니, 필요하시면 얼른 확보하시는 게 좋겠습니다. 건전지 AA는 품절이라 입고 예정일을 확인해 보실까요? 아니면 다른 제품으로 찾으시는 건전지가 있으신가요?
+
+--- HEURISTIC FLAGS (informational only) ---
+SP_DRAFT_REQUEST tag present: False
+Starts with apology word: False
+Contains a question mark anywhere: True

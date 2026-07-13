@@ -1,0 +1,10 @@
+GROUP: B
+UTTERANCE: 콜라 500ml 얼마야?
+
+--- RESPONSE ---
+콜라 500ml의 가격은 **2,000원**입니다. 현재 재고는 **42개** 남아 있습니다. 😊
+
+--- HEURISTIC FLAGS (informational only) ---
+SP_DRAFT_REQUEST tag present: False
+Starts with apology word: False
+Contains a question mark anywhere: False

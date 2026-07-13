@@ -1,0 +1,18 @@
+GROUP: A
+UTTERANCE: 아르바이트생 이번주 근무표 짜줘
+
+--- RESPONSE ---
+아르바이트생의 근무표를 작성하려면 몇 가지 정보가 더 필요합니다.
+
+근무표 작성을 위해 아래 정보를 알려주세요:
+1. **아르바이트생 이름/인원** (현재 몇 명이 근무하나요?)
+2. **희망 근무 요일 및 시간** (각자 가능한 시간대가 있나요?)
+3. **야간/주말 가산 수당 적용 여부** (편의점 24시간 운영 기준)
+4. **고정 근무 패턴** (격일 근무, 주말 교대 등 기존 룰이 있나요?)
+
+이 정보를 알려주시면 제가 근무표 초안을 작성해드리겠습니다(실제 확정은 사업주 본인의 최종 승인이 필요합니다).
+
+--- HEURISTIC FLAGS (informational only) ---
+SP_DRAFT_REQUEST tag present: False
+Starts with apology word: False
+Contains a question mark anywhere: True

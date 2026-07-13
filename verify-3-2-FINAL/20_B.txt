@@ -1,0 +1,12 @@
+GROUP: B
+UTTERANCE: 배달 되는 가게야?
+
+--- RESPONSE ---
+네, 현재 저희 편의점은 **배달 서비스를 운영하지 않고 있습니다** (`delivery_available: false`).
+
+방문하여 구매해 주시면 감사하겠습니다. 혹시 필요하신 상품이 있으시면 재고 확인이나 가격 안내는 도와드릴 수 있어요.
+
+--- HEURISTIC FLAGS (informational only) ---
+SP_DRAFT_REQUEST tag present: False
+Starts with apology word: False
+Contains a question mark anywhere: False

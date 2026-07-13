@@ -1,0 +1,10 @@
+GROUP: B
+UTTERANCE: 화장지 8롤 얼마에 팔아?
+
+--- RESPONSE ---
+화장지 8롤의 가격은 **6,900원**입니다. 현재 재고는 **15개** 있으며, 판매중 상태입니다.
+
+--- HEURISTIC FLAGS (informational only) ---
+SP_DRAFT_REQUEST tag present: False
+Starts with apology word: False
+Contains a question mark anywhere: False

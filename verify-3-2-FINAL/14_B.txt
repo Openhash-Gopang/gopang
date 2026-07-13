@@ -1,0 +1,10 @@
+GROUP: B
+UTTERANCE: 우리 가게 몇 시부터 몇 시까지 해?
+
+--- RESPONSE ---
+저희 가게는 **24시간** 운영하고 있습니다. 언제든지 방문해 주세요!
+
+--- HEURISTIC FLAGS (informational only) ---
+SP_DRAFT_REQUEST tag present: False
+Starts with apology word: False
+Contains a question mark anywhere: False

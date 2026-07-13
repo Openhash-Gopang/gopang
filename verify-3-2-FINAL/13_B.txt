@@ -1,0 +1,12 @@
+GROUP: B
+UTTERANCE: 건전지 AA 4입 재고 있어?
+
+--- RESPONSE ---
+네, 건전지 AA 4입(SKU-005)은 현재 **재고가 없습니다(품절)** 상태입니다.
+
+다른 도움이 필요하시면 말씀해 주세요.
+
+--- HEURISTIC FLAGS (informational only) ---
+SP_DRAFT_REQUEST tag present: False
+Starts with apology word: False
+Contains a question mark anywhere: False

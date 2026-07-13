@@ -1,0 +1,20 @@
+GROUP: B
+UTTERANCE: 재고 5개 미만인 상품 다 뽑아줘
+
+--- RESPONSE ---
+재고가 **5개 미만**인 상품은 아래와 같습니다.
+
+| 상품명 | 현재 재고 |
+|---|---|
+| 삼각김밥(참치마요) | **3개** |
+| 봉지라면(신라면) | **1개** |
+| 건전지 AA 4입 | **0개 (품절)** |
+
+특히 **봉지라면(신라면)**은 1개만 남아 빠르게 소진될 수 있고, **건전지 AA 4입**은 품절 상태입니다. 삼각김밥도 3개 남아있어 평소 판매량을 고려해 발주 시점을 검토하시는 게 좋겠습니다.
+
+주문서 작성을 도와드릴까요?
+
+--- HEURISTIC FLAGS (informational only) ---
+SP_DRAFT_REQUEST tag present: False
+Starts with apology word: False
+Contains a question mark anywhere: True
