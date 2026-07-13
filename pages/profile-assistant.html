@@ -314,7 +314,54 @@ function _closeTabSoon(delayMs = 900) {
   setTimeout(() => { window.close(); location.href = RETURN; }, delayMs);
 }
 
+// ── 업종 템플릿 조회 (2026-07-13 신설) ─────────────────────
+// 동종업계(같은 schema_id) 공개 프로필 최대 8건에서 다수가 가진
+// industry_fields 키만 추출한다 — 개별 업체명·연락처는 절대 넘기지
+// 않고 "필드 구조"만 참조로 넘긴다. /search는 handleSearch가
+// schema_id alias를 KSIC_LABELS로 자동 해석해준다(worker.js 2026-07-13).
+async function _lookupIndustryTemplate(schemaId) {
+  try {
+    const res = await fetch(`${RELAY_ENDPOINT}/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schema_id: schemaId, lim: 8 }),
+    });
+    const data = await res.json().catch(() => ({}));
+    const items = Array.isArray(data.results) ? data.results
+      : (Array.isArray(data.items) ? data.items : []);
+    if (!items.length) return '';
+
+    const fieldCounts = {};
+    for (const it of items) {
+      const fields = it.extra?.public?.industry_fields || {};
+      for (const k of Object.keys(fields)) {
+        if (k === 'schema_id' || k === 'status') continue;
+        fieldCounts[k] = (fieldCounts[k] || 0) + 1;
+      }
+    }
+    const majorityThreshold = Math.max(2, Math.ceil(items.length / 2));
+    const majorityFields = Object.entries(fieldCounts)
+      .filter(([, c]) => c >= majorityThreshold)
+      .map(([k]) => k);
+    if (!majorityFields.length) return '';
+    return `동종업계 ${items.length}건 중 다수가 보유한 필드: ${majorityFields.join(', ')}`;
+  } catch (e) {
+    console.warn('[PA] 업종 템플릿 조회 실패(무시):', e.message);
+    return '';
+  }
+}
+
 async function _handleReplyTags(fullReply) {
+  // 업종 템플릿 조회 [INDUSTRY_TEMPLATE_LOOKUP: schema_id=NN]
+  const templateMatch = fullReply.match(/\[INDUSTRY_TEMPLATE_LOOKUP:\s*schema_id=(\d+)\]/);
+  if (templateMatch) {
+    const summary = await _lookupIndustryTemplate(templateMatch[1]);
+    const ctx = summary
+      ? `[CONTEXT: INDUSTRY_TEMPLATE]\n${summary}\n[/CONTEXT]`
+      : `[CONTEXT: INDUSTRY_TEMPLATE]\n(참조할 동종업계 사례 없음 — 본인 업종 지식으로 진행)\n[/CONTEXT]`;
+    await sendTurn(ctx);
+    return;
+  }
   // 진행 중 필드 저장 [PARTIAL_SAVE]
   if (!localStorage.getItem('hondi_profile_done')) {
     const partialMatch = fullReply.match(/\[PARTIAL_SAVE\]\s*(\{[\s\S]*?\})/);

@@ -331,6 +331,25 @@ const VALID_INDUSTRY_SCHEMA_IDS = new Set([
   '91','94','95','96','97','98','99',
 ]);
 
+// 2026-07-13 신설 — Tier 3(규제산업, 사람 검토 전까지 보류) 코드.
+// docs/ksic_schema_tier_classification_v1.md Tier 3 표와 정확히 동기화.
+// 87(사회복지서비스)은 문서 자체가 "Tier 2→3 상향 검토 권고"로 남겨뒀으나,
+// 안전한 쪽(포함)으로 처리한다 — 문서가 확정하지 못한 채 남겨둔 항목을
+// 서버가 임의로 관대하게 해석하지 않는다.
+const TIER3_REGULATED_SCHEMA_IDS = new Set([
+  '12', // 담배 제조업 — 담배사업법
+  '19', // 코크스·석유정제 — 위험물·환경 규제
+  '21', // 의약품 제조업 — 약사법
+  '27', // 의료·정밀·광학기기 — 의료기기법
+  '64', // 은행·금융업 — 은행법 등
+  '65', // 보험업 — 보험업법
+  '66', // 금융·보험 관련 서비스업 — 자본시장법 등
+  '71', // 전문서비스업 — 변호사법 등 자격기반 서비스 포함 가능성
+  '85', // 교육서비스업 — 학원의 설립·운영에 관한 법률 등
+  '86', // 보건업 — 의료법
+  '87', // 사회복지서비스 — 아동복지법·노인복지법 등(상향 검토 권고분)
+]);
+
 // 2026-07-05: KSIC 코드 → 한글 업종명 단일 소스.
 // AGENT-SUPPLIER-{code}_*.txt 파일 첫 줄("[공급자형 AI Agent · X00 · 업종명]")에서
 // 자동 추출 — VALID_INDUSTRY_SCHEMA_IDS와 정확히 동일한 77개 코드를 커버한다.
@@ -3277,10 +3296,18 @@ async function handleSearch(request, env, corsHeaders) {
   // _l1SearchEntities로 대체한다(위 함수 정의부 주석에 알려진 차이점
   // 명시). 파라미터 정규화(p_* 별칭 허용)는 기존 클라이언트 호환을
   // 위해 그대로 유지.
+  // 2026-07-13 신설 — schema_id(KSIC 코드) alias. occupation 필드는
+  // profiles 테이블에 KSIC_LABELS 라벨 텍스트(예: "음식점업")로 저장돼
+  // 있어 코드 숫자로는 매칭이 안 된다 — profile-assistant의 업종 템플릿
+  // 조회([INDUSTRY_TEMPLATE_LOOKUP])가 schema_id만 들고 있어도 여기서
+  // 라벨로 변환해준다.
+  const resolvedOccupationFromSchema = body.schema_id
+    ? (KSIC_LABELS[String(body.schema_id)] || null) : null;
+
   const searchParams = {
     q:          keyword,
     etype:      body.p_entity_type || body.entity_type || null,
-    occupation: body.p_occupation  || body.occupation  || null,
+    occupation: body.p_occupation  || body.occupation  || resolvedOccupationFromSchema || null,
     address:    body.p_address     || body.address     || null,
     lat:        body.p_lat         || body.lat         || null,
     lng:        body.p_lng         || body.lng         || null,
@@ -7345,10 +7372,16 @@ async function handleProfilePost(request, env, corsHeaders) {
   const sigOk  = await _verifyEd25519Simple(pubkey, signature, sigMsg);
   if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
 
-  const {
+  // 2026-07-13: is_public을 const에서 let으로(Tier3 규제산업 감지 시
+  // 서버가 강제로 false 재할당해야 함) + 기본값을 true→false로 변경.
+  // 이유: profile-assistant STEP4가 항상 명시적으로 값을 보내므로 정상
+  // 경로엔 영향이 없고, 이건 어디까지나 값이 누락되는 예외 상황(모델
+  // 실수·전송 유실 등)을 위한 안전망이다 — 그런 실패는 "공개"가 아니라
+  // "비공개" 쪽으로 떨어지는 게 안전하다(기존엔 반대였음, 실사로 발견).
+  let {
     entity_type, name, native_lang = 'ko',
     address = '', lat = null, lng = null,
-    phone = null, website = '', is_public = true,
+    phone = null, website = '', is_public = false,
     handle = null,
     description = '', tags = [],
     hours = [], holidays = [],
@@ -7384,6 +7417,19 @@ async function handleProfilePost(request, env, corsHeaders) {
       return _err(400, 'INVALID_SCHEMA_ID',
         `industry_fields.schema_id가 유효하지 않습니다: ${JSON.stringify(sid)} (허용: ${[...VALID_INDUSTRY_SCHEMA_IDS].join(',')})`,
         corsHeaders);
+    }
+
+    // 2026-07-13 신설 — Tier 3(규제산업) 서버 강제. docs/
+    // ksic_schema_tier_classification_v1.md가 "사람 검토 전까지 보류
+    // (status: under_review)"라고 명시했지만, VALID_INDUSTRY_SCHEMA_IDS가
+    // 2026-06-30에 77개 코드를 한꺼번에 열면서 이 구분이 서버에 전혀
+    // 반영 안 되고 있었다(실사로 발견 — 담배 제조업 등도 검토 없이
+    // 그냥 통과). 통째로 막지는 않되(정상 사업자 유입 자체를 막으면
+    // 안 되므로), 검토 전까지 검색·공개 노출만 차단한다.
+    if (TIER3_REGULATED_SCHEMA_IDS.has(String(sid))) {
+      is_public = false; // 클라이언트가 뭘 보냈든 강제 — 검토 전 노출 차단
+      body.industry_fields = { ...body.industry_fields, status: 'under_review' };
+      console.info('[Profile] Tier3 규제산업 감지 — is_public 강제 false, status=under_review:', sid);
     }
   }
 
