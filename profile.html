@@ -19,6 +19,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap">
+<script src="/gopang-wallet.js?v=20260624"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:#111827;min-height:100dvh}
@@ -556,10 +557,42 @@ window.addEventListener('DOMContentLoaded', () => {
   loadProfile();
 });
 
+// ── 뷰어 서명 (2026-07-13 신설) ──────────────────────────────
+// GET /profile이 이제 서명 기반 뷰어 인증을 지원한다(worker.js
+// _isAuthenticatedOwnerRequest 참조) — 본인이 자기 프로필을 볼 때만
+// 비공개 필드까지 전부 내려받고, 그 외엔 field_visibility로 걸러진
+// 데이터만 온다. 여기서 "요청 대상 handle == 내 handle"일 때만
+// 서명을 시도한다(타인 프로필엔 의미 없음, 지갑도 없으면 조용히 생략
+// — 익명 방문자와 동일하게 필터링된 데이터를 받을 뿐 에러 아님).
+async function _buildViewerAuthQuery() {
+  try {
+    let stored = null;
+    try { stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { return ''; }
+    const myHandle = (stored?.handle || '').replace(/^@/, '');
+    if (!myHandle || myHandle !== _handle) return ''; // 본인 프로필 조회가 아님
+
+    const wallet = window.gopangWallet;
+    if (!wallet?.signPayload) return ''; // 지갑 미준비 — 조용히 필터링된 데이터로 폴백
+    const pubkey = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+    const guid = stored?.ipv6 || stored?.guid || '';
+    if (!pubkey || !guid) return '';
+
+    const ts = Date.now().toString();
+    const sigMsg = `view:${guid}:${pubkey}:${ts}`;
+    const sig = await wallet.signPayload(sigMsg);
+    return `&viewer_guid=${encodeURIComponent(guid)}&viewer_pubkey=${encodeURIComponent(pubkey)}` +
+           `&viewer_sig=${encodeURIComponent(sig)}&viewer_ts=${encodeURIComponent(ts)}`;
+  } catch (e) {
+    console.warn('[Profile] 뷰어 서명 실패(무시, 필터링된 데이터로 진행):', e.message);
+    return '';
+  }
+}
+
 async function loadProfile() {
   if (!_handle) { showError(); return; }
   try {
-    const res  = await fetch(`${PROXY}/profile/@${_handle}`);
+    const viewerAuthQuery = await _buildViewerAuthQuery();
+    const res  = await fetch(`${PROXY}/profile/@${_handle}?_=1${viewerAuthQuery}`);
     const data = await res.json();
     if (!res.ok || !data.ok) { await renderBasicOrError(); return; }
     _profile = data.profile;

@@ -3228,6 +3228,65 @@ function _haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// 2026-07-13 신설 — field_visibility 필터링 공용 헬퍼. 원래
+// _l1SearchEntities 안에 인라인으로만 있었는데, handleProfileGet(직접
+// 조회)에도 똑같이 적용해야 해서 모듈 스코프로 끌어올렸다 — 두 곳에서
+// 필터링 기준이 어긋나는(하나는 고치고 하나는 깜빡하는) 사고를 막는다.
+function _isFieldVisible(fv, field) {
+  const DEFAULT_PUBLIC_FIELDS = new Set(['products']);
+  if (fv && typeof fv[field] === 'boolean') return fv[field];
+  return DEFAULT_PUBLIC_FIELDS.has(field);
+}
+
+function _filterProfileByVisibility({ address, phone, website, extra }) {
+  const fv = extra?.public?.field_visibility || {};
+  const filteredExtra = extra ? {
+    ...extra,
+    public: extra.public ? {
+      ...extra.public,
+      location: _isFieldVisible(fv, 'address') ? extra.public.location
+        : { ...extra.public.location, address_short: undefined, directions: undefined },
+      contact: _isFieldVisible(fv, 'phone') ? extra.public.contact
+        : { ...extra.public.contact, phone_display: undefined },
+      identity: _isFieldVisible(fv, 'description') ? extra.public.identity
+        : { ...extra.public.identity, description: undefined },
+      products: _isFieldVisible(fv, 'products') ? extra.public.products : undefined,
+    } : extra.public,
+  } : extra;
+  return {
+    address: _isFieldVisible(fv, 'address') ? address : null,
+    phone: _isFieldVisible(fv, 'phone') ? phone : null,
+    website: _isFieldVisible(fv, 'website') ? website : null,
+    extra: filteredExtra,
+  };
+}
+
+// 2026-07-13 신설 — GET /profile 뷰어(요청자) 인증. 지금까지 이
+// 엔드포인트는 요청자가 누구든 원본 전체를 그대로 돌려주고 있었다
+// (실사로 발견 — field_visibility·phone_visible 어느 쪽도 서버 응답
+// 자체는 걸러진 적이 없었음). 서명 기반으로 "본인이 자기 프로필을
+// 보는 경우"만 가려내 그때만 필터링을 건너뛴다 — POST /profile과
+// 동일한 TOFU 원칙(등록된 pubkey와 일치해야 함)을 재사용.
+async function _isAuthenticatedOwnerRequest(env, targetGuid, url) {
+  const viewerGuid   = url.searchParams.get('viewer_guid');
+  const viewerPubkey = url.searchParams.get('viewer_pubkey');
+  const viewerSig    = url.searchParams.get('viewer_sig');
+  const viewerTs     = url.searchParams.get('viewer_ts') || '';
+  if (!viewerGuid || !viewerPubkey || !viewerSig) return false;
+  if (viewerGuid !== targetGuid) return false; // 본인 프로필 조회만 인증 대상 — 타인 것엔 의미 없음
+
+  const sigMsg = `view:${viewerGuid}:${viewerPubkey}:${viewerTs}`;
+  const sigOk = await _verifyEd25519Simple(viewerPubkey, viewerSig, sigMsg).catch(() => false);
+  if (!sigOk) return false;
+
+  // TOFU 확인 — 서명이 유효해도 그 pubkey가 실제로 이 guid 소유자로
+  // 등록된 키와 일치해야 한다(임의의 키페어로 아무 guid나 사칭 방지).
+  const viewerProfile = await _l1FindProfileByGuid(env, viewerGuid).catch(() => null);
+  if (!viewerProfile?.pubkey_ed25519 || viewerProfile.pubkey_ed25519 !== viewerPubkey) return false;
+
+  return true;
+}
+
 async function _l1SearchEntities(env, { q, etype, occupation, address, lat, lng, lim = 20, ofst = 0 }) {
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}` };
@@ -3256,17 +3315,9 @@ async function _l1SearchEntities(env, { q, etype, occupation, address, lat, lng,
   const data = await res.json().catch(() => ({ items: [] }));
 
   const qLower = (q || '').toLowerCase();
-  // 2026-07-13 신설 — field_visibility 서버측 필터링. profile.html은
-  // 이제까지 phone_visible 같은 플래그를 "표시 여부"로만 썼을 뿐,
-  // 서버 응답 자체는 항상 원본 전체를 그대로 내려주고 있었다(실사로
-  // 발견 — 클라이언트가 숨겨도 API를 직접 호출하면 비공개 필드가 그대로
-  // 보임). 검색 결과(가장 광범위하게 노출되는 경로)부터 서버에서
-  // 실제로 걸러 내려보낸다.
-  const _isFieldVisible = (fv, field) => {
-    const DEFAULT_PUBLIC_FIELDS = new Set(['products']);
-    if (fv && typeof fv[field] === 'boolean') return fv[field];
-    return DEFAULT_PUBLIC_FIELDS.has(field);
-  };
+  // 2026-07-13 신설 — field_visibility 서버측 필터링(공용 헬퍼 재사용,
+  // _filterProfileByVisibility/_isFieldVisible 정의부 참조). 지금까지
+  // 서버가 원본 전체를 그대로 내려주고 있었다(실사로 발견).
   const scored = (data.items || []).map(p => {
     let rank = 1.0;
     if (qLower) {
@@ -3277,26 +3328,16 @@ async function _l1SearchEntities(env, { q, etype, occupation, address, lat, lng,
       if (rank === 0) rank = 0.5; // 단어별 매칭은 됐지만 원문 전체는 안 겹치는 경우(AND 필터를 통과했으므로 최소 점수는 준다)
     }
     const distance_km = _haversineKm(lat, lng, p.lat, p.lng);
-    const fv = p.extra?.public?.field_visibility || {};
-    const filteredExtra = p.extra ? {
-      ...p.extra,
-      public: p.extra.public ? {
-        ...p.extra.public,
-        location: _isFieldVisible(fv, 'address') ? p.extra.public.location
-          : { ...p.extra.public.location, address_short: undefined, directions: undefined },
-        contact: _isFieldVisible(fv, 'phone') ? p.extra.public.contact
-          : { ...p.extra.public.contact, phone_display: undefined },
-        identity: _isFieldVisible(fv, 'description') ? p.extra.public.identity
-          : { ...p.extra.public.identity, description: undefined },
-        products: _isFieldVisible(fv, 'products') ? p.extra.public.products : undefined,
-      } : p.extra.public,
-    } : p.extra;
+    const filtered = _filterProfileByVisibility({
+      address: p.address,
+      phone: p.extra?.core?.phone ?? null,
+      website: p.extra?.core?.website ?? null,
+      extra: p.extra,
+    });
     return {
       guid: p.guid, name: p.name, handle: p.handle, entity_type: p.entity_type,
-      address: _isFieldVisible(fv, 'address') ? p.address : null,
-      phone: _isFieldVisible(fv, 'phone') ? (p.extra?.core?.phone ?? null) : null,
-      website: _isFieldVisible(fv, 'website') ? (p.extra?.core?.website ?? null) : null,
-      extra: filteredExtra,
+      address: filtered.address, phone: filtered.phone, website: filtered.website,
+      extra: filtered.extra,
       primary_guid: p.guid, occupation: p.occupation,
       rank, distance_km,
     };
@@ -6864,6 +6905,20 @@ async function handleProfileGet(request, env, corsHeaders) {
 
   if (l1Record) {
     const core = l1Record.extra?.core || {};
+
+    // 2026-07-13 신설 — 뷰어 인증. 서명으로 본인 확인이 된 경우에만
+    // 원본 전체를, 그 외(익명 방문자·타인)에는 field_visibility로
+    // 걸러진 데이터를 돌려준다.
+    const isOwnerRequest = await _isAuthenticatedOwnerRequest(env, l1Record.guid, url);
+    const filtered = isOwnerRequest
+      ? { address: core.address ?? null, phone: core.phone ?? null, website: core.website ?? null, extra: l1Record.extra || {} }
+      : _filterProfileByVisibility({
+          address: core.address ?? null,
+          phone: core.phone ?? null,
+          website: core.website ?? null,
+          extra: l1Record.extra || {},
+        });
+
     const profile = {
       guid: l1Record.guid,
       current_ipv6: l1Record.guid,
@@ -6873,19 +6928,20 @@ async function handleProfileGet(request, env, corsHeaders) {
       is_public: l1Record.is_public,
       pubkey_ed25519: l1Record.pubkey_ed25519,
       name: core.name ?? null,
-      address: core.address ?? null,
+      address: filtered.address,
       lat: core.lat ?? null,
       lng: core.lng ?? null,
-      phone: core.phone ?? null,
-      website: core.website ?? null,
+      phone: filtered.phone,
+      website: filtered.website,
       casts_for: core.casts_for ?? null,
-      extra: l1Record.extra || {},
+      extra: filtered.extra,
       updated_at: l1Record.updated,
       created_at: l1Record.created,
     };
     return new Response(JSON.stringify({
       ok: true, profile,
       identity_source: 'l1', detail_source: 'l1',
+      viewer_authenticated: isOwnerRequest,
     }), { status: 200, headers: corsHeaders });
   }
 
