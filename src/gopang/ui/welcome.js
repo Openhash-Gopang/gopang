@@ -13,6 +13,7 @@ import { appendBubble } from './bubble.js';
 import { _USER } from '../core/state.js';
 import { loadPersonalAssistantSP, resetSPLoader } from '../core/config.js';
 import { _recordPDV } from '../pdv/record.js';
+import { validateJobKsco } from '../profile2.0/ksco-lookup.js';
 
 // ── 초기 환영 메시지 — 더 이상 아무 일도 하지 않음 (v1.6) ──────────
 // gopang-app.js가 부팅 시 호출하는 기존 진입점과의 호환을 위해 함수
@@ -37,6 +38,18 @@ export async function handleProfileSubmit(aiResponseText) {
   try { profile = JSON.parse(match[1]); } catch (e) {
     console.warn('[Profile] PROFILE_SUBMIT JSON 파싱 실패:', e.message);
     return false;
+  }
+
+  // 2026-07-13 신설(AC-AUTHOR_v1_0.md §3-1) — job_ksco는 entity_type이
+  // person일 때만 의미가 있고, LLM이 제안한 code/label을 실제 KSCO
+  // 데이터(data/ksco_2024_v8.json)로 한 번 더 대조한다 — U2(불확실
+  // 식별자 지어내지 않기)를 프롬프트 지침에만 맡기지 않고 코드로 강제.
+  if (profile.entity_type === 'person' && profile.job_ksco) {
+    try { profile.job_ksco = await validateJobKsco(profile.job_ksco); }
+    catch (e) { console.warn('[Profile] job_ksco 검증 실패, 원본 유지:', e.message); }
+  } else if (profile.entity_type !== 'person' && profile.job_ksco) {
+    // §3-2: 사업자/기관에는 job_ksco 개념이 없다 — 잘못 채워졌으면 제거.
+    delete profile.job_ksco;
   }
 
   // 사용자 GUID 주입

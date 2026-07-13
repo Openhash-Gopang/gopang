@@ -7591,6 +7591,13 @@ async function handleProfilePost(request, env, corsHeaders) {
     region = '', directions = '', parking = false,
     gdc_accepted = false, currencies = ['KRW'], price_range = '',
     phone_visible = false,
+    // 2026-07-13 신설 — AC-AUTHOR_v1_0.md §3(job_ksco 스키마). KSIC 기반
+    // occupation(사업자 업종, 검색용)과 절대 혼용하지 않는다 — 이건 개인
+    // (entity_type='person')의 KSCO 직업 정보이며 검색 인덱스 대상이
+    // 아니다. 라벨 검증(코드→명칭 매핑 대조)은 클라이언트(브라우저,
+    // data/ksco_2024_v8.json)의 몫이고, 서버는 형식만 검증한다 — 아래
+    // job_ksco != null 처리부 참조.
+    job_ksco = null,
     // 2026-07-13 신설 — products_structured가 여태 이 함수 destructure에
     // 없어 저장 경로 자체가 없었다(실사로 발견 — welcome.js
     // _forwardProductsToMarket()이 Market의 seller_products로는 보냈지만,
@@ -7725,9 +7732,44 @@ async function handleProfilePost(request, env, corsHeaders) {
       : DEFAULT_PUBLIC_FIELDS.has(f);
   }
 
+  // 2026-07-13 신설 — job_ksco 형식 검증(AC-AUTHOR_v1_0.md §3-1/§6).
+  // 서버는 코드 형식과 허용 필드만 검증한다 — 1,999개 KSCO 코드→명칭
+  // 전체를 worker.js에 인라인하지 않는다(이미 540K가 넘는 파일, KSIC_LABELS
+  // 77개와 규모가 다르다). label의 사실 여부는 클라이언트가
+  // data/ksco_2024_v8.json으로 조회해 채운 값을 신뢰하고 서버는 재검증하지
+  // 않는다 — U2(불확실 식별자 지어내지 않기) 준수는 "LLM이 label을 직접
+  // 짓지 않는다"는 클라이언트 측 규칙(personal-assistant SP)으로 담보한다.
+  // entity_type이 person이 아닌데 job_ksco가 오면 무시한다(기관/사업자는
+  // industry_fields·occupation(KSIC) 몫 — §3-2 병존 원칙).
+  const KSCO_CODE_RE = /^[0-9A][0-9]{0,4}$/;
+  const KSCO_VISIBILITY = new Set(['private', 'contacts', 'public']);
+  let resolvedJobKsco = null;
+  if (entity_type === 'person' && job_ksco && typeof job_ksco === 'object') {
+    const code = job_ksco.code != null ? String(job_ksco.code) : null;
+    if (code === null || KSCO_CODE_RE.test(code)) {
+      resolvedJobKsco = {
+        code,
+        label: (typeof job_ksco.label === 'string' && job_ksco.label.trim()) ? job_ksco.label.trim().slice(0, 100) : null,
+        level: code ? code.length : null,
+        source: ['self_reported', 'pdv_inferred', 'unconfirmed'].includes(job_ksco.source) ? job_ksco.source : 'unconfirmed',
+        // 기본값 private — AC-AUTHOR §6(민감 직종 접근통제), is_public 기본 false와 동일 원칙.
+        visibility: KSCO_VISIBILITY.has(job_ksco.visibility) ? job_ksco.visibility : 'private',
+        confirmed_at: job_ksco.confirmed_at || new Date().toISOString().slice(0, 10),
+        review_due: job_ksco.review_due || null,
+      };
+    }
+    // 코드 형식이 어긋나면 조용히 무시(저장 자체를 막지 않음) — 프로필
+    // 등록 실패의 사유가 되기엔 너무 지엽적인 필드(§0 U0: 실패보다 진행).
+  }
+
   const newExtraPublic = {
     ...(prevExtra.public || {}),
-    identity: { _schema_version: '2.0', display_name: name, description, tags, entity_subtype: body.entity_subtype || null },
+    identity: {
+      _schema_version: '2.0', display_name: name, description, tags,
+      entity_subtype: body.entity_subtype || null,
+      // 'job_ksco' in body로 "안 보냄(기존값 보존)"과 "null 명시(비움)"를 구분.
+      job_ksco: ('job_ksco' in body) ? resolvedJobKsco : ((prevExtra.public || {}).identity?.job_ksco ?? null),
+    },
     activity: { timezone: 'Asia/Seoul', hours, holidays },
     contact:  { phone_display: phone, phone_visible: !!phone_visible, website, sns_public, languages_spoken },
     location: { region, address_short: address, directions, parking },
