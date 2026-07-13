@@ -55,6 +55,16 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
 .claim-sub{font-size:12.5px;color:#9ca3af;font-weight:400;margin-top:2px}
 .badge-unclaimed{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
 
+/* ── 예약하기 (2026-07-13 신설) ── */
+.resv-field{padding:9px 20px}
+.resv-label{font-size:12.5px;color:#6b7280;font-weight:600;margin-bottom:6px}
+.resv-input{width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:9px 12px;
+  font-size:14px;font-family:inherit;outline:none}
+.resv-input:focus{border-color:#007b8b}
+.resv-deposit-notice{margin:0 20px 10px;padding:10px 12px;background:#fef3c7;
+  border:1px solid #fde68a;border-radius:10px;font-size:12.5px;color:#92400e;display:none}
+.resv-status{padding:9px 20px;font-size:13px;color:#6b7280}
+
 /* ── Suggest an edit / 신고 (비소유자 전용) ── */
 .btn-pill-ghost{display:inline-flex;align-items:center;gap:6px;padding:11px 20px;
   border:1px solid #e5e7eb;border-radius:999px;background:#fff;color:#374151;
@@ -399,6 +409,30 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
   </div>
 
 
+  <!-- 예약하기 (2026-07-13 신설, reservation_config 있는 사업자만 노출) -->
+  <div class="card hidden" id="card-reservation">
+    <div class="card-title">예약하기</div>
+    <div class="resv-field" id="resv-slot-field">
+      <div class="resv-label">방문 일시</div>
+      <input type="datetime-local" class="resv-input" id="resv-start">
+    </div>
+    <div class="resv-field hidden" id="resv-range-field">
+      <div class="resv-label">종료 일시</div>
+      <input type="datetime-local" class="resv-input" id="resv-end">
+    </div>
+    <div class="resv-field">
+      <div class="resv-label">요청사항(선택)</div>
+      <input type="text" class="resv-input" id="resv-note" placeholder="예: 창가 자리 원해요">
+    </div>
+    <div class="resv-deposit-notice" id="resv-deposit-notice">
+      🌡️ 신뢰도 온도가 낮아 보증금 결제 후 예약이 확정됩니다.
+    </div>
+    <div class="pill-wrap" style="border-top:none">
+      <button class="btn-pill-outline" id="resv-submit-btn" onclick="_submitReservation()">예약 요청</button>
+    </div>
+    <div class="resv-status hidden" id="resv-status"></div>
+  </div>
+
   <!-- 업종 정보 (industry_fields) -->
   <div class="card hidden" id="card-industry">
     <div class="card-title">업종 정보</div>
@@ -631,6 +665,15 @@ function render(p) {
 
   // ── 신뢰도 온도 배지 (2026-07-13 신설) ──
   _renderTempBadge(p.guid);
+
+  // ── 예약하기 노출 제어 (2026-07-13 신설) ──
+  const rc = pub.industry_fields?.reservation_config || null;
+  document.getElementById('card-reservation').classList.toggle('hidden', !(rc && rc.enabled) || _isOwner);
+  if (rc && rc.enabled) {
+    document.getElementById('resv-slot-field').classList.toggle('hidden', rc.mode === 'range');
+    document.getElementById('resv-range-field').classList.toggle('hidden', rc.mode !== 'range' && rc.mode !== 'both');
+    _checkDepositNotice(p.guid, rc);
+  }
 
   // 소개
   const desc = ident.description || p.description || '';
@@ -1178,6 +1221,81 @@ function _reportProfile() {
   if (!document.getElementById('ai-chat-box')?.classList.contains('open')) toggleAIChat();
   document.getElementById('ai-section')?.scrollIntoView({ behavior: 'smooth' });
   input.focus();
+}
+
+// ── 예약 보증금 필요 여부 사전 안내 (2026-07-13 신설) ──────
+async function _checkDepositNotice(myGuid, rc) {
+  const notice = document.getElementById('resv-deposit-notice');
+  if (!myGuid) { notice.style.display = 'none'; return; }
+  try {
+    const res = await fetch(`${PROXY}/biz/temperature?guid=${encodeURIComponent(myGuid)}`);
+    const data = await res.json().catch(() => ({}));
+    const temp = (data.ok && typeof data.temp_score === 'number') ? data.temp_score : _DEFAULT_TEMP;
+    const threshold = typeof rc.deposit_temp_threshold === 'number' ? rc.deposit_temp_threshold : _DEFAULT_TEMP;
+    notice.style.display = temp < threshold ? 'block' : 'none';
+  } catch (e) {
+    notice.style.display = 'none';
+  }
+}
+
+// ── 예약 요청 제출 (2026-07-13 신설) ────────────────────────
+// 보증금이 필요한 경우, v1에서는 별도 결제 UI를 새로 만들지 않고
+// AI 비서 대화로 안내한다(Claim this business와 동일한 이유 — 서명이
+// 필요한 흐름은 대화 경로로 먼저 열고, 전용 UI는 후속 패치에서 붙인다).
+async function _submitReservation() {
+  const statusEl = document.getElementById('resv-status');
+  const startEl  = document.getElementById('resv-start');
+  const endEl    = document.getElementById('resv-end');
+  const noteEl   = document.getElementById('resv-note');
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { stored = null; }
+  const myGuid = stored?.ipv6 || stored?.guid || null;
+  if (!myGuid) { statusEl.textContent = '⚠️ 로그인이 필요합니다.'; statusEl.classList.remove('hidden'); return; }
+  if (!startEl.value) { statusEl.textContent = '⚠️ 방문 일시를 선택해 주세요.'; statusEl.classList.remove('hidden'); return; }
+
+  const rc = _profile?.extra?.public?.industry_fields?.reservation_config || {};
+  const reservationType = rc.mode === 'range' ? 'range' : 'slot';
+
+  document.getElementById('resv-submit-btn').disabled = true;
+  statusEl.textContent = '⏳ 예약 요청 중…';
+  statusEl.classList.remove('hidden');
+
+  try {
+    const res = await fetch(`${PROXY}/biz/reservation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid: myGuid, seller_guid: _profile.guid, reservation_type: reservationType,
+        start_at: new Date(startEl.value).toISOString(),
+        end_at: reservationType === 'range' && endEl.value ? new Date(endEl.value).toISOString() : null,
+        note: noteEl.value || '',
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 402 && data.error === 'DEPOSIT_REQUIRED') {
+      statusEl.textContent = '';
+      const input = document.getElementById('ai-input');
+      if (input) {
+        input.value = `${_profile?.name || ''}에 예약하고 싶은데 보증금이 필요하다고 해요. 도와주세요.`;
+        if (!document.getElementById('ai-chat-box')?.classList.contains('open')) toggleAIChat();
+        document.getElementById('ai-section')?.scrollIntoView({ behavior: 'smooth' });
+        sendAIMsg();
+      }
+      return;
+    }
+    if (!res.ok || !data.ok) {
+      statusEl.textContent = `⚠️ 예약 실패: ${data.detail || data.error || res.status}`;
+      document.getElementById('resv-submit-btn').disabled = false;
+      return;
+    }
+    statusEl.textContent = data.status === 'confirmed'
+      ? '✅ 예약이 확정됐어요!'
+      : '✅ 예약 요청 완료 — 사업자 승인을 기다리고 있어요.';
+    document.getElementById('resv-submit-btn').disabled = false;
+  } catch (e) {
+    statusEl.textContent = `⚠️ 오류: ${e.message}`;
+    document.getElementById('resv-submit-btn').disabled = false;
+  }
 }
 
 function _startCheckout() {

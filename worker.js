@@ -2378,6 +2378,8 @@ export default {
     // handleBizReview는 하단에 DEPRECATED로 남겨두되 라우팅에서 제거함.
     if (pathname === '/biz/trade-rating' && request.method === 'POST') return handleTradeRatingSubmit(request, env, corsHeaders);
     if (pathname === '/biz/temperature'  && request.method === 'GET')  return handleTemperatureQuery(request, env, corsHeaders);
+    if (pathname === '/biz/reservation'        && request.method === 'POST')  return handleReservationCreate(request, env, corsHeaders);
+    if (pathname === '/biz/reservation/status' && request.method === 'PATCH') return handleReservationStatus(request, env, corsHeaders);
     if (pathname === '/biz/product' && request.method === 'POST') return handleBizProduct(request, env, corsHeaders);
     // ★ 2026-07-09 신설 — 짜장면 주문 사고실험 1단계: 프로필-to-프로필
     // AI 메시징(예: 손님의 AI가 식당의 AI에게 주문을 전달). /ai/chat(기존,
@@ -7879,6 +7881,158 @@ async function handleTemperatureQuery(request, env, corsHeaders) {
     return new Response(JSON.stringify({ ok: true, temp_score: null, badge: 'new_seller', count }), { status: 200, headers: corsHeaders });
   }
   return new Response(JSON.stringify({ ok: true, temp_score: profile.temp_score ?? DEFAULT_TEMP, badge: null, count }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-13 신설 — 예약(reservations)
+//   시간대(slot)/날짜단위(range) 둘 다 지원. 확정 방식(confirm_mode)과
+//   보증금 온도 임계값(deposit_temp_threshold)은 사업자가
+//   industry_fields.reservation_config에 설정한 값을 예약 생성 시점에
+//   스냅샷한다(trade_ratings의 rater_temp_snapshot과 동일 원칙 — 이후
+//   사업자가 설정을 바꿔도 이미 생성된 예약엔 소급 적용되지 않음).
+//   보증금은 별도 결제 시스템을 새로 만들지 않고 기존 /biz/order
+//   (contract_type='escrow')의 tx_hash를 deposit_order_tx_hash로 참조만
+//   한다 — 그 tx의 실재성 검증(blocks 조회)은 v1에서는 생략하고 존재
+//   여부만 확인한다(TODO: trade-rating처럼 blocks 조회로 당사자·금액까지
+//   검증하는 건 후속 패치 — 이번 범위는 예약 스케줄링 자체).
+// ═══════════════════════════════════════════════════════════
+const RESERVATION_ALLOWED_TYPES   = new Set(['slot', 'range']);
+const RESERVATION_ALLOWED_STATUS  = new Set(['pending', 'confirmed', 'cancelled', 'completed', 'no_show']);
+const RESERVATION_DEPOSIT_TEMP_DEFAULT = 36.5; // DEFAULT_TEMP와 동일 값 — 별도 상수로 분리(설정 가능성 대비)
+
+// 요청/전이 유효성 — {현재상태: {허용 다음상태 집합}}
+const RESERVATION_TRANSITIONS = {
+  pending:   new Set(['confirmed', 'cancelled']),
+  confirmed: new Set(['cancelled', 'completed', 'no_show']),
+};
+
+// POST /biz/reservation — 예약 생성
+async function handleReservationCreate(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const {
+    guid, seller_guid, reservation_type, start_at, end_at = null,
+    deposit_order_tx_hash = null, note = '',
+  } = body;
+
+  if (!guid)              return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!seller_guid)       return _err(400, 'MISSING_FIELD', 'seller_guid 필수', corsHeaders);
+  if (!reservation_type)  return _err(400, 'MISSING_FIELD', 'reservation_type 필수', corsHeaders);
+  if (!RESERVATION_ALLOWED_TYPES.has(reservation_type)) {
+    return _err(400, 'INVALID_TYPE', `reservation_type은 slot/range만 허용됩니다`, corsHeaders);
+  }
+  if (!start_at) return _err(400, 'MISSING_FIELD', 'start_at 필수', corsHeaders);
+  if (reservation_type === 'range' && !end_at) {
+    return _err(400, 'MISSING_FIELD', 'range 예약은 end_at 필수', corsHeaders);
+  }
+
+  const homeNodeId = (await _resolveHomeL1Node(env, seller_guid)) || 'KR-JEJU-JEJU-HANLIM';
+  const l1Base = L1_NODE_MAP[homeNodeId] || L1_DEFAULT;
+  const token  = await _l1AdminTokenFor(env, l1Base);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  // 1) 사업자 예약 설정 조회
+  const sellerFilter = encodeURIComponent(`guid='${seller_guid}'`);
+  const sellerRes = await fetch(`${l1Base}/api/collections/profiles/records?filter=${sellerFilter}&perPage=1`, { headers });
+  const sellerData = await sellerRes.json().catch(() => ({ items: [] }));
+  const sellerProfile = sellerData.items?.[0];
+  if (!sellerProfile) return _err(404, 'SELLER_NOT_FOUND', '사업자 프로필을 찾을 수 없습니다', corsHeaders);
+
+  const rc = sellerProfile.extra?.public?.industry_fields?.reservation_config || null;
+  if (!rc || !rc.enabled) {
+    return _err(400, 'NOT_RESERVABLE', '이 사업자는 예약을 받지 않습니다', corsHeaders);
+  }
+  if (rc.mode !== 'both' && rc.mode !== reservation_type) {
+    return _err(400, 'TYPE_NOT_SUPPORTED', `이 사업자는 ${rc.mode} 방식만 지원합니다`, corsHeaders);
+  }
+  const confirmMode = rc.confirm_mode === 'manual' ? 'manual' : 'auto';
+  const depositThreshold = typeof rc.deposit_temp_threshold === 'number'
+    ? rc.deposit_temp_threshold : RESERVATION_DEPOSIT_TEMP_DEFAULT;
+
+  // 2) 요청자 온도 조회 — /biz/temperature와 동일 로직(내부 재사용)
+  const requesterFilter = encodeURIComponent(`guid='${guid}'`);
+  const requesterRes = await fetch(`${l1Base}/api/collections/profiles/records?filter=${requesterFilter}&perPage=1`, { headers });
+  const requesterData = await requesterRes.json().catch(() => ({ items: [] }));
+  const requesterProfile = requesterData.items?.[0];
+  const requesterTemp = requesterProfile?.temp_score ?? DEFAULT_TEMP; // 신규 사용자는 기본값(온도 배지 렌더링 규칙과 동일)
+
+  const depositRequired = requesterTemp < depositThreshold;
+  if (depositRequired && !deposit_order_tx_hash) {
+    return _err(402, 'DEPOSIT_REQUIRED',
+      `신뢰도 온도(${requesterTemp.toFixed(1)}°)가 기준(${depositThreshold}°) 미만이라 보증금 결제가 필요합니다`,
+      corsHeaders);
+  }
+
+  // 3) 예약 레코드 생성
+  const now = new Date().toISOString();
+  const record = {
+    guid, seller_guid, reservation_type, start_at, end_at,
+    status: confirmMode === 'manual' ? 'pending' : 'confirmed',
+    confirm_mode: confirmMode,
+    deposit_required: depositRequired,
+    deposit_order_tx_hash: deposit_order_tx_hash || null,
+    note: String(note || '').slice(0, 500),
+    created_at: now, updated_at: now,
+  };
+
+  const insRes = await fetch(`${l1Base}/api/collections/reservations/records`, {
+    method: 'POST', headers, body: JSON.stringify(record),
+  });
+  if (!insRes.ok) return _err(500, 'INSERT_FAILED', await insRes.text(), corsHeaders);
+  const inserted = await insRes.json().catch(() => null);
+
+  return new Response(JSON.stringify({
+    ok: true, reservation_id: inserted?.id || null,
+    status: record.status, deposit_required: depositRequired,
+  }), { status: 201, headers: corsHeaders });
+}
+
+// PATCH /biz/reservation/status — 상태 전이(확정/취소/완료/노쇼)
+// 원칙: pending→confirmed/cancelled, confirmed→cancelled/completed/no_show만 허용.
+// TODO: actor_guid가 실제로 seller_guid/guid 당사자인지 서명 검증은 이번 범위 밖
+// (handleProfileClaim류 Ed25519 서명 검증 패턴을 후속 패치에서 적용 필요 —
+// 지금은 profile.html이 로그인 세션의 guid를 그대로 보내는 경량 체크만 수행).
+async function handleReservationStatus(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { reservation_id, actor_guid, new_status } = body;
+  if (!reservation_id) return _err(400, 'MISSING_FIELD', 'reservation_id 필수', corsHeaders);
+  if (!actor_guid)     return _err(400, 'MISSING_FIELD', 'actor_guid 필수', corsHeaders);
+  if (!RESERVATION_ALLOWED_STATUS.has(new_status)) {
+    return _err(400, 'INVALID_STATUS', 'new_status 값이 올바르지 않습니다', corsHeaders);
+  }
+
+  // reservation_id만으로는 어느 L1인지 알 수 없으므로, seller_guid 매핑을
+  // 못 쓰는 대신 요청 본문에 seller_guid를 함께 받아 홈 노드를 찾는다.
+  const { seller_guid } = body;
+  if (!seller_guid) return _err(400, 'MISSING_FIELD', 'seller_guid 필수(홈 노드 조회용)', corsHeaders);
+
+  const homeNodeId = (await _resolveHomeL1Node(env, seller_guid)) || 'KR-JEJU-JEJU-HANLIM';
+  const l1Base = L1_NODE_MAP[homeNodeId] || L1_DEFAULT;
+  const token  = await _l1AdminTokenFor(env, l1Base);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const getRes = await fetch(`${l1Base}/api/collections/reservations/records/${reservation_id}`, { headers });
+  if (!getRes.ok) return _err(404, 'NOT_FOUND', '예약을 찾을 수 없습니다', corsHeaders);
+  const existing = await getRes.json().catch(() => null);
+  if (!existing) return _err(404, 'NOT_FOUND', '예약을 찾을 수 없습니다', corsHeaders);
+
+  if (actor_guid !== existing.guid && actor_guid !== existing.seller_guid) {
+    return _err(403, 'NOT_A_PARTICIPANT', '예약 당사자만 상태를 변경할 수 있습니다', corsHeaders);
+  }
+  const allowedNext = RESERVATION_TRANSITIONS[existing.status];
+  if (!allowedNext || !allowedNext.has(new_status)) {
+    return _err(400, 'INVALID_TRANSITION', `${existing.status} → ${new_status} 전이는 허용되지 않습니다`, corsHeaders);
+  }
+
+  const patchRes = await fetch(`${l1Base}/api/collections/reservations/records/${reservation_id}`, {
+    method: 'PATCH', headers,
+    body: JSON.stringify({ status: new_status, updated_at: new Date().toISOString() }),
+  });
+  if (!patchRes.ok) return _err(500, 'UPDATE_FAILED', await patchRes.text(), corsHeaders);
+
+  return new Response(JSON.stringify({ ok: true, reservation_id, status: new_status }), { status: 200, headers: corsHeaders });
 }
 
 // POST /biz/catalog/sync — 로컬 IndexedDB 전체 스냅샷을 서버 백업/공개미러에 반영
