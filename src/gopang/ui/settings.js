@@ -657,14 +657,14 @@ export async function openGopangWallet() {
 
   try {
     const { PROXY } = await import('../core/state.js');
-    // Supabase에서 fs_ledger 조회
-    const { _SUPABASE_URL, _SUPABASE_KEY } = await import('../core/state.js').catch(() => ({}));
 
-    // extra.fs에서 잔액 조회
-    const profileRes = await fetch(`${L1_URL}?filter=${encodeURIComponent("guid='" + guid + "'")}&perPage=1`);
-    const profileData = await profileRes.json().catch(() => ({}));
-    const _profile = profileData.items?.[0] || profileData.profile || profileData;
-    const fs = _profile?.extra?.public?.finance?.fs || {};
+    // 2026-07-13 신설 — 재무제표(fs)는 서버 프로필 레코드에 저장된 적이
+    // 없다(사고실험으로 발견 — extra.public.finance.fs 경로가 애초에
+    // 아무도 값을 쓴 적 없는 빈 자리라 이 화면이 항상 ₮0만 보여주고
+    // 있었다). fs는 로컬 지갑(IndexedDB)이 유일한 원본이므로 거기서
+    // 직접 읽는다.
+    const wallet = window.gopangWallet;
+    const fs = wallet?.getFinancialState ? await wallet.getFinancialState() : {};
     const balance = fs['bs-cash'] ?? 0;
 
     // pdv_log에서 거래 기록 조회
@@ -718,10 +718,10 @@ export async function openGopangWallet() {
 }
 
 window._openWalletTxDetail = async function() {
-  const user = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
-  const profileRes = await fetch(`${L1_URL}?filter=${encodeURIComponent("guid='" + user.ipv6 + "'")}&perPage=1`);
-  const profileData = await profileRes.json().catch(() => ({}));
-  const fs = profileData.profile?.extra?.public?.finance?.fs || {};
+  // 2026-07-13 신설 — 위 openGopangWallet과 동일한 이유로 로컬 지갑에서
+  // 직접 읽는다(서버 profile 레코드엔 fs가 저장된 적이 없었음).
+  const wallet = window.gopangWallet;
+  const fs = wallet?.getFinancialState ? await wallet.getFinancialState() : {};
 
   let txRecord = {};
   try { txRecord = JSON.parse(fs['last_tx_record'] || '{}'); } catch {}
@@ -759,18 +759,22 @@ export async function openFinancialStatement() {
   _openSheet('재무제표', '<div style="padding:40px 16px;text-align:center;color:#9ca3af;font-size:14px">로딩 중...</div>');
 
   try {
-    const user = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
-    const guid = user.ipv6 || '';
-
-    const profileRes = await fetch(`${L1_URL}?filter=${encodeURIComponent("guid='" + guid + "'")}&perPage=1`);
-    const profileData = await profileRes.json().catch(() => ({}));
-    const _profile = profileData.items?.[0] || profileData.profile || profileData;
-    const fs = _profile?.extra?.public?.finance?.fs || {};
+    // 2026-07-13 신설 — 위 두 함수와 동일한 이유로 로컬 지갑에서 직접
+    // 읽는다(서버 profile 레코드엔 fs가 저장된 적이 없어 이 화면 전체가
+    // 지금까지 항상 ₮0만 보여주고 있었을 가능성이 높음 — 사고실험으로
+    // 발견).
+    const wallet = window.gopangWallet;
+    const fs = wallet?.getFinancialState ? await wallet.getFinancialState() : {};
 
     const bsCash     = fs['bs-cash']     || 0;
     const plPurchase = fs['pl-purchase'] || 0;
     const plRevenue  = fs['pl-revenue']  || 0;
-    const netIncome  = plRevenue - plPurchase;
+    // 2026-07-13 신설 — GDC-재무제표-재고 연동 4단계(매출원가). 원가를
+    // 알려준 상품에 한해서만 계산되므로(모든 판매를 다 커버하지 않음)
+    // 전체 지출 기준 순이익(netIncome)과 별개로 표시한다.
+    const plCogs      = fs['pl-cogs'] || 0;
+    const grossProfit = plRevenue - plCogs;
+    const netIncome   = plRevenue - plPurchase;
     const lastUpdated = fs['last_updated_at']
       ? new Date(fs['last_updated_at']).toLocaleString('ko-KR')
       : '거래 없음';
@@ -810,10 +814,14 @@ export async function openFinancialStatement() {
         ${_title('손익계산서 (P&L)', '#3b82f6')}
         ${_card(
           _row('수입 (pl-revenue)', '+₮' + plRevenue.toLocaleString(), 'green') +
-          _row('지출 (pl-purchase)', '-₮' + plPurchase.toLocaleString(), 'red') +
+          (plCogs > 0 ? _row('매출원가 (pl-cogs)', '-₮' + plCogs.toLocaleString(), 'red') : '') +
+          (plCogs > 0 ? _row('매출총이익 (Gross Profit)', (grossProfit >= 0 ? '+' : '') + '₮' + grossProfit.toLocaleString(),
+               grossProfit >= 0 ? 'green' : 'red') : '') +
+          _row('지출 전체 (pl-purchase)', '-₮' + plPurchase.toLocaleString(), 'red') +
           _row('순이익', (netIncome >= 0 ? '+' : '') + '₮' + netIncome.toLocaleString(),
                netIncome >= 0 ? 'green' : 'red', true)
         )}
+        ${plCogs > 0 ? '<div style="text-align:center;font-size:11px;color:#9ca3af;padding:0 0 8px">매출원가는 원가를 알려주신 상품에 한해서만 계산됩니다</div>' : ''}
         ${_notice}`,
 
       cf: `
