@@ -1,0 +1,29 @@
+# hondi-proxy Cloudflare Worker 배포 설정
+# 2026-07-12 — CI/CD 자동배포 구축(수동 복사-붙여넣기 방식 근본 해결).
+#
+# 바인딩은 Cloudflare 대시보드(Workers & Pages > hondi-proxy > Bindings)
+# 실사 확인 + `wrangler kv namespace list`로 정확한 ID 확보한 값을
+# 그대로 반영했다 — 추측으로 만들지 않았다.
+#
+# RATE_LIMIT_KV는 대시보드에 없어서 여기 안 넣는다(worker.js가
+# `if(env.RATE_LIMIT_KV)`로 방어적으로 처리하므로 없어도 안전하게
+# 스킵됨 — _checkRateLimit 함수 참조).
+# QR_SESSIONS_KV는 현재 worker.js 코드에서 실제로는 안 쓰이지만
+# (grep으로 참조 0건 확인), 기존 배포 설정을 그대로 유지하기 위해
+# 넣어둔다 — 임의로 빼면 대시보드 설정과 어긋난다.
+
+name = "hondi-proxy"
+main = "worker.js"
+compatibility_date = "2026-07-12"
+
+[[kv_namespaces]]
+binding = "AI_SETUP_SEALS_KV"
+id = "e1ae4dd08b344f9c9208ea4235e17d3e"
+
+[[kv_namespaces]]
+binding = "QR_SESSIONS_KV"
+id = "af7cad0be99e4072bbca8d81d71edd98"
+
+[[services]]
+binding = "AGENT_SIGNER"
+service = "gopang-agent-signer"

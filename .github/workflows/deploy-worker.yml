@@ -1,0 +1,30 @@
+name: Deploy hondi-proxy Worker
+
+# 2026-07-12 — worker.js를 매번 Cloudflare 대시보드에 수동 복사-붙여넣기
+# 하던 방식의 근본 해결책. worker.js나 wrangler.toml이 main에 push되면
+# 자동으로 hondi-proxy Worker에 배포한다.
+#
+# 필요한 GitHub Secrets(Settings > Secrets and variables > Actions):
+#   CLOUDFLARE_API_TOKEN   — Workers Scripts:Edit 권한의 Custom Token
+#   CLOUDFLARE_ACCOUNT_ID  — 8897e584cfc42457b462f76fdcf6e157
+# (2026-07-12 세션에서 이미 등록 완료 확인됨)
+
+"on":
+  push:
+    branches: [main]
+    paths:
+      - 'worker.js'
+      - 'wrangler.toml'
+  workflow_dispatch:  # 수동 실행도 가능(Actions 탭에서 Run workflow)
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
