@@ -3,7 +3,7 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : Jeju Special Self-Governing Province Office — Core System Prompt
 # 문서 코드  : SP-DO-000
-# 버전      : v1.3
+# 버전      : v1.4
 # 상위 상속  : UNIVERSAL-INTEGRITY → UNIVERSAL-common(U1~U10) → kgov
 #             (SP-10_kpublic, 전국 광역시도 공통) → JEJU-GOV-COMMON-OVERLAY
 #             → JEJU-TREE-PROTOCOL → 본 문서
@@ -24,6 +24,12 @@
 #
 # 버전 변경 이력
 # ─────────────────────────────────────────────────
+# v1.4 (2026-07-13): SP-ORG-JDC 분류오류 정리 — §3-4 출자기관 목록표에서
+#                    제거(국토교통부 산하 국가공기업, 도청 소관 아님).
+#                    §4-1 org: 매핑표는 이전 턴에 이미 제외돼 있었음.
+#                    레거시 파일 prompts/Jejudo/07-org/SP-ORG-JDC_v1.0.md
+#                    삭제, jeju-gov-sp-hierarchy.md·SP-ORGDIV-TEMPLATE의
+#                    관련 참조도 함께 정정.
 # v1.3 (2026-07-13): 사고실험 후속과제 ISSUE-3 반영 — §4-1 매핑표에
 #                    `org:` 26개(출자·출연기관) 등록. 07-org 27개 SP는
 #                    이미 본 문서를 상속해 §4-2 자체는 구조적으로
@@ -150,9 +156,15 @@
 | SP-ORG-JPDC | 제주특별자치도개발공사 (제주삼다수 등) |
 | SP-ORG-JTO | 제주관광공사 |
 | SP-ORG-JEA | 제주에너지공사 |
-| SP-ORG-JDC | 제주국제자유도시개발센터 |
 | SP-ORG-JERI | 제주연구원 |
 | SP-ORG-JEDA | 제주경제통상진흥원 |
+
+> **2026-07-13 정정**: 이전까지 이 표에 있던 "SP-ORG-JDC 제주국제자유도시개발센터"는
+> 제거했다 — 제주도 출자·출연기관이 아니라 국토교통부 산하 국가공기업이라
+> 도청 라우팅 대상이 아니다(§4-1 org: 매핑표에서도 이미 같은 사유로 제외돼
+> 있었다). 국가기관 트리에 `SP-NAT-ENT-JDC`로 이미 정확히 분류돼 있다.
+> `prompts/Jejudo/07-org/SP-ORG-JDC_v1.0.md`는 중복·오분류 레거시 파일이라
+> 삭제했다.
 
 ## §4. 체인 조립 규칙 요약 (상세는 jeju-gov-sp-hierarchy.md 참조)
 
