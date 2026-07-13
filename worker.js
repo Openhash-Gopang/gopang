@@ -3256,6 +3256,17 @@ async function _l1SearchEntities(env, { q, etype, occupation, address, lat, lng,
   const data = await res.json().catch(() => ({ items: [] }));
 
   const qLower = (q || '').toLowerCase();
+  // 2026-07-13 신설 — field_visibility 서버측 필터링. profile.html은
+  // 이제까지 phone_visible 같은 플래그를 "표시 여부"로만 썼을 뿐,
+  // 서버 응답 자체는 항상 원본 전체를 그대로 내려주고 있었다(실사로
+  // 발견 — 클라이언트가 숨겨도 API를 직접 호출하면 비공개 필드가 그대로
+  // 보임). 검색 결과(가장 광범위하게 노출되는 경로)부터 서버에서
+  // 실제로 걸러 내려보낸다.
+  const _isFieldVisible = (fv, field) => {
+    const DEFAULT_PUBLIC_FIELDS = new Set(['products']);
+    if (fv && typeof fv[field] === 'boolean') return fv[field];
+    return DEFAULT_PUBLIC_FIELDS.has(field);
+  };
   const scored = (data.items || []).map(p => {
     let rank = 1.0;
     if (qLower) {
@@ -3266,10 +3277,26 @@ async function _l1SearchEntities(env, { q, etype, occupation, address, lat, lng,
       if (rank === 0) rank = 0.5; // 단어별 매칭은 됐지만 원문 전체는 안 겹치는 경우(AND 필터를 통과했으므로 최소 점수는 준다)
     }
     const distance_km = _haversineKm(lat, lng, p.lat, p.lng);
+    const fv = p.extra?.public?.field_visibility || {};
+    const filteredExtra = p.extra ? {
+      ...p.extra,
+      public: p.extra.public ? {
+        ...p.extra.public,
+        location: _isFieldVisible(fv, 'address') ? p.extra.public.location
+          : { ...p.extra.public.location, address_short: undefined, directions: undefined },
+        contact: _isFieldVisible(fv, 'phone') ? p.extra.public.contact
+          : { ...p.extra.public.contact, phone_display: undefined },
+        identity: _isFieldVisible(fv, 'description') ? p.extra.public.identity
+          : { ...p.extra.public.identity, description: undefined },
+        products: _isFieldVisible(fv, 'products') ? p.extra.public.products : undefined,
+      } : p.extra.public,
+    } : p.extra;
     return {
       guid: p.guid, name: p.name, handle: p.handle, entity_type: p.entity_type,
-      address: p.address, phone: p.extra?.core?.phone ?? null,
-      website: p.extra?.core?.website ?? null, extra: p.extra,
+      address: _isFieldVisible(fv, 'address') ? p.address : null,
+      phone: _isFieldVisible(fv, 'phone') ? (p.extra?.core?.phone ?? null) : null,
+      website: _isFieldVisible(fv, 'website') ? (p.extra?.core?.website ?? null) : null,
+      extra: filteredExtra,
       primary_guid: p.guid, occupation: p.occupation,
       rank, distance_km,
     };
@@ -7389,6 +7416,20 @@ async function handleProfilePost(request, env, corsHeaders) {
     region = '', directions = '', parking = false,
     gdc_accepted = false, currencies = ['KRW'], price_range = '',
     phone_visible = false,
+    // 2026-07-13 신설 — products_structured가 여태 이 함수 destructure에
+    // 없어 저장 경로 자체가 없었다(실사로 발견 — welcome.js
+    // _forwardProductsToMarket()이 Market의 seller_products로는 보냈지만,
+    // 프로필 레코드 자신에는 한 번도 저장된 적이 없다. profile.html의
+    // "판매 상품" 카드는 처음부터 p.products/pub.products 배열을
+    // 기대하고 있었는데 그 값이 항상 undefined라 카드 자체가 한 번도
+    // 렌더링된 적이 없었을 가능성이 높다). 여기서 profile 레코드에도
+    // 함께 저장해 profile.html이 실제로 읽을 수 있게 한다.
+    products_structured = [],
+    // 2026-07-13 신설 — 필드별 공개/비공개 토글. 기존 phone_visible
+    // 패턴(단일 필드 전용)을 일반화한 것. 명시 안 하면 필드별 기본값을
+    // 따른다(DEFAULT_PUBLIC_FIELDS 참조 — products만 기본 공개, 나머지는
+    // 기본 비공개).
+    field_visibility = {},
     // 2026-07-05: search_entities RPC의 p_occupation, /pdv/page 표시 페이지의
     // p.occupation이 참조하는 컬럼이지만, 지금까지 이 함수의 destructuring
     // 목록에 없어 저장 경로 자체가 없었다(실사로 발견 — 상시 null이었음).
@@ -7496,6 +7537,19 @@ async function handleProfilePost(request, env, corsHeaders) {
 
   // extra.public 병합 (기존 extra 보존, public 섹션만 갱신)
   const prevExtra = existing?.extra || {};
+
+  // 2026-07-13 신설 — 필드별 공개/비공개 기본값. 명시 안 된 필드는
+  // products만 기본 공개(디폴트 발견성), 나머지는 기본 비공개(안전
+  // 우선 — is_public 기본값을 false로 바꾼 것과 동일한 원칙).
+  const DEFAULT_PUBLIC_FIELDS = new Set(['products']);
+  const VISIBILITY_FIELDS = ['address', 'phone', 'website', 'description', 'products', 'hours'];
+  const resolvedFieldVisibility = {};
+  for (const f of VISIBILITY_FIELDS) {
+    resolvedFieldVisibility[f] = (typeof field_visibility[f] === 'boolean')
+      ? field_visibility[f]
+      : DEFAULT_PUBLIC_FIELDS.has(f);
+  }
+
   const newExtraPublic = {
     ...(prevExtra.public || {}),
     identity: { _schema_version: '2.0', display_name: name, description, tags, entity_subtype: body.entity_subtype || null },
@@ -7503,6 +7557,11 @@ async function handleProfilePost(request, env, corsHeaders) {
     contact:  { phone_display: phone, phone_visible: !!phone_visible, website, sns_public, languages_spoken },
     location: { region, address_short: address, directions, parking },
     finance:  { gdc_accepted, currencies, price_range },
+    // 2026-07-13 신설 — products_structured를 profile 레코드 자신에도
+    // 저장(위 destructure 주석 참조). 'products_structured' in body로
+    // "안 보냄(보존)"과 "빈 배열을 명시적으로 보냄(비움)"을 구분한다.
+    products: ('products_structured' in body) ? products_structured : ((prevExtra.public || {}).products ?? []),
+    field_visibility: resolvedFieldVisibility,
     // 2026-06-22: 업종/유형별 확장 슬롯(profile_pdv_schema_plan_v1.md Phase 1).
     // 'industry_fields' in body로 "필드 자체를 안 보냄(보존)"과 "null을 명시적으로 보냄(비움)"을 구분.
     industry_fields: ('industry_fields' in body) ? body.industry_fields : ((prevExtra.public || {}).industry_fields ?? null),
