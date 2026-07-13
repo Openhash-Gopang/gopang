@@ -135,7 +135,11 @@ export async function handleProfileSubmit(aiResponseText) {
     // ── 그림자 SP 즉시 로드 (플래그 리셋 직후) ──
     await loadPersonalAssistantSP();
 
-    return true;
+    // 2026-07-13 변경 — boolean 대신 저장된 profile 객체를 반환한다.
+    // 기존 호출부(call-ai.js, pages/profile-assistant.html) 둘 다 반환값을
+    // 쓰지 않고 있어(grep으로 확인) 안전한 변경 — 호출자가 GWP_DONE
+    // 요약을 만들 때 이 값을 그대로 재사용할 수 있게 하기 위함.
+    return profile;
   } catch (e) {
     console.error('[Profile] 등록 오류:', e.message);
     appendBubble('ai', `⚠️ 프로필 등록 중 오류가 발생했습니다: ${e.message}\n잠시 후 다시 시도해 주세요.`);

@@ -284,6 +284,30 @@ function _stripInternalTags(s) {
 }
 
 let _closing = false;
+// ── 프로필 완성 요약 (2026-07-13 신설) ──────────────────────
+// GWP_DONE의 summary로 실려 나가면 engine.js가 채팅 버블에 자동 표시한다
+// (다른 GWP 서비스와 동일 메커니즘). profile-assistant SP의 [§PROFILE_CARD]
+// 포맷(이모지+한 줄)을 클라이언트 쪽에서 동일하게 재현 — 두 표현이
+// 어긋나지 않도록 SP 문서 쪽 포맷을 바꾸면 여기도 함께 갱신해야 한다.
+function _buildProfileSummaryText(profile) {
+  const isBiz = profile.entity_type && profile.entity_type !== 'person';
+  const label = profile.name || profile.nickname || '(이름 미상)';
+  const lines = [];
+  if (!isBiz) {
+    lines.push(`👤 ${label}`);
+    if (profile.address) lines.push(`📍 ${profile.address}`);
+    if (profile.phone)   lines.push(`📞 ${profile.phone}`);
+    lines.push(profile.is_public ? '🌐 다른 이용자에게 공개돼요' : '🔒 비공개로 둘게요');
+  } else {
+    lines.push(`🏪 ${label}`);
+    if (profile.address) lines.push(`📍 ${profile.address}`);
+    if (profile.products) lines.push(`🍜 ${profile.products}`);
+    if (profile.gdc_accepted) lines.push('💳 GDC 결제도 받아요');
+    lines.push(profile.is_public ? '🌐 K-Market 등에서 검색돼요' : '🔒 비공개로 둘게요');
+  }
+  return `🎉 프로필 완성됐어요!\n\n${lines.join('\n')}`;
+}
+
 function _closeTabSoon(delayMs = 900) {
   if (_closing) return;
   _closing = true;
@@ -322,7 +346,8 @@ async function _handleReplyTags(fullReply) {
   }
   // PROFILE_SUBMIT — 실제 서버 등록(welcome.js 그대로 재사용)
   if (fullReply.includes('PROFILE_SUBMIT')) {
-    try { await handleProfileSubmit(fullReply); }
+    let savedProfile = null;
+    try { savedProfile = await handleProfileSubmit(fullReply); }
     catch (e) { console.warn('[PA] handleProfileSubmit 실패:', e.message); }
     try {
       localStorage.setItem('hondi_profile_done', '1');
@@ -330,6 +355,23 @@ async function _handleReplyTags(fullReply) {
       localStorage.removeItem('hondi_profile_skipped');
       localStorage.removeItem('hondi_profile_partial');
     } catch {}
+    // 2026-07-13 신설 — 이 페이지 상단 주석은 애초에 "K-Law·market과 동일한
+    // GWP_DONE 보고 패턴"이라고 설명하고 있었지만, 실제로는 한 번도
+    // window.opener.postMessage(GWP_DONE)을 호출하지 않고 있었다(발견된
+    // gap — _closeTabSoon()이 그냥 탭만 닫음). 그래서 원래 창(AC)이 완료
+    // 사실도, 요약도 전혀 받지 못했다. 이제 실제로 보고한다.
+    if (savedProfile && window.opener && !window.opener.closed) {
+      try {
+        window.opener.postMessage({
+          type:         'GWP_DONE',
+          summary:      _buildProfileSummaryText(savedProfile),
+          session_id:   crypto.randomUUID(),
+          reporter_svc: 'profile-assistant',
+        }, RETURN);
+      } catch (e) {
+        console.warn('[PA] GWP_DONE 보고 실패(무시, 프로필 저장 자체는 정상 처리됨):', e.message);
+      }
+    }
     _closeTabSoon();
     return;
   }
