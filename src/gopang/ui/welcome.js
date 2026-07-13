@@ -204,7 +204,15 @@ async function _forwardProductsToMarket(profile, wallet, pubkey) {
     };
   });
 
-  const payload = { guid: profile.guid, pubkey, products, mode: 'merge' };
+  // 2026-07-13 신설 — 상품 삭제 경로. mode는 여전히 'merge'로 고정
+  // (이 세션이 판매자의 "전체" 카탈로그를 모르므로 'replace'는 여전히
+  // 위험 — 다른 경로로 등록된 상품까지 지울 수 있음). 대신 사용자가
+  // 명시적으로 "이제 안 팔아요"라고 말한 상품만 이름으로 정확히
+  // 지정해 표적 삭제한다(handleCatalogSync가 deleted_names로 처리).
+  const payload = {
+    guid: profile.guid, pubkey, products, mode: 'merge',
+    deleted_names: Array.isArray(profile.deleted_product_names) ? profile.deleted_product_names : [],
+  };
   // industry_fields: PA가 KSIC 코드(schema_id)를 이미 판단해 뒀으면 실어
   // 보낸다. 2026-07-07 수정(사고실험 #3): 이전엔 "형식이 안 맞아도 서버가
   // 그 필드만 무시하고 동기화는 계속된다"고 설명했는데 이건 착각이었다 —

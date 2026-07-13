@@ -2657,10 +2657,14 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
   // items가 비어 있으면(= P2P 송금 등 카탈로그와 무관한 거래) 이 검증은
   // 건너뛴다 — 애초에 대조할 카탈로그가 없는 케이스이기 때문이다.
   const txItems = Array.isArray(tx?.items) ? tx.items : [];
+  // 2026-07-13 신설 — 재고 자동 차감(②단계)을 위해 catalog를 바깥
+  // 스코프로 끌어올린다(주문 성공 후 차감 시점에서도 재사용).
+  let orderCatalog = null;
   if (txItems.length) {
     let catalog;
     try {
       catalog = await _l1ListSellerProducts(env, seller_guid);
+      orderCatalog = catalog;
     } catch (e) {
       return _err(502, 'L1_UNREACHABLE', '카탈로그 조회 실패: ' + e.message, corsHeaders);
     }
@@ -2679,6 +2683,13 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
         return _err(400, 'ITEM_PRICE_UNSET', `가격 미정 상품은 이 경로로 구매할 수 없습니다: ${item.id}`, corsHeaders);
       }
       const qty = Number(item.quantity) > 0 ? Number(item.quantity) : 1;
+      // 2026-07-13 신설 — 재고 부족 검증. stock_qty가 숫자로 추적되고
+      // 있는 상품만 검사한다(null=무제한/미추적 상품은 그대로 통과).
+      if (typeof rec.stock_qty === 'number' && qty > rec.stock_qty) {
+        return _err(409, 'INSUFFICIENT_STOCK',
+          `재고 부족: ${rec.name || item.id} (요청 ${qty}개, 재고 ${rec.stock_qty}개)`,
+          corsHeaders);
+      }
       authoritativeTotal += rec.price * qty;
     }
 
@@ -2879,6 +2890,15 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
     });
   }
   console.log('[BizOrder] 성공:', JSON.stringify({ ok: true, block_hash, height, buyer_claim: !!buyer_claim }));
+
+  // 2026-07-13 신설 — 재고 자동 차감(②단계). 결제 자체는 이미 완료됐으므로
+  // 여기서 실패해도(네트워크 등) 주문을 되돌리지 않는다 — try/catch로
+  // 격리하고 실패는 로그만 남긴다(다른 fire-and-forget 후처리와 동일 원칙).
+  if (orderCatalog && txItems.length) {
+    await _decrementStockAfterOrder(env, orderCatalog, txItems).catch(e =>
+      console.warn('[Stock] 재고 차감 실패(무시, 결제 자체는 정상 처리됨):', e.message)
+    );
+  }
 
   // ── 2026-07-12 신설 — contract_type이 'escrow'/'conditional'이어도 실제
   // 자금 보류·조건부 해제 로직은 구현돼 있지 않다(사고실험으로 확인 —
@@ -4020,6 +4040,32 @@ function _getSvcRegistration(origin,svcId){const resolvedId=_resolveSvcId(svcId)
 async function handleSvcRegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.svc_id||!body?.domain||!body?.operator_ipv6)return _err(400,'MISSING_FIELD','svc_id, domain, operator_ipv6 필수',corsHeaders);const{svc_id,domain,description,min_auth,operator_ipv6}=body;const isGopangSub=/^[a-z0-9-]+\.gopang\.net$/.test(domain);await sbFetch(env,'/rest/v1/svc_registry','POST',{svc_id,domain,description:description||'',operator_ipv6,min_auth:min_auth||'L0',trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending',registered_at:new Date().toISOString()});return new Response(JSON.stringify({ok:true,svc_id,domain,trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending_review',message:isGopangSub?'*.hondi.net 서브도메인으로 자동 승인됐습니다. (Level 1)':'등록 신청이 접수됐습니다.'}),{status:200,headers:corsHeaders});}
 async function handleSvcVerify(request,env,corsHeaders){const url=new URL(request.url);const svcId=url.searchParams.get('svc_id');const origin=request.headers.get('Origin')||'';if(!svcId)return _err(400,'MISSING_FIELD','svc_id 파라미터 필수',corsHeaders);const reg=_getSvcRegistration(origin,svcId);if(!reg)return new Response(JSON.stringify({ok:false,registered:false,svc_id:svcId,message:'등록되지 않은 서비스입니다.'}),{status:200,headers:corsHeaders});return new Response(JSON.stringify({ok:true,registered:true,svc_id:svcId,trust_level:reg.level,pdv_allowed:reg.pdv,min_auth:reg.minAuth,message:`등록된 서비스 (Level ${reg.level})`}),{status:200,headers:corsHeaders});}
 async function handleGeocode(url,env,corsHeaders){const lat=url.searchParams.get('lat');const lng=url.searchParams.get('lng');if(!lat||!lng)return _err(400,'MISSING_FIELD','lat, lng required',corsHeaders);try{const res=await fetch(`${KAKAO_BASE}?x=${lng}&y=${lat}&input_coord=WGS84`,{headers:{'Authorization':`KakaoAK ${env.KAKAO_REST_KEY}`}});const data=await res.json();return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'GEOCODE_ERROR',e.message,corsHeaders);}}
+
+// 2026-07-13 신설 — 정방향 지오코딩(주소→좌표). handleGeocode(위)는
+// 좌표→주소(역방향)만 지원했다 — profile-assistant가 대화로 받은 주소
+// 텍스트를 좌표로 바꿀 방법이 서버에 전혀 없었다(사고실험으로 발견 —
+// _l1SearchEntities의 거리순 정렬이 사업자 프로필에 대해 항상 무의미
+// 했음, p.lat/p.lng가 늘 null이었기 때문). Kakao의 주소 검색 API
+// (coord2address의 반대인 search/address)를 사용한다. 실패해도(주소
+// 인식 불가 등) null을 반환할 뿐 예외를 던지지 않는다 — 호출부가
+// "지오코딩 실패해도 프로필 저장 자체는 막지 않는다"는 원칙을 지키게.
+const KAKAO_ADDRESS_SEARCH_BASE = 'https://dapi.kakao.com/v2/local/search/address.json';
+async function _geocodeAddressForward(env, address) {
+  if (!address || !env.KAKAO_REST_KEY) return null;
+  try {
+    const res = await fetch(`${KAKAO_ADDRESS_SEARCH_BASE}?query=${encodeURIComponent(address)}`, {
+      headers: { 'Authorization': `KakaoAK ${env.KAKAO_REST_KEY}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    const doc = data?.documents?.[0];
+    if (!doc) return null;
+    return { lat: parseFloat(doc.y), lng: parseFloat(doc.x) };
+  } catch (e) {
+    console.warn('[Geocode] 정방향 지오코딩 실패(무시):', e.message);
+    return null;
+  }
+}
 async function handleKakaoAppKey(request,env,corsHeaders){const appkey=env.KAKAO_JS_KEY||env.KAKAO_REST_KEY;if(!appkey)return _err(500,'CONFIG_ERROR','Kakao key not configured',corsHeaders);return new Response(JSON.stringify({appkey}),{status:200,headers:{...corsHeaders,'Cache-Control':'public, max-age=300'}});}
 async function handleAIChat(bodyText,env,corsHeaders,meta=null){let body;try{body=JSON.parse(bodyText);}catch{return _err(400,'INVALID_JSON','Invalid JSON',corsHeaders);}const{provider='deepseek',model,system,messages,max_tokens=2000}=body;const builtMessages=[...(system?[{role:'system',content:system}]:[]),...(messages||[])];
 console.log(JSON.stringify({tag:'AI_PROXY_CALL',fn:'handleAIChat',ts:new Date().toISOString(),provider,model,...meta}));
@@ -7624,6 +7670,21 @@ async function handleProfilePost(request, env, corsHeaders) {
   };
   const newExtra = { ...prevExtra, public: newExtraPublic };
 
+  // 2026-07-13 신설 — 주소 자동 지오코딩. profile-assistant는 주소를
+  // 텍스트로만 수집하고 lat/lng를 채울 방법이 없었다(사고실험으로 발견
+  // — 위치 기반 검색이 사업자 프로필에 대해 항상 무의미했음). 클라이언트가
+  // lat/lng를 이미 보냈으면(예: GPS 자동감지) 그대로 신뢰하고, 주소만
+  // 있고 좌표가 없으면 서버가 자동으로 지오코딩한다. 실패해도(주소
+  // 인식 불가 등) 조용히 null로 남기고 프로필 저장 자체는 계속 진행한다
+  // — 지오코딩은 부가 기능이지 저장의 필수 전제가 아니다.
+  if (address && (lat == null || lng == null)) {
+    const geocoded = await _geocodeAddressForward(env, address);
+    if (geocoded) {
+      lat = geocoded.lat;
+      lng = geocoded.lng;
+    }
+  }
+
   const record = {
     guid,
     current_ipv6: guid,
@@ -7723,6 +7784,29 @@ async function _l1ListSellerProducts(env, guid) {
   if (!res.ok) throw new Error(`L1 seller_products 조회 실패 (HTTP ${res.status})`);
   const data = await res.json().catch(() => ({ items: [] }));
   return data.items || [];
+}
+
+// 2026-07-13 신설 — 재고 자동 차감(②단계). handleBizOrder가 이미
+// 조회해둔 catalog(byId 매칭용, 가격검증 재사용)와 txItems를 그대로
+// 받아, stock_qty가 숫자로 추적되는 상품만 차감한다(null=무제한/미추적
+// 상품은 건드리지 않음 — 기존 동작 그대로 유지). worker.js
+// handleCatalogSync의 legacy stock(select) 자동 파생 로직과 동일한
+// 임계값(0=out, ≤3=low)을 재사용해 두 경로가 어긋나지 않게 한다.
+async function _decrementStockAfterOrder(env, catalog, txItems) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const byId = new Map(catalog.map(r => [r.id, r]));
+  for (const item of txItems) {
+    const rec = byId.get(item.id);
+    if (!rec || typeof rec.stock_qty !== 'number') continue; // 미추적 상품은 건드리지 않음
+    const qty = Number(item.quantity) > 0 ? Number(item.quantity) : 1;
+    const newQty = Math.max(0, rec.stock_qty - qty);
+    const derivedStock = newQty <= 0 ? 'out' : (newQty <= 3 ? 'low' : 'in');
+    await fetch(`${L1_DEFAULT}/api/collections/seller_products/records/${rec.id}`, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ stock_qty: newQty, stock: derivedStock }),
+    }).catch(e => console.warn('[Stock] 개별 상품 차감 실패(무시):', rec.id, e.message));
+  }
 }
 
 // ★ 2026-07-09 신설 — 짜장면 주문 사고실험 5·6번(주문 큐/주방 용량 판단,
@@ -7836,7 +7920,7 @@ async function _l1CreateDeliveryRequest(env, record) {
 //     "전체" 카탈로그를 모르는 채로(예: CA/PA가 프로필에서 파악한 상품
 //     일부만 들고 있는 경우) 보낼 때 쓴다 — 여기 없는 기존 상품을
 //     실수로 지우면 안 되는 경우.
-async function _l1SyncSellerProducts(env, guid, products, mode = 'replace') {
+async function _l1SyncSellerProducts(env, guid, products, mode = 'replace', deletedNames = []) {
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 
@@ -7854,7 +7938,24 @@ async function _l1SyncSellerProducts(env, guid, products, mode = 'replace') {
       }
     }
   }
-  // mode === 'merge'면 삭제 단계 전체를 건너뛴다 — 아래 upsert만 수행.
+  // mode === 'merge'면 위 전체교체 삭제 단계는 건너뛴다.
+
+  // 2026-07-13 신설 — 이름 기반 표적 삭제. mode와 무관하게(merge에서도)
+  // 동작한다 — profile-assistant처럼 "그 세션에서 파악한 상품 일부만"
+  // 들고 있는 호출자가, 사용자가 "이제 안 팔아요"라고 말한 특정 상품
+  // 하나만 정확히 지우고 싶을 때 쓴다. mode='replace'로 전체 스냅샷을
+  // 요구하지 않아도 되므로, 알지 못하는 다른 상품을 실수로 지울 위험이
+  // 없다(이름이 정확히 일치하는 것만 지움).
+  if (Array.isArray(deletedNames) && deletedNames.length) {
+    const targetNames = new Set(deletedNames.map(n => String(n || '').trim().toLowerCase()).filter(Boolean));
+    for (const rec of existing) {
+      if (targetNames.has(String(rec.name || '').trim().toLowerCase())) {
+        await fetch(`${L1_DEFAULT}/api/collections/seller_products/records/${rec.id}`, {
+          method: 'DELETE', headers,
+        }).catch(e => console.warn('[Catalog] 표적 삭제 실패(무시하고 계속):', rec.id, e.message));
+      }
+    }
+  }
 
   // upsert
   for (const p of products) {
@@ -8209,7 +8310,7 @@ async function handleCatalogSync(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
 
-  const { guid, pubkey, signature, products, industry_fields, mode } = body;
+  const { guid, pubkey, signature, products, industry_fields, mode, deleted_names } = body;
   if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
   if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
   if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
@@ -8280,7 +8381,7 @@ async function handleCatalogSync(request, env, corsHeaders) {
   }
 
   try {
-    await _l1SyncSellerProducts(env, guid, validProducts, syncMode);
+    await _l1SyncSellerProducts(env, guid, validProducts, syncMode, deleted_names);
   } catch (e) {
     return _err(502, 'L1_SYNC_FAILED', '카탈로그 동기화 실패: ' + e.message, corsHeaders);
   }

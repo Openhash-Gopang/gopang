@@ -340,8 +340,15 @@ async function _lookupIndustryTemplate(schemaId) {
       }
     }
     const majorityThreshold = Math.max(2, Math.ceil(items.length / 2));
+    // 2026-07-13 신설 — 상위 4개로 상한. 상한이 없으면 피어 데이터가
+    // 풍부한 업종일수록 STEP2 추가 질문이 한없이 길어질 위험이 있다는
+    // 사고실험 결과 반영(불필요한 질문 남발 방지). 빈도 높은 순으로
+    // 정렬 후 자른다 — 가장 흔한 패턴부터 우선.
+    const MAX_TEMPLATE_FIELDS = 4;
     const majorityFields = Object.entries(fieldCounts)
       .filter(([, c]) => c >= majorityThreshold)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, MAX_TEMPLATE_FIELDS)
       .map(([k]) => k);
     if (!majorityFields.length) return '';
     return `동종업계 ${items.length}건 중 다수가 보유한 필드: ${majorityFields.join(', ')}`;
