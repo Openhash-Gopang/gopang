@@ -67,11 +67,20 @@ const TIER_CONFIG = {
   // 적 없던 계층. 처음엔 team_type 4종만 원형화했으나, emd-master-data.json/
   // hallim-data.json에 이미 읍면동별 실제 팀구성 데이터가 있어 43개
   // 읍면동 전체를 (emd_code, team_code) 실제 인스턴스로 확장했다.
+  // 2026-07-13 갱신 — 팀마다 실제 업무 성격이 크게 달라(§CAPABILITIES가
+  // 팀마다 다름 — 예: 민원팀의 여권/등기부등본/개명신고 불가 조항은
+  // 총무팀엔 없음) 단일 SP-TEAM-TEMPLATE 하나로는 얕았다. team_code별
+  // 5종 원형(SP-TEAM-{GENERAL|CIVIL|WELFARE|OUTREACH|INDUSTRY}-
+  // TEMPLATE_v2.0.md)으로 교체 — fixedTemplate은 폴백(레코드 누락 시
+  // general로 처리)이고, 실제로는 각 레코드의 `template` 필드(아래
+  // team-master-data.json에 team_code별로 채워둠, _renderTemplate
+  // L225의 `record.template || cfg.fixedTemplate` 우선순위 로직 그대로
+  // 재사용)가 우선 적용된다.
   'team': {
     masterDataPath: 'prompts/Jejudo/05-emd/templates/team-master-data.json',
     listKey: '팀목록',
     templateDir: 'prompts/Jejudo/05-emd/templates/',
-    fixedTemplate: 'SP-TEAM-TEMPLATE_v1.0.md',
+    fixedTemplate: 'SP-TEAM-GENERAL-TEMPLATE_v2.1.md',
     matchFn: (rec, { emdCode, teamCode }) => rec.emd_code === emdCode && rec.team_code === teamCode,
   },
   'do-dept': {
@@ -94,10 +103,15 @@ const TIER_CONFIG = {
     matchFn: (rec, { cityCode }) => rec['시코드'] === cityCode,
   },
   'emd': {
+    // 2026-07-13 갱신 — AGENCY-AC-COMMON 공리 0(main()/submodule) 반영,
+    // 구 SP-EMD-TEMPLATE_v1.2(단일 평면 SP)를 SP-EMD-AGENT-COMMON-
+    // TEMPLATE_v1.0(읍면동 AC 원형)으로 교체. 읍면동도 팀(§3 COMPOSE)
+    // 여러 개를 조합하는 2단계 조직이므로 도청 실·국·시청 국과
+    // 동일하게 AC가 필요하다는 판단(AC-AUTHOR PHASE 0 적용).
     masterDataPath: 'prompts/Jejudo/05-emd/emd-master-data.json',
     listKey: '읍면동목록',
-    templateDir: 'prompts/Jejudo/05-emd/',
-    fixedTemplate: 'SP-EMD-TEMPLATE_v1.2.md',
+    templateDir: 'prompts/Jejudo/05-emd/agent-common/',
+    fixedTemplate: 'SP-EMD-AGENT-COMMON-TEMPLATE_v1.1.md',
     matchFn: (rec, { emdCode }) => rec.emd_code === emdCode,
   },
   // 2026-07-09 신설 — 전국 단일 창구형 정책기관(19부·4헌법기관·6대통령직속·
