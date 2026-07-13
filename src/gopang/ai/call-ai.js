@@ -1186,6 +1186,46 @@ async function _triggerSeamlessHandoff(sendFn = callAI) {
  * 호출하고 결과를 history에 재주입한다. K-Search든 AC 자신이든 이
  * 태그를 낼 수 있으므로 특정 system으로 게이트하지 않는다.
  */
+// ── 재무제표(fs) 실시간 조회 (2026-07-13 신설) ──────────────
+// GDC 시스템 소속 데이터라 프로필에 스냅샷으로 저장하지 않는다 —
+// 필요할 때마다 wallet.getFinancialState()(로컬 IndexedDB, 네트워크
+// 불필요)로 그때그때 조회한다. _handleWebSearchTag와 동일한 "태그 →
+// 조회 → 재주입 → 재호출" 패턴.
+export async function _handleBalanceCheckTag(fullReply, bubble, sendFn = callAI, userText = '') {
+  if (!fullReply.includes('[BALANCE_CHECK]')) return false;
+
+  const _updateBubble = async (text) => {
+    if (!bubble) return;
+    const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+    if (_usb) _usb(bubble, text);
+  };
+  await _updateBubble(_stripInternalTags(fullReply).replace('[BALANCE_CHECK]', '\n재무 상태 확인 중…'));
+  history.push({ role: 'assistant', content: fullReply });
+
+  let resultText;
+  try {
+    const wallet = window.gopangWallet;
+    if (!wallet?.getFinancialState) {
+      resultText = '재무 상태 조회 불가(지갑 미준비)';
+    } else {
+      const fs = await wallet.getFinancialState();
+      resultText = JSON.stringify(fs);
+    }
+  } catch (e) {
+    resultText = `조회 오류: ${e.message}`;
+  }
+
+  const inject =
+    `[재무제표 조회 결과 — GDC 시스템 실시간 데이터] ${resultText}\n\n` +
+    `이 정보는 본인에게 답변할 때만 사용하십시오. 프로필의 공개 필드로 ` +
+    `저장하거나(PARTIAL_SAVE·PROFILE_SUBMIT 등) 제3자에게 노출하지 마십시오 ` +
+    `— 재무제표는 항상 비공개입니다.`;
+  history.push({ role: 'user', content: inject });
+
+  await sendFn(inject);
+  return true;
+}
+
 export async function _handleWebSearchTag(fullReply, bubble, sendFn = callAI, userText = '') {
   const m = fullReply.match(/\[WEB_SEARCH:\s*query=([^\]]+)\]/);
   if (!m) return false;
@@ -3095,6 +3135,10 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     // [WEB_SEARCH: query=...]는 다른 태그와 이름이 겹치지 않는다.
     const _webSearchHandled = await _handleWebSearchTag(fullReply, bubble, callAI, userText);
     if (_webSearchHandled) return;
+
+    // ── 재무제표 실시간 조회 태그 처리 (2026-07-13 신설) ──────
+    const _balanceCheckHandled = await _handleBalanceCheckTag(fullReply, bubble, callAI, userText);
+    if (_balanceCheckHandled) return;
 
     // ── §9 실행 태그 공용 디스패처 (Phase 0) ────────────────
     // 이전엔 GWP가 자체 정규식으로 fullReply를 스캔했고, 별도로

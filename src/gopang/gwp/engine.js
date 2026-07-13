@@ -270,7 +270,24 @@ function _readPdvField(field) {
       '유형': user?.type || null,
       '업종': user?.industry || null,
     };
-    return field in KNOWN ? (KNOWN[field] ?? { not_in_pdv: true }) : { not_in_pdv: true };
+    if (field in KNOWN && KNOWN[field] != null) return KNOWN[field];
+
+    // 2026-07-13 확장 — gopang_pdv_log(welcome.js _recordProfileToPDV가
+    // { data: { field, value } } 형태로 이미 기록해두고 있던 실제 활동
+    // 이력)에서 필드명이 일치하는 최신 값을 찾는다. KNOWN에 없는 필드
+    // (예: "취급 상품·서비스")는 여기서만 찾을 수 있다 — 새 저장 경로를
+    // 만들지 않고 이미 쌓이고 있던 데이터를 조회만 가능하게 한다.
+    try {
+      const log = JSON.parse(localStorage.getItem('gopang_pdv_log') || '[]');
+      if (Array.isArray(log)) {
+        for (let i = log.length - 1; i >= 0; i--) {
+          const r = log[i];
+          if (r?.data?.field === field && r.data.value != null) return r.data.value;
+        }
+      }
+    } catch {}
+
+    return { not_in_pdv: true };
   } catch {
     return { not_in_pdv: true };
   }

@@ -470,7 +470,72 @@ window.addEventListener('pagehide', () => {
     ', 프로필=' + (localStorage.getItem('hondi_profile_step') || '0'));
 });
 
-startGreeting();
+// ── PDV 필드 사전 요청 (2026-07-13 신설) ────────────────────
+// 지금까지 이 페이지는 GWP_PDV_REQUEST를 한 번도 보낸 적이 없었다
+// (수신 측 _handlePdvRequest는 이미 있었지만 발신이 빠져 있던 gap).
+// 원래 창(AC)에게 부족한 필드를 요청해, 사용자 승인 시에만
+// hondi_profile_partial에 미리 채워 같은 질문을 다시 안 묻게 한다.
+function _requestPdvFields(fields, reason) {
+  return new Promise((resolve) => {
+    if (!window.opener || window.opener.closed) { resolve(null); return; }
+    const requestId = 'pareq-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener('message', onMsg);
+      resolve(null); // 타임아웃 — 평소처럼 대화로 물어보는 경로로 자연스럽게 폴백
+    }, 20000);
+    function onMsg(e) {
+      if (e.source !== window.opener) return; // 원래 창에서 온 응답만 신뢰
+      const msg = e.data;
+      if (!msg || msg.type !== 'GWP_PDV_RESPONSE' || msg.request_id !== requestId) return;
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      window.removeEventListener('message', onMsg);
+      resolve(msg.approved ? msg.values : null);
+    }
+    window.addEventListener('message', onMsg);
+    window.opener.postMessage({
+      type: 'GWP_PDV_REQUEST',
+      request_id: requestId,
+      requesting_sp: 'profile-assistant',
+      fields,
+      reason,
+    }, RETURN);
+  });
+}
+
+async function _prefillFromPdvIfNeeded() {
+  try {
+    const partial = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}');
+    const needed = [];
+    if (!partial.products) needed.push('취급 상품·서비스');
+    if (!partial.entity_subtype) needed.push('업종');
+    if (!needed.length) return;
+
+    const values = await _requestPdvFields(needed, '프로필 작성에 참고하기 위해');
+    if (!values) return;
+
+    // PDV 필드명 → profile-assistant 필드명 매핑
+    const FIELD_MAP = { '취급 상품·서비스': 'products', '업종': 'entity_subtype' };
+    let changed = false;
+    for (const [pdvField, profileKey] of Object.entries(FIELD_MAP)) {
+      const v = values[pdvField];
+      if (!v || (typeof v === 'object' && v.not_in_pdv)) continue;
+      if (!partial[profileKey]) { partial[profileKey] = v; changed = true; }
+    }
+    if (changed) localStorage.setItem('hondi_profile_partial', JSON.stringify(partial));
+  } catch (e) {
+    console.warn('[PA] PDV 필드 요청 실패(무시, 평소처럼 대화로 진행):', e.message);
+  }
+}
+
+(async () => {
+  await _prefillFromPdvIfNeeded();
+  startGreeting();
+})();
 </script>
 </body>
 </html>
