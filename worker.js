@@ -923,7 +923,7 @@ async function _l1PatchProfile(env, recordId, patch) {
 // 동일하게 L1에 실존하고 claim된 사업자인지로 검증한다(신규 사업자는
 // 매일 생기므로 하드코딩 목록이 성립하지 않는다는 dept-task-handler.js의
 // 기존 원칙을 그대로 계승).
-async function approveAffiliationCore(env, { orgId, targetGuid, approverLabel = '' }, opts = {}) {
+async function approveAffiliationCore(env, { orgId, targetGuid, approverLabel = '', evidence = '' }, opts = {}) {
   const { authoritativeAgency = null } = opts;
   if (!orgId || !targetGuid) return { ok: false, reason: 'MISSING_FIELD' };
 
@@ -969,7 +969,16 @@ async function approveAffiliationCore(env, { orgId, targetGuid, approverLabel = 
   // 통일(공무원 소속은 job_ksco보다 변경 빈도가 낮을 수 있지만, 퇴직·전보
   // 누락 위험이 더 크므로 더 짧은 주기를 우선한다).
   const reviewDue = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  affList[idx] = { ...affList[idx], verified: true, verified_at: now, verified_by: approverLabel || orgId, review_due: reviewDue };
+  // AC-EVOLUTION-GAPS #6 — 관리자가 "이 사람이 진짜 우리 직원 맞다"를
+  // 무엇을 보고 판단했는지 근거를 함께 남긴다(사번·기관메일 등 자유
+  // 텍스트 — 이 저장소가 사번 체계를 직접 검증할 방법은 없으므로 형식
+  // 검증은 하지 않고 감사 기록으로만 남긴다. 동명이인 오승인 자체를
+  // 막지는 못하지만, 나중에 "무엇을 근거로 승인했는지" 추적은 가능해진다).
+  affList[idx] = {
+    ...affList[idx], verified: true, verified_at: now, verified_by: approverLabel || orgId,
+    verified_evidence: evidence ? String(evidence).slice(0, 200) : null,
+    review_due: reviewDue, revoked_at: null, revoked_by: null,
+  };
 
   const newExtra = {
     ...prevExtra,
@@ -977,6 +986,51 @@ async function approveAffiliationCore(env, { orgId, targetGuid, approverLabel = 
   };
   await _l1PatchProfile(env, profile.id, { extra: newExtra });
   return { ok: true, org_id: orgId, target_guid: targetGuid, review_due: reviewDue };
+}
+
+// ── 소속 철회 — AC-EVOLUTION-GAPS #4 완결 ─────────────────────────────
+// approveAffiliationCore의 짝. 퇴직·전보 시 기관 측이 명시적으로
+// 철회한다(자동 만료가 아니라 명시적 행위 — 관리자가 잊으면 여전히
+// 남아있을 수 있다는 잔여 위험은 있지만, 최소한 "철회할 방법이 아예
+// 없는" 상태보다는 낫다. 완전 자동화하려면 각 기관 인사시스템과의
+// 연동이 필요한데 그건 이 저장소 밖의 과제).
+async function revokeAffiliationCore(env, { orgId, targetGuid, revokerLabel = '', reason = '' }, opts = {}) {
+  const { authoritativeAgency = null } = opts;
+  if (!orgId || !targetGuid) return { ok: false, reason: 'MISSING_FIELD' };
+  const orgType = orgId.startsWith('city-dept:') || orgId.startsWith('do-dept:') || orgId.startsWith('do-agency:')
+    ? 'dept' : orgId.startsWith('org:') ? 'org' : orgId.startsWith('national:') ? 'national' : null;
+  if (!orgType) return { ok: false, reason: 'UNKNOWN_ORG_TYPE' };
+  const authCheck = _authoritativeCheck(orgType === 'national' ? 'dept' : orgType, orgId, authoritativeAgency);
+  if (!authCheck.ok) return { ok: false, reason: authCheck.reason };
+
+  const profile = await _l1FindProfileByGuid(env, targetGuid).catch(() => null);
+  if (!profile) return { ok: false, reason: 'TARGET_NOT_FOUND' };
+  const prevExtra = profile.extra || {};
+  const prevIdentity = (prevExtra.public || {}).identity || {};
+  const affList = Array.isArray(prevIdentity.affiliation) ? prevIdentity.affiliation : [];
+  const idx = affList.findIndex(a => a.org_id === orgId);
+  if (idx === -1) return { ok: false, reason: 'AFFILIATION_NOT_FOUND' };
+
+  affList[idx] = {
+    ...affList[idx], verified: false, active: false,
+    revoked_at: new Date().toISOString(), revoked_by: revokerLabel || orgId,
+    revoke_reason: reason ? String(reason).slice(0, 200) : null,
+  };
+  const newExtra = {
+    ...prevExtra,
+    public: { ...(prevExtra.public || {}), identity: { ...prevIdentity, affiliation: affList } },
+  };
+  await _l1PatchProfile(env, profile.id, { extra: newExtra });
+  return { ok: true, org_id: orgId, target_guid: targetGuid };
+}
+
+// AC-EVOLUTION-GAPS #4 — review_due가 지났으면 재확인 전까지 "검증됨"으로
+// 취급하지 않는다(자동 revoke는 아니고, 소비하는 쪽이 이 함수로 판단만
+// 하게 한다 — DB 값 자체를 배치로 고치는 크론은 별도 과제로 남긴다).
+function _isAffiliationCurrentlyVerified(affEntry) {
+  if (!affEntry || !affEntry.verified || affEntry.active === false) return false;
+  if (affEntry.review_due && new Date(affEntry.review_due) < new Date()) return false;
+  return true;
 }
 
 // ── 업무영역 PDV 조회 요청 게이트 — AC-EVOLUTION_v1_1.md §PDV-SPLIT ──────
@@ -5004,7 +5058,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
       const result = affPayload
         ? await approveAffiliationCore(env, {
             orgId: affPayload.org_id, targetGuid: affPayload.target_guid,
-            approverLabel: affPayload.approver_label,
+            approverLabel: affPayload.approver_label, evidence: affPayload.evidence,
           }, { authoritativeAgency: bizKey })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_APPROVE\][\s\S]*?\[\/AFFILIATION_APPROVE\]/, '').trim();
@@ -5014,6 +5068,28 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
       data.choices[0].message.content = (cleanedText || '소속 승인 요청을 처리했습니다.') + noticeText;
     }
   }
+
+  // ── AFFILIATION_REVOKE 서버측 처리 (2026-07-13 신설, AC-EVOLUTION-GAPS #4 완결) ──
+  {
+    const firstContent = data?.choices?.[0]?.message?.content;
+    const revMatch = typeof firstContent === 'string'
+      ? firstContent.match(/\[AFFILIATION_REVOKE\]([\s\S]*?)\[\/AFFILIATION_REVOKE\]/)
+      : null;
+    if (revMatch) {
+      let revPayload = null;
+      try { revPayload = JSON.parse(revMatch[1].trim()); } catch (e) { /* ok:false로 처리 */ }
+      const result = revPayload
+        ? await revokeAffiliationCore(env, {
+            orgId: revPayload.org_id, targetGuid: revPayload.target_guid,
+            revokerLabel: revPayload.revoker_label, reason: revPayload.reason,
+          }, { authoritativeAgency: bizKey })
+        : { ok: false, reason: 'INVALID_JSON' };
+      const cleanedText = firstContent.replace(/\[AFFILIATION_REVOKE\][\s\S]*?\[\/AFFILIATION_REVOKE\]/, '').trim();
+      const noticeText = result.ok
+        ? `\n\n(소속이 철회됐습니다.)`
+        : `\n\n(소속 철회 실패: ${result.reason})`;
+      data.choices[0].message.content = (cleanedText || '소속 철회 요청을 처리했습니다.') + noticeText;
+    }
 
   // ── WORK_PDV_REQUEST 서버측 처리 (2026-07-13 신설, AC-EVOLUTION_v1_1.md §PDV-SPLIT) ──
   {
@@ -5782,7 +5858,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
       const result = affPayload
         ? await approveAffiliationCore(env, {
             orgId: affPayload.org_id, targetGuid: affPayload.target_guid,
-            approverLabel: affPayload.approver_label,
+            approverLabel: affPayload.approver_label, evidence: affPayload.evidence,
           }, { authoritativeAgency: agency })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_APPROVE\][\s\S]*?\[\/AFFILIATION_APPROVE\]/, '').trim();
@@ -5790,6 +5866,27 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
         ? `\n\n(소속 승인이 완료됐습니다 — 다음 재확인 예정일 ${result.review_due}.)`
         : `\n\n(소속 승인에 실패했습니다: ${result.reason}${result.detail ? ' — ' + result.detail : ''})`;
       data.choices[0].message.content = (cleanedText || '소속 승인 요청을 처리했습니다.') + noticeText;
+      return new Response(JSON.stringify(data), { headers: corsHeaders });
+    }
+
+    // ── AFFILIATION_REVOKE 서버측 처리 (2026-07-13 신설, AC-EVOLUTION-GAPS #4 완결) ──
+    const revMatch = typeof firstContent === 'string'
+      ? firstContent.match(/\[AFFILIATION_REVOKE\]([\s\S]*?)\[\/AFFILIATION_REVOKE\]/)
+      : null;
+    if (revMatch) {
+      let revPayload = null;
+      try { revPayload = JSON.parse(revMatch[1].trim()); } catch (e) { /* ok:false로 처리 */ }
+      const result = revPayload
+        ? await revokeAffiliationCore(env, {
+            orgId: revPayload.org_id, targetGuid: revPayload.target_guid,
+            revokerLabel: revPayload.revoker_label, reason: revPayload.reason,
+          }, { authoritativeAgency: agency })
+        : { ok: false, reason: 'INVALID_JSON' };
+      const cleanedText = firstContent.replace(/\[AFFILIATION_REVOKE\][\s\S]*?\[\/AFFILIATION_REVOKE\]/, '').trim();
+      const noticeText = result.ok
+        ? `\n\n(소속이 철회됐습니다.)`
+        : `\n\n(소속 철회 실패: ${result.reason})`;
+      data.choices[0].message.content = (cleanedText || '소속 철회 요청을 처리했습니다.') + noticeText;
       return new Response(JSON.stringify(data), { headers: corsHeaders });
     }
 
@@ -8045,19 +8142,27 @@ async function handleProfilePost(request, env, corsHeaders) {
     resolvedAffiliation = affiliation.slice(0, 5).map(a => { // 겸직 상한 5(과도한 배열 남용 방지, 임의값)
       const orgId = typeof a?.org_id === 'string' ? a.org_id.trim().slice(0, 100) : null;
       const prevMatch = prevAffList.find(p => p.org_id === orgId);
+      const userWantsInactive = a?.active === false;
       return {
         org_type:  typeof a?.org_type === 'string' ? a.org_type.slice(0, 30) : null,
         org_id:    orgId,
         role:      ['staff', 'manager'].includes(a?.role) ? a.role : 'staff',
-        active:    a?.active !== false, // 은퇴·퇴직 시 클라이언트가 false로 명시(§ work_domain.active와 별개, 소속 단위)
+        active:    !userWantsInactive, // 은퇴·퇴직 시 클라이언트가 false로 명시
         // ★ 핵심: verified는 이전 값을 그대로 이어받을 뿐, 이번 요청의
         // affiliation 배열에 담긴 verified 값(사용자가 뭘 보내든)은
         // 절대 참조하지 않는다 — 자기 신고로는 권한이 생기지 않는다.
-        verified:      prevMatch?.verified || false,
+        // AC-EVOLUTION-GAPS #4 완결 — 단, 사용자 본인이 active:false를
+        // 명시(자진 철회 — 예: "저 퇴사했어요")하면 verified도 함께
+        // false로 내린다. 이건 "자기 신고로 권한을 얻는" 게 아니라
+        // "자기 신고로 권한을 내려놓는" 것이라 원칙과 배치되지 않는다
+        // (권한 획득은 항상 기관 승인만, 권한 포기는 본인이 즉시 가능
+        // — 대칭이 아니라 의도된 비대칭이다).
+        verified:      userWantsInactive ? false : (prevMatch?.verified || false),
         verified_at:   prevMatch?.verified_at || null,
-        // AC-EVOLUTION-GAPS #4 — 재확인 주기. verified=true가 된 시점에
-        // approve 엔드포인트가 채운다(아래 handleAffiliationApprove).
-        review_due:    prevMatch?.review_due || null,
+        verified_evidence: prevMatch?.verified_evidence || null,
+        review_due:    userWantsInactive ? null : (prevMatch?.review_due || null),
+        revoked_at:    userWantsInactive ? new Date().toISOString() : (prevMatch?.revoked_at || null),
+        revoked_by:    userWantsInactive ? 'self' : (prevMatch?.revoked_by || null),
       };
     }).filter(a => a.org_id);
   }
