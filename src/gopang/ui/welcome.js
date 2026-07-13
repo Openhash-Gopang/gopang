@@ -275,7 +275,7 @@ async function _recordProfileToPDV(profile) {
     what:    isBiz
       ? `${label} 프로필 등록(${profile.entity_subtype || profile.schema_id || '업종 미상'})`
       : `개인 프로필 등록 — ${label}`,
-    how:     'personal_assistant',
+    how:     'profile_assistant',
     why:     isBiz ? 'K-Market 등에서 검색·연결되기 위함' : '개인화된 응대를 위함',
     summary: isBiz
       ? `${label} 프로필 등록 완료`
@@ -317,7 +317,7 @@ async function _recordProfileToPDV(profile) {
       when:    now,
       where:   profile.address || '설정 → 프로필 작성',
       what:    `${f.key}: ${f.value}`,
-      how:     'personal_assistant',
+      how:     'profile_assistant',
       why:     '프로필 작성 중 PA에게 직접 제공',
       summary: f.summary,
       data:    { field: f.key, value: f.value, data_source: profile.data_sources?.[f.key] || 'pa_dialogue' },
