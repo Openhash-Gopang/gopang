@@ -7758,20 +7758,26 @@ async function handleAiSetupSealGet(request, env, corsHeaders) {
 // /ai-setup GET — 현재 AI 비서 설정 조회
 // ═══════════════════════════════════════════════════════════
 async function handleAiSetupGet(request, env, corsHeaders, guid) {
-  const sbH = _sbHeaders(env);
+  // (2026-07-14: Supabase user_llm_keys → L1 이관. 겸사겸사 발견한
+  //  기존 버그도 고친다 — 원래 select 절에 api_key_enc가 빠져있어서
+  //  has_key가 사실상 항상 false였다(row.api_key_enc가 항상 undefined).
+  //  PocketBase는 select 파라미터 없이 전체 필드를 반환하므로 이 버그가
+  //  구조적으로 재발할 수 없다.)
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`guid='${String(guid).replace(/'/g, "\\'")}'`);
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/user_llm_keys?guid=eq.${guid}&select=provider,model,ai_active,custom_prompt,native_lang&limit=1`,
-    { headers: sbH }
+    `${L1_DEFAULT}/api/collections/user_llm_keys/records?filter=${filter}&perPage=1`,
+    { headers: { 'Authorization': 'Bearer ' + token } }
   );
-  if (!res.ok) return _err(502, 'DB_ERROR', 'DB 조회 실패', corsHeaders);
-  const rows = await res.json().catch(() => []);
-  if (!rows.length) {
+  if (!res.ok) return _err(502, 'L1_UNREACHABLE', 'L1 조회 실패', corsHeaders);
+  const data = await res.json().catch(() => ({ items: [] }));
+  const row = (data.items || [])[0];
+  if (!row) {
     return new Response(JSON.stringify({
       ai_active: false, provider: 'deepseek', model: 'deepseek-v4-flash',
       has_key: false, custom_prompt: '',
     }), { status: 200, headers: corsHeaders });
   }
-  const row = rows[0];
   return new Response(JSON.stringify({
     ai_active:     row.ai_active,
     provider:      row.provider,
@@ -9473,15 +9479,18 @@ async function handleTradeRatingSubmit(request, env, corsHeaders) {
   if (typeof amount !== 'number' || amount <= 0) return _err(400, 'MISSING_FIELD', 'amount 필수(양수)', corsHeaders);
   if (!category) return _err(400, 'MISSING_FIELD', 'category 필수', corsHeaders);
 
-  // 2026-07-15 신설 — 사고실험에서 발견한 허점 치유. 지금까지 rater_guid를
-  // 요청 바디값 그대로 믿었다 — 거래 당사자인지는 검증했지만(아래 blocks
-  // 조회) "요청 보낸 사람이 정말 rater_guid 본인이냐"는 확인한 적이
-  // 없었다. 즉 거래 상대방이 상대의 개인키 없이도 "구매자가 남긴 것처럼"
-  // 가짜 긍정 평가를 대신 제출해 자기 온도를 올릴 수 있었다 — "실거래
-  // 검증이라 허위 평가가 어렵다"는 원래 설계 의도를 무력화하는 구멍이었다.
-  // /biz/claims·/biz/settle-ledger와 동일한 서명+TOFU 인증 원칙을 쓰되,
-  // tx_hash·양쪽 guid·polarity를 전부 서명 메시지에 묶어서 이 평가가
-  // 다른 거래·다른 결과에 재사용(재생공격)되는 것도 막는다.
+  // 2026-07-15 재적용 — 이 블록이 원래 같은 날 07:13 커밋(852b1a7)으로
+  // 추가됐는데, 4분 뒤 무관한 커밋(a7c19e5, anchorL1MerkleRoot 이관)이
+  // 오래된 로컬 체크아웃에서 작업하다 실수로 되돌렸다(2026-07-15
+  // 저장소 점검에서 발견 — git이 같은 파일의 다른 부분이라 충돌 없이
+  // 조용히 통과시킴). 내용은 최초 추가 때와 동일:
+  //
+  // rater_guid를 요청 바디값 그대로 믿으면, 거래 상대방이 상대 개인키
+  // 없이도 "구매자가 남긴 것처럼" 가짜 긍정 평가를 대신 제출해 자기
+  // 온도를 올릴 수 있다 — "실거래 검증이라 허위 평가가 어렵다"는 원래
+  // 설계 의도를 무력화하는 구멍이었다. /biz/claims·/biz/settle-ledger와
+  // 동일한 서명+TOFU 인증 원칙을 쓰되, tx_hash·양쪽 guid·polarity를
+  // 전부 서명 메시지에 묶어서 재생공격도 막는다.
   const authOk = await _verifyClaimsRequester(env, {
     guid: rater_guid, pubkey, signature,
     sigMsg: `rating:${tx_hash}:${rater_guid}:${ratee_guid}:${polarity}:${pubkey}:${ts}`,
@@ -10303,14 +10312,21 @@ async function handleAiSetupPost(request, env, corsHeaders) {
   if (!/^[a-z0-9-]{2,30}$/.test(provider))
     return _err(400, 'INVALID_PROVIDER', 'provider는 영문 소문자/숫자/하이픈 2~30자여야 합니다', corsHeaders);
 
-  // 기존 키 조회
-  const sbSvcH = _sbServiceHeaders(env);
-  const existing = await fetch(
-    `${SUPABASE_URL}/rest/v1/user_llm_keys?guid=eq.${guid}&select=api_key_enc&limit=1`,
-    { headers: sbSvcH }
-  ).then(r => r.json()).catch(() => []);
+  // (2026-07-14: Supabase user_llm_keys → L1 이관. PocketBase는
+  //  on_conflict 벌크 upsert가 없어 "guid로 조회 → 있으면 PATCH,
+  //  없으면 CREATE" 패턴을 직접 구현한다 — charge_requests/register-key
+  //  류와 동일 관례.)
+  const token = await _l1AdminToken(env);
+  const l1Headers = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+  const filter = encodeURIComponent(`guid='${String(guid).replace(/'/g, "\\'")}'`);
+  const existingRes = await fetch(
+    `${L1_DEFAULT}/api/collections/user_llm_keys/records?filter=${filter}&perPage=1`,
+    { headers: l1Headers }
+  ).catch(() => null);
+  const existingData = existingRes?.ok ? await existingRes.json().catch(() => ({ items: [] })) : { items: [] };
+  const existingRow = (existingData.items || [])[0] || null;
 
-  let apiKeyEnc = existing[0]?.api_key_enc || null;
+  let apiKeyEnc = existingRow?.api_key_enc || null;
 
   if (api_key && api_key.trim()) {
     if (!env.AES_ENCRYPTION_KEY)
@@ -10323,20 +10339,24 @@ async function handleAiSetupPost(request, env, corsHeaders) {
 
   const tokenEst = Math.ceil(custom_prompt.length / 3.5);
 
+  const payload = {
+    guid, provider, model, api_key_enc: apiKeyEnc,
+    ai_active, custom_prompt,
+    native_lang: 'ko',
+    ...(endpoint && { endpoint }),
+  };
+
   let upsertRes;
   try {
-    upsertRes = await fetch(`${SUPABASE_URL}/rest/v1/user_llm_keys`, {
-      method: 'POST',
-      headers: { ...sbSvcH, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify({
-        guid, provider, model, api_key_enc: apiKeyEnc,
-        ai_active, custom_prompt,
-        native_lang: 'ko',
-        ...(endpoint && { endpoint }),
-      }),
-    });
+    upsertRes = existingRow
+      ? await fetch(`${L1_DEFAULT}/api/collections/user_llm_keys/records/${existingRow.id}`, {
+          method: 'PATCH', headers: l1Headers, body: JSON.stringify(payload),
+        })
+      : await fetch(`${L1_DEFAULT}/api/collections/user_llm_keys/records`, {
+          method: 'POST', headers: l1Headers, body: JSON.stringify(payload),
+        });
   } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
   }
 
   if (!upsertRes.ok) {
