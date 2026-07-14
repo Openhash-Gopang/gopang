@@ -1252,6 +1252,92 @@ async function _renderTempBadge(guid) {
 // gopang-wallet.js가 이제 이 페이지에 로드돼 있어(뷰어 인증 패치에서
 // 추가됨), 별도 서명 릴레이 없이 직접 서명해 POST /profile/claim을
 // 호출할 수 있다 — 지갑 미준비 시에만 기존 AI 채팅 우회로 폴백한다.
+// ── 리뷰 위젯 (2026-07-15 신설) ──────────────────────────────
+// 결제 완료 직후 인라인으로 뜬다. wallet.signPayload()는 이미 이
+// 파일에서 여러 번 쓰인 패턴(_startClaimFlow 등)을 그대로 재사용 —
+// 새 서명 배관을 만들지 않았다.
+function _showReviewWidget({ txHash, buyerGuid, sellerGuid, amount, category }) {
+  const host = document.getElementById('cart-summary');
+  if (!host || !txHash || !buyerGuid || !sellerGuid) return;
+
+  const box = document.createElement('div');
+  box.id = 'review-widget';
+  box.style.cssText = 'margin-top:14px;padding:14px;border:1px solid #f1f3f5;border-radius:10px;background:#fafbfc;';
+  box.innerHTML = `
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;">이번 거래는 어떠셨나요?</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button type="button" class="rv-btn" data-p="positive" style="flex:1;padding:10px 4px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;">👍 좋아요</button>
+      <button type="button" class="rv-btn" data-p="neutral"  style="flex:1;padding:10px 4px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;">😐 보통</button>
+      <button type="button" class="rv-btn" data-p="negative" style="flex:1;padding:10px 4px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;">👎 별로예요</button>
+    </div>
+    <textarea id="rv-comment" placeholder="(선택) 한줄평을 남겨주세요" maxlength="300"
+      style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-family:inherit;resize:none;height:52px;margin-bottom:8px;"></textarea>
+    <div style="display:flex;gap:8px;">
+      <button type="button" id="rv-skip" style="flex:1;padding:9px;border:none;border-radius:8px;background:transparent;color:#8a8f98;font-size:12px;cursor:pointer;">나중에</button>
+      <button type="button" id="rv-submit" disabled style="flex:2;padding:9px;border:none;border-radius:8px;background:#c7c9cc;color:#fff;font-size:13px;font-weight:700;cursor:not-allowed;">평가하기</button>
+    </div>
+    <div id="rv-status" style="font-size:11px;color:#8a8f98;margin-top:6px;text-align:center;"></div>
+  `;
+  host.appendChild(box);
+
+  let selectedPolarity = null;
+  box.querySelectorAll('.rv-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedPolarity = btn.dataset.p;
+      box.querySelectorAll('.rv-btn').forEach(b => { b.style.borderColor = '#e5e7eb'; b.style.background = '#fff'; });
+      btn.style.borderColor = '#1A73E8';
+      btn.style.background = '#eaf2fe';
+      const submitBtn = document.getElementById('rv-submit');
+      submitBtn.disabled = false;
+      submitBtn.style.cursor = 'pointer';
+      submitBtn.style.background = '#1A73E8';
+    });
+  });
+
+  document.getElementById('rv-skip').addEventListener('click', () => box.remove());
+
+  document.getElementById('rv-submit').addEventListener('click', async () => {
+    if (!selectedPolarity) return;
+    const statusEl = document.getElementById('rv-status');
+    const submitBtn = document.getElementById('rv-submit');
+    const comment = document.getElementById('rv-comment').value.trim();
+
+    const wallet = window.gopangWallet;
+    if (!wallet?.signPayload) {
+      statusEl.textContent = '⚠️ 지갑이 준비되지 않았습니다.';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    statusEl.textContent = '⏳ 제출 중…';
+
+    try {
+      const pubkey = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+      const ts = Date.now().toString();
+      const sigMsg = `rating:${txHash}:${buyerGuid}:${sellerGuid}:${selectedPolarity}:${pubkey}:${ts}`;
+      const sig = await wallet.signPayload(sigMsg);
+
+      const res = await fetch(`${PROXY}/biz/trade-rating`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tx_hash: txHash, rater_guid: buyerGuid, ratee_guid: sellerGuid,
+          rater_role: 'buyer', polarity: selectedPolarity, comment,
+          amount, category, pubkey, signature: sig, ts,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.detail || data.error || '평가 제출 실패');
+
+      box.innerHTML = '<div style="text-align:center;padding:8px;font-size:13px;color:#1A73E8;">✅ 평가해주셔서 감사합니다!</div>';
+      setTimeout(() => box.remove(), 2000);
+    } catch (e) {
+      statusEl.textContent = `⚠️ ${e.message}`;
+      submitBtn.disabled = false;
+    }
+  });
+}
+
 async function _startClaimFlow() {
   const wallet = window.gopangWallet;
   if (!wallet?.signPayload || !_profile?.guid) {
@@ -1592,6 +1678,20 @@ async function _submitOrder(signedTx) {
       claims:       [data.buyer_claim, data.seller_claim].filter(Boolean),
       reporter_svc: 'kmarket',
     }, _openerOrigin);
+
+    // 2026-07-15 신설 — 구매자 리뷰 → 판매자 혼디 온도 갱신 파이프라인
+    // 완성. 지금까지 POST /biz/trade-rating을 호출하는 UI가 세 레포
+    // 어디에도 없어(2026-07-15 사고실험에서 발견), 실거래가 쌓여도
+    // 온도가 절대 안 움직였다. tx_hash가 이미 확보된 이 시점(결제 직후)
+    // 이 리뷰를 받기 가장 자연스러운 지점이다 — 강제하지 않고 건너뛸
+    // 수 있게 한다.
+    _showReviewWidget({
+      txHash:   data.tx_hash,
+      buyerGuid: signedTx.tx?.input?.owner_guid,
+      sellerGuid: _profile.guid,
+      amount:   sellerNet + fee,
+      category: firstItem?.category || _catalog.find(c => c.id === firstItem?.id)?.category || '기타',
+    });
 
   } catch (e) {
     statusEl.textContent = `⚠️ 네트워크 오류: ${e.message}`;
