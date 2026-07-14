@@ -9460,15 +9460,37 @@ async function handleTradeRatingSubmit(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
 
-  const { tx_hash, rater_guid, ratee_guid, rater_role, polarity, comment, amount, category } = body;
+  const { tx_hash, rater_guid, ratee_guid, rater_role, polarity, comment, amount, category,
+          pubkey, signature, ts = '' } = body;
   if (!tx_hash)     return _err(400, 'MISSING_FIELD', 'tx_hash 필수', corsHeaders);
   if (!rater_guid)  return _err(400, 'MISSING_FIELD', 'rater_guid 필수', corsHeaders);
   if (!ratee_guid)  return _err(400, 'MISSING_FIELD', 'ratee_guid 필수', corsHeaders);
+  if (!pubkey)      return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  if (!signature)   return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
   if (!/^[0-9a-f]{64}$/.test(tx_hash)) return _err(400, 'INVALID_TX_HASH', 'tx_hash 형식 오류', corsHeaders);
   if (!['positive', 'neutral', 'negative'].includes(polarity)) return _err(400, 'INVALID_POLARITY', 'polarity는 positive/neutral/negative만 허용', corsHeaders);
   if (!['buyer', 'seller'].includes(rater_role)) return _err(400, 'INVALID_ROLE', 'rater_role은 buyer/seller만 허용', corsHeaders);
   if (typeof amount !== 'number' || amount <= 0) return _err(400, 'MISSING_FIELD', 'amount 필수(양수)', corsHeaders);
   if (!category) return _err(400, 'MISSING_FIELD', 'category 필수', corsHeaders);
+
+  // 2026-07-15 재적용 — 이 블록이 원래 같은 날 07:13 커밋(852b1a7)으로
+  // 추가됐는데, 4분 뒤 무관한 커밋(a7c19e5, anchorL1MerkleRoot 이관)이
+  // 오래된 로컬 체크아웃에서 작업하다 실수로 되돌렸다(2026-07-15
+  // 저장소 점검에서 발견 — git이 같은 파일의 다른 부분이라 충돌 없이
+  // 조용히 통과시킴). 내용은 최초 추가 때와 동일:
+  //
+  // rater_guid를 요청 바디값 그대로 믿으면, 거래 상대방이 상대 개인키
+  // 없이도 "구매자가 남긴 것처럼" 가짜 긍정 평가를 대신 제출해 자기
+  // 온도를 올릴 수 있다 — "실거래 검증이라 허위 평가가 어렵다"는 원래
+  // 설계 의도를 무력화하는 구멍이었다. /biz/claims·/biz/settle-ledger와
+  // 동일한 서명+TOFU 인증 원칙을 쓰되, tx_hash·양쪽 guid·polarity를
+  // 전부 서명 메시지에 묶어서 재생공격도 막는다.
+  const authOk = await _verifyClaimsRequester(env, {
+    guid: rater_guid, pubkey, signature,
+    sigMsg: `rating:${tx_hash}:${rater_guid}:${ratee_guid}:${polarity}:${pubkey}:${ts}`,
+    ts,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
 
   // 판매자(ratee) 소속 L1 조회 — seller_products와 동일 패턴(§4 guid_home_l1)
   const homeNodeId = (await _resolveHomeL1Node(env, ratee_guid)) || 'KR-JEJU-JEJU-HANLIM';
