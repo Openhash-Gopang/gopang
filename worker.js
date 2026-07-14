@@ -4898,6 +4898,19 @@ async function handlePdvQuery(request,env,corsHeaders){
     if(!consentOk)return _err(401,'CONSENT_INVALID','동의 토큰이 유효하지 않습니다',corsHeaders);
     const withinLimit=await _checkRateLimit(env,query.ipv6,'pdv_query');
     if(!withinLimit)return _err(429,'RATE_LIMITED','PDV 조회 한도 초과',corsHeaders);
+    // 2026-07-15 신설 — 공무원 직무보조 갱신계획 v1.0 §5 레이어 C(92번) 대응.
+    // query.official_access_cert가 있으면(=담당공무원이 대신 조회를 실행한
+    // 경우) dept-task-handler.js의 기존 _verifyAccessCert로 서명을 검증하고,
+    // 검증된 official_guid/org_id를 감사 로그에 남긴다. 없으면(citizen이
+    // 자기 자신을 조회하는 일반 경로) officialAudit은 null로 남아 기존 동작과
+    // 완전히 동일하다 — 기능 회귀 없음.
+    let officialAudit=null;
+    if(query.official_access_cert){
+      const cert=query.official_access_cert;
+      const verifiedOrgId=await _verifyAccessCert(env,cert,cert.official_guid,{_verifyEd25519Simple,_l1FindProfileByGuid}).catch(()=>null);
+      if(!verifiedOrgId)return _err(401,'ACCESS_CERT_INVALID','공무원 직책 인증서 검증 실패 — 서명·만료·TOFU 중 하나가 불일치합니다',corsHeaders);
+      officialAudit={official_guid:cert.official_guid,org_id:verifiedOrgId,role:cert.role||null};
+    }
     // 2026-07-13 신설 — work_pdv:{orgId} scope는 레거시 Supabase pdv_log가
     // 아니라 L1 pdv_records(실제 쓰기가 이뤄지는 테이블)에서 조회한다
     // (AC-EVOLUTION_v1_1.md §5-6 — 기존 _fetchPdvByScope 경로가 최신
@@ -4910,7 +4923,7 @@ async function handlePdvQuery(request,env,corsHeaders){
       pdvSummary[ws]=await _fetchWorkPdvRecordsL1(env,query.ipv6,orgId);
     }
     const queryId=`PDVQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;
-    const pdvEntryId=await _recordConsentEvent(env,query,queryId);
+    const pdvEntryId=await _recordConsentEvent(env,query,queryId,officialAudit);
     const expOut=verified?.exp ? new Date(verified.exp*1000).toISOString() : new Date(Date.now()+3600*1000).toISOString();
     return new Response(JSON.stringify({ok:true,query_id:queryId,ipv6:query.ipv6,period:query.period,pdv_summary:pdvSummary,consent:{granted_at:new Date().toISOString(),expires_at:expOut,pdv_entry_id:pdvEntryId}}),{status:200,headers:corsHeaders});
   }catch(e){return _err(500,'INTERNAL_ERROR',e.message,corsHeaders);}
@@ -4980,6 +4993,60 @@ async function _signConsentHmac(env,requestId,ipv6){
   let bin='';
   for(const b of new Uint8Array(sigBuf)) bin+=String.fromCharCode(b);
   return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_'); // '=' 패딩은 유지 — _verifyConsentHmac이 '+'/'/'만 되돌리므로
+}
+
+// ── 2026-07-15 신설: _recordConsentEvent ─────────────────────────────────
+// BUG: handlePdvQuery는 2026-07-04경부터 이 함수를 호출해왔으나(조회 성공
+// 시마다 pdv_entry_id를 응답에 담기 위해), 실제 정의가 이 파일에도 어느
+// import 모듈에도 없었다 — 즉 지금까지 모든 PDV 조회 성공 경로가 이 줄에서
+// ReferenceError를 던지고 바깥 catch(e)에 걸려 500 INTERNAL_ERROR를
+// 반환했을 가능성이 높다(실운영 트래픽에서 실제로 그랬는지는 로그 확인
+// 필요 — 이번 수정 범위 밖). 이 커밋이 최초 구현이다.
+//
+// 공무원 직무보조 갱신계획 v1.0 §5 레이어 C(92번, 개인정보 오남용 감사) 요구
+// 사항을 그대로 반영: "누가, 언제, 무슨 목적으로, 몇 명분을 뽑았는지"를
+// 사후에 확인 가능해야 한다. officialAudit이 있으면(=handlePdvQuery에서
+// access_cert로 서명 검증까지 끝난 공무원 요청) official_guid/org_id를
+// 함께 남기고, 없으면 시민의 자기 조회(self-query)로 기록한다.
+//
+// batch_size는 항상 1로 고정한다 — 이 경로(query.ipv6는 항상 단일 문자열)는
+// 구조적으로 한 번에 한 시민만 조회 가능하다. 다수인 대상 집계·명단 추출은
+// 이 함수의 대상이 아니라 별도 기관 AC 경로(트랙3, work_pdv와도 다른 축)로만
+// 허용해야 한다는 원칙을 스키마 차원에서 강제한다 — 나중에 이 함수가 배열
+// ipv6를 받아들이도록 "편의상" 확장되는 일이 없도록 주석으로 남겨둔다.
+async function _recordConsentEvent(env,query,queryId,officialAudit=null){
+  try{
+    const token=await _l1AdminToken(env);
+    const res=await fetch(`${L1_DEFAULT}/api/collections/pdv_query_audit_log/records`,{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        query_id:      queryId,
+        ipv6:          query.ipv6,
+        svc:           _resolveSvcId(query.svc),
+        scope:         query.scope,
+        purpose:       query.purpose||'',
+        batch_size:    1,
+        official_guid: officialAudit?.official_guid||null,
+        official_org:  officialAudit?.org_id||null,
+        official_role: officialAudit?.role||null,
+        recorded_at:   new Date().toISOString(),
+      }),
+    });
+    if(!res.ok){
+      console.warn('[PDVQuery] 감사 로그 저장 실패(L1):', res.status, await res.text().catch(()=>''));
+      return null;
+    }
+    const row=await res.json().catch(()=>null);
+    return row?.id||null;
+  }catch(e){
+    // 감사 로그 저장 실패가 조회 자체를 막지는 않는다(가용성 우선 — 시민이
+    // 정당한 조회 도중 로그 시스템 장애로 서비스를 못 받는 상황을 피한다).
+    // 다만 이 catch가 자주 발생하면 감사 추적 자체가 무력화되므로 별도
+    // 모니터링(실패율 알림)이 필요하다 — Phase 4 온나라시스템 연동 시 확정.
+    console.warn('[PDVQuery] 감사 로그 저장 실패:',e.message);
+    return null;
+  }
 }
 
 // L1(hanlim) pdv_consent_requests에서 request_id로 단일 레코드 조회 (Admin 토큰)
