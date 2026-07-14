@@ -1,4 +1,4 @@
-# AC 직종별 self 갱신 메커니즘 사고실험 v2.3 (A·B·C 해결)
+# AC 직종별 self 갱신 메커니즘 사고실험 v2.4 (A·B·C·D 해결)
 
 > **작성일:** 2026-07-14 | **근거:** 주피터님 지시("다양한 직종을
 > 상정하여 사고실험") — `AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_v1_0.md`
@@ -18,7 +18,7 @@
 | A | job_ksco에 검증 절차가 없다 — 누구나 자기 직업을 자칭하면 그대로 사실처럼 취급된다 | 중간 | **해결(2026-07-14)** |
 | B | 사업자(entity_type=business)는 job_ksco를 아예 가질 수 없다 — AC-AUTHOR §3-2 "병존" 시나리오가 코드에서 막혀 있다 | 구조적 | **해결(2026-07-14)** |
 | C | STAFF_TASK_QUEUE에 배정된 작업을 개인 AC가 실제로 확인하지 않는다 | 구조적 | **해결(2026-07-14)** |
-| D | `work_domain.status`(학생·은퇴자·무직 등)가 코드에 전혀 구현되지 않았다 | 구조적 | 미해결 |
+| D | `work_domain.status`(학생·은퇴자·무직 등)가 코드에 전혀 구현되지 않았다 | 구조적 | **해결(2026-07-14)** |
 | E | `job_ksco.review_due`가 있지만 아무 코드도 읽지 않는다(만료가 전혀 체크되지 않음) | 경미 | 미해결 |
 | F | `AGENCY_PUBKEY_REGISTRY`가 비어 있어, 이 논의의 출발점이었던 "위생과 직원" 시나리오 자체가 지금 실제로는 작동 못 한다 | 확인(기지) | 저장소 밖 |
 | G | 민감 직종(AC-AUTHOR §6) `job_ksco.visibility='private'`가 `GET /profile`의 field_visibility 필터에서 실제로 존중되는지 미확인 | 확인 필요 | 미해결 |
@@ -131,7 +131,7 @@ job_ksco의 `visibility` 기본값은 always `'private'`이지만
 `extra.public.identity` 안에 있는 **커스텀 중첩 필드**라, 범용
 field_visibility 룰이 이 안쪽까지 들여다보는지 별도 검증이 필요하다.
 
-### 8~9. 학생·은퇴자 — D(구조적 결함) 발견
+### 8~9. 학생·은퇴자 — D(구조적 결함) 발견 → 해결(2026-07-14)
 
 AC-EVOLUTION §1이 `work_domain.status`("employed_public"|
 "employed_private"|"self_employed"|"student"|"retired"|"homemaker"|
@@ -141,6 +141,15 @@ AC-EVOLUTION §1이 `work_domain.status`("employed_public"|
 말해도 그게 KSCO 매칭이 안 되니(§0의 "KSCO는 학생을 분류하지 않는다"
 원칙 그대로) job_ksco도 안 채워지고, work_domain도 없으니 **아무
 데도 안 남는다.** "학습이 업무다"는 설계 문서 안에만 존재한다.
+
+**→ 해결**: `worker.js`에 work_domain 검증 로직 신설(고정 enum,
+`status_since` 자동관리 — 같은 status를 재제출해도 날짜가 안 밀림),
+`personal-assistant` SP [P1-INFER]에 추정 규칙 추가, `call-ai.js`가
+`[ctx]`에 "업무상태:학생"/"업무상태:은퇴(비활성)" 식으로 반영,
+AGENT-COMMON §0-1-R에 활용 지시 추가(은퇴자는 "요즘 회사 어떠세요"
+같은 질문을 안 하되 과거 경력은 배경지식으로 참고 가능하다는 구분도
+명시). job_ksco와 독립적으로 병존 — 재직 중인 사람은 job_ksco만으로
+충분해 work_domain을 굳이 안 채워도 된다.
 
 ### 10. 프리랜서 디자이너 — 대체로 4·5번과 동일
 

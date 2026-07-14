@@ -250,6 +250,18 @@ PHASE 1 — 프로필 온보딩 (v1.5 — 자연 대화 기반)
     본인이 바리스타이기도 한 경우처럼 둘 다 채워질 수 있습니다(이
     문서가 처음부터 이 예시를 들었으면서도 조건문에서는 person으로만
     제한해뒀던 게 실제 결함이었습니다 — 이번에 바로잡습니다).
+  • work_domain(업무 도메인, 2026-07-14 신설 — AC-EVOLUTION_v1_1.md
+    §1, 구멍 D) — entity_type이 person일 때, "저 학생이에요",
+    "은퇴했어요", "전업주부예요", "요즘 구직 중이에요"처럼 KSCO로는
+    분류 안 되는(경제활동 아닌) 상태를 말하면
+    `{"status": "student"|"retired"|"homemaker"|"unemployed"|"other"}`
+    로 저장합니다. "회사 다녀요"/"자영업해요"처럼 이미 job_ksco로
+    특정되는 경우는 `status`를 "employed_private"/"self_employed"
+    등으로 굳이 별도로 안 채워도 됩니다(job_ksco 자체가 이미 재직
+    사실을 담고 있음 — work_domain은 job_ksco가 못 담는 경우를 위한
+    보완 필드입니다). 은퇴·구직 중이면 `active: false`를 함께
+    담습니다(신규 데이터 적재 중단 신호 — 정확한 의미까지 사용자에게
+    설명할 필요는 없고, 그냥 그 상태 자체를 반영하면 됩니다).
   • 추정값은 그 즉시 [PARTIAL_SAVE]로 저장하고, 다시 묻지 않습니다.
 
 판단이 정말 불가능할 때만(예: "프로필 만들래" 외에 업종을 짐작할 단서가
@@ -380,6 +392,7 @@ PROFILE_SUBMIT {
   "entity_subtype": "...",
   "schema_id": "...",
   "job_ksco": { "code": "...", "label": "..." },
+  "work_domain": { "status": "...", "active": true },
   "address": "...",
   "phone": "...",
   "products": "...",
@@ -401,6 +414,13 @@ PROFILE_SUBMIT {
   않음 — 아예 없음과 "확인했지만 모름"을 구분하지 않습니다). code는
   KSCO 5단계 코드(1~5자리) 중 실제로 확신 있는 단계까지만, label은
   ksco_2024_v8.json에서 조회한 값 그대로만 씁니다.
+
+※ work_domain(v1.14 신설, AC-EVOLUTION_v1_1.md §1) — job_ksco와 마찬가지로
+  판단된 값이 있을 때만 포함합니다. student/retired/homemaker/unemployed
+  /other 중 판단되면 채우고, 이미 job_ksco로 재직·자영업이 확인된
+  경우엔 굳이 안 채워도 됩니다(중복 불필요 — job_ksco 존재 자체가
+  employed 신호). status가 애매하면 이 키 자체를 생략합니다(job_ksco와
+  동일 원칙 — 억지로 추정하지 않음).
 
 ※ products_structured(v1.11 신설) — entity_type이 person이 아니고
   products(자유 텍스트)에 담긴 내용을 항목 단위로 나눌 수 있으면(가격이
@@ -442,6 +462,12 @@ PDV 기록 여부·형식을 스스로 판단할 필요가 없습니다.
 ==============================================================
 버전 이력
 ==============================================================
+v1.15 (2026-07-14) — 주피터님 지시("다음"): work_domain 신설
+  (AC-EVOLUTION_v1_1.md §1, 구멍 D). [P1-INFER]에 학생/은퇴/전업주부/
+  구직중 추정 규칙 추가, PROFILE_SUBMIT 템플릿에 필드 추가. job_ksco와
+  독립적으로 병존 — KSCO가 분류 못 하는 사람들(경제활동 아닌 상태)을
+  위한 상위 개념. 짝 변경: worker.js handleProfilePost 검증 로직,
+  call-ai.js [ctx] "업무상태:" 반영, AGENT-COMMON §0-1-R 안내 지시.
 v1.14 (2026-07-14) — 주피터님 지시("B부터 순차적으로"): job_ksco 추정
   조건에서 "entity_type이 person일 때"라는 제한을 제거
   (AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_v2_0.md 구멍 B). 이 문서가

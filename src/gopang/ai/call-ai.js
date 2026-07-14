@@ -2061,8 +2061,12 @@ async function _loadOwnJobContext() {
     const res = await fetch(`https://hondi-proxy.tensor-city.workers.dev/profile?${qs.toString()}`, { cache: 'no-cache' });
     const data = await res.json().catch(() => null);
     const identity = data?.extra?.public?.identity;
-    if (identity && (identity.job_ksco || identity.affiliation)) {
-      window.__hondiOwnProfileCache = { job_ksco: identity.job_ksco || null, affiliation: identity.affiliation || null };
+    if (identity && (identity.job_ksco || identity.affiliation || identity.work_domain)) {
+      window.__hondiOwnProfileCache = {
+        job_ksco: identity.job_ksco || null,
+        affiliation: identity.affiliation || null,
+        work_domain: identity.work_domain || null, // 2026-07-14 신설(구멍 D)
+      };
     }
 
     // 2026-07-14 신설 — 나에게 배정된 STAFF_TASK_QUEUE 작업 확인
@@ -2148,6 +2152,7 @@ async function _buildEnhancedUserContent(userContent) {
     try { partial = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}'); } catch {}
     const jobKsco = partial.job_ksco || window.__hondiOwnProfileCache?.job_ksco || null;
     const affiliation = partial.affiliation || window.__hondiOwnProfileCache?.affiliation || null;
+    const workDomain = partial.work_domain || window.__hondiOwnProfileCache?.work_domain || null;
     if (jobKsco?.label) parts.push(`직업:${jobKsco.label}`);
     if (Array.isArray(affiliation) && affiliation.length) {
       const affStr = affiliation
@@ -2155,6 +2160,19 @@ async function _buildEnhancedUserContent(userContent) {
         .map(a => `${a.org_id}${a.verified ? '' : '(승인대기)'}`)
         .join(', ');
       if (affStr) parts.push(`소속:${affStr}`);
+    }
+    // 2026-07-14 신설 — work_domain(구멍 D). job_ksco가 못 잡는
+    // 학생·은퇴자·전업주부·무직을 여기서 보완한다. WORK_DOMAIN_LABEL_KO
+    // 매핑은 AGENT-COMMON이 아니라 여기서 해둔다 — 태그 자체를 한국어
+    // 값으로 넘기면 AGENT-COMMON 쪽 파싱 부담이 준다.
+    if (workDomain?.status) {
+      const WORK_DOMAIN_LABEL_KO = {
+        employed_public: '공공부문 재직', employed_private: '민간부문 재직',
+        self_employed: '자영업', student: '학생', retired: '은퇴',
+        homemaker: '전업주부', unemployed: '구직 중', other: '기타',
+      };
+      const label = WORK_DOMAIN_LABEL_KO[workDomain.status] || workDomain.status;
+      parts.push(`업무상태:${label}${workDomain.active === false ? '(비활성)' : ''}`);
     }
     // 2026-07-14 신설 — 배정된 작업 안내(사고실험 구멍 C 해결). 사람이
     // 아니라 그 사람 소속 부서가 게시한 작업이 있으면, AC가 §0-1-Q

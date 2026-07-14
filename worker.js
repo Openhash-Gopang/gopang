@@ -8547,6 +8547,13 @@ async function handleProfilePost(request, env, corsHeaders) {
     // 가능하다. 자기 신고만으로 권한이 생기면 안 된다는 게 AC-EVOLUTION
     // §3의 핵심 결론이었다.
     affiliation = null,
+    // 2026-07-14 신설 — AC-EVOLUTION_v1_1.md §1(업무 도메인, 전 직종
+    // 일반화). job_ksco(KSCO)만으로는 학생·은퇴자·전업주부·무직을
+    // 표현할 수 없다(KSCO 자체가 "경제활동"만 분류하도록 설계됨) —
+    // 이 필드가 그 상위 개념이다(AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_
+    // v2_0.md 구멍 D 해결). job_ksco와 독립적으로 병존 — 학생은
+    // work_domain.status='student'만 있고 job_ksco는 없다.
+    work_domain = null,
     // 2026-07-13 신설 — products_structured가 여태 이 함수 destructure에
     // 없어 저장 경로 자체가 없었다(실사로 발견 — welcome.js
     // _forwardProductsToMarket()이 Market의 seller_products로는 보냈지만,
@@ -8752,6 +8759,39 @@ async function handleProfilePost(request, env, corsHeaders) {
     }).filter(a => a.org_id);
   }
 
+  // 2026-07-14 신설 — work_domain 검증(AC-EVOLUTION_v1_1.md §1, 구멍 D).
+  // status는 고정 enum만 허용 — LLM이 자유 문자열을 지어내 넣지
+  // 못하게 막는다(U2와 동일 원칙). job_ksco와 달리 검증 절차가 없는
+  // 것은 동일하다(자기신고) — 다만 이 필드는 "안전 판단을 낮추는"
+  // 위험군이 아니라 순수 맥락 정보라 §0-1-R의 C30 교차참조가 굳이
+  // 필요 없다(고용 상태 자체가 전문성 주장이 아니므로).
+  const WORK_DOMAIN_STATUS = new Set([
+    'employed_public', 'employed_private', 'self_employed',
+    'student', 'retired', 'homemaker', 'unemployed', 'other',
+  ]);
+  let resolvedWorkDomain = null;
+  if (entity_type === 'person' && work_domain && typeof work_domain === 'object') {
+    const prevWd = (prevExtra.public || {}).identity?.work_domain || null;
+    if (WORK_DOMAIN_STATUS.has(work_domain.status)) {
+      const statusChanged = !prevWd || prevWd.status !== work_domain.status;
+      resolvedWorkDomain = {
+        status: work_domain.status,
+        // active 기본값: 재직/자영업/학생은 true, 은퇴·무직은 명시 안
+        // 하면 false로 안전하게 기본 처리(신규 데이터 적재를 막는 쪽이
+        // "은퇴자인데 계속 적재됨"보다 안전 — AC-EVOLUTION §1과 동일 사상).
+        active: typeof work_domain.active === 'boolean'
+          ? work_domain.active
+          : !['retired', 'unemployed'].includes(work_domain.status),
+        // 상태가 바뀐 시점만 갱신 — 같은 status를 매번 다시 제출해도
+        // status_since가 오늘로 계속 밀리지 않게 한다(job_ksco의
+        // confirmed_at과 다른 설계 — 이건 "언제부터"가 의미 있는 값).
+        status_since: statusChanged ? new Date().toISOString().slice(0, 10) : (prevWd?.status_since || new Date().toISOString().slice(0, 10)),
+      };
+    }
+    // status가 enum 밖이면 조용히 무시(§0 U0: 실패보다 진행 — job_ksco
+    // 코드 형식 오류 처리와 동일 관례).
+  }
+
   const newExtraPublic = {
     ...(prevExtra.public || {}),
     identity: {
@@ -8760,6 +8800,7 @@ async function handleProfilePost(request, env, corsHeaders) {
       // 'job_ksco' in body로 "안 보냄(기존값 보존)"과 "null 명시(비움)"를 구분.
       job_ksco: ('job_ksco' in body) ? resolvedJobKsco : ((prevExtra.public || {}).identity?.job_ksco ?? null),
       affiliation: ('affiliation' in body) ? resolvedAffiliation : ((prevExtra.public || {}).identity?.affiliation ?? null),
+      work_domain: ('work_domain' in body) ? resolvedWorkDomain : ((prevExtra.public || {}).identity?.work_domain ?? null),
     },
     activity: { timezone: 'Asia/Seoul', hours, holidays },
     contact:  { phone_display: phone, phone_visible: !!phone_visible, website, sns_public, languages_spoken },
