@@ -103,6 +103,44 @@ function _clearTimeoutTimer() {
   if (_expert.timer) { clearTimeout(_expert.timer); _expert.timer = null; }
 }
 
+// ── 태그 해석 실패 공용 리포터 (구조적 취약점 보완 #2, 2026-07-14 신설) ──
+// EXPERT([EXPERT: personaId])·GWP([GWP: serviceId]) 두 라우팅 태그 모두
+// "모델이 태그는 냈지만 registry에 없는 id"인 경우, 기존에는 콘솔 경고만
+// 남기고 사용자에게는 아무 신호 없이 그대로 증발했다(사고실험으로 확인된
+// 구조적 취약점). 이제 (1) 사용자에게 실패를 알리고 일반 답변으로 계속
+// 도와줄 수 있음을 안내하며, (2) 서버 SP-Author 큐(/sp-author/queue)에
+// "unresolved_tag_signal"로 기록해 미등록 수요를 정량적으로 추적한다.
+// institution 필드에 raw id를 그대로 넣어두면 서버의 기존 중복병합 로직
+// (institution+task 기준, handleSPAuthorQueue 참조)이 동일 id의 반복
+// 실패를 자동으로 병합해줘서 큐가 노이즈로 넘치지 않는다.
+export function _reportUnresolvedTag(kind, rawId, userText) {
+  try {
+    appendBubble(
+      'ai',
+      `요청하신 항목("${rawId}")에 맞는 ${kind === 'expert' ? '전문가' : '서비스'}를 아직 찾지 못했어요. ` +
+      `우선 제가 아는 선에서 바로 도와드릴게요.`
+    );
+  } catch (e) {
+    console.warn('[TagTelemetry] 안내 버블 표시 실패(무시):', e.message);
+  }
+  try {
+    const base = (CFG.endpoint || '').replace(/\/+$/, '');
+    fetch(`${base}/sp-author/queue`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        request_type: 'unresolved_tag_signal',
+        signal_source: kind === 'expert' ? 'expert_tag_resolution' : 'gwp_tag_resolution',
+        institution: rawId,
+        task: `[${kind}] 태그 미해결 — 사용자 발화 기반 수요 신호`,
+        source_conversation: userText || '',
+        priority: 'low',
+      }),
+    }).catch(e => console.warn('[TagTelemetry] 큐 등록 실패(무시, 사용자 흐름엔 영향 없음):', e.message));
+  } catch (e) {
+    console.warn('[TagTelemetry] 큐 등록 시도 실패(무시):', e.message);
+  }
+}
+
 // ── [EXPERT:personaId] 태그 감지 → 새 탭에서 전문가 페르소나 시작 ──
 // call-ai.js의 GWP 태그 파서 옆에서 같이 호출한다.
 //
@@ -130,10 +168,21 @@ export async function handleExpertTag(fullReply, userText, _preTab) {
   const personaId = resolveExpertId(raw);
   if (!personaId) {
     console.warn('[Expert] 알 수 없는 전문가 ID:', raw);
+    // 2026-07-14 신설(구조적 취약점 보완 #2) — 이전에는 여기서 그냥 return
+    // false로 끝나 사용자에게 아무 신호도 없이 태그가 증발했다(핵심
+    // 대화가 이미 스트리밍된 뒤라 사용자는 원인을 알 길이 없었음). 이제
+    // (1) 사용자에게 실패 사실을 알리고, (2) 실제 미등록 수요로 서버에
+    // 기록한다 — 모델이 명시적으로 [SP_DRAFT_REQUEST]를 낸 경우만 큐에
+    // 잡히던 기존 방식의 사각지대(태그 자체가 잘못 나온 경우)를 메운다.
+    _reportUnresolvedTag('expert', raw, userText);
     return false;
   }
   const gwpDef = getExpertGwpDef(personaId);
-  if (!gwpDef) return false;
+  if (!gwpDef) {
+    console.warn('[Expert] personaId는 해석됐으나 GWP 정의 없음:', personaId);
+    _reportUnresolvedTag('expert', raw, userText);
+    return false;
+  }
 
   console.info('[Expert] LLM 판단 → 새 탭:', personaId);
   _gwpLaunch(gwpDef, userText, _preTab, _buildRoutingFacts());

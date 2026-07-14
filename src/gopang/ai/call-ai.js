@@ -29,7 +29,8 @@ import { inviteByHandle } from '../ui/p2p-chat.js';
 import { _openProfilePanel } from '../ui/settings.js';
 import { _gwpLaunch } from '../gwp/engine.js';
 import { maybeHandleExpertTurn, applyExpertSystemIfActive,
-         isExpertActive, handleExpertTag, _composeExpertPrompt } from './expert-session.js';
+         isExpertActive, handleExpertTag, _composeExpertPrompt,
+         _reportUnresolvedTag } from './expert-session.js';
 import { getExpertDef, resolveExpertId } from './expert-registry.js';
 import { buildHondiFaqContext } from './hondi-faq-router.js';
 import { setPdvDomain, _buildPDVNote } from '../pdv/record.js';
@@ -2742,6 +2743,10 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
         _gwpLaunch(svcDef, userText, _preTab, _buildRoutingFacts());
       } else {
         console.warn('[GWP] 알 수 없는 서비스 ID:', svcId);
+        // 2026-07-14 신설(구조적 취약점 보완 #2) — 기존엔 예약 탭만 조용히
+        // 닫고 끝났다(사용자 입장에선 아무 반응 없음). EXPERT 쪽과 동일한
+        // 공용 리포터로 안내+수요신호 등록을 맞춘다.
+        _reportUnresolvedTag('gwp', svcId, userText);
         if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
       }
     } else {
