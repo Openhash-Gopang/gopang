@@ -74,26 +74,6 @@ const DEPT_TASK_TAXONOMY = {
       ['agrieconomy','construction','health']
         .map(d => `city-dept:${city}:${d}`)),
   ]),
-  emd: new Set([
-    // 05-emd 43개 읍면동 × 6개 코드(general/civil/welfare/outreach/
-    // industry/agent) — emd-master-data.json(42개) + hallim(1개) 실사,
-    // 2026-07-13 신설(기존에는 emd 계층 자체가 U10-5/여기 어디에도
-    // 등록돼 있지 않아 이 계층의 DEPT_TASK_REQUEST가 원천적으로
-    // 불가능했음). 최초 등록 시 git add 목록에서 이 파일이 누락돼
-    // push가 안 됐던 것을 2026-07-13 최종 감사에서 재발견, 재적용함.
-    // industry는 12개 읍·면 인스턴스만 실사용하지만, do-dept/city-dept
-    // 크로스곱과 동일하게 "안 쓰는 조합도 등록만 해둔다" 원칙을 유지해
-    // 43개 전체 × 6개를 등록한다.
-    ...['aewol','jocheon','gujwa','hangyeong','chuja','udo','daejeong','namwon',
-        'seongsan','andeok','pyoseon','ildo1','ildo2','ido1','ido2','samdo1',
-        'samdo2','yongdam1','yongdam2','geonip','hwabuk','samyang','bonggae',
-        'ara','ora','yeondong','nohyeong','oedo','iho','dodu','songsan',
-        'jeongbang','jungang-sgp','cheonji','hyodon','yeongcheon','donghong',
-        'seohong','daeryun','daecheon','jungmun','yerae','hallim']
-      .flatMap(emd =>
-        ['general','civil','welfare','outreach','industry','agent']
-          .map(t => `emd:${emd}:${t}`)),
-  ]),
   org: new Set([
     // 07-org 27개 (prompts/Jejudo/07-org/*.md 실사)
     'org:JTO', 'org:JFAC', 'org:JPASS', 'org:IPF', 'org:JTP', 'org:JCPA', 'org:SGPMED',
@@ -150,23 +130,115 @@ async function _validateTarget(env, targetType, targetId, deps) {
 // 서버 안에서 직접 호출) requester가 그 세션과 실제로 일치하는지 검사한다.
 // null이면(=순수 HTTP POST) dept/org 요청자는 아예 거부한다 — 이 경로로는
 // "부서를 자칭"할 신뢰 근거가 전혀 없기 때문(위 상단 주석 참고).
+// ═══════════════════════════════════════════════════════════
+// 기관/기업 신원 암호 검증 — 2026-07-14 신설
+// (주피터님 지시: "모든 공무원은 국가가 서명한 증명서를 보유하며, 모든
+// 직책은 소속 기관장의 디지털 서명에 의해 유효하다. 국가와 기관의
+// 공개키로 신분을 검증한다.")
+//
+// 이전까지 authoritativeAgency는 handleGovRelay/handleBusinessRelay가
+// 클라이언트 요청 본문에서 그대로 읽은 agency/bizKey 문자열이었다 —
+// 누구든 {agency:"jeju_do"}만 보내면 그 세션 안에서 "저는 위생과
+// 관리자입니다"라고 자칭하는 것만으로 _authoritativeCheck를 통과했다
+// (사고실험이 아니라 실제 코드 검토로 발견한 결함). 이 블록이 그
+// 자기신고를 서명 검증으로 대체한다 — 이미 있는 Ed25519 TOFU 인프라
+// (business/citizen 요청자용, worker.js _verifyEd25519)를 그대로
+// 재사용하고, 새 암호 로직은 만들지 않는다.
+//
+// AGENCY_PUBKEY_REGISTRY — 정부기관의 "기관 공개키"(기관장 서명키에
+// 해당). 하드코딩(DEPT_TASK_TAXONOMY와 동일 관례) — 최초 등록은
+// 플랫폼 관리자가 실제 기관과 오프라인으로 신원을 확인한 뒤 채워
+// 넣는다. 이건 여전히 이 저장소 밖의 절차다(#18의 "관련 법령이
+// 최초 임명의 근거" 원칙과 동일 — 시스템은 이 값이 일단 등록되면
+// 그 이후의 서명 검증만 암호학적으로 보장한다, 최초 등록 행위 자체의
+// 진위는 시스템이 재검증할 방법이 없다). 값이 없는 기관은 접근증명을
+// 아예 발급 못 하므로 안전한 기본값(거부)이 유지된다.
+//
+// 민간기업(org:{bizKey})은 새 레지스트리가 필요 없다 — 이미 존재하는
+// L1 profiles.pubkey_ed25519(사업자 claim 절차로 등록된 본인 키)를
+// "기관 공개키"로 그대로 쓴다. deps._l1FindProfileByGuid로 조회.
+const AGENCY_PUBKEY_REGISTRY = {
+  // 'city-dept:jeju:health': '<base64url Ed25519 공개키 — 실제 기관장
+  //    키 확보 후 채울 것, 그 전까지 이 기관은 access_cert 발급 불가>',
+};
+
+/**
+ * _verifyAccessCert — "직책 인증서"(기관장이 특정 GUID에게 특정
+ * 직책을 부여했다는 서명) + "본인 서명"(그 GUID가 진짜 자기 키로
+ * 이번 요청을 보냈다는 서명) 둘 다 검증한다.
+ *
+ * cert = {
+ *   org_id, official_guid, role, issued_at, expires_at,
+ *   issuer_signature,      // org_id의 공개키로 서명 — 아래 canonical 대상
+ *   official_pubkey,       // official_guid 본인의 공개키
+ *   official_signature,    // official_pubkey로 이번 요청(request_nonce) 서명
+ *   request_nonce,         // 재전송 공격 방지용 — 호출부가 매 요청 새로 생성
+ * }
+ * 반환: 검증 통과 시 org_id 문자열, 실패 시 null(이유는 console.warn만).
+ */
+async function _verifyAccessCert(env, cert, callerGuid, deps) {
+  const { _verifyEd25519Simple, _l1FindProfileByGuid } = deps;
+  if (!cert || typeof cert !== 'object') return null;
+  const { org_id, official_guid, role, issued_at, expires_at,
+          issuer_signature, official_pubkey, official_signature, request_nonce } = cert;
+  if (!org_id || !official_guid || !role || !expires_at || !issuer_signature ||
+      !official_pubkey || !official_signature || !request_nonce) {
+    console.warn('[AccessCert] 필드 누락'); return null;
+  }
+  if (official_guid !== callerGuid) {
+    console.warn('[AccessCert] official_guid가 요청자 guid와 불일치'); return null;
+  }
+  if (new Date(expires_at).getTime() < Date.now()) {
+    console.warn('[AccessCert] 만료된 인증서'); return null;
+  }
+
+  // 1) 기관장 서명(issuer_signature) 검증 — "이 GUID에게 이 직책을 준다"는
+  //    선언 자체가 진짜 그 기관의 공개키로 서명됐는지.
+  let issuerPubkey = null;
+  if (org_id.startsWith('org:')) {
+    // 민간기업 — 기존 L1 profile pubkey_ed25519 재사용.
+    const bizProfile = await _l1FindProfileByGuid(env, org_id.slice('org:'.length)).catch(() => null);
+    issuerPubkey = bizProfile?.pubkey_ed25519 || null;
+  } else {
+    issuerPubkey = AGENCY_PUBKEY_REGISTRY[org_id] || null;
+  }
+  if (!issuerPubkey) { console.warn('[AccessCert] 기관 공개키 미등록:', org_id); return null; }
+
+  const appointmentMessage = JSON.stringify({ org_id, official_guid, role, issued_at, expires_at });
+  const issuerOk = await _verifyEd25519Simple(issuerPubkey, issuer_signature, appointmentMessage).catch(() => false);
+  if (!issuerOk) { console.warn('[AccessCert] 기관장 서명 검증 실패'); return null; }
+
+  // 2) 본인 서명(official_signature) 검증 — 이번 요청을 실제로 그
+  //    official_pubkey의 개인키 소유자가 보냈는지(request_nonce 재사용
+  //    공격 방지는 호출부가 매번 새 nonce를 쓰는 것으로 담보 — 이
+  //    함수는 서명 유효성만 확인, nonce 재사용 여부 추적은 범위 밖).
+  const selfOk = await _verifyEd25519Simple(official_pubkey, official_signature, request_nonce).catch(() => false);
+  if (!selfOk) { console.warn('[AccessCert] 본인 서명 검증 실패'); return null; }
+
+  // 3) TOFU — official_guid의 L1 프로필에 이미 등록된 키가 있으면 일치해야
+  //    한다(다른 사람이 같은 GUID를 사칭해 새 키로 서명 검증만 통과시키는
+  //    것 방지 — business/citizen 경로와 동일 원칙).
+  const officialProfile = await _l1FindProfileByGuid(env, official_guid).catch(() => null);
+  if (officialProfile?.pubkey_ed25519 && officialProfile.pubkey_ed25519 !== official_pubkey) {
+    console.warn('[AccessCert] official pubkey TOFU 불일치'); return null;
+  }
+
+  return org_id;
+}
+
+/**
+ * _authoritativeCheck — 2026-07-14 재설계. authoritativeAgency는 이제
+ * 클라이언트 자칭 문자열이 아니라 _verifyAccessCert가 서명까지 검증한
+ * org_id다. 그래서 느슨한 접두어 매칭("jeju_do면 city-dept:*는 다
+ * 통과")을 버리고 정확히 일치해야만 통과한다 — 검증이 이미 구체적인
+ * org_id 단위로 끝났으므로 느슨하게 풀어줄 이유가 없다.
+ */
 function _authoritativeCheck(requesterType, requesterId, authoritativeAgency) {
   if (requesterType !== 'dept' && requesterType !== 'org') return { ok: true }; // business/citizen은 서명으로 별도 검증
   if (!authoritativeAgency) {
-    return { ok: false, reason: 'DEPT_ORG_REQUIRES_RELAY_SESSION' };
+    return { ok: false, reason: 'DEPT_ORG_REQUIRES_VERIFIED_ACCESS_CERT' };
   }
-  if (authoritativeAgency === 'jeju_do') {
-    const ok = requesterType === 'dept' &&
-      (requesterId.startsWith('do-dept:') || requesterId.startsWith('do-agency:') || requesterId.startsWith('city-dept:'));
-    return ok ? { ok: true } : { ok: false, reason: 'REQUESTER_AGENCY_MISMATCH' };
-  }
-  if (authoritativeAgency === 'jeju_national') {
-    const ok = requesterType === 'dept' && requesterId.startsWith('national:');
-    return ok ? { ok: true } : { ok: false, reason: 'REQUESTER_AGENCY_MISMATCH' };
-  }
-  // handleBusinessRelay — authoritativeAgency는 bizKey 문자열 그대로.
-  const ok = requesterType === 'org' && requesterId === `org:${authoritativeAgency}`;
-  return ok ? { ok: true } : { ok: false, reason: 'REQUESTER_AGENCY_MISMATCH' };
+  return authoritativeAgency === requesterId ? { ok: true } : { ok: false, reason: 'REQUESTER_AGENCY_MISMATCH' };
 }
 
 /**
@@ -282,4 +354,4 @@ async function handleDeptTaskUpdate(request, env, corsHeaders, taskId, deps) {
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
-export { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck };
+export { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck, _verifyAccessCert, AGENCY_PUBKEY_REGISTRY };

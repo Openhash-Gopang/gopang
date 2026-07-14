@@ -14,10 +14,7 @@
 import { handleAiChat, handleEscalate } from './src/worker/ai-chat-handler.js';
 import { handleOrderQueue } from './src/worker/order-queue-handler.js';
 import { handleDeliveryRequest } from './src/worker/delivery-handler.js';
-import { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck } from './src/worker/dept-task-handler.js';
-// 2026-07-14: 레거시 별칭 안전망 — HONDI_TIER_MODELS에 없는 model이
-// 클라이언트에서 그대로 들어와도(레거시 호출 등) 여기서 한 번 더 정규화한다.
-import { resolveDeepseekModel } from './src/gopang/core/deepseek-client.js';
+import { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck, _verifyAccessCert } from './src/worker/dept-task-handler.js';
 
 const ALLOWED_ORIGINS = [
   'https://hondi.net',
@@ -4396,11 +4393,7 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   // 받은 model 값을 그대로 쓴다 — 하위 호환.
   const requestedModel = parsedBody?.model || '';
   const tierKey = HONDI_TIER_MODELS[requestedModel] ? requestedModel : null;
-  // 알려진 티어명("hondi-flash" 등)이면 그 tier의 backendModel을 쓰고,
-  // 아니면(레거시 직접 호출 등) requestedModel을 resolveDeepseekModel로
-  // 한 번 더 정규화한다 — 'deepseek-chat'/'deepseek-reasoner' 같은
-  // 폐기 예정 별칭이 그대로 들어와도 여기서 걸러진다.
-  const backendModel = tierKey ? HONDI_TIER_MODELS[tierKey].backendModel : resolveDeepseekModel(requestedModel);
+  const backendModel = tierKey ? HONDI_TIER_MODELS[tierKey].backendModel : requestedModel;
 
   // guid가 실려 있으면(=call-ai.js의 deepseek-default 경로) 1,000원 누적 한도 체크.
   let outboundBody = parsedBody ? { ...parsedBody, model: backendModel } : null;
@@ -4963,6 +4956,16 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
   const userKey   = `biz:spend:${bizKey}:${day}`;
   const globalKey = `biz:spend:global:${day}`;
 
+  // ── 2026-07-14 보안 수정 — handleGovRelay와 동일 원칙 ─────────────
+  // business_id도 여태 자칭 문자열이었다 — access_cert가 있고, 그 안의
+  // org_id가 정확히 이 요청의 bizKey와 일치할 때만 verifiedOrgId를
+  // 인정한다(다른 사업체 인증서로 이 세션의 bizKey를 대신 인증하는 것
+  // 방지).
+  const expectedOrgId = `org:${bizKey}`;
+  const verifiedOrgId = (body.access_cert && body.access_cert.org_id === expectedOrgId)
+    ? await _verifyAccessCert(env, body.access_cert, guid, { _verifyEd25519Simple, _l1FindProfileByGuid }).catch(() => null)
+    : null;
+
   const [userSpent, globalSpent] = await Promise.all([
     _klawSpendGet(env, userKey), _klawSpendGet(env, globalKey)
   ]);
@@ -5041,8 +5044,8 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
             payload: taskPayload.payload, originChain: taskPayload.origin_chain || [],
           }, {
             _l1FindProfileByGuid, _l1CreateDeptTask,
-            _verifyEd25519: async () => true,
-          }, { authoritativeAgency: bizKey })
+            _verifyEd25519, // 2026-07-14 수정 — async()=>true 스텁 제거(gov relay와 동일 이유)
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
 
       const cleanedText = firstContent.replace(/\[DEPT_TASK_REQUEST\][\s\S]*?\[\/DEPT_TASK_REQUEST\]/, '').trim();
@@ -5069,7 +5072,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
         ? await approveAffiliationCore(env, {
             orgId: affPayload.org_id, targetGuid: affPayload.target_guid,
             approverLabel: affPayload.approver_label, evidence: affPayload.evidence,
-          }, { authoritativeAgency: bizKey })
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_APPROVE\][\s\S]*?\[\/AFFILIATION_APPROVE\]/, '').trim();
       const noticeText = result.ok
@@ -5092,7 +5095,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
         ? await revokeAffiliationCore(env, {
             orgId: revPayload.org_id, targetGuid: revPayload.target_guid,
             revokerLabel: revPayload.revoker_label, reason: revPayload.reason,
-          }, { authoritativeAgency: bizKey })
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_REVOKE\][\s\S]*?\[\/AFFILIATION_REVOKE\]/, '').trim();
       const noticeText = result.ok
@@ -5113,7 +5116,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
       const result = wpPayload
         ? await requestWorkDomainPdvCore(env, {
             orgId: wpPayload.org_id, targetGuid: wpPayload.target_guid, purpose: wpPayload.purpose,
-          }, { authoritativeAgency: bizKey })
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[WORK_PDV_REQUEST\][\s\S]*?\[\/WORK_PDV_REQUEST\]/, '').trim();
       const noticeText = result.ok
@@ -5818,6 +5821,21 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   if (!guid || !agency || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/agency/messages 필수', corsHeaders);
   if (!GOV_AGENCIES.has(agency)) return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 기관: ${agency}`, corsHeaders);
 
+  // ── 2026-07-14 보안 수정 — 발신자 신원 암호 검증 ──────────────────
+  // 여태 `agency`는 이 요청을 보낸 사람이 그냥 자칭한 문자열이었고,
+  // 아래 AFFILIATION_APPROVE/REVOKE·WORK_PDV_REQUEST·DEPT_TASK_REQUEST
+  // 전부가 이 값을 "이미 검증된 세션 신원"처럼 신뢰했다 — 실제로는
+  // 누구든 {agency:"jeju_do"}만 보내면 그 안에서 임의 org_id를 자칭해
+  // 소속 승인·PDV 조회요청·업무지시를 만들 수 있었다(주피터님 발견,
+  // 코드 검토로 확인). body.access_cert(있으면)를 검증해 실제로 서명
+  // 확인이 끝난 org_id만 verifiedOrgId로 인정한다 — 없거나 검증 실패
+  // 시 null(= 아래 privileged 태그 전부 거부, 안전한 기본값). 일반
+  // 대화(비특권 기능)는 access_cert 없이도 그대로 동작한다 — 이건
+  // 특권 행위에만 필요한 게이트다.
+  const verifiedOrgId = body.access_cert
+    ? await _verifyAccessCert(env, body.access_cert, guid, { _verifyEd25519Simple, _l1FindProfileByGuid }).catch(() => null)
+    : null;
+
   // 클라이언트가 보낸 messages 중 system 역할은 전부 제거 — 서버가 직접 조립한
   // system(K-Public 공통 + agencyPrompt)만 유효하다.
   const dialogOnly = (messages || []).filter(m => m.role !== 'system');
@@ -5930,8 +5948,12 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
             payload: payload.payload, originChain: payload.origin_chain || [],
           }, {
             _l1FindProfileByGuid, _l1CreateDeptTask,
-            _verifyEd25519: async () => true, // dept/org만 이 경로를 타므로 서명 분기는 사실상 미사용
-          }, { authoritativeAgency: agency })
+            _verifyEd25519, // 2026-07-14 수정 — 이전엔 async()=>true로 스텁 처리돼
+            // requester_type을 citizen/business로 위조하면 서명 검증 자체가
+            // 무조건 통과하는 구멍이었다. 실제 함수로 교체 — dept/org 요청은
+            // 원래도 이 분기를 안 타므로(_authoritativeCheck가 별도 처리)
+            // 정상 동작에 영향 없다.
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
 
       const cleanedText = firstContent.replace(/\[DEPT_TASK_REQUEST\][\s\S]*?\[\/DEPT_TASK_REQUEST\]/, '').trim();
@@ -5953,7 +5975,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
         ? await approveAffiliationCore(env, {
             orgId: affPayload.org_id, targetGuid: affPayload.target_guid,
             approverLabel: affPayload.approver_label, evidence: affPayload.evidence,
-          }, { authoritativeAgency: agency })
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_APPROVE\][\s\S]*?\[\/AFFILIATION_APPROVE\]/, '').trim();
       const noticeText = result.ok
@@ -5974,7 +5996,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
         ? await revokeAffiliationCore(env, {
             orgId: revPayload.org_id, targetGuid: revPayload.target_guid,
             revokerLabel: revPayload.revoker_label, reason: revPayload.reason,
-          }, { authoritativeAgency: agency })
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_REVOKE\][\s\S]*?\[\/AFFILIATION_REVOKE\]/, '').trim();
       const noticeText = result.ok
@@ -5994,7 +6016,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
       const result = wpPayload
         ? await requestWorkDomainPdvCore(env, {
             orgId: wpPayload.org_id, targetGuid: wpPayload.target_guid, purpose: wpPayload.purpose,
-          }, { authoritativeAgency: agency })
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[WORK_PDV_REQUEST\][\s\S]*?\[\/WORK_PDV_REQUEST\]/, '').trim();
       const noticeText = result.ok
