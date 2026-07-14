@@ -44,3 +44,18 @@ jobs:
           else
             python3 tools/sp_refresh_scheduler.py
           fi
+
+      # ── unresolved_tag_signal 집계 (2026-07-14 신설) ────────────
+      # docs/SP-AUTHOR-AUTOMATION_v1_0.md §1-3(search_miss_pattern)과 동일
+      # 원칙 — EXPERT/GWP 태그 해석 실패(_reportUnresolvedTag)가 같은
+      # raw_id로 반복(최근 7일 내 3건 이상)되면 진짜 수요로 승격한다.
+      # sp_refresh_scheduler와 관심사가 달라(하나는 기존 SP 갱신 주기,
+      # 하나는 신규 미등록 수요 발굴) 별도 스크립트로 유지하되, 실행
+      # 주기(매일 1회)는 공유한다 — 별도 워크플로를 새로 안 만든다.
+      - name: Aggregate unresolved tag signals
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            python3 tools/aggregate_unresolved_tags.py --dry-run
+          else
+            python3 tools/aggregate_unresolved_tags.py
+          fi

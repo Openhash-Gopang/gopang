@@ -2319,17 +2319,39 @@ async function handleSPAuthorQueueList(request, env, corsHeaders) {
   }
 }
 
-// POST /sp-author/queue/:id/status  body: {status, duplicate_of?}
+// POST /sp-author/queue/:id/status  body: {status?, priority?, duplicate_of?}
 async function handleSPAuthorQueueStatus(request, env, corsHeaders, recordId) {
   let payload;
   try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
-  const allowed = ['queued', 'assigned', 'drafted', 'pending_review', 'approved', 'rejected', 'duplicate'];
-  if (!allowed.includes(payload.status)) {
-    return new Response(JSON.stringify({ error: `status must be one of ${allowed.join('|')}` }), { status: 400, headers: corsHeaders });
+  const patch = {};
+
+  if (payload.status !== undefined) {
+    const allowed = ['queued', 'assigned', 'drafted', 'pending_review', 'approved', 'rejected', 'duplicate'];
+    if (!allowed.includes(payload.status)) {
+      return new Response(JSON.stringify({ error: `status must be one of ${allowed.join('|')}` }), { status: 400, headers: corsHeaders });
+    }
+    patch.status = payload.status;
+    if (payload.status === 'duplicate' && payload.duplicate_of) patch.duplicate_of = payload.duplicate_of;
+    if (['approved', 'rejected'].includes(payload.status)) patch.resolved_at = new Date().toISOString();
   }
-  const patch = { status: payload.status };
-  if (payload.status === 'duplicate' && payload.duplicate_of) patch.duplicate_of = payload.duplicate_of;
-  if (['approved', 'rejected'].includes(payload.status)) patch.resolved_at = new Date().toISOString();
+
+  // 2026-07-14 신설 — docs/SP-AUTHOR-AUTOMATION_v1_0.md §1-3(search_miss_pattern)이
+  // "대표 레코드의 priority를 normal→high로 승격"을 전제하는데, 이 엔드포인트는
+  // 지금까지 status만 patch할 수 있었다(실사로 확인 — 설계문서가 존재를
+  // 전제한 기능이 코드엔 없던 갭). priority 단독 갱신도 허용한다(status 변경
+  // 없이 우선순위만 올리는 배치 집계 스크립트를 위함).
+  if (payload.priority !== undefined) {
+    const allowedPriority = ['low', 'normal', 'high'];
+    if (!allowedPriority.includes(payload.priority)) {
+      return new Response(JSON.stringify({ error: `priority must be one of ${allowedPriority.join('|')}` }), { status: 400, headers: corsHeaders });
+    }
+    patch.priority = payload.priority;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return new Response(JSON.stringify({ error: 'status 또는 priority 중 최소 하나는 필요' }), { status: 400, headers: corsHeaders });
+  }
+
   try {
     const rec = await _l1PatchDraftRequest(env, recordId, patch);
 
