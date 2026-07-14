@@ -309,6 +309,62 @@ async function handleFreeQuotaStatus(request, env, corsHeaders) {
   }), { status: 200, headers: corsHeaders });
 }
 
+// GET /usage-log?guid=...&days=30 — /usage.html의 "모델별·기간별 상세
+// 내역" 테이블용. ai_usage_log(L1)에서 최근 N일 레코드를 가져와
+// 모델별로 집계한다(PocketBase REST에는 GROUP BY가 없어 Worker에서 집계).
+async function handleUsageLog(request, env, corsHeaders) {
+  const url  = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const days = Math.min(Math.max(parseInt(url.searchParams.get('days') || '30', 10) || 30, 1), 90);
+
+  let items;
+  try {
+    items = await _l1QueryUsageLog(env, guid, days);
+  } catch (e) {
+    return _err(502, 'L1_ERROR', 'ai_usage_log 조회 실패: ' + e.message, corsHeaders);
+  }
+
+  // ── 모델별 집계 ──
+  const byModel = {};
+  let totalCostKRW = 0, totalBilledKRW = 0, totalRequests = 0, totalTokens = 0;
+  for (const it of items) {
+    const key = it.model || '(unknown)';
+    if (!byModel[key]) {
+      byModel[key] = { model: key, requests: 0, hit_tokens: 0, miss_tokens: 0, out_tokens: 0, cost_krw: 0, billed_krw: 0 };
+    }
+    const m = byModel[key];
+    m.requests += 1;
+    m.hit_tokens  += Number(it.hit_tokens)  || 0;
+    m.miss_tokens += Number(it.miss_tokens) || 0;
+    m.out_tokens  += Number(it.out_tokens)  || 0;
+    m.cost_krw    += Number(it.cost_krw)    || 0;
+    m.billed_krw  += Number(it.billed_krw)  || 0;
+
+    totalCostKRW   += Number(it.cost_krw)   || 0;
+    totalBilledKRW += Number(it.billed_krw) || 0;
+    totalRequests  += 1;
+    totalTokens    += (Number(it.hit_tokens) || 0) + (Number(it.miss_tokens) || 0) + (Number(it.out_tokens) || 0);
+  }
+
+  return new Response(JSON.stringify({
+    ok: true,
+    guid,
+    days,
+    total_cost_krw: Math.round(totalCostKRW * 100) / 100,
+    total_billed_krw: Math.round(totalBilledKRW * 100) / 100,
+    total_requests: totalRequests,
+    total_tokens: totalTokens,
+    by_model: Object.values(byModel).map(m => ({
+      ...m,
+      cost_krw: Math.round(m.cost_krw * 100) / 100,
+      billed_krw: Math.round(m.billed_krw * 100) / 100,
+    })).sort((a, b) => b.billed_krw - a.billed_krw),
+  }), { status: 200, headers: corsHeaders });
+}
+
+
 // 100원 무료 한도를 다 쓴 뒤(=유료 구간)를 위해 준비해 둔 스텁.
 // 현재는 콜사이트가 없다 — STEP 0 게이트(FREE_QUOTA_EXCEEDED 체크)가
 // 100원 초과 요청을 이미 429로 막기 때문에, 유료 과금 로직 자체가
@@ -767,118 +823,6 @@ async function _l1AdminToken(env) {
   return _l1AdminTokenFor(env, L1_DEFAULT);
 }
 
-// ── META_TABLE_UPDATE 태그 파싱/기록 — AGENCY-AC-COMMON_v1.3.md §6 ──────
-// 태그 형식: agency_id=..., category=..., task_type=..., dept_chain=[a,b],
-// outcome=completed|pending|referred, received_ts=ISO, processing_started_ts=ISO,
-// completed_ts=ISO, duration_seconds=123
-// (원 문서의 {} 표기는 플레이스홀더 설명용이라 실제 태그에는 안 나온다 —
-// 그래도 혹시 {}로 감싸 나오면 파서가 벗겨낸다.)
-function _parseMetaTableTag(raw) {
-  try {
-    const fields = {};
-    // dept_chain=[...] 처럼 대괄호 안의 콤마는 분리 기준에서 제외한다.
-    const parts = [];
-    let depth = 0, buf = '';
-    for (const ch of raw) {
-      if (ch === '[') depth++;
-      if (ch === ']') depth--;
-      if (ch === ',' && depth === 0) { parts.push(buf); buf = ''; }
-      else buf += ch;
-    }
-    if (buf.trim()) parts.push(buf);
-
-    for (const part of parts) {
-      const eq = part.indexOf('=');
-      if (eq === -1) continue;
-      const key = part.slice(0, eq).trim();
-      let val = part.slice(eq + 1).trim();
-      if (val.startsWith('{') && val.endsWith('}')) val = val.slice(1, -1).trim();
-      if (key === 'dept_chain') {
-        if (val.startsWith('[') && val.endsWith(']')) val = val.slice(1, -1);
-        fields.dept_chain = val.split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
-      } else {
-        fields[key] = val.replace(/^["']|["']$/g, '');
-      }
-    }
-    if (!fields.agency_id || !fields.category || !fields.outcome || !fields.received_ts) return null;
-    return fields;
-  } catch (e) { return null; }
-}
-
-async function _writeMetaTableRecord(env, sessionAgency, fields) {
-  const token = await _l1AdminToken(env);
-  // duration_seconds 자동 계산(안 왔거나 신뢰 안 될 때) — completed_ts가
-  // 있어야만 계산, 없으면 null(§6: "처리 중이라고 미리 채우지 않는다").
-  let duration = fields.duration_seconds ? parseInt(fields.duration_seconds, 10) : null;
-  if ((duration === null || Number.isNaN(duration)) && fields.completed_ts && fields.received_ts) {
-    const d = (new Date(fields.completed_ts) - new Date(fields.received_ts)) / 1000;
-    duration = Number.isFinite(d) && d >= 0 ? Math.round(d) : null;
-  }
-  const res = await fetch(`${L1_DEFAULT}/api/collections/meta_table_records/records`, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      agency_id: fields.agency_id || sessionAgency,
-      category: fields.category,
-      task_type: fields.task_type || null,
-      dept_chain: fields.dept_chain || [],
-      outcome: ['completed', 'pending', 'referred'].includes(fields.outcome) ? fields.outcome : 'pending',
-      received_ts: fields.received_ts,
-      processing_started_ts: fields.processing_started_ts || null,
-      completed_ts: fields.completed_ts || null,
-      duration_seconds: duration,
-    }),
-  });
-  if (!res.ok) throw new Error(`meta_table_records 저장 실패 HTTP ${res.status}: ${await res.text().catch(() => '')}`);
-}
-
-// GET /stats/agency-report?agency_id=X&period=weekly|monthly|quarterly|halfyear|yearly&anchor=ISO날짜(선택, 기본 오늘)
-// AGENCY-AC-COMMON §6이 요구한 주기별 보고서. 기관 간 효율성 비교와
-// 동일 원칙으로 준공개(별도 인증 없음) — /stats/org와 access tier를
-// 통일했다(같은 "기관 효율성" 개념이라 접근권한도 같아야 일관적이다).
-async function handleStatsAgencyReport(request, env, corsHeaders) {
-  const url = new URL(request.url);
-  const agencyId = url.searchParams.get('agency_id');
-  const period = url.searchParams.get('period') || 'monthly';
-  if (!agencyId) return _err(400, 'MISSING_FIELD', 'agency_id 필수', corsHeaders);
-  const PERIOD_DAYS = { weekly: 7, monthly: 30, quarterly: 91, halfyear: 182, yearly: 365 };
-  const days = PERIOD_DAYS[period];
-  if (!days) return _err(400, 'INVALID_PERIOD', 'weekly|monthly|quarterly|halfyear|yearly 중 하나여야 합니다', corsHeaders);
-  const anchor = url.searchParams.get('anchor') ? new Date(url.searchParams.get('anchor')) : new Date();
-  const since = new Date(anchor.getTime() - days * 86400000).toISOString();
-
-  const token = await _l1AdminToken(env);
-  const filter = encodeURIComponent(`agency_id='${agencyId}' && received_ts >= '${since}'`);
-  const res = await fetch(`${L1_DEFAULT}/api/collections/meta_table_records/records?filter=${filter}&perPage=500`,
-    { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => null);
-  if (!res || !res.ok) return _err(503, 'FETCH_FAILED', '', corsHeaders);
-  const json = await res.json().catch(() => null);
-  const items = json?.items || [];
-
-  // category별로 묶어서 건수·평균 처리시간·미완료 비율을 낸다(§6 "배선단
-  // 배치 집계 작업" — 여기선 요청 시점 즉석 집계로 구현, 트래픽이 커지면
-  // 별도 배치 잡으로 옮길 것을 KNOWN_LIMITATIONS에 남긴다).
-  const byCategory = {};
-  for (const it of items) {
-    const cat = it.category || '(미분류)';
-    if (!byCategory[cat]) byCategory[cat] = { count: 0, completed: 0, durations: [] };
-    byCategory[cat].count++;
-    if (it.outcome === 'completed') byCategory[cat].completed++;
-    if (it.duration_seconds != null) byCategory[cat].durations.push(it.duration_seconds);
-  }
-  const categories = Object.entries(byCategory).map(([category, v]) => ({
-    category,
-    count: v.count,
-    completion_rate: v.count ? +(v.completed / v.count).toFixed(3) : null,
-    avg_duration_seconds: v.durations.length ? Math.round(v.durations.reduce((a, b) => a + b, 0) / v.durations.length) : null,
-  }));
-
-  return new Response(JSON.stringify({
-    ok: true, agency_id: agencyId, period, since, until: anchor.toISOString(),
-    total_count: items.length, categories,
-  }), { status: 200, headers: corsHeaders });
-}
-
 // ── §4 guid→L1 소속 레지스트리 (L3 guid_home_l1 컬렉션) ──────────────
 const L1_ONLY_NODE_IDS = [
   'KR-JEJU-JEJU-AEWOL',
@@ -1013,6 +957,112 @@ function L1_NODE_MAP_ID_OF(base) {
 }
 
 // L1 profiles 컬렉션에서 guid로 레코드 조회 (Admin 토큰 필요 — is_public=false인 레코드도 봐야 하므로)
+// ── AI 사용량 상세 로그 (2026-07-14 신설) ──────────────────────────
+// HONDI_CHAT_COST 콘솔 로그는 조회가 안 되므로(Cloudflare 로그는
+// 검색·집계용이 아니다), /usage.html의 모델별·기간별 상세 내역을
+// 위해 L1에 요청 단위로 영구 기록한다. 컬렉션 스키마는
+// pb_migrations/1784800001_created_ai_usage_log.js 참조.
+async function _l1CreateUsageLog(env, { guid, serviceId, tier, model, hitTokens, missTokens, outTokens, costKRW, billedKRW }) {
+  if (!guid) return;
+  try {
+    const token = await _l1AdminToken(env);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/ai_usage_log/records`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid, service_id: serviceId || 'hondi-chat', tier: tier || '', model: model || '',
+        hit_tokens: Math.round(hitTokens || 0), miss_tokens: Math.round(missTokens || 0),
+        out_tokens: Math.round(outTokens || 0),
+        cost_krw: Math.round((costKRW || 0) * 100) / 100,
+        billed_krw: Math.round((billedKRW || 0) * 100) / 100,
+      }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.warn('[UsageLog] 기록 실패 (HTTP ' + res.status + '): ' + errText);
+    }
+  } catch (e) {
+    // 사용량 로그 기록 실패가 실제 채팅 응답을 막아서는 안 된다 — 조용히 경고만 남긴다.
+    console.warn('[UsageLog] 기록 실패:', e.message);
+  }
+}
+
+// ── AI 사용량 계산+기록 공통 함수 (2026-07-14 신설) ──────────────────
+// callDeepSeek(일반 챗)·handleKlawRelay·handleBusinessRelay·handleGovRelay가
+// 전부 이 함수 하나를 호출한다. "모든 AC/SP에 로그를 붙여야 한다"는
+// 요구에 대한 답: gov/relay와 biz/relay는 이미 각각 342개 국가기관·모든
+// 사업체 유형을 agency/business_id 파라미터로 처리하는 단일 공유
+// 엔드포인트이므로, 이 두 곳만 연결하면 사실상 "모든 AC/SP"가 한 번에
+// 커버된다 — 기관 하나하나에 반복 연결할 필요가 없다.
+//
+// 왜 별도 파일(src/worker/*.js)로 빼지 않았는가: 지금 이 함수를 호출하는
+// 4곳이 전부 이미 worker.js 안에 있다. 별도 모듈로 빼려면
+// computeBilledKRW·_l1CreateUsageLog·_klawSpendAdd 등 worker.js 로컬
+// 헬퍼 여러 개를 매개변수로 주입해야 하는데, 지금 시점엔 그 비용이
+// 이득보다 크다. 나중에 relay 핸들러들을 ai-chat-handler.js처럼 별도
+// 파일로 옮기게 되면, 그때 이 함수도 같이 옮기면 된다 — 아래는 클로저를
+// 최소화해 순수 함수에 가깝게 작성해뒀으므로 그 시점의 이관 비용은 낮다.
+//
+// spendKeys: 서비스별 KV 예산 카운터 키 목록(예: [1인1일 한도 키, 계정
+// 전체 한도 키]). 30시간 TTL로 자동 리셋되는 _klawSpendAdd를 그대로
+// 재사용한다 — 이름은 klaw 전용처럼 보이지만 실제로는 K-Law 전용이 아닌
+// 범용 "KV 카운터 누적" 헬퍼다(2026-07-02 K-Law용으로 먼저 만들어졌을
+// 뿐). 일반 챗의 "평생 누적 무료 한도"(_recordFreeSpend)는 TTL이 없어야
+// 하므로 spendKeys가 아니라 onAfterRecord로 별도 처리한다 — 여기 섞으면
+// 무료 한도가 30시간마다 조용히 리셋되는 심각한 회귀가 생긴다.
+async function _recordAiUsage(env, ctx, {
+  guid, serviceId, tier, priceTier, model, usage,
+  logTag, extraLogFields = {}, spendKeys = [], onAfterRecord = null,
+}) {
+  if (!usage) return null;
+  const bill = computeBilledKRW(env, usage, priceTier);
+  console.log(JSON.stringify({
+    tag: logTag, guid, tier, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW,
+    multiplier: bill.multiplier, ts: new Date().toISOString(), ...extraLogFields,
+  }));
+
+  const tasks = [
+    _l1CreateUsageLog(env, {
+      guid, serviceId, tier, model,
+      hitTokens: usage?.prompt_cache_hit_tokens, missTokens: usage?.prompt_cache_miss_tokens,
+      outTokens: usage?.completion_tokens, costKRW: bill.apiCostKRW, billedKRW: bill.billedKRW,
+    }),
+    ...spendKeys.map(key => _klawSpendAdd(env, key, bill.billedKRW)),
+  ];
+  if (onAfterRecord) tasks.push(Promise.resolve(onAfterRecord(bill)));
+
+  const combined = Promise.all(tasks);
+  if (ctx?.waitUntil) ctx.waitUntil(combined);
+  else combined.catch(e => console.warn('[UsageRecord] 기록 실패:', e.message));
+  return bill;
+}
+
+
+// GET /usage-log?guid=...&days=30 이 호출하는 조회+집계 함수.
+// PocketBase REST에는 GROUP BY가 없으므로, 기간 내 레코드를 그대로
+// 받아와 Worker에서 집계한다 — 개인 사용자 단위라 레코드 수가
+// 많지 않으므로(하루 수십~수백 건 수준) 이 방식으로 충분하다.
+async function _l1QueryUsageLog(env, guid, days) {
+  const token = await _l1AdminToken(env);
+  const sinceISO = new Date(Date.now() - days * 86400000).toISOString().replace('T', ' ').slice(0, 19);
+  const filter = encodeURIComponent(`guid='${guid}' && created>='${sinceISO}'`);
+  let page = 1, items = [];
+  // PocketBase 기본 perPage 상한(500) 안에서, 필요하면 페이지네이션.
+  for (;;) {
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/ai_usage_log/records?filter=${filter}&perPage=500&page=${page}&sort=-created`,
+      { headers: { 'Authorization': `Bearer ${token}` } },
+    );
+    if (!res.ok) throw new Error(`ai_usage_log 조회 실패 (HTTP ${res.status})`);
+    const data = await res.json();
+    items = items.concat(data.items || []);
+    if (page >= (data.totalPages || 1)) break;
+    page++;
+  }
+  return items;
+}
+
+// 가입자 GUID로 profiles 레코드 조회
 async function _l1FindProfileByGuid(env, guid) {
   const token = await _l1AdminToken(env);
   const filter = encodeURIComponent(`guid='${guid}'`);
@@ -2885,17 +2935,6 @@ export default {
     if (pathname === '/admin/gov-task-drafts' && request.method === 'GET')
       return handleGovTaskDraftList(request, env, corsHeaders);
 
-    // GET /stats/org — 기관 간 업무처리 효율성 비교, 준공개(별도 인증
-    // 없음 — STAFF_TASK_QUEUE_v1_0.md §3, 주피터님 지시로 시민 투명성
-    // 대상으로 판단). POST 게이트 앞에 둬야 한다(GET이라 bodyText 없음).
-    if (pathname === '/stats/org' && request.method === 'GET')
-      return handleStatsOrgCompare(request, env, corsHeaders);
-
-    // GET /stats/agency-report — AGENCY-AC-COMMON §6(META_TABLING) 주기별
-    // 보고서. /stats/org와 동일하게 준공개.
-    if (pathname === '/stats/agency-report' && request.method === 'GET')
-      return handleStatsAgencyReport(request, env, corsHeaders);
-
     // POST /admin/cf-dns — Cloudflare DNS CNAME 추가 (CORS 우회 프록시)
     if (pathname === '/admin/cf-dns' && request.method === 'POST')
       return handleAdminCfDns(request, env, corsHeaders);
@@ -2915,6 +2954,9 @@ export default {
     //  정책으로 복귀. 한도값은 FREE_QUOTA_KRW_LIMIT=100 참조.)
     if (pathname === '/free-quota-status' && request.method === 'GET')
       return handleFreeQuotaStatus(request, env, corsHeaders);
+    // (2026-07-14 신설) usage.html의 모델별·기간별 상세 내역용.
+    if (pathname === '/usage-log' && request.method === 'GET')
+      return handleUsageLog(request, env, corsHeaders);
     if (pathname === '/prompt' && request.method === 'GET')
       return handlePromptGet(request, env, corsHeaders);
     if (pathname === '/admin/prompt' && request.method === 'POST')
@@ -2957,8 +2999,6 @@ export default {
     if (pathname === '/gov/relay')                return handleGovRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname === '/gov/task/submit')          return handleGovTaskSubmit(bodyText, env, corsHeaders);
     if (pathname === '/gov/task/batch-status')    return handleGovTaskBatchStatus(bodyText, env, corsHeaders);
-    if (pathname === '/stats/dept')               return handleStatsDeptCompare(bodyText, env, corsHeaders);
-    if (pathname === '/stats/self')                return handleStatsSelf(bodyText, env, corsHeaders);
     if (pathname === '/gov/task/schema/draft')    return handleGovTaskSchemaDraft(bodyText, env, corsHeaders);
     if (pathname === '/admin/gov-task-drafts/review') return handleGovTaskDraftReview(request, bodyText, env, corsHeaders);
     if (pathname === '/business/relay')           return handleBusinessRelay(bodyText, env, corsHeaders, _meta, ctx);
@@ -4386,114 +4426,6 @@ async function handleConsentRespond(request,env,corsHeaders){
 async function _checkRateLimit(env,ipv6,action){if(env.RATE_LIMIT_KV){const kvKey=`rl:${action}:${ipv6}`;const current=parseInt(await env.RATE_LIMIT_KV.get(kvKey)||'0');if(current>=3)return false;await env.RATE_LIMIT_KV.put(kvKey,String(current+1),{expirationTtl:300});return true;}return true;}
 async function _fetchPdvByScope(env,ipv6,scopes,period){const key=env.SUPABASE_KEY||_supabaseAnonKey();const result={};for(const scope of scopes){const sources=SCOPE_SOURCE_MAP[scope];let queryUrl=SUPABASE_URL+'/rest/v1/pdv_log'+`?guid=eq.${encodeURIComponent(ipv6)}`+`&created_at=gte.${period.start}T00:00:00Z&created_at=lte.${period.end}T23:59:59Z`+`&select=summary,summary_6w,risk_level,created_at,source&order=created_at.desc&limit=50`;if(sources&&sources.length===1){queryUrl+=`&source=eq.${encodeURIComponent(sources[0])}`;}else if(sources&&sources.length>1){queryUrl+=`&source=in.(${sources.map(encodeURIComponent).join(',')})`;}try{const res=await fetch(queryUrl,{headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'}});const rows=await res.json().catch(()=>[]);if(!rows?.length){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{}};continue;}const RISK_ORDER={low:0,medium:1,high:2};const maxRisk=rows.reduce((max,r)=>{const lvl=r.risk_level||'low';return RISK_ORDER[lvl]>RISK_ORDER[max]?lvl:max;},'low');let summary6w=null;for(const row of rows){try{summary6w=JSON.parse(row.summary_6w);break;}catch{}}result[scope]={available:true,entry_count:rows.length,risk_level:maxRisk,summary_6w:summary6w,risk_factors:_aggregateRiskFactors(scope,rows),sources:[...new Set(rows.map(r=>r.source).filter(Boolean))]};}catch(e){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{},error:'fetch_failed'};}}return result;}
 function _aggregateRiskFactors(scope,rows){if(scope==='ktraffic')return{accident_count:rows.filter(r=>{try{return JSON.parse(r.summary_6w)?.what?.includes('사고');}catch{return false;}}).length,entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,accident_free_months:0};if(scope==='khealth')return{total_records:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,medium_risk_count:rows.filter(r=>r.risk_level==='medium').length};return{entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length};}
-// ── 업무 성과/효율성 측정 — STAFF_TASK_QUEUE_v1_0.md §3 ──────────────
-// 주피터님 지시 + 합의된 원칙: 집계 단위마다 접근권한이 다르다.
-//   기관 간 — 준공개(시민도 조회 가능)
-//   부서 간(같은 기관 내) — 그 기관 관리자만
-//   직원 간 — 절대 만들지 않는다. 본인 조회만, 그것도 "부서 평균"
-//            까지만 비교 기준을 준다. 관리자가 직원별로 줄 세워 보는
-//            기능은 이 시스템에 존재하지 않는다.
-async function _computeTaskStats(env, { targetType, targetId }) {
-  const token = await _l1AdminToken(env);
-  const filter = encodeURIComponent(`target_type='${targetType}' && target_id='${targetId}'`);
-  const res = await fetch(`${L1_DEFAULT}/api/collections/dept_tasks/records?filter=${filter}&perPage=200`,
-    { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => null);
-  if (!res || !res.ok) return null;
-  const json = await res.json().catch(() => null);
-  const items = json?.items || [];
-  const total = items.length;
-  const completed = items.filter(t => t.status === 'completed');
-  const rejected = items.filter(t => t.status === 'rejected');
-  const durationsHrs = completed
-    .map(t => (new Date(t.updated) - new Date(t.created)) / 3600000)
-    .filter(h => h >= 0);
-  const avgHrs = durationsHrs.length ? durationsHrs.reduce((a, b) => a + b, 0) / durationsHrs.length : null;
-  return {
-    total_count: total,
-    completed_count: completed.length,
-    rejected_count: rejected.length,
-    completion_rate: total ? +(completed.length / total).toFixed(3) : null,
-    avg_completion_hours: avgHrs !== null ? +avgHrs.toFixed(1) : null,
-  };
-}
-
-// GET /stats/org — 기관/전국단위(org·national) 간 비교. 준공개 — 별도
-// 인증 요구하지 않는다(공공기관 업무처리 효율성은 원래 시민 투명성
-// 대상이라는 판단 — 주피터님 지시 그대로). 존재하지 않는 org_id는
-// 조용히 목록에서 빠진다(오류로 취급하지 않음 — 부분 결과라도 유용).
-async function handleStatsOrgCompare(request, env, corsHeaders) {
-  const url = new URL(request.url);
-  const orgIds = (url.searchParams.get('org_ids') || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 20);
-  if (!orgIds.length) return _err(400, 'MISSING_FIELD', 'org_ids 필수(콤마 구분, 최대 20개)', corsHeaders);
-  const results = [];
-  for (const orgId of orgIds) {
-    // org/national taxonomy에 실제로 등록된 상위 조직 단위만 허용 —
-    // dept(부서) 단위는 이 공개 엔드포인트로 조회 못 한다(§ 부서 간
-    // 비교는 관리자 전용, handleStatsDeptCompare 참고).
-    const isOrgLevel = DEPT_TASK_TAXONOMY.org?.has(orgId) || DEPT_TASK_TAXONOMY.national?.has(orgId);
-    if (!isOrgLevel) continue;
-    const stats = await _computeTaskStats(env, { targetType: DEPT_TASK_TAXONOMY.national?.has(orgId) ? 'national' : 'org', targetId: orgId });
-    if (stats) results.push({ org_id: orgId, ...stats });
-  }
-  return new Response(JSON.stringify({ ok: true, compared_at: new Date().toISOString(), results }), { status: 200, headers: corsHeaders });
-}
-
-// POST /stats/dept — 같은 기관 산하 부서 간 비교. access_cert(§ACCESS-CERT)
-// 를 body에 직접 실어 보내면 이 엔드포인트가 자체적으로 검증한다 —
-// _verifyAccessCert는 서명 기반이라 handleGovRelay 세션을 거칠 필요가
-// 없다(그 경유가 필요했던 authoritativeAgency 방식과 다른 점).
-async function handleStatsDeptCompare(bodyText, env, corsHeaders) {
-  let body = null;
-  try { body = JSON.parse(bodyText); } catch {}
-  const deptIds = Array.isArray(body?.dept_ids) ? body.dept_ids.slice(0, 30) : [];
-  if (!deptIds.length) return _err(400, 'MISSING_FIELD', 'dept_ids 필수', corsHeaders);
-  if (!body?.access_cert || !body?.guid) return _err(401, 'MANAGER_ACCESS_CERT_REQUIRED', '부서 간 비교는 검증된 관리자만 조회할 수 있습니다(access_cert, guid 필수)', corsHeaders);
-  const verifiedOrgId = await _verifyAccessCert(env, body.access_cert, body.guid, { _verifyEd25519Simple, _l1FindProfileByGuid }).catch(() => null);
-  if (!verifiedOrgId) return _err(401, 'ACCESS_CERT_INVALID', '', corsHeaders);
-  if (body.access_cert.role !== 'manager') return _err(403, 'MANAGER_ROLE_REQUIRED', 'staff 권한으로는 부서 비교를 조회할 수 없습니다', corsHeaders);
-  const results = [];
-  for (const deptId of deptIds) {
-    if (!DEPT_TASK_TAXONOMY.dept?.has(deptId)) continue;
-    // 관리자 자신의 상위 기관 산하 부서인지 확인 — DEPT_TASK_TAXONOMY
-    // 자체가 제주도 관할로만 구성돼 있어 접두어 두 토큰 비교로 충분.
-    const sameJurisdiction = deptId.split(':').slice(0, 2).join(':') === verifiedOrgId.split(':').slice(0, 2).join(':');
-    if (!sameJurisdiction) continue;
-    const stats = await _computeTaskStats(env, { targetType: 'dept', targetId: deptId });
-    if (stats) results.push({ dept_id: deptId, ...stats });
-  }
-  return new Response(JSON.stringify({ ok: true, compared_at: new Date().toISOString(), results }), { status: 200, headers: corsHeaders });
-}
-
-// POST /stats/self — 직원 본인 지표 + 익명화된 부서 평균. 본인 서명
-// 필요(GET /profile 뷰어 인증과 동일 체계) — 관리자 자격으로도 남의
-// self-stats는 조회 못 한다(설계상 이 경로 자체가 없다).
-async function handleStatsSelf(bodyText, env, corsHeaders) {
-  let body = null;
-  try { body = JSON.parse(bodyText); } catch {}
-  const { guid, org_id, viewer_pubkey, viewer_sig, viewer_ts } = body || {};
-  if (!guid || !org_id) return _err(400, 'MISSING_FIELD', 'guid/org_id 필수', corsHeaders);
-  if (!viewer_pubkey || !viewer_sig) return _err(401, 'SIGNATURE_REQUIRED', '본인 서명이 필요합니다', corsHeaders);
-  const sigMsg = `view:${guid}:${viewer_pubkey}:${viewer_ts || ''}`;
-  const sigOk = await _verifyEd25519Simple(viewer_pubkey, viewer_sig, sigMsg).catch(() => false);
-  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '', corsHeaders);
-  const profile = await _l1FindProfileByGuid(env, guid).catch(() => null);
-  if (!profile?.pubkey_ed25519 || profile.pubkey_ed25519 !== viewer_pubkey) return _err(401, 'PUBKEY_MISMATCH', '', corsHeaders);
-  const affList = profile.extra?.public?.identity?.affiliation || [];
-  if (!affList.some(a => a.org_id === org_id && a.verified)) {
-    return _err(403, 'NOT_A_VERIFIED_MEMBER', '해당 소속의 검증된 구성원이 아닙니다', corsHeaders);
-  }
-
-  const myStats = await _computeTaskStats(env, { targetType: 'staff', targetId: guid });
-  // 부서 평균 — org_staff_pool에 게시된 전체 task로 근사(개인별로 쪼개
-  // 재집계하지 않는다 — 그 자체가 개인 비교로 가는 문을 여는 것이므로).
-  const poolStats = await _computeTaskStats(env, { targetType: 'org_staff_pool', targetId: org_id });
-
-  return new Response(JSON.stringify({
-    ok: true, self: myStats, dept_average: poolStats,
-    note: '이 값은 본인에게만 보입니다. 관리자는 이 조회 결과를 볼 수 없습니다.',
-  }), { status: 200, headers: corsHeaders });
-}
-
 async function _fetchWorkPdvRecordsL1(env,ipv6,orgId){
   try{
     const token=await _l1AdminToken(env);
@@ -4728,17 +4660,11 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   if(isStream){
     if (guid && env.AI_SETUP_SEALS_KV) {
       const [forClient, forUsage] = res.body.tee();
-      const usageTask = _parseUsageFromStream(forUsage).then(usage => {
-        const bill = computeBilledKRW(env, usage, spendTier);
-        console.log(JSON.stringify({
-          tag: 'HONDI_CHAT_COST', guid, tier: spendTier,
-          promptTokens: usage?.prompt_tokens, cacheHitTokens: usage?.prompt_cache_hit_tokens,
-          completionTokens: usage?.completion_tokens,
-          apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier,
-          ts: new Date().toISOString(), ...meta,
-        }));
-        return _recordFreeSpend(env, guid, bill.billedKRW);
-      });
+      const usageTask = _parseUsageFromStream(forUsage).then(usage => _recordAiUsage(env, ctx, {
+        guid, serviceId: 'hondi-chat', tier: spendTier, priceTier: spendTier, model: backendModel, usage,
+        logTag: 'HONDI_CHAT_COST', extraLogFields: meta,
+        onAfterRecord: bill => _recordFreeSpend(env, guid, bill.billedKRW),
+      }));
       if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
       return new Response(forClient,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});
     }
@@ -4746,16 +4672,11 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   }
   const data=await res.json();
   if (guid && env.AI_SETUP_SEALS_KV && data?.usage) {
-    const bill = computeBilledKRW(env, data.usage, spendTier);
-    console.log(JSON.stringify({
-      tag: 'HONDI_CHAT_COST', guid, tier: spendTier,
-      promptTokens: data.usage?.prompt_tokens, cacheHitTokens: data.usage?.prompt_cache_hit_tokens,
-      completionTokens: data.usage?.completion_tokens,
-      apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier,
-      ts: new Date().toISOString(), ...meta,
-    }));
-    const recordTask = _recordFreeSpend(env, guid, bill.billedKRW);
-    if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
+    _recordAiUsage(env, ctx, {
+      guid, serviceId: 'hondi-chat', tier: spendTier, priceTier: spendTier, model: backendModel, usage: data.usage,
+      logTag: 'HONDI_CHAT_COST', extraLogFields: meta,
+      onAfterRecord: bill => _recordFreeSpend(env, guid, bill.billedKRW),
+    });
   }
   if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}
   return new Response(JSON.stringify(data),{headers:corsHeaders});
@@ -4974,21 +4895,22 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
 
   if (isStream) {
     const [forClient, forUsage] = res.body.tee();
-    const usageTask = _parseUsageFromStream(forUsage).then(async usage => {
-      const bill = computeBilledKRW(env, usage, priceTier);
-      console.log(JSON.stringify({ tag:'KLAW_RELAY_COST', guid, tier: tierKey, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier, elapsedMs: Date.now() - t0, ts: new Date().toISOString(), ...meta }));
-      await Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW), recordStep()]);
-    });
+    const usageTask = _parseUsageFromStream(forUsage).then(usage => _recordAiUsage(env, ctx, {
+      guid, serviceId: 'klaw', tier: tierKey, priceTier, model: backendModel, usage,
+      logTag: 'KLAW_RELAY_COST', extraLogFields: { elapsedMs: Date.now() - t0, ...meta },
+      spendKeys: [userKey, globalKey], onAfterRecord: recordStep,
+    }));
     if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
     return new Response(forClient, { status:200, headers:{ ...corsHeaders, 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache', 'X-Accel-Buffering':'no' } });
   }
 
   const data = await res.json();
   if (data?.usage) {
-    const bill = computeBilledKRW(env, data.usage, priceTier);
-    console.log(JSON.stringify({ tag:'KLAW_RELAY_COST', guid, tier: tierKey, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier, elapsedMs: Date.now() - t0, ts: new Date().toISOString(), ...meta }));
-    const recordTask = Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW), recordStep()]);
-    if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
+    _recordAiUsage(env, ctx, {
+      guid, serviceId: 'klaw', tier: tierKey, priceTier, model: backendModel, usage: data.usage,
+      logTag: 'KLAW_RELAY_COST', extraLogFields: { elapsedMs: Date.now() - t0, ...meta },
+      spendKeys: [userKey, globalKey], onAfterRecord: recordStep,
+    });
   }
   return new Response(JSON.stringify(data), { headers: corsHeaders });
 }
@@ -5280,21 +5202,22 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
 
   if (isStream) {
     const [forClient, forUsage] = res.body.tee();
-    const usageTask = _parseUsageFromStream(forUsage).then(async usage => {
-      const bill = computeBilledKRW(env, usage, priceTier);
-      console.log(JSON.stringify({ tag:'BUSINESS_RELAY_COST', guid, business_id: bizKey, tier: tierKey, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier, ts: new Date().toISOString(), ...meta }));
-      await Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW)]);
-    });
+    const usageTask = _parseUsageFromStream(forUsage).then(usage => _recordAiUsage(env, ctx, {
+      guid, serviceId: `biz:${bizKey}`, tier: tierKey, priceTier, model: backendModel, usage,
+      logTag: 'BUSINESS_RELAY_COST', extraLogFields: { business_id: bizKey, ...meta },
+      spendKeys: [userKey, globalKey],
+    }));
     if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
     return new Response(forClient, { status:200, headers:{ ...corsHeaders, 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache', 'X-Accel-Buffering':'no' } });
   }
 
   const data = await res.json();
   if (data?.usage) {
-    const bill = computeBilledKRW(env, data.usage, priceTier);
-    console.log(JSON.stringify({ tag:'BUSINESS_RELAY_COST', guid, business_id: bizKey, tier: tierKey, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier, ts: new Date().toISOString(), ...meta }));
-    const recordTask = Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW)]);
-    if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
+    _recordAiUsage(env, ctx, {
+      guid, serviceId: `biz:${bizKey}`, tier: tierKey, priceTier, model: backendModel, usage: data.usage,
+      logTag: 'BUSINESS_RELAY_COST', extraLogFields: { business_id: bizKey, ...meta },
+      spendKeys: [userKey, globalKey],
+    });
   }
 
   // ── DEPT_TASK_REQUEST 서버측 처리 (2026-07-12 신설) ──────────────
@@ -6159,12 +6082,15 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
 
   // 비용 기록 공통 헬퍼 — 위임 흐름에서 여러 번(원 SP 판단 / 위임 대상 / 최종 합성) 호출된다.
   // via는 감사(audit) 로그용 호출 경로 표시일 뿐 과금 로직에는 영향 없음(같은 guid·agency 한도로 합산).
+  // 342개 국가기관 전부가 이 handleGovRelay 하나를 agency 파라미터로 공유하므로,
+  // 이 클로저 하나만 고치면 전 기관에 동시 적용된다(기관별 반복 연결 불필요).
   const billGovCall = (usage, via) => {
     if (!usage) return;
-    const bill = computeBilledKRW(env, usage, priceTier);
-    console.log(JSON.stringify({ tag:'GOV_RELAY_COST', guid, agency, tier: tierKey, via, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier, ts: new Date().toISOString(), ...meta }));
-    const recordTask = Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW)]);
-    if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
+    _recordAiUsage(env, ctx, {
+      guid, serviceId: `gov:${agency}`, tier: tierKey, priceTier, model: backendModel, usage,
+      logTag: 'GOV_RELAY_COST', extraLogFields: { agency, via, ...meta },
+      spendKeys: [userKey, globalKey],
+    });
   };
 
   if (isStream) {
@@ -6176,30 +6102,6 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
 
   const data = await res.json();
   billGovCall(data?.usage, agency);
-
-  // ── META_TABLE_UPDATE 서버측 처리 (2026-07-14 신설) ─────────────
-  // AGENCY-AC-COMMON_v1.3.md §6이 "백엔드 배선 필요"로 표시해둔 것을
-  // 배선한다. canDelegate 여부와 무관하게 모든 기관 세션에 적용 —
-  // 이건 위임 오케스트레이션이 아니라 그 기관 자신의 요청처리 실적
-  // 로깅이라 canDelegate 게이트와 관계없다. 응답 흐름을 막지 않는다
-  // (얼리리턴 없음 — 태그만 벗겨내고 로깅은 비동기로 흘려보낸다).
-  {
-    const mtContent = data?.choices?.[0]?.message?.content;
-    const mtMatch = typeof mtContent === 'string'
-      ? mtContent.match(/\[META_TABLE_UPDATE:([\s\S]*?)\]/)
-      : null;
-    if (mtMatch) {
-      const mtFields = _parseMetaTableTag(mtMatch[1]);
-      if (mtFields) {
-        const writeTask = _writeMetaTableRecord(env, agency, mtFields).catch(e =>
-          console.warn('[MetaTable] 기록 실패(응답 흐름은 계속 진행):', e.message));
-        if (ctx?.waitUntil) ctx.waitUntil(writeTask); else writeTask.catch(() => {});
-      } else {
-        console.warn('[MetaTable] 태그 파싱 실패 — 형식이 예상과 다름:', mtMatch[1].slice(0, 200));
-      }
-      data.choices[0].message.content = mtContent.replace(/\[META_TABLE_UPDATE:[\s\S]*?\]/, '').trim();
-    }
-  }
 
   // ── SP 간 호출(위임) 오케스트레이션 — canDelegate agency에서만 시도 ──────
   // call_chain은 이 요청 안에서만 존재하는 서버 내부 상태다(클라이언트가 보낸
