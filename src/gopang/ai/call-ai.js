@@ -431,6 +431,8 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[SHARE_DOC_REJECTED\]/g, '')          // 공유문서 거부 태그
   .replace(/\[PANEL_ACTION:close\]/g, '')      // AI 패널 닫기 지시 태그 (2026-07-02 신설)
   .replace(/\[PDV_DOMAIN_SET:[^\]]*\]/g, '')    // PDV 일상/업무 전환 태그 (2026-07-13 신설)
+  .replace(/\[JOB_KSCO_REVIEWED\]/g, '')        // job_ksco 재확인 완료 태그 (2026-07-14 신설, 구멍 E)
+  .replace(/\[JOB_KSCO_REVIEW_DUE:[\s\S]*?\]/g, '')  // 방어적 — 정상 경로는 컨텍스트 주입용, AI가 실수로 에코하면 제거
   .replace(/\[GWP:\s*[\w-]+\]/g, '')           // 하위 시스템 라우팅 태그 (방어적 — 정상 경로는 _parseAgentTags가 처리)
   .replace(/\[EXPERT:\s*[@\w-]+\]/g, '')       // 전문가 세션 라우팅 태그 (방어적 — 정상 경로는 handleExpertTag가 처리)
   // 2026-07-07 신설 — 아래 5개는 이전부터 _parseAgentTags가 실제 동작은
@@ -536,6 +538,23 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI, use
   // ── PDV_REVIEWED — 주기적 PDV 검토 완료 기록 (2026-07-13 신설) ──
   if (fullReply.includes('[PDV_REVIEWED]')) {
     try { localStorage.setItem('hondi_pdv_review_last', new Date().toISOString()); } catch {}
+  }
+
+  // ── JOB_KSCO_REVIEWED — job_ksco 재확인 완료 기록 (2026-07-14 신설, 구멍 E) ──
+  // review_due 자체도 +30일로 미뤄둔다(AC-AUTHOR §7과 동일 주기) — 서버
+  // PROFILE_SUBMIT이 다음에 올 때까지는 로컬 캐시만 갱신, 서버 값은
+  // 다음 정식 저장 때 반영된다(이 태그 자체는 "재확인을 시도했다"는
+  // 기록일 뿐 job_ksco 내용 자체를 바꾸지 않음 — 내용 변경은 여전히
+  // [PARTIAL_SAVE]의 몫).
+  if (fullReply.includes('[JOB_KSCO_REVIEWED]')) {
+    try {
+      localStorage.setItem('hondi_job_ksco_review_last', new Date().toISOString());
+      const partial = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}');
+      if (partial.job_ksco) {
+        partial.job_ksco.review_due = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+        localStorage.setItem('hondi_profile_partial', JSON.stringify(partial));
+      }
+    } catch {}
   }
 
   // ── SHARE_DOC_CONFIRMED/REJECTED — 정부24 공유문서 확인 완료(2026-07-09) ──
@@ -1924,6 +1943,44 @@ function _pdvReviewIntervalDays() {
   return 30;                     // 1년 이후: 매월
 }
 
+// ══════════════════════════════════════════════════════════
+// job_ksco 재확인 트리거 (2026-07-14 신설 — 구멍 E 해결)
+// ══════════════════════════════════════════════════════════
+// AC-AUTHOR §7이 job_ksco.review_due를 만들어뒀지만, 위
+// _buildPdvReviewContext()는 "프로필이 아직 미완성인 사용자"만
+// 대상으로 하는(hondi_profile_done==='1'이면 즉시 return) 온보딩
+// 완료 유도용 메커니즘이라 job_ksco의 "시간이 지나 오래된 정보"
+// 문제와는 대상 집단이 정반대다(오래돼서 review_due가 지나는 건
+// 이미 프로필을 완성한 지 오래된 사용자에게나 일어난다). 그래서
+// 독립적인 함수로 새로 만든다 — 프로필 완성 여부와 무관하게 동작.
+function _buildJobKscoReviewContext() {
+  try {
+    let partial = {};
+    try { partial = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}'); } catch {}
+    const jobKsco = partial.job_ksco || window.__hondiOwnProfileCache?.job_ksco || null;
+    if (!jobKsco?.review_due) return ''; // review_due 자체가 없으면(아직 한 번도 승인/작성 안 됨) 대상 아님
+    if (new Date(jobKsco.review_due) >= new Date()) return ''; // 아직 안 지남
+
+    // 쿨다운 — PDV_REVIEW_DUE와 별개 타이머. 매 턴 물어보면 피곤하므로
+    // 최소 14일 간격(임의값 — job_ksco 자체가 자주 안 바뀌는 정보라
+    // PDV 검토(1~30일)보다 더 여유 있게 잡음).
+    let lastAsked = null;
+    try { lastAsked = localStorage.getItem('hondi_job_ksco_review_last'); } catch {}
+    if (lastAsked && (Date.now() - new Date(lastAsked).getTime()) < 14 * 86400000) return '';
+
+    return (
+      `[JOB_KSCO_REVIEW_DUE: 저장된 직업 정보("${jobKsco.label || '미상'}")의 ` +
+      `재확인 시점이 지났습니다. 이번 응답 끝에 자연스럽게 "여전히 같은 일을 ` +
+      `하고 계세요?" 류로 한 번만 가볍게 물어보십시오(강요하지 않음, 지금 대화` +
+      `흐름과 전혀 안 맞으면 이번엔 생략해도 됩니다). 사용자가 답하면(계속 ` +
+      `같은 일이든, 바뀌었든) [PARTIAL_SAVE]로 job_ksco를 갱신하십시오. 답하지` +
+      ` 않거나 이번 턴에 안 물어봤어도, 이번 응답 끝에 [JOB_KSCO_REVIEWED]를` +
+      ` 출력해 검토 시도를 기록하십시오(다음 재확인 시점 계산용, 사용자에게는` +
+      ` 안 보이는 내부 태그).]\n\n`
+    );
+  } catch { return ''; }
+}
+
 export function _buildPdvReviewContext() {
   try {
     // 프로필이 이미 완성된 사용자는 이 트리거 대상이 아니다(§0-1-P[6]의
@@ -2219,9 +2276,12 @@ async function _buildEnhancedUserContent(userContent) {
   // 1회성(이번엔 "주기적 1회") 트리거 패턴.
   const pdvReviewBlock = _buildPdvReviewContext();
 
-  if (!parts.length && !firstContact && !faqBlock && !integrityBlock && !shareBlock && !pdvReviewBlock) return userContent;
+  // job_ksco 재확인(2026-07-14 신설, 구멍 E) — 위와 별개 타이머·대상.
+  const jobKscoReviewBlock = _buildJobKscoReviewContext();
 
-  const ctxBlock = integrityBlock + shareBlock + pdvReviewBlock + firstContact + faqBlock + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
+  if (!parts.length && !firstContact && !faqBlock && !integrityBlock && !shareBlock && !pdvReviewBlock && !jobKscoReviewBlock) return userContent;
+
+  const ctxBlock = integrityBlock + shareBlock + pdvReviewBlock + jobKscoReviewBlock + firstContact + faqBlock + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
 
   // multipart(이미지 포함) 메시지 처리
   if (Array.isArray(userContent)) {
