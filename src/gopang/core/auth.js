@@ -33,8 +33,8 @@ if (DEV_MODE) {
     if (!hasDeepseek) {
       cfg.llm_keys.unshift({
         provider: 'deepseek',
-        model: 'deepseek-chat',
-        key: 'sk-b8cbc6d46c884e8faec110098365fcb9',
+        model: 'deepseek-v4-flash', // 2026-07-24 레거시 별칭(deepseek-chat) 폐기 대응
+        key: '__DEV_KEY_REMOVED__', // 2026-07-14: 하드코딩된 실키 노출 발견 — 반드시 교체/삭제할 것. 아래 보고 참조.
       });
       localStorage.setItem('gopang_cfg', JSON.stringify(cfg));
       console.info('[DEV] DeepSeek 디폴트 키 주입 완료');

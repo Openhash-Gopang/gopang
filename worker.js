@@ -159,12 +159,14 @@ function _selfHostReady(env) { return !!(env.HONDI_SELFHOST_URL && env.HONDI_SEL
 // 보낸다 — 어느 백엔드(공식 API vs 자체 서버)를 쓰든 클라이언트는 안 바뀐다.
 const HONDI_TIER_MODELS = {
   'hondi-flash': {
-    backendModel: 'deepseek-chat',      // deepseek-v4-flash 비사고 모드 별칭
+    backendModel: 'deepseek-v4-flash',  // 2026-07-24 레거시 별칭(deepseek-chat) 폐기 대응 — 정식 ID로 교정
     price: { cacheHit: 0.0028, cacheMiss: 0.14, output: 0.28 }, // $/1M tokens
   },
   'hondi-pro': {
-    backendModel: 'deepseek-reasoner',  // deepseek-v4-flash 사고 모드 별칭
-    // V4 Pro 프로모션가 기준(2026-06) — 자체 서버 전환 후 실제 원가로 재조정 필요
+    // 레거시 별칭 'deepseek-reasoner'는 실제로 V4 Flash의 사고 모드였고 V4 Pro가 아니었다.
+    // 가격표는 V4 Pro 기준이므로, 과금-원가 정합을 위해 실제로도 V4 Pro를 호출하도록 교정.
+    // (2026-07-14 — deepseek-v4-flash+thinking으로 바꾸려면 price도 flash 단가로 같이 낮춰야 함)
+    backendModel: 'deepseek-v4-pro',
     price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 },
   },
 };
@@ -4595,8 +4597,8 @@ async function handleLLMRelay(bodyText, env, corsHeaders, meta = null) {
 // (3) 1인 1일 "판결 생성"(STEP 0~C 풀사이클) 횟수 한도.
 // ═══════════════════════════════════════════════════════════
 const KLAW_TIER_MODELS = {
-  'klaw-flash': { backendModel: 'deepseek-chat',     price: { cacheHit: 0.0028, cacheMiss: 0.14,  output: 0.28 } }, // 인터뷰·분석 — 경량
-  'klaw-pro':   { backendModel: 'deepseek-reasoner', price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 } }, // STEP 0~C 판결 생성 — 추론
+  'klaw-flash': { backendModel: 'deepseek-v4-flash', price: { cacheHit: 0.0028, cacheMiss: 0.14,  output: 0.28 } }, // 인터뷰·분석 — 경량
+  'klaw-pro':   { backendModel: 'deepseek-v4-pro',   price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 } }, // STEP 0~C 판결 생성 — 추론
 };
 const KLAW_USER_DAILY_KRW_LIMIT   = 300;    // 1인 1일 한도(원)
 const KLAW_GLOBAL_DAILY_KRW_LIMIT = 30000;  // 계정 전체 1일 예산 상한(원) — 공유 계정 보호
@@ -4929,8 +4931,8 @@ async function _fetchBusinessKr() {
 }
 
 const BUSINESS_TIER_MODELS = {
-  'biz-flash': { backendModel: 'deepseek-chat',     price: { cacheHit: 0.0028, cacheMiss: 0.14,  output: 0.28 } },
-  'biz-pro':   { backendModel: 'deepseek-reasoner', price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 } },
+  'biz-flash': { backendModel: 'deepseek-v4-flash', price: { cacheHit: 0.0028, cacheMiss: 0.14,  output: 0.28 } },
+  'biz-pro':   { backendModel: 'deepseek-v4-pro',   price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 } },
 };
 const BUSINESS_USER_DAILY_KRW_LIMIT   = 300;
 const BUSINESS_GLOBAL_DAILY_KRW_LIMIT = 30000;
@@ -5131,8 +5133,8 @@ const GOV_AGENCY_PDV_SCOPE = {
 const _PDV_SCOPE_PLACEHOLDER_RE = /\{본인 서비스의 VALID_PDV_SCOPES 값\}/g;
 
 const GOV_TIER_MODELS = {
-  'gov-flash': { backendModel: 'deepseek-chat',     price: { cacheHit: 0.0028, cacheMiss: 0.14,  output: 0.28 } },
-  'gov-pro':   { backendModel: 'deepseek-reasoner', price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 } },
+  'gov-flash': { backendModel: 'deepseek-v4-flash', price: { cacheHit: 0.0028, cacheMiss: 0.14,  output: 0.28 } },
+  'gov-pro':   { backendModel: 'deepseek-v4-pro',   price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 } },
 };
 const GOV_USER_DAILY_KRW_LIMIT   = 300;
 const GOV_GLOBAL_DAILY_KRW_LIMIT = 30000;

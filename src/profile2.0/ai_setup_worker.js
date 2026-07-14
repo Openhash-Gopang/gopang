@@ -56,7 +56,7 @@ export async function handleAiSetupGet(request, env, guid) {
     return jsonResp({
       ai_active: false,
       provider:  'deepseek',
-      model:     'deepseek-chat',
+      model:     'deepseek-v4-flash', // 2026-07-24 레거시 별칭(deepseek-chat) 폐기 대응
       has_key:   false,
       custom_prompt: '',
     });
@@ -79,7 +79,7 @@ export async function handleAiSetupPost(request, env, guid) {
   const body = await request.json();
   const {
     provider         = 'deepseek',
-    model            = 'deepseek-chat',
+    model            = 'deepseek-v4-flash', // 2026-07-24 레거시 별칭(deepseek-chat) 폐기 대응
     ai_active        = false,
     api_key,                    // 새 키 (없으면 기존 유지)
     custom_prompt    = '',

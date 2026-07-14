@@ -122,7 +122,7 @@ async function callLLM({ provider, apiKey, model, systemPrompt, userMessage }) {
       url     = 'https://api.deepseek.com/v1/chat/completions';
       headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` };
       body    = JSON.stringify({
-        model:      model || 'deepseek-chat',
+        model:      model || 'deepseek-v4-flash', // 2026-07-24 레거시 별칭(deepseek-chat) 폐기 대응
         max_tokens: 512,
         messages:   [
           { role: 'system', content: systemPrompt },
@@ -185,7 +185,7 @@ async function translate(text, fromLang, toLang, apiKey) {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body:    JSON.stringify({
-        model:      'deepseek-chat',
+        model:      'deepseek-v4-flash', // 2026-07-24 레거시 별칭(deepseek-chat) 폐기 대응
         max_tokens: 256,
         messages: [{
           role:    'user',
