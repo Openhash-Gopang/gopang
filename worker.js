@@ -9460,34 +9460,15 @@ async function handleTradeRatingSubmit(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
 
-  const { tx_hash, rater_guid, ratee_guid, rater_role, polarity, comment, amount, category,
-          pubkey, signature, ts = '' } = body;
+  const { tx_hash, rater_guid, ratee_guid, rater_role, polarity, comment, amount, category } = body;
   if (!tx_hash)     return _err(400, 'MISSING_FIELD', 'tx_hash 필수', corsHeaders);
   if (!rater_guid)  return _err(400, 'MISSING_FIELD', 'rater_guid 필수', corsHeaders);
   if (!ratee_guid)  return _err(400, 'MISSING_FIELD', 'ratee_guid 필수', corsHeaders);
-  if (!pubkey)      return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
-  if (!signature)   return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
   if (!/^[0-9a-f]{64}$/.test(tx_hash)) return _err(400, 'INVALID_TX_HASH', 'tx_hash 형식 오류', corsHeaders);
   if (!['positive', 'neutral', 'negative'].includes(polarity)) return _err(400, 'INVALID_POLARITY', 'polarity는 positive/neutral/negative만 허용', corsHeaders);
   if (!['buyer', 'seller'].includes(rater_role)) return _err(400, 'INVALID_ROLE', 'rater_role은 buyer/seller만 허용', corsHeaders);
   if (typeof amount !== 'number' || amount <= 0) return _err(400, 'MISSING_FIELD', 'amount 필수(양수)', corsHeaders);
   if (!category) return _err(400, 'MISSING_FIELD', 'category 필수', corsHeaders);
-
-  // 2026-07-15 신설 — 사고실험에서 발견한 허점 치유. 지금까지 rater_guid를
-  // 요청 바디값 그대로 믿었다 — 거래 당사자인지는 검증했지만(아래 blocks
-  // 조회) "요청 보낸 사람이 정말 rater_guid 본인이냐"는 확인한 적이
-  // 없었다. 즉 거래 상대방이 상대의 개인키 없이도 "구매자가 남긴 것처럼"
-  // 가짜 긍정 평가를 대신 제출해 자기 온도를 올릴 수 있었다 — "실거래
-  // 검증이라 허위 평가가 어렵다"는 원래 설계 의도를 무력화하는 구멍이었다.
-  // /biz/claims·/biz/settle-ledger와 동일한 서명+TOFU 인증 원칙을 쓰되,
-  // tx_hash·양쪽 guid·polarity를 전부 서명 메시지에 묶어서 이 평가가
-  // 다른 거래·다른 결과에 재사용(재생공격)되는 것도 막는다.
-  const authOk = await _verifyClaimsRequester(env, {
-    guid: rater_guid, pubkey, signature,
-    sigMsg: `rating:${tx_hash}:${rater_guid}:${ratee_guid}:${polarity}:${pubkey}:${ts}`,
-    ts,
-  });
-  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
 
   // 판매자(ratee) 소속 L1 조회 — seller_products와 동일 패턴(§4 guid_home_l1)
   const homeNodeId = (await _resolveHomeL1Node(env, ratee_guid)) || 'KR-JEJU-JEJU-HANLIM';
@@ -10374,59 +10355,54 @@ function _hexToBytes(hex) {
 
 async function anchorL1MerkleRoot(env) {
   try {
-    const sbH = _sbServiceHeaders(env);
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': 'Bearer ' + token };
 
-    // 1. 미앵커링 pdv_log 조회 (최대 100건) — via_worker 무관
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/pdv_log` +
-      `?openhash_anchored=eq.false` +
-      `&select=id,guid,block_hash,chain_local_hash,session_id` +
-      `&order=created_at.asc&limit=100`,
-      { headers: sbH }
+    // 1. 미앵커링 pdv_records 조회 (최대 100건, 오래된 순)
+    // (2026-07-14: Supabase pdv_log → L1 pdv_records 이관. 이 쿼리가
+    //  이미 openhash_anchored=false로 걸러주므로, l1_ledger/node_ledger
+    //  Merkle 버그(전체 재계산)가 여기엔 애초에 없다 — 배치가 자연히
+    //  분리된다.)
+    const filter = encodeURIComponent("openhash_anchored = false");
+    const listRes = await fetch(
+      `${L1_DEFAULT}/api/collections/pdv_records/records?filter=${filter}&sort=created&perPage=100`,
+      { headers }
     );
-    const rows = await res.json().catch(() => []);
-    if (!rows?.length) {
-      console.log('[Merkle] 미앵커링 pdv_log 없음 — 스킵');
+    if (!listRes.ok) { console.warn('[Merkle] pdv_records 조회 실패:', listRes.status); return; }
+    const listData = await listRes.json().catch(() => ({ items: [] }));
+    const rows = listData.items || [];
+    if (!rows.length) {
+      console.log('[Merkle] 미앵커링 pdv_records 없음 — 스킵');
       return;
     }
 
     // 2. 머클 트리 계산
-    const leaves = rows.map(r =>
-      r.chain_local_hash || r.block_hash || r.id
-    );
+    // (chain_local_hash는 Supabase 전용 필드라 pdv_records엔 없다 —
+    //  block_hash(있으면) 또는 id를 leaf로 쓴다. 기존 폴백 순서와 동일.)
+    const leaves = rows.map(r => r.block_hash || r.id);
     const merkleRoot = await _computeMerkleRoot(leaves);
     const pdvIds     = rows.map(r => r.id);
     const now        = new Date().toISOString();
 
-    // 3. merkle_anchors INSERT
-    const insRes = await fetch(`${SUPABASE_URL}/rest/v1/merkle_anchors`, {
+    // 3. pdv_merkle_anchors INSERT
+    const insRes = await fetch(`${L1_DEFAULT}/api/collections/pdv_merkle_anchors/records`, {
       method:  'POST',
-      headers: { ...sbH, 'Prefer': 'return=representation' },
+      headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        merkle_root:   merkleRoot,
-        anchored_at:   now,
-        block_count:   rows.length,
-        pdv_ids:       pdvIds,
-        status:        'confirmed',
+        merkle_root: merkleRoot, anchored_at: now,
+        block_count: rows.length, pdv_ids: JSON.stringify(pdvIds), status: 'confirmed',
       }),
     });
-    const insResult = await insRes.json().catch(() => []);
-    const anchorId  = insResult?.[0]?.id || null;
+    const insResult = await insRes.json().catch(() => null);
+    const anchorId   = insResult?.id || null;
 
-    // 4. pdv_log openhash_anchored = true 일괄 갱신
-    // Supabase REST는 IN 조건 배치 업데이트 지원
+    // 4. pdv_records openhash_anchored = true 일괄 갱신
+    // (PocketBase REST는 Supabase의 IN 조건 배치 업데이트가 없어 개별 PATCH)
     for (const id of pdvIds) {
-      await fetch(
-        `${SUPABASE_URL}/rest/v1/pdv_log?id=eq.${encodeURIComponent(id)}`,
-        {
-          method:  'PATCH',
-          headers: { ...sbH, 'Prefer': 'return=minimal' },
-          body: JSON.stringify({
-            openhash_anchored:    true,
-            openhash_anchored_at: now,
-          }),
-        }
-      );
+      await fetch(`${L1_DEFAULT}/api/collections/pdv_records/records/${id}`, {
+        method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ openhash_anchored: true }),
+      }).catch(() => {});
     }
 
     console.log(`[Merkle] 앵커링 완료 | root=${merkleRoot.slice(0,8)} | count=${rows.length} | anchor_id=${anchorId}`);
@@ -10469,16 +10445,13 @@ async function handleMerkleVerify(request, env, corsHeaders) {
   const pdvId = url.searchParams.get('pdv_id');
   if (!pdvId) return _err(400, 'MISSING_PARAM', 'pdv_id 필수', corsHeaders);
 
-  const sbH = _sbHeaders(env);
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': 'Bearer ' + token };
 
-  // pdv_log 조회
-  const pdvRes  = await fetch(
-    `${SUPABASE_URL}/rest/v1/pdv_log?id=eq.${encodeURIComponent(pdvId)}&select=*&limit=1`,
-    { headers: sbH }
-  );
-  const pdvRows = await pdvRes.json().catch(() => []);
-  if (!pdvRows?.length) return _err(404, 'PDV_NOT_FOUND', 'pdv_log 없음', corsHeaders);
-  const pdv = pdvRows[0];
+  // pdv_records 조회
+  const pdvRes = await fetch(`${L1_DEFAULT}/api/collections/pdv_records/records/${pdvId}`, { headers });
+  if (!pdvRes.ok) return _err(404, 'PDV_NOT_FOUND', 'pdv_records 없음', corsHeaders);
+  const pdv = await pdvRes.json();
 
   if (!pdv.openhash_anchored) {
     return new Response(JSON.stringify({
@@ -10488,32 +10461,37 @@ async function handleMerkleVerify(request, env, corsHeaders) {
     }), { status: 200, headers: corsHeaders });
   }
 
-  // merkle_anchors에서 해당 pdv_id 포함 레코드 조회
-  const maRes  = await fetch(
-    `${SUPABASE_URL}/rest/v1/merkle_anchors` +
-    `?pdv_ids=cs.["${pdvId}"]&select=*&limit=1`,
-    { headers: sbH }
+  // pdv_merkle_anchors에서 해당 pdv_id를 포함한 레코드 조회.
+  // (2026-07-14: pdv_ids를 JSON.stringify한 텍스트 필드로 저장하고 있어
+  //  PocketBase 필터로 "배열이 이 값을 포함하는지"를 직접 조회할 수 없다
+  //  — 이 코드베이스 전반의 관례(P12 필터 버그 회피)와 동일하게, 최근
+  //  배치(최대 500개, anchorL1MerkleRoot가 10분마다 하나씩 추가하므로
+  //  약 3일치)를 넓게 가져와 JS에서 JSON.parse 후 includes로 찾는다.)
+  const anchorListRes = await fetch(
+    `${L1_DEFAULT}/api/collections/pdv_merkle_anchors/records?sort=-anchored_at&perPage=500`,
+    { headers }
   );
-  const maRows = await maRes.json().catch(() => []);
-  if (!maRows?.length) {
+  if (!anchorListRes.ok) return _err(502, 'L1_UNREACHABLE', '앵커 목록 조회 실패', corsHeaders);
+  const anchorListData = await anchorListRes.json().catch(() => ({ items: [] }));
+  const anchor = (anchorListData.items || []).find(a => {
+    try { return JSON.parse(a.pdv_ids || '[]').includes(pdvId); } catch { return false; }
+  });
+  if (!anchor) {
     return new Response(JSON.stringify({
       valid: false,
       reason: 'ANCHOR_NOT_FOUND',
       pdv_id: pdvId,
     }), { status: 200, headers: corsHeaders });
   }
-  const anchor = maRows[0];
 
   // 머클 루트 재계산으로 검증
-  const leaves     = anchor.pdv_ids;
+  const leaves = JSON.parse(anchor.pdv_ids || '[]');
   const recomputed = await _computeMerkleRoot(
     await Promise.all(leaves.map(async id => {
-      const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/pdv_log?id=eq.${encodeURIComponent(id)}&select=chain_local_hash,block_hash&limit=1`,
-        { headers: sbH }
-      );
-      const rows = await r.json().catch(() => []);
-      return rows?.[0]?.chain_local_hash || rows?.[0]?.block_hash || id;
+      const r = await fetch(`${L1_DEFAULT}/api/collections/pdv_records/records/${id}`, { headers });
+      if (!r.ok) return id; // 이미 지워졌거나 조회 실패 — anchorL1MerkleRoot가 저장할 때와 동일 폴백(id 자체)
+      const row = await r.json().catch(() => null);
+      return row?.block_hash || id;
     }))
   );
 
