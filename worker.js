@@ -15,6 +15,9 @@ import { handleAiChat, handleEscalate } from './src/worker/ai-chat-handler.js';
 import { handleOrderQueue } from './src/worker/order-queue-handler.js';
 import { handleDeliveryRequest } from './src/worker/delivery-handler.js';
 import { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck } from './src/worker/dept-task-handler.js';
+// 2026-07-14: 레거시 별칭 안전망 — HONDI_TIER_MODELS에 없는 model이
+// 클라이언트에서 그대로 들어와도(레거시 호출 등) 여기서 한 번 더 정규화한다.
+import { resolveDeepseekModel } from './src/gopang/core/deepseek-client.js';
 
 const ALLOWED_ORIGINS = [
   'https://hondi.net',
@@ -4393,7 +4396,11 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   // 받은 model 값을 그대로 쓴다 — 하위 호환.
   const requestedModel = parsedBody?.model || '';
   const tierKey = HONDI_TIER_MODELS[requestedModel] ? requestedModel : null;
-  const backendModel = tierKey ? HONDI_TIER_MODELS[tierKey].backendModel : requestedModel;
+  // 알려진 티어명("hondi-flash" 등)이면 그 tier의 backendModel을 쓰고,
+  // 아니면(레거시 직접 호출 등) requestedModel을 resolveDeepseekModel로
+  // 한 번 더 정규화한다 — 'deepseek-chat'/'deepseek-reasoner' 같은
+  // 폐기 예정 별칭이 그대로 들어와도 여기서 걸러진다.
+  const backendModel = tierKey ? HONDI_TIER_MODELS[tierKey].backendModel : resolveDeepseekModel(requestedModel);
 
   // guid가 실려 있으면(=call-ai.js의 deepseek-default 경로) 1,000원 누적 한도 체크.
   let outboundBody = parsedBody ? { ...parsedBody, model: backendModel } : null;

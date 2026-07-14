@@ -3,6 +3,8 @@
 // 저장위치: gopang/src/profile2.0/location.js
 // 의존: src/auth/auth.js (requireAuth)
 // ============================================================
+// 2026-07-14: DeepSeek 직접 fetch를 공용 클라이언트로 교체.
+import { deepseekChatText } from '../gopang/core/deepseek-client.js';
 
 // ─────────────────────────────────────────────
 // 상수
@@ -84,22 +86,15 @@ async function sbInsert(url, key, table, data) {
 // ─────────────────────────────────────────────
 async function translate(text, fromLang, toLang, apiKey) {
   if (!text || fromLang === toLang || !apiKey) return text;
-  try {
-    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body:    JSON.stringify({
-        model:      'deepseek-v4-flash', // 2026-07-24 레거시 별칭(deepseek-chat) 폐기 대응
-        max_tokens: 128,
-        messages: [{
-          role:    'user',
-          content: `Translate from ${fromLang} to ${toLang}. Return only the translation.\n\n${text}`,
-        }],
-      }),
-    });
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content?.trim() || text;
-  } catch { return text; }
+  return deepseekChatText({
+    apiKey,
+    messages: [{
+      role:    'user',
+      content: `Translate from ${fromLang} to ${toLang}. Return only the translation.\n\n${text}`,
+    }],
+    max_tokens: 128,
+    fallbackText: text,
+  });
 }
 
 // ─────────────────────────────────────────────

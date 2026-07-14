@@ -23,24 +23,16 @@ const DEV_MODE = false;
 
 // DEV_MODE: _issueSession 서명 검증 우회 → 항상 ok
 // DEV_MODE: initAuth / initAuthWithPhone → handle만 있으면 즉시 로그인
-// DEV_MODE: 디폴트 LLM 키 자동 주입 (deepseek)
-if (DEV_MODE) {
-  // 디폴트 DeepSeek API 키를 gopang_cfg에 자동 주입
-  try {
-    const cfg = JSON.parse(localStorage.getItem('gopang_cfg') || '{}');
-    if (!cfg.llm_keys) cfg.llm_keys = [];
-    const hasDeepseek = cfg.llm_keys.some(k => k.provider === 'deepseek');
-    if (!hasDeepseek) {
-      cfg.llm_keys.unshift({
-        provider: 'deepseek',
-        model: 'deepseek-v4-flash', // 2026-07-24 레거시 별칭(deepseek-chat) 폐기 대응
-        key: '__DEV_KEY_REMOVED__', // 2026-07-14: 하드코딩된 실키 노출 발견 — 반드시 교체/삭제할 것. 아래 보고 참조.
-      });
-      localStorage.setItem('gopang_cfg', JSON.stringify(cfg));
-      console.info('[DEV] DeepSeek 디폴트 키 주입 완료');
-    }
-  } catch(e) { console.warn('[DEV] 키 주입 실패:', e); }
-}
+//
+// (2026-07-14 제거됨 — 예전에는 여기서 DEV_MODE 시 localStorage.gopang_cfg에
+//  실제 DeepSeek API 키를 하드코딩해 자동 주입했었다. 이게 소스에 실키가
+//  그대로 노출되는 사고로 이어졌는데, 확인해보니 애초에 불필요한 코드였다 —
+//  call-ai.js의 _buildCallCandidates()가 "혼디 제공 DeepSeek 기본 키" 후보
+//  (provider: 'deepseek-default', apiKey: null)를 사용자 키 등록 여부와
+//  무관하게 항상 마지막 폴백으로 추가하므로, DEV 환경에서도 키 없이 이미
+//  정상 동작한다. 즉 이 블록은 기능적 이득 없이 위험만 추가하고 있었다.
+//  개발자가 실제 자기 키로 테스트하고 싶으면 앱 UI의 LLM 키 설정 화면에서
+//  직접 등록하면 된다 — 소스에 다시 하드코딩하지 말 것.)
 
 const STORE_KEY = 'gopang_user_v4';
 const DEFAULT_COUNTRY = 'KR';

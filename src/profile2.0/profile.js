@@ -4,6 +4,8 @@
 // 의존: src/auth/auth.js (verifyJWT — 선택적)
 // 기존 worker.js의 handleBizProfile()을 이 파일로 대체·확장
 // ============================================================
+// 2026-07-14: DeepSeek 직접 fetch를 공용 클라이언트로 교체.
+import { deepseekChatText } from '../gopang/core/deepseek-client.js';
 
 // ─────────────────────────────────────────────
 // 하버사인 거리 계산 (미터 단위)
@@ -107,25 +109,15 @@ async function buildReviewSummary(supabaseUrl, key, targetGuid, viewerLang) {
 // ─────────────────────────────────────────────
 async function translate(text, fromLang, toLang, env) {
   if (!text || fromLang === toLang) return text;
-  try {
-    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method:  'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        Authorization:   `Bearer ${env.DEEPSEEK_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model:      'deepseek-v4-flash', // 2026-07-24 레거시 별칭(deepseek-chat) 폐기 대응
-        max_tokens: 256,
-        messages: [{
-          role:    'user',
-          content: `Translate the following text from ${fromLang} to ${toLang}. Return only the translated text, no explanation.\n\n${text}`,
-        }],
-      }),
-    });
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content?.trim() || text;
-  } catch { return text; } // 번역 실패 시 원문 반환
+  return deepseekChatText({
+    env,
+    messages: [{
+      role:    'user',
+      content: `Translate the following text from ${fromLang} to ${toLang}. Return only the translated text, no explanation.\n\n${text}`,
+    }],
+    max_tokens: 256,
+    fallbackText: text, // 번역 실패 시 원문 반환
+  });
 }
 
 // ─────────────────────────────────────────────

@@ -28,6 +28,9 @@
 // 작업으로 분리해뒀다), 배송업체 매칭(7·8번), createEscrow 실결제
 // 연결(3단계 예정).
 
+// 2026-07-14: DeepSeek 직접 fetch를 공용 클라이언트로 교체.
+import { deepseekChat, deepseekChatText } from '../gopang/core/deepseek-client.js';
+
 const LLM_TIMEOUT_MS = 15000;
 
 const ESCALATION_KEYWORDS = [
@@ -165,20 +168,23 @@ async function callLLM({ provider, apiKey, model, systemPrompt, userMessage }) {
   const timer = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
 
   try {
-    let url, headers, body;
-
     if (provider === 'deepseek') {
-      url = 'https://api.deepseek.com/v1/chat/completions';
-      headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` };
-      body = JSON.stringify({
-        model: model || 'deepseek-v4-flash', // 2026-07-24 레거시 별칭(deepseek-chat) 폐기 대응
-        max_tokens: 512,
+      const data = await deepseekChat({
+        apiKey, model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage },
         ],
+        max_tokens: 512,
+        timeoutMs: LLM_TIMEOUT_MS,
       });
-    } else if (provider === 'anthropic') {
+      clearTimeout(timer);
+      return data.choices?.[0]?.message?.content || '';
+    }
+
+    let url, headers, body;
+
+    if (provider === 'anthropic') {
       url = 'https://api.anthropic.com/v1/messages';
       headers = {
         'Content-Type': 'application/json',
@@ -224,22 +230,15 @@ async function callLLM({ provider, apiKey, model, systemPrompt, userMessage }) {
 
 async function translate(text, fromLang, toLang, apiKey) {
   if (!text || fromLang === toLang) return text;
-  try {
-    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: 'deepseek-v4-flash', // 2026-07-24 레거시 별칭(deepseek-chat) 폐기 대응
-        max_tokens: 256,
-        messages: [{
-          role: 'user',
-          content: `Translate from ${fromLang} to ${toLang}. Return only the translation, no explanation.\n\n${text}`,
-        }],
-      }),
-    });
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content?.trim() || text;
-  } catch { return text; }
+  return deepseekChatText({
+    apiKey,
+    messages: [{
+      role: 'user',
+      content: `Translate from ${fromLang} to ${toLang}. Return only the translation, no explanation.\n\n${text}`,
+    }],
+    max_tokens: 256,
+    fallbackText: text,
+  });
 }
 
 async function aesEncrypt(plaintext, rawKey) {
