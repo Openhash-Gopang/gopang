@@ -135,6 +135,42 @@ function _aiChargeSecret(env) {
   return env.AI_CHARGE_SECRET || 'hondi-dev-ai-charge-2026';
 }
 
+// (2026-07-14: L1 /api/mint 호출용. main.pb.js의 MINT_SECRET과 반드시
+//  일치해야 한다 — 지금까지는 개발자가 curl로 직접 호출했지만, 충전
+//  파이프라인 연결로 Worker(handleChargeConfirm)가 서버 대 서버로
+//  처음 호출하게 됐다.)
+function _mintSecret(env) {
+  return env.MINT_SECRET || 'hondi-dev-mint-2026';
+}
+
+// (2026-07-14: GDC 충전 — "고정계좌 + 입금자명 매칭" 방식. PG·카드 배제
+//  확정(사고실험 세션 2026-07-14 "혼디의 GDC 환전 및 판매 체계 설계"
+//  참고) — 은행 API 없이 지금 코드만으로 구현 가능한 옵션을 택했다.
+//  ⚠️ 아래 계좌번호는 플레이스홀더다 — 실제 배포 전 반드시
+//  env.CHARGE_BANK_ACCOUNT_INFO(wrangler secret)로 실제 회사 계좌
+//  정보로 교체할 것. 지금 값 그대로 배포하면 사용자가 존재하지 않는
+//  계좌로 입금을 시도하게 된다.)
+function _chargeBankAccountInfo(env) {
+  return env.CHARGE_BANK_ACCOUNT_INFO || '(관리자 설정 필요) 은행명 미설정 / 계좌번호 미설정 / 예금주 미설정';
+}
+
+// (2026-07-14: 관리자 전용 액션 — /biz/charge-list, /biz/charge-confirm
+//  인증. handlePushBroadcast의 DEPLOY_PUSH_SECRET과 동일 관례.)
+function _adminActionSecret(env) {
+  return env.ADMIN_ACTION_SECRET || 'hondi-dev-admin-2026';
+}
+
+// 입금자명(보내는 분 표시)에 사용자가 직접 포함시킬 짧은 매칭 코드.
+// 은행 앱마다 "보내는 분 표시" 커스텀 입력 길이 제한이 다르므로
+// (짧게는 10자 안팎) HD+6자리 숫자로 짧게 유지한다 — 완벽한 자동 대사가
+// 아니라 관리자가 은행 명세서와 눈으로 대조할 때 쓰는 1차 단서일
+// 뿐이므로, 충돌(같은 코드가 드물게 겹침) 가능성은 감수한다(낮은
+// 트래픽 + 최종 확인은 관리자가 금액까지 함께 대조하므로 실질 위험 낮음).
+function _generateChargeMatchCode() {
+  const n = Math.floor(100000 + Math.random() * 900000); // 6자리
+  return `HD${n}`;
+}
+
 const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions';
 const DEEPSEEK_URL   = 'https://api.deepseek.com/v1/chat/completions';
 // OpenRouter — Worker 내부 AI 호출 (내부 Agent, 피드백 분류 등)
@@ -3121,6 +3157,11 @@ export default {
     if (pathname === '/biz/order'   && request.method === 'POST') return handleBizOrder(request, env, corsHeaders, ctx);
     if (pathname === '/biz/balance' && request.method === 'GET')  return handleBizBalance(request, env, corsHeaders);
     if (pathname === '/biz/supply'  && request.method === 'GET')  return handleBizSupply(request, env, corsHeaders);
+    // (2026-07-14 신설: GDC 충전 파이프라인 — "고정계좌 + 입금자명 매칭")
+    if (pathname === '/biz/charge-request' && request.method === 'POST') return handleChargeRequest(request, env, corsHeaders);
+    if (pathname === '/biz/charge-status'  && request.method === 'GET')  return handleChargeStatus(request, env, corsHeaders);
+    if (pathname === '/biz/charge-list'    && request.method === 'GET')  return handleChargeList(request, env, corsHeaders);
+    if (pathname === '/biz/charge-confirm' && request.method === 'POST') return handleChargeConfirm(request, env, corsHeaders);
     // 2026-07-07: /biz/review(Supabase biz_reviews, 5점 척도) → 완전 대체.
     // 실거래(tx_hash) 기반 trade_ratings(PocketBase, polarity+온도)로 이전.
     // handleBizReview는 하단에 DEPRECATED로 남겨두되 라우팅에서 제거함.
@@ -3779,6 +3820,192 @@ async function handleBizSupply(request, env, corsHeaders) {
   } catch (e) {
     return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// GDC 충전 파이프라인 — "고정계좌 + 입금자명 매칭" (2026-07-14 신설,
+// 2026-07-14 재적용: 낡은 로컬 clone 위에서 작업해 첫 배포 시 유실됨 —
+// 이번엔 origin/main 최신 HEAD(ede6c2d) 위에서 다시 붙였다.)
+//
+// PG·카드는 배제하고 계좌 입금만 쓴다(사고실험 세션 "혼디의 GDC 환전
+// 및 판매 체계 설계" 2026-07-14 확정 — GDC↔KRW 환전은 "환급"으로
+// 재정의, 충전은 계좌입금 전용). 은행 API(가상계좌) 없이 지금 코드
+// 만으로 구현 가능한 옵션 B(고정계좌 + 입금자명 매칭)를 택했다:
+//
+//   1. 사용자가 /biz/charge-request로 "N원 충전할게요" 신청
+//      → 서버가 짧은 매칭 코드(HDxxxxxx) 발급, charge_requests에
+//        status="pending"으로 기록
+//   2. 사용자가 회사 고정계좌로 직접 이체하면서, "보내는 분 표시"에
+//      그 매칭 코드를 포함시킨다(예: "혼디HD482910")
+//   3. 관리자(주피터)가 은행 앱에서 입금 내역을 직접 눈으로 확인하고,
+//      /biz/charge-confirm으로 그 신청을 확정
+//   4. 확정 즉시 L1 /api/mint 호출 → GDC 발행, charge_requests를
+//      status="matched"로 갱신
+//
+// 이 방식의 본질적 한계: 자동화된 은행 API 대사가 없으므로 "확정"은
+// 사람(관리자)의 판단에 의존한다 — 관리자 1인 체제인 지금 규모에서는
+// 감당 가능한 수동 절차이고, PG 없이 지금 당장 동작하는 걸 우선한
+// 트레이드오프다(가상계좌 자동화는 은행 API 계약이 필요해 별도 TODO).
+// ═══════════════════════════════════════════════════════════
+
+const CHARGE_MIN_KRW = 1000;    // 너무 작은 신청은 매칭 단서(코드)만으로 은행 명세서 대조가 더 번거로워짐
+const CHARGE_EXPIRE_HOURS = 48; // 이 시간 안에 입금 안 되면 UI/관리자 화면에서 만료로 표시(레코드 자체는 감사 보존을 위해 삭제하지 않음)
+
+// POST /biz/charge-request — 사용자가 충전 의사를 밝히고 매칭 코드를 발급받는다.
+async function handleChargeRequest(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, krw_amount } = body;
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  const krwAmount = Number(krw_amount);
+  if (!(krwAmount >= CHARGE_MIN_KRW)) {
+    return _err(400, 'INVALID_AMOUNT', `최소 충전 금액은 ${CHARGE_MIN_KRW}원입니다`, corsHeaders);
+  }
+
+  const matchCode = _generateChargeMatchCode();
+  const expiresAt = new Date(Date.now() + CHARGE_EXPIRE_HOURS * 3600 * 1000).toISOString();
+
+  try {
+    const token = await _l1AdminToken(env);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid, match_code: matchCode, requested_krw: krwAmount,
+        status: 'pending', expires_at: expiresAt,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.id) {
+      const errText = JSON.stringify(data || {});
+      console.warn('[ChargeRequest] 생성 실패:', errText);
+      return _err(502, 'L1_ERROR', '충전 신청 기록 실패: ' + errText.slice(0, 200), corsHeaders);
+    }
+    return new Response(JSON.stringify({
+      ok: true,
+      request_id: data.id,
+      match_code: matchCode,
+      requested_krw: krwAmount,
+      bank_account_info: _chargeBankAccountInfo(env),
+      expires_at: expiresAt,
+      guide: `위 계좌로 ${krwAmount.toLocaleString('ko-KR')}원을 입금하시되, "보내는 분 표시"에 ${matchCode} 코드를 반드시 포함해 주세요(예: 홍길동${matchCode}). 관리자가 입금을 확인하면 자동으로 GDC가 지급됩니다.`,
+    }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+}
+
+// GET /biz/charge-status?guid=...&request_id=... — 사용자가 본인 신청 상태를 폴링.
+// request_id 없이 guid만 주면 최근 신청 목록을 최신순으로 반환한다.
+async function handleChargeStatus(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  const requestId = url.searchParams.get('request_id');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': `Bearer ${token}` };
+    if (requestId) {
+      const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records/${requestId}`, { headers });
+      if (!res.ok) return _err(404, 'NOT_FOUND', '신청 내역을 찾을 수 없습니다', corsHeaders);
+      const rec = await res.json();
+      if (rec.guid !== guid) return _err(403, 'FORBIDDEN', '본인 신청이 아닙니다', corsHeaders);
+      return new Response(JSON.stringify({ ok: true, request: rec }), { status: 200, headers: corsHeaders });
+    }
+    const filter = encodeURIComponent(`guid='${guid}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records?filter=${filter}&sort=-created&perPage=20`, { headers });
+    if (!res.ok) return _err(502, 'L1_ERROR', '신청 목록 조회 실패', corsHeaders);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ ok: true, requests: data.items || [] }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+}
+
+// GET /biz/charge-list?secret=...&status=pending — 관리자 전용. 은행 앱과
+// 대조할 대기 목록을 보여준다.
+async function handleChargeList(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  if (url.searchParams.get('secret') !== _adminActionSecret(env)) {
+    return _err(403, 'FORBIDDEN', '시크릿이 일치하지 않습니다', corsHeaders);
+  }
+  const status = url.searchParams.get('status') || 'pending';
+  try {
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const filter = encodeURIComponent(`status='${status}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records?filter=${filter}&sort=-created&perPage=200`, { headers });
+    if (!res.ok) return _err(502, 'L1_ERROR', '목록 조회 실패', corsHeaders);
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ ok: true, requests: data.items || [] }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+}
+
+// POST /biz/charge-confirm — 관리자 전용. 은행 명세서에서 입금을 직접
+// 확인한 뒤 호출 → GDC 발행(L1 /api/mint) + charge_requests 확정 갱신.
+async function handleChargeConfirm(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { secret, request_id, matched_krw, depositor_name, memo } = body;
+  if (secret !== _adminActionSecret(env)) return _err(403, 'FORBIDDEN', '시크릿이 일치하지 않습니다', corsHeaders);
+  if (!request_id) return _err(400, 'MISSING_FIELD', 'request_id 필수', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  // 멱등성/이중 확정 방지: 이미 matched면 재차감하지 않는다.
+  const getRes = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records/${request_id}`, { headers });
+  if (!getRes.ok) return _err(404, 'NOT_FOUND', '신청 내역을 찾을 수 없습니다', corsHeaders);
+  const rec = await getRes.json();
+  if (rec.status === 'matched') {
+    return new Response(JSON.stringify({ ok: true, already_matched: true, mint_content_hash: rec.mint_content_hash }), { status: 200, headers: corsHeaders });
+  }
+  if (rec.status !== 'pending') {
+    return _err(409, 'INVALID_STATUS', `이 신청은 이미 ${rec.status} 상태입니다`, corsHeaders);
+  }
+
+  const krwAmount = Number(matched_krw) > 0 ? Number(matched_krw) : rec.requested_krw;
+
+  let mintData;
+  try {
+    const mintRes = await fetch(`${L1_DEFAULT}/api/mint`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid: rec.guid, krw_amount: krwAmount, secret: _mintSecret(env),
+        memo: `charge_request:${request_id}${depositor_name ? ' / 입금자:' + depositor_name : ''}${memo ? ' / ' + memo : ''}`,
+      }),
+    });
+    mintData = await mintRes.json().catch(() => ({ ok: false, error: 'L1_PARSE_FAILED' }));
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'GDC 발행 실패: ' + e.message, corsHeaders);
+  }
+  if (!mintData.ok) {
+    console.warn('[ChargeConfirm] mint 실패:', JSON.stringify(mintData));
+    return _err(502, mintData.error || 'MINT_FAILED', mintData.detail || 'GDC 발행 실패', corsHeaders);
+  }
+
+  const patchRes = await fetch(`${L1_DEFAULT}/api/collections/charge_requests/records/${request_id}`, {
+    method: 'PATCH', headers,
+    body: JSON.stringify({
+      status: 'matched', matched_krw: krwAmount,
+      depositor_name: depositor_name || '', memo: memo || '',
+      mint_content_hash: mintData.content_hash, matched_at: new Date().toISOString(),
+    }),
+  });
+  if (!patchRes.ok) {
+    // GDC는 이미 발행됐는데 상태 갱신만 실패한 경우 — 발행 자체는 되돌릴 수
+    // 없으므로(멱등 처리 없음), 크게 로그를 남겨 수동 정정이 필요함을 표시.
+    console.error(JSON.stringify({ tag: 'CHARGE_CONFIRM_PATCH_FAILED_AFTER_MINT', request_id, mint_content_hash: mintData.content_hash, guid: rec.guid, krwAmount, ts: new Date().toISOString() }));
+  }
+
+  console.log(JSON.stringify({ tag: 'CHARGE_CONFIRM_OK', request_id, guid: rec.guid, krwAmount, contentHash: mintData.content_hash, ts: new Date().toISOString() }));
+  return new Response(JSON.stringify({
+    ok: true, guid: rec.guid, charged_krw: krwAmount,
+    gdc_amount: mintData.amount, mint_content_hash: mintData.content_hash,
+  }), { status: 200, headers: corsHeaders });
 }
 
 // ── POST /gwp/register-key — 가입 시점 지갑 공개키 등록 ─────────────

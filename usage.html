@@ -72,6 +72,38 @@ body{font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
 @keyframes spin{to{transform:rotate(360deg)}}
 .retry-btn{margin-top:12px;padding:8px 18px;border-radius:20px;background:#1A73E8;
   color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+
+/* ── 충전 모달 ── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;
+  align-items:flex-end;justify-content:center;z-index:100}
+.modal-backdrop.open{display:flex}
+.modal-sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:480px;
+  padding:20px 20px calc(env(safe-area-inset-bottom,0px)+20px);max-height:88vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;
+  align-items:center;justify-content:space-between}
+.modal-close{background:none;border:none;font-size:20px;color:#9ca3af;cursor:pointer;padding:4px}
+.modal-label{font-size:12.5px;color:#6b7280;margin:14px 0 6px}
+.modal-input{width:100%;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;
+  font-size:15px;font-family:inherit}
+.modal-primary-btn{width:100%;margin-top:18px;padding:13px;border:none;border-radius:12px;
+  background:#1A73E8;color:#fff;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.modal-primary-btn:disabled{background:#c7ddfd;cursor:not-allowed}
+.charge-result-box{background:#F7F8FA;border-radius:12px;padding:14px;margin-top:14px;
+  font-size:13px;line-height:1.7;color:#111}
+.charge-result-box .cr-code{font-size:20px;font-weight:700;letter-spacing:.5px;
+  color:#1A73E8;margin:4px 0}
+.charge-result-box .cr-row{display:flex;justify-content:space-between;gap:10px;
+  padding:4px 0;border-bottom:1px dashed #e5e7eb}
+.charge-result-box .cr-row:last-child{border-bottom:none}
+.charge-warn{font-size:12px;color:#dc2626;margin-top:10px;line-height:1.6}
+.charge-status-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;
+  font-weight:600}
+.charge-status-pill.pending{background:#FFF4E5;color:#B45309}
+.charge-status-pill.matched{background:#E7F7EE;color:#0F9D58}
+.charge-status-pill.expired,.charge-status-pill.cancelled{background:#F3F4F6;color:#6b7280}
+.chq-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;
+  border-top:1px solid #f5f5f5;font-size:13px}
+.chq-row:first-child{border-top:none}
 </style>
 </head>
 <body>
@@ -101,7 +133,10 @@ body{font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
 
     <div class="summary-grid">
       <div class="summary-card">
-        <div class="summary-label">GDC 잔액</div>
+        <div class="summary-label">
+          GDC 잔액
+          <button class="topup-btn" onclick="openChargeModal()">충전하기</button>
+        </div>
         <div class="summary-value" id="balance-value">—<span class="unit">GDC</span></div>
       </div>
       <div class="summary-card">
@@ -110,6 +145,16 @@ body{font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
         </div>
         <div class="summary-value" id="spent-value">—<span class="unit">원</span></div>
       </div>
+    </div>
+
+    <div class="detail-section" id="charge-history-section" style="margin-bottom:16px;display:none">
+      <div class="detail-header">
+        <div>
+          <div class="detail-header-title">충전 신청 내역</div>
+          <div class="detail-header-sub">최근 20건</div>
+        </div>
+      </div>
+      <div id="charge-history-body"></div>
     </div>
 
     <div class="quota-card" id="quota-card" style="display:none">
@@ -131,6 +176,40 @@ body{font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
       <div id="detail-body">
         <div class="detail-empty">불러오는 중...</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 충전 신청 모달 ── -->
+<div class="modal-backdrop" id="charge-modal-backdrop" onclick="if(event.target===this) closeChargeModal()">
+  <div class="modal-sheet">
+    <div class="modal-title">
+      GDC 충전
+      <button class="modal-close" onclick="closeChargeModal()">&times;</button>
+    </div>
+
+    <div id="charge-step-input">
+      <div style="font-size:13px;color:#6b7280;line-height:1.6">
+        신용카드·PG 없이 계좌 입금으로만 충전할 수 있어요. 금액을 입력하면
+        입금 계좌와, 입금 시 꼭 포함해야 할 코드를 알려드려요.
+      </div>
+      <div class="modal-label">충전 금액 (원)</div>
+      <input class="modal-input" id="charge-amount-input" type="number" min="1000" step="1000" placeholder="예: 10000" inputmode="numeric">
+      <button class="modal-primary-btn" id="charge-submit-btn" onclick="submitChargeRequest()">충전 신청하기</button>
+    </div>
+
+    <div id="charge-step-result" style="display:none">
+      <div class="charge-result-box">
+        <div class="cr-row"><span>입금 은행/계좌</span><span id="cr-account"></span></div>
+        <div class="cr-row"><span>충전 금액</span><span id="cr-amount"></span></div>
+        <div style="margin-top:10px">보내는 분 표시에 아래 코드를 꼭 포함해 입금해 주세요</div>
+        <div class="cr-code" id="cr-code"></div>
+      </div>
+      <div class="charge-warn">
+        관리자가 입금을 확인하는 대로 GDC가 지급돼요(자동 처리가 아니라 보통
+        수 시간 정도 걸릴 수 있어요). 코드를 빠뜨리면 확인이 늦어질 수 있어요.
+      </div>
+      <button class="modal-primary-btn" onclick="closeChargeModal()">확인했어요</button>
     </div>
   </div>
 </div>
@@ -283,7 +362,81 @@ function escapeHtml(s) {
   return div.innerHTML;
 }
 
+// ── 충전 모달 ──────────────────────────────────────────────
+function openChargeModal() {
+  document.getElementById('charge-step-input').style.display = 'block';
+  document.getElementById('charge-step-result').style.display = 'none';
+  document.getElementById('charge-amount-input').value = '';
+  document.getElementById('charge-modal-backdrop').classList.add('open');
+}
+function closeChargeModal() {
+  document.getElementById('charge-modal-backdrop').classList.remove('open');
+  // 모달을 닫을 때(신청을 완료했든 취소했든) 내역을 새로고침해 최신 상태를 보여준다.
+  loadChargeHistory();
+}
+
+async function submitChargeRequest() {
+  const guid = getGuid();
+  const amountInput = document.getElementById('charge-amount-input');
+  const amount = parseInt(amountInput.value, 10);
+  if (!amount || amount < 1000) {
+    alert('최소 1,000원 이상 입력해 주세요.');
+    return;
+  }
+  const btn = document.getElementById('charge-submit-btn');
+  btn.disabled = true;
+  btn.textContent = '신청 중...';
+  try {
+    const res = await fetch(`${WORKER_URL}/biz/charge-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guid, krw_amount: amount }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      alert('충전 신청 실패: ' + (data.message || data.error || `HTTP ${res.status}`));
+      return;
+    }
+    document.getElementById('cr-account').textContent = data.bank_account_info;
+    document.getElementById('cr-amount').textContent = fmt(data.requested_krw) + '원';
+    document.getElementById('cr-code').textContent = data.match_code;
+    document.getElementById('charge-step-input').style.display = 'none';
+    document.getElementById('charge-step-result').style.display = 'block';
+  } catch (e) {
+    alert('충전 신청 중 오류가 발생했습니다: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '충전 신청하기';
+  }
+}
+
+async function loadChargeHistory() {
+  const guid = getGuid();
+  if (!guid) return;
+  const sectionEl = document.getElementById('charge-history-section');
+  const bodyEl = document.getElementById('charge-history-body');
+  try {
+    const res = await fetch(`${WORKER_URL}/biz/charge-status?guid=${encodeURIComponent(guid)}`);
+    const data = await res.json();
+    if (!data.ok || !data.requests || data.requests.length === 0) {
+      sectionEl.style.display = 'none';
+      return;
+    }
+    const statusLabel = { pending: '입금 대기', matched: '충전 완료', expired: '만료', cancelled: '취소' };
+    bodyEl.innerHTML = data.requests.map(r => `
+      <div class="chq-row">
+        <span>${fmt(r.requested_krw)}원 · ${escapeHtml(r.match_code)}</span>
+        <span class="charge-status-pill ${escapeHtml(r.status)}">${statusLabel[r.status] || r.status}</span>
+      </div>
+    `).join('');
+    sectionEl.style.display = 'block';
+  } catch (e) {
+    sectionEl.style.display = 'none';
+  }
+}
+
 loadUsage();
+loadChargeHistory();
 </script>
 </body>
 </html>
