@@ -1138,6 +1138,8 @@ async function handleStatsSelf(bodyText, env, corsHeaders) {
   const { guid, org_id, viewer_pubkey, viewer_sig, viewer_ts } = body || {};
   if (!guid || !org_id) return _err(400, 'MISSING_FIELD', 'guid/org_id 필수', corsHeaders);
   if (!viewer_pubkey || !viewer_sig) return _err(401, 'SIGNATURE_REQUIRED', '본인 서명이 필요합니다', corsHeaders);
+  // (2026-07-14 추가 — ts 신선도 검증. worker.js 상단 _isFreshTs 주석 참고.)
+  if (!_isFreshTs(viewer_ts)) return _err(401, 'STALE_TIMESTAMP', 'ts가 만료되었습니다', corsHeaders);
   const sigMsg = `view:${guid}:${viewer_pubkey}:${viewer_ts || ''}`;
   const sigOk = await _verifyEd25519Simple(viewer_pubkey, viewer_sig, sigMsg).catch(() => false);
   if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '', corsHeaders);
@@ -1162,6 +1164,8 @@ async function handleMyAssignments(bodyText, env, corsHeaders) {
   const { guid, viewer_pubkey, viewer_sig, viewer_ts } = body || {};
   if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
   if (!viewer_pubkey || !viewer_sig) return _err(401, 'SIGNATURE_REQUIRED', '본인 서명이 필요합니다', corsHeaders);
+  // (2026-07-14 추가 — ts 신선도 검증. worker.js 상단 _isFreshTs 주석 참고.)
+  if (!_isFreshTs(viewer_ts)) return _err(401, 'STALE_TIMESTAMP', 'ts가 만료되었습니다', corsHeaders);
   const sigMsg = `view:${guid}:${viewer_pubkey}:${viewer_ts || ''}`;
   const sigOk = await _verifyEd25519Simple(viewer_pubkey, viewer_sig, sigMsg).catch(() => false);
   if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '', corsHeaders);
@@ -3173,6 +3177,7 @@ export default {
     if (pathname === '/biz/claims/ack' && request.method === 'POST') return handleClaimsAck(request, env, corsHeaders);
     if (pathname === '/biz/settle-ledger' && request.method === 'POST') return handleSettleLedger(request, env, corsHeaders);
     if (pathname === '/biz/financials' && request.method === 'GET') return handleFinancialsGet(request, env, corsHeaders);
+    if (pathname === '/biz/tx-history' && request.method === 'GET') return handleTxHistory(request, env, corsHeaders);
     if (pathname === '/biz/product' && request.method === 'POST') return handleBizProduct(request, env, corsHeaders);
     // ★ 2026-07-09 신설 — 짜장면 주문 사고실험 1단계: 프로필-to-프로필
     // AI 메시징(예: 손님의 AI가 식당의 AI에게 주문을 전달). /ai/chat(기존,
@@ -4350,8 +4355,14 @@ function _filterProfileByVisibility({ address, phone, website, extra }) {
 // _isAuthenticatedOwnerRequest와 동일한 서명+TOFU 원칙을 재사용하되,
 // sigMsg를 호출부가 지정하게 해 GET 조회와 POST 확인(claim_ids 바인딩
 // 필요)에서 다른 문구를 쓸 수 있게 한다.
-async function _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg }) {
+// (2026-07-14 추가 — ts 신선도 검증. 위 _isFreshTs 주석 참고: 서명은
+// 검증하면서 ts가 오래됐는지는 확인하지 않아, 캡처된 서명을 무기한
+// replay할 수 있는 상태였다. ts를 별도 파라미터로 받아 확인한다 —
+// sigMsg 문자열 안에서 ts를 다시 파싱해내는 것보다 호출부가 이미 갖고
+// 있는 값을 그대로 넘기는 편이 형식 의존성이 없어 더 안전하다.)
+async function _verifyClaimsRequester(env, { guid, pubkey, signature, sigMsg, ts }) {
   if (!guid || !pubkey || !signature) return false;
+  if (!_isFreshTs(ts)) return false;
   const sigOk = await _verifyEd25519Simple(pubkey, signature, sigMsg).catch(() => false);
   if (!sigOk) return false;
   const profile = await _l1FindProfileByGuid(env, guid).catch(() => null);
@@ -4366,6 +4377,9 @@ async function _isAuthenticatedOwnerRequest(env, targetGuid, url) {
   const viewerTs     = url.searchParams.get('viewer_ts') || '';
   if (!viewerGuid || !viewerPubkey || !viewerSig) return false;
   if (viewerGuid !== targetGuid) return false; // 본인 프로필 조회만 인증 대상 — 타인 것엔 의미 없음
+  // (2026-07-14 추가 — ts 신선도 검증. _isFreshTs 주석 참고: profile.html은
+  // 밀리초, call-ai.js는 초 단위로 ts를 보내므로 자동 판별 헬퍼를 쓴다.)
+  if (!_isFreshTs(viewerTs)) return false;
 
   const sigMsg = `view:${viewerGuid}:${viewerPubkey}:${viewerTs}`;
   const sigOk = await _verifyEd25519Simple(viewerPubkey, viewerSig, sigMsg).catch(() => false);
@@ -4665,6 +4679,30 @@ async function _verifyEd25519Simple(pubkeyB64u, signatureB64u, message) {
     const cryptoKey   = await crypto.subtle.importKey('raw', pubKeyBytes, { name:'Ed25519' }, false, ['verify']);
     return await crypto.subtle.verify('Ed25519', cryptoKey, sigBytes, data);
   } catch (e) { console.warn('[Ed25519Simple]', e.message); return false; }
+}
+
+// (2026-07-14 신설 — 사고실험에서 발견: "view:" 서명 메시지를 검증하는
+// _isAuthenticatedOwnerRequest와, claims류 서명을 검증하는
+// _verifyClaimsRequester 둘 다 서명 자체는 검증하면서도 ts(타임스탬프)의
+// 신선도는 전혀 확인하지 않고 있었다 — handleProfileVerifyOwner 등
+// 다른 서명 엔드포인트는 이미 5분 윈도우를 강제하는데, 이 두 곳만
+// 빠져 있었다. 즉 한 번 유효했던 viewer_sig/signature를(GET 요청이면
+// URL 쿼리파라미터라 브라우저 히스토리·서버 로그·리퍼러에 남기 쉽다)
+// 무기한 재사용(replay)할 수 있는 상태였다.
+//
+// 클라이언트마다 ts 단위가 다르다는 것도 함께 확인했다 — profile.html/
+// webapp.html의 claims·settle·financials·tx-history류는 전부
+// Date.now().toString()(밀리초)을 쓰지만, call-ai.js의
+// _loadOwnJobContext()는 String(Math.floor(Date.now()/1000))(초)를
+// 쓴다. 이 두 클라이언트를 전부 고치는 대신, 자릿수로 초/밀리초를
+// 자동 판별하는 쪽이 더 안전하다(어느 한쪽 클라이언트를 놓쳐 조용히
+// 깨뜨릴 위험이 없다) — 1e12(2001-09-09 이후의 밀리초 타임스탬프는
+// 항상 13자리 이상, 초 타임스탬프는 항상 10자리)를 기준으로 나눈다.
+function _isFreshTs(tsRaw, windowMs = 300000) {
+  const tsNum = Number(tsRaw);
+  if (!Number.isFinite(tsNum) || tsNum <= 0) return false;
+  const tsMs = tsNum >= 1e12 ? tsNum : tsNum * 1000; // 1e12 미만이면 초 단위로 간주
+  return Math.abs(Date.now() - tsMs) <= windowMs;
 }
 
 function _b64uToBytes(b64u) {
@@ -9876,7 +9914,7 @@ async function handleClaimsList(request, env, corsHeaders) {
   // 2026-07-13 신설 — 서명 인증 필수. guid는 공개 정보라 자기주장만으로는
   // 남의 claim 목록(거래 금액 등 민감 정보 포함)을 볼 수 있었다.
   const authOk = await _verifyClaimsRequester(env, {
-    guid, pubkey, signature, sigMsg: `claims:${guid}:${pubkey}:${ts}`,
+    guid, pubkey, signature, ts, sigMsg: `claims:${guid}:${pubkey}:${ts}`,
   });
   if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
 
@@ -9918,7 +9956,7 @@ async function handleClaimsAck(request, env, corsHeaders) {
   // 하는 것도 함께 막는다.
   const sortedIds = [...claim_ids].sort().join(',');
   const authOk = await _verifyClaimsRequester(env, {
-    guid, pubkey, signature, sigMsg: `claims_ack:${guid}:${pubkey}:${ts}:${sortedIds}`,
+    guid, pubkey, signature, ts, sigMsg: `claims_ack:${guid}:${pubkey}:${ts}:${sortedIds}`,
   });
   if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
 
@@ -9972,7 +10010,7 @@ async function handleSettleLedger(request, env, corsHeaders) {
   // 정보를 조회/재계산시킬 수 있는 것을 막는다(2026-07-13 /biz/claims에
   // 적용된 것과 동일한 원칙).
   const authOk = await _verifyClaimsRequester(env, {
-    guid, pubkey, signature, sigMsg: `settle:${guid}:${pubkey}:${ts}`,
+    guid, pubkey, signature, ts, sigMsg: `settle:${guid}:${pubkey}:${ts}`,
   });
   if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
 
@@ -10068,7 +10106,7 @@ async function handleFinancialsGet(request, env, corsHeaders) {
   if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
 
   const authOk = await _verifyClaimsRequester(env, {
-    guid, pubkey, signature, sigMsg: `financials:${guid}:${pubkey}:${ts}`,
+    guid, pubkey, signature, ts, sigMsg: `financials:${guid}:${pubkey}:${ts}`,
   });
   if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
 
@@ -10079,6 +10117,99 @@ async function handleFinancialsGet(request, env, corsHeaders) {
   return new Response(JSON.stringify({ ok: true, fs }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-14 신설 — GET /biz/tx-history. GDC(gdc 레포) webapp.html의
+// 홈 화면 "최근 거래" 목록(home-ledger)이 지금까지 Supabase fs_ledger를
+// 직접 읽고 있었는데, doTransfer()가 L1 /biz/order로 재작성되면서 더는
+// 그 테이블에 쓰지 않게 됐다(fix2.py 참고) — 그 목록이 채워질 곳이
+// 필요해서 신설한다. /biz/financials와 동일한 서명+TOFU 인증 원칙.
+//
+// L1에는 거래내역 전용 인덱스가 없다(computeBalance와 동일한 한계 —
+// main.pb.js 상단 주석 "규모가 커지면 스냅샷+증분 방식 필요" 참고).
+// 지금 규모(개발 단계)에서는 최근 blocks를 넓게 가져와 이 guid가
+// buyer_guid이거나 outputs의 recipient_guid인 것만 JS에서 추려내는
+// 방식으로 충분하다 — 다만 이 guid의 거래가 "최근 스캔 범위" 밖에
+// 있으면(즉 다른 사용자들의 거래가 그 사이에 아주 많았으면) 누락될 수
+// 있다는 걸 명시한다(truncated 플래그로 알림).
+// ═══════════════════════════════════════════════════════════
+async function handleTxHistory(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid      = url.searchParams.get('guid');
+  const pubkey    = url.searchParams.get('pubkey');
+  const signature = url.searchParams.get('signature');
+  const ts        = url.searchParams.get('ts') || '';
+  const limit     = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '10', 10) || 10, 1), 50);
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const authOk = await _verifyClaimsRequester(env, {
+    guid, pubkey, signature, ts, sigMsg: `tx-history:${guid}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+
+  // 최신순으로 최대 5페이지(1,000건)까지만 스캔 — handleSettleLedger의
+  // MAX_PAGES 안전판과 동일한 관례. 그 안에서 limit개를 채우면 조기 종료.
+  const PER_PAGE = 200, MAX_PAGES = 5;
+  const items = [];
+  let page = 1, truncated = false, scanned = 0;
+  try {
+    while (page <= MAX_PAGES && items.length < limit) {
+      const filter = encodeURIComponent(`block_type != ''`);
+      const res = await fetch(
+        `${L1_DEFAULT}/api/collections/blocks/records?filter=${filter}&sort=-created&page=${page}&perPage=${PER_PAGE}`,
+        { headers }
+      );
+      if (!res.ok) return _err(502, 'L1_UNREACHABLE', '거래내역 조회 실패', corsHeaders);
+      const data = await res.json().catch(() => ({ items: [], totalPages: 0 }));
+      const blocks = data.items || [];
+      scanned += blocks.length;
+
+      for (const b of blocks) {
+        let outputs;
+        try { outputs = JSON.parse(b.outputs || '[]'); } catch { continue; }
+        const isBuyer = b.buyer_guid === guid;
+        const recipientOutput = outputs.find(o => o.recipient_guid === guid);
+        if (!isBuyer && !recipientOutput) continue;
+
+        if (isBuyer) {
+          // 이 guid가 지불자 — outputs 각각을 개별 차변 항목으로 표시
+          // (예: 판매자 몫 + 플랫폼 수수료를 따로 보여줌).
+          for (const o of outputs) {
+            items.push({
+              tx_hash: b.tx_hash, block_type: b.block_type, direction: 'debit',
+              counterpart: o.recipient_guid || null, amount: o.amount || 0,
+              memo: o.memo || o.service_id || b.block_type,
+              created: b.created,
+            });
+          }
+        } else if (recipientOutput) {
+          items.push({
+            tx_hash: b.tx_hash, block_type: b.block_type, direction: 'credit',
+            counterpart: b.buyer_guid || null, amount: recipientOutput.amount || 0,
+            memo: recipientOutput.memo || recipientOutput.service_id || b.block_type,
+            created: b.created,
+          });
+        }
+      }
+      if (page >= (data.totalPages || 1)) break;
+      page++;
+    }
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (page > MAX_PAGES) {
+    truncated = true;
+    console.warn('[TxHistory] 스캔 페이지 상한 도달 — 일부만 조회됨:', guid);
+  }
+
+  items.sort((a, b) => new Date(b.created) - new Date(a.created));
+  return new Response(JSON.stringify({
+    ok: true, items: items.slice(0, limit), truncated, scanned,
+  }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
 // POST /biz/catalog/sync — 로컬 IndexedDB 전체 스냅샷을 서버 백업/공개미러에 반영
