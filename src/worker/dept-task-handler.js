@@ -183,6 +183,51 @@ const AGENCY_PUBKEY_REGISTRY = {
   //    키 확보 후 채울 것, 그 전까지 이 기관은 access_cert 발급 불가>',
 };
 
+// ── 필드 테스트용 임시 기관 키 — 2026-07-14 신설 ──────────────────
+// 주피터님 지시: "기관들이 실제로 참여하기 전, 혼디 성능을 검증하고
+// 버그를 색출하기 위한 필드 테스트 기간 동안" AGENCY_PUBKEY_REGISTRY가
+// 빈 채로는 STAFF_TASK_QUEUE·성과측정·업무영역 PDV 요청 전체를 실행
+// 검증할 방법이 없다. 그렇다고 별도 목업 경로를 만들면(예: 검증을
+// 우회하는 테스트 전용 함수) 정작 실제 access_cert 검증 로직 자체는
+// 테스트가 안 되는 모순이 생긴다 — 그래서 진짜 검증 로직(위
+// _verifyAccessCert)은 그대로 타되, 키 조회 대상만 이 레지스트리로
+// 바꾼다. QA 팀이 gopang-wallet.js(실사용자와 동일한 도구)로 키쌍을
+// 만들어 그 공개키를 여기 커밋해 넣는 방식 — 별도 서명 발급 UI를
+// 새로 안 만든다.
+//
+// 안전장치 3중:
+//   1) FIELD_TEST_MODE_EXPIRY 이후에는 코드가 이 레지스트리를 아예
+//      무시한다(날짜를 깜빡 지우지 않아도 시간이 지나면 자동 비활성).
+//   2) env.HONDI_FIELD_TEST_MODE==='true'가 명시적으로 설정된 배포
+//      에서만 참조한다 — 이 값은 git에 커밋되지 않는 Cloudflare
+//      환경변수라, 실서비스 배포 설정에 넣지 않으면 원천 차단된다.
+//   3) 이 레지스트리로 검증된 access_cert는 승인 시 verified_by에
+//      "FIELD_TEST:" 접두어가 붙는다(approveAffiliationCore) — 실제
+//      기관 참여를 앞두고 테스트 데이터를 일괄 검색·정리할 수 있다.
+//
+// org_id는 실제 DEPT_TASK_TAXONOMY 값을 그대로 쓴다(예:
+// 'city-dept:jeju:health') — 별도 test: 접두어를 만들지 않는 이유는,
+// 접두어를 쓰면 _validateTarget의 taxonomy 대조 로직까지 분기해야
+// 하는데 그러면 "진짜 코드 경로를 탄다"는 목적 자체가 흐려지기
+// 때문이다. 대신 env 플래그(안전장치 2)가 그 역할을 대신한다.
+const FIELD_TEST_AGENCY_PUBKEY_REGISTRY = {
+  // 'city-dept:jeju:health': '<QA 팀이 gopang-wallet.js로 생성한 테스트
+  //    키쌍의 공개키 — 실제 기관장 키가 아님, 필드 테스트 전용>',
+};
+const FIELD_TEST_MODE_EXPIRY = '2026-10-01'; // 이 날짜 이후 자동 비활성 — 실제 참여 전 재검토 없이 지나면 안전 쪽으로 닫힘
+
+function _fieldTestModeActive(env) {
+  if (env?.HONDI_FIELD_TEST_MODE !== 'true') return false;
+  return new Date() < new Date(FIELD_TEST_MODE_EXPIRY);
+}
+
+// approveAffiliationCore(worker.js)가 verified_by 태깅(§FIELD_TEST 접두어)
+// 여부를 판단할 때 쓴다 — _verifyAccessCert의 반환 계약(성공 시 org_id
+// 문자열)을 바꾸지 않기 위해 독립 함수로 분리했다.
+function _isFieldTestOrg(env, orgId) {
+  return !AGENCY_PUBKEY_REGISTRY[orgId] && _fieldTestModeActive(env) && !!FIELD_TEST_AGENCY_PUBKEY_REGISTRY[orgId];
+}
+
 /**
  * _verifyAccessCert — "직책 인증서"(기관장이 특정 GUID에게 특정
  * 직책을 부여했다는 서명) + "본인 서명"(그 GUID가 진짜 자기 키로
@@ -216,12 +261,18 @@ async function _verifyAccessCert(env, cert, callerGuid, deps) {
   // 1) 기관장 서명(issuer_signature) 검증 — "이 GUID에게 이 직책을 준다"는
   //    선언 자체가 진짜 그 기관의 공개키로 서명됐는지.
   let issuerPubkey = null;
+  let viaFieldTest = false;
   if (org_id.startsWith('org:')) {
     // 민간기업 — 기존 L1 profile pubkey_ed25519 재사용.
     const bizProfile = await _l1FindProfileByGuid(env, org_id.slice('org:'.length)).catch(() => null);
     issuerPubkey = bizProfile?.pubkey_ed25519 || null;
   } else {
     issuerPubkey = AGENCY_PUBKEY_REGISTRY[org_id] || null;
+    if (!issuerPubkey && _fieldTestModeActive(env) && FIELD_TEST_AGENCY_PUBKEY_REGISTRY[org_id]) {
+      issuerPubkey = FIELD_TEST_AGENCY_PUBKEY_REGISTRY[org_id];
+      viaFieldTest = true;
+      console.warn(`[AccessCert][FIELD_TEST] ${org_id} — 필드 테스트 키로 검증 시도 (만료: ${FIELD_TEST_MODE_EXPIRY})`);
+    }
   }
   if (!issuerPubkey) { console.warn('[AccessCert] 기관 공개키 미등록:', org_id); return null; }
 
@@ -375,4 +426,4 @@ async function handleDeptTaskUpdate(request, env, corsHeaders, taskId, deps) {
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
-export { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck, _verifyAccessCert, AGENCY_PUBKEY_REGISTRY };
+export { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck, _verifyAccessCert, AGENCY_PUBKEY_REGISTRY, _isFieldTestOrg };

@@ -2319,39 +2319,17 @@ async function handleSPAuthorQueueList(request, env, corsHeaders) {
   }
 }
 
-// POST /sp-author/queue/:id/status  body: {status?, priority?, duplicate_of?}
+// POST /sp-author/queue/:id/status  body: {status, duplicate_of?}
 async function handleSPAuthorQueueStatus(request, env, corsHeaders, recordId) {
   let payload;
   try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
-  const patch = {};
-
-  if (payload.status !== undefined) {
-    const allowed = ['queued', 'assigned', 'drafted', 'pending_review', 'approved', 'rejected', 'duplicate'];
-    if (!allowed.includes(payload.status)) {
-      return new Response(JSON.stringify({ error: `status must be one of ${allowed.join('|')}` }), { status: 400, headers: corsHeaders });
-    }
-    patch.status = payload.status;
-    if (payload.status === 'duplicate' && payload.duplicate_of) patch.duplicate_of = payload.duplicate_of;
-    if (['approved', 'rejected'].includes(payload.status)) patch.resolved_at = new Date().toISOString();
+  const allowed = ['queued', 'assigned', 'drafted', 'pending_review', 'approved', 'rejected', 'duplicate'];
+  if (!allowed.includes(payload.status)) {
+    return new Response(JSON.stringify({ error: `status must be one of ${allowed.join('|')}` }), { status: 400, headers: corsHeaders });
   }
-
-  // 2026-07-14 신설 — docs/SP-AUTHOR-AUTOMATION_v1_0.md §1-3(search_miss_pattern)이
-  // "대표 레코드의 priority를 normal→high로 승격"을 전제하는데, 이 엔드포인트는
-  // 지금까지 status만 patch할 수 있었다(실사로 확인 — 설계문서가 존재를
-  // 전제한 기능이 코드엔 없던 갭). priority 단독 갱신도 허용한다(status 변경
-  // 없이 우선순위만 올리는 배치 집계 스크립트를 위함).
-  if (payload.priority !== undefined) {
-    const allowedPriority = ['low', 'normal', 'high'];
-    if (!allowedPriority.includes(payload.priority)) {
-      return new Response(JSON.stringify({ error: `priority must be one of ${allowedPriority.join('|')}` }), { status: 400, headers: corsHeaders });
-    }
-    patch.priority = payload.priority;
-  }
-
-  if (Object.keys(patch).length === 0) {
-    return new Response(JSON.stringify({ error: 'status 또는 priority 중 최소 하나는 필요' }), { status: 400, headers: corsHeaders });
-  }
-
+  const patch = { status: payload.status };
+  if (payload.status === 'duplicate' && payload.duplicate_of) patch.duplicate_of = payload.duplicate_of;
+  if (['approved', 'rejected'].includes(payload.status)) patch.resolved_at = new Date().toISOString();
   try {
     const rec = await _l1PatchDraftRequest(env, recordId, patch);
 
@@ -4084,6 +4062,27 @@ function _isFieldVisible(fv, field) {
 
 function _filterProfileByVisibility({ address, phone, website, extra }) {
   const fv = extra?.public?.field_visibility || {};
+  const identity = extra?.public?.identity || {};
+  // 2026-07-14 신설 — 구멍 G 해결(AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_
+  // v2_0.md). 이 함수가 description/location/contact/products는 거르면서
+  // job_ksco·affiliation·work_domain은 아예 손대지 않고 있었다 — 즉
+  // job_ksco.visibility='private'로 저장해도 실제로는 타인 조회 시
+  // 그대로 다 보였다(코드 재확인으로 실제 결함 확정, "확인 필요"가
+  // 아니라 "결함 확인됨"으로 격상). 이 블록이 이미 한 번(1c891de) 회귀,
+  // 이번(a20461b)이 두 번째 회귀 — 복구.
+  //
+  // job_ksco는 자체 3단계 visibility(private/contacts/public)가 있다 —
+  // 다만 "contacts"(지인) 등급을 판별할 관계 데이터가 이 시스템에
+  // 없으므로, 지금은 owner가 아니면 public일 때만 노출하고 나머지는
+  // 전부 가린다(private와 동일 취급 — 과다노출보다 과소노출이 안전).
+  const jobKscoVisible = identity.job_ksco?.visibility === 'public';
+  // affiliation·work_domain은 자체 visibility 필드가 없다 — 기존
+  // description과 동일하게 boolean field_visibility로 다룬다. 기본값은
+  // false(비공개) — is_public 기본 false, job_ksco 기본 private와
+  // 동일한 "기본 비공개" 원칙(AC-AUTHOR §6·AC-EVOLUTION §6 근거).
+  const affiliationVisible = fv.affiliation === true;
+  const workDomainVisible = fv.work_domain === true;
+
   const filteredExtra = extra ? {
     ...extra,
     public: extra.public ? {
@@ -4092,8 +4091,12 @@ function _filterProfileByVisibility({ address, phone, website, extra }) {
         : { ...extra.public.location, address_short: undefined, directions: undefined },
       contact: _isFieldVisible(fv, 'phone') ? extra.public.contact
         : { ...extra.public.contact, phone_display: undefined },
-      identity: _isFieldVisible(fv, 'description') ? extra.public.identity
-        : { ...extra.public.identity, description: undefined },
+      identity: {
+        ...(_isFieldVisible(fv, 'description') ? identity : { ...identity, description: undefined }),
+        job_ksco: jobKscoVisible ? identity.job_ksco : undefined,
+        affiliation: affiliationVisible ? identity.affiliation : undefined,
+        work_domain: workDomainVisible ? identity.work_domain : undefined,
+      },
       products: _isFieldVisible(fv, 'products') ? extra.public.products : undefined,
     } : extra.public,
   } : extra;
@@ -8712,6 +8715,14 @@ async function handleProfilePost(request, env, corsHeaders) {
     // 가능하다. 자기 신고만으로 권한이 생기면 안 된다는 게 AC-EVOLUTION
     // §3의 핵심 결론이었다.
     affiliation = null,
+    // 2026-07-14 신설 — AC-EVOLUTION_v1_1.md §1(업무 도메인, 전 직종
+    // 일반화). job_ksco(KSCO)만으로는 학생·은퇴자·전업주부·무직을
+    // 표현할 수 없다(KSCO 자체가 "경제활동"만 분류하도록 설계됨) —
+    // 이 필드가 그 상위 개념이다(AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_
+    // v2_0.md 구멍 D 해결). job_ksco와 독립적으로 병존 — 학생은
+    // work_domain.status='student'만 있고 job_ksco는 없다. (이 필드가
+    // a20461b에서 한 차례 회귀했다가 복구됨 — 세 번째 회귀 사례.)
+    work_domain = null,
     // 2026-07-13 신설 — products_structured가 여태 이 함수 destructure에
     // 없어 저장 경로 자체가 없었다(실사로 발견 — welcome.js
     // _forwardProductsToMarket()이 Market의 seller_products로는 보냈지만,
@@ -8853,12 +8864,18 @@ async function handleProfilePost(request, env, corsHeaders) {
   // data/ksco_2024_v8.json으로 조회해 채운 값을 신뢰하고 서버는 재검증하지
   // 않는다 — U2(불확실 식별자 지어내지 않기) 준수는 "LLM이 label을 직접
   // 짓지 않는다"는 클라이언트 측 규칙(personal-assistant SP)으로 담보한다.
-  // entity_type이 person이 아닌데 job_ksco가 오면 무시한다(기관/사업자는
-  // industry_fields·occupation(KSIC) 몫 — §3-2 병존 원칙).
+  // 2026-07-14 수정(사고실험 구멍 B 해결, a20461b에서 회귀했다가 복구) —
+  // 이전엔 entity_type==='person'일 때만 처리했는데, 이건 AC-AUTHOR
+  // §3-2("한 사람이 사업자이면서 동시에 직업 정체성을 가질 수 있다 —
+  // 카페 사장이자 바리스타, job_ksco와 occupation(KSIC)이 독립적으로
+  // 병존")를 실제로 막고 있던 구현 결함이었다. business도 job_ksco를
+  // 가질 수 있게 게이트를 넓힌다 — occupation(KSIC, industry_fields.
+  // schema_id)과는 완전히 별개 필드이므로 서로 자동 파생하거나
+  // 덮어쓰지 않는다.
   const KSCO_CODE_RE = /^[0-9A][0-9]{0,4}$/;
   const KSCO_VISIBILITY = new Set(['private', 'contacts', 'public']);
   let resolvedJobKsco = null;
-  if (entity_type === 'person' && job_ksco && typeof job_ksco === 'object') {
+  if ((entity_type === 'person' || entity_type === 'business') && job_ksco && typeof job_ksco === 'object') {
     const code = job_ksco.code != null ? String(job_ksco.code) : null;
     if (code === null || KSCO_CODE_RE.test(code)) {
       resolvedJobKsco = {
@@ -8911,6 +8928,40 @@ async function handleProfilePost(request, env, corsHeaders) {
     }).filter(a => a.org_id);
   }
 
+  // 2026-07-14 신설 — work_domain 검증(AC-EVOLUTION_v1_1.md §1, 구멍 D,
+  // a20461b에서 회귀했다가 복구). status는 고정 enum만 허용 — LLM이
+  // 자유 문자열을 지어내 넣지 못하게 막는다(U2와 동일 원칙). job_ksco와
+  // 달리 검증 절차가 없는 것은 동일하다(자기신고) — 다만 이 필드는
+  // "안전 판단을 낮추는" 위험군이 아니라 순수 맥락 정보라 §0-1-R의
+  // C30 교차참조가 굳이 필요 없다(고용 상태 자체가 전문성 주장이
+  // 아니므로).
+  const WORK_DOMAIN_STATUS = new Set([
+    'employed_public', 'employed_private', 'self_employed',
+    'student', 'retired', 'homemaker', 'unemployed', 'other',
+  ]);
+  let resolvedWorkDomain = null;
+  if (entity_type === 'person' && work_domain && typeof work_domain === 'object') {
+    const prevWd = (prevExtra.public || {}).identity?.work_domain || null;
+    if (WORK_DOMAIN_STATUS.has(work_domain.status)) {
+      const statusChanged = !prevWd || prevWd.status !== work_domain.status;
+      resolvedWorkDomain = {
+        status: work_domain.status,
+        // active 기본값: 재직/자영업/학생은 true, 은퇴·무직은 명시 안
+        // 하면 false로 안전하게 기본 처리(신규 데이터 적재를 막는 쪽이
+        // "은퇴자인데 계속 적재됨"보다 안전 — AC-EVOLUTION §1과 동일 사상).
+        active: typeof work_domain.active === 'boolean'
+          ? work_domain.active
+          : !['retired', 'unemployed'].includes(work_domain.status),
+        // 상태가 바뀐 시점만 갱신 — 같은 status를 매번 다시 제출해도
+        // status_since가 오늘로 계속 밀리지 않게 한다(job_ksco의
+        // confirmed_at과 다른 설계 — 이건 "언제부터"가 의미 있는 값).
+        status_since: statusChanged ? new Date().toISOString().slice(0, 10) : (prevWd?.status_since || new Date().toISOString().slice(0, 10)),
+      };
+    }
+    // status가 enum 밖이면 조용히 무시(§0 U0: 실패보다 진행 — job_ksco
+    // 코드 형식 오류 처리와 동일 관례).
+  }
+
   const newExtraPublic = {
     ...(prevExtra.public || {}),
     identity: {
@@ -8919,6 +8970,7 @@ async function handleProfilePost(request, env, corsHeaders) {
       // 'job_ksco' in body로 "안 보냄(기존값 보존)"과 "null 명시(비움)"를 구분.
       job_ksco: ('job_ksco' in body) ? resolvedJobKsco : ((prevExtra.public || {}).identity?.job_ksco ?? null),
       affiliation: ('affiliation' in body) ? resolvedAffiliation : ((prevExtra.public || {}).identity?.affiliation ?? null),
+      work_domain: ('work_domain' in body) ? resolvedWorkDomain : ((prevExtra.public || {}).identity?.work_domain ?? null),
     },
     activity: { timezone: 'Asia/Seoul', hours, holidays },
     contact:  { phone_display: phone, phone_visible: !!phone_visible, website, sns_public, languages_spoken },
