@@ -767,6 +767,118 @@ async function _l1AdminToken(env) {
   return _l1AdminTokenFor(env, L1_DEFAULT);
 }
 
+// ── META_TABLE_UPDATE 태그 파싱/기록 — AGENCY-AC-COMMON_v1.3.md §6 ──────
+// 태그 형식: agency_id=..., category=..., task_type=..., dept_chain=[a,b],
+// outcome=completed|pending|referred, received_ts=ISO, processing_started_ts=ISO,
+// completed_ts=ISO, duration_seconds=123
+// (원 문서의 {} 표기는 플레이스홀더 설명용이라 실제 태그에는 안 나온다 —
+// 그래도 혹시 {}로 감싸 나오면 파서가 벗겨낸다.)
+function _parseMetaTableTag(raw) {
+  try {
+    const fields = {};
+    // dept_chain=[...] 처럼 대괄호 안의 콤마는 분리 기준에서 제외한다.
+    const parts = [];
+    let depth = 0, buf = '';
+    for (const ch of raw) {
+      if (ch === '[') depth++;
+      if (ch === ']') depth--;
+      if (ch === ',' && depth === 0) { parts.push(buf); buf = ''; }
+      else buf += ch;
+    }
+    if (buf.trim()) parts.push(buf);
+
+    for (const part of parts) {
+      const eq = part.indexOf('=');
+      if (eq === -1) continue;
+      const key = part.slice(0, eq).trim();
+      let val = part.slice(eq + 1).trim();
+      if (val.startsWith('{') && val.endsWith('}')) val = val.slice(1, -1).trim();
+      if (key === 'dept_chain') {
+        if (val.startsWith('[') && val.endsWith(']')) val = val.slice(1, -1);
+        fields.dept_chain = val.split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+      } else {
+        fields[key] = val.replace(/^["']|["']$/g, '');
+      }
+    }
+    if (!fields.agency_id || !fields.category || !fields.outcome || !fields.received_ts) return null;
+    return fields;
+  } catch (e) { return null; }
+}
+
+async function _writeMetaTableRecord(env, sessionAgency, fields) {
+  const token = await _l1AdminToken(env);
+  // duration_seconds 자동 계산(안 왔거나 신뢰 안 될 때) — completed_ts가
+  // 있어야만 계산, 없으면 null(§6: "처리 중이라고 미리 채우지 않는다").
+  let duration = fields.duration_seconds ? parseInt(fields.duration_seconds, 10) : null;
+  if ((duration === null || Number.isNaN(duration)) && fields.completed_ts && fields.received_ts) {
+    const d = (new Date(fields.completed_ts) - new Date(fields.received_ts)) / 1000;
+    duration = Number.isFinite(d) && d >= 0 ? Math.round(d) : null;
+  }
+  const res = await fetch(`${L1_DEFAULT}/api/collections/meta_table_records/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      agency_id: fields.agency_id || sessionAgency,
+      category: fields.category,
+      task_type: fields.task_type || null,
+      dept_chain: fields.dept_chain || [],
+      outcome: ['completed', 'pending', 'referred'].includes(fields.outcome) ? fields.outcome : 'pending',
+      received_ts: fields.received_ts,
+      processing_started_ts: fields.processing_started_ts || null,
+      completed_ts: fields.completed_ts || null,
+      duration_seconds: duration,
+    }),
+  });
+  if (!res.ok) throw new Error(`meta_table_records 저장 실패 HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+}
+
+// GET /stats/agency-report?agency_id=X&period=weekly|monthly|quarterly|halfyear|yearly&anchor=ISO날짜(선택, 기본 오늘)
+// AGENCY-AC-COMMON §6이 요구한 주기별 보고서. 기관 간 효율성 비교와
+// 동일 원칙으로 준공개(별도 인증 없음) — /stats/org와 access tier를
+// 통일했다(같은 "기관 효율성" 개념이라 접근권한도 같아야 일관적이다).
+async function handleStatsAgencyReport(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const agencyId = url.searchParams.get('agency_id');
+  const period = url.searchParams.get('period') || 'monthly';
+  if (!agencyId) return _err(400, 'MISSING_FIELD', 'agency_id 필수', corsHeaders);
+  const PERIOD_DAYS = { weekly: 7, monthly: 30, quarterly: 91, halfyear: 182, yearly: 365 };
+  const days = PERIOD_DAYS[period];
+  if (!days) return _err(400, 'INVALID_PERIOD', 'weekly|monthly|quarterly|halfyear|yearly 중 하나여야 합니다', corsHeaders);
+  const anchor = url.searchParams.get('anchor') ? new Date(url.searchParams.get('anchor')) : new Date();
+  const since = new Date(anchor.getTime() - days * 86400000).toISOString();
+
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`agency_id='${agencyId}' && received_ts >= '${since}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/meta_table_records/records?filter=${filter}&perPage=500`,
+    { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => null);
+  if (!res || !res.ok) return _err(503, 'FETCH_FAILED', '', corsHeaders);
+  const json = await res.json().catch(() => null);
+  const items = json?.items || [];
+
+  // category별로 묶어서 건수·평균 처리시간·미완료 비율을 낸다(§6 "배선단
+  // 배치 집계 작업" — 여기선 요청 시점 즉석 집계로 구현, 트래픽이 커지면
+  // 별도 배치 잡으로 옮길 것을 KNOWN_LIMITATIONS에 남긴다).
+  const byCategory = {};
+  for (const it of items) {
+    const cat = it.category || '(미분류)';
+    if (!byCategory[cat]) byCategory[cat] = { count: 0, completed: 0, durations: [] };
+    byCategory[cat].count++;
+    if (it.outcome === 'completed') byCategory[cat].completed++;
+    if (it.duration_seconds != null) byCategory[cat].durations.push(it.duration_seconds);
+  }
+  const categories = Object.entries(byCategory).map(([category, v]) => ({
+    category,
+    count: v.count,
+    completion_rate: v.count ? +(v.completed / v.count).toFixed(3) : null,
+    avg_duration_seconds: v.durations.length ? Math.round(v.durations.reduce((a, b) => a + b, 0) / v.durations.length) : null,
+  }));
+
+  return new Response(JSON.stringify({
+    ok: true, agency_id: agencyId, period, since, until: anchor.toISOString(),
+    total_count: items.length, categories,
+  }), { status: 200, headers: corsHeaders });
+}
+
 // ── §4 guid→L1 소속 레지스트리 (L3 guid_home_l1 컬렉션) ──────────────
 const L1_ONLY_NODE_IDS = [
   'KR-JEJU-JEJU-AEWOL',
@@ -2778,6 +2890,11 @@ export default {
     // 대상으로 판단). POST 게이트 앞에 둬야 한다(GET이라 bodyText 없음).
     if (pathname === '/stats/org' && request.method === 'GET')
       return handleStatsOrgCompare(request, env, corsHeaders);
+
+    // GET /stats/agency-report — AGENCY-AC-COMMON §6(META_TABLING) 주기별
+    // 보고서. /stats/org와 동일하게 준공개.
+    if (pathname === '/stats/agency-report' && request.method === 'GET')
+      return handleStatsAgencyReport(request, env, corsHeaders);
 
     // POST /admin/cf-dns — Cloudflare DNS CNAME 추가 (CORS 우회 프록시)
     if (pathname === '/admin/cf-dns' && request.method === 'POST')
@@ -6059,6 +6176,30 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
 
   const data = await res.json();
   billGovCall(data?.usage, agency);
+
+  // ── META_TABLE_UPDATE 서버측 처리 (2026-07-14 신설) ─────────────
+  // AGENCY-AC-COMMON_v1.3.md §6이 "백엔드 배선 필요"로 표시해둔 것을
+  // 배선한다. canDelegate 여부와 무관하게 모든 기관 세션에 적용 —
+  // 이건 위임 오케스트레이션이 아니라 그 기관 자신의 요청처리 실적
+  // 로깅이라 canDelegate 게이트와 관계없다. 응답 흐름을 막지 않는다
+  // (얼리리턴 없음 — 태그만 벗겨내고 로깅은 비동기로 흘려보낸다).
+  {
+    const mtContent = data?.choices?.[0]?.message?.content;
+    const mtMatch = typeof mtContent === 'string'
+      ? mtContent.match(/\[META_TABLE_UPDATE:([\s\S]*?)\]/)
+      : null;
+    if (mtMatch) {
+      const mtFields = _parseMetaTableTag(mtMatch[1]);
+      if (mtFields) {
+        const writeTask = _writeMetaTableRecord(env, agency, mtFields).catch(e =>
+          console.warn('[MetaTable] 기록 실패(응답 흐름은 계속 진행):', e.message));
+        if (ctx?.waitUntil) ctx.waitUntil(writeTask); else writeTask.catch(() => {});
+      } else {
+        console.warn('[MetaTable] 태그 파싱 실패 — 형식이 예상과 다름:', mtMatch[1].slice(0, 200));
+      }
+      data.choices[0].message.content = mtContent.replace(/\[META_TABLE_UPDATE:[\s\S]*?\]/, '').trim();
+    }
+  }
 
   // ── SP 간 호출(위임) 오케스트레이션 — canDelegate agency에서만 시도 ──────
   // call_chain은 이 요청 안에서만 존재하는 서버 내부 상태다(클라이언트가 보낸
