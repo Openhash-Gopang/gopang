@@ -8688,12 +8688,18 @@ async function handleProfilePost(request, env, corsHeaders) {
   // data/ksco_2024_v8.json으로 조회해 채운 값을 신뢰하고 서버는 재검증하지
   // 않는다 — U2(불확실 식별자 지어내지 않기) 준수는 "LLM이 label을 직접
   // 짓지 않는다"는 클라이언트 측 규칙(personal-assistant SP)으로 담보한다.
-  // entity_type이 person이 아닌데 job_ksco가 오면 무시한다(기관/사업자는
-  // industry_fields·occupation(KSIC) 몫 — §3-2 병존 원칙).
+  // 2026-07-14 수정(사고실험 구멍 B 해결) — 이전엔 entity_type==='person'
+  // 일 때만 처리했는데, 이건 AC-AUTHOR §3-2("한 사람이 사업자이면서
+  // 동시에 직업 정체성을 가질 수 있다 — 카페 사장이자 바리스타, job_ksco
+  // 와 occupation(KSIC)이 독립적으로 병존")를 실제로 막고 있던 구현
+  // 결함이었다(AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_v2_0.md 구멍 B).
+  // business도 job_ksco를 가질 수 있게 게이트를 넓힌다 — occupation
+  // (KSIC, industry_fields.schema_id)과는 완전히 별개 필드이므로 서로
+  // 자동 파생하거나 덮어쓰지 않는다(§3-2 그대로).
   const KSCO_CODE_RE = /^[0-9A][0-9]{0,4}$/;
   const KSCO_VISIBILITY = new Set(['private', 'contacts', 'public']);
   let resolvedJobKsco = null;
-  if (entity_type === 'person' && job_ksco && typeof job_ksco === 'object') {
+  if ((entity_type === 'person' || entity_type === 'business') && job_ksco && typeof job_ksco === 'object') {
     const code = job_ksco.code != null ? String(job_ksco.code) : null;
     if (code === null || KSCO_CODE_RE.test(code)) {
       resolvedJobKsco = {
