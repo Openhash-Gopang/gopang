@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사용량 — 혼디</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+  background:#f5f5f5;color:#111;display:flex;flex-direction:column;min-height:100dvh}
+
+/* ── 상단 바 ── */
+.topbar{background:#fff;border-bottom:1px solid #e5e7eb;
+  padding:calc(env(safe-area-inset-top,0px)+14px) 16px 14px;
+  display:flex;align-items:center;gap:10px;flex-shrink:0;position:sticky;top:0;z-index:10}
+.back-btn{width:32px;height:32px;border-radius:50%;background:#f3f4f6;
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:#374151;flex-shrink:0;font-size:18px;text-decoration:none}
+.topbar-title{font-size:18px;font-weight:700;color:#111;flex:1;letter-spacing:-.3px}
+
+/* ── 본문 ── */
+.scroll-body{flex:1;overflow-y:auto;padding:16px 16px calc(env(safe-area-inset-bottom,0px)+24px);
+  max-width:640px;margin:0 auto;width:100%}
+
+/* ── 안내 배너 ── */
+.notice{background:#EEF4FF;border:1px solid #c7ddfd;border-radius:12px;
+  padding:12px 14px;font-size:13px;color:#1557B0;line-height:1.55;margin-bottom:16px}
+
+/* ── 요약 카드 2열 ── */
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+@media (max-width:420px){.summary-grid{grid-template-columns:1fr}}
+.summary-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px}
+.summary-label{font-size:12.5px;color:#6b7280;margin-bottom:8px;display:flex;
+  align-items:center;justify-content:space-between;gap:6px}
+.summary-value{font-size:26px;font-weight:700;letter-spacing:-.5px;color:#111}
+.summary-value .unit{font-size:13px;font-weight:500;color:#9ca3af;margin-left:4px}
+.summary-sub{font-size:12px;color:#9ca3af;margin-top:6px}
+.topup-btn{background:#111;color:#fff;border:none;border-radius:20px;
+  padding:6px 14px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
+  white-space:nowrap}
+
+/* ── 무료 한도 진행바 ── */
+.quota-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px;margin-bottom:16px}
+.quota-title{font-size:13.5px;font-weight:600;color:#111;margin-bottom:10px}
+.quota-bar-track{height:8px;border-radius:4px;background:#eee;overflow:hidden;margin-bottom:8px}
+.quota-bar-fill{height:100%;border-radius:4px;background:#1A73E8;transition:width .3s ease}
+.quota-bar-fill.warn{background:#dc2626}
+.quota-text{font-size:12.5px;color:#374151}
+.quota-est{font-size:12px;color:#6b7280;margin-top:8px;line-height:1.55}
+
+/* ── 상세 내역 (준비 중) ── */
+.detail-section{background:#fff;border:1px solid #e5e7eb;border-radius:14px;
+  padding:20px 16px;text-align:center}
+.detail-icon{font-size:26px;margin-bottom:8px;opacity:.4}
+.detail-title{font-size:13.5px;font-weight:600;color:#374151;margin-bottom:4px}
+.detail-desc{font-size:12.5px;color:#9ca3af;line-height:1.6}
+
+/* ── 상태 ── */
+.state-box{text-align:center;padding:60px 20px;color:#9ca3af;font-size:13.5px}
+.spinner{width:22px;height:22px;border:2.5px solid #e5e7eb;border-top-color:#1A73E8;
+  border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.retry-btn{margin-top:12px;padding:8px 18px;border-radius:20px;background:#1A73E8;
+  color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="window.close();history.back()" title="닫기">←</button>
+  <div class="topbar-title">사용량</div>
+</div>
+
+<div class="scroll-body">
+  <div id="state-loading" class="state-box">
+    <div class="spinner"></div>
+    불러오는 중...
+  </div>
+
+  <div id="state-error" class="state-box" style="display:none">
+    사용량 정보를 불러오지 못했습니다.
+    <div id="state-error-detail" style="font-size:12px;color:#c7c7cc;margin-top:6px"></div>
+    <button class="retry-btn" onclick="loadUsage()">다시 시도</button>
+  </div>
+
+  <div id="content" style="display:none">
+    <div class="notice">
+      GDC는 실시간으로 정확히 반영됩니다. 표시된 값과 실제 잔액이 다르게 보이면
+      새로고침해 주세요. 데이터는 최대 몇 분 정도 지연될 수 있습니다.
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">GDC 잔액</div>
+        <div class="summary-value" id="balance-value">—<span class="unit">GDC</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">
+          지금까지 쓴 금액
+        </div>
+        <div class="summary-value" id="spent-value">—<span class="unit">원</span></div>
+      </div>
+    </div>
+
+    <div class="quota-card" id="quota-card" style="display:none">
+      <div class="quota-title">가입 무료 한도 사용 현황</div>
+      <div class="quota-bar-track">
+        <div class="quota-bar-fill" id="quota-bar-fill" style="width:0%"></div>
+      </div>
+      <div class="quota-text" id="quota-text"></div>
+      <div class="quota-est" id="quota-est"></div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-icon">&#128202;</div>
+      <div class="detail-title">모델별·기간별 상세 내역</div>
+      <div class="detail-desc">
+        대화별·모델별 세부 사용 내역 조회는 아직 준비 중입니다.<br>
+        지금은 누적 GDC 잔액과 무료 한도 사용액만 확인할 수 있어요.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const WORKER_URL = 'https://hondi-proxy.tensor-city.workers.dev';
+
+function getGuid() {
+  const params = new URLSearchParams(location.search);
+  const fromQuery = params.get('guid');
+  if (fromQuery) return fromQuery;
+  try {
+    const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}');
+    return stored?.ipv6 || '';
+  } catch { return ''; }
+}
+
+function fmt(n) {
+  return Math.round(n).toLocaleString('ko-KR');
+}
+
+async function loadUsage() {
+  const loadingEl = document.getElementById('state-loading');
+  const errorEl   = document.getElementById('state-error');
+  const contentEl = document.getElementById('content');
+  loadingEl.style.display = 'block';
+  errorEl.style.display   = 'none';
+  contentEl.style.display = 'none';
+
+  const guid = getGuid();
+  if (!guid) {
+    loadingEl.style.display = 'none';
+    errorEl.style.display   = 'block';
+    document.getElementById('state-error-detail').textContent = 'guid를 찾을 수 없습니다. 앱에서 다시 열어주세요.';
+    return;
+  }
+
+  try {
+    // GDC 잔액과 무료 한도 사용 현황을 병렬로 조회한다.
+    // 둘 중 하나가 실패해도(예: GDC 미사용자라 balance가 없는 경우) 나머지는 보여준다.
+    const [balanceRes, quotaRes] = await Promise.allSettled([
+      fetch(`${WORKER_URL}/biz/balance?guid=${encodeURIComponent(guid)}`).then(r => r.json()),
+      fetch(`${WORKER_URL}/free-quota-status?guid=${encodeURIComponent(guid)}`).then(r => r.json()),
+    ]);
+
+    // ── GDC 잔액 ──
+    const balanceData = balanceRes.status === 'fulfilled' ? balanceRes.value : null;
+    const balanceEl = document.getElementById('balance-value');
+    if (balanceData?.ok && typeof balanceData.balance === 'number') {
+      balanceEl.innerHTML = `${fmt(balanceData.balance)}<span class="unit">GDC</span>`;
+    } else {
+      balanceEl.innerHTML = `0<span class="unit">GDC</span>`;
+    }
+
+    // ── 무료 한도 사용 현황 ──
+    const quotaData = quotaRes.status === 'fulfilled' ? quotaRes.value : null;
+    const spentEl = document.getElementById('spent-value');
+    if (quotaData?.ok) {
+      spentEl.innerHTML = `${fmt(quotaData.spent_krw)}<span class="unit">원</span>`;
+
+      const quotaCard = document.getElementById('quota-card');
+      quotaCard.style.display = 'block';
+
+      const pct = Math.min(Math.round((quotaData.spent_krw / quotaData.limit_krw) * 100), 100);
+      const fillEl = document.getElementById('quota-bar-fill');
+      fillEl.style.width = pct + '%';
+      fillEl.classList.toggle('warn', pct >= 90);
+
+      document.getElementById('quota-text').textContent =
+        `${fmt(quotaData.spent_krw)}원 / ${fmt(quotaData.limit_krw)}원 (가입자당 평생 무료 한도)`;
+
+      const estEl = document.getElementById('quota-est');
+      if (quotaData.estimated_monthly_krw > 0) {
+        let msg = `지금 쓰시는 속도라면 한 달에 대략 <b>${fmt(quotaData.estimated_monthly_krw)}원</b> 정도예요.`;
+        if (quotaData.projected_days_to_limit != null) {
+          msg += ` 이 속도라면 약 <b>${quotaData.projected_days_to_limit}일</b> 후 무료 한도를 다 쓰게 돼요.`;
+        }
+        estEl.innerHTML = msg;
+      } else {
+        estEl.textContent = '아직 대화를 시작하기 전이에요.';
+      }
+    } else {
+      spentEl.innerHTML = `0<span class="unit">원</span>`;
+    }
+
+    loadingEl.style.display = 'none';
+    contentEl.style.display = 'block';
+  } catch (e) {
+    loadingEl.style.display = 'none';
+    errorEl.style.display   = 'block';
+    document.getElementById('state-error-detail').textContent = e.message || String(e);
+  }
+}
+
+loadUsage();
+</script>
+</body>
+</html>

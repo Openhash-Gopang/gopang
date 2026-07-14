@@ -185,6 +185,23 @@ async function _loadFreeQuotaStatus() {
   }
 }
 
+// ── "사용량 보기" 메뉴 (2026-07-14 신설) ──────────────────
+// 설정 창 > GDC Wallet 섹션의 "사용량 보기" 행에서 호출된다.
+// GDC 잔액 + 무료 한도 사용 현황을 DeepSeek 플랫폼 Usage 페이지와
+// 유사한 형식의 대시보드로, 별도 탭(usage.html)에서 보여준다.
+// 새 탭으로 여는 이유: 설정 시트(바텀시트)는 화면이 좁아 표·그래프
+// 형태의 사용량 내역을 담기 부적합하고, 사용자가 이 페이지만 즐겨찾기
+// 하거나 나중에 다시 열어보기도 편해진다.
+window._openUsagePage = function () {
+  const guid = _USER?.ipv6 ||
+    JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}')?.ipv6;
+  if (!guid) {
+    alert('사용량을 보려면 먼저 가입/로그인이 필요합니다.');
+    return;
+  }
+  window.open(`/usage.html?guid=${encodeURIComponent(guid)}`, '_blank', 'noopener');
+}
+
 // ── PC→휴대폰 동기화 준비: X25519 키 보장 + 등록 + 대기 중인 PC 설정 확인 ──
 async function _ensurePcSyncReady() {
   const guid = _USER?.ipv6 || JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}')?.ipv6;
