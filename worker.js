@@ -3044,8 +3044,6 @@ export default {
 
     // ── WebAuthn ─────────────────────────────────────────
     if (pathname === '/auth/webauthn/challenge') return handleWAChallenge(request, env, corsHeaders);
-    if (pathname === '/auth/webauthn/register')  return handleWARegister(request, env, corsHeaders);
-    if (pathname === '/auth/webauthn/verify')    return handleWAVerify(request, env, corsHeaders);
 
     // ── PDV ──────────────────────────────────────────────
     if (pathname === '/pdv/query')               return handlePdvQuery(request, env, corsHeaders);
@@ -3178,7 +3176,6 @@ export default {
     if (pathname === '/biz/settle-ledger' && request.method === 'POST') return handleSettleLedger(request, env, corsHeaders);
     if (pathname === '/biz/financials' && request.method === 'GET') return handleFinancialsGet(request, env, corsHeaders);
     if (pathname === '/biz/tx-history' && request.method === 'GET') return handleTxHistory(request, env, corsHeaders);
-    if (pathname === '/biz/product' && request.method === 'POST') return handleBizProduct(request, env, corsHeaders);
     // ★ 2026-07-09 신설 — 짜장면 주문 사고실험 1단계: 프로필-to-프로필
     // AI 메시징(예: 손님의 AI가 식당의 AI에게 주문을 전달). /ai/chat(기존,
     // 슬래시)와 이름이 헷갈리지 않도록 /biz/ 네임스페이스로 통일 —
@@ -4544,121 +4541,24 @@ async function handleSearch(request, env, corsHeaders) {
 }
 
 
-// ═══════════════════════════════════════════════════════════
-// v4.8 — /biz/profile/{handle}
-// ═══════════════════════════════════════════════════════════
-async function handleBizProfile(request, env, corsHeaders) {
-  const rawHandle = decodeURIComponent(new URL(request.url).pathname.replace('/biz/profile/', ''));
-  if (!rawHandle) return _err(400, 'MISSING_HANDLE', 'handle 필수', corsHeaders);
-  const sbH = _sbHeaders(env);
-  let profile = null;
-  const pRes  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?handle=eq.${encodeURIComponent(rawHandle)}&limit=1`, { headers: sbH });
-  const pRows = await pRes.json().catch(() => []);
-  if (pRows.length) {
-    profile = pRows[0];
-  } else {
-    const nickname = rawHandle.replace(/^@/, '').split('#')[0];
-    const res2     = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?nickname=eq.${encodeURIComponent(nickname)}&limit=1`, { headers: sbH });
-    const rows2    = await res2.json().catch(() => []);
-    if (!rows2.length) {
-    // guid로 재시도
-    const res3 = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?primary_guid=eq.${encodeURIComponent(rawHandle)}&limit=1`, { headers: sbH });
-    const rows3 = await res3.json().catch(() => []);
-    if (!rows3.length) return _err(404, 'PROFILE_NOT_FOUND', `handle/guid ${rawHandle} 없음`, corsHeaders);
-    profile = rows3[0];
-  } else {
-    profile = rows2[0];
-  }
-  }
-  const guid = profile.current_ipv6;
-  const [prodRes, reviewRes] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/biz_products?seller_guid=eq.${encodeURIComponent(guid)}&is_active=eq.true&order=sort_order.asc`, { headers: sbH }),
-    fetch(`${SUPABASE_URL}/rest/v1/biz_reviews?seller_guid=eq.${encodeURIComponent(guid)}&is_visible=eq.true&order=created_at.desc&limit=20`, { headers: sbH }),
-  ]);
-  const [products, reviews] = await Promise.all([prodRes.json().catch(()=>[]), reviewRes.json().catch(()=>[])]);
-  const avgRating = reviews.length ? (reviews.reduce((s,r)=>s+(r.rating||0),0)/reviews.length).toFixed(1) : null;
-  return new Response(JSON.stringify({ ok:true, profile, products, reviews, review_summary:{count:reviews.length,avg_rating:avgRating} }), { status:200, headers:corsHeaders });
-}
+// (2026-07-14 삭제 — Supabase 폐기 지시에 따른 정리. handleBizProfile
+//  (/biz/profile/{handle}), handleBizReview(/biz/review, 이미
+//  [DEPRECATED] 표시돼 있었음), handleBizProduct(/biz/product) 전부
+//  삭제했다. 셋 다 Supabase user_profiles/biz_products/biz_reviews에
+//  의존했는데, 조사 결과 /biz/review·/biz/profile/*는 라우터에
+//  등록조차 안 돼 있었고(router dispatch에 pathname 매칭 자체가 없음),
+//  /biz/product는 등록은 돼 있었지만 저장소 전체에서 fetch로 호출하는
+//  클라이언트 코드가 하나도 없었다(src/profile2.0/은 어떤 html에서도
+//  로드되지 않는 고아 디렉터리). 실제 상품/리뷰는 이미 PocketBase
+//  seller_products(/biz/catalog/sync, _l1ListSellerProducts)와
+//  trade_ratings로 완전히 대체된 상태였다 — 새로 이관할 대상이 없어
+//  그냥 삭제로 정리했다.)
 
+// (_verifyEd25519는 위 삭제된 함수들 전용이 아니라 다른 곳(예:
+//  handleGwpRegisterKey류)에서도 쓰이므로 그대로 유지한다 — 아래 주석
+//  "/biz/product, /biz/review 전용"이 이제 부정확해 정정.)
 // ═══════════════════════════════════════════════════════════
-// [DEPRECATED 2026-07-07] v4.8 — /biz/review (Supabase biz_reviews)
-// 라우팅에서 제거됨 — trade_ratings(PocketBase, polarity+온도)로 완전 대체.
-// 백필/마이그레이션 스크립트가 biz_reviews 과거 데이터를 참조할 수 있어
-// 함수 자체는 즉시 삭제하지 않고 남겨둔다. 마이그레이션 완료 확인 후
-// 이 함수와 Supabase biz_reviews/biz_products 테이블을 함께 제거할 것.
-// ═══════════════════════════════════════════════════════════
-async function handleBizReview(request, env, corsHeaders) {
-  const body = await request.json().catch(() => null);
-  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { reviewer_guid, product_id, tx_id, rating, body:reviewBody, image_urls=[], seller_guid } = body;
-  if (!reviewer_guid) return _err(400, 'MISSING_FIELD', 'reviewer_guid 필수', corsHeaders);
-  if (!product_id)    return _err(400, 'MISSING_FIELD', 'product_id 필수', corsHeaders);
-  if (!tx_id)         return _err(400, 'MISSING_FIELD', 'tx_id 필수', corsHeaders);
-  if (!rating||rating<1||rating>5) return _err(400, 'INVALID_RATING', 'rating 1~5 필수', corsHeaders);
-  const sbServiceH = _sbServiceHeaders(env);
-  const valRes     = await fetch(`${SUPABASE_URL}/rest/v1/rpc/validate_review`, { method:'POST', headers:sbServiceH, body:JSON.stringify({ p_reviewer_guid:reviewer_guid, p_product_id:product_id, p_tx_id:tx_id }) });
-  const valResult  = await valRes.json().catch(()=>({ ok:false, error:'RPC_PARSE_FAILED' }));
-  if (!valResult.ok) {
-    const statusMap = { NO_VALID_PURCHASE:403, ALREADY_REVIEWED:409 };
-    return _err(statusMap[valResult.error]||400, valResult.error, valResult.error, corsHeaders);
-  }
-  const insRes = await fetch(`${SUPABASE_URL}/rest/v1/biz_reviews`, {
-    method:'POST', headers:{...sbServiceH,'Prefer':'return=representation'},
-    body:JSON.stringify({ order_id:valResult.order_id, tx_id, reviewer_guid, seller_guid:seller_guid||null, product_id, rating, body:reviewBody||null, image_urls }),
-  });
-  if (!insRes.ok) return _err(500, 'INSERT_FAILED', await insRes.text(), corsHeaders);
-  const inserted = await insRes.json().catch(()=>[]);
-  return new Response(JSON.stringify({ ok:true, review_id:inserted[0]?.id||null, message:'리뷰가 등록됐습니다' }), { status:200, headers:corsHeaders });
-}
-
-// ═══════════════════════════════════════════════════════════
-// v4.8 — /biz/product
-// ═══════════════════════════════════════════════════════════
-async function handleBizProduct(request, env, corsHeaders) {
-  const body = await request.json().catch(() => null);
-  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { action='create', seller_guid, pubkey, signature, product, l1_node } = body;
-  if (!seller_guid)              return _err(400, 'MISSING_FIELD', 'seller_guid 필수', corsHeaders);
-  if (!pubkey)                   return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
-  if (!signature)                return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
-  if (!product?.name && action==='create') return _err(400, 'MISSING_FIELD', 'product.name 필수', corsHeaders);
-  const sigOk = await _verifyEd25519(pubkey, signature, body);
-  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', 'TX 서명 검증 실패', corsHeaders);
-  const sbH       = _sbHeaders(env);
-  const ownerRes  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?current_ipv6=eq.${encodeURIComponent(seller_guid)}&select=pubkey_ed25519,handle&limit=1`, { headers:sbH });
-  const ownerRows = await ownerRes.json().catch(()=>[]);
-  if (!ownerRows.length) return _err(404, 'SELLER_NOT_FOUND', 'seller_guid 없음', corsHeaders);
-  if (ownerRows[0].pubkey_ed25519 && ownerRows[0].pubkey_ed25519 !== pubkey)
-    return _err(403, 'PUBKEY_MISMATCH', '공개키가 등록된 판매자와 일치하지 않습니다', corsHeaders);
-  const sellerHandle = ownerRows[0].handle || null;
-  const sbServiceH   = _sbServiceHeaders(env);
-  if (action === 'create') {
-    const insRes = await fetch(`${SUPABASE_URL}/rest/v1/biz_products`, {
-      method:'POST', headers:{...sbServiceH,'Prefer':'return=representation'},
-      body:JSON.stringify({ seller_guid, seller_handle:sellerHandle, name:product.name, description:product.description||null, category:product.category||null, image_urls:product.image_urls||[], tags:product.tags||[], price_krw:product.price_krw??0, price_gdc:product.price_gdc??0, stock:product.stock??null, sort_order:product.sort_order??0, is_active:product.is_active??true, l1_node:l1_node||null }),
-    });
-    if (!insRes.ok) return _err(500, 'INSERT_FAILED', await insRes.text(), corsHeaders);
-    const inserted = await insRes.json().catch(()=>[]);
-    return new Response(JSON.stringify({ ok:true, action:'created', product_id:inserted[0]?.id||null }), { status:200, headers:corsHeaders });
-  }
-  if (action === 'update') {
-    if (!product?.id) return _err(400, 'MISSING_FIELD', 'product.id 필수 (update)', corsHeaders);
-    const chkRes  = await fetch(`${SUPABASE_URL}/rest/v1/biz_products?id=eq.${encodeURIComponent(product.id)}&seller_guid=eq.${encodeURIComponent(seller_guid)}&select=id&limit=1`, { headers:sbH });
-    const chkRows = await chkRes.json().catch(()=>[]);
-    if (!chkRows.length) return _err(403, 'FORBIDDEN', '본인 상품만 수정할 수 있습니다', corsHeaders);
-    const patch  = {};
-    const fields = ['name','description','category','image_urls','tags','price_krw','price_gdc','stock','sort_order','is_active'];
-    for (const f of fields) { if (product[f] !== undefined) patch[f] = product[f]; }
-    const updRes = await fetch(`${SUPABASE_URL}/rest/v1/biz_products?id=eq.${encodeURIComponent(product.id)}`, { method:'PATCH', headers:{...sbServiceH,'Prefer':'return=minimal'}, body:JSON.stringify(patch) });
-    if (!updRes.ok) return _err(500, 'UPDATE_FAILED', await updRes.text(), corsHeaders);
-    return new Response(JSON.stringify({ ok:true, action:'updated', product_id:product.id }), { status:200, headers:corsHeaders });
-  }
-  return _err(400, 'INVALID_ACTION', 'action은 create 또는 update', corsHeaders);
-}
-
-// ═══════════════════════════════════════════════════════════
-// Ed25519 서명 검증 (/biz/product, /biz/review 전용)
-// /biz/order는 L1이 담당 — Worker에서 호출하지 않음
+// Ed25519 서명 검증(body 전체 서명 — TX류 공용)
 // ═══════════════════════════════════════════════════════════
 async function _verifyEd25519(pubkeyB64u, signatureB64u, bodyObj) {
   try {
@@ -4898,19 +4798,6 @@ async function handlePdvQuery(request,env,corsHeaders){
     if(!consentOk)return _err(401,'CONSENT_INVALID','동의 토큰이 유효하지 않습니다',corsHeaders);
     const withinLimit=await _checkRateLimit(env,query.ipv6,'pdv_query');
     if(!withinLimit)return _err(429,'RATE_LIMITED','PDV 조회 한도 초과',corsHeaders);
-    // 2026-07-15 신설 — 공무원 직무보조 갱신계획 v1.0 §5 레이어 C(92번) 대응.
-    // query.official_access_cert가 있으면(=담당공무원이 대신 조회를 실행한
-    // 경우) dept-task-handler.js의 기존 _verifyAccessCert로 서명을 검증하고,
-    // 검증된 official_guid/org_id를 감사 로그에 남긴다. 없으면(citizen이
-    // 자기 자신을 조회하는 일반 경로) officialAudit은 null로 남아 기존 동작과
-    // 완전히 동일하다 — 기능 회귀 없음.
-    let officialAudit=null;
-    if(query.official_access_cert){
-      const cert=query.official_access_cert;
-      const verifiedOrgId=await _verifyAccessCert(env,cert,cert.official_guid,{_verifyEd25519Simple,_l1FindProfileByGuid}).catch(()=>null);
-      if(!verifiedOrgId)return _err(401,'ACCESS_CERT_INVALID','공무원 직책 인증서 검증 실패 — 서명·만료·TOFU 중 하나가 불일치합니다',corsHeaders);
-      officialAudit={official_guid:cert.official_guid,org_id:verifiedOrgId,role:cert.role||null};
-    }
     // 2026-07-13 신설 — work_pdv:{orgId} scope는 레거시 Supabase pdv_log가
     // 아니라 L1 pdv_records(실제 쓰기가 이뤄지는 테이블)에서 조회한다
     // (AC-EVOLUTION_v1_1.md §5-6 — 기존 _fetchPdvByScope 경로가 최신
@@ -4923,7 +4810,7 @@ async function handlePdvQuery(request,env,corsHeaders){
       pdvSummary[ws]=await _fetchWorkPdvRecordsL1(env,query.ipv6,orgId);
     }
     const queryId=`PDVQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;
-    const pdvEntryId=await _recordConsentEvent(env,query,queryId,officialAudit);
+    const pdvEntryId=await _recordConsentEvent(env,query,queryId);
     const expOut=verified?.exp ? new Date(verified.exp*1000).toISOString() : new Date(Date.now()+3600*1000).toISOString();
     return new Response(JSON.stringify({ok:true,query_id:queryId,ipv6:query.ipv6,period:query.period,pdv_summary:pdvSummary,consent:{granted_at:new Date().toISOString(),expires_at:expOut,pdv_entry_id:pdvEntryId}}),{status:200,headers:corsHeaders});
   }catch(e){return _err(500,'INTERNAL_ERROR',e.message,corsHeaders);}
@@ -4993,60 +4880,6 @@ async function _signConsentHmac(env,requestId,ipv6){
   let bin='';
   for(const b of new Uint8Array(sigBuf)) bin+=String.fromCharCode(b);
   return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_'); // '=' 패딩은 유지 — _verifyConsentHmac이 '+'/'/'만 되돌리므로
-}
-
-// ── 2026-07-15 신설: _recordConsentEvent ─────────────────────────────────
-// BUG: handlePdvQuery는 2026-07-04경부터 이 함수를 호출해왔으나(조회 성공
-// 시마다 pdv_entry_id를 응답에 담기 위해), 실제 정의가 이 파일에도 어느
-// import 모듈에도 없었다 — 즉 지금까지 모든 PDV 조회 성공 경로가 이 줄에서
-// ReferenceError를 던지고 바깥 catch(e)에 걸려 500 INTERNAL_ERROR를
-// 반환했을 가능성이 높다(실운영 트래픽에서 실제로 그랬는지는 로그 확인
-// 필요 — 이번 수정 범위 밖). 이 커밋이 최초 구현이다.
-//
-// 공무원 직무보조 갱신계획 v1.0 §5 레이어 C(92번, 개인정보 오남용 감사) 요구
-// 사항을 그대로 반영: "누가, 언제, 무슨 목적으로, 몇 명분을 뽑았는지"를
-// 사후에 확인 가능해야 한다. officialAudit이 있으면(=handlePdvQuery에서
-// access_cert로 서명 검증까지 끝난 공무원 요청) official_guid/org_id를
-// 함께 남기고, 없으면 시민의 자기 조회(self-query)로 기록한다.
-//
-// batch_size는 항상 1로 고정한다 — 이 경로(query.ipv6는 항상 단일 문자열)는
-// 구조적으로 한 번에 한 시민만 조회 가능하다. 다수인 대상 집계·명단 추출은
-// 이 함수의 대상이 아니라 별도 기관 AC 경로(트랙3, work_pdv와도 다른 축)로만
-// 허용해야 한다는 원칙을 스키마 차원에서 강제한다 — 나중에 이 함수가 배열
-// ipv6를 받아들이도록 "편의상" 확장되는 일이 없도록 주석으로 남겨둔다.
-async function _recordConsentEvent(env,query,queryId,officialAudit=null){
-  try{
-    const token=await _l1AdminToken(env);
-    const res=await fetch(`${L1_DEFAULT}/api/collections/pdv_query_audit_log/records`,{
-      method:'POST',
-      headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-      body:JSON.stringify({
-        query_id:      queryId,
-        ipv6:          query.ipv6,
-        svc:           _resolveSvcId(query.svc),
-        scope:         query.scope,
-        purpose:       query.purpose||'',
-        batch_size:    1,
-        official_guid: officialAudit?.official_guid||null,
-        official_org:  officialAudit?.org_id||null,
-        official_role: officialAudit?.role||null,
-        recorded_at:   new Date().toISOString(),
-      }),
-    });
-    if(!res.ok){
-      console.warn('[PDVQuery] 감사 로그 저장 실패(L1):', res.status, await res.text().catch(()=>''));
-      return null;
-    }
-    const row=await res.json().catch(()=>null);
-    return row?.id||null;
-  }catch(e){
-    // 감사 로그 저장 실패가 조회 자체를 막지는 않는다(가용성 우선 — 시민이
-    // 정당한 조회 도중 로그 시스템 장애로 서비스를 못 받는 상황을 피한다).
-    // 다만 이 catch가 자주 발생하면 감사 추적 자체가 무력화되므로 별도
-    // 모니터링(실패율 알림)이 필요하다 — Phase 4 온나라시스템 연동 시 확정.
-    console.warn('[PDVQuery] 감사 로그 저장 실패:',e.message);
-    return null;
-  }
 }
 
 // L1(hanlim) pdv_consent_requests에서 request_id로 단일 레코드 조회 (Admin 토큰)
@@ -5241,8 +5074,13 @@ async function handleRefresh(request,env,corsHeaders){const cookieHeader=request
 async function sbFetch(env,path,method='GET',body=null){const key=env.SUPABASE_KEY||_supabaseAnonKey();const headers={'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'};const res=await fetch(SUPABASE_URL+path,{method,headers,body:body?JSON.stringify(body):undefined});return res.ok?res.json().catch(()=>({})):null;}
 async function handleWAChallenge(request,env,corsHeaders){const challenge=crypto.getRandomValues(new Uint8Array(32));const chalB64=btoa(String.fromCharCode(...challenge)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');const exp=Math.floor(Date.now()/1000)+300;const sigData=`${chalB64}.${exp}`;const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['sign']);const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(sigData));const sigHex=Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');return new Response(JSON.stringify({challenge:chalB64,exp,sig:sigHex}),{status:200,headers:corsHeaders});}
 async function _verifyChallengeToken(env,chalB64,exp,sig){if(exp<Math.floor(Date.now()/1000))return false;const sigData=`${chalB64}.${exp}`;const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['verify']);const sigBytes=Uint8Array.from(sig.match(/.{2}/g).map(h=>parseInt(h,16)));return crypto.subtle.verify('HMAC',key,sigBytes,new TextEncoder().encode(sigData));}
-async function handleWARegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.ipv6||!body?.credentialId||!body?.publicKey)return _err(400,'MISSING_FIELD','ipv6, credentialId, publicKey 필수',corsHeaders);const chalOk=await _verifyChallengeToken(env,body.challenge,body.challengeExp,body.challengeSig);if(!chalOk)return _err(401,'CHALLENGE_INVALID','챌린지 만료 또는 위조',corsHeaders);const result=await sbFetch(env,'/rest/v1/webauthn_credentials','POST',{ipv6:body.ipv6,credential_id:body.credentialId,public_key:body.publicKey,counter:0,device_type:body.deviceType||'platform',aaguid:body.aaguid||null});if(!result)return _err(502,'DB_ERROR','Supabase 저장 실패',corsHeaders);return new Response(JSON.stringify({ok:true,ipv6:body.ipv6}),{status:200,headers:corsHeaders});}
-async function handleWAVerify(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.ipv6||!body?.credentialId)return _err(400,'MISSING_FIELD','ipv6, credentialId 필수',corsHeaders);const rows=await sbFetch(env,`/rest/v1/webauthn_credentials?ipv6=eq.${encodeURIComponent(body.ipv6)}&credential_id=eq.${encodeURIComponent(body.credentialId)}&select=public_key,counter`,'GET');if(!rows?.length)return _err(404,'CREDENTIAL_NOT_FOUND','credential_not_found',corsHeaders);const cred=rows[0];if(body.counter!==undefined&&body.counter<=cred.counter)return _err(401,'COUNTER_REPLAY','counter_replay',corsHeaders);if(body.counter!==undefined)await sbFetch(env,`/rest/v1/webauthn_credentials?credential_id=eq.${encodeURIComponent(body.credentialId)}`,'PATCH',{counter:body.counter,last_used_at:new Date().toISOString()});const token=await buildToken(env,body.ipv6,'L2','*');return new Response(JSON.stringify({valid:true,ipv6:body.ipv6,level:'L2'}),{status:200,headers:{...corsHeaders,'Set-Cookie':buildCookie(token)}});}
+// (2026-07-14 삭제 — handleWARegister/handleWAVerify. 라우팅 자체가
+//  제거됐고(위 참고), 이 대화에서 확인한 바 저장소 전체에서
+//  /auth/webauthn/register·/verify를 fetch로 실제 호출하는 클라이언트
+//  코드가 없었다 — src/gopang/core/auth.js는 로컬에 저장된
+//  s.webauthn?.credentialId 값을 "여러 인증 신호 중 하나"로 읽기만
+//  할 뿐, 그 값을 채워 넣을 호출부 자체가 없어 항상 undefined였다.
+//  Supabase webauthn_credentials 의존이라 정리 대상.)
 const REGISTERED_SERVICES={'gopang':{level:3,domain:'hondi.net',minAuth:'L0',pdv:true},'klaw':{level:3,domain:'klaw.hondi.net',minAuth:'L0',pdv:true},'market':{level:3,domain:'market.hondi.net',minAuth:'L0',pdv:true},'school':{level:3,domain:'school.hondi.net',minAuth:'L0',pdv:true},'security':{level:3,domain:'security.hondi.net',minAuth:'L1',pdv:true},'health':{level:3,domain:'health.hondi.net',minAuth:'L1',pdv:true},'tax':{level:3,domain:'tax.hondi.net',minAuth:'L0',pdv:true},'gdc':{level:3,domain:'gdc.hondi.net',minAuth:'L1',pdv:true},'public':{level:3,domain:'public.hondi.net',minAuth:'L0',pdv:true},'democracy':{level:3,domain:'democracy.hondi.net',minAuth:'L1',pdv:true},'911':{level:3,domain:'911.hondi.net',minAuth:'L0',pdv:true},'police':{level:3,domain:'police.hondi.net',minAuth:'L1',pdv:true},'insurance':{level:3,domain:'insurance.hondi.net',minAuth:'L1',pdv:true},'stock':{level:3,domain:'stock.hondi.net',minAuth:'L1',pdv:true},'traffic':{level:3,domain:'traffic.hondi.net',minAuth:'L0',pdv:true},'logistics':{level:3,domain:'logistics.hondi.net',minAuth:'L0',pdv:true},'fiil':{level:2,domain:'fiil.kr',minAuth:'L0',pdv:true},'klaw-ext':{level:2,domain:'klaw.openhash.kr',minAuth:'L0',pdv:false},'users':{level:3,domain:'users.hondi.net',minAuth:'L0',pdv:false}};
 function _getSvcRegistration(origin,svcId){const resolvedId=_resolveSvcId(svcId);const svc=REGISTERED_SERVICES[resolvedId];if(svc&&origin.includes(svc.domain))return{...svc,svcId:resolvedId,originalId:svcId};if(/^https:\/\/[a-z0-9-]+\.gopang\.net$/.test(origin))return{level:1,domain:origin,minAuth:'L0',pdv:false,svcId:resolvedId,originalId:svcId};return null;}
 async function handleSvcRegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.svc_id||!body?.domain||!body?.operator_ipv6)return _err(400,'MISSING_FIELD','svc_id, domain, operator_ipv6 필수',corsHeaders);const{svc_id,domain,description,min_auth,operator_ipv6}=body;const isGopangSub=/^[a-z0-9-]+\.gopang\.net$/.test(domain);await sbFetch(env,'/rest/v1/svc_registry','POST',{svc_id,domain,description:description||'',operator_ipv6,min_auth:min_auth||'L0',trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending',registered_at:new Date().toISOString()});return new Response(JSON.stringify({ok:true,svc_id,domain,trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending_review',message:isGopangSub?'*.hondi.net 서브도메인으로 자동 승인됐습니다. (Level 1)':'등록 신청이 접수됐습니다.'}),{status:200,headers:corsHeaders});}
@@ -7676,7 +7514,32 @@ async function handleAccountFullReset(request, env, corsHeaders) {
 //    그림자 정리를 끝내야 한다(handleAdminBulkDelete의 ① casts_for 일괄 정리 참고).
 async function _deleteAllUserData(env, guid, l1Record) {
   const results = {};
-  const sbSvcH  = _sbServiceHeaders(env);
+
+  // (2026-07-14 신설 — Supabase 폐기에 따라 여러 컬렉션에서 반복 필요해진
+  //  "필터로 목록 조회 후 개별 DELETE" 패턴을 공용 헬퍼로 추출했다.
+  //  PocketBase REST API는 Supabase처럼 필터 조건으로 여러 row를 한 번에
+  //  지우는 벌크 DELETE가 없다.)
+  async function _l1DeleteByFilter(collectionName, filter) {
+    try {
+      const token = await _l1AdminToken(env);
+      const listRes = await fetch(
+        `${L1_DEFAULT}/api/collections/${collectionName}/records?filter=${encodeURIComponent(filter)}&perPage=200`,
+        { headers: { 'Authorization': 'Bearer ' + token } }
+      );
+      if (!listRes.ok) return `error:${listRes.status}`;
+      const listData = await listRes.json().catch(() => ({ items: [] }));
+      const items = listData.items || [];
+      let failCount = 0;
+      for (const item of items) {
+        const delRes = await fetch(
+          `${L1_DEFAULT}/api/collections/${collectionName}/records/${item.id}`,
+          { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } }
+        );
+        if (!delRes.ok && delRes.status !== 404) failCount++;
+      }
+      return failCount === 0 ? `deleted(${items.length})` : `error:${failCount}/${items.length}_failed`;
+    } catch (e) { return 'error:' + e.message; }
+  }
 
   // ── 1. L1 profiles 삭제 ──────────────────────────────────
   if (l1Record?.id) {
@@ -7692,99 +7555,38 @@ async function _deleteAllUserData(env, guid, l1Record) {
     results.l1_profiles = 'not_found';
   }
 
-  // ── 2. Supabase: user_profiles ───────────────────────────
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`,
-      { method: 'DELETE', headers: sbSvcH });
-    results.sb_user_profiles = r.ok ? 'deleted' : `error:${r.status}`;
-  } catch (e) { results.sb_user_profiles = 'error:' + e.message; }
+  // ── 2. L1: user_llm_keys ─────────────────────────────────
+  results.l1_user_llm_keys = await _l1DeleteByFilter('user_llm_keys', `guid='${String(guid).replace(/'/g, "\\'")}'`);
 
-  // ── 3. Supabase: user_llm_keys ───────────────────────────
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_llm_keys?guid=eq.${encodeURIComponent(guid)}`,
-      { method: 'DELETE', headers: sbSvcH });
-    results.sb_user_llm_keys = r.ok ? 'deleted' : `error:${r.status}`;
-  } catch (e) { results.sb_user_llm_keys = 'error:' + e.message; }
+  // ── 3. L1: pdv_records ───────────────────────────────────
+  results.l1_pdv_records = await _l1DeleteByFilter('pdv_records', `guid='${String(guid).replace(/'/g, "\\'")}'`);
 
-  // ── 4. Supabase: pdv_log ─────────────────────────────────
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/pdv_log?guid=eq.${encodeURIComponent(guid)}`,
-      { method: 'DELETE', headers: sbSvcH });
-    results.sb_pdv_log = r.ok ? 'deleted' : `error:${r.status}`;
-  } catch (e) { results.sb_pdv_log = 'error:' + e.message; }
-
-  // ── 5. L1(hanlim): pdv_consent_requests ──────────────────
+  // ── 4. L1(hanlim): pdv_consent_requests ──────────────────
   // BUG-FIX(2026-07-02): 원래 Supabase pdv_consent_requests 테이블이 한 번도
   // 생성된 적이 없어(HTTP 404 PGRST205 확인됨) 여기서 항상 실패해 계정 완전
   // 삭제 전체가 막혔다. Supabase→L1 마이그레이션 방향에 맞춰 테이블을 새로
   // 만드는 대신 L1(hanlim) PocketBase에 pdv_consent_requests 컬렉션을 신설했다
-  // (id: p1tketkfid3uup8, listRule 등 전부 관리자 전용). PocketBase REST API는
-  // Supabase처럼 필터 조건으로 여러 row를 한 번에 지우는 벌크 DELETE가 없어서,
-  // 먼저 ipv6로 목록 조회한 뒤 각 record id로 개별 DELETE한다.
-  try {
-    const token = await _l1AdminToken(env);
-    const filter = encodeURIComponent(`ipv6='${String(guid).replace(/'/g, "\\'")}'`);
-    const listRes = await fetch(
-      `${L1_DEFAULT}/api/collections/pdv_consent_requests/records?filter=${filter}&perPage=200`,
-      { headers: { 'Authorization': 'Bearer ' + token } }
-    );
-    if (!listRes.ok) {
-      results.l1_pdv_consent = `error:${listRes.status}`;
-    } else {
-      const listData = await listRes.json().catch(() => ({ items: [] }));
-      const items = listData.items || [];
-      let failCount = 0;
-      for (const item of items) {
-        const delRes = await fetch(
-          `${L1_DEFAULT}/api/collections/pdv_consent_requests/records/${item.id}`,
-          { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } }
-        );
-        if (!delRes.ok && delRes.status !== 404) failCount++;
-      }
-      results.l1_pdv_consent = failCount === 0 ? 'deleted' : `error:${failCount}/${items.length}_failed`;
-    }
-  } catch (e) { results.l1_pdv_consent = 'error:' + e.message; }
+  // (id: p1tketkfid3uup8, listRule 등 전부 관리자 전용).
+  results.l1_pdv_consent = await _l1DeleteByFilter('pdv_consent_requests', `ipv6='${String(guid).replace(/'/g, "\\'")}'`);
 
-  // ── 6. Supabase: biz_products (판매자) ───────────────────
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/biz_products?seller_guid=eq.${encodeURIComponent(guid)}`,
-      { method: 'DELETE', headers: sbSvcH });
-    results.sb_biz_products = r.ok ? 'deleted' : `error:${r.status}`;
-  } catch (e) { results.sb_biz_products = 'error:' + e.message; }
+  // ── 5. L1: tx_hash_chain ──────────────────────────────────
+  // (2026-07-14: Supabase l1_ledger(선형 해시체인, updateNodeHashChain이
+  //  씀 — PocketBase blocks 원장과는 별개) → L1 tx_hash_chain 이관.
+  //  이 체인은 감사 기록이라 사용자별로 지우지 않는다 — buyer_guid/
+  //  seller_guid로 지워버리면 그 거래에 관여했던 상대방 쪽 감사 기록도
+  //  같이 끊긴다. 계정 삭제와 무관하게 보존한다(다른 항목들과 원칙이
+  //  다름을 명시).
+  results.l1_tx_hash_chain = 'retained_for_audit';
 
-  // ── 7. Supabase: biz_reviews (작성자 + 판매자) ───────────
-  try {
-    const r1 = await fetch(`${SUPABASE_URL}/rest/v1/biz_reviews?reviewer_guid=eq.${encodeURIComponent(guid)}`,
-      { method: 'DELETE', headers: sbSvcH });
-    const r2 = await fetch(`${SUPABASE_URL}/rest/v1/biz_reviews?seller_guid=eq.${encodeURIComponent(guid)}`,
-      { method: 'DELETE', headers: sbSvcH });
-    results.sb_biz_reviews = (r1.ok && r2.ok) ? 'deleted' : `error:${r1.status}/${r2.status}`;
-  } catch (e) { results.sb_biz_reviews = 'error:' + e.message; }
+  // (2026-07-14: biz_products/biz_reviews/webauthn_credentials/
+  //  webrtc_signals 항목 제거 — 전부 클라이언트 호출 지점이 없는 죽은
+  //  기능이었고(handleBizProduct/handleBizReview/handleBizProfile,
+  //  handleWARegister/handleWAVerify), 해당 함수 자체를 이 커밋에서
+  //  삭제했다. webrtc_signals는 살아있는 기능이지만 만료시간 60초짜리
+  //  휘발성 시그널링 데이터라 계정 삭제 시점까지 남아있을 값이 사실상
+  //  없어 별도 정리 불필요.)
 
-  // ── 8. Supabase: webauthn_credentials ────────────────────
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/webauthn_credentials?ipv6=eq.${encodeURIComponent(guid)}`,
-      { method: 'DELETE', headers: sbSvcH });
-    results.sb_webauthn = r.ok ? 'deleted' : `error:${r.status}`;
-  } catch (e) { results.sb_webauthn = 'error:' + e.message; }
-
-  // ── 9. Supabase: webrtc_signals (송신 + 수신) ────────────
-  try {
-    const r1 = await fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals?from_guid=eq.${encodeURIComponent(guid)}`,
-      { method: 'DELETE', headers: sbSvcH });
-    const r2 = await fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals?to_guid=eq.${encodeURIComponent(guid)}`,
-      { method: 'DELETE', headers: sbSvcH });
-    results.sb_webrtc = (r1.ok && r2.ok) ? 'deleted' : `error:${r1.status}/${r2.status}`;
-  } catch (e) { results.sb_webrtc = 'error:' + e.message; }
-
-  // ── 10. Supabase: push_subscriptions (레거시 테이블) ─────
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(guid)}`,
-      { method: 'DELETE', headers: sbSvcH });
-    results.sb_push_subscriptions = r.ok ? 'deleted' : `error:${r.status}`;
-  } catch (e) { results.sb_push_subscriptions = 'error:' + e.message; }
-
-  // ── 11. Cloudflare KV: AI Setup 봉투 ────────────────────
+  // ── 6. Cloudflare KV: AI Setup 봉투 ────────────────────
   if (env.AI_SETUP_SEALS_KV) {
     try {
       await env.AI_SETUP_SEALS_KV.delete(guid);
@@ -8121,27 +7923,14 @@ async function handleSignalSend(request, env, corsHeaders) {
 
   const expires_at = new Date(Date.now() + 60_000).toISOString();
 
-  // ① L1 우선 저장
-  let savedTo = 'l1';
+  // (2026-07-14: Supabase 폴백 제거 — L1이 실패하면 그대로 실패 처리한다.
+  //  webrtc_signals는 초 단위로 재시도되는 폴링성 데이터라 클라이언트가
+  //  다음 폴링에서 다시 시도하면 되므로, 서버가 대신 폴백해줄 필요가 없다.)
   try {
     await _l1SignalSend(from_guid, to_guid, type, payload, expires_at);
-    console.log('[Signal] L1 저장 성공');
   } catch (l1Err) {
-    // ② Supabase 폴백
-    console.warn('[Signal] L1 실패 → Supabase 폴백:', l1Err.message);
-    savedTo = 'supabase';
-    const sbH = _sbServiceHeaders(env);
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals`, {
-      method:  'POST',
-      headers: { ...sbH, 'Prefer': 'return=minimal' },
-      body:    JSON.stringify({ from_guid, to_guid, type, payload, expires_at }),
-    });
-    if (!res.ok) return _err(500, 'DB_ERROR', await res.text(), corsHeaders);
-
-    // 기회적 만료 시그널 정리 (Supabase)
-    fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals?expires_at=lt.${new Date().toISOString()}`, {
-      method: 'DELETE', headers: sbH,
-    }).catch(() => {});
+    console.warn('[Signal] L1 저장 실패:', l1Err.message);
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + l1Err.message, corsHeaders);
   }
 
   // ── 수신자에게 Push 알림 전송 (offer 시그널일 때만)
@@ -8154,7 +7943,7 @@ async function handleSignalSend(request, env, corsHeaders) {
     }).catch(e => console.warn('[Push] 알림 전송 실패:', e.message));
   }
 
-  return new Response(JSON.stringify({ ok: true, source: savedTo }), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify({ ok: true, source: 'l1' }), { status: 200, headers: corsHeaders });
 }
 
 async function handleSignalPoll(request, env, corsHeaders) {
@@ -8163,21 +7952,12 @@ async function handleSignalPoll(request, env, corsHeaders) {
   const guid = url.searchParams.get('guid');
   if (!guid) return _err(400, 'GUID_REQUIRED', '', corsHeaders);
 
-  // ① L1 우선 조회
   try {
     const signals = await _l1SignalPoll(guid);
     return new Response(JSON.stringify({ ok: true, signals, source: 'l1' }), { status: 200, headers: corsHeaders });
   } catch (l1Err) {
-    // ② Supabase 폴백
-    console.warn('[Signal] L1 poll 실패 → Supabase 폴백:', l1Err.message);
-    const sbH = _sbHeaders(env);
-    const now = new Date().toISOString();
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/webrtc_signals?to_guid=eq.${encodeURIComponent(guid)}&expires_at=gt.${now}&order=created_at.asc&limit=20`,
-      { headers: sbH }
-    );
-    const signals = await res.json().catch(() => []);
-    return new Response(JSON.stringify({ ok: true, signals, source: 'supabase' }), { status: 200, headers: corsHeaders });
+    console.warn('[Signal] L1 poll 실패:', l1Err.message);
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + l1Err.message, corsHeaders);
   }
 }
 
@@ -8186,26 +7966,13 @@ async function handleSignalDelete(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', '', corsHeaders);
 
-  // ① L1 우선 삭제
   try {
     if (body.id)        await _l1SignalDelete('id',        body.id);
     if (body.from_guid) await _l1SignalDelete('from_guid', body.from_guid);
     return new Response(JSON.stringify({ ok: true, source: 'l1' }), { status: 200, headers: corsHeaders });
   } catch (l1Err) {
-    // ② Supabase 폴백
-    console.warn('[Signal] L1 delete 실패 → Supabase 폴백:', l1Err.message);
-    const sbH = _sbServiceHeaders(env);
-    if (body.id) {
-      await fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals?id=eq.${encodeURIComponent(body.id)}`,
-        { method: 'DELETE', headers: sbH });
-      return new Response(JSON.stringify({ ok: true, source: 'supabase' }), { status: 200, headers: corsHeaders });
-    }
-    if (body.from_guid) {
-      await fetch(`${SUPABASE_URL}/rest/v1/webrtc_signals?from_guid=eq.${encodeURIComponent(body.from_guid)}`,
-        { method: 'DELETE', headers: sbH });
-      return new Response(JSON.stringify({ ok: true, source: 'supabase' }), { status: 200, headers: corsHeaders });
-    }
-    return _err(400, 'ID_OR_FROM_GUID_REQUIRED', '', corsHeaders);
+    console.warn('[Signal] L1 delete 실패:', l1Err.message);
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + l1Err.message, corsHeaders);
   }
 }
 
@@ -10809,7 +10576,6 @@ async function handlePushSubscribe(request, env, corsHeaders) {
   if (body.unsubscribe) {
     try { await _l1PatchProfile(env, record.id, { push_subscription: '', push_sound: '' }); }
     catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
-    _backupPushSubscriptionToSupabase(env, body.guid, null).catch(() => {});
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
   }
 
@@ -10820,31 +10586,13 @@ async function handlePushSubscribe(request, env, corsHeaders) {
       push_sound:        body.sound || 'ping',
     });
   } catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
-  _backupPushSubscriptionToSupabase(env, body.guid, body.subscription, body.sound).catch(() => {});
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
 }
 
-// L1 쓰기가 끝난 뒤 Supabase에도 best-effort로 미러링 (백업·시뮬레이션 용도).
-// 실패해도 throw하지 않음 — 호출부에서 .catch(()=>{})로 무시, 메인 흐름은 L1만으로 완결.
-async function _backupPushSubscriptionToSupabase(env, guid, subscription, sound) {
-  const sbH = _sbServiceHeaders(env);
-  if (subscription === null) {
-    await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(guid)}`, {
-      method: 'DELETE', headers: sbH,
-    });
-    return;
-  }
-  await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?on_conflict=guid`, {
-    method:  'POST',
-    headers: { ...sbH, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    body:    JSON.stringify({ guid, subscription: JSON.stringify(subscription), sound: sound || 'ping' }),
-  });
-}
-
-// POST /push/send — 특정 guid에게 push 전송
-// L1이 실제 구독 저장소이므로 L1을 우선 조회. L1 "연결 자체"가 실패했을 때만
-// Supabase 백업을 본다 — L1이 정상 응답했는데 구독이 없으면 그게 정답이므로
-// 폴백하지 않는다 (해지한 사용자에게 옛 백업으로 다시 push가 나가는 사고 방지).
+// (2026-07-14 삭제 — Supabase 폐기 지시. _backupPushSubscriptionToSupabase는
+//  L1 쓰기 완료 후 Supabase에 best-effort로 미러링만 하던 백업용 함수였다
+//  — 원래도 "메인 흐름은 L1만으로 완결"이라고 스스로 명시하고 있었으니,
+//  Supabase 자체를 없애는 지금 삭제해도 기능 손실이 없다.)
 async function handlePushSend(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body?.to_guid) return _err(400, 'MISSING_FIELD', 'to_guid 필수', corsHeaders);
@@ -10853,25 +10601,17 @@ async function handlePushSend(request, env, corsHeaders) {
     return _err(500, 'CONFIG_ERROR', 'VAPID 환경변수 미설정', corsHeaders);
 
   let rows = [];
-  let source = 'l1';
+  const source = 'l1';
   try {
     const record = await _l1FindProfileByGuid(env, body.to_guid);
     if (record?.push_subscription) {
       rows = [{ subscription: record.push_subscription, sound: record.push_sound }];
     }
   } catch (e) {
-    console.warn('[Push] L1 조회 실패 → Supabase 백업 조회:', e.message);
-    source = 'supabase';
-    try {
-      const sbH = _sbServiceHeaders(env);
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/push_subscriptions?guid=eq.${encodeURIComponent(body.to_guid)}&select=subscription,sound&limit=5`,
-        { headers: sbH }
-      );
-      rows = await res.json().catch(() => []);
-    } catch (e2) {
-      console.warn('[Push] Supabase 백업 조회도 실패:', e2.message);
-    }
+    // (2026-07-14: Supabase 백업 폴백 제거 — L1 연결 실패는 그대로 실패로
+    //  처리한다. 재시도는 호출부(클라이언트) 책임.)
+    console.warn('[Push] L1 조회 실패:', e.message);
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
   }
 
   if (!rows.length) return new Response(JSON.stringify({ ok: true, sent: 0, reason: 'NO_SUBSCRIPTION', source }), { status: 200, headers: corsHeaders });
