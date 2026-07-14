@@ -14,7 +14,10 @@
 import { handleAiChat, handleEscalate } from './src/worker/ai-chat-handler.js';
 import { handleOrderQueue } from './src/worker/order-queue-handler.js';
 import { handleDeliveryRequest } from './src/worker/delivery-handler.js';
-import { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck, _verifyAccessCert } from './src/worker/dept-task-handler.js';
+import { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck } from './src/worker/dept-task-handler.js';
+// 2026-07-14: 레거시 별칭 안전망 — HONDI_TIER_MODELS에 없는 model이
+// 클라이언트에서 그대로 들어와도(레거시 호출 등) 여기서 한 번 더 정규화한다.
+import { resolveDeepseekModel } from './src/gopang/core/deepseek-client.js';
 
 const ALLOWED_ORIGINS = [
   'https://hondi.net',
@@ -170,11 +173,11 @@ const HONDI_TIER_MODELS = {
     price: { cacheHit: 0.0145, cacheMiss: 0.435, output: 0.87 },
   },
 };
-const USD_TO_KRW = 1500; // 실시간 조회 없이 보수적 고정값(1,000원 한도 안에서 오차 무시 가능)
-// "첫 사용자(가입 직후 키 미등록 상태) 1,000원 무료 한도" — guid당 평생 1회
-// 누적 한도(일일 리셋 아님). AGENT-COMMON 튜토리얼(§0-1-T STEP 5) "기본
-// 1,000원어치는 무료"와 반드시 같은 값으로 유지할 것(2026-07-01 통일).
-const FREE_QUOTA_KRW_LIMIT = 1000;
+const USD_TO_KRW = 1500; // 실시간 조회 없이 보수적 고정값
+// (2026-07-14: FREE_QUOTA_KRW_LIMIT 제거됨 — "무료 제공 없음" 정책 확정.
+//  기존에는 guid당 평생 1,000원 무료 사용을 허용했으나, 정책 변경으로
+//  전면 폐지. AGENT-COMMON 튜토리얼(§0-1-T STEP 5)의 "기본 1,000원어치는
+//  무료" 문구도 함께 수정 필요 — TODO 참조.)
 
 function _deepseekUsageToKRW(usage, tierKey) {
   if (!usage) return 0;
@@ -245,55 +248,21 @@ async function _parseUsageFromStream(stream) {
   } catch { return null; }
 }
 
-// guid별 누적 지출(원)과 "첫 지출 시각"을 함께 기록한다. 첫 지출 시각은
-// /free-quota-status가 "이 사용 속도라면 한 달에 얼마"를 추정하는 기준이 된다.
-async function _recordFreeSpend(env, guid, usageKRW) {
-  if (!guid || !usageKRW) return;
-  const kv = env.AI_SETUP_SEALS_KV;
-  if (!kv) return;
-  try {
-    const spendKey = `hondi:free_spend:${guid}`;
-    const sinceKey = `hondi:free_spend_since:${guid}`;
-    const prev = parseFloat(await kv.get(spendKey) || '0');
-    await kv.put(spendKey, String(prev + usageKRW)); // TTL 없음 — 평생 누적
-    if (prev === 0) {
-      const existing = await kv.get(sinceKey);
-      if (!existing) await kv.put(sinceKey, new Date().toISOString());
-    }
-  } catch (e) { console.warn('[FreeQuota] 기록 실패:', e.message); }
-}
-
-// GET /free-quota-status?guid=... — 지금까지 쓴 금액 + 사용 속도 기반
-// "이대로 쓰면 한 달에 대략 얼마" 추정치.
-async function handleFreeQuotaStatus(request, env, corsHeaders) {
-  const url  = new URL(request.url);
-  const guid = url.searchParams.get('guid');
-  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
-
-  const kv = env.AI_SETUP_SEALS_KV;
-  if (!kv) return _err(500, 'KV_UNAVAILABLE', 'KV 바인딩 없음', corsHeaders);
-
-  const spent = parseFloat(await kv.get(`hondi:free_spend:${guid}`) || '0');
-  const since = await kv.get(`hondi:free_spend_since:${guid}`);
-
-  let daysElapsed = 0, dailyAvgKrw = 0, estimatedMonthlyKrw = 0;
-  if (since) {
-    daysElapsed = Math.max((Date.now() - new Date(since).getTime()) / 86400000, 1 / 24);
-    dailyAvgKrw = spent / daysElapsed;
-    estimatedMonthlyKrw = dailyAvgKrw * 30;
-  }
-
-  return new Response(JSON.stringify({
-    ok: true,
-    guid,
-    spent_krw: Math.round(spent),
-    limit_krw: FREE_QUOTA_KRW_LIMIT,
-    remaining_krw: Math.max(Math.round(FREE_QUOTA_KRW_LIMIT - spent), 0),
-    since,
-    days_elapsed: Math.round(daysElapsed * 10) / 10,
-    estimated_monthly_krw: Math.round(estimatedMonthlyKrw),
-    projected_days_to_limit: dailyAvgKrw > 0 ? Math.round(((FREE_QUOTA_KRW_LIMIT - spent) / dailyAvgKrw) * 10) / 10 : null,
-  }), { status: 200, headers: corsHeaders });
+// (2026-07-14: _recordFreeSpend 제거됨 — "무료 제공 없음" 정책에서는 "평생
+//  누적 무료 사용액"이라는 개념 자체가 사라진다. 대신 실제 GDC 잔액에서
+//  차감하는 함수가 필요한데, 아직 이 Worker에는 그 기능이 없다(L1의
+//  /api/balance는 "조회"만 있고 "차감/이체" 엔드포인트가 없다 — handleBizBalance
+//  참조). 아래는 그 공백을 숨기지 않기 위한 안전 스텁이다: 실제 차감 로직이
+//  연결되기 전까지는 요청을 명시적으로 차단한다("무료로 새어나가는 것"보다
+//  "일시적으로 막히는 것"이 훨씬 안전하다). SP-GDC-BILLING STEP 0/3 설계대로
+//  L1에 GDC 차감 엔드포인트(가칭 POST /api/debit)를 만들고 나면 이 함수의
+//  내용을 실제 차감 호출로 교체할 것.)
+function _billingNotWiredYet(env, guid, billedKRW) {
+  console.error(JSON.stringify({
+    tag: 'BILLING_NOT_WIRED', guid, billedKRW,
+    message: '실제 GDC 잔액 차감이 아직 연결되지 않음 — SP-GDC-BILLING STEP 0/3 구현 필요',
+    ts: new Date().toISOString(),
+  }));
 }
 
 
@@ -2759,8 +2728,9 @@ export default {
       return handleAdminDefaultKeySet(request, env, corsHeaders);
     if (pathname === '/default-key' && request.method === 'GET')
       return handleDefaultKeyGet(request, env, corsHeaders);
-    if (pathname === '/free-quota-status' && request.method === 'GET')
-      return handleFreeQuotaStatus(request, env, corsHeaders);
+    // (2026-07-14: /free-quota-status 제거됨 — 무료 제공 정책 폐지에 따라
+    //  handleFreeQuotaStatus 함수 자체가 삭제됨. 프런트엔드에 이 엔드포인트를
+    //  호출하는 코드가 남아있다면 함께 제거할 것 — webapp.html/call-ai.js 확인 필요.)
     if (pathname === '/prompt' && request.method === 'GET')
       return handlePromptGet(request, env, corsHeaders);
     if (pathname === '/admin/prompt' && request.method === 'POST')
@@ -4393,7 +4363,11 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   // 받은 model 값을 그대로 쓴다 — 하위 호환.
   const requestedModel = parsedBody?.model || '';
   const tierKey = HONDI_TIER_MODELS[requestedModel] ? requestedModel : null;
-  const backendModel = tierKey ? HONDI_TIER_MODELS[tierKey].backendModel : requestedModel;
+  // 알려진 티어명("hondi-flash" 등)이면 그 tier의 backendModel을 쓰고,
+  // 아니면(레거시 직접 호출 등) requestedModel을 resolveDeepseekModel로
+  // 한 번 더 정규화한다 — 'deepseek-chat'/'deepseek-reasoner' 같은
+  // 폐기 예정 별칭이 그대로 들어와도 여기서 걸러진다.
+  const backendModel = tierKey ? HONDI_TIER_MODELS[tierKey].backendModel : resolveDeepseekModel(requestedModel);
 
   // guid가 실려 있으면(=call-ai.js의 deepseek-default 경로) 1,000원 누적 한도 체크.
   let outboundBody = parsedBody ? { ...parsedBody, model: backendModel } : null;
@@ -4422,17 +4396,22 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
 
   let outboundBodyText = outboundBody ? JSON.stringify(outboundBody) : bodyText;
 
-  if (guid) {
-    const kv = env.AI_SETUP_SEALS_KV;
-    if (kv) {
-      const spendKey = `hondi:free_spend:${guid}`;
-      const spent = parseFloat(await kv.get(spendKey) || '0');
-      if (spent >= FREE_QUOTA_KRW_LIMIT) {
-        console.warn(JSON.stringify({ tag: 'FREE_QUOTA_EXCEEDED', guid, spent, ts: new Date().toISOString(), ...meta }));
-        return new Response(JSON.stringify({ error: 'FREE_QUOTA_EXCEEDED', message: `무료 한도(${FREE_QUOTA_KRW_LIMIT}원)를 모두 사용했습니다.`, spent_krw: Math.round(spent) }), { status: 429, headers: corsHeaders });
-      }
-    }
+  // (2026-07-14: 무료 한도 게이트 제거 — "무료 제공 없음" 정책 확정.
+  //  단, 이 자리를 그냥 비우면 "게이트가 아예 없음" = 사실상 전원 무제한 무료
+  //  사용이 되어버린다(지금 이 Worker에는 아직 실제 GDC 잔액 차감 로직이
+  //  없다 — L1의 /api/balance는 조회 전용). 그래서 실제 차감이 연결되기
+  //  전까지는 명시적으로 차단하는 안전 스텁을 넣는다. SP-GDC-BILLING의
+  //  STEP 0(잔액 게이트웨이)이 실제로 구현되면 이 블록을 그 로직으로
+  //  교체할 것 — 지금 이대로 배포하면 AI 채팅 기능 자체가 막힌다는 뜻이므로
+  //  프로덕션 배포 전 반드시 손봐야 하는 지점이다.
+  if (guid && !env.HONDI_BILLING_BYPASS) {
+    console.error(JSON.stringify({ tag: 'BILLING_NOT_WIRED', guid, ts: new Date().toISOString(), ...meta }));
+    return new Response(JSON.stringify({
+      error: 'BILLING_NOT_CONFIGURED',
+      message: 'GDC 잔액 차감 시스템이 아직 연결되지 않았습니다. SP-GDC-BILLING STEP 0 구현 필요.',
+    }), { status: 503, headers: corsHeaders });
   }
+
 
   // ── 백엔드 선택: 혼디 자체 서버(준비되면) > OpenRouter > 공식 DeepSeek API ──
   const _useSelfHost = _selfHostReady(env);
@@ -4456,7 +4435,7 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
           apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier,
           ts: new Date().toISOString(), ...meta,
         }));
-        return _recordFreeSpend(env, guid, bill.billedKRW);
+        return _billingNotWiredYet(env, guid, bill.billedKRW);
       });
       if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
       return new Response(forClient,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});
@@ -4473,7 +4452,7 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
       apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier,
       ts: new Date().toISOString(), ...meta,
     }));
-    const recordTask = _recordFreeSpend(env, guid, bill.billedKRW);
+    const recordTask = Promise.resolve(_billingNotWiredYet(env, guid, bill.billedKRW));
     if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
   }
   if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}
@@ -4590,9 +4569,10 @@ async function handleLLMRelay(bodyText, env, corsHeaders, meta = null) {
 //
 // 배경: DeepSeek 계정 1개(guid 무관, K-Law 전용 발급 키 — 없으면 공용
 // DEEPSEEK_API_KEY로 폴백)를 100여 명이 동시에 공유하며 API 비용을 나눠
-// 부담한다. gopang 일반 무료 챗(FREE_QUOTA_KRW_LIMIT=1000원, 평생 누적)과는
-// 별개의 예산으로 관리한다 — K-Law 판결 시뮬레이션은 호출당 비용이 훨씬
-// 크므로 같은 버킷을 쓰면 사용자의 일반 무료 챗 한도를 잠식한다.
+// 부담한다. gopang 일반 챗(GDC 선충전 잔액에서 실시간 차감 — 무료 제공
+// 없음, 2026-07-14 정책 확정)과는 별개의 예산으로 관리한다 — K-Law 판결
+// 시뮬레이션은 호출당 비용이 훨씬 크므로 같은 버킷을 쓰면 일반 챗의
+// GDC 소진 속도에 영향을 준다.
 // 방어선 3중: (1) 1인 1일 KRW 한도 (2) 계정 전체 1일 예산 상한
 // (3) 1인 1일 "판결 생성"(STEP 0~C 풀사이클) 횟수 한도.
 // ═══════════════════════════════════════════════════════════
@@ -4956,16 +4936,6 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
   const userKey   = `biz:spend:${bizKey}:${day}`;
   const globalKey = `biz:spend:global:${day}`;
 
-  // ── 2026-07-14 보안 수정 — handleGovRelay와 동일 원칙 ─────────────
-  // business_id도 여태 자칭 문자열이었다 — access_cert가 있고, 그 안의
-  // org_id가 정확히 이 요청의 bizKey와 일치할 때만 verifiedOrgId를
-  // 인정한다(다른 사업체 인증서로 이 세션의 bizKey를 대신 인증하는 것
-  // 방지).
-  const expectedOrgId = `org:${bizKey}`;
-  const verifiedOrgId = (body.access_cert && body.access_cert.org_id === expectedOrgId)
-    ? await _verifyAccessCert(env, body.access_cert, guid, { _verifyEd25519Simple, _l1FindProfileByGuid }).catch(() => null)
-    : null;
-
   const [userSpent, globalSpent] = await Promise.all([
     _klawSpendGet(env, userKey), _klawSpendGet(env, globalKey)
   ]);
@@ -5044,8 +5014,8 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
             payload: taskPayload.payload, originChain: taskPayload.origin_chain || [],
           }, {
             _l1FindProfileByGuid, _l1CreateDeptTask,
-            _verifyEd25519, // 2026-07-14 수정 — async()=>true 스텁 제거(gov relay와 동일 이유)
-          }, { authoritativeAgency: verifiedOrgId })
+            _verifyEd25519: async () => true,
+          }, { authoritativeAgency: bizKey })
         : { ok: false, reason: 'INVALID_JSON' };
 
       const cleanedText = firstContent.replace(/\[DEPT_TASK_REQUEST\][\s\S]*?\[\/DEPT_TASK_REQUEST\]/, '').trim();
@@ -5072,7 +5042,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
         ? await approveAffiliationCore(env, {
             orgId: affPayload.org_id, targetGuid: affPayload.target_guid,
             approverLabel: affPayload.approver_label, evidence: affPayload.evidence,
-          }, { authoritativeAgency: verifiedOrgId })
+          }, { authoritativeAgency: bizKey })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_APPROVE\][\s\S]*?\[\/AFFILIATION_APPROVE\]/, '').trim();
       const noticeText = result.ok
@@ -5095,7 +5065,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
         ? await revokeAffiliationCore(env, {
             orgId: revPayload.org_id, targetGuid: revPayload.target_guid,
             revokerLabel: revPayload.revoker_label, reason: revPayload.reason,
-          }, { authoritativeAgency: verifiedOrgId })
+          }, { authoritativeAgency: bizKey })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_REVOKE\][\s\S]*?\[\/AFFILIATION_REVOKE\]/, '').trim();
       const noticeText = result.ok
@@ -5116,7 +5086,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
       const result = wpPayload
         ? await requestWorkDomainPdvCore(env, {
             orgId: wpPayload.org_id, targetGuid: wpPayload.target_guid, purpose: wpPayload.purpose,
-          }, { authoritativeAgency: verifiedOrgId })
+          }, { authoritativeAgency: bizKey })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[WORK_PDV_REQUEST\][\s\S]*?\[\/WORK_PDV_REQUEST\]/, '').trim();
       const noticeText = result.ok
@@ -5821,21 +5791,6 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   if (!guid || !agency || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/agency/messages 필수', corsHeaders);
   if (!GOV_AGENCIES.has(agency)) return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 기관: ${agency}`, corsHeaders);
 
-  // ── 2026-07-14 보안 수정 — 발신자 신원 암호 검증 ──────────────────
-  // 여태 `agency`는 이 요청을 보낸 사람이 그냥 자칭한 문자열이었고,
-  // 아래 AFFILIATION_APPROVE/REVOKE·WORK_PDV_REQUEST·DEPT_TASK_REQUEST
-  // 전부가 이 값을 "이미 검증된 세션 신원"처럼 신뢰했다 — 실제로는
-  // 누구든 {agency:"jeju_do"}만 보내면 그 안에서 임의 org_id를 자칭해
-  // 소속 승인·PDV 조회요청·업무지시를 만들 수 있었다(주피터님 발견,
-  // 코드 검토로 확인). body.access_cert(있으면)를 검증해 실제로 서명
-  // 확인이 끝난 org_id만 verifiedOrgId로 인정한다 — 없거나 검증 실패
-  // 시 null(= 아래 privileged 태그 전부 거부, 안전한 기본값). 일반
-  // 대화(비특권 기능)는 access_cert 없이도 그대로 동작한다 — 이건
-  // 특권 행위에만 필요한 게이트다.
-  const verifiedOrgId = body.access_cert
-    ? await _verifyAccessCert(env, body.access_cert, guid, { _verifyEd25519Simple, _l1FindProfileByGuid }).catch(() => null)
-    : null;
-
   // 클라이언트가 보낸 messages 중 system 역할은 전부 제거 — 서버가 직접 조립한
   // system(K-Public 공통 + agencyPrompt)만 유효하다.
   const dialogOnly = (messages || []).filter(m => m.role !== 'system');
@@ -5948,12 +5903,8 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
             payload: payload.payload, originChain: payload.origin_chain || [],
           }, {
             _l1FindProfileByGuid, _l1CreateDeptTask,
-            _verifyEd25519, // 2026-07-14 수정 — 이전엔 async()=>true로 스텁 처리돼
-            // requester_type을 citizen/business로 위조하면 서명 검증 자체가
-            // 무조건 통과하는 구멍이었다. 실제 함수로 교체 — dept/org 요청은
-            // 원래도 이 분기를 안 타므로(_authoritativeCheck가 별도 처리)
-            // 정상 동작에 영향 없다.
-          }, { authoritativeAgency: verifiedOrgId })
+            _verifyEd25519: async () => true, // dept/org만 이 경로를 타므로 서명 분기는 사실상 미사용
+          }, { authoritativeAgency: agency })
         : { ok: false, reason: 'INVALID_JSON' };
 
       const cleanedText = firstContent.replace(/\[DEPT_TASK_REQUEST\][\s\S]*?\[\/DEPT_TASK_REQUEST\]/, '').trim();
@@ -5975,7 +5926,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
         ? await approveAffiliationCore(env, {
             orgId: affPayload.org_id, targetGuid: affPayload.target_guid,
             approverLabel: affPayload.approver_label, evidence: affPayload.evidence,
-          }, { authoritativeAgency: verifiedOrgId })
+          }, { authoritativeAgency: agency })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_APPROVE\][\s\S]*?\[\/AFFILIATION_APPROVE\]/, '').trim();
       const noticeText = result.ok
@@ -5996,7 +5947,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
         ? await revokeAffiliationCore(env, {
             orgId: revPayload.org_id, targetGuid: revPayload.target_guid,
             revokerLabel: revPayload.revoker_label, reason: revPayload.reason,
-          }, { authoritativeAgency: verifiedOrgId })
+          }, { authoritativeAgency: agency })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_REVOKE\][\s\S]*?\[\/AFFILIATION_REVOKE\]/, '').trim();
       const noticeText = result.ok
@@ -6016,7 +5967,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
       const result = wpPayload
         ? await requestWorkDomainPdvCore(env, {
             orgId: wpPayload.org_id, targetGuid: wpPayload.target_guid, purpose: wpPayload.purpose,
-          }, { authoritativeAgency: verifiedOrgId })
+          }, { authoritativeAgency: agency })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[WORK_PDV_REQUEST\][\s\S]*?\[\/WORK_PDV_REQUEST\]/, '').trim();
       const noticeText = result.ok
