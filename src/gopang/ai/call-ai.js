@@ -32,7 +32,7 @@ import { maybeHandleExpertTurn, applyExpertSystemIfActive,
          isExpertActive, handleExpertTag, _composeExpertPrompt } from './expert-session.js';
 import { getExpertDef, resolveExpertId } from './expert-registry.js';
 import { buildHondiFaqContext } from './hondi-faq-router.js';
-import { setPdvDomain } from '../pdv/record.js';
+import { setPdvDomain, _buildPDVNote } from '../pdv/record.js';
 // ★ 2026-07-11 추가: _callGeminiGeneral 등 5개 함수가 vision.js에 정의는
 // 돼 있는데 여기서 import가 빠져 있었다 — 이미지 첨부 후 Gemini 분석
 // 경로를 탈 때마다 ReferenceError로 죽고 있었을 것(실사로 확인, 아래
@@ -2030,7 +2030,48 @@ async function _buildUniversalIntegrityContext(userText) {
  * @param {string|Array} userContent — 현재 사용자 메시지 (텍스트 또는 multipart)
  * @returns {string|Array} 컨텍스트가 병합된 사용자 메시지
  */
+// _loadOwnJobContext — 2026-07-14 신설. 서버에 최종 저장된 본인
+// 프로필의 job_ksco/affiliation을 가져와 window.__hondiOwnProfileCache에
+// 캐시한다(AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_v1_0.md 1번 제안).
+// hondi_profile_partial(localStorage, 온보딩 중 즉시 반영)은 그 세션
+// 안에서만 유효하고 새 세션·새 탭에서는 비어 있으므로, 이 함수가 그
+// 간극을 메운다 — GET /profile의 기존 뷰어 서명 핸드셰이크
+// (_isAuthenticatedOwnerRequest, verifyOwnerHandshake와 동일한
+// gopangWallet.signPayload 체계)를 그대로 재사용한다. 세션(페이지 로드)
+// 당 한 번만 시도한다 — 매 턴 서버를 다시 부르지 않는다.
+let _ownJobContextAttempted = false;
+async function _loadOwnJobContext() {
+  if (_ownJobContextAttempted) return;
+  _ownJobContextAttempted = true;
+  try {
+    const guid = USER_GUID;
+    const wallet = window.gopangWallet;
+    if (!guid || !wallet?.signPayload) return; // 지갑 미준비 — 조용히 스킵(필수 기능 아님)
+
+    const ts = String(Math.floor(Date.now() / 1000));
+    const pubkey = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+    // handleProfileGet._isAuthenticatedOwnerRequest가 기대하는 정확한
+    // 서명 메시지 형식 — 다른 문자열이면 서버가 본인 조회로 인정 안 함.
+    const sigMsg = `view:${guid}:${pubkey}:${ts}`;
+    const signature = await wallet.signPayload(sigMsg);
+
+    const qs = new URLSearchParams({
+      guid, viewer_guid: guid, viewer_pubkey: pubkey, viewer_sig: signature, viewer_ts: ts,
+    });
+    const res = await fetch(`https://hondi-proxy.tensor-city.workers.dev/profile?${qs.toString()}`, { cache: 'no-cache' });
+    const data = await res.json().catch(() => null);
+    const identity = data?.extra?.public?.identity;
+    if (identity && (identity.job_ksco || identity.affiliation)) {
+      window.__hondiOwnProfileCache = { job_ksco: identity.job_ksco || null, affiliation: identity.affiliation || null };
+    }
+  } catch (e) {
+    console.warn('[JobContext] 본인 프로필 조회 실패(무시 — 필수 기능 아님):', e.message);
+  }
+}
+
 async function _buildEnhancedUserContent(userContent) {
+  _loadOwnJobContext(); // fire-and-forget — 이번 턴엔 아직 캐시가 없을 수 있지만 다음 턴부터 반영됨(await로 첫 턴을 늦추지 않음)
+
   const parts = [];
 
   // GUID + 위치 + PDV 요약 (RAG 스타일, 압축)
@@ -2063,13 +2104,36 @@ async function _buildEnhancedUserContent(userContent) {
   const locNote = _buildLocNote();
   if (locNote) parts.push(locNote.trim());
 
-  // PDV 요약 — IndexedDB 대신 localStorage log 사용 (동기, 압축)
+  // PDV 요약 — 2026-07-14 수정: 이전엔 여기서 localStorage 로그를 직접
+  // 읽어 domain(일상/업무) 구분 없이 그대로 넣고 있었다 — §PDV-SPLIT
+  // (AC-EVOLUTION_v1_1.md)가 만든 _buildPDVNote()(도메인 필터링)는
+  // 정작 이 실제 호출 경로에 한 번도 연결된 적이 없었다(사고실험으로
+  // 발견, AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_v1_0.md). 이제
+  // _buildPDVNote()를 그대로 쓴다 — 현재 모드(personal/work)와 다른
+  // 도메인의 기록은 아예 여기 안 실린다.
+  const pdvNote = _buildPDVNote();
+  if (pdvNote) parts.push(pdvNote.trim());
+
+  // 2026-07-14 신설 — job_ksco/affiliation을 매 턴 컨텍스트에 포함
+  // (AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_v1_0.md 1·2번 제안 반영).
+  // hondi_profile_partial(온보딩 중 즉시 반영)을 1차 소스로 쓴다 — 이건
+  // 동기 접근이라 이 함수의 기존 패턴(GUID·위치 등)과 동일한 방식으로
+  // 끼워 넣을 수 있다. 세션이 새로 열려 partial이 비어있는 경우까지
+  // 커버하려면 서버 저장 프로필을 별도로 조회해야 하는데, 그건
+  // _loadOwnJobContext()(아래 신설, 캐시됨)가 채운
+  // window.__hondiOwnProfileCache를 폴백으로 참조한다.
   try {
-    const log = JSON.parse(localStorage.getItem('gopang_pdv_log') || '[]');
-    if (Array.isArray(log) && log.length) {
-      const summaries = log.slice(-8).reverse()
-        .map(r => r.summary || r.what || '').filter(Boolean);
-      if (summaries.length) parts.push(`[이력]${summaries.join('; ')}`);
+    let partial = {};
+    try { partial = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}'); } catch {}
+    const jobKsco = partial.job_ksco || window.__hondiOwnProfileCache?.job_ksco || null;
+    const affiliation = partial.affiliation || window.__hondiOwnProfileCache?.affiliation || null;
+    if (jobKsco?.label) parts.push(`직업:${jobKsco.label}`);
+    if (Array.isArray(affiliation) && affiliation.length) {
+      const affStr = affiliation
+        .filter(a => a.active !== false)
+        .map(a => `${a.org_id}${a.verified ? '' : '(승인대기)'}`)
+        .join(', ');
+      if (affStr) parts.push(`소속:${affStr}`);
     }
   } catch {}
 
