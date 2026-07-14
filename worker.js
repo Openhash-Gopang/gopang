@@ -9473,18 +9473,15 @@ async function handleTradeRatingSubmit(request, env, corsHeaders) {
   if (typeof amount !== 'number' || amount <= 0) return _err(400, 'MISSING_FIELD', 'amount 필수(양수)', corsHeaders);
   if (!category) return _err(400, 'MISSING_FIELD', 'category 필수', corsHeaders);
 
-  // 2026-07-15 재적용 — 이 블록이 원래 같은 날 07:13 커밋(852b1a7)으로
-  // 추가됐는데, 4분 뒤 무관한 커밋(a7c19e5, anchorL1MerkleRoot 이관)이
-  // 오래된 로컬 체크아웃에서 작업하다 실수로 되돌렸다(2026-07-15
-  // 저장소 점검에서 발견 — git이 같은 파일의 다른 부분이라 충돌 없이
-  // 조용히 통과시킴). 내용은 최초 추가 때와 동일:
-  //
-  // rater_guid를 요청 바디값 그대로 믿으면, 거래 상대방이 상대 개인키
-  // 없이도 "구매자가 남긴 것처럼" 가짜 긍정 평가를 대신 제출해 자기
-  // 온도를 올릴 수 있다 — "실거래 검증이라 허위 평가가 어렵다"는 원래
-  // 설계 의도를 무력화하는 구멍이었다. /biz/claims·/biz/settle-ledger와
-  // 동일한 서명+TOFU 인증 원칙을 쓰되, tx_hash·양쪽 guid·polarity를
-  // 전부 서명 메시지에 묶어서 재생공격도 막는다.
+  // 2026-07-15 신설 — 사고실험에서 발견한 허점 치유. 지금까지 rater_guid를
+  // 요청 바디값 그대로 믿었다 — 거래 당사자인지는 검증했지만(아래 blocks
+  // 조회) "요청 보낸 사람이 정말 rater_guid 본인이냐"는 확인한 적이
+  // 없었다. 즉 거래 상대방이 상대의 개인키 없이도 "구매자가 남긴 것처럼"
+  // 가짜 긍정 평가를 대신 제출해 자기 온도를 올릴 수 있었다 — "실거래
+  // 검증이라 허위 평가가 어렵다"는 원래 설계 의도를 무력화하는 구멍이었다.
+  // /biz/claims·/biz/settle-ledger와 동일한 서명+TOFU 인증 원칙을 쓰되,
+  // tx_hash·양쪽 guid·polarity를 전부 서명 메시지에 묶어서 이 평가가
+  // 다른 거래·다른 결과에 재사용(재생공격)되는 것도 막는다.
   const authOk = await _verifyClaimsRequester(env, {
     guid: rater_guid, pubkey, signature,
     sigMsg: `rating:${tx_hash}:${rater_guid}:${ratee_guid}:${polarity}:${pubkey}:${ts}`,
