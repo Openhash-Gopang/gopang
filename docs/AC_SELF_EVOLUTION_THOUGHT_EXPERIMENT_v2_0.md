@@ -1,23 +1,50 @@
-# AC 직종별 self 갱신 메커니즘 사고실험 v2.0
+# AC 직종별 self 갱신 메커니즘 사고실험 v2.1 (C 해결)
 
 > **작성일:** 2026-07-14 | **근거:** 주피터님 지시("다양한 직종을
 > 상정하여 사고실험") — `AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_v1_0.md`
 > (job_ksco/affiliation을 대화 컨텍스트에 연결한 v1.1 patch) 이후
-> 실제 코드를 12개 직종 시나리오로 재추적.
+> 실제 코드를 12개 직종 시나리오로 재추적. **v2.1: "C부터 시작"
+> 지시로 구멍 C를 patch — `POST /gov/dept-task/my-assignments`
+> 신설, `_loadOwnJobContext()`/`_buildEnhancedUserContent()`가
+> 배정된 작업을 `[ctx]`에 반영, AGENT-COMMON §0-1-R에 안내 지시
+> 추가.**
 > **신뢰도:** B급(추론) — 코드는 직접 읽어 확인했지만 실행 로그
 > 재구성은 아니다. 단 각 항목은 구체적인 파일·라인 근거를 남긴다.
 
-## 요약 — 7개 구멍 발견
+## 요약 — 7개 구멍 발견, 1개 해결(C)
 
-| # | 구멍 | 심각도 |
-|---|---|---|
-| A | job_ksco에 검증 절차가 없다 — 누구나 자기 직업을 자칭하면 그대로 사실처럼 취급된다 | 중간 |
-| B | 사업자(entity_type=business)는 job_ksco를 아예 가질 수 없다 — AC-AUTHOR §3-2 "병존" 시나리오가 코드에서 막혀 있다 | 구조적 |
-| C | STAFF_TASK_QUEUE에 배정된 작업을 개인 AC가 실제로 확인하지 않는다 | 구조적 |
-| D | `work_domain.status`(학생·은퇴자·무직 등)가 코드에 전혀 구현되지 않았다 | 구조적 |
-| E | `job_ksco.review_due`가 있지만 아무 코드도 읽지 않는다(만료가 никогда 체크되지 않음) | 경미 |
-| F | `AGENCY_PUBKEY_REGISTRY`가 비어 있어, 이 논의의 출발점이었던 "위생과 직원" 시나리오 자체가 지금 실제로는 작동 못 한다 | 확인(기지) |
-| G | 민감 직종(AC-AUTHOR §6) `job_ksco.visibility='private'`가 `GET /profile`의 field_visibility 필터에서 실제로 존중되는지 미확인 | 확인 필요 |
+| # | 구멍 | 심각도 | 상태 |
+|---|---|---|---|
+| A | job_ksco에 검증 절차가 없다 — 누구나 자기 직업을 자칭하면 그대로 사실처럼 취급된다 | 중간 | 미해결 |
+| B | 사업자(entity_type=business)는 job_ksco를 아예 가질 수 없다 — AC-AUTHOR §3-2 "병존" 시나리오가 코드에서 막혀 있다 | 구조적 | 미해결 |
+| C | STAFF_TASK_QUEUE에 배정된 작업을 개인 AC가 실제로 확인하지 않는다 | 구조적 | **해결(2026-07-14)** |
+| D | `work_domain.status`(학생·은퇴자·무직 등)가 코드에 전혀 구현되지 않았다 | 구조적 | 미해결 |
+| E | `job_ksco.review_due`가 있지만 아무 코드도 읽지 않는다(만료가 전혀 체크되지 않음) | 경미 | 미해결 |
+| F | `AGENCY_PUBKEY_REGISTRY`가 비어 있어, 이 논의의 출발점이었던 "위생과 직원" 시나리오 자체가 지금 실제로는 작동 못 한다 | 확인(기지) | 저장소 밖 |
+| G | 민감 직종(AC-AUTHOR §6) `job_ksco.visibility='private'`가 `GET /profile`의 field_visibility 필터에서 실제로 존중되는지 미확인 | 확인 필요 | 미해결 |
+
+## C 해결 내역
+
+`POST /gov/dept-task/my-assignments`(worker.js 신설) — 본인 서명
+(기존 `handleStatsSelf`와 동일한 Ed25519 TOFU 체계) 인증 후, (1)
+`target_type='staff', target_id=나`로 직접 지목된 게시물과 (2) 내가
+검증된 소속인 부서의 `org_staff_pool` 게시물을 모두 조회한다.
+
+`call-ai.js`의 `_loadOwnJobContext()`가 검증된 소속이 하나라도 있을
+때만(불필요한 요청 절약) 이 엔드포인트를 불러
+`window.__hondiOwnProfileCache.pending_assignments`를 채우고,
+`_buildEnhancedUserContent()`가 `[ctx]`에 "배정된업무(N건):..."로
+반영한다. AGENT-COMMON §0-1-R에 이 필드를 자연스럽게(대화 흐름과
+무관하게 끼워 넣지 않고) 안내하는 지시를 추가했다 — SG3 원칙(초안
+까지만 대행)이 여기도 그대로 적용된다는 점도 명시했다.
+
+**여전히 남은 한계**: F(AGENCY_PUBKEY_REGISTRY가 비어 있음)가 풀리기
+전까지는 애초에 verified affiliation 자체가 생길 수 없으므로, 이번
+patch로 배선한 경로는 "F가 풀리면 바로 작동하는 상태"로 대기 중이다
+— 지금 당장 실사용자에게 눈에 보이는 변화는 없다(F가 이 저장소 밖
+과제이기 때문).
+
+
 
 ## 시나리오별 추적
 
@@ -67,13 +94,15 @@ occupation(KSIC)이 독립적으로 병존"이라고 설계했지만, **실제
   직원도 `verified:true`가 될 수 없다.** 소속 승인 자체가 막혀
   있으니 STAFF_TASK_QUEUE·업무영역 PDV 요청 전부 실질적으로 비활성
   상태다. (기존에 이미 안 사실을 재확인한 것 — 신규 발견 아님.)
-- **신규 발견(C)**: 설령 `verified:true`가 되고 부서가
+- **발견(C) → 2026-07-14 해결**: 설령 `verified:true`가 되고 부서가
   `target_type='staff'`로 작업을 게시해도, 그 직원의 **개인 AC(평소
-  쓰는 채팅)는 그 작업이 배정됐다는 사실 자체를 확인하지 않는다.**
+  쓰는 채팅)는 그 작업이 배정됐다는 사실 자체를 확인하지 않았다.**
   `_loadOwnJobContext()`(call-ai.js)는 job_ksco/affiliation만 가져올
-  뿐, "나에게 배정된 dept_task가 있는가"는 조회하지 않는다.
+  뿐, "나에게 배정된 dept_task가 있는가"는 조회하지 않았다.
   AGENT-COMMON §0-1-Q가 "승인대기 안내" 톤은 정의해뒀지만, 애초에
-  그 안내를 트리거할 데이터를 가져오는 코드가 없다.
+  그 안내를 트리거할 데이터를 가져오는 코드가 없었다.
+  **→ `POST /gov/dept-task/my-assignments` 신설로 해결(§요약 참고)**
+  — 다만 F(레지스트리 공백)가 안 풀리면 실사용자 눈엔 아직 안 보인다.
 
 ### 7. 판사/검사 — G(확인 필요) 발견
 

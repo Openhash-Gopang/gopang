@@ -2064,6 +2064,27 @@ async function _loadOwnJobContext() {
     if (identity && (identity.job_ksco || identity.affiliation)) {
       window.__hondiOwnProfileCache = { job_ksco: identity.job_ksco || null, affiliation: identity.affiliation || null };
     }
+
+    // 2026-07-14 신설 — 나에게 배정된 STAFF_TASK_QUEUE 작업 확인
+    // (AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_v2_0.md 구멍 C). 검증된
+    // 소속(verified affiliation)이 하나도 없으면 애초에 배정될 수
+    // 없으므로 조회 자체를 건너뛴다(불필요한 요청 절약).
+    const hasVerifiedAffiliation = Array.isArray(identity?.affiliation) &&
+      identity.affiliation.some(a => a.verified && a.active !== false);
+    if (hasVerifiedAffiliation) {
+      try {
+        const assignRes = await fetch('https://hondi-proxy.tensor-city.workers.dev/gov/dept-task/my-assignments', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guid, viewer_pubkey: pubkey, viewer_sig: signature, viewer_ts: ts }),
+        });
+        const assignData = await assignRes.json().catch(() => null);
+        if (assignData?.ok && assignData.count > 0) {
+          window.__hondiOwnProfileCache = { ...(window.__hondiOwnProfileCache || {}), pending_assignments: assignData.assignments };
+        }
+      } catch (e) {
+        console.warn('[JobContext] 배정 작업 조회 실패(무시):', e.message);
+      }
+    }
   } catch (e) {
     console.warn('[JobContext] 본인 프로필 조회 실패(무시 — 필수 기능 아님):', e.message);
   }
@@ -2134,6 +2155,17 @@ async function _buildEnhancedUserContent(userContent) {
         .map(a => `${a.org_id}${a.verified ? '' : '(승인대기)'}`)
         .join(', ');
       if (affStr) parts.push(`소속:${affStr}`);
+    }
+    // 2026-07-14 신설 — 배정된 작업 안내(사고실험 구멍 C 해결). 사람이
+    // 아니라 그 사람 소속 부서가 게시한 작업이 있으면, AC가 §0-1-Q
+    // 톤으로 자연스럽게 알릴 수 있게 원자료만 [ctx]에 싣는다(실제 안내
+    // 문구 생성은 AGENT-COMMON §0-1-Q/R이 담당 — 여기선 데이터만 전달).
+    const assignments = window.__hondiOwnProfileCache?.pending_assignments;
+    if (Array.isArray(assignments) && assignments.length) {
+      const asgStr = assignments.slice(0, 5)
+        .map(a => `${a.requester_id}:${a.task_type || '(유형미기재)'}`)
+        .join('; ');
+      parts.push(`배정된업무(${assignments.length}건):${asgStr}`);
     }
   } catch {}
 

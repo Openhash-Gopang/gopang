@@ -14,7 +14,7 @@
 import { handleAiChat, handleEscalate } from './src/worker/ai-chat-handler.js';
 import { handleOrderQueue } from './src/worker/order-queue-handler.js';
 import { handleDeliveryRequest } from './src/worker/delivery-handler.js';
-import { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck } from './src/worker/dept-task-handler.js';
+import { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck, _verifyAccessCert } from './src/worker/dept-task-handler.js';
 // 2026-07-14: 레거시 별칭 안전망 — HONDI_TIER_MODELS에 없는 model이
 // 클라이언트에서 그대로 들어와도(레거시 호출 등) 여기서 한 번 더 정규화한다.
 import { resolveDeepseekModel } from './src/gopang/core/deepseek-client.js';
@@ -821,6 +821,237 @@ async function _l1AdminTokenFor(env, base) {
 // 기존 호출부(hanlim 고정) 하위호환용 래퍼 — 신규 코드는 _l1AdminTokenFor를 직접 쓸 것
 async function _l1AdminToken(env) {
   return _l1AdminTokenFor(env, L1_DEFAULT);
+}
+
+// ── META_TABLE_UPDATE 태그 파싱/기록 — AGENCY-AC-COMMON_v1.3.md §6 ──────
+// (2026-07-14 신설, 1c891de가 이전 버전 worker.js 기준으로 편집하며
+// 한 차례 삭제됐다가 이번에 복구됨)
+// 태그 형식: agency_id=..., category=..., task_type=..., dept_chain=[a,b],
+// outcome=completed|pending|referred, received_ts=ISO, processing_started_ts=ISO,
+// completed_ts=ISO, duration_seconds=123
+function _parseMetaTableTag(raw) {
+  try {
+    const fields = {};
+    const parts = [];
+    let depth = 0, buf = '';
+    for (const ch of raw) {
+      if (ch === '[') depth++;
+      if (ch === ']') depth--;
+      if (ch === ',' && depth === 0) { parts.push(buf); buf = ''; }
+      else buf += ch;
+    }
+    if (buf.trim()) parts.push(buf);
+
+    for (const part of parts) {
+      const eq = part.indexOf('=');
+      if (eq === -1) continue;
+      const key = part.slice(0, eq).trim();
+      let val = part.slice(eq + 1).trim();
+      if (val.startsWith('{') && val.endsWith('}')) val = val.slice(1, -1).trim();
+      if (key === 'dept_chain') {
+        if (val.startsWith('[') && val.endsWith(']')) val = val.slice(1, -1);
+        fields.dept_chain = val.split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+      } else {
+        fields[key] = val.replace(/^["']|["']$/g, '');
+      }
+    }
+    if (!fields.agency_id || !fields.category || !fields.outcome || !fields.received_ts) return null;
+    return fields;
+  } catch (e) { return null; }
+}
+
+async function _writeMetaTableRecord(env, sessionAgency, fields) {
+  const token = await _l1AdminToken(env);
+  let duration = fields.duration_seconds ? parseInt(fields.duration_seconds, 10) : null;
+  if ((duration === null || Number.isNaN(duration)) && fields.completed_ts && fields.received_ts) {
+    const d = (new Date(fields.completed_ts) - new Date(fields.received_ts)) / 1000;
+    duration = Number.isFinite(d) && d >= 0 ? Math.round(d) : null;
+  }
+  const res = await fetch(`${L1_DEFAULT}/api/collections/meta_table_records/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      agency_id: fields.agency_id || sessionAgency,
+      category: fields.category,
+      task_type: fields.task_type || null,
+      dept_chain: fields.dept_chain || [],
+      outcome: ['completed', 'pending', 'referred'].includes(fields.outcome) ? fields.outcome : 'pending',
+      received_ts: fields.received_ts,
+      processing_started_ts: fields.processing_started_ts || null,
+      completed_ts: fields.completed_ts || null,
+      duration_seconds: duration,
+    }),
+  });
+  if (!res.ok) throw new Error(`meta_table_records 저장 실패 HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+}
+
+// GET /stats/agency-report — AGENCY-AC-COMMON §6이 요구한 주기별 보고서.
+async function handleStatsAgencyReport(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const agencyId = url.searchParams.get('agency_id');
+  const period = url.searchParams.get('period') || 'monthly';
+  if (!agencyId) return _err(400, 'MISSING_FIELD', 'agency_id 필수', corsHeaders);
+  const PERIOD_DAYS = { weekly: 7, monthly: 30, quarterly: 91, halfyear: 182, yearly: 365 };
+  const days = PERIOD_DAYS[period];
+  if (!days) return _err(400, 'INVALID_PERIOD', 'weekly|monthly|quarterly|halfyear|yearly 중 하나여야 합니다', corsHeaders);
+  const anchor = url.searchParams.get('anchor') ? new Date(url.searchParams.get('anchor')) : new Date();
+  const since = new Date(anchor.getTime() - days * 86400000).toISOString();
+
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`agency_id='${agencyId}' && received_ts >= '${since}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/meta_table_records/records?filter=${filter}&perPage=500`,
+    { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => null);
+  if (!res || !res.ok) return _err(503, 'FETCH_FAILED', '', corsHeaders);
+  const json = await res.json().catch(() => null);
+  const items = json?.items || [];
+
+  const byCategory = {};
+  for (const it of items) {
+    const cat = it.category || '(미분류)';
+    if (!byCategory[cat]) byCategory[cat] = { count: 0, completed: 0, durations: [] };
+    byCategory[cat].count++;
+    if (it.outcome === 'completed') byCategory[cat].completed++;
+    if (it.duration_seconds != null) byCategory[cat].durations.push(it.duration_seconds);
+  }
+  const categories = Object.entries(byCategory).map(([category, v]) => ({
+    category,
+    count: v.count,
+    completion_rate: v.count ? +(v.completed / v.count).toFixed(3) : null,
+    avg_duration_seconds: v.durations.length ? Math.round(v.durations.reduce((a, b) => a + b, 0) / v.durations.length) : null,
+  }));
+
+  return new Response(JSON.stringify({
+    ok: true, agency_id: agencyId, period, since, until: anchor.toISOString(),
+    total_count: items.length, categories,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// ── 업무 성과/효율성 측정 — STAFF_TASK_QUEUE_v1_0.md §3 ──────────────
+// (2026-07-14 신설, 1c891de 회귀로 삭제됐다가 이번에 복구됨)
+async function _computeTaskStats(env, { targetType, targetId }) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`target_type='${targetType}' && target_id='${targetId}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/dept_tasks/records?filter=${filter}&perPage=200`,
+    { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => null);
+  if (!res || !res.ok) return null;
+  const json = await res.json().catch(() => null);
+  const items = json?.items || [];
+  const total = items.length;
+  const completed = items.filter(t => t.status === 'completed');
+  const rejected = items.filter(t => t.status === 'rejected');
+  const durationsHrs = completed
+    .map(t => (new Date(t.updated) - new Date(t.created)) / 3600000)
+    .filter(h => h >= 0);
+  const avgHrs = durationsHrs.length ? durationsHrs.reduce((a, b) => a + b, 0) / durationsHrs.length : null;
+  return {
+    total_count: total,
+    completed_count: completed.length,
+    rejected_count: rejected.length,
+    completion_rate: total ? +(completed.length / total).toFixed(3) : null,
+    avg_completion_hours: avgHrs !== null ? +avgHrs.toFixed(1) : null,
+  };
+}
+
+async function handleStatsOrgCompare(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const orgIds = (url.searchParams.get('org_ids') || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 20);
+  if (!orgIds.length) return _err(400, 'MISSING_FIELD', 'org_ids 필수(콤마 구분, 최대 20개)', corsHeaders);
+  const results = [];
+  for (const orgId of orgIds) {
+    const isOrgLevel = DEPT_TASK_TAXONOMY.org?.has(orgId) || DEPT_TASK_TAXONOMY.national?.has(orgId);
+    if (!isOrgLevel) continue;
+    const stats = await _computeTaskStats(env, { targetType: DEPT_TASK_TAXONOMY.national?.has(orgId) ? 'national' : 'org', targetId: orgId });
+    if (stats) results.push({ org_id: orgId, ...stats });
+  }
+  return new Response(JSON.stringify({ ok: true, compared_at: new Date().toISOString(), results }), { status: 200, headers: corsHeaders });
+}
+
+async function handleStatsDeptCompare(bodyText, env, corsHeaders) {
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
+  const deptIds = Array.isArray(body?.dept_ids) ? body.dept_ids.slice(0, 30) : [];
+  if (!deptIds.length) return _err(400, 'MISSING_FIELD', 'dept_ids 필수', corsHeaders);
+  if (!body?.access_cert || !body?.guid) return _err(401, 'MANAGER_ACCESS_CERT_REQUIRED', '부서 간 비교는 검증된 관리자만 조회할 수 있습니다(access_cert, guid 필수)', corsHeaders);
+  const verifiedOrgId = await _verifyAccessCert(env, body.access_cert, body.guid, { _verifyEd25519Simple, _l1FindProfileByGuid }).catch(() => null);
+  if (!verifiedOrgId) return _err(401, 'ACCESS_CERT_INVALID', '', corsHeaders);
+  if (body.access_cert.role !== 'manager') return _err(403, 'MANAGER_ROLE_REQUIRED', 'staff 권한으로는 부서 비교를 조회할 수 없습니다', corsHeaders);
+  const results = [];
+  for (const deptId of deptIds) {
+    if (!DEPT_TASK_TAXONOMY.dept?.has(deptId)) continue;
+    const sameJurisdiction = deptId.split(':').slice(0, 2).join(':') === verifiedOrgId.split(':').slice(0, 2).join(':');
+    if (!sameJurisdiction) continue;
+    const stats = await _computeTaskStats(env, { targetType: 'dept', targetId: deptId });
+    if (stats) results.push({ dept_id: deptId, ...stats });
+  }
+  return new Response(JSON.stringify({ ok: true, compared_at: new Date().toISOString(), results }), { status: 200, headers: corsHeaders });
+}
+
+async function handleStatsSelf(bodyText, env, corsHeaders) {
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
+  const { guid, org_id, viewer_pubkey, viewer_sig, viewer_ts } = body || {};
+  if (!guid || !org_id) return _err(400, 'MISSING_FIELD', 'guid/org_id 필수', corsHeaders);
+  if (!viewer_pubkey || !viewer_sig) return _err(401, 'SIGNATURE_REQUIRED', '본인 서명이 필요합니다', corsHeaders);
+  const sigMsg = `view:${guid}:${viewer_pubkey}:${viewer_ts || ''}`;
+  const sigOk = await _verifyEd25519Simple(viewer_pubkey, viewer_sig, sigMsg).catch(() => false);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '', corsHeaders);
+  const profile = await _l1FindProfileByGuid(env, guid).catch(() => null);
+  if (!profile?.pubkey_ed25519 || profile.pubkey_ed25519 !== viewer_pubkey) return _err(401, 'PUBKEY_MISMATCH', '', corsHeaders);
+  const affList = profile.extra?.public?.identity?.affiliation || [];
+  if (!affList.some(a => a.org_id === org_id && a.verified)) {
+    return _err(403, 'NOT_A_VERIFIED_MEMBER', '해당 소속의 검증된 구성원이 아닙니다', corsHeaders);
+  }
+  const myStats = await _computeTaskStats(env, { targetType: 'staff', targetId: guid });
+  const poolStats = await _computeTaskStats(env, { targetType: 'org_staff_pool', targetId: org_id });
+  return new Response(JSON.stringify({
+    ok: true, self: myStats, dept_average: poolStats,
+    note: '이 값은 본인에게만 보입니다. 관리자는 이 조회 결과를 볼 수 없습니다.',
+  }), { status: 200, headers: corsHeaders });
+}
+
+// POST /gov/dept-task/my-assignments — 배정된 STAFF_TASK_QUEUE 작업 확인.
+async function handleMyAssignments(bodyText, env, corsHeaders) {
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
+  const { guid, viewer_pubkey, viewer_sig, viewer_ts } = body || {};
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!viewer_pubkey || !viewer_sig) return _err(401, 'SIGNATURE_REQUIRED', '본인 서명이 필요합니다', corsHeaders);
+  const sigMsg = `view:${guid}:${viewer_pubkey}:${viewer_ts || ''}`;
+  const sigOk = await _verifyEd25519Simple(viewer_pubkey, viewer_sig, sigMsg).catch(() => false);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '', corsHeaders);
+  const profile = await _l1FindProfileByGuid(env, guid).catch(() => null);
+  if (!profile?.pubkey_ed25519 || profile.pubkey_ed25519 !== viewer_pubkey) return _err(401, 'PUBKEY_MISMATCH', '', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const results = [];
+
+  const staffFilter = encodeURIComponent(
+    `target_type='staff' && target_id='${guid}' && (status='requested' || status='acknowledged' || status='in_progress')`);
+  const staffRes = await fetch(`${L1_DEFAULT}/api/collections/dept_tasks/records?filter=${staffFilter}&sort=-created&perPage=20`,
+    { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => null);
+  if (staffRes?.ok) {
+    const json = await staffRes.json().catch(() => null);
+    for (const t of (json?.items || [])) {
+      results.push({ task_id: t.id, mode: 'staff', requester_id: t.requester_id, task_type: t.task_type, directive: t.directive, status: t.status, created: t.created });
+    }
+  }
+
+  const affList = profile.extra?.public?.identity?.affiliation || [];
+  const verifiedOrgIds = affList.filter(a => a.verified && a.active !== false).map(a => a.org_id);
+  for (const orgId of verifiedOrgIds.slice(0, 10)) {
+    const poolFilter = encodeURIComponent(
+      `target_type='org_staff_pool' && target_id='${orgId}' && (status='requested' || status='acknowledged' || status='in_progress')`);
+    const poolRes = await fetch(`${L1_DEFAULT}/api/collections/dept_tasks/records?filter=${poolFilter}&sort=-created&perPage=20`,
+      { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => null);
+    if (poolRes?.ok) {
+      const json = await poolRes.json().catch(() => null);
+      for (const t of (json?.items || [])) {
+        results.push({ task_id: t.id, mode: 'org_staff_pool', org_id: orgId, requester_id: t.requester_id, task_type: t.task_type, directive: t.directive, status: t.status, created: t.created });
+      }
+    }
+  }
+
+  return new Response(JSON.stringify({ ok: true, count: results.length, assignments: results }), { status: 200, headers: corsHeaders });
 }
 
 // ── §4 guid→L1 소속 레지스트리 (L3 guid_home_l1 컬렉션) ──────────────
@@ -2935,6 +3166,13 @@ export default {
     if (pathname === '/admin/gov-task-drafts' && request.method === 'GET')
       return handleGovTaskDraftList(request, env, corsHeaders);
 
+    // GET /stats/org, /stats/agency-report — 준공개 통계 엔드포인트
+    // (2026-07-14 신설, 회귀로 삭제됐다가 복구됨)
+    if (pathname === '/stats/org' && request.method === 'GET')
+      return handleStatsOrgCompare(request, env, corsHeaders);
+    if (pathname === '/stats/agency-report' && request.method === 'GET')
+      return handleStatsAgencyReport(request, env, corsHeaders);
+
     // POST /admin/cf-dns — Cloudflare DNS CNAME 추가 (CORS 우회 프록시)
     if (pathname === '/admin/cf-dns' && request.method === 'POST')
       return handleAdminCfDns(request, env, corsHeaders);
@@ -2999,6 +3237,9 @@ export default {
     if (pathname === '/gov/relay')                return handleGovRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname === '/gov/task/submit')          return handleGovTaskSubmit(bodyText, env, corsHeaders);
     if (pathname === '/gov/task/batch-status')    return handleGovTaskBatchStatus(bodyText, env, corsHeaders);
+    if (pathname === '/stats/dept')               return handleStatsDeptCompare(bodyText, env, corsHeaders);
+    if (pathname === '/stats/self')                return handleStatsSelf(bodyText, env, corsHeaders);
+    if (pathname === '/gov/dept-task/my-assignments') return handleMyAssignments(bodyText, env, corsHeaders);
     if (pathname === '/gov/task/schema/draft')    return handleGovTaskSchemaDraft(bodyText, env, corsHeaders);
     if (pathname === '/admin/gov-task-drafts/review') return handleGovTaskDraftReview(request, bodyText, env, corsHeaders);
     if (pathname === '/business/relay')           return handleBusinessRelay(bodyText, env, corsHeaders, _meta, ctx);
@@ -5160,6 +5401,18 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
   const userKey   = `biz:spend:${bizKey}:${day}`;
   const globalKey = `biz:spend:global:${day}`;
 
+  // ── 2026-07-14 보안 수정(#18) — 회귀 복구 ─────────────────────────
+  // business_id는 클라이언트 자칭 문자열이다. access_cert가 있고, 그
+  // org_id가 정확히 이 요청의 bizKey와 일치할 때만 verifiedOrgId를
+  // 인정한다(다른 사업체 인증서로 이 세션의 bizKey를 대신 인증하는
+  // 것 방지). 이 블록이 한 번 삭제됐다가 복구됐다 — 다른 무관한
+  // 커밋(1c891de, AI 사용량 로그)이 이전 버전 worker.js를 기준으로
+  // 편집해 통째로 되돌아갔었다.
+  const expectedOrgId = `org:${bizKey}`;
+  const verifiedOrgId = (body.access_cert && body.access_cert.org_id === expectedOrgId)
+    ? await _verifyAccessCert(env, body.access_cert, guid, { _verifyEd25519Simple, _l1FindProfileByGuid }).catch(() => null)
+    : null;
+
   const [userSpent, globalSpent] = await Promise.all([
     _klawSpendGet(env, userKey), _klawSpendGet(env, globalKey)
   ]);
@@ -5239,8 +5492,8 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
             payload: taskPayload.payload, originChain: taskPayload.origin_chain || [],
           }, {
             _l1FindProfileByGuid, _l1CreateDeptTask,
-            _verifyEd25519: async () => true,
-          }, { authoritativeAgency: bizKey })
+            _verifyEd25519, // 2026-07-14 수정(회귀 복구) — async()=>true 스텁 제거
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
 
       const cleanedText = firstContent.replace(/\[DEPT_TASK_REQUEST\][\s\S]*?\[\/DEPT_TASK_REQUEST\]/, '').trim();
@@ -5267,7 +5520,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
         ? await approveAffiliationCore(env, {
             orgId: affPayload.org_id, targetGuid: affPayload.target_guid,
             approverLabel: affPayload.approver_label, evidence: affPayload.evidence,
-          }, { authoritativeAgency: bizKey })
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_APPROVE\][\s\S]*?\[\/AFFILIATION_APPROVE\]/, '').trim();
       const noticeText = result.ok
@@ -5290,7 +5543,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
         ? await revokeAffiliationCore(env, {
             orgId: revPayload.org_id, targetGuid: revPayload.target_guid,
             revokerLabel: revPayload.revoker_label, reason: revPayload.reason,
-          }, { authoritativeAgency: bizKey })
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_REVOKE\][\s\S]*?\[\/AFFILIATION_REVOKE\]/, '').trim();
       const noticeText = result.ok
@@ -5311,7 +5564,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
       const result = wpPayload
         ? await requestWorkDomainPdvCore(env, {
             orgId: wpPayload.org_id, targetGuid: wpPayload.target_guid, purpose: wpPayload.purpose,
-          }, { authoritativeAgency: bizKey })
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[WORK_PDV_REQUEST\][\s\S]*?\[\/WORK_PDV_REQUEST\]/, '').trim();
       const noticeText = result.ok
@@ -6016,6 +6269,16 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   if (!guid || !agency || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/agency/messages 필수', corsHeaders);
   if (!GOV_AGENCIES.has(agency)) return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 기관: ${agency}`, corsHeaders);
 
+  // ── 2026-07-14 보안 수정(#18) — 회귀 복구 ─────────────────────────
+  // agency는 클라이언트 자칭 문자열이다. body.access_cert(있으면)를
+  // 검증해 실제로 서명 확인이 끝난 org_id만 verifiedOrgId로 인정한다
+  // — 없거나 검증 실패 시 null(= 아래 privileged 태그 전부 거부).
+  // 일반 대화는 access_cert 없이도 그대로 동작한다. 이 블록이 한 번
+  // 삭제됐다가 복구됐다(1c891de가 이전 버전 worker.js 기준으로 편집).
+  const verifiedOrgId = body.access_cert
+    ? await _verifyAccessCert(env, body.access_cert, guid, { _verifyEd25519Simple, _l1FindProfileByGuid }).catch(() => null)
+    : null;
+
   // 클라이언트가 보낸 messages 중 system 역할은 전부 제거 — 서버가 직접 조립한
   // system(K-Public 공통 + agencyPrompt)만 유효하다.
   const dialogOnly = (messages || []).filter(m => m.role !== 'system');
@@ -6103,6 +6366,27 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   const data = await res.json();
   billGovCall(data?.usage, agency);
 
+  // ── META_TABLE_UPDATE 서버측 처리 (2026-07-14 신설, 회귀 복구) ─────
+  // AGENCY-AC-COMMON_v1.3.md §6 배선. canDelegate 여부와 무관하게 모든
+  // 기관 세션에 적용 — 응답 흐름을 막지 않는다(얼리리턴 없음).
+  {
+    const mtContent = data?.choices?.[0]?.message?.content;
+    const mtMatch = typeof mtContent === 'string'
+      ? mtContent.match(/\[META_TABLE_UPDATE:([\s\S]*?)\]/)
+      : null;
+    if (mtMatch) {
+      const mtFields = _parseMetaTableTag(mtMatch[1]);
+      if (mtFields) {
+        const writeTask = _writeMetaTableRecord(env, agency, mtFields).catch(e =>
+          console.warn('[MetaTable] 기록 실패(응답 흐름은 계속 진행):', e.message));
+        if (ctx?.waitUntil) ctx.waitUntil(writeTask); else writeTask.catch(() => {});
+      } else {
+        console.warn('[MetaTable] 태그 파싱 실패 — 형식이 예상과 다름:', mtMatch[1].slice(0, 200));
+      }
+      data.choices[0].message.content = mtContent.replace(/\[META_TABLE_UPDATE:[\s\S]*?\]/, '').trim();
+    }
+  }
+
   // ── SP 간 호출(위임) 오케스트레이션 — canDelegate agency에서만 시도 ──────
   // call_chain은 이 요청 안에서만 존재하는 서버 내부 상태다(클라이언트가 보낸
   // 값이 아니다) — 최초 호출은 항상 [agency]에서 시작하므로 순환 검사가
@@ -6131,8 +6415,8 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
             payload: payload.payload, originChain: payload.origin_chain || [],
           }, {
             _l1FindProfileByGuid, _l1CreateDeptTask,
-            _verifyEd25519: async () => true, // dept/org만 이 경로를 타므로 서명 분기는 사실상 미사용
-          }, { authoritativeAgency: agency })
+            _verifyEd25519, // 2026-07-14 수정(회귀 복구) — async()=>true 스텁 제거
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
 
       const cleanedText = firstContent.replace(/\[DEPT_TASK_REQUEST\][\s\S]*?\[\/DEPT_TASK_REQUEST\]/, '').trim();
@@ -6154,7 +6438,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
         ? await approveAffiliationCore(env, {
             orgId: affPayload.org_id, targetGuid: affPayload.target_guid,
             approverLabel: affPayload.approver_label, evidence: affPayload.evidence,
-          }, { authoritativeAgency: agency })
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_APPROVE\][\s\S]*?\[\/AFFILIATION_APPROVE\]/, '').trim();
       const noticeText = result.ok
@@ -6175,7 +6459,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
         ? await revokeAffiliationCore(env, {
             orgId: revPayload.org_id, targetGuid: revPayload.target_guid,
             revokerLabel: revPayload.revoker_label, reason: revPayload.reason,
-          }, { authoritativeAgency: agency })
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[AFFILIATION_REVOKE\][\s\S]*?\[\/AFFILIATION_REVOKE\]/, '').trim();
       const noticeText = result.ok
@@ -6195,7 +6479,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
       const result = wpPayload
         ? await requestWorkDomainPdvCore(env, {
             orgId: wpPayload.org_id, targetGuid: wpPayload.target_guid, purpose: wpPayload.purpose,
-          }, { authoritativeAgency: agency })
+          }, { authoritativeAgency: verifiedOrgId })
         : { ok: false, reason: 'INVALID_JSON' };
       const cleanedText = firstContent.replace(/\[WORK_PDV_REQUEST\][\s\S]*?\[\/WORK_PDV_REQUEST\]/, '').trim();
       const noticeText = result.ok
