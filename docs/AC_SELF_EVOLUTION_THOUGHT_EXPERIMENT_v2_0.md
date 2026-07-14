@@ -1,4 +1,4 @@
-# AC 직종별 self 갱신 메커니즘 사고실험 v2.5 (A·B·C·D·E 해결)
+# AC 직종별 self 갱신 메커니즘 사고실험 v2.6 (A·B·C·D·E·G 해결)
 
 > **작성일:** 2026-07-14 | **근거:** 주피터님 지시("다양한 직종을
 > 상정하여 사고실험") — `AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_v1_0.md`
@@ -21,7 +21,7 @@
 | D | `work_domain.status`(학생·은퇴자·무직 등)가 코드에 전혀 구현되지 않았다 | 구조적 | **해결(2026-07-14)** |
 | E | `job_ksco.review_due`가 있지만 아무 코드도 읽지 않는다(만료가 전혀 체크되지 않음) | 경미 | **해결(2026-07-14)** |
 | F | `AGENCY_PUBKEY_REGISTRY`가 비어 있어, 이 논의의 출발점이었던 "위생과 직원" 시나리오 자체가 지금 실제로는 작동 못 한다 | 확인(기지) | 저장소 밖 |
-| G | 민감 직종(AC-AUTHOR §6) `job_ksco.visibility='private'`가 `GET /profile`의 field_visibility 필터에서 실제로 존중되는지 미확인 | 확인 필요 | 미해결 |
+| G | 민감 직종(AC-AUTHOR §6) `job_ksco.visibility='private'`가 `GET /profile`의 field_visibility 필터에서 실제로 존중되는지 미확인 | 확인 필요→**구조적** | **해결(2026-07-14)** |
 
 ## C 해결 내역
 
@@ -122,7 +122,7 @@ entity_type==='business')`로 확대, `personal-assistant-v1_12.txt`
   **→ `POST /gov/dept-task/my-assignments` 신설로 해결(§요약 참고)**
   — 다만 F(레지스트리 공백)가 안 풀리면 실사용자 눈엔 아직 안 보인다.
 
-### 7. 판사/검사 — G(확인 필요) 발견
+### 7. 판사/검사 — G(확인 필요) 발견 → 결함 확인 및 해결(2026-07-14)
 
 job_ksco의 `visibility` 기본값은 always `'private'`이지만
 (`worker.js` 구현 확인됨), 이게 `GET /profile`의 `_filterProfileByVisibility`
@@ -130,6 +130,22 @@ job_ksco의 `visibility` 기본값은 always `'private'`이지만
 이번 사고실험에서 코드까지 다 확인하지 못했다 — job_ksco는
 `extra.public.identity` 안에 있는 **커스텀 중첩 필드**라, 범용
 field_visibility 룰이 이 안쪽까지 들여다보는지 별도 검증이 필요하다.
+
+**→ 확인 결과, "미확인"이 아니라 실제 결함이었다.**
+`_filterProfileByVisibility`가 `description`/`location`/`contact`/
+`products`만 거르고 **`job_ksco`·`affiliation`·`work_domain`은 아예
+손대지 않고 있었다** — `job_ksco.visibility='private'`로 저장해도
+타인이 `GET /profile`이나 K-Market 검색으로 조회하면 그대로 다
+보였다. 판사·검사·경찰관·군인처럼 AC-AUTHOR §6이 민감 직종으로
+지정한 경우 실질적인 노출 위험이었다.
+
+**→ 해결**: `_filterProfileByVisibility`에 세 필드 모두 추가.
+`job_ksco`는 자체 3단계 `visibility`(private/contacts/public)를 쓰되,
+"contacts"(지인) 등급을 판별할 관계 데이터가 시스템에 없어서 지금은
+`public`이 아니면 전부 가린다(과다노출보다 과소노출이 안전 — 기존
+관례 재적용). `affiliation`·`work_domain`은 자체 visibility 필드가
+없어 `description`과 동일하게 boolean `field_visibility`로 다루고,
+기본값은 `false`(비공개)로 뒀다.
 
 ### 8~9. 학생·은퇴자 — D(구조적 결함) 발견 → 해결(2026-07-14)
 

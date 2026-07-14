@@ -3952,6 +3952,26 @@ function _isFieldVisible(fv, field) {
 
 function _filterProfileByVisibility({ address, phone, website, extra }) {
   const fv = extra?.public?.field_visibility || {};
+  const identity = extra?.public?.identity || {};
+  // 2026-07-14 신설 — 구멍 G 해결(AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_
+  // v2_0.md). 이 함수가 description/location/contact/products는 거르면서
+  // job_ksco·affiliation·work_domain은 아예 손대지 않고 있었다 — 즉
+  // job_ksco.visibility='private'로 저장해도 실제로는 타인 조회 시
+  // 그대로 다 보였다(코드 재확인으로 실제 결함 확정, "확인 필요"가
+  // 아니라 "결함 확인됨"으로 격상).
+  //
+  // job_ksco는 자체 3단계 visibility(private/contacts/public)가 있다 —
+  // 다만 "contacts"(지인) 등급을 판별할 관계 데이터가 이 시스템에
+  // 없으므로, 지금은 owner가 아니면 public일 때만 노출하고 나머지는
+  // 전부 가린다(private와 동일 취급 — 과다노출보다 과소노출이 안전).
+  const jobKscoVisible = identity.job_ksco?.visibility === 'public';
+  // affiliation·work_domain은 자체 visibility 필드가 없다 — 기존
+  // description과 동일하게 boolean field_visibility로 다룬다. 기본값은
+  // false(비공개) — is_public 기본 false, job_ksco 기본 private와
+  // 동일한 "기본 비공개" 원칙(AC-AUTHOR §6·AC-EVOLUTION §6 근거).
+  const affiliationVisible = fv.affiliation === true;
+  const workDomainVisible = fv.work_domain === true;
+
   const filteredExtra = extra ? {
     ...extra,
     public: extra.public ? {
@@ -3960,8 +3980,12 @@ function _filterProfileByVisibility({ address, phone, website, extra }) {
         : { ...extra.public.location, address_short: undefined, directions: undefined },
       contact: _isFieldVisible(fv, 'phone') ? extra.public.contact
         : { ...extra.public.contact, phone_display: undefined },
-      identity: _isFieldVisible(fv, 'description') ? extra.public.identity
-        : { ...extra.public.identity, description: undefined },
+      identity: {
+        ...(_isFieldVisible(fv, 'description') ? identity : { ...identity, description: undefined }),
+        job_ksco: jobKscoVisible ? identity.job_ksco : undefined,
+        affiliation: affiliationVisible ? identity.affiliation : undefined,
+        work_domain: workDomainVisible ? identity.work_domain : undefined,
+      },
       products: _isFieldVisible(fv, 'products') ? extra.public.products : undefined,
     } : extra.public,
   } : extra;
