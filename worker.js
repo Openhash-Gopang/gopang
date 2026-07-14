@@ -2800,6 +2800,7 @@ export default {
     if (pathname === '/klaw/relay')               return handleKlawRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname === '/gov/relay')                return handleGovRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname === '/gov/task/submit')          return handleGovTaskSubmit(bodyText, env, corsHeaders);
+    if (pathname === '/gov/task/batch-status')    return handleGovTaskBatchStatus(bodyText, env, corsHeaders);
     if (pathname === '/gov/task/schema/draft')    return handleGovTaskSchemaDraft(bodyText, env, corsHeaders);
     if (pathname === '/admin/gov-task-drafts/review') return handleGovTaskDraftReview(request, bodyText, env, corsHeaders);
     if (pathname === '/business/relay')           return handleBusinessRelay(bodyText, env, corsHeaders, _meta, ctx);
@@ -5588,6 +5589,19 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
   if (!guid || !agency || !task_key) {
     return _err(400, 'MISSING_FIELD', 'guid/agency/task_key 필수', corsHeaders);
   }
+  // 2026-07-13 신설 — GAP-LIST-50 B-3(병렬·팬아웃 처리 모델 부재) 해소.
+  // batch_id가 있으면 이 제출이 "한 사건을 여러 기관에 동시 처리"하는
+  // 그룹의 일부임을 표시한다. K-Compose(SP-20)가 PROCEDURE_MAP의
+  // parallel_group이 같은 step들을 실행할 때 하나의 batch_id를 만들어
+  // 각 제출에 동일하게 실어 보낸다. fanout_mode는 그 그룹의 집계 방식:
+  //   'notify' — 통지형(예: 폐업신고→세무서+국민연금+건강보험). 서로
+  //              독립적, 하나가 실패해도 나머지는 그대로 유효.
+  //   'join'   — 협의형(예: 건축허가=건축과+소방서+환경과 전원 승인
+  //              필요). 하나라도 거부되면 전체 목표가 실패.
+  // 둘 다 없으면(batch_id 없음) 기존과 동일한 단일 제출로 처리한다 —
+  // 하위호환 유지, 이 필드들은 선택적이다.
+  const batchId = typeof body.batch_id === 'string' ? body.batch_id.slice(0, 100) : null;
+  const fanoutMode = ['notify', 'join'].includes(body.fanout_mode) ? body.fanout_mode : null;
   // ★ 2026-07-12 정정 — GOV_AGENCIES.has(agency) 검증을 제거했다.
   // GOV_AGENCIES는 /gov/relay의 라우팅·정체성 목록(public/jeju_do/
   // jeju_national/health/police 등)이고, 여기서 쓰는 agency는
@@ -5648,6 +5662,10 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
       documents_required: requiredDocs.map(d => d.id),
       documents_matched:  matchedDocs.map(d => ({ id: d.id, name: d.name, sha256: submitted.find(s => s.doc_id === d.id)?.sha256 })),
       documents_missing:  missingDocs.map(d => ({ id: d.id, name: d.name, acquisition: d.acquisition })),
+      // 2026-07-13 신설(#15) — 팬아웃 그룹 소속 여부. 둘 다 null이면
+      // 기존과 동일한 단일 제출.
+      batch_id: batchId,
+      fanout_mode: batchId ? fanoutMode : null,
     },
   };
 
@@ -5698,6 +5716,73 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
     task_name:  schema.task_name,
     documents_missing: missingDocs.map(d => ({ id: d.id, name: d.name, acquisition: d.acquisition })),
     pdv_id: pdvId,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// ── GOV_TASK 팬아웃 집계 조회 (2026-07-13 신설, #15) ──────────────────
+// batch_id로 묶인 모든 gov_task_submission을 모아 집계 상태를 낸다.
+// fanout_mode에 따라 집계 규칙이 다르다:
+//   notify — 각 건이 독립적. overall = 전부 accepted면 'complete',
+//            일부만 accepted면 'partial'(실패한 것만 재시도 대상),
+//            전부 pending_documents면 'in_progress'.
+//   join   — AND 조건. 하나라도 명시적으로 거부되면 overall='denied'
+//            (이 구현 범위에서 '거부'는 기관 측 별도 PATCH가 필요 —
+//            handleGovTaskSubmit 자체는 accepted/pending_documents만
+//            내므로, 실제 '거부' 판정은 이 조회 시점엔 아직 배선이
+//            없다 — KNOWN_LIMITATIONS에 명시). 전부 accepted여야만
+//            'complete'.
+async function handleGovTaskBatchStatus(bodyText, env, corsHeaders) {
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
+  const batchId = body?.batch_id;
+  if (!batchId) return _err(400, 'MISSING_FIELD', 'batch_id 필수', corsHeaders);
+
+  // pdv_records(L1)에서 type='gov_task_submission' + summary_6w 안의
+  // gov_task.batch_id 일치 건을 모은다. summary_6w가 JSON 문자열로
+  // 저장돼 있어 PocketBase filter로 직접 못 거르므로, guid로 1차
+  // 필터한 뒤 서버에서 JSON 파싱해 batch_id를 대조한다(guid 없이
+  // batch_id만으로 조회하면 전체 스캔이 되므로, guid도 함께 받는다).
+  const guid = body?.guid;
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수(batch_id만으로는 조회 범위가 너무 넓어짐)', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`guid='${guid}' && type='gov_task_submission'`);
+  const res = await fetch(
+    `${L1_DEFAULT}/api/collections/pdv_records/records?filter=${filter}&sort=-created&perPage=100`,
+    { headers: { 'Authorization': `Bearer ${token}` } },
+  ).catch(() => null);
+  if (!res || !res.ok) return _err(503, 'FETCH_FAILED', 'batch 조회 실패', corsHeaders);
+  const json = await res.json().catch(() => null);
+  const items = json?.items || [];
+
+  const members = [];
+  for (const it of items) {
+    let sw = null;
+    try { sw = JSON.parse(it.summary_6w); } catch { continue; }
+    const gt = sw?.gov_task;
+    if (!gt || gt.batch_id !== batchId) continue;
+    members.push({
+      agency: gt.agency, task_key: gt.task_key, task_name: gt.task_name,
+      status: gt.status, receipt_no: gt.receipt_no, created_at: it.created,
+      fanout_mode: gt.fanout_mode || null,
+    });
+  }
+
+  if (!members.length) return _err(404, 'BATCH_NOT_FOUND', `batch_id=${batchId}에 해당하는 제출 기록이 없습니다`, corsHeaders);
+
+  const fanoutMode = members[0].fanout_mode;
+  const acceptedCount = members.filter(m => m.status === 'accepted').length;
+  const total = members.length;
+
+  let overall;
+  if (acceptedCount === total) overall = 'complete';
+  else if (fanoutMode === 'join') overall = 'in_progress'; // join은 전원 완료 전까지 부분완료 개념이 없음(AND 조건)
+  else if (acceptedCount > 0) overall = 'partial';
+  else overall = 'in_progress';
+
+  return new Response(JSON.stringify({
+    ok: true, batch_id: batchId, total, accepted_count: acceptedCount,
+    overall_status: overall, members,
   }), { status: 200, headers: corsHeaders });
 }
 
