@@ -128,6 +128,13 @@ function _bridgeSecret(env) {
   return env.BRIDGE_SECRET || 'hondi-dev-bridge-2026';
 }
 
+// (2026-07-14: /api/ai-charge 인증용. MINT_SECRET/BRIDGE_SECRET과 동일
+//  관례 — 운영 전환 시 env.AI_CHARGE_SECRET(wrangler secret)으로 교체할
+//  것. main.pb.js의 AI_CHARGE_SECRET과 반드시 일치해야 한다.)
+function _aiChargeSecret(env) {
+  return env.AI_CHARGE_SECRET || 'hondi-dev-ai-charge-2026';
+}
+
 const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions';
 const DEEPSEEK_URL   = 'https://api.deepseek.com/v1/chat/completions';
 // OpenRouter — Worker 내부 AI 호출 (내부 Agent, 피드백 분류 등)
@@ -274,6 +281,109 @@ async function _recordFreeSpend(env, guid, usageKRW) {
       if (!existing) await kv.put(sinceKey, new Date().toISOString());
     }
   } catch (e) { console.warn('[FreeQuota] 기록 실패:', e.message); }
+}
+
+// (2026-07-14: /api/ai-charge와 동일 환율. 원본은 L1(main.pb.js)에
+//  있고 여기는 KRW↔GDC 환산을 위한 로컬 사본이다 — 두 값이 어긋나면
+//  게이트(사전 확인)와 실제 차감(L1)의 판정이 서로 달라질 수 있으므로,
+//  이 값을 바꿀 땐 반드시 main.pb.js의 EXCHANGE_RATE_KRW_PER_GDC도
+//  함께 바꿀 것. gwp-registry.js에 가격 갱신 배치를 넣을 때(SP-GDC-
+//  BILLING-v1.0 TODO 4-3) 이 상수도 그 배치가 갱신하도록 편입 검토.)
+const EXCHANGE_RATE_KRW_PER_GDC = 1000;
+
+// 무료 한도 소진 후, 이번 요청을 통과시켜도 되는지 사전 확인하기 위해
+// L1의 실제 GDC 잔액을 조회한다(SP-GDC-BILLING-v2_0 STEP 0 게이트웨이
+// 1단계 — v1.0의 "reserve_μT 홀드"까지는 아니지만, 원가 자체가 매우
+// 작아서(일반 대화 1턴 약 1~3원) 정밀 홀드 없이 "잔액이 최소 예약금
+// 이상인가"만 확인해도 실질적으로 안전하다는 게 v2.0에서 확정된 단순화
+// 트레이드오프다. 요청 크기가 커지는 티어(예: max_tokens가 큰 K-Law)가
+// 이 무료 한도 게이트를 타게 되면 이 단순화를 재검토해야 한다).
+async function _l1GetBalanceKRW(guid) {
+  try {
+    const res = await fetch(`${L1_DEFAULT}/api/balance?guid=${encodeURIComponent(guid)}`);
+    const data = await res.json().catch(() => null);
+    if (!data || !data.ok) return null;
+    return Number(data.balance || 0) * EXCHANGE_RATE_KRW_PER_GDC;
+  } catch (e) {
+    console.warn('[AiCharge] 잔액 조회 실패:', e.message);
+    return null;
+  }
+}
+
+// 요청 하나가 처리된 뒤, 실사용량(billedKRW)만큼 GDC 잔액에서 실제로
+// 차감한다(SP-GDC-BILLING-v2_0 STEP 3, L1 /api/ai-charge 호출).
+// /api/mint와 동일하게 서버 공유 비밀(secret)로만 인증한다 — 매 턴마다
+// 사용자 서명을 요구하는 건 UX상 불가능하고, 이 시점엔 이미 요청 주체가
+// (전화번호 인증 기반 세션으로) 확정돼 있으므로 이중 서명은 불필요한
+// 마찰이다. 실패해도(L1 연결 문제 등) 이미 끝난 채팅 응답을 되돌릴 수는
+// 없으므로 응답 자체는 막지 않는다 — 크게 로그를 남겨 STEP 6 월간
+// 정산 대사에서 추적해야 할 항목으로 남긴다. 다음 요청부터는 STEP-0
+// 게이트가 잔액을 다시 확인하므로, 이 차감이 실패해 잔액이 실제보다
+// 높게 남아있어도 무제한으로 새지는 않는다(다음 정산 대사에서 걸러짐).
+async function _chargeGdcForAiUsage(env, {
+  guid, krwAmount, serviceId, model, hitTokens, missTokens, outTokens, costKRW, memo,
+}) {
+  if (!guid || !(krwAmount > 0)) return null;
+  const txHash = 'aicharge-' + (crypto.randomUUID?.() || (Date.now() + '-' + Math.random().toString(36).slice(2)));
+  try {
+    const res = await fetch(`${L1_DEFAULT}/api/ai-charge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid, tx_hash: txHash, krw_amount: krwAmount,
+        service_id: serviceId || 'hondi-chat', model: model || '',
+        hit_tokens:  Math.round(hitTokens  || 0),
+        miss_tokens: Math.round(missTokens || 0),
+        out_tokens:  Math.round(outTokens  || 0),
+        cost_krw:    Math.round((costKRW || 0) * 100) / 100,
+        secret: _aiChargeSecret(env), memo: memo || '',
+      }),
+    });
+    const data = await res.json().catch(() => ({ ok: false, error: 'L1_PARSE_FAILED' }));
+    if (!data.ok) {
+      console.warn(JSON.stringify({
+        tag: 'AI_CHARGE_FAILED', guid, krwAmount, error: data.error, detail: data.detail,
+        ts: new Date().toISOString(),
+      }));
+      return data;
+    }
+    console.log(JSON.stringify({
+      tag: 'AI_CHARGE_OK', guid, krwAmount, chargedGdc: data.charged_gdc, balanceAfter: data.balance_after,
+      ts: new Date().toISOString(),
+    }));
+    return data;
+  } catch (e) {
+    console.warn('[AiCharge] L1 호출 실패:', e.message);
+    return { ok: false, error: 'L1_UNREACHABLE', detail: e.message };
+  }
+}
+
+// _recordAiUsage의 onAfterRecord에서 호출하는 정산 분기점. 한 요청의
+// billedKRW가 "남은 무료 한도"보다 많을 수 있으므로(예: 남은 무료 한도
+// 3원인데 이번 요청이 5원), 무료/유료 경계를 정확히 나눠 처리한다 —
+// 무료로 나가는 부분은 지금까지처럼 _recordFreeSpend(TTL 없는 평생
+// 누적)로, 그 초과분만 GDC 잔액에서 차감한다. 이렇게 해야 "가입자당
+// 평생 100원 무료"라는 약속이 요청 경계와 무관하게 정확히 지켜진다.
+async function _settleAiUsage(env, guid, bill, meta = {}) {
+  if (!guid || !bill) return;
+  const kv = env.AI_SETUP_SEALS_KV;
+  let spentBefore = 0;
+  if (kv) {
+    try { spentBefore = parseFloat(await kv.get(`hondi:free_spend:${guid}`) || '0'); } catch (e) { /* 조회 실패는 0원 소진으로 보수적 간주 */ }
+  }
+  const remainingFree = Math.max(FREE_QUOTA_KRW_LIMIT - spentBefore, 0);
+  const freePortion   = Math.min(bill.billedKRW, remainingFree);
+  const paidPortion   = bill.billedKRW - freePortion;
+
+  if (freePortion > 0) await _recordFreeSpend(env, guid, freePortion);
+  if (paidPortion > 0) {
+    await _chargeGdcForAiUsage(env, {
+      guid, krwAmount: paidPortion,
+      serviceId: meta.serviceId, model: meta.model,
+      hitTokens: meta.hitTokens, missTokens: meta.missTokens, outTokens: meta.outTokens,
+      costKRW: bill.apiCostKRW, memo: meta.memo,
+    });
+  }
 }
 
 // GET /free-quota-status?guid=... — 지금까지 쓴 무료 한도 금액 + 사용
@@ -3952,26 +4062,6 @@ function _isFieldVisible(fv, field) {
 
 function _filterProfileByVisibility({ address, phone, website, extra }) {
   const fv = extra?.public?.field_visibility || {};
-  const identity = extra?.public?.identity || {};
-  // 2026-07-14 신설 — 구멍 G 해결(AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_
-  // v2_0.md). 이 함수가 description/location/contact/products는 거르면서
-  // job_ksco·affiliation·work_domain은 아예 손대지 않고 있었다 — 즉
-  // job_ksco.visibility='private'로 저장해도 실제로는 타인 조회 시
-  // 그대로 다 보였다(코드 재확인으로 실제 결함 확정, "확인 필요"가
-  // 아니라 "결함 확인됨"으로 격상).
-  //
-  // job_ksco는 자체 3단계 visibility(private/contacts/public)가 있다 —
-  // 다만 "contacts"(지인) 등급을 판별할 관계 데이터가 이 시스템에
-  // 없으므로, 지금은 owner가 아니면 public일 때만 노출하고 나머지는
-  // 전부 가린다(private와 동일 취급 — 과다노출보다 과소노출이 안전).
-  const jobKscoVisible = identity.job_ksco?.visibility === 'public';
-  // affiliation·work_domain은 자체 visibility 필드가 없다 — 기존
-  // description과 동일하게 boolean field_visibility로 다룬다. 기본값은
-  // false(비공개) — is_public 기본 false, job_ksco 기본 private와
-  // 동일한 "기본 비공개" 원칙(AC-AUTHOR §6·AC-EVOLUTION §6 근거).
-  const affiliationVisible = fv.affiliation === true;
-  const workDomainVisible = fv.work_domain === true;
-
   const filteredExtra = extra ? {
     ...extra,
     public: extra.public ? {
@@ -3980,12 +4070,8 @@ function _filterProfileByVisibility({ address, phone, website, extra }) {
         : { ...extra.public.location, address_short: undefined, directions: undefined },
       contact: _isFieldVisible(fv, 'phone') ? extra.public.contact
         : { ...extra.public.contact, phone_display: undefined },
-      identity: {
-        ...(_isFieldVisible(fv, 'description') ? identity : { ...identity, description: undefined }),
-        job_ksco: jobKscoVisible ? identity.job_ksco : undefined,
-        affiliation: affiliationVisible ? identity.affiliation : undefined,
-        work_domain: workDomainVisible ? identity.work_domain : undefined,
-      },
+      identity: _isFieldVisible(fv, 'description') ? extra.public.identity
+        : { ...extra.public.identity, description: undefined },
       products: _isFieldVisible(fv, 'products') ? extra.public.products : undefined,
     } : extra.public,
   } : extra;
@@ -4890,23 +4976,46 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   // (2026-07-14: "가입자당 100원 무료 한도" 게이트. guid가 있다는 것 자체가
   //  가입자라는 뜻이므로(익명 모드 없음 — FREE_QUOTA_KRW_LIMIT 선언부 주석
   //  참조), 별도의 profiles 조회 없이 guid 존재만으로 자격을 인정한다.
-  //  100원을 다 쓴 뒤에는 실제 GDC 유료 차감이 아직 연결되어 있지 않으므로
-  //  (L1 /api/balance는 조회 전용) 명시적으로 차단한다 — "무료로 새는 것"도
-  //  "그냥 무제한 통과되는 것"도 아니라 "막히는 것"이 맞다. 실제 GDC 차감
-  //  엔드포인트가 생기면 이 분기를 그쪽 호출로 교체할 것(SP-GDC-BILLING
-  //  STEP 0/3, TODO 최우선 항목).
+  //  100원을 다 쓴 뒤에는 이제 GDC 유료 차감 파이프라인이 연결되어 있으므로
+  //  (L1 /api/ai-charge — SP-GDC-BILLING-v2_0 STEP 0/3) 즉시 차단하지
+  //  않고, 실제 GDC 잔액을 확인해 최소 예약금 이상이면 통과시킨다. 잔액도
+  //  부족하면 그때 비로소 차단한다 — "무료로 새는 것"도 "무제한 통과"도
+  //  아니라, 정확히 "낸 만큼만 쓸 수 있다"가 최종 상태다.)
   if (guid) {
     const kv = env.AI_SETUP_SEALS_KV;
     if (kv) {
       const spendKey = `hondi:free_spend:${guid}`;
       const spent = parseFloat(await kv.get(spendKey) || '0');
       if (spent >= FREE_QUOTA_KRW_LIMIT) {
-        console.warn(JSON.stringify({ tag: 'FREE_QUOTA_EXCEEDED', guid, spent, ts: new Date().toISOString(), ...meta }));
-        return new Response(JSON.stringify({
-          error: 'FREE_QUOTA_EXCEEDED',
-          message: `무료 한도(${FREE_QUOTA_KRW_LIMIT}원)를 모두 사용했습니다. GDC 유료 차감 시스템이 아직 연결되지 않아 추가 이용은 준비 중입니다.`,
-          spent_krw: Math.round(spent),
-        }), { status: 429, headers: corsHeaders });
+        // 무료 한도 소진 — STEP 0 2단계: GDC 잔액 확인. 일반 대화 1턴의
+        // 실제 원가는 대략 1~3원 수준(SP-GDC-BILLING-v1.0 STEP 2-3 계산
+        // 예시 참고)이므로, 최소 예약금 3원을 문턱값으로 둔다 — v1.0의
+        // 정밀 reserve_μT 홀드 대신 채택한 단순화(파일 상단 _l1GetBalanceKRW
+        // 주석 참고).
+        const AI_CHARGE_MIN_RESERVE_KRW = 3;
+        const balanceKRW = await _l1GetBalanceKRW(guid);
+        if (balanceKRW === null) {
+          // L1 잔액 조회 자체가 실패한 경우: 과금 상태를 확인할 수 없는
+          // 채로 통과시키면 무제한 무료로 새는 것과 같으므로, 안전하게
+          // 차단한다(무료 한도 소진 전 정상 이용에는 영향 없음 — 이 분기는
+          // 애초에 100원을 다 쓴 뒤에만 탄다).
+          console.warn(JSON.stringify({ tag: 'GDC_BALANCE_CHECK_FAILED', guid, ts: new Date().toISOString(), ...meta }));
+          return new Response(JSON.stringify({
+            error: 'GDC_BALANCE_CHECK_FAILED',
+            message: '잔액 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+          }), { status: 502, headers: corsHeaders });
+        }
+        if (balanceKRW < AI_CHARGE_MIN_RESERVE_KRW) {
+          console.warn(JSON.stringify({ tag: 'GDC_INSUFFICIENT_BALANCE', guid, spent, balanceKRW, ts: new Date().toISOString(), ...meta }));
+          return new Response(JSON.stringify({
+            error: 'GDC_INSUFFICIENT_BALANCE',
+            message: `무료 한도(${FREE_QUOTA_KRW_LIMIT}원)를 모두 사용했고 GDC 잔액도 부족합니다. GDC를 충전한 뒤 다시 이용해 주세요.`,
+            spent_krw: Math.round(spent),
+            balance_krw: Math.round(balanceKRW),
+          }), { status: 402, headers: corsHeaders });
+        }
+        // 잔액 충분 — 통과. 실제 차감은 이번 요청의 실사용량이 확정된
+        // 뒤(_recordAiUsage → _settleAiUsage → /api/ai-charge)에 일어난다.
       }
     }
   }
@@ -4928,7 +5037,13 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
       const usageTask = _parseUsageFromStream(forUsage).then(usage => _recordAiUsage(env, ctx, {
         guid, serviceId: 'hondi-chat', tier: spendTier, priceTier: spendTier, model: backendModel, usage,
         logTag: 'HONDI_CHAT_COST', extraLogFields: meta,
-        onAfterRecord: bill => _recordFreeSpend(env, guid, bill.billedKRW),
+        // (2026-07-14: 무료 한도 100원을 넘는 사용량은 이제 GDC 잔액에서
+        //  실제로 차감된다 — _settleAiUsage가 무료/유료 경계를 나눠 처리)
+        onAfterRecord: bill => _settleAiUsage(env, guid, bill, {
+          serviceId: 'hondi-chat', model: backendModel,
+          hitTokens: usage?.prompt_cache_hit_tokens, missTokens: usage?.prompt_cache_miss_tokens,
+          outTokens: usage?.completion_tokens,
+        }),
       }));
       if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
       return new Response(forClient,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});
@@ -4940,7 +5055,11 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
     _recordAiUsage(env, ctx, {
       guid, serviceId: 'hondi-chat', tier: spendTier, priceTier: spendTier, model: backendModel, usage: data.usage,
       logTag: 'HONDI_CHAT_COST', extraLogFields: meta,
-      onAfterRecord: bill => _recordFreeSpend(env, guid, bill.billedKRW),
+      onAfterRecord: bill => _settleAiUsage(env, guid, bill, {
+        serviceId: 'hondi-chat', model: backendModel,
+        hitTokens: data.usage?.prompt_cache_hit_tokens, missTokens: data.usage?.prompt_cache_miss_tokens,
+        outTokens: data.usage?.completion_tokens,
+      }),
     });
   }
   if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}
@@ -8571,13 +8690,6 @@ async function handleProfilePost(request, env, corsHeaders) {
     // 가능하다. 자기 신고만으로 권한이 생기면 안 된다는 게 AC-EVOLUTION
     // §3의 핵심 결론이었다.
     affiliation = null,
-    // 2026-07-14 신설 — AC-EVOLUTION_v1_1.md §1(업무 도메인, 전 직종
-    // 일반화). job_ksco(KSCO)만으로는 학생·은퇴자·전업주부·무직을
-    // 표현할 수 없다(KSCO 자체가 "경제활동"만 분류하도록 설계됨) —
-    // 이 필드가 그 상위 개념이다(AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_
-    // v2_0.md 구멍 D 해결). job_ksco와 독립적으로 병존 — 학생은
-    // work_domain.status='student'만 있고 job_ksco는 없다.
-    work_domain = null,
     // 2026-07-13 신설 — products_structured가 여태 이 함수 destructure에
     // 없어 저장 경로 자체가 없었다(실사로 발견 — welcome.js
     // _forwardProductsToMarket()이 Market의 seller_products로는 보냈지만,
@@ -8719,18 +8831,12 @@ async function handleProfilePost(request, env, corsHeaders) {
   // data/ksco_2024_v8.json으로 조회해 채운 값을 신뢰하고 서버는 재검증하지
   // 않는다 — U2(불확실 식별자 지어내지 않기) 준수는 "LLM이 label을 직접
   // 짓지 않는다"는 클라이언트 측 규칙(personal-assistant SP)으로 담보한다.
-  // 2026-07-14 수정(사고실험 구멍 B 해결) — 이전엔 entity_type==='person'
-  // 일 때만 처리했는데, 이건 AC-AUTHOR §3-2("한 사람이 사업자이면서
-  // 동시에 직업 정체성을 가질 수 있다 — 카페 사장이자 바리스타, job_ksco
-  // 와 occupation(KSIC)이 독립적으로 병존")를 실제로 막고 있던 구현
-  // 결함이었다(AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_v2_0.md 구멍 B).
-  // business도 job_ksco를 가질 수 있게 게이트를 넓힌다 — occupation
-  // (KSIC, industry_fields.schema_id)과는 완전히 별개 필드이므로 서로
-  // 자동 파생하거나 덮어쓰지 않는다(§3-2 그대로).
+  // entity_type이 person이 아닌데 job_ksco가 오면 무시한다(기관/사업자는
+  // industry_fields·occupation(KSIC) 몫 — §3-2 병존 원칙).
   const KSCO_CODE_RE = /^[0-9A][0-9]{0,4}$/;
   const KSCO_VISIBILITY = new Set(['private', 'contacts', 'public']);
   let resolvedJobKsco = null;
-  if ((entity_type === 'person' || entity_type === 'business') && job_ksco && typeof job_ksco === 'object') {
+  if (entity_type === 'person' && job_ksco && typeof job_ksco === 'object') {
     const code = job_ksco.code != null ? String(job_ksco.code) : null;
     if (code === null || KSCO_CODE_RE.test(code)) {
       resolvedJobKsco = {
@@ -8783,39 +8889,6 @@ async function handleProfilePost(request, env, corsHeaders) {
     }).filter(a => a.org_id);
   }
 
-  // 2026-07-14 신설 — work_domain 검증(AC-EVOLUTION_v1_1.md §1, 구멍 D).
-  // status는 고정 enum만 허용 — LLM이 자유 문자열을 지어내 넣지
-  // 못하게 막는다(U2와 동일 원칙). job_ksco와 달리 검증 절차가 없는
-  // 것은 동일하다(자기신고) — 다만 이 필드는 "안전 판단을 낮추는"
-  // 위험군이 아니라 순수 맥락 정보라 §0-1-R의 C30 교차참조가 굳이
-  // 필요 없다(고용 상태 자체가 전문성 주장이 아니므로).
-  const WORK_DOMAIN_STATUS = new Set([
-    'employed_public', 'employed_private', 'self_employed',
-    'student', 'retired', 'homemaker', 'unemployed', 'other',
-  ]);
-  let resolvedWorkDomain = null;
-  if (entity_type === 'person' && work_domain && typeof work_domain === 'object') {
-    const prevWd = (prevExtra.public || {}).identity?.work_domain || null;
-    if (WORK_DOMAIN_STATUS.has(work_domain.status)) {
-      const statusChanged = !prevWd || prevWd.status !== work_domain.status;
-      resolvedWorkDomain = {
-        status: work_domain.status,
-        // active 기본값: 재직/자영업/학생은 true, 은퇴·무직은 명시 안
-        // 하면 false로 안전하게 기본 처리(신규 데이터 적재를 막는 쪽이
-        // "은퇴자인데 계속 적재됨"보다 안전 — AC-EVOLUTION §1과 동일 사상).
-        active: typeof work_domain.active === 'boolean'
-          ? work_domain.active
-          : !['retired', 'unemployed'].includes(work_domain.status),
-        // 상태가 바뀐 시점만 갱신 — 같은 status를 매번 다시 제출해도
-        // status_since가 오늘로 계속 밀리지 않게 한다(job_ksco의
-        // confirmed_at과 다른 설계 — 이건 "언제부터"가 의미 있는 값).
-        status_since: statusChanged ? new Date().toISOString().slice(0, 10) : (prevWd?.status_since || new Date().toISOString().slice(0, 10)),
-      };
-    }
-    // status가 enum 밖이면 조용히 무시(§0 U0: 실패보다 진행 — job_ksco
-    // 코드 형식 오류 처리와 동일 관례).
-  }
-
   const newExtraPublic = {
     ...(prevExtra.public || {}),
     identity: {
@@ -8824,7 +8897,6 @@ async function handleProfilePost(request, env, corsHeaders) {
       // 'job_ksco' in body로 "안 보냄(기존값 보존)"과 "null 명시(비움)"를 구분.
       job_ksco: ('job_ksco' in body) ? resolvedJobKsco : ((prevExtra.public || {}).identity?.job_ksco ?? null),
       affiliation: ('affiliation' in body) ? resolvedAffiliation : ((prevExtra.public || {}).identity?.affiliation ?? null),
-      work_domain: ('work_domain' in body) ? resolvedWorkDomain : ((prevExtra.public || {}).identity?.work_domain ?? null),
     },
     activity: { timezone: 'Asia/Seoul', hours, holidays },
     contact:  { phone_display: phone, phone_visible: !!phone_visible, website, sns_public, languages_spoken },

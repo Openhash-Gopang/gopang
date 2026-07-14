@@ -431,8 +431,6 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[SHARE_DOC_REJECTED\]/g, '')          // 공유문서 거부 태그
   .replace(/\[PANEL_ACTION:close\]/g, '')      // AI 패널 닫기 지시 태그 (2026-07-02 신설)
   .replace(/\[PDV_DOMAIN_SET:[^\]]*\]/g, '')    // PDV 일상/업무 전환 태그 (2026-07-13 신설)
-  .replace(/\[JOB_KSCO_REVIEWED\]/g, '')        // job_ksco 재확인 완료 태그 (2026-07-14 신설, 구멍 E)
-  .replace(/\[JOB_KSCO_REVIEW_DUE:[\s\S]*?\]/g, '')  // 방어적 — 정상 경로는 컨텍스트 주입용, AI가 실수로 에코하면 제거
   .replace(/\[GWP:\s*[\w-]+\]/g, '')           // 하위 시스템 라우팅 태그 (방어적 — 정상 경로는 _parseAgentTags가 처리)
   .replace(/\[EXPERT:\s*[@\w-]+\]/g, '')       // 전문가 세션 라우팅 태그 (방어적 — 정상 경로는 handleExpertTag가 처리)
   // 2026-07-07 신설 — 아래 5개는 이전부터 _parseAgentTags가 실제 동작은
@@ -538,23 +536,6 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI, use
   // ── PDV_REVIEWED — 주기적 PDV 검토 완료 기록 (2026-07-13 신설) ──
   if (fullReply.includes('[PDV_REVIEWED]')) {
     try { localStorage.setItem('hondi_pdv_review_last', new Date().toISOString()); } catch {}
-  }
-
-  // ── JOB_KSCO_REVIEWED — job_ksco 재확인 완료 기록 (2026-07-14 신설, 구멍 E) ──
-  // review_due 자체도 +30일로 미뤄둔다(AC-AUTHOR §7과 동일 주기) — 서버
-  // PROFILE_SUBMIT이 다음에 올 때까지는 로컬 캐시만 갱신, 서버 값은
-  // 다음 정식 저장 때 반영된다(이 태그 자체는 "재확인을 시도했다"는
-  // 기록일 뿐 job_ksco 내용 자체를 바꾸지 않음 — 내용 변경은 여전히
-  // [PARTIAL_SAVE]의 몫).
-  if (fullReply.includes('[JOB_KSCO_REVIEWED]')) {
-    try {
-      localStorage.setItem('hondi_job_ksco_review_last', new Date().toISOString());
-      const partial = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}');
-      if (partial.job_ksco) {
-        partial.job_ksco.review_due = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
-        localStorage.setItem('hondi_profile_partial', JSON.stringify(partial));
-      }
-    } catch {}
   }
 
   // ── SHARE_DOC_CONFIRMED/REJECTED — 정부24 공유문서 확인 완료(2026-07-09) ──
@@ -1943,44 +1924,6 @@ function _pdvReviewIntervalDays() {
   return 30;                     // 1년 이후: 매월
 }
 
-// ══════════════════════════════════════════════════════════
-// job_ksco 재확인 트리거 (2026-07-14 신설 — 구멍 E 해결)
-// ══════════════════════════════════════════════════════════
-// AC-AUTHOR §7이 job_ksco.review_due를 만들어뒀지만, 위
-// _buildPdvReviewContext()는 "프로필이 아직 미완성인 사용자"만
-// 대상으로 하는(hondi_profile_done==='1'이면 즉시 return) 온보딩
-// 완료 유도용 메커니즘이라 job_ksco의 "시간이 지나 오래된 정보"
-// 문제와는 대상 집단이 정반대다(오래돼서 review_due가 지나는 건
-// 이미 프로필을 완성한 지 오래된 사용자에게나 일어난다). 그래서
-// 독립적인 함수로 새로 만든다 — 프로필 완성 여부와 무관하게 동작.
-function _buildJobKscoReviewContext() {
-  try {
-    let partial = {};
-    try { partial = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}'); } catch {}
-    const jobKsco = partial.job_ksco || window.__hondiOwnProfileCache?.job_ksco || null;
-    if (!jobKsco?.review_due) return ''; // review_due 자체가 없으면(아직 한 번도 승인/작성 안 됨) 대상 아님
-    if (new Date(jobKsco.review_due) >= new Date()) return ''; // 아직 안 지남
-
-    // 쿨다운 — PDV_REVIEW_DUE와 별개 타이머. 매 턴 물어보면 피곤하므로
-    // 최소 14일 간격(임의값 — job_ksco 자체가 자주 안 바뀌는 정보라
-    // PDV 검토(1~30일)보다 더 여유 있게 잡음).
-    let lastAsked = null;
-    try { lastAsked = localStorage.getItem('hondi_job_ksco_review_last'); } catch {}
-    if (lastAsked && (Date.now() - new Date(lastAsked).getTime()) < 14 * 86400000) return '';
-
-    return (
-      `[JOB_KSCO_REVIEW_DUE: 저장된 직업 정보("${jobKsco.label || '미상'}")의 ` +
-      `재확인 시점이 지났습니다. 이번 응답 끝에 자연스럽게 "여전히 같은 일을 ` +
-      `하고 계세요?" 류로 한 번만 가볍게 물어보십시오(강요하지 않음, 지금 대화` +
-      `흐름과 전혀 안 맞으면 이번엔 생략해도 됩니다). 사용자가 답하면(계속 ` +
-      `같은 일이든, 바뀌었든) [PARTIAL_SAVE]로 job_ksco를 갱신하십시오. 답하지` +
-      ` 않거나 이번 턴에 안 물어봤어도, 이번 응답 끝에 [JOB_KSCO_REVIEWED]를` +
-      ` 출력해 검토 시도를 기록하십시오(다음 재확인 시점 계산용, 사용자에게는` +
-      ` 안 보이는 내부 태그).]\n\n`
-    );
-  } catch { return ''; }
-}
-
 export function _buildPdvReviewContext() {
   try {
     // 프로필이 이미 완성된 사용자는 이 트리거 대상이 아니다(§0-1-P[6]의
@@ -2118,12 +2061,8 @@ async function _loadOwnJobContext() {
     const res = await fetch(`https://hondi-proxy.tensor-city.workers.dev/profile?${qs.toString()}`, { cache: 'no-cache' });
     const data = await res.json().catch(() => null);
     const identity = data?.extra?.public?.identity;
-    if (identity && (identity.job_ksco || identity.affiliation || identity.work_domain)) {
-      window.__hondiOwnProfileCache = {
-        job_ksco: identity.job_ksco || null,
-        affiliation: identity.affiliation || null,
-        work_domain: identity.work_domain || null, // 2026-07-14 신설(구멍 D)
-      };
+    if (identity && (identity.job_ksco || identity.affiliation)) {
+      window.__hondiOwnProfileCache = { job_ksco: identity.job_ksco || null, affiliation: identity.affiliation || null };
     }
 
     // 2026-07-14 신설 — 나에게 배정된 STAFF_TASK_QUEUE 작업 확인
@@ -2209,7 +2148,6 @@ async function _buildEnhancedUserContent(userContent) {
     try { partial = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}'); } catch {}
     const jobKsco = partial.job_ksco || window.__hondiOwnProfileCache?.job_ksco || null;
     const affiliation = partial.affiliation || window.__hondiOwnProfileCache?.affiliation || null;
-    const workDomain = partial.work_domain || window.__hondiOwnProfileCache?.work_domain || null;
     if (jobKsco?.label) parts.push(`직업:${jobKsco.label}`);
     if (Array.isArray(affiliation) && affiliation.length) {
       const affStr = affiliation
@@ -2217,19 +2155,6 @@ async function _buildEnhancedUserContent(userContent) {
         .map(a => `${a.org_id}${a.verified ? '' : '(승인대기)'}`)
         .join(', ');
       if (affStr) parts.push(`소속:${affStr}`);
-    }
-    // 2026-07-14 신설 — work_domain(구멍 D). job_ksco가 못 잡는
-    // 학생·은퇴자·전업주부·무직을 여기서 보완한다. WORK_DOMAIN_LABEL_KO
-    // 매핑은 AGENT-COMMON이 아니라 여기서 해둔다 — 태그 자체를 한국어
-    // 값으로 넘기면 AGENT-COMMON 쪽 파싱 부담이 준다.
-    if (workDomain?.status) {
-      const WORK_DOMAIN_LABEL_KO = {
-        employed_public: '공공부문 재직', employed_private: '민간부문 재직',
-        self_employed: '자영업', student: '학생', retired: '은퇴',
-        homemaker: '전업주부', unemployed: '구직 중', other: '기타',
-      };
-      const label = WORK_DOMAIN_LABEL_KO[workDomain.status] || workDomain.status;
-      parts.push(`업무상태:${label}${workDomain.active === false ? '(비활성)' : ''}`);
     }
     // 2026-07-14 신설 — 배정된 작업 안내(사고실험 구멍 C 해결). 사람이
     // 아니라 그 사람 소속 부서가 게시한 작업이 있으면, AC가 §0-1-Q
@@ -2276,12 +2201,9 @@ async function _buildEnhancedUserContent(userContent) {
   // 1회성(이번엔 "주기적 1회") 트리거 패턴.
   const pdvReviewBlock = _buildPdvReviewContext();
 
-  // job_ksco 재확인(2026-07-14 신설, 구멍 E) — 위와 별개 타이머·대상.
-  const jobKscoReviewBlock = _buildJobKscoReviewContext();
+  if (!parts.length && !firstContact && !faqBlock && !integrityBlock && !shareBlock && !pdvReviewBlock) return userContent;
 
-  if (!parts.length && !firstContact && !faqBlock && !integrityBlock && !shareBlock && !pdvReviewBlock && !jobKscoReviewBlock) return userContent;
-
-  const ctxBlock = integrityBlock + shareBlock + pdvReviewBlock + jobKscoReviewBlock + firstContact + faqBlock + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
+  const ctxBlock = integrityBlock + shareBlock + pdvReviewBlock + firstContact + faqBlock + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
 
   // multipart(이미지 포함) 메시지 처리
   if (Array.isArray(userContent)) {
@@ -3366,9 +3288,21 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     }
     const existingBubble = document.querySelector('.bubble-ai.streaming');
     let userMsg = `⚠️ API 오류: ${err.message}`;
-    const _isQuotaMsg = err.message.includes('402') || err.message.includes('Insufficient Balance') ||
-      err.message.includes('FREE_QUOTA_EXCEEDED');
-    if (_isQuotaMsg) {
+    // (2026-07-14: SP-GDC-BILLING-v2_0 파이프라인 연결 — 무료 한도(100원)
+    //  소진과 "GDC 잔액도 부족해 최종 차단"을 구분해서 안내한다. 전자는
+    //  본인 AI 키 등록으로 우회 가능하지만, 후자는 GDC 충전이 필요하다는
+    //  점이 달라 안내 문구/버튼도 다르게 준다.)
+    const _isBalanceMsg = err.message.includes('GDC_INSUFFICIENT_BALANCE');
+    const _isQuotaMsg = !_isBalanceMsg && (err.message.includes('402') || err.message.includes('Insufficient Balance') ||
+      err.message.includes('FREE_QUOTA_EXCEEDED'));
+    if (_isBalanceMsg) {
+      userMsg =
+        '💳 무료로 제공되는 100원어치 AI 사용량을 모두 사용했고, GDC 잔액도 부족해요.<br>' +
+        'GDC를 충전한 뒤 다시 이용해 주세요.<br>' +
+        '<button onclick="window.location.href=\'usage.html\'" ' +
+        'style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;' +
+        'background:#1A73E8;color:#fff;font-weight:600;cursor:pointer">내 GDC 잔액 확인하기</button>';
+    } else if (_isQuotaMsg) {
       // BUG FIX(2026-07-01): 이전엔 사용자 키 미등록 시 대화창을 벗어나
       // ai-setup-mobile.html로 강제 이동시켰다 — 가입 직후 강제 LLM 설정
       // 이동을 없앤 것과 정면으로 모순되는 잔재였다. deepseek-default(혼디
@@ -3376,7 +3310,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
       // 건 "무료 한도까지 다 썼다"는 뜻이다. 페이지 이동 없이 대화창 안에서
       // 안내하고, 설정으로 가는 버튼만 제공한다.
       userMsg =
-        '🔑 무료로 제공되는 1,000원어치 AI 사용량을 모두 사용했어요.<br>' +
+        '🔑 무료로 제공되는 100원어치 AI 사용량을 모두 사용했어요.<br>' +
         '설정에서 본인의 AI 키를 등록하시면 제한 없이 계속 쓰실 수 있어요.<br>' +
         '<button onclick="window.openAISettings && window.openAISettings()" ' +
         'style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;' +

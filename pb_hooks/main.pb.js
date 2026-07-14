@@ -34,10 +34,19 @@ routerAdd("POST", "/api/tx", (c) => {
   if (!keyRecord) return c.json(403, { ok: false, error: "UNREGISTERED_KEY" });
 
   // 3단계: 블록 조회
+  // (2026-07-14: buyer_guid만으로 필터링하던 걸 block_type==="tx_2party"로
+  //  한정했다 — /api/ai-charge 신설로 buyer_guid가 실사용자 guid인
+  //  "ai_usage_charge" 타입 블록이 생기기 시작했는데, 이 블록들은 P2P
+  //  정산 체인(prev_settle_hash 연쇄)과 무관한 별도 계열이다. 한정하지
+  //  않으면 AI 사용량 차감이 P2P 거래보다 늦게(혹은 먼저) 일어났을 때
+  //  이 STALE_STATE 판정이 AI 차감 블록을 "직전 정산"으로 오인해, 클라
+  //  이언트가 실제로는 최신인 prev_settle_hash를 보내도 거부당하는
+  //  회귀가 생긴다. 같은 이유로 아래 /api/balance의 동일 필터도 함께
+  //  고쳤다 — SP-GDC-BILLING-v2_0 STEP 0/3 파이프라인 연결 작업.)
   let latestBlock = null;
   try {
     const allBlocks = $app.dao().findRecordsByFilter("blocks", "block_type != ''", "-height", 1000, 0);
-    const buyerBlocks = allBlocks.filter(r => r.getString("buyer_guid") === owner_guid);
+    const buyerBlocks = allBlocks.filter(r => r.getString("buyer_guid") === owner_guid && r.getString("block_type") === "tx_2party");
     if (buyerBlocks.length > 0) latestBlock = buyerBlocks[0];
   } catch(e) { console.log("[TX] 3단계 예외:", e.message); }
 
@@ -535,6 +544,218 @@ routerAdd("POST", "/api/mint", (c) => {
     return c.json(500, { ok: false, error: "MINT_EXCEPTION", detail: e.message || String(e) });
   }
 });
+// ── 2026-07-14 신설: AI 사용량 GDC 차감 (SP-GDC-BILLING-v2_0 STEP 0/3,
+// TODO 1 최우선 항목 구현) ───────────────────────────────────────────
+// worker.js가 가입자당 평생 100원 무료 한도(FREE_QUOTA_KRW_LIMIT)를 다
+// 쓴 뒤, 실제 AI 사용량이 확정된 시점(_recordAiUsage의 onAfterRecord →
+// _settleAiUsage)에 이 엔드포인트를 호출해 GDC 잔액에서 초과분만 정확히
+// 차감한다.
+//
+// /api/mint와 동일하게 사용자 서명(buyer_sig) 없이 서버 공유 비밀
+// (AI_CHARGE_SECRET)로만 인증한다 — 매 채팅 턴마다 사용자에게 서명을
+// 요구하는 건 UX상 불가능하고(카드사가 매 결제마다 서명을 요구하지
+// 않듯, 이미 가입 시점의 인증으로 신원이 확정된 뒤의 종량 청구다),
+// worker.js가 이미 guid의 실제 요청 소유자를 인증(전화번호 기반 세션)한
+// 뒤에만 이 경로를 호출하므로 이중 서명은 불필요한 마찰이다.
+//
+// ⚠️ AI_CHARGE_SECRET은 MINT_SECRET/BRIDGE_SECRET과 같은 임시 개발용
+// 공유 비밀이다 — 실서비스 전환 전 반드시 제거하거나 진짜 인증(mTLS,
+// Cloudflare Worker 전용 서명 등)으로 교체할 것.
+//
+// 멱등성: tx_hash(worker.js가 요청 단위로 crypto.randomUUID()로 생성)로
+// 중복 차감을 막는다 — ctx.waitUntil 재시도나 네트워크 재시도로 같은
+// 사용량이 두 번 청구되는 걸 방지.
+//
+// ⚠️ ai_usage_charge 블록은 buyer_guid를 실사용자 guid로 둔다 — 잔액을
+// 실제로 깎으려면 computeBalance 공식상(buyer_guid 일치 시 outputs 합계
+// 차감) 불가피하다. 이 때문에 /api/tx·/api/balance의 "P2P 정산 체인"
+// 판정이 이 블록까지 자기 체인으로 오인하지 않도록, 두 곳 모두
+// block_type==="tx_2party"로 필터를 한정하는 수정을 이 커밋에서 함께
+// 적용했다(파일 위쪽 해당 주석 참고) — AI 차감 블록은 P2P 정산 체인과
+// 완전히 무관한 별도 계열이어야 한다.
+routerAdd("POST", "/api/ai-charge", (c) => {
+  const EXCHANGE_RATE_KRW_PER_GDC = 1000; // /api/mint와 동일 환율(정본은 그쪽 — 콜백마다 재선언 필요, Goja 제약 상단 주석 참고)
+
+  try {
+    console.log("[AI-CHARGE] 진입");
+    const body = $apis.requestInfo(c).data;
+    const {
+      guid, tx_hash, krw_amount, secret,
+      service_id, model, hit_tokens, miss_tokens, out_tokens, cost_krw, memo,
+    } = body;
+
+    const AI_CHARGE_SECRET = "hondi-dev-ai-charge-2026"; // 콜백 내부 선언 — MINT_SECRET과 동일 관례
+    if (secret !== AI_CHARGE_SECRET) {
+      console.log("[AI-CHARGE] secret 불일치");
+      return c.json(403, { ok: false, error: "FORBIDDEN" });
+    }
+    if (!guid || !tx_hash) {
+      return c.json(400, { ok: false, error: "MISSING_FIELD", detail: "guid, tx_hash 필수" });
+    }
+    if (!(Number(krw_amount) > 0)) {
+      return c.json(400, { ok: false, error: "INVALID_AMOUNT", detail: "krw_amount는 0보다 커야 합니다" });
+    }
+    const krwAmount = Number(krw_amount);
+    const gdcAmount = krwAmount / EXCHANGE_RATE_KRW_PER_GDC;
+    console.log("[AI-CHARGE] 검증 통과, guid:", guid, "gdc:", gdcAmount, "krw:", krwAmount);
+
+    // ── 멱등성 확인: 같은 tx_hash로 이미 차감된 적 있으면 그 결과를 그대로 반환 ──
+    // (P12 필터 버그 회피 관례에 따라, 좁은 필터 문자열 대신 넓게 가져와
+    //  JS 쪽에서 걸러낸다 — 파일 상단 P12 관련 기존 주석과 동일 패턴.)
+    let already = null;
+    try {
+      const recent = $app.dao().findRecordsByFilter("blocks", "block_type != ''", "-created", 5000, 0);
+      already = recent.find(r => r.getString("block_type") === "ai_usage_charge" && r.getString("tx_hash") === tx_hash) || null;
+    } catch (e) { console.log("[AI-CHARGE] 멱등성 조회 예외(무시하고 진행):", e.message); }
+    if (already) {
+      console.log("[AI-CHARGE] 이미 처리된 tx_hash, 중복 차감 방지:", tx_hash);
+      return c.json(200, {
+        ok: true, already_charged: true,
+        block_id: already.getId(), content_hash: already.getString("content_hash"),
+      });
+    }
+
+    // computeBalance — /api/tx와 동일 로직(콜백마다 따로 선언, Goja 제약)
+    function computeBalance(g) {
+      const allBlocks = $app.dao().findRecordsByFilter("blocks", "block_type != ''", "", 10000, 0);
+      let balance = 0;
+      for (const b of allBlocks) {
+        let blkOutputs;
+        try { blkOutputs = JSON.parse(b.getString("outputs") || "[]"); } catch (e) { continue; }
+        for (const o of blkOutputs) {
+          if (o.recipient_guid === g) balance += (o.amount || 0);
+        }
+        if (b.getString("buyer_guid") === g) {
+          const total = blkOutputs.reduce((s, o) => s + (o.amount || 0), 0);
+          balance -= total;
+        }
+      }
+      return balance;
+    }
+
+    const actualBalance = computeBalance(guid);
+    if (actualBalance < gdcAmount) {
+      console.log("[AI-CHARGE] 잔액 부족:", actualBalance, "<", gdcAmount);
+      return c.json(402, {
+        ok: false, error: "INSUFFICIENT_BALANCE",
+        detail: `GDC 잔액 부족: 보유 ${actualBalance}T < 필요 ${gdcAmount}T`,
+        balance_gdc: actualBalance, required_gdc: gdcAmount,
+      });
+    }
+
+    function sha256hex(str) {
+      const mathPow = Math.pow;
+      const maxWord = mathPow(2, 32);
+      let result = '';
+      const words = [];
+      const asciiBitLength = str.length * 8;
+      let hash = [], k = [];
+      let primeCounter = 0;
+      const isComposite = {};
+      for (let candidate = 2; primeCounter < 64; candidate++) {
+        if (!isComposite[candidate]) {
+          for (let i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+          hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+          k[primeCounter++] = (mathPow(candidate, 1/3) * maxWord) | 0;
+        }
+      }
+      let s = str + '\x80';
+      while (s.length % 64 - 56) s += '\x00';
+      for (let i = 0; i < s.length; i++) {
+        const j = s.charCodeAt(i);
+        if (j >> 8) return '';
+        words[i >> 2] |= j << ((3 - i) % 4) * 8;
+      }
+      words[words.length] = ((asciiBitLength / maxWord) | 0);
+      words[words.length] = (asciiBitLength | 0);
+      for (let j = 0; j < words.length;) {
+        const w = words.slice(j, j += 16);
+        const oldHash = hash.slice(0);
+        for (let i = 0; i < 64; i++) {
+          const w15 = w[i-15], w2 = w[i-2];
+          const a = hash[0], e = hash[4];
+          const temp1 = hash[7]
+            + ((e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7))
+            + ((e & hash[5]) ^ (~e & hash[6]))
+            + k[i]
+            + (w[i] = (i < 16) ? w[i] : (
+              w[i-16]
+              + ((w15 >>> 7 | w15 << 25) ^ (w15 >>> 18 | w15 << 14) ^ (w15 >>> 3))
+              + w[i-7]
+              + ((w2 >>> 17 | w2 << 15) ^ (w2 >>> 19 | w2 << 13) ^ (w2 >>> 10))
+            ) | 0);
+          const temp2 = ((a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10))
+            + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+          hash = [(temp1+temp2)|0].concat(hash);
+          hash[4] = (hash[4]+temp1)|0;
+          hash.length = 8;
+        }
+        hash = hash.map((v,i) => (v+oldHash[i])|0);
+      }
+      hash.forEach(val => {
+        for (let i = 3; i+1; i--) {
+          const byte = (val>>(i*8))&255;
+          result += ((byte<16)?'0':'') + byte.toString(16);
+        }
+      });
+      return result;
+    }
+
+    const contentHash = sha256hex("aicharge:" + guid + ":" + tx_hash + ":" + Date.now());
+
+    const col = $app.dao().findCollectionByNameOrId("blocks");
+    const blockRecord = new Record(col);
+    blockRecord.set("block_type",       "ai_usage_charge");
+    blockRecord.set("tx_hash",          tx_hash);
+    blockRecord.set("buyer_guid",       guid);
+    blockRecord.set("seller_guid",      "gopang-platform");
+    blockRecord.set("buyer_sig",        "");
+    blockRecord.set("outputs", JSON.stringify([{
+      recipient_guid: "gopang-platform",
+      amount:          gdcAmount,
+      krw_amount:      krwAmount,
+      exchange_rate:   EXCHANGE_RATE_KRW_PER_GDC,
+      service_id:      service_id || "hondi-chat",
+      model:           model || "",
+      hit_tokens:      hit_tokens  || 0,
+      miss_tokens:     miss_tokens || 0,
+      out_tokens:      out_tokens  || 0,
+      cost_krw:        cost_krw || 0,
+      memo:            memo || "",
+    }]));
+    // (deposit 블록과 동일 관례: P2P 정산 체인과 무관하므로
+    //  prev_block_hash/prev_settle_hash는 비워두고 height는 0으로 둔다.
+    //  위에서 이미 buyerBlocks 필터를 tx_2party로 한정했으므로 이 블록이
+    //  누군가의 "직전 정산"으로 오인될 일은 없다.)
+    blockRecord.set("prev_block_hash",  "");
+    blockRecord.set("content_hash",     contentHash);
+    blockRecord.set("height",           0);
+    blockRecord.set("prev_settle_hash", "");
+
+    try {
+      $app.dao().saveRecord(blockRecord);
+    } catch (e) {
+      console.log("[AI-CHARGE] BLOCK_SAVE_FAILED:", e.message);
+      return c.json(500, { ok: false, error: "BLOCK_SAVE_FAILED", detail: e.message });
+    }
+
+    const balanceAfter = actualBalance - gdcAmount;
+    console.log("[AI-CHARGE]", guid, "-" + gdcAmount + "T", "(krw:" + krwAmount + ")", memo ? "(" + memo + ")" : "");
+    return c.json(200, {
+      ok:             true,
+      block_id:       blockRecord.getId(),
+      content_hash:   contentHash,
+      guid,
+      charged_gdc:    gdcAmount,
+      krw_amount:     krwAmount,
+      balance_after:  balanceAfter,
+    });
+  } catch (e) {
+    console.log("[AI-CHARGE] 예외 발생:", e.message, "| stack:", e.stack || "(no stack)");
+    return c.json(500, { ok: false, error: "AI_CHARGE_EXCEPTION", detail: e.message || String(e) });
+  }
+});
+
 // ── 2026-07-07 신설: 재대사(reconcile) 지원 — guid의 실제 잔액 +
 // 다음 거래에 쓸 prev_settle_hash를 서버(L1)에서 직접 조회한다.
 // 클라이언트(gopang-wallet.js)의 로컬 IndexedDB가 새 기기·스토리지
@@ -572,8 +793,10 @@ routerAdd("GET", "/api/balance", (c) => {
     let latestBlockHash = null;
     let height = 0;
     try {
+      // (2026-07-14: /api/tx와 동일하게 tx_2party로 한정 — 위 /api/tx
+      //  3단계 주석 참고. ai_usage_charge 블록은 P2P 정산 포인터에서 제외.)
       const buyerBlocks = $app.dao().findRecordsByFilter("blocks", "block_type != ''", "-height", 1000, 0)
-        .filter(r => r.getString("buyer_guid") === guid);
+        .filter(r => r.getString("buyer_guid") === guid && r.getString("block_type") === "tx_2party");
       if (buyerBlocks.length > 0) {
         latestBlockHash = buyerBlocks[0].getString("content_hash");
         height = buyerBlocks[0].getFloat("height");
