@@ -3171,6 +3171,8 @@ export default {
     if (pathname === '/biz/reservation/status' && request.method === 'PATCH') return handleReservationStatus(request, env, corsHeaders);
     if (pathname === '/biz/claims'     && request.method === 'GET')  return handleClaimsList(request, env, corsHeaders);
     if (pathname === '/biz/claims/ack' && request.method === 'POST') return handleClaimsAck(request, env, corsHeaders);
+    if (pathname === '/biz/settle-ledger' && request.method === 'POST') return handleSettleLedger(request, env, corsHeaders);
+    if (pathname === '/biz/financials' && request.method === 'GET') return handleFinancialsGet(request, env, corsHeaders);
     if (pathname === '/biz/product' && request.method === 'POST') return handleBizProduct(request, env, corsHeaders);
     // ★ 2026-07-09 신설 — 짜장면 주문 사고실험 1단계: 프로필-to-프로필
     // AI 메시징(예: 손님의 AI가 식당의 AI에게 주문을 전달). /ai/chat(기존,
@@ -9937,6 +9939,146 @@ async function handleClaimsAck(request, env, corsHeaders) {
     if (patchRes.ok) acked++;
   }
   return new Response(JSON.stringify({ ok: true, acked }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-14 신설 — GDC 재무제표 재결선(옵션 b: Supabase → L1 이관).
+// 검증 결과: K-Market 주문의 revenue/cogs가 2026-07-07 L1 이관 이후
+// Supabase fs_ledger에 더 이상 기록되지 않는데, GDC의 settleLedger()/
+// gdc_settle_ledger RPC는 여전히 그 테이블만 읽고 있어 실거래가 있어도
+// 손익계산서가 갱신되지 않았다. 판매자 매출(pl-revenue)·매출원가
+// (pl-cogs)는 L1 pending_claims에 실제로 쌓이고 있으므로(handleBizOrder
+// 참고) 여기서 그걸 직접 집계한다.
+//
+// 2026-07-14 추가 지시 반영 — "Supabase는 더 이상 사용하면 안됩니다":
+// Supabase user_profiles로의 병행(미러) PATCH를 완전히 제거했다. 쓰기는
+// L1 profiles.extra.fs.pl만 정본으로 삼는다. 읽기 쪽은 아래 신설한
+// GET /biz/financials로 대체한다(gdc-core.js가 호출).
+//
+// 범위: 판매자(claimant=seller_guid) 측 매출·매출원가만 다룬다. 구매자
+// 측 매입(pl-purchase)은 buyer_claim이 로컬 지갑에만 즉시 반영되고
+// pending_claims에는 적재되지 않아 서버에서 재구성할 수 없다 — 별도
+// 이관 필요(후속 작업).
+// ═══════════════════════════════════════════════════════════
+async function handleSettleLedger(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, pubkey, signature, ts = '' } = body;
+  if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+
+  // /biz/claims와 동일한 서명+TOFU 인증 — guid만 자기주장하면 남의 매출
+  // 정보를 조회/재계산시킬 수 있는 것을 막는다(2026-07-13 /biz/claims에
+  // 적용된 것과 동일한 원칙).
+  const authOk = await _verifyClaimsRequester(env, {
+    guid, pubkey, signature, sigMsg: `settle:${guid}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+
+  // pending_claims 전체 페이지네이션 — claimant=guid 레코드 전부
+  // (redeemed 무관 — 로컬 지갑 수령 여부와 무관하게 발생한 거래는 전부
+  // 누적 집계에 포함돼야 한다). 안전판: 최대 20페이지(2,000건)까지만
+  // 순회한다 — 그 이상이면 truncated:true로 응답에 표시한다(완전한
+  // 커서 기반 페이지네이션은 후속 작업).
+  let revenue = 0, cogs = 0;
+  let page = 1, truncated = false;
+  const PER_PAGE = 100, MAX_PAGES = 20;
+  const filter = encodeURIComponent(`claimant='${guid}'`);
+  while (page <= MAX_PAGES) {
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/pending_claims/records?filter=${filter}&page=${page}&perPage=${PER_PAGE}`,
+      { headers }
+    );
+    if (!res.ok) return _err(502, 'L1_UNREACHABLE', 'pending_claims 조회 실패', corsHeaders);
+    const data = await res.json().catch(() => ({ items: [], totalPages: 0 }));
+    const items = data.items || [];
+    for (const rec of items) {
+      const claims = Array.isArray(rec.claim_data) ? rec.claim_data : [];
+      for (const c of claims) {
+        if (c.claimant && c.claimant !== guid) continue; // 방어적 재확인
+        const amt = parseFloat(c.amount) || 0;
+        if (c.fs_account === 'pl-revenue' && c.direction === 'credit') revenue += amt;
+        else if (c.fs_account === 'pl-cogs' && c.direction === 'debit') cogs += amt;
+      }
+    }
+    if (page >= (data.totalPages || 1)) break;
+    page++;
+  }
+  if (page > MAX_PAGES) {
+    truncated = true;
+    console.warn('[GDC Settle] pending_claims 페이지 상한 도달 — 부분 집계:', guid);
+  }
+
+  // 손실도 그대로 보여준다 — 이전 클라이언트 구현(Math.max(0,...))은
+  // 적자를 항상 ₮0으로 지워서 실제 손실이 재무제표에서 사라졌었다
+  // (2026-07-14 검증에서 발견, 함께 수정).
+  const grossProfit = revenue - cogs;
+  const opex = 0; // TODO: pl-opex claim 발행 경로가 생기면 여기 합산
+  const netIncome = grossProfit - opex;
+
+  const plPatch = {
+    'pl-revenue':      String(revenue),
+    'pl-cogs':          String(cogs),
+    'pl-gross-profit':  String(grossProfit),
+    'pl-opex':          String(opex),
+    'pl-net-income':    String(netIncome),
+  };
+
+  // L1 profiles.extra.fs.pl PATCH — 유일한 쓰기 대상(Supabase 미사용).
+  const profile = await _l1FindProfileByGuid(env, guid);
+  if (!profile) return _err(404, 'PROFILE_NOT_FOUND', 'L1에 프로필이 없습니다', corsHeaders);
+
+  let l1Ok = false;
+  try {
+    const ex = profile.extra || {};
+    ex.fs = ex.fs || {};
+    ex.fs.pl = { ...(ex.fs.pl || {}), ...plPatch };
+    await _l1PatchProfile(env, profile.id, { extra: ex });
+    l1Ok = true;
+  } catch (e) {
+    console.warn('[GDC Settle] L1 PATCH 실패:', e.message);
+    return _err(502, 'L1_PATCH_FAILED', 'L1 재무제표 갱신 실패: ' + e.message, corsHeaders);
+  }
+
+  return new Response(JSON.stringify({
+    ok: true,
+    pl: { revenue, cogs, gross_profit: grossProfit, opex, net_income: netIncome },
+    truncated,
+    l1_updated: l1Ok,
+  }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-14 신설 — GET /biz/financials. Supabase user_profiles를 더
+// 이상 쓰지 않기로 하면서(위 handleSettleLedger 참고), gdc-core.js의
+// getBalance()/getFinancials()가 재무제표(pl+bs)를 읽어올 곳이 필요해
+// 신설했다. /biz/claims와 동일한 서명+TOFU 인증 원칙을 그대로 쓴다 —
+// guid만 자기주장하면 남의 잔액·매출을 조회할 수 있는 걸 막는다.
+// ═══════════════════════════════════════════════════════════
+async function handleFinancialsGet(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid      = url.searchParams.get('guid');
+  const pubkey    = url.searchParams.get('pubkey');
+  const signature = url.searchParams.get('signature');
+  const ts        = url.searchParams.get('ts') || '';
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const authOk = await _verifyClaimsRequester(env, {
+    guid, pubkey, signature, sigMsg: `financials:${guid}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const profile = await _l1FindProfileByGuid(env, guid).catch(() => null);
+  if (!profile) return _err(404, 'PROFILE_NOT_FOUND', 'L1에 프로필이 없습니다', corsHeaders);
+
+  const fs = profile.extra?.fs || {};
+  return new Response(JSON.stringify({ ok: true, fs }), {
+    status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 // POST /biz/catalog/sync — 로컬 IndexedDB 전체 스냅샷을 서버 백업/공개미러에 반영
