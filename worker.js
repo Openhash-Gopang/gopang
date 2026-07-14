@@ -309,6 +309,62 @@ async function handleFreeQuotaStatus(request, env, corsHeaders) {
   }), { status: 200, headers: corsHeaders });
 }
 
+// GET /usage-log?guid=...&days=30 — /usage.html의 "모델별·기간별 상세
+// 내역" 테이블용. ai_usage_log(L1)에서 최근 N일 레코드를 가져와
+// 모델별로 집계한다(PocketBase REST에는 GROUP BY가 없어 Worker에서 집계).
+async function handleUsageLog(request, env, corsHeaders) {
+  const url  = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const days = Math.min(Math.max(parseInt(url.searchParams.get('days') || '30', 10) || 30, 1), 90);
+
+  let items;
+  try {
+    items = await _l1QueryUsageLog(env, guid, days);
+  } catch (e) {
+    return _err(502, 'L1_ERROR', 'ai_usage_log 조회 실패: ' + e.message, corsHeaders);
+  }
+
+  // ── 모델별 집계 ──
+  const byModel = {};
+  let totalCostKRW = 0, totalBilledKRW = 0, totalRequests = 0, totalTokens = 0;
+  for (const it of items) {
+    const key = it.model || '(unknown)';
+    if (!byModel[key]) {
+      byModel[key] = { model: key, requests: 0, hit_tokens: 0, miss_tokens: 0, out_tokens: 0, cost_krw: 0, billed_krw: 0 };
+    }
+    const m = byModel[key];
+    m.requests += 1;
+    m.hit_tokens  += Number(it.hit_tokens)  || 0;
+    m.miss_tokens += Number(it.miss_tokens) || 0;
+    m.out_tokens  += Number(it.out_tokens)  || 0;
+    m.cost_krw    += Number(it.cost_krw)    || 0;
+    m.billed_krw  += Number(it.billed_krw)  || 0;
+
+    totalCostKRW   += Number(it.cost_krw)   || 0;
+    totalBilledKRW += Number(it.billed_krw) || 0;
+    totalRequests  += 1;
+    totalTokens    += (Number(it.hit_tokens) || 0) + (Number(it.miss_tokens) || 0) + (Number(it.out_tokens) || 0);
+  }
+
+  return new Response(JSON.stringify({
+    ok: true,
+    guid,
+    days,
+    total_cost_krw: Math.round(totalCostKRW * 100) / 100,
+    total_billed_krw: Math.round(totalBilledKRW * 100) / 100,
+    total_requests: totalRequests,
+    total_tokens: totalTokens,
+    by_model: Object.values(byModel).map(m => ({
+      ...m,
+      cost_krw: Math.round(m.cost_krw * 100) / 100,
+      billed_krw: Math.round(m.billed_krw * 100) / 100,
+    })).sort((a, b) => b.billed_krw - a.billed_krw),
+  }), { status: 200, headers: corsHeaders });
+}
+
+
 // 100원 무료 한도를 다 쓴 뒤(=유료 구간)를 위해 준비해 둔 스텁.
 // 현재는 콜사이트가 없다 — STEP 0 게이트(FREE_QUOTA_EXCEEDED 체크)가
 // 100원 초과 요청을 이미 429로 막기 때문에, 유료 과금 로직 자체가
@@ -901,6 +957,61 @@ function L1_NODE_MAP_ID_OF(base) {
 }
 
 // L1 profiles 컬렉션에서 guid로 레코드 조회 (Admin 토큰 필요 — is_public=false인 레코드도 봐야 하므로)
+// ── AI 사용량 상세 로그 (2026-07-14 신설) ──────────────────────────
+// HONDI_CHAT_COST 콘솔 로그는 조회가 안 되므로(Cloudflare 로그는
+// 검색·집계용이 아니다), /usage.html의 모델별·기간별 상세 내역을
+// 위해 L1에 요청 단위로 영구 기록한다. 컬렉션 스키마는
+// pb_migrations/1784800001_created_ai_usage_log.js 참조.
+async function _l1CreateUsageLog(env, { guid, serviceId, tier, model, hitTokens, missTokens, outTokens, costKRW, billedKRW }) {
+  if (!guid) return;
+  try {
+    const token = await _l1AdminToken(env);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/ai_usage_log/records`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid, service_id: serviceId || 'hondi-chat', tier: tier || '', model: model || '',
+        hit_tokens: Math.round(hitTokens || 0), miss_tokens: Math.round(missTokens || 0),
+        out_tokens: Math.round(outTokens || 0),
+        cost_krw: Math.round((costKRW || 0) * 100) / 100,
+        billed_krw: Math.round((billedKRW || 0) * 100) / 100,
+      }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.warn('[UsageLog] 기록 실패 (HTTP ' + res.status + '): ' + errText);
+    }
+  } catch (e) {
+    // 사용량 로그 기록 실패가 실제 채팅 응답을 막아서는 안 된다 — 조용히 경고만 남긴다.
+    console.warn('[UsageLog] 기록 실패:', e.message);
+  }
+}
+
+// GET /usage-log?guid=...&days=30 이 호출하는 조회+집계 함수.
+// PocketBase REST에는 GROUP BY가 없으므로, 기간 내 레코드를 그대로
+// 받아와 Worker에서 집계한다 — 개인 사용자 단위라 레코드 수가
+// 많지 않으므로(하루 수십~수백 건 수준) 이 방식으로 충분하다.
+async function _l1QueryUsageLog(env, guid, days) {
+  const token = await _l1AdminToken(env);
+  const sinceISO = new Date(Date.now() - days * 86400000).toISOString().replace('T', ' ').slice(0, 19);
+  const filter = encodeURIComponent(`guid='${guid}' && created>='${sinceISO}'`);
+  let page = 1, items = [];
+  // PocketBase 기본 perPage 상한(500) 안에서, 필요하면 페이지네이션.
+  for (;;) {
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/ai_usage_log/records?filter=${filter}&perPage=500&page=${page}&sort=-created`,
+      { headers: { 'Authorization': `Bearer ${token}` } },
+    );
+    if (!res.ok) throw new Error(`ai_usage_log 조회 실패 (HTTP ${res.status})`);
+    const data = await res.json();
+    items = items.concat(data.items || []);
+    if (page >= (data.totalPages || 1)) break;
+    page++;
+  }
+  return items;
+}
+
+// 가입자 GUID로 profiles 레코드 조회
 async function _l1FindProfileByGuid(env, guid) {
   const token = await _l1AdminToken(env);
   const filter = encodeURIComponent(`guid='${guid}'`);
@@ -2792,6 +2903,9 @@ export default {
     //  정책으로 복귀. 한도값은 FREE_QUOTA_KRW_LIMIT=100 참조.)
     if (pathname === '/free-quota-status' && request.method === 'GET')
       return handleFreeQuotaStatus(request, env, corsHeaders);
+    // (2026-07-14 신설) usage.html의 모델별·기간별 상세 내역용.
+    if (pathname === '/usage-log' && request.method === 'GET')
+      return handleUsageLog(request, env, corsHeaders);
     if (pathname === '/prompt' && request.method === 'GET')
       return handlePromptGet(request, env, corsHeaders);
     if (pathname === '/admin/prompt' && request.method === 'POST')
@@ -4504,6 +4618,14 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
           apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier,
           ts: new Date().toISOString(), ...meta,
         }));
+        // 무료 한도 누적(요약)과 별개로, 모델별·기간별 상세 조회(/usage.html)를
+        // 위한 요청 단위 로그를 L1에 남긴다. 실패해도 채팅 자체는 막지 않는다.
+        const usageLogTask = _l1CreateUsageLog(env, {
+          guid, serviceId: 'hondi-chat', tier: spendTier, model: backendModel,
+          hitTokens: usage?.prompt_cache_hit_tokens, missTokens: usage?.prompt_cache_miss_tokens,
+          outTokens: usage?.completion_tokens, costKRW: bill.apiCostKRW, billedKRW: bill.billedKRW,
+        });
+        if (ctx?.waitUntil) ctx.waitUntil(usageLogTask); else usageLogTask.catch(() => {});
         return _recordFreeSpend(env, guid, bill.billedKRW);
       });
       if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
@@ -4521,6 +4643,12 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
       apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier,
       ts: new Date().toISOString(), ...meta,
     }));
+    const usageLogTask2 = _l1CreateUsageLog(env, {
+      guid, serviceId: 'hondi-chat', tier: spendTier, model: backendModel,
+      hitTokens: data.usage?.prompt_cache_hit_tokens, missTokens: data.usage?.prompt_cache_miss_tokens,
+      outTokens: data.usage?.completion_tokens, costKRW: bill.apiCostKRW, billedKRW: bill.billedKRW,
+    });
+    if (ctx?.waitUntil) ctx.waitUntil(usageLogTask2); else usageLogTask2.catch(() => {});
     const recordTask = _recordFreeSpend(env, guid, bill.billedKRW);
     if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
   }
@@ -4744,7 +4872,14 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
     const usageTask = _parseUsageFromStream(forUsage).then(async usage => {
       const bill = computeBilledKRW(env, usage, priceTier);
       console.log(JSON.stringify({ tag:'KLAW_RELAY_COST', guid, tier: tierKey, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier, elapsedMs: Date.now() - t0, ts: new Date().toISOString(), ...meta }));
-      await Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW), recordStep()]);
+      await Promise.all([
+        _klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW), recordStep(),
+        _l1CreateUsageLog(env, {
+          guid, serviceId: 'klaw', tier: tierKey, model: backendModel,
+          hitTokens: usage?.prompt_cache_hit_tokens, missTokens: usage?.prompt_cache_miss_tokens,
+          outTokens: usage?.completion_tokens, costKRW: bill.apiCostKRW, billedKRW: bill.billedKRW,
+        }),
+      ]);
     });
     if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
     return new Response(forClient, { status:200, headers:{ ...corsHeaders, 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache', 'X-Accel-Buffering':'no' } });
@@ -4754,7 +4889,14 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   if (data?.usage) {
     const bill = computeBilledKRW(env, data.usage, priceTier);
     console.log(JSON.stringify({ tag:'KLAW_RELAY_COST', guid, tier: tierKey, apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier, elapsedMs: Date.now() - t0, ts: new Date().toISOString(), ...meta }));
-    const recordTask = Promise.all([_klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW), recordStep()]);
+    const recordTask = Promise.all([
+      _klawSpendAdd(env, userKey, bill.billedKRW), _klawSpendAdd(env, globalKey, bill.billedKRW), recordStep(),
+      _l1CreateUsageLog(env, {
+        guid, serviceId: 'klaw', tier: tierKey, model: backendModel,
+        hitTokens: data.usage?.prompt_cache_hit_tokens, missTokens: data.usage?.prompt_cache_miss_tokens,
+        outTokens: data.usage?.completion_tokens, costKRW: bill.apiCostKRW, billedKRW: bill.billedKRW,
+      }),
+    ]);
     if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
   }
   return new Response(JSON.stringify(data), { headers: corsHeaders });

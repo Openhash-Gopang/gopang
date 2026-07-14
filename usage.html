@@ -51,12 +51,19 @@ body{font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
 .quota-text{font-size:12.5px;color:#374151}
 .quota-est{font-size:12px;color:#6b7280;margin-top:8px;line-height:1.55}
 
-/* ── 상세 내역 (준비 중) ── */
-.detail-section{background:#fff;border:1px solid #e5e7eb;border-radius:14px;
-  padding:20px 16px;text-align:center}
-.detail-icon{font-size:26px;margin-bottom:8px;opacity:.4}
-.detail-title{font-size:13.5px;font-weight:600;color:#374151;margin-bottom:4px}
-.detail-desc{font-size:12.5px;color:#9ca3af;line-height:1.6}
+/* ── 상세 내역 테이블 ── */
+.detail-section{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden}
+.detail-header{padding:14px 16px;border-bottom:1px solid #f2f2f7;
+  display:flex;align-items:center;justify-content:space-between}
+.detail-header-title{font-size:13.5px;font-weight:600;color:#111}
+.detail-header-sub{font-size:11.5px;color:#9ca3af}
+.detail-table{width:100%;border-collapse:collapse}
+.detail-table th{text-align:left;font-size:11px;color:#9ca3af;font-weight:500;
+  padding:8px 16px;background:#fafafa;white-space:nowrap}
+.detail-table td{padding:10px 16px;font-size:13px;color:#111;border-top:1px solid #f5f5f5;white-space:nowrap}
+.detail-table th.num,.detail-table td.num{text-align:right}
+.detail-empty{padding:32px 16px;text-align:center;color:#9ca3af;font-size:13px}
+.detail-empty-icon{font-size:24px;margin-bottom:8px;opacity:.4}
 
 /* ── 상태 ── */
 .state-box{text-align:center;padding:60px 20px;color:#9ca3af;font-size:13.5px}
@@ -115,11 +122,14 @@ body{font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
     </div>
 
     <div class="detail-section">
-      <div class="detail-icon">&#128202;</div>
-      <div class="detail-title">모델별·기간별 상세 내역</div>
-      <div class="detail-desc">
-        대화별·모델별 세부 사용 내역 조회는 아직 준비 중입니다.<br>
-        지금은 누적 GDC 잔액과 무료 한도 사용액만 확인할 수 있어요.
+      <div class="detail-header">
+        <div>
+          <div class="detail-header-title">모델별 사용 내역</div>
+          <div class="detail-header-sub">최근 30일</div>
+        </div>
+      </div>
+      <div id="detail-body">
+        <div class="detail-empty">불러오는 중...</div>
       </div>
     </div>
   </div>
@@ -159,11 +169,13 @@ async function loadUsage() {
   }
 
   try {
-    // GDC 잔액과 무료 한도 사용 현황을 병렬로 조회한다.
-    // 둘 중 하나가 실패해도(예: GDC 미사용자라 balance가 없는 경우) 나머지는 보여준다.
-    const [balanceRes, quotaRes] = await Promise.allSettled([
+    // GDC 잔액 / 무료 한도 사용 현황 / 모델별 상세 내역을 병렬로 조회한다.
+    // 셋 중 하나가 실패해도(예: 아직 ai_usage_log 컬렉션이 없는 초기 상태)
+    // 나머지는 정상적으로 보여준다.
+    const [balanceRes, quotaRes, usageLogRes] = await Promise.allSettled([
       fetch(`${WORKER_URL}/biz/balance?guid=${encodeURIComponent(guid)}`).then(r => r.json()),
       fetch(`${WORKER_URL}/free-quota-status?guid=${encodeURIComponent(guid)}`).then(r => r.json()),
+      fetch(`${WORKER_URL}/usage-log?guid=${encodeURIComponent(guid)}&days=30`).then(r => r.json()),
     ]);
 
     // ── GDC 잔액 ──
@@ -206,6 +218,10 @@ async function loadUsage() {
       spentEl.innerHTML = `0<span class="unit">원</span>`;
     }
 
+    // ── 모델별 상세 내역 ──
+    const usageLogData = usageLogRes.status === 'fulfilled' ? usageLogRes.value : null;
+    renderDetailTable(usageLogData);
+
     loadingEl.style.display = 'none';
     contentEl.style.display = 'block';
   } catch (e) {
@@ -213,6 +229,58 @@ async function loadUsage() {
     errorEl.style.display   = 'block';
     document.getElementById('state-error-detail').textContent = e.message || String(e);
   }
+}
+
+function renderDetailTable(data) {
+  const body = document.getElementById('detail-body');
+
+  if (!data?.ok) {
+    body.innerHTML = `
+      <div class="detail-empty">
+        <div class="detail-empty-icon">&#128202;</div>
+        상세 내역을 불러오지 못했습니다.<br>
+        <span style="font-size:11.5px">서비스 도입 초기라 아직 기록이 없을 수 있어요.</span>
+      </div>`;
+    return;
+  }
+
+  if (!data.by_model || data.by_model.length === 0) {
+    body.innerHTML = `
+      <div class="detail-empty">
+        <div class="detail-empty-icon">&#128202;</div>
+        아직 사용 내역이 없어요.
+      </div>`;
+    return;
+  }
+
+  const rows = data.by_model.map(m => `
+    <tr>
+      <td>${escapeHtml(m.model)}</td>
+      <td class="num">${fmt(m.requests)}</td>
+      <td class="num">${fmt(m.hit_tokens + m.miss_tokens + m.out_tokens)}</td>
+      <td class="num">${fmt(m.billed_krw)}원</td>
+    </tr>
+  `).join('');
+
+  body.innerHTML = `
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th>모델</th>
+          <th class="num">요청 수</th>
+          <th class="num">토큰</th>
+          <th class="num">청구액</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function escapeHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = String(s ?? '');
+  return div.innerHTML;
 }
 
 loadUsage();
