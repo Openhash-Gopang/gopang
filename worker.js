@@ -174,10 +174,17 @@ const HONDI_TIER_MODELS = {
   },
 };
 const USD_TO_KRW = 1500; // 실시간 조회 없이 보수적 고정값
-// (2026-07-14: FREE_QUOTA_KRW_LIMIT 제거됨 — "무료 제공 없음" 정책 확정.
-//  기존에는 guid당 평생 1,000원 무료 사용을 허용했으나, 정책 변경으로
-//  전면 폐지. AGENT-COMMON 튜토리얼(§0-1-T STEP 5)의 "기본 1,000원어치는
-//  무료" 문구도 함께 수정 필요 — TODO 참조.)
+// (2026-07-14: 정책 재확정 — "가입자당 100원 무료 한도" 도입.
+//  주의: "사용자"가 아니라 "가입자" 기준이다. 이 코드베이스는 익명 모드가
+//  없다(auth.js 상단 주석 "익명 모드 없음" 참조) — guid는 전화번호 인증을
+//  마친 가입 완료 시점에만 발급되므로(_e164ToIPv6), guid가 존재한다는 것
+//  자체가 곧 가입자라는 뜻이다. 즉 별도로 profiles 컬렉션을 조회해
+//  "진짜 가입자인지" 매 요청마다 검증할 필요는 없다(그렇게 하면 매
+//  채팅 요청마다 L1 왕복이 추가되어 불필요하게 느려진다) — 다만 이는
+//  "guid는 가입 완료 시에만 발급된다"는 현재 auth.js의 불변식에 의존하는
+//  가정이므로, 이 불변식이 깨지면(예: 훗날 프리뷰/게스트 모드가 다시
+//  생기면) 이 가정도 함께 재검토해야 한다.
+const FREE_QUOTA_KRW_LIMIT = 100;
 
 function _deepseekUsageToKRW(usage, tierKey) {
   if (!usage) return 0;
@@ -248,15 +255,68 @@ async function _parseUsageFromStream(stream) {
   } catch { return null; }
 }
 
-// (2026-07-14: _recordFreeSpend 제거됨 — "무료 제공 없음" 정책에서는 "평생
-//  누적 무료 사용액"이라는 개념 자체가 사라진다. 대신 실제 GDC 잔액에서
-//  차감하는 함수가 필요한데, 아직 이 Worker에는 그 기능이 없다(L1의
-//  /api/balance는 "조회"만 있고 "차감/이체" 엔드포인트가 없다 — handleBizBalance
-//  참조). 아래는 그 공백을 숨기지 않기 위한 안전 스텁이다: 실제 차감 로직이
-//  연결되기 전까지는 요청을 명시적으로 차단한다("무료로 새어나가는 것"보다
-//  "일시적으로 막히는 것"이 훨씬 안전하다). SP-GDC-BILLING STEP 0/3 설계대로
-//  L1에 GDC 차감 엔드포인트(가칭 POST /api/debit)를 만들고 나면 이 함수의
-//  내용을 실제 차감 호출로 교체할 것.)
+// (2026-07-14: "가입자당 100원 무료 한도" 재도입. guid별 누적 지출(원)과
+//  "첫 지출 시각"을 함께 기록한다 — 100원을 다 쓰면 아래 _billingNotWiredYet
+//  스텁으로 넘어간다(실제 GDC 유료 차감이 아직 안 연결되어 있으므로, 100원
+//  초과분은 "무료로 새는 것"도 "청구되는 것"도 아니라 "막히는 것"이 맞다 —
+//  실제 GDC 차감 엔드포인트가 생기면 이 분기를 그쪽으로 연결할 것).
+async function _recordFreeSpend(env, guid, usageKRW) {
+  if (!guid || !usageKRW) return;
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv) return;
+  try {
+    const spendKey = `hondi:free_spend:${guid}`;
+    const sinceKey = `hondi:free_spend_since:${guid}`;
+    const prev = parseFloat(await kv.get(spendKey) || '0');
+    await kv.put(spendKey, String(prev + usageKRW)); // TTL 없음 — 평생 누적
+    if (prev === 0) {
+      const existing = await kv.get(sinceKey);
+      if (!existing) await kv.put(sinceKey, new Date().toISOString());
+    }
+  } catch (e) { console.warn('[FreeQuota] 기록 실패:', e.message); }
+}
+
+// GET /free-quota-status?guid=... — 지금까지 쓴 무료 한도 금액 + 사용
+// 속도 기반 "이대로 쓰면 한 달에 대략 얼마" 추정치.
+async function handleFreeQuotaStatus(request, env, corsHeaders) {
+  const url  = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv) return _err(500, 'KV_UNAVAILABLE', 'KV 바인딩 없음', corsHeaders);
+
+  const spent = parseFloat(await kv.get(`hondi:free_spend:${guid}`) || '0');
+  const since = await kv.get(`hondi:free_spend_since:${guid}`);
+
+  let daysElapsed = 0, dailyAvgKrw = 0, estimatedMonthlyKrw = 0;
+  if (since) {
+    daysElapsed = Math.max((Date.now() - new Date(since).getTime()) / 86400000, 1 / 24);
+    dailyAvgKrw = spent / daysElapsed;
+    estimatedMonthlyKrw = dailyAvgKrw * 30;
+  }
+
+  return new Response(JSON.stringify({
+    ok: true,
+    guid,
+    spent_krw: Math.round(spent),
+    limit_krw: FREE_QUOTA_KRW_LIMIT,
+    remaining_krw: Math.max(Math.round(FREE_QUOTA_KRW_LIMIT - spent), 0),
+    since,
+    days_elapsed: Math.round(daysElapsed * 10) / 10,
+    estimated_monthly_krw: Math.round(estimatedMonthlyKrw),
+    projected_days_to_limit: dailyAvgKrw > 0 ? Math.round(((FREE_QUOTA_KRW_LIMIT - spent) / dailyAvgKrw) * 10) / 10 : null,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// 100원 무료 한도를 다 쓴 뒤(=유료 구간)를 위해 준비해 둔 스텁.
+// 현재는 콜사이트가 없다 — STEP 0 게이트(FREE_QUOTA_EXCEEDED 체크)가
+// 100원 초과 요청을 이미 429로 막기 때문에, 유료 과금 로직 자체가
+// 실행될 일이 아직 없다. 실제 GDC 유료 차감(L1 차감 엔드포인트, 가칭
+// POST /api/debit)이 구현되면: (1) STEP 0 게이트의 429 응답을
+// "GDC 잔액 확인 후 통과/차단"으로 교체하고, (2) 아래 함수 안에 실제
+// 차감 호출을 채운 뒤, (3) 무료 한도 소진 이후 경로의 과금 기록 지점에서
+// 이 함수를 호출하도록 연결할 것. SP-GDC-BILLING STEP 0/3 참조.
 function _billingNotWiredYet(env, guid, billedKRW) {
   console.error(JSON.stringify({
     tag: 'BILLING_NOT_WIRED', guid, billedKRW,
@@ -2728,9 +2788,10 @@ export default {
       return handleAdminDefaultKeySet(request, env, corsHeaders);
     if (pathname === '/default-key' && request.method === 'GET')
       return handleDefaultKeyGet(request, env, corsHeaders);
-    // (2026-07-14: /free-quota-status 제거됨 — 무료 제공 정책 폐지에 따라
-    //  handleFreeQuotaStatus 함수 자체가 삭제됨. 프런트엔드에 이 엔드포인트를
-    //  호출하는 코드가 남아있다면 함께 제거할 것 — webapp.html/call-ai.js 확인 필요.)
+    // (2026-07-14: /free-quota-status 재도입 — "가입자당 100원 무료 한도"
+    //  정책으로 복귀. 한도값은 FREE_QUOTA_KRW_LIMIT=100 참조.)
+    if (pathname === '/free-quota-status' && request.method === 'GET')
+      return handleFreeQuotaStatus(request, env, corsHeaders);
     if (pathname === '/prompt' && request.method === 'GET')
       return handlePromptGet(request, env, corsHeaders);
     if (pathname === '/admin/prompt' && request.method === 'POST')
@@ -4396,20 +4457,28 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
 
   let outboundBodyText = outboundBody ? JSON.stringify(outboundBody) : bodyText;
 
-  // (2026-07-14: 무료 한도 게이트 제거 — "무료 제공 없음" 정책 확정.
-  //  단, 이 자리를 그냥 비우면 "게이트가 아예 없음" = 사실상 전원 무제한 무료
-  //  사용이 되어버린다(지금 이 Worker에는 아직 실제 GDC 잔액 차감 로직이
-  //  없다 — L1의 /api/balance는 조회 전용). 그래서 실제 차감이 연결되기
-  //  전까지는 명시적으로 차단하는 안전 스텁을 넣는다. SP-GDC-BILLING의
-  //  STEP 0(잔액 게이트웨이)이 실제로 구현되면 이 블록을 그 로직으로
-  //  교체할 것 — 지금 이대로 배포하면 AI 채팅 기능 자체가 막힌다는 뜻이므로
-  //  프로덕션 배포 전 반드시 손봐야 하는 지점이다.
-  if (guid && !env.HONDI_BILLING_BYPASS) {
-    console.error(JSON.stringify({ tag: 'BILLING_NOT_WIRED', guid, ts: new Date().toISOString(), ...meta }));
-    return new Response(JSON.stringify({
-      error: 'BILLING_NOT_CONFIGURED',
-      message: 'GDC 잔액 차감 시스템이 아직 연결되지 않았습니다. SP-GDC-BILLING STEP 0 구현 필요.',
-    }), { status: 503, headers: corsHeaders });
+  // (2026-07-14: "가입자당 100원 무료 한도" 게이트. guid가 있다는 것 자체가
+  //  가입자라는 뜻이므로(익명 모드 없음 — FREE_QUOTA_KRW_LIMIT 선언부 주석
+  //  참조), 별도의 profiles 조회 없이 guid 존재만으로 자격을 인정한다.
+  //  100원을 다 쓴 뒤에는 실제 GDC 유료 차감이 아직 연결되어 있지 않으므로
+  //  (L1 /api/balance는 조회 전용) 명시적으로 차단한다 — "무료로 새는 것"도
+  //  "그냥 무제한 통과되는 것"도 아니라 "막히는 것"이 맞다. 실제 GDC 차감
+  //  엔드포인트가 생기면 이 분기를 그쪽 호출로 교체할 것(SP-GDC-BILLING
+  //  STEP 0/3, TODO 최우선 항목).
+  if (guid) {
+    const kv = env.AI_SETUP_SEALS_KV;
+    if (kv) {
+      const spendKey = `hondi:free_spend:${guid}`;
+      const spent = parseFloat(await kv.get(spendKey) || '0');
+      if (spent >= FREE_QUOTA_KRW_LIMIT) {
+        console.warn(JSON.stringify({ tag: 'FREE_QUOTA_EXCEEDED', guid, spent, ts: new Date().toISOString(), ...meta }));
+        return new Response(JSON.stringify({
+          error: 'FREE_QUOTA_EXCEEDED',
+          message: `무료 한도(${FREE_QUOTA_KRW_LIMIT}원)를 모두 사용했습니다. GDC 유료 차감 시스템이 아직 연결되지 않아 추가 이용은 준비 중입니다.`,
+          spent_krw: Math.round(spent),
+        }), { status: 429, headers: corsHeaders });
+      }
+    }
   }
 
 
@@ -4435,7 +4504,7 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
           apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier,
           ts: new Date().toISOString(), ...meta,
         }));
-        return _billingNotWiredYet(env, guid, bill.billedKRW);
+        return _recordFreeSpend(env, guid, bill.billedKRW);
       });
       if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
       return new Response(forClient,{status:200,headers:{...corsHeaders,'Content-Type':'text/event-stream','Cache-Control':'no-cache','X-Accel-Buffering':'no'}});
@@ -4452,7 +4521,7 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
       apiCostKRW: bill.apiCostKRW, billedKRW: bill.billedKRW, multiplier: bill.multiplier,
       ts: new Date().toISOString(), ...meta,
     }));
-    const recordTask = Promise.resolve(_billingNotWiredYet(env, guid, bill.billedKRW));
+    const recordTask = _recordFreeSpend(env, guid, bill.billedKRW);
     if (ctx?.waitUntil) ctx.waitUntil(recordTask); else recordTask.catch(() => {});
   }
   if(fallbackFrom){const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'deepseek-fallback',_fallback_from:fallbackFrom}),{headers:corsHeaders});}
@@ -4569,10 +4638,10 @@ async function handleLLMRelay(bodyText, env, corsHeaders, meta = null) {
 //
 // 배경: DeepSeek 계정 1개(guid 무관, K-Law 전용 발급 키 — 없으면 공용
 // DEEPSEEK_API_KEY로 폴백)를 100여 명이 동시에 공유하며 API 비용을 나눠
-// 부담한다. gopang 일반 챗(GDC 선충전 잔액에서 실시간 차감 — 무료 제공
-// 없음, 2026-07-14 정책 확정)과는 별개의 예산으로 관리한다 — K-Law 판결
-// 시뮬레이션은 호출당 비용이 훨씬 크므로 같은 버킷을 쓰면 일반 챗의
-// GDC 소진 속도에 영향을 준다.
+// 부담한다. gopang 일반 챗(가입자당 100원 무료 한도 소진 후에는 현재
+// 차단 — GDC 유료 차감 미연결, 2026-07-14 정책 확정)과는 별개의 예산으로
+// 관리한다 — K-Law 판결 시뮬레이션은 호출당 비용이 훨씬 크므로 같은
+// 버킷을 쓰면 일반 챗의 무료 한도 소진 속도에 영향을 준다.
 // 방어선 3중: (1) 1인 1일 KRW 한도 (2) 계정 전체 1일 예산 상한
 // (3) 1인 1일 "판결 생성"(STEP 0~C 풀사이클) 횟수 한도.
 // ═══════════════════════════════════════════════════════════
