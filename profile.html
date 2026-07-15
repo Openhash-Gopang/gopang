@@ -1525,7 +1525,27 @@ async function _startClaimFlow() {
     }
     return;
   }
-  if (!confirm(`"${_profile.name || '이 업체'}"를 본인 소유로 인증하시겠습니까?`)) return;
+
+  // 2026-07-15 신설 — 서명 청구(기존)와 전화번호 인증 청구(신규) 중 선택.
+  // gopang-wallet.js가 페이지 로드 시 지갑을 자동 생성하므로(1397행대
+  // 싱글턴 초기화), "지갑이 없어서" 서명 청구를 못 하는 경우는 실제로는
+  // 없다 — 문제는 그 자동생성된 지갑이 이 사업자와 실제로 관련 있다는
+  // 걸 증명할 방법이 없다는 것이다(누구든 방문만 하면 지갑이 생기므로,
+  // 서명만으로는 "내가 진짜 이 가게 주인"이라는 증명이 되지 않는다).
+  // 그래서 서명 청구와 별개로 전화번호 인증 청구 옵션을 항상 제공한다 —
+  // 새 지갑을 만들지 않고 기존 wallet.publicKeyB64u를 그대로 pin하되,
+  // "서명"이 아니라 "전화번호 소유 증명"을 근거로 삼는다.
+  const usePhone = confirm(
+    `"${_profile.name || '이 업체'}"를 본인 소유로 인증합니다.\n\n` +
+    `전화번호 인증으로 진행하시겠습니까?\n` +
+    `(확인: 전화번호 인증 / 취소: 지갑 서명으로 바로 인증)`
+  );
+
+  if (usePhone) {
+    return _claimViaPhone(wallet);
+  }
+
+  if (!confirm(`"${_profile.name || '이 업체'}"를 지갑 서명으로 인증하시겠습니까?`)) return;
 
   const pubkey = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
   const ts = Date.now().toString();
@@ -1543,6 +1563,58 @@ async function _startClaimFlow() {
     location.reload();
   } catch (e) {
     alert('⚠️ 인증 실패: ' + e.message);
+  }
+}
+
+// 2026-07-15 신설 — 전화번호 인증 청구 흐름. handlePhoneOtpRequest/Verify
+// (worker.js) + handleProfileClaim의 phone_verify_token 경로와 짝을 이룬다.
+// 새 지갑을 만들지 않는다 — window.gopangWallet은 이미 자동 생성돼 있으므로
+// 그 publicKeyB64u를 그대로 pin 대상 pubkey로 쓴다(위 _startClaimFlow 주석
+// 참조). AC(그림자 AI SP) 초기화는 서버 handleProfileClaim이 claim 방식과
+// 무관하게 이미 자동으로 수행한다 — 클라이언트가 별도로 할 일 없음.
+async function _claimViaPhone(wallet) {
+  const phoneRaw = prompt('본인 명의 휴대폰 번호를 입력해주세요 (하이픈 없이, 예: 01012345678)');
+  if (!phoneRaw) return;
+  const digits = phoneRaw.replace(/\D/g, '');
+  if (!/^0\d{9,10}$/.test(digits)) {
+    alert('⚠️ 올바른 국내 휴대폰 번호 형식이 아닙니다(0으로 시작하는 10~11자리).');
+    return;
+  }
+  const e164 = '+82' + digits; // handlePhoneOtpRequest 정규식(/^\+820\d{8,10}$/)과 정확히 일치하는 형식
+
+  try {
+    const reqRes = await fetch(`${PROXY}/biz/phone-otp-request`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ e164 }),
+    });
+    const reqData = await reqRes.json().catch(() => ({}));
+    if (!reqRes.ok || !reqData.ok) throw new Error(reqData.detail || reqData.error || '인증번호 발송 실패');
+
+    const code = prompt('문자로 받은 인증번호 6자리를 입력해주세요.');
+    if (!code) return;
+
+    const verifyRes = await fetch(`${PROXY}/biz/phone-otp-verify`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ e164, code }),
+    });
+    const verifyData = await verifyRes.json().catch(() => ({}));
+    if (!verifyRes.ok || !verifyData.ok) throw new Error(verifyData.detail || verifyData.error || '인증번호 확인 실패');
+
+    const pubkey = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+    const claimRes = await fetch(`${PROXY}/profile/claim`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid: _profile.guid, pubkey,
+        phone_verify_token: verifyData.phone_verify_token,
+      }),
+    });
+    const claimData = await claimRes.json().catch(() => ({}));
+    if (!claimRes.ok || !claimData.ok) throw new Error(claimData.detail || claimData.error || '인증 실패');
+
+    alert('✅ 전화번호 인증으로 인증 완료! 이제 이 프로필을 직접 관리할 수 있습니다.');
+    location.reload();
+  } catch (e) {
+    alert('⚠️ 전화번호 인증 실패: ' + e.message);
   }
 }
 
