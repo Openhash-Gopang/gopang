@@ -26,6 +26,11 @@
   const LS_PUBKEY        = 'gopang_wallet_pubkey';
   const LS_X25519_PUBKEY = 'gopang_wallet_x25519_pubkey';
   const LS_HANDLE        = 'gopang_wallet_handle';
+  const LS_WEBAUTHN_CRED = 'gopang_wallet_webauthn_cred_id';
+  const WEBAUTHN_RP_ID   = 'hondi.net';  // 전체 hondi.net 서브도메인에서 credential 공유
+  // PRF는 결정론적 — 동일 salt + 동일 authenticator = 항상 동일 32바이트.
+  // 서버에 아무것도 저장할 필요 없음.
+  const WEBAUTHN_PRF_SALT = new TextEncoder().encode('gopang-wallet-v1-prf-salt');
   const SUPABASE_URL     = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
   const WORKER_URL       = 'https://hondi-proxy.tensor-city.workers.dev';
 
@@ -944,7 +949,7 @@
       const kp  = await generateKeyPair();
       const enc = await encryptPrivKey(
         b64uToBuf(kp.privateKeyB64u).buffer,
-        passphrase || await GopangWallet._deviceEntropy()
+        passphrase || await GopangWallet._webauthnEntropy()
       );
 
       const record = {
@@ -982,7 +987,7 @@
         const encBuf = b64uToBuf(record.encPrivKey).buffer;
         const privRaw = await decryptPrivKey(
           encBuf,
-          passphrase || await GopangWallet._deviceEntropy()
+          passphrase || await GopangWallet._webauthnEntropy()
         );
 
         // JWK 형식으로 복원
@@ -1011,7 +1016,7 @@
           const xEncBuf = b64uToBuf(xRecord.encPrivKey).buffer;
           const xPrivRaw = await decryptPrivKey(
             xEncBuf,
-            passphrase || await GopangWallet._deviceEntropy()
+            passphrase || await GopangWallet._webauthnEntropy()
           );
           const xPrivJwk = {
             kty: 'OKP', crv: 'X25519',
@@ -1060,7 +1065,7 @@
       const kp  = await generateX25519KeyPair();
       const enc = await encryptPrivKey(
         b64uToBuf(kp.privateKeyB64u).buffer,
-        passphrase || await GopangWallet._deviceEntropy()
+        passphrase || await GopangWallet._webauthnEntropy()
       );
 
       const record = {
@@ -1132,7 +1137,7 @@
 
       const enc = await encryptPrivKey(
         b64uToBuf(privKeyB64u).buffer,
-        passphrase || await GopangWallet._deviceEntropy()
+        passphrase || await GopangWallet._webauthnEntropy()
       );
       const record = {
         publicKeyB64u: pubKeyB64u,
@@ -1206,6 +1211,129 @@
       const raw = navigator.userAgent + 'gopang-wallet-v1-entropy';
       const buf = await sha256(raw);
       return bufToHex(buf);
+    }
+
+    /* ── WebAuthn PRF 기반 entropy ──────────────────────────
+     * enroll 안 됐으면 기존 _deviceEntropy()로 그대로 폴백 (하위호환).
+     * enroll 됐는데 생체인증 실패/취소 시엔 여기서 예외가 나며,
+     * 이는 decryptPrivKey()에서 AES-GCM auth tag 불일치로 안전하게 실패한다
+     * (평문 노출 없이 load() 쪽 catch로 흡수됨).
+     * ──────────────────────────────────────────────────── */
+    static async _webauthnEntropy() {
+      const credIdB64u = localStorage.getItem(LS_WEBAUTHN_CRED);
+      if (!credIdB64u) return GopangWallet._deviceEntropy();
+
+      const prfBytes = await GopangWallet._prfEval(b64uToBuf(credIdB64u).buffer);
+      return bufToHex(prfBytes.buffer);
+    }
+
+    /** 등록된 credential로 PRF 값을 재도출 (매번 동일 salt → 동일 결과) */
+    static async _prfEval(credentialIdBuf) {
+      const assertion = await navigator.credentials.get({
+        publicKey: {
+          rpId: WEBAUTHN_RP_ID,
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          allowCredentials: [{ id: credentialIdBuf, type: 'public-key' }],
+          userVerification: 'required',
+          extensions: { prf: { eval: { first: WEBAUTHN_PRF_SALT } } },
+        },
+      });
+      const results = assertion.getClientExtensionResults();
+      const first = results && results.prf && results.prf.results && results.prf.results.first;
+      if (!first) throw new Error('WEBAUTHN_PRF_EVAL_FAILED');
+      return new Uint8Array(first);
+    }
+
+    /**
+     * 플랫폼 인증기(지문/얼굴)를 새로 등록하고, 현재 지갑의 개인키를
+     * _deviceEntropy() 암호화 → PRF entropy 암호화로 전환한다.
+     * @returns {{ ok: boolean, reason?: string }}
+     *   reason 'PRF_UNSUPPORTED' — 이 브라우저/인증기는 PRF 미지원 → 폴백 유지, UI에서 안내할 것
+     *   reason 'NO_WALLET' — 아직 지갑이 없음 (create() 먼저 호출)
+     */
+    static async enrollWebAuthn() {
+      if (!window.PublicKeyCredential) return { ok: false, reason: 'PRF_UNSUPPORTED' };
+
+      const db = await openDB();
+      const record = await idbGet(db, IDB_KEY_ID);
+      if (!record) return { ok: false, reason: 'NO_WALLET' };
+
+      const cred = await navigator.credentials.create({
+        publicKey: {
+          rp: { id: WEBAUTHN_RP_ID, name: 'Hondi Wallet' },
+          user: {
+            id: b64uToBuf(record.publicKeyB64u),
+            name: localStorage.getItem(LS_HANDLE) || 'gopang-wallet',
+            displayName: 'Gopang Wallet',
+          },
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform',
+            userVerification: 'required',
+            residentKey: 'required',
+          },
+          extensions: { prf: {} },
+        },
+      });
+
+      const prfEnabled = cred.getClientExtensionResults() && cred.getClientExtensionResults().prf
+        && cred.getClientExtensionResults().prf.enabled;
+      if (!prfEnabled) return { ok: false, reason: 'PRF_UNSUPPORTED' };
+
+      // 기존 device-entropy로 복호화 → 새 PRF-entropy로 재암호화 (Ed25519 + X25519 둘 다)
+      const oldEntropy = await GopangWallet._deviceEntropy();
+      const newEntropyBytes = await GopangWallet._prfEval(cred.rawId);
+      const newEntropy = bufToHex(newEntropyBytes.buffer);
+
+      const privRaw = await decryptPrivKey(b64uToBuf(record.encPrivKey).buffer, oldEntropy);
+      const reEnc = await encryptPrivKey(privRaw, newEntropy);
+      await idbPut(db, IDB_KEY_ID, { ...record, encPrivKey: bufToB64u(reEnc) });
+
+      const xRecord = await idbGet(db, IDB_X25519_ID).catch(() => null);
+      if (xRecord) {
+        const xPrivRaw = await decryptPrivKey(b64uToBuf(xRecord.encPrivKey).buffer, oldEntropy);
+        const xReEnc = await encryptPrivKey(xPrivRaw, newEntropy);
+        await idbPut(db, IDB_X25519_ID, { ...xRecord, encPrivKey: bufToB64u(xReEnc) });
+      }
+
+      localStorage.setItem(LS_WEBAUTHN_CRED, bufToB64u(cred.rawId));
+      return { ok: true };
+    }
+
+    static isWebAuthnEnrolled() {
+      return !!localStorage.getItem(LS_WEBAUTHN_CRED);
+    }
+
+    /**
+     * WebAuthn 잠금 해제 — 다시 device-entropy 암호화로 되돌린다.
+     * (기기 분실이 아니라 '지문 인식기가 자꾸 실패한다' 류의 사용자 요청 대응용)
+     */
+    static async disableWebAuthn() {
+      if (!GopangWallet.isWebAuthnEnrolled()) return { ok: true, already: true };
+
+      const db = await openDB();
+      const record = await idbGet(db, IDB_KEY_ID);
+      if (!record) return { ok: false, reason: 'NO_WALLET' };
+
+      const credIdB64u = localStorage.getItem(LS_WEBAUTHN_CRED);
+      const oldEntropyBytes = await GopangWallet._prfEval(b64uToBuf(credIdB64u).buffer);
+      const oldEntropy = bufToHex(oldEntropyBytes.buffer);
+      const newEntropy = await GopangWallet._deviceEntropy();
+
+      const privRaw = await decryptPrivKey(b64uToBuf(record.encPrivKey).buffer, oldEntropy);
+      const reEnc = await encryptPrivKey(privRaw, newEntropy);
+      await idbPut(db, IDB_KEY_ID, { ...record, encPrivKey: bufToB64u(reEnc) });
+
+      const xRecord = await idbGet(db, IDB_X25519_ID).catch(() => null);
+      if (xRecord) {
+        const xPrivRaw = await decryptPrivKey(b64uToBuf(xRecord.encPrivKey).buffer, oldEntropy);
+        const xReEnc = await encryptPrivKey(xPrivRaw, newEntropy);
+        await idbPut(db, IDB_X25519_ID, { ...xRecord, encPrivKey: bufToB64u(xReEnc) });
+      }
+
+      localStorage.removeItem(LS_WEBAUTHN_CRED);
+      return { ok: true };
     }
 
     /* ── 정적 유틸 노출 ── */
