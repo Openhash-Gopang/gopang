@@ -1,4 +1,5 @@
 import { NATIONAL_POSITION_TITLES } from './national-role-registry.js';
+import { JOB_SERIES_REGISTRY_DATA } from './job-series-registry.js';
 
 // ═══════════════════════════════════════════════════════════
 // src/worker/dept-task-handler.js — 부서/기관/사업자 간 업무지시 큐
@@ -267,10 +268,27 @@ function _isFieldTestOrg(env, orgId) {
 // 원칙을 유지한다(worker.js EMERGENCY_ELIGIBLE_ROLES 계속 빈 Set).
 const NATIONAL_ROLE_REGISTRY = new Set(['staff', 'manager', ...NATIONAL_POSITION_TITLES]);
 
+// 2026-07-15f(사고실험 후속) — role(직위명)과 job_series(직류/계급)는 대한민국
+// 공무원 분류 체계에서 서로 다른 축이다("사회복지심의관"이라는 직위를 가진
+// 사람이 실제로는 행정직 출신일 수 있고, 반대로 사회복지 직류 공무원이
+// 아직 특정 심의관 직위를 안 받았을 수도 있다). EMERGENCY_ELIGIBLE_ROLES가
+// role 필드를 검증하던 기존 설계는 이 두 축을 뒤섞어, role 필드가 "직위명
+// 아니면 직류 아니면 계급 중 아무거나"인 모호한 필드가 될 위험이 있었다.
+// job_series를 access_cert에 별도 필드로 신설하고, 서명 메시지에도 포함시켜
+// role과 마찬가지로 위조를 막는다. EMERGENCY_ELIGIBLE_JOB_SERIES(worker.js)는
+// 이제 role이 아니라 이 필드를 검증한다.
+//
+// ★ 이건 서명 메시지(appointmentMessage) 형식을 바꾸는 하위호환 깨는
+// 변경이다 — job_series 필드가 없던 기존 발급 인증서는 이 변경 이후
+// 서명 검증에 실패한다. 이 시스템은 아직 실사용 전(Bearer 배선 미완성)
+// 단계라 지금 끊는 게 맞다고 판단했다 — 실사용 시작 후였다면 필드
+// 버전닝(v2 인증서 별도 타입) 없이 이렇게 바꾸면 안 된다.
+const JOB_SERIES_REGISTRY = new Set(JOB_SERIES_REGISTRY_DATA);
+
 async function _verifyAccessCert(env, cert, callerGuid, deps) {
   const { _verifyEd25519Simple, _l1FindProfileByGuid } = deps;
   if (!cert || typeof cert !== 'object') return null;
-  const { org_id, official_guid, role, issued_at, expires_at,
+  const { org_id, official_guid, role, job_series, issued_at, expires_at,
           issuer_signature, official_pubkey, official_signature, request_nonce } = cert;
   if (!org_id || !official_guid || !role || !expires_at || !issuer_signature ||
       !official_pubkey || !official_signature || !request_nonce) {
@@ -278,6 +296,14 @@ async function _verifyAccessCert(env, cert, callerGuid, deps) {
   }
   if (!NATIONAL_ROLE_REGISTRY.has(role)) {
     console.warn('[AccessCert] role이 국가 직책 코드 표준 화이트리스트에 없음:', role);
+    return null;
+  }
+  // job_series는 선택 필드다(모든 직위가 EMERGENCY 판단에 필요한 직류/계급
+  // 정보를 갖는 건 아니다) — 단, 값이 있다면 반드시 화이트리스트 안이어야
+  // 한다. 빈 문자열('')은 "job_series 없음"으로 취급해 서명 메시지에도
+  // 일관되게 ''로 포함시킨다(아래 appointmentMessage).
+  if (job_series && !JOB_SERIES_REGISTRY.has(job_series)) {
+    console.warn('[AccessCert] job_series가 화이트리스트에 없음:', job_series);
     return null;
   }
   if (official_guid !== callerGuid) {
@@ -305,7 +331,7 @@ async function _verifyAccessCert(env, cert, callerGuid, deps) {
   }
   if (!issuerPubkey) { console.warn('[AccessCert] 기관 공개키 미등록:', org_id); return null; }
 
-  const appointmentMessage = JSON.stringify({ org_id, official_guid, role, issued_at, expires_at });
+  const appointmentMessage = JSON.stringify({ org_id, official_guid, role, job_series: job_series || '', issued_at, expires_at });
   const issuerOk = await _verifyEd25519Simple(issuerPubkey, issuer_signature, appointmentMessage).catch(() => false);
   if (!issuerOk) { console.warn('[AccessCert] 기관장 서명 검증 실패'); return null; }
 

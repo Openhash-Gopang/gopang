@@ -5082,7 +5082,25 @@ async function _l1FindConsentRequest(env,requestId){
 // 전까지는, 검증되지 않는 값과 대조하는 것보다 "아무도 통과 못 함"이 더
 // 안전한 실패(fail-safe)다 — 그래서 지금은 빈 Set으로 둔다. 표준 확정 후
 // 이 배열에 실제 코드값을 채우고 이 주석은 제거할 것.
-const EMERGENCY_ELIGIBLE_ROLES = new Set([]);
+// 2026-07-15f(사고실험 후속) — role(직위명)이 아니라 job_series(직류/계급)를
+// 검증하도록 축 자체를 바꿨다(dept-task-handler.js _verifyAccessCert 참고,
+// access_cert에 job_series 필드 신설·서명 포함). role은 국장급 이상
+// 직위명이라 "일선 긴급대응 자격"이라는 질문과 애초에 안 맞았다 —
+// 그래서 기존 EMERGENCY_ELIGIBLE_ROLES(role 대조용)는 삭제하고 아래로
+// 완전히 교체한다.
+//
+// job_series는 이제 서명 검증되는 필드이므로(자유 텍스트 아님), 실제
+// code.go.kr에서 확인한 값으로 채운다 — 사회복지 직류 2종과 경찰 계급
+// 중 '경위' 이상(주무관·책임자급)만 포함했다. '순경'~'경사'까지 전부
+// 포함하지 않은 건, code.go.kr이 이 컷오프를 정해준 게 아니라 내가 판단한
+// 정책 결정이다 — 실제 긴급조치 발동 권한 기준은 경찰청 등 소관부처와
+// 별도 확인이 필요하다. 아동보호는 여전히 비어있다(job-series-registry.js
+// 상단 주석 — 독립 국가 직렬 코드 없음, 사회복지로 임의 대체하지 않음).
+const EMERGENCY_ELIGIBLE_JOB_SERIES = new Set([
+  '사회복지', '사회복지전문',
+  '경위', '경감', '경정', '총경', '경무관', '치안감', '치안정감', '치안총감',
+  // '순경', '경장', '경사'는 의도적으로 제외 — 위 주석 참고, 컷오프 재검토 필요
+]);
 
 async function handlePersonalAcCall(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
@@ -5110,8 +5128,8 @@ async function handlePersonalAcCall(request, env, corsHeaders) {
   if (!verifiedOrgId)
     return _err(401, 'ACCESS_CERT_INVALID', '공무원 직책 인증서 검증 실패 — 서명·만료·TOFU 중 하나가 불일치합니다', corsHeaders);
 
-  if (emergency && !EMERGENCY_ELIGIBLE_ROLES.has(official_access_cert.role)) {
-    return _err(403, 'EMERGENCY_NOT_ALLOWED', '이 직책은 긴급 플래그를 발화할 권한이 없습니다', corsHeaders);
+  if (emergency && !EMERGENCY_ELIGIBLE_JOB_SERIES.has(official_access_cert.job_series || '')) {
+    return _err(403, 'EMERGENCY_NOT_ALLOWED', '이 직류/계급은 긴급 플래그를 발화할 권한이 없습니다', corsHeaders);
   }
 
   const target = await _l1FindProfileByGuid(env, target_guid).catch(() => null);
