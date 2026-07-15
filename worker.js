@@ -2968,14 +2968,21 @@ async function _sweepBridgeOutbox(env) {
     for (const item of pending) {
       const ageMs = Date.now() - new Date(item.created_at).getTime();
       if (ageMs > BRIDGE_REFUND_TIMEOUT_MS) {
-        // 유예시간 초과 — 원 구매자를 PDV 로그(tx_hash 기준)에서 역조회해 환불
+        // 유예시간 초과 — 원 구매자를 PDV 기록(tx_hash 기준)에서 역조회해 환불
         try {
-          const sbH = _sbHeaders(env);
+          // (2026-07-14: Supabase pdv_log → L1 pdv_records 이관. raw_hash는
+          //  top-level 필드가 아니라 summary_6w JSON 안에 보존돼 있다
+          //  (handlePdvReport 참고) — PocketBase가 JSON 내부 값 필터를
+          //  지원하지 않아 최근 500건을 넓게 가져와 JS에서 찾는다.)
+          const token = await _l1AdminToken(env);
           const pdvRes = await fetch(
-            `${SUPABASE_URL}/rest/v1/pdv_log?raw_hash=eq.${encodeURIComponent(item.tx_hash)}&select=guid&limit=1`,
-            { headers: sbH });
-          const pdvRows = await pdvRes.json().catch(() => []);
-          const buyerGuid = pdvRows?.[0]?.guid;
+            `${L1_DEFAULT}/api/collections/pdv_records/records?sort=-created&perPage=500`,
+            { headers: { 'Authorization': 'Bearer ' + token } });
+          const pdvData = await pdvRes.json().catch(() => ({ items: [] }));
+          const matched = (pdvData.items || []).find(r => {
+            try { return JSON.parse(r.summary_6w || '{}').raw_hash === item.tx_hash; } catch { return false; }
+          });
+          const buyerGuid = matched?.guid;
           if (!buyerGuid) {
             console.error(`[BridgeSweep] ${item.tx_hash} 환불 대상(구매자) 조회 실패 — 수동 감사 필요`);
             continue;
@@ -4091,18 +4098,28 @@ async function _recordOrderPdv(env, {
   importance_score = 0, importance_mode = 'LIGHTWEIGHT', lcat = 'B', risk_tier = 'low',
   consistency_check = null,
 }) {
-  const pdvKey   = env.SUPABASE_KEY || _supabaseAnonKey();
-  const pdvId    = `PDV-${from_guid.replace(/:/g, '').slice(0, 12)}-${Date.now()}`;
+  // (2026-07-14: Supabase pdv_log → L1 pdv_records 이관. handlePdvReport와
+  //  동일 관례 — pdv_records 스키마에 없는 필드(raw_hash·openhash_block_id·
+  //  openhash_anchored_at·importance_score 등)는 summary_6w(JSON) 안에
+  //  같이 보존한다.)
   const reportId = session_id || `RPT-kmarket-${Date.now()}`;
   const now      = new Date().toISOString();
 
-  const summary6w = JSON.stringify({
+  const summary6wFull = JSON.stringify({
     who:   `buyer(${from_guid.slice(0, 20)}...)`,
     when:  now,
     where: 'https://market.hondi.net',
     what:  `구매: ${item_name} ₮${total}`,
     how:   'Ed25519 서명 + L1 4단계 검증',
     why:   '상품 구매 거래',
+    raw_hash:             tx_hash,
+    openhash_block_id:    block_id,
+    openhash_anchored_at: now,
+    importance_score:     parseFloat(importance_score.toFixed(4)),
+    importance_mode,
+    lcat,
+    risk_tier,
+    consistency_check,
   });
 
   // risk_level: PDV 표준 필드. importance 기반으로 매핑
@@ -4110,43 +4127,28 @@ async function _recordOrderPdv(env, {
                      : importance_mode === 'STANDARD' ? 'medium'
                      : 'low';
 
-  await fetch(`${SUPABASE_URL}/rest/v1/pdv_log`, {
-    method:  'POST',
-    headers: {
-      'apikey': pdvKey, 'Authorization': `Bearer ${pdvKey}`,
-      'Content-Type': 'application/json', 'Prefer': 'return=minimal',
-    },
-    body: JSON.stringify({
-      id:                   pdvId,
-      guid:                 from_guid,
-      source:               'market',
-      type:                 'tx_2party',
-      report_id:            reportId,
-      summary:              `구매: ${item_name} ₮${total}`,
-      summary_6w:           summary6w,
-      risk_level:           pdvRiskLevel,
-      raw_hash:             tx_hash,
-      // STEP 09: 동기 앵커링 — L1 응답 수신 즉시 true
-      block_hash:           block_hash,
-      openhash_block_id:    block_id,
-      openhash_anchored:    true,
-      openhash_anchored_at: now,
-      reporter_svc:         'hondi-proxy',
-      via_worker:           true,
-      created_at:           now,
-      // Phase 4: 중요도·LCAT·risk_tier (OpenHash PLSM 입력 추적)
-      // 2026-07-07 추가: consistency_check — 판매자·구매자 재무제표 변동
-      // 일치 검증 결과. 이전엔 로그에만 찍히고 사라졌다 — 이제 거래마다
-      // 감사 가능한 기록으로 남긴다.
-      extra: {
-        importance_score: parseFloat(importance_score.toFixed(4)),
-        importance_mode,
-        lcat,
-        risk_tier,
-        consistency_check,
-      },
-    }),
-  }).catch(e => console.warn('[PDV] 기록 실패:', e.message));
+  try {
+    const token = await _l1AdminToken(env);
+    await fetch(`${L1_DEFAULT}/api/collections/pdv_records/records`, {
+      method:  'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid:              from_guid,
+        report_id:         reportId,
+        reporter_svc:      'hondi-proxy',
+        svc:               'market',
+        type:              'tx_2party',
+        summary:           `구매: ${item_name} ₮${total}`,
+        summary_6w:        summary6wFull,
+        block_hash:        block_hash,
+        risk_level:        pdvRiskLevel,
+        source:            'market',
+        openhash_anchored: true, // STEP 09: 동기 앵커링 — L1 응답 수신 즉시 true
+        domain:            'personal',
+        affiliation_org_id: null,
+      }),
+    });
+  } catch (e) { console.warn('[PDV] 기록 실패:', e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -4798,6 +4800,21 @@ async function handlePdvQuery(request,env,corsHeaders){
     if(!consentOk)return _err(401,'CONSENT_INVALID','동의 토큰이 유효하지 않습니다',corsHeaders);
     const withinLimit=await _checkRateLimit(env,query.ipv6,'pdv_query');
     if(!withinLimit)return _err(429,'RATE_LIMITED','PDV 조회 한도 초과',corsHeaders);
+    // 2026-07-15 신설(2026-07-15 복구 — 2026-07-14 배치1 커밋(03e8696)이
+    // 실수로 이 블록을 되돌렸던 것을 원본 423d246 기준으로 복원함) —
+    // 공무원 직무보조 갱신계획 v1.0 §5 레이어 C(92번) 대응.
+    // query.official_access_cert가 있으면(=담당공무원이 대신 조회를 실행한
+    // 경우) dept-task-handler.js의 기존 _verifyAccessCert로 서명을 검증하고,
+    // 검증된 official_guid/org_id를 감사 로그에 남긴다. 없으면(citizen이
+    // 자기 자신을 조회하는 일반 경로) officialAudit은 null로 남아 기존 동작과
+    // 완전히 동일하다 — 기능 회귀 없음.
+    let officialAudit=null;
+    if(query.official_access_cert){
+      const cert=query.official_access_cert;
+      const verifiedOrgId=await _verifyAccessCert(env,cert,cert.official_guid,{_verifyEd25519Simple,_l1FindProfileByGuid}).catch(()=>null);
+      if(!verifiedOrgId)return _err(401,'ACCESS_CERT_INVALID','공무원 직책 인증서 검증 실패 — 서명·만료·TOFU 중 하나가 불일치합니다',corsHeaders);
+      officialAudit={official_guid:cert.official_guid,org_id:verifiedOrgId,role:cert.role||null};
+    }
     // 2026-07-13 신설 — work_pdv:{orgId} scope는 레거시 Supabase pdv_log가
     // 아니라 L1 pdv_records(실제 쓰기가 이뤄지는 테이블)에서 조회한다
     // (AC-EVOLUTION_v1_1.md §5-6 — 기존 _fetchPdvByScope 경로가 최신
@@ -4810,7 +4827,7 @@ async function handlePdvQuery(request,env,corsHeaders){
       pdvSummary[ws]=await _fetchWorkPdvRecordsL1(env,query.ipv6,orgId);
     }
     const queryId=`PDVQ-${query.ipv6.replace(/:/g,'').slice(0,8)}-${Date.now()}`;
-    const pdvEntryId=await _recordConsentEvent(env,query,queryId);
+    const pdvEntryId=await _recordConsentEvent(env,query,queryId,officialAudit);
     const expOut=verified?.exp ? new Date(verified.exp*1000).toISOString() : new Date(Date.now()+3600*1000).toISOString();
     return new Response(JSON.stringify({ok:true,query_id:queryId,ipv6:query.ipv6,period:query.period,pdv_summary:pdvSummary,consent:{granted_at:new Date().toISOString(),expires_at:expOut,pdv_entry_id:pdvEntryId}}),{status:200,headers:corsHeaders});
   }catch(e){return _err(500,'INTERNAL_ERROR',e.message,corsHeaders);}
@@ -4967,7 +4984,39 @@ async function handleConsentRespond(request,env,corsHeaders){
   }),{status:200,headers:corsHeaders});
 }
 async function _checkRateLimit(env,ipv6,action){if(env.RATE_LIMIT_KV){const kvKey=`rl:${action}:${ipv6}`;const current=parseInt(await env.RATE_LIMIT_KV.get(kvKey)||'0');if(current>=3)return false;await env.RATE_LIMIT_KV.put(kvKey,String(current+1),{expirationTtl:300});return true;}return true;}
-async function _fetchPdvByScope(env,ipv6,scopes,period){const key=env.SUPABASE_KEY||_supabaseAnonKey();const result={};for(const scope of scopes){const sources=SCOPE_SOURCE_MAP[scope];let queryUrl=SUPABASE_URL+'/rest/v1/pdv_log'+`?guid=eq.${encodeURIComponent(ipv6)}`+`&created_at=gte.${period.start}T00:00:00Z&created_at=lte.${period.end}T23:59:59Z`+`&select=summary,summary_6w,risk_level,created_at,source&order=created_at.desc&limit=50`;if(sources&&sources.length===1){queryUrl+=`&source=eq.${encodeURIComponent(sources[0])}`;}else if(sources&&sources.length>1){queryUrl+=`&source=in.(${sources.map(encodeURIComponent).join(',')})`;}try{const res=await fetch(queryUrl,{headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'}});const rows=await res.json().catch(()=>[]);if(!rows?.length){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{}};continue;}const RISK_ORDER={low:0,medium:1,high:2};const maxRisk=rows.reduce((max,r)=>{const lvl=r.risk_level||'low';return RISK_ORDER[lvl]>RISK_ORDER[max]?lvl:max;},'low');let summary6w=null;for(const row of rows){try{summary6w=JSON.parse(row.summary_6w);break;}catch{}}result[scope]={available:true,entry_count:rows.length,risk_level:maxRisk,summary_6w:summary6w,risk_factors:_aggregateRiskFactors(scope,rows),sources:[...new Set(rows.map(r=>r.source).filter(Boolean))]};}catch(e){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{},error:'fetch_failed'};}}return result;}
+// (2026-07-14: Supabase pdv_log → L1 pdv_records 이관. PocketBase 필터
+//  문법으로 날짜범위+source 목록을 직접 표현한다 — Supabase의
+//  created_at=gte./lte., source=in.()와 동등한 PocketBase 문법.)
+async function _fetchPdvByScope(env,ipv6,scopes,period){
+  const token = await _l1AdminToken(env);
+  const result={};
+  for(const scope of scopes){
+    const sources=SCOPE_SOURCE_MAP[scope];
+    let filter = `guid='${ipv6.replace(/'/g,"\\'")}' && created >= '${period.start} 00:00:00' && created <= '${period.end} 23:59:59'`;
+    if(sources && sources.length===1){
+      filter += ` && source='${sources[0]}'`;
+    } else if(sources && sources.length>1){
+      filter += ` && (${sources.map(s=>`source='${s}'`).join(' || ')})`;
+    }
+    try{
+      const res=await fetch(
+        `${L1_DEFAULT}/api/collections/pdv_records/records?filter=${encodeURIComponent(filter)}&sort=-created&perPage=50`,
+        {headers:{'Authorization':'Bearer '+token}}
+      );
+      const data=await res.json().catch(()=>({items:[]}));
+      const rows=data.items||[];
+      if(!rows.length){result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{}};continue;}
+      const RISK_ORDER={low:0,medium:1,high:2};
+      const maxRisk=rows.reduce((max,r)=>{const lvl=r.risk_level||'low';return RISK_ORDER[lvl]>RISK_ORDER[max]?lvl:max;},'low');
+      let summary6w=null;
+      for(const row of rows){try{summary6w=JSON.parse(row.summary_6w);break;}catch{}}
+      result[scope]={available:true,entry_count:rows.length,risk_level:maxRisk,summary_6w:summary6w,risk_factors:_aggregateRiskFactors(scope,rows),sources:[...new Set(rows.map(r=>r.source).filter(Boolean))]};
+    }catch(e){
+      result[scope]={available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{},error:'fetch_failed'};
+    }
+  }
+  return result;
+}
 function _aggregateRiskFactors(scope,rows){if(scope==='ktraffic')return{accident_count:rows.filter(r=>{try{return JSON.parse(r.summary_6w)?.what?.includes('사고');}catch{return false;}}).length,entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,accident_free_months:0};if(scope==='khealth')return{total_records:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length,medium_risk_count:rows.filter(r=>r.risk_level==='medium').length};return{entry_count:rows.length,high_risk_count:rows.filter(r=>r.risk_level==='high').length};}
 async function _fetchWorkPdvRecordsL1(env,ipv6,orgId){
   try{
@@ -4983,7 +5032,60 @@ async function _fetchWorkPdvRecordsL1(env,ipv6,orgId){
     return{available:true,entry_count:items.length,risk_level:maxRisk,summary_6w:items.slice(0,10).map(it=>({summary:it.summary,type:it.type,created_at:it.created})),risk_factors:{},sources:[orgId]};
   }catch(e){return{available:false,entry_count:0,risk_level:'unknown',summary_6w:null,risk_factors:{},error:'fetch_failed'};}
 }
-const key=env.SUPABASE_KEY||_supabaseAnonKey();const svcId=_resolveSvcId(query.svc);const pdvId=`PDV-${query.ipv6.replace(/:/g,'').slice(0,12)}-${Date.now()}`;const summary6w=JSON.stringify({who:svcId,when:new Date().toISOString(),where:`https://${svcId}.hondi.net`,what:`PDV 조회 동의: scope=[${query.scope.join(',')}]`,how:'사용자 명시적 동의',why:query.purpose||'PDV 데이터 조회'});try{await fetch(SUPABASE_URL+'/rest/v1/pdv_log',{method:'POST',headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({id:pdvId,guid:query.ipv6,source:svcId,type:'consent_event',report_id:queryId,summary:`PDV 조회 동의: ${svcId} → [${query.scope.join(',')}]`,summary_6w:summary6w,risk_level:'low',period:query.period,raw_hash:null,created_at:new Date().toISOString()})});}catch(e){console.warn('[PDVQuery] consent_event 기록 실패:',e.message);}return pdvId;}
+// ── 2026-07-15 신설(2026-07-15 복구 — 배치1 커밋(03e8696)이 실수로
+// 통째로 지웠던 걸 423d246 원본 그대로 복원): _recordConsentEvent ──
+// BUG: handlePdvQuery는 2026-07-04경부터 이 함수를 호출해왔으나(조회 성공
+// 시마다 pdv_entry_id를 응답에 담기 위해), 실제 정의가 이 파일에도 어느
+// import 모듈에도 없었다 — 즉 지금까지 모든 PDV 조회 성공 경로가 이 줄에서
+// ReferenceError를 던지고 바깥 catch(e)에 걸려 500 INTERNAL_ERROR를
+// 반환했을 가능성이 높다(실운영 트래픽에서 실제로 그랬는지는 로그 확인
+// 필요 — 이번 수정 범위 밖).
+//
+// 공무원 직무보조 갱신계획 v1.0 §5 레이어 C(92번, 개인정보 오남용 감사) 요구
+// 사항을 그대로 반영: "누가, 언제, 무슨 목적으로, 몇 명분을 뽑았는지"를
+// 사후에 확인 가능해야 한다. officialAudit이 있으면(=handlePdvQuery에서
+// access_cert로 서명 검증까지 끝난 공무원 요청) official_guid/org_id를
+// 함께 남기고, 없으면 시민의 자기 조회(self-query)로 기록한다.
+//
+// batch_size는 항상 1로 고정한다 — 이 경로(query.ipv6는 항상 단일 문자열)는
+// 구조적으로 한 번에 한 시민만 조회 가능하다. 다수인 대상 집계·명단 추출은
+// 이 함수의 대상이 아니라 별도 기관 AC 경로(트랙3, work_pdv와도 다른 축)로만
+// 허용해야 한다는 원칙을 스키마 차원에서 강제한다 — 나중에 이 함수가 배열
+// ipv6를 받아들이도록 "편의상" 확장되는 일이 없도록 주석으로 남겨둔다.
+async function _recordConsentEvent(env,query,queryId,officialAudit=null){
+  try{
+    const token=await _l1AdminToken(env);
+    const res=await fetch(`${L1_DEFAULT}/api/collections/pdv_query_audit_log/records`,{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        query_id:      queryId,
+        ipv6:          query.ipv6,
+        svc:           _resolveSvcId(query.svc),
+        scope:         query.scope,
+        purpose:       query.purpose||'',
+        batch_size:    1,
+        official_guid: officialAudit?.official_guid||null,
+        official_org:  officialAudit?.org_id||null,
+        official_role: officialAudit?.role||null,
+        recorded_at:   new Date().toISOString(),
+      }),
+    });
+    if(!res.ok){
+      console.warn('[PDVQuery] 감사 로그 저장 실패(L1):', res.status, await res.text().catch(()=>''));
+      return null;
+    }
+    const row=await res.json().catch(()=>null);
+    return row?.id||null;
+  }catch(e){
+    // 감사 로그 저장 실패가 조회 자체를 막지는 않는다(가용성 우선 — 시민이
+    // 정당한 조회 도중 로그 시스템 장애로 서비스를 못 받는 상황을 피한다).
+    // 다만 이 catch가 자주 발생하면 감사 추적 자체가 무력화되므로 별도
+    // 모니터링(실패율 알림)이 필요하다 — Phase 4 온나라시스템 연동 시 확정.
+    console.warn('[PDVQuery] 감사 로그 저장 실패:',e.message);
+    return null;
+  }
+}
 async function _sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
 function buildCookie(token){return[`gopang_token=${token}`,'Path=/','Domain=.hondi.net','Max-Age=3600','SameSite=None','Secure','HttpOnly'].join('; ');}
 function parseCookie(header,name){const match=header.match(new RegExp(`(?:^|;)\\s*${name}=([^;]+)`));return match?decodeURIComponent(match[1]):null;}
