@@ -31,7 +31,6 @@
   // PRF는 결정론적 — 동일 salt + 동일 authenticator = 항상 동일 32바이트.
   // 서버에 아무것도 저장할 필요 없음.
   const WEBAUTHN_PRF_SALT = new TextEncoder().encode('gopang-wallet-v1-prf-salt');
-  const SUPABASE_URL     = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
   const WORKER_URL       = 'https://hondi-proxy.tensor-city.workers.dev';
 
   /* ────────────────────────────────────────────────
@@ -634,22 +633,11 @@
       if (guid) this.guid = guid;
     }
 
-    /* ── Supabase 공개키 등록 (Worker 경유) ── */
-    async registerPublicKey(anonKey) {
-      if (!this.guid) throw new Error('wallet: guid가 없습니다.');
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?current_ipv6=eq.${this.guid}`, {
-        method : 'PATCH',
-        headers: {
-          'Content-Type' : 'application/json',
-          'apikey'       : anonKey,
-          'Authorization': `Bearer ${anonKey}`,
-          'Prefer'       : 'return=minimal',
-        },
-        body: JSON.stringify({ pubkey_ed25519: this.publicKeyB64u }),
-      });
-      if (!res.ok) throw new Error(`공개키 등록 실패: ${res.status}`);
-      return true;
-    }
+    // (2026-07-15 삭제 — registerPublicKey. Supabase user_profiles에
+    //  직접 PATCH하던 옛날 방식이고, 지금은 handleProfilePost/
+    //  _l1UpsertProfile(L1 기반)이 공개키 등록을 대신한다. gopang·gdc
+    //  두 저장소 어디서도 이 메서드를 호출하는 곳이 없었다 — Supabase
+    //  완전 폐기의 마지막 잔재라 정리한다.)
 
     /* ── 지갑 정보 요약 ── */
     summary() {
