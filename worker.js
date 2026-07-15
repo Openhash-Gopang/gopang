@@ -6116,6 +6116,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
         : `\n\n(소속 철회 실패: ${result.reason})`;
       data.choices[0].message.content = (cleanedText || '소속 철회 요청을 처리했습니다.') + noticeText;
     }
+  }
 
   // ── WORK_PDV_REQUEST 서버측 처리 (2026-07-13 신설, AC-EVOLUTION_v1_1.md §PDV-SPLIT) ──
   {
