@@ -1187,8 +1187,48 @@ function _showPhonePopup(resolve) {
 
   const btn = document.getElementById('_auth-btn');
 
+  // ── 전화번호 OTP 발송/확인 (2026-07-15 신설) ──────────────────
+  // 성공 시 L1 훅이 검증할 phone_verify_token을 반환. 사용자가 입력을
+  // 취소하거나 5회 다 틀리면 null을 반환(가입 중단, 앞 화면으로).
+  async function _requestAndVerifyPhoneOtp(e164) {
+    try {
+      const reqRes = await fetch(`${PROXY}/biz/phone-otp-request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ e164 }),
+      });
+      const reqData = await reqRes.json().catch(() => ({}));
+      if (!reqRes.ok || !reqData.ok) {
+        alert('인증번호 발송에 실패했습니다: ' + (reqData.detail || reqData.error || '알 수 없는 오류'));
+        return null;
+      }
+    } catch (e) {
+      alert('인증번호 발송 중 네트워크 오류가 발생했습니다: ' + e.message);
+      return null;
+    }
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const code = prompt(`${e164}로 전송된 인증번호 6자리를 입력해 주세요.`);
+      if (code === null) return null; // 사용자 취소
+      try {
+        const verRes = await fetch(`${PROXY}/biz/phone-otp-verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ e164, code: code.trim() }),
+        });
+        const verData = await verRes.json().catch(() => ({}));
+        if (verRes.ok && verData.ok) return verData.phone_verify_token;
+        alert(verData.detail || '인증번호가 일치하지 않습니다. 다시 시도해 주세요.');
+      } catch (e) {
+        alert('인증 확인 중 네트워크 오류가 발생했습니다: ' + e.message);
+      }
+    }
+    alert('인증 시도 횟수를 초과했습니다. 처음부터 다시 시도해 주세요.');
+    return null;
+  }
+
   // ── 실제 신규 가입 처리 (기존 _register 로직 그대로, 지역 필드는 제거) ──
-  async function _completeRegistration({ ipv6, handle, e164, nickname, digits }) {
+  async function _completeRegistration({ ipv6, handle, e164, nickname, digits, phoneVerifyToken }) {
     const nickname_hash = await _sha256('phone:' + e164);
     const region = '';
 
@@ -1252,6 +1292,10 @@ function _showPhonePopup(resolve) {
         hondi_code_version: hondiCodeVersion,
         hondi_code_id: hondiShortId ? hondiShortId.toString() : null,
         digit_code_id: digitCodeId,
+        // 2026-07-15 신설 — L1 pb_hooks의 전화번호 소유 검증 훅이 이 값을
+        // 요구한다(없으면 프로필 생성 자체가 거부됨). 아래 케이스 C에서
+        // _requestAndVerifyPhoneOtp()로 발급받은 값을 그대로 전달.
+        phone_verify_token: phoneVerifyToken,
       })
     });
     let _l1Res = await _postL1Profile().catch(e => { console.warn('[가입][L1] 1차 요청 실패(네트워크):', e.message); return null; });
@@ -1410,9 +1454,19 @@ function _showPhonePopup(resolve) {
         btn.style.opacity = '0.4'; btn.style.pointerEvents = 'none';
       }
 
+      btn.textContent = '인증번호 확인 중...';
+      const phoneVerifyToken = await _requestAndVerifyPhoneOtp(e164);
+      if (!phoneVerifyToken) {
+        phoneErr.textContent = '전화번호 인증이 완료되지 않아 가입을 진행할 수 없습니다.';
+        phoneErr.style.display = 'block';
+        btn.style.opacity = '1'; btn.style.pointerEvents = '';
+        btn.textContent = '시작하기';
+        return;
+      }
+
       btn.textContent = '등록 중...';
       const ipv6 = await _e164ToIPv6(e164);
-      await _completeRegistration({ ipv6, handle, e164, nickname, digits });
+      await _completeRegistration({ ipv6, handle, e164, nickname, digits, phoneVerifyToken });
 
     } catch(e) {
       phoneErr.textContent = '네트워크 오류. 다시 시도해 주세요.';
