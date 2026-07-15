@@ -468,6 +468,27 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
     <div id="missing-info-rows"></div>
   </div>
 
+  <!-- 지갑 보안 — WebAuthn PRF (본인 프로필만, 2026-07-15 신설) -->
+  <div class="card hidden" id="card-wallet-security">
+    <div class="card-title">지갑 보안</div>
+    <div id="wallet-security-banner">
+      <div style="font-size:13px;color:#5f6368;line-height:1.5;margin-bottom:10px;">
+        지문 또는 얼굴 인식으로 지갑을 잠글 수 있어요. 기기를 도난당해도 개인키가 보호됩니다.
+      </div>
+      <div class="pill-wrap" style="border-top:none">
+        <button class="btn-pill-filled" id="btn-enroll-webauthn" onclick="_enrollWalletWebAuthn()">🔒 지문/얼굴 인식으로 보호하기</button>
+        <button class="btn-pill-outline" onclick="_dismissWalletSecurityBanner()">나중에</button>
+      </div>
+    </div>
+    <div id="wallet-security-enrolled" class="hidden">
+      <div class="ifield-row"><span class="ifield-key">상태</span><span class="ifield-val">🔒 지문/얼굴 인식 보호 중</span></div>
+      <div class="pill-wrap" style="border-top:none">
+        <button class="btn-pill-outline" onclick="_disableWalletWebAuthn()">보호 끄기</button>
+      </div>
+    </div>
+    <div id="wallet-security-status" style="font-size:12px;color:#8a8f98;margin-top:6px;"></div>
+  </div>
+
   <!-- AI 비서 채팅 -->
   <div class="ai-section hidden" id="ai-section">
     <button class="ai-toggle-btn" onclick="toggleAIChat()">
@@ -907,6 +928,7 @@ function render(p) {
 
   // ── 누락된 정보 추가 (본인 프로필만) ──
   renderMissingInfo(p, ident, pub, cont, loc, tags, _isOwner);
+  renderWalletSecurity(_isOwner);
 
   // ── SEO ──
   injectSEO(p, ident, tags);
@@ -945,6 +967,72 @@ function renderMissingInfo(p, ident, pub, cont, loc, tags, isOwner) {
 }
 
 // ── 프로필 저장(즐겨찾기) — 기기 로컬 저장, 서버 동기화 없음 ──
+
+// ── 지갑 보안 (WebAuthn PRF) — 본인 프로필 전용, 2026-07-15 신설 ──
+const _WALLET_SEC_DISMISS_KEY = 'gopang_wallet_security_banner_dismissed';
+
+function renderWalletSecurity(isOwner) {
+  const card = document.getElementById('card-wallet-security');
+  if (!isOwner || !window.GopangWallet) { card.classList.add('hidden'); return; }
+
+  const enrolled = GopangWallet.isWebAuthnEnrolled();
+  const dismissed = sessionStorage.getItem(_WALLET_SEC_DISMISS_KEY) === '1';
+
+  if (!enrolled && dismissed) { card.classList.add('hidden'); return; }
+
+  document.getElementById('wallet-security-banner').classList.toggle('hidden', enrolled);
+  document.getElementById('wallet-security-enrolled').classList.toggle('hidden', !enrolled);
+  document.getElementById('wallet-security-status').textContent = '';
+  card.classList.remove('hidden');
+}
+
+async function _enrollWalletWebAuthn() {
+  const btn = document.getElementById('btn-enroll-webauthn');
+  const status = document.getElementById('wallet-security-status');
+  if (btn) { btn.disabled = true; btn.textContent = '확인 중…'; }
+  try {
+    const result = await GopangWallet.enrollWebAuthn();
+    if (result.ok) {
+      status.textContent = '✅ 지문/얼굴 인식 보호가 활성화됐습니다.';
+      renderWalletSecurity(true);
+      return;
+    }
+    if (result.reason === 'PRF_UNSUPPORTED') {
+      status.textContent = '이 기기/브라우저는 아직 이 기능을 지원하지 않습니다.';
+    } else if (result.reason === 'NO_WALLET') {
+      status.textContent = '지갑이 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.';
+    } else {
+      status.textContent = '설정에 실패했습니다. 다시 시도해주세요.';
+    }
+  } catch (e) {
+    console.error('[wallet-security] enroll 실패:', e);
+    status.textContent = '설정이 취소되었거나 실패했습니다.';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔒 지문/얼굴 인식으로 보호하기'; }
+  }
+}
+
+async function _disableWalletWebAuthn() {
+  if (!confirm('지문/얼굴 인식 보호를 끌까요?\n다음부터는 생체인증 없이 지갑을 사용합니다.')) return;
+  const status = document.getElementById('wallet-security-status');
+  try {
+    const result = await GopangWallet.disableWebAuthn();
+    if (result.ok) {
+      status.textContent = '보호가 해제됐습니다.';
+      renderWalletSecurity(true);
+    } else {
+      status.textContent = '해제에 실패했습니다. 다시 시도해주세요.';
+    }
+  } catch (e) {
+    console.error('[wallet-security] disable 실패:', e);
+    status.textContent = '해제가 취소되었거나 실패했습니다.';
+  }
+}
+
+function _dismissWalletSecurityBanner() {
+  sessionStorage.setItem(_WALLET_SEC_DISMISS_KEY, '1');
+  document.getElementById('card-wallet-security')?.classList.add('hidden');
+}
 const _SAVED_PROFILES_KEY = 'hondi_saved_profiles';
 function _getSavedProfiles() {
   try { return JSON.parse(localStorage.getItem(_SAVED_PROFILES_KEY) || '[]'); } catch { return []; }
