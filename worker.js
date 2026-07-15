@@ -3493,6 +3493,8 @@ export default {
     if (pathname.startsWith('/biz/profile/'))   return handleBizProfile(request, env, corsHeaders);
     if (pathname === '/gwp/register-key' && request.method === 'POST') return handleRegisterKey(request, env, corsHeaders);
     if (pathname === '/biz/order'   && request.method === 'POST') return handleBizOrder(request, env, corsHeaders, ctx);
+    if (pathname === '/biz/gdc-deposit' && request.method === 'POST') return handleGdcDepositCreate(request, env, corsHeaders);
+    if (pathname === '/biz/gdc-deposits' && request.method === 'GET') return handleGdcDepositList(request, env, corsHeaders);
     if (pathname === '/biz/balance' && request.method === 'GET')  return handleBizBalance(request, env, corsHeaders);
     if (pathname === '/biz/supply'  && request.method === 'GET')  return handleBizSupply(request, env, corsHeaders);
     // (2026-07-14 신설: GDC 충전 파이프라인 — "고정계좌 + 입금자명 매칭")
@@ -3653,6 +3655,11 @@ export default {
     // GET /admin/stats — 대시보드 통계 (HMAC 인증, L1 PocketBase 프록시)
     if (pathname === '/admin/stats' && request.method === 'GET')
       return handleAdminStats(request, env, corsHeaders);
+
+    // (2026-07-15 신설) GET /admin/tx-recent — gdc.hondi.net 관리자
+    // 대시보드용 전체 최근 거래(admin/stats와 동일 토큰 인증 관례)
+    if (pathname === '/admin/tx-recent' && request.method === 'GET')
+      return handleAdminTxRecent(request, env, corsHeaders);
 
     // GET /admin/gov-task-drafts — 대기중 GOV_TASK draft 목록 (2026-07-12 위치 정정
     // — 기존엔 POST 전용 게이트 뒤에 있어서 GET 요청이 그 게이트에서 먼저
@@ -4120,6 +4127,127 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
     },
     contract_notice,
   }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-15 신설 — GDC 예금 메타데이터(gdc_deposits) L1 이관.
+// gdc.hondi.net의 openDep()이 실제 자금 이체는 이미 L1 /biz/order로
+// 처리한 뒤(GDC_DEPOSIT_VAULT_GUID='gdc-deposit-vault'로 송금), 그
+// 이체에 딸린 상품정보(product_type/interest_rate)만 이 엔드포인트로
+// 기록한다. vault_tx_hash로 넘어온 값이 실제 blocks 원장에 존재하고
+// 정말 예금금고로 간 거래인지 검증한 뒤에만 기록한다 — 클라이언트가
+// 임의의 tx_hash로 가짜 예금 메타데이터를 만들지 못하게 막는다.
+// ═══════════════════════════════════════════════════════════
+const GDC_DEPOSIT_VAULT_GUID = 'gdc-deposit-vault';
+
+async function handleGdcDepositCreate(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { user_guid, product_type, principal, interest_rate, vault_tx_hash } = body;
+  if (!user_guid)      return _err(400, 'MISSING_FIELD', 'user_guid 필수', corsHeaders);
+  if (!product_type)   return _err(400, 'MISSING_FIELD', 'product_type 필수', corsHeaders);
+  if (!(principal > 0)) return _err(400, 'INVALID_AMOUNT', 'principal은 0보다 커야 합니다', corsHeaders);
+  if (!vault_tx_hash)  return _err(400, 'MISSING_FIELD', 'vault_tx_hash 필수', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  // vault_tx_hash 검증 — 실제로 이 tx_hash의 블록이 존재하고, buyer가
+  // user_guid이며, 예금금고로 가는 output이 있는지 확인.
+  try {
+    const filter = encodeURIComponent(`tx_hash='${String(vault_tx_hash).replace(/'/g,"\\'")}'`);
+    const blockRes = await fetch(`${L1_DEFAULT}/api/collections/blocks/records?filter=${filter}&perPage=1`, { headers });
+    const blockData = await blockRes.json().catch(() => ({ items: [] }));
+    const block = blockData.items?.[0];
+    if (!block || block.buyer_guid !== user_guid) {
+      return _err(403, 'TX_VERIFICATION_FAILED', '해당 tx_hash가 이 사용자의 유효한 예치 거래가 아닙니다', corsHeaders);
+    }
+    let outputs; try { outputs = JSON.parse(block.outputs || '[]'); } catch { outputs = []; }
+    const vaultOutput = outputs.find(o => o.recipient_guid === GDC_DEPOSIT_VAULT_GUID);
+    if (!vaultOutput || vaultOutput.amount < principal) {
+      return _err(403, 'TX_VERIFICATION_FAILED', '거래 금액이 예치금과 일치하지 않습니다', corsHeaders);
+    }
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 검증 실패: ' + e.message, corsHeaders);
+  }
+
+  try {
+    const res = await fetch(`${L1_DEFAULT}/api/collections/gdc_deposits/records`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        user_guid, product_type, principal,
+        interest_rate: interest_rate || 0,
+        vault_tx_hash, status: 'active',
+      }),
+    });
+    if (!res.ok) return _err(500, 'SAVE_FAILED', await res.text(), corsHeaders);
+    const row = await res.json().catch(() => null);
+    return new Response(JSON.stringify({ ok: true, id: row?.id }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 저장 실패: ' + e.message, corsHeaders);
+  }
+}
+
+async function handleGdcDepositList(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const userGuid = url.searchParams.get('user_guid');
+  const limit = Math.min(parseInt(url.searchParams.get('limit') || '10', 10) || 10, 50);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': 'Bearer ' + token };
+  const filter = userGuid
+    ? encodeURIComponent(`user_guid='${String(userGuid).replace(/'/g,"\\'")}'`)
+    : '';
+  const url2 = filter
+    ? `${L1_DEFAULT}/api/collections/gdc_deposits/records?filter=${filter}&sort=-created&perPage=${limit}`
+    : `${L1_DEFAULT}/api/collections/gdc_deposits/records?sort=-created&perPage=${limit}`;
+  try {
+    const res = await fetch(url2, { headers });
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ ok: true, items: data.items || [] }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 조회 실패: ' + e.message, corsHeaders);
+  }
+}
+
+// GET /admin/tx-recent?token=&limit= — 관리자 전용 전체 최근 거래 목록.
+// (2026-07-15 신설 — gdc.hondi.net dashboard.html의 Supabase fs_ledger
+//  전체조회를 대체. handleTxHistory와 달리 guid 필터 없이 최근 blocks를
+//  그대로 가져온다 — 관리자가 "전체 흐름"을 보는 용도라 개인정보
+//  노출 범위가 넓으므로 admin token 필수.)
+async function handleAdminTxRecent(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const token = url.searchParams.get('token');
+  if (!token) return _err(401, 'MISSING_TOKEN', '', corsHeaders);
+  const isValid = await _verifyAdminToken(env, token);
+  if (!isValid) return _err(403, 'INVALID_TOKEN', '', corsHeaders);
+
+  const limit = Math.min(parseInt(url.searchParams.get('limit') || '15', 10) || 15, 100);
+  const l1Token = await _l1AdminToken(env);
+  const headers = { 'Authorization': 'Bearer ' + l1Token };
+
+  try {
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/blocks/records?filter=${encodeURIComponent("block_type != ''")}&sort=-created&perPage=${limit}`,
+      { headers }
+    );
+    const data = await res.json().catch(() => ({ items: [] }));
+    const items = [];
+    for (const b of (data.items || [])) {
+      let outputs; try { outputs = JSON.parse(b.outputs || '[]'); } catch { continue; }
+      for (const o of outputs) {
+        items.push({
+          tx_id: b.tx_hash, guid: b.buyer_guid, counterpart: o.recipient_guid,
+          direction: 'debit', amount: o.amount || 0,
+          fs_account: b.block_type, tx_at: b.created,
+        });
+      }
+    }
+    items.sort((a, c) => new Date(c.tx_at) - new Date(a.tx_at));
+    return new Response(JSON.stringify({ ok: true, items: items.slice(0, limit) }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 조회 실패: ' + e.message, corsHeaders);
+  }
 }
 
 // ── GET /biz/balance?guid=... — 재대사(reconcile) 지원 ────────────
