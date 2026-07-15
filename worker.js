@@ -7203,15 +7203,21 @@ function computeLCAT(buyerRegion, sellerRegion) {
  */
 async function updateNodeHashChain(env, { userHash, txId, blockHash, buyerGuid, sellerGuid, balanceClaimed }) {
   try {
-    const sbH = _sbServiceHeaders(env);
+    // (2026-07-14: Supabase l1_ledger(선형 해시체인 전용 테이블 — main.pb.js의
+    //  동명 l1_ledger 블록원장과는 완전히 별개) → L1 tx_hash_chain 이관.
+    //  이 체인은 엄격히 순차적이라 위 tx_hash_chain 마이그레이션 주석에
+    //  적어둔 대로 경쟁 상태 위험이 있다 — Supabase 버전에도 있던 한계라
+    //  이번 이관에서 새로 생긴 문제는 아니다.)
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
 
     // 직전 node_hash 조회
     const lastRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/l1_ledger?select=node_hash&order=anchored_at.desc&limit=1`,
-      { headers: sbH }
+      `${L1_DEFAULT}/api/collections/tx_hash_chain/records?sort=-anchored_at&perPage=1`,
+      { headers }
     );
-    const lastRows = await lastRes.json().catch(() => []);
-    const prevNodeHash = lastRows?.[0]?.node_hash || '0'.repeat(64);
+    const lastData = lastRes.ok ? await lastRes.json().catch(() => ({ items: [] })) : { items: [] };
+    const prevNodeHash = lastData.items?.[0]?.node_hash || '0'.repeat(64);
 
     // n_i = SHA-256(n_{i-1} ∥ h_{user,i})
     const input    = new TextEncoder().encode(prevNodeHash + userHash);
@@ -7219,9 +7225,9 @@ async function updateNodeHashChain(env, { userHash, txId, blockHash, buyerGuid, 
     const nodeHash = Array.from(new Uint8Array(buf))
       .map(b => b.toString(16).padStart(2, '0')).join('');
 
-    await fetch(`${SUPABASE_URL}/rest/v1/l1_ledger`, {
+    await fetch(`${L1_DEFAULT}/api/collections/tx_hash_chain/records`, {
       method:  'POST',
-      headers: { ...sbH, 'Prefer': 'return=minimal' },
+      headers,
       body: JSON.stringify({
         tx_id:           txId,
         buyer_guid:      buyerGuid,
@@ -7234,7 +7240,7 @@ async function updateNodeHashChain(env, { userHash, txId, blockHash, buyerGuid, 
       }),
     });
 
-    console.log('[H_N] l1_ledger 기록 완료 | tx_id:', txId?.slice(0, 8),
+    console.log('[H_N] tx_hash_chain 기록 완료 | tx_id:', txId?.slice(0, 8),
       '| node_hash:', nodeHash.slice(0, 8));
     return nodeHash;
   } catch(e) {
