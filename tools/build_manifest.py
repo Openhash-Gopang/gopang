@@ -99,6 +99,20 @@ universal_integrity_files = [
 if universal_integrity_files:
     manifest['UNIVERSAL-INTEGRITY'] = best(universal_integrity_files)
 
+# 2-c-2) UNIVERSAL-job-assist — prompts/UNIVERSAL-job-assist_vX_Y.md
+#      2026-07-15 신설: call-ai.js가 처음엔 UNIVERSAL_COMMON_URL 하드코딩
+#      패턴(worker.js, v1_3에 박제된 채 실제 최신 v1_5를 못 읽고 있던 걸
+#      같은 날 발견)을 그대로 따라가려다, 바로 위 UNIVERSAL-INTEGRITY
+#      항목이 정확히 이 문제를 막으려고 만들어진 선례라는 걸 확인하고
+#      대신 이 매니페스트 규칙을 추가했다 — call-ai.js는
+#      _loadSpByKey('UNIVERSAL-job-assist', ...)로 읽는다.
+universal_job_assist_files = [
+    f.name for f in PROMPTS.iterdir()
+    if re.match(r'^UNIVERSAL-job-assist_v', f.name) and f.name.endswith('.md')
+]
+if universal_job_assist_files:
+    manifest['UNIVERSAL-job-assist'] = best(universal_job_assist_files)
+
 # 2-d) SP_{slug} 계열(.md) — EXPERT 페르소나(SP_lawyer 등) + 공통 가드레일
 #      (SP_common_guardrails·SP_common_medical_safety) — prompts/SP_{slug}_v{ver}.md
 #      2026-07-09 신설: expert-registry.js/expert-session.js가 이 파일들을

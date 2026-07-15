@@ -32,7 +32,7 @@ import { maybeHandleExpertTurn, applyExpertSystemIfActive,
          isExpertActive, handleExpertTag, _composeExpertPrompt } from './expert-session.js';
 import { getExpertDef, resolveExpertId } from './expert-registry.js';
 import { buildHondiFaqContext } from './hondi-faq-router.js';
-import { setPdvDomain, _buildPDVNote } from '../pdv/record.js';
+import { setPdvDomain, getPdvDomain, _buildPDVNote } from '../pdv/record.js';
 // ★ 2026-07-11 추가: _callGeminiGeneral 등 5개 함수가 vision.js에 정의는
 // 돼 있는데 여기서 import가 빠져 있었다 — 이미지 첨부 후 Gemini 분석
 // 경로를 탈 때마다 ReferenceError로 죽고 있었을 것(실사로 확인, 아래
@@ -69,6 +69,37 @@ export async function _loadAgentCommonSP() {
     console.error('[SP] AGENT-COMMON 로드 실패:', e.message);
     return '';
   }
+}
+
+// UNIVERSAL-job-assist (2026-07-15 신설) — AGENT-COMMON과 달리 CFG.system_base에
+// 넣지 않는다. 위 AGENT-COMMON 로드 지점 주석에 "system 메시지는 세션 내 절대
+// 변경하지 않는다(DeepSeek 캐시 prefix 보존)"는 명시적 원칙이 있는데, 이 모듈은
+// [PDV_DOMAIN_SET mode=work] 태그로 세션 도중 켜지고 꺼질 수 있는 상태(getPdvDomain())에
+// 반응해야 하므로 system이 아니라 매 턴 _buildEnhancedUserContent()의 동적
+// 컨텍스트로 주입한다(job_ksco/affiliation과 같은 위치·같은 이유, UNIVERSAL-
+// INTEGRITY의 user 메시지 병합 패턴과도 동일). UNIVERSAL-job-assist_v1_1.md
+// 서문 참고 — v1.0의 "system 상속" 서술은 이 제약을 몰랐을 때 쓴 부정확한
+// 서술이라 v1.1에서 정정했다.
+//
+// 로드 방식은 UNIVERSAL-INTEGRITY와 동일하게 _loadSpByKey(manifest 기반)를
+// 쓴다 — worker.js UNIVERSAL_COMMON_URL이 raw.githubusercontent.com 하드코딩
+// URL이라 v1_3에 박제된 채 실제 파일은 v1_5까지 올라간 걸 놓치고 있었던 걸
+// 이번에 발견했다(별도 커밋으로 수정). 그 문제를 막으려고 UNIVERSAL-INTEGRITY가
+// 2026-07-09에 이미 manifest 체계로 전환된 선례가 있어 그 패턴을 그대로
+// 따른다(tools/build_manifest.py에 동일한 스캔 규칙 추가). 버전을 올려도
+// 파일명 접두어(UNIVERSAL-job-assist_v)만 지키면 manifest가 최신본을
+// 자동으로 찾는다 — URL을 손으로 바꿀 필요가 없다.
+let _jobAssistCache = null;
+
+async function _fetchUniversalJobAssist() {
+  if (_jobAssistCache) return _jobAssistCache;
+  try {
+    _jobAssistCache = await _loadSpByKey('UNIVERSAL-job-assist', 'UNIVERSAL-job-assist');
+  } catch (e) {
+    console.warn('[JobAssist] 로드 실패:', e.message);
+    return '';
+  }
+  return _jobAssistCache;
 }
 
 // profile-assistant SP (2026-07-08: personal-assistant에서 프로필 작성
@@ -2241,6 +2272,19 @@ async function _buildEnhancedUserContent(userContent) {
         .map(a => `${a.requester_id}:${a.task_type || '(유형미기재)'}`)
         .join('; ');
       parts.push(`배정된업무(${assignments.length}건):${asgStr}`);
+    }
+  } catch {}
+
+  // 2026-07-15 신설 — UNIVERSAL-job-assist(U1~U6) 주입. system이 아니라
+  // 여기(매 턴 동적 컨텍스트)에서 넣는 이유는 위 _fetchUniversalJobAssist
+  // 정의부 주석 참고. 위의 짧은 key:value 압축 신호들과 달리 이건 지침
+  // 원문이라 압축하지 않고 그대로 붙인다 — job_ksco/affiliation처럼
+  // "정보"가 아니라 "행동 규칙"이라 요약하면 의미가 소실된다. getPdvDomain()이
+  // 'work'일 때만 붙여 개인 모드 turn의 토큰 비용을 늘리지 않는다.
+  try {
+    if (getPdvDomain() === 'work') {
+      const jobAssistText = await _fetchUniversalJobAssist();
+      if (jobAssistText) parts.push(`[업무보조원칙]\n${jobAssistText}`);
     }
   } catch {}
 
