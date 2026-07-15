@@ -5,6 +5,8 @@
 
 const CACHE_NAME    = 'gopang-20260707-1833';
 const CACHE_TIMEOUT = 5000; // 네트워크 타임아웃 5초
+// 2026-07-15 신설 — PERSONAL-AC-CALL-PROTOCOL §5 수신확인 3단계 전송용.
+const WORKER_PROXY  = 'https://hondi-proxy.tensor-city.workers.dev';
 
 // 설치 시 사전 캐시할 핵심 파일
 const PRECACHE_URLS = [
@@ -178,6 +180,20 @@ self.addEventListener('message', (event) => {
   }
 });
 
+// ── 수신확인(PERSONAL-AC-CALL-PROTOCOL §5) — 도달(delivered) 보고 ──────
+// tag가 'personal-ac-call-{request_id}' 형태일 때만 request_id를 추출해
+// 보고한다. 실패해도(오프라인 등) 알림 표시 자체는 막지 않는다 — 기존
+// worker.js _recordConsentEvent와 동일한 "가용성 우선" 원칙.
+function _reportConsentReceipt(tag, event) {
+  const m = /^personal-ac-call-(.+)$/.exec(tag || '');
+  if (!m) return Promise.resolve();
+  return fetch(`${WORKER_PROXY}/pdv/consent-receipt`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ request_id: m[1], event }),
+  }).catch(e => console.warn('[SW] 수신확인 발송 실패:', e.message));
+}
+
 // ── Push 알림 수신 ─────────────────────────────────────────
 self.addEventListener('push', (event) => {
   let data = {};
@@ -216,6 +232,7 @@ self.addEventListener('push', (event) => {
         vibrate: [200, 100, 200],
       }),
       _broadcastSound,
+      _reportConsentReceipt(tag, 'delivered'),
       (isAiSetupSync || isVersionUpdate)
         ? clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
             for (const client of list) {
@@ -239,20 +256,24 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url   = event.notification.data?.url   || '/webapp.html';
   const sound = event.notification.data?.sound || 'ping';
+  const tag   = event.notification.tag || '';
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      // 이미 열린 창이 있으면 포커스 + postMessage (리스너가 이미 살아있음)
-      for (const client of list) {
-        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
-          client.postMessage({ type: 'PLAY_SOUND', sound });
-          return client.focus();
+    Promise.all([
+      _reportConsentReceipt(tag, 'acknowledged'),
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+        // 이미 열린 창이 있으면 포커스 + postMessage (리스너가 이미 살아있음)
+        for (const client of list) {
+          if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+            client.postMessage({ type: 'PLAY_SOUND', sound });
+            return client.focus();
+          }
         }
-      }
-      // 없으면 새 창 — postMessage 대신 URL 파라미터로 전달(경쟁 상태 회피)
-      const sep = url.includes('?') ? '&' : '?';
-      return clients.openWindow(url + sep + 'playSound=' + encodeURIComponent(sound));
-    })
+        // 없으면 새 창 — postMessage 대신 URL 파라미터로 전달(경쟁 상태 회피)
+        const sep = url.includes('?') ? '&' : '?';
+        return clients.openWindow(url + sep + 'playSound=' + encodeURIComponent(sound));
+      }),
+    ])
   );
 });
 
