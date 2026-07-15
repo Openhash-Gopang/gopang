@@ -324,7 +324,13 @@ async function _issueViaWorker(svc, level = 'L0') {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, reason: data?.code || `http_${res.status}` };
-    return { ok: true, ipv6: user.ipv6, level: data.level || level, exp: Math.floor(ts / 1000) + 3600 };
+    // 2026-07-15(발견④ 수정): data.token(handleIssue가 이미 서명해 내려주는 실제
+    // Bearer 토큰 문자열)을 그동안 여기서 버리고 있었다 — QR 경로(위 294행)는
+    // token: qrToken을 이미 정확히 포함시켰는데, 지갑 경로만 빠뜨린 누락이었다.
+    // 이 필드가 없으면 handlePdvQuery(worker.js)가 "검증 불가"로 보고 L2/L3
+    // scope를 전부 L1로 강등시킨다(worker.js 4749행대 TODO 참고) — 이 한 줄이
+    // L2/L3 인증 배선 미완의 실제 원인 지점이었다.
+    return { ok: true, ipv6: user.ipv6, level: data.level || level, exp: Math.floor(ts / 1000) + 3600, token: data.token };
   } catch (e) {
     return { ok: false, reason: 'NETWORK' };
   }
@@ -340,7 +346,10 @@ async function _runSilentMode() {
     _postToParent(null, result.reason);
     return;
   }
-  _postToParent({ ipv6: result.ipv6, level: result.level, exp: result.exp }, null);
+  // 2026-07-15(발견④ 수정): result.token을 postMessage 페이로드에도 포함시켜야
+  // gopang-sso.js의 _trySilentIframe이 세션에 저장하는 객체에 실제 서명된
+  // Bearer 토큰이 담긴다 — 위 _issueViaWorker 수정과 반드시 짝을 이뤄야 함.
+  _postToParent({ ipv6: result.ipv6, level: result.level, exp: result.exp, token: result.token }, null);
 }
 
 function _postToParent(token, error) {
