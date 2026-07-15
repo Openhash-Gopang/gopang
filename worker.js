@@ -172,6 +172,121 @@ function _generateChargeMatchCode() {
 }
 
 const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions';
+
+// ── 전화번호 OTP (2026-07-15 신설, 솔라피 연동) ──────────────────
+// env.SOLAPI_API_KEY / SOLAPI_API_SECRET / SOLAPI_SENDER_NUMBER /
+// PHONE_VERIFY_SECRET = wrangler secret put 로 등록.
+const SOLAPI_SEND_URL = 'https://api.solapi.com/messages/v4/send';
+const OTP_TTL_SECONDS = 300;              // 5분
+const OTP_MAX_ATTEMPTS = 5;
+const OTP_RESEND_COOLDOWN_SECONDS = 60;   // 같은 번호 재발송 최소 간격
+const PHONE_VERIFY_TOKEN_TTL_MS = 10 * 60 * 1000; // 검증 토큰 유효 10분
+
+function _generateOtpCode() {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return String(100000 + (buf[0] % 900000));
+}
+
+async function _hmacSha256Hex(secret, message) {
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// 솔라피 HMAC-SHA256 인증 스킴으로 SMS 1건 발송.
+async function _sendSolapiSms(env, toE164, text) {
+  if (!env.SOLAPI_API_KEY || !env.SOLAPI_API_SECRET || !env.SOLAPI_SENDER_NUMBER) {
+    throw new Error('SOLAPI 인증 정보가 설정되지 않았습니다(SOLAPI_API_KEY/SECRET/SENDER_NUMBER)');
+  }
+  const date = new Date().toISOString();
+  const salt = crypto.randomUUID();
+  const signature = await _hmacSha256Hex(env.SOLAPI_API_SECRET, date + salt);
+  const to = toE164.replace(/^\+82/, ''); // '+820XXXXXXXXX' → '0XXXXXXXXX'(국내 포맷)
+
+  const res = await fetch(SOLAPI_SEND_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `HMAC-SHA256 apiKey=${env.SOLAPI_API_KEY}, date=${date}, salt=${salt}, signature=${signature}`,
+    },
+    body: JSON.stringify({ message: { to, from: env.SOLAPI_SENDER_NUMBER, text } }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.errorMessage || data?.message || `SOLAPI HTTP ${res.status}`);
+  return data;
+}
+
+// POST /biz/phone-otp-request { e164 } — SMS로 6자리 코드 발송.
+async function handlePhoneOtpRequest(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { e164 } = body;
+  if (!e164 || !/^\+820\d{8,10}$/.test(e164)) {
+    return _err(400, 'INVALID_PHONE', '올바른 국내 전화번호 형식이 아닙니다', corsHeaders);
+  }
+  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', 'OTP 저장소가 설정되지 않았습니다', corsHeaders);
+
+  const cooldownKey = `otp_cd:${e164}`;
+  if (await env.QR_SESSIONS_KV.get(cooldownKey)) {
+    return _err(429, 'OTP_COOLDOWN', `잠시 후(${OTP_RESEND_COOLDOWN_SECONDS}초) 다시 시도해 주세요`, corsHeaders);
+  }
+
+  const code = _generateOtpCode();
+  const otpKey = `otp:${e164}`;
+  await env.QR_SESSIONS_KV.put(otpKey, JSON.stringify({ code, attempts: 0 }), { expirationTtl: OTP_TTL_SECONDS });
+  await env.QR_SESSIONS_KV.put(cooldownKey, '1', { expirationTtl: OTP_RESEND_COOLDOWN_SECONDS });
+
+  try {
+    await _sendSolapiSms(env, e164, `[혼디] 인증번호는 ${code}입니다. ${Math.floor(OTP_TTL_SECONDS / 60)}분 이내에 입력해 주세요.`);
+  } catch (e) {
+    console.warn('[PhoneOTP] SOLAPI 발송 실패:', e.message);
+    return _err(502, 'SMS_SEND_FAILED', '인증번호 발송에 실패했습니다: ' + e.message, corsHeaders);
+  }
+
+  return new Response(JSON.stringify({ ok: true, expires_in: OTP_TTL_SECONDS }), { status: 200, headers: corsHeaders });
+}
+
+// POST /biz/phone-otp-verify { e164, code } — 성공 시 서명된 검증 토큰 발급.
+// 이 토큰은 (다음 fix.py에서) L1 profiles 생성 훅이 PHONE_VERIFY_SECRET으로
+// 재검증해야 실제 강제력이 생긴다 — 지금은 발급만 하고 아직 아무도 검사 안 함.
+async function handlePhoneOtpVerify(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { e164, code } = body;
+  if (!e164 || !code) return _err(400, 'MISSING_FIELD', 'e164, code 필수', corsHeaders);
+  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', 'OTP 저장소가 설정되지 않았습니다', corsHeaders);
+  if (!env.PHONE_VERIFY_SECRET) return _err(500, 'SECRET_NOT_SET', 'PHONE_VERIFY_SECRET이 설정되지 않았습니다', corsHeaders);
+
+  const otpKey = `otp:${e164}`;
+  const raw = await env.QR_SESSIONS_KV.get(otpKey);
+  if (!raw) return _err(400, 'OTP_EXPIRED', '인증번호가 만료됐거나 요청 이력이 없습니다', corsHeaders);
+
+  const record = JSON.parse(raw);
+  if (record.attempts >= OTP_MAX_ATTEMPTS) {
+    await env.QR_SESSIONS_KV.delete(otpKey);
+    return _err(429, 'OTP_TOO_MANY_ATTEMPTS', '시도 횟수를 초과했습니다. 다시 요청해 주세요', corsHeaders);
+  }
+
+  if (String(code).trim() !== record.code) {
+    record.attempts += 1;
+    await env.QR_SESSIONS_KV.put(otpKey, JSON.stringify(record), { expirationTtl: OTP_TTL_SECONDS });
+    return _err(400, 'OTP_MISMATCH', `인증번호가 일치하지 않습니다(남은 시도 ${OTP_MAX_ATTEMPTS - record.attempts}회)`, corsHeaders);
+  }
+
+  await env.QR_SESSIONS_KV.delete(otpKey);
+
+  const exp = Date.now() + PHONE_VERIFY_TOKEN_TTL_MS;
+  const payload = `${e164}:${exp}`;
+  const signature = await _hmacSha256Hex(env.PHONE_VERIFY_SECRET, payload);
+  const token = btoa(payload) + '.' + signature;
+
+  return new Response(JSON.stringify({
+    ok: true, phone_verify_token: token, expires_at: new Date(exp).toISOString(),
+  }), { status: 200, headers: corsHeaders });
+}
 const DEEPSEEK_URL   = 'https://api.deepseek.com/v1/chat/completions';
 // OpenRouter — Worker 내부 AI 호출 (내부 Agent, 피드백 분류 등)
 // 클라이언트가 OR 키로 직접 OR에 접속하는 것과 별개.
@@ -3189,6 +3304,9 @@ export default {
     if (pathname === '/biz/charge-status'  && request.method === 'GET')  return handleChargeStatus(request, env, corsHeaders);
     if (pathname === '/biz/charge-list'    && request.method === 'GET')  return handleChargeList(request, env, corsHeaders);
     if (pathname === '/biz/charge-confirm' && request.method === 'POST') return handleChargeConfirm(request, env, corsHeaders);
+    // (2026-07-15 신설: 전화번호 OTP — 가입 시 번호 소유 증명, 솔라피 연동)
+    if (pathname === '/biz/phone-otp-request' && request.method === 'POST') return handlePhoneOtpRequest(request, env, corsHeaders);
+    if (pathname === '/biz/phone-otp-verify'  && request.method === 'POST') return handlePhoneOtpVerify(request, env, corsHeaders);
     // 2026-07-07: /biz/review(Supabase biz_reviews, 5점 척도) → 완전 대체.
     // 실거래(tx_hash) 기반 trade_ratings(PocketBase, polarity+온도)로 이전.
     // handleBizReview는 하단에 DEPRECATED로 남겨두되 라우팅에서 제거함.
