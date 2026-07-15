@@ -3193,6 +3193,13 @@ export default {
     if (pathname === '/consent/info')            return handleConsentInfo(request, env, corsHeaders);
     if (pathname === '/consent/respond')         return handleConsentRespond(request, env, corsHeaders);
 
+    // ── 개인 AC 호출 프로토콜 (PERSONAL-AC-CALL-PROTOCOL_v1_0, 2026-07-15) ──
+    // 공무원 AC가 특정 시민의 개인 AC를 호출하는 진입점. 응답(동의/거부)은
+    // 기존 /consent/respond를 그대로 재사용 — 새 응답 엔드포인트를 만들지
+    // 않는다(consent.html이 이미 이 흐름을 처리함).
+    if (pathname === '/personal-ac/call' && request.method === 'POST')
+      return handlePersonalAcCall(request, env, corsHeaders);
+
     // ── 서비스 등록 ───────────────────────────────────────
     if (pathname === '/svc/register')            return handleSvcRegister(request, env, corsHeaders);
     if (pathname === '/svc/verify')              return handleSvcVerify(request, env, corsHeaders);
@@ -5014,6 +5021,110 @@ async function _l1FindConsentRequest(env,requestId){
 // GET/POST /consent/info?req=... — 동의 승인 페이지(consent.html)가 요청 상세를 표시하기 위해 호출.
 // 관리자 토큰이 필요한 L1 컬렉션을 안전하게 프록시 — svc/scope/purpose/expires_at/status만 노출,
 // consent_token·ipv6 원문은 절대 클라이언트에 반환하지 않는다.
+// ═══════════════════════════════════════════════════════════
+// PERSONAL-AC-CALL-PROTOCOL_v1_0 구현 — /personal-ac/call
+// (docs/PERSONAL-AC-CALL-PROTOCOL_v1_0_2026-07-15.md 참조)
+//
+// 왜 필요한가(발견①): handlePdvQuery의 "동의 필요" 단계는 요청자(=시민 본인의
+// 브라우저)가 그대로 consent.html로 리다이렉트되는 걸 전제한다. 공무원이 시민을
+// 대신 조회하려는 경우, 이 리다이렉트는 공무원의 화면에서 일어나므로 시민에게는
+// 아무 일도 일어나지 않는다 — 요청이 존재한다는 사실 자체를 시민이 알 방법이
+// 없었다.
+//
+// 이 함수가 하는 일은 두 가지뿐이다(나머지는 기존 인프라 재사용):
+//  (1) official_access_cert를 요청 "생성 시점"에 미리 검증한다 — handlePdvQuery는
+//      consent_token이 이미 있는 "2단계"에서만 이 검증을 했다. 여기서는 애초에
+//      1단계(동의요청 생성) 자체를 공무원 신원 확인 없이는 시작하지 않는다.
+//  (2) _sendPushToGuid로 대상 시민에게 실제 알림을 보낸다 — 지금까지 없었던
+//      알림 채널. 응답(동의/거부)은 시민이 consent.html에서 기존 /consent/respond
+//      를 그대로 호출하면 되므로 새 응답 엔드포인트는 만들지 않는다.
+//
+// 긴급(emergency) 처리에 대한 구현 결정 — 설계문서(§[PERSONAL_AC_EMERGENCY_
+// BYPASS])는 "§4 표준 왕복을 거치지 않는다"고 썼으나, 실제 구현에서는 동의
+// 요건 자체를 생략하지 않는다 — 이건 법적 근거(강제조사·긴급조항)가 있어야
+// 정당화되는 영역이라 AI가 코드 차원에서 단독으로 결정할 사안이 아니다(이전
+// 사고실험 "강제조사·수사성 업무" 논의와 동일 원칙). emergency=true는 대신
+// (a) 알림의 긴급도(제목·진동 패턴)만 다르게 하고 (b) EMERGENCY_ELIGIBLE_ROLES
+// 화이트리스트에 없는 role은 애초에 emergency를 자칭할 수 없게 막는다. 설계
+// 문서의 "표준 왕복 생략"은 이번 구현에서 채택하지 않았음을 문서에도 반영 필요.
+const EMERGENCY_ELIGIBLE_ROLES = new Set([
+  // 2026-07-15: 실제 role 명명 체계가 아직 확정 전이라(PERSONAL-AC-CALL-
+  // PROTOCOL KNOWN_LIMITATIONS 5) 자리표시자 값만 등록해둔다 — 실사용 전
+  // 반드시 실제 직책 코드 체계와 대조해 갱신할 것.
+  'welfare_officer', 'police_liaison', 'child_protection_officer',
+]);
+
+async function handlePersonalAcCall(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const {
+    target_guid, scope, purpose = '', period,
+    official_access_cert, ttl_sec = 3600,
+    emergency = false,
+  } = body;
+
+  if (!target_guid) return _err(400, 'MISSING_FIELD', 'target_guid 필수', corsHeaders);
+  if (!Array.isArray(scope) || scope.length === 0)
+    return _err(400, 'SCOPE_INVALID', 'scope는 비어있지 않은 배열이어야 합니다', corsHeaders);
+  const invalidScope = scope.find(s => !VALID_PDV_SCOPES.includes(s) && !/^work_pdv:/.test(s));
+  if (invalidScope) return _err(400, 'SCOPE_INVALID', `허용되지 않은 scope: ${invalidScope}`, corsHeaders);
+  if (!period?.start || !period?.end) return _err(400, 'SCHEMA_ERROR', 'period.start, period.end 필수', corsHeaders);
+  if (!official_access_cert?.official_guid) return _err(400, 'MISSING_FIELD', 'official_access_cert 필수', corsHeaders);
+
+  // (1) 공무원 신원 선검증 — handlePdvQuery와 달리 요청 "생성 이전"에 검증한다.
+  const verifiedOrgId = await _verifyAccessCert(
+    env, official_access_cert, official_access_cert.official_guid,
+    { _verifyEd25519Simple, _l1FindProfileByGuid }
+  ).catch(() => null);
+  if (!verifiedOrgId)
+    return _err(401, 'ACCESS_CERT_INVALID', '공무원 직책 인증서 검증 실패 — 서명·만료·TOFU 중 하나가 불일치합니다', corsHeaders);
+
+  if (emergency && !EMERGENCY_ELIGIBLE_ROLES.has(official_access_cert.role)) {
+    return _err(403, 'EMERGENCY_NOT_ALLOWED', '이 직책은 긴급 플래그를 발화할 권한이 없습니다', corsHeaders);
+  }
+
+  const target = await _l1FindProfileByGuid(env, target_guid).catch(() => null);
+  if (!target) return _err(404, 'TARGET_NOT_FOUND', '대상 시민 프로필을 찾을 수 없습니다', corsHeaders);
+
+  const reqId = `PACREQ-${target_guid.replace(/:/g, '').slice(0, 8)}-${Date.now()}`;
+  const expiresAt = Math.floor(Date.now() / 1000) + (emergency ? 86400 : ttl_sec); // 긴급은 24시간 — "무제한"은 아님(위 주석 참고)
+  const query = { svc: verifiedOrgId, ipv6: target_guid, scope, purpose, period };
+  await _storeConsentRequest(env, reqId, query, expiresAt);
+
+  const consentUrl = 'https://hondi.net/consent' +
+    `?req=${encodeURIComponent(reqId)}&svc=${encodeURIComponent(verifiedOrgId)}` +
+    `&scope=${encodeURIComponent(scope.join(','))}&purpose=${encodeURIComponent(purpose)}`;
+
+  // (2) 실제 알림 발송 — 발견①의 핵심 수정. 실패해도 요청 생성 자체는
+  // 무효화하지 않는다(대기함 폴백은 STAFF_TASK_QUEUE 패턴 재사용 예정,
+  // PERSONAL-AC-CALL-PROTOCOL §6-1 참조 — 이번 구현 범위 밖).
+  await _sendPushToGuid(env, target_guid, {
+    title: emergency ? '긴급 확인 요청' : `${verifiedOrgId} 확인 요청`,
+    body:  purpose || '개인정보 조회 동의 요청이 도착했습니다.',
+    tag:   `personal-ac-call-${reqId}`,
+    url:   consentUrl,
+  }).catch(e => console.warn('[PersonalACCall] push 발송 실패:', e.message));
+
+  // 발견⑤ 패턴 재사용 — 요청 생성 자체도 감사 대상(누가 언제 무슨 목적으로
+  // 어떤 시민에게 요청을 보냈는지). 실제 조회 성공 시의 감사 기록은 기존
+  // handlePdvQuery의 _recordConsentEvent가 별도로 남긴다 — 이건 "요청 발신"
+  // 시점 기록이라 중복이 아니다.
+  await _recordConsentEvent(env, query, reqId, {
+    official_guid: official_access_cert.official_guid,
+    org_id: verifiedOrgId,
+    role: official_access_cert.role || null,
+  }).catch(() => {});
+
+  return new Response(JSON.stringify({
+    ok: true,
+    status: emergency ? 'emergency_pending' : 'pending',
+    request_id: reqId,
+    consent_url: consentUrl,
+    expires_at: expiresAt,
+  }), { status: 202, headers: corsHeaders });
+}
+
 async function handleConsentInfo(request,env,corsHeaders){
   const url=new URL(request.url);
   const reqId=(request.method==='POST'?(await request.json().catch(()=>({})))?.req:url.searchParams.get('req'))||'';
