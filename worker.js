@@ -5073,6 +5073,7 @@ async function _recordConsentEvent(env,query,queryId,officialAudit=null){
     });
     if(!res.ok){
       console.warn('[PDVQuery] 감사 로그 저장 실패(L1):', res.status, await res.text().catch(()=>''));
+      await _incrAuditFailureCounter(env,'l1_error').catch(()=>{});
       return null;
     }
     const row=await res.json().catch(()=>null);
@@ -5080,11 +5081,31 @@ async function _recordConsentEvent(env,query,queryId,officialAudit=null){
   }catch(e){
     // 감사 로그 저장 실패가 조회 자체를 막지는 않는다(가용성 우선 — 시민이
     // 정당한 조회 도중 로그 시스템 장애로 서비스를 못 받는 상황을 피한다).
-    // 다만 이 catch가 자주 발생하면 감사 추적 자체가 무력화되므로 별도
-    // 모니터링(실패율 알림)이 필요하다 — Phase 4 온나라시스템 연동 시 확정.
+    // 2026-07-15(발견⑤ 수정): 다만 이 catch가 console.warn에만 남으면 Cloudflare
+    // 실시간 로그를 그 순간 보고 있지 않은 한 아무도 모른 채 사라진다(사고실험
+    // 지적사항 — 92번 감사 안전장치가 배포 파이프라인 실수로 통째로 사라졌던
+    // 전례가 이미 있었음). KV 카운터에 집계해 나중에라도 실패율을 확인할 수
+    // 있게 최소한의 관측성만 추가한다 — 진짜 알림(Phase 4 온나라시스템 연동)이
+    // 붙기 전까지의 임시 안전망이다.
     console.warn('[PDVQuery] 감사 로그 저장 실패:',e.message);
+    await _incrAuditFailureCounter(env,'exception').catch(()=>{});
     return null;
   }
+}
+// 2026-07-15 신설(발견⑤ 대응) — 감사 로그 저장 실패를 날짜별로 집계하는
+// 최소 관측성 카운터. _checkRateLimit과 동일한 RATE_LIMIT_KV를 재사용하며
+// (새 KV 바인딩 추가 없음), 이 카운터 자체의 기록 실패는 절대 상위로
+// 전파하지 않는다(호출부가 이미 .catch(()=>{})로 무시하지만 이중 방어).
+// 조회 결과(_fetchPdvByScope) 이후 시점에서 실행되므로 사용자 응답 지연에는
+// 영향 없다 — await하되 실패해도 무해하다.
+async function _incrAuditFailureCounter(env,reason){
+  if(!env.RATE_LIMIT_KV)return;
+  try{
+    const day=new Date().toISOString().slice(0,10);
+    const kvKey=`audit_fail:pdv_query:${day}:${reason}`;
+    const current=parseInt(await env.RATE_LIMIT_KV.get(kvKey)||'0');
+    await env.RATE_LIMIT_KV.put(kvKey,String(current+1),{expirationTtl:30*24*60*60});
+  }catch{/* 카운터 자체 실패는 무시 — 원래 조회를 막지 않는다는 원칙과 동일 */}
 }
 async function _sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
 function buildCookie(token){return[`gopang_token=${token}`,'Path=/','Domain=.hondi.net','Max-Age=3600','SameSite=None','Secure','HttpOnly'].join('; ');}
