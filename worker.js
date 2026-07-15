@@ -5468,7 +5468,32 @@ async function _verifyChallengeToken(env,chalB64,exp,sig){if(exp<Math.floor(Date
 //  Supabase webauthn_credentials 의존이라 정리 대상.)
 const REGISTERED_SERVICES={'gopang':{level:3,domain:'hondi.net',minAuth:'L0',pdv:true},'klaw':{level:3,domain:'klaw.hondi.net',minAuth:'L0',pdv:true},'market':{level:3,domain:'market.hondi.net',minAuth:'L0',pdv:true},'school':{level:3,domain:'school.hondi.net',minAuth:'L0',pdv:true},'security':{level:3,domain:'security.hondi.net',minAuth:'L1',pdv:true},'health':{level:3,domain:'health.hondi.net',minAuth:'L1',pdv:true},'tax':{level:3,domain:'tax.hondi.net',minAuth:'L0',pdv:true},'gdc':{level:3,domain:'gdc.hondi.net',minAuth:'L1',pdv:true},'public':{level:3,domain:'public.hondi.net',minAuth:'L0',pdv:true},'democracy':{level:3,domain:'democracy.hondi.net',minAuth:'L1',pdv:true},'911':{level:3,domain:'911.hondi.net',minAuth:'L0',pdv:true},'police':{level:3,domain:'police.hondi.net',minAuth:'L1',pdv:true},'insurance':{level:3,domain:'insurance.hondi.net',minAuth:'L1',pdv:true},'stock':{level:3,domain:'stock.hondi.net',minAuth:'L1',pdv:true},'traffic':{level:3,domain:'traffic.hondi.net',minAuth:'L0',pdv:true},'logistics':{level:3,domain:'logistics.hondi.net',minAuth:'L0',pdv:true},'fiil':{level:2,domain:'fiil.kr',minAuth:'L0',pdv:true},'klaw-ext':{level:2,domain:'klaw.openhash.kr',minAuth:'L0',pdv:false},'users':{level:3,domain:'users.hondi.net',minAuth:'L0',pdv:false}};
 function _getSvcRegistration(origin,svcId){const resolvedId=_resolveSvcId(svcId);const svc=REGISTERED_SERVICES[resolvedId];if(svc&&origin.includes(svc.domain))return{...svc,svcId:resolvedId,originalId:svcId};if(/^https:\/\/[a-z0-9-]+\.gopang\.net$/.test(origin))return{level:1,domain:origin,minAuth:'L0',pdv:false,svcId:resolvedId,originalId:svcId};return null;}
-async function handleSvcRegister(request,env,corsHeaders){if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});const body=await request.json().catch(()=>null);if(!body?.svc_id||!body?.domain||!body?.operator_ipv6)return _err(400,'MISSING_FIELD','svc_id, domain, operator_ipv6 필수',corsHeaders);const{svc_id,domain,description,min_auth,operator_ipv6}=body;const isGopangSub=/^[a-z0-9-]+\.gopang\.net$/.test(domain);await sbFetch(env,'/rest/v1/svc_registry','POST',{svc_id,domain,description:description||'',operator_ipv6,min_auth:min_auth||'L0',trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending',registered_at:new Date().toISOString()});return new Response(JSON.stringify({ok:true,svc_id,domain,trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending_review',message:isGopangSub?'*.hondi.net 서브도메인으로 자동 승인됐습니다. (Level 1)':'등록 신청이 접수됐습니다.'}),{status:200,headers:corsHeaders});}
+async function handleSvcRegister(request,env,corsHeaders){
+  if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});
+  const body=await request.json().catch(()=>null);
+  if(!body?.svc_id||!body?.domain||!body?.operator_ipv6)return _err(400,'MISSING_FIELD','svc_id, domain, operator_ipv6 필수',corsHeaders);
+  const{svc_id,domain,description,min_auth,operator_ipv6}=body;
+  const isGopangSub=/^[a-z0-9-]+\.gopang\.net$/.test(domain);
+  // (2026-07-15: Supabase svc_registry → L1 이관. 컬렉션은 별도 신설
+  //  없이 기존 관례대로 profiles 밖의 범용 등록부이므로, 이번엔 다른
+  //  단순 CRUD 테이블들과 동일하게 svc_registry 컬렉션을 새로 만든다.)
+  try {
+    const token = await _l1AdminToken(env);
+    await fetch(`${L1_DEFAULT}/api/collections/svc_registry/records`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        svc_id, domain, description: description || '', operator_ipv6,
+        min_auth: min_auth || 'L0',
+        trust_level: isGopangSub ? 1 : 0,
+        status: isGopangSub ? 'auto_approved' : 'pending',
+      }),
+    });
+  } catch (e) {
+    console.warn('[SvcRegister] L1 저장 실패:', e.message);
+  }
+  return new Response(JSON.stringify({ok:true,svc_id,domain,trust_level:isGopangSub?1:0,status:isGopangSub?'auto_approved':'pending_review',message:isGopangSub?'*.hondi.net 서브도메인으로 자동 승인됐습니다. (Level 1)':'등록 신청이 접수됐습니다.'}),{status:200,headers:corsHeaders});
+}
 async function handleSvcVerify(request,env,corsHeaders){const url=new URL(request.url);const svcId=url.searchParams.get('svc_id');const origin=request.headers.get('Origin')||'';if(!svcId)return _err(400,'MISSING_FIELD','svc_id 파라미터 필수',corsHeaders);const reg=_getSvcRegistration(origin,svcId);if(!reg)return new Response(JSON.stringify({ok:false,registered:false,svc_id:svcId,message:'등록되지 않은 서비스입니다.'}),{status:200,headers:corsHeaders});return new Response(JSON.stringify({ok:true,registered:true,svc_id:svcId,trust_level:reg.level,pdv_allowed:reg.pdv,min_auth:reg.minAuth,message:`등록된 서비스 (Level ${reg.level})`}),{status:200,headers:corsHeaders});}
 async function handleGeocode(url,env,corsHeaders){const lat=url.searchParams.get('lat');const lng=url.searchParams.get('lng');if(!lat||!lng)return _err(400,'MISSING_FIELD','lat, lng required',corsHeaders);try{const res=await fetch(`${KAKAO_BASE}?x=${lng}&y=${lat}&input_coord=WGS84`,{headers:{'Authorization':`KakaoAK ${env.KAKAO_REST_KEY}`}});const data=await res.json();return new Response(JSON.stringify(data),{headers:corsHeaders});}catch(e){return _err(502,'GEOCODE_ERROR',e.message,corsHeaders);}}
 
@@ -8521,6 +8546,13 @@ async function handleP2PRegister(request, env, corsHeaders) {
   }
 }
 
+// (2026-07-15: Supabase rpc/search_users → L1 이관. ⚠️ 완전한 대체가
+//  아니다 — Supabase 쪽 search_users()는 필시 pg_trgm 유사도 기반
+//  퍼지검색(오타 허용, 유사도 순위)이었을 텐데, PocketBase 필터는
+//  `~`(부분일치/LIKE 유사) 연산자만 지원하고 트라이그램 유사도 랭킹은
+//  없다. 정확히 포함된 문자열만 찾고, 정렬은 최신순으로 대체했다.
+//  검색 품질이 눈에 띄게 떨어지면 별도로 클라이언트 측 fuzzy 매칭
+//  (예: Fuse.js)을 얹는 걸 검토해야 한다.)
 async function handleSearchUsers(request, env, corsHeaders) {
   if (request.method !== 'GET' && request.method !== 'POST') return _err(405, 'METHOD_NOT_ALLOWED', '', corsHeaders);
   const url   = new URL(request.url);
@@ -8528,14 +8560,16 @@ async function handleSearchUsers(request, env, corsHeaders) {
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 50);
   if (!q) return _err(400, 'QUERY_REQUIRED', 'q 파라미터 필수', corsHeaders);
 
-  const sbH = _sbHeaders(env);
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_users`, {
-    method: 'POST',
-    headers: sbH,
-    body: JSON.stringify({ q, limit_n: limit }),
-  });
-  const data = await res.json().catch(() => []);
-  return new Response(JSON.stringify({ ok: true, users: data, count: data.length }),
+  const token = await _l1AdminToken(env);
+  const qEsc = q.replace(/'/g, "\\'");
+  const filter = `(handle ~ '${qEsc}' || nickname ~ '${qEsc}')`;
+  const res = await fetch(
+    `${L1_DEFAULT}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&sort=-created&perPage=${limit}`,
+    { headers: { 'Authorization': 'Bearer ' + token } }
+  );
+  const data = await res.json().catch(() => ({ items: [] }));
+  const users = data.items || [];
+  return new Response(JSON.stringify({ ok: true, users, count: users.length }),
     { status: 200, headers: corsHeaders });
 }
 
@@ -9593,34 +9627,12 @@ async function _l1UpdateDeptTask(env, taskId, patch) {
   return res.json();
 }
 
-// ★ 2026-07-09 신설 — 짜장면 주문 사고실험 7·8번(배송업체 검색, 배송
-// 요청)용. handleSearch(/search)는 seller_products 조인 등 로직이
-// 얽혀 있어 그대로 재사용하지 않고, search_entities RPC 호출부만
-// 최소로 분리했다 — handleSearch를 건드릴 위험 없이 같은 RPC를 공유.
-// ★ 발견(별도 이슈, 이번 커밋에서 고치지 않음) — sql/search_index.sql에
-// 적힌 search_entities 시그니처(q,etype,lat,lng,lim,ofst)가 handleSearch/
-// docs/STEP27_test_checklist.md가 실제로 쓰는 파라미터명(p_keyword,
-// p_occupation 등)과 다르다. handleSearch가 이미 라이브로 도는 걸 보면
-// 실제 배포된 함수는 최신(p_* 이름) 시그니처로 보이고, 저장소 안 SQL
-// 소스 파일이 낡은 채 방치된 것으로 보인다 — handleSearch와 동일
-// 관례를 그대로 따라 구현했다.
-async function _searchEntitiesRaw(env, params) {
-  const sbH = _sbHeaders(env);
-  const rpcBody = {
-    p_keyword: null, p_entity_type: null,
-    p_occupation: params.occupation || null,
-    p_address: null, p_gdc_only: false, p_trust_min: null,
-    p_lat: params.lat ?? null, p_lng: params.lng ?? null,
-    p_sort: params.lat != null ? 'distance' : 'rank',
-    p_limit: params.limit || 10, p_offset: 0,
-    p_exclude_guid: params.exclude_guid || null,
-    p_l1_node: null, p_l2_node: null, p_primary_guid: null,
-    p_handle: null, p_nickname: null, p_lang_code: null, p_l3_node: null,
-  };
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_entities`, { method: 'POST', headers: sbH, body: JSON.stringify(rpcBody) });
-  const data = await res.json().catch(() => []);
-  return (res.ok && Array.isArray(data)) ? data : [];
-}
+// (2026-07-15 삭제 — _searchEntitiesRaw. 유일한 실 검색 경로는 이미
+//  _l1SearchEntities(L1 기반, 4511행)로 대체돼 있었고, 이 함수는
+//  정의만 있을 뿐 호출하는 곳이 저장소 전체에 하나도 없었다 — 짜장면
+//  배송업체 검색용으로 별도 분리했다는 주석이 있었지만 실제로는
+//  연결된 적이 없었던 것으로 보인다. Supabase rpc/search_entities
+//  의존이라 정리 대상.)
 
 async function _l1CreateDeliveryRequest(env, record) {
   const token = await _l1AdminToken(env);
@@ -11183,17 +11195,17 @@ async function handleFeedbackPost(request, env, corsHeaders) {
     console.warn('[Feedback] AI 분류 실패:', e.message);
   }
 
-  const sbH = _sbServiceHeaders(env);
-  const now  = new Date().toISOString();
-  const insRes = await fetch(`${SUPABASE_URL}/rest/v1/feedback`, {
+  // (2026-07-15: Supabase feedback → L1 이관)
+  const token = await _l1AdminToken(env);
+  const insRes = await fetch(`${L1_DEFAULT}/api/collections/feedback/records`, {
     method:  'POST',
-    headers: { ...sbH, 'Prefer': 'return=representation' },
-    body: JSON.stringify({ guid, handle, content, category, status: 'pending', created_at: now, updated_at: now }),
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ guid, handle, content, category, status: 'pending' }),
   });
   if (!insRes.ok) return _err(500, 'DB_ERROR', await insRes.text(), corsHeaders);
-  const rows = await insRes.json().catch(() => []);
+  const row = await insRes.json().catch(() => null);
 
-  return new Response(JSON.stringify({ ok: true, id: rows[0]?.id, category }), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify({ ok: true, id: row?.id, category }), { status: 200, headers: corsHeaders });
 }
 
 // GET /feedback — 목록 조회
@@ -11202,12 +11214,11 @@ async function handleFeedbackGet(request, env, corsHeaders) {
   const status = url.searchParams.get('status');
   const limit  = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
 
-  const sbH = _sbHeaders(env);
-  let query = `${SUPABASE_URL}/rest/v1/feedback?order=created_at.desc&limit=${limit}`;
-  if (status) query += `&status=eq.${encodeURIComponent(status)}`;
-
-  const res  = await fetch(query, { headers: sbH });
-  const rows = await res.json().catch(() => []);
+  const token = await _l1AdminToken(env);
+  const filter = status ? `?filter=${encodeURIComponent(`status='${status}'`)}&sort=-created&perPage=${limit}` : `?sort=-created&perPage=${limit}`;
+  const res  = await fetch(`${L1_DEFAULT}/api/collections/feedback/records${filter}`, { headers: { 'Authorization': 'Bearer ' + token } });
+  const data = await res.json().catch(() => ({ items: [] }));
+  const rows = data.items || [];
   return new Response(JSON.stringify({ ok: true, items: rows, count: rows.length }), { status: 200, headers: corsHeaders });
 }
 
@@ -11222,22 +11233,20 @@ async function handleFeedbackPatch(request, env, corsHeaders) {
   if (!admin_guid) return _err(400, 'MISSING_FIELD', 'admin_guid 필수', corsHeaders);
 
   // 관리자 확인 (주피터 guid)
-  // (2026-07-15: Supabase user_profiles → L1 이관. feedback 테이블
-  //  자체는 user_profiles와 별개 카테고리라 이번 배치 범위 밖 — 그대로 둠.)
-  const sbH = _sbServiceHeaders(env);
   const adminProfile = await _l1FindProfileByGuid(env, admin_guid).catch(() => null);
   if (!adminProfile || adminProfile.handle !== '@96627170')
     return _err(403, 'FORBIDDEN', '관리자만 상태를 변경할 수 있습니다', corsHeaders);
 
   // 상태 변경
-  const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/feedback?id=eq.${encodeURIComponent(id)}`, {
+  // (2026-07-15: Supabase feedback → L1 이관)
+  const token = await _l1AdminToken(env);
+  const patchRes = await fetch(`${L1_DEFAULT}/api/collections/feedback/records/${encodeURIComponent(id)}`, {
     method:  'PATCH',
-    headers: { ...sbH, 'Prefer': 'return=representation' },
-    body: JSON.stringify({ status, admin_note: admin_note || null, updated_at: new Date().toISOString() }),
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, admin_note: admin_note || null }),
   });
   if (!patchRes.ok) return _err(500, 'DB_ERROR', await patchRes.text(), corsHeaders);
-  const rows = await patchRes.json().catch(() => []);
-  const item = rows[0];
+  const item = await patchRes.json().catch(() => null);
 
   // 제안자에게 Push 알림
   const STATUS_LABEL = { pending: '검토 대기', reviewing: '검토중', accepted: '반영 확정', rejected: '보류' };
