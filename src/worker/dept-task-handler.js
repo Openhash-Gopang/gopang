@@ -1,3 +1,5 @@
+import { NATIONAL_POSITION_TITLES } from './national-role-registry.js';
+
 // ═══════════════════════════════════════════════════════════
 // src/worker/dept-task-handler.js — 부서/기관/사업자 간 업무지시 큐
 // (2026-07-12 신설, B그룹 100건 사고실험 대응 / 2026-07-12 재설계)
@@ -253,7 +255,17 @@ function _isFieldTestOrg(env, orgId) {
 // 안전한 실패(fail-safe)다. 표준 반입 후 이 Set에 실제 code.go.kr 코드값을
 // 추가할 것 — 이 배열이 곧 국가 표준의 부분집합이어야 하며, 다시 임의
 // 식별자를 지어내는 방식으로 확장하지 않는다.
-const NATIONAL_ROLE_REGISTRY = new Set(['staff', 'manager']);
+//
+// 2026-07-15d(사고실험 후속) — 행안부 행정표준코드 "직위코드" 반입 완료
+// (national-role-registry.js, 공공데이터포털 실제 파일 기준 626종 고유
+// 직위명). 다만 반입 과정에서 확인한 성격 제약을 기록해둔다 — 이 목록은
+// 국장급·심의관급 이상 "고위 직위명" 표준이라, 일선 실무자 role(복지
+// 담당자 등)은 여기 없다. 즉 이 확장은 "서명자가 실제 그 고위직을
+// 가졌는가"를 검증하는 용도로는 유효하지만, EMERGENCY_ELIGIBLE_ROLES
+// (일선 긴급대응 자격)를 채우는 데는 여전히 쓸 수 없다 — 그건 별도
+// 데이터(직류/직렬 또는 기관별 업무분장표) 없이는 지어내지 않는다는
+// 원칙을 유지한다(worker.js EMERGENCY_ELIGIBLE_ROLES 계속 빈 Set).
+const NATIONAL_ROLE_REGISTRY = new Set(['staff', 'manager', ...NATIONAL_POSITION_TITLES]);
 
 async function _verifyAccessCert(env, cert, callerGuid, deps) {
   const { _verifyEd25519Simple, _l1FindProfileByGuid } = deps;
