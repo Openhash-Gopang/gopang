@@ -15,10 +15,19 @@
 
 트랙1/2(58건)에서 PDV 동의 기반 정부24 API 조회가 발생한 SP 응답에 표준 포함되는 필드.
 
+> **2026-07-15 정정(발견③):** 아래 `required_if`가 참조하는 `pdv-consent.js`의
+> `requestPDVConsent()`는 실재하지 않는다 — 실제 파일은 `pdv-history-client.js`이고
+> 노출 함수는 `interceptPdvTags`/`checkPdvConsentReturn`/`queryPdvScope` 셋뿐이다
+> (사고실험 발견③, 원본 갱신계획 §5 레이어A도 동일 오류). 공무원이 시민을 대신해
+> 조회하는 경우(트랙1/2 대부분)는 `queryPdvScope`가 아니라 `PERSONAL-AC-CALL-
+> PROTOCOL_v1_0`의 `[PERSONAL_AC_CALL]`이 실제 호출 경로다 — 아래 `required_if`는
+> 그 프로토콜 기준으로 다시 읽는다.
+
 ```yaml
 정부24_조회_결과:
   type: object
-  required_if: "SP가 pdv-consent.js의 requestPDVConsent()를 호출한 경우"
+  required_if: "SP가 PERSONAL-AC-CALL-PROTOCOL의 [PERSONAL_AC_CALL]을 발화하여
+    [PERSONAL_AC_RESPONSE: status=granted]를 회신받은 경우"
   properties:
     조회됨: boolean
     scope: string          # pdv-consent.js의 PDV_SCOPES 값 중 하나
