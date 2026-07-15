@@ -3338,9 +3338,9 @@ export default {
     // 슬래시)와 이름이 헷갈리지 않도록 /biz/ 네임스페이스로 통일 —
     // /ai/chat은 범용 LLM 프로바이더 프록시고 이건 완전히 다른 기능이다.
     if (pathname === '/biz/ai-chat' && request.method === 'POST')
-      return handleAiChat(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, _l1ListSellerProducts, sbFetch });
+      return handleAiChat(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, _l1ListSellerProducts, L1_DEFAULT, _l1AdminToken });
     if (pathname === '/biz/escalate' && request.method === 'POST')
-      return handleEscalate(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, sbFetch });
+      return handleEscalate(request, env, corsHeaders, { _err, _verifyEd25519, _l1FindProfileByGuid, L1_DEFAULT, _l1AdminToken });
     // ★ 2026-07-09 신설 — 짜장면 주문 사고실험 5·6단계: 주문 큐/주방
     // 용량 판단 + 조리시간 추정. buildSystemPrompt가 명시적으로 "이 SP
     // 몫이 아니다"라고 선언해뒀던 부분 — LLM 없이 순수 서버 로직으로 처리.

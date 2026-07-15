@@ -241,10 +241,22 @@ async function translate(text, fromLang, toLang, apiKey) {
   });
 }
 
-async function aesEncrypt(plaintext, rawKey) {
+// (2026-07-15 수정 — 암호화 키 유도 방식 불일치 발견 및 수정. 이 함수들의
+//  원래 구현은 rawKey를 UTF-8 문자열로 32자 패딩/자르기 했는데, 실제로
+//  API 키를 암호화해서 저장하는 worker.js handleAiSetupPost는
+//  _aesEncrypt(plaintext, keyHex)가 keyHex를 "16진수 문자열"로 해석해
+//  _hexToBytes()로 디코딩한다(worker.js 10679행). 두 방식은 서로 다른
+//  키 바이트를 만들어내므로, 이 파일의 원래 aesDecrypt로는 handleAiSetupPost가
+//  암호화한 값을 복호화할 수 없었다 — AI 점원 기능이 도입 이래 한 번도
+//  정상 동작한 적이 없었을 가능성이 있다. worker.js와 동일한 hex 기반
+//  방식으로 통일한다.)
+function _hexToBytesLocal(hex) {
+  return new Uint8Array(hex.match(/.{2}/g).map(h => parseInt(h, 16)));
+}
+
+async function aesEncrypt(plaintext, keyHex) {
   const keyBuf = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(rawKey.padEnd(32, '0').slice(0, 32)),
-    { name: 'AES-GCM' }, false, ['encrypt']
+    'raw', _hexToBytesLocal(keyHex), { name: 'AES-GCM' }, false, ['encrypt']
   );
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encoded = new TextEncoder().encode(plaintext);
@@ -255,13 +267,12 @@ async function aesEncrypt(plaintext, rawKey) {
   return btoa(String.fromCharCode(...combined));
 }
 
-async function aesDecrypt(b64, rawKey) {
+async function aesDecrypt(b64, keyHex) {
   const combined = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
   const iv = combined.slice(0, 12);
   const cipher = combined.slice(12);
   const keyBuf = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(rawKey.padEnd(32, '0').slice(0, 32)),
-    { name: 'AES-GCM' }, false, ['decrypt']
+    'raw', _hexToBytesLocal(keyHex), { name: 'AES-GCM' }, false, ['decrypt']
   );
   const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, keyBuf, cipher);
   return new TextDecoder().decode(plain);
@@ -277,8 +288,52 @@ async function aesDecrypt(b64, rawKey) {
  *   이 파일을 다른 프로젝트에서도 재사용하거나 단위테스트할 때 worker.js
  *   전체를 끌어올 필요가 없다).
  */
+// (2026-07-15 신설 — Supabase ai_sessions/messages/user_llm_keys → L1 이관.
+//  이 파일 도입 당시(2026-07-09) 주석은 "docs/supabase_to_l1_migration_plan.md가
+//  이 3개 테이블을 가장 마지막으로 미룰 것을 명시했다"고 적었으나, 그
+//  문서 자체가 2026-06-30 작성된 "L1 스키마를 실제로 확인 못 한 상태의
+//  잠정 계획"이었다(문서 원문: "배포 전에 L1 Admin UI에서 profiles
+//  컬렉션 필드명을 한 번 확인해 주세요" 등 불확실성을 스스로 명시).
+//  이후 세션들에서 L1 profiles.extra 필드 존재를 실제로 확인했고,
+//  user_profiles(27곳)를 포함해 이 문서가 "보류 권장"이라 적었던
+//  webauthn_credentials까지 이미 전부 안전하게 이관을 마쳤다 — 이
+//  3개 테이블만 옛 계획대로 남아있던 상태였다. user_llm_keys는 특히
+//  중요한데, worker.js의 handleAiSetupPost(3차 배치)가 이미 Supabase가
+//  아니라 L1 user_llm_keys에 쓰고 있어서, 이 파일이 계속 Supabase를
+//  읽었다면 항상 빈 결과("AI 미설정")만 받았을 것이다.
+async function _l1FindSession(env, deps, sessionId) {
+  const { L1_DEFAULT, _l1AdminToken } = deps;
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`session_id='${String(sessionId).replace(/'/g, "\\'")}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/ai_sessions/records?filter=${filter}&perPage=1`,
+    { headers: { 'Authorization': 'Bearer ' + token } });
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+async function _l1CreateSession(env, deps, fields) {
+  const { L1_DEFAULT, _l1AdminToken } = deps;
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/ai_sessions/records`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  });
+  return res.json().catch(() => null);
+}
+
+async function _l1PatchSession(env, deps, recordId, patch) {
+  const { L1_DEFAULT, _l1AdminToken } = deps;
+  const token = await _l1AdminToken(env);
+  await fetch(`${L1_DEFAULT}/api/collections/ai_sessions/records/${recordId}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  }).catch(() => {});
+}
+
 async function handleAiChat(request, env, corsHeaders, deps) {
-  const { _err, _verifyEd25519, _l1FindProfileByGuid, _l1ListSellerProducts, sbFetch } = deps;
+  const { _err, _verifyEd25519, _l1FindProfileByGuid, _l1ListSellerProducts, L1_DEFAULT, _l1AdminToken } = deps;
 
   let body;
   try { body = await request.json(); } catch {
@@ -308,15 +363,15 @@ async function handleAiChat(request, env, corsHeaders, deps) {
   }
 
   try {
-    let sessions = await sbFetch(env, `/ai_sessions?id=eq.${session_id}&select=*`);
-    let session = sessions?.[0];
+    let session = await _l1FindSession(env, deps, session_id);
+    let sessionRecordId = session?.id || null;
 
     if (!session) {
-      await sbFetch(env, '/ai_sessions', 'POST', {
-        id: session_id, caller_guid: guid, caller_lang,
+      const created = await _l1CreateSession(env, deps, {
+        session_id, caller_guid: guid, caller_lang,
         target_guid, mode: 'ai', messages: [], is_active: true,
-        created_at: new Date().toISOString(),
       });
+      sessionRecordId = created?.id || null;
       session = { mode: 'ai', messages: [] };
     }
 
@@ -325,8 +380,9 @@ async function handleAiChat(request, env, corsHeaders, deps) {
     const hasKeyword = detectEscalationKeyword(message);
 
     if (session.mode === 'escalated' || failCount >= FAIL_THRESHOLD || hasKeyword) {
-      await sbFetch(env, `/ai_sessions?id=eq.${session_id}`, 'PATCH',
-        { mode: 'escalated', escalated_at: new Date().toISOString() });
+      if (sessionRecordId) {
+        await _l1PatchSession(env, deps, sessionRecordId, { mode: 'escalated', escalated_at: new Date().toISOString() });
+      }
 
       return new Response(JSON.stringify({
         ok: true, mode: 'escalated',
@@ -335,22 +391,32 @@ async function handleAiChat(request, env, corsHeaders, deps) {
       }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const llmRows = await sbFetch(env, `/user_llm_keys?guid=eq.${encodeURIComponent(target_guid)}&select=*`);
-    const llmKey = llmRows?.[0];
+    // (2026-07-15: 이 조회가 이 파일의 핵심 회귀 지점이었다 — worker.js
+    //  handleAiSetupPost는 L1 user_llm_keys에 쓰는데, 여기는 계속
+    //  Supabase user_llm_keys를 읽고 있어서 항상 llmKey가 null이었다.)
+    const llmToken = await _l1AdminToken(env);
+    const llmFilter = encodeURIComponent(`guid='${String(target_guid).replace(/'/g, "\\'")}'`);
+    const llmRes = await fetch(`${L1_DEFAULT}/api/collections/user_llm_keys/records?filter=${llmFilter}&perPage=1`,
+      { headers: { 'Authorization': 'Bearer ' + llmToken } });
+    const llmData = await llmRes.json().catch(() => ({ items: [] }));
+    const llmKey = llmData.items?.[0] || null;
 
     if (!llmKey || !llmKey.ai_active) {
-      await sbFetch(env, '/messages', 'POST', {
-        session_id,
-        sender_guid: guid,
-        receiver_guid: target_guid,
-        content_original: message,
-        content_translated: await translate(message, caller_lang, 'ko', env.DEEPSEEK_API_KEY),
-        lang_from: caller_lang,
-        lang_to: 'ko',
-        content_type: 'text',
-        created_at: new Date().toISOString(),
-      });
-      await sbFetch(env, `/ai_sessions?id=eq.${session_id}`, 'PATCH', { mode: 'human' });
+      await fetch(`${L1_DEFAULT}/api/collections/ai_messages/records`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + llmToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id,
+          sender_guid: guid,
+          receiver_guid: target_guid,
+          content_original: message,
+          content_translated: await translate(message, caller_lang, 'ko', env.DEEPSEEK_API_KEY),
+          lang_from: caller_lang,
+          lang_to: 'ko',
+          content_type: 'text',
+        }),
+      }).catch(() => {});
+      if (sessionRecordId) await _l1PatchSession(env, deps, sessionRecordId, { mode: 'human' });
 
       return new Response(JSON.stringify({
         ok: true, mode: 'human',
@@ -385,8 +451,7 @@ async function handleAiChat(request, env, corsHeaders, deps) {
       responseKo = await callLLM({ provider: llmKey.provider, apiKey, model: llmKey.model, systemPrompt, userMessage: msgKo });
     } catch (e) {
       const updated = [...sessionMessages, { type: 'fail', ts: Date.now(), reason: e.message }];
-      await sbFetch(env, `/ai_sessions?id=eq.${session_id}`, 'PATCH',
-        { messages: updated, updated_at: new Date().toISOString() });
+      if (sessionRecordId) await _l1PatchSession(env, deps, sessionRecordId, { messages: updated });
       return _err(502, 'LLM_ERROR', `AI 응답 실패: ${e.message}`, corsHeaders);
     }
 
@@ -410,8 +475,7 @@ async function handleAiChat(request, env, corsHeaders, deps) {
       { type: 'user', ts: Date.now(), lang: caller_lang, content: message },
       { type: 'assistant', ts: Date.now(), lang: caller_lang, content: responseLang },
     ];
-    await sbFetch(env, `/ai_sessions?id=eq.${session_id}`, 'PATCH',
-      { messages: updatedMessages, updated_at: new Date().toISOString() });
+    if (sessionRecordId) await _l1PatchSession(env, deps, sessionRecordId, { messages: updatedMessages });
 
     return new Response(JSON.stringify({ ok: true, mode: 'ai', response: responseLang, lang: caller_lang, order }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -425,7 +489,7 @@ async function handleAiChat(request, env, corsHeaders, deps) {
  * POST /escalate — 수동 에스컬레이션. 원본 대비 동일 변경(JWT→Ed25519/TOFU).
  */
 async function handleEscalate(request, env, corsHeaders, deps) {
-  const { _err, _verifyEd25519, _l1FindProfileByGuid, sbFetch } = deps;
+  const { _err, _verifyEd25519, _l1FindProfileByGuid } = deps;
 
   let body;
   try { body = await request.json(); } catch {
@@ -452,8 +516,10 @@ async function handleEscalate(request, env, corsHeaders, deps) {
     return _err(401, 'PUBKEY_MISMATCH', '등록된 공개키와 일치하지 않습니다', corsHeaders);
   }
 
-  await sbFetch(env, `/ai_sessions?id=eq.${session_id}`, 'PATCH',
-    { mode: 'escalated', escalated_at: new Date().toISOString() });
+  const existingSession = await _l1FindSession(env, deps, session_id);
+  if (existingSession) {
+    await _l1PatchSession(env, deps, existingSession.id, { mode: 'escalated', escalated_at: new Date().toISOString() });
+  }
 
   return new Response(JSON.stringify({ ok: true, mode: 'escalated', session_id }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
