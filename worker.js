@@ -281,7 +281,11 @@ async function handlePhoneOtpVerify(request, env, corsHeaders) {
   const exp = Date.now() + PHONE_VERIFY_TOKEN_TTL_MS;
   const payload = `${e164}:${exp}`;
   const signature = await _hmacSha256Hex(env.PHONE_VERIFY_SECRET, payload);
-  const token = btoa(payload) + '.' + signature;
+  // 2026-07-15: btoa() 제거 — L1 PocketBase v0.22.14 JSVM에 base64
+  // 디코더가 없음을 실제 바이너리로 검증. payload는 이미 안전한
+  // 문자(전화번호 숫자/+, 콜론, 타임스탬프 숫자)만 포함해 인코딩이
+  // 애초에 불필요했다.
+  const token = payload + '.' + signature;
 
   return new Response(JSON.stringify({
     ok: true, phone_verify_token: token, expires_at: new Date(exp).toISOString(),
