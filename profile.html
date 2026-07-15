@@ -32,10 +32,13 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
 .top-share{background:none;border:none;cursor:pointer;padding:4px;color:#374151;display:flex;align-items:center}
 
 /* ── 프로필 배너 + 헤더 (Google Maps 장소 카드 스타일) ── */
-.profile-banner{height:92px;background:linear-gradient(180deg,#456bb0 0%,#5b8be3 18%,#5b8be3 78%,#3569d7 100%);
+/* 2026-07-15: 92px → 172px — 구글 맵스 장소 카드 레퍼런스는 이 배너가
+   "히어로 이미지"로 읽힐 만큼 크다. 색상·스카이라인 실루엣·아바타
+   오버랩 방식은 이미 레퍼런스와 맞아 있어 그대로 두고 높이만 확대. */
+.profile-banner{height:172px;background:linear-gradient(180deg,#456bb0 0%,#5b8be3 18%,#5b8be3 78%,#3569d7 100%);
   position:relative;overflow:hidden}
-.profile-banner svg{position:absolute;bottom:-8px;left:0;width:100%;opacity:.32}
-.profile-hero{background:#fff;padding:0 20px 16px;margin-top:-34px;position:relative}
+.profile-banner svg{position:absolute;bottom:-14px;left:0;width:100%;height:110px;opacity:.32}
+.profile-hero{background:#fff;padding:0 20px 16px;margin-top:-44px;position:relative}
 .profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#007b8b,#3569d7);
   display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;
   color:#fff;flex-shrink:0;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.1)}
