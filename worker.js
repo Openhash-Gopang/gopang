@@ -8972,20 +8972,26 @@ async function _handleUnclaimedProfilePost(body, env, corsHeaders) {
   }), { status: 201, headers: corsHeaders });
 }
 
-// SP-18 STEP3 선행조건 (c) — 미청구 프로필을 실제 소유자가 서명 계정으로
-// 정식 전환. 서명 대상 문자열은 일반 가입(guid:pubkey:ts)과 겹치지 않게
-// 접두어를 둬 재생공격(다른 목적으로 만든 서명을 여기 재사용)을 막는다.
+// SP-18 STEP3 선행조건 (c) — 미청구 프로필을 실제 소유자가 정식 전환.
+// 두 가지 증명 경로를 지원한다:
+//  (a) Ed25519 서명(기존) — 이미 지갑이 있는 소유자. 서명 대상 문자열은
+//      일반 가입(guid:pubkey:ts)과 겹치지 않게 접두어를 둬 재생공격을 막는다.
+//  (b) 전화번호 인증(2026-07-15 신설) — 지갑이 없는 소유자(주로 unclaimed
+//      상태로 등록된 소규모 사업자). CROSS-ACTOR-SCENARIOS-100 A축 사고실험
+//      발견 대응 — unclaimed 프로필은 claim 전까지 소유자가 없어(pubkey_
+//      ed25519: null) 대화 상대(AC) 자체가 없다는 문제였다. solapi 전화번호
+//      인증(/biz/phone-otp-verify가 발급하는 phone_verify_token)으로 소유자가
+//      "이 전화번호를 실제로 통제한다"는 걸 증명하면, 그 번호가 프로필에
+//      이미 등록된 phone과 일치할 때 claim을 허용한다. pubkey는 이 경우
+//      "새로 만든 지갑의 공개키를 최초로 핀(pin)한다"는 의미이지 그 키로
+//      서명했다는 증명은 아니다 — 증명의 근거가 서명이 아니라 전화번호로
+//      바뀌는 것뿐이다.
 async function handleProfileClaim(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { guid, pubkey, signature, ts = '' } = body;
-  if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
-  if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
-  if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
-
-  const sigMsg = `claim:${guid}:${pubkey}:${ts}`;
-  const sigOk  = await _verifyEd25519Simple(pubkey, signature, sigMsg);
-  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+  const { guid, pubkey, signature, ts = '', phone_verify_token } = body;
+  if (!guid)   return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!pubkey) return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
 
   const existing = await _l1FindProfileByGuid(env, guid).catch(() => null);
   const claimStatus = existing?.claim_status ?? existing?.extra?.claim_status;
@@ -8993,7 +8999,42 @@ async function handleProfileClaim(request, env, corsHeaders) {
     return _err(404, 'NOT_CLAIMABLE', '미청구 상태의 프로필이 아니거나 존재하지 않습니다', corsHeaders);
   }
 
-  const newExtra = { ...(existing.extra || {}), claim_status: 'claimed', claimed_at: new Date().toISOString() };
+  let claimMethod;
+  if (phone_verify_token) {
+    if (!env.PHONE_VERIFY_SECRET) return _err(500, 'SECRET_NOT_SET', 'PHONE_VERIFY_SECRET이 설정되지 않았습니다', corsHeaders);
+    const dotIdx = String(phone_verify_token).lastIndexOf('.');
+    if (dotIdx < 0) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 형식 오류', corsHeaders);
+    const payloadB64 = phone_verify_token.slice(0, dotIdx);
+    const sig = phone_verify_token.slice(dotIdx + 1);
+    let payload;
+    try { payload = atob(payloadB64); } catch { return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 디코딩 실패', corsHeaders); }
+    const colonIdx = payload.lastIndexOf(':');
+    if (colonIdx < 0) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 페이로드 오류', corsHeaders);
+    const e164 = payload.slice(0, colonIdx);
+    const exp  = Number(payload.slice(colonIdx + 1));
+    if (!e164 || !Number.isFinite(exp)) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 페이로드 오류', corsHeaders);
+    if (Date.now() > exp) return _err(401, 'TOKEN_EXPIRED', '전화번호 인증 토큰이 만료됐습니다', corsHeaders);
+    const expectedSig = await _hmacSha256Hex(env.PHONE_VERIFY_SECRET, payload);
+    if (expectedSig !== sig) return _err(401, 'TOKEN_INVALID', '전화번호 인증 토큰 서명이 유효하지 않습니다', corsHeaders);
+
+    // e164는 handlePhoneOtpRequest와 동일 관례로 '+82'가 이미 국내 0으로
+    // 시작하는 나머지 숫자 앞에 붙은 형태다(_sendSolapiSms의 치환과 동일).
+    const domesticPhone       = e164.replace(/^\+82/, '');
+    const existingPhoneDigits = String(existing.phone || '').replace(/\D/g, '');
+    const tokenPhoneDigits    = domesticPhone.replace(/\D/g, '');
+    if (!existingPhoneDigits || existingPhoneDigits !== tokenPhoneDigits) {
+      return _err(403, 'PHONE_MISMATCH', '인증된 전화번호가 이 프로필에 등록된 번호와 일치하지 않습니다', corsHeaders);
+    }
+    claimMethod = 'phone_verify';
+  } else {
+    if (!signature) return _err(400, 'MISSING_FIELD', 'signature 또는 phone_verify_token 중 하나가 필요합니다', corsHeaders);
+    const sigMsg = `claim:${guid}:${pubkey}:${ts}`;
+    const sigOk  = await _verifyEd25519Simple(pubkey, signature, sigMsg);
+    if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+    claimMethod = 'ed25519_signature';
+  }
+
+  const newExtra = { ...(existing.extra || {}), claim_status: 'claimed', claimed_at: new Date().toISOString(), claim_method: claimMethod };
 
   try {
     await _l1UpsertProfile(env, {
@@ -9016,7 +9057,7 @@ async function handleProfileClaim(request, env, corsHeaders) {
     return { ok: false, error: 'EXCEPTION', detail: e.message };
   });
 
-  return new Response(JSON.stringify({ ok: true, guid, claim_status: 'claimed', agent: agentResult }), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify({ ok: true, guid, claim_status: 'claimed', claim_method: claimMethod, agent: agentResult }), { status: 200, headers: corsHeaders });
 }
 
 async function handleProfilePost(request, env, corsHeaders) {
