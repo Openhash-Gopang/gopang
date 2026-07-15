@@ -172,125 +172,6 @@ function _generateChargeMatchCode() {
 }
 
 const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions';
-
-// ── 전화번호 OTP (2026-07-15 신설, 솔라피 연동) ──────────────────
-// env.SOLAPI_API_KEY / SOLAPI_API_SECRET / SOLAPI_SENDER_NUMBER /
-// PHONE_VERIFY_SECRET = wrangler secret put 로 등록.
-const SOLAPI_SEND_URL = 'https://api.solapi.com/messages/v4/send';
-const OTP_TTL_SECONDS = 300;              // 5분
-const OTP_MAX_ATTEMPTS = 5;
-const OTP_RESEND_COOLDOWN_SECONDS = 60;   // 같은 번호 재발송 최소 간격
-const PHONE_VERIFY_TOKEN_TTL_MS = 10 * 60 * 1000; // 검증 토큰 유효 10분
-
-function _generateOtpCode() {
-  const buf = new Uint32Array(1);
-  crypto.getRandomValues(buf);
-  return String(100000 + (buf[0] % 900000));
-}
-
-async function _hmacSha256Hex(secret, message) {
-  const key = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
-  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// 솔라피 HMAC-SHA256 인증 스킴으로 SMS 1건 발송.
-async function _sendSolapiSms(env, toE164, text) {
-  if (!env.SOLAPI_API_KEY || !env.SOLAPI_API_SECRET || !env.SOLAPI_SENDER_NUMBER) {
-    throw new Error('SOLAPI 인증 정보가 설정되지 않았습니다(SOLAPI_API_KEY/SECRET/SENDER_NUMBER)');
-  }
-  const date = new Date().toISOString();
-  const salt = crypto.randomUUID();
-  const signature = await _hmacSha256Hex(env.SOLAPI_API_SECRET, date + salt);
-  const to = toE164.replace(/^\+82/, ''); // '+820XXXXXXXXX' → '0XXXXXXXXX'(국내 포맷)
-
-  const res = await fetch(SOLAPI_SEND_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `HMAC-SHA256 apiKey=${env.SOLAPI_API_KEY}, date=${date}, salt=${salt}, signature=${signature}`,
-    },
-    body: JSON.stringify({ message: { to, from: env.SOLAPI_SENDER_NUMBER, text } }),
-  });
-  const data = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(data?.errorMessage || data?.message || `SOLAPI HTTP ${res.status}`);
-  return data;
-}
-
-// POST /biz/phone-otp-request { e164 } — SMS로 6자리 코드 발송.
-async function handlePhoneOtpRequest(request, env, corsHeaders) {
-  const body = await request.json().catch(() => null);
-  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { e164 } = body;
-  if (!e164 || !/^\+820\d{8,10}$/.test(e164)) {
-    return _err(400, 'INVALID_PHONE', '올바른 국내 전화번호 형식이 아닙니다', corsHeaders);
-  }
-  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', 'OTP 저장소가 설정되지 않았습니다', corsHeaders);
-
-  const cooldownKey = `otp_cd:${e164}`;
-  if (await env.QR_SESSIONS_KV.get(cooldownKey)) {
-    return _err(429, 'OTP_COOLDOWN', `잠시 후(${OTP_RESEND_COOLDOWN_SECONDS}초) 다시 시도해 주세요`, corsHeaders);
-  }
-
-  const code = _generateOtpCode();
-  const otpKey = `otp:${e164}`;
-  await env.QR_SESSIONS_KV.put(otpKey, JSON.stringify({ code, attempts: 0 }), { expirationTtl: OTP_TTL_SECONDS });
-  await env.QR_SESSIONS_KV.put(cooldownKey, '1', { expirationTtl: OTP_RESEND_COOLDOWN_SECONDS });
-
-  try {
-    await _sendSolapiSms(env, e164, `[혼디] 인증번호는 ${code}입니다. ${Math.floor(OTP_TTL_SECONDS / 60)}분 이내에 입력해 주세요.`);
-  } catch (e) {
-    console.warn('[PhoneOTP] SOLAPI 발송 실패:', e.message);
-    return _err(502, 'SMS_SEND_FAILED', '인증번호 발송에 실패했습니다: ' + e.message, corsHeaders);
-  }
-
-  return new Response(JSON.stringify({ ok: true, expires_in: OTP_TTL_SECONDS }), { status: 200, headers: corsHeaders });
-}
-
-// POST /biz/phone-otp-verify { e164, code } — 성공 시 서명된 검증 토큰 발급.
-// 이 토큰은 (다음 fix.py에서) L1 profiles 생성 훅이 PHONE_VERIFY_SECRET으로
-// 재검증해야 실제 강제력이 생긴다 — 지금은 발급만 하고 아직 아무도 검사 안 함.
-async function handlePhoneOtpVerify(request, env, corsHeaders) {
-  const body = await request.json().catch(() => null);
-  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { e164, code } = body;
-  if (!e164 || !code) return _err(400, 'MISSING_FIELD', 'e164, code 필수', corsHeaders);
-  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', 'OTP 저장소가 설정되지 않았습니다', corsHeaders);
-  if (!env.PHONE_VERIFY_SECRET) return _err(500, 'SECRET_NOT_SET', 'PHONE_VERIFY_SECRET이 설정되지 않았습니다', corsHeaders);
-
-  const otpKey = `otp:${e164}`;
-  const raw = await env.QR_SESSIONS_KV.get(otpKey);
-  if (!raw) return _err(400, 'OTP_EXPIRED', '인증번호가 만료됐거나 요청 이력이 없습니다', corsHeaders);
-
-  const record = JSON.parse(raw);
-  if (record.attempts >= OTP_MAX_ATTEMPTS) {
-    await env.QR_SESSIONS_KV.delete(otpKey);
-    return _err(429, 'OTP_TOO_MANY_ATTEMPTS', '시도 횟수를 초과했습니다. 다시 요청해 주세요', corsHeaders);
-  }
-
-  if (String(code).trim() !== record.code) {
-    record.attempts += 1;
-    await env.QR_SESSIONS_KV.put(otpKey, JSON.stringify(record), { expirationTtl: OTP_TTL_SECONDS });
-    return _err(400, 'OTP_MISMATCH', `인증번호가 일치하지 않습니다(남은 시도 ${OTP_MAX_ATTEMPTS - record.attempts}회)`, corsHeaders);
-  }
-
-  await env.QR_SESSIONS_KV.delete(otpKey);
-
-  const exp = Date.now() + PHONE_VERIFY_TOKEN_TTL_MS;
-  const payload = `${e164}:${exp}`;
-  const signature = await _hmacSha256Hex(env.PHONE_VERIFY_SECRET, payload);
-  // 2026-07-15: btoa() 제거 — L1 PocketBase v0.22.14 JSVM에 base64
-  // 디코더가 없음을 실제 바이너리로 검증. payload는 이미 안전한
-  // 문자(전화번호 숫자/+, 콜론, 타임스탬프 숫자)만 포함해 인코딩이
-  // 애초에 불필요했다.
-  const token = payload + '.' + signature;
-
-  return new Response(JSON.stringify({
-    ok: true, phone_verify_token: token, expires_at: new Date(exp).toISOString(),
-  }), { status: 200, headers: corsHeaders });
-}
 const DEEPSEEK_URL   = 'https://api.deepseek.com/v1/chat/completions';
 // OpenRouter — Worker 내부 AI 호출 (내부 Agent, 피드백 분류 등)
 // 클라이언트가 OR 키로 직접 OR에 접속하는 것과 별개.
@@ -950,12 +831,6 @@ const VALID_PDV_SCOPES = [
   'kagri', 'kclimate', 'kculture', 'kecon', 'khousing',
   'kinnov', 'kjachi', 'kocean', 'kplan', 'ksafety',
   'ktourism', 'ktransport', 'kwelfare',
-  // 2026-07-15: 공무원 직무보조 트랙1/2(SCOPE-MAPPING-TRACK1-2_v1_0) 대응 —
-  // 시민 본인이 PDV에 직접 기록하는 자산·소득 신고(기초생활수급·국가장학금
-  // 소득분위 심사 등에 필요). 특정 정부기관 리포터가 없어 신규 scope 필요.
-  // 'kfinance'로 명명하려 했으나 이미 SVC_ALIAS(아래)에서 K-Stock(투자
-  // 서비스)의 별칭으로 선점돼 있어 충돌 회피를 위해 'kassetdecl'로 명명함.
-  'kassetdecl',
 ];
 const SCOPE_MIN_LEVEL = {
   ktraffic:'L1', khealth:'L1', pdv_general:'L1', k119:'L1', kmarket:'L0',
@@ -975,17 +850,6 @@ const SCOPE_MIN_LEVEL = {
   kagri:'L1', kclimate:'L1', kculture:'L0', kecon:'L1', khousing:'L1',
   kinnov:'L1', kjachi:'L1', kocean:'L1', kplan:'L1', ksafety:'L1',
   ktourism:'L0', ktransport:'L0', kwelfare:'L1',
-  // 2026-07-15: 자산·소득 정보는 L1보다 높은 게 맞다 — L2로 지정한다.
-  // 발견④ 수정(silent-auth.html의 지갑 경로 Bearer 토큰 누락 수정)으로
-  // 배선의 SSO 쪽 절반(서명된 토큰을 실제로 세션에 담아 전달하는 부분)은
-  // 됐지만, 이건 부분 수정이다 — (1) _runRedirectMode 경로는 여전히
-  // 비서명 base64 토큰(367행)만 쓰고, (2) 각 K-서비스 앱 코드가
-  // session.token을 실제로 queryPdvScope({sessionToken})에 넘기도록
-  // 연동하는 다운스트림 작업도 아직 안 됐다(발견④ 커밋 메시지에 명시).
-  // 그래서 지금 L2로 걸어도 당장 실사용에서 통과되리라는 보장은 없다 —
-  // 다만 이전처럼 "L2를 걸면 구조적으로 무조건 실패"였던 상태에서 "배선이
-  // 끝나는 만큼 점진적으로 동작 가능"한 상태로는 바뀌었다.
-  kassetdecl:'L2',
 };
 // 2026-07-04c: scope → source 배열(1:다)로 변경. 이전엔 scope 하나당 저장소
 // 하나만 가능했는데, 같은 종류의 데이터(예: 세무 상담)를 여러 지역/서비스가
@@ -1004,7 +868,6 @@ const SCOPE_SOURCE_MAP = {
   kagri:['jeju'], kclimate:['jeju'], kculture:['jeju'], kecon:['jeju'], khousing:['jeju'],
   kinnov:['jeju'], kjachi:['jeju'], kocean:['jeju'], kplan:['jeju'], ksafety:['jeju'],
   ktourism:['jeju'], ktransport:['jeju'], kwelfare:['jeju'],
-  kassetdecl:null, // pdv_general과 동일 — 정부기관 리포터 없음, 시민 본인이 직접 기록
 };
 
 const SVC_ALIAS = {
@@ -3192,22 +3055,10 @@ export default {
     // ── PDV ──────────────────────────────────────────────
     if (pathname === '/pdv/query')               return handlePdvQuery(request, env, corsHeaders);
     if (pathname === '/pdv/report')              return handlePdvReport(request, env, corsHeaders);
-    if (pathname.startsWith('/pdv/page/'))       return handlePdvPage(request, env, corsHeaders);
 
     // ── PDV 조회 동의 승인 페이지 (consent.html 전용, 2026-07-02 신설) ──
     if (pathname === '/consent/info')            return handleConsentInfo(request, env, corsHeaders);
     if (pathname === '/consent/respond')         return handleConsentRespond(request, env, corsHeaders);
-
-    // ── 개인 AC 호출 프로토콜 (PERSONAL-AC-CALL-PROTOCOL_v1_0, 2026-07-15) ──
-    // 공무원 AC가 특정 시민의 개인 AC를 호출하는 진입점. 응답(동의/거부)은
-    // 기존 /consent/respond를 그대로 재사용 — 새 응답 엔드포인트를 만들지
-    // 않는다(consent.html이 이미 이 흐름을 처리함).
-    if (pathname === '/personal-ac/call' && request.method === 'POST')
-      return handlePersonalAcCall(request, env, corsHeaders);
-
-    // §5 수신확인 3단계(sw.js push/notificationclick 훅이 호출)
-    if (pathname === '/pdv/consent-receipt' && request.method === 'POST')
-      return handleConsentReceipt(request, env, corsHeaders);
 
     // ── 서비스 등록 ───────────────────────────────────────
     if (pathname === '/svc/register')            return handleSvcRegister(request, env, corsHeaders);
@@ -3319,9 +3170,6 @@ export default {
     if (pathname === '/biz/charge-status'  && request.method === 'GET')  return handleChargeStatus(request, env, corsHeaders);
     if (pathname === '/biz/charge-list'    && request.method === 'GET')  return handleChargeList(request, env, corsHeaders);
     if (pathname === '/biz/charge-confirm' && request.method === 'POST') return handleChargeConfirm(request, env, corsHeaders);
-    // (2026-07-15 신설: 전화번호 OTP — 가입 시 번호 소유 증명, 솔라피 연동)
-    if (pathname === '/biz/phone-otp-request' && request.method === 'POST') return handlePhoneOtpRequest(request, env, corsHeaders);
-    if (pathname === '/biz/phone-otp-verify'  && request.method === 'POST') return handlePhoneOtpVerify(request, env, corsHeaders);
     // 2026-07-07: /biz/review(Supabase biz_reviews, 5점 척도) → 완전 대체.
     // 실거래(tx_hash) 기반 trade_ratings(PocketBase, polarity+온도)로 이전.
     // handleBizReview는 하단에 DEPRECATED로 남겨두되 라우팅에서 제거함.
@@ -4302,46 +4150,12 @@ async function _recordOrderPdv(env, {
   } catch (e) { console.warn('[PDV] 기록 실패:', e.message); }
 }
 
-// ═══════════════════════════════════════════════════════════
-// v4.7 — /pdv/page/{identifier}
-// ═══════════════════════════════════════════════════════════
-async function handlePdvPage(request, env, corsHeaders) {
-  const identifier = decodeURIComponent(new URL(request.url).pathname.replace('/pdv/page/', ''));
-  if (!identifier) return _err(400, 'MISSING_ID', 'identifier 필수', corsHeaders);
-  const sbH = _sbHeaders(env);
-  let primaryGuid = identifier;
-  let l1Node      = 'KR-JEJU-JEJU-HANLIM';
-  if (identifier.includes(':')) {
-    const res  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?current_ipv6=eq.${encodeURIComponent(identifier)}&select=primary_guid,l1_node&limit=1`, { headers: sbH });
-    const rows = await res.json().catch(() => []);
-    if (!rows?.length) return _err(404, 'NOT_FOUND', `IPv6 ${identifier} 엔티티 없음`, corsHeaders);
-    primaryGuid = rows[0].primary_guid || identifier;
-    l1Node      = rows[0].l1_node      || l1Node;
-  } else {
-    const res  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?primary_guid=eq.${encodeURIComponent(identifier)}&select=primary_guid,l1_node,name,entity_type,current_ipv6&limit=1`, { headers: sbH });
-    const rows = await res.json().catch(() => []);
-    if (rows?.length) l1Node = rows[0].l1_node || l1Node;
-  }
-  const nodeBase   = L1_NODE_MAP[l1Node] || L1_DEFAULT;
-  const pguidShort = primaryGuid.slice(0, 8);
-  const pdvUrl     = `${nodeBase}/entities/${pguidShort}.html`;
-  try {
-    const pdvRes = await fetch(pdvUrl);
-    if (pdvRes.ok) {
-      const html = await pdvRes.text();
-      return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Access-Control-Allow-Origin': corsHeaders['Access-Control-Allow-Origin'], 'X-Gopang-Node': l1Node, 'X-Gopang-GUID': primaryGuid } });
-    }
-  } catch {}
-  const res2   = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?primary_guid=eq.${encodeURIComponent(primaryGuid)}&select=*&limit=1`, { headers: sbH });
-  const rows2  = await res2.json().catch(() => []);
-  const profile = rows2?.[0];
-  if (profile) return new Response(_generatePdvHtml(profile), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Access-Control-Allow-Origin': corsHeaders['Access-Control-Allow-Origin'], 'X-Gopang-Generated': 'dynamic' } });
-  return _err(404, 'PDV_NOT_FOUND', `PDV 페이지 없음: ${primaryGuid}`, corsHeaders);
-}
-
-function _generatePdvHtml(p) {
-  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${p.name||'엔티티'} — Gopang PDV</title><meta name="ofp:primary_guid" content="${p.primary_guid||''}"><meta name="ofp:current_ipv6" content="${p.current_ipv6||''}"><meta name="ofp:l1_node" content="${p.l1_node||''}"><style>body{font-family:sans-serif;max-width:480px;margin:40px auto;padding:20px;background:#f8f9fa}.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px}h1{font-size:20px;margin-bottom:16px}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px}.label{color:#6b7280}.val{font-family:monospace;font-size:11px;word-break:break-all}.btn{display:block;width:100%;padding:12px;margin-top:16px;background:#3ecf8e;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}</style></head><body><div class="card"><h1>${p.name||'(이름 없음)'}</h1><div class="row"><span class="label">유형</span><span>${p.entity_type||'–'}</span></div><div class="row"><span class="label">업종</span><span>${p.occupation||'–'}</span></div><div class="row"><span class="label">주소</span><span>${p.address||'–'}</span></div><div class="row"><span class="label">Primary GUID</span><span class="val">${p.primary_guid||'–'}</span></div><div class="row"><span class="label">IPv6</span><span class="val">${p.current_ipv6||'–'}</span></div><div class="row"><span class="label">L1 노드</span><span class="val">${p.l1_node||'–'}</span></div><button class="btn" onclick="window.open('https://hondi.net/?connect=${encodeURIComponent(p.primary_guid||'')}','_blank')">고팡으로 연결</button></div></body></html>`;
-}
+// (2026-07-15 삭제 — handlePdvPage(/pdv/page/{identifier}), _generatePdvHtml.
+//  라우트는 등록돼 있었지만 저장소 전체에서 이 경로를 fetch로 호출하는
+//  클라이언트 코드가 없었다. 게다가 primary_guid/l1_node라는, 지금은
+//  guid 하나로 단순화된 것으로 보이는 옛 다중엔티티 스키마 개념에
+//  의존하고 있어 이미 개념적으로도 낡은 코드였다. Supabase user_profiles
+//  의존이라 정리 대상 — 이관하지 않고 삭제.)
 
 // ═══════════════════════════════════════════════════════════
 // v4.7 — /search
@@ -5064,151 +4878,6 @@ async function _l1FindConsentRequest(env,requestId){
 // GET/POST /consent/info?req=... — 동의 승인 페이지(consent.html)가 요청 상세를 표시하기 위해 호출.
 // 관리자 토큰이 필요한 L1 컬렉션을 안전하게 프록시 — svc/scope/purpose/expires_at/status만 노출,
 // consent_token·ipv6 원문은 절대 클라이언트에 반환하지 않는다.
-// ═══════════════════════════════════════════════════════════
-// PERSONAL-AC-CALL-PROTOCOL_v1_0 구현 — /personal-ac/call
-// (docs/PERSONAL-AC-CALL-PROTOCOL_v1_0_2026-07-15.md 참조)
-//
-// 왜 필요한가(발견①): handlePdvQuery의 "동의 필요" 단계는 요청자(=시민 본인의
-// 브라우저)가 그대로 consent.html로 리다이렉트되는 걸 전제한다. 공무원이 시민을
-// 대신 조회하려는 경우, 이 리다이렉트는 공무원의 화면에서 일어나므로 시민에게는
-// 아무 일도 일어나지 않는다 — 요청이 존재한다는 사실 자체를 시민이 알 방법이
-// 없었다.
-//
-// 이 함수가 하는 일은 두 가지뿐이다(나머지는 기존 인프라 재사용):
-//  (1) official_access_cert를 요청 "생성 시점"에 미리 검증한다 — handlePdvQuery는
-//      consent_token이 이미 있는 "2단계"에서만 이 검증을 했다. 여기서는 애초에
-//      1단계(동의요청 생성) 자체를 공무원 신원 확인 없이는 시작하지 않는다.
-//  (2) _sendPushToGuid로 대상 시민에게 실제 알림을 보낸다 — 지금까지 없었던
-//      알림 채널. 응답(동의/거부)은 시민이 consent.html에서 기존 /consent/respond
-//      를 그대로 호출하면 되므로 새 응답 엔드포인트는 만들지 않는다.
-//
-// 긴급(emergency) 처리에 대한 구현 결정 — 설계문서(§[PERSONAL_AC_EMERGENCY_
-// BYPASS])는 "§4 표준 왕복을 거치지 않는다"고 썼으나, 실제 구현에서는 동의
-// 요건 자체를 생략하지 않는다 — 이건 법적 근거(강제조사·긴급조항)가 있어야
-// 정당화되는 영역이라 AI가 코드 차원에서 단독으로 결정할 사안이 아니다(이전
-// 사고실험 "강제조사·수사성 업무" 논의와 동일 원칙). emergency=true는 대신
-// (a) 알림의 긴급도(제목·진동 패턴)만 다르게 하고 (b) EMERGENCY_ELIGIBLE_ROLES
-// 화이트리스트에 없는 role은 애초에 emergency를 자칭할 수 없게 막는다. 설계
-// 문서의 "표준 왕복 생략"은 이번 구현에서 채택하지 않았음을 문서에도 반영 필요.
-const EMERGENCY_ELIGIBLE_ROLES = new Set([
-  // 2026-07-15: 실제 role 명명 체계가 아직 확정 전이라(PERSONAL-AC-CALL-
-  // PROTOCOL KNOWN_LIMITATIONS 5) 자리표시자 값만 등록해둔다 — 실사용 전
-  // 반드시 실제 직책 코드 체계와 대조해 갱신할 것.
-  'welfare_officer', 'police_liaison', 'child_protection_officer',
-]);
-
-async function handlePersonalAcCall(request, env, corsHeaders) {
-  const body = await request.json().catch(() => null);
-  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-
-  const {
-    target_guid, scope, purpose = '', period,
-    official_access_cert, ttl_sec = 3600,
-    emergency = false,
-  } = body;
-
-  if (!target_guid) return _err(400, 'MISSING_FIELD', 'target_guid 필수', corsHeaders);
-  if (!Array.isArray(scope) || scope.length === 0)
-    return _err(400, 'SCOPE_INVALID', 'scope는 비어있지 않은 배열이어야 합니다', corsHeaders);
-  const invalidScope = scope.find(s => !VALID_PDV_SCOPES.includes(s) && !/^work_pdv:/.test(s));
-  if (invalidScope) return _err(400, 'SCOPE_INVALID', `허용되지 않은 scope: ${invalidScope}`, corsHeaders);
-  if (!period?.start || !period?.end) return _err(400, 'SCHEMA_ERROR', 'period.start, period.end 필수', corsHeaders);
-  if (!official_access_cert?.official_guid) return _err(400, 'MISSING_FIELD', 'official_access_cert 필수', corsHeaders);
-
-  // (1) 공무원 신원 선검증 — handlePdvQuery와 달리 요청 "생성 이전"에 검증한다.
-  const verifiedOrgId = await _verifyAccessCert(
-    env, official_access_cert, official_access_cert.official_guid,
-    { _verifyEd25519Simple, _l1FindProfileByGuid }
-  ).catch(() => null);
-  if (!verifiedOrgId)
-    return _err(401, 'ACCESS_CERT_INVALID', '공무원 직책 인증서 검증 실패 — 서명·만료·TOFU 중 하나가 불일치합니다', corsHeaders);
-
-  if (emergency && !EMERGENCY_ELIGIBLE_ROLES.has(official_access_cert.role)) {
-    return _err(403, 'EMERGENCY_NOT_ALLOWED', '이 직책은 긴급 플래그를 발화할 권한이 없습니다', corsHeaders);
-  }
-
-  const target = await _l1FindProfileByGuid(env, target_guid).catch(() => null);
-  if (!target) return _err(404, 'TARGET_NOT_FOUND', '대상 시민 프로필을 찾을 수 없습니다', corsHeaders);
-
-  const reqId = `PACREQ-${target_guid.replace(/:/g, '').slice(0, 8)}-${Date.now()}`;
-  const expiresAt = Math.floor(Date.now() / 1000) + (emergency ? 86400 : ttl_sec); // 긴급은 24시간 — "무제한"은 아님(위 주석 참고)
-  const query = { svc: verifiedOrgId, ipv6: target_guid, scope, purpose, period };
-  await _storeConsentRequest(env, reqId, query, expiresAt);
-
-  const consentUrl = 'https://hondi.net/consent' +
-    `?req=${encodeURIComponent(reqId)}&svc=${encodeURIComponent(verifiedOrgId)}` +
-    `&scope=${encodeURIComponent(scope.join(','))}&purpose=${encodeURIComponent(purpose)}`;
-
-  // (2) 실제 알림 발송 — 발견①의 핵심 수정. 실패해도 요청 생성 자체는
-  // 무효화하지 않는다(대기함 폴백은 STAFF_TASK_QUEUE 패턴 재사용 예정,
-  // PERSONAL-AC-CALL-PROTOCOL §6-1 참조 — 이번 구현 범위 밖).
-  await _sendPushToGuid(env, target_guid, {
-    title: emergency ? '긴급 확인 요청' : `${verifiedOrgId} 확인 요청`,
-    body:  purpose || '개인정보 조회 동의 요청이 도착했습니다.',
-    tag:   `personal-ac-call-${reqId}`,
-    url:   consentUrl,
-  }).catch(e => console.warn('[PersonalACCall] push 발송 실패:', e.message));
-
-  // 발견⑤ 패턴 재사용 — 요청 생성 자체도 감사 대상(누가 언제 무슨 목적으로
-  // 어떤 시민에게 요청을 보냈는지). 실제 조회 성공 시의 감사 기록은 기존
-  // handlePdvQuery의 _recordConsentEvent가 별도로 남긴다 — 이건 "요청 발신"
-  // 시점 기록이라 중복이 아니다.
-  await _recordConsentEvent(env, query, reqId, {
-    official_guid: official_access_cert.official_guid,
-    org_id: verifiedOrgId,
-    role: official_access_cert.role || null,
-  }).catch(() => {});
-
-  return new Response(JSON.stringify({
-    ok: true,
-    status: emergency ? 'emergency_pending' : 'pending',
-    request_id: reqId,
-    consent_url: consentUrl,
-    expires_at: expiresAt,
-  }), { status: 202, headers: corsHeaders });
-}
-
-// POST /pdv/consent-receipt { request_id, event:'delivered'|'acknowledged' }
-// PERSONAL-AC-CALL-PROTOCOL_v1_0 §5 수신확인 3단계 구현. sw.js의 push/
-// notificationclick 핸들러가 각각 delivered/acknowledged를 보고한다.
-// sent는 _sendPushToGuid 호출 자체로 이미 감사로그에 남으므로 별도 처리
-// 불필요 — 여기서는 delivered_at/acknowledged_at 2개 시각만 기록한다.
-async function handleConsentReceipt(request, env, corsHeaders) {
-  const body = await request.json().catch(() => null);
-  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { request_id, event } = body;
-  if (!request_id) return _err(400, 'MISSING_FIELD', 'request_id 필수', corsHeaders);
-  if (!['delivered', 'acknowledged'].includes(event))
-    return _err(400, 'SCHEMA_ERROR', "event는 'delivered' 또는 'acknowledged'여야 합니다", corsHeaders);
-
-  let record;
-  try { record = await _l1FindConsentRequest(env, request_id); }
-  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders); }
-  if (!record) return _err(404, 'NOT_FOUND', '존재하지 않는 동의 요청입니다', corsHeaders);
-
-  const field = event === 'delivered' ? 'delivered_at' : 'acknowledged_at';
-  // 이미 기록돼 있으면 덮어쓰지 않는다 — "최초 도달/인지 시각"만 의미
-  // 있다(여러 번 push가 재전송되거나 알림을 여러 번 눌러도 첫 시각이
-  // 사고실험에서 짚은 "실패의 책임 소재" 판단의 근거 값이다).
-  if (record[field]) {
-    return new Response(JSON.stringify({ ok: true, already_recorded: true, [field]: record[field] }), { status: 200, headers: corsHeaders });
-  }
-
-  try {
-    const token = await _l1AdminToken(env);
-    const now = new Date().toISOString();
-    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/pdv_consent_requests/records/${record.id}`, {
-      method: 'PATCH',
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ [field]: now }),
-    });
-    if (!patchRes.ok) return _err(502, 'L1_UPDATE_FAILED', '수신확인 기록 실패: HTTP ' + patchRes.status, corsHeaders);
-    return new Response(JSON.stringify({ ok: true, [field]: now }), { status: 200, headers: corsHeaders });
-  } catch (e) {
-    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
-  }
-}
-
 async function handleConsentInfo(request,env,corsHeaders){
   const url=new URL(request.url);
   const reqId=(request.method==='POST'?(await request.json().catch(()=>({})))?.req:url.searchParams.get('req'))||'';
@@ -5369,7 +5038,6 @@ async function _recordConsentEvent(env,query,queryId,officialAudit=null){
     });
     if(!res.ok){
       console.warn('[PDVQuery] 감사 로그 저장 실패(L1):', res.status, await res.text().catch(()=>''));
-      await _incrAuditFailureCounter(env,'l1_error').catch(()=>{});
       return null;
     }
     const row=await res.json().catch(()=>null);
@@ -5377,31 +5045,11 @@ async function _recordConsentEvent(env,query,queryId,officialAudit=null){
   }catch(e){
     // 감사 로그 저장 실패가 조회 자체를 막지는 않는다(가용성 우선 — 시민이
     // 정당한 조회 도중 로그 시스템 장애로 서비스를 못 받는 상황을 피한다).
-    // 2026-07-15(발견⑤ 수정): 다만 이 catch가 console.warn에만 남으면 Cloudflare
-    // 실시간 로그를 그 순간 보고 있지 않은 한 아무도 모른 채 사라진다(사고실험
-    // 지적사항 — 92번 감사 안전장치가 배포 파이프라인 실수로 통째로 사라졌던
-    // 전례가 이미 있었음). KV 카운터에 집계해 나중에라도 실패율을 확인할 수
-    // 있게 최소한의 관측성만 추가한다 — 진짜 알림(Phase 4 온나라시스템 연동)이
-    // 붙기 전까지의 임시 안전망이다.
+    // 다만 이 catch가 자주 발생하면 감사 추적 자체가 무력화되므로 별도
+    // 모니터링(실패율 알림)이 필요하다 — Phase 4 온나라시스템 연동 시 확정.
     console.warn('[PDVQuery] 감사 로그 저장 실패:',e.message);
-    await _incrAuditFailureCounter(env,'exception').catch(()=>{});
     return null;
   }
-}
-// 2026-07-15 신설(발견⑤ 대응) — 감사 로그 저장 실패를 날짜별로 집계하는
-// 최소 관측성 카운터. _checkRateLimit과 동일한 RATE_LIMIT_KV를 재사용하며
-// (새 KV 바인딩 추가 없음), 이 카운터 자체의 기록 실패는 절대 상위로
-// 전파하지 않는다(호출부가 이미 .catch(()=>{})로 무시하지만 이중 방어).
-// 조회 결과(_fetchPdvByScope) 이후 시점에서 실행되므로 사용자 응답 지연에는
-// 영향 없다 — await하되 실패해도 무해하다.
-async function _incrAuditFailureCounter(env,reason){
-  if(!env.RATE_LIMIT_KV)return;
-  try{
-    const day=new Date().toISOString().slice(0,10);
-    const kvKey=`audit_fail:pdv_query:${day}:${reason}`;
-    const current=parseInt(await env.RATE_LIMIT_KV.get(kvKey)||'0');
-    await env.RATE_LIMIT_KV.put(kvKey,String(current+1),{expirationTtl:30*24*60*60});
-  }catch{/* 카운터 자체 실패는 무시 — 원래 조회를 막지 않는다는 원칙과 동일 */}
 }
 async function _sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
 function buildCookie(token){return[`gopang_token=${token}`,'Path=/','Domain=.hondi.net','Max-Age=3600','SameSite=None','Secure','HttpOnly'].join('; ');}
@@ -5464,13 +5112,14 @@ async function handleIssue(request,env,corsHeaders){
   // TOFU: 이 guid에 이미 핀(pin)된 Ed25519 공개키와 대조 — /profile 등록 시
   // 핀이 기록된다(handleProfilePost). 핀이 있는데 다른 키로 서명했다면, 이 기기는
   // 그 계정의 정당한 기기가 아니다(다른 사람의 전화번호/닉네임을 알아냈을 뿐).
+  // (2026-07-15: Supabase user_profiles → L1 이관. 이미 저장소 전반에서
+  //  표준으로 쓰이는 _l1FindProfileByGuid로 교체 — 다른 여러 TOFU 체크와
+  //  동일한 조회 경로를 타게 된다.)
   let existing=null;
   try{
-    const r=await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=pubkey_ed25519&limit=1`,{headers:_sbHeaders(env)});
-    const rows=await r.json().catch(()=>[]);
-    existing=rows[0]||null;
+    existing = await _l1FindProfileByGuid(env, guid);
   }catch(e){
-    return _err(502,'SUPABASE_UNREACHABLE','DB 연결 실패: '+e.message,corsHeaders);
+    return _err(502,'L1_UNREACHABLE','L1 연결 실패: '+e.message,corsHeaders);
   }
   if(existing?.pubkey_ed25519 && existing.pubkey_ed25519!==pubkey){
     return _err(403,'PUBKEY_MISMATCH','이 기기는 해당 계정의 등록된 기기가 아닙니다',corsHeaders);
@@ -6310,7 +5959,6 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
         : `\n\n(소속 철회 실패: ${result.reason})`;
       data.choices[0].message.content = (cleanedText || '소속 철회 요청을 처리했습니다.') + noticeText;
     }
-  }
 
   // ── WORK_PDV_REQUEST 서버측 처리 (2026-07-13 신설, AC-EVOLUTION_v1_1.md §PDV-SPLIT) ──
   {
@@ -8049,7 +7697,6 @@ async function handleAdminBulkDelete(request, env, corsHeaders) {
   if (identifiers.length > 100)
     return _err(400, 'TOO_MANY', '한 번에 최대 100개까지 삭제할 수 있습니다', corsHeaders);
 
-  const sbSvcH   = _sbServiceHeaders(env);
   const perItem  = {};
 
   // ① 식별자 → guid 해석
@@ -8074,14 +7721,33 @@ async function handleAdminBulkDelete(request, env, corsHeaders) {
   }
 
   // ② 그림자(casts_for) 일괄 정리 — 본체들 삭제 전에 먼저 처리
+  // (2026-07-15: Supabase user_profiles → L1 이관. casts_for는 L1
+  //  profiles에서 top-level 필드가 아니라 extra.core.casts_for(중첩
+  //  JSON)로 저장돼 있어(2885행 주석 참고) PocketBase 필터로 직접
+  //  못 찾는다 — profiles 전체를 넓게 가져와 JS에서 매칭한다.)
   let shadowCleanup = 'skipped';
   try {
-    const filter = resolved.map(r => encodeURIComponent(r.guid)).join(',');
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?casts_for=in.(${filter})`,
-      { method: 'DELETE', headers: sbSvcH }
+    const targetGuids = new Set(resolved.map(r => r.guid));
+    const token = await _l1AdminToken(env);
+    const listRes = await fetch(
+      `${L1_DEFAULT}/api/collections/profiles/records?perPage=2000`,
+      { headers: { 'Authorization': 'Bearer ' + token } }
     );
-    shadowCleanup = r.ok ? 'deleted' : `error:${r.status}`;
+    const listData = await listRes.json().catch(() => ({ items: [] }));
+    const shadows = (listData.items || []).filter(p => {
+      let extra;
+      try { extra = typeof p.extra === 'string' ? JSON.parse(p.extra) : p.extra; } catch { return false; }
+      return targetGuids.has(extra?.core?.casts_for);
+    });
+    let failCount = 0;
+    for (const s of shadows) {
+      const delRes = await fetch(
+        `${L1_DEFAULT}/api/collections/profiles/records/${s.id}`,
+        { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } }
+      );
+      if (!delRes.ok && delRes.status !== 404) failCount++;
+    }
+    shadowCleanup = failCount === 0 ? `deleted(${shadows.length})` : `error:${failCount}/${shadows.length}_failed`;
   } catch (e) { shadowCleanup = 'error:' + e.message; }
 
   // ③ guid별 전체 삭제
@@ -8581,27 +8247,8 @@ async function handleSearchUsers(request, env, corsHeaders) {
 // 장기적으로는 L1 자체가 상세 프로필 정보까지 저장하게 되며,
 // Supabase는 그 이후에도 백업 레이어로만 남는다.
 //
-// 아래 구현은 2~3단계(P2P 직접 요청/응답)가 아직 구축되지 않았으므로,
-// 그 자리에 "A가 Supabase에 캐시된 B의 데이터를 대신 가져오는" 임시 경로를
-// 끼워 넣은 것이다 — 표준의 본체가 아니라 필드 테스트 단계의 대체 수단.
-// P2P 요청/응답 채널(예: /signal/* 위에 profile_request 타입 추가)이
-// 구축되면 이 함수는 1)L1 존재 확인까지만 남기고, 상세조회는 클라이언트의
-// P2P 요청 로직으로 옮겨야 한다.
-// handle로 L1 PocketBase에서 존재 확인 + guid 조회 (표준 1단계: 분산 노드가 1차 소스)
-async function _resolveGuidFromL1(handle) {
-  const L1_PROFILES = L1_DEFAULT + '/api/collections/profiles/records';
-  const h = handle.startsWith('@') ? handle : '@' + handle;
-  const queryUrl = `${L1_PROFILES}?perPage=1&fields=guid,handle&filter=${encodeURIComponent(`handle='${h}'`)}`;
-  try {
-    const res = await fetch(queryUrl);
-    if (!res.ok) return null;
-    const data = await res.json().catch(() => null);
-    return data?.items?.[0]?.guid || null;
-  } catch (e) {
-    console.warn('[L1] handle 조회 실패 (Supabase로 폴백):', e.message);
-    return null;
-  }
-}
+// (2026-07-15 삭제 — _resolveGuidFromL1. handleProfileGet의 Supabase
+//  레거시 폴백 블록을 지우면서 유일한 호출자가 사라졌다.)
 
 // GET /profile/verify-owner?guid=&pubkey=&signature=&ts= — 핸드셰이크
 // 중 "지금 상대가 본인(운영자)인가"를 실시간으로 검증한다. 2026-07-01
@@ -8643,7 +8290,6 @@ async function handleProfileVerifyOwner(request, env, corsHeaders) {
 
 async function handleProfileGet(request, env, corsHeaders) {
   const url = new URL(request.url);
-  const sbH = _sbHeaders(env);
 
   const rawHandle = decodeURIComponent(url.pathname.replace('/profile/', '').replace('/profile', ''));
   const guidParam = url.searchParams.get('guid');
@@ -8706,51 +8352,9 @@ async function handleProfileGet(request, env, corsHeaders) {
     }), { status: 200, headers: corsHeaders });
   }
 
-  // ── 레거시 폴백: L1로 아직 안 옮겨진 계정 — Supabase 직접 조회 ──
-  // ⚠️ 임시 경로 — user_profiles 전체가 L1로 옮겨지면 이 블록은 삭제 대상.
-  let resolvedGuid = guidParam || null;
-  if (!resolvedGuid && rawHandle) {
-    resolvedGuid = await _resolveGuidFromL1(rawHandle);
-  }
-
-  let query;
-  if (resolvedGuid) {
-    query = `guid=eq.${encodeURIComponent(resolvedGuid)}`;
-  } else if (rawHandle) {
-    query = `handle=eq.${encodeURIComponent(normHandle)}`;
-  } else {
-    return _err(400, 'MISSING_FIELD', 'handle 또는 guid 필요', corsHeaders);
-  }
-
-  let res;
-  try {
-    res = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?${query}&limit=1`, { headers: sbH });
-  } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
-  }
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${res.status}): ${errText}`, corsHeaders);
-  }
-
-  const rows = await res.json().catch(() => []);
-  if (!rows.length) {
-    if (resolvedGuid) {
-      return new Response(JSON.stringify({
-        ok: true,
-        profile: { guid: resolvedGuid, handle: normHandle },
-        identity_source: 'l1',
-        detail_source: 'minimal-fallback',
-      }), { status: 200, headers: corsHeaders });
-    }
-    return _err(404, 'PROFILE_NOT_FOUND', '프로필 없음', corsHeaders);
-  }
-
-  return new Response(JSON.stringify({
-    ok: true, profile: rows[0],
-    identity_source: resolvedGuid ? 'l1' : 'supabase-direct',
-    detail_source:   'supabase-legacy-fallback',
-  }), { status: 200, headers: corsHeaders });
+  // (2026-07-15: Supabase 레거시 폴백 삭제 — L1이 이제 유일한 소스.
+  //  개발 단계라 "L1로 아직 안 옮겨진 계정" 자체가 없다는 게 확인됨.)
+  return _err(404, 'PROFILE_NOT_FOUND', '프로필 없음', corsHeaders);
 }
 
 // POST /profile — 본인 프로필 생성/갱신 (upsert)
@@ -8997,7 +8601,8 @@ async function _mergeAgentSP(env, principalProfile) {
     },
   };
 
-  // L1을 1차로 먼저 쓴다 — 실패해도 Supabase는 계속 진행.
+  // (2026-07-15: Supabase 이중쓰기 제거 — L1이 이미 1차 소스로 저장을
+  //  끝냈으므로 더 이상 Supabase에 따로 쓸 이유가 없다.)
   try {
     await _l1UpsertProfile(env, {
       guid: principalProfile.guid, handle: principalProfile.handle,
@@ -9006,24 +8611,8 @@ async function _mergeAgentSP(env, principalProfile) {
       extra: newExtra,
     });
   } catch (e) {
-    console.warn('[Profile] L1 통합 SP 저장 실패 (Supabase는 계속 진행):', e.message);
-  }
-
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(principalProfile.guid)}`,
-    {
-      method: 'PATCH',
-      headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=minimal' },
-      body: JSON.stringify({
-        extra: newExtra,
-        updated_at: new Date().toISOString(),
-      }),
-    }
-  );
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    console.warn('[Profile] Supabase 통합 SP 저장 실패 (L1은 이미 저장됐을 수 있음):', errText);
-    // L1이 1차 소스이므로 Supabase 실패만으로 전체 실패 처리하지 않는다.
+    console.warn('[Profile] L1 통합 SP 저장 실패:', e.message);
+    return { ok: false, error: 'L1_SAVE_FAILED', detail: e.message };
   }
   return { ok: true, merged: true, guid: principalProfile.guid, sp_updated: true };
 }
@@ -9089,19 +8678,6 @@ async function _handleUnclaimedProfilePost(body, env, corsHeaders) {
     },
   };
 
-  const record = {
-    guid, current_ipv6: guid,
-    pubkey_ed25519: null, // claim 전까지 소유자 없음
-    entity_type, name, handle: finalHandle, native_lang,
-    address, lat, lng, phone, website,
-    occupation: resolvedOccupation,
-    is_public: true, // 검색엔 노출하되 phone 등은 위에서 마스킹
-    claim_status: 'unclaimed',
-    extra: newExtra,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-
   try {
     await _l1UpsertProfile(env, {
       guid, handle: finalHandle, entityType: entity_type, nativeLang: native_lang,
@@ -9110,25 +8686,9 @@ async function _handleUnclaimedProfilePost(body, env, corsHeaders) {
       claimStatus: 'unclaimed',
     });
   } catch (e) {
-    console.warn('[Profile/Unclaimed] L1 저장 실패 (Supabase는 계속 진행):', e.message);
+    console.warn('[Profile/Unclaimed] L1 저장 실패:', e.message);
+    return _err(502, 'L1_SAVE_FAILED', '미청구 프로필 저장 실패: ' + e.message, corsHeaders);
   }
-
-  let saveRes;
-  try {
-    saveRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
-      method: 'POST',
-      headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
-      body: JSON.stringify(record),
-    });
-  } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
-  }
-  if (!saveRes.ok) {
-    const errText = await saveRes.text().catch(() => '');
-    return _err(502, 'DB_ERROR', `미청구 프로필 저장 실패: ${errText}`, corsHeaders);
-  }
-  const savedRows = await saveRes.json().catch(() => []);
-  const savedProfile = savedRows[0] || record;
 
   // ★ 정식 가입과 달리 _mergeAgentSP(그림자 AI SP 합성)는 호출하지 않는다
   // — 이 프로필엔 아직 서명 소유자가 없어 "본인의 AI 비서"라는 전제가
@@ -9136,33 +8696,27 @@ async function _handleUnclaimedProfilePost(body, env, corsHeaders) {
 
   return new Response(JSON.stringify({
     ok: true,
-    guid: savedProfile.guid,
-    handle: savedProfile.handle,
+    guid,
+    handle: finalHandle,
     claim_status: 'unclaimed',
     confidence: 'provisional',
   }), { status: 201, headers: corsHeaders });
 }
 
-// SP-18 STEP3 선행조건 (c) — 미청구 프로필을 실제 소유자가 정식 전환.
-// 두 가지 증명 경로를 지원한다:
-//  (a) Ed25519 서명(기존) — 이미 지갑이 있는 소유자. 서명 대상 문자열은
-//      일반 가입(guid:pubkey:ts)과 겹치지 않게 접두어를 둬 재생공격을 막는다.
-//  (b) 전화번호 인증(2026-07-15 신설) — 지갑이 없는 소유자(주로 unclaimed
-//      상태로 등록된 소규모 사업자). CROSS-ACTOR-SCENARIOS-100 A축 사고실험
-//      발견 대응 — unclaimed 프로필은 claim 전까지 소유자가 없어(pubkey_
-//      ed25519: null) 대화 상대(AC) 자체가 없다는 문제였다. solapi 전화번호
-//      인증(/biz/phone-otp-verify가 발급하는 phone_verify_token)으로 소유자가
-//      "이 전화번호를 실제로 통제한다"는 걸 증명하면, 그 번호가 프로필에
-//      이미 등록된 phone과 일치할 때 claim을 허용한다. pubkey는 이 경우
-//      "새로 만든 지갑의 공개키를 최초로 핀(pin)한다"는 의미이지 그 키로
-//      서명했다는 증명은 아니다 — 증명의 근거가 서명이 아니라 전화번호로
-//      바뀌는 것뿐이다.
+// SP-18 STEP3 선행조건 (c) — 미청구 프로필을 실제 소유자가 서명 계정으로
+// 정식 전환. 서명 대상 문자열은 일반 가입(guid:pubkey:ts)과 겹치지 않게
+// 접두어를 둬 재생공격(다른 목적으로 만든 서명을 여기 재사용)을 막는다.
 async function handleProfileClaim(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { guid, pubkey, signature, ts = '', phone_verify_token } = body;
-  if (!guid)   return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
-  if (!pubkey) return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  const { guid, pubkey, signature, ts = '' } = body;
+  if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+
+  const sigMsg = `claim:${guid}:${pubkey}:${ts}`;
+  const sigOk  = await _verifyEd25519Simple(pubkey, signature, sigMsg);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
 
   const existing = await _l1FindProfileByGuid(env, guid).catch(() => null);
   const claimStatus = existing?.claim_status ?? existing?.extra?.claim_status;
@@ -9170,42 +8724,7 @@ async function handleProfileClaim(request, env, corsHeaders) {
     return _err(404, 'NOT_CLAIMABLE', '미청구 상태의 프로필이 아니거나 존재하지 않습니다', corsHeaders);
   }
 
-  let claimMethod;
-  if (phone_verify_token) {
-    if (!env.PHONE_VERIFY_SECRET) return _err(500, 'SECRET_NOT_SET', 'PHONE_VERIFY_SECRET이 설정되지 않았습니다', corsHeaders);
-    const dotIdx = String(phone_verify_token).lastIndexOf('.');
-    if (dotIdx < 0) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 형식 오류', corsHeaders);
-    const payloadB64 = phone_verify_token.slice(0, dotIdx);
-    const sig = phone_verify_token.slice(dotIdx + 1);
-    let payload;
-    try { payload = atob(payloadB64); } catch { return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 디코딩 실패', corsHeaders); }
-    const colonIdx = payload.lastIndexOf(':');
-    if (colonIdx < 0) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 페이로드 오류', corsHeaders);
-    const e164 = payload.slice(0, colonIdx);
-    const exp  = Number(payload.slice(colonIdx + 1));
-    if (!e164 || !Number.isFinite(exp)) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 페이로드 오류', corsHeaders);
-    if (Date.now() > exp) return _err(401, 'TOKEN_EXPIRED', '전화번호 인증 토큰이 만료됐습니다', corsHeaders);
-    const expectedSig = await _hmacSha256Hex(env.PHONE_VERIFY_SECRET, payload);
-    if (expectedSig !== sig) return _err(401, 'TOKEN_INVALID', '전화번호 인증 토큰 서명이 유효하지 않습니다', corsHeaders);
-
-    // e164는 handlePhoneOtpRequest와 동일 관례로 '+82'가 이미 국내 0으로
-    // 시작하는 나머지 숫자 앞에 붙은 형태다(_sendSolapiSms의 치환과 동일).
-    const domesticPhone       = e164.replace(/^\+82/, '');
-    const existingPhoneDigits = String(existing.phone || '').replace(/\D/g, '');
-    const tokenPhoneDigits    = domesticPhone.replace(/\D/g, '');
-    if (!existingPhoneDigits || existingPhoneDigits !== tokenPhoneDigits) {
-      return _err(403, 'PHONE_MISMATCH', '인증된 전화번호가 이 프로필에 등록된 번호와 일치하지 않습니다', corsHeaders);
-    }
-    claimMethod = 'phone_verify';
-  } else {
-    if (!signature) return _err(400, 'MISSING_FIELD', 'signature 또는 phone_verify_token 중 하나가 필요합니다', corsHeaders);
-    const sigMsg = `claim:${guid}:${pubkey}:${ts}`;
-    const sigOk  = await _verifyEd25519Simple(pubkey, signature, sigMsg);
-    if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
-    claimMethod = 'ed25519_signature';
-  }
-
-  const newExtra = { ...(existing.extra || {}), claim_status: 'claimed', claimed_at: new Date().toISOString(), claim_method: claimMethod };
+  const newExtra = { ...(existing.extra || {}), claim_status: 'claimed', claimed_at: new Date().toISOString() };
 
   try {
     await _l1UpsertProfile(env, {
@@ -9216,22 +8735,11 @@ async function handleProfileClaim(request, env, corsHeaders) {
     return _err(502, 'L1_ERROR', 'L1 claim 반영 실패: ' + e.message, corsHeaders);
   }
 
-  let saveRes;
-  try {
-    saveRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
-      method: 'PATCH',
-      headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
-      body: JSON.stringify({ pubkey_ed25519: pubkey, claim_status: 'claimed', extra: newExtra, updated_at: new Date().toISOString() }),
-    });
-  } catch (e) {
-    return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
-  }
-  if (!saveRes.ok) {
-    const errText = await saveRes.text().catch(() => '');
-    return _err(502, 'DB_ERROR', `claim 반영 실패: ${errText}`, corsHeaders);
-  }
-  const savedRows = await saveRes.json().catch(() => []);
-  const savedProfile = savedRows[0] || { guid, pubkey_ed25519: pubkey };
+  // (2026-07-15: Supabase 이중쓰기 제거 — L1이 이미 1차 소스로 저장을
+  //  끝냈다. _mergeAgentSP에 넘길 principalProfile은 L1에서 조회했던
+  //  existing에 이번에 바뀐 필드(pubkey/claim_status/extra)만 얹어
+  //  구성한다 — Supabase 응답에 의존할 필요가 없다.)
+  const savedProfile = { ...existing, pubkey_ed25519: pubkey, claim_status: 'claimed', extra: newExtra };
 
   // 정식 소유자가 생겼으니 이제 그림자 AI SP를 합성한다(일반 가입과 동일 처리).
   const agentResult = await _mergeAgentSP(env, savedProfile).catch(e => {
@@ -9239,7 +8747,7 @@ async function handleProfileClaim(request, env, corsHeaders) {
     return { ok: false, error: 'EXCEPTION', detail: e.message };
   });
 
-  return new Response(JSON.stringify({ ok: true, guid, claim_status: 'claimed', claim_method: claimMethod, agent: agentResult }), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify({ ok: true, guid, claim_status: 'claimed', agent: agentResult }), { status: 200, headers: corsHeaders });
 }
 
 async function handleProfilePost(request, env, corsHeaders) {
@@ -9273,7 +8781,6 @@ async function handleProfilePost(request, env, corsHeaders) {
     sns_public = {}, languages_spoken = [],
     region = '', directions = '', parking = false,
     gdc_accepted = false, currencies = ['KRW'], price_range = '',
-    payout_account = null,  // 2026-07-15 신설 — { bank_name, account_number, holder_name }
     phone_visible = false,
     // 2026-07-13 신설 — AC-AUTHOR_v1_0.md §3(job_ksco 스키마). KSIC 기반
     // occupation(사업자 업종, 검색용)과 절대 혼용하지 않는다 — 이건 개인
@@ -9366,8 +8873,9 @@ async function handleProfilePost(request, env, corsHeaders) {
 
   const sbH = _sbHeaders(env);
 
-  // 기존 프로필 존재 여부 확인 — 2026-06-30: L1 PocketBase를 1차 소스로 전환.
-  // L1에 없으면(아직 L1로 안 옮겨진 레거시 계정) Supabase로 폴백 조회한다.
+  // 기존 프로필 존재 여부 확인 — L1 PocketBase가 유일한 소스.
+  // (2026-07-15: Supabase 레거시 폴백 삭제 — 개발 단계라 "L1로 아직 안
+  //  옮겨진 계정" 자체가 없다는 게 확인됨. L1에 없으면 그냥 신규 가입.)
   // TOFU: pubkey 일치 확인은 어느 소스에서 찾았든 동일하게 적용.
   let existing = null;
   try {
@@ -9382,22 +8890,7 @@ async function handleProfilePost(request, env, corsHeaders) {
       };
     }
   } catch (e) {
-    console.warn('[Profile] L1 조회 실패, Supabase로 폴백:', e.message);
-  }
-
-  if (!existing) {
-    let existRes;
-    try {
-      existRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}&select=guid,handle,extra,pubkey_ed25519&limit=1`, { headers: sbH });
-    } catch (e) {
-      return _err(502, 'SUPABASE_UNREACHABLE', 'DB 연결 실패: ' + e.message, corsHeaders);
-    }
-    if (!existRes.ok) {
-      const errText = await existRes.text().catch(() => '');
-      return _err(502, 'SUPABASE_ERROR', `DB 조회 실패 (HTTP ${existRes.status}): ${errText}`, corsHeaders);
-    }
-    const existRows = await existRes.json().catch(() => []);
-    existing = existRows[0] || null;
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
   }
 
   // v6.0: TOFU 복원. "guid는 전화번호 기반이라 안전하다"는 이전 가정은 틀렸다 —
@@ -9550,7 +9043,7 @@ async function handleProfilePost(request, env, corsHeaders) {
     activity: { timezone: 'Asia/Seoul', hours, holidays },
     contact:  { phone_display: phone, phone_visible: !!phone_visible, website, sns_public, languages_spoken },
     location: { region, address_short: address, directions, parking },
-    finance:  { gdc_accepted, currencies, price_range, payout_account },
+    finance:  { gdc_accepted, currencies, price_range },
     // 2026-07-13 신설 — products_structured를 profile 레코드 자신에도
     // 저장(위 destructure 주석 참조). 'products_structured' in body로
     // "안 보냄(보존)"과 "빈 배열을 명시적으로 보냄(비움)"을 구분한다.
@@ -9614,25 +9107,8 @@ async function handleProfilePost(request, env, corsHeaders) {
     return _err(502, 'L1_SAVE_FAILED', 'L1 프로필 저장 실패: ' + e.message, corsHeaders);
   }
 
-  try {
-    if (existing) {
-      await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
-        method: 'PATCH',
-        headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
-        body: JSON.stringify(record),
-      });
-    } else {
-      record.created_at = new Date().toISOString();
-      await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
-        method: 'POST',
-        headers: { ..._sbServiceHeaders(env), 'Prefer': 'return=representation' },
-        body: JSON.stringify(record),
-      });
-    }
-  } catch (e) {
-    console.warn('[Profile] Supabase 병행쓰기 실패 (L1은 이미 저장됨, 가입은 정상 처리):', e.message);
-  }
-
+  // (2026-07-15: Supabase 병행쓰기 제거 — L1이 유일한 소스가 됐고,
+  //  L1을 읽던 레거시 폴백 경로들도 전부 이 배치에서 함께 제거됐다.)
   const savedProfile = { ...record, id: l1Result?.id };
 
   // 2026-06-23: SP 합성 시점 — 가입 직후가 아니라 PROFILE_SUBMIT 완료 후.
@@ -10645,10 +10121,7 @@ async function handleCatalogSync(request, env, corsHeaders) {
         extra: { ...prevExtra, public: newExtraPublic },
         core: { ...(prevExtra.core || {}), occupation: derived.occupation },
       });
-      await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(guid)}`, {
-        method: 'PATCH', headers: _sbServiceHeaders(env),
-        body: JSON.stringify({ occupation: derived.occupation }),
-      }).catch(e => console.warn('[Catalog] Supabase occupation 동기화 실패(L1은 반영됨):', e.message));
+      // (2026-07-15: Supabase 병행 미러링 제거 — L1이 유일한 소스)
       occupationUpdated = true;
     } catch (e) {
       console.warn('[Catalog] 업종 갱신 실패(카탈로그 동기화 자체는 성공):', e.message);
@@ -11389,10 +10862,11 @@ async function handleFeedbackPatch(request, env, corsHeaders) {
   if (!admin_guid) return _err(400, 'MISSING_FIELD', 'admin_guid 필수', corsHeaders);
 
   // 관리자 확인 (주피터 guid)
+  // (2026-07-15: Supabase user_profiles → L1 이관. feedback 테이블
+  //  자체는 user_profiles와 별개 카테고리라 이번 배치 범위 밖 — 그대로 둠.)
   const sbH = _sbServiceHeaders(env);
-  const adminRes  = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?guid=eq.${encodeURIComponent(admin_guid)}&select=handle&limit=1`, { headers: sbH });
-  const adminRows = await adminRes.json().catch(() => []);
-  if (!adminRows.length || adminRows[0].handle !== '@96627170')
+  const adminProfile = await _l1FindProfileByGuid(env, admin_guid).catch(() => null);
+  if (!adminProfile || adminProfile.handle !== '@96627170')
     return _err(403, 'FORBIDDEN', '관리자만 상태를 변경할 수 있습니다', corsHeaders);
 
   // 상태 변경
@@ -11774,8 +11248,11 @@ async function handleAdminCfDns(request, env, corsHeaders) {
   });
 }
 
-// GET /admin/stats?token=... — 통계 (Supabase user_profiles 기반)
-// L1 PocketBase는 SSL 미설정으로 Worker에서 직접 접근 불가 → Supabase 사용
+// GET /admin/stats?token=... — 통계 (L1 profiles 기반)
+// (2026-07-15: Supabase → L1 이관. 기존 주석("L1은 SSL 미설정이라 Worker
+//  에서 직접 접근 불가")은 이제 사실이 아니다 — L1_DEFAULT가 이미
+//  'https://l1-hanlim.hondi.net'로 저장소 전체에서 수백 곳에서 정상
+//  호출되고 있다. 오래된 주석이 남아있었을 뿐이다.)
 async function handleAdminStats(request, env, corsHeaders) {
   const url = new URL(request.url);
   const token = url.searchParams.get('token');
@@ -11784,26 +11261,28 @@ async function handleAdminStats(request, env, corsHeaders) {
   if (!isValid) return new Response(JSON.stringify({error:'INVALID_TOKEN'}), {status:403, headers:corsHeaders});
 
   try {
-    const sbKey = env.SUPABASE_SERVICE_KEY || env.SUPABASE_KEY || _supabaseAnonKey();
-    const sbHeaders = { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` };
+    const l1Token = await _l1AdminToken(env);
+    const l1Headers = { 'Authorization': 'Bearer ' + l1Token };
 
-    // 전체 카운트
+    // 전체 카운트 — PocketBase 목록 응답의 totalItems를 이용 (perPage=1로 최소 조회)
     const r1 = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?select=count`,
-      { headers: { ...sbHeaders, 'Prefer': 'count=exact', 'Range': '0-0' }, signal: AbortSignal.timeout(6000) }
+      `${L1_DEFAULT}/api/collections/profiles/records?perPage=1`,
+      { headers: l1Headers, signal: AbortSignal.timeout(6000) }
     );
-    const total = parseInt(r1.headers.get('content-range')?.split('/')?.[1] ?? '0');
+    const d1 = await r1.json().catch(() => ({ totalItems: 0 }));
+    const total = d1.totalItems || 0;
 
     // 최근 500개 created 날짜
     const r2 = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?select=created_at&order=created_at.desc&limit=500`,
-      { headers: sbHeaders, signal: AbortSignal.timeout(8000) }
+      `${L1_DEFAULT}/api/collections/profiles/records?sort=-created&perPage=500`,
+      { headers: l1Headers, signal: AbortSignal.timeout(8000) }
     );
-    const items = await r2.json();
+    const d2 = await r2.json().catch(() => ({ items: [] }));
+    const items = d2.items || [];
 
     return new Response(JSON.stringify({
       total,
-      items: (Array.isArray(items) ? items : []).map(u => ({created: u.created_at}))
+      items: items.map(u => ({created: u.created}))
     }), {status:200, headers:{...corsHeaders,'Content-Type':'application/json'}});
   } catch(e) {
     return new Response(JSON.stringify({error: e.message}), {status:502, headers:corsHeaders});
