@@ -242,6 +242,19 @@ function _isFieldTestOrg(env, orgId) {
  * }
  * 반환: 검증 통과 시 org_id 문자열, 실패 시 null(이유는 console.warn만).
  */
+// 2026-07-15c(사고실험) — 직책 코드 표준화 1단계. role 필드가 서명 메시지에는
+// 포함되지만 유효한 값인지 검증하는 로직이 전혀 없었다(필드 존재 여부만
+// 확인) — 즉 기관장이 서명 시 임의 문자열을 적어 넣어도 통과했다.
+// docs/NATIONAL-OFFICIAL-ROLE-REGISTRY_v1.0에 따라, 행안부 행정표준코드
+// (code.go.kr 직위코드)를 정식 반입하기 전까지는 이미 이 저장소에서
+// 실사용 중이던 두 값(affiliation.role — worker.js 9374행, dept-task-handler.js
+// 1260행의 'manager' 체크)만 화이트리스트로 인정한다. 이 두 값 외의 role은
+// 거부한다 — 검증되지 않는 자유 텍스트보다, 표준 반입 전까지는 "좁게 허용"이
+// 안전한 실패(fail-safe)다. 표준 반입 후 이 Set에 실제 code.go.kr 코드값을
+// 추가할 것 — 이 배열이 곧 국가 표준의 부분집합이어야 하며, 다시 임의
+// 식별자를 지어내는 방식으로 확장하지 않는다.
+const NATIONAL_ROLE_REGISTRY = new Set(['staff', 'manager']);
+
 async function _verifyAccessCert(env, cert, callerGuid, deps) {
   const { _verifyEd25519Simple, _l1FindProfileByGuid } = deps;
   if (!cert || typeof cert !== 'object') return null;
@@ -250,6 +263,10 @@ async function _verifyAccessCert(env, cert, callerGuid, deps) {
   if (!org_id || !official_guid || !role || !expires_at || !issuer_signature ||
       !official_pubkey || !official_signature || !request_nonce) {
     console.warn('[AccessCert] 필드 누락'); return null;
+  }
+  if (!NATIONAL_ROLE_REGISTRY.has(role)) {
+    console.warn('[AccessCert] role이 국가 직책 코드 표준 화이트리스트에 없음:', role);
+    return null;
   }
   if (official_guid !== callerGuid) {
     console.warn('[AccessCert] official_guid가 요청자 guid와 불일치'); return null;

@@ -5055,12 +5055,19 @@ async function _l1FindConsentRequest(env,requestId){
 // (a) 알림의 긴급도(제목·진동 패턴)만 다르게 하고 (b) EMERGENCY_ELIGIBLE_ROLES
 // 화이트리스트에 없는 role은 애초에 emergency를 자칭할 수 없게 막는다. 설계
 // 문서의 "표준 왕복 생략"은 이번 구현에서 채택하지 않았음을 문서에도 반영 필요.
-const EMERGENCY_ELIGIBLE_ROLES = new Set([
-  // 2026-07-15: 실제 role 명명 체계가 아직 확정 전이라(PERSONAL-AC-CALL-
-  // PROTOCOL KNOWN_LIMITATIONS 5) 자리표시자 값만 등록해둔다 — 실사용 전
-  // 반드시 실제 직책 코드 체계와 대조해 갱신할 것.
-  'welfare_officer', 'police_liaison', 'child_protection_officer',
-]);
+//
+// 2026-07-15b(사고실험 재확인): 이 화이트리스트가 실제로 무엇과 대조되는지
+// _verifyAccessCert(dept-task-handler.js)를 직접 확인한 결과, access_cert의
+// role 필드는 검증 로직이 `!role`(비어있지 않은지) 하나뿐인 자유 텍스트였다
+// — 기관장이 서명 시 임의로 적어 넣는 값이며, 전국 공통 직책 코드 표준이
+// 존재하지 않는다. 즉 이 Set에 값을 채워도 "각 기관장이 뭐라고 서명했는가"에
+// 안전성이 전적으로 위임될 뿐, 실질적인 화이트리스트 기능을 하지 못한다.
+// GWP_REGISTRY 직책 코드 표준(§NATIONAL-OFFICIAL-ROLE-REGISTRY, 별도 설계
+// 문서 예정)이 확정되고 _verifyAccessCert가 role을 그 표준에 대조 검증하기
+// 전까지는, 검증되지 않는 값과 대조하는 것보다 "아무도 통과 못 함"이 더
+// 안전한 실패(fail-safe)다 — 그래서 지금은 빈 Set으로 둔다. 표준 확정 후
+// 이 배열에 실제 코드값을 채우고 이 주석은 제거할 것.
+const EMERGENCY_ELIGIBLE_ROLES = new Set([]);
 
 async function handlePersonalAcCall(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
