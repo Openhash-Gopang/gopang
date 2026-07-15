@@ -1614,3 +1614,55 @@ const NODE_CONFIG = {
   } catch(e) {}
   return c.json(200, { ok: true, node: self.id, child_node, merkle_root: myRoot, parent_root: parentRoot });
 });
+
+// ── 전화번호 소유 검증 훅 (2026-07-15 신설) ──────────────────────
+// worker.js POST /biz/phone-otp-verify가 발급한 phone_verify_token을
+// 재검증한다. profiles 생성 요청에 e164가 있는데 토큰이 없거나
+// 위조/번호불일치/만료면 생성 자체를 거부한다 — 이게 없으면
+// 누구나 타인의 전화번호를 자칭해 가입할 수 있다(대화 중 발견①).
+//
+// 토큰 형식: '{e164}:{만료ms}' + '.' + hex(HMAC-SHA256(그 앞부분, secret))
+// worker.js의 handlePhoneOtpVerify()와 정확히 동일한 방식이어야 함.
+//
+// 필요한 환경변수: PHONE_VERIFY_SECRET
+//   systemd unit(Environment=PHONE_VERIFY_SECRET=...) 또는 .env로 설정.
+//   worker.js의 wrangler secret PHONE_VERIFY_SECRET과 반드시 동일한 값.
+//   (실제 PocketBase v0.22.14 바이너리로 $security.hs256()이 Node의
+//   crypto.createHmac('sha256',...)와 동일한 hex를 내는 것까지 검증 완료.)
+onRecordBeforeCreateRequest((e) => {
+  if (e.collection.name !== "profiles") return;
+
+  const info = $apis.requestInfo(e.httpContext);
+  const e164 = info.data.e164;
+  if (!e164) return; // 전화번호 없는 생성(게스트 등)은 검증 대상 아님
+
+  const secret = $os.getenv("PHONE_VERIFY_SECRET");
+  if (!secret) {
+    throw new BadRequestError("PHONE_VERIFY_SECRET 미설정 — 관리자에게 문의하세요");
+  }
+
+  const token = info.data.phone_verify_token;
+  if (!token || typeof token !== "string" || token.indexOf(".") === -1) {
+    throw new BadRequestError("전화번호 인증이 필요합니다(phone_verify_token 누락)");
+  }
+
+  const dotIdx = token.indexOf(".");
+  const payload = token.substring(0, dotIdx);
+  const signature = token.substring(dotIdx + 1);
+
+  const expectedSig = $security.hs256(payload, secret);
+  if (!$security.equal(expectedSig, signature)) {
+    throw new BadRequestError("인증 토큰 서명이 유효하지 않습니다");
+  }
+
+  const segs = payload.split(":");
+  const tokenE164 = segs[0];
+  const exp = parseInt(segs[1], 10);
+
+  if (tokenE164 !== e164) {
+    throw new BadRequestError("인증된 번호와 가입 요청 번호가 일치하지 않습니다");
+  }
+  if (!exp || Date.now() > exp) {
+    throw new BadRequestError("인증 토큰이 만료됐습니다. 인증번호를 다시 요청해 주세요");
+  }
+}, "profiles");
