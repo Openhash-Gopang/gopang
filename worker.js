@@ -8802,6 +8802,7 @@ async function handleProfilePost(request, env, corsHeaders) {
     sns_public = {}, languages_spoken = [],
     region = '', directions = '', parking = false,
     gdc_accepted = false, currencies = ['KRW'], price_range = '',
+    payout_account = null,  // 2026-07-15 신설 — { bank_name, account_number, holder_name }
     phone_visible = false,
     // 2026-07-13 신설 — AC-AUTHOR_v1_0.md §3(job_ksco 스키마). KSIC 기반
     // occupation(사업자 업종, 검색용)과 절대 혼용하지 않는다 — 이건 개인
@@ -9064,7 +9065,7 @@ async function handleProfilePost(request, env, corsHeaders) {
     activity: { timezone: 'Asia/Seoul', hours, holidays },
     contact:  { phone_display: phone, phone_visible: !!phone_visible, website, sns_public, languages_spoken },
     location: { region, address_short: address, directions, parking },
-    finance:  { gdc_accepted, currencies, price_range },
+    finance:  { gdc_accepted, currencies, price_range, payout_account },
     // 2026-07-13 신설 — products_structured를 profile 레코드 자신에도
     // 저장(위 destructure 주석 참조). 'products_structured' in body로
     // "안 보냄(보존)"과 "빈 배열을 명시적으로 보냄(비움)"을 구분한다.
