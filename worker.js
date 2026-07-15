@@ -831,6 +831,12 @@ const VALID_PDV_SCOPES = [
   'kagri', 'kclimate', 'kculture', 'kecon', 'khousing',
   'kinnov', 'kjachi', 'kocean', 'kplan', 'ksafety',
   'ktourism', 'ktransport', 'kwelfare',
+  // 2026-07-15: 공무원 직무보조 트랙1/2(SCOPE-MAPPING-TRACK1-2_v1_0) 대응 —
+  // 시민 본인이 PDV에 직접 기록하는 자산·소득 신고(기초생활수급·국가장학금
+  // 소득분위 심사 등에 필요). 특정 정부기관 리포터가 없어 신규 scope 필요.
+  // 'kfinance'로 명명하려 했으나 이미 SVC_ALIAS(아래)에서 K-Stock(투자
+  // 서비스)의 별칭으로 선점돼 있어 충돌 회피를 위해 'kassetdecl'로 명명함.
+  'kassetdecl',
 ];
 const SCOPE_MIN_LEVEL = {
   ktraffic:'L1', khealth:'L1', pdv_general:'L1', k119:'L1', kmarket:'L0',
@@ -850,6 +856,17 @@ const SCOPE_MIN_LEVEL = {
   kagri:'L1', kclimate:'L1', kculture:'L0', kecon:'L1', khousing:'L1',
   kinnov:'L1', kjachi:'L1', kocean:'L1', kplan:'L1', ksafety:'L1',
   ktourism:'L0', ktransport:'L0', kwelfare:'L1',
+  // 2026-07-15: 자산·소득 정보는 L1보다 높은 게 맞다 — L2로 지정한다.
+  // 발견④ 수정(silent-auth.html의 지갑 경로 Bearer 토큰 누락 수정)으로
+  // 배선의 SSO 쪽 절반(서명된 토큰을 실제로 세션에 담아 전달하는 부분)은
+  // 됐지만, 이건 부분 수정이다 — (1) _runRedirectMode 경로는 여전히
+  // 비서명 base64 토큰(367행)만 쓰고, (2) 각 K-서비스 앱 코드가
+  // session.token을 실제로 queryPdvScope({sessionToken})에 넘기도록
+  // 연동하는 다운스트림 작업도 아직 안 됐다(발견④ 커밋 메시지에 명시).
+  // 그래서 지금 L2로 걸어도 당장 실사용에서 통과되리라는 보장은 없다 —
+  // 다만 이전처럼 "L2를 걸면 구조적으로 무조건 실패"였던 상태에서 "배선이
+  // 끝나는 만큼 점진적으로 동작 가능"한 상태로는 바뀌었다.
+  kassetdecl:'L2',
 };
 // 2026-07-04c: scope → source 배열(1:다)로 변경. 이전엔 scope 하나당 저장소
 // 하나만 가능했는데, 같은 종류의 데이터(예: 세무 상담)를 여러 지역/서비스가
@@ -868,6 +885,7 @@ const SCOPE_SOURCE_MAP = {
   kagri:['jeju'], kclimate:['jeju'], kculture:['jeju'], kecon:['jeju'], khousing:['jeju'],
   kinnov:['jeju'], kjachi:['jeju'], kocean:['jeju'], kplan:['jeju'], ksafety:['jeju'],
   ktourism:['jeju'], ktransport:['jeju'], kwelfare:['jeju'],
+  kassetdecl:null, // pdv_general과 동일 — 정부기관 리포터 없음, 시민 본인이 직접 기록
 };
 
 const SVC_ALIAS = {
