@@ -3204,6 +3204,10 @@ export default {
     if (pathname === '/personal-ac/call' && request.method === 'POST')
       return handlePersonalAcCall(request, env, corsHeaders);
 
+    // §5 수신확인 3단계(sw.js push/notificationclick 훅이 호출)
+    if (pathname === '/pdv/consent-receipt' && request.method === 'POST')
+      return handleConsentReceipt(request, env, corsHeaders);
+
     // ── 서비스 등록 ───────────────────────────────────────
     if (pathname === '/svc/register')            return handleSvcRegister(request, env, corsHeaders);
     if (pathname === '/svc/verify')              return handleSvcVerify(request, env, corsHeaders);
@@ -5127,6 +5131,47 @@ async function handlePersonalAcCall(request, env, corsHeaders) {
     consent_url: consentUrl,
     expires_at: expiresAt,
   }), { status: 202, headers: corsHeaders });
+}
+
+// POST /pdv/consent-receipt { request_id, event:'delivered'|'acknowledged' }
+// PERSONAL-AC-CALL-PROTOCOL_v1_0 §5 수신확인 3단계 구현. sw.js의 push/
+// notificationclick 핸들러가 각각 delivered/acknowledged를 보고한다.
+// sent는 _sendPushToGuid 호출 자체로 이미 감사로그에 남으므로 별도 처리
+// 불필요 — 여기서는 delivered_at/acknowledged_at 2개 시각만 기록한다.
+async function handleConsentReceipt(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { request_id, event } = body;
+  if (!request_id) return _err(400, 'MISSING_FIELD', 'request_id 필수', corsHeaders);
+  if (!['delivered', 'acknowledged'].includes(event))
+    return _err(400, 'SCHEMA_ERROR', "event는 'delivered' 또는 'acknowledged'여야 합니다", corsHeaders);
+
+  let record;
+  try { record = await _l1FindConsentRequest(env, request_id); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders); }
+  if (!record) return _err(404, 'NOT_FOUND', '존재하지 않는 동의 요청입니다', corsHeaders);
+
+  const field = event === 'delivered' ? 'delivered_at' : 'acknowledged_at';
+  // 이미 기록돼 있으면 덮어쓰지 않는다 — "최초 도달/인지 시각"만 의미
+  // 있다(여러 번 push가 재전송되거나 알림을 여러 번 눌러도 첫 시각이
+  // 사고실험에서 짚은 "실패의 책임 소재" 판단의 근거 값이다).
+  if (record[field]) {
+    return new Response(JSON.stringify({ ok: true, already_recorded: true, [field]: record[field] }), { status: 200, headers: corsHeaders });
+  }
+
+  try {
+    const token = await _l1AdminToken(env);
+    const now = new Date().toISOString();
+    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/pdv_consent_requests/records/${record.id}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: now }),
+    });
+    if (!patchRes.ok) return _err(502, 'L1_UPDATE_FAILED', '수신확인 기록 실패: HTTP ' + patchRes.status, corsHeaders);
+    return new Response(JSON.stringify({ ok: true, [field]: now }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
 }
 
 async function handleConsentInfo(request,env,corsHeaders){
