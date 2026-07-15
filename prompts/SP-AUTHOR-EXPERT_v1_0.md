@@ -21,7 +21,7 @@
 #             배포하는가"만 다룬다(SP-AUTHOR가 기관 SP에 대해 하는 역할과
 #             동일한 층위, 대상만 다름).
 # 필수 선행 문서:
-#             SP_common_guardrails_v3_8.md (SP-COMMON-02, 모든 페르소나의
+#             SP_common_guardrails_v3_9.md (SP-COMMON-02, 모든 페르소나의
 #               공통 상속 상위 — PHASE C는 이 문서를 절대 재작성하지 않고
 #               인용만 한다)
 #             SP_common_medical_safety_v1_3.md (needsMedicalSafety:true
@@ -126,7 +126,7 @@ R0에 해당하는 응급 시나리오가 없음".)
    자살·자해 대응) 프로토콜이 필요한 직업인가? (기존 18개 판정 기준 —
    HEALTH 14개 전부 + EDU 상담 계열 4개 — 을 그대로 적용, 새 직업이 이
    두 부류 중 하나에 해당하면 true)
-3. **상속 선언**: 어떤 경우든 `SP_common_guardrails_v3_8.md`(SP-COMMON-02)
+3. **상속 선언**: 어떤 경우든 `SP_common_guardrails_v3_9.md`(SP-COMMON-02)
    상속은 필수이고 생략 불가다. C1~C13 원본이 이 저장소에 없으므로,
    기존 v1.0 초안 10개와 동일하게 "번호를 지어내지 않고 원칙만 서술"
    원칙을 그대로 따른다.
