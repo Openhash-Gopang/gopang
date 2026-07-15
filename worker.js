@@ -956,6 +956,13 @@ const VALID_PDV_SCOPES = [
   // 'kfinance'로 명명하려 했으나 이미 SVC_ALIAS(아래)에서 K-Stock(투자
   // 서비스)의 별칭으로 선점돼 있어 충돌 회피를 위해 'kassetdecl'로 명명함.
   'kassetdecl',
+  // 2026-07-15e: 공무원 직무보조 100번(여권 재발급) 대응 — 외교부(여권) 소관
+  // scope가 51종 어디에도 없었다(kimmigration은 법무부 출입국관리로 성격이
+  // 다름). 여권 접수·재발급은 실제로 시/군/구 여권과(제주 포함)에서 국가
+  // 위임사무로 처리하므로, 다른 jeju발 위임사무 scope와 동일하게 jeju를
+  // source로 등록한다. 이름 충돌 여부(SVC_ALIAS·UNIVERSAL_FORCED_K_SERVICES·
+  // DEPT_TASK_TAXONOMY) 확인 완료 — 'kforeign'은 어디에도 선점돼 있지 않음.
+  'kforeign',
 ];
 const SCOPE_MIN_LEVEL = {
   ktraffic:'L1', khealth:'L1', pdv_general:'L1', k119:'L1', kmarket:'L0',
@@ -986,6 +993,13 @@ const SCOPE_MIN_LEVEL = {
   // 다만 이전처럼 "L2를 걸면 구조적으로 무조건 실패"였던 상태에서 "배선이
   // 끝나는 만큼 점진적으로 동작 가능"한 상태로는 바뀌었다.
   kassetdecl:'L2',
+  // 2026-07-15e: 여권 정보(여권번호 등)는 주민등록번호급 식별정보라 다른
+  // jeju발 scope들과 마찬가지로 원칙상 L2 이상이 맞지만, 위 TODO(966행)와
+  // 동일한 이유로 지금 L2를 걸면 Bearer 배선 미완성 상태에서 무조건 실패하는
+  // scope가 된다. kcourt·kimmigration 등과 동일하게 잠정 L1로 등록 — 배선
+  // 완성 후 이 값들과 함께 일괄 L2로 올리는 걸 권장(개별로 올리면 "왜 얘만
+  // L2였지" 식의 비일관성이 생긴다).
+  kforeign:'L1',
 };
 // 2026-07-04c: scope → source 배열(1:다)로 변경. 이전엔 scope 하나당 저장소
 // 하나만 가능했는데, 같은 종류의 데이터(예: 세무 상담)를 여러 지역/서비스가
@@ -1005,6 +1019,7 @@ const SCOPE_SOURCE_MAP = {
   kinnov:['jeju'], kjachi:['jeju'], kocean:['jeju'], kplan:['jeju'], ksafety:['jeju'],
   ktourism:['jeju'], ktransport:['jeju'], kwelfare:['jeju'],
   kassetdecl:null, // pdv_general과 동일 — 정부기관 리포터 없음, 시민 본인이 직접 기록
+  kforeign:['jeju'], // 여권과 위임사무 — 다른 jeju발 국가위임사무 scope와 동일 패턴
 };
 
 const SVC_ALIAS = {
