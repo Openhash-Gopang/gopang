@@ -5,6 +5,15 @@
  */
 
 // ── Network ──────────────────────────────────────────────────────────────
+// ⚠️ 2026-07-15 — src/gdc/*.js(currencyPool, escrow, dao, offlineQueue)가
+// gdc 저장소(gdc.hondi.net)로 이동했다(gopang/gdc 파일 재배치). 이 파일은
+// GDC 모듈과 network/privacy 모듈을 함께 테스트하는 혼합 스펙이라
+// 순수 GDC 전용이 아니어서 옮기지 않고 gopang에 남겨뒀다 — 대신 아래
+// gdc/* import 6곳은 더 이상 이 저장소에서 유효한 경로가 아니다.
+// (이 저장소엔 package.json/테스트 러너가 없어 원래도 실행되는 CI
+// 테스트는 아니었다 — 참고용 스펙 문서에 가깝다. 실제로 이 테스트를
+// 되살리려면 gdc 저장소의 src/gdc/*.js를 별도로 import하거나, GDC
+// 부분만 떼어 gdc 저장소 쪽 테스트로 옮겨야 한다.)
 import { submitToLayer, getLayerStatus, _resetStatus } from '../../network/layerClient.js'
 import { deriveGUID, deriveIPv6, calcTrustLevel, generateStealthAddress,
          matchStealthAddress, checkPermission, getDailyMsgLimit,
