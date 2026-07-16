@@ -14,6 +14,7 @@
 
 name = "hondi-proxy"
 main = "worker.js"
+account_id = "8897e584cfc42457b462f76fdcf6e157"
 compatibility_date = "2026-07-12"
 
 [[kv_namespaces]]
@@ -23,6 +24,14 @@ id = "e1ae4dd08b344f9c9208ea4235e17d3e"
 [[kv_namespaces]]
 binding = "QR_SESSIONS_KV"
 id = "af7cad0be99e4072bbca8d81d71edd98"
+
+# 2026-07-16 추가 — GOV_OPEN_DATA_MAP 리졸버(/api/stats/resolve)용 캐시.
+# wrangler.json에는 있었으나 이 파일(.toml)에는 빠져 있어서, Wrangler가
+# .toml을 우선 읽는 상황에서 env.GOV_DATA_KV가 런타임에 비어있는 문제가
+# 있었다 — 이번에 반영해 두 설정 파일을 일치시킨다.
+[[kv_namespaces]]
+binding = "GOV_DATA_KV"
+id = "cf1dc69a346747ac8319a6cab85640cf"
 
 [[services]]
 binding = "AGENT_SIGNER"
