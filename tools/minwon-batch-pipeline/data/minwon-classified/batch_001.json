@@ -1,0 +1,1013 @@
+{
+  "batch_id": "001",
+  "classified_at": "2026-07-16",
+  "total_items": 50,
+  "flagged_items": 20,
+  "flagged_high_priority": 18,
+  "flagged_low_priority": 2,
+  "domain_discovery": {
+    "taxonomy_size": 20,
+    "known_domain_hit_counts": {
+      "PUBLIC_SAFETY": 11,
+      "IMMIGRATION": 3,
+      "IDENTITY_REG": 6,
+      "TAX": 4,
+      "FAMILY": 2,
+      "HEALTH": 6,
+      "STUPARENT": 8,
+      "BIZ": 7,
+      "WELFARECERT": 4,
+      "REALESTATE": 2,
+      "VEHICLE": 6,
+      "MATERNITY": 3,
+      "RESERVATION": 1,
+      "MILITARY": 1
+    },
+    "watch_list_candidates": []
+  },
+  "items": [
+    {
+      "id": 1,
+      "title": "성매매 신고 방법",
+      "agency": [
+        "경찰청"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "경찰청:성매매_신고_방법",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 2,
+      "title": "여권정보증명서 발급(국문)",
+      "agency": [
+        "외교부"
+      ],
+      "category_raw": "출입국",
+      "domain_candidates": [
+        "IMMIGRATION",
+        "IDENTITY_REG"
+      ],
+      "task_key_candidate": "외교부:여권정보증명서_발급_국문",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 3,
+      "title": "지방세 온라인 서비스 - 위택스(wetax)",
+      "agency": [
+        "행정안전부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "TAX",
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "행정안전부:지방세_온라인_서비스_위택스_wetax",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 4,
+      "title": "혼인관계증명서 발급",
+      "agency": [
+        "대법원"
+      ],
+      "category_raw": "가족관계",
+      "domain_candidates": [
+        "FAMILY"
+      ],
+      "task_key_candidate": "대법원:혼인관계증명서_발급",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R3_duplicate_description",
+          "detail": "설명 텍스트가 항목 [46]와 완전히 동일 — 원본 데이터 복붙 오류 가능성."
+        },
+        {
+          "rule": "R3_cross_batch_duplicate_description",
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '002', 'id': 21, 'title': '입양관계증명서 발급'}, {'batch_id': '002', 'id': 22, 'title': '친양자입양관계증명서 발급'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 5,
+      "title": "건강보험료 납부확인서",
+      "agency": [],
+      "category_raw": "공통",
+      "domain_candidates": [
+        "HEALTH"
+      ],
+      "task_key_candidate": "unknown_agency:건강보험료_납부확인서",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 6,
+      "title": "나이스플러스",
+      "agency": [
+        "한국교육학술정보원"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "HEALTH",
+        "STUPARENT"
+      ],
+      "task_key_candidate": "한국교육학술정보원:나이스플러스",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 7,
+      "title": "사업자등록증명 발급",
+      "agency": [
+        "국세청"
+      ],
+      "category_raw": "세무 및 납세",
+      "domain_candidates": [
+        "BIZ"
+      ],
+      "task_key_candidate": "국세청:사업자등록증명_발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 8,
+      "title": "국민기초생활수급자증명",
+      "agency": [
+        "보건복지부"
+      ],
+      "category_raw": "사회 약자 복지",
+      "domain_candidates": [
+        "WELFARECERT"
+      ],
+      "task_key_candidate": "보건복지부:국민기초생활수급자증명",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 9,
+      "title": "전자본인서명확인서 발급(열람)",
+      "agency": [
+        "행정안전부"
+      ],
+      "category_raw": "세무 및 납세",
+      "domain_candidates": [
+        "IDENTITY_REG"
+      ],
+      "task_key_candidate": "행정안전부:전자본인서명확인서_발급_열람",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R1_category_keyword_mismatch",
+          "detail": "원문 카테고리='세무 및 납세'이지만 내용상 주민등록/신원 계열(IDENTITY_REG)로 추정됨 — 해당 도메인과 무관해 보임."
+        },
+        {
+          "rule": "R2_title_button_verb_mismatch",
+          "detail": "제목 동사='열람'(조회형)인데 버튼='발급하기'(발급형) — 처리유형 판단 기준이 문서 내에서 상충."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 10,
+      "title": "학교생활기록부(대입전형용) 발급",
+      "agency": [
+        "교육부"
+      ],
+      "category_raw": "학생과 학부모",
+      "domain_candidates": [
+        "STUPARENT"
+      ],
+      "task_key_candidate": "교육부:학교생활기록부_대입전형용_발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 11,
+      "title": "토지임야대장등본교부 다량신청",
+      "agency": [
+        "국토교통부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "REALESTATE"
+      ],
+      "task_key_candidate": "국토교통부:토지임야대장등본교부_다량신청",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": false,
+      "flags": [
+        {
+          "rule": "R4_bundled_gateway_service",
+          "confidence": "low",
+          "detail": "설명문에만 약한 번들 키워드 존재 — 3배치 누적 검증 결과 이 경우 오탐 비율이 높다(단일 서비스의 '통합 이력'·'일괄 처리 편의성' 표현일 가능성). 실제 여러 기관·서비스가 묶이는지 본문을 직접 확인할 것."
+        }
+      ],
+      "review_required": true,
+      "priority": "low"
+    },
+    {
+      "id": 12,
+      "title": "연말정산 간소화 서비스",
+      "agency": [
+        "국세청"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "TAX"
+      ],
+      "task_key_candidate": "국세청:연말정산_간소화_서비스",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 13,
+      "title": "통신판매업신고-시.군.구",
+      "agency": [
+        "공정거래위원회"
+      ],
+      "category_raw": "사업자 지원",
+      "domain_candidates": [
+        "BIZ",
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "공정거래위원회:통신판매업신고_시_군_구",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 14,
+      "title": "대학(교) 재학증명",
+      "agency": [
+        "교육부"
+      ],
+      "category_raw": "학생과 학부모",
+      "domain_candidates": [
+        "STUPARENT"
+      ],
+      "task_key_candidate": "교육부:대학_교_재학증명",
+      "proc_type_candidate": "APPLY",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 15,
+      "title": "성적증명서 중, 고(국문)",
+      "agency": [
+        "교육부"
+      ],
+      "category_raw": "학생과 학부모",
+      "domain_candidates": [
+        "STUPARENT"
+      ],
+      "task_key_candidate": "교육부:성적증명서_중_고_국문",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R3_cross_batch_duplicate_description",
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '003', 'id': 3, 'title': '성적증명서 중, 고(영문)'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 16,
+      "title": "여권 발급 상태 조회",
+      "agency": [
+        "외교부"
+      ],
+      "category_raw": "출입국",
+      "domain_candidates": [
+        "IMMIGRATION"
+      ],
+      "task_key_candidate": "외교부:여권_발급_상태_조회",
+      "proc_type_candidate": "INQUIRY",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 17,
+      "title": "주민등록증분실신고(철회)",
+      "agency": [
+        "행정안전부"
+      ],
+      "category_raw": "주택 및 부동산",
+      "domain_candidates": [
+        "IDENTITY_REG",
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "행정안전부:주민등록증분실신고_철회",
+      "proc_type_candidate": "REPORT",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R1_category_keyword_mismatch",
+          "detail": "원문 카테고리='주택 및 부동산'이지만 내용상 주민등록/신원 계열(IDENTITY_REG)로 추정됨 — 해당 도메인과 무관해 보임."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 18,
+      "title": "농지대장",
+      "agency": [
+        "농림축산식품부"
+      ],
+      "category_raw": "사업자 지원",
+      "domain_candidates": [
+        "BIZ"
+      ],
+      "task_key_candidate": "농림축산식품부:농지대장",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 19,
+      "title": "영문 운전경력증명발급",
+      "agency": [
+        "경찰청"
+      ],
+      "category_raw": "차량 및 운송",
+      "domain_candidates": [],
+      "task_key_candidate": "경찰청:영문_운전경력증명발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 20,
+      "title": "하이패스 미납요금 조회",
+      "agency": [
+        "국토교통부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "VEHICLE"
+      ],
+      "task_key_candidate": "국토교통부:하이패스_미납요금_조회",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 21,
+      "title": "부가가치세과세표준증명 발급",
+      "agency": [
+        "국세청"
+      ],
+      "category_raw": "세무 및 납세",
+      "domain_candidates": [
+        "TAX",
+        "BIZ",
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "국세청:부가가치세과세표준증명_발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 22,
+      "title": "주민등록정정(말소,거주불명등록)신고",
+      "agency": [
+        "행정안전부"
+      ],
+      "category_raw": "주택 및 부동산",
+      "domain_candidates": [
+        "IDENTITY_REG",
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "행정안전부:주민등록정정_말소_거주불명등록_신고",
+      "proc_type_candidate": "REPORT",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R1_category_keyword_mismatch",
+          "detail": "원문 카테고리='주택 및 부동산'이지만 내용상 주민등록/신원 계열(IDENTITY_REG)로 추정됨 — 해당 도메인과 무관해 보임."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 23,
+      "title": "요금감면일괄신청",
+      "agency": [
+        "행정안전부"
+      ],
+      "category_raw": "사회 약자 복지",
+      "domain_candidates": [
+        "WELFARECERT"
+      ],
+      "task_key_candidate": "행정안전부:요금감면일괄신청",
+      "proc_type_candidate": "APPLY",
+      "auth_required": false,
+      "flags": [
+        {
+          "rule": "R4_bundled_gateway_service",
+          "confidence": "high",
+          "detail": "제목이 통합/일괄 처리를 명시적으로 표방 — 단일 agency:task_key로 처리하면 부정확, 하위 항목별 분해 필요(§BUNDLED-TASK 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 24,
+      "title": "임신 지원 서비스 통합 제공(맘편한 임신)",
+      "agency": [
+        "행정안전부"
+      ],
+      "category_raw": "출산 및 육아 지원",
+      "domain_candidates": [
+        "MATERNITY"
+      ],
+      "task_key_candidate": "행정안전부:임신_지원_서비스_통합_제공_맘편한_임신",
+      "proc_type_candidate": "APPLY",
+      "auth_required": false,
+      "flags": [
+        {
+          "rule": "R4_bundled_gateway_service",
+          "confidence": "high",
+          "detail": "제목이 통합/일괄 처리를 명시적으로 표방 — 단일 agency:task_key로 처리하면 부정확, 하위 항목별 분해 필요(§BUNDLED-TASK 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 25,
+      "title": "자동차 검사 예약",
+      "agency": [
+        "한국교통안전공단"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "VEHICLE",
+        "RESERVATION"
+      ],
+      "task_key_candidate": "한국교통안전공단:자동차_검사_예약",
+      "proc_type_candidate": "RESERVE_OR_VIEW",
+      "auth_required": false,
+      "flags": [
+        {
+          "rule": "R5_proc_type_out_of_taxonomy",
+          "detail": "버튼 라벨='내용보기' — 기존 5개 PROC 유형에 대응 안 됨(예약형 등 taxonomy 공백)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 26,
+      "title": "경찰 사건조회",
+      "agency": [
+        "법무부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "법무부:경찰_사건조회",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [
+        {
+          "rule": "R1_agency_label_ambiguous",
+          "detail": "소관기관 라벨이 '법무부'로만 표기됐으나 실제 서비스명은 경찰/검찰로 구분됨 — 동일 라벨이 서로 다른 실집행기관을 가리킴."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 27,
+      "title": "유치원 및 초중등학교 재학증명서(국문) 발급",
+      "agency": [
+        "교육부"
+      ],
+      "category_raw": "학생과 학부모",
+      "domain_candidates": [
+        "STUPARENT"
+      ],
+      "task_key_candidate": "교육부:유치원_및_초중등학교_재학증명서_국문_발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 28,
+      "title": "중소기업 확인서 발급서비스",
+      "agency": [
+        "중소벤처기업부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "BIZ"
+      ],
+      "task_key_candidate": "중소벤처기업부:중소기업_확인서_발급서비스",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 29,
+      "title": "장애인증명서 발급",
+      "agency": [
+        "보건복지부"
+      ],
+      "category_raw": "사회 약자 복지",
+      "domain_candidates": [
+        "WELFARECERT"
+      ],
+      "task_key_candidate": "보건복지부:장애인증명서_발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 30,
+      "title": "주민등록 관련 통보서비스(전입신고, 세대주변경, 주민등록증, 주민등록표, 주소변경사실)",
+      "agency": [
+        "행정안전부"
+      ],
+      "category_raw": "주택 및 부동산",
+      "domain_candidates": [
+        "IDENTITY_REG",
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "행정안전부:주민등록_관련_통보서비스_전입신고_세대주변경_주민등록증_주민등록표_주소변경사실",
+      "proc_type_candidate": "REPORT",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R1_category_keyword_mismatch",
+          "detail": "원문 카테고리='주택 및 부동산'이지만 내용상 주민등록/신원 계열(IDENTITY_REG)로 추정됨 — 해당 도메인과 무관해 보임."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 31,
+      "title": "유치원 및 초중등학교 졸업증명서(영문) 발급",
+      "agency": [
+        "교육부"
+      ],
+      "category_raw": "학생과 학부모",
+      "domain_candidates": [
+        "STUPARENT"
+      ],
+      "task_key_candidate": "교육부:유치원_및_초중등학교_졸업증명서_영문_발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R3_duplicate_description",
+          "detail": "설명 텍스트가 항목 [37]와 완전히 동일 — 원본 데이터 복붙 오류 가능성."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 32,
+      "title": "주민등록표 열람",
+      "agency": [
+        "행정안전부"
+      ],
+      "category_raw": "주택 및 부동산",
+      "domain_candidates": [
+        "IDENTITY_REG"
+      ],
+      "task_key_candidate": "행정안전부:주민등록표_열람",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R1_category_keyword_mismatch",
+          "detail": "원문 카테고리='주택 및 부동산'이지만 내용상 주민등록/신원 계열(IDENTITY_REG)로 추정됨 — 해당 도메인과 무관해 보임."
+        },
+        {
+          "rule": "R2_title_button_verb_mismatch",
+          "detail": "제목 동사='열람'(조회형)인데 버튼='발급하기'(발급형) — 처리유형 판단 기준이 문서 내에서 상충."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 33,
+      "title": "농업경영체 등록(변경등록) 확인서 발급 신청",
+      "agency": [
+        "농림축산식품부"
+      ],
+      "category_raw": "사업자 지원",
+      "domain_candidates": [
+        "BIZ"
+      ],
+      "task_key_candidate": "농림축산식품부:농업경영체_등록_변경등록_확인서_발급_신청",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 34,
+      "title": "착한운전마일리지신청",
+      "agency": [
+        "경찰청"
+      ],
+      "category_raw": "차량 및 운송",
+      "domain_candidates": [
+        "VEHICLE",
+        "WELFARECERT"
+      ],
+      "task_key_candidate": "경찰청:착한운전마일리지신청",
+      "proc_type_candidate": "APPLY",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 35,
+      "title": "나이스 학부모서비스",
+      "agency": [
+        "한국교육학술정보원"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "STUPARENT"
+      ],
+      "task_key_candidate": "한국교육학술정보원:나이스_학부모서비스",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 36,
+      "title": "자동차등록증 재발급 신청",
+      "agency": [
+        "국토교통부"
+      ],
+      "category_raw": "차량 및 운송",
+      "domain_candidates": [
+        "VEHICLE",
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "국토교통부:자동차등록증_재발급_신청",
+      "proc_type_candidate": "APPLY",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R6_cross_batch_agency_conflict",
+          "detail": "동일 제목 '자동차등록증 재발급 신청'이 이전 배치에서는 소관기관=['한국교통안전공단']로, 이번 배치에서는 ['국토교통부']로 기록됨 — 동일 서비스명에 서로 다른 소관기관이 붙는 원본 데이터 불일치, 혹은 실제로는 유사명의 별개 서비스."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 37,
+      "title": "유치원 및 초중등학교 졸업예정증명서 발급",
+      "agency": [
+        "교육부"
+      ],
+      "category_raw": "학생과 학부모",
+      "domain_candidates": [
+        "STUPARENT"
+      ],
+      "task_key_candidate": "교육부:유치원_및_초중등학교_졸업예정증명서_발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R3_duplicate_description",
+          "detail": "설명 텍스트가 항목 [31]와 완전히 동일 — 원본 데이터 복붙 오류 가능성."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 38,
+      "title": "보건의료인 면허(자격) 증명서 발급",
+      "agency": [
+        "보건복지부"
+      ],
+      "category_raw": "건강 및 의료",
+      "domain_candidates": [
+        "HEALTH"
+      ],
+      "task_key_candidate": "보건복지부:보건의료인_면허_자격_증명서_발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 39,
+      "title": "외국인등록사실증명",
+      "agency": [
+        "법무부"
+      ],
+      "category_raw": "출입국",
+      "domain_candidates": [
+        "IMMIGRATION"
+      ],
+      "task_key_candidate": "법무부:외국인등록사실증명",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 40,
+      "title": "건강보험 자격확인서",
+      "agency": [
+        "보건복지부"
+      ],
+      "category_raw": "건강 및 의료",
+      "domain_candidates": [
+        "HEALTH"
+      ],
+      "task_key_candidate": "보건복지부:건강보험_자격확인서",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 41,
+      "title": "사실증명(사업자등록사실여부)",
+      "agency": [
+        "국세청"
+      ],
+      "category_raw": "세무 및 납세",
+      "domain_candidates": [
+        "BIZ",
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "국세청:사실증명_사업자등록사실여부",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 42,
+      "title": "운전면허 정보",
+      "agency": [
+        "경찰청"
+      ],
+      "category_raw": "차량 및 운송",
+      "domain_candidates": [
+        "VEHICLE"
+      ],
+      "task_key_candidate": "경찰청:운전면허_정보",
+      "proc_type_candidate": "INQUIRY",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 43,
+      "title": "검찰사건조회",
+      "agency": [
+        "법무부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "법무부:검찰사건조회",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [
+        {
+          "rule": "R1_agency_label_ambiguous",
+          "detail": "소관기관 라벨이 '법무부'로만 표기됐으나 실제 서비스명은 경찰/검찰로 구분됨 — 동일 라벨이 서로 다른 실집행기관을 가리킴."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 44,
+      "title": "자동차세 연납 및 분납 안내",
+      "agency": [
+        "행정안전부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "VEHICLE"
+      ],
+      "task_key_candidate": "행정안전부:자동차세_연납_및_분납_안내",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 45,
+      "title": "건축물대장 인터넷 발급",
+      "agency": [
+        "국토교통부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "REALESTATE"
+      ],
+      "task_key_candidate": "국토교통부:건축물대장_인터넷_발급",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 46,
+      "title": "영문증명서 발급",
+      "agency": [
+        "대법원"
+      ],
+      "category_raw": "가족관계",
+      "domain_candidates": [
+        "FAMILY"
+      ],
+      "task_key_candidate": "대법원:영문증명서_발급",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R3_duplicate_description",
+          "detail": "설명 텍스트가 항목 [4]와 완전히 동일 — 원본 데이터 복붙 오류 가능성."
+        },
+        {
+          "rule": "R3_cross_batch_duplicate_description",
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '002', 'id': 21, 'title': '입양관계증명서 발급'}, {'batch_id': '002', 'id': 22, 'title': '친양자입양관계증명서 발급'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 47,
+      "title": "예비군훈련 교육 필증 발급",
+      "agency": [
+        "국방부"
+      ],
+      "category_raw": "병역 및 보훈",
+      "domain_candidates": [
+        "MILITARY"
+      ],
+      "task_key_candidate": "국방부:예비군훈련_교육_필증_발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 48,
+      "title": "난임부부 시술비 지원 신청",
+      "agency": [
+        "보건복지부"
+      ],
+      "category_raw": "출산 및 육아 지원",
+      "domain_candidates": [
+        "HEALTH",
+        "MATERNITY"
+      ],
+      "task_key_candidate": "보건복지부:난임부부_시술비_지원_신청",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R3_duplicate_description",
+          "detail": "설명 텍스트가 항목 [50]와 완전히 동일 — 원본 데이터 복붙 오류 가능성."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 49,
+      "title": "미환급금 신청",
+      "agency": [
+        "행정안전부"
+      ],
+      "category_raw": "세무 및 납세",
+      "domain_candidates": [
+        "TAX"
+      ],
+      "task_key_candidate": "행정안전부:미환급금_신청",
+      "proc_type_candidate": "APPLY",
+      "auth_required": false,
+      "flags": [
+        {
+          "rule": "R4_bundled_gateway_service",
+          "confidence": "low",
+          "detail": "설명문에만 약한 번들 키워드 존재 — 3배치 누적 검증 결과 이 경우 오탐 비율이 높다(단일 서비스의 '통합 이력'·'일괄 처리 편의성' 표현일 가능성). 실제 여러 기관·서비스가 묶이는지 본문을 직접 확인할 것."
+        }
+      ],
+      "review_required": true,
+      "priority": "low"
+    },
+    {
+      "id": 50,
+      "title": "조회를 통한 지원결정통지 출력",
+      "agency": [],
+      "category_raw": "출산 및 육아 지원",
+      "domain_candidates": [
+        "HEALTH",
+        "MATERNITY"
+      ],
+      "task_key_candidate": "unknown_agency:조회를_통한_지원결정통지_출력",
+      "proc_type_candidate": null,
+      "auth_required": null,
+      "flags": [
+        {
+          "rule": "R3_duplicate_description",
+          "detail": "설명 텍스트가 항목 [48]와 완전히 동일 — 원본 데이터 복붙 오류 가능성."
+        },
+        {
+          "rule": "R5_missing_button_data",
+          "detail": "버튼 라벨 자체가 원문에 없음 — 항목 데이터 자체가 불완전(설명 복붙 오류인 #50과 동일 항목일 가능성)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    }
+  ]
+}

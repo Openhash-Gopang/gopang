@@ -1,0 +1,939 @@
+{
+  "batch_id": "003",
+  "classified_at": "2026-07-16",
+  "total_items": 50,
+  "flagged_items": 10,
+  "flagged_high_priority": 9,
+  "flagged_low_priority": 1,
+  "domain_discovery": {
+    "taxonomy_size": 20,
+    "known_domain_hit_counts": {
+      "FAMILY": 2,
+      "MATERNITY": 1,
+      "PUBLIC_SAFETY": 9,
+      "HEALTH": 5,
+      "PENSION": 4,
+      "STUPARENT": 4,
+      "WELFARECERT": 6,
+      "VEHICLE": 2,
+      "TAX": 2,
+      "IDENTITY_REG": 1,
+      "REALESTATE": 1,
+      "BIZ": 5,
+      "FINANCE": 1,
+      "LABOR": 4,
+      "POLICY_INFO": 1,
+      "IMMIGRATION": 4,
+      "RESERVATION": 1,
+      "MILITARY": 1
+    },
+    "watch_list_candidates": [
+      "POLICY_INFO"
+    ]
+  },
+  "items": [
+    {
+      "id": 1,
+      "title": "출산 관련 서비스 통합처리 신청(행복출산)",
+      "agency": [
+        "행정안전부"
+      ],
+      "category_raw": "출산 및 육아 지원",
+      "domain_candidates": [
+        "FAMILY",
+        "MATERNITY",
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "행정안전부:출산_관련_서비스_통합처리_신청_행복출산",
+      "proc_type_candidate": "APPLY",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R4_bundled_gateway_service",
+          "confidence": "high",
+          "detail": "제목이 통합/일괄 처리를 명시적으로 표방 — 단일 agency:task_key로 처리하면 부정확, 하위 항목별 분해 필요(§BUNDLED-TASK 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 2,
+      "title": "지역가입자 건강·연금보험료 자동이체",
+      "agency": [
+        "국민건강보험공단"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "HEALTH",
+        "PENSION"
+      ],
+      "task_key_candidate": "국민건강보험공단:지역가입자_건강_연금보험료_자동이체",
+      "proc_type_candidate": "APPLY",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 3,
+      "title": "성적증명서 중, 고(영문)",
+      "agency": [
+        "교육부"
+      ],
+      "category_raw": "학생과 학부모",
+      "domain_candidates": [
+        "STUPARENT"
+      ],
+      "task_key_candidate": "교육부:성적증명서_중_고_영문",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R3_cross_batch_duplicate_description",
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '001', 'id': 15, 'title': '성적증명서 중, 고(국문)'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 4,
+      "title": "교육공무원 경력증명서 발급",
+      "agency": [
+        "교육부"
+      ],
+      "category_raw": "교사 및 교원",
+      "domain_candidates": [],
+      "task_key_candidate": "교육부:교육공무원_경력증명서_발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 5,
+      "title": "기초생활보장수급자의 근로능력 평가 진행상황",
+      "agency": [
+        "국민연금공단"
+      ],
+      "category_raw": "사회 약자 복지",
+      "domain_candidates": [
+        "WELFARECERT"
+      ],
+      "task_key_candidate": "국민연금공단:기초생활보장수급자의_근로능력_평가_진행상황",
+      "proc_type_candidate": "INQUIRY",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 6,
+      "title": "운전면허 정보 조회 서비스",
+      "agency": [
+        "경찰청"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "VEHICLE"
+      ],
+      "task_key_candidate": "경찰청:운전면허_정보_조회_서비스",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 7,
+      "title": "교통사고사실확인원 발급 신청",
+      "agency": [
+        "경찰청"
+      ],
+      "category_raw": "차량 및 운송",
+      "domain_candidates": [],
+      "task_key_candidate": "경찰청:교통사고사실확인원_발급_신청",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 8,
+      "title": "국가유공자(유족 또는 가족) 확인서 발급",
+      "agency": [
+        "국가보훈부"
+      ],
+      "category_raw": "병역 및 보훈",
+      "domain_candidates": [],
+      "task_key_candidate": "국가보훈부:국가유공자_유족_또는_가족_확인서_발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 9,
+      "title": "보험료 완납 증명원",
+      "agency": [
+        "근로복지공단"
+      ],
+      "category_raw": "일자리 및 직장",
+      "domain_candidates": [
+        "TAX"
+      ],
+      "task_key_candidate": "근로복지공단:보험료_완납_증명원",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 10,
+      "title": "주민등록증 신규 발급신청",
+      "agency": [
+        "행정안전부"
+      ],
+      "category_raw": "주택 및 부동산",
+      "domain_candidates": [
+        "IDENTITY_REG"
+      ],
+      "task_key_candidate": "행정안전부:주민등록증_신규_발급신청",
+      "proc_type_candidate": "APPLY",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R1_category_keyword_mismatch",
+          "detail": "원문 카테고리='주택 및 부동산'이지만 내용상 주민등록/신원 계열(IDENTITY_REG)로 추정됨 — 해당 도메인과 무관해 보임."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 11,
+      "title": "식품관련영업신고-즉석판매제조가공업 한시적 영업신고의 경우",
+      "agency": [
+        "식품의약품안전처"
+      ],
+      "category_raw": "사업자 지원",
+      "domain_candidates": [
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "식품의약품안전처:식품관련영업신고_즉석판매제조가공업_한시적_영업신고의_경우",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 12,
+      "title": "토지이용계획 열람 서비스",
+      "agency": [
+        "국토교통부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "REALESTATE"
+      ],
+      "task_key_candidate": "국토교통부:토지이용계획_열람_서비스",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 13,
+      "title": "통신판매업자의 폐업신고-시.군.구",
+      "agency": [
+        "공정거래위원회"
+      ],
+      "category_raw": "사업자 지원",
+      "domain_candidates": [
+        "BIZ",
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "공정거래위원회:통신판매업자의_폐업신고_시_군_구",
+      "proc_type_candidate": "REPORT",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 14,
+      "title": "개별공시지가 확인",
+      "agency": [
+        "국토교통부"
+      ],
+      "category_raw": "주택 및 부동산",
+      "domain_candidates": [],
+      "task_key_candidate": "국토교통부:개별공시지가_확인",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 15,
+      "title": "건설기계등록원부(갑)열람신청",
+      "agency": [
+        "국토교통부"
+      ],
+      "category_raw": "차량 및 운송",
+      "domain_candidates": [],
+      "task_key_candidate": "국토교통부:건설기계등록원부_갑_열람신청",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R2_title_button_verb_mismatch",
+          "detail": "제목 동사='열람'(조회형)인데 버튼='발급하기'(발급형) — 처리유형 판단 기준이 문서 내에서 상충."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 16,
+      "title": "현금영수증 카드 신청 및 조회",
+      "agency": [
+        "국세청"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "FINANCE"
+      ],
+      "task_key_candidate": "국세청:현금영수증_카드_신청_및_조회",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 17,
+      "title": "세금 납부내역 조회",
+      "agency": [
+        "국세청"
+      ],
+      "category_raw": null,
+      "domain_candidates": [],
+      "task_key_candidate": "국세청:세금_납부내역_조회",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 18,
+      "title": "사업자등록신청(개인, 법인)",
+      "agency": [
+        "국세청"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "BIZ"
+      ],
+      "task_key_candidate": "국세청:사업자등록신청_개인_법인",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 19,
+      "title": "고용24 직업능력개발",
+      "agency": [
+        "한국고용정보원"
+      ],
+      "category_raw": null,
+      "domain_candidates": [],
+      "task_key_candidate": "한국고용정보원:고용24_직업능력개발",
+      "proc_type_candidate": "RESERVE_OR_VIEW",
+      "auth_required": false,
+      "flags": [
+        {
+          "rule": "R5_proc_type_out_of_taxonomy",
+          "detail": "버튼 라벨='내용보기' — 기존 5개 PROC 유형에 대응 안 됨(예약형 등 taxonomy 공백)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 20,
+      "title": "[근로복지공단] 산재보험 근로자 고용정보 확인서(사업주용)",
+      "agency": [
+        "근로복지공단"
+      ],
+      "category_raw": "일자리 및 직장",
+      "domain_candidates": [
+        "WELFARECERT",
+        "LABOR"
+      ],
+      "task_key_candidate": "근로복지공단:[근로복지공단]_산재보험_근로자_고용정보_확인서_사업주용",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 21,
+      "title": "제적등본 발급",
+      "agency": [
+        "대법원"
+      ],
+      "category_raw": "가족관계",
+      "domain_candidates": [
+        "FAMILY"
+      ],
+      "task_key_candidate": "대법원:제적등본_발급",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 22,
+      "title": "고등학교 졸업학력 검정고시 합격증명서 (대입전형용)",
+      "agency": [
+        "교육부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "STUPARENT"
+      ],
+      "task_key_candidate": "교육부:고등학교_졸업학력_검정고시_합격증명서_대입전형용",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R3_cross_batch_duplicate_description",
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '002', 'id': 10, 'title': '검정고시 합격증명서(국문) 발급'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 23,
+      "title": "운전면허 발급 안내",
+      "agency": [
+        "한국도로교통공단"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "VEHICLE",
+        "POLICY_INFO"
+      ],
+      "task_key_candidate": "한국도로교통공단:운전면허_발급_안내",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 24,
+      "title": "국민 건강보험공단 직장보험료 개인별 조회",
+      "agency": [
+        "국민건강보험공단"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "HEALTH"
+      ],
+      "task_key_candidate": "국민건강보험공단:국민_건강보험공단_직장보험료_개인별_조회",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 25,
+      "title": "아파트 인터넷 청약신청",
+      "agency": [
+        "한국토지주택공사"
+      ],
+      "category_raw": null,
+      "domain_candidates": [],
+      "task_key_candidate": "한국토지주택공사:아파트_인터넷_청약신청",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 26,
+      "title": "전기 요금 납부",
+      "agency": [
+        "한국전력공사"
+      ],
+      "category_raw": null,
+      "domain_candidates": [],
+      "task_key_candidate": "한국전력공사:전기_요금_납부",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 27,
+      "title": "고소 고발 처리 절차 안내 서비스",
+      "agency": [
+        "경찰청"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "경찰청:고소_고발_처리_절차_안내_서비스",
+      "proc_type_candidate": "RESERVE_OR_VIEW",
+      "auth_required": false,
+      "flags": [
+        {
+          "rule": "R5_proc_type_out_of_taxonomy",
+          "detail": "버튼 라벨='내용보기' — 기존 5개 PROC 유형에 대응 안 됨(예약형 등 taxonomy 공백)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 28,
+      "title": "여권 발급기록 증명서(국문) 발급",
+      "agency": [
+        "외교부"
+      ],
+      "category_raw": "출입국",
+      "domain_candidates": [
+        "IMMIGRATION"
+      ],
+      "task_key_candidate": "외교부:여권_발급기록_증명서_국문_발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 29,
+      "title": "국내거소사실증명",
+      "agency": [
+        "법무부"
+      ],
+      "category_raw": "출입국",
+      "domain_candidates": [
+        "IMMIGRATION",
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "법무부:국내거소사실증명",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 30,
+      "title": "검정고시 성적증명서(국문) 발급",
+      "agency": [
+        "교육부"
+      ],
+      "category_raw": "학생과 학부모",
+      "domain_candidates": [
+        "STUPARENT"
+      ],
+      "task_key_candidate": "교육부:검정고시_성적증명서_국문_발급",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 31,
+      "title": "검정고시 (온라인 접수, 대입전형자료 제공)",
+      "agency": [
+        "한국교육학술정보원"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "STUPARENT"
+      ],
+      "task_key_candidate": "한국교육학술정보원:검정고시_온라인_접수_대입전형자료_제공",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 32,
+      "title": "여권 분실 신고",
+      "agency": [
+        "외교부"
+      ],
+      "category_raw": "출입국",
+      "domain_candidates": [
+        "IMMIGRATION",
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "외교부:여권_분실_신고",
+      "proc_type_candidate": "REPORT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 33,
+      "title": "방문 예약 신청(출입국)",
+      "agency": [
+        "법무부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "IMMIGRATION",
+        "RESERVATION"
+      ],
+      "task_key_candidate": "법무부:방문_예약_신청_출입국",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 34,
+      "title": "실업급여 수급자격 신청내역 조회",
+      "agency": [
+        "한국고용정보원"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "WELFARECERT",
+        "LABOR"
+      ],
+      "task_key_candidate": "한국고용정보원:실업급여_수급자격_신청내역_조회",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 35,
+      "title": "군 소음 피해 보상금 지급 신청",
+      "agency": [
+        "국방부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [],
+      "task_key_candidate": "국방부:군_소음_피해_보상금_지급_신청",
+      "proc_type_candidate": "APPLY",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 36,
+      "title": "취업지원 대상자증명(국가유공자 등)",
+      "agency": [
+        "국가보훈부"
+      ],
+      "category_raw": "일자리 및 직장",
+      "domain_candidates": [],
+      "task_key_candidate": "국가보훈부:취업지원_대상자증명_국가유공자_등",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 37,
+      "title": "내가 먹는 약! 한눈에",
+      "agency": [
+        "건강보험심사평가원"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "HEALTH"
+      ],
+      "task_key_candidate": "건강보험심사평가원:내가_먹는_약!_한눈에",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 38,
+      "title": "(근로복지공단)근로자 생활안정자금 융자",
+      "agency": [
+        "근로복지공단"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "HEALTH",
+        "WELFARECERT",
+        "LABOR"
+      ],
+      "task_key_candidate": "근로복지공단:근로복지공단_근로자_생활안정자금_융자",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 39,
+      "title": "근로(자녀)장려금(정기) 신청",
+      "agency": [
+        "국세청"
+      ],
+      "category_raw": "세무 및 납세",
+      "domain_candidates": [
+        "BIZ"
+      ],
+      "task_key_candidate": "국세청:근로_자녀_장려금_정기_신청",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 40,
+      "title": "연금소득원천징수 영수증",
+      "agency": [
+        "국민연금공단"
+      ],
+      "category_raw": "연금 납입 및 수급",
+      "domain_candidates": [
+        "PENSION"
+      ],
+      "task_key_candidate": "국민연금공단:연금소득원천징수_영수증",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 41,
+      "title": "지방공무원경력증명신청",
+      "agency": [
+        "공통"
+      ],
+      "category_raw": "교사 및 교원",
+      "domain_candidates": [],
+      "task_key_candidate": "공통:지방공무원경력증명신청",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 42,
+      "title": "병무청 군 지원",
+      "agency": [
+        "병무청"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "MILITARY"
+      ],
+      "task_key_candidate": "병무청:병무청_군_지원",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 43,
+      "title": "주소일괄정정신청서",
+      "agency": [
+        "행정안전부"
+      ],
+      "category_raw": "주택 및 부동산",
+      "domain_candidates": [
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "행정안전부:주소일괄정정신청서",
+      "proc_type_candidate": "APPLY",
+      "auth_required": true,
+      "flags": [
+        {
+          "rule": "R4_bundled_gateway_service",
+          "confidence": "low",
+          "detail": "설명문에만 약한 번들 키워드 존재 — 3배치 누적 검증 결과 이 경우 오탐 비율이 높다(단일 서비스의 '통합 이력'·'일괄 처리 편의성' 표현일 가능성). 실제 여러 기관·서비스가 묶이는지 본문을 직접 확인할 것."
+        }
+      ],
+      "review_required": true,
+      "priority": "low"
+    },
+    {
+      "id": 44,
+      "title": "건강, 연금 보험료 환급금 조회 및 신청",
+      "agency": [
+        "국민건강보험공단"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "TAX",
+        "HEALTH",
+        "PENSION"
+      ],
+      "task_key_candidate": "국민건강보험공단:건강_연금_보험료_환급금_조회_및_신청",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 45,
+      "title": "(근로복지공단)산재 요양 승인/반려 여부 확인서",
+      "agency": [
+        "근로복지공단"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "WELFARECERT",
+        "LABOR"
+      ],
+      "task_key_candidate": "근로복지공단:근로복지공단_산재_요양_승인/반려_여부_확인서",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 46,
+      "title": "내 연금 정보조회 신청 및 정보조회(개인, 퇴직연금)",
+      "agency": [
+        "국민연금공단"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "PENSION"
+      ],
+      "task_key_candidate": "국민연금공단:내_연금_정보조회_신청_및_정보조회_개인_퇴직연금",
+      "proc_type_candidate": "APPLY",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 47,
+      "title": "통신판매업 신고",
+      "agency": [
+        "충청남도 홍성군"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "BIZ",
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "충청남도 홍성군:통신판매업_신고",
+      "proc_type_candidate": "RESERVE_OR_VIEW",
+      "auth_required": false,
+      "flags": [
+        {
+          "rule": "R5_proc_type_out_of_taxonomy",
+          "detail": "버튼 라벨='내용보기' — 기존 5개 PROC 유형에 대응 안 됨(예약형 등 taxonomy 공백)."
+        },
+        {
+          "rule": "R8_single_municipality_for_generic_service",
+          "detail": "소관기관이 특정 기초자치단체 하나('충청남도 홍성군')인데, 서비스명·설명에 그 지역명이 등장하지 않아 전국 표준형 서비스로 보임 — 실제로 이 지자체만 제공하는 서비스인지, 원본이 여러 지자체 중 한 곳의 사례만 수집한 것인지 웹검색으로 확인 필요(U2-1)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    },
+    {
+      "id": 48,
+      "title": "재외 동포(F-4) 거소신고자 체류 기간 연장 허가",
+      "agency": [
+        "법무부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "PUBLIC_SAFETY"
+      ],
+      "task_key_candidate": "법무부:재외_동포_F_4_거소신고자_체류_기간_연장_허가",
+      "proc_type_candidate": "PORTAL_REDIRECT",
+      "auth_required": false,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 49,
+      "title": "차상위계층 확인서 발급(확인서 발급 가능 유형에 한함)",
+      "agency": [
+        "보건복지부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "WELFARECERT"
+      ],
+      "task_key_candidate": "보건복지부:차상위계층_확인서_발급_확인서_발급_가능_유형에_한함",
+      "proc_type_candidate": "ISSUE",
+      "auth_required": true,
+      "flags": [],
+      "review_required": false,
+      "priority": "none"
+    },
+    {
+      "id": 50,
+      "title": "농업경영체 등록 지원",
+      "agency": [
+        "농림축산식품부"
+      ],
+      "category_raw": null,
+      "domain_candidates": [
+        "BIZ"
+      ],
+      "task_key_candidate": "농림축산식품부:농업경영체_등록_지원",
+      "proc_type_candidate": null,
+      "auth_required": null,
+      "flags": [
+        {
+          "rule": "R4_bundled_gateway_service",
+          "confidence": "low",
+          "detail": "설명문에만 약한 번들 키워드 존재 — 3배치 누적 검증 결과 이 경우 오탐 비율이 높다(단일 서비스의 '통합 이력'·'일괄 처리 편의성' 표현일 가능성). 실제 여러 기관·서비스가 묶이는지 본문을 직접 확인할 것."
+        },
+        {
+          "rule": "R5_missing_button_data",
+          "detail": "버튼 라벨 자체가 원문에 없음 — 항목 데이터 자체가 불완전(설명 복붙 오류인 #50과 동일 항목일 가능성)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
+    }
+  ]
+}
