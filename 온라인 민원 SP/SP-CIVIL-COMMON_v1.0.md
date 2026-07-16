@@ -2,6 +2,15 @@
 # SP-CIVIL-COMMON
 # ═══════════════════════════════════════════════════
 # 문서명    : 온라인 민원 카테고리 — 공통 SP (최상위 부모)
+# ⚠ 상태(2026-07-16 확인): 이 SP 계열(SP-CIVIL-*, 23개 파일)은
+#   sp-catalog.json·gwp-registry.js 어디에도 등록돼 있지 않아
+#   프로덕션에 로드되지 않는다 — 실제 실행 경로는 SP-10_kpublic이다.
+#   삭제하지 않고 보존하는 이유: (1) 17개 도메인×5개 PROC 매트릭스가
+#   민원 배치 자동분류 파이프라인(scripts/classify_batch.py)의
+#   taxonomy 사전으로 재사용되고 있음, (2) §4 관문서비스 처리 원칙
+#   등 아직 SP-10_kpublic에 완전히 이식되지 않은 설계가 남아있어
+#   향후 이식 대상 참고자료로 유효함. 신규 기여자는 이 문서를 라이브
+#   SP로 착각해 수정하지 말 것 — 변경이 필요하면 SP-10_kpublic 쪽에.
 # 문서 코드  : SP-CIVIL-COMMON
 # 버전      : v1.0 (본문 최초 작성 — 상속 구조 신설)
 # 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common [2026-07-10: JEJU-GOV-COMMON은 폐기됨, kgov+UNIVERSAL-common으로 대체]
