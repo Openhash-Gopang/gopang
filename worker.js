@@ -7482,54 +7482,25 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
 //   'external_insurer'— 정부기관도 정부24도 아닌 제3자(보험사)에게서 받는
 //                        서류.
 
-function _findDocSchema(agency, taskKey) {
-  return REQUIRED_DOCUMENTS_REGISTRY[`${agency}:${taskKey}`] || null;
-}
-
-// ═══════════════════════════════════════════════════════════
-// RESOLUTION_TIER_REGISTRY (2026-07-16 신설)
-// SP-10_kpublic §RESOLUTION-TIER / UNIVERSAL-common U0("의도 특정 후
-// 해법 제시")의 데이터 구현. tier는 "이 대상과 지금 어느 수준까지
-// 연동돼 있는가"의 스냅샷이며, 연동이 진전되면 값만 갱신하면 된다
-// (프롬프트 재작성 불필요 — SP-10_kpublic §RESOLUTION-TIER 참조).
-//
-// tier 값: AGENT_HANDOFF | MANUAL_GUIDE_DETAILED | DIRECT_API
-//
-// 시딩 근거: 첨부 50건 사고실험에서 "정부24 안내만으로는 불충분한"
-// 것으로 확인된 두 사례(대학재학증명, 사실증명13종)부터 시작.
-// ─────────────────────────────────────────────────────────────
-const RESOLUTION_TIER_REGISTRY = {
-  // 대학은 개별 학교 단위라 target 키를 "university:{학교명}"으로 열어둔다.
-  // 아직 어느 대학도 AI비서 디렉토리에 등록된 바 없으므로 전부
-  // MANUAL_GUIDE_DETAILED. 개별 학교가 실제로 등록되면 그 학교 키만
-  // AGENT_HANDOFF로 승격하고 agent_endpoint를 채운다.
-  'university:_default': {
-    tier: 'MANUAL_GUIDE_DETAILED',
-    agent_endpoint: null,
-    guide_steps: [
-      '해당 대학교 홈페이지 접속(정부24가 아닌 대학 자체 시스템)',
-      '"증명서 발급" 또는 "제증명 발급" 메뉴 검색(대학마다 명칭이 "학사종합서비스"·"포털"등으로 다를 수 있음)',
-      '재학증명서 항목 선택 후 본인인증(대학 계정 또는 공동인증서)',
-      '즉시 출력 또는 PDF 다운로드 — 대부분 무료, 즉시 발급',
-    ],
-    note: '정부24로는 발급되지 않는 대표적 예외 사례(§공문서 발급 안내 참조). 대학마다 메뉴명이 달라 웹검색으로 해당 학교명을 확인 후 안내할 것.',
-    upgrade_condition: '해당 대학이 대학별 AI 비서 디렉토리(미구축)에 등록되면 그 학교 키만 AGENT_HANDOFF로 개별 승격.',
-  },
-  'nts:fact_certificate_13types': {
-    tier: 'MANUAL_GUIDE_DETAILED',
-    agent_endpoint: null,
-    guide_steps: [
-      '13종 전체가 필요하면 홈택스(hometax.go.kr) 로그인 → "민원증명" → "사실증명" 메뉴 이용',
-      '신고사실없음·사업자등록사실 등 일부 항목만 필요하면 정부24 또는 "어디서나 민원"에서도 발급 가능',
-      '어떤 항목이 필요한지 먼저 확인 — 정부24 대상이 아닌 나머지 항목은 반드시 홈택스로 안내',
-    ],
-    note: '홈택스=13종 전체, 정부24/어디서나민원=일부만 — 이 차이를 안내에서 누락하면 오안내. 국세청 API 연동 전까지는 창구 구분 안내가 필수.',
-    upgrade_condition: '국세청 홈택스 API 연동 체결 시 DIRECT_API로 승격.',
-  },
-};
-
-function _resolveResolutionTier(target) {
-  return RESOLUTION_TIER_REGISTRY[target] || null;
+// RESOLUTION_TIER_REGISTRY — 폐기됨 (2026-07-16 당일 신설 → 당일 폐기)
+// 신설 당시 org_profiles/atom_rows(이미 라이브, K-Compose SP-20이 소비)와
+// 정확히 같은 개념(기관별 자동화 수준: full_api/assisted/manual_only)을
+// 담는 별도 하드코딩 레지스트리를 또 만든 것이었다 — SP-CIVIL-* vs
+// SP-10_kpublic 때와 같은 "따로 만들었다가 나중에 충돌" 패턴을 이번엔
+// 제가 직접 반복했다. 대학재학증명·사실증명13종 2건은
+// pb_migrations/1786200001_seeded_kgov_resolution_tier_migration.js로
+// org_profiles에 이관했고(org_id: 'university-generic', 'nts-hometax'),
+// 조회는 아래처럼 기존 _l1FindOrgProfile을 그대로 재사용한다 — 새 조회
+// 함수도 만들지 않는다.
+async function _resolveResolutionTier(env, orgId) {
+  const profile = await _l1FindOrgProfile(env, orgId).catch(() => null);
+  if (!profile) return null;
+  let automation = {};
+  try { automation = JSON.parse(profile.automation || '{}'); } catch {}
+  return {
+    tier: automation.level || 'manual_only',   // full_api | assisted | manual_only
+    profile,                                    // input/output/unavailable_reason 등 원본 그대로 전달
+  };
 }
 
 // ═══════════════════════════════════════════════════════════
