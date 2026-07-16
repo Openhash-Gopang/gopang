@@ -292,6 +292,22 @@ STEP 4 — K-Execute로 이관
   실행 시점에 [KSEARCH_HANDOFF] 등으로 마저 해소한다(SP-22 RULE-02
   참조, 로직 자체는 예전 STEP 4~5와 동일하게 그쪽으로 이관됨).
 
+  ★ 100건 사고실험(2026-07-16)에서 발견된 결함 수정 — `parallel_group`
+  ·`fanout_mode`를 누가 정하는지가 문서에 없었다(계획/실행이 K-Compose
+  하나였을 땐 암묵적으로 자연스러웠으나, 분리된 지금은 명시가
+  필요하다). **이건 K-Compose가 여기서 정한다** — "이 목표를 이루는
+  데 서로 다른 기관에 대한 신고·통지가 여러 건 필요하고, 그 순서가
+  결과에 영향을 안 준다"고 판단되면(예: 폐업신고→세무서+국민연금+
+  건강보험) 그 step들에 같은 `parallel_group` id를 매기고
+  `fanout_mode`를 정한다:
+    - 각 기관이 서로 독립이면(하나 실패해도 나머지는 그대로 유효)
+      `fanout_mode=notify`
+    - 전원 승인이 있어야 전체가 완료되면(예: 건축허가=건축과+소방서+
+      환경과) `fanout_mode=join`
+  판단 근거가 불확실하면 묶지 않는다(순차 실행으로 두는 게 안전
+  — SP-22 STEP1-P도 "fanout_mode 없으면 그룹으로 안 묶고 순차 실행
+  으로 강등"이라고 이미 그 폴백을 갖고 있다).
+
   K-Execute가 [HANDOFF_TO_KCOMPOSE: reason=sub_goal_replan_needed,
    sub_goal=..., completed_steps=...]로 재계획을 요청하면(기존
    K-Intent→K-Compose와 같은 태그를 K-Execute도 재사용 — call-ai.js가
@@ -312,7 +328,16 @@ STEP 5 — 무료 이관 처리 (STEP 3에서 무료 전환된 경우)
   넘겨 이용자가 그 창구에 가져갈 수 있는 형태로 전달하게 한다:
 
   [HANDOFF_TO_KDELIVER: goal=..., results={...}, free_alternative_
-   referral=true, pending_user_action={"~창구로 직접 문의하세요"}]
+   referral=true, pending_user_action={"~창구로 직접 문의하세요"},
+   case_type="referral_only"]
+
+  ★ 100건 사고실험(2026-07-16)에서 발견된 결함 수정 — case_type을
+  빠뜨리면 K-Deliver·K-Report가 매번 추정해야 했다. 무료 이관은
+  Hondi가 절차를 대행하지 않으므로 대부분 통지·신고 의무가 발생할
+  일이 없다 — `case_type="referral_only"`로 고정해 K-Report STEP1이
+  이해당사자 식별을 생략하고 바로 넘어가게 한다(드물게 예외가 있으면
+  K-Report가 STEP1에서 여전히 스스로 재판단할 수 있다 — 이 값은
+  힌트일 뿐 강제가 아니다).
 
 ================================================================
 [태그 규격]
