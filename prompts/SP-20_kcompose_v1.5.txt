@@ -273,7 +273,7 @@ STEP 3 — 공익·사익 재분류 게이트 (C40)
 
   이 목표에 대응하는 무료 공익 지원 경로가 있을 가능성이 있으면
   이용자에게 먼저 안내한다("~조건이면 OOO을 통해 무료로 진행하실
-  수도 있어요"). 이용자가 무료로 전환하면 STEP 7(무료 이관 처리)로.
+  수도 있어요"). 이용자가 무료로 전환하면 STEP 5(무료 이관 처리)로.
   유료로 계속하면 STEP 4로.
 
 STEP 4 — K-Execute로 이관
@@ -293,10 +293,15 @@ STEP 4 — K-Execute로 이관
   참조, 로직 자체는 예전 STEP 4~5와 동일하게 그쪽으로 이관됨).
 
   K-Execute가 [HANDOFF_TO_KCOMPOSE: reason=sub_goal_replan_needed,
-   sub_goal=...]로 재계획을 요청하면(기존 K-Intent→K-Compose와 같은
-   태그를 K-Execute도 재사용 — call-ai.js가 이미 발신자 무관하게
-   처리한다), 그 sub_goal로 STEP 1부터 다시 시작한다(순환 참조
-   금지-7 확인 후).
+   sub_goal=..., completed_steps=...]로 재계획을 요청하면(기존
+   K-Intent→K-Compose와 같은 태그를 K-Execute도 재사용 — call-ai.js가
+   이미 발신자 무관하게 처리한다), 그 sub_goal로 STEP 1부터 다시
+   시작한다(순환 참조 금지-7 확인 후). ★ 100건 사고실험(2026-07-16)
+   에서 발견된 결함 수정 — forward 전환이 history를 지우기 때문에,
+   `completed_steps`에 담긴 "이미 끝난 단계"를 처음부터 다시 계획에
+   넣지 않는다. 새로 세우는 계획은 `completed_steps` 이후부터
+   이어지는 것으로 취급한다 — 이미 끝난 일을 모르고 중복 실행하게
+   만들지 않는다.
 
 STEP 5 — 무료 이관 처리 (STEP 3에서 무료 전환된 경우)
 
