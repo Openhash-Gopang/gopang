@@ -2883,6 +2883,167 @@ async function handleWebSearch(request, env, corsHeaders, ctx) {
   return new Response(JSON.stringify(result), { headers: corsHeaders });
 }
 
+// ── 공공데이터포털: 행정표준코드_법정동코드 (2026-07-16 신설) ────────
+// PUBLIC-DATA-PORTAL-INTEGRATION-PLAN_v1_0 STEP 1.
+// 요청주소: http://apis.data.go.kr/1741000/StanReginCd/getStanReginCdList
+// 서비스키는 서버(DATA_GO_KR_API_KEY env secret)에만 있고 클라이언트에
+// 노출되지 않는다(WEB_SEARCH_API_KEY와 동일 원칙).
+//
+// ★ 배치 전용 설계 — 이 엔드포인트는 사용자 요청 경로에서 실시간
+//   호출되지 않는다(사고실험 시나리오 9). province-tier SP/GDC L1은
+//   이 API가 아니라 PocketBase에 저장된 스냅샷을 읽는다. 이 엔드포인트는
+//   그 스냅샷을 채우는 배치(Cron Trigger 또는 수동 트리거) 전용이다.
+//
+// ★ 입력은 자유 텍스트가 아니라 16개 광역시도 화이트리스트로 정규화한다
+//   (사고실험 시나리오 4) — 정규화하지 않으면 캐시가 사실상 무력화되어
+//   개발계정 트래픽(10,000회)을 빠르게 소진할 수 있다.
+//
+// ★ 캐시 키는 서비스키를 절대 포함하지 않는다(사고실험 시나리오 8) —
+//   handleWebSearch의 cacheKey 패턴(쿼리 텍스트만 사용)을 그대로 따른다.
+
+const SIDO_WHITELIST = [
+  '서울특별시', '부산광역시', '대구광역시', '인천광역시', '광주광역시',
+  '대전광역시', '울산광역시', '세종특별자치시', '경기도', '강원특별자치도',
+  '충청북도', '충청남도', '전북특별자치도', '전남광주통합특별시',
+  '경상북도', '경상남도', '제주특별자치도',
+];
+// ★ 위 목록은 GOV-TIER-IO-SCHEMA_v1_1 §A 적용대상과 동일하게 16개로
+//   맞췄다(전남광주통합특별시 병합 반영, 2026-07-01). 이 목록 자체도
+//   조직개편 시 갱신 대상이라는 점은 GOV-TIER-IO-SCHEMA의 "갱신 원칙"과
+//   동일하게 적용된다 — 하드코딩이 아니라 "현재 알려진 최신값"으로 취급.
+
+function _normalizeSidoQuery(raw) {
+  const q = (raw || '').trim();
+  // 정확히 일치하는 경우만 허용 — 부분 매칭은 의도치 않은 캐시 분산을
+  // 유발하므로(시나리오 4) 여기서는 엄격 일치만 허용한다. 부분 검색이
+  // 필요하면 별도 오토컴플리트 레이어를 SP-Search 쪽에 둔다.
+  return SIDO_WHITELIST.includes(q) ? q : null;
+}
+
+async function _l1GetPublicDataUsage(env, dataset, date) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`dataset='${dataset}' && date='${date}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/public_data_usage/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`public_data_usage 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+async function _l1IncrementPublicDataUsage(env, dataset, date) {
+  const existing = await _l1GetPublicDataUsage(env, dataset, date);
+  const token = await _l1AdminToken(env);
+  if (existing) {
+    const res = await fetch(`${L1_DEFAULT}/api/collections/public_data_usage/records/${existing.id}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ count: (Number(existing.count) || 0) + 1 }),
+    });
+    if (!res.ok) throw new Error(`public_data_usage PATCH 실패 (HTTP ${res.status})`);
+    return res.json();
+  }
+  const res = await fetch(`${L1_DEFAULT}/api/collections/public_data_usage/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset, date, count: 1 }),
+  });
+  if (!res.ok) throw new Error(`public_data_usage 생성 실패 (HTTP ${res.status})`);
+  return res.json();
+}
+
+async function handleBdongCode(request, env, corsHeaders, ctx) {
+  const url = new URL(request.url);
+  const rawQuery = url.searchParams.get('q') || '';
+  const sido = _normalizeSidoQuery(rawQuery);
+  if (!sido) {
+    return new Response(JSON.stringify({
+      error: 'INVALID_SIDO',
+      message: '16개 광역시도 명칭과 정확히 일치하는 값을 q 파라미터로 보내주세요.',
+      allowed: SIDO_WHITELIST,
+    }), { status: 400, headers: corsHeaders });
+  }
+
+  // 캐시 키는 정규화된 sido 값만 사용 — 서비스키 미포함(시나리오 8)
+  const cacheKey = new Request(`https://bdong-code-cache.internal/?sido=${encodeURIComponent(sido)}`);
+  const cache = caches.default;
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    const body = await cached.json();
+    return new Response(JSON.stringify({ ...body, cache: 'hit' }), { headers: corsHeaders });
+  }
+
+  if (!env.DATA_GO_KR_API_KEY) {
+    return new Response(JSON.stringify({
+      error: 'PUBLIC_DATA_NOT_CONFIGURED',
+      message: 'DATA_GO_KR_API_KEY가 설정되지 않았습니다 — wrangler secret put DATA_GO_KR_API_KEY로 등록하세요.',
+    }), { status: 503, headers: corsHeaders });
+  }
+
+  const DATASET = 'bdong_code';
+  const today = _todayKST();
+  const cap = Number(env.PUBLIC_DATA_DAILY_CAP_BDONG || env.PUBLIC_DATA_DAILY_CAP) || 300;
+  let usage;
+  try {
+    usage = await _l1GetPublicDataUsage(env, DATASET, today);
+  } catch (e) {
+    usage = null; // 예산 조회 실패는 안전하게 "아직 0회"로 간주(과금 폭주보다 조회 실패가 낫다는 기존 판단과 동일)
+  }
+  if (usage && Number(usage.count) >= cap) {
+    return new Response(JSON.stringify({
+      error: 'DAILY_BUDGET_EXCEEDED',
+      message: `오늘 법정동코드 조회 한도(${cap}회)를 초과했습니다. 내일 다시 시도해주세요.`,
+      count: usage.count,
+    }), { status: 429, headers: corsHeaders });
+  }
+
+  const apiUrl = new URL('http://apis.data.go.kr/1741000/StanReginCd/getStanReginCdList');
+  apiUrl.searchParams.set('serviceKey', env.DATA_GO_KR_API_KEY);
+  apiUrl.searchParams.set('pageNo', '1');
+  apiUrl.searchParams.set('numOfRows', '1000');
+  apiUrl.searchParams.set('type', 'json');
+  apiUrl.searchParams.set('locatadd_nm', sido);
+
+  let apiRes;
+  try {
+    apiRes = await fetch(apiUrl.toString(), { signal: AbortSignal.timeout(8000) });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'FETCH_FAILED', message: e.message }), { status: 502, headers: corsHeaders });
+  }
+
+  // 예산 증분은 API 호출 성공 여부와 무관하게(공공데이터포털 쪽에서
+  // 이미 카운트됐을 가능성이 있는 요청이므로) 시도했다는 사실 자체로 센다.
+  ctx?.waitUntil?.(_l1IncrementPublicDataUsage(env, DATASET, today).catch((e) => {
+    console.warn('[bdong-code] 예산 카운터 증분 실패:', e.message);
+  }));
+
+  if (!apiRes.ok) {
+    const errText = await apiRes.text().catch(() => '');
+    return new Response(JSON.stringify({ error: 'DATA_GO_KR_ERROR', status: apiRes.status, detail: errText }), { status: 502, headers: corsHeaders });
+  }
+
+  const raw = await apiRes.json().catch(() => ({}));
+  const items = raw?.StanReginCd?.[1]?.row || raw?.response?.body?.items?.item || [];
+  const rows = (Array.isArray(items) ? items : [items]).filter(Boolean).map(r => ({
+    region_cd: r.region_cd,
+    locatadd_nm: r.locatadd_nm,
+    locallow_nm: r.locallow_nm,
+    locathigh_cd: r.locathigh_cd,
+    adpt_de: r.adpt_de,
+    locat_rm: r.locat_rm || null, // ★ 병합·폐지 이력은 이 비고란에 자연어로 담길 수 있음 —
+                                    //   사람 검토 큐(§3-C)에서 반드시 확인할 필드
+  }));
+
+  const result = { sido, count: rows.length, rows, source: 'data.go.kr/StanReginCd', cache: 'miss' };
+
+  const cacheResponse = new Response(JSON.stringify(result), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=86400' }, // 24h TTL — PLAN §4
+  });
+  ctx?.waitUntil?.(cache.put(cacheKey, cacheResponse.clone()));
+
+  return new Response(JSON.stringify(result), { headers: corsHeaders });
+}
+
 // ── ATOM_PATTERN 실행 엔진 (2026-07-09 신설) ────────────────────────
 // 3~4차 라운드(개인파산·창업 준비 사고실험)에서 확정한 5개 실행 패턴을
 // 실제로 구현한다. 지금 시점에 실제로 자동화된 automation_sp는 거의
@@ -3284,6 +3445,12 @@ export default {
     // ── 웹검색(Serper.dev) (2026-07-11 신설) ────────────────────────
     if (pathname === '/web-search' && request.method === 'POST')
       return handleWebSearch(request, env, corsHeaders, ctx);
+
+    // ── 공공데이터포털: 법정동코드 (2026-07-16 신설) ────────────────
+    // PUBLIC-DATA-PORTAL-INTEGRATION-PLAN_v1_0 STEP 1. 배치 전용 —
+    // 사용자 요청 경로 실시간 의존 금지(시나리오 9, 위 함수 주석 참고).
+    if (pathname === '/public-data/bdong-code' && request.method === 'GET')
+      return handleBdongCode(request, env, corsHeaders, ctx);
 
     // ── merkle (T10) ─────────────────────────────────────────
     if (pathname === '/merkle/verify')           return handleMerkleVerify(request, env, corsHeaders);
