@@ -25,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 5  # git diff(HEAD~1 또는 event.before 비교)에 필요
 
       - name: SSH 에이전트 설정
         uses: webfactory/ssh-agent@v0.9.0
@@ -36,13 +38,24 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H "${{ secrets.L1_SSH_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: 마이그레이션 적용 (강제 커맨드로 제한된 원격 스크립트 실행)
+      - name: 변경된 pb_migrations 파일 목록 추출
+        id: changed
         run: |
-          ssh "${{ secrets.L1_SSH_USER }}@${{ secrets.L1_SSH_HOST }}" "echo triggering apply-pb-migrations.sh"
-        # ★ 위 ssh 접속 자체가 authorized_keys의 command= 강제 커맨드로
-        #   /opt/gopang/ops/apply-pb-migrations.sh를 실행시킨다. 이 스크립트가
-        #   GitHub main의 pb_migrations/를 직접 내려받은 뒤 migrate up까지
-        #   수행하므로, 이 한 번의 SSH 접속만으로 배포가 끝난다.
-        #   (2026-07-16 확인: rsync는 강제 커맨드 키와 애초에 호환되지 않아
-        #   제거함 — 강제 커맨드는 그 키로 맺는 모든 SSH 세션에 적용되므로
-        #   rsync 내부 SSH 세션도 함께 하이재킹당해 파일 전송 자체가 불가능했음)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # 수동 실행 시엔 가장 최근 커밋 기준으로 비교
+            FILES=$(git diff --name-only HEAD~1 HEAD -- 'pb_migrations/*.js' | xargs -n1 basename | tr '\n' ' ')
+          else
+            FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} -- 'pb_migrations/*.js' | xargs -n1 basename | tr '\n' ' ')
+          fi
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+          echo "변경된 파일: $FILES"
+
+      - name: 마이그레이션 적용 (강제 커맨드로 제한된 원격 스크립트 실행)
+        if: steps.changed.outputs.files != ''
+        run: |
+          ssh "${{ secrets.L1_SSH_USER }}@${{ secrets.L1_SSH_HOST }}" "${{ steps.changed.outputs.files }}"
+        # ★ SSH_ORIGINAL_COMMAND로 이 문자열(변경된 파일명 목록)이 서버에
+        #   전달되고, apply-pb-migrations.sh가 그 파일들만 개별 검증 후
+        #   받아온다. 강제 커맨드가 실제 실행을 대체하지만, 클라이언트가
+        #   보내려던 커맨드 문자열 자체는 환경변수로 여전히 읽을 수 있다
+        #   (SSH 표준 동작 — 별도 파일 전송 없이 파라미터만 안전하게 전달).
