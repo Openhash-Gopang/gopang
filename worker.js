@@ -3041,6 +3041,132 @@ async function handleBdongCode(request, env, corsHeaders, ctx) {
   });
   ctx?.waitUntil?.(cache.put(cacheKey, cacheResponse.clone()));
 
+
+// ── 공공데이터포털: 법제처 국가법령정보 (법령정보 목록 조회) (2026-07-16 신설) ──
+// PUBLIC-DATA-PORTAL-INTEGRATION-PLAN_v1_0 STEP 2.
+// 요청주소: https://apis.data.go.kr/1170000/law/lawSearchList.do
+// DATA_GO_KR_API_KEY 재사용(법정동코드와 동일 계정 공용 인증키, 승인상세 확인 완료).
+//
+// ★ 이용허락범위: "제3자 권리 포함 — 저작권 표시" + "공공저작물 출처표시
+//   (제1유형)"가 걸려 있다(법정동코드와 달리 제한 없음이 아님 — PLAN §5
+//   시나리오 6에서 예견한 케이스가 실제로 발생). 따라서 이 함수의 응답에는
+//   항상 attribution 필드를 강제로 포함시킨다. 이 데이터를 사용자에게
+//   그대로 노출하는 SP/화면에서는 반드시 이 attribution을 함께 표시해야 한다.
+//
+// ★ 판례(대법원 등)는 이 API 범위 밖이다 — open.law.go.kr의 별도 OC 인증
+//   체계를 쓰므로 STEP 2-b(handleLawPrecedent, LAW_GO_KR_OC secret)로 분리.
+//
+// ★ 배치 전용은 아니다(법정동코드와 다름) — 법령 검색은 사용자 질의마다
+//   달라지는 자유 검색이라 SP-Law가 사용자 요청 경로에서 실시간 호출한다.
+//   대신 캐시 TTL을 6h로 두어(PLAN §4) 같은 검색어 반복 호출 비용을 줄인다.
+
+// _l1GetPublicDataUsage / _l1IncrementPublicDataUsage는 STEP 1(handleBdongCode)에서
+// 이미 정의됐고 dataset 인자로 데이터셋을 구분하므로 그대로 재사용한다.
+
+async function handleLawSearch(request, env, corsHeaders, ctx) {
+  const url = new URL(request.url);
+  const query = (url.searchParams.get('q') || '*').trim() || '*';
+  const pageNo = Math.max(1, Number(url.searchParams.get('page')) || 1);
+  const numOfRows = Math.min(100, Math.max(1, Number(url.searchParams.get('rows')) || 20));
+
+  // 캐시 키 — 서비스키 미포함, 검색어+페이지 조합만 사용(시나리오 8과 동일 원칙)
+  const cacheKey = new Request(`https://law-search-cache.internal/?q=${encodeURIComponent(query)}&page=${pageNo}&rows=${numOfRows}`);
+  const cache = caches.default;
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    const body = await cached.json();
+    return new Response(JSON.stringify({ ...body, cache: 'hit' }), { headers: corsHeaders });
+  }
+
+  if (!env.DATA_GO_KR_API_KEY) {
+    return new Response(JSON.stringify({
+      error: 'PUBLIC_DATA_NOT_CONFIGURED',
+      message: 'DATA_GO_KR_API_KEY가 설정되지 않았습니다.',
+    }), { status: 503, headers: corsHeaders });
+  }
+
+  const DATASET = 'law_search';
+  const today = _todayKST();
+  const cap = Number(env.PUBLIC_DATA_DAILY_CAP_LAW || env.PUBLIC_DATA_DAILY_CAP) || 300;
+  let usage;
+  try {
+    usage = await _l1GetPublicDataUsage(env, DATASET, today);
+  } catch (e) {
+    usage = null;
+  }
+  if (usage && Number(usage.count) >= cap) {
+    return new Response(JSON.stringify({
+      error: 'DAILY_BUDGET_EXCEEDED',
+      message: `오늘 법령검색 조회 한도(${cap}회)를 초과했습니다. 내일 다시 시도해주세요.`,
+      count: usage.count,
+    }), { status: 429, headers: corsHeaders });
+  }
+
+  const apiUrl = new URL('https://apis.data.go.kr/1170000/law/lawSearchList.do');
+  apiUrl.searchParams.set('serviceKey', env.DATA_GO_KR_API_KEY);
+  apiUrl.searchParams.set('target', 'law');
+  apiUrl.searchParams.set('query', query);
+  apiUrl.searchParams.set('numOfRows', String(numOfRows));
+  apiUrl.searchParams.set('pageNo', String(pageNo));
+
+  let apiRes;
+  try {
+    apiRes = await fetch(apiUrl.toString(), { signal: AbortSignal.timeout(8000) });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'FETCH_FAILED', message: e.message }), { status: 502, headers: corsHeaders });
+  }
+
+  ctx?.waitUntil?.(_l1IncrementPublicDataUsage(env, DATASET, today).catch((e) => {
+    console.warn('[law-search] 예산 카운터 증분 실패:', e.message);
+  }));
+
+  if (!apiRes.ok) {
+    const errText = await apiRes.text().catch(() => '');
+    return new Response(JSON.stringify({ error: 'DATA_GO_KR_ERROR', status: apiRes.status, detail: errText }), { status: 502, headers: corsHeaders });
+  }
+
+  // 이 API는 XML이 기본이라(데이터포맷: XML) 여기서는 텍스트로 받은 뒤
+  // 최소한의 필드만 정규식으로 뽑아 정리한다. 전면적인 XML 파서 도입은
+  // 다음 STEP에서 XML 응답 데이터셋이 더 늘어나면 공용 유틸로 뺀다.
+  const xmlText = await apiRes.text();
+
+  function extractAll(tag, text) {
+    const re = new RegExp(`<${tag}>([\s\S]*?)</${tag}>`, 'g');
+    const out = [];
+    let m;
+    while ((m = re.exec(text)) !== null) out.push(m[1].trim());
+    return out;
+  }
+
+  const rows = extractAll('법령명한글', xmlText).map((name, i) => ({
+    법령명한글: name,
+    법령ID: extractAll('법령ID', xmlText)[i] || null,
+    법령일련번호: extractAll('법령일련번호', xmlText)[i] || null,
+    현행연혁코드: extractAll('현행연혁코드', xmlText)[i] || null,
+    공포일자: extractAll('공포일자', xmlText)[i] || null,
+    시행일자: extractAll('시행일자', xmlText)[i] || null,
+    소관부처명: extractAll('소관부처명', xmlText)[i] || null,
+    법령구분명: extractAll('법령구분명', xmlText)[i] || null,
+    법령상세링크: extractAll('법령상세링크', xmlText)[i] || null,
+  }));
+  const totalCntMatch = xmlText.match(/<totalCnt>(\d+)<\/totalCnt>/);
+
+  const result = {
+    query,
+    page: pageNo,
+    numOfRows,
+    totalCnt: totalCntMatch ? Number(totalCntMatch[1]) : rows.length,
+    rows,
+    source: 'data.go.kr/1170000/law (법제처 국가법령정보 공유서비스)',
+    attribution: '자료출처: 법제처 국가법령정보센터 (공공저작물 출처표시 제1유형)', // ★ 이용허락범위 준수 — 응답 노출 시 반드시 함께 표시
+    cache: 'miss',
+  };
+
+  const cacheResponse = new Response(JSON.stringify(result), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' }, // 6h TTL — PLAN §4
+  });
+  ctx?.waitUntil?.(cache.put(cacheKey, cacheResponse.clone()));
+
   return new Response(JSON.stringify(result), { headers: corsHeaders });
 }
 
@@ -3451,6 +3577,12 @@ export default {
     // 사용자 요청 경로 실시간 의존 금지(시나리오 9, 위 함수 주석 참고).
     if (pathname === '/public-data/bdong-code' && request.method === 'GET')
       return handleBdongCode(request, env, corsHeaders, ctx);
+
+    // ── 공공데이터포털: 법령정보 목록 조회 (2026-07-16 신설) ──────────
+    // PUBLIC-DATA-PORTAL-INTEGRATION-PLAN_v1_0 STEP 2. 판례는 범위 밖
+    // (open.law.go.kr 별도 OC 인증 — STEP 2-b에서 분리 구현 예정).
+    if (pathname === '/public-data/law-search' && request.method === 'GET')
+      return handleLawSearch(request, env, corsHeaders, ctx);
 
     // ── merkle (T10) ─────────────────────────────────────────
     if (pathname === '/merkle/verify')           return handleMerkleVerify(request, env, corsHeaders);
