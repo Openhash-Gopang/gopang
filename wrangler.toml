@@ -26,9 +26,11 @@ binding = "QR_SESSIONS_KV"
 id = "af7cad0be99e4072bbca8d81d71edd98"
 
 # 2026-07-16 추가 — GOV_OPEN_DATA_MAP 리졸버(/api/stats/resolve)용 캐시.
-# wrangler.json에는 있었으나 이 파일(.toml)에는 빠져 있어서, Wrangler가
-# .toml을 우선 읽는 상황에서 env.GOV_DATA_KV가 런타임에 비어있는 문제가
-# 있었다 — 이번에 반영해 두 설정 파일을 일치시킨다.
+# [정정 2026-07-16] 이 주석은 원래 "Wrangler가 .toml을 우선 읽는다"고
+# 적혀 있었으나 이는 사실과 반대다 — Wrangler는 wrangler.json이 있으면
+# .toml을 통째로 무시한다(공식 문서 확인). 당시 이 블록을 추가해도
+# 실제로는 .json이 배포에 쓰이고 있어 문제가 "우연히" 해소된 것뿐이었다.
+# 이번에 .json 자체를 삭제해 이 파일 하나만 유효하도록 통합했다.
 [[kv_namespaces]]
 binding = "GOV_DATA_KV"
 id = "cf1dc69a346747ac8319a6cab85640cf"
@@ -36,6 +38,7 @@ id = "cf1dc69a346747ac8319a6cab85640cf"
 [[services]]
 binding = "AGENT_SIGNER"
 service = "gopang-agent-signer"
+environment = "production"  # wrangler.json에서 이관(2026-07-16)
 
 # 2026-07-16 추가 — 혜택 카탈로그 임베딩 기반 의미검색(docs/HANDOFF-
 # 5단계오케스트레이션-임베딩설계_2026-07-16.md 설계 반영). 별도 GPU
@@ -57,3 +60,19 @@ binding = "AI"
 [[vectorize]]
 binding = "VECTORIZE"
 index_name = "hondi-benefit-catalog"
+
+# 2026-07-16 통합 — wrangler.json 제거 후 이관된 필드
+# (observability, AGENT_SIGNER의 environment) — wrangler.json에는 있었으나
+# .toml엔 빠져 있던 설정. Wrangler는 두 파일이 공존하면 .json만 읽고
+# .toml을 통째로 무시하므로(v3.91+ 공식 동작), 이 프로젝트는 .json을
+# 삭제하고 .toml 하나로 통합한다 — 두 파일을 계속 동기화하는 방식은
+# 오늘 같은 사고(AI/VECTORIZE 바인딩이 조용히 무시됨)를 반복시킨다.
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+
+[observability.traces]
+enabled = true
