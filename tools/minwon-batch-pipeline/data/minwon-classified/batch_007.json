@@ -400,7 +400,7 @@
       "flags": [
         {
           "rule": "R3_cross_batch_duplicate_description",
-          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '003', 'id': 16, 'title': '현금영수증 카드 신청 및 조회'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '003', 'id': 16, 'title': '현금영수증 카드 신청 및 조회'}, {'batch_id': '008', 'id': 19, 'title': '현금영수증 카드 재발급 신청'}, {'batch_id': '008', 'id': 36, 'title': '개인소득공제용 현금영수증 내역 조회'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
         }
       ],
       "review_required": true,

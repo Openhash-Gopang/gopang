@@ -2,8 +2,8 @@
   "batch_id": "003",
   "classified_at": "2026-07-16",
   "total_items": 50,
-  "flagged_items": 15,
-  "flagged_high_priority": 14,
+  "flagged_items": 17,
+  "flagged_high_priority": 16,
   "flagged_low_priority": 1,
   "domain_discovery": {
     "taxonomy_size": 21,
@@ -333,7 +333,7 @@
       "flags": [
         {
           "rule": "R3_cross_batch_duplicate_description",
-          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '007', 'id': 20, 'title': '지출증빙용 현금영수증 내역 조회'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '007', 'id': 20, 'title': '지출증빙용 현금영수증 내역 조회'}, {'batch_id': '008', 'id': 19, 'title': '현금영수증 카드 재발급 신청'}, {'batch_id': '008', 'id': 36, 'title': '개인소득공제용 현금영수증 내역 조회'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
         }
       ],
       "review_required": true,
@@ -422,9 +422,14 @@
       "task_key_candidate": "대법원:제적등본_발급",
       "proc_type_candidate": "PORTAL_REDIRECT",
       "auth_required": true,
-      "flags": [],
-      "review_required": false,
-      "priority": "none"
+      "flags": [
+        {
+          "rule": "R3_cross_batch_duplicate_description",
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '008', 'id': 2, 'title': '제적초본 발급'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
     },
     {
       "id": 22,
@@ -583,9 +588,14 @@
       "task_key_candidate": "교육부:검정고시_성적증명서_국문_발급",
       "proc_type_candidate": "ISSUE",
       "auth_required": true,
-      "flags": [],
-      "review_required": false,
-      "priority": "none"
+      "flags": [
+        {
+          "rule": "R3_cross_batch_duplicate_description",
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '008', 'id': 34, 'title': '검정고시 성적증명서(영문) 발급'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
     },
     {
       "id": 31,
