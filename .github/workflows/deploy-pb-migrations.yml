@@ -1,0 +1,51 @@
+name: Deploy PB Migrations to L1 (hanlim)
+
+# pb_migrations/*.js가 main에 push되면 L1(hanlim) PocketBase에 자동
+# 적용한다. 2026-07-16 사고(마이그레이션 파일이 GitHub에만 있고
+# 서버엔 한 번도 안 들어간 문제) 재발 방지용.
+#
+# 필요한 GitHub Secrets(Settings > Secrets and variables > Actions):
+#   L1_SSH_PRIVATE_KEY  — 전용 배포키 개인키 전체
+#   L1_SSH_HOST         — l1-hanlim.hondi.net
+#   L1_SSH_USER         — ubuntu
+#
+# 이 키는 서버의 authorized_keys에 강제 커맨드(command=)로 제한돼 있어
+# /opt/gopang/ops/apply-pb-migrations.sh 외의 어떤 명령도 실행할 수 없다.
+# worker.js 배포(deploy-worker.yml)와 완전히 분리된 별도 파이프라인이다.
+
+"on":
+  push:
+    branches: [main]
+    paths:
+      - 'pb_migrations/**'
+  workflow_dispatch:  # 수동 실행도 가능(Actions 탭에서 Run workflow)
+
+jobs:
+  deploy-pb-migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SSH 에이전트 설정
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.L1_SSH_PRIVATE_KEY }}
+
+      - name: known_hosts 등록
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.L1_SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: pb_migrations 동기화 (신규/변경 파일만 전송)
+        run: |
+          rsync -avz --include='*.js' --exclude='*' \
+            pb_migrations/ \
+            "${{ secrets.L1_SSH_USER }}@${{ secrets.L1_SSH_HOST }}:/opt/gopang/pb/pb_migrations/"
+
+      - name: 마이그레이션 적용 (강제 커맨드로 제한된 원격 스크립트 실행)
+        run: |
+          ssh "${{ secrets.L1_SSH_USER }}@${{ secrets.L1_SSH_HOST }}" "echo triggering apply-pb-migrations.sh"
+        # ★ 위 ssh 접속 자체가 authorized_keys의 command= 강제 커맨드로
+        #   /opt/gopang/ops/apply-pb-migrations.sh를 실행시킨다.
+        #   "echo ..." 부분은 실제로 무시된다(강제 커맨드가 우선) — 로그에
+        #   무슨 의도인지 남기기 위한 표시 문자열일 뿐이다.
