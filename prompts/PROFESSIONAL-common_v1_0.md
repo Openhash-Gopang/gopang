@@ -3,7 +3,7 @@
 > **이 문서는 원칙 설명이 아니라, 실제로 system 메시지에 그대로 삽입되는
 > 시스템 프롬프트 본문입니다.** 아래 텍스트는 **한 글자도 바꾸지 않고**
 > 전문가 보조 모듈(K-Doctor 등, 국가약칭 없는 보통명사 SP — doctor,
-> attorney 등)의 system 메시지에서 `UNIVERSAL-common_v1_6.md` 바로
+> attorney 등)의 system 메시지에서 `UNIVERSAL-common_v1_7.md` 바로
 > 뒤에 배치합니다.
 >
 > **전제**: 이 문서만 단독으로 삽입하지 않는다. 반드시
