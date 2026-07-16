@@ -1221,7 +1221,15 @@ async function handleGovDataResolve(request, url, env, corsHeaders) {
     logEntry.outcome = 'not_found';
     await _recordGovDataResolveLog(logEntry, env);
     return new Response(
-      JSON.stringify({ status: 'not_found', message: '대응하는 KOSIS 통계표를 찾지 못했습니다.' }),
+      JSON.stringify({
+        status: 'not_found',
+        message: '대응하는 KOSIS 통계표를 찾지 못했습니다.',
+        // 진단용 — KOSIS 검색 자체가 0건인지(raw=0, 키/검색어 문제), 검색은
+        // 됐는데 규칙 A/B/C가 다 걸러냈는지(raw>0, filtered=0, 규칙 문제)를
+        // 구분하기 위한 필드. 정상 운영에도 부담 없는 크기라 상시 포함한다.
+        debug: { raw_candidate_count: raw.length, filtered_candidate_count: candidates.length,
+          raw_sample: raw.slice(0, 3).map((c) => ({ tbl_nm: c.TBL_NM, rec_tbl_se: c.REC_TBL_SE })) },
+      }),
       { status: 404, headers: corsHeaders }
     );
   }
