@@ -2345,6 +2345,72 @@ async function handleProcedureMapLookup(request, env, corsHeaders) {
   return new Response(JSON.stringify(body), { headers: corsHeaders });
 }
 
+// ── 혜택 후보 검색 (2026-07-16 신설) ──
+// 배경: _l1FindProcedureMap(위)는 goal 완전일치라 "이용자가 정확한
+// 사업명을 이미 알고 있음"을 전제한다. 하지만 혜택 카탈로그(gov24
+// civil-petitions, procedure_maps에 10,289건 시딩됨)의 실제 용도는
+// 그 반대 — "청년인데 뭐 받을 거 있어?"처럼 사업명을 모르는 상태에서
+// 후보를 찾아주는 것이다. 완전일치로는 이 용도를 달성할 수 없어
+// LIKE 기반 다건 검색을 별도 경로로 신설한다(단건 조회를 이걸로
+// 대체하지 않음 — 사업명을 이미 아는 경우는 기존 경로가 더 빠르고
+// 정확하다).
+//
+// ★ 정직한 한계 ★ SQLite LIKE 기반이라 진짜 의미검색(semantic search)이
+// 아니다. "청년" 검색어가 eligibility_gate JSON 문자열에 등장하는지만
+// 본다 — 동의어(예: "만 19~34세" vs "청년")는 못 잡을 수 있다. 후보를
+// 넉넉히(기본 30건) 반환해 K-Compose가 직접 읽고 판단하게 하는 이유가
+// 이거다 — 서버가 아니라 모델이 최종 적합성을 판단한다.
+async function handleBenefitCandidateSearch(request, env, corsHeaders) {
+  const { searchParams } = new URL(request.url);
+  const q = searchParams.get('q');
+  const domain = searchParams.get('domain');
+  const limit = Math.min(parseInt(searchParams.get('limit') || '30', 10) || 30, 50);
+  if (!q && !domain) {
+    return new Response(JSON.stringify({ error: 'q or domain required' }), { status: 400, headers: corsHeaders });
+  }
+
+  const token = await _l1AdminToken(env);
+  const clauses = [];
+  if (q) {
+    const esc = q.replace(/'/g, "\\'").replace(/%/g, '');
+    // goal과 eligibility_gate(문자열로 저장된 JSON) 양쪽에서 검색 —
+    // eligibility_gate까지 뒤지는 이유는 이용자가 "청년"이라고만
+    // 말해도, 사업명엔 "청년"이 없지만 eligibility_gate.conditions에
+    // "만 18~34세 청년"이라고 적혀 있는 경우가 많기 때문이다.
+    clauses.push(`(goal ~ '${esc}' || eligibility_gate ~ '${esc}' || domain ~ '${esc}')`);
+  }
+  if (domain) clauses.push(`domain = '${domain.replace(/'/g, "\\'")}'`);
+  const filter = encodeURIComponent(clauses.join(' && '));
+
+  const res = await fetch(
+    `${L1_DEFAULT}/api/collections/procedure_maps/records?filter=${filter}&perPage=${limit}&sort=-created`,
+    { headers: { 'Authorization': `Bearer ${token}` } }
+  );
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    return new Response(JSON.stringify({ error: `benefit-candidates 조회 실패 (HTTP ${res.status}): ${errText}` }), { status: 502, headers: corsHeaders });
+  }
+  const data = await res.json().catch(() => ({ items: [] }));
+  const items = (data.items || []).map((rec) => ({
+    goal: rec.goal,
+    domain: rec.domain,
+    org_id: (rec.steps && rec.steps[0] && rec.steps[0].org_id) || null,
+    eligibility_gate: rec.eligibility_gate,
+    status: rec.status,
+    as_of_date: rec.as_of_date,
+  }));
+
+  return new Response(JSON.stringify({
+    status: items.length ? 'candidates_found' : 'no_candidates',
+    count: items.length,
+    // pending_review인 후보가 섞여 있으면 K-Compose가 이용자에게
+    // 반드시 고지해야 한다는 걸 명시적으로 알려준다(§0-H와 동일 원칙,
+    // 서버가 판단을 대신하지 않고 신호만 준다).
+    has_unverified: items.some((i) => i.status !== 'active'),
+    candidates: items,
+  }), { headers: corsHeaders });
+}
+
 async function handleProcedureMapDraft(request, env, corsHeaders) {
   let payload;
   try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
@@ -3862,6 +3928,8 @@ export default {
     //    관리자 패널 수동 생성 불필요) ──
     if (pathname === '/orchestration/procedure-map' && request.method === 'GET')
       return handleProcedureMapLookup(request, env, corsHeaders);
+    if (pathname === '/orchestration/benefit-candidates' && request.method === 'GET')
+      return handleBenefitCandidateSearch(request, env, corsHeaders);
     if (pathname === '/orchestration/procedure-map/draft' && request.method === 'POST')
       return handleProcedureMapDraft(request, env, corsHeaders);
     if (pathname === '/orchestration/procedure-map/update' && request.method === 'POST')

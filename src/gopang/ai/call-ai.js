@@ -491,6 +491,7 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[ORCHESTRATION_SUBTASK_RESULT:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_PROGRESS:[^\]]*\]/g, '')  // 2026-07-12 신설(SP-20 v1.4)
   .replace(/\[PROCEDURE_MAP_LOOKUP:[^\]]*\]/g, '')
+  .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6)
   // 2026-07-09 정정 — DRAFT/UPDATE·KSEARCH_CANDIDATES는 steps=[...] 같은
   // 중첩 배열을 값으로 가져 위 _stripBracketTag()가 이미 먼저 처리했다
   // (이 체인에 들어오기 전에 적용됨) — 여기서 다시 정규식으로 지우지
@@ -827,6 +828,34 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
         resultText = `{"error":"${e.message}"}`;
       }
       await sendFn(`[PROCEDURE_MAP_LOOKUP 결과] ${resultText}\n\n위 결과를 이어받아 RULE-02를 계속 진행하세요.`);
+      return true;
+    }
+
+    // 2026-07-16 신설(SP-20 v1.6 STEP 0-DISCOVER) — 사업명을 모르는
+    // 발견형 의도 전용. PROCEDURE_MAP_LOOKUP과 동일한 재주입 패턴이나
+    // goal 완전일치 대신 q/domain LIKE 검색으로 다건을 받는다.
+    const benefitSearchMatch = fullReply.match(/\[BENEFIT_CANDIDATE_SEARCH:\s*([^\]]+)\]/);
+    if (benefitSearchMatch) {
+      console.log('[Orchestration] BENEFIT_CANDIDATE_SEARCH 감지 — worker.js 후보 검색');
+      await _updateBubble(_stripInternalTags(fullReply));
+      history.push({ role: 'assistant', content: fullReply });
+      const params = {};
+      benefitSearchMatch[1].split(',').forEach((kv) => {
+        const [k, ...rest] = kv.split('=');
+        if (k) params[k.trim()] = rest.join('=').trim();
+      });
+      const qs = new URLSearchParams();
+      if (params.q) qs.set('q', params.q);
+      if (params.domain) qs.set('domain', params.domain);
+      if (params.limit) qs.set('limit', params.limit);
+      let resultText;
+      try {
+        const res = await fetch(`${base}/orchestration/benefit-candidates?${qs.toString()}`);
+        resultText = res.ok ? JSON.stringify(await res.json()) : `{"error":"HTTP ${res.status}"}`;
+      } catch (e) {
+        resultText = `{"error":"${e.message}"}`;
+      }
+      await sendFn(`[BENEFIT_CANDIDATE_SEARCH 결과] ${resultText}\n\n위 후보 목록을 이어받아 RULE-02 STEP 0-C를 계속 진행하세요.`);
       return true;
     }
 
