@@ -1136,6 +1136,16 @@ async function _l1AdminToken(env) {
 // 2단계에서 스코어링을 정교화할 근거로 쓴다.
 // ═══════════════════════════════════════════════════════════
 
+// KOSIS는 format=json이어도 표준 JSON이 아니라 키를 따옴표 없이 반환한다
+// (JS 객체 리터럴 표기, 예: {ORG_ID:"101",...} — 키에 따옴표가 없다).
+// 표준 JSON.parse는 이걸 정당하게 SyntaxError로 거부하므로, 단순 식별자
+// 형태의 키(영문/숫자/언더스코어)만 따옴표로 감싸는 전처리 후 파싱한다.
+// eval()은 신뢰할 수 없는 외부 응답에 쓰지 않는다 — 정규식 전처리 + JSON.parse로 한정.
+function _lenientJsonParse(text) {
+  const withQuotedKeys = text.replace(/([{,]\s*)([A-Za-z0-9_]+)(\s*:)/g, '$1"$2"$3');
+  return JSON.parse(withQuotedKeys);
+}
+
 async function _kosisSearch(query, apiKey) {
   const url = `https://kosis.kr/openapi/statisticsSearch.do?method=getList&apiKey=${apiKey}&searchNm=${encodeURIComponent(query)}&format=json`;
   const res = await fetch(url);
@@ -1144,9 +1154,9 @@ async function _kosisSearch(query, apiKey) {
 
   let data;
   try {
-    data = JSON.parse(bodyText);
+    data = _lenientJsonParse(bodyText);
   } catch (e) {
-    throw new Error(`KOSIS 응답이 JSON이 아님: ${bodyText.slice(0, 200)}`);
+    throw new Error(`KOSIS 응답 파싱 실패: ${bodyText.slice(0, 200)}`);
   }
 
   // KOSIS는 결과가 없거나 오류일 때도 200을 주며 {err, errMsg} 객체를 반환하는 경우가
