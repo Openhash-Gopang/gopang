@@ -2,8 +2,8 @@
   "batch_id": "003",
   "classified_at": "2026-07-16",
   "total_items": 50,
-  "flagged_items": 11,
-  "flagged_high_priority": 10,
+  "flagged_items": 12,
+  "flagged_high_priority": 11,
   "flagged_low_priority": 1,
   "domain_discovery": {
     "taxonomy_size": 21,
@@ -302,6 +302,10 @@
         {
           "rule": "R2_title_button_verb_mismatch",
           "detail": "제목 동사='열람'(조회형)인데 버튼='발급하기'(발급형) — 처리유형 판단 기준이 문서 내에서 상충."
+        },
+        {
+          "rule": "R3_cross_batch_duplicate_description",
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '005', 'id': 3, 'title': '건설기계등록원부(을)열람신청'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
         }
       ],
       "review_required": true,
@@ -754,9 +758,14 @@
       "task_key_candidate": "공통:지방공무원경력증명신청",
       "proc_type_candidate": "ISSUE",
       "auth_required": true,
-      "flags": [],
-      "review_required": false,
-      "priority": "none"
+      "flags": [
+        {
+          "rule": "R3_cross_batch_duplicate_description",
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '005', 'id': 38, 'title': '국가공무원퇴직자경력증명신청'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
     },
     {
       "id": 42,

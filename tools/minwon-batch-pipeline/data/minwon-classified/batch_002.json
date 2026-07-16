@@ -2,8 +2,8 @@
   "batch_id": "002",
   "classified_at": "2026-07-16",
   "total_items": 50,
-  "flagged_items": 14,
-  "flagged_high_priority": 13,
+  "flagged_items": 15,
+  "flagged_high_priority": 14,
   "flagged_low_priority": 1,
   "domain_discovery": {
     "taxonomy_size": 21,
@@ -858,9 +858,14 @@
       "task_key_candidate": "국토교통부:공동주택가격확인서_발급",
       "proc_type_candidate": "ISSUE",
       "auth_required": false,
-      "flags": [],
-      "review_required": false,
-      "priority": "none"
+      "flags": [
+        {
+          "rule": "R3_cross_batch_duplicate_description",
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '005', 'id': 9, 'title': '공동주택가격확인발급신청(방문수령)'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
     },
     {
       "id": 45,
@@ -895,7 +900,7 @@
       "flags": [
         {
           "rule": "R3_cross_batch_duplicate_description",
-          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '004', 'id': 24, 'title': '지방세 납부확인서(서울) 발급'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '004', 'id': 24, 'title': '지방세 납부확인서(서울) 발급'}, {'batch_id': '005', 'id': 30, 'title': '등록세 납부확인서(서울외) 발급'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
         }
       ],
       "review_required": true,

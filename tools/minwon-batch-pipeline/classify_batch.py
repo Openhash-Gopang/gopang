@@ -117,6 +117,14 @@ def normalize_title(title: str) -> str:
     return re.sub(r"\s+", "", title or "")
 
 
+def normalize_description(desc: str) -> str:
+    """R3 해시 비교용 정규화 — 공백류 통일, 끝맺음 마침표 유무 차이 무시.
+    2026-07-16 발견: 배치2#44/배치5#9가 마침표 하나 차이로 교차탐지를
+    피해갔다(같은 원본을 다른 시점에 옮겨적으며 생긴 사소한 차이로 추정)."""
+    s = re.sub(r"\s+", " ", (desc or "").strip())
+    return s.rstrip(".。 ")
+
+
 def button_verb(button):
     if not button:
         return None
@@ -181,13 +189,13 @@ def classify_batch(raw_path: Path, out_path: Path, classified_dir: Path = None, 
         prior_title_agency[normalize_title(pit["title"])].update(pit.get("agency", []) or [])
         # 이전 배치 산출물에는 원본 description이 없으므로(분류 결과만 저장) 여기선 제목 기준만 비교.
     for pit in prior_raw_items:
-        h = hashlib.sha256((pit.get("description") or "").strip().encode("utf-8")).hexdigest()
+        h = hashlib.sha256(normalize_description(pit.get("description")).encode("utf-8")).hexdigest()
         prior_desc_hash[h].append({"batch_id": pit.get("_batch_id"), "id": pit.get("id"), "title": pit.get("title")})
 
     # R3용: description 해시 -> id 목록 (이번 배치 내부)
     desc_hash_map = defaultdict(list)
     for it in items:
-        h = hashlib.sha256((it.get("description") or "").strip().encode("utf-8")).hexdigest()
+        h = hashlib.sha256(normalize_description(it.get("description")).encode("utf-8")).hexdigest()
         desc_hash_map[h].append(it["id"])
 
 
@@ -247,7 +255,7 @@ def classify_batch(raw_path: Path, out_path: Path, classified_dir: Path = None, 
             })
 
         # R3: 설명 텍스트 중복
-        h = hashlib.sha256((it.get("description") or "").strip().encode("utf-8")).hexdigest()
+        h = hashlib.sha256(normalize_description(it.get("description")).encode("utf-8")).hexdigest()
         dupes = [i for i in desc_hash_map[h] if i != it["id"]]
         if dupes:
             flags.append({

@@ -472,7 +472,7 @@
       "flags": [
         {
           "rule": "R3_cross_batch_duplicate_description",
-          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '002', 'id': 46, 'title': '지방세 납부확인서(서울외) 발급'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '002', 'id': 46, 'title': '지방세 납부확인서(서울외) 발급'}, {'batch_id': '005', 'id': 30, 'title': '등록세 납부확인서(서울외) 발급'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
         }
       ],
       "review_required": true,
