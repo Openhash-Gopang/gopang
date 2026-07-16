@@ -927,6 +927,35 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       return true;
     }
 
+    // 2026-07-16 신설(SP-20 v1.9 STEP 0-DISCOVER, 임베딩 기반 전면
+    // 재설계) — query가 자연어 문장이라 콤마를 포함할 수 있다(예:
+    // "제주 거주, 만 30세 청년..."). 기존 BENEFIT_CANDIDATE_SEARCH
+    // 처럼 태그 전체를 콤마로 나누면 문장 안의 콤마에서 파싱이
+    // 깨진다 — query는 반드시 따옴표로 감싸게 하고, 정규식으로
+    // 따옴표 안쪽만 통째로 뽑는다(콤마 개수와 무관하게 안전).
+    const semanticSearchMatch = fullReply.match(
+      /\[BENEFIT_SEMANTIC_SEARCH:\s*query="([^"]*)"(?:,\s*domain=([^,\]]+))?(?:,\s*limit=(\d+))?\]/
+    );
+    if (semanticSearchMatch) {
+      console.log('[Orchestration] BENEFIT_SEMANTIC_SEARCH 감지 — worker.js 임베딩 의미검색');
+      await _updateBubble(_stripInternalTags(fullReply));
+      history.push({ role: 'assistant', content: fullReply });
+      const [, query, domain, limit] = semanticSearchMatch;
+      const qs = new URLSearchParams();
+      qs.set('query', query.trim());
+      if (domain) qs.set('domain', domain.trim());
+      if (limit) qs.set('limit', limit.trim());
+      let resultText;
+      try {
+        const res = await fetch(`${base}/orchestration/benefit-semantic-search?${qs.toString()}`);
+        resultText = res.ok ? JSON.stringify(await res.json()) : `{"error":"HTTP ${res.status}"}`;
+      } catch (e) {
+        resultText = `{"error":"${e.message}"}`;
+      }
+      await sendFn(`[BENEFIT_SEMANTIC_SEARCH 결과] ${resultText}\n\n위 후보 목록을 이어받아 RULE-02 STEP 0-C를 계속 진행하세요.`);
+      return true;
+    }
+
     // 2026-07-16 신설(SP-20 v1.6 STEP 0-DISCOVER) — 사업명을 모르는
     // 발견형 의도 전용. PROCEDURE_MAP_LOOKUP과 동일한 재주입 패턴이나
     // goal 완전일치 대신 q/domain LIKE 검색으로 다건을 받는다.
