@@ -1121,6 +1121,145 @@ async function _l1AdminToken(env) {
   return _l1AdminTokenFor(env, L1_DEFAULT);
 }
 
+
+// ═══════════════════════════════════════════════════════════
+// GOV_OPEN_DATA_MAP — KOSIS 리졸버 (2026-07-16 배선)
+// 선행 문서: GOV_OPEN_DATA_MAP-통합설계_v1.0, resolveGovData-최소버전설계_v1.0
+//
+// 핵심 원칙: 트랙4/57건류 예시를 정적으로 미리 채워두지 않는다. 혼디 사용자
+// (공무원 SP·K-Public)의 실제 질의마다 KOSIS 통합검색을 호출해 그때그때
+// 대응 통계표를 찾고, 확정된 것만 GOV_DATA_KV에 캐싱해 재사용한다.
+//
+// 스코어링 알고리즘은 아직 안 만든다 — 단순 배제 규칙 3개 + 후보 2건 이상이면
+// 무조건 사람(공무원 SP는 "담당자_확인_필요" 플래그, K-Public은 되묻기)에게
+// 넘긴다. 모든 시도는 gov_data_resolve_log에 기록해, 실사용 로그가 쌓인 뒤
+// 2단계에서 스코어링을 정교화할 근거로 쓴다.
+// ═══════════════════════════════════════════════════════════
+
+async function _kosisSearch(query, apiKey) {
+  const url = `https://kosis.kr/openapi/statisticsSearch.do?method=getList&apiKey=${apiKey}&searchNm=${encodeURIComponent(query)}&format=json`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`KOSIS 검색 실패: ${res.status}`);
+  const data = await res.json().catch(() => null);
+  // KOSIS는 결과가 없거나 오류일 때도 200을 주며 {err, errMsg} 객체를 반환하는 경우가 있다
+  // (예: 유효하지 않은 인증키). 배열이 아니면 후보 0건으로 취급한다.
+  return Array.isArray(data) ? data : [];
+}
+
+// 규칙 A: 세부항목표(REC_TBL_SE='Y')는 1차 후보에서 제외 — 원자료 상세표라
+// 지역단위 집계 요청 의도와 대부분 안 맞는다(오늘 세션 "기초생활수급자현황"
+// 검색 20건 중 실제 부합은 REC_TBL_SE='N' 1건뿐이었던 사례 참조).
+function _filterRuleA(candidates) {
+  return candidates.filter((c) => c.REC_TBL_SE !== 'Y');
+}
+
+// 규칙 B: 검색어와 TBL_NM(통계표명) 사이 단순 부분일치. 형태소 분석기 없이
+// 시작하는 최소 버전이라 오탐 가능성이 있다 — 정교화는 2단계 과제.
+function _filterRuleB(candidates, query) {
+  const q = query.replace(/\s/g, '');
+  return candidates.filter((c) => (c.TBL_NM || '').replace(/\s/g, '').includes(q));
+}
+
+// 규칙 C: 동일 STAT_ID(통계조사 자체가 같은 경우) 중 최신 END_PRD_DE만 유지
+function _dedupeRuleC(candidates) {
+  const bestByStat = new Map();
+  for (const c of candidates) {
+    const key = c.STAT_ID || c.TBL_ID;
+    const prev = bestByStat.get(key);
+    if (!prev || (c.END_PRD_DE || '') > (prev.END_PRD_DE || '')) bestByStat.set(key, c);
+  }
+  return [...bestByStat.values()];
+}
+
+// gov_data_resolve_log 기록 — 실패해도 본 요청(통계 조회)을 막지 않는다.
+async function _recordGovDataResolveLog(entry, env) {
+  try {
+    const token = await _l1AdminTokenFor(env, L1_BASE_HOST);
+    const res = await fetch(`${L1_BASE_HOST}/api/collections/gov_data_resolve_log/records`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ...entry, recorded_at: new Date().toISOString() }),
+    });
+    if (!res.ok) console.error('gov_data_resolve_log 기록 실패:', res.status, await res.text().catch(() => ''));
+  } catch (e) {
+    console.error('gov_data_resolve_log 기록 실패:', e.message);
+  }
+}
+
+// TTL — 최소버전은 고정 30일. update_cycle/publish_lag 파싱한 동적 계산은
+// KOSIS 통계표설명 API 연동 후 2단계 과제(resolveGovData-최소버전설계 §4 참조).
+function _computeGovDataTTL() {
+  return 60 * 60 * 24 * 30;
+}
+
+// GET /api/stats/resolve?q=1인가구비율&requester_type=k-public
+async function handleGovDataResolve(request, url, env, corsHeaders) {
+  const rawQuery = (url.searchParams.get('q') || '').trim();
+  const requesterType = url.searchParams.get('requester_type') || 'k-public';
+  if (!rawQuery) return _err(400, 'MISSING_QUERY', 'q 파라미터 필수', corsHeaders);
+  if (!env.KOSIS_API_KEY) return _err(500, 'KOSIS_KEY_MISSING', 'KOSIS_API_KEY secret 미설정', corsHeaders);
+
+  const cacheKey = `gov-data:${rawQuery}`;
+  if (env.GOV_DATA_KV) {
+    const cached = await env.GOV_DATA_KV.get(cacheKey, 'json');
+    if (cached) return new Response(JSON.stringify({ source: 'cache', ...cached }), { headers: corsHeaders });
+  }
+
+  const raw = await _kosisSearch(rawQuery, env.KOSIS_API_KEY);
+  let candidates = _filterRuleA(raw);
+  candidates = _filterRuleB(candidates, rawQuery);
+  candidates = _dedupeRuleC(candidates);
+
+  const logEntry = {
+    raw_query: rawQuery,
+    requester_type: requesterType,
+    kosis_search_candidates: raw,
+    filtered_candidates: candidates,
+  };
+
+  if (candidates.length === 0) {
+    logEntry.outcome = 'not_found';
+    await _recordGovDataResolveLog(logEntry, env);
+    return new Response(
+      JSON.stringify({ status: 'not_found', message: '대응하는 KOSIS 통계표를 찾지 못했습니다.' }),
+      { status: 404, headers: corsHeaders }
+    );
+  }
+
+  if (candidates.length > 1) {
+    // 확신 없는 자동 선택을 하지 않는다 — 후보를 그대로 넘겨 사람이 고르게 한다.
+    // (공무원 SP 쪽에서는 이 응답을 §3 "담당자_확인_필요" 플래그로 받아 처리)
+    logEntry.outcome = 'ambiguous';
+    await _recordGovDataResolveLog(logEntry, env);
+    return new Response(
+      JSON.stringify({
+        status: 'ambiguous',
+        candidates: candidates.map((c) => ({ tbl_nm: c.TBL_NM, org_id: c.ORG_ID, tbl_id: c.TBL_ID })),
+      }),
+      { status: 300, headers: corsHeaders }
+    );
+  }
+
+  const picked = candidates[0];
+  const entry = {
+    entry_id: `kosis:${picked.ORG_ID}:${picked.TBL_ID}`,
+    source_type: 'kosis',
+    consent_required: false,
+    status: 'confirmed',
+    kosis: { org_id: picked.ORG_ID, tbl_id: picked.TBL_ID, tbl_nm: picked.TBL_NM },
+  };
+  logEntry.outcome = 'confirmed';
+  logEntry.selected_entry_id = entry.entry_id;
+  await _recordGovDataResolveLog(logEntry, env);
+
+  const result = { entry, tbl_nm: picked.TBL_NM };
+  if (env.GOV_DATA_KV) {
+    await env.GOV_DATA_KV.put(cacheKey, JSON.stringify(result), { expirationTtl: _computeGovDataTTL() });
+  }
+  return new Response(JSON.stringify({ source: 'live', ...result }), { headers: corsHeaders });
+}
+
+
 // ── META_TABLE_UPDATE 태그 파싱/기록 — AGENCY-AC-COMMON_v1.3.md §6 ──────
 // (2026-07-14 신설, 1c891de가 이전 버전 worker.js 기준으로 편집하며
 // 한 차례 삭제됐다가 이번에 복구됨)
@@ -3644,6 +3783,9 @@ export default {
 
     // ── search (v4.7) ────────────────────────────────────
     if (pathname === '/search' && request.method === 'POST') return handleSearch(request, env, corsHeaders);
+
+    // ── 국가데이터처(KOSIS) 통계 리졸버 (2026-07-16 배선) ──
+    if (pathname === '/api/stats/resolve') return handleGovDataResolve(request, url, env, corsHeaders);
     // ── 오케스트레이션 레지스트리 (2026-07-08 신설, 2026-07-09 확장 —
     //    AGENT-COMMON §0-H v3.40 / K-Compose SP-20이 참조. PROCEDURE_MAP·
     //    ORG_PROFILE·ATOM_ROW를 실제 L1 PocketBase 컬렉션에 저장한다.

@@ -10,6 +10,10 @@
                           {
                               "binding":  "QR_SESSIONS_KV",
                               "id":  "af7cad0be99e4072bbca8d81d71edd98"
+                          },
+                          {
+                              "binding":  "GOV_DATA_KV",
+                              "id":  "REPLACE_WITH_REAL_NAMESPACE_ID"
                           }
                       ],
     "services":  [
