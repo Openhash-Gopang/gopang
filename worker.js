@@ -1292,10 +1292,17 @@ async function handleGovDataResolve(request, url, env, corsHeaders) {
   await _recordGovDataResolveLog(logEntry, env);
 
   const result = { entry, tbl_nm: picked.TBL_NM };
+  let kvWriteStatus = 'skipped (env.GOV_DATA_KV 바인딩 없음)';
   if (env.GOV_DATA_KV) {
-    await env.GOV_DATA_KV.put(cacheKey, JSON.stringify(result), { expirationTtl: _computeGovDataTTL() });
+    try {
+      await env.GOV_DATA_KV.put(cacheKey, JSON.stringify(result), { expirationTtl: _computeGovDataTTL() });
+      kvWriteStatus = 'ok';
+    } catch (e) {
+      // put() 실패를 조용히 삼키지 않는다 — 캐싱이 실제로 도는지 여기서 바로 확인 가능하게.
+      kvWriteStatus = `error: ${e.message}`;
+    }
   }
-  return new Response(JSON.stringify({ source: 'live', ...result }), { headers: corsHeaders });
+  return new Response(JSON.stringify({ source: 'live', kv_write: kvWriteStatus, ...result }), { headers: corsHeaders });
 }
 
 
