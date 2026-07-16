@@ -1,0 +1,598 @@
+{
+  "orgs": [
+    {
+      "org_id": "gov24-org:1342000",
+      "org_name": "교육부",
+      "branch_hint": "중앙행정기관",
+      "dept": "영유아재정과",
+      "branch": "admin_central"
+    },
+    {
+      "org_id": "gov24-org:1220000",
+      "org_name": "관세청",
+      "branch_hint": "중앙행정기관",
+      "dept": "자유무역협정집행과",
+      "branch": "admin_central"
+    },
+    {
+      "org_id": "gov24-org:1270000",
+      "org_name": "법무부",
+      "branch_hint": "중앙행정기관",
+      "dept": "소년범죄예방팀",
+      "branch": "admin_central"
+    },
+    {
+      "org_id": "gov24-org:1210000",
+      "org_name": "국세청",
+      "branch_hint": "중앙행정기관",
+      "dept": "장려세제과",
+      "branch": "admin_central"
+    },
+    {
+      "org_id": "gov24-org:B551408",
+      "org_name": "한국주택금융공사",
+      "branch_hint": "공공기관",
+      "dept": "주택보증부",
+      "branch": "public_institution"
+    },
+    {
+      "org_id": "gov24-org:1250000",
+      "org_name": "통일부",
+      "branch_hint": "중앙행정기관",
+      "dept": "자립지원과",
+      "branch": "admin_central"
+    },
+    {
+      "org_id": "gov24-org:1192000",
+      "org_name": "해양수산부",
+      "branch_hint": "중앙행정기관",
+      "dept": "어선안전정책과",
+      "branch": "admin_central"
+    },
+    {
+      "org_id": "gov24-org:1371000",
+      "org_name": "문화체육관광부",
+      "branch_hint": "중앙행정기관",
+      "dept": "관광정책과",
+      "branch": "admin_central"
+    },
+    {
+      "org_id": "gov24-org:1352000",
+      "org_name": "보건복지부",
+      "branch_hint": "중앙행정기관",
+      "dept": "기초의료보장과",
+      "branch": "admin_central"
+    },
+    {
+      "org_id": "gov24-org:1290000",
+      "org_name": "국방부",
+      "branch_hint": "중앙행정기관",
+      "dept": "국방일자리정책과",
+      "branch": "admin_central"
+    }
+  ],
+  "atoms": {
+    "welfare-apply-online": {
+      "pattern": "APPLY",
+      "org_class": "benefit-provider",
+      "note": "정부24/복지로 등 온라인 신청 가능"
+    },
+    "welfare-apply-visit": {
+      "pattern": "APPLY",
+      "org_class": "benefit-provider",
+      "note": "읍면동 주민센터 등 방문신청 필수 — automation 상한선"
+    }
+  },
+  "procs": [
+    {
+      "petition_id": "000000465790",
+      "goal": "유아학비 (누리과정) 지원",
+      "domain": "보육·교육",
+      "org_id": "gov24-org:1342000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "연령 3~5세",
+          "source": "target/eligibility 필드 정규식 추출 — 원문 재확인 필요",
+          "confidence": "low"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "주민센터",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/000000465790"
+    },
+    {
+      "petition_id": "122000000003",
+      "goal": "원산지검증 대응 지원",
+      "domain": "보육·교육",
+      "org_id": "gov24-org:1220000",
+      "atom_id": "welfare-apply-online",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/122000000003"
+    },
+    {
+      "petition_id": "127000000037",
+      "goal": "소년원 출원생 등 소외계층 청소년을 위한 청소년자립생활관 운영 지원",
+      "domain": "보육·교육",
+      "org_id": "gov24-org:1270000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "(재)한국소년보호협회",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/127000000037"
+    },
+    {
+      "petition_id": "105100000001",
+      "goal": "근로·자녀장려금",
+      "domain": "주거·자립",
+      "org_id": "gov24-org:1210000",
+      "atom_id": "welfare-apply-online",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "관할 세무서",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/105100000001"
+    },
+    {
+      "petition_id": "116010000001",
+      "goal": "주택금융공사 월세자금보증",
+      "domain": "주거·자립",
+      "org_id": "gov24-org:B551408",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "금융기관(은행)",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/116010000001"
+    },
+    {
+      "petition_id": "125000000004",
+      "goal": "북한이탈주민 자산형성 지원 (미래행복통장)",
+      "domain": "주거·자립",
+      "org_id": "gov24-org:1250000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/125000000004"
+    },
+    {
+      "petition_id": "119200000001",
+      "goal": "친환경 에너지절감장비 보급",
+      "domain": "농림축산어업",
+      "org_id": "gov24-org:1192000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "시·군·구청",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/119200000001"
+    },
+    {
+      "petition_id": "119200000008",
+      "goal": "옵서버 승선경비 지원",
+      "domain": "농림축산어업",
+      "org_id": "gov24-org:1192000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "한국수산자원공단",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/119200000008"
+    },
+    {
+      "petition_id": "119200000010",
+      "goal": "합작수산물 관세 감면 추진",
+      "domain": "농림축산어업",
+      "org_id": "gov24-org:1192000",
+      "atom_id": "welfare-apply-online",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "해양수산부",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/119200000010"
+    },
+    {
+      "petition_id": "119200000007",
+      "goal": "해양사고 국선 심판변론인 선정 지원",
+      "domain": "행정·안전",
+      "org_id": "gov24-org:1192000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "관할지방해양안전심판원 심판관실",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/119200000007"
+    },
+    {
+      "petition_id": "119200000055",
+      "goal": "연안선박 현대화 지원",
+      "domain": "행정·안전",
+      "org_id": "gov24-org:1192000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "한국해운조합 해운정책팀",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/119200000055"
+    },
+    {
+      "petition_id": "119200000067",
+      "goal": "어업인안전조업교육지원",
+      "domain": "행정·안전",
+      "org_id": "gov24-org:1192000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "수협중앙회 어선안전조업본부",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/119200000067"
+    },
+    {
+      "petition_id": "119200000110",
+      "goal": "패각 친환경 처리 지원",
+      "domain": "문화·환경",
+      "org_id": "gov24-org:1192000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "시·군·구청",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/119200000110"
+    },
+    {
+      "petition_id": "119200000176",
+      "goal": "해양문화행사 및 해양영토 대장정",
+      "domain": "문화·환경",
+      "org_id": "gov24-org:1192000",
+      "atom_id": "welfare-apply-online",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "한국해양재단",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/119200000176"
+    },
+    {
+      "petition_id": "137100000004",
+      "goal": "관광진흥개발기금 융자지원",
+      "domain": "문화·환경",
+      "org_id": "gov24-org:1371000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "○시설자금-방문 : 한국산업은행 등 14개 취급은행 영업점 / ○운영자금-방문 , 우편,  온라인 : 한국관광협회중앙회 등 업종별 협회 ",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/137100000004"
+    },
+    {
+      "petition_id": "119200000111",
+      "goal": "수산동물질병 예방백신 공급 지원",
+      "domain": "보건·의료",
+      "org_id": "gov24-org:1192000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "전남도청(친환경수산과), 경북도청(해양수산과), 경남도청(수산안전기술원)",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/119200000111"
+    },
+    {
+      "petition_id": "135200000002",
+      "goal": "의료급여 틀니·치과임플란트 지원",
+      "domain": "보건·의료",
+      "org_id": "gov24-org:1352000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "시·군·구청",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/135200000002"
+    },
+    {
+      "petition_id": "135200000005",
+      "goal": "임산부 및 영유아 영양플러스",
+      "domain": "보건·의료",
+      "org_id": "gov24-org:1352000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "보건소",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/135200000005"
+    },
+    {
+      "petition_id": "119200000162",
+      "goal": "선원복지고용센터 운영",
+      "domain": "고용·창업",
+      "org_id": "gov24-org:1192000",
+      "atom_id": "welfare-apply-online",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "한국선원복지고용센터",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/119200000162"
+    },
+    {
+      "petition_id": "129000000013",
+      "goal": "전역예정군인 재취업 지원",
+      "domain": "고용·창업",
+      "org_id": "gov24-org:1290000",
+      "atom_id": "welfare-apply-online",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "국방전직교육원 각 사업부서",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/129000000013"
+    },
+    {
+      "petition_id": "129000000015",
+      "goal": "전역예정장병 취업활동지원",
+      "domain": "고용·창업",
+      "org_id": "gov24-org:1290000",
+      "atom_id": "welfare-apply-online",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/129000000015"
+    },
+    {
+      "petition_id": "127000000022",
+      "goal": "특별공로자 및 우수인재 특별귀화 허가 신청 수수료 면제 안내",
+      "domain": "생활안정",
+      "org_id": "gov24-org:1270000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "지방출입국ㆍ외국인관서",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/127000000022"
+    },
+    {
+      "petition_id": "127000000023",
+      "goal": "귀화허가, 국적회복허가 신청 및 국적업무 증명서 발급 수수료 면제 안내",
+      "domain": "생활안정",
+      "org_id": "gov24-org:1270000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "지방출입국‧외국인관서",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/127000000023"
+    },
+    {
+      "petition_id": "129000000007",
+      "goal": "군인 재해보상 유족급여 지급",
+      "domain": "생활안정",
+      "org_id": "gov24-org:1290000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "국군재정관리단",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/129000000007"
+    },
+    {
+      "petition_id": "135200000012",
+      "goal": "학대피해아동쉼터 지원",
+      "domain": "보호·돌봄",
+      "org_id": "gov24-org:1352000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "시·군·구청",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/135200000012"
+    },
+    {
+      "petition_id": "135200000095",
+      "goal": "발달장애인 개인별지원계획 수립 지원",
+      "domain": "보호·돌봄",
+      "org_id": "gov24-org:1352000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "읍.면.동 주민센터, 지역발달장애인지원센터",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/135200000095"
+    },
+    {
+      "petition_id": "135200000130",
+      "goal": "발달장애인 주간활동서비스",
+      "domain": "보호·돌봄",
+      "org_id": "gov24-org:1352000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "주민센터",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/135200000130"
+    },
+    {
+      "petition_id": "135200000114",
+      "goal": "고위험 임산부 의료비 지원",
+      "domain": "임신·출산",
+      "org_id": "gov24-org:1352000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "보건소",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/135200000114"
+    },
+    {
+      "petition_id": "135200005011",
+      "goal": "입양축하금",
+      "domain": "임신·출산",
+      "org_id": "gov24-org:1352000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/135200005011"
+    },
+    {
+      "petition_id": "135200005015",
+      "goal": "첫만남이용권 지원",
+      "domain": "임신·출산",
+      "org_id": "gov24-org:1352000",
+      "atom_id": "welfare-apply-visit",
+      "eligibility_gate": [
+        {
+          "item": "자동 추출 실패 — 원문 직접 검토 필요",
+          "source": "target/eligibility raw text",
+          "confidence": "none"
+        }
+      ],
+      "as_of_date": "2026-07-16",
+      "receiving_org": "",
+      "detail_url": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/135200005015"
+    }
+  ]
+}
