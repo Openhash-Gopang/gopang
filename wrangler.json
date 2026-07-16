@@ -1,34 +1,35 @@
-﻿{
-    "name":  "hondi-proxy",
-    "compatibility_date":  "2026-06-16",
-    "main":  "worker.js",
-    "kv_namespaces":  [
-                          {
-                              "binding":  "AI_SETUP_SEALS_KV",
-                              "id":  "e1ae4dd08b344f9c9208ea4235e17d3e"
-                          },
-                          {
-                              "binding":  "QR_SESSIONS_KV",
-                              "id":  "af7cad0be99e4072bbca8d81d71edd98"
-                          },
-                          {
-                              "binding":  "GOV_DATA_KV",
-                              "id":  "REPLACE_WITH_REAL_NAMESPACE_ID"
-                          }
-                      ],
-    "services":  [
-                     {
-                         "binding":  "AGENT_SIGNER",
-                         "service":  "gopang-agent-signer",
-                         "environment":  "production"
-                     }
-                 ],
-    "observability":  {
-                          "logs":  {
-                                       "enabled":  true
-                                   },
-                          "traces":  {
-                                         "enabled":  true
-                                     }
-                      }
+{
+    "name": "hondi-proxy",
+    "account_id": "8897e584cfc42457b462f76fdcf6e157",
+    "compatibility_date": "2026-06-16",
+    "main": "worker.js",
+    "kv_namespaces": [
+        {
+            "binding": "AI_SETUP_SEALS_KV",
+            "id": "e1ae4dd08b344f9c9208ea4235e17d3e"
+        },
+        {
+            "binding": "QR_SESSIONS_KV",
+            "id": "af7cad0be99e4072bbca8d81d71edd98"
+        },
+        {
+            "binding": "GOV_DATA_KV",
+            "id": "cf1dc69a346747ac8319a6cab85640cf"
+        }
+    ],
+    "services": [
+        {
+            "binding": "AGENT_SIGNER",
+            "service": "gopang-agent-signer",
+            "environment": "production"
+        }
+    ],
+    "observability": {
+        "logs": {
+            "enabled": true
+        },
+        "traces": {
+            "enabled": true
+        }
+    }
 }
