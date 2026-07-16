@@ -2554,6 +2554,169 @@ async function handleBenefitCandidateSearch(request, env, corsHeaders) {
   }), { headers: corsHeaders });
 }
 
+// ════════════════════════════════════════════════════════════
+// 혜택 후보 의미검색 — 임베딩 기반 (2026-07-16, 처음부터 재설계)
+// ════════════════════════════════════════════════════════════
+// 배경: handleBenefitCandidateSearch(위, LIKE 기반)를 v2까지 패치했지만,
+// LIKE의 부분일치 폭발·조합 조건 조회 불가라는 구조적 한계 자체는 못
+// 넘었다. 임베딩(Cloudflare Workers AI bge-m3) + Vectorize로 바꾸면서,
+// "LIKE의 한계를 우회하려고 만든 구조"(키워드 쪼개기·불용어 필터·
+// 다단계 AND 재검색·total_match_estimate)를 그대로 얹지 않고 처음부터
+// 다시 설계했다(주피터님 의견 검토 후 반영 — v1→v2 패치가 아니라 새
+// 함수):
+//   1. q는 이제 자연어 문장 그대로 받는다(키워드 쪼개기·불용어 필터
+//      없음 — 벡터 검색은 문맥이 살아있는 원문을 더 잘 다룬다).
+//   2. "속성 하나씩 좁혀 재검색"이 아니라 "문맥을 보강한 문장으로
+//      재임베딩" — SP-20 STEP 0-C가 재설계됨(이 함수 자체는 그냥
+//      매번 주어진 문장을 그대로 임베딩할 뿐, 문맥 보강은 호출부 몫).
+//   3. total_match_estimate 대신 결과별 similarity score를 반환한다
+//      — kNN에 "전체 몇 건" 개념이 자연스럽지 않다(임계값이 새 튜닝
+//      포인트가 됨).
+//   4. domain 필터·limit(topK) 개념은 그대로 유지 — 이건 LIKE 특유의
+//      문제가 아니라 카테고리 정확일치일 뿐이라 손댈 이유가 없었다.
+//
+// ★ 정직한 한계 ★ bge-m3가 한국 행정·복지 전문용어 도메인에서 실제로
+// 얼마나 잘 되는지 이 세션에서 검증 못 했다 — Vectorize가 로컬에서
+// 안 돌아가는 환경 제약. 배포 전 소규모 파일럿으로 실제 유사도가
+// 그럴듯하게 나오는지 먼저 확인 필요(주피터님 검토 필요 사항으로
+// 남김). 기존 LIKE 기반 handleBenefitCandidateSearch는 코드에 그대로
+// 남겨둔다 — SP-20 프로토콜에서는 더 이상 참조하지 않지만, 임베딩
+// 경로가 검증 전이라 즉시 삭제하지 않고 비상 폴백으로 유지한다.
+
+const BENEFIT_EMBED_MODEL = '@cf/baai/bge-m3';
+
+async function _embedText(env, texts) {
+  // texts: string[] → number[][] (bge-m3 dense 벡터, 1024차원 추정 —
+  // wrangler.toml 주석 참조, 최초 실행 결과로 재확인 필요)
+  const result = await env.AI.run(BENEFIT_EMBED_MODEL, { text: texts });
+  // Workers AI bge-m3 응답 형태: { shape: [...], data: number[][] }
+  if (!result || !result.data) throw new Error('bge-m3 임베딩 응답 형식 이상: ' + JSON.stringify(result));
+  return result.data;
+}
+
+// POST /orchestration/benefit-embed-index
+// body: { records: [{ petition_id, goal, domain, text }] }
+// text는 임베딩할 원문 — 호출부(인덱싱 스크립트)가 goal + eligibility_
+// gate 요약을 합쳐서 넘긴다. 이 함수는 그걸 그대로 임베딩해 Vectorize
+// 에 upsert만 한다 — 무엇을 임베딩할지는 판단하지 않는다.
+async function handleBenefitEmbedIndex(request, env, corsHeaders) {
+  if (!env.AI) return new Response(JSON.stringify({ error: 'AI 바인딩 없음 — wrangler.toml [ai] 확인' }), { status: 500, headers: corsHeaders });
+  if (!env.VECTORIZE) return new Response(JSON.stringify({ error: 'VECTORIZE 바인딩 없음 — wrangler.toml [[vectorize]] 확인, 인덱스 사전 생성 필요' }), { status: 500, headers: corsHeaders });
+
+  let body;
+  try { body = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  const records = body.records;
+  if (!Array.isArray(records) || records.length === 0) {
+    return new Response(JSON.stringify({ error: 'records(배열) 필요' }), { status: 400, headers: corsHeaders });
+  }
+  if (records.length > 100) {
+    // Workers AI 배치 한도 보호 — 대량 인덱싱은 호출부가 100건 단위로
+    // 쪼개서 여러 번 호출해야 한다(정확한 한도는 실제 배포 시 재확인).
+    return new Response(JSON.stringify({ error: '한 번에 최대 100건 — 호출부에서 배치 분할 필요' }), { status: 400, headers: corsHeaders });
+  }
+
+  let vectors;
+  try {
+    vectors = await _embedText(env, records.map((r) => r.text));
+  } catch (e) {
+    return new Response(JSON.stringify({ error: `임베딩 생성 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
+  }
+
+  const upsertPayload = records.map((r, i) => ({
+    id: r.petition_id,
+    values: vectors[i],
+    metadata: { goal: r.goal, domain: r.domain },
+  }));
+
+  try {
+    await env.VECTORIZE.upsert(upsertPayload);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: `Vectorize upsert 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
+  }
+
+  return new Response(JSON.stringify({ status: 'indexed', count: upsertPayload.length }), { headers: corsHeaders });
+}
+
+// GET /orchestration/benefit-semantic-search?query=...&domain=...&limit=20
+async function handleBenefitSemanticSearch(request, env, corsHeaders) {
+  if (!env.AI) return new Response(JSON.stringify({ error: 'AI 바인딩 없음' }), { status: 500, headers: corsHeaders });
+  if (!env.VECTORIZE) return new Response(JSON.stringify({ error: 'VECTORIZE 바인딩 없음' }), { status: 500, headers: corsHeaders });
+
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get('query');
+  const domainRaw = searchParams.get('domain');
+  let limit = parseInt(searchParams.get('limit') || '20', 10);
+  if (!Number.isFinite(limit) || limit <= 0) limit = 20;
+  limit = Math.min(limit, 50);
+
+  if (!query || query.trim().length === 0) {
+    return new Response(JSON.stringify({ error: 'query 필요(자연어 문장 그대로 — 키워드로 쪼개서 보내지 않는다)' }), { status: 400, headers: corsHeaders });
+  }
+
+  const domain = _normalizeBenefitDomain(domainRaw); // 기존 LIKE 검색용
+  // 매핑 함수를 그대로 재사용 — 이건 LIKE 특유의 로직이 아니라 자유
+  // 텍스트→고정 10종 정규화라 임베딩 검색에도 동일하게 필요하다.
+
+  let vectors;
+  try {
+    vectors = await _embedText(env, [query]);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: `쿼리 임베딩 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
+  }
+
+  let matches;
+  try {
+    const result = await env.VECTORIZE.query(vectors[0], {
+      topK: limit,
+      filter: domain ? { domain } : undefined,
+      returnMetadata: 'all',
+    });
+    matches = result.matches || [];
+  } catch (e) {
+    return new Response(JSON.stringify({ error: `Vectorize 조회 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
+  }
+
+  if (matches.length === 0) {
+    return new Response(JSON.stringify({ status: 'no_candidates', count: 0, candidates: [] }), { headers: corsHeaders });
+  }
+
+  // Vectorize 메타데이터엔 goal·domain만 있다(eligibility_gate는 크기
+  // 제한 때문에 안 넣음) — 매칭된 것만 골라 PocketBase procedure_maps
+  // 에서 전체 레코드를 조회한다(전수가 아니라 이 topK개만이라 가볍다).
+  const token = await _l1AdminToken(env);
+  const candidates = [];
+  for (const m of matches) {
+    try {
+      const filter = encodeURIComponent(`goal = '${(m.metadata?.goal || '').replace(/'/g, "\\'")}'`);
+      const res = await fetch(`${L1_DEFAULT}/api/collections/procedure_maps/records?filter=${filter}&perPage=1`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({ items: [] }));
+      const rec = data.items?.[0];
+      candidates.push({
+        goal: m.metadata?.goal || null,
+        domain: m.metadata?.domain || null,
+        score: m.score, // ★ total_match_estimate 대신 유사도 점수 —
+        // K-Compose가 이 점수로 확신도를 판단한다(임계값은 SP-20
+        // 문서에서 시작점만 제시, 실사용 데이터로 재검증 필요).
+        org_id: rec ? (rec.steps && rec.steps[0] && rec.steps[0].org_id) || null : null,
+        eligibility_gate: rec ? rec.eligibility_gate : null,
+        status: rec ? rec.status : null,
+        as_of_date: rec ? rec.as_of_date : null,
+      });
+    } catch (e) {
+      // 개별 레코드 조회 실패는 그 후보만 건너뛴다 — 전체를 죽이지 않는다.
+      continue;
+    }
+  }
+
+  return new Response(JSON.stringify({
+    status: candidates.length ? 'candidates_found' : 'no_candidates',
+    count: candidates.length,
+    candidates,
+  }), { headers: corsHeaders });
+}
+
 async function handleProcedureMapDraft(request, env, corsHeaders) {
   let payload;
   try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
@@ -4073,6 +4236,13 @@ export default {
       return handleProcedureMapLookup(request, env, corsHeaders);
     if (pathname === '/orchestration/benefit-candidates' && request.method === 'GET')
       return handleBenefitCandidateSearch(request, env, corsHeaders);
+    // 2026-07-16 신설 — 임베딩 기반 의미검색(bge-m3+Vectorize). 위
+    // /orchestration/benefit-candidates(LIKE 기반)는 SP-20 프로토콜에서
+    // 더 이상 참조하지 않지만 비상 폴백으로 코드에 남겨둔다.
+    if (pathname === '/orchestration/benefit-semantic-search' && request.method === 'GET')
+      return handleBenefitSemanticSearch(request, env, corsHeaders);
+    if (pathname === '/orchestration/benefit-embed-index' && request.method === 'POST')
+      return handleBenefitEmbedIndex(request, env, corsHeaders);
     if (pathname === '/orchestration/procedure-map/draft' && request.method === 'POST')
       return handleProcedureMapDraft(request, env, corsHeaders);
     if (pathname === '/orchestration/procedure-map/update' && request.method === 'POST')

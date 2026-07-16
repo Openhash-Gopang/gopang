@@ -517,7 +517,8 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[ORCHESTRATION_SUBTASK_RESULT:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_PROGRESS:[^\]]*\]/g, '')  // 2026-07-12 신설(SP-20 v1.4)
   .replace(/\[PROCEDURE_MAP_LOOKUP:[^\]]*\]/g, '')
-  .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6)
+  .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6, v1.9부터 레거시 폴백)
+  .replace(/\[BENEFIT_SEMANTIC_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.9, 임베딩 재설계)
   // 2026-07-09 정정 — DRAFT/UPDATE·KSEARCH_CANDIDATES는 steps=[...] 같은
   // 중첩 배열을 값으로 가져 위 _stripBracketTag()가 이미 먼저 처리했다
   // (이 체인에 들어오기 전에 적용됨) — 여기서 다시 정규식으로 지우지
@@ -857,12 +858,42 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       return true;
     }
 
+    // 2026-07-16 신설(SP-20 v1.9 STEP 0-DISCOVER, 임베딩 기반 전면
+    // 재설계) — query가 자연어 문장이라 콤마를 포함할 수 있다(예:
+    // "제주 거주, 만 30세 청년..."). 기존 BENEFIT_CANDIDATE_SEARCH
+    // 처럼 태그 전체를 콤마로 나누면 문장 안의 콤마에서 파싱이
+    // 깨진다 — query는 반드시 따옴표로 감싸게 하고, 정규식으로
+    // 따옴표 안쪽만 통째로 뽑는다(콤마 개수와 무관하게 안전).
+    const semanticSearchMatch = fullReply.match(
+      /\[BENEFIT_SEMANTIC_SEARCH:\s*query="([^"]*)"(?:,\s*domain=([^,\]]+))?(?:,\s*limit=(\d+))?\]/
+    );
+    if (semanticSearchMatch) {
+      console.log('[Orchestration] BENEFIT_SEMANTIC_SEARCH 감지 — worker.js 임베딩 의미검색');
+      await _updateBubble(_stripInternalTags(fullReply));
+      history.push({ role: 'assistant', content: fullReply });
+      const [, query, domain, limit] = semanticSearchMatch;
+      const qs = new URLSearchParams();
+      qs.set('query', query.trim());
+      if (domain) qs.set('domain', domain.trim());
+      if (limit) qs.set('limit', limit.trim());
+      let resultText;
+      try {
+        const res = await fetch(`${base}/orchestration/benefit-semantic-search?${qs.toString()}`);
+        resultText = res.ok ? JSON.stringify(await res.json()) : `{"error":"HTTP ${res.status}"}`;
+      } catch (e) {
+        resultText = `{"error":"${e.message}"}`;
+      }
+      await sendFn(`[BENEFIT_SEMANTIC_SEARCH 결과] ${resultText}\n\n위 후보 목록을 이어받아 RULE-02 STEP 0-C를 계속 진행하세요.`);
+      return true;
+    }
+
+    // ★ 비상 폴백으로 유지(2026-07-16부터 SP-20이 더 이상 안 씀) —
     // 2026-07-16 신설(SP-20 v1.6 STEP 0-DISCOVER) — 사업명을 모르는
     // 발견형 의도 전용. PROCEDURE_MAP_LOOKUP과 동일한 재주입 패턴이나
     // goal 완전일치 대신 q/domain LIKE 검색으로 다건을 받는다.
     const benefitSearchMatch = fullReply.match(/\[BENEFIT_CANDIDATE_SEARCH:\s*([^\]]+)\]/);
     if (benefitSearchMatch) {
-      console.log('[Orchestration] BENEFIT_CANDIDATE_SEARCH 감지 — worker.js 후보 검색');
+      console.log('[Orchestration] BENEFIT_CANDIDATE_SEARCH 감지 — worker.js 후보 검색(레거시 LIKE 경로)');
       await _updateBubble(_stripInternalTags(fullReply));
       history.push({ role: 'assistant', content: fullReply });
       const params = {};

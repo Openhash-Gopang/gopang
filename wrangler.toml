@@ -36,3 +36,24 @@ id = "cf1dc69a346747ac8319a6cab85640cf"
 [[services]]
 binding = "AGENT_SIGNER"
 service = "gopang-agent-signer"
+
+# 2026-07-16 추가 — 혜택 카탈로그 임베딩 기반 의미검색(docs/HANDOFF-
+# 5단계오케스트레이션-임베딩설계_2026-07-16.md 설계 반영). 별도 GPU
+# 서버 없이 Cloudflare Workers AI(bge-m3, BAAI 오픈소스 임베딩 모델)
+# + Vectorize(네이티브 벡터DB)로 해결한다 — 둘 다 별도 API 키·계정
+# 불필요, 기존 Cloudflare 계정 안에서 바로 쓸 수 있다.
+#
+# [ai] 바인딩은 id가 필요 없다(계정 단위로 자동 제공) — env.AI.run(...)
+# 으로 바로 호출 가능.
+[ai]
+binding = "AI"
+
+# ★ 배포 전 필수 — 아래 index_name의 Vectorize 인덱스를 먼저 만들어야
+# 한다(로컬에선 실행 못 함, 배포 권한 있는 쪽에서 1회 실행):
+#   wrangler vectorize create hondi-benefit-catalog --dimensions=1024 --metric=cosine
+# (bge-m3 임베딩 차원은 1024 — 다른 값이면 이 커맨드의 --dimensions도
+# 맞춰 바꿔야 한다. 정확한 차원은 최초 소량 테스트 임베딩 생성 후
+# 응답의 벡터 길이로 재확인 권장.)
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "hondi-benefit-catalog"
