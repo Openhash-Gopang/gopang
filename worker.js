@@ -3041,6 +3041,8 @@ async function handleBdongCode(request, env, corsHeaders, ctx) {
   });
   ctx?.waitUntil?.(cache.put(cacheKey, cacheResponse.clone()));
 
+  return new Response(JSON.stringify(result), { headers: corsHeaders });
+}
 
 // ── 공공데이터포털: 법제처 국가법령정보 (법령정보 목록 조회) (2026-07-16 신설) ──
 // PUBLIC-DATA-PORTAL-INTEGRATION-PLAN_v1_0 STEP 2.
@@ -3167,6 +3169,8 @@ async function handleLawSearch(request, env, corsHeaders, ctx) {
   });
   ctx?.waitUntil?.(cache.put(cacheKey, cacheResponse.clone()));
 
+  return new Response(JSON.stringify(result), { headers: corsHeaders });
+}
 
 // ── open.law.go.kr: 판례 목록/본문 조회 (2026-07-16 신설) ──────────────
 // PUBLIC-DATA-PORTAL-INTEGRATION-PLAN_v1_0 STEP 2-b.
