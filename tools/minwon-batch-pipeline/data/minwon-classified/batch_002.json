@@ -2,11 +2,11 @@
   "batch_id": "002",
   "classified_at": "2026-07-16",
   "total_items": 50,
-  "flagged_items": 13,
-  "flagged_high_priority": 11,
-  "flagged_low_priority": 2,
+  "flagged_items": 14,
+  "flagged_high_priority": 13,
+  "flagged_low_priority": 1,
   "domain_discovery": {
-    "taxonomy_size": 20,
+    "taxonomy_size": 21,
     "known_domain_hit_counts": {
       "BIZ": 4,
       "PENSION": 7,
@@ -28,7 +28,6 @@
       "IMMIGRATION": 1
     },
     "watch_list_candidates": [
-      "CERT_EXAM",
       "POLICY_INFO"
     ]
   },
@@ -595,13 +594,17 @@
       "auth_required": false,
       "flags": [
         {
+          "rule": "R3_cross_batch_duplicate_description",
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '004', 'id': 32, 'title': '자동차 말소 사실 증명서 발급 신청'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+        },
+        {
           "rule": "R4_bundled_gateway_service",
           "confidence": "low",
           "detail": "설명문에만 약한 번들 키워드 존재 — 3배치 누적 검증 결과 이 경우 오탐 비율이 높다(단일 서비스의 '통합 이력'·'일괄 처리 편의성' 표현일 가능성). 실제 여러 기관·서비스가 묶이는지 본문을 직접 확인할 것."
         }
       ],
       "review_required": true,
-      "priority": "low"
+      "priority": "high"
     },
     {
       "id": 31,
@@ -889,9 +892,14 @@
       "task_key_candidate": "행정안전부:지방세_납부확인서_서울외_발급",
       "proc_type_candidate": "ISSUE",
       "auth_required": true,
-      "flags": [],
-      "review_required": false,
-      "priority": "none"
+      "flags": [
+        {
+          "rule": "R3_cross_batch_duplicate_description",
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '004', 'id': 24, 'title': '지방세 납부확인서(서울) 발급'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
     },
     {
       "id": 47,

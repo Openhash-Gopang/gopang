@@ -201,10 +201,10 @@ def classify_batch(raw_path: Path, out_path: Path, classified_dir: Path = None, 
     #   IDENTITY_REG: 배치1(3건) + 배치2(1건) + 배치3(1건) = 4회
     #   PUBLIC_SAFETY: 배치1(1건) + 배치2(1건, 습득조회) + 배치3(2건, 고소고발/여권분실) = 3회+
     #   RESERVATION: 배치1(1건, 자동차검사예약) + 배치3(1건, 방문예약) = 2회
-    CONFIRMED_NEW_DOMAINS = {"IDENTITY_REG", "PUBLIC_SAFETY", "RESERVATION"}
-    # 아직 1회만 나온 것(CERT_EXAM: 배치2 #35, POLICY_INFO: 배치2 #43)은
-    # 계속 관찰 대상으로만 표시 — 다음 배치에서 재확인되면 그때 정식 편입.
-    WATCH_LIST = {"CERT_EXAM", "POLICY_INFO"}
+    #   CERT_EXAM: 배치2(1건, 2급생활스포츠지도사) + 배치4(1건, 한국사능력검정) = 2회
+    CONFIRMED_NEW_DOMAINS = {"IDENTITY_REG", "PUBLIC_SAFETY", "RESERVATION", "CERT_EXAM"}
+    # 아직 1회만 나온 것(POLICY_INFO: 배치2 #43)은 계속 관찰 대상으로만 표시.
+    WATCH_LIST = {"POLICY_INFO"}
 
     for it in items:
         flags = []
@@ -218,7 +218,16 @@ def classify_batch(raw_path: Path, out_path: Path, classified_dir: Path = None, 
         # R1: 카테고리-키워드 불일치
         cat = it.get("category")
         implausible_categories_for_identity = {"주택 및 부동산", "세무 및 납세", "차량 및 운송"}
-        if cat in implausible_categories_for_identity and "IDENTITY_REG" in domain_hits and cat.split()[0] not in it["title"]:
+        full_text = (it["title"] or "") + " " + (it.get("description") or "")
+        # 2026-07-16 정정 — "주민등록번호 대신 발급받는"(개인통관 고유부호) 오탐 발견.
+        # IDENTITY_REG 키워드가 부정/대체 문맥("대신", "아니", "불필요") 근처에만 있으면
+        # 그 서비스 자체가 신원계열이 아니라 신원정보를 대체·회피하는 맥락일 수 있다 —
+        # 이 경우 R1을 억제한다(완벽한 구문분석은 아니고 근접 어휘 휴리스틱).
+        negation_near_identity = any(
+            neg in full_text for neg in ["대신", "아니", "불필요"]
+        )
+        if (cat in implausible_categories_for_identity and "IDENTITY_REG" in domain_hits
+                and cat.split()[0] not in it["title"] and not negation_near_identity):
             flags.append({
                 "rule": "R1_category_keyword_mismatch",
                 "detail": f"원문 카테고리='{cat}'이지만 내용상 주민등록/신원 계열(IDENTITY_REG)로 추정됨 — 해당 도메인과 무관해 보임."

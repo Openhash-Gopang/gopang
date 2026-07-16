@@ -2,11 +2,11 @@
   "batch_id": "003",
   "classified_at": "2026-07-16",
   "total_items": 50,
-  "flagged_items": 10,
-  "flagged_high_priority": 9,
+  "flagged_items": 11,
+  "flagged_high_priority": 10,
   "flagged_low_priority": 1,
   "domain_discovery": {
-    "taxonomy_size": 20,
+    "taxonomy_size": 21,
     "known_domain_hit_counts": {
       "FAMILY": 2,
       "MATERNITY": 1,
@@ -228,9 +228,14 @@
       "task_key_candidate": "식품의약품안전처:식품관련영업신고_즉석판매제조가공업_한시적_영업신고의_경우",
       "proc_type_candidate": "ISSUE",
       "auth_required": true,
-      "flags": [],
-      "review_required": false,
-      "priority": "none"
+      "flags": [
+        {
+          "rule": "R3_cross_batch_duplicate_description",
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '004', 'id': 14, 'title': '식품관련영업신고-음식판매자동차영업소재지추가(푸드트럭)'}, {'batch_id': '004', 'id': 40, 'title': '식품영업 신고'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
     },
     {
       "id": 12,
