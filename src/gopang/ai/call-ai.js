@@ -158,6 +158,30 @@ export async function _loadKDeliverSP() {
     return null;
   }
 }
+// K-Execute(SP-22)·K-Report(SP-23) 로더 — 2026-07-16 신설(5단계 확장).
+// K-Compose·K-Deliver와 동일한 _loadSpByKey 패턴을 그대로 재사용한다.
+let _kExecuteSpCache = null;
+export async function _loadKExecuteSP() {
+  if (_kExecuteSpCache) return _kExecuteSpCache;
+  try {
+    _kExecuteSpCache = await _loadSpByKey('SP-22_kexecute', 'K-Execute');
+    return _kExecuteSpCache;
+  } catch (e) {
+    console.warn('[Orchestration] K-Execute SP 로드 실패:', e.message);
+    return null;
+  }
+}
+let _kReportSpCache = null;
+export async function _loadKReportSP() {
+  if (_kReportSpCache) return _kReportSpCache;
+  try {
+    _kReportSpCache = await _loadSpByKey('SP-23_kreport', 'K-Report');
+    return _kReportSpCache;
+  } catch (e) {
+    console.warn('[Orchestration] K-Report SP 로드 실패:', e.message);
+    return null;
+  }
+}
 // K-Search(SP-18) 로더 — 2026-07-09 신설. §0-F(AGENT-COMMON)가 오래전부터
 // [KSEARCH_HANDOFF]를 문서화하고 있었지만, 실제 로더가 없어 이 태그
 // 자체가 조용히 실패하는 상태였다(K-Compose의 nested 호출 스텁이
@@ -485,7 +509,9 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   // 2026-07-08 신설 — 오케스트레이션 3단계(K-Intent/K-Compose/K-Deliver) 핸드오프 태그(§0-H v3.40)
   .replace(/\[CALL_KINTENT:[^\]]*\]/g, '')
   .replace(/\[HANDOFF_TO_KCOMPOSE:[^\]]*\]/g, '')
+  .replace(/\[HANDOFF_TO_KEXECUTE:[^\]]*\]/g, '')  // 2026-07-16 신설(5단계 확장)
   .replace(/\[HANDOFF_TO_KDELIVER:[^\]]*\]/g, '')
+  .replace(/\[HANDOFF_TO_KREPORT:[^\]]*\]/g, '')  // 2026-07-16 신설(5단계 확장)
   .replace(/\[ORCHESTRATION_COMPLETE:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_HANDOFF_BACK:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_SUBTASK_RESULT:[^\]]*\]/g, '')
@@ -938,14 +964,38 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     return true;
   }
 
-  // ── K-Compose → K-Deliver (forward) ──
+  // ── K-Compose → K-Execute (forward, 2026-07-16 신설 — 5단계 확장) ──
+  const kExecuteMatch = fullReply.match(/\[HANDOFF_TO_KEXECUTE:([^\]]*)\]/);
+  if (kExecuteMatch) {
+    console.log('[Orchestration] HANDOFF_TO_KEXECUTE 감지 — K-Execute로 전달 전환');
+    await _updateBubble(_stripInternalTags(fullReply));
+    history.length = 0;
+    await _forwardSwitchSP(_loadKExecuteSP, 'K-Execute');
+    await sendFn(`[INTERNAL: K-Compose→K-Execute 위임 — 아래 계획을 이어받아 실행하세요: ${kExecuteMatch[1].trim()}]`);
+    return true;
+  }
+
+  // ── K-Execute → K-Deliver (forward) — 기존 K-Compose→K-Deliver와
+  // 같은 태그를 K-Execute도 낸다(무료 이관 경로는 K-Compose가 여전히
+  // 직접 냄, 아래 kDeliverMatch가 양쪽 다 받는다). ──
   const kDeliverMatch = fullReply.match(/\[HANDOFF_TO_KDELIVER:([^\]]*)\]/);
   if (kDeliverMatch) {
     console.log('[Orchestration] HANDOFF_TO_KDELIVER 감지 — K-Deliver로 전달 전환');
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
     await _forwardSwitchSP(_loadKDeliverSP, 'K-Deliver');
-    await sendFn(`[INTERNAL: K-Compose→K-Deliver 위임 — 아래 결과를 정리해 제출하세요: ${kDeliverMatch[1].trim()}]`);
+    await sendFn(`[INTERNAL: →K-Deliver 위임 — 아래 결과를 정리해 제출하세요: ${kDeliverMatch[1].trim()}]`);
+    return true;
+  }
+
+  // ── K-Deliver → K-Report (forward, 2026-07-16 신설 — 5단계 확장) ──
+  const kReportMatch = fullReply.match(/\[HANDOFF_TO_KREPORT:([^\]]*)\]/);
+  if (kReportMatch) {
+    console.log('[Orchestration] HANDOFF_TO_KREPORT 감지 — K-Report로 전달 전환');
+    await _updateBubble(_stripInternalTags(fullReply));
+    history.length = 0;
+    await _forwardSwitchSP(_loadKReportSP, 'K-Report');
+    await sendFn(`[INTERNAL: K-Deliver→K-Report 위임 — 아래 결과에 대한 이해당사자 통지/신고를 처리하세요: ${kReportMatch[1].trim()}]`);
     return true;
   }
 
