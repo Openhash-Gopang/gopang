@@ -36,16 +36,13 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H "${{ secrets.L1_SSH_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: pb_migrations 동기화 (신규/변경 파일만 전송)
-        run: |
-          rsync -avz --include='*.js' --exclude='*' \
-            pb_migrations/ \
-            "${{ secrets.L1_SSH_USER }}@${{ secrets.L1_SSH_HOST }}:/opt/gopang/pb/pb_migrations/"
-
       - name: 마이그레이션 적용 (강제 커맨드로 제한된 원격 스크립트 실행)
         run: |
           ssh "${{ secrets.L1_SSH_USER }}@${{ secrets.L1_SSH_HOST }}" "echo triggering apply-pb-migrations.sh"
         # ★ 위 ssh 접속 자체가 authorized_keys의 command= 강제 커맨드로
-        #   /opt/gopang/ops/apply-pb-migrations.sh를 실행시킨다.
-        #   "echo ..." 부분은 실제로 무시된다(강제 커맨드가 우선) — 로그에
-        #   무슨 의도인지 남기기 위한 표시 문자열일 뿐이다.
+        #   /opt/gopang/ops/apply-pb-migrations.sh를 실행시킨다. 이 스크립트가
+        #   GitHub main의 pb_migrations/를 직접 내려받은 뒤 migrate up까지
+        #   수행하므로, 이 한 번의 SSH 접속만으로 배포가 끝난다.
+        #   (2026-07-16 확인: rsync는 강제 커맨드 키와 애초에 호환되지 않아
+        #   제거함 — 강제 커맨드는 그 키로 맺는 모든 SSH 세션에 적용되므로
+        #   rsync 내부 SSH 세션도 함께 하이재킹당해 파일 전송 자체가 불가능했음)
