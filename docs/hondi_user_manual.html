@@ -349,6 +349,7 @@ body {
   <nav class="guide-toc" id="toc">
     <div class="guide-toc-title">목차</div>
     <a href="#how-to-read">이 문서를 읽는 법</a>
+    <a href="#foundation">PDV와 AC — 혼디의 작동 원리</a>
     <a href="#daily">일상에서의 혼디</a>
     <a href="#work">업무에서의 혼디</a>
     <a href="#principles">공통 원칙</a>
@@ -391,6 +392,35 @@ body {
         </div>
         <div class="gs-case-interop">
           🔗 <strong>상호운용 시 확장 가능성</strong> — 상대 기관도 혼디(또는 호환 AI 에이전트)를 운영할 경우, 어디까지 자동화되고 어디서부터 여전히 사람이 확인해야 하는지를 보여줍니다.
+        </div>
+      </div>
+    </section>
+
+    <!-- 0-1. PDV와 AC — 혼디의 작동 원리 -->
+    <section class="gs reveal" id="foundation">
+      <div class="gs-head">
+        <div class="gs-icon">🔐</div>
+        <div class="gs-head-text">
+          <div class="gs-num">00-1 · PDV와 AC</div>
+          <div class="gs-title">아래 모든 사례가 가능한 이유</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>일상·업무 사례를 보기 전에, 혼디가 이런 일들을 할 수 있는 근본 원리 두 가지를 먼저 알아두면 이해가 훨씬 쉽습니다.</p>
+
+        <div class="gs-case-grid" style="margin:16px 0">
+          <div class="gs-case-col gs-case-col-ok">
+            <span class="gs-case-col-label">PDV — Private Data Vault</span>
+            나와 나눈 모든 대화·기록은 서버가 아니라 <strong>내 기기(로컬)</strong>에 저장됩니다. 서버는 내용을 보관하지 않고, Openhash 기술로 "위변조되지 않았다"는 사실만 증명합니다. 내 데이터는 나 이외에는 누구도 열람할 수 없습니다.
+          </div>
+          <div class="gs-case-col gs-case-col-limit">
+            <span class="gs-case-col-label">AC — Agent Common</span>
+            가입 시점에는 모두 같은 AI 비서(AC)로 시작하지만, PDV에 쌓이는 나의 습관·일상·업무 지시를 학습하며 <strong>수개월에 걸쳐 개인화</strong>됩니다. 시간이 지날수록 문자 그대로 "나만의" 비서가 됩니다.
+          </div>
+        </div>
+
+        <div class="gs-highlight">
+          💡 <strong>요약</strong>: 이 문서에서 "혼디가 ~을 안다", "혼디가 ~을 기억한다"고 설명하는 부분은 모두 <strong>내 PDV 안에서만 일어나는 일</strong>입니다. 그리고 혼디가 갈수록 내 말을 더 잘 알아듣는 것처럼 느껴진다면, 그것은 <strong>AC가 개인화되고 있다는 증거</strong>입니다.
         </div>
       </div>
     </section>
