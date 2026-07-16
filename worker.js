@@ -10661,20 +10661,41 @@ async function handleProfilePost(request, env, corsHeaders) {
   // 덮어쓰지 않는다.
   const KSCO_CODE_RE = /^[0-9A][0-9]{0,4}$/;
   const KSCO_VISIBILITY = new Set(['private', 'contacts', 'public']);
+  // 2026-07-17 신설 — KSCO Tier3(자격규제·민감직종) 게이트.
+  // docs/ksco_schema_tier_classification_v1.md v1.1 재분류 결과.
+  // industry_fields.schema_id의 TIER3_REGULATED_SCHEMA_IDS와 동일 원칙 —
+  // 자기신고(visibility)로 이 목록의 직종을 공개로 노출할 수 없게 강제한다.
+  // KSCO 코드는 자릿수가 곧 계층(1자리=대분류...5자리=세세분류)이라 문자열
+  // startsWith로 상위 코드를 매칭하면 그 하위 전체가 자동으로 걸린다.
+  const TIER3_REGULATED_KSCO_PREFIXES = [
+    '2411', '2412', '2413', '2414', // 의사(전문/일반)·한의사·치과의사
+    '242',                          // 수의사
+    '2431', '2432',                 // 약사·한약사
+    '2711',                         // 판사·검사
+  ];
   let resolvedJobKsco = null;
   if ((entity_type === 'person' || entity_type === 'business') && job_ksco && typeof job_ksco === 'object') {
     const code = job_ksco.code != null ? String(job_ksco.code) : null;
     if (code === null || KSCO_CODE_RE.test(code)) {
+      const isRegulatedKsco = !!code && TIER3_REGULATED_KSCO_PREFIXES.some(p => code.startsWith(p));
       resolvedJobKsco = {
         code,
         label: (typeof job_ksco.label === 'string' && job_ksco.label.trim()) ? job_ksco.label.trim().slice(0, 100) : null,
         level: code ? code.length : null,
         source: ['self_reported', 'pdv_inferred', 'unconfirmed'].includes(job_ksco.source) ? job_ksco.source : 'unconfirmed',
         // 기본값 private — AC-AUTHOR §6(민감 직종 접근통제), is_public 기본 false와 동일 원칙.
-        visibility: KSCO_VISIBILITY.has(job_ksco.visibility) ? job_ksco.visibility : 'private',
+        // 규제 직종이면 클라이언트가 무엇을 보내든 무조건 private로 강제한다
+        // (industry_fields.schema_id의 TIER3_REGULATED_SCHEMA_IDS가 is_public을
+        // 강제하는 것과 동일한 원칙 — 자기신고만으로 공개 노출 불가).
+        visibility: isRegulatedKsco ? 'private' : (KSCO_VISIBILITY.has(job_ksco.visibility) ? job_ksco.visibility : 'private'),
         confirmed_at: job_ksco.confirmed_at || new Date().toISOString().slice(0, 10),
-        review_due: job_ksco.review_due || null,
+        review_due: isRegulatedKsco
+          ? (job_ksco.review_due || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10))
+          : (job_ksco.review_due || null),
       };
+      if (isRegulatedKsco) {
+        console.info('[Profile] KSCO Tier3 규제직종 감지 — visibility 강제 private:', code);
+      }
     }
     // 코드 형식이 어긋나면 조용히 무시(저장 자체를 막지 않음) — 프로필
     // 등록 실패의 사유가 되기엔 너무 지엽적인 필드(§0 U0: 실패보다 진행).

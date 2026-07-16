@@ -172,6 +172,32 @@ def compute_stats(profiles):
         for k in keys:
             grouped[k].append(present)
 
+    # 2026-07-17 신설 — 최소 표본 크기 임계값(주피터님 지시로 Claude가
+    # 의견 제시 후 반영). 100인 사고실험(§4)에서 n=1일 때 "과반수(50%
+    # 초과)" 기준이 우연히 채워진 필드까지 자동으로 "권장"으로 승격시키는
+    # 과신 문제를 실측으로 확인했다 — 그 해결.
+    #
+    # 기준(3단계, 조정 가능):
+    #   n < MIN_SAMPLE_PROVISIONAL(3)  → confidence='insufficient',
+    #     recommended_fields는 비운다. 표본 1~2건으로는 "패턴"이라 부를
+    #     근거 자체가 없다(우연과 구분 불가) — PA의 [§TEMPLATE-REFERENCE]는
+    #     이 경우를 참조 없는 최초 사례와 동일하게 취급하면 된다.
+    #   MIN_SAMPLE_PROVISIONAL <= n < MIN_SAMPLE_STABLE(5) → confidence=
+    #     'provisional' — 보여주되 "아직 확정 아님" 표시를 달아 PA가 과반수
+    #     이상치 하나에 끌려가지 않도록 참고용임을 분명히 한다.
+    #   n >= MIN_SAMPLE_STABLE → confidence='stable' — 정상적으로 신뢰.
+    #
+    # 왜 3과 5인가: n=3 미만은 "과반수"라는 개념 자체가 통계적으로 거의
+    # 무의미하다(n=2면 1건만 있어도 50%로 동률이라 판정 자체가 애매하고,
+    # n=1은 100% 자동 승격되는 게 이번에 발견한 결함이다). n=3부터는 적어도
+    # "2/3 이상 동의"라는 최소한의 다수결 의미가 생긴다. 5는 절대적인 통계
+    # 기준이라기보다, 이 서비스가 아직 초기 단계라 표본이 빨리 쌓이지
+    # 않는 코드가 대부분일 것으로 보여 임계값을 너무 높게 잡으면 대부분의
+    # 코드가 영영 "확정" 단계에 도달 못 하는 역효과가 있다고 판단해 낮게
+    # 잡은 것 — 실제 가입 속도를 보고 이 숫자(3, 5)는 조정하는 게 맞다.
+    MIN_SAMPLE_PROVISIONAL = 3
+    MIN_SAMPLE_STABLE = 5
+
     stats = {}
     for key, samples in grouped.items():
         n = len(samples)
@@ -179,11 +205,20 @@ def compute_stats(profiles):
         for s in samples:
             for f in s:
                 field_counts[f] += 1
-        stats[key] = {
-            'sample_size': n,
+
+        if n < MIN_SAMPLE_PROVISIONAL:
+            confidence = 'insufficient'
+            recommended = []
+        else:
+            confidence = 'provisional' if n < MIN_SAMPLE_STABLE else 'stable'
             # 과반수(50% 초과) 등장 필드만 "권장" — SP의 [§TEMPLATE-
             # REFERENCE] "과반수 패턴만 참고" 원칙과 동일 기준.
-            'recommended_fields': sorted([f for f, c in field_counts.items() if c > n / 2]),
+            recommended = sorted([f for f, c in field_counts.items() if c > n / 2])
+
+        stats[key] = {
+            'sample_size': n,
+            'confidence': confidence,
+            'recommended_fields': recommended,
             'field_frequency': {f: round(c / n, 3) for f, c in sorted(field_counts.items())},
         }
     return stats
@@ -213,9 +248,9 @@ def main():
     for key, cur in sorted(stats.items()):
         old = prev.get(key)
         if old is None:
-            print(f'[신규] {key} (표본 {cur["sample_size"]}건) → {cur["recommended_fields"]}')
-        elif set(old.get('recommended_fields', [])) != set(cur['recommended_fields']):
-            print(f'[변경] {key}: {old.get("recommended_fields")} → {cur["recommended_fields"]} (표본 {cur["sample_size"]}건)')
+            print(f'[신규] {key} (표본 {cur["sample_size"]}건, {cur["confidence"]}) → {cur["recommended_fields"]}')
+        elif set(old.get('recommended_fields', [])) != set(cur['recommended_fields']) or old.get('confidence') != cur['confidence']:
+            print(f'[변경] {key}: {old.get("recommended_fields")}({old.get("confidence","?")}) → {cur["recommended_fields"]}({cur["confidence"]}) (표본 {cur["sample_size"]}건)')
 
     output = {
         'generated_at': datetime.now(timezone.utc).isoformat(),
