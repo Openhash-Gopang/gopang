@@ -2555,6 +2555,8 @@ async function handleBenefitCandidateSearch(request, env, corsHeaders) {
 }
 
 // ════════════════════════════════════════════════════════════
+// 혜택 후보 의미검색 — 임베딩 기반 (2026-07-16, 처음부터 재설계)
+// ════════════════════════════════════════════════════════════
 // 배경: handleBenefitCandidateSearch(위, LIKE 기반)를 v2까지 패치했지만,
 // LIKE의 부분일치 폭발·조합 조건 조회 불가라는 구조적 한계 자체는 못
 // 넘었다. 임베딩(Cloudflare Workers AI bge-m3) + Vectorize로 바꾸면서,
@@ -2714,7 +2716,6 @@ async function handleBenefitSemanticSearch(request, env, corsHeaders) {
     candidates,
   }), { headers: corsHeaders });
 }
-
 
 async function handleProcedureMapDraft(request, env, corsHeaders) {
   let payload;
@@ -4245,7 +4246,6 @@ export default {
     // 2026-07-16 신설 — 임베딩 기반 의미검색(bge-m3+Vectorize). 위
     // /orchestration/benefit-candidates(LIKE 기반)는 SP-20 프로토콜에서
     // 더 이상 참조하지 않지만 비상 폴백으로 코드에 남겨둔다.
-    // [2026-07-17 복구] e7c1db3 커밋이 실수로 지웠던 것을 되살림.
     if (pathname === '/orchestration/benefit-semantic-search' && request.method === 'GET')
       return handleBenefitSemanticSearch(request, env, corsHeaders);
     if (pathname === '/orchestration/benefit-embed-index' && request.method === 'POST')
@@ -10750,10 +10750,15 @@ async function handleProfilePost(request, env, corsHeaders) {
         statuses,
         // active 기본값: 배열 안에 retired/unemployed"만" 있으면 false,
         // 그 외 하나라도 활동성 상태(학생·재직·자영업·전업주부·기타)가
-        // 섞여 있으면 true. 명시적 active 값이 오면 그걸 최우선.
+        // 섞여 있으면 true. job_ksco가 이번에 확정돼 있으면(은퇴자인데
+        // 자문·소일거리 등으로 직업 코드가 있는 경우) 그 자체도 활동성
+        // 신호로 반영한다 — 2026-07-17 100인 사고실험(§IDENTIFY-EXP)
+        // 케이스 #37에서 발견: "은퇴했지만 주 2일 자문"이 job_ksco는
+        // 채워지는데 work_domain.statuses=['retired']만 있어 active가
+        // false로 잘못 계산되던 결함. 명시적 active 값이 오면 그걸 최우선.
         active: typeof work_domain.active === 'boolean'
           ? work_domain.active
-          : statuses.some(s => !['retired', 'unemployed'].includes(s)),
+          : (statuses.some(s => !['retired', 'unemployed'].includes(s)) || !!resolvedJobKsco),
         // 조합 자체가 바뀐 시점만 갱신(원소 추가/제거 포함) — 같은
         // 조합을 매번 다시 제출해도 status_since가 밀리지 않게 한다.
         status_since: setsEqual ? (prevWd?.status_since || new Date().toISOString().slice(0, 10)) : new Date().toISOString().slice(0, 10),

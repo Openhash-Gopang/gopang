@@ -488,6 +488,7 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[PDV_DOMAIN_SET:[^\]]*\]/g, '')    // PDV 일상/업무 전환 태그 (2026-07-13 신설)
   .replace(/\[TEMPLATE_LOOKUP:[^\]]*\]/g, '')   // 정체성 템플릿 참조 조회 태그 (2026-07-17 신설, 방어적 — 정상 경로는 _handleProfileTags가 먼저 소비)
   .replace(/\[INDUSTRY_TEMPLATE_LOOKUP:[^\]]*\]/g, '') // 구 태그명(v2.3~) — SP 갱신 유예기간 동안 방어적으로 함께 제거
+  .replace(/\[TEMPLATE_CANDIDATE:[^\]]*\]/g, '') // 템플릿 후보 큐잉 태그 (2026-07-17 신설 — 100인 사고실험 케이스 #52에서 strip 누락 발견, 그 즉시 추가)
   .replace(/\[JOB_KSCO_REVIEWED\]/g, '')        // job_ksco 재확인 완료 태그 (2026-07-14 신설, 구멍 E)
   .replace(/\[JOB_KSCO_REVIEW_DUE:[\s\S]*?\]/g, '')  // 방어적 — 정상 경로는 컨텍스트 주입용, AI가 실수로 에코하면 제거
   .replace(/\[GWP:\s*[\w-]+\]/g, '')           // 하위 시스템 라우팅 태그 (방어적 — 정상 경로는 _parseAgentTags가 처리)
@@ -519,7 +520,8 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[ORCHESTRATION_SUBTASK_RESULT:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_PROGRESS:[^\]]*\]/g, '')  // 2026-07-12 신설(SP-20 v1.4)
   .replace(/\[PROCEDURE_MAP_LOOKUP:[^\]]*\]/g, '')
-  .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6)
+  .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6, v1.9부터 레거시 폴백)
+  .replace(/\[BENEFIT_SEMANTIC_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.9, 임베딩 재설계)
   // 2026-07-09 정정 — DRAFT/UPDATE·KSEARCH_CANDIDATES는 steps=[...] 같은
   // 중첩 배열을 값으로 가져 위 _stripBracketTag()가 이미 먼저 처리했다
   // (이 체인에 들어오기 전에 적용됨) — 여기서 다시 정규식으로 지우지
@@ -694,36 +696,53 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI, use
       : undefined;
 
     const base = (CFG.endpoint || '').replace(/\/+$/, '');
-    let refs = [];
-    try {
-      const res = await fetch(`${base}/template-lookup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          entity_type: params.entity_type || (params.schema_id ? 'business' : 'person'),
-          schema_id: params.schema_id || undefined,
-          job_ksco_code: params.job_ksco_code || undefined,
-          work_domain_statuses: workDomainStatuses,
-        }),
+
+    // 2026-07-17 수정 — 100인 사고실험 케이스 #64("카페 사장이자 바리스타")
+    // 에서 발견: schema_id(업종)와 job_ksco_code/work_domain(개인 직업)이
+    // 같은 세션에서 함께 확정되면, 예전 코드는 이걸 한 요청에 AND로 묶어
+    // 보냈다 — "이 KSIC 코드'와 동시에' 이 KSCO 코드도 가진 프로필"이라는
+    // 조건은 사실상 항상 공집합에 가까워(업종 템플릿과 개인 직업 템플릿은
+    // 서로 다른 모집단이다), 참조가 있어야 할 상황에서도 매번 "최초 사례"로
+    // 잘못 처리됐다. 두 축이 모두 있으면 독립된 요청 두 번으로 분리한다.
+    const lookups = [];
+    if (params.schema_id) {
+      lookups.push({ label: 'INDUSTRY_TEMPLATE', body: { entity_type: 'business', schema_id: params.schema_id } });
+    }
+    if (params.job_ksco_code || workDomainStatuses) {
+      lookups.push({
+        label: 'PERSON_TEMPLATE',
+        body: { entity_type: 'person', job_ksco_code: params.job_ksco_code || undefined, work_domain_statuses: workDomainStatuses },
       });
-      if (res.ok) {
-        const data = await res.json().catch(() => ({ refs: [] }));
-        refs = data.refs || [];
-      } else {
-        console.warn('[Profile] template-lookup 실패 (HTTP', res.status, ') — 빈 참조로 진행');
-      }
-    } catch (e) {
-      console.warn('[Profile] template-lookup 요청 실패(무시 — 빈 참조로 진행):', e.message);
     }
 
-    // 참조가 없어도(신규 업종/정체성 최초 사례) 빈 블록으로 다음 턴을
-    // 진행시킨다 — SP의 [§INDUSTRY-TEMPLATE] 원칙("참조 없으면 조용히
-    // 본인 지식으로 진행")이 이 빈 블록을 보고 그대로 동작한다.
-    const contextLabel = params.schema_id ? 'INDUSTRY_TEMPLATE' : 'PERSON_TEMPLATE';
-    const contextBlock = refs.length
-      ? `[CONTEXT: ${contextLabel}]\n${JSON.stringify(refs)}\n[/CONTEXT]`
-      : `[CONTEXT: ${contextLabel}]\n(참조 사례 없음 — 최초 사례)\n[/CONTEXT]`;
-    await sendFn(contextBlock);
+    const contextBlocks = [];
+    for (const { label, body } of lookups) {
+      let refs = [];
+      try {
+        const res = await fetch(`${base}/template-lookup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) {
+          const data = await res.json().catch(() => ({ refs: [] }));
+          refs = data.refs || [];
+        } else {
+          console.warn('[Profile] template-lookup 실패 (HTTP', res.status, `, ${label}) — 빈 참조로 진행`);
+        }
+      } catch (e) {
+        console.warn(`[Profile] template-lookup 요청 실패(${label}, 무시 — 빈 참조로 진행):`, e.message);
+      }
+      // 참조가 없어도(신규 업종/정체성 최초 사례) 빈 블록으로 다음 턴을
+      // 진행시킨다 — SP의 [§TEMPLATE-REFERENCE] 원칙("참조 없으면 조용히
+      // 본인 지식으로 진행")이 이 빈 블록을 보고 그대로 동작한다.
+      contextBlocks.push(
+        refs.length
+          ? `[CONTEXT: ${label}]\n${JSON.stringify(refs)}\n[/CONTEXT]`
+          : `[CONTEXT: ${label}]\n(참조 사례 없음 — 최초 사례)\n[/CONTEXT]`
+      );
+    }
+    await sendFn(contextBlocks.join('\n'));
     return true;
   }
 
@@ -731,6 +750,39 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI, use
   const stepMatch = fullReply.match(/\[(\d+)\/\d+단계\]/);
   if (stepMatch && !localStorage.getItem('hondi_profile_done')) {
     try { localStorage.setItem('hondi_profile_step', stepMatch[1]); } catch {}
+  }
+
+  // ── TEMPLATE_CANDIDATE — 최초 사례 템플릿 후보 큐잉 (2026-07-17 신설) ──
+  // PROFILE_SUBMIT과 같은 응답에 함께 출력되므로 그 처리보다 먼저 감지한다.
+  // 아직 서버 컬렉션(identity_templates 등)이 없어(§RENEWALING 배치 도구가
+  // 그 역할까지는 아직 안 함 — PocketBase 마이그레이션 별도 필요) 우선
+  // 로컬에 큐잉만 해둔다. 클라이언트 하나의 큐일 뿐이라 전체 통계로서의
+  // 의미는 없고, "이 기기에서 최초 사례가 몇 번 있었나"를 사람이 나중에
+  // 확인할 수 있는 최소한의 기록이다 — 실제 코드↔템플릿 갱신은 여전히
+  // tools/renew_identity_templates.py(전수 조사)의 몫.
+  const templateCandidateMatch = fullReply.match(/\[TEMPLATE_CANDIDATE:\s*([^\]]*)\]/);
+  if (templateCandidateMatch) {
+    try {
+      const raw = templateCandidateMatch[1];
+      const params = {};
+      for (const part of raw.split(',')) {
+        const eq = part.indexOf('=');
+        if (eq === -1) continue;
+        params[part.slice(0, eq).trim()] = part.slice(eq + 1).trim();
+      }
+      const queue = JSON.parse(localStorage.getItem('hondi_template_candidates') || '[]');
+      queue.push({
+        key: params.key || null,
+        fields: params.fields ? params.fields.split('|').map(f => f.trim()).filter(Boolean) : [],
+        queued_at: new Date().toISOString(),
+      });
+      // 무한 누적 방지 — 오래된 것부터 버리고 최근 200건만 유지.
+      while (queue.length > 200) queue.shift();
+      localStorage.setItem('hondi_template_candidates', JSON.stringify(queue));
+      console.log('[Profile] TEMPLATE_CANDIDATE 큐잉 완료:', params.key);
+    } catch (e) {
+      console.warn('[Profile] TEMPLATE_CANDIDATE 큐잉 실패(무시):', e.message);
+    }
   }
 
   // ── PROFILE_SUBMIT ────────────────────────────────────────
@@ -956,12 +1008,13 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       return true;
     }
 
+    // ★ 비상 폴백으로 유지(2026-07-16부터 SP-20이 더 이상 안 씀) —
     // 2026-07-16 신설(SP-20 v1.6 STEP 0-DISCOVER) — 사업명을 모르는
     // 발견형 의도 전용. PROCEDURE_MAP_LOOKUP과 동일한 재주입 패턴이나
     // goal 완전일치 대신 q/domain LIKE 검색으로 다건을 받는다.
     const benefitSearchMatch = fullReply.match(/\[BENEFIT_CANDIDATE_SEARCH:\s*([^\]]+)\]/);
     if (benefitSearchMatch) {
-      console.log('[Orchestration] BENEFIT_CANDIDATE_SEARCH 감지 — worker.js 후보 검색');
+      console.log('[Orchestration] BENEFIT_CANDIDATE_SEARCH 감지 — worker.js 후보 검색(레거시 LIKE 경로)');
       await _updateBubble(_stripInternalTags(fullReply));
       history.push({ role: 'assistant', content: fullReply });
       const params = {};
