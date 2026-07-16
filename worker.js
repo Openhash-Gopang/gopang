@@ -3167,6 +3167,126 @@ async function handleLawSearch(request, env, corsHeaders, ctx) {
   });
   ctx?.waitUntil?.(cache.put(cacheKey, cacheResponse.clone()));
 
+
+// ── open.law.go.kr: 판례 목록/본문 조회 (2026-07-16 신설) ──────────────
+// PUBLIC-DATA-PORTAL-INTEGRATION-PLAN_v1_0 STEP 2-b.
+// data.go.kr이 아니라 별도 시스템(국가법령정보 공동활용) — 인증은
+// env.LAW_GO_KR_OC(값 "openhash")를 OC 요청변수로 넘긴다.
+// DATA_GO_KR_API_KEY와는 완전히 무관하니 혼동하지 말 것.
+//
+// ★ mode=search: 판례 목록 검색 (사건명/본문 키워드)
+// ★ mode=detail: 판례 본문 조회 (판례일련번호 ID 필요 — 보통 search
+//   결과의 "판례상세링크"나 판례일련번호 필드에서 얻는다)
+//
+// ★ 캐시 TTL 6h — 법령검색(STEP 2)과 동일 이유(PLAN §4 표에는 없던 값이라
+//   법령정보와 같은 갱신 빈도로 잠정 설정, 실제 판례 갱신 주기가 다르면
+//   추후 조정)
+
+async function handleLawPrecedent(request, env, corsHeaders, ctx) {
+  const url = new URL(request.url);
+  const mode = url.searchParams.get('mode') === 'detail' ? 'detail' : 'search';
+
+  if (!env.LAW_GO_KR_OC) {
+    return new Response(JSON.stringify({
+      error: 'LAW_OC_NOT_CONFIGURED',
+      message: 'LAW_GO_KR_OC가 설정되지 않았습니다 — open.law.go.kr에서 발급받은 OC 값을 등록하세요.',
+    }), { status: 503, headers: corsHeaders });
+  }
+
+  const cacheKeyStr = mode === 'detail'
+    ? `https://law-prec-cache.internal/?mode=detail&id=${encodeURIComponent(url.searchParams.get('id') || '')}`
+    : `https://law-prec-cache.internal/?mode=search&q=${encodeURIComponent(url.searchParams.get('q') || '')}&page=${url.searchParams.get('page') || '1'}`;
+  const cacheKey = new Request(cacheKeyStr);
+  const cache = caches.default;
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    const body = await cached.json();
+    return new Response(JSON.stringify({ ...body, cache: 'hit' }), { headers: corsHeaders });
+  }
+
+  const DATASET = 'law_precedent';
+  const today = _todayKST();
+  const cap = Number(env.PUBLIC_DATA_DAILY_CAP_LAW_PREC || env.PUBLIC_DATA_DAILY_CAP) || 300;
+  let usage;
+  try {
+    usage = await _l1GetPublicDataUsage(env, DATASET, today);
+  } catch (e) {
+    usage = null;
+  }
+  if (usage && Number(usage.count) >= cap) {
+    return new Response(JSON.stringify({
+      error: 'DAILY_BUDGET_EXCEEDED',
+      message: `오늘 판례 조회 한도(${cap}회)를 초과했습니다. 내일 다시 시도해주세요.`,
+      count: usage.count,
+    }), { status: 429, headers: corsHeaders });
+  }
+
+  let apiUrl;
+  if (mode === 'detail') {
+    const id = url.searchParams.get('id');
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'MISSING_ID', message: 'mode=detail에는 id(판례일련번호)가 필요합니다.' }), { status: 400, headers: corsHeaders });
+    }
+    apiUrl = new URL('http://www.law.go.kr/DRF/lawService.do');
+    apiUrl.searchParams.set('target', 'prec');
+    apiUrl.searchParams.set('ID', id);
+  } else {
+    const query = (url.searchParams.get('q') || '').trim();
+    if (!query) {
+      return new Response(JSON.stringify({ error: 'MISSING_QUERY', message: 'mode=search(기본값)에는 q가 필요합니다.' }), { status: 400, headers: corsHeaders });
+    }
+    apiUrl = new URL('http://www.law.go.kr/DRF/lawSearch.do');
+    apiUrl.searchParams.set('target', 'prec');
+    apiUrl.searchParams.set('query', query);
+    apiUrl.searchParams.set('display', String(Math.min(100, Math.max(1, Number(url.searchParams.get('rows')) || 20))));
+    apiUrl.searchParams.set('page', String(Math.max(1, Number(url.searchParams.get('page')) || 1)));
+  }
+  apiUrl.searchParams.set('OC', env.LAW_GO_KR_OC);
+  apiUrl.searchParams.set('type', 'JSON');
+
+  let apiRes;
+  try {
+    apiRes = await fetch(apiUrl.toString(), { signal: AbortSignal.timeout(8000) });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'FETCH_FAILED', message: e.message }), { status: 502, headers: corsHeaders });
+  }
+
+  ctx?.waitUntil?.(_l1IncrementPublicDataUsage(env, DATASET, today).catch((e) => {
+    console.warn('[law-precedent] 예산 카운터 증분 실패:', e.message);
+  }));
+
+  if (!apiRes.ok) {
+    const errText = await apiRes.text().catch(() => '');
+    return new Response(JSON.stringify({ error: 'LAW_GO_KR_ERROR', status: apiRes.status, detail: errText }), { status: 502, headers: corsHeaders });
+  }
+
+  const raw = await apiRes.json().catch(() => null);
+  if (raw === null) {
+    // JSON 파싱 실패 — open.law.go.kr이 이 요청엔 XML/HTML을 돌려줬을 수
+    // 있다(문서에 JSON 봉투가 명시 안 된 것과 같은 맥락). 지어내지 않고
+    // 실패를 그대로 알린다.
+    return new Response(JSON.stringify({
+      error: 'UNEXPECTED_RESPONSE_FORMAT',
+      message: 'open.law.go.kr 응답을 JSON으로 파싱하지 못했습니다 — 실제 응답 구조를 확인해 STEP 2-c에서 보정이 필요합니다.',
+    }), { status: 502, headers: corsHeaders });
+  }
+
+  // best-effort 언랩 — 정확한 키 구조는 실제 첫 호출로 확인 후 STEP 2-c에서 확정
+  const unwrapped = raw?.PrecSearch || raw?.PrecService || raw;
+
+  const result = {
+    mode,
+    raw: unwrapped,
+    source: 'open.law.go.kr (국가법령정보 공동활용, 법제처)',
+    attribution: '자료출처: 법제처 국가법령정보센터',
+    cache: 'miss',
+  };
+
+  const cacheResponse = new Response(JSON.stringify(result), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' }, // 6h TTL(잠정)
+  });
+  ctx?.waitUntil?.(cache.put(cacheKey, cacheResponse.clone()));
+
   return new Response(JSON.stringify(result), { headers: corsHeaders });
 }
 
@@ -3583,6 +3703,12 @@ export default {
     // (open.law.go.kr 별도 OC 인증 — STEP 2-b에서 분리 구현 예정).
     if (pathname === '/public-data/law-search' && request.method === 'GET')
       return handleLawSearch(request, env, corsHeaders, ctx);
+
+    // ── open.law.go.kr: 판례 목록/본문 조회 (2026-07-16 신설) ────────
+    // PUBLIC-DATA-PORTAL-INTEGRATION-PLAN_v1_0 STEP 2-b. LAW_GO_KR_OC
+    // 사용 — DATA_GO_KR_API_KEY와 무관한 별도 인증.
+    if (pathname === '/public-data/law-precedent' && request.method === 'GET')
+      return handleLawPrecedent(request, env, corsHeaders, ctx);
 
     // ── merkle (T10) ─────────────────────────────────────────
     if (pathname === '/merkle/verify')           return handleMerkleVerify(request, env, corsHeaders);
