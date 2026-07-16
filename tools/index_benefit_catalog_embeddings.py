@@ -26,7 +26,13 @@ import urllib.request
 import urllib.error
 
 ELIGIBILITY_PATH = "tools/batch_output/eligibility_gates_final.json"  # merge 완료본
-FALLBACK_PATH = "/mnt/user-data/uploads/eligibility_gates.json"  # merge 전 10,310건
+FALLBACK_PATH = "tools/batch_output/eligibility_gates.json"  # merge 전 10,310건
+# ★ 2026-07-16 정정 — 원래 FALLBACK_PATH가 "/mnt/user-data/uploads/..."로
+# 돼 있었는데, 이건 작성 당시 세션(Claude 샌드박스)에서만 유효한 절대
+# 경로였다. 실제 배포 권한이 있는 쪽(로컬 Windows 등)에서 이 스크립트를
+# 돌리면 그 경로가 존재하지 않아 FileNotFoundError가 난다 — 리포에
+# 커밋된 실제 파일(tools/batch_output/eligibility_gates.json, 10,310건
+# 확인됨)을 가리키도록 고쳤다.
 RAW_PATH = "tools/civil-petitions-raw.json"
 BATCH_SIZE = 100  # worker.js handleBenefitEmbedIndex의 1회 상한과 일치
 
