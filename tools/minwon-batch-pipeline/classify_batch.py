@@ -6,7 +6,7 @@
 입력: data/minwon-raw/batch_NNN_*.json
 출력: data/minwon-classified/batch_NNN.json
 
-이상탐지 규칙 5개 (지난 50건 수작업 감사에서 실제로 발견한 패턴을 규칙화):
+이상탐지 규칙 9개 (지난 50건 수작업 감사 + 250건 누적 운영 중 실제로 발견한 패턴을 규칙화):
   R1. 카테고리-키워드 불일치 (예: 주민등록 관련인데 "주택 및 부동산"으로 태깅)
   R2. 제목 동사 vs 버튼 라벨 동사 불일치 (예: 제목은 "열람"인데 버튼은 "발급하기")
   R3. 설명(description) 텍스트 중복 해시 (복붙 오류 탐지 + 배치 간 문서군 탐지)
@@ -16,6 +16,14 @@
   R7. 폐지·통합된 행정구역/기관명(예: 전라남도·광주광역시)이 소관기관으로
       그대로 들어온 경우 — 승계기관 확인 요구(SUCCESSOR_AGENCY_MAP)
   R8. 전국 표준형 서비스인데 특정 시군구 하나만 소관기관인 경우 — 검증 요청
+  R9. 유사(핵심명 동일) 제목인데 category/auth_required/button 등 메타데이터가
+      갈리는 경우 — 배치·배치간 모두 검사(2026-07-16 신설). 예:
+      "사실증명(사업자등록사실여부)" vs "사실증명신청(사업자등록사실여부)"처럼
+      제목이 행위접미사(신청/열람/조회/발급 등) 유무만 다른 경우 R3(설명 완전
+      일치)·R6(제목 완전 일치)이 둘 다 못 잡는 사각지대였다. 핵심명은 정확
+      일치를 요구하되(자유 위치 substring 제거는 오탐 위험이 커서 배제),
+      "제목 자체는 사실상 동일"이라는 판단만 규칙화하고 최종 병합 여부는
+      검토자가 U2-1 원칙에 따라 확인한다(자동 병합하지 않음).
 
 도메인 taxonomy는 SP-CIVIL-* (죽은 라우팅 경로지만 분류 사전으로는 재사용)의
 17개 도메인 근사치를 시드로 사용한다. 여기서 신규 도메인이 나오면(예: "치안/신고")
@@ -125,6 +133,22 @@ def normalize_description(desc: str) -> str:
     return s.rstrip(".。 ")
 
 
+# R9용: 괄호 직전 또는 문미에 붙는 행위접미사만 제거해 핵심명을 만든다.
+# (문자열 아무 위치에서나 "신청" 등을 지우면 핵심명 자체를 훼손해 무관한
+# 제목끼리 뭉치는 오탐이 생길 수 있어, 위치를 접미사로 제한한다.)
+ACTION_SUFFIX_RE = re.compile(
+    r"(?:신청하기|신청|발급하기|발급|조회하기|조회|열람|접수|확인)(?=\(|$)"
+)
+
+
+def core_title_key(title: str) -> str:
+    """R9용 핵심명 추출 — 공백 제거 후 괄호 직전/문미 행위접미사만 제거.
+    2026-07-16 발견: "사실증명(사업자등록사실여부)" vs
+    "사실증명신청(사업자등록사실여부)"처럼 행위접미사 유무만 다른데
+    R3(설명 완전일치)·R6(제목 완전일치) 둘 다 못 잡는 사례가 있었다."""
+    return ACTION_SUFFIX_RE.sub("", normalize_title(title))
+
+
 def button_verb(button):
     if not button:
         return None
@@ -197,6 +221,23 @@ def classify_batch(raw_path: Path, out_path: Path, classified_dir: Path = None, 
     for it in items:
         h = hashlib.sha256(normalize_description(it.get("description")).encode("utf-8")).hexdigest()
         desc_hash_map[h].append(it["id"])
+
+    # R9용: 이전 배치의 핵심명 -> [{batch_id, id, title, category, auth_required, button, agency}]
+    # (분류 산출물이 아니라 raw를 쓴다 — category_raw/proc_type_candidate로 가공되기 전
+    # 원본 필드명(category/button)이 필요해서, R3 cross-batch와 동일한 이유.)
+    prior_core_index = defaultdict(list)
+    for pit in prior_raw_items:
+        ck = core_title_key(pit["title"])
+        prior_core_index[ck].append({
+            "batch_id": pit.get("_batch_id"), "id": pit.get("id"), "title": pit.get("title"),
+            "category": pit.get("category"), "auth_required": pit.get("auth_required"),
+            "button": pit.get("button"),
+        })
+
+    # R9용: 이번 배치 내부 핵심명 -> id 목록
+    core_key_map = defaultdict(list)
+    for it in items:
+        core_key_map[core_title_key(it["title"])].append(it["id"])
 
 
     classified = []
@@ -341,6 +382,38 @@ def classify_batch(raw_path: Path, out_path: Path, classified_dir: Path = None, 
                     "detail": f"동일 제목 '{it['title']}'이 이전 배치에서는 소관기관={sorted(prior_agencies)}로, "
                               f"이번 배치에서는 {sorted(cur_agencies)}로 기록됨 — 동일 서비스명에 서로 다른 "
                               f"소관기관이 붙는 원본 데이터 불일치, 혹은 실제로는 유사명의 별개 서비스."
+                })
+
+        # R9: 핵심명(행위접미사 제거) 동일 + category/auth_required/button 등 메타데이터 불일치
+        ck = core_title_key(it["title"])
+        same_batch_dupes = [i for i in core_key_map.get(ck, []) if i != it["id"]]
+        if same_batch_dupes:
+            flags.append({
+                "rule": "R9_similar_title_metadata_mismatch",
+                "detail": f"핵심명(행위접미사 제거) 기준 이번 배치 항목 {same_batch_dupes}와 동일 — "
+                          f"제목이 '신청/열람/조회/발급' 등 접미사만 다른 사실상 동일 서비스일 가능성. "
+                          f"category/auth_required/button 등 필드가 갈리면 병합 전 확인 필요(U2-1)."
+            })
+        cross_batch_matches = prior_core_index.get(ck, [])
+        if cross_batch_matches:
+            mismatches = []
+            for m in cross_batch_matches:
+                diffs = []
+                if m["category"] != cat:
+                    diffs.append(f"category:{m['category']!r}→{cat!r}")
+                if m["auth_required"] != it.get("auth_required"):
+                    diffs.append(f"auth_required:{m['auth_required']!r}→{it.get('auth_required')!r}")
+                if m["button"] != it.get("button"):
+                    diffs.append(f"button:{m['button']!r}→{it.get('button')!r}")
+                if diffs:
+                    mismatches.append(f"배치{m['batch_id']}#{m['id']}('{m['title']}': {', '.join(diffs)})")
+            if mismatches:
+                flags.append({
+                    "rule": "R9_cross_batch_similar_title_metadata_mismatch",
+                    "confidence": "high",
+                    "detail": f"핵심명(행위접미사 제거) 기준 제목은 이전 배치 유사 항목과 사실상 동일하나 "
+                              f"필드가 다름 — {'; '.join(mismatches)}. 원본(정부24) 표기 불일치이거나 실제로 "
+                              f"다른 접수창구/절차를 가리키는 별개 항목일 수 있음 — 자동 병합하지 않고 검토자 확인 필요."
                 })
 
         classified.append({

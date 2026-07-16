@@ -2,8 +2,8 @@
   "batch_id": "005",
   "classified_at": "2026-07-16",
   "total_items": 50,
-  "flagged_items": 18,
-  "flagged_high_priority": 18,
+  "flagged_items": 20,
+  "flagged_high_priority": 20,
   "flagged_low_priority": 0,
   "domain_discovery": {
     "taxonomy_size": 21,
@@ -466,9 +466,15 @@
       "task_key_candidate": "국세청:사실증명신청_사업자등록사실여부",
       "proc_type_candidate": "PORTAL_REDIRECT",
       "auth_required": false,
-      "flags": [],
-      "review_required": false,
-      "priority": "none"
+      "flags": [
+        {
+          "rule": "R9_cross_batch_similar_title_metadata_mismatch",
+          "confidence": "high",
+          "detail": "핵심명(행위접미사 제거) 기준 제목은 이전 배치 유사 항목과 사실상 동일하나 필드가 다름 — 배치001#41('사실증명(사업자등록사실여부)': category:'세무 및 납세'→None, auth_required:True→False, button:'발급하기'→'사이트가기'). 원본(정부24) 표기 불일치이거나 실제로 다른 접수창구/절차를 가리키는 별개 항목일 수 있음 — 자동 병합하지 않고 검토자 확인 필요."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
     },
     {
       "id": 24,
@@ -597,7 +603,7 @@
       "flags": [
         {
           "rule": "R3_cross_batch_duplicate_description",
-          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '002', 'id': 46, 'title': '지방세 납부확인서(서울외) 발급'}, {'batch_id': '004', 'id': 24, 'title': '지방세 납부확인서(서울) 발급'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '002', 'id': 46, 'title': '지방세 납부확인서(서울외) 발급'}, {'batch_id': '004', 'id': 24, 'title': '지방세 납부확인서(서울) 발급'}, {'batch_id': '006', 'id': 7, 'title': '등록세 납부확인서(서울) 발급'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
         }
       ],
       "review_required": true,
@@ -649,9 +655,15 @@
       "task_key_candidate": "국세청:사실증명신청_신고사실없음",
       "proc_type_candidate": "PORTAL_REDIRECT",
       "auth_required": false,
-      "flags": [],
-      "review_required": false,
-      "priority": "none"
+      "flags": [
+        {
+          "rule": "R9_cross_batch_similar_title_metadata_mismatch",
+          "confidence": "high",
+          "detail": "핵심명(행위접미사 제거) 기준 제목은 이전 배치 유사 항목과 사실상 동일하나 필드가 다름 — 배치002#15('사실증명(신고사실없음)': category:'세무 및 납세'→None, auth_required:True→False, button:'발급하기'→'사이트가기'). 원본(정부24) 표기 불일치이거나 실제로 다른 접수창구/절차를 가리키는 별개 항목일 수 있음 — 자동 병합하지 않고 검토자 확인 필요."
+        }
+      ],
+      "review_required": true,
+      "priority": "high"
     },
     {
       "id": 34,

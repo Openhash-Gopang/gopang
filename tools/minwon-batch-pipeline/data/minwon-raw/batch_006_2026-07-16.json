@@ -1,0 +1,541 @@
+{
+  "batch_id": "006",
+  "ingested_at": "2026-07-16T00:00:00Z",
+  "items": [
+    {
+      "id": 1,
+      "title": "개별주택가격 확인서 발급",
+      "description": "시장·군수 또는 구청장이 결정·공시한 개별주택의 가격을 확인받기 위하여 신청하는 민원사무입니다. ※ 모바일은 열람만 가능합니다",
+      "category": "주택 및 부동산",
+      "agency": [
+        "국토교통부"
+      ],
+      "auth_required": false,
+      "button": "발급하기"
+    },
+    {
+      "id": 2,
+      "title": "종합소득세 신고 안내",
+      "description": "홈택스 세금신고는 종합소득세 신고서를 서면으로 작성하여 세무서에 제출하는 대신 인터넷 홈택스를 통해 작성하여 제출하는 서비스입니다.",
+      "category": null,
+      "agency": [
+        "국세청"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 3,
+      "title": "검정고시 합격증명서(영문) 발급",
+      "description": "검정고시 합격자를 증명하는 서류입니다.",
+      "category": "학생과 학부모",
+      "agency": [
+        "교육부"
+      ],
+      "auth_required": true,
+      "button": "발급하기"
+    },
+    {
+      "id": 4,
+      "title": "지방공무원퇴직자경력증명신청",
+      "description": "공공기관에서 근무하였던 자 또는 근무하고 있는 자가 경력사항을 증명 받을 때 혹은 퇴직할 때 신청하는 민원사무입니다.(현재 온라인 신청은 중앙부처(퇴직자) 및 지방자치단체 경력증명...",
+      "category": "교사 및 교원",
+      "agency": [
+        "공통"
+      ],
+      "auth_required": true,
+      "button": "발급하기"
+    },
+    {
+      "id": 5,
+      "title": "병역판정신체검사 출석확인서 발급",
+      "description": "병역판정신체검사 수검사실 확인서 발급하는 서비스입니다.",
+      "category": "병역 및 보훈",
+      "agency": [
+        "병무청"
+      ],
+      "auth_required": false,
+      "button": "발급하기"
+    },
+    {
+      "id": 6,
+      "title": "표준재무제표증명원 법인",
+      "description": "종합소득세·법인세 신고시 부속서류로 표준재무제표를 제출한 자가 표준재무제표를 확인받기 위한 민원입니다.",
+      "category": "세무 및 납세",
+      "agency": [
+        "국세청"
+      ],
+      "auth_required": true,
+      "button": "발급하기"
+    },
+    {
+      "id": 7,
+      "title": "등록세 납부확인서(서울) 발급",
+      "description": "지방세 과세내역에 대한 납부사실을 증명하는 민원입니다.",
+      "category": "세무 및 납세",
+      "agency": [
+        "행정안전부"
+      ],
+      "auth_required": true,
+      "button": "발급하기"
+    },
+    {
+      "id": 8,
+      "title": "디지털 교과서",
+      "description": "기존 교과 내용(서책형 교과서)에 용어 사전, 멀티미디어 자료, 평가문항, 보충학습 내용 등 풍부한 학습 자료와 학습 지원 및 관리 기능이 부가되고, 교육용 콘텐츠 등과 연계가 가...",
+      "category": null,
+      "agency": [
+        "한국교육학술정보원"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 9,
+      "title": "자동차 양도증명",
+      "description": "자동차 관련 민원처리를 온라인에서 한 번에 쉽고 간편하게 처리하실 수 있습니다.",
+      "category": null,
+      "agency": [
+        "한국교통안전공단"
+      ],
+      "auth_required": false,
+      "button": "내용보기"
+    },
+    {
+      "id": 10,
+      "title": "용인시 아르피아스포츠센터 이용 안내",
+      "description": "용인시 아르피아스포츠센터(용인시 수지구 죽전동 소재) 시설 및 프로그램 이용 안내",
+      "category": null,
+      "agency": [],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 11,
+      "title": "부가가치세면세사업자수입금액증명",
+      "description": "부가가치세 면세사업자의 수입금액을 증명받고자 신청하는 민원입니다.",
+      "category": "세무 및 납세",
+      "agency": [
+        "국세청"
+      ],
+      "auth_required": true,
+      "button": "발급하기"
+    },
+    {
+      "id": 12,
+      "title": "주택청약종합저축",
+      "description": "무주택서민의 주거안정을 위한 자금(주택도시기금) 마련을 위해 주택을 공급받으려는 경우 사전에 청약통장(입주자저축) 가입 의무화",
+      "category": null,
+      "agency": [
+        "국토교통부"
+      ],
+      "auth_required": false,
+      "button": "내용보기"
+    },
+    {
+      "id": 13,
+      "title": "운전적성정밀검사",
+      "description": "인지-판단-조작에 따른 운전적성 결함요인을 측정하여 운전자 요인에 의한 교통사고 예방에 기여 검출된 결함사항에 대해 교정 및 교육의 기회를 제공함으로써 운전자의 적성상의 결함요인에...",
+      "category": null,
+      "agency": [
+        "한국교통안전공단"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 14,
+      "title": "전국 주택 가격 동향 조사",
+      "description": "전국 주택시장의 매매, 전세, 월세를 조사하여 주택시장의 평균적인 가격 변화를 측정, 주택시장 판단 지표 또는 주택정책 수립의 참고 자료 제공",
+      "category": null,
+      "agency": [
+        "한국부동산원"
+      ],
+      "auth_required": false,
+      "button": "내용보기"
+    },
+    {
+      "id": 15,
+      "title": "취업지원 대상자증명(5·18,특수임무,보훈보상)",
+      "description": "취업지원 대상자가 채용시험의 가점을 받아 취업하기 위해 채용시험을 실시하는 국가기관 또는 업체 등의 장에게 그 증명서를 제출하고자 할 때 신청하는 민원사무입니다.",
+      "category": "일자리 및 직장",
+      "agency": [
+        "국가보훈부"
+      ],
+      "auth_required": true,
+      "button": "발급하기"
+    },
+    {
+      "id": 16,
+      "title": "전국 낚시금지구역 및 제한구역 지정현황 조회",
+      "description": "전국에 산재한 저수지의 물을 상수원수로 사용하거나 수질 보전을 위하여 해당 지방자치단체장이 낚시 금지구역 또는 낚시 제한구역으로 지정하고, 이를 위반하는 경우에는 과태료 부과 등의...",
+      "category": null,
+      "agency": [],
+      "auth_required": false,
+      "button": "내용보기"
+    },
+    {
+      "id": 17,
+      "title": "초중고 사교육비조사 통계정보 제공",
+      "description": "○ 사교육비 경감 대책 및 공교육 내실화 등 교육정책 수립에 활용할 수 있는 사교육비 실태를 체계적으로 조사하여 공신력 있는 통계를 정기적으로 작성 제공 ○ 조사 주기 1년",
+      "category": null,
+      "agency": [
+        "국가데이터처"
+      ],
+      "auth_required": false,
+      "button": "내용보기"
+    },
+    {
+      "id": 18,
+      "title": "표준재무제표증명원",
+      "description": "종합소득세·법인세 신고시 부속서류로 표준재무제표를 제출한 자가 표준재무제표를 확인받기 위한 민원입니다.",
+      "category": "세무 및 납세",
+      "agency": [
+        "국세청"
+      ],
+      "auth_required": true,
+      "button": "발급하기"
+    },
+    {
+      "id": 19,
+      "title": "개별공시지가 열람",
+      "description": "개별공시지가를 열람할 수 있습니다.",
+      "category": null,
+      "agency": [
+        "국토교통부"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 20,
+      "title": "국민내일배움카드 훈련과정 정보",
+      "description": "구직자(실업자)들의 취업능력 향상을 위해 정부에서 지원하고 있는 훈련 기관 및 훈련과정 정보를 제공합니다.",
+      "category": null,
+      "agency": [
+        "한국고용정보원"
+      ],
+      "auth_required": false,
+      "button": "내용보기"
+    },
+    {
+      "id": 21,
+      "title": "농업인 확인서 지원",
+      "description": "농업인 기준에 해당하는 사람을 확인하는 데 필요한 농업인의 확인 신청, 기준, 절차 및 발급에 관한 사항을 정함",
+      "category": null,
+      "agency": [
+        "농림축산식품부"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 22,
+      "title": "동물등록증 재발급",
+      "description": "동물등록증을 잃어버리거나 헐어 못쓰게 된 경우에는 재발급 신청서를 시장·군수·구청장에게 제출하여 동물등록증을 재발급 신청",
+      "category": "사업자 지원",
+      "agency": [
+        "농림축산식품부"
+      ],
+      "auth_required": true,
+      "button": "신청하기"
+    },
+    {
+      "id": 23,
+      "title": "국민연금 임의(임계)가입자 가입(탈퇴)신청",
+      "description": "국민연금 의무가입대상이 아닌 자가 본인이 원하여 국민연금을 납부하고자 할 때 이용하는 제도",
+      "category": null,
+      "agency": [
+        "국민연금공단"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 24,
+      "title": "여권정보증명서 발급(영문)",
+      "description": "주민등록번호(뒷자리)가 없는 여권을 신분증으로 활용할 경우 여권 명의인의 주민등록번호를 확인하기 위해 발급하는 문서",
+      "category": null,
+      "agency": [
+        "외교부"
+      ],
+      "auth_required": false,
+      "button": "발급하기"
+    },
+    {
+      "id": 25,
+      "title": "장애인 고용의무제도",
+      "description": "비장애인과 비교하면 취업에 어려움이 많은 장애인의 고용촉진을 위해 일정 규모 이상의 사업주에게 일정 비율 이상의 장애인을 고용하도록 의무를 부과하고, 의무를 이행하지 않은 경우에는...",
+      "category": null,
+      "agency": [
+        "고용노동부"
+      ],
+      "auth_required": false,
+      "button": "내용보기"
+    },
+    {
+      "id": 26,
+      "title": "행복출산 원스톱서비스 제공",
+      "description": "읍면동 행정복지센터에서 출산자(산모) 또는 출생자 등에게 제공하는 출산지원 서비스를 출생신고 완료 후 당일 또는 추후에 한 번의 통합신청서 작성으로 처리함",
+      "category": null,
+      "agency": [
+        "경기도 화성시"
+      ],
+      "auth_required": false,
+      "button": "내용보기"
+    },
+    {
+      "id": 27,
+      "title": "학술연구정보서비스(RISS)",
+      "description": "국가 연구 경쟁력 강화 및 디지털 전환 시대의 미래인재 양성을 위한 국가 차원의 학술연구정보 공유(유통) 플랫폼 제공",
+      "category": null,
+      "agency": [
+        "한국교육학술정보원"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 28,
+      "title": "법원 사건 검색",
+      "description": "법원에 형사사건으로 접수된 공판, 약식, 전자약식, 소년 보호, 가정, 성매매 관련 보호사건에 대한 검색이 가능합니다.",
+      "category": null,
+      "agency": [
+        "법무부"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 29,
+      "title": "국민연금보험료 납부확인서",
+      "description": "국민연금 가입자가 국민연금보험료 납부 여부를 확인하기 위해 납부확인서를 발급받기 희망하는 경우 제공하는 증명서 서비스",
+      "category": null,
+      "agency": [
+        "국민연금공단"
+      ],
+      "auth_required": false,
+      "button": "내용보기"
+    },
+    {
+      "id": 30,
+      "title": "지역가입자 건강·연금보험료 납부현황",
+      "description": "지역가입자의 건강·연금보험료 납부현황을 조회하는 서비스입니다.",
+      "category": "건강 및 의료",
+      "agency": [
+        "국민건강보험공단"
+      ],
+      "auth_required": false,
+      "button": "조회하기"
+    },
+    {
+      "id": 31,
+      "title": "국방부 군무원 채용 관리",
+      "description": "군부대에서 군인과 함께 일하는 특정직 공무원의 선발",
+      "category": null,
+      "agency": [
+        "국방부"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 32,
+      "title": "해외체류 신고",
+      "description": "- 90일 이상 해외에 체류할 목적으로 출국하려는 경우 출국 후에 속할 세대의 거주지를 미리 신고할 수 있는 제도입니다. - 해외체류 신고 후 최초 출국일 다음날에 주민등록상 주소...",
+      "category": "출입국",
+      "agency": [
+        "행정안전부"
+      ],
+      "auth_required": true,
+      "button": "신고하기"
+    },
+    {
+      "id": 33,
+      "title": "운전면허 벌점",
+      "description": "교통 법규위반으로 부여받은 벌점을 조회하는 서비스입니다.",
+      "category": "차량 및 운송",
+      "agency": [
+        "경찰청"
+      ],
+      "auth_required": false,
+      "button": "조회하기"
+    },
+    {
+      "id": 34,
+      "title": "(모의계산) 증여세 자동계산",
+      "description": "순수토지, 공동주택, 단독주택, 일반건물, 상업용건물(오피스텔), 상장주식, 기타재산 등의 증여세를 직접 계산할 수 있도록 서비스 제공",
+      "category": null,
+      "agency": [
+        "국세청"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 35,
+      "title": "폐교대학 통합증명발급서비스",
+      "description": "폐교대학 구성원의 증명서 발급 관련 행정서비스 제공",
+      "category": null,
+      "agency": [
+        "한국사학진흥재단"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 36,
+      "title": "대학(교) 교육비 납입증명서 신청",
+      "description": "대학(교)의 교육비 납입을 증명하는 서류입니다. * 지자체 등을 방문하지 않고, 각 대학교 홈페이지를 통해 대학 제증명을 직접 발급(출력)하는 방법은 각 대학교 홈페이지 안내를 참...",
+      "category": "학생과 학부모",
+      "agency": [
+        "교육부"
+      ],
+      "auth_required": true,
+      "button": "신청하기"
+    },
+    {
+      "id": 37,
+      "title": "음식점 원산지 표시 제도",
+      "description": "음식점 원산지 표시 제도 대상 업소, 대상 품목, 표시 방법, 위반 시 처벌, 신고포상 제도 등을 안내하는 서비스입니다.",
+      "category": null,
+      "agency": [
+        "농림축산식품부"
+      ],
+      "auth_required": false,
+      "button": "내용보기"
+    },
+    {
+      "id": 38,
+      "title": "국민연금공단 내 연금 정보",
+      "description": "가입 중인 개인연금, 퇴직연금 예상연금액 조회를 통한 전 국민 노후준비 지원",
+      "category": null,
+      "agency": [
+        "국민연금공단"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 39,
+      "title": "건강기능식품 영업신고",
+      "description": "건강기능식품판매업의 신고를 하고자 하는 민원입니다.",
+      "category": "사업자 지원",
+      "agency": [
+        "식품의약품안전처"
+      ],
+      "auth_required": true,
+      "button": "발급하기"
+    },
+    {
+      "id": 40,
+      "title": "대학(교) 수료증명서 신청",
+      "description": "수료 또는 수료예정을 증명하는 서류입니다. * 지자체 등을 방문하지 않고, 각 대학교 홈페이지를 통해 대학 제증명을 직접 발급(출력)하는 방법은 각 대학교 홈페이지 안내를 참조하거...",
+      "category": "학생과 학부모",
+      "agency": [
+        "교육부"
+      ],
+      "auth_required": true,
+      "button": "신청하기"
+    },
+    {
+      "id": 41,
+      "title": "연금보험료 등 소득·세액공제 확인서",
+      "description": "연금소득자의 연금소득금액 계산을 위해 기존에 공제받은 연금소득공제등에 대한 자료를 신청하는 업무",
+      "category": "세무 및 납세",
+      "agency": [
+        "국세청"
+      ],
+      "auth_required": true,
+      "button": "발급하기"
+    },
+    {
+      "id": 42,
+      "title": "생리휴가 제도",
+      "description": "생리로 인해 일하기 힘든 여성 근로자를 보호하기 위한 근로기준법상 휴가제도",
+      "category": null,
+      "agency": [
+        "고용노동부"
+      ],
+      "auth_required": false,
+      "button": "내용보기"
+    },
+    {
+      "id": 43,
+      "title": "여권 유효기간 만료일 사전알림 서비스",
+      "description": "많은 국가들이 입국 시 여권 잔여 유효기간을 6개월 이상 요구하고 있어, 잔여 유효기간이 6개월 미만인 여권으로 출국을 하려다 우리 국민이 불편을 겪는 경우를 방지하기 위해 여권 ...",
+      "category": null,
+      "agency": [
+        "외교부"
+      ],
+      "auth_required": false,
+      "button": "내용보기"
+    },
+    {
+      "id": 44,
+      "title": "대입정보포털(대학 입시정보 제공)",
+      "description": "- 진로 및 대입정보(대학별/학과별/전형별)를 제공하는 대국민 서비스입니다. - 학생부성적, 수능/모의고사 성적분석 및 관리가 가능합니다. - 올해 내 점수 계산 결과와 전년도 대...",
+      "category": null,
+      "agency": [
+        "한국대학교육협의회"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 45,
+      "title": "1372 소비자상담센터 상담 신청",
+      "description": "소비자상담센터는 전국 어디서나 단일 대표전화 1372로 소비자가 전화를 걸면 신속한 전화연결로 상담 편의성을 높이고 모범상담 답변과 상담정보 관리를 통해 질 높은 상담서비스 및 정...",
+      "category": null,
+      "agency": [
+        "한국소비자원"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 46,
+      "title": "국민연금 수급증명(지급내역)",
+      "description": "월별, 연도별 연금지급내역 증명서 조회·발급하는 서비스입니다.",
+      "category": "연금 납입 및 수급",
+      "agency": [
+        "국민연금공단"
+      ],
+      "auth_required": false,
+      "button": "발급하기"
+    },
+    {
+      "id": 47,
+      "title": "연말정산 신용카드 누계 조회",
+      "description": "연말정산에 필요한 신용카드 사용금액 누계를 조회하실 수 있습니다.",
+      "category": null,
+      "agency": [
+        "국세청"
+      ],
+      "auth_required": false,
+      "button": "사이트가기"
+    },
+    {
+      "id": 48,
+      "title": "채무정보 조회",
+      "description": "파산 금융기관에 채무가 있는 채무자 자신의 채무현황을 온라인상에서 확인할 수 있도록 서비스 제공",
+      "category": "금융거래 및 신용",
+      "agency": [
+        "예금보험공사"
+      ],
+      "auth_required": false,
+      "button": "조회하기"
+    },
+    {
+      "id": 49,
+      "title": "사업자등록상태조회(사업자등록번호)",
+      "description": "사업자등록번호로 해당 사업자의 상태를 조회",
+      "category": null,
+      "agency": [
+        "국세청"
+      ],
+      "auth_required": false,
+      "button": "조회하기"
+    }
+  ]
+}
