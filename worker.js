@@ -2345,52 +2345,184 @@ async function handleProcedureMapLookup(request, env, corsHeaders) {
   return new Response(JSON.stringify(body), { headers: corsHeaders });
 }
 
-// ── 혜택 후보 검색 (2026-07-16 신설) ──
+// ── 혜택 후보 검색 (2026-07-16 신설, 2026-07-16 v2 — 100건 사고실험
+//    docs/BENEFIT_CANDIDATE_SEARCH_100_thought_experiment_2026-07-16.md
+//    에서 발견된 치명적 결함 3건 + 심각 2건 + 중간 1건 반영) ──
 // 배경: _l1FindProcedureMap(위)는 goal 완전일치라 "이용자가 정확한
 // 사업명을 이미 알고 있음"을 전제한다. 하지만 혜택 카탈로그(gov24
 // civil-petitions, procedure_maps에 10,289건 시딩됨)의 실제 용도는
 // 그 반대 — "청년인데 뭐 받을 거 있어?"처럼 사업명을 모르는 상태에서
-// 후보를 찾아주는 것이다. 완전일치로는 이 용도를 달성할 수 없어
-// LIKE 기반 다건 검색을 별도 경로로 신설한다(단건 조회를 이걸로
-// 대체하지 않음 — 사업명을 이미 아는 경우는 기존 경로가 더 빠르고
-// 정확하다).
+// 후보를 찾아주는 것이다.
 //
-// ★ 정직한 한계 ★ SQLite LIKE 기반이라 진짜 의미검색(semantic search)이
-// 아니다. "청년" 검색어가 eligibility_gate JSON 문자열에 등장하는지만
-// 본다 — 동의어(예: "만 19~34세" vs "청년")는 못 잡을 수 있다. 후보를
-// 넉넉히(기본 30건) 반환해 K-Compose가 직접 읽고 판단하게 하는 이유가
-// 이거다 — 서버가 아니라 모델이 최종 적합성을 판단한다.
+// v2에서 고친 것:
+//  1. (치명적) keywords[] 다중 조건 AND 검색 신설 — v1은 q가 단일
+//     문자열이라 "청년 30세"처럼 여러 속성을 조합한 재검색이
+//     구조적으로 불가능했다(그 연속 문자열이 원문에 있을 리 없음).
+//     이제 keywords=청년,30세처럼 콤마 구분으로 넘기면 각각 독립된
+//     LIKE 절로 만들어 AND 결합한다 — STEP 0-C의 "속성 하나씩 좁혀
+//     재검색"이 실제로 의미를 갖게 된다.
+//  2. (치명적) 불용어·최소길이 필터링 — q="지원"이 전체의 73.6%를
+//     삼키던 문제. 조사·범용 행정용어를 STOPWORDS로 걸러내고, 필터링
+//     후 남은 키워드가 하나도 없으면 400으로 명확히 거부한다(임의
+//     30건을 의미있는 결과처럼 반환하지 않는다).
+//  3. (심각) domain 정규화 — K-Intent가 넘기는 자유텍스트 domain이
+//     고정 10종과 안 맞으면(예: "취업"·"창업지원") 매핑을 시도하고,
+//     매핑 실패 시 domain 절 자체를 버린다(예전처럼 q까지 함께
+//     죽이지 않는다).
+//  4. (심각) total_match_estimate 추가 — PocketBase 응답의 totalItems
+//     를 그대로 실어보내, K-Compose가 "30건이 전부"와 "2,117건 중
+//     30건"을 구분할 수 있게 한다.
+//  5. (중간) 띄어쓰기 정규화 폴백 — 1차 검색이 0건이면, 공백을 제거한
+//     키워드로 넓게(앞 2~4글자) 재조회한 뒤 애플리케이션 레벨에서
+//     공백을 지운 문자열끼리 포함 여부를 다시 검사한다("친환경농산물"
+//     이 "친환경 농산물"을 찾게 한다).
+//  6. (경미) limit 0·음수를 명시적으로 30으로 강제(기존엔 JS falsy
+//     함정에 암묵적으로 의존했다).
+//
+// ★ 정직한 한계 ★ 그래도 진짜 의미검색(semantic search)은 아니다 —
+// 동의어(예: "MZ세대" vs "청년")는 여전히 못 잡는다. 후보를 넉넉히
+// 반환해 K-Compose가 직접 읽고 판단하게 하는 이유가 이거다 — 서버가
+// 아니라 모델이 최종 적합성을 판단한다.
+
+const BENEFIT_SEARCH_STOPWORDS = new Set([
+  '지원', '신청', '확인', '사업', '제도', '혜택', '보조금', '바우처',
+  '이용', '대상', '안내', '관련', '있나요', '있어요', '알려줘', '해줘',
+  '받고', '받을', '싶어요', '무엇', '무슨', '어떤', '위한',
+]);
+
+const BENEFIT_DOMAIN_MAP = {
+  '농림축산어업': ['농업', '축산', '어업', '임업', '농림'],
+  '행정·안전': ['행정', '안전', '재난'],
+  '보건·의료': ['보건', '의료', '건강', '병원'],
+  '생활안정': ['생활안정', '생계', '저소득'],
+  '보호·돌봄': ['돌봄', '보호', '요양'],
+  '문화·환경': ['문화', '환경', '관광', '체육'],
+  '주거·자립': ['주거', '주택', '자립', '전세', '임대'],
+  '임신·출산': ['임신', '출산', '산모'],
+  '보육·교육': ['보육', '교육', '어린이집', '학교'],
+  '고용·창업': ['고용', '창업', '취업', '일자리', '소상공인'],
+};
+
+function _normalizeBenefitDomain(freeText) {
+  if (!freeText) return null;
+  if (BENEFIT_DOMAIN_MAP[freeText]) return freeText; // 이미 고정 10종과 정확히 일치
+  const t = freeText.replace(/[·\s]/g, '');
+  for (const [fixed, hints] of Object.entries(BENEFIT_DOMAIN_MAP)) {
+    if (hints.some((h) => t.includes(h)) || fixed.replace(/[·\s]/g, '').includes(t)) {
+      return fixed;
+    }
+  }
+  return null; // 매핑 실패 — 절대 원문 그대로 필터에 쓰지 않는다(q까지 죽이는 사고 방지)
+}
+
+function _cleanBenefitKeywords(raw) {
+  // ★ 2026-07-16 v2 — 구분자를 콤마가 아니라 '+'로 쓴다. 이 함수를
+  // 호출하는 call-ai.js의 태그 파싱(benefitSearchMatch[1].split(','))이
+  // 태그 전체를 콤마로 나누기 때문에, q 값 안에 콤마를 쓰면
+  // "q=청년,30세"가 "q=청년"과 "30세"(키 없음, 유실)로 깨진다.
+  // '+'는 그 파싱과 충돌하지 않는다. 공백 구분(단일 문자열)도 계속 지원.
+  const tokens = raw.includes('+') ? raw.split('+') : raw.split(/\s+/);
+  return tokens
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 2 && !BENEFIT_SEARCH_STOPWORDS.has(t));
+}
+
 async function handleBenefitCandidateSearch(request, env, corsHeaders) {
   const { searchParams } = new URL(request.url);
-  const q = searchParams.get('q');
-  const domain = searchParams.get('domain');
-  const limit = Math.min(parseInt(searchParams.get('limit') || '30', 10) || 30, 50);
-  if (!q && !domain) {
-    return new Response(JSON.stringify({ error: 'q or domain required' }), { status: 400, headers: corsHeaders });
+  const qRaw = searchParams.get('q') || searchParams.get('keywords');
+  const domainRaw = searchParams.get('domain');
+  let limit = parseInt(searchParams.get('limit') || '30', 10);
+  if (!Number.isFinite(limit) || limit <= 0) limit = 30; // ★ 경미-6 수정
+  limit = Math.min(limit, 50);
+
+  const keywords = qRaw ? _cleanBenefitKeywords(qRaw) : [];
+  const domain = _normalizeBenefitDomain(domainRaw);
+
+  if (!qRaw && !domainRaw) {
+    return new Response(JSON.stringify({ error: 'q(or keywords) or domain required' }), { status: 400, headers: corsHeaders });
+  }
+  // ★ 치명적-2 수정: 불용어 제거 후 아무 것도 안 남으면 "전체 카탈로그
+  // 무작위 30건"을 그럴듯한 결과처럼 반환하지 않는다.
+  if (qRaw && keywords.length === 0 && !domainRaw) {
+    return new Response(JSON.stringify({
+      error: 'q에 의미있는 검색어가 없습니다(조사·범용어만 입력됨)',
+      stripped_input: qRaw,
+    }), { status: 400, headers: corsHeaders });
   }
 
   const token = await _l1AdminToken(env);
-  const clauses = [];
-  if (q) {
-    const esc = q.replace(/'/g, "\\'").replace(/%/g, '');
-    // goal과 eligibility_gate(문자열로 저장된 JSON) 양쪽에서 검색 —
-    // eligibility_gate까지 뒤지는 이유는 이용자가 "청년"이라고만
-    // 말해도, 사업명엔 "청년"이 없지만 eligibility_gate.conditions에
-    // "만 18~34세 청년"이라고 적혀 있는 경우가 많기 때문이다.
-    clauses.push(`(goal ~ '${esc}' || eligibility_gate ~ '${esc}' || domain ~ '${esc}')`);
-  }
-  if (domain) clauses.push(`domain = '${domain.replace(/'/g, "\\'")}'`);
-  const filter = encodeURIComponent(clauses.join(' && '));
 
-  const res = await fetch(
-    `${L1_DEFAULT}/api/collections/procedure_maps/records?filter=${filter}&perPage=${limit}&sort=-created`,
-    { headers: { 'Authorization': `Bearer ${token}` } }
-  );
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    return new Response(JSON.stringify({ error: `benefit-candidates 조회 실패 (HTTP ${res.status}): ${errText}` }), { status: 502, headers: corsHeaders });
+  const buildClauses = (kwList, useDomain) => {
+    const clauses = kwList.map((kw) => {
+      const esc = kw.replace(/'/g, "\\'").replace(/%/g, '');
+      // goal과 eligibility_gate(문자열로 저장된 JSON) 양쪽에서 검색 —
+      // eligibility_gate까지 뒤지는 이유는 이용자가 "청년"이라고만
+      // 말해도, 사업명엔 "청년"이 없지만 eligibility_gate.conditions에
+      // "만 18~34세 청년"이라고 적혀 있는 경우가 많기 때문이다.
+      return `(goal ~ '${esc}' || eligibility_gate ~ '${esc}' || domain ~ '${esc}')`;
+    });
+    // ★ 치명적-1 수정: 여러 키워드는 OR가 아니라 AND로 묶는다 — 이게
+    // STEP 0-C "속성 하나씩 좁혀 재검색"이 실제로 좁혀지게 하는 지점.
+    if (useDomain && domain) clauses.push(`domain = '${domain.replace(/'/g, "\\'")}'`);
+    return clauses.join(' && ');
+  };
+
+  async function runQuery(filterStr, perPage) {
+    const filter = encodeURIComponent(filterStr);
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/procedure_maps/records?filter=${filter}&perPage=${perPage}&sort=-created`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`benefit-candidates 조회 실패 (HTTP ${res.status}): ${errText}`);
+    }
+    return res.json().catch(() => ({ items: [], totalItems: 0 }));
   }
-  const data = await res.json().catch(() => ({ items: [] }));
+
+  let data;
+  try {
+    data = await runQuery(buildClauses(keywords, true), limit);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+
+  // ★ 심각-3 수정: domain 매핑이 있는데 결과가 0건이면, domain 절을
+  // 빼고 q만으로 재시도한다 — 잘못된 domain 하나가 유효했을 q 매칭
+  // 전체를 죽이던 v1의 가장 위험한 결함.
+  let domainDropped = false;
+  if ((data.items || []).length === 0 && domain && keywords.length > 0) {
+    try {
+      data = await runQuery(buildClauses(keywords, false), limit);
+      domainDropped = true;
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+    }
+  }
+
+  // ★ 중간 수정: 띄어쓰기 정규화 폴백 — 여전히 0건이고 공백이 없는
+  // 단일 키워드라면, 앞부분만으로 넓게 조회한 뒤 애플리케이션에서
+  // 공백 제거 후 포함 여부를 재확인한다.
+  let spacingFallbackUsed = false;
+  if ((data.items || []).length === 0 && keywords.length === 1 && keywords[0].length >= 3) {
+    const kw = keywords[0];
+    const broadKw = kw.slice(0, Math.max(2, kw.length - 2)); // 앞부분만 남겨 그물을 넓힌다
+    try {
+      const broad = await runQuery(buildClauses([broadKw], false), Math.min(limit * 3, 50));
+      const kwNoSpace = kw.replace(/\s/g, '');
+      const filtered = (broad.items || []).filter((rec) => {
+        const hay = ((rec.goal || '') + (rec.eligibility_gate || '')).replace(/\s/g, '');
+        return hay.includes(kwNoSpace);
+      });
+      if (filtered.length > 0) {
+        data = { items: filtered.slice(0, limit), totalItems: filtered.length };
+        spacingFallbackUsed = true;
+      }
+    } catch (e) {
+      // 폴백 실패는 치명적이지 않다 — 원래 0건 결과를 그대로 반환한다.
+    }
+  }
+
   const items = (data.items || []).map((rec) => ({
     goal: rec.goal,
     domain: rec.domain,
@@ -2403,6 +2535,11 @@ async function handleBenefitCandidateSearch(request, env, corsHeaders) {
   return new Response(JSON.stringify({
     status: items.length ? 'candidates_found' : 'no_candidates',
     count: items.length,
+    // ★ 심각-4 수정: 30건이 "전부"인지 "일부"인지 K-Compose가 구분할
+    // 수 있게 전체 매칭 추정치를 함께 실어보낸다.
+    total_match_estimate: data.totalItems ?? items.length,
+    domain_filter_dropped: domainDropped,
+    spacing_fallback_used: spacingFallbackUsed,
     // pending_review인 후보가 섞여 있으면 K-Compose가 이용자에게
     // 반드시 고지해야 한다는 걸 명시적으로 알려준다(§0-H와 동일 원칙,
     // 서버가 판단을 대신하지 않고 신호만 준다).
