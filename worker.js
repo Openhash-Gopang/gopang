@@ -1139,11 +1139,23 @@ async function _l1AdminToken(env) {
 async function _kosisSearch(query, apiKey) {
   const url = `https://kosis.kr/openapi/statisticsSearch.do?method=getList&apiKey=${apiKey}&searchNm=${encodeURIComponent(query)}&format=json`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`KOSIS 검색 실패: ${res.status}`);
-  const data = await res.json().catch(() => null);
-  // KOSIS는 결과가 없거나 오류일 때도 200을 주며 {err, errMsg} 객체를 반환하는 경우가 있다
-  // (예: 유효하지 않은 인증키). 배열이 아니면 후보 0건으로 취급한다.
-  return Array.isArray(data) ? data : [];
+  const bodyText = await res.text();
+  if (!res.ok) throw new Error(`KOSIS 검색 실패(HTTP ${res.status}): ${bodyText.slice(0, 200)}`);
+
+  let data;
+  try {
+    data = JSON.parse(bodyText);
+  } catch (e) {
+    throw new Error(`KOSIS 응답이 JSON이 아님: ${bodyText.slice(0, 200)}`);
+  }
+
+  // KOSIS는 결과가 없거나 오류일 때도 200을 주며 {err, errMsg} 객체를 반환하는 경우가
+  // 있다(예: 유효하지 않은 인증키). 이전 버전은 이 경우를 조용히 빈 배열로 취급해서
+  // "진짜 검색결과 0건"과 "인증키 오류"를 구분할 수 없었다 — 이제 예외로 명확히 구분한다.
+  if (!Array.isArray(data)) {
+    throw new Error(`KOSIS 오류 응답: ${JSON.stringify(data).slice(0, 200)}`);
+  }
+  return data;
 }
 
 // 규칙 A: 세부항목표(REC_TBL_SE='Y')는 1차 후보에서 제외 — 원자료 상세표라
@@ -1205,7 +1217,16 @@ async function handleGovDataResolve(request, url, env, corsHeaders) {
     if (cached) return new Response(JSON.stringify({ source: 'cache', ...cached }), { headers: corsHeaders });
   }
 
-  const raw = await _kosisSearch(rawQuery, env.KOSIS_API_KEY);
+  let raw;
+  try {
+    raw = await _kosisSearch(rawQuery, env.KOSIS_API_KEY);
+  } catch (e) {
+    // 인증키 오류 등 KOSIS 자체 문제를 not_found로 뭉개지 않고 명확히 구분한다.
+    return new Response(
+      JSON.stringify({ status: 'upstream_error', message: 'KOSIS 조회 중 오류', detail: e.message }),
+      { status: 502, headers: corsHeaders }
+    );
+  }
   let candidates = _filterRuleA(raw);
   candidates = _filterRuleB(candidates, rawQuery);
   candidates = _dedupeRuleC(candidates);
