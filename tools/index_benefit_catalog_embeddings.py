@@ -81,8 +81,18 @@ def load_records():
 
 
 def post_json(url, payload, timeout=60):
+    # ★ 2026-07-16 추가 — Cloudflare error 1010(Browser Integrity Check)
+    # 대응. urllib 기본 User-Agent("Python-urllib/3.x")가 봇으로 판정돼
+    # 매 배치가 403으로 막혔던 걸 확인, 실제 브라우저 User-Agent를 명시.
     data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        ),
+    }
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
 

@@ -486,6 +486,8 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[SHARE_DOC_REJECTED\]/g, '')          // 공유문서 거부 태그
   .replace(/\[PANEL_ACTION:close\]/g, '')      // AI 패널 닫기 지시 태그 (2026-07-02 신설)
   .replace(/\[PDV_DOMAIN_SET:[^\]]*\]/g, '')    // PDV 일상/업무 전환 태그 (2026-07-13 신설)
+  .replace(/\[TEMPLATE_LOOKUP:[^\]]*\]/g, '')   // 정체성 템플릿 참조 조회 태그 (2026-07-17 신설, 방어적 — 정상 경로는 _handleProfileTags가 먼저 소비)
+  .replace(/\[INDUSTRY_TEMPLATE_LOOKUP:[^\]]*\]/g, '') // 구 태그명(v2.3~) — SP 갱신 유예기간 동안 방어적으로 함께 제거
   .replace(/\[JOB_KSCO_REVIEWED\]/g, '')        // job_ksco 재확인 완료 태그 (2026-07-14 신설, 구멍 E)
   .replace(/\[JOB_KSCO_REVIEW_DUE:[\s\S]*?\]/g, '')  // 방어적 — 정상 경로는 컨텍스트 주입용, AI가 실수로 에코하면 제거
   .replace(/\[GWP:\s*[\w-]+\]/g, '')           // 하위 시스템 라우팅 태그 (방어적 — 정상 경로는 _parseAgentTags가 처리)
@@ -517,8 +519,7 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[ORCHESTRATION_SUBTASK_RESULT:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_PROGRESS:[^\]]*\]/g, '')  // 2026-07-12 신설(SP-20 v1.4)
   .replace(/\[PROCEDURE_MAP_LOOKUP:[^\]]*\]/g, '')
-  .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6, v1.9부터 레거시 폴백)
-  .replace(/\[BENEFIT_SEMANTIC_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.9, 임베딩 재설계)
+  .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6)
   // 2026-07-09 정정 — DRAFT/UPDATE·KSEARCH_CANDIDATES는 steps=[...] 같은
   // 중첩 배열을 값으로 가져 위 _stripBracketTag()가 이미 먼저 처리했다
   // (이 체인에 들어오기 전에 적용됨) — 여기서 다시 정규식으로 지우지
@@ -656,6 +657,74 @@ export async function _handleProfileTags(fullReply, bubble, sendFn = callAI, use
         localStorage.setItem('hondi_profile_partial', JSON.stringify(Object.assign(existing, incoming)));
       } catch {}
     }
+  }
+
+  // ── [TEMPLATE_LOOKUP] — 정체성/업종 템플릿 참조 조회 (2026-07-17 신설) ──
+  // profile-assistant SP의 [§INDUSTRY-TEMPLATE](v2.3)가 이 태그를 출력하도록
+  // 설계돼 있었으나, 여기(클라이언트 핸들러)와 worker.js(엔드포인트) 양쪽 다
+  // 실제 구현이 없어 태그가 조용히 유실되고 있었다(실사 발견). 아래에서
+  // 처음으로 배선한다 — schema_id(사업자/KSIC), job_ksco_code·work_domain
+  // (개인/KSCO+work_domain 배열) 중 있는 것만 보내면 서버가 알아서 분기.
+  // 구 태그명 [INDUSTRY_TEMPLATE_LOOKUP: schema_id=...]도 과도기 동안 함께 인식.
+  const templateLookupMatch =
+    fullReply.match(/\[TEMPLATE_LOOKUP:\s*([^\]]*)\]/) ||
+    fullReply.match(/\[INDUSTRY_TEMPLATE_LOOKUP:\s*([^\]]*)\]/);
+  if (templateLookupMatch) {
+    console.log('[Profile] TEMPLATE_LOOKUP 감지 — 참조 프로필 조회');
+    if (bubble) {
+      const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
+      if (_usb) _usb(bubble, _stripInternalTags(fullReply));
+    }
+    history.push({ role: 'assistant', content: fullReply });
+
+    // 태그 본문 파싱 — "key=value, key2=value2" 형식(다른 태그들과 동일 관례).
+    // work_domain=student,self_employed 처럼 콤마로 다중값을 받을 수 있는
+    // 필드는 work_domain만 별도 분리해 배열로 만든다.
+    const raw = templateLookupMatch[1];
+    const params = {};
+    for (const part of raw.split(',')) {
+      const eq = part.indexOf('=');
+      if (eq === -1) continue;
+      const k = part.slice(0, eq).trim();
+      const v = part.slice(eq + 1).trim();
+      if (k) params[k] = v;
+    }
+    const workDomainStatuses = params.work_domain
+      ? params.work_domain.split('+').map(s => s.trim()).filter(Boolean) // '+'로 다중 결합 표기(콤마는 이미 파라미터 구분자로 씀)
+      : undefined;
+
+    const base = (CFG.endpoint || '').replace(/\/+$/, '');
+    let refs = [];
+    try {
+      const res = await fetch(`${base}/template-lookup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entity_type: params.entity_type || (params.schema_id ? 'business' : 'person'),
+          schema_id: params.schema_id || undefined,
+          job_ksco_code: params.job_ksco_code || undefined,
+          work_domain_statuses: workDomainStatuses,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({ refs: [] }));
+        refs = data.refs || [];
+      } else {
+        console.warn('[Profile] template-lookup 실패 (HTTP', res.status, ') — 빈 참조로 진행');
+      }
+    } catch (e) {
+      console.warn('[Profile] template-lookup 요청 실패(무시 — 빈 참조로 진행):', e.message);
+    }
+
+    // 참조가 없어도(신규 업종/정체성 최초 사례) 빈 블록으로 다음 턴을
+    // 진행시킨다 — SP의 [§INDUSTRY-TEMPLATE] 원칙("참조 없으면 조용히
+    // 본인 지식으로 진행")이 이 빈 블록을 보고 그대로 동작한다.
+    const contextLabel = params.schema_id ? 'INDUSTRY_TEMPLATE' : 'PERSON_TEMPLATE';
+    const contextBlock = refs.length
+      ? `[CONTEXT: ${contextLabel}]\n${JSON.stringify(refs)}\n[/CONTEXT]`
+      : `[CONTEXT: ${contextLabel}]\n(참조 사례 없음 — 최초 사례)\n[/CONTEXT]`;
+    await sendFn(contextBlock);
+    return true;
   }
 
   // ── 단계 업데이트 [N/6단계] ───────────────────────────────
@@ -858,42 +927,12 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       return true;
     }
 
-    // 2026-07-16 신설(SP-20 v1.9 STEP 0-DISCOVER, 임베딩 기반 전면
-    // 재설계) — query가 자연어 문장이라 콤마를 포함할 수 있다(예:
-    // "제주 거주, 만 30세 청년..."). 기존 BENEFIT_CANDIDATE_SEARCH
-    // 처럼 태그 전체를 콤마로 나누면 문장 안의 콤마에서 파싱이
-    // 깨진다 — query는 반드시 따옴표로 감싸게 하고, 정규식으로
-    // 따옴표 안쪽만 통째로 뽑는다(콤마 개수와 무관하게 안전).
-    const semanticSearchMatch = fullReply.match(
-      /\[BENEFIT_SEMANTIC_SEARCH:\s*query="([^"]*)"(?:,\s*domain=([^,\]]+))?(?:,\s*limit=(\d+))?\]/
-    );
-    if (semanticSearchMatch) {
-      console.log('[Orchestration] BENEFIT_SEMANTIC_SEARCH 감지 — worker.js 임베딩 의미검색');
-      await _updateBubble(_stripInternalTags(fullReply));
-      history.push({ role: 'assistant', content: fullReply });
-      const [, query, domain, limit] = semanticSearchMatch;
-      const qs = new URLSearchParams();
-      qs.set('query', query.trim());
-      if (domain) qs.set('domain', domain.trim());
-      if (limit) qs.set('limit', limit.trim());
-      let resultText;
-      try {
-        const res = await fetch(`${base}/orchestration/benefit-semantic-search?${qs.toString()}`);
-        resultText = res.ok ? JSON.stringify(await res.json()) : `{"error":"HTTP ${res.status}"}`;
-      } catch (e) {
-        resultText = `{"error":"${e.message}"}`;
-      }
-      await sendFn(`[BENEFIT_SEMANTIC_SEARCH 결과] ${resultText}\n\n위 후보 목록을 이어받아 RULE-02 STEP 0-C를 계속 진행하세요.`);
-      return true;
-    }
-
-    // ★ 비상 폴백으로 유지(2026-07-16부터 SP-20이 더 이상 안 씀) —
     // 2026-07-16 신설(SP-20 v1.6 STEP 0-DISCOVER) — 사업명을 모르는
     // 발견형 의도 전용. PROCEDURE_MAP_LOOKUP과 동일한 재주입 패턴이나
     // goal 완전일치 대신 q/domain LIKE 검색으로 다건을 받는다.
     const benefitSearchMatch = fullReply.match(/\[BENEFIT_CANDIDATE_SEARCH:\s*([^\]]+)\]/);
     if (benefitSearchMatch) {
-      console.log('[Orchestration] BENEFIT_CANDIDATE_SEARCH 감지 — worker.js 후보 검색(레거시 LIKE 경로)');
+      console.log('[Orchestration] BENEFIT_CANDIDATE_SEARCH 감지 — worker.js 후보 검색');
       await _updateBubble(_stripInternalTags(fullReply));
       history.push({ role: 'assistant', content: fullReply });
       const params = {};

@@ -2554,169 +2554,6 @@ async function handleBenefitCandidateSearch(request, env, corsHeaders) {
   }), { headers: corsHeaders });
 }
 
-// ════════════════════════════════════════════════════════════
-// 혜택 후보 의미검색 — 임베딩 기반 (2026-07-16, 처음부터 재설계)
-// ════════════════════════════════════════════════════════════
-// 배경: handleBenefitCandidateSearch(위, LIKE 기반)를 v2까지 패치했지만,
-// LIKE의 부분일치 폭발·조합 조건 조회 불가라는 구조적 한계 자체는 못
-// 넘었다. 임베딩(Cloudflare Workers AI bge-m3) + Vectorize로 바꾸면서,
-// "LIKE의 한계를 우회하려고 만든 구조"(키워드 쪼개기·불용어 필터·
-// 다단계 AND 재검색·total_match_estimate)를 그대로 얹지 않고 처음부터
-// 다시 설계했다(주피터님 의견 검토 후 반영 — v1→v2 패치가 아니라 새
-// 함수):
-//   1. q는 이제 자연어 문장 그대로 받는다(키워드 쪼개기·불용어 필터
-//      없음 — 벡터 검색은 문맥이 살아있는 원문을 더 잘 다룬다).
-//   2. "속성 하나씩 좁혀 재검색"이 아니라 "문맥을 보강한 문장으로
-//      재임베딩" — SP-20 STEP 0-C가 재설계됨(이 함수 자체는 그냥
-//      매번 주어진 문장을 그대로 임베딩할 뿐, 문맥 보강은 호출부 몫).
-//   3. total_match_estimate 대신 결과별 similarity score를 반환한다
-//      — kNN에 "전체 몇 건" 개념이 자연스럽지 않다(임계값이 새 튜닝
-//      포인트가 됨).
-//   4. domain 필터·limit(topK) 개념은 그대로 유지 — 이건 LIKE 특유의
-//      문제가 아니라 카테고리 정확일치일 뿐이라 손댈 이유가 없었다.
-//
-// ★ 정직한 한계 ★ bge-m3가 한국 행정·복지 전문용어 도메인에서 실제로
-// 얼마나 잘 되는지 이 세션에서 검증 못 했다 — Vectorize가 로컬에서
-// 안 돌아가는 환경 제약. 배포 전 소규모 파일럿으로 실제 유사도가
-// 그럴듯하게 나오는지 먼저 확인 필요(주피터님 검토 필요 사항으로
-// 남김). 기존 LIKE 기반 handleBenefitCandidateSearch는 코드에 그대로
-// 남겨둔다 — SP-20 프로토콜에서는 더 이상 참조하지 않지만, 임베딩
-// 경로가 검증 전이라 즉시 삭제하지 않고 비상 폴백으로 유지한다.
-
-const BENEFIT_EMBED_MODEL = '@cf/baai/bge-m3';
-
-async function _embedText(env, texts) {
-  // texts: string[] → number[][] (bge-m3 dense 벡터, 1024차원 추정 —
-  // wrangler.toml 주석 참조, 최초 실행 결과로 재확인 필요)
-  const result = await env.AI.run(BENEFIT_EMBED_MODEL, { text: texts });
-  // Workers AI bge-m3 응답 형태: { shape: [...], data: number[][] }
-  if (!result || !result.data) throw new Error('bge-m3 임베딩 응답 형식 이상: ' + JSON.stringify(result));
-  return result.data;
-}
-
-// POST /orchestration/benefit-embed-index
-// body: { records: [{ petition_id, goal, domain, text }] }
-// text는 임베딩할 원문 — 호출부(인덱싱 스크립트)가 goal + eligibility_
-// gate 요약을 합쳐서 넘긴다. 이 함수는 그걸 그대로 임베딩해 Vectorize
-// 에 upsert만 한다 — 무엇을 임베딩할지는 판단하지 않는다.
-async function handleBenefitEmbedIndex(request, env, corsHeaders) {
-  if (!env.AI) return new Response(JSON.stringify({ error: 'AI 바인딩 없음 — wrangler.toml [ai] 확인' }), { status: 500, headers: corsHeaders });
-  if (!env.VECTORIZE) return new Response(JSON.stringify({ error: 'VECTORIZE 바인딩 없음 — wrangler.toml [[vectorize]] 확인, 인덱스 사전 생성 필요' }), { status: 500, headers: corsHeaders });
-
-  let body;
-  try { body = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
-  const records = body.records;
-  if (!Array.isArray(records) || records.length === 0) {
-    return new Response(JSON.stringify({ error: 'records(배열) 필요' }), { status: 400, headers: corsHeaders });
-  }
-  if (records.length > 100) {
-    // Workers AI 배치 한도 보호 — 대량 인덱싱은 호출부가 100건 단위로
-    // 쪼개서 여러 번 호출해야 한다(정확한 한도는 실제 배포 시 재확인).
-    return new Response(JSON.stringify({ error: '한 번에 최대 100건 — 호출부에서 배치 분할 필요' }), { status: 400, headers: corsHeaders });
-  }
-
-  let vectors;
-  try {
-    vectors = await _embedText(env, records.map((r) => r.text));
-  } catch (e) {
-    return new Response(JSON.stringify({ error: `임베딩 생성 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
-  }
-
-  const upsertPayload = records.map((r, i) => ({
-    id: r.petition_id,
-    values: vectors[i],
-    metadata: { goal: r.goal, domain: r.domain },
-  }));
-
-  try {
-    await env.VECTORIZE.upsert(upsertPayload);
-  } catch (e) {
-    return new Response(JSON.stringify({ error: `Vectorize upsert 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
-  }
-
-  return new Response(JSON.stringify({ status: 'indexed', count: upsertPayload.length }), { headers: corsHeaders });
-}
-
-// GET /orchestration/benefit-semantic-search?query=...&domain=...&limit=20
-async function handleBenefitSemanticSearch(request, env, corsHeaders) {
-  if (!env.AI) return new Response(JSON.stringify({ error: 'AI 바인딩 없음' }), { status: 500, headers: corsHeaders });
-  if (!env.VECTORIZE) return new Response(JSON.stringify({ error: 'VECTORIZE 바인딩 없음' }), { status: 500, headers: corsHeaders });
-
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get('query');
-  const domainRaw = searchParams.get('domain');
-  let limit = parseInt(searchParams.get('limit') || '20', 10);
-  if (!Number.isFinite(limit) || limit <= 0) limit = 20;
-  limit = Math.min(limit, 50);
-
-  if (!query || query.trim().length === 0) {
-    return new Response(JSON.stringify({ error: 'query 필요(자연어 문장 그대로 — 키워드로 쪼개서 보내지 않는다)' }), { status: 400, headers: corsHeaders });
-  }
-
-  const domain = _normalizeBenefitDomain(domainRaw); // 기존 LIKE 검색용
-  // 매핑 함수를 그대로 재사용 — 이건 LIKE 특유의 로직이 아니라 자유
-  // 텍스트→고정 10종 정규화라 임베딩 검색에도 동일하게 필요하다.
-
-  let vectors;
-  try {
-    vectors = await _embedText(env, [query]);
-  } catch (e) {
-    return new Response(JSON.stringify({ error: `쿼리 임베딩 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
-  }
-
-  let matches;
-  try {
-    const result = await env.VECTORIZE.query(vectors[0], {
-      topK: limit,
-      filter: domain ? { domain } : undefined,
-      returnMetadata: 'all',
-    });
-    matches = result.matches || [];
-  } catch (e) {
-    return new Response(JSON.stringify({ error: `Vectorize 조회 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
-  }
-
-  if (matches.length === 0) {
-    return new Response(JSON.stringify({ status: 'no_candidates', count: 0, candidates: [] }), { headers: corsHeaders });
-  }
-
-  // Vectorize 메타데이터엔 goal·domain만 있다(eligibility_gate는 크기
-  // 제한 때문에 안 넣음) — 매칭된 것만 골라 PocketBase procedure_maps
-  // 에서 전체 레코드를 조회한다(전수가 아니라 이 topK개만이라 가볍다).
-  const token = await _l1AdminToken(env);
-  const candidates = [];
-  for (const m of matches) {
-    try {
-      const filter = encodeURIComponent(`goal = '${(m.metadata?.goal || '').replace(/'/g, "\\'")}'`);
-      const res = await fetch(`${L1_DEFAULT}/api/collections/procedure_maps/records?filter=${filter}&perPage=1`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      const data = await res.json().catch(() => ({ items: [] }));
-      const rec = data.items?.[0];
-      candidates.push({
-        goal: m.metadata?.goal || null,
-        domain: m.metadata?.domain || null,
-        score: m.score, // ★ total_match_estimate 대신 유사도 점수 —
-        // K-Compose가 이 점수로 확신도를 판단한다(임계값은 SP-20
-        // 문서에서 시작점만 제시, 실사용 데이터로 재검증 필요).
-        org_id: rec ? (rec.steps && rec.steps[0] && rec.steps[0].org_id) || null : null,
-        eligibility_gate: rec ? rec.eligibility_gate : null,
-        status: rec ? rec.status : null,
-        as_of_date: rec ? rec.as_of_date : null,
-      });
-    } catch (e) {
-      // 개별 레코드 조회 실패는 그 후보만 건너뛴다 — 전체를 죽이지 않는다.
-      continue;
-    }
-  }
-
-  return new Response(JSON.stringify({
-    status: candidates.length ? 'candidates_found' : 'no_candidates',
-    count: candidates.length,
-    candidates,
-  }), { headers: corsHeaders });
-}
-
 async function handleProcedureMapDraft(request, env, corsHeaders) {
   let payload;
   try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
@@ -4225,6 +4062,13 @@ export default {
     // ── search (v4.7) ────────────────────────────────────
     if (pathname === '/search' && request.method === 'POST') return handleSearch(request, env, corsHeaders);
 
+    // ── 정체성 템플릿 참조 조회 (2026-07-17 신설) ─────────
+    // profile-assistant SP의 [INDUSTRY_TEMPLATE_LOOKUP]/[PERSON_TEMPLATE_LOOKUP]
+    // 태그가 v2.3부터 SP 텍스트엔 있었으나 이 라우트·핸들러가 없어 응답이
+    // 항상 유실되고 있었다(실사 발견). 사업자=schema_id(KSIC), 개인=
+    // job_ksco.code/work_domain.statuses를 같은 함수로 처리한다.
+    if (pathname === '/template-lookup' && request.method === 'POST') return handleTemplateLookup(request, env, corsHeaders);
+
     // ── 국가데이터처(KOSIS) 통계 리졸버 (2026-07-16 배선) ──
     if (pathname === '/api/stats/resolve') return handleGovDataResolve(request, url, env, corsHeaders);
     // ── 오케스트레이션 레지스트리 (2026-07-08 신설, 2026-07-09 확장 —
@@ -4236,13 +4080,6 @@ export default {
       return handleProcedureMapLookup(request, env, corsHeaders);
     if (pathname === '/orchestration/benefit-candidates' && request.method === 'GET')
       return handleBenefitCandidateSearch(request, env, corsHeaders);
-    // 2026-07-16 신설 — 임베딩 기반 의미검색(bge-m3+Vectorize). 위
-    // /orchestration/benefit-candidates(LIKE 기반)는 SP-20 프로토콜에서
-    // 더 이상 참조하지 않지만 비상 폴백으로 코드에 남겨둔다.
-    if (pathname === '/orchestration/benefit-semantic-search' && request.method === 'GET')
-      return handleBenefitSemanticSearch(request, env, corsHeaders);
-    if (pathname === '/orchestration/benefit-embed-index' && request.method === 'POST')
-      return handleBenefitEmbedIndex(request, env, corsHeaders);
     if (pathname === '/orchestration/procedure-map/draft' && request.method === 'POST')
       return handleProcedureMapDraft(request, env, corsHeaders);
     if (pathname === '/orchestration/procedure-map/update' && request.method === 'POST')
@@ -5820,6 +5657,100 @@ async function handleSearch(request, env, corsHeaders) {
   }
 
   return new Response(JSON.stringify(data), { status: 200, headers: corsHeaders });
+}
+
+// ── 정체성 템플릿 참조 조회 (2026-07-17 신설) ──────────────────────────
+// [§INDUSTRY-TEMPLATE](profile-assistant SP v2.3)가 "schema_id 확정 시
+// 동종업계 공개 프로필 최대 8건을 참조한다"고 설계했으나, 이 서버 핸들러가
+// 없어 실제로는 한 번도 응답이 간 적이 없었다(실사 발견 — call-ai.js에도
+// 대응 코드 없음, 같은 조사 세션에서 함께 확인). 이번에 개인(job_ksco/
+// work_domain) 축까지 함께 지원하도록 일반화해 신설한다.
+//
+// 설계 원칙(docs/ksco_schema_tier_classification_v1.md·
+// ksic_schema_tier_classification_v1.md, 2026-07-13 주피터님 승인 —
+// AC-EVOLUTION §5 유지): KSIC/KSCO 코드 자체(코드→명칭)는 정적 참조
+// 데이터로만 쓰고, 템플릿 "내용"은 그 코드로 이미 등록된 실사용자
+// 프로필에서 매번 동적으로 조합한다 — 직종/업종별 정적 템플릿 파일을
+// 새로 만들지 않는다는 기존 결정과 배치되지 않는다.
+async function _l1FindTemplateReferenceProfiles(env, { entity_type, schema_id, job_ksco_code, work_domain_statuses, exclude_guid }, limit = 8) {
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+
+  const filterParts = ['is_public = true'];
+  if (entity_type) filterParts.push(`entity_type = ${JSON.stringify(entity_type)}`);
+  if (schema_id) {
+    // 사업자 — KSIC 코드는 industry_fields.schema_id에 JSON으로 저장돼
+    // 있어 PocketBase 텍스트 필터로 부분일치 조회(코드 값 자체가
+    // 문자열이라 정확도는 충분 — 오탐 시 아래에서 한 번 더 정확 비교).
+    filterParts.push(`extra ~ ${JSON.stringify(`"schema_id":"${schema_id}"`)}`);
+  }
+  if (job_ksco_code) {
+    filterParts.push(`extra ~ ${JSON.stringify(`"code":"${job_ksco_code}"`)}`);
+  }
+  if (exclude_guid) filterParts.push(`guid != ${JSON.stringify(exclude_guid)}`);
+  const filter = filterParts.join(' && ');
+
+  // work_domain.statuses는 배열이라 텍스트 부분일치로 걸러낼 수 없으므로
+  // 넉넉히 가져온 뒤 Worker에서 정확히 필터링한다(최대 60건 스캔 후 8건 샘플).
+  const res = await fetch(
+    `${L1_DEFAULT}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=60&sort=-updated`,
+    { headers }
+  );
+  if (!res.ok) throw new Error(`L1 템플릿 참조 조회 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  const data = await res.json().catch(() => ({ items: [] }));
+
+  let items = data.items || [];
+  if (job_ksco_code) {
+    // 텍스트 부분일치로 넉넉히 받은 뒤 정확한 코드 일치만 남긴다.
+    items = items.filter(p => (p.extra?.public?.identity?.job_ksco?.code) === job_ksco_code);
+  }
+  if (schema_id) {
+    items = items.filter(p => String(p.extra?.public?.industry_fields?.schema_id ?? p.extra?.industry_fields?.schema_id ?? '') === String(schema_id));
+  }
+  if (Array.isArray(work_domain_statuses) && work_domain_statuses.length > 0) {
+    items = items.filter(p => {
+      const s = p.extra?.public?.identity?.work_domain?.statuses
+        || (p.extra?.public?.identity?.work_domain?.status ? [p.extra.public.identity.work_domain.status] : []);
+      return work_domain_statuses.some(want => s.includes(want));
+    });
+  }
+
+  // 필드별 공개/비공개(field_visibility)를 이미 만족하는 값만 노출 —
+  // _l1SearchEntities와 동일 원칙, 프로필 원본을 그대로 흘려보내지 않는다.
+  const refs = items.slice(0, limit).map(p => {
+    const pub = p.extra?.public || {};
+    const fv = pub.field_visibility || {};
+    return {
+      entity_subtype: pub.identity?.entity_subtype ?? null,
+      description:    fv.description ? pub.identity?.description ?? null : undefined,
+      hours:          fv.hours ? pub.activity?.hours ?? null : undefined,
+      products:       fv.products ? (pub.products || []).slice(0, 10) : undefined,
+      industry_fields: pub.industry_fields ?? null,
+      job_ksco_label: pub.identity?.job_ksco?.label ?? null,
+      work_domain_statuses: pub.identity?.work_domain?.statuses
+        || (pub.identity?.work_domain?.status ? [pub.identity.work_domain.status] : null),
+    };
+  });
+  return refs;
+}
+
+async function handleTemplateLookup(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { entity_type, schema_id, job_ksco_code, work_domain_statuses, exclude_guid } = body;
+  if (!schema_id && !job_ksco_code && (!Array.isArray(work_domain_statuses) || work_domain_statuses.length === 0)) {
+    return _err(400, 'MISSING_FIELD', 'schema_id, job_ksco_code, work_domain_statuses 중 최소 1개 필수', corsHeaders);
+  }
+
+  let refs;
+  try {
+    refs = await _l1FindTemplateReferenceProfiles(env, { entity_type, schema_id, job_ksco_code, work_domain_statuses, exclude_guid }, 8);
+  } catch (e) {
+    return _err(502, 'L1_TEMPLATE_LOOKUP_FAILED', 'L1 템플릿 조회 실패: ' + e.message, corsHeaders);
+  }
+
+  return new Response(JSON.stringify({ refs, count: refs.length }), { status: 200, headers: corsHeaders });
 }
 
 
@@ -10626,26 +10557,39 @@ async function handleProfilePost(request, env, corsHeaders) {
     'student', 'retired', 'homemaker', 'unemployed', 'other',
   ]);
   let resolvedWorkDomain = null;
+  // 2026-07-17 신설 — statuses 배열화(다중 정체성 지원, 주피터님 지시).
+  // 이전엔 status 단일 문자열이라 "학생이면서 부업 자영업" 같은 동시
+  // 결합을 표현할 수 없었다(job_ksco와의 독립 결합은 이미 가능했지만,
+  // work_domain 축 내부의 다중 결합은 불가능했음). 하위호환: 옛 저장값
+  // (prevWd.status, 문자열)과 구버전 클라이언트가 여전히 work_domain.status로
+  // 단일 문자열을 보내는 경우 둘 다 배열로 승격해 처리한다.
   if (entity_type === 'person' && work_domain && typeof work_domain === 'object') {
     const prevWd = (prevExtra.public || {}).identity?.work_domain || null;
-    if (WORK_DOMAIN_STATUS.has(work_domain.status)) {
-      const statusChanged = !prevWd || prevWd.status !== work_domain.status;
+    const prevStatuses = Array.isArray(prevWd?.statuses)
+      ? prevWd.statuses
+      : (prevWd?.status ? [prevWd.status] : []); // 구버전 단일값 승격
+
+    const rawInput = Array.isArray(work_domain.statuses)
+      ? work_domain.statuses
+      : (work_domain.status ? [work_domain.status] : []); // 구버전 클라이언트 페이로드 승격
+    const statuses = [...new Set(rawInput.filter(s => WORK_DOMAIN_STATUS.has(s)))].slice(0, 5); // 겸직 상한 5(affiliation과 동일 원칙)
+
+    if (statuses.length > 0) {
+      const setsEqual = statuses.length === prevStatuses.length && statuses.every(s => prevStatuses.includes(s));
       resolvedWorkDomain = {
-        status: work_domain.status,
-        // active 기본값: 재직/자영업/학생은 true, 은퇴·무직은 명시 안
-        // 하면 false로 안전하게 기본 처리(신규 데이터 적재를 막는 쪽이
-        // "은퇴자인데 계속 적재됨"보다 안전 — AC-EVOLUTION §1과 동일 사상).
+        statuses,
+        // active 기본값: 배열 안에 retired/unemployed"만" 있으면 false,
+        // 그 외 하나라도 활동성 상태(학생·재직·자영업·전업주부·기타)가
+        // 섞여 있으면 true. 명시적 active 값이 오면 그걸 최우선.
         active: typeof work_domain.active === 'boolean'
           ? work_domain.active
-          : !['retired', 'unemployed'].includes(work_domain.status),
-        // 상태가 바뀐 시점만 갱신 — 같은 status를 매번 다시 제출해도
-        // status_since가 오늘로 계속 밀리지 않게 한다(job_ksco의
-        // confirmed_at과 다른 설계 — 이건 "언제부터"가 의미 있는 값).
-        status_since: statusChanged ? new Date().toISOString().slice(0, 10) : (prevWd?.status_since || new Date().toISOString().slice(0, 10)),
+          : statuses.some(s => !['retired', 'unemployed'].includes(s)),
+        // 조합 자체가 바뀐 시점만 갱신(원소 추가/제거 포함) — 같은
+        // 조합을 매번 다시 제출해도 status_since가 밀리지 않게 한다.
+        status_since: setsEqual ? (prevWd?.status_since || new Date().toISOString().slice(0, 10)) : new Date().toISOString().slice(0, 10),
       };
     }
-    // status가 enum 밖이면 조용히 무시(§0 U0: 실패보다 진행 — job_ksco
-    // 코드 형식 오류 처리와 동일 관례).
+    // 유효한 status가 하나도 없으면 조용히 무시(§0 U0: 실패보다 진행).
   }
 
   const newExtraPublic = {
