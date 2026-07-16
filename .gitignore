@@ -9,3 +9,7 @@ fix*.py
 *.lnk
 tools/__pycache__/
 *.pyc
+
+index_errors.json
+tools/batch_output/
+tools/batch_last_id.txt
