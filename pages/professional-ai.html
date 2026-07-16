@@ -145,6 +145,14 @@ body {
 /* ── 전문가 AI 카테고리 그룹 ── */
 .pro-subgroup { margin-top: 36px; }
 .pro-subgroup:first-child { margin-top: 0; }
+
+.ex-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 18px 0 8px; }
+.ex-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; }
+.ex-role { font-size: 12px; font-weight: 700; color: var(--brand-dk); margin-bottom: 8px; }
+.ex-line { font-size: 12.5px; color: var(--text3); line-height: 1.65; margin-bottom: 6px; }
+.ex-line b { color: var(--text); font-weight: 600; }
+.ex-line:last-child { margin-bottom: 0; }
+.ex-tag { display:inline-block; font-size: 10.5px; color: var(--text4); margin-left: 4px; }
 .pro-subgroup-label {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 13px; font-weight: 700; color: var(--text);
@@ -309,6 +317,25 @@ body {
     <div class="section-tag reveal">EXPERT PERSONAS</div>
     <h3 class="section-title reveal" style="font-size:clamp(19px,2.4vw,24px)">전문가 <strong>AI</strong></h3>
     <p class="section-body reveal">변호사·의사·간호사·건축사 등 자격을 갖춘 개별 전문직 종사자의 업무를 보조하는 AI 페르소나입니다. 모두 공통 추론 아키텍처(SP-COMMON)를 상속하며, 의료직군은 별도 안전 모듈을 추가로 적용합니다.</p>
+
+    <div class="ex-grid reveal">
+      <div class="ex-card">
+        <div class="ex-role">🩺 의사 — SP_physician 호출 예시</div>
+        <div class="ex-line">"60대 환자 혈압약, 기존 약물과 상호작용 체크해줘"</div>
+        <div class="ex-line"><b>나만의 AI 비서(AC)</b>가 PDV의 처방 이력을 확인 → <b>SP_physician</b>을 호출해 상호작용을 분석 → 대체 약물 후보 정리</div>
+      </div>
+      <div class="ex-card">
+        <div class="ex-role">⚖️ 변호사 — SP_lawyer 호출 예시</div>
+        <div class="ex-line">"임대차 계약 분쟁, 비슷한 판례 찾아줘"</div>
+        <div class="ex-line">AC가 <b>K-Law</b>와 <b>SP_lawyer</b>를 함께 호출 → 유사 판례·승소 논거 정리 → 준비서면 초안까지 작성</div>
+      </div>
+      <div class="ex-card">
+        <div class="ex-role">📊 공인회계사 — SP_accountant 호출 예시</div>
+        <div class="ex-line">"이번 달 결산 마감해줘"</div>
+        <div class="ex-line">AC가 <b>SP_accountant</b>를 호출해 거래 내역 이상 탐지 → 결산 반영 → 홈택스 신고 일정까지 예약</div>
+      </div>
+    </div>
+    <p class="section-body reveal" style="font-size:12.5px;color:var(--text4);margin-top:6px">이처럼 이용자는 항상 자신의 <strong>나만의 AI 비서(AC)</strong>하고만 대화합니다. 어떤 전문 SP를 언제 호출할지 판단하고, 결과를 PDV에 기록하는 것은 모두 AC의 역할입니다.</p>
     <div class="reveal">
 
     <div class="pro-subgroup">
