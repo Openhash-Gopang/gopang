@@ -3414,12 +3414,35 @@ async function handleLawPrecedent(request, env, corsHeaders, ctx) {
     }), { status: 502, headers: corsHeaders });
   }
 
-  // best-effort 언랩 — 정확한 키 구조는 실제 첫 호출로 확인 후 STEP 2-c에서 확정
+  // STEP 2-c(2026-07-16 실측 확정) — 봉투 없이 최상위에 바로 옴
   const unwrapped = raw?.PrecSearch || raw?.PrecService || raw;
+
+  let rows = null;
+  let totalCnt = null;
+  if (mode === 'search' && Array.isArray(unwrapped?.prec)) {
+    // 실제 라이브 호출로 확인된 필드명 그대로 사용(지어내지 않음, 2026-07-16 확인)
+    rows = unwrapped.prec.map(p => ({
+      판례일련번호: p['판례일련번호'] ?? null,
+      사건명:       p['사건명'] ?? null,
+      사건번호:     p['사건번호'] ?? null,
+      법원명:       p['법원명'] ?? null,
+      법원종류코드: p['법원종류코드'] || null,
+      선고:         p['선고'] ?? null,
+      선고일자:     p['선고일자'] ?? null,
+      사건종류명:   p['사건종류명'] ?? null,
+      사건종류코드: p['사건종류코드'] ?? null,
+      판결유형:     p['판결유형'] ?? null,
+      데이터출처명: p['데이터출처명'] ?? null,
+      판례상세링크: p['판례상세링크'] ?? null,
+    }));
+    totalCnt = Number(unwrapped.totalCnt) || rows.length;
+  }
+  // mode=detail(본문 조회)은 실측 샘플이 아직 없어 raw 그대로 유지 —
+  // 지어내지 않고 다음 확인 후 STEP 2-d로 정리한다.
 
   const result = {
     mode,
-    raw: unwrapped,
+    ...(rows !== null ? { totalCnt, rows } : { raw: unwrapped }),
     source: 'open.law.go.kr (국가법령정보 공동활용, 법제처)',
     attribution: '자료출처: 법제처 국가법령정보센터',
     cache: 'miss',
