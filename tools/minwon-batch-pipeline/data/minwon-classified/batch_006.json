@@ -192,7 +192,7 @@
       "flags": [
         {
           "rule": "R3_cross_batch_duplicate_description",
-          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '002', 'id': 30, 'title': '자동차 등록 원부 발급 열람 신청'}, {'batch_id': '004', 'id': 32, 'title': '자동차 말소 사실 증명서 발급 신청'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
+          "detail": "설명 텍스트가 이전 배치 항목 [{'batch_id': '002', 'id': 30, 'title': '자동차 등록 원부 발급 열람 신청'}, {'batch_id': '004', 'id': 32, 'title': '자동차 말소 사실 증명서 발급 신청'}, {'batch_id': '007', 'id': 16, 'title': '자동차 민원 신청'}]와 완전히 동일 — 같은 서류군(문서군)의 다른 하위유형일 가능성(§문서군 패턴, task_key 병합 검토 대상)."
         },
         {
           "rule": "R4_bundled_gateway_service",
