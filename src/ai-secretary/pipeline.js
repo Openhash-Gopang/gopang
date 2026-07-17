@@ -21,6 +21,7 @@ import { analyzePhase3 } from './phase3.js'
 import { calculateScore, bidirectionalVerify } from './phase4.js'
 import { classifyRisk } from './phase5.js'
 import { recordAndAnchor } from './phase6.js'
+import { assessOverallViolation } from './phase7.js'
 
 /**
  * AI 비서 전체 파이프라인 실행 (Phase 0~6)
@@ -28,15 +29,19 @@ import { recordAndAnchor } from './phase6.js'
  * @param {Object} message   - 발신 메시지
  * @param {Object} context   - 소통 맥락
  * @param {Object} [incoming] - 수신 메시지 (쌍방향 검증용, 없으면 null)
+ * @param {Function} [llmCaller] - Phase 7(종합 위법 가능성 판단)용 LLM 호출
+ *   함수. 주입 안 하면 Phase 7은 항상 skip(비용 0) — 기존 호출부는 수정
+ *   없이 그대로 동작한다.
  * @returns {Promise<{
  *   msgId:       string,
  *   anchorHash:  string,
  *   riskResult:  Object,
  *   phaseScores: Object,
+ *   overallAssessment: Object|null,
  *   processingMs: number
  * }>}
  */
-export async function runPipeline(message, context, incoming = null) {
+export async function runPipeline(message, context, incoming = null, llmCaller = null) {
   const t0 = performance.now()
 
   EventBus.emit(EVENTS.MSG_RECEIVED, { senderId: message.senderId }, 'pipeline')
@@ -101,6 +106,10 @@ export async function runPipeline(message, context, incoming = null) {
     ws: wsScore, final: finalScore,
   }
 
+  // ── Phase 7: 종합 위법 가능성 판단(LLM, S0가 아닐 때만·llmCaller 주입 시만) ──
+  const transcript = message.content ? `[발신자] ${message.content}` : ''
+  const overallAssessment = await assessOverallViolation(transcript, riskResult, llmCaller)
+
   const recorded = await recordAndAnchor(
     message, riskResult, phaseScores,
     phase3.details?.length > 0 ? phase3 : null,
@@ -116,10 +125,10 @@ export async function runPipeline(message, context, incoming = null) {
     EventBus.emit(EVENTS.MSG_BLOCKED, { msgId: recorded.msgId, reason: riskResult.message }, 'pipeline')
   }
 
-  return _buildResult(recorded, riskResult, phaseScores, t0, phase0)
+  return _buildResult(recorded, riskResult, phaseScores, t0, phase0, overallAssessment)
 }
 
-function _buildResult(recorded, riskResult, phaseScores, t0, phase0) {
+function _buildResult(recorded, riskResult, phaseScores, t0, phase0, overallAssessment = null) {
   const processingMs = parseFloat((performance.now() - t0).toFixed(3))
   return {
     msgId:        recorded.msgId,
@@ -127,6 +136,7 @@ function _buildResult(recorded, riskResult, phaseScores, t0, phase0) {
     layer:        recorded.layer,
     riskResult,
     phaseScores,
+    overallAssessment,
     processingMs,
     historyWeight: phase0?.historyWeight ?? 1.0,
   }
