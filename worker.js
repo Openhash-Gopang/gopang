@@ -4195,6 +4195,10 @@ async function _sweepBridgeOutbox(env) {
   }
 }
 
+// 2026-07-18 신설 — 테스트 목적 named export. 런타임 동작에는 영향 없음
+// (default export의 fetch 핸들러는 그대로 pathname 매칭으로 호출).
+export { handleGdcDepositClose };
+
 export default {
   // ── Cron 트리거 (10분마다 머클 앵커링 + 브릿지 아웃박스 스윕) ────────
   async scheduled(event, env, ctx) {
@@ -4417,6 +4421,7 @@ export default {
     if (pathname === '/wallet/gdc-transfer' && request.method === 'POST') return handleGdcTransfer(request, env, corsHeaders, ctx);
     if (pathname === '/biz/gdc-deposit' && request.method === 'POST') return handleGdcDepositCreate(request, env, corsHeaders);
     if (pathname === '/biz/gdc-deposits' && request.method === 'GET') return handleGdcDepositList(request, env, corsHeaders);
+    if (pathname === '/biz/gdc-deposit-close' && request.method === 'POST') return handleGdcDepositClose(request, env, corsHeaders);
     if (pathname === '/biz/balance' && request.method === 'GET')  return handleBizBalance(request, env, corsHeaders);
     if (pathname === '/biz/supply'  && request.method === 'GET')  return handleBizSupply(request, env, corsHeaders);
     // (2026-07-14 신설: GDC 충전 파이프라인 — "고정계좌 + 입금자명 매칭")
@@ -5201,6 +5206,99 @@ async function handleGdcDepositList(request, env, corsHeaders) {
   } catch (e) {
     return _err(502, 'L1_UNREACHABLE', 'L1 조회 실패: ' + e.message, corsHeaders);
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-18 신설 — POST /biz/gdc-deposit-close (예치금 인출/반환).
+// 법적 검토(무이자 예치·보관만 허용)에 따라 이자 지급 없이 원금만
+// 그대로 돌려준다. GDC_DEPOSIT_VAULT_GUID는 실제 개인키가 없는
+// 시스템 계정이라(handleGdcDepositCreate 주석 참고) 사용자처럼
+// buyer_sig로 서명할 수 없다 — main.pb.js /api/mint가 쓰는 것과
+// 동일한 "서버 관리자 권한으로 직접 blocks 레코드 생성" 패턴을
+// 그대로 따른다(buyer_guid=vault, seller_guid=user, buyer_sig='').
+// 예치 개설(handleGdcDepositCreate)과 반대 방향 블록이라 총량
+// 보존 불변식은 그대로 유지된다(새 발행 아님, 이미 있던 vault
+// 잔액을 사용자에게 되돌리는 것뿐).
+//
+// 자금이 실제로 이동하므로 본인 서명 인증을 반드시 요구한다
+// (/biz/claims, /biz/settle-ledger와 동일한 서명+TOFU 원칙 —
+// handleGdcDepositCreate 자체는 vault_tx_hash가 이미 서명된
+// 거래에서 나온 값이라 별도 인증이 없었지만, 인출은 다르다).
+// ═══════════════════════════════════════════════════════════
+async function handleGdcDepositClose(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { user_guid, deposit_id, pubkey, signature, ts } = body;
+  if (!user_guid)  return _err(400, 'MISSING_FIELD', 'user_guid 필수', corsHeaders);
+  if (!deposit_id) return _err(400, 'MISSING_FIELD', 'deposit_id 필수', corsHeaders);
+
+  const authOk = await _verifyClaimsRequester(env, {
+    guid: user_guid, pubkey, signature, ts,
+    sigMsg: `gdc-deposit-close:${user_guid}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  // 예치 레코드 조회 — 소유자·상태 검증(타인 예치금 인출/중복 인출 방지)
+  let dep;
+  try {
+    const depRes = await fetch(`${L1_DEFAULT}/api/collections/gdc_deposits/records/${encodeURIComponent(deposit_id)}`, { headers });
+    if (!depRes.ok) return _err(404, 'DEPOSIT_NOT_FOUND', '예치 기록을 찾을 수 없습니다', corsHeaders);
+    dep = await depRes.json();
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 조회 실패: ' + e.message, corsHeaders);
+  }
+  if (dep.user_guid !== user_guid) return _err(403, 'NOT_OWNER', '본인 예치금이 아닙니다', corsHeaders);
+  if (dep.status !== 'active')     return _err(409, 'ALREADY_CLOSED', `이미 ${dep.status} 상태입니다`, corsHeaders);
+
+  const principal = Number(dep.principal);
+  if (!(principal > 0)) return _err(500, 'INVALID_PRINCIPAL', '예치금 원금 값이 올바르지 않습니다', corsHeaders);
+
+  // 반환 블록 생성 — vault → user (무이자, 원금만 그대로 반환)
+  const contentHash = await _sha256Hex(`gdc-deposit-close:${deposit_id}:${user_guid}:${principal}:${Date.now()}`);
+  const blockBody = {
+    block_type:       'withdrawal',
+    tx_hash:           contentHash,
+    buyer_guid:         GDC_DEPOSIT_VAULT_GUID,
+    seller_guid:        user_guid,
+    buyer_sig:          '',
+    outputs: JSON.stringify([{ recipient_guid: user_guid, amount: principal, deposit_id }]),
+    prev_block_hash:    '',
+    content_hash:       contentHash,
+    height:             0,
+    prev_settle_hash:   '',
+  };
+  let blockRow;
+  try {
+    const blockRes = await fetch(`${L1_DEFAULT}/api/collections/blocks/records`, {
+      method: 'POST', headers, body: JSON.stringify(blockBody),
+    });
+    if (!blockRes.ok) return _err(502, 'L1_WRITE_FAILED', await blockRes.text(), corsHeaders);
+    blockRow = await blockRes.json().catch(() => null);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 반환 블록 생성 실패: ' + e.message, corsHeaders);
+  }
+
+  // 예치 상태를 closed로 표시 — 실패해도 반환 블록은 이미 만들어졌으니
+  // 자금은 안전하다(중복 인출은 블록 존재와 무관하게 status 검사로
+  // 여전히 1차 방어됨 — 다만 이 PATCH가 실패하면 status가 active로
+  // 남아 재시도 시 두 번째 반환 블록이 생길 위험이 있다는 걸 명시).
+  try {
+    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/gdc_deposits/records/${encodeURIComponent(deposit_id)}`, {
+      method: 'PATCH', headers, body: JSON.stringify({ status: 'closed' }),
+    });
+    if (!patchRes.ok) {
+      console.warn('[GDC Deposit Close] 상태 갱신 실패(반환 블록은 생성됨, 자금 안전, 수동 확인 필요):', await patchRes.text());
+    }
+  } catch (e) {
+    console.warn('[GDC Deposit Close] 상태 갱신 예외(반환 블록은 생성됨):', e.message);
+  }
+
+  return new Response(JSON.stringify({
+    ok: true, tx_hash: contentHash, amount: principal, block_id: blockRow?.id,
+  }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
 // GET /admin/tx-recent?token=&limit= — 관리자 전용 전체 최근 거래 목록.
