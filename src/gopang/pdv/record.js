@@ -269,6 +269,34 @@ export async function _loadOpenProjectStates() {
   }
 }
 
+// ── SP 자기 갱신 제안 (2026-07-17 신설 — RULE-03, K-Intent v1.3/
+// K-Compose v1.7/K-Deliver v1.3/K-Report v1.1). worker.js
+// /sp-updates/propose 경유 — sp_update_proposals 컬렉션에
+// status=pending_review로만 저장(자동 승인 없음 — 실제 SP 파일
+// 갱신은 사람이 검토 후 수동으로 다음 버전을 만든다).
+export async function _proposeSpUpdate(proposal) {
+  if (!proposal?.sp_id || !proposal?.issue || !proposal?.proposed_patch) {
+    console.warn('[SelfUpdate] 제안 무시 — sp_id/issue/proposed_patch 누락');
+    return null;
+  }
+  try {
+    const res = await fetch(CFG.endpoint + '/sp-updates/propose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(proposal),
+    });
+    if (!res.ok) {
+      console.warn('[SelfUpdate] 제안 저장 실패:', res.status);
+      return null;
+    }
+    console.info('[SelfUpdate] 제안 저장 완료:', proposal.sp_id, '| trigger:', proposal.trigger);
+    return await res.json();
+  } catch (e) {
+    console.warn('[SelfUpdate] 제안 저장 오류(무시):', e.message);
+    return null;
+  }
+}
+
 
 
 /**

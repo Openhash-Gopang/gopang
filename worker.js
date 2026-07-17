@@ -4204,6 +4204,10 @@ export default {
     if (pathname === '/orchestration/project-state/save')  return handleProjectStateSave(request, env, corsHeaders);
     if (pathname === '/orchestration/project-state/query') return handleProjectStateQuery(request, env, corsHeaders);
 
+    // ── SP 자기 갱신 제안 (2026-07-17 신설 — K-Intent v1.3/K-Compose
+    // v1.7/K-Deliver v1.3/K-Report v1.1 RULE-03) ──
+    if (pathname === '/sp-updates/propose')      return handleSpUpdatePropose(request, env, corsHeaders);
+
     // ── PDV 조회 동의 승인 페이지 (consent.html 전용, 2026-07-02 신설) ──
     if (pathname === '/consent/info')            return handleConsentInfo(request, env, corsHeaders);
     if (pathname === '/consent/respond')         return handleConsentRespond(request, env, corsHeaders);
@@ -6185,6 +6189,54 @@ async function handleProjectStateQuery(request,env,corsHeaders){
     human_action_desc: it.human_action_desc || '',
   }));
   return new Response(JSON.stringify({ok:true, items}),{status:200,headers:corsHeaders});
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-17 신설 — SP 자기 갱신 제안(Self-Update Proposal, RULE-03:
+// K-Intent v1.3/K-Compose v1.7/K-Deliver v1.3/K-Report v1.1). L1
+// PocketBase sp_update_proposals 컬렉션에 status=pending_review로만
+// 쌓는다 — 절대 자동 승인·자동 반영하지 않는다(주피터님이 직접
+// 검토해 승인하면 그때 사람이 실제 SP 파일의 다음 버전을 만든다).
+// protected_sections_touched=true(RULE-01/전문직 가드레일 관련)인
+// 제안 중 방향이 "완화"인 것은 애초에 SP 프롬프트 자체가 내지
+// 않도록 설계돼 있지만(RULE-03 본문 참조), 서버 쪽에서도 이중
+// 방어로 그 조합을 별도 플래그(needs_extra_review)로 표시해 검토
+// 우선순위를 높인다 — 차단은 아니다(차단은 SP 프롬프트 단에서 이미
+// 함), 검토자가 더 주의 깊게 보게 하는 신호일 뿐이다.
+// ═══════════════════════════════════════════════════════════
+async function handleSpUpdatePropose(request,env,corsHeaders){
+  if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});
+  const body=await request.json().catch(()=>null);
+  if(!body?.sp_id||!body?.issue||!body?.proposed_patch)
+    return _err(400,'SCHEMA_ERROR','sp_id, issue, proposed_patch 필드 필수',corsHeaders);
+
+  const protectedTouched = !!body.protected_sections_touched;
+  const payload = {
+    sp_id: body.sp_id,
+    current_version: body.current_version || '',
+    trigger: body.trigger || 'self_noticed_gap',
+    issue: body.issue,
+    proposed_patch: body.proposed_patch,
+    confidence: body.confidence || 'medium',
+    protected_sections_touched: protectedTouched,
+    // RULE-01/가드레일 관련 제안은 검토 우선순위를 높인다(차단이 아니라
+    // 신호 — 완화 방향 자체는 SP 프롬프트 단에서 이미 내지 않게 설계돼
+    // 있으므로, 여기 도달했다는 건 대개 "강화" 방향 제안이다).
+    needs_extra_review: protectedTouched,
+    status: 'pending_review',
+    source_session_note: body.source_session_note || '',
+  };
+
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_update_proposals/records`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(()=>res.status);
+    return _err(503,'SP_UPDATE_PROPOSE_FAILED',String(err),corsHeaders);
+  }
+  return new Response(JSON.stringify({ok:true, sp_id: body.sp_id, status:'pending_review'}),{status:200,headers:corsHeaders});
 }
 
 // ═══════════════════════════════════════════════════════════

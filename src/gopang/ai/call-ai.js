@@ -32,7 +32,7 @@ import { maybeHandleExpertTurn, applyExpertSystemIfActive,
          isExpertActive, handleExpertTag, _composeExpertPrompt } from './expert-session.js';
 import { getExpertDef, resolveExpertId } from './expert-registry.js';
 import { buildHondiFaqContext } from './hondi-faq-router.js';
-import { setPdvDomain, getPdvDomain, _buildPDVNote, _saveProjectState, _loadOpenProjectStates } from '../pdv/record.js';
+import { setPdvDomain, getPdvDomain, _buildPDVNote, _saveProjectState, _loadOpenProjectStates, _proposeSpUpdate } from '../pdv/record.js';
 // ★ 2026-07-11 추가: _callGeminiGeneral 등 5개 함수가 vision.js에 정의는
 // 돼 있는데 여기서 import가 빠져 있었다 — 이미지 첨부 후 Gemini 분석
 // 경로를 탈 때마다 ReferenceError로 죽고 있었을 것(실사로 확인, 아래
@@ -545,6 +545,8 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   // 2026-07-17 신설 — mode=project(SP-19 v1.2/SP-20 v1.6/SP-22 v1.1)
   .replace(/\[PROJECT_STATE_SAVE:[^\]]*\]/g, '')
   .replace(/\[RESUME_KEXECUTE:[^\]]*\]/g, '')
+  // 2026-07-17 신설 — 자기 갱신 제안(RULE-03, K-Intent v1.3 등)
+  .replace(/\[SELF_UPDATE_PROPOSAL:[^\]]*\]/g, '')
   .replace(/\[PROCEDURE_MAP_LOOKUP:[^\]]*\]/g, '')
   .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6, v1.9부터 레거시 폴백)
   .replace(/\[BENEFIT_SEMANTIC_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.9, 임베딩 재설계)
@@ -1182,6 +1184,35 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       });
     } catch (e) {
       console.warn('[ProjectState] PROJECT_STATE_SAVE 처리 실패(무시):', e.message);
+    }
+    // return true 하지 않음 — 계속 진행
+  }
+
+  // ── [SELF_UPDATE_PROPOSAL: ...] — SP 자기 갱신 제안 (2026-07-17
+  // 신설, RULE-03: K-Intent v1.3/K-Compose v1.7/K-Deliver v1.3/
+  // K-Report v1.1). ★ 이것도 forward가 아니다 — 사이드이펙트로 저장만
+  // 하고, 원래 이 SP가 하려던 처리(HANDOFF_TO_KCOMPOSE 등)는 같은
+  // 응답 안에서 그대로 계속 진행된다. 자동 승인은 없다 — pending_
+  // review로 쌓일 뿐, 이 SP의 다음 동작에 어떤 영향도 주지 않는다.
+  const selfUpdateMatch = fullReply.match(/\[SELF_UPDATE_PROPOSAL:([^\]]*)\]/);
+  if (selfUpdateMatch) {
+    try {
+      const raw = selfUpdateMatch[1];
+      const pick = (key) => {
+        const m = raw.match(new RegExp(key + '=("[^"]*"|[^,\\]]*)'));
+        return m ? m[1].replace(/^"|"$/g, '') : null;
+      };
+      await _proposeSpUpdate({
+        sp_id: pick('sp_id'),
+        current_version: pick('current_version'),
+        trigger: pick('trigger') || 'self_noticed_gap',
+        issue: pick('issue'),
+        proposed_patch: pick('proposed_patch'),
+        confidence: pick('confidence') || 'medium',
+        protected_sections_touched: pick('protected_sections_touched') === 'Y',
+      });
+    } catch (e) {
+      console.warn('[SelfUpdate] SELF_UPDATE_PROPOSAL 처리 실패(무시):', e.message);
     }
     // return true 하지 않음 — 계속 진행
   }
