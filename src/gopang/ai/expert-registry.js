@@ -72,6 +72,14 @@ export const EXPERT_REGISTRY = {
     label: '공인노무사', icon: '👷', category: 'LAW',
     key: 'SP_labor-attorney', needsMedicalSafety: false,
   },
+  'patent-attorney': {
+    label: '변리사', icon: '💡', category: 'LAW',
+    key: 'SP_patent-attorney', needsMedicalSafety: false,
+  },
+  'customs-broker': {
+    label: '관세사', icon: '🛃', category: 'LAW',
+    key: 'SP_customs-broker', needsMedicalSafety: false,
+  },
 
   // ── 의료·보건 (SP-HEALTH-06~15) ──────────────────────
   // 2026-07-06 신설(SP-HEALTH-16~19) — 의사·치과의사·한의사·약사. 다른 10개
@@ -141,6 +149,22 @@ export const EXPERT_REGISTRY = {
     label: '응급구조사', icon: '🚑', category: 'HEALTH',
     key: 'SP_paramedic', needsMedicalSafety: true,
   },
+  midwife: {
+    label: '조산사', icon: '🤱', category: 'HEALTH',
+    key: 'SP_midwife', needsMedicalSafety: true,
+  },
+  'speech-language-pathologist': {
+    label: '언어재활사', icon: '🗣️', category: 'HEALTH',
+    key: 'SP_speech-language-pathologist', needsMedicalSafety: true,
+  },
+  optician: {
+    label: '안경사', icon: '👓', category: 'HEALTH',
+    key: 'SP_optician', needsMedicalSafety: true,
+  },
+  sanitarian: {
+    label: '위생사', icon: '🧼', category: 'HEALTH',
+    key: 'SP_sanitarian', needsMedicalSafety: false,
+  },
 
   // ── 교육·상담·문화 (SP-EDU-01~06) ────────────────────
   teacher: {
@@ -173,6 +197,18 @@ export const EXPERT_REGISTRY = {
   librarian: {
     label: '사서', icon: '📖', category: 'EDU',
     key: 'SP_librarian', needsMedicalSafety: false,
+  },
+  'youth-counselor': {
+    label: '청소년상담사', icon: '🧑‍🤝‍🧑', category: 'EDU',
+    key: 'SP_youth-counselor', needsMedicalSafety: true,
+  },
+  'childcare-teacher': {
+    label: '보육교사', icon: '🧸', category: 'EDU',
+    key: 'SP_childcare-teacher', needsMedicalSafety: false,
+  },
+  'lifelong-educator': {
+    label: '평생교육사', icon: '🎓', category: 'EDU',
+    key: 'SP_lifelong-educator', needsMedicalSafety: false,
   },
 
   // ── 공학·건설·해사 (SP-ENG-01~09) ────────────────────
@@ -212,6 +248,22 @@ export const EXPERT_REGISTRY = {
     label: '소방시설관리사', icon: '🧯', category: 'ENG',
     key: 'SP_fire-safety-manager', needsMedicalSafety: false,
   },
+  'landscape-engineer': {
+    label: '조경기술사', icon: '🌳', category: 'ENG',
+    key: 'SP_landscape-engineer', needsMedicalSafety: false,
+  },
+  'surveying-engineer': {
+    label: '측량 및 지형공간정보기술사', icon: '📐', category: 'ENG',
+    key: 'SP_surveying-engineer', needsMedicalSafety: false,
+  },
+  'electrical-safety-engineer': {
+    label: '전기안전기술사', icon: '⚡', category: 'ENG',
+    key: 'SP_electrical-safety-engineer', needsMedicalSafety: false,
+  },
+  'gas-safety-engineer': {
+    label: '가스기술사', icon: '🔥', category: 'ENG',
+    key: 'SP_gas-safety-engineer', needsMedicalSafety: false,
+  },
 
   // ── 부동산 (SP-RE-01, 2026-07-06 신설) ────────────────
   // 2026-07-06 이전엔 이 카테고리 자체가 없었음 — 전문가 페르소나 누락
@@ -219,6 +271,31 @@ export const EXPERT_REGISTRY = {
   'real-estate-agent': {
     label: '공인중개사', icon: '🏠', category: 'REAL_ESTATE',
     key: 'SP_real-estate-agent', needsMedicalSafety: false,
+  },
+
+  'security-engineer': {
+    label: '정보보안전문가', icon: '🔒', category: 'IT',
+    key: 'SP_security-engineer', needsMedicalSafety: false,
+  },
+  'translator-interpreter': {
+    label: '통역사·번역사', icon: '🌐', category: 'TRANSLATION',
+    key: 'SP_translator-interpreter', needsMedicalSafety: false,
+  },
+  'tour-guide': {
+    label: '관광통역안내사', icon: '🗺️', category: 'TOURISM',
+    key: 'SP_tour-guide', needsMedicalSafety: false,
+  },
+  'sports-instructor': {
+    label: '생활스포츠지도사', icon: '🏃', category: 'SPORTS',
+    key: 'SP_sports-instructor', needsMedicalSafety: true,
+  },
+  hairdresser: {
+    label: '미용사', icon: '💇', category: 'BEAUTY',
+    key: 'SP_hairdresser', needsMedicalSafety: false,
+  },
+  chef: {
+    label: '조리사', icon: '👨‍🍳', category: 'CULINARY',
+    key: 'SP_chef', needsMedicalSafety: false,
   },
 };
 
@@ -254,6 +331,25 @@ const EXPERT_ID_ALIAS = {
   'insurance-adjuster': 'loss-adjuster',
   'labor-consultant': 'labor-attorney', 'employment-attorney': 'labor-attorney',
   'emt': 'paramedic', 'emergency-medical-technician': 'paramedic',
+  'patent-agent': 'patent-attorney', 'ip-attorney': 'patent-attorney',
+  'customs-agent': 'customs-broker',
+  'midwife-ai': 'midwife',
+  'speech-therapist': 'speech-language-pathologist', 'slp': 'speech-language-pathologist',
+  'optometrist': 'optician',
+  'hygienist': 'sanitarian',
+  'youth-counselor-ai': 'youth-counselor',
+  'daycare-teacher': 'childcare-teacher', 'preschool-teacher': 'childcare-teacher',
+  'lifelong-education-instructor': 'lifelong-educator',
+  'landscape-architect-eng': 'landscape-engineer',
+  'surveyor': 'surveying-engineer', 'geospatial-engineer': 'surveying-engineer',
+  'electrical-engineer-safety': 'electrical-safety-engineer',
+  'gas-engineer': 'gas-safety-engineer',
+  'security-expert': 'security-engineer', 'infosec': 'security-engineer', 'cybersecurity-expert': 'security-engineer',
+  'translator': 'translator-interpreter', 'interpreter': 'translator-interpreter',
+  'tourist-guide': 'tour-guide', 'travel-guide': 'tour-guide',
+  'fitness-instructor': 'sports-instructor', 'personal-trainer': 'sports-instructor',
+  'hair-stylist': 'hairdresser', 'hairstylist': 'hairdresser',
+  'cook': 'chef', 'baker': 'chef', 'culinary-chef': 'chef',
 };
 
 export function resolveExpertId(personaId) {

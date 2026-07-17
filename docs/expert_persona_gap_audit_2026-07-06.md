@@ -115,3 +115,33 @@
 | 손해사정사 | `loss-adjuster` | SP-LAW-04 | kinsurance와 역할 구분, 보험사/가입자 어느 쪽도 편들지 않음 |
 | 공인노무사 | `labor-attorney` | SP-LAW-05 | lawyer와 자격 구분(노동위원회 사건 특화) |
 | 응급구조사 | `paramedic` | SP-HEALTH-20 | **kemergency(GWP, R0 실제 신고)와 명칭 충돌 주의** — 평시 교육용, 실제 응급 신호는 항상 R0 우선 적용되어 이 페르소나를 오버라이드 |
+
+## 2026-07-17 추가 등록 (3차 후속 조치 — 남은 미착수 항목 전량)
+
+2차 배치(위)에서 남겨둔 항목 전량(보건교육사 제외, 낮은 빈도로 다음 배치 이월)을
+등록했다. 등록 후 총 59개. `expert-registry.js`/`sp-catalog.json` 반영 및
+node --check·esbuild 빌드 검증 완료.
+
+| 직업 | 키 | SP 코드 | 카테고리 | 비고 |
+|---|---|---|---|---|
+| 변리사 | `patent-attorney` | SP-LAW-06 | LAW | |
+| 관세사 | `customs-broker` | SP-LAW-07 | LAW | |
+| 조산사 | `midwife` | SP-HEALTH-21 | HEALTH | nurse와 자격 구분 |
+| 언어재활사 | `speech-language-pathologist` | SP-HEALTH-22 | HEALTH | |
+| 안경사 | `optician` | SP-HEALTH-23 | HEALTH | |
+| 위생사 | `sanitarian` | SP-HEALTH-24 | HEALTH | 보건교육사는 이월 |
+| 청소년상담사 | `youth-counselor` | SP-EDU-07 | EDU | school-counselor와 자격 구분 |
+| 보육교사 | `childcare-teacher` | SP-EDU-08 | EDU | |
+| 평생교육사 | `lifelong-educator` | SP-EDU-09 | EDU | |
+| 조경기술사 | `landscape-engineer` | SP-ENG-10 | ENG | |
+| 측량 및 지형공간정보기술사 | `surveying-engineer` | SP-ENG-11 | ENG | |
+| 전기안전기술사 | `electrical-safety-engineer` | SP-ENG-12 | ENG | |
+| 가스기술사 | `gas-safety-engineer` | SP-ENG-13 | ENG | |
+| 정보보안전문가 | `security-engineer` | SP-IT-01 | **IT (신규)** | 공격코드 제공은 항상 거절 |
+| 통역사·번역사 | `translator-interpreter` | SP-LANG-01 | **TRANSLATION (신규)** | |
+| 관광통역안내사 | `tour-guide` | SP-TOUR-01 | **TOURISM (신규)** | |
+| 생활스포츠지도사 | `sports-instructor` | SP-SPORTS-01 | **SPORTS (신규)** | needsMedicalSafety:true(M1 상속) |
+| 미용사 | `hairdresser` | SP-BEAUTY-01 | **BEAUTY (신규)** | |
+| 조리사 | `chef` | SP-CULINARY-01 | **CULINARY (신규)** | |
+
+**여전히 미착수(다음 배치 후보, 낮은 빈도로 분류)**: 보건교육사 1건뿐.
