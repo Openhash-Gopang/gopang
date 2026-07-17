@@ -165,6 +165,10 @@ export const EXPERT_REGISTRY = {
     label: '위생사', icon: '🧼', category: 'HEALTH',
     key: 'SP_sanitarian', needsMedicalSafety: false,
   },
+  'health-educator': {
+    label: '보건교육사', icon: '📢', category: 'HEALTH',
+    key: 'SP_health-educator', needsMedicalSafety: false,
+  },
 
   // ── 교육·상담·문화 (SP-EDU-01~06) ────────────────────
   teacher: {
@@ -350,6 +354,7 @@ const EXPERT_ID_ALIAS = {
   'fitness-instructor': 'sports-instructor', 'personal-trainer': 'sports-instructor',
   'hair-stylist': 'hairdresser', 'hairstylist': 'hairdresser',
   'cook': 'chef', 'baker': 'chef', 'culinary-chef': 'chef',
+  'health-education-specialist': 'health-educator', 'public-health-educator': 'health-educator',
 };
 
 export function resolveExpertId(personaId) {
