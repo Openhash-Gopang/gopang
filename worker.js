@@ -5612,10 +5612,31 @@ function _filterProfileByVisibility({ address, phone, website, extra }) {
   const affiliationVisible = fv.affiliation === true;
   const workDomainVisible = fv.work_domain === true;
 
+  // 2026-07-17 신설 — 결함 3건 추가 발견·수정(세 번째 회귀 계열).
+  // 이 함수가 여전히 extra.public 최상위 키를 손으로 하나씩 나열하는
+  // 방식이었다: activity(hours)는 VISIBILITY_FIELDS 목록엔 있었는데
+  // 정작 이 함수가 한 번도 손대지 않아 무조건 노출, finance(정산 계좌
+  // payout_account 포함!)와 industry_fields는 애초에 목록에도 없어서
+  // 역시 무조건 노출 — 이런 식으로 필드를 나열하는 방식 자체가
+  // "새 필드가 생길 때마다 여기 코드를 patch해야 한다"는 구조라, PA가
+  // 자연어 대화로 새 구조화 슬롯을 만들 때마다(§TEMPLATE-REFERENCE
+  // 커스터마이징 등) 또 빠뜨릴 게 뻔하다 — SP-19가 겪은 것과 같은
+  // "고정 enum을 계속 patch" 함정. 아래로 대체: location/contact/
+  // identity/products처럼 세부 필드 단위 통제가 필요한 것만 개별
+  // 처리하고, 나머지 최상위 키(activity·finance·industry_fields·향후
+  // 신설될 무엇이든)는 제네릭하게 훑어 field_visibility에 명시적
+  // true가 없으면 기본 비공개 — 코드 수정 없이 미래 필드까지 커버.
+  const HANDLED_TOP_KEYS = new Set(['location', 'contact', 'identity', 'products', 'field_visibility']);
+  const genericFiltered = {};
+  for (const [key, value] of Object.entries(extra?.public || {})) {
+    if (HANDLED_TOP_KEYS.has(key)) continue;
+    genericFiltered[key] = _isFieldVisible(fv, key) ? value : undefined;
+  }
+
   const filteredExtra = extra ? {
     ...extra,
     public: extra.public ? {
-      ...extra.public,
+      ...genericFiltered,
       location: _isFieldVisible(fv, 'address') ? extra.public.location
         : { ...extra.public.location, address_short: undefined, directions: undefined },
       contact: _isFieldVisible(fv, 'phone') ? extra.public.contact

@@ -159,6 +159,29 @@ def _present_fields(pub):
     for k, v in industry.items():
         if v not in (None, '', [], {}):
             present.add(f'industry_fields.{k}')
+
+    # 2026-07-17 신설 — 위 하드코딩된 체크리스트가 정확히 worker.js의
+    # _filterProfileByVisibility가 겪었던 것과 같은 함정이다(같은 세션에서
+    # 발견·수정): 필드를 하나씩 나열하다 보니 finance의 currencies·
+    # price_range·payout_account, activity의 holidays 같은 나머지 필드,
+    # 그리고 PA가 자연어 대화로 만들 향후 신규 최상위 슬롯은 전부
+    # 빠져있었다. industry_fields처럼 제네릭 순회로 보완 — 이미 위에서
+    # 개별 처리한 키(_HANDLED)는 건너뛰고, finance의 나머지 필드까지
+    # 코드 수정 없이 자동으로 잡히게 한다.
+    _HANDLED = {'address', 'phone', 'products', 'hours', 'description', 'gdc_accepted'}
+    finance = pub.get('finance') or {}
+    for k, v in finance.items():
+        if k == 'gdc_accepted':
+            continue  # 이미 위에서 처리
+        if v not in (None, '', [], {}) and f'finance.{k}' not in _HANDLED:
+            present.add(f'finance.{k}')
+    activity = pub.get('activity') or {}
+    for k, v in activity.items():
+        if k in ('hours', 'timezone'):
+            continue  # hours는 이미 처리, timezone은 거의 항상 고정값이라 빈도 집계 의미 없음
+        if v not in (None, '', [], {}):
+            present.add(f'activity.{k}')
+
     return present
 
 
