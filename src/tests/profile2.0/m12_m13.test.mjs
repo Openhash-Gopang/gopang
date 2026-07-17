@@ -3,8 +3,8 @@
  * node m12_m13.test.mjs
  */
 
-import { handleSearch } from '/home/claude/search.js';
-import { localAnomalyScore, classifySeverity, scoreContent } from '/home/claude/security.js';
+import { handleSearch } from '../../profile2.0/search.js';
+import { localAnomalyScore, classifySeverity, scoreContent } from '../../profile2.0/security.js';
 
 let pass = 0, fail = 0;
 function assert(id, cond, detail = '') {

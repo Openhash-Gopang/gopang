@@ -11,7 +11,7 @@ import {
   handleGetPost,
   handleCreateReply,
   handleResolve,
-} from '/home/claude/community.js';
+} from '../../profile2.0/community.js';
 
 let pass = 0, fail = 0;
 function assert(id, cond, detail = '') {

@@ -8,11 +8,12 @@ import asyncio
 import csv
 import io
 import json
+import os
 import sys
 import unittest
 import uuid
 from unittest.mock import patch, MagicMock, AsyncMock
-sys.path.insert(0, '/home/claude')
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'tools'))
 
 from bulk_register import (
     make_guid, make_handle, hangul_to_roman,

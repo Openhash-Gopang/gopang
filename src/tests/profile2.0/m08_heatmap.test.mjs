@@ -3,7 +3,7 @@
  * node --experimental-vm-modules src/tests/profile2.0/m08_heatmap.test.mjs
  */
 
-import { getColor, handleHeatmap } from '/home/claude/heatmap.js';
+import { getColor, handleHeatmap } from '../../profile2.0/heatmap.js';
 
 let pass = 0;
 let fail = 0;

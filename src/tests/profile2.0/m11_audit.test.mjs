@@ -3,7 +3,7 @@
  * node m11_audit.test.mjs
  */
 
-import { sha256hex, computeMerkleRoot, buildPdvLogInsert, anchorL1MerkleRoot, handleMerkleVerify } from '/home/claude/audit.js';
+import { sha256hex, computeMerkleRoot, buildPdvLogInsert, anchorL1MerkleRoot, handleMerkleVerify } from '../../profile2.0/audit.js';
 
 let pass = 0, fail = 0;
 function assert(id, cond, detail = '') {
