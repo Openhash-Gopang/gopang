@@ -405,16 +405,20 @@ gopang/
 
 | 체크 | 상태 | 심화 | 우선순위 |
 |---|---|---|---|
-| S1~S3 | **방금 등록** — 실사용 검증 전무 | 등록 직후 최초 트리거 재현 테스트 필수 | **P0 — 신규라 리스크 최고** |
-| S4 | 미실시 | trigger("찾아줘" 계열은 없지만 "질문있어/문의/궁금해"가 다른 서비스의 일반 질문과 경계가 모호함 — 예: "보험 궁금해"가 kqna로 갈지 kinsurance로 갈지) | **P0** |
+| S1 | **완료(2026-07-17)** — index/webapp/desktop.html 전부 HTTP 200 확인 | — | — |
+| S2 | **완료 — 실패(P0 발견)** — `pdv-history-client.js`가 저장소 어디에도 없음(루트·js/ 둘 다 404, 클론 후 루트 목록에서도 부재 확인). qna는 51개 파일 규모 신규 저장소인데 PDV 기록 자체가 안 됨 | 신규 저장소 배치 시 SSOT 체크리스트에 PDV 클라이언트가 빠졌을 가능성 — I1-1의 "12개 일치+3개 신규 배치"에 qna/users는 포함 안 됐던 것으로 보임 | **P0 — PDV 기록 불가 상태** |
+| S3 | **완료** — gwp-registry.js에 등록됨(id: kqna, type: tab, status: active, priority 9, threshold 0.65) — sp-tag-dispatch.test.mjs SD-14/15로 구조 검증 통과 | — | — |
+| S4 | 미실시(정적 검사로는 한계) | trigger("찾아줘" 계열은 없지만 "질문있어/문의/궁금해"가 다른 서비스의 일반 질문과 경계가 모호함 — 예: "보험 궁금해"가 kqna로 갈지 kinsurance로 갈지)는 라이브 LLM 판단 품질 문제라 이 샌드박스에서 재현 불가 | **P0** |
 | 도메인 | 미실시 | `SP-CORE.txt` + 9개 도메인별 SP(BIZ/ECONOMY/EDU/GOV/INFRA/IP/LEGAL/LOGISTICS/SAFETY) 자체 라우팅 로직 — gwp-registry.js와는 별개로 qna 자체 내부에 2차 라우터가 있음, 이 내부 라우터 테스트 전무 | **P0 — 완전 미검증 영역** |
 
 ## E-18. Gopang Users (users) — id: kusers **(2026-07-17 신규 등록, 테스트 이력 0건)**
 
 | 체크 | 상태 | 심화 | 우선순위 |
 |---|---|---|---|
-| S1~S3 | **방금 등록** | 최초 검증 필요 | **P0** |
-| S4 | 미실시 | trigger("찾아줘")가 `ksearch`(id: ksearch, "찾아줘/연결해줘/불러줘") 및 `tool-web-search`("찾아줘")와 **3중 중복** — 실제 어느 서비스가 이기는지(threshold/priority 비교 필요: kusers 0.65 vs ksearch 0.7 vs tool-web-search 0.6) | **P0 — 3중 트리거 충돌, 이번 세션에서 처음 발견** |
+| S1 | **완료(2026-07-17)** — index/webapp/desktop.html 전부 HTTP 200 확인 | — | — |
+| S2 | **완료 — 실패(P0 발견, qna와 동일 패턴)** — `pdv-history-client.js` 없음(루트·js/ 둘 다 404, 클론 확인) | E-17과 동일 원인으로 추정 | **P0 — PDV 기록 불가 상태** |
+| S3 | **완료** — gwp-registry.js에 등록됨(id: kusers, type: tab, status: active, priority 9, threshold 0.65) — sp-tag-dispatch.test.mjs SD-14/15로 구조 검증 통과 | — | — |
+| S4 | **재확인 완료 — 이전 판단(3중 충돌) 정정 필요.** 실제 kusers의 trigger는 "찾아줘" 단독이 아니라 "이 사람 찾아줘"/"프로필 찾아줘"/"연락처 찾아줘" 등 구체적 구문이다(gwp-registry.js 508행대 실측 확인) — `ksearch`/`tool-web-search`의 "찾아줘"는 kusers 문구의 부분 문자열이라 완전 동일 충돌은 아님. 다만 matchService()가 dead code라 실사용 라우팅에는 어차피 영향 없음(sp-tag-dispatch.test.mjs SD-16에 정보성으로 기록됨) | 이전 세션(E-18 최초 작성 시점)의 "3중 충돌" 판단 자체가 부정확했음 — 이번 세션에서 실측으로 정정 | P1(실사용 영향 없음으로 하향) |
 | 도메인 | 미실시 | GAS(Gopang Address System) v1.6 기반 엔티티 검색 — `register-profile.html`/`profile.html`과의 데이터 연동(동일 저장소 내 register 관련 파일들) | P0 |
 
 
@@ -506,13 +510,13 @@ gopang/
 
 ## Phase R1 — 즉시(다음 세션 최우선, 전부 이 샌드박스에서 실행 가능)
 
-1. **B2-5** `phase23_gwp_registry_scaling.test.mjs` — 방금 gwp-registry.js를 고쳤으니 회귀부터 확인
-2. **PART C 전체(M01~M13)** — 39개 테스트 중 13개, ①(가입) 검증의 진짜 실체
-3. **A3-7** `phase_anchor_integration.test.js` — openhash 관련 놓친 파일
-4. **B2-1, B2-2** `router-category.test.mjs`, `sp-intercall.test.mjs` — 라우팅 실핵심
-5. **I1-2** `gopang-wallet.js` 전 저장소 diff — 신규 발견 과제
-6. **I2-2** 트리거 충돌 전수조사(kusers/ksearch/tool-web-search 3중 충돌 재현 포함)
-7. **E-17, E-18** qna/users 방금 등록한 신규 서비스 최초 검증
+1. **B2-5** `phase23_gwp_registry_scaling.test.mjs` — ✅ 완료(11/11 통과, 회귀 없음) + DB 드리프트 마이그레이션(`1786500002_...`) 추가
+2. **PART C 전체(M01~M13)** — 39개 테스트 중 13개, ①(가입) 검증의 진짜 실체 — **미완료, 다음 세션 최우선**
+3. **A3-7** `phase_anchor_integration.test.js` — ✅ 완료(12/12 통과) + hashChain.js 배치 타이머 unref() 누락 버그 수정(프로세스 행 현상 재현·해결)
+4. **B2-1, B2-2** `router-category.test.mjs`, `sp-intercall.test.mjs` — ✅ 완료. B2-1은 죽은 `router.js` 참조로 실행 자체 불가 확인 후 `sp-tag-dispatch.test.mjs`(16/16)로 교체. B2-2는 최초 실행 시 26개 중 8개 실패 → JEJU-DO-SP 목 파일명 드리프트(v1.0→v1.5)가 원인으로 확인, 수정 후 26/26 통과
+5. **I1-2** `gopang-wallet.js` 전 저장소 diff — ✅ 조사 완료(3세대 드리프트 + security/gdc 파일 누락 발견, §I-1 참조) — **재배포는 push 권한 필요해 사용자 판단/조치 대기**
+6. **I2-2** 트리거 충돌 전수조사(kusers/ksearch/tool-web-search 3중 충돌 재현 포함) — ✅ 완료. 정확히 동일한 trigger 문자열 공유 7쌍 확인(정보성, matchService dead code라 실사용 무관) + kusers 3중 충돌 판단 자체가 부정확했음을 재확인·정정(§E-18 S4)
+7. **E-17, E-18** qna/users 방금 등록한 신규 서비스 최초 검증 — ✅ S1~S3 완료. **P0 발견: 두 저장소 모두 `pdv-history-client.js`가 없어 PDV 기록이 아예 안 되는 상태**(§E-17/E-18 S2 참조, 사용자 조치 필요)
 
 ## Phase R2 — 단기(1주 내)
 
