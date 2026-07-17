@@ -436,11 +436,11 @@ gopang/
 
 | ID | 대상 | 목적 | 우선순위 | 커버리지 |
 |---|---|---|---|---|
-| F-1 | Network 계층(N-01~05) | `src/network/` 통신 규약 | P0 | [기존] 이번 세션 미실행 |
-| F-2 | GDC 계층(G-01~08) | `src/gdc/` — E-7(K-GDC 서비스)과는 별개로 코어에도 GDC 모듈이 존재, 역할 분담 확인 필요 | P0 | [기존] 미실행, **역할 중복 여부 신규 확인 필요** |
-| F-3 | Privacy 계층(P-01~06) | `src/privacy/` | P0 | [기존] 미실행 |
-| F-4 | Push 브로드캐스트(PB-01~04) | `worker.js`의 `POST /push/broadcast`, `sw.js` push 분기 | P1 | [기존] 미실행 |
-| F-5 | Push L1 우선순위 | `node:test` 프레임워크 사용(다른 파일들과 다른 스타일 — Node 내장 test runner) | P1 | [기존] 미실행, **실행 명령어가 다를 수 있음**(`node --test` 필요 여부 확인) |
+| F-1 | Network 계층(N-01~05) | `src/network/` 통신 규약 | P0 | ✅ **완료 — 실제 프로덕션 버그 발견·수정.** 원래 파일(`phase5_network_gdc_privacy.test.js`)이 GDC import 6곳(§F-2 참조)이 깨져 파일 전체가 단 하나도 실행 못 하는 상태였음 — `phase5_network_privacy.test.js`로 분리해 N-01~05 살림. 분리 중 `src/network/layerClient.js` 자체가 "config import 제거"라는 자기 주석대로 실제 import는 지웠는데 `config.LAYER_ENDPOINTS`/`config.ENV` 참조는 안 지워서 이 파일을 import하는 순간 항상 크래시하던 것도 발견·수정(로컬 dev 스텁 추가). 5/5 통과 |
+| F-2 | GDC 계층(G-01~08) | `src/gdc/` — E-7(K-GDC 서비스)과는 별개로 코어에도 GDC 모듈이 존재, 역할 분담 확인 필요 | P0 | ✅ **"역할 중복"이 아니라 gopang에 GDC 코드 자체가 더 이상 없음을 확인.** `git log`로 실측: 2026-07-15 커밋(e0e71d0)에서 `src/gdc/*.js` 6개(tokenomics/smartVault/currencyPool/escrow/dao/offlineQueue)가 통째로 gdc 저장소로 이동했음(고의적 마이그레이션, 버그 아님). gopang 쪽에서는 G-01~08을 더 이상 검증할 수 없음 — 원본 테스트 스펙을 `docs/phase5_gdc_original_spec_REFERENCE.js`로 보존하고, 실제 검증은 `HONDI_DOMAIN_DEEP_TEST_DIRECTIVE_v1_0.md` §4.5(gdc 저장소)로 이관 완료 |
+| F-3 | Privacy 계층(P-01~06) | `src/privacy/` | P0 | ✅ **완료 — 6/6(P-06은 offlineQueue.js 부재로 skip, 별도 실패 아님).** F-1과 같은 분리 작업으로 함께 살림. `getMixnode()` 누락 import 버그도 함께 발견·수정(GDC import 에러에 가려 안 보이고 있었음) |
+| F-4 | Push 브로드캐스트(PB-01~04) | `worker.js`의 `POST /push/broadcast`, `sw.js` push 분기 | P1 | ✅ **완료 — 실제 프로덕션 버그 발견·수정, 8/8 통과.** PB-04: 구독 픽스처가 placeholder 키(`p256dh:'x'`)라 실제 payload 암호화를 못 통과해 발송이 항상 조용히 실패(sent:0)하던 것 발견 — 진짜 ECDH 키로 교체. 같은 테스트의 Authorization 헤더 정규식이 프로덕션이 실제로 만드는 형식(콤마 뒤 공백)과 안 맞아 검증 자체가 안 되던 것도 수정. SW-01~03은 `sw.js`에 나중에 추가된 상시 PLAY_SOUND 브로드캐스트를 반영 안 한 낡은 기대값이었음 — 갱신 |
+| F-5 | Push L1 우선순위 | `node:test` 프레임워크 사용(다른 파일들과 다른 스타일 — Node 내장 test runner) | P1 | ✅ **완료 — 전면 재작성, 5/5 통과.** 이 파일 전체가 "L1 우선, Supabase 폴백" 아키텍처를 검증하고 있었는데 2026-07-14에 Supabase가 완전히 폐기됨(handlePushSend/handlePushSubscribe 어디에도 Supabase 코드 없음, 실사 확인) — "L1 only, 실패 시 즉시 502" 현재 설계에 맞춰 재작성 |
 
 ---
 
