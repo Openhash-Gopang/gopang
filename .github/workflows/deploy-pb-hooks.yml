@@ -1,0 +1,47 @@
+name: Deploy PB Hooks to L1 (hanlim)
+
+# pb_hooks/main.pb.js가 main에 push되면 hanlim에 자동 배포한다.
+# deploy-pb-migrations.yml과 동일한 강제 커맨드 SSH 패턴을 따르되,
+# 반드시 별도의 키/스크립트를 쓴다 — 강제 커맨드(command=)는 그 키로
+# 맺는 모든 SSH 세션에 적용되므로 pb_migrations용 키를 재사용하면
+# 그쪽 강제 커맨드가 이 배포를 가로챈다(docs/POCKETBASE-STRUCTURE-
+# GUIDE_v1_0.md §4-2에 기록된 교훈).
+#
+# 필요한 GitHub Secrets(Settings > Secrets and variables > Actions):
+#   L1_HOOKS_SSH_PRIVATE_KEY  — pb_hooks 배포 전용 키(신규 발급 필요,
+#                                pb_migrations용 L1_SSH_PRIVATE_KEY와
+#                                절대 같은 키 재사용 금지)
+#   L1_SSH_HOST               — l1-hanlim.hondi.net (기존 값 재사용 가능)
+#   L1_SSH_USER                — ubuntu (기존 값 재사용 가능)
+#
+# 서버 authorized_keys에 이 키를 등록할 때 강제 커맨드로 제한할 것:
+#   command="/opt/gopang/ops/apply-pb-hooks.sh",no-port-forwarding,\
+#   no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA...
+
+"on":
+  push:
+    branches: [main]
+    paths:
+      - 'pb_hooks/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-pb-hooks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH 에이전트 설정
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.L1_HOOKS_SSH_PRIVATE_KEY }}
+
+      - name: known_hosts 등록
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.L1_SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: pb_hooks 배포 (강제 커맨드로 제한된 원격 스크립트 실행)
+        run: |
+          ssh "${{ secrets.L1_SSH_USER }}@${{ secrets.L1_SSH_HOST }}" "deploy"
+        # 강제 커맨드가 실제 실행을 대체하므로 여기 전달하는 인자는
+        # 의미 없다(apply-pb-hooks.sh 참고) — apply-pb-migrations.sh와
+        # 달리 파일명 목록이 필요 없어서(파일이 하나뿐) 더 단순하다.
