@@ -42,6 +42,20 @@ async function makeVapidKeyPair() {
   };
 }
 
+// BUG-FIX(2026-07-17): 원래 PB-04는 keys: { p256dh: 'x', auth: 'y' }처럼
+// 임의 문자열을 썼는데, _sendWebPush()가 실제로 이 값들로
+// _encryptWebPushPayload()(65바이트 EC 공개키 + 16바이트 auth secret
+// 요구)를 호출해서 fetch에 도달하기도 전에 매번 예외로 실패하고 있었다
+// (실사로 재현: sent:0, failed:2). PB-04의 실제 목적(VAPID JWT 서명 검증)에
+// 도달하려면 페이로드 암호화 단계부터 통과해야 하므로, 진짜 ECDH
+// 공개키/16바이트 난수로 만든 구독자 키를 쓴다.
+async function makeSubscriberKeys() {
+  const kp = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const rawPub = new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey));
+  const authSecret = crypto.getRandomValues(new Uint8Array(16));
+  return { p256dh: b64uEncodeBytes(rawPub), auth: b64uEncodeBytes(authSecret) };
+}
+
 function makeEnv(overrides = {}) {
   return {
     L1_ADMIN_EMAIL:     'admin@test.local',
@@ -98,8 +112,8 @@ describe('PB: handlePushBroadcast — /push/broadcast', () => {
     const { publicKey, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY } = await makeVapidKeyPair();
     const env = makeEnv({ VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY });
 
-    const subA = { endpoint: 'https://fake-push.example.com/dev/aaa', keys: { p256dh: 'x', auth: 'y' } };
-    const subB = { endpoint: 'https://fake-push.example.com/dev/bbb', keys: { p256dh: 'x', auth: 'y' } };
+    const subA = { endpoint: 'https://fake-push.example.com/dev/aaa', keys: await makeSubscriberKeys() };
+    const subB = { endpoint: 'https://fake-push.example.com/dev/bbb', keys: await makeSubscriberKeys() };
 
     let sentCount = 0;
     globalThis.fetch = async (urlArg, init = {}) => {
@@ -126,7 +140,13 @@ describe('PB: handlePushBroadcast — /push/broadcast', () => {
       // (importKey 'raw'→'jwk' 수정이 실제로 유효한 서명을 만드는지 끝까지 확인)
       if (u.startsWith('https://fake-push.example.com/')) {
         const auth = init.headers?.Authorization;
-        const m = /^vapid t=([^,]+),k=(.+)$/.exec(auth || '');
+        // BUG-FIX(2026-07-17): 프로덕션(worker.js _buildVapidHeaders)이
+        // `vapid t=${jwt}, k=${...}`로 콤마 뒤에 공백을 넣어 만드는데, 이
+        // 정규식은 공백을 허용하지 않아 항상 매칭 실패 → assert.ok(m)이
+        // 던진 예외가 handlePushBroadcast의 catch(e){failed++}에 조용히
+        // 삼켜져서 "실패"가 아니라 "발송 실패 처리"로만 보였다(sent:0,
+        // failed:2, 실사로 재현·확인). 콤마 뒤 공백을 허용하도록 완화.
+        const m = /^vapid t=([^,]+),\s*k=(.+)$/.exec(auth || '');
         assert.ok(m, 'Authorization 헤더가 "vapid t=...,k=..." 형식이어야 함');
         const [, jwt, k] = m;
         assert.equal(k, VAPID_PUBLIC_KEY, 'k= 파라미터가 VAPID_PUBLIC_KEY와 일치해야 함');
@@ -197,31 +217,42 @@ describe('SW: push 이벤트 핸들러 — 태그별 분기', () => {
 
   beforeEach(() => { notifyCalls.length = 0; clientMessages.length = 0; });
 
-  it('SW-01: 일반 메시지 태그 — 알림만 표시, 클라이언트 메시지 없음', async () => {
+  it('SW-01: 일반 메시지 태그 — 알림 표시 + 사운드 브로드캐스트만(SYNC/UPDATE 없음)', async () => {
+    // BUG-FIX(2026-07-17): sw.js에 나중에 추가된 _broadcastSound(주석: "push
+    // 도착 즉시 열린 모든 탭에 강제 사운드 신호를 브로드캐스트")가 태그
+    // 종류와 무관하게 항상 PLAY_SOUND를 postMessage로 보낸다 — 이 테스트가
+    // 작성된 시점엔 없던 동작. "일반 메시지는 postMessage 전혀 없음"이
+    // 아니라 "PLAY_SOUND 하나만 있고 SYNC_AI_SETTING/CHECK_FOR_UPDATE는
+    // 없음"으로 갱신.
     const event = makePushEvent({ title: '고팡', body: '안녕', tag: 'gopang-msg', sound: 'ping' });
     pushHandler(event);
     await event._settled;
     assert.equal(notifyCalls.length, 1);
     assert.equal(notifyCalls[0].title, '고팡');
     assert.equal(notifyCalls[0].opts.tag, 'gopang-msg');
-    assert.equal(clientMessages.length, 0, '일반 메시지는 postMessage를 보내면 안 됨');
+    assert.equal(clientMessages.length, 1, 'PLAY_SOUND 브로드캐스트 1건만 있어야 함');
+    assert.equal(clientMessages[0].type, 'PLAY_SOUND');
+    assert.ok(!clientMessages.some(m => m.type === 'SYNC_AI_SETTING' || m.type === 'CHECK_FOR_UPDATE'),
+      '일반 메시지에 SYNC_AI_SETTING/CHECK_FOR_UPDATE가 섞이면 안 됨');
   });
 
-  it('SW-02: AI 설정 동기화 태그 — SYNC_AI_SETTING 브로드캐스트', async () => {
+  it('SW-02: AI 설정 동기화 태그 — PLAY_SOUND + SYNC_AI_SETTING 브로드캐스트', async () => {
     const event = makePushEvent({ title: 'AI 비서 설정', body: '...', tag: 'gopang-ai-setup-abcd1234' });
     pushHandler(event);
     await event._settled;
-    assert.equal(clientMessages.length, 1);
-    assert.equal(clientMessages[0].type, 'SYNC_AI_SETTING');
+    assert.equal(clientMessages.length, 2, 'PLAY_SOUND + SYNC_AI_SETTING 총 2건이어야 함');
+    assert.ok(clientMessages.some(m => m.type === 'PLAY_SOUND'));
+    assert.ok(clientMessages.some(m => m.type === 'SYNC_AI_SETTING'));
   });
 
-  it('SW-03: 버전 업데이트 태그 — 알림 표시 + CHECK_FOR_UPDATE 브로드캐스트', async () => {
+  it('SW-03: 버전 업데이트 태그 — 알림 표시 + PLAY_SOUND + CHECK_FOR_UPDATE 브로드캐스트', async () => {
     const event = makePushEvent({ title: '고팡 업데이트', body: '새 버전이 준비됐습니다.', tag: 'gopang-version-update' });
     pushHandler(event);
     await event._settled;
     assert.equal(notifyCalls.length, 1, '버전 업데이트도 알림은 그대로 표시되어야 함');
-    assert.equal(clientMessages.length, 1);
-    assert.equal(clientMessages[0].type, 'CHECK_FOR_UPDATE');
+    assert.equal(clientMessages.length, 2, 'PLAY_SOUND + CHECK_FOR_UPDATE 총 2건이어야 함');
+    assert.ok(clientMessages.some(m => m.type === 'PLAY_SOUND'));
+    assert.ok(clientMessages.some(m => m.type === 'CHECK_FOR_UPDATE'));
   });
 
   it('SW-04: JSON 파싱 실패 시 텍스트로 폴백', async () => {
