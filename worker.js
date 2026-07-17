@@ -4197,7 +4197,7 @@ async function _sweepBridgeOutbox(env) {
 
 // 2026-07-18 신설 — 테스트 목적 named export. 런타임 동작에는 영향 없음
 // (default export의 fetch 핸들러는 그대로 pathname 매칭으로 호출).
-export { handleGdcDepositClose };
+export { handleGdcDepositClose, handleGdcDaoProposalCreate, handleGdcDaoVote, handleGdcDaoProposalsList };
 
 export default {
   // ── Cron 트리거 (10분마다 머클 앵커링 + 브릿지 아웃박스 스윕) ────────
@@ -4422,6 +4422,9 @@ export default {
     if (pathname === '/biz/gdc-deposit' && request.method === 'POST') return handleGdcDepositCreate(request, env, corsHeaders);
     if (pathname === '/biz/gdc-deposits' && request.method === 'GET') return handleGdcDepositList(request, env, corsHeaders);
     if (pathname === '/biz/gdc-deposit-close' && request.method === 'POST') return handleGdcDepositClose(request, env, corsHeaders);
+    if (pathname === '/biz/gdc-dao/proposal'  && request.method === 'POST') return handleGdcDaoProposalCreate(request, env, corsHeaders);
+    if (pathname === '/biz/gdc-dao/vote'      && request.method === 'POST') return handleGdcDaoVote(request, env, corsHeaders);
+    if (pathname === '/biz/gdc-dao/proposals' && request.method === 'GET')  return handleGdcDaoProposalsList(request, env, corsHeaders);
     if (pathname === '/biz/balance' && request.method === 'GET')  return handleBizBalance(request, env, corsHeaders);
     if (pathname === '/biz/supply'  && request.method === 'GET')  return handleBizSupply(request, env, corsHeaders);
     // (2026-07-14 신설: GDC 충전 파이프라인 — "고정계좌 + 입금자명 매칭")
@@ -5299,6 +5302,178 @@ async function handleGdcDepositClose(request, env, corsHeaders) {
   return new Response(JSON.stringify({
     ok: true, tx_hash: contentHash, amount: principal, block_id: blockRow?.id,
   }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-18 신설 — GDC DAO 거버넌스 3종 (POST /biz/gdc-dao/proposal,
+// POST /biz/gdc-dao/vote, GET /biz/gdc-dao/proposals).
+// 법적 검토(자금 이동·수익분배 없는 순수 거버넌스 참여로 한정 —
+// src/gdc/dao.js 상단 활성화 배너 참고)에 따라 활성화. gdc-deposit류와
+// 동일하게 L1(gdc_dao_proposals/gdc_dao_votes)을 유일한 저장소로 쓴다.
+//
+// 핵심 설계: 투표 시 stake_gdc를 클라이언트가 자기신고하지 않는다 —
+// 서버가 GET /biz/balance(L1 실제 잔액 재생)로 직접 조회해서 채운다.
+// (이전 세션에서 발견한 버그: 메모리 Map 버전의 vote()는 호출자가
+// 주장하는 stakeGDC를 그대로 신뢰했음.)
+// ═══════════════════════════════════════════════════════════
+const GDC_DAO_MIN_STAKE = 1000;
+
+async function handleGdcDaoProposalCreate(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { proposer_guid, title, params, pubkey, signature, ts } = body;
+  if (!proposer_guid) return _err(400, 'MISSING_FIELD', 'proposer_guid 필수', corsHeaders);
+  if (!title)         return _err(400, 'MISSING_FIELD', 'title 필수', corsHeaders);
+  if (params && params.type === 'OWNERSHIP_TRANSFER') {
+    return _err(403, 'DAWN_VIOLATION', 'DAWN 원칙 위반: 통화 풀 소유권 이전 제안 불가', corsHeaders);
+  }
+
+  const authOk = await _verifyClaimsRequester(env, {
+    guid: proposer_guid, pubkey, signature, ts,
+    sigMsg: `gdc-dao-proposal:${proposer_guid}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  const proposalId = 'prop_' + (await _sha256Hex(`${proposer_guid}:${title}:${Date.now()}`)).slice(0, 16);
+  const expiresAt = new Date(Date.now() + 30 * 86400 * 1000).toISOString();
+
+  try {
+    const res = await fetch(`${L1_DEFAULT}/api/collections/gdc_dao_proposals/records`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        proposal_id: proposalId, title, proposer_guid,
+        params_json: JSON.stringify(params || {}), expires_at: expiresAt,
+      }),
+    });
+    if (!res.ok) return _err(502, 'L1_WRITE_FAILED', await res.text(), corsHeaders);
+    const row = await res.json().catch(() => null);
+    return new Response(JSON.stringify({
+      ok: true, proposal: { proposalId, title, proposerGuid: proposer_guid, expiresAt, id: row?.id },
+    }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 저장 실패: ' + e.message, corsHeaders);
+  }
+}
+
+async function handleGdcDaoVote(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { proposal_id, user_guid, choice, pubkey, signature, ts } = body;
+  if (!proposal_id) return _err(400, 'MISSING_FIELD', 'proposal_id 필수', corsHeaders);
+  if (!user_guid)   return _err(400, 'MISSING_FIELD', 'user_guid 필수', corsHeaders);
+  if (!['yes', 'no', 'abstain'].includes(choice)) return _err(400, 'INVALID_CHOICE', 'choice는 yes/no/abstain 중 하나여야 합니다', corsHeaders);
+
+  const authOk = await _verifyClaimsRequester(env, {
+    guid: user_guid, pubkey, signature, ts,
+    sigMsg: `gdc-dao-vote:${user_guid}:${proposal_id}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  // 제안 존재·만료 여부 확인
+  let proposal;
+  try {
+    const filter = encodeURIComponent(`proposal_id='${proposal_id}'`);
+    const pRes = await fetch(`${L1_DEFAULT}/api/collections/gdc_dao_proposals/records?filter=${filter}&perPage=1`, { headers });
+    const pData = await pRes.json().catch(() => ({ items: [] }));
+    proposal = pData.items?.[0];
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 제안 조회 실패: ' + e.message, corsHeaders);
+  }
+  if (!proposal) return _err(404, 'PROPOSAL_NOT_FOUND', '제안을 찾을 수 없습니다', corsHeaders);
+  if (new Date(proposal.expires_at).getTime() < Date.now()) {
+    return _err(409, 'PROPOSAL_EXPIRED', '투표 기간이 종료된 제안입니다', corsHeaders);
+  }
+
+  // ★ 핵심: stake_gdc는 클라이언트 자기신고를 신뢰하지 않는다 —
+  // 서버가 L1 실제 잔액을 직접 재조회해서 채운다.
+  let stakeGdc = 0;
+  try {
+    const balRes = await fetch(`${L1_DEFAULT}/api/balance?guid=${encodeURIComponent(user_guid)}`);
+    const balData = await balRes.json().catch(() => ({ ok: false }));
+    stakeGdc = balData.ok ? (balData.balance || 0) : 0;
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', '잔액 조회 실패: ' + e.message, corsHeaders);
+  }
+  if (stakeGdc < GDC_DAO_MIN_STAKE) {
+    return _err(403, 'INSUFFICIENT_STAKE', `투표 최소 스테이킹 부족: ${stakeGdc} < ${GDC_DAO_MIN_STAKE} GDC`, corsHeaders);
+  }
+
+  // 중복 투표 방지 — unique index(proposal_id, user_guid)가 최종 방어선,
+  // 여기선 사용자 친화적 에러 메시지를 위해 먼저 조회.
+  try {
+    const dupFilter = encodeURIComponent(`proposal_id='${proposal_id}' && user_guid='${user_guid}'`);
+    const dupRes = await fetch(`${L1_DEFAULT}/api/collections/gdc_dao_votes/records?filter=${dupFilter}&perPage=1`, { headers });
+    const dupData = await dupRes.json().catch(() => ({ items: [] }));
+    if (dupData.items?.length) return _err(409, 'ALREADY_VOTED', '이미 투표했습니다', corsHeaders);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', '중복 투표 확인 실패: ' + e.message, corsHeaders);
+  }
+
+  try {
+    const voteRes = await fetch(`${L1_DEFAULT}/api/collections/gdc_dao_votes/records`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ proposal_id, user_guid, choice, stake_gdc: stakeGdc }),
+    });
+    if (!voteRes.ok) return _err(502, 'L1_WRITE_FAILED', await voteRes.text(), corsHeaders);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 투표 저장 실패: ' + e.message, corsHeaders);
+  }
+
+  const tally = await _gdcDaoTally(env, proposal_id, headers);
+  return new Response(JSON.stringify({ ok: true, stake_gdc: stakeGdc, votes: tally }),
+    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+async function _gdcDaoTally(env, proposalId, headers) {
+  const filter = encodeURIComponent(`proposal_id='${proposalId}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/gdc_dao_votes/records?filter=${filter}&perPage=200`, { headers });
+  const data = await res.json().catch(() => ({ items: [] }));
+  const tally = { yes: 0, no: 0, abstain: 0 };
+  for (const v of (data.items || [])) {
+    if (tally[v.choice] != null) tally[v.choice]++;
+  }
+  return tally;
+}
+
+async function handleGdcDaoProposalsList(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const proposalId = url.searchParams.get('proposal_id');
+  const limit = Math.min(parseInt(url.searchParams.get('limit') || '20', 10) || 20, 100);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': 'Bearer ' + token };
+
+  try {
+    const filter = proposalId ? encodeURIComponent(`proposal_id='${proposalId}'`) : '';
+    const listUrl = filter
+      ? `${L1_DEFAULT}/api/collections/gdc_dao_proposals/records?filter=${filter}&sort=-created&perPage=${limit}`
+      : `${L1_DEFAULT}/api/collections/gdc_dao_proposals/records?sort=-created&perPage=${limit}`;
+    const res = await fetch(listUrl, { headers });
+    const data = await res.json().catch(() => ({ items: [] }));
+
+    const items = [];
+    for (const p of (data.items || [])) {
+      const votes = await _gdcDaoTally(env, p.proposal_id, headers);
+      const expired = new Date(p.expires_at).getTime() < Date.now();
+      const total = votes.yes + votes.no;
+      const status = !expired ? 'ACTIVE' : (total > 0 && votes.yes > votes.no ? 'PASSED' : 'REJECTED');
+      items.push({
+        proposalId: p.proposal_id, title: p.title, proposerGuid: p.proposer_guid,
+        params: JSON.parse(p.params_json || '{}'), expiresAt: p.expires_at,
+        votes, status,
+      });
+    }
+    return new Response(JSON.stringify({ ok: true, items }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 조회 실패: ' + e.message, corsHeaders);
+  }
 }
 
 // GET /admin/tx-recent?token=&limit= — 관리자 전용 전체 최근 거래 목록.
