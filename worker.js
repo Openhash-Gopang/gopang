@@ -354,6 +354,16 @@ const USD_TO_KRW = 1500; // 실시간 조회 없이 보수적 고정값
 //  생기면) 이 가정도 함께 재검토해야 한다.
 const FREE_QUOTA_KRW_LIMIT = 100;
 
+// (2026-07-17: 개발 기간 동안 위 100원 무료 한도의 "집행"만 잠정 해제한다.
+//  한도값(FREE_QUOTA_KRW_LIMIT) 자체나 spend 추적(_recordAiUsage 등)은
+//  그대로 유지 — 이 플래그는 아래 STEP 0 게이트(7100번대, "guid 존재 +
+//  spent >= 한도" 분기)에서 차단 여부만 결정한다. 즉 개발 기간에도 사용량은
+//  정상적으로 KV(hondi:free_spend:{guid})에 누적되므로, 상용 출시 시점에
+//  이 플래그를 true로 되돌리기만 하면 이미 쌓인 누적치 기준으로 즉시
+//  집행이 재개된다 — 별도 마이그레이션이나 리셋 불필요.
+//  TODO(상용 출시 전 필수): true로 변경할 것.)
+const FREE_QUOTA_ENFORCEMENT_ENABLED = false;
+
 function _deepseekUsageToKRW(usage, tierKey) {
   if (!usage) return 0;
   const price = HONDI_TIER_MODELS[tierKey]?.price || HONDI_TIER_MODELS['hondi-flash'].price;
@@ -7119,7 +7129,7 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   //  않고, 실제 GDC 잔액을 확인해 최소 예약금 이상이면 통과시킨다. 잔액도
   //  부족하면 그때 비로소 차단한다 — "무료로 새는 것"도 "무제한 통과"도
   //  아니라, 정확히 "낸 만큼만 쓸 수 있다"가 최종 상태다.)
-  if (guid) {
+  if (guid && FREE_QUOTA_ENFORCEMENT_ENABLED) {
     const kv = env.AI_SETUP_SEALS_KV;
     if (kv) {
       const spendKey = `hondi:free_spend:${guid}`;
