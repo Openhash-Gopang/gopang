@@ -231,18 +231,17 @@ gopang/
 | C-07 | `m07_location.test.mjs` | ✅ 12/12 통과(동일 방식) | P1 |
 | C-08 | `m08_heatmap.test.mjs` | ✅ **버그 수정 후 19/19 통과** — `/home/claude/heatmap.js`(이전 세션의 하드코딩된 샌드박스 절대경로)를 `../../profile2.0/heatmap.js`로 수정, 실제 `src/profile2.0/heatmap.js`(getColor/handleHeatmap) 대상으로 실행 확인 | P2 |
 | C-09 | `m09_community.test.mjs` | ✅ **버그 수정 후 12/12 통과** — 동일한 절대경로 버그, `community.js` 실제 모듈 대상 확인 | P1 |
-| C-10 | `m10_ledger.test.mjs` | ❌ **미해결 — 프로덕션 모듈(`ledger.js`) 자체가 저장소 어디에도 없음.** 테스트가 요구하는 7개 함수(validateLedgerEntry/buildMarketPurchaseRows/verifyBIVM/reconstructBalances/detectBalanceAnomalies/computeSettledFs/marketPurchaseRPC) 전체를 저장소 전수 grep으로 확인했으나 존재하지 않음 — 테스트만 작성되고 구현은 된 적이 없는 것으로 보임. 금전/정산 로직이라 사양 없이 임의 구현하지 않고 사용자 판단으로 남김 | **P0 — 실제 미구현 상태, 사용자 결정 필요** |
+| C-10 | `m10_ledger.test.mjs` | ✅ **완료 — `src/profile2.0/ledger.js` 신규 구현 후 19/19 통과.** 테스트 사양(7개 함수)대로 K-Market 구매 1건을 구매자 차변/판매자 대변(97%)/플랫폼 대변(3%) 3행 복식부기로 분해, Σ차변=Σ대변 불변식(verifyBIVM) 검증, 원장→사용자 잔액 역산(reconstructBalances/computeSettledFs), 프로필 캐시(extra.fs) 대조(detectBalanceAnomalies), Supabase RPC 기록(marketPurchaseRPC, SQLSTATE 23514→CHECK_VIOLATION 변환)까지 구현. `verifyBIVM`은 A-3(OpenHash BIVM)과 개념만 공유하고 구현은 완전히 별개(파일도 다름) | 완료 |
 | C-11 | `m11_audit.test.mjs` | ✅ **버그 수정 후 22/22 통과** — 동일한 절대경로 버그, `audit.js`(sha256hex/computeMerkleRoot/buildPdvLogInsert/anchorL1MerkleRoot/handleMerkleVerify) 실제 모듈 대상 확인. A-3(OpenHash phase_anchor_integration)와는 별개 계층(이쪽은 PDV 로그 Merkle 감사, A-3은 가입/대화/거래 3단 앵커링)으로 겹치지 않음 확인 | P0 |
 | C-12 | `m12_m13.test.mjs` | ✅ **버그 수정 후 19/19 통과** — 동일한 절대경로 버그, `search.js`(handleSearch)+`security.js`(localAnomalyScore/classifySeverity/scoreContent) 실제 모듈 대상 확인. ksearch(GWP_REGISTRY id)와는 별개(이쪽은 profile2.0 내부 프로필 검색) | P0 |
 | (보너스) | `test_m14_bulk_register.py` | ✅ **버그 수정 후 10/10 통과** — `sys.path.insert(0, '/home/claude')` 하드코딩을 저장소 상대경로로 수정, `tools/bulk_register.py` 실제 모듈 대상 확인 | — |
 
 **PART C 종합 소견(갱신)**: M08/M09/M11/M12/M14 5개 파일이 전부 동일한 패턴의 버그(이전 세션이 남긴
 샌드박스 전용 절대경로 `/home/claude/*`)로 실행 자체가 불가능했다 — 경로만 고치면 실제 프로덕션
-모듈을 정확히 검증하는 잘 작성된 테스트였음(19/19, 12/12, 22/22, 19/19, 10/10 전부 통과). 반면
-M01~M07은 실행은 늘 가능했지만 애초에 프로덕션 코드를 import하지 않는 방식이라 "통과"의 의미가
-다르다 — 프로덕션 모듈과의 드리프트 여부는 별도 확인이 필요하다. **가장 중요한 발견은 M10 —
-`ledger.js`가 테스트만 있고 실제 구현이 존재하지 않는다는 것**이며, 이는 재구현이 아니라 원래
-설계/사양이 필요한 부분이라 이 세션에서 임의로 작성하지 않았다.
+모듈을 정확히 검증하는 잘 작성된 테스트였음(19/19, 12/12, 22/22, 19/19, 10/10 전부 통과). M10은
+프로덕션 모듈(`ledger.js`) 자체가 없어서 테스트 사양대로 신규 구현 후 19/19 통과 확인. 반면 M01~M07은
+실행은 늘 가능했지만 애초에 프로덕션 코드를 import하지 않는 방식이라 "통과"의 의미가 다르다 —
+프로덕션 모듈과의 드리프트 여부는 별도 확인이 필요하다. **PART C(M01~M14) 전 항목 완료.**
 
 ---
 
