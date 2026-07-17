@@ -510,6 +510,30 @@ const GWP_REGISTRY = [
     triggers: ['계산','얼마','합계','퍼센트','%','환산'],
   },
 
+  {
+    id: 'kqna', name: 'Gopang QnA', category: 'GOV',
+    type: 'tab',
+    url: 'https://qna.hondi.net/webapp.html',
+    status: 'active', priority: 9, threshold: 0.65,
+    description: '범부처 질의응답 라우터. SP-CORE + 도메인별 SP(BIZ/ECONOMY/EDU/GOV/INFRA/IP/LEGAL/LOGISTICS/SAFETY) 자체 라우팅.',
+    triggers: [
+      '질문있어','문의','궁금해','뭐예요','어떻게 해요','절차가',
+      '신청 방법','자격 요건','필요한 서류',
+    ],
+  },
+
+  {
+    id: 'kusers', name: 'Gopang Users', category: 'GOV',
+    type: 'tab',
+    url: 'https://users.hondi.net/webapp.html',
+    status: 'active', priority: 9, threshold: 0.65,
+    description: '개인/기관 엔티티 검색·해석. GAS(Gopang Address System) v1.6 기반. SP-USERS 자체 라우팅.',
+    triggers: [
+      '이 사람 찾아줘','프로필 찾아줘','연락처 찾아줘','누구세요',
+      '가입자 조회','엔티티 검색',
+    ],
+  },
+
 ];
 
 // ── L1 pending_agents 동적 로드 (앱 시작 시 1회) ───────────────

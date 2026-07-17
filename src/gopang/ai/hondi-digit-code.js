@@ -99,7 +99,7 @@ export function phoneToDigits({ type, areaCode, subscriberNumber }) {
 // 10자리 숫자 배열(또는 숫자 코드 문자열)을 다시 전화번호 구조로 해석.
 // 스캐너가 인식한 결과(숫자 배열)를 실제 전화번호로 되돌릴 때 사용.
 export function digitsToPhone(digits) {
-  const s = Array.isArray(digits) ? digits.join('') : String(digits).padStart(DIGIT_COUNT, '0');
+  const s = Array.isArray(digits) ? digits.join('') : String(digits);
   if (s.length !== DIGIT_COUNT || !/^\d+$/.test(s)) {
     throw new Error(`숫자 코드는 ${DIGIT_COUNT}자리 숫자여야 합니다: "${s}"`);
   }
