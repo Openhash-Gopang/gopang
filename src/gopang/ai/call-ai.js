@@ -32,7 +32,7 @@ import { maybeHandleExpertTurn, applyExpertSystemIfActive,
          isExpertActive, handleExpertTag, _composeExpertPrompt } from './expert-session.js';
 import { getExpertDef, resolveExpertId } from './expert-registry.js';
 import { buildHondiFaqContext } from './hondi-faq-router.js';
-import { setPdvDomain, getPdvDomain, _buildPDVNote } from '../pdv/record.js';
+import { setPdvDomain, getPdvDomain, _buildPDVNote, _saveProjectState, _loadOpenProjectStates } from '../pdv/record.js';
 // ★ 2026-07-11 추가: _callGeminiGeneral 등 5개 함수가 vision.js에 정의는
 // 돼 있는데 여기서 import가 빠져 있었다 — 이미지 첨부 후 Gemini 분석
 // 경로를 탈 때마다 ReferenceError로 죽고 있었을 것(실사로 확인, 아래
@@ -470,6 +470,29 @@ function _stripBracketTag(text, tagName) {
   return out;
 }
 
+// ── PROJECT_STATE_SAVE 태그의 중첩 배열/객체 필드(remaining_steps 등)를
+// 안전하게 떼어낸다(2026-07-17 신설). 정규식으로 완벽한 JSON 파싱을
+// 시도하지 않는다 — LLM 출력은 형식이 살짝 흔들릴 수 있어, 실패하면
+// 빈 배열로 두고 조용히 넘어간다(재개 시 K-Execute가 부족분을 다시
+// 판단하게 하는 편이 파싱 에러로 전체 흐름을 막는 것보다 안전하다).
+function _safeParseJsonField(raw, key) {
+  const startIdx = raw.indexOf(key + '=');
+  if (startIdx === -1) return [];
+  let i = raw.indexOf('=', startIdx) + 1;
+  while (i < raw.length && /\s/.test(raw[i])) i++;
+  const openChar = raw[i];
+  if (openChar !== '[' && openChar !== '{') return [];
+  const closeChar = openChar === '[' ? ']' : '}';
+  let depth = 0, end = -1;
+  for (let j = i; j < raw.length; j++) {
+    if (raw[j] === openChar) depth++;
+    else if (raw[j] === closeChar) { depth--; if (depth === 0) { end = j + 1; break; } }
+  }
+  if (end === -1) return [];
+  try { return JSON.parse(raw.slice(i, end)); }
+  catch { return []; }
+}
+
 export const _stripInternalTags = (text) => _stripBracketTag(
   _stripBracketTag(_stripBracketTag(text,
     'PROCEDURE_MAP_DRAFT'), 'PROCEDURE_MAP_UPDATE'), 'KSEARCH_CANDIDATES')
@@ -519,6 +542,9 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[ORCHESTRATION_HANDOFF_BACK:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_SUBTASK_RESULT:[^\]]*\]/g, '')
   .replace(/\[ORCHESTRATION_PROGRESS:[^\]]*\]/g, '')  // 2026-07-12 신설(SP-20 v1.4)
+  // 2026-07-17 신설 — mode=project(SP-19 v1.2/SP-20 v1.6/SP-22 v1.1)
+  .replace(/\[PROJECT_STATE_SAVE:[^\]]*\]/g, '')
+  .replace(/\[RESUME_KEXECUTE:[^\]]*\]/g, '')
   .replace(/\[PROCEDURE_MAP_LOOKUP:[^\]]*\]/g, '')
   .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6, v1.9부터 레거시 폴백)
   .replace(/\[BENEFIT_SEMANTIC_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.9, 임베딩 재설계)
@@ -1127,6 +1153,53 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     return true;
   }
 
+  // ── [PROJECT_STATE_SAVE: ...] — mode=project human_action 일시정지
+  // 시 PDV에 진행상태 기록(2026-07-17 신설, SP-22 v1.1 STEP1-PROJECT).
+  // ★ forward가 아니다 — 같은 K-Execute 응답 안에 이 태그와
+  // [HANDOFF_TO_KDELIVER]가 함께 나오므로, 여기서 return true 하지
+  // 않고 저장만 한 뒤 아래 kDeliverMatch 처리로 계속 흘러가게 둔다.
+  const projectStateSaveMatch = fullReply.match(/\[PROJECT_STATE_SAVE:([^\]]*)\]/);
+  if (projectStateSaveMatch) {
+    try {
+      const raw = projectStateSaveMatch[1];
+      const pick = (key) => {
+        const m = raw.match(new RegExp(key + '=("[^"]*"|\\{[\\s\\S]*?\\}(?=,\\s*\\w+=|$)|[^,}]*)'));
+        return m ? m[1].replace(/^"|"$/g, '') : null;
+      };
+      await _saveProjectState({
+        project_id: pick('project_id'),
+        goal: pick('goal'),
+        status: pick('status') || 'awaiting_human_action',
+        paused_at_seq: Number(pick('paused_at_seq')) || null,
+        human_action_desc: pick('human_action_desc') || '',
+        // remaining_steps/fan_out_targets/results_so_far는 중첩 객체라
+        // 위 단순 정규식으로 안전히 못 뗀다 — JSON 본문 전체를 다시
+        // 안전 파싱 시도, 실패하면 빈 배열로 둔다(과도한 파싱 실패보다
+        // 안전, 재개 시 K-Execute가 부족분을 다시 물어볼 수 있다).
+        remaining_steps: _safeParseJsonField(raw, 'remaining_steps'),
+        fan_out_targets: _safeParseJsonField(raw, 'fan_out_targets'),
+        results_so_far: _safeParseJsonField(raw, 'results_so_far'),
+      });
+    } catch (e) {
+      console.warn('[ProjectState] PROJECT_STATE_SAVE 처리 실패(무시):', e.message);
+    }
+    // return true 하지 않음 — 계속 진행
+  }
+
+  // ── AC → K-Execute 직접 재호출 (재개, 2026-07-17 신설) ──
+  // K-Intent/K-Compose를 다시 거치지 않는다 — 계획은 이미 확정돼 있다.
+  // 재개 판별 자체(이 발화가 재개인지)는 AC(AGENT-COMMON §0-H [재개
+  // 판별])가 이미 끝낸 뒤 이 태그를 낸다 — 여기서는 그대로 전달만 한다.
+  const resumeMatch = fullReply.match(/\[RESUME_KEXECUTE:([^\]]*)\]/);
+  if (resumeMatch) {
+    console.log('[Orchestration] RESUME_KEXECUTE 감지 — K-Execute로 직접 전달');
+    await _updateBubble(_stripInternalTags(fullReply));
+    history.length = 0;
+    await _forwardSwitchSP(_loadKExecuteSP, 'K-Execute');
+    await sendFn(`[INTERNAL: AC→K-Execute 재개 위임 — 아래 저장된 project_state부터 이어서 실행하세요: ${resumeMatch[1].trim()}]`);
+    return true;
+  }
+
   // ── K-Execute → K-Deliver (forward) — 기존 K-Compose→K-Deliver와
   // 같은 태그를 K-Execute도 낸다(무료 이관 경로는 K-Compose가 여전히
   // 직접 냄, 아래 kDeliverMatch가 양쪽 다 받는다). ──
@@ -1288,6 +1361,28 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
   }
 
   // ── 어느 단계에서든 즉시 AC로 반환 (응급·순환참조·단일서비스충분 등) ──
+  // ── K-Deliver → AC (mode=project 일시정지, v1.2 신설) ──
+  // 일반 handoffBackMatch(아래, 원래는 emergency 전용 폴백)와 달리
+  // userText를 재전송하지 않는다 — 원래 발화를 다시 보내면 AC가 이미
+  // K-Deliver가 전달한 요약/pending_user_action을 다시 처리하는 게
+  // 아니라 원래 발화를 새 요청처럼 재처리할 위험이 있다. 대신 K-Deliver
+  // 가 낸 태그 내용을 그대로 넘겨 AC가 이용자에게 전달하고 PDV 기록
+  // (§4-1, AC 전속)까지 하게 한다 — ORCHESTRATION_COMPLETE와 동일한
+  // 패턴, reason만 다르다.
+  const projectPausedMatch = fullReply.match(/\[ORCHESTRATION_HANDOFF_BACK:\s*reason=project_paused\]/);
+  if (projectPausedMatch) {
+    console.log('[Orchestration] ORCHESTRATION_HANDOFF_BACK(reason=project_paused) 감지 — AC로 복귀');
+    await _updateBubble(_stripInternalTags(fullReply));
+    history.length = 0;
+    CFG.systemStack = [];
+    await _switchToAssistantSP();
+    await sendFn(`[INTERNAL: mode=project가 human_action에서 일시정지됨 — 방금 K-Deliver가 ` +
+      `전달한 요약과 pending_user_action을 이용자에게 자연스럽게 전달하고, "프로젝트 일시정지: ` +
+      `{project_id}, {human_action_desc}"로 §4-1 PDV 기록을 남기세요(project_state 자체는 ` +
+      `K-Execute가 이미 PDV에 저장했으므로 여기서는 일반 6하원칙 로그만 남기면 된다).]`);
+    return true;
+  }
+
   const handoffBackMatch = fullReply.match(/\[ORCHESTRATION_HANDOFF_BACK:\s*reason=(\w+)\]/);
   if (handoffBackMatch) {
     console.log(`[Orchestration] ORCHESTRATION_HANDOFF_BACK(reason=${handoffBackMatch[1]}) 감지 — AC로 즉시 반환`);

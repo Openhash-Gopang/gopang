@@ -1,5 +1,5 @@
 {
-  "AGENT-COMMON": "AGENT-COMMON_v3_41.txt",
+  "AGENT-COMMON": "AGENT-COMMON_v3_42.txt",
   "AGENT-SUPPLIER-COMMON": "AGENT-SUPPLIER-COMMON_v2.2.txt",
   "HONDI_VISITOR_SP": "hondi_visitor_sp_v1_2.txt",
   "UNIVERSAL-INTEGRITY": "UNIVERSAL-INTEGRITY_v1_0.md",
@@ -53,7 +53,7 @@
   "SP-18_ksearch": "SP-18_ksearch_v1.4.txt",
   "SP-19_kintent": "SP-19_kintent_v1.2.txt",
   "SP-20_kcompose": "SP-20_kcompose_v1.6.txt",
-  "SP-21_kdeliver": "SP-21_kdeliver_v1.1.txt",
+  "SP-21_kdeliver": "SP-21_kdeliver_v1.2.txt",
   "SP-22_kbank": "SP-22_kbank_v1.0.txt",
   "SP-22_kexecute": "SP-22_kexecute_v1.1.txt",
   "SP-23_kreport": "SP-23_kreport_v1.0.txt",

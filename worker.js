@@ -4199,6 +4199,11 @@ export default {
     if (pathname === '/pdv/query')               return handlePdvQuery(request, env, corsHeaders);
     if (pathname === '/pdv/report')              return handlePdvReport(request, env, corsHeaders);
 
+    // ── 오케스트레이션 project_state (2026-07-17 신설 — mode=project
+    // human_action 일시정지/재개, SP-19 v1.2/SP-20 v1.6/SP-22 v1.1) ──
+    if (pathname === '/orchestration/project-state/save')  return handleProjectStateSave(request, env, corsHeaders);
+    if (pathname === '/orchestration/project-state/query') return handleProjectStateQuery(request, env, corsHeaders);
+
     // ── PDV 조회 동의 승인 페이지 (consent.html 전용, 2026-07-02 신설) ──
     if (pathname === '/consent/info')            return handleConsentInfo(request, env, corsHeaders);
     if (pathname === '/consent/respond')         return handleConsentRespond(request, env, corsHeaders);
@@ -6100,6 +6105,86 @@ async function handlePdvReport(request,env,corsHeaders){
     svc_level:reg.level,
     message:`PDV 기록 완료. ${resolvedSvcId} (Level ${reg.level})`,
   }),{status:200,headers:corsHeaders});
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-17 신설 — project_state 저장/조회 (SP-19 v1.2/SP-20 v1.6/
+// SP-22 v1.1 mode=project, human_action 일시정지·재개). L1 PocketBase
+// project_states 컬렉션 직접 사용(handlePdvReport와 동일 방식 —
+// Supabase pdv_log 쪽 읽기/쓰기 경로 불일치 문제(sql/pdv_domain_split.sql
+// 주석 참조)를 새로 상속하지 않기 위해 별도 컬렉션으로 분리했다).
+// third-party consent 흐름(handlePdvQuery)은 필요 없다 — 이건 이용자
+// 본인의 세션 안에서 AC 자신이 자기 자신의 진행 중 프로젝트를 확인하는
+// 내부 용도이지, 외부 서비스가 조회하는 것이 아니다.
+// ═══════════════════════════════════════════════════════════
+async function handleProjectStateSave(request,env,corsHeaders){
+  if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});
+  const body=await request.json().catch(()=>null);
+  if(!body?.project_id||!body?.guid||!body?.goal||!body?.status)
+    return _err(400,'SCHEMA_ERROR','project_id, guid, goal, status 필드 필수',corsHeaders);
+
+  const payload={
+    project_id: body.project_id,
+    guid: body.guid,
+    goal: body.goal,
+    status: body.status, // awaiting_human_action | completed | abandoned
+    paused_at_seq: body.paused_at_seq ?? null,
+    remaining_steps: JSON.stringify(body.remaining_steps ?? []),
+    fan_out_targets: JSON.stringify(body.fan_out_targets ?? []),
+    results_so_far: JSON.stringify(body.results_so_far ?? []),
+    human_action_desc: body.human_action_desc || '',
+  };
+
+  // 이미 같은 project_id 레코드가 있으면(재개 후 다시 멈추는 경우 등)
+  // 새로 만들지 않고 갱신한다 — project_id UNIQUE 인덱스 그대로 재사용.
+  const existing = await fetch(
+    `${L1_DEFAULT}/api/collections/project_states/records?filter=` +
+    encodeURIComponent(`project_id="${body.project_id}"`),
+  ).then(r=>r.json()).catch(()=>null);
+
+  let res;
+  if (existing?.items?.length) {
+    res = await fetch(`${L1_DEFAULT}/api/collections/project_states/records/${existing.items[0].id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } else {
+    res = await fetch(`${L1_DEFAULT}/api/collections/project_states/records`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  }
+  if (!res.ok) {
+    const err = await res.text().catch(()=>res.status);
+    return _err(503,'PROJECT_STATE_SAVE_FAILED',String(err),corsHeaders);
+  }
+  return new Response(JSON.stringify({ok:true, project_id: body.project_id}),{status:200,headers:corsHeaders});
+}
+
+async function handleProjectStateQuery(request,env,corsHeaders){
+  const url = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  const status = url.searchParams.get('status') || 'awaiting_human_action';
+  if (!guid) return _err(400,'SCHEMA_ERROR','guid 쿼리 파라미터 필수',corsHeaders);
+
+  const filter = encodeURIComponent(`guid="${guid}" && status="${status}"`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/project_states/records?filter=${filter}&sort=-created`)
+    .catch(()=>null);
+  if (!res || !res.ok) return _err(503,'PROJECT_STATE_QUERY_FAILED','L1 조회 실패',corsHeaders);
+  const data = await res.json().catch(()=>({items:[]}));
+  const items = (data.items||[]).map(it => ({
+    project_id: it.project_id,
+    goal: it.goal,
+    status: it.status,
+    paused_at_seq: it.paused_at_seq,
+    remaining_steps: JSON.parse(it.remaining_steps||'[]'),
+    fan_out_targets: JSON.parse(it.fan_out_targets||'[]'),
+    results_so_far: JSON.parse(it.results_so_far||'[]'),
+    human_action_desc: it.human_action_desc || '',
+  }));
+  return new Response(JSON.stringify({ok:true, items}),{status:200,headers:corsHeaders});
 }
 
 // ═══════════════════════════════════════════════════════════

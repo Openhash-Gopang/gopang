@@ -221,7 +221,55 @@ export async function _recordPDV(record) {
   }
 }
 
-// ── PDV Chain 연동 유틸 (v3.0) ─────────────────────────────────────────────
+// ── project_state 저장/조회 (2026-07-17 신설 — mode=project human_action
+// 일시정지·재개, SP-19 v1.2/SP-20 v1.6/SP-22 v1.1). worker.js
+// /orchestration/project-state/* 경유 — L1 PocketBase project_states
+// 컬렉션 직접 사용(일반 recordPDV의 pdv_records와는 별도 컬렉션).
+export async function _saveProjectState(state) {
+  if (!state?.project_id || !state?.goal || !state?.status) {
+    console.warn('[ProjectState] 저장 무시 — project_id/goal/status 누락');
+    return null;
+  }
+  try {
+    const guid = _USER?.guid || _USER?.ipv6 || null;
+    if (!guid) { console.warn('[ProjectState] guid 없음 — 저장 불가'); return null; }
+    const res = await fetch(CFG.endpoint + '/orchestration/project-state/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...state, guid }),
+    });
+    if (!res.ok) {
+      console.warn('[ProjectState] 저장 실패:', res.status);
+      return null;
+    }
+    console.info('[ProjectState] 저장 완료:', state.project_id, '| status:', state.status);
+    return await res.json();
+  } catch (e) {
+    console.warn('[ProjectState] 저장 오류(무시):', e.message);
+    return null;
+  }
+}
+
+// AGENT-COMMON §0-H [재개 판별]이 매 턴 시작 시 호출 — 열려있는(멈춰있는)
+// 프로젝트가 있는지 확인. 없으면 빈 배열(평소처럼 §ROUTER-CONFIDENCE로).
+export async function _loadOpenProjectStates() {
+  try {
+    const guid = _USER?.guid || _USER?.ipv6 || null;
+    if (!guid) return [];
+    const res = await fetch(
+      CFG.endpoint + '/orchestration/project-state/query'
+        + `?guid=${encodeURIComponent(guid)}&status=awaiting_human_action`
+    );
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => ({ items: [] }));
+    return data.items || [];
+  } catch (e) {
+    console.warn('[ProjectState] 조회 오류(무시):', e.message);
+    return [];
+  }
+}
+
+
 
 /**
  * l1_ledger.user_hash를 클라이언트 local_hash로 교정
