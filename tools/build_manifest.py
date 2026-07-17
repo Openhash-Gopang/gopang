@@ -113,6 +113,19 @@ universal_job_assist_files = [
 if universal_job_assist_files:
     manifest['UNIVERSAL-job-assist'] = best(universal_job_assist_files)
 
+# 2-c-3) TASK-DELEGATION-GUIDE — prompts/TASK-DELEGATION-GUIDE_vX_Y.md
+#      2026-07-17 신설(주피터님 지시): "혼디는 안내가 아니라 업무 대행이
+#      본래 용도" 제1원칙을 모든 SP에 강제 주입하기 위해 UNIVERSAL-
+#      INTEGRITY와 동일한 패턴으로 추가. UNIVERSAL-INTEGRITY 바로 다음에
+#      결합된다(manifest-loader.js _loadSpByKey 참조) — 판단이 애매할 때
+#      참조할 구체적 서비스별 대행 방법 목록(등본 발급 등)을 담는다.
+task_delegation_guide_files = [
+    f.name for f in PROMPTS.iterdir()
+    if re.match(r'^TASK-DELEGATION-GUIDE_v', f.name) and f.name.endswith('.md')
+]
+if task_delegation_guide_files:
+    manifest['TASK-DELEGATION-GUIDE'] = best(task_delegation_guide_files)
+
 # 2-d) SP_{slug} 계열(.md) — EXPERT 페르소나(SP_lawyer 등) + 공통 가드레일
 #      (SP_common_guardrails·SP_common_medical_safety) — prompts/SP_{slug}_v{ver}.md
 #      2026-07-09 신설: expert-registry.js/expert-session.js가 이 파일들을

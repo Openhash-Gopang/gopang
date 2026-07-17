@@ -56,6 +56,29 @@ async function _loadUniversalIntegrityRaw() {
   }
 }
 
+// ★ 2026-07-17 신설(주피터님 지시) — TASK-DELEGATION-GUIDE 자동 상속.
+// UNIVERSAL-INTEGRITY U0(제1공리, "안내로 끝내지 않는다")가 이미
+// "업무 대행"의 방향을 세워뒀지만, "혼디의 본래 용도는 업무 대행이고
+// 문의 응답은 부차적"이라는 걸 더 명시적으로 못박고, 판단이 애매할
+// 때 참조할 구체적 서비스별 대행 방법(등본 발급 등)을 별도 문서로
+// 분리해 UNIVERSAL-INTEGRITY와 동일한 패턴으로 모든 SP에 강제 주입.
+let _taskDelegationGuideCache = null;
+async function _loadTaskDelegationGuideRaw() {
+  if (_taskDelegationGuideCache) return _taskDelegationGuideCache;
+  try {
+    const manifest = await _loadManifest();
+    const fname = manifest['TASK-DELEGATION-GUIDE'];
+    if (!fname) return '';
+    const res = await fetch(_SP_BASE + fname);
+    if (!res.ok) return '';
+    _taskDelegationGuideCache = await res.text();
+    return _taskDelegationGuideCache;
+  } catch (e) {
+    console.warn('[SP] TASK-DELEGATION-GUIDE 로드 실패(무시, 개별 SP만 적용):', e.message);
+    return '';
+  }
+}
+
 export async function _loadSpByKey(manifestKey, label) {
   const manifest = await _loadManifest();
   const fname = manifest[manifestKey];
@@ -64,16 +87,20 @@ export async function _loadSpByKey(manifestKey, label) {
   if (!res.ok) throw new Error(`${label} SP 로드 실패: ${res.status} (${fname})`);
   const sp = await res.text();
 
-  // UNIVERSAL-INTEGRITY 자기 자신을 로드할 때는 중복 결합하지 않는다
-  // (무한 재귀는 아니지만 — self-concat은 무의미).
-  if (manifestKey === 'UNIVERSAL-INTEGRITY') {
+  // UNIVERSAL-INTEGRITY·TASK-DELEGATION-GUIDE 자기 자신을 로드할 때는
+  // 중복 결합하지 않는다(self-concat은 무의미).
+  if (manifestKey === 'UNIVERSAL-INTEGRITY' || manifestKey === 'TASK-DELEGATION-GUIDE') {
     console.info(`[SP] ${label} 로드 완료: ${fname} (${sp.length} chars)`);
     return sp;
   }
 
   const universal = await _loadUniversalIntegrityRaw();
-  const combined = universal ? `${universal}\n\n---\n\n${sp}` : sp;
+  const taskGuide = await _loadTaskDelegationGuideRaw();
+  const parts = [universal, taskGuide, sp].filter(Boolean);
+  const combined = parts.join('\n\n---\n\n');
   console.info(`[SP] ${label} 로드 완료: ${fname} (${sp.length} chars` +
-    (universal ? ` + UNIVERSAL-INTEGRITY ${universal.length} chars` : ' — UNIVERSAL-INTEGRITY 없이') + `)`);
+    (universal ? ` + UNIVERSAL-INTEGRITY ${universal.length} chars` : '') +
+    (taskGuide ? ` + TASK-DELEGATION-GUIDE ${taskGuide.length} chars` : '') +
+    (!universal && !taskGuide ? ' — 공통문서 없이' : '') + `)`);
   return combined;
 }
