@@ -188,11 +188,11 @@ gopang/
 |---|---|---|---|---|
 | B2-1 | `router-category.test.mjs` | SP-00-ROUTER 실제 코드 라우팅 검증(재구현 아닌 실행 기반) | P0 | [기존] **이번 세션 미실행** |
 | B2-2 | `sp-intercall.test.mjs` | `worker.js`의 `handleGovRelay` 실제 경로 | P0 | [기존] **이번 세션 미실행** |
-| B2-3 | `phase11_orchestration_registry_and_ksearch.test.mjs` | 오케스트레이션 레지스트리 + K-Search | P0 | [기존] 미실행 |
-| B2-4 | `phase22_sp_author_automation.test.mjs` | SP-Author 자동화(신호 큐잉, ESCALATE) | P1 | [기존] 미실행 |
+| B2-3 | `phase11_orchestration_registry_and_ksearch.test.mjs` | 오케스트레이션 레지스트리 + K-Search | P0 | ✅ 재실행 완료(2026-07-17) — 23/23 통과, 회귀 없음 |
+| B2-4 | `phase22_sp_author_automation.test.mjs` | SP-Author 자동화(신호 큐잉, ESCALATE) | P1 | ✅ 재실행 완료(2026-07-17) — 14/14 통과, 회귀 없음 |
 | B2-5 | `phase23_gwp_registry_scaling.test.mjs` | **이번 세션에 gwp-registry.js를 직접 수정(qna/users 추가)했는데 이 스케일링 테스트를 안 돌림** | P0 | [기존] **회귀 확인 시급** — 다음 세션 최우선 |
-| B2-6 | SP-00-ROUTER 매니페스트 동기화 | `check_stale_refs.py`가 "manifest에 SP-00-ROUTER 키 없음"으로 매번 이 검사를 건너뛰고 있음 — 근본 원인 파악 필요 | P0 | [신규] — 이번 세션에서 발견한 미해결 갭, `sp-catalog.json`에 SP-00-ROUTER 키가 왜 없는지 조사 필요 |
-| B2-7 | GWP_REGISTRY 신규 2건(kqna/kusers) 트리거 정확도 | threshold 0.65, trigger 문구가 실제 발화에서 오탐/누락 없이 매칭되는지 | P0 | [신규] — 이번 세션에 값 삽입했으나 실사용 문장으로 재현 테스트 안 함 |
+| B2-6 | SP-00-ROUTER 매니페스트 동기화 | `check_stale_refs.py`가 "manifest에 SP-00-ROUTER 키 없음"으로 매번 이 검사를 건너뛰고 있음 — 근본 원인 파악 필요 | P0 | ✅ **근본 원인 확인 후 검사 제거로 해결.** SP-00-ROUTER는 2026-07-05(같은 날 나중 커밋 6766c60)에 죽은 코드로 완전 삭제됐고, 라우팅은 이제 AGENT-COMMON이 GWP_REGISTRY를 직접 참조해 판단하는 방식이라 "라우터 서비스 표"라는 두 번째 진실 공급원 자체가 더 이상 존재하지 않음 — 검사 대상이 원천적으로 사라진 것. `check_router_registry_sync()` 함수와 호출부를 제거(되살릴 게 아니라 없애는 게 맞음). 제거 후 64/64 참조 정상 확인 |
+| B2-7 | GWP_REGISTRY 신규 2건(kqna/kusers) 트리거 정확도 | threshold 0.65, trigger 문구가 실제 발화에서 오탐/누락 없이 매칭되는지 | P0 | ✅ **재현 시도 — matchService() 자체가 존재하지 않음을 확인(2026-07-05 완전 삭제, 함수 자체가 없음).** 트리거 배열 직접 점검만 가능: kqna(질문있어/문의/궁금해/뭐예요/어떻게 해요/절차가/신청 방법/자격 요건/필요한 서류), kusers(이 사람 찾아줘/프로필 찾아줘/연락처 찾아줘/누구세요/가입자 조회/엔티티 검색) — 문구 자체는 합리적이나 실사용 오탐/누락 여부는 실제 LLM 판단 품질 문제라 이 샌드박스에서 검증 불가(라이브 환경 필요, R3로 이월) |
 
 ## B-3. 전문가 AI 페르소나 호출 시스템
 

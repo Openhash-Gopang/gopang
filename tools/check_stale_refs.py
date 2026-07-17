@@ -100,73 +100,17 @@ def parse_version(fname: str) -> tuple:
     return (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0))
 
 
-# ── 검사 2: GWP_REGISTRY ↔ SP-00-ROUTER 동기화 (2026-07-05 신설) ──────
-# 배경: jeju(제주도청 AI) 서비스가 gwp-registry.js의 GWP_REGISTRY에는
-# 등록돼 있었지만, 실제 LLM 라우터가 읽는 SP-00-ROUTER 프롬프트의 서비스
-# 표에는 빠져 있어서 — 그 서비스로 갈 방법 자체가 없는 상태로 방치돼
-# 있었다(정적 코드 분석으로 발견, 2026-07-05). 두 파일이 서로 다른 시점에
-# 독립적으로 손으로 유지되는 게 근본 원인이므로, "새 서비스 추가 → 라우터
-# 갱신 누락"이 다시 발생하면 이 검사가 CI에서 반드시 잡아낸다.
-#
-# 검사 대상은 실제로 "여기로 보낼 수 있는 목적지"인 type: 'inline'/'tab'
-# 항목만이다. type: 'tool'(웹검색·계산기 등 function calling)은 라우팅
-# 목적지가 아니라 항상 사용 가능한 도구라서 SP-00-ROUTER의 서비스 표에
-# 나열될 필요가 없다 — 이 검사에서 의도적으로 제외한다.
-REGISTRY_ENTRY_RE = re.compile(r'\{([^{}]*)\}')
-
-
-def extract_registry_entries(text: str) -> list[dict]:
-    entries = []
-    for block in REGISTRY_ENTRY_RE.findall(text):
-        id_m     = re.search(r"id:\s*'([\w-]+)'", block)
-        status_m = re.search(r"status:\s*'(\w+)'", block)
-        type_m   = re.search(r"type:\s*'(\w+)'", block)
-        name_m   = re.search(r"name:\s*'([^']+)'", block)
-        if id_m and status_m and type_m:
-            entries.append({
-                'id': id_m.group(1), 'status': status_m.group(1),
-                'type': type_m.group(1), 'name': name_m.group(1) if name_m else id_m.group(1),
-            })
-    return entries
-
-
-def check_router_registry_sync(results: list):
-    registry_path = ROOT / 'gwp-registry.js'
-    if not registry_path.exists():
-        return
-
-    manifest_path = PROMPTS / 'sp-catalog.json'
-    if not manifest_path.exists():
-        print("[경고] prompts/sp-catalog.json 없음 — 라우터 동기화 검사 건너뜀", file=sys.stderr)
-        return
-    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-    router_fname = manifest.get('SP-00-ROUTER')
-    if not router_fname:
-        print("[경고] manifest에 SP-00-ROUTER 키 없음 — 라우터 동기화 검사 건너뜀", file=sys.stderr)
-        return
-    router_path = PROMPTS / router_fname
-    if not router_path.exists():
-        results.append(('MISSING', 'SP-00-ROUTER manifest 참조', router_fname, '(파일 없음)'))
-        return
-
-    router_text = router_path.read_text(encoding='utf-8')
-    registry_text = registry_path.read_text(encoding='utf-8')
-    entries = extract_registry_entries(registry_text)
-
-    for e in entries:
-        if e['status'] != 'active':
-            continue          # pending 항목은 아직 정식 노출 전이라 제외
-        if e['type'] == 'tool':
-            continue          # function-calling 도구는 라우팅 목적지가 아님
-        marker = f"### {e['id']}"
-        if marker not in router_text:
-            results.append((
-                'UNROUTABLE', 'gwp-registry.js → SP-00-ROUTER',
-                f"id={e['id']} ({e['name']})",
-                f"{router_fname}에 '### {e['id']}' 섹션 없음 — 라우터가 이 서비스를 모름",
-            ))
-        else:
-            results.append(('OK', 'gwp-registry.js → SP-00-ROUTER', e['id'], router_fname))
+# ── 검사 2: (2026-07-17 제거) GWP_REGISTRY ↔ SP-00-ROUTER 동기화 ────────
+# 2026-07-05 신설 당시엔 유의미했으나, 같은 날 나중에(6766c60) SP-00-ROUTER
+# 자체가 "죽은 코드"로 완전히 삭제됐다 — 라우팅은 이제 AGENT-COMMON이
+# GWP_REGISTRY를 직접 참조해 [GWP:]/[EXPERT:] 태그로 한 번에 판단하는
+# 방식으로 바뀌었고(sp-tag-dispatch.test.mjs 참조), 별도의 "라우터 서비스
+# 표"가 더 이상 존재하지 않는다. 그 결과 이 검사는 실행할 때마다
+# "manifest에 SP-00-ROUTER 키 없음 — 검사 건너뜀" 경고만 찍고 항상
+# no-op이었다(2026-07-17 마스터 테스트플랜 B2-6 조사에서 확인 — 스킵
+# 자체는 안전했지만 죽은 코드였음). GWP_REGISTRY가 이제 그 자체로 유일한
+# 진실 공급원(SSOT)이라 "두 표가 어긋난다"는 시나리오 자체가 성립하지
+# 않으므로, 검사를 되살리는 게 아니라 완전히 제거하는 것이 맞다.
 
 
 def base_key(path: str) -> str:
@@ -241,7 +185,7 @@ def main():
         except Exception as e:
             print(f"[경고] {label} 원격 fetch 실패, 건너뜀: {e}", file=sys.stderr)
 
-    check_router_registry_sync(results)
+    # (2026-07-17) check_router_registry_sync() 호출 제거 — 위 주석 참조
 
     problems = [r for r in results if r[0] != 'OK']
     ok_count = len(results) - len(problems)
