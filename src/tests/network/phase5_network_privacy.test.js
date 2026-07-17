@@ -1,19 +1,23 @@
 /**
- * @file phase5_network_gdc_privacy.test.js
- * @description Phase 5 Network + GDC + Privacy 통합 테스트
- * @테스트항목 N-01~N-05, G-01~G-08, P-01~P-06
+ * @file phase5_network_privacy.test.js
+ * @description Phase 5 Network + Privacy 테스트 (GDC 분리됨)
+ * @테스트항목 N-01~N-05, P-01~P-06
+ *
+ * BUG-FIX(2026-07-17): 원래 phase5_network_gdc_privacy.test.js는 N/G/P
+ * 셋을 한 파일에서 같이 import했는데, GDC 파일 6개(currencyPool/escrow/
+ * dao/offlineQueue/tokenomics/smartVault)가 2026-07-15에 gdc 저장소로
+ * 이동한 뒤 그 import들이 전부 깨져서 파일 전체(N/P 포함)가 단 하나의
+ * 테스트도 실행 못 하는 상태였다(ERR_MODULE_NOT_FOUND). gopang에 남아있는
+ * Network/Privacy 부분만 이 파일로 분리해 살렸다 — GDC(G-01~08) 부분은
+ * gdc 저장소 쪽에서 별도로 테스트해야 한다
+ * (docs/HONDI_DOMAIN_DEEP_TEST_DIRECTIVE_v1_0.md §4.5 참조).
+ *
+ * 분리하면서 추가로 발견한 버그: P-01이 쓰는 getMixnode()가 애초에
+ * import 목록에 없었다(ReferenceError 유발 — GDC import 에러에 가려
+ * 지금까지 드러나지 않았음). import에 추가해서 수정.
  */
 
 // ── Network ──────────────────────────────────────────────────────────────
-// ⚠️ 2026-07-15 — src/gdc/*.js(currencyPool, escrow, dao, offlineQueue)가
-// gdc 저장소(gdc.hondi.net)로 이동했다(gopang/gdc 파일 재배치). 이 파일은
-// GDC 모듈과 network/privacy 모듈을 함께 테스트하는 혼합 스펙이라
-// 순수 GDC 전용이 아니어서 옮기지 않고 gopang에 남겨뒀다 — 대신 아래
-// gdc/* import 6곳은 더 이상 이 저장소에서 유효한 경로가 아니다.
-// (이 저장소엔 package.json/테스트 러너가 없어 원래도 실행되는 CI
-// 테스트는 아니었다 — 참고용 스펙 문서에 가깝다. 실제로 이 테스트를
-// 되살리려면 gdc 저장소의 src/gdc/*.js를 별도로 import하거나, GDC
-// 부분만 떼어 gdc 저장소 쪽 테스트로 옮겨야 한다.)
 import { submitToLayer, getLayerStatus, _resetStatus } from '../../network/layerClient.js'
 import { deriveGUID, deriveIPv6, calcTrustLevel, generateStealthAddress,
          matchStealthAddress, checkPermission, getDailyMsgLimit,
@@ -22,18 +26,8 @@ import { gdcWeightedDistance, findClosestNode, registerRecord,
          lookupGUID, registerNickname, resolveNickname,
          auctionNickname, updateMobility, _resetDHT } from '../../network/dht.js'
 
-// ── GDC ──────────────────────────────────────────────────────────────────
-import { calcInflationRate, calcNewIssuance, burn, getTotalBurned,
-         getBurnLog, calcGEI, BURN_PATH, _resetBurnLog } from '../../gdc/tokenomics.js'
-import { createVault, getVault, calcExpectedVolatility,
-         VAULT_TYPE, _resetVaults } from '../../gdc/smartVault.js'
-import { depositGDC, exchange, getPoolBalance, _resetPool } from '../../gdc/currencyPool.js'
-import { createEscrow, executeFromKLaw, getEscrow, _resetEscrows } from '../../gdc/escrow.js'
-import { createProposal, vote, finalizeProposal, _resetDAO } from '../../gdc/dao.js'
-import { calcDeposit, enqueue, confirmReceived, _resetQueue } from '../../gdc/offlineQueue.js'
-
 // ── Privacy ───────────────────────────────────────────────────────────────
-import { registerMixnode, selectPath, rewardRelay, slashNode, _resetMixnet } from '../../privacy/mixnet.js'
+import { registerMixnode, selectPath, rewardRelay, slashNode, getMixnode, _resetMixnet } from '../../privacy/mixnet.js'
 import { createGroup, satisfiesKAnonymity } from '../../privacy/kAnonymity.js'
 import { calcDifficulty, verifyPoW, updateReputation, _resetReputation } from '../../privacy/adaptivePow.js'
 import { deriveSalt, maskAdminCode } from '../../privacy/salt.js'
@@ -57,12 +51,11 @@ async function test(id, desc, fn) {
 function assert(c, m) { if (!c) throw new Error(m || '단언 실패') }
 
 function setup() {
-  _resetStatus(); _resetDHT(); _resetBurnLog(); _resetVaults()
-  _resetPool(); _resetEscrows(); _resetDAO(); _resetQueue()
+  _resetStatus(); _resetDHT()
   _resetMixnet(); _resetReputation(); _resetRecovery()
 }
 
-console.log('\n=== Phase 5 Network + GDC + Privacy 테스트 ===\n')
+console.log('\n=== Phase 5 Network + Privacy 테스트(GDC 분리됨) ===\n')
 
 // ── Network 테스트 ────────────────────────────────────────────────────────
 console.log('[ Network ]')
@@ -118,96 +111,6 @@ await test('N-05', 'Sybil 4단계 신뢰 등급 + 권한 확인', async () => {
   assert(checkPermission(TRUST_LEVEL.L3, 'escrow')    === true,  'L3: 에스크로 허용')
   assert(checkPermission(TRUST_LEVEL.L2, 'escrow')    === false, 'L2: 에스크로 불가')
   assert(getDailyMsgLimit(TRUST_LEVEL.L0) === 10,                'L0: 일일 10건')
-})
-
-// ── GDC 테스트 ────────────────────────────────────────────────────────────
-console.log('\n[ GDC ]')
-
-setup()
-await test('G-01', '인플레이션율 공식 검증', () => {
-  // GDP 35%, 소각률 5%, 기준율 1%
-  const rate = calcInflationRate(0.35, 0.05, 0.01)
-  const expected = 0.01 + 0.20 * (0.35 - 0.30) - 0.50 * 0.05
-  assert(Math.abs(rate - expected) < 0.0001, `인플레이션율: ${rate} vs ${expected.toFixed(6)}`)
-  assert(rate <= 0.02, `최대 2% 이하: ${rate}`)
-})
-
-await test('G-02', '신규 발행량 계산 + 최대 공급량 캡', () => {
-  const issuance = calcNewIssuance(100_000_000, 0.02)
-  assert(issuance === 2_000_000, `발행량: ${issuance}`)
-  // 최대 공급량 초과 시 캡
-  const capped = calcNewIssuance(199_000_000, 0.02)
-  assert(capped === 1_000_000, `캡 발행량: ${capped}`)
-})
-
-await test('G-03', '다중 소각 6개 경로', () => {
-  burn(BURN_PATH.MSG_FEE,      0.001, 'msg-001')
-  burn(BURN_PATH.NICKNAME_REG, 0.001, 'nick-001')
-  burn(BURN_PATH.STEALTH_TAG,  0.010, 'stealth-001')
-  const total = getTotalBurned()
-  assert(Math.abs(total - 0.012) < 0.0001, `총 소각: ${total}`)
-  assert(getBurnLog(BURN_PATH.MSG_FEE).length === 1, '경로별 이력')
-
-  // 잘못된 경로
-  let threw = false
-  try { burn('INVALID_PATH', 1) } catch (_) { threw = true }
-  assert(threw, '잘못된 경로 오류')
-})
-
-await test('G-04', 'GEI 계산', () => {
-  const gei = calcGEI(2.5, 1.5)
-  assert(gei === 2.0, `GEI: ${gei}`)
-})
-
-await test('G-05', 'Smart Vault 4개 바스켓', () => {
-  const v = createVault('user-1', VAULT_TYPE.STABLE, 1000)
-  assert(v.type === 'stable', `유형: ${v.type}`)
-  assert(v.allocation.bonds === 0.50, `채권 50%: ${v.allocation.bonds}`)
-  assert(calcExpectedVolatility('stable') < 0.05, '안정형 변동성 <5%')
-  assert(getVault('user-1')?.amount === 1000, '조회 성공')
-
-  // 잘못된 유형
-  let threw = false
-  try { createVault('u2', 'invalid', 100) } catch (_) { threw = true }
-  assert(threw, '잘못된 바스켓 오류')
-})
-
-await test('G-06', '통화 풀 입금·환전', () => {
-  depositGDC('KRW', 1_000_000, 100, 'user-1')
-  depositGDC('USD', 750,       100, 'user-2')
-  assert(getPoolBalance('KRW') === 1_000_000, `KRW 풀: ${getPoolBalance('KRW')}`)
-
-  const r = exchange('KRW', 'USD', 100_000, 1333)  // 1333원 = 1달러
-  assert(r.success === true, `환전 성공: ${r.success}`)
-  assert(Math.abs(r.received - 75) < 0.01, `수령: ${r.received}`)
-})
-
-await test('G-07', 'K-Law 연동 에스크로 생성·집행', () => {
-  createEscrow('esc-001', 'alice', 'bob', 100, 'DELIVERY_CONFIRMED', 'msg-001')
-  assert(getEscrow('esc-001')?.status === 'LOCKED', '에스크로 잠금')
-  const r = executeFromKLaw('esc-001', 'RELEASE')
-  assert(r.success === true, '집행 성공')
-  assert(getEscrow('esc-001')?.status === 'RELEASED', '에스크로 해제')
-})
-
-await test('G-08', 'DAO 거버넌스 + DAWN 비영리 원칙', () => {
-  // 정상 제안
-  createProposal('P-001', 'GEI 파라미터 조정', 'alice', { type: 'PARAM_CHANGE' })
-  vote('P-001', 'voter-1', 1000, 'yes')
-  vote('P-001', 'voter-2', 1500, 'yes')
-  vote('P-001', 'voter-3', 800, 'no')
-  const result = finalizeProposal('P-001')
-  assert(result.status === 'PASSED', `제안 통과: ${result.status}`)
-
-  // 통화 풀 소유권 이전 → 차단
-  let threw = false
-  try { createProposal('P-002', '불법 제안', 'hacker', { type: 'OWNERSHIP_TRANSFER' }) }
-  catch (e) { threw = true; assert(e.message.includes('DAWN'), e.message) }
-  assert(threw, 'DAWN 원칙 위반 차단')
-
-  // 최소 스테이킹 미충족 → 투표 불가
-  const noVote = vote('P-001', 'voter-poor', 50, 'yes')
-  assert(noVote.success === false, '스테이킹 부족 투표 거부')
 })
 
 // ── Privacy 테스트 ────────────────────────────────────────────────────────
@@ -282,15 +185,10 @@ await test('P-05', '사회적 복구 — 보호자 60% 승인', async () => {
 })
 
 await test('P-06', '오프라인 큐 예치금 계산·환불', () => {
-  // 예치금 = 0.0001 × KB × h × (1 + 지연가중치)
-  const dep = calcDeposit(10, 24, 'L1')  // L1 지연가중치 0.5
-  const expected = 0.0001 * 10 * 24 * 1.5
-  assert(Math.abs(dep - expected) < 0.00001, `예치금: ${dep} vs ${expected}`)
-
-  enqueue('msg-q01', 'alice', 10, 'L1')
-  const r = confirmReceived('msg-q01')
-  assert(r.success === true, '수신 확인')
-  assert(r.refund > 0, `환불: ${r.refund}`)
+  // BUG-FIX(2026-07-17): 이 테스트는 gdc/offlineQueue.js(calcDeposit/enqueue/
+  // confirmReceived)를 썼는데 그 파일이 gdc 저장소로 이동해 더 이상 gopang에
+  // 없다 — 이 케이스만 gdc 저장소 쪽에서 재구현해야 한다(§ 파일 헤더 참고).
+  console.log('     (SKIP — offlineQueue.js가 gdc 저장소로 이동, 여기선 검증 불가)')
 })
 
 // ── 결과 ─────────────────────────────────────────────────────────────────

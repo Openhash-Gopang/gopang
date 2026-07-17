@@ -13,6 +13,22 @@
 // layerClient.js: 구설계(폐기 예정) — config import 제거
 import { PLSM } from '../core/constants.js'
 
+// BUG-FIX(2026-07-17): 위 주석대로 config import는 제거됐는데 아래
+// LAYER_NODES 구성과 _submitToNode()가 여전히 config.LAYER_ENDPOINTS/
+// config.ENV를 참조하고 있어 이 파일을 import하는 순간(모듈 최상위
+// 코드라 함수 호출 전에 바로) ReferenceError로 죽었다 — 이 파일이 실제
+// 앱 부트스트랩(app.js)에서는 안 쓰이고(주석으로만 언급) 있어서 지금까지
+// 안 드러났을 뿐, phase5 테스트에서 import하자마자 확인됨. 이 모듈 자체가
+// "폐기 예정"이라 공유 config 모듈에 LAYER_ENDPOINTS를 새로 만들어 넣지
+// 않고, 파일 설명대로 "dev 환경: 로컬 에뮬레이션"에 맞는 로컬 스텁만 둔다.
+const config = Object.freeze({
+  ENV: 'dev',
+  LAYER_ENDPOINTS: {
+    L1: 'https://l1.hondi.net', L2: 'https://l2.hondi.net', L3: 'https://l3.hondi.net',
+    L4: 'https://l4.hondi.net', L5: 'https://l5.hondi.net',
+  },
+})
+
 // K=3 리던던시: 각 계층별 3개 노드 엔드포인트
 const LAYER_NODES = {
   L1: [
