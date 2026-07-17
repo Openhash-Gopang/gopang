@@ -11,7 +11,7 @@ import {
   detectBalanceAnomalies,
   computeSettledFs,
   marketPurchaseRPC,
-} from '/home/claude/ledger.js';
+} from '../../profile2.0/ledger.js';
 
 let pass = 0, fail = 0;
 function assert(id, cond, detail = '') {
