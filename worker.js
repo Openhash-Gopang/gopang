@@ -6148,19 +6148,23 @@ async function handleProjectStateSave(request,env,corsHeaders){
   if(!body?.project_id||!body?.guid||!body?.goal||!body?.status)
     return _err(400,'SCHEMA_ERROR','project_id, guid, goal, status 필드 필수',corsHeaders);
 
+  // 2026-07-17 개정 — "구조화는 데이터만, 판단은 자연어로" 원칙
+  // 리팩토링(K-Compose v2.0/K-Execute v1.4). remaining_steps/
+  // results_so_far(구조화 배열)를 execution_plan/progress_note/
+  // results_summary(자연어 문자열)로 교체 — 컬렉션 스키마는
+  // migrate-project-states-add-plan-fields.ps1로 신규 컬럼 3개
+  // 추가(기존 remaining_steps/results_so_far 컬럼은 더 안 씀,
+  // 삭제하지 않고 남겨둠 — 데이터 유실 방지).
   const payload={
     project_id: body.project_id,
     guid: body.guid,
     goal: body.goal,
     status: body.status, // awaiting_human_action | completed | abandoned
-    paused_at_seq: body.paused_at_seq ?? null,
-    // 2026-07-17 신설(사고실험 결함 1) — project_brief를 저장 안 하면
-    // 재개 시 K-Execute가 남은 step의 세부 맥락을 잃는다. steps의
-    // name만으로는 부족(참여자·순서 제약 등은 project_brief에만 있음).
     project_brief: body.project_brief || '',
-    remaining_steps: JSON.stringify(body.remaining_steps ?? []),
-    fan_out_targets: JSON.stringify(body.fan_out_targets ?? []),
-    results_so_far: JSON.stringify(body.results_so_far ?? []),
+    execution_plan: body.execution_plan || '',
+    progress_note: body.progress_note || '',
+    results_summary: body.results_summary || '',
+    fan_out_targets: JSON.stringify(body.fan_out_targets ?? []), // 데이터라 구조 유지
     human_action_desc: body.human_action_desc || '',
   };
 
@@ -6207,11 +6211,11 @@ async function handleProjectStateQuery(request,env,corsHeaders){
     project_id: it.project_id,
     goal: it.goal,
     status: it.status,
-    paused_at_seq: it.paused_at_seq,
     project_brief: it.project_brief || '',
-    remaining_steps: JSON.parse(it.remaining_steps||'[]'),
+    execution_plan: it.execution_plan || '',
+    progress_note: it.progress_note || '',
+    results_summary: it.results_summary || '',
     fan_out_targets: JSON.parse(it.fan_out_targets||'[]'),
-    results_so_far: JSON.parse(it.results_so_far||'[]'),
     human_action_desc: it.human_action_desc || '',
   }));
   return new Response(JSON.stringify({ok:true, items}),{status:200,headers:corsHeaders});

@@ -1172,20 +1172,21 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
         project_id: pick('project_id'),
         goal: pick('goal'),
         status: pick('status') || 'awaiting_human_action',
-        paused_at_seq: Number(pick('paused_at_seq')) || null,
         human_action_desc: pick('human_action_desc') || '',
-        // 2026-07-17 신설(사고실험 결함 1) — project_brief를 저장 안
-        // 하면 재개 시 K-Execute가 남은 step의 세부 맥락을 잃는다.
-        // SP가 다른 자유서술 필드(issue/proposed_patch 등)와 동일하게
-        // 따옴표로 감싸 낼 것을 전제로 pick()의 "[^"]*" 분기를 탄다.
         project_brief: pick('project_brief') || '',
-        // remaining_steps/fan_out_targets/results_so_far는 중첩 객체라
-        // 위 단순 정규식으로 안전히 못 뗀다 — JSON 본문 전체를 다시
-        // 안전 파싱 시도, 실패하면 빈 배열로 둔다(과도한 파싱 실패보다
-        // 안전, 재개 시 K-Execute가 부족분을 다시 물어볼 수 있다).
-        remaining_steps: _safeParseJsonField(raw, 'remaining_steps'),
+        // 2026-07-17 개정 — "구조화는 데이터만, 판단은 자연어로" 원칙
+        // 리팩토링(K-Compose v2.0/K-Execute v1.4). remaining_steps/
+        // results_so_far가 자연어 문자열(execution_plan·progress_note·
+        // results_summary)로 바뀌면서, 이전에 필요했던 _safeParseJsonField
+        // 의 중괄호/대괄호 깊이 추적 파싱이 더 이상 필요 없다 — 다른
+        // 자유서술 필드와 동일하게 pick()의 따옴표 분기만으로 충분하다
+        // (파싱 코드 자체가 단순해짐 — 원칙 적용의 부수 효과).
+        execution_plan: pick('execution_plan') || '',
+        progress_note: pick('progress_note') || '',
+        results_summary: pick('results_summary') || '',
+        // fan_out_targets만 실제 데이터(목록)라 배열 그대로 유지 —
+        // 이건 "판단"이 아니라 "데이터"라 구조화가 맞다.
         fan_out_targets: _safeParseJsonField(raw, 'fan_out_targets'),
-        results_so_far: _safeParseJsonField(raw, 'results_so_far'),
       });
     } catch (e) {
       console.warn('[ProjectState] PROJECT_STATE_SAVE 처리 실패(무시):', e.message);
