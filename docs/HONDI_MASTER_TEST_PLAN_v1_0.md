@@ -451,12 +451,14 @@ gopang/
 
 | ID | 대상 | 목적 | 우선순위 | 커버리지 |
 |---|---|---|---|---|
-| G-1 | `phase17_share_target.test.mjs` | 정부24 앱 ↔ 혼디 앱 대 앱 연동, Web Share Target API | P0 | [기존] 미실행 |
-| G-2 | `phase18_procedure_docs.test.mjs` | "정부24 공유문서 → 개인파산 court-filing 서류 연결" | P0 | [기존] 미실행 |
-| G-3 | `phase19_welfare_eligibility.test.mjs` | "기초수급자격 확인+신청" 사고실험 | P0 | [기존] 미실행 |
-| G-4 | `phase20_document_handoff.test.mjs` | "이력서+등본 두 통을 기업에 전송" 사고실험 | P1 | [기존] 미실행 |
-| G-5 | `phase22_sp_author_automation.test.mjs` | B-4와 중복 리스트 — SP 저작 자동화 | P1 | [기존] 미실행 |
-| G-6 | `phase24_web_search.test.mjs` | `POST /web-search`(Serper.dev 프록시) | P1 | [기존] 미실행, 외부 API 키 필요 시 [불가]로 재분류 가능 |
+| G-1 | `phase17_share_target.test.mjs` | 정부24 앱 ↔ 혼디 앱 대 앱 연동, Web Share Target API | P0 | ✅ **완료(2026-07-18) — 20/20 통과, 회귀 없음.** 전부 in-memory mock(Cache Storage), 실제 네트워크 호출 없음 |
+| G-2 | `phase18_procedure_docs.test.mjs` | "정부24 공유문서 → 개인파산 court-filing 서류 연결" | P0 | ✅ **완료(2026-07-18) — 41/41 통과, 회귀 없음** |
+| G-3 | `phase19_welfare_eligibility.test.mjs` | "기초수급자격 확인+신청" 사고실험 | P0 | ✅ **완료(2026-07-18) — 20/20 통과, 회귀 없음** |
+| G-4 | `phase20_document_handoff.test.mjs` | "이력서+등본 두 통을 기업에 전송" 사고실험 | P1 | ✅ **완료(2026-07-18) — 20/20 통과, 회귀 없음** |
+| G-5 | `phase22_sp_author_automation.test.mjs` | B-4와 중복 리스트 — SP 저작 자동화 | P1 | ✅ **완료(2026-07-18) — 14/14 통과, 회귀 없음.** L1 PocketBase in-memory mock만 사용 |
+| G-6 | `phase24_web_search.test.mjs` | `POST /web-search`(Serper.dev 프록시) | P1 | ✅ **완료(2026-07-18) — 5/5 통과, 회귀 없음.** 테스트 자체 주석에 "Serper.dev 호출은 이 샌드박스에서 불가하므로 mock"이라 명시돼 있음 |
+
+**PART G 결론**: 6개 전부 완전 mock 기반(라이브 정부24/Serper.dev 호출 없음)임을 실행 전 확인 후 전량 실행. 120/120 통과, 신규 버그 없음.
 
 ---
 
@@ -464,8 +466,10 @@ gopang/
 
 | ID | 대상 | 목적 | 우선순위 | 커버리지 |
 |---|---|---|---|---|
-| H-1 | `src/app.js` 부트스트랩 순서 | v3.1 문서 §7 명시 순서(core→pdv→openhash→...) 준수 | P0 | [기존] 미실행, A-1-2와 교차 확인 |
-| H-2 | `index.html` Shell UI | 최초 로딩 화면 구성요소 | P1 | [기존] 미실행 |
+| H-1 | `src/app.js` 부트스트랩 순서 | v3.1 문서 §7 명시 순서(core→pdv→openhash→...) 준수 | P0 | ✅ **실행 완료(2026-07-18) — 8/9 통과, 1건 실패(B-03).** 순서 자체(`registry.init`→`registry.register`→`ShellUI.render`)는 정상 구현·정상 실행됨. **추가 실측**: `src/app.js`의 `bootstrap()`은 죽은 코드가 아니라 `gopang-app.js`의 `_boot()`(webapp.html이 로드)가 `await import('./src/app.js')`로 동적 호출 — A1-2가 이월만 하고 확인 못 한 부분이 해소됨. 다만 6단계 `ShellUI.render()`가 찾는 DOM 루트 `#gopang-shell`이 webapp.html/desktop.html 어디에도 없어 `_renderDOM()`의 `if (!root) return` 가드에 걸려 **매번 조용히 no-op**됨 — webapp.html은 `#message-list`/`#status-dot`/`#tab-bar`를 손으로 직접 구현해 놓았고 `registry`/`ShellUI`와 전혀 안 이어져 있음. `bootstrap()`은 "성공" 로그를 남기고 KLaw/KHealth 플러그인을 `registry`에 등록까지 하지만 그 결과를 실제로 소비하는 코드가 없음. 버그라기보단 아키텍처 미스매치 — 2026-05-30(fbeadad) "device-routing index, PC desktop.html, mobile webapp.html restored" 커밋에서 셸 구조가 통째로 교체되며 shell-ui.js의 DOM 생성 경로가 고아가 된 것으로 보임 |
+| H-2 | `index.html` Shell UI | 최초 로딩 화면 구성요소 | P1 | ✅ **실행 완료(2026-07-18, B-03) — 실패.** index.html에 `#gopang-shell`/`#boot-splash`/`src/app.js` 참조가 전혀 없음. 버그가 아니라 H-1과 동일한 아키텍처 변경 — index.html은 더 이상 Shell UI 마운트 지점이 아니라 기기 판별 후 webapp.html(모바일/SSO)·desktop.html(PC 정적 랜딩)로 즉시 리다이렉트만 하는 라우터 페이지로 재작성됨(fe99325 "index.html 스플래시 제거"). 테스트가 낡은 기대치를 검사하고 있음 |
+
+**PART H 결론**: 코드 결함은 없음(부트스트랩 순서 자체는 정상 동작). 다만 `phase7_bootstrap.test.js`의 설계 전제(단일 index.html + `#gopang-shell` 셸)가 2026-05-30 아키텍처 개편 이후 실제 구조와 어긋나 있고, `ShellUI.render()`가 프로덕션에서 실질적으로 no-op이 되는 부작용까지 확인됨. **사용자 판단 필요**: (a) 이 테스트를 webapp.html 기준으로 재작성/은퇴시킬지, (b) ShellUI를 실제로 webapp.html에 연결할지(플러그인 탭 UI가 필요하다면), (c) 알려진 고아 코드로 남겨두고 문서만 남길지.
 
 ---
 
@@ -485,17 +489,17 @@ gopang/
 
 | ID | 대상 | 목적 | 우선순위 | 커버리지 |
 |---|---|---|---| ---|
-| I2-1 | `check_stale_refs.py`의 SP-00-ROUTER 검사 스킵 근본 원인 | B2-6과 동일 항목, 여기서도 재강조 | **P0** | [신규] |
-| I2-2 | GWP_REGISTRY 트리거 충돌 전수 조사 | E-18에서 발견한 "찾아줘" 3중 충돌처럼, 28개 서비스 전체 trigger 배열을 교차 비교해 숨은 충돌 찾기 | **P0 — 이번 계획서 작성 중 실제로 1건 발견됨, 전수조사 시 더 있을 가능성 높음** | [신규] |
-| I2-3 | `services/fiil-kcleaner`, `kbank`/`ktelecom`/`kestate`(switch형) — 별도 저장소 없는 서비스들의 코드 실체 확인 | 이번 세션에서 fiil-kcleaner는 gopang/services 하위에 있음만 확인, kbank 등 3개는 존재 자체를 확인 안 함(type:switch라 SP만 있고 코드가 없을 가능성) | P1 | [신규] |
+| I2-1 | `check_stale_refs.py`의 SP-00-ROUTER 검사 스킵 근본 원인 | B2-6과 동일 항목, 여기서도 재강조 | **P0** | ✅ **재확인 완료(2026-07-18) — 이미 해소돼 있었음.** 103~109행 주석에 "2026-07-05 신설 당시엔 유의미했으나, 같은 날 나중에(6766c60) SP-00-ROUTER 자체가 삭제됨"이라 명시, 실제로 그 검사는 "manifest에 SP-00-ROUTER 키 없음 — 검사 건너뜀" 경고만 찍고 항상 통과하도록 이미 처리됨(6aad178). 추가 조치 불필요 |
+| I2-2 | GWP_REGISTRY 트리거 충돌 전수 조사 | E-18에서 발견한 "찾아줘" 3중 충돌처럼, 28개 서비스 전체 trigger 배열을 교차 비교해 숨은 충돌 찾기 | **P0 — 이번 계획서 작성 중 실제로 1건 발견됨, 전수조사 시 더 있을 가능성 높음** | ✅ 이전 세션(R1)에서 완료 — 동일 trigger 문자열 공유 7쌍 확인(matchService dead code라 실사용 무관) |
+| I2-3 | `services/fiil-kcleaner`, `kbank`/`ktelecom`/`kestate`(switch형) — 별도 저장소 없는 서비스들의 코드 실체 확인 | 이번 세션에서 fiil-kcleaner는 gopang/services 하위에 있음만 확인, kbank 등 3개는 존재 자체를 확인 안 함(type:switch라 SP만 있고 코드가 없을 가능성) | P1 | ✅ **완료(2026-07-18).** kbank/ktelecom/kestate: 예상대로 `SP-22~24_*.txt` SP 파일만 존재, 별도 코드 없음(설계대로). fiil-kcleaner: `services/fiil-kcleaner/manifest.json` 하나뿐 — `url: "https://fiil.kr/webapp.html"`로 이 저장소 밖 외부 배포 사이트를 가리킴, gopang 쪽엔 SP 경로만 있고 실 서비스 코드는 fiil.kr 별도 배포. 둘 다 설계대로, 버그 아님 |
 
 ## I-3. 보안 회귀
 
 | ID | 대상 | 목적 | 우선순위 | 커버리지 |
 |---|---|---|---|---|
-| I3-1 | `handleProfilePost` 서명 검증 우회 시나리오 | 서명 없이/위조 서명으로 프로필 갱신 시도 시 실제 거부되는지 | P0 | [신규] |
-| I3-2 | `phone_verify_token` 재사용 공격 | 한 번 쓴 토큰 재사용 시 거부되는지 | P0 | [신규] |
-| I3-3 | PDV `request_id` 위조(T-05에서 이미 로직 확인, 라이브 재현 필요) | 크로스 사이트 재사용 방어 | P0 | [기존 로직 확인, 라이브 미확인] |
+| I3-1 | `handleProfilePost` 서명 검증 우회 시나리오 | 서명 없이/위조 서명으로 프로필 갱신 시도 시 실제 거부되는지 | P0 | ✅ **완료(2026-07-18) — 신규 테스트 `src/tests/integration/phase25_security_regression.test.mjs` 5/5 통과.** 워커통합 방식(라이브 인프라 불필요, worker.js 직접 import + L1 mock)으로 검증 가능함을 확인 — "[불가]로 재분류될 가능성" 우려가 해소됨. 검증한 우회 시도: (a) signature 누락 → 400, (b) 랜덤 위조 서명 → 401, (c) 공격자가 자기 키로 서명 후 pubkey만 피해자 것으로 바꿔치기 → 401(서명·공개키 불일치로 차단), (d) 다른 guid로 서명해놓고 요청 본문 guid만 바꿔치기(메시지 변조) → 401. 정상 서명은 통과(오탐 없음). **결론: 우회 경로 발견 안 됨** |
+| I3-2 | `phone_verify_token` 재사용 공격 | 한 번 쓴 토큰 재사용 시 거부되는지 | P0 | ✅ **완료(2026-07-18) — 같은 테스트 파일 I3-2 스위트 5/5 통과.** 만료 토큰 거부(401), HMAC 변조 토큰 거부(401), 전화번호 불일치 거부(403) 전부 정상. **같은 프로필 재사용은 막혀 있음**(claim 성공 후 claim_status 전이로 두 번째 시도는 404). **[설계 판단 필요 — 신규 발견]** 토큰의 서명 대상이 `e164:exp`뿐이라 특정 guid에 바인딩돼 있지 않음 — **동일 전화번호가 등록된 서로 다른 두 unclaimed 프로필**이 있으면 만료 전까지 같은 토큰으로 둘 다 claim 가능함을 실측 확인(테스트 재현 완료). 의도된 설계(한 사업자가 같은 번호로 여러 업체를 한 번에 인증)인지 취약점(탈취한 번호로 여러 리스팅을 동시에 가로챔)인지 코드만으론 판단 불가 — 사용자 확인 필요 |
+| I3-3 | PDV `request_id` 위조(T-05에서 이미 로직 확인, 라이브 재현 필요) | 크로스 사이트 재사용 방어 | P0 | [기존 로직 확인, 라이브 미확인 — 이번 세션에서도 미착수] |
 
 ## I-4. 환경 매트릭스 (실행 가능성 요약)
 
@@ -536,11 +540,22 @@ gopang/
 - E-17/E-18 PDV 클라이언트 누락 — ✅ qna/users 배치 완료(2026-07-17)
 - A1-3 의존성 방향 규칙 위반(`core/auth.js`가 ui/services/ai를 import) — **미해결, 리팩토링 범위가 크고 위험해 임의로 안 건드림**
 
-## Phase R2 다음 — 남은 것 (다음 세션 시작점)
+## Phase R2 다음 — ✅ 완료(2026-07-18)
 
-- **PART G** 정부 연계 특수 기능(6개 테스트: `phase17_share_target`~`phase24_web_search`) — 외부 API 의존 가능성 있어 실행 전 라이브/목업 여부 먼저 확인
-- **PART H** 부트스트랩/Shell UI(2개: `phase7_bootstrap.test.js`, `index.html` 구성요소) — A1-2(부트스트랩 순서)와 교차 확인 예정이었던 항목
-- **PART I** 횡단 관심사 — I-1(SSOT 드리프트, 이미 대부분 완료), I-2(참조 무결성 확장), I-3(보안 회귀), I-4(환경 매트릭스 요약 정리)
+- ✅ **PART G** 정부 연계 특수 기능 6개 전부 실행 — 사전에 전부 mock 기반(라이브 의존 없음) 확인 후 실행, 120/120 통과, 신규 버그 없음
+- ✅ **PART H** 부트스트랩/Shell UI — 실행은 8/9(B-03 실패)이나, 실패 원인을 아키텍처 변경(2026-05-30 index.html→webapp.html/desktop.html 분리)으로 규명. 추가로 `ShellUI.render()`가 프로덕션에서 `#gopang-shell` 부재로 매번 no-op된다는 부작용 신규 발견 — **사용자 판단 대기**
+- ✅ **PART I** — I-1(이미 완료), I-2(전부 확인 완료, 추가 조치 불필요), I-3(신규 테스트 작성 — I3-1 우회 경로 없음 확인, I3-2에서 **phone_verify_token의 다중 프로필 재사용 가능성 신규 발견 — 사용자 판단 대기**), I-3-3만 라이브 필요라 미착수, I-4는 아래 갱신판 참고
+
+**미해결 — 사용자 결정 대기 중인 신규 항목(2026-07-18)**:
+- PART H — `phase7_bootstrap.test.js`를 webapp.html 기준으로 재작성할지, ShellUI를 실제로 연결할지, 고아 코드로 둘지
+- I3-2 — 동일 전화번호를 쓰는 서로 다른 unclaimed 프로필 간 `phone_verify_token` 재사용을 막을지(현재는 가능) — 의도된 설계인지부터 확인 필요
+
+## Phase R3 나머지 (다음 세션 시작점)
+
+- A1-3 의존성 방향 규칙 위반(`core/auth.js`가 ui/services/ai를 import) — 리팩토링 여부 사용자 판단 대기(R2 때부터 미해결)
+- phase7.js LLM 배선 — `runPipeline()`의 `llmCaller`를 `worker.js`/`deepseek-client.js`와 실제로 연결하는 작업, 사용자 원하면 진행
+- I3-3(PDV request_id 위조 라이브 재현) — 라이브 환경 필요
+- PART G 라이브 정부24/Serper.dev 실물 연동 확인 — 이 샌드박스에서 불가
 
 ## Phase R3 — 중기(라이브 환경 접근 확보 후)
 
