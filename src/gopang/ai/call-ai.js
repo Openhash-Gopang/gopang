@@ -32,7 +32,7 @@ import { maybeHandleExpertTurn, applyExpertSystemIfActive,
          isExpertActive, handleExpertTag, _composeExpertPrompt } from './expert-session.js';
 import { getExpertDef, resolveExpertId } from './expert-registry.js';
 import { buildHondiFaqContext } from './hondi-faq-router.js';
-import { setPdvDomain, getPdvDomain, _buildPDVNote, _saveProjectState, _loadOpenProjectStates, _proposeSpUpdate } from '../pdv/record.js';
+import { setPdvDomain, getPdvDomain, _buildPDVNote, _saveProjectState, _loadOpenProjectStates, _proposeSpUpdate, _submitUserFeedback } from '../pdv/record.js';
 // ★ 2026-07-11 추가: _callGeminiGeneral 등 5개 함수가 vision.js에 정의는
 // 돼 있는데 여기서 import가 빠져 있었다 — 이미지 첨부 후 Gemini 분석
 // 경로를 탈 때마다 ReferenceError로 죽고 있었을 것(실사로 확인, 아래
@@ -547,6 +547,7 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[RESUME_KEXECUTE:[^\]]*\]/g, '')
   // 2026-07-17 신설 — 자기 갱신 제안(RULE-03, K-Intent v1.3 등)
   .replace(/\[SELF_UPDATE_PROPOSAL:[^\]]*\]/g, '')
+  .replace(/\[USER_FEEDBACK:[^\]]*\]/g, '')      // 사용자 개선 제안 포착 태그 (2026-07-17 신설)
   .replace(/\[PROCEDURE_MAP_LOOKUP:[^\]]*\]/g, '')
   .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6, v1.9부터 레거시 폴백)
   .replace(/\[BENEFIT_SEMANTIC_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.9, 임베딩 재설계)
@@ -1172,21 +1173,20 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
         project_id: pick('project_id'),
         goal: pick('goal'),
         status: pick('status') || 'awaiting_human_action',
+        paused_at_seq: Number(pick('paused_at_seq')) || null,
         human_action_desc: pick('human_action_desc') || '',
+        // 2026-07-17 신설(사고실험 결함 1) — project_brief를 저장 안
+        // 하면 재개 시 K-Execute가 남은 step의 세부 맥락을 잃는다.
+        // SP가 다른 자유서술 필드(issue/proposed_patch 등)와 동일하게
+        // 따옴표로 감싸 낼 것을 전제로 pick()의 "[^"]*" 분기를 탄다.
         project_brief: pick('project_brief') || '',
-        // 2026-07-17 개정 — "구조화는 데이터만, 판단은 자연어로" 원칙
-        // 리팩토링(K-Compose v2.0/K-Execute v1.4). remaining_steps/
-        // results_so_far가 자연어 문자열(execution_plan·progress_note·
-        // results_summary)로 바뀌면서, 이전에 필요했던 _safeParseJsonField
-        // 의 중괄호/대괄호 깊이 추적 파싱이 더 이상 필요 없다 — 다른
-        // 자유서술 필드와 동일하게 pick()의 따옴표 분기만으로 충분하다
-        // (파싱 코드 자체가 단순해짐 — 원칙 적용의 부수 효과).
-        execution_plan: pick('execution_plan') || '',
-        progress_note: pick('progress_note') || '',
-        results_summary: pick('results_summary') || '',
-        // fan_out_targets만 실제 데이터(목록)라 배열 그대로 유지 —
-        // 이건 "판단"이 아니라 "데이터"라 구조화가 맞다.
+        // remaining_steps/fan_out_targets/results_so_far는 중첩 객체라
+        // 위 단순 정규식으로 안전히 못 뗀다 — JSON 본문 전체를 다시
+        // 안전 파싱 시도, 실패하면 빈 배열로 둔다(과도한 파싱 실패보다
+        // 안전, 재개 시 K-Execute가 부족분을 다시 물어볼 수 있다).
+        remaining_steps: _safeParseJsonField(raw, 'remaining_steps'),
         fan_out_targets: _safeParseJsonField(raw, 'fan_out_targets'),
+        results_so_far: _safeParseJsonField(raw, 'results_so_far'),
       });
     } catch (e) {
       console.warn('[ProjectState] PROJECT_STATE_SAVE 처리 실패(무시):', e.message);
@@ -1219,6 +1219,37 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       });
     } catch (e) {
       console.warn('[SelfUpdate] SELF_UPDATE_PROPOSAL 처리 실패(무시):', e.message);
+    }
+    // return true 하지 않음 — 계속 진행
+  }
+
+  // ── [USER_FEEDBACK: ...] — 사용자 개선 제안 능동 획득 (2026-07-17
+  // 신설, docs/user_feedback_mechanism_proposal_v1.md). RULE-03과
+  // 동일 원칙: 사이드이펙트일 뿐이라 원래 이 SP가 하려던 처리를 막지
+  // 않는다. 태그 자체는 AGENT-COMMON/profile-assistant 등 여러 SP가
+  // 낼 수 있다 — 이 핸들러는 그중 하나만 신경 쓰면 된다(어느 SP가
+  // 냈는지는 context_sp 파라미터로 구분).
+  const userFeedbackMatch = fullReply.match(/\[USER_FEEDBACK:\s*([^\]]*)\]/);
+  if (userFeedbackMatch) {
+    try {
+      const raw = userFeedbackMatch[1];
+      const pick = (key) => {
+        const m = raw.match(new RegExp(key + '=("[^"]*"|[^,\\]]*)'));
+        return m ? m[1].replace(/^"|"$/g, '') : null;
+      };
+      await _submitUserFeedback({
+        raw_text: pick('raw') || userText || '',
+        context_sp: pick('context_sp') || CFG.system?.slice(0, 60) || null,
+        context_summary: pick('context_summary') || '',
+        category: pick('category') || 'question',
+      });
+      // 능동 요청 빈도 제한 — 같은 기기에서 최근 7일 이내 이미 물어봤으면
+      // AC/PA 프롬프트에도 그 사실을 알려 다시 캐묻지 않게 한다. 서버
+      // 왕복 없이 localStorage만으로 충분(사람 하나당 기기 하나 기준의
+      // 느슨한 제한이라 정밀할 필요 없음).
+      localStorage.setItem('hondi_feedback_last_asked_at', new Date().toISOString());
+    } catch (e) {
+      console.warn('[UserFeedback] USER_FEEDBACK 처리 실패(무시):', e.message);
     }
     // return true 하지 않음 — 계속 진행
   }
@@ -2612,19 +2643,36 @@ async function _buildEnhancedUserContent(userContent) {
         .join(', ');
       if (affStr) parts.push(`소속:${affStr}`);
     }
-    // 2026-07-14 신설 — work_domain(구멍 D). job_ksco가 못 잡는
-    // 학생·은퇴자·전업주부·무직을 여기서 보완한다. WORK_DOMAIN_LABEL_KO
-    // 매핑은 AGENT-COMMON이 아니라 여기서 해둔다 — 태그 자체를 한국어
-    // 값으로 넘기면 AGENT-COMMON 쪽 파싱 부담이 준다.
-    if (workDomain?.status) {
+    // 2026-07-14 신설, 2026-07-17 수정 — work_domain(구멍 D). job_ksco가
+    // 못 잡는 학생·은퇴자·전업주부·무직을 여기서 보완한다. WORK_DOMAIN_
+    // LABEL_KO 매핑은 AGENT-COMMON이 아니라 여기서 해둔다 — 태그 자체를
+    // 한국어 값으로 넘기면 AGENT-COMMON 쪽 파싱 부담이 준다.
+    // ★ 2026-07-17 수정 — work_domain.status(단일값)가 그 사이
+    // statuses(배열, 다중 정체성 지원)로 바뀌었는데 이 지점이 옛
+    // 필드명을 그대로 읽고 있어 이 줄 자체가 항상 빈 값으로 조용히
+    // 죽어있었다(같은 세션에서 발견 즉시 수정 — 배열의 각 상태를
+    // '+'로 이어붙여 표시).
+    if (Array.isArray(workDomain?.statuses) && workDomain.statuses.length) {
       const WORK_DOMAIN_LABEL_KO = {
         employed_public: '공공부문 재직', employed_private: '민간부문 재직',
         self_employed: '자영업', student: '학생', retired: '은퇴',
         homemaker: '전업주부', unemployed: '구직 중', other: '기타',
       };
-      const label = WORK_DOMAIN_LABEL_KO[workDomain.status] || workDomain.status;
-      parts.push(`업무상태:${label}${workDomain.active === false ? '(비활성)' : ''}`);
+      const labels = workDomain.statuses.map(s => WORK_DOMAIN_LABEL_KO[s] || s).join('+');
+      parts.push(`업무상태:${labels}${workDomain.active === false ? '(비활성)' : ''}`);
     }
+    // 2026-07-17 신설 — 사용자 개선 제안 능동 획득 빈도 제한(docs/
+    // user_feedback_mechanism_proposal_v1.md). AC/PA가 이 신호를 보고
+    // "최근에 이미 물어봤으면 이번엔 안 물어본다"를 스스로 판단한다 —
+    // 클라이언트가 강제로 막는 게 아니라 판단 재료만 준다(과유불급
+    // 원칙, RULE-03과 동일하게 최종 판단은 SP에 맡김).
+    try {
+      const lastAsked = localStorage.getItem('hondi_feedback_last_asked_at');
+      if (lastAsked) {
+        const daysSince = (Date.now() - new Date(lastAsked).getTime()) / 86400000;
+        if (daysSince < 7) parts.push(`피드백요청:${Math.floor(daysSince)}일전에_이미_물어봤음`);
+      }
+    } catch {}
     // 2026-07-14 신설 — 배정된 작업 안내(사고실험 구멍 C 해결). 사람이
     // 아니라 그 사람 소속 부서가 게시한 작업이 있으면, AC가 §0-1-Q
     // 톤으로 자연스럽게 알릴 수 있게 원자료만 [ctx]에 싣는다(실제 안내

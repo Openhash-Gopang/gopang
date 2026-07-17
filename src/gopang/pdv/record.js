@@ -297,6 +297,32 @@ export async function _proposeSpUpdate(proposal) {
   }
 }
 
+// 2026-07-17 신설 — 사용자 개선 제안 능동 획득(docs/
+// user_feedback_mechanism_proposal_v1.md). _proposeSpUpdate와 동일
+// 패턴 — 실패해도 원래 하려던 응답 흐름을 막지 않는다(사이드이펙트).
+export async function _submitUserFeedback(feedback) {
+  if (!feedback?.raw_text) {
+    console.warn('[UserFeedback] 제출 무시 — raw_text 누락');
+    return null;
+  }
+  try {
+    const res = await fetch(CFG.endpoint + '/user-feedback/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(feedback),
+    });
+    if (!res.ok) {
+      console.warn('[UserFeedback] 제출 저장 실패:', res.status);
+      return null;
+    }
+    console.info('[UserFeedback] 저장 완료 | context_sp:', feedback.context_sp);
+    return await res.json();
+  } catch (e) {
+    console.warn('[UserFeedback] 제출 저장 오류(무시):', e.message);
+    return null;
+  }
+}
+
 
 
 /**

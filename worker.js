@@ -2594,6 +2594,31 @@ async function _embedText(env, texts) {
   return result.data;
 }
 
+// POST /embed-text (2026-07-17 신설)
+// body: { texts: string[] } → { vectors: number[][] }
+// _embedText()의 얇은 HTTP 통로. env.AI는 Worker 내부 바인딩이라
+// tools/triage_feedback.py 같은 Python 배치 스크립트가 직접 호출할
+// 수 없다 — 이미 만든 bge-m3 임베딩 인프라(benefit-semantic-search용)를
+// user_feedback 클러스터링에도 그대로 재사용하기 위한 범용 통로.
+// 새 임베딩 파이프라인을 또 만들지 않는다는 원칙(docs/
+// user_feedback_mechanism_proposal_v1.md §4).
+async function handleEmbedText(request, env, corsHeaders) {
+  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  const body = await request.json().catch(() => null);
+  if (!Array.isArray(body?.texts) || !body.texts.length) {
+    return _err(400, 'SCHEMA_ERROR', 'texts(배열) 필드 필수', corsHeaders);
+  }
+  if (body.texts.length > 100) {
+    return _err(400, 'TOO_MANY_TEXTS', '한 번에 최대 100건까지', corsHeaders);
+  }
+  try {
+    const vectors = await _embedText(env, body.texts);
+    return new Response(JSON.stringify({ vectors }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'EMBED_FAILED', 'bge-m3 임베딩 실패: ' + e.message, corsHeaders);
+  }
+}
+
 // POST /orchestration/benefit-embed-index
 // body: { records: [{ petition_id, goal, domain, text }] }
 // text는 임베딩할 원문 — 호출부(인덱싱 스크립트)가 goal + eligibility_
@@ -4207,6 +4232,8 @@ export default {
     // ── SP 자기 갱신 제안 (2026-07-17 신설 — K-Intent v1.3/K-Compose
     // v1.7/K-Deliver v1.3/K-Report v1.1 RULE-03) ──
     if (pathname === '/sp-updates/propose')      return handleSpUpdatePropose(request, env, corsHeaders);
+    if (pathname === '/user-feedback/submit')    return handleUserFeedbackSubmit(request, env, corsHeaders);
+    if (pathname === '/embed-text')              return handleEmbedText(request, env, corsHeaders);
 
     // ── PDV 조회 동의 승인 페이지 (consent.html 전용, 2026-07-02 신설) ──
     if (pathname === '/consent/info')            return handleConsentInfo(request, env, corsHeaders);
@@ -6148,23 +6175,19 @@ async function handleProjectStateSave(request,env,corsHeaders){
   if(!body?.project_id||!body?.guid||!body?.goal||!body?.status)
     return _err(400,'SCHEMA_ERROR','project_id, guid, goal, status 필드 필수',corsHeaders);
 
-  // 2026-07-17 개정 — "구조화는 데이터만, 판단은 자연어로" 원칙
-  // 리팩토링(K-Compose v2.0/K-Execute v1.4). remaining_steps/
-  // results_so_far(구조화 배열)를 execution_plan/progress_note/
-  // results_summary(자연어 문자열)로 교체 — 컬렉션 스키마는
-  // migrate-project-states-add-plan-fields.ps1로 신규 컬럼 3개
-  // 추가(기존 remaining_steps/results_so_far 컬럼은 더 안 씀,
-  // 삭제하지 않고 남겨둠 — 데이터 유실 방지).
   const payload={
     project_id: body.project_id,
     guid: body.guid,
     goal: body.goal,
     status: body.status, // awaiting_human_action | completed | abandoned
+    paused_at_seq: body.paused_at_seq ?? null,
+    // 2026-07-17 신설(사고실험 결함 1) — project_brief를 저장 안 하면
+    // 재개 시 K-Execute가 남은 step의 세부 맥락을 잃는다. steps의
+    // name만으로는 부족(참여자·순서 제약 등은 project_brief에만 있음).
     project_brief: body.project_brief || '',
-    execution_plan: body.execution_plan || '',
-    progress_note: body.progress_note || '',
-    results_summary: body.results_summary || '',
-    fan_out_targets: JSON.stringify(body.fan_out_targets ?? []), // 데이터라 구조 유지
+    remaining_steps: JSON.stringify(body.remaining_steps ?? []),
+    fan_out_targets: JSON.stringify(body.fan_out_targets ?? []),
+    results_so_far: JSON.stringify(body.results_so_far ?? []),
     human_action_desc: body.human_action_desc || '',
   };
 
@@ -6211,11 +6234,11 @@ async function handleProjectStateQuery(request,env,corsHeaders){
     project_id: it.project_id,
     goal: it.goal,
     status: it.status,
+    paused_at_seq: it.paused_at_seq,
     project_brief: it.project_brief || '',
-    execution_plan: it.execution_plan || '',
-    progress_note: it.progress_note || '',
-    results_summary: it.results_summary || '',
+    remaining_steps: JSON.parse(it.remaining_steps||'[]'),
     fan_out_targets: JSON.parse(it.fan_out_targets||'[]'),
+    results_so_far: JSON.parse(it.results_so_far||'[]'),
     human_action_desc: it.human_action_desc || '',
   }));
   return new Response(JSON.stringify({ok:true, items}),{status:200,headers:corsHeaders});
@@ -6255,6 +6278,13 @@ async function handleSpUpdatePropose(request,env,corsHeaders){
     needs_extra_review: protectedTouched,
     status: 'pending_review',
     source_session_note: body.source_session_note || '',
+    // 2026-07-17 신설 — user_feedback 취합 배치(tools/triage_feedback.py)가
+    // 클러스터를 특정 SP 수정 제안으로 브릿지할 때 이 필드로 출처를
+    // 구분한다. 주피터님이 검토할 때 "SP가 스스로 느낀 것"과 "사용자가
+    // 실제로 말한 것"을 구분해서 볼 수 있게 — 기본값은 기존 동작과
+    // 동일(SP 자기반성)이라 하위호환 깨지지 않는다.
+    source: ['sp_self_reflection', 'user_feedback'].includes(body.source) ? body.source : 'sp_self_reflection',
+    user_feedback_ids: Array.isArray(body.user_feedback_ids) ? body.user_feedback_ids : [],
   };
 
   const res = await fetch(`${L1_DEFAULT}/api/collections/sp_update_proposals/records`, {
@@ -6267,6 +6297,48 @@ async function handleSpUpdatePropose(request,env,corsHeaders){
     return _err(503,'SP_UPDATE_PROPOSE_FAILED',String(err),corsHeaders);
   }
   return new Response(JSON.stringify({ok:true, sp_id: body.sp_id, status:'pending_review'}),{status:200,headers:corsHeaders});
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-17 신설 — 사용자 개선 제안 능동 획득(docs/
+// user_feedback_mechanism_proposal_v1.md). RULE-03(SP 자기 갱신
+// 제안)과 검토 창구를 통합하되(sp_update_proposals.source로 구분),
+// 사용자 발화 원문·문맥은 별도 컬렉션(user_feedback)에 전부 보존한다
+// — 모든 피드백이 다 SP 수정으로 이어지는 건 아니므로(예: "화면이
+// 이쁘면 좋겠다"), 원문 보존과 SP 제안 브릿지를 분리했다. 브릿지
+// 자체는 이 핸들러가 하지 않는다 — tools/triage_feedback.py(주기
+// 배치)가 임베딩 클러스터링 후 명확한 것만 /sp-updates/propose로
+// source=user_feedback 브릿지한다.
+// ═══════════════════════════════════════════════════════════
+async function handleUserFeedbackSubmit(request, env, corsHeaders) {
+  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  const body = await request.json().catch(() => null);
+  if (!body?.raw_text) return _err(400, 'SCHEMA_ERROR', 'raw_text 필드 필수', corsHeaders);
+
+  const payload = {
+    guid: body.guid || null, // 익명 제출 허용
+    raw_text: String(body.raw_text).slice(0, 2000), // 과도한 길이 방어
+    context_sp: body.context_sp || null,
+    context_summary: body.context_summary ? String(body.context_summary).slice(0, 500) : '',
+    // category는 포착 시점 SP의 판단일 뿐 — 사람이 나중에 재분류 가능하므로
+    // 여기서 엄격히 검증하지 않는다(모르는 값이 오면 'question'으로 안전
+    // 폴백, 저장 자체를 막지 않음 — §0 U0: 실패보다 진행).
+    category: ['bug', 'feature_request', 'complaint', 'praise', 'question'].includes(body.category)
+      ? body.category : 'question',
+    status: 'new',
+  };
+
+  const res = await fetch(`${L1_DEFAULT}/api/collections/user_feedback/records`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => res.status);
+    return _err(503, 'USER_FEEDBACK_SUBMIT_FAILED', String(err), corsHeaders);
+  }
+  const saved = await res.json().catch(() => ({}));
+  return new Response(JSON.stringify({ ok: true, id: saved.id || null, status: 'new' }), { status: 200, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
