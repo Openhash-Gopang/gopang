@@ -299,9 +299,10 @@ gopang/
 | 체크 | 상태 | 심화 테스트 | 우선순위 |
 |---|---|---|---|
 | S2 | **2026-07-17 PDV 클라이언트 신규 배치 완료** | 배치 직후이므로 실제 태그 처리 재확인 필요 | P0 |
-| S4 | 미실시 | "판결", "소송" 등 법률 트리거와 K-Police의 "고소"류 트리거가 겹치는지(priority klaw=1, kpolice=1 — 동순위 충돌 가능) | **P0 — 우선순위 동률 충돌 케이스** |
-| 도메인 | [기존] phase4_klaw.test.js(K-01~10) — **이번 세션 미실행** | AI 가상 판결문 로직(K-Law v20.0) 정확성 | P0 |
-| gopang 내 사본 | 미실시 | `gopang/klaw/` 서브디렉토리와 독립 klaw 저장소 간 `diff -rq` — 이전 세션에서 "확인 필요"로만 남기고 실행 안 함 | **P0 — 미완료 숙제** |
+| S4 | 미실시 | "판결", "소송" 등 법률 트리거와 K-Police의 "고소"류 트리거가 겹치는지(priority klaw=1, kpolice=1 — 동순위 충돌 가능) | **P0 — 우선순위 동률 충돌 케이스, R3로 이월** |
+| 도메인 | ✅ **재실행 완료(11/11 통과)** — K-10이 core 파일의 JSDoc 예시 주석("예: 'k-law'")까지 실제 코드 결합으로 오탐하던 걸 수정 | AI 가상 판결문 로직(K-Law v20.0) 정확성 — classifier.js 자체(K-01~09)는 정상 | 완료 |
+| gopang 내 사본 | 미실시 | `gopang/klaw/` 서브디렉토리와 독립 klaw 저장소 간 `diff -rq` | P0, R3로 이월 |
+| **🔴 아키텍처 갭(신규 발견)** | `src/tests/domains/phase6_khealth.test.js`의 H-08(K-Law+K-Health 동시 활성화 테스트)에서 실제 파이프라인 실행 중 발견 | **K-Law의 CV-1~4 분류기(classifier.js)가 실사용 파이프라인(`runPipeline`)에 사실상 연결돼 있지 않다.** `runPipeline`→`analyzePhase1`이 `p1Score<0.3`이면 Phase 2(=classifier.classify() 호출 지점) 자체를 생략하는데, Phase 1의 위험판단 태그(`dangerTags=[THREAT,DECEIVE,SOLICIT]`)에 K-Law의 CV-2(임대차) 패턴과 겹치는 카테고리가 없다 — `SU_TAG.LEGAL`(소송/고소장/내용증명)이 있긴 하지만 이것조차 `dangerTags`에 안 들어가 있어 P1 게이트를 못 넘는다. 그 결과 "보증금 반환을 거부하고 있습니다"처럼 협박·사기 어휘가 전혀 없는 순수 임대차 분쟁 메시지는 K-Law classifier.js의 CV-2 정규식이 실제로는 매칭됨에도(직접 호출 시 확인됨, K-03 통과) **파이프라인에서는 Phase 2 자체가 생략되어 항상 S0(무위험)로 처리된다.** K-01~09가 `classifier.classify()`를 직접 호출해 검증하는 방식이라 이 문제를 여태 못 잡고 있었음. | **P0 — 코드 수정은 안 함(설계 판단 필요: dangerTags에 LEGAL 추가? K-Law가 자체 fast-path 트리거를 등록? 등 트레이드오프가 있는 결정이라 사용자 확인 후 진행)** |
 
 ## E-3. K-Police (police) — id: kpolice
 
@@ -323,8 +324,8 @@ gopang/
 | 체크 | 상태 | 심화 | 우선순위 |
 |---|---|---|---|
 | S1~S3 | 정상 | — | — |
-| 도메인 | [기존] H-01~10 **이번 세션 미실행** | 의료 정보 민감도 — needsMedicalSafety 상속 체계(B-3)와의 연동 여부 | **P0 — 의료 안전 직결** |
-| 별도 파일 | 미실시 | `health`에만 `pdv.js`가 별도로 있음(다른 서비스는 `pdv-history-client.js`만) — 이 파일의 역할과 중복/충돌 여부 확인 필요 | P1 |
+| 도메인 | ✅ **재실행 완료 — 9/10 통과.** H-08(K-Law+K-Health 동시 활성화) 1건 실패 — K-Health 자체 결함 아님, K-Law 쪽 파이프라인 연결 갭이 원인(§E-2 K-Law 아키텍처 갭 참조). K-Health 고유 로직(H-01~07, H-09~10, MED-01~05 분류)은 전부 정상 | 의료 정보 민감도 — needsMedicalSafety 상속 체계(B-3)와의 연동 여부는 별도 확인(B-3에서 이미 임상심리사 등 3개 상속 확인됨) — **완료** |
+| 별도 파일 | 미실시 | `health`에만 `pdv.js`가 별도로 있음(다른 서비스는 `pdv-history-client.js`만) — 이 파일의 역할과 중복/충돌 여부 확인 필요 | P1, R3로 이월 |
 
 ## E-6. K-Edu (school) — id: kedu
 
