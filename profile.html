@@ -430,6 +430,29 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
       <div class="ifield-row"><span class="ifield-key">예금주</span><span class="ifield-val" id="payout-holder-name"></span></div>
       <div class="pill-wrap" style="border-top:none">
         <button class="btn-pill-filled" id="btn-copy-payout-account" onclick="_copyPayoutAccount()">📋 계좌번호 복사</button>
+        <button class="btn-pill-filled" id="btn-send-gdc" onclick="_openSendGdcModal()">💰 GDC 보내기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GDC 이체 확인 모달 (2026-07-18 신설) -->
+  <div class="hidden" id="gdc-transfer-modal" style="position:fixed;inset:0;z-index:9999;
+       background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;">
+    <div style="background:var(--bg,#fff);border-radius:16px;padding:20px;width:90%;max-width:340px;">
+      <div style="font-size:16px;font-weight:700;margin-bottom:12px;">💰 GDC 보내기</div>
+      <div style="font-size:13px;color:#8a8f98;margin-bottom:14px;">
+        받는 사람: <b id="gdc-modal-recipient">-</b>
+      </div>
+      <input type="number" id="gdc-modal-amount" placeholder="이체 금액(₮)" min="1" step="1"
+             style="width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;
+                    font-size:15px;margin-bottom:10px;box-sizing:border-box;" />
+      <div style="font-size:12px;color:#c0392b;margin-bottom:14px;">
+        ⚠️ 한 번 보낸 GDC는 되돌릴 수 없습니다. 받는 사람을 다시 확인해 주세요.
+      </div>
+      <div id="gdc-modal-status" style="font-size:13px;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-pill-outline" style="flex:1" onclick="_closeSendGdcModal()">취소</button>
+        <button class="btn-pill-filled" style="flex:1" id="btn-confirm-send-gdc" onclick="_confirmSendGdc()">보내기</button>
       </div>
     </div>
   </div>
@@ -1123,6 +1146,65 @@ function _copyPayoutAccount() {
       setTimeout(() => { btn.textContent = orig; }, 1500);
     }
   }).catch(() => alert('복사 실패 — 직접 입력해주세요: ' + text));
+}
+
+// ── GDC 이체 (2026-07-18 신설) ────────────────────────────────
+// 스캔한 상대(_profile — 이 profile.html이 표시 중인 사람)에게 GDC를
+// 이체한다. gopang-wallet.js가 이 페이지에 직접 로드돼 있어(라인 22
+// <script src="/gopang-wallet.js">) window.gopangWallet은 "나(방문자)의
+// 지갑"이며, 이체 대상은 항상 _profile.guid(이 프로필의 주인)이다.
+function _openSendGdcModal() {
+  const wallet = window.gopangWallet;
+  if (!wallet?.guid) {
+    alert('⚠️ 지갑이 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+    return;
+  }
+  if (!_profile?.guid) {
+    alert('⚠️ 받는 사람 프로필 정보를 불러오지 못했습니다.');
+    return;
+  }
+  if (_profile.guid === wallet.guid) {
+    alert('본인에게는 이체할 수 없습니다.');
+    return;
+  }
+  document.getElementById('gdc-modal-recipient').textContent =
+    _profile.nickname || _profile.name || _profile.handle || _profile.guid;
+  document.getElementById('gdc-modal-amount').value = '';
+  document.getElementById('gdc-modal-status').textContent = '';
+  document.getElementById('gdc-transfer-modal').classList.remove('hidden');
+}
+
+function _closeSendGdcModal() {
+  document.getElementById('gdc-transfer-modal').classList.add('hidden');
+}
+
+async function _confirmSendGdc() {
+  const wallet    = window.gopangWallet;
+  const statusEl  = document.getElementById('gdc-modal-status');
+  const btn       = document.getElementById('btn-confirm-send-gdc');
+  const amountStr = document.getElementById('gdc-modal-amount').value;
+  const amount    = parseFloat(amountStr);
+
+  if (!(amount > 0)) { statusEl.textContent = '⚠️ 올바른 금액을 입력해 주세요.'; return; }
+  if (amount < 1)     { statusEl.textContent = '⚠️ 최소 이체액은 ₮1입니다.'; return; }
+
+  const recipientLabel = document.getElementById('gdc-modal-recipient').textContent;
+  if (!confirm(`${recipientLabel}에게 ₮${amount.toLocaleString()}을 보내시겠습니까?\n되돌릴 수 없습니다.`)) return;
+
+  btn.disabled = true;
+  statusEl.style.color = '';
+  statusEl.textContent = '🔏 서명 후 전송 중…';
+  try {
+    const result = await wallet.sendGdc({ toGuid: _profile.guid, amount, memo: '' });
+    statusEl.style.color = '#2e7d32';
+    statusEl.textContent = `✅ 이체 완료 (블록 #${result.height ?? '-'})`;
+    setTimeout(() => { _closeSendGdcModal(); location.reload(); }, 1200);
+  } catch (e) {
+    statusEl.style.color = '#c0392b';
+    statusEl.textContent = '⚠️ ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
 }
 function _getSavedProfiles() {
   try { return JSON.parse(localStorage.getItem(_SAVED_PROFILES_KEY) || '[]'); } catch { return []; }

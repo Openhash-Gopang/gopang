@@ -4400,6 +4400,14 @@ export default {
     if (pathname.startsWith('/biz/profile/'))   return handleBizProfile(request, env, corsHeaders);
     if (pathname === '/gwp/register-key' && request.method === 'POST') return handleRegisterKey(request, env, corsHeaders);
     if (pathname === '/biz/order'   && request.method === 'POST') return handleBizOrder(request, env, corsHeaders, ctx);
+    // 2026-07-18 신설 — GDC P2P 이체(혼디 코드 스캔 → 프로필 → 이체).
+    // handleBizOrder를 재구현하지 않고, 필드를 매핑해 그대로 위임한다 —
+    // handleBizOrder는 이미 items가 비어있으면(P2P 성격) 카탈로그 가격·
+    // 수수료 검증을 건너뛰므로 재사용에 적합하다(설계문서
+    // docs/gdc_transfer_design_v0_1.md §2 참고). 크로스-L1 브릿지·중요도
+    // 점수·재무제표 일치검증·PDV 기록·판매자(수신자) claim 적재까지
+    // handleBizOrder의 검증된 로직을 그대로 물려받는다.
+    if (pathname === '/wallet/gdc-transfer' && request.method === 'POST') return handleGdcTransfer(request, env, corsHeaders, ctx);
     if (pathname === '/biz/gdc-deposit' && request.method === 'POST') return handleGdcDepositCreate(request, env, corsHeaders);
     if (pathname === '/biz/gdc-deposits' && request.method === 'GET') return handleGdcDepositList(request, env, corsHeaders);
     if (pathname === '/biz/balance' && request.method === 'GET')  return handleBizBalance(request, env, corsHeaders);
@@ -5034,6 +5042,77 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
     },
     contract_notice,
   }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-18 신설 — GDC P2P 이체 (/wallet/gdc-transfer)
+// 혼디 코드 스캔 → 프로필 연결 → "GDC 보내기"에서 호출된다.
+// 설계문서: docs/gdc_transfer_design_v0_1.md
+//
+// handleBizOrder를 다시 구현하지 않고 필드만 매핑해 위임한다 — 이미
+// items가 빈 배열이면 카탈로그 가격·수수료 분할 검증을 건너뛰므로(주석
+// "items가 비어 있으면(= P2P 송금 등...)" 참고) P2P 이체에 그대로 맞고,
+// 크로스-L1 브릿지·중요도 점수·재무제표 일치검증·PDV 기록·수신자 claim
+// 적재(pending_claims)까지 검증된 로직을 그대로 물려받는다. 로직이 두
+// 곳에 복붙되면 다음에 또 어긋난다(과거 fee-split 버그가 이런 식으로
+// 났었다) — 반드시 위임 구조를 유지할 것.
+async function handleGdcTransfer(request, env, corsHeaders, ctx) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const {
+    tx, tx_hash, sender_sig, sender_public_key,
+    from_guid, to_guid, amount, memo = '',
+    prev_settle_hash, balance_claimed, l1_node,
+  } = body;
+
+  // 필수 필드 확인
+  if (!tx_hash)            return _err(400, 'MISSING_FIELD', 'tx_hash 필수', corsHeaders);
+  if (!sender_sig)         return _err(400, 'MISSING_FIELD', 'sender_sig 필수', corsHeaders);
+  if (!sender_public_key)  return _err(400, 'MISSING_FIELD', 'sender_public_key 필수', corsHeaders);
+  if (!from_guid)          return _err(400, 'MISSING_FIELD', 'from_guid 필수', corsHeaders);
+  if (!to_guid)            return _err(400, 'MISSING_FIELD', 'to_guid 필수', corsHeaders);
+  if (!(amount > 0))       return _err(400, 'MISSING_FIELD', 'amount 필수(양수)', corsHeaders);
+
+  // ── P2P 전용 검증 (설계문서 §4 정책) ──────────────────────────
+  if (from_guid === to_guid) {
+    return _err(400, 'SELF_TRANSFER_NOT_ALLOWED', '본인에게는 이체할 수 없습니다', corsHeaders);
+  }
+  // 최소 이체액 1₮ — 0/음수/비정상 소수점 방지. 최대 한도는 1차 미구현
+  // (설계문서 §4 — 결정 시 여기 추가).
+  const GDC_TRANSFER_MIN_AMOUNT = 1;
+  if (amount < GDC_TRANSFER_MIN_AMOUNT) {
+    return _err(400, 'AMOUNT_OUT_OF_RANGE',
+      `최소 이체액은 ₮${GDC_TRANSFER_MIN_AMOUNT}입니다`, corsHeaders);
+  }
+
+  // ── handleBizOrder가 기대하는 형태로 매핑해 위임 ──────────────
+  // outputs는 수취인 1개뿐 — 플랫폼 수수료 output 없음(P2P는 수수료 0%).
+  const mappedTx = tx || {
+    version: 1,
+    input: { owner_guid: from_guid, prev_settle_hash: prev_settle_hash || null,
+              balance_claimed: balance_claimed || 0 },
+    outputs: [{ recipient_guid: to_guid, amount }],
+    items: [],
+  };
+
+  const mappedBody = {
+    tx: mappedTx, tx_hash,
+    buyer_sig: sender_sig, buyer_public_key: sender_public_key,
+    from_guid, seller_guid: to_guid, l1_node,
+    memo, item_name: memo || 'GDC 이체',
+    prev_settle_hash, balance_claimed,
+    seller_net: amount, fee: 0,   // P2P는 플랫폼 수수료 없음
+    asset_type: 'stable', contract_type: 'instant',
+  };
+
+  const syntheticRequest = new Request(request.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(mappedBody),
+  });
+
+  return handleBizOrder(syntheticRequest, env, corsHeaders, ctx);
 }
 
 // ═══════════════════════════════════════════════════════════
