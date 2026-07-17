@@ -525,10 +525,22 @@ gopang/
 
 ## Phase R2 — 단기(1주 내)
 
-- PART A 나머지(A2-3, A2-4, A4-1)
-- PART B 나머지(B1 전체, B3-2, B3-4)
-- PART E 도메인 심화(E-1~E-16 도메인 행 전체)
-- PART F 전체
+- ✅ PART A 나머지(A1-1/A1-2/A1-3, A2-1/A2-3/A2-4, A4-1) 완료 — A4-1에서 evidencePackage.js 프로덕션 버그 발견·수정
+- ✅ PART B 나머지(B1 전체, B2-3/B2-4/B2-6/B2-7, B3-2/B3-4, B4-1~B4-3) 완료 — B1-1에서 ai-secretary/phase6.js 프로덕션 버그 발견·수정, B1-2에서 phase13_ai_chat_handler.test.mjs L1 이관 드리프트 전면 수정
+- ✅ PART E — gopang 세션에서 가능한 만큼(구조적 SSOT 확인) 완료. E-2(K-Law)에서 **중대 아키텍처 갭 발견·수정**(classifier.js가 실사용 파이프라인에 연결 안 돼 있던 문제, phase2.js/phase4.js 수정 + phase7.js 신설로 "개별 위법 탐지 vs 전반적 위법 가능성 판단" 2단계 구조 구현). 나머지 16개 서비스 저장소의 도메인 고유 로직 심화 테스트는 `docs/HONDI_DOMAIN_DEEP_TEST_DIRECTIVE_v1_0.md`로 별도 작업자에게 이관
+- ✅ PART F 전체(F-1~F-5) 완료 — F-1/F-3에서 `layerClient.js` 로드 크래시, F-4에서 push 발송 조용한 실패 2건 발견·수정, F-2는 GDC 코드가 gdc 저장소로 완전 이동했음을 확인(원본 스펙 보존·이관), F-5는 Supabase 폐기 이후 아키텍처로 전면 재작성
+
+**미해결 — 사용자 결정 대기 중인 항목**:
+- PART C M10(ledger.js) — ✅ 사용자 지시로 신규 구현 완료(2026-07-17)
+- I1-2 wallet 3세대 드리프트 — ✅ 18개 저장소 동기화 완료(2026-07-17)
+- E-17/E-18 PDV 클라이언트 누락 — ✅ qna/users 배치 완료(2026-07-17)
+- A1-3 의존성 방향 규칙 위반(`core/auth.js`가 ui/services/ai를 import) — **미해결, 리팩토링 범위가 크고 위험해 임의로 안 건드림**
+
+## Phase R2 다음 — 남은 것 (다음 세션 시작점)
+
+- **PART G** 정부 연계 특수 기능(6개 테스트: `phase17_share_target`~`phase24_web_search`) — 외부 API 의존 가능성 있어 실행 전 라이브/목업 여부 먼저 확인
+- **PART H** 부트스트랩/Shell UI(2개: `phase7_bootstrap.test.js`, `index.html` 구성요소) — A1-2(부트스트랩 순서)와 교차 확인 예정이었던 항목
+- **PART I** 횡단 관심사 — I-1(SSOT 드리프트, 이미 대부분 완료), I-2(참조 무결성 확장), I-3(보안 회귀), I-4(환경 매트릭스 요약 정리)
 
 ## Phase R3 — 중기(라이브 환경 접근 확보 후)
 
