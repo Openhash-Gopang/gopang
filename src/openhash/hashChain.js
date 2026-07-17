@@ -326,6 +326,15 @@ function _scheduleBatch() {
     _batchTimer = null
     await _processBatch()
   }, MERKLE_BATCH_INTERVAL_MS)
+  // BUG-FIX(2026-07-17): 이 타이머(기본 1시간)가 unref() 안 되어 있어서
+  // Node 환경(테스트·스크립트)에서 이 모듈을 import하기만 해도 나머지
+  // 작업이 다 끝난 뒤에도 프로세스가 안 죽고 타이머 만료까지 걸려있었다
+  // (phase_anchor_integration.test.js A-01~A-12는 실제로 12/12 통과하는데도
+  // process.exit()을 명시적으로 안 불러서 타임아웃으로 죽어야 했음 — 다른
+  // openhash 테스트는 우연히 process.exit()을 호출해서 이 문제를 안 겪었을
+  // 뿐). 브라우저의 setTimeout 리턴값(number)에는 unref가 없으므로 존재할
+  // 때만 호출 — Node/Node 유사 환경에서만 적용되고 브라우저 동작은 그대로.
+  if (typeof _batchTimer?.unref === 'function') _batchTimer.unref()
 }
 
 /** 배치 처리 — Merkle Root 계산 */
