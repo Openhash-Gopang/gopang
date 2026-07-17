@@ -177,10 +177,10 @@ gopang/
 
 | ID | 대상 | 목적 | 우선순위 | 커버리지 |
 |---|---|---|---|---|
-| B1-1 | `call-ai.js`(3,905줄) 전체 | AI 호출 파이프라인 — 이번 세션에서 파일 크기만 확인, 내용 미검증 | P0 | [기존] phase3 — **이번 세션 미실행**, 파일 자체도 안 읽음(3900줄 중 앞부분만 훑음) |
-| B1-2 | `phase13_ai_chat_handler.test.mjs` | "짜장면 주문 사고실험" — `src/worker/ai-chat-handler.js` | P0 | [기존] 미실행 |
-| B1-3 | `phase14_order_queue_handler.test.mjs` | 주문 큐 처리 | P1 | [기존] 미실행 |
-| B1-4 | `phase15_delivery_handler.test.mjs` | 배송 처리 | P1 | [기존] 미실행 |
+| B1-1 | `call-ai.js`(3,905줄) 전체 | AI 호출 파이프라인 — 이번 세션에서 파일 크기만 확인, 내용 미검증 | P0 | ✅ **phase3_ai_secretary.test.js 재실행 — 실제 프로덕션 버그 발견·수정.** 최초 13개 중 3개 실패(A-11~A-13), 원인은 `src/ai-secretary/phase6.js`가 `evidencePackage.js`와 동일한 `anchor()` API 드리프트(구 API로 호출)를 갖고 있어 AI 비서의 모든 Phase 6(대화 기록+OpenHash 앵커링)가 항상 예외로 실패하던 것 — 수정 후 13/13 통과 |
+| B1-2 | `phase13_ai_chat_handler.test.mjs` | "짜장면 주문 사고실험" — `src/worker/ai-chat-handler.js` | P0 | ✅ **실행 결과 9/31 실패 → 전면 원인 규명·수정, 31/31 통과.** 2026-07-15 `ai-chat-handler.js`가 세션/LLM키 조회를 Supabase(sbFetch)→L1 PocketBase(`_l1AdminToken`+원문 fetch)로 이관했는데 테스트 목이 갱신 안 됨(`_l1AdminToken is not a function`) + AES 테스트 키가 hex 아니어서 유효하지 않은 키 길이 + 번역 테스트 env에 DEEPSEEK_API_KEY 누락, 3가지 복합 원인 |
+| B1-3 | `phase14_order_queue_handler.test.mjs` | 주문 큐 처리 | P1 | ✅ 재실행 완료(2026-07-17) — 11/11 통과, 회귀 없음 |
+| B1-4 | `phase15_delivery_handler.test.mjs` | 배송 처리 | P1 | ✅ 재실행 완료(2026-07-17) — 12/12 통과, 회귀 없음 |
 
 ## B-2. GWP 라우터 & 오케스트레이션
 
@@ -199,9 +199,9 @@ gopang/
 | ID | 대상 | 목적 | 우선순위 | 커버리지 |
 |---|---|---|---|---|
 | B3-1 | `expert-registry.js` 27개 페르소나 개별 | 각 페르소나의 `key`가 실제 `sp-catalog.json`에 존재하는지 | P0 | [기존] check_stale_refs.py가 부분 커버(38→0건 확인) |
-| B3-2 | `expert-session.js` 세션 교체(same-thread SP switch) | 실제로 시스템 프롬프트가 교체되는지, 이전 페르소나 잔존 여부 | P0 | [신규] — 세션 스위칭 자체를 테스트한 파일이 없음 |
+| B3-2 | `expert-session.js` 세션 교체(same-thread SP switch) | 실제로 시스템 프롬프트가 교체되는지, 이전 페르소나 잔존 여부 | P0 | ✅ **신규 테스트 작성·통과(6/6, `expert-session-switch.test.mjs`)** — CFG.system 교체·history[0] 동기화·history 유지(맥락 보존)·종료 발화 감지·system_base 복원·이전 페르소나 잔존 없음·PDV 기록까지 실행 검증 |
 | B3-3 | 위기개입 상속(`needsMedicalSafety`) | 임상심리사·정신건강전문요원·전문상담교사 3개만 true인지 | P0 | [기존, 완료] 2026-07-17 grep 확인 |
-| B3-4 | `UNIVERSAL-INTEGRITY` 자동 상속 | manifest-loader.js 주석에 "K-Intent/K-Compose 등 전부에 적용 안 되고 있었다"는 2026-07-12 발견 기록 — 그 이후 실제로 고쳐졌는지 재확인 | P0 | [신규] — 회귀 여부 미확인 |
+| B3-4 | `UNIVERSAL-INTEGRITY` 자동 상속 | manifest-loader.js 주석에 "K-Intent/K-Compose 등 전부에 적용 안 되고 있었다"는 2026-07-12 발견 기록 — 그 이후 실제로 고쳐졌는지 재확인 | P0 | ✅ **회귀 없음, 실행 검증 완료.** `_loadSpByKey()`가 UNIVERSAL-INTEGRITY(+2026-07-17 TASK-DELEGATION-GUIDE)를 모든 SP 로드에 무조건 결합(자기 자신 로드 시만 예외). call-ai.js의 12개 로더 전부가 이 함수 하나만 거치는 단일 관문 구조라 개별 로더가 우회할 수 없음(구조 자체가 회귀를 막음). 실행 테스트로 확인 |
 | B3-5 | `TASK-DELEGATION-GUIDE` 자동 상속(2026-07-17 신설, 주피터님 지시) | 방금 추가된 기능이라 테스트 자체가 없음 | P1 | [신규] |
 
 ## B-4. 매니페스트/SP 카탈로그 시스템
