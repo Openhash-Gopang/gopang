@@ -137,18 +137,18 @@ gopang/
 
 | ID | 대상 | 목적 | 우선순위 | 커버리지 |
 |---|---|---|---|---|
-| A1-1 | `src/gopang/core/state.js` | 전역 상태(PROXY 등)가 여러 모듈에서 동일 인스턴스로 공유되는지 | P0 | [기존] C-01~C-08 재실행 필요(이번 세션 미실행) |
-| A1-2 | 플랫폼 초기화 순서 | app.js 부트스트랩 시 core→pdv→openhash 순서 준수 | P0 | [기존] Phase 7 겹침, 교차 확인 필요 |
-| A1-3 | 의존성 방향 규칙 | `docs/gopang_implementation_plan_v3.1.md` §1의 "의존성 방향 규칙" 위반 여부(예: core가 K서비스를 import하는 역방향 의존) | P1 | [신규] — import 그래프 정적 분석 스크립트 필요 |
+| A1-1 | `src/gopang/core/state.js` | 전역 상태(PROXY 등)가 여러 모듈에서 동일 인스턴스로 공유되는지 | P0 | ✅ **확인 완료** — 저장소 전체에 `state.js` 사본이 단 하나뿐이고(`src/gopang/core/state.js`), 24개 import 지점 전부 상대경로로 그 파일 하나에 귀결됨. ESM의 `export let` 라이브 바인딩 특성상 동일 모듈을 가리키는 이상 별도 런타임 테스트 없이도 공유가 보장됨(중복 파일이 없다는 것 자체가 검증 포인트) |
+| A1-2 | 플랫폼 초기화 순서 | app.js 부트스트랩 시 core→pdv→openhash 순서 준수 | P1 | 별도 확인 안 함 — Phase 7(부트스트랩) 재실행 시 함께 확인 예정, R2 범위 밖으로 이월 |
+| A1-3 | 의존성 방향 규칙 | `docs/gopang_implementation_plan_v3.1.md` §1의 "의존성 방향 규칙" 위반 여부(예: core가 K서비스를 import하는 역방향 의존) | P1 | ⚠️ **위반 확인됨(실측).** 문서 규칙은 `core → (없음)`이지만, 실제 `src/gopang/core/auth.js`가 `../ui/bubble.js`, `../services/push.js`, `../ai/hondi-code.js`, `../ai/hondi-digit-code.js` 4개를 import하고 있음(core→ui/services/ai 역방향). 다만 이 규칙 자체가 v3.1 계획서(K서비스 2개뿐이던 초기 시점 작성) 기준이라 지금도 유효한 제약인지는 불확실 — 리팩토링은 범위가 크고 위험해 이 세션에서 임의로 손대지 않음, 사용자 판단 필요 |
 
 ## A-2. PDV 기반 레이어 [기존: `src/tests/pdv/phase2a_pdv.test.js`, P-01~P-08]
 
 | ID | 대상 | 목적 | 우선순위 | 커버리지 |
 |---|---|---|---|---|
-| A2-1 | `src/pdv/keyManager.js`의 `sha256`/`generateKeyPair`/`signMessage` | 암호 primitive 정확성(Web Crypto API 기반) | P0 | [기존] phase2a_pdv.test.js — 이번 세션 미실행, 재실행 필요 |
+| A2-1 | `src/pdv/keyManager.js`의 `sha256`/`generateKeyPair`/`signMessage` | 암호 primitive 정확성(Web Crypto API 기반) | P0 | ✅ 재실행 완료(2026-07-17) — 9/9 통과, 회귀 없음 |
 | A2-2 | `pdv-history-client.js` 태그 파싱·동의흐름 | ④ 항목, 이번 세션 완료 | P0 | [기존, 신규 테스트 추가] `pdv-history-client.test.mjs` 14/14 통과 (2026-07-17) |
-| A2-3 | PDV 4대 유형(문서 §PDV-4대유형) vs `_parseTagParams`가 실제 인식하는 scope 종류 | 설계-구현 갭 확인 | P1 | [신규] — 문서 대조 미실시, 이전 계획서 v2.0에서 예정만 됨 |
-| A2-4 | `phase16_pdv_extract.test.mjs` | PDV 추출 로직("과거 상호작용 요약 → 고정 필드") | P0 | [기존] 이번 세션 미실행 |
+| A2-3 | PDV 4대 유형(문서 §PDV-4대유형) vs `_parseTagParams`가 실제 인식하는 scope 종류 | 설계-구현 갭 확인 | P1 → 하향(§우측 참조) | ✅ **분석 완료 — "갭"이 아니라 애초에 서로 다른 두 축의 분류 체계였음이 확인됨.** `PDV-4대유형-해법_2026-07-14.md`의 "4대 유형"(①다수인 대상 집계 ②강제조사/수사 ③기관 내부 행정 ④정책용 익명통계)은 정부기관이 PDV를 소비하는 **쿼리 패턴(용도)** 분류다. 반면 `_parseTagParams`/`scope`(worker.js에 51개 이상 실존)는 **어느 서비스/기관 소관인지**(khealth/kpolice/ktax/jeju_xxx 등)를 나타내는 완전히 다른 축 — 코드 어디에도 요청이 4대 유형 중 무엇인지 구분하는 필드가 없다. 4대 유형 분류는 지금 설계 문서로만 존재. 실제 쿼리 파라미터로 넣을지는 별도 설계 판단 필요(P1 유지, 다만 "버그"는 아님) |
+| A2-4 | `phase16_pdv_extract.test.mjs` | PDV 추출 로직("과거 상호작용 요약 → 고정 필드") | P0 | ✅ 재실행 완료(2026-07-17) — 12/12 통과, 회귀 없음 |
 
 ## A-3. OpenHash 레이어 [기존: `src/tests/openhash/phase2b_openhash.test.js`, O-01~O-14]
 
@@ -167,7 +167,7 @@ gopang/
 
 | ID | 대상 | 목적 | 우선순위 | 커버리지 |
 |---|---|---|---|---|
-| A4-1 | 증거 패키지 생성(PDV 조회 결과 + Openhash 앵커 결합) | 두 레이어가 실제로 맞물리는지 | P0 | [기존] **이번 세션 미실행** |
+| A4-1 | 증거 패키지 생성(PDV 조회 결과 + Openhash 앵커 결합) | 두 레이어가 실제로 맞물리는지 | P0 | ✅ **완료 — 실제 프로덕션 버그 발견·수정.** 최초 실행 시 7개 중 4개 실패, 원인 조사 결과 테스트가 아니라 `src/pdv/evidencePackage.js`(법원 제출용 증거 패키지 생성 모듈) 자체가 `hashChain.js`의 옛 `anchor()` API(content, sig, msgId)를 그대로 호출하고 있어 신 API(contentHash, signatures[], msgId)와 어긋나 매번 예외로 실패했음(스토킹/가정폭력 등 실사용 시나리오에서 증거 패키지 생성이 항상 죽는 상태였음). 프로덕션 코드 수정 + `generateEvidencePackage()`를 실제로 끝까지 호출하는 신규 종단 테스트(`phase2c_evidence_e2e.test.mjs`, vault.js를 mock.module로 대체) 추가. 결과: `phase2c_evidence.test.js` 7/7, `phase2c_evidence_e2e.test.mjs` 2/2 |
 
 ---
 

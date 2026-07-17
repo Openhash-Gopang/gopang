@@ -71,9 +71,16 @@ export async function recordAndAnchor(message, riskResult, phaseScores, docAnaly
   }
 
   // OpenHash 앵커링
+  // BUG-FIX(2026-07-17): anchor()가 (contentHash, signatures[], msgId)를
+  // 받는 신 API로 바뀐 뒤 이 파일이 갱신되지 않아, message.content(원문)를
+  // 해시 없이 그대로 넘겨 매번 "[HashChain] contentHash는 SHA-256
+  // hex(64자)여야 합니다" 예외로 실패했다(실사로 재현·확인 — evidencePackage.js
+  // 와 동일한 드리프트). Phase 6은 모든 flagged 대화마다 실행되는 경로라
+  // 영향 범위가 더 크다.
+  const contentHash = await sha256(message.content ?? '')
   const anchored = await anchor(
-    message.content ?? '',
-    message.signature ?? 'no-sig',
+    contentHash,
+    [message.signature ?? 'no-sig'],
     msgId
   )
 
