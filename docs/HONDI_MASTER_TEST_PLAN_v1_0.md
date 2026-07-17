@@ -469,7 +469,7 @@ gopang/
 | H-1 | `src/app.js` 부트스트랩 순서 | v3.1 문서 §7 명시 순서(core→pdv→openhash→...) 준수 | P0 | ✅ **실행 완료(2026-07-18) — 8/9 통과, 1건 실패(B-03).** 순서 자체(`registry.init`→`registry.register`→`ShellUI.render`)는 정상 구현·정상 실행됨. **추가 실측**: `src/app.js`의 `bootstrap()`은 죽은 코드가 아니라 `gopang-app.js`의 `_boot()`(webapp.html이 로드)가 `await import('./src/app.js')`로 동적 호출 — A1-2가 이월만 하고 확인 못 한 부분이 해소됨. 다만 6단계 `ShellUI.render()`가 찾는 DOM 루트 `#gopang-shell`이 webapp.html/desktop.html 어디에도 없어 `_renderDOM()`의 `if (!root) return` 가드에 걸려 **매번 조용히 no-op**됨 — webapp.html은 `#message-list`/`#status-dot`/`#tab-bar`를 손으로 직접 구현해 놓았고 `registry`/`ShellUI`와 전혀 안 이어져 있음. `bootstrap()`은 "성공" 로그를 남기고 KLaw/KHealth 플러그인을 `registry`에 등록까지 하지만 그 결과를 실제로 소비하는 코드가 없음. 버그라기보단 아키텍처 미스매치 — 2026-05-30(fbeadad) "device-routing index, PC desktop.html, mobile webapp.html restored" 커밋에서 셸 구조가 통째로 교체되며 shell-ui.js의 DOM 생성 경로가 고아가 된 것으로 보임 |
 | H-2 | `index.html` Shell UI | 최초 로딩 화면 구성요소 | P1 | ✅ **실행 완료(2026-07-18, B-03) — 실패.** index.html에 `#gopang-shell`/`#boot-splash`/`src/app.js` 참조가 전혀 없음. 버그가 아니라 H-1과 동일한 아키텍처 변경 — index.html은 더 이상 Shell UI 마운트 지점이 아니라 기기 판별 후 webapp.html(모바일/SSO)·desktop.html(PC 정적 랜딩)로 즉시 리다이렉트만 하는 라우터 페이지로 재작성됨(fe99325 "index.html 스플래시 제거"). 테스트가 낡은 기대치를 검사하고 있음 |
 
-**PART H 결론**: 코드 결함은 없음(부트스트랩 순서 자체는 정상 동작). 다만 `phase7_bootstrap.test.js`의 설계 전제(단일 index.html + `#gopang-shell` 셸)가 2026-05-30 아키텍처 개편 이후 실제 구조와 어긋나 있고, `ShellUI.render()`가 프로덕션에서 실질적으로 no-op이 되는 부작용까지 확인됨. **사용자 판단 필요**: (a) 이 테스트를 webapp.html 기준으로 재작성/은퇴시킬지, (b) ShellUI를 실제로 webapp.html에 연결할지(플러그인 탭 UI가 필요하다면), (c) 알려진 고아 코드로 남겨두고 문서만 남길지.
+**PART H 결론**: 코드 결함은 없음(부트스트랩 순서 자체는 정상 동작). **2026-07-18 주피터님 결정: (1) 테스트를 실제 구조에 맞게 재작성 — 완료. (2) `gopang-app.js`/`src/app.js`/`shell-ui.js` 정리(레거시 v2 플러그인 체계 제거)는 의도적으로 보류, 코드에 경위 주석만 남김.** `phase7_bootstrap.test.js`의 B-03을 index.html의 실제 역할(기기 판별 후 webapp.html/desktop.html 리다이렉트)에 맞게 재작성해 9/9 전체 통과로 갱신했다. `gopang-app.js`의 `bootstrap()` 호출부와 `phase7_bootstrap.test.js` 상단에 향후 제거 작업 시 필요한 정보(무엇이 죽은 코드가 아니고 무엇이 no-op인지, 함께 지울 파일 목록)를 주석으로 남겨뒀다.
 
 ---
 
@@ -547,7 +547,7 @@ gopang/
 - ✅ **PART I** — I-1(이미 완료), I-2(전부 확인 완료, 추가 조치 불필요), I-3(신규 테스트 작성 — I3-1 우회 경로 없음 확인, I3-2에서 **phone_verify_token의 다중 프로필 재사용 가능성 신규 발견 — 사용자 판단 대기**), I-3-3만 라이브 필요라 미착수, I-4는 아래 갱신판 참고
 
 **미해결 — 사용자 결정 대기 중인 신규 항목(2026-07-18)**:
-- PART H — `phase7_bootstrap.test.js`를 webapp.html 기준으로 재작성할지, ShellUI를 실제로 연결할지, 고아 코드로 둘지
+- PART H — ✅ 사용자 지시로 처리 완료(2026-07-18): 테스트 재작성 완료, 코드 정리는 주석만 남기고 보류
 - I3-2 — 동일 전화번호를 쓰는 서로 다른 unclaimed 프로필 간 `phone_verify_token` 재사용을 막을지(현재는 가능) — 의도된 설계인지부터 확인 필요
 
 ## Phase R3 나머지 (다음 세션 시작점)

@@ -1,6 +1,37 @@
 /**
  * phase7_bootstrap.test.js — Phase 7 부트스트랩 + Shell UI 테스트
  * B-01~B-09
+ *
+ * ⚠️ 2026-07-18 결정 사항(PART H 조사 후 주피터님 확인) ─────────────────
+ * 여기서 검증하는 registry/ShellUI/plugin-registry.js 체계는 "고팡 v2"
+ * 시절(K서비스가 klaw·khealth 2개뿐이던 초기 아키텍처, src/app.js 파일
+ * 자체 주석에도 "v2 부트스트랩 진입점 v3"라 명시)의 유산이다. 지금은
+ * GWP_REGISTRY(28개 서비스 라우팅 테이블) + SP 파일 + 18개 개별 K서비스
+ * 저장소 체계가 이 역할을 완전히 대체했다 — src/app.js가 하드코딩으로
+ * 아는 플러그인은 여전히 KLawPlugin/KHealthPlugin 딱 2개뿐이다.
+ *
+ * 실측 결과: `gopang-app.js`(webapp.html이 로드하는 실제 진입점)의
+ * `_boot()`가 지금도 매 페이지 로드마다 `src/app.js`의 `bootstrap()`을
+ * 동적 import로 호출하고는 있으나(죽은 코드는 아님), 그 마지막 단계인
+ * `ShellUI.render()`가 찾는 DOM 루트 `#gopang-shell`이 webapp.html/
+ * desktop.html 어디에도 없어 `_renderDOM()`의 `if (!root) return` 가드에
+ * 걸려 매번 조용히 아무 일도 안 하고 끝난다. webapp.html은 `#message-list`/
+ * `#status-dot`/`#tab-bar` 등 자기 UI를 이미 손으로 다 구현해놨고, 이
+ * registry/ShellUI 결과를 전혀 소비하지 않는다.
+ *
+ * 결정: (1) 이 파일은 살려두되 실제 index.html 구조(기기 판별 리다이렉터,
+ * 아래 B-03 참고)에 맞게 최소 수정만 한다 — B-01/02/04~09는 여전히
+ * src/app.js·shell-ui.js 자체의 내부 로직(부트 순서, 이중호출 방지 등)을
+ * 검증하는 것이라 유효하다. (2) `gopang-app.js`의 `bootstrap()` 호출부와
+ * `src/app.js`/`shell-ui.js`/`core/plugin-registry.js` 자체를 통째로
+ * 제거하는 정리 작업은 **의도적으로 보류**한다 — 이건 프로덕션 엔트리
+ * 파일(`gopang-app.js`)을 건드리는 리팩토링이라 A1-3(core/auth.js 의존성
+ * 방향 위반)과 같은 수준의 신중함이 필요하다. 착수 시 아래 세 가지를
+ * 함께 지워야 한다: `gopang-app.js`의 `await import('./src/app.js')` +
+ * `await bootstrap()` 호출부(_boot 함수 4-1 단계), `src/app.js` 전체,
+ * `src/shell-ui.js` 전체(둘 다 이 테스트 외 다른 곳에서 import되지 않음,
+ * 2026-07-18 grep 확인). 원하시면 별도 세션에서 진행.
+ * ───────────────────────────────────────────────────────────────────
  */
 
 import { describe, it, beforeEach, after } from 'node:test';
@@ -68,12 +99,17 @@ describe('Phase 7 — 부트스트랩 + Shell UI', () => {
     assert.ok(content.length > 0, 'shell-ui.js가 비어 있음');
   });
 
-  // ── B-03: index.html 파일 존재 및 필수 요소 포함 ──────────
-  it('B-03: index.html에 필수 마운트 포인트가 있다', () => {
+  // ── B-03: index.html — 기기 판별 리다이렉터 구성요소 ──────
+  // (2026-07-18 수정: 2026-05-30 아키텍처 개편으로 index.html은 더 이상
+  //  Shell UI 마운트 지점이 아니라, 기기 판별 후 webapp.html(모바일/SSO)
+  //  또는 desktop.html(PC 정적 랜딩)로 즉시 리다이렉트만 하는 라우터
+  //  페이지다. #gopang-shell/#boot-splash/src/app.js 참조는 더 이상
+  //  존재하지 않는 게 정상이므로, 실제 역할에 맞는 항목으로 교체했다.)
+  it('B-03: index.html이 기기 판별 후 webapp.html/desktop.html로 리다이렉트한다', () => {
     const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
-    assert.ok(html.includes('id="gopang-shell"'), '#gopang-shell 마운트 포인트 없음');
-    assert.ok(html.includes('id="boot-splash"'),  '#boot-splash 없음');
-    assert.ok(html.includes('src/app.js'),         'app.js import 없음');
+    assert.ok(html.includes('webapp.html'),          'webapp.html(모바일/SSO 진입점) 리다이렉트 대상 없음');
+    assert.ok(html.includes('desktop.html'),         'desktop.html(PC 정적 랜딩) 리다이렉트 대상 없음');
+    assert.ok(html.includes('window.location.replace'), '리다이렉트 로직(location.replace) 없음');
   });
 
   // ── B-04: bootstrap() 부트 순서 (코어→레이어→플러그인→AI→네트워크→UI) ──

@@ -246,6 +246,15 @@ const _boot = async () => {
   }
 
   // 4-1. 부트스트랩 (src/app.js)
+  // ⚠️ 2026-07-18: src/app.js/shell-ui.js/core/plugin-registry.js는 "고팡 v2"
+  //    시절(K서비스 klaw·khealth 2개뿐이던 초기 아키텍처) 유산이다. 지금은
+  //    GWP_REGISTRY + SP 파일 + 18개 K서비스 저장소 체계가 이 역할을 완전히
+  //    대체했고, bootstrap()의 마지막 단계(ShellUI.render)는 #gopang-shell
+  //    마운트 지점이 이 페이지에 없어 매번 조용히 no-op된다(webapp.html은
+  //    자기 UI를 직접 구현, registry 결과를 안 씀) — 해롭진 않으나 낭비.
+  //    제거 작업은 의도적으로 보류 중(src/tests/phase7_bootstrap.test.js
+  //    상단 주석 참고). 착수 시 이 블록 + src/app.js + src/shell-ui.js를
+  //    함께 지울 것.
   try {
     const { bootstrap } = await import('./src/app.js');
     await bootstrap();
