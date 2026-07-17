@@ -62,7 +62,12 @@ export async function generateEvidencePackage(msgId, options = {}) {
 
     // Merkle Proof 생성 (체인 내 전체 해시 목록 기준)
     // Phase 2C: 단순화 — 단일 해시 Merkle (Phase 4에서 실제 노드 연동)
-    const hashes = [chainEntry.msgHash]
+    // BUG-FIX(2026-07-17): hashChain.js의 앵커 엔트리 필드는 'contentHash'인데
+    // 여기서는 존재하지 않는 'msgHash' 필드를 읽고 있었다(항상 undefined) —
+    // anchor()의 API가 (content, sig, msgId) → (contentHash, signatures[], msgId)로
+    // 바뀐 뒤 이 파일이 갱신되지 않아 생긴 드리프트. 패키지 자체의 외부
+    // 필드명(msgHash)은 하위 호환을 위해 유지하되, 값은 chainEntry.contentHash에서 가져온다.
+    const hashes = [chainEntry.contentHash]
     const root   = await buildMerkleRoot(hashes)
     merkleProof  = {
       root,
@@ -74,7 +79,7 @@ export async function generateEvidencePackage(msgId, options = {}) {
 
     openHashProof = {
       entryHash:   chainEntry.entryHash,
-      msgHash:     chainEntry.msgHash,
+      msgHash:     chainEntry.contentHash,
       prevHash:    chainEntry.prevHash,
       blockHeight: chainEntry.blockHeight,
       layer:       chainEntry.layer,
@@ -82,13 +87,26 @@ export async function generateEvidencePackage(msgId, options = {}) {
     }
   } else {
     // 체인에 없으면 즉시 앵커링 후 증거 구성
+    // BUG-FIX(2026-07-17): anchor()는 이제 (contentHash, signatures[], msgId)를
+    // 받는다 — 원문(record.content)과 서명 문자열 하나를 그대로 넘기면
+    // "[HashChain] contentHash는 SHA-256 hex(64자)여야 합니다." 예외로
+    // 매번 실패했다(실사로 재현·확인). content를 먼저 해시하고, 서명은
+    // 배열로 감싼다.
+    const contentHash = await sha256(record.content)
     const anchored = await anchor(
-      record.content,
-      senderSignature,
+      contentHash,
+      [senderSignature],
       msgId
     )
     entryHash    = anchored.entryHash
-    openHashProof = anchored
+    openHashProof = {
+      entryHash:   anchored.entryHash,
+      msgHash:     anchored.contentHash,
+      prevHash:    anchored.prevHash,
+      blockHeight: anchored.blockHeight,
+      layer:       anchored.layer,
+      timestamp:   anchored.timestamp,
+    }
     merkleProof   = { root: anchored.entryHash, proof: [], layer: anchored.layer }
 
     // vault openHashRef 업데이트
