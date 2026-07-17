@@ -168,6 +168,36 @@ def check_refs(label: str, text: str, latest_map: dict, results: list, jeju_rela
             results.append((status, label, ref, latest_file))
 
 
+# ── 검사 3(2026-07-17 신설, B4-2) — HONDI_FAQ_REGISTRY 참조 파일 존재 ────
+# 배경: check_stale_refs.py는 지금까지 FILE_REF_RE/RAW_URL_RE/BLOB_URL_RE/
+# JEJU_RELATIVE_RE 네 패턴 전부 문자열 안에 'prompts/' 또는 'Jejudo/'가
+# 리터럴로 박혀있어야 매칭됐다. 그런데 src/gopang/ai/hondi-faq-router.js의
+# HONDI_FAQ_REGISTRY는 `file: 'pdv.txt'`처럼 접두사 없는 파일명만 갖고
+# 있고(접두사 `/prompts/HONDI-FAQ/`는 런타임에 별도 상수와 문자열
+# 결합으로 붙는다), JS_FILES_TO_SCAN에도 이 파일이 애초에 없었다 —
+# 즉 이 레지스트리 19개 항목은 지금까지 이 스크립트의 완전한 사각지대였다
+# (2026-07-17 마스터 테스트플랜 B4-2 조사에서 발견 — 지금 당장 깨진 참조는
+# 없었지만, 향후 오타/삭제가 나도 이 스크립트가 못 잡는 상태였음).
+FAQ_FILE_RE = re.compile(r"""file:\s*'([\w.-]+\.txt)'""")
+
+
+def check_hondi_faq_registry(results: list):
+    router_path = ROOT / 'src' / 'gopang' / 'ai' / 'hondi-faq-router.js'
+    if not router_path.exists():
+        return
+    text = router_path.read_text(encoding='utf-8')
+    faq_dir = PROMPTS / 'HONDI-FAQ'
+    for fname in FAQ_FILE_RE.findall(text):
+        target = faq_dir / fname
+        if target.exists():
+            results.append(('OK', 'hondi-faq-router.js → HONDI-FAQ', fname, str(target.relative_to(ROOT))))
+        else:
+            results.append((
+                'MISSING', 'hondi-faq-router.js → HONDI-FAQ', fname,
+                f'prompts/HONDI-FAQ/{fname} 없음',
+            ))
+
+
 def main():
     latest_map = index_prompts_dir()
     results = []
@@ -186,6 +216,7 @@ def main():
             print(f"[경고] {label} 원격 fetch 실패, 건너뜀: {e}", file=sys.stderr)
 
     # (2026-07-17) check_router_registry_sync() 호출 제거 — 위 주석 참조
+    check_hondi_faq_registry(results)
 
     problems = [r for r in results if r[0] != 'OK']
     ok_count = len(results) - len(problems)
