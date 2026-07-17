@@ -159,7 +159,18 @@ await test('K-10', '코어 파일 변경 없음 확인', async () => {
   // 새 플러그인 추가 시 코어 파일(core/*)은 변경되지 않아야 함
   // plugin-validator.js는 BUG-003 수정으로 이미 변경됨 → 현재 상태가 최종 코어
   // K-Law 플러그인 추가로 인한 추가 코어 변경이 없음을 확인
+  //
+  // BUG-FIX(2026-07-17): 기존엔 파일 전체에서 'k-law' 문자열을 단순 검색해서,
+  // event-bus.js/plugin-interface.js의 JSDoc 예시 주석("EventBus.on(...,
+  // 'k-law')", "name: '' // 고유 식별자 (예: 'k-law', ...)")까지 실제 코드
+  // 결합으로 오탐했다 — 이건 core가 k-law를 실제로 아는 게 아니라 범용
+  // 플러그인 문서에 자연스러운 예시 이름을 든 것뿐이다. 주석을 제거한
+  // 코드에서만 검사하도록 수정(실제 import/조건분기 결합만 잡아냄).
   const { readFileSync } = await import('fs')
+
+  const stripComments = (src) => src
+    .replace(/\/\*[\s\S]*?\*\//g, '')   // 블록 주석
+    .replace(/\/\/[^\n]*/g, '')          // 라인 주석
 
   const coreFiles = [
     'src/core/event-bus.js',
@@ -168,8 +179,8 @@ await test('K-10', '코어 파일 변경 없음 확인', async () => {
   ]
 
   for (const f of coreFiles) {
-    const content = readFileSync(f, 'utf8')
-    assert(!content.includes('k-law'), `${f}에 k-law 참조 없음`)
+    const content = stripComments(readFileSync(f, 'utf8'))
+    assert(!content.includes('k-law'), `${f}에 k-law 참조 없음(주석 제외 실제 코드 기준)`)
   }
 })
 
