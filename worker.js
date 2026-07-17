@@ -7943,7 +7943,7 @@ const SP_DELEGATION_REGISTRY = {
   public:     { via: 'manifest', key: 'SP-10_kpublic',    identity: 'kpublic',       pdvScope: 'kpublic' },
   jeju_do: {
     via: 'url',
-    url: 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/Jejudo/01-do/JEJU-DO-SP_v1.1.md',
+    url: 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/Jejudo/01-do/JEJU-DO-SP_v1.5.md',
     identity: null, label: '제주도청(총괄)',
     // ★ 2026-07-09 추가 — JEJU-DO-SP_v1.0.md 자신의 헤더가 "반드시
     // 상위 공통 레이어 뒤에 고정 삽입, 단독 사용 금지"라고 명시하는데

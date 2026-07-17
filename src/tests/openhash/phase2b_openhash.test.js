@@ -13,7 +13,7 @@ import { downwardAudit, upwardMonitor, crossLayerVerify } from '../../openhash/i
 import { LPBFT, STATE, DEACTIVATION_CONDITIONS } from '../../openhash/lpbft.js'
 import { calculateImportanceScore, selectMode, MODE } from '../../openhash/importanceVerifier.js'
 import { processTx, addToBlacklist, _resetPipeline } from '../../openhash/transactionPipeline.js'
-import { generateKeyPair, signMessage } from '../../pdv/keyManager.js'
+import { generateKeyPair, signMessage, sha256 } from '../../pdv/keyManager.js'
 
 let passed = 0, failed = 0
 
@@ -43,9 +43,9 @@ await test('O-01', 'PLSM 10만 회 분포 χ² 검정', async () => {
 // O-02: Hash Chain 연속 앵커링 + prevHash 체인 연결
 await test('O-02', 'Hash Chain 앵커링 + prevHash 체인 연결', async () => {
   _resetChain()
-  const e1 = await anchor('메시지1', 'sig1', 'msg-001')
-  const e2 = await anchor('메시지2', 'sig2', 'msg-002')
-  const e3 = await anchor('메시지3', 'sig3', 'msg-003')
+  const e1 = await anchor(await sha256('메시지1'), ['sig1'], 'msg-001')
+  const e2 = await anchor(await sha256('메시지2'), ['sig2'], 'msg-002')
+  const e3 = await anchor(await sha256('메시지3'), ['sig3'], 'msg-003')
 
   assert(e2.prevHash === e1.entryHash, `e2.prevHash = e1.entryHash`)
   assert(e3.prevHash === e2.entryHash, `e3.prevHash = e2.entryHash`)
@@ -192,8 +192,8 @@ await test('O-12', 'Stage 5 블랙리스트 차단', async () => {
 // O-13: 체인 무결성 검증
 await test('O-13', '체인 무결성 검증', async () => {
   _resetChain()
-  await anchor('msg-A', 'sigA', 'id-A')
-  await anchor('msg-B', 'sigB', 'id-B')
+  await anchor(await sha256('msg-A'), ['sigA'], 'id-A')
+  await anchor(await sha256('msg-B'), ['sigB'], 'id-B')
   const { valid } = await verifyChainIntegrity()
   assert(valid === true, '체인 무결성 통과')
 })
