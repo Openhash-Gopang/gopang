@@ -249,13 +249,15 @@ async function handlePhoneOtpRequest(request, env, corsHeaders) {
   return new Response(JSON.stringify({ ok: true, expires_in: OTP_TTL_SECONDS }), { status: 200, headers: corsHeaders });
 }
 
-// POST /biz/phone-otp-verify { e164, code } — 성공 시 서명된 검증 토큰 발급.
-// 이 토큰은 (다음 fix.py에서) L1 profiles 생성 훅이 PHONE_VERIFY_SECRET으로
-// 재검증해야 실제 강제력이 생긴다 — 지금은 발급만 하고 아직 아무도 검사 안 함.
+// POST /biz/phone-otp-verify { e164, code, guid? } — 성공 시 서명된 검증
+// 토큰 발급. 이 토큰은 두 곳에서 재검증된다: (1) pb_hooks/main.pb.js의
+// onRecordBeforeCreateRequest(신규 profiles 생성 시, e164만 있으면 됨),
+// (2) worker.js의 handleProfileClaim(미청구 프로필 claim 시, guid 바인딩
+// 필수 — 2026-07-18 신설). 두 소비처의 요구가 달라 guid는 선택 필드다.
 async function handlePhoneOtpVerify(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { e164, code } = body;
+  const { e164, code, guid } = body;
   if (!e164 || !code) return _err(400, 'MISSING_FIELD', 'e164, code 필수', corsHeaders);
   if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', 'OTP 저장소가 설정되지 않았습니다', corsHeaders);
   if (!env.PHONE_VERIFY_SECRET) return _err(500, 'SECRET_NOT_SET', 'PHONE_VERIFY_SECRET이 설정되지 않았습니다', corsHeaders);
@@ -279,11 +281,16 @@ async function handlePhoneOtpVerify(request, env, corsHeaders) {
   await env.QR_SESSIONS_KV.delete(otpKey);
 
   const exp = Date.now() + PHONE_VERIFY_TOKEN_TTL_MS;
-  const payload = `${e164}:${exp}`;
+  // 2026-07-18: guid가 있으면(claim 흐름) 서명 대상에 포함해 토큰을 그
+  // 프로필에 바인딩한다 — 동일 전화번호로 등록된 다른 unclaimed 프로필에
+  // 재사용되는 것을 막기 위함(guid 없는 2-필드 토큰은 handleProfileClaim이
+  // 거부한다). e164에는 콜론이 없고(형식 검증됨) exp는 항상 마지막
+  // 필드이므로 guid 자체에 콜론이 섞여 있어도 파싱 시 안전하다.
+  const payload = guid ? `${e164}:${guid}:${exp}` : `${e164}:${exp}`;
   const signature = await _hmacSha256Hex(env.PHONE_VERIFY_SECRET, payload);
   // 2026-07-15: btoa() 제거 — L1 PocketBase v0.22.14 JSVM에 base64
   // 디코더가 없음을 실제 바이너리로 검증. payload는 이미 안전한
-  // 문자(전화번호 숫자/+, 콜론, 타임스탬프 숫자)만 포함해 인코딩이
+  // 문자(전화번호 숫자/+, 콜론, 타임스탬프 숫자, guid)만 포함해 인코딩이
   // 애초에 불필요했다.
   const token = payload + '.' + signature;
 
@@ -10740,15 +10747,35 @@ async function handleProfileClaim(request, env, corsHeaders) {
     if (!env.PHONE_VERIFY_SECRET) return _err(500, 'SECRET_NOT_SET', 'PHONE_VERIFY_SECRET이 설정되지 않았습니다', corsHeaders);
     const dotIdx = String(phone_verify_token).lastIndexOf('.');
     if (dotIdx < 0) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 형식 오류', corsHeaders);
-    const payloadB64 = phone_verify_token.slice(0, dotIdx);
-    const sig = phone_verify_token.slice(dotIdx + 1);
-    let payload;
-    try { payload = atob(payloadB64); } catch { return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 디코딩 실패', corsHeaders); }
-    const colonIdx = payload.lastIndexOf(':');
-    if (colonIdx < 0) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 페이로드 오류', corsHeaders);
-    const e164 = payload.slice(0, colonIdx);
-    const exp  = Number(payload.slice(colonIdx + 1));
+    const payload = phone_verify_token.slice(0, dotIdx);
+    const sig     = phone_verify_token.slice(dotIdx + 1);
+    // 2026-07-18 버그 수정: 예전엔 여기서 atob(payload)를 호출했는데,
+    // 발급부(handlePhoneOtpVerify)는 2026-07-15(caf72c1)에 btoa()를
+    // 이미 제거해서 payload가 원문 그대로 서명 대상이 됐다(pb_hooks의
+    // onRecordBeforeCreateRequest 훅은 그때 같이 고쳐졌으나 이 함수만
+    // 누락됨). payload는 '+8201012345678:...' 형태라 ':' 문자가 base64
+    // 알파벳에 없어 atob()가 매번 예외를 던졌다 — 즉 2026-07-15 이후
+    // phone_verify_token으로 claim을 시도한 모든 요청이 항상
+    // TOKEN_MALFORMED로 거부되던 실제 프로덕션 버그. 원문 그대로 사용.
+    const firstColon = payload.indexOf(':');
+    const lastColon  = payload.lastIndexOf(':');
+    if (firstColon < 0 || lastColon < firstColon) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 페이로드 오류', corsHeaders);
+    const e164      = payload.slice(0, firstColon);
+    // guid 없는(2-필드, 등록 전용) 토큰이면 firstColon === lastColon
+    const tokenGuid = firstColon === lastColon ? null : payload.slice(firstColon + 1, lastColon);
+    const exp       = Number(payload.slice(lastColon + 1));
     if (!e164 || !Number.isFinite(exp)) return _err(400, 'TOKEN_MALFORMED', 'phone_verify_token 페이로드 오류', corsHeaders);
+
+    // 2026-07-18 신설 — 토큰을 claim 대상 guid에 바인딩 강제. 이게 없으면
+    // 동일 전화번호로 등록된 서로 다른 unclaimed 프로필에 같은 토큰을
+    // 재사용해 전부 claim할 수 있었다(실측으로 발견, phase25 I3-2 참고).
+    if (!tokenGuid) {
+      return _err(400, 'TOKEN_NOT_BOUND', '이 인증 토큰은 claim 전용으로 발급되지 않았습니다(guid 미포함) — /biz/phone-otp-verify 요청 시 guid를 함께 보내주세요', corsHeaders);
+    }
+    if (tokenGuid !== guid) {
+      return _err(403, 'TOKEN_GUID_MISMATCH', '이 인증 토큰은 다른 프로필용으로 발급됐습니다', corsHeaders);
+    }
+
     if (Date.now() > exp) return _err(401, 'TOKEN_EXPIRED', '전화번호 인증 토큰이 만료됐습니다', corsHeaders);
     const expectedSig = await _hmacSha256Hex(env.PHONE_VERIFY_SECRET, payload);
     if (expectedSig !== sig) return _err(401, 'TOKEN_INVALID', '전화번호 인증 토큰 서명이 유효하지 않습니다', corsHeaders);

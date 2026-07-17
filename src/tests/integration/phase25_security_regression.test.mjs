@@ -106,18 +106,43 @@ async function hmacSha256Hex(secret, message) {
   return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function b64(str) { return btoa(str); }
+// ── 인메모리 KV mock (QR_SESSIONS_KV) ────────────────────────────────
+// 2026-07-18: I3-2 테스트가 phone_verify_token을 손으로 조립(btoa 사용)
+// 하고 있었는데, 그게 하필 당시 handleProfileClaim의 atob() 버그와
+// 우연히 맞아떨어져 "발급부-검증부 인코딩 불일치" 실제 프로덕션 버그를
+// 테스트가 놓쳤다. 이후로는 실제 handlePhoneOtpVerify 엔드포인트를
+// 그대로 호출해 토큰을 발급받는다 — 손으로 만들지 않는다.
+function makeKvMock() {
+  const store = new Map();
+  return {
+    async get(key) { return store.has(key) ? store.get(key) : null; },
+    async put(key, value) { store.set(key, value); },
+    async delete(key) { store.delete(key); },
+  };
+}
 
-async function buildPhoneVerifyToken(secret, e164, exp) {
-  const payload = `${e164}:${exp}`;
-  const sig = await hmacSha256Hex(secret, payload);
-  return `${b64(payload)}.${sig}`;
+// 실제 /biz/phone-otp-verify를 호출해 진짜 phone_verify_token을 발급받는다.
+// OTP 발송(SMS) 자체는 외부 API라 우회한다 — QR_SESSIONS_KV에 이미 코드가
+// 발급된 것처럼 직접 시딩하고(handlePhoneOtpRequest가 정상적으로 하는 일과
+// 동일한 상태), 그 다음 handlePhoneOtpVerify는 반드시 실제 호출로 태운다.
+const OTP_CODE = '123456';
+async function issuePhoneVerifyToken(kv, e164, guid) {
+  await kv.put(`otp:${e164}`, JSON.stringify({ code: OTP_CODE, attempts: 0 }));
+  const { status, json } = await call('/biz/phone-otp-verify', {
+    method: 'POST', body: { e164, code: OTP_CODE, ...(guid ? { guid } : {}) },
+  });
+  assert.equal(status, 200, `테스트 셋업: /biz/phone-otp-verify 실패 — ${JSON.stringify(json)}`);
+  return json.phone_verify_token;
 }
 
 // ══════════════════════════════════════════════════════════════════
 
 let worker;
-const ENV = { L1_ADMIN_EMAIL: 'admin@test', L1_ADMIN_PASSWORD: 'pw', PHONE_VERIFY_SECRET: 'test-secret-key' };
+const kvMock = makeKvMock();
+const ENV = {
+  L1_ADMIN_EMAIL: 'admin@test', L1_ADMIN_PASSWORD: 'pw',
+  PHONE_VERIFY_SECRET: 'test-secret-key', QR_SESSIONS_KV: kvMock,
+};
 
 before(async () => {
   installMockFetch();
@@ -225,8 +250,7 @@ describe('I3-1: handleProfilePost — 서명 검증 우회 시나리오', () => 
 // I3-2: /profile/claim POST — phone_verify_token 재사용 공격
 // ══════════════════════════════════════════════════════════════════
 
-describe('I3-2: handleProfileClaim — phone_verify_token 재사용 공격', () => {
-  const SECRET = 'test-secret-key';
+describe('I3-2: handleProfileClaim — phone_verify_token 재사용 공격 + guid 바인딩(2026-07-18 신설)', () => {
   const PHONE_E164 = '+8201012345678';
   // handleProfileClaim은 토큰의 e164에서 '+82' 접두어를 뗀 국내 형식과
   // profiles.phone을 비교한다(_sendSolapiSms 관례와 동일) — 시드 데이터도
@@ -241,22 +265,55 @@ describe('I3-2: handleProfileClaim — phone_verify_token 재사용 공격', () 
     });
   }
 
-  it('만료된 토큰은 401 TOKEN_EXPIRED로 거부', async () => {
-    seedUnclaimedProfile('biz-expired', PHONE_DOMESTIC);
-    const expiredExp = Date.now() - 1000;
-    const token = await buildPhoneVerifyToken(SECRET, PHONE_E164, expiredExp);
-
-    const { status, json } = await call('/profile/claim', {
-      method: 'POST', body: { guid: 'biz-expired', pubkey: 'newpub', phone_verify_token: token },
+  it('실제 /biz/phone-otp-verify → /profile/claim 정상 흐름 — guid 바인딩된 토큰으로 claim 성공', async () => {
+    seedUnclaimedProfile('biz-happy', PHONE_DOMESTIC);
+    const token = await issuePhoneVerifyToken(kvMock, PHONE_E164, 'biz-happy');
+    const { status } = await call('/profile/claim', {
+      method: 'POST', body: { guid: 'biz-happy', pubkey: 'pub1', phone_verify_token: token },
     });
-    assert.equal(status, 401);
-    assert.equal(json.error, 'TOKEN_EXPIRED');
+    assert.equal(status, 200, '정상 발급된 guid 바인딩 토큰은 통과해야 함(atob 버그 수정 후 회귀 확인)');
+  });
+
+  it('[버그 수정 회귀 확인] 발급부는 더 이상 payload를 base64 인코딩하지 않는다 — 실제 토큰이 atob 없이 파싱돼야 함', async () => {
+    seedUnclaimedProfile('biz-encoding', PHONE_DOMESTIC);
+    const token = await issuePhoneVerifyToken(kvMock, PHONE_E164, 'biz-encoding');
+    const [payload] = token.split('.');
+    // payload 자체에 ':' 문자가 그대로 있어야 함(base64였다면 인코딩된
+    // 형태라 원문 ':'가 그대로 보이지 않는다) — 2026-07-15 btoa 제거 확인
+    assert.ok(payload.includes(':'), 'payload가 base64로 인코딩되지 않은 원문이어야 함');
+    assert.ok(payload.startsWith(PHONE_E164), 'payload는 e164로 시작해야 함');
+  });
+
+  it('guid 없이 발급된(등록용) 토큰으로 claim 시도 — 400 TOKEN_NOT_BOUND로 거부', async () => {
+    seedUnclaimedProfile('biz-noguid', PHONE_DOMESTIC);
+    const token = await issuePhoneVerifyToken(kvMock, PHONE_E164, null); // guid 생략 — 등록 흐름 시뮬레이션
+    const { status, json } = await call('/profile/claim', {
+      method: 'POST', body: { guid: 'biz-noguid', pubkey: 'pub1', phone_verify_token: token },
+    });
+    assert.equal(status, 400);
+    assert.equal(json.error, 'TOKEN_NOT_BOUND');
+  });
+
+  it('[수정 확인] 다른 guid용으로 발급된 토큰을 다른 프로필에 재사용 — 403 TOKEN_GUID_MISMATCH로 거부(이전엔 성공했었음)', async () => {
+    seedUnclaimedProfile('biz-alpha', PHONE_DOMESTIC);
+    seedUnclaimedProfile('biz-beta', PHONE_DOMESTIC);
+    const tokenForAlpha = await issuePhoneVerifyToken(kvMock, PHONE_E164, 'biz-alpha');
+
+    const claimAlpha = await call('/profile/claim', {
+      method: 'POST', body: { guid: 'biz-alpha', pubkey: 'pubA', phone_verify_token: tokenForAlpha },
+    });
+    assert.equal(claimAlpha.status, 200, 'biz-alpha용 토큰은 biz-alpha claim엔 성공해야 함');
+
+    const claimBeta = await call('/profile/claim', {
+      method: 'POST', body: { guid: 'biz-beta', pubkey: 'pubB', phone_verify_token: tokenForAlpha },
+    });
+    assert.equal(claimBeta.status, 403, 'biz-alpha용 토큰으로 biz-beta를 claim하면 안 됨 — guid 바인딩 수정 확인');
+    assert.equal(claimBeta.json.error, 'TOKEN_GUID_MISMATCH');
   });
 
   it('같은 토큰으로 같은 프로필을 두 번 claim — 두 번째는 이미 claimed라 거부됨(단일 프로필 재사용 방지 확인)', async () => {
     seedUnclaimedProfile('biz-single', PHONE_DOMESTIC);
-    const exp = Date.now() + 5 * 60000;
-    const token = await buildPhoneVerifyToken(SECRET, PHONE_E164, exp);
+    const token = await issuePhoneVerifyToken(kvMock, PHONE_E164, 'biz-single');
 
     const first = await call('/profile/claim', {
       method: 'POST', body: { guid: 'biz-single', pubkey: 'pub1', phone_verify_token: token },
@@ -270,36 +327,9 @@ describe('I3-2: handleProfileClaim — phone_verify_token 재사용 공격', () 
     assert.equal(second.json.error, 'NOT_CLAIMABLE', '이미 claimed된 프로필 재청구는 claim_status 전이로 막힘');
   });
 
-  it('[발견] 같은 전화번호를 등록해 둔 서로 다른 두 unclaimed 프로필에 동일 토큰을 재사용 — 현재 둘 다 성공함', async () => {
-    // phone_verify_token의 서명 대상은 "e164:exp"뿐이고 guid가 전혀 포함돼
-    // 있지 않다. 서버 쪽 유일한 제약은 "토큰의 전화번호 == 그 요청이
-    // 지목한 guid 프로필의 등록 전화번호"뿐이라, 동일 전화번호가 등록된
-    // 서로 다른 두 unclaimed 프로필이 있으면 만료 전까지 같은 토큰으로
-    // 반복 claim이 가능하다 — 토큰이 "전화번호 소유 증명"에 특정 청구
-    // 대상을 묶어두지 않는 설계이기 때문.
-    seedUnclaimedProfile('biz-alpha', PHONE_DOMESTIC);
-    seedUnclaimedProfile('biz-beta', PHONE_DOMESTIC);
-    const exp = Date.now() + 5 * 60000;
-    const token = await buildPhoneVerifyToken(SECRET, PHONE_E164, exp);
-
-    const claimAlpha = await call('/profile/claim', {
-      method: 'POST', body: { guid: 'biz-alpha', pubkey: 'pubA', phone_verify_token: token },
-    });
-    const claimBeta = await call('/profile/claim', {
-      method: 'POST', body: { guid: 'biz-beta', pubkey: 'pubB', phone_verify_token: token },
-    });
-
-    assert.equal(claimAlpha.status, 200);
-    assert.equal(claimBeta.status, 200, '현재 동작: 같은 번호의 다른 프로필도 같은 토큰으로 claim 성공(재사용 방지 없음)');
-    // 이 동작이 의도된 설계(한 사업자가 동일 번호로 여러 업체를 동시에
-    // 인증하는 정상 시나리오)인지, 아니면 막아야 할 취약점인지는 코드만
-    // 봐서는 판단할 수 없다 — 사용자 설계 판단 필요(§보고서 참고).
-  });
-
   it('전화번호가 다른 프로필에는 토큰 재사용 불가(PHONE_MISMATCH)', async () => {
     seedUnclaimedProfile('biz-other-phone', '01099998888');
-    const exp = Date.now() + 5 * 60000;
-    const token = await buildPhoneVerifyToken(SECRET, PHONE_E164, exp);
+    const token = await issuePhoneVerifyToken(kvMock, PHONE_E164, 'biz-other-phone');
 
     const { status, json } = await call('/profile/claim', {
       method: 'POST', body: { guid: 'biz-other-phone', pubkey: 'pubX', phone_verify_token: token },
@@ -310,15 +340,31 @@ describe('I3-2: handleProfileClaim — phone_verify_token 재사용 공격', () 
 
   it('HMAC 서명 부분을 변조한 토큰은 401 TOKEN_INVALID로 거부', async () => {
     seedUnclaimedProfile('biz-tampered', PHONE_DOMESTIC);
-    const exp = Date.now() + 5 * 60000;
-    const validToken = await buildPhoneVerifyToken(SECRET, PHONE_E164, exp);
-    const [payloadB64] = validToken.split('.');
-    const tamperedToken = `${payloadB64}.0000000000000000000000000000000000000000000000000000000000000000`;
+    const validToken = await issuePhoneVerifyToken(kvMock, PHONE_E164, 'biz-tampered');
+    const [payload] = validToken.split('.');
+    const tamperedToken = `${payload}.0000000000000000000000000000000000000000000000000000000000000000`;
 
     const { status, json } = await call('/profile/claim', {
       method: 'POST', body: { guid: 'biz-tampered', pubkey: 'pubY', phone_verify_token: tamperedToken },
     });
     assert.equal(status, 401);
     assert.equal(json.error, 'TOKEN_INVALID');
+  });
+
+  it('만료된 토큰은 401 TOKEN_EXPIRED로 거부', async () => {
+    seedUnclaimedProfile('biz-expired', PHONE_DOMESTIC);
+    // PHONE_VERIFY_TOKEN_TTL_MS는 발급부 내부 상수라 여기서 직접 조작할
+    // 수 없으므로, 서명은 정상인 채로 exp만 과거로 둔 토큰을 동일 HMAC
+    // 절차로 재구성한다(발급 로직 자체는 issuePhoneVerifyToken으로 이미
+    // 별도 검증됨 — 이 테스트는 만료 검사 자체만 겨냥).
+    const expiredPayload = `${PHONE_E164}:biz-expired:${Date.now() - 1000}`;
+    const sig = await hmacSha256Hex('test-secret-key', expiredPayload);
+    const token = `${expiredPayload}.${sig}`;
+
+    const { status, json } = await call('/profile/claim', {
+      method: 'POST', body: { guid: 'biz-expired', pubkey: 'newpub', phone_verify_token: token },
+    });
+    assert.equal(status, 401);
+    assert.equal(json.error, 'TOKEN_EXPIRED');
   });
 });
