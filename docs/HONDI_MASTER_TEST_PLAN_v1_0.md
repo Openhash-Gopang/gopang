@@ -469,7 +469,7 @@ gopang/
 | ID | 대상 | 목적 | 우선순위 | 커버리지 |
 |---|---|---|---|---|
 | I1-1 | `pdv-history-client.js` 전 저장소 `diff` | 이번 세션 완료(12개 일치 확인, 3개 신규 배치) | P0 | **[완료]** |
-| I1-2 | `gopang-wallet.js` 전 저장소 `diff` | **13개 저장소가 이 파일도 지참 — 이번 세션에서 단 한 번도 비교 안 함** | **P0 — 신규 발견, 최우선** |
+| I1-2 | `gopang-wallet.js` 전 저장소 `diff` | **완료(2026-07-17, 이 세션) — 3세대 드리프트 확인.** ① gopang(허브): v2.0.0/IDB_VER=3, anchor_chain(OpenHash 통합)+WebAuthn PRF+X25519 암호화 키페어까지 포함(1,510줄, 최신). ② `users`: v2.0.0/IDB_VER=2, `hash_chain` 스토어(OpenHash 통합 이전 세대, anchor_chain 개명·WebAuthn·X25519 전부 없음, 1,062줄) — 허브와 users 사이 중간 세대가 그대로 배포돼 있음. ③ klaw/911/police/health/school/stock/insurance/market/tax/traffic/logistics/jeju/public/democracy/qna(15개): v1.0.0, IDB 스토어 자체가 keys 하나뿐(hash_chain조차 없음, 567줄) — OpenHash 앵커링 기능이 이 15개 저장소의 지갑에는 전혀 없는 상태. ④ security/gdc: `gopang-wallet.js` 파일 자체가 없음(같은 두 저장소에 `pdv-history-client.js`는 최근 배치돼 있음 — I1-1이 말한 "3개 신규 배치"가 아마 이 두 곳 포함일 가능성, 근데 지갑 파일은 그때 안 딸려간 것으로 보임). **재배포는 각 저장소에 대한 push 권한이 필요해 이 세션 범위 밖 — 주피터님 확인 후 우선순위(허브 v2.0.0을 18개 전체에 동기화할지, 아니면 위성 저장소는 지갑 기능 자체가 불필요한지) 판단 필요.** | **P0 — 조사 완료, 배포는 사용자 조치 필요** |
 | I1-3 | `desktop.html`/`webapp.html` 공통 셸 템플릿 | 서비스마다 다른 트리, 어디까지 공유되어야 하는지 기준 문서 부재 | P2 |
 
 ## I-2. 참조 무결성 확장
