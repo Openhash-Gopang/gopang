@@ -6154,6 +6154,10 @@ async function handleProjectStateSave(request,env,corsHeaders){
     goal: body.goal,
     status: body.status, // awaiting_human_action | completed | abandoned
     paused_at_seq: body.paused_at_seq ?? null,
+    // 2026-07-17 신설(사고실험 결함 1) — project_brief를 저장 안 하면
+    // 재개 시 K-Execute가 남은 step의 세부 맥락을 잃는다. steps의
+    // name만으로는 부족(참여자·순서 제약 등은 project_brief에만 있음).
+    project_brief: body.project_brief || '',
     remaining_steps: JSON.stringify(body.remaining_steps ?? []),
     fan_out_targets: JSON.stringify(body.fan_out_targets ?? []),
     results_so_far: JSON.stringify(body.results_so_far ?? []),
@@ -6204,6 +6208,7 @@ async function handleProjectStateQuery(request,env,corsHeaders){
     goal: it.goal,
     status: it.status,
     paused_at_seq: it.paused_at_seq,
+    project_brief: it.project_brief || '',
     remaining_steps: JSON.parse(it.remaining_steps||'[]'),
     fan_out_targets: JSON.parse(it.fan_out_targets||'[]'),
     results_so_far: JSON.parse(it.results_so_far||'[]'),

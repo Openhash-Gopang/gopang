@@ -1174,6 +1174,11 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
         status: pick('status') || 'awaiting_human_action',
         paused_at_seq: Number(pick('paused_at_seq')) || null,
         human_action_desc: pick('human_action_desc') || '',
+        // 2026-07-17 신설(사고실험 결함 1) — project_brief를 저장 안
+        // 하면 재개 시 K-Execute가 남은 step의 세부 맥락을 잃는다.
+        // SP가 다른 자유서술 필드(issue/proposed_patch 등)와 동일하게
+        // 따옴표로 감싸 낼 것을 전제로 pick()의 "[^"]*" 분기를 탄다.
+        project_brief: pick('project_brief') || '',
         // remaining_steps/fan_out_targets/results_so_far는 중첩 객체라
         // 위 단순 정규식으로 안전히 못 뗀다 — JSON 본문 전체를 다시
         // 안전 파싱 시도, 실패하면 빈 배열로 둔다(과도한 파싱 실패보다
