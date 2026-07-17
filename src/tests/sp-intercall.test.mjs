@@ -29,7 +29,12 @@ const PROMPT_FILES = {
       출자기관예시_문구: '(테스트)', 행정시목록_문구: '제주시와 서귀포시', 관할예시_문구: '(테스트)' }],
   }),
   'JEJU-TREE-PROTOCOL_v1.0.md': '[JEJU-TREE-PROTOCOL 텍스트]',
-  'JEJU-DO-SP_v1.0.md':       '[제주도청 총괄 SP 텍스트]',
+  // BUG-FIX(2026-07-17): worker.js SP_DELEGATION_REGISTRY.jeju_do.url이
+  // .../01-do/JEJU-DO-SP_v1.5.md를 가리키는데(버전 올라감) 이 목은 예전
+  // v1.0 파일명 그대로 남아있어 실제로는 404를 돌려주고 있었다(테스트가
+  // "위임 대상 SP 로드 실패" 예외 경로를 조용히 타면서 LLM 호출 횟수 등
+  // 나머지 검증이 줄줄이 어긋남).
+  'JEJU-DO-SP_v1.5.md':       '[제주도청 총괄 SP 텍스트]',
   'JEJU-NATIONAL-SP_v1.0.md': '[제주 국가기관 총괄 SP 텍스트]',
 };
 
