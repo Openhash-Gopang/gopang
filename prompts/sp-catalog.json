@@ -135,5 +135,10 @@
   "AGENT-SUPPLIER-96": "AGENT-SUPPLIER-96_other-personal-services_v2.0.txt",
   "AGENT-SUPPLIER-97": "AGENT-SUPPLIER-97_household-employment_v2.0.txt",
   "AGENT-SUPPLIER-98": "AGENT-SUPPLIER-98_own-consumption-production_v2.0.txt",
-  "AGENT-SUPPLIER-99": "AGENT-SUPPLIER-99_international-foreign-organizations_v2.0.txt"
+  "AGENT-SUPPLIER-99": "AGENT-SUPPLIER-99_international-foreign-organizations_v2.0.txt",
+  "SP_financial-planner": "SP_financial-planner_v1_0.md",
+  "SP_appraiser": "SP_appraiser_v1_0.md",
+  "SP_loss-adjuster": "SP_loss-adjuster_v1_0.md",
+  "SP_labor-attorney": "SP_labor-attorney_v1_0.md",
+  "SP_paramedic": "SP_paramedic_v1_0.md"
 }

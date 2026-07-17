@@ -49,6 +49,29 @@ export const EXPERT_REGISTRY = {
     label: '공인회계사', icon: '📊', category: 'FIN',
     key: 'SP_accountant', needsMedicalSafety: false,
   },
+  // 2026-07-17 신설(전문가 페르소나 누락 감사 후속) — 개별 금융상품 추천은
+  // 하지 않음(자본시장법). kbank/kfinance/kinsurance와 격치는 실행
+  // 영역은 해당 GWP로 안내.
+  'financial-planner': {
+    label: '재무설계사', icon: '📈', category: 'FIN',
+    key: 'SP_financial-planner', needsMedicalSafety: false,
+  },
+
+  // ── 법률 (2026-07-17 추가분) ──────────────────────
+  // 사고실험 #44/#48/#42에서 확인된 공백. kinsurance·real-estate-agent·lawyer와
+  // 각각 자격이 다름 — SP 본문 상단 주석 참조.
+  appraiser: {
+    label: '감정평가사', icon: '🏷️', category: 'LAW',
+    key: 'SP_appraiser', needsMedicalSafety: false,
+  },
+  'loss-adjuster': {
+    label: '손해사정사', icon: '📋', category: 'LAW',
+    key: 'SP_loss-adjuster', needsMedicalSafety: false,
+  },
+  'labor-attorney': {
+    label: '공인노무사', icon: '👷', category: 'LAW',
+    key: 'SP_labor-attorney', needsMedicalSafety: false,
+  },
 
   // ── 의료·보건 (SP-HEALTH-06~15) ──────────────────────
   // 2026-07-06 신설(SP-HEALTH-16~19) — 의사·치과의사·한의사·약사. 다른 10개
@@ -109,6 +132,14 @@ export const EXPERT_REGISTRY = {
   dietitian: {
     label: '영양사', icon: '🥗', category: 'HEALTH',
     key: 'SP_dietitian', needsMedicalSafety: true,
+  },
+  // 2026-07-17 신설(사고실험 #50) — kemergency(GWP, 실제 R0 신고·출동 연계)와
+  // 이름이 격치므로 SP 본문 상단에 역할 분리를 명시. 이 페르소나는 평시
+  // 교육용이며, 실제 응급 신호 감지 시 R0이 최우선 적용되어 이 페르소나
+  // 세션 여부와 무관하게 kemergency 트리거로 전환된다.
+  paramedic: {
+    label: '응급구조사', icon: '🚑', category: 'HEALTH',
+    key: 'SP_paramedic', needsMedicalSafety: true,
   },
 
   // ── 교육·상담·문화 (SP-EDU-01~06) ────────────────────
@@ -217,6 +248,12 @@ const EXPERT_ID_ALIAS = {
   cpa: 'accountant', 'certified-public-accountant': 'accountant',
   'realtor': 'real-estate-agent', 'real-estate': 'real-estate-agent',
   'social-worker-ai': 'social-worker',
+  // 2026-07-17 신설 5개 페르소나의 흔한 대체 표기
+  'afpk': 'financial-planner', 'cfp': 'financial-planner', 'financial-advisor': 'financial-planner',
+  'property-appraiser': 'appraiser', 'valuation-appraiser': 'appraiser',
+  'insurance-adjuster': 'loss-adjuster',
+  'labor-consultant': 'labor-attorney', 'employment-attorney': 'labor-attorney',
+  'emt': 'paramedic', 'emergency-medical-technician': 'paramedic',
 };
 
 export function resolveExpertId(personaId) {
