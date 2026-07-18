@@ -663,17 +663,60 @@ escrow는 계속 legal-hold 상태.
 
 
 
+## 세션 중 신규 기능 4종 테스트 커버리지 점검 — ✅ 완료(2026-07-18)
+
+이번 세션 진행 중 주피터님이 별도로 push한 신규 기능(GDC P2P 이체, GDC 예치금 인출,
+GDC DAO 거버넌스, 플랫폼 수수료율 API) 4건을 전부 점검했다.
+
+| 기능 | 커밋 | 테스트 상태 |
+|---|---|---|
+| GDC 예치금 인출(`/biz/gdc-deposit-close`) | 120ae1d | ✅ 커밋 시점에 이미 테스트 작성됨(`test/gdc_deposit_close.test.mjs` 3개 + `test/gdc_deposit_close_full.test.mjs` 5개, 실제 Ed25519 서명 사용) — 재실행 8/8 통과 |
+| GDC DAO 거버넌스(제안/투표/조회 3종) | cc8aff2 | ✅ 커밋 시점에 이미 테스트 작성됨(`test/gdc_dao.test.mjs` 7개, stake_gdc 클라이언트 자기신고 방지 검증 포함) — 재실행 7/7 통과 |
+| 플랫폼 수수료율(`GET /biz/fee-rate`) | 47799d7 | ✅ 커밋 시점에 이미 테스트 작성됨(`test/fee_rate.test.mjs` 1개) — 재실행 1/1 통과 |
+| GDC P2P 이체(`/wallet/gdc-transfer`) + `/api/tx` 서명 암호학적 검증 신설 | a775958 | ⚠️ **테스트 없었음 — 점검 중 심각한 버그 발견, 수정 + 신규 테스트 작성 완료(아래)** |
+
+### 🔴 발견 — pb_hooks/main.pb.js의 `sha256hex()` UTF-8 미지원 (한글 상품명 있는 모든 구매가 깨질 뻔함)
+
+`/api/tx` 핸들러에 이번에 처음 추가된 서명 검증은 `expectedTxHash =
+sha256hex(sortedStringify(tx))`로 서버가 tx_hash를 직접 재계산해 클라이언트
+주장값과 비교한다. 그런데 이 손이식 SHA-256(`pb_hooks/main.pb.js`에 **5곳
+복붙**돼 있음)이 `charCodeAt()`이 256 이상(한글 등 비ASCII)이면 **조용히 빈
+문자열을 반환**하고 있었다 — UTF-8 멀티바이트 인코딩 없이 코드포인트를 그대로
+1바이트로 취급한 게 원인. 실측 재현(Node `crypto.createHash`와 대조): ASCII
+입력은 정상이지만 `'GDC 이체'`(GDC P2P 이체의 `item_name` 기본값 그 자체) 하나만
+넣어도 결과가 `''`가 됨을 확인. `tx.items`에 실제 상품명이 들어가는 필드(`item.
+name`, `src/gopang/gwp/sign.js`에서 서명 확인 UI에 렌더링하는 그 필드)를 감안하면,
+**한글 상품명이 있는 모든 K-Market 구매가 이 서명 검증 도입과 함께
+TX_HASH_MISMATCH로 거부될 뻔했다** — 한국어 상거래 플랫폼에서 사실상 전체 구매
+플로우에 영향을 줄 수 있는 심각도.
+
+**수정**: UTF-8 인코딩 단계(코드포인트 → UTF-8 바이트열, 서로게이트쌍 포함)를
+기존 SHA-256 블록 처리 알고리즘 앞에 추가 — 5곳 전부 동일하게 적용. Node
+`TextEncoder`와 결과 동일함을 ASCII/한글/이모지 서로게이트쌍/한중일 혼합 문자로
+실측 검증.
+
+**함께 검증**: 이 커밋에서 처음 이식된 TweetNaCl Ed25519(`_sigVerify.
+ed25519Verify`)도 Node 네이티브 Ed25519(`crypto.generateKeyPairSync`/`crypto.
+sign`)로 만든 실제 서명과 상호운용 검증 — 정상 서명 통과, 변조된 메시지 거부,
+다른 공개키 거부, `sortedStringify` 키 순서 무관 정규화 전부 확인. **이 부분은
+버그 없음.**
+
+**신규 테스트**: `test/pb_hooks_sha256_utf8.test.mjs`(31개 — 5개 복사본 ×
+6가지 케이스 + 복사본 개수 자체 검증), `test/pb_hooks_tx_signature.test.mjs`(5개).
+두 파일 다 `pb_hooks/main.pb.js`에서 해당 함수를 **그 자리에서 직접 추출해서
+실행**하는 방식이라(별도 유지·관리 사본이 아님) 원본이 바뀌면 테스트가 자동으로
+최신 코드를 검증한다. 전체 재실행 52/52 통과(신규 기능 4종 테스트 전부 포함).
+
+
+
 ## 다음 세션 시작점 (R4 후보)
 
-마스터플랜상 R1~R3 전 범위와 위임된 16개 K서비스 심화 테스트까지 전부 소진됐다.
-다음으로 고려할 만한 것:
+마스터플랜상 R1~R3 전 범위, 위임된 16개 K서비스 심화 테스트, 세션 중 신규 기능 4종
+커버리지 점검까지 전부 소진됐다. 다음으로 고려할 만한 것:
 1. security 저장소의 `K_SECURITY_PUBLIC_KEY_B64U` 플레이스홀더를 실제 키로 교체
    (사용자/K-Security 서버 관리자 영역)
 2. `showRiskAnalysis()` 명령 라우팅 신설 여부(위 Phase 7 섹션 참고) — 원하면 진행
-3. 이번 세션 이후 계속 쌓인 신규 기능(GDC DAO 거버넌스, GDC 예치금 인출, 플랫폼 수수료율
-   API 등 — 이 세션 진행 중에도 주피터님이 별도로 여러 커밋을 push함)에 대한 테스트 커버리지
-   점검 — 마스터플랜이 아직 이 신규 기능들을 다루지 않음
-4. 라이브 환경 접근이 가능한 세션에서 I3-3, PART G 라이브 연동, PART I I-3(보안 회귀 나머지),
+3. 라이브 환경 접근이 가능한 세션에서 I3-3, PART G 라이브 연동, PART I I-3(보안 회귀 나머지),
    Phase 7 실배포 후 수동 QA 착수
 
 ## Phase R3 — 중기(라이브 환경 접근 확보 후)

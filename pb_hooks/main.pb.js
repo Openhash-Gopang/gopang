@@ -1401,6 +1401,45 @@ const NODE_CONFIG = {
   }
   // sha256 계산
   function sha256hex(str) {
+    // 2026-07-18 버그 수정: 이 함수는 charCodeAt()이 256 이상(한글 등 비ASCII
+    // 문자)이면 조용히 빈 문자열을 반환했다 — 코드포인트를 UTF-8 멀티바이트로
+    // 인코딩하지 않고 1바이트로 취급하던 게 원인. 실제 GDC 이체 item_name
+    // 기본값("GDC 이체") 하나만으로도 재현됨(sortedStringify(tx)에 포함되어
+    // tx_hash 서버측 재계산이 매번 ''가 되고, 클라이언트가 보낸 진짜
+    // tx_hash와 항상 달라 TX_HASH_MISMATCH로 거부됨 — 한글 상품명이 있는
+    // 모든 K-Market 구매가 이 서명 검증 도입과 함께 깨질 뻔했다). 먼저
+    // 문자열을 UTF-8 바이트열(각 char가 0~255인 문자열)로 변환한 뒤 기존
+    // 알고리즘에 그대로 넘긴다 — Node TextEncoder와 결과 동일함을 실측
+    // 검증(ASCII/한글/이모지 서로게이트쌍/혼합 문자 전부 일치).
+    str = (function(s) {
+      var o = '';
+      for (var i = 0; i < s.length; i++) {
+        var c = s.charCodeAt(i);
+        if (c < 0x80) {
+          o += String.fromCharCode(c);
+        } else if (c < 0x800) {
+          o += String.fromCharCode(0xc0 | (c >> 6));
+          o += String.fromCharCode(0x80 | (c & 0x3f));
+        } else if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {
+          var c2 = s.charCodeAt(i + 1);
+          if (c2 >= 0xdc00 && c2 <= 0xdfff) {
+            var cp = 0x10000 + ((c - 0xd800) << 10) + (c2 - 0xdc00);
+            o += String.fromCharCode(0xf0 | (cp >> 18));
+            o += String.fromCharCode(0x80 | ((cp >> 12) & 0x3f));
+            o += String.fromCharCode(0x80 | ((cp >> 6) & 0x3f));
+            o += String.fromCharCode(0x80 | (cp & 0x3f));
+            i++;
+            continue;
+          }
+          o += String.fromCharCode(0xef, 0xbf, 0xbd);
+        } else {
+          o += String.fromCharCode(0xe0 | (c >> 12));
+          o += String.fromCharCode(0x80 | ((c >> 6) & 0x3f));
+          o += String.fromCharCode(0x80 | (c & 0x3f));
+        }
+      }
+      return o;
+    })(str);
     const mathPow = Math.pow;
     const maxWord = mathPow(2, 32);
     let result = '';
@@ -1665,6 +1704,45 @@ routerAdd("POST", "/api/mint", (c) => {
     console.log("[MINT] 검증 통과, guid:", guid, "gdc:", gdcAmount, "krw:", krwAmount, "method:", mintMethod);
 
     function sha256hex(str) {
+      // 2026-07-18 버그 수정: 이 함수는 charCodeAt()이 256 이상(한글 등 비ASCII
+      // 문자)이면 조용히 빈 문자열을 반환했다 — 코드포인트를 UTF-8 멀티바이트로
+      // 인코딩하지 않고 1바이트로 취급하던 게 원인. 실제 GDC 이체 item_name
+      // 기본값("GDC 이체") 하나만으로도 재현됨(sortedStringify(tx)에 포함되어
+      // tx_hash 서버측 재계산이 매번 ''가 되고, 클라이언트가 보낸 진짜
+      // tx_hash와 항상 달라 TX_HASH_MISMATCH로 거부됨 — 한글 상품명이 있는
+      // 모든 K-Market 구매가 이 서명 검증 도입과 함께 깨질 뻔했다). 먼저
+      // 문자열을 UTF-8 바이트열(각 char가 0~255인 문자열)로 변환한 뒤 기존
+      // 알고리즘에 그대로 넘긴다 — Node TextEncoder와 결과 동일함을 실측
+      // 검증(ASCII/한글/이모지 서로게이트쌍/혼합 문자 전부 일치).
+      str = (function(s) {
+        var o = '';
+        for (var i = 0; i < s.length; i++) {
+          var c = s.charCodeAt(i);
+          if (c < 0x80) {
+            o += String.fromCharCode(c);
+          } else if (c < 0x800) {
+            o += String.fromCharCode(0xc0 | (c >> 6));
+            o += String.fromCharCode(0x80 | (c & 0x3f));
+          } else if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {
+            var c2 = s.charCodeAt(i + 1);
+            if (c2 >= 0xdc00 && c2 <= 0xdfff) {
+              var cp = 0x10000 + ((c - 0xd800) << 10) + (c2 - 0xdc00);
+              o += String.fromCharCode(0xf0 | (cp >> 18));
+              o += String.fromCharCode(0x80 | ((cp >> 12) & 0x3f));
+              o += String.fromCharCode(0x80 | ((cp >> 6) & 0x3f));
+              o += String.fromCharCode(0x80 | (cp & 0x3f));
+              i++;
+              continue;
+            }
+            o += String.fromCharCode(0xef, 0xbf, 0xbd);
+          } else {
+            o += String.fromCharCode(0xe0 | (c >> 12));
+            o += String.fromCharCode(0x80 | ((c >> 6) & 0x3f));
+            o += String.fromCharCode(0x80 | (c & 0x3f));
+          }
+        }
+        return o;
+      })(str);
       const mathPow = Math.pow;
       const maxWord = mathPow(2, 32);
       let result = '';
@@ -1868,6 +1946,45 @@ routerAdd("POST", "/api/ai-charge", (c) => {
     }
 
     function sha256hex(str) {
+      // 2026-07-18 버그 수정: 이 함수는 charCodeAt()이 256 이상(한글 등 비ASCII
+      // 문자)이면 조용히 빈 문자열을 반환했다 — 코드포인트를 UTF-8 멀티바이트로
+      // 인코딩하지 않고 1바이트로 취급하던 게 원인. 실제 GDC 이체 item_name
+      // 기본값("GDC 이체") 하나만으로도 재현됨(sortedStringify(tx)에 포함되어
+      // tx_hash 서버측 재계산이 매번 ''가 되고, 클라이언트가 보낸 진짜
+      // tx_hash와 항상 달라 TX_HASH_MISMATCH로 거부됨 — 한글 상품명이 있는
+      // 모든 K-Market 구매가 이 서명 검증 도입과 함께 깨질 뻔했다). 먼저
+      // 문자열을 UTF-8 바이트열(각 char가 0~255인 문자열)로 변환한 뒤 기존
+      // 알고리즘에 그대로 넘긴다 — Node TextEncoder와 결과 동일함을 실측
+      // 검증(ASCII/한글/이모지 서로게이트쌍/혼합 문자 전부 일치).
+      str = (function(s) {
+        var o = '';
+        for (var i = 0; i < s.length; i++) {
+          var c = s.charCodeAt(i);
+          if (c < 0x80) {
+            o += String.fromCharCode(c);
+          } else if (c < 0x800) {
+            o += String.fromCharCode(0xc0 | (c >> 6));
+            o += String.fromCharCode(0x80 | (c & 0x3f));
+          } else if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {
+            var c2 = s.charCodeAt(i + 1);
+            if (c2 >= 0xdc00 && c2 <= 0xdfff) {
+              var cp = 0x10000 + ((c - 0xd800) << 10) + (c2 - 0xdc00);
+              o += String.fromCharCode(0xf0 | (cp >> 18));
+              o += String.fromCharCode(0x80 | ((cp >> 12) & 0x3f));
+              o += String.fromCharCode(0x80 | ((cp >> 6) & 0x3f));
+              o += String.fromCharCode(0x80 | (cp & 0x3f));
+              i++;
+              continue;
+            }
+            o += String.fromCharCode(0xef, 0xbf, 0xbd);
+          } else {
+            o += String.fromCharCode(0xe0 | (c >> 12));
+            o += String.fromCharCode(0x80 | ((c >> 6) & 0x3f));
+            o += String.fromCharCode(0x80 | (c & 0x3f));
+          }
+        }
+        return o;
+      })(str);
       const mathPow = Math.pow;
       const maxWord = mathPow(2, 32);
       let result = '';
@@ -2337,6 +2454,45 @@ routerAdd("POST", "/api/bridge-in", (c) => {
     } catch (e) { /* 없음 — 최초 호출, 정상 진행 */ }
 
     function sha256hex(str) {
+      // 2026-07-18 버그 수정: 이 함수는 charCodeAt()이 256 이상(한글 등 비ASCII
+      // 문자)이면 조용히 빈 문자열을 반환했다 — 코드포인트를 UTF-8 멀티바이트로
+      // 인코딩하지 않고 1바이트로 취급하던 게 원인. 실제 GDC 이체 item_name
+      // 기본값("GDC 이체") 하나만으로도 재현됨(sortedStringify(tx)에 포함되어
+      // tx_hash 서버측 재계산이 매번 ''가 되고, 클라이언트가 보낸 진짜
+      // tx_hash와 항상 달라 TX_HASH_MISMATCH로 거부됨 — 한글 상품명이 있는
+      // 모든 K-Market 구매가 이 서명 검증 도입과 함께 깨질 뻔했다). 먼저
+      // 문자열을 UTF-8 바이트열(각 char가 0~255인 문자열)로 변환한 뒤 기존
+      // 알고리즘에 그대로 넘긴다 — Node TextEncoder와 결과 동일함을 실측
+      // 검증(ASCII/한글/이모지 서로게이트쌍/혼합 문자 전부 일치).
+      str = (function(s) {
+        var o = '';
+        for (var i = 0; i < s.length; i++) {
+          var c = s.charCodeAt(i);
+          if (c < 0x80) {
+            o += String.fromCharCode(c);
+          } else if (c < 0x800) {
+            o += String.fromCharCode(0xc0 | (c >> 6));
+            o += String.fromCharCode(0x80 | (c & 0x3f));
+          } else if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {
+            var c2 = s.charCodeAt(i + 1);
+            if (c2 >= 0xdc00 && c2 <= 0xdfff) {
+              var cp = 0x10000 + ((c - 0xd800) << 10) + (c2 - 0xdc00);
+              o += String.fromCharCode(0xf0 | (cp >> 18));
+              o += String.fromCharCode(0x80 | ((cp >> 12) & 0x3f));
+              o += String.fromCharCode(0x80 | ((cp >> 6) & 0x3f));
+              o += String.fromCharCode(0x80 | (cp & 0x3f));
+              i++;
+              continue;
+            }
+            o += String.fromCharCode(0xef, 0xbf, 0xbd);
+          } else {
+            o += String.fromCharCode(0xe0 | (c >> 12));
+            o += String.fromCharCode(0x80 | ((c >> 6) & 0x3f));
+            o += String.fromCharCode(0x80 | (c & 0x3f));
+          }
+        }
+        return o;
+      })(str);
       const mathPow = Math.pow;
       const maxWord = mathPow(2, 32);
       let result = '';
@@ -2502,6 +2658,45 @@ routerAdd("POST", "/api/bridge-out/refund", (c) => {
     const amount     = rec.getFloat("amount");
 
     function sha256hex(str) {
+      // 2026-07-18 버그 수정: 이 함수는 charCodeAt()이 256 이상(한글 등 비ASCII
+      // 문자)이면 조용히 빈 문자열을 반환했다 — 코드포인트를 UTF-8 멀티바이트로
+      // 인코딩하지 않고 1바이트로 취급하던 게 원인. 실제 GDC 이체 item_name
+      // 기본값("GDC 이체") 하나만으로도 재현됨(sortedStringify(tx)에 포함되어
+      // tx_hash 서버측 재계산이 매번 ''가 되고, 클라이언트가 보낸 진짜
+      // tx_hash와 항상 달라 TX_HASH_MISMATCH로 거부됨 — 한글 상품명이 있는
+      // 모든 K-Market 구매가 이 서명 검증 도입과 함께 깨질 뻔했다). 먼저
+      // 문자열을 UTF-8 바이트열(각 char가 0~255인 문자열)로 변환한 뒤 기존
+      // 알고리즘에 그대로 넘긴다 — Node TextEncoder와 결과 동일함을 실측
+      // 검증(ASCII/한글/이모지 서로게이트쌍/혼합 문자 전부 일치).
+      str = (function(s) {
+        var o = '';
+        for (var i = 0; i < s.length; i++) {
+          var c = s.charCodeAt(i);
+          if (c < 0x80) {
+            o += String.fromCharCode(c);
+          } else if (c < 0x800) {
+            o += String.fromCharCode(0xc0 | (c >> 6));
+            o += String.fromCharCode(0x80 | (c & 0x3f));
+          } else if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {
+            var c2 = s.charCodeAt(i + 1);
+            if (c2 >= 0xdc00 && c2 <= 0xdfff) {
+              var cp = 0x10000 + ((c - 0xd800) << 10) + (c2 - 0xdc00);
+              o += String.fromCharCode(0xf0 | (cp >> 18));
+              o += String.fromCharCode(0x80 | ((cp >> 12) & 0x3f));
+              o += String.fromCharCode(0x80 | ((cp >> 6) & 0x3f));
+              o += String.fromCharCode(0x80 | (cp & 0x3f));
+              i++;
+              continue;
+            }
+            o += String.fromCharCode(0xef, 0xbf, 0xbd);
+          } else {
+            o += String.fromCharCode(0xe0 | (c >> 12));
+            o += String.fromCharCode(0x80 | ((c >> 6) & 0x3f));
+            o += String.fromCharCode(0x80 | (c & 0x3f));
+          }
+        }
+        return o;
+      })(str);
       const mathPow = Math.pow; const maxWord = mathPow(2, 32);
       let result = ''; const words = []; const asciiBitLength = str.length * 8;
       let hash = [], k = []; let primeCounter = 0; const isComposite = {};
