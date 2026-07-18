@@ -1,9 +1,9 @@
 ﻿/**
  * ui/send-message.js — 메시지 전송 라우팅
  */
-import { aiActive, _peer, attachFile, setAttachFile, _locationReady, _locationPending, _USER, USER_GUID } from '../core/state.js';
+import { aiActive, _peer, attachFile, setAttachFile, _locationReady, _locationPending, _USER, USER_GUID, _lastPipelineResult, setLastPipelineResult } from '../core/state.js';
 import { _isRegistered } from '../core/auth.js';
-import { appendBubble } from './bubble.js';
+import { appendBubble, riskChip } from './bubble.js';
 import { activateAI } from '../ai/toggle.js';
 import { _sendP2P } from '../p2p/webrtc.js';
 import { callAI } from '../ai/call-ai.js';
@@ -78,6 +78,15 @@ export async function sendMessage() {
 
   // ── 대화 상대 분기 ─────────────────────────────────────
   if (text) {
+    // 로컬 명령: 최근 위험 분석 결과 조회 — 2026-07-18 라우팅 신설.
+    // showRiskAnalysis()는 오래전부터 정의만 되고 어디서도 호출되지 않는
+    // 고아 함수였다(HANDOFF_2026-07-18 §2-(1) 후속 과제). 파이프라인
+    // 재실행이나 AI/P2P 전송 없이 즉시 로컬에서 처리하고 반환한다.
+    if (_isRiskAnalysisCommand(text)) {
+      showRiskAnalysis();
+      return;
+    }
+
     // 2026-07-18 버그 수정: _runPipelineBackground()는 정의만 돼 있고
     // 어디서도 호출되지 않고 있었다(export도 안 됨, 이 파일 내 호출도
     // 없음 — src/app.js의 낡은 주석에 "index.html이 담당"이라고만 남아
@@ -115,7 +124,23 @@ export async function sendMessage() {
 
 // ── 고팡 파이프라인 백그라운드 실행 ─────────────────────
 // 대화 중 결과를 표시하지 않음 — 사용자 요청 시 showRiskAnalysis() 호출
-let _lastPipelineResult = null;
+// (2026-07-18: 결과 저장은 이 파일 로컬 변수가 아니라 core/state.js의
+// _lastPipelineResult/setLastPipelineResult 공유 상태를 쓴다 — 이전엔
+// 이름이 같은 로컬 변수가 state.js의 export를 shadow하고 있어서, 다른
+// 모듈에서는 state.js를 import해도 항상 null만 보이는 상태였다.)
+
+// 사용자가 위험 분석 결과 조회를 요청했는지 판단하는 로컬 명령 트리거.
+// GWP_REGISTRY의 trigger 배열과 동일한 방식(문구 포함 여부)을 따른다.
+const RISK_ANALYSIS_TRIGGERS = [
+  '분석 결과 보여줘', '분석결과 보여줘',
+  '위험 분석 보여줘', '위험분석 보여줘',
+  '분석 결과 확인', '방금 분석 결과',
+  '위험도 보여줘', '위험도 확인',
+];
+export function _isRiskAnalysisCommand(text) {
+  const t = text.trim();
+  return RISK_ANALYSIS_TRIGGERS.some(trigger => t === trigger || t.includes(trigger));
+}
 
 // ── Phase 7(AI 종합 위법 가능성 판단) LLM 호출자 — 2026-07-18 신설 ──
 // CFG.phase7.enabled가 꺼져 있으면 null을 반환하고, runPipeline은 그
@@ -162,7 +187,7 @@ async function _runPipelineBackground(text) {
       { content: text, senderId: 'user', attachment: attachFile ?? null },
       {}, null, llmCaller
     );
-    _lastPipelineResult = result;
+    setLastPipelineResult(result);
 
     // OpenHash ref는 상태 바에만 조용히 업데이트
     if (result?.anchorHash) {
