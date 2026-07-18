@@ -4197,7 +4197,7 @@ async function _sweepBridgeOutbox(env) {
 
 // 2026-07-18 신설 — 테스트 목적 named export. 런타임 동작에는 영향 없음
 // (default export의 fetch 핸들러는 그대로 pathname 매칭으로 호출).
-export { handleGdcDepositClose, handleGdcDaoProposalCreate, handleGdcDaoVote, handleGdcDaoProposalsList, handleFeeRate };
+export { handleGdcDepositClose, handleGdcDaoProposalCreate, handleGdcDaoVote, handleGdcDaoProposalsList, handleFeeRate, handleInsClaimCreate, handleInsClaimsList };
 
 export default {
   // ── Cron 트리거 (10분마다 머클 앵커링 + 브릿지 아웃박스 스윕) ────────
@@ -4426,6 +4426,11 @@ export default {
     if (pathname === '/biz/gdc-dao/proposal'  && request.method === 'POST') return handleGdcDaoProposalCreate(request, env, corsHeaders);
     if (pathname === '/biz/gdc-dao/vote'      && request.method === 'POST') return handleGdcDaoVote(request, env, corsHeaders);
     if (pathname === '/biz/gdc-dao/proposals' && request.method === 'GET')  return handleGdcDaoProposalsList(request, env, corsHeaders);
+    // (2026-07-18 신설 — K-Insurance 청구 접수. HONDI_GAP_REMEDIATION_DIRECTIVE
+    // v1.0 §2.1 참고: 자동 심사·지급은 이번 범위 밖 — "접수 → 사람이 확인 →
+    // 수동 상태 변경"만 구현한다.)
+    if (pathname === '/biz/ins-claim'  && request.method === 'POST') return handleInsClaimCreate(request, env, corsHeaders);
+    if (pathname === '/biz/ins-claims' && request.method === 'GET')  return handleInsClaimsList(request, env, corsHeaders);
     if (pathname === '/biz/balance' && request.method === 'GET')  return handleBizBalance(request, env, corsHeaders);
     if (pathname === '/biz/supply'  && request.method === 'GET')  return handleBizSupply(request, env, corsHeaders);
     // (2026-07-14 신설: GDC 충전 파이프라인 — "고정계좌 + 입금자명 매칭")
@@ -5316,6 +5321,90 @@ async function handleGdcDepositClose(request, env, corsHeaders) {
   return new Response(JSON.stringify({
     ok: true, tx_hash: contentHash, amount: principal, block_id: blockRow?.id,
   }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-18 신설 — K-Insurance 청구 접수 2종 (POST /biz/ins-claim,
+// GET /biz/ins-claims). HONDI_GAP_REMEDIATION_DIRECTIVE v1.0 §2.1 참고.
+//
+// insurance/js/ins-core.js 등 죽은 코드 클러스터(Supabase placeholder
+// 의존, 자동 심사·사기탐지·자동지급 포함)는 완전히 폐기하고, 여기서는
+// "접수 → 사람이 확인 → 수동 상태 변경"만 구현한다. 무심사 자동지급은
+// 보험업법 인가 문제와 직결되므로 이번 범위에 절대 포함하지 않는다
+// (gdc LEGAL-HOLD와 동일한 원칙 — 확실한 것만 현실화).
+//
+// 청구 내역은 거래 금액 등 민감 정보를 담으므로, handleClaimsList와
+// 동일하게 GET도 서명 인증을 요구한다(guid는 공개 정보라 자기주장만으로는
+// 부족 — TOFU 방식 pubkey 대조).
+// ═══════════════════════════════════════════════════════════
+const INS_CLAIM_STATUSES = ['접수', '심사중', '승인', '거부', '지급완료'];
+
+async function handleInsClaimCreate(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { user_guid, insurance_type, amount, note, pubkey, signature, ts } = body;
+  if (!user_guid)       return _err(400, 'MISSING_FIELD', 'user_guid 필수', corsHeaders);
+  if (!insurance_type)  return _err(400, 'MISSING_FIELD', 'insurance_type 필수', corsHeaders);
+  if (!(amount > 0))    return _err(400, 'INVALID_AMOUNT', 'amount는 0보다 커야 합니다', corsHeaders);
+
+  const authOk = await _verifyClaimsRequester(env, {
+    guid: user_guid, pubkey, signature, ts,
+    sigMsg: `ins-claim:${user_guid}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+  const claimId = 'ins_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+
+  try {
+    const res = await fetch(`${L1_DEFAULT}/api/collections/ins_claims/records`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        claim_id: claimId, user_guid, insurance_type,
+        amount, note: note || '', status: '접수',
+      }),
+    });
+    if (!res.ok) return _err(500, 'SAVE_FAILED', await res.text(), corsHeaders);
+    const row = await res.json().catch(() => null);
+    return new Response(JSON.stringify({ ok: true, claim_id: claimId, id: row?.id, status: '접수' }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 저장 실패: ' + e.message, corsHeaders);
+  }
+}
+
+async function handleInsClaimsList(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid      = url.searchParams.get('guid');
+  const pubkey    = url.searchParams.get('pubkey');
+  const signature = url.searchParams.get('signature');
+  const ts        = url.searchParams.get('ts') || '';
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const authOk = await _verifyClaimsRequester(env, {
+    guid, pubkey, signature, ts, sigMsg: `ins-claims:${guid}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+  const filter = encodeURIComponent(`user_guid='${String(guid).replace(/'/g,"\\'")}'`);
+  try {
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/ins_claims/records?filter=${filter}&sort=-created&perPage=50`,
+      { headers }
+    );
+    if (!res.ok) return _err(502, 'L1_UNREACHABLE', '청구 조회 실패', corsHeaders);
+    const data = await res.json().catch(() => ({ items: [] }));
+    const claims = (data.items || []).map(r => ({
+      claim_id: r.claim_id, insurance_type: r.insurance_type,
+      amount: r.amount, note: r.note, status: r.status,
+      created: r.created, updated: r.updated,
+    }));
+    return new Response(JSON.stringify({ ok: true, claims }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 조회 실패: ' + e.message, corsHeaders);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
