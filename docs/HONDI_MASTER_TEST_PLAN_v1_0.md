@@ -139,7 +139,7 @@ gopang/
 |---|---|---|---|---|
 | A1-1 | `src/gopang/core/state.js` | 전역 상태(PROXY 등)가 여러 모듈에서 동일 인스턴스로 공유되는지 | P0 | ✅ **확인 완료** — 저장소 전체에 `state.js` 사본이 단 하나뿐이고(`src/gopang/core/state.js`), 24개 import 지점 전부 상대경로로 그 파일 하나에 귀결됨. ESM의 `export let` 라이브 바인딩 특성상 동일 모듈을 가리키는 이상 별도 런타임 테스트 없이도 공유가 보장됨(중복 파일이 없다는 것 자체가 검증 포인트) |
 | A1-2 | 플랫폼 초기화 순서 | app.js 부트스트랩 시 core→pdv→openhash 순서 준수 | P1 | 별도 확인 안 함 — Phase 7(부트스트랩) 재실행 시 함께 확인 예정, R2 범위 밖으로 이월 |
-| A1-3 | 의존성 방향 규칙 | `docs/gopang_implementation_plan_v3.1.md` §1의 "의존성 방향 규칙" 위반 여부(예: core가 K서비스를 import하는 역방향 의존) | P1 | ⚠️ **위반 확인됨(실측).** 문서 규칙은 `core → (없음)`이지만, 실제 `src/gopang/core/auth.js`가 `../ui/bubble.js`, `../services/push.js`, `../ai/hondi-code.js`, `../ai/hondi-digit-code.js` 4개를 import하고 있음(core→ui/services/ai 역방향). 다만 이 규칙 자체가 v3.1 계획서(K서비스 2개뿐이던 초기 시점 작성) 기준이라 지금도 유효한 제약인지는 불확실 — 리팩토링은 범위가 크고 위험해 이 세션에서 임의로 손대지 않음, 사용자 판단 필요 |
+| A1-3 | 의존성 방향 규칙 | `docs/gopang_implementation_plan_v3.1.md` §1의 "의존성 방향 규칙" 위반 여부(예: core가 K서비스를 import하는 역방향 의존) | P1 | ✅ **종결(2026-07-18, 사용자 확인) — 실질적 위험 없음, 조치 불필요.** 심층 조사 결과: (1) 이 규칙의 출처(`docs/architecture.md`, "gopang_v2 아키텍처 문서", 2026-05-22)가 PART H에서 이미 폐기 확인된 `src/app.js`/`shell-ui.js`와 **같은 문서** — 규칙 자체의 현재 유효성이 의심스러움. (2) `core/auth.js`가 import하는 4개 파일(`ui/bubble.js`/`services/push.js`/`ai/hondi-code.js`/`ai/hondi-digit-code.js`) 전부 **자기 자신은 아무것도 import하지 않는 leaf 모듈** — 순환 참조 위험 없음(실측 확인). (3) `core/auth.js`는 `gopang-app.js`(브라우저)에서만 쓰이고 `worker.js`/서비스워커/PWA 등 DOM 없는 컨텍스트에서는 전혀 안 쓰임(전체 저장소 grep으로 확인) — 이 규칙이 막으려던 "DOM 코드가 DOM 없는 곳에서 로드돼 깨지는" 실제 사고 시나리오 자체가 성립하지 않음. (4) `hondi-code.js`/`hondi-digit-code.js`는 AI/LLM과 무관한 순수 인코더 함수가 `ai/` 폴더에 잘못 배치된 것뿐(이름표 문제, 저위험 파일 이동으로 고칠 수 있으나 사용자가 보류 결정). `ui/bubble.js`(지문/얼굴/보안키 MFA 피드백)만 실질적 계층 위반이지만 기능상 문제 없음 — 이미 낡은 것으로 확인된 문서의 규칙 하나 때문에 보안 민감 인증 흐름을 건드릴 이유 없다는 판단으로 **리팩토링하지 않고 그대로 종결** |
 
 ## A-2. PDV 기반 레이어 [기존: `src/tests/pdv/phase2a_pdv.test.js`, P-01~P-08]
 
@@ -550,12 +550,30 @@ gopang/
 - PART H — ✅ 사용자 지시로 처리 완료(2026-07-18): 테스트 재작성 완료, 코드 정리는 주석만 남기고 보류
 - I3-2 — ✅ 사용자 확인·지시로 처리 완료(2026-07-18): 토큰을 guid에 바인딩(guid 없는 토큰으로 claim 시 400 TOKEN_NOT_BOUND, 다른 guid용 토큰 재사용 시 403 TOKEN_GUID_MISMATCH). 수정 과정에서 별개의 실제 프로덕션 버그(발급부-검증부 base64 인코딩 불일치로 전화인증 claim이 2026-07-15 이후 전부 실패하던 것)도 함께 발견·수정 — 상세는 위 I3-2 항목 참고
 
-## Phase R3 나머지 (다음 세션 시작점)
+## Phase R3 — ✅ 실질적으로 완료(2026-07-18)
 
-- A1-3 의존성 방향 규칙 위반(`core/auth.js`가 ui/services/ai를 import) — 리팩토링 여부 사용자 판단 대기(R2 때부터 미해결, 유일하게 남은 결정 대기 항목)
-- phase7.js LLM 배선 — `runPipeline()`의 `llmCaller`를 `worker.js`/`deepseek-client.js`와 실제로 연결하는 작업, 사용자 원하면 진행
-- I3-3(PDV request_id 위조 라이브 재현) — 라이브 환경 필요
-- PART G 라이브 정부24/Serper.dev 실물 연동 확인 — 이 샌드박스에서 불가
+R3의 결정 대기 항목(PART H, I3-2, A1-3) 전부 사용자 확인·지시로 처리 완료. 남은 항목은
+전부 이 샌드박스의 근본적 한계(라이브 인프라 필요) 때문에 보류 중이거나, 사용자가 필요할
+때 요청하면 되는 선택적 작업뿐 — R3 로드맵상 더 이상 미해결 결정 대기 항목 없음.
+
+- A1-3 의존성 방향 규칙 위반 — ✅ 종결(2026-07-18): 조사 결과 실질적 위험 없음(순환참조 없음,
+  DOM-less 컨텍스트 미사용 확인), 규칙 출처 자체가 PART H와 같은 폐기 문서. 리팩토링 안 함
+- phase7.js LLM 배선 — `runPipeline()`의 `llmCaller`를 `worker.js`/`deepseek-client.js`와 실제로
+  연결하는 작업, **선택 사항** — 사용자 원하면 다음 세션에 진행
+- I3-3(PDV request_id 위조 라이브 재현) — **라이브 환경 필요, 이 샌드박스에서 불가**
+- PART G 라이브 정부24/Serper.dev 실물 연동 확인 — **라이브 환경 필요, 이 샌드박스에서 불가**
+
+## 다음 세션 시작점 (R4 후보)
+
+마스터플랜상 R1~R3 전 범위가 소진됐다. 다음으로 고려할 만한 것:
+1. 위 phase7.js LLM 배선(원하면)
+2. `docs/HONDI_DOMAIN_DEEP_TEST_DIRECTIVE_v1_0.md`(다른 작업자에게 위임된 16개 K서비스 심화
+   테스트)의 결과가 들어왔다면 마스터플랜에 재합류
+3. 이번 세션 이후 계속 쌓인 신규 기능(GDC DAO 거버넌스, GDC 예치금 인출, 플랫폼 수수료율
+   API 등 — 이 세션 진행 중에도 주피터님이 별도로 여러 커밋을 push함)에 대한 테스트 커버리지
+   점검 — 마스터플랜이 아직 이 신규 기능들을 다루지 않음
+4. 라이브 환경 접근이 가능한 세션에서 I3-3, PART G 라이브 연동, PART I I-3(보안 회귀 나머지)
+   착수
 
 ## Phase R3 — 중기(라이브 환경 접근 확보 후)
 
