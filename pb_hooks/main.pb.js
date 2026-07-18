@@ -2,42 +2,12 @@
 
 const NODE_ID = "KR-JEJU-JEJU-HANLIM";
 
-routerAdd("POST", "/api/tx", (c) => {
-  const body = $apis.requestInfo(c).data;
-  const { tx, tx_hash, buyer_sig, buyer_public_key, purpose } = body;
 
-  if (!tx || !tx_hash || !buyer_sig || !buyer_public_key) {
-    return c.json(400, { ok: false, error: "MISSING_FIELD" });
-  }
-  if (!/^[0-9a-f]{64}$/.test(tx_hash)) {
-    return c.json(400, { ok: false, error: "INVALID_SIGNATURE", detail: "tx_hash 형식 오류" });
-  }
-
-  const { input, outputs } = tx;
-  const { owner_guid, prev_settle_hash, balance_claimed } = input;
-
-  // ── 2026-07-07 신설(제주 L1~L3 필드 테스트): 크로스-L1 브릿지 ──────────
-  // Worker가 §4 레지스트리(L3의 guid_home_l1)로 판매자 소속 L1을 미리
-  // 조회해 seller_home_node로 넘겨준다. 이 L1(자기 자신)과 다르면, 판매자
-  // 몫 output의 recipient_guid를 sentinel("bridge-out:{target}")로 바꿔
-  // 로컬 총량 보존식(발행==잔액합, sentinel도 guid 취급)을 그대로 유지한
-  // 채, 실제 판매자 크레딧은 bridge_out 레코드를 통해 대상 L1으로 넘긴다
-  // (jeju-l1-l3-field-test-plan-2026-07-07.md §5 참고).
-  const { seller_home_node } = body;
-
-  // 2단계: 공개키 확인
-  let keyRecord = null;
-  try {
-    const allKeys = $app.dao().findRecordsByFilter("gdc_keys", "public_key != ''", "", 1000, 0);
-    keyRecord = allKeys.find(r => r.getString("public_key") === buyer_public_key) || null;
-  } catch(e) { console.log("[TX] 2단계 예외:", e.message); }
-  if (!keyRecord) return c.json(403, { ok: false, error: "UNREGISTERED_KEY" });
-
-  // ── (2026-07-18 신설) 서명 암호학적 검증 유틸 — 이 파일 전체와 변수
-  // 충돌을 피하려고 IIFE로 완전히 격리한다(TweetNaCl 이식 코드가 짧은
-  // 이름(D, X, Y, I, K 등)을 많이 쓰는데, 이 콜백 함수가 380줄이 넘어
-  // 우연히 겹치는 이름이 있으면 조용히 잘못된 값을 덮어쓸 위험이 있다).
-  var _sigVerify = (function() {
+// ── 서명 암호학적 검증 공유 유틸 (2026-07-19, 모듈 최상단으로 승격) ──────
+// TweetNaCl Ed25519 포트 — 원래 /api/tx 콜백 내부 지역변수였던 것을
+// 여러 훅(onRecordBeforeUpdateRequest 등)에서 재사용할 수 있도록 여기로
+// 옮겼다. IIFE로 감싸 짧은 이름(D, X, Y, I, K 등)의 전역 오염을 막는다.
+var _sigVerify = (function() {
 var nacl = {};
 'use strict';
 
@@ -1232,6 +1202,46 @@ function ed25519Verify(msgBytes, sigBytes, pubkeyBytes) {
       return out;
     }
   })();
+
+routerAdd("POST", "/api/tx", (c) => {
+  const body = $apis.requestInfo(c).data;
+  const { tx, tx_hash, buyer_sig, buyer_public_key, purpose } = body;
+
+  if (!tx || !tx_hash || !buyer_sig || !buyer_public_key) {
+    return c.json(400, { ok: false, error: "MISSING_FIELD" });
+  }
+  if (!/^[0-9a-f]{64}$/.test(tx_hash)) {
+    return c.json(400, { ok: false, error: "INVALID_SIGNATURE", detail: "tx_hash 형식 오류" });
+  }
+
+  const { input, outputs } = tx;
+  const { owner_guid, prev_settle_hash, balance_claimed } = input;
+
+  // ── 2026-07-07 신설(제주 L1~L3 필드 테스트): 크로스-L1 브릿지 ──────────
+  // Worker가 §4 레지스트리(L3의 guid_home_l1)로 판매자 소속 L1을 미리
+  // 조회해 seller_home_node로 넘겨준다. 이 L1(자기 자신)과 다르면, 판매자
+  // 몫 output의 recipient_guid를 sentinel("bridge-out:{target}")로 바꿔
+  // 로컬 총량 보존식(발행==잔액합, sentinel도 guid 취급)을 그대로 유지한
+  // 채, 실제 판매자 크레딧은 bridge_out 레코드를 통해 대상 L1으로 넘긴다
+  // (jeju-l1-l3-field-test-plan-2026-07-07.md §5 참고).
+  const { seller_home_node } = body;
+
+  // 2단계: 공개키 확인
+  let keyRecord = null;
+  try {
+    const allKeys = $app.dao().findRecordsByFilter("gdc_keys", "public_key != ''", "", 1000, 0);
+    keyRecord = allKeys.find(r => r.getString("public_key") === buyer_public_key) || null;
+  } catch(e) { console.log("[TX] 2단계 예외:", e.message); }
+  if (!keyRecord) return c.json(403, { ok: false, error: "UNREGISTERED_KEY" });
+
+  // 2026-07-19: 서명 검증 유틸(_sigVerify)을 이 파일 최상단 모듈 스코프로
+  // 승격했다 — 원래 이 콜백 안에서만 쓰던 지역변수였는데, 그렇게 두면
+  // 다른 훅(onRecordBeforeUpdateRequest 등)에서 재사용하려 할 때마다
+  // 1,200줄짜리 TweetNaCl 포트를 통째로 복붙해야 한다 — sha256hex()가
+  // 5곳에 복붙됐다가 UTF-8 버그가 5중으로 재발했던 사고(2026-07-18
+  // faa7fdc 커밋)와 동일한 패턴이라, 두 번째 사용처가 생기기 전에
+  // 미리 공유 유틸로 뺐다. 아래에서는 파일 상단에서 이미 초기화된
+  // 전역 _sigVerify를 그대로 참조한다.
 
   var expectedTxHash = sha256hex(_sigVerify.sortedStringify(tx));
   if (expectedTxHash !== tx_hash) {
@@ -3161,5 +3171,72 @@ onRecordBeforeCreateRequest((e) => {
   }
   if (!exp || Date.now() > exp) {
     throw new BadRequestError("인증 토큰이 만료됐습니다. 인증번호를 다시 요청해 주세요");
+  }
+}, "profiles");
+
+// ── 프로필 수정(PATCH) 서명 검증 훅 (2026-07-19 신설) ───────────────
+// 생성(onRecordBeforeCreateRequest)에는 phone_verify_token 검증이 있었지만
+// 수정에는 그런 훅이 전혀 없었다(실사로 발견) — 그리고 profiles 컬렉션의
+// PocketBase updateRule("guid = @request.data.guid")은 요청 바디에 담긴
+// guid를 레코드 자신의 guid와 비교하는 조건인데, guid는 프로필을 한 번이라도
+// 스캔/조회하면 누구나 아는 공개 정보라 사실상 아무 인증도 아니다. 게다가
+// L1_URL(PocketBase REST API)이 클라이언트 코드(core/state.js)에 그대로
+// 하드코딩돼 브라우저에서 직접 접근 가능하므로, worker.js의
+// handleProfilePost() Ed25519 서명 검증을 완전히 우회해 이 API에 직접
+// PATCH를 보내는 경로가 열려 있었다 — 이 훅이 그 공백을 메운다.
+//
+// 서명 대상은 worker.js handleProfilePost()와 정확히 동일한 포맷이다:
+//   sigMsg = `${guid}:${pubkey}:${ts}`
+// 클라이언트는 기존과 동일한 서명 로직을 그대로 쓰면 되고 별도 변경이
+// 필요 없다 — 이 훅은 서버측 재검증(defense-in-depth)이며, worker.js가
+// 이미 하는 검증(TOFU pubkey 고정, handleProfilePost 11858행 부근
+// PUBKEY_MISMATCH 체크)을 PocketBase 계층에서도 동일하게 강제한다.
+//
+// e.record는 이미 요청 바디 값이 바인딩된 상태일 수 있어 TOFU 비교
+// 기준으로 신뢰할 수 없다 — 반드시 DB에서 갱신 전 원본을 별도로 다시
+// 읽어와 비교한다.
+onRecordBeforeUpdateRequest((e) => {
+  if (e.collection.name !== "profiles") return;
+
+  const info = $apis.requestInfo(e.httpContext);
+  const { guid, pubkey, signature } = info.data;
+  const ts = info.data.ts || "";
+
+  if (!guid || !pubkey || !signature) {
+    throw new BadRequestError("프로필 수정에는 guid, pubkey, signature가 필요합니다");
+  }
+
+  let original;
+  try {
+    original = $app.dao().findRecordById("profiles", e.record.getId());
+  } catch (err) {
+    throw new BadRequestError("원본 레코드 조회 실패: " + err.message);
+  }
+
+  if (guid !== original.getString("guid")) {
+    throw new BadRequestError("guid가 대상 레코드와 일치하지 않습니다");
+  }
+
+  // TOFU: 최초 등록 시 핀(pin)된 pubkey와 다른 키로는 이 프로필을
+  // 수정할 수 없다 — worker.js handleProfilePost()와 동일한 정책.
+  const registeredPubkey = original.getString("pubkey_ed25519");
+  if (registeredPubkey && registeredPubkey !== pubkey) {
+    throw new BadRequestError("공개키가 이 계정에 등록된 키와 일치하지 않습니다(PUBKEY_MISMATCH)");
+  }
+
+  const sigMsg = `${guid}:${pubkey}:${ts}`;
+  let sigValid = false;
+  try {
+    const pubBytes = _sigVerify.b64uToBytes(pubkey);
+    const sigBytes = _sigVerify.b64uToBytes(signature);
+    if (pubBytes.length !== 32 || sigBytes.length !== 64) {
+      throw new Error("키/서명 길이 오류");
+    }
+    sigValid = _sigVerify.ed25519Verify(_sigVerify.asciiToBytes(sigMsg), sigBytes, pubBytes);
+  } catch (err) {
+    throw new BadRequestError("서명 검증 실패: " + err.message);
+  }
+  if (!sigValid) {
+    throw new BadRequestError("서명이 유효하지 않습니다(INVALID_SIGNATURE)");
   }
 }, "profiles");
