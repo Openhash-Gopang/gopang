@@ -745,17 +745,27 @@
      * 만드는 것보다 안전하다 — 설계문서 §3의 "다음에 개선" 항목으로 남김.
      *
      * @param {Object} opts
-     *   opts.toGuid — 수신자 GUID (스캔된 프로필에서 확보)
-     *   opts.amount — 이체 금액(₮)
-     *   opts.memo   — 선택, 이체 메모
+     *   opts.toGuid  — 수신자 GUID (스캔된 프로필에서 확보)
+     *   opts.amount  — 이체 금액(₮)
+     *   opts.memo    — purpose='purchase'면 필수(품목명), 'transfer'면 선택
+     *   opts.purpose — 'transfer'(단순송금, 기본값) | 'purchase'(재화·용역 대금)
+     *                  — 2026-07-18 GDC 상거래 완성 계획서 Phase 1. 서버가
+     *                  최종 강제하지만(worker.js handleGdcTransfer), 클라도
+     *                  먼저 걸러서 불필요한 왕복을 줄인다.
      * @returns {Object} L1 응답 (block_hash, height, seller_claim 등)
      */
-    async sendGdc({ toGuid, amount, memo = '' }) {
+    async sendGdc({ toGuid, amount, memo = '', purpose = 'transfer' }) {
       if (!this.guid) throw new Error('[Wallet] guid(IPv6)가 설정되지 않았습니다.');
       if (!toGuid) throw new Error('[Wallet] 수신자 GUID가 없습니다.');
       if (toGuid === this.guid) throw new Error('[Wallet] 본인에게는 이체할 수 없습니다.');
       if (!(amount > 0)) throw new Error('[Wallet] 이체 금액이 올바르지 않습니다.');
       if (amount < 1) throw new Error('[Wallet] 최소 이체액은 ₮1입니다.');
+      if (purpose !== 'transfer' && purpose !== 'purchase') {
+        throw new Error("[Wallet] purpose는 'transfer' 또는 'purchase'여야 합니다.");
+      }
+      if (purpose === 'purchase' && !memo.trim()) {
+        throw new Error('[Wallet] 재화·용역 대금 결제는 품목명(memo)을 입력해야 합니다.');
+      }
 
       // 1) 로컬 잔액 사전 확인(UX용 — 최종 검증은 L1이 재생 계산으로 함)
       const db = await openDB();
@@ -779,7 +789,7 @@
         body: JSON.stringify({
           tx: signed.tx, tx_hash: signed.tx_hash,
           sender_sig: signed.buyer_sig, sender_public_key: signed.buyer_public_key,
-          from_guid: this.guid, to_guid: toGuid, amount, memo,
+          from_guid: this.guid, to_guid: toGuid, amount, memo, purpose,
           prev_settle_hash: signed.prev_settle_hash, balance_claimed: localBalance,
         }),
       });

@@ -412,6 +412,25 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
     </div>
   </div>
 
+  <!-- 판매자 인증 — 사업자등록증 첨부 (2026-07-18 신설)
+       GDC 상거래 완성 계획서(docs/gdc_commerce_completion_plan_v0_1.md)
+       Phase 2. 정부24 앱에서 발급받은 사업자등록증을 첨부해 인증한다.
+       소유자(본인 프로필)에게만 노출. 원본 파일은 서버에 저장하지 않고
+       SHA-256 해시+파일명+크기만 전송(worker.js KNOWN_LIMITATIONS와
+       동일 제약 — 진위 확인은 별도 관리자 승인 절차, 이번 배치 미포함). -->
+  <div class="card hidden" id="card-seller-verification">
+    <div class="card-title">판매자 인증</div>
+    <div style="font-size:12px;color:#8a8f98;margin-bottom:10px;">
+      ₮50 초과 재화·용역 대금을 받으려면 사업자등록증(정부24 발급) 인증이 필요합니다.
+    </div>
+    <div class="ifield-row"><span class="ifield-key">인증 상태</span><span class="ifield-val" id="seller-verify-status-badge">미제출</span></div>
+    <input type="file" id="seller-verify-file-input" accept="image/*,.pdf" class="hidden" onchange="_onSellerVerifyFileSelected(event)" />
+    <div class="pill-wrap" style="border-top:none">
+      <button class="btn-pill-outline" onclick="document.getElementById('seller-verify-file-input').click()">사업자등록증 첨부</button>
+    </div>
+    <div id="seller-verify-status-msg" style="font-size:12px;margin-top:6px;"></div>
+  </div>
+
   <!-- 송금 계좌 (2026-07-15 신설) — 소유자: 등록/수정, 방문자: 조회+복사 -->
   <div class="card hidden" id="card-payout-account">
     <div class="card-title">송금 계좌</div>
@@ -443,6 +462,25 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
       <div style="font-size:13px;color:#8a8f98;margin-bottom:14px;">
         받는 사람: <b id="gdc-modal-recipient">-</b>
       </div>
+
+      <!-- 2026-07-18 신설(GDC 상거래 완성 계획서 Phase 1) — 거래목적 분류.
+           단순송금(memo 선택)과 재화·용역 대금(memo 필수)을 구분해야
+           법적으로 "이게 재화 대금 결제였다"를 사후 소명할 수 있다. -->
+      <div style="font-size:12px;color:#8a8f98;margin-bottom:4px;">거래 목적</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <label style="flex:1;display:flex;align-items:center;gap:4px;padding:8px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">
+          <input type="radio" name="gdc-purpose" value="transfer" checked onchange="_onGdcPurposeChange()" /> 단순 송금
+        </label>
+        <label style="flex:1;display:flex;align-items:center;gap:4px;padding:8px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">
+          <input type="radio" name="gdc-purpose" value="purchase" onchange="_onGdcPurposeChange()" /> 재화·용역 대금
+        </label>
+      </div>
+      <input type="text" id="gdc-modal-memo" placeholder="품목명(예: 짜장면)" maxlength="100"
+             class="hidden"
+             style="width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;
+                    font-size:14px;margin-bottom:10px;box-sizing:border-box;" />
+      <div id="gdc-modal-seller-status" class="hidden" style="font-size:12px;margin-bottom:10px;padding:8px;border-radius:8px;"></div>
+
       <input type="number" id="gdc-modal-amount" placeholder="이체 금액(₮)" min="1" step="1"
              style="width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;
                     font-size:15px;margin-bottom:10px;box-sizing:border-box;" />
@@ -1097,6 +1135,9 @@ function renderPayoutAccount(p, isOwner) {
     document.getElementById('payout-account-summary').textContent =
       pa?.account_number ? `${pa.bank_name} ${pa.account_number} (${pa.holder_name})` : '등록된 계좌 없음';
     card.classList.remove('hidden');
+    // 2026-07-18 신설 — 판매자 인증 카드는 소유자(본인 프로필)에게만 노출
+    document.getElementById('card-seller-verification')?.classList.remove('hidden');
+    _loadSellerVerifyStatus().catch(e => console.warn('[SellerVerify] 상태 로드 실패:', e.message));
     return;
   }
 
@@ -1171,12 +1212,47 @@ function _openSendGdcModal() {
   document.getElementById('gdc-modal-recipient').textContent =
     _profile.nickname || _profile.name || _profile.handle || _profile.guid;
   document.getElementById('gdc-modal-amount').value = '';
+  document.getElementById('gdc-modal-memo').value = '';
   document.getElementById('gdc-modal-status').textContent = '';
+  document.querySelector('input[name="gdc-purpose"][value="transfer"]').checked = true;
+  _onGdcPurposeChange();
   document.getElementById('gdc-transfer-modal').classList.remove('hidden');
 }
 
 function _closeSendGdcModal() {
   document.getElementById('gdc-transfer-modal').classList.add('hidden');
+}
+
+// 2026-07-18 신설 — 거래목적 전환 시 품목명 입력란 노출 + 상대 판매자
+// 인증 상태 조회(구매 선택 시에만, UX 참고용 — 최종 강제는 서버가 함).
+async function _onGdcPurposeChange() {
+  const purpose = document.querySelector('input[name="gdc-purpose"]:checked')?.value || 'transfer';
+  const memoInput = document.getElementById('gdc-modal-memo');
+  const sellerStatusEl = document.getElementById('gdc-modal-seller-status');
+
+  if (purpose === 'purchase') {
+    memoInput.classList.remove('hidden');
+    memoInput.placeholder = '품목명(예: 짜장면) — 필수';
+    sellerStatusEl.classList.remove('hidden');
+    sellerStatusEl.textContent = '판매자 인증 상태 확인 중…';
+    sellerStatusEl.style.background = '#f1f3f5'; sellerStatusEl.style.color = '#8a8f98';
+    try {
+      const res = await fetch(`${PROXY}/seller/verify-status?guid=${encodeURIComponent(_profile.guid)}`);
+      const data = await res.json();
+      if (data.status === 'verified') {
+        sellerStatusEl.textContent = '✅ 인증된 판매자입니다.';
+        sellerStatusEl.style.background = '#e8f5e9'; sellerStatusEl.style.color = '#2e7d32';
+      } else {
+        sellerStatusEl.textContent = `⚠️ 미인증 판매자입니다 — ₮50 초과분은 이체가 거부될 수 있습니다. (상태: ${data.status})`;
+        sellerStatusEl.style.background = '#fff3e0'; sellerStatusEl.style.color = '#e65100';
+      }
+    } catch (e) {
+      sellerStatusEl.textContent = '판매자 인증 상태를 확인하지 못했습니다.';
+    }
+  } else {
+    memoInput.classList.add('hidden');
+    sellerStatusEl.classList.add('hidden');
+  }
 }
 
 async function _confirmSendGdc() {
@@ -1185,18 +1261,27 @@ async function _confirmSendGdc() {
   const btn       = document.getElementById('btn-confirm-send-gdc');
   const amountStr = document.getElementById('gdc-modal-amount').value;
   const amount    = parseFloat(amountStr);
+  const purpose   = document.querySelector('input[name="gdc-purpose"]:checked')?.value || 'transfer';
+  const memo      = document.getElementById('gdc-modal-memo').value.trim();
 
   if (!(amount > 0)) { statusEl.textContent = '⚠️ 올바른 금액을 입력해 주세요.'; return; }
   if (amount < 1)     { statusEl.textContent = '⚠️ 최소 이체액은 ₮1입니다.'; return; }
+  if (purpose === 'purchase' && !memo) {
+    statusEl.textContent = '⚠️ 재화·용역 대금 결제는 품목명을 입력해야 합니다.';
+    return;
+  }
 
   const recipientLabel = document.getElementById('gdc-modal-recipient').textContent;
-  if (!confirm(`${recipientLabel}에게 ₮${amount.toLocaleString()}을 보내시겠습니까?\n되돌릴 수 없습니다.`)) return;
+  const confirmMsg = purpose === 'purchase'
+    ? `${recipientLabel}에게 "${memo}" 대금으로 ₮${amount.toLocaleString()}을 보내시겠습니까?\n되돌릴 수 없습니다.`
+    : `${recipientLabel}에게 ₮${amount.toLocaleString()}을 보내시겠습니까?\n되돌릴 수 없습니다.`;
+  if (!confirm(confirmMsg)) return;
 
   btn.disabled = true;
   statusEl.style.color = '';
   statusEl.textContent = '🔏 서명 후 전송 중…';
   try {
-    const result = await wallet.sendGdc({ toGuid: _profile.guid, amount, memo: '' });
+    const result = await wallet.sendGdc({ toGuid: _profile.guid, amount, memo, purpose });
     statusEl.style.color = '#2e7d32';
     statusEl.textContent = `✅ 이체 완료 (블록 #${result.height ?? '-'})`;
     setTimeout(() => { _closeSendGdcModal(); location.reload(); }, 1200);
@@ -1207,6 +1292,56 @@ async function _confirmSendGdc() {
     btn.disabled = false;
   }
 }
+
+// ── 판매자 인증(사업자등록증 첨부) — 2026-07-18 신설 ──────────────
+// 원본 파일은 서버에 저장하지 않는다 — SHA-256 해시+파일명+크기만 전송.
+async function _loadSellerVerifyStatus() {
+  const wallet = window.gopangWallet;
+  if (!wallet?.guid) return;
+  const badge = document.getElementById('seller-verify-status-badge');
+  try {
+    const res = await fetch(`${PROXY}/seller/verify-status?guid=${encodeURIComponent(wallet.guid)}`);
+    const data = await res.json();
+    const labels = { verified: '✅ 인증 완료', pending: '⏳ 검토 중', rejected: '❌ 반려됨', unverified: '미제출' };
+    badge.textContent = labels[data.status] || data.status;
+  } catch (e) {
+    badge.textContent = '상태 확인 실패';
+  }
+}
+
+async function _onSellerVerifyFileSelected(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const wallet = window.gopangWallet;
+  const msgEl = document.getElementById('seller-verify-status-msg');
+  if (!wallet?.guid) { msgEl.textContent = '⚠️ 지갑이 준비되지 않았습니다.'; return; }
+
+  msgEl.style.color = '#8a8f98';
+  msgEl.textContent = '해시 계산 중…';
+  try {
+    const buf = await file.arrayBuffer();
+    const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+    const hashHex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    msgEl.textContent = '제출 중…';
+    const res = await fetch(`${PROXY}/seller/verify-submit`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid: wallet.guid, biz_reg_hash: hashHex,
+        biz_reg_filename: file.name, biz_reg_size: file.size,
+      }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '제출 실패');
+    msgEl.style.color = '#2e7d32';
+    msgEl.textContent = '✅ 제출 완료 — 검토 후 반영됩니다.';
+    await _loadSellerVerifyStatus();
+  } catch (e) {
+    msgEl.style.color = '#c0392b';
+    msgEl.textContent = '⚠️ ' + e.message;
+  }
+}
+
 function _getSavedProfiles() {
   try { return JSON.parse(localStorage.getItem(_SAVED_PROFILES_KEY) || '[]'); } catch { return []; }
 }

@@ -4419,6 +4419,10 @@ export default {
     // 점수·재무제표 일치검증·PDV 기록·판매자(수신자) claim 적재까지
     // handleBizOrder의 검증된 로직을 그대로 물려받는다.
     if (pathname === '/wallet/gdc-transfer' && request.method === 'POST') return handleGdcTransfer(request, env, corsHeaders, ctx);
+    // 2026-07-18 신설 — 판매자 자격 확인(사업자등록증 첨부, 정부24 발급).
+    // 설계문서: docs/gdc_commerce_completion_plan_v0_1.md Phase 2.
+    if (pathname === '/seller/verify-submit' && request.method === 'POST') return handleSellerVerifySubmit(request, env, corsHeaders);
+    if (pathname === '/seller/verify-status' && request.method === 'GET') return handleSellerVerifyStatus(request, env, corsHeaders);
     if (pathname === '/biz/gdc-deposit' && request.method === 'POST') return handleGdcDepositCreate(request, env, corsHeaders);
     if (pathname === '/biz/gdc-deposits' && request.method === 'GET') return handleGdcDepositList(request, env, corsHeaders);
     if (pathname === '/biz/fee-rate' && request.method === 'GET') return handleFeeRate(request, env, corsHeaders);
@@ -5083,6 +5087,30 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// 2026-07-18 신설 — GDC 상거래 완성 계획서(docs/gdc_commerce_completion_plan_v0_1.md)
+// Phase 1(거래목적 분류) + Phase 2(판매자 자격 확인) 정책 상수.
+const GDC_PURCHASE_MEMO_REQUIRED = true;
+// verified_seller 아닌 상대에게 purpose='purchase'로 이체할 수 있는 1회
+// 상한선(₮). 이 이하는 소규모 개인간 거래로 보고 허용, 초과분은 상대가
+// 사업자등록증(정부24) 인증을 마쳐야 한다 — 계획서 §4 제안, 피터 확정
+// 전까지 조정 가능하도록 상수로 분리해뒀다.
+const GDC_UNVERIFIED_SELLER_LIMIT = 50; // ₮50 = 50,000원
+
+async function _lookupSellerVerification(env, guid) {
+  try {
+    const token = await _l1AdminTokenFor(env, L1_DEFAULT);
+    const filter = encodeURIComponent(`guid='${guid}'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/seller_verifications/records?filter=${filter}&perPage=1`,
+      { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json().catch(() => ({ items: [] }));
+    return data.items?.[0] || null;
+  } catch (e) {
+    console.warn('[SellerVerify] 조회 실패(미검증으로 폴백):', e.message);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
 // 2026-07-18 신설 — GDC P2P 이체 (/wallet/gdc-transfer)
 // 혼디 코드 스캔 → 프로필 연결 → "GDC 보내기"에서 호출된다.
 // 설계문서: docs/gdc_transfer_design_v0_1.md
@@ -5101,6 +5129,7 @@ async function handleGdcTransfer(request, env, corsHeaders, ctx) {
   const {
     tx, tx_hash, sender_sig, sender_public_key,
     from_guid, to_guid, amount, memo = '',
+    purpose = 'transfer',
     prev_settle_hash, balance_claimed, l1_node,
   } = body;
 
@@ -5111,6 +5140,26 @@ async function handleGdcTransfer(request, env, corsHeaders, ctx) {
   if (!from_guid)          return _err(400, 'MISSING_FIELD', 'from_guid 필수', corsHeaders);
   if (!to_guid)            return _err(400, 'MISSING_FIELD', 'to_guid 필수', corsHeaders);
   if (!(amount > 0))       return _err(400, 'MISSING_FIELD', 'amount 필수(양수)', corsHeaders);
+
+  // ── Phase 1: 거래목적 분류 (설계문서 §4, 법적 리스크 직결) ──────────
+  if (purpose !== 'transfer' && purpose !== 'purchase') {
+    return _err(400, 'INVALID_PURPOSE', "purpose는 'transfer' 또는 'purchase'여야 합니다", corsHeaders);
+  }
+  if (purpose === 'purchase' && GDC_PURCHASE_MEMO_REQUIRED && !memo.trim()) {
+    return _err(400, 'MEMO_REQUIRED_FOR_PURCHASE', '재화·용역 대금 결제는 품목명(memo)이 필수입니다', corsHeaders);
+  }
+
+  // ── Phase 2: 판매자 자격 확인 (설계문서 §4 정책 — 피터 확정: 정부24
+  // 사업자등록증 첨부로 인증). purpose='purchase'이고 소액 문턱을 넘으면
+  // 수취인이 verified_seller여야 한다. transfer(단순송금)에는 적용 안 함.
+  if (purpose === 'purchase' && amount > GDC_UNVERIFIED_SELLER_LIMIT) {
+    const verification = await _lookupSellerVerification(env, to_guid);
+    if (!verification || verification.status !== 'verified') {
+      return _err(403, 'SELLER_NOT_VERIFIED',
+        `₮${GDC_UNVERIFIED_SELLER_LIMIT} 초과 재화·용역 대금 결제는 수취인이 사업자등록증(정부24) ` +
+        `인증을 완료해야 합니다. 현재 상태: ${verification?.status || '미제출'}`, corsHeaders);
+    }
+  }
 
   // ── P2P 전용 검증 (설계문서 §4 정책) ──────────────────────────
   if (from_guid === to_guid) {
@@ -5138,7 +5187,7 @@ async function handleGdcTransfer(request, env, corsHeaders, ctx) {
     tx: mappedTx, tx_hash,
     buyer_sig: sender_sig, buyer_public_key: sender_public_key,
     from_guid, seller_guid: to_guid, l1_node,
-    memo, item_name: memo || 'GDC 이체',
+    memo, item_name: memo || 'GDC 이체', purpose,
     prev_settle_hash, balance_claimed,
     seller_net: amount, fee: 0,   // P2P는 플랫폼 수수료 없음
     asset_type: 'stable', contract_type: 'instant',
@@ -5151,6 +5200,79 @@ async function handleGdcTransfer(request, env, corsHeaders, ctx) {
   });
 
   return handleBizOrder(syntheticRequest, env, corsHeaders, ctx);
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-18 신설 — 판매자 자격 확인(사업자등록증 첨부) 제출/조회
+// (/seller/verify-submit, /seller/verify-status)
+//
+// worker.js에는 파일 바이너리 저장소가 없다(2026-07-12 K-Gov
+// REQUIRED_DOCUMENTS 작업 때 확인된 동일 제약) — SHA-256 해시+파일명+
+// 크기만 "서류 소지 증명"으로 받는다. 진위 확인(국세청 API)은 범위 밖
+// — 항상 'pending'으로 저장되고, 별도 관리자 승인 절차(이번 배치에는
+// 미포함)로만 'verified'가 된다. 즉 지금 이 엔드포인트만으로는 아무도
+// 자동으로 verified가 되지 않는다 — 승인 UI/절차가 다음 과제다.
+async function handleSellerVerifySubmit(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { guid, biz_reg_hash, biz_reg_filename, biz_reg_size } = body;
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!biz_reg_hash || !/^[0-9a-f]{64}$/.test(biz_reg_hash)) {
+    return _err(400, 'INVALID_HASH', 'biz_reg_hash는 64자리 hex(SHA-256)여야 합니다', corsHeaders);
+  }
+  if (!biz_reg_filename) return _err(400, 'MISSING_FIELD', 'biz_reg_filename 필수', corsHeaders);
+  if (!(biz_reg_size > 0)) return _err(400, 'MISSING_FIELD', 'biz_reg_size 필수(양수)', corsHeaders);
+
+  try {
+    const token = await _l1AdminTokenFor(env, L1_DEFAULT);
+    const filter = encodeURIComponent(`guid='${guid}'`);
+    const existingRes = await fetch(`${L1_DEFAULT}/api/collections/seller_verifications/records?filter=${filter}&perPage=1`,
+      { headers: { 'Authorization': `Bearer ${token}` } });
+    const existingData = await existingRes.json().catch(() => ({ items: [] }));
+    const existing = existingData.items?.[0];
+
+    const payload = {
+      guid, status: 'pending', biz_reg_hash, biz_reg_filename, biz_reg_size,
+      submitted_at: new Date().toISOString(),
+    };
+
+    let saved;
+    if (existing) {
+      // 재제출 — 이전 상태(rejected 등)와 무관하게 pending으로 재시작
+      const res = await fetch(`${L1_DEFAULT}/api/collections/seller_verifications/records/${existing.id}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      saved = await res.json();
+    } else {
+      const res = await fetch(`${L1_DEFAULT}/api/collections/seller_verifications/records`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      saved = await res.json();
+    }
+    return new Response(JSON.stringify({ ok: true, status: 'pending', record: saved }),
+      { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(500, 'SELLER_VERIFY_SUBMIT_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleSellerVerifyStatus(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 쿼리 파라미터 필수', corsHeaders);
+
+  const verification = await _lookupSellerVerification(env, guid);
+  return new Response(JSON.stringify({
+    ok: true,
+    guid,
+    status: verification?.status || 'unverified',
+    submitted_at: verification?.submitted_at || null,
+  }), { status: 200, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
