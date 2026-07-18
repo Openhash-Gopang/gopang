@@ -4434,6 +4434,13 @@ export default {
     // 설계문서: docs/gdc_commerce_completion_plan_v0_1.md Phase 2.
     if (pathname === '/seller/verify-submit' && request.method === 'POST') return handleSellerVerifySubmit(request, env, corsHeaders);
     if (pathname === '/seller/verify-status' && request.method === 'GET') return handleSellerVerifyStatus(request, env, corsHeaders);
+    // 2026-07-18 신설 — 판매자 인증 승인 절차(admin_guids 재사용).
+    if (pathname === '/seller/verify-queue' && request.method === 'GET') return handleSellerVerifyQueue(request, env, corsHeaders);
+    if (pathname === '/seller/verify-review' && request.method === 'POST') return handleSellerVerifyReview(request, env, corsHeaders);
+    // 2026-07-18 신설 — 거래 이의제기(사후 신고). 설계문서 Phase 3.
+    if (pathname === '/ledger/dispute' && request.method === 'POST') return handleTradeDisputeSubmit(request, env, corsHeaders);
+    if (pathname === '/ledger/dispute-queue' && request.method === 'GET') return handleTradeDisputeQueue(request, env, corsHeaders);
+    if (pathname === '/ledger/dispute-resolve' && request.method === 'POST') return handleTradeDisputeResolve(request, env, corsHeaders);
     if (pathname === '/biz/gdc-deposit' && request.method === 'POST') return handleGdcDepositCreate(request, env, corsHeaders);
     if (pathname === '/biz/gdc-deposits' && request.method === 'GET') return handleGdcDepositList(request, env, corsHeaders);
     if (pathname === '/biz/fee-rate' && request.method === 'GET') return handleFeeRate(request, env, corsHeaders);
@@ -5315,6 +5322,225 @@ async function handleGdcTransfer(request, env, corsHeaders, ctx) {
   });
 
   return handleBizOrder(syntheticRequest, env, corsHeaders, ctx);
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-18 신설 — 거래 이의제기(사후 신고), GDC 상거래 완성 계획서
+// Phase 3. §2 결론대로 완전 자동 가격판단은 이번 배치에 포함하지 않고,
+// 신고→관리자 검토 흐름만 구현한다. 신고 권한은 해당 tx_id의 ledger_entries
+// 에 실제로 등장하는 guid(=그 거래 당사자)로 제한한다 — 아무나 남의
+// 거래를 신고할 수 있으면 악용 소지가 크다.
+async function handleTradeDisputeSubmit(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { tx_id, reporter_guid, pubkey, signature, ts, reason } = body;
+  if (!tx_id || !reporter_guid || !reason?.trim()) {
+    return _err(400, 'MISSING_FIELD', 'tx_id, reporter_guid, reason 필수', corsHeaders);
+  }
+
+  const authOk = await _verifyClaimsRequester(env, {
+    guid: reporter_guid, pubkey, signature, ts, sigMsg: `dispute:${tx_id}:${reporter_guid}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    // 신고자가 이 거래 당사자인지 ledger_entries로 확인
+    const filter = encodeURIComponent(`tx_id='${String(tx_id).replace(/'/g,"\\'")}' && guid='${String(reporter_guid).replace(/'/g,"\\'")}'`);
+    const partyRes = await fetch(`${L1_DEFAULT}/api/collections/ledger_entries/records?filter=${filter}&perPage=1`, { headers });
+    const partyData = await partyRes.json().catch(() => ({ items: [] }));
+    if (!partyData.items?.length) {
+      return _err(403, 'NOT_A_PARTY', '해당 거래의 당사자만 신고할 수 있습니다', corsHeaders);
+    }
+
+    const col = 'transaction_disputes';
+    const res = await fetch(`${L1_DEFAULT}/api/collections/${col}/records`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tx_id, reporter_guid, reason: reason.trim(), status: 'open',
+        created_at: new Date().toISOString(),
+      }),
+    });
+    const saved = await res.json();
+    return new Response(JSON.stringify({ ok: true, record: saved }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(500, 'DISPUTE_SUBMIT_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleTradeDisputeQueue(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const admin_guid = url.searchParams.get('admin_guid');
+  const pubkey      = url.searchParams.get('pubkey');
+  const signature   = url.searchParams.get('signature');
+  const ts          = url.searchParams.get('ts') || '';
+  if (!admin_guid) return _err(400, 'MISSING_FIELD', 'admin_guid 필수', corsHeaders);
+
+  const authOk = await _verifyClaimsRequester(env, {
+    guid: admin_guid, pubkey, signature, ts, sigMsg: `dispute-admin:${admin_guid}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const adminFilter = encodeURIComponent(`guid='${String(admin_guid).replace(/'/g,"\\'")}' && active=true`);
+  const adminRes = await fetch(`${L1_DEFAULT}/api/collections/admin_guids/records?filter=${adminFilter}&perPage=1`,
+    { headers: { 'Authorization': `Bearer ${token}` } });
+  const adminData = await adminRes.json().catch(() => ({ items: [] }));
+  const adminRow = adminData.items?.[0];
+  let services = [];
+  try { services = Array.isArray(adminRow?.services) ? adminRow.services : JSON.parse(adminRow?.services || '[]'); } catch { services = []; }
+  const isAdmin = !!adminRow && (services.includes('*') || services.includes('trade_dispute_review'));
+  if (!isAdmin) return _err(403, 'AUTH_REQUIRED', 'trade_dispute_review 관리자 권한이 필요합니다', corsHeaders);
+
+  try {
+    const filter = encodeURIComponent(`status != 'resolved'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/transaction_disputes/records?filter=${filter}&sort=created_at&perPage=100`,
+      { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json().catch(() => ({ items: [] }));
+    return new Response(JSON.stringify({ ok: true, count: data.items?.length || 0, items: data.items || [] }),
+      { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(500, 'QUEUE_FETCH_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleTradeDisputeResolve(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { admin_guid, pubkey, signature, ts, dispute_id, resolution_note } = body;
+  if (!admin_guid || !dispute_id) return _err(400, 'MISSING_FIELD', 'admin_guid, dispute_id 필수', corsHeaders);
+
+  const authOk = await _verifyClaimsRequester(env, {
+    guid: admin_guid, pubkey, signature, ts, sigMsg: `dispute-admin:${admin_guid}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const adminFilter = encodeURIComponent(`guid='${String(admin_guid).replace(/'/g,"\\'")}' && active=true`);
+  const adminRes = await fetch(`${L1_DEFAULT}/api/collections/admin_guids/records?filter=${adminFilter}&perPage=1`,
+    { headers: { 'Authorization': `Bearer ${token}` } });
+  const adminData = await adminRes.json().catch(() => ({ items: [] }));
+  const adminRow = adminData.items?.[0];
+  let services = [];
+  try { services = Array.isArray(adminRow?.services) ? adminRow.services : JSON.parse(adminRow?.services || '[]'); } catch { services = []; }
+  const isAdmin = !!adminRow && (services.includes('*') || services.includes('trade_dispute_review'));
+  if (!isAdmin) return _err(403, 'AUTH_REQUIRED', 'trade_dispute_review 관리자 권한이 필요합니다', corsHeaders);
+
+  try {
+    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/transaction_disputes/records/${dispute_id}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'resolved', resolution_note: resolution_note || '',
+        resolved_at: new Date().toISOString(),
+      }),
+    });
+    const saved = await patchRes.json();
+    return new Response(JSON.stringify({ ok: true, record: saved }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(500, 'RESOLVE_FAILED', e.message, corsHeaders);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-18 신설 — 판매자 인증 승인 절차 (GDC 상거래 완성 계획서
+// Phase 2 잔여 과제). 지난 배치(fix10.py)에서 제출(/seller/verify-submit)
+// 까지만 만들고 "누가 pending→verified로 바꾸는지"는 비워뒀었다.
+//
+// 인증 방식은 handleVerifyAdmin과 완전히 동일한 패턴을 그대로 재사용한다
+// (admin_guids 컬렉션, Ed25519 서명 검증 — "로그인=관리자" 착각 구조적
+// 공백을 gopang 레벨에서 이미 한 번 해결해둔 걸 그대로 따른다). 좁게
+// 권한을 줄 수 있도록 service='seller_verification'로 스코프를 잡는다
+// (admin_guids에 이 service를 포함해 등록해야 승인 가능 — 등록 자체는
+// 이 배치 범위 밖, 서버 관리자가 DB에 직접 넣어야 한다).
+async function _isSellerVerificationAdmin(env, { guid, pubkey, signature, ts }) {
+  const authOk = await _verifyClaimsRequester(env, {
+    guid, pubkey, signature, ts, sigMsg: `seller-verify-admin:${guid}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return false;
+
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`guid='${String(guid).replace(/'/g,"\\'")}' && active=true`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/admin_guids/records?filter=${filter}&perPage=1`,
+    { headers: { 'Authorization': `Bearer ${token}` } });
+  const data = await res.json().catch(() => ({ items: [] }));
+  const row = data.items?.[0];
+  let services = [];
+  try { services = Array.isArray(row?.services) ? row.services : JSON.parse(row?.services || '[]'); } catch { services = []; }
+  return !!row && (services.includes('*') || services.includes('seller_verification'));
+}
+
+async function handleSellerVerifyQueue(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const admin_guid = url.searchParams.get('admin_guid');
+  const pubkey      = url.searchParams.get('pubkey');
+  const signature   = url.searchParams.get('signature');
+  const ts          = url.searchParams.get('ts') || '';
+  if (!admin_guid) return _err(400, 'MISSING_FIELD', 'admin_guid 필수', corsHeaders);
+
+  const isAdmin = await _isSellerVerificationAdmin(env, { guid: admin_guid, pubkey, signature, ts });
+  if (!isAdmin) return _err(403, 'AUTH_REQUIRED', 'seller_verification 관리자 권한이 필요합니다', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`status='pending'`);
+    const res = await fetch(`${L1_DEFAULT}/api/collections/seller_verifications/records?filter=${filter}&sort=submitted_at&perPage=100`,
+      { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json().catch(() => ({ items: [] }));
+    // 원본 서류 파일은 저장하지 않으므로(해시만 보관) 관리자가 여기서
+    // 확인할 수 있는 건 해시·파일명·크기뿐이다 — 실제 서류 진위 확인은
+    // 이 큐 바깥(다른 채널로 직접 확인)에서 이뤄져야 한다는 걸 명시.
+    return new Response(JSON.stringify({
+      ok: true, count: data.items?.length || 0, items: data.items || [],
+      note: '원본 파일 미보관(해시만 있음) — 진위 확인은 별도 채널 필요',
+    }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(500, 'QUEUE_FETCH_FAILED', e.message, corsHeaders);
+  }
+}
+
+async function handleSellerVerifyReview(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { admin_guid, pubkey, signature, ts, target_guid, decision, reject_reason } = body;
+  if (!admin_guid || !target_guid) return _err(400, 'MISSING_FIELD', 'admin_guid, target_guid 필수', corsHeaders);
+  if (decision !== 'verified' && decision !== 'rejected') {
+    return _err(400, 'INVALID_DECISION', "decision은 'verified' 또는 'rejected'여야 합니다", corsHeaders);
+  }
+
+  const isAdmin = await _isSellerVerificationAdmin(env, { guid: admin_guid, pubkey, signature, ts });
+  if (!isAdmin) return _err(403, 'AUTH_REQUIRED', 'seller_verification 관리자 권한이 필요합니다', corsHeaders);
+
+  try {
+    const token = await _l1AdminToken(env);
+    const filter = encodeURIComponent(`guid='${String(target_guid).replace(/'/g,"\\'")}'`);
+    const existingRes = await fetch(`${L1_DEFAULT}/api/collections/seller_verifications/records?filter=${filter}&perPage=1`,
+      { headers: { 'Authorization': `Bearer ${token}` } });
+    const existingData = await existingRes.json().catch(() => ({ items: [] }));
+    const existing = existingData.items?.[0];
+    if (!existing) return _err(404, 'NOT_FOUND', '해당 guid의 제출 기록이 없습니다', corsHeaders);
+
+    const patch = { status: decision };
+    if (decision === 'verified') patch.verified_at = new Date().toISOString();
+    if (decision === 'rejected') patch.reject_reason = reject_reason || '';
+
+    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/seller_verifications/records/${existing.id}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    const saved = await patchRes.json();
+    return new Response(JSON.stringify({ ok: true, status: decision, record: saved }),
+      { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(500, 'REVIEW_FAILED', e.message, corsHeaders);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════

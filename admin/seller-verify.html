@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>관리자 — 판매자 인증 / 거래 이의제기</title>
+<!--
+  2026-07-18 신설 — GDC 상거래 완성 계획서 Phase 2/3 관리자 승인 UI.
+
+  worker.js의 /seller/verify-queue, /seller/verify-review,
+  /ledger/dispute-queue, /ledger/dispute-resolve 는 전부
+  Ed25519 서명 인증(_verifyClaimsRequester, handleVerifyAdmin과 동일
+  패턴)을 요구한다. 이 페이지는 gopang-wallet.js(같은 origin, 이미
+  자동 생성된 지갑)로 그 서명을 만들어준다 — curl로 수동 서명하는
+  것보다 훨씬 안전하고 실용적이다(개인키가 이 브라우저 밖으로 나가지
+  않음).
+
+  이 페이지 자체는 누구나 접근 가능하지만, 실제 조회/승인 API가
+  admin_guids 등록 여부를 서버에서 재확인하므로 등록 안 된 사람이
+  열어봤자 AUTH_REQUIRED만 뜬다 — 이 페이지에 별도 접근 제어를 걸
+  필요는 없다(worker.js가 이미 진짜 게이트다).
+-->
+<script src="/gopang-wallet.js"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background:#f7f8fa; margin:0; padding:20px; color:#1a1a1a; }
+  .container { max-width:720px; margin:0 auto; }
+  h1 { font-size:20px; margin-bottom:4px; }
+  .subtitle { font-size:13px; color:#8a8f98; margin-bottom:20px; }
+  .card { background:#fff; border-radius:12px; padding:16px; margin-bottom:16px;
+          box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+  .card-title { font-size:15px; font-weight:700; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; }
+  .badge { font-size:11px; padding:2px 8px; border-radius:10px; background:#eef1f4; color:#5a6169; }
+  .item { border:1px solid #eee; border-radius:8px; padding:12px; margin-bottom:10px; }
+  .item-row { font-size:13px; margin-bottom:4px; }
+  .item-row .k { color:#8a8f98; display:inline-block; width:90px; }
+  .btn { padding:7px 14px; border-radius:8px; border:none; font-size:13px; font-weight:600; cursor:pointer; }
+  .btn-approve { background:#2e7d32; color:#fff; }
+  .btn-reject { background:#c0392b; color:#fff; }
+  .btn-resolve { background:#1A73E8; color:#fff; }
+  .btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .empty { color:#8a8f98; font-size:13px; text-align:center; padding:20px 0; }
+  .status-msg { font-size:12px; margin-top:6px; }
+  #auth-status { font-size:13px; padding:10px 14px; border-radius:8px; margin-bottom:16px; }
+  input[type=text] { width:100%; padding:6px 8px; border:1px solid #ddd; border-radius:6px;
+                      font-size:12px; box-sizing:border-box; margin-top:6px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🛡️ 관리자 승인</h1>
+  <div class="subtitle">판매자 인증(사업자등록증) · 거래 이의제기 검토</div>
+
+  <div id="auth-status">지갑 확인 중…</div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>판매자 인증 대기열</span>
+      <span class="badge" id="seller-queue-count">-</span>
+    </div>
+    <div id="seller-queue-list"><div class="empty">불러오는 중…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>거래 이의제기 대기열</span>
+      <span class="badge" id="dispute-queue-count">-</span>
+    </div>
+    <div id="dispute-queue-list"><div class="empty">불러오는 중…</div></div>
+  </div>
+</div>
+
+<script>
+const PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
+
+// ── 지갑 준비 대기 (profile.html의 _viewerAuthQuery와 동일 패턴) ──
+function _waitForWallet(maxMs = 8000) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const tick = () => {
+      const w = window.gopangWallet;
+      if (w?.signPayload && w.guid) return resolve(w);
+      if (Date.now() - start > maxMs) return resolve(null);
+      setTimeout(tick, 200);
+    };
+    tick();
+  });
+}
+
+// admin 인증 파라미터 생성 — sigMsg 형식은 worker.js의
+// _isSellerVerificationAdmin / handleTradeDisputeQueue와 정확히 일치해야
+// 한다(다르면 서명 검증은 통과해도 sigMsg 불일치로 그냥 무시됨은 아니고,
+// _verifyEd25519Simple이 sigMsg 자체를 서명 대상으로 쓰므로 여기서
+// 어긋나면 서명 검증 자체가 실패한다).
+async function _signAdminAuth(wallet, prefix) {
+  const ts = Date.now().toString();
+  const pubkey = wallet.publicKeyB64u;
+  const sigMsg = `${prefix}:${wallet.guid}:${pubkey}:${ts}`;
+  const signature = await wallet.signPayload(sigMsg);
+  return { admin_guid: wallet.guid, pubkey, signature, ts };
+}
+
+let _wallet = null;
+
+async function init() {
+  const statusEl = document.getElementById('auth-status');
+  _wallet = await _waitForWallet();
+  if (!_wallet) {
+    statusEl.textContent = '⚠️ 지갑을 불러오지 못했습니다. 페이지를 새로고침해 주세요.';
+    statusEl.style.background = '#fff3e0'; statusEl.style.color = '#e65100';
+    return;
+  }
+  statusEl.textContent = `연결된 지갑: ${_wallet.guid}`;
+  statusEl.style.background = '#e8f5e9'; statusEl.style.color = '#2e7d32';
+
+  await Promise.all([loadSellerQueue(), loadDisputeQueue()]);
+}
+
+// ── 판매자 인증 대기열 ──────────────────────────────────────────
+async function loadSellerQueue() {
+  const listEl = document.getElementById('seller-queue-list');
+  const countEl = document.getElementById('seller-queue-count');
+  try {
+    const auth = await _signAdminAuth(_wallet, 'seller-verify-admin');
+    const qs = new URLSearchParams(auth).toString();
+    const res = await fetch(`${PROXY}/seller/verify-queue?${qs}`);
+    const data = await res.json();
+    if (!data.ok) {
+      listEl.innerHTML = `<div class="empty">⚠️ ${data.error || '조회 실패'}${data.detail ? ' — ' + data.detail : ''}</div>`;
+      countEl.textContent = '오류';
+      return;
+    }
+    countEl.textContent = `${data.count}건`;
+    if (!data.items?.length) { listEl.innerHTML = '<div class="empty">대기 중인 요청 없음</div>'; return; }
+
+    listEl.innerHTML = '';
+    for (const item of data.items) {
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <div class="item-row"><span class="k">GUID</span>${item.guid}</div>
+        <div class="item-row"><span class="k">파일명</span>${item.biz_reg_filename} (${item.biz_reg_size}바이트)</div>
+        <div class="item-row"><span class="k">해시</span><span style="font-size:11px;color:#8a8f98">${item.biz_reg_hash}</span></div>
+        <div class="item-row"><span class="k">제출일</span>${item.submitted_at}</div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-approve" onclick="_reviewSeller('${item.guid}', 'verified', this)">승인</button>
+          <button class="btn btn-reject" onclick="_reviewSeller('${item.guid}', 'rejected', this)">반려</button>
+        </div>
+        <div class="status-msg"></div>
+      `;
+      listEl.appendChild(div);
+    }
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty">⚠️ ${e.message}</div>`;
+  }
+}
+
+async function _reviewSeller(targetGuid, decision, btnEl) {
+  const container = btnEl.closest('.item');
+  const statusMsg = container.querySelector('.status-msg');
+  const buttons = container.querySelectorAll('button');
+  buttons.forEach(b => b.disabled = true);
+  statusMsg.textContent = '처리 중…';
+  try {
+    let reject_reason = '';
+    if (decision === 'rejected') {
+      reject_reason = prompt('반려 사유를 입력해 주세요(선택):') || '';
+    }
+    const auth = await _signAdminAuth(_wallet, 'seller-verify-admin');
+    const res = await fetch(`${PROXY}/seller/verify-review`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...auth, target_guid: targetGuid, decision, reject_reason }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '처리 실패');
+    statusMsg.style.color = '#2e7d32';
+    statusMsg.textContent = decision === 'verified' ? '✅ 승인 완료' : '❌ 반려 완료';
+    setTimeout(() => container.remove(), 1000);
+  } catch (e) {
+    statusMsg.style.color = '#c0392b';
+    statusMsg.textContent = '⚠️ ' + e.message;
+    buttons.forEach(b => b.disabled = false);
+  }
+}
+
+// ── 거래 이의제기 대기열 ──────────────────────────────────────────
+async function loadDisputeQueue() {
+  const listEl = document.getElementById('dispute-queue-list');
+  const countEl = document.getElementById('dispute-queue-count');
+  try {
+    const auth = await _signAdminAuth(_wallet, 'dispute-admin');
+    const qs = new URLSearchParams(auth).toString();
+    const res = await fetch(`${PROXY}/ledger/dispute-queue?${qs}`);
+    const data = await res.json();
+    if (!data.ok) {
+      listEl.innerHTML = `<div class="empty">⚠️ ${data.error || '조회 실패'}${data.detail ? ' — ' + data.detail : ''}</div>`;
+      countEl.textContent = '오류';
+      return;
+    }
+    countEl.textContent = `${data.count}건`;
+    if (!data.items?.length) { listEl.innerHTML = '<div class="empty">대기 중인 신고 없음</div>'; return; }
+
+    listEl.innerHTML = '';
+    for (const item of data.items) {
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <div class="item-row"><span class="k">tx_id</span><span style="font-size:11px">${item.tx_id}</span></div>
+        <div class="item-row"><span class="k">신고자</span>${item.reporter_guid}</div>
+        <div class="item-row"><span class="k">사유</span>${item.reason}</div>
+        <div class="item-row"><span class="k">신고일</span>${item.created_at}</div>
+        <div class="item-row"><span class="k">상태</span>${item.status}</div>
+        <input type="text" placeholder="처리 메모(선택)" class="resolution-note" />
+        <div style="margin-top:10px;">
+          <button class="btn btn-resolve" onclick="_resolveDispute('${item.id}', this)">처리 완료로 표시</button>
+        </div>
+        <div class="status-msg"></div>
+      `;
+      listEl.appendChild(div);
+    }
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty">⚠️ ${e.message}</div>`;
+  }
+}
+
+async function _resolveDispute(disputeId, btnEl) {
+  const container = btnEl.closest('.item');
+  const statusMsg = container.querySelector('.status-msg');
+  const note = container.querySelector('.resolution-note').value;
+  btnEl.disabled = true;
+  statusMsg.textContent = '처리 중…';
+  try {
+    const auth = await _signAdminAuth(_wallet, 'dispute-admin');
+    const res = await fetch(`${PROXY}/ledger/dispute-resolve`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...auth, dispute_id: disputeId, resolution_note: note }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '처리 실패');
+    statusMsg.style.color = '#2e7d32';
+    statusMsg.textContent = '✅ 처리 완료';
+    setTimeout(() => container.remove(), 1000);
+  } catch (e) {
+    statusMsg.style.color = '#c0392b';
+    statusMsg.textContent = '⚠️ ' + e.message;
+    btnEl.disabled = false;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
