@@ -670,6 +670,7 @@ async function loadProfile() {
     // /biz/catalog가 원본이다 — card-products(자유 텍스트)와 별개로 로드한다.
     if (_profile.entity_type && _profile.entity_type !== 'person') {
       _loadCatalog(_profile.guid).catch(e => console.warn('[Buy] 카탈로그 로드 실패:', e.message));
+      _loadFeeRate();
     }
   } catch(e) {
     await renderBasicOrError();
@@ -1419,12 +1420,20 @@ function toggleProductDetail(i) {
 
 let _catalog       = [];   // /biz/catalog에서 받은 실제 구조화 상품(숫자 가격)
 let _cart          = {};   // { productId: qty }
-// 2026-07-07: 플랫폼 수수료율. 서버(worker.js)가 아직 이 비율을 강제하지
-// 않는다(클라이언트가 보낸 seller_net/fee를 그대로 신뢰) — 이건 알려진
-// 별도 결함(사고실험 G)이고 다음 단계에서 서버 검증을 추가해야 한다.
-// 여기서는 향후 서버 검증과 맞출 기준값으로 3%를 쓴다(ledger.js 초안과
-// 동일 값 — 다만 그 파일 자체는 죽은 코드이므로 정본은 아니다).
-const _PLATFORM_FEE_RATE = 0.03;
+// 2026-07-18: worker.js PLATFORM_FEE_RATE의 "복사본"이었던 하드코딩을
+// 제거했다 — 두 값이 어긋나면 결제가 전부 PRICE_MISMATCH로 거부되는
+// 문제가 있었다(worker.js 4685번 줄 주석 참고). 이제 GET /biz/fee-rate로
+// 서버 값을 직접 조회한다. 0.03은 fetch 실패 시에만 쓰는 안전 폴백값.
+let _PLATFORM_FEE_RATE = 0.03;
+async function _loadFeeRate() {
+  try {
+    const res  = await fetch(`${PROXY}/biz/fee-rate`);
+    const data = await res.json().catch(() => null);
+    if (data?.ok && typeof data.rate === 'number') _PLATFORM_FEE_RATE = data.rate;
+  } catch (e) {
+    console.warn('[Fee] 수수료율 조회 실패, 폴백값(3%) 사용:', e.message);
+  }
+}
 
 async function _loadCatalog(sellerGuid) {
   const res  = await fetch(`${PROXY}/biz/catalog?guid=${encodeURIComponent(sellerGuid)}`);

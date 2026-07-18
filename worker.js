@@ -4197,7 +4197,7 @@ async function _sweepBridgeOutbox(env) {
 
 // 2026-07-18 신설 — 테스트 목적 named export. 런타임 동작에는 영향 없음
 // (default export의 fetch 핸들러는 그대로 pathname 매칭으로 호출).
-export { handleGdcDepositClose, handleGdcDaoProposalCreate, handleGdcDaoVote, handleGdcDaoProposalsList };
+export { handleGdcDepositClose, handleGdcDaoProposalCreate, handleGdcDaoVote, handleGdcDaoProposalsList, handleFeeRate };
 
 export default {
   // ── Cron 트리거 (10분마다 머클 앵커링 + 브릿지 아웃박스 스윕) ────────
@@ -4421,6 +4421,7 @@ export default {
     if (pathname === '/wallet/gdc-transfer' && request.method === 'POST') return handleGdcTransfer(request, env, corsHeaders, ctx);
     if (pathname === '/biz/gdc-deposit' && request.method === 'POST') return handleGdcDepositCreate(request, env, corsHeaders);
     if (pathname === '/biz/gdc-deposits' && request.method === 'GET') return handleGdcDepositList(request, env, corsHeaders);
+    if (pathname === '/biz/fee-rate' && request.method === 'GET') return handleFeeRate(request, env, corsHeaders);
     if (pathname === '/biz/gdc-deposit-close' && request.method === 'POST') return handleGdcDepositClose(request, env, corsHeaders);
     if (pathname === '/biz/gdc-dao/proposal'  && request.method === 'POST') return handleGdcDaoProposalCreate(request, env, corsHeaders);
     if (pathname === '/biz/gdc-dao/vote'      && request.method === 'POST') return handleGdcDaoVote(request, env, corsHeaders);
@@ -4689,7 +4690,20 @@ export default {
 // 클라이언트가 보낸 seller_net/fee 분할을 그대로 신뢰하고 있었다. 이제
 // 이 값이 유일한 정본이다 — profile.html의 _PLATFORM_FEE_RATE도 반드시
 // 이 값과 같아야 한다(다르면 매 결제가 PRICE_MISMATCH로 거부됨).
-const PLATFORM_FEE_RATE = 0.03; // 3%
+const PLATFORM_FEE_RATE = 0.03; // 3% — 변경 시 이 한 줄만 고치면 된다(아래 참고).
+
+// 2026-07-18 신설: profile.html의 _PLATFORM_FEE_RATE가 이 값의 "복사본"이라
+// 수동으로 값을 맞춰야 했고(다르면 결제가 전부 PRICE_MISMATCH로 거부),
+// market 쪽 판매자 화면엔 수수료율이 아예 노출되지 않았다. 이제 이
+// 엔드포인트가 유일한 조회 경로다 — PLATFORM_FEE_RATE를 바꾸면 재배포만
+// 하면 클라이언트 전부(profile.html 결제 화면, market 판매자 화면)가
+// 다음 로드 시 자동으로 새 값을 받는다. 클라이언트 쪽 하드코딩 상수는
+// 전부 이 엔드포인트를 부르는 방식으로 교체했다(fetch 실패 시에만
+// 안전한 기본값 0.03으로 폴백).
+async function handleFeeRate(request, env, corsHeaders) {
+  return new Response(JSON.stringify({ ok: true, rate: PLATFORM_FEE_RATE }),
+    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
 
 async function handleBizOrder(request, env, corsHeaders, ctx) {
   const body = await request.json().catch(() => null);
