@@ -4197,7 +4197,7 @@ async function _sweepBridgeOutbox(env) {
 
 // 2026-07-18 신설 — 테스트 목적 named export. 런타임 동작에는 영향 없음
 // (default export의 fetch 핸들러는 그대로 pathname 매칭으로 호출).
-export { handleGdcDepositClose, handleGdcDaoProposalCreate, handleGdcDaoVote, handleGdcDaoProposalsList, handleFeeRate, handleInsClaimCreate, handleInsClaimsList };
+export { handleGdcDepositClose, handleGdcDaoProposalCreate, handleGdcDaoVote, handleGdcDaoProposalsList, handleFeeRate, handleInsClaimCreate, handleInsClaimsList, handleVerifyAdmin };
 
 export default {
   // ── Cron 트리거 (10분마다 머클 앵커링 + 브릿지 아웃박스 스윕) ────────
@@ -4431,6 +4431,10 @@ export default {
     // 수동 상태 변경"만 구현한다.)
     if (pathname === '/biz/ins-claim'  && request.method === 'POST') return handleInsClaimCreate(request, env, corsHeaders);
     if (pathname === '/biz/ins-claims' && request.method === 'GET')  return handleInsClaimsList(request, env, corsHeaders);
+    // (2026-07-18 신설 — 플랫폼 공통 관리자 인증. HONDI_GAP_REMEDIATION_DIRECTIVE
+    // v1.0 §2.3 참고. tax 등 각 K-서비스 관리자 대시보드가 이 엔드포인트로
+    // "로그인은 했지만 실제 관리자인지"를 검증한다.)
+    if (pathname === '/biz/verify-admin' && request.method === 'GET') return handleVerifyAdmin(request, env, corsHeaders);
     if (pathname === '/biz/balance' && request.method === 'GET')  return handleBizBalance(request, env, corsHeaders);
     if (pathname === '/biz/supply'  && request.method === 'GET')  return handleBizSupply(request, env, corsHeaders);
     // (2026-07-14 신설: GDC 충전 파이프라인 — "고정계좌 + 입금자명 매칭")
@@ -5402,6 +5406,49 @@ async function handleInsClaimsList(request, env, corsHeaders) {
       created: r.created, updated: r.updated,
     }));
     return new Response(JSON.stringify({ ok: true, claims }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 조회 실패: ' + e.message, corsHeaders);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-18 신설 — 플랫폼 공통 관리자 인증 (GET /biz/verify-admin).
+// HONDI_GAP_REMEDIATION_DIRECTIVE v1.0 §2.3 참고. tax뿐 아니라 여러
+// K-서비스 관리자 대시보드가 "로그인=관리자"로 착각하기 쉬운 구조적
+// 공백을 공유하고 있어 gopang 레벨에서 한 번만 설계한다.
+//
+// admin_guids 컬렉션 자체가 민감정보(누가 관리자인지)이므로 목록을
+// 절대 반환하지 않고, "이 guid가 이 service의 admin인가?" 질의에
+// true/false만 응답한다. guid는 자기주장만으로는 신뢰할 수 없으므로
+// _verifyClaimsRequester로 서명 인증(TOFU pubkey 대조)까지 통과해야
+// 응답한다 — 그렇지 않으면 "내가 admin이 아닌 남의 guid로 조회해서
+// 그 사람이 admin인지 알아내는" 정보 유출이 가능해진다.
+async function handleVerifyAdmin(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid      = url.searchParams.get('guid');
+  const service   = url.searchParams.get('service') || '';
+  const pubkey    = url.searchParams.get('pubkey');
+  const signature = url.searchParams.get('signature');
+  const ts        = url.searchParams.get('ts') || '';
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const authOk = await _verifyClaimsRequester(env, {
+    guid, pubkey, signature, ts, sigMsg: `verify-admin:${guid}:${service}:${pubkey}:${ts}`,
+  });
+  if (!authOk) return _err(403, 'AUTH_REQUIRED', '본인 서명 인증이 필요합니다', corsHeaders);
+
+  const token = await _l1AdminToken(env);
+  const headers = { 'Authorization': `Bearer ${token}` };
+  const filter = encodeURIComponent(`guid='${String(guid).replace(/'/g,"\\'")}' && active=true`);
+  try {
+    const res = await fetch(`${L1_DEFAULT}/api/collections/admin_guids/records?filter=${filter}&perPage=1`, { headers });
+    if (!res.ok) return _err(502, 'L1_UNREACHABLE', '관리자 조회 실패', corsHeaders);
+    const data = await res.json().catch(() => ({ items: [] }));
+    const row = data.items?.[0];
+    let services = [];
+    try { services = Array.isArray(row?.services) ? row.services : JSON.parse(row?.services || '[]'); } catch { services = []; }
+    const isAdmin = !!row && (services.includes('*') || (service && services.includes(service)));
+    return new Response(JSON.stringify({ ok: true, is_admin: isAdmin }), { status: 200, headers: corsHeaders });
   } catch (e) {
     return _err(502, 'L1_UNREACHABLE', 'L1 조회 실패: ' + e.message, corsHeaders);
   }
