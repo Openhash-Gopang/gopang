@@ -20,7 +20,7 @@ migrate((db) => {
     "system": false,
     "schema": [
         { "system": false, "id": "8al8zy82aieq1cm", "name": "guid",     "type": "text", "required": true,  "presentable": true,  "unique": true,  "options": { "min": null, "max": null, "pattern": "" } },
-        { "system": false, "id": "qqjisay62j90erh", "name": "services", "type": "json", "required": true,  "presentable": true,  "unique": false, "options": {} },
+        { "system": false, "id": "qqjisay62j90erh", "name": "services", "type": "json", "required": true,  "presentable": true,  "unique": false, "options": { "maxSize": 2000000 } },
         { "system": false, "id": "vi23w897q5ovsft", "name": "note",     "type": "text", "required": false, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } },
         { "system": false, "id": "av1898krvciz9ik", "name": "active",   "type": "bool", "required": false, "presentable": true,  "unique": false, "options": {} }
     ],
