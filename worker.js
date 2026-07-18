@@ -18,6 +18,13 @@ import { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TA
 // 2026-07-14: 레거시 별칭 안전망 — HONDI_TIER_MODELS에 없는 model이
 // 클라이언트에서 그대로 들어와도(레거시 호출 등) 여기서 한 번 더 정규화한다.
 import { resolveDeepseekModel } from './src/gopang/core/deepseek-client.js';
+// 2026-07-18 신설 — GDC 상거래 완성 계획서 Phase 4. src/profile2.0/ledger.js(M10)
+// 는 이 저장소 어디서도 호출되지 않던 죽은 코드였다(2026-07-18 실사로 발견) —
+// 순수 계산 함수만 재사용한다(marketPurchaseRPC/Supabase 관련 함수는 legacy라
+// 가져오지 않는다. 정본은 이미 L1이므로 되살리지 않는다). 지금은
+// reconstructBalances만 실제로 쓰지만, verifyBIVM/detectBalanceAnomalies도
+// 향후 일괄 대사(batch reconciliation) 배치 작업에 바로 재사용 가능하다.
+import { reconstructBalances } from './src/profile2.0/ledger.js';
 
 const ALLOWED_ORIGINS = [
   'https://hondi.net',
@@ -4419,6 +4426,10 @@ export default {
     // 점수·재무제표 일치검증·PDV 기록·판매자(수신자) claim 적재까지
     // handleBizOrder의 검증된 로직을 그대로 물려받는다.
     if (pathname === '/wallet/gdc-transfer' && request.method === 'POST') return handleGdcTransfer(request, env, corsHeaders, ctx);
+    // 2026-07-18 신설 — 재무제표 대사. 설계문서 Phase 4.
+    if (pathname === '/ledger/reconcile' && request.method === 'GET') return handleLedgerReconcile(request, env, corsHeaders);
+    // 2026-07-18 신설 — 발행잔액 집계. 설계문서 Phase 5.
+    if (pathname === '/ledger/issuance-summary' && request.method === 'GET') return handleLedgerIssuanceSummary(request, env, corsHeaders);
     // 2026-07-18 신설 — 판매자 자격 확인(사업자등록증 첨부, 정부24 발급).
     // 설계문서: docs/gdc_commerce_completion_plan_v0_1.md Phase 2.
     if (pathname === '/seller/verify-submit' && request.method === 'POST') return handleSellerVerifySubmit(request, env, corsHeaders);
@@ -4729,6 +4740,10 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
     session_id, reporter_svc,
     item_name, item_id, quantity,
     seller_net, fee,
+    purpose, // 2026-07-18 신설 — GDC 상거래 완성 계획서 Phase 4(재무제표
+             // 원장 source 분류용). handleGdcTransfer가 'transfer'|'purchase'로
+             // 채워 보낸다 — 직접 /biz/order를 호출하는 K-Market 구매는
+             // undefined(→ L1에서 source='market'으로 분류됨).
     // Phase 3/4 추가: 중요도 점수 + LCAT 입력
     asset_type    = 'stable',  // 'stable'|'physical'|'point'
     contract_type = 'instant', // 'instant'|'conditional'|'escrow'
@@ -4867,7 +4882,7 @@ async function handleBizOrder(request, env, corsHeaders, ctx) {
     const l1Res = await fetch(l1Url, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: (() => { const p = { tx: txPayload, tx_hash, buyer_sig, buyer_public_key, ...bridgeBody }; console.log('[L1] tx:', JSON.stringify(p.tx)); return JSON.stringify(p); })(),
+      body: (() => { const p = { tx: txPayload, tx_hash, buyer_sig, buyer_public_key, purpose, ...bridgeBody }; console.log('[L1] tx:', JSON.stringify(p.tx)); return JSON.stringify(p); })(),
     });
     l1Result = await l1Res.json().catch(() => ({ ok: false, error: 'L1_PARSE_FAILED' }));
   } catch (e) {
@@ -5107,6 +5122,106 @@ async function _lookupSellerVerification(env, guid) {
   } catch (e) {
     console.warn('[SellerVerify] 조회 실패(미검증으로 폴백):', e.message);
     return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-18 신설 — 발행잔액 집계(/ledger/issuance-summary)
+// GDC 상거래 완성 계획서 Phase 5. 지난 턴 법적 검토에서 확인한 전자금융
+// 거래법 선불업 등록 면제 기준(발행잔액 30억원 미만 & 연간 총발행액
+// 500억원 미만)에 얼마나 가까운지 상시 확인할 수 있어야 하는데, 지금까지
+// 이걸 추적하는 코드가 전혀 없었다(2026-07-18 실사 발견).
+//
+// ⚠️ "발행잔액"의 정확한 정의: 지금 코드베이스에는 GDC를 소각/환급하는
+// 경로가 안 보인다(AI-CHARGE도 GDC를 gopang-platform 계정으로 옮길 뿐
+// 파괴하지 않는다) — 즉 지금은 "총발행액 = 발행잔액"이다. 나중에 환급
+// (KRW 재전환) 기능이 생기면 그 소각분을 여기서 반드시 차감해야 한다 —
+// 지금 이 함수는 그 경우를 대비한 자리만 남겨둔다(REDEEMED_TOTAL=0 고정).
+async function handleLedgerIssuanceSummary(request, env, corsHeaders) {
+  const EXCHANGE_RATE_KRW_PER_GDC = 1000; // pb_hooks와 동일 환율(정본은 그쪽)
+  const EXEMPTION_THRESHOLD_BALANCE_GDC = 3_000_000;   // 30억원 / 1,000원
+  const EXEMPTION_THRESHOLD_ANNUAL_GDC  = 50_000_000;  // 500억원 / 1,000원
+
+  try {
+    const token = await _l1AdminTokenFor(env, L1_DEFAULT);
+    const filter = encodeURIComponent(`source='mint'`);
+    let totalIssuedGdc = 0;
+    let page = 1;
+    // 500건씩 페이지네이션 — 규모가 커지면 이 방식은 느려진다(다음 배치
+    // 과제: 발행 총액을 별도 카운터 레코드로 캐싱). 지금은 정확성 우선.
+    while (true) {
+      const res = await fetch(
+        `${L1_DEFAULT}/api/collections/ledger_entries/records?filter=${filter}&page=${page}&perPage=500`,
+        { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json().catch(() => ({ items: [], totalPages: 0 }));
+      for (const item of (data.items || [])) totalIssuedGdc += (item.amount || 0);
+      if (page >= (data.totalPages || 1)) break;
+      page++;
+      if (page > 50) break; // 안전장치 — 25000건 초과 시 중단(다음 배치에서 캐싱으로 대체)
+    }
+
+    const REDEEMED_TOTAL_GDC = 0; // 위 주석 참고 — 환급 기능 생기면 여기서 차감
+    const outstandingBalanceGdc = totalIssuedGdc - REDEEMED_TOTAL_GDC;
+
+    return new Response(JSON.stringify({
+      ok: true,
+      total_issued_gdc: totalIssuedGdc,
+      total_issued_krw: totalIssuedGdc * EXCHANGE_RATE_KRW_PER_GDC,
+      outstanding_balance_gdc: outstandingBalanceGdc,
+      outstanding_balance_krw: outstandingBalanceGdc * EXCHANGE_RATE_KRW_PER_GDC,
+      exemption_threshold_balance_krw: EXEMPTION_THRESHOLD_BALANCE_GDC * EXCHANGE_RATE_KRW_PER_GDC,
+      exemption_threshold_balance_ratio: outstandingBalanceGdc / EXEMPTION_THRESHOLD_BALANCE_GDC,
+      note: '연간 총발행액(500억원) 기준은 이번 배치에 미구현 — mint 기록에 연도별 집계가 ' +
+            '필요하다(다음 과제). 발행잔액 기준(30억원)만 여기서 확인 가능.',
+    }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(500, 'ISSUANCE_SUMMARY_FAILED', e.message, corsHeaders);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-18 신설 — 재무제표 대사(/ledger/reconcile)
+// GDC 상거래 완성 계획서 Phase 4. ledger_entries(회계 부기, 이번에 신설)
+// 로부터 역산한 bs-cash와 L1 blocks 원장(정산의 정본)에서 재생한 실제
+// 잔액이 항상 같아야 한다는 원칙("GDC=현금계정")을 실제로 검증한다 —
+// 지금까지는 이 원칙이 코드로 검증된 적이 없었다(2026-07-18 실사 발견).
+async function handleLedgerReconcile(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 쿼리 파라미터 필수', corsHeaders);
+
+  try {
+    const token = await _l1AdminTokenFor(env, L1_DEFAULT);
+    const filter = encodeURIComponent(`guid='${guid}'`);
+    const entriesRes = await fetch(
+      `${L1_DEFAULT}/api/collections/ledger_entries/records?filter=${filter}&perPage=500`,
+      { headers: { 'Authorization': `Bearer ${token}` } });
+    const entriesData = await entriesRes.json().catch(() => ({ items: [] }));
+    const rows = (entriesData.items || []).map(r => ({
+      guid: r.guid, direction: r.direction, amount: r.amount,
+    }));
+
+    const expected = reconstructBalances(rows, guid);
+
+    const balRes = await fetch(`${L1_DEFAULT}/api/balance?guid=${encodeURIComponent(guid)}`);
+    const balData = await balRes.json().catch(() => ({ balance: null }));
+    const actualBalance = balData.balance;
+
+    const anomaly = actualBalance !== null && actualBalance !== expected.bsCash;
+
+    return new Response(JSON.stringify({
+      ok: true, guid,
+      ledger_entries_count: rows.length,
+      expected_bs_cash: expected.bsCash,
+      expected_pl_purchase: expected.plPurchase,
+      actual_balance_l1: actualBalance,
+      anomaly,
+      note: anomaly
+        ? '불일치 발견 — ledger_entries 기록 누락(예: 서비스 배포 이전 거래) 또는 실제 이상 가능성. block_hash/tx_id로 개별 대조 필요.'
+        : '일치 확인됨.',
+    }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(500, 'RECONCILE_FAILED', e.message, corsHeaders);
   }
 }
 

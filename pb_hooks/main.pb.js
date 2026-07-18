@@ -4,7 +4,7 @@ const NODE_ID = "KR-JEJU-JEJU-HANLIM";
 
 routerAdd("POST", "/api/tx", (c) => {
   const body = $apis.requestInfo(c).data;
-  const { tx, tx_hash, buyer_sig, buyer_public_key } = body;
+  const { tx, tx_hash, buyer_sig, buyer_public_key, purpose } = body;
 
   if (!tx || !tx_hash || !buyer_sig || !buyer_public_key) {
     return c.json(400, { ok: false, error: "MISSING_FIELD" });
@@ -1581,6 +1581,43 @@ const NODE_CONFIG = {
   } : null;
   console.log("[TX] 청구권 생성 완료");
 
+  // ── 2026-07-18 신설 — 재무제표 원장(ledger_entries) 기록 ────────────
+  // buyerClaim/sellerClaim은 이미 회계 관점(차변/대변, 계정과목)으로
+  // 계산돼 있다 — 이걸 그대로 영구 기록으로 남긴다(claim은 72시간 후
+  // 만료되는 임시 청구권이라 재무제표 대사에는 못 쓴다). 이 기록이
+  // 실패해도 이미 완료된 정산(blocks 저장) 자체는 되돌리지 않는다 —
+  // 회계 부기는 보조 장부이지, 정산의 전제조건이 아니다.
+  try {
+    const legCol = $app.dao().findCollectionByNameOrId("ledger_entries");
+    const source = purpose ? "gdc_transfer" : "market"; // handleGdcTransfer가 purpose를 실어 보낸다
+
+    const buyerEntry = new Record(legCol);
+    buyerEntry.set("guid", buyerClaim.claimant);
+    buyerEntry.set("direction", buyerClaim.direction);
+    buyerEntry.set("amount", buyerClaim.amount);
+    buyerEntry.set("fs_account", buyerClaim.fs_account);
+    buyerEntry.set("source", source);
+    buyerEntry.set("block_hash", blockHash);
+    buyerEntry.set("tx_id", tx_hash);
+    $app.dao().saveRecord(buyerEntry);
+
+    if (sellerClaim) {
+      const sellerEntry = new Record(legCol);
+      sellerEntry.set("guid", sellerClaim.claimant);
+      sellerEntry.set("direction", sellerClaim.direction);
+      sellerEntry.set("amount", sellerClaim.amount);
+      sellerEntry.set("fs_account", sellerClaim.fs_account);
+      sellerEntry.set("source", source);
+      sellerEntry.set("block_hash", blockHash);
+      sellerEntry.set("tx_id", tx_hash);
+      $app.dao().saveRecord(sellerEntry);
+    }
+    console.log("[TX] ledger_entries 기록 완료");
+  } catch (e) {
+    // 의도적으로 응답 실패로 이어지지 않게 한다 — 위 주석 참고.
+    console.log("[TX] ledger_entries 기록 실패(감사 필요, 정산 자체는 정상):", e.message);
+  }
+
   // l1_ledger 앵커링
   try {
     const ledgerCol = $app.dao().findCollectionByNameOrId("l1_ledger");
@@ -1831,6 +1868,27 @@ routerAdd("POST", "/api/mint", (c) => {
     $app.dao().saveRecord(blockRecord);
     console.log("[MINT] 저장 완료, id:", blockRecord.getId());
 
+    // ── 2026-07-18 신설 — 재무제표 원장(ledger_entries) 기록 (Phase 5
+    // 발행잔액 추적의 전제). 발행(mint)은 수취인 입장에서 credit(bs-cash
+    // 증가) — 대변 상대방이 "혼디(발행자)"라 복식부기 상대 계정은 만들지
+    // 않는다(발행자 자신의 부채 계정을 추적하는 건 이번 범위 밖). 실패해도
+    // 이미 완료된 발행(blockRecord 저장)은 되돌리지 않는다.
+    try {
+      const legCol = $app.dao().findCollectionByNameOrId("ledger_entries");
+      const entry = new Record(legCol);
+      entry.set("guid", guid);
+      entry.set("direction", "credit");
+      entry.set("amount", gdcAmount);
+      entry.set("fs_account", "bs-cash");
+      entry.set("source", "mint");
+      entry.set("block_hash", contentHash);
+      entry.set("tx_id", contentHash);
+      $app.dao().saveRecord(entry);
+      console.log("[MINT] ledger_entries 기록 완료");
+    } catch (e) {
+      console.log("[MINT] ledger_entries 기록 실패(감사 필요, 발행 자체는 정상):", e.message);
+    }
+
     console.log("[MINT]", guid, "+" + gdcAmount + "T", "(krw:" + krwAmount + ")", memo ? "(" + memo + ")" : "");
     return c.json(200, {
       ok: true,
@@ -2078,6 +2136,26 @@ routerAdd("POST", "/api/ai-charge", (c) => {
     } catch (e) {
       console.log("[AI-CHARGE] BLOCK_SAVE_FAILED:", e.message);
       return c.json(500, { ok: false, error: "BLOCK_SAVE_FAILED", detail: e.message });
+    }
+
+    // ── 2026-07-18 신설 — 재무제표 원장(ledger_entries) 기록 ──────────
+    // AI 이용료도 "거래"다 — GDC 상거래 완성 계획서 Phase 4가 P2P/마켓
+    // 뿐 아니라 이것도 포함해야 한다고 명시함. 실패해도 이미 완료된
+    // 차감(blockRecord 저장)은 되돌리지 않는다 — /api/tx와 동일 원칙.
+    try {
+      const legCol = $app.dao().findCollectionByNameOrId("ledger_entries");
+      const entry = new Record(legCol);
+      entry.set("guid", guid);
+      entry.set("direction", "debit");
+      entry.set("amount", gdcAmount);
+      entry.set("fs_account", "pl-purchase");
+      entry.set("source", "ai_usage");
+      entry.set("block_hash", contentHash);
+      entry.set("tx_id", tx_hash);
+      $app.dao().saveRecord(entry);
+      console.log("[AI-CHARGE] ledger_entries 기록 완료");
+    } catch (e) {
+      console.log("[AI-CHARGE] ledger_entries 기록 실패(감사 필요, 차감 자체는 정상):", e.message);
     }
 
     const balanceAfter = actualBalance - gdcAmount;
