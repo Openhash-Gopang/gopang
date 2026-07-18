@@ -74,6 +74,11 @@ export const CFG = {
   system: '',
   system_base: null,
   locationStr: '',
+  // ── Phase 7(AI 종합 위법 가능성 판단) — 2026-07-18 신설 ────────
+  // opt-in, 기본 꺼짐. 켜면 본인 무료 한도/GDC 잔액에서 비용 차감
+  // (수익자 부담). 절대 자동 신고 없음 — send-message.js가 감지 시
+  // 신고 초안만 만들어 보여주고, 실제 신고는 사용자가 직접 확인 후 진행.
+  phase7: { enabled: false, tier: 'flash' },
 };
 
 // ── 모델명 교정 매핑 ──────────────────────────────────────
@@ -94,6 +99,8 @@ export function saveSettings() {
   const gKeyInput= document.getElementById('setting-gemini-key');
   const sysInput = document.getElementById('setting-system');
   const custUrl  = document.getElementById('custom-endpoint-url');
+  const p7Toggle = document.getElementById('setting-phase7-enabled');
+  const p7Tier   = document.getElementById('setting-phase7-tier');
 
   if (modelSel)  CFG.model = modelSel.value;
   if (epSel) {
@@ -106,12 +113,18 @@ export function saveSettings() {
   const gVal = gKeyInput?.value?.trim();
   if (gVal && !gVal.startsWith('•'))   CFG.geminiKey = gVal;
   if (sysInput?.value?.trim())         CFG.system    = sysInput.value.trim();
+  if (p7Toggle) {
+    CFG.phase7 = {
+      enabled: !!p7Toggle.checked,
+      tier: (p7Tier?.value === 'pro') ? 'pro' : 'flash',
+    };
+  }
 
   try {
     localStorage.setItem('gopang_cfg', JSON.stringify({
       model: CFG.model, endpoint: CFG.endpoint,
       apiKey: CFG.apiKey, geminiKey: CFG.geminiKey,
-      providers: CFG.providers,
+      providers: CFG.providers, phase7: CFG.phase7,
     }));
   } catch {}
 
@@ -129,6 +142,12 @@ export function loadSettings() {
     if (saved.geminiKey)CFG.geminiKey= saved.geminiKey;
     if (Array.isArray(saved.providers) && saved.providers.length) {
       CFG.providers = saved.providers;
+    }
+    if (saved.phase7 && typeof saved.phase7 === 'object') {
+      CFG.phase7 = {
+        enabled: !!saved.phase7.enabled,
+        tier: saved.phase7.tier === 'pro' ? 'pro' : 'flash',
+      };
     }
     if (saved.apiKey || saved.geminiKey || CFG.providers.length) setAiActive(true);
   } catch {}

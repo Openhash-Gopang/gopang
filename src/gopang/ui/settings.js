@@ -139,6 +139,16 @@ export function openAISettings() {
   if (sysEl) sysEl.value = CFG.system;
   document.getElementById('ai-settings-overlay')?.classList.add('open');
 
+  // Phase 7(AI 종합 위법 가능성 판단) 저장된 상태 반영
+  const p7Toggle  = document.getElementById('setting-phase7-enabled');
+  const p7Tier    = document.getElementById('setting-phase7-tier');
+  const p7TierRow = document.getElementById('setting-phase7-tier-row');
+  if (p7Toggle) {
+    p7Toggle.checked = !!CFG.phase7?.enabled;
+    if (p7Tier)    p7Tier.value = CFG.phase7?.tier === 'pro' ? 'pro' : 'flash';
+    if (p7TierRow) p7TierRow.style.display = p7Toggle.checked ? 'flex' : 'none';
+  }
+
   // ── X25519 자동 부트스트랩 (공장초기화 후 첫 진입 시 자동 개시) ──
   // PC(ai-setup.html)가 이 공개키로 API 설정을 암호화해 보낼 수 있도록
   // 설정 창을 열 때마다 보장 — 이미 있으면 아무 일도 하지 않음

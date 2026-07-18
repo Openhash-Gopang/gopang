@@ -1,13 +1,15 @@
 ﻿/**
  * ui/send-message.js — 메시지 전송 라우팅
  */
-import { aiActive, _peer, attachFile, setAttachFile, _locationReady, _locationPending } from '../core/state.js';
+import { aiActive, _peer, attachFile, setAttachFile, _locationReady, _locationPending, _USER, USER_GUID } from '../core/state.js';
 import { _isRegistered } from '../core/auth.js';
 import { appendBubble } from './bubble.js';
 import { activateAI } from '../ai/toggle.js';
 import { _sendP2P } from '../p2p/webrtc.js';
 import { callAI } from '../ai/call-ai.js';
 import { _showRegisterFlow } from './register-flow.js';
+import { CFG } from '../core/config.js';
+import { _gwpLaunch } from '../gwp/engine.js';
 
 export function autoResize(el) {
   el.style.height = 'auto';
@@ -76,6 +78,14 @@ export async function sendMessage() {
 
   // ── 대화 상대 분기 ─────────────────────────────────────
   if (text) {
+    // 2026-07-18 버그 수정: _runPipelineBackground()는 정의만 돼 있고
+    // 어디서도 호출되지 않고 있었다(export도 안 됨, 이 파일 내 호출도
+    // 없음 — src/app.js의 낡은 주석에 "index.html이 담당"이라고만 남아
+    // 있었는데 실제로 그 연결이 새 아키텍처로 넘어오며 빠짐). 위험 탐지·
+    // PDV 기록·OpenHash 앵커링·Phase 7이 전부 여기 걸려 있으므로,
+    // 실제 전송을 막지 않도록 완전히 비동기(fire-and-forget)로 호출한다.
+    _runPipelineBackground(text);
+
     if (_peer) {
       // 사람과 대화 → WebRTC P2P 전송 (등록/비등록 모두 가능)
       await _sendP2P(text);
@@ -107,12 +117,50 @@ export async function sendMessage() {
 // 대화 중 결과를 표시하지 않음 — 사용자 요청 시 showRiskAnalysis() 호출
 let _lastPipelineResult = null;
 
+// ── Phase 7(AI 종합 위법 가능성 판단) LLM 호출자 — 2026-07-18 신설 ──
+// CFG.phase7.enabled가 꺼져 있으면 null을 반환하고, runPipeline은 그
+// 경우 Phase 7을 항상 skip한다(비용 0). 켜져 있으면 worker.js의
+// /deepseek(사용자 본인 guid로 호출 — 본인 무료 한도/GDC 잔액에서
+// 차감, 수익자 부담 원칙)를 통해 실제 LLM을 호출한다.
+function _buildPhase7LlmCaller() {
+  if (!CFG.phase7?.enabled) return null;
+  const tier = CFG.phase7.tier === 'pro' ? 'hondi-pro' : 'hondi-flash';
+  return async ({ systemPrompt, userMessage }) => {
+    const guid = _USER?.ipv6 || USER_GUID || null;
+    const res = await fetch(`${CFG.endpoint.replace(/\/+$/, '')}/deepseek`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: tier,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userMessage },
+        ],
+        max_tokens: 300,
+        temperature: 0.2,
+        guid,
+      }),
+    });
+    if (!res.ok) throw new Error(`phase7 llm http ${res.status}`);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content ?? '';
+  };
+}
+
 async function _runPipelineBackground(text) {
   try {
-    const { runPipeline } = await import('./src/ai-secretary/pipeline.js');
+    // 2026-07-18 버그 수정: 예전엔 './src/ai-secretary/pipeline.js'였는데,
+    // 이 파일(src/gopang/ui/send-message.js) 기준 상대경로는
+    // 'src/gopang/ui/src/ai-secretary/pipeline.js'로 잘못 해석됨(존재하지
+    // 않는 경로). ES 동적 import는 참조 모듈 기준 상대경로라 이 값은 항상
+    // 404로 실패했고, catch가 콘솔 경고만 남기고 조용히 삼켜서 지금까지
+    // 발견되지 않았다 — 즉 Phase 0~6(위험 탐지·PDV 기록·OpenHash 앵커링)
+    // 전체가 실제로는 한 번도 실행되지 못했던 것으로 보인다.
+    const { runPipeline } = await import('../../ai-secretary/pipeline.js');
+    const llmCaller = _buildPhase7LlmCaller();
     const result = await runPipeline(
       { content: text, senderId: 'user', attachment: attachFile ?? null },
-      {}
+      {}, null, llmCaller
     );
     _lastPipelineResult = result;
 
@@ -123,16 +171,98 @@ async function _runPipelineBackground(text) {
     }
 
     // S3 감지 시 즉시 경고 (위험 등급 S3만 예외적으로 즉시 표시)
-    if (result?.riskResult?.level === 'S3') {
+    const isS3 = result?.riskResult?.level === 'S3';
+    // Phase 7(LLM, opt-in)이 위법 가능성을 종합 판단해 recommend_review를
+    // 켠 경우 — 규칙기반만으론 안 잡히던 완곡어법·암시적 위협 케이스.
+    const flaggedByPhase7 = !!result?.overallAssessment?.recommendReview;
+
+    if (isS3) {
       const chip = riskChip('S3', result.riskResult.legalFlags ?? []);
       appendBubble('ai',
         `🛑 위험 감지 — 즉시 확인이 필요합니다. ${chip}`, true);
+      _injectReportSuggestion(text, result, 'S3');
+    } else if (flaggedByPhase7) {
+      const reasoning = result.overallAssessment.reasoning
+        ? ` — ${result.overallAssessment.reasoning}` : '';
+      appendBubble('ai',
+        `⚠️ AI 종합 판단: 위법 가능성이 있어 보입니다${reasoning}. 신고 여부는 아래에서 직접 결정해 주세요.`, true);
+      _injectReportSuggestion(text, result, 'PHASE7');
     }
   } catch (e) {
     // 파이프라인 오류는 콘솔에만 기록, 사용자에게 표시하지 않음
     console.warn('[Pipeline]', e.message);
   }
 }
+
+// ── 신고 제안 UI — 2026-07-18 신설 ──────────────────────────────
+// 절대 자동으로 신고하지 않는다. 신고 초안만 만들어 두고, 사용자가
+// "K-Police에 신고" 버튼을 직접 눌러야만 K-Police 웹앱으로 핸드오프된다
+// (_gwpLaunch — 새 탭, 실제 제출은 그 탭에서 사용자가 직접 진행).
+function _injectReportSuggestion(text, result, source) {
+  const list = document.getElementById('message-list');
+  if (!list) return;
+  document.getElementById('_police-report-row')?.remove();
+
+  window._pendingPoliceReportDraft = _buildPoliceReportDraft(text, result, source);
+
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.id = '_police-report-row';
+  row.innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0;">
+      <button onclick="window._launchPoliceReport()"
+        style="background:#dc2626;color:#fff;border:none;border-radius:8px;
+               padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;">
+        🚨 K-Police에 신고
+      </button>
+      <button onclick="window._dismissReportSuggestion()"
+        style="background:var(--bg-subtle);color:var(--label-2);border:1px solid var(--sep);
+               border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;">닫기</button>
+    </div>`;
+  list.appendChild(row);
+  list.scrollTop = list.scrollHeight;
+}
+
+function _buildPoliceReportDraft(text, result, source) {
+  const ts       = new Date().toISOString();
+  const level    = result?.riskResult?.level ?? 'S1';
+  const flags    = (result?.riskResult?.legalFlags ?? []).join(', ');
+  const reasoning  = result?.overallAssessment?.reasoning ?? '';
+  const anchorHash = result?.anchorHash ?? '';
+  return [
+    '[혼디 신고 초안 — 사용자 확인 후 제출, 자동 전송 아님]',
+    `시각: ${ts}`,
+    `분류: ${level}${source === 'PHASE7' ? ' (AI 종합판단·recommend_review)' : ' (규칙기반 즉시감지)'}`,
+    flags     ? `관련 카테고리: ${flags}` : null,
+    reasoning ? `AI 판단 근거: ${reasoning}` : null,
+    anchorHash? `증거 해시(OpenHash 앵커): ${anchorHash}` : null,
+    '---',
+    `해당 메시지 내용: ${text}`,
+  ].filter(Boolean).join('\n');
+}
+
+window._launchPoliceReport = function() {
+  document.getElementById('_police-report-row')?.remove();
+  const draft = window._pendingPoliceReportDraft;
+  window._pendingPoliceReportDraft = null;
+  if (!draft) return;
+
+  // getService()는 gwp-registry.js(전역 스크립트)가 제공 — call-ai.js의
+  // [GWP:] 태그 처리와 동일한 조회·status 가드 패턴을 그대로 따른다.
+  const svcDef = (typeof getService === 'function') ? getService('kpolice') : null;
+  if (!svcDef || svcDef.status !== 'active') {
+    appendBubble('ai',
+      '⚠️ K-Police 연동 서비스가 아직 준비 중입니다. 긴급 상황이면 112(범죄)·119(구조)로 직접 연락해 주세요.', true);
+    return;
+  }
+  appendBubble('user', '[신고 요청] K-Police로 신고 초안을 전달합니다 — 실제 제출은 새 탭에서 직접 진행해 주세요.', false);
+  _gwpLaunch(svcDef, draft);
+};
+
+window._dismissReportSuggestion = function() {
+  document.getElementById('_police-report-row')?.remove();
+  window._pendingPoliceReportDraft = null;
+};
 
 // 사용자 요청 시 분석 결과 표시 (예: "분석 결과 보여줘")
 function showRiskAnalysis() {
