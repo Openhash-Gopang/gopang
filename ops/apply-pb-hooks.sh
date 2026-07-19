@@ -3,16 +3,23 @@
 # 로 전달되는 인자는 무시 — pb_hooks/main.pb.js 파일은 항상 통째로 하나뿐이라
 # pb_migrations처럼 "바뀐 파일명 목록"을 받을 필요가 없다).
 #
-# 2026-07-18 실전 배포 경험으로 v2 수정:
-#   - 백업을 pb_hooks/ 밖(pb_hooks_backups/)에 만든다. --hooksWatch=true
-#     (PocketBase 기본값)가 pb_hooks/ 디렉터리 전체를 감시하기 때문에,
-#     백업 파일을 그 안에 만들면 그 생성 자체가 재시작을 또 유발해서
-#     부팅 도중에 재시작이 겹치는 사고가 실제로 났었다(50분 장애).
-#   - 명시적 systemctl restart를 안 쓴다. hooksWatch가 파일 변경을 감지해
-#     자동으로 재시작하므로, cp 이후 systemctl restart를 추가로 부르면
-#     오히려 재시작이 중복 트리거될 수 있다(의심되나 완전히 확증은 못함
-#     — docs/pb_hooks_deployment_plan_v0_1.md §6 참고). 파일 교체 후에는
-#     헬스체크로 자연스러운 기동만 기다린다.
+# 2026-07-19 v3 수정 — 실전 배포에서 hooksWatch 자동재시작 가정이 틀린
+# 것으로 확인됐다: 이 서버(v0.22.14, --hooksWatch 플래그 미지정)에서는
+# 파일 교체 후 재시작이 전혀 일어나지 않았다(git 배포 파이프라인 최초
+# 성공 실행에서 실측 — 헬스체크는 통과했지만 systemctl 프로세스 시작
+# 시각이 그대로였음, 신구 파일 내용을 grep으로 대조해 확인). v2의
+# "hooksWatch가 자동으로 재시작한다"는 가정은 폐기하고, 이제 파일 교체
+# 직후 명시적으로 systemctl restart를 호출한다. ubuntu 계정에
+# `sudo -n systemctl restart gopang-pb-hanlim`이 암호 없이 되도록
+# sudoers가 이미 설정돼 있어야 한다(2026-07-19 확인 완료).
+#
+# 2026-07-18 실전 배포 경험으로 v2 수정(현재는 위 v3로 대체된 가정 포함):
+#   - 백업을 pb_hooks/ 밖(pb_hooks_backups/)에 만든다. 파일 생성이
+#     불필요한 트리거로 이어지는 걸 막기 위한 조치였는데, v3에서 재시작을
+#     명시적으로 제어하게 되면서 이 걱정 자체는 의미가 옅어졌지만, 백업을
+#     pb_hooks/ 밖에 두는 관례는 여전히 안전하므로 유지한다.
+#   - (v3에서 폐기) 명시적 systemctl restart를 안 쓴다는 가정 — 실측
+#     결과 hooksWatch가 동작하지 않아 폐기.
 #   - 헬스체크 대기를 2초→최대 120초로 늘렸다. 이 서버는 메모리 956MB에
 #     PocketBase 49개가 떠 있어(도입 초기 스펙, 출시 시 업그레이드 예정)
 #     정상 배포도 60~90초씩 걸릴 수 있다.
@@ -26,9 +33,9 @@
 #   1) 현재 pb_hooks/main.pb.js를 pb_hooks_backups/ 에 백업(감시 밖)
 #   2) GitHub main의 최신 pb_hooks/main.pb.js 다운로드(/tmp, 감시 밖)
 #   3) 최소 검증(필수 라우트/함수 존재 확인)
-#   4) 교체(단 1회 cp) — 이후 hooksWatch가 자동 재시작
+#   4) 교체(단 1회 cp) + 명시적 systemctl restart (v3)
 #   5) 최대 120초 헬스체크 대기
-#   6) 실패 시 백업으로 즉시 롤백(교체만, 재시작은 자동 감지에 맡김)
+#   6) 실패 시 백업으로 즉시 롤백 + 재시작
 
 set -euo pipefail
 
@@ -65,12 +72,14 @@ if ! grep -q 'routerAdd("POST", "/api/tx"' "$TMPFILE"; then
   echo "[FAIL] /api/tx 라우트가 없음 — 중단(잘못된 파일 가능성)"; rm -f "$TMPFILE"; exit 1
 fi
 
-echo "[4/6] 교체 (단 1회 cp — 이후 아무것도 이 디렉터리를 건드리지 않음."
-echo "      hooksWatch가 자동으로 재시작을 트리거한다)..."
+echo "[4/6] 교체 (단 1회 cp)..."
 cp "$TMPFILE" pb_hooks/main.pb.js
 rm -f "$TMPFILE"
 
-echo "[5/6] 자동 재시작 대기 (최대 120초)..."
+echo "[4.5/6] 명시적 재시작 (hooksWatch 미동작 확인됨 — 2026-07-19)..."
+sudo -n systemctl restart "$SERVICE"
+
+echo "[5/6] 재시작 후 헬스체크 대기 (최대 120초)..."
 OK=0
 for i in $(seq 1 120); do
   sleep 1
@@ -91,7 +100,8 @@ if [ "$OK" = "1" ]; then
 else
   echo "[FAIL] 120초 내 헬스체크 실패 — 롤백"
   cp "$BACKUP" pb_hooks/main.pb.js
-  echo "     롤백 파일 교체 완료 — 자동 재시작 대기(최대 60초)..."
+  echo "     롤백 파일 교체 완료 — 재시작 후 헬스체크 대기(최대 60초)..."
+  sudo -n systemctl restart "$SERVICE"
   for i in $(seq 1 60); do
     sleep 1
     if curl -sf http://127.0.0.1:8091/api/health >/dev/null 2>&1; then
