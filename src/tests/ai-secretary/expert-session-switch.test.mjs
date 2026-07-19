@@ -49,11 +49,18 @@ let recordedPdv = null;
 mock.module(new URL('../../gopang/pdv/record.js', import.meta.url), {
   namedExports: { _recordPDV: async (record) => { recordedPdv = record; return { ok: true }; } },
 });
+// 테스트별로 반환값을 바꿔 끼울 수 있도록 가변 변수를 mock 함수가 읽게 한다.
+let handoffSummaryResult = null; // null이면 "요약 없음"(폴백) 시나리오
 mock.module(new URL('../../gopang/ai/report-utils.js', import.meta.url), {
-  namedExports: { summarizeTranscript6W: async () => ({ who: 'u', when: 't', where: 'w', what: '요약됨', how: 'h', why: 'y' }) },
+  namedExports: {
+    summarizeTranscript6W: async () => ({ who: 'u', when: 't', where: 'w', what: '요약됨', how: 'h', why: 'y' }),
+    // 2026-07-19 신설(핸드오프 맥락 요약)
+    summarizeHandoffContext6W: async () => handoffSummaryResult,
+  },
 });
+let lastGwpLaunchArgs = null;
 mock.module(new URL('../../gopang/gwp/engine.js', import.meta.url), {
-  namedExports: { _gwpLaunch: () => {} },
+  namedExports: { _gwpLaunch: (...args) => { lastGwpLaunchArgs = args; } },
 });
 
 const { CFG } = await import(new URL('../../gopang/core/config.js', import.meta.url));
@@ -61,6 +68,7 @@ const { history } = await import(new URL('../../gopang/core/state.js', import.me
 const {
   startExpertSession, endExpertSession, maybeHandleExpertTurn,
   isExpertActive, currentExpertLabel, applyExpertSystemIfActive,
+  handleExpertTag,
 } = await import(new URL('../../gopang/ai/expert-session.js', import.meta.url));
 const { getExpertGwpDef, resolveExpertId } = await import(new URL('../../gopang/ai/expert-registry.js', import.meta.url));
 const { _loadSpByKey } = await import(new URL('../../gopang/ai/manifest-loader.js', import.meta.url));
@@ -153,5 +161,61 @@ describe('B3-2 — 전문가 세션 same-thread SP 전환', () => {
     assert.ok(CFG.system.includes('변호사 페르소나 SP 원문'), '캐시에서 재적용 안 됨');
 
     await endExpertSession('test_cleanup');
+  });
+});
+
+describe('2026-07-19 신설 — handleExpertTag 핸드오프 맥락 전달', () => {
+  test('AC와의 이전 대화가 없으면 이번 발화 원문만 그대로 전달됨(하위호환)', async () => {
+    history.length = 0;
+    history.push({ role: 'system', content: '[그림자 AI(AGENT-COMMON) 프롬프트]' });
+    lastGwpLaunchArgs = null;
+    handoffSummaryResult = { party: '무시됨', situation: '무시됨', already_done: '', goal: '' };
+
+    const handled = await handleExpertTag('[EXPERT: lawyer]', '소장 좀 써주세요', null);
+
+    assert.equal(handled, true);
+    assert.ok(lastGwpLaunchArgs, '_gwpLaunch가 호출되지 않음');
+    assert.equal(lastGwpLaunchArgs[1], '소장 좀 써주세요',
+      '이전 대화가 없을 땐 이번 발화 원문 그대로여야 함(요약 블록이 섞이면 안 됨)');
+  });
+
+  test('AC와의 이전 대화가 있으면 요약 블록 + 이번 발화 원문 순으로 합쳐짐', async () => {
+    history.length = 0;
+    history.push({ role: 'system', content: '[그림자 AI(AGENT-COMMON) 프롬프트]' });
+    history.push({ role: 'user', content: '임차인이 보증금을 안 돌려줘요' });
+    history.push({ role: 'assistant', content: '언제 계약이 만료됐나요?' });
+    history.push({ role: 'user', content: '두 달 전에 만료됐고 내용증명도 보냈어요' });
+    lastGwpLaunchArgs = null;
+    handoffSummaryResult = {
+      party: '임대인(사용자)-임차인 관계, 사용자는 보증금 반환 채권자',
+      situation: '임대차 계약 만료 2개월 경과, 보증금 미반환',
+      already_done: '내용증명 발송함',
+      goal: '보증금 반환',
+    };
+
+    const handled = await handleExpertTag('[EXPERT: lawyer]', '소장 써주세요', null);
+
+    assert.equal(handled, true);
+    assert.ok(lastGwpLaunchArgs, '_gwpLaunch가 호출되지 않음');
+    const ctx = lastGwpLaunchArgs[1];
+    assert.ok(ctx.includes('내용증명 발송함'), '이전 대화에서 확인된 사실(이미 진행된 절차)이 누락됨');
+    assert.ok(ctx.includes('보증금 반환'), '이전 대화에서 확인된 목표가 누락됨');
+    assert.ok(ctx.endsWith('[이번 발화]\n소장 써주세요'),
+      '이번 발화 원문이 요약 블록 뒤에 손대지 않은 채로 붙어 있어야 함(AGENT-COMMON "원문 그대로" 규약)');
+  });
+
+  test('요약 실패(null 반환) 시 이번 발화 원문만으로 폴백됨', async () => {
+    history.length = 0;
+    history.push({ role: 'system', content: '[그림자 AI(AGENT-COMMON) 프롬프트]' });
+    history.push({ role: 'user', content: '이혼하고 싶어요' });
+    history.push({ role: 'assistant', content: '혼인 기간이 얼마나 되셨나요?' });
+    lastGwpLaunchArgs = null;
+    handoffSummaryResult = null; // 요약 실패 시뮬레이션
+
+    const handled = await handleExpertTag('[EXPERT: lawyer]', '5년이요', null);
+
+    assert.equal(handled, true);
+    assert.equal(lastGwpLaunchArgs[1], '5년이요',
+      '요약 실패 시 기존 동작(이번 발화만 전달)으로 정확히 폴백해야 함');
   });
 });

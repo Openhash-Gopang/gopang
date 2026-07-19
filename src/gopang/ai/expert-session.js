@@ -18,7 +18,7 @@ import { CFG } from '../core/config.js';
 import { history, _USER } from '../core/state.js';
 import { appendBubble } from '../ui/bubble.js';
 import { _recordPDV } from '../pdv/record.js';
-import { summarizeTranscript6W } from './report-utils.js';
+import { summarizeTranscript6W, summarizeHandoffContext6W } from './report-utils.js';
 import { EXPERT_REGISTRY, UNIVERSAL_INTEGRITY_KEY, COMMON_GUARDRAILS_KEY, COMMON_MEDICAL_SAFETY_KEY,
          getExpertGwpDef, resolveExpertId }
   from './expert-registry.js';
@@ -185,7 +185,52 @@ export async function handleExpertTag(fullReply, userText, _preTab) {
   }
 
   console.info('[Expert] LLM 판단 → 새 탭:', personaId);
-  _gwpLaunch(gwpDef, userText, _preTab, _buildRoutingFacts());
+
+  // ── 2026-07-19 신설: AC와의 이전 대화 맥락을 페르소나에 함께 인계 ──
+  // 배경: 지금까지는 이 태그를 유발한 "이번 발화"(userText) 한 줄만 전달돼,
+  // AC와 여러 턴에 걸쳐 이미 확인된 맥락(당사자·경위·이미 진행된 절차 등)이
+  // 새 탭에서 소실되고 사용자가 같은 내용을 반복 진술해야 했다(UX 저하 —
+  // 주피터 지시). 이번 발화 자신을 제외한 이전 대화만 슬라이스해 6하원칙류
+  // 요약을 생성하고, "이번 발화 원문은 그대로 유지"라는 기존 규약은
+  // 건드리지 않은 채 그 앞에 요약 블록만 덧붙인다.
+  //
+  // 실패 시(네트워크 오류 등) priorSummary는 null이 되고, 기존과 동일하게
+  // userText만 전달된다 — 100% 하위호환.
+  let finalCtx = userText;
+  try {
+    // AC 대화 로그 중 "이번 발화" 이전 구간만 사용(중복 방지). 이번 발화는
+    // 아직 history에 push되지 않은 시점일 수도, 이미 push된 시점일 수도
+    // 있으므로 양쪽 다 방어적으로 걸러낸다.
+    const priorTurns = history.filter(t =>
+      !(t.role === 'user' &&
+        (typeof t.content === 'string' ? t.content : '') === userText)
+    );
+    if (priorTurns.length > 0) {
+      const priorTranscript = priorTurns
+        .filter(t => t.role === 'user' || t.role === 'assistant')
+        .map(t => `[${t.role === 'user' ? '사용자' : 'AI비서'}] ${
+          typeof t.content === 'string' ? t.content : JSON.stringify(t.content)
+        }`)
+        .join('\n');
+      const handoff = priorTranscript.trim()
+        ? await summarizeHandoffContext6W(priorTranscript)
+        : null;
+      if (handoff && (handoff.party || handoff.situation || handoff.already_done || handoff.goal)) {
+        const lines = [
+          '[AI 비서와의 이전 대화에서 이미 확인된 내용 — 다시 캐묻지 않아도 됩니다]',
+          handoff.party        ? `- 당사자/입장: ${handoff.party}`       : null,
+          handoff.situation    ? `- 경위·현재 상황: ${handoff.situation}` : null,
+          handoff.already_done ? `- 이미 진행된 절차: ${handoff.already_done}` : null,
+          handoff.goal         ? `- 원하는 결과: ${handoff.goal}`         : null,
+        ].filter(Boolean).join('\n');
+        finalCtx = `${lines}\n\n[이번 발화]\n${userText}`;
+      }
+    }
+  } catch (e) {
+    console.warn('[Expert] 핸드오프 맥락 요약 실패(무시 — 이번 발화만 전달):', e.message);
+  }
+
+  _gwpLaunch(gwpDef, finalCtx, _preTab, _buildRoutingFacts());
   return true;
 }
 
