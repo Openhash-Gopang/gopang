@@ -99,6 +99,35 @@ universal_integrity_files = [
 if universal_integrity_files:
     manifest['UNIVERSAL-INTEGRITY'] = best(universal_integrity_files)
 
+# 2-c-1) UNIVERSAL-common — prompts/UNIVERSAL-common_vX_Y.md
+#      2026-07-19 신설(사용자 지시로 발견된 결함 수정): expert-session.js의
+#      _composeExpertPrompt()가 UNIVERSAL-common(U0 의도특정·U1 권한의 한계·
+#      U7 업무처리파이프라인 — "안내로 끝내지 않는다"는 원칙의 실제 본문)을
+#      상수 문자열 'UNIVERSAL-common'으로 조회하는데, 이 파일이 SP_ 접두사가
+#      아니라서(SP_{slug} 정규식 미매칭) manifest에 전혀 등재되지 않고 있었다
+#      — 60개 EXPERT 페르소나 전원이 이 원칙 없이 구동되던 근본 원인. 수동
+#      으로 키를 추가해도 다음 push 때 이 스크립트가 재생성하며 조용히
+#      지워버렸다(실제로 1회 발생 — commit f111f85). UNIVERSAL-INTEGRITY와
+#      동일한 스캔 패턴을 그대로 적용해 재발을 원천 차단한다.
+universal_common_files = [
+    f.name for f in PROMPTS.iterdir()
+    if re.match(r'^UNIVERSAL-common_v', f.name) and f.name.endswith('.md')
+]
+if universal_common_files:
+    manifest['UNIVERSAL-common'] = best(universal_common_files)
+
+# 2-c-1-b) PROFESSIONAL-common — prompts/PROFESSIONAL-common_vX_Y.md
+#      2026-07-19 신설(위 UNIVERSAL-common과 동일 사유) — 전문가 보조 모듈
+#      (EXPERT 페르소나) 전용 정체성 계층("특정 전문가를 사칭하지 않는다",
+#      "최종 판단은 감독 전문가 전속" 등). 마찬가지로 SP_ 접두사가 아니라
+#      스캔 대상에서 누락돼 있었다.
+professional_common_files = [
+    f.name for f in PROMPTS.iterdir()
+    if re.match(r'^PROFESSIONAL-common_v', f.name) and f.name.endswith('.md')
+]
+if professional_common_files:
+    manifest['PROFESSIONAL-common'] = best(professional_common_files)
+
 # 2-c-2) UNIVERSAL-job-assist — prompts/UNIVERSAL-job-assist_vX_Y.md
 #      2026-07-15 신설: call-ai.js가 처음엔 UNIVERSAL_COMMON_URL 하드코딩
 #      패턴(worker.js, v1_3에 박제된 채 실제 최신 v1_5를 못 읽고 있던 걸
