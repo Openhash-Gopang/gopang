@@ -141,12 +141,17 @@ function _showUpdateBanner(seconds = 0) {
 
   const countdownLabel = seconds > 0
     ? `<span id="update-countdown" style="color:#8E8E93;font-size:12px">${seconds}초 후 자동 적용</span>`
-    : '';
+    // 2026-07-19 수정 — seconds=0(루프 방지 회로차단기로 자동적용을 건너뛴
+    // 경우)일 때 지금까지 아무 문구도 안 붙어서, 사용자에게는 "새 버전이
+    // 있습니다"만 뜨고 그 뒤로 아무 일도 안 일어나는 것처럼 보였다(실사
+    // 신고 계기). 자동 적용을 안 한다는 것과 수동으로 눌러야 한다는 걸
+    // 명시적으로 알려준다.
+    : `<span style="color:#8E8E93;font-size:12px">아래 버튼을 눌러 적용하세요</span>`;
 
   banner.innerHTML = `
     <span>🆕 새 버전이 있습니다</span>
     ${countdownLabel}
-    <button onclick="_applyUpdate()" style="
+    <button id="update-apply-btn" onclick="_applyUpdate()" style="
       background:#0057A8; color:#fff; border:none;
       border-radius:8px; padding:6px 14px;
       font-size:13px; font-weight:600; cursor:pointer;">
@@ -168,16 +173,54 @@ function _showUpdateBanner(seconds = 0) {
 }
 
 // ── 업데이트 적용 (skipWaiting 메시지 전송) ──────────────────
+// 2026-07-19 수정 — 클릭해도 아무 반응이 없어 "실제로 진행되는지 알 수
+// 없다"는 실사용자 신고 계기. forceUpdateApp()(설정 패널 버튼)은 이미
+// "갱신 중…" → "✅ 갱신 완료" 피드백이 있었는데, 배너 쪽 버튼에는 그게
+// 없었다 — 같은 원칙을 여기도 적용. controllerchange가 예상보다 안 오는
+// 경우(SW 상태 이상 등)를 위한 안전장치도 추가: 6초 안에 반응이 없으면
+// 강제 새로고침으로 대체(무한정 "적용 중…"에 멈춰있지 않도록).
 function _applyUpdate() {
+  const btn = document.getElementById('update-apply-btn');
+  if (btn) {
+    btn.textContent = '적용 중…';
+    btn.style.pointerEvents = 'none';
+    btn.style.opacity = '0.7';
+  }
+  // 주의: _manualUpdateInProgress를 여기서 세우지 않는다 — 그 플래그는
+  // 상단의 전역 controllerchange 리스너(실제 새로고침 담당)를 억제하는
+  // 용도라, 여기서 세우면 "적용 중…"만 뜨고 아무도 새로고침을 안 하는
+  // 상태로 6초를 그냥 흘려보내게 된다(직접 만들 뻔한 버그). 배너 쪽은
+  // 전역 리스너가 그대로 새로고침을 처리하게 두고, 여기서는 그 신호를
+  // 기다려 안전장치 타이머만 해제한다.
+  const fallback = setTimeout(() => {
+    console.warn('[PWA] 배너 수동 적용 — 6초 내 응답 없음, 강제 새로고침으로 대체');
+    window.location.reload();
+  }, 6000);
+
   navigator.serviceWorker.ready.then((reg) => {
     if (reg.waiting) {
-      // SW에 skipWaiting 지시 → controllerchange → 자동 새로고침
+      // 실제 새로고침은 상단의 전역 controllerchange 리스너가 처리한다 —
+      // 여기서는 그게 왔다는 신호로 안전장치 타이머만 끈다.
+      navigator.serviceWorker.addEventListener('controllerchange', () => clearTimeout(fallback), { once: true });
       reg.waiting.postMessage({ type: 'SKIP_WAITING' });
     } else {
+      clearTimeout(fallback);
       window.location.reload();
     }
+  }).catch((err) => {
+    console.warn('[PWA] 배너 수동 적용 실패 — 강제 새로고침으로 대체:', err.message);
+    clearTimeout(fallback);
+    window.location.reload();
   });
 }
+// ★ 진짜 원인(2026-07-19) ★ — 이 함수는 window.addEventListener('load', ...)
+// 클로저 안에 선언돼 있어 전역이 아니다. 배너의 onclick="_applyUpdate()"는
+// 전역 스코프에서 이름을 찾으므로 지금까지 "_applyUpdate is not defined"로
+// 조용히 실패해왔다(콘솔에만 찍히고 화면엔 무반응) — forceUpdateApp()은
+// 아래 window.forceUpdateApp = forceUpdateApp;가 있어서 정상 작동했던 것과
+// 대조된다. 오늘 추가한 진행상태 피드백 로직 자체는 문제가 없었다 —애초에
+// 실행될 수 없었을 뿐이다.
+window._applyUpdate = _applyUpdate;
 
 // ── 설정 패널의 "최신 버전으로 갱신" 버튼 — 수동 강제 갱신 ──────
 // 자동 감지(_autoApplyUpdate)와 달리 사용자가 언제든 직접 누를 수 있다.
