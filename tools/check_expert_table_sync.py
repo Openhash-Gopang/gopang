@@ -20,7 +20,13 @@ ROOT = Path(__file__).parent.parent
 
 def registry_ids() -> set[str]:
     text = (ROOT / 'src' / 'gopang' / 'ai' / 'expert-registry.js').read_text(encoding='utf-8')
-    ids = re.findall(r"^\s*(?:'([\w-]+)'|([\w-]+)):\s*\{\s*\n?\s*label:", text, re.M)
+    # ★ 2026-07-20 수정 — 'lawyer' 등 key: { 뒤에 여러 줄 주석(버전 이력 설명)이
+    # 오는 엔트리를 놓치던 버그 수정. 기존 \s*\n?\s*는 개행 1개만 허용해
+    # 다줄 // 주석 블록을 만나면 매칭 실패 → registry에 있는데 없다고 오탐.
+    ids = re.findall(
+        r"^\s*(?:'([\w-]+)'|([\w-]+)):\s*\{\s*\n(?:\s*//[^\n]*\n)*\s*label:",
+        text, re.M
+    )
     return {a or b for a, b in ids}
 
 
