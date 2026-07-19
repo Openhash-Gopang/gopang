@@ -12142,8 +12142,21 @@ async function handleProfileVisibility(request, env, corsHeaders) {
   }
   if (!existing) return _err(404, 'PROFILE_NOT_FOUND', '프로필 없음', corsHeaders);
 
+  // 2026-07-19 신설 — pubkey_ed25519가 아직 등록되지 않은 프로필(예:
+  // claim_status='unclaimed'인 관리자 사전등록 사업자 리스팅)은 소유자가
+  // 아직 확정되지 않은 상태다. 아래 TOFU 체크는 이런 경우 조건 자체가
+  // falsy라 통째로 스킵되므로, 이 guid를 아는 누구나(핸들/QR 등으로
+  // 노출되는 공개 정보) 자기 키로 서명해 "최초 서명자가 곧 소유자"처럼
+  // 이 필드를 바꿔버릴 수 있었다(사고실험으로 발견). is_public 토글은
+  // /profile/claim으로 소유권을 정식 확정한 뒤에만 허용한다.
+  if (!existing.pubkey_ed25519) {
+    return _err(403, 'PROFILE_NOT_CLAIMED',
+      '아직 소유권이 확정되지 않은 프로필입니다 — 먼저 /profile/claim으로 소유권을 확인해 주세요',
+      corsHeaders);
+  }
+
   // TOFU: 최초 등록 시 핀(pin)된 pubkey와 다른 키로는 수정 불가 (handleProfilePost와 동일 원칙)
-  if (existing.pubkey_ed25519 && existing.pubkey_ed25519 !== pubkey) {
+  if (existing.pubkey_ed25519 !== pubkey) {
     return _err(403, 'PUBKEY_MISMATCH', '공개키가 이 계정에 등록된 키와 일치하지 않습니다', corsHeaders);
   }
 
