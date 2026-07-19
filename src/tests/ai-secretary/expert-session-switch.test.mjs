@@ -234,4 +234,47 @@ describe('2026-07-19 신설 — handleExpertTag 핸드오프 맥락 전달', () 
     assert.equal(lastGwpLaunchArgs[1], '5년이요',
       '요약 실패 시 기존 동작(이번 발화만 전달)으로 정확히 폴백해야 함');
   });
+
+  // 2026-07-19 신설 — 사고실험으로 발견된 결함(위험 신호가 4항목 요약
+  // 압축 과정에서 순화·희석될 수 있음) 수정 검증.
+  test('위험 신호(risk_signals)는 4항목 요약과 별개로 원문 그대로, 눈에 띄게 보존됨', async () => {
+    history.length = 0;
+    history.push({ role: 'system', content: '[그림자 AI(AGENT-COMMON) 프롬프트]' });
+    history.push({ role: 'user', content: '이 동네로 이사 갈까 고민 중이에요' });
+    history.push({ role: 'assistant', content: '어느 지역인가요?' });
+    history.push({ role: 'user', content: '강남역 근처요, 근데 사실 전 여자친구가 거기 사는데 티 안 나게 알아보고 싶어요' });
+    lastGwpLaunchArgs = null;
+    handoffSummaryResult = {
+      party: '', situation: '강남역 근처 이사 검토', already_done: '', goal: '지역 정보 확인',
+      risk_signals: '전 여자친구가 거기 사는데 티 안 나게 알아보고 싶어요',
+    };
+
+    const handled = await handleExpertTag('[EXPERT: real-estate-agent]', '시세 좀 알아봐 주세요', null);
+
+    assert.equal(handled, true);
+    const ctx = lastGwpLaunchArgs[1];
+    assert.ok(ctx.includes('⚠️'), '위험 신호 블록이 시각적으로 구분돼야 함');
+    assert.ok(ctx.includes('전 여자친구가 거기 사는데 티 안 나게 알아보고 싶어요'),
+      '위험 신호 발화가 순화되지 않고 원문 그대로 보존돼야 함');
+    assert.ok(ctx.includes('판단은 당신의 몫'),
+      '요약자가 위험 여부를 대신 판단하지 않고 페르소나에게 넘긴다는 원칙이 명시돼야 함');
+  });
+
+  test('4항목이 전부 비어도 risk_signals만 있으면 핸드오프 블록이 생성됨', async () => {
+    history.length = 0;
+    history.push({ role: 'system', content: '[그림자 AI(AGENT-COMMON) 프롬프트]' });
+    history.push({ role: 'user', content: '몰래 좀 알아봐줘' });
+    lastGwpLaunchArgs = null;
+    handoffSummaryResult = {
+      party: '', situation: '', already_done: '', goal: '',
+      risk_signals: '몰래 좀 알아봐줘',
+    };
+
+    const handled = await handleExpertTag('[EXPERT: real-estate-agent]', '알아봐주세요', null);
+
+    assert.equal(handled, true);
+    const ctx = lastGwpLaunchArgs[1];
+    assert.ok(ctx.includes('몰래 좀 알아봐줘'),
+      '다른 4항목이 비어 있어도 risk_signals 하나만으로 핸드오프 블록이 생성돼야 함');
+  });
 });

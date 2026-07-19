@@ -244,7 +244,13 @@ export async function handleExpertTag(fullReply, userText, _preTab) {
       const handoff = priorTranscript.trim()
         ? await summarizeHandoffContext6W(priorTranscript)
         : null;
-      if (handoff && (handoff.party || handoff.situation || handoff.already_done || handoff.goal)) {
+      // 2026-07-19 신설 — risk_signals가 있으면 다른 4개 필드가 전부 비어
+      // 있어도(예: 요약할 만한 "사실"은 없지만 위험 신호만 있는 경우) 반드시
+      // 포함한다. 일반 요약 4줄과 섞여 묻히지 않도록 별도 블록·경고 표시로
+      // 분리한다 — 이 블록이 있다는 것 자체가 페르소나에게 "판단이 필요한
+      // 신호가 있다"는 신호이며, 판단 자체(위험한지 아닌지)는 페르소나 몫이다.
+      if (handoff && (handoff.party || handoff.situation || handoff.already_done ||
+                       handoff.goal || handoff.risk_signals)) {
         const lines = [
           '[AI 비서와의 이전 대화에서 이미 확인된 내용 — 다시 캐묻지 않아도 됩니다]',
           handoff.party        ? `- 당사자/입장: ${handoff.party}`       : null,
@@ -252,7 +258,12 @@ export async function handleExpertTag(fullReply, userText, _preTab) {
           handoff.already_done ? `- 이미 진행된 절차: ${handoff.already_done}` : null,
           handoff.goal         ? `- 원하는 결과: ${handoff.goal}`         : null,
         ].filter(Boolean).join('\n');
-        finalCtx = `${lines}\n\n[이번 발화]\n${userText}`;
+        const riskBlock = handoff.risk_signals
+          ? `\n\n[⚠️ 이전 대화에서 그대로 보존된 표현 — 요약 압축 없이 원문 전달됨]\n` +
+            `"${handoff.risk_signals}"\n` +
+            `(이 표현이 위험 신호인지 판단은 당신의 몫입니다 — 요약 과정에서 순화되지 않았습니다)`
+          : '';
+        finalCtx = `${lines}${riskBlock}\n\n[이번 발화]\n${userText}`;
       }
     }
   } catch (e) {

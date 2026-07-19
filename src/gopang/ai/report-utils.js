@@ -34,9 +34,20 @@ const HANDOFF_SYS_PROMPT =
   '이 사용자를 인계하려 한다. 전문가 AI가 같은 내용을 다시 캐묻지 않도록, 이미 확인된 ' +
   '사실만 최대 4개 항목으로 80자 이내씩 요약하라(추측 금지 — 로그에 없는 내용은 채우지 ' +
   '않는다. 결론·판단은 포함하지 않는다 — 판단은 전문가 AI의 몫이다). ' +
-  'JSON만 출력(설명 텍스트 금지). ' +
-  '형식: {"party":"당사자/입장 정보 또는 빈 문자열","situation":"경위·현재 상황",' +
-  '"already_done":"이미 진행된 절차(있으면)","goal":"사용자가 원하는 결과"}';
+  // 2026-07-19 신설 — 사고실험으로 발견된 결함 수정: 이별·감시·추적·괴롭힘·위협·
+  // 자해 등을 암시하는 표현이 로그에 있을 때, 위 "80자 요약" 압축 과정에서
+  // "이사 계획 있음, 주변 정보 관심"처럼 밋밋하게 순화돼 위험 신호 자체가
+  // 사라지는 문제가 있었다. 이런 표현은 요약하지 말고 원문에 가깝게 별도
+  // 필드로 분리 보존한다 — 요약자가 "이게 위험한지"를 판단하지 않고(그 판단은
+  // 여전히 전문가 AI 몫), 판단에 필요한 원재료만 훼손 없이 넘긴다.
+  '추가로, 대화 로그에 이별·감시·추적·괴롭힘·위협·자해·폭력 등을 암시하는 표현이 ' +
+  '있으면(예: "몰래", "티 안 나게", "전 여자친구/남자친구가 어디 사는지" 등), 그 부분은 ' +
+  '절대 순화·요약하지 말고 해당 발화를 최대한 원문 그대로 별도 필드에 담아라 — 이 필드는 ' +
+  '있는 그대로의 신호 보존이 목적이며, 위험 여부 판단은 하지 않는다(판단은 전문가 AI 몫). ' +
+  '해당 표현이 없으면 빈 문자열로 둔다. ' +
+  'JSON만 출력하라(설명 텍스트 금지). ' +
+  '형식: {"party":"...","situation":"...","already_done":"...","goal":"...",' +
+  '"risk_signals":"위 표현이 있을 때만 원문 인용, 없으면 빈 문자열"}';
 
 /**
  * AC(그림자 AI) 대화 로그를 "전문가 페르소나 인계용" 요약으로 압축한다.
@@ -45,7 +56,7 @@ const HANDOFF_SYS_PROMPT =
  * 핸드오프 자체가 막히지 않는다).
  * @param {string} transcriptText - "[역할] 발화" 형태로 줄바꿈된 AC 대화 로그
  *   (핸드오프를 유발한 "이번 발화" 자신은 포함하지 않는다 — 그건 ctx로 별도 전달)
- * @returns {Promise<{party:string, situation:string, already_done:string, goal:string}|null>}
+ * @returns {Promise<{party:string, situation:string, already_done:string, goal:string, risk_signals:string}|null>}
  */
 export async function summarizeHandoffContext6W(transcriptText) {
   if (!transcriptText || !transcriptText.trim()) return null;
