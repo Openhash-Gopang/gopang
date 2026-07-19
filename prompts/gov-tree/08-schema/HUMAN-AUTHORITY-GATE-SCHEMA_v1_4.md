@@ -342,6 +342,14 @@ missing_authority_gate]`로 기록한다.
   artifact=<조립된 서류·신청 초안 참조>, summary=<6하원칙 요약>]
 ```
 
+**구현 참고(2026-07-19)**: `handler_code`는 LLM이 채우지만, 실제 담당부서
+조회에는 이 값을 신뢰하지 않는다 — `jeju-router.js`의
+`resolveHandlerCodeFromTrace(trace)`가 이번 턴에 실제로 매칭된 trace의
+가장 구체적인 노드(`SP-DO-*`/`SP-CITY-*`/`SP-EMD-*`)를 대신 써서 조회한다.
+LLM의 `handler_code`는 형식이 달라도 게이트 트리거 자체는 안전하게
+동작한다 — "형식을 못박아야 실패율이 줄어든다"는 접근 대신, 애초에
+형식 준수 여부에 기능이 좌우되지 않도록 설계했다.
+
 - `handler_type=DEPARTMENT_CONTACT`(현재 유일하게 활성화): 부서·읍면동
   마스터데이터(`do-dept-master-data.json`/`emd-master-data.json`/
   `city-dept-master-data.json`)에 이미 있는 콜센터명·번호, 대표전화로
@@ -360,33 +368,54 @@ APPROVAL_GATE`)에 도달할 수 없다 — 사용자 본인의 최종 승인(G3
 먼저 담당부서·직원의 확인(G18)이 선행돼야 한다는 순서 자체가 이
 게이트의 핵심이다.
 
-## G19. 외부 발급 서류 획득·전달 게이트 — 정부24 등 (2026-07-19 신설)
+## G19. 외부 발급 서류 획득·전달 게이트 — 정부24 등 (2026-07-19 신설, 같은 날 정정)
 
-기관 SP가 §DATA_REQUIREMENT에서 요구하는 서류(doc_type)가
-DOCUMENT-TYPE-REGISTRY §경로 해석상 `issuing_gov_task`가 **정부24 등
-혼디와 API 연동이 안 된 외부 발급처**(`connected:false`,
-`unavailable_reason:no_interagency_access`, DATA_REQUIREMENT-SCHEMA
-Type B)로 확인되면, 기관 SP는 이 서류를 직접 확보할 수 없다 — 사용자
-본인의 그림자 AI(AGENT-COMMON)에게 확보를 위임한다.
+**정정(2026-07-19, 같은 날)**: 최초 설계는 이 게이트를 G13(PDV 중개)과
+같은 "탭 간 중개가 필요한 문제"로 취급했다. 그런데 kgov(SP-10, 모든
+기관 SP의 최상위 공통 조상)를 다시 확인한 결과, §REQUIRED-DOCUMENTS·
+§공문서 발급 안내("정부24")가 **이미 2026-07-10부터 존재**했고, 그
+설계는 처음부터 "정부24에서 발급받아 **같은 대화창**에 다시 첨부하면
+됨"을 전제하고 있었다 — PDV처럼 다른 탭이 읽으면 안 되는 민감정보가
+아니라, 사용자 본인이 방금 내려받아 지금 이 대화의 담당 기관 SP에
+직접 제출하는 파일이라 애초에 중개가 구조적으로 불필요했다.
+
+진짜 문제는 이 SP 문구(kgov 상속분)가 전제하는 **클라이언트 쪽 첨부파일
+처리 기능(본문 추출·sha256·이미지 인식)이 `jeju.hondi.net`
+`webapp.html`에는 구현돼 있지 않았다**는 것이었다(반면 `gopang`의 메인
+`webapp.html`엔 이미 있었다) — SP는 상속됐는데 그걸 실행할 UI가
+빠져있던 것. 2026-07-19 포팅으로 해결(아래 §기본 경로).
+
+### §기본 경로 — 같은 대화창 첨부 (kgov §REQUIRED-DOCUMENTS 그대로)
+
+사용자가 정부24 앱 등에서 발급받은 파일을 **지금 대화 중인 기관 SP의
+같은 탭**에 직접 첨부한다. 이미지는 `image_url` 블록 + sha256, 그 외
+(txt/pdf/docx)는 본문 전체를 텍스트로 추출해 첨부 — 포맷은 kgov
+§REQUIRED-DOCUMENTS §4 그대로다. 탭을 옮기거나 postMessage 중개를
+거치지 않는다.
+
+### §보조 경로 — `GWP_DOC_REQUEST` 탭 간 중계 (2026-07-19, 축소 유지)
+
+사용자가 **지금 이 기관 SP 탭이 아니라 다른 곳(메인 고팡 탭 등)에 있어서
+직접 첨부가 불가능한 경우에 한해서만** 쓰는 폴백이다 — 기본 경로가
+아니다. 기관 SP는 §기본 경로를 먼저 안내하고, 사용자가 명시적으로
+"지금 이 탭에 없다"는 취지로 답한 경우에만 이 태그를 쓴다:
 
 ```
 [DOC_ACQUIRE_REQUEST: doc_type=..., requesting_sp=..., reason=...]
 ```
 
-이 태그는 GWP_PDV_REQUEST와 동일한 승인 UI 패턴을 재사용하되
-(`window.opener.postMessage()`로 오프너 탭에 전달, `GWP_DOC_REQUEST`/
-`GWP_DOC_RESPONSE` postMessage 쌍), 응답에 사용자가 첨부한 파일
-자체(base64)가 실려온다는 점이 다르다:
+`GWP_PDV_REQUEST`와 동일한 승인 UI 패턴을 재사용하되(`window.opener.
+postMessage()`로 오프너 탭에 전달, `GWP_DOC_REQUEST`/`GWP_DOC_RESPONSE`
+postMessage 쌍), 응답에 사용자가 첨부한 파일 자체(base64)가 실려온다는
+점이 다르다:
 
 ```
 GWP_DOC_RESPONSE: { request_id, approved, file: { name, mime, size,
   data_b64 } | null }
 ```
 
-- 사용자의 그림자 AI가 안내 문구("OO동 주민센터가 주민등록등본을
-  요청했습니다 — 정부24 앱에서 발급받아 첨부해주세요")를 표시하고,
-  사용자가 파일을 첨부하면 base64로 인코딩해 요청한 탭으로 그대로
-  중계한다 — 사용자가 같은 파일을 여러 탭에 반복 첨부할 필요가 없다.
+- 사용자의 그림자 AI가 안내 문구를 표시하고, 사용자가 파일을 첨부하면
+  base64로 인코딩해 요청한 탭으로 중계한다.
 - 크기 제한: 5MB(단일 postMessage 페이로드 상한 — engine.js 구현 참고).
   초과 시 `approved:false, reason:file_too_large`로 응답하고 사용자에게
   직접 업로드를 안내한다(성능·보안상 무제한 허용 금지).
