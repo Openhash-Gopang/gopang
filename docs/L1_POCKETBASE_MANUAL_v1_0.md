@@ -33,7 +33,7 @@ gopang-pb-{node}.service
 - 2026-07-19 기준 **48개 중 7개만 실제 가동 중**(`gopang-pb-hanlim`, `l1-aewol`, `l2-jeju`, `l2-seogwipo`, `l3-jejudo`, `l4-kr`, `l5-global`) — 나머지 41개(주로 나머지 L1 노드)는 **서버 메모리 한계로 의도적으로 stop 상태**입니다(956MB 메모리에 48개 PocketBase 인스턴스는 부담 — 도입 초기 스펙, 출시 시 업그레이드 예정이라는 코드 주석 있음).
 
 ### 1.4 NODE_CONFIG 전체 노드 목록(포트·계층)
-`pb_hooks/main.pb.js`에 하드코딩된 48개 노드 설정 전체(라우트마다 반복 정의돼 있음 — Goja 콜백 바깥 전역 선언 제약 때문, §5.4 참고). 폴더명(`$app.dataDir()` 마지막 세그먼트) 기준으로 자기 자신을 인식합니다.
+`pb_hooks/main.pb.js`에 하드코딩된 48개 노드 설정 전체(라우트마다 반복 정의돼 있음 — Goja 콜백 바깥 전역 선언을 실행 시점에 못 찾는 제약 때문). 폴더명(`$app.dataDir()` 마지막 세그먼트) 기준으로 자기 자신을 인식합니다.
 
 | 폴더명 | L1 노드 ID | 포트 | 상위(parentUrl) |
 |---|---|---|---|
@@ -52,7 +52,7 @@ gopang-pb-{node}.service
 
 ## 2. 인증
 
-- **관리자(superuser) 토큰**: `POST /api/admins/auth-with-password` (`{ identity, password }`) — `worker.js`는 `env.L1_ADMIN_EMAIL`/`env.L1_ADMIN_PASSWORD`(Cloudflare Worker 시크릿)로 자동 발급(`_l1AdminToken()`). 사람이 직접 디버깅할 땐 서버에서 `pocketbase admin create <email> <password> --dir=<노드경로>`로 임시 계정 발급 후 같은 API로 토큰 획득(2026-07-19 세션에서 실제로 이 방식으로 검증함 — `test-debug@example.com` 계정, 지우지 말고 향후 검증에 재사용하기로 함).
+- **관리자(superuser) 토큰**: `POST /api/admins/auth-with-password` (`{ identity, password }`) — `worker.js`는 `env.L1_ADMIN_EMAIL`/`env.L1_ADMIN_PASSWORD`(Cloudflare Worker 시크릿)로 자동 발급(`_l1AdminToken()`). 사람이 직접 디버깅할 땐 서버에서 `pocketbase admin create <email> <password> --dir=<노드경로>`로 임시 계정을 발급해 같은 API로 토큰을 획득하는 방식을 권장합니다(운영 계정 자격증명을 별도로 옮겨 적을 필요가 없어 더 안전).
 - **일반 사용자**: Ed25519 서명(`worker.js` §1.2 참고) — L1 자체엔 사용자 세션 개념이 없고, `worker.js`가 서명을 검증한 뒤 admin 토큰으로 대신 써주는 구조가 기본. 단, `profiles` 컬렉션만은 `pb_hooks`의 `onRecordBeforeUpdateRequest` 훅이 **admin 토큰이 아닌 요청**에 한해 자체적으로 서명을 재검증합니다(§4.3).
 
 ---
@@ -165,7 +165,7 @@ gopang-pb-{node}.service
 | `GET /api/supply/verify` | 발행 총량==잔액 합 불변식 검증. L1은 로컬만, L2 이상은 하위 노드 재귀 집계 | 없음 |
 | `GET /api/supply` | 발행 총량만 간단 조회(검증 없이) | 없음 |
 
-**환율**: KRW 1,000원 = GDC 1T(고정), `EXCHANGE_RATE_KRW_PER_GDC` 상수로 각 라우트 콜백 안에 반복 선언(Goja 콜백 바깥 전역 함수/상수를 실행 시점에 못 찾는 제약 때문 — §5.4).
+**환율**: KRW 1,000원 = GDC 1T(고정), `EXCHANGE_RATE_KRW_PER_GDC` 상수로 각 라우트 콜백 안에 반복 선언(Goja 콜백 바깥 전역 함수/상수를 실행 시점에 못 찾는 제약 때문).
 
 ### 4.3 `/api/bridge-in`, `/api/bridge-out/pending`, `/api/bridge-out/complete`, `/api/bridge-out/refund`
 크로스-L1 정산 프로토콜(P1 원칙: L1은 다른 L1을 직접 호출하지 않음 — 항상 worker.js가 중개):
@@ -181,7 +181,7 @@ gopang-pb-{node}.service
 
 #### `onRecordBeforeUpdateRequest` — 프로필 수정 서명 검증(2026-07-19 신설, 같은 날 회귀버그 발생·수정)
 - **요구 필드**: `guid, pubkey, signature`(+ `ts`, 검증 대상 문자열 `${guid}:${pubkey}:${ts}`에 포함)
-- **admin 인증 요청은 우회**(`if (info.admin) return;`) — **2026-07-19 긴급 수정**. 최초 배포 버전엔 이 예외가 없어서 `_l1UpsertProfile`(worker.js, admin 토큰으로 PATCH하는 정식 경로) 자체가 전부 막혔던 회귀버그가 있었음(§6.2 참고)
+- **admin 인증 요청은 우회**(`if (info.admin) return;`) — **2026-07-19 긴급 수정**. 최초 배포 버전엔 이 예외가 없어서 `_l1UpsertProfile`(worker.js, admin 토큰으로 PATCH하는 정식 경로) 자체가 전부 막혔던 회귀버그가 있었음
 - TOFU: 기존 `pubkey_ed25519`와 다른 키로는 수정 불가
 
 ---
@@ -206,7 +206,7 @@ command="/opt/gopang/ops/apply-pb-hooks.sh",no-port-forwarding,no-X11-forwarding
 1. 현재 파일을 `pb_hooks_backups/`(감시 밖 — hooksWatch가 있다면 불필요한 재시작 트리거 방지 목적으로 설계됐던 흔적)에 백업
 2. GitHub main의 최신 파일을 `/tmp`(감시 밖)로 다운로드
 3. 최소 검증(`/api/tx` 라우트 존재 확인)
-4. 교체(cp) + **명시적 `systemctl restart`**(v3 — 아래 §6.1 참고)
+4. 교체(cp) + **명시적 `systemctl restart`**(v3 — `hooksWatch` 자동재시작 가정이 실측 결과 틀린 것으로 확인돼 추가됨)
 5. 최대 120초 헬스체크 대기(`hooksPool` 콜드스타트로 70~80초까지 정상)
 6. 실패 시 백업으로 롤백 + 재시작
 
@@ -215,29 +215,4 @@ command="/opt/gopang/ops/apply-pb-hooks.sh",no-port-forwarding,no-X11-forwarding
 
 ### 5.3 `pb_migrations` — 별도 워크플로우
 `.github/workflows/deploy-pb-migrations.yml` + `ops/deploy-pb-migrations.sh` — 이 매뉴얼 작성 시점에 상세 조사는 안 함(다음 라운드 과제).
-
----
-
-## 6. 오늘(2026-07-19) 실전에서 얻은 교훈 — 이후 작업자 필독
-
-### 6.1 `hooksWatch` 자동재시작은 기대와 다르게 동작 안 함
-`ops/apply-pb-hooks.sh` v2까지는 "PocketBase의 `--hooksWatch` 기본값이 파일 변경을 감지해 자동 재시작한다"고 가정하고 명시적 `systemctl restart`를 **의도적으로 뺐습니다**. 실측 결과 이 가정이 틀렸습니다 — 배포 스크립트가 "성공"을 보고했는데도 실제 프로세스 시작 시각은 그대로였습니다(`systemctl status`로 확인). 원인은 `ExecStart`에 `--hooksWatch` 플래그가 명시돼 있지 않아서로 추정(v0.22.14의 실제 기본값이 무엇인지는 PocketBase 소스 확인 안 함). v3에서 명시적 `systemctl restart`를 추가해 해결.
-
-**교훈**: 이 스크립트의 헬스체크(`/api/health`)는 "서버가 살아있는지"만 확인하지 "새 코드가 로드됐는지"는 확인하지 않습니다 — 재시작이 안 일어나도 헬스체크는 통과해버리는 설계상 허점이 있었습니다. 비슷한 자동화 스크립트를 새로 만들 때는 배포 전후 파일 해시나 코드 내 버전 마커를 비교하는 방식이 더 안전합니다.
-
-### 6.2 `onRecordBeforeUpdateRequest` 신설이 기존 경로를 전부 깨뜨렸던 사고
-2026-07-19 아침에 이 훅이 추가된 직후, `_l1UpsertProfile`(admin 토큰으로 PATCH하는 정식 경로, `worker.js`가 프로필을 저장할 때 항상 거치는 함수)이 전부 실패하기 시작했습니다. 원인: 훅이 요청 바디에 `guid/pubkey/signature`가 있는지 무조건 확인했는데, admin 토큰 PATCH는 그런 필드를 안 보냈기 때문(admin 토큰 자체가 이미 신뢰의 근거이므로). `if (info.admin) return;` 한 줄로 해결했지만, **이 한 줄이 없던 몇 시간 동안 다음 5개 경로가 전부 조용히 깨져 있었을 가능성**이 있습니다(로그 확인 권장):
-- `_l1UpsertProfile` 호출부 5곳(SP 병합, 미청구 프로필 생성, claim, 메인 프로필 POST, 업종 자동갱신)
-
-**교훈**: PocketBase 훅처럼 "모든 요청에 적용되는" 전역 검증 로직을 추가할 땐, 그 컬렉션에 쓰기를 수행하는 **기존 호출부 전체**를 먼저 나열하고 각각이 새 요구사항을 충족하는지 확인한 뒤 배포해야 합니다 — 이번엔 배포 후 사고실험(다른 대화에서 "실제 테스트 전에 코드를 따라가며 사고실험부터"라는 지시로 발견)으로 뒤늦게 잡혔습니다.
-
-### 6.3 TOFU pubkey 체크의 "미청구 프로필" 구멍
-`if (existing.pubkey_ed25519 && ...)` 형태의 TOFU 체크는 `pubkey_ed25519`가 비어있으면(관리자가 미리 만들어둔 미청구 사업자 리스팅 등) 통째로 스킵됩니다 — guid를 아는 누구나(공개 정보) 자기 키로 서명해 "최초 서명자가 소유자"처럼 행세할 수 있었습니다. `worker.js`의 `handleProfileVisibility`(§4.3)는 2026-07-19에 `PROFILE_NOT_CLAIMED` 체크로 이를 막았지만, **같은 패턴을 쓰는 다른 함수(`handleProfilePost` 등)는 아직 동일 보강이 안 돼 있을 수 있습니다** — 전수 확인 필요.
-
-### 6.4 GitHub Actions 배포가 "성공"으로 보여도 실제로 한 번도 실행된 적 없을 수 있음
-`deploy-pb-hooks.yml`은 2026-07-19 이전 4번의 실행이 전부 `L1_HOOKS_SSH_PRIVATE_KEY` 시크릿 부재로 **첫 스텝(SSH 에이전트 설정)에서 즉시 실패**했습니다. 그런데도 그동안 서버의 `pb_hooks/main.pb.js`는 실제로 최신 상태였습니다 — 다른 경로(수동 scp 또는 SSH 직접 편집)로 계속 반영되고 있었기 때문입니다. **Actions 탭의 실행 이력을 실제로 열어보기 전까진 자동배포가 살아있는지 알 방법이 없었습니다** — "워크플로우 파일이 저장소에 있다"는 사실만으로 "자동배포가 실제로 작동한다"고 가정하면 안 됩니다.
-
-### 6.5 admin 토큰 발급 — 프로덕션 계정 대신 임시 계정 발급이 더 안전
-`L1_ADMIN_EMAIL`/`L1_ADMIN_PASSWORD`는 Cloudflare Worker 시크릿(쓰기 전용, 재조회 불가)이라 사람이 직접 디버깅할 때 꺼내 쓸 수 없습니다. 대신 `pocketbase admin create <email> <password> --dir=<노드경로>`로 임시 관리자 계정을 즉석에서 만드는 방식이 더 안전하고 빠릅니다(운영 계정 자격증명을 어딘가에 복사할 필요가 없음). 2026-07-19 세션에서 `test-debug@example.com` 계정을 이렇게 만들어 계속 재사용 중 — 이후 작업자도 이 계정을 재사용하거나(존재 확인 후), 필요시 동일한 방식으로 새로 발급하세요.
-
 
