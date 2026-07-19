@@ -381,6 +381,15 @@ async function sendTurn(text, attachment) {
     });
     messages.push({ role: 'assistant', content: full });
 
+    // ── [WEB_SEARCH: query=...] 태그 감지 (2026-07-19 신설) ──────────
+    // 배경: worker.js의 /web-search(Serper.dev 연동, 일일예산캡·캐싱 포함)와
+    // call-ai.js의 _handleWebSearchTag()가 그림자 AI(AC) 쪽엔 이미 있었지만,
+    // 전문가 페르소나가 실행되는 이 페이지엔 연결된 적이 없었다 — SP 문서가
+    // 뭐라고 지시하든 페르소나가 실제로 검색을 실행할 방법 자체가 없었다는
+    // 뜻이다(주피터 지적으로 발견). AC와 동일한 백엔드(/web-search)를 그대로
+    // 재사용하고, 결과 재주입 후 한 번 더 응답을 받는 흐름도 동일하게 맞춘다.
+    await _maybeHandleWebSearch(full);
+
     // ── [CONNECT_HUMAN_EXPERT: 업종키워드] 태그 감지 (2026-07-06, C39 신설) ──
     // SP-COMMON-02 C39가 요구하는 "인간 전문가 연결"을 실제로 수행한다.
     // market/webapp.html의 [SEARCH] 인터셉터와 같은 패턴 — 존재하지 않는
@@ -399,6 +408,74 @@ async function sendTurn(text, attachment) {
     aiBubble.remove();
     appendBubble('ai', `⚠️ 응답 중 오류가 발생했습니다: ${escHtml(e.message)}. 잠시 후 다시 시도해 주세요.`);
   }
+}
+
+// ── [WEB_SEARCH: query=...] 처리 (2026-07-19 신설) ──────────────────
+// call-ai.js의 _handleWebSearchTag()와 동일한 백엔드(worker.js /web-search
+// — Serper.dev 연동, 일일예산캡·캐싱 포함)를 그대로 재사용한다. 검색 결과는
+// "Hondi 내부에서 검증된 게 아닌 웹 참고정보"임을 명시해 재주입하고, 페르소나가
+// 그 정보를 반영해 한 번 더 답하도록 한다. depth로 무한 루프를 방지한다
+// (한 사용자 턴당 검색 최대 2회 — 그 이상 필요하면 페르소나가 사용자에게
+// 직접 안내해야 한다).
+async function _maybeHandleWebSearch(fullReply, depth = 0) {
+  const m = fullReply.match(/\[WEB_SEARCH:\s*query=([^\]]+)\]/);
+  if (!m) return;
+
+  if (depth >= 2) {
+    console.warn('[Expert] WEB_SEARCH 반복 한도(2회) 도달 — 추가 검색 없이 현재 응답으로 진행');
+    return;
+  }
+
+  const query = m[1].trim();
+  const box = appendBubble('ai', `<i>"${escHtml(query)}" 관련 정보를 검색하는 중…</i>`);
+
+  let resultText;
+  try {
+    const res = await fetch(`${RELAY_ENDPOINT}/web-search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      // 429(일일예산 초과)·503(키 미설정) 등도 조용히 감추지 않고 정직하게
+      // 전달한다(call-ai.js의 동일 원칙과 일치).
+      resultText = `검색 불가: ${data.message || data.error || `HTTP ${res.status}`}`;
+    } else {
+      const parts = [];
+      if (data.answer_box) parts.push(`[요약] ${data.answer_box.title}: ${data.answer_box.snippet}`);
+      if (data.knowledge_graph) parts.push(`[정보] ${data.knowledge_graph.title} — ${data.knowledge_graph.description}`);
+      (data.organic || []).forEach((r, i) => {
+        parts.push(`${i + 1}. ${r.title} — ${r.snippet} (${r.link})`);
+      });
+      resultText = parts.length > 0 ? parts.join('\n') : '검색 결과 없음';
+    }
+  } catch (e) {
+    resultText = `검색 오류: ${e.message}`;
+  }
+
+  box.innerHTML = `<i>"${escHtml(query)}" 검색 완료</i>`;
+
+  // call-ai.js의 searchInject와 동일한 형식 — "미검증·웹 출처"임을 명시.
+  const searchInject =
+    `[웹 검색결과 — 미검증, 출처: 웹] ${resultText}\n\n` +
+    `이 정보는 Hondi 내부에서 검증된 게 아닙니다. 이 결과를 반영해 답하되, ` +
+    `여전히 불확실한 부분은 [VERIFY] 표시와 함께 사용자 본인 확인을 권하세요.`;
+  messages.push({ role: 'user', content: searchInject });
+
+  let shown = false;
+  const aiBubble = appendBubble('ai', '');
+  aiBubble.style.display = 'none';
+  const full = await callExpertAI(messages, (delta, fullText) => {
+    if (!shown) { aiBubble.style.display = ''; shown = true; }
+    aiBubble.innerHTML = escHtml(fullText).replace(/\n/g, '<br>');
+    document.getElementById('chat-thread').scrollTop = 1e9;
+  });
+  messages.push({ role: 'assistant', content: full });
+
+  // 이어진 응답이 또 검색을 요청하면(예: 1차 검색으로 부족했던 경우) depth+1로
+  // 재귀 — 2회 한도에 도달하면 위에서 조용히 종료.
+  await _maybeHandleWebSearch(full, depth + 1);
 }
 
 // market의 search_entities RPC를 호출해 관련 업종의 실제 등록 사업자를
