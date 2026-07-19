@@ -163,8 +163,5 @@
   "AGENT-SUPPLIER-96": "AGENT-SUPPLIER-96_other-personal-services_v2.0.txt",
   "AGENT-SUPPLIER-97": "AGENT-SUPPLIER-97_household-employment_v2.0.txt",
   "AGENT-SUPPLIER-98": "AGENT-SUPPLIER-98_own-consumption-production_v2.0.txt",
-  "AGENT-SUPPLIER-99": "AGENT-SUPPLIER-99_international-foreign-organizations_v2.0.txt",
-  "K-Public_common": "K-Public_common_v1_3.md",
-  "k-business": "k-business_v1_0.md",
-  "business-kr": "business-kr_v1_0.md"
+  "AGENT-SUPPLIER-99": "AGENT-SUPPLIER-99_international-foreign-organizations_v2.0.txt"
 }
