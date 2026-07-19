@@ -31,14 +31,25 @@
 # 추가하는 것만으로 바로 재사용된다(2026-07-09 실제로 추가·렌더링
 # 검증 완료 — 경기도/서울/전남광주통합특별시 3건, unresolved 0건).
 #
-# ★ 별도로 발견된, 아직 미해결인 진짜 문제 ★
-# gopang worker.js의 SP_DELEGATION_REGISTRY(jeju_do/jeju_national)는
-# JEJU-DO-SP_v1.0.md 한 파일만 fetch하고 위 상위 체인(kgov+overlay+
-# tree-protocol)을 전혀 붙이지 않는다 — JEJU-DO-SP_v1.0.md 자신의
-# 헤더가 "반드시 JEJU-GOV-COMMON 뒤에 고정 삽입, 단독 사용 금지"라고
-# 명시하는데도. jeju.hondi.net(독립 jeju 저장소)은 이 체인을 올바르게
-# 조립하지만, gopang의 /gov/relay 경로는 그렇지 않다 — 의도된
-# 경량화인지 버그인지 확인 필요(사용자 판단 대기, 이 문서 범위 밖).
+# ★ 위 "미해결" 문제, 같은 날 실제로는 이미 해결돼 있었음(정정, 2026-07-19) ★
+# worker.js에 govCommonDoCode 필드 + _loadGovCommonChain(doCode)가 이미
+# 2026-07-09에 추가돼 있었다(실사로 재확인) — jeju_do/jeju_national
+# 위임 항목은 SP_DELEGATION_REGISTRY에서 govCommonDoCode:'jeju'를 갖고
+# 있고, _fetchDelegationPrompt()가 이를 보고 상위 체인을 앞에 붙인다.
+# _loadGovCommonChain(doCode)는 도코드를 인자로 받는 범용 함수라 이미
+# province-agnostic하다 — 전국 확장 시 이 함수 자체는 손댈 필요 없다.
+# 실제로 손봐야 했던 곳은 jeju-router.js 쪽이었다(_PROVINCE_CODE
+# 하드코딩 + _loadDoSp()가 이 템플릿을 안 쓰고 정적 파일만 fetch하던
+# 문제) — 2026-07-19 배선 작업으로 해결.
+#
+# ★ 거버넌스구조 필드 신설(2026-07-19) ★
+# province-master-data.json의 각 도 레코드에 `거버넌스구조` 구조화
+# 필드가 추가됐다(계층모델/하위단위_기본유형/하위단위_오버레이/
+# 창구단위_오버레이/하위단위목록). 이 템플릿의 자리표시자(프로즈)와는
+# 별개 — 프로즈는 LLM 컨텍스트용, `거버넌스구조`는 라우터 코드가 분기
+# 조건으로 참조하는 값이다(예: 계층모델==='SINGLE_TIER'면 B 계층
+# 스킵, 하위단위_기본유형==='B-2_ADMINISTRATIVE_CITY'면 자치사무 없음
+# 문구 자동 삽입). 상세는 GOV-TIER-IO-SCHEMA_v1_1.md 오버레이 B-2 참조.
 #
 # 자리표시자 목록: 도이름, 도코드, 통치구조_문구, 이원화_문구,
 #                 인접기관_문구, 광역출력_문구, 위임사무_문구,
