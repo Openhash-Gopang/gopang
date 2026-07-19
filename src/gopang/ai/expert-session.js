@@ -22,7 +22,7 @@ import { summarizeTranscript6W, summarizeHandoffContext6W } from './report-utils
 import { EXPERT_REGISTRY, UNIVERSAL_INTEGRITY_KEY, COMMON_GUARDRAILS_KEY, COMMON_MEDICAL_SAFETY_KEY,
          getExpertGwpDef, resolveExpertId }
   from './expert-registry.js';
-import { _loadSpByKey } from './manifest-loader.js';
+import { _loadSpByKey, _loadSpRawByKey } from './manifest-loader.js';
 import { _gwpLaunch } from '../gwp/engine.js';
 import { _buildRoutingFacts } from '../services/location.js';
 
@@ -49,7 +49,24 @@ export function currentExpertLabel() {
   return _expert.def ? `${_expert.def.icon} ${_expert.def.label}` : null;
 }
 
-// ── 합성 System Prompt 로드 (공통 가드레일 + (의료시) 안전모듈 + 페르소나) ──
+// ── 합성 System Prompt 로드 (2026-07-19 재구성) ──────────────────────
+// 조립 순서: UNIVERSAL-INTEGRITY → UNIVERSAL-common → PROFESSIONAL-common
+//   → 공통 가드레일(C1~C43) → (의료시) 의료 안전모듈 → 페르소나 SP
+//
+// 배경 ① (2026-07-19 실사로 발견): UNIVERSAL-common(U0 의도특정·U1 권한의
+// 한계·U7 업무처리파이프라인 — "안내로 끝내지 않는다"는 원칙의 실제 본문)과
+// PROFESSIONAL-common(전문가 사칭 금지·최종판단은 감독전문가 전속 등 정체성
+// 계층)이 이 조립 함수 어디에도 없어, 60개 EXPERT 페르소나 전원이 그 원칙
+// 없이 구동되고 있었다 — SP 문서 자신은 이 상속을 전제로 쓰여 있었으나
+// (예: PROFESSIONAL-common_v1_0.md 헤더) 실제로 로드된 적이 없었다.
+//
+// 배경 ② (동시 발견): 기존 코드는 _loadSpByKey()를 이 함수 안에서 여러 번
+// 호출했는데, _loadSpByKey()가 매번 UNIVERSAL-INTEGRITY·TASK-DELEGATION-GUIDE를
+// 자동으로 다시 앞에 붙이는 바람에 최종 합성 프롬프트에 그 두 문서가 최대
+// 4번까지 중복 삽입되고 있었다(실사로 확인 — UNIVERSAL-INTEGRITY 시작 문구
+// 3회 반복). 공유 상위 계층은 이 함수에서 정확히 한 번만 조립하고, 나머지는
+// _loadSpRawByKey()(자동 결합 없음)로 원문만 받아온다.
+//
 // 2026-07-09: fetch(하드코딩 URL) 직접 호출 -> _loadSpByKey(manifest 키)로
 // 전환. sp-catalog.json은 CI가 매 push마다 최신 버전으로 자동 갱신하므로,
 // 이제 새 SP 버전을 만들면 이 파일을 손대지 않아도 자동으로 반영된다
@@ -57,29 +74,41 @@ export function currentExpertLabel() {
 // 2026-07-09: export 추가 — call-ai.js의 K-Compose→EXPERT(scope=
 // orchestration_subtask) nested 호출(§0-H)이 이 합성 로직을 그대로
 // 재사용한다. 페르소나 SP 파일 하나만 달랑 로드하면 UNIVERSAL-INTEGRITY·
-// 공통 가드레일(C1~C41)·의료 안전모듈이 빠진 반쪽 프롬프트가 되므로,
+// 공통 가드레일(C1~C43)·의료 안전모듈이 빠진 반쪽 프롬프트가 되므로,
 // 오케스트레이션 하위 호출이라고 해서 이 합성 과정을 생략하면 안 된다
 // — 로직을 중복 구현하지 않고 여기 하나만 있게 유지한다.
 export async function _composeExpertPrompt(def) {
   if (_promptCache.has(def.key)) return _promptCache.get(def.key);
 
   const parts = [];
+
+  // 공유 상위 계층 — 정확히 한 번만 조립(중복 버그 수정, 2026-07-19).
+  // UNIVERSAL-INTEGRITY 자기 자신을 로드할 땐 _loadSpByKey()도 자동 결합을
+  // 하지 않으므로(self-concat 방지 분기) 그대로 써도 무방하다.
   try {
     parts.push(await _loadSpByKey(UNIVERSAL_INTEGRITY_KEY, 'UNIVERSAL-INTEGRITY'));
   } catch (e) { console.warn('[Expert] UNIVERSAL-INTEGRITY 로드 실패:', e.message); }
 
   try {
-    parts.push(await _loadSpByKey(COMMON_GUARDRAILS_KEY, '공통 가드레일'));
+    parts.push(await _loadSpRawByKey('UNIVERSAL-common', 'UNIVERSAL-common'));
+  } catch (e) { console.warn('[Expert] UNIVERSAL-common 로드 실패:', e.message); }
+
+  try {
+    parts.push(await _loadSpRawByKey('PROFESSIONAL-common', 'PROFESSIONAL-common'));
+  } catch (e) { console.warn('[Expert] PROFESSIONAL-common 로드 실패:', e.message); }
+
+  try {
+    parts.push(await _loadSpRawByKey(COMMON_GUARDRAILS_KEY, '공통 가드레일'));
   } catch (e) { console.warn('[Expert] 공통 가드레일 로드 실패:', e.message); }
 
   if (def.needsMedicalSafety) {
     try {
-      parts.push(await _loadSpByKey(COMMON_MEDICAL_SAFETY_KEY, '의료 안전모듈'));
+      parts.push(await _loadSpRawByKey(COMMON_MEDICAL_SAFETY_KEY, '의료 안전모듈'));
     } catch (e) { console.warn('[Expert] 의료 안전모듈 로드 실패:', e.message); }
   }
 
   try {
-    parts.push(await _loadSpByKey(def.key, def.label));
+    parts.push(await _loadSpRawByKey(def.key, def.label));
   } catch (e) {
     console.warn('[Expert] 페르소나 SP 로드 실패:', e.message);
     parts.push(`[${def.label} 페르소나 SP 로드 실패 — 일반 전문가 모드로 응답]`);

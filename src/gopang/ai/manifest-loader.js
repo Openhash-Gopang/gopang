@@ -104,3 +104,26 @@ export async function _loadSpByKey(manifestKey, label) {
     (!universal && !taskGuide ? ' — 공통문서 없이' : '') + `)`);
   return combined;
 }
+
+// ── 원문만 로드(자동 상위계층 결합 없음) — 2026-07-19 신설 ──────────────
+// 배경: expert-session.js의 _composeExpertPrompt()가 한 번의 페르소나
+// 합성 안에서 _loadSpByKey()를 여러 번(UNIVERSAL-INTEGRITY 자체·공통
+// 가드레일·의료 안전모듈·페르소나 SP) 호출했는데, _loadSpByKey()가 매번
+// UNIVERSAL-INTEGRITY·TASK-DELEGATION-GUIDE를 자동으로 다시 앞에 붙이는
+// 바람에 최종 합성 프롬프트에 그 두 문서가 최대 4번까지 중복 삽입되고
+// 있었다(실사로 확인 — UNIVERSAL-INTEGRITY 시작 문구가 3회 반복). 여러
+// SP를 한 번의 합성 안에서 이어붙이는 호출부는 이 함수로 원문만 받고,
+// 공유 상위 계층(UNIVERSAL-INTEGRITY·TASK-DELEGATION-GUIDE 등)은 합성부
+// 코드가 정확히 한 번만 직접 배치해야 한다. 단독으로 SP 하나만 로드하는
+// 기존 호출부(K-Intent 등)는 계속 _loadSpByKey()를 그대로 쓴다 — 그
+// 경우는 중복이 발생하지 않는다(호출이 1회뿐이므로).
+export async function _loadSpRawByKey(manifestKey, label) {
+  const manifest = await _loadManifest();
+  const fname = manifest[manifestKey];
+  if (!fname) throw new Error(`${label} manifest 키 없음: ${manifestKey}`);
+  const res = await fetch(_SP_BASE + fname);
+  if (!res.ok) throw new Error(`${label} SP 로드 실패: ${res.status} (${fname})`);
+  const sp = await res.text();
+  console.info(`[SP] ${label} 로드 완료(원문, 상위계층 미결합): ${fname} (${sp.length} chars)`);
+  return sp;
+}

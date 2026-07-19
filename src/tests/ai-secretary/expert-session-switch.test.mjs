@@ -28,10 +28,19 @@ const SP_FILES = {
   'sp-catalog.json': JSON.stringify({
     'UNIVERSAL-INTEGRITY': 'UNIVERSAL-INTEGRITY_v1_0.md',
     'TASK-DELEGATION-GUIDE': 'TASK-DELEGATION-GUIDE_v1_0.md',
+    // 2026-07-19 신설 — _composeExpertPrompt 조립 검증용(회귀 방지: 이 둘이
+    // 목에 없어도 try/catch로 조용히 건너뛰어 테스트가 거짓 통과하던 문제를
+    // 막기 위해 추가).
+    'UNIVERSAL-common': 'UNIVERSAL-common_v1_0.md',
+    'PROFESSIONAL-common': 'PROFESSIONAL-common_v1_0.md',
+    'SP_common_guardrails': 'SP_common_guardrails_v1_0.md',
     'SP_lawyer': 'SP_lawyer_v4_1.txt',
   }),
   'UNIVERSAL-INTEGRITY_v1_0.md': '[UNIVERSAL-INTEGRITY 원문 — U0 제1공리]',
   'TASK-DELEGATION-GUIDE_v1_0.md': '[TASK-DELEGATION-GUIDE 원문]',
+  'UNIVERSAL-common_v1_0.md': '[UNIVERSAL-common 원문 — U1 권한의 한계]',
+  'PROFESSIONAL-common_v1_0.md': '[PROFESSIONAL-common 원문 — 전문가 사칭 금지]',
+  'SP_common_guardrails_v1_0.md': '[공통 가드레일 원문]',
   'SP_lawyer_v4_1.txt': '[변호사 페르소나 SP 원문]',
 };
 
@@ -110,6 +119,13 @@ describe('B3-2 — 전문가 세션 same-thread SP 전환', () => {
     assert.equal(currentExpertLabel(), '⚖️ 변호사');
     assert.ok(CFG.system.includes('변호사 페르소나 SP 원문'), 'CFG.system이 페르소나 프롬프트로 안 바뀜');
     assert.ok(CFG.system.includes('UNIVERSAL-INTEGRITY 원문'), '페르소나 전환에도 UNIVERSAL-INTEGRITY 유지돼야 함');
+    // 2026-07-19 신설 — U0/U1/U7("안내로 끝내지 않는다")과 전문가 정체성
+    // 계층이 실제로 조립되는지 검증(2026-07-19 실사로 발견된 결함의 회귀 방지).
+    assert.ok(CFG.system.includes('UNIVERSAL-common 원문'), 'UNIVERSAL-common(U0/U1/U7)이 조립에서 빠짐 — 회귀');
+    assert.ok(CFG.system.includes('PROFESSIONAL-common 원문'), 'PROFESSIONAL-common(전문가 정체성 계층)이 조립에서 빠짐 — 회귀');
+    // UNIVERSAL-INTEGRITY가 중복 삽입되지 않는지 검증(3중복 버그 회귀 방지).
+    const uiCount = CFG.system.split('UNIVERSAL-INTEGRITY 원문').length - 1;
+    assert.equal(uiCount, 1, `UNIVERSAL-INTEGRITY가 ${uiCount}회 삽입됨 — 정확히 1회여야 함(중복 버그 회귀)`);
     assert.equal(history[0].content, CFG.system, 'history[0](캐시된 system)도 함께 갱신돼야 함(캐시 최적화 우회)');
     assert.equal(history.length, 2, '기존 대화(history)가 유실되면 안 됨 — 같은 스레드 유지가 핵심');
 
