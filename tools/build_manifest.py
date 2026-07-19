@@ -128,6 +128,37 @@ professional_common_files = [
 if professional_common_files:
     manifest['PROFESSIONAL-common'] = best(professional_common_files)
 
+# 2-c-1-c) K-Public_common / k-business / business-kr
+#      2026-07-20 신설(사용자 지시로 발견된 결함 수정 — UNIVERSAL-common과
+#      정확히 동일한 사고 패턴): worker.js가 이 세 문서를 하드코딩 URL로
+#      직접 fetch()하고 있어 K-Public_common이 v1_0에 몇 주간 박제돼 있던
+#      것을 발견, sp-catalog.json에 수동으로 키를 추가해 manifest 기반
+#      조회로 전환했다. 그런데 이 스크립트가 SP_ 접두사가 아닌 이 세
+#      파일을 스캔하는 블록이 없어(UNIVERSAL-common이 처음 겪었던 것과
+#      동일 원인), 다음 push 때 수동 추가한 키가 조용히 다시 지워지는
+#      회귀가 실제로 발생했다(2026-07-20 실사로 확인). UNIVERSAL-common·
+#      PROFESSIONAL-common과 동일한 스캔 패턴을 추가해 재발을 원천 차단한다.
+k_public_common_files = [
+    f.name for f in PROMPTS.iterdir()
+    if re.match(r'^K-Public_common_v', f.name) and f.name.endswith('.md')
+]
+if k_public_common_files:
+    manifest['K-Public_common'] = best(k_public_common_files)
+
+k_business_files = [
+    f.name for f in PROMPTS.iterdir()
+    if re.match(r'^k-business_v', f.name) and f.name.endswith('.md')
+]
+if k_business_files:
+    manifest['k-business'] = best(k_business_files)
+
+business_kr_files = [
+    f.name for f in PROMPTS.iterdir()
+    if re.match(r'^business-kr_v', f.name) and f.name.endswith('.md')
+]
+if business_kr_files:
+    manifest['business-kr'] = best(business_kr_files)
+
 # 2-c-2) UNIVERSAL-job-assist — prompts/UNIVERSAL-job-assist_vX_Y.md
 #      2026-07-15 신설: call-ai.js가 처음엔 UNIVERSAL_COMMON_URL 하드코딩
 #      패턴(worker.js, v1_3에 박제된 채 실제 최신 v1_5를 못 읽고 있던 걸

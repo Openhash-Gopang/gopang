@@ -84,6 +84,24 @@ def group_files() -> dict[str, list[Path]]:
             m2 = re.match(r'^(AGENT-SUPPLIER-(\d+))_', name)
             if m2:
                 add(f'AGENT-SUPPLIER-{m2.group(2)}', f)
+        elif name.endswith('.md'):
+            # ★ 2026-07-20 신설 — build_manifest.py와 동일한 규칙인데 이
+            # 스크립트엔 .md 스캔이 통째로 빠져 있었다(전수조사로 발견:
+            # SP_accountant·SP_appraiser 등 60개 EXPERT 페르소나 .md 파일과
+            # UNIVERSAL-common·K-Public_common 등이 KEEP_LATEST 정리 대상에서
+            # 한 번도 걸러진 적이 없어 prompts/ 루트에 무기한 쌓이고 있었다).
+            # build_manifest.py의 SP_{slug} 정규식(밑줄, 비탐욕 매칭)과
+            # UNIVERSAL-common/PROFESSIONAL-common/K-Public_common 등 개별
+            # 문서 규칙을 동일하게 적용한다.
+            m = re.match(r'^(SP_.+?)_v[\d_]+\.md$', name)
+            if m:
+                add(m.group(1), f)
+                continue
+            m3 = re.match(r'^(UNIVERSAL-INTEGRITY|UNIVERSAL-common|UNIVERSAL-job-assist|'
+                          r'PROFESSIONAL-common|TASK-DELEGATION-GUIDE|K-Public_common|'
+                          r'k-business|business-kr)_v', name)
+            if m3:
+                add(m3.group(1), f)
 
     pa_dir = PROMPTS / 'profile-assistant'
     if pa_dir.is_dir():
