@@ -321,8 +321,6 @@ const DEEPSEEK_MODEL = 'deepseek-v4-flash'; // ★ 2026-07-16 정정 — 기존 
 // HONDI_TIER_MODELS(아래)·src/profile2.0/ai_setup_worker.js는 이미 'deepseek-v4-flash'로
 // 맞춰져 있었는데 이 상수만 예전 값으로 남아 있던 걸 발견해 통일한다(주피터님 지시:
 // "LLM은 디폴트로 deepseek v4 flash로 상정").
-const SUPABASE_URL   = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
-
 // ══════════════════════════════════════════════════════════
 // 혼디 제공 무료 기본 키(deepseek-default) — Flash/Pro 티어 + 비용 산정
 // ══════════════════════════════════════════════════════════
@@ -1093,20 +1091,6 @@ function _err(status, code, detail, corsHeaders) {
     JSON.stringify({ ok: false, error: code, detail }),
     { status, headers: corsHeaders }
   );
-}
-
-function _supabaseAnonKey() {
-  return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
-}
-
-function _sbHeaders(env) {
-  const key = env.SUPABASE_KEY || _supabaseAnonKey();
-  return { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' };
-}
-
-function _sbServiceHeaders(env) {
-  const key = env.SUPABASE_SERVICE_KEY || env.SUPABASE_KEY || _supabaseAnonKey();
-  return { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -11205,7 +11189,7 @@ async function handleProfileGet(request, env, corsHeaders) {
       ? await _l1FindProfileByGuid(env, guidParam)
       : (rawHandle ? await _l1FindProfileByHandle(env, normHandle) : null);
   } catch (e) {
-    console.warn('[Profile] L1 조회 실패, Supabase로 폴백:', e.message);
+    console.warn('[Profile] L1 조회 실패:', e.message);  // (실제 폴백 로직 없음 — 낡은 메시지 정정, 2026-07-19)
   }
 
   if (l1Record) {
@@ -11300,15 +11284,12 @@ async function _signerKeypair(env, agentGuid, principalGuid) {
     console.warn('[Signer] AGENT_SIGNER binding 없음 — 키 생성 건너뜀');
     return { ok: false, error: 'NO_SIGNER_BINDING', public_key_b64: null };
   }
-  const sbKey = env.SUPABASE_SERVICE_KEY || env.SUPABASE_KEY || '';
   const res = await env.AGENT_SIGNER.fetch('http://signer/agent/keypair', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       agent_guid:           agentGuid,
       principal_guid:       principalGuid,
-      supabase_url:         SUPABASE_URL,
-      supabase_service_key: sbKey,
     }),
   });
   return res.json().catch(() => ({ ok: false, error: 'SIGNER_PARSE_ERROR' }));
@@ -11318,15 +11299,12 @@ async function _signerSign(env, agentGuid, message) {
   if (!env.AGENT_SIGNER) {
     return { ok: false, error: 'NO_SIGNER_BINDING', signature_b64: null };
   }
-  const sbKey = env.SUPABASE_SERVICE_KEY || env.SUPABASE_KEY || '';
   const res = await env.AGENT_SIGNER.fetch('http://signer/agent/sign', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       agent_guid:           agentGuid,
       message,
-      supabase_url:         SUPABASE_URL,
-      supabase_service_key: sbKey,
     }),
   });
   return res.json().catch(() => ({ ok: false, error: 'SIGNER_PARSE_ERROR' }));
@@ -11830,8 +11808,6 @@ async function handleProfilePost(request, env, corsHeaders) {
   // 그런 경우 애초에 매칭 대상이 아니므로 문제 없다.
   const resolvedOccupation = occupation
     || (body.industry_fields?.schema_id ? (KSIC_LABELS[String(body.industry_fields.schema_id)] || null) : null);
-
-  const sbH = _sbHeaders(env);
 
   // 기존 프로필 존재 여부 확인 — L1 PocketBase가 유일한 소스.
   // (2026-07-15: Supabase 레거시 폴백 삭제 — 개발 단계라 "L1로 아직 안

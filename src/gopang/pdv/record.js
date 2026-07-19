@@ -1,8 +1,11 @@
 /**
  * pdv/record.js — PDV 기록·체인·Supabase 연동
  */
-import { _SUPABASE_URL, _SUPABASE_KEY, USER_GUID, _USER } from '../core/state.js';
+import { _SUPABASE_URL, _SUPABASE_KEY, USER_GUID, _USER, _userLocation } from '../core/state.js';
 import { CFG } from '../core/config.js';
+// (2026-07-19: _recordPDV()는 /pdv/report 경유로 이관 완료. 아래
+//  _patchL1LedgerUserHash/_patchPdvChainHeight는 대응하는 worker.js
+//  엔드포인트가 아직 없어 Supabase 직접 접근이 남아있다 — §미해결 블로커.)
 
 // ── PDV 일상/업무 영역 모드 — AC-EVOLUTION_v1_1.md §PDV-SPLIT ──────────
 // 시간대 기반 자동전환은 쓰지 않는다(AC-EVOLUTION-GAPS #13 — 자동전환은
@@ -123,7 +126,8 @@ export function _buildPDVNote() {
 }
 
 
-// 고팡 내부 전용. 직접 Supabase INSERT. 하위 시스템은 위 recordPDV() 사용.
+// 고팡 내부 전용. /pdv/report 경유(위 recordPDV()와 동일 경로, 2026-07-19 이관).
+// 하위 시스템은 위 recordPDV()를 직접 사용.
 export async function _recordPDV(record) {
   try {
     // AC-EVOLUTION_v1_1.md §PDV-SPLIT — 호출부가 명시 안 하면 현재 모드로.
@@ -175,39 +179,36 @@ export async function _recordPDV(record) {
         : record.type === 'service_task' ? '서비스 작업 완료'
         : '대화');
 
-    // ── Supabase pdv_log 저장 ──────────────────────────────
-    // 실제 컬럼명: guid(user_guid), type(record_type), summary_6w(6하원칙 요약)
-    const res = await fetch(_SUPABASE_URL + '/rest/v1/pdv_log', {
+    // ── L1 PocketBase(pdv_records) 저장 — Worker /pdv/report 경유 ──────
+    // (2026-07-19: Supabase pdv_log 직접 INSERT 제거. 바로 위 recordPDV()가
+    //  이미 이 경로로 정상 이관돼 있었는데 _recordPDV만 옛 방식으로 남아있던
+    //  것을 발견해 통일한다. handlePdvReport(worker.js)가 기대하는 report
+    //  스키마에 맞춰 6하원칙 필드를 구성한다.)
+    const res = await fetch(CFG.endpoint + '/pdv/report', {
       method: 'POST',
-      headers: {
-        'apikey': _SUPABASE_KEY, 'Authorization': 'Bearer ' + _SUPABASE_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal,resolution=ignore-duplicates',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        guid:              _effectiveGuid,
-        source:            'gopang',
-        type:              record.type,
-        summary:           record.summary || null,
-        summary_6w:        record.what    || record.summary || null,
-        // 위치
-        // (pdv_log에 location 컬럼 없음 — summary_6w에 포함)
-        // Hash Chain 연동 (v3.0)
-        session_id:        record.session_id        ?? null,
-        domain:            record.domain             ?? 'personal',
-        affiliation_org_id: record.affiliation_org_id ?? null,
-        chain_height:      record.chain_height       ?? null,
-        chain_local_hash:  record.chain_local_hash   ?? null,
-        openhash_anchored: false,
-        via_worker:        false,
-        reporter_svc:      null,
-        block_hash:        record.block_hash         ?? null,
+        report: {
+          svc:  'gopang',
+          type: record.type,
+          who:   { role: 'user', ipv6: _effectiveGuid },
+          what:  { summary: record.what || record.summary || null },
+          why:   { goal: whyStr },
+          how:   { method: howStr },
+          where: { svc_url: locStr || undefined },
+          session_id:        record.session_id        ?? null,
+          reporter_svc:      null,
+          domain:            record.domain             ?? 'personal',
+          affiliation_org_id: record.affiliation_org_id ?? null,
+          block_hash:        record.block_hash         ?? null,
+          content_hash:      record.chain_local_hash   ?? null,
+        },
       }),
     });
 
     if (!res.ok) {
       const err = await res.text().catch(() => res.status);
-      console.warn('[PDV] Supabase 오류:', res.status, err);
+      console.warn('[PDV] Worker 오류:', res.status, err);
     } else {
       console.info('[PDV] 기록 완료:', record.type,
         '| session_id:', record.session_id?.slice(0, 8) || '-',
