@@ -158,7 +158,7 @@ await fetch('https://gopang-proxy.tensor-city.workers.dev/svc/register', {
 ## 4. 저장소 구조
 
 ```
-gopang_v2/
+gopang/
 │
 │  ← hondi.net 배포 파일
 ├── index.html          기기 감지 라우터
@@ -176,11 +176,19 @@ gopang_v2/
 ├── report/
 │   └── gopang-report.js    PDV 보고서 전송 라이브러리
 │
-│  ← 문서
+│  ← L1 PocketBase 훅 (2026-07-19부로 git 추적 시작)
+├── pb_hooks/
+│   └── main.pb.js          profiles 훅 + /api/tx·mint·bridge-* 등 커스텀 라우트
+│
+│  ← 문서 — 전체 목록·용도는 docs/MANUAL_INDEX.md 참고
 ├── docs/
-│   ├── gopang-auth-whitepaper.md   인증 백서 (§12: 하위 시스템 구현 가이드)
-│   ├── gopang-report-manual.md     보고서 전송 매뉴얼
-│   ├── supabase_webauthn.sql       WebAuthn 테이블 SQL
+│   ├── MANUAL_INDEX.md              📄 전체 문서 지도(신설, 여기서 시작하세요)
+│   ├── API_REFERENCE_worker_v1_0.md worker.js 145개 엔드포인트 레퍼런스
+│   ├── L1_POCKETBASE_MANUAL_v1_0.md L1 PocketBase 아키텍처·배포 매뉴얼
+│   ├── gopang-auth-whitepaper.md    인증 백서 (§12: 하위 시스템 구현 가이드)
+│   ├── gopang-report-manual.md      보고서 전송 매뉴얼
+│   ├── manual/                      개발자 온보딩 6부작(01~05 + README)
+│   ├── archive/                     폐기된 구버전 문서(Supabase 시절 등)
 │   └── ...기타 설계 문서
 │
 │  ← 고팡 앱 빌드 소스
@@ -219,20 +227,23 @@ gopang_v2/
 
 `https://gopang-proxy.tensor-city.workers.dev`
 
+> **📄 전체 145개 엔드포인트는 [`docs/API_REFERENCE_worker_v1_0.md`](docs/API_REFERENCE_worker_v1_0.md) 참고.** 아래는 하위 시스템 개발 시 가장 자주 쓰는 것만 추린 하이라이트입니다(전체 목록 아님).
+
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
 | POST | `/auth/issue` | SSO 토큰 발급 |
 | GET  | `/auth/verify` | 토큰 검증 |
 | GET  | `/auth/refresh` | 토큰 갱신 |
 | POST | `/auth/webauthn/challenge` | WebAuthn 챌린지 발급 |
-| POST | `/auth/webauthn/register` | 지문 공개키 등록 |
-| POST | `/auth/webauthn/verify` | 지문 서명 검증 |
 | GET  | `/geocode` | 카카오 역지오코딩 |
 | POST | `/deepseek` | DeepSeek API 프록시 |
 | POST | `/gemini/*` | GPT-4o mini 프록시 |
 | POST | `/pdv/report` | **PDV 보고서 수신·기록** |
+| POST | `/profile/visibility` | is_public 전용 갱신(2026-07-19 신설) |
 | POST | `/svc/register` | **서비스 등록 신청** |
 | GET  | `/svc/verify` | **서비스 등록 상태 확인** |
+
+⚠️ **2026-07-19 정정**: 기존에 이 표에 있던 `/auth/webauthn/register`, `/auth/webauthn/verify`는 **실제 `worker.js`에 존재하지 않는 죽은 경로**였습니다(코드 주석 확인 — 호출자가 사라진 Supabase 전용 헬퍼로 이미 정리된 것으로 보임). 제거했습니다.
 
 ---
 

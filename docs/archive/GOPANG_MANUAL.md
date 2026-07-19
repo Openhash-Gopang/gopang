@@ -1,5 +1,12 @@
 # 고팡 (Gopang) 개발 매뉴얼 v5.1
 
+> ⚠️ **폐기된 문서 (2026-07-19)** — Supabase 기반 아키텍처를 설명하는 구버전입니다.
+> 현재는 L1 PocketBase로 완전 이관되었습니다. 최신 문서: [docs/L1_POCKETBASE_MANUAL_v1_0.md](../L1_POCKETBASE_MANUAL_v1_0.md)
+> 전체 문서 지도: [docs/MANUAL_INDEX.md](../MANUAL_INDEX.md)
+
+---
+
+
 > 작성: AI City Inc. · 도영민 | 최종 갱신: 2026-05-28
 
 ---

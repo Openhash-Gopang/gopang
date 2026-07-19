@@ -1,5 +1,8 @@
 # PocketBase 구조 & 지침 (L1-hanlim 인프라)
 
+> **이 문서가 다루는 범위**: L1-hanlim 인프라의 서버 구조·데이터 파일 위치·Rule 확인법 등 실전 팁
+> **전체 문서 지도**: [MANUAL_INDEX.md](MANUAL_INDEX.md)
+
 ```
 문서 코드: POCKETBASE-STRUCTURE-GUIDE
 버전: v1.0

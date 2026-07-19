@@ -1,4 +1,11 @@
 # 고팡(Gopang) Supabase DB 완전 매뉴얼 v2.0
+
+> ⚠️ **폐기된 문서 (2026-07-19)** — Supabase 기반 아키텍처를 설명하는 구버전입니다.
+> 현재는 L1 PocketBase로 완전 이관되었습니다. 최신 문서: [docs/L1_POCKETBASE_MANUAL_v1_0.md](../L1_POCKETBASE_MANUAL_v1_0.md)
+> 전체 문서 지도: [docs/MANUAL_INDEX.md](../MANUAL_INDEX.md)
+
+---
+
 **작성일**: 2026-06-12  
 **프로젝트**: ebbecjfrwaswbdybbgiu.supabase.co  
 **기준**: T01~T10 완료, 실제 Supabase 스키마 검증 완료  

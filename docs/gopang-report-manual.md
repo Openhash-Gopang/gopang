@@ -1,4 +1,7 @@
 # 고팡 하위 시스템 보고서 작성 및 전송 매뉴얼
+
+> **이 문서가 다루는 범위**: 하위 시스템이 PDV 6하원칙 보고서를 작성·전송하는 스키마와 API
+> **전체 문서 지도**: [MANUAL_INDEX.md](MANUAL_INDEX.md)
 **Gopang Subsystem Report Manual**
 버전 1.0 · 2026년 5월 · AI City Inc.
 

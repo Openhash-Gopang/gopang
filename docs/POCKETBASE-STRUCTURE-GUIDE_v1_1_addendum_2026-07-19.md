@@ -1,5 +1,8 @@
 # PocketBase 구조 & 지침 (L1-hanlim 인프라) — v1.1 addendum
 
+> **이 문서가 다루는 범위**: 위 가이드의 2026-07-19 추가분(pb_hooks 서명검증, profiles 스키마 등)
+> **전체 문서 지도**: [MANUAL_INDEX.md](MANUAL_INDEX.md)
+
 ```
 문서 코드: POCKETBASE-STRUCTURE-GUIDE
 버전: v1.1 addendum (base: v1.0, 2026-07-16)

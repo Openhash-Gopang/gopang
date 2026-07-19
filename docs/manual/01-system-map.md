@@ -1,13 +1,18 @@
 # 01 — 시스템 맵 (파일 구조 + Export 이름 일람)
 
+> **이 문서가 다루는 범위**: 파일 구조 및 Export 이름 일람 — import 오류 예방용 레퍼런스
+> **전체 문서 지도**: [../MANUAL_INDEX.md](../MANUAL_INDEX.md)
+
 > 오류 `does not provide an export named 'X'` 발생 시 이 파일을 먼저 확인하세요.
 
 ---
 
 ## 1. 전체 디렉토리 구조
 
+> ⚠️ **2026-07-19 확인**: 아래 트리의 저장소명(`gopang_v2`→`gopang`)만 정정했습니다. 트리 내용 자체는 부분적으로 낡았을 수 있습니다(예: `src/core/config.js`로 표기돼 있으나 실제로는 `src/gopang/core/config.js`에 위치 — 언제 `src/gopang/` 서브폴더가 생겼는지 이번 조사에선 추적 못 함). 전체 재검증은 후속 작업 필요.
+
 ```
-gopang_v2/
+gopang/
 ├── index.html                          ← Shell UI 진입점 (브라우저 로드)
 │
 └── src/

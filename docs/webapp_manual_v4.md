@@ -1,5 +1,8 @@
 # Gopang webapp.html — 설계 명세 및 검증 보고서
 
+> **이 문서가 다루는 범위**: webapp.html의 설계 명세와 검증 이력(SP-00 v10.0 적용본, v4.0)
+> **전체 문서 지도**: [MANUAL_INDEX.md](MANUAL_INDEX.md)
+
 > **문서 코드:** GOPANG-WEBAPP-SPEC-v4.0
 > **작성일:** 2026년 06월 09일
 > **작성:** AI City Inc. · 팀 주피터
