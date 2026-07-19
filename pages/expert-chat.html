@@ -410,13 +410,25 @@ async function sendTurn(text, attachment) {
   }
 }
 
-// ── [WEB_SEARCH: query=...] 처리 (2026-07-19 신설) ──────────────────
+// ── [WEB_SEARCH: query=...] 처리 (2026-07-19 신설, 2026-07-19 재정정) ────
+// 이 태그는 AC 범용 기능이 아니라 K-Search(SP-18_ksearch) RULE-07 [7-B]가
+// 정의한 태그다(v1.3, 2026-07-11 신설) — 원래는 K-Search 핸드오프 이후에만
+// emit되도록 설계됐다. EXPERT 페르소나가 이 태그를 직접 쓰는 건 K-Search
+// 본체(및 그 RULE-01 안전장치)를 거치지 않는 지름길이므로, 최소한 결과
+// 보고 형식만큼은 K-Search RULE-07 [7-A] 대체형과 동일하게 맞춘다(아래
+// searchInject) — "Hondi 내부에서 검증된 게 아닌 웹 참고정보"임을 명시.
+// RULE-01의 실행 전 판단(전수조사·감시추적 정황·민감정보·전화번호 역조회
+// 금지 등)은 SP_common_guardrails C43-1+에 요지가 반영돼 있고, 판단 자체는
+// (이 코드가 아니라) 페르소나 자신이 C43 지시에 따라 검색 실행 전에 한다 —
+// 이 판단이 코드 레벨 정규식 필터링이 아니라 LLM 판단에 맡겨진 이유는
+// "감시·추적 정황" 같은 신호가 문맥 의존적이라 규칙만으로 걸러내기
+// 어렵기 때문이다(K-Search 본체도 같은 방식으로 자기 자신의 SP 지시에
+// 따라 판단한다 — 이 코드는 그 판단이 이뤄졌다고 전제하고 실행만 한다).
+//
 // call-ai.js의 _handleWebSearchTag()와 동일한 백엔드(worker.js /web-search
-// — Serper.dev 연동, 일일예산캡·캐싱 포함)를 그대로 재사용한다. 검색 결과는
-// "Hondi 내부에서 검증된 게 아닌 웹 참고정보"임을 명시해 재주입하고, 페르소나가
-// 그 정보를 반영해 한 번 더 답하도록 한다. depth로 무한 루프를 방지한다
-// (한 사용자 턴당 검색 최대 2회 — 그 이상 필요하면 페르소나가 사용자에게
-// 직접 안내해야 한다).
+// — Serper.dev 연동, 일일예산캡·캐싱 포함)를 그대로 재사용한다. depth로
+// 무한 루프를 방지한다(한 사용자 턴당 검색 최대 2회 — 그 이상 필요하면
+// 페르소나가 사용자에게 직접 안내해야 한다).
 async function _maybeHandleWebSearch(fullReply, depth = 0) {
   const m = fullReply.match(/\[WEB_SEARCH:\s*query=([^\]]+)\]/);
   if (!m) return;
@@ -456,11 +468,13 @@ async function _maybeHandleWebSearch(fullReply, depth = 0) {
 
   box.innerHTML = `<i>"${escHtml(query)}" 검색 완료</i>`;
 
-  // call-ai.js의 searchInject와 동일한 형식 — "미검증·웹 출처"임을 명시.
+  // K-Search RULE-07 [7-A] 대체형과 동일한 보고 형식 — "Hondi 내부에서
+  // 검증된 게 아닌 웹 참고정보"임을 명시(guid 등 Hondi 검증 필드와 구분).
   const searchInject =
-    `[웹 검색결과 — 미검증, 출처: 웹] ${resultText}\n\n` +
+    `[웹 검색결과 — 미검증, 출처: 웹, K-Search RULE-07 [7-A] 대체형 준용] ${resultText}\n\n` +
     `이 정보는 Hondi 내부에서 검증된 게 아닙니다. 이 결과를 반영해 답하되, ` +
-    `여전히 불확실한 부분은 [VERIFY] 표시와 함께 사용자 본인 확인을 권하세요.`;
+    `여전히 불확실한 부분은 [VERIFY] 표시와 함께 사용자 본인 확인을 권하세요. ` +
+    `검색 결과에 없는 제3자의 정보(나이·거래이력 등)를 추정해 채우지 마세요(RULE-01 금지-10).`;
   messages.push({ role: 'user', content: searchInject });
 
   let shown = false;
