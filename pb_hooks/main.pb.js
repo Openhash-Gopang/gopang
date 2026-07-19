@@ -1719,7 +1719,7 @@ routerAdd("POST", "/api/mint", (c) => {
     console.log("[MINT] body 파싱 완료:", JSON.stringify(body));
     const { guid, amount, krw_amount, secret, memo } = body;
 
-    const MINT_SECRET = "hondi-dev-mint-2026"; // 콜백 내부 선언 — 위 주석 참고
+    const MINT_SECRET = $os.getenv("MINT_SECRET"); // 2026-07-19: 하드코딩 제거, 환경변수로 이관(공개 저장소 노출 방지)
     if (secret !== MINT_SECRET) {
       console.log("[MINT] secret 불일치");
       return c.json(403, { ok: false, error: "FORBIDDEN" });
@@ -1954,7 +1954,7 @@ routerAdd("POST", "/api/ai-charge", (c) => {
       service_id, model, hit_tokens, miss_tokens, out_tokens, cost_krw, memo,
     } = body;
 
-    const AI_CHARGE_SECRET = "hondi-dev-ai-charge-2026"; // 콜백 내부 선언 — MINT_SECRET과 동일 관례
+    const AI_CHARGE_SECRET = $os.getenv("AI_CHARGE_SECRET"); // 2026-07-19: 하드코딩 제거, 환경변수로 이관(공개 저장소 노출 방지)
     if (secret !== AI_CHARGE_SECRET) {
       console.log("[AI-CHARGE] secret 불일치");
       return c.json(403, { ok: false, error: "FORBIDDEN" });
@@ -2528,7 +2528,7 @@ routerAdd("POST", "/api/bridge-in", (c) => {
     // 대응하는 bridge_out 없이도 누구나 임의 guid에 임의 금액을 크레딧할
     // 수 있었다(sentinel 설계상 로컬 발행==잔액 불변식은 깨지지 않아
     // supply/verify로는 못 잡아냄 — "정당한 거래인가"는 별개 문제).
-    const BRIDGE_SECRET = "hondi-dev-bridge-2026"; // 콜백 내부 선언(MINT_SECRET과 동일 관례)
+    const BRIDGE_SECRET = $os.getenv("BRIDGE_SECRET"); // 2026-07-19: 하드코딩 제거, 환경변수로 이관(공개 저장소 노출 방지)
     if (bridge_secret !== BRIDGE_SECRET) {
       return c.json(403, { ok: false, error: "FORBIDDEN", detail: "bridge_secret 불일치 — 이 엔드포인트는 Worker(허브)만 호출할 수 있습니다" });
     }
@@ -2679,7 +2679,7 @@ routerAdd("POST", "/api/bridge-in", (c) => {
 routerAdd("GET", "/api/bridge-out/pending", (c) => {
   try {
     const bridge_secret = $apis.requestInfo(c).query.bridge_secret;
-    const BRIDGE_SECRET = "hondi-dev-bridge-2026"; // 콜백 내부 선언(MINT_SECRET과 동일 관례)
+    const BRIDGE_SECRET = $os.getenv("BRIDGE_SECRET"); // 2026-07-19: 하드코딩 제거, 환경변수로 이관(공개 저장소 노출 방지)
     if (bridge_secret !== BRIDGE_SECRET) {
       return c.json(403, { ok: false, error: "FORBIDDEN", detail: "bridge_secret 불일치 — 이 엔드포인트는 Worker(허브)만 호출할 수 있습니다" });
     }
@@ -2704,7 +2704,7 @@ routerAdd("POST", "/api/bridge-out/complete", (c) => {
     const body = $apis.requestInfo(c).data;
     const { tx_hash, bridge_secret } = body;
     if (!tx_hash) return c.json(400, { ok: false, error: "MISSING_FIELD" });
-    const BRIDGE_SECRET = "hondi-dev-bridge-2026"; // 콜백 내부 선언(MINT_SECRET과 동일 관례)
+    const BRIDGE_SECRET = $os.getenv("BRIDGE_SECRET"); // 2026-07-19: 하드코딩 제거, 환경변수로 이관(공개 저장소 노출 방지)
     if (bridge_secret !== BRIDGE_SECRET) {
       return c.json(403, { ok: false, error: "FORBIDDEN", detail: "bridge_secret 불일치 — 이 엔드포인트는 Worker(허브)만 호출할 수 있습니다" });
     }
@@ -2729,7 +2729,7 @@ routerAdd("POST", "/api/bridge-out/refund", (c) => {
     const body = $apis.requestInfo(c).data;
     const { tx_hash, buyer_guid, bridge_secret } = body;
     if (!tx_hash || !buyer_guid) return c.json(400, { ok: false, error: "MISSING_FIELD" });
-    const BRIDGE_SECRET = "hondi-dev-bridge-2026"; // 콜백 내부 선언(MINT_SECRET과 동일 관례)
+    const BRIDGE_SECRET = $os.getenv("BRIDGE_SECRET"); // 2026-07-19: 하드코딩 제거, 환경변수로 이관(공개 저장소 노출 방지)
     if (bridge_secret !== BRIDGE_SECRET) {
       return c.json(403, { ok: false, error: "FORBIDDEN", detail: "bridge_secret 불일치 — 이 엔드포인트는 Worker(허브)만 호출할 수 있습니다" });
     }
@@ -3199,6 +3199,15 @@ onRecordBeforeUpdateRequest((e) => {
   if (e.collection.name !== "profiles") return;
 
   const info = $apis.requestInfo(e.httpContext);
+
+  // 2026-07-19 긴급 수정: admin(superuser) 인증 요청은 서명 검증을 건너뛴다.
+  // admin 토큰은 hondi-proxy Worker만 보유 — 이미 자체 Ed25519 검증을
+  // 거쳤거나(handleProfilePost 주 경로) 사용자 서명 개념이 없는 신뢰된
+  // 서버 내부 작업(SP 병합·미청구 프로필 생성·업종 자동갱신 등)이다.
+  // 이 예외가 없으면 그 경로들이 전부 깨진다(실사로 발견 — 2026-07-19,
+  // l1-hanlim에서 재현·수정·검증 완료).
+  if (info.admin) return;
+
   const { guid, pubkey, signature } = info.data;
   const ts = info.data.ts || "";
 
