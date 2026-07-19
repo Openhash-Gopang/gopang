@@ -40,8 +40,11 @@ ALLOWLIST = {
     # SP_DELEGATION_REGISTRY(제주 지역 트리 전용, via:'url' 명시) —
     # 2026-07-20 실사 시점 기준 sp-catalog.json 미등록 상태. 등록되면
     # via:'manifest'로 전환하고 이 allowlist에서 제거해야 한다.
-    'Jejudo/01-do/JEJU-DO-SP_v1.5.md',
-    'Jejudo/09-national/JEJU-NATIONAL-SP_v1.0.md',
+    # (2026-07-20 정정: 이전 버전은 로컬 작업 사본의 잘못된 디렉토리명
+    # "Jejudo/"를 등록해 실제 저장소 경로 "gov-tree/"와 불일치 → 매번
+    # 오탐이 났다. 실제 경로로 정정.)
+    'gov-tree/01-do/JEJU-DO-SP_v1.5.md',
+    'gov-tree/09-national/JEJU-NATIONAL-SP_v1.0.md',
 }
 
 
