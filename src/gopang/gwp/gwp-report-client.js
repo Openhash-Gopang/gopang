@@ -40,6 +40,14 @@ const DEFAULT_PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
  * @param {string} [opts.sessionId]    - 없으면 자동 생성
  * @param {string} [opts.sessionStartedAt] - 없으면 now
  * @param {string} [opts.proxyBase]    - PDV 리포트 프록시 base URL
+ * @param {Array<{docType:string, fileName:string, mime:string, size:number,
+ *   acquiredAt:string}>} [opts.attachedDocs] - HUMAN-AUTHORITY-GATE-SCHEMA
+ *   G19(보조 경로, GWP_DOC_REQUEST)로 확보한 서류의 메타데이터만(원본
+ *   base64는 포함하지 않음 — 이미 요청 탭 자신의 대화에 실려 kgov
+ *   GOV_TASK_SUBMIT_REQUEST로 처리됐으므로 여기서는 G18(STAFF_REVIEW_GATE)
+ *   산출물 번들에 "무엇을 확보했는지"만 남긴다). 같은 탭 첨부(§기본
+ *   경로)로 확보한 서류는 이미 GOV_TASK_SUBMIT_REQUEST 쪽에 기록되므로
+ *   여기 다시 넣지 않는다 — 중복 기록 방지.
  * @returns {Promise<{reported: boolean, sessionId: string}>}
  */
 export async function reportGwpSessionEnd({
@@ -53,6 +61,7 @@ export async function reportGwpSessionEnd({
   sessionId,
   sessionStartedAt,
   proxyBase = DEFAULT_PROXY,
+  attachedDocs = [],
 } = {}) {
   if (!gwpMode) return { reported: false, sessionId: null };
   if (!agencyId) throw new Error('[gwp-report-client] agencyId 필수');
@@ -102,6 +111,7 @@ export async function reportGwpSessionEnd({
           session_id: sid,
           reporter_svc: agencyId,
           pdvData: { who: resolvedGuid, when: whenObj, where: location.href, what: whatText, how: 'gwp', why: whatText },
+          attachedDocs: Array.isArray(attachedDocs) && attachedDocs.length ? attachedDocs : undefined,
         },
         gwpOrigin || '*'
       );

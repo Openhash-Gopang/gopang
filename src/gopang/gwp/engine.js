@@ -520,6 +520,7 @@ window.addEventListener('message', (e) => {
               chain_height:     chainRec.height,
               chain_local_hash: chainRec.local_hash,
               block_hash:       msg.block_hash    || null,
+              attachedDocs:     msg.attachedDocs || null, // G18 산출물 번들 — 2026-07-19 연결
               ts:               new Date().toISOString(),
             }).then(() => _markPdvAnchored(chainRec.height));
           } else {
@@ -548,6 +549,11 @@ window.addEventListener('message', (e) => {
           why:        p.why   || ((_gwpService?.name || '') + ' 서비스 이용'),
           session_id: sessionId,
           reporter_svc: reporterSvc || null,
+          // G18(STAFF_REVIEW_GATE) 산출물 번들 — 2026-07-19 연결. 담당부서
+          // 확인·승인 시 "이 세션에서 어떤 서류가 확보됐는지" 조회할 수
+          // 있도록 메타데이터만 남긴다. 전용 결재함 UI는 아직 없음(다음
+          // 단계) — 지금은 PDV 레코드 조회로만 확인 가능.
+          attachedDocs: msg.attachedDocs || null,
           ts:         new Date().toISOString(),
         }).catch(err => console.warn('[GWP_DONE] 비결제 PDV 기록 실패(무시):', err.message));
       }
