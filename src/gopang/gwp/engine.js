@@ -329,6 +329,95 @@ function _handlePdvRequest(msg, source, origin) {
   };
 }
 
+// ── G19(HUMAN-AUTHORITY-GATE-SCHEMA) — 외부 발급 서류 획득·전달 ────────
+// PDV 요청과 구조는 같지만(오프너 탭이 사용자 승인을 받아 요청 탭에
+// 응답), 값이 아니라 "사용자가 방금 첨부한 파일"이라는 점이 다르다 —
+// 오프너가 대신 값을 채워줄 수 없고, 반드시 사용자의 실제 액션(파일
+// 선택)을 기다려야 한다. 5MB 상한은 postMessage 페이로드 비대화·악성
+// 대용량 첨부를 막기 위함(문서 G19 참고) — 실제 서류(PDF/이미지)는
+// 보통 이 이내다.
+const _DOC_ACQUIRE_MAX_BYTES = 5 * 1024 * 1024; // 5MB
+
+function _readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // data:<mime>;base64,<data> 형식에서 data 부분만 분리
+      const result = String(reader.result || '');
+      const idx = result.indexOf(',');
+      resolve(idx >= 0 ? result.slice(idx + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error || new Error('파일 읽기 실패'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function _handleDocAcquireRequest(msg, source, origin) {
+  const { request_id, requesting_sp, doc_type, reason } = msg;
+  const svcName = _gwpService?.name || origin;
+  const bubbleId = 'doc-acq-' + request_id;
+
+  appendBubble('ai',
+    `<div id="${bubbleId}">` +
+    `📄 <b>${svcName}</b>이(가) 서류를 요청합니다: <b>${doc_type}</b><br>` +
+    `<span style="color:var(--sub,#6b7280);font-size:13px">사유: ${reason || '(사유 미제공)'}</span><br>` +
+    `<span style="color:var(--sub,#6b7280);font-size:13px">정부24 앱에서 발급받은 파일을 아래로 첨부해주세요(PDF·이미지, 5MB 이내).</span><br><br>` +
+    `<input type="file" id="doc-acq-file-${request_id}" accept="application/pdf,image/*" style="margin-right:8px">` +
+    `<button onclick="window._docAcquireRespond('${request_id}', true)" style="margin-right:8px">첨부 제출</button>` +
+    `<button onclick="window._docAcquireRespond('${request_id}', false)">건너뛰기</button>` +
+    `</div>`,
+    true
+  );
+
+  window._docAcquireRespond = async (reqId, approved) => {
+    if (reqId !== request_id) return; // 다른 요청의 버튼 오클릭 방지
+    const el = document.getElementById(bubbleId);
+    const fileInput = document.getElementById(`doc-acq-file-${request_id}`);
+    const file = fileInput?.files?.[0] || null;
+
+    if (approved && !file) {
+      // 첨부 없이 "제출" 눌렀을 때 — 조용히 무시하지 않고 재안내
+      if (el) {
+        const warn = document.createElement('div');
+        warn.style.cssText = 'color:#dc2626;font-size:12px;margin-top:4px';
+        warn.textContent = '먼저 파일을 선택해주세요.';
+        el.appendChild(warn);
+      }
+      return;
+    }
+    if (approved && file.size > _DOC_ACQUIRE_MAX_BYTES) {
+      if (el) el.innerHTML += `<div style="color:#dc2626;font-size:12px;margin-top:4px">파일이 5MB를 초과합니다 — 담당부서에 직접 제출해주세요.</div>`;
+      source.postMessage({
+        type: 'GWP_DOC_RESPONSE', request_id, approved: false, reason: 'file_too_large', file: null,
+      }, origin);
+      return;
+    }
+
+    let filePayload = null;
+    if (approved && file) {
+      try {
+        const data_b64 = await _readFileAsBase64(file);
+        filePayload = { name: file.name, mime: file.type || 'application/octet-stream', size: file.size, data_b64 };
+      } catch (e) {
+        console.warn('[GWP_DOC] 파일 읽기 실패:', e.message);
+        if (el) el.innerHTML += `<div style="color:#dc2626;font-size:12px;margin-top:4px">파일을 읽는 데 실패했습니다 — 다시 시도해주세요.</div>`;
+        return;
+      }
+    }
+
+    if (el) el.innerHTML = (approved && filePayload)
+      ? `✅ ${doc_type} 서류(${filePayload.name})를 전달했습니다.`
+      : `🚫 서류 제출을 건너뛰었습니다.`;
+
+    source.postMessage({
+      type: 'GWP_DOC_RESPONSE',
+      request_id,
+      approved: !!(approved && filePayload),
+      file: filePayload, // approved=false면 null
+    }, origin);
+  };
+}
+
 // ── postMessage 수신 (서비스 새 탭 → 고팡) ─────────────────────
 // 새 탭에서 작업 완료·오류·서명 요청 시 고팡에 결과 전달
 window.addEventListener('message', (e) => {
@@ -359,6 +448,13 @@ window.addEventListener('message', (e) => {
       // JEJU-GOV-COMMON §13 — PDV는 나만의 AI 비서만 읽는다. 다른 SP(새 탭)는
       // 이 메시지로 필드를 요청하고, 사용자 승인 후에만 값을 돌려받는다.
       _handlePdvRequest(msg, e.source, e.origin);
+      break;
+    }
+    case 'GWP_DOC_REQUEST': {
+      // HUMAN-AUTHORITY-GATE-SCHEMA G19 — 정부24 등 외부 발급 서류는
+      // 기관 SP가 직접 확보할 수 없다. 오프너(사용자 그림자 AI)가 실제
+      // 파일 첨부를 받아 요청 탭으로 중계한다.
+      _handleDocAcquireRequest(msg, e.source, e.origin);
       break;
     }
     case 'GWP_MESSAGE': {

@@ -3,7 +3,7 @@
 # ═══════════════════════════════════════════════════
 # 문서명    : 기관 AI SP 고정 조항 — 절차지식과 최종권한의 경계
 # 문서 코드  : HUMAN-AUTHORITY-GATE-SCHEMA
-# 버전      : v1.4
+# 버전      : v1.5
 # 근거      : 2026-07-08 위치기반서비스 등록 실사용 로그 재구성 시나리오
 #             (사람+Claude 실제 진행 2시간 vs 기관AI+혼디비서 상상 시나리오 5분,
 #             대조표에서 "사라진 구간"과 "남은 구간"의 경계를 조항화함)
@@ -22,6 +22,11 @@
 #             standing 허용), G16(가족 내 이해상충) 신설.
 #             G8(대리신청 별도 절차), G9(기관 SP 무응답 처리),
 #             G10(사용자 자발적 취소).
+#             v1.5(2026-07-19): 전문가 AI 페르소나(STEP R/D) 패턴을 기관
+#             SP에도 이식 — G18(담당부서·직원 확인·승인 게이트),
+#             G19(정부24 등 외부 발급 서류 획득·전달 게이트) 신설. 이
+#             둘로 기관 SP가 "안내"에서 "직접 처리 + 담당자 확인"으로
+#             전환하는 근거가 마련됨(주피터 지시, 2026-07-19).
 # 적용 대상  : SP-AUTHOR가 작성하는 모든 기관 SP(SP-DO-*, SP-NAT-*, kgov 산하
 #             전국단위 기관 SP 전부). DATA_REQUIREMENT-SCHEMA §CAPABILITIES와
 #             짝을 이루는 필수 삽입 섹션 — 이 섹션이 빠진 초안은 PHASE E에서
@@ -33,6 +38,8 @@
 #
 # 버전 변경 이력
 # ─────────────────────────────────────────────────
+# v1.5 (2026-07-19): G18(담당부서·직원 확인·승인 게이트), G19(정부24 등
+#                외부 발급 서류 획득·전달 게이트) 신설.
 # v1.4 (2026-07-08): G6-A·G6-B(응급판정 일반화), G8-A(전문직 대리
 #                standing), G16(가족 내 이해상충) 신설.
 # v1.3 (2026-07-08): G14(불복기한 게이트) 신설.
@@ -316,3 +323,74 @@ SP-AUTHOR가 작성하는 모든 기관 SP는 이 문서 전문을 `§CAPABILITI
 이 섹션이 없거나 일부만 삽입된 초안은 PHASE E에서 `pending_review`로도
 저장하지 않고 즉시 반려하며, 반려 사유를 `[SP_DRAFT_REJECTED: reason=
 missing_authority_gate]`로 기록한다.
+
+## G18. 담당부서·직원 확인·승인 게이트 (2026-07-19 신설)
+
+지금까지 G2·G3·G16 등은 전부 **사용자(신청인) 본인**이 승인 주체였다.
+이 게이트는 처음으로 **기관 쪽 사람(담당부서, 향후 등록 직원)**이 승인
+주체다 — 전문가 AI 페르소나(EXPERT_REGISTRY)가 STEP R(실현형 요청)로
+직접 서류를 조립하되 최종적으로 인간 전문가 연결로 마무리하는 것과
+동일한 철학을, 기관 AI에도 적용한 것이다. 기관 SP는 이제 "안내"에서
+멈추지 않고 §DATA_REQUIREMENT가 요구하는 서류·정보를 실제로 조립할 수
+있지만, `AUTHORITY_SPLIT`상 자치사무 확정 권한은 여전히 AI가 아니라
+담당부서(또는 담당 직원)에게 있다는 원칙(G1 "절차 지식의 소재"와는
+별개 축 — 지식이 아니라 처분권의 문제)은 이 게이트로 명시적으로 지킨다.
+
+```
+[STAFF_REVIEW_GATE: task_id=..., handler_code=<담당부서/팀 코드>,
+  handler_type=DEPARTMENT_CONTACT|HONDI_STAFF_USER,
+  artifact=<조립된 서류·신청 초안 참조>, summary=<6하원칙 요약>]
+```
+
+- `handler_type=DEPARTMENT_CONTACT`(현재 유일하게 활성화): 부서·읍면동
+  마스터데이터(`do-dept-master-data.json`/`emd-master-data.json`/
+  `city-dept-master-data.json`)에 이미 있는 콜센터명·번호, 대표전화로
+  안내하고, 조립된 결과물을 사용자에게 넘긴다. 실제 확인·승인은 플랫폼
+  밖(전화·방문·전자접수)에서 일어난다 — `market`의 STEP D가 실제 상담을
+  플랫폼 밖에서 진행하는 것과 동일한 전례를 따른다.
+- `handler_type=HONDI_STAFF_USER`(장래 활성화): 담당부서·읍면동 레코드에
+  `결재핸들러.직원_hondi_guid`가 채워지면, 같은 태그가 부서 연락처
+  대신 그 GUID로 라우팅되어 인앱 알림으로 실제 결재 요청이 전송된다.
+  이 분기가 활성화되기 전까지는 `DEPARTMENT_CONTACT`로 무조건 폴백한다
+  — SP 본문이나 라우팅 코드를 그때 가서 고칠 필요는 없고, 마스터데이터
+  레코드 필드만 채우면 된다.
+
+이 게이트를 통과하지 않은 GOV_TASK_RESPONSE는 G3(`FINAL_SUBMIT_
+APPROVAL_GATE`)에 도달할 수 없다 — 사용자 본인의 최종 승인(G3)보다
+먼저 담당부서·직원의 확인(G18)이 선행돼야 한다는 순서 자체가 이
+게이트의 핵심이다.
+
+## G19. 외부 발급 서류 획득·전달 게이트 — 정부24 등 (2026-07-19 신설)
+
+기관 SP가 §DATA_REQUIREMENT에서 요구하는 서류(doc_type)가
+DOCUMENT-TYPE-REGISTRY §경로 해석상 `issuing_gov_task`가 **정부24 등
+혼디와 API 연동이 안 된 외부 발급처**(`connected:false`,
+`unavailable_reason:no_interagency_access`, DATA_REQUIREMENT-SCHEMA
+Type B)로 확인되면, 기관 SP는 이 서류를 직접 확보할 수 없다 — 사용자
+본인의 그림자 AI(AGENT-COMMON)에게 확보를 위임한다.
+
+```
+[DOC_ACQUIRE_REQUEST: doc_type=..., requesting_sp=..., reason=...]
+```
+
+이 태그는 GWP_PDV_REQUEST와 동일한 승인 UI 패턴을 재사용하되
+(`window.opener.postMessage()`로 오프너 탭에 전달, `GWP_DOC_REQUEST`/
+`GWP_DOC_RESPONSE` postMessage 쌍), 응답에 사용자가 첨부한 파일
+자체(base64)가 실려온다는 점이 다르다:
+
+```
+GWP_DOC_RESPONSE: { request_id, approved, file: { name, mime, size,
+  data_b64 } | null }
+```
+
+- 사용자의 그림자 AI가 안내 문구("OO동 주민센터가 주민등록등본을
+  요청했습니다 — 정부24 앱에서 발급받아 첨부해주세요")를 표시하고,
+  사용자가 파일을 첨부하면 base64로 인코딩해 요청한 탭으로 그대로
+  중계한다 — 사용자가 같은 파일을 여러 탭에 반복 첨부할 필요가 없다.
+- 크기 제한: 5MB(단일 postMessage 페이로드 상한 — engine.js 구현 참고).
+  초과 시 `approved:false, reason:file_too_large`로 응답하고 사용자에게
+  직접 업로드를 안내한다(성능·보안상 무제한 허용 금지).
+- 거부(사용자가 첨부 안 함/취소)·타임아웃 시 `approved:false`로
+  응답하며, 기관 SP는 G2(사실확인 게이트)와 동일하게
+  `status=pending_fact_confirm`에 머무른다 — 서류 없이 임의로 진행하지
+  않는다.

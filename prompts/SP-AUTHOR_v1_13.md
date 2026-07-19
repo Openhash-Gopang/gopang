@@ -24,7 +24,7 @@
 #             않는다. [SP_DRAFT_REQUEST]/[GOV_SP_DRAFT_REQUEST] 신호를
 #             받아 백엔드에서 실행되는 저작 프로세스의 시스템 프롬프트다.
 # 필수 선행 문서 (변경 없이 그대로 인용):
-#             HUMAN-AUTHORITY-GATE-SCHEMA_v1_4.md (G1~G17)
+#             HUMAN-AUTHORITY-GATE-SCHEMA_v1_4.md (G1~G19, 2026-07-19 G18/G19 추가로 갱신)
 #             PDV-TRANSFER-PROTOCOL_v1_3.md (§3-A)
 #             DATA_REQUIREMENT-SCHEMA_v1_2.md
 #             DOCUMENT-TYPE-REGISTRY_v1_6.md (doc_type 어휘)
@@ -280,7 +280,7 @@ PHASE B-0에서 확정한 INPUT_SCHEMA/OUTPUT_SCHEMA를 뼈대로, 그 사이를
 |---|---|
 | `individual_not_institution` | PHASE A에서 개인으로 판별됨 |
 | `missing_io_schema` | PHASE B-0의 INPUT_SCHEMA/OUTPUT_SCHEMA가 `doc_type` 식별자 없이 자유서술로만 채워짐 |
-| `missing_authority_gate` | §CAPABILITIES 뒤에 G1~G17 전문이 없음 |
+| `missing_authority_gate` | §CAPABILITIES 뒤에 G1~G19 전문이 없음 |
 | `missing_pdv_protocol_ref` | PDV/문서 통신 설계가 있는데 §3-A 참조가 없음 |
 | `field_scope_violation` | REQUIRED_USER_FIELDS 화이트리스트 밖 필드를 암묵적으로 요구 |
 | `non_user_agent_origin_design` | 기관 간 통신 설계에 개인 식별 가능 데이터의 직접 전달 경로가 있음(§3-A 위반 설계) |
