@@ -1,0 +1,147 @@
+// gov-router.js(중앙 공유 모듈) 실제 코드 라우팅 검증 하네스 — 2026-07-19 jeju 저장소에서 이전
+// 실행: node src/tests/jeju-router.test.mjs
+//
+// assembleGovSystemPrompt()를 실제로 import해서 실행한다(재구현 아님).
+// fetch는 raw.githubusercontent.com 대상 전부를 범용 목으로 대체한다 —
+// .json 요청은 구조가 맞는 최소 더미 데이터를, .md 요청은 플레이스홀더
+// 텍스트를 돌려준다. 목적은 "어느 SP 코드로 라우팅되는가"(trace)를
+// 검증하는 것이므로 텍스트 내용 자체는 중요하지 않다.
+
+globalThis.window = globalThis;
+
+function fakeText(name) { return `[목 텍스트: ${name}]`; }
+
+const EMD_MASTER = {
+  읍면동목록: [
+    { 읍면동명: '노형동', 행정시명: '제주시' },
+    { 읍면동명: '애월읍', 행정시명: '제주시' },
+    { 읍면동명: '중문동', 행정시명: '서귀포시' },
+  ],
+};
+const HALLIM_DATA = { 읍면동명: '한림읍', 행정시명: '제주시' };
+const GOV_OVERLAY_MASTER = { 도목록: [{ 도코드: 'jeju', 도이름: '제주특별자치도', 콜센터명: '제주콜센터', 콜센터번호: '064-120' }] };
+const NAT_OVERLAY_MASTER = { 도목록: [{ 도코드: 'jeju', 도이름: '제주특별자치도' }] };
+const NAT_AGENCY_MASTER = { 기관목록: [
+  { 도코드: 'jeju', domain: 'tax', 지사명: '제주세무서', 소속부처: '국세청', 대표전화: '126' },
+  { 도코드: 'jeju', domain: 'nps', 지사명: '국민연금공단 제주지역본부', 소속부처: '보건복지부' },
+  { 도코드: 'jeju', domain: 'nhis', 지사명: '국민건강보험공단 제주지사', 소속부처: '보건복지부' },
+  { 도코드: 'jeju', domain: 'immigration', 지사명: '제주출입국·외국인청', 소속부처: '법무부' },
+] };
+// 2026-07-19 신설 — SP-PROVINCE-TEMPLATE 렌더링 경로(정적 파일 폴백이
+// 아니라) 실제 정상 케이스를 검증하기 위한 최소 목. jeju 레코드 하나만
+// 두고, 거버넌스구조.계층모델이 결과 텍스트에 실제로 반영되는지까지 확인.
+const PROVINCE_MASTER = { 도목록: [
+  { 도코드: 'jeju', 도이름: '제주특별자치도', 통치구조_문구: '단층제 특별자치도',
+    이원화_문구: '', 인접기관_문구: '행정시', 광역출력_문구: '행정시 창구 연결',
+    위임사무_문구: '위임사무 문구', 하위SP_접두어: 'SP-DO', 유의사항_추가: '유의사항',
+    거버넌스구조: { 계층모델: 'TWO_TIER_ADMIN_CITY' } },
+] };
+
+globalThis.fetch = async (url) => {
+  const u = String(url);
+  if (u.includes('sp-catalog.json')) return { ok: true, json: async () => ({ 'SP-10_kpublic': 'SP-10_kpublic_v2.2.txt' }) };
+  if (u.endsWith('.json') || u.includes('.json?')) {
+    if (u.includes('emd-master-data.json')) return { ok: true, text: async () => JSON.stringify(EMD_MASTER) };
+    if (u.includes('hallim-data.json')) return { ok: true, text: async () => JSON.stringify(HALLIM_DATA) };
+    if (u.includes('gov-common-overlay-master-data.json')) return { ok: true, text: async () => JSON.stringify(GOV_OVERLAY_MASTER) };
+    if (u.includes('national-sp-overlay-master-data.json')) return { ok: true, text: async () => JSON.stringify(NAT_OVERLAY_MASTER) };
+    if (u.includes('national-agency-master-data.json')) return { ok: true, text: async () => JSON.stringify(NAT_AGENCY_MASTER) };
+    if (u.includes('do-dept-master-data.json')) return { ok: true, text: async () => JSON.stringify({ 부서목록: [] }) }; // 빈 배열 → 의도된 static file 폴백 경로로 감
+    if (u.includes('city-master-data.json')) return { ok: true, text: async () => JSON.stringify({ 시목록: [] }) };
+    if (u.includes('province-master-data.json')) return { ok: true, text: async () => JSON.stringify(PROVINCE_MASTER) }; // 2026-07-19 신설 — 템플릿 정상 경로 검증용
+    return { ok: true, text: async () => '{}' };
+  }
+  // .md 등 나머지 전부 — 플레이스홀더 텍스트(내용은 trace 검증과 무관)
+  return { ok: true, text: async () => fakeText(u.split('/').pop()) };
+};
+
+const { assembleGovSystemPrompt, resolveGovAgency } = await import('../gopang/gov/gov-router.js');
+
+// classifyFn 목 — LLM 분류가 필요한 케이스에서 "이럴 법한 판단"을 주입한다.
+// (실제 DeepSeek 호출 없이 파이프라인 배선을 검증하는 것이 목적 — router-category
+// 테스트와 동일한 한계를 가진다.)
+function mockClassify(text) {
+  if (/청년\s*월세/.test(text)) return 'SP-DO-WELFARE';
+  if (/자치경찰/.test(text)) return null; // 비교·설명형 — NONE
+  return null;
+}
+
+const CASES = [
+  // ── 응급(최우선) ──────────────────────────────
+  { text: '지금 쓰러졌어요 숨을 안 쉬어요', expectTrace: ['JEJU-GOV-COMMON', 'SP-EXP-EMERGENCY'] },
+
+  // ── 국가기관 트리(중앙행정기관) ────────────────
+  { text: '국민연금 수령 나이가 언제부터예요', expectAgency: 'jeju_national', expectContains: 'SP-NAT-NPS' },
+  { text: '건강보험료 얼마나 나왔는지 확인하고 싶어요', expectAgency: 'jeju_national', expectContains: 'SP-NAT-NHIS' },
+  { text: '외국인 배우자 비자 연장하려면 어디로 가나요', expectAgency: 'jeju_national', expectContains: 'SP-NAT-IMMIGRATION' },
+  { text: '홈택스 종합소득세 신고가 안 열려요', expectAgency: 'jeju_national', expectContains: 'SP-NAT-TAX' },
+
+  // ── 도청 트리(지방행정) — 실국 매칭 ────────────
+  { text: '지방세 취득세 납부 기한이 언제인가요', expectAgency: 'jeju_do', expectContains: 'SP-DO-PLAN' },
+  { text: '태풍 대비 재난 문자는 어디서 신청하나요', expectAgency: 'jeju_do', expectContains: 'SP-DO-SAFETY' },
+  { text: '소상공인 정책자금 대출 상담하고 싶어요', expectAgency: 'jeju_do', expectContains: 'SP-DO-ECON' },
+  { text: '어린이집 보육료 지원 대상인지 궁금해요', expectAgency: 'jeju_do', expectContains: 'SP-DO-WELFARE' },
+
+  // ── 시청 트리 ────────────────────────────────
+  { text: '제주시청 주차 관련 문의드립니다', expectAgency: 'jeju_do', expectContains: 'SP-CITY-JEJU' },
+
+  // ── 읍면동 트리(GPS/텍스트 힌트) ────────────────
+  { text: '노형동 주민센터 몇시까지 하나요', expectAgency: 'jeju_do', expectContains: 'SP-EMD-노형동' },
+  { text: '수돗물에서 이상한 냄새가 나요', locationHint: '애월읍', expectAgency: 'jeju_do', expectContains: 'SP-EXP-WATER' },
+
+  // ── LLM 분류 폴백 ────────────────────────────
+  { text: '청년 월세 지원 있어요?', expectAgency: 'jeju_do', expectContains: 'SP-DO-WELFARE', useClassify: true },
+  { text: '자치경찰이랑 일반경찰 차이가 뭐예요', expectAgency: 'jeju_do', expectContains: '(LLM 분류도 NONE', useClassify: true },
+
+  // ── 국세/지방세 혼동 방지(설계 의도 검증) ────────
+  { text: '세금 신고하러 왔는데 어디로 가야하나요', expectAgency: 'jeju_do', note: '범용어 "세금"만으로는 국가기관 트리로 안 새는지(§0 혼동방지 설계) 확인 — 실제로는 LLM폴백/공통레이어 처리' },
+
+  // ── 복합 관할(SP 위임 후보) ──────────────────
+  { text: '전입신고랑 국민연금 가입 둘 다 어디서 처리하나요', note: '전입신고(도청 kgov 트리거)+국민연금(국가기관) 복합 — 배타적 분기라 실제로는 국가기관 트리 하나만 선택됨(§0), U9 위임 시나리오의 실사용 사례로 4절에서 다룸' },
+];
+
+let pass = 0, fail = 0, info = 0;
+
+// ── 2026-07-19 신설 — SP-PROVINCE-TEMPLATE 정상 렌더링 검증 ──────────
+// _loadDoSp()는 실패 시 조용히 정적 파일로 폴백하므로(의도된 동작),
+// "폴백이 아니라 템플릿 경로를 실제로 탔는지"는 trace만으로 구분되지
+// 않는다. console.warn을 가로채 폴백 경고가 안 찍히는지로 검증한다.
+{
+  const warnings = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => { warnings.push(args.join(' ')); originalWarn(...args); };
+  const r = await assembleGovSystemPrompt('지방세 취득세 납부 기한이 언제인가요');
+  console.warn = originalWarn;
+  const fellBack = warnings.some(w => w.includes('SP-PROVINCE-TEMPLATE 렌더링 실패'));
+  if (!fellBack) {
+    pass++; console.log('✅ [신설] SP-PROVINCE-TEMPLATE 정상 경로(폴백 없음) 확인');
+  } else {
+    fail++; console.log('❌ [신설] SP-PROVINCE-TEMPLATE가 폴백으로 빠짐:', warnings);
+  }
+}
+
+for (const c of CASES) {
+  const r = await assembleGovSystemPrompt(c.text, c.locationHint || null, c.useClassify ? mockClassify : null);
+  const agency = resolveGovAgency(r.trace);
+
+  if (!c.expectTrace && !c.expectAgency && !c.expectContains) {
+    info++;
+    console.log(`ℹ️  [참고] "${c.text}" → trace=[${r.trace.join(' > ')}] agency=${agency}${c.note ? '  (' + c.note + ')' : ''}`);
+    continue;
+  }
+
+  const traceOk = c.expectTrace ? c.expectTrace.every(t => r.trace.includes(t)) : true;
+  const agencyOk = c.expectAgency ? agency === c.expectAgency : true;
+  const containsOk = c.expectContains ? r.trace.some(t => t.includes(c.expectContains)) : true;
+
+  if (traceOk && agencyOk && containsOk) {
+    pass++;
+    console.log(`✅ "${c.text}" → [${r.trace.join(' > ')}] (agency=${agency})`);
+  } else {
+    fail++;
+    console.log(`❌ "${c.text}" → 실제 trace=[${r.trace.join(' > ')}] agency=${agency} / 기대 agency=${c.expectAgency},contains=${c.expectContains}`);
+  }
+}
+
+console.log(`\n총 ${CASES.length + 1}건(CASES ${CASES.length} + 신설 1) — 판정 가능 ${pass + fail}건 중 통과 ${pass} / 실패 ${fail} / 참고용 ${info}건`);
+process.exit(fail > 0 ? 1 : 0);
