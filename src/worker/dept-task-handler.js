@@ -55,11 +55,11 @@ import { JOB_SERIES_REGISTRY_DATA } from './job-series-registry.js';
 // 그대로 따른다 — 여기 없는 target_id는 target_type이 뭐든 거부.
 const DEPT_TASK_TAXONOMY = {
   dept: new Set([
-    // do-dept 12개 domain (prompts/Jejudo/02-do-dept/templates/do-dept-master-data.json 실사)
+    // do-dept 12개 domain (prompts/gov-tree/02-do-dept/templates/do-dept-master-data.json 실사)
     'do-dept:welfare', 'do-dept:plan', 'do-dept:safety', 'do-dept:jachi',
     'do-dept:econ', 'do-dept:innov', 'do-dept:climate', 'do-dept:housing',
     'do-dept:transport', 'do-dept:culture', 'do-dept:tourism', 'do-dept:agri', 'do-dept:ocean',
-    // do-agency 11개 (prompts/Jejudo/03-do-agency/*.md 실사)
+    // do-agency 11개 (prompts/gov-tree/03-do-agency/*.md 실사)
     'do-agency:FIRE', 'do-agency:POLICE', 'do-agency:WATER', 'do-agency:AGRITECH',
     'do-agency:BOHWAN', 'do-agency:CHUKSAN', 'do-agency:LIBRARY', 'do-agency:ARTMUSEUM',
     'do-agency:FOLKMUSEUM', 'do-agency:HERITAGE',
@@ -78,7 +78,7 @@ const DEPT_TASK_TAXONOMY = {
         .map(d => `city-dept:${city}:${d}`)),
   ]),
   org: new Set([
-    // 07-org 27개 (prompts/Jejudo/07-org/*.md 실사)
+    // 07-org 27개 (prompts/gov-tree/07-org/*.md 실사)
     'org:JTO', 'org:JFAC', 'org:JPASS', 'org:IPF', 'org:JTP', 'org:JCPA', 'org:SGPMED',
     'org:ICCJEJU', 'org:MAEUL', 'org:JDC', 'org:JCGF', 'org:JEJUMED', 'org:JEDA',
     'org:JPSPO', 'org:URBANREGEN', 'org:JEA', 'org:JSPO', 'org:JILES', 'org:JTA',

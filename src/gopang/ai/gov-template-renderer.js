@@ -45,9 +45,9 @@ const TIER_CONFIG = {
   // city-dept의 (시코드-국코드) 또는 do-dept의 (도코드-domain)을 하이픈으로
   // 이어붙인 값을 그대로 재사용해 상위 계층과 매칭한다.
   'division': {
-    masterDataPath: 'prompts/Jejudo/00-common/templates/division-master-data.json',
+    masterDataPath: 'prompts/gov-tree/00-common/templates/division-master-data.json',
     listKey: '과목록',
-    templateDir: 'prompts/Jejudo/00-common/templates/',
+    templateDir: 'prompts/gov-tree/00-common/templates/',
     fixedTemplate: 'SP-DIV-TEMPLATE_v1.0.md',
     matchFn: (rec, { orgCode, divCode }) => rec['소속기관코드'] === orgCode && rec['과코드'] === divCode,
   },
@@ -56,9 +56,9 @@ const TIER_CONFIG = {
   // fixedTemplate 패턴(제주시/서귀포시 모두 같은 국 원형을 공유) — 국코드로
   // 시별 실제 조직명·소관을 구분한다.
   'city-dept': {
-    masterDataPath: 'prompts/Jejudo/04-city/templates/city-dept-master-data.json',
+    masterDataPath: 'prompts/gov-tree/04-city/templates/city-dept-master-data.json',
     listKey: '국목록',
-    templateDir: 'prompts/Jejudo/04-city/templates/',
+    templateDir: 'prompts/gov-tree/04-city/templates/',
     fixedTemplate: 'SP-CITYDEPT-TEMPLATE_v1.0.md',
     matchFn: (rec, { cityCode, deptCode }) => rec['시코드'] === cityCode && rec['국코드'] === deptCode,
   },
@@ -77,28 +77,28 @@ const TIER_CONFIG = {
   // L225의 `record.template || cfg.fixedTemplate` 우선순위 로직 그대로
   // 재사용)가 우선 적용된다.
   'team': {
-    masterDataPath: 'prompts/Jejudo/05-emd/templates/team-master-data.json',
+    masterDataPath: 'prompts/gov-tree/05-emd/templates/team-master-data.json',
     listKey: '팀목록',
-    templateDir: 'prompts/Jejudo/05-emd/templates/',
+    templateDir: 'prompts/gov-tree/05-emd/templates/',
     fixedTemplate: 'SP-TEAM-GENERAL-TEMPLATE_v2.1.md',
     matchFn: (rec, { emdCode, teamCode }) => rec.emd_code === emdCode && rec.team_code === teamCode,
   },
   'do-dept': {
-    masterDataPath: 'prompts/Jejudo/02-do-dept/templates/do-dept-master-data.json',
+    masterDataPath: 'prompts/gov-tree/02-do-dept/templates/do-dept-master-data.json',
     listKey: '부서목록',
-    templateDir: 'prompts/Jejudo/02-do-dept/templates/',
+    templateDir: 'prompts/gov-tree/02-do-dept/templates/',
     matchFn: (rec, { domain, doCode }) => rec.domain === domain && rec['도코드'] === doCode,
   },
   'national': {
-    masterDataPath: 'prompts/Jejudo/09-national/agencies/templates/national-agency-master-data.json',
+    masterDataPath: 'prompts/gov-tree/09-national/agencies/templates/national-agency-master-data.json',
     listKey: '기관목록',
-    templateDir: 'prompts/Jejudo/09-national/agencies/templates/',
+    templateDir: 'prompts/gov-tree/09-national/agencies/templates/',
     matchFn: (rec, { domain, doCode }) => rec.domain === domain && rec['도코드'] === doCode,
   },
   'city': {
-    masterDataPath: 'prompts/Jejudo/04-city/templates/city-master-data.json',
+    masterDataPath: 'prompts/gov-tree/04-city/templates/city-master-data.json',
     listKey: '시목록',
-    templateDir: 'prompts/Jejudo/04-city/templates/',
+    templateDir: 'prompts/gov-tree/04-city/templates/',
     fixedTemplate: 'SP-CITY-TEMPLATE_v1.0.md',
     matchFn: (rec, { cityCode }) => rec['시코드'] === cityCode,
   },
@@ -108,9 +108,9 @@ const TIER_CONFIG = {
     // TEMPLATE_v1.0(읍면동 AC 원형)으로 교체. 읍면동도 팀(§3 COMPOSE)
     // 여러 개를 조합하는 2단계 조직이므로 도청 실·국·시청 국과
     // 동일하게 AC가 필요하다는 판단(AC-AUTHOR PHASE 0 적용).
-    masterDataPath: 'prompts/Jejudo/05-emd/emd-master-data.json',
+    masterDataPath: 'prompts/gov-tree/05-emd/emd-master-data.json',
     listKey: '읍면동목록',
-    templateDir: 'prompts/Jejudo/05-emd/agent-common/',
+    templateDir: 'prompts/gov-tree/05-emd/agent-common/',
     fixedTemplate: 'SP-EMD-AGENT-COMMON-TEMPLATE_v1.1.md',
     matchFn: (rec, { emdCode }) => rec.emd_code === emdCode,
   },
@@ -120,9 +120,9 @@ const TIER_CONFIG = {
   // 없으므로, city/emd 계층과 같은 fixedTemplate 패턴을 쓴다. matchFn이
   // domain만으로 매칭하는 게 city(cityCode)·emd(emdCode)와의 유일한 차이다.
   'policy': {
-    masterDataPath: 'prompts/Jejudo/09-national/policy-bodies/templates/policy-bodies-master-data.json',
+    masterDataPath: 'prompts/gov-tree/09-national/policy-bodies/templates/policy-bodies-master-data.json',
     listKey: '기관목록',
-    templateDir: 'prompts/Jejudo/09-national/policy-bodies/templates/',
+    templateDir: 'prompts/gov-tree/09-national/policy-bodies/templates/',
     fixedTemplate: 'SP-NAT-POLICY-TEMPLATE_v1.0.md',
     matchFn: (rec, { domain }) => rec.domain === domain,
   },
@@ -135,9 +135,9 @@ const TIER_CONFIG = {
   // 나머지 16개 광역시도는 미등재(레코드 없음 에러 → SP-AUTHOR PHASE B
   // 진행 신호, 기존 원칙 그대로).
   'province': {
-    masterDataPath: 'prompts/Jejudo/01-do/templates/province-master-data.json',
+    masterDataPath: 'prompts/gov-tree/01-do/templates/province-master-data.json',
     listKey: '도목록',
-    templateDir: 'prompts/Jejudo/01-do/templates/',
+    templateDir: 'prompts/gov-tree/01-do/templates/',
     fixedTemplate: 'SP-PROVINCE-TEMPLATE_v1.1.md',
     matchFn: (rec, { doCode }) => rec['도코드'] === doCode,
   },

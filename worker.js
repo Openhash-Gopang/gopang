@@ -4563,11 +4563,6 @@ export default {
     if (pathname === '/profile/claim' && request.method === 'POST')
       return handleProfileClaim(request, env, corsHeaders);
 
-    // 2026-07-19 — is_public 전용 소형 PATCH. 위와 동일한 이유로
-    // startsWith('/profile')보다 먼저 분기해야 한다.
-    if (pathname === '/profile/visibility' && request.method === 'POST')
-      return handleProfileVisibility(request, env, corsHeaders);
-
     if (pathname.startsWith('/profile')) {
       if (request.method === 'GET')  return handleProfileGet(request, env, corsHeaders);
       if (request.method === 'POST') return handleProfilePost(request, env, corsHeaders);
@@ -8914,7 +8909,7 @@ const SP_DELEGATION_REGISTRY = {
   public:     { via: 'manifest', key: 'SP-10_kpublic',    identity: 'kpublic',       pdvScope: 'kpublic' },
   jeju_do: {
     via: 'url',
-    url: 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/Jejudo/01-do/JEJU-DO-SP_v1.5.md',
+    url: 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/gov-tree/01-do/JEJU-DO-SP_v1.5.md',
     identity: null, label: '제주도청(총괄)',
     // ★ 2026-07-09 추가 — JEJU-DO-SP_v1.0.md 자신의 헤더가 "반드시
     // 상위 공통 레이어 뒤에 고정 삽입, 단독 사용 금지"라고 명시하는데
@@ -8926,7 +8921,7 @@ const SP_DELEGATION_REGISTRY = {
   },
   jeju_national: {
     via: 'url',
-    url: 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/Jejudo/09-national/JEJU-NATIONAL-SP_v1.0.md',
+    url: 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/gov-tree/09-national/JEJU-NATIONAL-SP_v1.0.md',
     identity: null, label: '제주 소재 국가기관(총괄)',
     govCommonDoCode: 'jeju',
   },
@@ -8960,15 +8955,15 @@ async function _loadGovCommonChain(doCode) {
 
   const [kgov, overlayTemplate, overlayDataRaw, treeProtocol] = await Promise.all([
     _fetchDelegationPrompt('public'), // kgov == SP-10_kpublic, 'public' 항목과 동일 소스 재사용
-    fetch(GITHUB_RAW_BASE + '/prompts/Jejudo/00-common/overlays/GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md', { cache: 'no-cache' }).then(r => {
+    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/00-common/overlays/GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md', { cache: 'no-cache' }).then(r => {
       if (!r.ok) throw new Error(`GOV-COMMON-OVERLAY-TEMPLATE fetch 실패: HTTP ${r.status}`);
       return r.text();
     }),
-    fetch(GITHUB_RAW_BASE + '/prompts/Jejudo/00-common/overlays/gov-common-overlay-master-data.json', { cache: 'no-cache' }).then(r => {
+    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/00-common/overlays/gov-common-overlay-master-data.json', { cache: 'no-cache' }).then(r => {
       if (!r.ok) throw new Error(`gov-common-overlay-master-data.json fetch 실패: HTTP ${r.status}`);
       return r.json();
     }),
-    fetch(GITHUB_RAW_BASE + '/prompts/Jejudo/00-common/JEJU-TREE-PROTOCOL_v1.0.md', { cache: 'no-cache' }).then(r => {
+    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/00-common/JEJU-TREE-PROTOCOL_v1.0.md', { cache: 'no-cache' }).then(r => {
       if (!r.ok) throw new Error(`JEJU-TREE-PROTOCOL fetch 실패: HTTP ${r.status}`);
       return r.text();
     }),
@@ -12103,80 +12098,6 @@ async function handleProfilePost(request, env, corsHeaders) {
 
 
   return new Response(JSON.stringify({ ok: true, profile: savedProfile, agent: agentResult }), { status: 200, headers: corsHeaders });
-}
-
-// POST /profile/visibility — is_public 단일 필드 전용 갱신 (2026-07-19 신설)
-// handleProfilePost(POST /profile)는 entity_type/name 필수의 전체 upsert라
-// is_public만 바꾸려고 호출하면 destructuring 기본값(''/null/[])이 주소·
-// 전화번호·설명·태그·영업시간 등 나머지 필드를 덮어쓸 위험이 있다
-// (webapp.html togglePublic()이 필요로 하는 건 이 필드 하나뿐). 그래서
-// 이 필드 하나만 targeted PATCH하는 전용 엔드포인트를 별도로 둔다.
-// 서명 규약은 handleProfilePost와 동일(guid:pubkey:ts) — pb_hooks
-// (main.pb.js) onRecordBeforeUpdateRequest가 admin 토큰 요청은 우회
-// 하므로(2026-07-19 수정) 여기서 자체 검증한 뒤 admin 토큰으로 L1에
-// targeted PATCH한다.
-async function handleProfileVisibility(request, env, corsHeaders) {
-  const body = await request.json().catch(() => null);
-  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-
-  const { guid, pubkey, signature } = body;
-  if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
-  if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
-  if (!signature) return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
-  if (typeof body.is_public !== 'boolean')
-    return _err(400, 'MISSING_FIELD', 'is_public(boolean) 필수', corsHeaders);
-
-  const ts = body.ts || '';
-  if (!_isFreshTs(ts))
-    return _err(401, 'STALE_TS', '요청이 만료됐습니다 — 다시 시도해 주세요', corsHeaders);
-
-  const sigMsg = `${guid}:${pubkey}:${ts}`;
-  const sigOk  = await _verifyEd25519Simple(pubkey, signature, sigMsg);
-  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
-
-  let existing;
-  try {
-    existing = await _l1FindProfileByGuid(env, guid);
-  } catch (e) {
-    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
-  }
-  if (!existing) return _err(404, 'PROFILE_NOT_FOUND', '프로필 없음', corsHeaders);
-
-  // 2026-07-19 신설 — pubkey_ed25519가 아직 등록되지 않은 프로필(예:
-  // claim_status='unclaimed'인 관리자 사전등록 사업자 리스팅)은 소유자가
-  // 아직 확정되지 않은 상태다. 아래 TOFU 체크는 이런 경우 조건 자체가
-  // falsy라 통째로 스킵되므로, 이 guid를 아는 누구나(핸들/QR 등으로
-  // 노출되는 공개 정보) 자기 키로 서명해 "최초 서명자가 곧 소유자"처럼
-  // 이 필드를 바꿔버릴 수 있었다(사고실험으로 발견). is_public 토글은
-  // /profile/claim으로 소유권을 정식 확정한 뒤에만 허용한다.
-  if (!existing.pubkey_ed25519) {
-    return _err(403, 'PROFILE_NOT_CLAIMED',
-      '아직 소유권이 확정되지 않은 프로필입니다 — 먼저 /profile/claim으로 소유권을 확인해 주세요',
-      corsHeaders);
-  }
-
-  // TOFU: 최초 등록 시 핀(pin)된 pubkey와 다른 키로는 수정 불가 (handleProfilePost와 동일 원칙)
-  if (existing.pubkey_ed25519 !== pubkey) {
-    return _err(403, 'PUBKEY_MISMATCH', '공개키가 이 계정에 등록된 키와 일치하지 않습니다', corsHeaders);
-  }
-
-  try {
-    const token = await _l1AdminToken(env);
-    const patchRes = await fetch(`${L1_DEFAULT}/api/collections/profiles/records/${existing.id}`, {
-      method: 'PATCH',
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_public: body.is_public }),
-    });
-    if (!patchRes.ok) {
-      const errBody = await patchRes.text().catch(() => '');
-      return _err(502, 'L1_PATCH_FAILED', 'is_public 갱신 실패: ' + errBody.slice(0, 200), corsHeaders);
-    }
-  } catch (e) {
-    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
-  }
-
-  return new Response(JSON.stringify({ ok: true, guid, is_public: body.is_public }),
-    { status: 200, headers: corsHeaders });
 }
 
 

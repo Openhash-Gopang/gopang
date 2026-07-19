@@ -69,7 +69,7 @@ REMOTE_JS = [
 
 FILE_REF_RE = re.compile(
     r"""['"]                                # 여는 따옴표
-    (?:/prompts/|prompts/|Jejudo/)          # 상대경로 또는 raw URL의 prompts/ 이하
+    (?:/prompts/|prompts/|gov-tree/)          # 상대경로 또는 raw URL의 prompts/ 이하
     ([\w./-]+\.(?:md|txt|json))             # 실제 파일 경로(하위 폴더 포함)
     ['"]""",
     re.VERBOSE,
@@ -86,8 +86,8 @@ BLOB_URL_RE = re.compile(
     r"https://github\.com/Openhash-Gopang/gopang/blob/main/prompts/([\w./-]+\.(?:md|txt|json))"
 )
 # jeju-router.js 전용: _fetchText('00-common/JEJU-GOV-COMMON_v1_5.md')처럼
-# 접두사 없는 상대경로(_RAW가 이미 prompts/Jejudo/를 포함하므로 문자열
-# 자체엔 없다) — 매칭되면 'Jejudo/' 접두사를 붙여 로컬 인덱스 키와 맞춘다.
+# 접두사 없는 상대경로(_RAW가 이미 prompts/gov-tree/를 포함하므로 문자열
+# 자체엔 없다) — 매칭되면 'gov-tree/' 접두사를 붙여 로컬 인덱스 키와 맞춘다.
 JEJU_RELATIVE_RE = re.compile(
     r"""_fetchText\(\s*['"]([\w./-]+\.(?:md|txt|json))['"]"""
 )
@@ -114,8 +114,8 @@ def parse_version(fname: str) -> tuple:
 
 
 def base_key(path: str) -> str:
-    """디렉터리 + 버전 제거한 파일명 기준 키. 'Jejudo/00-common/JEJU-GOV-COMMON_v1_5.md'
-    -> 'Jejudo/00-common/JEJU-GOV-COMMON'
+    """디렉터리 + 버전 제거한 파일명 기준 키. 'gov-tree/00-common/JEJU-GOV-COMMON_v1_5.md'
+    -> 'gov-tree/00-common/JEJU-GOV-COMMON'
     2026-07-06: Path(path).parent를 쓰지 않는다 — Windows에서 str(Path(...))가
     입력 구분자와 무관하게 항상 백슬래시로 렌더링해서, index_prompts_dir()에서
     슬래시로 정규화해도 여기서 다시 깨진다(실사로 확인). 순수 문자열 split만
@@ -140,7 +140,7 @@ def index_prompts_dir() -> dict:
         # 2026-07-06: Windows에서 str(Path.relative_to(...))가 백슬래시(\)를
         # 쓰는데, 소스 코드(worker.js, jeju-router.js 등)의 참조는 항상
         # URL 스타일 슬래시(/)다. 정규화 안 하면 Windows에서만 "같은 파일인데
-        # 문자열이 달라서" 전부 STALE로 오탐된다(실사로 확인 — Jejudo 하위
+        # 문자열이 달라서" 전부 STALE로 오탐된다(실사로 확인 — gov-tree 하위
         # 폴더 참조 18건 전부 이 버그였음, 실제 내용 문제는 0건).
         rel = str(p.relative_to(PROMPTS)).replace('\\', '/')
         idx.setdefault(base_key(rel), []).append(rel)
@@ -153,7 +153,7 @@ def check_refs(label: str, text: str, latest_map: dict, results: list, jeju_rela
            set(m.group(1) for m in RAW_URL_RE.finditer(text)) | \
            set(m.group(1) for m in BLOB_URL_RE.finditer(text))
     if jeju_relative:
-        refs |= set(f"Jejudo/{m.group(1)}" for m in JEJU_RELATIVE_RE.finditer(text))
+        refs |= set(f"gov-tree/{m.group(1)}" for m in JEJU_RELATIVE_RE.finditer(text))
     for ref in refs:
         key = base_key(ref)
         if key not in latest_map:
@@ -170,7 +170,7 @@ def check_refs(label: str, text: str, latest_map: dict, results: list, jeju_rela
 
 # ── 검사 3(2026-07-17 신설, B4-2) — HONDI_FAQ_REGISTRY 참조 파일 존재 ────
 # 배경: check_stale_refs.py는 지금까지 FILE_REF_RE/RAW_URL_RE/BLOB_URL_RE/
-# JEJU_RELATIVE_RE 네 패턴 전부 문자열 안에 'prompts/' 또는 'Jejudo/'가
+# JEJU_RELATIVE_RE 네 패턴 전부 문자열 안에 'prompts/' 또는 'gov-tree/'가
 # 리터럴로 박혀있어야 매칭됐다. 그런데 src/gopang/ai/hondi-faq-router.js의
 # HONDI_FAQ_REGISTRY는 `file: 'pdv.txt'`처럼 접두사 없는 파일명만 갖고
 # 있고(접두사 `/prompts/HONDI-FAQ/`는 런타임에 별도 상수와 문자열
