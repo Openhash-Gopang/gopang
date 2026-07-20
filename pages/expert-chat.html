@@ -603,7 +603,7 @@ function clearAttach() {
   updateSendBtn();
 }
 
-// ── 마이크(음성 입력) — 단발 토글, 1초 무음 시 자동 종료 ──────────
+// ── 마이크(음성 입력) — 단발 토글, 1초 무음 시 자동 전송 ──────────
 // 2026-07-19 재수정 — 이전 버전은 주석만 "webapp.html의 ai-panel-mic-btn과
 // 동일한 패턴"이라 해놓고 실제 설정은 그게 아니라 웹앱의 별개 기능(상시
 // 대기 "혼디야" 호출어 리스너)의 설정(continuous:true)을 잘못 베껴온
@@ -632,9 +632,24 @@ function clearAttach() {
 
   // 결과가 들어온 뒤에만 호출된다(startMic()에서는 호출하지 않음) —
   // 클릭 직후부터 무음을 세면 말하기 전 잠깐의 정적만으로도 꺼진다.
+  //
+  // 2026-07-19 추가 — 무음 시 마이크만 끄고 입력창에 텍스트를 남겨두는
+  // 것으로 처음 고쳤으나(자동 stop 버그 수정에 집중), 실사용자 신고로
+  // "터치해야만 전송되는 건 원치 않는다"는 게 확인됨 — 진짜 참조
+  // 구현(webapp.html의 ai-panel-mic-btn `scheduleAutoSend`)도 원래
+  // 무음 시 자동으로 전송까지 한다. 그 동작을 그대로 맞춘다.
   function scheduleAutoStop() {
     clearSilenceTimer();
-    silenceTimer = setTimeout(() => { if (active) stopMic(); }, SILENCE_MS);
+    silenceTimer = setTimeout(() => {
+      silenceTimer = null;
+      if (!active) return;
+      if (input.value.trim()) {
+        stopMic();
+        doSend();
+      } else {
+        stopMic();
+      }
+    }, SILENCE_MS);
   }
 
   function createRecognition() {
