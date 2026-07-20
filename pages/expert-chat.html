@@ -350,7 +350,7 @@ let systemPrompt = null;
 const TERMINATION_RE = /끝났|그만|종료|돌아가|그림자\s*AI(로|에게)?\s*(돌아|연결)/;
 
 // ── §7 기관측 PDV 리포팅 상태 (2026-07-20 신설) ──────────────────
-let _escalatedThisSession = false; // _connectHumanExpert 호출 시 true
+let _escalationReason    = null; // null | 'success' | 'limit' — C39-5 반영(2026-07-20)
 let _ownerPdvRecorded     = false; // 중복 기록 방지(종료 경로가 여러 개라 한 번만 기록)
 const _sessionStartedAt   = new Date().toISOString();
 
@@ -421,7 +421,8 @@ async function _recordExpertOwnerPDV(reason) {
 
   const exchanged = messages.filter(m => m.role === 'user' || m.role === 'assistant').length;
   let how;
-  if (_escalatedThisSession) how = 'escalated_success'; // 알려진 한계 — 위 주석 참조
+  if (_escalationReason === 'limit') how = 'escalated_ai_limit'; // C39-5 반영(2026-07-20) — 더는 일괄 success 분류 아님
+  else if (_escalationReason === 'success') how = 'escalated_success';
   else if (reason === 'timeout' && exchanged === 0) how = 'early_exit';
   else if (reason === 'timeout') how = 'early_exit';
   else how = 'completed';
@@ -513,9 +514,14 @@ async function sendTurn(text, attachment) {
     // SP-COMMON-02 C39가 요구하는 "인간 전문가 연결"을 실제로 수행한다.
     // market/webapp.html의 [SEARCH] 인터셉터와 같은 패턴 — 존재하지 않는
     // 사업자를 지어내지 않고, 실제 등록된 사업자만 반환한다(C39-4).
+    // C39-5(2026-07-20) — 선택적 `| reason=limit` 세그먼트로 정상 절차/AI
+    // 한계 조기이관을 구분한다. 없으면 정상 절차(success)로 취급.
     const connectMatch = full.match(/\[CONNECT_HUMAN_EXPERT:\s*([^\]]+)\]/);
     if (connectMatch) {
-      await _connectHumanExpert(connectMatch[1].trim());
+      const [rawKeyword, ...rest] = connectMatch[1].split('|').map(s => s.trim());
+      const reasonSeg = rest.find(s => /^reason\s*=/.test(s));
+      const escReason = reasonSeg && /limit/.test(reasonSeg) ? 'limit' : 'success';
+      await _connectHumanExpert(rawKeyword, escReason);
     }
 
     if (TERMINATION_RE.test(text) || doneTagMatch) {
@@ -732,8 +738,8 @@ async function _continueAfterOrchestrationTag() {
 
 // market의 search_entities RPC를 호출해 관련 업종의 실제 등록 사업자를
 // 찾아 보여준다. 결과가 없으면 없다고 정직하게 알린다(C39-4).
-async function _connectHumanExpert(occupationKeyword) {
-  _escalatedThisSession = true; // §7 how 필드 판정용 (2026-07-20)
+async function _connectHumanExpert(occupationKeyword, escReason = 'success') {
+  _escalationReason = escReason; // §7 how 필드 판정용 — C39-5 반영(2026-07-20)
   const box = appendBubble('ai', `<i>market에서 "${escHtml(occupationKeyword)}" 관련 등록
     사업자를 찾는 중…</i>`);
   try {
