@@ -3789,6 +3789,40 @@ async function handleSigunguDeptResolve(request, url, env, corsHeaders, ctx) {
 
   const fallbackText = _sigunguRenderFallback(cityGuess, domain);
 
+  // ── 임시 디버그 모드(&debug=1) — 원인 파악 후 제거 예정 ────────────
+  // 백그라운드로 안 돌리고 동기적으로 Serper 검색까지 실행해서 원본 결과와
+  // 추출 시도 결과를 응답에 그대로 담는다. 정상 트래픽에는 영향 없음
+  // (debug 파라미터가 없으면 이 블록 자체를 안 탐).
+  if (url.searchParams.get('debug') === '1') {
+    const query = `${cityGuess} ${SIGUNGU_DOMAIN_LABEL_KO[domain] || domain} 담당 부서 조직도`;
+    let organic = null;
+    let serperError = null;
+    let serperStatus = null;
+    try {
+      const searchRes = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: { 'X-API-KEY': env.WEB_SEARCH_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: query, gl: 'kr', hl: 'ko' }),
+      });
+      serperStatus = searchRes.status;
+      if (searchRes.ok) {
+        const raw = await searchRes.json().catch((e) => { serperError = `JSON 파싱 실패: ${e.message}`; return null; });
+        organic = raw?.organic || null;
+      } else {
+        serperError = await searchRes.text().catch(() => `HTTP ${searchRes.status}`);
+      }
+    } catch (e) {
+      serperError = `fetch 예외: ${e.message}`;
+    }
+    const deptName = _sigunguExtractDeptName(organic, cityGuess);
+    return new Response(JSON.stringify({
+      debug_mode: true,
+      query, serper_status: serperStatus, serper_error: serperError,
+      organic_raw: organic, extracted_dept_name: deptName,
+      web_search_api_key_length: env.WEB_SEARCH_API_KEY ? env.WEB_SEARCH_API_KEY.length : 0,
+    }, null, 2), { headers: corsHeaders });
+  }
+
   // 백그라운드 검증 — 응답은 즉시 나가고, 검증은 ctx.waitUntil로 이어서.
   if (env.WEB_SEARCH_API_KEY && ctx?.waitUntil) {
     const bgTask = (async () => {
