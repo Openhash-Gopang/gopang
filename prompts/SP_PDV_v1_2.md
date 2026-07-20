@@ -124,7 +124,7 @@ PDV-Recorder는 대화/문서 교환 종료 시 아래 JSON을 생성한다.
 
 §1~§6은 "사용자가 상대방과의 대화를 기록"하는 **사용자측 PDV**를 규정한다. 이 절은 그 반대편 — K-서비스(K-Law 등)와 전문가 AI 페르소나(변호사·회계사 등)가 **자신이 수행한 활동의 이력을 스스로 기록**하는 **기관측 PDV**를 규정한다.
 
-두 PDV는 완전히 별개의 저장소다. 저장 위치도 다르다 — 사용자측 PDV는 기기 로컬(IndexedDB)이지만, 기관측 PDV는 해당 K-서비스의 서버 측(`<ownerAgency>_pdv` PocketBase 컬렉션)에 있다. 기관측 PDV는 다음 두 파티션(`record_type`)으로 구성된다.
+두 PDV는 완전히 별개의 저장소다. 저장 위치도 다르다 — 사용자측 PDV는 기기 로컬(IndexedDB)이지만, 기관측 PDV는 gopang의 단일 공유 PocketBase에 있는 `owner_pdv` 컬렉션에 있다(2026-07-20 실사 정정: klaw/market 등 개별 K-서비스 저장소는 자체 PocketBase가 없고 전체 플랫폼이 하나의 백엔드를 공유하므로, 에이전시별 별도 컬렉션이 아니라 `gwp_registry`와 동일하게 `owner_agency` 필드로 파티션하는 단일 컬렉션이다 — 개념상 "각 K-서비스가 자기 레코드를 갖는다"는 의미는 유지되고, 물리적 구현만 정정됐다). 기관측 PDV는 다음 두 파티션(`record_type`)으로 구성된다.
 
 - **`consultation`**: 전문가 AI 페르소나가 상담 세션 1건을 종료할 때 기록. 소유 K-서비스는 `src/gopang/ai/expert-registry.js`의 `ownerAgency` 필드로 결정된다(예: `lawyer` → `klaw`).
 - **`own_output`**: K-서비스 자신의 고유 기능이 만들어낸 산출물의 이력. 예: K-Law의 가상 판결문 시뮬레이션 결과. 상대방(counterpart) 개념이 없는 K-서비스는 이 파티션이 비어 있을 수 있다 — 강제 사항 아님.
@@ -188,9 +188,10 @@ who_hash = SHA256(userGuid + ownerAgency_salt)
 ### 7.6 구현 연결점
 
 - `src/gopang/ai/expert-registry.js`: `ownerAgency` 필드 (구현 완료, 2026-07-20)
-- `src/gopang/gwp/gwp-report-client.js`: `recordOwnerPDV()` — 해시 생성 및 전송 (미구현)
-- `expert-session.js`: 세션 종료 지점에서 `recordOwnerPDV()` 호출 (미구현)
-- 각 K-서비스 PocketBase: `<ownerAgency>_pdv` 컬렉션 마이그레이션 (미구현)
+- `src/gopang/gwp/gwp-report-client.js`: `recordOwnerPDV()` — 클라이언트는 원문 guid를 프록시로 전송, 해싱은 프록시(Worker, salt는 서버 비밀)가 수행 (구현 완료, 2026-07-20)
+- `pages/expert-chat.html`: 세션 종료 지점(명시적 종료 발화 / 10분 타임아웃)에서 `recordOwnerPDV()` 호출 (구현 완료, 2026-07-20) — `expert-session.js`의 `endExpertSession()`은 2026-07-03부로 죽은 코드이므로 연결 대상이 아니다(실사로 확인, 실제 라이브 경로는 이 파일)
+- gopang 공유 PocketBase: `owner_pdv` 컬렉션 (구현 완료, pb_migrations/1786800004_created_owner_pdv.js, 2026-07-20)
+- 미구현: `/owner-pdv/report` 프록시(Worker) 엔드포인트 자체 — salt 관리·해싱 로직, 이 저장소 범위 밖(별도 인프라 레포)
 
 ---
 
