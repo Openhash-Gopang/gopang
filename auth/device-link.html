@@ -51,7 +51,7 @@
   <h1>PC에서 혼디 로그인</h1>
   <p class="desc">
     스마트폰과 완전히 같은 계정으로 PC에서도 이용할 수 있습니다.
-    문자(SMS) 없이, 스마트폰 앱에 뜨는 확인 코드를 여기 입력하면 됩니다.
+    문자(SMS) 없이, 스마트폰에서 확인 한 번이면 됩니다.
   </p>
 
   <!-- STEP 1: 전화번호 입력 -->
@@ -61,14 +61,14 @@
     <button id="btn-request">스마트폰으로 요청 보내기</button>
   </div>
 
-  <!-- STEP 2: 코드 입력 -->
+  <!-- STEP 2: 승인 대기 (2026-07-20 UX 개선 — 구글 방식, PC에 입력할 코드 없음) -->
   <div class="step" id="step-code">
-    <div class="spinner" id="code-spinner" style="display:none"></div>
-    <label for="code">스마트폰 화면에 뜬 6자리 코드</label>
-    <input id="code" type="text" inputmode="numeric" maxlength="6" placeholder="숫자 6자리" autocomplete="one-time-code">
-    <button id="btn-verify">확인</button>
+    <div class="spinner" id="code-spinner"></div>
+    <p style="text-align:center;font-size:14px;color:#374151;margin-bottom:6px">
+      스마트폰 알림을 열어 <strong>"본인이 맞습니다"</strong>를 눌러주세요
+    </p>
     <div class="timer" id="timer"></div>
-    <button id="btn-sms-fallback" class="secondary" style="opacity:0.5;font-size:12px;padding:9px;margin-top:10px">
+    <button id="btn-sms-fallback" class="secondary" style="opacity:0.5;font-size:12px;padding:9px;margin-top:14px">
       알림이 안 왔나요? 문자로 받기
     </button>
   </div>
@@ -154,7 +154,7 @@
       sessionId = data.sessionId;
       stepPhone.classList.remove('active');
       stepCode.classList.add('active');
-      setStatus('스마트폰 알림을 확인하고, 화면에 뜬 코드를 입력해 주세요.');
+      setStatus('스마트폰 알림을 확인해 주세요.');
       startCountdown(data.expires_in || 90);
       startPolling();
       setupSmsFallback(data.pushSent);
@@ -211,31 +211,9 @@
     }
   });
 
-  // ── STEP 2: 코드 확인 ──────────────────────────────
-  $('btn-verify').addEventListener('click', async () => {
-    const code = $('code').value.trim();
-    if (!/^\d{6}$/.test(code)) { setStatus('6자리 숫자를 입력해 주세요.', 'error'); return; }
-
-    $('btn-verify').disabled = true;
-    setStatus('확인 중...');
-
-    try {
-      const res = await fetch(`${WORKER}/auth/device-link/verify`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, code }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.detail || data.error || '코드가 일치하지 않습니다.');
-
-      setStatus('확인됐습니다. 스마트폰에서 지갑을 전송하는 중...');
-      $('code-spinner').style.display = 'block';
-      $('btn-sms-fallback').disabled = true; // 이미 승인됨 — 지금부터 SMS는 무의미(서버도 409로 거부)
-      // 이후 polling이 봉투 도착을 감지해 자동으로 다음 단계 진행
-    } catch (e) {
-      setStatus(e.message, 'error');
-      $('btn-verify').disabled = false;
-    }
-  });
+  // (2026-07-20 삭제 — STEP 2 "코드 확인" 버튼 자체가 없어졌다. 폰이
+  // 승인 버튼을 누르면 스스로 code를 /verify에 제출하므로, PC는
+  // 이제부터 오직 polling만으로 결과(delivered)를 기다린다.)
 
   // ── 봉투 polling ────────────────────────────────────
   function startPolling() {
@@ -282,8 +260,6 @@
     stepCode.classList.remove('active');
     stepPhone.classList.add('active');
     $('btn-request').disabled = false;
-    $('btn-verify').disabled = false;
-    $('code').value = '';
     sessionId = null; pcKeyPair = null;
     if (smsFallbackTimer) { clearTimeout(smsFallbackTimer); smsFallbackTimer = null; }
     const smsBtn = $('btn-sms-fallback');

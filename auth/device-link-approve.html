@@ -24,10 +24,6 @@
     background: #f3f4f6; border-radius: 10px; padding: 12px;
     font-size: 14px; color: #374151; margin-bottom: 18px;
   }
-  .code {
-    font-size: 38px; font-weight: 800; letter-spacing: 6px;
-    color: #0057A8; margin: 8px 0 20px;
-  }
   .warn {
     font-size: 12px; color: #92400e; background: #fffbeb;
     border: 1px solid #fde68a; border-radius: 8px; padding: 10px 12px;
@@ -61,13 +57,12 @@
   <div id="content" class="hide">
     <h1>새 기기에서 로그인을 요청했습니다</h1>
     <div class="pc-label" id="pc-label"></div>
-    <div class="code" id="code"></div>
     <div class="warn">
-      본인이 PC에서 직접 로그인을 시도한 게 맞는지 확인해 주세요.
-      승인하면 <strong>이 계정 전체(GDC 잔액 포함)를 사용할 수 있는 권한</strong>이
-      그 PC에 전달됩니다.
+      본인이 PC에서 직접 로그인을 시도한 게 맞는지, 위 기기 정보를 확인해
+      주세요. 승인하면 <strong>이 계정 전체(GDC 잔액 포함)를 사용할 수 있는
+      권한</strong>이 그 PC에 전달됩니다.
     </div>
-    <button id="btn-approve">이 PC에 로그인 허용</button>
+    <button id="btn-approve">본인이 맞습니다 — 로그인 허용</button>
     <button id="btn-deny" class="secondary">본인 아님 — 거부</button>
   </div>
 
@@ -121,7 +116,15 @@
 
       sessionData = data;
       $('pc-label').textContent = data.pcLabel || '알 수 없는 기기';
-      $('code').textContent = data.code;
+      // ★ 2026-07-20 UX 개선(사용자 지시 — 구글 방식) — 코드를 화면에
+      // 보여주고 PC에 옮겨 적게 하던 방식을 없앤다. 폰은 이미 /session에서
+      // code를 받아뒀으므로, "본인이 맞습니다" 버튼을 누르면 그 코드를
+      // 폰이 스스로 /verify에 제출한다 — 사람이 숫자를 옮겨 적을 필요가
+      // 없다. 서버 쪽 검증 로직(코드 일치 확인)은 전혀 안 바뀌었고, 누가
+      // 그 코드를 "안다"는 사실 자체가 이미 이 세션의 소유자(같은 guid로
+      // /session을 조회할 수 있었다는 것)라는 증거이므로 보안 수준은
+      // 그대로다 — 단지 그 값을 사람이 눈으로 보고 옮겨 적던 단계를
+      // 자동화했을 뿐이다.
       show('content');
     } catch (e) {
       show('error');
@@ -138,29 +141,22 @@
   $('btn-approve').addEventListener('click', async () => {
     $('btn-approve').disabled = true;
     $('btn-deny').disabled = true;
-    setStatus('PC가 코드를 입력하길 기다리는 중...');
+    setStatus('확인 중...');
 
     try {
       const wallet = await waitForWallet();
 
-      // PC가 아직 코드를 입력하지 않았을 수 있다 — approved 상태가 될
-      // 때까지 재확인한다. ★ 2026-07-20 정정(사고실험 2차): 여기 자체
-      // TTL을 90초로 하드코딩했었는데, SMS 폴백을 쓰면 서버가 세션을
-      // 5분으로 연장해도 이 페이지는 여전히 90초 만에 포기해버리는
-      // 불일치가 있었다. 클라이언트가 TTL 값을 따로 들고 있지 않게,
-      // 서버가 세션 만료를 스스로 알려줄 때(404 SESSION_EXPIRED)까지
-      // 기다리는 방식으로 바꾼다 — 안전장치로 넉넉한 상한(10분)만 둔다.
-      let approved = sessionData.state === 'approved';
-      const safetyDeadline = Date.now() + 10 * 60 * 1000;
-      while (!approved && Date.now() < safetyDeadline) {
-        await new Promise(r => setTimeout(r, 2000));
-        const res = await fetch(`${WORKER}/auth/device-link/session?sessionId=${encodeURIComponent(sessionId)}&guid=${encodeURIComponent(wallet.guid)}`);
-        const data = await res.json();
-        if (!res.ok || !data.ok) throw new Error(data.detail || data.error || '요청이 만료됐습니다.');
-        sessionData = data;
-        approved = data.state === 'approved';
-      }
-      if (!approved) throw new Error('PC에서 코드를 입력하지 않아 요청이 만료됐습니다.');
+      // ★ 2026-07-20 변경 — 예전엔 여기서 "PC가 코드를 입력할 때까지"
+      // 폴링으로 기다렸다(PC 쪽에서 사람이 코드를 옮겨 적어야 approved
+      // 상태가 됐으므로). 이제 그 사람 개입을 없앴으니, 폰이 이미 알고
+      // 있는 code를 스스로 /verify에 제출해 곧바로 approved로 전환한다
+      // — 기다릴 대상이 없어져 폴링 루프 자체가 필요 없다.
+      const verifyRes = await fetch(`${WORKER}/auth/device-link/verify`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, code: sessionData.code }),
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok || !verifyData.ok) throw new Error(verifyData.detail || verifyData.error || '요청이 만료됐거나 이미 처리됐습니다.');
 
       setStatus('지갑을 안전하게 전달하는 중...');
 
