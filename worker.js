@@ -13852,16 +13852,19 @@ async function handlePushSend(request, env, corsHeaders) {
   });
 
   let sent = 0;
+  let _debugSendErrors = []; // ★ 2026-07-20 임시 진단용 — 원인 확정되면 제거 예정
   for (const row of rows) {
     try {
       const sub = JSON.parse(row.subscription);
       const result = await _sendWebPush(env, sub, payload);
       if (result) sent++;
+      else _debugSendErrors.push('_sendWebPush returned false (자세한 내용은 res.status/text 참고 — Worker 로그 확인 필요)');
     } catch(e) {
       console.warn('[Push] 전송 실패:', e.message);
+      _debugSendErrors.push(e.message + (e.stack ? ' | ' + e.stack.split('\n')[0] : ''));
     }
   }
-  return new Response(JSON.stringify({ ok: true, sent, source }), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify({ ok: true, sent, source, _debugSendErrors }), { status: 200, headers: corsHeaders });
 }
 
 // Web Push 전송 (VAPID)
@@ -13962,7 +13965,13 @@ async function _sendWebPush(env, subscription, payload) {
   if (ok) {
     console.info('[Push] 발송 성공:', res.status, subscription.endpoint?.slice(0, 60));
   } else {
-    console.warn('[Push] 발송 실패:', res.status, await res.text().catch(() => ''));
+    const detail = await res.text().catch(() => '');
+    console.warn('[Push] 발송 실패:', res.status, detail);
+    // ★ 2026-07-20 임시 진단용 — 그냥 false만 반환하면 호출부에서 "왜"
+    // 실패했는지 알 방법이 없다(401 VAPID 서명 불일치 vs 410 구독 만료 등
+    // 원인이 완전히 다른데 구분이 안 됨). throw해서 호출부가 캐치해
+    // 클라이언트 응답에 노출할 수 있게 한다.
+    throw new Error(`FCM/푸시서비스 응답 ${res.status}: ${detail.slice(0, 200)}`);
   }
   return ok;
 }
