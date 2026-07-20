@@ -665,6 +665,44 @@ const CHUNGBUK_L2_TABLE = [
     kw: ['체육'] },
 ];
 
+
+// ── 충남 L2 라우팅 테이블 (2026-07-20 최초 실사) ─────────────────
+// 원형 도메인 16개 중 충남이 보유한 15개(health 없음) 채움. 근거:
+// chungnam.go.kr 공식 조직도. 자치안전실(jachi+safety)·산업경제실
+// (econ+innov)처럼 인접 도메인 2개를 한 실에 담는 패턴이 특징적이다.
+const CHUNGNAM_L2_TABLE = [
+  { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'chungnam', file: null,
+    kw: ['기획조정실', '데이터담당관', '고등교육정책'] },
+  { code: 'SP-DO-SAFETY', domain: 'safety', 도코드: 'chungnam', file: null,
+    kw: ['자치안전실', '안전정책', '사회재난', '자연재난', '재난'] },
+  { code: 'SP-DO-JACHI', domain: 'jachi', 도코드: 'chungnam', file: null,
+    kw: ['자치안전실', '자치행정', '새마을공동체', '세정'] },
+  { code: 'SP-DO-ECON', domain: 'econ', 도코드: 'chungnam', file: null,
+    kw: ['산업경제실', '경제정책', '일자리기업지원', '산업입지'] },
+  { code: 'SP-DO-INNOV', domain: 'innov', 도코드: 'chungnam', file: null,
+    kw: ['산업경제실', '미래산업', '산업육성', '탄소중립경제'] },
+  { code: 'SP-DO-WELFARE', domain: 'welfare', 도코드: 'chungnam', file: null,
+    kw: ['복지보건국', '복지보육', '경로보훈', '장애인복지', '보건정책', '감염병', '건강증진'] },
+  { code: 'SP-DO-FAMILY', domain: 'family', 도코드: 'chungnam', file: null,
+    kw: ['여성가족정책관', '여성가족', '임신', '출산', '보육'] },
+  { code: 'SP-DO-AGRI', domain: 'agri', 도코드: 'chungnam', file: null,
+    kw: ['농림축산국', '농업', '축산'] },
+  { code: 'SP-DO-CLIMATE', domain: 'climate', 도코드: 'chungnam', file: null,
+    kw: ['기후환경국', '기후', '환경'] },
+  { code: 'SP-DO-HOUSING', domain: 'housing', 도코드: 'chungnam', file: null,
+    kw: ['건설교통국', '주택', '건설'] },
+  { code: 'SP-DO-TRANSPORT', domain: 'transport', 도코드: 'chungnam', file: null,
+    kw: ['건설교통국', '교통'] },
+  { code: 'SP-DO-CULTURE', domain: 'culture', 도코드: 'chungnam', file: null,
+    kw: ['문화체육관광국', '문화정책', '문화유산'] },
+  { code: 'SP-DO-TOURISM', domain: 'tourism', 도코드: 'chungnam', file: null,
+    kw: ['관광진흥', '관광'] },
+  { code: 'SP-DO-SPORTS', domain: 'sports', 도코드: 'chungnam', file: null,
+    kw: ['체육진흥', '체육'] },
+  { code: 'SP-DO-OCEAN', domain: 'ocean', 도코드: 'chungnam', file: null,
+    kw: ['해양수산국', '해양', '수산', '어업'] },
+];
+
 const PROVINCE_TABLES = {
   jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE },
   // busan: L2만 실사 완료(2026-07-20). city(자치구·군 16개)/national은 아직 미착수 —
@@ -676,6 +714,7 @@ const PROVINCE_TABLES = {
   ulsan: { l2: ULSAN_L2_TABLE, city: [], national: [] },
   sejong: { l2: SEJONG_L2_TABLE, city: [], national: [] },
   chungbuk: { l2: CHUNGBUK_L2_TABLE, city: [], national: [] },
+  chungnam: { l2: CHUNGNAM_L2_TABLE, city: [], national: [] },
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }
