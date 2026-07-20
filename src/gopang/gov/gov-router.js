@@ -134,7 +134,11 @@ function _guessProvinceFromText(text, sigunguList) {
 let _currentResolvedProvinceCode = null;
 function _resolveProvinceCode() {
   if (typeof window !== 'undefined' && window.HONDI_PROVINCE_CODE) return window.HONDI_PROVINCE_CODE;
-  return _currentResolvedProvinceCode || 'jeju';
+  // ★ 2026-07-21 — 'jeju' 최후 기본값 제거(주피터 지시: jeju 중심 →
+  // 전국 중심 전환). #26 이후 정상 흐름은 이 지점에 도달하기 전
+  // _assembleGovSystemPromptRaw의 -0.5단계에서 이미 "지역 미판별"로
+  // 조기 반환하므로, 이 함수가 null을 반환해도 호출부는 안전하다.
+  return _currentResolvedProvinceCode || null;
 }
 
 // ── kgov(SP-10_kpublic, 전국 공통) 동적 로더 (2026-07-05 신설) ──────
@@ -314,8 +318,14 @@ async function _loadDoSp() {
     if (!rec) throw new Error(`province-master-data.json에 도코드=${provinceCode} 레코드 없음`);
     result = _renderProvinceTemplate(template, rec);
   } catch (e) {
-    console.warn(`[gov-router] SP-PROVINCE-TEMPLATE 렌더링 실패(도코드=${provinceCode}, ${e.message}) — 정적 파일로 폴백(⚠️ 제주 전용 정적 파일이라 다른 도에선 부정확할 수 있음)`);
-    result = await _fetchText('01-do/JEJU-DO-SP_v1.5.md');
+    // ★ 2026-07-21 — 예전엔 여기서 제주 정적 파일(JEJU-DO-SP_v1.5.md)로
+    // 조용히 대체했다. 주피터 지시로 jeju 중심 폴백을 폐기하고, 실사
+    // 안 된 도는 정직하게 "미확인"으로 안내한다(제주 조직 구조를
+    // 다른 도에 잘못 투사하지 않는다).
+    console.warn(`[gov-router] SP-PROVINCE-TEMPLATE 렌더링 실패(도코드=${provinceCode}, ${e.message}) — 도청 조직 정보 미확인으로 대체`);
+    result = `[도청 조직 정보 — 이 지역(${provinceCode}) 미확인] 광역시도청의 구체적인 조직·부서 정보는 ` +
+      `아직 실사되지 않았습니다. 정확한 안내는 정부24(gov.kr) 또는 해당 광역시도 대표전화, ` +
+      `국번없이 110(정부민원안내)으로 확인해 주세요.`;
   }
   _doSpCacheByProvince.set(provinceCode, result);
   return result;
