@@ -3,7 +3,7 @@
 // PWA 오프라인 지원 + 캐시 전략
 // ═══════════════════════════════════════════════════════════
 
-const CACHE_NAME    = 'gopang-20260707-1833';
+const CACHE_NAME    = 'gopang-20260720-1500';
 const CACHE_TIMEOUT = 5000; // 네트워크 타임아웃 5초
 // 2026-07-15 신설 — PERSONAL-AC-CALL-PROTOCOL §5 수신확인 3단계 전송용.
 const WORKER_PROXY  = 'https://hondi-proxy.tensor-city.workers.dev';
@@ -263,10 +263,29 @@ self.addEventListener('notificationclick', (event) => {
   // 것인데, 앱이 이미 열려있으면 아래 로직이 "포커스만 하고 postMessage엔
   // url을 아예 안 담아" 보내서 기존 창이 원래 있던 화면(보통 채팅창)에
   // 그대로 머물렀다 — 실사로 확인(알림을 눌러도 혼디 앱은 열리는데
-  // 코드 화면이 안 뜨던 원인). device-link 알림에 한해서만 이미 열린
-  // 창도 승인 화면으로 강제 이동시킨다 — 다른 알림(메시지 도착 등)은
-  // 사용자가 보고 있던 화면을 뺏지 않도록 기존 동작(포커스만) 유지.
+  // 코드 화면이 안 뜨던 원인).
+  //
+  // ★ 2026-07-20 2차 수정 — 위 1차 수정에서 client.navigate()를 썼더니
+  // 이 기기(Motorola Edge70, Android Chrome)에서 알림을 눌러도 아예
+  // 아무 반응이 없어졌다(앱조차 안 열림, 홈 화면 그대로) — navigate()가
+  // 이 환경 조합에서 원인 불명으로 막히는 것으로 추정된다. 원인을 더
+  // 파기보다, device-link 알림에 한해서는 기존 창 재사용 시도 자체를
+  // 하지 않고 항상 openWindow()로 새로 여는 쪽으로 단순화한다 —
+  // openWindow는 이미 다른 알림 종류에서 검증된 경로다. PWA 특성상
+  // 이미 앱이 열려있어도 openWindow가 그 창을 새 탭으로 열거나 브라우저가
+  // 알아서 기존 창으로 포커스를 넘기는 경우가 많아, 채팅 중이던 화면을
+  // 잃는 부작용도 이 방식이 client.navigate보다 오히려 적다.
   const isDeviceLink = tag.startsWith('gopang-device-link-');
+
+  if (isDeviceLink) {
+    event.waitUntil(
+      Promise.all([
+        _reportConsentReceipt(tag, 'acknowledged'),
+        clients.openWindow(url + (url.includes('?') ? '&' : '?') + 'playSound=' + encodeURIComponent(sound)),
+      ])
+    );
+    return;
+  }
 
   event.waitUntil(
     Promise.all([
@@ -276,9 +295,6 @@ self.addEventListener('notificationclick', (event) => {
         for (const client of list) {
           if (client.url.startsWith(self.location.origin) && 'focus' in client) {
             client.postMessage({ type: 'PLAY_SOUND', sound });
-            if (isDeviceLink && 'navigate' in client) {
-              try { await client.navigate(url); } catch (e) { console.warn('[SW] navigate 실패:', e.message); }
-            }
             return client.focus();
           }
         }
