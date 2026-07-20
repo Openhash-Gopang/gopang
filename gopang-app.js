@@ -113,6 +113,47 @@ document.body.classList.add('gopang-authed');
   }
 })();
 
+// ── 고액 거래 재인증(생체인증)도 기본값으로 유도 — 2026-07-20 신설 ────
+// (사용자 지시: "지문·얼굴 등 생체인식을 사용자 선택이 아니라 디폴트로
+// 활성화") 다만 웹푸시 권한과 달리 WebAuthn 등록(navigator.credentials
+// .create())은 브라우저가 사용자 제스처 없는 호출을 거부한다 — 완전히
+// 조용한 자동 등록은 기술적으로 불가능하다. 그래서 가입 직후(auth.js
+// _completeRegistration)에 한 번 자동 시도는 이미 하되, 그게 제스처
+// 컨텍스트 만료로 실패했거나 이미 가입된 기존 사용자인 경우를 위해,
+// 앱을 열 때 "원탭이면 바로 등록되는" 배너를 띄운다 — 이게 이 플랫폼에서
+// "디폴트"에 가장 가깝게 갈 수 있는 방법이다. 24시간 쿨다운으로 매번
+// 뜨는 걸 막는다(웹푸시 배너와 동일한 정책).
+(async () => {
+  try {
+    if (typeof window.GopangWallet === 'undefined' || !window.PublicKeyCredential) return;
+    if (window.GopangWallet.isStepUpEnrolled()) return;
+
+    const STEPUP_NUDGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+    const lastNudge = parseInt(localStorage.getItem('gopang_stepup_nudge_last') || '0', 10);
+    if (Date.now() - lastNudge < STEPUP_NUDGE_COOLDOWN_MS) return;
+
+    const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+    if (!stored?.ipv6) return;
+    if (!document.getElementById('message-list')) return; // 채팅창 준비 전이면 스킵
+
+    localStorage.setItem('gopang_stepup_nudge_last', String(Date.now()));
+    appendBubble('ai',
+      '🔒 고액 거래를 더 안전하게 지키려면 생체인증(지문·얼굴)을 등록하세요. ' +
+      '등록해두면 큰 금액을 보낼 때 한 번 더 본인 확인을 요청해요.' +
+      '<br><button onclick="this.disabled=true;this.textContent=\'등록 중...\';' +
+      'window.GopangWallet.enrollStepUpBiometric(JSON.parse(localStorage.getItem(\'gopang_user_v4\')).ipv6)' +
+      '.then(r=>{this.textContent=r.ok?\'✅ 등록 완료\':\'등록 실패(\'+r.reason+\')\';})' +
+      '.catch(e=>{this.textContent=\'등록 실패: \'+e.message;this.disabled=false;});" ' +
+      'style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;' +
+      'background:#0057A8;color:#fff;font-size:13px;font-weight:700;cursor:pointer">' +
+      '지금 등록하기</button>',
+      true
+    );
+  } catch (e) {
+    console.warn('[StepUpBiometric] 등록 유도 배너 표시 실패(치명적 아님):', e.message);
+  }
+})();
+
 // ── 신규 가입 직후 처리 ────────────────────────────────────────────
 // v3.3(2026-07-01): LLM 선택 창(ai-setup-mobile.html)으로 강제 이동시키던
 // 로직을 완전히 제거했다. 이제 혼디는 가입 즉시 DeepSeek V4 Flash를

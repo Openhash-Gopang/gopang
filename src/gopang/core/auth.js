@@ -1377,6 +1377,25 @@ function _showPhonePopup(resolve) {
         appendBubble('ai', '🔔 알림 권한이 꺼져 있어요. PC에서 보낸 메시지를 실시간으로 받으려면 브라우저 설정 → 알림에서 고팡을 허용해 주세요.');
       }
     }).catch(() => {});
+
+    // 2026-07-20 신설(사용자 지시 — 생체인증 디폴트 활성화): 가입 버튼을
+    // 누른 직후라 사용자 제스처 맥락이 아직 살아있을 가능성이 높은
+    // 시점이다 — 여기서 바로 시도한다. WebAuthn 등록(navigator.credentials
+    // .create())은 완전히 조용한 백그라운드 트리거가 불가능(브라우저가
+    // 사용자 제스처를 요구)하므로, 웹푸시처럼 "권한이 이미 default"인
+    // 상태를 그냥 밀어붙이는 것과는 다르다 — 이 시점에 시도해서 성공하면
+    // 그걸로 "디폴트 활성화"가 완성되고, 브라우저가 제스처 부족으로
+    // 거부하면 조용히 실패하고 넘어간다(설정 화면의 수동 등록 버튼이
+    // 폴백으로 남아있음 — 무한정 재시도하며 성가시게 하지 않는다).
+    if (typeof window.GopangWallet !== 'undefined') {
+      window.GopangWallet.enrollStepUpBiometric(ipv6).then(bioResult => {
+        if (bioResult.ok) {
+          console.info('[가입][생체인증] 고액 거래 재인증 기본 등록 완료');
+        } else {
+          console.info('[가입][생체인증] 기본 등록 시도 실패(설정에서 수동 등록 가능):', bioResult.reason);
+        }
+      }).catch(() => {});
+    }
   }
 
   const _submit = async () => {
