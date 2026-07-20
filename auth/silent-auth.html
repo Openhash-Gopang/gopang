@@ -211,23 +211,14 @@
     고팡 계정으로 로그인하면 모든 하위 서비스를 이용할 수 있습니다.
   </p>
 
-  <!-- 폰(개인 기기)으로 QR을 스캔해 이 PC/기기에 로그인 승인 -->
-  <div id="qr-sso-box" style="margin:20px 0;text-align:center">
-    <div id="qr-sso-img" style="width:180px;height:180px;margin:0 auto 10px;
-         border:1px solid #e5e7eb;border-radius:10px;display:flex;
-         align-items:center;justify-content:center;background:#fafafa">
-      <span style="font-size:11px;color:#9ca3af">QR 생성 중…</span>
-    </div>
-    <div id="qr-sso-status" style="font-size:12px;color:#9ca3af">
-      혼디 앱이 설치된 내 스마트폰으로 스캔하세요
-    </div>
-  </div>
-
-  <div style="text-align:center;font-size:12px;color:#9ca3af;margin:12px 0">또는</div>
-
-  <!-- hondi.net 가입/복구로 이동 -->
+  <!-- 2026-07-19 삭제 — "폰으로 QR 스캔해 이 기기 승인" 방식은 폐기됐다
+       (주피터 지시: 가입 시점 전화번호 문자 인증 1회만이 유일한 본인
+       인증 경로). 예전엔 이 기기에 개인키(지갑)가 없을 때 "다른 기기에
+       있는 지갑으로 QR 서명"을 대안으로 뒀지만, 그 대안 자체를 없앤다
+       — 이 기기에서 로그인 정보를 못 찾으면 hondi.net의 진짜 로그인
+       흐름(전화번호 인증)으로 보내는 것 하나만 남긴다. -->
   <button class="btn-primary" id="register-btn" onclick="goRegister()">
-    hondi.net에서 계속하기
+    hondi.net에서 로그인
   </button>
 </div>
 
@@ -279,29 +270,9 @@ function _waitForWallet(timeoutMs = 4000) {
 
 // ── 로컬 정체성 + 지갑 서명으로 /auth/issue 호출 (공통) ──────────────
 async function _issueViaWorker(svc, level = 'L0') {
-  // 0) QR 세션(지갑 없는 PC 등) — 같은 origin(hondi.net)의 sessionStorage에
-  //    남아있으면 지갑 서명 없이 즉시 통과시킨다. 폰(개인 기기, 지갑 보유)은
-  //    이 값이 없으므로 그대로 아래 지갑 경로로 진행된다.
-  const qrToken = sessionStorage.getItem('gopang_qr_token');
-  if (qrToken) {
-    try {
-      const res = await fetch(`${WORKER}/auth/verify`, {
-        headers: { 'Authorization': `Bearer ${qrToken}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.valid && (data.svc === '*' || data.svc === svc)) {
-          return { ok: true, ipv6: data.ipv6, level: data.level, exp: data.exp, token: qrToken };
-        }
-      } else {
-        // 만료/무효 — 다음 방문 때 다시 뜨도록 정리
-        sessionStorage.removeItem('gopang_qr_token');
-        sessionStorage.removeItem('gopang_user_v4');
-      }
-    } catch (e) { /* 네트워크 오류 — 지갑 경로로 폴백 */ }
-  }
-
-  // 1) 지갑(폰 등 개인 기기) 경로 — 기존 로직
+  // 2026-07-19 삭제 — 여기 있던 "QR 세션 토큰이 sessionStorage에 있으면
+  // 지갑 서명 없이 통과" 분기는 QR 로그인 자체를 폐기하면서 함께
+  // 제거했다(아무도 이 토큰을 더 이상 발급하지 않으므로 죽은 코드였다).
   const user = _getLocalUser();
   if (!user?.ipv6 || !user?.handle) return { ok: false, reason: 'NOT_REGISTERED' };
 
@@ -325,8 +296,8 @@ async function _issueViaWorker(svc, level = 'L0') {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, reason: data?.code || `http_${res.status}` };
     // 2026-07-15(발견④ 수정): data.token(handleIssue가 이미 서명해 내려주는 실제
-    // Bearer 토큰 문자열)을 그동안 여기서 버리고 있었다 — QR 경로(위 294행)는
-    // token: qrToken을 이미 정확히 포함시켰는데, 지갑 경로만 빠뜨린 누락이었다.
+    // Bearer 토큰 문자열)을 그동안 여기서 버리고 있었다 — 그때 QR 경로(2026-07-19
+    // 삭제됨)는 token을 이미 정확히 포함시켰는데, 지갑 경로만 빠뜨린 누락이었다.
     // 이 필드가 없으면 handlePdvQuery(worker.js)가 "검증 불가"로 보고 L2/L3
     // scope를 전부 L1로 강등시킨다(worker.js 4749행대 TODO 참고) — 이 한 줄이
     // L2/L3 인증 배선 미완의 실제 원인 지점이었다.
@@ -385,71 +356,21 @@ async function _runRedirectMode() {
     return;
   }
 
-  // 미가입/기기 불일치 — 이 기기(PC 등)엔 개인키가 없다.
-  // 열쇠는 폰(개인 기기)에 있으므로, QR로 폰의 서명을 받아온다.
-  // (백업 키를 직접 붙여넣는 방법은 hondi.net 설정에도 남아 있다 — 대안일 뿐.)
+  // 미가입/기기 불일치 — 이 기기(PC 등)엔 로그인 정보가 없다.
+  // 2026-07-19: 예전엔 여기서 "폰으로 QR 스캔" 대안을 안내했지만, QR
+  // 로그인 방식 자체를 폐기했다(주피터 지시 — 가입 시점 전화번호 문자
+  // 인증 1회만이 유일한 본인 인증 경로). hondi.net의 진짜 로그인
+  // 흐름(전화번호 인증)으로 보내는 것 하나만 남긴다.
   document.getElementById('auth-card').style.display = 'block';
   const title = document.getElementById('auth-title');
   const desc  = document.getElementById('auth-desc');
   if (result.reason === 'PUBKEY_MISMATCH') {
     title.textContent = '이 기기는 등록된 기기가 아닙니다';
-    desc.textContent  = '내 스마트폰으로 QR을 스캔해 이 기기를 승인하세요.';
+    desc.textContent  = 'hondi.net에서 전화번호로 다시 로그인해주세요.';
   } else {
     title.textContent = '고팡 로그인이 필요합니다';
-    desc.textContent  = '내 스마트폰으로 QR을 스캔해 로그인하세요.';
+    desc.textContent  = 'hondi.net에서 전화번호로 로그인해주세요.';
   }
-  _startQrSso();
-}
-
-// ── QR SSO — 폰(개인 기기, 이미 로그인됨)이 이 세션을 대신 승인 ──────────
-async function _startQrSso() {
-  const imgBox = document.getElementById('qr-sso-img');
-  const statusEl = document.getElementById('qr-sso-status');
-  let sid;
-  try {
-    const res = await fetch(`${WORKER}/auth/qr/create`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ svc: SERVICE, level: params.get('level') || 'L0' }),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error('create_failed');
-    sid = data.sid;
-  } catch (e) {
-    imgBox.innerHTML = '<span style="font-size:11px;color:#dc2626">QR 생성 실패</span>';
-    return;
-  }
-
-  const scanUrl = `https://hondi.net/auth/qr-scan.html?sid=${encodeURIComponent(sid)}`;
-  const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(scanUrl)}`;
-  imgBox.innerHTML = `<img src="${qrImgUrl}" style="width:100%;height:100%;border-radius:10px" alt="QR">`;
-
-  const startedAt = Date.now();
-  const poll = setInterval(async () => {
-    if (Date.now() - startedAt > 180000) {
-      clearInterval(poll);
-      statusEl.textContent = 'QR이 만료되었습니다. 새로고침 해주세요.';
-      return;
-    }
-    try {
-      const res = await fetch(`${WORKER}/auth/qr/status?sid=${encodeURIComponent(sid)}`);
-      const data = await res.json();
-      if (data.status === 'approved') {
-        clearInterval(poll);
-        statusEl.textContent = '승인됨 — 이동 중…';
-        if (RETURN) {
-          const returnUrl = new URL(decodeURIComponent(RETURN));
-          returnUrl.searchParams.set('gopang_token', data.token);
-          location.href = returnUrl.toString();
-        } else {
-          location.href = 'https://hondi.net';
-        }
-      } else if (data.status === 'expired') {
-        clearInterval(poll);
-        statusEl.textContent = 'QR이 만료되었습니다. 새로고침 해주세요.';
-      }
-    } catch (e) { /* 다음 폴링에서 재시도 */ }
-  }, 2000);
 }
 
 window.goRegister = function() {

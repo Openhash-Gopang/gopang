@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>혼디 QR 로그인 승인</title>
+<title>혼디 로그인</title>
 <style>
   body{margin:0;font-family:-apple-system,'Pretendard',sans-serif;background:#f9fafb;
        display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;box-sizing:border-box}
@@ -11,122 +11,24 @@
         box-sizing:border-box;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.06)}
   h1{font-size:16px;color:#111827;margin:0 0 10px;font-weight:700}
   p{font-size:13px;color:#374151;line-height:1.6;margin:0 0 20px}
-  .handle{color:#1A73E8;font-weight:700}
   button{width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;
-         font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px}
-  #approve{background:#16a34a;color:#fff}
-  #deny{background:none;border:1px solid #e5e7eb;color:#6b7280}
-  #msg{font-size:13px;color:#9ca3af;margin-top:4px}
-  #msg.error{color:#dc2626}
-  #msg.success{color:#16a34a;font-weight:600}
+         font-weight:700;cursor:pointer;font-family:inherit;background:#0057A8;color:#fff}
 </style>
 </head>
 <body>
-  <div class="card" id="card">
-    <h1>불러오는 중…</h1>
-    <p id="desc">로그인 정보를 확인하고 있습니다.</p>
+  <!--
+    2026-07-19 폐기 — QR 스캔 로그인 방식 자체를 없앴다(주피터 지시:
+    가입 시점 전화번호 문자 인증 1회만이 유일한 본인 인증 경로). 이
+    페이지를 가리키던 유일한 진입점(auth/silent-auth.html의 QR
+    생성 로직)도 같은 날 제거했다 — 지금은 옛 QR 코드를 스캔했거나
+    북마크로 직접 들어온 경우에만 도달한다. /auth/qr/approve를 계속
+    호출할 수 있는 상태로 남겨두면 폐기 방침과 어긋나므로, 승인 UI
+    자체를 없애고 로그인 페이지로만 안내한다.
+  -->
+  <div class="card">
+    <h1>QR 로그인은 더 이상 지원하지 않습니다</h1>
+    <p>전화번호 인증으로 로그인해주세요.</p>
+    <button onclick="location.href='https://hondi.net'">hondi.net에서 로그인</button>
   </div>
-
-<!-- 이미 로그인된 이 기기의 지갑(gopang-wallet.js)을 재사용한다 -->
-<script src="/gopang-wallet.js?v=20260624"></script>
-<script>
-const PROXY_URL = 'https://hondi-proxy.tensor-city.workers.dev';
-const STORE_KEY = 'gopang_user_v4';
-
-function waitForWallet(timeoutMs = 8000) {
-  return new Promise((resolve) => {
-    if (window.gopangWallet) { resolve(window.gopangWallet); return; }
-    const start = Date.now();
-    const t = setInterval(() => {
-      if (window.gopangWallet) { clearInterval(t); resolve(window.gopangWallet); }
-      else if (Date.now() - start > timeoutMs) { clearInterval(t); resolve(null); }
-    }, 100);
-  });
-}
-
-function render(html) {
-  document.getElementById('card').innerHTML = html;
-}
-
-async function main() {
-  const params = new URLSearchParams(location.search);
-  const sid = params.get('sid');
-  if (!sid) {
-    render('<h1>잘못된 접근입니다</h1><p>QR 코드를 다시 스캔해 주세요.</p>');
-    return;
-  }
-
-  const stored = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-  if (!stored?.ipv6) {
-    render(`<h1>먼저 로그인해 주세요</h1>
-      <p>이 기기에서 혼디 계정으로 먼저 로그인한 뒤<br>다시 QR을 스캔해 주세요.</p>
-      <button id="go-home" style="background:#1A73E8;color:#fff">혼디 앱 열기</button>`);
-    document.getElementById('go-home').onclick = () => { location.href = '/webapp.html'; };
-    return;
-  }
-
-  const wallet = await waitForWallet();
-  if (!wallet?.publicKeyB64u || typeof wallet.signPayload !== 'function') {
-    render('<h1>보안 키 준비 중</h1><p>잠시 후 새로고침하여 다시 시도해 주세요.</p>');
-    return;
-  }
-
-  render(`
-    <h1>이 PC를 내 계정으로 로그인할까요?</h1>
-    <p>계정 <span class="handle">${stored.handle || stored.nickname || ''}</span>(으)로<br>다른 기기에 로그인을 승인합니다.</p>
-    <button id="approve">승인</button>
-    <button id="deny">거부</button>
-    <div id="msg"></div>
-  `);
-
-  document.getElementById('deny').onclick = () => {
-    render('<h1>취소됨</h1><p>로그인 요청을 거부했습니다. 이 창을 닫아도 됩니다.</p>');
-  };
-
-  document.getElementById('approve').onclick = async () => {
-    const approveBtn = document.getElementById('approve');
-    const denyBtn = document.getElementById('deny');
-    const msgEl = document.getElementById('msg');
-    approveBtn.disabled = true; denyBtn.disabled = true;
-    approveBtn.textContent = '승인 중…';
-    msgEl.className = '';
-    msgEl.textContent = '';
-
-    const ts = Date.now();
-    const sigMsg = `qr-auth:${sid}:${stored.ipv6}:${wallet.publicKeyB64u}:${ts}`;
-    let signature;
-    try {
-      signature = await wallet.signPayload(sigMsg);
-    } catch (e) {
-      msgEl.className = 'error';
-      msgEl.textContent = '서명에 실패했습니다. 다시 시도해 주세요.';
-      approveBtn.disabled = false; denyBtn.disabled = false; approveBtn.textContent = '승인';
-      return;
-    }
-
-    try {
-      const res = await fetch(`${PROXY_URL}/auth/qr/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sid, guid: stored.ipv6, pubkey: wallet.publicKeyB64u, signature, ts }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) {
-        msgEl.className = 'error';
-        msgEl.textContent = data?.detail || data?.code || '승인에 실패했습니다.';
-        approveBtn.disabled = false; denyBtn.disabled = false; approveBtn.textContent = '승인';
-        return;
-      }
-      render('<h1>승인 완료</h1><p>PC 화면에서 자동으로 로그인됩니다.<br>이 창은 닫아도 됩니다.</p>');
-    } catch (e) {
-      msgEl.className = 'error';
-      msgEl.textContent = '네트워크 오류입니다. 다시 시도해 주세요.';
-      approveBtn.disabled = false; denyBtn.disabled = false; approveBtn.textContent = '승인';
-    }
-  };
-}
-
-main();
-</script>
 </body>
 </html>
