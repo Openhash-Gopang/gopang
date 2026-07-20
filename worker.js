@@ -3870,6 +3870,149 @@ async function handleSigunguDeptResolve(request, url, env, corsHeaders, ctx) {
     { headers: corsHeaders });
 }
 
+
+// ── 국가기관 지사(L·중앙정부 지역사무소) 지연 초기화 리졸버 (2026-07-20 신설) ──
+// 시군구 리졸버(/gov/sigungu-dept-resolve)와 완전히 동일한 철학·구조.
+// 원형(SP-NAT-*-TEMPLATE)은 이미 09-national/agencies/templates/에 34개
+// 전부 있었다 — 없던 건 제주 외 도의 인스턴스뿐이라 이걸로 채운다.
+//
+// 19개 핵심 기관(시민 문의 빈도 높은 것)만 원형 폴백 대상 — 명칭 패턴이
+// 국가기관은 시군구보다 훨씬 표준화돼 있어("OO세무서", "OO지방법원" 등)
+// 확정률이 더 높을 것으로 기대.
+const NAT_AGENCY_COMMON_PATTERNS = {
+  tax: '{도}세무서', court: '{도}지방법원', prosecution: '{도}지방검찰청',
+  police: '{도}지방경찰청', labor: '근로복지공단 {도}지사',
+  laborimprove: '{도}지방고용노동청', nhis: '국민건강보험공단 {도}지사',
+  nps: '국민연금공단 {도}지역본부', immigration: '{도}출입국·외국인청(사무소)',
+  post: '{도}지방우정청', mma: '{도}지방병무청', customs: '{도}세관',
+  veterans: '{도}보훈청', weather: '{도}지방기상청', coastguard: '{도}해양경찰서',
+  port: '{도}지방해양수산청', probation: '{도}준법지원센터',
+  bok: '한국은행 {도}본부', stat: '통계청 {도}사무소',
+};
+const NAT_AGENCY_LABEL_KO = {
+  tax: '세무', court: '법원', prosecution: '검찰', police: '경찰',
+  labor: '근로복지', laborimprove: '고용노동', nhis: '건강보험',
+  nps: '국민연금', immigration: '출입국', post: '우정(우체국)', mma: '병무',
+  customs: '세관', veterans: '보훈', weather: '기상', coastguard: '해양경찰',
+  port: '해양수산', probation: '준법지원(보호관찰)', bok: '한국은행', stat: '통계청',
+};
+
+function _natAgencyRenderFallback(provinceName, domain) {
+  const pattern = NAT_AGENCY_COMMON_PATTERNS[domain];
+  const label = NAT_AGENCY_LABEL_KO[domain] || domain;
+  if (!pattern) {
+    return `'${label}' 관련 국가기관 지사 정보는 아직 확인되지 않았습니다 — 정부24(gov.kr) 또는 ` +
+      `국번없이 110(정부민원안내)으로 확인해 주세요.`;
+  }
+  const guess = pattern.replace('{도}', provinceName);
+  return `'${label}' 관련 문의는 통상 **${guess}**(정확한 명칭·관할 미확인 — 일반적인 국가기관 지역조직 ` +
+    `명명 패턴에 근거한 추정)에서 담당합니다. 실제 관할·연락처는 해당 기관 공식 홈페이지나 ` +
+    `국번없이 110(정부민원안내)으로 재확인을 권합니다.`;
+}
+
+function _natAgencyExtractName(organic, provinceName, domain) {
+  if (!organic || organic.length === 0) return null;
+  const label = NAT_AGENCY_LABEL_KO[domain] || domain;
+  // 국가기관은 명칭 패턴이 훨씬 정형화돼 있어("OO지방법원", "OO세무서")
+  // 시군구보다 넓게(과/국 접미사 대신) 기관명 접미사로 잡는다.
+  const namePattern = /([가-힣]{2,10}(?:세무서|지방법원|지방검찰청|지방경찰청|지사|지방고용노동청|지역본부|출입국\S{0,6}청|지방우정청|지방병무청|세관|보훈청|지방기상청|해양경찰서|지방해양수산청|준법지원센터|본부|사무소))/g;
+  const counts = new Map();
+  for (const r of organic.slice(0, 5)) {
+    if (!r.link || !r.link.includes('.go.kr')) continue;
+    const text = `${r.title || ''} ${r.snippet || ''}`;
+    if (!text.includes(provinceName.replace(/(특별자치도|특별자치시|광역시|특별시|도)$/, ''))) continue;
+    let m;
+    while ((m = namePattern.exec(text)) !== null) {
+      counts.set(m[1], (counts.get(m[1]) || 0) + 1);
+    }
+  }
+  if (counts.size === 0) return null;
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  if (sorted.length > 1 && sorted[0][1] === sorted[1][1]) return null;
+  return sorted[0][0];
+}
+
+async function _natAgencyRecordResolveLog(entry, env) {
+  try {
+    const token = await _l1AdminToken(env);
+    await fetch(`${L1_BASE_HOST}/api/collections/national_agency_resolve_log/records`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ...entry, recorded_at: new Date().toISOString() }),
+    });
+  } catch (e) {
+    console.error('[national-agency-resolve] 로그 기록 실패:', e.message);
+  }
+}
+
+const NAT_AGENCY_RESOLVE_TTL = 60 * 60 * 24 * 60; // 60일 — 국가기관은 시군구보다 변동이 적어 더 길게
+
+// GET /gov/national-agency-resolve?domain=tax&province=busan&provinceName=부산광역시
+async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) {
+  const provinceCode = (url.searchParams.get('province') || '').trim();
+  const provinceName = (url.searchParams.get('provinceName') || provinceCode).trim();
+  const domain = (url.searchParams.get('domain') || '').trim();
+  if (!provinceCode || !domain) {
+    return _err(400, 'MISSING_PARAM', 'province/domain 파라미터 필수', corsHeaders);
+  }
+
+  const cacheKey = `gov-data:nat-agency:${provinceCode}:${domain}`;
+  if (env.GOV_DATA_KV) {
+    try {
+      const cached = await env.GOV_DATA_KV.get(cacheKey, 'json');
+      if (cached?.agencyName) {
+        return new Response(JSON.stringify({
+          text: `'${NAT_AGENCY_LABEL_KO[domain] || domain}' 관련 문의는 **${cached.agencyName}**에서 담당합니다.`,
+          verified: true, source: 'cache',
+        }), { headers: corsHeaders });
+      }
+    } catch (e) {
+      console.error('[national-agency-resolve] KV 조회 실패(무시):', e.message);
+    }
+  }
+
+  const fallbackText = _natAgencyRenderFallback(provinceName, domain);
+
+  if (env.WEB_SEARCH_API_KEY && ctx?.waitUntil) {
+    const bgTask = (async () => {
+      const query = `${provinceName} ${NAT_AGENCY_LABEL_KO[domain] || domain} 관할`;
+      let organic = null;
+      try {
+        const searchRes = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'X-API-KEY': env.WEB_SEARCH_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: query, gl: 'kr', hl: 'ko' }),
+        });
+        if (searchRes.ok) {
+          const raw = await searchRes.json().catch(() => null);
+          organic = raw?.organic || null;
+        }
+      } catch (e) {
+        console.error('[national-agency-resolve] Serper 호출 실패:', e.message);
+      }
+
+      const agencyName = _natAgencyExtractName(organic, provinceName, domain);
+      if (agencyName && env.GOV_DATA_KV) {
+        try {
+          await env.GOV_DATA_KV.put(cacheKey, JSON.stringify({ agencyName, resolvedAt: new Date().toISOString() }),
+            { expirationTtl: NAT_AGENCY_RESOLVE_TTL });
+        } catch (e) {
+          console.error('[national-agency-resolve] KV 저장 실패:', e.message);
+        }
+      }
+      await _natAgencyRecordResolveLog({
+        province_code: provinceCode, domain, query,
+        outcome: agencyName ? 'resolved' : 'not_found',
+        resolved_agency_name: agencyName || null,
+      }, env);
+    })();
+    ctx.waitUntil(bgTask.catch((e) => console.error('[national-agency-resolve] 백그라운드 실패:', e.message)));
+  }
+
+  return new Response(JSON.stringify({ text: fallbackText, verified: false, source: 'template_fallback' }),
+    { headers: corsHeaders });
+}
+
 // ── POST /web-search (Serper.dev 연동, 2026-07-11 신설) ────────────
 // K-Search RULE-07 "대체형"([WEB_SEARCH: query=...] 태그, call-ai.js가
 // 파싱)이 호출한다. §0-B 경로1(웹검색)이 이번까지는 원칙 서술뿐이고
@@ -4832,6 +4975,10 @@ export default {
     // ── 웹검색(Serper.dev) (2026-07-11 신설) ────────────────────────
     if (pathname === '/web-search' && request.method === 'POST')
       return handleWebSearch(request, env, corsHeaders, ctx);
+
+    // ── 국가기관 지사 지연초기화 (2026-07-20 신설) ──────────────────
+    if (pathname === '/gov/national-agency-resolve' && request.method === 'GET')
+      return handleNationalAgencyResolve(request, url, env, corsHeaders, ctx);
 
     // ── 시군구 부서 지연초기화 (2026-07-20 신설, 2026-07-20 재적용) ──
     if (pathname === '/gov/sigungu-dept-resolve' && request.method === 'GET')
