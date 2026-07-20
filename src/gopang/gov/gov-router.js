@@ -703,6 +703,46 @@ const CHUNGNAM_L2_TABLE = [
     kw: ['해양수산국', '해양', '수산', '어업'] },
 ];
 
+
+// ── 전북 L2 라우팅 테이블 (2026-07-20 최초 실사) ─────────────────
+// 원형 도메인 16개 전부 채운 첫 사례. welfare/family/health가 전부
+// 복지여성보건국 하나를 가리킨다. econ(기업유치지원실 매핑)은 불확실 —
+// 재확인 필요. 근거: jeonbuk.go.kr 공식 조직도 + 2026년 하반기 인사 발령.
+const JEONBUK_L2_TABLE = [
+  { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'jeonbuk', file: null,
+    kw: ['기획조정실', '인구청년정책', '법무행정'] },
+  { code: 'SP-DO-SAFETY', domain: 'safety', 도코드: 'jeonbuk', file: null,
+    kw: ['도민안전실', '재난', '특별사법경찰', '안전'] },
+  { code: 'SP-DO-JACHI', domain: 'jachi', 도코드: 'jeonbuk', file: null,
+    kw: ['자치행정국', '자치행정', '세정'] },
+  { code: 'SP-DO-ECON', domain: 'econ', 도코드: 'jeonbuk', file: null,
+    kw: ['기업유치지원실', '투자유치', '기업지원'] },
+  { code: 'SP-DO-INNOV', domain: 'innov', 도코드: 'jeonbuk', file: null,
+    kw: ['미래산업국', '이차전지', '탄소산업'] },
+  { code: 'SP-DO-WELFARE', domain: 'welfare', 도코드: 'jeonbuk', file: null,
+    kw: ['복지여성보건국', '기초생활수급', '기초연금', '복지'] },
+  { code: 'SP-DO-FAMILY', domain: 'family', 도코드: 'jeonbuk', file: null,
+    kw: ['복지여성보건국', '여성가족', '임신', '출산', '보육'] },
+  { code: 'SP-DO-HEALTH', domain: 'health', 도코드: 'jeonbuk', file: null,
+    kw: ['복지여성보건국', '보건', '건강'] },
+  { code: 'SP-DO-AGRI', domain: 'agri', 도코드: 'jeonbuk', file: null,
+    kw: ['농생명축산식품국', '스마트농산', '동물방역', '농업'] },
+  { code: 'SP-DO-CLIMATE', domain: 'climate', 도코드: 'jeonbuk', file: null,
+    kw: ['환경녹지국', '환경', '녹지'] },
+  { code: 'SP-DO-HOUSING', domain: 'housing', 도코드: 'jeonbuk', file: null,
+    kw: ['건설교통국', '주택건축', '토지정보'] },
+  { code: 'SP-DO-TRANSPORT', domain: 'transport', 도코드: 'jeonbuk', file: null,
+    kw: ['건설교통국', '교통'] },
+  { code: 'SP-DO-CULTURE', domain: 'culture', 도코드: 'jeonbuk', file: null,
+    kw: ['문화체육관광국', '문화산업', '유산관리'] },
+  { code: 'SP-DO-TOURISM', domain: 'tourism', 도코드: 'jeonbuk', file: null,
+    kw: ['관광산업', '관광'] },
+  { code: 'SP-DO-SPORTS', domain: 'sports', 도코드: 'jeonbuk', file: null,
+    kw: ['체육정책', '체육'] },
+  { code: 'SP-DO-OCEAN', domain: 'ocean', 도코드: 'jeonbuk', file: null,
+    kw: ['새만금해양수산국', '새만금', '해양항만', '수산'] },
+];
+
 const PROVINCE_TABLES = {
   jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE },
   // busan: L2만 실사 완료(2026-07-20). city(자치구·군 16개)/national은 아직 미착수 —
@@ -715,6 +755,7 @@ const PROVINCE_TABLES = {
   sejong: { l2: SEJONG_L2_TABLE, city: [], national: [] },
   chungbuk: { l2: CHUNGBUK_L2_TABLE, city: [], national: [] },
   chungnam: { l2: CHUNGNAM_L2_TABLE, city: [], national: [] },
+  jeonbuk: { l2: JEONBUK_L2_TABLE, city: [], national: [] },
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }

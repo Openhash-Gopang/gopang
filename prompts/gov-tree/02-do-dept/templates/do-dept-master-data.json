@@ -1,5 +1,5 @@
 {
-  "_schema_설명": "도(道) 단위 부서 데이터. 하나의 domain(예: welfare)에 여러 도(道코드)가 각자 레코드를 등록한다. 렌더링은 jeju-router.js의 _renderDeptTemplate()이 domain으로 template을 찾고, 도코드로 이 배열에서 해당 레코드를 찾아 자리표시자를 채운다. 이 파일은 gopang/prompts/Jejudo/02-do-dept/templates/ 아래 있지만 향후 도별 프로젝트가 늘면 Jejudo 밖(prompts/ 최상위 공용 위치)으로 옮기는 것을 검토할 것 — 지금은 jeju가 유일한 구현체라 이 위치에 둔다. 2026-07-13 추가: '개편예정_문구' 필드 신설 — 도의회 심사 등으로 아직 확정되지 않은 조직개편 내용을 '구명칭_문구'(이미 확정된 과거 개편)와 구분해 추적한다. 확정되면 부서명/산하과목록 등 실제 필드를 갱신하고 이 필드는 '구명칭_문구'로 이동한다. | 2026-07-20: 원형 도메인 13→16 확장(health/family/sports 신설) — 도별로 조직이 통합/분리된 경우를 모두 지원. 인스턴스가 해당 슬롯 레코드를 갖고 있지 않으면 그 도는 상위(통합된) 도메인이 흡수한다. | 2026-07-20: 서울 14개 도메인 신설(agri/ocean 없음 — 도심형 광역시라 별도 농수산 국이 없음을 확인, 정상적 공백). | 2026-07-20: 인천 8개 레코드 추가 — ⚠️ 전부 2026-08 시행 예정(안) 기준, 시의회 통과 전(TBD). safety/jachi/culture/tourism/sports/agri/ocean/health는 이번 개편 보도에 언급 없어 미확인 — 레코드 미생성. | 2026-07-20: 대전 10개 도메인 신설(확인된 것만 — housing/transport/climate/family/agri/ocean은 미확인이라 레코드 없음). ⚠️ 민선 9기(허태정) 조직개편 여부 미확인. | 2026-07-20: 울산 13개 도메인 신설(family/agri/ocean 없음 — family는 복지보훈여성국 통합, agri/ocean은 국 단위 조직 미확인). | 2026-07-20: 세종 12개 도메인 신설(innov/family/health/ocean 없음 — innov는 미확인, family/health는 보건복지국 통합, ocean은 내륙이라 정상 공백). | 2026-07-20: 충북 14개 도메인 신설(health/ocean 없음 — health는 보건복지국 통합, ocean은 내륙도라 정상 공백). ★ family가 국이 아니라 도지사 직속 \"관\" 단위인 특이 사례. | 2026-07-20: 충남 15개 도메인 신설(health 없음 — 복지보건국 통합). ★ 자치안전실(jachi+safety 통합), 산업경제실(econ+innov 통합) — 인접 도메인 2개를 한 실에 넣는 새로운 조합.",
+  "_schema_설명": "도(道) 단위 부서 데이터. 하나의 domain(예: welfare)에 여러 도(道코드)가 각자 레코드를 등록한다. 렌더링은 jeju-router.js의 _renderDeptTemplate()이 domain으로 template을 찾고, 도코드로 이 배열에서 해당 레코드를 찾아 자리표시자를 채운다. 이 파일은 gopang/prompts/Jejudo/02-do-dept/templates/ 아래 있지만 향후 도별 프로젝트가 늘면 Jejudo 밖(prompts/ 최상위 공용 위치)으로 옮기는 것을 검토할 것 — 지금은 jeju가 유일한 구현체라 이 위치에 둔다. 2026-07-13 추가: '개편예정_문구' 필드 신설 — 도의회 심사 등으로 아직 확정되지 않은 조직개편 내용을 '구명칭_문구'(이미 확정된 과거 개편)와 구분해 추적한다. 확정되면 부서명/산하과목록 등 실제 필드를 갱신하고 이 필드는 '구명칭_문구'로 이동한다. | 2026-07-20: 원형 도메인 13→16 확장(health/family/sports 신설) — 도별로 조직이 통합/분리된 경우를 모두 지원. 인스턴스가 해당 슬롯 레코드를 갖고 있지 않으면 그 도는 상위(통합된) 도메인이 흡수한다. | 2026-07-20: 서울 14개 도메인 신설(agri/ocean 없음 — 도심형 광역시라 별도 농수산 국이 없음을 확인, 정상적 공백). | 2026-07-20: 인천 8개 레코드 추가 — ⚠️ 전부 2026-08 시행 예정(안) 기준, 시의회 통과 전(TBD). safety/jachi/culture/tourism/sports/agri/ocean/health는 이번 개편 보도에 언급 없어 미확인 — 레코드 미생성. | 2026-07-20: 대전 10개 도메인 신설(확인된 것만 — housing/transport/climate/family/agri/ocean은 미확인이라 레코드 없음). ⚠️ 민선 9기(허태정) 조직개편 여부 미확인. | 2026-07-20: 울산 13개 도메인 신설(family/agri/ocean 없음 — family는 복지보훈여성국 통합, agri/ocean은 국 단위 조직 미확인). | 2026-07-20: 세종 12개 도메인 신설(innov/family/health/ocean 없음 — innov는 미확인, family/health는 보건복지국 통합, ocean은 내륙이라 정상 공백). | 2026-07-20: 충북 14개 도메인 신설(health/ocean 없음 — health는 보건복지국 통합, ocean은 내륙도라 정상 공백). ★ family가 국이 아니라 도지사 직속 \"관\" 단위인 특이 사례. | 2026-07-20: 충남 15개 도메인 신설(health 없음 — 복지보건국 통합). ★ 자치안전실(jachi+safety 통합), 산업경제실(econ+innov 통합) — 인접 도메인 2개를 한 실에 넣는 새로운 조합. | 2026-07-20: 전북 16개 도메인 신설 — ★ welfare/family/health 3개가 전부 복지여성보건국 하나로 통합된 최초 사례. econ 매핑(기업유치지원실)은 불확실, 재확인 필요.",
   "부서목록": [
     {
       "domain": "welfare",
@@ -2210,6 +2210,278 @@
       "콜센터번호": "041-120",
       "콜센터운영시간": "평일 8~20시(유료)",
       "_비고": "2026-07-20 최초 실사(chungnam.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "plan",
+      "template": "SP-DEPT-PLAN-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "기획조정실",
+      "산하과목록": "정책기획관, 예산과, 인구청년정책과, 행정정보과, 법무행정과",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "safety",
+      "template": "SP-DEPT-SAFETY-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "도민안전실",
+      "산하과목록": "안전정책과, 사회재난과, 자연재난과, 특별사법경찰과",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "jachi",
+      "template": "SP-DEPT-JACHI-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "자치행정국",
+      "산하과목록": "자치행정과, 총무과, 세정과, 회계과",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "econ",
+      "template": "SP-DEPT-ECON-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "기업유치지원실",
+      "산하과목록": "산하과 미확인(TBD) — ★ 정확한 '경제' 담당 국(局) 명칭을 공식 조직도에서 확정 못해 잠정적으로 이 실(室)을 매핑했다. 실제로는 경제부지사 산하 별도 국이 있을 가능성이 높음(미확정, 재확인 필요).",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "innov",
+      "template": "SP-DEPT-INNOV-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "미래산업국",
+      "산하과목록": "이차전지탄소산업과(2026 인사로 확인) 등",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "welfare",
+      "template": "SP-DEPT-WELFARE-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "복지여성보건국",
+      "산하과목록": "산하과 미확인(TBD) — ★ 복지+여성가족+보건이 전부 한 국으로 통합된 유일 사례(지금까지 조사한 도 중). family/health 도메인도 전부 이 부서를 가리킨다.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "family",
+      "template": "SP-DEPT-FAMILY-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "복지여성보건국",
+      "산하과목록": "welfare와 동일 부서(복지여성보건국) — domain만 분리.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "health",
+      "template": "SP-DEPT-HEALTH-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "복지여성보건국",
+      "산하과목록": "welfare/family와 동일 부서(복지여성보건국) — domain만 분리.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "agri",
+      "template": "SP-DEPT-AGRI-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "농생명축산식품국",
+      "산하과목록": "스마트농산과, 동물방역과",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "climate",
+      "template": "SP-DEPT-CLIMATE-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "환경녹지국",
+      "산하과목록": "산하과 미확인(TBD)",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "housing",
+      "template": "SP-DEPT-HOUSING-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "건설교통국",
+      "산하과목록": "주택건축과, 토지정보과",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "transport",
+      "template": "SP-DEPT-TRANSPORT-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "건설교통국",
+      "산하과목록": "housing과 동일 부서 — domain만 분리.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "culture",
+      "template": "SP-DEPT-CULTURE-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "문화체육관광국",
+      "산하과목록": "문화산업과, 유산관리과, 체육정책과, 관광산업과 — 문화·체육·관광 통합.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "tourism",
+      "template": "SP-DEPT-TOURISM-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "문화체육관광국",
+      "산하과목록": "culture와 동일 부서 — domain만 분리.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "sports",
+      "template": "SP-DEPT-SPORTS-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "문화체육관광국",
+      "산하과목록": "culture와 동일 부서 — domain만 분리.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "ocean",
+      "template": "SP-DEPT-OCEAN-TEMPLATE_v1.0.md",
+      "도코드": "jeonbuk",
+      "도이름": "전북특별자치도",
+      "부서명": "새만금해양수산국",
+      "산하과목록": "해양항만과, 새만금지원수질과 — 새만금 간척지 개발 특성상 일반 해양수산국과 다른 이름.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (063-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(jeonbuk.go.kr 공식 조직도).",
       "결재핸들러": {
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
