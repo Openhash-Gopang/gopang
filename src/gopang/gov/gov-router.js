@@ -470,11 +470,50 @@ const BUSAN_L2_TABLE = [
     kw: ['해운항만', '수산정책', '수산진흥', '어업', '수산업', '양식업'] },
 ];
 
+
+// ── 서울 L2 라우팅 테이블 (2026-07-20 최초 실사) ─────────────────
+// 원형 도메인 16개 중 서울이 보유한 14개(agri/ocean 없음 — 도심형 광역시라
+// 정상적 공백) 채움. 근거: org.seoul.go.kr 공식 조직도(2026-07-20) +
+// news.seoul.go.kr 2026년 부서별 주요업무계획 + opengov.seoul.go.kr
+// 업무추진비 공개문서. 산하과 상세는 다수 도메인에서 TBD로 남아있어
+// 안정적인 국/실/본부 단위 키워드 위주로 구성(§비고 참고).
+const SEOUL_L2_TABLE = [
+  { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'seoul', file: null,
+    kw: ['지방세', '취득세', '재산세', '예산', '기획조정실', '정책기획관'] },
+  { code: 'SP-DO-SAFETY', domain: 'safety', 도코드: 'seoul', file: null,
+    kw: ['재난안전실', '재난', '안전관리'] },
+  { code: 'SP-DO-JACHI', domain: 'jachi', 도코드: 'seoul', file: null,
+    kw: ['행정국', '총무', '자치행정'] },
+  { code: 'SP-DO-ECON', domain: 'econ', 도코드: 'seoul', file: null,
+    kw: ['경제실', '소상공인', '중소기업', '민생노동', '일자리'] },
+  { code: 'SP-DO-INNOV', domain: 'innov', 도코드: 'seoul', file: null,
+    kw: ['디지털도시', '스마트시티', '정보화'] },
+  { code: 'SP-DO-WELFARE', domain: 'welfare', 도코드: 'seoul', file: null,
+    kw: ['복지실', '복지정책', '장애인복지', '기초생활수급', '기초연금'] },
+  { code: 'SP-DO-HEALTH', domain: 'health', 도코드: 'seoul', file: null,
+    kw: ['시민건강국', '식품정책', '정신건강', '보건', '감염병', '건강증진', '응급의료'] },
+  { code: 'SP-DO-FAMILY', domain: 'family', 도코드: 'seoul', file: null,
+    kw: ['여성가족실', '저출생', '여성정책', '가족정책', '보육', '아동돌봄', '출산'] },
+  { code: 'SP-DO-CLIMATE', domain: 'climate', 도코드: 'seoul', file: null,
+    kw: ['기후환경본부', '기후환경', '대기질', '미세먼지', '탄소중립'] },
+  { code: 'SP-DO-HOUSING', domain: 'housing', 도코드: 'seoul', file: null,
+    kw: ['주택실', '주택정책', '전략주택공급', '공동주택', '재건축'] },
+  { code: 'SP-DO-TRANSPORT', domain: 'transport', 도코드: 'seoul', file: null,
+    kw: ['교통실', '대중교통', '버스', '지하철', '따릉이'] },
+  { code: 'SP-DO-CULTURE', domain: 'culture', 도코드: 'seoul', file: null,
+    kw: ['문화본부', '문화정책', '문화예술', '도서관', '박물관'] },
+  { code: 'SP-DO-TOURISM', domain: 'tourism', 도코드: 'seoul', file: null,
+    kw: ['관광체육국', '관광', '관광정책', '마이스'] },
+  { code: 'SP-DO-SPORTS', domain: 'sports', 도코드: 'seoul', file: null,
+    kw: ['체육진흥', '생활체육', '체육시설'] },
+];
+
 const PROVINCE_TABLES = {
   jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE },
   // busan: L2만 실사 완료(2026-07-20). city(자치구·군 16개)/national은 아직 미착수 —
   // 허위로 채우지 않고 빈 배열로 정직하게 남긴다(TBD 마커 관행과 동일).
   busan: { l2: BUSAN_L2_TABLE, city: [], national: [] },
+  seoul: { l2: SEOUL_L2_TABLE, city: [], national: [] },
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }
