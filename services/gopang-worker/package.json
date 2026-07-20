@@ -1,0 +1,15 @@
+{
+  "name": "gopang-worker-trust-infra",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "K-Market 9(재무제표 위변조 방지)·7(에스크로)·10(리뷰) 항목 Cloudflare Worker 구현",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "for f in $(find src -name '*.js'); do node --check \"$f\"; done"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

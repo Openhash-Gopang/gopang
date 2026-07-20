@@ -1,0 +1,73 @@
+name = "gopang-proxy"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+# ── KV 네임스페이스 (실제 id는 `wrangler kv namespace create <NAME>` 후 채워넣기) ──
+[[kv_namespaces]]
+binding = "L1_REGISTRY_KV"
+id = "REPLACE_ME"
+
+[[kv_namespaces]]
+binding = "PENDING_REGION_KV"
+id = "REPLACE_ME"
+
+[[kv_namespaces]]
+binding = "OPS_ALERTS_KV"
+id = "REPLACE_ME"
+
+[[kv_namespaces]]
+binding = "SHARED_ATTR_INDEX"
+id = "REPLACE_ME"
+
+[[kv_namespaces]]
+binding = "REWARD_COUNTER_KV"
+id = "REPLACE_ME"
+
+[[kv_namespaces]]
+binding = "PUSH_SUBSCRIPTIONS_KV"
+id = "REPLACE_ME"
+
+[[kv_namespaces]]
+binding = "CONFIG_KV"
+id = "REPLACE_ME"
+
+[[kv_namespaces]]
+binding = "PG_PROVIDER_CONFIG_KV"
+id = "REPLACE_ME"
+
+[[kv_namespaces]]
+binding = "VELOCITY_KV"
+id = "REPLACE_ME"
+
+[[kv_namespaces]]
+binding = "DISPUTE_ABUSE_KV"
+id = "REPLACE_ME"
+
+# ── Durable Objects ──────────────────────────────────────────
+[[durable_objects.bindings]]
+name = "ESCROW_SIGNER"
+class_name = "EscrowSigner"
+
+[[durable_objects.bindings]]
+name = "LEDGER_WRITER"
+class_name = "LedgerWriter"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["EscrowSigner", "LedgerWriter"]
+
+# ── 크론 트리거 ────────────────────────────────────────────
+[triggers]
+crons = [
+  "0 * * * *",   # 매시 정각 — 원장 앵커링
+  "0 18 * * *",  # 매일 03:00 KST — 무결성감사/에스크로자동릴리즈/리뷰이상탐지
+]
+
+# ── Secrets (wrangler secret put <NAME> 로 별도 등록, 이 파일엔 값 없음) ──
+# L1_ADMIN_EMAIL, L1_ADMIN_PASSWORD
+# ESCROW_PRIVATE_KEY, ESCROW_PUBLIC_KEY
+# TOSS_CLIENT_KEY, TOSS_SECRET_KEY, TOSS_WEBHOOK_SECRET
+# PUSH_GATEWAY_URL
+# NTS_SERVICE_KEY        (1번: 국세청 사업자등록정보 API 서비스키)
+# KAKAO_REST_KEY         (선행종속 B절: 카카오 주소검색 API)
+# APP_BASE_URL           (8번: PG 결제 성공/실패 리다이렉트 base)

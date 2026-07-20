@@ -1,0 +1,253 @@
+[
+  {
+    "name": "fs_ledger",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "tx_id", "type": "text", "required": true },
+      { "name": "guid", "type": "text", "required": true },
+      { "name": "counterpart", "type": "text" },
+      { "name": "direction", "type": "select", "required": true, "options": { "values": ["credit", "debit"] } },
+      { "name": "amount", "type": "number", "required": true },
+      { "name": "item_name", "type": "text" },
+      { "name": "fs_account", "type": "text", "required": true },
+      { "name": "payment_rail", "type": "select", "options": { "values": ["gdc", "pg"] } },
+      { "name": "fee_rate_applied", "type": "number" },
+      { "name": "memo", "type": "text" },
+      { "name": "tx_at", "type": "date", "required": true },
+      { "name": "seq", "type": "number", "required": true },
+      { "name": "entry_hash", "type": "text", "required": true },
+      { "name": "prev_entry_hash", "type": "text", "required": true },
+      { "name": "anchored", "type": "bool" },
+      { "name": "anchor_batch_id", "type": "text" }
+    ],
+    "indexes": ["CREATE INDEX idx_fs_ledger_guid_seq ON fs_ledger (guid, seq)"]
+  },
+  {
+    "name": "fs_ledger_corrections",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "original_tx_id", "type": "text", "required": true },
+      { "name": "reversal_tx_id", "type": "text" },
+      { "name": "correction_tx_id", "type": "text" },
+      { "name": "reason", "type": "text", "required": true },
+      { "name": "requested_by", "type": "text", "required": true },
+      { "name": "approved_by", "type": "text" },
+      { "name": "created_at", "type": "date", "required": true }
+    ]
+  },
+  {
+    "name": "fs_ledger_anchor_flags",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "batch_id", "type": "text", "required": true },
+      { "name": "l1_node", "type": "text", "required": true },
+      { "name": "merkle_root", "type": "text", "required": true },
+      { "name": "anchor_entry_hash", "type": "text" },
+      { "name": "leaf_count", "type": "number" },
+      { "name": "leaf_entry_hashes", "type": "json" },
+      { "name": "anchored_at", "type": "date", "required": true }
+    ]
+  },
+  {
+    "name": "escrow_holds",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "tx_id", "type": "text", "required": true },
+      { "name": "buyer_guid", "type": "text", "required": true },
+      { "name": "seller_guid", "type": "text", "required": true },
+      { "name": "total", "type": "number", "required": true },
+      { "name": "seller_net", "type": "number", "required": true },
+      { "name": "platform_fee", "type": "number", "required": true },
+      { "name": "items", "type": "json" },
+      { "name": "status", "type": "select", "required": true, "options": { "values": ["held", "released", "refunded", "disputed", "partial_released"] } },
+      { "name": "condition_type", "type": "select", "required": true, "options": { "values": ["delivery_confirmation", "service_completion", "manual_only"] } },
+      { "name": "payment_rail", "type": "select", "options": { "values": ["gdc", "pg"] } },
+      { "name": "pg_provider", "type": "select", "options": { "values": ["toss", "inicis"] } },
+      { "name": "pg_payment_key", "type": "text" },
+      { "name": "pg_order_id", "type": "text" },
+      { "name": "fee_rate_applied", "type": "number" },
+      { "name": "held_at", "type": "date", "required": true },
+      { "name": "release_deadline", "type": "date", "required": true },
+      { "name": "released_at", "type": "date" },
+      { "name": "release_tx_hash", "type": "text" },
+      { "name": "release_reason", "type": "select", "options": { "values": ["buyer_confirmed", "auto_timeout", "dispute_resolved_seller", "dispute_resolved_buyer"] } },
+      { "name": "carrier_id", "type": "text" },
+      { "name": "tracking_no", "type": "text" },
+      { "name": "delivery_confirmed_at", "type": "date" },
+      { "name": "fraud_review_required", "type": "bool" },
+      { "name": "fraud_risk_level", "type": "text" }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_escrow_holds_tx_id ON escrow_holds (tx_id)",
+      "CREATE INDEX idx_escrow_holds_status_deadline ON escrow_holds (status, release_deadline)"
+    ]
+  },
+  {
+    "name": "escrow_chain_state",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "guid", "type": "text", "required": true },
+      { "name": "block_hash", "type": "text" },
+      { "name": "updated_at", "type": "date" },
+      { "name": "pending_lock", "type": "bool" }
+    ],
+    "indexes": ["CREATE UNIQUE INDEX idx_escrow_chain_state_guid ON escrow_chain_state (guid)"]
+  },
+  {
+    "name": "dispute_cases",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "hold_id", "type": "text", "required": true },
+      { "name": "buyer_guid", "type": "text", "required": true },
+      { "name": "seller_guid", "type": "text", "required": true },
+      { "name": "reason", "type": "text", "required": true },
+      { "name": "evidence_refs", "type": "json" },
+      { "name": "ai_verdict", "type": "text" },
+      { "name": "ai_confidence", "type": "number" },
+      { "name": "human_verdict", "type": "text" },
+      { "name": "status", "type": "select", "options": { "values": ["ai_resolved", "human_review", "appealed", "final"] } },
+      { "name": "appeal_count", "type": "number" },
+      { "name": "created_at", "type": "date", "required": true }
+    ]
+  },
+  {
+    "name": "reviews",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "tx_id", "type": "text", "required": true },
+      { "name": "buyer_guid", "type": "text", "required": true },
+      { "name": "seller_guid", "type": "text", "required": true },
+      { "name": "product_id", "type": "text" },
+      { "name": "rating", "type": "number", "required": true, "options": { "min": 1, "max": 5 } },
+      { "name": "text", "type": "text", "required": true },
+      { "name": "helpful_count", "type": "number" },
+      { "name": "status", "type": "select", "required": true, "options": { "values": ["visible", "flagged", "hidden_by_moderation"] } },
+      { "name": "edit_count", "type": "number" },
+      { "name": "edit_locked_at", "type": "date" },
+      { "name": "seller_reply", "type": "text" },
+      { "name": "seller_replied_at", "type": "date" },
+      { "name": "created_at", "type": "date", "required": true },
+      { "name": "reviewer_sso_level", "type": "text" }
+    ],
+    "indexes": ["CREATE UNIQUE INDEX idx_reviews_tx_id ON reviews (tx_id)"]
+  },
+  {
+    "name": "review_helpful_votes",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "review_id", "type": "text", "required": true },
+      { "name": "voter_guid", "type": "text", "required": true },
+      { "name": "voted_at", "type": "date", "required": true }
+    ],
+    "indexes": ["CREATE UNIQUE INDEX idx_review_votes_unique ON review_helpful_votes (review_id, voter_guid)"]
+  },
+  {
+    "name": "review_moderation_log",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "review_id", "type": "text", "required": true },
+      { "name": "event", "type": "select", "required": true, "options": { "values": ["auto_flagged", "manual_hidden", "manual_restored", "reported_by_user"] } },
+      { "name": "reason", "type": "text" },
+      { "name": "actor", "type": "text" },
+      { "name": "created_at", "type": "date", "required": true }
+    ]
+  },
+  {
+    "name": "owner_notifications",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "seller_guid", "type": "text", "required": true },
+      { "name": "event_type", "type": "text", "required": true },
+      { "name": "severity", "type": "select", "required": true, "options": { "values": ["info", "warn", "critical"] } },
+      { "name": "payload", "type": "json" },
+      { "name": "read", "type": "bool" },
+      { "name": "channel_sent", "type": "text" },
+      { "name": "created_at", "type": "date", "required": true }
+    ]
+  },
+  {
+    "name": "business_verifications",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "guid", "type": "text", "required": true },
+      { "name": "b_no", "type": "text", "required": true },
+      { "name": "start_dt", "type": "text", "required": true },
+      { "name": "representative_name", "type": "text" },
+      { "name": "verify_status", "type": "select", "required": true, "options": { "values": ["pending", "verified", "mismatch", "not_found", "suspended", "error"] } },
+      { "name": "nts_b_stt", "type": "text" },
+      { "name": "last_verified_at", "type": "date" },
+      { "name": "last_checked_at", "type": "date" },
+      { "name": "raw_response", "type": "json" },
+      { "name": "retry_count", "type": "number" }
+    ],
+    "indexes": ["CREATE UNIQUE INDEX idx_business_verifications_guid ON business_verifications (guid)"]
+  },
+  {
+    "name": "business_verification_log",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "guid", "type": "text", "required": true },
+      { "name": "event", "type": "select", "required": true, "options": { "values": ["initial_check", "periodic_recheck", "manual_recheck"] } },
+      { "name": "prev_status", "type": "text" },
+      { "name": "new_status", "type": "text", "required": true },
+      { "name": "detail", "type": "json" },
+      { "name": "checked_at", "type": "date", "required": true }
+    ]
+  },
+  {
+    "name": "fraud_signals",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "subject_type", "type": "select", "required": true, "options": { "values": ["tx", "account", "review"] } },
+      { "name": "subject_id", "type": "text", "required": true },
+      { "name": "signal_type", "type": "select", "required": true, "options": { "values": ["self_dealing", "velocity", "wash_trading_cycle", "chargeback", "dispute_abuse", "shared_device", "shared_kyc_attrs", "review_burst", "blacklist_flag", "aml_structuring"] } },
+      { "name": "score", "type": "number", "required": true },
+      { "name": "detail", "type": "json" },
+      { "name": "detected_at", "type": "date", "required": true },
+      { "name": "detector", "type": "select", "options": { "values": ["realtime", "batch_graph", "batch_cluster"] } }
+    ]
+  },
+  {
+    "name": "fraud_cases",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "case_status", "type": "select", "required": true, "options": { "values": ["open", "reviewing", "confirmed_fraud", "false_positive", "dismissed"] } },
+      { "name": "risk_level", "type": "select", "required": true, "options": { "values": ["S0", "S1", "S2", "S3"] } },
+      { "name": "signal_ids", "type": "json" },
+      { "name": "subject_guids", "type": "json" },
+      { "name": "detail", "type": "json" },
+      { "name": "assigned_to", "type": "text" },
+      { "name": "resolution", "type": "text" },
+      { "name": "created_at", "type": "date", "required": true },
+      { "name": "resolved_at", "type": "date" }
+    ]
+  },
+  {
+    "name": "account_risk_score",
+    "type": "base",
+    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
+    "schema": [
+      { "name": "guid", "type": "text", "required": true },
+      { "name": "current_score", "type": "number", "required": true },
+      { "name": "open_case_count", "type": "number" },
+      { "name": "trust_level", "type": "select", "options": { "values": ["L0", "L1", "L2", "L3"] } },
+      { "name": "step_up_required", "type": "bool" },
+      { "name": "last_computed_at", "type": "date", "required": true }
+    ],
+    "indexes": ["CREATE UNIQUE INDEX idx_account_risk_score_guid ON account_risk_score (guid)"]
+  }
+]
