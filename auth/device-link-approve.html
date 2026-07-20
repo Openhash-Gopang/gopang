@@ -45,6 +45,19 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .hide { display: none; }
+  /* 2026-07-20 신설 — USB 원격 디버깅이 반복적으로 불안정해(모토로라
+     기기·Edge 조합에서 연결은 인식되지만 세션이 안 붙는 문제가 실사로
+     반복 확인됨), 화면 자체에 단계별 로그를 항상 보여주는 패널을 만든다.
+     이러면 콘솔 접근 없이도 정확히 어느 단계에서 무슨 에러가 났는지
+     바로 알 수 있다. */
+  #debug-log {
+    margin-top: 16px; text-align: left; font-family: monospace;
+    font-size: 11px; background: #111827; color: #d1fae5;
+    border-radius: 8px; padding: 10px 12px; max-height: 220px;
+    overflow-y: auto; line-height: 1.6; white-space: pre-wrap; word-break: break-all;
+  }
+  #debug-log .err { color: #fca5a5; }
+  #debug-log .ok  { color: #6ee7b7; }
 </style>
 </head>
 <body>
@@ -72,6 +85,7 @@
   </div>
 
   <div id="status"></div>
+  <div id="debug-log"></div>
 </div>
 
 <script>
@@ -82,6 +96,21 @@
   const $ = (id) => document.getElementById(id);
   const show = (id) => { ['loading','content','error'].forEach(x => $(x).classList.add('hide')); $(id).classList.remove('hide'); };
   const setStatus = (msg, kind) => { $('status').textContent = msg || ''; $('status').className = kind || ''; };
+
+  // 2026-07-20 신설 — USB 원격 디버깅이 반복적으로 불안정해, 화면에
+  // 직접 단계별 로그를 남긴다. 각 단계 진입·성공·실패를 전부 기록해서
+  // 콘솔 접근 없이도 정확히 어느 지점에서 무엇이 잘못됐는지 바로 보이게
+  // 한다(예: "X25519 key data must be 256 bits"처럼 원인이 짧은 메시지
+  // 뒤에 숨어 어느 단계인지 알기 어려웠던 사고를 재발 방지).
+  function dlog(msg, kind) {
+    const el = $('debug-log');
+    const line = document.createElement('div');
+    if (kind) line.className = kind;
+    const t = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+    line.textContent = `[${t}] ${msg}`;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  }
 
   let sessionData = null;
 
@@ -142,53 +171,65 @@
     $('btn-approve').disabled = true;
     $('btn-deny').disabled = true;
     setStatus('확인 중...');
+    dlog('승인 시작');
 
     try {
       const wallet = await waitForWallet();
+      dlog('지갑 준비 완료 · guid=' + wallet.guid, 'ok');
 
-      // ★ 2026-07-20 변경 — 예전엔 여기서 "PC가 코드를 입력할 때까지"
-      // 폴링으로 기다렸다(PC 쪽에서 사람이 코드를 옮겨 적어야 approved
-      // 상태가 됐으므로). 이제 그 사람 개입을 없앴으니, 폰이 이미 알고
-      // 있는 code를 스스로 /verify에 제출해 곧바로 approved로 전환한다
-      // — 기다릴 대상이 없어져 폴링 루프 자체가 필요 없다.
       const verifyRes = await fetch(`${WORKER}/auth/device-link/verify`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, code: sessionData.code }),
       });
       const verifyData = await verifyRes.json();
+      dlog('verify 응답: ' + JSON.stringify(verifyData));
       if (!verifyRes.ok || !verifyData.ok) throw new Error(verifyData.detail || verifyData.error || '요청이 만료됐거나 이미 처리됐습니다.');
+      dlog('verify 성공', 'ok');
 
       setStatus('지갑을 안전하게 전달하는 중...');
 
-      // 기존 sealForRecipient()를 그대로 재사용 — PC의 1회용 공개키로
-      // 봉투 암호화(새 암호화 로직 없음, gopang-wallet.js §X25519 참조).
       const privKeyB64u = await wallet.exportPrivateKey();
-      // ★ 2026-07-20 수정: privKeyB64u·handle만 보내던 걸로는 부족했다
-      // (실사 발견 — PC에서 로그아웃·계정 삭제 버튼이 작동하지 않음).
-      // gopang-wallet.js의 싱글턴 자동 초기화 IIFE는 매 페이지 로드마다
-      // localStorage의 gopang_user_v4.ipv6를 읽어 지갑에 연결하는데,
-      // PC 쪽에서 이 레코드를 통째로 써주지 않으면 지갑 키는 옮겨져도
-      // 앱은 "게스트"로 인식한다(handle 없음 → 로그아웃 버튼 숨김,
-      // nickname/e164 불일치 → 계정 삭제 확인 실패). gopang_user_v4
-      // 전체를 그대로 넘겨 PC가 동일하게 복원하게 한다.
+      dlog('개인키 추출 완료(길이만 표시): ' + privKeyB64u.length + '자');
+
       const storedUser = (() => {
         try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); }
         catch { return null; }
       })();
+      dlog('로컬 계정정보 확인: ' + (storedUser ? 'ipv6=' + storedUser.ipv6 : '없음'));
+
+      // ★ 2026-07-20 신설 — sealForRecipient() 호출 직전, 실제로 원인이
+      // 됐던 문제(pcPubKeyB64u가 32바이트가 아니어서 "X25519 key data
+      // must be 256 bits" 에러로만 나타났던 것)를 여기서 미리 잡아
+      // 화면에 명확히 보여준다.
+      const pcKeyLen = (() => {
+        try {
+          const bin = atob(sessionData.pcPubKeyB64u.replace(/-/g, '+').replace(/_/g, '/'));
+          return bin.length;
+        } catch (e) { return -1; }
+      })();
+      dlog('PC 공개키(pcPubKeyB64u) 디코딩 길이: ' + pcKeyLen + '바이트 (32여야 정상)', pcKeyLen === 32 ? 'ok' : 'err');
+      if (pcKeyLen !== 32) {
+        throw new Error(`PC 공개키 형식이 잘못됐습니다(${pcKeyLen}바이트, 32바이트여야 함) — PC에서 device-link.html을 새로고침 후 다시 시도해 주세요.`);
+      }
+
       const plaintext = JSON.stringify({ privKeyB64u, userRecord: storedUser });
       const sealed = await GopangWallet.sealForRecipient(sessionData.pcPubKeyB64u, plaintext);
+      dlog('봉투 암호화 완료', 'ok');
 
       const res = await fetch(`${WORKER}/auth/device-link/deliver`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, guid: wallet.guid, sealed }),
       });
       const data = await res.json();
+      dlog('deliver 응답: ' + JSON.stringify(data));
       if (!res.ok || !data.ok) throw new Error(data.detail || data.error || '전달에 실패했습니다.');
 
       setStatus('완료됐습니다. PC 화면을 확인해 주세요.', 'success');
+      dlog('전체 완료', 'ok');
       $('content').innerHTML = '<h1>✅ 연결 완료</h1><p style="font-size:13px;color:#6b7280;margin-top:8px">이 창은 닫으셔도 됩니다.</p>';
     } catch (e) {
       setStatus(e.message, 'error');
+      dlog('오류: ' + e.message + (e.stack ? '\n' + e.stack : ''), 'err');
       $('btn-approve').disabled = false;
       $('btn-deny').disabled = false;
     }

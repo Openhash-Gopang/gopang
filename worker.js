@@ -381,6 +381,22 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
     return _err(400, 'INVALID_PHONE', '올바른 국내 전화번호 형식이 아닙니다', corsHeaders);
   }
   if (!pcPubKeyB64u) return _err(400, 'MISSING_FIELD', 'pcPubKeyB64u 필수', corsHeaders);
+  // ★ 2026-07-20 신설 — 실사로 발견: 이 값이 32바이트(X25519 raw 공개키
+  // 크기)가 아닌 채로 저장되면, 폰이 나중에 sealForRecipient()에서
+  // "X25519 key data must be 256 bits"라는 암호화 단계 에러로만 마주치게
+  // 되어 원인을 찾기 매우 어려웠다(USB 디버깅 여러 번 시도 끝에 겨우
+  // 발견). 여기서 미리 길이를 검증해 애초에 나쁜 값이 세션에 저장조차
+  // 안 되게 막는다 — 문제가 있으면 PC가 요청하는 순간 바로 명확한
+  // 에러를 받는다.
+  try {
+    if (_b64uToBytes(pcPubKeyB64u).length !== 32) {
+      return _err(400, 'INVALID_PC_PUBKEY',
+        `pcPubKeyB64u는 32바이트(X25519 공개키)여야 합니다 — 받은 길이: ${_b64uToBytes(pcPubKeyB64u).length}바이트`,
+        corsHeaders);
+    }
+  } catch (e) {
+    return _err(400, 'INVALID_PC_PUBKEY', 'pcPubKeyB64u가 올바른 Base64URL 형식이 아닙니다: ' + e.message, corsHeaders);
+  }
   if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
 
   let profile;
