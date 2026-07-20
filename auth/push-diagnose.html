@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 — 알림 진단</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    background: #f8f9fa; padding: 20px; color: #111827;
+  }
+  h1 { font-size: 18px; margin-bottom: 4px; }
+  p.desc { font-size: 13px; color: #6b7280; margin-bottom: 20px; line-height: 1.5; }
+  .row {
+    background: white; border: 1px solid #e5e7eb; border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 10px; font-size: 14px;
+  }
+  .row .label { color: #6b7280; font-size: 12px; margin-bottom: 4px; }
+  .row .value { font-family: monospace; word-break: break-all; }
+  .ok    { color: #059669; font-weight: 700; }
+  .bad   { color: #dc2626; font-weight: 700; }
+  .warn  { color: #d97706; font-weight: 700; }
+  button {
+    width: 100%; padding: 14px; border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+    background: #0057A8; color: #fff; margin-top: 8px;
+  }
+  button:disabled { background: #9ca3af; }
+  #result {
+    white-space: pre-wrap; font-family: monospace; font-size: 12px;
+    background: #111827; color: #d1fae5; border-radius: 10px;
+    padding: 14px; margin-top: 14px; display: none; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<h1>🔔 알림(웹푸시) 진단</h1>
+<p class="desc">
+  USB 디버깅 없이 이 화면만으로 원인을 확인합니다. 아래 항목이 자동으로
+  채워지고, "지금 다시 시도" 버튼으로 실제 등록까지 바로 해볼 수 있습니다.
+</p>
+
+<div class="row">
+  <div class="label">브라우저 알림 권한</div>
+  <div class="value" id="v-permission">확인 중...</div>
+</div>
+<div class="row">
+  <div class="label">서비스워커 상태</div>
+  <div class="value" id="v-sw">확인 중...</div>
+</div>
+<div class="row">
+  <div class="label">이 기기에 이미 만들어진 구독</div>
+  <div class="value" id="v-sub">확인 중...</div>
+</div>
+<div class="row">
+  <div class="label">로그인 계정(guid)</div>
+  <div class="value" id="v-guid">확인 중...</div>
+</div>
+<div class="row">
+  <div class="label">자동 재시도 쿨다운 기록</div>
+  <div class="value" id="v-cooldown">확인 중...</div>
+</div>
+
+<button id="btn-retry">지금 다시 시도</button>
+<button id="btn-clear-cooldown" style="background:#f3f4f6;color:#374151;margin-top:8px">
+  쿨다운 기록 지우기(재시도가 계속 막혀있을 때만)
+</button>
+
+<div id="result"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  function fmtPermission(p) {
+    if (p === 'granted') return { text: 'granted (허용됨)', cls: 'ok' };
+    if (p === 'denied')  return { text: 'denied (차단됨 — 브라우저 설정에서 직접 켜야 함)', cls: 'bad' };
+    return { text: (p || 'unsupported') + ' (아직 결정 안 됨 또는 미지원)', cls: 'warn' };
+  }
+
+  async function diagnose() {
+    // 1. 권한 상태
+    const perm = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+    const permInfo = fmtPermission(perm);
+    $('v-permission').textContent = permInfo.text;
+    $('v-permission').className = 'value ' + permInfo.cls;
+
+    // 2. 서비스워커
+    let reg = null;
+    try {
+      if ('serviceWorker' in navigator) {
+        // 이 페이지에 바로 들어온 경우(webapp.html을 먼저 거치지 않은 경우)를
+        // 대비해, 등록이 안 돼 있으면 gopang-pwa.js와 동일한 방식으로
+        // 여기서도 직접 등록을 시도한다.
+        reg = await navigator.serviceWorker.getRegistration('/');
+        if (!reg) {
+          reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        }
+        reg = await navigator.serviceWorker.ready;
+        $('v-sw').textContent = '정상 등록됨: ' + (reg.active?.scriptURL || '(scriptURL 없음)');
+        $('v-sw').className = 'value ok';
+      } else {
+        $('v-sw').textContent = '이 브라우저는 서비스워커를 지원하지 않습니다';
+        $('v-sw').className = 'value bad';
+      }
+    } catch (e) {
+      $('v-sw').textContent = '오류: ' + e.message;
+      $('v-sw').className = 'value bad';
+    }
+
+    // 3. 로컬 구독
+    if (reg) {
+      try {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          $('v-sub').textContent = '있음 (endpoint: ' + sub.endpoint.slice(0, 50) + '...)';
+          $('v-sub').className = 'value ok';
+        } else {
+          $('v-sub').textContent = '없음 — 아직 구독이 안 만들어졌습니다';
+          $('v-sub').className = 'value warn';
+        }
+      } catch (e) {
+        $('v-sub').textContent = '오류: ' + e.message;
+        $('v-sub').className = 'value bad';
+      }
+    } else {
+      $('v-sub').textContent = '(서비스워커 없어서 확인 불가)';
+    }
+
+    // 4. 로그인 계정
+    const stored = (() => {
+      try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); }
+      catch { return null; }
+    })();
+    if (stored?.ipv6) {
+      $('v-guid').textContent = `${stored.handle || '(handle 없음)'} · ${stored.ipv6}`;
+      $('v-guid').className = 'value ok';
+    } else {
+      $('v-guid').textContent = '로그인 정보 없음 — 이 브라우저에서 로그인 상태가 아닙니다';
+      $('v-guid').className = 'value bad';
+    }
+
+    // 5. 쿨다운 기록
+    const lastTry = localStorage.getItem('gopang_push_last_try');
+    if (lastTry) {
+      const d = new Date(parseInt(lastTry, 10));
+      const hoursAgo = ((Date.now() - d.getTime()) / 3600000).toFixed(1);
+      $('v-cooldown').textContent = `${d.toLocaleString('ko-KR')} (${hoursAgo}시간 전) — 24시간 이내면 자동 재시도가 막혀 있음`;
+      $('v-cooldown').className = 'value ' + (hoursAgo < 24 ? 'warn' : 'ok');
+    } else {
+      $('v-cooldown').textContent = '기록 없음 (자동 재시도가 아직 한 번도 안 돎)';
+    }
+  }
+
+  $('btn-clear-cooldown').addEventListener('click', () => {
+    localStorage.removeItem('gopang_push_last_try');
+    diagnose();
+  });
+
+  $('btn-retry').addEventListener('click', async () => {
+    const btn = $('btn-retry');
+    btn.disabled = true;
+    btn.textContent = '시도 중...';
+    const resultEl = $('result');
+    resultEl.style.display = 'block';
+    resultEl.textContent = '실행 중...';
+
+    try {
+      const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+      if (!stored?.ipv6) throw new Error('로그인 정보가 없습니다 — 먼저 앱에서 로그인해 주세요.');
+
+      const { requestPushSubscription } = await import('/src/gopang/services/push.js');
+      const result = await requestPushSubscription(stored.ipv6);
+      resultEl.textContent = JSON.stringify(result, null, 2);
+      resultEl.style.color = result.ok ? '#6ee7b7' : '#fca5a5';
+
+      if (result.ok) {
+        localStorage.setItem('gopang_push_last_try', String(Date.now()));
+      }
+    } catch (e) {
+      resultEl.textContent = '오류: ' + e.message;
+      resultEl.style.color = '#fca5a5';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '지금 다시 시도';
+      diagnose();
+    }
+  });
+
+  diagnose();
+})();
+</script>
+</body>
+</html>
