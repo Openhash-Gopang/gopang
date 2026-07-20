@@ -411,20 +411,10 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
   // 이 값과 무관하게 "문자로 받기" 링크를 항상 노출하되(§3 원칙),
   // pushSent:false면 그 즉시 강조해서 보여준다.
   let pushSent = false;
-  let _debugPushReason = null; // ★ 2026-07-20 임시 진단용 — 원인 확정되면 제거 예정
   try {
-    if (!env.VAPID_PRIVATE_KEY || !env.VAPID_PUBLIC_KEY || !env.VAPID_SUBJECT) {
-      _debugPushReason = 'VAPID_ENV_NOT_CONFIGURED';
-    } else {
-      const fresh = await _l1FindProfileByGuid(env, profile.guid).catch((e) => {
-        _debugPushReason = 'L1_LOOKUP_FAILED: ' + e.message;
-        return null;
-      });
-      if (!fresh) {
-        if (!_debugPushReason) _debugPushReason = 'PROFILE_NOT_FOUND_BY_GUID';
-      } else if (!fresh.push_subscription) {
-        _debugPushReason = 'NO_PUSH_SUBSCRIPTION_ON_THIS_PROFILE';
-      } else {
+    if (env.VAPID_PRIVATE_KEY && env.VAPID_PUBLIC_KEY && env.VAPID_SUBJECT) {
+      const fresh = await _l1FindProfileByGuid(env, profile.guid).catch(() => null);
+      if (fresh?.push_subscription) {
         const sub = JSON.parse(fresh.push_subscription);
         const payload = JSON.stringify({
           title: '새 기기에서 로그인 요청',
@@ -439,12 +429,10 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
     }
   } catch (e) {
     console.warn('[DeviceLink] 푸시 발송 실패(치명적 아님 — SMS 폴백으로 계속 진행 가능):', e.message);
-    _debugPushReason = 'SEND_EXCEPTION: ' + e.message;
   }
 
   return new Response(JSON.stringify({
     ok: true, sessionId, expires_in: DEVICE_LINK_TTL_SECONDS, pushSent,
-    _debugPushReason, _debugResolvedGuid: profile.guid,
   }), { status: 200, headers: corsHeaders });
 }
 
@@ -3676,194 +3664,6 @@ async function handleGwpRegistryRegister(request, env, corsHeaders) {
   }
 }
 
-
-// ── 시군구(L3) 부서 지연 초기화 리졸버 (2026-07-20 신설) ────────────
-// GOV_OPEN_DATA_MAP/KOSIS 리졸버(2026-07-16)와 동일 철학: 226개 시군구를
-// 미리 채우지 않고 첫 조회 시점에 초기화한다. 비밀키(WEB_SEARCH_API_KEY,
-// L1_ADMIN_EMAIL/PASSWORD)는 전부 이 파일(서버) 안에서만 쓰고 클라이언트
-// (gov-router.js)로는 절대 넘기지 않는다 — 원래 설계는 이 로직을
-// gov-router.js(브라우저에서 실행됨)에 직접 넣으려 했으나, agencyPrompt를
-// 클라이언트가 조립해서 /gov/relay로 보내는 구조를 뒤늦게 확인해 비밀키
-// 노출 직전에 이 서버측 엔드포인트로 구조를 바꿨다.
-//
-// 10개 표본 실사(강남구·천안시·고창군·원주시 등, 2026-07-20)로 뽑은
-// 도메인별 "가장 흔한" 부서명 — 확정 사실이 아니라 통계적 최빈값이라
-// 응답에 항상 "미확인 추정" 딱지를 붙인다.
-const SIGUNGU_COMMON_DEPT_PATTERNS = {
-  plan: '기획(예산)담당관', safety: '안전총괄과', jachi: '총무과',
-  econ: '지역경제과', welfare: '복지정책과', family: '여성가족과',
-  health: '보건소', climate: '환경과', housing: '건설(도시)과',
-  transport: '교통행정과', culture: '문화체육과', tourism: '관광과',
-  sports: '체육과', agri: '농정과', ocean: '수산과', innov: null,
-};
-const SIGUNGU_DOMAIN_LABEL_KO = {
-  plan: '기획', safety: '안전', jachi: '행정', econ: '경제', welfare: '복지',
-  family: '여성가족', health: '보건', climate: '환경', housing: '건설주택',
-  transport: '교통', culture: '문화', tourism: '관광', sports: '체육',
-  agri: '농업', ocean: '수산', innov: '산업',
-};
-
-function _sigunguRenderFallback(cityGuess, domain) {
-  const guess = SIGUNGU_COMMON_DEPT_PATTERNS[domain];
-  const label = SIGUNGU_DOMAIN_LABEL_KO[domain] || domain;
-  if (!guess) {
-    return `${cityGuess}의 '${label}' 담당 부서는 아직 확인되지 않았습니다. 이 지역에는 해당 기능을 ` +
-      `전담하는 별도 부서가 없을 수도 있습니다 — 정확한 담당 부서는 ${cityGuess} 대표전화 또는 ` +
-      `정부24(gov.kr)로 확인해 주세요.`;
-  }
-  return `${cityGuess}의 '${label}' 관련 문의는 통상 **${guess}**(정확한 명칭 미확인 — 일반적인 시군구 ` +
-    `조직 패턴에 근거한 추정)에서 담당합니다. 실제 부서명은 지자체마다 다를 수 있어, ${cityGuess} ` +
-    `대표전화나 정부24(gov.kr)로 재확인을 권합니다.`;
-}
-
-// 검색 스니펫에서 "OO과"/"OO국"/"OO담당관" 형태의 부서명을 뽑는다. 보수적
-// 설계 — 애매하면 null(허위 데이터를 실사로 위장하는 것보다 미확인 유지가
-// 낫다는 이 프로젝트의 반복된 원칙).
-function _sigunguExtractDeptName(organic, cityGuess) {
-  if (!organic || organic.length === 0) return null;
-  const deptPattern = /([가-힣]{2,8}(?:과|국|담당관|팀))/g;
-  const counts = new Map();
-  const cityCore = cityGuess.replace(/(시|군|구)$/, '');
-  for (const r of organic.slice(0, 3)) {
-    const text = `${r.title || ''} ${r.snippet || ''}`;
-    if (!text.includes(cityCore)) continue;
-    let m;
-    while ((m = deptPattern.exec(text)) !== null) {
-      counts.set(m[1], (counts.get(m[1]) || 0) + 1);
-    }
-  }
-  if (counts.size === 0) return null;
-  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  if (sorted.length > 1 && sorted[0][1] === sorted[1][1]) return null; // 동률이면 애매 — 채택 안 함
-  return sorted[0][0];
-}
-
-async function _sigunguRecordResolveLog(entry, env) {
-  try {
-    const token = await _l1AdminToken(env);
-    await fetch(`${L1_BASE_HOST}/api/collections/sigungu_dept_resolve_log/records`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ ...entry, recorded_at: new Date().toISOString() }),
-    });
-  } catch (e) {
-    console.error('[sigungu-dept-resolve] 로그 기록 실패:', e.message);
-  }
-}
-
-const SIGUNGU_RESOLVE_TTL = 60 * 60 * 24 * 30; // 30일 — KOSIS 리졸버와 동일 원칙
-
-// GET /gov/sigungu-dept-resolve?city=천안시&domain=welfare
-async function handleSigunguDeptResolve(request, url, env, corsHeaders, ctx) {
-  const cityGuess = (url.searchParams.get('city') || '').trim();
-  const domain = (url.searchParams.get('domain') || '').trim();
-  if (!cityGuess || !domain) {
-    return _err(400, 'MISSING_PARAM', 'city/domain 파라미터 필수', corsHeaders);
-  }
-  if (!SIGUNGU_COMMON_DEPT_PATTERNS.hasOwnProperty(domain)) {
-    return _err(400, 'UNKNOWN_DOMAIN', `알 수 없는 domain: ${domain}`, corsHeaders);
-  }
-
-  const _sigunguDebug = {
-    has_web_search_key: !!env.WEB_SEARCH_API_KEY,
-    has_kv: !!env.GOV_DATA_KV,
-    has_l1_admin: !!(env.L1_ADMIN_EMAIL && env.L1_ADMIN_PASSWORD),
-    has_waituntil: !!ctx?.waitUntil,
-  };
-  console.log('[sigungu-dept-resolve] 진단:', JSON.stringify(_sigunguDebug));
-
-  const cacheKey = `gov-data:sigungu-dept:${cityGuess}:${domain}`;
-  if (env.GOV_DATA_KV) {
-    try {
-      const cached = await env.GOV_DATA_KV.get(cacheKey, 'json');
-      if (cached?.deptName) {
-        return new Response(JSON.stringify({
-          text: `${cityGuess}의 '${SIGUNGU_DOMAIN_LABEL_KO[domain] || domain}' 관련 문의는 **${cached.deptName}**에서 담당합니다.`,
-          verified: true, source: 'cache',
-        }), { headers: corsHeaders });
-      }
-    } catch (e) {
-      console.error('[sigungu-dept-resolve] KV 조회 실패(무시):', e.message);
-    }
-  }
-
-  const fallbackText = _sigunguRenderFallback(cityGuess, domain);
-
-  // ── 임시 디버그 모드(&debug=1) — 원인 파악 후 제거 예정 ────────────
-  // 백그라운드로 안 돌리고 동기적으로 Serper 검색까지 실행해서 원본 결과와
-  // 추출 시도 결과를 응답에 그대로 담는다. 정상 트래픽에는 영향 없음
-  // (debug 파라미터가 없으면 이 블록 자체를 안 탐).
-  if (url.searchParams.get('debug') === '1') {
-    const query = `${cityGuess} ${SIGUNGU_DOMAIN_LABEL_KO[domain] || domain} 담당 부서 조직도`;
-    let organic = null;
-    let serperError = null;
-    let serperStatus = null;
-    try {
-      const searchRes = await fetch('https://google.serper.dev/search', {
-        method: 'POST',
-        headers: { 'X-API-KEY': env.WEB_SEARCH_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: query, gl: 'kr', hl: 'ko' }),
-      });
-      serperStatus = searchRes.status;
-      if (searchRes.ok) {
-        const raw = await searchRes.json().catch((e) => { serperError = `JSON 파싱 실패: ${e.message}`; return null; });
-        organic = raw?.organic || null;
-      } else {
-        serperError = await searchRes.text().catch(() => `HTTP ${searchRes.status}`);
-      }
-    } catch (e) {
-      serperError = `fetch 예외: ${e.message}`;
-    }
-    const deptName = _sigunguExtractDeptName(organic, cityGuess);
-    return new Response(JSON.stringify({
-      debug_mode: true,
-      query, serper_status: serperStatus, serper_error: serperError,
-      organic_raw: organic, extracted_dept_name: deptName,
-      web_search_api_key_length: env.WEB_SEARCH_API_KEY ? env.WEB_SEARCH_API_KEY.length : 0,
-    }, null, 2), { headers: corsHeaders });
-  }
-
-  // 백그라운드 검증 — 응답은 즉시 나가고, 검증은 ctx.waitUntil로 이어서.
-  if (env.WEB_SEARCH_API_KEY && ctx?.waitUntil) {
-    const bgTask = (async () => {
-      const query = `${cityGuess} ${SIGUNGU_DOMAIN_LABEL_KO[domain] || domain} 담당 부서 조직도`;
-      let organic = null;
-      try {
-        const searchRes = await fetch('https://google.serper.dev/search', {
-          method: 'POST',
-          headers: { 'X-API-KEY': env.WEB_SEARCH_API_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q: query, gl: 'kr', hl: 'ko' }),
-        });
-        if (searchRes.ok) {
-          const raw = await searchRes.json().catch(() => null);
-          organic = raw?.organic || null;
-        }
-      } catch (e) {
-        console.error('[sigungu-dept-resolve] Serper 호출 실패:', e.message);
-      }
-
-      const deptName = _sigunguExtractDeptName(organic, cityGuess);
-      if (deptName && env.GOV_DATA_KV) {
-        try {
-          await env.GOV_DATA_KV.put(cacheKey, JSON.stringify({ deptName, resolvedAt: new Date().toISOString() }),
-            { expirationTtl: SIGUNGU_RESOLVE_TTL });
-        } catch (e) {
-          console.error('[sigungu-dept-resolve] KV 저장 실패:', e.message);
-        }
-      }
-      await _sigunguRecordResolveLog({
-        city_guess: cityGuess, domain, query,
-        outcome: deptName ? 'resolved' : 'not_found',
-        resolved_dept_name: deptName || null,
-      }, env);
-    })();
-    ctx.waitUntil(bgTask.catch((e) => console.error('[sigungu-dept-resolve] 백그라운드 실패:', e.message)));
-  }
-
-  return new Response(JSON.stringify({ text: fallbackText, verified: false, source: 'template_fallback', _debug: _sigunguDebug }),
-    { headers: corsHeaders });
-}
-
 // ── POST /web-search (Serper.dev 연동, 2026-07-11 신설) ────────────
 // K-Search RULE-07 "대체형"([WEB_SEARCH: query=...] 태그, call-ai.js가
 // 파싱)이 호출한다. §0-B 경로1(웹검색)이 이번까지는 원칙 서술뿐이고
@@ -4715,6 +4515,11 @@ export default {
     if (pathname === '/pdv/query')               return handlePdvQuery(request, env, corsHeaders);
     if (pathname === '/pdv/report')              return handlePdvReport(request, env, corsHeaders);
 
+    // ── 기관측 PDV (§7, SP_PDV v1.2, 2026-07-20 신설) ──────────
+    // 사용자측 /pdv/report와 별개 — K-서비스/전문가 페르소나가 자신의
+    // 상담·산출물 이력을 가명화 해시로 남기는 거버넌스 레코드.
+    if (pathname === '/owner-pdv/report')        return handleOwnerPdvReport(request, env, corsHeaders);
+
     // ── 오케스트레이션 project_state (2026-07-17 신설 — mode=project
     // human_action 일시정지/재개, SP-19 v1.2/SP-20 v1.6/SP-22 v1.1) ──
     if (pathname === '/orchestration/project-state/save')  return handleProjectStateSave(request, env, corsHeaders);
@@ -4821,10 +4626,6 @@ export default {
     // ── 웹검색(Serper.dev) (2026-07-11 신설) ────────────────────────
     if (pathname === '/web-search' && request.method === 'POST')
       return handleWebSearch(request, env, corsHeaders, ctx);
-
-    // ── 시군구 부서 지연초기화 (2026-07-20 신설) ──────────────────
-    if (pathname === '/gov/sigungu-dept-resolve' && request.method === 'GET')
-      return handleSigunguDeptResolve(request, url, env, corsHeaders, ctx);
 
     // ── 공공데이터포털: 법정동코드 (2026-07-16 신설) ────────────────
     // PUBLIC-DATA-PORTAL-INTEGRATION-PLAN_v1_0 STEP 1. 배치 전용 —
@@ -4944,11 +4745,6 @@ export default {
     if (pathname === '/auth/device-link/resend-sms' && request.method === 'POST') return handleDeviceLinkResendSms(request, env, corsHeaders);
     if (pathname === '/auth/device-link/deliver'  && request.method === 'POST') return handleDeviceLinkDeliver(request, env, corsHeaders);
     if (pathname === '/auth/device-link/poll'     && request.method === 'GET')  return handleDeviceLinkPoll(request, env, corsHeaders);
-    if (pathname === '/account/step-up-threshold' && request.method === 'GET')  return handleStepUpThresholdGet(request, env, corsHeaders);
-    if (pathname === '/account/step-up-threshold' && request.method === 'POST') return handleStepUpThresholdSet(request, env, corsHeaders);
-    if (pathname === '/auth/webauthn/register-key' && request.method === 'POST') return handleWebAuthnRegisterKey(request, env, corsHeaders);
-    if (pathname === '/account/step-up-challenge'  && request.method === 'POST') return handleStepUpChallenge(request, env, corsHeaders);
-    if (pathname === '/account/step-up-verify'     && request.method === 'POST') return handleStepUpVerify(request, env, corsHeaders);
     // 2026-07-07: /biz/review(Supabase biz_reviews, 5점 척도) → 완전 대체.
     // 실거래(tx_hash) 기반 trade_ratings(PocketBase, polarity+온도)로 이전.
     // handleBizReview는 하단에 DEPRECATED로 남겨두되 라우팅에서 제거함.
@@ -5726,276 +5522,6 @@ async function handleLedgerReconcile(request, env, corsHeaders) {
 // 적재(pending_claims)까지 검증된 로직을 그대로 물려받는다. 로직이 두
 // 곳에 복붙되면 다음에 또 어긋난다(과거 fee-split 버그가 이런 식으로
 // 났었다) — 반드시 위임 구조를 유지할 것.
-// ═══════════════════════════════════════════════════════════
-// 고액 거래 생체 재인증 — 사용자별 문턱 금액 (2026-07-20 신설)
-//
-// 문턱은 사용자가 직접 설정한다(주피터 지시). profiles.extra JSON에
-// 저장 — 새 컬럼 마이그레이션 불필요, approveAffiliationCore 등이 이미
-// 쓰는 extra 패치 패턴을 그대로 재사용한다. 실제 생체인증 자체(WebAuthn
-// 어설션)는 클라이언트(gopang-wallet.js)에서 완결되고, 서버는 "이 사용자의
-// 문턱이 얼마인지"만 보관·제공한다 — WebAuthn 어설션 결과 자체를 서버가
-// 검증하지 않는 것은, sender_sig(Ed25519 서명) 자체가 이미 로컬에서
-// 잠금 해제된 개인키로만 나올 수 있고, 생체인증은 "그 잠금 해제 시도를
-// 실제로 사용자가 지금 이 순간 승인했는가"를 문턱 이상 거래에서 한 번 더
-// 요구하는 클라이언트측 게이트이기 때문이다(기존 sender_sig 검증과 계층이
-// 다름 — 서버가 이중으로 검증할 대상이 아니다).
-const GDC_STEP_UP_DEFAULT_THRESHOLD = 100000; // 사용자가 아직 설정 안 했을 때 기본값(₮)
-
-// GET /account/step-up-threshold?guid=...
-async function handleStepUpThresholdGet(request, env, corsHeaders) {
-  const url = new URL(request.url);
-  const guid = url.searchParams.get('guid');
-  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
-
-  let profile;
-  try { profile = await _l1FindProfileByGuid(env, guid); }
-  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders); }
-  if (!profile) return _err(404, 'PROFILE_NOT_FOUND', '프로필을 찾을 수 없습니다', corsHeaders);
-
-  const threshold = profile.extra?.gdc_step_up_threshold;
-  return new Response(JSON.stringify({
-    ok: true,
-    threshold: (typeof threshold === 'number' && threshold >= 0) ? threshold : GDC_STEP_UP_DEFAULT_THRESHOLD,
-    is_default: !(typeof threshold === 'number'),
-  }), { status: 200, headers: corsHeaders });
-}
-
-// POST /account/step-up-threshold { guid, amount }
-async function handleStepUpThresholdSet(request, env, corsHeaders) {
-  const body = await request.json().catch(() => null);
-  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { guid, amount } = body;
-  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
-  if (!(typeof amount === 'number' && amount >= 0 && Number.isFinite(amount))) {
-    return _err(400, 'INVALID_AMOUNT', 'amount는 0 이상의 숫자여야 합니다(0 = 매 거래마다 재인증)', corsHeaders);
-  }
-
-  let profile;
-  try { profile = await _l1FindProfileByGuid(env, guid); }
-  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders); }
-  if (!profile) return _err(404, 'PROFILE_NOT_FOUND', '프로필을 찾을 수 없습니다', corsHeaders);
-
-  const newExtra = { ...(profile.extra || {}), gdc_step_up_threshold: amount };
-  try { await _l1PatchProfile(env, profile.id, { extra: newExtra }); }
-  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
-
-  return new Response(JSON.stringify({ ok: true, threshold: amount }), { status: 200, headers: corsHeaders });
-}
-
-// ═══════════════════════════════════════════════════════════
-// WebAuthn 서버측 검증 — 2026-07-20 신설 (사고실험에서 발견된 🔴 치명적
-// 결함 수정: 이전 구현은 생체인증이 클라이언트 JS 안에서만 일어나고
-// 서버가 그 결과를 전혀 몰라, sender_sig만 있으면 generateWebAuthn 검증
-// 자체를 건너뛰고 바로 /wallet/gdc-transfer를 호출해도 통과됐다. 이제
-// 서버가 WebAuthn 공개키를 직접 보관하고, 문턱 초과 거래는 서버가 발급한
-// challenge에 대한 assertion을 서버가 직접 서명 검증한 뒤에만 발급하는
-// step_up_token 없이는 handleGdcTransfer 자체가 거부한다.
-//
-// 참고: 이 저장소엔 예전에 /auth/webauthn/register·/verify가 있다가
-// "실제로 호출하는 클라이언트가 없어서" 2026-07-14에 삭제된 이력이
-// 있다 — 이번엔 gopang-wallet.js가 실제로 호출하도록 만든다.
-// ═══════════════════════════════════════════════════════════
-const STEP_UP_CHALLENGE_TTL_SECONDS = 120; // 챌린지 발급 → assertion 완료까지 유예
-const STEP_UP_TOKEN_TTL_MS = 2 * 60 * 1000; // step_up_token 발급 → 실제 거래 제출까지 유예
-
-// DER(ASN.1) 인코딩된 ECDSA 서명(WebAuthn assertion.response.signature 원본
-// 형식)을 WebCrypto crypto.subtle.verify()가 요구하는 raw r||s(P-256 기준
-// 64바이트, IEEE P1363) 형식으로 변환한다. WebCrypto엔 이 변환 기능이
-// 내장돼 있지 않아 직접 파싱해야 한다 — CBOR/COSE 파서까지는 필요 없다
-// (getPublicKey()가 이미 SPKI로 내려주므로), 서명 형식 변환만 필요하다.
-function _derToRawEcdsaSig(der) {
-  if (der[0] !== 0x30) throw new Error('DER 서명 형식이 아님(SEQUENCE 태그 없음)');
-  let idx = 2;
-  if (der[1] & 0x80) idx = 2 + (der[1] & 0x7f); // 긴 형식 길이(P-256 서명엔 거의 없지만 방어적으로 처리
-  if (der[idx] !== 0x02) throw new Error('DER 서명 형식이 아님(r INTEGER 없음)');
-  const rLen = der[idx + 1];
-  const r = der.slice(idx + 2, idx + 2 + rLen);
-  const sIdx = idx + 2 + rLen;
-  if (der[sIdx] !== 0x02) throw new Error('DER 서명 형식이 아님(s INTEGER 없음)');
-  const sLen = der[sIdx + 1];
-  const s = der.slice(sIdx + 2, sIdx + 2 + sLen);
-  const _trimAndPad = (bytes, len) => {
-    let b = bytes;
-    while (b.length > len && b[0] === 0) b = b.slice(1); // DER INTEGER 부호 비트용 선행 0x00 제거
-    if (b.length < len) b = _concatBytes(new Uint8Array(len - b.length), b);
-    return b;
-  };
-  return _concatBytes(_trimAndPad(r, 32), _trimAndPad(s, 32));
-}
-
-// POST /auth/webauthn/register-key { guid, credentialId, publicKeySpkiB64u }
-// enrollWebAuthn() 성공 직후 클라이언트가 호출 — 이 기기의 생체인증
-// 공개키를 서버에 등록한다. 여러 기기(폰·PC)가 각자 별도 credential로
-// 같은 guid에 등록할 수 있다(profiles.extra.webauthn_credentials 배열).
-async function handleWebAuthnRegisterKey(request, env, corsHeaders) {
-  const body = await request.json().catch(() => null);
-  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { guid, credentialId, publicKeySpkiB64u } = body;
-  if (!guid || !credentialId || !publicKeySpkiB64u) {
-    return _err(400, 'MISSING_FIELD', 'guid, credentialId, publicKeySpkiB64u 필수', corsHeaders);
-  }
-
-  // 저장 전 실제로 유효한 P-256 공개키인지 확인(쓰레기 값이 저장되는 것 방지)
-  try {
-    await crypto.subtle.importKey(
-      'spki', _b64uToBytes(publicKeySpkiB64u), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']
-    );
-  } catch (e) {
-    return _err(400, 'INVALID_PUBLIC_KEY', '공개키 형식이 올바르지 않습니다: ' + e.message, corsHeaders);
-  }
-
-  let profile;
-  try { profile = await _l1FindProfileByGuid(env, guid); }
-  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders); }
-  if (!profile) return _err(404, 'PROFILE_NOT_FOUND', '프로필을 찾을 수 없습니다', corsHeaders);
-
-  const prevExtra = profile.extra || {};
-  const creds = Array.isArray(prevExtra.webauthn_credentials) ? prevExtra.webauthn_credentials : [];
-  const filtered = creds.filter(c => c.credentialId !== credentialId); // 재등록 시 갱신
-  filtered.push({ credentialId, publicKeySpkiB64u, createdAt: new Date().toISOString() });
-
-  try { await _l1PatchProfile(env, profile.id, { extra: { ...prevExtra, webauthn_credentials: filtered } }); }
-  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
-
-  return new Response(JSON.stringify({ ok: true, registered: filtered.length }), { status: 200, headers: corsHeaders });
-}
-
-// POST /account/step-up-challenge { guid, tx_hash }
-// 특정 거래(tx_hash)에 결박된 챌린지를 발급한다 — 무작위 챌린지가 아니라
-// "이 거래를 승인하는 assertion"이어야만 나중에 verify가 통과한다
-// (사고실험에서 지적된 WYSIWYS 미비점 — 서명 대상이 매번 새 값이므로
-// 다른 거래의 assertion을 재사용할 수 없다).
-async function handleStepUpChallenge(request, env, corsHeaders) {
-  const body = await request.json().catch(() => null);
-  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { guid, tx_hash } = body;
-  if (!guid || !tx_hash) return _err(400, 'MISSING_FIELD', 'guid, tx_hash 필수', corsHeaders);
-  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
-
-  const challengeBytes = crypto.getRandomValues(new Uint8Array(32));
-  const challengeB64u = _b64uEncode(String.fromCharCode(...challengeBytes));
-  const sessionId = crypto.randomUUID();
-
-  await env.QR_SESSIONS_KV.put(`stepup:${sessionId}`, JSON.stringify({
-    guid, tx_hash, challengeB64u, used: false,
-  }), { expirationTtl: STEP_UP_CHALLENGE_TTL_SECONDS });
-
-  return new Response(JSON.stringify({
-    ok: true, sessionId, challengeB64u, rpId: 'hondi.net', expires_in: STEP_UP_CHALLENGE_TTL_SECONDS,
-  }), { status: 200, headers: corsHeaders });
-}
-
-// POST /account/step-up-verify
-// { guid, sessionId, credentialId, authenticatorDataB64u, clientDataJSONB64u, signatureB64u }
-// WebAuthn assertion을 서버가 직접 서명 검증한다. 통과하면 그 거래
-// (tx_hash)에 한해 유효한 짧은 수명의 step_up_token을 발급한다.
-async function handleStepUpVerify(request, env, corsHeaders) {
-  const body = await request.json().catch(() => null);
-  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { guid, sessionId, credentialId, authenticatorDataB64u, clientDataJSONB64u, signatureB64u } = body;
-  if (!guid || !sessionId || !credentialId || !authenticatorDataB64u || !clientDataJSONB64u || !signatureB64u) {
-    return _err(400, 'MISSING_FIELD', '필수 필드 누락', corsHeaders);
-  }
-  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
-  if (!env.PHONE_VERIFY_SECRET) return _err(500, 'SECRET_NOT_SET', 'PHONE_VERIFY_SECRET이 설정되지 않았습니다', corsHeaders);
-
-  const sessKey = `stepup:${sessionId}`;
-  const raw = await env.QR_SESSIONS_KV.get(sessKey);
-  if (!raw) return _err(404, 'CHALLENGE_EXPIRED', '챌린지가 만료됐거나 존재하지 않습니다', corsHeaders);
-  const session = JSON.parse(raw);
-  if (session.used) return _err(409, 'CHALLENGE_ALREADY_USED', '이미 사용된 챌린지입니다', corsHeaders);
-  if (session.guid !== guid) return _err(403, 'GUID_MISMATCH', '이 챌린지의 소유자가 아닙니다', corsHeaders);
-
-  // ── clientDataJSON 검증 ──
-  let clientData;
-  try { clientData = JSON.parse(new TextDecoder().decode(_b64uToBytes(clientDataJSONB64u))); }
-  catch (e) { return _err(400, 'CLIENTDATA_PARSE_ERROR', 'clientDataJSON 파싱 실패', corsHeaders); }
-  if (clientData.type !== 'webauthn.get') {
-    return _err(400, 'WRONG_CEREMONY_TYPE', `type이 webauthn.get이 아닙니다: ${clientData.type}`, corsHeaders);
-  }
-  if (clientData.challenge !== session.challengeB64u) {
-    return _err(403, 'CHALLENGE_MISMATCH', '이 세션에서 발급한 챌린지와 일치하지 않습니다', corsHeaders);
-  }
-  const expectedOrigin = 'https://hondi.net';
-  if (clientData.origin !== expectedOrigin) {
-    return _err(403, 'ORIGIN_MISMATCH', `예상 origin(${expectedOrigin})과 다릅니다: ${clientData.origin}`, corsHeaders);
-  }
-
-  // ── authenticatorData 검증(rpIdHash, User Presence·Verification 플래그) ──
-  const authData = _b64uToBytes(authenticatorDataB64u);
-  if (authData.length < 37) return _err(400, 'AUTHDATA_TOO_SHORT', 'authenticatorData 형식 오류', corsHeaders);
-  const rpIdHashExpected = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('hondi.net')));
-  const rpIdHashActual = authData.slice(0, 32);
-  if (!rpIdHashExpected.every((b, i) => b === rpIdHashActual[i])) {
-    return _err(403, 'RPID_HASH_MISMATCH', 'RP ID 해시가 일치하지 않습니다', corsHeaders);
-  }
-  const flags = authData[32];
-  const userPresent    = (flags & 0x01) !== 0;
-  const userVerified    = (flags & 0x04) !== 0;
-  if (!userPresent) return _err(403, 'USER_NOT_PRESENT', 'User Presence 플래그가 없습니다', corsHeaders);
-  if (!userVerified) {
-    // ★ 클라이언트가 userVerification:'required'로 요청했어도, 서버가
-    // 다시 한번 확인한다 — 클라이언트측 요청 옵션을 신뢰하지 않는다는
-    // 원칙(이번 사고실험의 핵심 교훈)을 여기서도 그대로 적용한다.
-    return _err(403, 'USER_NOT_VERIFIED', 'User Verification(생체인증) 플래그가 없습니다', corsHeaders);
-  }
-
-  // ── 저장된 공개키로 서명 검증 ──
-  let profile;
-  try { profile = await _l1FindProfileByGuid(env, guid); }
-  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders); }
-  const creds = profile?.extra?.webauthn_credentials || [];
-  const credRecord = creds.find(c => c.credentialId === credentialId);
-  if (!credRecord) return _err(404, 'CREDENTIAL_NOT_FOUND', '이 기기의 생체인증 키가 서버에 등록돼 있지 않습니다', corsHeaders);
-
-  let verified = false;
-  try {
-    const pubKey = await crypto.subtle.importKey(
-      'spki', _b64uToBytes(credRecord.publicKeySpkiB64u), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']
-    );
-    const clientDataHash = new Uint8Array(await crypto.subtle.digest('SHA-256', _b64uToBytes(clientDataJSONB64u)));
-    const signedData = _concatBytes(authData, clientDataHash);
-    const rawSig = _derToRawEcdsaSig(_b64uToBytes(signatureB64u));
-    verified = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, pubKey, rawSig, signedData);
-  } catch (e) {
-    return _err(400, 'SIGNATURE_VERIFY_ERROR', '서명 검증 중 오류: ' + e.message, corsHeaders);
-  }
-  if (!verified) return _err(403, 'SIGNATURE_INVALID', '서명이 유효하지 않습니다', corsHeaders);
-
-  // 챌린지 재사용 방지 — 1회성 소비
-  session.used = true;
-  await env.QR_SESSIONS_KV.put(sessKey, JSON.stringify(session), { expirationTtl: STEP_UP_CHALLENGE_TTL_SECONDS });
-
-  // step_up_token 발급 — phone_verify_token과 동일한 HMAC 서명 패턴 재사용
-  const exp = Date.now() + STEP_UP_TOKEN_TTL_MS;
-  const payload = `${guid}:${session.tx_hash}:${exp}`;
-  const signature = await _hmacSha256Hex(env.PHONE_VERIFY_SECRET, payload);
-  const step_up_token = payload + '.' + signature;
-
-  return new Response(JSON.stringify({ ok: true, step_up_token, expires_at: new Date(exp).toISOString() }), { status: 200, headers: corsHeaders });
-}
-
-// step_up_token 검증 — handleGdcTransfer가 호출. phone_verify_token 파싱과
-// 동일한 방식(마지막 '.' 기준 payload/서명 분리, ':' 기준 필드 분리).
-async function _verifyStepUpToken(env, token, expectedGuid, expectedTxHash) {
-  if (!token || typeof token !== 'string') return { ok: false, reason: 'MISSING_TOKEN' };
-  const dotIdx = token.lastIndexOf('.');
-  if (dotIdx < 0) return { ok: false, reason: 'MALFORMED' };
-  const payload = token.slice(0, dotIdx);
-  const sig = token.slice(dotIdx + 1);
-  const expectedSig = await _hmacSha256Hex(env.PHONE_VERIFY_SECRET, payload);
-  if (sig !== expectedSig) return { ok: false, reason: 'BAD_SIGNATURE' };
-
-  const parts = payload.split(':');
-  if (parts.length !== 3) return { ok: false, reason: 'MALFORMED_PAYLOAD' };
-  const [guid, txHash, expStr] = parts;
-  const exp = parseInt(expStr, 10);
-  if (!Number.isFinite(exp) || Date.now() > exp) return { ok: false, reason: 'EXPIRED' };
-  if (guid !== expectedGuid) return { ok: false, reason: 'GUID_MISMATCH' };
-  if (txHash !== expectedTxHash) return { ok: false, reason: 'TX_HASH_MISMATCH' };
-  return { ok: true };
-}
-
 async function handleGdcTransfer(request, env, corsHeaders, ctx) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
@@ -6045,32 +5571,6 @@ async function handleGdcTransfer(request, env, corsHeaders, ctx) {
   if (amount < GDC_TRANSFER_MIN_AMOUNT) {
     return _err(400, 'AMOUNT_OUT_OF_RANGE',
       `최소 이체액은 ₮${GDC_TRANSFER_MIN_AMOUNT}입니다`, corsHeaders);
-  }
-
-  // ── 고액 거래 생체 재인증 강제(step-up) — 2026-07-20 신설 ──────────
-  // ★ 사고실험에서 발견된 치명적 결함 수정: 이전엔 이 검증이 클라이언트
-  // JS(sendGdc)에만 있어서, sender_sig만 있으면 이 엔드포인트를 직접
-  // 호출해 우회할 수 있었다(개발자도구 콘솔에서든, 유출된 개인키로 만든
-  // 외부 스크립트에서든). 이제 서버가 from_guid의 문턱을 "클라이언트가
-  // 뭐라고 말했든" 스스로 독립적으로 조회하고, 문턱 이상이면 그 정확한
-  // tx_hash에 대해 서버가 방금 검증한 step_up_token 없이는 무조건
-  // 거부한다 — 클라이언트를 신뢰하지 않는다.
-  {
-    let senderProfile;
-    try { senderProfile = await _l1FindProfileByGuid(env, from_guid); }
-    catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패(재인증 문턱 조회): ' + e.message, corsHeaders); }
-    const rawThreshold = senderProfile?.extra?.gdc_step_up_threshold;
-    const threshold = (typeof rawThreshold === 'number' && rawThreshold >= 0) ? rawThreshold : GDC_STEP_UP_DEFAULT_THRESHOLD;
-
-    if (amount >= threshold) {
-      const stepUpCheck = await _verifyStepUpToken(env, body.step_up_token, from_guid, tx_hash);
-      if (!stepUpCheck.ok) {
-        return _err(403, 'STEP_UP_REQUIRED',
-          `₮${threshold.toLocaleString()} 이상 거래는 생체 재인증이 필요합니다(${stepUpCheck.reason}). ` +
-          `/account/step-up-challenge → WebAuthn assertion → /account/step-up-verify로 발급받은 ` +
-          `step_up_token을 함께 제출해 주세요.`, corsHeaders);
-      }
-    }
   }
 
   // ── handleBizOrder가 기대하는 형태로 매핑해 위임 ──────────────
@@ -7917,6 +7417,92 @@ async function handlePdvReport(request,env,corsHeaders){
     svc_level:reg.level,
     message:`PDV 기록 완료. ${resolvedSvcId} (Level ${reg.level})`,
   }),{status:200,headers:corsHeaders});
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2026-07-20 신설 — 기관측 PDV (§7, prompts/SP_PDV_v1_2.md).
+// handlePdvReport(사용자측, 실명 GUID + 원문 전체)와 목적이 다르다 — 이쪽은
+// K-서비스/전문가 페르소나가 만족도·성과 분석용으로 남기는 가명화·요약
+// 전용 거버넌스 레코드다. 클라이언트(gwp-report-client.js recordOwnerPDV())는
+// 원문 guid를 TLS로 여기까지만 보내고, 해시(who_hash)는 반드시 여기(서버)
+// 에서 계산한다 — 클라이언트에서 해시하면 salt가 번들에 노출되어 GUID
+// (uuidv5(phone_number), 결정론적)를 전화번호 전수조사로 역산할 수 있게
+// 되어 "역추적 불가" 원칙이 무력화되기 때문이다(SP_PDV §7.2).
+//
+// salt는 에이전시별로 25개 시크릿을 따로 프로비저닝하지 않는다 — 기존
+// GOPANG_MASTER_KEY(HMAC 서명 등에 이미 쓰이는 서버 비밀) 하나에서
+// ownerAgency별 salt를 결정론적으로 파생한다(아래 salt 계산 참조). 이러면
+// 마스터 키가 유출되지 않는 한 어떤 K-서비스도 다른 K-서비스의 salt를
+// 알 수 없다(각자 자기 ownerAgency 값으로만 파생 가능) — C8(기관 간 교차
+// 금지) 원칙을 시크릿 관리 단에서도 지킨다.
+//
+// 인증(authz) 참고: 이 엔드포인트는 handlePdvReport처럼 origin 기반
+// _getSvcRegistration() 검사를 아직 하지 않는다 — 호출 주체가 개별
+// K-서비스 도메인이 아니라 hondi.net 아래 pages/expert-chat.html이기
+// 때문에 기존 서비스 등록 체계와 1:1로 안 맞는다. 지금은 스키마 검증만
+// 하는 상태이며, 남용 방지가 필요해지면 별도 인증 체계를 얹어야 한다
+// (알려진 한계 — 이번 범위 밖).
+async function handleOwnerPdvReport(request, env, corsHeaders) {
+  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  const body = await request.json().catch(() => null);
+  const r = body?.record;
+  if (!r) return _err(400, 'SCHEMA_ERROR', 'record 필드 필수', corsHeaders);
+
+  const RECORD_TYPES = ['consultation', 'own_output'];
+  if (!RECORD_TYPES.includes(r.record_type))
+    return _err(400, 'SCHEMA_ERROR', `record_type은 ${RECORD_TYPES.join('|')} 중 하나여야 합니다`, corsHeaders);
+  const ownerAgency = r.owner_agency;
+  if (!ownerAgency) return _err(400, 'SCHEMA_ERROR', 'owner_agency 필수', corsHeaders);
+  if (!r.what || !r.how) return _err(400, 'SCHEMA_ERROR', 'what/how 필수', corsHeaders);
+
+  const HOW_VALUES = ['completed', 'escalated_success', 'escalated_ai_limit', 'early_exit'];
+  if (!HOW_VALUES.includes(r.how))
+    return _err(400, 'SCHEMA_ERROR', `how은 ${HOW_VALUES.join('|')} 중 하나여야 합니다`, corsHeaders);
+
+  const guidForHashing = r.guid_for_hashing || null;
+  if (r.record_type === 'consultation' && !guidForHashing)
+    return _err(400, 'SCHEMA_ERROR', 'consultation 레코드는 guid_for_hashing 필수', corsHeaders);
+
+  // §7.2 가명화 해시 계산 — 원문 guid는 이 함수 밖으로 나가지 않으며
+  // 어디에도 로그로 남기지 않는다(아래 catch 포함, guid 관련 값은 찍지 않음).
+  let whoHash = null;
+  if (guidForHashing) {
+    const agencySalt = await _sha256Hex(
+      `${env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1'}:owner-pdv-salt:${ownerAgency}`
+    );
+    whoHash = await _sha256Hex(`${guidForHashing}:${agencySalt}`);
+  }
+
+  const now = new Date().toISOString();
+  const pbFetch = await fetch(`${L1_DEFAULT}/api/collections/owner_pdv/records`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      record_type:     r.record_type,
+      owner_agency:    ownerAgency,
+      persona_key:     r.record_type === 'consultation' ? (r.persona_key || null) : null,
+      persona_version: r.record_type === 'consultation' ? (r.persona_version || null) : null,
+      who_hash:        whoHash,
+      when:            r.when || now,
+      where:           r.where || null,
+      what:            String(r.what).slice(0, 500),
+      how:             r.how,
+      why:             r.why || null,
+      source_ref:      null, // §7.3 원칙 — 원문 미저장
+      confidence:      typeof r.confidence === 'number' ? r.confidence : 1,
+    }),
+  });
+
+  if (!pbFetch.ok) {
+    return _err(503, 'OWNER_PDV_WRITE_FAILED', '기관측 PDV 저장 실패, 잠시 후 재시도', corsHeaders);
+  }
+
+  return new Response(JSON.stringify({
+    ok: true,
+    recorded_at: now,
+    owner_agency: ownerAgency,
+    record_type: r.record_type,
+  }), { status: 200, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -14345,19 +13931,16 @@ async function handlePushSend(request, env, corsHeaders) {
   });
 
   let sent = 0;
-  let _debugSendErrors = []; // ★ 2026-07-20 임시 진단용 — 원인 확정되면 제거 예정
   for (const row of rows) {
     try {
       const sub = JSON.parse(row.subscription);
       const result = await _sendWebPush(env, sub, payload);
       if (result) sent++;
-      else _debugSendErrors.push('_sendWebPush returned false (자세한 내용은 res.status/text 참고 — Worker 로그 확인 필요)');
     } catch(e) {
       console.warn('[Push] 전송 실패:', e.message);
-      _debugSendErrors.push(e.message + (e.stack ? ' | ' + e.stack.split('\n')[0] : ''));
     }
   }
-  return new Response(JSON.stringify({ ok: true, sent, source, _debugSendErrors }), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify({ ok: true, sent, source }), { status: 200, headers: corsHeaders });
 }
 
 // Web Push 전송 (VAPID)
@@ -14458,13 +14041,7 @@ async function _sendWebPush(env, subscription, payload) {
   if (ok) {
     console.info('[Push] 발송 성공:', res.status, subscription.endpoint?.slice(0, 60));
   } else {
-    const detail = await res.text().catch(() => '');
-    console.warn('[Push] 발송 실패:', res.status, detail);
-    // ★ 2026-07-20 임시 진단용 — 그냥 false만 반환하면 호출부에서 "왜"
-    // 실패했는지 알 방법이 없다(401 VAPID 서명 불일치 vs 410 구독 만료 등
-    // 원인이 완전히 다른데 구분이 안 됨). throw해서 호출부가 캐치해
-    // 클라이언트 응답에 노출할 수 있게 한다.
-    throw new Error(`FCM/푸시서비스 응답 ${res.status}: ${detail.slice(0, 200)}`);
+    console.warn('[Push] 발송 실패:', res.status, await res.text().catch(() => ''));
   }
   return ok;
 }
