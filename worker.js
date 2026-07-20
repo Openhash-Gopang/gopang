@@ -411,10 +411,20 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
   // 이 값과 무관하게 "문자로 받기" 링크를 항상 노출하되(§3 원칙),
   // pushSent:false면 그 즉시 강조해서 보여준다.
   let pushSent = false;
+  let _debugPushReason = null; // ★ 2026-07-20 임시 진단용 — 원인 확정되면 제거 예정
   try {
-    if (env.VAPID_PRIVATE_KEY && env.VAPID_PUBLIC_KEY && env.VAPID_SUBJECT) {
-      const fresh = await _l1FindProfileByGuid(env, profile.guid).catch(() => null);
-      if (fresh?.push_subscription) {
+    if (!env.VAPID_PRIVATE_KEY || !env.VAPID_PUBLIC_KEY || !env.VAPID_SUBJECT) {
+      _debugPushReason = 'VAPID_ENV_NOT_CONFIGURED';
+    } else {
+      const fresh = await _l1FindProfileByGuid(env, profile.guid).catch((e) => {
+        _debugPushReason = 'L1_LOOKUP_FAILED: ' + e.message;
+        return null;
+      });
+      if (!fresh) {
+        if (!_debugPushReason) _debugPushReason = 'PROFILE_NOT_FOUND_BY_GUID';
+      } else if (!fresh.push_subscription) {
+        _debugPushReason = 'NO_PUSH_SUBSCRIPTION_ON_THIS_PROFILE';
+      } else {
         const sub = JSON.parse(fresh.push_subscription);
         const payload = JSON.stringify({
           title: '새 기기에서 로그인 요청',
@@ -429,10 +439,12 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
     }
   } catch (e) {
     console.warn('[DeviceLink] 푸시 발송 실패(치명적 아님 — SMS 폴백으로 계속 진행 가능):', e.message);
+    _debugPushReason = 'SEND_EXCEPTION: ' + e.message;
   }
 
   return new Response(JSON.stringify({
     ok: true, sessionId, expires_in: DEVICE_LINK_TTL_SECONDS, pushSent,
+    _debugPushReason, _debugResolvedGuid: profile.guid,
   }), { status: 200, headers: corsHeaders });
 }
 
