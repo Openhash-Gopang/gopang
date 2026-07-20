@@ -3664,6 +3664,196 @@ async function handleGwpRegistryRegister(request, env, corsHeaders) {
   }
 }
 
+
+// ── 시군구(L3) 부서 지연 초기화 리졸버 (2026-07-20 신설, 2026-07-20 재적용) ──
+// ⚠️ 이 코드는 한 번 배포됐다가 다른 작업자의 스테일 체크아웃 커밋
+// (436e508)에 worker.js 519줄이 통째로 삭제되면서 함께 사라진 적이 있다
+// — 재적용 시 반드시 `git pull origin main` 먼저 할 것.
+//
+// GOV_OPEN_DATA_MAP/KOSIS 리졸버(2026-07-16)와 동일 철학: 226개 시군구를
+// 미리 채우지 않고 첫 조회 시점에 초기화한다. 비밀키(WEB_SEARCH_API_KEY,
+// L1_ADMIN_EMAIL/PASSWORD)는 전부 이 파일(서버) 안에서만 쓰고 클라이언트
+// (gov-router.js)로는 절대 넘기지 않는다.
+//
+// 10개 표본 실사(강남구·천안시·고창군·원주시 등, 2026-07-20)로 뽑은
+// 도메인별 "가장 흔한" 부서명 — 확정 사실이 아니라 통계적 최빈값이라
+// 응답에 항상 "미확인 추정" 딱지를 붙인다.
+const SIGUNGU_COMMON_DEPT_PATTERNS = {
+  plan: '기획(예산)담당관', safety: '안전총괄과', jachi: '총무과',
+  econ: '지역경제과', welfare: '복지정책과', family: '여성가족과',
+  health: '보건소', climate: '환경과', housing: '건설(도시)과',
+  transport: '교통행정과', culture: '문화체육과', tourism: '관광과',
+  sports: '체육과', agri: '농정과', ocean: '수산과', innov: null,
+};
+const SIGUNGU_DOMAIN_LABEL_KO = {
+  plan: '기획', safety: '안전', jachi: '행정', econ: '경제', welfare: '복지',
+  family: '여성가족', health: '보건', climate: '환경', housing: '건설주택',
+  transport: '교통', culture: '문화', tourism: '관광', sports: '체육',
+  agri: '농업', ocean: '수산', innov: '산업',
+};
+
+function _sigunguRenderFallback(cityGuess, domain) {
+  const guess = SIGUNGU_COMMON_DEPT_PATTERNS[domain];
+  const label = SIGUNGU_DOMAIN_LABEL_KO[domain] || domain;
+  if (!guess) {
+    return `${cityGuess}의 '${label}' 담당 부서는 아직 확인되지 않았습니다. 이 지역에는 해당 기능을 ` +
+      `전담하는 별도 부서가 없을 수도 있습니다 — 정확한 담당 부서는 ${cityGuess} 대표전화 또는 ` +
+      `정부24(gov.kr)로 확인해 주세요.`;
+  }
+  return `${cityGuess}의 '${label}' 관련 문의는 통상 **${guess}**(정확한 명칭 미확인 — 일반적인 시군구 ` +
+    `조직 패턴에 근거한 추정)에서 담당합니다. 실제 부서명은 지자체마다 다를 수 있어, ${cityGuess} ` +
+    `대표전화나 정부24(gov.kr)로 재확인을 권합니다.`;
+}
+
+// 검색 스니펫에서 "OO과"/"OO국"/"OO담당관" 형태의 부서명을 뽑는다. 보수적
+// 설계 — 애매하면 null(허위 데이터를 실사로 위장하는 것보다 미확인 유지가
+// 낫다는 이 프로젝트의 반복된 원칙). ★ 2026-07-20 개선: .go.kr 공식
+// 도메인에서 나온 결과만 후보로 인정 — 부안군/공기업/타지역 언론기사가
+// 섞여 동률로 무산되는 문제를 실사용 테스트(천안시 사례)에서 확인해 반영.
+function _sigunguExtractDeptName(organic, cityGuess) {
+  if (!organic || organic.length === 0) return null;
+  const deptPattern = /([가-힣]{2,8}(?:과|국|담당관|팀))/g;
+  const counts = new Map();
+  const cityCore = cityGuess.replace(/(시|군|구)$/, '');
+  for (const r of organic.slice(0, 5)) {
+    if (!r.link || !r.link.includes('.go.kr')) continue; // 공식 도메인만
+    const text = `${r.title || ''} ${r.snippet || ''}`;
+    if (!text.includes(cityCore)) continue;
+    let m;
+    while ((m = deptPattern.exec(text)) !== null) {
+      counts.set(m[1], (counts.get(m[1]) || 0) + 1);
+    }
+  }
+  if (counts.size === 0) return null;
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  if (sorted.length > 1 && sorted[0][1] === sorted[1][1]) return null; // 동률이면 애매 — 채택 안 함
+  return sorted[0][0];
+}
+
+async function _sigunguRecordResolveLog(entry, env) {
+  try {
+    const token = await _l1AdminToken(env);
+    await fetch(`${L1_BASE_HOST}/api/collections/sigungu_dept_resolve_log/records`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ...entry, recorded_at: new Date().toISOString() }),
+    });
+  } catch (e) {
+    console.error('[sigungu-dept-resolve] 로그 기록 실패:', e.message);
+  }
+}
+
+const SIGUNGU_RESOLVE_TTL = 60 * 60 * 24 * 30; // 30일 — KOSIS 리졸버와 동일 원칙
+
+// GET /gov/sigungu-dept-resolve?city=천안시&domain=welfare[&debug=1]
+async function handleSigunguDeptResolve(request, url, env, corsHeaders, ctx) {
+  const cityGuess = (url.searchParams.get('city') || '').trim();
+  const domain = (url.searchParams.get('domain') || '').trim();
+  if (!cityGuess || !domain) {
+    return _err(400, 'MISSING_PARAM', 'city/domain 파라미터 필수', corsHeaders);
+  }
+  if (!SIGUNGU_COMMON_DEPT_PATTERNS.hasOwnProperty(domain)) {
+    return _err(400, 'UNKNOWN_DOMAIN', `알 수 없는 domain: ${domain}`, corsHeaders);
+  }
+
+  const _sigunguDebug = {
+    has_web_search_key: !!env.WEB_SEARCH_API_KEY,
+    has_kv: !!env.GOV_DATA_KV,
+    has_l1_admin: !!(env.L1_ADMIN_EMAIL && env.L1_ADMIN_PASSWORD),
+    has_waituntil: !!ctx?.waitUntil,
+  };
+
+  const cacheKey = `gov-data:sigungu-dept:${cityGuess}:${domain}`;
+  if (env.GOV_DATA_KV) {
+    try {
+      const cached = await env.GOV_DATA_KV.get(cacheKey, 'json');
+      if (cached?.deptName) {
+        return new Response(JSON.stringify({
+          text: `${cityGuess}의 '${SIGUNGU_DOMAIN_LABEL_KO[domain] || domain}' 관련 문의는 **${cached.deptName}**에서 담당합니다.`,
+          verified: true, source: 'cache',
+        }), { headers: corsHeaders });
+      }
+    } catch (e) {
+      console.error('[sigungu-dept-resolve] KV 조회 실패(무시):', e.message);
+    }
+  }
+
+  const fallbackText = _sigunguRenderFallback(cityGuess, domain);
+
+  // ── 임시 디버그 모드(&debug=1) — 원인 파악용, 필요 없어지면 제거 예정 ──
+  // 백그라운드로 안 돌리고 동기적으로 Serper 검색까지 실행해서 원본 결과와
+  // 추출 시도 결과를 응답에 그대로 담는다. 정상 트래픽에는 영향 없음.
+  if (url.searchParams.get('debug') === '1') {
+    const query = `${cityGuess} 조직도`;
+    let organic = null;
+    let serperError = null;
+    let serperStatus = null;
+    try {
+      const searchRes = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: { 'X-API-KEY': env.WEB_SEARCH_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: query, gl: 'kr', hl: 'ko' }),
+      });
+      serperStatus = searchRes.status;
+      if (searchRes.ok) {
+        const raw = await searchRes.json().catch((e) => { serperError = `JSON 파싱 실패: ${e.message}`; return null; });
+        organic = raw?.organic || null;
+      } else {
+        serperError = await searchRes.text().catch(() => `HTTP ${searchRes.status}`);
+      }
+    } catch (e) {
+      serperError = `fetch 예외: ${e.message}`;
+    }
+    const deptName = _sigunguExtractDeptName(organic, cityGuess);
+    return new Response(JSON.stringify({
+      debug_mode: true, _debug: _sigunguDebug,
+      query, serper_status: serperStatus, serper_error: serperError,
+      organic_raw: organic, extracted_dept_name: deptName,
+    }, null, 2), { headers: corsHeaders });
+  }
+
+  // 백그라운드 검증 — 응답은 즉시 나가고, 검증은 ctx.waitUntil로 이어서.
+  if (env.WEB_SEARCH_API_KEY && ctx?.waitUntil) {
+    const bgTask = (async () => {
+      const query = `${cityGuess} 조직도`; // ★ 2026-07-20: 도메인 라벨 포함 쿼리가 관련없는
+      // 결과(타지역·언론기사)를 끌어와 동률 무산되는 걸 확인해 단순화함
+      let organic = null;
+      try {
+        const searchRes = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'X-API-KEY': env.WEB_SEARCH_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: query, gl: 'kr', hl: 'ko' }),
+        });
+        if (searchRes.ok) {
+          const raw = await searchRes.json().catch(() => null);
+          organic = raw?.organic || null;
+        }
+      } catch (e) {
+        console.error('[sigungu-dept-resolve] Serper 호출 실패:', e.message);
+      }
+
+      const deptName = _sigunguExtractDeptName(organic, cityGuess);
+      if (deptName && env.GOV_DATA_KV) {
+        try {
+          await env.GOV_DATA_KV.put(cacheKey, JSON.stringify({ deptName, resolvedAt: new Date().toISOString() }),
+            { expirationTtl: SIGUNGU_RESOLVE_TTL });
+        } catch (e) {
+          console.error('[sigungu-dept-resolve] KV 저장 실패:', e.message);
+        }
+      }
+      await _sigunguRecordResolveLog({
+        city_guess: cityGuess, domain, query,
+        outcome: deptName ? 'resolved' : 'not_found',
+        resolved_dept_name: deptName || null,
+      }, env);
+    })();
+    ctx.waitUntil(bgTask.catch((e) => console.error('[sigungu-dept-resolve] 백그라운드 실패:', e.message)));
+  }
+
+  return new Response(JSON.stringify({ text: fallbackText, verified: false, source: 'template_fallback', _debug: _sigunguDebug }),
+    { headers: corsHeaders });
+}
+
 // ── POST /web-search (Serper.dev 연동, 2026-07-11 신설) ────────────
 // K-Search RULE-07 "대체형"([WEB_SEARCH: query=...] 태그, call-ai.js가
 // 파싱)이 호출한다. §0-B 경로1(웹검색)이 이번까지는 원칙 서술뿐이고
@@ -4626,6 +4816,10 @@ export default {
     // ── 웹검색(Serper.dev) (2026-07-11 신설) ────────────────────────
     if (pathname === '/web-search' && request.method === 'POST')
       return handleWebSearch(request, env, corsHeaders, ctx);
+
+    // ── 시군구 부서 지연초기화 (2026-07-20 신설, 2026-07-20 재적용) ──
+    if (pathname === '/gov/sigungu-dept-resolve' && request.method === 'GET')
+      return handleSigunguDeptResolve(request, url, env, corsHeaders, ctx);
 
     // ── 공공데이터포털: 법정동코드 (2026-07-16 신설) ────────────────
     // PUBLIC-DATA-PORTAL-INTEGRATION-PLAN_v1_0 STEP 1. 배치 전용 —
