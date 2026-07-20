@@ -427,8 +427,54 @@ const CATALOG_ONLY = [];
 // 복붙해 gyeonggi/busan을 "작동하는 것처럼" 보이게 하지 않는다(허위
 // 데이터를 실사로 위장하는 것보다, 미등록 상태를 정직하게 유지하는
 // 게 낫다는 이 프로젝트의 반복된 원칙 — TBD 마커 관행과 동일).
+
+// ── 부산 L2 라우팅 테이블 (2026-07-20 실사) ─────────────────────
+// 원형 도메인 16개 중 부산이 실제로 보유한 16개 전부 채움(health/family/
+// sports 포함 — 부산은 이 3개가 제주와 달리 별도 국으로 분리돼 있음).
+// 근거: do-dept-master-data.json 부산 레코드(나무위키 2026-07-10 + 공식
+// 조직도 검색결과 2026-07-20 재검증) — 실 이름이 불확실한 econ/culture는
+// 안정적인 과 이름 위주로 키워드를 구성했다(§비고 참고, 확정 아님).
+const BUSAN_L2_TABLE = [
+  { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'busan', file: null,
+    kw: ['고향사랑기부', '지방세', '취득세', '재산세', '세정', '예산', '기획조정실'] },
+  { code: 'SP-DO-SAFETY', domain: 'safety', 도코드: 'busan', file: null,
+    kw: ['시민안전실', '재난', '태풍', '호우', '자연재난', '사회재난', '원자력안전', '특별사법경찰'] },
+  { code: 'SP-DO-JACHI', domain: 'jachi', 도코드: 'busan', file: null,
+    kw: ['자치분권', '협치행정', '통합민원'] },
+  { code: 'SP-DO-ECON', domain: 'econ', 도코드: 'busan', file: null,
+    kw: ['투자유치', '중소기업', '소상공인', '자영업', '일자리', '신용보증재단', '경제진흥원'] },
+  { code: 'SP-DO-INNOV', domain: 'innov', 도코드: 'busan', file: null,
+    kw: ['인공지능', '빅데이터', '바이오헬스', '연구개발', '미래기술', '스타트업'] },
+  { code: 'SP-DO-WELFARE', domain: 'welfare', 도코드: 'busan', file: null,
+    kw: ['기초생활수급', '기초연금', '장애인복지', '노인복지', '돌봄복지'] },
+  { code: 'SP-DO-HEALTH', domain: 'health', 도코드: 'busan', file: null,
+    kw: ['건강정책', '보건위생', '감염병', '예방접종', '건강검진', '보건'] },
+  { code: 'SP-DO-FAMILY', domain: 'family', 도코드: 'busan', file: null,
+    kw: ['여성가족', '임신', '출산', '보육', '어린이집', '아동청소년', '아동수당'] },
+  { code: 'SP-DO-CLIMATE', domain: 'climate', 도코드: 'busan', file: null,
+    kw: ['녹색환경정책실', '기후대기', '자원순환', '분리배출', '폐기물',
+         '산림녹지', '공원운영', '하천관리', '수질개선'] },
+  { code: 'SP-DO-HOUSING', domain: 'housing', 도코드: 'busan', file: null,
+    kw: ['건축주택국', '건축허가', '건축정책', '주택정책', '도시디자인'] },
+  { code: 'SP-DO-TRANSPORT', domain: 'transport', 도코드: 'busan', file: null,
+    kw: ['도시철도', '지하철', '버스운영', '택시운수', '물류정책', '공공교통'] },
+  { code: 'SP-DO-CULTURE', domain: 'culture', 도코드: 'busan', file: null,
+    kw: ['문화예술', '문화유산', '영상콘텐츠', '도서관'] },
+  { code: 'SP-DO-SPORTS', domain: 'sports', 도코드: 'busan', file: null,
+    kw: ['체육정책', '생활체육', '체육시설', '전국체전'] },
+  { code: 'SP-DO-TOURISM', domain: 'tourism', 도코드: 'busan', file: null,
+    kw: ['관광마이스', '관광정책', '해양레저관광', '국제협력', '숙박업', '여행업'] },
+  { code: 'SP-DO-AGRI', domain: 'agri', 도코드: 'busan', file: null,
+    kw: ['농축산유통', '축산', '농업'] },
+  { code: 'SP-DO-OCEAN', domain: 'ocean', 도코드: 'busan', file: null,
+    kw: ['해운항만', '수산정책', '수산진흥', '어업', '수산업', '양식업'] },
+];
+
 const PROVINCE_TABLES = {
   jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE },
+  // busan: L2만 실사 완료(2026-07-20). city(자치구·군 16개)/national은 아직 미착수 —
+  // 허위로 채우지 않고 빈 배열로 정직하게 남긴다(TBD 마커 관행과 동일).
+  busan: { l2: BUSAN_L2_TABLE, city: [], national: [] },
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }
@@ -470,6 +516,9 @@ const ROUTE_DESCRIPTIONS = {
   'SP-DO-TOURISM': '관광교류국',
   'SP-DO-AGRI': '농축산식품국',
   'SP-DO-OCEAN': '해양수산국',
+  'SP-DO-HEALTH': '보건 담당 [2026-07-20 신설 — 제주는 SP-DO-SAFETY에 통합, 별도 분리된 도만 이 코드 사용]',
+  'SP-DO-FAMILY': '여성가족 담당 [2026-07-20 신설 — 제주는 SP-DO-WELFARE에 통합, 별도 분리된 도만 이 코드 사용]',
+  'SP-DO-SPORTS': '체육 담당 [2026-07-20 신설 — 제주는 SP-DO-CULTURE에 통합, 별도 분리된 도만 이 코드 사용]',
   'SP-NAT-TAX': '제주세무서(국세청) [국세 — 지방세 아님]',
   'SP-NAT-COURT': '제주지방법원(법원행정처(사법부)) [실제 재판 절차 — K-Law(AI 판결 시뮬레이션)와 다름]',
   'SP-NAT-NPS': '국민연금공단 제주지역본부(보건복지부)',
