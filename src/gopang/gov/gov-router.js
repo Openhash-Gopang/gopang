@@ -171,9 +171,38 @@ async function _loadKgovSp() {
   return _kgovSp;
 }
 
+// ── SP-COMMON-02(K-전문직 AI 공통 추론 아키텍처) 동적 로더 (2026-07-21 신설) ──
+// 주피터 지시: "모든 클래스(원형)에 '인스턴스는 반드시 전문가 AI 페르소나와
+// 동등한 방식으로, 동일한 태도로 사용자 요청에 응해야 한다'고 명시하십시오.
+// 전문가 AI 페르소나의 상위 SP를 정부 기관 클래스의 상위 SP로 하십시오."
+//
+// SP_common_guardrails(=SP-COMMON-02) v3.14 changelog에 이미 이 질문이
+// 기록돼 있었다 — "K-Service·공공기관 AC에도 동일 원칙이 적용돼야
+// 하는가"라는 지적에, 그때는 핵심 원칙(C44)만 UNIVERSAL-common으로
+// 옮기고 나머지는 EXPERT 전용(expert-session.js에서만 로드)으로 남겨
+// 뒀다(실사 결과: "이 문서는 K-Service·공공기관 AC·개인 AC 경로에는
+// 연결돼 있지 않음을 확인"). 오늘 그 공백을 메운다.
+//
+// _loadKgovSp()와 완전히 동일한 패턴 — 버전을 하드코딩하지 않고
+// sp-catalog.json에서 매번 최신 키를 조회한다(60개 전문가 페르소나가
+// 이미 상속하고 있는 것과 동일한 최신본을 정부기관 AC도 그대로 상속).
+let _expertCommonSp = null;
+async function _loadExpertCommonSp() {
+  if (_expertCommonSp) return _expertCommonSp;
+  const manifestRaw = await fetch(_RAW_ROOT + 'sp-catalog.json?t=' + Math.floor(Date.now() / 3600000));
+  if (!manifestRaw.ok) throw new Error(`[gov-router] sp-catalog.json fetch 실패 (${manifestRaw.status})`);
+  const manifest = await manifestRaw.json();
+  const fname = manifest['SP_common_guardrails'];
+  if (!fname) throw new Error('[gov-router] sp-catalog.json에 SP_common_guardrails 키 없음 — SP-COMMON-02를 찾을 수 없음');
+  const r = await fetch(_RAW_ROOT + fname + '?t=' + Math.floor(Date.now() / 3600000));
+  if (!r.ok) throw new Error(`[gov-router] SP-COMMON-02(${fname}) fetch 실패 (${r.status})`);
+  _expertCommonSp = await r.text();
+  return _expertCommonSp;
+}
+
 let _jejuTreeProtocol = null;
 async function _loadJejuTreeProtocol() {
-  if (!_jejuTreeProtocol) _jejuTreeProtocol = await _fetchText('00-common/JEJU-TREE-PROTOCOL_v1.0.md');
+  if (!_jejuTreeProtocol) _jejuTreeProtocol = await _fetchText('00-common/GOV-TREE-PROTOCOL_v1.0.md');
   return _jejuTreeProtocol;
 }
 
@@ -213,8 +242,9 @@ async function _loadGovCommon() {
   // "§CAPABILITIES 뒤" — 와 동등한 효과: 정체성/능력 정의 직후).
   const provinceCode = _resolveProvinceCode();
   if (_govCommonByProvince.has(provinceCode)) return _govCommonByProvince.get(provinceCode);
-  const [kgov, gateSchema, overlayTemplate, overlayRecords, treeProtocol] = await Promise.all([
+  const [kgov, expertCommonSp, gateSchema, overlayTemplate, overlayRecords, treeProtocol] = await Promise.all([
     _loadKgovSp(),
+    _loadExpertCommonSp(),
     _fetchText('08-schema/HUMAN-AUTHORITY-GATE-SCHEMA_v1_4.md'),
     _fetchText('00-common/overlays/GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md'),
     _loadGovCommonOverlayMasterData(),
@@ -231,7 +261,14 @@ async function _loadGovCommon() {
     overlay = `[참고: 이 지역(${provinceCode})의 상세 안내(콜센터 번호 등)는 아직 준비 중입니다 — ` +
       `정부24(gov.kr) 또는 해당 지자체 대표전화로 확인해 주세요.]`;
   }
-  const result = kgov + '\n\n---\n\n' + gateSchema + '\n\n---\n\n' + overlay + '\n\n---\n\n' + treeProtocol;
+  const expertParityNotice =
+    '[상위 SP 상속 선언 — 2026-07-21] 아래 SP-COMMON-02(K-전문직 AI 공통 추론 아키텍처)는 ' +
+    '노무사·변호사·의사 등 60개 전문가 AI 페르소나의 상위 공통 SP다. 이 정부기관 AC의 5개 ' +
+    '원형 클래스(광역시도청·실국·시군구청(기초자치단체)·읍면동사무소·국가기관 지역사무소) 전부 ' +
+    '이를 동일하게 상위 SP로 상속한다 — 어느 클래스의 인스턴스든 전문가 AI 페르소나와 동등한 ' +
+    '방식, 동일한 태도로 사용자 요청에 응해야 한다.';
+  const result = kgov + '\n\n---\n\n' + expertParityNotice + '\n\n' + expertCommonSp +
+    '\n\n---\n\n' + gateSchema + '\n\n---\n\n' + overlay + '\n\n---\n\n' + treeProtocol;
   _govCommonByProvince.set(provinceCode, result);
   return result;
 }
