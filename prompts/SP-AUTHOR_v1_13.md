@@ -30,7 +30,10 @@
 #             DOCUMENT-TYPE-REGISTRY_v1_6.md (doc_type 어휘)
 #             JURISDICTION-RESOLVER-SCHEMA_v1_2.md (tier 판별)
 #             GOV-TIER-IO-SCHEMA_v1_1.md (지방정부 A/B/C 계층 입출력 뼈대 —
-#             제주 단일 지자체를 전국 17개 광역시도로 확장할 때, 지방정부
+#             제주 단일 지자체를 전국 16개 광역시도로 확장할 때, 지방정부
+#             (★ 2026-07-20 정정: 2026-07-01 전남·광주 통합으로 17→16개로
+#             줄었음 — GOV-TIER-IO-SCHEMA와 동일 정정, 아래 v1.10 changelog
+#             항목의 '17개'는 그 시점 기준 정확한 서술이라 원문 보존)
 #             기관에 한해 PHASE B-0보다 먼저 참조. v1.1의 "갱신 원칙" 절이
 #             아래 §SELF-EVOLUTION과 직접 연결됨)
 #             AGENCY-AC-COMMON_v1.2.md (공리 0 — main()/submodule 은유.
