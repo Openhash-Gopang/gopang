@@ -780,6 +780,44 @@ const GYEONGBUK_L2_TABLE = [
     kw: ['체육'] },
 ];
 
+
+// ── 경남 L2 라우팅 테이블 ⚠️ 조직도 스냅샷 불일치, 신뢰도 낮음 ────────
+// 경북과 동일한 문제 — 검색 중 서로 다른 시점의 조직도 스냅샷이 충돌
+// (교통/균형발전/산업경제 부서명이 스냅샷마다 다름). 공식 '조직도' 메뉴
+// 페이지 기준을 우선 채택했으나 다른 도보다 신뢰도 낮음 — 재검증 권장.
+const GYEONGNAM_L2_TABLE = [
+  { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'gyeongnam', file: null,
+    kw: ['기획조정실'] },
+  { code: 'SP-DO-SAFETY', domain: 'safety', 도코드: 'gyeongnam', file: null,
+    kw: ['재난안전건설본부', '도민안전본부', '재난', '안전'] },
+  { code: 'SP-DO-JACHI', domain: 'jachi', 도코드: 'gyeongnam', file: null,
+    kw: ['자치행정국', '자치행정'] },
+  { code: 'SP-DO-ECON', domain: 'econ', 도코드: 'gyeongnam', file: null,
+    kw: ['일자리경제국', '경제통상', '경제기업'] },
+  { code: 'SP-DO-INNOV', domain: 'innov', 도코드: 'gyeongnam', file: null,
+    kw: ['산업혁신국', '산업정책', '산업통상'] },
+  { code: 'SP-DO-WELFARE', domain: 'welfare', 도코드: 'gyeongnam', file: null,
+    kw: ['복지보건국', '기초생활수급', '기초연금', '보건', '복지'] },
+  { code: 'SP-DO-FAMILY', domain: 'family', 도코드: 'gyeongnam', file: null,
+    kw: ['여성가족아동국', '여성가족', '아동청소년', '임신', '출산', '보육'] },
+  { code: 'SP-DO-AGRI', domain: 'agri', 도코드: 'gyeongnam', file: null,
+    kw: ['농정국', '농업정책', '농업'] },
+  { code: 'SP-DO-CLIMATE', domain: 'climate', 도코드: 'gyeongnam', file: null,
+    kw: ['환경산림국', '기후환경산림', '환경', '산림'] },
+  { code: 'SP-DO-HOUSING', domain: 'housing', 도코드: 'gyeongnam', file: null,
+    kw: ['도시주택국', '주택'] },
+  { code: 'SP-DO-TRANSPORT', domain: 'transport', 도코드: 'gyeongnam', file: null,
+    kw: ['도시교통국', '물류공항철도', '교통'] },
+  { code: 'SP-DO-CULTURE', domain: 'culture', 도코드: 'gyeongnam', file: null,
+    kw: ['문화관광체육국', '문화'] },
+  { code: 'SP-DO-TOURISM', domain: 'tourism', 도코드: 'gyeongnam', file: null,
+    kw: ['관광'] },
+  { code: 'SP-DO-SPORTS', domain: 'sports', 도코드: 'gyeongnam', file: null,
+    kw: ['체육'] },
+  { code: 'SP-DO-OCEAN', domain: 'ocean', 도코드: 'gyeongnam', file: null,
+    kw: ['해양수산국', '해양', '수산', '어업'] },
+];
+
 const PROVINCE_TABLES = {
   jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE },
   // busan: L2만 실사 완료(2026-07-20). city(자치구·군 16개)/national은 아직 미착수 —
@@ -794,6 +832,7 @@ const PROVINCE_TABLES = {
   chungnam: { l2: CHUNGNAM_L2_TABLE, city: [], national: [] },
   jeonbuk: { l2: JEONBUK_L2_TABLE, city: [], national: [] },
   gyeongbuk: { l2: GYEONGBUK_L2_TABLE, city: [], national: [] },  // ⚠️ 조직개편 중, 신뢰도 낮음
+  gyeongnam: { l2: GYEONGNAM_L2_TABLE, city: [], national: [] },  // ⚠️ 스냅샷 불일치, 신뢰도 낮음
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }
