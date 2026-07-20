@@ -4946,6 +4946,9 @@ export default {
     if (pathname === '/auth/device-link/poll'     && request.method === 'GET')  return handleDeviceLinkPoll(request, env, corsHeaders);
     if (pathname === '/account/step-up-threshold' && request.method === 'GET')  return handleStepUpThresholdGet(request, env, corsHeaders);
     if (pathname === '/account/step-up-threshold' && request.method === 'POST') return handleStepUpThresholdSet(request, env, corsHeaders);
+    if (pathname === '/auth/webauthn/register-key' && request.method === 'POST') return handleWebAuthnRegisterKey(request, env, corsHeaders);
+    if (pathname === '/account/step-up-challenge'  && request.method === 'POST') return handleStepUpChallenge(request, env, corsHeaders);
+    if (pathname === '/account/step-up-verify'     && request.method === 'POST') return handleStepUpVerify(request, env, corsHeaders);
     // 2026-07-07: /biz/review(Supabase biz_reviews, 5점 척도) → 완전 대체.
     // 실거래(tx_hash) 기반 trade_ratings(PocketBase, polarity+온도)로 이전.
     // handleBizReview는 하단에 DEPRECATED로 남겨두되 라우팅에서 제거함.
@@ -5779,6 +5782,220 @@ async function handleStepUpThresholdSet(request, env, corsHeaders) {
   return new Response(JSON.stringify({ ok: true, threshold: amount }), { status: 200, headers: corsHeaders });
 }
 
+// ═══════════════════════════════════════════════════════════
+// WebAuthn 서버측 검증 — 2026-07-20 신설 (사고실험에서 발견된 🔴 치명적
+// 결함 수정: 이전 구현은 생체인증이 클라이언트 JS 안에서만 일어나고
+// 서버가 그 결과를 전혀 몰라, sender_sig만 있으면 generateWebAuthn 검증
+// 자체를 건너뛰고 바로 /wallet/gdc-transfer를 호출해도 통과됐다. 이제
+// 서버가 WebAuthn 공개키를 직접 보관하고, 문턱 초과 거래는 서버가 발급한
+// challenge에 대한 assertion을 서버가 직접 서명 검증한 뒤에만 발급하는
+// step_up_token 없이는 handleGdcTransfer 자체가 거부한다.
+//
+// 참고: 이 저장소엔 예전에 /auth/webauthn/register·/verify가 있다가
+// "실제로 호출하는 클라이언트가 없어서" 2026-07-14에 삭제된 이력이
+// 있다 — 이번엔 gopang-wallet.js가 실제로 호출하도록 만든다.
+// ═══════════════════════════════════════════════════════════
+const STEP_UP_CHALLENGE_TTL_SECONDS = 120; // 챌린지 발급 → assertion 완료까지 유예
+const STEP_UP_TOKEN_TTL_MS = 2 * 60 * 1000; // step_up_token 발급 → 실제 거래 제출까지 유예
+
+// DER(ASN.1) 인코딩된 ECDSA 서명(WebAuthn assertion.response.signature 원본
+// 형식)을 WebCrypto crypto.subtle.verify()가 요구하는 raw r||s(P-256 기준
+// 64바이트, IEEE P1363) 형식으로 변환한다. WebCrypto엔 이 변환 기능이
+// 내장돼 있지 않아 직접 파싱해야 한다 — CBOR/COSE 파서까지는 필요 없다
+// (getPublicKey()가 이미 SPKI로 내려주므로), 서명 형식 변환만 필요하다.
+function _derToRawEcdsaSig(der) {
+  if (der[0] !== 0x30) throw new Error('DER 서명 형식이 아님(SEQUENCE 태그 없음)');
+  let idx = 2;
+  if (der[1] & 0x80) idx = 2 + (der[1] & 0x7f); // 긴 형식 길이(P-256 서명엔 거의 없지만 방어적으로 처리
+  if (der[idx] !== 0x02) throw new Error('DER 서명 형식이 아님(r INTEGER 없음)');
+  const rLen = der[idx + 1];
+  const r = der.slice(idx + 2, idx + 2 + rLen);
+  const sIdx = idx + 2 + rLen;
+  if (der[sIdx] !== 0x02) throw new Error('DER 서명 형식이 아님(s INTEGER 없음)');
+  const sLen = der[sIdx + 1];
+  const s = der.slice(sIdx + 2, sIdx + 2 + sLen);
+  const _trimAndPad = (bytes, len) => {
+    let b = bytes;
+    while (b.length > len && b[0] === 0) b = b.slice(1); // DER INTEGER 부호 비트용 선행 0x00 제거
+    if (b.length < len) b = _concatBytes(new Uint8Array(len - b.length), b);
+    return b;
+  };
+  return _concatBytes(_trimAndPad(r, 32), _trimAndPad(s, 32));
+}
+
+// POST /auth/webauthn/register-key { guid, credentialId, publicKeySpkiB64u }
+// enrollWebAuthn() 성공 직후 클라이언트가 호출 — 이 기기의 생체인증
+// 공개키를 서버에 등록한다. 여러 기기(폰·PC)가 각자 별도 credential로
+// 같은 guid에 등록할 수 있다(profiles.extra.webauthn_credentials 배열).
+async function handleWebAuthnRegisterKey(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, credentialId, publicKeySpkiB64u } = body;
+  if (!guid || !credentialId || !publicKeySpkiB64u) {
+    return _err(400, 'MISSING_FIELD', 'guid, credentialId, publicKeySpkiB64u 필수', corsHeaders);
+  }
+
+  // 저장 전 실제로 유효한 P-256 공개키인지 확인(쓰레기 값이 저장되는 것 방지)
+  try {
+    await crypto.subtle.importKey(
+      'spki', _b64uToBytes(publicKeySpkiB64u), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']
+    );
+  } catch (e) {
+    return _err(400, 'INVALID_PUBLIC_KEY', '공개키 형식이 올바르지 않습니다: ' + e.message, corsHeaders);
+  }
+
+  let profile;
+  try { profile = await _l1FindProfileByGuid(env, guid); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders); }
+  if (!profile) return _err(404, 'PROFILE_NOT_FOUND', '프로필을 찾을 수 없습니다', corsHeaders);
+
+  const prevExtra = profile.extra || {};
+  const creds = Array.isArray(prevExtra.webauthn_credentials) ? prevExtra.webauthn_credentials : [];
+  const filtered = creds.filter(c => c.credentialId !== credentialId); // 재등록 시 갱신
+  filtered.push({ credentialId, publicKeySpkiB64u, createdAt: new Date().toISOString() });
+
+  try { await _l1PatchProfile(env, profile.id, { extra: { ...prevExtra, webauthn_credentials: filtered } }); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
+
+  return new Response(JSON.stringify({ ok: true, registered: filtered.length }), { status: 200, headers: corsHeaders });
+}
+
+// POST /account/step-up-challenge { guid, tx_hash }
+// 특정 거래(tx_hash)에 결박된 챌린지를 발급한다 — 무작위 챌린지가 아니라
+// "이 거래를 승인하는 assertion"이어야만 나중에 verify가 통과한다
+// (사고실험에서 지적된 WYSIWYS 미비점 — 서명 대상이 매번 새 값이므로
+// 다른 거래의 assertion을 재사용할 수 없다).
+async function handleStepUpChallenge(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, tx_hash } = body;
+  if (!guid || !tx_hash) return _err(400, 'MISSING_FIELD', 'guid, tx_hash 필수', corsHeaders);
+  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+
+  const challengeBytes = crypto.getRandomValues(new Uint8Array(32));
+  const challengeB64u = _b64uEncode(String.fromCharCode(...challengeBytes));
+  const sessionId = crypto.randomUUID();
+
+  await env.QR_SESSIONS_KV.put(`stepup:${sessionId}`, JSON.stringify({
+    guid, tx_hash, challengeB64u, used: false,
+  }), { expirationTtl: STEP_UP_CHALLENGE_TTL_SECONDS });
+
+  return new Response(JSON.stringify({
+    ok: true, sessionId, challengeB64u, rpId: 'hondi.net', expires_in: STEP_UP_CHALLENGE_TTL_SECONDS,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// POST /account/step-up-verify
+// { guid, sessionId, credentialId, authenticatorDataB64u, clientDataJSONB64u, signatureB64u }
+// WebAuthn assertion을 서버가 직접 서명 검증한다. 통과하면 그 거래
+// (tx_hash)에 한해 유효한 짧은 수명의 step_up_token을 발급한다.
+async function handleStepUpVerify(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, sessionId, credentialId, authenticatorDataB64u, clientDataJSONB64u, signatureB64u } = body;
+  if (!guid || !sessionId || !credentialId || !authenticatorDataB64u || !clientDataJSONB64u || !signatureB64u) {
+    return _err(400, 'MISSING_FIELD', '필수 필드 누락', corsHeaders);
+  }
+  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+  if (!env.PHONE_VERIFY_SECRET) return _err(500, 'SECRET_NOT_SET', 'PHONE_VERIFY_SECRET이 설정되지 않았습니다', corsHeaders);
+
+  const sessKey = `stepup:${sessionId}`;
+  const raw = await env.QR_SESSIONS_KV.get(sessKey);
+  if (!raw) return _err(404, 'CHALLENGE_EXPIRED', '챌린지가 만료됐거나 존재하지 않습니다', corsHeaders);
+  const session = JSON.parse(raw);
+  if (session.used) return _err(409, 'CHALLENGE_ALREADY_USED', '이미 사용된 챌린지입니다', corsHeaders);
+  if (session.guid !== guid) return _err(403, 'GUID_MISMATCH', '이 챌린지의 소유자가 아닙니다', corsHeaders);
+
+  // ── clientDataJSON 검증 ──
+  let clientData;
+  try { clientData = JSON.parse(new TextDecoder().decode(_b64uToBytes(clientDataJSONB64u))); }
+  catch (e) { return _err(400, 'CLIENTDATA_PARSE_ERROR', 'clientDataJSON 파싱 실패', corsHeaders); }
+  if (clientData.type !== 'webauthn.get') {
+    return _err(400, 'WRONG_CEREMONY_TYPE', `type이 webauthn.get이 아닙니다: ${clientData.type}`, corsHeaders);
+  }
+  if (clientData.challenge !== session.challengeB64u) {
+    return _err(403, 'CHALLENGE_MISMATCH', '이 세션에서 발급한 챌린지와 일치하지 않습니다', corsHeaders);
+  }
+  const expectedOrigin = 'https://hondi.net';
+  if (clientData.origin !== expectedOrigin) {
+    return _err(403, 'ORIGIN_MISMATCH', `예상 origin(${expectedOrigin})과 다릅니다: ${clientData.origin}`, corsHeaders);
+  }
+
+  // ── authenticatorData 검증(rpIdHash, User Presence·Verification 플래그) ──
+  const authData = _b64uToBytes(authenticatorDataB64u);
+  if (authData.length < 37) return _err(400, 'AUTHDATA_TOO_SHORT', 'authenticatorData 형식 오류', corsHeaders);
+  const rpIdHashExpected = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('hondi.net')));
+  const rpIdHashActual = authData.slice(0, 32);
+  if (!rpIdHashExpected.every((b, i) => b === rpIdHashActual[i])) {
+    return _err(403, 'RPID_HASH_MISMATCH', 'RP ID 해시가 일치하지 않습니다', corsHeaders);
+  }
+  const flags = authData[32];
+  const userPresent    = (flags & 0x01) !== 0;
+  const userVerified    = (flags & 0x04) !== 0;
+  if (!userPresent) return _err(403, 'USER_NOT_PRESENT', 'User Presence 플래그가 없습니다', corsHeaders);
+  if (!userVerified) {
+    // ★ 클라이언트가 userVerification:'required'로 요청했어도, 서버가
+    // 다시 한번 확인한다 — 클라이언트측 요청 옵션을 신뢰하지 않는다는
+    // 원칙(이번 사고실험의 핵심 교훈)을 여기서도 그대로 적용한다.
+    return _err(403, 'USER_NOT_VERIFIED', 'User Verification(생체인증) 플래그가 없습니다', corsHeaders);
+  }
+
+  // ── 저장된 공개키로 서명 검증 ──
+  let profile;
+  try { profile = await _l1FindProfileByGuid(env, guid); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders); }
+  const creds = profile?.extra?.webauthn_credentials || [];
+  const credRecord = creds.find(c => c.credentialId === credentialId);
+  if (!credRecord) return _err(404, 'CREDENTIAL_NOT_FOUND', '이 기기의 생체인증 키가 서버에 등록돼 있지 않습니다', corsHeaders);
+
+  let verified = false;
+  try {
+    const pubKey = await crypto.subtle.importKey(
+      'spki', _b64uToBytes(credRecord.publicKeySpkiB64u), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']
+    );
+    const clientDataHash = new Uint8Array(await crypto.subtle.digest('SHA-256', _b64uToBytes(clientDataJSONB64u)));
+    const signedData = _concatBytes(authData, clientDataHash);
+    const rawSig = _derToRawEcdsaSig(_b64uToBytes(signatureB64u));
+    verified = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, pubKey, rawSig, signedData);
+  } catch (e) {
+    return _err(400, 'SIGNATURE_VERIFY_ERROR', '서명 검증 중 오류: ' + e.message, corsHeaders);
+  }
+  if (!verified) return _err(403, 'SIGNATURE_INVALID', '서명이 유효하지 않습니다', corsHeaders);
+
+  // 챌린지 재사용 방지 — 1회성 소비
+  session.used = true;
+  await env.QR_SESSIONS_KV.put(sessKey, JSON.stringify(session), { expirationTtl: STEP_UP_CHALLENGE_TTL_SECONDS });
+
+  // step_up_token 발급 — phone_verify_token과 동일한 HMAC 서명 패턴 재사용
+  const exp = Date.now() + STEP_UP_TOKEN_TTL_MS;
+  const payload = `${guid}:${session.tx_hash}:${exp}`;
+  const signature = await _hmacSha256Hex(env.PHONE_VERIFY_SECRET, payload);
+  const step_up_token = payload + '.' + signature;
+
+  return new Response(JSON.stringify({ ok: true, step_up_token, expires_at: new Date(exp).toISOString() }), { status: 200, headers: corsHeaders });
+}
+
+// step_up_token 검증 — handleGdcTransfer가 호출. phone_verify_token 파싱과
+// 동일한 방식(마지막 '.' 기준 payload/서명 분리, ':' 기준 필드 분리).
+async function _verifyStepUpToken(env, token, expectedGuid, expectedTxHash) {
+  if (!token || typeof token !== 'string') return { ok: false, reason: 'MISSING_TOKEN' };
+  const dotIdx = token.lastIndexOf('.');
+  if (dotIdx < 0) return { ok: false, reason: 'MALFORMED' };
+  const payload = token.slice(0, dotIdx);
+  const sig = token.slice(dotIdx + 1);
+  const expectedSig = await _hmacSha256Hex(env.PHONE_VERIFY_SECRET, payload);
+  if (sig !== expectedSig) return { ok: false, reason: 'BAD_SIGNATURE' };
+
+  const parts = payload.split(':');
+  if (parts.length !== 3) return { ok: false, reason: 'MALFORMED_PAYLOAD' };
+  const [guid, txHash, expStr] = parts;
+  const exp = parseInt(expStr, 10);
+  if (!Number.isFinite(exp) || Date.now() > exp) return { ok: false, reason: 'EXPIRED' };
+  if (guid !== expectedGuid) return { ok: false, reason: 'GUID_MISMATCH' };
+  if (txHash !== expectedTxHash) return { ok: false, reason: 'TX_HASH_MISMATCH' };
+  return { ok: true };
+}
+
 async function handleGdcTransfer(request, env, corsHeaders, ctx) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
@@ -5828,6 +6045,32 @@ async function handleGdcTransfer(request, env, corsHeaders, ctx) {
   if (amount < GDC_TRANSFER_MIN_AMOUNT) {
     return _err(400, 'AMOUNT_OUT_OF_RANGE',
       `최소 이체액은 ₮${GDC_TRANSFER_MIN_AMOUNT}입니다`, corsHeaders);
+  }
+
+  // ── 고액 거래 생체 재인증 강제(step-up) — 2026-07-20 신설 ──────────
+  // ★ 사고실험에서 발견된 치명적 결함 수정: 이전엔 이 검증이 클라이언트
+  // JS(sendGdc)에만 있어서, sender_sig만 있으면 이 엔드포인트를 직접
+  // 호출해 우회할 수 있었다(개발자도구 콘솔에서든, 유출된 개인키로 만든
+  // 외부 스크립트에서든). 이제 서버가 from_guid의 문턱을 "클라이언트가
+  // 뭐라고 말했든" 스스로 독립적으로 조회하고, 문턱 이상이면 그 정확한
+  // tx_hash에 대해 서버가 방금 검증한 step_up_token 없이는 무조건
+  // 거부한다 — 클라이언트를 신뢰하지 않는다.
+  {
+    let senderProfile;
+    try { senderProfile = await _l1FindProfileByGuid(env, from_guid); }
+    catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패(재인증 문턱 조회): ' + e.message, corsHeaders); }
+    const rawThreshold = senderProfile?.extra?.gdc_step_up_threshold;
+    const threshold = (typeof rawThreshold === 'number' && rawThreshold >= 0) ? rawThreshold : GDC_STEP_UP_DEFAULT_THRESHOLD;
+
+    if (amount >= threshold) {
+      const stepUpCheck = await _verifyStepUpToken(env, body.step_up_token, from_guid, tx_hash);
+      if (!stepUpCheck.ok) {
+        return _err(403, 'STEP_UP_REQUIRED',
+          `₮${threshold.toLocaleString()} 이상 거래는 생체 재인증이 필요합니다(${stepUpCheck.reason}). ` +
+          `/account/step-up-challenge → WebAuthn assertion → /account/step-up-verify로 발급받은 ` +
+          `step_up_token을 함께 제출해 주세요.`, corsHeaders);
+      }
+    }
   }
 
   // ── handleBizOrder가 기대하는 형태로 매핑해 위임 ──────────────

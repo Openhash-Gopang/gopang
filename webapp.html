@@ -2312,7 +2312,7 @@ async function _toggleBiometric() {
       if (!result.ok) throw new Error(result.reason || '해제 실패');
       if (status) status.textContent = '해제됐습니다.';
     } else {
-      const result = await GopangWallet.enrollWebAuthn();
+      const result = await GopangWallet.enrollWebAuthn(_currentGuid());
       if (!result.ok) {
         const msg = result.reason === 'PRF_UNSUPPORTED'
           ? '이 기기의 생체인증은 지원되지 않는 방식입니다.'

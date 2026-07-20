@@ -767,39 +767,28 @@
         throw new Error('[Wallet] 재화·용역 대금 결제는 품목명(memo)을 입력해야 합니다.');
       }
 
-      // ── 고액 거래 재인증(step-up biometric) — 2026-07-20 신설 ──────
-      // 사용자가 설정 화면에서 정한 문턱(기본값 ₮100,000) 이상이면,
-      // 서명 직전에 플랫폼 생체인증(지문/얼굴)을 한 번 더 요구한다.
-      // Ed25519 서명 자체는 그대로 진행되지만(키가 이미 세션에 잠금
-      // 해제돼 있음), "지금 이 순간 사용자가 실제로 이 결제를 인지하고
-      // 승인했다"는 증거를 이 시점에 추가로 받는다 — 로그인(누가 이
-      // 기기를 쓰는지)과는 다른 층위의 확인이다.
+      // ── 고액 거래 재인증 사전 점검(2026-07-20) — 문턱 조회 및 미등록
+      // 시 조기 실패만 여기서 한다. 실제 생체인증(서버 챌린지 결박)은
+      // sign() 이후, tx_hash가 나온 다음에 한다(WYSIWYS — 이 거래에만
+      // 유효한 챌린지를 받기 위함, 사고실험에서 지적된 미비점 수정).
+      let stepUpThreshold = null;
       try {
         const thRes = await fetch(`${CFG.endpoint}/account/step-up-threshold?guid=${encodeURIComponent(this.guid)}`);
         const thData = await thRes.json().catch(() => null);
-        const threshold = (thRes.ok && thData?.ok) ? thData.threshold : null;
-        if (threshold !== null && amount >= threshold) {
-          if (!GopangWallet.isWebAuthnEnrolled()) {
-            throw new Error(
-              `[Wallet] ₮${threshold.toLocaleString()} 이상 거래는 생체인증 등록이 필요합니다. ` +
-              `설정 → 생체인증에서 먼저 등록해 주세요.`
-            );
-          }
-          const bio = await GopangWallet.requireStepUpBiometric();
-          if (!bio.ok) {
-            throw new Error(`[Wallet] 생체인증에 실패해 거래를 중단합니다(${bio.reason}).`);
-          }
-        }
+        stepUpThreshold = (thRes.ok && thData?.ok) ? thData.threshold : null;
       } catch (e) {
-        // 문턱 조회 자체가 네트워크 오류로 실패한 경우(threshold===null로
-        // 남는 위 케이스와 달리, fetch/json 파싱이 예외를 던진 경우)는
-        // "확인할 수 없으면 안전하게 차단"하지 않고 그냥 넘어간다 —
-        // 이 게이트가 없어도 sender_sig 자체는 여전히 유효한 서명이므로,
-        // 네트워크 문제로 정상 거래(특히 소액)까지 막는 건 과잉이다.
-        // 다만 위에서 명시적으로 threw한 에러(문턱 초과·생체인증 실패)는
-        // 그대로 다시 던진다.
-        if (e.message?.startsWith('[Wallet]')) throw e;
-        console.warn('[Wallet] 재인증 문턱 확인 실패(무시하고 진행):', e.message);
+        // 조회 자체가 네트워크 오류로 실패하면 이 시점엔 판단을 유보한다
+        // (아래서 다시 시도) — 서버가 handleGdcTransfer에서 어차피
+        // 독립적으로 재확인하므로, 여기서 못 정해도 최종 안전성은
+        // 유지된다(사고실험 이후 서버측 강제로 바뀐 부분).
+        console.warn('[Wallet] 재인증 문턱 사전 조회 실패(서버가 최종 강제):', e.message);
+      }
+      const needsStepUp = stepUpThreshold !== null && amount >= stepUpThreshold;
+      if (needsStepUp && !GopangWallet.isWebAuthnEnrolled()) {
+        throw new Error(
+          `[Wallet] ₮${stepUpThreshold.toLocaleString()} 이상 거래는 생체인증 등록이 필요합니다. ` +
+          `설정 → 생체인증에서 먼저 등록해 주세요.`
+        );
       }
 
       // 1) 로컬 잔액 사전 확인(UX용 — 최종 검증은 L1이 재생 계산으로 함)
@@ -818,6 +807,19 @@
         items: [],
       });
 
+      // 2-1) 고액 거래면 이제 이 tx_hash에 결박된 생체 재인증을 실제로
+      // 수행한다 — 서버가 챌린지를 발급하고, 서버가 서명을 직접
+      // 검증하고, 서버가 step_up_token을 발급한다(전 과정 서버 확인 —
+      // 사고실험에서 지적된 치명적 결함의 실제 수정 지점).
+      let stepUpToken = null;
+      if (needsStepUp) {
+        const bio = await GopangWallet.requireStepUpBiometric(this.guid, signed.tx_hash);
+        if (!bio.ok) {
+          throw new Error(`[Wallet] 생체인증에 실패해 거래를 중단합니다(${bio.reason}).`);
+        }
+        stepUpToken = bio.step_up_token;
+      }
+
       // 3) 서버 호출 — /biz/order가 아니라 전용 엔드포인트로
       const res = await fetch(`${CFG.endpoint}/wallet/gdc-transfer`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -826,6 +828,7 @@
           sender_sig: signed.buyer_sig, sender_public_key: signed.buyer_public_key,
           from_guid: this.guid, to_guid: toGuid, amount, memo, purpose,
           prev_settle_hash: signed.prev_settle_hash, balance_claimed: localBalance,
+          step_up_token: stepUpToken,
         }),
       });
       const result = await res.json().catch(() => ({ ok: false, error: 'PARSE_FAILED' }));
@@ -1349,7 +1352,13 @@
      *   reason 'PRF_UNSUPPORTED' — 이 브라우저/인증기는 PRF 미지원 → 폴백 유지, UI에서 안내할 것
      *   reason 'NO_WALLET' — 아직 지갑이 없음 (create() 먼저 호출)
      */
-    static async enrollWebAuthn() {
+    /**
+     * @param {string|null} [guid] — 2026-07-20 신설: 서버에 공개키를
+     *   등록하려면 guid가 필요하다(고액 거래 재인증을 서버가 실제로
+     *   검증하게 하려면 필수 — 없으면 로컬 재암호화만 하고 서버 등록은
+     *   건너뛴다, 하위호환).
+     */
+    static async enrollWebAuthn(guid = null) {
       if (!window.PublicKeyCredential) return { ok: false, reason: 'PRF_UNSUPPORTED' };
 
       const db = await openDB();
@@ -1379,6 +1388,27 @@
         && cred.getClientExtensionResults().prf.enabled;
       if (!prfEnabled) return { ok: false, reason: 'PRF_UNSUPPORTED' };
 
+      // ── 2026-07-20 신설: 서버에 공개키 등록(고액 거래 재인증 서버측
+      // 검증용) ── getPublicKey()는 SPKI(DER) 형식을 바로 내려주는
+      // 표준 API라 CBOR/COSE를 직접 파싱할 필요가 없다. 이 단계가
+      // 실패해도(구형 브라우저 등) 로컬 등록 자체는 막지 않는다 —
+      // 다만 이 경우 서버는 이 기기의 assertion을 검증할 공개키가
+      // 없어 고액 거래 재인증이 항상 실패(안전하게 차단)한다.
+      if (guid && cred.response.getPublicKey) {
+        try {
+          const spki = cred.response.getPublicKey();
+          await fetch(`${WORKER_URL}/auth/webauthn/register-key`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              guid, credentialId: bufToB64u(cred.rawId),
+              publicKeySpkiB64u: bufToB64u(spki),
+            }),
+          });
+        } catch (e) {
+          console.warn('[GopangWallet] WebAuthn 공개키 서버 등록 실패(로컬 등록은 유지):', e.message);
+        }
+      }
+
       // 기존 device-entropy로 복호화 → 새 PRF-entropy로 재암호화 (Ed25519 + X25519 둘 다)
       const oldEntropy = await GopangWallet._deviceEntropy();
       const newEntropyBytes = await GopangWallet._prfEval(cred.rawId);
@@ -1404,25 +1434,65 @@
     }
 
     /**
-     * 2026-07-20 신설 — 고액 거래 재인증(step-up) 전용.
-     * _prfEval()을 그대로 재사용해 플랫폼 인증기(지문/얼굴) 어설션을
-     * 요청한다 — PRF 결과값 자체는 필요 없고(그건 저장용 키 유도 목적),
-     * "이 어설션이 예외 없이 끝났다 = 사용자가 지금 이 순간 생체인증을
-     * 통과했다"는 사실만 신호로 쓴다. 새 WebAuthn 로직을 만들지 않고
-     * 이미 검증된 challenge/rpId/userVerification:'required' 구성을
-     * 그대로 물려받는다.
-     * @returns {{ ok: boolean, reason?: string }}
-     *   reason 'NOT_ENROLLED' — 이 기기에 생체인증이 등록 안 됨(enrollWebAuthn() 먼저 필요)
-     *   reason (기타) — 어설션 실패/취소 시 에러 메시지
+     * 2026-07-20 개정 — 고액 거래 재인증(step-up), 서버 검증판.
+     * 예전엔 _prfEval()만 로컬에서 통과하면 끝이었다(사고실험에서 발견된
+     * 치명적 결함 — 서버가 이 결과를 전혀 몰라 우회가 자명했음). 이제
+     * ①서버에 tx_hash 결박 챌린지 요청 → ②그 챌린지로 실제 WebAuthn
+     * assertion(navigator.credentials.get) → ③서버가 저장된 공개키로
+     * 직접 서명 검증 → ④통과 시 서버가 발급하는 짧은 수명 step_up_token
+     * 을 돌려받는 흐름이다. 이 토큰이 있어야 handleGdcTransfer가 문턱
+     * 이상 거래를 받아준다 — 클라이언트 판단을 서버가 신뢰하지 않는다.
+     * @param {string} guid
+     * @param {string} txHash — 방금 sign()으로 만든 거래의 tx_hash(이
+     *   거래에만 유효한 챌린지를 받기 위해 필수 — WYSIWYS 원칙)
+     * @returns {{ ok: boolean, reason?: string, step_up_token?: string }}
      */
-    static async requireStepUpBiometric() {
+    static async requireStepUpBiometric(guid, txHash) {
       if (!GopangWallet.isWebAuthnEnrolled()) return { ok: false, reason: 'NOT_ENROLLED' };
+      const credIdB64u = localStorage.getItem(LS_WEBAUTHN_CRED);
+
+      let challengeData;
       try {
-        const credIdB64u = localStorage.getItem(LS_WEBAUTHN_CRED);
-        await GopangWallet._prfEval(b64uToBuf(credIdB64u).buffer);
-        return { ok: true };
+        const res = await fetch(`${WORKER_URL}/account/step-up-challenge`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guid, tx_hash: txHash }),
+        });
+        challengeData = await res.json();
+        if (!res.ok || !challengeData.ok) return { ok: false, reason: challengeData.detail || 'CHALLENGE_REQUEST_FAILED' };
+      } catch (e) {
+        return { ok: false, reason: '챌린지 요청 실패: ' + e.message };
+      }
+
+      let assertion;
+      try {
+        assertion = await navigator.credentials.get({
+          publicKey: {
+            challenge: b64uToBuf(challengeData.challengeB64u),
+            rpId: challengeData.rpId || WEBAUTHN_RP_ID,
+            allowCredentials: [{ id: b64uToBuf(credIdB64u), type: 'public-key' }],
+            userVerification: 'required',
+          },
+        });
       } catch (e) {
         return { ok: false, reason: e.message || 'ASSERTION_FAILED' };
+      }
+
+      try {
+        const res = await fetch(`${WORKER_URL}/account/step-up-verify`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            guid, sessionId: challengeData.sessionId,
+            credentialId: bufToB64u(assertion.rawId),
+            authenticatorDataB64u: bufToB64u(assertion.response.authenticatorData),
+            clientDataJSONB64u: bufToB64u(assertion.response.clientDataJSON),
+            signatureB64u: bufToB64u(assertion.response.signature),
+          }),
+        });
+        const verifyData = await res.json();
+        if (!res.ok || !verifyData.ok) return { ok: false, reason: verifyData.detail || 'SERVER_VERIFY_FAILED' };
+        return { ok: true, step_up_token: verifyData.step_up_token };
+      } catch (e) {
+        return { ok: false, reason: '서버 검증 요청 실패: ' + e.message };
       }
     }
 
