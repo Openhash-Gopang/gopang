@@ -907,6 +907,7 @@ const ROUTE_DESCRIPTIONS = {
   'SP-NAT-PORT': '제주지방해양수산청(해양수산부)',
   'SP-CITY-JEJU': '제주시청',
   'SP-CITY-SEOGWIPO': '서귀포시청',
+  'SP-SIGUNGU-LAZY': '시군구(기초자치단체) 관할 업무 — 텍스트에 정적 테이블에 없는 특정 시/군/구 이름이 언급되고 그 지자체 소관 업무(복지·안전·민원·환경 등) 문의로 보이는 경우 [2026-07-20 신설 — 지연 초기화]',
 };
 
 function _findTableEntry(code) {
@@ -1423,8 +1424,13 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
 
   // 2.5) 시군구 이름이 언급됐지만 정적 도시 테이블에는 없는 경우 —
   // 지연 초기화(worker.js /gov/sigungu-dept-resolve 호출, 비밀키 없음).
-  // 실패해도 안전하게 대체 문구로 처리되므로 항상 시도해도 무해하다.
-  {
+  // ★ 2026-07-20 재설계: classifyFn(AI)이 주입돼 있으면 여기서 즉시
+  // 확정하지 않는다 — 정규식 오탐 가능성이 있어, AI가 있을 땐 5단계
+  // LLM 분류 폴백에서 'SP-SIGUNGU-LAZY'를 다른 코드들과 동등한 후보로
+  // 놓고 AI가 직접 판단하게 넘긴다(결정권을 코드→AI로 이동). classifyFn이
+  // 없으면(상담할 AI 자체가 없음) 기존처럼 정규식이 즉시 판단한다 —
+  // 하위호환 100% 유지.
+  if (!classifyFn) {
     const sigunguGuess = _guessSigunguName(text);
     if (sigunguGuess) {
       const domainGuess = _guessDomainFromText(text);
@@ -1461,7 +1467,22 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 여기서 LLM 자신에게 43개 코드 중 하나를 고르거나 NONE(=이 GOV-COMMON
   // 레이어 지식만으로 답 가능)을 판단하게 한다.
   const classified = await _classifyFallback(text, classifyFn);
-  if (classified) {
+  if (classified === 'SP-SIGUNGU-LAZY') {
+    // AI가 "이건 시군구 문제"라고 직접 판단한 경우 — 결정권은 AI에게
+    // 있고, 여기서는 그 판단을 실행에 옮기기 위해 이름·도메인만 정규식
+    // 으로 추출한다(추출은 기계적 실행일 뿐, 판단 자체는 이미 AI가 끝냄).
+    const sigunguGuess = _guessSigunguName(text);
+    const domainGuess = _guessDomainFromText(text);
+    if (sigunguGuess && domainGuess) {
+      const resolved = await resolveSigunguDept(sigunguGuess, domainGuess);
+      parts.push(resolved.text);
+      trace.push(`SP-SIGUNGU-LAZY(${sigunguGuess}/${domainGuess}/${resolved.source})`, '(LLM 분류 폴백)');
+      await _appendExpertIfMatched();
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    }
+    // AI는 시군구 문제라고 봤는데 정규식이 이름·도메인을 못 뽑으면 —
+    // 억지로 추측하지 않고 6)의 공통 레이어 응답으로 흘려보낸다.
+  } else if (classified) {
     if (_isNationalCode(classified)) {
       // 이미 parts에 SP-DO-000이 들어가 있으므로, 도청 트리를 걷어내고
       // 국가기관 트리로 다시 시작한다(JEJU-NATIONAL-SP §0: 배타적 형제 노드).
