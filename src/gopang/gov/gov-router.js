@@ -1204,13 +1204,28 @@ const _SIGUNGU_DOMAIN_KEYWORDS = {
   sports: ['체육', '생활체육'],
   agri: ['농정', '농업', '축산'],
   ocean: ['수산', '어업'],
-  plan: ['기획', '예산'],
+  plan: ['기획', '예산', '지방세', '취득세', '재산세', '세정'],
 };
 function _guessDomainFromText(text) {
   for (const [domain, kws] of Object.entries(_SIGUNGU_DOMAIN_KEYWORDS)) {
     if (kws.some(k => text.includes(k))) return domain;
   }
   return null;
+}
+
+// ── govType 기반 세정 라우팅 가드 (2026-07-21 신설) ──────────────
+// 주피터 지시: "도청 등의 원형 클래스를 먼저 구현하고... 클래스와
+// 인스턴스 관계를 명확히 규정하십시오." — PROVINCE_REGISTRY의 govType
+// 필드를 실제 라우팅 분기에 처음 연결하는 지점. SPECIAL_AUTONOMOUS(제주)
+// 는 기초자치단체가 없어 세정이 도청 직할이 맞지만, GENERAL(그 외 전부)
+// 은 세정이 시군구 소관이다 — 이 구분 없이 jeju L2 키워드를 그대로
+// 복붙한 도(busan·seoul)의 실사 데이터가 사고실험에서 확인됐다.
+const _MUNICIPAL_TAX_KEYWORDS = ['지방세', '취득세', '재산세', '세정'];
+function _isMunicipalTaxOnlyMatch(text, entry) {
+  if (!entry || entry.code !== 'SP-DO-PLAN') return false;
+  const matchedKw = entry.kw.filter(k => text.includes(k));
+  if (matchedKw.length === 0) return false;
+  return matchedKw.every(k => _MUNICIPAL_TAX_KEYWORDS.includes(k));
 }
 
 function _scoreMatch(text, table) {
@@ -1641,11 +1656,31 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 3) 실국 키워드 매칭 → 규칙 A: 짧은 체인
   const divMatch = _scoreMatch(text, _l2Table());
   if (divMatch) {
-    const divText = await _fetchDeptText(divMatch);
-    parts.push(divText);
-    trace.push(divMatch.code);
-    await _appendExpertIfMatched();
-    return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    // govType 가드(2026-07-21 신설) — 재산세 등 세정 키워드'만'으로
+    // 매칭됐고 이 도가 GENERAL(기초자치단체 존재)이면, 도청이 아니라
+    // 시군구 소관이므로 여기서 도청 L2로 확정하지 않는다.
+    const _registryEntry = PROVINCE_REGISTRY[_resolveProvinceCode()];
+    if (_registryEntry?.govType === 'GENERAL' && _isMunicipalTaxOnlyMatch(text, divMatch)) {
+      const sigunguGuess = _guessSigunguName(text);
+      const domainGuess = _guessDomainFromText(text);
+      if (sigunguGuess && domainGuess) {
+        const resolved = await resolveSigunguDept(sigunguGuess, domainGuess);
+        parts.push(resolved.text);
+        trace.push(`SP-SIGUNGU-LAZY(${sigunguGuess}/${domainGuess}/${resolved.source})`,
+          '(govType 가드 — 세정은 시군구 소관, 도청 L2 매칭 우회)');
+        await _appendExpertIfMatched();
+        return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+      }
+      // 시/군/구 이름을 특정 못 하면 도청 소관으로 잘못 답하지 않고
+      // 6)의 공통 레이어 응답으로 흘려보낸다(정직한 미확정 처리).
+      trace.push('(govType 가드 — 세정은 시군구 소관이나 시군구명 미특정, 도청 L2 매칭 무시)');
+    } else {
+      const divText = await _fetchDeptText(divMatch);
+      parts.push(divText);
+      trace.push(divMatch.code);
+      await _appendExpertIfMatched();
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    }
   }
 
   // 4) 읍면동/실국 어느 쪽도 안 걸렸지만 업무영역만 매칭된 경우(예: 지역 언급 없이 "수돗물 냄새나요")
