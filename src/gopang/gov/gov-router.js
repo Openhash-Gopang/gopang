@@ -42,9 +42,12 @@ const _RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prom
 const _RAW_ROOT = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/';
 
 // ── 고정 접두사(GOV-COMMON) + 배타적 L1 노드(DO-SP/NATIONAL-SP) 캐시 ──
-let _govCommon = null;
-let _doSpCache = null;
-let _nationalSpCache = null;
+// ★ 2026-07-20 수정 — 이전엔 도 하나만 담는 단일 변수였다. 발화마다
+// 도가 바뀌는 지금 구조(백지화 이후)에서는 두 번째 도 질문에 첫 번째
+// 도의 캐시된 내용이 잘못 나가는 버그였다 — 도코드별 Map으로 전환.
+const _govCommonByProvince = new Map();
+const _doSpCacheByProvince = new Map();
+const _nationalSpCacheByProvince = new Map();
 
 async function _fetchText(path) {
   const r = await fetch(_RAW + path + '?t=' + Math.floor(Date.now() / 3600000)); // 1시간 캐시 버스팅
@@ -52,22 +55,86 @@ async function _fetchText(path) {
   return r.text();
 }
 
-// ── 도코드 해석 (2026-07-19 배선 — 하드코딩 제거) ──────────────────
-// 기존엔 상수로 고정돼 있었다("두 번째 도가 온보딩되면 고쳐야 한다"고
-// 스스로 예언해뒀던 부분). 지금은 province-master-data.json에 경기·
-// 서울·부산 등 8개 도 레코드가 이미 조사돼 있으므로(2026-07-19 배선
-// 작업 계기) 더 이상 미룰 이유가 없다.
+// ── 시군구명 → 도코드 역매핑 (지연 로드, 세션당 1회) ────────────────
+// sigungu-national-list.json(2026-07-20 신설)을 재사용 — 226개+시군구
+// 명칭·소속 목록.
+let _sigunguListCache = null;
+async function _loadSigunguListForProvinceGuess() {
+  if (_sigunguListCache) return _sigunguListCache;
+  try {
+    const r = await fetch('https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/'
+      + 'src/gopang/gov/sigungu-national-list.json?t=' + Math.floor(Date.now() / 3600000));
+    const data = await r.json();
+    _sigunguListCache = data.시군구목록 || [];
+  } catch (e) {
+    console.warn('[gov-router] 시군구 목록 로드 실패(도 판별에 시군구명 매칭 없이 진행):', e.message);
+    _sigunguListCache = [];
+  }
+  return _sigunguListCache;
+}
+
+// 도 이름(전체·축약형) → 내부 도코드. ★ 동명이인 충돌 위험이 있는
+// 짧은 형태(예: 그냥 '광주'는 전남광주통합특별시의 구 광주광역시 ·
+// 경기도 광주시 둘 다와 겹침)는 일부러 뺐다 — 그런 경우는 시군구명
+// 역매핑(아래, 시군구 목록에 도코드까지 정확히 있음)에 맡긴다.
+const PROVINCE_NAME_TO_CODE = {
+  '제주특별자치도': 'jeju', '제주도': 'jeju', '제주': 'jeju',
+  '부산광역시': 'busan', '부산': 'busan',
+  '경기도': 'gyeonggi', '경기': 'gyeonggi',
+  '서울특별시': 'seoul', '서울': 'seoul',
+  '전남광주통합특별시': 'jeonnam-gwangju',
+  '대구광역시': 'daegu', '대구': 'daegu',
+  '인천광역시': 'incheon', '인천': 'incheon',
+  '대전광역시': 'daejeon', '대전': 'daejeon',
+  '울산광역시': 'ulsan', '울산': 'ulsan',
+  '세종특별자치시': 'sejong', '세종': 'sejong',
+  '강원특별자치도': 'gangwon', '강원도': 'gangwon', '강원': 'gangwon',
+  '충청북도': 'chungbuk', '충북': 'chungbuk',
+  '충청남도': 'chungnam', '충남': 'chungnam',
+  '전북특별자치도': 'jeonbuk', '전라북도': 'jeonbuk', '전북': 'jeonbuk',
+  '경상북도': 'gyeongbuk', '경북': 'gyeongbuk',
+  '경상남도': 'gyeongnam', '경남': 'gyeongnam',
+};
+
+function _guessProvinceFromText(text, sigunguList) {
+  // 1순위: 도 이름 직접 언급 — 긴 이름부터 검사(짧은 이름이 긴 이름의
+  // 부분문자열인 경우는 없지만, 검사 순서를 명확히 하기 위함).
+  const names = Object.keys(PROVINCE_NAME_TO_CODE).sort((a, b) => b.length - a.length);
+  for (const name of names) {
+    if (text.includes(name)) return PROVINCE_NAME_TO_CODE[name];
+  }
+  // 2순위: 시군구명 역매핑(예: '천안시' 언급 → 충청남도 → chungnam).
+  // 동명이인 시군구(중구·동구 등)는 첫 매치를 채택 — 정밀한 동명이인
+  // 구분은 아직 TBD, 추후 GWP 트리거 단계에서 보강 예정.
+  if (sigunguList && sigunguList.length) {
+    for (const rec of sigunguList) {
+      if (rec.이름 && text.includes(rec.이름)) {
+        const code = PROVINCE_NAME_TO_CODE[rec.광역];
+        if (code) return code;
+      }
+    }
+  }
+  return null;
+}
+
+// ── 도코드 해석 (2026-07-20 재설계 — 백지화, 'jeju' 하드코딩 기본값
+// 제거) ──────────────────────────────────────────────────────
+// 주피터 지시: "제주는 전체 광역시도 중 하나일 뿐입니다. 완전히
+// 걷어내고, 백지 상태에서 사용자의 발화에 대응하는 광역시도 및
+// 시군구를 결정하도록 수정하십시오."
 //
-// 결정 순서: (1) window.HONDI_PROVINCE_CODE — 배포 시점에 주입하는
-// 명시적 오버라이드(예: gyeonggi.hondi.net처럼 도별 서브도메인을 둘
-// 경우 그 배포의 index.html/webapp.html이 이 값을 설정). (2) 없으면
-// 'jeju' — 현재 유일하게 배포된 jeju.hondi.net과 100% 하위호환.
-//
-// 아직 안 정한 것(사용자 판단 대기): 도별 서브도메인 다중 배포 vs
-// 단일 라우터가 PDV 거주지/호스트명으로 도를 자동 판별하는 통합형 —
-// 이 함수는 어느 쪽으로 가든 호출부를 다시 안 고쳐도 되게만 만든다.
+// 결정 순서: (1) window.HONDI_PROVINCE_CODE — 배포 시점 명시적
+// 오버라이드(도별 서브도메인 등, 최우선 유지). (2) 이번 요청의 사용자
+// 발화에서 도/시군구 이름을 인식해 판별 — _assembleGovSystemPromptRaw
+// 시작 시점에 미리 계산해 _currentResolvedProvinceCode에 저장한다
+// (이 함수 자체는 동기 함수로 유지 — 호출부가 많아 시그니처를 바꾸면
+// 파급이 크다). (3) 그래도 못 정하면 'jeju' — 더 이상 "의도된
+// 기본값"이 아니라 "신호 없을 때의 최후 폴백"일 뿐이다(제주가
+// 특별해서가 아니라 데이터가 가장 완비된 인스턴스라 안전망으로 씀).
+let _currentResolvedProvinceCode = null;
 function _resolveProvinceCode() {
-  return (typeof window !== 'undefined' && window.HONDI_PROVINCE_CODE) || 'jeju';
+  if (typeof window !== 'undefined' && window.HONDI_PROVINCE_CODE) return window.HONDI_PROVINCE_CODE;
+  return _currentResolvedProvinceCode || 'jeju';
 }
 
 // ── kgov(SP-10_kpublic, 전국 공통) 동적 로더 (2026-07-05 신설) ──────
@@ -144,21 +211,29 @@ async function _loadGovCommon() {
   // 원칙을 적용 — 개별 SP 100개를 고치는 대신 여기 한 곳에서 kgov
   // 바로 뒤에 끼워 넣는다(kgov §준수 문서가 지시한 삽입 위치 —
   // "§CAPABILITIES 뒤" — 와 동등한 효과: 정체성/능력 정의 직후).
-  if (!_govCommon) {
-    const provinceCode = _resolveProvinceCode();
-    const [kgov, gateSchema, overlayTemplate, overlayRecords, treeProtocol] = await Promise.all([
-      _loadKgovSp(),
-      _fetchText('08-schema/HUMAN-AUTHORITY-GATE-SCHEMA_v1_4.md'),
-      _fetchText('00-common/overlays/GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md'),
-      _loadGovCommonOverlayMasterData(),
-      _loadJejuTreeProtocol(),
-    ]);
-    const rec = overlayRecords.find(r => r.도코드 === provinceCode);
-    if (!rec) throw new Error(`[Jeju] GOV-COMMON-OVERLAY 데이터 없음(도코드=${provinceCode})`);
-    const overlay = _renderGovCommonOverlay(overlayTemplate, rec);
-    _govCommon = kgov + '\n\n---\n\n' + gateSchema + '\n\n---\n\n' + overlay + '\n\n---\n\n' + treeProtocol;
+  const provinceCode = _resolveProvinceCode();
+  if (_govCommonByProvince.has(provinceCode)) return _govCommonByProvince.get(provinceCode);
+  const [kgov, gateSchema, overlayTemplate, overlayRecords, treeProtocol] = await Promise.all([
+    _loadKgovSp(),
+    _fetchText('08-schema/HUMAN-AUTHORITY-GATE-SCHEMA_v1_4.md'),
+    _fetchText('00-common/overlays/GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md'),
+    _loadGovCommonOverlayMasterData(),
+    _loadJejuTreeProtocol(),
+  ]);
+  const rec = overlayRecords.find(r => r.도코드 === provinceCode);
+  let overlay;
+  if (rec) {
+    overlay = _renderGovCommonOverlay(overlayTemplate, rec);
+  } else {
+    // ★ 2026-07-20 — 예전엔 여기서 throw했다(오버레이 없는 도는 전부
+    // 크래시). 이 세션 내내 써온 TBD 원칙대로 정직한 대체 문구로 바꿈.
+    console.warn(`[gov-router] GOV-COMMON-OVERLAY 데이터 없음(도코드=${provinceCode}) — 일반 안내로 대체`);
+    overlay = `[참고: 이 지역(${provinceCode})의 상세 안내(콜센터 번호 등)는 아직 준비 중입니다 — ` +
+      `정부24(gov.kr) 또는 해당 지자체 대표전화로 확인해 주세요.]`;
   }
-  return _govCommon;
+  const result = kgov + '\n\n---\n\n' + gateSchema + '\n\n---\n\n' + overlay + '\n\n---\n\n' + treeProtocol;
+  _govCommonByProvince.set(provinceCode, result);
+  return result;
 }
 
 // ── L1(SP-DO-000) 로딩 — SP-PROVINCE-TEMPLATE 렌더링으로 전환 (2026-07-19) ──
@@ -190,8 +265,9 @@ function _renderProvinceTemplate(template, rec) {
     .replaceAll('{유의사항_추가}', rec.유의사항_추가 || '');
 }
 async function _loadDoSp() {
-  if (_doSpCache) return _doSpCache;
   const provinceCode = _resolveProvinceCode();
+  if (_doSpCacheByProvince.has(provinceCode)) return _doSpCacheByProvince.get(provinceCode);
+  let result;
   try {
     const [template, records] = await Promise.all([
       _fetchText('01-do/templates/SP-PROVINCE-TEMPLATE_v1.1.md'),
@@ -199,12 +275,13 @@ async function _loadDoSp() {
     ]);
     const rec = records.find(r => r.도코드 === provinceCode);
     if (!rec) throw new Error(`province-master-data.json에 도코드=${provinceCode} 레코드 없음`);
-    _doSpCache = _renderProvinceTemplate(template, rec);
+    result = _renderProvinceTemplate(template, rec);
   } catch (e) {
-    console.warn(`[Jeju] SP-PROVINCE-TEMPLATE 렌더링 실패(${e.message}) — 정적 파일로 폴백`);
-    _doSpCache = await _fetchText('01-do/JEJU-DO-SP_v1.5.md');
+    console.warn(`[gov-router] SP-PROVINCE-TEMPLATE 렌더링 실패(도코드=${provinceCode}, ${e.message}) — 정적 파일로 폴백(⚠️ 제주 전용 정적 파일이라 다른 도에선 부정확할 수 있음)`);
+    result = await _fetchText('01-do/JEJU-DO-SP_v1.5.md');
   }
-  return _doSpCache;
+  _doSpCacheByProvince.set(provinceCode, result);
+  return result;
 }
 
 let _natOverlayMasterData = null;
@@ -239,21 +316,33 @@ function _renderNatCatalogSection(records, provinceCode) {
 }
 
 async function _loadNationalSp() {
-  if (!_nationalSpCache) {
-    const provinceCode = _resolveProvinceCode();
-    const [core, overlayTemplate, overlayRecords, natRecords] = await Promise.all([
-      _fetchText('09-national/NATIONAL-SP-CORE_v1.2.md'),
-      _fetchText('09-national/overlays/NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md'),
-      _loadNatOverlayMasterData(),
-      _loadNatMasterData(),
-    ]);
-    const overlayRec = overlayRecords.find(r => r.도코드 === provinceCode);
-    if (!overlayRec) throw new Error(`[Jeju] NATIONAL-SP-OVERLAY 데이터 없음(도코드=${provinceCode})`);
-    const overlay = _renderNatOverlay(overlayTemplate, overlayRec);
-    const catalogSection = _renderNatCatalogSection(natRecords, provinceCode);
-    _nationalSpCache = core + '\n\n---\n\n' + overlay + '\n\n---\n\n' + catalogSection;
+  const provinceCode = _resolveProvinceCode();
+  if (_nationalSpCacheByProvince.has(provinceCode)) return _nationalSpCacheByProvince.get(provinceCode);
+  const [core, overlayTemplate, overlayRecords, natRecords] = await Promise.all([
+    _fetchText('09-national/NATIONAL-SP-CORE_v1.2.md'),
+    _fetchText('09-national/overlays/NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md'),
+    _loadNatOverlayMasterData(),
+    _loadNatMasterData(),
+  ]);
+  const overlayRec = overlayRecords.find(r => r.도코드 === provinceCode);
+  let overlay;
+  if (overlayRec) {
+    overlay = _renderNatOverlay(overlayTemplate, overlayRec);
+  } else {
+    // ★ 2026-07-20 — 국가기관 지사 데이터는 아직 제주만 있다(세무서·
+    // 법원 등 12~15개 도 분량이 별도 후속 작업으로 남아있음). 예전엔
+    // 여기서 throw했다 — 정직한 대체 문구로 바꿔 최소한 안 죽게 함.
+    console.warn(`[gov-router] NATIONAL-SP-OVERLAY 데이터 없음(도코드=${provinceCode}) — 일반 안내로 대체`);
+    overlay = `[참고: 이 지역(${provinceCode})의 국가기관 지사 상세 정보는 아직 준비 중입니다.]`;
   }
-  return _nationalSpCache;
+  const rowsForProvince = natRecords.filter(r => r.도코드 === provinceCode);
+  const catalogSection = rowsForProvince.length > 0
+    ? _renderNatCatalogSection(natRecords, provinceCode)
+    : `## §3. 라우팅 테이블\n\n이 지역의 국가기관 지사 목록은 아직 조사되지 않았습니다 — ` +
+      `정확한 관할 기관은 정부24(gov.kr) 또는 국번없이 110(정부민원안내)으로 확인해 주세요.`;
+  const result = core + '\n\n---\n\n' + overlay + '\n\n---\n\n' + catalogSection;
+  _nationalSpCacheByProvince.set(provinceCode, result);
+  return result;
 }
 
 // ── L2 라우팅 테이블 (JEJU-DO-SP §3-1/§3-2/§3-3과 동기화) ─────
@@ -1336,8 +1425,12 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 공통 규칙을 빠뜨리거나 조작할 여지를 구조적으로 없앤다). 이 함수가
   // 반환하는 systemPrompt는 이제 "agencyPrompt"(JEJU-GOV-COMMON 이하)에
   // 해당하는 부분만 담당한다.
-  const govCommon = await _loadGovCommon();
   const text = userText || '';
+  // ★ 2026-07-20 — 매 요청(턴)마다 발화 기반으로 도를 다시 판별한다.
+  // _resolveProvinceCode()는 동기 함수라 여기서 미리 계산해둔다.
+  const _sigunguListForGuess = await _loadSigunguListForProvinceGuess();
+  _currentResolvedProvinceCode = _guessProvinceFromText(text, _sigunguListForGuess);
+  const govCommon = await _loadGovCommon();
   const trace = ['JEJU-GOV-COMMON'];
   const parts = [govCommon].filter(Boolean);
 
