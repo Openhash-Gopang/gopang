@@ -1,5 +1,3 @@
-import { resolveSigunguDept } from './sigungu-dept-resolver.js';
-
 /**
  * gov-router.js — 광역시도 정부 AC 공용 라우터 (중앙/공유 모듈)
  *
@@ -985,6 +983,29 @@ function _matchCity(text) {
   return null;
 }
 
+
+// ── 시군구 지연 초기화 — 클라이언트측(브라우저) 안전한 fetch (2026-07-20) ──
+// ⚠️ 비밀키 없음 — worker.js(hondi-proxy)의 /gov/sigungu-dept-resolve를
+// 호출할 뿐이다. 실패해도(네트워크 오류·CORS 등) 예외를 던지지 않고 안전한
+// 기본 문구로 대체 — 이 기능이 죽어도 기존 라우팅에 영향 없음.
+const SIGUNGU_RESOLVE_ORIGIN = 'https://hondi-proxy.tensor-city.workers.dev';
+
+async function resolveSigunguDept(cityGuess, domain) {
+  try {
+    const url = `${SIGUNGU_RESOLVE_ORIGIN}/gov/sigungu-dept-resolve?city=${encodeURIComponent(cityGuess)}&domain=${encodeURIComponent(domain)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data;
+  } catch (e) {
+    console.warn('[gov-router] resolveSigunguDept 실패, 기본 문구로 대체:', e?.message);
+    return {
+      text: `${cityGuess} 관련 문의는 해당 시군구 대표전화 또는 정부24(gov.kr)로 확인해 주세요.`,
+      verified: false, source: 'error_fallback',
+    };
+  }
+}
+
 // ── 시군구 지연 초기화용 휴리스틱 (2026-07-20 신설) ──────────────
 // ★ 정밀하지 않음 — "정읍시가 아니라 정읍시가"처럼 실제 지명이 아닌
 // 문자열도 걸릴 수 있다. KOSIS 리졸버와 동일하게 "일단 v1으로 배선하고
@@ -1306,7 +1327,7 @@ function _resolvePdvScopeFromTrace(trace) {
 // 아래의 얇은 래퍼가 담당한다 — §13b PDV_HISTORY_REQUEST 자리표시자 치환을
 // 반환 지점이 8곳 넘게 흩어진 이 함수 내부를 전부 건드리지 않고 한 곳에서
 // 처리하기 위함(호출부 입장에서 동작은 완전히 동일, 순수 후처리 wrapper).
-async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, classifyFn = null, env = null, ctx = null) {
+async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, classifyFn = null) {
   // 2026-07-05: UNIVERSAL-INTEGRITY를 여기서 fetch/삽입하던 걸 제거했다.
   // jeju-router.js는 이제 /ai/chat이 아니라 /gov/relay를 호출하고,
   // handleGovRelay()가 UNIVERSAL-INTEGRITY + UNIVERSAL-common(U9 포함)을
@@ -1400,17 +1421,15 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     return { systemPrompt: parts.join('\n\n---\n\n'), trace };
   }
 
-  // 2.5) 시군구 이름이 언급됐지만 정적 도시 테이블(_cityTable())에는
-  // 없는 경우 — 지연 초기화 리졸버 호출(2026-07-20 신설). env가 없으면
-  // (호출부가 아직 env/ctx를 안 넘기면) 조용히 건너뛰고 기존 3)/5)
-  // 경로로 정상 진행 — 하위호환 안전, 이 단계가 없어도 기존 동작 100%
-  // 동일.
-  if (env) {
+  // 2.5) 시군구 이름이 언급됐지만 정적 도시 테이블에는 없는 경우 —
+  // 지연 초기화(worker.js /gov/sigungu-dept-resolve 호출, 비밀키 없음).
+  // 실패해도 안전하게 대체 문구로 처리되므로 항상 시도해도 무해하다.
+  {
     const sigunguGuess = _guessSigunguName(text);
     if (sigunguGuess) {
       const domainGuess = _guessDomainFromText(text);
       if (domainGuess) {
-        const resolved = await resolveSigunguDept(sigunguGuess, domainGuess, env, ctx);
+        const resolved = await resolveSigunguDept(sigunguGuess, domainGuess);
         parts.push(resolved.text);
         trace.push(`SP-SIGUNGU-LAZY(${sigunguGuess}/${domainGuess}/${resolved.source})`);
         await _appendExpertIfMatched();
@@ -1514,8 +1533,8 @@ export function resolveHandlerCodeFromTrace(trace) {
 }
 window.resolveHandlerCodeFromTrace = resolveHandlerCodeFromTrace;
 
-export async function assembleGovSystemPrompt(userText, pdvLocationHint = null, classifyFn = null, env = null, ctx = null) {
-  const result = await _assembleGovSystemPromptRaw(userText, pdvLocationHint, classifyFn, env, ctx);
+export async function assembleGovSystemPrompt(userText, pdvLocationHint = null, classifyFn = null) {
+  const result = await _assembleGovSystemPromptRaw(userText, pdvLocationHint, classifyFn);
   if (!_PDV_HISTORY_SCOPE_PLACEHOLDER_RE.test(result.systemPrompt)) return result;
   const scope = _resolvePdvScopeFromTrace(result.trace);
   return {
