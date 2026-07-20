@@ -144,10 +144,15 @@
       const wallet = await waitForWallet();
 
       // PC가 아직 코드를 입력하지 않았을 수 있다 — approved 상태가 될
-      // 때까지 짧게 재확인한다(최대 90초, 세션 TTL과 동일).
+      // 때까지 재확인한다. ★ 2026-07-20 정정(사고실험 2차): 여기 자체
+      // TTL을 90초로 하드코딩했었는데, SMS 폴백을 쓰면 서버가 세션을
+      // 5분으로 연장해도 이 페이지는 여전히 90초 만에 포기해버리는
+      // 불일치가 있었다. 클라이언트가 TTL 값을 따로 들고 있지 않게,
+      // 서버가 세션 만료를 스스로 알려줄 때(404 SESSION_EXPIRED)까지
+      // 기다리는 방식으로 바꾼다 — 안전장치로 넉넉한 상한(10분)만 둔다.
       let approved = sessionData.state === 'approved';
-      const deadline = Date.now() + 90000;
-      while (!approved && Date.now() < deadline) {
+      const safetyDeadline = Date.now() + 10 * 60 * 1000;
+      while (!approved && Date.now() < safetyDeadline) {
         await new Promise(r => setTimeout(r, 2000));
         const res = await fetch(`${WORKER}/auth/device-link/session?sessionId=${encodeURIComponent(sessionId)}&guid=${encodeURIComponent(wallet.guid)}`);
         const data = await res.json();

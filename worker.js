@@ -329,10 +329,33 @@ async function handlePhoneOtpVerify(request, env, corsHeaders) {
 const DEVICE_LINK_TTL_SECONDS = 90;      // 코드 유효기간 — SMS(5분)보다 훨씬 짧게(사용자 지시)
 const DEVICE_LINK_MAX_ATTEMPTS = 5;
 
+// ── 2026-07-20 신설: 웹푸시 실패 시 SMS 폴백(1안 웹푸시·2안 SMS) ──
+// 사고실험(주피터 지시)에서 발견한 위험 6가지를 반영:
+// ① TTL 불일치로 SMS 도착 전 세션 만료 → SMS 요청 시 세션 TTL을
+//    OTP와 동일한 5분으로 연장.
+// ② 타인 번호로 SMS를 반복 유발하는 DoS/괴롭힘 벡터 → 전화번호별
+//    시간당 발송 횟수 제한(기존 OTP와 별도 카운터, 동일 원리).
+// ④ "문자로 받기"가 새 세션을 만들면 웹푸시 코드와 SMS 코드가
+//    달라져 혼란 → 기존 sessionId·code 그대로, SMS만 재발송.
+// ⑤ 버튼 연타로 인한 과다 발송 → 세션당 재발송 횟수 제한(최대 2회).
+// (③·⑥은 서버가 아니라 PC 쪽 UI 설계로 대응 — device-link.html 참고)
+const DEVICE_LINK_SMS_TTL_SECONDS = 300;       // OTP와 동일 — SMS 지연 감안
+const DEVICE_LINK_SMS_MAX_RESEND = 2;          // 세션당 SMS 재발송 최대 횟수
+const DEVICE_LINK_SMS_RATE_LIMIT_PER_HOUR = 3; // 전화번호당 시간당 최대 발송
+const DEVICE_LINK_SMS_RATE_WINDOW_SECONDS = 3600;
+
 function _generateDeviceLinkCode() {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
   return String(100000 + (buf[0] % 900000));
+}
+
+// ★ 사고실험 ①에서 발견한 버그의 근본 수정: verify/deliver가 레코드를
+// 재기록할 때마다 무조건 90초 TTL로 되돌리면, SMS로 5분 연장한 게
+// 다음 단계에서 조용히 원상복구돼 버린다. 재기록 시엔 항상 이 함수로
+// "SMS를 이미 썼는지"를 보고 TTL을 정한다.
+function _deviceLinkTtl(record) {
+  return (record.smsResendCount || 0) > 0 ? DEVICE_LINK_SMS_TTL_SECONDS : DEVICE_LINK_TTL_SECONDS;
 }
 
 // L1 profiles 컬렉션에서 e164(전화번호)로 레코드 조회 — device-link 전용
@@ -373,13 +396,21 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
   const record = {
     guid: profile.guid, e164, pcPubKeyB64u,
     pcLabel: pcLabel || '알 수 없는 기기',
-    code, attempts: 0, state: 'pending',
+    code, attempts: 0, state: 'pending', smsResendCount: 0,
   };
   await env.QR_SESSIONS_KV.put(`devlink:${sessionId}`, JSON.stringify(record), { expirationTtl: DEVICE_LINK_TTL_SECONDS });
 
   // 웹푸시로 폰을 깨운다(SMS 아님 — 비용 없음). 코드 자체는 푸시 payload에
   // 담지 않는다 — 알림을 열어 앱(자기 guid)으로 조회해야만 코드가 보이게
   // 해서, 푸시를 가로챈 제3자가 코드까지 얻는 걸 한 단계 더 막는다.
+  //
+  // ★ 사고실험 ③에서 발견: push_subscription이 있어도 구독이 만료됐거나
+  // (410 Gone) 알림 권한이 나중에 꺼졌으면 발송이 조용히 실패할 수 있다.
+  // 이걸 PC가 알 방법이 없으면 사용자는 영원히 기다리게 된다 — 그래서
+  // "성공했다"고 확신할 수 있을 때만 pushSent:true를 내려주고, PC는
+  // 이 값과 무관하게 "문자로 받기" 링크를 항상 노출하되(§3 원칙),
+  // pushSent:false면 그 즉시 강조해서 보여준다.
+  let pushSent = false;
   try {
     if (env.VAPID_PRIVATE_KEY && env.VAPID_PUBLIC_KEY && env.VAPID_SUBJECT) {
       const fresh = await _l1FindProfileByGuid(env, profile.guid).catch(() => null);
@@ -393,13 +424,69 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
           tag:   `gopang-device-link-${sessionId}`,
         });
         await _sendWebPush(env, sub, payload);
+        pushSent = true;
       }
     }
   } catch (e) {
-    console.warn('[DeviceLink] 푸시 발송 실패(치명적 아님 — 사용자가 앱을 직접 열어도 진행 가능):', e.message);
+    console.warn('[DeviceLink] 푸시 발송 실패(치명적 아님 — SMS 폴백으로 계속 진행 가능):', e.message);
   }
 
-  return new Response(JSON.stringify({ ok: true, sessionId, expires_in: DEVICE_LINK_TTL_SECONDS }), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify({
+    ok: true, sessionId, expires_in: DEVICE_LINK_TTL_SECONDS, pushSent,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// POST /auth/device-link/resend-sms { sessionId }
+// PC가 호출 — 같은 세션·같은 코드를 SMS로도 보낸다(새 세션 생성 안 함,
+// 사고실험 ④). 다음을 전부 확인한 뒤에만 발송한다:
+//  1) 세션 존재·pending 상태(이미 approved/delivered면 의미 없음)
+//  2) 세션당 재발송 횟수(사고실험 ⑤ — 버튼 연타 방지)
+//  3) 전화번호당 시간당 발송 횟수(사고실험 ② — DoS/괴롭힘 방지)
+// 성공 시 세션 TTL을 OTP와 동일한 5분으로 연장한다(사고실험 ① —
+// SMS는 웹푸시보다 늦게 올 수 있어, 90초 TTL로는 도착 전에 만료될
+// 위험이 있었다).
+async function handleDeviceLinkResendSms(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { sessionId } = body;
+  if (!sessionId) return _err(400, 'MISSING_FIELD', 'sessionId 필수', corsHeaders);
+  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+
+  const key = `devlink:${sessionId}`;
+  const raw = await env.QR_SESSIONS_KV.get(key);
+  if (!raw) return _err(404, 'SESSION_EXPIRED', '세션이 만료됐거나 존재하지 않습니다', corsHeaders);
+  const record = JSON.parse(raw);
+
+  if (record.state !== 'pending') {
+    return _err(409, 'ALREADY_PROGRESSED', '이미 진행된 세션입니다', corsHeaders);
+  }
+  if ((record.smsResendCount || 0) >= DEVICE_LINK_SMS_MAX_RESEND) {
+    return _err(429, 'TOO_MANY_RESENDS', '문자 재발송 횟수를 초과했습니다. 처음부터 다시 시도해 주세요', corsHeaders);
+  }
+
+  // 전화번호당 시간당 발송 제한 — 타인 번호로 반복 요청해 문자 폭탄을
+  // 유발하는 걸 막는다(웹푸시와 달리 SMS는 회사에 실제 비용이 나간다).
+  const rlKey = `devlink_sms_rl:${record.e164}`;
+  const rlRaw = await env.QR_SESSIONS_KV.get(rlKey);
+  const rlCount = rlRaw ? parseInt(rlRaw, 10) || 0 : 0;
+  if (rlCount >= DEVICE_LINK_SMS_RATE_LIMIT_PER_HOUR) {
+    return _err(429, 'PHONE_RATE_LIMITED', '이 번호로 문자를 너무 많이 요청했습니다. 잠시 후 다시 시도해 주세요', corsHeaders);
+  }
+
+  const approveUrl = `https://hondi.net/auth/device-link-approve.html?sessionId=${encodeURIComponent(sessionId)}`;
+  try {
+    await _sendSolapiSms(env, record.e164,
+      `[혼디] PC 로그인 확인: ${approveUrl} (${Math.floor(DEVICE_LINK_SMS_TTL_SECONDS / 60)}분 이내)`);
+  } catch (e) {
+    console.warn('[DeviceLink] SMS 발송 실패:', e.message);
+    return _err(502, 'SMS_SEND_FAILED', '문자 발송에 실패했습니다: ' + e.message, corsHeaders);
+  }
+
+  record.smsResendCount = (record.smsResendCount || 0) + 1;
+  await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: DEVICE_LINK_SMS_TTL_SECONDS });
+  await env.QR_SESSIONS_KV.put(rlKey, String(rlCount + 1), { expirationTtl: DEVICE_LINK_SMS_RATE_WINDOW_SECONDS });
+
+  return new Response(JSON.stringify({ ok: true, expires_in: DEVICE_LINK_SMS_TTL_SECONDS }), { status: 200, headers: corsHeaders });
 }
 
 // GET /auth/device-link/session?sessionId=...&guid=...
@@ -442,12 +529,12 @@ async function handleDeviceLinkVerify(request, env, corsHeaders) {
   }
   if (String(code).trim() !== record.code) {
     record.attempts += 1;
-    await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: DEVICE_LINK_TTL_SECONDS });
+    await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: _deviceLinkTtl(record) });
     return _err(400, 'CODE_MISMATCH', `코드가 일치하지 않습니다(남은 시도 ${DEVICE_LINK_MAX_ATTEMPTS - record.attempts}회)`, corsHeaders);
   }
 
   record.state = 'approved';
-  await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: DEVICE_LINK_TTL_SECONDS });
+  await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: _deviceLinkTtl(record) });
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
 }
 
@@ -4650,6 +4737,7 @@ export default {
     if (pathname === '/auth/device-link/init'    && request.method === 'POST') return handleDeviceLinkInit(request, env, corsHeaders);
     if (pathname === '/auth/device-link/session'  && request.method === 'GET')  return handleDeviceLinkSession(request, env, corsHeaders);
     if (pathname === '/auth/device-link/verify'   && request.method === 'POST') return handleDeviceLinkVerify(request, env, corsHeaders);
+    if (pathname === '/auth/device-link/resend-sms' && request.method === 'POST') return handleDeviceLinkResendSms(request, env, corsHeaders);
     if (pathname === '/auth/device-link/deliver'  && request.method === 'POST') return handleDeviceLinkDeliver(request, env, corsHeaders);
     if (pathname === '/auth/device-link/poll'     && request.method === 'GET')  return handleDeviceLinkPoll(request, env, corsHeaders);
     // 2026-07-07: /biz/review(Supabase biz_reviews, 5점 척도) → 완전 대체.

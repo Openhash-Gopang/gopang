@@ -32,6 +32,7 @@
     background: #0057A8; color: #fff;
   }
   button:disabled { background: #9ca3af; cursor: not-allowed; }
+  button.secondary { background: #f3f4f6; color: #374151; }
   #status { font-size: 13px; color: #6b7280; margin-top: 14px; text-align: center; min-height: 18px; }
   #status.error { color: #dc2626; }
   #status.success { color: #059669; }
@@ -67,6 +68,9 @@
     <input id="code" type="text" inputmode="numeric" maxlength="6" placeholder="숫자 6자리" autocomplete="one-time-code">
     <button id="btn-verify">확인</button>
     <div class="timer" id="timer"></div>
+    <button id="btn-sms-fallback" class="secondary" style="opacity:0.5;font-size:12px;padding:9px;margin-top:10px">
+      알림이 안 왔나요? 문자로 받기
+    </button>
   </div>
 
   <div id="status"></div>
@@ -147,9 +151,57 @@
       setStatus('스마트폰 알림을 확인하고, 화면에 뜬 코드를 입력해 주세요.');
       startCountdown(data.expires_in || 90);
       startPolling();
+      setupSmsFallback(data.pushSent);
     } catch (e) {
       setStatus(e.message || '요청에 실패했습니다.', 'error');
       $('btn-request').disabled = false;
+    }
+  });
+
+  // ── SMS 폴백(2안) ───────────────────────────────────
+  // 사고실험 ③: 웹푸시 발송 자체가 실패했다고 서버가 확실히 판단한
+  // 경우(pushSent:false — 구독 없음/만료 등)는 기다려봐야 소용없으니
+  // 즉시 강조해서 보여준다.
+  // 사고실험 ⑥: 반대로 푸시가 정상 발송된 경우엔, 알림이 보통 1~2초
+  // 안에 도착하므로 사용자가 성급하게 눌러 불필요한 SMS 비용이
+  // 나가지 않도록 8초간은 흐리게 뒀다가 그 뒤에 강조한다.
+  let smsFallbackTimer = null;
+  function setupSmsFallback(pushSent) {
+    const btn = $('btn-sms-fallback');
+    btn.style.opacity = '0.5';
+    btn.disabled = false;
+    if (pushSent === false) {
+      btn.style.opacity = '1';
+    } else {
+      smsFallbackTimer = setTimeout(() => { btn.style.opacity = '1'; }, 8000);
+    }
+  }
+
+  $('btn-sms-fallback').addEventListener('click', async () => {
+    const btn = $('btn-sms-fallback');
+    if (!sessionId || btn.disabled) return;
+    btn.disabled = true; // 연타 방지(사고실험 ⑤) — 서버도 별도로 재확인함
+    const original = btn.textContent;
+    btn.textContent = '문자 발송 중...';
+    try {
+      const res = await fetch(`${WORKER}/auth/device-link/resend-sms`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.detail || data.error || '문자 발송 실패');
+
+      btn.textContent = '문자를 보냈습니다';
+      setStatus('문자로 받은 링크를 스마트폰에서 열어 승인해 주세요.');
+      // 서버가 세션 TTL을 5분으로 연장했으므로(사고실험 ①), PC의
+      // 카운트다운도 같이 늘려준다 — 안 그러면 화면상 타이머만 먼저
+      // 끝나 사용자가 아직 유효한 세션을 포기하게 된다.
+      if (countdownTimer) clearInterval(countdownTimer);
+      startCountdown(data.expires_in || 300);
+    } catch (e) {
+      setStatus(e.message, 'error');
+      btn.textContent = original;
+      btn.disabled = false;
     }
   });
 
@@ -171,6 +223,7 @@
 
       setStatus('확인됐습니다. 스마트폰에서 지갑을 전송하는 중...');
       $('code-spinner').style.display = 'block';
+      $('btn-sms-fallback').disabled = true; // 이미 승인됨 — 지금부터 SMS는 무의미(서버도 409로 거부)
       // 이후 polling이 봉투 도착을 감지해 자동으로 다음 단계 진행
     } catch (e) {
       setStatus(e.message, 'error');
@@ -226,6 +279,11 @@
     $('btn-verify').disabled = false;
     $('code').value = '';
     sessionId = null; pcKeyPair = null;
+    if (smsFallbackTimer) { clearTimeout(smsFallbackTimer); smsFallbackTimer = null; }
+    const smsBtn = $('btn-sms-fallback');
+    smsBtn.disabled = false;
+    smsBtn.textContent = '알림이 안 왔나요? 문자로 받기';
+    smsBtn.style.opacity = '0.5';
   }
 
   // ── 봉투 복호화 → 지갑 복원 ─────────────────────────
