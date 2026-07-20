@@ -11,6 +11,8 @@
  */
 
 import { BIVM as BIVM_CONST } from '../core/constants.js'
+import { buildMerkleRoot } from './hashChain.js'
+import { sha256 } from '../pdv/keyManager.js'
 
 // ── 타입 정의 ────────────────────────────────────────────────────────────
 /**
@@ -152,4 +154,50 @@ export function createTxPair(id, from, to, amount, fromBalance, toBalance) {
       balanceAfter:  toBalance + amount,
     },
   ]
+}
+
+// ── 계층 간 잔액 매핑 무결성 (BMI Merkle 루트) ──────────────────────────
+// [2026-07 통합 추가]
+// 근거: 논문 §4.2.2 BMI_k(T) = MerkleRoot({ balance_u(T) : u ∈ tier_k })
+//
+// 기존 verifyBMI()는 "거래 1건의 산술(balanceBefore+delta=balanceAfter)"만
+// 확인한다 — 이는 논문이 막으려던 "계층 간 무단 재배분 위변조"(계정 A→B로
+// 은밀히 재배분하면서 양쪽 balanceBefore/After를 함께 조작하는 경우)는
+// 탐지하지 못한다. 아래 두 함수가 논문이 말하는 실제 BMI 메커니즘 —
+// 계층 소속 전체 계정의 잔액 스냅샷에 대한 Merkle 루트를 계산해 상위
+// 계층이 보유한 값과 대조하는 방식 — 을 채운다.
+//
+// Merkle 트리 계산은 신규 구현하지 않고 hashChain.js의 buildMerkleRoot()를
+// 그대로 재사용한다(통합 원칙: 같은 암호 연산을 두 곳에 두지 않는다).
+
+/**
+ * tier_k 소속 전체 계정의 잔액 스냅샷으로 BMI Merkle 루트를 계산한다.
+ * @param {Array<{guid: string, balance: number}>} tierBalances - tier_k 소속 전체 계정
+ * @returns {Promise<string>} Merkle 루트 해시(hex)
+ * @throws {Error} tierBalances가 비어있으면 buildMerkleRoot가 예외를 던짐
+ */
+export async function computeBmiRoot(tierBalances) {
+  if (!Array.isArray(tierBalances) || tierBalances.length === 0) {
+    throw new Error('[BIVM] computeBmiRoot: tierBalances가 비어있음')
+  }
+
+  // guid 정렬 — 계산 순서가 달라도 항상 같은 루트가 나오도록(결정론성 보장)
+  const sorted = [...tierBalances].sort((a, b) => a.guid.localeCompare(b.guid))
+  const leaves = await Promise.all(
+    sorted.map(({ guid, balance }) => sha256(`${guid}:${balance}`))
+  )
+  return buildMerkleRoot(leaves)
+}
+
+/**
+ * 상위 계층이 이전 루트에 "합법적 거래만" 반영해 재계산한 값(recomputedRoot)과
+ * 하위 계층이 보고한 루트(reportedRoot)를 대조한다.
+ * 불일치 시 무단 잔액 변경(위변조)으로 판정 — 호출자가 LPBFT 발동 여부를 결정한다.
+ *
+ * @param {string} reportedRoot   - 하위 계층이 보고한 BMI 루트
+ * @param {string} recomputedRoot - 상위 계층이 독립적으로 재계산한 BMI 루트
+ * @returns {boolean} true면 일치(정상), false면 불일치(위변조 의심)
+ */
+export function verifyBmiRoot(reportedRoot, recomputedRoot) {
+  return reportedRoot === recomputedRoot
 }

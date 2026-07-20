@@ -11175,14 +11175,21 @@ async function _computeUserHash(txHash, blockHash, height) {
 // 요청에 정확히 맞추려면 판매자 쪽도 봐야 한다. L1이 독립적으로 계산해
 // 돌려준 seller_claim.amount가, 원래 보내려던 판매자 몫(outputs 중
 // gopang-platform이 아닌 첫 수취인)과 정확히 일치하는지도 검증한다.
+// [2026-07 통합 수정] 허용오차를 src/openhash/bivm.js의 BIVM_CONST.EPSILON과
+// 일치시킨다. 기존 0.01은 bivm.js의 1e-9보다 1,000만 배 느슨해서, 클라이언트
+// (GDC 송금 등 bivm.js 경유)와 서버(이 파일)가 서로 다른 기준으로 같은 이름의
+// 검증을 하고 있었다 — 정본은 bivm.js이므로 여기 값을 반드시 함께 맞춘다.
+// 정본: src/openhash/bivm.js BIVM_CONST.EPSILON — 그쪽을 고치면 이 값도 같이 고칠 것.
+const _BIVM_EPSILON = 1e-9;
+
 function verifyOutputConsistency(l1Response, outputs) {
   const l1BuyerTotal  = l1Response.buyer_claim?.amount  || 0;
   const l1SellerTotal = l1Response.seller_claim?.amount || 0;
   const calcTotal     = outputs.reduce((s, o) => s + (o.amount || 0), 0);
   const calcSellerNet = outputs.find(o => o.recipient_guid !== 'gopang-platform')?.amount || 0;
 
-  const buyerConsistent  = Math.abs(l1BuyerTotal  - calcTotal)     < 0.01;
-  const sellerConsistent = Math.abs(l1SellerTotal - calcSellerNet) < 0.01;
+  const buyerConsistent  = Math.abs(l1BuyerTotal  - calcTotal)     < _BIVM_EPSILON;
+  const sellerConsistent = Math.abs(l1SellerTotal - calcSellerNet) < _BIVM_EPSILON;
   const consistent = buyerConsistent && sellerConsistent;
 
   if (!consistent) {
@@ -11205,7 +11212,7 @@ function verifyDeltaZero(outputs, balanceClaimed) {
   const buyerDebit  = sellerNet + platformFee;
   const sigmaDelta  = Math.abs(buyerDebit - sellerNet - platformFee);
 
-  if (sigmaDelta > 0.01) {
+  if (sigmaDelta > _BIVM_EPSILON) {
     console.error('[BIVM] Σδ ≠ 0 — 집합 잔액 불변성 위반!',
       JSON.stringify({ buyerDebit, sellerNet, platformFee, sigmaDelta }));
     return { valid: false, sigmaDelta };

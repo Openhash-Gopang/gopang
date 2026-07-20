@@ -45,6 +45,15 @@ export const PLSM = Object.freeze({
       low:  Object.freeze({ L1:   0, L2:   0, L3: 600, L4: 900, L5: 1000 }),
       high: Object.freeze({ L1:   0, L2:   0, L3: 250, L4: 700, L5: 1000 }),
     }),
+    // [2026-07 추가] 표1 L4 행 — 지금까지 L1~L3만 있어 국가 단위(L4) 앵커링이
+    // 필요한 거래는 전부 단일분포 폴백으로 빠지고 있었다. 논문 표1 그대로 이식.
+    //   LCAT  중요도  L1  L2  L3  L4  L5
+    //   L4    저       0   0   0  70  30
+    //   L4    고       0   0   0  40  60
+    L4: Object.freeze({
+      low:  Object.freeze({ L1: 0, L2: 0, L3: 0, L4: 700, L5: 1000 }),
+      high: Object.freeze({ L1: 0, L2: 0, L3: 0, L4: 400, L5: 1000 }),
+    }),
   }),
 })
 
