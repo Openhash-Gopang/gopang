@@ -575,7 +575,13 @@ async function handleDeviceLinkDeliver(request, env, corsHeaders) {
   record.sealed = sealed;
   // PC가 가져갈 시간만 짧게 더 준다 — 폰이 봉투를 보낸 뒤에도 무기한
   // 남아있으면 안 되므로(암호화된 봉투라도 최소한으로만 존재).
-  await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: 30 });
+  // ★ 2026-07-20 버그 수정 — 원래 30초로 뒀는데, Cloudflare KV는
+  // expirationTtl 최솟값이 60초라 이 PUT 자체가 매번 "400 Invalid
+  // expiration_ttl of 30" 예외를 던지고 있었다(wrangler tail로 실사
+  // 확인). 이게 device-link 흐름에서 "verify는 성공하는데 deliver만
+  // 항상 실패"하던 진짜 원인 — 다른 문제들(전화번호 형식·VAPID·L1
+  // 장애 등)에 가려 이 코드까지 실행이 도달한 게 이번이 처음이었다.
+  await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: 60 });
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
 }
 
