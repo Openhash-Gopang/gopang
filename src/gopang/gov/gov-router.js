@@ -629,6 +629,42 @@ const SEJONG_L2_TABLE = [
     kw: ['도농상생국', '농업', '농촌'] },
 ];
 
+
+// ── 충북 L2 라우팅 테이블 (2026-07-20 최초 실사) ─────────────────
+// 원형 도메인 16개 중 충북이 보유한 14개(health/ocean 없음) 채움. 근거:
+// chungbuk.go.kr 공식 조직도. family는 국이 아니라 도지사 직속 '관'
+// (양성평등가족정책관) — 조직 규모가 작아도 라우팅 코드는 동일하게 부여.
+const CHUNGBUK_L2_TABLE = [
+  { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'chungbuk', file: null,
+    kw: ['기획관리실', '인구청년정책', '법무혁신'] },
+  { code: 'SP-DO-SAFETY', domain: 'safety', 도코드: 'chungbuk', file: null,
+    kw: ['재난안전실', '사회재난', '자연재난', '재난'] },
+  { code: 'SP-DO-JACHI', domain: 'jachi', 도코드: 'chungbuk', file: null,
+    kw: ['행정국'] },
+  { code: 'SP-DO-ECON', domain: 'econ', 도코드: 'chungbuk', file: null,
+    kw: ['경제통상국', '경제기업', '일자리정책', '소상공인', '에너지', '국제통상'] },
+  { code: 'SP-DO-INNOV', domain: 'innov', 도코드: 'chungbuk', file: null,
+    kw: ['신성장산업국', '바이오산업', '방사광가속기', '과학기술'] },
+  { code: 'SP-DO-WELFARE', domain: 'welfare', 도코드: 'chungbuk', file: null,
+    kw: ['보건복지국', '기초생활수급', '기초연금', '보건', '복지'] },
+  { code: 'SP-DO-FAMILY', domain: 'family', 도코드: 'chungbuk', file: null,
+    kw: ['양성평등가족정책관', '여성가족', '임신', '출산', '보육'] },
+  { code: 'SP-DO-AGRI', domain: 'agri', 도코드: 'chungbuk', file: null,
+    kw: ['농정국', '농업정책', '스마트농산', '농식품유통', '축수산', '동물방역'] },
+  { code: 'SP-DO-CLIMATE', domain: 'climate', 도코드: 'chungbuk', file: null,
+    kw: ['환경산림국', '환경', '산림'] },
+  { code: 'SP-DO-HOUSING', domain: 'housing', 도코드: 'chungbuk', file: null,
+    kw: ['균형건설국', '주택', '건설'] },
+  { code: 'SP-DO-TRANSPORT', domain: 'transport', 도코드: 'chungbuk', file: null,
+    kw: ['균형건설국', '교통'] },
+  { code: 'SP-DO-CULTURE', domain: 'culture', 도코드: 'chungbuk', file: null,
+    kw: ['문화체육관광국', '문화'] },
+  { code: 'SP-DO-TOURISM', domain: 'tourism', 도코드: 'chungbuk', file: null,
+    kw: ['관광'] },
+  { code: 'SP-DO-SPORTS', domain: 'sports', 도코드: 'chungbuk', file: null,
+    kw: ['체육'] },
+];
+
 const PROVINCE_TABLES = {
   jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE },
   // busan: L2만 실사 완료(2026-07-20). city(자치구·군 16개)/national은 아직 미착수 —
@@ -639,6 +675,7 @@ const PROVINCE_TABLES = {
   daejeon: { l2: DAEJEON_L2_TABLE, city: [], national: [] },
   ulsan: { l2: ULSAN_L2_TABLE, city: [], national: [] },
   sejong: { l2: SEJONG_L2_TABLE, city: [], national: [] },
+  chungbuk: { l2: CHUNGBUK_L2_TABLE, city: [], national: [] },
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }

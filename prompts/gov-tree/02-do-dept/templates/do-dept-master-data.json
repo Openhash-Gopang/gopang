@@ -1,5 +1,5 @@
 {
-  "_schema_설명": "도(道) 단위 부서 데이터. 하나의 domain(예: welfare)에 여러 도(道코드)가 각자 레코드를 등록한다. 렌더링은 jeju-router.js의 _renderDeptTemplate()이 domain으로 template을 찾고, 도코드로 이 배열에서 해당 레코드를 찾아 자리표시자를 채운다. 이 파일은 gopang/prompts/Jejudo/02-do-dept/templates/ 아래 있지만 향후 도별 프로젝트가 늘면 Jejudo 밖(prompts/ 최상위 공용 위치)으로 옮기는 것을 검토할 것 — 지금은 jeju가 유일한 구현체라 이 위치에 둔다. 2026-07-13 추가: '개편예정_문구' 필드 신설 — 도의회 심사 등으로 아직 확정되지 않은 조직개편 내용을 '구명칭_문구'(이미 확정된 과거 개편)와 구분해 추적한다. 확정되면 부서명/산하과목록 등 실제 필드를 갱신하고 이 필드는 '구명칭_문구'로 이동한다. | 2026-07-20: 원형 도메인 13→16 확장(health/family/sports 신설) — 도별로 조직이 통합/분리된 경우를 모두 지원. 인스턴스가 해당 슬롯 레코드를 갖고 있지 않으면 그 도는 상위(통합된) 도메인이 흡수한다. | 2026-07-20: 서울 14개 도메인 신설(agri/ocean 없음 — 도심형 광역시라 별도 농수산 국이 없음을 확인, 정상적 공백). | 2026-07-20: 인천 8개 레코드 추가 — ⚠️ 전부 2026-08 시행 예정(안) 기준, 시의회 통과 전(TBD). safety/jachi/culture/tourism/sports/agri/ocean/health는 이번 개편 보도에 언급 없어 미확인 — 레코드 미생성. | 2026-07-20: 대전 10개 도메인 신설(확인된 것만 — housing/transport/climate/family/agri/ocean은 미확인이라 레코드 없음). ⚠️ 민선 9기(허태정) 조직개편 여부 미확인. | 2026-07-20: 울산 13개 도메인 신설(family/agri/ocean 없음 — family는 복지보훈여성국 통합, agri/ocean은 국 단위 조직 미확인). | 2026-07-20: 세종 12개 도메인 신설(innov/family/health/ocean 없음 — innov는 미확인, family/health는 보건복지국 통합, ocean은 내륙이라 정상 공백).",
+  "_schema_설명": "도(道) 단위 부서 데이터. 하나의 domain(예: welfare)에 여러 도(道코드)가 각자 레코드를 등록한다. 렌더링은 jeju-router.js의 _renderDeptTemplate()이 domain으로 template을 찾고, 도코드로 이 배열에서 해당 레코드를 찾아 자리표시자를 채운다. 이 파일은 gopang/prompts/Jejudo/02-do-dept/templates/ 아래 있지만 향후 도별 프로젝트가 늘면 Jejudo 밖(prompts/ 최상위 공용 위치)으로 옮기는 것을 검토할 것 — 지금은 jeju가 유일한 구현체라 이 위치에 둔다. 2026-07-13 추가: '개편예정_문구' 필드 신설 — 도의회 심사 등으로 아직 확정되지 않은 조직개편 내용을 '구명칭_문구'(이미 확정된 과거 개편)와 구분해 추적한다. 확정되면 부서명/산하과목록 등 실제 필드를 갱신하고 이 필드는 '구명칭_문구'로 이동한다. | 2026-07-20: 원형 도메인 13→16 확장(health/family/sports 신설) — 도별로 조직이 통합/분리된 경우를 모두 지원. 인스턴스가 해당 슬롯 레코드를 갖고 있지 않으면 그 도는 상위(통합된) 도메인이 흡수한다. | 2026-07-20: 서울 14개 도메인 신설(agri/ocean 없음 — 도심형 광역시라 별도 농수산 국이 없음을 확인, 정상적 공백). | 2026-07-20: 인천 8개 레코드 추가 — ⚠️ 전부 2026-08 시행 예정(안) 기준, 시의회 통과 전(TBD). safety/jachi/culture/tourism/sports/agri/ocean/health는 이번 개편 보도에 언급 없어 미확인 — 레코드 미생성. | 2026-07-20: 대전 10개 도메인 신설(확인된 것만 — housing/transport/climate/family/agri/ocean은 미확인이라 레코드 없음). ⚠️ 민선 9기(허태정) 조직개편 여부 미확인. | 2026-07-20: 울산 13개 도메인 신설(family/agri/ocean 없음 — family는 복지보훈여성국 통합, agri/ocean은 국 단위 조직 미확인). | 2026-07-20: 세종 12개 도메인 신설(innov/family/health/ocean 없음 — innov는 미확인, family/health는 보건복지국 통합, ocean은 내륙이라 정상 공백). | 2026-07-20: 충북 14개 도메인 신설(health/ocean 없음 — health는 보건복지국 통합, ocean은 내륙도라 정상 공백). ★ family가 국이 아니라 도지사 직속 \"관\" 단위인 특이 사례.",
   "부서목록": [
     {
       "domain": "welfare",
@@ -1717,6 +1717,244 @@
       "콜센터번호": "TBD (044-120으로 추정, 미확인)",
       "콜센터운영시간": "TBD",
       "_비고": "2026-07-20 최초 실사(sejong.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "plan",
+      "template": "SP-DEPT-PLAN-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "기획관리실",
+      "산하과목록": "정책기획관, 예산담당관, 인구청년정책담당관, 세정담당관, 법무혁신담당관",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "safety",
+      "template": "SP-DEPT-SAFETY-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "재난안전실",
+      "산하과목록": "안전정책과, 사회재난과, 자연재난과",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "jachi",
+      "template": "SP-DEPT-JACHI-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "행정국",
+      "산하과목록": "산하과 미확인(TBD)",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "econ",
+      "template": "SP-DEPT-ECON-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "경제통상국",
+      "산하과목록": "경제기업과, 일자리정책과, 소상공인정책과, 에너지과, 국제통상과",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "innov",
+      "template": "SP-DEPT-INNOV-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "신성장산업국",
+      "산하과목록": "산하과 미확인(TBD) — ★ 바이오산업국(별도 국)·방사광가속기추진지원단(한시조직)도 혁신산업 관련 별도 조직으로 존재해 innov 기능이 3갈래로 나뉨. 구버전 자료에는 '과학인재국'이라는 이름으로 나오는데, 최신 공식 페이지에는 없어 개편·개칭된 것으로 추정(미확정).",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "welfare",
+      "template": "SP-DEPT-WELFARE-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "보건복지국",
+      "산하과목록": "산하과 미확인(TBD) — 보건 통합, health 별도 도메인 레코드는 미생성.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "family",
+      "template": "SP-DEPT-FAMILY-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "양성평등가족정책관",
+      "산하과목록": "산하과 미확인(TBD) — ★ 다른 도처럼 '국' 단위가 아니라 도지사 직속의 '관'(정책관) 단위로 존재하는 특이 형태. 대변인·감사관과 같은 급으로 편성돼 있음.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "agri",
+      "template": "SP-DEPT-AGRI-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "농정국",
+      "산하과목록": "농업정책과, 스마트농산과, 농식품유통과, 축수산과, 동물방역과",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "climate",
+      "template": "SP-DEPT-CLIMATE-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "환경산림국",
+      "산하과목록": "산하과 미확인(TBD)",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "housing",
+      "template": "SP-DEPT-HOUSING-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "균형건설국",
+      "산하과목록": "산하과 미확인(TBD) — 주택·교통이 분리되지 않고 '균형건설국' 하나로 통합(지역균형 발전 관점이 강조된 명칭으로 보임).",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "transport",
+      "template": "SP-DEPT-TRANSPORT-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "균형건설국",
+      "산하과목록": "housing과 동일 부서(균형건설국) — domain만 분리.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "culture",
+      "template": "SP-DEPT-CULTURE-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "문화체육관광국",
+      "산하과목록": "산하과 미확인(TBD) — 경기·대구·울산·세종과 동일하게 문화·체육·관광 통합.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "tourism",
+      "template": "SP-DEPT-TOURISM-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "문화체육관광국",
+      "산하과목록": "culture와 동일 부서 — domain만 분리.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "sports",
+      "template": "SP-DEPT-SPORTS-TEMPLATE_v1.0.md",
+      "도코드": "chungbuk",
+      "도이름": "충청북도",
+      "부서명": "문화체육관광국",
+      "산하과목록": "culture와 동일 부서 — domain만 분리.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (043-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(chungbuk.go.kr 공식 조직도).",
       "결재핸들러": {
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
