@@ -258,14 +258,27 @@ self.addEventListener('notificationclick', (event) => {
   const sound = event.notification.data?.sound || 'ping';
   const tag   = event.notification.tag || '';
 
+  // ★ 2026-07-20 발견·수정 — device-link(기기 간 지갑 이전 승인) 알림은
+  // 사용자가 명시적으로 특정 화면(코드 확인·승인 화면)으로 가려고 누른
+  // 것인데, 앱이 이미 열려있으면 아래 로직이 "포커스만 하고 postMessage엔
+  // url을 아예 안 담아" 보내서 기존 창이 원래 있던 화면(보통 채팅창)에
+  // 그대로 머물렀다 — 실사로 확인(알림을 눌러도 혼디 앱은 열리는데
+  // 코드 화면이 안 뜨던 원인). device-link 알림에 한해서만 이미 열린
+  // 창도 승인 화면으로 강제 이동시킨다 — 다른 알림(메시지 도착 등)은
+  // 사용자가 보고 있던 화면을 뺏지 않도록 기존 동작(포커스만) 유지.
+  const isDeviceLink = tag.startsWith('gopang-device-link-');
+
   event.waitUntil(
     Promise.all([
       _reportConsentReceipt(tag, 'acknowledged'),
-      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (list) => {
         // 이미 열린 창이 있으면 포커스 + postMessage (리스너가 이미 살아있음)
         for (const client of list) {
           if (client.url.startsWith(self.location.origin) && 'focus' in client) {
             client.postMessage({ type: 'PLAY_SOUND', sound });
+            if (isDeviceLink && 'navigate' in client) {
+              try { await client.navigate(url); } catch (e) { console.warn('[SW] navigate 실패:', e.message); }
+            }
             return client.focus();
           }
         }
