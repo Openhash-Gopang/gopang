@@ -363,6 +363,33 @@ function _extractPersonaVersion(promptText) {
   } catch { return null; }
 }
 
+// §4 사고실험 대응(2026-07-20) — 명시적 1탭 평가. 텍스트 입력을 받지 않으므로
+// 판독(감정분석 등)이 필요 없다. 응답이 없으면(4초 타임아웃) null로 진행 —
+// 강제하지 않는다. 무응답 자동 종료(reason==='timeout') 경로에서는 애초에
+// 사용자가 자리에 없다는 뜻이므로 아예 호출하지 않는다(아래 참조).
+function _captureExplicitRating() {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (done) return; done = true; resolve(v); };
+    const box = appendBubble('ai',
+      `<div style="display:flex;align-items:center;gap:10px">
+        <span>이번 상담, 도움이 되셨나요?</span>
+        <button id="rate-up" style="border:none;background:none;font-size:20px;cursor:pointer">👍</button>
+        <button id="rate-down" style="border:none;background:none;font-size:20px;cursor:pointer">👎</button>
+      </div>`
+    );
+    box.querySelector('#rate-up')?.addEventListener('click', () => {
+      box.innerHTML = '<span style="color:var(--label-3)">평가 감사합니다 👍</span>';
+      finish('up');
+    });
+    box.querySelector('#rate-down')?.addEventListener('click', () => {
+      box.innerHTML = '<span style="color:var(--label-3)">평가 감사합니다 👎</span>';
+      finish('down');
+    });
+    setTimeout(() => finish(null), 4000);
+  });
+}
+
 // §7 기관측 PDV 기록 — 세션 종료 경로(명시적 종료 발화 / 10분 타임아웃)
 // 양쪽에서 공용으로 호출한다. how 필드는 도달 경로로 구분한다(§7.4):
 //   - 상담 중 CONNECT_HUMAN_EXPERT가 한 번이라도 호출됐으면 정상 설계된
@@ -399,6 +426,10 @@ async function _recordExpertOwnerPDV(reason) {
   else if (reason === 'timeout') how = 'early_exit';
   else how = 'completed';
 
+  // §4 — 무응답 타임아웃 경로는 사용자가 이미 자리에 없으므로 평가를 묻지
+  // 않는다. 그 외 경로만 4초짜리 짧은 창을 준다(대화 흐름 지연 최소화).
+  const explicitRating = (reason === 'timeout') ? null : await _captureExplicitRating();
+
   const lastUserTurn = [...messages].reverse().find(m => m.role === 'user');
   const what = typeof lastUserTurn?.content === 'string'
     ? lastUserTurn.content.slice(0, 80)
@@ -415,6 +446,7 @@ async function _recordExpertOwnerPDV(reason) {
     why: null,
     when: _sessionStartedAt,
     where: location.href,
+    outcomeSignals: { explicit_rating: explicitRating },
   }).catch(e => console.warn('[Expert] §7 기관측 PDV 기록 실패(무시):', e.message));
 }
 
@@ -455,6 +487,18 @@ async function sendTurn(text, attachment) {
     });
     messages.push({ role: 'assistant', content: full });
 
+    // ── [EXPERT_DONE] 태그 감지 (2026-07-20, C45 신설) ──────────────
+    // 정규식 기반 종료 감지(아래 TERMINATION_RE)의 오탐지 문제(상담 내용
+    // 자체에 "그만" 등이 등장하면 조기 종료)를 보완 — 페르소나 자신이
+    // 대화 맥락으로 판단해 이 태그를 낸다. 사용자에게는 노출하지 않는다
+    // (C39의 [CONNECT_HUMAN_EXPERT:] 클라이언트 처리 의무와 동일 패턴).
+    const doneTagMatch = full.match(/\s*\[EXPERT_DONE\]\s*$/);
+    if (doneTagMatch) {
+      const cleaned = full.slice(0, doneTagMatch.index).trim();
+      aiBubble.innerHTML = escHtml(cleaned).replace(/\n/g, '<br>');
+      messages[messages.length - 1].content = cleaned; // 대화 이력에 태그가 남지 않도록 정리
+    }
+
     // ── [WEB_SEARCH: query=...] 태그 감지 (2026-07-19 신설) ──────────
     // 배경: worker.js의 /web-search(Serper.dev 연동, 일일예산캡·캐싱 포함)와
     // call-ai.js의 _handleWebSearchTag()가 그림자 AI(AC) 쪽엔 이미 있었지만,
@@ -474,9 +518,11 @@ async function sendTurn(text, attachment) {
       await _connectHumanExpert(connectMatch[1].trim());
     }
 
-    if (TERMINATION_RE.test(text)) {
+    if (TERMINATION_RE.test(text) || doneTagMatch) {
+      // 45-3(SP_common_guardrails C45) — 정규식(빠른 경로)과 [EXPERT_DONE]
+      // (페르소나 판단) 중 하나라도 트리거되면 종료. 둘 다 걸려도 문구는 하나만.
       appendBubble('ai', `상담을 종료합니다. 고팡 화면으로 돌아갑니다…`);
-      await _recordExpertOwnerPDV('user_phrase'); // §7 기관측 PDV (2026-07-20)
+      await _recordExpertOwnerPDV(doneTagMatch && !TERMINATION_RE.test(text) ? 'expert_judged' : 'user_phrase'); // §7 기관측 PDV
       setTimeout(() => { location.href = RETURN; }, 1200);
     }
   } catch (e) {

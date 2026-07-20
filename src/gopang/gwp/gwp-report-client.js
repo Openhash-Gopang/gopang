@@ -215,6 +215,9 @@ export async function recordOwnerPDV({
   detail = null, // 2026-07-20 신설 — own_output 전용 구조화 데이터(K-서비스마다
                   // 스키마가 다름). 예: K-Law 판결문 { case_no, klaw_version,
                   // score_total, grade }. consultation이면 항상 무시(null)된다.
+  outcomeSignals = null, // 2026-07-20 신설(#4) — 문장/단어 판독이 아닌 구조화된
+                  // 행동 신호. 예: { explicit_rating: 'up'|'down' }. consultation/
+                  // own_output 공통으로 쓸 수 있다.
   proxyBase = DEFAULT_PROXY,
 } = {}) {
   if (!ownerAgency) throw new Error('[gwp-report-client] recordOwnerPDV: ownerAgency 필수');
@@ -239,6 +242,7 @@ export async function recordOwnerPDV({
     how,
     why,
     detail: recordType === 'own_output' ? (detail || null) : null,
+    outcome_signals: outcomeSignals || null,
     source_ref: null, // 원문 미저장 원칙(SP_PDV §1/§7.3)
     confidence: 1,
   };
