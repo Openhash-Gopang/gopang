@@ -3764,6 +3764,14 @@ async function handleSigunguDeptResolve(request, url, env, corsHeaders, ctx) {
     return _err(400, 'UNKNOWN_DOMAIN', `알 수 없는 domain: ${domain}`, corsHeaders);
   }
 
+  const _sigunguDebug = {
+    has_web_search_key: !!env.WEB_SEARCH_API_KEY,
+    has_kv: !!env.GOV_DATA_KV,
+    has_l1_admin: !!(env.L1_ADMIN_EMAIL && env.L1_ADMIN_PASSWORD),
+    has_waituntil: !!ctx?.waitUntil,
+  };
+  console.log('[sigungu-dept-resolve] 진단:', JSON.stringify(_sigunguDebug));
+
   const cacheKey = `gov-data:sigungu-dept:${cityGuess}:${domain}`;
   if (env.GOV_DATA_KV) {
     try {
@@ -3818,7 +3826,7 @@ async function handleSigunguDeptResolve(request, url, env, corsHeaders, ctx) {
     ctx.waitUntil(bgTask.catch((e) => console.error('[sigungu-dept-resolve] 백그라운드 실패:', e.message)));
   }
 
-  return new Response(JSON.stringify({ text: fallbackText, verified: false, source: 'template_fallback' }),
+  return new Response(JSON.stringify({ text: fallbackText, verified: false, source: 'template_fallback', _debug: _sigunguDebug }),
     { headers: corsHeaders });
 }
 
