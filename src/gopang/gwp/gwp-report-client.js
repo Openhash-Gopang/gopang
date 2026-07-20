@@ -24,6 +24,15 @@
  *   </script>
  * 기존 로컬 _reportSessionEnd() 정의는 삭제하고 호출부(대화 종료 지점)는
  * 그대로 둔다 — 함수 시그니처(resultText, summaryLine)를 그대로 유지했다.
+ *
+ * 사용법 (전문가 페르소나 세션, expert-session.js — 2026-07-20 신설):
+ *   import { recordOwnerPDV } from 'https://hondi.net/src/gopang/gwp/gwp-report-client.js';
+ *   await recordOwnerPDV({
+ *     ownerAgency: EXPERT_REGISTRY[personaKey].ownerAgency,
+ *     recordType: 'consultation', guid: userGuid,
+ *     personaKey, personaVersion, what: summaryLine, how: outcomeType,
+ *   });
+ * 자세한 스키마·가드레일은 prompts/SP_PDV_v1_2.md §7 참조.
  */
 
 const DEFAULT_PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
@@ -121,4 +130,91 @@ export async function reportGwpSessionEnd({
   }
 
   return { reported: true, sessionId: sid };
+}
+
+/**
+ * recordOwnerPDV — §7(기관측 PDV, SP_PDV v1.2) 기록 함수 (2026-07-20 신설)
+ *
+ * reportGwpSessionEnd()의 (a) "서브시스템 자기 PDV"와 목적이 다르다: 그쪽은
+ * K-서비스가 실명 GUID + 원문 전체를 자기 운영용으로 남기는 기존 메커니즘이고,
+ * 이 함수는 소유 K-서비스(ownerAgency)가 만족도/성과 분석·SP 개정 근거로 쓰는
+ * 가명화·요약 전용 거버넌스 레코드를 남긴다. 둘은 별개이며 서로 대체하지 않는다.
+ *
+ * 호출 주체는 두 종류다:
+ *   - 전문가 페르소나 세션 (expert-session.js): recordType='consultation',
+ *     personaKey/personaVersion 필수, guid 필수(해싱 대상).
+ *   - K-서비스 자신의 고유 산출물 (예: K-Law 가상 판결문): recordType='own_output',
+ *     personaKey/personaVersion 없음, guid는 특정 상대가 없으면 생략 가능.
+ *
+ * 중요 — guid는 여기서 평문 그대로 프록시로 전송된다. §7.2의 who_hash =
+ * SHA256(userGuid + ownerAgency_salt) 계산은 반드시 프록시(Worker, salt는
+ * 서버 비밀)에서 수행해야 한다. 클라이언트에서 해시하면 salt가 번들에
+ * 노출되어 GUID(uuidv5(phone_number), 결정론적)를 전화번호 전수조사로
+ * 역산할 수 있게 되므로 "역추적 불가" 원칙이 무력화된다 — 프록시 구현은
+ * 이 저장소 범위 밖(별도 인프라 레포)이며, 반드시 해시 후에만
+ * `<ownerAgency>_pdv`에 저장해야 한다(원문 guid를 그대로 영속화 금지).
+ *
+ * @param {Object} opts
+ * @param {string} opts.ownerAgency        - 소유 K-서비스 id (예: 'klaw'). expert-registry.js의 ownerAgency와 동일
+ * @param {'consultation'|'own_output'} [opts.recordType='consultation']
+ * @param {string} [opts.guid]             - 사용자 GUID (consultation이면 필수, 프록시에서 해싱됨)
+ * @param {string} [opts.personaKey]       - consultation일 때만 (예: 'lawyer')
+ * @param {string} [opts.personaVersion]   - 세션 시점 SP 버전 (예: 'v4.1')
+ * @param {string} opts.what               - 무엇을 처리했는지 1문장 요약
+ * @param {'completed'|'escalated_success'|'escalated_ai_limit'|'early_exit'} opts.how
+ * @param {string} [opts.why]              - 목적 태그
+ * @param {string} [opts.when]             - 없으면 now
+ * @param {string} [opts.where]            - 없으면 location.href
+ * @param {string} [opts.proxyBase]
+ * @returns {Promise<{recorded: boolean, recordId: string}>}
+ */
+export async function recordOwnerPDV({
+  ownerAgency,
+  recordType = 'consultation',
+  guid,
+  personaKey = null,
+  personaVersion = null,
+  what,
+  how,
+  why = null,
+  when,
+  where,
+  proxyBase = DEFAULT_PROXY,
+} = {}) {
+  if (!ownerAgency) throw new Error('[gwp-report-client] recordOwnerPDV: ownerAgency 필수');
+  if (recordType === 'consultation' && !guid) {
+    throw new Error('[gwp-report-client] recordOwnerPDV: consultation 레코드는 guid 필수(해싱은 프록시가 수행)');
+  }
+  if (!what || !how) {
+    throw new Error('[gwp-report-client] recordOwnerPDV: what/how 필수');
+  }
+
+  const now = new Date().toISOString();
+  const record = {
+    record_id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2),
+    record_type: recordType,
+    owner_agency: ownerAgency,
+    persona_key: recordType === 'consultation' ? personaKey : null,
+    persona_version: recordType === 'consultation' ? personaVersion : null,
+    guid_for_hashing: guid || null, // 프록시가 해싱 후 폐기 — <ownerAgency>_pdv에는 who_hash만 저장
+    when: when || now,
+    where: where || (typeof location !== 'undefined' ? location.href : null),
+    what,
+    how,
+    why,
+    source_ref: null, // 원문 미저장 원칙(SP_PDV §1/§7.3)
+    confidence: 1,
+  };
+
+  try {
+    const res = await fetch(proxyBase + '/owner-pdv/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ record }),
+    });
+    return { recorded: res.ok, recordId: record.record_id };
+  } catch (e) {
+    console.warn('[owner-pdv] 기록 실패(무시):', e.message);
+    return { recorded: false, recordId: record.record_id };
+  }
 }
