@@ -1089,13 +1089,18 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
   visibility:hidden;opacity:0;transition:opacity .2s,visibility .2s;
 }
 #settings-overlay.open{visibility:visible;opacity:1}
+/* 2026-07-20 수정(사용자 지시) — 기존엔 바텀시트(높이 90dvh·너비 최대
+   480px)라 화면의 2/3 정도만 덮고 뒤로 대화창이 비쳐 보였다. 이제
+   전체 화면(100dvh·100%)을 채워 사실상 독립된 페이지처럼 보이게
+   한다 — 슬라이드업 전환 애니메이션(밑에서 올라오는 느낌)은 그대로
+   유지하되 도착 지점을 화면 전체로 넓힌 것뿐이다. */
 #settings-overlay .settings-sheet{
-  width:100%;max-width:480px;background:#fff;
-  border-radius:20px 20px 0 0;
-  padding:0 0 calc(16px + var(--safe-b));
-  max-height:90dvh;overflow-y:auto;
+  width:100%;max-width:none;background:#fff;
+  border-radius:0;
+  padding:0 0 var(--safe-b);
+  height:100dvh;max-height:100dvh;overflow-y:auto;
   transform:translateY(100%);transition:transform .25s;
-  box-shadow:none;height:auto;
+  box-shadow:none;
 }
 #settings-overlay.open .settings-sheet{transform:translateY(0)}
 /* BUG-FIX(2026-07-02, 3차): 바텀시트 팝업 방식은 이미 열려있는

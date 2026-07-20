@@ -188,6 +188,24 @@ html,body{height:100%;background:#fff;color:#111;
   </button>
 </div>
 
+<!-- ── 설정 (2026-07-20 신설 — 사용자 지시) ──
+     2026-07-08 상단 바 삭제로 톱니바퀴(설정) 버튼이 없어진 뒤, 설정
+     화면 자체(settings.js openSettings())는 그대로 있는데 진입로가
+     "AI 비서에게 '설정 열어줘'라고 말하기"뿐이었다 — 좌측 메뉴 맨
+     아래에 직접 누를 수 있는 항목으로 되살린다. openSettings는
+     gopang-app.js가 이미 window.openSettings로 전역 노출해 두고
+     있어(GDC 지갑 항목과 동일한 parent.* 호출 패턴), 새 배선 없이
+     그대로 재사용한다. -->
+<div class="menu-section" style="border-top:1px solid var(--border);padding-top:6px">
+  <button class="menu-item" id="mi-settings" onclick="parent.openSettings && parent.openSettings()">
+    <span class="menu-item-icon">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </span>
+    <span class="menu-item-label">설정</span>
+    <span class="menu-item-arrow">›</span>
+  </button>
+</div>
+
 <div class="menu-footer">혼디 · Gopang Platform</div>
 
 <!-- ── 오른쪽→왼쪽 스와이프로 메뉴 밀어넣기(닫기) ──
@@ -283,6 +301,7 @@ html,body{height:100%;background:#fff;color:#111;
     'mi-gdc-wallet':  '여기를 누르면 내 GDC 지갑을 열어 잔액과 결제 내역을 볼 수 있어요.',
     'mi-notify':      '알림 기능이에요. 아직 준비 중이라 지금은 눌러도 반응하지 않아요.',
     'mi-inbox':       '다른 사람이 보낸 메시지를 모아 보는 곳이에요. 아직 준비 중이에요.',
+    'mi-settings':    '알림·보안·계정 등 혼디 앱의 여러 설정을 한 곳에서 관리할 수 있어요.',
   };
 
   let tipEl = null;
