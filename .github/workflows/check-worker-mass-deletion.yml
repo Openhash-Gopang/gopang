@@ -1,0 +1,40 @@
+name: Check worker.js mass deletion
+
+# 2026-07-20 신설 — worker.js가 같은 계정의 스테일 로컬 체크아웃 커밋으로
+# 두 차례(436e508, 890e434c) 각각 519줄·457줄이 삭제되는 사고가 반복돼
+# 만들었다. "커밋 전 git pull부터"라는 규칙은 그 규칙을 모르거나 깜빡한
+# 세션에는 아무 효력이 없다 — 사람의 기억이 아니라 기계가 push 시점에
+# 자동으로 막도록 함.
+
+"on":
+  push:
+    branches: [main]
+    paths:
+      - 'worker.js'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'worker.js'
+  workflow_dispatch:
+
+jobs:
+  check-mass-deletion:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run mass-deletion check
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+          GITHUB_EVENT_AFTER: ${{ github.event.after }}
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+        run: python3 tools/check_no_mass_deletion.py
