@@ -389,6 +389,7 @@ async function sendTurn(text, attachment) {
     // 뜻이다(주피터 지적으로 발견). AC와 동일한 백엔드(/web-search)를 그대로
     // 재사용하고, 결과 재주입 후 한 번 더 응답을 받는 흐름도 동일하게 맞춘다.
     await _maybeHandleWebSearch(full);
+    await _maybeHandleOrchestrationTags(full);
 
     // ── [CONNECT_HUMAN_EXPERT: 업종키워드] 태그 감지 (2026-07-06, C39 신설) ──
     // SP-COMMON-02 C39가 요구하는 "인간 전문가 연결"을 실제로 수행한다.
@@ -490,6 +491,122 @@ async function _maybeHandleWebSearch(fullReply, depth = 0) {
   // 이어진 응답이 또 검색을 요청하면(예: 1차 검색으로 부족했던 경우) depth+1로
   // 재귀 — 2회 한도에 도달하면 위에서 조용히 종료.
   await _maybeHandleWebSearch(full, depth + 1);
+}
+
+// ── PROCEDURE_MAP_LOOKUP/DRAFT/UPDATE + CALL_GOVSYS 처리 (2026-07-20 신설) ──
+// call-ai.js의 동일 이름 핸들러(§0-H 부근)를 그대로 이식한다 — 같은 백엔드
+// (worker.js의 /orchestration/procedure-map*, /orchestration/execute-atom),
+// 같은 정규식, 같은 정직한 한계(PROCEDURE_MAP_DRAFT는 goal 필드만 안전하게
+// 추출하고 steps 등 구조화 필드는 아직 파싱하지 않음 — call-ai.js 원본 주석과
+// 동일한 이유: 태그 바디가 완전한 JSON이 아니라 준-JSON 자유 텍스트라서다).
+//
+// call-ai.js와 다른 점 — 딱 하나, 의도적: 원본은
+// `if (CFG.system?.includes('K-Compose') || CFG.system?.includes('K-Deliver'))`
+// 로 게이트돼 있다. 이건 K-Compose/K-Deliver가 AC의 System Prompt로 전환된
+// 상태에서만 작동하게 만든 것인데, expert-chat.html에서는 CFG.system이 애초에
+// 항상 "이 페르소나 자신"이라 그런 게이트 자체가 성립하지 않는다(무엇과
+// 비교해 켤지 대상이 없음). SP_lawyer STEP R이 K-Compose 전용으로 설계된
+// 태그를 빌려 쓰면서 이 게이트에 원천적으로 걸릴 수밖에 없었던 것도 이번에
+// 함께 확인됐다 — 그래서 게이트를 빼고 이식한다(K-Compose가 아닌 페르소나가
+// 써도 안전한 범용 오케스트레이션 프리미티브이므로 무해하다).
+async function _maybeHandleOrchestrationTags(fullReply) {
+  const updateMatch = fullReply.match(/\[PROCEDURE_MAP_UPDATE:\s*goal=([^,\]]+)/);
+  if (updateMatch && fullReply.includes('[PROCEDURE_MAP_UPDATE:')) {
+    console.log('[Expert] PROCEDURE_MAP_UPDATE 감지 — worker.js 갱신 요청');
+    let resultText;
+    try {
+      const res = await fetch(`${RELAY_ENDPOINT}/orchestration/procedure-map/update`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal: updateMatch[1].trim(), changes: [] }),
+      });
+      resultText = JSON.stringify(await res.json().catch(() => ({ status: res.status })));
+    } catch (e) {
+      resultText = `{"error":"${e.message}"}`;
+    }
+    messages.push({ role: 'user', content: `[PROCEDURE_MAP_UPDATE 결과] ${resultText}` });
+    await _continueAfterOrchestrationTag();
+    return;
+  }
+
+  const lookupMatch = fullReply.match(/\[PROCEDURE_MAP_LOOKUP:\s*goal=([^\]]+)\]/);
+  if (lookupMatch) {
+    console.log('[Expert] PROCEDURE_MAP_LOOKUP 감지 — worker.js 조회');
+    let resultText;
+    try {
+      const res = await fetch(`${RELAY_ENDPOINT}/orchestration/procedure-map?goal=${encodeURIComponent(lookupMatch[1].trim())}`);
+      resultText = res.ok ? JSON.stringify(await res.json()) : `{"error":"HTTP ${res.status}"}`;
+    } catch (e) {
+      resultText = `{"error":"${e.message}"}`;
+    }
+    messages.push({ role: 'user', content: `[PROCEDURE_MAP_LOOKUP 결과] ${resultText}` });
+    await _continueAfterOrchestrationTag();
+    return;
+  }
+
+  const draftMatch = fullReply.match(/\[PROCEDURE_MAP_DRAFT:([\s\S]*)\]$/m);
+  if (draftMatch && fullReply.includes('[PROCEDURE_MAP_DRAFT:')) {
+    console.log('[Expert] PROCEDURE_MAP_DRAFT 감지 — worker.js 등재 요청');
+    // ★ 정직한 한계(call-ai.js 원본과 동일) ★ goal 필드만 안전하게 추출한다
+    // — steps 등 구조화 필드는 이번 배선에서 전달하지 않는다.
+    const goalM = draftMatch[1].match(/goal=([^,\]]+)/);
+    let resultText;
+    if (!goalM) {
+      resultText = '{"error":"goal 필드를 이 태그 바디에서 못 찾음 — 등재 생략"}';
+    } else {
+      try {
+        const res = await fetch(`${RELAY_ENDPOINT}/orchestration/procedure-map/draft`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ goal: goalM[1].trim(), domain: '', steps: [] }),
+        });
+        resultText = JSON.stringify(await res.json().catch(() => ({ status: res.status })));
+      } catch (e) {
+        resultText = `{"error":"${e.message}"}`;
+      }
+    }
+    messages.push({ role: 'user', content: `[PROCEDURE_MAP_DRAFT 결과] ${resultText}` });
+    await _continueAfterOrchestrationTag();
+    return;
+  }
+
+  const govsysMatch = fullReply.match(/\[CALL_GOVSYS:\s*id=([\w-]+),\s*mode=([\w-]+),\s*caller=([\w-]+)\]/);
+  if (govsysMatch) {
+    console.log('[Expert] CALL_GOVSYS 감지 — /orchestration/execute-atom 호출(id=atom_id로 취급)');
+    let resultText;
+    try {
+      const res = await fetch(`${RELAY_ENDPOINT}/orchestration/execute-atom`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ atom_id: govsysMatch[1], atom_input: {} }),
+      });
+      resultText = JSON.stringify(await res.json().catch(() => ({ status: res.status })));
+    } catch (e) {
+      resultText = `{"error":"${e.message}"}`;
+    }
+    messages.push({ role: 'user', content:
+      `[CALL_GOVSYS 결과] ${resultText}\n\n결과가 requires_user_action이면 그 사유를 이용자에게 자연스럽게 전달하세요.` });
+    await _continueAfterOrchestrationTag();
+    return;
+  }
+}
+
+// 위 네 핸들러 공통 후속 처리 — 결과를 재주입한 뒤 한 번 더 응답을 받는다
+// (WEB_SEARCH의 재호출 패턴과 동일).
+async function _continueAfterOrchestrationTag() {
+  let shown = false;
+  const aiBubble = appendBubble('ai', '');
+  aiBubble.style.display = 'none';
+  const full = await callExpertAI(messages, (delta, fullText) => {
+    if (!shown) { aiBubble.style.display = ''; shown = true; }
+    aiBubble.innerHTML = escHtml(fullText).replace(/\n/g, '<br>');
+    document.getElementById('chat-thread').scrollTop = 1e9;
+  });
+  messages.push({ role: 'assistant', content: full });
+  // 이어진 응답이 또 오케스트레이션 태그를 요청하면(예: LOOKUP 후 DRAFT로
+  // 이어지는 흐름) 재귀 처리한다. WEB_SEARCH와 달리 depth 한도를 별도로
+  // 두지 않는 이유: STEP R 자체가 LOOKUP→DRAFT→CALL_GOVSYS로 이어지는
+  // 정상적인 다단계 흐름을 갖고 있어(SP_lawyer STEP R 참조), 인위적으로
+  // 끊으면 오히려 그 흐름을 깬다 — 대신 각 fetch 자체에 실패 시 에러
+  // 텍스트가 재주입되므로 모델이 무한 재시도할 유인이 없다.
+  await _maybeHandleOrchestrationTags(full);
 }
 
 // market의 search_entities RPC를 호출해 관련 업종의 실제 등록 사업자를
