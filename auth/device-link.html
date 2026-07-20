@@ -99,15 +99,21 @@
   function normalizePhoneToE164(v) {
     const digits = v.replace(/[^0-9]/g, '');
     if (!digits) return null;
-    // 010-1234-5678 → +8210-... 관례(worker.js OTP와 동일한 국내 정규식 형식에 맞춤)
-    const withoutLeadingZero = digits.startsWith('0') ? digits.slice(1) : digits;
-    return '+82' + withoutLeadingZero;
+    // ★ 2026-07-20 수정 — 버그였다. auth.js의 buildE164()/COUNTRIES.KR을
+    // 확인해보니 이 시스템의 실제 관례는 "+82" 뒤에 "010"을 그대로 붙이는
+    // 것이다(예: 010-9662-7170 → "+8201096627170") — 표준 E.164처럼
+    // 앞자리 0을 제거하는 게 아니다. 0을 제거하던 이전 코드가
+    // "+821096627170"(이 시스템 기준으로는 틀린 형식)을 만들어
+    // /auth/device-link/init이 400으로 거부하고 있었다.
+    return '+82' + digits;
   }
 
   // ── STEP 1: 요청 보내기 ─────────────────────────────
   function e164ToKrDisplay(e164) {
-    // "+821012345678" → "0" + "1012345678" → "010-1234-5678"
-    const digits = '0' + e164.replace(/^\+82/, '');
+    // "+8201012345678" → "01012345678"(이미 앞자리 0 포함, 11자리) →
+    // "010-1234-5678". 위 정규화 수정과 짝을 이루는 수정 — 여기서도
+    // "0"을 추가로 더 붙이면 12자리가 돼 형식이 깨졌었다.
+    const digits = e164.replace(/^\+82/, '');
     if (digits.length !== 11) return e164; // 예상 밖 형식이면 그대로 반환(정규화 단계에서 재검증됨)
     return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
   }
