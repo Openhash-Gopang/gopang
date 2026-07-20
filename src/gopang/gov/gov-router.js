@@ -508,12 +508,38 @@ const SEOUL_L2_TABLE = [
     kw: ['체육진흥', '생활체육', '체육시설'] },
 ];
 
+
+// ── 인천 L2 라우팅 테이블 ⚠️ 전부 "예정(안)" ─────────────────────
+// 2026-07-03 발표된 조직개편안(2026-08 시행 예정, 시의회 심의 중) 기준.
+// 아직 발효 전이라 실사용 전 8월 조례 통과 여부 재확인 필수. 신설/개편이
+// 보도로 확인된 8개 도메인만 채움 — 나머지 도메인은 이번 개편 보도에
+// 언급이 없어 전혀 조사되지 않았다(레코드 없음, 허위로 채우지 않음).
+const INCHEON_L2_TABLE = [
+  { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'incheon', file: null,
+    kw: ['정책조정국', 'ABC+E', '미래기획', '콘텐츠산업', '투자유치'] },
+  { code: 'SP-DO-CLIMATE', domain: 'climate', 도코드: 'incheon', file: null,
+    kw: ['기후에너지국', '탄소중립', '에너지전환'] },
+  { code: 'SP-DO-TRANSPORT', domain: 'transport', 도코드: 'incheon', file: null,
+    kw: ['교통정책국', '철도도로국', '대중교통', '철도', '도로'] },
+  { code: 'SP-DO-INNOV', domain: 'innov', 도코드: 'incheon', file: null,
+    kw: ['미래산업본부', '첨단산업', '바이오산업'] },
+  { code: 'SP-DO-ECON', domain: 'econ', 도코드: 'incheon', file: null,
+    kw: ['경제국', '민생경제'] },
+  { code: 'SP-DO-WELFARE', domain: 'welfare', 도코드: 'incheon', file: null,
+    kw: ['보건복지국', '통합돌봄국', '기초생활수급', '기초연금', '돌봄'] },
+  { code: 'SP-DO-FAMILY', domain: 'family', 도코드: 'incheon', file: null,
+    kw: ['여성가족국', '여성가족', '임신', '출산', '보육'] },
+  { code: 'SP-DO-HOUSING', domain: 'housing', 도코드: 'incheon', file: null,
+    kw: ['도시계획국', '도시균형국', '원도심혁신국', '제물포', '문학', '부평'] },
+];
+
 const PROVINCE_TABLES = {
   jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE },
   // busan: L2만 실사 완료(2026-07-20). city(자치구·군 16개)/national은 아직 미착수 —
   // 허위로 채우지 않고 빈 배열로 정직하게 남긴다(TBD 마커 관행과 동일).
   busan: { l2: BUSAN_L2_TABLE, city: [], national: [] },
   seoul: { l2: SEOUL_L2_TABLE, city: [], national: [] },
+  incheon: { l2: INCHEON_L2_TABLE, city: [], national: [] },  // ⚠️ 2026-08 시행 예정(안)
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }
