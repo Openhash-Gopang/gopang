@@ -1072,6 +1072,44 @@ async function _classifyFallback(text, classifyFn) {
 const EMD_PATHS = {
   jeju: { master: '05-emd/emd-master-data.json', extra: ['05-emd/hallim/hallim-data.json'] },
 };
+
+// ── 도 클래스/인스턴스 레지스트리 (2026-07-21 신설) ──────────────
+// 주피터 지시: "제주도는 8개 광역시도 중 하나일 뿐입니다. 도청 등의
+// 원형 클래스를 먼저 구현하고, 제주도청 등의 인스턴스를 조합해야
+// 합니다." — 이 레지스트리가 그 첫 단계다. PROVINCE_TABLES·EMD_PATHS를
+// 수기로 다시 베끼지 않고 거기서 그대로 계산한다(이중 관리 시 실사
+// 현황이 어긋나는 사고를 구조적으로 막기 위함) — 새 도의 실사가
+// 끝나 PROVINCE_TABLES/EMD_PATHS에 반영되면 이 레지스트리는 재계산
+// 없이 자동으로 최신 상태가 된다.
+//
+// govType: 'SPECIAL_AUTONOMOUS'(제주 — 기초자치단체 없음, 도가 세정
+// 등을 직할) | 'GENERAL'(그 외 — 시군구가 기초자치단체로 존재).
+// 재산세 등 세정 라우팅이 이 필드로 분기해야 한다(제주 규칙을 다른
+// 도에 그대로 투사하면 안 됨 — 사고실험에서 확인된 문제).
+const SPECIAL_AUTONOMOUS_PROVINCES = new Set(['jeju']);
+
+function _computeProvinceRegistry() {
+  const registry = {};
+  for (const [name, code] of Object.entries(PROVINCE_NAME_TO_CODE)) {
+    if (registry[code]) continue; // 도별로 한 번만 계산(이름은 여러 개, 코드는 하나)
+    const t = PROVINCE_TABLES[code] || { l2: [], city: [], national: [] };
+    registry[code] = {
+      govType: SPECIAL_AUTONOMOUS_PROVINCES.has(code) ? 'SPECIAL_AUTONOMOUS' : 'GENERAL',
+      dataStatus: {
+        province: '01-do/templates/province-master-data.json' /* 별도 레코드 없으면 호출부(_loadDoSp)가 폴백 처리 */,
+        l2: t.l2.length > 0 ? 'available' : 'none',
+        city: t.city.length > 0 ? 'available' : 'none',
+        national: t.national.length > 0 ? 'available' : 'none',
+        emd: EMD_PATHS[code] ? 'available' : 'none',
+      },
+    };
+  }
+  return registry;
+}
+// EMD_PATHS 선언 직후에 즉시 계산 — 아래에서 참조하는 모든 테이블이
+// 이 시점에 이미 선언·초기화돼 있어야 한다(모듈 로드 순서 의존).
+const PROVINCE_REGISTRY = _computeProvinceRegistry();
+
 const _emdRecordsByProvince = {};
 async function _loadEmdRecords() {
   const provinceCode = _resolveProvinceCode();
@@ -1465,8 +1503,17 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   const text = userText || '';
   // ★ 2026-07-20 — 매 요청(턴)마다 발화 기반으로 도를 다시 판별한다.
   // _resolveProvinceCode()는 동기 함수라 여기서 미리 계산해둔다.
+  // ★ 2026-07-21 — 발화에 지역 언급이 없으면 PDV 위치 힌트로 2차 판별
+  // (주피터 지시: "제주시 한경면 소재 홍길동의 등본 발급은 한경면사무소
+  // 소관" — PDV 위치를 활용하면 관할 기관을 쉽게 특정할 수 있다). 이전엔
+  // 여기서 실패하면 _resolveProvinceCode()의 최후 안전망이 조용히
+  // 'jeju'로 대체해 "판별 불가"가 아니라 "제주로 확신에 찬 오답"이
+  // 나가는 문제가 사고실험으로 확인됐다 — 아래 -0.5단계에서 명시적으로
+  // 끊는다.
   const _sigunguListForGuess = await _loadSigunguListForProvinceGuess();
-  _currentResolvedProvinceCode = _guessProvinceFromText(text, _sigunguListForGuess);
+  _currentResolvedProvinceCode =
+    _guessProvinceFromText(text, _sigunguListForGuess)
+    || (pdvLocationHint ? _guessProvinceFromText(pdvLocationHint, _sigunguListForGuess) : null);
   const govCommon = await _loadGovCommon();
   const trace = ['JEJU-GOV-COMMON'];
   const parts = [govCommon].filter(Boolean);
@@ -1478,6 +1525,23 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     return {
       systemPrompt: parts.join('\n\n---\n\n'),
       trace: ['JEJU-GOV-COMMON', 'SP-EXP-EMERGENCY', '(응급 감지 — 최우선 즉시 처리)'],
+    };
+  }
+
+  // -0.5) 도 판별 실패(발화·PDV 위치 힌트 둘 다 실패) — 2026-07-21 신설.
+  // 정확한 관할(도청/시군구/읍면동/국가기관 지역사무소 어느 계층이든)은
+  // 지역 없이는 특정할 수 없다는 원칙(JEJU-GOV-COMMON §10 데이터 연동
+  // 공백 고지 원칙)의 연장 — "판별 불가"를 정직하게 알리고, 발화가
+  // 애초에 위치와 무관한 일반 질문일 수도 있으므로 GOV-COMMON 공통
+  // 레이어까지는 포함해 반환한다(도청/L2/국가기관 트리는 로드하지 않음).
+  if (!_currentResolvedProvinceCode) {
+    parts.push(
+      '[지역 미판별] 정확한 관할 기관을 안내하려면 거주 지역(광역시도·시군구, ' +
+      '가능하면 읍면동까지)을 알려주세요. PDV에 거주지가 저장돼 있다면 자동으로 반영됩니다.'
+    );
+    return {
+      systemPrompt: parts.join('\n\n---\n\n'),
+      trace: [...trace, '(지역 미판별 — 발화·PDV 힌트 모두 실패, 도청/국가기관 트리 로드 안 함)'],
     };
   }
 
