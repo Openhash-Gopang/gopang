@@ -767,6 +767,41 @@
         throw new Error('[Wallet] 재화·용역 대금 결제는 품목명(memo)을 입력해야 합니다.');
       }
 
+      // ── 고액 거래 재인증(step-up biometric) — 2026-07-20 신설 ──────
+      // 사용자가 설정 화면에서 정한 문턱(기본값 ₮100,000) 이상이면,
+      // 서명 직전에 플랫폼 생체인증(지문/얼굴)을 한 번 더 요구한다.
+      // Ed25519 서명 자체는 그대로 진행되지만(키가 이미 세션에 잠금
+      // 해제돼 있음), "지금 이 순간 사용자가 실제로 이 결제를 인지하고
+      // 승인했다"는 증거를 이 시점에 추가로 받는다 — 로그인(누가 이
+      // 기기를 쓰는지)과는 다른 층위의 확인이다.
+      try {
+        const thRes = await fetch(`${CFG.endpoint}/account/step-up-threshold?guid=${encodeURIComponent(this.guid)}`);
+        const thData = await thRes.json().catch(() => null);
+        const threshold = (thRes.ok && thData?.ok) ? thData.threshold : null;
+        if (threshold !== null && amount >= threshold) {
+          if (!GopangWallet.isWebAuthnEnrolled()) {
+            throw new Error(
+              `[Wallet] ₮${threshold.toLocaleString()} 이상 거래는 생체인증 등록이 필요합니다. ` +
+              `설정 → 생체인증에서 먼저 등록해 주세요.`
+            );
+          }
+          const bio = await GopangWallet.requireStepUpBiometric();
+          if (!bio.ok) {
+            throw new Error(`[Wallet] 생체인증에 실패해 거래를 중단합니다(${bio.reason}).`);
+          }
+        }
+      } catch (e) {
+        // 문턱 조회 자체가 네트워크 오류로 실패한 경우(threshold===null로
+        // 남는 위 케이스와 달리, fetch/json 파싱이 예외를 던진 경우)는
+        // "확인할 수 없으면 안전하게 차단"하지 않고 그냥 넘어간다 —
+        // 이 게이트가 없어도 sender_sig 자체는 여전히 유효한 서명이므로,
+        // 네트워크 문제로 정상 거래(특히 소액)까지 막는 건 과잉이다.
+        // 다만 위에서 명시적으로 threw한 에러(문턱 초과·생체인증 실패)는
+        // 그대로 다시 던진다.
+        if (e.message?.startsWith('[Wallet]')) throw e;
+        console.warn('[Wallet] 재인증 문턱 확인 실패(무시하고 진행):', e.message);
+      }
+
       // 1) 로컬 잔액 사전 확인(UX용 — 최종 검증은 L1이 재생 계산으로 함)
       const db = await openDB();
       const fsRec = await idbGet(db, IDB_FS_KEY);
@@ -1366,6 +1401,29 @@
 
     static isWebAuthnEnrolled() {
       return !!localStorage.getItem(LS_WEBAUTHN_CRED);
+    }
+
+    /**
+     * 2026-07-20 신설 — 고액 거래 재인증(step-up) 전용.
+     * _prfEval()을 그대로 재사용해 플랫폼 인증기(지문/얼굴) 어설션을
+     * 요청한다 — PRF 결과값 자체는 필요 없고(그건 저장용 키 유도 목적),
+     * "이 어설션이 예외 없이 끝났다 = 사용자가 지금 이 순간 생체인증을
+     * 통과했다"는 사실만 신호로 쓴다. 새 WebAuthn 로직을 만들지 않고
+     * 이미 검증된 challenge/rpId/userVerification:'required' 구성을
+     * 그대로 물려받는다.
+     * @returns {{ ok: boolean, reason?: string }}
+     *   reason 'NOT_ENROLLED' — 이 기기에 생체인증이 등록 안 됨(enrollWebAuthn() 먼저 필요)
+     *   reason (기타) — 어설션 실패/취소 시 에러 메시지
+     */
+    static async requireStepUpBiometric() {
+      if (!GopangWallet.isWebAuthnEnrolled()) return { ok: false, reason: 'NOT_ENROLLED' };
+      try {
+        const credIdB64u = localStorage.getItem(LS_WEBAUTHN_CRED);
+        await GopangWallet._prfEval(b64uToBuf(credIdB64u).buffer);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, reason: e.message || 'ASSERTION_FAILED' };
+      }
     }
 
     /**

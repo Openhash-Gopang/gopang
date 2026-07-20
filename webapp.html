@@ -1792,6 +1792,37 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
         </div>
       </div>
 
+      <!-- ⑤-1 보안 — 고액 거래 생체 재인증 (2026-07-20 신설) -->
+      <div class="settings-section">
+        <div class="settings-section-title">보안 — 고액 거래 재인증</div>
+        <div class="settings-card">
+          <div style="padding:14px 16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <span style="font-size:13px;color:#333">생체인증(지문·얼굴)</span>
+              <button id="btn-biometric-toggle" onclick="_toggleBiometric()"
+                style="padding:6px 14px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
+                확인 중...
+              </button>
+            </div>
+            <div id="biometric-status" style="font-size:11px;color:#9ca3af;margin-bottom:14px"></div>
+
+            <div style="font-size:13px;color:#333;margin-bottom:6px">
+              이 금액(₮) 이상 송금 시 생체인증 재확인
+            </div>
+            <div style="display:flex;gap:8px">
+              <input id="step-up-threshold-input" type="number" min="0" step="1000"
+                placeholder="예: 100000"
+                style="flex:1;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit">
+              <button onclick="_saveStepUpThreshold()"
+                style="padding:9px 16px;border-radius:8px;border:none;background:#0057A8;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+                저장
+              </button>
+            </div>
+            <div id="step-up-status" style="font-size:11px;color:#9ca3af;margin-top:6px"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ⑥ 권한 설정 -->
       <div class="settings-block">
         <div class="settings-block-label"><i class="ti ti-shield-lock" aria-hidden="true"></i><span id="setting-label-perm">권한 설정</span></div>
@@ -2237,6 +2268,110 @@ async function _togglePush(on) {
   }
 }
 
+// ── 보안: 고액 거래 생체 재인증 (2026-07-20 신설) ──────────────────
+const _STEP_UP_WORKER = 'https://hondi-proxy.tensor-city.workers.dev';
+
+function _currentGuid() {
+  try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null')?.ipv6 || null; }
+  catch { return null; }
+}
+
+async function _refreshBiometricUI() {
+  const btn    = document.getElementById('btn-biometric-toggle');
+  const status = document.getElementById('biometric-status');
+  if (!btn) return;
+
+  if (typeof GopangWallet === 'undefined' || !window.PublicKeyCredential) {
+    btn.textContent = '미지원';
+    btn.disabled = true;
+    btn.style.background = '#e5e7eb'; btn.style.color = '#9ca3af';
+    if (status) status.textContent = '이 브라우저/기기는 생체인증을 지원하지 않습니다.';
+    return;
+  }
+
+  btn.disabled = false;
+  if (GopangWallet.isWebAuthnEnrolled()) {
+    btn.textContent = '해제';
+    btn.style.background = '#f3f4f6'; btn.style.color = '#374151';
+    if (status) status.textContent = '등록됨 — 문턱 이상 거래 시 지문/얼굴 인증을 요청합니다.';
+  } else {
+    btn.textContent = '등록';
+    btn.style.background = '#0057A8'; btn.style.color = '#fff';
+    if (status) status.textContent = '등록 안 됨 — 등록해야 고액 거래 재인증이 실제로 동작합니다.';
+  }
+}
+
+async function _toggleBiometric() {
+  const btn    = document.getElementById('btn-biometric-toggle');
+  const status = document.getElementById('biometric-status');
+  btn.disabled = true;
+
+  try {
+    if (GopangWallet.isWebAuthnEnrolled()) {
+      const result = await GopangWallet.disableWebAuthn();
+      if (!result.ok) throw new Error(result.reason || '해제 실패');
+      if (status) status.textContent = '해제됐습니다.';
+    } else {
+      const result = await GopangWallet.enrollWebAuthn();
+      if (!result.ok) {
+        const msg = result.reason === 'PRF_UNSUPPORTED'
+          ? '이 기기의 생체인증은 지원되지 않는 방식입니다.'
+          : result.reason === 'NO_WALLET'
+            ? '지갑이 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.'
+            : '등록에 실패했습니다.';
+        throw new Error(msg);
+      }
+      if (status) status.textContent = '등록 완료 — 다음 고액 거래부터 적용됩니다.';
+    }
+  } catch (e) {
+    if (status) status.textContent = e.message;
+    console.warn('[Biometric]', e.message);
+  } finally {
+    await _refreshBiometricUI();
+  }
+}
+
+async function _loadStepUpThreshold() {
+  const input  = document.getElementById('step-up-threshold-input');
+  const status = document.getElementById('step-up-status');
+  const guid = _currentGuid();
+  if (!guid || !input) return;
+
+  try {
+    const res  = await fetch(`${_STEP_UP_WORKER}/account/step-up-threshold?guid=${encodeURIComponent(guid)}`);
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      input.value = data.threshold;
+      if (status) status.textContent = data.is_default ? '기본값입니다 — 원하는 금액으로 바꿀 수 있습니다.' : '';
+    }
+  } catch (e) {
+    console.warn('[StepUpThreshold] 조회 실패:', e.message);
+  }
+}
+
+async function _saveStepUpThreshold() {
+  const input  = document.getElementById('step-up-threshold-input');
+  const status = document.getElementById('step-up-status');
+  const guid = _currentGuid();
+  if (!guid) { if (status) status.textContent = '먼저 로그인해 주세요.'; return; }
+
+  const amount = parseFloat(input.value);
+  if (!(amount >= 0)) { if (status) status.textContent = '0 이상의 숫자를 입력해 주세요.'; return; }
+
+  if (status) status.textContent = '저장 중...';
+  try {
+    const res = await fetch(`${_STEP_UP_WORKER}/account/step-up-threshold`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guid, amount }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.detail || data.error || '저장 실패');
+    if (status) status.textContent = `저장됐습니다 — ₮${amount.toLocaleString()} 이상 송금 시 재인증합니다.`;
+  } catch (e) {
+    if (status) status.textContent = '저장 실패: ' + e.message;
+  }
+}
+
 function _urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -2246,8 +2381,16 @@ function _urlBase64ToUint8Array(base64String) {
 
 // 설정 창 열릴 때 초기화
 document.addEventListener('DOMContentLoaded', _initPushSoundUI);
+document.addEventListener('DOMContentLoaded', () => {
+  _refreshBiometricUI();
+  _loadStepUpThreshold();
+});
 // 설정 패널이 동적으로 열리는 경우 대비
-if (document.readyState === 'complete') _initPushSoundUI();
+if (document.readyState === 'complete') {
+  _initPushSoundUI();
+  _refreshBiometricUI();
+  _loadStepUpThreshold();
+}
 </script>
 
 <script>

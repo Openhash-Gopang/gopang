@@ -4944,6 +4944,8 @@ export default {
     if (pathname === '/auth/device-link/resend-sms' && request.method === 'POST') return handleDeviceLinkResendSms(request, env, corsHeaders);
     if (pathname === '/auth/device-link/deliver'  && request.method === 'POST') return handleDeviceLinkDeliver(request, env, corsHeaders);
     if (pathname === '/auth/device-link/poll'     && request.method === 'GET')  return handleDeviceLinkPoll(request, env, corsHeaders);
+    if (pathname === '/account/step-up-threshold' && request.method === 'GET')  return handleStepUpThresholdGet(request, env, corsHeaders);
+    if (pathname === '/account/step-up-threshold' && request.method === 'POST') return handleStepUpThresholdSet(request, env, corsHeaders);
     // 2026-07-07: /biz/review(Supabase biz_reviews, 5점 척도) → 완전 대체.
     // 실거래(tx_hash) 기반 trade_ratings(PocketBase, polarity+온도)로 이전.
     // handleBizReview는 하단에 DEPRECATED로 남겨두되 라우팅에서 제거함.
@@ -5721,6 +5723,62 @@ async function handleLedgerReconcile(request, env, corsHeaders) {
 // 적재(pending_claims)까지 검증된 로직을 그대로 물려받는다. 로직이 두
 // 곳에 복붙되면 다음에 또 어긋난다(과거 fee-split 버그가 이런 식으로
 // 났었다) — 반드시 위임 구조를 유지할 것.
+// ═══════════════════════════════════════════════════════════
+// 고액 거래 생체 재인증 — 사용자별 문턱 금액 (2026-07-20 신설)
+//
+// 문턱은 사용자가 직접 설정한다(주피터 지시). profiles.extra JSON에
+// 저장 — 새 컬럼 마이그레이션 불필요, approveAffiliationCore 등이 이미
+// 쓰는 extra 패치 패턴을 그대로 재사용한다. 실제 생체인증 자체(WebAuthn
+// 어설션)는 클라이언트(gopang-wallet.js)에서 완결되고, 서버는 "이 사용자의
+// 문턱이 얼마인지"만 보관·제공한다 — WebAuthn 어설션 결과 자체를 서버가
+// 검증하지 않는 것은, sender_sig(Ed25519 서명) 자체가 이미 로컬에서
+// 잠금 해제된 개인키로만 나올 수 있고, 생체인증은 "그 잠금 해제 시도를
+// 실제로 사용자가 지금 이 순간 승인했는가"를 문턱 이상 거래에서 한 번 더
+// 요구하는 클라이언트측 게이트이기 때문이다(기존 sender_sig 검증과 계층이
+// 다름 — 서버가 이중으로 검증할 대상이 아니다).
+const GDC_STEP_UP_DEFAULT_THRESHOLD = 100000; // 사용자가 아직 설정 안 했을 때 기본값(₮)
+
+// GET /account/step-up-threshold?guid=...
+async function handleStepUpThresholdGet(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  let profile;
+  try { profile = await _l1FindProfileByGuid(env, guid); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders); }
+  if (!profile) return _err(404, 'PROFILE_NOT_FOUND', '프로필을 찾을 수 없습니다', corsHeaders);
+
+  const threshold = profile.extra?.gdc_step_up_threshold;
+  return new Response(JSON.stringify({
+    ok: true,
+    threshold: (typeof threshold === 'number' && threshold >= 0) ? threshold : GDC_STEP_UP_DEFAULT_THRESHOLD,
+    is_default: !(typeof threshold === 'number'),
+  }), { status: 200, headers: corsHeaders });
+}
+
+// POST /account/step-up-threshold { guid, amount }
+async function handleStepUpThresholdSet(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, amount } = body;
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!(typeof amount === 'number' && amount >= 0 && Number.isFinite(amount))) {
+    return _err(400, 'INVALID_AMOUNT', 'amount는 0 이상의 숫자여야 합니다(0 = 매 거래마다 재인증)', corsHeaders);
+  }
+
+  let profile;
+  try { profile = await _l1FindProfileByGuid(env, guid); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders); }
+  if (!profile) return _err(404, 'PROFILE_NOT_FOUND', '프로필을 찾을 수 없습니다', corsHeaders);
+
+  const newExtra = { ...(profile.extra || {}), gdc_step_up_threshold: amount };
+  try { await _l1PatchProfile(env, profile.id, { extra: newExtra }); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
+
+  return new Response(JSON.stringify({ ok: true, threshold: amount }), { status: 200, headers: corsHeaders });
+}
+
 async function handleGdcTransfer(request, env, corsHeaders, ctx) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
