@@ -967,6 +967,58 @@ function _nationalTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.nati
 function _matchNational(text) {
   return _scoreMatch(text, _nationalTable());
 }
+
+// ── L2Department 원형(canonical) 키워드 (2026-07-21 신설) ────────────
+// 주피터 지시: "도청 등의 원형 클래스를 먼저 구현하고, 제주도청 등의
+// 인스턴스를 사전에 혹은 실시간으로 조합해야 합니다." — 지금까지 L2
+// 매칭은 도별 실사 테이블(JEJU_L2_TABLE 등)에만 의존해서, 실사 안 된
+// 도(강원 등)는 도청 업무 자체를 전혀 판별하지 못했다(사고실험에서
+// 확인). 이 원형 키워드는 실사 여부와 무관하게 최소한의 도메인
+// 판별("이건 ○○ 관련 업무입니다")까지는 가능하게 하는 안전망이다 —
+// 특정 부서명·연락처까지 확정하지는 않는다(실사 데이터가 있을 때만
+// 가능한 일이라 정직하게 구분).
+//
+// 근거: 실사 완료된 12개 도의 L2 테이블을 실측 분석해, 2개 이상 도에서
+// 공통으로 쓰인 어휘만 채택(도 하나만의 조직명은 배제). plan 도메인의
+// 세정 관련 어휘(지방세/취득세/재산세/세정)는 govType 가드(#27)의
+// 발견과 동일한 이유로 의도적으로 제외했다 — 원형에 넣으면 GENERAL
+// 도에서 도청 오판정을 원형 단계부터 재생산하게 된다.
+const L2_CANONICAL_KEYWORDS = {
+  plan: ['기획조정실', '예산', '기획'],
+  safety: ['재난', '안전', '태풍', '호우'],
+  jachi: ['자치행정', '자치분권'],
+  econ: ['소상공인', '일자리', '투자유치', '중소기업', '자영업'],
+  innov: ['스타트업', '인공지능', '바이오산업'],
+  welfare: ['기초생활수급', '기초연금', '장애인복지'],
+  climate: ['환경', '탄소중립', '산림'],
+  housing: ['주택', '건설', '건축'],
+  transport: ['교통', '대중교통', '버스', '지하철'],
+  culture: ['문화예술', '문화', '도서관'],
+  tourism: ['관광', '숙박업', '여행업'],
+  agri: ['농업', '축산'],
+  ocean: ['어업', '수산', '해양'],
+  health: ['보건', '감염병'],
+  family: ['출산', '보육', '임신', '여성가족'],
+  sports: ['체육', '생활체육'],
+};
+const _L2_DOMAIN_LABEL_KO = {
+  plan: '기획·예산', safety: '안전·재난', jachi: '자치행정', econ: '경제·소상공인',
+  innov: '혁신산업', welfare: '복지', climate: '환경·기후', housing: '주택·건설',
+  transport: '교통', culture: '문화', tourism: '관광', agri: '농업·축산',
+  ocean: '해양수산', health: '보건', family: '여성가족', sports: '체육',
+};
+function _matchL2Canonical(text) {
+  for (const [domain, kws] of Object.entries(L2_CANONICAL_KEYWORDS)) {
+    if (kws.some(k => text.includes(k))) return domain;
+  }
+  return null;
+}
+function _renderL2CanonicalFallback(domain) {
+  const label = _L2_DOMAIN_LABEL_KO[domain] || domain;
+  return `[실국 원형 매칭 — 이 지역 실사 전] '${label}' 관련 업무로 보입니다. ` +
+    `담당 부서·연락처는 아직 실사되지 않아 구체적으로 안내하기 어렵습니다 — ` +
+    `정부24(gov.kr), 해당 광역시도 대표전화, 또는 국번없이 110(정부민원안내)으로 확인해 주세요.`;
+}
 function _matchCatalogOnly(text) {
   for (const c of CATALOG_ONLY) {
     if (c.kw.some(k => text.includes(k))) return c;
@@ -1681,6 +1733,17 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       await _appendExpertIfMatched();
       return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
+  }
+
+  // 3.5) 실국 원형키워드 매칭(2026-07-21 신설, L2Department 원형 —
+  // 도 실사 여부와 무관). 여기 도달했다는 것 자체가 3단계 실사 매칭이
+  // 확정 응답을 못 만들었다는 뜻이다.
+  const canonicalDomain = _matchL2Canonical(text);
+  if (canonicalDomain) {
+    parts.push(_renderL2CanonicalFallback(canonicalDomain));
+    trace.push(`SP-DO-${canonicalDomain.toUpperCase()}(원형 매칭, 도 실사 전)`);
+    await _appendExpertIfMatched();
+    return { systemPrompt: parts.join('\n\n---\n\n'), trace };
   }
 
   // 4) 읍면동/실국 어느 쪽도 안 걸렸지만 업무영역만 매칭된 경우(예: 지역 언급 없이 "수돗물 냄새나요")
