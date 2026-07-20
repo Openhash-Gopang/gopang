@@ -197,10 +197,22 @@
       })();
       dlog('로컬 계정정보 확인: ' + (storedUser ? 'ipv6=' + storedUser.ipv6 : '없음'));
 
-      // ★ 2026-07-20 신설 — sealForRecipient() 호출 직전, 실제로 원인이
-      // 됐던 문제(pcPubKeyB64u가 32바이트가 아니어서 "X25519 key data
-      // must be 256 bits" 에러로만 나타났던 것)를 여기서 미리 잡아
-      // 화면에 명확히 보여준다.
+      // ★ 2026-07-20 신설(실사 발견 — 주피터 지시) — 지갑 키와 계정
+      // 정보만 옮기면, PC는 "hondi_first_greeted" 같은 '평생 1회' 온보딩
+      // 완료 플래그가 없어서 이미 오래전에 가입한 사용자를 방금 막
+      // 가입한 사람으로 오인해 신규 환영 인사(프로필 질문 등)를 다시
+      // 시작해버린다 — 이 플래그들은 서버가 아니라 이 브라우저의
+      // localStorage에만 있었던 게 근본 원인이다(call-ai.js §_buildFirst
+      // ContactContext). 상세 PDV(대화 기록 등)까지 옮길 필요는 없고,
+      // "이미 인사를 마친 계정이다"라는 이 최소 신호 세 개만 옮기면
+      // 충분하다.
+      const onboardingFlags = {
+        firstGreeted: localStorage.getItem('hondi_first_greeted') === '1',
+        tutorialDone: localStorage.getItem('hondi_tutorial_done') === '1',
+        tutorialStep: localStorage.getItem('hondi_tutorial_step') || null,
+      };
+      dlog('온보딩 플래그 확인: ' + JSON.stringify(onboardingFlags));
+
       const pcKeyLen = (() => {
         try {
           const bin = atob(sessionData.pcPubKeyB64u.replace(/-/g, '+').replace(/_/g, '/'));
@@ -212,7 +224,7 @@
         throw new Error(`PC 공개키 형식이 잘못됐습니다(${pcKeyLen}바이트, 32바이트여야 함) — PC에서 device-link.html을 새로고침 후 다시 시도해 주세요.`);
       }
 
-      const plaintext = JSON.stringify({ privKeyB64u, userRecord: storedUser });
+      const plaintext = JSON.stringify({ privKeyB64u, userRecord: storedUser, onboardingFlags });
       const sealed = await GopangWallet.sealForRecipient(sessionData.pcPubKeyB64u, plaintext);
       dlog('봉투 암호화 완료', 'ok');
 

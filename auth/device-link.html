@@ -272,7 +272,7 @@
   async function finishImport(sealed) {
     try {
       const plaintext = await GopangWallet.openSealedWithKey(pcKeyPair.privateKey, sealed);
-      const { privKeyB64u, userRecord } = JSON.parse(plaintext);
+      const { privKeyB64u, userRecord, onboardingFlags } = JSON.parse(plaintext);
       if (!privKeyB64u) throw new Error('전달받은 데이터 형식이 올바르지 않습니다.');
 
       await GopangWallet.restoreFromPrivateKey(privKeyB64u);
@@ -290,6 +290,18 @@
         // 복원은 됐으니 계속 진행하되, 계정 삭제·로그아웃이 정상
         // 동작하지 않을 수 있음을 알린다.
         console.warn('[DeviceLink] 폰의 gopang_user_v4가 비어있어 계정 식별 정보를 옮기지 못했습니다.');
+      }
+
+      // ★ 2026-07-20 신설(실사 발견 — 주피터 지시) — 온보딩 완료 플래그
+      // (hondi_first_greeted 등)도 같이 안 옮기면, 오래전에 가입한
+      // 사용자인데도 PC에서는 "평생 1회" 신규 환영 인사·프로필 질문이
+      // 다시 시작돼버린다(call-ai.js의 _buildFirstContactContext가
+      // localStorage만 보고 판단하기 때문). 상세 PDV·대화 기록까지
+      // 옮길 필요는 없고, 이 최소 신호만 옮기면 충분하다.
+      if (onboardingFlags) {
+        if (onboardingFlags.firstGreeted) localStorage.setItem('hondi_first_greeted', '1');
+        if (onboardingFlags.tutorialDone) localStorage.setItem('hondi_tutorial_done', '1');
+        if (onboardingFlags.tutorialStep) localStorage.setItem('hondi_tutorial_step', onboardingFlags.tutorialStep);
       }
 
       setStatus('완료됐습니다. 이동 중...', 'success');
