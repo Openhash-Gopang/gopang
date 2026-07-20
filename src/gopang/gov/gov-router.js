@@ -1200,6 +1200,20 @@ function _matchCity(text) {
   return null;
 }
 
+// ── AdministrativeCity(행정시) 이름 기반 조회 (2026-07-21 신설) ──────
+// 주피터 지시: "클래스와 인스턴스 관계를 명확히 규정하십시오(광역시도,
+// 시군구, 읍면동, 국가기관 지역 사무소)." — 행정시(AdministrativeCity,
+// 자치권 없음, SPECIAL_AUTONOMOUS 도에만 존재·현재는 제주 유일)와
+// 시군구청(MunicipalGovernment, 자치권 있음, GENERAL 도의 기초자치
+// 단체·sigungu-national-list.json 기반)은 서로 다른 클래스인데, EMD
+// 매칭 코드가 "_cityTable()[0]/[1]" 배열 인덱스로 "행정시는 정확히
+// 2개, 순서는 제주시가 먼저"라고 암묵 가정하고 있었다 — 다른
+// SPECIAL_AUTONOMOUS 도가 추가되거나 순서가 다르면 조용히 잘못된
+// 행정시를 반환할 구조였다. 이름으로 조회하도록 일반화한다.
+function _findCityByName(cityName) {
+  return _cityTable().find(c => c.kw.includes(cityName)) || null;
+}
+
 
 // ── 시군구 지연 초기화 — 클라이언트측(브라우저) 안전한 fetch (2026-07-20) ──
 // ⚠️ 비밀키 없음 — worker.js(hondi-proxy)의 /gov/sigungu-dept-resolve를
@@ -1655,22 +1669,28 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     || (pdvLocationHint ? _matchEmd(pdvLocationHint, emdRecords) : null);
 
   if (emdMatch) {
-    const cityCode = emdMatch.행정시명 === '제주시' ? _cityTable()[0] : _cityTable()[1];
-    const cityText = await _fetchCityText(cityCode);
-    parts.push(cityText);
-    trace.push(cityCode.code);
+    const cityCode = _findCityByName(emdMatch.행정시명);
+    if (cityCode) {
+      const cityText = await _fetchCityText(cityCode);
+      parts.push(cityText);
+      trace.push(cityCode.code);
 
-    // 서귀포시 + 상하수도 키워드 → 규칙 F: 읍면동 생략, 시청 직행 후 바로 SP-EXP-WATER
-    if (cityCode.code === 'SP-CITY-SEOGWIPO' && isWaterQuery) {
-      trace.push('(규칙 F: 서귀포 상하수도는 읍면동 생략)');
-    } else {
-      const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.2.md');
-      parts.push(_renderEmdTemplate(emdTemplate, emdMatch));
-      trace.push(`SP-EMD-${emdMatch.읍면동명}`);
+      // 서귀포시 + 상하수도 키워드 → 규칙 F: 읍면동 생략, 시청 직행 후 바로 SP-EXP-WATER
+      if (cityCode.code === 'SP-CITY-SEOGWIPO' && isWaterQuery) {
+        trace.push('(규칙 F: 서귀포 상하수도는 읍면동 생략)');
+      } else {
+        const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.2.md');
+        parts.push(_renderEmdTemplate(emdTemplate, emdMatch));
+        trace.push(`SP-EMD-${emdMatch.읍면동명}`);
+      }
+      await _appendExpertIfMatched();
+
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
-    await _appendExpertIfMatched();
-
-    return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    // 행정시 테이블(AdministrativeCity)에서 emdMatch.행정시명을 못 찾으면
+    // (도 실사 불일치 등) 이 EMD 매칭은 신뢰하지 않고 무시한다 — 잘못된
+    // 행정시로 단정하지 않는다(govType 가드·L2 원형키워드와 동일한
+    // "정직한 미확정 처리" 원칙). 이후 단계(2·2.5·3 등)로 계속 진행.
   }
 
   // 2) 행정시만 언급(읍면동 특정 안 됨) → 시청 레이어만
