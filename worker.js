@@ -8319,15 +8319,18 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   const { guid, tier, messages, max_tokens, stream, step_cycle } = body || {};
   if (!guid || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/messages 필수', corsHeaders);
 
-  // UNIVERSAL-INTEGRITY 서버측 강제 주입(2026-07-04) — K-Law는 클라이언트가
-  // 시스템 메시지를 직접 조립해 보내는 구조(/gov/relay와 다름)라, 클라이언트의
-  // system 메시지를 대체하지는 않되 그 앞에 별도 system 메시지로 추가한다.
-  // K-Law 자체(SP-01_klaw_v15.1)가 이미 이 문서보다 훨씬 정교한 자체 확신도
-  // 메커니즘을 갖고 있으므로 중복이지만, "모든 SP가 이 문서를 상속한다"는
-  // 원칙을 예외 없이 지키기 위해 형식적으로도 주입한다.
-  const universalIntegrity = await _fetchUniversalIntegrity();
-  const messagesWithIntegrity = universalIntegrity
-    ? [{ role: 'system', content: universalIntegrity }, ...messages]
+  // UNIVERSAL-INTEGRITY·UNIVERSAL-common 서버측 강제 주입(2026-07-04 신설,
+  // 2026-07-20 UNIVERSAL-common 추가) — K-Law는 클라이언트가 시스템 메시지를
+  // 직접 조립해 보내는 구조(/gov/relay와 다름)라, 클라이언트의 system
+  // 메시지를 대체하지는 않되 그 앞에 별도 system 메시지로 추가한다.
+  // ★ 2026-07-20 실사로 발견: UNIVERSAL-common은 그동안 이 릴레이에서
+  // 누락돼 있었다 — U7-3·U8·U11 등이 K-Law에는 적용되지 않고 있었다.
+  const [universalIntegrity, universalCommon] = await Promise.all([
+    _fetchUniversalIntegrity(), _fetchUniversalCommon(),
+  ]);
+  const universalInjected = [universalIntegrity, universalCommon].filter(Boolean).join('\n\n---\n\n');
+  const messagesWithIntegrity = universalInjected
+    ? [{ role: 'system', content: universalInjected }, ...messages]
     : messages;
 
   const tierKey = KLAW_TIER_MODELS[tier] ? tier : 'klaw-flash';
@@ -8413,7 +8416,8 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
 // 전부 무시한다 — 클라이언트 코드가 실수(또는 고의)로 공통 규칙을
 // 빠뜨리거나 조작할 수 있는 여지를 구조적으로 없앤다.
 // ═══════════════════════════════════════════════════════════
-const K_PUBLIC_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/K-Public_common_v1_3.md';
+// ★ 2026-07-20 정정: sp-catalog.json에 "K-Public_common" 키를 신설하고
+// manifest 경로로 전환해 이 클래스의 버그를 근본적으로 없앤다.
 let _kPublicCommonCache = null;
 let _kPublicCommonCacheAt = 0;
 const _K_PUBLIC_COMMON_TTL_MS = 10 * 60 * 1000; // 10분 — 문서 갱신 반영 최대 지연
@@ -8440,7 +8444,12 @@ const _K_PUBLIC_COMMON_TTL_MS = 10 * 60 * 1000; // 10분 — 문서 갱신 반�
 // 일치하는지 파일 변경 시마다 이 상수도 같이 갱신해야 한다는 점을
 // 다시 한번 명시해둔다 — 근본적으로는 sp-catalog.json 같은 manifest
 // 기반 조회로 옮기는 게 맞지만, 이번 변경 범위에는 포함하지 않았다.
-const UNIVERSAL_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/UNIVERSAL-common_v1_7.md';
+// 2026-07-20 정정: 위 경고가 세 번째로 재현될 뻔했다 — UNIVERSAL-common에
+// U11(사용자 현황·성향 우선 파악 원칙)을 신설하며 파일을 v1_7→v1_8로
+// 올렸는데, 이 하드코딩 URL을 그대로 뒀다면 K-Service·공공기관 AC·개인
+// AC 전부가 U11 없는 v1.7을 계속 받았을 것이다. UNIVERSAL-INTEGRITY가
+// 이미 쓰고 있는 `_fetchByManifestKeyFromGithub()`(sp-catalog.json 경유)
+// 로 전환해 이 클래스의 버그를 구조적으로 제거한다.
 let _universalCommonCache = null;
 let _universalCommonCacheAt = 0;
 const _UNIVERSAL_COMMON_TTL_MS = 10 * 60 * 1000;
@@ -8449,9 +8458,7 @@ async function _fetchUniversalCommon() {
   const now = Date.now();
   if (_universalCommonCache && (now - _universalCommonCacheAt) < _UNIVERSAL_COMMON_TTL_MS) return _universalCommonCache;
   try {
-    const res = await fetch(UNIVERSAL_COMMON_URL, { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    _universalCommonCache = await res.text();
+    _universalCommonCache = await _fetchByManifestKeyFromGithub('UNIVERSAL-common');
     _universalCommonCacheAt = now;
   } catch (e) {
     console.warn('[UniversalCommon] 로드 실패:', e.message);
@@ -8466,7 +8473,6 @@ async function _fetchUniversalCommon() {
 // 이 문서를 상속한다 — "국가기관을 대신한다"고 잘못 자기소개하던
 // 버그를 구조적으로 해소.
 // ═══════════════════════════════════════════════════════════
-const PROFESSIONAL_COMMON_URL = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/PROFESSIONAL-common_v1_0.md';
 let _professionalCommonCache = null;
 let _professionalCommonCacheAt = 0;
 const _PROFESSIONAL_COMMON_TTL_MS = 10 * 60 * 1000;
@@ -8475,9 +8481,7 @@ async function _fetchProfessionalCommon() {
   const now = Date.now();
   if (_professionalCommonCache && (now - _professionalCommonCacheAt) < _PROFESSIONAL_COMMON_TTL_MS) return _professionalCommonCache;
   try {
-    const res = await fetch(PROFESSIONAL_COMMON_URL, { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    _professionalCommonCache = await res.text();
+    _professionalCommonCache = await _fetchByManifestKeyFromGithub('PROFESSIONAL-common');
     _professionalCommonCacheAt = now;
   } catch (e) {
     console.warn('[ProfessionalCommon] 로드 실패:', e.message);
@@ -8549,9 +8553,7 @@ async function _fetchKPublicCommon() {
   const now = Date.now();
   if (_kPublicCommonCache && (now - _kPublicCommonCacheAt) < _K_PUBLIC_COMMON_TTL_MS) return _kPublicCommonCache;
   try {
-    const res = await fetch(K_PUBLIC_COMMON_URL, { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    _kPublicCommonCache = await res.text();
+    _kPublicCommonCache = await _fetchByManifestKeyFromGithub('K-Public_common');
     _kPublicCommonCacheAt = now;
   } catch (e) {
     console.warn('[GovRelay] K-Public 공통 규칙 로드 실패:', e.message);
@@ -8602,8 +8604,6 @@ const NO_IDENTITY_LAYER_AGENCIES = new Set(['jeju_do', 'jeju_national']);
 // 하나(business-kr)만 우선 지원 — 다른 국가 확장 시 BUSINESS_COUNTRY_MODULES
 // 에 추가한다.
 // ═══════════════════════════════════════════════════════════
-const K_BUSINESS_URL   = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/k-business_v1_0.md';
-const BUSINESS_KR_URL  = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/business-kr_v1_0.md';
 let _kBusinessCache = null, _kBusinessCacheAt = 0;
 let _businessKrCache = null, _businessKrCacheAt = 0;
 const _BUSINESS_TTL_MS = 10 * 60 * 1000;
@@ -8612,9 +8612,7 @@ async function _fetchKBusiness() {
   const now = Date.now();
   if (_kBusinessCache && (now - _kBusinessCacheAt) < _BUSINESS_TTL_MS) return _kBusinessCache;
   try {
-    const res = await fetch(K_BUSINESS_URL, { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    _kBusinessCache = await res.text();
+    _kBusinessCache = await _fetchByManifestKeyFromGithub('k-business');
     _kBusinessCacheAt = now;
   } catch (e) {
     console.warn('[k-business] 로드 실패:', e.message);
@@ -8627,9 +8625,7 @@ async function _fetchBusinessKr() {
   const now = Date.now();
   if (_businessKrCache && (now - _businessKrCacheAt) < _BUSINESS_TTL_MS) return _businessKrCache;
   try {
-    const res = await fetch(BUSINESS_KR_URL, { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    _businessKrCache = await res.text();
+    _businessKrCache = await _fetchByManifestKeyFromGithub('business-kr');
     _businessKrCacheAt = now;
   } catch (e) {
     console.warn('[business-kr] 로드 실패:', e.message);
