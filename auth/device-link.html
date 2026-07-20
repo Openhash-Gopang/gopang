@@ -217,10 +217,26 @@
   async function finishImport(sealed) {
     try {
       const plaintext = await GopangWallet.openSealedWithKey(pcKeyPair.privateKey, sealed);
-      const { privKeyB64u } = JSON.parse(plaintext);
+      const { privKeyB64u, userRecord } = JSON.parse(plaintext);
       if (!privKeyB64u) throw new Error('전달받은 데이터 형식이 올바르지 않습니다.');
 
       await GopangWallet.restoreFromPrivateKey(privKeyB64u);
+
+      // ★ 2026-07-20 신설 — gopang_user_v4를 폰과 동일하게 이 기기에도
+      // 써준다. gopang-wallet.js의 싱글턴 자동 초기화 IIFE가 다음 페이지
+      // 로드(webapp.html) 때 이 값을 읽어 지갑에 guid를 연결하고,
+      // 그 값이 없으면(로그아웃 버튼이 숨겨지는 등) 앱이 이 계정을
+      // "게스트"로 오인한다 — 지갑 키만 옮기고 이 기록을 빠뜨리면 계정
+      // 삭제·로그아웃이 정상 동작하지 않는다는 게 실사로 확인됐다.
+      if (userRecord && userRecord.ipv6) {
+        localStorage.setItem('gopang_user_v4', JSON.stringify(userRecord));
+      } else {
+        // 폰 쪽에도 gopang_user_v4가 없던 경우(드묾) — 최소한 지갑
+        // 복원은 됐으니 계속 진행하되, 계정 삭제·로그아웃이 정상
+        // 동작하지 않을 수 있음을 알린다.
+        console.warn('[DeviceLink] 폰의 gopang_user_v4가 비어있어 계정 식별 정보를 옮기지 못했습니다.');
+      }
+
       setStatus('완료됐습니다. 이동 중...', 'success');
       setTimeout(() => { location.href = RETURN_URL; }, 800);
     } catch (e) {

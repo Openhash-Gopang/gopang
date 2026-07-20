@@ -162,7 +162,19 @@
       // 기존 sealForRecipient()를 그대로 재사용 — PC의 1회용 공개키로
       // 봉투 암호화(새 암호화 로직 없음, gopang-wallet.js §X25519 참조).
       const privKeyB64u = await wallet.exportPrivateKey();
-      const plaintext = JSON.stringify({ privKeyB64u, handle: wallet.handle || null });
+      // ★ 2026-07-20 수정: privKeyB64u·handle만 보내던 걸로는 부족했다
+      // (실사 발견 — PC에서 로그아웃·계정 삭제 버튼이 작동하지 않음).
+      // gopang-wallet.js의 싱글턴 자동 초기화 IIFE는 매 페이지 로드마다
+      // localStorage의 gopang_user_v4.ipv6를 읽어 지갑에 연결하는데,
+      // PC 쪽에서 이 레코드를 통째로 써주지 않으면 지갑 키는 옮겨져도
+      // 앱은 "게스트"로 인식한다(handle 없음 → 로그아웃 버튼 숨김,
+      // nickname/e164 불일치 → 계정 삭제 확인 실패). gopang_user_v4
+      // 전체를 그대로 넘겨 PC가 동일하게 복원하게 한다.
+      const storedUser = (() => {
+        try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); }
+        catch { return null; }
+      })();
+      const plaintext = JSON.stringify({ privKeyB64u, userRecord: storedUser });
       const sealed = await GopangWallet.sealForRecipient(sessionData.pcPubKeyB64u, plaintext);
 
       const res = await fetch(`${WORKER}/auth/device-link/deliver`, {
