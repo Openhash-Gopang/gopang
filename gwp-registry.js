@@ -339,15 +339,22 @@ const GWP_REGISTRY = [
     ],
   },
 
-  // ── 제주 지방행정 (GOV-JEJU) — tab: 자체 4단계 SP 체인 라우터 ──
-  // sp_key 없음 — jeju.hondi.net이 jeju-router.js로 요청마다 SP를 동적 조립.
+  // ── 전국 지방행정(GOV-REGIONAL) — tab: 광역시도·시군구·읍면동·국가기관
+  // 지역사무소 4단계 SP 체인 자체 라우터 (2026-07-21 전국 중심 전환) ──
+  // 2026-07-19까지 제주 전용이었으나, gov-router.js가 PROVINCE_REGISTRY
+  // 기반으로 16개 광역시도(실사 진행 중)를 다루도록 일반화됐다(#24~#31).
+  // sp_key 없음 — 배포된 웹앱이 요청마다 사용자 발화·PDV 위치로 도를
+  // 판별해 SP를 동적 조립한다. id는 'kregionalgov'로 명명(과거 PDV
+  // 기록이 없어 자유롭게 변경 가능 — 주피터 확인).
   {
-    id: 'jeju', name: '제주도청 AI', category: 'GOV',
+    id: 'kregionalgov', name: '전국 지방행정 AI', category: 'GOV',
     type: 'tab',
     url: 'https://jeju.hondi.net/webapp.html',
     status: 'active', priority: 8, threshold: 0.70,
-    description: '제주도청·시청·읍면동 행정 안내. JEJU-GOV-COMMON SP 트리 자체 라우팅.',
+    description: '광역시도청·시군구청·읍면동사무소·국가기관 지역사무소 행정 안내(전국 대응, GOV-COMMON SP 트리 자체 라우팅).',
     triggers: [
+      '시청','도청','군청','구청','읍사무소','면사무소','동주민센터',
+      '읍면동','행정복지센터','전입신고','등본 발급','인감',
       '제주도청','제주특별자치도청','제주시청','서귀포시청','제주특별자치도',
       '제주 행정','도지사','제주콜센터',
       '애월읍','조천읍','구좌읍','한경면','추자면','우도면',
