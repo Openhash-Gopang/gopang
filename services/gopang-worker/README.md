@@ -2,7 +2,11 @@
 
 마스터 아키텍처 문서(`K-Market_Architecture_Master_v1.0.md`) 7절에서 권장한 순서대로
 **공용모듈 → 9번(재무제표 위변조 방지) → 7번(에스크로) → 10번(리뷰)**을 구현했습니다.
-이 저장소는 기존 `gopang-proxy` Cloudflare Worker에 병합하는 것을 전제로 합니다.
+이 저장소는 독립 Cloudflare Worker(`market-proxy`)로 배포됩니다. [2026-07 정정]
+최초 설계 시 기존 `gopang-proxy` Worker에 병합하는 것을 전제로 했으나, `gopang-proxy`가
+`hondi-proxy`(루트 worker.js)로 통합·폐지 중임을 확인해 이름 충돌을 피하고자 별도
+Worker로 배치를 확정했습니다. `services/gopang-worker/wrangler.toml`이 `hondi-proxy`의
+루트 `wrangler.toml`과 완전히 분리되어 있으므로 서로의 배포에 영향을 주지 않습니다.
 
 ## 사고실험 검토 후 수정 이력 (이번 커밋)
 
@@ -141,7 +145,8 @@ wrangler.toml           KV/DO 바인딩, 크론 트리거
   `payment.js`는 결제완료 이벤트만 처리한다.
 - **사전(pre-execution) 사기 차단** — `realtimeFraudCheck`가 S3를 반환해도 이 저장소
   범위 내에서는 이미 자금이 에스크로로 들어온 뒤라 거래 자체를 막지 못한다. 진짜 차단은
-  `/biz/order` 핸들러(이 저장소 밖, 기존 gopang-proxy Worker)가 L1 `/api/tx` 호출 전에
+  `/biz/order` 핸들러(이 저장소 밖, hondi-proxy 루트 worker.js — 2026-07 확인: gopang-proxy는
+  hondi-proxy로 통합·폐지 중이므로 실제 위치를 정정함)가 L1 `/api/tx` 호출 전에
   `realtimeFraudCheck`를 호출하도록 통합해야 완성된다.
 - `escrow-signer.js`의 `../openhash/hashChain.js` — 기존 `gopang-wallet.js`가 쓰던 앵커 모듈을
   실제 배포 환경 경로에 맞게 연결 필요 (인터페이스만 고정해둠)

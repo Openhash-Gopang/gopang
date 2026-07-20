@@ -1,7 +1,11 @@
 /**
- * Worker 진입점
- * gopang-proxy Worker에 이 라우트들을 추가한다고 가정 (기존 /deepseek, /geocode,
- * /pdv/report, /sso 등과 나란히 배치).
+ * Worker 진입점 — market-proxy (독립 Cloudflare Worker)
+ *
+ * [2026-07 정정] 최초 설계 시 "gopang-proxy Worker에 라우트를 추가"한다고
+ * 가정했으나, gopang-proxy는 hondi-proxy(루트 worker.js)로 통합·폐지 중임을
+ * 확인해 별도 독립 Worker(market-proxy)로 배치를 확정했다. hondi-proxy의
+ * /deepseek, /geocode, /pdv/report, /sso 등과는 별개의 배포 단위이며, 서로
+ * HTTP 호출로만 연동한다(공유 코드는 저장소 루트 src/openhash/를 통해서만).
  */
 
 import { handleLedgerCorrection, handleLedgerVerify, scheduledLedgerAnchoring, scheduledLedgerIntegrityAudit } from './routes/ledger.js';

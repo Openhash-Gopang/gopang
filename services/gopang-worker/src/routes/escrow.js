@@ -43,9 +43,10 @@ function conditionTypeForMode(mode) {
  * 호출되므로, 11번의 실시간 체크(realtimeFraudCheck)가 여기서 S3(hold_for_review)를
  * 반환해도 자금 이동 자체를 막을 수는 없다 — GDC의 경우 buyer_sig 서명이 이미 L1에
  * 반영된 뒤이기 때문이다. 진짜 사전 차단은 /biz/order 핸들러가 L1 /api/tx를 호출하기
- * "전"에 realtimeFraudCheck를 호출해야 하며, 그 핸들러는 이 저장소 범위 밖(기존
- * gopang-proxy Worker)에 있다. 이 함수는 사후 최선책으로 "보류 플래그 + 유예기간
- * 조정"까지만 수행한다.
+ * "전"에 realtimeFraudCheck를 호출해야 하며, 그 핸들러는 이 저장소 범위 밖 —
+ * hondi-proxy(루트 worker.js)의 /biz/order 핸들러 — 에 있다(2026-07 확인:
+ * gopang-proxy는 hondi-proxy로 통합·폐지 중이므로 실제 위치를 정정함). 이
+ * 함수는 사후 최선책으로 "보류 플래그 + 유예기간 조정"까지만 수행한다.
  */
 export async function afterOrderConfirmed(env, l1Base, orderResult, orderMeta) {
   const { seller_guid, buyer_guid, total, seller_net, platform_fee, items, mode, payment_rail, deviceFp } = orderMeta;

@@ -1,47 +1,47 @@
-name = "gopang-proxy"
+name = "market-proxy"
 main = "src/index.js"
 compatibility_date = "2026-07-01"
 
-# ── KV 네임스페이스 (실제 id는 `wrangler kv namespace create <NAME>` 후 채워넣기) ──
+# ── KV 네임스페이스 (2026-07-21 wrangler kv namespace create 실행 결과로 채움) ──
 [[kv_namespaces]]
 binding = "L1_REGISTRY_KV"
-id = "REPLACE_ME"
+id = "2b2cb21a53d34db5841b20ccd022f601"
 
 [[kv_namespaces]]
 binding = "PENDING_REGION_KV"
-id = "REPLACE_ME"
+id = "780dea8f38da43659bc1c5c5608b814e"
 
 [[kv_namespaces]]
 binding = "OPS_ALERTS_KV"
-id = "REPLACE_ME"
+id = "245ea108426f45a08860291e45f878f4"
 
 [[kv_namespaces]]
 binding = "SHARED_ATTR_INDEX"
-id = "REPLACE_ME"
+id = "0a5107a78c4e4fbb8723111f1e781f14"
 
 [[kv_namespaces]]
 binding = "REWARD_COUNTER_KV"
-id = "REPLACE_ME"
+id = "8fae71b2b1674c86b1a4d098f192c36e"
 
 [[kv_namespaces]]
 binding = "PUSH_SUBSCRIPTIONS_KV"
-id = "REPLACE_ME"
+id = "afb81fe8eaee440098688d50057b9c25"
 
 [[kv_namespaces]]
 binding = "CONFIG_KV"
-id = "REPLACE_ME"
+id = "6e8c77fb2f1143f6ac1aa17e7cd491bf"
 
 [[kv_namespaces]]
 binding = "PG_PROVIDER_CONFIG_KV"
-id = "REPLACE_ME"
+id = "41c66077b1c84952b2c489dbee2cf127"
 
 [[kv_namespaces]]
 binding = "VELOCITY_KV"
-id = "REPLACE_ME"
+id = "35ad9b58772742f8ad785a3273814489"
 
 [[kv_namespaces]]
 binding = "DISPUTE_ABUSE_KV"
-id = "REPLACE_ME"
+id = "9945a83f23cd4c218b5a2e0e021e6b4a"
 
 # ── Durable Objects ──────────────────────────────────────────
 [[durable_objects.bindings]]
