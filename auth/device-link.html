@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 — PC에서 로그인</title>
+<script src="/gopang-wallet.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    background: #f8f9fa;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 24px;
+  }
+  #card {
+    background: white; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 32px 28px; width: 100%; max-width: 380px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+  h1 { font-size: 18px; color: #111827; margin-bottom: 6px; }
+  p.desc { font-size: 13px; color: #6b7280; margin-bottom: 20px; line-height: 1.6; }
+  label { display:block; font-size: 12px; color:#374151; margin-bottom:6px; font-weight:600; }
+  input {
+    width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 15px; margin-bottom: 16px; font-family: inherit;
+  }
+  input:focus { outline: none; border-color: #0057A8; }
+  button {
+    width: 100%; padding: 13px; border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+    background: #0057A8; color: #fff;
+  }
+  button:disabled { background: #9ca3af; cursor: not-allowed; }
+  #status { font-size: 13px; color: #6b7280; margin-top: 14px; text-align: center; min-height: 18px; }
+  #status.error { color: #dc2626; }
+  #status.success { color: #059669; }
+  .step { display: none; }
+  .step.active { display: block; }
+  .timer { font-size: 12px; color: #9ca3af; text-align: center; margin-top: 8px; }
+  .spinner {
+    width: 22px; height: 22px; border: 2.5px solid #e5e7eb; border-top-color: #0057A8;
+    border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="card">
+  <h1>PC에서 혼디 로그인</h1>
+  <p class="desc">
+    스마트폰과 완전히 같은 계정으로 PC에서도 이용할 수 있습니다.
+    문자(SMS) 없이, 스마트폰 앱에 뜨는 확인 코드를 여기 입력하면 됩니다.
+  </p>
+
+  <!-- STEP 1: 전화번호 입력 -->
+  <div class="step active" id="step-phone">
+    <label for="phone">스마트폰에 등록된 전화번호</label>
+    <input id="phone" type="tel" placeholder="010-1234-5678" autocomplete="tel">
+    <button id="btn-request">스마트폰으로 요청 보내기</button>
+  </div>
+
+  <!-- STEP 2: 코드 입력 -->
+  <div class="step" id="step-code">
+    <div class="spinner" id="code-spinner" style="display:none"></div>
+    <label for="code">스마트폰 화면에 뜬 6자리 코드</label>
+    <input id="code" type="text" inputmode="numeric" maxlength="6" placeholder="숫자 6자리" autocomplete="one-time-code">
+    <button id="btn-verify">확인</button>
+    <div class="timer" id="timer"></div>
+  </div>
+
+  <div id="status"></div>
+</div>
+
+<script>
+(() => {
+  const WORKER = 'https://hondi-proxy.tensor-city.workers.dev';
+  const RETURN_URL = new URLSearchParams(location.search).get('return') || '/webapp.html';
+
+  const $ = (id) => document.getElementById(id);
+  const stepPhone = $('step-phone'), stepCode = $('step-code');
+  const statusEl = $('status');
+
+  let sessionId = null;
+  let pcKeyPair = null;   // { publicKey, privateKey (CryptoKey), publicKeyB64u }
+  let pollTimer = null;
+  let countdownTimer = null;
+
+  function setStatus(msg, kind) {
+    statusEl.textContent = msg || '';
+    statusEl.className = kind || '';
+  }
+
+  function normalizePhoneToE164(v) {
+    const digits = v.replace(/[^0-9]/g, '');
+    if (!digits) return null;
+    // 010-1234-5678 → +8210-... 관례(worker.js OTP와 동일한 국내 정규식 형식에 맞춤)
+    const withoutLeadingZero = digits.startsWith('0') ? digits.slice(1) : digits;
+    return '+82' + withoutLeadingZero;
+  }
+
+  // ── STEP 1: 요청 보내기 ─────────────────────────────
+  $('btn-request').addEventListener('click', async () => {
+    const e164 = normalizePhoneToE164($('phone').value);
+    if (!e164) { setStatus('전화번호를 입력해 주세요.', 'error'); return; }
+
+    $('btn-request').disabled = true;
+    setStatus('스마트폰에 요청을 보내는 중...');
+
+    try {
+      // PC 전용 1회용 X25519 키페어 — 개인키는 이 페이지 메모리에만 존재,
+      // 서버·IndexedDB 어디에도 저장하지 않는다(1회성).
+      pcKeyPair = await GopangWallet.generateX25519KeyPair();
+
+      const pcLabel = (() => {
+        const ua = navigator.userAgent;
+        const browser = /Chrome/.test(ua) ? 'Chrome' : /Firefox/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : '브라우저';
+        const os = /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : '';
+        return `${browser} · ${os}`.trim();
+      })();
+
+      const res = await fetch(`${WORKER}/auth/device-link/init`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ e164, pcPubKeyB64u: pcKeyPair.publicKeyB64u, pcLabel }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.detail || data.error || '요청 실패');
+
+      sessionId = data.sessionId;
+      stepPhone.classList.remove('active');
+      stepCode.classList.add('active');
+      setStatus('스마트폰 알림을 확인하고, 화면에 뜬 코드를 입력해 주세요.');
+      startCountdown(data.expires_in || 90);
+      startPolling();
+    } catch (e) {
+      setStatus(e.message || '요청에 실패했습니다.', 'error');
+      $('btn-request').disabled = false;
+    }
+  });
+
+  // ── STEP 2: 코드 확인 ──────────────────────────────
+  $('btn-verify').addEventListener('click', async () => {
+    const code = $('code').value.trim();
+    if (!/^\d{6}$/.test(code)) { setStatus('6자리 숫자를 입력해 주세요.', 'error'); return; }
+
+    $('btn-verify').disabled = true;
+    setStatus('확인 중...');
+
+    try {
+      const res = await fetch(`${WORKER}/auth/device-link/verify`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, code }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.detail || data.error || '코드가 일치하지 않습니다.');
+
+      setStatus('확인됐습니다. 스마트폰에서 지갑을 전송하는 중...');
+      $('code-spinner').style.display = 'block';
+      // 이후 polling이 봉투 도착을 감지해 자동으로 다음 단계 진행
+    } catch (e) {
+      setStatus(e.message, 'error');
+      $('btn-verify').disabled = false;
+    }
+  });
+
+  // ── 봉투 polling ────────────────────────────────────
+  function startPolling() {
+    pollTimer = setInterval(async () => {
+      try {
+        const res = await fetch(`${WORKER}/auth/device-link/poll?sessionId=${encodeURIComponent(sessionId)}`);
+        const data = await res.json();
+        if (!data.ok) return;
+
+        if (data.state === 'expired') {
+          stopPolling();
+          setStatus('요청이 만료됐습니다. 처음부터 다시 시도해 주세요.', 'error');
+          resetToStep1();
+          return;
+        }
+        if (data.state === 'delivered' && data.sealed) {
+          stopPolling();
+          await finishImport(data.sealed);
+        }
+      } catch { /* 일시적 네트워크 오류는 무시하고 다음 polling에서 재시도 */ }
+    }, 2000);
+  }
+  function stopPolling() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
+
+  function startCountdown(seconds) {
+    let remain = seconds;
+    const el = $('timer');
+    const tick = () => {
+      if (remain <= 0) {
+        clearInterval(countdownTimer);
+        el.textContent = '요청이 만료됐습니다.';
+        stopPolling();
+        resetToStep1();
+        return;
+      }
+      el.textContent = `${remain}초 후 만료`;
+      remain -= 1;
+    };
+    tick();
+    countdownTimer = setInterval(tick, 1000);
+  }
+
+  function resetToStep1() {
+    stepCode.classList.remove('active');
+    stepPhone.classList.add('active');
+    $('btn-request').disabled = false;
+    $('btn-verify').disabled = false;
+    $('code').value = '';
+    sessionId = null; pcKeyPair = null;
+  }
+
+  // ── 봉투 복호화 → 지갑 복원 ─────────────────────────
+  async function finishImport(sealed) {
+    try {
+      const plaintext = await GopangWallet.openSealedWithKey(pcKeyPair.privateKey, sealed);
+      const { privKeyB64u } = JSON.parse(plaintext);
+      if (!privKeyB64u) throw new Error('전달받은 데이터 형식이 올바르지 않습니다.');
+
+      await GopangWallet.restoreFromPrivateKey(privKeyB64u);
+      setStatus('완료됐습니다. 이동 중...', 'success');
+      setTimeout(() => { location.href = RETURN_URL; }, 800);
+    } catch (e) {
+      setStatus('지갑 가져오기에 실패했습니다: ' + e.message, 'error');
+      resetToStep1();
+    } finally {
+      // 페어링 전용 1회용 키는 즉시 폐기(순방향 비밀성) — 참조만 끊어도
+      // CryptoKey 자체가 non-extractable이라 메모리에서 재추출 불가능하다.
+      pcKeyPair = null;
+    }
+  }
+})();
+</script>
+</body>
+</html>

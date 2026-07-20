@@ -1412,6 +1412,27 @@
     static async sealForRecipient(recipientPubKeyB64u, plaintext) {
       return sealForRecipient(recipientPubKeyB64u, plaintext);
     }
+    /**
+     * 2026-07-20 신설 — 기기 간 지갑 이전(device-link) 전용.
+     * PC가 이 페어링 세션에서만 쓸 1회용 X25519 키페어를 생성한다.
+     * 공개키는 서버로 보내 폰이 sealForRecipient()로 암호화하는 데 쓰고,
+     * 개인키(CryptoKey)는 PC 메모리에만 들고 있다가 openSealedWithKey()로
+     * 복호화한 뒤 버린다 — 어디에도 저장하지 않는다(1회용, 순방향 비밀성).
+     */
+    static async generateX25519KeyPair() {
+      return generateX25519KeyPair();
+    }
+    /**
+     * 2026-07-20 신설 — 아직 지갑 인스턴스가 없는 새 기기(PC)에서,
+     * generateX25519KeyPair()로 만든 임의의 개인키로 sealForRecipient()
+     * 봉투를 복호화한다. 복호화 로직 자체는 openSealed()를 그대로
+     * 쓴다(이미 CryptoKey를 인자로 받으므로 재구현 불필요) — 지갑 인스턴스
+     * 메서드(wallet.openSealed)와 달리 this._x25519PrivKey에 묶이지 않고
+     * 호출자가 넘긴 키를 그대로 쓰는 버전만 static으로 노출한다.
+     */
+    static async openSealedWithKey(privateKey, sealed) {
+      return openSealed(privateKey, sealed);
+    }
     static bufToB64u(buf)     { return bufToB64u(buf); }
     static b64uToBuf(b64u)    { return b64uToBuf(b64u); }
     static bufToHex(buf)      { return bufToHex(buf); }

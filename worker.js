@@ -305,6 +305,198 @@ async function handlePhoneOtpVerify(request, env, corsHeaders) {
     ok: true, phone_verify_token: token, expires_at: new Date(exp).toISOString(),
   }), { status: 200, headers: corsHeaders });
 }
+
+// ═══════════════════════════════════════════════════════════
+// 기기 간 지갑 이전(device-link) — 2026-07-20 신설
+//
+// 목표: PC가 폰과 "완전히 같은 개인키"를 갖게 한다(은행 온라인뱅킹과
+// 동일한 사용성). QR 스캔 로그인은 이미 폐기됐고(주피터 지시, 가입 시점
+// SMS 인증만이 유일한 본인 인증 경로), 그렇다고 매 로그인마다 SMS를
+// 또 보내면 비용이 로그인 빈도만큼 계속 나간다. 그래서 이 흐름은 SMS를
+// 전혀 쓰지 않는다 — 이미 로그인된 폰에 무료 웹푸시로 알리고, 폰 화면에
+// 뜨는 짧은 코드를 PC에 입력받아 페어링을 증명한 뒤, 개인키 자체는
+// gopang-wallet.js의 기존 X25519 봉투 암호화(sealForRecipient/openSealed
+// — 이미 있는 함수, 새로 안 만듦)로 암호화해 전달한다. 서버는 암호화된
+// 덩어리만 중계할 뿐 평문 개인키를 한 번도 보지 않는다.
+//
+// 세션 상태 전이: pending(코드 발급) → approved(PC가 코드 맞춤,
+// 폰이 봉투를 보내도 되는 시점) → delivered(폰이 봉투 전송 완료,
+// PC가 poll로 가져가면 즉시 삭제).
+//
+// 저장소는 phone-otp와 동일한 env.QR_SESSIONS_KV를 그대로 쓴다(짧은
+// TTL의 임시 레코드라는 성격이 완전히 동일 — 별도 KV 바인딩 불필요).
+// ═══════════════════════════════════════════════════════════
+const DEVICE_LINK_TTL_SECONDS = 90;      // 코드 유효기간 — SMS(5분)보다 훨씬 짧게(사용자 지시)
+const DEVICE_LINK_MAX_ATTEMPTS = 5;
+
+function _generateDeviceLinkCode() {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return String(100000 + (buf[0] % 900000));
+}
+
+// L1 profiles 컬렉션에서 e164(전화번호)로 레코드 조회 — device-link 전용
+// 신설. _l1FindProfileByGuid/_l1FindProfileByHandle과 동일 패턴.
+async function _l1FindProfileByE164(env, e164) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`e164='${e164}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`L1 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+// POST /auth/device-link/init { e164, pcPubKeyB64u, pcLabel? }
+// PC가 호출 — 그 번호로 등록된 계정(guid)에 웹푸시로 페어링 요청을 보낸다.
+async function handleDeviceLinkInit(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { e164, pcPubKeyB64u, pcLabel } = body;
+  if (!e164 || !/^\+820\d{8,10}$/.test(e164)) {
+    return _err(400, 'INVALID_PHONE', '올바른 국내 전화번호 형식이 아닙니다', corsHeaders);
+  }
+  if (!pcPubKeyB64u) return _err(400, 'MISSING_FIELD', 'pcPubKeyB64u 필수', corsHeaders);
+  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+
+  let profile;
+  try {
+    profile = await _l1FindProfileByE164(env, e164);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  }
+  if (!profile) return _err(404, 'PHONE_NOT_REGISTERED', '이 번호로 등록된 계정이 없습니다', corsHeaders);
+
+  const sessionId = crypto.randomUUID();
+  const code = _generateDeviceLinkCode();
+  const record = {
+    guid: profile.guid, e164, pcPubKeyB64u,
+    pcLabel: pcLabel || '알 수 없는 기기',
+    code, attempts: 0, state: 'pending',
+  };
+  await env.QR_SESSIONS_KV.put(`devlink:${sessionId}`, JSON.stringify(record), { expirationTtl: DEVICE_LINK_TTL_SECONDS });
+
+  // 웹푸시로 폰을 깨운다(SMS 아님 — 비용 없음). 코드 자체는 푸시 payload에
+  // 담지 않는다 — 알림을 열어 앱(자기 guid)으로 조회해야만 코드가 보이게
+  // 해서, 푸시를 가로챈 제3자가 코드까지 얻는 걸 한 단계 더 막는다.
+  try {
+    if (env.VAPID_PRIVATE_KEY && env.VAPID_PUBLIC_KEY && env.VAPID_SUBJECT) {
+      const fresh = await _l1FindProfileByGuid(env, profile.guid).catch(() => null);
+      if (fresh?.push_subscription) {
+        const sub = JSON.parse(fresh.push_subscription);
+        const payload = JSON.stringify({
+          title: '새 기기에서 로그인 요청',
+          body:  `${record.pcLabel}에서 로그인을 시도했습니다. 확인하려면 누르세요.`,
+          sound: fresh.push_sound || 'ping',
+          url:   `/auth/device-link-approve.html?sessionId=${encodeURIComponent(sessionId)}`,
+          tag:   `gopang-device-link-${sessionId}`,
+        });
+        await _sendWebPush(env, sub, payload);
+      }
+    }
+  } catch (e) {
+    console.warn('[DeviceLink] 푸시 발송 실패(치명적 아님 — 사용자가 앱을 직접 열어도 진행 가능):', e.message);
+  }
+
+  return new Response(JSON.stringify({ ok: true, sessionId, expires_in: DEVICE_LINK_TTL_SECONDS }), { status: 200, headers: corsHeaders });
+}
+
+// GET /auth/device-link/session?sessionId=...&guid=...
+// 폰이 호출 — 자신의 guid가 이 세션의 소유자와 일치할 때만 코드를 보여준다.
+async function handleDeviceLinkSession(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const sessionId = url.searchParams.get('sessionId');
+  const guid = url.searchParams.get('guid');
+  if (!sessionId || !guid) return _err(400, 'MISSING_FIELD', 'sessionId, guid 필수', corsHeaders);
+  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+
+  const raw = await env.QR_SESSIONS_KV.get(`devlink:${sessionId}`);
+  if (!raw) return _err(404, 'SESSION_EXPIRED', '세션이 만료됐거나 존재하지 않습니다', corsHeaders);
+  const record = JSON.parse(raw);
+  if (record.guid !== guid) return _err(403, 'GUID_MISMATCH', '이 세션의 소유자가 아닙니다', corsHeaders);
+
+  return new Response(JSON.stringify({
+    ok: true, state: record.state, code: record.code, pcLabel: record.pcLabel,
+    pcPubKeyB64u: record.pcPubKeyB64u,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// POST /auth/device-link/verify { sessionId, code }
+// PC가 호출 — 폰 화면의 코드를 맞게 입력했는지 확인.
+async function handleDeviceLinkVerify(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { sessionId, code } = body;
+  if (!sessionId || !code) return _err(400, 'MISSING_FIELD', 'sessionId, code 필수', corsHeaders);
+  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+
+  const key = `devlink:${sessionId}`;
+  const raw = await env.QR_SESSIONS_KV.get(key);
+  if (!raw) return _err(404, 'SESSION_EXPIRED', '세션이 만료됐거나 존재하지 않습니다', corsHeaders);
+  const record = JSON.parse(raw);
+
+  if (record.attempts >= DEVICE_LINK_MAX_ATTEMPTS) {
+    await env.QR_SESSIONS_KV.delete(key);
+    return _err(429, 'TOO_MANY_ATTEMPTS', '시도 횟수를 초과했습니다. 처음부터 다시 시도해 주세요', corsHeaders);
+  }
+  if (String(code).trim() !== record.code) {
+    record.attempts += 1;
+    await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: DEVICE_LINK_TTL_SECONDS });
+    return _err(400, 'CODE_MISMATCH', `코드가 일치하지 않습니다(남은 시도 ${DEVICE_LINK_MAX_ATTEMPTS - record.attempts}회)`, corsHeaders);
+  }
+
+  record.state = 'approved';
+  await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: DEVICE_LINK_TTL_SECONDS });
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
+}
+
+// POST /auth/device-link/deliver { sessionId, guid, sealed }
+// 폰이 호출 — code가 이미 approved된 세션에만, 자기 guid가 그 세션
+// 소유자와 일치할 때만 봉투(암호화된 개인키)를 넘긴다.
+async function handleDeviceLinkDeliver(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { sessionId, guid, sealed } = body;
+  if (!sessionId || !guid || !sealed) return _err(400, 'MISSING_FIELD', 'sessionId, guid, sealed 필수', corsHeaders);
+  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+
+  const key = `devlink:${sessionId}`;
+  const raw = await env.QR_SESSIONS_KV.get(key);
+  if (!raw) return _err(404, 'SESSION_EXPIRED', '세션이 만료됐거나 존재하지 않습니다', corsHeaders);
+  const record = JSON.parse(raw);
+  if (record.guid !== guid) return _err(403, 'GUID_MISMATCH', '이 세션의 소유자가 아닙니다', corsHeaders);
+  if (record.state !== 'approved') return _err(409, 'NOT_APPROVED', 'PC가 아직 코드를 확인하지 않았습니다', corsHeaders);
+
+  record.state = 'delivered';
+  record.sealed = sealed;
+  // PC가 가져갈 시간만 짧게 더 준다 — 폰이 봉투를 보낸 뒤에도 무기한
+  // 남아있으면 안 되므로(암호화된 봉투라도 최소한으로만 존재).
+  await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: 30 });
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
+}
+
+// GET /auth/device-link/poll?sessionId=...
+// PC가 호출 — 봉투가 도착했는지 짧은 간격으로 확인. 가져가면 즉시 삭제
+// (재사용 방지 — 한 세션당 봉투는 한 번만 소비된다).
+async function handleDeviceLinkPoll(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const sessionId = url.searchParams.get('sessionId');
+  if (!sessionId) return _err(400, 'MISSING_FIELD', 'sessionId 필수', corsHeaders);
+  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+
+  const key = `devlink:${sessionId}`;
+  const raw = await env.QR_SESSIONS_KV.get(key);
+  if (!raw) return new Response(JSON.stringify({ ok: true, state: 'expired' }), { status: 200, headers: corsHeaders });
+  const record = JSON.parse(raw);
+
+  if (record.state === 'delivered') {
+    await env.QR_SESSIONS_KV.delete(key);
+    return new Response(JSON.stringify({ ok: true, state: 'delivered', sealed: record.sealed }), { status: 200, headers: corsHeaders });
+  }
+  return new Response(JSON.stringify({ ok: true, state: record.state }), { status: 200, headers: corsHeaders });
+}
+
 const DEEPSEEK_URL   = 'https://api.deepseek.com/v1/chat/completions';
 // OpenRouter — Worker 내부 AI 호출 (내부 Agent, 피드백 분류 등)
 // 클라이언트가 OR 키로 직접 OR에 접속하는 것과 별개.
@@ -4451,6 +4643,15 @@ export default {
     // (2026-07-15 신설: 전화번호 OTP — 가입 시 번호 소유 증명, 솔라피 연동)
     if (pathname === '/biz/phone-otp-request' && request.method === 'POST') return handlePhoneOtpRequest(request, env, corsHeaders);
     if (pathname === '/biz/phone-otp-verify'  && request.method === 'POST') return handlePhoneOtpVerify(request, env, corsHeaders);
+    // (2026-07-20 신설: 기기 간 지갑 이전 — PC가 폰과 완전히 같은 개인키를
+    // 갖도록, SMS 대신 웹푸시로 폰을 깨우고 폰 화면에 뜬 짧은 코드를 PC에
+    // 입력받아 페어링한 뒤, X25519 봉투 암호화로 개인키 자체를 옮긴다.
+    // 서버는 암호화된 봉투만 중계하며 평문 개인키를 절대 보지 않는다.)
+    if (pathname === '/auth/device-link/init'    && request.method === 'POST') return handleDeviceLinkInit(request, env, corsHeaders);
+    if (pathname === '/auth/device-link/session'  && request.method === 'GET')  return handleDeviceLinkSession(request, env, corsHeaders);
+    if (pathname === '/auth/device-link/verify'   && request.method === 'POST') return handleDeviceLinkVerify(request, env, corsHeaders);
+    if (pathname === '/auth/device-link/deliver'  && request.method === 'POST') return handleDeviceLinkDeliver(request, env, corsHeaders);
+    if (pathname === '/auth/device-link/poll'     && request.method === 'GET')  return handleDeviceLinkPoll(request, env, corsHeaders);
     // 2026-07-07: /biz/review(Supabase biz_reviews, 5점 척도) → 완전 대체.
     // 실거래(tx_hash) 기반 trade_ratings(PocketBase, polarity+온도)로 이전.
     // handleBizReview는 하단에 DEPRECATED로 남겨두되 라우팅에서 제거함.
