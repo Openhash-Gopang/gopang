@@ -743,6 +743,43 @@ const JEONBUK_L2_TABLE = [
     kw: ['새만금해양수산국', '새만금', '해양항만', '수산'] },
 ];
 
+
+// ── 경북 L2 라우팅 테이블 ⚠️ 조직개편 중으로 신뢰도 낮음 ───────────
+// 검색 중 서로 다른 시점의 조직도 스냅샷 3개가 충돌(family/innov/safety
+// 담당 부서명이 스냅샷마다 다름) — 3선 이철우 도지사(민선 9기) 취임과
+// 함께 실제 개편이 진행 중인 것으로 보인다. 최신으로 보이는 조합을
+// 채택했으나 다른 도보다 신뢰도가 명확히 낮다 — 최우선 재검증 대상.
+const GYEONGBUK_L2_TABLE = [
+  { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'gyeongbuk', file: null,
+    kw: ['기획조정실'] },
+  { code: 'SP-DO-SAFETY', domain: 'safety', 도코드: 'gyeongbuk', file: null,
+    kw: ['재난안전실', '재난', '안전'] },
+  { code: 'SP-DO-JACHI', domain: 'jachi', 도코드: 'gyeongbuk', file: null,
+    kw: ['자치행정국', '자치행정'] },
+  { code: 'SP-DO-ECON', domain: 'econ', 도코드: 'gyeongbuk', file: null,
+    kw: ['경제통상국', '경제산업', '일자리'] },
+  { code: 'SP-DO-INNOV', domain: 'innov', 도코드: 'gyeongbuk', file: null,
+    kw: ['메타AI과학국', '메타버스', '과학산업', 'AI'] },
+  { code: 'SP-DO-WELFARE', domain: 'welfare', 도코드: 'gyeongbuk', file: null,
+    kw: ['복지건강국', '기초생활수급', '기초연금', '보건', '복지'] },
+  { code: 'SP-DO-FAMILY', domain: 'family', 도코드: 'gyeongbuk', file: null,
+    kw: ['저출생극복본부', '여성아동', '출산', '보육', '임신'] },
+  { code: 'SP-DO-AGRI', domain: 'agri', 도코드: 'gyeongbuk', file: null,
+    kw: ['농축산유통국', '농업', '축산'] },
+  { code: 'SP-DO-CLIMATE', domain: 'climate', 도코드: 'gyeongbuk', file: null,
+    kw: ['기후환경국', '환경산림', '산림', '환경'] },
+  { code: 'SP-DO-HOUSING', domain: 'housing', 도코드: 'gyeongbuk', file: null,
+    kw: ['건설도시국', '주택', '건설'] },
+  { code: 'SP-DO-TRANSPORT', domain: 'transport', 도코드: 'gyeongbuk', file: null,
+    kw: ['건설도시국', '교통'] },
+  { code: 'SP-DO-CULTURE', domain: 'culture', 도코드: 'gyeongbuk', file: null,
+    kw: ['문화관광체육국', '문화'] },
+  { code: 'SP-DO-TOURISM', domain: 'tourism', 도코드: 'gyeongbuk', file: null,
+    kw: ['관광'] },
+  { code: 'SP-DO-SPORTS', domain: 'sports', 도코드: 'gyeongbuk', file: null,
+    kw: ['체육'] },
+];
+
 const PROVINCE_TABLES = {
   jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE },
   // busan: L2만 실사 완료(2026-07-20). city(자치구·군 16개)/national은 아직 미착수 —
@@ -756,6 +793,7 @@ const PROVINCE_TABLES = {
   chungbuk: { l2: CHUNGBUK_L2_TABLE, city: [], national: [] },
   chungnam: { l2: CHUNGNAM_L2_TABLE, city: [], national: [] },
   jeonbuk: { l2: JEONBUK_L2_TABLE, city: [], national: [] },
+  gyeongbuk: { l2: GYEONGBUK_L2_TABLE, city: [], national: [] },  // ⚠️ 조직개편 중, 신뢰도 낮음
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }
