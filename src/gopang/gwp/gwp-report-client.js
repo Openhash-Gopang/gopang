@@ -71,6 +71,9 @@ export async function reportGwpSessionEnd({
   sessionStartedAt,
   proxyBase = DEFAULT_PROXY,
   attachedDocs = [],
+  how = 'completed', // 2026-07-20 신설 — §7 owner_pdv 기록용. 대부분 K-서비스는
+                      // escalation 개념이 없으므로 기본값 'completed'. 필요한
+                      // 서비스만 명시적으로 전달(값 종류는 §7.4 참조).
 } = {}) {
   if (!gwpMode) return { reported: false, sessionId: null };
   if (!agencyId) throw new Error('[gwp-report-client] agencyId 필수');
@@ -129,6 +132,36 @@ export async function reportGwpSessionEnd({
     }
   }
 
+  // (c) §7 기관측 PDV — 2026-07-20 신설. 여기 한 곳에서만 호출하면, 이미
+  // reportGwpSessionEnd()를 쓰고 있는 K-서비스 15개+ 전원이 개별 수정 없이
+  // 자동으로 owner_pdv에 consultation 레코드를 남긴다("모든 K-서비스가
+  // 자신의 PDV에 기록하는 메커니즘"을 한 곳으로 일반화 — 각 서비스 webapp.html을
+  // 일일이 고치는 대신 이미 다들 호출하는 공용 함수 안에 심는다).
+  // persona_key는 항상 null — 이건 "K-서비스 자신"과의 직접 상담이고, 전문가
+  // 페르소나 경유(expert-chat.html)는 recordOwnerPDV()를 별도로 직접 호출한다
+  // (그쪽은 ownerAgency가 agencyId 자기 자신이 아니라 소유 K-서비스이므로 구분 필요).
+  // guid가 없는 완전 익명 세션(resolvedGuid==='anonymous')은 §7.2 해싱 대상이
+  // 아니므로 기록을 생략한다 — 억지로 "anonymous" 문자열을 해싱하면 그
+  // K-서비스의 모든 익명 세션이 같은 who_hash로 뭉쳐 의미 없는 데이터가 된다.
+  if (guid) {
+    try {
+      await recordOwnerPDV({
+        ownerAgency: agencyId,
+        recordType: 'consultation',
+        guid,
+        personaKey: null,
+        personaVersion: null,
+        what: whatText,
+        how,
+        when: startedAt,
+        where: location.href,
+        proxyBase,
+      });
+    } catch (e) {
+      console.warn('[owner-pdv] 자동 기록 실패(무시):', e.message);
+    }
+  }
+
   return { reported: true, sessionId: sid };
 }
 
@@ -179,6 +212,9 @@ export async function recordOwnerPDV({
   why = null,
   when,
   where,
+  detail = null, // 2026-07-20 신설 — own_output 전용 구조화 데이터(K-서비스마다
+                  // 스키마가 다름). 예: K-Law 판결문 { case_no, klaw_version,
+                  // score_total, grade }. consultation이면 항상 무시(null)된다.
   proxyBase = DEFAULT_PROXY,
 } = {}) {
   if (!ownerAgency) throw new Error('[gwp-report-client] recordOwnerPDV: ownerAgency 필수');
@@ -196,12 +232,13 @@ export async function recordOwnerPDV({
     owner_agency: ownerAgency,
     persona_key: recordType === 'consultation' ? personaKey : null,
     persona_version: recordType === 'consultation' ? personaVersion : null,
-    guid_for_hashing: guid || null, // 프록시가 해싱 후 폐기 — <ownerAgency>_pdv에는 who_hash만 저장
+    guid_for_hashing: guid || null, // 프록시가 해싱 후 폐기 — owner_pdv에는 who_hash만 저장
     when: when || now,
     where: where || (typeof location !== 'undefined' ? location.href : null),
     what,
     how,
     why,
+    detail: recordType === 'own_output' ? (detail || null) : null,
     source_ref: null, // 원문 미저장 원칙(SP_PDV §1/§7.3)
     confidence: 1,
   };

@@ -7451,8 +7451,27 @@ async function handleOwnerPdvReport(request, env, corsHeaders) {
   const RECORD_TYPES = ['consultation', 'own_output'];
   if (!RECORD_TYPES.includes(r.record_type))
     return _err(400, 'SCHEMA_ERROR', `record_type은 ${RECORD_TYPES.join('|')} 중 하나여야 합니다`, corsHeaders);
-  const ownerAgency = r.owner_agency;
+
+  // §6(2026-07-20 사고실험) 대응 — salt 파생 전에 정규화(trim+lowercase)해
+  // 대소문자 차이로 같은 K-서비스의 salt가 갈라지는 걸 막고, 화이트리스트
+  // 대조로 오타·미등록 값 주입을 막는다. 목록은 gwp-registry.js의 agency id +
+  // 'gopang'(오너 없는 카테고리 폴백, expert-registry.js 참조)을 미러링한다 —
+  // 매 요청마다 DB(gwp_registry)를 조회하지 않고 하드코딩한 이유는
+  // REGISTERED_SERVICES(위 8347행)도 동일하게 정적 화이트리스트 방식이라
+  // 기존 관례를 따른 것이다. 새 K-서비스 추가 시 이 배열도 같이 갱신해야
+  // 한다(잊기 쉬운 지점 — gwp-registry.js 수정 체크리스트에 추가 권장).
+  const OWNER_AGENCY_WHITELIST = new Set([
+    'gopang', 'klaw', 'kpolice', 'ksecurity', 'khealth', 'kedu', 'kgdc',
+    'kfinance', 'kinsurance', 'kbank', 'ktelecom', 'kestate',
+    'kcommerce_seller', 'ktax', 'kcommerce', 'ktransport', 'klogistics',
+    'jeju', 'kgov', 'kdemocracy', 'kbusiness', 'kemergency',
+    'fiil-kcleaner', 'ksearch', 'kqna', 'kusers',
+  ]);
+  const ownerAgency = String(r.owner_agency || '').trim().toLowerCase();
   if (!ownerAgency) return _err(400, 'SCHEMA_ERROR', 'owner_agency 필수', corsHeaders);
+  if (!OWNER_AGENCY_WHITELIST.has(ownerAgency))
+    return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 owner_agency: ${ownerAgency}`, corsHeaders);
+
   if (!r.what || !r.how) return _err(400, 'SCHEMA_ERROR', 'what/how 필수', corsHeaders);
 
   const HOW_VALUES = ['completed', 'escalated_success', 'escalated_ai_limit', 'early_exit'];
@@ -7488,6 +7507,7 @@ async function handleOwnerPdvReport(request, env, corsHeaders) {
       what:            String(r.what).slice(0, 500),
       how:             r.how,
       why:             r.why || null,
+      detail:          r.record_type === 'own_output' && r.detail ? JSON.stringify(r.detail) : null,
       source_ref:      null, // §7.3 원칙 — 원문 미저장
       confidence:      typeof r.confidence === 'number' ? r.confidence : 1,
     }),

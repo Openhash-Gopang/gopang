@@ -383,7 +383,12 @@ async function _recordExpertOwnerPDV(reason) {
   }
   const user = _loadUser();
   if (!user?.ipv6) {
-    console.warn('[Expert] 로그인 정보 없음 — §7 기관측 PDV 기록 생략');
+    // 2026-07-20 확인: gopang-app.js v6.0부로 게스트 모드가 완전히 폐지되어
+    // 정상 경로로는 비로그인 상태에서 이 페이지에 도달할 수 없다(#app 자체가
+    // 렌더링 안 되고 로그인 팝업만 뜸, 닫기 버튼 없음). 그래도 이 분기를
+    // 남겨두는 이유는 localStorage 손상·세션 중 로그아웃 등 비정상 상태에
+    // 대한 방어 코드이지, 정상적인 "게스트 사용" 경로가 아니다.
+    console.warn('[Expert] 로그인 정보 없음(비정상 상태) — §7 기관측 PDV 기록 생략');
     return;
   }
 
