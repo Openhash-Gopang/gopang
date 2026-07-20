@@ -188,7 +188,10 @@ if (!def) {
 }
 document.getElementById('tb-icon').textContent  = def.icon || '🤝';
 document.getElementById('tb-title').textContent = def.label + ' AI';
-document.getElementById('tb-sub').textContent   = '자격직 전문가 페르소나 · 최종 법적/의료적 행위는 인간 전속';
+document.getElementById('tb-sub').textContent   =
+  PERSONA === 'hondi'
+    ? '혼디 플랫폼 공식 안내 · 개발 결정은 개발팀 전속'
+    : '자격직 전문가 페르소나 · 최종 법적/의료적 행위는 인간 전속';
 document.title = def.label + ' AI 상담';
 
 // ══════════════════════════════════════════════════════════════
@@ -390,6 +393,7 @@ async function sendTurn(text, attachment) {
     // 재사용하고, 결과 재주입 후 한 번 더 응답을 받는 흐름도 동일하게 맞춘다.
     await _maybeHandleWebSearch(full);
     await _maybeHandleOrchestrationTags(full);
+    await _maybeHandleFeedbackSubmit(full);
 
     // ── [CONNECT_HUMAN_EXPERT: 업종키워드] 태그 감지 (2026-07-06, C39 신설) ──
     // SP-COMMON-02 C39가 요구하는 "인간 전문가 연결"을 실제로 수행한다.
@@ -607,6 +611,58 @@ async function _continueAfterOrchestrationTag() {
   // 끊으면 오히려 그 흐름을 깬다 — 대신 각 fetch 자체에 실패 시 에러
   // 텍스트가 재주입되므로 모델이 무한 재시도할 유인이 없다.
   await _maybeHandleOrchestrationTags(full);
+}
+
+// ── [SUBMIT_FEEDBACK: category=..., content=...] 처리 (2026-07-20 신설) ──
+// 혼디(hondi) 페르소나 전용 — 다만 태그 자체는 다른 페르소나가 emit해도
+// 무해하게 동작한다(범용 인프라). 이 파일 상단(로드 실패 배너 분기)에
+// 이미 있던 "등록 안 된 페르소나 요청 시 /feedback에 자동 기록" 패턴과
+// 완전히 동일한 엔드포인트·바디 형식을 재사용한다 — 새 백엔드를 만들지
+// 않고 이미 검증된 인프라(자동 category 분류, feedback.html 관리자 검토
+// 화면)를 그대로 쓴다. category는 서버가 DeepSeek으로 자동 재분류하므로
+// 이 태그의 category는 참고용 힌트일 뿐이다.
+async function _maybeHandleFeedbackSubmit(fullReply) {
+  const m = fullReply.match(/\[SUBMIT_FEEDBACK:([\s\S]*?)\]/);
+  if (!m) return;
+
+  const body = m[1];
+  const contentM = body.match(/content=([\s\S]*)/);
+  if (!contentM) {
+    console.warn('[Expert] SUBMIT_FEEDBACK 감지됐으나 content 필드를 못 찾음 — 제출 생략');
+    return;
+  }
+  const content = contentM[1].trim().replace(/,\s*category=.*$/i, '').trim();
+
+  let resultText;
+  try {
+    const user = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+    if (!user?.ipv6 || !user?.handle) {
+      resultText = '{"error":"로그인 정보 없음 — 제출 불가"}';
+    } else {
+      const res = await fetch(`${RELAY_ENDPOINT}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guid: user.ipv6, handle: user.handle, content }),
+      });
+      resultText = res.ok ? JSON.stringify(await res.json()) : `{"error":"HTTP ${res.status}"}`;
+    }
+  } catch (e) {
+    resultText = `{"error":"${e.message}"}`;
+  }
+
+  messages.push({ role: 'user', content:
+    `[SUBMIT_FEEDBACK 결과] ${resultText}\n\n제출이 성공했으면 접수됐다고 간단히 확인해주고,` +
+    ` 실패했으면(예: 로그인 정보 없음) 그 사유를 이용자에게 자연스럽게 전달하세요.` });
+
+  let shown = false;
+  const aiBubble = appendBubble('ai', '');
+  aiBubble.style.display = 'none';
+  const full = await callExpertAI(messages, (delta, fullText) => {
+    if (!shown) { aiBubble.style.display = ''; shown = true; }
+    aiBubble.innerHTML = escHtml(fullText).replace(/\n/g, '<br>');
+    document.getElementById('chat-thread').scrollTop = 1e9;
+  });
+  messages.push({ role: 'assistant', content: full });
 }
 
 // market의 search_entities RPC를 호출해 관련 업종의 실제 등록 사업자를

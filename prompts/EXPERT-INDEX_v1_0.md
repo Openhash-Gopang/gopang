@@ -1,4 +1,4 @@
-# EXPERT-INDEX v1.0 — 전문가 페르소나 일련번호 목록 (60개)
+# EXPERT-INDEX v1.1 — 전문가 페르소나 일련번호 목록 (61개, 2026-07-20 혼디 추가)
 
 > 소스: `src/gopang/ai/expert-registry.js` (EXPERT_REGISTRY, 2026-07-19 실사 기준 60개)
 > 번호 체계: 전체 일련번호(No.) + 카테고리 코드(EXPERT-{CAT}-{순번})
@@ -65,6 +65,7 @@
 | 058 | EXPERT-SPORTS-01 | 생활스포츠지도사 | `sports-instructor` | 🏃 | ✅ | `SP_sports-instructor` |
 | 059 | EXPERT-BEAUTY-01 | 미용사 | `hairdresser` | 💇 | — | `SP_hairdresser` |
 | 060 | EXPERT-CULINARY-01 | 조리사 | `chef` | 👨‍🍳 | — | `SP_chef` |
+| 061 | EXPERT-PLATFORM-01 | 혼디 안내 | `hondi` | 🏝️ | — | `SP_hondi` |
 
 ## 카테고리별 개수
 
@@ -82,4 +83,12 @@
 | 스포츠 | SPORTS | 1 |
 | 뷰티 | BEAUTY | 1 |
 | 조리 | CULINARY | 1 |
-| **합계** | | **60** |
+| 플랫폼 안내 | PLATFORM | 1 |
+| **합계** | | **61** |
+
+> **2026-07-20 추가**: No.061 혼디(`hondi`)는 다른 60개와 근본적으로 다르다 —
+> 자격을 요구하는 전문직이 아니라 플랫폼 자체를 안내하는 페르소나이며, C5의
+> "인간 전문가 전속"이 이 페르소나에서는 "개발팀 전속"으로 해석된다. 기존
+> `hondi_visitor_sp`(어떤 코드에서도 로드되지 않던 phantom SP)의 지식을
+> 재사용하고, 기존 `/feedback` 인프라(자동 category 분류)를 정식 액션
+> 태그(`SUBMIT_FEEDBACK`)로 노출했다.

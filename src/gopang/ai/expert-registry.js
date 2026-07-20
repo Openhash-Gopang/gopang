@@ -301,6 +301,24 @@ export const EXPERT_REGISTRY = {
     label: '조리사', icon: '👨‍🍳', category: 'CULINARY',
     key: 'SP_chef', needsMedicalSafety: false,
   },
+
+  // ── 플랫폼 안내 (2026-07-20 신설, 61번째) ───────────────────
+  // 배경: hondi_visitor_sp(HONDI_VISITOR_SP 매니페스트 키)가 이미 "혼디란
+  // 무엇인가"에 대한 지식베이스로 작성돼 있었으나, 실제로는 어떤 코드에서도
+  // 로드하는 곳이 없는 phantom SP였다(실사 확인 — grep 전수조사 결과
+  // hondi_visitor_sp/HONDI_VISITOR_SP를 참조하는 JS/HTML이 전혀 없었음).
+  // 별도로 expert-chat.html엔 "등록 안 된 페르소나 요청 시 /feedback에
+  // 자동 기록"하는 fallback이 이미 있었다(주석: "이미 검증된 인프라를
+  // 재사용") — 하지만 이건 사용자가 실수로 존재하지 않는 페르소나를 부를
+  // 때만 조용히 발동하는 부산물이지, 사용자가 의도적으로 대화할 수 있는
+  // 페르소나가 아니었다. 이 둘을 하나의 정식 EXPERT 페르소나로 통합한다 —
+  // hondi_visitor_sp의 지식(§1~§13)을 STEP 구조로 재구성하고, 기존 /feedback
+  // 엔드포인트(자동 카테고리 분류 + feedback.html 관리자 검토 화면 이미
+  // 존재)를 정식 액션 태그로 노출한다.
+  hondi: {
+    label: '혼디 안내', icon: '🏝️', category: 'PLATFORM',
+    key: 'SP_hondi', needsMedicalSafety: false,
+  },
 };
 
 export function getExpertDef(personaId) {
