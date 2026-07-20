@@ -1,3 +1,5 @@
+import { resolveSigunguDept } from './sigungu-dept-resolver.js';
+
 /**
  * gov-router.js — 광역시도 정부 AC 공용 라우터 (중앙/공유 모듈)
  *
@@ -983,6 +985,48 @@ function _matchCity(text) {
   return null;
 }
 
+// ── 시군구 지연 초기화용 휴리스틱 (2026-07-20 신설) ──────────────
+// ★ 정밀하지 않음 — "정읍시가 아니라 정읍시가"처럼 실제 지명이 아닌
+// 문자열도 걸릴 수 있다. KOSIS 리졸버와 동일하게 "일단 v1으로 배선하고
+// 실사용 로그(sigungu_dept_resolve_log)가 쌓이면 정교화"하는 전략을 쓴다
+// — 오탐이 나도 결과 자체가 "확인 안 됨" 톤이라 사용자에게 해를 끼치지
+// 않는다(_renderFallback 참고).
+const _SIGUNGU_FALSE_POSITIVE_WORDS = ['필요시', '동시', '당시', '임시', '수시', '즉시', '항시'];
+function _guessSigunguName(text) {
+  const pattern = /([가-힣]{2,4}(?:시|군|구))/g;
+  let m;
+  while ((m = pattern.exec(text)) !== null) {
+    const candidate = m[1];
+    if (_SIGUNGU_FALSE_POSITIVE_WORDS.includes(candidate)) continue;
+    return candidate;
+  }
+  return null;
+}
+
+const _SIGUNGU_DOMAIN_KEYWORDS = {
+  welfare: ['복지', '기초생활수급', '기초연금'],
+  family: ['여성가족', '보육', '어린이집', '임신', '출산'],
+  health: ['보건소', '예방접종', '건강검진', '감염병'],
+  safety: ['재난', '안전', '화재'],
+  jachi: ['민원', '주민등록', '인감', '자치행정'],
+  econ: ['일자리', '소상공인', '지역경제', '전통시장'],
+  climate: ['환경', '쓰레기', '재활용', '분리배출'],
+  housing: ['건축', '주택', '도시계획'],
+  transport: ['버스', '교통', '도로'],
+  culture: ['문화', '도서관', '축제'],
+  tourism: ['관광'],
+  sports: ['체육', '생활체육'],
+  agri: ['농정', '농업', '축산'],
+  ocean: ['수산', '어업'],
+  plan: ['기획', '예산'],
+};
+function _guessDomainFromText(text) {
+  for (const [domain, kws] of Object.entries(_SIGUNGU_DOMAIN_KEYWORDS)) {
+    if (kws.some(k => text.includes(k))) return domain;
+  }
+  return null;
+}
+
 function _scoreMatch(text, table) {
   let best = null, bestScore = 0;
   for (const entry of table) {
@@ -1262,7 +1306,7 @@ function _resolvePdvScopeFromTrace(trace) {
 // 아래의 얇은 래퍼가 담당한다 — §13b PDV_HISTORY_REQUEST 자리표시자 치환을
 // 반환 지점이 8곳 넘게 흩어진 이 함수 내부를 전부 건드리지 않고 한 곳에서
 // 처리하기 위함(호출부 입장에서 동작은 완전히 동일, 순수 후처리 wrapper).
-async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, classifyFn = null) {
+async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, classifyFn = null, env = null, ctx = null) {
   // 2026-07-05: UNIVERSAL-INTEGRITY를 여기서 fetch/삽입하던 걸 제거했다.
   // jeju-router.js는 이제 /ai/chat이 아니라 /gov/relay를 호출하고,
   // handleGovRelay()가 UNIVERSAL-INTEGRITY + UNIVERSAL-common(U9 포함)을
@@ -1354,6 +1398,25 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     trace.push(cityOnly.code);
     await _appendExpertIfMatched();
     return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+  }
+
+  // 2.5) 시군구 이름이 언급됐지만 정적 도시 테이블(_cityTable())에는
+  // 없는 경우 — 지연 초기화 리졸버 호출(2026-07-20 신설). env가 없으면
+  // (호출부가 아직 env/ctx를 안 넘기면) 조용히 건너뛰고 기존 3)/5)
+  // 경로로 정상 진행 — 하위호환 안전, 이 단계가 없어도 기존 동작 100%
+  // 동일.
+  if (env) {
+    const sigunguGuess = _guessSigunguName(text);
+    if (sigunguGuess) {
+      const domainGuess = _guessDomainFromText(text);
+      if (domainGuess) {
+        const resolved = await resolveSigunguDept(sigunguGuess, domainGuess, env, ctx);
+        parts.push(resolved.text);
+        trace.push(`SP-SIGUNGU-LAZY(${sigunguGuess}/${domainGuess}/${resolved.source})`);
+        await _appendExpertIfMatched();
+        return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+      }
+    }
   }
 
   // 3) 실국 키워드 매칭 → 규칙 A: 짧은 체인
@@ -1451,8 +1514,8 @@ export function resolveHandlerCodeFromTrace(trace) {
 }
 window.resolveHandlerCodeFromTrace = resolveHandlerCodeFromTrace;
 
-export async function assembleGovSystemPrompt(userText, pdvLocationHint = null, classifyFn = null) {
-  const result = await _assembleGovSystemPromptRaw(userText, pdvLocationHint, classifyFn);
+export async function assembleGovSystemPrompt(userText, pdvLocationHint = null, classifyFn = null, env = null, ctx = null) {
+  const result = await _assembleGovSystemPromptRaw(userText, pdvLocationHint, classifyFn, env, ctx);
   if (!_PDV_HISTORY_SCOPE_PLACEHOLDER_RE.test(result.systemPrompt)) return result;
   const scope = _resolvePdvScopeFromTrace(result.trace);
   return {
