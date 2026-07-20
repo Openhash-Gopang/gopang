@@ -596,6 +596,39 @@ const ULSAN_L2_TABLE = [
     kw: ['체육', '생활체육'] },
 ];
 
+
+// ── 세종 L2 라우팅 테이블 (2026-07-20 최초 실사) ─────────────────
+// 원형 도메인 16개 중 세종이 보유한 12개(innov/family/health/ocean 없음)
+// 채움. 근거: sejong.go.kr 공식 조직도. 세종은 단층제(시·군·구 없음)라
+// city/national 테이블 개념 자체가 다른 도와 다르게 설계돼야 할 수 있음
+// (PHASE C에서 검토 필요).
+const SEJONG_L2_TABLE = [
+  { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'sejong', file: null,
+    kw: ['기획조정실', '기획', '예산'] },
+  { code: 'SP-DO-SAFETY', domain: 'safety', 도코드: 'sejong', file: null,
+    kw: ['시민안전실', '재난', '안전'] },
+  { code: 'SP-DO-JACHI', domain: 'jachi', 도코드: 'sejong', file: null,
+    kw: ['자치행정국', '자치행정'] },
+  { code: 'SP-DO-ECON', domain: 'econ', 도코드: 'sejong', file: null,
+    kw: ['경제산업국', '경제', '산업', '투자유치'] },
+  { code: 'SP-DO-WELFARE', domain: 'welfare', 도코드: 'sejong', file: null,
+    kw: ['보건복지국', '기초생활수급', '기초연금', '보건', '복지', '임신', '출산', '보육'] },
+  { code: 'SP-DO-CLIMATE', domain: 'climate', 도코드: 'sejong', file: null,
+    kw: ['환경녹지국', '환경', '녹지'] },
+  { code: 'SP-DO-HOUSING', domain: 'housing', 도코드: 'sejong', file: null,
+    kw: ['도시주택국', '주택', '건축'] },
+  { code: 'SP-DO-TRANSPORT', domain: 'transport', 도코드: 'sejong', file: null,
+    kw: ['교통국', '대중교통', 'BRT'] },
+  { code: 'SP-DO-CULTURE', domain: 'culture', 도코드: 'sejong', file: null,
+    kw: ['문화체육관광국', '문화'] },
+  { code: 'SP-DO-TOURISM', domain: 'tourism', 도코드: 'sejong', file: null,
+    kw: ['관광'] },
+  { code: 'SP-DO-SPORTS', domain: 'sports', 도코드: 'sejong', file: null,
+    kw: ['체육', '생활체육'] },
+  { code: 'SP-DO-AGRI', domain: 'agri', 도코드: 'sejong', file: null,
+    kw: ['도농상생국', '농업', '농촌'] },
+];
+
 const PROVINCE_TABLES = {
   jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE },
   // busan: L2만 실사 완료(2026-07-20). city(자치구·군 16개)/national은 아직 미착수 —
@@ -605,6 +638,7 @@ const PROVINCE_TABLES = {
   incheon: { l2: INCHEON_L2_TABLE, city: [], national: [] },  // ⚠️ 2026-08 시행 예정(안)
   daejeon: { l2: DAEJEON_L2_TABLE, city: [], national: [] },
   ulsan: { l2: ULSAN_L2_TABLE, city: [], national: [] },
+  sejong: { l2: SEJONG_L2_TABLE, city: [], national: [] },
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }

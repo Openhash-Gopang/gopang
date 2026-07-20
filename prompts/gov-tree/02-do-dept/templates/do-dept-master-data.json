@@ -1,5 +1,5 @@
 {
-  "_schema_설명": "도(道) 단위 부서 데이터. 하나의 domain(예: welfare)에 여러 도(道코드)가 각자 레코드를 등록한다. 렌더링은 jeju-router.js의 _renderDeptTemplate()이 domain으로 template을 찾고, 도코드로 이 배열에서 해당 레코드를 찾아 자리표시자를 채운다. 이 파일은 gopang/prompts/Jejudo/02-do-dept/templates/ 아래 있지만 향후 도별 프로젝트가 늘면 Jejudo 밖(prompts/ 최상위 공용 위치)으로 옮기는 것을 검토할 것 — 지금은 jeju가 유일한 구현체라 이 위치에 둔다. 2026-07-13 추가: '개편예정_문구' 필드 신설 — 도의회 심사 등으로 아직 확정되지 않은 조직개편 내용을 '구명칭_문구'(이미 확정된 과거 개편)와 구분해 추적한다. 확정되면 부서명/산하과목록 등 실제 필드를 갱신하고 이 필드는 '구명칭_문구'로 이동한다. | 2026-07-20: 원형 도메인 13→16 확장(health/family/sports 신설) — 도별로 조직이 통합/분리된 경우를 모두 지원. 인스턴스가 해당 슬롯 레코드를 갖고 있지 않으면 그 도는 상위(통합된) 도메인이 흡수한다. | 2026-07-20: 서울 14개 도메인 신설(agri/ocean 없음 — 도심형 광역시라 별도 농수산 국이 없음을 확인, 정상적 공백). | 2026-07-20: 인천 8개 레코드 추가 — ⚠️ 전부 2026-08 시행 예정(안) 기준, 시의회 통과 전(TBD). safety/jachi/culture/tourism/sports/agri/ocean/health는 이번 개편 보도에 언급 없어 미확인 — 레코드 미생성. | 2026-07-20: 대전 10개 도메인 신설(확인된 것만 — housing/transport/climate/family/agri/ocean은 미확인이라 레코드 없음). ⚠️ 민선 9기(허태정) 조직개편 여부 미확인. | 2026-07-20: 울산 13개 도메인 신설(family/agri/ocean 없음 — family는 복지보훈여성국 통합, agri/ocean은 국 단위 조직 미확인).",
+  "_schema_설명": "도(道) 단위 부서 데이터. 하나의 domain(예: welfare)에 여러 도(道코드)가 각자 레코드를 등록한다. 렌더링은 jeju-router.js의 _renderDeptTemplate()이 domain으로 template을 찾고, 도코드로 이 배열에서 해당 레코드를 찾아 자리표시자를 채운다. 이 파일은 gopang/prompts/Jejudo/02-do-dept/templates/ 아래 있지만 향후 도별 프로젝트가 늘면 Jejudo 밖(prompts/ 최상위 공용 위치)으로 옮기는 것을 검토할 것 — 지금은 jeju가 유일한 구현체라 이 위치에 둔다. 2026-07-13 추가: '개편예정_문구' 필드 신설 — 도의회 심사 등으로 아직 확정되지 않은 조직개편 내용을 '구명칭_문구'(이미 확정된 과거 개편)와 구분해 추적한다. 확정되면 부서명/산하과목록 등 실제 필드를 갱신하고 이 필드는 '구명칭_문구'로 이동한다. | 2026-07-20: 원형 도메인 13→16 확장(health/family/sports 신설) — 도별로 조직이 통합/분리된 경우를 모두 지원. 인스턴스가 해당 슬롯 레코드를 갖고 있지 않으면 그 도는 상위(통합된) 도메인이 흡수한다. | 2026-07-20: 서울 14개 도메인 신설(agri/ocean 없음 — 도심형 광역시라 별도 농수산 국이 없음을 확인, 정상적 공백). | 2026-07-20: 인천 8개 레코드 추가 — ⚠️ 전부 2026-08 시행 예정(안) 기준, 시의회 통과 전(TBD). safety/jachi/culture/tourism/sports/agri/ocean/health는 이번 개편 보도에 언급 없어 미확인 — 레코드 미생성. | 2026-07-20: 대전 10개 도메인 신설(확인된 것만 — housing/transport/climate/family/agri/ocean은 미확인이라 레코드 없음). ⚠️ 민선 9기(허태정) 조직개편 여부 미확인. | 2026-07-20: 울산 13개 도메인 신설(family/agri/ocean 없음 — family는 복지보훈여성국 통합, agri/ocean은 국 단위 조직 미확인). | 2026-07-20: 세종 12개 도메인 신설(innov/family/health/ocean 없음 — innov는 미확인, family/health는 보건복지국 통합, ocean은 내륙이라 정상 공백).",
   "부서목록": [
     {
       "domain": "welfare",
@@ -1513,6 +1513,210 @@
       "콜센터번호": "052-120",
       "콜센터운영시간": "평일 9~20시 (주말·공휴일 미운영 — 다른 도시와 다름, 유의)",
       "_비고": "2026-07-20 최초 실사(ulsan.go.kr 공식 조직도 재확인, 최근 개편 보도는 못 찾아 비교적 안정적 상태로 판단).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "plan",
+      "template": "SP-DEPT-PLAN-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "도이름": "세종특별자치시",
+      "부서명": "기획조정실",
+      "산하과목록": "산하과 미확인(TBD)",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (044-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(sejong.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "safety",
+      "template": "SP-DEPT-SAFETY-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "도이름": "세종특별자치시",
+      "부서명": "시민안전실",
+      "산하과목록": "산하과 미확인(TBD)",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (044-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(sejong.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "jachi",
+      "template": "SP-DEPT-JACHI-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "도이름": "세종특별자치시",
+      "부서명": "자치행정국",
+      "산하과목록": "산하과 미확인(TBD)",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (044-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(sejong.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "econ",
+      "template": "SP-DEPT-ECON-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "도이름": "세종특별자치시",
+      "부서명": "경제산업국",
+      "산하과목록": "산하과 미확인(TBD) — 투자유치단(별도 조직)도 인접 기능.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (044-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(sejong.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "welfare",
+      "template": "SP-DEPT-WELFARE-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "도이름": "세종특별자치시",
+      "부서명": "보건복지국",
+      "산하과목록": "산하과 미확인(TBD) — 보건환경연구원·보건소는 직속기관으로 별도. 보건+복지 통합돼 있어 health/family 별도 도메인 레코드는 미생성.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (044-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(sejong.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "climate",
+      "template": "SP-DEPT-CLIMATE-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "도이름": "세종특별자치시",
+      "부서명": "환경녹지국",
+      "산하과목록": "산하과 미확인(TBD)",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (044-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(sejong.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "housing",
+      "template": "SP-DEPT-HOUSING-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "도이름": "세종특별자치시",
+      "부서명": "도시주택국",
+      "산하과목록": "산하과 미확인(TBD)",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (044-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(sejong.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "transport",
+      "template": "SP-DEPT-TRANSPORT-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "도이름": "세종특별자치시",
+      "부서명": "교통국",
+      "산하과목록": "산하과 미확인(TBD)",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (044-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(sejong.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "culture",
+      "template": "SP-DEPT-CULTURE-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "도이름": "세종특별자치시",
+      "부서명": "문화체육관광국",
+      "산하과목록": "산하과 미확인(TBD) — 경기·대구·울산과 동일하게 문화·체육·관광 통합.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (044-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(sejong.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "tourism",
+      "template": "SP-DEPT-TOURISM-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "도이름": "세종특별자치시",
+      "부서명": "문화체육관광국",
+      "산하과목록": "culture와 동일 부서 — domain만 분리.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (044-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(sejong.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "sports",
+      "template": "SP-DEPT-SPORTS-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "도이름": "세종특별자치시",
+      "부서명": "문화체육관광국",
+      "산하과목록": "culture와 동일 부서 — domain만 분리.",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (044-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(sejong.go.kr 공식 조직도).",
+      "결재핸들러": {
+        "유형": "DEPARTMENT_CONTACT",
+        "직원_hondi_guid": null,
+        "직원_등록여부": false
+      }
+    },
+    {
+      "domain": "agri",
+      "template": "SP-DEPT-AGRI-TEMPLATE_v1.0.md",
+      "도코드": "sejong",
+      "도이름": "세종특별자치시",
+      "부서명": "도농상생국",
+      "산하과목록": "산하과 미확인(TBD) — ★ '도농상생'이라는 이름 자체가 세종의 특수성(신도시+농촌 공존)을 보여줌. 농업기술센터(직속기관)도 별도 존재. 해양수산 기능은 없음(내륙, ocean 도메인 레코드 미생성).",
+      "콜센터명": "TBD",
+      "콜센터번호": "TBD (044-120으로 추정, 미확인)",
+      "콜센터운영시간": "TBD",
+      "_비고": "2026-07-20 최초 실사(sejong.go.kr 공식 조직도).",
       "결재핸들러": {
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
