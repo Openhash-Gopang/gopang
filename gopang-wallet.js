@@ -27,6 +27,14 @@
   const LS_X25519_PUBKEY = 'gopang_wallet_x25519_pubkey';
   const LS_HANDLE        = 'gopang_wallet_handle';
   const LS_WEBAUTHN_CRED = 'gopang_wallet_webauthn_cred_id';
+  // 2026-07-20 신설 — 고액 거래 재인증(step-up) 전용 credential.
+  // LS_WEBAUTHN_CRED(위)는 PRF 확장이 필수인 "로컬 저장소 재암호화"
+  // 목적과 강하게 결합돼 있는데, PRF는 기기·브라우저에 따라 미지원인
+  // 경우가 실사로 확인됐다(지문 인증 자체는 성공해도 PRF_UNSUPPORTED로
+  // enrollWebAuthn()이 실패). 고액 거래 재인증은 서버가 직접 서명을
+  // 검증하는 방식이라 PRF가 애초에 필요 없다 — 완전히 독립된 credential
+  // 로 분리해, PRF 미지원 기기에서도 재인증만큼은 등록되게 한다.
+  const LS_STEPUP_CRED = 'gopang_wallet_stepup_cred_id';
   const WEBAUTHN_RP_ID   = 'hondi.net';  // 전체 hondi.net 서브도메인에서 credential 공유
   // PRF는 결정론적 — 동일 salt + 동일 authenticator = 항상 동일 32바이트.
   // 서버에 아무것도 저장할 필요 없음.
@@ -784,7 +792,7 @@
         console.warn('[Wallet] 재인증 문턱 사전 조회 실패(서버가 최종 강제):', e.message);
       }
       const needsStepUp = stepUpThreshold !== null && amount >= stepUpThreshold;
-      if (needsStepUp && !GopangWallet.isWebAuthnEnrolled()) {
+      if (needsStepUp && !GopangWallet.isStepUpEnrolled()) {
         throw new Error(
           `[Wallet] ₮${stepUpThreshold.toLocaleString()} 이상 거래는 생체인증 등록이 필요합니다. ` +
           `설정 → 생체인증에서 먼저 등록해 주세요.`
@@ -1358,7 +1366,7 @@
      *   검증하게 하려면 필수 — 없으면 로컬 재암호화만 하고 서버 등록은
      *   건너뛴다, 하위호환).
      */
-    static async enrollWebAuthn(guid = null) {
+    static async enrollWebAuthn() {
       if (!window.PublicKeyCredential) return { ok: false, reason: 'PRF_UNSUPPORTED' };
 
       const db = await openDB();
@@ -1388,26 +1396,12 @@
         && cred.getClientExtensionResults().prf.enabled;
       if (!prfEnabled) return { ok: false, reason: 'PRF_UNSUPPORTED' };
 
-      // ── 2026-07-20 신설: 서버에 공개키 등록(고액 거래 재인증 서버측
-      // 검증용) ── getPublicKey()는 SPKI(DER) 형식을 바로 내려주는
-      // 표준 API라 CBOR/COSE를 직접 파싱할 필요가 없다. 이 단계가
-      // 실패해도(구형 브라우저 등) 로컬 등록 자체는 막지 않는다 —
-      // 다만 이 경우 서버는 이 기기의 assertion을 검증할 공개키가
-      // 없어 고액 거래 재인증이 항상 실패(안전하게 차단)한다.
-      if (guid && cred.response.getPublicKey) {
-        try {
-          const spki = cred.response.getPublicKey();
-          await fetch(`${WORKER_URL}/auth/webauthn/register-key`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              guid, credentialId: bufToB64u(cred.rawId),
-              publicKeySpkiB64u: bufToB64u(spki),
-            }),
-          });
-        } catch (e) {
-          console.warn('[GopangWallet] WebAuthn 공개키 서버 등록 실패(로컬 등록은 유지):', e.message);
-        }
-      }
+      // (2026-07-20: 여기서 서버에 공개키를 등록하던 코드를 제거했다 —
+      // 고액 거래 재인증은 PRF와 무관한 별도 credential(enrollStepUpBiometric,
+      // LS_STEPUP_CRED)로 완전히 분리했다. 이 함수는 원래 목적인
+      // "로컬 저장소 재암호화"에만 집중한다 — 하나의 credential이
+      // 두 가지 다른 목적을 겸하면서 생긴 PRF_UNSUPPORTED 연쇄 실패
+      // 문제가 재발하지 않게 하기 위함.)
 
       // 기존 device-entropy로 복호화 → 새 PRF-entropy로 재암호화 (Ed25519 + X25519 둘 다)
       const oldEntropy = await GopangWallet._deviceEntropy();
@@ -1434,6 +1428,75 @@
     }
 
     /**
+     * 2026-07-20 신설 — 고액 거래 재인증 전용 생체인증 등록.
+     * enrollWebAuthn()과 달리 PRF 확장을 전혀 요구하지 않는다 —
+     * 서버가 assertion 서명을 직접 검증하는 방식이라(handleStepUpVerify)
+     * 로컬 키 유도(PRF)가 필요 없다. 실사로 확인된 문제: PRF는 기기·
+     * 브라우저에 따라 미지원인 경우가 흔해(지문 인증 자체는 성공해도
+     * enrollWebAuthn()이 PRF_UNSUPPORTED로 실패), 재인증 기능 전체가
+     * PRF 지원 기기로만 제한될 뻔했다 — 완전히 독립시켜 이 문제를
+     * 근본적으로 없앤다.
+     * @param {string} guid — 서버에 공개키를 등록하려면 필수
+     * @returns {{ ok: boolean, reason?: string }}
+     */
+    static async enrollStepUpBiometric(guid) {
+      if (!window.PublicKeyCredential) return { ok: false, reason: 'UNSUPPORTED' };
+      if (!guid) return { ok: false, reason: 'GUID_REQUIRED' };
+
+      const cred = await navigator.credentials.create({
+        publicKey: {
+          rp: { id: WEBAUTHN_RP_ID, name: 'Hondi Wallet' },
+          user: {
+            id: crypto.getRandomValues(new Uint8Array(16)),
+            name: localStorage.getItem(LS_HANDLE) || 'gopang-wallet',
+            displayName: 'Gopang Wallet (재인증 전용)',
+          },
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform',
+            userVerification: 'required',
+            residentKey: 'preferred', // required 아님 — PRF와 달리 없어도 재인증 흐름엔 지장 없음
+          },
+          // extensions: prf 없음 — 의도적. 이 기능엔 필요 없다(위 설명 참고).
+        },
+      });
+
+      if (!cred.response.getPublicKey) {
+        return { ok: false, reason: 'GETPUBLICKEY_UNSUPPORTED(브라우저가 너무 오래됨)' };
+      }
+      const spki = cred.response.getPublicKey();
+
+      try {
+        const res = await fetch(`${WORKER_URL}/auth/webauthn/register-key`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            guid, credentialId: bufToB64u(cred.rawId),
+            publicKeySpkiB64u: bufToB64u(spki),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) return { ok: false, reason: data.detail || 'SERVER_REGISTER_FAILED' };
+      } catch (e) {
+        return { ok: false, reason: '서버 등록 실패: ' + e.message };
+      }
+
+      localStorage.setItem(LS_STEPUP_CRED, bufToB64u(cred.rawId));
+      return { ok: true };
+    }
+
+    static isStepUpEnrolled() {
+      return !!localStorage.getItem(LS_STEPUP_CRED);
+    }
+
+    /** 로컬 등록만 해제한다 — 분실 기기 등으로 서버 쪽도 지워야 하면
+     *  별도 관리자 조치나 추후 revoke 엔드포인트가 필요하다(현재 없음). */
+    static disableStepUpBiometric() {
+      localStorage.removeItem(LS_STEPUP_CRED);
+      return { ok: true };
+    }
+
+    /**
      * 2026-07-20 개정 — 고액 거래 재인증(step-up), 서버 검증판.
      * 예전엔 _prfEval()만 로컬에서 통과하면 끝이었다(사고실험에서 발견된
      * 치명적 결함 — 서버가 이 결과를 전혀 몰라 우회가 자명했음). 이제
@@ -1442,14 +1505,16 @@
      * 직접 서명 검증 → ④통과 시 서버가 발급하는 짧은 수명 step_up_token
      * 을 돌려받는 흐름이다. 이 토큰이 있어야 handleGdcTransfer가 문턱
      * 이상 거래를 받아준다 — 클라이언트 판단을 서버가 신뢰하지 않는다.
+     * ★ 2026-07-20 2차 수정: LS_WEBAUTHN_CRED(PRF용) 대신 독립된
+     * LS_STEPUP_CRED를 쓰도록 변경 — 위 enrollStepUpBiometric() 참고.
      * @param {string} guid
      * @param {string} txHash — 방금 sign()으로 만든 거래의 tx_hash(이
      *   거래에만 유효한 챌린지를 받기 위해 필수 — WYSIWYS 원칙)
      * @returns {{ ok: boolean, reason?: string, step_up_token?: string }}
      */
     static async requireStepUpBiometric(guid, txHash) {
-      if (!GopangWallet.isWebAuthnEnrolled()) return { ok: false, reason: 'NOT_ENROLLED' };
-      const credIdB64u = localStorage.getItem(LS_WEBAUTHN_CRED);
+      if (!GopangWallet.isStepUpEnrolled()) return { ok: false, reason: 'NOT_ENROLLED' };
+      const credIdB64u = localStorage.getItem(LS_STEPUP_CRED);
 
       let challengeData;
       try {

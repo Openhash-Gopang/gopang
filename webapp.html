@@ -2290,7 +2290,7 @@ async function _refreshBiometricUI() {
   }
 
   btn.disabled = false;
-  if (GopangWallet.isWebAuthnEnrolled()) {
+  if (GopangWallet.isStepUpEnrolled()) {
     btn.textContent = '해제';
     btn.style.background = '#f3f4f6'; btn.style.color = '#374151';
     if (status) status.textContent = '등록됨 — 문턱 이상 거래 시 지문/얼굴 인증을 요청합니다.';
@@ -2307,18 +2307,20 @@ async function _toggleBiometric() {
   btn.disabled = true;
 
   try {
-    if (GopangWallet.isWebAuthnEnrolled()) {
-      const result = await GopangWallet.disableWebAuthn();
+    if (GopangWallet.isStepUpEnrolled()) {
+      const result = GopangWallet.disableStepUpBiometric();
       if (!result.ok) throw new Error(result.reason || '해제 실패');
       if (status) status.textContent = '해제됐습니다.';
     } else {
-      const result = await GopangWallet.enrollWebAuthn(_currentGuid());
+      const guid = _currentGuid();
+      if (!guid) throw new Error('먼저 로그인해 주세요.');
+      const result = await GopangWallet.enrollStepUpBiometric(guid);
       if (!result.ok) {
-        const msg = result.reason === 'PRF_UNSUPPORTED'
-          ? '이 기기의 생체인증은 지원되지 않는 방식입니다.'
-          : result.reason === 'NO_WALLET'
-            ? '지갑이 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.'
-            : '등록에 실패했습니다.';
+        const msg = result.reason === 'UNSUPPORTED'
+          ? '이 브라우저/기기는 생체인증을 지원하지 않습니다.'
+          : result.reason === 'GETPUBLICKEY_UNSUPPORTED(브라우저가 너무 오래됨)'
+            ? '브라우저가 너무 오래돼 등록할 수 없습니다. 업데이트 후 다시 시도해 주세요.'
+            : `등록에 실패했습니다(${result.reason}).`;
         throw new Error(msg);
       }
       if (status) status.textContent = '등록 완료 — 다음 고액 거래부터 적용됩니다.';
