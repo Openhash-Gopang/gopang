@@ -133,6 +133,11 @@ import { EXPERT_REGISTRY, COMMON_GUARDRAILS_KEY, COMMON_MEDICAL_SAFETY_KEY, reso
 // 코드로 남아 있을 뿐 — 실사로 확인). SP_lawyer가 v3.2에 몇 주간 고정돼
 // 있던 실제 버그가 바로 이 파일의 하드코딩 때문이었다.
 import { _loadSpByKey } from '/src/gopang/ai/manifest-loader.js';
+// 2026-07-20: §7(기관측 PDV, SP_PDV v1.2) 기록 — 이 페이지가 EXPERT 페르소나의
+// 실제 라이브 경로이므로(위 주석 참조), 세션 종료 리포팅도 여기 붙여야 실제로
+// 동작한다. expert-session.js의 endExpertSession()에 붙이면 죽은 코드에
+// 연결하는 셈이라 아무 효과가 없다.
+import { recordOwnerPDV } from '/src/gopang/gwp/gwp-report-client.js';
 
 const RELAY_ENDPOINT = 'https://hondi-proxy.tensor-city.workers.dev';
 
@@ -188,10 +193,7 @@ if (!def) {
 }
 document.getElementById('tb-icon').textContent  = def.icon || '🤝';
 document.getElementById('tb-title').textContent = def.label + ' AI';
-document.getElementById('tb-sub').textContent   =
-  PERSONA === 'hondi'
-    ? '혼디 플랫폼 공식 안내 · 개발 결정은 개발팀 전속'
-    : '자격직 전문가 페르소나 · 최종 법적/의료적 행위는 인간 전속';
+document.getElementById('tb-sub').textContent   = '자격직 전문가 페르소나 · 최종 법적/의료적 행위는 인간 전속';
 document.title = def.label + ' AI 상담';
 
 // ══════════════════════════════════════════════════════════════
@@ -347,6 +349,70 @@ let messages = [];
 let systemPrompt = null;
 const TERMINATION_RE = /끝났|그만|종료|돌아가|그림자\s*AI(로|에게)?\s*(돌아|연결)/;
 
+// ── §7 기관측 PDV 리포팅 상태 (2026-07-20 신설) ──────────────────
+let _escalatedThisSession = false; // _connectHumanExpert 호출 시 true
+let _ownerPdvRecorded     = false; // 중복 기록 방지(종료 경로가 여러 개라 한 번만 기록)
+const _sessionStartedAt   = new Date().toISOString();
+
+// 페르소나 SP 원문 헤더에서 버전 표기(예: "v4.1")를 최선 노력으로 추출.
+// 못 찾아도 기록 자체를 막지 않는다 — null로 남긴다.
+function _extractPersonaVersion(promptText) {
+  try {
+    const m = promptText?.match(/#\s*SP-[\w-]+.*?\bv(\d+\.\d+)/);
+    return m ? `v${m[1]}` : null;
+  } catch { return null; }
+}
+
+// §7 기관측 PDV 기록 — 세션 종료 경로(명시적 종료 발화 / 10분 타임아웃)
+// 양쪽에서 공용으로 호출한다. how 필드는 도달 경로로 구분한다(§7.4):
+//   - 상담 중 CONNECT_HUMAN_EXPERT가 한 번이라도 호출됐으면 정상 설계된
+//     경로이므로 'escalated_success'로 본다(§7.4 원칙 — STEP D 도달 자체는
+//     실패 신호가 아님). AI 한계로 인한 조기 이탈과의 구분은 현재 코드에서
+//     신뢰성 있게 판별할 신호가 없어 향후 SP가 별도 태그를 내도록 개선이
+//     필요하다 — 지금은 보수적으로 success 쪽에 분류한다(알려진 한계).
+//   - 그 외 명시적 종료 발화면 'completed', 대화 없이/거의 없이 타임아웃되면
+//     'early_exit'.
+async function _recordExpertOwnerPDV(reason) {
+  if (_ownerPdvRecorded) return; // 이미 기록됨(예: 종료발화 처리 중 타임아웃 동시발생 등)
+  _ownerPdvRecorded = true;
+
+  const ownerAgency = def?.ownerAgency;
+  if (!ownerAgency) {
+    console.warn('[Expert] ownerAgency 미설정 — §7 기관측 PDV 기록 생략:', PERSONA);
+    return;
+  }
+  const user = _loadUser();
+  if (!user?.ipv6) {
+    console.warn('[Expert] 로그인 정보 없음 — §7 기관측 PDV 기록 생략');
+    return;
+  }
+
+  const exchanged = messages.filter(m => m.role === 'user' || m.role === 'assistant').length;
+  let how;
+  if (_escalatedThisSession) how = 'escalated_success'; // 알려진 한계 — 위 주석 참조
+  else if (reason === 'timeout' && exchanged === 0) how = 'early_exit';
+  else if (reason === 'timeout') how = 'early_exit';
+  else how = 'completed';
+
+  const lastUserTurn = [...messages].reverse().find(m => m.role === 'user');
+  const what = typeof lastUserTurn?.content === 'string'
+    ? lastUserTurn.content.slice(0, 80)
+    : `${def.label} AI 상담 (${exchanged}턴)`;
+
+  await recordOwnerPDV({
+    ownerAgency,
+    recordType: 'consultation',
+    guid: user.ipv6,
+    personaKey: PERSONA,
+    personaVersion: _extractPersonaVersion(systemPrompt),
+    what,
+    how,
+    why: null,
+    when: _sessionStartedAt,
+    where: location.href,
+  }).catch(e => console.warn('[Expert] §7 기관측 PDV 기록 실패(무시):', e.message));
+}
+
 async function ensureSystemPrompt() {
   if (systemPrompt) return systemPrompt;
   systemPrompt = await composeExpertPrompt();
@@ -393,7 +459,6 @@ async function sendTurn(text, attachment) {
     // 재사용하고, 결과 재주입 후 한 번 더 응답을 받는 흐름도 동일하게 맞춘다.
     await _maybeHandleWebSearch(full);
     await _maybeHandleOrchestrationTags(full);
-    await _maybeHandleFeedbackSubmit(full);
 
     // ── [CONNECT_HUMAN_EXPERT: 업종키워드] 태그 감지 (2026-07-06, C39 신설) ──
     // SP-COMMON-02 C39가 요구하는 "인간 전문가 연결"을 실제로 수행한다.
@@ -406,6 +471,7 @@ async function sendTurn(text, attachment) {
 
     if (TERMINATION_RE.test(text)) {
       appendBubble('ai', `상담을 종료합니다. 고팡 화면으로 돌아갑니다…`);
+      await _recordExpertOwnerPDV('user_phrase'); // §7 기관측 PDV (2026-07-20)
       setTimeout(() => { location.href = RETURN; }, 1200);
     }
   } catch (e) {
@@ -613,61 +679,10 @@ async function _continueAfterOrchestrationTag() {
   await _maybeHandleOrchestrationTags(full);
 }
 
-// ── [SUBMIT_FEEDBACK: category=..., content=...] 처리 (2026-07-20 신설) ──
-// 혼디(hondi) 페르소나 전용 — 다만 태그 자체는 다른 페르소나가 emit해도
-// 무해하게 동작한다(범용 인프라). 이 파일 상단(로드 실패 배너 분기)에
-// 이미 있던 "등록 안 된 페르소나 요청 시 /feedback에 자동 기록" 패턴과
-// 완전히 동일한 엔드포인트·바디 형식을 재사용한다 — 새 백엔드를 만들지
-// 않고 이미 검증된 인프라(자동 category 분류, feedback.html 관리자 검토
-// 화면)를 그대로 쓴다. category는 서버가 DeepSeek으로 자동 재분류하므로
-// 이 태그의 category는 참고용 힌트일 뿐이다.
-async function _maybeHandleFeedbackSubmit(fullReply) {
-  const m = fullReply.match(/\[SUBMIT_FEEDBACK:([\s\S]*?)\]/);
-  if (!m) return;
-
-  const body = m[1];
-  const contentM = body.match(/content=([\s\S]*)/);
-  if (!contentM) {
-    console.warn('[Expert] SUBMIT_FEEDBACK 감지됐으나 content 필드를 못 찾음 — 제출 생략');
-    return;
-  }
-  const content = contentM[1].trim().replace(/,\s*category=.*$/i, '').trim();
-
-  let resultText;
-  try {
-    const user = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
-    if (!user?.ipv6 || !user?.handle) {
-      resultText = '{"error":"로그인 정보 없음 — 제출 불가"}';
-    } else {
-      const res = await fetch(`${RELAY_ENDPOINT}/feedback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ guid: user.ipv6, handle: user.handle, content }),
-      });
-      resultText = res.ok ? JSON.stringify(await res.json()) : `{"error":"HTTP ${res.status}"}`;
-    }
-  } catch (e) {
-    resultText = `{"error":"${e.message}"}`;
-  }
-
-  messages.push({ role: 'user', content:
-    `[SUBMIT_FEEDBACK 결과] ${resultText}\n\n제출이 성공했으면 접수됐다고 간단히 확인해주고,` +
-    ` 실패했으면(예: 로그인 정보 없음) 그 사유를 이용자에게 자연스럽게 전달하세요.` });
-
-  let shown = false;
-  const aiBubble = appendBubble('ai', '');
-  aiBubble.style.display = 'none';
-  const full = await callExpertAI(messages, (delta, fullText) => {
-    if (!shown) { aiBubble.style.display = ''; shown = true; }
-    aiBubble.innerHTML = escHtml(fullText).replace(/\n/g, '<br>');
-    document.getElementById('chat-thread').scrollTop = 1e9;
-  });
-  messages.push({ role: 'assistant', content: full });
-}
-
 // market의 search_entities RPC를 호출해 관련 업종의 실제 등록 사업자를
 // 찾아 보여준다. 결과가 없으면 없다고 정직하게 알린다(C39-4).
 async function _connectHumanExpert(occupationKeyword) {
+  _escalatedThisSession = true; // §7 how 필드 판정용 (2026-07-20)
   const box = appendBubble('ai', `<i>market에서 "${escHtml(occupationKeyword)}" 관련 등록
     사업자를 찾는 중…</i>`);
   try {
@@ -913,6 +928,7 @@ function _resetIdle() {
   if (_idleTimer) clearTimeout(_idleTimer);
   _idleTimer = setTimeout(() => {
     appendBubble('ai', '10분간 응답이 없어 상담을 종료합니다. 고팡 화면으로 돌아갑니다…');
+    _recordExpertOwnerPDV('timeout'); // §7 기관측 PDV (2026-07-20) — await 없이 발사(페이지 곧 이동)
     setTimeout(() => { location.href = RETURN; }, 1500);
   }, 10 * 60 * 1000);
 }
