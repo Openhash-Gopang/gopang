@@ -533,6 +533,34 @@ const INCHEON_L2_TABLE = [
     kw: ['도시계획국', '도시균형국', '원도심혁신국', '제물포', '문학', '부평'] },
 ];
 
+
+// ── 대전 L2 라우팅 테이블 (2026-07-20 최초 실사, 확인된 것만) ────────
+// 원형 도메인 중 부서명까지 확인된 10개만 채움. 근거 대부분이 2026년 1월
+// 인사 명단(전임 시장 체제)이라, 2026-06-03 지방선거로 취임한 신임
+// 시장(민선 9기)의 조직개편 여부는 미확인 — 재검증 주기 짧게 가져갈 것.
+const DAEJEON_L2_TABLE = [
+  { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'daejeon', file: null,
+    kw: ['기획조정실', '예산편성', '정책개발'] },
+  { code: 'SP-DO-SAFETY', domain: 'safety', 도코드: 'daejeon', file: null,
+    kw: ['시민안전실', '재난', '안전'] },
+  { code: 'SP-DO-JACHI', domain: 'jachi', 도코드: 'daejeon', file: null,
+    kw: ['행정자치국', '자치행정'] },
+  { code: 'SP-DO-ECON', domain: 'econ', 도코드: 'daejeon', file: null,
+    kw: ['경제국', '기업지원국', '기업자금', '창업', '투자유치'] },
+  { code: 'SP-DO-INNOV', domain: 'innov', 도코드: 'daejeon', file: null,
+    kw: ['미래전략산업실', '전략산업'] },
+  { code: 'SP-DO-WELFARE', domain: 'welfare', 도코드: 'daejeon', file: null,
+    kw: ['복지국', '기초생활수급', '기초연금', '장애인복지', '노인복지'] },
+  { code: 'SP-DO-HEALTH', domain: 'health', 도코드: 'daejeon', file: null,
+    kw: ['체육건강국', '보건', '건강'] },
+  { code: 'SP-DO-SPORTS', domain: 'sports', 도코드: 'daejeon', file: null,
+    kw: ['체육건강국', '체육', '생활체육'] },
+  { code: 'SP-DO-CULTURE', domain: 'culture', 도코드: 'daejeon', file: null,
+    kw: ['문화예술관광국', '문화예술'] },
+  { code: 'SP-DO-TOURISM', domain: 'tourism', 도코드: 'daejeon', file: null,
+    kw: ['관광'] },
+];
+
 const PROVINCE_TABLES = {
   jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE },
   // busan: L2만 실사 완료(2026-07-20). city(자치구·군 16개)/national은 아직 미착수 —
@@ -540,6 +568,7 @@ const PROVINCE_TABLES = {
   busan: { l2: BUSAN_L2_TABLE, city: [], national: [] },
   seoul: { l2: SEOUL_L2_TABLE, city: [], national: [] },
   incheon: { l2: INCHEON_L2_TABLE, city: [], national: [] },  // ⚠️ 2026-08 시행 예정(안)
+  daejeon: { l2: DAEJEON_L2_TABLE, city: [], national: [] },
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }
