@@ -618,13 +618,19 @@ function _showDeviceMismatchNotice(found, resolve) {
         </p>
         <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 20px">
           입력하신 번호(또는 닉네임)로 가입된 계정이 이미 있지만, 이 계정의 암호키(GDC Wallet)는 이 기기에 없습니다.<br><br>
-          본인 계정이라면 백업 키로 이 기기를 등록할 수 있습니다. 본인 계정이 아니라면 다른 번호로 가입해 주세요.
+          본인 계정이라면 스마트폰으로 이 기기를 승인해 등록할 수 있습니다. 본인 계정이 아니라면 다른 번호로 가입해 주세요.
         </p>
-        <button id="_dm_restore"
+        <button id="_dm_devicelink"
           style="width:100%;padding:13px;border:none;border-radius:10px;
-                 background:#16a34a;color:#fff;cursor:pointer;margin-bottom:8px;
+                 background:#0057A8;color:#fff;cursor:pointer;margin-bottom:8px;
                  font-size:14px;font-weight:700;font-family:inherit">
-          백업 키로 복구
+          스마트폰으로 이 기기 승인하기
+        </button>
+        <button id="_dm_restore"
+          style="width:100%;padding:13px;border:1px solid #d1d5db;border-radius:10px;
+                 background:none;color:#374151;cursor:pointer;margin-bottom:8px;
+                 font-size:13px;font-family:inherit">
+          백업 키를 직접 갖고 있어요(수동 입력)
         </button>
         <button id="_dm_close"
           style="width:100%;padding:13px;border:1px solid #e5e7eb;border-radius:10px;
@@ -633,6 +639,18 @@ function _showDeviceMismatchNotice(found, resolve) {
           닫기
         </button>
       </div>`;
+    // 2026-07-20 신설: 스마트폰 인증번호 발송 단계에서 이미 e164가 확정돼
+    // 있으므로(found.e164 — 이 화면 자체가 그 번호로 기존 계정을 찾은
+    // 결과다), device-link.html에 다시 입력하지 않도록 쿼리로 넘긴다.
+    // return에는 현재 페이지(가입을 이어서 마칠 위치)를 넘겨 완료 후
+    // 자연스럽게 돌아오게 한다.
+    overlay.querySelector('#_dm_devicelink').onclick = () => {
+      const params = new URLSearchParams({
+        phone: found.e164 || '',
+        return: location.pathname + location.search,
+      });
+      location.href = `/auth/device-link.html?${params.toString()}`;
+    };
     overlay.querySelector('#_dm_restore').onclick = _renderRestoreForm;
     overlay.querySelector('#_dm_close').onclick = () => { overlay.remove(); resolve?.(null); };
   };

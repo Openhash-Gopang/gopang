@@ -76,6 +76,7 @@
 (() => {
   const WORKER = 'https://hondi-proxy.tensor-city.workers.dev';
   const RETURN_URL = new URLSearchParams(location.search).get('return') || '/webapp.html';
+  const PREFILLED_PHONE = new URLSearchParams(location.search).get('phone') || '';
 
   const $ = (id) => document.getElementById(id);
   const stepPhone = $('step-phone'), stepCode = $('step-code');
@@ -100,7 +101,21 @@
   }
 
   // ── STEP 1: 요청 보내기 ─────────────────────────────
+  function e164ToKrDisplay(e164) {
+    // "+821012345678" → "0" + "1012345678" → "010-1234-5678"
+    const digits = '0' + e164.replace(/^\+82/, '');
+    if (digits.length !== 11) return e164; // 예상 밖 형식이면 그대로 반환(정규화 단계에서 재검증됨)
+    return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
+  }
+  if (PREFILLED_PHONE) {
+    $('phone').value = e164ToKrDisplay(PREFILLED_PHONE);
+    setStatus('본인 계정 확인 — 번호가 자동으로 채워졌습니다.');
+  }
+
   $('btn-request').addEventListener('click', async () => {
+    // 기기 불일치 화면(auth.js)에서 넘어온 경우도 위에서 이미 표준
+    // "010-1234-5678" 형식으로 채워뒀으므로, 아래는 항상 같은 경로
+    // (normalizePhoneToE164)로 처리한다 — 별도 분기 불필요.
     const e164 = normalizePhoneToE164($('phone').value);
     if (!e164) { setStatus('전화번호를 입력해 주세요.', 'error'); return; }
 
