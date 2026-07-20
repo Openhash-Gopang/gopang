@@ -72,6 +72,47 @@ while (!_isRegistered()) {
 document.getElementById('gopang-auth-gate')?.remove();
 document.body.classList.add('gopang-authed');
 
+// ── 웹푸시 구독을 모든 가입자의 기본값으로 보장 (2026-07-20 신설) ──────
+// 지금까지 requestPushSubscription()은 "신규 가입 완료 시점" 단 1회만
+// 자동 호출됐다 — 그 순간 사용자가 권한 팝업을 놓치거나 거부하면(흔함),
+// 재유도 경로가 설정 화면의 수동 토글뿐이었다. 그 결과 오래된 계정일수록
+// push_subscription이 아예 없는 경우가 실사로 확인됐고, 이는 device-link
+// (기기 간 지갑 이전 — 웹푸시로 폰을 깨우는 기능)가 조용히 멈추는
+// 직접적 원인이 됐다.
+//
+// 브라우저 알림 권한은 코드로 강제할 수 없다(사용자 동의 필수, 플랫폼
+// 제약) — 그래서 "디폴트로 추가"는 "매번 자동으로 재시도해서, 사용자가
+// 한 번이라도 허용하는 순간 반드시 등록되게 한다"로 구현한다. 이미
+// 거부(denied)한 사용자에게는 재요청하지 않는다(requestPushSubscription
+// 자체가 이미 이 경우 조용히 종료함 — services/push.js 참조).
+//
+// 매 페이지 로드마다 재시도하면 권한이 아직 결정 안 된(default) 사용자
+// 에게는 매번 팝업이 뜰 수 있어 성가시므로, 24시간에 한 번만 재시도한다
+// — 그래도 어차피 이미 구독된 사용자는 이 호출이 즉시 재확인만 하고
+// 끝나므로(services/push.js의 getSubscription() 우선 확인) 실질적
+// 비용은 없다.
+(async () => {
+  try {
+    const PUSH_RETRY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+    const lastTry = parseInt(localStorage.getItem('gopang_push_last_try') || '0', 10);
+    if (Date.now() - lastTry < PUSH_RETRY_COOLDOWN_MS) return;
+
+    const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+    if (!stored?.ipv6) return; // 게스트/미로그인 상태에서는 시도하지 않음
+
+    localStorage.setItem('gopang_push_last_try', String(Date.now()));
+    const { requestPushSubscription } = await import('/src/gopang/services/push.js');
+    const result = await requestPushSubscription(stored.ipv6);
+    if (result.ok) {
+      console.info('[Push] 기본 구독 보장 완료(guid:', stored.ipv6.slice(0, 12) + '...)');
+    } else if (result.reason && result.reason !== 'permission_denied') {
+      console.warn('[Push] 기본 구독 보장 실패(다음 재시도까지 대기):', result.reason);
+    }
+  } catch (e) {
+    console.warn('[Push] 기본 구독 보장 중 오류(치명적 아님):', e.message);
+  }
+})();
+
 // ── 신규 가입 직후 처리 ────────────────────────────────────────────
 // v3.3(2026-07-01): LLM 선택 창(ai-setup-mobile.html)으로 강제 이동시키던
 // 로직을 완전히 제거했다. 이제 혼디는 가입 즉시 DeepSeek V4 Flash를
