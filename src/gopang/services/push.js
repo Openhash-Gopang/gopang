@@ -16,7 +16,16 @@ const WORKER_URL = 'https://hondi-proxy.tensor-city.workers.dev';
 // 이전: Worker GET /push/vapid-public-key → env.VAPID_PUBLIC_KEY 반환
 // 이후: 공개키는 공개 정보이므로 단말에 직접 내장. Worker 엔드포인트 호출 불필요.
 // 공개키가 교체될 경우 이 상수와 함께 Worker secret도 같이 교체해야 함.
-const VAPID_PUBLIC_KEY = 'BPl0BPpqPr9qGGU7BvMv4CuUAf2i9e3g_ChE4LHSN5l4dCVOBAtaOFQkifgP3GbD44NMIHRfFDlFH3TGJEf2Jgk';
+//
+// ★ 2026-07-20 교체 — 예전 VAPID 개인키를 분실해(어디에도 백업이 없었음)
+// 서버가 새 키 쌍(VAPID_PRIVATE_KEY/VAPID_PUBLIC_KEY, wrangler secret으로
+// 등록 완료)으로 서명하는데 기존 공개키로 구독한 클라이언트와 안 맞아
+// FCM이 403으로 거부하는 문제가 실사로 확인됐다(device-link 웹푸시가
+// 조용히 도착 안 하던 근본 원인). 새 공개키로 교체 — 이 시점 이전에
+// 구독한 사용자는 전부 재구독이 필요하다(applicationServerKey가 바뀌면
+// 브라우저가 기존 구독을 그대로 못 씀 — pushManager.subscribe()가 새
+// 구독을 만든다).
+const VAPID_PUBLIC_KEY = 'BKgtXbSP0ng9P5fb7Jl6byOZDO7O9gNp1fZ9EC_ClPhKjwA5I-9lNUezY10AFGHTT4UHZfmW_Wyt7LfEp0wAz7I';
 
 function _urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
