@@ -604,45 +604,89 @@ function clearAttach() {
 }
 
 // ── 마이크(음성 입력) — 단발 토글, 1초 무음 시 자동 종료 ──────────
-// 메인 webapp.html의 ai-panel-mic-btn과 동일한 단순 패턴(상시 대기
-// 호출어 방식이 아니라, 눌렀을 때만 듣는 1회용 마이크).
+// 2026-07-19 재수정 — 이전 버전은 주석만 "webapp.html의 ai-panel-mic-btn과
+// 동일한 패턴"이라 해놓고 실제 설정은 그게 아니라 웹앱의 별개 기능(상시
+// 대기 "혼디야" 호출어 리스너)의 설정(continuous:true)을 잘못 베껴온
+// 것이었다(실사용자 신고 — "활성화됐다가 바로 stop"). 진짜 ai-panel-mic-btn
+// 구현(webapp.html 3137행대)은 continuous:false를 쓰고, 결정적으로
+// "무음 타이머"를 클릭 직후가 아니라 **결과가 한 번이라도 들어온 뒤에만**
+// 건다 — 이전 버전은 클릭하자마자 1초 타이머를 걸어서, 말하기 전에
+// 1초만 머뭇거려도 죽었다. 이번엔 그 실수를 그대로 재현하지 않도록
+// 원본을 통째로 옮겨왔다.
 (function () {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const micBtn = document.getElementById('btn-mic');
   if (!SR || !micBtn) { if (micBtn) micBtn.style.display = 'none'; return; }
 
-  const SILENCE_MS = 1000;
+  const SILENCE_MS = 1000;      // 1초 무음 → 자동 종료
+  const RESTART_DELAY_MS = 150; // 재시작 전 짧은 지연(오디오 핸들 해제 대기)
+
   let recognition = null;
   let active = false;
   let baseText = '';
+  let errorStreak = 0;
   let silenceTimer = null;
 
   function setMicVisual(on) { micBtn.classList.toggle('mic-recording', on); }
   function clearSilenceTimer() { if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; } }
+
+  // 결과가 들어온 뒤에만 호출된다(startMic()에서는 호출하지 않음) —
+  // 클릭 직후부터 무음을 세면 말하기 전 잠깐의 정적만으로도 꺼진다.
   function scheduleAutoStop() {
     clearSilenceTimer();
     silenceTimer = setTimeout(() => { if (active) stopMic(); }, SILENCE_MS);
   }
 
-  function startMic() {
-    baseText = input.value ? input.value + ' ' : '';
-    recognition = new SR();
-    recognition.lang = 'ko-KR';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.onresult = (e) => {
-      let interim = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) interim += e.results[i][0].transcript;
-      input.value = baseText + interim;
-      input.dispatchEvent(new Event('input'));
+  function createRecognition() {
+    const r = new SR();
+    r.lang = 'ko-KR';
+    r.continuous = false;
+    r.interimResults = false;
+
+    r.onresult = (e) => {
+      const text = e.results?.[0]?.[0]?.transcript || '';
+      if (text) {
+        baseText = baseText && !/\s$/.test(baseText) ? baseText + ' ' + text : baseText + text;
+        input.value = baseText;
+        input.dispatchEvent(new Event('input'));
+      }
+      errorStreak = 0;
       scheduleAutoStop();
     };
-    recognition.onerror = (e) => { console.warn('[Expert Mic] 오류:', e.error); stopMic(); };
-    recognition.onend = () => { if (active) stopMic(); };
-    recognition.start();
+    r.onerror = (e) => {
+      // 무음(no-speech)·중단(aborted)은 흔히 발생하는 정상적인 일시
+      // 정지다 — onend에서 자동 재시작되므로 여기서 죽이지 않는다.
+      // (이전 버전은 이걸 구분 안 하고 모든 오류에 즉시 stopMic()을
+      // 불러서, continuous:false의 자연스러운 no-speech 타임아웃조차
+      // "고장"으로 오인해 죽었다.)
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+      errorStreak++;
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || errorStreak >= 3) {
+        stopMic();
+      }
+    };
+    r.onend = () => {
+      // 자연 종료(no-speech 타임아웃 등)면 계속 듣고 있는 것처럼 보이게
+      // 조용히 재시작 — 사용자가 stopMic()을 부르지 않은 이상 마이크가
+      // 꺼지지 않는다.
+      if (active) setTimeout(() => { if (active) startListening(); }, RESTART_DELAY_MS);
+      else setMicVisual(false);
+    };
+    return r;
+  }
+
+  function startListening() {
+    recognition = createRecognition();
+    try { recognition.start(); return true; }
+    catch (e) { return false; } // 이미 시작된 경우 등 — 다음 onend를 기다린다
+  }
+
+  function startMic() {
+    baseText = input.value ? input.value + ' ' : '';
     active = true;
+    if (!startListening()) { active = false; return; }
     setMicVisual(true);
-    scheduleAutoStop();
+    // scheduleAutoStop()을 여기서 부르지 않는다 — 위 주석 참고.
   }
 
   function stopMic() {
