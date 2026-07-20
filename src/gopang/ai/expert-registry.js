@@ -6,11 +6,27 @@
  * Prompt" 페르소나다. 따라서 GWP_REGISTRY(새 탭 방식)에 넣지 않고, 이 레지스트리를
  * 통해 "같은 스레드 내 System Prompt 교체" 방식(expert-session.js)으로 호출한다.
  *
- * 분류(LAW/HEALTH/EDU/ENG/FIN/REAL_ESTATE)는 각 SP 파일 1행에 적힌 코드(SP-LAW-01
- * 등)를 그대로 따른다. 임상심리사·정신건강전문요원·전문상담교사는 SP-EDU 코드를
- * 부여받아 category는 EDU를 유지하지만, needsMedicalSafety는 true다 — 2026-07-04에
- * 위기개입 프로토콜(SP-COMMON-03 M5, 자살·자해 대응)을 상속받도록 수정됐다(카테고리
- * 분류와 안전모듈 상속은 별개 기준).
+ * 분류(LAW/HEALTH/EDU/ENG/FIN/REAL_ESTATE/IT/TRANSLATION/TOURISM/SPORTS/BEAUTY/
+ * CULINARY)는 각 SP 파일 1행에 적힌 코드(SP-LAW-01 등)를 그대로 따른다. 임상심리사·
+ * 정신건강전문요원·전문상담교사는 SP-EDU 코드를 부여받아 category는 EDU를
+ * 유지하지만, needsMedicalSafety는 true다 — 2026-07-04에 위기개입 프로토콜
+ * (SP-COMMON-03 M5, 자살·자해 대응)을 상속받도록 수정됐다(카테고리 분류와
+ * 안전모듈 상속은 별개 기준).
+ *
+ * ownerAgency (2026-07-20 신설): 이 페르소나의 세션 데이터·상담 이력이
+ * 귀속되는 소유 K-서비스(GWP_REGISTRY의 agency id)다. 원칙적으로 category와
+ * 1:1이지만 두 종류의 예외가 있다:
+ *   (1) FIN 카테고리 안에서도 자격별 업무 실질이 달라 개별 override가 있다
+ *       — tax-accountant는 카테고리 기본값(ktax) 그대로, accountant는
+ *       kfinance(회계감사·재무제표·기업가치평가가 K-Tax보다 K-Stock 쪽 실질에
+ *       가까움), financial-planner는 kbank(개인 자산관리) — 각 override는
+ *       해당 엔트리 옆 주석 참조.
+ *   (2) 대응하는 K-서비스 저장소가 아직 없는 카테고리(ENG/TRANSLATION/
+ *       TOURISM/SPORTS/BEAUTY/CULINARY)는 총괄 저장소인 gopang으로 폴백한다
+ *       — 수요가 확인되면 그때 전용 K-서비스로 분리한다(의도된 폴백이지
+ *       누락이 아님).
+ * 세션 종료 시 이 필드를 기준으로 소유 K-서비스의 PDV(가명화 해시 상담기록)에
+ * 6하원칙 레코드가 기록된다 — 자세한 스키마는 SP_PDV 문서 참조.
  */
 
 export const UNIVERSAL_INTEGRITY_KEY   = 'UNIVERSAL-INTEGRITY'; // 2026-07-09: 하드코딩 경로 -> manifest 키로 전환
@@ -28,32 +44,38 @@ export const EXPERT_REGISTRY = {
     // 2026-07-09: v3.2 → v4.1 갱신. v4.0(STEP R 오케스트레이션)·v4.1(C41
     // scope=orchestration_subtask 대응)이 이 줄이 안 바뀌어서 한 번도
     // 실제로 로드된 적이 없었다(실사로 확인).
-    label: '변호사', icon: '⚖️', category: 'LAW',
+    label: '변호사', icon: '⚖️', category: 'LAW', ownerAgency: 'klaw',
     key: 'SP_lawyer', needsMedicalSafety: false,
   },
   // 2026-07-06 신설(전문가 페르소나 누락 감사 결과) — 변호사와 다른 자격.
   // 업무범위(등기·경매·소액사건 등) 초과 시 lawyer로 안내하도록 SP 본문에 명시.
   'judicial-scrivener': {
-    label: '법무사', icon: '📜', category: 'LAW',
+    label: '법무사', icon: '📜', category: 'LAW', ownerAgency: 'klaw',
     key: 'SP_judicial-scrivener', needsMedicalSafety: false,
   },
 
   // ── 재무·세무 (SP-FIN-01, 2026-07-04 신설) ────────────
   'tax-accountant': {
-    label: '세무사', icon: '🧾', category: 'FIN',
+    label: '세무사', icon: '🧾', category: 'FIN', ownerAgency: 'ktax',
     key: 'SP_tax-accountant', needsMedicalSafety: false,
   },
   // 2026-07-06 신설 — 세무사와 다른 자격(회계감사·재무제표 중심). 사고실험
   // #40에서 세무사로 오매핑될 위험이 확인된 항목.
   accountant: {
-    label: '공인회계사', icon: '📊', category: 'FIN',
+    // ownerAgency override: FIN 기본값(ktax)이 아니라 kfinance(K-Stock) —
+    // 세무사(ktax)와 달리 회계감사·재무제표·기업가치평가·M&A 실사가
+    // 중심이라 K-Tax보다 K-Finance 업무 범위에 더 가깝다(2026-07-20).
+    label: '공인회계사', icon: '📊', category: 'FIN', ownerAgency: 'kfinance',
     key: 'SP_accountant', needsMedicalSafety: false,
   },
   // 2026-07-17 신설(전문가 페르소나 누락 감사 후속) — 개별 금융상품 추천은
   // 하지 않음(자본시장법). kbank/kfinance/kinsurance와 격치는 실행
   // 영역은 해당 GWP로 안내.
   'financial-planner': {
-    label: '재무설계사', icon: '📈', category: 'FIN',
+    // ownerAgency override: FIN 기본값(ktax)이 아니라 kbank —
+    // 개인 자산관리·금융상품 상담이 중심이라 개인 뱅킹 서비스(K-Bank)
+    // 소관이 세무(K-Tax)보다 적합하다(2026-07-20).
+    label: '재무설계사', icon: '📈', category: 'FIN', ownerAgency: 'kbank',
     key: 'SP_financial-planner', needsMedicalSafety: false,
   },
 
@@ -61,23 +83,23 @@ export const EXPERT_REGISTRY = {
   // 사고실험 #44/#48/#42에서 확인된 공백. kinsurance·real-estate-agent·lawyer와
   // 각각 자격이 다름 — SP 본문 상단 주석 참조.
   appraiser: {
-    label: '감정평가사', icon: '🏷️', category: 'LAW',
+    label: '감정평가사', icon: '🏷️', category: 'LAW', ownerAgency: 'klaw',
     key: 'SP_appraiser', needsMedicalSafety: false,
   },
   'loss-adjuster': {
-    label: '손해사정사', icon: '📋', category: 'LAW',
+    label: '손해사정사', icon: '📋', category: 'LAW', ownerAgency: 'klaw',
     key: 'SP_loss-adjuster', needsMedicalSafety: false,
   },
   'labor-attorney': {
-    label: '공인노무사', icon: '👷', category: 'LAW',
+    label: '공인노무사', icon: '👷', category: 'LAW', ownerAgency: 'klaw',
     key: 'SP_labor-attorney', needsMedicalSafety: false,
   },
   'patent-attorney': {
-    label: '변리사', icon: '💡', category: 'LAW',
+    label: '변리사', icon: '💡', category: 'LAW', ownerAgency: 'klaw',
     key: 'SP_patent-attorney', needsMedicalSafety: false,
   },
   'customs-broker': {
-    label: '관세사', icon: '🛃', category: 'LAW',
+    label: '관세사', icon: '🛃', category: 'LAW', ownerAgency: 'klaw',
     key: 'SP_customs-broker', needsMedicalSafety: false,
   },
 
@@ -86,59 +108,59 @@ export const EXPERT_REGISTRY = {
   // 의료직이 전부 "확진·처방은 의사 영역"이라고 선을 긋는 구조라, 그 반대편을
   // 정의하는 이 4개는 특히 신중한 검토가 필요함(SP 본문 상단 주석 참조).
   physician: {
-    label: '의사', icon: '🩺', category: 'HEALTH',
+    label: '의사', icon: '🩺', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_physician', needsMedicalSafety: true,
   },
   dentist: {
-    label: '치과의사', icon: '🦷', category: 'HEALTH',
+    label: '치과의사', icon: '🦷', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_dentist', needsMedicalSafety: true,
   },
   'traditional-medicine-doctor': {
-    label: '한의사', icon: '🌿', category: 'HEALTH',
+    label: '한의사', icon: '🌿', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_traditional-medicine-doctor', needsMedicalSafety: true,
   },
   pharmacist: {
-    label: '약사', icon: '💊', category: 'HEALTH',
+    label: '약사', icon: '💊', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_pharmacist', needsMedicalSafety: true,
   },
   veterinarian: {
-    label: '수의사', icon: '🐾', category: 'HEALTH',
+    label: '수의사', icon: '🐾', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_veterinarian', needsMedicalSafety: true,
   },
   nurse: {
-    label: '간호사', icon: '👩‍⚕️', category: 'HEALTH',
+    label: '간호사', icon: '👩‍⚕️', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_nurse', needsMedicalSafety: true,
   },
   'physical-therapist': {
-    label: '물리치료사', icon: '💪', category: 'HEALTH',
+    label: '물리치료사', icon: '💪', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_physical-therapist', needsMedicalSafety: true,
   },
   'medical-lab-technologist': {
-    label: '임상병리사', icon: '🔬', category: 'HEALTH',
+    label: '임상병리사', icon: '🔬', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_medical-lab-technologist', needsMedicalSafety: true,
   },
   'radiologic-technologist': {
-    label: '방사선사', icon: '📡', category: 'HEALTH',
+    label: '방사선사', icon: '📡', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_radiologic-technologist', needsMedicalSafety: true,
   },
   'dental-hygienist': {
-    label: '치과위생사', icon: '🦷', category: 'HEALTH',
+    label: '치과위생사', icon: '🦷', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_dental-hygienist', needsMedicalSafety: true,
   },
   'occupational-therapist': {
-    label: '작업치료사', icon: '🧠', category: 'HEALTH',
+    label: '작업치료사', icon: '🧠', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_occupational-therapist', needsMedicalSafety: true,
   },
   'dental-technician': {
-    label: '치과기공사', icon: '🦷', category: 'HEALTH',
+    label: '치과기공사', icon: '🦷', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_dental-technician', needsMedicalSafety: true,
   },
   'advanced-practice-nurse': {
-    label: '전문간호사', icon: '💉', category: 'HEALTH',
+    label: '전문간호사', icon: '💉', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_advanced-practice-nurse', needsMedicalSafety: true,
   },
   dietitian: {
-    label: '영양사', icon: '🥗', category: 'HEALTH',
+    label: '영양사', icon: '🥗', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_dietitian', needsMedicalSafety: true,
   },
   // 2026-07-17 신설(사고실험 #50) — kemergency(GWP, 실제 R0 신고·출동 연계)와
@@ -146,126 +168,126 @@ export const EXPERT_REGISTRY = {
   // 교육용이며, 실제 응급 신호 감지 시 R0이 최우선 적용되어 이 페르소나
   // 세션 여부와 무관하게 kemergency 트리거로 전환된다.
   paramedic: {
-    label: '응급구조사', icon: '🚑', category: 'HEALTH',
+    label: '응급구조사', icon: '🚑', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_paramedic', needsMedicalSafety: true,
   },
   midwife: {
-    label: '조산사', icon: '🤱', category: 'HEALTH',
+    label: '조산사', icon: '🤱', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_midwife', needsMedicalSafety: true,
   },
   'speech-language-pathologist': {
-    label: '언어재활사', icon: '🗣️', category: 'HEALTH',
+    label: '언어재활사', icon: '🗣️', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_speech-language-pathologist', needsMedicalSafety: true,
   },
   optician: {
-    label: '안경사', icon: '👓', category: 'HEALTH',
+    label: '안경사', icon: '👓', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_optician', needsMedicalSafety: true,
   },
   sanitarian: {
-    label: '위생사', icon: '🧼', category: 'HEALTH',
+    label: '위생사', icon: '🧼', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_sanitarian', needsMedicalSafety: false,
   },
   'health-educator': {
-    label: '보건교육사', icon: '📢', category: 'HEALTH',
+    label: '보건교육사', icon: '📢', category: 'HEALTH', ownerAgency: 'khealth',
     key: 'SP_health-educator', needsMedicalSafety: false,
   },
 
   // ── 교육·상담·문화 (SP-EDU-01~06) ────────────────────
   teacher: {
-    label: '교사(정교사)', icon: '👩‍🏫', category: 'EDU',
+    label: '교사(정교사)', icon: '👩‍🏫', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_teacher', needsMedicalSafety: false,
   },
   'clinical-psychologist': {
-    label: '임상심리사', icon: '🧑‍⚕️', category: 'EDU',
+    label: '임상심리사', icon: '🧑‍⚕️', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_clinical-psychologist', needsMedicalSafety: true, // 2026-07-04: 위기개입(M5) 상속 위해 true로 수정
   },
   'school-counselor': {
-    label: '전문상담교사', icon: '🛋️', category: 'EDU',
+    label: '전문상담교사', icon: '🛋️', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_school-counselor', needsMedicalSafety: true, // 2026-07-04: 상동
   },
   'mental-health-professional': {
-    label: '정신건강전문요원', icon: '💬', category: 'EDU',
+    label: '정신건강전문요원', icon: '💬', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_mental-health-professional', needsMedicalSafety: true, // 2026-07-04: 상동
   },
   // 2026-07-06 신설(SP-EDU-04) — 상담직 3개와 마찬가지로 위기개입 프로토콜(M5)
   // 상속 위해 needsMedicalSafety:true. category는 EDU 유지(복지 상담이 의료
   // 행위는 아니지만, 위기 신호 대응 원칙은 동일하게 필요).
   'social-worker': {
-    label: '사회복지사', icon: '🤝', category: 'EDU',
+    label: '사회복지사', icon: '🤝', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_social-worker', needsMedicalSafety: true,
   },
   curator: {
-    label: '학예사(큐레이터)', icon: '🎨', category: 'EDU',
+    label: '학예사(큐레이터)', icon: '🎨', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_curator', needsMedicalSafety: false,
   },
   librarian: {
-    label: '사서', icon: '📖', category: 'EDU',
+    label: '사서', icon: '📖', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_librarian', needsMedicalSafety: false,
   },
   'youth-counselor': {
-    label: '청소년상담사', icon: '🧑‍🤝‍🧑', category: 'EDU',
+    label: '청소년상담사', icon: '🧑‍🤝‍🧑', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_youth-counselor', needsMedicalSafety: true,
   },
   'childcare-teacher': {
-    label: '보육교사', icon: '🧸', category: 'EDU',
+    label: '보육교사', icon: '🧸', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_childcare-teacher', needsMedicalSafety: false,
   },
   'lifelong-educator': {
-    label: '평생교육사', icon: '🎓', category: 'EDU',
+    label: '평생교육사', icon: '🎓', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_lifelong-educator', needsMedicalSafety: false,
   },
 
   // ── 공학·건설·해사 (SP-ENG-01~09) ────────────────────
   architect: {
-    label: '건축사', icon: '🏗️', category: 'ENG',
+    label: '건축사', icon: '🏗️', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_architect', needsMedicalSafety: false,
   },
   'professional-engineer': {
-    label: '기술사', icon: '📐', category: 'ENG',
+    label: '기술사', icon: '📐', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_professional-engineer', needsMedicalSafety: false,
   },
   'marine-pilot': {
-    label: '도선사', icon: '⚓', category: 'ENG',
+    label: '도선사', icon: '⚓', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_marine-pilot', needsMedicalSafety: false,
   },
   'naval-architect': {
-    label: '조선사', icon: '🚢', category: 'ENG',
+    label: '조선사', icon: '🚢', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_naval-architect', needsMedicalSafety: false,
   },
   'navigation-officer': {
-    label: '항해사', icon: '🧭', category: 'ENG',
+    label: '항해사', icon: '🧭', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_navigation-officer', needsMedicalSafety: false,
   },
   'marine-engineer': {
-    label: '기관사(선박)', icon: '⚙️', category: 'ENG',
+    label: '기관사(선박)', icon: '⚙️', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_marine-engineer', needsMedicalSafety: false,
   },
   'industrial-safety-consultant': {
-    label: '산업안전·보건지도사', icon: '🦺', category: 'ENG',
+    label: '산업안전·보건지도사', icon: '🦺', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_industrial-safety-consultant', needsMedicalSafety: false,
   },
   'weather-forecaster': {
-    label: '기상예보사', icon: '🌤️', category: 'ENG',
+    label: '기상예보사', icon: '🌤️', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_weather-forecaster', needsMedicalSafety: false,
   },
   'fire-safety-manager': {
-    label: '소방시설관리사', icon: '🧯', category: 'ENG',
+    label: '소방시설관리사', icon: '🧯', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_fire-safety-manager', needsMedicalSafety: false,
   },
   'landscape-engineer': {
-    label: '조경기술사', icon: '🌳', category: 'ENG',
+    label: '조경기술사', icon: '🌳', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_landscape-engineer', needsMedicalSafety: false,
   },
   'surveying-engineer': {
-    label: '측량 및 지형공간정보기술사', icon: '📐', category: 'ENG',
+    label: '측량 및 지형공간정보기술사', icon: '📐', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_surveying-engineer', needsMedicalSafety: false,
   },
   'electrical-safety-engineer': {
-    label: '전기안전기술사', icon: '⚡', category: 'ENG',
+    label: '전기안전기술사', icon: '⚡', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_electrical-safety-engineer', needsMedicalSafety: false,
   },
   'gas-safety-engineer': {
-    label: '가스기술사', icon: '🔥', category: 'ENG',
+    label: '가스기술사', icon: '🔥', category: 'ENG', ownerAgency: 'gopang',
     key: 'SP_gas-safety-engineer', needsMedicalSafety: false,
   },
 
@@ -273,51 +295,33 @@ export const EXPERT_REGISTRY = {
   // 2026-07-06 이전엔 이 카테고리 자체가 없었음 — 전문가 페르소나 누락
   // 감사에서 확인된 가장 큰 신규 카테고리 공백.
   'real-estate-agent': {
-    label: '공인중개사', icon: '🏠', category: 'REAL_ESTATE',
+    label: '공인중개사', icon: '🏠', category: 'REAL_ESTATE', ownerAgency: 'kestate',
     key: 'SP_real-estate-agent', needsMedicalSafety: false,
   },
 
   'security-engineer': {
-    label: '정보보안전문가', icon: '🔒', category: 'IT',
+    label: '정보보안전문가', icon: '🔒', category: 'IT', ownerAgency: 'ksecurity',
     key: 'SP_security-engineer', needsMedicalSafety: false,
   },
   'translator-interpreter': {
-    label: '통역사·번역사', icon: '🌐', category: 'TRANSLATION',
+    label: '통역사·번역사', icon: '🌐', category: 'TRANSLATION', ownerAgency: 'gopang',
     key: 'SP_translator-interpreter', needsMedicalSafety: false,
   },
   'tour-guide': {
-    label: '관광통역안내사', icon: '🗺️', category: 'TOURISM',
+    label: '관광통역안내사', icon: '🗺️', category: 'TOURISM', ownerAgency: 'gopang',
     key: 'SP_tour-guide', needsMedicalSafety: false,
   },
   'sports-instructor': {
-    label: '생활스포츠지도사', icon: '🏃', category: 'SPORTS',
+    label: '생활스포츠지도사', icon: '🏃', category: 'SPORTS', ownerAgency: 'gopang',
     key: 'SP_sports-instructor', needsMedicalSafety: true,
   },
   hairdresser: {
-    label: '미용사', icon: '💇', category: 'BEAUTY',
+    label: '미용사', icon: '💇', category: 'BEAUTY', ownerAgency: 'gopang',
     key: 'SP_hairdresser', needsMedicalSafety: false,
   },
   chef: {
-    label: '조리사', icon: '👨‍🍳', category: 'CULINARY',
+    label: '조리사', icon: '👨‍🍳', category: 'CULINARY', ownerAgency: 'gopang',
     key: 'SP_chef', needsMedicalSafety: false,
-  },
-
-  // ── 플랫폼 안내 (2026-07-20 신설, 61번째) ───────────────────
-  // 배경: hondi_visitor_sp(HONDI_VISITOR_SP 매니페스트 키)가 이미 "혼디란
-  // 무엇인가"에 대한 지식베이스로 작성돼 있었으나, 실제로는 어떤 코드에서도
-  // 로드하는 곳이 없는 phantom SP였다(실사 확인 — grep 전수조사 결과
-  // hondi_visitor_sp/HONDI_VISITOR_SP를 참조하는 JS/HTML이 전혀 없었음).
-  // 별도로 expert-chat.html엔 "등록 안 된 페르소나 요청 시 /feedback에
-  // 자동 기록"하는 fallback이 이미 있었다(주석: "이미 검증된 인프라를
-  // 재사용") — 하지만 이건 사용자가 실수로 존재하지 않는 페르소나를 부를
-  // 때만 조용히 발동하는 부산물이지, 사용자가 의도적으로 대화할 수 있는
-  // 페르소나가 아니었다. 이 둘을 하나의 정식 EXPERT 페르소나로 통합한다 —
-  // hondi_visitor_sp의 지식(§1~§13)을 STEP 구조로 재구성하고, 기존 /feedback
-  // 엔드포인트(자동 카테고리 분류 + feedback.html 관리자 검토 화면 이미
-  // 존재)를 정식 액션 태그로 노출한다.
-  hondi: {
-    label: '혼디 안내', icon: '🏝️', category: 'PLATFORM',
-    key: 'SP_hondi', needsMedicalSafety: false,
   },
 };
 
