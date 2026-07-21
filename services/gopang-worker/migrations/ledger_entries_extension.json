@@ -1,0 +1,19 @@
+{
+  "_설명": "2026-07-21 통합: gopang-worker는 별도 fs_ledger 컬렉션을 만들지 않고, hondi-proxy(pb_hooks/main.pb.js)가 이미 쓰던 ledger_entries에 아래 11개 필드를 추가하는 방식으로 통합했다. 기존 7개 필드(guid, direction, amount, fs_account, source, block_hash, tx_id)는 이름·id 그대로 유지.",
+  "_적용_방법": "PATCH /api/collections/{ledger_entries의 collection id} — 기존 GET 결과의 schema 배열을 그대로 유지한 채 아래 fields_to_add만 이어붙여서 보낼 것. id를 직접 만들어서 보내면 PocketBase가 기존 컬럼을 드롭하고 재생성하니 절대 금지(2026-07-21 한림읍 적용 중 실제 발생, 테스트 데이터라 피해 없었음).",
+  "_적용된_노드": ["KR-JEJU-JEJU-HANLIM"],
+  "_미적용_노드_주의": "worker.js L1_NODE_MAP에 등록된 나머지 42개 노드(l1-aewol 등)에도 동일 확장이 필요하다. 이 파일은 한림읍에 적용한 필드 정의를 그대로 재사용할 수 있도록 남겨둔 것.",
+  "fields_to_add": [
+    { "name": "entry_hash", "type": "text", "required": false, "options": { "min": null, "max": null, "pattern": "" } },
+    { "name": "prev_entry_hash", "type": "text", "required": false, "options": { "min": null, "max": null, "pattern": "" } },
+    { "name": "seq", "type": "number", "required": false, "options": { "min": null, "max": null, "noDecimal": true } },
+    { "name": "anchored", "type": "bool", "required": false, "options": {} },
+    { "name": "anchor_batch_id", "type": "text", "required": false, "options": { "min": null, "max": null, "pattern": "" } },
+    { "name": "counterpart", "type": "text", "required": false, "options": { "min": null, "max": null, "pattern": "" } },
+    { "name": "item_name", "type": "text", "required": false, "options": { "min": null, "max": null, "pattern": "" } },
+    { "name": "payment_rail", "type": "select", "required": false, "options": { "maxSelect": 1, "values": ["gdc", "pg"] } },
+    { "name": "fee_rate_applied", "type": "number", "required": false, "options": { "min": null, "max": null, "noDecimal": false } },
+    { "name": "memo", "type": "text", "required": false, "options": { "min": null, "max": null, "pattern": "" } },
+    { "name": "tx_at", "type": "date", "required": false, "options": { "min": "", "max": "" } }
+  ]
+}

@@ -71,3 +71,7 @@ crons = [
 # NTS_SERVICE_KEY        (1번: 국세청 사업자등록정보 API 서비스키)
 # KAKAO_REST_KEY         (선행종속 B절: 카카오 주소검색 API)
 # APP_BASE_URL           (8번: PG 결제 성공/실패 리다이렉트 base)
+# LEDGER_WRITE_SECRET    (2026-07-21 신설: /internal/ledger-entries 인증용 공유
+#                         시크릿. hondi-proxy PocketBase 서버들의 OS 환경변수
+#                         LEDGER_WRITE_SECRET과 반드시 동일한 값이어야 함 —
+#                         README "원장 통합" 절 참조)

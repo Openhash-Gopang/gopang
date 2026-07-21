@@ -1591,38 +1591,44 @@ const NODE_CONFIG = {
   } : null;
   console.log("[TX] 청구권 생성 완료");
 
-  // ── 2026-07-18 신설 — 재무제표 원장(ledger_entries) 기록 ────────────
+  // ── 2026-07-18 신설, 2026-07-21 통합 — 재무제표 원장(ledger_entries) 기록 ──
   // buyerClaim/sellerClaim은 이미 회계 관점(차변/대변, 계정과목)으로
   // 계산돼 있다 — 이걸 그대로 영구 기록으로 남긴다(claim은 72시간 후
   // 만료되는 임시 청구권이라 재무제표 대사에는 못 쓴다). 이 기록이
   // 실패해도 이미 완료된 정산(blocks 저장) 자체는 되돌리지 않는다 —
   // 회계 부기는 보조 장부이지, 정산의 전제조건이 아니다.
+  //
+  // [2026-07-21 통합] 원장(fs) 관련 쓰기는 market-proxy가 전담하도록 변경—
+  // 내부 dao().saveRecord() 직접 호출은 (1) fs_ledger.pb.js의 해시체인 훅을
+  // 건너뛰고(entry_hash/seq 미계산, 2026-07-21 로컬 재현으로 실증) (2) 이
+  // 노드와 market-proxy가 같은 guid에 동시에 쓸 때 경합 소지가 있었다.
+  // market-proxy의 LedgerWriter DO(guid 단위 직렬화)를 거치도록 HTTP 호출로
+  // 대체한다. 공유 시크릿은 body 필드로 전달(BRIDGE_SECRET과 동일 관례).
   try {
-    const legCol = $app.dao().findCollectionByNameOrId("ledger_entries");
     const source = purpose ? "gdc_transfer" : "market"; // handleGdcTransfer가 purpose를 실어 보낸다
+    const marketProxyUrl = $os.getenv("MARKET_PROXY_URL");
+    const ledgerWriteSecret = $os.getenv("LEDGER_WRITE_SECRET");
 
-    const buyerEntry = new Record(legCol);
-    buyerEntry.set("guid", buyerClaim.claimant);
-    buyerEntry.set("direction", buyerClaim.direction);
-    buyerEntry.set("amount", buyerClaim.amount);
-    buyerEntry.set("fs_account", buyerClaim.fs_account);
-    buyerEntry.set("source", source);
-    buyerEntry.set("block_hash", blockHash);
-    buyerEntry.set("tx_id", tx_hash);
-    $app.dao().saveRecord(buyerEntry);
+    const sendLedgerEntry = (claim) => $http.send({
+      url: marketProxyUrl + "/internal/ledger-entries",
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        l1_node: NODE_ID_SELF,
+        guid: claim.claimant,
+        direction: claim.direction,
+        amount: claim.amount,
+        fs_account: claim.fs_account,
+        source,
+        block_hash: blockHash,
+        tx_id: tx_hash,
+        ledger_write_secret: ledgerWriteSecret,
+      }),
+    });
 
-    if (sellerClaim) {
-      const sellerEntry = new Record(legCol);
-      sellerEntry.set("guid", sellerClaim.claimant);
-      sellerEntry.set("direction", sellerClaim.direction);
-      sellerEntry.set("amount", sellerClaim.amount);
-      sellerEntry.set("fs_account", sellerClaim.fs_account);
-      sellerEntry.set("source", source);
-      sellerEntry.set("block_hash", blockHash);
-      sellerEntry.set("tx_id", tx_hash);
-      $app.dao().saveRecord(sellerEntry);
-    }
-    console.log("[TX] ledger_entries 기록 완료");
+    sendLedgerEntry(buyerClaim);
+    if (sellerClaim) sendLedgerEntry(sellerClaim);
+    console.log("[TX] ledger_entries 기록 요청 완료(market-proxy)");
   } catch (e) {
     // 의도적으로 응답 실패로 이어지지 않게 한다 — 위 주석 참고.
     console.log("[TX] ledger_entries 기록 실패(감사 필요, 정산 자체는 정상):", e.message);
@@ -1878,23 +1884,63 @@ routerAdd("POST", "/api/mint", (c) => {
     $app.dao().saveRecord(blockRecord);
     console.log("[MINT] 저장 완료, id:", blockRecord.getId());
 
-    // ── 2026-07-18 신설 — 재무제표 원장(ledger_entries) 기록 (Phase 5
+    // ── 2026-07-18 신설, 2026-07-21 통합 — 재무제표 원장(ledger_entries) 기록 (Phase 5
     // 발행잔액 추적의 전제). 발행(mint)은 수취인 입장에서 credit(bs-cash
     // 증가) — 대변 상대방이 "혼디(발행자)"라 복식부기 상대 계정은 만들지
     // 않는다(발행자 자신의 부채 계정을 추적하는 건 이번 범위 밖). 실패해도
     // 이미 완료된 발행(blockRecord 저장)은 되돌리지 않는다.
+    //
+    // [2026-07-21 통합] 원장(fs) 관련 쓰기는 market-proxy가 전담 — TX 핸들러와
+    // 동일한 이유(해시체인 훅 우회, 경합 방지)로 HTTP 호출로 대체.
+    // NODE_CONFIG/_self는 핸들러별 격리 컨텍스트라 이 핸들러에도 로컬로 재정의
+    // (파일 내 기존 관례 — NODE_CONFIG가 핸들러마다 각각 정의되어 있음).
     try {
-      const legCol = $app.dao().findCollectionByNameOrId("ledger_entries");
-      const entry = new Record(legCol);
-      entry.set("guid", guid);
-      entry.set("direction", "credit");
-      entry.set("amount", gdcAmount);
-      entry.set("fs_account", "bs-cash");
-      entry.set("source", "mint");
-      entry.set("block_hash", contentHash);
-      entry.set("tx_id", contentHash);
-      $app.dao().saveRecord(entry);
-      console.log("[MINT] ledger_entries 기록 완료");
+      const NODE_CONFIG = {
+        "hanlim": { id: "KR-JEJU-JEJU-HANLIM" }, "l1-aewol": { id: "KR-JEJU-JEJU-AEWOL" },
+        "l1-jocheon": { id: "KR-JEJU-JEJU-JOCHEON" }, "l1-gujwa": { id: "KR-JEJU-JEJU-GUJWA" },
+        "l1-hangyeong": { id: "KR-JEJU-JEJU-HANGYEONG" }, "l1-chuja": { id: "KR-JEJU-JEJU-CHUJA" },
+        "l1-udo": { id: "KR-JEJU-JEJU-UDO" }, "l1-ildo1": { id: "KR-JEJU-JEJU-ILDO1" },
+        "l1-ildo2": { id: "KR-JEJU-JEJU-ILDO2" }, "l1-ido1": { id: "KR-JEJU-JEJU-IDO1" },
+        "l1-ido2": { id: "KR-JEJU-JEJU-IDO2" }, "l1-samdo1": { id: "KR-JEJU-JEJU-SAMDO1" },
+        "l1-samdo2": { id: "KR-JEJU-JEJU-SAMDO2" }, "l1-yongdam1": { id: "KR-JEJU-JEJU-YONGDAM1" },
+        "l1-yongdam2": { id: "KR-JEJU-JEJU-YONGDAM2" }, "l1-geonip": { id: "KR-JEJU-JEJU-GEONIP" },
+        "l1-hwabuk": { id: "KR-JEJU-JEJU-HWABUK" }, "l1-samyang": { id: "KR-JEJU-JEJU-SAMYANG" },
+        "l1-bonggae": { id: "KR-JEJU-JEJU-BONGGAE" }, "l1-ara": { id: "KR-JEJU-JEJU-ARA" },
+        "l1-ora": { id: "KR-JEJU-JEJU-ORA" }, "l1-yeondong": { id: "KR-JEJU-JEJU-YEONDONG" },
+        "l1-nohyeong": { id: "KR-JEJU-JEJU-NOHYEONG" }, "l1-oedo": { id: "KR-JEJU-JEJU-OEDO" },
+        "l1-iho": { id: "KR-JEJU-JEJU-IHO" }, "l1-dodu": { id: "KR-JEJU-JEJU-DODU" },
+        "l1-daejeong": { id: "KR-JEJU-SGP-DAEJEONG" }, "l1-namwon": { id: "KR-JEJU-SGP-NAMWON" },
+        "l1-seongsan": { id: "KR-JEJU-SGP-SEONGSAN" }, "l1-andeok": { id: "KR-JEJU-SGP-ANDEOK" },
+        "l1-pyoseon": { id: "KR-JEJU-SGP-PYOSEON" }, "l1-songsan": { id: "KR-JEJU-SGP-SONGSAN" },
+        "l1-jeongbang": { id: "KR-JEJU-SGP-JEONGBANG" }, "l1-jungang-sgp": { id: "KR-JEJU-SGP-JUNGANG-SGP" },
+        "l1-cheonji": { id: "KR-JEJU-SGP-CHEONJI" }, "l1-hyodon": { id: "KR-JEJU-SGP-HYODON" },
+        "l1-yeongcheon": { id: "KR-JEJU-SGP-YEONGCHEON" }, "l1-donghong": { id: "KR-JEJU-SGP-DONGHONG" },
+        "l1-seohong": { id: "KR-JEJU-SGP-SEOHONG" }, "l1-daeryun": { id: "KR-JEJU-SGP-DAERYUN" },
+        "l1-daecheon": { id: "KR-JEJU-SGP-DAECHEON" }, "l1-jungmun": { id: "KR-JEJU-SGP-JUNGMUN" },
+        "l1-yerae": { id: "KR-JEJU-SGP-YERAE" }, "l2-jeju": { id: "KR-JEJU-JEJU-SI" },
+        "l2-seogwipo": { id: "KR-JEJU-SGP-SI" }, "l3-jejudo": { id: "KR-JEJU" },
+        "l4-kr": { id: "KR" }, "l5-global": { id: "GLOBAL" },
+      };
+      const _selfFolder = $app.dataDir().split("/").pop();
+      const _self = NODE_CONFIG[_selfFolder] || NODE_CONFIG["hanlim"];
+
+      $http.send({
+        url: $os.getenv("MARKET_PROXY_URL") + "/internal/ledger-entries",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          l1_node: _self.id,
+          guid,
+          direction: "credit",
+          amount: gdcAmount,
+          fs_account: "bs-cash",
+          source: "mint",
+          block_hash: contentHash,
+          tx_id: contentHash,
+          ledger_write_secret: $os.getenv("LEDGER_WRITE_SECRET"),
+        }),
+      });
+      console.log("[MINT] ledger_entries 기록 요청 완료(market-proxy)");
     } catch (e) {
       console.log("[MINT] ledger_entries 기록 실패(감사 필요, 발행 자체는 정상):", e.message);
     }
@@ -2148,22 +2194,60 @@ routerAdd("POST", "/api/ai-charge", (c) => {
       return c.json(500, { ok: false, error: "BLOCK_SAVE_FAILED", detail: e.message });
     }
 
-    // ── 2026-07-18 신설 — 재무제표 원장(ledger_entries) 기록 ──────────
+    // ── 2026-07-18 신설, 2026-07-21 통합 — 재무제표 원장(ledger_entries) 기록 ──
     // AI 이용료도 "거래"다 — GDC 상거래 완성 계획서 Phase 4가 P2P/마켓
     // 뿐 아니라 이것도 포함해야 한다고 명시함. 실패해도 이미 완료된
     // 차감(blockRecord 저장)은 되돌리지 않는다 — /api/tx와 동일 원칙.
+    //
+    // [2026-07-21 통합] 원장(fs) 관련 쓰기는 market-proxy가 전담 — 동일 이유로
+    // HTTP 호출로 대체(NODE_CONFIG는 핸들러별 격리 컨텍스트라 로컬 재정의).
     try {
-      const legCol = $app.dao().findCollectionByNameOrId("ledger_entries");
-      const entry = new Record(legCol);
-      entry.set("guid", guid);
-      entry.set("direction", "debit");
-      entry.set("amount", gdcAmount);
-      entry.set("fs_account", "pl-purchase");
-      entry.set("source", "ai_usage");
-      entry.set("block_hash", contentHash);
-      entry.set("tx_id", tx_hash);
-      $app.dao().saveRecord(entry);
-      console.log("[AI-CHARGE] ledger_entries 기록 완료");
+      const NODE_CONFIG = {
+        "hanlim": { id: "KR-JEJU-JEJU-HANLIM" }, "l1-aewol": { id: "KR-JEJU-JEJU-AEWOL" },
+        "l1-jocheon": { id: "KR-JEJU-JEJU-JOCHEON" }, "l1-gujwa": { id: "KR-JEJU-JEJU-GUJWA" },
+        "l1-hangyeong": { id: "KR-JEJU-JEJU-HANGYEONG" }, "l1-chuja": { id: "KR-JEJU-JEJU-CHUJA" },
+        "l1-udo": { id: "KR-JEJU-JEJU-UDO" }, "l1-ildo1": { id: "KR-JEJU-JEJU-ILDO1" },
+        "l1-ildo2": { id: "KR-JEJU-JEJU-ILDO2" }, "l1-ido1": { id: "KR-JEJU-JEJU-IDO1" },
+        "l1-ido2": { id: "KR-JEJU-JEJU-IDO2" }, "l1-samdo1": { id: "KR-JEJU-JEJU-SAMDO1" },
+        "l1-samdo2": { id: "KR-JEJU-JEJU-SAMDO2" }, "l1-yongdam1": { id: "KR-JEJU-JEJU-YONGDAM1" },
+        "l1-yongdam2": { id: "KR-JEJU-JEJU-YONGDAM2" }, "l1-geonip": { id: "KR-JEJU-JEJU-GEONIP" },
+        "l1-hwabuk": { id: "KR-JEJU-JEJU-HWABUK" }, "l1-samyang": { id: "KR-JEJU-JEJU-SAMYANG" },
+        "l1-bonggae": { id: "KR-JEJU-JEJU-BONGGAE" }, "l1-ara": { id: "KR-JEJU-JEJU-ARA" },
+        "l1-ora": { id: "KR-JEJU-JEJU-ORA" }, "l1-yeondong": { id: "KR-JEJU-JEJU-YEONDONG" },
+        "l1-nohyeong": { id: "KR-JEJU-JEJU-NOHYEONG" }, "l1-oedo": { id: "KR-JEJU-JEJU-OEDO" },
+        "l1-iho": { id: "KR-JEJU-JEJU-IHO" }, "l1-dodu": { id: "KR-JEJU-JEJU-DODU" },
+        "l1-daejeong": { id: "KR-JEJU-SGP-DAEJEONG" }, "l1-namwon": { id: "KR-JEJU-SGP-NAMWON" },
+        "l1-seongsan": { id: "KR-JEJU-SGP-SEONGSAN" }, "l1-andeok": { id: "KR-JEJU-SGP-ANDEOK" },
+        "l1-pyoseon": { id: "KR-JEJU-SGP-PYOSEON" }, "l1-songsan": { id: "KR-JEJU-SGP-SONGSAN" },
+        "l1-jeongbang": { id: "KR-JEJU-SGP-JEONGBANG" }, "l1-jungang-sgp": { id: "KR-JEJU-SGP-JUNGANG-SGP" },
+        "l1-cheonji": { id: "KR-JEJU-SGP-CHEONJI" }, "l1-hyodon": { id: "KR-JEJU-SGP-HYODON" },
+        "l1-yeongcheon": { id: "KR-JEJU-SGP-YEONGCHEON" }, "l1-donghong": { id: "KR-JEJU-SGP-DONGHONG" },
+        "l1-seohong": { id: "KR-JEJU-SGP-SEOHONG" }, "l1-daeryun": { id: "KR-JEJU-SGP-DAERYUN" },
+        "l1-daecheon": { id: "KR-JEJU-SGP-DAECHEON" }, "l1-jungmun": { id: "KR-JEJU-SGP-JUNGMUN" },
+        "l1-yerae": { id: "KR-JEJU-SGP-YERAE" }, "l2-jeju": { id: "KR-JEJU-JEJU-SI" },
+        "l2-seogwipo": { id: "KR-JEJU-SGP-SI" }, "l3-jejudo": { id: "KR-JEJU" },
+        "l4-kr": { id: "KR" }, "l5-global": { id: "GLOBAL" },
+      };
+      const _selfFolder = $app.dataDir().split("/").pop();
+      const _self = NODE_CONFIG[_selfFolder] || NODE_CONFIG["hanlim"];
+
+      $http.send({
+        url: $os.getenv("MARKET_PROXY_URL") + "/internal/ledger-entries",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          l1_node: _self.id,
+          guid,
+          direction: "debit",
+          amount: gdcAmount,
+          fs_account: "pl-purchase",
+          source: "ai_usage",
+          block_hash: contentHash,
+          tx_id: tx_hash,
+          ledger_write_secret: $os.getenv("LEDGER_WRITE_SECRET"),
+        }),
+      });
+      console.log("[AI-CHARGE] ledger_entries 기록 요청 완료(market-proxy)");
     } catch (e) {
       console.log("[AI-CHARGE] ledger_entries 기록 실패(감사 필요, 차감 자체는 정상):", e.message);
     }

@@ -15,11 +15,17 @@ import { handleVerifyNts, scheduledKycRecheck } from './routes/kyc.js';
 import { handleResolveL1 } from './routes/l1-resolve.js';
 import { handleCreatePayment, handlePgWebhook, scheduledPgReconciliation } from './routes/payment.js';
 import { handleFraudAppeal, handleResolveFraudCase, scheduledWashTradingDetection, scheduledClusterDetection } from './routes/fraud.js';
+import { handleInternalLedgerEntry } from './routes/internal.js';
 import { jsonResponse } from './lib/http.js';
 
 const ROUTES = {
   'POST /biz/ledger-correction': handleLedgerCorrection,
   'GET /biz/ledger-verify': handleLedgerVerify,
+
+  // [2026-07 통합] hondi-proxy(pb_hooks/main.pb.js)가 ledger_entries에 쓸 때
+  // 이 엔드포인트를 거치도록 함 — 원장(fs) 관련 쓰기는 market이 전담.
+  // 공유 시크릿(LEDGER_WRITE_SECRET)으로 보호되는 서비스 간 전용 엔드포인트.
+  'POST /internal/ledger-entries': handleInternalLedgerEntry,
 
   'POST /biz/escrow/confirm': handleBuyerConfirm,
   'POST /biz/escrow/dispute': handleOpenDispute,
