@@ -1556,6 +1556,11 @@ const NODE_CONFIG = {
     claim_id:   sha256hex("buyer-" + tx_hash + blockId).substring(0, 32),
     tx_id:      tx_hash,
     claimant:   owner_guid,
+    // [2026-07-21 신설 — 사고실험 시나리오5에서 발견] counterpart가 없으면
+    // fraud.js의 buildTxGraph가 이 행을 그래프 엣지로 못 쓰고 건너뛴다 —
+    // 에스크로/PG를 거치지 않은 순수 P2P GDC 송금이 순환거래 탐지에서
+    // 통째로 빠져있었다.
+    counterpart: sellerOutput ? sellerOutput.recipient_guid : null,
     direction:  "debit",
     amount:     totalOutput,
     // 2026-07-07 수정: "bs-cash"였던 걸 "pl-purchase"로 고친다.
@@ -1576,6 +1581,7 @@ const NODE_CONFIG = {
     claim_id:   sha256hex("seller-" + tx_hash + blockId).substring(0, 32),
     tx_id:      tx_hash,
     claimant:   sellerOutput.recipient_guid,
+    counterpart: owner_guid,
     direction:  "credit",
     amount:     sellerOutput.amount,
     fs_account: "pl-revenue",
@@ -1629,6 +1635,7 @@ const NODE_CONFIG = {
           direction: claim.direction,
           amount: claim.amount,
           fs_account: claim.fs_account,
+          counterpart: claim.counterpart,
           source,
           block_hash: blockHash,
           tx_id: tx_hash,

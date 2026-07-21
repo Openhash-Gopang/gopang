@@ -99,7 +99,11 @@ export async function scheduledWashTradingDetection(env) {
   for (const [l1Node, meta] of await listActiveL1Nodes(env)) {
     const since = new Date(Date.now() - 30 * 86400000).toISOString();
     const filter = buildFilter([['tx_at', '>=', since]]);
-    const res = await pbFetch(env, meta.base_url, `/api/collections/fs_ledger/records?${new URLSearchParams({ filter, perPage: '2000' })}`);
+    // [2026-07-21 수정 — 사고실험 시나리오5에서 발견] fs_ledger는 원장 통합
+    // 커밋에서 ledger_entries로 합쳐지고 더 이상 존재하지 않는 컬렉션이 됐는데
+    // 이 쿼리만 갱신이 안 돼 있었다 — 이 크론이 매번 빈 배열만 받아 사기탐지가
+    // 완전히 무력화된 상태였을 것.
+    const res = await pbFetch(env, meta.base_url, `/api/collections/ledger_entries/records?${new URLSearchParams({ filter, perPage: '2000' })}`);
     const { items: ledger = [] } = await res.json();
     if (!ledger.length) continue;
 
