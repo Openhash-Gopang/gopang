@@ -3897,10 +3897,13 @@ async function handleSigunguDeptResolve(request, url, env, corsHeaders, ctx) {
       await send({
         status: 'done',
         text: `${cityGuess}의 '${label}' 관련 문의는 **${deptName}**에서 담당합니다.`,
-        verified: true, source: 'live_search',
+        verified: true, source: 'live_search', _debug: _sigunguDebug,
       });
     } else {
-      await send({ status: 'done', text: _sigunguRenderFallback(cityGuess, domain), verified: false, source: 'template_fallback' });
+      await send({
+        status: 'done', text: _sigunguRenderFallback(cityGuess, domain),
+        verified: false, source: 'template_fallback', _debug: _sigunguDebug,
+      });
     }
     await writer.close();
   })();
@@ -4001,6 +4004,13 @@ async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) 
     return _err(400, 'MISSING_PARAM', 'province/domain 파라미터 필수', corsHeaders);
   }
 
+  const _natAgencyDebug = {
+    has_web_search_key: !!env.WEB_SEARCH_API_KEY,
+    has_kv: !!env.GOV_DATA_KV,
+    has_l1_admin: !!(env.L1_ADMIN_EMAIL && env.L1_ADMIN_PASSWORD),
+    has_waituntil: !!ctx?.waitUntil,
+  };
+
   const cacheKey = `gov-data:nat-agency:${provinceCode}:${domain}`;
   if (env.GOV_DATA_KV) {
     try {
@@ -4085,10 +4095,13 @@ async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) 
       await send({
         status: 'done',
         text: `'${label}' 관련 문의는 **${agencyName}**에서 담당합니다.`,
-        verified: true, source: 'live_search',
+        verified: true, source: 'live_search', _debug: _natAgencyDebug,
       });
     } else {
-      await send({ status: 'done', text: _natAgencyRenderFallback(provinceName, domain), verified: false, source: 'template_fallback' });
+      await send({
+        status: 'done', text: _natAgencyRenderFallback(provinceName, domain),
+        verified: false, source: 'template_fallback', _debug: _natAgencyDebug,
+      });
     }
     await writer.close();
   })();
