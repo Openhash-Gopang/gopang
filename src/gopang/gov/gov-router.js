@@ -96,7 +96,7 @@ const PROVINCE_NAME_TO_CODE = {
   '경상남도': 'gyeongnam', '경남': 'gyeongnam',
 };
 
-function _guessProvinceFromText(text, sigunguList) {
+function _guessProvinceFromText(text, sigunguList, emdNameIndex) {
   // 1순위: 도 이름 직접 언급 — 긴 이름부터 검사(짧은 이름이 긴 이름의
   // 부분문자열인 경우는 없지만, 검사 순서를 명확히 하기 위함).
   const names = Object.keys(PROVINCE_NAME_TO_CODE).sort((a, b) => b.length - a.length);
@@ -112,6 +112,15 @@ function _guessProvinceFromText(text, sigunguList) {
         const code = PROVINCE_NAME_TO_CODE[rec.광역];
         if (code) return code;
       }
+    }
+  }
+  // 3순위(2026-07-21 신설, 버그3 수정) — 읍/면/동명 역매핑. 상위 시/군/구·
+  // 도 이름 없이 읍면동만 언급해도(예: "한경면 전입신고") 판별되게 한다.
+  // EMD_PATHS가 있는 도(현재 jeju)에 한해서만 가능 — 다른 도에 EMD
+  // 데이터가 실사되면 자동으로 확장된다.
+  if (emdNameIndex) {
+    for (const [name, code] of Object.entries(emdNameIndex)) {
+      if (text.includes(name)) return code;
     }
   }
   return null;
@@ -1172,6 +1181,33 @@ function _computeProvinceRegistry() {
 // 이 시점에 이미 선언·초기화돼 있어야 한다(모듈 로드 순서 의존).
 const PROVINCE_REGISTRY = _computeProvinceRegistry();
 
+// ── 읍면동명 → 도코드 역색인 (2026-07-21 신설, 버그3 수정) ─────────
+// EMD_PATHS에 등록된 도(현재 jeju)의 읍면동 마스터 데이터를 전부 읽어
+// {읍면동명: 도코드} 평면 색인을 만든다 — _guessProvinceFromText의
+// 3순위 판별원. 세션당 1회만 로드(모듈 전역 캐시).
+let _emdNameToProvinceIndex = null;
+async function _loadEmdNameToProvinceIndex() {
+  if (_emdNameToProvinceIndex) return _emdNameToProvinceIndex;
+  const index = {};
+  for (const [provinceCode, paths] of Object.entries(EMD_PATHS)) {
+    try {
+      const [masterRaw, ...extraRaws] = await Promise.all([
+        _fetchText(paths.master),
+        ...(paths.extra || []).map(p => _fetchText(p)),
+      ]);
+      const master = JSON.parse(masterRaw);
+      const extras = extraRaws.map(r => JSON.parse(r));
+      for (const rec of [...master.읍면동목록, ...extras]) {
+        if (rec.읍면동명 && !index[rec.읍면동명]) index[rec.읍면동명] = provinceCode;
+      }
+    } catch (e) {
+      console.warn(`[gov-router] EMD 이름 역색인 로드 실패(${provinceCode}): ${e.message}`);
+    }
+  }
+  _emdNameToProvinceIndex = index;
+  return index;
+}
+
 const _emdRecordsByProvince = {};
 async function _loadEmdRecords() {
   const provinceCode = _resolveProvinceCode();
@@ -1253,7 +1289,14 @@ async function resolveSigunguDept(cityGuess, domain) {
 // 실사용 로그(sigungu_dept_resolve_log)가 쌓이면 정교화"하는 전략을 쓴다
 // — 오탐이 나도 결과 자체가 "확인 안 됨" 톤이라 사용자에게 해를 끼치지
 // 않는다(_renderFallback 참고).
-const _SIGUNGU_FALSE_POSITIVE_WORDS = ['필요시', '동시', '당시', '임시', '수시', '즉시', '항시'];
+const _SIGUNGU_FALSE_POSITIVE_WORDS = [
+  '필요시', '동시', '당시', '임시', '수시', '즉시', '항시',
+  // ★ 2026-07-21 추가 — 8개 광역시·특별시 이름이 [가-힣]{2,4}(시|군|구)
+  // 정규식에 걸려 시/군/구로 오인되던 버그(50개 사고실험 A7 등에서 실증
+  // — "서울시 소상공인 지원 문의"가 SEOUL_L2_TABLE의 SP-DO-ECON 정밀
+  // 매칭 대신 시군구 지연초기화로 잘못 빠졌었다).
+  '서울시', '부산시', '대구시', '인천시', '광주시', '대전시', '울산시', '세종시',
+];
 function _guessSigunguName(text) {
   const pattern = /([가-힣]{2,4}(?:시|군|구))/g;
   let m;
@@ -1481,8 +1524,25 @@ async function _fetchNatText(entry) {
     console.warn(`[Jeju] 국가기관 데이터 레코드/템플릿 없음(domain=${entry.domain}, 도코드=${entry.도코드}) — static file로 폴백`);
     return _fetchText(entry.file);
   }
-  const template = await _fetchText(`09-national/agencies/templates/${rec.template}`);
-  return _renderNatTemplate(template, rec);
+  // ★ 2026-07-21 수정(버그4) — rec.template 필드값은 있는데 그 파일이
+  // 실제로 저장소에 없는 경우(예: SP-NAT-TAX-TEMPLATE_v1.0.md 404)를
+  // 못 잡고 그대로 throw해 응답 전체가 깨지던 버그(50개 사고실험 D1·D6
+  // 에서 세무서·병무청 둘 다 실제로 재현). 템플릿 fetch를 try/catch로
+  // 감싸 static file → 그것도 실패하면 정직한 정보없음으로 단계적
+  // 폴백한다.
+  try {
+    const template = await _fetchText(`09-national/agencies/templates/${rec.template}`);
+    return _renderNatTemplate(template, rec);
+  } catch (e) {
+    console.warn(`[gov-router] 국가기관 템플릿 파일 없음(${rec.template}): ${e.message} — static file로 폴백`);
+    try {
+      return await _fetchText(entry.file);
+    } catch (e2) {
+      console.warn(`[gov-router] static 폴백도 실패(${entry.file}): ${e2.message} — 정직한 정보없음으로 대체`);
+      return `[정보 없음] ${entry.code} 관련 상세 안내를 아직 준비하지 못했습니다. ` +
+        `정부24(gov.kr) 또는 국번없이 110(정부민원안내)으로 확인해 주세요.`;
+    }
+  }
 }
 
 // ── 시(市) 템플릿 렌더링 (2026-07-04, 도 부서 템플릿과 동일 철학이나
@@ -1601,10 +1661,13 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 'jeju'로 대체해 "판별 불가"가 아니라 "제주로 확신에 찬 오답"이
   // 나가는 문제가 사고실험으로 확인됐다 — 아래 -0.5단계에서 명시적으로
   // 끊는다.
-  const _sigunguListForGuess = await _loadSigunguListForProvinceGuess();
+  const [_sigunguListForGuess, _emdNameIndexForGuess] = await Promise.all([
+    _loadSigunguListForProvinceGuess(),
+    _loadEmdNameToProvinceIndex(),
+  ]);
   _currentResolvedProvinceCode =
-    _guessProvinceFromText(text, _sigunguListForGuess)
-    || (pdvLocationHint ? _guessProvinceFromText(pdvLocationHint, _sigunguListForGuess) : null);
+    _guessProvinceFromText(text, _sigunguListForGuess, _emdNameIndexForGuess)
+    || (pdvLocationHint ? _guessProvinceFromText(pdvLocationHint, _sigunguListForGuess, _emdNameIndexForGuess) : null);
   const govCommon = await _loadGovCommon();
   const trace = ['JEJU-GOV-COMMON'];
   const parts = [govCommon].filter(Boolean);
@@ -1625,7 +1688,13 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 공백 고지 원칙)의 연장 — "판별 불가"를 정직하게 알리고, 발화가
   // 애초에 위치와 무관한 일반 질문일 수도 있으므로 GOV-COMMON 공통
   // 레이어까지는 포함해 반환한다(도청/L2/국가기관 트리는 로드하지 않음).
-  if (!_currentResolvedProvinceCode) {
+  // ★ 2026-07-21 수정(버그2) — 예전엔 _currentResolvedProvinceCode(발화·
+  // PDV 기반 판별값)만 검사해서, window.HONDI_PROVINCE_CODE로 도가 이미
+  // 고정된 배포(도별 전용 사이트)에서도 위치 없는 일반 질문이 전부
+  // "지역 미판별"로 잘못 튕겨나가는 버그가 있었다(50개 사고실험 E7에서
+  // 실증). _resolveProvinceCode()는 오버라이드까지 감안한 최종값이라
+  // 이걸 검사해야 맞다.
+  if (!_resolveProvinceCode()) {
     parts.push(
       '[지역 미판별] 정확한 관할 기관을 안내하려면 거주 지역(광역시도·시군구, ' +
       '가능하면 읍면동까지)을 알려주세요. PDV에 거주지가 저장돼 있다면 자동으로 반영됩니다.'
