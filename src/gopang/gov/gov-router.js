@@ -1379,11 +1379,21 @@ function _guessDomainFromText(text) {
 // 호출할 뿐이다(SIGUNGU_RESOLVE_ORIGIN과 동일 Worker 재사용). 실패해도
 // 예외를 던지지 않고 안전한 기본 문구로 대체 — 이 기능이 죽어도 기존
 // 라우팅에 영향 없음(시군구 리졸버와 완전히 동일한 안전 철학).
-async function resolveNationalAgencyLazy(provinceCode, provinceName, domain) {
+// onProgress(선택, 2026-07-21 신설) — worker.js가 SSE로 매초 진행상황을
+// 보내면 그대로 넘겨받는 콜백. SSE 파싱은 _consumeSigunguSSE(범용 —
+// "sigungu" 전용이 아니라 이 프로젝트의 모든 지연조립 리졸버가 쓰는
+// data: 라인 프로토콜 파서)를 그대로 재사용한다.
+async function resolveNationalAgencyLazy(provinceCode, provinceName, domain, onProgress) {
   try {
     const url = `${SIGUNGU_RESOLVE_ORIGIN}/gov/national-agency-resolve?domain=${encodeURIComponent(domain)}&province=${encodeURIComponent(provinceCode)}&provinceName=${encodeURIComponent(provinceName)}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('text/event-stream') && res.body) {
+      const streamed = await _consumeSigunguSSE(res.body, onProgress);
+      if (streamed) return streamed;
+      throw new Error('SSE 스트림이 done 이벤트 없이 종료됨');
+    }
     const data = await res.json();
     return data;
   } catch (e) {
@@ -1844,7 +1854,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       const nationalSp = await _loadNationalSp();
       parts.push(nationalSp);
       trace.push('JEJU-NATIONAL-SP');
-      const resolved = await resolveNationalAgencyLazy(_resolveProvinceCode(), _provinceCodeToName(_resolveProvinceCode()), natDomainGuess);
+      const resolved = await resolveNationalAgencyLazy(_resolveProvinceCode(), _provinceCodeToName(_resolveProvinceCode()), natDomainGuess, onProgress);
       parts.push(resolved.text);
       trace.push(`SP-NATIONAL-LAZY(${natDomainGuess}/${resolved.source})`);
       return { systemPrompt: parts.join('\n\n---\n\n'), trace };
@@ -1992,7 +2002,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       const nationalOnlyParts = [govCommon];
       const nationalSp = await _loadNationalSp();
       nationalOnlyParts.push(nationalSp);
-      const resolved = await resolveNationalAgencyLazy(_resolveProvinceCode(), _provinceCodeToName(_resolveProvinceCode()), natDomainGuess);
+      const resolved = await resolveNationalAgencyLazy(_resolveProvinceCode(), _provinceCodeToName(_resolveProvinceCode()), natDomainGuess, onProgress);
       nationalOnlyParts.push(resolved.text);
       return {
         systemPrompt: nationalOnlyParts.join('\n\n---\n\n'),
