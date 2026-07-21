@@ -1845,13 +1845,31 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
 // police/public/911 scope 불일치 버그와 동일 계열 문제를 jeju에서는
 // 애초에 만들지 않기 위함).
 // trace를 보고 /gov/relay에 넘길 agency 값을 판정한다 — worker.js
-// GOV_AGENCIES/SP_DELEGATION_REGISTRY의 'jeju_do'/'jeju_national'과
+// GOV_AGENCIES/SP_DELEGATION_REGISTRY의 'gov_do'/'gov_national'과
 // 반드시 동일한 문자열이어야 한다(어긋나면 UNKNOWN_AGENCY로 조용히
 // 거부되는 사고가 난다 — SP-00-ROUTER v5.1 manifest 누락과 동일 유형).
+// ★ 2026-07-21 개명 — 'jeju_do'/'jeju_national'이었다. 주피터 지시:
+// "제주는 전국 광역시도 중 하나일 뿐인데 여전히 특별 취급해야 하는
+// 이유는?" — 없다. JEJU-NATIONAL-SP/JEJU-DO-SP라는 트리 이름 자체는
+// (파일명 등 여러 저장소에 걸친 문자열이라) 오늘은 그대로 두지만,
+// 외부에 노출되는 agency 값만이라도 전국 중립적으로 바꾼다.
 export function resolveGovAgency(trace) {
-  return (trace || []).includes('JEJU-NATIONAL-SP') ? 'jeju_national' : 'jeju_do';
+  return (trace || []).includes('JEJU-NATIONAL-SP') ? 'gov_national' : 'gov_do';
 }
 window.resolveGovAgency = resolveGovAgency;
+
+// ── 현재 요청의 판별된 도코드 노출 (2026-07-21 신설) ────────────────
+// worker.js가 도별 동적 위임 렌더링(gov_do/gov_national)을 하려면
+// provinceCode가 필요한데, 지금까지 /gov/relay 요청 바디에 이 정보가
+// 아예 없었다(도 판별이 전부 클라이언트 쪽에만 있었음). resolveGovAgency와
+// 동일하게 trace 계산 직후 바로 조회 가능하도록 export한다 — 호출부는
+// assembleGovSystemPrompt(...) 완료 직후 이 함수를 호출하면 된다
+// (모듈 전역 변수 _currentResolvedProvinceCode는 매 요청 시작 시
+// 동기적으로 갱신되므로 순서만 지키면 안전).
+export function resolveProvinceCode() {
+  return _currentResolvedProvinceCode;
+}
+window.resolveProvinceCode = resolveProvinceCode;
 
 // ── G18(STAFF_REVIEW_GATE) handler_code — LLM 출력이 아니라 trace에서 결정
 // (2026-07-19, 사용자 지적으로 설계 변경) ──────────────────────────────
