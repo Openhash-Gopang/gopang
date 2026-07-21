@@ -2123,6 +2123,23 @@ export async function guessProvinceCode(userText, pdvLocationHint = null) {
 }
 window.guessProvinceCode = guessProvinceCode;
 
+// ── 경량 도 판별(SP 조립 없이) — 2026-07-21 신설 ────────────────────
+// public/webapp.html처럼 지방행정 SP를 조립할 필요는 없지만(자기
+// 서비스 고유 SP를 따로 쓴다) K-Public→gov_do/gov_national 위임 시
+// provinceCode는 실어 보내야 하는 K-서비스를 위한 export. 도 판별에
+// 필요한 데이터(시군구 목록, 읍면동 역색인)만 로드하고, 그 밖의 무거운
+// SP 조립·네트워크 fetch는 전혀 하지 않는다 — assembleGovSystemPrompt()
+// 전체를 부르는 것보다 훨씬 가볍다.
+export async function guessProvinceCode(userText, pdvLocationHint = null) {
+  const [sigunguList, emdNameIndex] = await Promise.all([
+    _loadSigunguListForProvinceGuess(),
+    _loadEmdNameToProvinceIndex(),
+  ]);
+  return _guessProvinceFromText(userText, sigunguList, emdNameIndex)
+    || (pdvLocationHint ? _guessProvinceFromText(pdvLocationHint, sigunguList, emdNameIndex) : null);
+}
+window.guessProvinceCode = guessProvinceCode;
+
 // ── G18(STAFF_REVIEW_GATE) handler_code — LLM 출력이 아니라 trace에서 결정
 // (2026-07-19, 사용자 지적으로 설계 변경) ──────────────────────────────
 // 애초 계획은 "handler_code 형식을 스키마 문서에 못박는다"였다. 그런데
