@@ -11,6 +11,15 @@ id = "2b2cb21a53d34db5841b20ccd022f601"
 binding = "PENDING_REGION_KV"
 id = "780dea8f38da43659bc1c5c5608b814e"
 
+# [2026-07-21 신설] handleCreatePayment가 orderId를 키로 주문 메타데이터
+# (buyer_guid/seller_guid/mode/items/device_fp)를 저장 — 토스가 웹훅에
+# 가맹점 커스텀 메타데이터를 실어주지 않아서 필요해짐(사고실험 시나리오2 발견).
+# 아래 id는 실제 생성 후 채울 것:
+#   wrangler kv namespace create PENDING_PG_ORDER_KV
+[[kv_namespaces]]
+binding = "PENDING_PG_ORDER_KV"
+id = "REPLACE_ME"
+
 [[kv_namespaces]]
 binding = "OPS_ALERTS_KV"
 id = "245ea108426f45a08860291e45f878f4"
