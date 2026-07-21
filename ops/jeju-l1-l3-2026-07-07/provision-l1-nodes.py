@@ -18,6 +18,13 @@ jeju-l1-l3-field-test-plan-2026-07-07.md §2.3 참고.
 이 스크립트가 하는 일 (신규 L1 42개 + L3의 guid_home_l1 1개):
   1. pb_data 디렉터리 생성
   2. systemd 유닛 파일 생성·기동 (openhash-l1-{folder}.service)
+  2-1. [2026-07-21 신설] 공유 시크릿 파일(--env-file, 기본
+       /opt/gopang/gopang.env)을 가리키는 systemd 드롭인을 각 노드마다 자동
+       생성 — 이게 없으면 main.pb.js의 BRIDGE_SECRET/MARKET_PROXY_URL 등
+       $os.getenv() 값이 전부 비어있는 채로 노드가 "정상 기동"해버리는
+       사고가 생긴다(l1-aewol 등에서 실제 재현·확인됨). --env-file이 이
+       호스트에 없으면 스크립트가 시작 시점에 바로 중단됨(사람이 먼저
+       gopang.env를 만들어야 함 — 다른 호스트 것을 scp로 복사 권장).
   3. hanlim의 admin 계정과 동일한 이메일/비밀번호로 각 신규 인스턴스에
      superuser 생성 (L1_ADMIN_EMAIL/L1_ADMIN_PASSWORD 환경변수 — worker.js가
      노드별로 별도 토큰을 발급받으므로, 자격증명 자체는 동일해도 무방)
@@ -30,6 +37,7 @@ jeju-l1-l3-field-test-plan-2026-07-07.md §2.3 참고.
 """
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -184,9 +192,29 @@ def main():
     ap.add_argument("--l3-base", default="http://127.0.0.1:8094")
     ap.add_argument("--admin-email", required=True)
     ap.add_argument("--admin-password", required=True)
+    ap.add_argument("--env-file", default="/opt/gopang/gopang.env",
+                     help="공유 시크릿 파일(BRIDGE_SECRET/MARKET_PROXY_URL 등) — "
+                          "2026-07-21 신설: 이 파일이 없으면 새로 만든 노드가 "
+                          "main.pb.js의 $os.getenv() 값을 전부 못 받는 사고가 있었음 "
+                          "(l1-aewol 등 42개 노드에서 실제 재현·확인됨). 이 옵션으로 "
+                          "지정된 파일을 각 노드 서비스의 systemd 드롭인으로 자동 연결한다.")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--only", help="쉼표구분 폴더명만 처리(테스트용, 예: l1-aewol)")
     args = ap.parse_args()
+
+    # [2026-07-21 신설] 공유 시크릿 파일이 이 호스트에 없으면 지금 여기서 바로
+    # 멈춘다 — 이 확인 없이 계속 진행하면, l1-aewol 등 42개 노드에서 실제로
+    # 재현됐던 사고(BRIDGE_SECRET/MARKET_PROXY_URL 등이 전부 빈 값으로 뜨는
+    # 채로 노드가 "정상 기동"해버리는 것)가 그대로 반복된다. 이 호스트에
+    # 처음 노드를 만드는 경우(예: 서귀포 호스트 최초 구성)라면, gopang.env를
+    # 먼저 만들고 다시 실행할 것.
+    if not args.dry_run and not os.path.isfile(args.env_file):
+        print(f"오류: 공유 시크릿 파일이 없습니다: {args.env_file}")
+        print("  이 호스트에 처음 노드를 만드는 경우, 다음처럼 먼저 만드세요")
+        print("  (다른 호스트의 gopang.env를 scp로 그대로 복사하는 것을 권장 — ")
+        print("   값을 다시 타이핑하면 실수로 다른 값이 될 위험이 있음):")
+        print(f"    scp <다른 호스트>:/opt/gopang/gopang.env {args.env_file}")
+        sys.exit(1)
 
     topo = json.load(open(TOPOLOGY_FILE, encoding="utf-8"))
     new_l1 = {f: c for f, c in topo.items()
@@ -216,6 +244,7 @@ def main():
             print(f"  [dry-run] mkdir -p {args.base_dir}/{folder}")
             print(f"  [dry-run] chown -R {args.run_user}:{args.run_user} {args.base_dir}/{folder}")
             print(f"  [dry-run] write {unit_path}")
+            print(f"  [dry-run] write {unit_path}.d/gopang-env.conf (EnvironmentFile={args.env_file})")
             print(f"  [dry-run] systemctl enable --now gopang-pb-{folder}")
             continue
 
@@ -230,6 +259,16 @@ def main():
         subprocess.run(["chown", "-R", f"{args.run_user}:{args.run_user}", f"{args.base_dir}/{folder}"], check=True)
         with open(unit_path, "w") as f:
             f.write(unit)
+
+        # [2026-07-21 신설] 공유 시크릿 드롭인 — 없으면 이 노드는 main.pb.js의
+        # $os.getenv() 값을 전부 못 받는다(l1-aewol 등에서 실제 재현된 사고).
+        # hanlim의 기존 관례(EnvironmentFile 드롭인)를 모든 신규 노드에도
+        # 자동 적용해서, 사람이 매번 손으로 만들 필요가 없도록 한다.
+        dropin_dir = f"{unit_path}.d"
+        os.makedirs(dropin_dir, exist_ok=True)
+        with open(f"{dropin_dir}/gopang-env.conf", "w") as f:
+            f.write(f"[Service]\nEnvironmentFile={args.env_file}\n")
+
         subprocess.run(["systemctl", "daemon-reload"], check=True)
         subprocess.run(["systemctl", "enable", "--now", f"gopang-pb-{folder}"], check=True)
 
