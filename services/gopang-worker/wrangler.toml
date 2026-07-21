@@ -1,4 +1,4 @@
-name = "market-proxy"
+﻿name = "market-proxy"
 main = "src/index.js"
 compatibility_date = "2026-07-01"
 
@@ -18,7 +18,7 @@ id = "780dea8f38da43659bc1c5c5608b814e"
 #   wrangler kv namespace create PENDING_PG_ORDER_KV
 [[kv_namespaces]]
 binding = "PENDING_PG_ORDER_KV"
-id = "REPLACE_ME"
+id = "b3d3c4841b4c4ade89fd7ec90fa2d83b"
 
 [[kv_namespaces]]
 binding = "OPS_ALERTS_KV"
