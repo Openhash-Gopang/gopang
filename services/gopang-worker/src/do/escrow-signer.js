@@ -71,12 +71,21 @@ export class EscrowSigner {
     const txHash = await sha256Hex(sortedStringify(tx));
     const escrowSig = await this._signWithEscrowKey(txHash);
 
+    // [2026-07-21 수정] 사고실험 시나리오1에서 실제 재현된 이중 기장 문제 —
+    // main.pb.js의 /api/tx 핸들러는 모든 tx에 대해 자동으로 buyerClaim/
+    // sellerClaim을 계산해 ledger_entries에 기록한다. EscrowSigner는 이 tx가
+    // 이미 자기만의 정확한 3행(buyer/seller/platform)을 별도로 기록할
+    // 것이므로, main.pb.js 쪽 자동 기장은 반드시 건너뛰어야 한다 —
+    // 그렇지 않으면 판매자 크레딧이 두 번(pl-revenue + revenue) 잡히고,
+    // 구매자 쪽은 실제 구매자가 아니라 'gopang-escrow' 시스템 계정으로
+    // 잘못 기록된다(실제로 확인됨).
     const l1Res = await fetch(`${l1Base}/api/tx`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         tx, tx_hash: txHash, buyer_sig: escrowSig,
         buyer_public_key: this.env.ESCROW_PUBLIC_KEY,
+        skip_ledger: true,
       }),
     });
     const l1Data = await l1Res.json();

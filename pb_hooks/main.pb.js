@@ -1205,7 +1205,7 @@ function ed25519Verify(msgBytes, sigBytes, pubkeyBytes) {
 
 routerAdd("POST", "/api/tx", (c) => {
   const body = $apis.requestInfo(c).data;
-  const { tx, tx_hash, buyer_sig, buyer_public_key, purpose } = body;
+  const { tx, tx_hash, buyer_sig, buyer_public_key, purpose, skip_ledger } = body;
 
   if (!tx || !tx_hash || !buyer_sig || !buyer_public_key) {
     return c.json(400, { ok: false, error: "MISSING_FIELD" });
@@ -1604,6 +1604,15 @@ const NODE_CONFIG = {
   // 노드와 market-proxy가 같은 guid에 동시에 쓸 때 경합 소지가 있었다.
   // market-proxy의 LedgerWriter DO(guid 단위 직렬화)를 거치도록 HTTP 호출로
   // 대체한다. 공유 시크릿은 body 필드로 전달(BRIDGE_SECRET과 동일 관례).
+  // [2026-07-21 수정 — 사고실험 시나리오1 이중기장 발견] skip_ledger=true면
+  // 이 자동 기장을 건너뛴다. EscrowSigner처럼 호출자가 자기만의 정확한 원장
+  // 구조(3행 buyer/seller/platform)를 별도로 이미 기록하는 경우, 여기서
+  // owner_guid(에스크로의 경우 'gopang-escrow' 시스템 계정 — 실제 구매자가
+  // 아님) 기준으로 또 자동 기록하면 판매자 크레딧이 중복되고 구매자가
+  // 잘못된 주체로 기록된다(실제 재현·확인됨).
+  if (skip_ledger) {
+    console.log("[TX] ledger_entries 자동 기록 건너뜀(skip_ledger=true, 호출자가 별도 기록)");
+  } else {
   try {
     const source = purpose ? "gdc_transfer" : "market"; // handleGdcTransfer가 purpose를 실어 보낸다
     const marketProxyUrl = $os.getenv("MARKET_PROXY_URL");
@@ -1642,6 +1651,7 @@ const NODE_CONFIG = {
     // 의도적으로 응답 실패로 이어지지 않게 한다 — 위 주석 참고.
     console.log("[TX] ledger_entries 기록 실패(감사 필요, 정산 자체는 정상):", e.message);
   }
+  } // skip_ledger 분기 종료
 
   // l1_ledger 앵커링
   try {
