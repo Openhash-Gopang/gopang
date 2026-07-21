@@ -1339,15 +1339,22 @@ const _SIGUNGU_FALSE_POSITIVE_WORDS = [
   // 매칭 대신 시군구 지연초기화로 잘못 빠졌었다).
   '서울시', '부산시', '대구시', '인천시', '광주시', '대전시', '울산시', '세종시',
 ];
-function _guessSigunguName(text) {
+function _guessSigunguNameFrom(src) {
+  if (!src) return null;
   const pattern = /([가-힣]{2,4}(?:시|군|구))/g;
   let m;
-  while ((m = pattern.exec(text)) !== null) {
+  while ((m = pattern.exec(src)) !== null) {
     const candidate = m[1];
     if (_SIGUNGU_FALSE_POSITIVE_WORDS.includes(candidate)) continue;
     return candidate;
   }
   return null;
+}
+// ★ 2026-07-21 수정 — pdvLocationHint도 함께 본다(발화에 없으면 PDV로
+// 폴백, 도 판별과 동일한 우선순위). 사용자가 "세무서 문의"처럼 지역
+// 언급 없이 말해도, AC가 이미 아는 위치(GPS/PDV)로 시/군을 특정한다.
+function _guessSigunguName(text, pdvLocationHint) {
+  return _guessSigunguNameFrom(text) || _guessSigunguNameFrom(pdvLocationHint);
 }
 
 const _SIGUNGU_DOMAIN_KEYWORDS = {
@@ -1383,9 +1390,13 @@ function _guessDomainFromText(text) {
 // 보내면 그대로 넘겨받는 콜백. SSE 파싱은 _consumeSigunguSSE(범용 —
 // "sigungu" 전용이 아니라 이 프로젝트의 모든 지연조립 리졸버가 쓰는
 // data: 라인 프로토콜 파서)를 그대로 재사용한다.
-async function resolveNationalAgencyLazy(provinceCode, provinceName, domain, onProgress) {
+// cityHint(선택, 2026-07-21 신설) — 시/군까지 특정되면 worker.js가 그
+// 시/군 관할 지사만 골라 검색한다(도 전체엔 세무서가 여럿이라 시/군
+// 없이는 정답을 하나로 좁힐 수 없다 — 실제 배포 재현으로 확인된 문제).
+async function resolveNationalAgencyLazy(provinceCode, provinceName, domain, onProgress, cityHint) {
   try {
-    const url = `${SIGUNGU_RESOLVE_ORIGIN}/gov/national-agency-resolve?domain=${encodeURIComponent(domain)}&province=${encodeURIComponent(provinceCode)}&provinceName=${encodeURIComponent(provinceName)}`;
+    const url = `${SIGUNGU_RESOLVE_ORIGIN}/gov/national-agency-resolve?domain=${encodeURIComponent(domain)}&province=${encodeURIComponent(provinceCode)}&provinceName=${encodeURIComponent(provinceName)}` +
+      (cityHint ? `&city=${encodeURIComponent(cityHint)}` : '');
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const contentType = res.headers.get('content-type') || '';
@@ -1851,12 +1862,13 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   if (_nationalTable().length === 0 && !classifyFn) {
     const natDomainGuess = _guessNatAgencyDomainFromText(text);
     if (natDomainGuess) {
+      const cityHint = _guessSigunguName(text, pdvLocationHint);
       const nationalSp = await _loadNationalSp();
       parts.push(nationalSp);
       trace.push('JEJU-NATIONAL-SP');
-      const resolved = await resolveNationalAgencyLazy(_resolveProvinceCode(), _provinceCodeToName(_resolveProvinceCode()), natDomainGuess, onProgress);
+      const resolved = await resolveNationalAgencyLazy(_resolveProvinceCode(), _provinceCodeToName(_resolveProvinceCode()), natDomainGuess, onProgress, cityHint);
       parts.push(resolved.text);
-      trace.push(`SP-NATIONAL-LAZY(${natDomainGuess}/${resolved.source})`);
+      trace.push(`SP-NATIONAL-LAZY(${natDomainGuess}${cityHint ? '/' + cityHint : ''}/${resolved.source})`);
       return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
   }
@@ -1926,7 +1938,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 없으면(상담할 AI 자체가 없음) 기존처럼 정규식이 즉시 판단한다 —
   // 하위호환 100% 유지.
   if (!classifyFn) {
-    const sigunguGuess = _guessSigunguName(text);
+    const sigunguGuess = _guessSigunguName(text, pdvLocationHint);
     if (sigunguGuess) {
       const domainGuess = _guessDomainFromText(text);
       if (domainGuess) {
@@ -1947,7 +1959,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     // 시군구 소관이므로 여기서 도청 L2로 확정하지 않는다.
     const _registryEntry = PROVINCE_REGISTRY[_resolveProvinceCode()];
     if (_registryEntry?.govType === 'GENERAL' && _isMunicipalTaxOnlyMatch(text, divMatch)) {
-      const sigunguGuess = _guessSigunguName(text);
+      const sigunguGuess = _guessSigunguName(text, pdvLocationHint);
       const domainGuess = _guessDomainFromText(text);
       if (sigunguGuess && domainGuess) {
         const resolved = await resolveSigunguDept(sigunguGuess, domainGuess, onProgress);
@@ -1999,14 +2011,15 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     // (시군구 LLM 분류 폴백과 완전히 동일한 철학).
     const natDomainGuess = _guessNatAgencyDomainFromText(text);
     if (natDomainGuess) {
+      const cityHint = _guessSigunguName(text, pdvLocationHint);
       const nationalOnlyParts = [govCommon];
       const nationalSp = await _loadNationalSp();
       nationalOnlyParts.push(nationalSp);
-      const resolved = await resolveNationalAgencyLazy(_resolveProvinceCode(), _provinceCodeToName(_resolveProvinceCode()), natDomainGuess, onProgress);
+      const resolved = await resolveNationalAgencyLazy(_resolveProvinceCode(), _provinceCodeToName(_resolveProvinceCode()), natDomainGuess, onProgress, cityHint);
       nationalOnlyParts.push(resolved.text);
       return {
         systemPrompt: nationalOnlyParts.join('\n\n---\n\n'),
-        trace: ['JEJU-GOV-COMMON', 'JEJU-NATIONAL-SP', `SP-NATIONAL-LAZY(${natDomainGuess}/${resolved.source})`, '(LLM 분류 폴백)'],
+        trace: ['JEJU-GOV-COMMON', 'JEJU-NATIONAL-SP', `SP-NATIONAL-LAZY(${natDomainGuess}${cityHint ? '/' + cityHint : ''}/${resolved.source})`, '(LLM 분류 폴백)'],
       };
     }
     // AI는 국가기관 문제라고 봤는데 정규식이 도메인을 못 뽑으면 — 억지로
@@ -2015,7 +2028,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     // AI가 "이건 시군구 문제"라고 직접 판단한 경우 — 결정권은 AI에게
     // 있고, 여기서는 그 판단을 실행에 옮기기 위해 이름·도메인만 정규식
     // 으로 추출한다(추출은 기계적 실행일 뿐, 판단 자체는 이미 AI가 끝냄).
-    const sigunguGuess = _guessSigunguName(text);
+    const sigunguGuess = _guessSigunguName(text, pdvLocationHint);
     const domainGuess = _guessDomainFromText(text);
     if (sigunguGuess && domainGuess) {
       const resolved = await resolveSigunguDept(sigunguGuess, domainGuess, onProgress);
