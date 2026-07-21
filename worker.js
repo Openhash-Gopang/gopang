@@ -195,6 +195,36 @@ function _generateOtpCode() {
   return String(100000 + (buf[0] % 900000));
 }
 
+// ── 전화번호 정규화 (2026-07-21 신설) ────────────────────────────
+// 클라이언트/curl 테스트마다 표기가 제각각이라(대시 포함, 국가번호
+// 유무, 0 유무) 지금까지 딱 "+8201...부터 10~12자리"만 통과시키는
+// 정규식 하나로 전부 거부해왔다. 실제로 통용되는 다음 표기를 전부
+// 같은 번호로 인식해 내부 표준(+820...) 하나로 합친다:
+//   "010-9662-7170"   (국내 표기, 대시/공백 포함)
+//   "01096627170"     (국내 표기, 대시 없음)
+//   "821096627170"    (국가번호만, 0 생략 — 통상적 E.164 관례)
+//   "8201096627170"   (국가번호 + 0 유지 — 이 프로젝트 내부 표준)
+//   "+8201096627170"  (위와 동일, + 유무는 무관)
+// 반환값은 항상 "+820"로 시작하는 내부 표준 형식이거나, 형식이 끝내
+// 안 맞으면 null (호출부에서 INVALID_PHONE 처리).
+function _normalizePhoneE164(raw) {
+  if (!raw) return null;
+  let digits = String(raw).replace(/[^\d]/g, ''); // 대시·공백·+ 전부 제거
+  if (!digits) return null;
+
+  if (digits.startsWith('0')) {
+    // 010-9662-7170 / 01096627170 → 82 붙이고 0은 그대로 유지
+    digits = '82' + digits;
+  } else if (digits.startsWith('82') && !digits.startsWith('820')) {
+    // 821096627170 (0 생략된 통상 E.164) → 0을 다시 끼워넣는다
+    digits = '820' + digits.slice(2);
+  }
+  // 이미 8201096627170 형식이면 위 두 분기 다 안 타고 그대로 통과
+
+  const e164 = '+' + digits;
+  return /^\+820\d{8,10}$/.test(e164) ? e164 : null;
+}
+
 async function _hmacSha256Hex(secret, message) {
   const key = await crypto.subtle.importKey(
     'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
@@ -230,8 +260,8 @@ async function _sendSolapiSms(env, toE164, text) {
 async function handlePhoneOtpRequest(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { e164 } = body;
-  if (!e164 || !/^\+820\d{8,10}$/.test(e164)) {
+  const e164 = _normalizePhoneE164(body.e164);
+  if (!e164) {
     return _err(400, 'INVALID_PHONE', '올바른 국내 전화번호 형식이 아닙니다', corsHeaders);
   }
   if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', 'OTP 저장소가 설정되지 않았습니다', corsHeaders);
@@ -376,8 +406,9 @@ async function _l1FindProfileByE164(env, e164) {
 async function handleDeviceLinkInit(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { e164, pcPubKeyB64u, pcLabel } = body;
-  if (!e164 || !/^\+820\d{8,10}$/.test(e164)) {
+  const { pcPubKeyB64u, pcLabel } = body;
+  const e164 = _normalizePhoneE164(body.e164);
+  if (!e164) {
     return _err(400, 'INVALID_PHONE', '올바른 국내 전화번호 형식이 아닙니다', corsHeaders);
   }
   if (!pcPubKeyB64u) return _err(400, 'MISSING_FIELD', 'pcPubKeyB64u 필수', corsHeaders);
