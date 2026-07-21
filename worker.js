@@ -9553,15 +9553,17 @@ const GOV_AGENCIES = new Set([
   // src/gopang/ai/gov-template-renderer.js로 파일명이 분리되어 이름
   // 충돌 자체가 해소됐다 — 2026-07-08 SP-AUTHOR 템플릿 렌더링 전용
   // 엔진이며 jeju.hondi.net과는 여전히 무관. 해당 파일 주석 참고.)
-  'jeju_do', 'jeju_national',
+  'gov_do', 'gov_national',
 ]);
 
-// jeju_do/jeju_national의 agencyPrompt는 이미 JEJU-GOV-COMMON을 통해
-// 자체 정체성 레이어를 포함하고 있다(Jejudo 트리는 K-Public_common을
-// 상속하지 않는 독립 계통). 이 agency들에는 K-Public_common/
-// PROFESSIONAL-common을 추가로 덧씌우지 않는다 — 덧씌우면 정체성이
-// 이중으로 겹치는(khealth 때와 같은 유형의) 버그가 난다.
-const NO_IDENTITY_LAYER_AGENCIES = new Set(['jeju_do', 'jeju_national']);
+// gov_do/gov_national의 agencyPrompt는 이미 GOV-COMMON을 통해 자체
+// 정체성 레이어를 포함하고 있다(지방행정 트리는 K-Public_common을
+// 상속하지 않는 독립 계통 — 2026-07-21 이전엔 jeju_do/jeju_national로
+// 불렸으나 제주 전용이 아니라 전국 공통 지방행정 트리였다는 게 명확해져
+// 개명). 이 agency들에는 K-Public_common/PROFESSIONAL-common을 추가로
+// 덧씌우지 않는다 — 덧씌우면 정체성이 이중으로 겹치는(khealth 때와
+// 같은 유형의) 버그가 난다.
+const NO_IDENTITY_LAYER_AGENCIES = new Set(['gov_do', 'gov_national']);
 
 // ═══════════════════════════════════════════════════════════
 // k-business / business-kr — 사업체 보조 AI (2026-07-05 신설)
@@ -9870,23 +9872,20 @@ const SP_DELEGATION_REGISTRY = {
   traffic:    { via: 'manifest', key: 'SP-06_ktraffic',   identity: 'kpublic',       pdvScope: 'ktraffic' },
   logistics:  { via: 'manifest', key: 'SP-13_klogistics', identity: 'kpublic',       pdvScope: 'klogistics' },
   public:     { via: 'manifest', key: 'SP-10_kpublic',    identity: 'kpublic',       pdvScope: 'kpublic' },
-  jeju_do: {
-    via: 'url',
-    url: 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/gov-tree/01-do/JEJU-DO-SP_v1.5.md',
-    identity: null, label: '제주도청(총괄)',
-    // ★ 2026-07-09 추가 — JEJU-DO-SP_v1.0.md 자신의 헤더가 "반드시
-    // 상위 공통 레이어 뒤에 고정 삽입, 단독 사용 금지"라고 명시하는데
-    // 지금까지 이 위임 경로가 그 상위 체인(kgov+OVERLAY+TREE-PROTOCOL)을
-    // 전혀 안 붙이고 있었다(2026-07-09 GOV_COMMON 조사 중 발견). 이
-    // 필드가 있으면 _fetchDelegationPrompt가 해당 도코드로 체인을
-    // 조립해 앞에 붙인다.
-    govCommonDoCode: 'jeju',
+  // ★ 2026-07-21 개명 — jeju_do/jeju_national이었다. 제주는 16개
+  // 광역시도 중 하나일 뿐이라 정적 파일(JEJU-DO-SP_v1.5.md 등)로 고정
+  // 폴백하지 않는다 — dynamicRegional 플래그가 있으면
+  // _fetchDelegationPrompt가 provinceCode 기반으로 매번 동적 렌더링하고,
+  // provinceCode가 없거나 그 도가 아직 실사되지 않았으면 "정직한
+  // 정보없음" 메시지로 대체한다(gov-router.js _loadDoSp()의 PR#30
+  // 원칙과 동일 — 특정 도 내용을 다른 도인 것처럼 내보내지 않는다).
+  gov_do: {
+    dynamicRegional: 'do',
+    identity: null, label: '광역시도청(총괄)',
   },
-  jeju_national: {
-    via: 'url',
-    url: 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/gov-tree/09-national/JEJU-NATIONAL-SP_v1.0.md',
-    identity: null, label: '제주 소재 국가기관(총괄)',
-    govCommonDoCode: 'jeju',
+  gov_national: {
+    dynamicRegional: 'national',
+    identity: null, label: '국가기관 지역사무소(총괄)',
   },
   // tax: sp-catalog.json에 SP-XX_ktax 없음 — 등록 전까지 위임 대상에서 제외.
 };
@@ -9897,17 +9896,19 @@ const SP_DELEGATION_REGISTRY = {
 // 보내도 서버가 강제로 non-stream 처리한다(아래 handleGovRelay 참조) — 위임
 // 여부를 알려면 첫 응답 전체를 먼저 봐야 하기 때문이다. 파일럿 단계에서는
 // 영향 범위를 최소화한다.
-const SP_DELEGATION_ORIGINATORS = new Set(['public', 'jeju_do', 'jeju_national']);
+const SP_DELEGATION_ORIGINATORS = new Set(['public', 'gov_do', 'gov_national']);
 
 let _spDelegationCache = new Map();
 const _SP_DELEGATION_TTL_MS = 10 * 60 * 1000;
 
 // ★ 2026-07-09 신설 — kgov(SP-10_kpublic) + <PROVINCE>-GOV-COMMON-OVERLAY +
-// JEJU-TREE-PROTOCOL을 조립한다. jeju.hondi.net(독립 jeju 저장소)의
+// GOV-TREE-PROTOCOL을 조립한다. jeju.hondi.net(독립 jeju 저장소)의
 // jeju-router.js `_loadGovCommon()`과 정확히 같은 로직을 worker.js
-// 서버사이드에도 이식했다 — 지금까지 /gov/relay의 jeju_do/jeju_national
-// 위임 경로만 이 상위 체인 없이 JEJU-DO-SP/JEJU-NATIONAL-SP를 단독으로
-// 보내고 있었다(발견 경위: GOV_COMMON 조사, 2026-07-09).
+// 서버사이드에도 이식했다 — 지금까지 /gov/relay의 gov_do/gov_national
+// (당시 jeju_do/jeju_national) 위임 경로만 이 상위 체인 없이
+// JEJU-DO-SP/JEJU-NATIONAL-SP를 단독으로 보내고 있었다(발견 경위:
+// GOV_COMMON 조사, 2026-07-09). 2026-07-21 — 이 두 agency를 제주
+// 전용에서 전국 공통으로 개명.
 let _govCommonChainCache = new Map(); // 도코드 -> { text, at }
 const _GOV_COMMON_CHAIN_TTL_MS = 10 * 60 * 1000;
 
@@ -9948,9 +9949,122 @@ async function _loadGovCommonChain(doCode) {
   return text;
 }
 
-async function _fetchDelegationPrompt(regKey) {
+// ── 도별 동적 위임 콘텐츠 렌더링 (2026-07-21 신설) ────────────────
+// gov_do/gov_national이 무조건 제주 정적 파일을 돌려주던 걸 도별로
+// 동적 렌더링하게 한다 — gov-router.js의 _loadDoSp()/_loadNationalSp()와
+// 완전히 동일한 소스(province-master-data.json, national-agency-master-data.json
+// 등)를 서버측에서 그대로 재사용한다(로직 중복이지만, Workers 런타임이
+// 원격 ES 모듈을 안전하게 동적 import할 방법이 없어 불가피 — 클라이언트
+// 쪽이 바뀌면 이 두 함수도 같이 봐야 함을 주석으로 남긴다).
+async function _renderDoSpDynamic(provinceCode) {
+  const [templateRes, masterRes] = await Promise.all([
+    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/01-do/templates/SP-PROVINCE-TEMPLATE_v1.1.md', { cache: 'no-cache' }),
+    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/01-do/templates/province-master-data.json', { cache: 'no-cache' }),
+  ]);
+  if (!templateRes.ok) throw new Error(`SP-PROVINCE-TEMPLATE fetch 실패: HTTP ${templateRes.status}`);
+  if (!masterRes.ok) throw new Error(`province-master-data.json fetch 실패: HTTP ${masterRes.status}`);
+  const template = await templateRes.text();
+  const records = (await masterRes.json())['도목록'] || [];
+  const rec = records.find(r => r['도코드'] === provinceCode);
+  if (!rec) return null; // 실사 안 된 도 — 호출부가 null을 보고 정직한 정보없음으로 대체
+  return template
+    .replaceAll('{도이름}', rec['도이름'] || '')
+    .replaceAll('{도코드}', rec['도코드'] || '')
+    .replaceAll('{통치구조_문구}', rec['통치구조_문구'] || '')
+    .replaceAll('{이원화_문구}', rec['이원화_문구'] || '')
+    .replaceAll('{인접기관_문구}', rec['인접기관_문구'] || '')
+    .replaceAll('{광역출력_문구}', rec['광역출력_문구'] || '')
+    .replaceAll('{위임사무_문구}', rec['위임사무_문구'] || '')
+    .replaceAll('{하위SP_접두어}', rec['하위SP_접두어'] || '')
+    .replaceAll('{유의사항_추가}', rec['유의사항_추가'] || '');
+}
+
+function _renderNatCatalogSectionServer(records, provinceCode) {
+  const rows = records.filter(r => r['도코드'] === provinceCode);
+  if (rows.length === 0) {
+    return `## §3. 라우팅 테이블\n\n이 지역의 국가기관 지사 목록은 아직 조사되지 않았습니다 — ` +
+      `정확한 관할 기관은 정부24(gov.kr) 또는 국번없이 110(정부민원안내)으로 확인해 주세요.`;
+  }
+  const tableRows = rows.map(r =>
+    `| SP-NAT-${(r.domain || '').toUpperCase()} | ${r['지사명'] || ''} | ${r['소속부처'] || ''} |`
+  ).join('\n');
+  return (
+    `## §3. 라우팅 테이블 (national-agency-master-data.json 기준, 매 요청 시 동적 생성)\n\n` +
+    `| 코드 | 기관명 | 소속 |\n|---|---|---|\n${tableRows}`
+  );
+}
+
+async function _renderNationalSpDynamic(provinceCode) {
+  const [coreRes, overlayTemplateRes, overlayMasterRes, natMasterRes] = await Promise.all([
+    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/09-national/NATIONAL-SP-CORE_v1.2.md', { cache: 'no-cache' }),
+    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/09-national/overlays/NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md', { cache: 'no-cache' }),
+    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/09-national/overlays/national-sp-overlay-master-data.json', { cache: 'no-cache' }),
+    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/09-national/agencies/templates/national-agency-master-data.json', { cache: 'no-cache' }),
+  ]);
+  if (!coreRes.ok) throw new Error(`NATIONAL-SP-CORE fetch 실패: HTTP ${coreRes.status}`);
+  if (!overlayTemplateRes.ok) throw new Error(`NATIONAL-SP-OVERLAY-TEMPLATE fetch 실패: HTTP ${overlayTemplateRes.status}`);
+  if (!overlayMasterRes.ok) throw new Error(`national-sp-overlay-master-data.json fetch 실패: HTTP ${overlayMasterRes.status}`);
+  if (!natMasterRes.ok) throw new Error(`national-agency-master-data.json fetch 실패: HTTP ${natMasterRes.status}`);
+  const core = await coreRes.text();
+  const overlayTemplate = await overlayTemplateRes.text();
+  const overlayRecords = (await overlayMasterRes.json())['도목록'] || [];
+  const natRecords = (await natMasterRes.json())['기관목록'] || [];
+
+  const overlayRec = overlayRecords.find(r => r['도코드'] === provinceCode);
+  const overlay = overlayRec
+    ? overlayTemplate.replaceAll('{도이름}', overlayRec['도이름'] || '')
+    : `[참고: 이 지역(${provinceCode})의 국가기관 지사 상세 정보는 아직 준비 중입니다.]`;
+  const catalogSection = _renderNatCatalogSectionServer(natRecords, provinceCode);
+  return core + '\n\n---\n\n' + overlay + '\n\n---\n\n' + catalogSection;
+}
+
+async function _fetchDelegationPrompt(regKey, provinceCode) {
   const entry = SP_DELEGATION_REGISTRY[regKey];
   if (!entry) return null;
+
+  // ── gov_do/gov_national(dynamicRegional) 전용 경로 — 정적 파일 없음.
+  // provinceCode가 없거나 그 도가 실사되지 않았으면 "정직한 정보없음"
+  // 메시지로 답한다(제주 특별 취급 폐지 — 주피터 지시). ──────────────
+  if (entry.dynamicRegional) {
+    const cacheKey = `${regKey}:${provinceCode || 'unknown'}`;
+    const cached = _spDelegationCache.get(cacheKey);
+    const now = Date.now();
+    if (cached && (now - cached.at) < _SP_DELEGATION_TTL_MS) return cached.text;
+
+    let body = null;
+    if (provinceCode) {
+      try {
+        body = entry.dynamicRegional === 'do'
+          ? await _renderDoSpDynamic(provinceCode)
+          : await _renderNationalSpDynamic(provinceCode);
+      } catch (e) {
+        console.warn(`[worker] 도별 동적 위임 렌더링 실패(${regKey}, ${provinceCode}): ${e.message}`);
+        body = null;
+      }
+    }
+    if (body === null) {
+      body = `[지역 정보 없음] ${entry.label} 관련 상세 안내는 ` +
+        (provinceCode
+          ? `이 지역(${provinceCode})이 아직 실사되지 않아 제공할 수 없습니다.`
+          : `요청에 지역 정보가 없어 제공할 수 없습니다.`) +
+        ` 정부24(gov.kr) 또는 국번없이 110(정부민원안내)으로 확인해 주세요.`;
+    }
+
+    let text = body;
+    if (provinceCode) {
+      try {
+        const chain = await _loadGovCommonChain(provinceCode);
+        text = chain + '\n\n---\n\n' + text;
+      } catch (e) {
+        console.warn(`[worker] GOV-COMMON 체인 로드 실패(${provinceCode}): ${e.message} — 본문만 반환`);
+      }
+    }
+
+    _spDelegationCache.set(cacheKey, { text, at: now });
+    return text;
+  }
+
+  // ── 기존 경로(K-서비스 SP 등, manifest/url 방식) — 변경 없음 ──────
   const cached = _spDelegationCache.get(regKey);
   const now = Date.now();
   if (cached && (now - cached.at) < _SP_DELEGATION_TTL_MS) return cached.text;
@@ -9971,12 +10085,6 @@ async function _fetchDelegationPrompt(regKey) {
   if (!res.ok) throw new Error(`위임 대상 SP 로드 실패(${regKey}): HTTP ${res.status}`);
   let text = await res.text();
 
-  // ★ 2026-07-09 — 이 항목이 상위 공통 체인을 필요로 하면(JEJU-DO-SP/
-  // JEJU-NATIONAL-SP처럼 "단독 사용 금지"가 명시된 문서) kgov+OVERLAY+
-  // TREE-PROTOCOL을 앞에 붙인다. entry.govCommonDoCode가 없는 항목(대부분의
-  // K-서비스 SP)은 원래도 자기 완결형 단일 SP라 이 로직을 타지 않는다 —
-  // 'public'(kgov 자기 자신) 항목도 govCommonDoCode가 없으므로 무한
-  // 재귀로 자기 자신을 앞에 붙이는 일은 없다.
   if (entry.govCommonDoCode) {
     const chain = await _loadGovCommonChain(entry.govCommonDoCode);
     text = chain + '\n\n---\n\n' + text;
@@ -10006,12 +10114,12 @@ function _parseSpCallRequest(content) {
 // 규칙을 어기고 또 sp_call JSON을 내놓더라도 절대 따르지 않는다 — 그 결과의
 // sp_call 여부 자체를 확인하지 않고 raw content 그대로 반환한다. 이것이
 // "재위임 금지"의 실제 강제 지점이다(U9-3은 프롬프트 차원의 심층 방어).
-async function _callDelegationTarget(env, regKey, query, backendModel) {
+async function _callDelegationTarget(env, regKey, query, backendModel, provinceCode) {
   const entry = SP_DELEGATION_REGISTRY[regKey];
   if (!entry) return { ok: false, reason: 'TARGET_NOT_REGISTERED' };
 
   let promptText;
-  try { promptText = await _fetchDelegationPrompt(regKey); }
+  try { promptText = await _fetchDelegationPrompt(regKey, provinceCode); }
   catch (e) { return { ok: false, reason: 'PROMPT_LOAD_FAILED', detail: e.message }; }
 
   const [universalIntegrity, universalCommon] = await Promise.all([
@@ -10307,8 +10415,8 @@ async function handleGovTaskSubmit(bodyText, env, corsHeaders) {
   const batchId = typeof body.batch_id === 'string' ? body.batch_id.slice(0, 100) : null;
   const fanoutMode = ['notify', 'join'].includes(body.fanout_mode) ? body.fanout_mode : null;
   // ★ 2026-07-12 정정 — GOV_AGENCIES.has(agency) 검증을 제거했다.
-  // GOV_AGENCIES는 /gov/relay의 라우팅·정체성 목록(public/jeju_do/
-  // jeju_national/health/police 등)이고, 여기서 쓰는 agency는
+  // GOV_AGENCIES는 /gov/relay의 라우팅·정체성 목록(public/gov_do/
+  // gov_national/health/police 등)이고, 여기서 쓰는 agency는
   // REQUIRED_DOCUMENTS_REGISTRY의 키 접두어(kcc, court, 342개 기관 코드
   // 등)로 완전히 다른 네임스페이스다. 실제로 /gov/relay에 도달하는
   // agency 값은 국가기관 전체에 대해 언제나 'public' 하나뿐이며(client
@@ -10509,9 +10617,14 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
-  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier } = body || {};
+  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier, provinceCode } = body || {};
   if (!guid || !agency || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/agency/messages 필수', corsHeaders);
   if (!GOV_AGENCIES.has(agency)) return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 기관: ${agency}`, corsHeaders);
+  // provinceCode는 선택 필드(2026-07-21 신설) — gov_do/gov_national 위임
+  // 서브 호출이 어느 도 내용을 렌더링할지 결정한다. 안 보내면(구 클라이언트)
+  // 아래 _fetchDelegationPrompt가 "정직한 정보없음" 메시지로 답한다 —
+  // 예전처럼 조용히 제주 내용이 나가지 않는다(주피터 지시: 제주 특별
+  // 취급 폐지).
 
   // ── 2026-07-14 보안 수정(#18) — 회귀 복구 ─────────────────────────
   // agency는 클라이언트 자칭 문자열이다. body.access_cert(있으면)를
@@ -10773,7 +10886,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
       }
 
       // ── 위임 승인 — 대상 SP 서브 호출(2번째 LLM 호출) ──────────────
-      const sub = await _callDelegationTarget(env, target, call.query, backendModel);
+      const sub = await _callDelegationTarget(env, target, call.query, backendModel, provinceCode);
       billGovCall(sub.usage, `${agency}→${target}`);
 
       if (!sub.ok) {
