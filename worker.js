@@ -5324,22 +5324,6 @@ export default {
     // 입력받아 페어링한 뒤, X25519 봉투 암호화로 개인키 자체를 옮긴다.
     // 서버는 암호화된 봉투만 중계하며 평문 개인키를 절대 보지 않는다.)
     if (pathname === '/auth/device-link/init'    && request.method === 'POST') return handleDeviceLinkInit(request, env, corsHeaders);
-    // ★★★ 2026-07-21 임시 디버그 라우트 — L1 admin auth 400 원인 규명용.
-    // 평문은 절대 반환하지 않고 길이+SHA256 앞 16자만 반환한다. 원인
-    // 확정되면(혹은 늦어도 확인 직후) 반드시 이 블록을 제거할 것.
-    if (pathname === '/debug/l1-secret-check' && request.method === 'GET') {
-      const _enc = new TextEncoder();
-      const _hashHex = async (s) => {
-        const buf = await crypto.subtle.digest('SHA-256', _enc.encode(s || ''));
-        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
-      };
-      return new Response(JSON.stringify({
-        emailLen:  (env.L1_ADMIN_EMAIL || '').length,
-        emailHash: await _hashHex(env.L1_ADMIN_EMAIL),
-        pwLen:     (env.L1_ADMIN_PASSWORD || '').length,
-        pwHash:    await _hashHex(env.L1_ADMIN_PASSWORD),
-      }), { status: 200, headers: corsHeaders });
-    }
     if (pathname === '/auth/device-link/session'  && request.method === 'GET')  return handleDeviceLinkSession(request, env, corsHeaders);
     if (pathname === '/auth/device-link/verify'   && request.method === 'POST') return handleDeviceLinkVerify(request, env, corsHeaders);
     if (pathname === '/auth/device-link/resend-sms' && request.method === 'POST') return handleDeviceLinkResendSms(request, env, corsHeaders);
