@@ -158,3 +158,72 @@ wrangler.toml           KV/DO 바인딩, 크론 트리거
   작업이 별도로 필요합니다.
 - 14번(실시간 배송사 연동)이 구현되면 `escrow.js`의 "운송장 미등록 시 자동릴리즈 제외"
   로직을 실제 배송완료 확인 기반으로 고도화할 수 있습니다.
+
+## 2026-07-21 — 원장 통합 (fs_ledger → ledger_entries)
+
+배포 준비 중 hondi-proxy(`pb_hooks/main.pb.js`)가 이미 `ledger_entries` 컬렉션에
+GDC 송금/발행/AI과금 시 buyer/seller 2행 부기를 기록하고 있다는 걸 확인했다.
+`fs_ledger`(이 저장소가 원래 설계했던 것)와 스키마 목적이 사실상 같아서(둘 다
+`guid, direction, amount, fs_account, tx_id`), 병존시키지 않고 **`ledger_entries`에
+해시체인 필드를 추가하는 방식으로 통합**했다:
+
+- `pb_hooks/fs_ledger.pb.js` — 해시체인 강제 규칙(append-only, seq/entry_hash 계산)의
+  대상 컬렉션을 `fs_ledger` → `ledger_entries`로 변경 (파일명은 유지)
+- `do/ledger-writer.js` — INSERT 대상을 `ledger_entries`로 변경
+- `migrations/collections.json`에서 `fs_ledger` 항목 제거
+- `migrations/ledger_entries_extension.json` — 한림읍(`KR-JEJU-JEJU-HANLIM`)에 실제
+  적용한 11개 신규 필드 정의. **나머지 42개 L1 노드에도 동일 확장이 아직 필요함**
+  (worker.js의 `L1_NODE_MAP` 참조)
+
+**⚠️ 미검증 사항**: `main.pb.js`는 `$app.dao().saveRecord()`(내부 DAO 직접 호출)로
+쓰는데, 해시체인 훅은 `onRecordBeforeCreateRequest`(HTTP 요청 훅)에 걸려있다. 내부
+DAO 호출도 이 요청 훅을 타는지 이 PocketBase 버전(0.22.x)에서 아직 실증 확인 못 함 —
+확인 전까지는 `main.pb.js`가 쓰는 레코드의 `seq`/`entry_hash`가 비어있을 수 있다.
+실제 GDC 송금을 하나 발생시켜서 결과 레코드를 조회해보는 방식으로 검증 필요.
+
+**아직 통합 안 한 것 (같은 종류의 중복이지만 이번 범위 밖으로 보류)**:
+- `reviews`(이 저장소) vs 기존 `trade_ratings` — 후자가 다국어 번역까지 이미 구현되어 더 성숙
+- `business_verifications`(이 저장소) vs 기존 `seller_verifications`
+- `dispute_cases`(이 저장소) vs 기존 `transaction_disputes`
+
+세 쌍 모두 필드 구성이 겹치는 것으로 보이나, `fs_ledger`처럼 "지금 당장 안 고치면
+배포 자체가 위험한" 수준은 아니라고 판단해 후속 작업으로 미뤘다. 착수 전 반드시
+기존 컬렉션을 실제로 쓰는 코드(worker.js, pb_hooks/main.pb.js)를 먼저 확인할 것.
+
+## 2026-07-21 — 원장(fs) 쓰기를 market-proxy로 완전 이관
+
+로컬 PocketBase 0.22.14 재현 실험으로 두 가지를 실증했다:
+1. `hondi-proxy`(`pb_hooks/main.pb.js`)의 내부 `$app.dao().saveRecord()` 직접
+   쓰기는 `fs_ledger.pb.js`의 `onRecordBeforeCreateRequest` 훅을 **타지 않는다**
+   (HTTP 요청 경로에만 걸리는 훅이라 내부 DAO 호출은 우회함) — `entry_hash`/
+   `seq`가 계산되지 않은 채 저장됨.
+2. 위와 별개로, `fs_ledger.pb.js` 자체가 v0.23+ 전용 훅 이름
+   (`onRecordUpdateRequest`/`onRecordDeleteRequest`, Before 없이)을 쓰고 있어
+   실제 0.22.14 서버에서 파일 로드 자체가 `ReferenceError`로 실패했을 가능성이
+   높다(→ Before 포함 이름으로 수정 완료, 별도 커밋).
+
+이 두 문제와, 애초에 우려했던 "hondi-proxy·market-proxy가 동시에 같은 guid에
+쓸 때의 경합" 문제를 한번에 해결하기 위해, **원장(fs, financial statement)
+관련 쓰기를 market-proxy가 전담**하도록 이관했다:
+
+- **신규 엔드포인트**: `POST /internal/ledger-entries` (`src/routes/internal.js`)
+  — `pb_hooks/main.pb.js`의 3개 지점(TX 정산·MINT·AI과금)이 이제 이 엔드포인트를
+  HTTP로 호출한다. 호출은 `LedgerWriter` DO(guid 단위 직렬화)를 거치므로 경합이
+  사라지고, HTTP 요청 경로이므로 해시체인 훅도 정상적으로 발동한다.
+- **인증**: Cloudflare Service Binding은 호출자가 Cloudflare 밖의 일반 서버
+  (PocketBase VM)라 적용할 수 없음을 확인 — 기존 코드베이스 관례
+  (`BRIDGE_SECRET`/`MINT_SECRET`/`AI_CHARGE_SECRET`, body 필드로 공유 시크릿
+  전달)를 그대로 따라 `LEDGER_WRITE_SECRET`을 도입했다.
+- **필요한 서버 측(PocketBase VM) 설정**: `main.pb.js`가 `$os.getenv()`로
+  읽는 두 값을 **43개 L1 노드 프로세스 전부**의 OS 환경변수로 설정해야 한다:
+  - `MARKET_PROXY_URL` — 예: `https://market-proxy.tensor-city.workers.dev`
+  - `LEDGER_WRITE_SECRET` — market-proxy의 `wrangler secret put LEDGER_WRITE_SECRET`과
+    **반드시 동일한 값**
+- **알려진 트레이드오프**: PocketBase(로컬) → market-proxy(Cloudflare) →
+  다시 같은 PocketBase 서버로 돌아오는 왕복 네트워크 홉이 생긴다. 원장 기록은
+  이미 "실패해도 정산 자체는 안 막는다"는 비동기·관용적 설계(각 지점 try/catch)라
+  이 지연이 정산 응답 자체를 늦추지는 않지만, 원장 반영에는 약간의 지연이 생긴다.
+- **아직 안 한 것**: `main.pb.js`에 `NODE_CONFIG`가 (핸들러별 격리 컨텍스트
+  때문에) 5번 중복 정의되어 있던 기존 관례를 그대로 따라, 이번에 추가한 2곳
+  (MINT/AI-CHARGE)에도 동일 객체를 복제했다 — 이 중복 자체를 줄이는 리팩터링은
+  이번 범위 밖.

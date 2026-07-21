@@ -1,29 +1,5 @@
 [
   {
-    "name": "fs_ledger",
-    "type": "base",
-    "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
-    "schema": [
-      { "name": "tx_id", "type": "text", "required": true },
-      { "name": "guid", "type": "text", "required": true },
-      { "name": "counterpart", "type": "text" },
-      { "name": "direction", "type": "select", "required": true, "options": { "values": ["credit", "debit"] } },
-      { "name": "amount", "type": "number", "required": true },
-      { "name": "item_name", "type": "text" },
-      { "name": "fs_account", "type": "text", "required": true },
-      { "name": "payment_rail", "type": "select", "options": { "values": ["gdc", "pg"] } },
-      { "name": "fee_rate_applied", "type": "number" },
-      { "name": "memo", "type": "text" },
-      { "name": "tx_at", "type": "date", "required": true },
-      { "name": "seq", "type": "number", "required": true },
-      { "name": "entry_hash", "type": "text", "required": true },
-      { "name": "prev_entry_hash", "type": "text", "required": true },
-      { "name": "anchored", "type": "bool" },
-      { "name": "anchor_batch_id", "type": "text" }
-    ],
-    "indexes": ["CREATE INDEX idx_fs_ledger_guid_seq ON fs_ledger (guid, seq)"]
-  },
-  {
     "name": "fs_ledger_corrections",
     "type": "base",
     "listRule": null, "viewRule": null, "createRule": null, "updateRule": null, "deleteRule": null,
