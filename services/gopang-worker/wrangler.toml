@@ -54,7 +54,12 @@ class_name = "LedgerWriter"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["EscrowSigner", "LedgerWriter"]
+# [2026-07-21 수정] Cloudflare가 최근 정책을 바꿔 신규 Durable Object
+# 네임스페이스는 new_classes(구 key-value 백엔드)로 생성 불가 —
+# new_sqlite_classes(SQLite 백엔드)만 허용됨(code 10097). 실제 배포 시도
+# 중 발견. 기능은 key-value 백엔드와 동일(SQL 쿼리는 추가 옵션일 뿐 필수
+# 아님)하므로 EscrowSigner/LedgerWriter 로직 변경 불필요.
+new_sqlite_classes = ["EscrowSigner", "LedgerWriter"]
 
 # ── 크론 트리거 ────────────────────────────────────────────
 [triggers]
