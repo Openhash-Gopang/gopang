@@ -3726,18 +3726,32 @@ function _sigunguRenderFallback(cityGuess, domain) {
 // 낫다는 이 프로젝트의 반복된 원칙). ★ 2026-07-20 개선: .go.kr 공식
 // 도메인에서 나온 결과만 후보로 인정 — 부안군/공기업/타지역 언론기사가
 // 섞여 동률로 무산되는 문제를 실사용 테스트(천안시 사례)에서 확인해 반영.
+// ★ 2026-07-21 추가 — 실제 배포 재현(홍천군/복지)으로 발견한 문제 두
+// 가지를 더 고쳤다: (1) "직위건설안전국장" 같은 스니펫에서 "직위건설
+// 안전국"과 "건설안전국"이 같은 부서인데 레이블 단어("직위") 때문에
+// 서로 다른 후보로 갈려 인위적 동률이 나던 걸 접두어 제거로 정규화.
+// (2) 상위 5개만 보던 걸 10개(Serper가 이미 반환한 전체)로 넓혀 후보
+// 풀 자체가 좁아서 정답이 아예 안 걸리는 경우를 줄인다.
+const _SIGUNGU_LABEL_PREFIXES = ['직위', '이름', '성명', '전화번호', '담당업무', '소속'];
+function _sigunguStripLabelPrefix(candidate) {
+  for (const label of _SIGUNGU_LABEL_PREFIXES) {
+    if (candidate.startsWith(label) && candidate.length > label.length) return candidate.slice(label.length);
+  }
+  return candidate;
+}
 function _sigunguExtractDeptName(organic, cityGuess) {
   if (!organic || organic.length === 0) return null;
   const deptPattern = /([가-힣]{2,8}(?:과|국|담당관|팀))/g;
   const counts = new Map();
   const cityCore = cityGuess.replace(/(시|군|구)$/, '');
-  for (const r of organic.slice(0, 5)) {
+  for (const r of organic.slice(0, 10)) {
     if (!r.link || !r.link.includes('.go.kr')) continue; // 공식 도메인만
     const text = `${r.title || ''} ${r.snippet || ''}`;
     if (!text.includes(cityCore)) continue;
     let m;
     while ((m = deptPattern.exec(text)) !== null) {
-      counts.set(m[1], (counts.get(m[1]) || 0) + 1);
+      const cleaned = _sigunguStripLabelPrefix(m[1]);
+      counts.set(cleaned, (counts.get(cleaned) || 0) + 1);
     }
   }
   if (counts.size === 0) return null;
@@ -3798,7 +3812,11 @@ async function handleSigunguDeptResolve(request, url, env, corsHeaders, ctx) {
   // 정상 흐름과 동일하게 실제 검색을 동기적으로 실행하되, 원본 검색
   // 결과와 추출 과정을 응답에 그대로 노출한다.
   if (url.searchParams.get('debug') === '1') {
-    const query = `${cityGuess} 조직도`;
+    // ★ 2026-07-21 — domain 라벨을 다시 포함(실제 재현으로 도메인 없는
+    // 쿼리가 무관한 부서로 뒤섞여 다수결이 무산되는 걸 확인). .go.kr
+    // 필터 + cityCore 포함 필터가 이미 있어 과거(2026-07-20)의 "타지역·
+    // 언론기사 섞임" 문제는 지금은 재발하지 않는다고 판단.
+    const query = `${cityGuess} ${SIGUNGU_DOMAIN_LABEL_KO[domain] || domain} 담당부서`;
     let organic = null;
     let serperError = null;
     let serperStatus = null;
@@ -3840,9 +3858,12 @@ async function handleSigunguDeptResolve(request, url, env, corsHeaders, ctx) {
   const send = (obj) => writer.write(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
 
   const streamTask = (async () => {
-    const query = `${cityGuess} 조직도`; // ★ 2026-07-20: 도메인 라벨 포함 쿼리가 관련없는
-    // 결과(타지역·언론기사)를 끌어와 동률 무산되는 걸 확인해 단순화함
+    // ★ 2026-07-21 — domain 라벨을 다시 포함(실제 재현: "OO 조직도"만으로는
+    // 검색 결과가 무관한 여러 부서로 흩어져 다수결로 domain을 특정할 수
+    // 없었다). .go.kr 필터 + cityCore 포함 필터가 이미 과거(2026-07-20)의
+    // "타지역·언론기사 섞임" 문제를 막아준다고 판단해 라벨을 되살렸다.
     const label = SIGUNGU_DOMAIN_LABEL_KO[domain] || domain;
+    const query = `${cityGuess} ${label} 담당부서`;
     const progressMessages = [
       `${cityGuess}의 '${label}' 담당 부서를 확인하고 있습니다...`,
       `${cityGuess} 공식 자료를 조회하고 있습니다...`,
