@@ -12,7 +12,11 @@ export async function l1AdminToken(env, l1Base) {
   const cached = _tokenCache.get(l1Base);
   if (cached && cached.expiresAt > Date.now()) return cached.token;
 
-  const res = await fetch(`${l1Base}/api/collections/_superusers/auth-with-password`, {
+  // [2026-07-21 수정] /api/collections/_superusers/auth-with-password는
+  // PocketBase v0.23+ 전용 경로 — 실제 L1 서버는 0.22.14라 이 경로가 404난다
+  // (worker.js의 _l1AdminTokenFor에 이미 있던 동일 경고를 놓쳤던 것, 실제
+  // 배포 후 재현·확인됨). 구버전 경로로 수정.
+  const res = await fetch(`${l1Base}/api/admins/auth-with-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
