@@ -1,0 +1,38 @@
+name: Check gopang-wallet.js sync across satellite repos
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'gopang-wallet.js'
+      - 'tools/check_wallet_sync.py'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'gopang-wallet.js'
+  schedule:
+    # 허브 변경과 무관하게, 위성 쪽에서만 되돌아가거나 드리프트가 생기는
+    # 경우도 잡기 위해 매일 1회 별도로도 돈다(2026-07-22 사고실험에서
+    # "동기화 완료로 기록했지만 실제로는 반영 안 됨" 사례를 발견한 뒤 신설).
+    - cron: '0 21 * * *'  # 매일 06:00 KST
+  workflow_dispatch:
+
+jobs:
+  check-wallet-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ── gopang-wallet.js는 18개+ 위성 저장소에 사본으로 fan-out 배포된다.
+      # "동기화 스크립트를 돌렸다"는 자기보고와 실제 상태가 어긋난 전례가
+      # 있어(2026-07-19 문서 "완료" 기록 vs 2026-07-22 실측 드리프트 발견),
+      # 매 push·PR·매일 스케줄마다 직접 sha256을 비교해 재발을 잡는다.
+      - name: Run wallet sync check
+        run: python3 tools/check_wallet_sync.py
