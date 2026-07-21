@@ -3794,11 +3794,9 @@ async function handleSigunguDeptResolve(request, url, env, corsHeaders, ctx) {
     }
   }
 
-  const fallbackText = _sigunguRenderFallback(cityGuess, domain);
-
   // ── 임시 디버그 모드(&debug=1) — 원인 파악용, 필요 없어지면 제거 예정 ──
-  // 백그라운드로 안 돌리고 동기적으로 Serper 검색까지 실행해서 원본 결과와
-  // 추출 시도 결과를 응답에 그대로 담는다. 정상 트래픽에는 영향 없음.
+  // 정상 흐름과 동일하게 실제 검색을 동기적으로 실행하되, 원본 검색
+  // 결과와 추출 과정을 응답에 그대로 노출한다.
   if (url.searchParams.get('debug') === '1') {
     const query = `${cityGuess} 조직도`;
     let organic = null;
@@ -3828,44 +3826,56 @@ async function handleSigunguDeptResolve(request, url, env, corsHeaders, ctx) {
     }, null, 2), { headers: corsHeaders });
   }
 
-  // 백그라운드 검증 — 응답은 즉시 나가고, 검증은 ctx.waitUntil로 이어서.
-  if (env.WEB_SEARCH_API_KEY && ctx?.waitUntil) {
-    const bgTask = (async () => {
-      const query = `${cityGuess} 조직도`; // ★ 2026-07-20: 도메인 라벨 포함 쿼리가 관련없는
-      // 결과(타지역·언론기사)를 끌어와 동률 무산되는 걸 확인해 단순화함
-      let organic = null;
-      try {
-        const searchRes = await fetch('https://google.serper.dev/search', {
-          method: 'POST',
-          headers: { 'X-API-KEY': env.WEB_SEARCH_API_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q: query, gl: 'kr', hl: 'ko' }),
-        });
-        if (searchRes.ok) {
-          const raw = await searchRes.json().catch(() => null);
-          organic = raw?.organic || null;
-        }
-      } catch (e) {
-        console.error('[sigungu-dept-resolve] Serper 호출 실패:', e.message);
+  // ★ 2026-07-21 수정 — 주피터 지시: "시간보다 중요한 점은 정확한 답을
+  // 제출하는 것" — 캐시 미스여도 추정치를 먼저 던지지 않는다. 실제
+  // 웹검색을 여기서 동기적으로 기다려, 검증에 성공하면 그 결과를
+  // 즉시(그리고 정확하게) 반환한다. 검색 실패·결과 모호(동률)·API 키
+  // 없음일 때만 추정치(_sigunguRenderFallback)로 폴백한다.
+  let deptName = null;
+  const query = `${cityGuess} 조직도`; // ★ 2026-07-20: 도메인 라벨 포함 쿼리가 관련없는
+  // 결과(타지역·언론기사)를 끌어와 동률 무산되는 걸 확인해 단순화함
+  if (env.WEB_SEARCH_API_KEY) {
+    try {
+      const searchRes = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: { 'X-API-KEY': env.WEB_SEARCH_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: query, gl: 'kr', hl: 'ko' }),
+      });
+      if (searchRes.ok) {
+        const raw = await searchRes.json().catch(() => null);
+        const organic = raw?.organic || null;
+        deptName = _sigunguExtractDeptName(organic, cityGuess);
       }
-
-      const deptName = _sigunguExtractDeptName(organic, cityGuess);
-      if (deptName && env.GOV_DATA_KV) {
-        try {
-          await env.GOV_DATA_KV.put(cacheKey, JSON.stringify({ deptName, resolvedAt: new Date().toISOString() }),
-            { expirationTtl: SIGUNGU_RESOLVE_TTL });
-        } catch (e) {
-          console.error('[sigungu-dept-resolve] KV 저장 실패:', e.message);
-        }
-      }
-      await _sigunguRecordResolveLog({
-        city_guess: cityGuess, domain, query,
-        outcome: deptName ? 'resolved' : 'not_found',
-        resolved_dept_name: deptName || null,
-      }, env);
-    })();
-    ctx.waitUntil(bgTask.catch((e) => console.error('[sigungu-dept-resolve] 백그라운드 실패:', e.message)));
+    } catch (e) {
+      console.error('[sigungu-dept-resolve] Serper 호출 실패:', e.message);
+    }
   }
 
+  if (ctx?.waitUntil) {
+    ctx.waitUntil(_sigunguRecordResolveLog({
+      city_guess: cityGuess, domain, query,
+      outcome: deptName ? 'resolved' : 'not_found',
+      resolved_dept_name: deptName || null,
+    }, env).catch((e) => console.error('[sigungu-dept-resolve] 로그 기록 실패(무시):', e.message)));
+  }
+
+  if (deptName) {
+    if (env.GOV_DATA_KV) {
+      try {
+        await env.GOV_DATA_KV.put(cacheKey, JSON.stringify({ deptName, resolvedAt: new Date().toISOString() }),
+          { expirationTtl: SIGUNGU_RESOLVE_TTL });
+      } catch (e) {
+        console.error('[sigungu-dept-resolve] KV 저장 실패(무시):', e.message);
+      }
+    }
+    return new Response(JSON.stringify({
+      text: `${cityGuess}의 '${SIGUNGU_DOMAIN_LABEL_KO[domain] || domain}' 관련 문의는 **${deptName}**에서 담당합니다.`,
+      verified: true, source: 'live_search', _debug: _sigunguDebug,
+    }), { headers: corsHeaders });
+  }
+
+  // 실제 검증 실패(검색 실패·모호·API 키 없음) — 정직한 추정치로 폴백.
+  const fallbackText = _sigunguRenderFallback(cityGuess, domain);
   return new Response(JSON.stringify({ text: fallbackText, verified: false, source: 'template_fallback', _debug: _sigunguDebug }),
     { headers: corsHeaders });
 }
