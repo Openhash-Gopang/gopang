@@ -100,6 +100,22 @@ document.body.classList.add('gopang-authed');
     const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
     if (!stored?.ipv6) return; // 게스트/미로그인 상태에서는 시도하지 않음
 
+    // ★ 2026-07-21 신설 — 실사로 발견한 버그: push_subscription은 계정(guid)당
+    // 딱 하나뿐인데(profiles 단일 필드, 기기별 아님), 이 블록이 여태 "이 기기가
+    // 실제로 이 계정의 지갑 키를 갖고 있는가"는 전혀 확인하지 않고 localStorage의
+    // gopang_user_v4 세션만 보고 구독을 재등록했다. 그 결과, 예전에 이 계정으로
+    // 로그인한 적 있는 PC가 device-link(기기 간 지갑 이전) 승인을 "받는 중"인
+    // 상태에서도 조용히 자신을 push 대상으로 덮어써서, 폰으로 가야 할 device-link
+    // 알림이 엉뚱하게 PC 자신에게 온 채 폰에는 도착하지 않는 문제가 실제로
+    // 재현됐다. GopangWallet.exists()는 이 기기 IndexedDB에 실제 서명키가
+    // 있는지 확인한다 — PC는 device-link 승인 전까지 이 키를 가질 수 없으므로
+    // (지갑 키 생성은 휴대폰 전용, "PC는 이 키를 생성하지 않음" 관례), 이 체크로
+    // "세션은 있지만 진짜 지갑은 없는" 기기를 걸러낼 수 있다.
+    if (typeof window.GopangWallet === 'undefined' || !(await window.GopangWallet.exists())) {
+      console.info('[Push] 이 기기에 지갑 키가 없어 기본 구독 보장을 건너뜁니다(세션만 있는 기기로 추정).');
+      return;
+    }
+
     localStorage.setItem('gopang_push_last_try', String(Date.now()));
     const { requestPushSubscription } = await import('/src/gopang/services/push.js');
     const result = await requestPushSubscription(stored.ipv6);
