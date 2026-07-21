@@ -3,21 +3,21 @@
   "기관목록": [
     {
       "domain": "agroquality",
-      "template": "SP-NAT-AGROQUALITY-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-AGROQUALITY-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "국립농산물품질관리원 제주지원",
       "소속부처": "농림축산식품부"
     },
     {
       "domain": "airport",
-      "template": "SP-NAT-AIRPORT-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-AIRPORT-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "한국공항공사 제주공항",
       "소속부처": "국토교통부 산하 공기업"
     },
     {
       "domain": "animalquarantine",
-      "template": "SP-NAT-ANIMALQUARANTINE-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-ANIMALQUARANTINE-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "농림축산검역본부 제주지역본부",
       "소속부처": "농림축산식품부"
@@ -31,7 +31,7 @@
     },
     {
       "domain": "court",
-      "template": "SP-NAT-COURT-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-COURT-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "제주지방법원",
       "대표전화": "064-729-2000",
@@ -46,14 +46,14 @@
     },
     {
       "domain": "env",
-      "template": "SP-NAT-ENV-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-ENV-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "영산강유역환경청 제주주재사무실",
       "소속부처": "기후에너지환경부"
     },
     {
       "domain": "fishquality",
-      "template": "SP-NAT-FISHQUALITY-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-FISHQUALITY-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "국립수산물품질관리원 제주지원",
       "소속부처": "해양수산부"
@@ -67,7 +67,7 @@
     },
     {
       "domain": "humanquarantine",
-      "template": "SP-NAT-HUMANQUARANTINE-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-HUMANQUARANTINE-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "국립제주검역소",
       "소속부처": "질병관리청"
@@ -81,42 +81,42 @@
     },
     {
       "domain": "internet",
-      "template": "SP-NAT-INTERNET-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-INTERNET-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "한국지능정보사회진흥원 제주스마트쉼센터",
       "소속부처": "과학기술정보통신부/행정안전부"
     },
     {
       "domain": "labor",
-      "template": "SP-NAT-LABOR-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-LABOR-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "근로복지공단 제주지사",
       "소속부처": "고용노동부"
     },
     {
       "domain": "laborimprove",
-      "template": "SP-NAT-LABORIMPROVE-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-LABORIMPROVE-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "광주지방고용노동청 제주근로개선지도센터",
       "소속부처": "고용노동부"
     },
     {
       "domain": "laborrel",
-      "template": "SP-NAT-LABORREL-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-LABORREL-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "제주지방노동위원회",
       "소속부처": "고용노동부"
     },
     {
       "domain": "mma",
-      "template": "SP-NAT-MMA-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-MMA-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "제주지방병무청",
       "소속부처": "병무청"
     },
     {
       "domain": "nhis",
-      "template": "SP-NAT-NHIS-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-NHIS-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "국민건강보험공단 제주지사",
       "소속부처": "보건복지부"
@@ -144,14 +144,14 @@
     },
     {
       "domain": "post",
-      "template": "SP-NAT-POST-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-POST-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "제주지방우정청",
       "소속부처": "우정사업본부(과학기술정보통신부)"
     },
     {
       "domain": "pps",
-      "template": "SP-NAT-PPS-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-PPS-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "제주지방조달청",
       "소속부처": "조달청"
@@ -165,7 +165,7 @@
     },
     {
       "domain": "prosecution",
-      "template": "SP-NAT-PROSECUTION-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-PROSECUTION-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "제주지방검찰청",
       "소속부처": "법무부(대검찰청)"
@@ -179,14 +179,14 @@
     },
     {
       "domain": "tax",
-      "template": "SP-NAT-TAX-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-TAX-TEMPLATE_v1.3.md",
       "도코드": "jeju",
       "지사명": "제주세무서",
       "소속부처": "국세청(부산지방국세청 관할 — 1972년 광주지방국세청에서 이관, '제주지방국세청'은 존재하지 않음)"
     },
     {
       "domain": "veterans",
-      "template": "SP-NAT-VETERANS-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-VETERANS-TEMPLATE_v1.2.md",
       "도코드": "jeju",
       "지사명": "제주보훈청",
       "소속부처": "국가보훈부"
@@ -200,7 +200,7 @@
     },
     {
       "domain": "bok",
-      "template": "SP-NAT-BOK-TEMPLATE_v1.0.md",
+      "template": "SP-NAT-BOK-TEMPLATE_v1.1.md",
       "도코드": "jeju",
       "소속부처": "한국은행(중앙은행)",
       "지사명": "한국은행 제주본부"
