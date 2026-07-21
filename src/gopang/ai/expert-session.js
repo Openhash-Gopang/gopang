@@ -289,7 +289,12 @@ function _applySystemEverywhere(text) {
   }
 }
 
-// ── 전문가 AI 세션 시작 ───────────────────────────────────────
+// ── 전문가 AI 세션 시작 (같은 스레드 방식) ──────────────────────
+// @deprecated 2026-07-22 — call-ai.js는 이 함수를 import하지 않음(2026-07-03
+// 이후 handleExpertTag의 "새 탭 방식"으로 대체됨, scenario-test.html A17
+// 확인 이력과 일치). 허브(gopang) 내부 grep 기준 살아있는 호출부 없음.
+// 위성 저장소(18개) 쪽에서 이 파일을 직접 fetch해 쓰는 경로가 있는지는
+// 확인 못 했으므로, 삭제 대신 표시만 해두고 1개 배포 주기 관찰 후 제거할 것.
 export async function startExpertSession(personaId, def) {
   if (_expert.active && _expert.personaId === personaId) return; // 이미 같은 페르소나 진행 중
 
