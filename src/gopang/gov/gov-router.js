@@ -1268,11 +1268,52 @@ function _findCityByName(cityName) {
 // 기본 문구로 대체 — 이 기능이 죽어도 기존 라우팅에 영향 없음.
 const SIGUNGU_RESOLVE_ORIGIN = 'https://hondi-proxy.tensor-city.workers.dev';
 
-async function resolveSigunguDept(cityGuess, domain) {
+// SSE(text/event-stream) 응답을 파싱해 progress 이벤트마다 onProgress를
+// 호출하고, done 이벤트의 payload를 최종 결과로 반환한다.
+async function _consumeSigunguSSE(bodyStream, onProgress) {
+  const reader = bodyStream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let result = null;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buffer.indexOf('\n\n')) !== -1) {
+      const chunk = buffer.slice(0, idx).trim();
+      buffer = buffer.slice(idx + 2);
+      if (!chunk.startsWith('data:')) continue;
+      let payload;
+      try { payload = JSON.parse(chunk.slice(5).trim()); } catch { continue; }
+      if (payload.status === 'progress') {
+        if (typeof onProgress === 'function') {
+          try { onProgress(payload); } catch (e) { console.warn('[gov-router] onProgress 콜백 실패(무시):', e?.message); }
+        }
+      } else if (payload.status === 'done') {
+        result = payload;
+      }
+    }
+  }
+  return result;
+}
+
+// onProgress(선택) — worker.js가 SSE로 매초 진행상황을 보내면 payload
+// ({status:'progress', elapsed, message})를 그대로 넘겨받는 콜백(2026-07-21
+// 신설, 주피터 지시: "매 초마다 진행 상황을 알려주고, 정확한 답을
+// 제출하는 것"). worker.js가 구버전(단일 JSON) 응답을 주더라도
+// Content-Type으로 분기해 안전하게 처리한다.
+async function resolveSigunguDept(cityGuess, domain, onProgress) {
   try {
     const url = `${SIGUNGU_RESOLVE_ORIGIN}/gov/sigungu-dept-resolve?city=${encodeURIComponent(cityGuess)}&domain=${encodeURIComponent(domain)}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('text/event-stream') && res.body) {
+      const streamed = await _consumeSigunguSSE(res.body, onProgress);
+      if (streamed) return streamed;
+      throw new Error('SSE 스트림이 done 이벤트 없이 종료됨');
+    }
     const data = await res.json();
     return data;
   } catch (e) {
@@ -1709,7 +1750,7 @@ function _resolvePdvScopeFromTrace(trace) {
 // 아래의 얇은 래퍼가 담당한다 — §13b PDV_HISTORY_REQUEST 자리표시자 치환을
 // 반환 지점이 8곳 넘게 흩어진 이 함수 내부를 전부 건드리지 않고 한 곳에서
 // 처리하기 위함(호출부 입장에서 동작은 완전히 동일, 순수 후처리 wrapper).
-async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, classifyFn = null) {
+async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, classifyFn = null, onProgress = null) {
   // 2026-07-05: UNIVERSAL-INTEGRITY를 여기서 fetch/삽입하던 걸 제거했다.
   // jeju-router.js는 이제 /ai/chat이 아니라 /gov/relay를 호출하고,
   // handleGovRelay()가 UNIVERSAL-INTEGRITY + UNIVERSAL-common(U9 포함)을
@@ -1879,7 +1920,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     if (sigunguGuess) {
       const domainGuess = _guessDomainFromText(text);
       if (domainGuess) {
-        const resolved = await resolveSigunguDept(sigunguGuess, domainGuess);
+        const resolved = await resolveSigunguDept(sigunguGuess, domainGuess, onProgress);
         parts.push(resolved.text);
         trace.push(`SP-SIGUNGU-LAZY(${sigunguGuess}/${domainGuess}/${resolved.source})`);
         await _appendExpertIfMatched();
@@ -1899,7 +1940,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       const sigunguGuess = _guessSigunguName(text);
       const domainGuess = _guessDomainFromText(text);
       if (sigunguGuess && domainGuess) {
-        const resolved = await resolveSigunguDept(sigunguGuess, domainGuess);
+        const resolved = await resolveSigunguDept(sigunguGuess, domainGuess, onProgress);
         parts.push(resolved.text);
         trace.push(`SP-SIGUNGU-LAZY(${sigunguGuess}/${domainGuess}/${resolved.source})`,
           '(govType 가드 — 세정은 시군구 소관, 도청 L2 매칭 우회)');
@@ -1967,7 +2008,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     const sigunguGuess = _guessSigunguName(text);
     const domainGuess = _guessDomainFromText(text);
     if (sigunguGuess && domainGuess) {
-      const resolved = await resolveSigunguDept(sigunguGuess, domainGuess);
+      const resolved = await resolveSigunguDept(sigunguGuess, domainGuess, onProgress);
       parts.push(resolved.text);
       trace.push(`SP-SIGUNGU-LAZY(${sigunguGuess}/${domainGuess}/${resolved.source})`, '(LLM 분류 폴백)');
       await _appendExpertIfMatched();
@@ -2065,8 +2106,8 @@ export function resolveHandlerCodeFromTrace(trace) {
 }
 window.resolveHandlerCodeFromTrace = resolveHandlerCodeFromTrace;
 
-export async function assembleGovSystemPrompt(userText, pdvLocationHint = null, classifyFn = null) {
-  const result = await _assembleGovSystemPromptRaw(userText, pdvLocationHint, classifyFn);
+export async function assembleGovSystemPrompt(userText, pdvLocationHint = null, classifyFn = null, onProgress = null) {
+  const result = await _assembleGovSystemPromptRaw(userText, pdvLocationHint, classifyFn, onProgress);
   if (!_PDV_HISTORY_SCOPE_PLACEHOLDER_RE.test(result.systemPrompt)) return result;
   const scope = _resolvePdvScopeFromTrace(result.trace);
   return {
