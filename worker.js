@@ -3990,28 +3990,50 @@ function _natAgencyStripLabelPrefix(candidate) {
   }
   return candidate;
 }
-function _natAgencyExtractName(organic, provinceName, domain) {
+function _natAgencyExtractName(organic, provinceName, domain, cityHint) {
   if (!organic || organic.length === 0) return null;
   const label = NAT_AGENCY_LABEL_KO[domain] || domain;
   // 국가기관은 명칭 패턴이 훨씬 정형화돼 있어("OO지방법원", "OO세무서")
   // 시군구보다 넓게(과/국 접미사 대신) 기관명 접미사로 잡는다.
   const namePattern = /([가-힣]{2,10}(?:세무서|지방법원|지방검찰청|지방경찰청|지사|지방고용노동청|지역본부|출입국\S{0,6}청|지방우정청|지방병무청|세관|보훈청|지방기상청|해양경찰서|지방해양수산청|준법지원센터|본부|사무소))/g;
-  const counts = new Map();
-  // ★ 2026-07-21 — 시군구와 동일하게 5→10개로 확장(Serper가 이미 반환한
-  // 전체 결과, 추가 API 비용 없음). 정답이 상위 5개 밖에 있어 후보에
-  // 못 들어가는 경우를 줄인다.
+  const provinceCore = provinceName.replace(/(특별자치도|특별자치시|광역시|특별시|도)$/, '');
+  const cityCore = cityHint ? cityHint.replace(/(시|군|구)$/, '') : null;
+
+  // ★ 2026-07-21 추가 — cityHint(시/군)가 있으면 두 갈래로 카운트한다.
+  // 실제 배포 재현(홍천군 세무서)에서 확인: 도 전체 관할 목록형 페이지는
+  // 전부 .go.kr(국세청 등)에 있지만 스니펫이 짧게 잘려 "홍천" 같은 특정
+  // 시/군 이름이 아예 안 보이고, 정작 "홍천세무서"라는 정답이 명시된
+  // 페이지는 민간 정리 사이트(.go.kr 아님)에만 있었다. 그래서: (1)
+  // .go.kr 공식 도메인 → 기존처럼 도 단위 카운트(provinceCounts, 신뢰도
+  // 기준 도메인), (2) cityHint 텍스트까지 명시적으로 일치하면 도메인
+  // 불문 카운트(cityCounts, 신뢰도 기준을 도메인 대신 텍스트 특정도로
+  // 대체). city 레벨 후보가 있으면 그걸 최우선 채택 — 시/군까지 정확히
+  // 언급한 텍스트는 애매할 확률이 낮다. city 레벨이 없거나 동률이면
+  // 기존 도 단위 다수결로 폴백(cityHint 없을 때와 완전히 동일 동작,
+  // 하위호환 유지).
+  const cityCounts = new Map();
+  const provinceCounts = new Map();
   for (const r of organic.slice(0, 10)) {
-    if (!r.link || !r.link.includes('.go.kr')) continue;
     const text = `${r.title || ''} ${r.snippet || ''}`;
-    if (!text.includes(provinceName.replace(/(특별자치도|특별자치시|광역시|특별시|도)$/, ''))) continue;
+    if (!text.includes(provinceCore)) continue;
+    const isOfficial = r.link && r.link.includes('.go.kr');
+    const hasCity = !!(cityCore && text.includes(cityCore));
+    if (!isOfficial && !hasCity) continue; // 비공식 도메인은 city 일치할 때만 신뢰
     let m;
     while ((m = namePattern.exec(text)) !== null) {
       const cleaned = _natAgencyStripLabelPrefix(m[1]);
-      counts.set(cleaned, (counts.get(cleaned) || 0) + 1);
+      if (isOfficial) provinceCounts.set(cleaned, (provinceCounts.get(cleaned) || 0) + 1);
+      if (hasCity) cityCounts.set(cleaned, (cityCounts.get(cleaned) || 0) + 1);
     }
   }
-  if (counts.size === 0) return null;
-  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+
+  if (cityCounts.size > 0) {
+    const citySorted = [...cityCounts.entries()].sort((a, b) => b[1] - a[1]);
+    if (citySorted.length === 1 || citySorted[0][1] > citySorted[1][1]) return citySorted[0][0];
+    // city 레벨도 동률이면 아래 도 단위 폴백으로 이어간다.
+  }
+  if (provinceCounts.size === 0) return null;
+  const sorted = [...provinceCounts.entries()].sort((a, b) => b[1] - a[1]);
   if (sorted.length > 1 && sorted[0][1] === sorted[1][1]) return null;
   return sorted[0][0];
 }
@@ -4036,6 +4058,9 @@ async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) 
   const provinceCode = (url.searchParams.get('province') || '').trim();
   const provinceName = (url.searchParams.get('provinceName') || provinceCode).trim();
   const domain = (url.searchParams.get('domain') || '').trim();
+  // cityHint(선택, 2026-07-21 신설) — AC가 이미 아는 사용자 위치(PDV/GPS)
+  // 로 시/군까지 특정되면, 도 전체가 아니라 그 시/군 관할 지사만 찾는다.
+  const cityHint = (url.searchParams.get('city') || '').trim() || null;
   if (!provinceCode || !domain) {
     return _err(400, 'MISSING_PARAM', 'province/domain 파라미터 필수', corsHeaders);
   }
@@ -4047,7 +4072,9 @@ async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) 
     has_waituntil: !!ctx?.waitUntil,
   };
 
-  const cacheKey = `gov-data:nat-agency:${provinceCode}:${domain}`;
+  // cityHint를 캐시 키에 반영 — 안 하면 홍천군 결과가 다른 시/군
+  // 사용자에게도 그대로 캐시로 나가는 사고가 난다.
+  const cacheKey = `gov-data:nat-agency:${provinceCode}:${domain}${cityHint ? ':' + cityHint : ''}`;
   if (env.GOV_DATA_KV) {
     try {
       const cached = await env.GOV_DATA_KV.get(cacheKey, 'json');
@@ -4067,7 +4094,7 @@ async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) 
   // 검색 결과와 추출 과정을 응답에 그대로 노출한다.
   if (url.searchParams.get('debug') === '1') {
     const label = NAT_AGENCY_LABEL_KO[domain] || domain;
-    const query = `${provinceName} ${label} 관할`;
+    const query = `${provinceName} ${cityHint ? cityHint + ' ' : ''}${label} 관할`;
     let organic = null;
     let serperError = null;
     let serperStatus = null;
@@ -4087,9 +4114,9 @@ async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) 
     } catch (e) {
       serperError = `fetch 예외: ${e.message}`;
     }
-    const agencyName = _natAgencyExtractName(organic, provinceName, domain);
+    const agencyName = _natAgencyExtractName(organic, provinceName, domain, cityHint);
     return new Response(JSON.stringify({
-      debug_mode: true, _debug: _natAgencyDebug,
+      debug_mode: true, _debug: _natAgencyDebug, city_hint: cityHint,
       query, serper_status: serperStatus, serper_error: serperError,
       organic_raw: organic, extracted_agency_name: agencyName,
     }, null, 2), { headers: corsHeaders });
@@ -4109,7 +4136,7 @@ async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) 
 
   const streamTask = (async () => {
     const label = NAT_AGENCY_LABEL_KO[domain] || domain;
-    const query = `${provinceName} ${label} 관할`;
+    const query = `${provinceName} ${cityHint ? cityHint + ' ' : ''}${label} 관할`;
     const progressMessages = [
       `'${label}' 관련 담당 기관을 확인하고 있습니다...`,
       `${provinceName} 관할 지역사무소를 조회하고 있습니다...`,
@@ -4135,7 +4162,7 @@ async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) 
         if (searchRes.ok) {
           const raw = await searchRes.json().catch(() => null);
           const organic = raw?.organic || null;
-          agencyName = _natAgencyExtractName(organic, provinceName, domain);
+          agencyName = _natAgencyExtractName(organic, provinceName, domain, cityHint);
         }
       } catch (e) {
         console.error('[national-agency-resolve] Serper 호출 실패:', e.message);
