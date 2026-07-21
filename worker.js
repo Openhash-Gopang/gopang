@@ -4016,12 +4016,37 @@ async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) 
     }
   }
 
-  const fallbackText = _natAgencyRenderFallback(provinceName, domain);
+  // ★ 2026-07-21 신설 — 시군구 리졸버(handleSigunguDeptResolve)와 동일한
+  // 두 원칙 적용: (1) 캐시 미스여도 추정치를 먼저 던지지 않고 실제
+  // 검증(Serper)을 동기적으로 기다린다 — "시간보다 정확한 답이 우선"
+  // (주피터 지시). (2) 그 대기 동안 SSE(text/event-stream)로 매초
+  // 진행상황을 흘려보낸다. 캐시 히트·잘못된 요청은 기존처럼 즉시 단일
+  // JSON 응답(스트리밍 불필요), 실제 검색이 필요한 경우만 스트리밍한다.
+  const streamHeaders = { ...corsHeaders, 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache' };
+  const encoder = new TextEncoder();
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const send = (obj) => writer.write(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
 
-  if (env.WEB_SEARCH_API_KEY && ctx?.waitUntil) {
-    const bgTask = (async () => {
-      const query = `${provinceName} ${NAT_AGENCY_LABEL_KO[domain] || domain} 관할`;
-      let organic = null;
+  const streamTask = (async () => {
+    const label = NAT_AGENCY_LABEL_KO[domain] || domain;
+    const query = `${provinceName} ${label} 관할`;
+    const progressMessages = [
+      `'${label}' 관련 담당 기관을 확인하고 있습니다...`,
+      `${provinceName} 관할 지역사무소를 조회하고 있습니다...`,
+      `공식 자료를 분석하고 있습니다...`,
+      `기관명을 추출하고 있습니다...`,
+    ];
+    let tick = 0;
+    await send({ status: 'progress', elapsed: 0, message: progressMessages[0] });
+    const interval = setInterval(() => {
+      tick++;
+      send({ status: 'progress', elapsed: tick, message: progressMessages[tick % progressMessages.length] })
+        .catch((e) => console.error('[national-agency-resolve] 진행상황 전송 실패(무시):', e.message));
+    }, 1000);
+
+    let agencyName = null;
+    if (env.WEB_SEARCH_API_KEY) {
       try {
         const searchRes = await fetch('https://google.serper.dev/search', {
           method: 'POST',
@@ -4030,32 +4055,49 @@ async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) 
         });
         if (searchRes.ok) {
           const raw = await searchRes.json().catch(() => null);
-          organic = raw?.organic || null;
+          const organic = raw?.organic || null;
+          agencyName = _natAgencyExtractName(organic, provinceName, domain);
         }
       } catch (e) {
         console.error('[national-agency-resolve] Serper 호출 실패:', e.message);
       }
+    }
 
-      const agencyName = _natAgencyExtractName(organic, provinceName, domain);
-      if (agencyName && env.GOV_DATA_KV) {
+    clearInterval(interval);
+
+    if (ctx?.waitUntil) {
+      ctx.waitUntil(_natAgencyRecordResolveLog({
+        province_code: provinceCode, domain, query,
+        outcome: agencyName ? 'resolved' : 'not_found',
+        resolved_agency_name: agencyName || null,
+      }, env).catch((e) => console.error('[national-agency-resolve] 로그 기록 실패(무시):', e.message)));
+    }
+
+    if (agencyName) {
+      if (env.GOV_DATA_KV) {
         try {
           await env.GOV_DATA_KV.put(cacheKey, JSON.stringify({ agencyName, resolvedAt: new Date().toISOString() }),
             { expirationTtl: NAT_AGENCY_RESOLVE_TTL });
         } catch (e) {
-          console.error('[national-agency-resolve] KV 저장 실패:', e.message);
+          console.error('[national-agency-resolve] KV 저장 실패(무시):', e.message);
         }
       }
-      await _natAgencyRecordResolveLog({
-        province_code: provinceCode, domain, query,
-        outcome: agencyName ? 'resolved' : 'not_found',
-        resolved_agency_name: agencyName || null,
-      }, env);
-    })();
-    ctx.waitUntil(bgTask.catch((e) => console.error('[national-agency-resolve] 백그라운드 실패:', e.message)));
+      await send({
+        status: 'done',
+        text: `'${label}' 관련 문의는 **${agencyName}**에서 담당합니다.`,
+        verified: true, source: 'live_search',
+      });
+    } else {
+      await send({ status: 'done', text: _natAgencyRenderFallback(provinceName, domain), verified: false, source: 'template_fallback' });
+    }
+    await writer.close();
+  })();
+
+  if (ctx?.waitUntil) {
+    ctx.waitUntil(streamTask.catch((e) => console.error('[national-agency-resolve] 스트림 처리 실패:', e.message)));
   }
 
-  return new Response(JSON.stringify({ text: fallbackText, verified: false, source: 'template_fallback' }),
-    { headers: corsHeaders });
+  return new Response(readable, { headers: streamHeaders });
 }
 
 // ── POST /web-search (Serper.dev 연동, 2026-07-11 신설) ────────────
