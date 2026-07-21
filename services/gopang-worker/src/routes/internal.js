@@ -46,7 +46,11 @@ export async function handleInternalLedgerEntry(request, env) {
   if (!expected) {
     return jsonResponse({ ok: false, reason: 'LEDGER_WRITE_SECRET_UNCONFIGURED' }, 500);
   }
-  if (!timingSafeEqual(String(ledger_write_secret || ''), expected)) {
+  // [2026-07-21 수정] PowerShell의 `"값" | wrangler secret put`이 문자열 끝에
+  // 개행을 붙이는 경우가 실제로 확인됨(HTTP 401 UNAUTHORIZED로 재현) — 양쪽
+  // 다 trim해서 비교. 시크릿 값 자체에 의미있는 선행/후행 공백이 올 일은
+  // 없으므로 보안상 문제 없음.
+  if (!timingSafeEqual(String(ledger_write_secret || '').trim(), String(expected).trim())) {
     return jsonResponse({ ok: false, reason: 'UNAUTHORIZED' }, 401);
   }
 
