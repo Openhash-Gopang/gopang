@@ -16,16 +16,23 @@ export async function l1AdminToken(env, l1Base) {
   // PocketBase v0.23+ 전용 경로 — 실제 L1 서버는 0.22.14라 이 경로가 404난다
   // (worker.js의 _l1AdminTokenFor에 이미 있던 동일 경고를 놓쳤던 것, 실제
   // 배포 후 재현·확인됨). 구버전 경로로 수정.
+  //
+  // [2026-07-21 추가 수정] LEDGER_WRITE_SECRET에서 실제로 재현된 것과 같은
+  // 문제 — PowerShell의 `"값" | wrangler secret put`이 문자열 끝에 개행을
+  // 붙이는 경우가 있어, L1_ADMIN_EMAIL/PASSWORD도 동일 위험이 있다(400
+  // 응답으로 재현 의심). 여기서 보내는 값은 항상 trim해서 방어한다 —
+  // 이메일/비밀번호에 의미있는 선행·후행 공백이 올 일은 없으므로 안전하다.
+  const identity = String(env.L1_ADMIN_EMAIL || '').trim();
+  const password = String(env.L1_ADMIN_PASSWORD || '').trim();
+
   const res = await fetch(`${l1Base}/api/admins/auth-with-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      identity: env.L1_ADMIN_EMAIL,
-      password: env.L1_ADMIN_PASSWORD,
-    }),
+    body: JSON.stringify({ identity, password }),
   });
   if (!res.ok) {
-    throw new Error(`L1 admin 인증 실패 (${l1Base}): ${res.status}`);
+    const detail = await res.text().catch(() => '');
+    throw new Error(`L1 admin 인증 실패 (${l1Base}): ${res.status} ${detail}`);
   }
   const data = await res.json();
   const token = `Bearer ${data.token}`;
