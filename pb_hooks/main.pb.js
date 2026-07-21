@@ -1609,22 +1609,31 @@ const NODE_CONFIG = {
     const marketProxyUrl = $os.getenv("MARKET_PROXY_URL");
     const ledgerWriteSecret = $os.getenv("LEDGER_WRITE_SECRET");
 
-    const sendLedgerEntry = (claim) => $http.send({
-      url: marketProxyUrl + "/internal/ledger-entries",
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        l1_node: NODE_ID_SELF,
-        guid: claim.claimant,
-        direction: claim.direction,
-        amount: claim.amount,
-        fs_account: claim.fs_account,
-        source,
-        block_hash: blockHash,
-        tx_id: tx_hash,
-        ledger_write_secret: ledgerWriteSecret,
-      }),
-    });
+    const sendLedgerEntry = (claim) => {
+      const res = $http.send({
+        url: marketProxyUrl + "/internal/ledger-entries",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          l1_node: NODE_ID_SELF,
+          guid: claim.claimant,
+          direction: claim.direction,
+          amount: claim.amount,
+          fs_account: claim.fs_account,
+          source,
+          block_hash: blockHash,
+          tx_id: tx_hash,
+          ledger_write_secret: ledgerWriteSecret,
+        }),
+      });
+      // [2026-07-21 수정] $http.send()는 4xx/5xx여도 예외를 안 던진다 —
+      // 반드시 statusCode를 직접 확인해야 한다(안 하면 실패해도
+      // "기록 요청 완료" 로그가 찍히는 거짓 성공 상태가 됨, 실제 재현됨).
+      if (res.statusCode !== 200) {
+        console.log("[TX] ledger_entries 기록 실패(market-proxy 응답",
+          res.statusCode, "):", res.raw);
+      }
+    };
 
     sendLedgerEntry(buyerClaim);
     if (sellerClaim) sendLedgerEntry(sellerClaim);
@@ -1924,7 +1933,7 @@ routerAdd("POST", "/api/mint", (c) => {
       const _selfFolder = $app.dataDir().split("/").pop();
       const _self = NODE_CONFIG[_selfFolder] || NODE_CONFIG["hanlim"];
 
-      $http.send({
+      const res = $http.send({
         url: $os.getenv("MARKET_PROXY_URL") + "/internal/ledger-entries",
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1940,7 +1949,11 @@ routerAdd("POST", "/api/mint", (c) => {
           ledger_write_secret: $os.getenv("LEDGER_WRITE_SECRET"),
         }),
       });
-      console.log("[MINT] ledger_entries 기록 요청 완료(market-proxy)");
+      if (res.statusCode !== 200) {
+        console.log("[MINT] ledger_entries 기록 실패(market-proxy 응답", res.statusCode, "):", res.raw);
+      } else {
+        console.log("[MINT] ledger_entries 기록 요청 완료(market-proxy)");
+      }
     } catch (e) {
       console.log("[MINT] ledger_entries 기록 실패(감사 필요, 발행 자체는 정상):", e.message);
     }
@@ -2231,7 +2244,7 @@ routerAdd("POST", "/api/ai-charge", (c) => {
       const _selfFolder = $app.dataDir().split("/").pop();
       const _self = NODE_CONFIG[_selfFolder] || NODE_CONFIG["hanlim"];
 
-      $http.send({
+      const res = $http.send({
         url: $os.getenv("MARKET_PROXY_URL") + "/internal/ledger-entries",
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2247,7 +2260,11 @@ routerAdd("POST", "/api/ai-charge", (c) => {
           ledger_write_secret: $os.getenv("LEDGER_WRITE_SECRET"),
         }),
       });
-      console.log("[AI-CHARGE] ledger_entries 기록 요청 완료(market-proxy)");
+      if (res.statusCode !== 200) {
+        console.log("[AI-CHARGE] ledger_entries 기록 실패(market-proxy 응답", res.statusCode, "):", res.raw);
+      } else {
+        console.log("[AI-CHARGE] ledger_entries 기록 요청 완료(market-proxy)");
+      }
     } catch (e) {
       console.log("[AI-CHARGE] ledger_entries 기록 실패(감사 필요, 차감 자체는 정상):", e.message);
     }
