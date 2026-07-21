@@ -1105,6 +1105,7 @@ const ROUTE_DESCRIPTIONS = {
   'SP-CITY-JEJU': '제주시청',
   'SP-CITY-SEOGWIPO': '서귀포시청',
   'SP-SIGUNGU-LAZY': '시군구(기초자치단체) 관할 업무 — 텍스트에 정적 테이블에 없는 특정 시/군/구 이름이 언급되고 그 지자체 소관 업무(복지·안전·민원·환경 등) 문의로 보이는 경우 [2026-07-20 신설 — 지연 초기화]',
+  'SP-NATIONAL-LAZY': '국가기관 지사(세무서·법원·검찰청·경찰청·건강보험공단 등 19개 핵심 기관) 관할 업무 — 정적 국가기관 테이블이 비어 있는 도(제주 외)에서 국가기관성 키워드가 언급된 경우 [2026-07-20 신설 — 지연 초기화]',
 };
 
 function _findTableEntry(code) {
@@ -1327,6 +1328,71 @@ const _SIGUNGU_DOMAIN_KEYWORDS = {
 };
 function _guessDomainFromText(text) {
   for (const [domain, kws] of Object.entries(_SIGUNGU_DOMAIN_KEYWORDS)) {
+    if (kws.some(k => text.includes(k))) return domain;
+  }
+  return null;
+}
+
+// ── 국가기관 지연 초기화 — 클라이언트측(브라우저) 안전한 fetch (2026-07-20) ──
+// ⚠️ 비밀키 없음 — worker.js(hondi-proxy)의 /gov/national-agency-resolve를
+// 호출할 뿐이다(SIGUNGU_RESOLVE_ORIGIN과 동일 Worker 재사용). 실패해도
+// 예외를 던지지 않고 안전한 기본 문구로 대체 — 이 기능이 죽어도 기존
+// 라우팅에 영향 없음(시군구 리졸버와 완전히 동일한 안전 철학).
+async function resolveNationalAgencyLazy(provinceCode, provinceName, domain) {
+  try {
+    const url = `${SIGUNGU_RESOLVE_ORIGIN}/gov/national-agency-resolve?domain=${encodeURIComponent(domain)}&province=${encodeURIComponent(provinceCode)}&provinceName=${encodeURIComponent(provinceName)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data;
+  } catch (e) {
+    console.warn('[gov-router] resolveNationalAgencyLazy 실패, 기본 문구로 대체:', e?.message);
+    return {
+      text: `${provinceName} 관련 국가기관 지사 문의는 정부24(gov.kr) 또는 국번없이 110(정부민원안내)으로 확인해 주세요.`,
+      verified: false, source: 'error_fallback',
+    };
+  }
+}
+
+// 도코드 → 정식 도이름 역매핑(PROVINCE_NAME_TO_CODE에서 각 코드별 가장
+// 긴(정식) 이름만 뽑아 구성 — worker.js provinceName 파라미터용).
+const PROVINCE_CODE_TO_NAME = {};
+for (const [name, code] of Object.entries(PROVINCE_NAME_TO_CODE)) {
+  if (!PROVINCE_CODE_TO_NAME[code] || name.length > PROVINCE_CODE_TO_NAME[code].length) {
+    PROVINCE_CODE_TO_NAME[code] = name;
+  }
+}
+function _provinceCodeToName(code) {
+  return PROVINCE_CODE_TO_NAME[code] || code;
+}
+
+// ── 국가기관 지연 초기화용 도메인 휴리스틱 (2026-07-20 신설) ──────
+// worker.js NAT_AGENCY_COMMON_PATTERNS/NAT_AGENCY_LABEL_KO의 19개 도메인과
+// 1:1 대응. 시군구 휴리스틱과 동일하게 "일단 v1으로 배선하고 실사용 로그
+// (national_agency_resolve_log)가 쌓이면 정교화"하는 전략을 쓴다.
+const _NAT_AGENCY_DOMAIN_KEYWORDS = {
+  tax: ['세무서', '국세', '부가세', '소득세', '법인세', '세무'],
+  court: ['법원', '재판', '소송', '판결', '민사', '형사'],
+  prosecution: ['검찰', '기소', '공소', '수사'],
+  police: ['지방경찰청', '국가경찰'],
+  labor: ['근로복지공단', '산재', '산업재해'],
+  laborimprove: ['근로개선', '고용노동청', '근로감독'],
+  nhis: ['건강보험공단', '국민건강보험'],
+  nps: ['국민연금공단', '국민연금'],
+  immigration: ['출입국', '비자', '외국인등록', '체류자격'],
+  post: ['우정청', '우체국', '우편'],
+  mma: ['병무청', '징병', '입영', '병역'],
+  customs: ['세관', '관세', '통관'],
+  veterans: ['보훈청', '국가유공자', '보훈'],
+  weather: ['지방기상청', '기상특보'],
+  coastguard: ['해양경찰', '해경'],
+  port: ['해양수산청', '항만'],
+  probation: ['준법지원센터', '보호관찰'],
+  bok: ['한국은행'],
+  stat: ['통계청'],
+};
+function _guessNatAgencyDomainFromText(text) {
+  for (const [domain, kws] of Object.entries(_NAT_AGENCY_DOMAIN_KEYWORDS)) {
     if (kws.some(k => text.includes(k))) return domain;
   }
   return null;
@@ -1726,6 +1792,24 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     return { systemPrompt: parts.join('\n\n---\n\n'), trace };
   }
 
+  // 0.5) 국가기관 지연 초기화(2026-07-20 신설) — 정적 국가기관 테이블이
+  // 비어 있는 도(현재 제주 외 전부, national:[])에서 국가기관성 키워드가
+  // 언급된 경우. classifyFn이 주입돼 있으면 시군구와 동일한 철학으로
+  // 여기서 확정하지 않고 5단계 LLM 분류 폴백에 'SP-NATIONAL-LAZY' 후보로
+  // 넘긴다. classifyFn이 없으면(상담할 AI 자체가 없음) 정규식이 즉시 판단.
+  if (_nationalTable().length === 0 && !classifyFn) {
+    const natDomainGuess = _guessNatAgencyDomainFromText(text);
+    if (natDomainGuess) {
+      const nationalSp = await _loadNationalSp();
+      parts.push(nationalSp);
+      trace.push('JEJU-NATIONAL-SP');
+      const resolved = await resolveNationalAgencyLazy(_resolveProvinceCode(), _provinceCodeToName(_resolveProvinceCode()), natDomainGuess);
+      parts.push(resolved.text);
+      trace.push(`SP-NATIONAL-LAZY(${natDomainGuess}/${resolved.source})`);
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    }
+  }
+
   // 여기부터는 도청 트리(JEJU-DO-SP) — 국가기관이 아닌 것으로 판단됐으므로 로드.
   const doSp = await _loadDoSp();
   parts.push(doSp);
@@ -1858,7 +1942,25 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 여기서 LLM 자신에게 43개 코드 중 하나를 고르거나 NONE(=이 GOV-COMMON
   // 레이어 지식만으로 답 가능)을 판단하게 한다.
   const classified = await _classifyFallback(text, classifyFn);
-  if (classified === 'SP-SIGUNGU-LAZY') {
+  if (classified === 'SP-NATIONAL-LAZY') {
+    // AI가 "이건 국가기관 지사 문제"라고 직접 판단한 경우 — 결정권은
+    // AI에게 있고, 여기서는 도메인만 정규식으로 추출해 실행에 옮긴다
+    // (시군구 LLM 분류 폴백과 완전히 동일한 철학).
+    const natDomainGuess = _guessNatAgencyDomainFromText(text);
+    if (natDomainGuess) {
+      const nationalOnlyParts = [govCommon];
+      const nationalSp = await _loadNationalSp();
+      nationalOnlyParts.push(nationalSp);
+      const resolved = await resolveNationalAgencyLazy(_resolveProvinceCode(), _provinceCodeToName(_resolveProvinceCode()), natDomainGuess);
+      nationalOnlyParts.push(resolved.text);
+      return {
+        systemPrompt: nationalOnlyParts.join('\n\n---\n\n'),
+        trace: ['JEJU-GOV-COMMON', 'JEJU-NATIONAL-SP', `SP-NATIONAL-LAZY(${natDomainGuess}/${resolved.source})`, '(LLM 분류 폴백)'],
+      };
+    }
+    // AI는 국가기관 문제라고 봤는데 정규식이 도메인을 못 뽑으면 — 억지로
+    // 추측하지 않고 6)의 공통 레이어 응답으로 흘려보낸다.
+  } else if (classified === 'SP-SIGUNGU-LAZY') {
     // AI가 "이건 시군구 문제"라고 직접 판단한 경우 — 결정권은 AI에게
     // 있고, 여기서는 그 판단을 실행에 옮기기 위해 이름·도메인만 정규식
     // 으로 추출한다(추출은 기계적 실행일 뿐, 판단 자체는 이미 AI가 끝냄).
