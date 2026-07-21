@@ -3979,6 +3979,17 @@ function _natAgencyRenderFallback(provinceName, domain) {
     `국번없이 110(정부민원안내)으로 재확인을 권합니다.`;
 }
 
+// ★ 2026-07-21 추가 — 시군구 리졸버(_sigunguExtractDeptName)에서 실제
+// 배포 재현으로 발견한 것과 동일한 유형의 문제를 예방한다: "직위OO
+// 세무서장" 같은 스니펫에서 레이블 단어가 후보명 앞에 붙어 같은 기관이
+// 서로 다른 문자열로 이중 카운트되며 인위적 동률이 나는 걸 방지.
+const _NAT_AGENCY_LABEL_PREFIXES = ['직위', '이름', '성명', '전화번호', '담당업무', '소속', '기관명'];
+function _natAgencyStripLabelPrefix(candidate) {
+  for (const label of _NAT_AGENCY_LABEL_PREFIXES) {
+    if (candidate.startsWith(label) && candidate.length > label.length) return candidate.slice(label.length);
+  }
+  return candidate;
+}
 function _natAgencyExtractName(organic, provinceName, domain) {
   if (!organic || organic.length === 0) return null;
   const label = NAT_AGENCY_LABEL_KO[domain] || domain;
@@ -3986,13 +3997,17 @@ function _natAgencyExtractName(organic, provinceName, domain) {
   // 시군구보다 넓게(과/국 접미사 대신) 기관명 접미사로 잡는다.
   const namePattern = /([가-힣]{2,10}(?:세무서|지방법원|지방검찰청|지방경찰청|지사|지방고용노동청|지역본부|출입국\S{0,6}청|지방우정청|지방병무청|세관|보훈청|지방기상청|해양경찰서|지방해양수산청|준법지원센터|본부|사무소))/g;
   const counts = new Map();
-  for (const r of organic.slice(0, 5)) {
+  // ★ 2026-07-21 — 시군구와 동일하게 5→10개로 확장(Serper가 이미 반환한
+  // 전체 결과, 추가 API 비용 없음). 정답이 상위 5개 밖에 있어 후보에
+  // 못 들어가는 경우를 줄인다.
+  for (const r of organic.slice(0, 10)) {
     if (!r.link || !r.link.includes('.go.kr')) continue;
     const text = `${r.title || ''} ${r.snippet || ''}`;
     if (!text.includes(provinceName.replace(/(특별자치도|특별자치시|광역시|특별시|도)$/, ''))) continue;
     let m;
     while ((m = namePattern.exec(text)) !== null) {
-      counts.set(m[1], (counts.get(m[1]) || 0) + 1);
+      const cleaned = _natAgencyStripLabelPrefix(m[1]);
+      counts.set(cleaned, (counts.get(cleaned) || 0) + 1);
     }
   }
   if (counts.size === 0) return null;
@@ -4045,6 +4060,39 @@ async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) 
     } catch (e) {
       console.error('[national-agency-resolve] KV 조회 실패(무시):', e.message);
     }
+  }
+
+  // ── 임시 디버그 모드(&debug=1) — 시군구 리졸버와 동일한 패턴, 원인
+  // 파악용. 정상 흐름과 동일하게 실제 검색을 동기적으로 실행하되, 원본
+  // 검색 결과와 추출 과정을 응답에 그대로 노출한다.
+  if (url.searchParams.get('debug') === '1') {
+    const label = NAT_AGENCY_LABEL_KO[domain] || domain;
+    const query = `${provinceName} ${label} 관할`;
+    let organic = null;
+    let serperError = null;
+    let serperStatus = null;
+    try {
+      const searchRes = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: { 'X-API-KEY': env.WEB_SEARCH_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: query, gl: 'kr', hl: 'ko' }),
+      });
+      serperStatus = searchRes.status;
+      if (searchRes.ok) {
+        const raw = await searchRes.json().catch((e) => { serperError = `JSON 파싱 실패: ${e.message}`; return null; });
+        organic = raw?.organic || null;
+      } else {
+        serperError = await searchRes.text().catch(() => `HTTP ${searchRes.status}`);
+      }
+    } catch (e) {
+      serperError = `fetch 예외: ${e.message}`;
+    }
+    const agencyName = _natAgencyExtractName(organic, provinceName, domain);
+    return new Response(JSON.stringify({
+      debug_mode: true, _debug: _natAgencyDebug,
+      query, serper_status: serperStatus, serper_error: serperError,
+      organic_raw: organic, extracted_agency_name: agencyName,
+    }, null, 2), { headers: corsHeaders });
   }
 
   // ★ 2026-07-21 신설 — 시군구 리졸버(handleSigunguDeptResolve)와 동일한
