@@ -67,7 +67,9 @@ async function _signalDeleteDirect(id) {
 // ※ PocketBase 구독은 Supabase의 postgres_changes filter처럼 서버에서
 //   to_guid로 걸러주지 않는다 — 컬렉션 전체 변경을 받고 클라이언트에서
 //   to_guid로 걸러야 한다(REST 폴링도 원래 그렇게 하고 있었으니 동일 신뢰모델).
-const _L1_BASE = 'https://l1-hanlim.gopang.net';
+// ★ 2026-07-22 버그 수정 — 구 브랜드 도메인 l1-hanlim.gopang.net(폐기됨,
+// 주피터 확인)에서 hondi.net으로 통일. state.js와 동일한 이슈 참고.
+const _L1_BASE = 'https://l1-hanlim.hondi.net';
 
 function _watchL1Realtime(myGuid, onRow) {
   let es = null, retryTimer = null, closed = false;

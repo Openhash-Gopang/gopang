@@ -41,7 +41,14 @@ export const PROXY      = 'https://hondi-proxy.tensor-city.workers.dev';
 // Worker는 이미 "L1 우선, Supabase 폴백" 구조로 L1을 직접 호출 중.
 // 단말이 같은 L1 URL을 직접 호출하면 Worker 경유가 불필요.
 // L1 PocketBase webrtc_signals 컬렉션 Rule: 인증 없음 (guid 기반 필터링으로 충분)
-export const L1_SIGNAL_BASE = 'https://l1-hanlim.gopang.net/api/collections/webrtc_signals/records';
+// ★ 2026-07-22 버그 수정 — 아래 이 파일의 L1_* 상수 5개가 전부 구 브랜드
+// 도메인 l1-hanlim.hondi.net을 가리키고 있었다(주피터 확인: 폐기된
+// 레거시 도메인, 더 이상 사용 안 함). 그 도메인의 PocketBase가 hondi.net
+// 오리진을 CORS로 허용 안 해서 realtime/프로필 조회가 전부 차단되고,
+// 반복 재시도가 서버에 503까지 유발했다(register 화면 "네트워크 오류").
+// worker.js·webrtc-realtime.js 등 나머지 전체는 이미 l1-hanlim.hondi.net을
+// 쓰고 있었으므로 여기만 뒤처져 있던 것 — l1-hanlim.hondi.net으로 통일.
+export const L1_SIGNAL_BASE = 'https://l1-hanlim.hondi.net/api/collections/webrtc_signals/records';
 // RTC_CONFIG — 기본값 (STUN 전용)
 // fetchRtcConfig() 호출 시 TURN credential 포함 버전으로 교체됨
 export const RTC_CONFIG_STUN_ONLY = { iceServers: [
@@ -135,15 +142,15 @@ export const _SUPABASE_URL = 'https://ebbecjfrwaswbdybbgiu.supabase.co';
 export const _SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViYmVjamZyd2Fzd2JkeWJiZ2l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NjE5ODQsImV4cCI6MjA5NTEzNzk4NH0.H2ahQKtWdSke04Pdi3hDY86pdTx7UUKPUpQMlS_zciA';
 
 // ── L1 ───────────────────────────────────────────────────
-export const L1_URL = 'https://l1-hanlim.gopang.net/api/collections/profiles/records';
+export const L1_URL = 'https://l1-hanlim.hondi.net/api/collections/profiles/records';
 
 // ── T-C: PDV/OpenHash 앵커링 L1 직접 (2026-06-23) ──────────
 // 이전: 단말 → PROXY /pdv/report → Worker → Supabase pdv_log
 // 이후: 단말 → L1_PDV_URL 직접 POST (+ block_hash 있으면 L1_ANCHOR_URL도 직접 POST)
-export const L1_PDV_URL    = 'https://l1-hanlim.gopang.net/api/collections/pdv_records/records';
-export const L1_ANCHOR_URL = 'https://l1-hanlim.gopang.net/api/collections/anchor_records/records';
+export const L1_PDV_URL    = 'https://l1-hanlim.hondi.net/api/collections/pdv_records/records';
+export const L1_ANCHOR_URL = 'https://l1-hanlim.hondi.net/api/collections/anchor_records/records';
 // P2P 호출 무응답 시 "상대방 AI 비서에게 메시지 남기기" 용 (2026-07-02 신설)
-export const L1_P2P_INVITES_URL = 'https://l1-hanlim.gopang.net/api/collections/p2p_pending_invites/records';
+export const L1_P2P_INVITES_URL = 'https://l1-hanlim.hondi.net/api/collections/p2p_pending_invites/records';
 
 // ── 기타 ─────────────────────────────────────────────────
 export let _lastPipelineResult = null;
