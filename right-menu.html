@@ -17,7 +17,7 @@ html,body{height:100%;background:#fff;color:#111;
 :root{
   --green:#16a34a;--green-lt:#dcfce7;--green-dk:#15803d;
   --border:#e5e7eb;--txt2:#6b7280;--txt3:#9ca3af;
-  --chip-bg:#f9fafb;--gray-tile:#eceff1;--gray-tile-bd:#d8dcdf;
+  --chip-bg:#f9fafb;
   --safe-t:env(safe-area-inset-top,0px);
   --safe-b:env(safe-area-inset-bottom,0px);
 }
@@ -96,11 +96,6 @@ html,body{height:100%;background:#fff;color:#111;
   transition:transform .2s;
 }
 .acc-item.open .acc-chevron{transform:rotate(180deg);stroke:var(--green-dk)}
-
-/* K-Law — 하위 항목 없이 곧바로 이동하는 특별 메뉴. 연한 회색 배경으로 구분 */
-.acc-item.klaw-special{background:var(--gray-tile);border-color:var(--gray-tile-bd)}
-.acc-item.klaw-special .acc-header:active{background:#e2e5e8}
-.acc-item.klaw-special .sys-icon{background:#fff;color:var(--txt2)}
 
 .acc-panel{
   max-height:0;overflow:hidden;
@@ -194,16 +189,41 @@ watchHondiSkin({ '--green': 'accent', '--green-lt': 'lt', '--green-dk': 'dk', '-
 // 주의: patent / realty / customs / games / sns / community 서브도메인은
 // 기존 SUBSYSTEMS 목록에 없던 신규 항목으로, 아직 실제 서비스가 없을 수
 // 있습니다. 실제 도메인이 정해지면 url 값만 교체하면 됩니다.
+//
+// 2026-07-23 확인(주피터): GitHub Openhash-Gopang 조직 저장소 목록 대조 결과
+// klaw/tax/health/insurance/stock/school/police/911/democracy/public/market/
+// logistics/traffic/qna/gdc/security는 배포 확인되어 K-서비스 카테고리에 편입.
+// jeju/jejudo(도청 AC 내부 라우팅 인스턴스로 추정)와 .github/gopang/gopang-test/
+// users(비-서비스 인프라 저장소로 추정)는 메뉴에서 제외.
 // ────────────────────────────────────────────────────────────
 
-// K-Law — 하위 항목 없이 단독으로 곧바로 이동하는 특별 메뉴 (연한 회색 타일)
-const KLAW = {
-  id:'klaw', name:'K-Law', desc:'법률 상담·소송',
-  url:'https://klaw.hondi.net/webapp.html', icon:'scale'
-};
-
-// 전문직 — 직업(역할) 기준 AI 에이전트. 변호사는 K-Law와 동일한 목적지로 연결됩니다.
+// 전문가 페르소나 — 직업(역할) 기준 AI 에이전트. 변호사는 K-서비스의 K-Law와 동일한
+// 목적지로 연결됩니다(같은 서비스로 가는 두 개의 서로 다른 진입점 — 의도된 중복).
 const CATEGORIES = [
+  {
+    // K-서비스 — 2026-07-23 신설. GitHub Openhash-Gopang 조직의 배포 확인된 저장소
+    // 기준(주피터 확인, 2026-07-23). K-Law는 과거 특수타일(하위 없이 단독 이동)이었으나
+    // 이번 개편으로 이 카테고리의 일반 항목으로 편입됨.
+    id:'kservice', name:'K-서비스', desc:'분야별 K-서비스', icon:'grid',
+    items:[
+      { id:'klaw',       name:'K-Law',    desc:'법률 상담·소송',           url:'https://klaw.hondi.net/webapp.html' },
+      { id:'ktax',       name:'K-Tax',    desc:'세금 신고·절세 상담',       url:'https://tax.hondi.net/webapp.html' },
+      { id:'khealth',    name:'K-Health', desc:'진료 상담·복약 안내',       url:'https://health.hondi.net/webapp.html' },
+      { id:'kinsurance', name:'K-보험',   desc:'보험 비교·청구 상담',       url:'https://insurance.hondi.net/webapp.html' },
+      { id:'kstock',     name:'K-증권',   desc:'투자 자문·시장 분석',       url:'https://stock.hondi.net/webapp.html' },
+      { id:'kschool',    name:'K-School', desc:'학사·교육 상담',           url:'https://school.hondi.net/webapp.html' },
+      { id:'kpolice',    name:'K-치안',   desc:'민원·신고 상담',           url:'https://police.hondi.net/webapp.html' },
+      { id:'k911',       name:'K-119',    desc:'화재 신고·구급 상담',       url:'https://911.hondi.net/webapp.html' },
+      { id:'kdemocracy', name:'K-Democracy', desc:'청원·투표 안내',        url:'https://democracy.hondi.net/webapp.html' },
+      { id:'kpublic',    name:'K-행정',   desc:'행정·민원 처리',           url:'https://public.hondi.net/webapp.html' },
+      { id:'kmarket',    name:'K-Market', desc:'전자상거래·고팡장터',       url:'https://market.hondi.net/webapp.html' },
+      { id:'klogistics', name:'K-물류',   desc:'배송·물류 조회',           url:'https://logistics.hondi.net/webapp.html' },
+      { id:'ktraffic',   name:'K-교통',   desc:'대중교통·도로 정보',        url:'https://traffic.hondi.net/webapp.html' },
+      { id:'kqna',       name:'K-Q&A',    desc:'생활 질문·답변',           url:'https://qna.hondi.net/webapp.html' },
+      { id:'kgdc',       name:'GDC 지갑', desc:'고팡 디지털 커런시 충전·결제', url:'https://gdc.hondi.net/webapp.html' },
+      { id:'ksecurity',  name:'K-보안',   desc:'계정·보안 점검',           url:'https://security.hondi.net/webapp.html' },
+    ]
+  },
   {
     id:'pro', name:'전문가 페르소나', desc:'직업별 전문가 AI 에이전트', icon:'briefcase',
     items:[
@@ -243,6 +263,7 @@ const CATEGORIES = [
 ];
 
 const ICONS = {
+  grid:      '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
   scale:     '<path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7 3 13a3 3 0 0 0 4 0z"/><path d="M19 7l-2 6a3 3 0 0 0 4 0z"/>',
   briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="2" y1="13" x2="22" y2="13"/>',
   building: '<rect x="4" y="9" width="16" height="12" rx="1"/><path d="M2 9l10-6 10 6"/><line x1="9" y1="13" x2="9" y2="17"/><line x1="15" y1="13" x2="15" y2="17"/>',
@@ -322,7 +343,7 @@ function _bindLongPress(el, onPress, ms) {
   }, { capture: true });
 }
 
-// container 안의 [data-explain] 요소 전부(K-Law 타일·카테고리·하위 항목)에
+// container 안의 [data-explain] 요소 전부(카테고리·하위 항목)에
 // 롱프레스를 바인딩 — 새로 authored하는 문구 없이 이미 화면에 보이는
 // 이름+설명을 그대로 재사용한다.
 function _bindExplainTargets(container) {
@@ -335,11 +356,8 @@ function _bindExplainTargets(container) {
 _bindLongPress(document.getElementById('mi-close'), () => _showExplainTip('여기를 누르면 이 화면을 닫아요. 손잡이를 왼쪽으로 밀어도 똑같이 닫혀요.', document.getElementById('mi-close')));
 
 
-// 검색 대상 — K-Law + 모든 카테고리의 하위 항목을 한 줄로 펼친 목록
-const SEARCHABLE = [
-  { ...KLAW, catLabel:'K-Law' },
-  ...CATEGORIES.flatMap(cat => cat.items.map(it => ({ ...it, catLabel: cat.name })))
-];
+// 검색 대상 — 모든 카테고리(K-서비스 포함)의 하위 항목을 한 줄로 펼친 목록
+const SEARCHABLE = CATEGORIES.flatMap(cat => cat.items.map(it => ({ ...it, catLabel: cat.name })));
 
 // 롱프레스 설명 툴팁에 재사용할 텍스트 — data-explain 속성에 안전하게 넣기 위한 이스케이프
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
@@ -359,18 +377,6 @@ function leafRowHtml(it, showCatBadge) {
 }
 
 function renderCategories() {
-  const klawTile = `
-    <div class="acc-item klaw-special" data-id="klaw">
-      <button class="acc-header" data-goto="${KLAW.url}" data-explain="${esc(KLAW.name + ' — ' + KLAW.desc)}">
-        <span class="sys-icon"><svg viewBox="0 0 24 24">${ICONS[KLAW.icon] || ''}</svg></span>
-        <span class="acc-header-text">
-          <span class="sys-name">${KLAW.name}</span>
-          <span class="sys-desc">${KLAW.desc}</span>
-        </span>
-        <svg class="leaf-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-    </div>`;
-
   const catTiles = CATEGORIES.map(cat => `
     <div class="acc-item" data-id="${cat.id}">
       <button class="acc-header" onclick="toggleAcc('${cat.id}')" data-explain="${esc(cat.name + ' — ' + cat.desc + ' (눌러서 펼치기)')}">
@@ -388,7 +394,7 @@ function renderCategories() {
       </div>
     </div>`).join('');
 
-  accList.innerHTML = klawTile + catTiles;
+  accList.innerHTML = catTiles;
   _bindExplainTargets(accList);
 }
 renderCategories();
@@ -411,7 +417,7 @@ function toggleAcc(id) {
 }
 window.toggleAcc = toggleAcc;
 
-// '하위 항목' 또는 K-Law 타일 클릭 → 외부 시스템 사이트로 전체 페이지 이동 (최상위 프레임 이동)
+// '하위 항목' 클릭 → 외부 시스템 사이트로 전체 페이지 이동 (최상위 프레임 이동)
 function navigateTo(url) {
   if (!url) return;
   try { window.top.location.href = url; }
