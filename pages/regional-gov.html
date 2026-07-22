@@ -77,8 +77,9 @@ body{
   border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+#bottom-dock{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--sur)}
 #input-bar{
-  position:fixed;left:0;right:0;bottom:0;display:flex;align-items:flex-end;gap:6px;padding:10px 12px;
+  display:flex;align-items:flex-end;gap:6px;padding:10px 12px;
   padding-bottom:calc(10px + env(safe-area-inset-bottom));
   background:var(--sur);border-top:1px solid var(--bdr);
 }
@@ -97,6 +98,15 @@ body{
   color:var(--sub);display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
 .ia-btn:active{background:rgba(0,0,0,.06)}
+.ia-btn.mic-active{background:#FEE2E2;color:#DC2626;animation:mic-pulse 1.2s ease-in-out infinite}
+@keyframes mic-pulse{0%,100%{opacity:1}50%{opacity:.55}}
+#attach-preview{
+  display:none;align-items:center;gap:8px;padding:8px 14px;background:var(--pri-bg);
+  border-top:1px solid var(--bdr);font-size:12.5px;color:var(--txt);
+}
+#attach-preview img{width:32px;height:32px;object-fit:cover;border-radius:6px;flex-shrink:0}
+#attach-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#attach-remove{flex-shrink:0;background:none;border:none;color:var(--sub);font-size:15px;cursor:pointer;padding:2px 6px}
 #err-banner{display:none;padding:8px 14px;background:#FEE2E2;color:#991B1B;font-size:12.5px;text-align:center}
 </style>
 </head>
@@ -112,28 +122,39 @@ body{
 <div id="err-banner"></div>
 <div id="chat-thread"></div>
 
-<div id="input-bar">
-  <button class="ia-btn" id="attach-btn" type="button" title="파일 첨부">
-    <svg width="17.87" height="17.87" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
-    </svg>
-  </button>
-  <button class="ia-btn" id="camera-btn" type="button" title="카메라">
-    <svg width="16.87" height="16.87" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-      <circle cx="12" cy="13" r="4"/>
-    </svg>
-  </button>
-  <textarea id="chat-input" rows="1" placeholder="메시지를 입력하세요…"></textarea>
-  <button class="ia-btn" id="mic-btn" type="button" title="음성 입력">
-    <svg width="15.88" height="15.88" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="9" y="2" width="6" height="11" rx="3"/>
-      <path d="M5 10a7 7 0 0 0 14 0"/>
-      <line x1="12" y1="19" x2="12" y2="22"/>
-      <line x1="8" y1="22" x2="16" y2="22"/>
-    </svg>
-  </button>
-  <button id="send-btn">➤</button>
+<div id="bottom-dock">
+  <div id="attach-preview">
+    <img id="attach-thumb" alt="">
+    <span id="attach-name"></span>
+    <button id="attach-remove" type="button">✕</button>
+  </div>
+
+  <input type="file" id="file-input" accept="image/*" style="display:none">
+  <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none">
+
+  <div id="input-bar">
+    <button class="ia-btn" id="attach-btn" type="button" title="파일 첨부">
+      <svg width="17.87" height="17.87" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+    </button>
+    <button class="ia-btn" id="camera-btn" type="button" title="카메라">
+      <svg width="16.87" height="16.87" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+    </button>
+    <textarea id="chat-input" rows="1" placeholder="메시지를 입력하세요…"></textarea>
+    <button class="ia-btn" id="mic-btn" type="button" title="음성 입력">
+      <svg width="15.88" height="15.88" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="2" width="6" height="11" rx="3"/>
+        <path d="M5 10a7 7 0 0 0 14 0"/>
+        <line x1="12" y1="19" x2="12" y2="22"/>
+        <line x1="8" y1="22" x2="16" y2="22"/>
+      </svg>
+    </button>
+    <button id="send-btn">➤</button>
+  </div>
 </div>
 
 <script type="module">
@@ -269,16 +290,77 @@ async function _callAI(latestUserText, typingEl) {
   return _govRelayCompletion(sp, messages, agency, provinceCode);
 }
 
+// ── 파일첨부/카메라로 붙인 이미지 — 2026-07-22 신설 ────────────────
+// 표준 OpenAI 호환 vision 메시지 포맷(content: [{type:'text'},
+// {type:'image_url'}])으로 실어 보낸다. handleGovRelay()가 messages를
+// 그대로 backendModel에 전달하는 구조라(worker.js 확인) 별도 서버
+// 작업 없이도 vision 지원 모델이면 바로 동작한다 — 다만 tier
+// 'gov-flash'가 실제로 vision을 지원하는지는 이 페이지가 보장할 수
+// 없다(모델 쪽 역량 문제). 실패하면 기존과 동일하게 오류 말풍선으로
+// 안내한다(사용자에게 조용히 실패하지 않음).
+let _attachedFile = null;
+
+function _fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload  = () => resolve(r.result);
+    r.onerror = () => reject(new Error('파일을 읽지 못했습니다.'));
+    r.readAsDataURL(file);
+  });
+}
+
+function _setAttachedFile(file) {
+  _attachedFile = file || null;
+  const preview = document.getElementById('attach-preview');
+  const nameEl  = document.getElementById('attach-name');
+  const thumb   = document.getElementById('attach-thumb');
+  if (_attachedFile) {
+    nameEl.textContent = _attachedFile.name;
+    thumb.src = URL.createObjectURL(_attachedFile);
+    preview.style.display = 'flex';
+  } else {
+    preview.style.display = 'none';
+    nameEl.textContent = '';
+    thumb.src = '';
+  }
+}
+
 async function sendMessage() {
-  const inp = document.getElementById('chat-input');
+  const inp  = document.getElementById('chat-input');
   const text = inp.value.trim();
-  if (!text) return;
+  const file = _attachedFile;
+  if (!text && !file) return;
   inp.value = '';
   inp.style.height = 'auto';
   document.getElementById('send-btn').disabled = true;
 
-  appendBubble('user', escHtml(text));
-  messages.push({ role: 'user', content: text });
+  let userMsg;
+  if (file) {
+    let dataUrl;
+    try {
+      dataUrl = await _fileToDataUrl(file);
+    } catch (e) {
+      document.getElementById('send-btn').disabled = false;
+      appendBubble('ai', `⚠️ 이미지를 읽지 못했습니다: ${escHtml(e.message)}`);
+      return;
+    }
+    userMsg = {
+      role: 'user',
+      content: [
+        ...(text ? [{ type: 'text', text }] : []),
+        { type: 'image_url', image_url: { url: dataUrl } },
+      ],
+    };
+    appendBubble('user',
+      (text ? escHtml(text) + '<br>' : '') +
+      `<img src="${dataUrl}" style="max-width:180px;max-height:160px;border-radius:8px;display:block;margin-top:4px">`
+    );
+    _setAttachedFile(null);
+  } else {
+    userMsg = { role: 'user', content: text };
+    appendBubble('user', escHtml(text));
+  }
+  messages.push(userMsg);
 
   const typing = appendTyping('지역 행정 정보를 확인하고 있습니다');
   try {
@@ -304,18 +386,74 @@ document.getElementById('chat-input').addEventListener('input', function () {
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
 
-// ── 파일첨부·카메라·마이크 — 2026-07-22 신설, UI 정합용 ───────────────
-// 메인 앱(webapp.html)의 입력창과 시각적으로 동일하게 맞추기 위한
-// 아이콘. 이 페이지(전국 지방행정 AI)는 아직 첨부·촬영·음성입력 실제
-// 처리 파이프라인이 연결돼 있지 않다(§13 미이관과 동일한 이유 — 범위가
-// 커서 후속 작업으로 분리) — 눌렀을 때 아무 반응이 없어 혼란을 주지
-// 않도록, 지금은 아직 지원되지 않는다는 걸 명확히 알린다.
-function _notYetSupported(label) {
-  appendBubble('ai', `${label} 기능은 이 화면에서 아직 지원되지 않습니다. 텍스트로 말씀해 주세요.`);
+// ── 파일첨부·카메라 — 2026-07-22 실장 ────────────────────────────
+const fileInput   = document.getElementById('file-input');
+const cameraInput = document.getElementById('camera-input');
+document.getElementById('attach-btn').addEventListener('click', () => fileInput.click());
+document.getElementById('camera-btn').addEventListener('click', () => cameraInput.click());
+fileInput.addEventListener('change', () => {
+  if (fileInput.files?.[0]) _setAttachedFile(fileInput.files[0]);
+  fileInput.value = '';
+});
+cameraInput.addEventListener('change', () => {
+  if (cameraInput.files?.[0]) _setAttachedFile(cameraInput.files[0]);
+  cameraInput.value = '';
+});
+document.getElementById('attach-remove').addEventListener('click', () => _setAttachedFile(null));
+
+// ── 마이크(실시간 받아쓰기) — 2026-07-22 실장 ───────────────────────
+// 메인 앱(webapp.html)의 ai-panel 마이크 로직(연속 인식 + onend 자동
+// 재시작)을 이 페이지 규모에 맞게 단순화해 재사용한다. 무음 자동정지
+// 타이머는 없음 — 버튼을 다시 눌러 수동으로 끈다(간단하고 예측 가능).
+let _recognition = null;
+let _micActive    = false;
+const micBtn = document.getElementById('mic-btn');
+
+function _speechRecognitionCtor() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
-document.getElementById('attach-btn').addEventListener('click', () => _notYetSupported('파일 첨부'));
-document.getElementById('camera-btn').addEventListener('click', () => _notYetSupported('카메라'));
-document.getElementById('mic-btn').addEventListener('click', () => _notYetSupported('음성 입력'));
+
+function _startMic() {
+  const SR = _speechRecognitionCtor();
+  if (!SR) {
+    appendBubble('ai', '이 브라우저는 음성 입력을 지원하지 않습니다.');
+    return;
+  }
+  const inp = document.getElementById('chat-input');
+  let baseText = inp.value;
+
+  const r = new SR();
+  r.lang = 'ko-KR';
+  r.continuous = true;
+  r.interimResults = true;
+
+  r.onresult = (e) => {
+    let finalT = '', interimT = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const res = e.results[i];
+      if (res.isFinal) finalT += res[0].transcript;
+      else interimT += res[0].transcript;
+    }
+    if (finalT) baseText = (baseText ? baseText + ' ' : '') + finalT;
+    inp.value = baseText + (interimT ? ' ' + interimT : '');
+    inp.dispatchEvent(new Event('input'));
+  };
+  r.onerror = () => { _stopMic(); };
+  r.onend   = () => { if (_micActive) { try { r.start(); } catch (e) { _stopMic(); } } };
+
+  try { r.start(); } catch (e) { return; }
+  _recognition = r;
+  _micActive = true;
+  micBtn.classList.add('mic-active');
+}
+
+function _stopMic() {
+  _micActive = false;
+  micBtn.classList.remove('mic-active');
+  try { _recognition?.stop(); } catch (e) { /* 무시 */ }
+}
+
+micBtn.addEventListener('click', () => { _micActive ? _stopMic() : _startMic(); });
 
 // ── 초기화 ─────────────────────────────────────────────────────
 (function init() {
