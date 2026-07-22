@@ -13,3 +13,5 @@ tools/__pycache__/
 index_errors.json
 tools/batch_output/
 tools/batch_last_id.txt
+sync_*.py
+migrate_*.py
