@@ -349,7 +349,16 @@ const GWP_REGISTRY = [
   {
     id: 'kregionalgov', name: '전국 지방행정 AI', category: 'GOV',
     type: 'tab',
-    url: 'https://jeju.hondi.net/webapp.html',
+    // ★ 2026-07-22 변경 — jeju.hondi.net(별도 서브도메인, 별개 오리진)에서
+    // hondi.net 자체 안의 페이지로 이전. 사용자 지시: "hondi.net/jeju,
+    // hondi.net/seoul 형식으로 하여, 탭 전환 시 별도의 인증이 불필요하게
+    // 하십시오." 별도 오리진이면 지갑(localStorage/IndexedDB)을 직접 못
+    // 읽어 매번 postMessage 서명 왕복이 필요했고, 그 타이밍/팝업차단
+    // 문제가 오늘 하루 종일의 SSO 버그 전부의 근본 원인이었다 — 같은
+    // 오리진으로 옮기면 그 문제 자체가 사라진다(pages/regional-gov.html
+    // 참조). 라우팅 로직 자체(어느 광역시도인지 판별)는 이미 전국 대응
+    // 으로 일반화된 gov-router.js를 그대로 재사용하므로 변경 없음.
+    url: 'https://hondi.net/pages/regional-gov.html',
     status: 'active', priority: 8, threshold: 0.70,
     description: '광역시도청·시군구청·읍면동사무소·국가기관 지역사무소 행정 안내(전국 대응, GOV-COMMON SP 트리 자체 라우팅).',
     triggers: [
@@ -630,21 +639,6 @@ const SVC_ID_ALIAS = {
   'k-emergency': 'kemergency',
   'k-business':  'kbusiness',
   'business':    'kbusiness',
-  // kregionalgov(전국 지방행정 AI) — 2026-07-21 신설. AGENT-COMMON이
-  // 이 서비스의 정확한 id를 명시적으로 가르치지 않아, 모델이 이름(전국
-  // 지방행정 AI)이나 url(jeju.hondi.net)에서 그럴듯하게 추측한 id를
-  // 낼 가능성이 높다("제주도청 불러 줘"에 응답은 하는데 실제로는 탭이
-  // 안 열리던 사고 — [GWP: jeju] 등 잘못된 id를 냈을 것으로 추정).
-  jeju:          'kregionalgov',
-  jejudo:        'kregionalgov',
-  kjeju:         'kregionalgov',
-  regionalgov:   'kregionalgov',
-  'k-regionalgov': 'kregionalgov',
-  'regional-gov':  'kregionalgov',
-  '제주도청':      'kregionalgov',
-  '제주특별자치도청': 'kregionalgov',
-  '지방행정':      'kregionalgov',
-  '지자체':        'kregionalgov',
 };
 
 function getService(id) {
