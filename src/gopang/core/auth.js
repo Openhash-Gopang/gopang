@@ -776,14 +776,24 @@ export async function initAuth() {
 // 문제로 정상 계정을 로그아웃시키는 사고를 만들지 않는다. 진짜로 서버가
 // "레코드 없음"이라고 명확히 응답했을 때만 로그아웃 처리한다.
 export async function _verifyStoredAccountStillExists(stored) {
-  try {
+  const _checkOnce = async () => {
     const filter = encodeURIComponent(`guid='${stored.ipv6}'`);
     const res  = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
-    if (!res.ok) return; // 서버 오류 — 판단 보류
+    if (!res.ok) return 'unknown'; // 서버 오류 — 판단 보류
     const data = await res.json().catch(() => null);
-    if (!data) return; // 파싱 실패 — 판단 보류
-    const stillExists = (data.items?.length || 0) > 0;
-    if (stillExists) return; // 정상 — 아무것도 안 함
+    if (!data) return 'unknown';
+    return (data.items?.length || 0) > 0 ? 'exists' : 'missing';
+  };
+  try {
+    let result = await _checkOnce();
+    // 첫 조회에서 "없음"이 나와도 곧바로 로그아웃시키지 않는다 — 복제
+    // 지연 등 일시적 사유일 수 있으므로 1.5초 뒤 한 번 더 확인해 두 번
+    // 연속으로 "없음"이 나올 때만 확정한다.
+    if (result === 'missing') {
+      await new Promise(r => setTimeout(r, 1500));
+      result = await _checkOnce();
+    }
+    if (result !== 'missing') return; // 존재 확인됨 또는 판단 보류 — 아무것도 안 함
 
     console.warn('[Auth] 저장된 계정이 서버에서 사라짐(관리자 삭제 등) — 로컬 세션 정리:', stored.ipv6);
     try { localStorage.removeItem(STORE_KEY); } catch {}

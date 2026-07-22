@@ -77,9 +77,22 @@ document.body.classList.add('gopang-authed');
 // while 루프 자체가 한 번도 안 돌아 initAuth() 내부의 서버 존재 확인
 // 코드가 아예 호출되지 않았다("여전히 로그인 상태"로 계속 남던 사고).
 // while 루프를 이미 통과한 이 시점에 별도로 한 번 더, 무조건 확인한다.
+//
+// ★★ 같은 날 재수정 — 위 코드가 방금 "이 세션에서 막 완료된 신규가입"
+// 까지도 검사해버려서 자기모순에 빠졌다: 서버에 방금 쓴 프로필이 조회
+// 가능해지기까지의 아주 짧은 복제 지연 사이에 이 확인이 먼저 실행되면
+// "없음"으로 오판해 방금 가입한 계정을 그 자리에서 로그아웃시켜 버린다
+// (실사로 재현 — 가입 완료 직후 다시 가입 화면으로 돌아가던 사고).
+// _hasRegisteredUser는 이 while 루프가 시작되기 "전", 즉 이번 로드에서
+// initAuth()가 실행되기 전 시점의 localStorage 상태다 — 그때 이미
+// 등록돼 있었다면 "이전 세션부터 있던 계정"이 확실하므로만 검사한다.
+// 이번 로드에서 막 새로 가입한 경우(그 전엔 _hasRegisteredUser가
+// false였던 경우)는 애초에 삭제될 대상이 아니므로 검사 자체를 건너뛴다.
 try {
-  const _storedNow = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
-  if (_storedNow?.ipv6) _verifyStoredAccountStillExists(_storedNow);
+  if (_hasRegisteredUser) {
+    const _storedNow = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+    if (_storedNow?.ipv6) _verifyStoredAccountStillExists(_storedNow);
+  }
 } catch {}
 
 // ── 웹푸시 구독을 모든 가입자의 기본값으로 보장 (2026-07-20 신설) ──────
