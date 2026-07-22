@@ -277,7 +277,17 @@ async function handlePhoneOtpRequest(request, env, corsHeaders) {
   await env.QR_SESSIONS_KV.put(cooldownKey, '1', { expirationTtl: OTP_RESEND_COOLDOWN_SECONDS });
 
   try {
-    await _sendSolapiSms(env, e164, `[혼디] 인증번호는 ${code}입니다. ${Math.floor(OTP_TTL_SECONDS / 60)}분 이내에 입력해 주세요.`);
+    // ── WebOTP API 연동 (2026-07-21 신설) ────────────────────────────
+    // 문자 본문 맨 끝에 "@도메인 #코드" 형식의 태그를 붙이면, 안드로이드
+    // Chrome이 SMS 도착을 감지해 브라우저가 자동으로 입력창에 코드를
+    // 채워준다(navigator.credentials.get({otp:...}) — 클라이언트 쪽은
+    // src/gopang/core/auth.js에서 처리). 이러면 사용자가 문자 앱으로
+    // 아예 나갈 필요가 없어져서, 이탈로 인한 문제(예: prompt() 강제
+    // 종료 사고, 2026-07-21 실사로 발견)가 원천적으로 없어진다. 태그는
+    // 반드시 메시지 맨 끝 줄이어야 하고, 그 뒤에 다른 텍스트가 있으면
+    // 안 된다(WebOTP 표준 요구사항).
+    await _sendSolapiSms(env, e164,
+      `[혼디] 인증번호는 ${code}입니다. ${Math.floor(OTP_TTL_SECONDS / 60)}분 이내에 입력해 주세요.\n\n@hondi.net #${code}`);
   } catch (e) {
     console.warn('[PhoneOTP] SOLAPI 발송 실패:', e.message);
     return _err(502, 'SMS_SEND_FAILED', '인증번호 발송에 실패했습니다: ' + e.message, corsHeaders);
