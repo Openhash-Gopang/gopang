@@ -616,7 +616,15 @@ async function handleDeviceLinkDeliver(request, env, corsHeaders) {
   record.sealed = sealed;
   // PC가 가져갈 시간만 짧게 더 준다 — 폰이 봉투를 보낸 뒤에도 무기한
   // 남아있으면 안 되므로(암호화된 봉투라도 최소한으로만 존재).
-  await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: 30 });
+  // ★ 2026-07-22 버그 수정 — 실사로 확인된 근본 원인: Cloudflare Workers
+  // KV는 expirationTtl 60초 미만을 아예 거부한다("Invalid expiration_ttl
+  // of 30. Expiration TTL must be at least 60."). 30초로 넣는 순간 KV
+  // PUT 자체가 400으로 예외를 던졌고, 그 처리되지 않은 예외가 deliver
+  // 핸들러 전체를 깨뜨려 클라이언트에서는 "Failed to fetch"(네트워크
+  // 레벨 실패처럼 보이는 응답 없는 실패)로 나타났다 — 재시도를 아무리
+  // 해도 매번 100% 확정적으로 실패할 수밖에 없었던 이유. 60초(KV 최소값)
+  // 로 수정.
+  await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: 60 });
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
 }
 
