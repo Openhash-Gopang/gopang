@@ -225,8 +225,7 @@
 
         if (data.state === 'expired') {
           stopPolling();
-          setStatus('요청이 만료됐습니다. 처음부터 다시 시도해 주세요.', 'error');
-          resetToStep1();
+          _showExpiredGuidance();
           return;
         }
         if (data.state === 'delivered' && data.sealed) {
@@ -244,9 +243,9 @@
     const tick = () => {
       if (remain <= 0) {
         clearInterval(countdownTimer);
-        el.textContent = '요청이 만료됐습니다.';
+        el.textContent = '만료됨';
         stopPolling();
-        resetToStep1();
+        _showExpiredGuidance();
         return;
       }
       el.textContent = `${remain}초 후 만료`;
@@ -254,6 +253,30 @@
     };
     tick();
     countdownTimer = setInterval(tick, 1000);
+  }
+
+  // ── 만료 시 안내 (2026-07-21 신설) ────────────────────
+  // 이 승인 방식은 서버가 절대 확인할 수 없는 전제 위에 서 있다 —
+  // "개인키를 가진 다른 기기가 실제로 존재하는가"는 서버가 원리상
+  // 알 수 없다(개인키는 서버에 없다). 그래서 "다시 시도하면 될 수도
+  // 있다"는 기존 문구는, 그 전제 자체가 성립하지 않는 경우(키를 가진
+  // 유일한 기기의 저장소를 지운 경우 등)에는 사실과 다르다 — 사용자가
+  // 영원히 재시도만 반복하게 만든다. 그 불확실성 자체를 솔직히 알리고,
+  // 실질적인 다음 단계(백업 키 복구 또는 이 계정 포기)를 안내한다.
+  function _showExpiredGuidance() {
+    setStatus(
+      '응답이 없어 만료됐습니다. 이 방식은 개인키를 가진 다른 기기가 ' +
+      '실제로 존재해야만 작동합니다 — 서버는 그런 기기가 진짜 있는지 ' +
+      '확인할 방법이 없어, 있어도 없어도 지금과 똑같이 "응답 없음"으로 ' +
+      '보입니다. 그 기기가 확실히 있다면 다시 시도해 주세요. 만약 이 ' +
+      '계정을 쓰던 기기가 이것뿐이었고 그 기기의 데이터를 지운 적이 ' +
+      '있다면, 이 방식으로는 복구할 수 없습니다 — 가입 시 저장해둔 ' +
+      '백업 키(4단어 시드)가 있으면 "백업 키를 직접 갖고 있어요" ' +
+      '경로로 복구하고, 없다면 이 계정은 되살릴 수 없으니 새로 ' +
+      '가입해 주세요.',
+      'error'
+    );
+    resetToStep1();
   }
 
   function resetToStep1() {
