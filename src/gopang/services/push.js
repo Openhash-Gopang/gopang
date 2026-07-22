@@ -34,7 +34,26 @@ function _urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
 }
 
-export async function requestPushSubscription(guid) {
+// ★ 2026-07-22 버그 수정 — 실사로 재현된 410(FCM "unsubscribed or
+// expired") 근본 원인. requestPushSubscription()을 부르는 경로가
+// 두 곳이다: ① auth.js가 가입 완료 직후 fire-and-forget으로 호출,
+// ② gopang-app.js의 자가치유 IIFE가 페이지 로드마다(신규 계정은
+// 쿨다운도 없음) 호출. 가입 완료 시점에 이 둘이 사실상 동시에 실행돼
+// pushManager.subscribe()/unsubscribe()가 겹쳐 돌면서, 서로 다른
+// 타이밍에 만든 두 엔드포인트 중 이미 무효화된 쪽이 서버에 마지막으로
+// 저장되는 경쟁이 실제로 발생했다(재가입 직후 저장된 구독이 곧바로
+// 410로 죽어있던 사고). in-flight 락으로 동시 호출을 하나의 실행으로
+// 합친다 — 먼저 온 호출이 실제로 진행하고, 뒤이어 온 호출은 새로
+// subscribe/unsubscribe를 또 트리거하지 않고 같은 결과를 기다린다.
+let _inFlight = null;
+
+export function requestPushSubscription(guid) {
+  if (_inFlight) return _inFlight;
+  _inFlight = _requestPushSubscriptionImpl(guid).finally(() => { _inFlight = null; });
+  return _inFlight;
+}
+
+async function _requestPushSubscriptionImpl(guid) {
   if (!guid) return { ok: false, reason: 'guid_missing' };
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     return { ok: false, reason: 'unsupported' };
