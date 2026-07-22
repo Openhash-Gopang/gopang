@@ -1699,6 +1699,14 @@
           console.error('[GopangWallet] 기존 지갑을 열 수 없습니다(엔트로피/인증 불일치로 추정) — 백업 키 복구가 필요합니다. 새 지갑을 자동 생성하지 않습니다.');
           global.gopangWallet = null;
           global.gopangWalletLocked = true; // UI가 "복구 필요" 배너를 띄울 수 있도록 하는 신호
+          // 2026-07-23 신설 — 위 플래그를 실제로 구독하는 코드가 어디에도
+          // 없어서(실사로 확인), 지갑이 잠겨도 사용자에게는 아무 것도 안
+          // 보이고 이후 모든 서명 필요 기능이 콘솔 에러만 남긴 채 조용히
+          // 실패했다. 폴링으로 플래그를 확인하지 않아도 되도록, 페이지가
+          // 뜬 시점이 언제든 즉시 받을 수 있게 이벤트를 던진다.
+          try {
+            global.dispatchEvent?.(new CustomEvent('gopang:wallet-locked'));
+          } catch (e) { /* CustomEvent 미지원 환경 — 조용히 무시 */ }
           return;
         }
         throw e; // 그 외 예상 못한 에러는 기존과 동일하게 바깥 catch로
