@@ -8,7 +8,7 @@
  */
 
 // ── Core ─────────────────────────────────────────────────
-import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, _deleteMyProfile, gopangAuth, _hasConfirmedBackup } from './src/gopang/core/auth.js';
+import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, _deleteMyProfile, gopangAuth, _hasConfirmedBackup, _issueSession } from './src/gopang/core/auth.js';
 import { loadSettings, CFG, saveSettings, loadDefaultKeyIfNeeded } from './src/gopang/core/config.js';
 import { _USER, aiActive, setAiActive, setUser } from './src/gopang/core/state.js';
 
@@ -107,12 +107,27 @@ document.body.classList.add('gopang-authed');
     // 로그인한 적 있는 PC가 device-link(기기 간 지갑 이전) 승인을 "받는 중"인
     // 상태에서도 조용히 자신을 push 대상으로 덮어써서, 폰으로 가야 할 device-link
     // 알림이 엉뚱하게 PC 자신에게 온 채 폰에는 도착하지 않는 문제가 실제로
-    // 재현됐다. GopangWallet.exists()는 이 기기 IndexedDB에 실제 서명키가
-    // 있는지 확인한다 — PC는 device-link 승인 전까지 이 키를 가질 수 없으므로
-    // (지갑 키 생성은 휴대폰 전용, "PC는 이 키를 생성하지 않음" 관례), 이 체크로
-    // "세션은 있지만 진짜 지갑은 없는" 기기를 걸러낼 수 있다.
+    // 재현됐다.
+    //
+    // ★★ 2026-07-21 추가 수정 — 처음엔 GopangWallet.exists()(이 기기 IndexedDB에
+    // "어떤" 서명키든 있는지)로만 걸렀는데, 이걸로는 부족하다는 게 바로 그날
+    // 실사로 다시 드러났다: GopangWallet.load()는 기존 키 복호화(decryptPrivKey)가
+    // 실패하면(OperationError — 기기 엔트로피/WebAuthn 소스가 바뀌는 사설/시크릿
+    // 모드 등에서 실제로 재현됨) 에러를 삼키고 null을 반환하고, 그러면 싱글턴
+    // 초기화 IIFE가 "최초 실행"으로 오판해 이 guid와 아무 관계 없는 새 키페어를
+    // 조용히 자동 생성한다(gopang-wallet.js 하단 IIFE, "새 지갑 자동 생성 완료"
+    // 로그). 그 새 키도 exists()엔 true로 잡히므로, "어떤 키든 있으면 통과"였던
+    // 이전 체크로는 이 가짜 상태를 걸러내지 못했다. 그래서 이번엔 "키가 있는가"가
+    // 아니라 "이 기기의 현재 키가 서버에 이 guid로 실제 등록된 그 키와 서명으로
+    // 검증되는가"(_issueSession — 로그인 시 기기 일치를 확인하는 바로 그 함수)를
+    // 재사용해 진짜로 확인한다.
     if (typeof window.GopangWallet === 'undefined' || !(await window.GopangWallet.exists())) {
       console.info('[Push] 이 기기에 지갑 키가 없어 기본 구독 보장을 건너뜁니다(세션만 있는 기기로 추정).');
+      return;
+    }
+    const _verify = await _issueSession(stored.ipv6, 'gopang');
+    if (!_verify.ok) {
+      console.info('[Push] 이 기기의 지갑 키가 서버 등록 키와 일치하지 않아 기본 구독 보장을 건너뜁니다:', _verify.reason);
       return;
     }
 

@@ -416,7 +416,7 @@ function _waitForWallet(timeoutMs = 15000) {
 // 서버가 TOFU 핀과 다른 공개키를 보면 PUBKEY_MISMATCH를 반환 — 이 기기가
 // 그 계정의 정당한 기기가 아니라는 뜻이므로, 호출부는 절대 로그인으로
 // 폴백하지 말고 reason을 그대로 사용자에게 보여줘야 한다.
-async function _issueSession(guid, svc = 'gopang', level = 'L0') {
+export async function _issueSession(guid, svc = 'gopang', level = 'L0') {
   // DEV_MODE: 서명 검증 우회
   if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
     console.info('[DEV] _issueSession 우회 — guid:', guid);
