@@ -1905,6 +1905,15 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
               </span>
               <span style="font-size:11px;background:#fffbeb;color:#b45309;padding:2px 6px;border-radius:4px" id="label-local-reset">재접속 시 복원 가능</span>
             </div>
+            <!-- 2026-07-22 신설 — device-link 웹푸시가 안 올 때 수동 재구독.
+                 자주 쓰는 기능이 아니라 이 섹션 맨 아래(눈에 덜 띄는 자리)에 배치. -->
+            <div class="settings-card-row" id="btn-resubscribe-push" onclick="_resubscribePush()" style="cursor:pointer">
+              <span class="settings-card-row-label" style="display:flex;align-items:center;gap:8px">
+                <i class="ti ti-bell" aria-hidden="true" style="font-size:17px;color:var(--accent-teal);width:20px;text-align:center"></i>
+                <span id="label-resubscribe-push">푸시 알림 재구독</span>
+              </span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
           </div>
           <div style="font-size:11px;color:var(--txt3);padding:8px 4px 0;line-height:1.6" id="label-local-reset-sub">이 기기의 데이터만 삭제 — 계정은 유지됩니다</div>
         </div>

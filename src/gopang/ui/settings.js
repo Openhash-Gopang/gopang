@@ -534,6 +534,36 @@ export async function clearSWCache() {
   location.reload();
 }
 
+// ── 푸시 알림 재구독 (2026-07-22 신설) ──────────────────────
+// device-link(기기 간 지갑 이전) 웹푸시가 안 오는 문제를 사용자가
+// javascript: 북마클릿이나 URL 파라미터(?resetpush=1) 없이도 설정
+// 화면에서 바로 재시도할 수 있게 한다. 자주 쓰는 기능이 아니라
+// "앱 관리" 섹션 맨 아래에 배치(webapp.html 참조). 실제 재구독 로직은
+// services/push.js의 requestPushSubscription() 그대로 재사용 —
+// in-flight 락이 있어 gopang-app.js의 24시간 자동 재시도와 겹쳐도
+// 안전하다.
+export async function _resubscribePush() {
+  const guid = _USER?.ipv6 || JSON.parse(localStorage.getItem('gopang_user_v4') || 'null')?.ipv6;
+  if (!guid) { alert('로그인 상태가 아닙니다.'); return; }
+
+  const label = document.getElementById('label-resubscribe-push');
+  if (label) label.textContent = '재구독 중…';
+
+  try {
+    const { requestPushSubscription } = await import('../services/push.js');
+    const result = await requestPushSubscription(guid);
+    if (result.ok) {
+      alert('✅ 푸시 재구독 완료');
+    } else if (result.reason === 'permission_denied') {
+      alert('🔔 알림 권한이 꺼져 있습니다. 브라우저 설정 → 알림에서 허용해 주세요.');
+    } else {
+      alert('⚠️ 재구독 실패: ' + (result.reason || '알 수 없는 오류'));
+    }
+  } finally {
+    if (label) label.textContent = '푸시 알림 재구독';
+  }
+}
+
 // ══════════════════════════════════════════════════════════════
 // ① 이전 대화 기록
 // ══════════════════════════════════════════════════════════════

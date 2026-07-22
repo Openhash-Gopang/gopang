@@ -22,6 +22,7 @@ import { openSettings, closeSettings, handleOverlayClick,
          openMyProfile, openProfileComposer, openBackupKey,
          applySkinColor,
          openHondiCodeModal, closeHondiCodeModal, _downloadHondiCode,
+         _resubscribePush,
 } from './src/gopang/ui/settings.js';
 import { _showRegisterFlow }                   from './src/gopang/ui/register-flow.js';
 
@@ -339,6 +340,7 @@ window.dismissBackupWarn = function() {
   window.handleOverlayClick        = handleOverlayClick;
   window.saveSettings              = saveSettings;
   window.clearSWCache              = clearSWCache;
+  window._resubscribePush          = _resubscribePush;
   window._settingsRegisterHandle   = _settingsRegisterHandle;
   window._updateHandleChip         = _updateHandleChip;
   window.applySkinColor            = applySkinColor;
