@@ -1299,9 +1299,33 @@ function _showPhonePopup(resolve) {
         let attempts = 0;
         let settled  = false;
 
+        // ── WebOTP API (2026-07-21 신설) ──────────────────────────
+        // 지원 브라우저(안드로이드 Chrome)에서는 문자를 아예 확인하러
+        // 나갈 필요 없이, 브라우저가 SMS 도착을 감지해 입력창에 자동으로
+        // 채워준다 — worker.js가 문자 맨 끝에 "@hondi.net #코드" 태그를
+        // 붙여 보내야 이 기능이 동작한다(같은 커밋에서 함께 수정).
+        // 이 단계(otp-step)를 벗어나면(수동 확인·재전송·뒤로가기 등)
+        // abort()로 반드시 정리한다 — 안 그러면 다음 단계에서도 계속
+        // SMS를 엿듣는 상태로 남는다.
+        const otpAbort = ('OTPCredential' in window && navigator.credentials?.get)
+          ? new AbortController() : null;
+        if (otpAbort) {
+          navigator.credentials.get({
+            otp: { transport: ['sms'] },
+            signal: otpAbort.signal,
+          }).then((otpCred) => {
+            if (settled || !otpCred?.code) return;
+            otpInput.value = otpCred.code;
+            doVerify(); // 자동 채움 후 바로 제출 — 사용자가 확인 버튼을 누를 필요조차 없음
+          }).catch(() => {
+            // 미지원·권한 거부·타임아웃 등 — 수동 입력 경로는 그대로 살아있으므로 조용히 무시
+          });
+        }
+
         const finish = (result) => {
           if (settled) return;
           settled = true;
+          otpAbort?.abort();
           verifyBtn.onclick = null;
           resendBtn.onclick = null;
           backBtn.onclick   = null;
