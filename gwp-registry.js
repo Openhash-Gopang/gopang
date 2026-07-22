@@ -630,6 +630,21 @@ const SVC_ID_ALIAS = {
   'k-emergency': 'kemergency',
   'k-business':  'kbusiness',
   'business':    'kbusiness',
+  // kregionalgov(전국 지방행정 AI) — 2026-07-21 신설. AGENT-COMMON이
+  // 이 서비스의 정확한 id를 명시적으로 가르치지 않아, 모델이 이름(전국
+  // 지방행정 AI)이나 url(jeju.hondi.net)에서 그럴듯하게 추측한 id를
+  // 낼 가능성이 높다("제주도청 불러 줘"에 응답은 하는데 실제로는 탭이
+  // 안 열리던 사고 — [GWP: jeju] 등 잘못된 id를 냈을 것으로 추정).
+  jeju:          'kregionalgov',
+  jejudo:        'kregionalgov',
+  kjeju:         'kregionalgov',
+  regionalgov:   'kregionalgov',
+  'k-regionalgov': 'kregionalgov',
+  'regional-gov':  'kregionalgov',
+  '제주도청':      'kregionalgov',
+  '제주특별자치도청': 'kregionalgov',
+  '지방행정':      'kregionalgov',
+  '지자체':        'kregionalgov',
 };
 
 function getService(id) {
