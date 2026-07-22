@@ -129,12 +129,23 @@ try {
 // 비용은 없다.
 (async () => {
   try {
+    // ★ 2026-07-22 신설 — javascript: 북마클릿을 모바일 주소창에 입력하기
+    // 어렵다는 실사용 피드백. ?debug=1과 동일한 패턴으로, URL에
+    // ?resetpush=1(또는 &resetpush=1)을 붙이면 24시간 쿨다운을 건너뛰고
+    // 즉시 재시도한다 — 그냥 평범한 URL이라 주소창에 타이핑/편집만 하면
+    // 되고 브라우저의 javascript: 스킴 차단과 무관하다. 콘솔을 볼 수
+    // 없는 상황을 가정해 결과를 화면에도 말풍선으로 보여준다.
+    const _forceRetry = new URLSearchParams(location.search).get('resetpush') === '1';
+
     const PUSH_RETRY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
     const lastTry = parseInt(localStorage.getItem('gopang_push_last_try') || '0', 10);
-    if (Date.now() - lastTry < PUSH_RETRY_COOLDOWN_MS) return;
+    if (!_forceRetry && Date.now() - lastTry < PUSH_RETRY_COOLDOWN_MS) return;
 
     const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
-    if (!stored?.ipv6) return; // 게스트/미로그인 상태에서는 시도하지 않음
+    if (!stored?.ipv6) {
+      if (_forceRetry) appendBubble('ai', '🔔 로그인 상태가 아니라 푸시 재구독을 건너뜁니다.');
+      return;
+    }
 
     // ★ 2026-07-21 신설 — 실사로 발견한 버그: push_subscription은 계정(guid)당
     // 딱 하나뿐인데(profiles 단일 필드, 기기별 아님), 이 블록이 여태 "이 기기가
@@ -159,11 +170,13 @@ try {
     // 재사용해 진짜로 확인한다.
     if (typeof window.GopangWallet === 'undefined' || !(await window.GopangWallet.exists())) {
       console.info('[Push] 이 기기에 지갑 키가 없어 기본 구독 보장을 건너뜁니다(세션만 있는 기기로 추정).');
+      if (_forceRetry) appendBubble('ai', '🔔 이 기기에 지갑 키가 없어 재구독을 건너뜁니다.');
       return;
     }
     const _verify = await _issueSession(stored.ipv6, 'gopang');
     if (!_verify.ok) {
       console.info('[Push] 이 기기의 지갑 키가 서버 등록 키와 일치하지 않아 기본 구독 보장을 건너뜁니다:', _verify.reason);
+      if (_forceRetry) appendBubble('ai', `🔔 이 기기 지갑 키가 서버 등록 키와 안 맞아 재구독을 건너뜁니다 (${_verify.reason}).`);
       return;
     }
 
@@ -172,8 +185,12 @@ try {
     const result = await requestPushSubscription(stored.ipv6);
     if (result.ok) {
       console.info('[Push] 기본 구독 보장 완료(guid:', stored.ipv6.slice(0, 12) + '...)');
+      if (_forceRetry) appendBubble('ai', '✅ 푸시 재구독 완료 — PC에서 다시 로그인 요청을 보내보세요.');
     } else if (result.reason && result.reason !== 'permission_denied') {
       console.warn('[Push] 기본 구독 보장 실패(다음 재시도까지 대기):', result.reason);
+      if (_forceRetry) appendBubble('ai', `⚠️ 푸시 재구독 실패: ${result.reason}`);
+    } else if (result.reason === 'permission_denied' && _forceRetry) {
+      appendBubble('ai', '🔔 알림 권한이 꺼져 있어 재구독할 수 없습니다. 브라우저 설정 → 알림에서 허용해 주세요.');
     }
   } catch (e) {
     console.warn('[Push] 기본 구독 보장 중 오류(치명적 아님):', e.message);
