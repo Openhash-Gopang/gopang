@@ -1,0 +1,24 @@
+name: Purge gopang-wallet.js CDN cache
+
+# 2026-07-22 신설 — 위성 저장소들이 더 이상 gopang-wallet.js 사본을
+# 갖지 않고 jsdelivr CDN(허브 gopang을 직접 참조)을 쓰도록 마이그레이션
+# 하면서 함께 추가. jsdelivr는 @main 같은 브랜치 참조를 최대 7일까지
+# 캐싱할 수 있어서, 이 워크플로 없이는 허브에서 gopang-wallet.js를
+# 고쳐도 실제 서비스(K-서비스 전부)에 반영되기까지 최대 7일이 걸릴 수
+# 있다. push 즉시 jsdelivr의 공식 purge API를 호출해 캐시를 무효화한다.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'gopang-wallet.js'
+  workflow_dispatch:
+
+jobs:
+  purge-cdn-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Purge jsdelivr cache for gopang-wallet.js
+        run: |
+          curl -sf "https://purge.jsdelivr.net/gh/Openhash-Gopang/gopang@main/gopang-wallet.js" \
+            || echo "::warning::jsdelivr purge 요청 실패 — 최대 7일 내 자연 만료되니 급하면 https://www.jsdelivr.com/tools/purge 에서 수동으로 다시 시도하세요."
