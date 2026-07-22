@@ -771,12 +771,11 @@ export async function initAuth() {
 }
 
 // ── 저장된 계정의 서버 존재 여부 백그라운드 확인 (2026-07-21 신설) ──
-// L1 profiles에서 이 guid 레코드가 실제로 있는지만 가볍게 조회한다.
 // 네트워크 오류 등으로 조회 자체가 실패하면(오프라인 등) 아무 조치도
 // 하지 않는다 — "확인 못 함"과 "확실히 없음"을 구분해, 일시적 네트워크
 // 문제로 정상 계정을 로그아웃시키는 사고를 만들지 않는다. 진짜로 서버가
 // "레코드 없음"이라고 명확히 응답했을 때만 로그아웃 처리한다.
-async function _verifyStoredAccountStillExists(stored) {
+export async function _verifyStoredAccountStillExists(stored) {
   try {
     const filter = encodeURIComponent(`guid='${stored.ipv6}'`);
     const res  = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
