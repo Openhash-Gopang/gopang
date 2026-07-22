@@ -165,7 +165,7 @@ watchHondiSkin({ '--green': 'accent', '--green-lt': 'lt', '--green-dk': 'dk', '-
 
 <div class="menu-search">
   <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg>
-  <input id="search-input" type="text" inputmode="search" placeholder="기관·전문직 검색 (예: 제주도청, 변호사)" autocomplete="off">
+  <input id="search-input" type="text" inputmode="search" placeholder="기관·전문가 검색 (예: 제주도청, 변호사)" autocomplete="off">
   <button class="search-clear" id="search-clear" hidden title="지우기">×</button>
 </div>
 
@@ -205,7 +205,7 @@ const KLAW = {
 // 전문직 — 직업(역할) 기준 AI 에이전트. 변호사는 K-Law와 동일한 목적지로 연결됩니다.
 const CATEGORIES = [
   {
-    id:'pro', name:'전문직', desc:'직업별 전문가 AI 에이전트', icon:'briefcase',
+    id:'pro', name:'전문가 페르소나', desc:'직업별 전문가 AI 에이전트', icon:'briefcase',
     items:[
       { id:'lawyer',      name:'변호사',     desc:'법률 상담·소송',        url:'https://klaw.hondi.net/webapp.html' },
       { id:'tax-pro',     name:'세무사',     desc:'세금 신고·절세 상담',     url:'https://tax.hondi.net/webapp.html' },
@@ -233,7 +233,7 @@ const CATEGORIES = [
     ]
   },
   {
-    id:'social', name:'소셜', desc:'게임·SNS', icon:'users',
+    id:'social', name:'소셜 페르소나', desc:'게임·SNS', icon:'users',
     items:[
       { id:'game-zone',  name:'게임존',     desc:'미니게임·이벤트',     url:'https://games.hondi.net/webapp.html' },
       { id:'sns-feed',   name:'고팡 SNS',  desc:'소셜 피드·친구',      url:'https://sns.hondi.net/webapp.html' },
