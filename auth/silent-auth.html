@@ -246,6 +246,7 @@ const ORIGIN    = params.get('origin') || '*';
 const RETURN    = params.get('return') || null;
 const IS_SILENT = (window.parent !== window);   // iframe 여부
 const WORKER    = 'https://hondi-proxy.tensor-city.workers.dev';
+const _GOPANG_ORIGIN = 'https://hondi.net'; // 2026-07-21 — postMessage 타겟/검증용
 
 window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('svc-label').textContent = SERVICE;
@@ -256,36 +257,52 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// ── 같은 오리진 탭에게 서명 대신 부탁 (2026-07-21 신설) ──────────────
+// ── 같은 오리진 탭에게 서명 대신 부탁 (2026-07-21 신설, 같은 날 재설계) ──
 // 이 문서는 보통 klaw 등 하위 서비스가 만드는 보이지 않는 iframe 안에서
 // 실행된다 — 사용자 제스처가 없어 WebAuthn을 새로 못 띄운다. hondi.net
 // 오리진에 지갑이 이미 풀려 있는 다른 탭(예: 방금 klaw를 열었던 그
 // webapp.html 탭)이 있으면, 그 탭의 이미 열려 있는 개인키로 대신
-// 서명받는다 — 새 프롬프트 없이, 서명 자체가 증명이라는 원칙은 그대로
-// 유지한다. 짧게(1.2초)만 기다려보고 응답이 없으면 로컬 로딩으로 폴백.
+// 서명받는다.
+//
+// ★ 1차 시도(BroadcastChannel)는 실사에서 실패가 재현됐다 — 최신
+// Chrome은 BroadcastChannel도 최상위 사이트(top-level site)별로 격리
+// 한다(스토리지 파티셔닝). klaw.hondi.net 안의 이 iframe이 여는 채널과
+// webapp.html 탭이 여는 같은 이름의 채널은 최상위 사이트가 서로 달라
+// 완전히 격리된 별개 채널이 되어 서로 절대 못 본다 — 처음에 iframe이
+// localStorage를 못 읽던 문제와 근본적으로 같은 원인이다.
+//
+// postMessage는 스토리지가 아니라 "실제로 쥐고 있는 창(window) 객체
+// 참조"로 직접 통신하므로 이 파티셔닝의 영향을 받지 않는다. 이 iframe의
+// window.parent는 klaw의 최상위 창이고, klaw는 window.open()으로 열렸으니
+// window.parent.opener가 바로 그 webapp.html 창이다 — 이 체인으로 직접
+// postMessage하면 격리 없이 도달한다.
 function _tryRelaySign(sigMsg, timeoutMs = 1200) {
-  if (typeof BroadcastChannel === 'undefined') return Promise.resolve(null);
+  const opener = window.parent?.opener;
+  if (!opener || opener.closed) return Promise.resolve(null);
   return new Promise((resolve) => {
-    let chan;
-    try { chan = new BroadcastChannel('gopang-wallet-sso-relay'); }
-    catch { resolve(null); return; }
     const requestId = Math.random().toString(36).slice(2);
     let settled = false;
     const done = (result) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      chan.close();
+      window.removeEventListener('message', onMessage);
       resolve(result);
     };
     const timer = setTimeout(() => done(null), timeoutMs);
-    chan.onmessage = (ev) => {
+    function onMessage(ev) {
+      if (ev.origin !== _GOPANG_ORIGIN) return;
       const msg = ev.data;
       if (msg?.type === 'GOPANG_SIGN_RESPONSE' && msg.requestId === requestId) {
         done({ signature: msg.signature, publicKeyB64u: msg.publicKeyB64u, guid: msg.guid });
       }
-    };
-    chan.postMessage({ type: 'GOPANG_SIGN_REQUEST', requestId, sigMsg });
+    }
+    window.addEventListener('message', onMessage);
+    try {
+      opener.postMessage({ type: 'GOPANG_SIGN_REQUEST', requestId, sigMsg }, _GOPANG_ORIGIN);
+    } catch (e) {
+      done(null);
+    }
   });
 }
 

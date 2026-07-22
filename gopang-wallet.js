@@ -1088,11 +1088,20 @@
      * @returns {GopangWallet|null}  — 지갑 없으면 null
      */
     static async load(passphrase = '') {
-      try {
-        const db     = await openDB();
-        const record = await idbGet(db, IDB_KEY_ID);
-        if (!record) return null;
+      const db     = await openDB();
+      const record = await idbGet(db, IDB_KEY_ID).catch(() => null);
+      if (!record) return null; // 진짜 최초 실행 — 이 경우에만 null을 반환한다
 
+      // ★ 2026-07-21 근본 수정 — 이전에는 아래 블록 전체가 하나의 try/catch에
+      // 묶여 있어서, "레코드가 아예 없음"과 "레코드는 있는데 이번 세션에서
+      // 못 엶(엔트로피 불일치·WebAuthn 실패 등)"이 똑같이 null로 뭉개졌다.
+      // 그 결과 싱글턴 초기화 쪽이 "최초 실행"으로 오판해 기존 계정과 무관한
+      // 새 키를 조용히 자동 생성하는 사고로 이어졌다(2026-07-21 실사로 확인).
+      // 지금은 "레코드가 있다"는 사실 자체가 이미 이 기기에 지갑이 존재한다는
+      // 증거이므로, 그 이후 단계(복호화·키 임포트)에서 실패하면 null이 아니라
+      // 구분 가능한 에러를 던진다 — 호출부가 "새로 만들어도 되는 상황"과
+      // "복구가 필요한 상황"을 반드시 구별하도록 강제한다.
+      try {
         const encBuf = b64uToBuf(record.encPrivKey).buffer;
         const privRaw = await decryptPrivKey(
           encBuf,
@@ -1154,8 +1163,11 @@
           x25519PublicKeyB64u: x25519PubKeyB64u,
         });
       } catch (e) {
-        console.error('[GopangWallet] load 실패:', e);
-        return null;
+        console.error('[GopangWallet] 기존 지갑 복호화 실패(레코드는 존재함) — 원인 불명확한 채로 새 지갑을 자동 생성하지 않습니다:', e);
+        const err = new Error('WALLET_DECRYPT_FAILED');
+        err.cause = e;
+        err.code = 'WALLET_DECRYPT_FAILED';
+        throw err;
       }
     }
 
@@ -1673,9 +1685,26 @@
    * ──────────────────────────────────────────────── */
   (async () => {
     try {
-      let wallet = await GopangWallet.load();
+      let wallet;
+      try {
+        wallet = await GopangWallet.load();
+      } catch (e) {
+        if (e?.code === 'WALLET_DECRYPT_FAILED') {
+          // ★ 2026-07-21 근본 수정 — 예전에는 load()가 이 경우도 그냥 null을
+          // 반환해서, 바로 아래 "최초 실행"과 구분이 안 됐고 결국 기존 계정과
+          // 무관한 새 키를 조용히 만들어버렸다(실사로 확인된 사고). 지금은
+          // 진짜로 이 기기에 지갑이 있었다는 게 확정된 상태이므로, 대체 지갑을
+          // 만들지 않고 잠금 상태로 멈춘다 — 사용자가 설정 화면에서 백업 키로
+          // 복구하거나, 다른 정상 기기에서 새로 device-link를 받아야 한다.
+          console.error('[GopangWallet] 기존 지갑을 열 수 없습니다(엔트로피/인증 불일치로 추정) — 백업 키 복구가 필요합니다. 새 지갑을 자동 생성하지 않습니다.');
+          global.gopangWallet = null;
+          global.gopangWalletLocked = true; // UI가 "복구 필요" 배너를 띄울 수 있도록 하는 신호
+          return;
+        }
+        throw e; // 그 외 예상 못한 에러는 기존과 동일하게 바깥 catch로
+      }
       if (!wallet) {
-        // 최초 실행 — 자동 생성 (passphrase 없이 기기 entropy 사용)
+        // 진짜 최초 실행(IndexedDB에 레코드 자체가 없음)일 때만 자동 생성
         wallet = await GopangWallet.create();
         console.info('[GopangWallet] 새 지갑 자동 생성 완료');
       }
@@ -1716,31 +1745,106 @@
       // 사용자 제스처가 없어 WebAuthn(지문)을 새로 못 띄운다(실사로 확인).
       // 이 문제를 서버 세션/쿠키로 우회하면 원칙이 깨지므로, 대신 "이미
       // 이 오리진(hondi.net)에 지갑이 풀려 있는 다른 탭"에게 대신 서명해
-      // 달라고 부탁한다 — BroadcastChannel은 완전히 same-origin 전용이라
-      // klaw.hondi.net 같은 다른 오리진은 절대 끼어들 수 없고, 서버는
-      // 여전히 서명만 검증할 뿐 아무 권한도 발급하지 않는다.
+      // 달라고 부탁한다.
+      //
+      // ★ 2026-07-21 같은 날 재설계 — BroadcastChannel만으로는 실사에서
+      // 실패가 재현됐다. 최신 Chrome은 BroadcastChannel도 최상위 사이트
+      // (top-level site)별로 격리한다(스토리지 파티셔닝) — klaw.hondi.net
+      // 안의 숨은 iframe이 여는 채널과 이 탭(webapp.html, 최상위 사이트가
+      // hondi.net)이 여는 같은 이름의 채널은 최상위 사이트가 달라 서로
+      // 완전히 격리된다. postMessage는 스토리지가 아니라 "실제로 쥐고
+      // 있는 창 참조"로 통신하므로 이 제약을 받지 않는다 — 그 iframe은
+      // window.parent.opener(=klaw를 연 이 탭)로 직접 도달할 수 있다.
+      // 그래서 window 메시지 리스너를 주력으로 쓰고, BroadcastChannel은
+      // (같은 최상위 사이트 안의 다른 탭처럼 파티션이 같은 극히 일부
+      // 상황에 도움 될 수 있어) 보조로 남겨둔다.
+      const _handleSignRequest = async (msg) => {
+        // 서명 대상을 "auth-issue:" SSO 신원 증명 챌린지로만 엄격히
+        // 제한한다 — 임의 페이로드(거래 등)를 원격에서 서명시키는
+        // 통로가 되지 않도록 막는 안전장치다.
+        if (typeof msg?.sigMsg !== 'string' || !msg.sigMsg.startsWith('auth-issue:')) return null;
+        const parts = msg.sigMsg.split(':');
+        const msgTs = parseInt(parts[parts.length - 1], 10);
+        if (!msgTs || Math.abs(Date.now() - msgTs) > 30000) return null; // 재생 공격 방지
+        try {
+          const signature = await wallet.signPayload(msg.sigMsg);
+          return { signature, publicKeyB64u: wallet.publicKeyB64u, guid: wallet.guid };
+        } catch (e) { return null; }
+      };
+
+      // 주력 경로 — window postMessage (opener 체인, 파티셔닝 영향 없음)
+      // 두 메시지 종류를 함께 처리한다:
+      //  - GOPANG_SIGN_REQUEST: hondi.net 자신의 iframe(silent-auth.html)이
+      //    보내는 "이 챌린지에 서명만 해달라" 요청 — 보낸 쪽이 hondi.net
+      //    오리진 그 자체이므로 정확히 그 오리진만 신뢰한다.
+      //  - GOPANG_ISSUE_TOKEN_REQUEST (2026-07-21 신설) — klaw.hondi.net
+      //    등 하위 서비스의 최상위 창이 iframe도 안 거치고 window.opener로
+      //    직접 보내는 "나 대신 /auth/issue까지 전부 해서 완성된 토큰을
+      //    달라" 요청이다. 이 경우 보낸 쪽은 hondi.net이 아니라
+      //    klaw.hondi.net처럼 *.hondi.net 서브도메인이므로, 오리진 검사도
+      //    그에 맞게 서브도메인 전체를 허용한다 — 오픈해시 서비스가 아닌
+      //    임의 외부 사이트가 opener 참조를 얻어 악용하는 걸 막는 선이다.
+      const _isHondiOrigin = (origin) => /^https:\/\/([a-z0-9-]+\.)?hondi\.net$/.test(origin);
+
+      window.addEventListener('message', async (ev) => {
+        const msg = ev.data;
+        if (!msg) return;
+
+        if (msg.type === 'GOPANG_SIGN_REQUEST') {
+          if (ev.origin !== 'https://hondi.net') return; // hondi.net 오리진 프레임만 신뢰
+          const result = await _handleSignRequest(msg);
+          if (!result) return; // 실패 시 응답 안 함 — 요청 측은 자체 타임아웃으로 로컬 폴백
+          ev.source?.postMessage(
+            { type: 'GOPANG_SIGN_RESPONSE', requestId: msg.requestId, ...result },
+            ev.origin
+          );
+          return;
+        }
+
+        if (msg.type === 'GOPANG_ISSUE_TOKEN_REQUEST') {
+          if (!_isHondiOrigin(ev.origin)) return; // *.hondi.net 서비스만 신뢰
+          if (!wallet.guid) {
+            ev.source?.postMessage({ type: 'GOPANG_ISSUE_TOKEN_RESPONSE', requestId: msg.requestId, ok: false, reason: 'NOT_REGISTERED' }, ev.origin);
+            return;
+          }
+          const svc = typeof msg.svc === 'string' ? msg.svc : 'unknown';
+          const level = typeof msg.level === 'string' ? msg.level : 'L0';
+          const ts = Date.now();
+          const sigMsg = `auth-issue:${wallet.guid}:${wallet.publicKeyB64u}:${svc}:${ts}`;
+          try {
+            const signature = await wallet.signPayload(sigMsg);
+            const res = await fetch('https://hondi-proxy.tensor-city.workers.dev/auth/issue', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ guid: wallet.guid, pubkey: wallet.publicKeyB64u, signature, ts, level, svc }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data?.token) {
+              ev.source?.postMessage({ type: 'GOPANG_ISSUE_TOKEN_RESPONSE', requestId: msg.requestId, ok: false, reason: data?.code || `http_${res.status}` }, ev.origin);
+              return;
+            }
+            ev.source?.postMessage({
+              type: 'GOPANG_ISSUE_TOKEN_RESPONSE', requestId: msg.requestId, ok: true,
+              ipv6: wallet.guid, level: data.level || level,
+              exp: Math.floor(ts / 1000) + 3600, token: data.token,
+            }, ev.origin);
+          } catch (e) {
+            ev.source?.postMessage({ type: 'GOPANG_ISSUE_TOKEN_RESPONSE', requestId: msg.requestId, ok: false, reason: 'NETWORK' }, ev.origin);
+          }
+        }
+      });
+
+      // 보조 경로 — BroadcastChannel (같은 최상위 사이트 내 다른 탭 등
+      // 파티션이 우연히 같은 경우를 위해 유지, 미지원 브라우저는 무시)
       try {
         const _relayChan = new BroadcastChannel('gopang-wallet-sso-relay');
         _relayChan.onmessage = async (ev) => {
-          const msg = ev.data;
-          if (!msg || msg.type !== 'GOPANG_SIGN_REQUEST') return;
-          // 서명 대상을 "auth-issue:" SSO 신원 증명 챌린지로만 엄격히
-          // 제한한다 — 임의 페이로드(거래 등)를 원격에서 서명시키는
-          // 통로가 되지 않도록 막는 안전장치다.
-          if (typeof msg.sigMsg !== 'string' || !msg.sigMsg.startsWith('auth-issue:')) return;
-          const parts = msg.sigMsg.split(':');
-          const msgTs = parseInt(parts[parts.length - 1], 10);
-          if (!msgTs || Math.abs(Date.now() - msgTs) > 30000) return; // 재생 공격 방지
-          try {
-            const signature = await wallet.signPayload(msg.sigMsg);
-            _relayChan.postMessage({
-              type: 'GOPANG_SIGN_RESPONSE', requestId: msg.requestId,
-              signature, publicKeyB64u: wallet.publicKeyB64u, guid: wallet.guid,
-            });
-          } catch (e) { /* 이 탭도 서명 실패 — 요청 측은 자체 타임아웃으로 로컬 폴백 */ }
+          const result = await _handleSignRequest(ev.data);
+          if (!result) return;
+          _relayChan.postMessage({ type: 'GOPANG_SIGN_RESPONSE', requestId: ev.data.requestId, ...result });
         };
       } catch (e) {
-        // BroadcastChannel 미지원 브라우저 — 조용히 폴백(기존 방식 그대로 동작)
+        // BroadcastChannel 미지원 브라우저 — 조용히 무시(주력 경로는 그대로 동작)
       }
     } catch(e) {
       console.error('[GopangWallet] 초기화 실패:', e.message);
