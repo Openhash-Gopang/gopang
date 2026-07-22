@@ -40,6 +40,19 @@ import { loadChainFromIDB }                    from './src/openhash/hashChain.js
 import { openSearch as openP2PSearch }         from './src/gopang/ui/p2p-search.js';
 import { startIncomingWatch, checkPendingInvites, startP2PCall } from './src/gopang/ui/p2p-chat.js';
 
+// ── 원격 디버깅 콘솔 (2026-07-22 신설) ──────────────────────
+// USB/무선 디버깅 연결이 안 되는 실기기에서도 콘솔을 봐야 하는 상황을
+// 위해, URL에 ?debug=1(또는 &debug=1)을 붙이면 Eruda(모바일 인페이지
+// devtools)를 불러와 화면 위에 떠 있는 콘솔·네트워크 패널로 보여준다.
+// 쿼리 파라미터가 없는 일반 사용자 경로에는 전혀 영향 없다(로드 자체를
+// 안 함) — 프로덕션 기본 동작과 완전히 분리돼 있어 안전하다.
+if (new URLSearchParams(location.search).get('debug') === '1') {
+  const _erudaScript = document.createElement('script');
+  _erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
+  _erudaScript.onload = () => { try { window.eruda.init(); } catch (e) { /* 무시 */ } };
+  document.head.appendChild(_erudaScript);
+}
+
 // ════════════════════════════════════════════════════════
 // 1. 사용자 초기화 — v6.0: Guest 모드 완전 폐지
 //
