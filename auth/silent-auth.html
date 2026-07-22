@@ -256,6 +256,39 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+// ── 같은 오리진 탭에게 서명 대신 부탁 (2026-07-21 신설) ──────────────
+// 이 문서는 보통 klaw 등 하위 서비스가 만드는 보이지 않는 iframe 안에서
+// 실행된다 — 사용자 제스처가 없어 WebAuthn을 새로 못 띄운다. hondi.net
+// 오리진에 지갑이 이미 풀려 있는 다른 탭(예: 방금 klaw를 열었던 그
+// webapp.html 탭)이 있으면, 그 탭의 이미 열려 있는 개인키로 대신
+// 서명받는다 — 새 프롬프트 없이, 서명 자체가 증명이라는 원칙은 그대로
+// 유지한다. 짧게(1.2초)만 기다려보고 응답이 없으면 로컬 로딩으로 폴백.
+function _tryRelaySign(sigMsg, timeoutMs = 1200) {
+  if (typeof BroadcastChannel === 'undefined') return Promise.resolve(null);
+  return new Promise((resolve) => {
+    let chan;
+    try { chan = new BroadcastChannel('gopang-wallet-sso-relay'); }
+    catch { resolve(null); return; }
+    const requestId = Math.random().toString(36).slice(2);
+    let settled = false;
+    const done = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      chan.close();
+      resolve(result);
+    };
+    const timer = setTimeout(() => done(null), timeoutMs);
+    chan.onmessage = (ev) => {
+      const msg = ev.data;
+      if (msg?.type === 'GOPANG_SIGN_RESPONSE' && msg.requestId === requestId) {
+        done({ signature: msg.signature, publicKeyB64u: msg.publicKeyB64u, guid: msg.guid });
+      }
+    };
+    chan.postMessage({ type: 'GOPANG_SIGN_REQUEST', requestId, sigMsg });
+  });
+}
+
 // ── window.gopangWallet 준비 대기 (gopang-wallet.js 싱글턴은 비동기 초기화) ──
 function _waitForWallet(timeoutMs = 4000) {
   return new Promise((resolve) => {
@@ -276,22 +309,41 @@ async function _issueViaWorker(svc, level = 'L0') {
   const user = _getLocalUser();
   if (!user?.ipv6 || !user?.handle) return { ok: false, reason: 'NOT_REGISTERED' };
 
-  const wallet = await _waitForWallet();
-  if (!wallet?.publicKeyB64u || typeof wallet.signPayload !== 'function') {
-    return { ok: false, reason: 'WALLET_NOT_READY' };
+  // 공개키는 암호화돼 있지 않으므로 지갑을 열지 않고도 바로 읽을 수 있다
+  // — 릴레이 요청에 필요한 sigMsg를 지갑 로딩과 무관하게 먼저 구성한다.
+  const cachedPubkey = localStorage.getItem('gopang_wallet_pubkey');
+  const ts = Date.now();
+  let signature, publicKeyB64u;
+
+  if (cachedPubkey) {
+    const relaySigMsg = `auth-issue:${user.ipv6}:${cachedPubkey}:${svc}:${ts}`;
+    const relayResult = await _tryRelaySign(relaySigMsg);
+    if (relayResult?.signature) {
+      signature = relayResult.signature;
+      publicKeyB64u = relayResult.publicKeyB64u;
+    }
   }
 
-  const ts = Date.now();
-  const sigMsg = `auth-issue:${user.ipv6}:${wallet.publicKeyB64u}:${svc}:${ts}`;
-  let signature;
-  try { signature = await wallet.signPayload(sigMsg); }
-  catch (e) { return { ok: false, reason: 'SIGN_FAILED' }; }
+  if (!signature) {
+    // 릴레이 응답이 없었다(다른 탭이 없거나 준비 안 됨) — 이 문서 자체에서
+    // 로컬 로딩을 시도한다. WebAuthn이 필요하면 여기서도 여전히 막힐 수
+    // 있지만, 최소한 릴레이로 해결되는 흔한 경우(다른 탭이 열려 있는 경우)는
+    // 새 프롬프트 없이 즉시 통과한다.
+    const wallet = await _waitForWallet();
+    if (!wallet?.publicKeyB64u || typeof wallet.signPayload !== 'function') {
+      return { ok: false, reason: 'WALLET_NOT_READY' };
+    }
+    const sigMsg = `auth-issue:${user.ipv6}:${wallet.publicKeyB64u}:${svc}:${ts}`;
+    try { signature = await wallet.signPayload(sigMsg); }
+    catch (e) { return { ok: false, reason: 'SIGN_FAILED' }; }
+    publicKeyB64u = wallet.publicKeyB64u;
+  }
 
   try {
     const res = await fetch(`${WORKER}/auth/issue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ guid: user.ipv6, pubkey: wallet.publicKeyB64u, signature, ts, level, svc }),
+      body: JSON.stringify({ guid: user.ipv6, pubkey: publicKeyB64u, signature, ts, level, svc }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, reason: data?.code || `http_${res.status}` };

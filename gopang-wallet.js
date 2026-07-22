@@ -1709,6 +1709,39 @@
       global.gopangWallet = wallet;
       console.info('[GopangWallet] 싱글턴 초기화 완료 | v' + VERSION
                    + ' | guid:', wallet.guid || '미연결');
+
+      // ── 같은 오리진 탭 간 SSO 서명 릴레이 (2026-07-21 신설) ──────────
+      // 오픈해시/고팡 원칙: "서명이 곧 증명, 서버는 검증만 한다" — 그런데
+      // 하위 서비스(klaw 등)가 SSO 확인용으로 만드는 보이지 않는 iframe은
+      // 사용자 제스처가 없어 WebAuthn(지문)을 새로 못 띄운다(실사로 확인).
+      // 이 문제를 서버 세션/쿠키로 우회하면 원칙이 깨지므로, 대신 "이미
+      // 이 오리진(hondi.net)에 지갑이 풀려 있는 다른 탭"에게 대신 서명해
+      // 달라고 부탁한다 — BroadcastChannel은 완전히 same-origin 전용이라
+      // klaw.hondi.net 같은 다른 오리진은 절대 끼어들 수 없고, 서버는
+      // 여전히 서명만 검증할 뿐 아무 권한도 발급하지 않는다.
+      try {
+        const _relayChan = new BroadcastChannel('gopang-wallet-sso-relay');
+        _relayChan.onmessage = async (ev) => {
+          const msg = ev.data;
+          if (!msg || msg.type !== 'GOPANG_SIGN_REQUEST') return;
+          // 서명 대상을 "auth-issue:" SSO 신원 증명 챌린지로만 엄격히
+          // 제한한다 — 임의 페이로드(거래 등)를 원격에서 서명시키는
+          // 통로가 되지 않도록 막는 안전장치다.
+          if (typeof msg.sigMsg !== 'string' || !msg.sigMsg.startsWith('auth-issue:')) return;
+          const parts = msg.sigMsg.split(':');
+          const msgTs = parseInt(parts[parts.length - 1], 10);
+          if (!msgTs || Math.abs(Date.now() - msgTs) > 30000) return; // 재생 공격 방지
+          try {
+            const signature = await wallet.signPayload(msg.sigMsg);
+            _relayChan.postMessage({
+              type: 'GOPANG_SIGN_RESPONSE', requestId: msg.requestId,
+              signature, publicKeyB64u: wallet.publicKeyB64u, guid: wallet.guid,
+            });
+          } catch (e) { /* 이 탭도 서명 실패 — 요청 측은 자체 타임아웃으로 로컬 폴백 */ }
+        };
+      } catch (e) {
+        // BroadcastChannel 미지원 브라우저 — 조용히 폴백(기존 방식 그대로 동작)
+      }
     } catch(e) {
       console.error('[GopangWallet] 초기화 실패:', e.message);
       global.gopangWallet = null;
