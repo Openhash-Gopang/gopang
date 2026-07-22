@@ -40,7 +40,21 @@ export async function sendMessage() {
   if (!text && !attachFile) return;
 
   // 첫 메시지 전송 시 GPS 요청 — PWA 배너가 이미 처리된 후이므로 충돌 없음
-  if (!_locationReady && !_locationPending) _initLocation();
+  // ★ 2026-07-22 버그 수정: 모바일 실기기(브라우저·설치된 웹앱 모두)에서
+  // "GWP 새 탭이 전혀 안 열림 + 폴백 링크도 안 뜸" 재현됨. 원인은
+  // navigator.geolocation.watchPosition()이 이 세션 첫 호출 시 네이티브
+  // 위치 권한 다이얼로그를 띄우는데(_locationReady/_locationPending은
+  // 매 페이지 로드마다 초기화되므로 매번 재발), 그게 아래쪽의
+  // window.open('', '_blank')(GWP 프리탭 예약)보다 먼저 실행돼서
+  // 모바일 브라우저가 사용자 활성화(user activation)를 소진된 것으로
+  // 판단 → 이후 window.open()을 팝업으로 오판해 조용히 차단. 데스크톱
+  // 에뮬레이션에서 재현이 안 된 건 그 테스트 계정이 데스크톱에서는 이미
+  // 위치 권한을 허용해둔 상태라 재프롬프트가 없었기 때문으로 보임.
+  // setTimeout(0)으로 다음 매크로태스크로 미루면, 같은 클릭 핸들러 안의
+  // window.open() 호출들이 권한 다이얼로그보다 먼저 끝나 사용자 활성화가
+  // 살아있는 상태에서 실행된다. _initLocation()은 원래도 await 없는
+  // fire-and-forget이라 지연 자체는 기능에 영향 없음.
+  if (!_locationReady && !_locationPending) setTimeout(_initLocation, 0);
 
   const capturedFile = attachFile;   // 전송 전에 캡처 (removeAttach 전)
 
