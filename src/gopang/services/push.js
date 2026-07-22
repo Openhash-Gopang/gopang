@@ -47,6 +47,28 @@ export async function requestPushSubscription(guid) {
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
 
+    // ★ 2026-07-22 버그 수정: "device-link 웹푸시가 조용히 도착 안 함"이
+    // 07-20 VAPID 키 교체로 한 번 고쳤다고 기록됐는데 재발함. 원인은
+    // 여기 — getSubscription()이 반환한 기존 구독을 "있으니 그냥 쓴다"만
+    // 하고, 그 구독이 지금 VAPID_PUBLIC_KEY로 만들어진 게 맞는지 검증한
+    // 적이 없었다. 07-20 키 교체 이전에 이미 구독해둔 기기는 옛 키로
+    // 만들어진 죽은 구독을 계속 서버에 재등록하게 되고, FCM이 키
+    // 불일치로 조용히 거부한다(에러가 클라이언트로 안 올라옴 — 그래서
+    // "조용히" 안 옴). applicationServerKey를 바이트 단위로 비교해서
+    // 안 맞으면 구독을 버리고 새로 만든다.
+    if (sub) {
+      const currentKey = _urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      const subKeyBuf  = sub.options?.applicationServerKey || null;
+      const subKey     = subKeyBuf ? new Uint8Array(subKeyBuf) : null;
+      const matches = !!subKey
+        && subKey.length === currentKey.length
+        && subKey.every((b, i) => b === currentKey[i]);
+      if (!matches) {
+        try { await sub.unsubscribe(); } catch (e) { /* 무시 — 아래서 어차피 새로 구독 */ }
+        sub = null;
+      }
+    }
+
     if (!sub) {
       // 이전: Worker API 호출 → 이후: 내장 상수 직접 사용
       sub = await reg.pushManager.subscribe({
