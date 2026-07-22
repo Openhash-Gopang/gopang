@@ -60,7 +60,6 @@ body{
   background:var(--gov);color:#fff;box-shadow:var(--sh);z-index:5;
 }
 #tb-icon{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-#tb-title{font-weight:800;font-size:15px;line-height:1.2}
 #tb-sub{font-size:11px;opacity:.7;font-weight:400}
 #tb-back{margin-left:auto;flex-shrink:0;background:rgba(255,255,255,.14);border:none;color:#fff;
   border-radius:8px;padding:7px 12px;font-size:12.5px;cursor:pointer;font-family:var(--font)}
@@ -93,6 +92,11 @@ body{
   font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;
 }
 #send-btn:disabled{opacity:.4;cursor:default}
+.ia-btn{
+  flex-shrink:0;width:36px;height:36px;border-radius:50%;border:none;background:transparent;
+  color:var(--sub);display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.ia-btn:active{background:rgba(0,0,0,.06)}
 #err-banner{display:none;padding:8px 14px;background:#FEE2E2;color:#991B1B;font-size:12.5px;text-align:center}
 </style>
 </head>
@@ -100,10 +104,7 @@ body{
 
 <div id="top-bar">
   <div id="tb-icon">🏛</div>
-  <div>
-    <div id="tb-title">전국 지방행정 AI</div>
-    <div id="tb-sub">로딩 중…</div>
-  </div>
+  <div id="tb-sub">로딩 중…</div>
   <div id="trace-badge"></div>
   <button id="tb-back">고팡으로</button>
 </div>
@@ -112,7 +113,26 @@ body{
 <div id="chat-thread"></div>
 
 <div id="input-bar">
+  <button class="ia-btn" id="attach-btn" type="button" title="파일 첨부">
+    <svg width="17.87" height="17.87" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+    </svg>
+  </button>
+  <button class="ia-btn" id="camera-btn" type="button" title="카메라">
+    <svg width="16.87" height="16.87" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+  </button>
   <textarea id="chat-input" rows="1" placeholder="메시지를 입력하세요…"></textarea>
+  <button class="ia-btn" id="mic-btn" type="button" title="음성 입력">
+    <svg width="15.88" height="15.88" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="2" width="6" height="11" rx="3"/>
+      <path d="M5 10a7 7 0 0 0 14 0"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+      <line x1="8" y1="22" x2="16" y2="22"/>
+    </svg>
+  </button>
   <button id="send-btn">➤</button>
 </div>
 
@@ -243,10 +263,8 @@ async function _callAI(latestUserText, typingEl) {
   const badge = document.getElementById('trace-badge');
   badge.textContent = trace.join(' > ');
 
-  const title = document.getElementById('tb-title');
   const provinceLabel = { jeju: '제주도청', seoul: '서울시청', busan: '부산시청', gyeonggi: '경기도청' }[provinceCode];
-  title.textContent = provinceLabel ? `${provinceLabel} AI` : '전국 지방행정 AI';
-  document.title = title.textContent;
+  document.title = provinceLabel ? `${provinceLabel} AI` : '전국 지방행정 AI';
 
   return _govRelayCompletion(sp, messages, agency, provinceCode);
 }
@@ -285,6 +303,19 @@ document.getElementById('chat-input').addEventListener('input', function () {
   this.style.height = 'auto';
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
+
+// ── 파일첨부·카메라·마이크 — 2026-07-22 신설, UI 정합용 ───────────────
+// 메인 앱(webapp.html)의 입력창과 시각적으로 동일하게 맞추기 위한
+// 아이콘. 이 페이지(전국 지방행정 AI)는 아직 첨부·촬영·음성입력 실제
+// 처리 파이프라인이 연결돼 있지 않다(§13 미이관과 동일한 이유 — 범위가
+// 커서 후속 작업으로 분리) — 눌렀을 때 아무 반응이 없어 혼란을 주지
+// 않도록, 지금은 아직 지원되지 않는다는 걸 명확히 알린다.
+function _notYetSupported(label) {
+  appendBubble('ai', `${label} 기능은 이 화면에서 아직 지원되지 않습니다. 텍스트로 말씀해 주세요.`);
+}
+document.getElementById('attach-btn').addEventListener('click', () => _notYetSupported('파일 첨부'));
+document.getElementById('camera-btn').addEventListener('click', () => _notYetSupported('카메라'));
+document.getElementById('mic-btn').addEventListener('click', () => _notYetSupported('음성 입력'));
 
 // ── 초기화 ─────────────────────────────────────────────────────
 (function init() {
