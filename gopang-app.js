@@ -8,7 +8,7 @@
  */
 
 // ── Core ─────────────────────────────────────────────────
-import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, _deleteMyProfile, gopangAuth, _hasConfirmedBackup, _issueSession } from './src/gopang/core/auth.js';
+import { initAuth, initAuthWithPhone, _isRegistered, _isGDCUser, _deviceFullReset, _deviceLocalReset, _deleteMyProfile, gopangAuth, _hasConfirmedBackup, _issueSession, _verifyStoredAccountStillExists } from './src/gopang/core/auth.js';
 import { loadSettings, CFG, saveSettings, loadDefaultKeyIfNeeded } from './src/gopang/core/config.js';
 import { _USER, aiActive, setAiActive, setUser } from './src/gopang/core/state.js';
 
@@ -71,6 +71,16 @@ while (!_isRegistered()) {
 // 이 줄에 도달했다는 것은 곧 _isRegistered() === true라는 뜻 — 이제 대화창을 공개한다.
 document.getElementById('gopang-auth-gate')?.remove();
 document.body.classList.add('gopang-authed');
+
+// ★ 2026-07-21 신설 — 실사로 발견한 버그: _isRegistered()는 localStorage만
+// 보고 판단하므로(서버 재확인 없음), 관리자가 서버에서 계정을 지워도 이
+// while 루프 자체가 한 번도 안 돌아 initAuth() 내부의 서버 존재 확인
+// 코드가 아예 호출되지 않았다("여전히 로그인 상태"로 계속 남던 사고).
+// while 루프를 이미 통과한 이 시점에 별도로 한 번 더, 무조건 확인한다.
+try {
+  const _storedNow = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+  if (_storedNow?.ipv6) _verifyStoredAccountStillExists(_storedNow);
+} catch {}
 
 // ── 웹푸시 구독을 모든 가입자의 기본값으로 보장 (2026-07-20 신설) ──────
 // 지금까지 requestPushSubscription()은 "신규 가입 완료 시점" 단 1회만
