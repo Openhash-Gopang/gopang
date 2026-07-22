@@ -126,6 +126,9 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   --green-color:#1A73E8;
   --font:'Pretendard',-apple-system,sans-serif;
   --r-md:12px;
+  /* 설정 패널 청록 강조색(#007b8b) — 기존 값을 그대로 기본값으로 사용.
+     스킨을 고르면 /assets/hondi-skin.js가 이 두 변수를 덮어쓴다. */
+  --accent-teal:#007b8b;--accent-teal-lt:#d3f7ff;
 }
 
 /* 설치된 PWA(standalone) 모드 — 안드로이드 하단 내비게이션 바가
@@ -854,7 +857,7 @@ body.gopang-authed #gopang-auth-gate{display:none}
 .settings-block:first-child{border-top:none}
 .settings-block-label{
   display:flex;align-items:center;gap:6px;margin:0;padding:14px 16px 8px;
-  font-size:13px;font-weight:600;color:#007b8b;letter-spacing:.2px;
+  font-size:13px;font-weight:600;color:var(--accent-teal);letter-spacing:.2px;
 }
 .settings-block-label.danger{color:#b91c1c}
 .settings-block-label i{font-size:14px}
@@ -869,9 +872,9 @@ body.gopang-authed #gopang-auth-gate{display:none}
 .sqa-item{display:flex;flex-direction:column;align-items:center;gap:7px;background:none;
   border:none;cursor:pointer;font-family:inherit;flex:1;min-width:0;padding:0}
 .sqa-circle{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;background:#d3f7ff;color:#007b8b;flex-shrink:0;transition:transform .12s}
+  justify-content:center;background:var(--accent-teal-lt);color:var(--accent-teal);flex-shrink:0;transition:transform .12s}
 .sqa-item:active .sqa-circle{transform:scale(.92)}
-.sqa-circle.primary{background:#007b8b;color:#fff}
+.sqa-circle.primary{background:var(--accent-teal);color:#fff}
 .sqa-label{font-size:11px;color:#374151;text-align:center;line-height:1.3;
   max-width:62px;font-weight:500}
 
@@ -1604,7 +1607,7 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
                 <p style="margin:12px 0 4px;font-size:13px;color:#6b6b6b">내 혼디 코드</p>
                 <button onclick="_downloadHondiCode()"
                         style="margin-top:8px;padding:10px 24px;border-radius:10px;
-                               background:#007b8b;color:#fff;border:none;
+                               background:var(--accent-teal);color:#fff;border:none;
                                font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
                   이미지로 저장
                 </button>
@@ -1617,7 +1620,7 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
                 onclick="this.removeAttribute('readonly')"
                 onblur="setTimeout(()=>this.setAttribute('readonly',''),100)">
               <button id="gopang-id-register-btn" onclick="_settingsRegisterHandle()"
-                style="width:100%;padding:13px;border-radius:10px;background:#007b8b;
+                style="width:100%;padding:13px;border-radius:10px;background:var(--accent-teal);
                        color:#fff;border:none;font-size:15px;font-weight:600;
                        cursor:pointer;font-family:inherit;letter-spacing:-0.2px">
                 아이디 등록
@@ -1631,19 +1634,19 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
           <div class="settings-card">
             <div class="settings-card-row" onclick="location.href='/register-profile.html'" style="cursor:pointer">
               <span class="settings-card-row-label">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#007b8b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><line x1="19" y1="8" x2="23" y2="8"/><line x1="21" y1="6" x2="21" y2="10"/></svg>프로필 등록
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><line x1="19" y1="8" x2="23" y2="8"/><line x1="21" y1="6" x2="21" y2="10"/></svg>프로필 등록
               </span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
             <div class="settings-card-row" onclick="openMyProfile()" style="cursor:pointer">
               <span class="settings-card-row-label">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#007b8b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>내 프로필 보기
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>내 프로필 보기
               </span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
             <div class="settings-card-row" onclick="openProfileComposer()" style="cursor:pointer">
               <span class="settings-card-row-label">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#007b8b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>AI와 대화로 프로필 작성
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>AI와 대화로 프로필 작성
               </span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
@@ -1687,7 +1690,7 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
             </div>
             <div class="settings-card-row" onclick="_openUsagePage()" style="cursor:pointer">
               <span class="settings-card-row-label">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#007b8b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>사용량 보기
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>사용량 보기
               </span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
@@ -1699,26 +1702,26 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
           <div class="settings-block-label" style="padding:10px 0 8px"><i class="ti ti-history" aria-hidden="true"></i><span id="setting-label-history">내 기록</span></div>
           <div class="settings-card">
             <div class="settings-card-row" onclick="openChatHistory()" style="cursor:pointer">
-              <span class="settings-card-row-label"><i class="ti ti-message-circle" aria-hidden="true" style="font-size:17px;color:#007b8b;width:20px;text-align:center"></i id="label-chat-history"> 이전 대화 기록</span>
+              <span class="settings-card-row-label"><i class="ti ti-message-circle" aria-hidden="true" style="font-size:17px;color:var(--accent-teal);width:20px;text-align:center"></i id="label-chat-history"> 이전 대화 기록</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
             <div class="settings-card-row" onclick="openHashChain()" style="cursor:pointer">
-              <span class="settings-card-row-label"><i class="ti ti-link" aria-hidden="true" style="font-size:17px;color:#007b8b;width:20px;text-align:center"></i id="label-hash-chain"> 나의 기록 금고 (PDV)</span>
+              <span class="settings-card-row-label"><i class="ti ti-link" aria-hidden="true" style="font-size:17px;color:var(--accent-teal);width:20px;text-align:center"></i id="label-hash-chain"> 나의 기록 금고 (PDV)</span>
               <div style="display:flex;align-items:center;gap:6px">
-                <span style="font-size:11px;background:#eafcff;color:#007b8b;padding:2px 6px;border-radius:4px">통합</span>
+                <span style="font-size:11px;background:#eafcff;color:var(--accent-teal);padding:2px 6px;border-radius:4px">통합</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </div>
             </div>
             <div class="settings-card-row" onclick="openGopangWallet()" style="cursor:pointer">
-              <span class="settings-card-row-label"><i class="ti ti-wallet" aria-hidden="true" style="font-size:17px;color:#007b8b;width:20px;text-align:center"></i id="label-gopang-wallet"> Gopang Wallet</span>
+              <span class="settings-card-row-label"><i class="ti ti-wallet" aria-hidden="true" style="font-size:17px;color:var(--accent-teal);width:20px;text-align:center"></i id="label-gopang-wallet"> Gopang Wallet</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
             <div class="settings-card-row" onclick="openBackupKey()" style="cursor:pointer">
-              <span class="settings-card-row-label"><i class="ti ti-key" aria-hidden="true" style="font-size:17px;color:#007b8b;width:20px;text-align:center"></i> 백업 키</span>
+              <span class="settings-card-row-label"><i class="ti ti-key" aria-hidden="true" style="font-size:17px;color:var(--accent-teal);width:20px;text-align:center"></i> 백업 키</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
             <div class="settings-card-row" onclick="openFinancialStatement()" style="cursor:pointer">
-              <span class="settings-card-row-label"><i class="ti ti-report-analytics" aria-hidden="true" style="font-size:17px;color:#007b8b;width:20px;text-align:center"></i id="label-financial"> 재무제표</span>
+              <span class="settings-card-row-label"><i class="ti ti-report-analytics" aria-hidden="true" style="font-size:17px;color:var(--accent-teal);width:20px;text-align:center"></i id="label-financial"> 재무제표</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
           </div>
@@ -1738,6 +1741,8 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
                 <button class="skin-swatch" data-skin="amber"  onclick="applySkinColor('amber')"  style="background:#d97706" aria-label="앰버"></button>
                 <button class="skin-swatch" data-skin="violet" onclick="applySkinColor('violet')" style="background:#7c3aed" aria-label="바이올렛"></button>
                 <button class="skin-swatch" data-skin="slate"  onclick="applySkinColor('slate')"  style="background:#475569" aria-label="슬레이트"></button>
+                <button class="skin-swatch" data-skin="green"  onclick="applySkinColor('green')"  style="background:#16a34a" aria-label="초록색"></button>
+                <button class="skin-swatch" data-skin="lime"   onclick="applySkinColor('lime')"   style="background:#65a30d" aria-label="연두색"></button>
               </div>
             </div>
           </div>
@@ -1753,25 +1758,25 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
               <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
                 <span class="settings-card-row-label" id="label-sound">메시지 알림 소리</span>
                 <button id="btn-push-test" onclick="_testPushSound()"
-                  style="font-size:12px;color:#007b8b;background:none;border:none;cursor:pointer;font-family:inherit">
+                  style="font-size:12px;color:var(--accent-teal);background:none;border:none;cursor:pointer;font-family:inherit">
                   <span id="label-preview">미리듣기</span>
                 </button>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
-                  <input type="radio" name="push-sound" value="ping"  onchange="_savePushSound(this.value)" style="accent-color:#007b8b"> <span id="snd-label-ping">기본</span>
+                  <input type="radio" name="push-sound" value="ping"  onchange="_savePushSound(this.value)" style="accent-color:var(--accent-teal)"> <span id="snd-label-ping">기본</span>
                 </label>
                 <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
-                  <input type="radio" name="push-sound" value="bell"  onchange="_savePushSound(this.value)" style="accent-color:#007b8b"> <span id="snd-label-bell">벨</span>
+                  <input type="radio" name="push-sound" value="bell"  onchange="_savePushSound(this.value)" style="accent-color:var(--accent-teal)"> <span id="snd-label-bell">벨</span>
                 </label>
                 <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
-                  <input type="radio" name="push-sound" value="drop"  onchange="_savePushSound(this.value)" style="accent-color:#007b8b"> <span id="snd-label-drop">물방울</span>
+                  <input type="radio" name="push-sound" value="drop"  onchange="_savePushSound(this.value)" style="accent-color:var(--accent-teal)"> <span id="snd-label-drop">물방울</span>
                 </label>
                 <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
-                  <input type="radio" name="push-sound" value="chime" onchange="_savePushSound(this.value)" style="accent-color:#007b8b"> <span id="snd-label-chime">차임</span>
+                  <input type="radio" name="push-sound" value="chime" onchange="_savePushSound(this.value)" style="accent-color:var(--accent-teal)"> <span id="snd-label-chime">차임</span>
                 </label>
                 <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">
-                  <input type="radio" name="push-sound" value="none"  onchange="_savePushSound(this.value)" style="accent-color:#007b8b"> <span id="snd-label-none">없음</span>
+                  <input type="radio" name="push-sound" value="none"  onchange="_savePushSound(this.value)" style="accent-color:var(--accent-teal)"> <span id="snd-label-none">없음</span>
                 </label>
               </div>
               <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:4px 0">
@@ -1888,7 +1893,7 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
             </div>
             <div class="settings-card-row" onclick="clearSWCache()" style="cursor:pointer">
               <span class="settings-card-row-label">
-                <i class="ti ti-refresh" aria-hidden="true" style="font-size:17px;color:#007b8b;width:20px;text-align:center"></i>
+                <i class="ti ti-refresh" aria-hidden="true" style="font-size:17px;color:var(--accent-teal);width:20px;text-align:center"></i>
                 <span id="label-cache-clear">앱 캐시 초기화</span>
               </span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -2039,7 +2044,7 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
     <div class="sheet-handle"></div>
     <div class="sheet-title">
       <button onclick="closeAISettings()"
-        style="background:none;border:none;color:#007b8b;font-size:15px;
+        style="background:none;border:none;color:var(--accent-teal);font-size:15px;
                font-weight:400;cursor:pointer;padding:0;font-family:inherit">
         ← 뒤로
       </button>
@@ -2088,7 +2093,7 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
             <span style="font-size:14px;color:#111827">사용</span>
             <input type="checkbox" id="setting-phase7-enabled"
                    onchange="document.getElementById('setting-phase7-tier-row').style.display=this.checked?'flex':'none'"
-                   style="width:20px;height:20px;accent-color:#007b8b">
+                   style="width:20px;height:20px;accent-color:var(--accent-teal)">
           </label>
           <div id="setting-phase7-tier-row" style="display:none;align-items:center;
                justify-content:space-between;padding:8px 0;border-top:1px solid #f2f2f7">
