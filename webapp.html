@@ -129,6 +129,18 @@ html,body{height:100%;height:100dvh;overflow:hidden;
   /* 설정 패널 청록 강조색(#007b8b) — 기존 값을 그대로 기본값으로 사용.
      스킨을 고르면 /assets/hondi-skin.js가 이 두 변수를 덮어쓴다. */
   --accent-teal:#007b8b;--accent-teal-lt:#d3f7ff;
+
+  /* AI 비서 패널(#ai-panel, 실제 기본 화면) 전용 색상.
+     기존 --green 계열과 의도적으로 분리했다 — bubble-user는 이미
+     var(--green)을 쓰고 있어서(전역 .bubble-user 규칙), 여기서
+     --panel-bg를 --green과 묶으면 "말풍선 색 = 배경 색"이 되어버려
+     구분이 안 된다. 배경/전송버튼은 새 변수로, 말풍선은 패널 전용
+     스코프 오버라이드로 따로 관리한다. */
+  --panel-bg:#5E71D6;
+  --panel-header-txt:#FFFFFF;--panel-header-sub:rgba(255,255,255,.72);
+  --panel-ai-bd:rgba(0,0,0,.05);
+  --panel-me-bg:#5CD98A;--panel-me-txt:#123321;
+  --panel-send:#5E71D6;--panel-send-hover:#4C5DBF;
 }
 
 /* 설치된 PWA(standalone) 모드 — 안드로이드 하단 내비게이션 바가
@@ -219,7 +231,7 @@ body.gopang-authed #gopang-auth-gate{display:none}
   position:relative;
   flex:1 1 auto;min-height:0;
   z-index:auto;
-  background:#F8FAFF;
+  background:var(--panel-bg);
   display:flex;flex-direction:column;
   border-radius:0;
   box-shadow:none;
@@ -227,15 +239,16 @@ body.gopang-authed #gopang-auth-gate{display:none}
   touch-action:pan-y;
 }
 
-/* 상단 바 — 2026-07-07: AI 비서 대화창이 곧 메인 대화창이 되어, 앱
-   자체의 상단 바(.top-bar)만으로 충분하므로 이 패널 전용 상단 바는
-   완전히 숨긴다(요소·JS는 남기고 화면에서만 제거). */
+/* 상단 바 — 2026-07-07엔 숨겼었으나, 대화 상대(AI 비서 이름)와 알림
+   버튼을 보여줄 자리가 필요해져 다시 노출한다(2026-07-23). 색상은
+   --panel-bg로 배경 전체와 통일. 핸들·닫기 버튼은 여전히 쓰임이
+   없어 숨김 유지, 닫기 버튼만 알림 버튼으로 용도 변경(아래 참조). */
 #ai-panel-topbar{
-  display:none;
+  display:flex;
   position:relative;
   align-items:center;
-  background:#1A73E8;
-  padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;
+  background:var(--panel-bg);
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;
   flex-shrink:0;
   min-height:52px;
 }
@@ -254,10 +267,15 @@ body.gopang-authed #gopang-auth-gate{display:none}
    아래쪽(▼, 접기 가능) 화살표로 바꿔, 높이를 다시 줄일 수 있음을 알려준다
    (2026-07-02 신설) */
 #ai-panel-handle.full svg{transform:rotate(180deg)}
-/* AI 비서 이름 — 중앙 (터치로 편집) */
+/* AI 비서 이름 — 좌측 정렬 (터치로 편집), 부제("AI 비서") 포함 */
 #ai-panel-name-wrap{
-  flex:1;display:flex;align-items:center;justify-content:center;
+  flex:1;display:flex;align-items:center;justify-content:flex-start;
   gap:4px;cursor:pointer;min-width:0;padding:0 4px;
+}
+#ai-panel-name-col{display:flex;flex-direction:column;min-width:0}
+#ai-panel-name-subtitle{
+  font-size:11px;color:var(--panel-header-sub);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 #ai-panel-name{
   font-size:14px;font-weight:600;color:#fff;
@@ -275,16 +293,17 @@ body.gopang-authed #gopang-auth-gate{display:none}
 #ai-panel-name-edit-icon{
   flex-shrink:0;opacity:.75;
 }
-/* 닫기 버튼 — 우측 (2026-07-07: 이 창이 디폴트 메인 화면이 되어 "닫을 곳"이
-   없어짐 — 요소·JS는 남기고 화면에서만 숨김) */
+/* 알림 버튼 — 우측. 원래는 "닫기" 버튼이었으나 이 창이 디폴트 메인
+   화면이 되며 닫을 일이 없어져 죽어있던 자리를 재사용했다
+   (2026-07-23, id·기존 원형 버튼 스타일은 그대로 유지). */
 #ai-panel-close{
-  display:none;
+  display:flex;
   width:32px;height:32px;border-radius:50%;
   background:rgba(255,255,255,.18);
   align-items:center;justify-content:center;
-  flex-shrink:0;cursor:pointer;border:none;
+  flex-shrink:0;cursor:pointer;border:none;color:var(--panel-header-txt);
 }
-#ai-panel-close svg{pointer-events:none}
+#ai-panel-close svg{pointer-events:none;stroke:currentColor}
 
 /* 이름 편집 인풋 (inline) */
 #ai-panel-name-input{
@@ -304,12 +323,18 @@ body.gopang-authed #gopang-auth-gate{display:none}
   padding:12px 14px 8px;
   display:flex;flex-direction:column;gap:10px;
   scroll-behavior:smooth;
-  background:#F8FAFF;
+  background:var(--panel-bg);
 }
 #ai-panel-messages .bubble-ai{
   background:#fff;
-  border:1px solid #E8F0FE;
+  border:1px solid var(--panel-ai-bd);
   box-shadow:0 1px 4px rgba(26,115,232,.06);
+}
+/* 사용자(내) 말풍선 — 전역 .bubble-user는 var(--green)을 쓰지만,
+   패널 배경(--panel-bg)과 구분되는 별도 색이 필요해 스코프 오버라이드 */
+#ai-panel-messages .bubble-user{
+  background:var(--panel-me-bg);
+  color:var(--panel-me-txt);
 }
 
 /* 패널 메시지 목록 */
@@ -360,13 +385,13 @@ body.gopang-authed #gopang-auth-gate{display:none}
 #ai-panel-send{
   width:27px;height:27px;flex-shrink:0;
   border:1.5px solid transparent;border-radius:9px;
-  background:#CC785C;
+  background:var(--panel-send);
   color:#fff;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   transition:background .15s,border-color .15s,box-shadow .15s,opacity .15s;
   box-shadow:none;
 }
-#ai-panel-send:hover:not(:disabled):not(.generating){background:#B96847}
+#ai-panel-send:hover:not(:disabled):not(.generating){background:var(--panel-send-hover)}
 #ai-panel-send svg{stroke:currentColor;fill:none}
 #ai-panel-send .icon-stop{display:none;fill:currentColor;stroke:none}
 #ai-panel-send .icon-waveform{display:none}
@@ -385,7 +410,7 @@ body.gopang-authed #gopang-auth-gate{display:none}
 #ai-panel-send.generating .icon-send{display:none}
 #ai-panel-send.generating .icon-stop{display:block;color:#111}
 /* 음성 입력 중 — 대기 상태의 파형 아이콘이 오디오 이퀄라이저처럼 움직임 */
-#ai-panel-send.mic-active .icon-waveform{display:block;stroke:#CC785C}
+#ai-panel-send.mic-active .icon-waveform{display:block;stroke:var(--panel-send)}
 #ai-panel-send.mic-active .icon-waveform line{
   transform-box:fill-box;transform-origin:center;
   animation:ai-panel-wave-bar .8s ease-in-out infinite;
@@ -1269,9 +1294,12 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
           <polyline points="6 15 12 9 18 15"/>
         </svg>
       </button>
-      <!-- AI 비서 이름 (중앙, 터치로 편집) -->
+      <!-- AI 비서 이름 (좌측, 터치로 편집) + 부제 -->
       <div id="ai-panel-name-wrap" onclick="_editAIName()" title="AI 비서 이름 변경">
-        <span id="ai-panel-name">혼디</span>
+        <div id="ai-panel-name-col">
+          <span id="ai-panel-name">혼디</span>
+          <span id="ai-panel-name-subtitle">AI 비서</span>
+        </div>
         <svg id="ai-panel-name-edit-icon" width="12" height="12" viewBox="0 0 24 24"
              fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -1280,11 +1308,12 @@ body:not(.gopang-authed) .install-banner.show{display:none!important}
         <input id="ai-panel-name-input" type="text" maxlength="16"
                placeholder="AI 비서 이름" autocomplete="off">
       </div>
-      <!-- 닫기 버튼 (우) -->
-      <button id="ai-panel-close" title="닫기" onclick="closeAIPanel()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-             stroke="#fff" stroke-width="2.5" stroke-linecap="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      <!-- 알림 버튼 (우) — 기존 "닫기" 버튼 자리 재사용 -->
+      <button id="ai-panel-close" title="알림" onclick="openSettings()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
         </svg>
       </button>
     </div>
