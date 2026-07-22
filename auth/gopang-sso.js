@@ -153,7 +153,15 @@ function _trySession() {
 function _tryOpenerAuth(requiredLevel) {
   if (!window.opener || window.opener.closed) return Promise.resolve(null);
   return new Promise(resolve => {
-    const TIMEOUT = 2500;
+    // ★ 2026-07-22 — 실사로 확인: 새 탭이 잠깐 정상적으로 보이다가 몇 초
+    // 뒤 "로그인이 필요합니다" 화면으로 바뀌는 사고가 재현됐다. 이는
+    // opener 탭에게 서명을 요청했는데 2.5초 안에 응답을 못 받아
+    // 타임아웃 → 리다이렉트로 빠진 것으로 추정된다(opener 탭이 지갑
+    // 서명·서버 왕복을 끝내는 데 2.5초보다 오래 걸리는 경우가 실제로
+    // 있음). 여유 있게 늘린다 — 그래도 실패하면 정직하게 리다이렉트로
+    // 넘어가므로, 값을 늘려서 생기는 부작용은 없다(사용자가 조금 더
+    // 기다릴 뿐).
+    const TIMEOUT = 6000;
     const requestId = Math.random().toString(36).slice(2);
 
     let timer = setTimeout(() => {
