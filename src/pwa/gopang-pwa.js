@@ -7,6 +7,19 @@ let _deferredInstallPrompt = null;   // beforeinstallprompt 이벤트 보관
 const _INSTALL_DISMISSED_KEY = 'gopang_install_dismissed';
 const _INSTALL_DONE_KEY      = 'gopang_installed';
 
+// ── 홈 화면 아이콘 삭제 감지(최선 노력) ───────────────────────
+// 아이콘을 지우는 순간을 웹앱이 감지할 방법은 없다(그 시점엔 코드가
+// 실행되지 않으므로) — 대신 "다음에 이 사이트를 열었을 때" 확인한다.
+// gopang_installed 플래그가 있는데 지금 standalone 모드가 아니라면,
+// 브라우저 탭으로 열렸다는 뜻이라 홈 화면 아이콘이 삭제됐을 가능성이
+// 매우 높다. 이 경우 플래그를 즉시 지워, 재설치 시도 시 설치 배너가
+// "이미 설치됨"으로 오판해 막지 않게 한다.
+// (2026-07-23 — 삭제 직후 재설치가 며칠씩 안 되던 문제의 재발 방지)
+if (localStorage.getItem(_INSTALL_DONE_KEY) && !_isInStandaloneMode()) {
+  console.log('[PWA] standalone 아님 + 설치 플래그 존재 → 홈 화면 삭제로 추정, 플래그 초기화');
+  localStorage.removeItem(_INSTALL_DONE_KEY);
+}
+
 // ── Service Worker 등록 + 자동 갱신 ──────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
