@@ -100,11 +100,26 @@ export async function sendMessage() {
       await _sendP2P(text);
     } else if (aiActive) {
       // AI와 대화
-      await callAI(text, capturedFile, null);
+      // ★ 2026-07-21 신설 — 실사로 발견한 버그: GWP(K-Law 등) 새 탭은
+      // AI 응답이 다 온 "뒤에" _gwpLaunch()가 window.open()을 호출했다.
+      // 클릭과 그 호출 사이에 시간차가 생겨 브라우저가 "사용자가 요청
+      // 안 한 팝업"으로 오인해 차단 → 매번 허용 여부를 묻는 프롬프트가
+      // 뜨고, 허용해도 그 사이 오리진 관계(opener)가 불안정해지는 부작용
+      // 까지 있었다. engine.js의 _gwpLaunch()는 원래 _preTab(클릭 즉시
+      // 미리 열어둔 빈 탭)을 받으면 그걸 재사용하도록 이미 만들어져
+      // 있었는데, 정작 호출부(여기)가 한 번도 그걸 넘긴 적이 없어 죽은
+      // 기능이었다. 지금 이 시점은 sendMessage() 호출 이후 아직 어떤
+      // await도 거치지 않은 상태라(_runPipelineBackground는 fire-and-
+      // forget) 클릭 제스처가 아직 살아있다 — 여기서 열면 팝업 차단
+      // 대상이 아니다. GWP가 실제로 호출되지 않으면 call-ai.js가 이
+      // 빈 탭을 알아서 닫는다(기존 로직 그대로).
+      const _preTab = window.open('', '_blank');
+      await callAI(text, capturedFile, _preTab);
     } else if (_isRegistered()) {
       // 등록 사용자 + 대화 상대 없음 → AI 자동 활성 후 전달
       activateAI(true);
-      await callAI(text, capturedFile, null);
+      const _preTab = window.open('', '_blank');
+      await callAI(text, capturedFile, _preTab);
     } else {
       // 미등록(Guest) → 등록 유도
       appendBubble('ai',
@@ -118,7 +133,8 @@ export async function sendMessage() {
 
   // text 없는 경우 (이미지만) → callAI로 처리
   if (capturedFile && aiActive) {
-    await callAI('', capturedFile);
+    const _preTab = window.open('', '_blank');
+    await callAI('', capturedFile, _preTab);
   }
 }
 
