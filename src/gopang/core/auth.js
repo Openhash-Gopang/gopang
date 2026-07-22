@@ -743,6 +743,15 @@ export async function initAuth() {
   if (stored?.ipv6) {
     console.info('[Auth] 자동 로그인 ✅', stored.ipv6);
     setUser(stored);
+    // ★ 2026-07-21 신설 — 실사로 발견한 버그: 여태 이 지점에서 localStorage만
+    // 보고 곧바로 로그인 처리했다. 관리자가 PocketBase에서 계정을 직접
+    // 삭제해도(테스트 계정 정리 등) 클라이언트는 그 사실을 전혀 모른 채
+    // "정상 작동"하는 것처럼 계속 동작했다 — 실제 API 호출들이 이후
+    // 산발적으로 실패하기 시작할 뿐, 어디서도 "계정이 없어졌다"고 명확히
+    // 알려주지 않았다. 화면 반응 속도를 늦추지 않기 위해 여기서는 낙관적
+    // 으로 먼저 로그인 처리하고, 백그라운드에서 서버에 실제 존재 여부를
+    // 확인해 없으면 그 자리에서 정리하고 새로 시작하게 한다.
+    _verifyStoredAccountStillExists(stored);
     return stored;
   }
   // DEV_MODE: 저장된 세션 없어도 팝업 없이 개발용 계정으로 통과
@@ -759,6 +768,36 @@ export async function initAuth() {
     return devUser;
   }
   return new Promise((resolve) => { _showPhonePopup(resolve); });
+}
+
+// ── 저장된 계정의 서버 존재 여부 백그라운드 확인 (2026-07-21 신설) ──
+// L1 profiles에서 이 guid 레코드가 실제로 있는지만 가볍게 조회한다.
+// 네트워크 오류 등으로 조회 자체가 실패하면(오프라인 등) 아무 조치도
+// 하지 않는다 — "확인 못 함"과 "확실히 없음"을 구분해, 일시적 네트워크
+// 문제로 정상 계정을 로그아웃시키는 사고를 만들지 않는다. 진짜로 서버가
+// "레코드 없음"이라고 명확히 응답했을 때만 로그아웃 처리한다.
+async function _verifyStoredAccountStillExists(stored) {
+  try {
+    const filter = encodeURIComponent(`guid='${stored.ipv6}'`);
+    const res  = await fetch(`${L1_URL}?filter=${filter}&perPage=1`);
+    if (!res.ok) return; // 서버 오류 — 판단 보류
+    const data = await res.json().catch(() => null);
+    if (!data) return; // 파싱 실패 — 판단 보류
+    const stillExists = (data.items?.length || 0) > 0;
+    if (stillExists) return; // 정상 — 아무것도 안 함
+
+    console.warn('[Auth] 저장된 계정이 서버에서 사라짐(관리자 삭제 등) — 로컬 세션 정리:', stored.ipv6);
+    try { localStorage.removeItem(STORE_KEY); } catch {}
+    try { await window.GopangWallet?.destroy?.(); } catch {}
+    setUser(null);
+    // 조용히 새로고침해 initAuth()가 처음부터 다시 시작하게 한다 — 어중간한
+    // 화면 상태(존재하지 않는 계정으로 로그인된 것처럼 보이는 UI)로 남겨두지
+    // 않는다.
+    alert('이 기기에 저장된 계정이 서버에서 삭제되어 로그아웃됩니다. 다시 가입해 주세요.');
+    location.reload();
+  } catch (e) {
+    // 네트워크 오류 등 — 판단 보류, 조용히 무시
+  }
 }
 
 // ── 번호를 직접 받아 처리 (통합 팝업용) ─────────────────
