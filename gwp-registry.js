@@ -639,6 +639,24 @@ const SVC_ID_ALIAS = {
   'k-emergency': 'kemergency',
   'k-business':  'kbusiness',
   'business':    'kbusiness',
+  // kregionalgov(전국 지방행정 AI) — 2026-07-22 복원. 2026-07-21에 신설
+  // 됐던 이 별칭들이 같은 날 later(e469e54, jeju.hondi.net → hondi.net
+  // 오리진 이전 커밋)에서 실수로 통째로 삭제됐다. 이 별칭들은 지역
+  // 라우팅용이 아니라 "모델이 [GWP: xxx] 태그에 낼 법한 id(jeju,
+  // 제주도청 등)를 실제 서비스 id(kregionalgov)로 되돌리는 안전망"이라
+  // 오리진 변경과 무관하게 계속 필요하다 — 이게 없으면 "제주도청 불러
+  // 줘"에 응답은 하지만 실제로는 탭이 안 열리는 바로 그 사고가 재발한다
+  // (실사로 재현 확인, 2026-07-22).
+  jeju:          'kregionalgov',
+  jejudo:        'kregionalgov',
+  kjeju:         'kregionalgov',
+  regionalgov:   'kregionalgov',
+  'k-regionalgov': 'kregionalgov',
+  'regional-gov':  'kregionalgov',
+  '제주도청':      'kregionalgov',
+  '제주특별자치도청': 'kregionalgov',
+  '지방행정':      'kregionalgov',
+  '지자체':        'kregionalgov',
 };
 
 function getService(id) {
