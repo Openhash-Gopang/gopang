@@ -863,6 +863,14 @@ function _showPhonePopup(resolve) {
         <div style="font-size:13px;color:#6b7280">전화번호와 닉네임만 있으면 바로 시작할 수 있어요</div>
       </div>
 
+      <!-- 2026-07-21 신설 — 아래 전체를 컨테이너로 감싸, 인증번호 단계로
+           전환할 때 이 블록은 숨기고 _otp-step을 보여주는 방식으로 바꾼다
+           (기존엔 네이티브 prompt()를 썼는데, 모바일에서 사용자가 문자
+           앱으로 전환하는 순간 브라우저가 백그라운드 탭의 prompt()를
+           강제로 닫아버려 코드를 영영 입력할 수 없게 되는 사고가 실사로
+           확인됐다 — prompt는 화면에 "계속 남아있지" 않는다). -->
+      <div id="_main-step">
+
       <!-- 국가 드롭다운 패널 -->
       <div id="_country-panel" style="display:none;margin-bottom:10px;
            border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;
@@ -960,6 +968,40 @@ function _showPhonePopup(resolve) {
       </button>
       <div style="font-size:12px;color:#9ca3af;text-align:center;margin-top:10px">
         handle: <span id="_handle-preview" style="color:#1A73E8">@ · · · · · · · ·</span>
+      </div>
+
+      </div>
+
+      <!-- 인증번호 입력 단계 (2026-07-21 신설, prompt() 대체) — 화면에
+           계속 남아있어서 문자 앱을 확인하고 돌아와도 사라지지 않는다. -->
+      <div id="_otp-step" style="display:none">
+        <div style="font-size:15px;font-weight:600;color:#111827;margin-bottom:4px">인증번호 입력</div>
+        <div id="_otp-desc" style="font-size:13px;color:#6b7280;margin-bottom:16px"></div>
+        <input id="_otp-input" type="text" maxlength="6" placeholder="6자리 숫자"
+          style="width:100%;height:52px;border:1px solid #e5e7eb;border-radius:12px;
+                 background:#f9fafb;padding:0 14px;font-size:20px;letter-spacing:6px;
+                 text-align:center;font-family:inherit;outline:none;color:#111827;
+                 box-sizing:border-box;margin-bottom:8px"
+          autocomplete="one-time-code" inputmode="numeric"/>
+        <div id="_otp-error" style="display:none;font-size:12px;color:#dc2626;padding:0 4px;margin-bottom:8px"></div>
+        <button id="_otp-verify-btn"
+          style="width:100%;height:52px;background:#1A73E8;color:#fff;
+                 border:none;border-radius:12px;font-size:16px;font-weight:600;
+                 cursor:pointer;font-family:inherit;margin-bottom:8px">
+          확인
+        </button>
+        <div style="display:flex;gap:8px">
+          <button id="_otp-resend-btn" type="button"
+            style="flex:1;height:44px;background:#f3f4f6;color:#374151;border:none;
+                   border-radius:10px;font-size:13px;cursor:pointer;font-family:inherit">
+            재전송
+          </button>
+          <button id="_otp-back-btn" type="button"
+            style="flex:1;height:44px;background:none;color:#9ca3af;border:1px solid #e5e7eb;
+                   border-radius:10px;font-size:13px;cursor:pointer;font-family:inherit">
+            전화번호 다시 입력
+          </button>
+        </div>
       </div>
     </div>`;
 
@@ -1205,44 +1247,142 @@ function _showPhonePopup(resolve) {
 
   const btn = document.getElementById('_auth-btn');
 
-  // ── 전화번호 OTP 발송/확인 (2026-07-15 신설) ──────────────────
-  // 성공 시 L1 훅이 검증할 phone_verify_token을 반환. 사용자가 입력을
-  // 취소하거나 5회 다 틀리면 null을 반환(가입 중단, 앞 화면으로).
-  async function _requestAndVerifyPhoneOtp(e164) {
-    try {
-      const reqRes = await fetch(`${PROXY}/biz/phone-otp-request`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ e164 }),
-      });
-      const reqData = await reqRes.json().catch(() => ({}));
-      if (!reqRes.ok || !reqData.ok) {
-        alert('인증번호 발송에 실패했습니다: ' + (reqData.detail || reqData.error || '알 수 없는 오류'));
-        return null;
-      }
-    } catch (e) {
-      alert('인증번호 발송 중 네트워크 오류가 발생했습니다: ' + e.message);
-      return null;
-    }
+  // ── 전화번호 OTP 발송/확인 (2026-07-15 신설, 2026-07-21 UI 전면 교체) ──
+  // 성공 시 L1 훅이 검증할 phone_verify_token을 반환. 사용자가 뒤로가기를
+  // 누르거나 5회 다 틀리면 null을 반환(가입 중단, 앞 화면으로).
+  //
+  // ★ 2026-07-21 재작성 — 원래 여기서 매 시도마다 네이티브 prompt()를
+  // 띄워 6자리를 입력받았는데, 실사에서 확인된 치명적 결함이 있었다:
+  // 사용자가 문자를 확인하러 메시지 앱으로 전환하면(=이 탭이 백그라운드로
+  // 밀리면) 안드로이드 Chrome이 그 순간 열려 있던 prompt()를 강제로
+  // 닫아버린다. 그러면 code===null(취소)로 처리돼 그대로 가입이 중단되고,
+  // 다시 시도할 방법(재입력 창)이 아예 없었다 — "인증 창이 한번 나타났다
+  // 사라진 뒤 다시 안 뜬다"는 증상 그대로. 지금은 카드 안에 계속 남아있는
+  // 입력창(#_otp-step)으로 바꿔서, 앱을 오가도 이 화면 상태가 유지된다.
+  function _requestAndVerifyPhoneOtp(e164) {
+    return new Promise((resolve) => {
+      (async () => {
+        try {
+          const reqRes = await fetch(`${PROXY}/biz/phone-otp-request`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ e164 }),
+          });
+          const reqData = await reqRes.json().catch(() => ({}));
+          if (!reqRes.ok || !reqData.ok) {
+            alert('인증번호 발송에 실패했습니다: ' + (reqData.detail || reqData.error || '알 수 없는 오류'));
+            resolve(null);
+            return;
+          }
+        } catch (e) {
+          alert('인증번호 발송 중 네트워크 오류가 발생했습니다: ' + e.message);
+          resolve(null);
+          return;
+        }
 
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const code = prompt(`${e164}로 전송된 인증번호 6자리를 입력해 주세요.`);
-      if (code === null) return null; // 사용자 취소
-      try {
-        const verRes = await fetch(`${PROXY}/biz/phone-otp-verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ e164, code: code.trim() }),
-        });
-        const verData = await verRes.json().catch(() => ({}));
-        if (verRes.ok && verData.ok) return verData.phone_verify_token;
-        alert(verData.detail || '인증번호가 일치하지 않습니다. 다시 시도해 주세요.');
-      } catch (e) {
-        alert('인증 확인 중 네트워크 오류가 발생했습니다: ' + e.message);
-      }
-    }
-    alert('인증 시도 횟수를 초과했습니다. 처음부터 다시 시도해 주세요.');
-    return null;
+        const mainStep  = document.getElementById('_main-step');
+        const otpStep   = document.getElementById('_otp-step');
+        const otpDesc   = document.getElementById('_otp-desc');
+        const otpInput  = document.getElementById('_otp-input');
+        const otpErr    = document.getElementById('_otp-error');
+        const verifyBtn = document.getElementById('_otp-verify-btn');
+        const resendBtn = document.getElementById('_otp-resend-btn');
+        const backBtn   = document.getElementById('_otp-back-btn');
+
+        mainStep.style.display = 'none';
+        otpStep.style.display = '';
+        otpDesc.textContent = `${e164}로 전송된 인증번호 6자리를 입력해 주세요. 다른 앱에서 문자를 확인하고 돌아오셔도 이 화면은 그대로 남아있어요.`;
+        otpErr.style.display = 'none';
+        otpInput.value = '';
+        otpInput.focus();
+
+        let attempts = 0;
+        let settled  = false;
+
+        const finish = (result) => {
+          if (settled) return;
+          settled = true;
+          verifyBtn.onclick = null;
+          resendBtn.onclick = null;
+          backBtn.onclick   = null;
+          mainStep.style.display = '';
+          otpStep.style.display = 'none';
+          resolve(result);
+        };
+
+        const doVerify = async () => {
+          const code = otpInput.value.trim();
+          if (!/^\d{6}$/.test(code)) {
+            otpErr.textContent = '6자리 숫자를 입력해 주세요.';
+            otpErr.style.display = 'block';
+            return;
+          }
+          verifyBtn.disabled = true;
+          verifyBtn.textContent = '확인 중...';
+          otpErr.style.display = 'none';
+          try {
+            const verRes  = await fetch(`${PROXY}/biz/phone-otp-verify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ e164, code }),
+            });
+            const verData = await verRes.json().catch(() => ({}));
+            if (verRes.ok && verData.ok) {
+              finish(verData.phone_verify_token);
+              return;
+            }
+            attempts += 1;
+            if (attempts >= 5) {
+              alert('인증 시도 횟수를 초과했습니다. 처음부터 다시 시도해 주세요.');
+              finish(null);
+              return;
+            }
+            otpErr.textContent = verData.detail || '인증번호가 일치하지 않습니다. 다시 시도해 주세요.';
+            otpErr.style.display = 'block';
+            otpInput.value = '';
+            otpInput.focus();
+          } catch (e) {
+            otpErr.textContent = '인증 확인 중 네트워크 오류가 발생했습니다: ' + e.message;
+            otpErr.style.display = 'block';
+          } finally {
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = '확인';
+          }
+        };
+
+        verifyBtn.onclick = doVerify;
+        otpInput.onkeydown = (ev) => { if (ev.key === 'Enter') doVerify(); };
+
+        resendBtn.onclick = async () => {
+          resendBtn.disabled = true;
+          resendBtn.textContent = '재전송 중...';
+          try {
+            const r = await fetch(`${PROXY}/biz/phone-otp-request`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ e164 }),
+            });
+            const d = await r.json().catch(() => ({}));
+            if (r.ok && d.ok) {
+              otpErr.style.display = 'none';
+              otpInput.value = '';
+              otpInput.focus();
+            } else {
+              otpErr.textContent = d.detail || d.error || '재전송에 실패했습니다.';
+              otpErr.style.display = 'block';
+            }
+          } catch (e) {
+            otpErr.textContent = '재전송 중 네트워크 오류: ' + e.message;
+            otpErr.style.display = 'block';
+          } finally {
+            resendBtn.disabled = false;
+            resendBtn.textContent = '재전송';
+          }
+        };
+
+        backBtn.onclick = () => finish(null);
+      })();
+    });
   }
 
   // ── 실제 신규 가입 처리 (기존 _register 로직 그대로, 지역 필드는 제거) ──
@@ -1950,7 +2090,15 @@ export async function ensureX25519Synced(guid) {
   if (!guid) return { ok: false, reason: 'guid_missing' };
   if (typeof window.GopangWallet === 'undefined') return { ok: false, reason: 'wallet_module_not_loaded' };
 
-  const wallet = await window.GopangWallet.load();
+  let wallet;
+  try {
+    wallet = await window.GopangWallet.load();
+  } catch (e) {
+    // load()가 2026-07-21부터 "레코드는 있는데 복호화 실패"를 null 대신
+    // 구분된 에러로 던지도록 바뀌었다 — 이 함수는 "실패해도 가입 흐름을
+    // 막지 않는다"는 계약이므로, 여기서도 예외를 삼키고 사유만 구분해 반환한다.
+    return { ok: false, reason: e?.code === 'WALLET_DECRYPT_FAILED' ? 'wallet_locked' : (e.message || 'wallet_load_failed') };
+  }
   if (!wallet) return { ok: false, reason: 'wallet_not_found' };
 
   const { publicKeyB64u } = await wallet.ensureX25519Key();
