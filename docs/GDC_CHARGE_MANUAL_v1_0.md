@@ -1,0 +1,146 @@
+# GDC 가입 충전·사용량 차감·저잔액 알림 완전 매뉴얼 v1.0
+
+> **작성일**: 2026-07-23 · **대상**: 일반 사용자 + 개발자(유지보수·확장)
+> **메타 매뉴얼**: [`docs/MANUAL_INDEX.md`](./MANUAL_INDEX.md)
+> **관련 코드**: `worker.js`(`_grantSignupBonus`, `_settleAiUsage`, `_checkLowBalanceAndNotify`,
+> `handleBalanceStatus`, `handleSignupBonusRetry`, `/biz/*` 라우트) ·
+> `pb_hooks/main.pb.js`(`/api/mint`, `/api/ai-charge`) ·
+> gdc 저장소 `charge.html`(사용자용 충전 신청) · `charge-admin.html`(관리자 확인) ·
+> `js/gdc-balance-banner.js`(저잔액 배너)
+
+이 문서는 "가입하면 GDC가 조금 생기고, 쓰다 보면 줄어들고, 다 떨어지면
+충전하라고 알려주는" 기능(이하 GDC 충전 메커니즘, SP-GDC-CHARGE-v1_0)을
+다룹니다. 설계 근거와 실사 중 발견한 문제들을 전부 기록해 뒀습니다 —
+비슷한 증상을 다시 겪게 될 다음 개발자가 같은 시행착오를 반복하지
+않도록 하는 것이 이 문서의 가장 큰 목적입니다.
+
+---
+
+## 1. 무엇을 하는 기능인가 (요약)
+
+1. **가입 축하 충전** — 가입 직후 100원 상당(=0.1 GDC, 교환비 1,000:1)을
+   실제 지갑에 1회 자동 충전합니다.
+2. **사용량 차감** — AI를 쓸 때마다 실사용량만큼 그 잔액에서 실제로
+   차감됩니다.
+3. **저잔액 알림** — 잔액이 20원 상당(=0.02 GDC) 이하로 내려가면
+   웹푸시로 충전을 권고합니다.
+4. **충전** — 사용자는 `charge.html`에서 계좌입금 방식으로 충전을
+   신청하고, 관리자가 `charge-admin.html`에서 입금을 확인하면 GDC가
+   발행됩니다.
+
+## 2. 왜 새로 만들지 않고 기존 코드를 재사용했나
+
+실사 결과 아래 세 파이프라인이 이미 구현·실사용 중이었습니다 — 그래서
+이번 작업은 "언제 부를 것인가"와 "저잔액을 어떻게 감지·통지할 것인가"에만
+집중했습니다.
+
+- `/api/mint`(main.pb.js) — krw_amount를 GDC로 환산해 발행. 관리자
+  충전확정(`handleChargeConfirm`)이 이미 이 경로를 씀 — 가입 보너스도
+  그대로 재사용.
+- `/api/ai-charge` + `_chargeGdcForAiUsage`/`_settleAiUsage`(worker.js) —
+  AI 사용량이 발생할 때마다 실제 GDC 잔액에서 차감하는 파이프라인이
+  이미 실사용 중이었음.
+- `_sendPushToGuid` — VAPID 웹푸시 발송 헬퍼(배포 알림 등에 이미 사용
+  중) — 저잔액 알림도 그대로 재사용.
+
+## 3. 신설한 것
+
+### 3-1. 가입 축하 충전 — `_grantSignupBonus(env, guid)`
+- 위치: `handleRegisterKey`의 "신규 등록" 분기(동일 키 재등록 멱등
+  분기에는 안 걸림).
+- `/api/mint`를 `krw_amount:100, memo:'signup_bonus:가입 축하 충전'`로
+  호출 → 0.1 GDC 발행.
+- 멱등성: KV `hondi:signup_bonus_granted:{guid}` 플래그, 평생 1회.
+  mint 실패 시 플래그를 세우지 않아 다음 로그인/재등록 시 자동 재시도.
+- 실패해도 가입 자체는 막지 않음(로그 태그 `SIGNUP_BONUS_MINT_FAILED`).
+
+### 3-2. 사용량 차감 — 별도 신설 없음
+기존 `_settleAiUsage → _chargeGdcForAiUsage → POST /api/ai-charge`를
+그대로 씀. 이번에 바꾼 부분은 `_chargeGdcForAiUsage`의 반환값
+(`balance_after`)을 저잔액 체크(3-3)로 그대로 넘기는 한 줄뿐 —
+잔액 재조회 없음.
+
+### 3-3. 저잔액 충전 권고 알림 — `_checkLowBalanceAndNotify`
+- 문턱값: 20원 상당(=0.02 GDC, `GDC_LOW_BALANCE_THRESHOLD_KRW`).
+- 실차감 직후 `balance_after`가 문턱값 이하면 `_sendPushToGuid`로 알림.
+- 스팸 방지: KV `hondi:low_balance_notified:{guid}` 플래그. 잔액이
+  다시 문턱값 위로 회복되면(충전 등) 플래그 해제 → 다음에 다시
+  낮아지면 재알림 가능.
+- 보조 채널: `GET /biz/balance-status?guid=...` — 푸시 미구독자를
+  위한 배너용 엔드포인트(`gdc-balance-banner.js`가 5분 간격 폴링).
+
+### 3-4. 관리자 재시도 엔드포인트 — `POST /biz/admin/signup-bonus-retry`
+`{secret, guids:[...]}`를 받아 각 guid에 `_grantSignupBonus`를 재실행.
+이 함수 자체가 멱등이라, 이미 지급된 guid를 섞어 넣어도
+`already_granted`로 안전하게 건너뜁니다 — "실패한 것만 정확히 골라야"
+하는 부담이 없습니다. 응답은 guid별
+`{status: granted|already_granted|failed|error}` 배열. 별도 실패
+로그 컬렉션은 만들지 않음 — 로그에서 `SIGNUP_BONUS_MINT_FAILED` 태그로
+guid를 찾아 이 엔드포인트에 넣는 수동 절차입니다.
+
+### 3-5. 사용자용 충전 신청 페이지 — `charge.html` (gdc 저장소)
+실사 중 발견: gdc 저장소에는 `charge-admin.html`(관리자 전용)만 있고
+**사용자가 직접 매칭코드를 발급받는 화면이 어디에도 없었습니다.**
+저잔액 알림을 보내도 클릭할 화면이 없는 상태였던 것 — 그래서
+`charge.html`을 신설했습니다.
+
+- `POST /biz/charge-request` → 매칭코드·계좌정보·안내문 표시
+- `GET /biz/charge-status`를 20초 간격 폴링 → 관리자가
+  `charge-admin.html`에서 확정하면 자동으로 "입금 확인 완료"로 전환
+- `GET /biz/balance-status`로 상단에 현재 잔액 배너 표시
+- 도메인: `gdc.hondi.net`(CNAME 확인함 — `gopang.net` 아님)
+
+## 4. 정책 결정 — "가입자당 100원 무료 한도"와의 관계 (B안 채택)
+
+기존에 **"가입자당 100원 무료 한도"**라는 별도의 가상 카운터(실지갑과
+무관, KV `hondi:free_spend`로만 추적)가 이미 있었습니다. 처음엔 이
+신설분(실지갑 0.1GDC)을 그 위에 얹는 A안으로 시작했는데(총 200원 상당
+무료가 되는 부작용 있음), 이후 **B안으로 정정**했습니다:
+
+- `FREE_QUOTA_KRW_LIMIT`를 100 → **0**으로 변경.
+- `_settleAiUsage`의 `remainingFree`가 항상 0이 되어, 첫 턴부터
+  실사용량 전액이 실지갑 GDC로 청구됩니다.
+- "가입 직후 충전된 GDC 그 자체가 유일한 무료 예산"이라는 원 요청과
+  정확히 일치합니다.
+- 과거 KV 누적치는 그대로 남아있지만 한도가 0이라 더 이상 참조되지
+  않음 — 별도 삭제·마이그레이션 불필요.
+- `FREE_QUOTA_ENFORCEMENT_ENABLED`(개발 기간 차단 잠정 해제 플래그)는
+  건드리지 않았습니다 — 이건 별도의 상용 출시 판단이라 이번 범위 밖.
+
+## 5. 실사용 검증 중 발견한 버그 — PC/미확인 기기·잠긴 지갑
+
+`gopang-wallet.js` 최신본을 직접 대조한 결과, **PC/미확인 기기에서는
+지갑이 자동 생성되지 않는다**는 걸 확인했습니다(최근 신설된 안전장치 —
+"PC가 먼저 키를 만들어 진짜 계정 키와 어긋나는 사고" 방지 목적). 이
+경우 `window.gopangWallet`은 계속 `null`로 남고
+`window.gopangWalletNeedsSetup=true`만 세워집니다. 처음 만든
+`charge.html`은 이걸 "아직 로딩 중"과 구분 못 하고 5초 뒤 무조건
+"잠시 후 다시 시도하세요"라는 **틀린 안내**를 보여주고 있었습니다
+(실제로는 아무리 기다려도 채워지지 않는 상태). 지갑은 있는데 못 여는
+경우(`gopangWalletLocked`)도 마찬가지였습니다.
+
+수정: `waitForWallet()`이 `{guid, reason}` 형태로 반환하도록 바꿔
+`setup_needed`/`locked`/`timeout`을 구분하고, 앞의 두 경우엔
+`/auth/device-link.html`로 안내하는 링크를 즉시 보여주도록 했습니다
+(webapp.html의 기존 지갑잠금 배너와 같은 목적지, 같은 관례).
+
+**주의**: 이 gap(`gopang:wallet-setup-needed` 이벤트를 구독하는 페이지가
+어디에도 없음)은 `charge.html`만의 문제가 아니라 **플랫폼 전체의 기존
+공백**입니다. 이번엔 `charge.html`만 고쳤고, 다른 페이지(`dashboard.html`
+등)는 손대지 않았습니다 — 전체 반영 여부는 별도 판단이 필요합니다.
+
+## 6. 부수적으로 발견·수정한 것 — gdc 저장소 `.git` 노출 사고
+
+별도 문서로 분리했습니다 — [`GDC_GIT_EXPOSURE_INCIDENT_2026_07_23.md`](./GDC_GIT_EXPOSURE_INCIDENT_2026_07_23.md)
+참고. wrangler 정적 자산 배포가 `.gitignore`를 따르지 않아 `.git` 폴더
+전체가 공개 배포된 사고였습니다 — GDC 충전 기능과 직접 관련은 없지만
+같은 배포 세션에서 발견돼 함께 기록해 둡니다.
+
+## 7. 남은 TODO
+
+- 가입 보너스 지급 실패 누적 건을 위한 **자동** 배치 재처리(현재는
+  로그에서 guid를 찾아 관리자 엔드포인트에 수동으로 넣어야 함).
+- `charge.html`의 PC/잠긴 지갑 안내를 다른 페이지(`dashboard.html`,
+  `user-dashboard.html` 등)에도 확대 적용할지 여부.
+- `FREE_QUOTA_ENFORCEMENT_ENABLED`를 상용 출시 시점에 언제 `true`로
+  되돌릴지는 이번 범위 밖의 별도 판단.

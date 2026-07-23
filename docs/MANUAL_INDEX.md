@@ -18,12 +18,14 @@
 | PC에서 스마트폰과 같은 지갑으로 로그인하는 법(기기 간 지갑 이전) | `docs/DEVICE_LINK_MANUAL_v1_0.md` |
 | K-서비스가 소유 전문가 페르소나·상담 이력을 어떻게 기록·총괄하는지(owner_pdv) | `docs/OWNER_PDV_GOVERNANCE_MANUAL_v1_0.md` |
 | 지방행정 AI(도청·시청·읍면동·국가기관)가 원형→인스턴스를 어떻게 조립하는지 | `docs/GOV_REGIONAL_AC_MANUAL_v1_0.md` |
+| GDC가 가입 후 어떻게 충전·차감되고, 잔액이 낮으면 어떻게 알림이 오는지 | `docs/GDC_CHARGE_MANUAL_v1_0.md` |
 | Supabase→L1 이관이 지금 어디까지 됐는지 | `docs/supabase_to_l1_migration_plan.md` |
 | webapp.html의 설계 이력·SP 구조 | `docs/webapp_manual_v4.md` |
 | 새 개발자가 코드베이스를 처음 파악할 때 | `docs/manual/01-system-map.md`부터 순서대로 |
 | 콘솔 에러가 났을 때 | `docs/manual/04-debug-guide.md` |
 | 새 플러그인(K-Law 분류기 등) 추가법 | `docs/plugin-guide.md` |
 | 하위 시스템이 PDV 보고서를 어떻게 보내는지 | `docs/gopang-report-manual.md` |
+| 최근 세션에서 무슨 작업이 있었는지(일회성 작업기록) | `docs/WORKLOG_INDEX.md` |
 
 ---
 
@@ -32,7 +34,7 @@
 ### 🧑‍💻 일반 사용자 대상
 | 문서 | 분야 | 최종수정 | 상태 |
 |---|---|---|---|
-| `docs/hondi_user_manual.html` | 혼디 활용·한계 시나리오, PDV/AC 개념 설명 | 2026-07-16 | 🟢 최신 — desktop.html 좌측 사이드바에 링크됨 |
+| `docs/hondi_user_manual.html` | 혼디 활용·한계 시나리오, PDV/AC 개념 설명, 혼디 생태계 한눈에 보기(+GDC 3문장 요약) | 2026-07-23 | 🟢 최신 — desktop.html 좌측 사이드바에 링크됨 |
 | `docs/user-guide.html` | 비개발자용 시작하기(가입→AI 활성화) | 2026-07-02 | 🟢 유효 — desktop.html "시작하기" 버튼에 링크됨 |
 | `user-manual.html`(루트) | 모바일 웹앱 UI 조작법(스와이프 메뉴 등) | 2026-07-02 | 🟢 유효 — webapp.html iframe + sw.js 오프라인 캐시로 링크됨 |
 | `docs/혼디_완전매뉴얼_v1.0.docx` | 혼디 비전·철학 개요(제1장~) | 2026-06-28 | 🟢 유효 |
@@ -56,6 +58,7 @@
 | `docs/DEVICE_LINK_MANUAL_v1_0.md` | 기기 간 지갑 이전(PC 로그인)·웹푸시·고액거래 재인증(WebAuthn)·실사로 발견한 함정 11가지 | 2026-07-20 | 🟢 신설 — 실사 완료(실제 기기 테스트로 end-to-end 검증됨) |
 | `docs/OWNER_PDV_GOVERNANCE_MANUAL_v1_0.md` | K-서비스·전문가 페르소나 거버넌스, 기관측 PDV(owner_pdv) 스키마·가명화 해시·C45/C39-5·SSOT 마이그레이션 현황 | 2026-07-20 | 🟢 신설 — 설계·구현 완료, 배포·실사용 테스트는 미완료(§11 체크리스트 참조) |
 | `docs/GOV_REGIONAL_AC_MANUAL_v1_0.md` | 지방행정 AI 원형/인스턴스 아키텍처(도청·시군구청·읍면동·국가기관), gov_do/gov_national 개명, 시군구·국가기관 리졸버 정확도 우선+SSE+cityHint | 2026-07-21 | 🟢 신설 — 실배포 재현 검증(`&debug=1`) 완료 |
+| `docs/GDC_CHARGE_MANUAL_v1_0.md` | 가입 축하 충전(0.1GDC)·사용량 차감·저잔액 알림(SP-GDC-CHARGE-v1_0), `charge.html` 신설, B안(무료한도 0원) 채택, PC/잠긴 지갑 안내 버그 수정 | 2026-07-23 | 🟢 신설 — 실사·배포 완료 |
 | `docs/POCKETBASE-STRUCTURE-GUIDE_v1_0.md` + `_v1_1_addendum` | L1~L5 서버 구조, Rule NULL/빈문자열 함정 등 실전 팁 | 2026-07-16 / 07-19 | 🟢 유효 — `L1_POCKETBASE_MANUAL`과 상호보완(겹치는 부분 있음, 통합은 후속 검토) |
 | `docs/gopang-report-manual.md` | 하위 시스템 PDV 보고서(6하원칙) 스키마·전송 API | 2026년 5월(v1.0) | 🟢 유효 — **README.md에서 직접 링크됨** |
 | `docs/webapp_manual_v4.md` | `webapp.html` 설계 명세(SP-00 v10.0, v4.0) | 2026-06-09 | 🟢 유효(v4.0 — v3.1의 상위호환) |
@@ -63,6 +66,20 @@
 | `docs/SUBSYSTEM_REGISTRY_GUIDE.md` | 하위 시스템 등록 가이드 | 미확인 | ⚪ 이번 조사 범위 밖 |
 | `docs/gopang-id-auth-guide.md` | 인증 SSO 구조 | 미확인 | ⚪ 이번 조사 범위 밖 |
 | `docs/openhash-l1-l5-provisioning-guide.md` | L1~L5 프로비저닝 | 미확인 | ⚪ 이번 조사 범위 밖 |
+
+### 📝 작업 이력 (일회성 작업 기록 — 매뉴얼 아님)
+> 2026-07-23 신설. `desktop.html` 사이드바에 날짜 찍힌 작업 기록이 개별
+> 항목으로 하나씩 쌓이면 세션이 늘수록 사이드바가 무한정 길어지는 문제가
+> 있어(`GDC_CHARGE_MANUAL_v1_0.md` 작업 중 정리), 개별 사이드바 링크는
+> 없애고 아래 인덱스 하나로 모았습니다. 새 작업 기록은 이 인덱스 표에만
+> 추가하면 됩니다 — `desktop.html`을 매번 고칠 필요 없음.
+
+| 문서 | 분야 | 상태 |
+|---|---|---|
+| `docs/WORKLOG_INDEX.md` | 모든 일회성 작업 기록의 목록(최신순) | 🟢 신설 — 사이드바 "작업 이력 (전체)" 링크가 이 문서 하나만 가리킴 |
+| `docs/MARKET_PROXY_INTEGRATION_LOG_2026_07_21.md` | market-proxy 원장통합 작업기록 | 🟢 유효 — `WORKLOG_INDEX.md`에서 링크됨(사이드바 개별 링크는 제거) |
+| `docs/WORKLOG_MANUAL_2026_07_22.md` | device-link 안정화·GWP 채팅 UI 공용화·지갑 CDN 개편 작업기록 | 🟢 유효 — `WORKLOG_INDEX.md`에서 링크됨(사이드바 개별 링크는 제거) |
+| `docs/GDC_GIT_EXPOSURE_INCIDENT_2026_07_23.md` | gdc 저장소 wrangler 배포 시 `.git` 폴더 전체 공개 노출 사고·수정 | 🟢 신설 — 사이드바 "⚠ 주의" 섹션에도 별도 링크됨(사고 성격상 이중 노출) |
 
 ### 📦 아카이브 (`docs/archive/`) — 폐기, 이력 보존용
 | 문서 | 폐기 사유 |
@@ -83,3 +100,4 @@
    ```
 2. **버전이 올라가면 구버전은 "폐기" 표시만 하고, 삭제는 이 인덱스에서 archive로 옮긴 뒤에만** 합니다.
 3. **Supabase/gopang_v2처럼 아키텍처가 바뀌는 큰 변경이 있으면, 이 인덱스의 "최종수정" 컬럼을 갱신하는 걸 그 변경 작업의 완료 조건에 포함**합니다(오늘처럼 "코드는 바뀌었는데 문서 15개가 안 바뀐" 상태가 반복되지 않도록).
+4. **날짜 찍힌 일회성 작업 기록(worklog)은 `desktop.html` 사이드바에 개별 항목으로 추가하지 않습니다** (2026-07-23 확정 — 세션마다 쌓여 사이드바가 무한정 길어지는 문제가 실제로 발생했음). 대신 `docs/WORKLOG_INDEX.md` 표에 한 줄만 추가하세요. 지금도 유효한 절차·개념 설명이 필요해지면, 그때 정식 매뉴얼(위 표 어딘가)로 승격하는 걸 고려하세요.
