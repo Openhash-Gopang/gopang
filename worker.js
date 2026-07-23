@@ -411,32 +411,56 @@ async function _l1FindProfileByE164(env, e164) {
   return data.items?.[0] || null;
 }
 
-// POST /auth/device-link/init { e164, pcPubKeyB64u, pcLabel? }
-// PC가 호출 — 그 번호로 등록된 계정(guid)에 웹푸시로 페어링 요청을 보낸다.
+// POST /auth/device-link/init { e164, pcPubKeyB64u?, pcLabel?, purpose?, sigMsg? }
+// PC가 호출 — 그 번호로 등록된 계정(guid)에 웹푸시로 페어링/서명 요청을 보낸다.
+//
+// purpose (2026-07-23 신설, 기본값 'key_transfer' — 이전 호출부와 완전
+// 하위호환):
+//   - 'key_transfer': 기존과 동일. PC가 이 세션을 통해 개인키 자체를
+//     X25519 봉투로 전달받는다(전용 PC — 다음부터 폰 없이 로그인).
+//     pcPubKeyB64u 필수.
+//   - 'sign_request' : PC가 개인키를 받지 않고, 특정 payload(sigMsg)에
+//     대한 서명 '결과'만 1회성으로 요청한다(공용 PC — 세션에 아무것도
+//     남기지 않음). sigMsg 필수, pcPubKeyB64u는 불필요.
 async function handleDeviceLinkInit(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { pcPubKeyB64u, pcLabel } = body;
+  const { pcPubKeyB64u, pcLabel, sigMsg } = body;
+  const purpose = body.purpose === 'sign_request' ? 'sign_request' : 'key_transfer'; // 미지정/그외 값은 안전하게 기존 동작으로
   const e164 = _normalizePhoneE164(body.e164);
   if (!e164) {
     return _err(400, 'INVALID_PHONE', '올바른 국내 전화번호 형식이 아닙니다', corsHeaders);
   }
-  if (!pcPubKeyB64u) return _err(400, 'MISSING_FIELD', 'pcPubKeyB64u 필수', corsHeaders);
-  // ★ 2026-07-20 신설 — 실사로 발견: 이 값이 32바이트(X25519 raw 공개키
-  // 크기)가 아닌 채로 저장되면, 폰이 나중에 sealForRecipient()에서
-  // "X25519 key data must be 256 bits"라는 암호화 단계 에러로만 마주치게
-  // 되어 원인을 찾기 매우 어려웠다(USB 디버깅 여러 번 시도 끝에 겨우
-  // 발견). 여기서 미리 길이를 검증해 애초에 나쁜 값이 세션에 저장조차
-  // 안 되게 막는다 — 문제가 있으면 PC가 요청하는 순간 바로 명확한
-  // 에러를 받는다.
-  try {
-    if (_b64uToBytes(pcPubKeyB64u).length !== 32) {
-      return _err(400, 'INVALID_PC_PUBKEY',
-        `pcPubKeyB64u는 32바이트(X25519 공개키)여야 합니다 — 받은 길이: ${_b64uToBytes(pcPubKeyB64u).length}바이트`,
-        corsHeaders);
+
+  if (purpose === 'key_transfer') {
+    if (!pcPubKeyB64u) return _err(400, 'MISSING_FIELD', 'pcPubKeyB64u 필수', corsHeaders);
+    // ★ 2026-07-20 신설 — 실사로 발견: 이 값이 32바이트(X25519 raw 공개키
+    // 크기)가 아닌 채로 저장되면, 폰이 나중에 sealForRecipient()에서
+    // "X25519 key data must be 256 bits"라는 암호화 단계 에러로만 마주치게
+    // 되어 원인을 찾기 매우 어려웠다(USB 디버깅 여러 번 시도 끝에 겨우
+    // 발견). 여기서 미리 길이를 검증해 애초에 나쁜 값이 세션에 저장조차
+    // 안 되게 막는다 — 문제가 있으면 PC가 요청하는 순간 바로 명확한
+    // 에러를 받는다.
+    try {
+      if (_b64uToBytes(pcPubKeyB64u).length !== 32) {
+        return _err(400, 'INVALID_PC_PUBKEY',
+          `pcPubKeyB64u는 32바이트(X25519 공개키)여야 합니다 — 받은 길이: ${_b64uToBytes(pcPubKeyB64u).length}바이트`,
+          corsHeaders);
+      }
+    } catch (e) {
+      return _err(400, 'INVALID_PC_PUBKEY', 'pcPubKeyB64u가 올바른 Base64URL 형식이 아닙니다: ' + e.message, corsHeaders);
     }
-  } catch (e) {
-    return _err(400, 'INVALID_PC_PUBKEY', 'pcPubKeyB64u가 올바른 Base64URL 형식이 아닙니다: ' + e.message, corsHeaders);
+  } else {
+    // sign_request
+    if (!sigMsg || typeof sigMsg !== 'string') {
+      return _err(400, 'MISSING_FIELD', 'sigMsg(서명 대상 문자열) 필수', corsHeaders);
+    }
+    // 서명 요청은 페이로드가 임의 길이일 수 있어 과도한 크기를 미리 막는다
+    // (푸시 payload·KV 값 크기 제한 보호 — 실제 서명 대상은 보통 해시라
+    // 이 한도면 충분하고 넘으면 호출부 실수로 본다).
+    if (sigMsg.length > 4096) {
+      return _err(400, 'SIGMSG_TOO_LARGE', 'sigMsg가 너무 깁니다(4096자 초과)', corsHeaders);
+    }
   }
   if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
 
@@ -451,7 +475,9 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
   const sessionId = crypto.randomUUID();
   const code = _generateDeviceLinkCode();
   const record = {
-    guid: profile.guid, e164, pcPubKeyB64u,
+    guid: profile.guid, e164, purpose,
+    pcPubKeyB64u: purpose === 'key_transfer' ? pcPubKeyB64u : null,
+    sigMsg: purpose === 'sign_request' ? sigMsg : null,
     pcLabel: pcLabel || '알 수 없는 기기',
     code, attempts: 0, state: 'pending', smsResendCount: 0,
   };
@@ -474,8 +500,10 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
       if (fresh?.push_subscription) {
         const sub = JSON.parse(fresh.push_subscription);
         const payload = JSON.stringify({
-          title: '새 기기에서 로그인 요청',
-          body:  `${record.pcLabel}에서 로그인을 시도했습니다. 확인하려면 누르세요.`,
+          title: purpose === 'sign_request' ? '서명 요청' : '새 기기에서 로그인 요청',
+          body:  purpose === 'sign_request'
+            ? `${record.pcLabel}에서 서명을 요청했습니다. 확인하려면 누르세요.`
+            : `${record.pcLabel}에서 로그인을 시도했습니다. 확인하려면 누르세요.`,
           sound: fresh.push_sound || 'ping',
           url:   `/auth/device-link-approve.html?sessionId=${encodeURIComponent(sessionId)}`,
           tag:   `gopang-device-link-${sessionId}`,
@@ -563,6 +591,8 @@ async function handleDeviceLinkSession(request, env, corsHeaders) {
   return new Response(JSON.stringify({
     ok: true, state: record.state, code: record.code, pcLabel: record.pcLabel,
     pcPubKeyB64u: record.pcPubKeyB64u,
+    purpose: record.purpose || 'key_transfer', // 2026-07-23 신설 — 이전 세션 레코드엔 없을 수 있어 기본값 보정
+    sigMsg: record.sigMsg || null,
   }), { status: 200, headers: corsHeaders });
 }
 
@@ -595,14 +625,15 @@ async function handleDeviceLinkVerify(request, env, corsHeaders) {
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
 }
 
-// POST /auth/device-link/deliver { sessionId, guid, sealed }
+// POST /auth/device-link/deliver { sessionId, guid, sealed? } (key_transfer)
+//  또는  { sessionId, guid, signature, publicKeyB64u } (sign_request)
 // 폰이 호출 — code가 이미 approved된 세션에만, 자기 guid가 그 세션
-// 소유자와 일치할 때만 봉투(암호화된 개인키)를 넘긴다.
+// 소유자와 일치할 때만 결과(key_transfer=봉투/sign_request=서명)를 넘긴다.
 async function handleDeviceLinkDeliver(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
-  const { sessionId, guid, sealed } = body;
-  if (!sessionId || !guid || !sealed) return _err(400, 'MISSING_FIELD', 'sessionId, guid, sealed 필수', corsHeaders);
+  const { sessionId, guid, sealed, signature, publicKeyB64u } = body;
+  if (!sessionId || !guid) return _err(400, 'MISSING_FIELD', 'sessionId, guid 필수', corsHeaders);
   if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
 
   const key = `devlink:${sessionId}`;
@@ -612,8 +643,19 @@ async function handleDeviceLinkDeliver(request, env, corsHeaders) {
   if (record.guid !== guid) return _err(403, 'GUID_MISMATCH', '이 세션의 소유자가 아닙니다', corsHeaders);
   if (record.state !== 'approved') return _err(409, 'NOT_APPROVED', 'PC가 아직 코드를 확인하지 않았습니다', corsHeaders);
 
+  const purpose = record.purpose || 'key_transfer';
+  if (purpose === 'sign_request') {
+    if (!signature || !publicKeyB64u) {
+      return _err(400, 'MISSING_FIELD', 'signature, publicKeyB64u 필수(sign_request)', corsHeaders);
+    }
+    record.signature = signature;
+    record.publicKeyB64u = publicKeyB64u;
+  } else {
+    if (!sealed) return _err(400, 'MISSING_FIELD', 'sealed 필수(key_transfer)', corsHeaders);
+    record.sealed = sealed;
+  }
+
   record.state = 'delivered';
-  record.sealed = sealed;
   // PC가 가져갈 시간만 짧게 더 준다 — 폰이 봉투를 보낸 뒤에도 무기한
   // 남아있으면 안 되므로(암호화된 봉투라도 최소한으로만 존재).
   // ★ 2026-07-22 버그 수정 — 실사로 확인된 근본 원인: Cloudflare Workers
@@ -644,7 +686,15 @@ async function handleDeviceLinkPoll(request, env, corsHeaders) {
 
   if (record.state === 'delivered') {
     await env.QR_SESSIONS_KV.delete(key);
-    return new Response(JSON.stringify({ ok: true, state: 'delivered', sealed: record.sealed }), { status: 200, headers: corsHeaders });
+    const purpose = record.purpose || 'key_transfer';
+    const payload = { ok: true, state: 'delivered', purpose };
+    if (purpose === 'sign_request') {
+      payload.signature = record.signature;
+      payload.publicKeyB64u = record.publicKeyB64u;
+    } else {
+      payload.sealed = record.sealed;
+    }
+    return new Response(JSON.stringify(payload), { status: 200, headers: corsHeaders });
   }
   return new Response(JSON.stringify({ ok: true, state: record.state }), { status: 200, headers: corsHeaders });
 }
