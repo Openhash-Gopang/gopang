@@ -4049,6 +4049,12 @@ function _validateIndustryTransformSP(content) {
 // Anthropic 네이티브 web_search 도구를 새로 쓰지 않고 기존 검색
 // 인프라(비용 통제 이미 구축됨)를 그대로 재사용하는 선택이다.
 async function _generateIndustryTransformSP(env, schemaId, ksicLabel, ctx) {
+  // REPO_RAW는 전역 상수가 아니라 _compileAgentSP 안에만 있는 지역 상수라
+  // (13307번줄 근처) 여기서 그대로 참조하면 안 된다 — 같은 값을 이 함수
+  // 스코프에도 지역으로 선언한다(기존 코드와 동일한 패턴, 전역으로 승격해서
+  // 다른 함수에 영향 주지 않기 위해). 2026-07-23 hotfix — 이 버그 때문에
+  // 실시간 생성이 배포 직후부터 100% 실패하고 있었다(격리 테스트로 발견).
+  const REPO_RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main';
   const manifestRes = await fetch(`${REPO_RAW}/prompts/sp-catalog.json`, { cache: 'no-cache' });
   const manifest = await manifestRes.json();
   const commonFile = manifest['SP-INDUSTRY-TRANSFORM-COMMON'];
