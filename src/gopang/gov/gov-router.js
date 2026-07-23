@@ -2286,6 +2286,64 @@ export function resolveGovAgency(trace) {
 }
 window.resolveGovAgency = resolveGovAgency;
 
+// ── trace(개발자용 SP 코드 배열) → 사용자용 기관/부서 한글명 (2026-07-23 신설) ──
+// 배경: 상단바 배지가 지금까지 trace.join(' > ')를 그대로 노출해
+// "JEJU-GOV-COMMON > SP-DO-000 > SP-CITY-JEJU" 같은 개발자용 코드가
+// 사용자 화면에 그대로 보였다(실사로 지적됨). 각 매칭 테이블(JEJU_CITY_TABLE
+// 등)의 kw 배열 첫 항목이 이미 그 기관/부서의 실제 한글 명칭이라는 점을
+// 재사용해, trace를 다시 스캔해 가장 구체적인 명칭을 뽑아낸다 — 라우팅
+// 로직 자체(_assembleGovSystemPromptRaw)는 건드리지 않는다.
+export function resolveAgencyDisplayName(trace) {
+  const t = Array.isArray(trace) ? trace : [];
+
+  // 시청 국(局) 단위까지 특정된 경우가 가장 구체적 — 우선 확인
+  // (city-dept 테이블은 2026-07-23 신설이라 아직 제주 전용 — 다른 도까지
+  // 일반화되면 이 부분도 province-aware 접근자로 교체 필요)
+  for (const entry of t) {
+    const m = /^SP-CITYDEPT-(\w+)-(\w+)$/.exec(entry);
+    if (m) {
+      const [, 시코드, 국코드] = m;
+      const cityRec = _cityTable().find(c => c.시코드 === 시코드);
+      const deptRec = JEJU_CITY_DEPT_TABLE.find(d => d.시코드 === 시코드 && d.국코드 === 국코드);
+      if (cityRec && deptRec) {
+        const cityName = cityRec.kw.find(k => k.endsWith('청')) || cityRec.kw[0];
+        return `${cityName} ${deptRec.kw[0]}`;
+      }
+    }
+  }
+
+  // 읍면동(행정복지센터) — SP-EMD-{읍면동명}에 이름이 그대로 들어있다
+  for (const entry of t) {
+    const m = /^SP-EMD-(.+)$/.exec(entry);
+    if (m) {
+      const cityEntry = t.find(e => _cityTable().some(c => c.code === e));
+      const cityRec = cityEntry ? _cityTable().find(c => c.code === cityEntry) : null;
+      return cityRec ? `${cityRec.kw[0]} ${m[1]}` : m[1];
+    }
+  }
+
+  // 시청(국 단위 특정 없이 시 전체)
+  for (const entry of t) {
+    const cityRec = _cityTable().find(c => c.code === entry);
+    if (cityRec) return cityRec.kw.find(k => k.endsWith('청')) || cityRec.kw[0];
+  }
+
+  // 국가기관
+  for (const entry of t) {
+    const natRec = _nationalTable().find(n => n.code === entry);
+    if (natRec) return natRec.kw[0];
+  }
+
+  // 도청 실/국(局) 단위까지 특정된 경우
+  for (const entry of t) {
+    const l2Rec = _l2Table().find(l => l.code === entry);
+    if (l2Rec) return l2Rec.kw[0];
+  }
+
+  return null; // 특정 안 됨 — 호출부가 "OO도청" 같은 일반 명칭으로 대체
+}
+window.resolveAgencyDisplayName = resolveAgencyDisplayName;
+
 // ── 현재 요청의 판별된 도코드 노출 (2026-07-21 신설) ────────────────
 // worker.js가 도별 동적 위임 렌더링(gov_do/gov_national)을 하려면
 // provinceCode가 필요한데, 지금까지 /gov/relay 요청 바디에 이 정보가

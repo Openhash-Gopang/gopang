@@ -57,13 +57,6 @@
 <style>
 :root{
   --gov:#06C755; --pri:#06C755; --pri-bg:#E9FBF0;
-  /* 2026-07-23 — webapp.html의 AI패널(#ai-panel-bg:#5E71D6로 화면 전체를
-     칠함)과 같은 방식으로 이 탭도 배경 전체를 색으로 채운다. 헤더/버튼/
-     사용자 말풍선(--pri, 밝은 초록)과 톤을 달리해(더 짙고 채도 낮은
-     초록) 서로 구분되게 한다 — webapp.html도 배경(--panel-bg, 남색)과
-     버튼(--green, 파랑)을 의도적으로 다른 색으로 뒀다(주석: "말풍선
-     색=배경 색이 되면 안 됨"). */
-  --bg:#2F8F63;
 }
 </style>
 </head>
@@ -84,7 +77,7 @@
 </div>
 
 <script type="module">
-import { assembleGovSystemPrompt, resolveGovAgency, resolveProvinceCode }
+import { assembleGovSystemPrompt, resolveGovAgency, resolveProvinceCode, resolveAgencyDisplayName }
   from '/src/gopang/gov/gov-router.js';
 import { escHtml, appendBubble, appendTyping, wireBackButton, setSubText, setTraceBadge }
   from '/src/gopang/ui/chat-shell.js';
@@ -224,9 +217,16 @@ async function _callAI(latestUserText, typingEl) {
   } catch (e) {
     console.warn('[RegionalGov] SP 조립 실패, 최소 폴백 사용:', e.message);
   }
-  setTraceBadge(trace.join(' > '));
+  // 2026-07-23 수정 — trace.join(' > ')는 "JEJU-GOV-COMMON > SP-DO-000 >
+  // SP-CITY-JEJU" 같은 개발자용 SP 코드를 그대로 사용자에게 보여주고
+  // 있었다. resolveAgencyDisplayName()으로 실제 한글 기관/부서명으로
+  // 바꿔 보여준다 — 특정 안 되면(예: 공통 레이어 응답만 나온 경우)
+  // provinceLabel(아래에서 곧 계산)로 대체한다.
+  const agencyDisplayName = resolveAgencyDisplayName(trace);
+  setTraceBadge(agencyDisplayName || '');
 
   const provinceLabel = { jeju: '제주도청', seoul: '서울시청', busan: '부산시청', gyeonggi: '경기도청' }[provinceCode];
+  if (!agencyDisplayName) setTraceBadge(provinceLabel || '전국 지방행정 안내');
   document.title = provinceLabel ? `${provinceLabel} AI` : '전국 지방행정 AI';
 
   return _govRelayCompletion(sp, messages, agency, provinceCode);
