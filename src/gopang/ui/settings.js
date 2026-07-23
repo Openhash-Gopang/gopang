@@ -227,6 +227,8 @@ async function _ensurePcSyncReady() {
         guid_missing:              '사용자 식별 정보를 찾을 수 없습니다. 다시 로그인해 주세요.',
         wallet_module_not_loaded:  '지갑 모듈을 불러오지 못했습니다. 앱을 다시 열어 주세요.',
         wallet_not_found:          '지갑이 아직 생성되지 않았습니다. 잠시 후 다시 열어 주세요.',
+        wallet_locked:             '이 기기의 지갑을 열 수 없습니다. 화면 하단의 복구 안내를 확인해 주세요.',
+        PUBKEY_MISMATCH:           '이 기기는 이 계정에 등록된 기기가 아닙니다. 화면 하단의 복구 안내를 확인해 주세요.',
         network:                   '네트워크 오류로 암호화 키를 등록하지 못했습니다. 잠시 후 다시 열어 주세요.',
       };
       _renderPcSyncBanner({
@@ -1314,7 +1316,7 @@ export async function openBackupKey() {
         ? '이 백업 키는 현재 로그인된 계정의 키가 아닙니다.'
         : result.reason === 'invalid_key'
           ? '키 형식이 올바르지 않습니다.'
-          : '적용에 실패했습니다 (' + result.reason + ').';
+          : '적용에 실패했습니다' + (result.detail ? ` (${result.detail}).` : ` (${result.reason}).`);
       errEl.textContent = msg;
       errEl.style.display = 'block';
       return;

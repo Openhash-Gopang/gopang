@@ -585,7 +585,13 @@ export async function _issueSession(guid, svc = 'gopang', level = 'L0') {
       body: JSON.stringify({ guid, pubkey: wallet.publicKeyB64u, signature, ts, level, svc }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, reason: data?.code || data?.detail || `http_${res.status}` };
+    // ★ 2026-07-23 수정 — worker.js의 _err()는 {ok:false, error: code, detail}
+    // 형태로 응답한다(code라는 필드는 애초에 없음). 여기서 data?.code를
+    // 먼저 보던 기존 코드는 항상 undefined만 얻어 data?.detail(사람이 읽는
+    // 한글 메시지)로 폴백했다 — PUBKEY_MISMATCH 같은 기계 판별용 코드가
+    // 필요한 호출부(_restoreFromBackupKey 경유, 설정화면 백업 키 복구 폼)가
+    // 실제로는 한 번도 정확히 그 값과 일치할 수 없었던 원인.
+    if (!res.ok) return { ok: false, reason: data?.error || data?.detail || `http_${res.status}`, detail: data?.detail };
     return { ok: true };
   } catch (e) {
     return { ok: false, reason: 'network' };
@@ -736,7 +742,7 @@ export async function _restoreFromBackupKey(privKeyB64u, guid = null, svc = 'gop
   if (!guid) return { ok: true };
 
   const session = await _issueSession(guid, svc);
-  if (!session.ok) return { ok: false, reason: session.reason };
+  if (!session.ok) return { ok: false, reason: session.reason, detail: session.detail };
   return { ok: true };
 }
 
@@ -844,7 +850,7 @@ function _showDeviceMismatchNotice(found, resolve) {
           ? '이 백업 키는 이 계정의 키가 아닙니다.'
           : result.reason === 'invalid_key'
             ? '키 형식이 올바르지 않습니다.'
-            : '복구에 실패했습니다 (' + result.reason + ').';
+            : '복구에 실패했습니다' + (result.detail ? ` (${result.detail}).` : ` (${result.reason}).`);
         errEl.textContent = msg;
         errEl.style.display = 'block';
         subBtn.disabled = false; subBtn.textContent = '복구';
@@ -2251,7 +2257,7 @@ export const gopangAuth = {
       appendBubble('ai', '🔑 보안키 인증이 필요합니다.', true);
       const session = await _issueSession(stored.ipv6, 'gopang', 'L3');
       if (!session.ok) {
-        appendBubble('ai', `❌ 인증 실패 (${session.reason === 'PUBKEY_MISMATCH' ? '이 기기는 등록된 기기가 아닙니다' : session.reason}).`, true);
+        appendBubble('ai', `❌ 인증 실패 (${session.reason === 'PUBKEY_MISMATCH' ? '이 기기는 등록된 기기가 아닙니다' : (session.detail || session.reason)}).`, true);
         return false;
       }
       appendBubble('ai', '✅ L3 인증 완료.', true);
@@ -2346,7 +2352,25 @@ export async function ensureX25519Synced(guid) {
 
     if (!regRes) return { ok: false, reason: 'network' };
     const regData = await regRes.json().catch(() => null);
-    if (!regRes.ok || !regData?.ok) return { ok: false, reason: regData?.detail || 'server_error' };
+    if (!regRes.ok || !regData?.ok) {
+      // ★ 2026-07-23 수정 — 기존엔 regData?.detail(사람이 읽는 한글 메시지)을
+      // reason으로 반환해서, 호출부가 이 값으로 분기하려면 깨지기 쉬운
+      // 문자열 비교를 해야 했다(실제로 다른 곳에선 이 값을 그냥 로그에만
+      // 찍고 아무도 분기하지 않았다). worker.js의 _err()가 이미 기계
+      // 판별용 코드(regData.error, 예: 'PUBKEY_MISMATCH')를 별도로 내려주므로
+      // 그걸 reason으로 쓴다. detail은 호출부가 사람에게 보여줄 때 쓰라고
+      // 별도 필드로 함께 반환.
+      const reason = regData?.error || 'server_error';
+      if (reason === 'PUBKEY_MISMATCH') {
+        // 6단계 — 이 PC의 로컬 지갑이 이 계정과 안 맞는다는 뜻(잠긴 것과는
+        // 다르지만 사용자가 취할 조치는 동일: 백업 키 복구/새로 시작/다른
+        // 기기에서 지갑 가져오기) — 이미 만들어둔 지갑 잠금 배너를 그대로
+        // 재사용한다(같은 이벤트를 재사용해 별도 배너를 새로 안 만듦).
+        window.gopangWalletLocked = true;
+        try { window.dispatchEvent?.(new CustomEvent('gopang:wallet-locked')); } catch (e) {}
+      }
+      return { ok: false, reason, detail: regData?.detail };
+    }
   }
 
   return { ok: true, publicKeyB64u, wallet };
