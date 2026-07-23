@@ -1,5 +1,5 @@
 {
-  "_schema_설명": "SP-CITYDEPT-TEMPLATE_v1.0.md의 자리표시자를 채우는 시청 국(局)별 레코드. (시코드, 국코드)로 매칭. 제주시청 홈페이지(jejusi.go.kr)·서귀포시청 홈페이지(seogwipo.go.kr) 2026-07-10 확인 조직도 기준.",
+  "_schema_설명": "SP-CITYDEPT-TEMPLATE_v1.0.md의 자리표시자를 채우는 시청 국(局)별 레코드. (시코드, 국코드)로 매칭. 제주시청 홈페이지(jejusi.go.kr)·서귀포시청 홈페이지(seogwipo.go.kr) 2026-07-10 확인 조직도 기준. | 2026-07-23: 선택 필드 처리사무 신설(do-dept-master-data.json과 동일 스펙) — gov-router.js의 _fetchCityDeptText()가 자동으로 PERMIT-CRITERIA-PROTOCOL_v1_0.md를 강제 삽입한다. 서귀포시 안전도시건설국(건축과 포함)에 최초로 PERMIT-BUILDING-REPORT-14(건축법 제14조 건축신고)를 실데이터로 채움 — 건축법 제14조 원문상 관할이 시장(행정시장)이라 도청이 아닌 이 계층이 올바른 위치. 제주시는 이 국(안전도시건설국류)에 해당하는 레코드 자체가 아직 없어 처리사무를 채우지 못함(별도 확인 필요).",
   "국목록": [
     {
       "시코드": "jejusi",
@@ -229,7 +229,10 @@
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
         "직원_등록여부": false
-      }
+      },
+      "처리사무": [
+        "PERMIT-BUILDING-REPORT-14"
+      ]
     },
     {
       "시코드": "seogwipo",

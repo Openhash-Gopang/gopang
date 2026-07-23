@@ -461,6 +461,53 @@ const JEJU_CITY_TABLE = [
     kw: ['서귀포시', '서귀포시청'] },
 ];
 
+// ── 시청 국(局) 단위 키워드 테이블 (2026-07-23 신설) ────────────────
+// 도청 실·국(JEJU_L2_TABLE)과 동일 철학 — city-dept-master-data.json에
+// 이미 13개 레코드(제주시 6 + 서귀포시 7)가 완결돼 있었으나
+// findStaffContact()(연락처 조회)에만 쓰이고 실제 SP 조립 경로에는
+// 연결이 안 돼 있었다. 이 테이블이 그 배선을 완성한다.
+// ⚠️ 알려진 공백: 제주시에는 "안전도시건설국"(건축과 포함)이 아직 없다
+// — 서귀포시만 있음. 제주시의 건축 관련 사무는 이 테이블 완성만으로는
+// 라우팅되지 않으며, city-dept-master-data.json에 제주시 레코드가
+// 추가돼야 한다(별도 확인 필요, 지어내지 않음).
+const JEJU_CITY_DEPT_TABLE = [
+  { 국코드: 'jachi', 시코드: 'jejusi',
+    kw: ['자치행정국', '총무과', '기획예산과', '세무과', '재산세과', '지방세', '인허가', '인사'] },
+  { 국코드: 'safety', 시코드: 'jejusi',
+    kw: ['안전교통국', '안전총괄과', '교통행정과', '차량관리과', '교통', '차량등록', '주정차'] },
+  { 국코드: 'welfare', 시코드: 'jejusi',
+    kw: ['복지위생국', '주민복지과', '노인복지과', '장애인복지과', '기초생활보장과', '여성가족과', '위생관리과', '복지', '위생'] },
+  { 국코드: 'econ', 시코드: 'jejusi',
+    kw: ['경제일자리국', '경제소상공인과', '일자리에너지과', '마을활력과', '정보화지원과', '소상공인', '일자리'] },
+  { 국코드: 'culture', 시코드: 'jejusi',
+    kw: ['문화관광체육국', '문화예술과', '관광진흥과', '체육진흥과', '우당도서관', '탐라도서관', '제주아트센터', '문화', '관광', '체육'] },
+  { 국코드: 'climate', 시코드: 'jejusi',
+    kw: ['청정환경국', '환경관리과', '환경지도과', '생활환경과', '공원녹지과', '절물생태관리소', '환경', '공원'] },
+  { 국코드: 'jachi', 시코드: 'seogwipo',
+    kw: ['자치행정국', '총무과', '기획예산과', '세무과', '평생교육과', '지방세', '인허가', '인사'] },
+  { 국코드: 'welfare', 시코드: 'seogwipo',
+    kw: ['복지위생국', '주민복지과', '노인복지과', '장애인복지과', '여성가족과', '위생관리과', '복지', '위생'] },
+  { 국코드: 'culture', 시코드: 'seogwipo',
+    kw: ['문화관광체육국', '문화예술과', '관광진흥과', '체육진흥과', '예술의전당', '도서관운영사무소', '공립미술관', '문화', '관광', '체육'] },
+  { 국코드: 'agrieconomy', 시코드: 'seogwipo',
+    kw: ['농수축산경제국', '경제일자리과', '디지털혁신과', '친환경농정과', '감귤유통과', '해양수산과', '청정축산과', '농업', '감귤', '수산', '축산'] },
+  { 국코드: 'climate', 시코드: 'seogwipo',
+    kw: ['청정환경국', '기후환경과', '생활환경과', '공원녹지과', '산림휴양관리소', '환경', '공원'] },
+  { 국코드: 'construction', 시코드: 'seogwipo',
+    kw: ['안전도시건설국', '안전총괄과', '도시과', '건축과', '건설과', '교통행정과', '상하수도과',
+         '건축', '건축허가', '건축인허가', '건축신고', '건설', '도시계획', '상하수도'] },
+  { 국코드: 'health', 시코드: 'seogwipo',
+    kw: ['서귀포보건소', '보건행정과', '건강증진과', '동부보건소', '서부보건소', '보건소', '보건'] },
+];
+
+function _matchCityDept(text, 시코드) {
+  for (const d of JEJU_CITY_DEPT_TABLE) {
+    if (d.시코드 !== 시코드) continue;
+    if (d.kw.some(k => text.includes(k))) return d;
+  }
+  return null;
+}
+
 // ── 국가기관 라우팅 테이블 (JEJU-NATIONAL-SP §3-1, 1차 배치 8개) ───
 // 도청 트리(JEJU-DO-SP)와 형제 관계 — 매칭되면 DO-SP 대신 이쪽으로 간다.
 // 지방세(도청)와 국세(세무서) 혼동 방지를 위해 '세금' 같은 범용어는 넣지
@@ -1734,6 +1781,40 @@ async function _fetchCityText(entry) {
   return _renderCityTemplate(template, rec);
 }
 
+// ── 시청 국(局) 렌더링·fetch (2026-07-23 신설) ──────────────────────
+// _fetchDeptText(도청 실·국)와 동일 철학 — city-dept-master-data.json은
+// 이미 완결돼 있었으므로(자리표시자도 SP-CITYDEPT-TEMPLATE에 이미 준비돼
+// 있었음), sigungu-dept-resolve처럼 실시간 웹검색이 필요 없다(제주 행정시
+// 2곳·13개 국 전부 정적으로 이미 확정된 데이터). rec가 없으면 상위
+// 시청 텍스트만으로 폴백(이 함수를 호출하는 쪽이 이미 시청 텍스트를
+// parts에 넣은 뒤이므로, 여기서는 추가 텍스트 없이 조용히 스킵).
+function _renderCityDeptTemplate(template, rec) {
+  return template
+    .replaceAll('{시이름}', rec.시이름 || '')
+    .replaceAll('{국이름}', rec.국이름 || '')
+    .replaceAll('{입력_문구}', rec.입력_문구 || '')
+    .replaceAll('{출력_문구}', rec.출력_문구 || '')
+    .replaceAll('{처분성_문구}', rec.처분성_문구 || '')
+    .replaceAll('{산하과목록}', rec.산하과목록 || '')
+    .replaceAll('{콜센터명}', rec.콜센터명 || '')
+    .replaceAll('{콜센터번호}', rec.콜센터번호 || '')
+    .replaceAll('{콜센터운영시간}', rec.콜센터운영시간 || '')
+    .replaceAll('{GOV_COMMON}', 'JEJU-GOV-COMMON')
+    .replaceAll('{DO_ROOT_SP}', 'SP-DO-000')
+    .replaceAll('{CITY_ROOT_SP}', rec.시코드 === 'jejusi' ? 'SP-CITY-JEJU' : 'SP-CITY-SEOGWIPO');
+}
+
+async function _fetchCityDeptText(match) {
+  const records = await _loadCityDeptMasterData();
+  const rec = records.find(r => r.시코드 === match.시코드 && r.국코드 === match.국코드);
+  if (!rec) {
+    console.warn(`[gov-router] 시청 국 데이터 레코드 없음(시코드=${match.시코드}, 국코드=${match.국코드}) — 스킵`);
+    return { text: null, permitCodes: [] };
+  }
+  const template = await _fetchText('04-city/templates/SP-CITYDEPT-TEMPLATE_v1.0.md');
+  return _appendPermitProtocolIfNeeded(_renderCityDeptTemplate(template, rec), rec);
+}
+
 // ── 응급 즉시 처리 (사고실험 2차 §3 권고 — 최우선, 다른 어떤 매칭보다 먼저) ──
 // 분류 LLM 호출조차 기다리게 하면 안 되는 영역이라 순수 정규식으로만 판단하고,
 // 애매하면 응급 쪽으로 분류한다(오탐 비용 < 누락 비용, SP-EXP-EMERGENCY §6).
@@ -1949,6 +2030,20 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     const cityText = await _fetchCityText(cityOnly);
     parts.push(cityText);
     trace.push(cityOnly.code);
+
+    // 2-1) 시청 국(局) 단위 매칭 (2026-07-23 신설) — 예: "서귀포시
+    // 건축허가 신청하고 싶어요" → 안전도시건설국(construction)까지 특정.
+    // 매칭 안 되면 조용히 시청 레이어에서 멈춘다(기존 동작 그대로).
+    const cityDeptMatch = _matchCityDept(text, cityOnly.시코드);
+    if (cityDeptMatch) {
+      const { text: cityDeptText, permitCodes: cityDeptPermitCodes } = await _fetchCityDeptText(cityDeptMatch);
+      if (cityDeptText) {
+        parts.push(cityDeptText);
+        trace.push(`SP-CITYDEPT-${cityOnly.시코드}-${cityDeptMatch.국코드}`);
+        if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
+      }
+    }
+
     await _appendExpertIfMatched();
     return { systemPrompt: parts.join('\n\n---\n\n'), trace };
   }

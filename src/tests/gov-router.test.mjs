@@ -72,6 +72,16 @@ globalThis.fetch = async (url) => {
         처리사무: ['TEST-PILOT-PERMIT'] },
     ] }) };
     if (u.includes('city-master-data.json')) return { ok: true, text: async () => JSON.stringify({ 시목록: [] }) };
+    if (u.includes('city-dept-master-data.json')) return { ok: true, text: async () => JSON.stringify({ 국목록: [
+      // 2026-07-23 신설 — 시청 국(局) 단위 라우팅 + PERMIT-CRITERIA-PROTOCOL
+      // 검증용 실데이터(서귀포시 안전도시건설국, 건축법 제14조 건축신고 실제 반영분).
+      { 시코드: 'seogwipo', 국코드: 'construction', 시이름: '서귀포시', 국이름: '안전도시건설국',
+        산하과목록: '안전총괄과, 도시과, 건축과, 건설과, 교통행정과, 상하수도과',
+        입력_문구: '건축·도시계획 인허가 신청', 출력_문구: '건축허가·도시계획 결정',
+        처분성_문구: '건축·도시계획 인허가는 실제 신청·심사를 통해서만 확정된다',
+        콜센터명: '제주콜센터', 콜센터번호: '064-120', 콜센터운영시간: '07:00~22:00, 유료',
+        처리사무: ['PERMIT-BUILDING-REPORT-14'] },
+    ] }) };
     if (u.includes('province-master-data.json')) return { ok: true, text: async () => JSON.stringify(PROVINCE_MASTER) }; // 2026-07-19 신설 — 템플릿 정상 경로 검증용
     return { ok: true, text: async () => '{}' };
   }
@@ -126,6 +136,10 @@ const CASES = [
   // ── 인허가류 사무 프로토콜 강제삽입 검증(2026-07-23 신설) ──────
   { text: '공공임대주택 입주 신청하고 싶어요', expectAgency: 'gov_do', expectContains: 'SP-DO-HOUSING',
     note: '처리사무 필드가 있는 부서(housing)라 PERMIT-CRITERIA-PROTOCOL이 trace에 강제로 딸려와야 함(아래 별도 검증 블록에서 trace 전체 확인)' },
+
+  // ── 시청 국(局) 라우팅 + 건축신고 파일럿 실사용 시나리오 (2026-07-23 신설) ──
+  { text: '서귀포시 건축허가 신청하고 싶어요', expectAgency: 'gov_do', expectContains: 'SP-CITYDEPT-seogwipo-construction',
+    note: '건축법 제14조상 관할은 도청이 아니라 서귀포시장 — 시청 국(안전도시건설국) 단위까지 정확히 내려가야 하고, PERMIT-CRITERIA-PROTOCOL(PERMIT-BUILDING-REPORT-14)까지 딸려와야 함' },
 ];
 
 let pass = 0, fail = 0, info = 0;
@@ -194,6 +208,17 @@ console.log(`\n총 ${CASES.length + 1}건(CASES ${CASES.length} + 신설 1) — 
     console.log('✅ [신설] 처리사무 필드가 없는 부서(welfare) → 프로토콜 미삽입 확인(대조군)');
   } else {
     console.log('❌ [신설] 처리사무 필드가 없는데도 프로토콜이 잘못 삽입됨:', r2.trace.join(' > '));
+    process.exitCode = 1;
+  }
+
+  // ── 시청 국(局) 라우팅 + 건축신고 파일럿 전용 검증 ──
+  const r3 = await assembleGovSystemPrompt('서귀포시 건축허가 신청하고 싶어요');
+  const hasCityDept = r3.trace.some(t => t === 'SP-CITYDEPT-seogwipo-construction');
+  const hasBuildingPermitProtocol = r3.trace.some(t => t.includes('PERMIT-CRITERIA-PROTOCOL(PERMIT-BUILDING-REPORT-14)'));
+  if (hasCityDept && hasBuildingPermitProtocol) {
+    console.log('✅ [신설] 서귀포시 건축신고 파일럿 — 시청 국 단위까지 라우팅 + 프로토콜 강제삽입 확인:', r3.trace.join(' > '));
+  } else {
+    console.log('❌ [신설] 서귀포시 건축신고 파일럿 실패, trace:', r3.trace.join(' > '));
     process.exitCode = 1;
   }
 }
