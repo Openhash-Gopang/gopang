@@ -770,24 +770,34 @@ async function _saveP2PSession(messages, peer, startedAt) {
     console.warn('[P2P] Ed25519 서명 실패, guid로 대체:', e.message);
   }
 
-  // ④ vault.js — 원본 저장 (IndexedDB AES-256-GCM)
-  try {
-    const { storeMessage } = await import('../../pdv/vault.js');
-    const pubKeyB64 = window.gopangWallet?.publicKeyB64u || '';
-    await storeMessage({
-      msgId:           sessionId,
-      senderId:        _USER.ipv6,
-      senderPubKeyB64: pubKeyB64,
-      signature:       userSig || _USER.ipv6,
-      role:            'p2p_session',
-      content:         sessionRaw,
-      timestamp:       now,
-      riskLevel:       'S0',
-      sessionId,
-    });
-    console.info('[P2P] vault 저장 완료 | sessionId:', sessionId);
-  } catch(e) {
-    console.warn('[P2P] vault 저장 실패 (무시):', e.message);
+  // ④ 원본 저장 — 공용 PC 세션이면 로컬 vault 대신 폰으로 릴레이한다
+  //    (2026-07-23 신설, 5단계 — B안: 폰이 오프라인이면 유실 감수).
+  if (sessionStorage.getItem('gopang_pc_session_mode') === 'shared' && _USER?.ipv6) {
+    try {
+      await window.GopangWallet?.relayContentToPhone?.(_USER.ipv6, sessionRaw);
+      console.info('[P2P] 공용 PC — 원문을 폰으로 릴레이함(이 기기엔 저장 안 함)');
+    } catch (e) {
+      console.warn('[P2P] 공용 PC 원문 릴레이 실패 (무시 — 이 PC엔 원문을 남기지 않음, B안):', e.message);
+    }
+  } else {
+    try {
+      const { storeMessage } = await import('../../pdv/vault.js');
+      const pubKeyB64 = window.gopangWallet?.publicKeyB64u || '';
+      await storeMessage({
+        msgId:           sessionId,
+        senderId:        _USER.ipv6,
+        senderPubKeyB64: pubKeyB64,
+        signature:       userSig || _USER.ipv6,
+        role:            'p2p_session',
+        content:         sessionRaw,
+        timestamp:       now,
+        riskLevel:       'S0',
+        sessionId,
+      });
+      console.info('[P2P] vault 저장 완료 | sessionId:', sessionId);
+    } catch(e) {
+      console.warn('[P2P] vault 저장 실패 (무시):', e.message);
+    }
   }
 
   // ⑤ OpenHash 앵커링

@@ -1742,6 +1742,53 @@
   GopangWallet.createSessionSignProxy = () => new SessionSignProxy();
 
   /* ────────────────────────────────────────────────
+   *  5단계(2026-07-23) — 공용 PC PDV 원문 릴레이 (PC → 폰, B안)
+   *  공용 PC 세션에서 생긴 원문(채팅 등)을 이 PC에 남기지 않고, 폰의
+   *  이미 등록된 X25519 공개키로 암호화해 즉시 전달한다. 폰이 그 안에
+   *  안 켜지면(TTL 10분) 서버가 알아서 지운다 — 유실을 감수하는 대신
+   *  큐가 무한정 쌓이지 않는다(B안, 주피터 지시).
+   * ──────────────────────────────────────────────── */
+  GopangWallet.relayContentToPhone = async function(guid, plaintext) {
+    if (!guid) throw new Error('relayContentToPhone: guid가 필요합니다.');
+    const res = await fetch(`${WORKER_URL}/wallet/x25519?guid=${encodeURIComponent(guid)}`);
+    const data = await res.json().catch(() => ({}));
+    if (!data.ok || !data.registered || !data.x25519_pubkey) {
+      throw new Error(data.message || '수신자(폰)의 암호화 키를 찾을 수 없습니다.');
+    }
+    const sealed = await sealForRecipient(data.x25519_pubkey, plaintext);
+    const pushRes = await fetch(`${WORKER_URL}/pdv/relay/push`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guid, sealed }),
+    });
+    const pushData = await pushRes.json().catch(() => ({}));
+    if (!pushRes.ok || !pushData.ok) throw new Error(pushData.detail || pushData.error || '전달에 실패했습니다.');
+    return pushData;
+  };
+
+  // 폰 쪽 — 대기 중인 릴레이 항목을 가져와 이 지갑의 개인키로 복호화한다.
+  // wallet은 이 폰의 진짜 GopangWallet 인스턴스(X25519 키 등록 완료 —
+  // ensureX25519Key() 먼저 호출된 상태)여야 한다. 복호화는 지갑이 이미
+  // 갖고 있는 wallet.openSealed()를 그대로 쓴다(X25519 개인키는 Ed25519
+  // 서명키와 별개 필드라 재구현하지 않고 기존 메서드를 재사용).
+  GopangWallet.pullRelayedContent = async function(wallet, guid) {
+    if (!wallet || typeof wallet.openSealed !== 'function') {
+      throw new Error('pullRelayedContent: 유효한 지갑 인스턴스가 필요합니다.');
+    }
+    const res = await fetch(`${WORKER_URL}/pdv/relay/pull?guid=${encodeURIComponent(guid)}`);
+    const data = await res.json().catch(() => ({}));
+    if (!data.ok) throw new Error(data.detail || data.error || '조회에 실패했습니다.');
+    const items = [];
+    for (const sealed of (data.items || [])) {
+      try {
+        items.push(await wallet.openSealed(sealed));
+      } catch (e) {
+        console.warn('[GopangWallet] 릴레이 항목 복호화 실패(건너뜀):', e.message);
+      }
+    }
+    return items;
+  };
+
+  /* ────────────────────────────────────────────────
    *  전역 노출
    * ──────────────────────────────────────────────── */
   global.GopangWallet = GopangWallet;
@@ -1844,6 +1891,25 @@
           await wallet.hydrateFromServer();
         } catch(e) {
           console.warn('[GopangWallet] 서버 동기화 실패 (무시):', e.message);
+        }
+
+        // 5단계(2026-07-23) — 공용 PC 세션에서 이 계정 앞으로 릴레이된
+        // 원문이 있으면 가져와 복호화한다. 화면에 어떻게 보여줄지는 이
+        // 파일(모듈 아님, ui/bubble.js 등을 import 못 함)의 책임이 아니라
+        // 이벤트를 구독하는 쪽(추후 UI 작업)에 맡긴다 — 여기서는 인프라만
+        // 완성해둔다. 실패해도(오프라인 등) 앱 시작을 막지 않는다.
+        if (typeof wallet.openSealed === 'function' && GopangWallet.pullRelayedContent) {
+          try {
+            const items = await GopangWallet.pullRelayedContent(wallet, stored.ipv6);
+            if (items.length) {
+              console.info(`[GopangWallet] 공용 PC 릴레이 항목 ${items.length}건 수신`);
+              try {
+                global.dispatchEvent?.(new CustomEvent('gopang:relayed-content-received', { detail: { items } }));
+              } catch (e) { /* CustomEvent 미지원 환경 — 조용히 무시 */ }
+            }
+          } catch (e) {
+            console.warn('[GopangWallet] 릴레이 조회 실패 (무시):', e.message);
+          }
         }
       }
 

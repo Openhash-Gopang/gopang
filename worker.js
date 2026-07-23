@@ -691,12 +691,110 @@ async function handleDeviceLinkPoll(request, env, corsHeaders) {
     if (purpose === 'sign_request') {
       payload.signature = record.signature;
       payload.publicKeyB64u = record.publicKeyB64u;
+      // 공용 PC 세션은 로컬에 계정 정보를 전혀 안 남기므로, 이 세션이
+      // "누구"의 서명인지 알 방법이 이것뿐이다 — 개인키가 아니라 guid만
+      // (이미 공개적으로 조회 가능한 식별자) 돌려준다.
+      payload.guid = record.guid;
     } else {
       payload.sealed = record.sealed;
     }
     return new Response(JSON.stringify(payload), { status: 200, headers: corsHeaders });
   }
   return new Response(JSON.stringify({ ok: true, state: record.state }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// PDV 원문 릴레이 (PC → 폰) — 2026-07-23 신설, 5단계
+//
+// device-link와 방향이 반대다: 거기선 폰이 보내고 PC가 받는데, 여기선
+// PC가 보내고 폰이 받는다. PC는 이미 콘텐츠를 갖고 있고 즉시 보낼 수
+// 있으므로 pending→approved 같은 승인 단계가 필요 없다 — PC가 폰의
+// X25519 공개키(GET /wallet/x25519, 이미 공개된 정보)로 그 자리에서
+// 암호화해 바로 push하면 끝이다. 서버는 암호화된 덩어리만 중계하고
+// 내용을 볼 수 없다(device-link와 동일 원칙).
+//
+// B안(주피터 지시) — 폰이 오프라인이면 유실을 감수한다: 큐를 무기한
+// 쌓아두지 않고 짧은 TTL(10분)만 준다. "PDV 원문은 서버에 오래 남지
+// 않는다"는 원칙과, 무한정 쌓이는 걸 막는 것 둘 다를 위해서다.
+//
+// pull 인증 수준: 이 엔드포인트는 guid만으로 조회를 허용한다(폰이 진짜
+// 서명해서 증명하지 않음) — 하지만 저장된 내용 자체가 이미 그 폰의
+// X25519 개인키로만 열 수 있게 암호화돼 있으므로, guid를 안다고 해서
+// 내용을 읽을 수 있는 건 아니다(기밀성은 암호화가 보장, 접근제어는
+// 아님). 얻을 수 있는 최대 정보는 "그 guid 앞으로 대기 중인 항목이
+// 있다/크기가 얼마다" 정도의 메타데이터뿐이다.
+const PDV_RELAY_TTL_SECONDS  = 600;   // 10분 — B안: 폰이 그 안에 안 오면 유실
+const PDV_RELAY_MAX_ITEMS    = 20;    // KV 값 크기 보호 — 무한 적체 방지
+
+// POST /pdv/relay/push { guid, sealed }
+// PC가 호출 — 이미 GopangWallet.sealForRecipient(폰의 x25519_pubkey, ...)로
+// 암호화한 원문 1건을 그 guid의 대기열에 추가한다.
+async function handlePdvRelayPush(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { guid, sealed } = body;
+  if (!guid || !sealed) return _err(400, 'MISSING_FIELD', 'guid, sealed 필수', corsHeaders);
+  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+
+  const key = `pdvrelay:${guid}`;
+  let queue = [];
+  try {
+    const raw = await env.QR_SESSIONS_KV.get(key);
+    if (raw) queue = JSON.parse(raw);
+    if (!Array.isArray(queue)) queue = [];
+  } catch (e) { queue = []; }
+
+  queue.push({ sealed, ts: Date.now() });
+  if (queue.length > PDV_RELAY_MAX_ITEMS) {
+    // 오래된 것부터 버린다 — 한도를 넘기면 어차피 폰이 한동안 안 켜진
+    // 상태라는 뜻이라, 최신 것 위주로 남기는 게 더 유용하다.
+    queue = queue.slice(queue.length - PDV_RELAY_MAX_ITEMS);
+  }
+  await env.QR_SESSIONS_KV.put(key, JSON.stringify(queue), { expirationTtl: PDV_RELAY_TTL_SECONDS });
+
+  // 웹푸시로 폰에 알린다 — 실패해도(구독 없음 등) push 자체는 이미
+  // 큐에 들어갔으니 계속 진행한다(device-link와 달리 이건 폰이 오면
+  // 언제든 가져갈 수 있는 큐라, 지금 당장 못 깨워도 치명적이지 않다).
+  try {
+    if (env.VAPID_PRIVATE_KEY && env.VAPID_PUBLIC_KEY && env.VAPID_SUBJECT) {
+      const profile = await _l1FindProfileByGuid(env, guid).catch(() => null);
+      if (profile?.push_subscription) {
+        const sub = JSON.parse(profile.push_subscription);
+        await _sendWebPush(env, sub, JSON.stringify({
+          title: '공용 PC에서 보낸 내용',
+          body:  '공용 PC 세션에서 남긴 내용이 있습니다. 열어서 확인하세요.',
+          sound: profile.push_sound || 'ping',
+          url:   '/webapp.html',
+          tag:   `gopang-pdv-relay-${guid}`,
+        }));
+      }
+    }
+  } catch (e) {
+    console.warn('[PdvRelay] 푸시 발송 실패(치명적 아님):', e.message);
+  }
+
+  return new Response(JSON.stringify({ ok: true, queued: queue.length, expires_in: PDV_RELAY_TTL_SECONDS }),
+    { status: 200, headers: corsHeaders });
+}
+
+// GET /pdv/relay/pull?guid=...
+// 폰이 호출 — 대기 중인 항목을 전부 가져가고 큐를 비운다(1회 소비).
+async function handlePdvRelayPull(request, env, corsHeaders) {
+  const url  = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+
+  const key = `pdvrelay:${guid}`;
+  const raw = await env.QR_SESSIONS_KV.get(key);
+  if (!raw) return new Response(JSON.stringify({ ok: true, items: [] }), { status: 200, headers: corsHeaders });
+
+  await env.QR_SESSIONS_KV.delete(key); // 1회 소비 — 재사용 방지
+  let queue = [];
+  try { queue = JSON.parse(raw); if (!Array.isArray(queue)) queue = []; } catch (e) { queue = []; }
+
+  return new Response(JSON.stringify({ ok: true, items: queue.map(q => q.sealed) }),
+    { status: 200, headers: corsHeaders });
 }
 
 const DEEPSEEK_URL   = 'https://api.deepseek.com/v1/chat/completions';
@@ -5397,6 +5495,8 @@ export default {
     if (pathname === '/auth/device-link/resend-sms' && request.method === 'POST') return handleDeviceLinkResendSms(request, env, corsHeaders);
     if (pathname === '/auth/device-link/deliver'  && request.method === 'POST') return handleDeviceLinkDeliver(request, env, corsHeaders);
     if (pathname === '/auth/device-link/poll'     && request.method === 'GET')  return handleDeviceLinkPoll(request, env, corsHeaders);
+    if (pathname === '/pdv/relay/push'            && request.method === 'POST') return handlePdvRelayPush(request, env, corsHeaders);
+    if (pathname === '/pdv/relay/pull'            && request.method === 'GET')  return handlePdvRelayPull(request, env, corsHeaders);
     if (pathname === '/account/step-up-threshold' && request.method === 'GET')  return handleStepUpThresholdGet(request, env, corsHeaders);
     if (pathname === '/account/step-up-threshold' && request.method === 'POST') return handleStepUpThresholdSet(request, env, corsHeaders);
     if (pathname === '/auth/webauthn/register-key' && request.method === 'POST') return handleWebAuthnRegisterKey(request, env, corsHeaders);

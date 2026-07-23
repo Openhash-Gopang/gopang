@@ -79,18 +79,28 @@ async function _saveSessionOnce() {
     // 세션 원문 직렬화
     const sessionRaw = JSON.stringify(sessionData);
 
-    // ① vault.js — 원본 저장 (IndexedDB AES-256-GCM)
-    //    원본 보관 주체 = 사용자 기기
-    //    검증 시: vault에서 원본 꺼냄 → SHA-256 재계산 → entryHash 대조
-    await storeMessage({
-      msgId:     sessionId,
-      senderId:  USER_GUID || 'anon',
-      role:      'session',
-      content:   sessionRaw,
-      timestamp: now,
-      riskLevel: 'S0',
-      sessionId,
-    }).catch(e => console.warn('[Session] vault 저장 실패 (무시):', e.message));
+    // ① 원본 저장 — 이 기기의 로컬 vault(IndexedDB)에 남길지, 공용 PC
+    //    세션이라 폰으로 릴레이만 하고 이 PC엔 아무것도 안 남길지 분기.
+    //    (2026-07-23 신설, 5단계 — B안: 폰이 오프라인이면 유실 감수)
+    if (sessionStorage.getItem('gopang_pc_session_mode') === 'shared' && USER_GUID) {
+      try {
+        await window.GopangWallet?.relayContentToPhone?.(USER_GUID, sessionRaw);
+      } catch (e) {
+        console.warn('[Session] 공용 PC 원문 릴레이 실패 (무시 — 이 PC엔 원문을 남기지 않음, B안):', e.message);
+      }
+    } else {
+      //    원본 보관 주체 = 사용자 기기
+      //    검증 시: vault에서 원본 꺼냄 → SHA-256 재계산 → entryHash 대조
+      await storeMessage({
+        msgId:     sessionId,
+        senderId:  USER_GUID || 'anon',
+        role:      'session',
+        content:   sessionRaw,
+        timestamp: now,
+        riskLevel: 'S0',
+        sessionId,
+      }).catch(e => console.warn('[Session] vault 저장 실패 (무시):', e.message));
+    }
 
     // ② contentHash = SHA-256(sessionRaw)
     const buf         = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sessionRaw));
