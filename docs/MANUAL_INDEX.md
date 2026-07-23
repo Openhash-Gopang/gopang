@@ -19,6 +19,7 @@
 | K-서비스가 소유 전문가 페르소나·상담 이력을 어떻게 기록·총괄하는지(owner_pdv) | `docs/OWNER_PDV_GOVERNANCE_MANUAL_v1_0.md` |
 | 지방행정 AI(도청·시청·읍면동·국가기관)가 원형→인스턴스를 어떻게 조립하는지 | `docs/GOV_REGIONAL_AC_MANUAL_v1_0.md` |
 | GDC가 가입 후 어떻게 충전·차감되고, 잔액이 낮으면 어떻게 알림이 오는지 | `docs/GDC_CHARGE_MANUAL_v1_0.md` |
+| K-Law·K-School 같은 개별 K-서비스는 요금을 어떻게 매기는지 | `docs/K_SERVICE_MONETIZATION_v1_0.md` |
 | Supabase→L1 이관이 지금 어디까지 됐는지 | `docs/supabase_to_l1_migration_plan.md` |
 | webapp.html의 설계 이력·SP 구조 | `docs/webapp_manual_v4.md` |
 | 새 개발자가 코드베이스를 처음 파악할 때 | `docs/manual/01-system-map.md`부터 순서대로 |
@@ -59,6 +60,7 @@
 | `docs/OWNER_PDV_GOVERNANCE_MANUAL_v1_0.md` | K-서비스·전문가 페르소나 거버넌스, 기관측 PDV(owner_pdv) 스키마·가명화 해시·C45/C39-5·SSOT 마이그레이션 현황 | 2026-07-20 | 🟢 신설 — 설계·구현 완료, 배포·실사용 테스트는 미완료(§11 체크리스트 참조) |
 | `docs/GOV_REGIONAL_AC_MANUAL_v1_0.md` | 지방행정 AI 원형/인스턴스 아키텍처(도청·시군구청·읍면동·국가기관), gov_do/gov_national 개명, 시군구·국가기관 리졸버 정확도 우선+SSE+cityHint | 2026-07-21 | 🟢 신설 — 실배포 재현 검증(`&debug=1`) 완료 |
 | `docs/GDC_CHARGE_MANUAL_v1_0.md` | 가입 축하 충전(0.1GDC)·사용량 차감·저잔액 알림(SP-GDC-CHARGE-v1_0), `charge.html` 신설, B안(무료한도 0원) 채택, PC/잠긴 지갑 안내 버그 수정 | 2026-07-23 | 🟢 신설 — 실사·배포 완료 |
+| `docs/K_SERVICE_MONETIZATION_v1_0.md` | K-Law(소송가액 구간별 건당 요금)·K-School(교육단계별 정액) 개별 유료화 가격정책, 인프라 펀드 조달 연계 | 2026-07-23 | 🟡 신설 — 형사사건 적용범위·법률 자문·대학원 요금 보정 등 TODO 있음 |
 | `docs/POCKETBASE-STRUCTURE-GUIDE_v1_0.md` + `_v1_1_addendum` | L1~L5 서버 구조, Rule NULL/빈문자열 함정 등 실전 팁 | 2026-07-16 / 07-19 | 🟢 유효 — `L1_POCKETBASE_MANUAL`과 상호보완(겹치는 부분 있음, 통합은 후속 검토) |
 | `docs/gopang-report-manual.md` | 하위 시스템 PDV 보고서(6하원칙) 스키마·전송 API | 2026년 5월(v1.0) | 🟢 유효 — **README.md에서 직접 링크됨** |
 | `docs/webapp_manual_v4.md` | `webapp.html` 설계 명세(SP-00 v10.0, v4.0) | 2026-06-09 | 🟢 유효(v4.0 — v3.1의 상위호환) |
