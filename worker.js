@@ -907,11 +907,17 @@ function _deepseekUsageToKRW(usage, tierKey) {
 // 다만 모델·티어별로 실제 비용이 다르므로, 매 호출 실비를 그대로 쓰는 편이
 // 고정 초당 요율을 추정하는 것보다 정확하다.
 //
-// 기본 배수 2 = 청구액의 50%는 API 비용 충당, 50%는 개발자 보상.
-// 배수 조정은 재배포 없이 가능하도록 env var를 최우선으로 읽는다:
-//   wrangler secret put BILLING_MULTIPLIER   (예: "2.5")
-// ═══════════════════════════════════════════════════════════
-const BILLING_MULTIPLIER_DEFAULT = 2;
+// (2026-07-23 정정 — 2배 마진은 API 원가 추정치가 예상보다 낮게 잡힐 경우
+//  적자로 직결되는 리스크가 있어("사업 시작하자마자 망하는" 시나리오),
+//  안전마진을 훨씬 두껍게 잡는 10배로 상향한다. 10배로 잡아도 실사용
+//  시뮬레이션(SP-GDC-CHARGE 세션, 2026-07-23) 기준 평균 시민의 하루
+//  비용은 한국 1인당 GNI(2025년 기준 약 5,241만원/년, 일 환산 약
+//  14,360원)의 0.1~0.2% 수준에 불과해, 원가 추정이 다소 틀리더라도
+//  요금이 부담스러워질 여지가 거의 없다는 게 그 세션에서 확인됐다.
+//  기본 배수 10 = 청구액의 10%는 API 비용 충당, 90%는 안전마진·개발자 보상.
+//  배수 조정은 재배포 없이 가능하도록 env var를 최우선으로 읽는다:
+//    wrangler secret put BILLING_MULTIPLIER   (예: "8")
+const BILLING_MULTIPLIER_DEFAULT = 10;
 function _billingMultiplier(env) {
   const v = parseFloat(env?.BILLING_MULTIPLIER);
   return Number.isFinite(v) && v > 0 ? v : BILLING_MULTIPLIER_DEFAULT;
