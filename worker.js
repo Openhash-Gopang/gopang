@@ -13128,8 +13128,42 @@ async function _compileAgentSP(env, principalProfile) {
     }
   }
 
+  // 3-b) SP-INDUSTRY-TRANSFORM-{ksic} 로드 (2026-07-23 신설)
+  //    사업자가 profile-assistant STEP3C에서 automation_opt_in을 최소 1개
+  //    이상 켰을 때만 로드한다 — 켠 게 없으면 이 SP를 합성해도 실질적으로
+  //    쓸 자리가 없어 토큰만 낭비. schema_id에 대응하는 파일이 아직 없는
+  //    업종(01/10/56 외 74개, 2026-07-23 기준)은 manifest에 키가 없어
+  //    자동으로 생략된다 — 별도 화이트리스트 불필요(AGENT-SUPPLIER처럼
+  //    VALID_INDUSTRY_SCHEMA_IDS 전체를 미리 등록해두지 않고, manifest에
+  //    실제로 있는지로만 판단 — 파일럿 단계라 자주 늘어날 수 있어 화이트
+  //    리스트를 매번 갱신하지 않아도 되게 함).
+  const iFieldsRaw = principalProfile?.extra?.public?.industry_fields;
+  const automationOptIn = Array.isArray(iFieldsRaw?.automation_opt_in) ? iFieldsRaw.automation_opt_in : [];
+  let industryTransformSP = '';
+  if (ksic && automationOptIn.length > 0) {
+    try {
+      const manifestRes = await fetch(`${REPO_RAW}/prompts/sp-catalog.json`, { ...headers, cache: 'no-cache' });
+      if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
+      const manifest = await manifestRes.json();
+      const ksicCode = String(ksic).padStart(2, '0');
+      const fname = manifest[`SP-INDUSTRY-TRANSFORM-${ksicCode}`];
+      if (fname) {
+        const itRes = await fetch(`${REPO_RAW}/prompts/${fname}`, { headers });
+        industryTransformSP = itRes.ok ? await itRes.text() : '';
+        if (itRes.ok) console.info('[Worker] SP-INDUSTRY-TRANSFORM 로드 완료:', fname);
+        else console.warn('[Worker] SP-INDUSTRY-TRANSFORM fetch 실패:', itRes.status, fname);
+      }
+      // manifest에 키가 없으면(아직 이 업종 파일럿 미작성) 조용히 생략 —
+      // AGENT-SUPPLIER와 달리 경고 로그도 남기지 않는다(대부분 업종에서
+      // 항상 없는 게 정상 상태이므로, 매번 경고가 뜨면 진짜 문제와 구분이
+      // 안 됨).
+    } catch (e) {
+      console.warn('[Worker] SP-INDUSTRY-TRANSFORM 로드 오류, 빈 문자열로 계속:', e.message);
+    }
+  }
+
   // 4) industry_fields 지식 블록(본인 등록 데이터를 AI가 참조할 수 있게)
-  const iFields = principalProfile?.extra?.public?.industry_fields;
+  const iFields = iFieldsRaw;
   const iFieldsBlock = iFields
     ? `
 
@@ -13142,10 +13176,11 @@ ${JSON.stringify(iFields, null, 2)}
   // 5) 합성 — 청중 안내문 → AGENT-COMMON → AGENT-SUPPLIER-COMMON → AGENT-SUPPLIER-{ksic} → industry_fields
   // 5) 합성 — 실시간 공개범위 안내문(업종 SP가 있을 때만, 즉 사업체·기관
   //    한정) → AGENT-COMMON → AGENT-SUPPLIER-COMMON → AGENT-SUPPLIER-{ksic}
-  //    → industry_fields. 개인은 안내문 없이 AGENT-COMMON만(영업기밀 같은
+  //    → SP-INDUSTRY-TRANSFORM-{ksic}(automation_opt_in 있을 때만) →
+  //    industry_fields. 개인은 안내문 없이 AGENT-COMMON만(영업기밀 같은
   //    공개범위 구분 자체가 해당 없음).
   const universalIntegrity = await _fetchUniversalIntegrity();
-  const parts = [universalIntegrity, ksic ? realtimeDisclosurePreamble : '', commonSP, supplierCommonSP, supplierSP, iFieldsBlock].filter(Boolean);
+  const parts = [universalIntegrity, ksic ? realtimeDisclosurePreamble : '', commonSP, supplierCommonSP, supplierSP, industryTransformSP, iFieldsBlock].filter(Boolean);
   if (!parts.length) return null;
 
   const compiled = parts.join('\n\n---\n\n').trim();
@@ -13481,6 +13516,24 @@ async function handleProfilePost(request, env, corsHeaders) {
   // entity_type:'agent'를 직접 보내 사칭 행을 만들 길을 원천 차단하기 위함.
   if (!['person','consumer','individual','org','institution','business','platform'].includes(entity_type)) {
     return _err(400, 'INVALID_FIELD', 'entity_type 값이 올바르지 않습니다', corsHeaders);
+  }
+
+  // 2026-07-23 신설 — industry_fields.automation_opt_in 검증(SP-INDUSTRY-
+  // TRANSFORM 연동). task_id별 화이트리스트는 여기서 강제하지 않는다 —
+  // 강제하려면 매 프로필 제출마다 해당 SP-INDUSTRY-TRANSFORM 파일을 fetch·
+  // 파싱해야 해서 비용이 크고, 이 필드는 "실행 권한 위임"이 아니라 컨텍스트
+  // 합성 시 SP를 하나 더 얹을지 말지를 결정하는 정보값일 뿐이라(worker.js
+  // 컨텍스트 합성부 참고 — manifest에 없는 task_id가 들어와도 SP 자체가
+  // 안 실릴 뿐 다른 부작용 없음), 타입 검증 정도로 충분하다고 판단했다.
+  // VALID_INDUSTRY_SCHEMA_IDS를 77개 한꺼번에 열지 않아서 2026-06-30에
+  // 가입 자체가 막혔던 전례(위 주석 참고)와 같은 실수를 반복하지 않기 위해,
+  // 여기서도 SP 파일 존재 여부에 검증을 결합하지 않는다.
+  if (body.industry_fields?.automation_opt_in != null) {
+    const opt = body.industry_fields.automation_opt_in;
+    if (!Array.isArray(opt) || opt.length > 10 || opt.some(t => typeof t !== 'string' || t.length > 100)) {
+      return _err(400, 'INVALID_AUTOMATION_OPT_IN',
+        'industry_fields.automation_opt_in은 문자열 10개 이하 배열이어야 합니다', corsHeaders);
+    }
   }
 
   // 2026-06-22: industry_fields.schema_id 검증 — AI(SP)가 지침을 어기고 "{ksic}" 같은
