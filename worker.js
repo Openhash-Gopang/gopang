@@ -846,6 +846,17 @@ const HONDI_TIER_MODELS = {
   },
 };
 const USD_TO_KRW = 1500; // 실시간 조회 없이 보수적 고정값
+// (2026-07-23 정정 — SP-GDC-CHARGE-v1_0 §5 "B안" 채택, 주피터 지시.
+//  가입 시 실지갑에 0.1 GDC(=100원)를 직접 충전하는 §1이 신설되면서,
+//  이 가상 카운터(KV hondi:free_spend, 실지갑과 무관)가 그 위에 얹혀
+//  "가상 100원 + 실지갑 100원 = 총 200원 무료"가 되는 중복을 없앤다.
+//  0으로 낮추면 _settleAiUsage의 remainingFree가 항상 0이 되어(아래
+//  참고) 첫 턴부터 실사용량 전액이 실지갑 GDC로 청구된다 — 이제
+//  "가입 직후 충전된 GDC 그 자체가 유일한 무료 예산"이라는 원 요청과
+//  정확히 일치한다. 과거 누적치(_recordFreeSpend로 이미 KV에 쌓인 값)는
+//  그대로 남아있지만 이 한도가 0이라 더 이상 참조되지 않는다 — 삭제 불필요.
+//  기존 100원 상수·주석은 정책 변경 이력으로 아래 보존.)
+//
 // (2026-07-14: 정책 재확정 — "가입자당 100원 무료 한도" 도입.
 //  주의: "사용자"가 아니라 "가입자" 기준이다. 이 코드베이스는 익명 모드가
 //  없다(auth.js 상단 주석 "익명 모드 없음" 참조) — guid는 전화번호 인증을
@@ -856,7 +867,7 @@ const USD_TO_KRW = 1500; // 실시간 조회 없이 보수적 고정값
 //  "guid는 가입 완료 시에만 발급된다"는 현재 auth.js의 불변식에 의존하는
 //  가정이므로, 이 불변식이 깨지면(예: 훗날 프리뷰/게스트 모드가 다시
 //  생기면) 이 가정도 함께 재검토해야 한다.
-const FREE_QUOTA_KRW_LIMIT = 100;
+const FREE_QUOTA_KRW_LIMIT = 0; // 2026-07-23: 100 → 0 (SP-GDC-CHARGE-v1_0 B안 — 이전 값 100은 위 주석 참고)
 
 // (2026-07-17: 개발 기간 동안 위 100원 무료 한도의 "집행"만 잠정 해제한다.
 //  한도값(FREE_QUOTA_KRW_LIMIT) 자체나 spend 추적(_recordAiUsage 등)은
@@ -1088,8 +1099,12 @@ const SIGNUP_BONUS_KRW = 100; // 100원 상당 = 0.1 GDC (1,000:1 환율 기준)
 
 // 멱등성: KV hondi:signup_bonus_granted:{guid} 플래그로 평생 1회만 지급.
 // mint 자체가 실패하면 플래그를 세우지 않아 다음 로그인/재등록 시 자동 재시도된다.
+// (2026-07-23: 관리자 재시도 엔드포인트(handleSignupBonusRetry)가 결과를
+//  그대로 사용자에게 보여줄 수 있도록 반환값을 { status, ... } 객체로
+//  통일했다 — 기존 호출부(handleRegisterKey)는 반환값을 쓰지 않으므로
+//  하위호환에 영향 없음.)
 async function _grantSignupBonus(env, guid) {
-  if (!guid) return;
+  if (!guid) return { status: 'error', error: 'MISSING_GUID' };
   const kv = env.AI_SETUP_SEALS_KV;
   const flagKey = `hondi:signup_bonus_granted:${guid}`;
   if (kv) {
@@ -1097,7 +1112,7 @@ async function _grantSignupBonus(env, guid) {
       const already = await kv.get(flagKey);
       if (already) {
         console.info('[SignupBonus] 이미 지급됨(멱등), guid:', guid.slice(0, 20));
-        return;
+        return { status: 'already_granted', granted_at: already };
       }
     } catch (e) {
       console.warn('[SignupBonus] KV 플래그 조회 실패(계속 진행):', e.message);
@@ -1118,7 +1133,7 @@ async function _grantSignupBonus(env, guid) {
         tag: 'SIGNUP_BONUS_MINT_FAILED', guid, error: mintData.error, detail: mintData.detail,
         ts: new Date().toISOString(),
       }));
-      return; // 가입 자체는 막지 않는다 — 플래그 미기록이라 다음 시도에서 재시도됨
+      return { status: 'failed', error: mintData.error, detail: mintData.detail }; // 가입 자체는 막지 않는다 — 플래그 미기록이라 다음 시도에서 재시도됨
     }
     if (kv) {
       try { await kv.put(flagKey, new Date().toISOString()); } // TTL 없음 — 평생 1회
@@ -1128,9 +1143,50 @@ async function _grantSignupBonus(env, guid) {
       tag: 'SIGNUP_BONUS_GRANTED', guid, krw: SIGNUP_BONUS_KRW,
       gdc: mintData.amount, contentHash: mintData.content_hash, ts: new Date().toISOString(),
     }));
+    return { status: 'granted', gdc: mintData.amount, content_hash: mintData.content_hash };
   } catch (e) {
     console.warn('[SignupBonus] mint 호출 실패(가입은 계속 진행):', e.message);
+    return { status: 'failed', error: 'L1_UNREACHABLE', detail: e.message };
   }
+}
+
+// POST /biz/admin/signup-bonus-retry — 관리자 전용. 가입 축하 충전(mint)이
+// 실패한 걸로 로그(SIGNUP_BONUS_MINT_FAILED)에서 확인된 guid들을 모아
+// 수동으로 재시도한다. _grantSignupBonus 자체가 멱등이라(KV 플래그 확인),
+// 이미 지급된 guid를 다시 넣어도 안전하게 already_granted로 스킵된다 —
+// 그래서 "실패한 것만 정확히 골라야" 하는 부담 없이, 의심되는 guid를
+// 그냥 다 넣어도 된다.
+async function handleSignupBonusRetry(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+  const { secret, guids } = body;
+  if (secret !== _adminActionSecret(env)) return _err(403, 'FORBIDDEN', '시크릿이 일치하지 않습니다', corsHeaders);
+  if (!Array.isArray(guids) || guids.length === 0) {
+    return _err(400, 'MISSING_FIELD', 'guids(배열) 필수', corsHeaders);
+  }
+  if (guids.length > 100) {
+    return _err(400, 'TOO_MANY', '한 번에 최대 100개까지만 처리합니다', corsHeaders);
+  }
+
+  const results = [];
+  for (const guid of guids) {
+    if (typeof guid !== 'string' || !guid) {
+      results.push({ guid, status: 'error', error: 'INVALID_GUID' });
+      continue;
+    }
+    const r = await _grantSignupBonus(env, guid);
+    results.push({ guid, ...r });
+  }
+
+  console.log(JSON.stringify({
+    tag: 'SIGNUP_BONUS_RETRY_BATCH', count: guids.length,
+    granted: results.filter(r => r.status === 'granted').length,
+    already: results.filter(r => r.status === 'already_granted').length,
+    failed:  results.filter(r => r.status === 'failed' || r.status === 'error').length,
+    ts: new Date().toISOString(),
+  }));
+
+  return new Response(JSON.stringify({ ok: true, results }), { status: 200, headers: corsHeaders });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5623,6 +5679,7 @@ export default {
     if (pathname === '/biz/fee-rate' && request.method === 'GET') return handleFeeRate(request, env, corsHeaders);
     if (pathname === '/biz/gdc-deposit-close' && request.method === 'POST') return handleGdcDepositClose(request, env, corsHeaders);
     if (pathname === '/biz/balance-status' && request.method === 'GET') return handleBalanceStatus(request, env, corsHeaders);
+    if (pathname === '/biz/admin/signup-bonus-retry' && request.method === 'POST') return handleSignupBonusRetry(request, env, corsHeaders);
     if (pathname === '/biz/gdc-dao/proposal'  && request.method === 'POST') return handleGdcDaoProposalCreate(request, env, corsHeaders);
     if (pathname === '/biz/gdc-dao/vote'      && request.method === 'POST') return handleGdcDaoVote(request, env, corsHeaders);
     if (pathname === '/biz/gdc-dao/proposals' && request.method === 'GET')  return handleGdcDaoProposalsList(request, env, corsHeaders);
