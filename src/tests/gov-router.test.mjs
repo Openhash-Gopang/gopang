@@ -95,6 +95,15 @@ globalThis.fetch = async (url) => {
         출력_문구: '복지급여 지급결정, 위생업 영업허가·신고필증',
         처분성_문구: '복지급여 지급 여부·위생업 허가는 실제 신청·심사를 통해서만 확정된다',
         콜센터명: '제주콜센터', 콜센터번호: '064-120', 콜센터운영시간: '07:00~22:00, 유료' },
+      // 2026-07-23 신설(작업 3) — 제주시 도시건설국(construction) 공백 해소 검증용
+      // 실데이터(jejusi.go.kr 조직도 실사 반영분).
+      { 시코드: 'jejusi', 국코드: 'construction', 시이름: '제주시', 국이름: '도시건설국',
+        산하과목록: '도시계획과, 도시재생과, 건설과, 주택과, 건축과, 상하수도과',
+        입력_문구: '건축·도시계획 인허가 신청, 건설공사 신고, 공공주택 관련 민원, 상하수도 관련 신청',
+        출력_문구: '건축허가·도시계획 결정, 공공주택 관련 처분, 상하수도 인허가',
+        처분성_문구: '건축·도시계획 인허가는 실제 신청·심사를 통해서만 확정된다',
+        콜센터명: '제주콜센터', 콜센터번호: '064-120', 콜센터운영시간: '07:00~22:00, 유료',
+        처리사무: ['PERMIT-BUILDING-REPORT-14'] },
     ] }) };
     if (u.includes('province-master-data.json')) return { ok: true, text: async () => JSON.stringify(PROVINCE_MASTER) }; // 2026-07-19 신설 — 템플릿 정상 경로 검증용
     return { ok: true, text: async () => '{}' };
@@ -187,6 +196,17 @@ const CASES = [
   { text: '기초생활수급 신청하고 싶어요', locationHint: '제주시', expectAgency: 'gov_do',
     expectContains: 'SP-CITYDEPT-jejusi-welfare',
     note: '제주시 쪽도 동일 패턴 확인' },
+
+  // ── 작업 3: 제주시 도시건설국 공백 해소 검증 (2026-07-23 신설) ──
+  // 인수인계 문서 §4에서 제안된 시나리오 그대로 — 이전에는 제주시에
+  // 해당 국 레코드가 없어 "제주시 건축허가..."처럼 지역이 정확히
+  // 특정된 질의조차 시청 국 단위까지 못 내려가고 멈췄었다.
+  { text: '제주시 건축허가 신청하고 싶어요', expectAgency: 'gov_do',
+    expectContains: 'SP-CITYDEPT-jejusi-construction',
+    note: '제주시 도시건설국(construction) 레코드 신설 후 최초 검증 — 서귀포시와 동일하게 시청 국 단위까지 라우팅돼야 함' },
+  { text: '노형동에서 건축허가 신청하고 싶어요', expectAgency: 'gov_do',
+    expectContains: 'SP-CITYDEPT-jejusi-construction',
+    note: '읍면동 이름(노형동→제주시)으로 emdMatch 경로 진입 후, 규칙 F 일반화로 읍면동 대신 시청 국이 붙어야 함(서귀포/중문동 케이스와 대칭)' },
 ];
 
 let pass = 0, fail = 0, info = 0;
