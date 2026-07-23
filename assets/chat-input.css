@@ -1,0 +1,110 @@
+/*
+ * assets/chat-input.css — src/gopang/ui/chat-input.js 전용 스타일
+ * (2026-07-23 신설, 1단계 — webapp.html의 #ai-panel-input-row CSS를
+ * 마크업과 함께 그대로 이식했다. 색만 색-중립 변수로 교체했다.)
+ *
+ * 사용법: 이 파일을 <link>하고, mountChatInput()에 theme/colors를 넘기면
+ * JS가 컨테이너에 인라인으로 --brand-primary 등 3개 변수를 설정한다 —
+ * 이 CSS 파일 자체는 페이지별로 고칠 필요가 없다.
+ */
+
+.chat-input-root{
+  /* 기본값(JS가 항상 덮어쓰지만, 혹시 JS 실행 전 렌더링될 때의 안전망) */
+  --brand-primary:      #06C755;
+  --brand-primary-dark: #05A648;
+  --brand-primary-bg:   #E9FBF0;
+
+  font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo',sans-serif;
+}
+
+.chat-input-root .ci-attach-preview{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 14px;margin-bottom:6px;
+  background:var(--brand-primary-bg);
+  font-size:13px;color:#374151;
+  border-bottom:1px solid #E2E8F0;
+}
+.chat-input-root .ci-attach-preview[hidden]{ display:none; }
+.chat-input-root .ci-attach-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chat-input-root .ci-attach-remove{
+  margin-left:auto;background:none;border:none;cursor:pointer;
+  color:#9CA3AF;font-size:14px;line-height:1;padding:2px 4px;
+}
+
+.chat-input-root .ci-row{
+  display:flex;align-items:flex-end;padding:0 8px;gap:6px;
+}
+
+.chat-input-root .ci-aux-btns{
+  display:flex;align-items:center;gap:0;flex-shrink:0;align-self:flex-end;
+  overflow:hidden;max-width:210px;
+  transition:max-width .18s ease, opacity .18s ease;opacity:1;
+}
+.chat-input-root .ci-aux-btns.hidden{ max-width:0;opacity:0;pointer-events:none; }
+
+.chat-input-root .ci-btn{
+  width:35.91px;height:35.91px;border-radius:50%;background:none;border:none;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  color:#9CA3AF;transition:background .12s,color .12s;flex-shrink:0;
+}
+.chat-input-root .ci-btn:hover,.chat-input-root .ci-btn:active{ background:#F3F4F6;color:#111; }
+.chat-input-root .ci-btn svg{ stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round; }
+.chat-input-root .ci-mic-btn.mic-active{
+  color:var(--brand-primary);
+  animation:ci-mic-pulse .9s ease-in-out infinite;
+}
+@keyframes ci-mic-pulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.2)} }
+
+.chat-input-root .ci-input-wrap{
+  flex:1;display:flex;align-items:flex-end;
+  background:#F3F4F6;
+  border:1.5px solid transparent;border-radius:22px;
+  padding:5.69px 9px 5.69px 12.6px;
+  transition:border-color .15s,background .15s;
+  min-width:0;
+}
+.chat-input-root .ci-input-wrap:focus-within{ border-color:var(--brand-primary);background:#fff; }
+
+.chat-input-root .ci-input{
+  flex:1;background:transparent;border:none;
+  font-family:inherit;font-size:14px;
+  resize:none;outline:none;
+  min-height:17.87px;max-height:160px;
+  line-height:1.55;color:#111;
+  padding:1px 0;min-width:0;
+  overflow-y:auto;
+}
+.chat-input-root .ci-input::placeholder{ color:#9CA3AF; }
+
+.chat-input-root .ci-send-btn{
+  width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  margin-left:4px;background:var(--brand-primary);color:#fff;
+  transition:background .12s;
+}
+.chat-input-root .ci-send-btn:hover:not(:disabled):not(.generating){ background:var(--brand-primary-dark); }
+.chat-input-root .ci-send-btn svg{ stroke:currentColor;fill:none; }
+.chat-input-root .ci-send-btn .icon-stop{ display:none;fill:currentColor;stroke:none; }
+.chat-input-root .ci-send-btn .icon-waveform{ display:none; }
+
+.chat-input-root .ci-send-btn:disabled{
+  background:transparent;cursor:default;
+}
+.chat-input-root .ci-send-btn:disabled .icon-send{ display:none; }
+.chat-input-root .ci-send-btn:disabled .icon-waveform{ display:block;stroke:#9CA3AF; }
+
+.chat-input-root .ci-send-btn.generating{ background:#E5E7EB;color:#111; }
+.chat-input-root .ci-send-btn.generating .icon-send{ display:none; }
+.chat-input-root .ci-send-btn.generating .icon-stop{ display:block; }
+
+.chat-input-root .ci-send-btn.mic-active .icon-waveform{ display:block;stroke:var(--brand-primary); }
+.chat-input-root .ci-send-btn.mic-active .icon-waveform line{
+  animation:ci-waveform .9s ease-in-out infinite;
+}
+.chat-input-root .ci-send-btn.mic-active .icon-waveform line:nth-child(1){ animation-delay:0s; }
+.chat-input-root .ci-send-btn.mic-active .icon-waveform line:nth-child(2){ animation-delay:.12s; }
+.chat-input-root .ci-send-btn.mic-active .icon-waveform line:nth-child(3){ animation-delay:.24s; }
+.chat-input-root .ci-send-btn.mic-active .icon-waveform line:nth-child(4){ animation-delay:.36s; }
+.chat-input-root .ci-send-btn.mic-active .icon-waveform line:nth-child(5){ animation-delay:.48s; }
+.chat-input-root .ci-send-btn.mic-active .icon-waveform line:nth-child(6){ animation-delay:.6s; }
+@keyframes ci-waveform{ 0%,100%{transform:scaleY(.6)} 50%{transform:scaleY(1)} }
