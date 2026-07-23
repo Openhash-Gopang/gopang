@@ -104,6 +104,10 @@ const CASES = [
   // ── 응급(최우선) ──────────────────────────────
   { text: '지금 쓰러졌어요 숨을 안 쉬어요', expectTrace: ['JEJU-GOV-COMMON', 'SP-EXP-EMERGENCY'] },
 
+  // ── 응급 오탐 방지(2026-07-23 신설, 100건 사고실험에서 발견) ──────
+  { text: '제주4·3평화재단에 자료 요청합니다', note: '"평화재단"의 "화재" 부분문자열 오탐 방지 검증 — 응급이 아니어야 함(아래 별도 검증 블록에서 확인)' },
+  { text: '문화재 관람 안내받고 싶어요', note: '"문화재"의 "화재" 부분문자열 오탐 방지 검증' },
+
   // ── 국가기관 트리(중앙행정기관) ────────────────
   { text: '국민연금 수령 나이가 언제부터예요', expectAgency: 'gov_national', expectContains: 'SP-NAT-NPS' },
   { text: '건강보험료 얼마나 나왔는지 확인하고 싶어요', expectAgency: 'gov_national', expectContains: 'SP-NAT-NHIS' },
@@ -121,6 +125,8 @@ const CASES = [
 
   // ── 읍면동 트리(GPS/텍스트 힌트) ────────────────
   { text: '노형동 주민센터 몇시까지 하나요', expectAgency: 'gov_do', expectContains: 'SP-EMD-노형동' },
+  { text: '애월읍 행정복지센터 위치 문의드립니다', expectAgency: 'gov_do', expectContains: 'SP-EMD-애월읍',
+    note: '"행정복지센터"는 읍면동 사무소의 공식 명칭 — "복지" 부분문자열 때문에 시청 welfare 국으로 잘못 흡수되지 않고 정상 EMD 안내가 나와야 함(2026-07-23 신설, 100건 사고실험에서 발견)' },
   { text: '수돗물에서 이상한 냄새가 나요', locationHint: '애월읍', expectAgency: 'gov_do', expectContains: 'SP-EXP-WATER' },
 
   // ── LLM 분류 폴백 ────────────────────────────
@@ -263,6 +269,35 @@ console.log(`\n총 ${CASES.length + 1}건(CASES ${CASES.length} + 신설 1) — 
     console.log('✅ [신설] 지역 정보 전무 시 도청 건설주택국으로 오매칭되지 않음 확인(근본원인 수정):', r6.trace.join(' > '));
   } else {
     console.log('❌ [신설] 지역 정보 없이도 SP-DO-HOUSING으로 잘못 매칭됨(근본원인 미수정), trace:', r6.trace.join(' > '));
+    process.exitCode = 1;
+  }
+
+  // ── 화재 부분문자열 오탐 방지 전용 검증 (2026-07-23 신설, 100건 사고실험) ──
+  const r7 = await assembleGovSystemPrompt('제주4·3평화재단에 자료 요청합니다');
+  const r7ok = !r7.trace.some(t => t.includes('EMERGENCY'));
+  if (r7ok) {
+    console.log('✅ [신설] "평화재단"이 응급으로 오탐되지 않음 확인:', r7.trace.join(' > '));
+  } else {
+    console.log('❌ [신설] "평화재단"이 여전히 응급으로 오탐됨, trace:', r7.trace.join(' > '));
+    process.exitCode = 1;
+  }
+
+  const r8 = await assembleGovSystemPrompt('문화재 관람 안내받고 싶어요');
+  const r8ok = !r8.trace.some(t => t.includes('EMERGENCY'));
+  if (r8ok) {
+    console.log('✅ [신설] "문화재"가 응급으로 오탐되지 않음 확인:', r8.trace.join(' > '));
+  } else {
+    console.log('❌ [신설] "문화재"가 여전히 응급으로 오탐됨, trace:', r8.trace.join(' > '));
+    process.exitCode = 1;
+  }
+
+  // ── "행정복지센터" 오배정 방지 전용 검증 ──
+  const r9 = await assembleGovSystemPrompt('애월읍 행정복지센터 위치 문의드립니다');
+  const r9ok = r9.trace.some(t => t === 'SP-EMD-애월읍') && !r9.trace.some(t => t.startsWith('SP-CITYDEPT-'));
+  if (r9ok) {
+    console.log('✅ [신설] "행정복지센터"가 시청 welfare 국으로 오배정되지 않고 정상 EMD 안내됨 확인:', r9.trace.join(' > '));
+  } else {
+    console.log('❌ [신설] "행정복지센터"가 여전히 시청 국으로 잘못 흡수됨, trace:', r9.trace.join(' > '));
     process.exitCode = 1;
   }
 }
