@@ -102,12 +102,21 @@ function _showWalletLockedBanner() {
   bar.innerHTML = `
     🔒 이 기기에 저장된 지갑을 열 수 없습니다 (인증 정보 불일치).
     새 지갑을 임의로 만들지 않고 멈췄습니다 — 아래 중 하나를 선택해 주세요.<br>
-    <button id="_wl-restore-btn" style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;background:#7f1d1d;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer">백업 키로 복구</button>
+    <button id="_wl-devicelink-btn" style="margin-top:8px;padding:8px 14px;border:none;border-radius:8px;background:#7f1d1d;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer">다른 기기에서 이 지갑 가져오기</button>
+    <button id="_wl-restore-btn" style="margin-top:8px;margin-left:6px;padding:8px 14px;border:none;border-radius:8px;background:transparent;color:#7f1d1d;border:1px solid #fca5a5;font-size:12.5px;cursor:pointer">백업 키로 복구</button>
     <button id="_wl-reset-btn" style="margin-top:8px;margin-left:6px;padding:8px 14px;border:none;border-radius:8px;background:transparent;color:#7f1d1d;border:1px solid #fca5a5;font-size:12.5px;cursor:pointer">이 기기에서 새로 시작</button>
     <button id="_wl-dismiss-btn" style="margin-top:8px;margin-left:6px;padding:8px 14px;border:none;border-radius:8px;background:transparent;color:#7f1d1d;font-size:12.5px;cursor:pointer">나중에</button>
   `;
   document.body.appendChild(bar);
 
+  // 2026-07-23 신설(7단계) — 이미 로그인돼 있던(스마트폰 등) 다른 기기가
+  // 있다면 그 기기에서 이 지갑을 X25519 봉투로 안전하게 옮겨오는 게 가장
+  // 신뢰도 높은 복구 경로다(백업 키를 따로 적어둔 사람만 쓸 수 있는
+  // "백업 키로 복구"보다 훨씬 많은 사람이 쓸 수 있음) — 그래서 첫 번째
+  // 버튼으로 배치한다.
+  document.getElementById('_wl-devicelink-btn').onclick = () => {
+    location.href = '/auth/device-link.html?return=' + encodeURIComponent(location.href);
+  };
   document.getElementById('_wl-restore-btn').onclick = async () => {
     const backupKey = prompt('백업 키(개인키, Base64URL)를 입력하세요:');
     if (!backupKey) return;
