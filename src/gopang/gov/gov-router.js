@@ -1608,18 +1608,38 @@ function _renderDeptTemplate(template, rec) {
     .replaceAll('{DO_ROOT_SP}', 'SP-DO-000');
 }
 
-// entry: JEJU_L2_TABLE(또는 도별 테이블)(또는 국가기관 테이블) 항목. domain+도코드가 있으면
-// 템플릿을 렌더링해 반환하고, 없으면 기존처럼 static file을 그대로 반환.
+// ── 인허가류 사무 프로토콜 강제삽입 (2026-07-23 신설) ────────────────
+// 주피터 지시(건축법 제14조 건축신고 사고실험): 부서 SP 본문이
+// PERMIT-CRITERIA-PROTOCOL을 참조하는 문구를 빠뜨려도 적용되도록,
+// 강제 지점을 부서 SP 텍스트가 아니라 이 라우터(코드) 단에 둔다 —
+// §LEGAL-BASIS 상속 규칙과 동일한 SSOT 원칙. rec.처리사무 필드가
+// 비어있으면 이 함수는 아무 것도 하지 않는다(대다수 부서는 아직
+// 이 필드가 없음 — 데이터 채우기는 별도 작업).
+let _permitProtocolCache = null;
+async function _loadPermitProtocol() {
+  if (!_permitProtocolCache) {
+    _permitProtocolCache = await _fetchText('08-schema/PERMIT-CRITERIA-PROTOCOL_v1_0.md');
+  }
+  return _permitProtocolCache;
+}
+
+async function _appendPermitProtocolIfNeeded(text, rec) {
+  const codes = (rec && Array.isArray(rec.처리사무)) ? rec.처리사무.filter(Boolean) : [];
+  if (codes.length === 0) return { text, permitCodes: [] };
+  const protocol = await _loadPermitProtocol();
+  return { text: text + '\n\n---\n\n' + protocol, permitCodes: codes };
+}
+
 async function _fetchDeptText(entry) {
-  if (!entry.domain || !entry.도코드) return _fetchText(entry.file);
+  if (!entry.domain || !entry.도코드) return { text: await _fetchText(entry.file), permitCodes: [] };
   const records = await _loadDeptMasterData();
   const rec = records.find(r => r.domain === entry.domain && r.도코드 === entry.도코드);
   if (!rec || !rec.template) {
     console.warn(`[Jeju] 부서 데이터 레코드/템플릿 없음(domain=${entry.domain}, 도코드=${entry.도코드}) — static file로 폴백`);
-    return _fetchText(entry.file);
+    return _appendPermitProtocolIfNeeded(await _fetchText(entry.file), rec);
   }
   const template = await _fetchText(`02-do-dept/templates/${rec.template}`);
-  return _renderDeptTemplate(template, rec);
+  return _appendPermitProtocolIfNeeded(_renderDeptTemplate(template, rec), rec);
 }
 
 // ── 국가기관(중앙정부 지역사무소) 템플릿 렌더링 (2026-07-04, 도 부서
@@ -1645,12 +1665,12 @@ function _renderNatTemplate(template, rec) {
 // 반환하고, 없으면 기존처럼 static file을 그대로 반환(_fetchDeptText와
 // 동일한 폴백 철학).
 async function _fetchNatText(entry) {
-  if (!entry.domain || !entry.도코드) return _fetchText(entry.file);
+  if (!entry.domain || !entry.도코드) return { text: await _fetchText(entry.file), permitCodes: [] };
   const records = await _loadNatMasterData();
   const rec = records.find(r => r.domain === entry.domain && r.도코드 === entry.도코드);
   if (!rec || !rec.template) {
     console.warn(`[Jeju] 국가기관 데이터 레코드/템플릿 없음(domain=${entry.domain}, 도코드=${entry.도코드}) — static file로 폴백`);
-    return _fetchText(entry.file);
+    return _appendPermitProtocolIfNeeded(await _fetchText(entry.file), rec);
   }
   // ★ 2026-07-21 수정(버그4) — rec.template 필드값은 있는데 그 파일이
   // 실제로 저장소에 없는 경우(예: SP-NAT-TAX-TEMPLATE_v1.0.md 404)를
@@ -1660,15 +1680,18 @@ async function _fetchNatText(entry) {
   // 폴백한다.
   try {
     const template = await _fetchText(`09-national/agencies/templates/${rec.template}`);
-    return _renderNatTemplate(template, rec);
+    return _appendPermitProtocolIfNeeded(_renderNatTemplate(template, rec), rec);
   } catch (e) {
     console.warn(`[gov-router] 국가기관 템플릿 파일 없음(${rec.template}): ${e.message} — static file로 폴백`);
     try {
-      return await _fetchText(entry.file);
+      return _appendPermitProtocolIfNeeded(await _fetchText(entry.file), rec);
     } catch (e2) {
       console.warn(`[gov-router] static 폴백도 실패(${entry.file}): ${e2.message} — 정직한 정보없음으로 대체`);
-      return `[정보 없음] ${entry.code} 관련 상세 안내를 아직 준비하지 못했습니다. ` +
-        `정부24(gov.kr) 또는 국번없이 110(정부민원안내)으로 확인해 주세요.`;
+      return {
+        text: `[정보 없음] ${entry.code} 관련 상세 안내를 아직 준비하지 못했습니다. ` +
+          `정부24(gov.kr) 또는 국번없이 110(정부민원안내)으로 확인해 주세요.`,
+        permitCodes: [],
+      };
     }
   }
 }
@@ -1840,9 +1863,10 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     const nationalSp = await _loadNationalSp();
     parts.push(nationalSp);
     trace.push('JEJU-NATIONAL-SP');
-    const agencyText = await _fetchNatText(natMatch);
+    const { text: agencyText, permitCodes: agencyPermitCodes } = await _fetchNatText(natMatch);
     parts.push(agencyText);
     trace.push(natMatch.code);
+    if (agencyPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${agencyPermitCodes.join(',')})`);
     return { systemPrompt: parts.join('\n\n---\n\n'), trace };
   }
   const catalogOnly = _matchCatalogOnly(text);
@@ -1974,8 +1998,9 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       trace.push('(govType 가드 — 세정은 시군구 소관이나 시군구명 미특정, 도청 L2 매칭 무시)');
     } else {
       const divText = await _fetchDeptText(divMatch);
-      parts.push(divText);
+      parts.push(divText.text);
       trace.push(divMatch.code);
+      if (divText.permitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${divText.permitCodes.join(',')})`);
       await _appendExpertIfMatched();
       return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
@@ -2047,18 +2072,21 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       const nationalSp = await _loadNationalSp();
       nationalOnlyParts.push(nationalSp);
       const entry = _findTableEntry(classified);
-      const agencyText = await _fetchNatText(entry);
+      const { text: agencyText, permitCodes: agencyPermitCodes } = await _fetchNatText(entry);
       nationalOnlyParts.push(agencyText);
+      const natTrace = ['JEJU-GOV-COMMON', 'JEJU-NATIONAL-SP', classified, '(LLM 분류 폴백)'];
+      if (agencyPermitCodes.length) natTrace.push(`PERMIT-CRITERIA-PROTOCOL(${agencyPermitCodes.join(',')})`);
       return {
         systemPrompt: nationalOnlyParts.join('\n\n---\n\n'),
-        trace: ['JEJU-GOV-COMMON', 'JEJU-NATIONAL-SP', classified, '(LLM 분류 폴백)'],
+        trace: natTrace,
       };
     }
     const entry = _findTableEntry(classified);
     if (entry) {
       const entryText = await _fetchDeptText(entry);
-      parts.push(entryText);
+      parts.push(entryText.text);
       trace.push(classified, '(LLM 분류 폴백)');
+      if (entryText.permitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${entryText.permitCodes.join(',')})`);
       await _appendExpertIfMatched();
       return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
