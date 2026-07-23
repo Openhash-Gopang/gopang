@@ -1719,9 +1719,32 @@
   // 정의 안 된 메서드(getBalance 등)는 자동으로 각 호출부의 기존
   // guid-fallback 경로로 떨어진다 — 별도 스텁이 필요 없다.
   class SessionSignProxy {
-    constructor() { this.guid = null; this.handle = null; this._isSessionProxy = true; }
+    constructor() {
+      this.guid = null;
+      this.handle = null;
+      this._isSessionProxy = true;
+      // 2026-07-23 추가 — 사고실험 E11에서 발견: 거의 동시에 두 서명이
+      // 필요해지면 둘 다 같은 이름('gopang_sign_request')의 팝업을 열려고
+      // 해서, 두 번째 호출이 첫 번째가 아직 열어둔 팝업을 가로채(같은
+      // 이름의 창은 새로 열지 않고 기존 창을 재사용/네비게이트하는
+      // window.open() 표준 동작) 첫 번째 요청의 Promise가 응답을 영영
+      // 못 받고 멈출 수 있었다. 팝업을 여러 개 동시에 띄우는 대신, 모든
+      // .sign() 호출을 하나의 큐로 직렬화한다 — 한 번에 팝업은 항상
+      // 하나만 뜨고, 먼저 요청한 게 항상 먼저 처리된다.
+      this._queue = Promise.resolve();
+    }
     setIdentity({ guid, handle } = {}) { this.guid = guid || null; this.handle = handle || null; }
-    async sign(payload) {
+    sign(payload) {
+      const run = () => this._signOne(payload);
+      // 이전 서명이 성공했든 실패했든(예: 사용자가 팝업을 닫아 reject)
+      // 다음 서명 요청은 항상 이어서 실행돼야 하므로, 큐 자체는 끊기지
+      // 않게 별도로 이어붙인다. run()의 반환(성공/실패)은 그대로
+      // 호출자에게 전달한다.
+      const result = this._queue.then(run, run);
+      this._queue = result.then(() => {}, () => {});
+      return result;
+    }
+    async _signOne(payload) {
       const { signature, guid } = await _openSignRequestPopup(String(payload));
       // 첫 서명 성공 시점에야 서버(전화번호 조회 결과)로부터 실제 guid를
       // 처음 알게 된다 — 공용 PC는 사전에 어떤 계정인지 전혀 모르는

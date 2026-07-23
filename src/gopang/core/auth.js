@@ -1733,6 +1733,15 @@ function _showPhonePopup(resolve) {
 
     resolve(user);
 
+    // 2026-07-23 신설 — 실사 중 확인된 혼란: 이 지갑은 지금 가입을 마친
+    // "이 브라우저"에만 생성된다. 같은 폰이라도 나중에 다른 브라우저(예:
+    // Chrome으로 가입했는데 Safari로 열어봄)에서는 별도 기기로 인식돼
+    // 다시 승인이 필요하다는 걸 미리 알려준다 — 그때 가서 "왜 또
+    // 로그인하라고 하지?"로 헤매지 않도록.
+    if (document.getElementById('message-list')) {
+      appendBubble('ai', 'ℹ️ 이 계정은 지금 쓰고 계신 이 브라우저에 연결됐어요. 같은 폰이라도 다른 브라우저(Chrome↔Safari 등)에서 열면 별도 기기로 인식되니, 그럴 땐 이 브라우저에서 승인 한 번만 더 해주시면 됩니다.');
+    }
+
     requestPushSubscription(ipv6).then(pushResult => {
       if (!document.getElementById('message-list')) return;
       if (pushResult.reason === 'permission_denied') {
