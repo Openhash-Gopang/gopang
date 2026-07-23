@@ -167,5 +167,9 @@
   "AGENT-SUPPLIER-96": "AGENT-SUPPLIER-96_other-personal-services_v2.0.txt",
   "AGENT-SUPPLIER-97": "AGENT-SUPPLIER-97_household-employment_v2.0.txt",
   "AGENT-SUPPLIER-98": "AGENT-SUPPLIER-98_own-consumption-production_v2.0.txt",
-  "AGENT-SUPPLIER-99": "AGENT-SUPPLIER-99_international-foreign-organizations_v2.0.txt"
+  "AGENT-SUPPLIER-99": "AGENT-SUPPLIER-99_international-foreign-organizations_v2.0.txt",
+  "SP-INDUSTRY-TRANSFORM-COMMON": "SP-INDUSTRY-TRANSFORM-COMMON_v1.0.md",
+  "SP-INDUSTRY-TRANSFORM-01": "SP-INDUSTRY-TRANSFORM-01_agriculture_v1.0.txt",
+  "SP-INDUSTRY-TRANSFORM-10": "SP-INDUSTRY-TRANSFORM-10_food-manufacturing_v1.0.txt",
+  "SP-INDUSTRY-TRANSFORM-56": "SP-INDUSTRY-TRANSFORM-56_restaurants-bars_v1.0.txt"
 }
