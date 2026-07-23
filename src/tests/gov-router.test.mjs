@@ -140,6 +140,19 @@ const CASES = [
   // ── 시청 국(局) 라우팅 + 건축신고 파일럿 실사용 시나리오 (2026-07-23 신설) ──
   { text: '서귀포시 건축허가 신청하고 싶어요', expectAgency: 'gov_do', expectContains: 'SP-CITYDEPT-seogwipo-construction',
     note: '건축법 제14조상 관할은 도청이 아니라 서귀포시장 — 시청 국(안전도시건설국) 단위까지 정확히 내려가야 하고, PERMIT-CRITERIA-PROTOCOL(PERMIT-BUILDING-REPORT-14)까지 딸려와야 함' },
+
+  // ── 지역명 없이 PDV 힌트만으로 관할 특정 (2026-07-23 신설, 주피터 지시) ──
+  // "서귀포 시청에 건축 인허가..."처럼 지역을 지정하지 않고 "건축 인허가
+  // 신청하고 싶어요"라고만 말해도, PDV 위치로 시(市)·국(局)까지 동적으로
+  // 특정해야 한다는 사고실험 결과 반영.
+  { text: '건축 인허가 신청하고 싶어요', locationHint: '서귀포시', expectAgency: 'gov_do',
+    expectContains: 'SP-CITYDEPT-seogwipo-construction',
+    note: '발화에 지역명 없음 — PDV 힌트(시 단위)만으로 cityOnly 경로 진입 후 시청 국까지 특정돼야 함(_matchCity가 힌트를 보도록 수정한 부분 검증)' },
+  { text: '건축 인허가 신청하고 싶어요', locationHint: '중문동', expectAgency: 'gov_do',
+    expectContains: 'SP-CITYDEPT-seogwipo-construction',
+    note: '발화에 지역명 없음 — PDV 힌트가 동(洞) 단위(중문동→서귀포시)라 emdMatch 경로로 들어가지만, 건축 사무는 읍면동이 아니라 시청 국 소관이므로 읍면동 템플릿 대신 시청 국이 붙어야 함(규칙 F 일반화 검증)' },
+  { text: '건축 인허가 신청하고 싶어요', expectAgency: 'gov_do',
+    note: '발화에도 PDV 힌트도 지역 정보 전혀 없음 — 이 경우 도청 건설주택국으로 잘못 라우팅되지 않는지가 핵심(근본원인 수정 검증). 실제로는 L2 미매칭/LLM폴백으로 흘러가는 게 정직한 처리' },
 ];
 
 let pass = 0, fail = 0, info = 0;
@@ -219,6 +232,37 @@ console.log(`\n총 ${CASES.length + 1}건(CASES ${CASES.length} + 신설 1) — 
     console.log('✅ [신설] 서귀포시 건축신고 파일럿 — 시청 국 단위까지 라우팅 + 프로토콜 강제삽입 확인:', r3.trace.join(' > '));
   } else {
     console.log('❌ [신설] 서귀포시 건축신고 파일럿 실패, trace:', r3.trace.join(' > '));
+    process.exitCode = 1;
+  }
+
+  // ── 지역명 없이 PDV 힌트만으로 관할 특정 — 전용 검증 (2026-07-23 신설) ──
+  const r4 = await assembleGovSystemPrompt('건축 인허가 신청하고 싶어요', '서귀포시');
+  const r4ok = r4.trace.some(t => t === 'SP-CITYDEPT-seogwipo-construction');
+  if (r4ok) {
+    console.log('✅ [신설] 지역명 없음 + 시 단위 PDV 힌트 → 시청 국 특정 확인:', r4.trace.join(' > '));
+  } else {
+    console.log('❌ [신설] 시 단위 PDV 힌트로 시청 국 특정 실패, trace:', r4.trace.join(' > '));
+    process.exitCode = 1;
+  }
+
+  const r5 = await assembleGovSystemPrompt('건축 인허가 신청하고 싶어요', '중문동');
+  const r5ok = r5.trace.some(t => t === 'SP-CITYDEPT-seogwipo-construction')
+    && !r5.trace.some(t => t.startsWith('SP-EMD-'));
+  if (r5ok) {
+    console.log('✅ [신설] 지역명 없음 + 동 단위 PDV 힌트(emdMatch 경로) → 읍면동 대신 시청 국 특정 확인(규칙 F 일반화):', r5.trace.join(' > '));
+  } else {
+    console.log('❌ [신설] 동 단위 PDV 힌트에서 규칙 F 일반화 실패, trace:', r5.trace.join(' > '));
+    process.exitCode = 1;
+  }
+
+  // ── 근본원인 수정 회귀검증 — 지역 정보가 전혀 없으면 도청으로 잘못
+  // 라우팅되지 않아야 한다(SP-DO-HOUSING 오매칭 방지) ──
+  const r6 = await assembleGovSystemPrompt('건축 인허가 신청하고 싶어요');
+  const r6ok = !r6.trace.includes('SP-DO-HOUSING');
+  if (r6ok) {
+    console.log('✅ [신설] 지역 정보 전무 시 도청 건설주택국으로 오매칭되지 않음 확인(근본원인 수정):', r6.trace.join(' > '));
+  } else {
+    console.log('❌ [신설] 지역 정보 없이도 SP-DO-HOUSING으로 잘못 매칭됨(근본원인 미수정), trace:', r6.trace.join(' > '));
     process.exitCode = 1;
   }
 }

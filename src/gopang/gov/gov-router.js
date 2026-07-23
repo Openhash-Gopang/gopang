@@ -434,7 +434,16 @@ const JEJU_L2_TABLE = [
     kw: ['기후환경국', '전기차', '탄소중립', '환경영향평가', '클린하우스', '분리배출', '폐기물', '환경'] },
   { code: 'SP-DO-HOUSING',  file: '02-do-dept/SP-DO-HOUSING_v1.1.md',
     domain: 'housing', 도코드: 'jeju',
-    kw: ['건설주택국', '공공임대주택', '건축허가', '건축인허가', '주택', '건축'] },
+    // ★ 2026-07-23 수정 — '건축허가'/'건축인허가'/'건축' 삭제(주피터 지시,
+    // 건축법 제14조 사고실험에서 발견). 이 도청 실국이 실제로 하는 일은
+    // 주택정책·공공임대주택 등 정책 수립이고, 개별 건축허가는 시청
+    // 건축과 소관이다 — division-master-data.json의 jeju-housing/
+    // architecture 레코드 처분성_문구가 이미 "개별 건축허가는 시청
+    // 건축과에서 확정된다"고 스스로 명시하고 있었는데, 이 라우팅
+    // 키워드 테이블만 안 고쳐져 있었다. 지역 특정 없이 "건축허가
+    // 신청하고 싶어요"라고만 말하면 이 목록에 걸려 도청으로 잘못
+    // 라우팅되던 버그의 근본 원인.
+    kw: ['건설주택국', '공공임대주택', '주택정책', '주택'] },
   { code: 'SP-DO-TRANSPORT',file: '02-do-dept/SP-DO-TRANSPORT_v1.1.md',
     domain: 'transport', 도코드: 'jeju',
     kw: ['교통항공국', '버스', '준공영제', '교통약자', '콜택시', '공영주차장', '공항', '제2공항', '교통'] },
@@ -472,7 +481,11 @@ const JEJU_CITY_TABLE = [
 // 추가돼야 한다(별도 확인 필요, 지어내지 않음).
 const JEJU_CITY_DEPT_TABLE = [
   { 국코드: 'jachi', 시코드: 'jejusi',
-    kw: ['자치행정국', '총무과', '기획예산과', '세무과', '재산세과', '지방세', '인허가', '인사'] },
+    // ★ 2026-07-23 수정 — '인허가'/'인사'는 지나치게 포괄적인 일반명사라
+    // "건축 인허가" 같은 타 국 소관 질의까지 자치행정국으로 잘못 흡수하는
+    // 버그를 유발했다(사고실험으로 발견, 주피터 지시). 자치행정과 고유
+    // 업무(총무·세정·조직)를 가리키는 구체적 단어만 남긴다.
+    kw: ['자치행정국', '총무과', '기획예산과', '세무과', '재산세과', '지방세'] },
   { 국코드: 'safety', 시코드: 'jejusi',
     kw: ['안전교통국', '안전총괄과', '교통행정과', '차량관리과', '교통', '차량등록', '주정차'] },
   { 국코드: 'welfare', 시코드: 'jejusi',
@@ -484,7 +497,7 @@ const JEJU_CITY_DEPT_TABLE = [
   { 국코드: 'climate', 시코드: 'jejusi',
     kw: ['청정환경국', '환경관리과', '환경지도과', '생활환경과', '공원녹지과', '절물생태관리소', '환경', '공원'] },
   { 국코드: 'jachi', 시코드: 'seogwipo',
-    kw: ['자치행정국', '총무과', '기획예산과', '세무과', '평생교육과', '지방세', '인허가', '인사'] },
+    kw: ['자치행정국', '총무과', '기획예산과', '세무과', '평생교육과', '지방세'] },
   { 국코드: 'welfare', 시코드: 'seogwipo',
     kw: ['복지위생국', '주민복지과', '노인복지과', '장애인복지과', '여성가족과', '위생관리과', '복지', '위생'] },
   { 국코드: 'culture', 시코드: 'seogwipo',
@@ -1057,7 +1070,7 @@ const L2_CANONICAL_KEYWORDS = {
   innov: ['스타트업', '인공지능', '바이오산업'],
   welfare: ['기초생활수급', '기초연금', '장애인복지'],
   climate: ['환경', '탄소중립', '산림'],
-  housing: ['주택', '건설', '건축'],
+  housing: ['주택', '건설'],
   transport: ['교통', '대중교통', '버스', '지하철'],
   culture: ['문화예술', '문화', '도서관'],
   tourism: ['관광', '숙박업', '여행업'],
@@ -1287,9 +1300,19 @@ function _matchEmd(text, records) {
   return null;
 }
 
-function _matchCity(text) {
+// ★ 2026-07-23 수정(주피터 지시 — 건축법 제14조 사고실험) — pdvLocationHint
+// 인자 추가. 기존엔 emdMatch(_matchEmd)만 힌트를 봤고 이 함수는 text만
+// 봐서, "서귀포시 동홍동" 같은 PDV 위치가 있어도 발화 자체에 지역명이
+// 없으면("건축 인허가 신청하고 싶어요") 행정시를 특정 못 하고 놓쳤다
+// — _matchEmd와 동일한 우선순위(발화 우선, 없으면 힌트)로 통일한다.
+function _matchCity(text, pdvLocationHint) {
   for (const c of _cityTable()) {
     if (c.kw.some(k => text.includes(k))) return c;
+  }
+  if (pdvLocationHint) {
+    for (const c of _cityTable()) {
+      if (c.kw.some(k => pdvLocationHint.includes(k))) return c;
+    }
   }
   return null;
 }
@@ -2006,8 +2029,22 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       parts.push(cityText);
       trace.push(cityCode.code);
 
-      // 서귀포시 + 상하수도 키워드 → 규칙 F: 읍면동 생략, 시청 직행 후 바로 SP-EXP-WATER
-      if (cityCode.code === 'SP-CITY-SEOGWIPO' && isWaterQuery) {
+      // ★ 2026-07-23 수정(주피터 지시) — 규칙 F(서귀포 상하수도는 읍면동
+      // 생략)를 상하수도 전용에서 모든 시청 국(局) 도메인으로 일반화한다.
+      // PDV 힌트에 동 이름이 있어 emdMatch까지는 됐지만("동홍동"),
+      // 발화 내용 자체가 읍면동 사무(민원 등)가 아니라 시청 국 소관
+      // 사무(예: 건축허가)인 경우, 읍면동 템플릿 대신 시청 국을 붙인다
+      // — 읍면동은 건축허가를 처리하지 않으므로 이게 실제로 맞는 관할이다.
+      const cityDeptMatch = _matchCityDept(text, cityCode.시코드);
+      if (cityDeptMatch) {
+        const { text: cityDeptText, permitCodes: cityDeptPermitCodes } = await _fetchCityDeptText(cityDeptMatch);
+        if (cityDeptText) {
+          parts.push(cityDeptText);
+          trace.push(`SP-CITYDEPT-${cityCode.시코드}-${cityDeptMatch.국코드}`,
+            '(규칙 F 일반화 — 시청 국 소관 사무라 읍면동 생략)');
+          if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
+        }
+      } else if (cityCode.code === 'SP-CITY-SEOGWIPO' && isWaterQuery) {
         trace.push('(규칙 F: 서귀포 상하수도는 읍면동 생략)');
       } else {
         const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.2.md');
@@ -2025,7 +2062,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   }
 
   // 2) 행정시만 언급(읍면동 특정 안 됨) → 시청 레이어만
-  const cityOnly = _matchCity(text);
+  const cityOnly = _matchCity(text, pdvLocationHint);
   if (cityOnly) {
     const cityText = await _fetchCityText(cityOnly);
     parts.push(cityText);
