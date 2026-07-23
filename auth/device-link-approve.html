@@ -186,16 +186,28 @@
 
     sessionData = data;
     $('pc-label').textContent = data.pcLabel || '알 수 없는 기기';
-    // ★ 2026-07-20 UX 개선(사용자 지시 — 구글 방식) — 코드를 화면에
-    // 보여주고 PC에 옮겨 적게 하던 방식을 없앤다. 폰은 이미 /session에서
-    // code를 받아뒀으므로, "본인이 맞습니다" 버튼을 누르면 그 코드를
-    // 폰이 스스로 /verify에 제출한다 — 사람이 숫자를 옮겨 적을 필요가
-    // 없다. 서버 쪽 검증 로직(코드 일치 확인)은 전혀 안 바뀌었고, 누가
-    // 그 코드를 "안다"는 사실 자체가 이미 이 세션의 소유자(같은 guid로
-    // /session을 조회할 수 있었다는 것)라는 증거이므로 보안 수준은
-    // 그대로다 — 단지 그 값을 사람이 눈으로 보고 옮겨 적던 단계를
-    // 자동화했을 뿐이다.
+    // 2026-07-23 신설 — purpose별로 승인 화면 문구를 다르게 보여준다.
+    // key_transfer는 원래부터 있던 "계정 전체 권한 이전" 경고 그대로
+    // 유지하지만, sign_request는 성격이 전혀 다르다 — 개인키도 계정
+    // 접근권한도 안 넘어가고, 딱 이 서명 1건만 승인하는 것이므로 같은
+    // 문구를 그대로 쓰면 사실과 다르게 겁을 주게 된다. 또한 "뭐에
+    // 서명하는지" 안 보여주고 버튼만 누르게 하면 맹목적 서명이 되므로
+    // sigMsg를 반드시 화면에 보여준다.
+    if (data.purpose === 'sign_request') {
+      document.querySelector('#content h1').textContent = '서명 요청이 도착했습니다';
+      document.querySelector('#content .warn').innerHTML =
+        `이 요청을 승인하면 <strong>아래 내용 1건에만</strong> 서명합니다. ` +
+        `계정 전체 권한이나 개인키는 그 기기로 넘어가지 않습니다.<br><br>` +
+        `<div style="background:#fff;border:1px solid #fde68a;border-radius:6px;` +
+        `padding:8px;margin-top:6px;font-family:monospace;font-size:11px;` +
+        `word-break:break-all;color:#111827">${_escapeHtml(data.sigMsg || '(내용 없음)')}</div>`;
+      $('btn-approve').textContent = '본인이 맞습니다 — 서명 허용';
+    }
     show('content');
+  }
+
+  function _escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   }
 
   async function init() {
@@ -241,16 +253,19 @@
   // 3회·최대 2초 간격으로는 실사에서 반복 실패가 계속 확인돼, 5회·최대
   // 4초 간격으로 늘렸다. 그래도 실패하면 verify/암호화를 다시 안 해도
   // 되도록 sealed를 _pendingDeliver에 남겨 수동 재전송 버튼이 재사용한다.
-  let _pendingDeliver = null; // { guid, sealed } — 암호화 성공 후에만 채워짐
+  let _pendingDeliver = null; // { guid, sealed } 또는 { guid, signPayload:{signature,publicKeyB64u} } — 성공 조건까지 끝난 뒤에만 채워짐
 
-  async function deliverWithRetry(guid, sealed, maxAttempts = 5) {
+  async function deliverWithRetry(guid, sealed, maxAttempts = 5, signPayload = null) {
     let lastErr;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         dlog(`deliver 시도 ${attempt}/${maxAttempts}...`);
+        const body = signPayload
+          ? { sessionId, guid, signature: signPayload.signature, publicKeyB64u: signPayload.publicKeyB64u }
+          : { sessionId, guid, sealed };
         const res = await fetch(`${WORKER}/auth/device-link/deliver`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId, guid, sealed }),
+          body: JSON.stringify(body),
         });
         const data = await res.json();
         dlog('deliver 응답: ' + JSON.stringify(data));
@@ -290,6 +305,24 @@
       dlog('verify 응답: ' + JSON.stringify(verifyData));
       if (!verifyRes.ok || !verifyData.ok) throw new Error(verifyData.detail || verifyData.error || '요청이 만료됐거나 이미 처리됐습니다.');
       dlog('verify 성공', 'ok');
+
+      // ── sign_request: 개인키는 안 넘기고, 이 폰의 실제 지갑으로
+      // sigMsg에 서명한 결과만 넘긴다 (2026-07-23 신설) ──────────────
+      if (sessionData.purpose === 'sign_request') {
+        setStatus('서명하는 중...');
+        const signature = await wallet.signPayload(sessionData.sigMsg);
+        dlog('서명 완료', 'ok');
+        const result = await deliverWithRetry(wallet.guid, null, 5, { signature, publicKeyB64u: wallet.publicKeyB64u });
+        if (!result.ok) {
+          setStatus('전달에 실패했습니다 — 아래 "전달 다시 시도" 버튼을 눌러 주세요.', 'error');
+          _pendingDeliver = { guid: wallet.guid, sealed: null, signPayload: { signature, publicKeyB64u: wallet.publicKeyB64u } };
+          $('btn-retry-deliver').classList.remove('hide');
+          $('btn-deny').disabled = false;
+          return;
+        }
+        _onDeliverSuccess();
+        return;
+      }
 
       setStatus('지갑을 안전하게 전달하는 중...');
 
@@ -361,7 +394,7 @@
     if (!_pendingDeliver) { dlog('재전송할 봉투가 없음 — 처음부터 다시 시도해 주세요.', 'err'); return; }
     $('btn-retry-deliver').disabled = true;
     setStatus('다시 전달하는 중...');
-    const result = await deliverWithRetry(_pendingDeliver.guid, _pendingDeliver.sealed);
+    const result = await deliverWithRetry(_pendingDeliver.guid, _pendingDeliver.sealed, 5, _pendingDeliver.signPayload || null);
     $('btn-retry-deliver').disabled = false;
     if (!result.ok) {
       setStatus('다시 실패했습니다 — 와이파이/데이터 연결 상태를 확인하고 다시 눌러 주세요.', 'error');

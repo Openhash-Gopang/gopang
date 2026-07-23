@@ -48,8 +48,8 @@
 </head>
 <body>
 <div id="card">
-  <h1>PC에서 혼디 로그인</h1>
-  <p class="desc">
+  <h1 id="page-title">PC에서 혼디 로그인</h1>
+  <p class="desc" id="page-desc">
     스마트폰과 완전히 같은 계정으로 PC에서도 이용할 수 있습니다.
     문자(SMS) 없이, 스마트폰에서 확인 한 번이면 됩니다.
   </p>
@@ -82,12 +82,33 @@
   const RETURN_URL = new URLSearchParams(location.search).get('return') || '/webapp.html';
   const PREFILLED_PHONE = new URLSearchParams(location.search).get('phone') || '';
 
+  // 2026-07-23 신설 — purpose='sign_request'면 개인키를 옮기지 않고,
+  // sigMsg에 대한 서명 결과만 1회성으로 받아 opener에게 postMessage로
+  // 돌려준다(공용 PC 세션의 1회성 서명 위임 — 4단계). 이 페이지는 그
+  // 경우 팝업으로 열린다(sendMessage() → gopang-wallet.js 참고).
+  const PARAMS  = new URLSearchParams(location.search);
+  const PURPOSE = PARAMS.get('purpose') === 'sign_request' ? 'sign_request' : 'key_transfer';
+  const SIG_MSG = PARAMS.get('sigMsg') || null;
+  const IS_POPUP_SIGN = PURPOSE === 'sign_request' && !!window.opener;
+  // 팝업(window.open)은 같은 오리진이면 opener와 sessionStorage를 공유한다
+  // (스펙 동작) — 그래서 "이번 공용 PC 세션에서 이미 승인받은 전화번호"를
+  // 매번 새로 입력할 필요 없이 재사용할 수 있다.
+  const CACHED_E164_KEY = 'gopang_shared_pc_e164';
+
+  if (PURPOSE === 'sign_request') {
+    document.getElementById('page-title').textContent = '서명 요청 승인';
+    document.getElementById('page-desc').textContent =
+      '이 PC(공용 PC 모드)가 방금 시도한 작업에 대한 서명을 요청합니다. ' +
+      '개인키는 이 PC로 옮겨지지 않고, 매번 스마트폰에서 승인해야 합니다.';
+  }
+
   const $ = (id) => document.getElementById(id);
   const stepPhone = $('step-phone'), stepCode = $('step-code');
   const statusEl = $('status');
 
   let sessionId = null;
   let pcKeyPair = null;   // { publicKey, privateKey (CryptoKey), publicKeyB64u }
+  let e164Used = null;    // sign_request 완료 시 sessionStorage에 캐시하기 위해 기억
   let pollTimer = null;
   let countdownTimer = null;
 
@@ -120,6 +141,17 @@
   if (PREFILLED_PHONE) {
     $('phone').value = e164ToKrDisplay(PREFILLED_PHONE);
     setStatus('본인 계정 확인 — 번호가 자동으로 채워졌습니다.');
+  } else if (PURPOSE === 'sign_request') {
+    // 공용 PC 세션에서 이미 한 번 승인받은 번호가 있으면 재사용 —
+    // 매 서명 요청마다 전화번호를 다시 입력하게 하면 "세션 동안은
+    // 편하게 쓴다"는 공용 PC 모드의 취지에 어긋난다. 승인 자체(폰에서
+    // 버튼 누르기)는 매번 새로 필요하다 — 여기서 건너뛰는 건 어디까지나
+    // "이 번호로 보낼지" 타이핑뿐이다.
+    const cached = sessionStorage.getItem(CACHED_E164_KEY);
+    if (cached) {
+      $('phone').value = e164ToKrDisplay(cached);
+      setStatus('이전에 사용한 번호로 자동 채워졌습니다. 바로 요청을 보낼 수 있습니다.');
+    }
   }
 
   $('btn-request').addEventListener('click', async () => {
@@ -128,15 +160,12 @@
     // (normalizePhoneToE164)로 처리한다 — 별도 분기 불필요.
     const e164 = normalizePhoneToE164($('phone').value);
     if (!e164) { setStatus('전화번호를 입력해 주세요.', 'error'); return; }
+    e164Used = e164;
 
     $('btn-request').disabled = true;
     setStatus('스마트폰에 요청을 보내는 중...');
 
     try {
-      // PC 전용 1회용 X25519 키페어 — 개인키는 이 페이지 메모리에만 존재,
-      // 서버·IndexedDB 어디에도 저장하지 않는다(1회성).
-      pcKeyPair = await GopangWallet.generateX25519KeyPair();
-
       const pcLabel = (() => {
         const ua = navigator.userAgent;
         const browser = /Chrome/.test(ua) ? 'Chrome' : /Firefox/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : '브라우저';
@@ -144,9 +173,20 @@
         return `${browser} · ${os}`.trim();
       })();
 
+      const initBody = { e164, pcLabel, purpose: PURPOSE };
+      if (PURPOSE === 'sign_request') {
+        if (!SIG_MSG) throw new Error('서명 대상이 없습니다(sigMsg 누락) — 잘못된 요청입니다.');
+        initBody.sigMsg = SIG_MSG;
+      } else {
+        // key_transfer만 X25519 키페어가 필요하다(개인키 봉투 수신용).
+        // sign_request는 서명 '결과'만 평문으로 받으면 되므로 불필요.
+        pcKeyPair = await GopangWallet.generateX25519KeyPair();
+        initBody.pcPubKeyB64u = pcKeyPair.publicKeyB64u;
+      }
+
       const res = await fetch(`${WORKER}/auth/device-link/init`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ e164, pcPubKeyB64u: pcKeyPair.publicKeyB64u, pcLabel }),
+        body: JSON.stringify(initBody),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.detail || data.error || '요청 실패');
@@ -228,9 +268,13 @@
           _showExpiredGuidance();
           return;
         }
-        if (data.state === 'delivered' && data.sealed) {
+        if (data.state === 'delivered') {
           stopPolling();
-          await finishImport(data.sealed);
+          if (data.purpose === 'sign_request') {
+            await finishSignRequest(e164Used, data.signature, data.publicKeyB64u, data.guid);
+          } else if (data.sealed) {
+            await finishImport(data.sealed);
+          }
         }
       } catch { /* 일시적 네트워크 오류는 무시하고 다음 polling에서 재시도 */ }
     }, 2000);
@@ -264,6 +308,20 @@
   // 영원히 재시도만 반복하게 만든다. 그 불확실성 자체를 솔직히 알리고,
   // 실질적인 다음 단계(백업 키 복구 또는 이 계정 포기)를 안내한다.
   function _showExpiredGuidance() {
+    // sign_request 팝업이면 굳이 이 긴 안내문을 보여줄 필요 없다 — 그냥
+    // 실패를 opener에게 알리고 닫는다. 이 문구는 key_transfer(전용 PC
+    // 최초 연결, 실패하면 사용자가 직접 다음 행동을 정해야 함)에만 맞다.
+    if (IS_POPUP_SIGN) {
+      try {
+        window.opener?.postMessage(
+          { type: 'GOPANG_SIGN_RESULT', ok: false, error: 'expired' },
+          location.origin
+        );
+      } catch (e) { /* 무시 */ }
+      setStatus('시간이 초과되어 취소되었습니다.', 'error');
+      setTimeout(() => { try { window.close(); } catch {} }, 800);
+      return;
+    }
     setStatus(
       '응답이 없어 만료됐습니다. 이 방식은 개인키를 가진 다른 기기가 ' +
       '실제로 존재해야만 작동합니다 — 서버는 그런 기기가 진짜 있는지 ' +
@@ -292,6 +350,24 @@
   }
 
   // ── 봉투 복호화 → 지갑 복원 ─────────────────────────
+  // ── 서명 결과 반환 (2026-07-23 신설, sign_request 전용) ──────────
+  // key_transfer와 달리 개인키를 옮기는 게 아니라, 이미 서명된 결과를
+  // opener(sendMessage()를 호출했던 원래 탭)에게 postMessage로 돌려주고
+  // 이 팝업은 닫는다. 성공한 번호는 세션 동안 재사용할 수 있도록
+  // sessionStorage에 남긴다(팝업은 opener와 같은 오리진이면 sessionStorage를
+  // 공유한다 — 스펙 동작).
+  async function finishSignRequest(e164, signature, publicKeyB64u, guid) {
+    if (e164) sessionStorage.setItem(CACHED_E164_KEY, e164);
+    setStatus('완료됐습니다.', 'success');
+    try {
+      window.opener?.postMessage(
+        { type: 'GOPANG_SIGN_RESULT', ok: true, signature, publicKeyB64u, guid },
+        location.origin
+      );
+    } catch (e) { /* opener가 이미 닫혔거나 접근 불가 — 무시 */ }
+    setTimeout(() => { try { window.close(); } catch {} }, 400);
+  }
+
   async function finishImport(sealed) {
     try {
       const plaintext = await GopangWallet.openSealedWithKey(pcKeyPair.privateKey, sealed);

@@ -1669,6 +1669,79 @@
   GopangWallet.appendHashChain       = appendHashChain;
 
   /* ────────────────────────────────────────────────
+   *  4단계(2026-07-23) — 공용 PC 1회성 서명 위임
+   *  개인키를 이 PC로 옮기지 않고, 서명이 필요할 때마다 device-link.html을
+   *  팝업(purpose=sign_request)으로 열어 폰의 승인을 받고 서명 '결과'만
+   *  돌려받는다. 결과는 postMessage로 전달되며, 서명 자체는 검증 가능한
+   *  공개 정보라 봉투 암호화가 필요 없다(개인키만 절대 노출 안 되면 됨).
+   * ──────────────────────────────────────────────── */
+  function _openSignRequestPopup(sigMsg) {
+    return new Promise((resolve, reject) => {
+      const popup = window.open(
+        '/auth/device-link.html?purpose=sign_request&sigMsg=' + encodeURIComponent(sigMsg),
+        'gopang_sign_request', 'width=420,height=560,menubar=no,toolbar=no'
+      );
+      if (!popup) {
+        reject(new Error('팝업이 차단되었습니다 — 브라우저 설정에서 이 사이트의 팝업을 허용해 주세요.'));
+        return;
+      }
+      let settled = false;
+      const cleanup = () => {
+        window.removeEventListener('message', onMessage);
+        clearInterval(closedPoll);
+      };
+      function onMessage(ev) {
+        if (ev.origin !== location.origin) return;
+        if (ev.data?.type !== 'GOPANG_SIGN_RESULT') return;
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (ev.data.ok) resolve({ signature: ev.data.signature, publicKeyB64u: ev.data.publicKeyB64u, guid: ev.data.guid });
+        else reject(new Error(ev.data.error === 'expired' ? '승인 시간이 초과됐습니다.' : (ev.data.error || '서명 요청이 실패했습니다.')));
+      }
+      // 팝업을 사용자가 직접 닫아버린 경우(승인도 거부도 안 하고 그냥
+      // 닫음) — postMessage가 영영 안 오므로, 별도로 감지해서 reject
+      // 해야 sign()을 호출한 쪽의 Promise가 무기한 대기하지 않는다.
+      const closedPoll = setInterval(() => {
+        if (popup.closed && !settled) {
+          settled = true;
+          cleanup();
+          reject(new Error('사용자가 창을 닫았습니다.'));
+        }
+      }, 500);
+      window.addEventListener('message', onMessage);
+    });
+  }
+
+  // window.gopangWallet 자리에 들어가는 대체 객체 — 진짜 지갑(GopangWallet
+  // 인스턴스)과 달리 개인키를 전혀 갖지 않는다. 외부 호출부들은 전부
+  // window.gopangWallet?.method 형태(옵셔널 체이닝)로 접근하므로, 여기
+  // 정의 안 된 메서드(getBalance 등)는 자동으로 각 호출부의 기존
+  // guid-fallback 경로로 떨어진다 — 별도 스텁이 필요 없다.
+  class SessionSignProxy {
+    constructor() { this.guid = null; this.handle = null; this._isSessionProxy = true; }
+    setIdentity({ guid, handle } = {}) { this.guid = guid || null; this.handle = handle || null; }
+    async sign(payload) {
+      const { signature, guid } = await _openSignRequestPopup(String(payload));
+      // 첫 서명 성공 시점에야 서버(전화번호 조회 결과)로부터 실제 guid를
+      // 처음 알게 된다 — 공용 PC는 사전에 어떤 계정인지 전혀 모르는
+      // 상태에서 시작하기 때문. sessionStorage에만 남긴다(localStorage
+      // 아님 — 탭/브라우저를 닫으면 다음 사람에게 아무 흔적도 안 남아야
+      // 하는 공용 PC 원칙 유지).
+      if (guid && !this.guid) {
+        this.guid = guid;
+        try {
+          if (!sessionStorage.getItem('gopang_user_v4')) {
+            sessionStorage.setItem('gopang_user_v4', JSON.stringify({ ipv6: guid }));
+          }
+        } catch (e) { /* sessionStorage 접근 불가 환경 — 서명 자체엔 영향 없음 */ }
+      }
+      return signature;
+    }
+  }
+  GopangWallet.createSessionSignProxy = () => new SessionSignProxy();
+
+  /* ────────────────────────────────────────────────
    *  전역 노출
    * ──────────────────────────────────────────────── */
   global.GopangWallet = GopangWallet;

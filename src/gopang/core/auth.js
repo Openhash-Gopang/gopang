@@ -256,7 +256,20 @@ export async function ensureWalletSetup() {
   }
   // mode === 'shared'
   sessionStorage.setItem('gopang_pc_session_mode', 'shared');
-  console.info('[Auth] 공용 PC 모드로 설정 — 이 세션엔 개인키를 저장하지 않습니다.');
+  // 2026-07-23 — 4단계: 실제 서명 프록시를 window.gopangWallet 자리에
+  // 꽂는다. 기존 호출부들(call-ai.js, p2p-chat.js, gwp/sign.js 등)은
+  // 전부 window.gopangWallet?.sign(...) 형태로 이미 짜여 있어서, 이
+  // 시점 이후로는 어떤 호출부도 수정할 필요 없이 자동으로 폰 승인
+  // 경유 서명을 쓰게 된다 — 개인키는 이 PC에 여전히 없다.
+  if (typeof window.GopangWallet?.createSessionSignProxy === 'function') {
+    window.gopangWallet = window.GopangWallet.createSessionSignProxy();
+    const stored = (() => {
+      try { return JSON.parse(localStorage.getItem(STORE_KEY) || sessionStorage.getItem(STORE_KEY) || 'null'); }
+      catch { return null; }
+    })();
+    if (stored?.ipv6) window.gopangWallet.setIdentity({ guid: stored.ipv6, handle: stored.handle || null });
+  }
+  console.info('[Auth] 공용 PC 모드로 설정 — 이 세션엔 개인키를 저장하지 않습니다. 서명이 필요할 때마다 폰 승인을 거칩니다.');
 }
 
 // ── 한국 유선 지역번호 목록 (서울만 1자리, 나머지 전부 2자리) ──────
