@@ -1681,7 +1681,11 @@
   /* ────────────────────────────────────────────────
    *  window.gopangWallet 싱글턴 자동 초기화
    *  gopang-app.js에서 window.gopangWallet.sign() 등으로 접근
-   *  지갑이 없으면 null — gopang-app.js _gwpSignExecute가 Phase 1 폴백 처리
+   *  2026-07-23 — 모바일 기기는 최초 실행 시 즉시 자동 생성(1기기 1사용자
+   *  전제). PC/미확인 기기는 자동 생성을 보류하고 gopangWalletNeedsSetup
+   *  플래그만 세운다 — window.gopangWallet은 null로 남고, 실제 서명이
+   *  필요해지는 순간 호출부가 계정 연결 흐름으로 안내한다(부록 A-1: PC가
+   *  먼저 키를 만들어 진짜 계정 키와 어긋나는 사고 방지).
    * ──────────────────────────────────────────────── */
   (async () => {
     try {
@@ -1712,9 +1716,36 @@
         throw e; // 그 외 예상 못한 에러는 기존과 동일하게 바깥 catch로
       }
       if (!wallet) {
-        // 진짜 최초 실행(IndexedDB에 레코드 자체가 없음)일 때만 자동 생성
-        wallet = await GopangWallet.create();
-        console.info('[GopangWallet] 새 지갑 자동 생성 완료');
+        // ★ 2026-07-23 근본 수정 — auth.js의 _isMobileDevice() 게이트("암호키
+        // 생성은 휴대폰에서만 — 부록 A-1")는 회원가입 *폼* 제출 시점만
+        // 지켜왔다. 그런데 이 부트스트랩은 그 폼과 무관하게 gopang-wallet.js가
+        // 로드되는 모든 페이지에서 무조건 실행돼서, 같은 사고(PC가 먼저 키를
+        // 만들어 나중에 진짜 계정의 키와 어긋남 — PUBKEY_MISMATCH)를 이
+        // 경로로는 계속 낼 수 있었다(실사로 재현됨). auth.js를 import하지
+        // 않는 독립 스크립트라 같은 판별 로직을 여기 그대로 복제한다(기준을
+        // 두 곳에서 다르게 두지 않기 위해 문구까지 동일하게 유지).
+        //
+        // 모바일: 기존과 동일하게 즉시 자동 생성(1기기 1사용자가 전제이므로
+        // 안전 — 폰이 진짜 신규가입 흐름에서 만드는 키와 지금 이 키가 같은
+        // 물리적 기기 위에서 만들어짐).
+        // PC/판별불가: 자동 생성을 보류한다. window.gopangWallet은 null로
+        // 남고, gopangWalletNeedsSetup=true만 세운다 — 배너를 여기서 바로
+        // 띄우지 않는다(둘러보기만 하는 방문자에게 불필요한 질문을 먼저
+        // 던지지 않기 위해). 실제로 서명이 필요한 순간에 그 호출부가 이
+        // 플래그를 보고 "이미 계정이 있나요?" 흐름으로 안내한다(다음 단계).
+        const _isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+        if (_isMobile) {
+          wallet = await GopangWallet.create();
+          console.info('[GopangWallet] 새 지갑 자동 생성 완료 (모바일 기기 확인됨)');
+        } else {
+          console.info('[GopangWallet] PC/미확인 기기 — 자동 생성 보류. 서명이 필요한 시점에 계정 연결 흐름으로 안내됩니다.');
+          global.gopangWallet = null;
+          global.gopangWalletNeedsSetup = true;
+          try {
+            global.dispatchEvent?.(new CustomEvent('gopang:wallet-setup-needed'));
+          } catch (e) { /* CustomEvent 미지원 환경 — 조용히 무시 */ }
+          return;
+        }
       }
 
       // gopang_user_v4에서 guid 연결
