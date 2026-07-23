@@ -544,9 +544,12 @@ function _bindExplainTargets(container) {
 _bindLongPress(document.getElementById('mi-close'), () => _showExplainTip('여기를 누르면 이 화면을 닫아요. 손잡이를 왼쪽으로 밀어도 똑같이 닫혀요.', document.getElementById('mi-close')));
 
 
-// 검색 대상 — 모든 카테고리(K-서비스 포함)의 하위 항목을 한 줄로 펼친 목록
-// 리프(하위 items 없는 노드, 즉 실제 이동 가능한 항목)만 재귀적으로 모은다.
-// 트리 깊이가 몇 단이든(카테고리→...→리프) 상관없이 검색 대상은 항상 리프뿐이며,
+// 검색 대상 — 모든 카테고리(K-서비스 포함)의 항목을 한 줄로 펼친 목록.
+// 리프(실제 이동 가능한 항목)뿐 아니라 브랜치(중간 분류, 예: "제주특별자치도청",
+// "부동산업")도 함께 포함한다 — 2026-07-23 100건 검색 사고실험에서 "제주도청",
+// "부동산업"처럼 분류 이름 자체로 찾는 사용자가 많은데, 리프만 색인하면 이런
+// 이름이 실존해도 전혀 안 잡히는 문제가 확인됐다. 브랜치 항목은 클릭해도
+// 이동하지 않으므로(url:'') desc 앞에 "분류 · "를 붙여 리프와 구분되게 표시한다.
 // catLabel은 지금까지와 동일하게 "최상위 카테고리명"으로 고정한다(중간 단계
 // 이름까지 배지에 넣으면 화면이 복잡해지므로, 필요해지면 breadcrumb는
 // leaf.path에서 별도로 뽑아 쓸 수 있게 남겨둔다).
@@ -558,7 +561,8 @@ function collectLeaves(node, rootCatName, path) {
   if (node.lazySrc && !Array.isArray(node.items)) return [];
   const hasChildren = Array.isArray(node.items) && node.items.length > 0;
   if (!hasChildren) return [{ ...node, catLabel: rootCatName, path }];
-  return node.items.flatMap(child => collectLeaves(child, rootCatName, path));
+  const branchEntry = { ...node, url: '', desc: `분류 · ${node.desc || ''}`.trim(), catLabel: rootCatName, path };
+  return [branchEntry, ...node.items.flatMap(child => collectLeaves(child, rootCatName, path))];
 }
 let SEARCHABLE = CATEGORIES.flatMap(cat => collectLeaves(cat, cat.name));
 
@@ -730,13 +734,28 @@ let _searchDebounce = null;
 // 뒤를 대비한 조치).
 const SEARCH_RESULT_LIMIT = 50;
 
+// 공백 무관 매칭 — "법률상담"(붙여쓰기)으로 검색해도 데이터의 "법률 상담"
+// (띄어쓰기)이 잡히도록 비교 전에 공백을 전부 제거한다(2026-07-23 100건
+// 검색 사고실험에서 공백 하나 차이로 실패하는 사례가 다수 확인됨).
+function normalize(s) { return (s || '').replace(/\s+/g, '').toLowerCase(); }
+
+// 동의어 매핑 — KSIC은 법정 업종분류 용어라 "카페"가 아니라 "커피 전문점",
+// "미용실"이 아니라 "미용업"처럼 일상어와 어긋나는 경우가 많다(100건 사고실험에서
+// 실측 확인). 정확한 KSIC 용어를 찾아 왼쪽 일상어 → 오른쪽 실제 용어로 매핑해
+// 검색 시 두 단어 모두로 찾아본다. 키는 normalize()를 거친 형태로 등록한다.
+const SYNONYMS = {
+  '카페':'커피', '펜션':'숙박', '게스트하우스':'숙박', '제빵':'빵', '감귤':'과실',
+  '미용실':'미용', '세탁소':'세탁', '동물병원':'수의', 'pc방':'오락장',
+  '식약처':'식품의약품안전처', '제주도청':'도청',
+};
+
 function runSearch() {
   clearTimeout(_searchDebounce);
   _searchDebounce = setTimeout(_runSearchNow, 80);
 }
 function _runSearchNow() {
-  const q = searchInput.value.trim().toLowerCase();
-  searchClear.hidden = !q;
+  const q = normalize(searchInput.value);
+  searchClear.hidden = !searchInput.value.trim();
 
   if (!q) {
     categorySec.hidden = false;
@@ -744,11 +763,18 @@ function _runSearchNow() {
     return;
   }
 
+  // 입력어 자체 + (있다면) 동의어까지 함께 검색 후보로 삼는다.
+  const terms = [q];
+  if (SYNONYMS[q]) terms.push(normalize(SYNONYMS[q]));
+
   const allMatches = SEARCHABLE
-    .filter(it => it.name.toLowerCase().includes(q) || (it.desc || '').toLowerCase().includes(q))
+    .filter(it => {
+      const n = normalize(it.name), d = normalize(it.desc);
+      return terms.some(t => n.includes(t) || d.includes(t));
+    })
     .sort((a, b) => {
-      const aStarts = a.name.toLowerCase().startsWith(q) ? 0 : 1;
-      const bStarts = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+      const aStarts = terms.some(t => normalize(a.name).startsWith(t)) ? 0 : 1;
+      const bStarts = terms.some(t => normalize(b.name).startsWith(t)) ? 0 : 1;
       if (aStarts !== bStarts) return aStarts - bStarts;
       return a.name.localeCompare(b.name, 'ko');
     });
