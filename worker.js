@@ -497,19 +497,27 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
   try {
     if (env.VAPID_PRIVATE_KEY && env.VAPID_PUBLIC_KEY && env.VAPID_SUBJECT) {
       const fresh = await _l1FindProfileByGuid(env, profile.guid).catch(() => null);
-      if (fresh?.push_subscription) {
-        const sub = JSON.parse(fresh.push_subscription);
+      // 2026-07-23 — 단일 push_subscription을 그대로 신뢰하지 않고, 이
+      // 계정에 등록된 "모든" 기기로 보낸다(§PUSH_SUBSCRIPTION_HIJACK
+      // _2026_07_21.md §4 근본 해결책). 실제 승인은 지갑 키를 가진
+      // 기기에서만 가능하므로, 다른 기기에도 알림이 뜨는 건 무해하다 —
+      // 오히려 "예전 PC가 자신을 덮어써서 폰에 알림이 안 오는" 사고를
+      // 구조적으로 막는다(폰의 구독이 살아있는 한 반드시 같이 발송됨).
+      const devices = _parseDeviceSubscriptions(fresh?.push_subscription);
+      if (devices.length) {
         const payload = JSON.stringify({
           title: purpose === 'sign_request' ? '서명 요청' : '새 기기에서 로그인 요청',
           body:  purpose === 'sign_request'
             ? `${record.pcLabel}에서 서명을 요청했습니다. 확인하려면 누르세요.`
             : `${record.pcLabel}에서 로그인을 시도했습니다. 확인하려면 누르세요.`,
-          sound: fresh.push_sound || 'ping',
+          sound: devices[0].sound || fresh.push_sound || 'ping',
           url:   `/auth/device-link-approve.html?sessionId=${encodeURIComponent(sessionId)}`,
           tag:   `gopang-device-link-${sessionId}`,
         });
-        await _sendWebPush(env, sub, payload);
-        pushSent = true;
+        const results = await Promise.allSettled(
+          devices.map(d => _sendWebPush(env, d.subscription, payload))
+        );
+        pushSent = results.some(r => r.status === 'fulfilled' && r.value === true);
       }
     }
   } catch (e) {
@@ -758,15 +766,16 @@ async function handlePdvRelayPush(request, env, corsHeaders) {
   try {
     if (env.VAPID_PRIVATE_KEY && env.VAPID_PUBLIC_KEY && env.VAPID_SUBJECT) {
       const profile = await _l1FindProfileByGuid(env, guid).catch(() => null);
-      if (profile?.push_subscription) {
-        const sub = JSON.parse(profile.push_subscription);
-        await _sendWebPush(env, sub, JSON.stringify({
+      const devices = _parseDeviceSubscriptions(profile?.push_subscription);
+      if (devices.length) {
+        const payload = JSON.stringify({
           title: '공용 PC에서 보낸 내용',
           body:  '공용 PC 세션에서 남긴 내용이 있습니다. 열어서 확인하세요.',
-          sound: profile.push_sound || 'ping',
+          sound: devices[0].sound || profile.push_sound || 'ping',
           url:   '/webapp.html',
           tag:   `gopang-pdv-relay-${guid}`,
-        }));
+        });
+        await Promise.allSettled(devices.map(d => _sendWebPush(env, d.subscription, payload)));
       }
     }
   } catch (e) {
@@ -15205,6 +15214,56 @@ async function handleMerkleVerify(request, env, corsHeaders) {
 // Push 알림 — VAPID Web Push
 // ═══════════════════════════════════════════════════════════
 
+// ── 기기별 push 구독 저장 형식 (2026-07-23 신설) ──────────────────────
+// 배경: profiles.push_subscription은 계정(guid)당 필드 하나뿐이라, 여러
+// 기기(PC+폰 등)가 같은 계정으로 각자 구독하면 마지막에 구독한 기기가
+// 이전 기기의 구독을 그냥 덮어썼다. 특히 device-link(PC 로그인) 흐름에서
+// "예전에 이 계정으로 로그인한 적 있는 PC"가 조용히 자신을 push 대상으로
+// 재등록해, 폰으로 가야 할 승인 알림이 PC에 오는 사고가 실제로 재현됨
+// (docs/PUSH_SUBSCRIPTION_HIJACK_2026_07_21.md — 그 문서의 07-21 수정은
+// "지갑 키 없는 기기"만 걸러내는 부분 수정이었고, §4에 근본 해결책으로
+// "기기별 구독 여러 개 저장 + device-link는 지갑 키 보유 기기 전체로 발송"을
+// 명시적으로 남겨뒀다 — 이번이 그 후속 작업이다).
+//
+// PocketBase 스키마 변경(마이그레이션) 없이, 기존 push_subscription
+// 텍스트 필드 안의 JSON "형태"만 바꾼다: 예전엔 구독 객체 하나
+// ({endpoint, keys, ...})였는데, 이제 기기별 항목 배열
+// ([{deviceId, subscription, sound, updatedAt}, ...])로 저장한다.
+// 구버전 데이터(배열이 아닌 단일 객체)도 조용히 읽을 수 있게 방어한다 —
+// 다음 구독/해지 시점에 자연스럽게 새 배열 형식으로 넘어간다.
+const PUSH_MAX_DEVICES_PER_ACCOUNT = 10; // 계정당 보관할 최대 기기 수(오래된 것부터 정리)
+
+function _parseDeviceSubscriptions(pushSubscriptionField) {
+  if (!pushSubscriptionField) return [];
+  let parsed;
+  try { parsed = JSON.parse(pushSubscriptionField); } catch (e) { return []; }
+  if (Array.isArray(parsed)) {
+    return parsed.filter(e => e && e.subscription); // 최소한의 모양 방어
+  }
+  // 구버전(단일 구독 객체) — deviceId 없이 1개짜리 배열로 취급.
+  if (parsed && typeof parsed === 'object' && parsed.endpoint) {
+    return [{ deviceId: 'legacy', subscription: parsed, sound: null, updatedAt: 0 }];
+  }
+  return [];
+}
+
+function _serializeDeviceSubscriptions(list) {
+  return JSON.stringify(list);
+}
+
+// 같은 deviceId면 교체, 없으면 추가. 계정당 보관 기기 수 한도를 넘으면
+// (updatedAt 기준) 오래된 것부터 제거.
+function _upsertDeviceSubscription(list, deviceId, subscription, sound) {
+  const next = list.filter(e => e.deviceId !== deviceId);
+  next.push({ deviceId, subscription, sound: sound || null, updatedAt: Date.now() });
+  next.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  return next.slice(0, PUSH_MAX_DEVICES_PER_ACCOUNT);
+}
+
+function _removeDeviceSubscription(list, deviceId) {
+  return list.filter(e => e.deviceId !== deviceId);
+}
+
 // GET /push/vapid-public-key
 function handlePushVapidKey(request, env, corsHeaders) {
   const key = env.VAPID_PUBLIC_KEY;
@@ -15237,18 +15296,20 @@ async function handlePushBroadcast(request, env, corsHeaders) {
 
   let sent = 0, failed = 0;
   for (const row of rows) {
-    try {
-      const sub = JSON.parse(row.push_subscription);
-      const ok = await _sendWebPush(env, sub, payload);
-      if (ok) sent++; else failed++;
-    } catch (e) {
-      failed++;
+    const devices = _parseDeviceSubscriptions(row.push_subscription);
+    for (const d of devices) {
+      try {
+        const ok = await _sendWebPush(env, d.subscription, payload);
+        if (ok) sent++; else failed++;
+      } catch (e) {
+        failed++;
+      }
     }
   }
   return new Response(JSON.stringify({ ok: true, total: rows.length, sent, failed }), { status: 200, headers: corsHeaders });
 }
 
-// POST /push/subscribe — 구독 정보 저장
+// POST /push/subscribe — 구독 정보 저장 (2026-07-23 — 기기별 upsert로 변경)
 async function handlePushSubscribe(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body?.guid)
@@ -15257,23 +15318,36 @@ async function handlePushSubscribe(request, env, corsHeaders) {
   if (!body.unsubscribe && !body.subscription)
     return _err(400, 'MISSING_FIELD', 'subscription 필수', corsHeaders);
 
+  // deviceId가 없는 구버전 클라이언트는 'legacy'로 취급 — 여러 구버전
+  // 기기가 동시에 있으면 서로 덮어쓸 수 있지만(기존 동작과 동일), 최소한
+  // deviceId를 보내는 기기(이 커밋 이후 배포분)는 서로 침범하지 않는다.
+  const deviceId = (typeof body.deviceId === 'string' && body.deviceId) ? body.deviceId : 'legacy';
+
   let record;
   try { record = await _l1FindProfileByGuid(env, body.guid); }
   catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders); }
   if (!record) return _err(404, 'PROFILE_NOT_FOUND', '가입(L1 등록)이 먼저 완료되어야 합니다', corsHeaders);
 
-  // 구독 취소: L1 row는 삭제 불가 → 빈 문자열로 PATCH
+  const current = _parseDeviceSubscriptions(record.push_subscription);
+
+  // 구독 취소: 이 기기의 항목만 제거(전체를 비우지 않음 — 다른 기기 보존)
   if (body.unsubscribe) {
-    try { await _l1PatchProfile(env, record.id, { push_subscription: '', push_sound: '' }); }
-    catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
+    const next = _removeDeviceSubscription(current, deviceId);
+    try {
+      await _l1PatchProfile(env, record.id, {
+        push_subscription: _serializeDeviceSubscriptions(next),
+        push_sound: next[0]?.sound || '', // 하위호환용 대표값(남은 기기 중 최신)
+      });
+    } catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
   }
 
-  // 구독 등록/갱신: 프로필 row는 가입 시 이미 존재 → 항상 PATCH
+  // 구독 등록/갱신: 이 deviceId 항목만 교체, 다른 기기 항목은 그대로 보존
+  const next = _upsertDeviceSubscription(current, deviceId, body.subscription, body.sound || 'ping');
   try {
     await _l1PatchProfile(env, record.id, {
-      push_subscription: JSON.stringify(body.subscription),
-      push_sound:        body.sound || 'ping',
+      push_subscription: _serializeDeviceSubscriptions(next),
+      push_sound: body.sound || 'ping', // 하위호환용 대표값(방금 갱신한 기기 기준)
     });
   } catch (e) { return _err(502, 'L1_UNREACHABLE', 'L1 PATCH 실패: ' + e.message, corsHeaders); }
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
@@ -15294,9 +15368,8 @@ async function handlePushSend(request, env, corsHeaders) {
   const source = 'l1';
   try {
     const record = await _l1FindProfileByGuid(env, body.to_guid);
-    if (record?.push_subscription) {
-      rows = [{ subscription: record.push_subscription, sound: record.push_sound }];
-    }
+    const devices = _parseDeviceSubscriptions(record?.push_subscription);
+    rows = devices.map(d => ({ subscription: JSON.stringify(d.subscription), sound: d.sound }));
   } catch (e) {
     // (2026-07-14: Supabase 백업 폴백 제거 — L1 연결 실패는 그대로 실패로
     //  처리한다. 재시도는 호출부(클라이언트) 책임.)
@@ -15477,21 +15550,21 @@ async function _sendPushToGuid(env, guid, { title, body, tag, url }) {
     console.warn('[Push] L1 조회 실패:', e.message);
     return;
   }
-  if (!record?.push_subscription) {
+  const devices = _parseDeviceSubscriptions(record?.push_subscription);
+  if (!devices.length) {
     console.warn('[Push] push_subscription 없음 — 구독 안 된 계정, 발송 건너뜀. guid:', guid);
     return;
   }
 
   const payload = JSON.stringify({
     title, body, tag,
-    sound: record.push_sound || 'ping',
+    sound: devices[0].sound || record.push_sound || 'ping',
     url:   url || '/webapp.html',
   });
 
   try {
-    const sub = JSON.parse(record.push_subscription);
-    console.info('[Push] 발송 시도:', guid, sub.endpoint?.slice(0, 50));
-    await _sendWebPush(env, sub, payload);
+    console.info('[Push] 발송 시도:', guid, `${devices.length}개 기기`);
+    await Promise.allSettled(devices.map(d => _sendWebPush(env, d.subscription, payload)));
   } catch(e) {
     console.warn('[Push] _sendPushToGuid 실패:', e.message);
   }

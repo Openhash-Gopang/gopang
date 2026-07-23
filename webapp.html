@@ -2151,10 +2151,12 @@ function _savePushSound(val) {
   navigator.serviceWorker?.ready.then(reg =>
     reg.pushManager.getSubscription().then(sub => {
       if (!sub) return;
-      fetch('https://hondi-proxy.tensor-city.workers.dev/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ guid: user.ipv6, subscription: sub.toJSON(), sound: val }),
+      import('/src/gopang/services/push.js').then(({ getOrCreateDeviceId }) => {
+        fetch('https://hondi-proxy.tensor-city.workers.dev/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guid: user.ipv6, subscription: sub.toJSON(), sound: val, deviceId: getOrCreateDeviceId() }),
+        });
       });
     })
   );
@@ -2220,11 +2222,12 @@ async function _togglePush(on) {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) await sub.unsubscribe();
-      // 서버에서도 삭제
+      // 서버에서도 삭제 — 이 기기의 구독 항목만 제거(다른 기기는 보존)
       if (user?.ipv6) {
+        const { getOrCreateDeviceId } = await import('/src/gopang/services/push.js');
         await fetch('https://hondi-proxy.tensor-city.workers.dev/push/subscribe', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ guid: user.ipv6, subscription: null, sound: 'none', unsubscribe: true }),
+          body: JSON.stringify({ guid: user.ipv6, subscription: null, sound: 'none', unsubscribe: true, deviceId: getOrCreateDeviceId() }),
         }).catch(()=>{});
       }
       _setPushToggle(false);

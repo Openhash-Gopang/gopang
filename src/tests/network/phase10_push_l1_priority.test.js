@@ -100,7 +100,7 @@ describe('PL: push 구독 L1 전용 동작(2026-07-14 Supabase 완전 폐기 이
     assert.equal(data.error, 'L1_UNREACHABLE');
   });
 
-  it('PL-04: handlePushSubscribe는 L1에만 저장한다(Supabase 미러링 없음)', async () => {
+  it('PL-04: handlePushSubscribe는 L1에만 저장한다(Supabase 미러링 없음) — 2026-07-23: 기기별 배열 형식', async () => {
     let patchedBody = null;
     globalThis.fetch = async (u, init = {}) => {
       const url = typeof u === 'string' ? u : u.url;
@@ -114,10 +114,15 @@ describe('PL: push 구독 L1 전용 동작(2026-07-14 Supabase 완전 폐기 이
       }
       throw new Error('unexpected fetch: ' + url);
     };
-    const res = await worker.fetch(req('/push/subscribe', { guid: 'g1', subscription: { endpoint: 'https://fake/z' }, sound: 'drop' }), await makeVapidEnv());
+    const res = await worker.fetch(req('/push/subscribe', { guid: 'g1', deviceId: 'dev-pc-1', subscription: { endpoint: 'https://fake/z' }, sound: 'drop' }), await makeVapidEnv());
     assert.equal(res.status, 200);
     assert.ok(patchedBody, 'L1 PATCH가 호출돼야 함');
-    assert.equal(JSON.parse(patchedBody.push_subscription).endpoint, 'https://fake/z');
+    const devices = JSON.parse(patchedBody.push_subscription);
+    assert.ok(Array.isArray(devices), 'push_subscription은 기기별 배열이어야 함');
+    assert.equal(devices.length, 1);
+    assert.equal(devices[0].deviceId, 'dev-pc-1');
+    assert.equal(devices[0].subscription.endpoint, 'https://fake/z');
+    assert.equal(devices[0].sound, 'drop');
     assert.equal(patchedBody.push_sound, 'drop');
   });
 

@@ -17,6 +17,7 @@
 
 | 날짜 | 문서 | 요약 |
 |---|---|---|
+| 2026-07-23 | [`PUSH_SUBSCRIPTION_MULTIDEVICE_2026_07_23.md`](./PUSH_SUBSCRIPTION_MULTIDEVICE_2026_07_23.md) | device-link 알림 PC 오발송 근본 수정 — push_subscription을 기기별 배열로 변경(§PUSH_SUBSCRIPTION_HIJACK_2026_07_21.md §4 후속) |
 | 2026-07-23 | [`GDC_CHARGE_MANUAL_v1_0.md`](./GDC_CHARGE_MANUAL_v1_0.md) | 가입 축하 충전(0.1GDC)·사용량 차감·저잔액 알림 신설, `charge.html` 신설, B안(무료한도 0원) 채택 |
 | 2026-07-23 | [`GDC_GIT_EXPOSURE_INCIDENT_2026_07_23.md`](./GDC_GIT_EXPOSURE_INCIDENT_2026_07_23.md) | gdc 저장소 wrangler 배포 시 `.git` 폴더 전체 공개 노출 사고·수정 |
 | 2026-07-22 | [`WORKLOG_MANUAL_2026_07_22.md`](./WORKLOG_MANUAL_2026_07_22.md) | device-link 안정화·GWP 채팅 UI 공용화·지갑 CDN 개편 작업기록 |

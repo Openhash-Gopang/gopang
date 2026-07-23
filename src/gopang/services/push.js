@@ -34,6 +34,24 @@ function _urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
 }
 
+// ★ 2026-07-23 신설 — push_subscription을 계정당 단일 필드에서 기기별
+// 배열로 바꾼 근본 수정(docs/PUSH_SUBSCRIPTION_HIJACK_2026_07_21.md §4)의
+// 클라이언트 쪽 절반. 이 브라우저(기기)를 구분할 안정적인 ID를 한 번만
+// 생성해 localStorage에 보존한다 — 로그아웃/재로그인해도 유지되므로,
+// 같은 물리 기기가 계속 자신의 구독만 갱신하고 다른 기기 것을 건드리지
+// 않는다.
+const DEVICE_ID_KEY = 'gopang_device_id';
+export function getOrCreateDeviceId() {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = (typeof crypto.randomUUID === 'function')
+      ? crypto.randomUUID()
+      : `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
+
 // ★ 2026-07-22 버그 수정 — 실사로 재현된 410(FCM "unsubscribed or
 // expired") 근본 원인. requestPushSubscription()을 부르는 경로가
 // 두 곳이다: ① auth.js가 가입 완료 직후 fire-and-forget으로 호출,
@@ -100,7 +118,7 @@ async function _requestPushSubscriptionImpl(guid) {
     await fetch(`${WORKER_URL}/push/subscribe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ guid, subscription: sub.toJSON(), sound }),
+      body: JSON.stringify({ guid, subscription: sub.toJSON(), sound, deviceId: getOrCreateDeviceId() }),
     });
 
     return { ok: true };
