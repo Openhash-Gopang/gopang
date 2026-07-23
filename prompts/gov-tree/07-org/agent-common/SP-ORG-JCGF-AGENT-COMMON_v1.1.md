@@ -22,6 +22,14 @@
 # ─────────────────────────────────────────────────
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 제주신용보증재단
+- 유형(type): `CREDITGUARANTEE` (SP-ORGDIV-TEMPLATE §0-1 검증 완료 유형)
+- 근거: 지역신용보증재단법
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 및 삽입 위치
 
 ```

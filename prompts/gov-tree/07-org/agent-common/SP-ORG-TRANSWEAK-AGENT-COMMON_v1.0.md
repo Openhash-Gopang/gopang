@@ -5,6 +5,13 @@
 # 상위상속: kgov→...→AGENCY-AC-COMMON→[본SP]→SP-ORG-TRANSWEAK→{팀SP 1개}
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 교통약자이동지원센터
+- 근거: 지방자치단체 출자·출연 기관의 운영에 관한 법률(일반법) + 교통약자의 이동편의 증진법
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-TRANSWEAK→{팀SP}`
 

@@ -9,6 +9,13 @@
 # 겹쳐 있어 조직개편 영향이 특히 크다.
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 제주에너지공사
+- 근거: 지방공기업법 제49조(지방공사의 설립) — 신에너지 및 재생에너지 개발·이용·보급 촉진법(사업 소관)
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-JEA→{팀SP}`
 

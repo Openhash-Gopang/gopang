@@ -24,6 +24,14 @@
 # ─────────────────────────────────────────────────
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 서귀포의료원
+- 유형(type): `MEDICALCENTER` (SP-ORGDIV-TEMPLATE §0-1 검증 완료 유형)
+- 근거: 지방의료원의 설립 및 운영에 관한 법률
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 및 삽입 위치
 
 ```

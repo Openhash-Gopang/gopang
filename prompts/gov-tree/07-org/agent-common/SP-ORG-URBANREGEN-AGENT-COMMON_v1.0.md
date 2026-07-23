@@ -5,6 +5,13 @@
 # 상위상속: kgov→...→AGENCY-AC-COMMON→[본SP]→SP-ORG-URBANREGEN→{팀SP 1개}
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 도시재생지원센터
+- 근거: 도시재생 활성화 및 지원에 관한 특별법(도시재생지원센터 설치 근거 조항) — 다만 설치방식·인적구성은 조례로 정함(SP-ORGDIV-TEMPLATE §0-1에서 이미 확인된 패턴)
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-URBANREGEN→{팀SP}`
 

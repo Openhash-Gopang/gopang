@@ -13,6 +13,12 @@
 # ─────────────────────────────────────────────────
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 상위 직속기관 `SP-AGY-WATER-AGENT-COMMON_v1.1.md (상하수도본부)`의 §LEGAL-BASIS를 그대로 상속 — 과 자체의 독립된 개별법은 없음
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 및 삽입 위치
 
 ```

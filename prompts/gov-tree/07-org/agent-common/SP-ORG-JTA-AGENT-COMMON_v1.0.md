@@ -9,6 +9,13 @@
 # §1에서 명시적으로 밝혀 이용자 혼동을 예방한다.
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 제주관광협회
+- 근거: 관광진흥법(관광협회 설립·업무 관련 조항) — 사단법인 형태
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-JTA→{팀SP}`
 

@@ -10,6 +10,13 @@
 # 맞다고 판단, "제주콘텐츠진흥원"으로 정체성을 갱신한다.
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 제주콘텐츠진흥원
+- 근거: 지방자치단체 출자·출연 기관의 운영에 관한 법률(일반법) + 콘텐츠산업 진흥법(지역 콘텐츠산업 지원 관련 조항)
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-JCPA→{팀SP}`
 

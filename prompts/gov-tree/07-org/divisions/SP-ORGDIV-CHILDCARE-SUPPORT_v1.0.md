@@ -7,6 +7,12 @@
 # E범주 확정)
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 상위 기관 `SP-ORG-CHILDCARE-AGENT-COMMON_v1.0.md (아이돌봄광역지원센터)`의 §LEGAL-BASIS를 그대로 상속 — 이 팀·부 자체의 독립된 법적 소관은 없음
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→SP-DO-000→SP-ORG-CHILDCARE→[돌봄지원팀]`
 

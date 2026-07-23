@@ -9,6 +9,13 @@
 # 배치의 마지막 항목이자, 검증된 유형을 실제로 적용한 유일한 사례.
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 어린이급식관리지원센터
+- 근거: 지방자치단체 출자·출연 기관의 운영에 관한 법률(일반법) + 식품안전기본법 및 어린이 식생활안전관리 특별법(급식관리지원센터 설치 관련 조항)
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-CHILDMEAL→{팀SP}`
 

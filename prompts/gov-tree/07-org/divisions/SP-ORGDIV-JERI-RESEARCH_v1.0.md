@@ -5,6 +5,12 @@
 # ★정확도: 실제 연구 실적(교통·방재·경제 등)으로 다분야 연구원임을 확인(높음)
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 상위 기관 `SP-ORG-JERI-AGENT-COMMON_v1.0.md (제주연구원)`의 §LEGAL-BASIS를 그대로 상속 — 이 팀·부 자체의 독립된 법적 소관은 없음
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→SP-DO-000→SP-ORG-JERI→[연구부]`
 

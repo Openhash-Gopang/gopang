@@ -5,6 +5,13 @@
 # 상위상속: kgov→...→AGENCY-AC-COMMON→[본SP]→SP-ORG-IPF→{팀SP 1개}
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 국제평화재단
+- 근거: 지방자치단체 출자·출연 기관의 운영에 관한 법률(일반법) + 민법(재단법인 설립 관련 일반 규정) — 개별 설치법 확인되지 않음, 재검증 필요로 표시
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-IPF→{팀SP}`
 

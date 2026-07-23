@@ -10,6 +10,13 @@
 # 실제로 상호작용할 수 있는 창구가 필요하다는 판단 하에 작성한다.
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 제주특별자치도개발공사
+- 근거: 지방공기업법 제49조(지방공사의 설립) — 먹는물관리법(먹는샘물 생산·판매 관련, 제주특별자치도개발공사가 삼다수를 생산하는 사업 소관법)
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-JPDC→{팀SP}`
 

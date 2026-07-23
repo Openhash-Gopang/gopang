@@ -8,6 +8,13 @@
 # 이전 D범주("문화재단은 표준화 근거 약함") 결론을 그대로 반영했다.
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 제주문화예술재단
+- 근거: 지방자치단체 출자·출연 기관의 운영에 관한 법률(일반법) + 문화예술진흥법(지역문화예술위원회·재단 관련 조항)
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-JFAC→{팀SP}`
 

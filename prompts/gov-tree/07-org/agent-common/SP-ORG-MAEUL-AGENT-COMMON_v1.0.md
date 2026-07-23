@@ -5,6 +5,13 @@
 # 상위상속: kgov→...→AGENCY-AC-COMMON→[본SP]→SP-ORG-MAEUL→{팀SP 1개}
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 마을만들기종합지원센터
+- 근거: 지방자치단체 출자·출연 기관의 운영에 관한 법률(일반법) — 법정 업무는 도시재생 활성화 및 지원에 관한 특별법과 유사한 성격이나, 조직·설치방식은 개별 조례로 정해짐(SP-ORGDIV-TEMPLATE §0-1의 '기능은 표준, 조직은 조례' 패턴과 동일 가능성 — 재검증 필요)
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-MAEUL→{팀SP}`
 

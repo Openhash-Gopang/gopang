@@ -5,6 +5,13 @@
 # 상위상속: kgov→...→AGENCY-AC-COMMON→[본SP]→SP-ORG-ICCJEJU→{팀SP 1개}
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 제주국제컨벤션센터
+- 근거: 지방자치단체 출자·출연 기관의 운영에 관한 법률(일반법) — 컨벤션센터 자체를 규율하는 개별 설치법은 확인되지 않음(국제회의산업 육성에 관한 법률은 국제회의산업 진흥 지원법이지 이 시설의 설치 근거는 아님). 재검증 필요로 표시
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-ICCJEJU→{팀SP}`
 

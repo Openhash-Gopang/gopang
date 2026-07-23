@@ -5,6 +5,13 @@
 # 상위상속: kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-CHILDCARE→{팀SP 1개}
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 아이돌봄광역지원센터
+- 근거: 지방자치단체 출자·출연 기관의 운영에 관한 법률(일반법) + 아이돌봄 지원법(광역지원센터 설치 관련 조항)
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-CHILDCARE→{팀SP}`
 

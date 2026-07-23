@@ -10,6 +10,13 @@
 # 그대로 적용하지 않고, 실제 직원수(15명)에 맞춰 2팀으로 축소했다.
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 제주여성가족연구원
+- 근거: 지방자치단체출연 연구원의 설립 및 운영에 관한 법률 + 양성평등기본법
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-JWFRI→{팀SP}`
 

@@ -5,6 +5,13 @@
 # 상위상속: kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-JEDA→{팀SP 2개}
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 제주경제통상진흥원
+- 근거: 지방자치단체 출자·출연 기관의 운영에 관한 법률(일반법) — 지역경제 진흥·통상 지원은 개별 설치법 없이 이 일반법과 조례에 근거
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-JEDA→{팀SP}`
 

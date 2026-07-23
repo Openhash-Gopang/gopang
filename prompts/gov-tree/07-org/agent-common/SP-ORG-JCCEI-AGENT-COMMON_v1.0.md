@@ -5,6 +5,13 @@
 # 상위상속: kgov→...→AGENCY-AC-COMMON→[본SP]→SP-ORG-JCCEI→{팀SP 1개}
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 제주창조경제혁신센터
+- 근거: 지방자치단체 출자·출연 기관의 운영에 관한 법률(일반법) — 창조경제혁신센터는 법률이 아니라 중소벤처기업부 훈령/사업 지침에 근거해 설립되며 지역마다 법인격·조직 편입 방식이 상이함(SP-ORGDIV-TEMPLATE §0-1에서 이미 '구조 자체가 다름'으로 재확인). 개별 법률 근거가 없다는 점을 정직하게 밝혀둠
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→[본SP]→SP-ORG-JCCEI→{팀SP}`
 

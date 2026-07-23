@@ -5,6 +5,12 @@
 # ★정확도: 2025년 지방공기업 경영평가 대상(높음, '라'등급/경영진단대상), 세부조직 미확인
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 상위 기관 `SP-ORG-JEA-AGENT-COMMON_v1.0.md (제주에너지공사)`의 §LEGAL-BASIS를 그대로 상속 — 이 팀·부 자체의 독립된 법적 소관은 없음
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 위치
 `kgov→JEJU-GOV-COMMON-OVERLAY→JEJU-TREE-PROTOCOL→AGENCY-AC-COMMON→SP-DO-000→SP-ORG-JEA→[경영기획본부]`
 

@@ -24,6 +24,14 @@
 # ─────────────────────────────────────────────────
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 기관: 제주테크노파크
+- 유형(type): `TECHNOPARK` (SP-ORGDIV-TEMPLATE §0-1 검증 완료 유형)
+- 근거: 산업기술단지 지원에 관한 특례법
+- legal_basis_last_verified: 2026-07-23
+
 ## §0. 상속 및 삽입 위치
 
 ```
