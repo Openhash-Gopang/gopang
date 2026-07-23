@@ -44,12 +44,22 @@ async function _loadSSO() {
 /**
  * initAuth()
  * 하위 시스템 초기화 시 호출. L0 인증 수행.
+ * 이 스크립트를 불러온 <script> 태그에 data-required="false"가 있으면
+ * 인증에 실패해도 hondi.net으로 리다이렉트하지 않고, 그냥 비로그인
+ * 상태(_user=null)로 페이지 렌더링을 계속한다 — 로그인 없이 봐도 되는
+ * 공개 페이지(랜딩, 벤치마크 결과 등)에 씀. 기본값은 지금까지와 동일하게
+ * 필수(true)라서, 이 속성을 안 붙인 기존 페이지들의 동작은 안 바뀐다.
  * 반환: { ipv6, level, exp } | null
  */
 export async function initAuth() {
   await _loadSSO();
-  _user = await _gopangAuth.require('L0');
-  if (!_user) return null;
+  const scriptEl = document.querySelector('script[src*="subsystem-auth.js"]');
+  const required = scriptEl?.dataset?.required !== 'false';
+  _user = await _gopangAuth.require('L0', { optional: !required });
+  if (!_user) {
+    _autoHideLoading(); // 필수 모드면 require()가 이미 리다이렉트 중; 선택 모드면 그냥 비로그인으로 계속
+    return null;
+  }
   _renderAuthBadge();
   _autoHideLoading();
   // 페이지 인라인 스크립트에 인증 결과 전달
@@ -250,7 +260,7 @@ function _localFallback() {
   const LVL     = { L0:0, L1:1, L2:2, L3:3 };
 
   return {
-    async require(level) {
+    async require(level, opts = {}) {
       // 세션 캐시(이전에 gopang-sso.js가 정상적으로 서버 검증해 발급한 토큰)만 신뢰
       try {
         const s = JSON.parse(sessionStorage.getItem(SESSION) || 'null');
@@ -258,7 +268,7 @@ function _localFallback() {
           return { ...s, via: 'session' };
       } catch {}
       // 검증 모듈을 로드할 수 없으므로 로컬 데이터를 무검증으로 신뢰하지 않는다
-      showLoginPrompt(level);
+      if (!opts?.optional) showLoginPrompt(level);
       return null;
     },
     async verify(level) { return this.require(level); },

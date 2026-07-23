@@ -300,11 +300,18 @@ async function _serverVerify(token) {
 export const gopangAuth = {
 
   /**
-   * require(level)
+   * require(level, opts)
    * 백서 §12.5 표준 패턴
-   * 반환: { ipv6, level, exp } | null (리다이렉트 중)
+   * opts.optional === true 이면: 실패해도 hondi.net으로 리다이렉트하지 않고
+   * null만 반환한다 — 공개 콘텐츠 페이지(둘러보기, 벤치마크 결과 등)가
+   * "로그인했으면 개인화, 안 했으면 그냥 익명으로 보여주기"를 구현할 때 씀.
+   * 2026-07-23 신설 — 이전엔 require()가 항상 실패 시 리다이렉트했기 때문에,
+   * 로그인 없이도 봐도 되는 페이지(K-Law 랜딩/벤치마크 등)까지 전부
+   * "고팡 로그인이 필요합니다" 화면에 막혀서 아예 못 보는 문제가 있었다
+   * (실사로 확인 — 본인조차 인증이 꼬이면 공개 페이지를 못 봤다).
+   * 반환: { ipv6, level, exp } | null (필수 모드에서는 리다이렉트 중)
    */
-  async require(level = 'L0') {
+  async require(level = 'L0', opts = {}) {
 
     // 경로 1: GWP 토큰
     let user = await _tryGwpToken();
@@ -328,6 +335,10 @@ export const gopangAuth = {
     // (구 Silent iframe 경로였던 _trySilentIframe()은 삭제하지 않고
     // 남겨뒀다 — 당장 쓰이진 않지만, 나중에 opener/자체 로그인 화면
     // 둘 다 없는 신규 하위 서비스가 생기면 그때 재사용할 수 있다.)
+    if (opts.optional) {
+      console.info('[SSO] 선택적 인증 실패 — 리다이렉트하지 않고 비로그인 상태로 진행');
+      return null;
+    }
     return _redirectToGopang(level);
   },
 
