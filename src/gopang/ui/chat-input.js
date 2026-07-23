@@ -119,15 +119,17 @@ function _buildMarkup(cfg) {
   <span class="ci-attach-name"></span>
   <button type="button" class="ci-attach-remove" aria-label="첨부 취소">✕</button>
 </div>
-<div class="ci-row">
-  <div class="ci-aux-btns">
-    <button type="button" class="ci-btn ci-attach-btn" title="파일 첨부">${_svgAttachIcon()}</button>
-    <button type="button" class="ci-btn ci-camera-btn" title="${cfg.cameraTitle}">${_svgCameraIcon()}</button>
-    <button type="button" class="ci-btn ci-mic-btn" title="음성으로 대화">${_svgMicIcon()}</button>
-  </div>
-  <div class="ci-input-wrap">
-    <textarea class="ci-input" rows="1" placeholder="${cfg.placeholder}"></textarea>
-    <button type="button" class="ci-send-btn" disabled title="전송 / 중단">${_svgSendButton()}</button>
+<div class="ci-card">
+  <textarea class="ci-input" rows="1" placeholder="${cfg.placeholder}"></textarea>
+  <div class="ci-toolbar">
+    <div class="ci-aux-left">
+      <button type="button" class="ci-btn ci-attach-btn" title="파일 첨부">${_svgAttachIcon()}</button>
+      <button type="button" class="ci-btn ci-camera-btn" title="${cfg.cameraTitle}">${_svgCameraIcon()}</button>
+    </div>
+    <div class="ci-aux-right">
+      <button type="button" class="ci-btn ci-mic-btn" title="음성으로 대화">${_svgMicIcon()}</button>
+      <button type="button" class="ci-send-btn" disabled title="전송 / 중단">${_svgSendButton()}</button>
+    </div>
   </div>
 </div>
 <input type="file" class="ci-file-input" hidden accept="${cfg.fileAccept}" ${cfg.multiple ? 'multiple' : ''}>
