@@ -1052,12 +1052,171 @@ async function _settleAiUsage(env, guid, bill, meta = {}) {
 
   if (freePortion > 0) await _recordFreeSpend(env, guid, freePortion);
   if (paidPortion > 0) {
-    await _chargeGdcForAiUsage(env, {
+    const chargeResult = await _chargeGdcForAiUsage(env, {
       guid, krwAmount: paidPortion,
       serviceId: meta.serviceId, model: meta.model,
       hitTokens: meta.hitTokens, missTokens: meta.missTokens, outTokens: meta.outTokens,
       costKRW: bill.apiCostKRW, memo: meta.memo,
     });
+    // (2026-07-23 신설: GDC 저잔액 충전 권고 알림 — SP-GDC-CHARGE-v1_0 §3.
+    //  실제 차감 직후 balance_after(GDC)를 그대로 재사용 — 별도 잔액 재조회 불필요.)
+    if (chargeResult?.ok && typeof chargeResult.balance_after === 'number') {
+      await _checkLowBalanceAndNotify(env, guid, chargeResult.balance_after);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// GDC 가입 축하 충전(Signup Bonus) — SP-GDC-CHARGE-v1_0 §1
+// (2026-07-23 신설)
+//
+// 가입 직후(핵심 지갑키 등록 시점, handleRegisterKey 신규 등록 분기) 1회,
+// 100원 상당(=0.1 GDC, EXCHANGE_RATE_KRW_PER_GDC=1000 기준) GDC를 실제
+// 지갑 잔액으로 지급한다. 기존 "가입자당 100원 무료 한도"(KV
+// hondi:free_spend, FREE_QUOTA_KRW_LIMIT)는 실지갑 잔액과 무관한 별도
+// 가상 카운터로 손대지 않는다 — 이번 신설분은 그 위에 실제 GDC 잔액을
+// 하나 더 얹는 것이라, 두 예산이 순서대로(가상 100원 → 실지갑 0.1GDC)
+// 소진된다. "가입 즉시 순수 100원 예산 하나만" 원하면 FREE_QUOTA_KRW_LIMIT를
+// 0으로 낮춰 가상 카운터를 사실상 끄고 이 실지갑 잔액만 쓰게 하는 대안도
+// 가능 — SP-GDC-CHARGE-v1_0 문서 §5(대안 B) 참고.
+//
+// /api/mint를 그대로 재사용한다(관리자 충전확정 때와 동일 경로, 감사
+// 추적을 위해 별도 mint 엔드포인트를 새로 만들지 않음) — memo로
+// "signup_bonus"를 남겨 일반 유상 충전과 블록 단위에서 구분 가능하게 한다.
+// ═══════════════════════════════════════════════════════════
+const SIGNUP_BONUS_KRW = 100; // 100원 상당 = 0.1 GDC (1,000:1 환율 기준)
+
+// 멱등성: KV hondi:signup_bonus_granted:{guid} 플래그로 평생 1회만 지급.
+// mint 자체가 실패하면 플래그를 세우지 않아 다음 로그인/재등록 시 자동 재시도된다.
+async function _grantSignupBonus(env, guid) {
+  if (!guid) return;
+  const kv = env.AI_SETUP_SEALS_KV;
+  const flagKey = `hondi:signup_bonus_granted:${guid}`;
+  if (kv) {
+    try {
+      const already = await kv.get(flagKey);
+      if (already) {
+        console.info('[SignupBonus] 이미 지급됨(멱등), guid:', guid.slice(0, 20));
+        return;
+      }
+    } catch (e) {
+      console.warn('[SignupBonus] KV 플래그 조회 실패(계속 진행):', e.message);
+    }
+  }
+
+  try {
+    const mintRes = await fetch(`${L1_DEFAULT}/api/mint`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid, krw_amount: SIGNUP_BONUS_KRW, secret: _mintSecret(env),
+        memo: 'signup_bonus:가입 축하 충전',
+      }),
+    });
+    const mintData = await mintRes.json().catch(() => ({ ok: false, error: 'L1_PARSE_FAILED' }));
+    if (!mintData.ok) {
+      console.warn(JSON.stringify({
+        tag: 'SIGNUP_BONUS_MINT_FAILED', guid, error: mintData.error, detail: mintData.detail,
+        ts: new Date().toISOString(),
+      }));
+      return; // 가입 자체는 막지 않는다 — 플래그 미기록이라 다음 시도에서 재시도됨
+    }
+    if (kv) {
+      try { await kv.put(flagKey, new Date().toISOString()); } // TTL 없음 — 평생 1회
+      catch (e) { console.warn('[SignupBonus] KV 플래그 기록 실패(지급 자체는 완료됨):', e.message); }
+    }
+    console.log(JSON.stringify({
+      tag: 'SIGNUP_BONUS_GRANTED', guid, krw: SIGNUP_BONUS_KRW,
+      gdc: mintData.amount, contentHash: mintData.content_hash, ts: new Date().toISOString(),
+    }));
+  } catch (e) {
+    console.warn('[SignupBonus] mint 호출 실패(가입은 계속 진행):', e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// GDC 저잔액 충전 권고 알림 — SP-GDC-CHARGE-v1_0 §3 (2026-07-23 신설)
+//
+// 실사용 차감(_chargeGdcForAiUsage) 직후 balance_after(GDC)가 문턱값
+// 이하로 떨어지면, 기존 VAPID 웹푸시 채널(_sendPushToGuid, 배포알림과
+// 동일 인프라)로 "GDC 충전 권고" 알림을 1회 보낸다. 문턱값 밑에서
+// 매 요청마다 재발송하면 스팸이 되므로, KV 플래그로 "이미 알렸음"을
+// 기록해 두고 — 이후 사용자가 충전해서 문턱값 위로 회복되면 플래그를
+// 지워 다음에 다시 낮아질 때 재알림이 가능하게 한다.
+// ═══════════════════════════════════════════════════════════
+const GDC_LOW_BALANCE_THRESHOLD_KRW = 20; // 잔액이 20원 상당(=0.02 GDC) 이하로 내려가면 알림
+const GDC_LOW_BALANCE_THRESHOLD_GDC = GDC_LOW_BALANCE_THRESHOLD_KRW / EXCHANGE_RATE_KRW_PER_GDC;
+
+async function _checkLowBalanceAndNotify(env, guid, balanceGdc) {
+  if (!guid || typeof balanceGdc !== 'number') return;
+  const kv = env.AI_SETUP_SEALS_KV;
+  const notifiedKey = `hondi:low_balance_notified:${guid}`;
+
+  if (balanceGdc > GDC_LOW_BALANCE_THRESHOLD_GDC) {
+    // 문턱값 위로 회복(재충전 등) — 다음에 다시 낮아질 때 재알림 가능하도록 플래그 해제.
+    if (kv) { try { await kv.delete(notifiedKey); } catch (e) { /* 무시 — 다음 체크에서 다시 시도 */ } }
+    return;
+  }
+
+  if (kv) {
+    try {
+      const already = await kv.get(notifiedKey);
+      if (already) return; // 이미 알림 보냄 — 재충전 전까지 재발송 안 함
+    } catch (e) {
+      console.warn('[LowBalance] KV 플래그 조회 실패(계속 진행):', e.message);
+    }
+  }
+
+  const balanceKrw = Math.round(balanceGdc * EXCHANGE_RATE_KRW_PER_GDC);
+  await _sendPushToGuid(env, guid, {
+    title: 'GDC 잔액이 얼마 남지 않았어요',
+    body:  `현재 잔액 약 ${balanceKrw.toLocaleString('ko-KR')}원 상당(${balanceGdc.toFixed(4)} GDC). 서비스 이용이 끊기지 않도록 GDC를 충전해 주세요.`,
+    tag:   'gdc-low-balance',
+    url:   'https://gdc.hondi.net/charge.html', // 충전 신청 페이지(gdc repo 신설, 2026-07-23)
+  });
+
+  if (kv) {
+    try { await kv.put(notifiedKey, new Date().toISOString()); }
+    catch (e) { console.warn('[LowBalance] KV 플래그 기록 실패:', e.message); }
+  }
+
+  console.log(JSON.stringify({
+    tag: 'GDC_LOW_BALANCE_NOTIFIED', guid, balanceGdc, balanceKrw, ts: new Date().toISOString(),
+  }));
+}
+
+// GET /biz/balance-status?guid=... — 클라이언트 UI 배너용. 저잔액 여부와
+// 문턱값을 함께 반환해, 푸시 구독을 안 한 사용자도 앱을 열면 배너로
+// 확인할 수 있게 한다(푸시는 "안 열어봐도 알림", 이 엔드포인트는 "열었을
+// 때 상태 확인" — 서로 다른 채널이라 둘 다 필요).
+async function handleBalanceStatus(request, env, corsHeaders) {
+  const url  = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const balanceGdc = await getBalanceGdcForStatus(guid);
+  if (balanceGdc === null) return _err(502, 'L1_ERROR', '잔액 조회 실패', corsHeaders);
+
+  const balanceKrw = Math.round(balanceGdc * EXCHANGE_RATE_KRW_PER_GDC);
+  return new Response(JSON.stringify({
+    ok: true, guid,
+    balance_gdc: balanceGdc,
+    balance_krw: balanceKrw,
+    low_balance_threshold_krw: GDC_LOW_BALANCE_THRESHOLD_KRW,
+    is_low_balance: balanceGdc <= GDC_LOW_BALANCE_THRESHOLD_GDC,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// 기존 _l1GetBalanceKRW는 KRW로 환산된 값만 반환한다 — 이 엔드포인트는
+// GDC 원 단위도 함께 보여줘야 해서 별도 소형 헬퍼로 둔다(로직 중복은
+// fetch 한 줄 수준이라 감수).
+async function getBalanceGdcForStatus(guid) {
+  try {
+    const res  = await fetch(`${L1_DEFAULT}/api/balance?guid=${encodeURIComponent(guid)}`);
+    const data = await res.json().catch(() => null);
+    return data?.ok ? Number(data.balance || 0) : null;
+  } catch (e) {
+    console.warn('[BalanceStatus] 조회 실패:', e.message);
+    return null;
   }
 }
 
@@ -5463,6 +5622,7 @@ export default {
     if (pathname === '/biz/gdc-deposits' && request.method === 'GET') return handleGdcDepositList(request, env, corsHeaders);
     if (pathname === '/biz/fee-rate' && request.method === 'GET') return handleFeeRate(request, env, corsHeaders);
     if (pathname === '/biz/gdc-deposit-close' && request.method === 'POST') return handleGdcDepositClose(request, env, corsHeaders);
+    if (pathname === '/biz/balance-status' && request.method === 'GET') return handleBalanceStatus(request, env, corsHeaders);
     if (pathname === '/biz/gdc-dao/proposal'  && request.method === 'POST') return handleGdcDaoProposalCreate(request, env, corsHeaders);
     if (pathname === '/biz/gdc-dao/vote'      && request.method === 'POST') return handleGdcDaoVote(request, env, corsHeaders);
     if (pathname === '/biz/gdc-dao/proposals' && request.method === 'GET')  return handleGdcDaoProposalsList(request, env, corsHeaders);
@@ -7644,6 +7804,12 @@ async function handleRegisterKey(request, env, corsHeaders) {
         body: JSON.stringify({ guid, public_key, created_at: new Date().toISOString() }),
       });
       console.info('[RegisterKey] 신규 등록:', guid.slice(0, 20), '@', homeNodeId);
+
+      // (2026-07-23 신설) 진짜 신규 가입자에게만 100원 상당(0.1 GDC) 가입
+      // 축하 충전 — SP-GDC-CHARGE-v1_0 §1. 위 existing 분기(동일 키 재등록,
+      // 멱등)에는 걸리지 않도록 이 else 블록 안에서만 호출한다. mint 실패
+      // 시에도 등록 자체는 막지 않는다(_grantSignupBonus 내부에서 처리).
+      await _grantSignupBonus(env, guid);
     }
 
     // §4 레지스트리 — 이 guid가 어느 L1 소속인지 L3에 기록(브릿지 거래 시
