@@ -975,7 +975,7 @@ async function _recordFreeSpend(env, guid, usageKRW) {
 //  이 값을 바꿀 땐 반드시 main.pb.js의 EXCHANGE_RATE_KRW_PER_GDC도
 //  함께 바꿀 것. gwp-registry.js에 가격 갱신 배치를 넣을 때(SP-GDC-
 //  BILLING-v1.0 TODO 4-3) 이 상수도 그 배치가 갱신하도록 편입 검토.)
-const EXCHANGE_RATE_KRW_PER_GDC = 1000;
+const EXCHANGE_RATE_KRW_PER_GDC = 100; // 2026-07-23: 1000 → 100 정정 (main.pb.js와 함께 변경)
 
 // 무료 한도 소진 후, 이번 요청을 통과시켜도 되는지 사전 확인하기 위해
 // L1의 실제 GDC 잔액을 조회한다(SP-GDC-BILLING-v2_0 STEP 0 게이트웨이
@@ -1082,7 +1082,7 @@ async function _settleAiUsage(env, guid, bill, meta = {}) {
 // (2026-07-23 신설)
 //
 // 가입 직후(핵심 지갑키 등록 시점, handleRegisterKey 신규 등록 분기) 1회,
-// 100원 상당(=0.1 GDC, EXCHANGE_RATE_KRW_PER_GDC=1000 기준) GDC를 실제
+// 100원 상당(=1 GDC, EXCHANGE_RATE_KRW_PER_GDC=100 기준) GDC를 실제
 // 지갑 잔액으로 지급한다. 기존 "가입자당 100원 무료 한도"(KV
 // hondi:free_spend, FREE_QUOTA_KRW_LIMIT)는 실지갑 잔액과 무관한 별도
 // 가상 카운터로 손대지 않는다 — 이번 신설분은 그 위에 실제 GDC 잔액을
@@ -1095,7 +1095,7 @@ async function _settleAiUsage(env, guid, bill, meta = {}) {
 // 추적을 위해 별도 mint 엔드포인트를 새로 만들지 않음) — memo로
 // "signup_bonus"를 남겨 일반 유상 충전과 블록 단위에서 구분 가능하게 한다.
 // ═══════════════════════════════════════════════════════════
-const SIGNUP_BONUS_KRW = 100; // 100원 상당 = 0.1 GDC (1,000:1 환율 기준)
+const SIGNUP_BONUS_KRW = 100; // 100원 상당 = 1 GDC (100:1 환율 기준, 2026-07-23 정정)
 
 // 멱등성: KV hondi:signup_bonus_granted:{guid} 플래그로 평생 1회만 지급.
 // mint 자체가 실패하면 플래그를 세우지 않아 다음 로그인/재등록 시 자동 재시도된다.
@@ -1199,7 +1199,7 @@ async function handleSignupBonusRetry(request, env, corsHeaders) {
 // 기록해 두고 — 이후 사용자가 충전해서 문턱값 위로 회복되면 플래그를
 // 지워 다음에 다시 낮아질 때 재알림이 가능하게 한다.
 // ═══════════════════════════════════════════════════════════
-const GDC_LOW_BALANCE_THRESHOLD_KRW = 20; // 잔액이 20원 상당(=0.02 GDC) 이하로 내려가면 알림
+const GDC_LOW_BALANCE_THRESHOLD_KRW = 20; // 잔액이 20원 상당(=0.2 GDC, 100:1 환율 기준) 이하로 내려가면 알림
 const GDC_LOW_BALANCE_THRESHOLD_GDC = GDC_LOW_BALANCE_THRESHOLD_KRW / EXCHANGE_RATE_KRW_PER_GDC;
 
 async function _checkLowBalanceAndNotify(env, guid, balanceGdc) {
@@ -6397,9 +6397,9 @@ async function _lookupSellerVerification(env, guid) {
 // (KRW 재전환) 기능이 생기면 그 소각분을 여기서 반드시 차감해야 한다 —
 // 지금 이 함수는 그 경우를 대비한 자리만 남겨둔다(REDEEMED_TOTAL=0 고정).
 async function handleLedgerIssuanceSummary(request, env, corsHeaders) {
-  const EXCHANGE_RATE_KRW_PER_GDC = 1000; // pb_hooks와 동일 환율(정본은 그쪽)
-  const EXEMPTION_THRESHOLD_BALANCE_GDC = 3_000_000;   // 30억원 / 1,000원
-  const EXEMPTION_THRESHOLD_ANNUAL_GDC  = 50_000_000;  // 500억원 / 1,000원
+  const EXCHANGE_RATE_KRW_PER_GDC = 100; // pb_hooks와 동일 환율(정본은 그쪽). 2026-07-23: 1000→100 정정
+  const EXEMPTION_THRESHOLD_BALANCE_GDC = 30_000_000;   // 30억원 / 100원 (2026-07-23: 환율 변경으로 재계산 — KRW 법정 기준액 자체는 불변)
+  const EXEMPTION_THRESHOLD_ANNUAL_GDC  = 500_000_000;  // 500억원 / 100원 (2026-07-23: 환율 변경으로 재계산 — KRW 법정 기준액 자체는 불변)
 
   try {
     const token = await _l1AdminTokenFor(env, L1_DEFAULT);

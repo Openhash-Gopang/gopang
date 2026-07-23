@@ -1736,14 +1736,19 @@ routerAdd("POST", "/api/mint", (c) => {
   // (이 프로젝트에 이미 알려진 "콜백 바깥 전역 함수 무시" 류의 다른
   // Goja 특이 동작과 비슷한 계열) — 원인을 찾을 때까지 이 형태로 둔다.
   //
-  // 2026-07-07 추가: 발행 환율 공식화 — KRW 1,000원당 GDC 1T.
+  // 2026-07-07 추가: 발행 환율 공식화 — KRW 100원당 GDC 1T.
   // krw_amount(원화 입금액)를 정본 입력으로 받아 gdc_amount를 서버가
   // 직접 계산한다(클라이언트가 gdc_amount를 임의로 우기지 못하게).
   // 개발 초기 테스트에서 쓰던 amount(=GDC 직접 지정)는 하위호환으로
   // 남기되, 감사 추적을 위해 블록에 "어느 방식으로 발행했는지"와 환율을
   // 반드시 같이 남긴다 — 나중에 실거래 발행과 테스트 발행을 구분할 수
   // 있어야 한다.
-  const EXCHANGE_RATE_KRW_PER_GDC = 1000; // KRW 1,000 = GDC 1
+  // (2026-07-23: 환율 1,000:1 → 100:1로 정정. deepseek v4 flash/pro
+  //  실사용 원가 기준 시뮬레이션 결과, 1,000:1은 GDC 최소 단위가 지나치게
+  //  커서 소액 차감의 정밀도가 떨어졌다 — 100:1로 낮춰 GDC 단위를
+  //  세분화한다. 이 상수를 바꾸면 worker.js의 동일 이름 상수 3곳도
+  //  반드시 함께 바꿀 것 — 파일 내 다른 곳의 주석 참고.)
+  const EXCHANGE_RATE_KRW_PER_GDC = 100; // KRW 100 = GDC 1
 
   try {
     console.log("[MINT] 진입");
@@ -2020,7 +2025,7 @@ routerAdd("POST", "/api/mint", (c) => {
 // 적용했다(파일 위쪽 해당 주석 참고) — AI 차감 블록은 P2P 정산 체인과
 // 완전히 무관한 별도 계열이어야 한다.
 routerAdd("POST", "/api/ai-charge", (c) => {
-  const EXCHANGE_RATE_KRW_PER_GDC = 1000; // /api/mint와 동일 환율(정본은 그쪽 — 콜백마다 재선언 필요, Goja 제약 상단 주석 참고)
+  const EXCHANGE_RATE_KRW_PER_GDC = 100; // /api/mint와 동일 환율(정본은 그쪽 — 콜백마다 재선언 필요, Goja 제약 상단 주석 참고). 2026-07-23: 1000→100 정정
 
   try {
     console.log("[AI-CHARGE] 진입");
