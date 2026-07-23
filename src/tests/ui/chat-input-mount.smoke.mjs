@@ -77,5 +77,19 @@ ok(ci.getText() === '', 'M-15: 전송 후 입력창 비워짐');
 ci.destroy();
 ok(container.innerHTML === '', 'M-16: destroy() 후 컨테이너 비워짐');
 
+// ── readonlyUntilFocus 옵션 ──────────────────────────────
+const container2 = document.createElement('div');
+document.body.appendChild(container2);
+const ci2 = mountChatInput(container2, {
+  theme: THEME_LINE_GREEN,
+  readonlyUntilFocus: true,
+  onSend: () => {},
+});
+const input2 = container2.querySelector('.ci-input');
+ok(input2.hasAttribute('readonly'), 'M-17: readonlyUntilFocus:true — 초기 상태 readonly');
+input2.dispatchEvent(new dom.window.Event('focus'));
+ok(!input2.hasAttribute('readonly'), 'M-18: focus 시 readonly 해제');
+ci2.destroy();
+
 console.log(`\n결과: ${pass} 통과 / ${fail} 실패 / 총 ${pass + fail}`);
 process.exit(fail > 0 ? 1 : 0);

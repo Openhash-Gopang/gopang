@@ -222,6 +222,7 @@ export function mountChatInput(container, config = {}) {
     allowStop: config.allowStop !== false,
     micEnabled: config.micEnabled !== false,
     autoSendOnSilence: config.autoSendOnSilence !== false,
+    readonlyUntilFocus: !!config.readonlyUntilFocus,
     onSend: config.onSend || (() => console.warn('[ChatInput] onSend 콜백이 설정되지 않았습니다.')),
     onStop: config.onStop || (() => {}),
   };
@@ -246,6 +247,19 @@ export function mountChatInput(container, config = {}) {
 
   let _generating = false;
   let _attachedFiles = [];
+
+  // ── 슬라이드업 패널 등에서 자동 키보드 표시를 막는 readonly 트릭 ──
+  // (webapp.html #ai-panel-input의 원본 동작: 포커스 전엔 readonly라 탭
+  // 전엔 모바일 키보드가 뜨지 않고, 포커스를 얻는 순간 해제된다.)
+  if (cfg.readonlyUntilFocus) {
+    input.setAttribute('readonly', '');
+    input.addEventListener('focus', () => input.removeAttribute('readonly'));
+    input.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (document.activeElement !== input) input.setAttribute('readonly', '');
+      }, 200);
+    });
+  }
 
   // ── 입력창 자동 높이 + 전송 버튼 상태 ─────────────────────
   function _syncState() {
@@ -277,6 +291,12 @@ export function mountChatInput(container, config = {}) {
     const entry = {
       name: file.name, dataUrl: null, isImage: file.type.startsWith('image/'),
       mimeType: file.type, sha256: null, extractedText: null,
+      // 첨부 직후 곧바로 전송(sha256/본문추출이 아직 안 끝난 경합 케이스)을
+      // 대비해, 호출부(onSend)가 필요하면 명시적으로 기다릴 수 있도록 각
+      // 비동기 작업의 Promise 자체도 노출한다(webapp.html _callPanelAI의
+      // 기존 계약 — f._hashPromise/f._extractPromise를 Promise.all로 기다린
+      // 뒤 사용 — 그대로 유지).
+      _hashPromise: null, _extractPromise: null,
     };
     const reader = new FileReader();
     const dataUrlPromise = new Promise((resolve) => {
@@ -284,14 +304,13 @@ export function mountChatInput(container, config = {}) {
     });
     reader.readAsDataURL(file);
     await dataUrlPromise;
-    file.arrayBuffer()
+    entry._hashPromise = file.arrayBuffer()
       .then(buf => crypto.subtle.digest('SHA-256', buf))
       .then(hashBuf => Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join(''))
-      .then(hex => { entry.sha256 = hex; })
-      .catch(e => console.warn('[ChatInput] SHA-256 계산 실패:', e.message));
-    if (!entry.isImage) {
-      _extractFileText(file).then(text => { entry.extractedText = text; });
-    }
+      .then(hex => { entry.sha256 = hex; return hex; })
+      .catch(e => { console.warn('[ChatInput] SHA-256 계산 실패:', e.message); return null; });
+    entry._extractPromise = entry.isImage ? Promise.resolve(null)
+      : _extractFileText(file).then(text => { entry.extractedText = text; return text; });
     _attachedFiles.push(entry);
     _renderAttachPreview();
     _syncState();
