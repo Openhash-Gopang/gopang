@@ -1,0 +1,32 @@
+name: Check SP inheritance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prompts/**'
+      - 'tools/check_sp_inheritance.py'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check-inheritance:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ── 하위 페르소나(SP-INDUSTRY-TRANSFORM-NN 등)가 상위 공통 SP를 실제로
+      # 상속했는지 검사한다 — 상속 문구 누락, 필수 PHASE/섹션 누락, 상위 SP
+      # 본문 복붙을 잡아낸다. 패밀리별 strict 여부는 tools/check_sp_inheritance.py
+      # 안의 FAMILIES 설정을 따른다(2026-07-23 기준 SP-INDUSTRY-TRANSFORM만
+      # strict, AGENT-SUPPLIER는 레거시라 informational).
+      - name: Run SP inheritance check
+        run: python3 tools/check_sp_inheritance.py
