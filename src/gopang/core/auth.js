@@ -127,7 +127,138 @@ function _showPcRegisterBlockedNotice() {
   overlay.querySelector('#_pc_blocked_close').onclick = () => overlay.remove();
 }
 
-// 194개국
+// ── 2026-07-23 신설: PC에서 서명이 실제로 필요해진 순간에만 뜨는
+//    "계정 연결" 흐름 (전용/공용 PC 선택) ─────────────────────
+//
+// 0단계(gopang-wallet.js)가 PC에서는 지갑을 조용히 자동생성하지 않도록
+// 바꿔서, window.gopangWallet이 null이고 gopangWalletNeedsSetup=true인
+// 상태가 정상적으로 존재하게 됐다. 이 함수는 "실제로 서명이 필요해진
+// 순간"(현재는 sendMessage() 진입부, 다른 서명 필요 지점에도 필요하면
+// 같은 함수를 재사용) 호출되어, 사용자에게 계정 연결 방법을 묻는다.
+//
+// 세션당 한 번만 묻는다(sessionStorage 플래그) — 매 메시지마다 반복해서
+// 물어보면 방해가 된다. "아니요, 처음이에요"를 고르면 이 사람은 신규
+// 방문자라는 뜻이므로, 이후 정상적인 회원가입 흐름(_showRegisterFlow
+// 등)에 맡기고 이 함수는 관여하지 않는다.
+const _WALLET_SETUP_ASKED_KEY = 'gopang_wallet_setup_asked_v1';
+
+function _showAccountExistsCheck() {
+  return new Promise((resolve) => {
+    document.getElementById('_account-exists-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = '_account-exists-overlay';
+    overlay.style.cssText = [
+      'position:fixed;inset:0;z-index:10002',
+      'background:rgba(0,0,0,0.5)',
+      'display:flex;align-items:center;justify-content:center',
+      'padding:24px;box-sizing:border-box',
+    ].join(';');
+
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:28px 22px;
+                  width:100%;max-width:360px;box-sizing:border-box;">
+        <p style="font-weight:700;font-size:16px;margin:0 0 10px;color:#111827">
+          이미 혼디 계정이 있으신가요?
+        </p>
+        <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 20px">
+          스마트폰에서 이미 가입하셨다면, 그 계정을 이 PC에서도 이용할 수 있습니다.
+        </p>
+        <div style="display:flex;gap:8px">
+          <button id="_ae_no"
+            style="flex:1;padding:13px;border:1px solid #e5e7eb;border-radius:10px;
+                   background:none;cursor:pointer;font-size:14px;font-family:inherit">
+            아니요, 처음이에요
+          </button>
+          <button id="_ae_yes"
+            style="flex:1;padding:13px;border:none;border-radius:10px;
+                   background:#16a34a;color:#fff;cursor:pointer;
+                   font-size:14px;font-weight:700;font-family:inherit">
+            네, 있어요
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#_ae_yes').onclick = () => { overlay.remove(); resolve(true); };
+    overlay.querySelector('#_ae_no').onclick  = () => { overlay.remove(); resolve(false); };
+  });
+}
+
+function _showDedicatedOrSharedChoice() {
+  return new Promise((resolve) => {
+    document.getElementById('_pc-mode-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = '_pc-mode-overlay';
+    overlay.style.cssText = [
+      'position:fixed;inset:0;z-index:10002',
+      'background:rgba(0,0,0,0.5)',
+      'display:flex;align-items:center;justify-content:center',
+      'padding:24px;box-sizing:border-box',
+    ].join(';');
+
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:28px 22px;
+                  width:100%;max-width:360px;box-sizing:border-box">
+        <p style="font-weight:700;font-size:16px;margin:0 0 10px;color:#111827">
+          이 PC는 어떤 PC인가요?
+        </p>
+        <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 20px">
+          전용 PC를 선택하면 다음부터 폰 없이 바로 로그인됩니다.<br>
+          공용 PC를 선택하면 이 PC엔 아무 정보도 남지 않습니다.
+        </p>
+        <button id="_pm_dedicated"
+          style="width:100%;padding:13px;border:none;border-radius:10px;
+                 background:#16a34a;color:#fff;cursor:pointer;
+                 font-size:14px;font-weight:700;font-family:inherit;margin-bottom:8px">
+          저만 쓰는 전용 PC예요
+        </button>
+        <button id="_pm_shared"
+          style="width:100%;padding:13px;border:1px solid #e5e7eb;border-radius:10px;
+                 background:none;cursor:pointer;font-size:14px;font-family:inherit">
+          여러 사람이 쓰는 공용 PC예요
+        </button>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#_pm_dedicated').onclick = () => { overlay.remove(); resolve('dedicated'); };
+    overlay.querySelector('#_pm_shared').onclick    = () => { overlay.remove(); resolve('shared'); };
+  });
+}
+
+/**
+ * ensureWalletSetup()
+ * 서명이 실제로 필요해진 지점(현재: sendMessage())에서 호출.
+ * - 이미 지갑이 있거나(window.gopangWallet), 애초에 이 PC가 대상이
+ *   아니면(gopangWalletNeedsSetup 미설정) 즉시 반환 — UI 없음.
+ * - 이번 세션에 이미 한 번 물어봤으면 다시 안 물어봄.
+ * - "처음이에요" → 관여 안 함(기존 회원가입 흐름에 맡김).
+ * - "전용 PC" → device-link.html로 이동(이 페이지로 돌아오는 return
+ *   파라미터 포함) — 진짜 개인키를 X25519 봉투로 전달받음.
+ * - "공용 PC" → sessionStorage에 표시만 하고 종료(3~5단계에서 이 표시를
+ *   보고 매 서명을 폰에 그때그때 위임하도록 이어붙일 예정 — 아직 미구현).
+ */
+export async function ensureWalletSetup() {
+  if (window.gopangWallet) return;               // 이미 있음
+  if (!window.gopangWalletNeedsSetup) return;     // 이 PC 대상 아님(모바일/잠김 등)
+  if (sessionStorage.getItem(_WALLET_SETUP_ASKED_KEY)) return; // 이번 세션에 이미 물어봄
+
+  sessionStorage.setItem(_WALLET_SETUP_ASKED_KEY, '1');
+
+  const hasAccount = await _showAccountExistsCheck();
+  if (!hasAccount) return; // 진짜 신규 방문자 — 기존 회원가입 흐름에 맡김
+
+  const mode = await _showDedicatedOrSharedChoice();
+  if (mode === 'dedicated') {
+    location.href = '/auth/device-link.html?return=' + encodeURIComponent(location.href);
+    return; // 페이지 이동 — 이후 코드 실행 안 됨
+  }
+  // mode === 'shared'
+  sessionStorage.setItem('gopang_pc_session_mode', 'shared');
+  console.info('[Auth] 공용 PC 모드로 설정 — 이 세션엔 개인키를 저장하지 않습니다.');
+}
+
 // ── 한국 유선 지역번호 목록 (서울만 1자리, 나머지 전부 2자리) ──────
 // hondi-digit-code.js의 VALID_AREA_CODES와 반드시 동일한 코드 값을
 // 유지해야 한다(숫자 코드 인코딩/디코딩과 짝이 맞아야 하므로).

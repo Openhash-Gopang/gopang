@@ -2,7 +2,7 @@
  * ui/send-message.js — 메시지 전송 라우팅
  */
 import { aiActive, _peer, attachFile, setAttachFile, _locationReady, _locationPending, _USER, USER_GUID, _lastPipelineResult, setLastPipelineResult } from '../core/state.js';
-import { _isRegistered } from '../core/auth.js';
+import { _isRegistered, ensureWalletSetup } from '../core/auth.js';
 import { appendBubble, riskChip } from './bubble.js';
 import { activateAI } from '../ai/toggle.js';
 import { _sendP2P } from '../p2p/webrtc.js';
@@ -38,6 +38,12 @@ export async function sendMessage() {
   const inp  = document.getElementById('msg-input');
   const text = inp.value.trim();
   if (!text && !attachFile) return;
+
+  // 2026-07-23 신설 — 실제로 서명이 필요해지는 첫 지점(메시지 전송)에서만
+  // "계정 연결" 흐름을 띄운다. 이 함수 내부에서 이미 지갑이 있거나, 이
+  // 기기가 애초에 대상이 아니거나(모바일 등), 이번 세션에 이미 한 번
+  // 물어봤으면 즉시 반환하므로 평소엔 아무 체감 지연이 없다.
+  await ensureWalletSetup();
 
   // 첫 메시지 전송 시 GPS 요청 — PWA 배너가 이미 처리된 후이므로 충돌 없음
   // ★ 2026-07-22 버그 수정: 모바일 실기기(브라우저·설치된 웹앱 모두)에서
