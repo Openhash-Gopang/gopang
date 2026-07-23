@@ -3969,6 +3969,270 @@ async function handleSPAuthorRefreshScheduleUpsert(request, env, corsHeaders) {
   }
 }
 
+// ── SP-INDUSTRY-TRANSFORM 실시간 생성 (2026-07-23 신설) ─────────────
+// 배경: profile-assistant STEP3C에서 사업자의 schema_id에 대응하는
+// SP-INDUSTRY-TRANSFORM-{schema_id}가 아직 없을 때, 지금까지는 조용히
+// 건너뛰기만 했다. 주피터님 지시(2026-07-23) — "위험한 작업으로 사전
+// 지정된 업종(TIER3_REGULATED_SCHEMA_IDS)을 제외하고는 실시간으로 SP를
+// 작성하고, 사후 승인받는 구조로 전환". 즉 위험 업종은 지금처럼 사람이
+// 먼저 검토(SP-Author 큐)해야 하고, 그 외는 AI가 즉시 생성해 곧바로
+// 활성화하되 사후에 사람이 검토한다 — HUMAN-AUTHORITY-GATE-SCHEMA의
+// "사전 승인" 원칙을 위험 업종에는 유지하고, 그 외에는 "사후 승인 +
+// 형식 자동검증 최소 게이트"로 완화한 것.
+//
+// 저장은 sp_draft_requests(기관 SP 전용, institution 중심 필드)가 아니라
+// 전용 테이블 sp_industry_transform_realtime을 새로 씀(2026-07-23,
+// pb_migrations/1786800007). 대시보드는 이 컬렉션을 PocketBase 관리자
+// 화면에서 status=active_pending_review, generated_at 오름차순으로 보는
+// 것으로 대체한다(주피터님 지시 — 별도 UI 안 만듦).
+
+async function _l1FindRealtimeIndustryTransform(env, schemaId) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`schema_id='${schemaId}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_industry_transform_realtime/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`sp_industry_transform_realtime 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+async function _l1CreateRealtimeIndustryTransform(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_industry_transform_realtime/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`sp_industry_transform_realtime 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+async function _l1UpdateRealtimeIndustryTransform(env, id, patch) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_industry_transform_realtime/records/${id}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`sp_industry_transform_realtime 갱신 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+// 자동 형식 검증 — tools/check_sp_inheritance.py의 SP-INDUSTRY-TRANSFORM
+// 규칙(필수 PHASE 0~5 커버리지)을 JS로 이식한 최소 게이트. 내용의 정확성
+// (예: task를 "즉시 가능"으로 잘못 분류했는지)까지는 기계적으로 못
+// 잡는다 — 그건 사후 사람 검토의 몫으로 남긴다(주피터님께 명시적으로
+// 설명드린 트레이드오프).
+function _validateIndustryTransformSP(content) {
+  const missing = [];
+  for (const phase of ['PHASE 0', 'PHASE 1', 'PHASE 2', 'PHASE 3', 'PHASE 4', 'PHASE 5']) {
+    if (!content.includes(phase)) missing.push(phase);
+  }
+  if (!/SP-INDUSTRY-TRANSFORM-COMMON\s*상속/.test(content.slice(0, 500))) {
+    missing.push('상속 선언(앞부분)');
+  }
+  if (content.length < 800) missing.push('본문이 너무 짧음(800자 미만)');
+  return { valid: missing.length === 0, missing };
+}
+
+// Claude에게 SP-INDUSTRY-TRANSFORM-COMMON을 시스템프롬프트로 주고 PHASE
+// 0~5를 작성시킨다. 자체 웹검색 도구(handleWebSearch, Serper.dev 기반,
+// 캐시·일일예산 이미 적용됨)를 [WEB_SEARCH: query=...] 태그로 요청하게
+// 하고, 최대 5회까지 왕복한다(무한 검색으로 인한 비용 폭주 방지). 이건
+// Anthropic 네이티브 web_search 도구를 새로 쓰지 않고 기존 검색
+// 인프라(비용 통제 이미 구축됨)를 그대로 재사용하는 선택이다.
+async function _generateIndustryTransformSP(env, schemaId, ksicLabel, ctx) {
+  const manifestRes = await fetch(`${REPO_RAW}/prompts/sp-catalog.json`, { cache: 'no-cache' });
+  const manifest = await manifestRes.json();
+  const commonFile = manifest['SP-INDUSTRY-TRANSFORM-COMMON'];
+  if (!commonFile) throw new Error('manifest에 SP-INDUSTRY-TRANSFORM-COMMON 키 없음');
+  const commonRes = await fetch(`${REPO_RAW}/prompts/${commonFile}`);
+  const commonSP = await commonRes.text();
+
+  const systemPrompt = `${commonSP}
+
+---
+
+당신은 지금 위 SP-INDUSTRY-TRANSFORM-COMMON을 상속해 KSIC 중분류 ${schemaId}
+(${ksicLabel})에 대한 SP-INDUSTRY-TRANSFORM-${schemaId} 문서를 실시간으로 작성해야
+합니다. PHASE 0~5를 전부 포함하고, PHASE 1(동향 조사)에는 실제 최신 정보가
+필요하면 [WEB_SEARCH: query=검색어] 태그를 응답 끝에 내십시오 — 검색 결과가
+다음 턴에 주어집니다. 확인되지 않은 수치는 "추정"이라고 명시하고, 검증 안 된
+사실을 단정하지 마십시오. 문서 맨 앞부분에 "(SP-INDUSTRY-TRANSFORM-COMMON
+상속)"을 반드시 포함하십시오. 최종 응답에는 [WEB_SEARCH] 태그 없이 완성된
+PHASE 0~5 전문만 출력하십시오.`;
+
+  let messages = [{ role: 'user', content: `SP-INDUSTRY-TRANSFORM-${schemaId}(${ksicLabel})를 작성해주세요.` }];
+  let finalText = '';
+
+  for (let round = 0; round < 5; round++) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4000, system: systemPrompt, messages }),
+    });
+    if (!res.ok) throw new Error(`Claude API 호출 실패 (HTTP ${res.status})`);
+    const data = await res.json();
+    const text = data.content?.find(c => c.type === 'text')?.text || '';
+
+    const searchMatch = text.match(/\[WEB_SEARCH:\s*query=([^\]]+)\]\s*$/);
+    if (searchMatch && round < 4) {
+      const query = searchMatch[1].trim();
+      let searchResult;
+      try {
+        const swRes = await handleWebSearch(new Request('https://internal/web-search', {
+          method: 'POST', body: JSON.stringify({ query }),
+        }), env, {}, ctx);
+        searchResult = await swRes.json();
+      } catch (e) {
+        searchResult = { error: e.message };
+      }
+      messages.push({ role: 'assistant', content: text });
+      messages.push({ role: 'user', content: `[검색 결과]\n${JSON.stringify(searchResult).slice(0, 3000)}` });
+      continue;
+    }
+
+    finalText = text.replace(/\[WEB_SEARCH:[^\]]*\]\s*$/, '').trim();
+    break;
+  }
+
+  return finalText;
+}
+
+// POST /sp-industry-transform/generate  body: {schema_id, ksic_label?, triggered_by_profile_guid?}
+async function handleSPIndustryTransformGenerate(request, env, corsHeaders, ctx) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  const schemaId = String(payload.schema_id || '').padStart(2, '0');
+  if (!schemaId || !VALID_INDUSTRY_SCHEMA_IDS.has(schemaId)) {
+    return new Response(JSON.stringify({ error: 'INVALID_SCHEMA_ID' }), { status: 400, headers: corsHeaders });
+  }
+  if (TIER3_REGULATED_SCHEMA_IDS.has(schemaId)) {
+    // 위험 업종 — 실시간 생성 대상이 아니다. 조용히 거부(호출부인
+    // profile-assistant STEP3C는 애초에 이 업종에서 이 엔드포인트를
+    // 부르지 않아야 하지만, 이중 방어선으로 서버에서도 막는다).
+    return new Response(JSON.stringify({ error: 'REGULATED_INDUSTRY_REQUIRES_HUMAN_REVIEW' }), { status: 403, headers: corsHeaders });
+  }
+
+  // 이미 생성돼 있으면(다른 사업자가 먼저 트리거) 그대로 반환 — 중복 생성 방지.
+  const existing = await _l1FindRealtimeIndustryTransform(env, schemaId).catch(() => null);
+  if (existing) {
+    return new Response(JSON.stringify({ status: 'already_exists', record: existing }), { headers: corsHeaders });
+  }
+
+  const ksicLabel = KSIC_LABELS[schemaId] || schemaId;
+  let content;
+  try {
+    content = await _generateIndustryTransformSP(env, schemaId, ksicLabel, ctx);
+  } catch (e) {
+    await _l1CreateRealtimeIndustryTransform(env, {
+      schema_id: schemaId, status: 'generation_failed',
+      validation_notes: `생성 실패: ${e.message}`,
+      generated_at: new Date().toISOString(),
+      triggered_by_profile_guid: payload.triggered_by_profile_guid || '',
+    }).catch(() => {});
+    return new Response(JSON.stringify({ error: 'GENERATION_FAILED', message: e.message }), { status: 502, headers: corsHeaders });
+  }
+
+  const validation = _validateIndustryTransformSP(content);
+  const record = {
+    schema_id: schemaId,
+    status: validation.valid ? 'active_pending_review' : 'generation_failed',
+    generated_content: content,
+    validation_notes: validation.valid ? '' : `필수 섹션 누락: ${validation.missing.join(', ')}`,
+    generated_at: new Date().toISOString(),
+    triggered_by_profile_guid: payload.triggered_by_profile_guid || '',
+  };
+
+  let rec;
+  try {
+    rec = await _l1CreateRealtimeIndustryTransform(env, record);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+
+  // 검증 통과해서 즉시 활성화된 경우, 기존 escalations 채널에도 알림을
+  // 남긴다 — "대시보드에서 주기적으로 확인"과 별개로, 이미 구축된 알림
+  // 경로도 같이 써서 "최대한 빨리 확인"할 확률을 높인다.
+  if (validation.valid) {
+    ctx?.waitUntil?.(_l1CreateEscalation(env, {
+      to: '@owner',
+      reason: 'sp_draft_request',
+      ref_collection: 'sp_industry_transform_realtime',
+      ref_id: rec.id,
+      summary: `[실시간생성·활성화됨·검토대기] SP-INDUSTRY-TRANSFORM-${schemaId}(${ksicLabel})`,
+      read: false,
+    }).catch((e) => console.error('[sp-industry-transform] escalation 생성 실패:', e.message)));
+  }
+
+  return new Response(JSON.stringify({ status: record.status, record: rec }), { headers: corsHeaders });
+}
+
+// POST /sp-industry-transform/review  body: {id, decision: 'approved'|'rejected', reviewer_note?}
+// 승인: status만 approved로 바꾼다(정식 파일 승격은 여전히 사람이 기존
+// fix.py 절차로 진행 — 이 엔드포인트는 "검토 완료" 표시만 한다).
+// 반려: status를 rejected로 바꾸고, 이 schema_id로 automation_opt_in을
+// 켜둔 모든 프로필에서 그 값을 즉시 비운다(자동화 중단).
+async function handleSPIndustryTransformReview(request, env, corsHeaders, ctx) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  const { id, decision, reviewer_note } = payload;
+  if (!id || !['approved', 'rejected'].includes(decision)) {
+    return new Response(JSON.stringify({ error: 'id, decision(approved|rejected) required' }), { status: 400, headers: corsHeaders });
+  }
+
+  const token = await _l1AdminToken(env);
+  const getRes = await fetch(`${L1_DEFAULT}/api/collections/sp_industry_transform_realtime/records/${id}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!getRes.ok) return new Response(JSON.stringify({ error: 'RECORD_NOT_FOUND' }), { status: 404, headers: corsHeaders });
+  const rec = await getRes.json();
+
+  const updated = await _l1UpdateRealtimeIndustryTransform(env, id, {
+    status: decision, reviewed_at: new Date().toISOString(), reviewer_note: reviewer_note || '',
+  });
+
+  if (decision === 'rejected') {
+    // 이 schema_id로 automation_opt_in을 켜둔 모든 프로필을 찾아 끈다.
+    // industry_fields는 profiles 테이블의 JSON 컬럼(extra.public.industry_fields)
+    // 안에 있어 SQL LIKE로 대략 찾은 뒤 개별 확인한다(스키마 상 JSON 내부
+    // 정밀 필터가 PocketBase 기본 문법으로는 어려움 — handleTemplateLookup의
+    // extra ~ 패턴과 동일한 방식 재사용).
+    ctx?.waitUntil?.((async () => {
+      try {
+        const filter = encodeURIComponent(`extra ~ "\\"schema_id\\":\\"${rec.schema_id}\\""`);
+        const listRes = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=200`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!listRes.ok) return;
+        const { items } = await listRes.json();
+        for (const p of items || []) {
+          const iFields = p.extra?.public?.industry_fields;
+          if (!iFields?.automation_opt_in?.length) continue;
+          const newExtra = { ...p.extra, public: { ...p.extra.public, industry_fields: { ...iFields, automation_opt_in: [] } } };
+          await fetch(`${L1_DEFAULT}/api/collections/profiles/records/${p.id}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ extra: newExtra }),
+          }).catch((e) => console.error('[sp-industry-transform] 반려 후 automation_opt_in 해제 실패:', p.id, e.message));
+        }
+      } catch (e) {
+        console.error('[sp-industry-transform] 반려 후 프로필 일괄 해제 중 오류:', e.message);
+      }
+    })());
+  }
+
+  return new Response(JSON.stringify({ status: 'ok', record: updated }), { headers: corsHeaders });
+}
+
+
 // ── 웹검색(Serper.dev) 예산 카운터 (2026-07-11 신설) ──────────────────
 // 캐시 미스로 실제 API를 호출할 때만 증분한다(캐시 히트는 무료이므로
 // 카운트 안 함). WEB_SEARCH_DAILY_CAP(env, 기본 500)을 넘으면 그날은
@@ -5586,6 +5850,12 @@ export default {
       return handleSPAuthorRefreshDue(request, env, corsHeaders);
     if (pathname === '/sp-author/refresh-schedule' && request.method === 'POST')
       return handleSPAuthorRefreshScheduleUpsert(request, env, corsHeaders);
+
+    // ── SP-INDUSTRY-TRANSFORM 실시간 생성 (2026-07-23 신설) ────────
+    if (pathname === '/sp-industry-transform/generate' && request.method === 'POST')
+      return handleSPIndustryTransformGenerate(request, env, corsHeaders, ctx);
+    if (pathname === '/sp-industry-transform/review' && request.method === 'POST')
+      return handleSPIndustryTransformReview(request, env, corsHeaders, ctx);
 
     // ── gwp_registry (2026-07-11 신설) ──────────────────────────────
     if (pathname === '/gwp-registry/lookup' && request.method === 'GET')
@@ -13161,11 +13431,25 @@ async function _compileAgentSP(env, principalProfile) {
         industryTransformSP = itRes.ok ? await itRes.text() : '';
         if (itRes.ok) console.info('[Worker] SP-INDUSTRY-TRANSFORM 로드 완료:', fname);
         else console.warn('[Worker] SP-INDUSTRY-TRANSFORM fetch 실패:', itRes.status, fname);
+      } else {
+        // manifest(정식 파일)에 없으면 실시간 생성 테이블도 확인한다
+        // (2026-07-23 신설 — active_pending_review·approved면 사용, 아직
+        // 검증 실패(generation_failed)거나 반려(rejected)면 사용 안 함).
+        // 이 조회 자체가 "생성을 트리거"하지는 않는다 — 트리거는
+        // profile-assistant STEP3C가 [SP_INDUSTRY_TRANSFORM_GENERATE_REQUEST]
+        // 태그로 /sp-industry-transform/generate를 호출할 때만 일어난다
+        // (아래 handleSPIndustryTransformGenerate 참고). 즉 이 블록은
+        // "이미 생성된 게 있으면 쓴다"만 담당.
+        try {
+          const rt = await _l1FindRealtimeIndustryTransform(env, ksicCode);
+          if (rt && ['active_pending_review', 'approved'].includes(rt.status) && rt.generated_content) {
+            industryTransformSP = rt.generated_content;
+            console.info('[Worker] SP-INDUSTRY-TRANSFORM 실시간생성분 로드:', ksicCode, rt.status);
+          }
+        } catch (e) {
+          console.warn('[Worker] sp_industry_transform_realtime 조회 오류:', e.message);
+        }
       }
-      // manifest에 키가 없으면(아직 이 업종 파일럿 미작성) 조용히 생략 —
-      // AGENT-SUPPLIER와 달리 경고 로그도 남기지 않는다(대부분 업종에서
-      // 항상 없는 게 정상 상태이므로, 매번 경고가 뜨면 진짜 문제와 구분이
-      // 안 됨).
     } catch (e) {
       console.warn('[Worker] SP-INDUSTRY-TRANSFORM 로드 오류, 빈 문자열로 계속:', e.message);
     }

@@ -2008,6 +2008,48 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
     return true;
   }
 
+  // [SP_INDUSTRY_TRANSFORM_GENERATE_REQUEST: schema_id=...] — 2026-07-23
+  // 신설. profile-assistant STEP3C가 TIER3 규제업종이 아닌데 SP-INDUSTRY-
+  // TRANSFORM-{schema_id}가 아직 없을 때 낸다. 위 SP_DRAFT_REQUEST와
+  // 성격이 다르다 — 저건 "큐에 등록하고 사람이 나중에 작성"이고, 이건
+  // "지금 바로 AI가 생성하고 검증 통과하면 즉시 활성화, 사후에 사람이
+  // 검토"다(HUMAN-AUTHORITY-GATE-SCHEMA의 사전 승인 원칙을 위험 업종
+  // 밖에서는 완화한 것 — 주피터님 2026-07-23 지시).
+  const itGenMatch = fullReply.match(/\[SP_INDUSTRY_TRANSFORM_GENERATE_REQUEST:([\s\S]*?)\]/);
+  if (itGenMatch) {
+    const body = itGenMatch[1];
+    const get = (field) => {
+      const m = body.match(new RegExp(`${field}=([^,\\]]+)`));
+      return m ? m[1].trim() : '';
+    };
+    const schemaId = get('schema_id');
+    console.log('[SP-INDUSTRY-TRANSFORM] 실시간 생성 요청 감지:', schemaId);
+    await _updateBubble(_stripInternalTags(fullReply));
+    history.push({ role: 'assistant', content: fullReply });
+    // 생성은 시간이 걸릴 수 있어(웹검색 왕복 포함) 응답을 기다리지 않고
+    // 백그라운드로 던진다 — 프로필 작성 대화 자체는 계속 진행돼야 한다
+    // (STEP3C 설계상 이 태그 다음 곧바로 STEP4로 넘어가므로, 여기서
+    // await로 막으면 그 설계 의도와 어긋난다).
+    fetch(`${base}/sp-industry-transform/generate`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        schema_id: schemaId,
+        // triggered_by_profile_guid는 감사 추적용 optional 필드라, 정확한
+        // 필드명이 CFG에 있는지 확인 못 했다(guid 관련 필드는 registration
+        // context의 ctx.guid만 확인됨, CFG 레벨엔 없어 보임) — 없으면 빈
+        // 문자열로 안전하게 넘어간다. 정확한 필드가 있으면 나중에 바꿔도 됨.
+        triggered_by_profile_guid: (CFG?.principalGuid || ''),
+      }),
+    }).catch((e) => console.warn('[SP-INDUSTRY-TRANSFORM] 백그라운드 생성 요청 실패:', e.message));
+    // 사용자에게 보이는 흐름은 막지 않으므로 별도 결과 말풍선 없이
+    // 곧바로 다음 턴(STEP4)으로 넘어간다 — SP_DRAFT_REQUEST처럼 진행
+    // 상태 말풍선을 띄우지 않는 이유: 어차피 "지금 만들고 있다"는 안내는
+    // STEP3C 프롬프트 자체가 이미 사용자 응답으로 냈고, 이 이후엔 조용히
+    // 백그라운드에서 끝난다(성공하든 실패하든 사업자 대화에 재개입하지
+    // 않음 — 다음 프로필 편집 시점에 반영 여부가 자연스럽게 드러남).
+    return false; // 대화 흐름을 여기서 끊지 않음(STEP4로 자연 진행)
+  }
+
   // [ESCALATE: to=..., reason=..., summary=...] — 응급이 아닌 일반 에스컬레이션
   // (응급은 §0-G가 별도 경로로 처리 — 이 핸들러는 SP-Author/검토 알림 용도).
   const escMatch = fullReply.match(/\[ESCALATE:([\s\S]*?)\]/);
