@@ -2048,6 +2048,35 @@ async function handleGovDataResolve(request, url, env, corsHeaders) {
 // 태그 형식: agency_id=..., category=..., task_type=..., dept_chain=[a,b],
 // outcome=completed|pending|referred, received_ts=ISO, processing_started_ts=ISO,
 // completed_ts=ISO, duration_seconds=123
+// [AGY_VAULT_STORE: agency_id=, who=, when=, where=, what=, why=, how=] 파싱
+// (AGENCY-AC-COMMON_v1.4.md §1(5) PDV_RECORDING 형식 — 2026-07-23 서버측
+// 처리 신설). _parseMetaTableTag와 동일한 괄호 깊이 인식 방식을 쓴다.
+function _parseAgyVaultStoreTag(raw) {
+  try {
+    const fields = {};
+    const parts = [];
+    let depth = 0, buf = '';
+    for (const ch of raw) {
+      if (ch === '[') depth++;
+      if (ch === ']') depth--;
+      if (ch === ',' && depth === 0) { parts.push(buf); buf = ''; }
+      else buf += ch;
+    }
+    if (buf.trim()) parts.push(buf);
+
+    for (const part of parts) {
+      const eq = part.indexOf('=');
+      if (eq === -1) continue;
+      const key = part.slice(0, eq).trim();
+      let val = part.slice(eq + 1).trim();
+      if (val.startsWith('{') && val.endsWith('}')) val = val.slice(1, -1).trim();
+      fields[key] = val.replace(/^["']|["']$/g, '');
+    }
+    if (!fields.agency_id || !fields.what) return null;
+    return fields;
+  } catch (e) { return null; }
+}
+
 function _parseMetaTableTag(raw) {
   try {
     const fields = {};
@@ -8906,6 +8935,65 @@ async function handlePdvReport(request,env,corsHeaders){
 // 때문에 기존 서비스 등록 체계와 1:1로 안 맞는다. 지금은 스키마 검증만
 // 하는 상태이며, 남용 방지가 필요해지면 별도 인증 체계를 얹어야 한다
 // (알려진 한계 — 이번 범위 밖).
+// ── 기관측 PDV 공용 쓰기 함수 (2026-07-23 분리) ────────────────────
+// handleOwnerPdvReport(공개 HTTP 엔드포인트, expert-chat.html이 클라이언트에서
+// 호출)와 handleGovRelay 내부의 AGY_VAULT_STORE 자동감지 경로(서버 내부,
+// LLM 응답에서 직접 추출) 양쪽이 이 함수 하나를 공유한다 — 해시 계산과
+// PocketBase 쓰기 로직을 두 곳에 따로 두지 않는다.
+//
+// 화이트리스트 검사(OWNER_AGENCY_WHITELIST)는 이 함수가 아니라 공개
+// 엔드포인트(handleOwnerPdvReport) 쪽에서만 한다 — 외부에서 임의 값을
+// 보낼 수 있는 유일한 경로이기 때문이다. 서버 내부 자동감지 경로는
+// 이미 서버가 확정한 agency 값 범위 안에서만 호출되므로 화이트리스트가
+// 불필요하다(악용 경로가 아니라 형식 오류 가능성만 있음 — 최소한의
+// 정제만 한다).
+async function _writeOwnerPdvRecord(env, r) {
+  const RECORD_TYPES = ['consultation', 'own_output'];
+  if (!RECORD_TYPES.includes(r.recordType)) throw new Error(`record_type은 ${RECORD_TYPES.join('|')} 중 하나여야 합니다`);
+  const ownerAgency = String(r.ownerAgency || '').trim();
+  if (!ownerAgency) throw new Error('owner_agency 필수');
+  if (!r.what) throw new Error('what 필수');
+
+  const HOW_VALUES = ['completed', 'escalated_success', 'escalated_ai_limit', 'early_exit'];
+  const how = HOW_VALUES.includes(r.how) ? r.how : 'completed';
+
+  const guidForHashing = r.guidForHashing || null;
+  if (r.recordType === 'consultation' && !guidForHashing) throw new Error('consultation 레코드는 guid_for_hashing 필수');
+
+  // §7.2 가명화 해시 계산 — 원문 guid는 이 함수 밖으로 나가지 않으며
+  // 어디에도 로그로 남기지 않는다.
+  let whoHash = null;
+  if (guidForHashing) {
+    const agencySalt = await _sha256Hex(
+      `${env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1'}:owner-pdv-salt:${ownerAgency}`
+    );
+    whoHash = await _sha256Hex(`${guidForHashing}:${agencySalt}`);
+  }
+
+  const now = new Date().toISOString();
+  const pbFetch = await fetch(`${L1_DEFAULT}/api/collections/owner_pdv/records`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      record_type:     r.recordType,
+      owner_agency:    ownerAgency,
+      persona_key:     r.recordType === 'consultation' ? (r.personaKey || null) : null,
+      persona_version: r.recordType === 'consultation' ? (r.personaVersion || null) : null,
+      who_hash:        whoHash,
+      when:            r.when || now,
+      where:           r.where || null,
+      what:            String(r.what).slice(0, 500),
+      how,
+      why:             r.why || null,
+      detail:          r.detail ? JSON.stringify(r.detail) : null,
+      outcome_signals: r.outcomeSignals ? JSON.stringify(r.outcomeSignals) : null,
+      source_ref:      null, // §7.3 원칙 — 원문 미저장
+      confidence:      typeof r.confidence === 'number' ? r.confidence : 1,
+    }),
+  });
+  if (!pbFetch.ok) throw new Error(`owner_pdv 저장 실패 HTTP ${pbFetch.status}`);
+}
+
 async function handleOwnerPdvReport(request, env, corsHeaders) {
   if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
   const body = await request.json().catch(() => null);
@@ -8924,12 +9012,21 @@ async function handleOwnerPdvReport(request, env, corsHeaders) {
   // REGISTERED_SERVICES(위 8347행)도 동일하게 정적 화이트리스트 방식이라
   // 기존 관례를 따른 것이다. 새 K-서비스 추가 시 이 배열도 같이 갱신해야
   // 한다(잊기 쉬운 지점 — gwp-registry.js 수정 체크리스트에 추가 권장).
+  //
+  // ★ 2026-07-23 — 정부기관 값('gov_do'/'gov_national', gov-router.js
+  // resolveGovAgency() 반환값)을 여기 추가했다. 이 값들은 공개
+  // 엔드포인트로도 들어올 수 있는 유일한 정부기관측 경로이므로(예: 향후
+  // 클라이언트에서 직접 보고하는 경우 대비) 화이트리스트에 포함해야
+  // UNKNOWN_AGENCY로 거부되지 않는다. AGY_VAULT_STORE 자동감지 경로(아래
+  // handleGovRelay 내부)는 이 화이트리스트를 거치지 않고 _writeOwnerPdvRecord를
+  // 직접 호출하므로 더 세분화된 agency_id(예: emd:한림읍:agent)를 쓸 수 있다.
   const OWNER_AGENCY_WHITELIST = new Set([
     'gopang', 'klaw', 'kpolice', 'ksecurity', 'khealth', 'kedu', 'kgdc',
     'kfinance', 'kinsurance', 'kbank', 'ktelecom', 'kestate',
     'kcommerce_seller', 'ktax', 'kcommerce', 'ktransport', 'klogistics',
     'jeju', 'kgov', 'kdemocracy', 'kbusiness', 'kemergency',
     'fiil-kcleaner', 'ksearch', 'kqna', 'kusers',
+    'gov_do', 'gov_national',
   ]);
   // 2026-07-20(SSOT 마이그레이션 중 발견) — 개별 K-서비스 저장소의 로컬
   // AGENCY_ID(REGISTERED_SERVICES 키, 예: 'tax'/'market'/'school')와
@@ -8953,49 +9050,24 @@ async function handleOwnerPdvReport(request, env, corsHeaders) {
   if (!HOW_VALUES.includes(r.how))
     return _err(400, 'SCHEMA_ERROR', `how은 ${HOW_VALUES.join('|')} 중 하나여야 합니다`, corsHeaders);
 
-  const guidForHashing = r.guid_for_hashing || null;
-  if (r.record_type === 'consultation' && !guidForHashing)
+  if (r.record_type === 'consultation' && !r.guid_for_hashing)
     return _err(400, 'SCHEMA_ERROR', 'consultation 레코드는 guid_for_hashing 필수', corsHeaders);
 
-  // §7.2 가명화 해시 계산 — 원문 guid는 이 함수 밖으로 나가지 않으며
-  // 어디에도 로그로 남기지 않는다(아래 catch 포함, guid 관련 값은 찍지 않음).
-  let whoHash = null;
-  if (guidForHashing) {
-    const agencySalt = await _sha256Hex(
-      `${env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1'}:owner-pdv-salt:${ownerAgency}`
-    );
-    whoHash = await _sha256Hex(`${guidForHashing}:${agencySalt}`);
-  }
-
-  const now = new Date().toISOString();
-  const pbFetch = await fetch(`${L1_DEFAULT}/api/collections/owner_pdv/records`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      record_type:     r.record_type,
-      owner_agency:    ownerAgency,
-      persona_key:     r.record_type === 'consultation' ? (r.persona_key || null) : null,
-      persona_version: r.record_type === 'consultation' ? (r.persona_version || null) : null,
-      who_hash:        whoHash,
-      when:            r.when || now,
-      where:           r.where || null,
-      what:            String(r.what).slice(0, 500),
-      how:             r.how,
-      why:             r.why || null,
-      detail:          r.record_type === 'own_output' && r.detail ? JSON.stringify(r.detail) : null,
-      outcome_signals: r.outcome_signals ? JSON.stringify(r.outcome_signals) : null,
-      source_ref:      null, // §7.3 원칙 — 원문 미저장
-      confidence:      typeof r.confidence === 'number' ? r.confidence : 1,
-    }),
-  });
-
-  if (!pbFetch.ok) {
+  try {
+    await _writeOwnerPdvRecord(env, {
+      recordType: r.record_type, ownerAgency, guidForHashing: r.guid_for_hashing || null,
+      personaKey: r.persona_key, personaVersion: r.persona_version,
+      when: r.when, where: r.where, what: r.what, how: r.how, why: r.why,
+      detail: r.record_type === 'own_output' ? r.detail : null,
+      outcomeSignals: r.outcome_signals, confidence: r.confidence,
+    });
+  } catch (e) {
     return _err(503, 'OWNER_PDV_WRITE_FAILED', '기관측 PDV 저장 실패, 잠시 후 재시도', corsHeaders);
   }
 
   return new Response(JSON.stringify({
     ok: true,
-    recorded_at: now,
+    recorded_at: new Date().toISOString(),
     owner_agency: ownerAgency,
     record_type: r.record_type,
   }), { status: 200, headers: corsHeaders });
@@ -11631,6 +11703,66 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
 
   const data = await res.json();
   billGovCall(data?.usage, agency);
+
+  // ── AGY_VAULT_STORE 서버측 처리 (2026-07-23 신설) ──────────────────
+  // 배경: AGENCY-AC-COMMON §1(5)이 65개 이상의 국가기관 SP 템플릿에
+  // 이미 "대화 종료 시 [AGY_VAULT_STORE: ...] 태그로 6하원칙 기록을
+  // 남기라"고 지시하고 있었지만, 그 태그를 실제로 읽어서 저장하는
+  // 코드가 이제까지 없었다(UNIVERSAL-common U0-1 신설 과정에서 발견 —
+  // 프롬프트 쪽은 이미 완성돼 있었는데 서버가 응답하지 않고 있었다).
+  // handleGovRelay 하나가 342개 국가기관 전부의 공용 진입점이므로,
+  // 이 블록 하나만 추가하면 그 SP들 전부가 즉시 실제로 기록을 남기게
+  // 된다 — 개별 기관 SP나 페이지를 하나씩 고칠 필요가 없다.
+  //
+  // who_hash 계산에는 LLM이 태그에 쓴 who 텍스트를 신뢰하지 않고, 이
+  // 요청을 보낸 실제 guid(서버가 이미 검증/과금에 쓴 값)를 쓴다 — U5
+  // (개인정보 최소화) 원칙상 LLM 응답 텍스트에 실명 식별자가 그대로
+  // 노출돼 있으면 안 되고, 실제로도 각 SP 템플릿은 "요청자 식별 정보 —
+  // 개인정보 최소화 원칙(U5) 적용"이라고만 되어 있어 원문 guid를 그대로
+  // 쓰라는 뜻이 아니다.
+  //
+  // ★★ 알려진 한계(2026-07-23 재검토 중 발견, 정직하게 고지) — 이 블록은
+  // 첫 LLM 응답(delegation 이전) 시점의 content만 본다. `canDelegate`가
+  // true인 agency(gov_do/gov_national — 정확히 이 태그를 실제로 방출하는
+  // 국가기관 트리 최상위 두 곳)에서 아래 위임 오케스트레이션(SP_CALL·
+  // DEPT_TASK_REQUEST·AFFILIATION_APPROVE/REVOKE·WORK_PDV_REQUEST)이
+  // 실제로 발동해 응답이 다시 합성되면, 그 최종 응답에 새로 나타날 수
+  // 있는 [AGY_VAULT_STORE] 태그는 이 블록이 잡지 못하고 조기 반환된다.
+  // **이건 이번에 새로 생긴 문제가 아니라, 바로 아래 META_TABLE_UPDATE
+  // 처리(2026-07-14 신설)도 처음부터 갖고 있던 것과 동일한 구조적
+  // 한계다** — 위임 분기 안에 조기 return이 6곳 넘게 흩어져 있어(각각
+  // DEPT_TASK_REQUEST/AFFILIATION_APPROVE/AFFILIATION_REVOKE/
+  // WORK_PDV_REQUEST/SP_CALL 성공·거부·실패 경로), 그 모두를 안전하게
+  // 고치는 건 결제·라우팅이 얽힌 별도의 신중한 후속 작업으로 남긴다.
+  // 지금 이 위치는 "위임이 발생하지 않는 절대다수의 단일 응답 케이스"는
+  // 정확히 처리하며, 이는 "아무 데도 기록되지 않던" 이전 상태보다 명백한
+  // 개선이다.
+  {
+    const avContent = data?.choices?.[0]?.message?.content;
+    const avMatch = typeof avContent === 'string'
+      ? avContent.match(/\[AGY_VAULT_STORE:([\s\S]*?)\]/)
+      : null;
+    if (avMatch) {
+      const avFields = _parseAgyVaultStoreTag(avMatch[1]);
+      if (avFields) {
+        const writeTask = _writeOwnerPdvRecord(env, {
+          recordType: 'consultation',
+          ownerAgency: avFields.agency_id,
+          guidForHashing: guid,
+          when: avFields.when || new Date().toISOString(),
+          where: avFields.where || null,
+          what: avFields.what,
+          how: 'completed', // owner_pdv의 how는 완료상태 enum — AGY_VAULT_STORE의 how(처리 절차 설명)와 의미가 달라 detail로 옮긴다
+          why: avFields.why || null,
+          detail: avFields.how ? { procedure: avFields.how } : null,
+        }).catch(e => console.warn('[AgyVaultStore] 기록 실패(응답 흐름은 계속 진행):', e.message));
+        if (ctx?.waitUntil) ctx.waitUntil(writeTask); else writeTask.catch(() => {});
+      } else {
+        console.warn('[AgyVaultStore] 태그 파싱 실패 — 형식이 예상과 다름:', avMatch[1].slice(0, 200));
+      }
+      data.choices[0].message.content = avContent.replace(/\[AGY_VAULT_STORE:[\s\S]*?\]/, '').trim();
+    }
+  }
 
   // ── META_TABLE_UPDATE 서버측 처리 (2026-07-14 신설, 회귀 복구) ─────
   // AGENCY-AC-COMMON_v1.3.md §6 배선. canDelegate 여부와 무관하게 모든
