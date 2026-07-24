@@ -624,12 +624,12 @@ function _makeGenericCityDeptEntries(시코드) {
     { 국코드: 'plan', 시코드, kw: ['기획예산', '중장기계획', '인구정책'] },
     { 국코드: 'jachi', 시코드, kw: ['지방세', '재산세과', '세무과', '자치행정', '주민등록', '인감증명', '취득세'] },
     { 국코드: 'safety', 시코드, kw: ['재난안전', '안전총괄', '주정차 단속'] },
-    { 국코드: 'welfare', 시코드, kw: ['기초생활수급', '기초연금', '장애인복지', '주민복지과'] },
+    { 국코드: 'welfare', 시코드, kw: ['기초생활수급', '기초연금', '장애인복지', '주민복지과', '어린이집', '보육'] },
     { 국코드: 'econ', 시코드, kw: ['소상공인', '지역경제', '전통시장', '일자리과'] },
     { 국코드: 'culture', 시코드, kw: ['문화예술과', '생활체육', '평생학습', '도서관'] },
-    { 국코드: 'climate', 시코드, kw: ['생활환경과', '폐기물', '공원녹지과'] },
+    { 국코드: 'climate', 시코드, kw: ['생활환경과', '폐기물', '공원녹지과', '쓰레기', '분리배출'] },
     { 국코드: 'housing', 시코드,
-      kw: ['건축허가', '건축인허가', '건축신고', '도시계획과', '상하수도과'] },
+      kw: ['건축허가', '건축인허가', '건축 인허가', '건축신고', '도시계획과', '상하수도과'] },
     { 국코드: 'transport', 시코드, kw: ['교통행정과', '시내버스', '버스 노선', '버스', '교통약자'] },
     { 국코드: 'health', 시코드, kw: ['보건소', '예방접종', '건강검진'] },
   ];
@@ -687,6 +687,254 @@ const BUSAN_CITY_TABLE = _makeMetroCityTable('busan', BUSAN_GU);
 const SEOUL_CITY_TABLE = _makeMetroCityTable('seoul', SEOUL_GU);
 const BUSAN_CITY_DEPT_TABLE = BUSAN_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
 const SEOUL_CITY_DEPT_TABLE = SEOUL_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
+
+// ══════════════════════════════════════════════════════════
+// 3단계 — 나머지 12개 도 시/군/구 183개 (2026-07-24, 계획서 v1.1 §5)
+// 자동 생성됨(gen_nationwide_phase3.py) — 도메인 범용 어휘만 사용,
+// 실명 조직명 없음(1·2단계와 동일 원칙).
+// ══════════════════════════════════════════════════════════
+const CHUNGBUK_GU = [
+  ['chungbuk_goesan', '괴산군'],
+  ['chungbuk_danyang', '단양군'],
+  ['chungbuk_boeun', '보은군'],
+  ['chungbuk_yeongdong', '영동군'],
+  ['chungbuk_ogcheon', '옥천군'],
+  ['chungbuk_eumseong', '음성군'],
+  ['chungbuk_jecheon', '제천시'],
+  ['chungbuk_jeungpyeong', '증평군'],
+  ['chungbuk_jincheon', '진천군'],
+  ['chungbuk_cheongju', '청주시'],
+  ['chungbuk_chungju', '충주시'],
+];
+const CHUNGBUK_CITY_TABLE = _makeMetroCityTable('chungbuk', CHUNGBUK_GU);
+const CHUNGBUK_CITY_DEPT_TABLE = CHUNGBUK_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
+
+const CHUNGNAM_GU = [
+  ['chungnam_gyelyong', '계룡시'],
+  ['chungnam_gongju', '공주시'],
+  ['chungnam_geumsan', '금산군'],
+  ['chungnam_nonsan', '논산시'],
+  ['chungnam_dangjin', '당진시'],
+  ['chungnam_bolyeong', '보령시'],
+  ['chungnam_buyeo', '부여군'],
+  ['chungnam_seosan', '서산시'],
+  ['chungnam_seocheon', '서천군'],
+  ['chungnam_asan', '아산시'],
+  ['chungnam_yesan', '예산군'],
+  ['chungnam_cheonan', '천안시'],
+  ['chungnam_cheongyang', '청양군'],
+  ['chungnam_taean', '태안군'],
+  ['chungnam_hongseong', '홍성군'],
+];
+const CHUNGNAM_CITY_TABLE = _makeMetroCityTable('chungnam', CHUNGNAM_GU);
+const CHUNGNAM_CITY_DEPT_TABLE = CHUNGNAM_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
+
+const DAEGU_GU = [
+  ['daegu_gunwi', '군위군'],
+  ['daegu_nam', '남구'],
+  ['daegu_dalseo', '달서구'],
+  ['daegu_dalseong', '달성군'],
+  ['daegu_dong', '동구'],
+  ['daegu_bug', '북구'],
+  ['daegu_seo', '서구'],
+  ['daegu_suseong', '수성구'],
+  ['daegu_jung', '중구'],
+];
+const DAEGU_CITY_TABLE = _makeMetroCityTable('daegu', DAEGU_GU);
+const DAEGU_CITY_DEPT_TABLE = DAEGU_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
+
+const DAEJEON_GU = [
+  ['daejeon_daedeog', '대덕구'],
+  ['daejeon_dong', '동구'],
+  ['daejeon_seo', '서구'],
+  ['daejeon_yuseong', '유성구'],
+  ['daejeon_jung', '중구'],
+];
+const DAEJEON_CITY_TABLE = _makeMetroCityTable('daejeon', DAEJEON_GU);
+const DAEJEON_CITY_DEPT_TABLE = DAEJEON_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
+
+const GANGWON_GU = [
+  ['gangwon_gangleung', '강릉시'],
+  ['gangwon_goseong', '고성군'],
+  ['gangwon_donghae', '동해시'],
+  ['gangwon_samcheog', '삼척시'],
+  ['gangwon_sogcho', '속초시'],
+  ['gangwon_yanggu', '양구군'],
+  ['gangwon_yangyang', '양양군'],
+  ['gangwon_yeongwol', '영월군'],
+  ['gangwon_wonju', '원주시'],
+  ['gangwon_inje', '인제군'],
+  ['gangwon_jeongseon', '정선군'],
+  ['gangwon_cheolwon', '철원군'],
+  ['gangwon_chuncheon', '춘천시'],
+  ['gangwon_taebaeg', '태백시'],
+  ['gangwon_pyeongchang', '평창군'],
+  ['gangwon_hongcheon', '홍천군'],
+  ['gangwon_hwacheon', '화천군'],
+  ['gangwon_hoengseong', '횡성군'],
+];
+const GANGWON_CITY_TABLE = _makeMetroCityTable('gangwon', GANGWON_GU);
+const GANGWON_CITY_DEPT_TABLE = GANGWON_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
+
+const GYEONGBUK_GU = [
+  ['gyeongbuk_gyeongsan', '경산시'],
+  ['gyeongbuk_gyeongju', '경주시'],
+  ['gyeongbuk_golyeong', '고령군'],
+  ['gyeongbuk_gumi', '구미시'],
+  ['gyeongbuk_gimcheon', '김천시'],
+  ['gyeongbuk_mungyeong', '문경시'],
+  ['gyeongbuk_bonghwa', '봉화군'],
+  ['gyeongbuk_sangju', '상주시'],
+  ['gyeongbuk_seongju', '성주군'],
+  ['gyeongbuk_andong', '안동시'],
+  ['gyeongbuk_yeongdeog', '영덕군'],
+  ['gyeongbuk_yeongyang', '영양군'],
+  ['gyeongbuk_yeongju', '영주시'],
+  ['gyeongbuk_yeongcheon', '영천시'],
+  ['gyeongbuk_yecheon', '예천군'],
+  ['gyeongbuk_ulleung', '울릉군'],
+  ['gyeongbuk_uljin', '울진군'],
+  ['gyeongbuk_uiseong', '의성군'],
+  ['gyeongbuk_cheongdo', '청도군'],
+  ['gyeongbuk_cheongsong', '청송군'],
+  ['gyeongbuk_chilgog', '칠곡군'],
+  ['gyeongbuk_pohang', '포항시'],
+];
+const GYEONGBUK_CITY_TABLE = _makeMetroCityTable('gyeongbuk', GYEONGBUK_GU);
+const GYEONGBUK_CITY_DEPT_TABLE = GYEONGBUK_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
+
+const GYEONGGI_GU = [
+  ['gyeonggi_gapyeong', '가평군'],
+  ['gyeonggi_goyang', '고양시'],
+  ['gyeonggi_gwacheon', '과천시'],
+  ['gyeonggi_gwangmyeong', '광명시'],
+  ['gyeonggi_gwangju', '광주시'],
+  ['gyeonggi_guli', '구리시'],
+  ['gyeonggi_gunpo', '군포시'],
+  ['gyeonggi_gimpo', '김포시'],
+  ['gyeonggi_namyangju', '남양주시'],
+  ['gyeonggi_dongducheon', '동두천시'],
+  ['gyeonggi_bucheon', '부천시'],
+  ['gyeonggi_seongnam', '성남시'],
+  ['gyeonggi_suwon', '수원시'],
+  ['gyeonggi_siheung', '시흥시'],
+  ['gyeonggi_ansan', '안산시'],
+  ['gyeonggi_anseong', '안성시'],
+  ['gyeonggi_anyang', '안양시'],
+  ['gyeonggi_yangju', '양주시'],
+  ['gyeonggi_yangpyeong', '양평군'],
+  ['gyeonggi_yeoju', '여주시'],
+  ['gyeonggi_yeoncheon', '연천군'],
+  ['gyeonggi_osan', '오산시'],
+  ['gyeonggi_yongin', '용인시'],
+  ['gyeonggi_uiwang', '의왕시'],
+  ['gyeonggi_uijeongbu', '의정부시'],
+  ['gyeonggi_icheon', '이천시'],
+  ['gyeonggi_paju', '파주시'],
+  ['gyeonggi_pyeongtaeg', '평택시'],
+  ['gyeonggi_pocheon', '포천시'],
+  ['gyeonggi_hanam', '하남시'],
+  ['gyeonggi_hwaseong', '화성시'],
+];
+const GYEONGGI_CITY_TABLE = _makeMetroCityTable('gyeonggi', GYEONGGI_GU);
+const GYEONGGI_CITY_DEPT_TABLE = GYEONGGI_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
+
+const GYEONGNAM_PHASE3_GU = [
+  ['gyeongnam_geoje', '거제시'],
+  ['gyeongnam_geochang', '거창군'],
+  ['gyeongnam_goseong', '고성군'],
+  ['gyeongnam_gimhae', '김해시'],
+  ['gyeongnam_namhae', '남해군'],
+  ['gyeongnam_milyang', '밀양시'],
+  ['gyeongnam_sacheon', '사천시'],
+  ['gyeongnam_yangsan', '양산시'],
+  ['gyeongnam_uilyeong', '의령군'],
+  ['gyeongnam_changnyeong', '창녕군'],
+  ['gyeongnam_tongyeong', '통영시'],
+  ['gyeongnam_hadong', '하동군'],
+  ['gyeongnam_haman', '함안군'],
+  ['gyeongnam_hamyang', '함양군'],
+  ['gyeongnam_habcheon', '합천군'],
+];
+const GYEONGNAM_PHASE3_CITY_TABLE = _makeMetroCityTable('gyeongnam', GYEONGNAM_PHASE3_GU);
+const GYEONGNAM_PHASE3_CITY_DEPT_TABLE = GYEONGNAM_PHASE3_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
+
+const INCHEON_GU = [
+  ['incheon_ganghwa', '강화군'],
+  ['incheon_geomdan', '검단구'],
+  ['incheon_gyeyang', '계양구'],
+  ['incheon_namdong', '남동구'],
+  ['incheon_michuhol', '미추홀구'],
+  ['incheon_bupyeong', '부평구'],
+  ['incheon_seohae', '서해구'],
+  ['incheon_yeonsu', '연수구'],
+  ['incheon_yeongjong', '영종구'],
+  ['incheon_ongjin', '옹진군'],
+  ['incheon_jemulpo', '제물포구'],
+];
+const INCHEON_CITY_TABLE = _makeMetroCityTable('incheon', INCHEON_GU);
+const INCHEON_CITY_DEPT_TABLE = INCHEON_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
+
+const JEONBUK_GU = [
+  ['jeonbuk_gochang', '고창군'],
+  ['jeonbuk_gunsan', '군산시'],
+  ['jeonbuk_gimje', '김제시'],
+  ['jeonbuk_namwon', '남원시'],
+  ['jeonbuk_muju', '무주군'],
+  ['jeonbuk_buan', '부안군'],
+  ['jeonbuk_sunchang', '순창군'],
+  ['jeonbuk_wanju', '완주군'],
+  ['jeonbuk_igsan', '익산시'],
+  ['jeonbuk_imsil', '임실군'],
+  ['jeonbuk_jangsu', '장수군'],
+  ['jeonbuk_jeonju', '전주시'],
+  ['jeonbuk_jeongeub', '정읍시'],
+  ['jeonbuk_jinan', '진안군'],
+];
+const JEONBUK_CITY_TABLE = _makeMetroCityTable('jeonbuk', JEONBUK_GU);
+const JEONBUK_CITY_DEPT_TABLE = JEONBUK_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
+
+const JEONNAM_GWANGJU_GU = [
+  ['jeonnam_gwangju_gangjin', '강진군'],
+  ['jeonnam_gwangju_goheung', '고흥군'],
+  ['jeonnam_gwangju_gogseong', '곡성군'],
+  ['jeonnam_gwangju_gwangsan', '광산구'],
+  ['jeonnam_gwangju_gwangyang', '광양시'],
+  ['jeonnam_gwangju_gulye', '구례군'],
+  ['jeonnam_gwangju_naju', '나주시'],
+  ['jeonnam_gwangju_nam', '남구'],
+  ['jeonnam_gwangju_damyang', '담양군'],
+  ['jeonnam_gwangju_dong', '동구'],
+  ['jeonnam_gwangju_mogpo', '목포시'],
+  ['jeonnam_gwangju_muan', '무안군'],
+  ['jeonnam_gwangju_boseong', '보성군'],
+  ['jeonnam_gwangju_bug', '북구'],
+  ['jeonnam_gwangju_seo', '서구'],
+  ['jeonnam_gwangju_suncheon', '순천시'],
+  ['jeonnam_gwangju_sinan', '신안군'],
+  ['jeonnam_gwangju_yeosu', '여수시'],
+  ['jeonnam_gwangju_yeonggwang', '영광군'],
+  ['jeonnam_gwangju_yeongam', '영암군'],
+  ['jeonnam_gwangju_wando', '완도군'],
+  ['jeonnam_gwangju_jangseong', '장성군'],
+  ['jeonnam_gwangju_jangheung', '장흥군'],
+  ['jeonnam_gwangju_jindo', '진도군'],
+  ['jeonnam_gwangju_hampyeong', '함평군'],
+  ['jeonnam_gwangju_haenam', '해남군'],
+  ['jeonnam_gwangju_hwasun', '화순군'],
+];
+const JEONNAM_GWANGJU_CITY_TABLE = _makeMetroCityTable('jeonnam-gwangju', JEONNAM_GWANGJU_GU);
+const JEONNAM_GWANGJU_CITY_DEPT_TABLE = JEONNAM_GWANGJU_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
+
+const ULSAN_GU = [
+  ['ulsan_nam', '남구'],
+  ['ulsan_dong', '동구'],
+  ['ulsan_bug', '북구'],
+  ['ulsan_ulju', '울주군'],
+  ['ulsan_jung', '중구'],
+];
+const ULSAN_CITY_TABLE = _makeMetroCityTable('ulsan', ULSAN_GU);
+const ULSAN_CITY_DEPT_TABLE = ULSAN_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
 
 // ── 국가기관 라우팅 테이블 (JEJU-NATIONAL-SP §3-1, 1차 배치 8개) ───
 // 도청 트리(JEJU-DO-SP)와 형제 관계 — 매칭되면 DO-SP 대신 이쪽으로 간다.
@@ -1229,16 +1477,33 @@ const PROVINCE_TABLES = {
   // 메타데이터 등록 완료(계획서 v1.1 §5). L2는 v1.0부터 이미 실사 완료 상태.
   busan: { l2: BUSAN_L2_TABLE, city: BUSAN_CITY_TABLE, national: [], citydept: BUSAN_CITY_DEPT_TABLE },
   seoul: { l2: SEOUL_L2_TABLE, city: SEOUL_CITY_TABLE, national: [], citydept: SEOUL_CITY_DEPT_TABLE },
-  incheon: { l2: INCHEON_L2_TABLE, city: [], national: [], citydept: [] },  // ⚠️ 2026-08 시행 예정(안)
-  daejeon: { l2: DAEJEON_L2_TABLE, city: [], national: [], citydept: [] },
-  ulsan: { l2: ULSAN_L2_TABLE, city: [], national: [], citydept: [] },
-  sejong: { l2: SEJONG_L2_TABLE, city: [], national: [], citydept: [] },
-  chungbuk: { l2: CHUNGBUK_L2_TABLE, city: [], national: [], citydept: [] },
-  chungnam: { l2: CHUNGNAM_L2_TABLE, city: [], national: [], citydept: [] },
-  jeonbuk: { l2: JEONBUK_L2_TABLE, city: [], national: [], citydept: [] },
-  gyeongbuk: { l2: GYEONGBUK_L2_TABLE, city: [], national: [], citydept: [] },  // ⚠️ 조직개편 중, 신뢰도 낮음
-  // 2026-07-24 — 진주·창원(+5개 일반구)·산청군 파일럿 인스턴스 신설(주피터 지시).
-  gyeongnam: { l2: GYEONGNAM_L2_TABLE, city: GYEONGNAM_CITY_TABLE, national: [], citydept: GYEONGNAM_CITY_DEPT_TABLE },  // ⚠️ L2는 스냅샷 불일치, 신뢰도 낮음
+  // 2026-07-24 — 3단계: 나머지 12개 도 시/군/구 183개 전수 메타데이터
+  // 등록 완료(계획서 v1.1 §5). L2가 이미 있던 8개 도는 city/citydept만
+  // 채우고, L2가 아예 없던 4개 도(경기·강원·대구·전남광주통합)는 항목
+  // 자체를 새로 만들되 l2/national은 정직하게 빈 배열로 남긴다(도청
+  // 실국 실사는 별도 작업 — 이 배치는 시/군/구 계층만 다룬다).
+  incheon: { l2: INCHEON_L2_TABLE, city: INCHEON_CITY_TABLE, national: [], citydept: INCHEON_CITY_DEPT_TABLE },  // ⚠️ 2026-08 시행 예정(안)
+  daejeon: { l2: DAEJEON_L2_TABLE, city: DAEJEON_CITY_TABLE, national: [], citydept: DAEJEON_CITY_DEPT_TABLE },
+  ulsan: { l2: ULSAN_L2_TABLE, city: ULSAN_CITY_TABLE, national: [], citydept: ULSAN_CITY_DEPT_TABLE },
+  sejong: { l2: SEJONG_L2_TABLE, city: [], national: [], citydept: [] },  // 단층제라 시청 계층 자체가 해당 없음
+  chungbuk: { l2: CHUNGBUK_L2_TABLE, city: CHUNGBUK_CITY_TABLE, national: [], citydept: CHUNGBUK_CITY_DEPT_TABLE },
+  chungnam: { l2: CHUNGNAM_L2_TABLE, city: CHUNGNAM_CITY_TABLE, national: [], citydept: CHUNGNAM_CITY_DEPT_TABLE },
+  jeonbuk: { l2: JEONBUK_L2_TABLE, city: JEONBUK_CITY_TABLE, national: [], citydept: JEONBUK_CITY_DEPT_TABLE },
+  gyeongbuk: { l2: GYEONGBUK_L2_TABLE, city: GYEONGBUK_CITY_TABLE, national: [], citydept: GYEONGBUK_CITY_DEPT_TABLE },  // ⚠️ L2 조직개편 중, 신뢰도 낮음
+  // 2026-07-24 — 진주·창원(+5개 일반구)·산청군 파일럿(2단계) + 나머지 15개
+  // 시/군(3단계)을 합친다.
+  gyeongnam: { l2: GYEONGNAM_L2_TABLE,
+    city: [...GYEONGNAM_CITY_TABLE, ...GYEONGNAM_PHASE3_CITY_TABLE],
+    national: [],
+    citydept: [...GYEONGNAM_CITY_DEPT_TABLE, ...GYEONGNAM_PHASE3_CITY_DEPT_TABLE] },  // ⚠️ L2는 스냅샷 불일치, 신뢰도 낮음
+  // ★ 2026-07-24 신설 — 이 4개 도는 도청 실국(L2) 실사가 아직 전혀
+  // 착수되지 않았다(PROVINCE_TABLES 항목 자체가 없었음). 시/군/구 계층
+  // 메타데이터만 이번에 등록하고, l2/national은 정직하게 빈 배열로 남긴다
+  // — 도청 질문(예: "경기도 기획조정실")은 여전히 일반 안내로 폴백된다.
+  gyeonggi: { l2: [], city: GYEONGGI_CITY_TABLE, national: [], citydept: GYEONGGI_CITY_DEPT_TABLE },
+  gangwon: { l2: [], city: GANGWON_CITY_TABLE, national: [], citydept: GANGWON_CITY_DEPT_TABLE },
+  daegu: { l2: [], city: DAEGU_CITY_TABLE, national: [], citydept: DAEGU_CITY_DEPT_TABLE },
+  'jeonnam-gwangju': { l2: [], city: JEONNAM_GWANGJU_CITY_TABLE, national: [], citydept: JEONNAM_GWANGJU_CITY_DEPT_TABLE },
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }

@@ -7,9 +7,25 @@
 // 단위 라우팅(제주 12개 도 + 온보딩 안 된 도 포함)을 검증하는 것이기
 // 때문이다(고정하면 모든 케이스가 강제로 jeju로만 흐른다).
 
+import fs from 'node:fs';
+import path from 'node:path';
+
 globalThis.window = globalThis;
 
 function fakeText(name) { return `[목 텍스트: ${name}]`; }
+
+// 2026-07-24 신설 — city-master-data.json / city-dept-master-data.json은
+// 이제 234개 시/군/구를 담고 있어(3단계 전수 등록), 이 파일 상단의
+// 손으로 쓴 소규모 mock(CITY_DEPT_MASTER)로는 커버리지가 계속 뒤처진다.
+// 이 두 파일만 실제 repo 파일을 디스크에서 읽어 대체한다(gyeongnam-pilot/
+// metro-districts-phase1 테스트와 동일 패턴) — 그 외 mock(SIGUNGU_LIST,
+// PROVINCE_MASTER, DO_DEPT_MASTER 등)은 이 파일 고유의 축소 표본을 그대로
+// 유지한다(도청·국가기관 계층은 아직 실사 범위가 제한적이라 손 mock이 더
+// 명확함).
+const CITY_MASTER_REAL_PATH = path.resolve(import.meta.dirname, '..', '..', 'prompts', 'gov-tree', '04-city', 'templates', 'city-master-data.json');
+const CITY_DEPT_MASTER_REAL_PATH = path.resolve(import.meta.dirname, '..', '..', 'prompts', 'gov-tree', '04-city', 'templates', 'city-dept-master-data.json');
+const CITY_MASTER_REAL = fs.readFileSync(CITY_MASTER_REAL_PATH, 'utf-8');
+const CITY_DEPT_MASTER_REAL = fs.readFileSync(CITY_DEPT_MASTER_REAL_PATH, 'utf-8');
 
 // ── 대표 시군구 목록(도 판별 3순위, sigungu-national-list.json 목) ──
 const SIGUNGU_LIST = [
@@ -63,27 +79,6 @@ const DO_DEPT_MASTER = { 부서목록: [
     산하과목록: '건축과 등', 콜센터명: '제주콜센터', 콜센터번호: '064-120', 콜센터운영시간: '07:00~22:00',
     처리사무: ['TEST-PILOT-PERMIT'] },
 ] };
-const CITY_DEPT_MASTER = { 국목록: [
-  { 시코드: 'seogwipo', 국코드: 'housing', 시이름: '서귀포시', 국이름: '안전도시건설국',
-    산하과목록: '건축과 등', 처리사무: ['PERMIT-BUILDING-REPORT-14'] },
-  { 시코드: 'jejusi', 국코드: 'housing', 시이름: '제주시', 국이름: '도시건설국',
-    산하과목록: '건축과 등', 처리사무: ['PERMIT-BUILDING-REPORT-14'] },
-  { 시코드: 'jejusi', 국코드: 'welfare', 시이름: '제주시', 국이름: '복지위생국', 산하과목록: '주민복지과 등' },
-  { 시코드: 'seogwipo', 국코드: 'welfare', 시이름: '서귀포시', 국이름: '복지위생국', 산하과목록: '주민복지과 등' },
-  { 시코드: 'jejusi', 국코드: 'safety', 시이름: '제주시', 국이름: '안전교통국', 산하과목록: '안전총괄과 등' },
-  { 시코드: 'seogwipo', 국코드: 'agrieconomy', 시이름: '서귀포시', 국이름: '농수축산경제국', 산하과목록: '청정축산과 등' },
-  // 2026-07-24 신설 — 1단계 확대(부산·경남 파일럿) 이후 K-govType가드/
-  // L-시군구지연 케이스가 이제 정적 시청 인스턴스로 실제로 잡히는지
-  // 검증하기 위한 최소 mock(실제 city-dept-master-data.json과 동일 스키마).
-  { 시코드: 'busan_haeundae', 국코드: 'jachi', 지자체유형: '자치구',
-    template: 'SP-CITYDEPT-JACHI-TEMPLATE_v1.0.md',
-    입력_문구: '지방세 관련 신청', 출력_문구: '지방세 부과고지서',
-    처분성_문구: '지방세 부과는 실제 신청·심사를 통해서만 확정된다' },
-  { 시코드: 'changwon', 국코드: 'transport', 지자체유형: '특례시',
-    template: 'SP-CITYDEPT-TRANSPORT-TEMPLATE_v1.0.md',
-    입력_문구: '대중교통 관련 문의', 출력_문구: '교통행정 처리결과',
-    처분성_문구: '교통 관련 처분은 실제 확인을 통해서만 확정된다' },
-] };
 
 // ── hondi-proxy(지연 초기화) 응답 목 — 도시별로 다르게 준다 ─────────
 function mockSigunguResolve(city, domain) {
@@ -125,8 +120,8 @@ globalThis.fetch = async (url) => {
     if (u.includes('national-sp-overlay-master-data.json')) return { ok: true, text: async () => JSON.stringify(NAT_OVERLAY_MASTER) };
     if (u.includes('national-agency-master-data.json')) return { ok: true, text: async () => JSON.stringify(NAT_AGENCY_MASTER) };
     if (u.includes('do-dept-master-data.json')) return { ok: true, text: async () => JSON.stringify(DO_DEPT_MASTER) };
-    if (u.includes('city-master-data.json')) return { ok: true, text: async () => JSON.stringify({ 시목록: [] }) };
-    if (u.includes('city-dept-master-data.json')) return { ok: true, text: async () => JSON.stringify(CITY_DEPT_MASTER) };
+    if (u.includes('city-master-data.json')) return { ok: true, text: async () => CITY_MASTER_REAL };
+    if (u.includes('city-dept-master-data.json')) return { ok: true, text: async () => CITY_DEPT_MASTER_REAL };
     if (u.includes('province-master-data.json')) return { ok: true, text: async () => JSON.stringify(PROVINCE_MASTER) };
     return { ok: true, text: async () => '{}' };
   }
@@ -247,14 +242,14 @@ add('K-govType가드', '인천 지방세 및 예산 편성 문의', { note: '세
 
 // ── L. 2026-07-24 신규 수정분 (3) — 광주 이름 인식, 자동차등록, 반려동물등록 ──
 add('L-신규수정', '광주광역시 세무서 어디예요', { expectProvince: 'jeonnam-gwangju', note: '"전남광주통합특별시"라는 미래 통합명칭만 있고 실제로 다들 쓰는 "광주광역시"가 빠져있던 버그 — 짧은 "광주"는 경기도 광주시와 겹쳐 기존 설계대로 계속 배제, 전체 명칭만 추가' });
-add('L-신규수정', '수원시 자동차 등록하려고요', { expectTrace: ['SP-SIGUNGU-LAZY'], note: '자동차등록/차량등록이 시군구 도메인 사전에 없어 제주 외 지역에선 전부 놓치던 버그. transport 도메인에 추가 — 제주는 정적 테이블(safety의 "차량등록")로 이미 되고 있었어서 이 버그가 안 드러났음' });
-add('L-신규수정', '고양시 반려동물 등록하고 싶어요', { expectTrace: ['SP-SIGUNGU-LAZY'], note: '반려동물등록은 기존 15개 도메인 어디에도 안 맞아 새 도메인(animal) 신설. worker.js SIGUNGU_DOMAIN_LABEL_KO에도 라벨 추가해 검색 쿼리 품질 유지' });
+add('L-신규수정', '수원시 자동차 등록하려고요', { expectTrace: ['SP-CITY-GYEONGGI_SUWON'], note: '2026-07-24 3단계 이후 수원시가 정적 시청 인스턴스로 등록되며 SP-SIGUNGU-LAZY보다 먼저 SP-CITY-GYEONGGI_SUWON에서 멈춘다 — 자동차등록은 아직 시청 국코드 도메인 키워드에 없어(범용 10개 도메인 밖) 국(局) 단위까지는 못 가지만, 최소한 올바른 시는 특정된다. 도메인 키워드 확장은 별도 작업.' });
+add('L-신규수정', '고양시 반려동물 등록하고 싶어요', { expectTrace: ['SP-CITY-GYEONGGI_GOYANG'], note: '2026-07-24 3단계 이후 고양시가 정적 시청 인스턴스로 등록되며 SP-SIGUNGU-LAZY보다 먼저 SP-CITY-GYEONGGI_GOYANG에서 멈춘다 — 반려동물등록도 자동차등록과 동일한 이유로 국(局) 단위까지는 아직 안 감.' });
 
 // ── L. 시군구 지연조회(GENERAL 도, 5) ───────────────────────────
-add('L-시군구지연', '수원시 기초생활수급 신청하고 싶어요', { expectTrace: ['SP-SIGUNGU-LAZY'] });
-add('L-시군구지연', '성남시 어린이집 입소 신청 방법', { expectTrace: ['SP-SIGUNGU-LAZY'] });
-add('L-시군구지연', '청주시 쓰레기 분리배출 규정', { expectTrace: ['SP-SIGUNGU-LAZY'] });
-add('L-시군구지연', '천안시 건축 인허가 문의', { expectTrace: ['SP-SIGUNGU-LAZY'] });
+add('L-시군구지연', '수원시 기초생활수급 신청하고 싶어요', { expectTrace: ['SP-CITYDEPT-gyeonggi_suwon-welfare'], note: '2026-07-24 3단계 이후 SP-SIGUNGU-LAZY 대신 정적 welfare 도메인으로 정밀하게 잡힌다' });
+add('L-시군구지연', '성남시 어린이집 입소 신청 방법', { expectTrace: ['SP-CITYDEPT-gyeonggi_seongnam-welfare'], note: '2026-07-24 welfare 키워드에 어린이집/보육 추가 — 정적 도메인으로 잡힌다' });
+add('L-시군구지연', '청주시 쓰레기 분리배출 규정', { expectTrace: ['SP-CITYDEPT-chungbuk_cheongju-climate'], note: '2026-07-24 climate 키워드에 쓰레기/분리배출 추가 — 정적 도메인으로 잡힌다' });
+add('L-시군구지연', '천안시 건축 인허가 문의', { expectTrace: ['SP-CITYDEPT-chungnam_cheonan-housing'], note: '2026-07-24 housing 키워드에 띄어쓰기 변형(건축 인허가) 추가 — 정적 도메인으로 잡힌다' });
 add('L-시군구지연', '창원시 버스 노선 문의', { expectTrace: ['SP-CITYDEPT-changwon-transport'], note: '2026-07-24 이전엔 SP-SIGUNGU-LAZY로 빠졌으나, 창원시가 정적 시청 인스턴스로 등록되며 이제 SP-CITYDEPT-changwon-transport로 더 정밀하게 잡힌다' });
 
 // ── M. 온보딩 안 된 도(강원/경기/대구) — 원형 폴백 (3) ───
