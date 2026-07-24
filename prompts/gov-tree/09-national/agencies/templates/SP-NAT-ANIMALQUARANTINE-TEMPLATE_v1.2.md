@@ -99,7 +99,7 @@ UNIVERSAL-common U1/U2 원칙(08-schema/DATA_REQUIREMENT-SCHEMA.md 상세 프로
 
 ## §7. PDV_REQUEST 실증 예시 (UNIVERSAL-common U7-3)
 
-> 사용자: "반려동물이랑 출국하는데 검역은 어디서 받나요"
+> 사용자: "반려동물 동반 출국하는데 검역은 어디서 받나요"
 > 응답 흐름: 출입국 예정 공항·항만을(를) 알면 관할 기관·연락처를 더 정확히 안내할 수 있으므로 확인 시도.
 > ```
 > [PDV_REQUEST: requesting_sp=SP-NAT-ANIMALQUARANTINE, fields=[출입국 예정 공항·항만],

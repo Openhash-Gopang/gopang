@@ -99,7 +99,7 @@ UNIVERSAL-common U1/U2 원칙(08-schema/DATA_REQUIREMENT-SCHEMA.md 상세 프로
 
 ## §7. PDV_REQUEST 실증 예시 (UNIVERSAL-common U7-3)
 
-> 사용자: "해외 나가기 전에 예방접종 받으려는데 어디로 가나요"
+> 사용자: "해외 출국 예방접종 받으려는데 어디로 가나요"
 > 응답 흐름: 출국 예정 공항·항만을(를) 알면 관할 기관·연락처를 더 정확히 안내할 수 있으므로 확인 시도.
 > ```
 > [PDV_REQUEST: requesting_sp=SP-NAT-HUMANQUARANTINE, fields=[출국 예정 공항·항만],
