@@ -4426,12 +4426,17 @@ const SIGUNGU_COMMON_DEPT_PATTERNS = {
   health: '보건소', climate: '환경과', housing: '건설(도시)과',
   transport: '교통행정과', culture: '문화체육과', tourism: '관광과',
   sports: '체육과', agri: '농정과', ocean: '수산과', innov: null,
+  // ★ 2026-07-24 추가 — 지자체마다 동물보호 업무 소속 부서(환경과·
+  // 축산과·별도 동물보호팀 등)가 제각각이라 특정 부서명을 확정 짓지
+  // 않는다(innov와 동일하게 null — 정직하게 "확인 필요" 폴백 문구 사용).
+  animal: null,
 };
 const SIGUNGU_DOMAIN_LABEL_KO = {
   plan: '기획', safety: '안전', jachi: '행정', econ: '경제', welfare: '복지',
   family: '여성가족', health: '보건', climate: '환경', housing: '건설주택',
   transport: '교통', culture: '문화', tourism: '관광', sports: '체육',
   agri: '농업', ocean: '수산', innov: '산업',
+  animal: '반려동물등록·동물보호',
 };
 
 function _sigunguRenderFallback(cityGuess, domain) {
