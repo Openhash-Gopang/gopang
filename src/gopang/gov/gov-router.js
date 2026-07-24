@@ -491,7 +491,10 @@ const JEJU_CITY_TABLE = [
 // findStaffContact()(연락처 조회)에만 쓰이고 실제 SP 조립 경로에는
 // 연결이 안 돼 있었다. 이 테이블이 그 배선을 완성한다.
 // ✅ 2026-07-23(2차 수정) — 아래 공백을 city-dept-master-data.json에
-// 제주시 '도시건설국'(국코드 construction) 레코드를 신설해 해소했다.
+// 제주시 '도시건설국'(국코드 housing, 2026-07-24 이전 이름 construction) 레코드를
+// 신설해 해소했다. 2026-07-24: 도청 도메인 코드('housing')와 통일하기 위해
+// construction → housing으로 국코드명을 바꿨다(실제 부서 실명은 무관, 내부
+// 식별자만 통일 — 시청 16개 도메인 클래스 신설과 함께 정리).
 // (구 주석: "제주시에는 안전도시건설국이 아직 없다" — jejusi.go.kr 조직도
 // 실사 결과 제주시 조직명은 "안전"이 빠진 "도시건설국"으로 확인됨. 교통·
 // 안전 업무는 별도로 이미 있는 'safety' 국코드(안전교통국)가 담당한다.)
@@ -517,7 +520,7 @@ const JEJU_CITY_DEPT_TABLE = [
     kw: ['문화관광체육국', '문화예술과', '관광진흥과', '체육진흥과', '우당도서관', '탐라도서관', '제주아트센터', '문화', '관광', '체육'] },
   { 국코드: 'climate', 시코드: 'jejusi',
     kw: ['청정환경국', '환경관리과', '환경지도과', '생활환경과', '공원녹지과', '절물생태관리소', '환경', '공원'] },
-  { 국코드: 'construction', 시코드: 'jejusi',
+  { 국코드: 'housing', 시코드: 'jejusi',
     // ★ 2026-07-23 신설 — jejusi.go.kr 조직도 실사(복수 독립 출처 교차검증).
     // '인허가'/'건설' 같은 과도하게 포괄적인 일반명사는 넣지 않는다
     // (자치행정국·복지위생국에서 겪은 과잉일반화 재발 방지, 주피터 지시).
@@ -533,7 +536,7 @@ const JEJU_CITY_DEPT_TABLE = [
     kw: ['농수축산경제국', '경제일자리과', '디지털혁신과', '친환경농정과', '감귤유통과', '해양수산과', '청정축산과', '농업', '감귤', '수산', '축산'] },
   { 국코드: 'climate', 시코드: 'seogwipo',
     kw: ['청정환경국', '기후환경과', '생활환경과', '공원녹지과', '산림휴양관리소', '환경', '공원'] },
-  { 국코드: 'construction', 시코드: 'seogwipo',
+  { 국코드: 'housing', 시코드: 'seogwipo',
     kw: ['안전도시건설국', '안전총괄과', '도시과', '건축과', '건설과', '교통행정과', '상하수도과',
          '건축', '건축허가', '건축인허가', '건축신고', '건설', '도시계획', '상하수도'] },
   { 국코드: 'health', 시코드: 'seogwipo',
@@ -1947,27 +1950,77 @@ async function _fetchCityText(entry) {
   return _renderCityTemplate(template, rec);
 }
 
-// ── 시청 국(局) 렌더링·fetch (2026-07-23 신설) ──────────────────────
-// _fetchDeptText(도청 실·국)와 동일 철학 — city-dept-master-data.json은
-// 이미 완결돼 있었으므로(자리표시자도 SP-CITYDEPT-TEMPLATE에 이미 준비돼
-// 있었음), sigungu-dept-resolve처럼 실시간 웹검색이 필요 없다(제주 행정시
-// 2곳·13개 국 전부 정적으로 이미 확정된 데이터). rec가 없으면 상위
-// 시청 텍스트만으로 폴백(이 함수를 호출하는 쪽이 이미 시청 텍스트를
+// ── 시청 국(局) 렌더링·fetch ──────────────────────────────────────
+// 2026-07-23 신설, 2026-07-24 개편(주피터 지시) — 단일 SP-CITYDEPT-TEMPLATE
+// 1개를 쓰던 방식에서, 도청(SP-DEPT-*-TEMPLATE 16개)과 동일하게 **국코드별
+// 추상 템플릿**(SP-CITYDEPT-{DOMAIN}-TEMPLATE_v1.0.md, §LEGAL-BASIS에 도메인별
+// 개별 소관법 명시)을 쓰도록 바꿨다 — rec.template 필드로 선택.
+// 실제 조직명(국이름)을 몰라도 DEFAULT_DEPT_LABEL로 즉시 렌더링 가능(주피터
+// 지시: "개별 기관의 부서 명칭이 무엇이든 중요하지 않다") — city-dept-master-data.json
+// 레코드에 없으면 상위 시청 텍스트만으로 폴백(호출부가 이미 시청 텍스트를
 // parts에 넣은 뒤이므로, 여기서는 추가 텍스트 없이 조용히 스킵).
-function _renderCityDeptTemplate(template, rec) {
+
+// 국코드별 기본 표시 라벨 — 실사로 확인된 실명이 아직 없는 인스턴스가
+// "정식 명칭 확인 중" 상태로도 즉시 응답 가능하게 한다(SP-CITYDEPT-*-TEMPLATE
+// 생성 스크립트의 dept_generic과 1:1 대응, 04-city/templates/에서 재생성 시
+// 함께 갱신할 것).
+const CITY_DEPT_DEFAULT_LABEL = {
+  plan: '기획(예산)담당부서', safety: '안전총괄담당부서', jachi: '자치행정담당부서',
+  econ: '지역경제담당부서', innov: '미래산업담당부서', welfare: '사회복지담당부서',
+  climate: '환경관리담당부서', housing: '건설(주택)담당부서', transport: '교통행정담당부서',
+  culture: '문화체육담당부서', sports: '체육담당부서', tourism: '관광담당부서',
+  agri: '농축산담당부서', ocean: '해양수산담당부서', health: '보건소', family: '여성가족담당부서',
+};
+
+// 지자체유형별 기본 처분권 문구 — rec.처분권_문구가 있으면 그걸 우선하고,
+// 없으면 rec.지자체유형으로 이 표에서 기본값을 고른다(둘 다 없으면 '일반시'
+// 취급 — 처분권 있음 쪽을 기본값으로 두는 게 "일반구인데 자치구로 오안내"
+// 보다 안전 — 반대 방향 오류(자치구인데 일반구로 안내)는 사용자가 시청으로
+// 잘못 이첩되어도 최종적으로는 처리되지만, 반대는 "이 구가 처리 못 한다"는
+// 잘못된 안내가 나갈 수 있어 비대칭적으로 위험하다).
+const CITY_TYPE_DISPOSITION_DEFAULT = {
+  일반시: '이 부서가 직접 처분청이다 — 정식 신청·심사를 통해 확정.',
+  특례시: '이 부서가 직접 처분청이다(특례시 조항에 따라 일부 도메인은 광역시급 권한 포함) — 정식 신청·심사를 통해 확정.',
+  자치구: '이 부서가 직접 처분청이다 — 정식 신청·심사를 통해 확정.',
+  군: '이 부서가 직접 처분청이다 — 정식 신청·심사를 통해 확정.',
+  행정시: '이 부서가 직접 처분청이다(행정시 체계 — 도지사 임명 시장 하의 국·과) — 정식 신청·심사를 통해 확정.',
+  일반구: '수행 불가 — 이 구는 법인격이 없어 처분권자가 아니다. 실제 처분청은 모시(母市) 시장이며, 이 부서는 접수·안내 창구 기능만 수행한다.',
+};
+
+function _renderCityDeptTemplate(template, rec, cityRootSPCode) {
+  const 국이름 = rec.국이름 || CITY_DEPT_DEFAULT_LABEL[rec.국코드] || '담당부서';
+  const 처분권_문구 = rec.처분권_문구 || CITY_TYPE_DISPOSITION_DEFAULT[rec.지자체유형] || CITY_TYPE_DISPOSITION_DEFAULT.일반시;
   return template
     .replaceAll('{시이름}', rec.시이름 || '')
-    .replaceAll('{국이름}', rec.국이름 || '')
+    .replaceAll('{국이름}', 국이름)
+    .replaceAll('{지자체유형}', rec.지자체유형 || '일반시')
+    .replaceAll('{처분권_문구}', 처분권_문구)
     .replaceAll('{입력_문구}', rec.입력_문구 || '')
     .replaceAll('{출력_문구}', rec.출력_문구 || '')
     .replaceAll('{처분성_문구}', rec.처분성_문구 || '')
-    .replaceAll('{산하과목록}', rec.산하과목록 || '')
+    .replaceAll('{산하과목록}', rec.산하과목록 || '(정식 명칭 확인 중 — 콜센터로 확인 권장)')
     .replaceAll('{콜센터명}', rec.콜센터명 || '')
     .replaceAll('{콜센터번호}', rec.콜센터번호 || '')
     .replaceAll('{콜센터운영시간}', rec.콜센터운영시간 || '')
     .replaceAll('{GOV_COMMON}', 'JEJU-GOV-COMMON')
     .replaceAll('{DO_ROOT_SP}', 'SP-DO-000')
-    .replaceAll('{CITY_ROOT_SP}', rec.시코드 === 'jejusi' ? 'SP-CITY-JEJU' : 'SP-CITY-SEOGWIPO');
+    .replaceAll('{CITY_ROOT_SP}', cityRootSPCode);
+}
+
+// 시/군/구 루트 SP 코드 도출 — 예전엔 jejusi/seogwipo 두 곳만 하드코딩된
+// 삼항연산자였다(다른 시코드가 오면 전부 SEOGWIPO로 잘못 귀속되는 버그,
+// 2026-07-24 발견). city-master-data.json에 SP코드 필드가 있으면 그걸
+// 쓰고, 없으면 `SP-CITY-{시코드 대문자}` 관례값으로 즉시 생성한다 —
+// 이래야 실사 없이도(주피터 지시 원칙) 새 시/군/구가 바로 작동한다.
+async function _resolveCityRootSPCode(시코드) {
+  try {
+    const records = await _loadCityMasterData();
+    const rec = records.find(r => r.시코드 === 시코드);
+    if (rec?.SP코드) return rec.SP코드;
+  } catch (e) {
+    console.warn('[gov-router] city-master-data 조회 실패(관례값으로 대체):', e?.message);
+  }
+  return `SP-CITY-${String(시코드 || '').toUpperCase()}`;
 }
 
 async function _fetchCityDeptText(match) {
@@ -1977,8 +2030,12 @@ async function _fetchCityDeptText(match) {
     console.warn(`[gov-router] 시청 국 데이터 레코드 없음(시코드=${match.시코드}, 국코드=${match.국코드}) — 스킵`);
     return { text: null, permitCodes: [] };
   }
-  const template = await _fetchText('04-city/templates/SP-CITYDEPT-TEMPLATE_v1.0.md');
-  return _appendPermitProtocolIfNeeded(_renderCityDeptTemplate(template, rec), rec);
+  const templateFile = rec.template || 'SP-CITYDEPT-TEMPLATE_v1.0.md';
+  const [template, cityRootSPCode] = await Promise.all([
+    _fetchText(`04-city/templates/${templateFile}`),
+    _resolveCityRootSPCode(match.시코드),
+  ]);
+  return _appendPermitProtocolIfNeeded(_renderCityDeptTemplate(template, rec, cityRootSPCode), rec);
 }
 
 // ── 응급 즉시 처리 (사고실험 2차 §3 권고 — 최우선, 다른 어떤 매칭보다 먼저) ──
@@ -2243,7 +2300,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     const cityText = await _fetchCityText(cityOnly);
 
     // 2-1) 시청 국(局) 단위 매칭 (2026-07-23 신설) — 예: "서귀포시
-    // 건축허가 신청하고 싶어요" → 안전도시건설국(construction)까지 특정.
+    // 건축허가 신청하고 싶어요" → 안전도시건설국(국코드 housing)까지 특정.
     // 매칭 안 되면 조용히 시청 레이어에서 멈춘다(기존 동작 그대로).
     const cityDeptMatch = _matchCityDept(text, cityOnly.시코드);
     if (cityDeptMatch) {

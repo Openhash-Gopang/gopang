@@ -64,9 +64,9 @@ const DO_DEPT_MASTER = { 부서목록: [
     처리사무: ['TEST-PILOT-PERMIT'] },
 ] };
 const CITY_DEPT_MASTER = { 국목록: [
-  { 시코드: 'seogwipo', 국코드: 'construction', 시이름: '서귀포시', 국이름: '안전도시건설국',
+  { 시코드: 'seogwipo', 국코드: 'housing', 시이름: '서귀포시', 국이름: '안전도시건설국',
     산하과목록: '건축과 등', 처리사무: ['PERMIT-BUILDING-REPORT-14'] },
-  { 시코드: 'jejusi', 국코드: 'construction', 시이름: '제주시', 국이름: '도시건설국',
+  { 시코드: 'jejusi', 국코드: 'housing', 시이름: '제주시', 국이름: '도시건설국',
     산하과목록: '건축과 등', 처리사무: ['PERMIT-BUILDING-REPORT-14'] },
   { 시코드: 'jejusi', 국코드: 'welfare', 시이름: '제주시', 국이름: '복지위생국', 산하과목록: '주민복지과 등' },
   { 시코드: 'seogwipo', 국코드: 'welfare', 시이름: '서귀포시', 국이름: '복지위생국', 산하과목록: '주민복지과 등' },
@@ -195,8 +195,8 @@ add('F-제주도청', '제주 농산물재해보험 가입', { expectTrace: ['SP
 add('F-제주도청', '제주 어업면허 발급 절차', { expectTrace: ['SP-DO-OCEAN'] });
 
 // ── G. 제주 시청 국 단위 (8) ────────────────────────────────────
-add('G-제주시청국', '서귀포시 건축허가 신청하고 싶어요', { expectTrace: ['SP-CITYDEPT-seogwipo-construction', 'PERMIT-CRITERIA-PROTOCOL'] });
-add('G-제주시청국', '제주시 건축신고 하려는데요', { expectTrace: ['SP-CITYDEPT-jejusi-construction', 'PERMIT-CRITERIA-PROTOCOL'] });
+add('G-제주시청국', '서귀포시 건축허가 신청하고 싶어요', { expectTrace: ['SP-CITYDEPT-seogwipo-housing', 'PERMIT-CRITERIA-PROTOCOL'] });
+add('G-제주시청국', '제주시 건축신고 하려는데요', { expectTrace: ['SP-CITYDEPT-jejusi-housing', 'PERMIT-CRITERIA-PROTOCOL'] });
 add('G-제주시청국', '제주시 기초생활수급 신청 어디서 하나요', { expectTrace: ['SP-CITYDEPT-jejusi-welfare'] });
 add('G-제주시청국', '서귀포시 기초생활수급 신청하고 싶어요', { expectTrace: ['SP-CITYDEPT-seogwipo-welfare'] });
 add('G-제주시청국', '제주시청 주차 관련 문의드립니다', { expectTrace: ['SP-CITY-JEJU'], expectNotTrace: ['SP-CITYDEPT'] });
@@ -213,7 +213,7 @@ add('H-제주읍면동', '중문동에서 상수도 누수 신고하려고요', 
 
 // ── I. PDV 힌트 기반(발화엔 지역 없음) (4) ──────────────────────
 add('I-PDV힌트', '수돗물에서 이상한 냄새가 나요', { pdvHint: '제주시 애월읍', expectTrace: ['SP-EMD-애월읍', 'SP-EXP-WATER'] });
-add('I-PDV힌트', '건축허가 신청하고 싶어요', { pdvHint: '서귀포시', expectTrace: ['SP-CITYDEPT-seogwipo-construction'] });
+add('I-PDV힌트', '건축허가 신청하고 싶어요', { pdvHint: '서귀포시', expectTrace: ['SP-CITYDEPT-seogwipo-housing'] });
 add('I-PDV힌트', '기초생활수급 신청하고 싶어요', { pdvHint: '제주시', expectTrace: ['SP-CITYDEPT-jejusi-welfare'] });
 add('I-PDV힌트', '세무서 문의하려고요', { pdvHint: '천안시', expectTrace: ['SP-NATIONAL-LAZY'] });
 
@@ -258,7 +258,7 @@ add('N-상하수도', '서귀포시 배관 공사 문의', { expectTrace: ['SP-C
 
 // ── O. 형식 다양성(사투리·오타·이모지·반말·복합의도·장문) (7) ────
 add('O-형식다양성', '제주도 어린이집 보육료 지원되나요??', { expectTrace: ['SP-DO-WELFARE'] });
-add('O-형식다양성', '제주시 건축허가요', { expectTrace: ['SP-CITYDEPT-jejusi-construction'], note: '극도로 짧은 발화' });
+add('O-형식다양성', '제주시 건축허가요', { expectTrace: ['SP-CITYDEPT-jejusi-housing'], note: '극도로 짧은 발화' });
 add('O-형식다양성', '저기.. 제주도에서 어업면허 낼라면 어떻게 해야되나마씸', { expectTrace: ['SP-DO-OCEAN'], note: '제주 방언(마씸) 포함' });
 add('O-형식다양성', '제주 태풍온다는데 재난문자 어디서신청함ㅋㅋ', { expectTrace: ['SP-DO-SAFETY'], note: '띄어쓰기 붕괴+ㅋㅋ' });
 add('O-형식다양성', '제주에서 관광 숙박업이랑 게스트하우스 등록을 하고 싶은데 정확히 어떤 서류가 필요하고 어디에 제출해야 하는지 그리고 처리 기간은 보통 얼마나 걸리는지 궁금합니다', { expectTrace: ['SP-DO-TOURISM'], note: '장문' });

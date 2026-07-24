@@ -1,5 +1,5 @@
 {
-  "_schema_설명": "SP-CITYDEPT-TEMPLATE_v1.0.md의 자리표시자를 채우는 시청 국(局)별 레코드. (시코드, 국코드)로 매칭. 제주시청 홈페이지(jejusi.go.kr)·서귀포시청 홈페이지(seogwipo.go.kr) 2026-07-10 확인 조직도 기준. | 2026-07-23: 선택 필드 처리사무 신설(do-dept-master-data.json과 동일 스펙) — gov-router.js의 _fetchCityDeptText()가 자동으로 PERMIT-CRITERIA-PROTOCOL_v1_0.md를 강제 삽입한다. 서귀포시 안전도시건설국(건축과 포함)에 최초로 PERMIT-BUILDING-REPORT-14(건축법 제14조 건축신고)를 실데이터로 채움 — 건축법 제14조 원문상 관할이 시장(행정시장)이라 도청이 아닌 이 계층이 올바른 위치. | 2026-07-23(2차): 제주시 '도시건설국'(국코드 construction) 레코드 신설 완료 — 서귀포시 안전도시건설국과 대응되나 조직명이 다르고('안전' 접두어 없음), 도청(jeju.go.kr)의 동명 '도시건설국'과는 별개 조직이니 혼동 주의.",
+  "_schema_설명": "SP-CITYDEPT-TEMPLATE_v1.0.md의 자리표시자를 채우는 시청 국(局)별 레코드. (시코드, 국코드)로 매칭. 제주시청 홈페이지(jejusi.go.kr)·서귀포시청 홈페이지(seogwipo.go.kr) 2026-07-10 확인 조직도 기준. | 2026-07-23: 선택 필드 처리사무 신설(do-dept-master-data.json과 동일 스펙) — gov-router.js의 _fetchCityDeptText()가 자동으로 PERMIT-CRITERIA-PROTOCOL_v1_0.md를 강제 삽입한다. 서귀포시 안전도시건설국(건축과 포함)에 최초로 PERMIT-BUILDING-REPORT-14(건축법 제14조 건축신고)를 실데이터로 채움 — 건축법 제14조 원문상 관할이 시장(행정시장)이라 도청이 아닌 이 계층이 올바른 위치. | 2026-07-23(2차): 제주시 '도시건설국'(국코드 construction) 레코드 신설 완료 — 서귀포시 안전도시건설국과 대응되나 조직명이 다르고('안전' 접두어 없음), 도청(jeju.go.kr)의 동명 '도시건설국'과는 별개 조직이니 혼동 주의. | 2026-07-24: 시청 국(局) 단위를 도청과 동일하게 16개 도메인별 추상 템플릿(SP-CITYDEPT-{DOMAIN}-TEMPLATE_v1.0.md)으로 분리 — 각 레코드에 template 필드 추가. 국코드 'construction'을 도청 도메인 코드와 통일하기 위해 'housing'으로 개명(제주시·서귀포시 도시건설국/안전도시건설국 레코드, 실제 부서 실명은 변경 없음 — 국코드만 내부 식별자 통일). 지자체유형(자치구/일반구/일반시/특례시/군/행정시)·처분권_문구 필드는 아직 제주 레코드에 없음(제주 행정시는 처분권 보유가 자명해 생략) — 향후 일반구 사례(창원 등) 추가 시 필수 필드가 됨.",
   "국목록": [
     {
       "시코드": "jejusi",
@@ -18,7 +18,8 @@
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
         "직원_등록여부": false
-      }
+      },
+      "template": "SP-CITYDEPT-JACHI-TEMPLATE_v1.0.md"
     },
     {
       "시코드": "jejusi",
@@ -37,7 +38,8 @@
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
         "직원_등록여부": false
-      }
+      },
+      "template": "SP-CITYDEPT-SAFETY-TEMPLATE_v1.0.md"
     },
     {
       "시코드": "jejusi",
@@ -56,7 +58,8 @@
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
         "직원_등록여부": false
-      }
+      },
+      "template": "SP-CITYDEPT-WELFARE-TEMPLATE_v1.0.md"
     },
     {
       "시코드": "jejusi",
@@ -75,7 +78,8 @@
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
         "직원_등록여부": false
-      }
+      },
+      "template": "SP-CITYDEPT-ECON-TEMPLATE_v1.0.md"
     },
     {
       "시코드": "jejusi",
@@ -94,7 +98,8 @@
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
         "직원_등록여부": false
-      }
+      },
+      "template": "SP-CITYDEPT-CULTURE-TEMPLATE_v1.0.md"
     },
     {
       "시코드": "jejusi",
@@ -113,11 +118,12 @@
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
         "직원_등록여부": false
-      }
+      },
+      "template": "SP-CITYDEPT-CLIMATE-TEMPLATE_v1.0.md"
     },
     {
       "시코드": "jejusi",
-      "국코드": "construction",
+      "국코드": "housing",
       "도이름": "제주특별자치도",
       "시이름": "제주시",
       "국이름": "도시건설국",
@@ -136,7 +142,8 @@
       },
       "처리사무": [
         "PERMIT-BUILDING-REPORT-14"
-      ]
+      ],
+      "template": "SP-CITYDEPT-HOUSING-TEMPLATE_v1.0.md"
     },
     {
       "시코드": "seogwipo",
@@ -155,7 +162,8 @@
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
         "직원_등록여부": false
-      }
+      },
+      "template": "SP-CITYDEPT-JACHI-TEMPLATE_v1.0.md"
     },
     {
       "시코드": "seogwipo",
@@ -174,7 +182,8 @@
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
         "직원_등록여부": false
-      }
+      },
+      "template": "SP-CITYDEPT-WELFARE-TEMPLATE_v1.0.md"
     },
     {
       "시코드": "seogwipo",
@@ -193,7 +202,8 @@
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
         "직원_등록여부": false
-      }
+      },
+      "template": "SP-CITYDEPT-CULTURE-TEMPLATE_v1.0.md"
     },
     {
       "시코드": "seogwipo",
@@ -213,7 +223,8 @@
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
         "직원_등록여부": false
-      }
+      },
+      "template": "SP-CITYDEPT-AGRIECONOMY-TEMPLATE_v1.0.md"
     },
     {
       "시코드": "seogwipo",
@@ -232,11 +243,12 @@
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
         "직원_등록여부": false
-      }
+      },
+      "template": "SP-CITYDEPT-CLIMATE-TEMPLATE_v1.0.md"
     },
     {
       "시코드": "seogwipo",
-      "국코드": "construction",
+      "국코드": "housing",
       "도이름": "제주특별자치도",
       "시이름": "서귀포시",
       "국이름": "안전도시건설국",
@@ -255,7 +267,8 @@
       },
       "처리사무": [
         "PERMIT-BUILDING-REPORT-14"
-      ]
+      ],
+      "template": "SP-CITYDEPT-HOUSING-TEMPLATE_v1.0.md"
     },
     {
       "시코드": "seogwipo",
@@ -274,7 +287,8 @@
         "유형": "DEPARTMENT_CONTACT",
         "직원_hondi_guid": null,
         "직원_등록여부": false
-      }
+      },
+      "template": "SP-CITYDEPT-HEALTH-TEMPLATE_v1.0.md"
     }
   ]
 }

@@ -75,7 +75,8 @@ globalThis.fetch = async (url) => {
     if (u.includes('city-dept-master-data.json')) return { ok: true, text: async () => JSON.stringify({ 국목록: [
       // 2026-07-23 신설 — 시청 국(局) 단위 라우팅 + PERMIT-CRITERIA-PROTOCOL
       // 검증용 실데이터(서귀포시 안전도시건설국, 건축법 제14조 건축신고 실제 반영분).
-      { 시코드: 'seogwipo', 국코드: 'construction', 시이름: '서귀포시', 국이름: '안전도시건설국',
+      { 시코드: 'seogwipo', 국코드: 'housing', 시이름: '서귀포시', 국이름: '안전도시건설국',
+        template: 'SP-CITYDEPT-HOUSING-TEMPLATE_v1.0.md',
         산하과목록: '안전총괄과, 도시과, 건축과, 건설과, 교통행정과, 상하수도과',
         입력_문구: '건축·도시계획 인허가 신청', 출력_문구: '건축허가·도시계획 결정',
         처분성_문구: '건축·도시계획 인허가는 실제 신청·심사를 통해서만 확정된다',
@@ -84,20 +85,33 @@ globalThis.fetch = async (url) => {
       // 2026-07-23 신설 — SP-DO-WELFARE v1.3(권한 경계 자기인식) 검증용
       // 실데이터(jejusi/seogwipo 복지위생국, 실제 city-dept-master-data.json과 동일 구조).
       { 시코드: 'jejusi', 국코드: 'welfare', 시이름: '제주시', 국이름: '복지위생국',
+        template: 'SP-CITYDEPT-WELFARE-TEMPLATE_v1.0.md',
         산하과목록: '주민복지과, 노인복지과, 장애인복지과, 기초생활보장과, 여성가족과, 위생관리과',
         입력_문구: '복지대상자 신청서류(기초생활·노인·장애인·여성가족 각 과 소관), 위생업소 신고·등록 신청',
         출력_문구: '복지급여 지급결정, 위생업 영업허가·신고필증',
         처분성_문구: '복지급여 지급 여부·위생업 허가는 실제 신청·심사를 통해서만 확정된다',
         콜센터명: '제주콜센터', 콜센터번호: '064-120', 콜센터운영시간: '07:00~22:00, 유료' },
       { 시코드: 'seogwipo', 국코드: 'welfare', 시이름: '서귀포시', 국이름: '복지위생국',
+        template: 'SP-CITYDEPT-WELFARE-TEMPLATE_v1.0.md',
         산하과목록: '주민복지과, 노인복지과, 장애인복지과, 여성가족과, 위생관리과',
         입력_문구: '복지대상자 신청서류, 위생업소 신고·등록 신청',
         출력_문구: '복지급여 지급결정, 위생업 영업허가·신고필증',
         처분성_문구: '복지급여 지급 여부·위생업 허가는 실제 신청·심사를 통해서만 확정된다',
         콜센터명: '제주콜센터', 콜센터번호: '064-120', 콜센터운영시간: '07:00~22:00, 유료' },
-      // 2026-07-23 신설(작업 3) — 제주시 도시건설국(construction) 공백 해소 검증용
+      // 2026-07-24 신설 — 시청 국코드 도메인 클래스(SP-CITYDEPT-*-TEMPLATE 16개)
+      // 신설 작업의 {지자체유형}/{처분권_문구} 기본값 분기 검증용. 일부러
+      // 처분권_문구를 비워서 CITY_TYPE_DISPOSITION_DEFAULT.일반구 기본값이
+      // 렌더링에 실제로 반영되는지 확인한다(실명 부서 없이도 즉시 작동
+      // 원칙 검증 겸용 — 국이름 필드도 일부러 생략).
+      { 시코드: 'seogwipo', 국코드: 'jachi', 시이름: '서귀포시', 지자체유형: '일반구',
+        template: 'SP-CITYDEPT-JACHI-TEMPLATE_v1.0.md',
+        산하과목록: '', 입력_문구: '지방세·세무 관련 신청', 출력_문구: '지방세 부과고지서',
+        처분성_문구: '지방세 부과 여부는 실제 신청·심사를 통해서만 확정된다',
+        콜센터명: '제주콜센터', 콜센터번호: '064-120', 콜센터운영시간: '07:00~22:00, 유료' },
+      // 2026-07-23 신설(작업 3) — 제주시 도시건설국(housing) 공백 해소 검증용
       // 실데이터(jejusi.go.kr 조직도 실사 반영분).
-      { 시코드: 'jejusi', 국코드: 'construction', 시이름: '제주시', 국이름: '도시건설국',
+      { 시코드: 'jejusi', 국코드: 'housing', 시이름: '제주시', 국이름: '도시건설국',
+        template: 'SP-CITYDEPT-HOUSING-TEMPLATE_v1.0.md',
         산하과목록: '도시계획과, 도시재생과, 건설과, 주택과, 건축과, 상하수도과',
         입력_문구: '건축·도시계획 인허가 신청, 건설공사 신고, 공공주택 관련 민원, 상하수도 관련 신청',
         출력_문구: '건축허가·도시계획 결정, 공공주택 관련 처분, 상하수도 인허가',
@@ -107,6 +121,17 @@ globalThis.fetch = async (url) => {
     ] }) };
     if (u.includes('province-master-data.json')) return { ok: true, text: async () => JSON.stringify(PROVINCE_MASTER) }; // 2026-07-19 신설 — 템플릿 정상 경로 검증용
     return { ok: true, text: async () => '{}' };
+  }
+  // 2026-07-24 신설 — SP-CITYDEPT-{DOMAIN}-TEMPLATE 렌더링(치환) 자체를
+  // 검증하는 테스트(r10/r11)를 위해, 실제 자리표시자를 담은 최소 템플릿을
+  // 돌려준다(전체 실 파일 내용은 불필요 — 치환 메커니즘만 확인하면 됨).
+  if (/SP-CITYDEPT-[A-Z]+-TEMPLATE_v1\.0\.md/.test(u)) {
+    return {
+      ok: true,
+      text: async () => '§1. 당신은 {시이름} {국이름}을 대표하는 AI 레이어다.\n'
+        + '§3. {처분권_문구}\n'
+        + '연락처: {콜센터명}({콜센터번호})',
+    };
   }
   // .md 등 나머지 전부 — 플레이스홀더 텍스트(내용은 trace 검증과 무관)
   return { ok: true, text: async () => fakeText(u.split('/').pop()) };
@@ -167,7 +192,7 @@ const CASES = [
     note: '처리사무 필드가 있는 부서(housing)라 PERMIT-CRITERIA-PROTOCOL이 trace에 강제로 딸려와야 함(아래 별도 검증 블록에서 trace 전체 확인)' },
 
   // ── 시청 국(局) 라우팅 + 건축신고 파일럿 실사용 시나리오 (2026-07-23 신설) ──
-  { text: '서귀포시 건축허가 신청하고 싶어요', expectAgency: 'gov_do', expectContains: 'SP-CITYDEPT-seogwipo-construction',
+  { text: '서귀포시 건축허가 신청하고 싶어요', expectAgency: 'gov_do', expectContains: 'SP-CITYDEPT-seogwipo-housing',
     note: '건축법 제14조상 관할은 도청이 아니라 서귀포시장 — 시청 국(안전도시건설국) 단위까지 정확히 내려가야 하고, PERMIT-CRITERIA-PROTOCOL(PERMIT-BUILDING-REPORT-14)까지 딸려와야 함' },
 
   // ── 지역명 없이 PDV 힌트만으로 관할 특정 (2026-07-23 신설, 주피터 지시) ──
@@ -175,10 +200,10 @@ const CASES = [
   // 신청하고 싶어요"라고만 말해도, PDV 위치로 시(市)·국(局)까지 동적으로
   // 특정해야 한다는 사고실험 결과 반영.
   { text: '건축 인허가 신청하고 싶어요', locationHint: '서귀포시', expectAgency: 'gov_do',
-    expectContains: 'SP-CITYDEPT-seogwipo-construction',
+    expectContains: 'SP-CITYDEPT-seogwipo-housing',
     note: '발화에 지역명 없음 — PDV 힌트(시 단위)만으로 cityOnly 경로 진입 후 시청 국까지 특정돼야 함(_matchCity가 힌트를 보도록 수정한 부분 검증)' },
   { text: '건축 인허가 신청하고 싶어요', locationHint: '중문동', expectAgency: 'gov_do',
-    expectContains: 'SP-CITYDEPT-seogwipo-construction',
+    expectContains: 'SP-CITYDEPT-seogwipo-housing',
     note: '발화에 지역명 없음 — PDV 힌트가 동(洞) 단위(중문동→서귀포시)라 emdMatch 경로로 들어가지만, 건축 사무는 읍면동이 아니라 시청 국 소관이므로 읍면동 템플릿 대신 시청 국이 붙어야 함(규칙 F 일반화 검증)' },
   { text: '건축 인허가 신청하고 싶어요', expectAgency: 'gov_do',
     note: '발화에도 PDV 힌트도 지역 정보 전혀 없음 — 이 경우 도청 건설주택국으로 잘못 라우팅되지 않는지가 핵심(근본원인 수정 검증). 실제로는 L2 미매칭/LLM폴백으로 흘러가는 게 정직한 처리' },
@@ -202,10 +227,10 @@ const CASES = [
   // 해당 국 레코드가 없어 "제주시 건축허가..."처럼 지역이 정확히
   // 특정된 질의조차 시청 국 단위까지 못 내려가고 멈췄었다.
   { text: '제주시 건축허가 신청하고 싶어요', expectAgency: 'gov_do',
-    expectContains: 'SP-CITYDEPT-jejusi-construction',
-    note: '제주시 도시건설국(construction) 레코드 신설 후 최초 검증 — 서귀포시와 동일하게 시청 국 단위까지 라우팅돼야 함' },
+    expectContains: 'SP-CITYDEPT-jejusi-housing',
+    note: '제주시 도시건설국(housing) 레코드 신설 후 최초 검증 — 서귀포시와 동일하게 시청 국 단위까지 라우팅돼야 함' },
   { text: '노형동에서 건축허가 신청하고 싶어요', expectAgency: 'gov_do',
-    expectContains: 'SP-CITYDEPT-jejusi-construction',
+    expectContains: 'SP-CITYDEPT-jejusi-housing',
     note: '읍면동 이름(노형동→제주시)으로 emdMatch 경로 진입 후, 규칙 F 일반화로 읍면동 대신 시청 국이 붙어야 함(서귀포/중문동 케이스와 대칭)' },
 ];
 
@@ -280,7 +305,7 @@ console.log(`\n총 ${CASES.length + 1}건(CASES ${CASES.length} + 신설 1) — 
 
   // ── 시청 국(局) 라우팅 + 건축신고 파일럿 전용 검증 ──
   const r3 = await assembleGovSystemPrompt('서귀포시 건축허가 신청하고 싶어요');
-  const hasCityDept = r3.trace.some(t => t === 'SP-CITYDEPT-seogwipo-construction');
+  const hasCityDept = r3.trace.some(t => t === 'SP-CITYDEPT-seogwipo-housing');
   const hasBuildingPermitProtocol = r3.trace.some(t => t.includes('PERMIT-CRITERIA-PROTOCOL(PERMIT-BUILDING-REPORT-14)'));
   if (hasCityDept && hasBuildingPermitProtocol) {
     console.log('✅ [신설] 서귀포시 건축신고 파일럿 — 시청 국 단위까지 라우팅 + 프로토콜 강제삽입 확인:', r3.trace.join(' > '));
@@ -291,7 +316,7 @@ console.log(`\n총 ${CASES.length + 1}건(CASES ${CASES.length} + 신설 1) — 
 
   // ── 지역명 없이 PDV 힌트만으로 관할 특정 — 전용 검증 (2026-07-23 신설) ──
   const r4 = await assembleGovSystemPrompt('건축 인허가 신청하고 싶어요', '서귀포시');
-  const r4ok = r4.trace.some(t => t === 'SP-CITYDEPT-seogwipo-construction');
+  const r4ok = r4.trace.some(t => t === 'SP-CITYDEPT-seogwipo-housing');
   if (r4ok) {
     console.log('✅ [신설] 지역명 없음 + 시 단위 PDV 힌트 → 시청 국 특정 확인:', r4.trace.join(' > '));
   } else {
@@ -300,7 +325,7 @@ console.log(`\n총 ${CASES.length + 1}건(CASES ${CASES.length} + 신설 1) — 
   }
 
   const r5 = await assembleGovSystemPrompt('건축 인허가 신청하고 싶어요', '중문동');
-  const r5ok = r5.trace.some(t => t === 'SP-CITYDEPT-seogwipo-construction')
+  const r5ok = r5.trace.some(t => t === 'SP-CITYDEPT-seogwipo-housing')
     && !r5.trace.some(t => t.startsWith('SP-EMD-'));
   if (r5ok) {
     console.log('✅ [신설] 지역명 없음 + 동 단위 PDV 힌트(emdMatch 경로) → 읍면동 대신 시청 국 특정 확인(규칙 F 일반화):', r5.trace.join(' > '));
@@ -336,6 +361,39 @@ console.log(`\n총 ${CASES.length + 1}건(CASES ${CASES.length} + 신설 1) — 
     console.log('✅ [신설] "문화재"가 응급으로 오탐되지 않음 확인:', r8.trace.join(' > '));
   } else {
     console.log('❌ [신설] "문화재"가 여전히 응급으로 오탐됨, trace:', r8.trace.join(' > '));
+    process.exitCode = 1;
+  }
+
+  // ── 2026-07-24 신설 — 시청 국코드 도메인 클래스 신설 회귀검증 ────────
+  // (1) rec.template 필드로 도메인별 SP-CITYDEPT-JACHI-TEMPLATE가 실제로
+  //     선택되는지, (2) 국이름 미기재 시 CITY_DEPT_DEFAULT_LABEL 기본값
+  //     ("자치행정담당부서")이 채워지는지, (3) 지자체유형=일반구인데
+  //     처분권_문구가 비어 있으면 CITY_TYPE_DISPOSITION_DEFAULT.일반구
+  //     문구("모시(母市) 시장")가 자동 적용되는지 — 전부 실사 없이도
+  //     즉시 작동해야 한다는 이번 설계 원칙의 핵심 회귀검증.
+  const r10 = await assembleGovSystemPrompt('서귀포시 지방세 납부 문의드립니다');
+  const r10ok = r10.trace.some(t => t === 'SP-CITYDEPT-seogwipo-jachi')
+    && r10.systemPrompt.includes('모시(母市) 시장')
+    && r10.systemPrompt.includes('자치행정담당부서');
+  if (r10ok) {
+    console.log('✅ [신설] 시청 국코드 도메인 클래스(일반구 처분권 기본값·국이름 기본 라벨) 확인:', r10.trace.join(' > '));
+  } else {
+    console.log('❌ [신설] 시청 국코드 도메인 클래스 기본값 분기 실패, trace:', r10.trace.join(' > '),
+      '| 모시 문구 포함:', r10.systemPrompt.includes('모시(母市) 시장'),
+      '| 기본 라벨 포함:', r10.systemPrompt.includes('자치행정담당부서'));
+    process.exitCode = 1;
+  }
+
+  // (4) 지자체유형 미기재 기존 레코드(jejusi welfare)는 기본값 '일반시'로
+  //     처분청 문구가 나가야 한다(하위호환 확인 — 기존 13개 레코드는
+  //     지자체유형 필드 자체가 없음).
+  const r11 = await assembleGovSystemPrompt('제주시 기초생활수급 신청하고 싶어요');
+  const r11ok = r11.trace.some(t => t === 'SP-CITYDEPT-jejusi-welfare')
+    && r11.systemPrompt.includes('이 부서가 직접 처분청이다');
+  if (r11ok) {
+    console.log('✅ [신설] 지자체유형 미기재 기존 레코드 하위호환(기본값 일반시) 확인:', r11.trace.join(' > '));
+  } else {
+    console.log('❌ [신설] 지자체유형 미기재 레코드의 기본값 처리 실패, trace:', r11.trace.join(' > '));
     process.exitCode = 1;
   }
 
