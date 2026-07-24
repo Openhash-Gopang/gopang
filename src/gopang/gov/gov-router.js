@@ -1471,6 +1471,95 @@ const GYEONGNAM_L2_TABLE = [
     kw: ['해양수산국', '해양', '수산', '어업'] },
 ];
 
+// ── 도청 국(局) 범용 도메인 키워드 (2026-07-24 신설) ──────────────────
+// 시청 계층의 _makeGenericCityDeptEntries와 동일 원칙 — 실사로 확인된
+// 실명이 없는 도메인도 이 범용 키워드로 즉시 라우팅 가능하다. 이미 실명
+// 키워드가 있는 도메인(예: 충북 jachi의 '행정국')과 병행해도 무해하다
+// (여러 kw 배열이 같은 domain+도코드로 매칭되면 먼저 매칭된 것을 쓰므로,
+// 아래 함수는 항상 그 도의 L2_TABLE 배열 뒤쪽에 "빠진 도메인만" 이어붙인다).
+function _makeGenericL2Entries(도코드, domains) {
+  const KW = {
+    plan: ['기획조정실', '예산담당관', '인구정책'],
+    safety: ['재난안전실', '자연재난', '사회재난'],
+    jachi: ['자치행정국', '지방세', '세정과'],
+    econ: ['경제정책국', '일자리정책', '중소기업'],
+    innov: ['산업혁신국', '과학기술', '신성장산업'],
+    welfare: ['복지정책국', '기초생활보장', '장애인복지'],
+    climate: ['환경정책국', '기후변화', '대기환경'],
+    housing: ['건설주택국', '도시계획', '주택정책'],
+    transport: ['교통정책국', '대중교통', '광역교통'],
+    culture: ['문화체육국', '문화예술', '생활체육'],
+    sports: ['체육진흥과', '전문체육'],
+    tourism: ['관광정책과', '관광진흥', '관광자원'],
+    agri: ['농정국', '농업정책', '축산'],
+    ocean: ['해양수산국', '수산업', '어업'],
+    health: ['보건정책과', '질병예방', '건강증진'],
+    family: ['여성가족과', '보육정책', '양성평등'],
+  };
+  return domains.map(domain => ({
+    code: `SP-DO-${domain.toUpperCase()}`, domain, 도코드, file: null, kw: KW[domain],
+  }));
+}
+const FULL16_DOMAINS = ['plan', 'safety', 'jachi', 'econ', 'innov', 'welfare', 'climate',
+  'housing', 'transport', 'culture', 'sports', 'tourism', 'agri', 'ocean', 'health', 'family'];
+
+// ── 2026-07-24 — 기존 도들의 빈 도메인 채우기(주피터 지시: "도청 실국
+// 나머지 완비"를 시청과 동일하게 실사 없이 즉시 완비) ──
+// 제주는 제외한다 — sports/health/family가 "없는 게 아니라 의도적으로
+// 다른 도메인에 통합"된 실제 조직 구조이기 때문(§0 헤더 주석 참고).
+SEOUL_L2_TABLE.push(..._makeGenericL2Entries('seoul', ['agri', 'ocean']));
+INCHEON_L2_TABLE.push(..._makeGenericL2Entries('incheon',
+  ['safety', 'jachi', 'culture', 'sports', 'tourism', 'agri', 'ocean', 'health']));
+DAEJEON_L2_TABLE.push(..._makeGenericL2Entries('daejeon',
+  ['climate', 'housing', 'transport', 'agri', 'ocean', 'family']));
+ULSAN_L2_TABLE.push(..._makeGenericL2Entries('ulsan', ['agri', 'ocean', 'family']));
+SEJONG_L2_TABLE.push(..._makeGenericL2Entries('sejong', ['innov', 'ocean', 'health', 'family']));
+CHUNGBUK_L2_TABLE.push(..._makeGenericL2Entries('chungbuk', ['ocean', 'health']));
+CHUNGNAM_L2_TABLE.push(..._makeGenericL2Entries('chungnam', ['health']));
+GYEONGBUK_L2_TABLE.push(..._makeGenericL2Entries('gyeongbuk', ['ocean', 'health']));
+GYEONGNAM_L2_TABLE.push(..._makeGenericL2Entries('gyeongnam', ['health']));
+
+// ── 경기도 — do-dept-master-data.json에 13개 도메인 실사 데이터가 이미
+// 있었는데 라우팅 테이블(L2_TABLE) 자체가 없어서 죽어있었다(2026-07-24
+// 발견). 실제 부서명(gg.go.kr 확인분)을 키워드로 써서 살리고, 미확인
+// 3개 도메인(sports/health/family)은 범용 키워드로 채운다.
+const GYEONGGI_L2_TABLE = [
+  { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'gyeonggi', file: null,
+    kw: ['기획조정실', '정책기획관', '예산담당관', '인구정책담당관'] },
+  { code: 'SP-DO-SAFETY', domain: 'safety', 도코드: 'gyeonggi', file: null,
+    kw: ['안전관리실', '안전기획과', '사회재난과', '자연재난과'] },
+  { code: 'SP-DO-JACHI', domain: 'jachi', 도코드: 'gyeonggi', file: null,
+    kw: ['자치행정국', '세정과', '조세정의과', '자산관리과'] },
+  { code: 'SP-DO-ECON', domain: 'econ', 도코드: 'gyeonggi', file: null,
+    kw: ['경제실', '일자리경제정책과', '지역금융과'] },
+  { code: 'SP-DO-INNOV', domain: 'innov', 도코드: 'gyeonggi', file: null,
+    kw: ['미래성장산업국'] },
+  { code: 'SP-DO-WELFARE', domain: 'welfare', 도코드: 'gyeonggi', file: null,
+    kw: ['복지국', '복지정책과', '노인복지과', '장애인복지과'] },
+  { code: 'SP-DO-CLIMATE', domain: 'climate', 도코드: 'gyeonggi', file: null,
+    kw: ['기후환경에너지국'] },
+  { code: 'SP-DO-HOUSING', domain: 'housing', 도코드: 'gyeonggi', file: null,
+    kw: ['도시주택실', '주택정책과', '건축정책과', '도시재생과'] },
+  { code: 'SP-DO-TRANSPORT', domain: 'transport', 도코드: 'gyeonggi', file: null,
+    kw: ['교통국', '버스정책과', '광역교통정책과'] },
+  { code: 'SP-DO-CULTURE', domain: 'culture', 도코드: 'gyeonggi', file: null,
+    kw: ['문화체육관광국', '문화정책과'] },
+  { code: 'SP-DO-TOURISM', domain: 'tourism', 도코드: 'gyeonggi', file: null,
+    kw: ['관광정책', '관광진흥'] },
+  { code: 'SP-DO-AGRI', domain: 'agri', 도코드: 'gyeonggi', file: null,
+    kw: ['농수산생명과학국', '농업정책'] },
+  { code: 'SP-DO-OCEAN', domain: 'ocean', 도코드: 'gyeonggi', file: null,
+    kw: ['해양수산', '수산업'] },
+  ..._makeGenericL2Entries('gyeonggi', ['sports', 'health', 'family']),
+];
+
+// ── 강원·대구·전남광주통합 — 도청 실국 실사 자체가 전혀 착수되지
+// 않았던 3개 도(2026-07-24 시청 롤아웃 중 발견). 시청과 동일 원칙으로
+// 16개 도메인 전부 범용 키워드+기본 라벨로 즉시 완비한다.
+const GANGWON_L2_TABLE = _makeGenericL2Entries('gangwon', FULL16_DOMAINS);
+const DAEGU_L2_TABLE = _makeGenericL2Entries('daegu', FULL16_DOMAINS);
+const JEONNAM_GWANGJU_L2_TABLE = _makeGenericL2Entries('jeonnam-gwangju', FULL16_DOMAINS);
+
 const PROVINCE_TABLES = {
   jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE, citydept: JEJU_CITY_DEPT_TABLE },
   // 2026-07-24 — 1단계 확대: 부산 16개 자치구·군 + 서울 25개 자치구
@@ -1496,14 +1585,15 @@ const PROVINCE_TABLES = {
     city: [...GYEONGNAM_CITY_TABLE, ...GYEONGNAM_PHASE3_CITY_TABLE],
     national: [],
     citydept: [...GYEONGNAM_CITY_DEPT_TABLE, ...GYEONGNAM_PHASE3_CITY_DEPT_TABLE] },  // ⚠️ L2는 스냅샷 불일치, 신뢰도 낮음
-  // ★ 2026-07-24 신설 — 이 4개 도는 도청 실국(L2) 실사가 아직 전혀
-  // 착수되지 않았다(PROVINCE_TABLES 항목 자체가 없었음). 시/군/구 계층
-  // 메타데이터만 이번에 등록하고, l2/national은 정직하게 빈 배열로 남긴다
-  // — 도청 질문(예: "경기도 기획조정실")은 여전히 일반 안내로 폴백된다.
-  gyeonggi: { l2: [], city: GYEONGGI_CITY_TABLE, national: [], citydept: GYEONGGI_CITY_DEPT_TABLE },
-  gangwon: { l2: [], city: GANGWON_CITY_TABLE, national: [], citydept: GANGWON_CITY_DEPT_TABLE },
-  daegu: { l2: [], city: DAEGU_CITY_TABLE, national: [], citydept: DAEGU_CITY_DEPT_TABLE },
-  'jeonnam-gwangju': { l2: [], city: JEONNAM_GWANGJU_CITY_TABLE, national: [], citydept: JEONNAM_GWANGJU_CITY_DEPT_TABLE },
+  // ★ 2026-07-24 신설 — 이 4개 도는 도청 실국(L2) 실사가 이전엔 전혀
+  // 없었다(PROVINCE_TABLES 항목 자체가 없었음). 시청과 동일 원칙으로
+  // 실명 없이도 즉시 작동하는 범용 도메인 키워드+기본 라벨로 16/16 채운다
+  // — 경기도는 do-dept-master-data.json에 이미 있던 13개 실사 데이터를
+  // 살려 실명 키워드를 우선 쓰고, 나머지 3개(sports/health/family)만 범용.
+  gyeonggi: { l2: GYEONGGI_L2_TABLE, city: GYEONGGI_CITY_TABLE, national: [], citydept: GYEONGGI_CITY_DEPT_TABLE },
+  gangwon: { l2: GANGWON_L2_TABLE, city: GANGWON_CITY_TABLE, national: [], citydept: GANGWON_CITY_DEPT_TABLE },
+  daegu: { l2: DAEGU_L2_TABLE, city: DAEGU_CITY_TABLE, national: [], citydept: DAEGU_CITY_DEPT_TABLE },
+  'jeonnam-gwangju': { l2: JEONNAM_GWANGJU_L2_TABLE, city: JEONNAM_GWANGJU_CITY_TABLE, national: [], citydept: JEONNAM_GWANGJU_CITY_DEPT_TABLE },
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }
@@ -1944,6 +2034,15 @@ function _guessSigunguNameFrom(src) {
   while ((m = pattern.exec(src)) !== null) {
     const candidate = m[1];
     if (_SIGUNGU_FALSE_POSITIVE_WORDS.includes(candidate)) continue;
+    // ★ 2026-07-24 추가(주피터 지시 — 도청 실국 완비 작업 중 발견) — 도
+    // 정식 명칭 자체가 길게 "…특별시"/"…광역시"로 끝나는 경우(예:
+    // "전남광주통합특별시"), 정규식이 그 뒷부분 일부만 잘라 시/군/구로
+    // 오인할 수 있다("합특별시" 등). 후보가 실제로 텍스트에 존재하는
+    // 공식 도 이름의 일부(접미사)라면 시군구 후보에서 제외한다 — 8개
+    // 광역시 짧은 이름 전용이던 기존 예외 목록을 모든 도로 일반화.
+    const isPartOfProvinceName = Object.keys(PROVINCE_NAME_TO_CODE)
+      .some(name => name.length > candidate.length && name.endsWith(candidate) && src.includes(name));
+    if (isPartOfProvinceName) continue;
     return candidate;
   }
   return null;
@@ -2207,12 +2306,25 @@ export async function findStaffContact(handlerCode) {
   return null;
 }
 
-function _renderDeptTemplate(template, rec) {
+// 도청 국(局) 기본 라벨 — 2026-07-24 신설(주피터 지시: 시청 계층 원칙을
+// 도청에도 확장). CITY_DEPT_DEFAULT_LABEL과 동일 철학 — 실사로 확인된
+// 실명이 없어도 이 라벨로 즉시 응답 가능하다.
+const DEPT_DEFAULT_LABEL = {
+  plan: '기획(조정)담당부서', safety: '안전관리담당부서', jachi: '자치행정담당부서',
+  econ: '경제정책담당부서', innov: '산업혁신담당부서', welfare: '복지정책담당부서',
+  climate: '환경정책담당부서', housing: '건설주택담당부서', transport: '교통정책담당부서',
+  culture: '문화체육담당부서', sports: '체육담당부서', tourism: '관광정책담당부서',
+  agri: '농정담당부서', ocean: '해양수산담당부서', health: '보건정책담당부서',
+  family: '여성가족담당부서',
+};
+
+function _renderDeptTemplate(template, rec, domain) {
+  const 부서명 = rec.부서명 || DEPT_DEFAULT_LABEL[domain] || '담당부서';
   return template
     .replaceAll('{도이름}', rec.도이름 || '')
-    .replaceAll('{부서명}', rec.부서명 || '')
+    .replaceAll('{부서명}', 부서명)
     .replaceAll('{구명칭_문구}', rec.구명칭_문구 || '')
-    .replaceAll('{산하과목록}', rec.산하과목록 || '')
+    .replaceAll('{산하과목록}', rec.산하과목록 || '(정식 명칭 확인 중 — 도청 콜센터로 확인 권장)')
     .replaceAll('{콜센터명}', rec.콜센터명 || '')
     .replaceAll('{콜센터번호}', rec.콜센터번호 || '')
     .replaceAll('{콜센터운영시간}', rec.콜센터운영시간 || '')
@@ -2253,13 +2365,25 @@ async function _appendPermitProtocolIfNeeded(text, rec) {
 async function _fetchDeptText(entry) {
   if (!entry.domain || !entry.도코드) return { text: await _fetchText(entry.file), permitCodes: [] };
   const records = await _loadDeptMasterData();
-  const rec = records.find(r => r.domain === entry.domain && r.도코드 === entry.도코드);
-  if (!rec || !rec.template) {
-    console.warn(`[Jeju] 부서 데이터 레코드/템플릿 없음(domain=${entry.domain}, 도코드=${entry.도코드}) — static file로 폴백`);
+  const rec = records.find(r => r.domain === entry.domain && r.도코드 === entry.도코드) || {};
+  const templateRelPath = rec.template
+    ? `02-do-dept/templates/${rec.template}`
+    : `02-do-dept/templates/SP-DEPT-${entry.domain.toUpperCase()}-TEMPLATE_v1.0.md`;
+  // 2026-07-24 신설(주피터 지시) — 예전엔 rec나 rec.template이 없으면
+  // static file(entry.file, 대개 비어있거나 없음)로 폴백해 사실상 빈
+  // 응답이 나갔다. 이제 rec.template이 없어도(실사 전) entry.domain은
+  // 알고 있으니 원형 클래스 템플릿(SP-DEPT-{DOMAIN}-TEMPLATE_v1.0.md)을
+  // 기본 라벨로 즉시 렌더링한다 — 시청 계층과 동일 원칙. rec 자체는
+  // template 필드가 없어도(예: 콜센터·처리사무만 있는 부분 레코드) 그대로
+  // 살려서 넘긴다(레코드를 통째로 버리면 처리사무 등 다른 필드가
+  // 유실된다 — 2026-07-24 회귀 발견·수정).
+  try {
+    const template = await _fetchText(templateRelPath);
+    return _appendPermitProtocolIfNeeded(_renderDeptTemplate(template, rec, entry.domain), rec);
+  } catch (e) {
+    console.warn(`[Jeju] 부서 템플릿 로드 실패(domain=${entry.domain}, 도코드=${entry.도코드}) — static file로 폴백: ${e.message}`);
     return _appendPermitProtocolIfNeeded(await _fetchText(entry.file), rec);
   }
-  const template = await _fetchText(`02-do-dept/templates/${rec.template}`);
-  return _appendPermitProtocolIfNeeded(_renderDeptTemplate(template, rec), rec);
 }
 
 // ── 국가기관(중앙정부 지역사무소) 템플릿 렌더링 (2026-07-04, 도 부서

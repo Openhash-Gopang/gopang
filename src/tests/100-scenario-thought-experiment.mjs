@@ -255,7 +255,7 @@ add('L-시군구지연', '창원시 버스 노선 문의', { expectTrace: ['SP-C
 // ── M. 온보딩 안 된 도(강원/경기/대구) — 원형 폴백 (3) ───
 add('M-미온보딩도', '강원도 산불 예방 안전 대책 문의', { expectTrace: ['원형 매칭'], expectProvince: 'gangwon' });
 add('M-미온보딩도', '경기도 소상공인 지원 문의', { expectTrace: ['원형 매칭'], expectProvince: 'gyeonggi' });
-add('M-미온보딩도', '대구 문화예술 지원사업 문의', { expectTrace: ['원형 매칭'], expectProvince: 'daegu' });
+add('M-미온보딩도', '대구 문화예술 지원사업 문의', { expectTrace: ['SP-DO-CULTURE'], expectProvince: 'daegu', note: '2026-07-24 도청 실국 완비(주피터 지시) 이후 대구도 범용 도메인 L2 테이블이 생겨 "원형 매칭"(3.5단계 최후 안전망)보다 먼저 SP-DO-CULTURE에서 정확히 잡힌다 — 원형 매칭 자체는 아직 이 배치에 없는 도/도메인 조합을 위한 안전망으로 계속 유효.' });
 
 // ── N. 상하수도 전문가 SP (3) ────────────────────────────────────
 add('N-상하수도', '급수 중단 안내 문자 받았는데 언제 복구되나요', { pdvHintNone: true, note: '지역 없음 — 상하수도 질문이지만 지역 미판별로 조기 반환될 수 있음(검증 대상)' });
