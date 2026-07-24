@@ -1560,30 +1560,45 @@ const GANGWON_L2_TABLE = _makeGenericL2Entries('gangwon', FULL16_DOMAINS);
 const DAEGU_L2_TABLE = _makeGenericL2Entries('daegu', FULL16_DOMAINS);
 const JEONNAM_GWANGJU_L2_TABLE = _makeGenericL2Entries('jeonnam-gwangju', FULL16_DOMAINS);
 
+// ── 국가기관 지사 확대(1차, 2026-07-24) — police만 선별 확대 ──────────
+// 주피터 지시: "관할구역이 도 경계와 거의 일치하는 기관만 선별적으로
+// 정적 확대". 국가기관은 도청/시청과 달리 관할구역이 행정구역과 안 맞는
+// 경우가 많아(세무서는 지방국세청 관할, 법원은 지방법원 관할구역 등)
+// 기본 라벨 방식이 위험하다 — 잘못된 관할 기관을 안내할 수 있다. police는
+// 예외적으로 2026-07 웹검색 확인 결과 대부분 도와 1:1 대응한다(경기·
+// 전남광주통합만 예외 — 미포함). 다른 18개 도메인은 이번 배치에서
+// 손대지 않는다(각각 별도 검증 필요 — SP-NATIONAL-LAZY가 계속 안전망).
+const POLICE_PROVINCES = ['seoul', 'busan', 'daegu', 'incheon', 'daejeon', 'ulsan',
+  'sejong', 'gangwon', 'chungbuk', 'chungnam', 'jeonbuk', 'gyeongbuk', 'gyeongnam'];
+function _makePoliceEntry(도코드) {
+  return { code: 'SP-NAT-POLICE', domain: 'police', 도코드, file: null,
+    kw: ['경찰청', '112', '고소장', '수사', '지구대', '파출소'] };
+}
+
 const PROVINCE_TABLES = {
   jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE, citydept: JEJU_CITY_DEPT_TABLE },
   // 2026-07-24 — 1단계 확대: 부산 16개 자치구·군 + 서울 25개 자치구
   // 메타데이터 등록 완료(계획서 v1.1 §5). L2는 v1.0부터 이미 실사 완료 상태.
-  busan: { l2: BUSAN_L2_TABLE, city: BUSAN_CITY_TABLE, national: [], citydept: BUSAN_CITY_DEPT_TABLE },
-  seoul: { l2: SEOUL_L2_TABLE, city: SEOUL_CITY_TABLE, national: [], citydept: SEOUL_CITY_DEPT_TABLE },
+  busan: { l2: BUSAN_L2_TABLE, city: BUSAN_CITY_TABLE, national: [_makePoliceEntry('busan')], citydept: BUSAN_CITY_DEPT_TABLE },
+  seoul: { l2: SEOUL_L2_TABLE, city: SEOUL_CITY_TABLE, national: [_makePoliceEntry('seoul')], citydept: SEOUL_CITY_DEPT_TABLE },
   // 2026-07-24 — 3단계: 나머지 12개 도 시/군/구 183개 전수 메타데이터
   // 등록 완료(계획서 v1.1 §5). L2가 이미 있던 8개 도는 city/citydept만
   // 채우고, L2가 아예 없던 4개 도(경기·강원·대구·전남광주통합)는 항목
   // 자체를 새로 만들되 l2/national은 정직하게 빈 배열로 남긴다(도청
   // 실국 실사는 별도 작업 — 이 배치는 시/군/구 계층만 다룬다).
-  incheon: { l2: INCHEON_L2_TABLE, city: INCHEON_CITY_TABLE, national: [], citydept: INCHEON_CITY_DEPT_TABLE },  // ⚠️ 2026-08 시행 예정(안)
-  daejeon: { l2: DAEJEON_L2_TABLE, city: DAEJEON_CITY_TABLE, national: [], citydept: DAEJEON_CITY_DEPT_TABLE },
-  ulsan: { l2: ULSAN_L2_TABLE, city: ULSAN_CITY_TABLE, national: [], citydept: ULSAN_CITY_DEPT_TABLE },
-  sejong: { l2: SEJONG_L2_TABLE, city: [], national: [], citydept: [] },  // 단층제라 시청 계층 자체가 해당 없음
-  chungbuk: { l2: CHUNGBUK_L2_TABLE, city: CHUNGBUK_CITY_TABLE, national: [], citydept: CHUNGBUK_CITY_DEPT_TABLE },
-  chungnam: { l2: CHUNGNAM_L2_TABLE, city: CHUNGNAM_CITY_TABLE, national: [], citydept: CHUNGNAM_CITY_DEPT_TABLE },
-  jeonbuk: { l2: JEONBUK_L2_TABLE, city: JEONBUK_CITY_TABLE, national: [], citydept: JEONBUK_CITY_DEPT_TABLE },
-  gyeongbuk: { l2: GYEONGBUK_L2_TABLE, city: GYEONGBUK_CITY_TABLE, national: [], citydept: GYEONGBUK_CITY_DEPT_TABLE },  // ⚠️ L2 조직개편 중, 신뢰도 낮음
+  incheon: { l2: INCHEON_L2_TABLE, city: INCHEON_CITY_TABLE, national: [_makePoliceEntry('incheon')], citydept: INCHEON_CITY_DEPT_TABLE },  // ⚠️ 2026-08 시행 예정(안)
+  daejeon: { l2: DAEJEON_L2_TABLE, city: DAEJEON_CITY_TABLE, national: [_makePoliceEntry('daejeon')], citydept: DAEJEON_CITY_DEPT_TABLE },
+  ulsan: { l2: ULSAN_L2_TABLE, city: ULSAN_CITY_TABLE, national: [_makePoliceEntry('ulsan')], citydept: ULSAN_CITY_DEPT_TABLE },
+  sejong: { l2: SEJONG_L2_TABLE, city: [], national: [_makePoliceEntry('sejong')], citydept: [] },  // 단층제라 시청 계층 자체가 해당 없음
+  chungbuk: { l2: CHUNGBUK_L2_TABLE, city: CHUNGBUK_CITY_TABLE, national: [_makePoliceEntry('chungbuk')], citydept: CHUNGBUK_CITY_DEPT_TABLE },
+  chungnam: { l2: CHUNGNAM_L2_TABLE, city: CHUNGNAM_CITY_TABLE, national: [_makePoliceEntry('chungnam')], citydept: CHUNGNAM_CITY_DEPT_TABLE },
+  jeonbuk: { l2: JEONBUK_L2_TABLE, city: JEONBUK_CITY_TABLE, national: [_makePoliceEntry('jeonbuk')], citydept: JEONBUK_CITY_DEPT_TABLE },
+  gyeongbuk: { l2: GYEONGBUK_L2_TABLE, city: GYEONGBUK_CITY_TABLE, national: [_makePoliceEntry('gyeongbuk')], citydept: GYEONGBUK_CITY_DEPT_TABLE },  // ⚠️ L2 조직개편 중, 신뢰도 낮음
   // 2026-07-24 — 진주·창원(+5개 일반구)·산청군 파일럿(2단계) + 나머지 15개
   // 시/군(3단계)을 합친다.
   gyeongnam: { l2: GYEONGNAM_L2_TABLE,
     city: [...GYEONGNAM_CITY_TABLE, ...GYEONGNAM_PHASE3_CITY_TABLE],
-    national: [],
+    national: [_makePoliceEntry('gyeongnam')],
     citydept: [...GYEONGNAM_CITY_DEPT_TABLE, ...GYEONGNAM_PHASE3_CITY_DEPT_TABLE] },  // ⚠️ L2는 스냅샷 불일치, 신뢰도 낮음
   // ★ 2026-07-24 신설 — 이 4개 도는 도청 실국(L2) 실사가 이전엔 전혀
   // 없었다(PROVINCE_TABLES 항목 자체가 없었음). 시청과 동일 원칙으로
@@ -1591,8 +1606,8 @@ const PROVINCE_TABLES = {
   // — 경기도는 do-dept-master-data.json에 이미 있던 13개 실사 데이터를
   // 살려 실명 키워드를 우선 쓰고, 나머지 3개(sports/health/family)만 범용.
   gyeonggi: { l2: GYEONGGI_L2_TABLE, city: GYEONGGI_CITY_TABLE, national: [], citydept: GYEONGGI_CITY_DEPT_TABLE },
-  gangwon: { l2: GANGWON_L2_TABLE, city: GANGWON_CITY_TABLE, national: [], citydept: GANGWON_CITY_DEPT_TABLE },
-  daegu: { l2: DAEGU_L2_TABLE, city: DAEGU_CITY_TABLE, national: [], citydept: DAEGU_CITY_DEPT_TABLE },
+  gangwon: { l2: GANGWON_L2_TABLE, city: GANGWON_CITY_TABLE, national: [_makePoliceEntry('gangwon')], citydept: GANGWON_CITY_DEPT_TABLE },
+  daegu: { l2: DAEGU_L2_TABLE, city: DAEGU_CITY_TABLE, national: [_makePoliceEntry('daegu')], citydept: DAEGU_CITY_DEPT_TABLE },
   'jeonnam-gwangju': { l2: JEONNAM_GWANGJU_L2_TABLE, city: JEONNAM_GWANGJU_CITY_TABLE, national: [], citydept: JEONNAM_GWANGJU_CITY_DEPT_TABLE },
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
@@ -1770,10 +1785,14 @@ function _buildCandidatesText() {
   for (const e of _cityTable()) codes.add(e.code);
   for (const e of _nationalTable()) codes.add(e.code);
 
-  // 국가기관 정적 인스턴스가 없는 도(현재 제주 외 전부)는 SP-NAT-* 코드
-  // 대신 SP-NATIONAL-LAZY를 후보로 준다 — 정적 인스턴스가 있으면(제주)
-  // 이미 위에서 실제 코드가 채워졌으므로 LAZY는 불필요.
-  if (_nationalTable().length === 0) codes.add('SP-NATIONAL-LAZY');
+  // 국가기관 정적 인스턴스가 부분적이거나 없는 도(현재 제주만 근접
+  // 종합 커버리지)는 SP-NATIONAL-LAZY도 항상 후보에 얹는다 — 매칭된
+  // 실제 코드(예: police)와 안 겹치는 다른 국가기관 질문(세무서·법원 등)은
+  // 여전히 LAZY가 받아야 하기 때문이다. 2026-07-24 police 선별 확대 이전엔
+  // "table.length === 0"이 "제주 외 전부"와 우연히 같은 뜻이었지만, 이제
+  // 부분 커버리지(예: 부산=police 1개만)가 생기면서 그 등가관계가 깨졌다
+  // — 도코드 자체로 직접 판단하도록 고친다(제주만 예외).
+  if (provinceCode !== 'jeju') codes.add('SP-NATIONAL-LAZY');
 
   // 시군구(기초자치단체) 지연조회는 GENERAL 도에서만 의미가 있다
   // (SPECIAL_AUTONOMOUS인 제주는 기초자치단체 자체가 없음).
@@ -2155,7 +2174,7 @@ const _NAT_AGENCY_DOMAIN_KEYWORDS = {
   tax: ['세무서', '국세', '부가세', '소득세', '법인세', '세무'],
   court: ['법원', '재판', '소송', '판결', '민사', '형사'],
   prosecution: ['검찰', '기소', '공소', '수사'],
-  police: ['지방경찰청', '국가경찰'],
+  police: ['지방경찰청', '경찰청', '국가경찰'],
   labor: ['근로복지공단', '산재', '산업재해'],
   laborimprove: ['근로개선', '고용노동청', '근로감독'],
   nhis: ['건강보험공단', '국민건강보험'],
@@ -2732,14 +2751,18 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     return { systemPrompt: parts.join('\n\n---\n\n'), trace };
   }
 
-  // 0.5) 국가기관 지연 초기화(2026-07-20 신설) — 정적 국가기관 테이블이
-  // 비어 있는 도(현재 제주 외 전부, national:[])에서 국가기관성 키워드가
-  // 언급된 경우. classifyFn이 주입돼 있으면 시군구와 동일한 철학으로
-  // 여기서 확정하지 않고 5단계 LLM 분류 폴백에 'SP-NATIONAL-LAZY' 후보로
-  // 넘긴다. classifyFn이 없으면(상담할 AI 자체가 없음) 정규식이 즉시 판단.
-  if (_nationalTable().length === 0 && !classifyFn) {
+  // 0.5) 국가기관 지연 초기화(2026-07-20 신설) — 이 도의 정적 테이블에
+  // 해당 도메인이 없는 경우(2026-07-24 수정: 예전엔 "테이블 전체가
+  // 비었는가"만 봤는데, police 선별 확대로 부분 커버리지 도가 생기면서
+  // 그 판단으로는 부족해졌다 — natDomainGuess 자체가 이 도 테이블에
+  // 있는지 직접 확인한다). classifyFn이 주입돼 있으면 시군구와 동일한
+  // 철학으로 여기서 확정하지 않고 5단계 LLM 분류 폴백에 'SP-NATIONAL-LAZY'
+  // 후보로 넘긴다. classifyFn이 없으면(상담할 AI 자체가 없음) 정규식이
+  // 즉시 판단.
+  if (!classifyFn) {
     const natDomainGuess = _guessNatAgencyDomainFromText(text);
-    if (natDomainGuess) {
+    const alreadyCovered = natDomainGuess && _nationalTable().some(e => e.domain === natDomainGuess);
+    if (natDomainGuess && !alreadyCovered) {
       const cityHint = _guessSigunguName(text, pdvLocationHint);
       const nationalSp = await _loadNationalSp();
       parts.push(nationalSp);
