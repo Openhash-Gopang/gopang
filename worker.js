@@ -4091,6 +4091,13 @@ async function _generateIndustryTransformSP(env, schemaId, ksicLabel, ctx) {
   const commonRes = await fetch(`${REPO_RAW}/prompts/${commonFile}`);
   const commonSP = await commonRes.text();
 
+  // ALLOW-EMBEDDED-SP: SP 사본이 아니라, fetch()로 받아온 SP-INDUSTRY-
+  // TRANSFORM-COMMON 본문(commonSP, 위에서 REPO_RAW로 실시간 조회)에
+  // "지금 이 SP를 상속해 새 업종 문서를 작성하라"는 지시문만 덧붙인
+  // 템플릿 리터럴이다. commonSP 자체는 이 파일에 하드코딩돼 있지 않고
+  // 매 호출마다 정본(prompts/SP-INDUSTRY-TRANSFORM-COMMON_v1.0.md)을
+  // 그대로 fetch해서 채운다 — check_no_embedded_sp.py가 막으려는
+  // "SP 사본이 파일 여러 곳에 흩어지는" 상황과 다르다.
   const systemPrompt = `${commonSP}
 
 ---
