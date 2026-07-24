@@ -4728,12 +4728,42 @@ function _natAgencyStripLabelPrefix(candidate) {
   }
   return candidate;
 }
+// ★ 2026-07-24 수정(주피터 지시 — §7 동적 조회 100건 사고실험 중 발견) —
+// 예전엔 모든 도메인이 하나의 공용 정규식(모든 기관 접미사를 한꺼번에
+// 인식)을 썼다. 그 결과 실제 사고: domain=prosecution(검찰) 조회인데
+// 검색결과에 "의정부지방법원"이 같이 언급돼 있으면 그게 집계돼 이겨서
+// "검찰 관련 문의는 의정부지방법원에서 담당합니다"라는 완전히 잘못된
+// 기관(법원≠검찰청)을 verified:true로 내보냈다. 도메인별로 정확히 그
+// 도메인에 해당하는 접미사만 인식하도록 분리한다 — 교차오염 자체를
+// 구조적으로 불가능하게 만드는 게, 개별 사례를 사후에 걸러내는 것보다
+// 안전하다.
+// police는 2021년 자치경찰제 개편으로 "OO지방경찰청" → "OO경찰청"으로
+// "지방"이 빠졌다(오늘 police 13개 도 확대 작업에서 이미 확인) — 신명칭
+// "경찰청"도 인식하지 않으면 최신 명칭이 검색결과에 있어도 무시되고
+// 구명칭만 잡히는 편향이 생긴다(실제로 제주 라이브 검색에서 재현됨).
+const NAT_AGENCY_NAME_SUFFIX = {
+  tax: '세무서', court: '지방법원', prosecution: '지방검찰청',
+  police: '(?:지방)?경찰청', labor: '지사', laborimprove: '지방고용노동청',
+  nhis: '(?:지역본부|지사)', nps: '(?:지사|지역본부)', immigration: '출입국\\S{0,6}청',
+  post: '지방우정청', mma: '지방병무청', customs: '세관', veterans: '보훈청',
+  weather: '지방기상청', coastguard: '해양경찰서', port: '지방해양수산청',
+  probation: '준법지원센터', bok: '본부', stat: '사무소',
+};
 function _natAgencyExtractName(organic, provinceName, domain, cityHint) {
   if (!organic || organic.length === 0) return null;
   const label = NAT_AGENCY_LABEL_KO[domain] || domain;
   // 국가기관은 명칭 패턴이 훨씬 정형화돼 있어("OO지방법원", "OO세무서")
-  // 시군구보다 넓게(과/국 접미사 대신) 기관명 접미사로 잡는다.
-  const namePattern = /([가-힣]{2,10}(?:세무서|지방법원|지방검찰청|지방경찰청|지사|지방고용노동청|지역본부|출입국\S{0,6}청|지방우정청|지방병무청|세관|보훈청|지방기상청|해양경찰서|지방해양수산청|준법지원센터|본부|사무소))/g;
+  // 시군구보다 넓게(과/국 접미사 대신) 기관명 접미사로 잡는다. 이 도메인의
+  // 접미사가 사전에 없으면(신규 도메인 추가 시 누락 등) 예전처럼 전체
+  // 접미사 집합으로 폴백하되, 이 경우는 교차오염 위험이 있다는 걸
+  // 로그로 남긴다.
+  const domainSuffix = NAT_AGENCY_NAME_SUFFIX[domain];
+  if (!domainSuffix) {
+    console.error(`[national-agency-resolve] NAT_AGENCY_NAME_SUFFIX에 domain='${domain}' 없음 — 전체 접미사로 폴백(교차오염 위험)`);
+  }
+  const suffixPattern = domainSuffix ||
+    '(?:세무서|지방법원|지방검찰청|(?:지방)?경찰청|지사|지방고용노동청|지역본부|출입국\\S{0,6}청|지방우정청|지방병무청|세관|보훈청|지방기상청|해양경찰서|지방해양수산청|준법지원센터|본부|사무소)';
+  const namePattern = new RegExp(`([가-힣]{2,10}(?:${suffixPattern}))`, 'g');
   const provinceCore = provinceName.replace(/(특별자치도|특별자치시|광역시|특별시|도)$/, '');
   const cityCore = cityHint ? cityHint.replace(/(시|군|구)$/, '') : null;
 
@@ -5750,7 +5780,7 @@ async function _sweepBridgeOutbox(env) {
 
 // 2026-07-18 신설 — 테스트 목적 named export. 런타임 동작에는 영향 없음
 // (default export의 fetch 핸들러는 그대로 pathname 매칭으로 호출).
-export { handleGdcDepositClose, handleGdcDaoProposalCreate, handleGdcDaoVote, handleGdcDaoProposalsList, handleFeeRate, handleInsClaimCreate, handleInsClaimsList, handleVerifyAdmin };
+export { handleGdcDepositClose, handleGdcDaoProposalCreate, handleGdcDaoVote, handleGdcDaoProposalsList, handleFeeRate, handleInsClaimCreate, handleInsClaimsList, handleVerifyAdmin, _natAgencyExtractName };
 
 export default {
   // ── Cron 트리거 (10분마다 머클 앵커링 + 브릿지 아웃박스 스윕) ────────
