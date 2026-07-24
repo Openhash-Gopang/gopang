@@ -1,12 +1,21 @@
-# 전국 지방행정 AC(도청·시청·읍면동·국가기관) 매뉴얼 v1.0
+# 전국 지방행정 AC(도청·시청·읍면동·국가기관) 매뉴얼 v1.1
 
-> **작성일**: 2026-07-21 · **대상**: 개발자(유지보수·확장)
+> **작성일**: 2026-07-21 · **v1.1 갱신**: 2026-07-25(별도 세션, 100건 사고실험·
+> 파이프라인 완결성 감사 반영) · **대상**: 개발자(유지보수·확장)
 > **메타 매뉴얼**: [`docs/MANUAL_INDEX.md`](./MANUAL_INDEX.md)
 > **관련 코드**: `src/gopang/gov/gov-router.js`(원형/인스턴스 조립 핵심 로직) ·
 > `worker.js`(`/gov/relay`, `/gov/sigungu-dept-resolve`, `/gov/national-agency-resolve`) ·
 > `gwp-registry.js`(`kregionalgov` 엔트리) · `prompts/gov-tree/`(SP 템플릿·마스터데이터) ·
-> 별도 저장소 `Openhash-Gopang/jeju`(`jeju-router.js`, `webapp.html` — 현재 유일한
-> 배포 진입점)
+> `pages/regional-gov.html`·`gopang-app.js`(v1.1에서 신설된 파이프라인 완결성
+> 배선 — §7 참고) · 별도 저장소 `Openhash-Gopang/jeju`(`jeju-router.js`,
+> `webapp.html` — 현재 유일한 배포 진입점)
+>
+> **v1.1 변경 요지**: §5에 100건 사고실험(2026-07-24)에서 발견·수정한 버그
+> 8건 추가, §6 한계 목록 갱신(#8 부분 해소), 신설 §7("파이프라인 완결성" —
+> 이 문서에 없던 새 주제: 담당자 승인 게이트·요청자 PDV 기록), 신설 §8(관련
+> 계획·설계 문서 상호 참조). §1~§4, 기존 §5(1~8번)·부록 PR 목록은 2026-07-21
+> 작성 당시 그대로 보존.
+
 
 이 문서는 지방행정 AI(도청·시군구청·읍면동사무소·국가기관 지역사무소) 상담
 기능이 **"제주 전용 파일럿"에서 "전국 원형(클래스)→인스턴스 조립 아키텍처"로
@@ -196,15 +205,35 @@ import해 `assembleGovSystemPrompt()`를 그대로 실행**시켜 얻은 `trace`
 | 5 | 국가기관 템플릿 파일명 버전 참조 19건 불일치(v1.0/v1.1 vs 실제 v1.2/v1.3) | 전수조사로 34개 중 19개 확인 | `national-agency-master-data.json`의 `template` 필드 19건 정정 |
 | 6 | 국가기관 지연초기화(SP-NATIONAL-LAZY)의 worker.js 엔드포인트는 있었지만 클라이언트 배선이 없었음 | 2차 50개 사고실험에서 9/10 시도조차 안 됨으로 확인 | `resolveNationalAgencyLazy` 등 클라이언트 배선 신설 |
 | 7 | `_guessSigunguName`이 발화만 보고 PDV 힌트는 안 봄 | "쓰레기 분리배출 문의"+PDV(경기도 수원시) 조합에서 시군구 매칭 실패 | PDV 힌트도 함께 검사하도록 확장(§3.4에서 국가기관까지 연결) |
-| 8 | `province-master-data.json`에 "전남광주" 약칭 없음(정식 명칭만 등록) | "전남광주 임신 출산 지원 문의" → 지역 미판별 | 미해결(§6 참고) |
+| 8 | `province-master-data.json`에 "전남광주" 약칭 없음(정식 명칭만 등록) | "전남광주 임신 출산 지원 문의" → 지역 미판별 | §6 #8 참고(v1.1에서 부분 해소) |
+
+### 5.1 v1.1 추가분 — 100건 사고실험(2026-07-24, 별도 세션) 발견 버그
+
+이 절의 시나리오도 §5 서두와 동일한 원칙(실제 `gov-router.js`를
+Node.js에서 import해 `assembleGovSystemPrompt()`를 그대로 실행)으로
+검증했다. 시뮬레이션 하네스는 `src/tests/100-scenario-thought-experiment.mjs`
+(103건, 저장소에 커밋돼 있어 회귀 자산으로 재사용 가능).
+
+| # | 버그 | 발견 시나리오 | 수정 |
+|---|---|---|---|
+| 9 | 국가기관 6개(세관·한국은행·통계청·산림청 계열 3개)가 SP 템플릿·마스터데이터는 완비돼 있는데 `JEJU_NATIONAL_TABLE`(키워드 배선)에만 등록이 안 돼 있어 전부 일반 안내로 떨어짐 | "제주세관 통관 절차 문의" → 매칭 실패 | `JEJU_NATIONAL_TABLE`/`ROUTE_DESCRIPTIONS`/`SP_CODE_TO_PDV_SCOPE` 3곳에 6개 기관 동시 등록. "콘텐츠 저작 완료"와 "실제 라우팅됨"은 별개라는 교훈 — 이후 §5.1의 다른 항목들도 이 3곳 동시 확인을 관례화 |
+| 10 | PDV 위치 힌트로만 시(市)가 특정되고 시청 국(局) 단위 매칭도 안 되면, 더 구체적인 L2/LLM 분류 매칭을 시도해보기도 전에 즉시 시청 일반 페이지로 확정되던 문제 | "청년 월세 지원 있어요?" + 제주시 PDV 힌트 → WELFARE 매칭 안 되고 시청 일반 안내로 조기 종료 | `_matchCity`가 발화 자체 매칭인지 힌트 전용 매칭인지(`_matchedViaTextItself`) 구분하도록 수정 — 힌트 전용+classifyFn 존재+시청국 미매칭이면 즉시 확정 대신 폴백으로 보류하고 L2/LLM 매칭 기회를 먼저 준 뒤, 전부 실패하면 그 폴백을 최종적으로 사용 |
+| 11 | 리(里) 이름이 도(道) 판별 색인에서 누락 — `_matchEmd`는 관할리목록을 인식하는데, 그보다 앞 단계인 도 판별 색인(`_loadEmdNameToProvinceIndex`)은 읍면동명만 색인해서 상위 읍 이름 없이 리 이름만 언급하면 도 판별 자체가 실패 | "한림리 전입신고 하려고 하는데요"(상위 읍 이름·"제주" 언급 전혀 없음) → 지역 미판별로 조기 반환 | 관할리목록도 함께 색인하도록 `_loadEmdNameToProvinceIndex` 수정 |
+| 12 | "폐업"이 시군구 도메인 휴리스틱(`_SIGUNGU_DOMAIN_KEYWORDS`)에 없어, LLM이 SP-SIGUNGU-LAZY로 정확히 분류해도 도메인 추출 실패로 최종 안내가 끊김 | "가게 폐업 신고하려고 하는데요" | econ 도메인에 '폐업' 추가 |
+| 13 | "여권"이 국가기관·시군구 도메인 어디에도 없음(실제로는 시/군/구 여권과 소관, 출입국청 아님) | "여권 재발급 받으려고요" | jachi 도메인에 '여권' 추가 |
+| 14 | "수압"이 상하수도 전문 SP(`SP-EXP-WATER`) 트리거 정규식에 없음 | "노형동 우리집 수압이 너무 약해요" | 정규식에 '수압' 추가 |
+| 15 | LLM 분류 폴백의 `candidatesText`가 도(道)를 구분하지 않고 항상 전체 코드를 보여줌 — 국가기관 정적 인스턴스가 제주만 있는 구조에서, 비제주 사용자 질문에 LLM이 제주 전용 코드를 골라도 조용히 실패(`SP-NATIONAL-LAZY`를 골랐어야 정답) | (설계 감사로 발견, 재현 시나리오 없이 코드 분석으로 확인) | `_buildCandidatesText()` 신설 — 현재 도에 실제로 존재하는 코드 + 해당 계층 데이터가 비어있을 때만 LAZY 코드로 필터링. 국가기관은 이후 "싱글턴+지사 디렉터리" 모델로 재해석됨(§8 국가기관 클래스-인스턴스 문서 참고) — 이 필터링 원칙 자체는 유효하나 구현 세부는 그 재해석을 반영해 갱신 필요할 수 있음(v1.1 시점 미확인) |
+| 16 | "해운대구"라는 지명에 "대구"가 부분문자열로 포함돼 있어, 도 판별이 부산이 아니라 대구광역시로 오탐(부산 시청 파일럿 착수 중 발견) | "해운대구청 대표번호 알려주세요" → province=daegu로 오판별 | `_PROVINCE_NAME_FALSE_POSITIVE_WORDS`(기존 `_EMERGENCY_FALSE_POSITIVE_WORDS`·`_SIGUNGU_FALSE_POSITIVE_WORDS`와 동일 철학)에 '해운대구' 추가 — 다른 "○○대구/○○광주" 류 지명도 같은 클래스의 문제를 일으킬 수 있어 §6에 일반화된 한계로 별도 기재 |
 
 ---
 
 ## 6. 알려진 한계 / 후속 과제
 
-1. **"전남광주" 등 도 이름 약칭이 `PROVINCE_NAME_TO_CODE`에 부족** — 정식
-   명칭("전남광주통합특별시")만 등록돼 있어 실사용자가 흔히 쓰는 줄임말을
-   놓친다.
+1. **["전남광주" 정식 명칭은 등록됨, 짧은 "광주"는 여전히 의도적 배제 — v1.1 부분 해소]**
+   "전남광주통합특별시"(정식) + "광주광역시"(실사용자가 흔히 쓰는 현재
+   명칭)는 `PROVINCE_NAME_TO_CODE`에 등록됐다. 다만 짧은 "광주"만 단독으로
+   쓴 발화는 여전히 안 걸린다 — 경기도 광주시와 충돌 위험이 있어 의도적으로
+   배제한 설계 판단이며, 버그가 아니다(2026-07-24 재확인·재정정 결정).
 2. **`gwp-registry.js`의 `kregionalgov` triggers가 제주 지명 위주** — 다른
    도의 지명·기관명이 트리거에 부족해 전국 포털에서 인식률이 낮을 수 있다.
 3. **`resolveSigunguDept`/`resolveNationalAgencyLazy`의 SSE·정확도 우선
@@ -220,6 +249,101 @@ import해 `assembleGovSystemPrompt()`를 그대로 실행**시켜 얻은 `trace`
 5. **CORS/503 계열 문제(`l1-hanlim.gopang.net`, P2P 시그널링)** — 오늘 조사
    중 콘솔 로그에서 반복 확인됐으나, 이 지방행정 AC와는 별개 서브시스템이라
    범위 밖으로 남겨뒀다.
+6. **[v1.1 신규] "○○대구/○○광주" 류 지명 부분문자열 충돌은 일반화된 위험군이다**
+   — §5.1 #16(해운대구)에서 실제로 한 건 확인됐다. `_PROVINCE_NAME_FALSE_
+   POSITIVE_WORDS`에 사례가 발견될 때마다 추가하는 대증적 방식이라, 앞으로
+   시청 인스턴스가 늘어날수록(전국 롤아웃 계획 §8 참고) 같은 클래스의 버그가
+   더 나올 가능성이 있다 — 매 시/군/구 인스턴스 추가 시 그 지명이 다른 도
+   이름의 부분문자열을 포함하는지 사전 점검하는 걸 권장.
+7. **[v1.1 신규] 파이프라인 완결성 배선(§7)은 자동 테스트로 100% 검증되지
+   않는다** — `[STAFF_REVIEW_GATE]` 소비, 요청자 PDV 크로스탭 기록은 새 탭
+   열기·`postMessage`·IndexedDB 기록처럼 실제 브라우저 동작에 의존해서,
+   `gov-router.test.mjs`/`100-scenario-thought-experiment.mjs`는 로직
+   단위(태그 파싱·연락처 조회)만 독립 검증했고 실제 브라우저 왕복은 배포 후
+   수동 확인이 필요하다.
+8. **[v1.1 신규] `_buildCandidatesText()`의 province-aware 필터링(§5.1 #15)이
+   국가기관의 "싱글턴+지사 디렉터리" 재해석(§8 국가기관 클래스-인스턴스
+   문서)과 완전히 정합하는지 v1.1 시점에 재확인되지 않았다** — 두 변경이
+   비슷한 시기에 각각 다른 세션에서 진행돼, 실제 상호작용은 다음 100건
+   사고실험에서 검증 권장.
+
+---
+
+## 7. [v1.1 신설] 파이프라인 완결성 — 위치판별부터 PDV 기록까지
+
+이 절은 §1~§6이 다루는 "어느 기관으로 라우팅되는가"가 아니라, 그 다음
+단계 — **라우팅된 뒤 실제로 무슨 일이 일어나는가**를 다룬다.
+2026-07-25 별도 세션이 "요청자 위치판별 → 관할기관 선정 → 실제 업무처리
+→ 인간 담당자 최종 승인 → 요청자·기관 PDV 기록"이라는 5단계 전체가
+실제로 매끄럽게 이어지는지 코드를 직접 추적해 감사했다.
+
+| 단계 | 상태 | 근거 |
+|---|---|---|
+| ① 위치 판별 | ✅ | §2.2, §5.1 |
+| ② 관할기관 선정 | ✅ | §3, §5.1 #15 |
+| ③ 실제 업무 수행(`DEPT_TASK_REQUEST`) | ✅(의도된 설계) | `worker.js`의 `handleGovRelay`가 서버측에서 실제로 감지해 `dept_tasks` 컬렉션에 영속 기록. 단 `docs/DEPT-TASK-PROTOCOL_v1_1.md` 원칙4대로 "기록·추적만" — AI가 자동으로 완료 처리하지 않고, 대상 측이 `PATCH /gov/dept-task/:id`를 명시적으로 호출해야 완료된다 |
+| ④ 인간 담당자 최종 승인(`[STAFF_REVIEW_GATE]`, G18) | ✅ v1.1에서 배선 | 아래 §7.1 |
+| ⑤ 요청자+기관 PDV 기록 | ✅ v1.1에서 배선(요청자 측 신설) | 아래 §7.2 |
+
+### 7.1 `[STAFF_REVIEW_GATE]` — 있었는데 아무도 안 듣고 있던 태그
+
+`HUMAN-AUTHORITY-GATE-SCHEMA_v1_4.md`(G18, 2026-07-19 신설)는
+`_loadGovCommon()`을 통해 모든 정부기관 세션의 시스템 프롬프트에 실제로
+삽입되고 있었다(이 자체는 `AC-EXPERT-PARITY-THOUGHT-EXPERIMENT_2026-07-19.md`가
+이미 확인·수정한 상태). 그런데 LLM이 실제로 `[STAFF_REVIEW_GATE: task_id=...,
+handler_code=...]`를 응답에 내보내도, 그걸 소비하는 코드가 서버(`worker.js`
+— `AGY_VAULT_STORE`/`META_TABLE_UPDATE`/`DEPT_TASK_REQUEST`는 전부 처리
+블록이 있는데 이것만 없었다)에도 클라이언트(`pages/regional-gov.html`이
+`gov-router.js`에서 import하던 함수 4개엔 `resolveHandlerCodeFromTrace`·
+`findStaffContact`가 없었다 — 두 함수는 정의만 돼 있고 어디서도 호출되지
+않는 죽은 코드였다)에도 전혀 없었다. 실질적으로 사용자가 원문 브래킷
+문법을 그대로 채팅창에서 볼 위험이 있는 상태였다.
+
+**수정**(`pages/regional-gov.html`): `_consumeStaffReviewGate(replyText, trace)`
+신설. `resolveHandlerCodeFromTrace(trace)`로 담당부서 코드를 뽑고(LLM
+출력이 아니라 이번 턴 실제 trace에서 — 형식 준수 여부에 기능이 좌우되지
+않게), `findStaffContact(handlerCode)`로 실제 연락처(이름·전화·운영시간)를
+조회해 사람이 읽을 수 있는 안내문으로 바꾼다. 원문 태그는 제거.
+
+`handler_type=HONDI_STAFF_USER`(담당 직원 GUID로 인앱 알림 승인 — G18이
+"장래 활성화"로 문서화해둔 것)는 아직 구현 안 됨 — 현재는 전부
+`handler_type=DEPARTMENT_CONTACT`(연락처 안내, 실제 승인은 플랫폼 밖
+전화·방문에서 진행)로만 동작한다.
+
+### 7.2 요청자(시민) 측 PDV 기록 — 크로스탭 위임 패턴
+
+기관 측 기록(`AGY_VAULT_STORE` → `owner_pdv`, `worker.js:11719` 부근)은
+이미 작동했지만, 요청자 자신의 PDV에 상담 이력이 남는 경로가 없었다.
+`pages/regional-gov.html`은 `webapp.html`이 `window.open()`으로 여는
+별도 탭이라, `webapp.html` 쪽 `_recordPDV()`(`src/gopang/pdv/record.js`)를
+직접 호출할 수 없다 — 그 함수는 `_USER`/`_userLocation` 같은 `webapp.html`
+모듈 스코프 상태에 의존한다.
+
+**수정**: 새 프로토콜을 발명하지 않고 이 저장소에 이미 있던 크로스탭
+패턴(`gopang-app.js`의 `HONDI_P2P_CONNECT_REQUEST` 리스너, 2026-07-07
+신설)을 재사용했다.
+
+```
+regional-gov.html → window.opener.postMessage({type:'GOV_CONSULTATION_RECORD', ...})
+                                    ↓
+gopang-app.js(webapp.html 컨텍스트) → _recordPDV({type:'gov_consultation', serviceId:'kgov', ...})
+```
+
+`window.opener`가 없으면(직접 URL 접근 등) 조용히 스킵 — 필수 기능이
+아니라 부가 기록이라 실패해도 상담 자체는 막지 않는다.
+
+---
+
+## 8. [v1.1 신설] 관련 계획·설계 문서
+
+이 매뉴얼과 같은 아키텍처(원형 클래스/인스턴스)를 다루지만 각각 별도
+문서로 분리된 것들 — 이 문서를 갱신할 때 함께 확인 권장.
+
+| 문서 | 다루는 것 | 작성 세션 |
+|---|---|---|
+| `prompts/gov-tree/docs/NATIONWIDE-INSTANCE-ROLLOUT-PLAN_v1.0.md` | 제주 외 15개 도의 도청·시청·읍면동·국가기관 인스턴스화 순서·우선순위·검증 방법론 | 2026-07-24(v1.1 작성 세션과 동일) |
+| `prompts/gov-tree/docs/LAZY-INSTANCE-ENRICHMENT-DESIGN_v1.0.md` | "처음 호출 시 원형을 복제해 인스턴스 생성 → 대화 중 즉시 반영 → 사람이 추후 검증"이라는 인스턴스 점진적 커스터마이징 메커니즘 설계(구현 전 승인 대기). PocketBase 초안 계층 + git 확정 계층 하이브리드, 기존 `AGY_VAULT_STORE`/`META_TABLE_UPDATE` 패턴 재사용 | 2026-07-24 |
+| `prompts/gov-tree/09-national/NATIONAL-AGENCY-CLASS-INSTANCE-ARCHITECTURE_v1.0.md` | 국가기관(09-national) 전용 — "34개 싱글턴 + 도별 지사 디렉터리"라는 재해석. **이 매뉴얼의 §2 표(4번째 행 `NationalAgencyRegionalOffice`)와 서술이 이 재해석 이전 모델을 전제하고 있어, 다음 v1.2에서 §2를 함께 갱신할 필요가 있다**(v1.1 시점엔 상호 참조만 추가하고 §2 본문은 손대지 않음 — 09-national 트리는 별도 세션 작업 범위라 이 문서 작성자가 직접 검증하지 않았다) | 2026-07-24, 별도 세션(`09-national/` 전담) |
 
 ---
 
