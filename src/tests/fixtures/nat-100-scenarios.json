@@ -1,0 +1,602 @@
+[
+  {
+    "loc_code": "seoul",
+    "loc_name": "서울특별시",
+    "domain": "tax",
+    "text": "서울특별시 종합소득세 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeju",
+    "loc_name": "제주시",
+    "domain": "court",
+    "text": "제주시 나의사건검색 어떻게 하나요"
+  },
+  {
+    "loc_code": "chungbuk",
+    "loc_name": "청주시",
+    "domain": "nps",
+    "text": "청주시 국민연금 어떻게 하나요"
+  },
+  {
+    "loc_code": "gangwon",
+    "loc_name": "춘천시",
+    "domain": "nhis",
+    "text": "춘천시 건강보험료 어떻게 하나요"
+  },
+  {
+    "loc_code": "gangwon",
+    "loc_name": "강원도",
+    "domain": "immigration",
+    "text": "강원도 체류자격 연장 어떻게 하나요"
+  },
+  {
+    "loc_code": "seoul",
+    "loc_name": "강남구",
+    "domain": "post",
+    "text": "강남구 등기우편 어떻게 하나요"
+  },
+  {
+    "loc_code": "busan",
+    "loc_name": "부산 중구",
+    "domain": "police",
+    "text": "부산 중구 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "daejeon",
+    "loc_name": "대전광역시",
+    "domain": "labor",
+    "text": "대전광역시 산업재해 신청 어떻게 하나요"
+  },
+  {
+    "loc_code": "busan",
+    "loc_name": "기장군",
+    "domain": "prosecution",
+    "text": "기장군 고소장 접수 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongnam",
+    "loc_name": "진주시",
+    "domain": "coastguard",
+    "text": "진주시 해양사고 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeju",
+    "loc_name": "서귀포시",
+    "domain": "weather",
+    "text": "서귀포시 태풍정보 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeju",
+    "loc_name": "제주시",
+    "domain": "pps",
+    "text": "제주시 나라장터 입찰 어떻게 하나요"
+  },
+  {
+    "loc_code": "busan",
+    "loc_name": "기장군",
+    "domain": "mma",
+    "text": "기장군 입영 연기 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeonggi",
+    "loc_name": "고양시",
+    "domain": "veterans",
+    "text": "고양시 보훈급여 신청 어떻게 하나요"
+  },
+  {
+    "loc_code": "gangwon",
+    "loc_name": "강원도",
+    "domain": "laborrel",
+    "text": "강원도 부당해고 구제신청 어떻게 하나요"
+  },
+  {
+    "loc_code": "daegu",
+    "loc_name": "대구 중구",
+    "domain": "probation",
+    "text": "대구 중구 사회봉사명령 이행 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeju",
+    "loc_name": "제주시",
+    "domain": "animalquarantine",
+    "text": "제주시 반려동물 검역 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "ulsan",
+    "loc_name": "울산광역시",
+    "domain": "humanquarantine",
+    "text": "울산광역시 해외 출국 예방접종 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeonggi",
+    "loc_name": "수원시",
+    "domain": "agroquality",
+    "text": "수원시 원산지표시 위반 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "daejeon",
+    "loc_name": "대전광역시",
+    "domain": "fishquality",
+    "text": "대전광역시 수산물 원산지 검사 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongnam",
+    "loc_name": "경상남도",
+    "domain": "foodimport",
+    "text": "경상남도 수입식품 통관 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "gangwon",
+    "loc_name": "강원도",
+    "domain": "data",
+    "text": "강원도 공공데이터포털 이용 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongnam",
+    "loc_name": "창원시",
+    "domain": "radio",
+    "text": "창원시 무선국 등록 어떻게 하나요"
+  },
+  {
+    "loc_code": "chungbuk",
+    "loc_name": "청주시",
+    "domain": "env",
+    "text": "청주시 환경영향평가 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeju",
+    "loc_name": "제주도",
+    "domain": "laborimprove",
+    "text": "제주도 임금체불 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "seoul",
+    "loc_name": "서울 중구",
+    "domain": "internet",
+    "text": "서울 중구 인터넷과의존 상담 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongnam",
+    "loc_name": "진주시",
+    "domain": "airport",
+    "text": "진주시 항공편 지연 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeonbuk",
+    "loc_name": "전주시",
+    "domain": "port",
+    "text": "전주시 선박등록 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "chungbuk",
+    "loc_name": "청주시",
+    "domain": "customs",
+    "text": "청주시 통관 절차 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "seoul",
+    "loc_name": "종로구",
+    "domain": "bok",
+    "text": "종로구 화폐 교환 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeonggi",
+    "loc_name": "고양시",
+    "domain": "stat",
+    "text": "고양시 통계청 자료 요청 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeonbuk",
+    "loc_name": "전주시",
+    "domain": "forestresearch",
+    "text": "전주시 임업연구 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "busan",
+    "loc_name": "부산 중구",
+    "domain": "forestseed",
+    "text": "부산 중구 산림용 종자 검사 어떻게 하나요"
+  },
+  {
+    "loc_code": "busan",
+    "loc_name": "기장군",
+    "domain": "forestcoop",
+    "text": "기장군 산림조합 가입 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "chungnam",
+    "loc_name": "충청남도",
+    "domain": "police",
+    "text": "충청남도 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "ulsan",
+    "loc_name": "울산광역시",
+    "domain": "police",
+    "text": "울산광역시 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "daegu",
+    "loc_name": "대구광역시",
+    "domain": "police",
+    "text": "대구광역시 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "daejeon",
+    "loc_name": "대전광역시",
+    "domain": "police",
+    "text": "대전광역시 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "sejong",
+    "loc_name": "세종특별자치시",
+    "domain": "police",
+    "text": "세종특별자치시 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "incheon",
+    "loc_name": "인천광역시",
+    "domain": "police",
+    "text": "인천광역시 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "gangwon",
+    "loc_name": "강원도",
+    "domain": "police",
+    "text": "강원도 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "chungbuk",
+    "loc_name": "충청북도",
+    "domain": "police",
+    "text": "충청북도 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeonbuk",
+    "loc_name": "전북특별자치도",
+    "domain": "police",
+    "text": "전북특별자치도 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongnam",
+    "loc_name": "경상남도",
+    "domain": "police",
+    "text": "경상남도 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "seoul",
+    "loc_name": "서울특별시",
+    "domain": "police",
+    "text": "서울특별시 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongbuk",
+    "loc_name": "경상북도",
+    "domain": "police",
+    "text": "경상북도 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeonggi",
+    "loc_name": "경기도",
+    "domain": "police",
+    "text": "경기도 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeonnam-gwangju",
+    "loc_name": "전남광주통합특별시",
+    "domain": "police",
+    "text": "전남광주통합특별시 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongbuk",
+    "loc_name": "경상북도",
+    "domain": "police",
+    "text": "경상북도 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeonnam-gwangju",
+    "loc_name": "전남광주통합특별시",
+    "domain": "radio",
+    "text": "전남광주통합특별시 무선국 등록 어떻게 하나요"
+  },
+  {
+    "loc_code": "chungbuk",
+    "loc_name": "충청북도",
+    "domain": "nps",
+    "text": "충청북도 국민연금 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongnam",
+    "loc_name": "의창구",
+    "domain": "labor",
+    "text": "의창구 산업재해 신청 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongbuk",
+    "loc_name": "경상북도",
+    "domain": "post",
+    "text": "경상북도 등기우편 어떻게 하나요"
+  },
+  {
+    "loc_code": "ulsan",
+    "loc_name": "울산광역시",
+    "domain": "agroquality",
+    "text": "울산광역시 원산지표시 위반 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeonnam-gwangju",
+    "loc_name": "광산구",
+    "domain": "mma",
+    "text": "광산구 입영 연기 어떻게 하나요"
+  },
+  {
+    "loc_code": "busan",
+    "loc_name": "해운대구",
+    "domain": "nps",
+    "text": "해운대구 국민연금 어떻게 하나요"
+  },
+  {
+    "loc_code": "gangwon",
+    "loc_name": "강원도",
+    "domain": "agroquality",
+    "text": "강원도 원산지표시 위반 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "busan",
+    "loc_name": "기장군",
+    "domain": "laborrel",
+    "text": "기장군 부당해고 구제신청 어떻게 하나요"
+  },
+  {
+    "loc_code": "busan",
+    "loc_name": "부산 중구",
+    "domain": "laborimprove",
+    "text": "부산 중구 임금체불 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "chungbuk",
+    "loc_name": "청주시",
+    "domain": "bok",
+    "text": "청주시 화폐 교환 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeonnam-gwangju",
+    "loc_name": "광산구",
+    "domain": "weather",
+    "text": "광산구 태풍정보 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeonnam-gwangju",
+    "loc_name": "광산구",
+    "domain": "radio",
+    "text": "광산구 무선국 등록 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeonggi",
+    "loc_name": "고양시",
+    "domain": "humanquarantine",
+    "text": "고양시 해외 출국 예방접종 어떻게 하나요"
+  },
+  {
+    "loc_code": "busan",
+    "loc_name": "해운대구",
+    "domain": "weather",
+    "text": "해운대구 태풍정보 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "daejeon",
+    "loc_name": "대전광역시",
+    "domain": "probation",
+    "text": "대전광역시 사회봉사명령 이행 어떻게 하나요"
+  },
+  {
+    "loc_code": "seoul",
+    "loc_name": "서울 중구",
+    "domain": "bok",
+    "text": "서울 중구 화폐 교환 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongbuk",
+    "loc_name": "경상북도",
+    "domain": "humanquarantine",
+    "text": "경상북도 해외 출국 예방접종 어떻게 하나요"
+  },
+  {
+    "loc_code": "ulsan",
+    "loc_name": "울산광역시",
+    "domain": "laborrel",
+    "text": "울산광역시 부당해고 구제신청 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeonbuk",
+    "loc_name": "전북특별자치도",
+    "domain": "nhis",
+    "text": "전북특별자치도 건강보험료 어떻게 하나요"
+  },
+  {
+    "loc_code": "gangwon",
+    "loc_name": "강원도",
+    "domain": "nps",
+    "text": "강원도 국민연금 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeonbuk",
+    "loc_name": "전북특별자치도",
+    "domain": "internet",
+    "text": "전북특별자치도 인터넷과의존 상담 어떻게 하나요"
+  },
+  {
+    "loc_code": "chungbuk",
+    "loc_name": "청주시",
+    "domain": "immigration",
+    "text": "청주시 체류자격 연장 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeonggi",
+    "loc_name": "고양시",
+    "domain": "foodimport",
+    "text": "고양시 수입식품 통관 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeonggi",
+    "loc_name": "고양시",
+    "domain": "forestresearch",
+    "text": "고양시 임업연구 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongbuk",
+    "loc_name": "포항시",
+    "domain": "bok",
+    "text": "포항시 화폐 교환 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "seoul",
+    "loc_name": "종로구",
+    "domain": "animalquarantine",
+    "text": "종로구 반려동물 검역 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "seoul",
+    "loc_name": "강남구",
+    "domain": "probation",
+    "text": "강남구 사회봉사명령 이행 어떻게 하나요"
+  },
+  {
+    "loc_code": "ulsan",
+    "loc_name": "울산광역시",
+    "domain": "animalquarantine",
+    "text": "울산광역시 반려동물 검역 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongnam",
+    "loc_name": "진주시",
+    "domain": "internet",
+    "text": "진주시 인터넷과의존 상담 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeonnam-gwangju",
+    "loc_name": "광산구",
+    "domain": "laborrel",
+    "text": "광산구 부당해고 구제신청 어떻게 하나요"
+  },
+  {
+    "loc_code": "seoul",
+    "loc_name": "강남구",
+    "domain": "forestseed",
+    "text": "강남구 산림용 종자 검사 어떻게 하나요"
+  },
+  {
+    "loc_code": "daegu",
+    "loc_name": "대구광역시",
+    "domain": "post",
+    "text": "대구광역시 등기우편 어떻게 하나요"
+  },
+  {
+    "loc_code": "busan",
+    "loc_name": "부산광역시",
+    "domain": "labor",
+    "text": "부산광역시 산업재해 신청 어떻게 하나요"
+  },
+  {
+    "loc_code": "seoul",
+    "loc_name": "종로구",
+    "domain": "weather",
+    "text": "종로구 태풍정보 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongnam",
+    "loc_name": "진주시",
+    "domain": "immigration",
+    "text": "진주시 체류자격 연장 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongbuk",
+    "loc_name": "경상북도",
+    "domain": "laborimprove",
+    "text": "경상북도 임금체불 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeongnam",
+    "loc_name": "의창구",
+    "domain": "forestcoop",
+    "text": "의창구 산림조합 가입 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "chungbuk",
+    "loc_name": "충청북도",
+    "domain": "tax",
+    "text": "충청북도 종합소득세 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "seoul",
+    "loc_name": "서울특별시",
+    "domain": "humanquarantine",
+    "text": "서울특별시 해외 출국 예방접종 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeonbuk",
+    "loc_name": "전주시",
+    "domain": "labor",
+    "text": "전주시 산업재해 신청 어떻게 하나요"
+  },
+  {
+    "loc_code": "chungnam",
+    "loc_name": "충청남도",
+    "domain": "port",
+    "text": "충청남도 선박등록 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "seoul",
+    "loc_name": "서울 중구",
+    "domain": "bok",
+    "text": "서울 중구 화폐 교환 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeju",
+    "loc_name": "제주도",
+    "domain": "animalquarantine",
+    "text": "제주도 반려동물 검역 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "daegu",
+    "loc_name": "대구 중구",
+    "domain": "pps",
+    "text": "대구 중구 나라장터 입찰 어떻게 하나요"
+  },
+  {
+    "loc_code": "daegu",
+    "loc_name": "대구 중구",
+    "domain": "police",
+    "text": "대구 중구 112 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "chungnam",
+    "loc_name": "천안시",
+    "domain": "forestseed",
+    "text": "천안시 산림용 종자 검사 어떻게 하나요"
+  },
+  {
+    "loc_code": "gyeonggi",
+    "loc_name": "수원시",
+    "domain": "coastguard",
+    "text": "수원시 해양사고 신고 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeonnam-gwangju",
+    "loc_name": "광산구",
+    "domain": "weather",
+    "text": "광산구 태풍정보 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "daejeon",
+    "loc_name": "대전광역시",
+    "domain": "forestcoop",
+    "text": "대전광역시 산림조합 가입 문의 어떻게 하나요"
+  },
+  {
+    "loc_code": "jeju",
+    "loc_name": "제주도",
+    "domain": "foodimport",
+    "text": "제주도 수입식품 통관 문의 어떻게 하나요"
+  }
+]
