@@ -70,7 +70,8 @@
 </div>
 
 <script type="module">
-import { assembleGovSystemPrompt, resolveGovAgency, resolveProvinceCode, resolveAgencyDisplayName }
+import { assembleGovSystemPrompt, resolveGovAgency, resolveProvinceCode, resolveAgencyDisplayName,
+         resolveHandlerCodeFromTrace, findStaffContact }
   from '/src/gopang/gov/gov-router.js';
 import { escHtml, appendBubble, appendTyping }
   from '/src/gopang/ui/chat-shell.js';
@@ -152,6 +153,65 @@ const ci = mountChatInput(document.getElementById('chat-input-slot'), {
   },
 });
 
+// ── Fix ④ (2026-07-25) — [STAFF_REVIEW_GATE] 태그 소비 ─────────────
+// 발견 경위: HUMAN-AUTHORITY-GATE-SCHEMA(G18)가 _loadGovCommon()을 통해
+// 모든 정부기관 세션의 시스템 프롬프트에 실제로 삽입되고 있어서, LLM이
+// [STAFF_REVIEW_GATE: task_id=..., handler_code=...] 태그를 실제로 응답에
+// 내보낼 수 있는 상태였다. 그런데 이 태그를 소비하는 코드가 서버(worker.js
+// — AGY_VAULT_STORE/META_TABLE_UPDATE/DEPT_TASK_REQUEST는 전부 처리 블록이
+// 있는데 이것만 없음)에도, 클라이언트(이 페이지가 기존에 import하던 4개
+// 함수엔 resolveHandlerCodeFromTrace·findStaffContact가 없었음)에도 전혀
+// 없어서, 사용자가 원문 브래킷 문법을 그대로 채팅창에서 보게 될 위험이
+// 있었다. handler_code는 LLM 출력이 아니라 이번 턴에 실제로 매칭된
+// trace에서 이 함수가 직접 resolveHandlerCodeFromTrace(trace)로 뽑는다
+// (G18 구현 참고 문구가 명시한 방식 그대로 — 형식 준수 여부에 기능이
+// 좌우되지 않게).
+const STAFF_GATE_RE = /\[STAFF_REVIEW_GATE:[\s\S]*?\]/;
+async function _consumeStaffReviewGate(replyText, trace) {
+  if (!STAFF_GATE_RE.test(replyText)) return replyText;
+  let noteText;
+  try {
+    const handlerCode = resolveHandlerCodeFromTrace(trace);
+    const contact = handlerCode ? await findStaffContact(handlerCode) : null;
+    noteText = contact
+      ? `\n\n📋 이 요청은 담당부서 확인이 필요합니다 — ${contact.name}` +
+        (contact.phone ? ` (${contact.phone}${contact.hours ? ', ' + contact.hours : ''})` : '') +
+        `로 문의하시면 실제 접수·승인이 진행됩니다.`
+      : `\n\n📋 이 요청은 담당부서 확인이 필요합니다 — 정확한 연락처를 지금 확인하지 못했습니다. 정부24(gov.kr) 또는 해당 기관 대표전화로 문의해 주세요.`;
+  } catch (e) {
+    console.warn('[RegionalGov] STAFF_REVIEW_GATE 연락처 조회 실패:', e.message);
+    noteText = `\n\n📋 이 요청은 담당부서 확인이 필요합니다 — 정확한 연락처를 지금 확인하지 못했습니다. 정부24(gov.kr) 또는 해당 기관 대표전화로 문의해 주세요.`;
+  }
+  return replyText.replace(STAFF_GATE_RE, '').trim() + noteText;
+}
+
+// ── Fix ⑤ (2026-07-25) — 요청자(시민) 측 PDV 기록 ──────────────────
+// 발견 경위: 기관 측 기록(AGY_VAULT_STORE → owner_pdv, worker.js)은 실제로
+// 작동하지만, 요청자 자신의 PDV에 상담 이력이 남는 경로가 이 페이지엔
+// 전혀 없었다. 이 페이지가 로그인 세션을 공유하는 별도 탭(webapp.html이
+// window.open으로 연 탭)이라, webapp.html 쪽 _recordPDV()(src/gopang/pdv/
+// record.js)를 여기서 직접 호출할 수 없다 — 그 함수는 _USER/_userLocation
+// 같은 webapp.html 모듈 스코프 상태에 의존한다. 대신 이 저장소가 이미 쓰고
+// 있는 크로스탭 패턴(HONDI_P2P_CONNECT_REQUEST, gopang-app.js:761)과 동일한
+// 방식으로 window.opener.postMessage 후 gopang-app.js가 받아서 자기
+// 컨텍스트 안에서 _recordPDV()를 호출하도록 한다 — 새 프로토콜을 발명하지
+// 않고 이미 검증된 패턴을 재사용.
+function _recordRequesterPdv(userText, replyText, agency, provinceCode, trace) {
+  try {
+    if (!window.opener) return; // 새 탭으로 안 열렸으면(직접 URL 접근 등) 조용히 스킵 — 필수 기능 아님
+    const agencyDisplayName = resolveAgencyDisplayName(trace) || agency;
+    window.opener.postMessage({
+      type: 'GOV_CONSULTATION_RECORD',
+      what: userText.slice(0, 200),
+      summary: replyText.slice(0, 200),
+      agency, agencyDisplayName, provinceCode,
+      ts: new Date().toISOString(),
+    }, location.origin);
+  } catch (e) {
+    console.warn('[RegionalGov] 요청자 PDV 기록 요청 실패(무시):', e.message);
+  }
+}
+
 // ── AI 호출 — jeju.hondi.net이 쓰던 것과 동일한 공용 워커 엔드포인트.
 // 오리진과 무관한 순수 서버 호출이라 그대로 재사용한다. ──────────────
 async function _govRelayCompletion(agencyPrompt, msgs, agency, provinceCode) {
@@ -226,7 +286,11 @@ async function _callAI(latestUserText, typingEl) {
   document.title = agencyDisplayName ? `${agencyDisplayName} AI`
     : (provinceLabel ? `${provinceLabel} AI` : '전국 지방행정 AI');
 
-  return _govRelayCompletion(sp, messages, agency, provinceCode);
+  return _govRelayCompletion(sp, messages, agency, provinceCode).then(async (rawReply) => {
+    const reply = await _consumeStaffReviewGate(rawReply, trace);
+    _recordRequesterPdv(latestUserText, reply, agency, provinceCode, trace);
+    return reply;
+  });
 }
 
 // ── 초기화 ─────────────────────────────────────────────────────

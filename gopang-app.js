@@ -768,6 +768,32 @@ window.addEventListener('message', (e) => {
   );
 });
 
+// ── 요청자(시민) 측 PDV 기록 — 정부기관 AC 새 탭(pages/regional-gov.html)
+// 위임 수신 (2026-07-25 신설) ────────────────────────────────────────
+// 발견 경위: 기관 측(AGY_VAULT_STORE→owner_pdv)은 실제로 기록되는데,
+// 요청자 자신의 PDV엔 정부기관 상담 이력이 전혀 안 남고 있었다.
+// regional-gov.html은 _USER/_userLocation 같은 이 파일(webapp.html 쪽
+// 최상위 컨텍스트) 모듈 스코프 상태에 의존하는 _recordPDV()를 직접 호출할
+// 수 없는 별도 탭이라(window.open으로 열림), 바로 위 HONDI_P2P_CONNECT_
+// REQUEST와 동일한 크로스탭 위임 패턴을 그대로 재사용한다 — 새 프로토콜을
+// 만들지 않는다.
+window.addEventListener('message', (e) => {
+  if (e.origin !== location.origin) return;
+  if (e.data?.type !== 'GOV_CONSULTATION_RECORD') return;
+  const { what, summary, agency, agencyDisplayName, provinceCode } = e.data;
+  if (!what) return;
+  import('./src/gopang/pdv/record.js').then(({ _recordPDV }) => _recordPDV({
+    type: 'gov_consultation',
+    serviceId: 'kgov',
+    what,
+    summary: summary || what,
+    why: `${agencyDisplayName || agency || '정부기관'} 상담`,
+    how: 'text',
+    domain: 'personal',
+    data: { agency, agencyDisplayName, provinceCode },
+  })).catch(err => console.warn('[GovConsultation] 요청자 PDV 기록 실패(무시):', err.message));
+});
+
 // 알림 클릭으로 새 창이 열린 경우 — URL 쿼리 파라미터(?playSound=...) 존재
 // 여부만 보고 무조건 강제 재생 (sound 값/none 체크 등 조건 전부 제거)
 (() => {
