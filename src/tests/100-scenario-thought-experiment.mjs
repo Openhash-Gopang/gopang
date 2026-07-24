@@ -343,3 +343,29 @@ if (failures.length) {
     (f.reasons || []).forEach(r => console.log(`   - ${r}`));
   });
 }
+
+console.log('\n=== 0단계 전용 검증 — candidatesText province-aware 필터링 ===');
+await (async () => {
+  const captureFn = (holder) => async (text, candidatesText) => { holder.value = candidatesText; return null; };
+  const jejuHolder = {}, busanHolder = {};
+  await assembleGovSystemPrompt('아무 상담이나 부탁드려요', '제주시', captureFn(jejuHolder), null);
+  await assembleGovSystemPrompt('아무 상담이나 부탁드려요', '해운대구', captureFn(busanHolder), null);
+  const capturedJeju = jejuHolder.value || '';
+  const capturedBusan = busanHolder.value || '';
+
+  const checks = [
+    { label: '제주 후보엔 SP-NAT-TAX(정적 인스턴스 있음) 포함', ok: capturedJeju.includes('SP-NAT-TAX') },
+    { label: '제주 후보엔 SP-NATIONAL-LAZY 없음(정적 인스턴스 있어 불필요)', ok: !capturedJeju.includes('SP-NATIONAL-LAZY') },
+    { label: '제주 후보엔 SP-SIGUNGU-LAZY 없음(SPECIAL_AUTONOMOUS라 기초자치단체 없음)', ok: !capturedJeju.includes('SP-SIGUNGU-LAZY') },
+    { label: '부산 후보엔 SP-NAT-TAX 없음(정적 인스턴스 없어 골라도 실패했을 코드)', ok: !capturedBusan.includes('SP-NAT-TAX') },
+    { label: '부산 후보엔 SP-NATIONAL-LAZY 포함(국가기관 정적 인스턴스 없음)', ok: capturedBusan.includes('SP-NATIONAL-LAZY') },
+    { label: '부산 후보엔 SP-SIGUNGU-LAZY 포함(GENERAL 도)', ok: capturedBusan.includes('SP-SIGUNGU-LAZY') },
+  ];
+  let stage0Pass = 0, stage0Fail = 0;
+  for (const c of checks) {
+    if (c.ok) { stage0Pass++; console.log(`✅ ${c.label}`); }
+    else { stage0Fail++; console.log(`❌ ${c.label}`); }
+  }
+  console.log(`0단계 검증: ${stage0Pass}/${checks.length} 통과`);
+  if (stage0Fail > 0) process.exitCode = 1;
+})();

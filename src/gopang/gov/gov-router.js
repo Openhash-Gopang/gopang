@@ -1252,10 +1252,45 @@ function _isNationalCode(code) {
 // classifyFn: async (text, candidatesText) => 'SP-XXX-YYY' | 'NONE' | null
 // webapp.html이 실제 LLM 호출로 구현해서 주입한다(라우터 자체는 네트워크 호출을
 // 안 한다 — 기존 구조 유지). 주입 안 하면 그냥 기존처럼 무매칭으로 끝난다.
+// ── candidatesText province-aware 필터링 (2026-07-24 신설, 전국 인스턴스
+// 롤아웃 계획 0단계) ─────────────────────────────────────────────
+// 이전엔 ROUTE_DESCRIPTIONS의 모든 코드(제주 전용 정적 인스턴스 포함)를
+// 도 구분 없이 LLM에게 후보로 통째로 보여줬다. 국가기관 지사가 지금은
+// 제주만 정적 인스턴스가 있는 구조라, 비제주 사용자 질문에 LLM이
+// SP-NAT-TAX 같은 제주 전용 코드를 골라도 _findTableEntry가 조용히 못
+// 찾아 실패하고(SP-NATIONAL-LAZY를 골랐어야 정답) 일반 안내로 떨어지는
+// 문제가 있었다. 전국 인스턴스화가 진행될수록(15개 도 추가) 이 문제의
+// 발생 빈도가 함께 커지므로, 데이터를 채우기 전에 먼저 후보 목록 자체를
+// "이 도에서 실제로 존재하는 코드"로만 한정한다.
+function _buildCandidatesText() {
+  const provinceCode = _resolveProvinceCode();
+  const registryEntry = PROVINCE_REGISTRY[provinceCode];
+  const codes = new Set();
+
+  // 실사된 도청 실국·시청·국가기관 코드만 후보에 넣는다(빈 배열이면
+  // 아무것도 안 들어가고, 대신 아래에서 LAZY 코드가 그 자리를 메운다).
+  for (const e of _l2Table()) codes.add(e.code);
+  for (const e of _cityTable()) codes.add(e.code);
+  for (const e of _nationalTable()) codes.add(e.code);
+
+  // 국가기관 정적 인스턴스가 없는 도(현재 제주 외 전부)는 SP-NAT-* 코드
+  // 대신 SP-NATIONAL-LAZY를 후보로 준다 — 정적 인스턴스가 있으면(제주)
+  // 이미 위에서 실제 코드가 채워졌으므로 LAZY는 불필요.
+  if (_nationalTable().length === 0) codes.add('SP-NATIONAL-LAZY');
+
+  // 시군구(기초자치단체) 지연조회는 GENERAL 도에서만 의미가 있다
+  // (SPECIAL_AUTONOMOUS인 제주는 기초자치단체 자체가 없음).
+  if (registryEntry?.govType === 'GENERAL') codes.add('SP-SIGUNGU-LAZY');
+
+  return [...codes]
+    .filter(code => ROUTE_DESCRIPTIONS[code])
+    .map(code => `${code}: ${ROUTE_DESCRIPTIONS[code]}`)
+    .join('\n');
+}
+
 async function _classifyFallback(text, classifyFn) {
   if (!classifyFn) return null;
-  const candidatesText = Object.entries(ROUTE_DESCRIPTIONS)
-    .map(([code, d]) => `${code}: ${d}`).join('\n');
+  const candidatesText = _buildCandidatesText();
   try {
     const code = await classifyFn(text, candidatesText);
     if (!code || code === 'NONE' || !ROUTE_DESCRIPTIONS[code]) return null;
