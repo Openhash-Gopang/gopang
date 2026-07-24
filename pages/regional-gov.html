@@ -62,13 +62,6 @@
 </head>
 <body>
 
-<div id="top-bar">
-  <div id="tb-icon">🏛</div>
-  <div id="tb-sub">로딩 중…</div>
-  <div id="trace-badge"></div>
-  <button id="tb-back">고팡으로</button>
-</div>
-
 <div id="err-banner"></div>
 <div id="chat-thread"></div>
 
@@ -79,7 +72,7 @@
 <script type="module">
 import { assembleGovSystemPrompt, resolveGovAgency, resolveProvinceCode, resolveAgencyDisplayName }
   from '/src/gopang/gov/gov-router.js';
-import { escHtml, appendBubble, appendTyping, wireBackButton, setSubText, setTraceBadge }
+import { escHtml, appendBubble, appendTyping }
   from '/src/gopang/ui/chat-shell.js';
 import { mountChatInput, THEME_LINE_GREEN } from '/src/gopang/ui/chat-input.js';
 
@@ -87,7 +80,6 @@ const PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
 
 // ── GWP 파라미터 파싱 — 다른 GWP 페이지들과 동일 규약 ──────────────
 const _qs     = new URLSearchParams(location.search);
-const RETURN  = _qs.get('return') || '/webapp.html';
 let   GWP_CTX = '';
 if (_qs.get('ctx')) {
   try {
@@ -107,7 +99,13 @@ function _loadUser() {
 let messages = [];
 let _lastAgency = 'gov_do';
 
-wireBackButton({ returnUrl: RETURN });
+// 2026-07-23 — 페이지 자체 헤더(구 #top-bar, 초록)를 삭제했다. 이
+// 웹뷰를 감싸는 상위 크롬(제목표시줄)이 이미 있어 헤더가 두 겹으로
+// 겹쳐 보이는 문제가 실사로 지적됨 — 상위 크롬 하나만 남기고, 그
+// document.title을 실제 호출된 기관명으로 갱신하는 쪽으로 통일한다
+// (아래 _callAI 안 document.title 갱신부 참고). "고팡으로" 버튼도
+// 함께 없앴다 — 상위 크롬 자체의 닫기 버튼이 새 탭을 닫고 원래
+// AI 비서 탭으로 돌아가는 동일한 역할을 한다.
 
 // 2026-07-23 — 입력창(첨부·카메라·마이크·전송)은 공용 chat-input.js가
 // 담당한다(webapp.html과 동일 모듈 공유, 옵션 B). 이 페이지는 기존
@@ -219,15 +217,14 @@ async function _callAI(latestUserText, typingEl) {
   }
   // 2026-07-23 수정 — trace.join(' > ')는 "JEJU-GOV-COMMON > SP-DO-000 >
   // SP-CITY-JEJU" 같은 개발자용 SP 코드를 그대로 사용자에게 보여주고
-  // 있었다. resolveAgencyDisplayName()으로 실제 한글 기관/부서명으로
-  // 바꿔 보여준다 — 특정 안 되면(예: 공통 레이어 응답만 나온 경우)
-  // provinceLabel(아래에서 곧 계산)로 대체한다.
+  // 있었다. resolveAgencyDisplayName()으로 실제 한글 기관/부서명을 뽑아
+  // document.title에 반영한다(페이지 자체 헤더를 없앴으므로, 상위 크롬의
+  // 제목표시줄이 유일한 헤더 — "제주도청 AI" 같은 광역 단위 대신 실제
+  // 호출된 "제주시청 AI"가 보이도록 도청 라벨보다 우선한다).
   const agencyDisplayName = resolveAgencyDisplayName(trace);
-  setTraceBadge(agencyDisplayName || '');
-
   const provinceLabel = { jeju: '제주도청', seoul: '서울시청', busan: '부산시청', gyeonggi: '경기도청' }[provinceCode];
-  if (!agencyDisplayName) setTraceBadge(provinceLabel || '전국 지방행정 안내');
-  document.title = provinceLabel ? `${provinceLabel} AI` : '전국 지방행정 AI';
+  document.title = agencyDisplayName ? `${agencyDisplayName} AI`
+    : (provinceLabel ? `${provinceLabel} AI` : '전국 지방행정 AI');
 
   return _govRelayCompletion(sp, messages, agency, provinceCode);
 }
@@ -239,13 +236,11 @@ async function _callAI(latestUserText, typingEl) {
     // 같은 오리진이라 SSO 자체가 필요 없다 — 여기서 "로그인 안 됨"은
     // 정말로 이 브라우저에 로그인 기록이 없다는 뜻이다(교차 오리진
     // 타이밍 문제가 아니다). 정직하게 안내한다.
-    setSubText('로그인이 필요합니다');
     const banner = document.getElementById('err-banner');
     banner.style.display = 'block';
     banner.innerHTML = '먼저 <a href="/webapp.html" style="color:#991B1B;text-decoration:underline">AI 비서 화면</a>에서 로그인해 주세요.';
     return;
   }
-  setSubText('Lv.L0');
 
   // ★ 2026-07-23 수정 — 어느 기관인지 이 시점엔 아직 확정되지 않는다
   // (province/agency는 첫 AI 응답이 SP를 조립해야 알 수 있음, gov-router.js
