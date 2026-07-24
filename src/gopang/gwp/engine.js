@@ -3,7 +3,7 @@
  */
 import { _gwpActive, _gwpService, _gwpTab, _gwpTabTimer,
          setGwpActive, setGwpService, setGwpTab, setGwpTabTimer,
-         _USER, PROXY } from '../core/state.js';
+         _USER, PROXY, _userLocation } from '../core/state.js';
 import { appendBubble } from '../ui/bubble.js';
 import { _recordPDV } from '../pdv/record.js';
 import { _patchL1LedgerUserHash, _patchPdvChainHeight,
@@ -262,7 +262,15 @@ export function _gwpClose(showReturn = true) {
 function _readPdvField(field) {
   try {
     const user = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
-    const addr = localStorage.getItem('gopang_profile_address');
+    // ★ 2026-07-24 수정 — localStorage의 'gopang_profile_address'는 어디서도
+    // 써진 적 없는 죽은 키였다(location.js 쪽에서 이미 확인됨). 대신
+    // location.js가 앱 시작 시 이미 해석해둔 _userLocation.address(①프로필
+    // 서버값 우선 ②없으면 GPS+Kakao 역지오코딩)를 그대로 읽는다 — 이 값은
+    // 이미 계산 완료된 상태라 여기서 새로 네트워크 호출을 할 필요가 없고,
+    // 이 함수를 동기로 유지할 수 있다(호출부가 버튼 클릭 핸들러 안이라
+    // 비동기로 바꿔도 문제는 없었겠지만, 이미 있는 값을 재사용하는 쪽이
+    // 더 간단하고 빠르다).
+    const addr = _userLocation?.address || null;
     const KNOWN = {
       '주소': addr || null,
       '이름': user?.name || null,
