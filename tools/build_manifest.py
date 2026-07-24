@@ -247,6 +247,35 @@ for f in PROMPTS.iterdir():
 for code in sorted(supplier_groups):
     manifest[f'AGENT-SUPPLIER-{code}'] = best(supplier_groups[code])
 
+# 6) SP-INDUSTRY-TRANSFORM-COMMON — prompts/SP-INDUSTRY-TRANSFORM-COMMON_vX.Y.md
+#    2026-07-23 신설(사용자 지시로 발견된 결함 수정 — UNIVERSAL-common·
+#    K-Public_common과 정확히 동일한 사고 패턴): worker.js의 실시간 SP 생성
+#    기능이 이 문서를 manifest로 조회하는데, 이 스크립트에 스캔 블록이 없어
+#    수동으로 추가한 키가 매 push마다(이 스크립트가 파일을 완전히 재생성
+#    하므로) 조용히 지워지는 회귀가 실제로 2회 발생했다(PR #63·#64 모두
+#    같은 원인으로 무력화됨, 2026-07-23 실사로 확인). AGENT-SUPPLIER-COMMON과
+#    동일한 스캔 패턴을 추가해 재발을 원천 차단한다.
+sp_industry_transform_common_files = [
+    f.name for f in PROMPTS.iterdir()
+    if re.match(r'^SP-INDUSTRY-TRANSFORM-COMMON_v', f.name) and f.name.endswith('.md')
+]
+if sp_industry_transform_common_files:
+    manifest['SP-INDUSTRY-TRANSFORM-COMMON'] = best(sp_industry_transform_common_files)
+
+# 6-b) SP-INDUSTRY-TRANSFORM-NN 계열 — prompts/SP-INDUSTRY-TRANSFORM-NN_slug_vX.Y.txt
+#      AGENT-SUPPLIER-NN과 동일한 스캔 패턴(코드만 다름).
+industry_transform_groups: dict[str, list[str]] = defaultdict(list)
+for f in PROMPTS.iterdir():
+    name = f.name
+    if not name.endswith('.txt') or 'LATEST' in name:
+        continue
+    m = re.match(r'^(SP-INDUSTRY-TRANSFORM-(\d+))_', name)
+    if m:
+        industry_transform_groups[m.group(2)].append(name)
+
+for code in sorted(industry_transform_groups):
+    manifest[f'SP-INDUSTRY-TRANSFORM-{code}'] = best(industry_transform_groups[code])
+
 # ── 출력 ──────────────────────────────────────────────────────────────
 for key, fname in manifest.items():
     print(f'  {key}: {fname}')
