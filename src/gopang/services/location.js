@@ -1,4 +1,4 @@
-import { setUserLocation, setLocationReady, setLocationPending, _userLocation, _locationReady, _locationPending, _installBannerVisible } from '../core/state.js';
+import { setUserLocation, setLocationReady, setLocationPending, _userLocation, _locationReady, _locationPending, _installBannerVisible, PROXY } from '../core/state.js';
 import { CFG } from '../core/config.js';
 
 export function _scheduleLocation() {
@@ -13,24 +13,56 @@ export function _scheduleLocation() {
 export function _initLocation() {
   if (_locationPending || _locationReady) return;
   setLocationPending(true);
+  _resolveLocation();
+}
+
+// ── 위치 확보 순서 재설계 (2026-07-23 — 실사로 발견한 문제 수정) ──────────
+// 기존 코드는 "GPS 실패 시 → localStorage의 gopang_profile_address 조회"
+// 순서였는데, 그 localStorage 키는 저장소 전체에서 읽히기만 하고 어디서도
+// 쓰인 적이 없는 죽은 경로였다 — 그래서 GPS가 거부되면 곧바로 UNKNOWN으로
+// 떨어져 SP가 사용자에게 주소를 직접 물어보는 문제가 실사로 확인됐다.
+//
+// 새 순서(주피터 지시): ① 사용자 프로필에 저장된 주소가 있으면 최우선으로
+// 그걸 쓴다(서버 profiles.address — register-flow.js가 가입 시 이미
+// 채워둔 바로 그 필드). ② 프로필에 없으면(아직 프로필 작성 전) GPS
+// 좌표를 얻어 Kakao 역지오코딩(coord2address, 이미 존재하는 /geocode
+// 엔드포인트 — register-flow.js가 가입 화면에서 쓰는 것과 동일)으로
+// 행정주소를 도출한다. 기존 코드는 GPS 성공 시에도 좌표만 쓰고 이
+// Kakao 변환을 아예 하지 않았다.
+async function _resolveLocation() {
+  const profileAddr = await _loadProfileAddressFromServer();
+  if (profileAddr) {
+    setUserLocation({ source: 'PROFILE', address: profileAddr, lat: null, lng: null });
+    _updateLocationInPrompt();
+    setLocationPending(false); setLocationReady(true);
+    return;
+  }
+
   if (!navigator.geolocation) {
-    _loadLocationFromPDV().finally(() => { setLocationPending(false); setLocationReady(true); });
+    setUserLocation({ source: 'UNKNOWN', address: null, lat: null, lng: null });
+    setLocationPending(false); setLocationReady(true);
     return;
   }
   let watchId = null, gotFirst = false;
   function startWatch(hi) {
     if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     watchId = navigator.geolocation.watchPosition(
-      (pos) => {
+      async (pos) => {
         const lat = pos.coords.latitude, lng = pos.coords.longitude, acc = pos.coords.accuracy;
+        // 먼저 좌표만으로 즉시 반영(응답성 우선) — Kakao 변환은 비동기로 뒤이어 덮어씀
         setUserLocation({ lat, lng, accuracy: acc, source: 'GPS', address: _userLocation ? _userLocation.address : null, region: _userLocation ? _userLocation.region : null });
         _updateLocationInPrompt();
         if (!gotFirst) { gotFirst = true; setLocationPending(false); setLocationReady(true); if (!hi) startWatch(true); }
+        const addr = await _reverseGeocodeViaKakao(lat, lng);
+        if (addr) {
+          setUserLocation({ lat, lng, accuracy: acc, source: 'GPS+KAKAO', address: addr, region: _userLocation ? _userLocation.region : null });
+          _updateLocationInPrompt();
+        }
       },
       (err) => {
         navigator.geolocation.clearWatch(watchId); watchId = null;
         if (!hi && err.code !== err.PERMISSION_DENIED) startWatch(true);
-        else { setLocationPending(false); _loadLocationFromPDV().finally(() => setLocationReady(true)); }
+        else { setLocationPending(false); setUserLocation({ source: 'UNKNOWN', address: null, lat: null, lng: null }); setLocationReady(true); }
       },
       { enableHighAccuracy: hi, timeout: hi ? 8000 : 5000, maximumAge: 0 }
     );
@@ -38,14 +70,44 @@ export function _initLocation() {
   startWatch(false);
 }
 
-export async function _loadLocationFromPDV() {
-  const addr = localStorage.getItem('gopang_profile_address');
-  if (addr) setUserLocation({ source: 'PDV', address: addr, lat: null, lng: null });
-  else {
-    try {
-      const d = await fetch('https://ipapi.co/json/').then(r => r.json());
-      setUserLocation(d.latitude ? { source: 'IP', address: d.city, lat: d.latitude, lng: d.longitude } : { source: 'UNKNOWN', address: null, lat: null, lng: null });
-    } catch { setUserLocation({ source: 'UNKNOWN', address: null, lat: null, lng: null }); }
+// 로그인한 본인의 프로필 주소를 서버에서 조회 — profile.html의
+// _buildViewerAuthQuery()와 동일한 지갑 서명 패턴(본인 확인 후에만
+// 서버가 address 필드를 돌려줌, handleProfileGet 참고).
+async function _loadProfileAddressFromServer() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('gopang_user_v4') || 'null');
+    const guid = stored?.ipv6 || stored?.guid;
+    const wallet = window.gopangWallet;
+    if (!guid || !wallet?.signPayload) return null;
+    const pubkey = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+    if (!pubkey) return null;
+    const ts = Date.now().toString();
+    const sig = await wallet.signPayload(`view:${guid}:${pubkey}:${ts}`);
+    const q = `viewer_guid=${encodeURIComponent(guid)}&viewer_pubkey=${encodeURIComponent(pubkey)}` +
+              `&viewer_sig=${encodeURIComponent(sig)}&viewer_ts=${encodeURIComponent(ts)}`;
+    const res = await fetch(`${PROXY}/profile?guid=${encodeURIComponent(guid)}&${q}`, { cache: 'no-cache' });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    return data?.profile?.address || null;
+  } catch (e) {
+    console.warn('[Location] 프로필 주소 조회 실패(무시, GPS로 폴백):', e.message);
+    return null;
+  }
+}
+
+// GPS 좌표 → 행정주소. register-flow.js _autoRegion()과 동일한 응답 파싱
+// (road_address 우선, 없으면 지번주소) — 기존 /geocode(Kakao coord2address)
+// 엔드포인트를 그대로 재사용한다(새 서버 작업 불필요).
+async function _reverseGeocodeViaKakao(lat, lng) {
+  try {
+    const res = await fetch(`${PROXY}/geocode?lat=${lat}&lng=${lng}`, { cache: 'no-cache' });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    const doc = data?.documents?.[0];
+    return doc?.road_address?.address_name || doc?.address?.address_name || null;
+  } catch (e) {
+    console.warn('[Location] Kakao 역지오코딩 실패(무시):', e.message);
+    return null;
   }
 }
 

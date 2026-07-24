@@ -3313,8 +3313,19 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
         if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
       } else if (svcDef) {
         console.info('[GWP] LLM 판단 → 새 탭:', svcId);
-        if (bubble) _updateStreamBubble(bubble, fullReply.replace(/\[GWP:\s*[\w-]+\]\s*/, ''));
-        _gwpLaunch(svcDef, userText, _preTab, _buildRoutingFacts());
+        const cleanedReply = fullReply.replace(/\[GWP:\s*[\w-]+\]\s*/, '').trim();
+        if (bubble) _updateStreamBubble(bubble, cleanedReply);
+        // ★ 2026-07-23 수정 — 지금까지는 userText(사용자의 방금 발화)만
+        // 새 탭에 넘겨서, 그 발화 자체엔 기관명이 없는 경우(예: "복지관련
+        // 부서 연결해 줘") 새 탭이 어느 시/도 소속인지 전혀 알 수 없어
+        // 전국 단위로 떨어지는 문제가 실사로 확인됐다. 그런데 바로 위
+        // cleanedReply(AI 자신의 이번 답변, 예: "제주시청 기초생활과로
+        // 연결해 드리겠습니다")에는 이미 그 기관명이 정확히 들어있다 —
+        // AI가 방금 스스로 판단해 말한 내용을 그냥 버리고 있었을 뿐이다.
+        // cleanedReply를 같이 실어 보내, 새 탭의 assembleGovSystemPrompt
+        // 키워드 매칭이 그 기관명을 그대로 잡을 수 있게 한다.
+        const gwpCtx = cleanedReply ? `${cleanedReply}\n\n[사용자 요청] ${userText}` : userText;
+        _gwpLaunch(svcDef, gwpCtx, _preTab, _buildRoutingFacts());
       } else {
         console.warn('[GWP] 알 수 없는 서비스 ID:', svcId);
         if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
