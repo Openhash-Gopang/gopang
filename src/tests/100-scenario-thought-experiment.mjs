@@ -72,6 +72,17 @@ const CITY_DEPT_MASTER = { 국목록: [
   { 시코드: 'seogwipo', 국코드: 'welfare', 시이름: '서귀포시', 국이름: '복지위생국', 산하과목록: '주민복지과 등' },
   { 시코드: 'jejusi', 국코드: 'safety', 시이름: '제주시', 국이름: '안전교통국', 산하과목록: '안전총괄과 등' },
   { 시코드: 'seogwipo', 국코드: 'agrieconomy', 시이름: '서귀포시', 국이름: '농수축산경제국', 산하과목록: '청정축산과 등' },
+  // 2026-07-24 신설 — 1단계 확대(부산·경남 파일럿) 이후 K-govType가드/
+  // L-시군구지연 케이스가 이제 정적 시청 인스턴스로 실제로 잡히는지
+  // 검증하기 위한 최소 mock(실제 city-dept-master-data.json과 동일 스키마).
+  { 시코드: 'busan_haeundae', 국코드: 'jachi', 지자체유형: '자치구',
+    template: 'SP-CITYDEPT-JACHI-TEMPLATE_v1.0.md',
+    입력_문구: '지방세 관련 신청', 출력_문구: '지방세 부과고지서',
+    처분성_문구: '지방세 부과는 실제 신청·심사를 통해서만 확정된다' },
+  { 시코드: 'changwon', 국코드: 'transport', 지자체유형: '특례시',
+    template: 'SP-CITYDEPT-TRANSPORT-TEMPLATE_v1.0.md',
+    입력_문구: '대중교통 관련 문의', 출력_문구: '교통행정 처리결과',
+    처분성_문구: '교통 관련 처분은 실제 확인을 통해서만 확정된다' },
 ] };
 
 // ── hondi-proxy(지연 초기화) 응답 목 — 도시별로 다르게 준다 ─────────
@@ -231,7 +242,7 @@ add('J-타도도청', '경남 조선업 지원 정책 문의', { expectProvince:
 // ── K. govType 가드 — 세정 라우팅 (4) ────────────────────────────
 add('K-govType가드', '제주 재산세 납부 기한 언제인가요', { expectTrace: ['L2 미매칭'], note: '2026-07-23 수정으로 PLAN 키워드에서 재산세/취득세가 빠짐 — 지역(시) 미특정 시 도청으로도 안 가는 게 의도된 최신 동작(정직한 미확정 처리). SP 본문상 개별 세액은 시청 소관이므로 도청 원형 매칭도 하지 않는 게 맞음' });
 add('K-govType가드', '부산 재산세 얼마 나왔는지 궁금해요', { expectTrace: ['L2 미매칭'], expectNotTrace: ['SP-DO-PLAN'], note: '2026-07-24 수정 — 제주와 동일하게 부산 PLAN에서도 재산세/취득세를 뺐다. 이러면 divMatch 자체가 안 생겨 govType 가드 코드에 도달하지 않고 곧바로 L2 미매칭으로 떨어진다(제주 K-1과 동일 경로) — 원래 이 테스트가 기대하던 "govType 가드" 트레이스는 키워드를 남겨두고 가드로 잡는 다른 구현을 가정한 것이었는데, 실제로는 제주 쪽 구현(키워드 삭제)으로 통일했으므로 기대값도 맞춘다. 최종 결과(도청이 특정 세액 답을 안 준다)는 동일, 트레이스 메시지만 다름.' });
-add('K-govType가드', '해운대구 취득세 계산 좀 도와주세요', { expectTrace: ['SP-SIGUNGU-LAZY'], note: '시군구명 있음 — 2.5단계 SIGUNGU-LAZY가 L2 매칭(3단계)보다 먼저 실행되므로, PLAN 키워드 삭제와 무관하게 그대로 통과' });
+add('K-govType가드', '해운대구 취득세 계산 좀 도와주세요', { expectTrace: ['SP-CITYDEPT-busan_haeundae-jachi'], note: '2026-07-24 이전엔 SP-SIGUNGU-LAZY로 빠졌으나, 해운대구가 정적 시청 인스턴스로 등록되며 이제 SP-CITYDEPT-busan_haeundae-jachi(지방세 도메인)로 더 정밀하게 잡힌다 — govType 가드의 핵심(도청 SP-DO-PLAN으로 잘못 흡수되지 않음)은 그대로 유지, 목만 더 구체화됨' });
 add('K-govType가드', '인천 지방세 및 예산 편성 문의', { note: '세정+예산(비세정 키워드) 혼합 — govType 가드 미작동 가능성 검증 대상' });
 
 // ── L. 2026-07-24 신규 수정분 (3) — 광주 이름 인식, 자동차등록, 반려동물등록 ──
@@ -244,7 +255,7 @@ add('L-시군구지연', '수원시 기초생활수급 신청하고 싶어요', 
 add('L-시군구지연', '성남시 어린이집 입소 신청 방법', { expectTrace: ['SP-SIGUNGU-LAZY'] });
 add('L-시군구지연', '청주시 쓰레기 분리배출 규정', { expectTrace: ['SP-SIGUNGU-LAZY'] });
 add('L-시군구지연', '천안시 건축 인허가 문의', { expectTrace: ['SP-SIGUNGU-LAZY'] });
-add('L-시군구지연', '창원시 버스 노선 문의', { expectTrace: ['SP-SIGUNGU-LAZY'] });
+add('L-시군구지연', '창원시 버스 노선 문의', { expectTrace: ['SP-CITYDEPT-changwon-transport'], note: '2026-07-24 이전엔 SP-SIGUNGU-LAZY로 빠졌으나, 창원시가 정적 시청 인스턴스로 등록되며 이제 SP-CITYDEPT-changwon-transport로 더 정밀하게 잡힌다' });
 
 // ── M. 온보딩 안 된 도(강원/경기/대구) — 원형 폴백 (3) ───
 add('M-미온보딩도', '강원도 산불 예방 안전 대책 문의', { expectTrace: ['원형 매칭'], expectProvince: 'gangwon' });
@@ -357,7 +368,13 @@ await (async () => {
     { label: '제주 후보엔 SP-NAT-TAX(정적 인스턴스 있음) 포함', ok: capturedJeju.includes('SP-NAT-TAX') },
     { label: '제주 후보엔 SP-NATIONAL-LAZY 없음(정적 인스턴스 있어 불필요)', ok: !capturedJeju.includes('SP-NATIONAL-LAZY') },
     { label: '제주 후보엔 SP-SIGUNGU-LAZY 없음(SPECIAL_AUTONOMOUS라 기초자치단체 없음)', ok: !capturedJeju.includes('SP-SIGUNGU-LAZY') },
-    { label: '부산 후보엔 SP-NAT-TAX 없음(정적 인스턴스 없어 골라도 실패했을 코드)', ok: !capturedBusan.includes('SP-NAT-TAX') },
+    { label: '부산 후보엔 SP-NAT-TAX 없음(정적 인스턴스 없어 골라도 실패했을 코드)',
+      // ★ 2026-07-24 수정 — naive .includes('SP-NAT-TAX')는 SP-DO-PLAN 설명문의
+      // "[지방세는 여기, 국세는 SP-NAT-TAX]" 참고문구까지 걸려 오탐이었다
+      // (부산 도판별 버그 수정으로 SP-DO-PLAN이 후보에 정상적으로 뜨면서
+      // 처음 드러남 — capturedBusan.includes 자체가 아니라 후보 "항목"인지를
+      // 정밀하게 확인하도록 고친다).
+      ok: !/(^|\n)SP-NAT-TAX:/.test(capturedBusan) },
     { label: '부산 후보엔 SP-NATIONAL-LAZY 포함(국가기관 정적 인스턴스 없음)', ok: capturedBusan.includes('SP-NATIONAL-LAZY') },
     { label: '부산 후보엔 SP-SIGUNGU-LAZY 포함(GENERAL 도)', ok: capturedBusan.includes('SP-SIGUNGU-LAZY') },
   ];

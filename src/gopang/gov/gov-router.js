@@ -115,25 +115,32 @@ const GENERAL_WARD_TO_PROVINCE = {
 };
 
 function _guessProvinceFromText(text, sigunguList, emdNameIndex) {
-  // 1순위: 도 이름 직접 언급 — 긴 이름부터 검사(짧은 이름이 긴 이름의
-  // 부분문자열인 경우는 없지만, 검사 순서를 명확히 하기 위함).
-  const names = Object.keys(PROVINCE_NAME_TO_CODE).sort((a, b) => b.length - a.length);
-  for (const name of names) {
-    if (text.includes(name)) return PROVINCE_NAME_TO_CODE[name];
-  }
-  // 2순위: 시군구명 역매핑(예: '천안시' 언급 → 충청남도 → chungnam).
-  // 동명이인 시군구(중구·동구 등)는 첫 매치를 채택 — 정밀한 동명이인
-  // 구분은 아직 TBD, 추후 GWP 트리거 단계에서 보강 예정.
+  // ★ 2026-07-24 수정(주피터 지시 이후 부산 1단계 확대 회귀검증에서 발견) —
+  // 예전엔 "도 이름"(1순위)과 "시군구명"(2순위)을 별개 우선순위로 나눠
+  // 도 이름을 항상 먼저 검사했다. 그런데 "해운대구"에 대구광역시 짧은
+  // 이름 '대구'가 부분문자열로 포함돼 있어서, 2순위(시군구 목록, '해운대구'
+  // → 부산광역시)까지 가지도 못하고 1순위에서 대구로 오판별됐다 — 옛
+  // 주석의 "짧은 이름이 긴 이름의 부분문자열인 경우는 없다"는 가정 자체가
+  // 틀렸던 것이다. 이제 두 후보군을 합쳐 **가장 긴(가장 구체적인) 일치
+  // 문자열이 이기도록** 단일 패스로 처리한다 — 이러면 이런 부분문자열
+  // 충돌 클래스 전체가 구조적으로 해소된다(개별 예외 등록 불필요).
+  const candidates = [];
+  for (const [name, code] of Object.entries(PROVINCE_NAME_TO_CODE)) candidates.push({ name, code });
   if (sigunguList && sigunguList.length) {
     for (const rec of sigunguList) {
-      if (rec.이름 && text.includes(rec.이름)) {
-        const code = PROVINCE_NAME_TO_CODE[rec.광역];
-        if (code) return code;
-      }
+      const code = rec.이름 && PROVINCE_NAME_TO_CODE[rec.광역];
+      if (code) candidates.push({ name: rec.이름, code });
     }
   }
+  candidates.sort((a, b) => b.name.length - a.name.length);
+  for (const { name, code } of candidates) {
+    if (text.includes(name)) return code;
+  }
   // 2.5순위(2026-07-24 신설) — 일반구명 역매핑. 일반구는 기초자치단체가
-  // 아니라 2순위 목록에 없으므로 별도 표에서 찾는다.
+  // 아니라 위 목록(sigunguList)에 없으므로 별도 표에서 찾는다. 일반구
+  // 이름은 자치구와 겹치지 않는 고유명이라 별도 tier로 둬도 위 충돌
+  // 클래스에 해당하지 않는다(다만 향후 겹치는 사례가 생기면 위 candidates
+  // 병합 방식으로 흡수할 것).
   for (const [name, code] of Object.entries(GENERAL_WARD_TO_PROVINCE)) {
     if (text.includes(name)) return code;
   }
@@ -614,7 +621,8 @@ const GYEONGNAM_CITY_TABLE = [
 // 테이블은 순수하게 "이 발화가 어느 도메인 사무인가"만 판별한다.
 function _makeGenericCityDeptEntries(시코드) {
   return [
-    { 국코드: 'jachi', 시코드, kw: ['지방세', '재산세과', '세무과', '자치행정', '주민등록', '인감증명'] },
+    { 국코드: 'plan', 시코드, kw: ['기획예산', '중장기계획', '인구정책'] },
+    { 국코드: 'jachi', 시코드, kw: ['지방세', '재산세과', '세무과', '자치행정', '주민등록', '인감증명', '취득세'] },
     { 국코드: 'safety', 시코드, kw: ['재난안전', '안전총괄', '주정차 단속'] },
     { 국코드: 'welfare', 시코드, kw: ['기초생활수급', '기초연금', '장애인복지', '주민복지과'] },
     { 국코드: 'econ', 시코드, kw: ['소상공인', '지역경제', '전통시장', '일자리과'] },
@@ -622,7 +630,7 @@ function _makeGenericCityDeptEntries(시코드) {
     { 국코드: 'climate', 시코드, kw: ['생활환경과', '폐기물', '공원녹지과'] },
     { 국코드: 'housing', 시코드,
       kw: ['건축허가', '건축인허가', '건축신고', '도시계획과', '상하수도과'] },
-    { 국코드: 'transport', 시코드, kw: ['교통행정과', '시내버스', '교통약자'] },
+    { 국코드: 'transport', 시코드, kw: ['교통행정과', '시내버스', '버스 노선', '버스', '교통약자'] },
     { 국코드: 'health', 시코드, kw: ['보건소', '예방접종', '건강검진'] },
   ];
 }
@@ -640,6 +648,45 @@ const GYEONGNAM_CITY_DEPT_TABLE = [
   ..._makeGenericCityDeptEntries('jinhae').filter(e => ['jachi', 'welfare', 'housing'].includes(e.국코드)),
   ..._makeGenericCityDeptEntries('sancheong'),
 ];
+
+// ── 부산 16개 자치구·군 + 서울 25개 자치구 — 1단계 확대 (2026-07-24) ────
+// 경남 파일럿과 달리 여기는 전부 자치구(+기장군 1개는 군)라 처분권 예외
+// (일반구)가 없다 — 지자체유형은 전부 '자치구'/'군'로 단순하다. 시코드는
+// 부산·서울 동명 자치구(중구·강서구)가 서로 충돌하지 않도록 도 접두어를
+// 붙인다(busan_/seoul_). 해운대구만 예외적으로 city-dept-master-data.json에
+// 국이름을 실사 데이터(2026-07-24 Research)로 채운다 — "실사+메타데이터
+// 혼합" 선례(계획서 v1.1 §5 1단계 참고), 이 배선 테이블 자체는 나머지
+// 40개 구·군과 동일하게 범용 도메인 어휘만 쓴다(라우팅은 실명과 무관).
+const BUSAN_GU = [
+  ['busan_gangseo', '강서구'], ['busan_geumjeong', '금정구'], ['busan_gijang', '기장군'],
+  ['busan_nam', '남구'], ['busan_dong', '동구'], ['busan_dongnae', '동래구'],
+  ['busan_busanjin', '부산진구'], ['busan_buk', '북구'], ['busan_sasang', '사상구'],
+  ['busan_saha', '사하구'], ['busan_seo', '서구'], ['busan_suyeong', '수영구'],
+  ['busan_yeonje', '연제구'], ['busan_yeongdo', '영도구'], ['busan_jung', '중구'],
+  ['busan_haeundae', '해운대구'],
+];
+const SEOUL_GU = [
+  ['seoul_gangnam', '강남구'], ['seoul_gangdong', '강동구'], ['seoul_gangbuk', '강북구'],
+  ['seoul_gangseo', '강서구'], ['seoul_gwanak', '관악구'], ['seoul_gwangjin', '광진구'],
+  ['seoul_guro', '구로구'], ['seoul_geumcheon', '금천구'], ['seoul_nowon', '노원구'],
+  ['seoul_dobong', '도봉구'], ['seoul_dongdaemun', '동대문구'], ['seoul_dongjak', '동작구'],
+  ['seoul_mapo', '마포구'], ['seoul_seodaemun', '서대문구'], ['seoul_seocho', '서초구'],
+  ['seoul_seongdong', '성동구'], ['seoul_seongbuk', '성북구'], ['seoul_songpa', '송파구'],
+  ['seoul_yangcheon', '양천구'], ['seoul_yeongdeungpo', '영등포구'], ['seoul_yongsan', '용산구'],
+  ['seoul_eunpyeong', '은평구'], ['seoul_jongno', '종로구'], ['seoul_jung', '중구'],
+  ['seoul_jungnang', '중랑구'],
+];
+
+function _makeMetroCityTable(도코드, guList) {
+  return guList.map(([시코드, 이름]) => ({
+    code: `SP-CITY-${시코드.toUpperCase()}`, file: null, 도코드, 시코드,
+    kw: [이름, `${이름}청`],
+  }));
+}
+const BUSAN_CITY_TABLE = _makeMetroCityTable('busan', BUSAN_GU);
+const SEOUL_CITY_TABLE = _makeMetroCityTable('seoul', SEOUL_GU);
+const BUSAN_CITY_DEPT_TABLE = BUSAN_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
+const SEOUL_CITY_DEPT_TABLE = SEOUL_GU.flatMap(([시코드]) => _makeGenericCityDeptEntries(시코드));
 
 // ── 국가기관 라우팅 테이블 (JEJU-NATIONAL-SP §3-1, 1차 배치 8개) ───
 // 도청 트리(JEJU-DO-SP)와 형제 관계 — 매칭되면 DO-SP 대신 이쪽으로 간다.
@@ -1178,10 +1225,10 @@ const GYEONGNAM_L2_TABLE = [
 
 const PROVINCE_TABLES = {
   jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE, citydept: JEJU_CITY_DEPT_TABLE },
-  // busan: L2만 실사 완료(2026-07-20). city(자치구·군 16개)/national은 아직 미착수 —
-  // 허위로 채우지 않고 빈 배열로 정직하게 남긴다(TBD 마커 관행과 동일).
-  busan: { l2: BUSAN_L2_TABLE, city: [], national: [], citydept: [] },
-  seoul: { l2: SEOUL_L2_TABLE, city: [], national: [], citydept: [] },
+  // 2026-07-24 — 1단계 확대: 부산 16개 자치구·군 + 서울 25개 자치구
+  // 메타데이터 등록 완료(계획서 v1.1 §5). L2는 v1.0부터 이미 실사 완료 상태.
+  busan: { l2: BUSAN_L2_TABLE, city: BUSAN_CITY_TABLE, national: [], citydept: BUSAN_CITY_DEPT_TABLE },
+  seoul: { l2: SEOUL_L2_TABLE, city: SEOUL_CITY_TABLE, national: [], citydept: SEOUL_CITY_DEPT_TABLE },
   incheon: { l2: INCHEON_L2_TABLE, city: [], national: [], citydept: [] },  // ⚠️ 2026-08 시행 예정(안)
   daejeon: { l2: DAEJEON_L2_TABLE, city: [], national: [], citydept: [] },
   ulsan: { l2: ULSAN_L2_TABLE, city: [], national: [], citydept: [] },
