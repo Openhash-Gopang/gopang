@@ -83,6 +83,12 @@ const PROVINCE_NAME_TO_CODE = {
   '경기도': 'gyeonggi', '경기': 'gyeonggi',
   '서울특별시': 'seoul', '서울': 'seoul',
   '전남광주통합특별시': 'jeonnam-gwangju',
+  // ★ 2026-07-24 수정 — "광주광역시"(사용자가 실제로 쓰는 현재 명칭)가
+  // 누락돼 있었다. 짧은 '광주'는 기존 설계 의도(경기도 광주시와 충돌
+  // 위험)대로 계속 배제하지만, "광주광역시"는 전체 명칭이라 경기도
+  // 광주시와 겹칠 일이 없다(경기도 쪽은 "경기도 광주시"/"광주시"로만
+  // 불리지 "광주광역시"로 불리지 않는다) — 안전하게 추가 가능.
+  '광주광역시': 'jeonnam-gwangju',
   '대구광역시': 'daegu', '대구': 'daegu',
   '인천광역시': 'incheon', '인천': 'incheon',
   '대전광역시': 'daejeon', '대전': 'daejeon',
@@ -631,6 +637,33 @@ const JEJU_NATIONAL_TABLE = [
   { code: 'SP-NAT-PORT',         file: '09-national/agencies/SP-NAT-PORT_v1.1.md',
     domain: 'port', 도코드: 'jeju',
     kw: ['해양수산청', '선박등록', '해상교통관제'] },
+  // ★ 2026-07-24 신설(100건 사고실험에서 발견) — 아래 6개는 템플릿
+  // (09-national/agencies/templates/SP-NAT-*-TEMPLATE_*.md)과
+  // national-agency-master-data.json 레코드가 이미 완비돼 있었는데,
+  // 이 라우팅 테이블에 등록이 안 돼 있어 "제주세관 통관 절차 문의"
+  // 같은 정당한 질문이 전부 L2 미매칭(일반 안내)으로 떨어지고
+  // 있었다 — 콘텐츠 저작은 끝났는데 배선만 누락된 사례. 키워드는
+  // 이미 다른 도의 지연조회(SP-NATIONAL-LAZY)가 쓰는
+  // _NAT_AGENCY_DOMAIN_KEYWORDS의 customs/bok/stat과 동일하게 맞춰
+  // 일관성을 유지했다(원형-인스턴스 키워드 불일치 방지).
+  { code: 'SP-NAT-CUSTOMS',      file: '09-national/agencies/SP-NAT-CUSTOMS_v1.0.md',
+    domain: 'customs', 도코드: 'jeju',
+    kw: ['세관', '관세', '통관'] },
+  { code: 'SP-NAT-BOK',          file: '09-national/agencies/SP-NAT-BOK_v1.1.md',
+    domain: 'bok', 도코드: 'jeju',
+    kw: ['한국은행'] },
+  { code: 'SP-NAT-STAT',         file: '09-national/agencies/SP-NAT-STAT_v1.0.md',
+    domain: 'stat', 도코드: 'jeju',
+    kw: ['통계청'] },
+  { code: 'SP-NAT-FORESTRESEARCH', file: '09-national/agencies/SP-NAT-FORESTRESEARCH_v1.0.md',
+    domain: 'forestresearch', 도코드: 'jeju',
+    kw: ['산림과학원', '임업연구'] },
+  { code: 'SP-NAT-FORESTSEED',   file: '09-national/agencies/SP-NAT-FORESTSEED_v1.0.md',
+    domain: 'forestseed', 도코드: 'jeju',
+    kw: ['산림품종관리센터', '산림용 종자', '종자검사'] },
+  { code: 'SP-NAT-FORESTCOOP',   file: '09-national/agencies/SP-NAT-FORESTCOOP_v1.0.md',
+    domain: 'forestcoop', 도코드: 'jeju',
+    kw: ['산림조합'] },
 ];
 
 // ── 카탈로그 등록만 되고 개별 SP는 아직 없는 국가기관 (§4 공통 폴백) ──
@@ -662,7 +695,12 @@ const CATALOG_ONLY = [];
 // 안정적인 과 이름 위주로 키워드를 구성했다(§비고 참고, 확정 아님).
 const BUSAN_L2_TABLE = [
   { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'busan', file: null,
-    kw: ['고향사랑기부', '지방세', '취득세', '재산세', '세정', '예산', '기획조정실'] },
+    // ★ 2026-07-24 수정 — '취득세'/'재산세' 삭제(제주 SP-DO-PLAN에서
+    // 이미 같은 이유로 제거한 것과 동일 — 개별 세액 확인은 도청이 아니라
+    // 시/군/구 세무과 소관인데, 이 두 키워드가 도청 기획조정실로 잘못
+    // 흡수했다). '지방세'/'세정'은 정책·제도 문의로도 쓰이는 일반 용어라
+    // 남긴다.
+    kw: ['고향사랑기부', '지방세', '세정', '예산', '기획조정실'] },
   { code: 'SP-DO-SAFETY', domain: 'safety', 도코드: 'busan', file: null,
     kw: ['시민안전실', '재난', '태풍', '호우', '자연재난', '사회재난', '원자력안전', '특별사법경찰'] },
   { code: 'SP-DO-JACHI', domain: 'jachi', 도코드: 'busan', file: null,
@@ -705,7 +743,8 @@ const BUSAN_L2_TABLE = [
 // 안정적인 국/실/본부 단위 키워드 위주로 구성(§비고 참고).
 const SEOUL_L2_TABLE = [
   { code: 'SP-DO-PLAN', domain: 'plan', 도코드: 'seoul', file: null,
-    kw: ['지방세', '취득세', '재산세', '예산', '기획조정실', '정책기획관'] },
+    // ★ 2026-07-24 수정 — 부산과 동일한 이유로 '취득세'/'재산세' 삭제.
+    kw: ['지방세', '예산', '기획조정실', '정책기획관'] },
   { code: 'SP-DO-SAFETY', domain: 'safety', 도코드: 'seoul', file: null,
     kw: ['재난안전실', '재난', '안전관리'] },
   { code: 'SP-DO-JACHI', domain: 'jachi', 도코드: 'seoul', file: null,
@@ -1183,6 +1222,16 @@ const ROUTE_DESCRIPTIONS = {
   'SP-NAT-INTERNET': '한국지능정보사회진흥원 제주스마트쉼센터(과학기술정보통신부/행정안전부)',
   'SP-NAT-AIRPORT': '한국공항공사 제주공항(국토교통부 산하 공기업)',
   'SP-NAT-PORT': '제주지방해양수산청(해양수산부)',
+  // ★ 2026-07-24 신설(100건 사고실험에서 발견) — JEJU_NATIONAL_TABLE에
+  // 같이 추가한 6개 기관. LLM 분류 폴백(_classifyFallback)이 여기 없는
+  // 코드는 무조건 무시하므로(ROUTE_DESCRIPTIONS[code] 존재 확인), 이걸
+  // 안 하면 라우팅 테이블에 넣어도 LLM 폴백 경로에서는 여전히 인식 못 함.
+  'SP-NAT-CUSTOMS': '제주세관(관세청)',
+  'SP-NAT-BOK': '한국은행 제주본부(중앙은행)',
+  'SP-NAT-STAT': '통계청 제주사무소(통계청)',
+  'SP-NAT-FORESTRESEARCH': '난대·아열대산림연구소(산림청 국립산림과학원)',
+  'SP-NAT-FORESTSEED': '국립산림품종관리센터 제주지소(산림청)',
+  'SP-NAT-FORESTCOOP': '산림조합중앙회 제주지역본부(국가기관 아님 — 임업인 출자 협동조합)',
   'SP-CITY-JEJU': '제주시청',
   'SP-CITY-SEOGWIPO': '서귀포시청',
   'SP-SIGUNGU-LAZY': '시군구(기초자치단체) 관할 업무 — 텍스트에 정적 테이블에 없는 특정 시/군/구 이름이 언급되고 그 지자체 소관 업무(복지·안전·민원·환경 등) 문의로 보이는 경우 [2026-07-20 신설 — 지연 초기화]',
@@ -1203,10 +1252,45 @@ function _isNationalCode(code) {
 // classifyFn: async (text, candidatesText) => 'SP-XXX-YYY' | 'NONE' | null
 // webapp.html이 실제 LLM 호출로 구현해서 주입한다(라우터 자체는 네트워크 호출을
 // 안 한다 — 기존 구조 유지). 주입 안 하면 그냥 기존처럼 무매칭으로 끝난다.
+// ── candidatesText province-aware 필터링 (2026-07-24 신설, 전국 인스턴스
+// 롤아웃 계획 0단계) ─────────────────────────────────────────────
+// 이전엔 ROUTE_DESCRIPTIONS의 모든 코드(제주 전용 정적 인스턴스 포함)를
+// 도 구분 없이 LLM에게 후보로 통째로 보여줬다. 국가기관 지사가 지금은
+// 제주만 정적 인스턴스가 있는 구조라, 비제주 사용자 질문에 LLM이
+// SP-NAT-TAX 같은 제주 전용 코드를 골라도 _findTableEntry가 조용히 못
+// 찾아 실패하고(SP-NATIONAL-LAZY를 골랐어야 정답) 일반 안내로 떨어지는
+// 문제가 있었다. 전국 인스턴스화가 진행될수록(15개 도 추가) 이 문제의
+// 발생 빈도가 함께 커지므로, 데이터를 채우기 전에 먼저 후보 목록 자체를
+// "이 도에서 실제로 존재하는 코드"로만 한정한다.
+function _buildCandidatesText() {
+  const provinceCode = _resolveProvinceCode();
+  const registryEntry = PROVINCE_REGISTRY[provinceCode];
+  const codes = new Set();
+
+  // 실사된 도청 실국·시청·국가기관 코드만 후보에 넣는다(빈 배열이면
+  // 아무것도 안 들어가고, 대신 아래에서 LAZY 코드가 그 자리를 메운다).
+  for (const e of _l2Table()) codes.add(e.code);
+  for (const e of _cityTable()) codes.add(e.code);
+  for (const e of _nationalTable()) codes.add(e.code);
+
+  // 국가기관 정적 인스턴스가 없는 도(현재 제주 외 전부)는 SP-NAT-* 코드
+  // 대신 SP-NATIONAL-LAZY를 후보로 준다 — 정적 인스턴스가 있으면(제주)
+  // 이미 위에서 실제 코드가 채워졌으므로 LAZY는 불필요.
+  if (_nationalTable().length === 0) codes.add('SP-NATIONAL-LAZY');
+
+  // 시군구(기초자치단체) 지연조회는 GENERAL 도에서만 의미가 있다
+  // (SPECIAL_AUTONOMOUS인 제주는 기초자치단체 자체가 없음).
+  if (registryEntry?.govType === 'GENERAL') codes.add('SP-SIGUNGU-LAZY');
+
+  return [...codes]
+    .filter(code => ROUTE_DESCRIPTIONS[code])
+    .map(code => `${code}: ${ROUTE_DESCRIPTIONS[code]}`)
+    .join('\n');
+}
+
 async function _classifyFallback(text, classifyFn) {
   if (!classifyFn) return null;
-  const candidatesText = Object.entries(ROUTE_DESCRIPTIONS)
-    .map(([code, d]) => `${code}: ${d}`).join('\n');
+  const candidatesText = _buildCandidatesText();
   try {
     const code = await classifyFn(text, candidatesText);
     if (!code || code === 'NONE' || !ROUTE_DESCRIPTIONS[code]) return null;
@@ -1281,6 +1365,16 @@ async function _loadEmdNameToProvinceIndex() {
       const extras = extraRaws.map(r => JSON.parse(r));
       for (const rec of [...master.읍면동목록, ...extras]) {
         if (rec.읍면동명 && !index[rec.읍면동명]) index[rec.읍면동명] = provinceCode;
+        // ★ 2026-07-24 수정(100건 사고실험에서 발견) — 관할리(里) 이름도
+        // 같이 색인한다. _matchEmd()는 리 이름까지 인식하는데, 그보다
+        // 앞 단계인 이 도 판별 색인은 읍면동명만 넣고 있어서 "한림리
+        // 전입신고"처럼 리 이름만 언급하고 상위 읍 이름·"제주" 언급이
+        // 전혀 없으면 도 판별 자체가 실패해 "지역 미판별"로 조기
+        // 반환되는 버그였다 — _matchEmd에 도달하기도 전에 걸러짐.
+        for (const ri of rec.관할리목록 || []) {
+          const riName = ri.split('(')[0].trim();
+          if (riName && !index[riName]) index[riName] = provinceCode;
+        }
       }
     } catch (e) {
       console.warn(`[gov-router] EMD 이름 역색인 로드 실패(${provinceCode}): ${e.message}`);
@@ -1326,13 +1420,19 @@ function _matchEmd(text, records) {
 // 봐서, "서귀포시 동홍동" 같은 PDV 위치가 있어도 발화 자체에 지역명이
 // 없으면("건축 인허가 신청하고 싶어요") 행정시를 특정 못 하고 놓쳤다
 // — _matchEmd와 동일한 우선순위(발화 우선, 없으면 힌트)로 통일한다.
+// ★ 2026-07-24 수정(100건 사고실험에서 발견) — 반환값에 _matchedViaTextItself
+// 플래그 추가(원본 테이블 항목을 얕은 복사해 새 필드만 얹음 — 공유 상수
+// 테이블 자체는 변경하지 않는다). 발화 자체에 시 이름이 있는 경우와
+// PDV 힌트로만 시가 특정된 경우를 호출부가 구분할 수 있어야, "힌트로만
+// 시가 잡혔고 더 구체적인 도메인 매칭 기회가 남아있으면 그걸 먼저
+// 시도한다"는 판단이 가능해진다(아래 stage 2 참고).
 function _matchCity(text, pdvLocationHint) {
   for (const c of _cityTable()) {
-    if (c.kw.some(k => text.includes(k))) return c;
+    if (c.kw.some(k => text.includes(k))) return { ...c, _matchedViaTextItself: true };
   }
   if (pdvLocationHint) {
     for (const c of _cityTable()) {
-      if (c.kw.some(k => pdvLocationHint.includes(k))) return c;
+      if (c.kw.some(k => pdvLocationHint.includes(k))) return { ...c, _matchedViaTextItself: false };
     }
   }
   return null;
@@ -1453,11 +1553,33 @@ const _SIGUNGU_DOMAIN_KEYWORDS = {
   family: ['여성가족', '보육', '어린이집', '임신', '출산'],
   health: ['보건소', '예방접종', '건강검진', '감염병'],
   safety: ['재난', '안전', '화재'],
-  jachi: ['민원', '주민등록', '인감', '자치행정'],
-  econ: ['일자리', '소상공인', '지역경제', '전통시장'],
+  // ★ 2026-07-24 추가(100건 사고실험에서 발견) — '여권'이 국가기관 19개
+  // 도메인·시군구 15개 도메인 어디에도 없어서, LLM이 올바르게
+  // "시군구 소관"(한국 여권은 출입국청이 아니라 시/군/구 여권과 발급)으로
+  // 분류해도 도메인 추출 단계에서 실패해 안내가 끊기는 문제였다.
+  jachi: ['민원', '주민등록', '인감', '자치행정', '여권'],
+  // ★ 2026-07-24 추가(100건 사고실험에서 발견) — '폐업'이 어느 도메인에도
+  // 없어서 "폐업 신고하려고요"를 LLM이 SP-SIGUNGU-LAZY로 정확히 분류해도
+  // 도메인을 못 뽑아 최종적으로 실패했다. 폐업 신고는 지방세(사업자
+  // 등록말소)·인허가(영업신고 반납) 등 시군구 세무·경제 부서 소관이라
+  // econ에 추가한다.
+  econ: ['일자리', '소상공인', '지역경제', '전통시장', '폐업'],
   climate: ['환경', '쓰레기', '재활용', '분리배출'],
   housing: ['건축', '주택', '도시계획'],
-  transport: ['버스', '교통', '도로'],
+  // ★ 2026-07-24 추가(주피터 지시로 재확인 — 100건 사고실험 항목3) —
+  // '자동차등록'/'차량등록'/'반려동물등록'이 어느 시군구 도메인에도
+  // 없었다. 제주는 정적 테이블(JEJU_CITY_DEPT_TABLE의 safety 도메인)에
+  // '차량등록' 키워드가 있어 이 문제를 안 겪었지만, 정적 테이블이 없는
+  // 비제주 지역은 SIGUNGU-LAZY 지연조회 자체가 발동을 못 해 "수원시
+  // 자동차 등록하려고요" 같은 정당한 요청이 전부 놓쳤다. 차량등록은
+  // 제주에서도 safety(교통행정) 소관이라 같은 도메인에 맞춘다.
+  transport: ['버스', '교통', '도로', '자동차등록', '자동차 등록', '차량등록', '차량 등록', '차량말소', '번호판'],
+  // ★ 2026-07-24 추가 — '반려동물등록'은 기존 15개 도메인 중 어디에도
+  // 안 맞는 새 카테고리라(동물보호법상 시군구 소관이지만 복지/보건/환경
+  // 어느 것과도 딱 맞지 않음), 가장 가까운 climate(환경·생활)에 더하지
+  // 않고 정직하게 새 도메인을 하나 신설한다 — 억지로 기존 도메인에
+  // 끼워넣으면 SP-SIGUNGU-LAZY가 엉뚱한 부서로 조회할 위험이 있다.
+  animal: ['반려동물등록', '반려동물 등록', '동물등록', '동물 등록', '유기동물', '동물보호'],
   culture: ['문화', '도서관', '축제'],
   tourism: ['관광'],
   sports: ['체육', '생활체육'],
@@ -1903,6 +2025,13 @@ const SP_CODE_TO_PDV_SCOPE = {
   'SP-NAT-FOODIMPORT': 'kfoodimport', 'SP-NAT-DATA': 'kdata', 'SP-NAT-RADIO': 'kradio',
   'SP-NAT-ENV': 'kenv', 'SP-NAT-LABORIMPROVE': 'klaborimprove',
   'SP-NAT-INTERNET': 'kinternet', 'SP-NAT-AIRPORT': 'kairport', 'SP-NAT-PORT': 'kport',
+  // ★ 2026-07-24 신설(100건 사고실험에서 발견) — 이걸 빠뜨리면 §13b
+  // PDV_HISTORY_REQUEST scope 치환이 이 6개 기관 응답에서 안전한
+  // 기본값('pdv_general')으로 조용히 대체돼, 다른 기관들과 달리 이
+  // 기관 관련 과거 민원 이력을 못 불러오는 미묘한 버그가 생겼을 것이다.
+  'SP-NAT-CUSTOMS': 'kcustoms', 'SP-NAT-BOK': 'kbok', 'SP-NAT-STAT': 'kstat',
+  'SP-NAT-FORESTRESEARCH': 'kforestresearch', 'SP-NAT-FORESTSEED': 'kforestseed',
+  'SP-NAT-FORESTCOOP': 'kforestcoop',
   // 도 자체 부서
   'SP-DO-PLAN': 'kplan', 'SP-DO-SAFETY': 'ksafety', 'SP-DO-JACHI': 'kjachi',
   'SP-DO-ECON': 'kecon', 'SP-DO-INNOV': 'kinnov', 'SP-DO-WELFARE': 'kwelfare',
@@ -2041,7 +2170,10 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
 
   // L4 업무영역 SP 매칭 — 지금은 상하수도(SP-EXP-WATER) 하나뿐.
   // JEJU-GOV-COMMON §10(정직성·데이터 연동 공백 고지 원칙)의 첫 실증 사례.
-  const isWaterQuery = /상수도|수돗물|누수|수질|정수|급수|배관/.test(text);
+  // ★ 2026-07-24 수정(100건 사고실험에서 발견) — '수압'이 빠져 있어서
+  // "수압이 너무 약해요" 같은 정당한 상하수도 민원이 SP-EXP-WATER를
+  // 못 띄우고 그냥 EMD 일반 안내로 끝났다.
+  const isWaterQuery = /상수도|수돗물|누수|수질|정수|급수|배관|수압/.test(text);
   async function _appendExpertIfMatched() {
     if (isWaterQuery) {
       const expText = await _fetchText('06-expert/SP-EXP-WATER_v1.1.md');
@@ -2095,27 +2227,50 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   }
 
   // 2) 행정시만 언급(읍면동 특정 안 됨) → 시청 레이어만
+  // ★ 2026-07-24 수정(100건 사고실험에서 발견) — "청년 월세 지원
+  // 있어요?"에 제주시 PDV 힌트만 있는 경우, 예전엔 여기서 곧바로
+  // 시청 공통 페이지로 확정해버려서 그보다 훨씬 구체적인 답을 줄 수
+  // 있는 3)L2 실국 매칭이나 5)LLM 분류 폴백(WELFARE 등)까지 가지도
+  // 못하고 끝났다. 발화 자체에 시 이름이 있으면(사용자가 명시적으로
+  // 그 시를 지목) 기존처럼 즉시 확정하는 게 맞지만, PDV 힌트로만
+  // 시가 잡히고 시청 국(局) 단위 매칭도 안 되고 classifyFn(AI)이
+  // 있으면 — 즉시 확정하지 않고 이 결과를 폴백으로만 들고 뒤 단계
+  // (L2/LLM)에 더 구체적인 매칭 기회를 먼저 준다. 아무것도 안 걸리면
+  // 6)에서 이 폴백을 쓴다(기존 동작과 최종 결과는 동일 — 순서만 바뀜).
   const cityOnly = _matchCity(text, pdvLocationHint);
+  let cityOnlyFallback = null;
   if (cityOnly) {
     const cityText = await _fetchCityText(cityOnly);
-    parts.push(cityText);
-    trace.push(cityOnly.code);
 
     // 2-1) 시청 국(局) 단위 매칭 (2026-07-23 신설) — 예: "서귀포시
     // 건축허가 신청하고 싶어요" → 안전도시건설국(construction)까지 특정.
     // 매칭 안 되면 조용히 시청 레이어에서 멈춘다(기존 동작 그대로).
     const cityDeptMatch = _matchCityDept(text, cityOnly.시코드);
     if (cityDeptMatch) {
+      parts.push(cityText);
+      trace.push(cityOnly.code);
       const { text: cityDeptText, permitCodes: cityDeptPermitCodes } = await _fetchCityDeptText(cityDeptMatch);
       if (cityDeptText) {
         parts.push(cityDeptText);
         trace.push(`SP-CITYDEPT-${cityOnly.시코드}-${cityDeptMatch.국코드}`);
         if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
       }
+      await _appendExpertIfMatched();
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
 
-    await _appendExpertIfMatched();
-    return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    if (cityOnly._matchedViaTextItself || !classifyFn) {
+      // 발화 자체에 시 이름이 있으면(명시적 지목) 즉시 확정, 또는
+      // classifyFn이 아예 없으면(AI 상담 불가) 기존처럼 즉시 확정.
+      parts.push(cityText);
+      trace.push(cityOnly.code);
+      await _appendExpertIfMatched();
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    }
+
+    // 힌트로만 시가 특정됐고, AI가 있으니 더 구체적인 매칭을 먼저
+    // 시도한다 — 이 결과는 6)에서 아무것도 안 걸렸을 때만 쓴다.
+    cityOnlyFallback = { parts: [...parts, cityText], trace: [...trace, cityOnly.code] };
   }
 
   // 2.5) 시군구 이름이 언급됐지만 정적 도시 테이블에는 없는 경우 —
@@ -2183,7 +2338,18 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   }
 
   // 4) 읍면동/실국 어느 쪽도 안 걸렸지만 업무영역만 매칭된 경우(예: 지역 언급 없이 "수돗물 냄새나요")
+  // ★ 2026-07-24 수정(100건 사고실험에서 발견) — cityOnlyFallback이 있다는
+  // 건 PDV 힌트로 시는 이미 알고 있다는 뜻이라, "지역 미특정" 문구를
+  // 그대로 쓰면 모순이다(시청 페이지까지 이미 parts에 있는데 "지역
+  // 모른다"고 말하는 셈). 이 경우엔 cityOnlyFallback 쪽(시청 정보 포함)에
+  // 전문가 SP만 추가로 얹어 반환한다.
   if (isWaterQuery) {
+    if (cityOnlyFallback) {
+      const expText = await _fetchText('06-expert/SP-EXP-WATER_v1.1.md');
+      cityOnlyFallback.parts.push(expText);
+      cityOnlyFallback.trace.push('SP-EXP-WATER', '(2단계 힌트 전용 매칭 폴백 + 상하수도 전문 SP)');
+      return { systemPrompt: cityOnlyFallback.parts.join('\n\n---\n\n'), trace: cityOnlyFallback.trace };
+    }
     await _appendExpertIfMatched();
     trace.push('(지역 미특정 — SP-EXP-WATER가 먼저 지역 확인 유도)');
     return { systemPrompt: parts.join('\n\n---\n\n'), trace };
@@ -2261,6 +2427,15 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 도청 공통 레이어만 반환한다. 이건 실패가 아니라, 이런 질문은 원래
   // 특정 기관 SP 없이도 GOV-COMMON/DO-SP의 배경지식으로 충분히 답할 수
   // 있는 경우가 많다(예: 자치경찰 vs 국가경찰 차이 설명).
+  // ★ 2026-07-24 수정(100건 사고실험에서 발견) — 2)에서 보류해둔
+  // cityOnlyFallback이 있으면 완전히 빈손으로 끝내는 대신 그 시청
+  // 페이지로 대체한다(더 구체적인 도메인 매칭은 다 실패했지만, PDV
+  // 힌트로 시는 이미 알고 있었으므로 최소한 그 정보는 활용).
+  if (cityOnlyFallback) {
+    await _appendExpertIfMatched();
+    cityOnlyFallback.trace.push('(2단계 힌트 전용 매칭 폴백 — 3~5단계에서 더 구체적인 매칭 실패)');
+    return { systemPrompt: cityOnlyFallback.parts.join('\n\n---\n\n'), trace: cityOnlyFallback.trace };
+  }
   trace.push(classifyFn ? '(LLM 분류도 NONE — 공통 레이어 지식으로 답변)' : '(L2 미매칭 — 공통 레이어가 일반 안내만 제공)');
   return { systemPrompt: parts.join('\n\n---\n\n'), trace };
 }
