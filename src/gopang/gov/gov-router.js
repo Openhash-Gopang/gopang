@@ -102,6 +102,18 @@ const PROVINCE_NAME_TO_CODE = {
   '경상남도': 'gyeongnam', '경남': 'gyeongnam',
 };
 
+// ── 일반구(법인격 없는 구) → 도코드 역매핑 (2026-07-24 신설) ────────────
+// 일반구는 지방자치법상 기초자치단체가 아니라서(자치구와 달리 법인격이
+// 없음) sigungu-national-list.json(기초자치단체 전용 목록)에 의도적으로
+// 빠져 있다 — 그 목록에 끼워 넣으면 그 파일의 정의 자체가 흐려진다.
+// 대신 이 별도의 작은 표를 둔다. 지금은 창원시 산하 5개 일반구만 채워져
+// 있다(2026-07-24 진주·창원·산청군 파일럿) — 다른 도의 일반구(예: 청주시
+// 상당구·성남시 분당구)가 인스턴스화되면 여기에 추가한다.
+const GENERAL_WARD_TO_PROVINCE = {
+  '의창구': 'gyeongnam', '성산구': 'gyeongnam', '마산합포구': 'gyeongnam',
+  '마산회원구': 'gyeongnam', '진해구': 'gyeongnam',
+};
+
 function _guessProvinceFromText(text, sigunguList, emdNameIndex) {
   // 1순위: 도 이름 직접 언급 — 긴 이름부터 검사(짧은 이름이 긴 이름의
   // 부분문자열인 경우는 없지만, 검사 순서를 명확히 하기 위함).
@@ -119,6 +131,11 @@ function _guessProvinceFromText(text, sigunguList, emdNameIndex) {
         if (code) return code;
       }
     }
+  }
+  // 2.5순위(2026-07-24 신설) — 일반구명 역매핑. 일반구는 기초자치단체가
+  // 아니라 2순위 목록에 없으므로 별도 표에서 찾는다.
+  for (const [name, code] of Object.entries(GENERAL_WARD_TO_PROVINCE)) {
+    if (text.includes(name)) return code;
   }
   // 3순위(2026-07-21 신설, 버그3 수정) — 읍/면/동명 역매핑. 상위 시/군/구·
   // 도 이름 없이 읍면동만 언급해도(예: "한경면 전입신고") 판별되게 한다.
@@ -544,12 +561,85 @@ const JEJU_CITY_DEPT_TABLE = [
 ];
 
 function _matchCityDept(text, 시코드) {
-  for (const d of JEJU_CITY_DEPT_TABLE) {
+  for (const d of _cityDeptTable()) {
     if (d.시코드 !== 시코드) continue;
     if (d.kw.some(k => text.includes(k))) return d;
   }
   return null;
 }
+
+// ── 경남 시/군 파일럿 인스턴스 (2026-07-24 신설) ──────────────────────
+// 주피터 지시: "진주·창원·산청군을 샘플로, 관련 법규를 기반으로 시 도메인을
+// 작성" — 단, 시청 국코드 도메인 클래스(SP-CITYDEPT-*-TEMPLATE 16개)는
+// 이미 실명 없이도 작동하도록 설계됐으므로(2026-07-24 개편), 이 키워드
+// 테이블도 제주(JEJU_CITY_DEPT_TABLE)처럼 실사로 확인한 실제 국·과 이름을
+// 쓰지 않는다 — 진주·창원 실사는 아직 안 했다. 대신 전국 어디서나 통하는
+// 도메인 범용 어휘만 쓴다(원칙 5: 키워드 과잉일반화 금지는 지키되, "지방세"
+// 처럼 구체적인 사무명은 범용이라도 안전).
+//
+// 지자체유형 표본 선택 근거(주피터 지시로 마산 대신 재선정, 2026-07-24):
+//   - 진주시: 일반시(구 없음)
+//   - 창원시: 특례시(지방자치법 특례시 조항, 인구 100만 이상) + 산하 일반구 5개
+//     (의창구·성산구·마산합포구·마산회원구·진해구 — 전부 법인격 없음,
+//     처분권자는 창원시장). 마산합포구·마산회원구는 2010년 마산시가
+//     창원시에 통합되며 신설된 구다(구 '마산시'는 더 이상 존재하지 않음
+//     — "마산시" 자체를 표본으로 쓰면 안 된다는 게 이번 재선정의 핵심).
+//   - 산청군: 군(읍면 중심 구조, 광역 산업팀 존재 패턴 검증용).
+const GYEONGNAM_CITY_TABLE = [
+  { code: 'SP-CITY-JINJU',    file: null, 도코드: 'gyeongnam', 시코드: 'jinju',
+    kw: ['진주시', '진주시청'] },
+  { code: 'SP-CITY-CHANGWON', file: null, 도코드: 'gyeongnam', 시코드: 'changwon',
+    kw: ['창원시', '창원시청'] },
+  // 아래 5개는 독립된 시가 아니라 창원시 산하 일반구다 — code는 일부러
+  // SP-CITY-CHANGWON을 그대로 재사용한다(법인격이 없어 자체 루트 SP가
+  // 없고, 상위 창원시 루트 SP를 공유하는 것이 정확한 법적 지위 반영).
+  { code: 'SP-CITY-CHANGWON', file: null, 도코드: 'gyeongnam', 시코드: 'uichang',
+    kw: ['의창구'] },
+  { code: 'SP-CITY-CHANGWON', file: null, 도코드: 'gyeongnam', 시코드: 'seongsan',
+    kw: ['성산구'] },
+  { code: 'SP-CITY-CHANGWON', file: null, 도코드: 'gyeongnam', 시코드: 'masanhappo',
+    kw: ['마산합포구'] },
+  { code: 'SP-CITY-CHANGWON', file: null, 도코드: 'gyeongnam', 시코드: 'masanhoewon',
+    kw: ['마산회원구'] },
+  { code: 'SP-CITY-CHANGWON', file: null, 도코드: 'gyeongnam', 시코드: 'jinhae',
+    kw: ['진해구'] },
+  { code: 'SP-CITY-SANCHEONG', file: null, 도코드: 'gyeongnam', 시코드: 'sancheong',
+    kw: ['산청군', '산청군청'] },
+];
+
+// 도메인 범용 키워드 — 실명(국·과 명칭) 없이 전국 어디서나 통하는 사무명만
+// 사용한다(2026-07-24 원칙: "부서 실명은 참고 정보일 뿐 라우팅에 필수가
+// 아니다"). 자치구·일반구 구분 없이 동일 키워드를 쓴다 — 처분권 소재는
+// city-dept-master-data.json의 지자체유형/처분권_문구가 담당하고, 이
+// 테이블은 순수하게 "이 발화가 어느 도메인 사무인가"만 판별한다.
+function _makeGenericCityDeptEntries(시코드) {
+  return [
+    { 국코드: 'jachi', 시코드, kw: ['지방세', '재산세과', '세무과', '자치행정', '주민등록', '인감증명'] },
+    { 국코드: 'safety', 시코드, kw: ['재난안전', '안전총괄', '주정차 단속'] },
+    { 국코드: 'welfare', 시코드, kw: ['기초생활수급', '기초연금', '장애인복지', '주민복지과'] },
+    { 국코드: 'econ', 시코드, kw: ['소상공인', '지역경제', '전통시장', '일자리과'] },
+    { 국코드: 'culture', 시코드, kw: ['문화예술과', '생활체육', '평생학습', '도서관'] },
+    { 국코드: 'climate', 시코드, kw: ['생활환경과', '폐기물', '공원녹지과'] },
+    { 국코드: 'housing', 시코드,
+      kw: ['건축허가', '건축인허가', '건축신고', '도시계획과', '상하수도과'] },
+    { 국코드: 'transport', 시코드, kw: ['교통행정과', '시내버스', '교통약자'] },
+    { 국코드: 'health', 시코드, kw: ['보건소', '예방접종', '건강검진'] },
+  ];
+}
+
+const GYEONGNAM_CITY_DEPT_TABLE = [
+  ..._makeGenericCityDeptEntries('jinju'),
+  ..._makeGenericCityDeptEntries('changwon'),
+  // 5개 일반구 — 국코드 범위를 자치행정/복지/건축 3개로만 좁힌다(§3
+  // 파일럿 목적상 "일반구는 처분권이 없다"는 메커니즘 검증이 핵심이고,
+  // 16개 전부 채우는 건 표본의 취지를 벗어난다 — 필요해지면 그때 확장).
+  ..._makeGenericCityDeptEntries('uichang').filter(e => ['jachi', 'welfare', 'housing'].includes(e.국코드)),
+  ..._makeGenericCityDeptEntries('seongsan').filter(e => ['jachi', 'welfare', 'housing'].includes(e.국코드)),
+  ..._makeGenericCityDeptEntries('masanhappo').filter(e => ['jachi', 'welfare', 'housing'].includes(e.국코드)),
+  ..._makeGenericCityDeptEntries('masanhoewon').filter(e => ['jachi', 'welfare', 'housing'].includes(e.국코드)),
+  ..._makeGenericCityDeptEntries('jinhae').filter(e => ['jachi', 'welfare', 'housing'].includes(e.국코드)),
+  ..._makeGenericCityDeptEntries('sancheong'),
+];
 
 // ── 국가기관 라우팅 테이블 (JEJU-NATIONAL-SP §3-1, 1차 배치 8개) ───
 // 도청 트리(JEJU-DO-SP)와 형제 관계 — 매칭되면 DO-SP 대신 이쪽으로 간다.
@@ -1087,24 +1177,26 @@ const GYEONGNAM_L2_TABLE = [
 ];
 
 const PROVINCE_TABLES = {
-  jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE },
+  jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE, citydept: JEJU_CITY_DEPT_TABLE },
   // busan: L2만 실사 완료(2026-07-20). city(자치구·군 16개)/national은 아직 미착수 —
   // 허위로 채우지 않고 빈 배열로 정직하게 남긴다(TBD 마커 관행과 동일).
-  busan: { l2: BUSAN_L2_TABLE, city: [], national: [] },
-  seoul: { l2: SEOUL_L2_TABLE, city: [], national: [] },
-  incheon: { l2: INCHEON_L2_TABLE, city: [], national: [] },  // ⚠️ 2026-08 시행 예정(안)
-  daejeon: { l2: DAEJEON_L2_TABLE, city: [], national: [] },
-  ulsan: { l2: ULSAN_L2_TABLE, city: [], national: [] },
-  sejong: { l2: SEJONG_L2_TABLE, city: [], national: [] },
-  chungbuk: { l2: CHUNGBUK_L2_TABLE, city: [], national: [] },
-  chungnam: { l2: CHUNGNAM_L2_TABLE, city: [], national: [] },
-  jeonbuk: { l2: JEONBUK_L2_TABLE, city: [], national: [] },
-  gyeongbuk: { l2: GYEONGBUK_L2_TABLE, city: [], national: [] },  // ⚠️ 조직개편 중, 신뢰도 낮음
-  gyeongnam: { l2: GYEONGNAM_L2_TABLE, city: [], national: [] },  // ⚠️ 스냅샷 불일치, 신뢰도 낮음
+  busan: { l2: BUSAN_L2_TABLE, city: [], national: [], citydept: [] },
+  seoul: { l2: SEOUL_L2_TABLE, city: [], national: [], citydept: [] },
+  incheon: { l2: INCHEON_L2_TABLE, city: [], national: [], citydept: [] },  // ⚠️ 2026-08 시행 예정(안)
+  daejeon: { l2: DAEJEON_L2_TABLE, city: [], national: [], citydept: [] },
+  ulsan: { l2: ULSAN_L2_TABLE, city: [], national: [], citydept: [] },
+  sejong: { l2: SEJONG_L2_TABLE, city: [], national: [], citydept: [] },
+  chungbuk: { l2: CHUNGBUK_L2_TABLE, city: [], national: [], citydept: [] },
+  chungnam: { l2: CHUNGNAM_L2_TABLE, city: [], national: [], citydept: [] },
+  jeonbuk: { l2: JEONBUK_L2_TABLE, city: [], national: [], citydept: [] },
+  gyeongbuk: { l2: GYEONGBUK_L2_TABLE, city: [], national: [], citydept: [] },  // ⚠️ 조직개편 중, 신뢰도 낮음
+  // 2026-07-24 — 진주·창원(+5개 일반구)·산청군 파일럿 인스턴스 신설(주피터 지시).
+  gyeongnam: { l2: GYEONGNAM_L2_TABLE, city: GYEONGNAM_CITY_TABLE, national: [], citydept: GYEONGNAM_CITY_DEPT_TABLE },  // ⚠️ L2는 스냅샷 불일치, 신뢰도 낮음
 };
 function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; }
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }
 function _nationalTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.national || []; }
+function _cityDeptTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.citydept || []; }
 
 function _matchNational(text) {
   return _scoreMatch(text, _nationalTable());
@@ -2031,9 +2123,12 @@ async function _fetchCityDeptText(match) {
     return { text: null, permitCodes: [] };
   }
   const templateFile = rec.template || 'SP-CITYDEPT-TEMPLATE_v1.0.md';
+  // 일반구처럼 법인격이 없어 자체 루트 SP가 없는 인스턴스는 rec.모시코드로
+  // 상위(모시) 시코드를 지정한다 — {CITY_ROOT_SP}가 그 상위 시로 귀속된다
+  // (2026-07-24 신설, 창원시 산하 5개 일반구 파일럿에서 처음 필요해짐).
   const [template, cityRootSPCode] = await Promise.all([
     _fetchText(`04-city/templates/${templateFile}`),
-    _resolveCityRootSPCode(match.시코드),
+    _resolveCityRootSPCode(rec.모시코드 || match.시코드),
   ]);
   return _appendPermitProtocolIfNeeded(_renderCityDeptTemplate(template, rec, cityRootSPCode), rec);
 }
@@ -2525,18 +2620,23 @@ window.resolveGovAgency = resolveGovAgency;
 // 등)의 kw 배열 첫 항목이 이미 그 기관/부서의 실제 한글 명칭이라는 점을
 // 재사용해, trace를 다시 스캔해 가장 구체적인 명칭을 뽑아낸다 — 라우팅
 // 로직 자체(_assembleGovSystemPromptRaw)는 건드리지 않는다.
+// 2026-07-24 — 시청 국(局) 트레이스 파싱은 요청 당시의 province 컨텍스트가
+// 아니라 trace 문자열만 갖고 사후에 호출될 수 있어(예: UI 배지 렌더링
+// 시점), _cityDeptTable()(현재 컨텍스트의 province에 의존)을 쓰면 컨텍스트가
+// 어긋날 위험이 있다. 시코드는 전국에서 유일하므로, 전체 도의 citydept
+// 테이블을 한 번 평탄화해 시코드만으로 안전하게 조회한다.
+const ALL_CITY_DEPT_ENTRIES = Object.values(PROVINCE_TABLES).flatMap(p => p.citydept || []);
+
 export function resolveAgencyDisplayName(trace) {
   const t = Array.isArray(trace) ? trace : [];
 
   // 시청 국(局) 단위까지 특정된 경우가 가장 구체적 — 우선 확인
-  // (city-dept 테이블은 2026-07-23 신설이라 아직 제주 전용 — 다른 도까지
-  // 일반화되면 이 부분도 province-aware 접근자로 교체 필요)
   for (const entry of t) {
     const m = /^SP-CITYDEPT-(\w+)-(\w+)$/.exec(entry);
     if (m) {
       const [, 시코드, 국코드] = m;
-      const cityRec = _cityTable().find(c => c.시코드 === 시코드);
-      const deptRec = JEJU_CITY_DEPT_TABLE.find(d => d.시코드 === 시코드 && d.국코드 === 국코드);
+      const cityRec = Object.values(PROVINCE_TABLES).flatMap(p => p.city || []).find(c => c.시코드 === 시코드);
+      const deptRec = ALL_CITY_DEPT_ENTRIES.find(d => d.시코드 === 시코드 && d.국코드 === 국코드);
       if (cityRec && deptRec) {
         const cityName = cityRec.kw.find(k => k.endsWith('청')) || cityRec.kw[0];
         return `${cityName} ${deptRec.kw[0]}`;
