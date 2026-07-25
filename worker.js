@@ -6183,6 +6183,636 @@ async function _sweepBridgeOutbox(env) {
 // (default export의 fetch 핸들러는 그대로 pathname 매칭으로 호출).
 export { handleGdcDepositClose, handleGdcDaoProposalCreate, handleGdcDaoVote, handleGdcDaoProposalsList, handleFeeRate, handleInsClaimCreate, handleInsClaimsList, handleVerifyAdmin, _natAgencyExtractName, _parseInstanceEnrichTag };
 
+// ═══════════════════════════════════════════════════════════
+// K-TRAFFIC / K-LOGISTICS 실매칭 백엔드 (2026-07-26 신설)
+//
+// 배경: traffic/desktop.html의 "차량 탐색" 하드코딩 샘플과 SYS 프롬프트가
+// 즉석에서 지어내던 가짜 매칭 결과, realtime-board.html의 Math.random()
+// 시뮬레이션을 실제 공유 백엔드로 교체하는 작업(피터님 지시로 발견·시정).
+// DAWN(공중 게시판, 위쪽 섹션 참고)과 동일한 설계 원칙 — 클라이언트는
+// PocketBase를 직접 두드리지 않고 이 파일(worker.js)만 서비스 계정으로
+// 접근한다. 실시간 알림은 Durable Objects(§ 아래)로 구현(2026-07-26,
+// 피터님 확정 — 무료 플랜에서도 SQLite 백엔드로 사용 가능, 유료 전환은
+// 개발 완료 시점으로 결정).
+//
+// 결제 정책(2026-07-26 확정): GDC 정산은 handleGdcTransfer를 그대로
+// 재사용하되 purpose='transfer'로 호출 — 일반 개인 카풀 기사에게
+// 사업자등록 인증(verified_seller)을 요구하지 않는다.
+//
+// 컬렉션 공유 정책(2026-07-26 확정): match_* 컬렉션은 traffic·logistics가
+// 공유한다(화물기사 복귀길 승객 매칭 등 교차 활용 목적). vehicle_type/
+// demand_type 필드로 구분.
+// ═══════════════════════════════════════════════════════════
+
+const MATCH_DEMAND_EXPIRY_MS = 30 * 60 * 1000; // 30분 — 임의 설정치, 피터님 확인 필요(DAWN_VOTE_WINDOW_MS와 동일 성격)
+const MATCH_OFFER_EXPIRY_MS  = 3  * 60 * 1000; // offer 응답 대기 3분 — 임의 설정치, 이번 커밋에서는 미사용(자동만료 로직은 Phase 2)
+
+async function _matchHashGuid(env, guid) {
+  if (!guid) return null;
+  const salt = await _sha256Hex(`${_requireMasterKey(env)}:match-transport-salt`);
+  return _sha256Hex(`${guid}:${salt}`);
+}
+
+// ── geohash (경위도 → 셀 문자열, 기사 실시간 알림 구독 단위) ──────────
+// 표준 base32 geohash 인코딩의 최소 구현. precision=5 → 셀 한 변 약 4.9km.
+// 셀 경계 부근 기사는 인접 셀 신규 수요를 놓칠 수 있음(알려진 한계,
+// Phase 1 수용 — 추후 인접 셀 동시구독으로 보완 가능). GOV-TREE의
+// 읍면동(행정구역) 격자와는 무관한 별개의 순수 좌표 기반 격자다.
+const _GEOHASH_BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+function _geohashEncode(lat, lng, precision = 5) {
+  const latRange = [-90, 90], lngRange = [-180, 180];
+  let hash = '', bit = 0, ch = 0, evenBit = true;
+  while (hash.length < precision) {
+    if (evenBit) {
+      const mid = (lngRange[0] + lngRange[1]) / 2;
+      if (lng >= mid) { ch |= (1 << (4 - bit)); lngRange[0] = mid; } else { lngRange[1] = mid; }
+    } else {
+      const mid = (latRange[0] + latRange[1]) / 2;
+      if (lat >= mid) { ch |= (1 << (4 - bit)); latRange[0] = mid; } else { latRange[1] = mid; }
+    }
+    evenBit = !evenBit;
+    if (bit < 4) { bit++; } else { hash += _GEOHASH_BASE32[ch]; bit = 0; ch = 0; }
+  }
+  return hash;
+}
+
+// ── PocketBase CRUD — match_vehicles ────────────────────────────────
+async function _l1UpsertMatchVehicle(env, ownerHash, patch) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`owner_guid_hash='${ownerHash}'`);
+  const findRes = await fetch(`${L1_DEFAULT}/api/collections/match_vehicles/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!findRes.ok) throw new Error(`match_vehicles 조회 실패 (HTTP ${findRes.status})`);
+  const found = await findRes.json().catch(() => ({ items: [] }));
+  const existing = found.items?.[0] || null;
+
+  if (existing) {
+    const res = await fetch(`${L1_DEFAULT}/api/collections/match_vehicles/records/${existing.id}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) throw new Error(`match_vehicles 갱신 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+    return res.json();
+  }
+  const res = await fetch(`${L1_DEFAULT}/api/collections/match_vehicles/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ owner_guid_hash: ownerHash, ...patch }),
+  });
+  if (!res.ok) throw new Error(`match_vehicles 생성 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  return res.json();
+}
+
+async function _l1GetMatchVehicle(env, id) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/match_vehicles/records/${id}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+// ── PocketBase CRUD — match_demands ─────────────────────────────────
+async function _l1CreateMatchDemand(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/match_demands/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) throw new Error(`match_demands 생성 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  return res.json();
+}
+
+async function _l1ListOpenMatchDemands(env, { demandType, perPage = 100 } = {}) {
+  const token = await _l1AdminToken(env);
+  const parts = [`status='open'`];
+  if (demandType) parts.push(`demand_type='${demandType}'`);
+  const filter = encodeURIComponent(parts.join(' && '));
+  const res = await fetch(`${L1_DEFAULT}/api/collections/match_demands/records?filter=${filter}&perPage=${perPage}&sort=-created_at`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`match_demands 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items || [];
+}
+
+async function _l1GetMatchDemand(env, id) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/match_demands/records/${id}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function _l1UpdateMatchDemand(env, id, patch) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/match_demands/records/${id}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error(`match_demands 갱신 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  return res.json();
+}
+
+// 읽기 시점 지연 만료 처리 — _dawnMaybeCloseVoting과 동일 패턴(별도 크론 없음).
+async function _matchMaybeExpireDemand(env, demand) {
+  if (demand.status !== 'open') return demand;
+  if (new Date(demand.expires_at).getTime() > Date.now()) return demand;
+  try {
+    return await _l1UpdateMatchDemand(env, demand.id, { status: 'expired' });
+  } catch (e) {
+    console.error('[match] 수요 만료 처리 실패:', e.message);
+    return demand;
+  }
+}
+
+// ── PocketBase CRUD — match_offers ──────────────────────────────────
+async function _l1CreateMatchOffer(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/match_offers/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) throw new Error(`match_offers 생성 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  return res.json();
+}
+
+async function _l1GetMatchOffer(env, id) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/match_offers/records/${id}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function _l1UpdateMatchOffer(env, id, patch) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/match_offers/records/${id}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error(`match_offers 갱신 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  return res.json();
+}
+
+// ── PocketBase CRUD — match_trips ───────────────────────────────────
+async function _l1CreateMatchTrip(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/match_trips/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) throw new Error(`match_trips 생성 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  return res.json();
+}
+
+async function _l1UpdateMatchTrip(env, id, patch) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/match_trips/records/${id}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error(`match_trips 갱신 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  return res.json();
+}
+
+// ── Durable Object 브로드캐스트 헬퍼 ────────────────────────────────
+// DO는 fetch() 인터페이스로만 호출한다(RPC 대신 — 기존 코드 스타일과
+// 일관되게 fetch 기반 유지, 호환성 우선).
+async function _matchBroadcast(env, binding, channelKey, eventObj) {
+  try {
+    const id = env[binding].idFromName(channelKey);
+    const stub = env[binding].get(id);
+    await stub.fetch('https://match-do/broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(eventObj),
+    });
+  } catch (e) {
+    // 실시간 알림은 best-effort — 실패해도 polling(GET /match/demand/nearby,
+    // GET /match/offer 등 조회)으로 결국 상태는 맞게 수렴한다. 여기서
+    // 던지면 정작 중요한 매칭 자체가 실패 처리되므로 흡수만 하고 로깅.
+    console.error(`[match] ${binding} 브로드캐스트 실패:`, e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// HTTP 핸들러
+// ═══════════════════════════════════════════════════════════
+
+// POST /match/vehicle/register  body: {guid, vehicle_type, capacity}
+async function handleMatchVehicleRegister(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders); }
+  const vehicleType = payload.vehicle_type;
+  if (vehicleType !== 'passenger' && vehicleType !== 'cargo')
+    return _err(400, 'INVALID_VEHICLE_TYPE', "vehicle_type은 'passenger' 또는 'cargo'여야 합니다", corsHeaders);
+  const capacity = Number(payload.capacity);
+  if (!(capacity > 0)) return _err(400, 'INVALID_CAPACITY', 'capacity는 양수여야 합니다', corsHeaders);
+
+  const ownerHash = await _matchHashGuid(env, payload.guid);
+  if (!ownerHash) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  let rec;
+  try {
+    rec = await _l1UpsertMatchVehicle(env, ownerHash, {
+      vehicle_type: vehicleType,
+      capacity,
+      status: 'offline',
+      created_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders);
+  }
+  return new Response(JSON.stringify({ status: 'registered', vehicle: rec }), { headers: corsHeaders });
+}
+
+// POST /match/vehicle/position  body: {guid, lat, lng, status?}
+async function handleMatchVehiclePosition(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders); }
+  const lat = Number(payload.lat), lng = Number(payload.lng);
+  if (!(lat >= -90 && lat <= 90) || !(lng >= -180 && lng <= 180))
+    return _err(400, 'INVALID_COORDS', 'lat/lng 범위 오류', corsHeaders);
+  const status = payload.status;
+  if (status && !['offline', 'available', 'matched'].includes(status))
+    return _err(400, 'INVALID_STATUS', 'status 값 오류', corsHeaders);
+
+  const ownerHash = await _matchHashGuid(env, payload.guid);
+  if (!ownerHash) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  let rec;
+  try {
+    rec = await _l1UpsertMatchVehicle(env, ownerHash, {
+      current_lat: lat,
+      current_lng: lng,
+      location_updated_at: new Date().toISOString(),
+      ...(status ? { status } : {}),
+    });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders);
+  }
+
+  // Phase 1에서는 위치 갱신 자체를 다른 사용자에게 브로드캐스트하지
+  // 않는다 — 매칭 성사 전까지 기사 위치는 비공개 원칙(개인정보 최소화).
+  return new Response(JSON.stringify({ status: 'updated', vehicle: rec }), { headers: corsHeaders });
+}
+
+// POST /match/demand  body: {guid, demand_type, from_lat, from_lng, from_label?,
+//                             to_lat, to_lng, to_label?, cargo_detail?}
+async function handleMatchDemandSubmit(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders); }
+  const demandType = payload.demand_type;
+  if (demandType !== 'ride' && demandType !== 'cargo')
+    return _err(400, 'INVALID_DEMAND_TYPE', "demand_type은 'ride' 또는 'cargo'여야 합니다", corsHeaders);
+  const fromLat = Number(payload.from_lat), fromLng = Number(payload.from_lng);
+  const toLat = Number(payload.to_lat), toLng = Number(payload.to_lng);
+  for (const [v, name] of [[fromLat, 'from_lat'], [toLat, 'to_lat']]) {
+    if (!(v >= -90 && v <= 90)) return _err(400, 'INVALID_COORDS', `${name} 범위 오류`, corsHeaders);
+  }
+  for (const [v, name] of [[fromLng, 'from_lng'], [toLng, 'to_lng']]) {
+    if (!(v >= -180 && v <= 180)) return _err(400, 'INVALID_COORDS', `${name} 범위 오류`, corsHeaders);
+  }
+
+  const requesterHash = await _matchHashGuid(env, payload.guid);
+  if (!requesterHash) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  const now = Date.now();
+  const record = {
+    requester_guid_hash: requesterHash,
+    demand_type: demandType,
+    from_lat: fromLat, from_lng: fromLng, from_label: String(payload.from_label || '').slice(0, 200),
+    to_lat: toLat, to_lng: toLng, to_label: String(payload.to_label || '').slice(0, 200),
+    cargo_detail: demandType === 'cargo' ? String(payload.cargo_detail || '').slice(0, 1000) : '',
+    status: 'open',
+    expires_at: new Date(now + MATCH_DEMAND_EXPIRY_MS).toISOString(),
+    created_at: new Date(now).toISOString(),
+  };
+
+  let rec;
+  try {
+    rec = await _l1CreateMatchDemand(env, record);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders);
+  }
+
+  // 출발지 geohash 셀에 구독 중인 기사들에게 실시간 알림(best-effort).
+  const cell = _geohashEncode(fromLat, fromLng, 5);
+  await _matchBroadcast(env, 'MATCH_REGION_CHANNEL', cell, {
+    type: 'demand_posted',
+    demand_id: rec.id,
+    demand_type: demandType,
+    from_lat: fromLat, from_lng: fromLng, from_label: record.from_label,
+    to_label: record.to_label,
+  });
+
+  return new Response(JSON.stringify({ status: 'posted', demand: rec }), { headers: corsHeaders });
+}
+
+// GET /match/demand/nearby?lat=&lng=&radius_km=&demand_type=
+async function handleMatchDemandNearby(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const lat = Number(url.searchParams.get('lat'));
+  const lng = Number(url.searchParams.get('lng'));
+  if (!(lat >= -90 && lat <= 90) || !(lng >= -180 && lng <= 180))
+    return _err(400, 'INVALID_COORDS', 'lat/lng 필수', corsHeaders);
+  const radiusKm = Number(url.searchParams.get('radius_km')) || 5;
+  const demandType = url.searchParams.get('demand_type') || null;
+
+  let items;
+  try {
+    items = await _l1ListOpenMatchDemands(env, { demandType });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders);
+  }
+  const resolved = await Promise.all(items.map((d) => _matchMaybeExpireDemand(env, d)));
+  const nearby = resolved
+    .filter((d) => d.status === 'open')
+    .map((d) => ({ ...d, distance_km: _haversineKm(lat, lng, d.from_lat, d.from_lng) }))
+    .filter((d) => d.distance_km <= radiusKm)
+    .sort((a, b) => a.distance_km - b.distance_km);
+
+  return new Response(JSON.stringify({ demands: nearby }), { headers: corsHeaders });
+}
+
+// POST /match/offer  body: {guid, vehicle_id, demand_id}
+async function handleMatchOfferSubmit(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders); }
+  const demandId = payload.demand_id, vehicleId = payload.vehicle_id;
+  if (!demandId || !vehicleId) return _err(400, 'MISSING_FIELD', 'demand_id, vehicle_id 필수', corsHeaders);
+
+  const driverHash = await _matchHashGuid(env, payload.guid);
+  if (!driverHash) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  let demand, vehicle;
+  try {
+    demand = await _l1GetMatchDemand(env, demandId);
+    vehicle = await _l1GetMatchVehicle(env, vehicleId);
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders);
+  }
+  if (!demand) return _err(404, 'DEMAND_NOT_FOUND', '수요를 찾을 수 없습니다', corsHeaders);
+  if (!vehicle) return _err(404, 'VEHICLE_NOT_FOUND', '차량을 찾을 수 없습니다', corsHeaders);
+  demand = await _matchMaybeExpireDemand(env, demand);
+  if (demand.status !== 'open')
+    return _err(409, 'DEMAND_NOT_OPEN', `이미 처리된 수요입니다(status=${demand.status})`, corsHeaders);
+  if (vehicle.owner_guid_hash !== driverHash)
+    return _err(403, 'NOT_VEHICLE_OWNER', '본인 차량으로만 응답할 수 있습니다', corsHeaders);
+
+  const distanceKm = _haversineKm(demand.from_lat, demand.from_lng, vehicle.current_lat, vehicle.current_lng);
+  const now = Date.now();
+  let rec;
+  try {
+    rec = await _l1CreateMatchOffer(env, {
+      demand_id: demandId,
+      vehicle_id: vehicleId,
+      driver_guid_hash: driverHash,
+      status: 'pending',
+      distance_km: Number.isFinite(distanceKm) ? distanceKm : null,
+      created_at: new Date(now).toISOString(),
+    });
+  } catch (e) {
+    // 유니크 인덱스(demand_id, vehicle_id) 위반 = 이미 이 수요에 응답한
+    // 적 있는 경우 — 409로 안내.
+    if (/UNIQUE|unique/.test(e.message)) return _err(409, 'OFFER_ALREADY_EXISTS', '이미 이 수요에 응답했습니다', corsHeaders);
+    return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders);
+  }
+
+  await _matchBroadcast(env, 'MATCH_DEMAND_CHANNEL', demandId, {
+    type: 'offer_created',
+    offer_id: rec.id,
+    demand_id: demandId,
+    distance_km: rec.distance_km,
+  });
+
+  return new Response(JSON.stringify({ status: 'offered', offer: rec }), { headers: corsHeaders });
+}
+
+// POST /match/offer/:id/accept  body: {guid}
+async function handleMatchOfferAccept(request, env, corsHeaders, offerId) {
+  let payload;
+  try { payload = await request.json(); } catch { return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders); }
+  const requesterHash = await _matchHashGuid(env, payload.guid);
+  if (!requesterHash) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  let offer;
+  try { offer = await _l1GetMatchOffer(env, offerId); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders); }
+  if (!offer) return _err(404, 'OFFER_NOT_FOUND', 'offer를 찾을 수 없습니다', corsHeaders);
+  if (offer.status !== 'pending')
+    return _err(409, 'OFFER_NOT_PENDING', `이미 처리된 offer입니다(status=${offer.status})`, corsHeaders);
+
+  let demand;
+  try { demand = await _l1GetMatchDemand(env, offer.demand_id); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders); }
+  if (!demand) return _err(404, 'DEMAND_NOT_FOUND', '수요를 찾을 수 없습니다', corsHeaders);
+  if (demand.requester_guid_hash !== requesterHash)
+    return _err(403, 'NOT_DEMAND_OWNER', '본인이 게시한 수요만 수락할 수 있습니다', corsHeaders);
+  if (demand.status !== 'open')
+    return _err(409, 'DEMAND_NOT_OPEN', `이미 처리된 수요입니다(status=${demand.status})`, corsHeaders);
+
+  const now = new Date().toISOString();
+  let updatedOffer, trip;
+  try {
+    updatedOffer = await _l1UpdateMatchOffer(env, offerId, { status: 'accepted', responded_at: now });
+    await _l1UpdateMatchDemand(env, demand.id, { status: 'matched' });
+    trip = await _l1CreateMatchTrip(env, {
+      demand_id: demand.id,
+      offer_id: offerId,
+      status: 'in_progress',
+      created_at: now,
+    });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders);
+  }
+
+  // 참고: 같은 수요에 냈던 다른 pending offer들을 자동 rejected 처리하는
+  // 로직은 Phase 2로 미룬다(이번 범위 밖 — 목록 조회 시 demand.status가
+  // 'matched'이므로 클라이언트가 판단 가능해서 치명적이진 않음).
+
+  await _matchBroadcast(env, 'MATCH_DEMAND_CHANNEL', demand.id, {
+    type: 'offer_accepted',
+    offer_id: offerId,
+    trip_id: trip.id,
+  });
+
+  return new Response(JSON.stringify({ status: 'accepted', offer: updatedOffer, trip }), { headers: corsHeaders });
+}
+
+// POST /match/offer/:id/reject  body: {guid}
+async function handleMatchOfferReject(request, env, corsHeaders, offerId) {
+  let payload;
+  try { payload = await request.json(); } catch { return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders); }
+  const requesterHash = await _matchHashGuid(env, payload.guid);
+  if (!requesterHash) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+
+  let offer;
+  try { offer = await _l1GetMatchOffer(env, offerId); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders); }
+  if (!offer) return _err(404, 'OFFER_NOT_FOUND', 'offer를 찾을 수 없습니다', corsHeaders);
+  if (offer.status !== 'pending')
+    return _err(409, 'OFFER_NOT_PENDING', `이미 처리된 offer입니다(status=${offer.status})`, corsHeaders);
+
+  let demand;
+  try { demand = await _l1GetMatchDemand(env, offer.demand_id); }
+  catch (e) { return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders); }
+  if (!demand) return _err(404, 'DEMAND_NOT_FOUND', '수요를 찾을 수 없습니다', corsHeaders);
+  if (demand.requester_guid_hash !== requesterHash)
+    return _err(403, 'NOT_DEMAND_OWNER', '본인이 게시한 수요만 거절할 수 있습니다', corsHeaders);
+
+  let updatedOffer;
+  try {
+    updatedOffer = await _l1UpdateMatchOffer(env, offerId, { status: 'rejected', responded_at: new Date().toISOString() });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders);
+  }
+
+  await _matchBroadcast(env, 'MATCH_DEMAND_CHANNEL', demand.id, {
+    type: 'offer_rejected',
+    offer_id: offerId,
+  });
+
+  return new Response(JSON.stringify({ status: 'rejected', offer: updatedOffer }), { headers: corsHeaders });
+}
+
+// POST /match/trip/:id/complete  body: {guid, gdc?: {tx_hash, sender_sig, sender_public_key, from_guid, to_guid, amount, memo?}}
+// 완료 처리 + GDC 정산(handleGdcTransfer 재사용, purpose='transfer' 고정 —
+// §8 확정 정책: 일반 카풀 기사에게 verified_seller 인증 요구 안 함).
+async function handleMatchTripComplete(request, env, corsHeaders, ctx, tripId) {
+  let payload;
+  try { payload = await request.json(); } catch { return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders); }
+
+  const token = await _l1AdminToken(env).catch(() => null);
+  if (!token) return _err(502, 'L1_UNREACHABLE', 'L1 인증 실패', corsHeaders);
+  const tripRes = await fetch(`${L1_DEFAULT}/api/collections/match_trips/records/${tripId}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!tripRes.ok) return _err(404, 'TRIP_NOT_FOUND', 'trip을 찾을 수 없습니다', corsHeaders);
+  const trip = await tripRes.json();
+  if (trip.status !== 'in_progress')
+    return _err(409, 'TRIP_NOT_IN_PROGRESS', `이미 처리된 trip입니다(status=${trip.status})`, corsHeaders);
+
+  let gdcResult = null;
+  if (payload.gdc) {
+    const gdcBody = { ...payload.gdc, purpose: 'transfer' };
+    const gdcRequest = new Request(request.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(gdcBody),
+    });
+    const gdcRes = await handleGdcTransfer(gdcRequest, env, corsHeaders, ctx);
+    if (!gdcRes.ok) return gdcRes; // GDC 실패 시 trip 완료 처리도 중단
+    gdcResult = await gdcRes.json();
+  }
+
+  let updatedTrip;
+  try {
+    updatedTrip = await _l1UpdateMatchTrip(env, tripId, {
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+      ...(gdcResult?.tx_hash ? { gdc_tx_hash: gdcResult.tx_hash } : {}),
+    });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders);
+  }
+
+  await _matchBroadcast(env, 'MATCH_DEMAND_CHANNEL', trip.demand_id, {
+    type: 'trip_completed',
+    trip_id: tripId,
+  });
+
+  return new Response(JSON.stringify({ status: 'completed', trip: updatedTrip, gdc: gdcResult }), { headers: corsHeaders });
+}
+
+// GET /match/ws/demand/:id  — WebSocket 업그레이드, 해당 수요의 이벤트 구독
+// (offer_created/offer_accepted/offer_rejected/trip_completed)
+async function handleMatchWsDemand(request, env, demandId) {
+  const id = env.MATCH_DEMAND_CHANNEL.idFromName(demandId);
+  const stub = env.MATCH_DEMAND_CHANNEL.get(id);
+  return stub.fetch(request);
+}
+
+// GET /match/ws/region/:geohash  — WebSocket 업그레이드, 해당 셀의 신규 수요 구독
+async function handleMatchWsRegion(request, env, cell) {
+  const id = env.MATCH_REGION_CHANNEL.idFromName(cell);
+  const stub = env.MATCH_REGION_CHANNEL.get(id);
+  return stub.fetch(request);
+}
+
+// ═══════════════════════════════════════════════════════════
+// Durable Objects — 실시간 매칭 알림 채널 (2026-07-26 신설)
+//
+// 무료 플랜 호환을 위해 SQLite 백엔드로 생성한다(wrangler.toml의
+// migrations 블록에서 new_sqlite_classes 사용 — new_classes(key-value
+// 백엔드) 아님, 무료 플랜에서는 SQLite 백엔드만 지원됨. Cloudflare
+// 공식 문서 2026-07-07 갱신 기준 확인). WebSocket Hibernation API
+// (ctx.acceptWebSocket)를 사용해 idle 연결에 duration 과금이 발생하지
+// 않도록 한다(Cloudflare 공식 권장 패턴).
+//
+// - MatchDemandChannel: demand_id별 1개 — 수요 게시자(+응답한 기사)가
+//   offer 생성·수락·거절·완료 이벤트를 실시간으로 받는다.
+// - MatchRegionChannel: geohash 5자리 셀별 1개 — 그 셀의 기사들이 새
+//   수요 게시 이벤트를 실시간으로 받는다(셀 경계 인접 한계는 위 주석
+//   참고).
+// ═══════════════════════════════════════════════════════════
+
+class _MatchChannelBase {
+  constructor(ctx, env) {
+    this.ctx = ctx;
+    this.env = env;
+  }
+
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (url.pathname === '/broadcast' && request.method === 'POST') {
+      let event;
+      try { event = await request.json(); } catch { return new Response('bad json', { status: 400 }); }
+      const msg = JSON.stringify(event);
+      for (const ws of this.ctx.getWebSockets()) {
+        try { ws.send(msg); } catch (e) { /* 끊긴 소켓 무시 */ }
+      }
+      return new Response('ok');
+    }
+
+    const upgradeHeader = request.headers.get('Upgrade');
+    if (upgradeHeader !== 'websocket') {
+      return new Response('Expected websocket', { status: 426 });
+    }
+    const pair = new WebSocketPair();
+    const [client, server] = Object.values(pair);
+    this.ctx.acceptWebSocket(server);
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  async webSocketMessage(ws, message) {
+    // 클라이언트는 구독 전용 — 별도 메시지를 보낼 필요 없음. 무시.
+  }
+
+  async webSocketClose(ws, code, reason, wasClean) {
+    try { ws.close(code, reason); } catch (e) { /* 이미 닫힘 */ }
+  }
+
+  async webSocketError(ws, error) {
+    console.error('[match-do] WebSocket 오류:', error?.message || error);
+  }
+}
+
+export class MatchDemandChannel extends _MatchChannelBase {}
+export class MatchRegionChannel extends _MatchChannelBase {}
+
+
 export default {
   // ── Cron 트리거 (10분마다 머클 앵커링 + 브릿지 아웃박스 스윕) ────────
   async scheduled(event, env, ctx) {
@@ -6346,6 +6976,28 @@ export default {
       return handleDemocracyEndorse(request, env, corsHeaders);
     if (pathname === '/democracy/vote' && request.method === 'POST')
       return handleDemocracyVote(request, env, corsHeaders);
+
+    // ── K-Traffic/K-Logistics 실매칭 백엔드 (2026-07-26 신설) ─────────
+    if (pathname === '/match/vehicle/register' && request.method === 'POST')
+      return handleMatchVehicleRegister(request, env, corsHeaders);
+    if (pathname === '/match/vehicle/position' && request.method === 'POST')
+      return handleMatchVehiclePosition(request, env, corsHeaders);
+    if (pathname === '/match/demand' && request.method === 'POST')
+      return handleMatchDemandSubmit(request, env, corsHeaders);
+    if (pathname === '/match/demand/nearby' && request.method === 'GET')
+      return handleMatchDemandNearby(request, env, corsHeaders);
+    if (pathname === '/match/offer' && request.method === 'POST')
+      return handleMatchOfferSubmit(request, env, corsHeaders);
+    if (pathname.match(/^\/match\/offer\/[^/]+\/accept$/) && request.method === 'POST')
+      return handleMatchOfferAccept(request, env, corsHeaders, pathname.split('/')[3]);
+    if (pathname.match(/^\/match\/offer\/[^/]+\/reject$/) && request.method === 'POST')
+      return handleMatchOfferReject(request, env, corsHeaders, pathname.split('/')[3]);
+    if (pathname.match(/^\/match\/trip\/[^/]+\/complete$/) && request.method === 'POST')
+      return handleMatchTripComplete(request, env, corsHeaders, ctx, pathname.split('/')[3]);
+    if (pathname.match(/^\/match\/ws\/demand\/[^/]+$/))
+      return handleMatchWsDemand(request, env, pathname.split('/')[4]);
+    if (pathname.match(/^\/match\/ws\/region\/[^/]+$/))
+      return handleMatchWsRegion(request, env, pathname.split('/')[4]);
 
     // ── gwp_registry (2026-07-11 신설) ──────────────────────────────
     if (pathname === '/gwp-registry/lookup' && request.method === 'GET')
