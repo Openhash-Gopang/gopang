@@ -680,13 +680,35 @@ body {
     </a>
   </div>
 
-  <!-- 문서 -->
+  <!-- 이용 안내 (2026-07-25 신설 — MANUAL_SEPARATION_PLAN_v1.0 §3.1.
+       일반 사용자 전용. 여기 3개만 본다는 확신을 주는 게 목적이라,
+       새 항목을 함부로 추가하지 말 것 — 개발자용 문서는 반드시 아래
+       "개발자 문서" 섹션에 넣는다. -->
   <div class="sb-section">
-    <div class="sb-section-label">문서</div>
+    <div class="sb-section-label">📖 이용 안내</div>
     <a class="sb-item" href="./docs/hondi_user_manual.html">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/></svg>
       <span class="sb-item-label">사용자 매뉴얼</span>
     </a>
+    <a class="sb-item" href="./docs/user-guide.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
+      <span class="sb-item-label">시작하기</span>
+    </a>
+    <a class="sb-item" href="./docs/hondi_glossary.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+      <span class="sb-item-label">용어집</span>
+    </a>
+  </div>
+
+  <!-- 개발자 문서 (2026-07-25 신설 — 옛 "문서" 섹션에서 "사용자 매뉴얼"만
+       빼고 나머지 그대로 이동. 파일 경로는 전혀 안 바꿨다(MANUAL_
+       SEPARATION_PLAN_v1.0 원칙 3 — 링크만 재배치, 파일은 이동 안 함). -->
+  <div class="sb-section">
+    <div class="sb-section-label">🛠 개발자 문서</div>
     <a class="sb-item" href="./docs/MANUAL_INDEX.md" target="_blank">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
@@ -786,7 +808,11 @@ body {
        이번에 실제로 확인돼서(§3.1: 같은 PowerShell 파이프 개행 버그가
        LEDGER_WRITE_SECRET 401 문서화 이후에도 L1_ADMIN_PASSWORD에서
        재발) 좌측 메뉴 상시 노출로 격상함. 새 항목 추가 시 이 섹션
-       맨 위(최신)에 넣을 것 — 아래로 밀려날수록 눈에 덜 띔. -->
+       맨 위(최신)에 넣을 것 — 아래로 밀려날수록 눈에 덜 띔.
+       ★ 2026-07-25(MANUAL_SEPARATION_PLAN_v1.0): 이 섹션을 "개발자
+       문서" 하위로 접어넣는 게 원래 계획(§3.1)이었으나, 위 설계
+       의도(상시 노출이 핵심)와 정면으로 충돌해 그대로 최상위 섹션으로
+       유지하기로 변경 — 실행 중 발견한 사실을 계획보다 우선했다. -->
   <div class="sb-section" id="sb-caution-section">
     <div class="sb-section-label" style="color:#c0392b">⚠ 주의</div>
     <a class="sb-item" href="./docs/PUSH_SUBSCRIPTION_MULTIDEVICE_2026_07_23.md" target="_blank" style="color:#c0392b">
