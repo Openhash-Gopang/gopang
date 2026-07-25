@@ -163,8 +163,12 @@ function _chargeBankAccountInfo(env) {
 
 // (2026-07-14: 관리자 전용 액션 — /biz/charge-list, /biz/charge-confirm
 //  인증. handlePushBroadcast의 DEPLOY_PUSH_SECRET과 동일 관례.)
+// 2026-07-25: 하드코딩된 폴백 시크릿('hondi-dev-admin-2026') 제거.
+// 공개 저장소에 그대로 노출되던 값이라 사실상 보호 기능이 없었음.
+// env.ADMIN_ACTION_SECRET 미설정 시 null을 반환해 모든 비교가 항상
+// 실패하도록(fail-closed) 한다 — wrangler secret put ADMIN_ACTION_SECRET 필수.
 function _adminActionSecret(env) {
-  return env.ADMIN_ACTION_SECRET || 'hondi-dev-admin-2026';
+  return env.ADMIN_ACTION_SECRET || null;
 }
 
 // 입금자명(보내는 분 표시)에 사용자가 직접 포함시킬 짧은 매칭 코드.
@@ -7977,11 +7981,10 @@ async function handleGdcDaoProposalsList(request, env, corsHeaders) {
 //  그대로 가져온다 — 관리자가 "전체 흐름"을 보는 용도라 개인정보
 //  노출 범위가 넓으므로 admin token 필수.)
 async function handleAdminTxRecent(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
+
   const url = new URL(request.url);
-  const token = url.searchParams.get('token');
-  if (!token) return _err(401, 'MISSING_TOKEN', '', corsHeaders);
-  const isValid = await _verifyAdminToken(env, token);
-  if (!isValid) return _err(403, 'INVALID_TOKEN', '', corsHeaders);
 
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '15', 10) || 15, 100);
   const l1Token = await _l1AdminToken(env);
@@ -12821,24 +12824,24 @@ async function _deleteAllUserData(env, guid, l1Record) {
 
 // ═══════════════════════════════════════════════════════════
 // POST /admin/users/bulk-delete — 관리자 일괄 삭제 (desktop.html 관리자 대시보드 전용)
-// body: { admin_token, identifiers: ['@KR-12345678', '2601:db80:...', ...] }
+// body: { identifiers: ['@KR-12345678', '2601:db80:...', ...] } — Authorization: Bearer <token> 헤더 필수
 // identifiers: '@'로 시작하면 handle로 보고 L1에서 guid를 조회, 아니면 그 값을 guid로 간주.
 // 절차:
 //   ① 식별자 → guid 해석 (handle인 경우 L1 조회)
 //   ② casts_for(그림자) 일괄 정리 — 대상 guid를 본체로 둔 그림자 row를 먼저 지워야
 //      2번 단계(user_profiles 삭제)가 자기참조 FK 위반으로 막히지 않는다.
 //   ③ guid별 _deleteAllUserData()로 L1 + Supabase 9개 테이블 + KV 삭제
-// 본인 서명(Ed25519) 검증 없음 — 관리자 HMAC 토큰(_verifyAdminToken)으로만 인증.
+// 본인 서명(Ed25519) 검증 없음 — Authorization: Bearer 관리자 토큰(_requireAdmin)으로만 인증.
 // 1회 호출당 최대 100개 — 그 이상은 여러 번에 나눠 호출할 것.
 // ═══════════════════════════════════════════════════════════
 async function handleAdminBulkDelete(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
+
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
 
-  const { admin_token, identifiers } = body;
-  if (!admin_token) return _err(401, 'MISSING_TOKEN', 'admin_token 필수', corsHeaders);
-  const isValid = await _verifyAdminToken(env, admin_token);
-  if (!isValid) return _err(403, 'INVALID_TOKEN', '관리자 인증 실패', corsHeaders);
+  const { identifiers } = body;
 
   if (!Array.isArray(identifiers) || identifiers.length === 0)
     return _err(400, 'MISSING_FIELD', 'identifiers(배열) 필수', corsHeaders);
@@ -16475,18 +16478,15 @@ async function handleAdminPromptSave(request, env, corsHeaders) {
 // ══════════════════════════════════════════════════════════════
 
 // POST /admin/default-key
-// body: { admin_token, keys:[{provider,model,key,active}], trial_days, expired_msg }
-// admin_token: desktop.html에서 HMAC-SHA256으로 생성한 토큰
+// body: { keys:[{provider,model,key,active}], trial_days, expired_msg } — Authorization: Bearer <token> 헤더 필수
 async function handleAdminDefaultKeySet(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
+
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON 파싱 실패', corsHeaders);
 
-  // HMAC 검증 — desktop.html의 ADMIN_SALT와 동일한 키로 검증
-  const { admin_token, keys, trial_days, expired_msg } = body;
-  if (!admin_token) return _err(401, 'MISSING_TOKEN', 'admin_token 필수', corsHeaders);
-
-  const isValid = await _verifyAdminToken(env, admin_token);
-  if (!isValid) return _err(403, 'INVALID_TOKEN', '관리자 인증 실패', corsHeaders);
+  const { keys, trial_days, expired_msg } = body;
 
   const kv = env.AI_SETUP_SEALS_KV;
   if (!kv) return _err(500, 'KV_UNAVAILABLE', 'KV 바인딩 없음', corsHeaders);
@@ -16584,11 +16584,11 @@ async function handleDefaultKeyGet(request, env, corsHeaders) {
 // POST /admin/cf-dns — Cloudflare DNS CNAME 추가 (브라우저 CORS 우회)
 // body: { token, apiKey, email, zoneId, name, content }
 async function handleAdminCfDns(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return new Response(JSON.stringify({error:'UNAUTHORIZED'}), {status:401, headers:corsHeaders});
+
   const body = await request.json().catch(() => ({}));
-  const { token, apiKey, email, zoneId, name, content } = body;
-  if (!token) return new Response(JSON.stringify({error:'MISSING_TOKEN'}), {status:401, headers:corsHeaders});
-  const isValid = await _verifyAdminToken(env, token);
-  if (!isValid) return new Response(JSON.stringify({error:'INVALID_TOKEN'}), {status:403, headers:corsHeaders});
+  const { apiKey, email, zoneId, name, content } = body;
   if (!apiKey || !email || !zoneId || !name) 
     return new Response(JSON.stringify({error:'MISSING_PARAMS'}), {status:400, headers:corsHeaders});
 
@@ -16610,11 +16610,10 @@ async function handleAdminCfDns(request, env, corsHeaders) {
 //  'https://l1-hanlim.hondi.net'로 저장소 전체에서 수백 곳에서 정상
 //  호출되고 있다. 오래된 주석이 남아있었을 뿐이다.)
 async function handleAdminStats(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return new Response(JSON.stringify({error:'UNAUTHORIZED'}), {status:401, headers:corsHeaders});
+
   const url = new URL(request.url);
-  const token = url.searchParams.get('token');
-  if (!token) return new Response(JSON.stringify({error:'MISSING_TOKEN'}), {status:401, headers:corsHeaders});
-  const isValid = await _verifyAdminToken(env, token);
-  if (!isValid) return new Response(JSON.stringify({error:'INVALID_TOKEN'}), {status:403, headers:corsHeaders});
 
   try {
     const l1Token = await _l1AdminToken(env);
@@ -16645,20 +16644,11 @@ async function handleAdminStats(request, env, corsHeaders) {
   }
 }
 
-async function _verifyAdminToken(env, token) {
-  try {
-    const [tsStr, hmacHex] = token.split('.');
-    if (!tsStr || !hmacHex) return false;
-    const ts  = parseInt(tsStr);
-    const now = Math.floor(Date.now() / 1000);
-    if (Math.abs(now - ts) > 300) return false;  // 5분 유효
-
-    const secret = env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1';
-    const k = await crypto.subtle.importKey(
-      'raw', new TextEncoder().encode(secret),
-      { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
-    );
-    const sigBytes = Uint8Array.from(hmacHex.match(/.{2}/g).map(h => parseInt(h, 16)));
-    return await crypto.subtle.verify('HMAC', k, sigBytes, new TextEncoder().encode(tsStr));
-  } catch { return false; }
-}
+// 2026-07-25: _verifyAdminToken() 제거됨 (보안 취약점).
+// 기존에는 이 함수가 desktop.html의 ADMIN_SALT('hondi-admin-salt', 공개 소스에
+// 평문 노출)와 짝을 이루는 타임스탬프-HMAC 토큰을 검증했다. 클라이언트 JS에
+// 서명 비밀키가 그대로 있었으므로, 비밀번호 없이 누구나 유효한 토큰을 직접
+// 만들어 관리자 API를 호출할 수 있는 상태였다. 모든 호출부(handleAdminTxRecent,
+// handleAdminBulkDelete, handleAdminDefaultKeySet, handleAdminCfDns,
+// handleAdminStats)는 이제 서버 전용 비밀(env.ADMIN_MASTER_KEY)로 서명되는
+// _requireAdmin()/parseAdminToken() 기반 Bearer 토큰 검증으로 교체됐다.

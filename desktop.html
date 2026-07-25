@@ -2282,19 +2282,24 @@ body {
 
     <!-- 로그인 -->
     <div id="admin-login" style="padding:40px 32px;text-align:center">
-      <div style="font-size:14px;color:#6b7280;margin-bottom:20px">관리자 패스워드를 입력하세요</div>
-      <input id="admin-pw-input" type="password" placeholder="패스워드"
+      <div style="font-size:14px;color:#6b7280;margin-bottom:20px">관리자 계정으로 로그인하세요</div>
+      <input id="admin-email-input" type="email" placeholder="이메일" autocomplete="username"
+             style="width:100%;max-width:320px;padding:11px 14px;border:1px solid #d1d5db;
+                    border-radius:10px;font-size:16px;outline:none;font-family:inherit;
+                    box-sizing:border-box;display:block;margin:0 auto 10px"
+             onkeydown="if(event.key==='Enter')document.getElementById('admin-pw-input')?.focus()">
+      <input id="admin-pw-input" type="password" placeholder="패스워드" autocomplete="current-password"
              style="width:100%;max-width:320px;padding:11px 14px;border:1px solid #d1d5db;
                     border-radius:10px;font-size:18px;outline:none;font-family:inherit;
                     box-sizing:border-box;display:block;margin:0 auto 12px"
              onkeydown="if(event.key==='Enter')_adminLogin()">
-      <button onclick="_adminLogin()"
+      <button onclick="_adminLogin()" id="admin-login-btn"
               style="width:100%;max-width:320px;padding:12px;background:#16a34a;color:#fff;
                      border:none;border-radius:10px;font-size:18px;font-weight:600;cursor:pointer;font-family:inherit">
         로그인
       </button>
       <div id="admin-login-err" style="color:#dc2626;font-size:14px;margin-top:10px;display:none">
-        패스워드가 올바르지 않습니다.
+        이메일 또는 패스워드가 올바르지 않습니다.
       </div>
     </div>
 
@@ -2491,17 +2496,21 @@ body {
 
 <script>
 // ══════════════════════════════════════════════════════════════
-// 관리자 대시보드 JS — v2.0
-// 패스워드: team_jupeter (HMAC-SHA256)
+// 관리자 대시보드 JS — v3.0 (2026-07-25)
+// 보안 수정: 이전 버전은 비밀번호 해시·솔트가 이 공개 소스 파일에
+// 그대로 노출돼 있어(ADMIN_HASH/ADMIN_SALT), 로그인 절차 없이도
+// 누구나 유효한 관리자 토큰을 직접 만들 수 있는 상태였다. 이제는
+// worker.js의 POST /admin/login이 PocketBase(prompt_admins 컬렉션)로
+// 서버 측에서 이메일·비밀번호를 검증하고, 서버 전용 비밀
+// (env.ADMIN_MASTER_KEY)로 서명한 Bearer 토큰을 발급한다. 클라이언트는
+// 그 비밀을 알거나 계산할 수 없다.
 // ══════════════════════════════════════════════════════════════
 
-const ADMIN_HASH  = '828b92846fc9e6108aa986cfa57336e26d596fb60dbe898601e7c2fe7060f68b';
-const ADMIN_SALT  = 'hondi-admin-salt';
 const WORKER_URL  = 'https://hondi-proxy.tensor-city.workers.dev';
 const LS_KEYS     = 'hondi_default_llm_keys';
 const LS_TRIAL    = 'hondi_trial_days';
 const LS_EXPR_MSG = 'hondi_trial_expired_msg';
-const LS_SESSION  = 'hondi_admin_session';
+const LS_TOKEN    = 'hondi_admin_token';      // 서버가 발급한 Bearer 토큰(JWT 유사, 30분 만료)
 const LS_CF_CRED  = 'hondi_cf_credentials';
 
 const PROVIDERS = [
@@ -2562,21 +2571,23 @@ const PROVIDERS = [
   ]},
 ];
 
-// ── HMAC ─────────────────────────────────────────────────────
-async function _hmac(msg, key) {
-  const enc = new TextEncoder();
-  const k   = await crypto.subtle.importKey('raw', enc.encode(key), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
-  const sig  = await crypto.subtle.sign('HMAC', k, enc.encode(msg));
-  return Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+// ── 인증 토큰 헬퍼 ────────────────────────────────────────────
+// 토큰은 로그인 시 서버(worker.js /admin/login)가 발급하며, 클라이언트는
+// 서명에 필요한 비밀을 전혀 알지 못한다. localStorage에는 편의를 위해
+// 토큰과 만료시각만 저장한다 — 실제 보안 경계는 항상 서버(_requireAdmin)이다.
+function _adminToken() {
+  try {
+    const raw = localStorage.getItem(LS_TOKEN);
+    if (!raw) return null;
+    const { token, exp } = JSON.parse(raw);
+    if (!token || !exp || Math.floor(Date.now()/1000) >= exp) return null;
+    return token;
+  } catch { return null; }
 }
 
-async function _buildAdminToken() {
-  const ts  = Math.floor(Date.now()/1000).toString();
-  const enc = new TextEncoder();
-  const k   = await crypto.subtle.importKey('raw', enc.encode(ADMIN_SALT), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
-  const sig  = await crypto.subtle.sign('HMAC', k, enc.encode(ts));
-  const hex  = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
-  return `${ts}.${hex}`;
+function _adminAuthHeaders() {
+  const t = _adminToken();
+  return t ? { 'Authorization': 'Bearer ' + t } : {};
 }
 
 // ── 패널 ─────────────────────────────────────────────────────
@@ -2584,12 +2595,11 @@ function _openAdminPanel() {
   const ov = document.getElementById('admin-overlay');
   ov.style.display = 'flex';
   document.body.style.overflow = 'hidden';
-  const sess = localStorage.getItem(LS_SESSION);
-  if (sess && Date.now() < parseInt(sess)) { _showAdminBody(); return; }
+  if (_adminToken()) { _showAdminBody(); return; }
   document.getElementById('admin-login').style.display     = 'block';
   document.getElementById('admin-body').style.display      = 'none';
   document.getElementById('admin-login-err').style.display = 'none';
-  setTimeout(() => document.getElementById('admin-pw-input')?.focus(), 100);
+  setTimeout(() => document.getElementById('admin-email-input')?.focus(), 100);
 }
 
 function closeAdminPanel() {
@@ -2598,17 +2608,34 @@ function closeAdminPanel() {
 }
 
 async function _adminLogin() {
-  const pw  = document.getElementById('admin-pw-input').value;
-  const err = document.getElementById('admin-login-err');
-  if (!pw) return;
-  const hash = await _hmac(pw, ADMIN_SALT);
-  if (hash === ADMIN_HASH) {
-    localStorage.setItem(LS_SESSION, Date.now() + 30*60*1000);
+  const email = document.getElementById('admin-email-input').value.trim();
+  const pw    = document.getElementById('admin-pw-input').value;
+  const err   = document.getElementById('admin-login-err');
+  const btn   = document.getElementById('admin-login-btn');
+  if (!email || !pw) return;
+
+  btn.disabled = true; btn.textContent = '로그인 중…';
+  try {
+    const res  = await fetch(`${WORKER_URL}/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pw }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.token) {
+      err.textContent = data?.message || '이메일 또는 패스워드가 올바르지 않습니다.';
+      err.style.display = 'block';
+      return;
+    }
+    localStorage.setItem(LS_TOKEN, JSON.stringify({ token: data.token, exp: data.exp }));
     document.getElementById('admin-pw-input').value = '';
     err.style.display = 'none';
     _showAdminBody();
-  } else {
+  } catch (e) {
+    err.textContent = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.';
     err.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = '로그인';
   }
 }
 
@@ -2629,8 +2656,7 @@ async function _loadStats() {
   const now = Date.now();
   try {
     // Worker 경유 — L1 PocketBase 직접 접근 시 HTTPS 인증서 없음
-    const token = await _buildAdminToken();
-    const res = await fetch(`${WORKER_URL}/admin/stats?token=${encodeURIComponent(token)}`, {signal:AbortSignal.timeout(10000)});
+    const res = await fetch(`${WORKER_URL}/admin/stats`, {signal:AbortSignal.timeout(10000), headers:_adminAuthHeaders()});
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     document.getElementById('stat-total').textContent = (data.total??0).toLocaleString();
@@ -2654,7 +2680,7 @@ function _loadTrialSettings() {
 async function _saveTrialDays() {
   const v = parseInt(document.getElementById('trial-days-input').value)||7;
   localStorage.setItem(LS_TRIAL, v);
-  try { const t=await _buildAdminToken(); await fetch(`${WORKER_URL}/admin/default-key`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({admin_token:t,trial_days:v})}); } catch {}
+  try { await fetch(`${WORKER_URL}/admin/default-key`,{method:'POST',headers:{'Content-Type':'application/json',..._adminAuthHeaders()},body:JSON.stringify({trial_days:v})}); } catch {}
   const ok=document.getElementById('trial-save-ok');
   ok.style.display='inline'; setTimeout(()=>ok.style.display='none',2000);
 }
@@ -2662,7 +2688,7 @@ async function _saveTrialDays() {
 async function _saveExpiredMsg() {
   const v = document.getElementById('trial-expired-msg').value;
   localStorage.setItem(LS_EXPR_MSG, v);
-  try { const t=await _buildAdminToken(); await fetch(`${WORKER_URL}/admin/default-key`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({admin_token:t,expired_msg:v})}); } catch {}
+  try { await fetch(`${WORKER_URL}/admin/default-key`,{method:'POST',headers:{'Content-Type':'application/json',..._adminAuthHeaders()},body:JSON.stringify({expired_msg:v})}); } catch {}
   const ok=document.getElementById('msg-save-ok');
   ok.style.display='inline'; setTimeout(()=>ok.style.display='none',2000);
 }
@@ -2693,11 +2719,10 @@ async function _runBulkDelete() {
 
   statusEl.textContent = '삭제 중...';
   try {
-    const token = await _buildAdminToken();
     const res = await fetch(`${WORKER_URL}/admin/users/bulk-delete`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ admin_token: token, identifiers }),
+      headers: { 'Content-Type': 'application/json', ..._adminAuthHeaders() },
+      body: JSON.stringify({ identifiers }),
       signal: AbortSignal.timeout(60000),
     });
     const data = await res.json();
@@ -2791,8 +2816,7 @@ async function _saveAllKeys() {
   localStorage.setItem(LS_EXPR_MSG,em);
   const ok=document.getElementById('key-save-ok');
   try {
-    const t=await _buildAdminToken();
-    const res=await fetch(`${WORKER_URL}/admin/default-key`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({admin_token:t,keys,trial_days:td,expired_msg:em})});
+    const res=await fetch(`${WORKER_URL}/admin/default-key`,{method:'POST',headers:{'Content-Type':'application/json',..._adminAuthHeaders()},body:JSON.stringify({keys,trial_days:td,expired_msg:em})});
     const d=await res.json();
     ok.textContent=d.ok?'✓ KV에 저장됐습니다 — 모든 사용자에게 적용됩니다.':'⚠️ KV 저장 실패: '+(d.message||res.status);
   } catch(e) { ok.textContent='⚠️ Worker 연결 실패: '+e.message; }
@@ -2885,12 +2909,11 @@ async function _createCFRecord(sub) {
   status.style.color='#92400e';
   try {
     // api.cloudflare.com CORS 차단 → Worker 프록시 경유
-    const token=await _buildAdminToken();
     const res=await fetch(`${WORKER_URL}/admin/cf-dns`, {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json', ..._adminAuthHeaders()},
       body:JSON.stringify({
-        token, apiKey:cred.apiKey, email:cred.email,
+        apiKey:cred.apiKey, email:cred.email,
         zoneId:cred.zoneId, name:sub,
         content:cred.target||'openhash-gopang.github.io'
       })
