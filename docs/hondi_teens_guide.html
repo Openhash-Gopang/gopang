@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: 중학생(만 13세 전후) 대상, 인간 교사 지도 하에
+  진행하는 "혼디 생태계 심화 활용" 하루(8시간) 이론+실습 커리큘럼.
+  초등용(hondi_kids_guide.html)보다 개념적으로 깊고, 실제 기기로 혼디를
+  작동시켜 결과를 기록·비교하는 실습을 중심축으로 구성. "나만의 AI
+  교사"(메타인지·학습전략)와 "디지털 시민의식/도덕 교사"(온라인 평판·
+  프라이버시·AI 비판적 활용)의 역할을 다룸.
+  2026-07-25 신설 — hondi_kids_guide.html의 하루 프로그램 구조를 계승하되
+  "실제 작동+비교 실습"을 요청받아 전면 재설계. 이 문서도 향후 실제
+  페르소나 SP 수정 작업의 기준 스펙 역할을 겸함.
+  전체 문서 지도(개발자용): docs/MANUAL_INDEX.md
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>혼디 심화 워크숍 — 중학생 하루 프로그램</title>
+<style>
+/* ══════════════════════════════════════════════════════════
+   디자인 토큰 — 초등용과 같은 계열(인디고/로즈/골드)을 이어받아
+   브랜드 일관성을 유지하되, "실험실 리포트"에 가까운 톤으로
+   낮춤(장식 축소, 데이터·비교표 중심). 신규 색: 비교실습 전용
+   틸(teal) — 이 문서에서 반복되는 핵심 활동 유형이라 별도 색을
+   배정해 시각적으로 바로 식별되게 함.
+   ══════════════════════════════════════════════════════════ */
+:root{
+  --paper:#F7F6F2; --paper-deep:#EDEBE2; --panel:#FFFFFF;
+  --ink:#201F1C; --ink-soft:#5C574C; --ink-faint:#938C7A;
+
+  --ai-600:#3946B0; --ai-500:#4C5FD5; --ai-100:#E4E7FA; --ai-50:#F1F2FC;
+  --civic-600:#B93E58; --civic-500:#E85D75; --civic-100:#FAE1E6; --civic-50:#FCEEF1;
+  --lab-600:#0E7A72; --lab-500:#149488; --lab-100:#D9F0EC; --lab-50:#ECF8F6;
+  --time-600:#B87420; --time-500:#E8A33D; --time-100:#FAE7C6; --time-50:#FCF3E1;
+  --safe-600:#9E332E; --safe-500:#C24444; --safe-100:#F5D8D6;
+
+  --line:#DFDACB; --line-strong:#C9C2AC;
+  --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  --radius-lg:22px; --radius-md:14px; --radius-sm:9px;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+  -webkit-font-smoothing:antialiased;line-height:1.78;font-size:16px;
+  padding-bottom:80px;
+}
+
+/* ── 표지 ─────────────────────────────────────────────── */
+.cover{
+  padding:60px 24px 50px;background:var(--paper);border-bottom:1px solid var(--line);
+}
+.cover-inner{max-width:760px;margin:0 auto}
+.cover .kicker{
+  font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--lab-600);
+  letter-spacing:1px;
+}
+.cover h1{
+  font-size:clamp(30px,6vw,44px);font-weight:900;letter-spacing:-1px;
+  margin:14px 0 14px;line-height:1.2;
+}
+.cover h1 .accent{color:var(--ai-600)}
+.cover p.lede{max-width:600px;font-size:16.5px;color:var(--ink-soft)}
+.cover .stat-row{display:flex;flex-wrap:wrap;gap:0;margin-top:28px;border-top:1px solid var(--line)}
+.stat-cell{flex:1;min-width:140px;padding:14px 18px 0;border-right:1px solid var(--line)}
+.stat-cell:last-child{border-right:none}
+.stat-cell .s-num{font-size:22px;font-weight:900;color:var(--ink)}
+.stat-cell .s-label{font-size:12px;color:var(--ink-faint);margin-top:2px;font-weight:600}
+
+/* ── 시간표 내비게이션 ────────────────────────────────── */
+.timetable-nav{
+  position:sticky;top:0;z-index:20;background:rgba(247,246,242,.95);
+  backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:9px 0;
+}
+.timetable-track{display:flex;gap:5px;overflow-x:auto;padding:3px 16px;scrollbar-width:none}
+.timetable-track::-webkit-scrollbar{display:none}
+.tt-item{
+  flex-shrink:0;display:flex;flex-direction:column;gap:1px;
+  padding:6px 12px;border-radius:9px;text-decoration:none;min-width:70px;
+}
+.tt-item .tt-time{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink-faint)}
+.tt-item .tt-label{font-size:12px;font-weight:800;color:var(--ink-soft);white-space:nowrap}
+.tt-item.theme-ai{background:var(--ai-50)}.tt-item.theme-ai .tt-label{color:var(--ai-600)}
+.tt-item.theme-civic{background:var(--civic-50)}.tt-item.theme-civic .tt-label{color:var(--civic-600)}
+.tt-item.theme-lab{background:var(--lab-50)}.tt-item.theme-lab .tt-label{color:var(--lab-600)}
+.tt-item.theme-time{background:var(--time-50)}.tt-item.theme-time .tt-label{color:var(--time-600)}
+.tt-item.theme-break{opacity:.5}.tt-item.theme-break .tt-label{color:var(--ink-faint);font-weight:600}
+
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+
+/* ── 교시 헤더 ─────────────────────────────────────────── */
+.period{padding-top:54px;scroll-margin-top:66px}
+.period-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:24px;border-bottom:2px solid var(--ink);padding-bottom:16px}
+.period-num{
+  font-family:var(--mono);font-size:34px;font-weight:800;line-height:1;flex-shrink:0;
+  color:var(--line-strong);
+}
+.period-eyebrow{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.5px}
+.theme-ai .period-eyebrow{color:var(--ai-600)}
+.theme-civic .period-eyebrow{color:var(--civic-600)}
+.theme-lab .period-eyebrow{color:var(--lab-600)}
+.theme-time .period-eyebrow{color:var(--time-600)}
+.period-title{font-size:24px;font-weight:900;letter-spacing:-.4px;margin-top:4px}
+.period-time{font-size:13px;color:var(--ink-soft);margin-top:4px;font-family:var(--mono)}
+
+/* 목표/준비물 */
+.meta-bar{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);margin-bottom:26px;border:1px solid var(--line)}
+@media (max-width:480px){.meta-bar{grid-template-columns:1fr}}
+.meta-box{background:var(--panel);padding:14px 16px}
+.meta-box .meta-label{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--ink-faint);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px}
+.meta-box ul{list-style:none}
+.meta-box li{font-size:13.5px;color:var(--ink);padding:2px 0;display:flex;gap:6px}
+.meta-box li::before{content:"—";color:var(--ink-faint)}
+
+h3.block-title{font-size:18px;font-weight:800;margin:28px 0 12px;display:flex;align-items:center;gap:8px}
+h4.mini-title{font-size:15px;font-weight:800;margin:16px 0 8px}
+p.body-p{font-size:15.5px;color:var(--ink);margin-bottom:12px}
+p.body-p b{font-weight:800}
+
+/* 심화 개념 박스 */
+.concept{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);
+  padding:20px 22px;margin:18px 0;
+}
+.concept .c-label{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px}
+.concept p{font-size:15px;color:var(--ink-soft)}
+.concept p+p{margin-top:9px}
+.concept b{color:var(--ink)}
+
+/* ── 실습(비교실습 전용, 시그니처) ───────────────────── */
+.lab{
+  border-radius:var(--radius-lg);padding:24px;margin:22px 0;
+  border:1.5px solid var(--lab-100);background:var(--lab-50);
+}
+.lab-head{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.lab-tag{
+  font-family:var(--mono);font-size:11px;font-weight:800;color:#fff;
+  background:var(--lab-600);padding:3px 9px;border-radius:5px;letter-spacing:.5px;
+}
+.lab-title{font-weight:900;font-size:16.5px;color:var(--lab-600)}
+.lab p{font-size:15px;color:var(--ink)}
+.lab p+p{margin-top:8px}
+.lab ol,.lab ul{margin:10px 0 0 20px;font-size:14.8px}
+.lab li{padding:3px 0}
+
+/* 실습 단계 */
+.steps{counter-reset:step;margin-top:14px}
+.step{
+  display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--lab-100);
+}
+.step:first-child{border-top:none}
+.step-num{
+  counter-increment:step;flex-shrink:0;width:24px;height:24px;border-radius:7px;
+  background:var(--lab-600);color:#fff;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:12px;font-weight:800;
+}
+.step-num::before{content:counter(step)}
+.step-body{font-size:14.8px;color:var(--ink)}
+.step-body b{font-weight:800}
+
+/* 비교 기록표 */
+.compare-table{width:100%;border-collapse:collapse;margin-top:14px;background:var(--panel);border-radius:var(--radius-sm);overflow:hidden}
+.compare-table th{
+  background:var(--lab-600);color:#fff;font-size:12px;font-weight:700;padding:9px 10px;text-align:left;
+  font-family:var(--mono);
+}
+.compare-table td{
+  padding:11px 10px;font-size:14px;border-bottom:1px solid var(--line);vertical-align:top;
+}
+.compare-table tr:last-child td{border-bottom:none}
+.compare-table .fill{color:var(--ink-faint);font-style:italic}
+
+/* 프롬프트 카드(실제 입력 문구) */
+.prompt-card{
+  background:var(--ink);color:#F2EFE4;border-radius:var(--radius-sm);
+  padding:14px 16px;margin:12px 0;font-family:var(--mono);font-size:13.5px;
+  position:relative;
+}
+.prompt-card::before{content:"PROMPT";position:absolute;top:-9px;left:14px;background:var(--lab-600);color:#fff;font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:5px;letter-spacing:.5px}
+
+/* 관찰 기록 워크시트 */
+.worksheet{background:var(--panel);border:1.5px dashed var(--line-strong);border-radius:var(--radius-sm);padding:16px 18px;margin-top:12px}
+.worksheet .ws-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px dotted var(--line);font-size:14px}
+.worksheet .ws-row:last-child{border-bottom:none}
+.ws-label{flex-shrink:0;font-weight:700;color:var(--ink-soft);min-width:96px;font-size:13px}
+.blank-line{border-bottom:1.3px solid var(--line-strong);flex:1;min-height:19px}
+.blank-block{border:1.3px solid var(--line-strong);border-radius:6px;flex:1;min-height:52px;margin-top:4px}
+
+/* 토론/딜레마 박스 */
+.dilemma{
+  background:var(--civic-50);border:1.5px solid var(--civic-100);border-radius:var(--radius-lg);
+  padding:22px;margin:20px 0;
+}
+.dilemma-head{font-weight:900;font-size:16px;color:var(--civic-600);margin-bottom:10px}
+.dilemma p{font-size:15px;color:var(--ink)}
+.dilemma p+p{margin-top:8px}
+.dilemma .position{
+  display:flex;gap:10px;margin-top:12px;
+}
+.pos-box{flex:1;background:var(--panel);border-radius:var(--radius-sm);padding:12px 14px;font-size:13.5px}
+.pos-box .pos-label{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--civic-600);margin-bottom:5px}
+
+/* 생각 나누기 */
+.think-box{background:var(--panel);border-left:4px solid var(--time-500);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:14px 16px;margin:16px 0}
+.think-box .tb-label{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--time-600);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px}
+.think-box p{font-size:14.5px;color:var(--ink)}
+
+/* 교사 안내 */
+.teacher-note{background:#231F1A;color:#EAE4D6;border-radius:var(--radius-md);padding:19px 21px;margin:22px 0}
+.teacher-note::before{content:"교사 안내";display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.6px;color:#B7AD91;margin-bottom:8px}
+.teacher-note p{font-size:13.8px;color:#D6CEB9;line-height:1.75}
+.teacher-note p+p{margin-top:8px}
+.teacher-note b{color:#fff}
+
+/* 안전/유의 박스 */
+.safety{background:var(--safe-100);border:2px solid var(--safe-500);border-radius:var(--radius-lg);padding:24px;margin:24px 0}
+.safety .safety-head{display:flex;align-items:center;gap:9px;font-weight:900;font-size:17px;color:var(--safe-600)}
+.safety p{font-size:14.8px;color:var(--ink);margin-top:9px}
+.safety .safety-callout{margin-top:12px;background:var(--panel);border-radius:var(--radius-sm);padding:13px 15px;font-size:15px;font-weight:800;color:var(--safe-600)}
+
+.numbered{list-style:none;margin-top:12px}
+.numbered li{display:flex;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:14.8px}
+.numbered li:first-child{border-top:none}
+.n-badge{flex-shrink:0;width:24px;height:24px;border-radius:6px;background:var(--paper-deep);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11.5px;font-weight:800;color:var(--ink-soft)}
+
+.divider{display:flex;align-items:center;gap:14px;margin:48px 0 0;color:var(--ink-faint)}
+.divider .dl{flex:1;height:1px;background:var(--line)}
+.divider .dtxt{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:1px;white-space:nowrap}
+
+.recess{margin:40px 0;padding:18px;border-radius:var(--radius-md);background:repeating-linear-gradient(135deg,var(--paper-deep),var(--paper-deep) 9px,var(--paper) 9px,var(--paper) 18px);text-align:center;border:1px solid var(--line)}
+.recess .r-title{font-family:var(--mono);font-weight:700;font-size:14px}
+.recess .r-desc{font-size:13px;color:var(--ink-soft);margin-top:3px}
+
+/* 최종 포트폴리오 카드 */
+.portfolio{margin-top:26px;border:2px solid var(--ink);border-radius:var(--radius-lg);padding:28px;background:var(--panel)}
+.portfolio h2{font-size:19px;font-weight:900}
+.portfolio .p-sub{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);margin-top:4px;margin-bottom:16px}
+
+.footer-note{text-align:center;margin-top:44px;padding:22px;color:var(--ink-faint);font-size:12px;font-family:var(--mono)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════ 표지 ══════════════════════ -->
+<div class="cover"><div class="cover-inner">
+  <div class="kicker">HONDI WORKSHOP · GRADE 7-9 · FULL-DAY LAB</div>
+  <h1>혼디 심화 워크숍 —<br><span class="accent">직접 써보고, 비교하고, 판단하기</span></h1>
+  <p class="lede">중학생을 위한 하루 심화 프로그램입니다. 이번엔 이론만 배우지 않아요 — 실제로 혼디를 작동시켜 나온 답변을 기록하고, 짝·모둠과 비교하면서 "AI를 어떻게 똑똑하게 쓸까"를 스스로 탐구합니다.</p>
+  <div class="stat-row">
+    <div class="stat-cell"><div class="s-num">8h</div><div class="s-label">총 수업 시간</div></div>
+    <div class="stat-cell"><div class="s-num">7</div><div class="s-label">직접 실습(랩)</div></div>
+    <div class="stat-cell"><div class="s-num">13</div><div class="s-label">대상 연령(세)</div></div>
+    <div class="stat-cell"><div class="s-num">1:1</div><div class="s-label">기기 필요(권장)</div></div>
+  </div>
+</div></div>
+
+<!-- ══════════════════════ 시간표 내비게이션 ══════════════════════ -->
+<div class="timetable-nav"><div class="timetable-track">
+  <a class="tt-item theme-time" href="#p0"><span class="tt-time">09:00</span><span class="tt-label">오리엔테이션</span></a>
+  <a class="tt-item theme-time" href="#p1"><span class="tt-time">09:10</span><span class="tt-label">1교시</span></a>
+  <a class="tt-item theme-lab" href="#p2"><span class="tt-time">10:00</span><span class="tt-label">2교시·랩</span></a>
+  <a class="tt-item theme-break"><span class="tt-time">10:50</span><span class="tt-label">쉬는시간</span></a>
+  <a class="tt-item theme-ai" href="#p3"><span class="tt-time">11:00</span><span class="tt-label">3교시</span></a>
+  <a class="tt-item theme-ai" href="#p4"><span class="tt-time">11:50</span><span class="tt-label">4교시·랩</span></a>
+  <a class="tt-item theme-break"><span class="tt-time">12:40</span><span class="tt-label">점심시간</span></a>
+  <a class="tt-item theme-civic" href="#p5"><span class="tt-time">13:40</span><span class="tt-label">5교시</span></a>
+  <a class="tt-item theme-break"><span class="tt-time">14:30</span><span class="tt-label">쉬는시간</span></a>
+  <a class="tt-item theme-civic" href="#p6"><span class="tt-time">14:40</span><span class="tt-label">6교시·랩</span></a>
+  <a class="tt-item theme-lab" href="#p7"><span class="tt-time">15:30</span><span class="tt-label">7교시·랩</span></a>
+  <a class="tt-item theme-break"><span class="tt-time">16:20</span><span class="tt-label">쉬는시간</span></a>
+  <a class="tt-item theme-time" href="#p8"><span class="tt-time">16:30</span><span class="tt-label">8교시</span></a>
+</div></div>
+
+<div class="wrap">
+
+<!-- ══════════════════════ 오리엔테이션 ══════════════════════ -->
+<section class="period theme-time" id="p0">
+  <div class="period-head">
+    <div class="period-num">00</div>
+    <div>
+      <div class="period-eyebrow">ORIENTATION · 09:00–09:10</div>
+      <div class="period-title">오늘 하루의 질문: "AI를 어떻게 써야 똑똑한 걸까?"</div>
+      <div class="period-time">10min · 전체 학급</div>
+    </div>
+  </div>
+
+  <p class="body-p">여러분은 이미 AI를 어느 정도 써봤을 거예요. 궁금한 걸 검색하거나, 숙제를 도와달라고 하거나, 재미로 대화해본 적도 있겠죠. 오늘은 한 단계 더 나아가요 — <b>AI가 왜 그렇게 대답했는지, 그 답이 항상 맞는지, 나에게 어떻게 맞춰지는지</b>를 직접 실험하며 알아볼 거예요.</p>
+  <p class="body-p">오늘 하루는 초등학생 때 배운 "나만의 AI 선생님"·"나만의 도덕 선생님" 개념을 훨씬 더 깊이, 그리고 <b>직접 기기로 작동시키며</b> 다룹니다.</p>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">오늘의 탐구 질문</div>
+      <ul>
+        <li>같은 질문에 AI는 항상 같은 답을 할까?</li>
+        <li>AI 답변을 어떻게 검증하고 판단할까?</li>
+        <li>디지털 공간에서 나의 행동은 왜 중요할까?</li>
+        <li>나는 AI를 앞으로 어떻게 쓰고 싶은가?</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">준비물</div>
+      <ul>
+        <li>스마트폰 또는 태블릿(1인 1기기 권장, 최소 2인 1기기)</li>
+        <li>실습 기록지(모둠당 여러 부)</li>
+        <li>필기구</li>
+        <li>(교사) 혼디 접속 방법 사전 확인</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="teacher-note">
+    <p>이 프로그램은 <b>실제 기기 사용이 핵심</b>입니다. 사전에 학교 와이파이·기기 대여·보호자 동의 절차를 확인해주세요. 기기가 부족하면 2~3인 1조로 진행 가능하도록 활동을 설계했습니다(각 랩 활동에 표기).</p>
+    <p>중학생 대상이므로 초등용보다 <b>토론과 비판적 사고의 비중</b>이 높습니다. 정답을 알려주기보다 "왜 그렇게 생각해?"라고 되묻는 진행을 권장합니다.</p>
+  </div>
+</section>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">01 · THEORY</span><span class="dl"></span></div>
+
+<!-- ══════════════════════ 1교시 ══════════════════════ -->
+<section class="period theme-time" id="p1">
+  <div class="period-head">
+    <div class="period-num">01</div>
+    <div>
+      <div class="period-eyebrow">이론 · 09:10–10:00</div>
+      <div class="period-title">혼디 생태계 다시 보기 — 개인화는 어떻게 일어날까</div>
+      <div class="period-time">50min</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>AI 비서의 개인화 원리를 개념 수준에서 설명한다</li>
+        <li>혼디 생태계의 여러 구성요소(개인 AC·전문가 페르소나·K-서비스)를 구분한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">핵심 개념어</div>
+      <ul>
+        <li>개인화, 데이터 금고(PDV), 전문가 페르소나, 위임(delegation)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="block-title">🔄 왜 같은 질문에도 답이 달라질까?</h3>
+  <p class="body-p">초등학생 때 배운 것처럼, 혼디의 나만의 AI 비서는 처음엔 모두 똑같이 시작하지만 시간이 지나며 개인화돼요. 그런데 이건 단순히 "친해진다"는 비유 이상의 <b>실제 작동 원리</b>가 있어요.</p>
+
+  <div class="concept">
+    <div class="c-label">개념 정리 — 개인화의 원리</div>
+    <p>나만의 AI 비서는 내가 나눈 대화, 물어봤던 질문, 좋아한다고 말한 것들을 <b>나만의 개인 기록(PDV)</b>에 차곡차곡 쌓아요. 새로운 질문을 하면, AI는 그 기록을 참고해서 나에게 맞는 방식으로 답해요.</p>
+    <p>그래서 같은 질문이라도 <b>①처음 쓰는 사람과 오래 쓴 사람의 답이 다르고, ②나와 친구의 답이 다르고, ③심지어 같은 나라도 어제와 오늘 상황이 다르면 답이 달라질 수 있어요.</b> 이건 오류가 아니라 <b>의도된 특징</b>이에요.</p>
+  </div>
+
+  <h3 class="block-title">🧩 혼디 생태계의 구성원들</h3>
+  <p class="body-p">혼디는 하나의 AI가 아니라, 역할이 다른 여러 AI가 협력하는 <b>생태계</b>예요. 오늘은 특히 아래 두 전문가를 깊이 다룰 거예요.</p>
+
+  <ul class="numbered">
+    <li><span class="n-badge">AC</span><span><b>나만의 AI 비서(Agent Common)</b> — 나와 가장 먼저 대화하고, 필요하면 다른 전문가를 연결해주는 "총괄 매니저" 역할.</span></li>
+    <li><span class="n-badge">EDU</span><span><b>나만의 AI 교사</b> — 과목 학습, 학습 전략, 메타인지(내가 뭘 알고 모르는지 아는 능력)를 돕는 전문가. 오늘 3~4교시에 깊이 다룸.</span></li>
+    <li><span class="n-badge">CIV</span><span><b>디지털 시민의식 교사(도덕 교사)</b> — 온라인 평판, 프라이버시, 사이버불링 같은 디지털 공간의 윤리를 다루는 전문가. 오늘 5~6교시에 깊이 다룸.</span></li>
+    <li><span class="n-badge">K</span><span><b>K-서비스들</b> — K-Law(법), K-Health(의료), K-Market(거래) 등 실제 사회의 전문 영역과 연결된 AI들. 필요할 때만 호출됨.</span></li>
+  </ul>
+
+  <div class="think-box">
+    <div class="tb-label">생각 나누기</div>
+    <p>사람도 상대에 따라 말투나 설명 방식을 바꾸죠? AI가 나에게 맞춰 답을 바꾸는 것과 사람이 상대를 배려해서 말을 바꾸는 것, 비슷한 점과 다른 점은 무엇일까요?</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>이 시간은 4교시·6교시 실습에서 관찰할 "왜 답이 달랐을까?"라는 질문에 대한 <b>이론적 배경</b>을 제공합니다. 개인화 원리를 완전히 기술적으로 설명할 필요는 없지만, "AI가 무작위로 답하는 게 아니라 근거(내 기록)를 참고한다"는 핵심은 분명히 짚어주세요.</p>
+  </div>
+</section>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">02 · LAB</span><span class="dl"></span></div>
+
+<!-- ══════════════════════ 2교시: 첫 실습 ══════════════════════ -->
+<section class="period theme-lab" id="p2">
+  <div class="period-head">
+    <div class="period-num">02</div>
+    <div>
+      <div class="period-eyebrow">실습(LAB 1) · 10:00–10:50</div>
+      <div class="period-title">같은 질문, 다른 답? — 첫 비교 실습</div>
+      <div class="period-time">50min · 2인 1조</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>동일 질문에 대한 응답 차이를 직접 관찰·기록한다</li>
+        <li>관찰 결과를 근거로 개인화 개념을 설명한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">준비물</div>
+      <ul>
+        <li>1인당 기기 1대(짝과 각자 로그인)</li>
+        <li>LAB 1 기록지</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">LAB 1</span><span class="lab-title">같은 질문 던지기</span></div>
+    <p>짝과 함께, 각자의 혼디에게 <b>완전히 똑같은 문장</b>으로 아래 질문을 물어보세요. 그리고 답변을 기록지에 옮겨 적으세요.</p>
+    <div class="prompt-card">"주말에 할 수 있는 재미있는 활동 하나만 추천해줘."</div>
+    <div class="steps">
+      <div class="step"><div class="step-num"></div><div class="step-body">각자 혼디를 켜고, 위 문장을 <b>토씨 하나 틀리지 않게</b> 입력한다.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">받은 답변을 아래 표에 요약해서 적는다(전체를 다 옮길 필요는 없음).</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">짝과 서로의 답변을 보여주고 <b>같은 점과 다른 점</b>을 찾는다.</div></div>
+    </div>
+    <table class="compare-table">
+      <tr><th>항목</th><th>나의 결과</th><th>짝의 결과</th></tr>
+      <tr><td>AI가 추천한 활동</td><td class="fill">적어보세요</td><td class="fill">적어보세요</td></tr>
+      <tr><td>왜 그걸 추천했는지(이유)</td><td class="fill">적어보세요</td><td class="fill">적어보세요</td></tr>
+      <tr><td>답변의 말투·길이</td><td class="fill">적어보세요</td><td class="fill">적어보세요</td></tr>
+    </table>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">LAB 2</span><span class="lab-title">질문을 살짝 바꿔보기</span></div>
+    <p>이번엔 같은 뜻이지만 <b>표현만 다르게</b> 질문해보세요. 답이 얼마나 달라지는지 관찰합니다.</p>
+    <div class="prompt-card">A. "나 완전 심심한데 뭐하지?"<br>B. "여가 활동을 추천해 주시겠어요?"</div>
+    <div class="worksheet">
+      <div class="ws-row"><span class="ws-label">A 답변 요약</span><span class="blank-line"></span></div>
+      <div class="ws-row"><span class="ws-label">B 답변 요약</span><span class="blank-line"></span></div>
+      <div class="ws-row"><span class="ws-label">달라진 점</span><span class="blank-line"></span></div>
+    </div>
+  </div>
+
+  <div class="think-box">
+    <div class="tb-label">모둠 토론(4명)</div>
+    <p>우리 모둠 4명의 결과를 모아보세요. 답이 다 달랐나요, 비슷했나요? 왜 그런 차이가 생겼을지 1교시에 배운 "개인화" 개념으로 설명해보세요.</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>이 실습의 핵심은 "정답 찾기"가 아니라 <b>"AI 응답의 가변성을 직접 눈으로 확인하기"</b>입니다. 답이 크게 다르지 않은 조가 있어도 괜찮습니다 — 오히려 "왜 비슷했을까?"도 좋은 토론거리입니다(질문이 단순해서, 아직 개인화가 많이 안 돼서 등). 결과를 칠판에 모아 학급 전체 패턴을 보여주면 효과적입니다.</p>
+  </div>
+</section>
+
+<div class="recess"><div class="r-title">쉬는시간 · 10:50–11:00</div><div class="r-desc">기록지를 정리하고 잠깐 쉬어요</div></div>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">03 · THEORY</span><span class="dl"></span></div>
+
+<!-- ══════════════════════ 3교시: 나만의 AI 교사 이론 ══════════════════════ -->
+<section class="period theme-ai" id="p3">
+  <div class="period-head">
+    <div class="period-num">03</div>
+    <div>
+      <div class="period-eyebrow">이론 · 11:00–11:50</div>
+      <div class="period-title">나만의 AI 교사 ① — 메타인지와 학습 전략</div>
+      <div class="period-time">50min</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>메타인지 개념을 이해하고 자신의 학습에 적용한다</li>
+        <li>AI 교사의 소크라테스식 질문법을 경험적으로 이해한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">핵심 개념어</div>
+      <ul>
+        <li>메타인지, 스캐폴딩, 소크라테스식 질문법</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="block-title">🧠 "안다"와 "안다고 착각한다"의 차이</h3>
+  <p class="body-p">시험 전에 "이건 다 아는 내용이야"라고 생각했는데 막상 문제를 풀면 틀린 경험, 있나요? 이건 <b>메타인지(metacognition)</b> — 내가 진짜로 아는지, 안다고 착각하는지를 스스로 판단하는 능력 — 가 부족해서 생기는 흔한 일이에요.</p>
+
+  <div class="concept">
+    <div class="c-label">개념 정리 — 나만의 AI 교사의 접근법</div>
+    <p>나만의 AI 교사는 단순히 "정답은 이거야"라고 알려주지 않아요. 대신 <b>질문을 되던져서 내가 스스로 생각하게 만드는 방식(소크라테스식 질문법)</b>을 자주 써요. 예를 들어 "이 문제 답이 뭐야?"라고 물으면, "그 전에, 이 문제에서 뭘 구하라고 하는지 다시 한번 말해볼래?"처럼 되묻는 식이에요.</p>
+    <p>또한 <b>스캐폴딩(비계)</b>이라는 방법도 써요 — 건물 지을 때 발판을 세워주듯, 처음엔 힌트를 많이 주다가 내가 익숙해질수록 점점 힌트를 줄여서 스스로 해내도록 도와줘요.</p>
+  </div>
+
+  <h3 class="block-title">📊 초등 때와 달라지는 점</h3>
+  <p class="body-p">초등학생 때는 "나에게 맞는 설명 방식(그림·이야기 등)"이 중심이었다면, 중학생부터는 <b>스스로 학습을 계획하고 점검하는 능력</b>이 더 중요해져요. 나만의 AI 교사도 이 시기부터는 다음과 같은 역할을 더 많이 해요.</p>
+
+  <ul class="numbered">
+    <li><span class="n-badge">1</span><span><b>진단</b> — 내가 어떤 개념에서 막히는지 스스로 알아채도록 질문으로 유도해요.</span></li>
+    <li><span class="n-badge">2</span><span><b>전략 제안</b> — "이 단원은 암기보다 원리 이해가 먼저야" 같은 학습 전략을 제안해요.</span></li>
+    <li><span class="n-badge">3</span><span><b>자기점검 습관화</b> — "이 문제를 풀고 나서, 내가 왜 이렇게 풀었는지 설명할 수 있어?"처럼 스스로 점검하게 해요.</span></li>
+    <li><span class="n-badge">4</span><span><b>진로 연결</b>(참고용) — 관심 분야와 관련된 학습 방향을 참고 정보로 제시해요(진로 결정은 학생·보호자·진로 선생님의 몫).</span></li>
+  </ul>
+
+  <div class="safety" style="border-color:var(--ai-500);background:var(--ai-50)">
+    <div class="safety-head" style="color:var(--ai-600)">⚠️ 여전히 변하지 않는 것</div>
+    <p>중학생이 돼도 <b>실제 성적 평가와 생활기록부 작성은 학교 선생님의 권한</b>이에요. AI 교사가 아무리 정교해져도, 답을 대신 써주거나 과제를 대신 완성해주지 않아요 — 그건 여러분의 실력을 키우는 데 오히려 방해가 되기 때문이에요.</p>
+  </div>
+
+  <div class="think-box">
+    <div class="tb-label">생각 나누기</div>
+    <p>선생님이 답을 바로 알려주지 않고 되물었을 때, 답답했지만 결국 스스로 이해했던 경험이 있나요? 그때 어떤 기분이었나요?</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>메타인지·스캐폴딩 개념은 교육학 용어지만, 중학생 수준에서 충분히 이해 가능합니다. "AI가 답을 안 주고 자꾸 되묻는 게 불친절한 게 아니라 의도된 교육 방법"이라는 걸 납득시키는 게 이 시간의 핵심입니다. 다음 4교시 실습에서 이걸 직접 체험합니다.</p>
+  </div>
+</section>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">04 · LAB</span><span class="dl"></span></div>
+
+<!-- ══════════════════════ 4교시: 나만의 AI 교사 실습 ══════════════════════ -->
+<section class="period theme-ai" id="p4">
+  <div class="period-head">
+    <div class="period-num">04</div>
+    <div>
+      <div class="period-eyebrow">실습(LAB 3~4) · 11:50–12:40</div>
+      <div class="period-title">나만의 AI 교사 ② — 과목별로 직접 물어보고 비교하기</div>
+      <div class="period-time">50min · 개인+모둠</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>실제 학습 질문을 만들어 AI 교사와 상호작용한다</li>
+        <li>좋은 질문과 그렇지 않은 질문의 차이를 비교로 파악한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">준비물</div>
+      <ul>
+        <li>기기(개인)</li>
+        <li>최근 배운 과목 노트(수학·과학·영어 등)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">LAB 3</span><span class="lab-title">질문의 질(質)이 답을 바꾼다</span></div>
+    <p>최근 수업에서 어려웠던 개념을 하나 골라, 아래 두 가지 방식으로 각각 질문해보고 결과를 비교하세요.</p>
+    <div class="prompt-card">A. "이거 정답 뭐야?"<br>B. "나는 이 개념을 이렇게 이해했는데(내 이해를 설명), 내가 맞게 이해한 걸까? 어디가 부족할까?"</div>
+    <table class="compare-table">
+      <tr><th>비교 항목</th><th>A(단순 질문)</th><th>B(구체적 질문)</th></tr>
+      <tr><td>답변 길이</td><td class="fill">짧음/보통/김</td><td class="fill">짧음/보통/김</td></tr>
+      <tr><td>내가 얻은 정보의 깊이</td><td class="fill">적어보세요</td><td class="fill">적어보세요</td></tr>
+      <tr><td>다음에 뭘 해야 할지 알겠는가</td><td class="fill">예/아니오</td><td class="fill">예/아니오</td></tr>
+    </table>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">LAB 4</span><span class="lab-title">과목별 활용 실험(모둠, 과목 나눠 담당)</span></div>
+    <p>모둠(4명)에서 각자 다른 과목을 하나씩 맡아, 그 과목에서 나만의 AI 교사에게 어떤 도움을 받을 수 있는지 직접 시도해보세요.</p>
+    <div class="steps">
+      <div class="step"><div class="step-num"></div><div class="step-body"><b>국어/영어 담당</b> — 글쓰기나 독해에서 막힌 부분을 설명하고 피드백을 요청해보세요.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body"><b>수학 담당</b> — 문제 풀이 과정을 스스로 설명하고, AI에게 그 풀이의 논리가 맞는지 점검받아보세요(답만 묻지 않기).</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body"><b>과학/사회 담당</b> — 개념 하나를 실생활 예시로 설명해달라고 요청해보세요.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">각자 결과를 모둠원에게 1분씩 공유하고, 아래 표를 함께 채우세요.</div></div>
+    </div>
+    <table class="compare-table">
+      <tr><th>과목</th><th>담당자</th><th>AI가 도와준 방식</th><th>도움이 됐는가(1~5)</th></tr>
+      <tr><td>국어/영어</td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+      <tr><td>수학</td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+      <tr><td>과학/사회</td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>
+    </table>
+  </div>
+
+  <div class="think-box">
+    <div class="tb-label">모둠 토론</div>
+    <p>어떤 과목에서 AI 교사가 가장 도움이 됐나요? 어떤 질문 방식이 더 좋은 답을 이끌어냈나요? 앞으로 공부할 때 어떻게 질문하면 좋을지 모둠의 "좋은 질문 3원칙"을 만들어보세요.</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>이 실습은 <b>"프롬프트 리터러시"</b>(AI에게 질문을 잘 던지는 능력)를 기르는 것이 목표입니다. 학생들이 실제 자신의 학습 내용을 가져오도록 사전에 안내하면 몰입도가 높아집니다. 모둠별 "좋은 질문 3원칙"은 8교시 발표에서 다시 활용됩니다.</p>
+  </div>
+</section>
+
+<div class="recess"><div class="r-title">점심시간 · 12:40–13:40</div><div class="r-desc">맛있게 먹고 오후를 준비해요</div></div>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">05 · THEORY</span><span class="dl"></span></div>
+
+<!-- ══════════════════════ 5교시: 디지털 시민의식 이론 ══════════════════════ -->
+<section class="period theme-civic" id="p5">
+  <div class="period-head">
+    <div class="period-num">05</div>
+    <div>
+      <div class="period-eyebrow">이론 · 13:40–14:30</div>
+      <div class="period-title">디지털 시민의식 교사 ① — 화면 너머의 진짜 세상</div>
+      <div class="period-time">50min</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>온라인 평판·프라이버시 개념을 이해한다</li>
+        <li>사이버불링·가짜정보의 실제 영향을 인식한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">핵심 개념어</div>
+      <ul>
+        <li>디지털 발자국, 온라인 평판, 프라이버시, 2차 가해</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="block-title">👣 디지털 발자국이란?</h3>
+  <p class="body-p">여러분이 인터넷에 올리는 글, 사진, 댓글은 눈 위에 남는 발자국처럼 <b>흔적</b>을 남겨요. 지웠다고 생각해도 누군가 캡처했거나 이미 퍼졌을 수 있어요. 이걸 <b>디지털 발자국</b>이라고 불러요.</p>
+
+  <div class="concept">
+    <div class="c-label">개념 정리 — 초등 때와 달라지는 것</div>
+    <p>초등학생 때는 "친구랑 사이좋게 지내기"가 중심이었다면, 중학생부터는 <b>디지털 공간에서의 정체성과 평판</b>을 스스로 관리하는 능력이 중요해져요. 여러분이 온라인에 남기는 것들이 몇 년 후 진학·교우관계에까지 영향을 줄 수 있다는 걸 알아야 해요.</p>
+  </div>
+
+  <h3 class="block-title">⚖️ 디지털 시민의식 교사가 다루는 것들</h3>
+  <ul class="numbered">
+    <li><span class="n-badge">①</span><span><b>온라인 평판</b> — 무심코 올린 글이 나중에 어떤 영향을 줄 수 있는지 함께 생각해요.</span></li>
+    <li><span class="n-badge">②</span><span><b>사이버불링과 2차 가해</b> — 직접 괴롭히지 않아도, 소문을 옮기거나 놀리는 글에 '좋아요'를 누르는 것도 가해가 될 수 있다는 걸 짚어줘요.</span></li>
+    <li><span class="n-badge">③</span><span><b>프라이버시</b> — 친구의 사진이나 정보를 허락 없이 퍼뜨리지 않는 것의 중요성을 알려줘요.</span></li>
+    <li><span class="n-badge">④</span><span><b>정보의 진위 판단</b> — 자극적인 소문이나 가짜 정보를 그대로 믿고 퍼뜨리기 전에 확인하는 습관을 길러줘요.</span></li>
+    <li><span class="n-badge">⑤</span><span><b>AI 콘텐츠 분별</b> — AI가 만든 이미지·글이 진짜처럼 보일 수 있다는 것, 그래서 출처를 확인하는 습관이 필요하다는 걸 알려줘요.</span></li>
+  </ul>
+
+  <div class="dilemma">
+    <div class="dilemma-head">🎭 딜레마 상황 — 생각해보기</div>
+    <p>단체 채팅방에서 한 친구에 대한 안 좋은 소문이 돌기 시작했어요. 나는 그 소문이 사실인지 모르지만, 다들 그 이야기를 하고 있어요.</p>
+    <div class="position">
+      <div class="pos-box"><div class="pos-label">입장 A</div>"다들 얘기하니까 나도 그냥 듣기만 하면 괜찮지 않을까?"</div>
+      <div class="pos-box"><div class="pos-label">입장 B</div>"듣기만 해도 소문을 키우는 데 일조하는 게 아닐까?"</div>
+    </div>
+  </div>
+
+  <div class="think-box">
+    <div class="tb-label">생각 나누기</div>
+    <p>두 입장 중 어느 쪽에 더 공감하나요? 만약 내가 그 소문의 주인공이라면 어떤 기분일까요?</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>이 시간은 초등용의 "친구와 사이좋게"보다 <b>훨씬 복잡한 사회적 딜레마</b>를 다룹니다. 정답을 정해주기보다 다양한 관점이 있다는 걸 인정하면서도, "침묵도 때로는 가담이 될 수 있다"는 메시지는 분명히 전달해주세요. 실제 학급 내 사건을 예시로 들 땐 특정 학생을 연상시키지 않도록 각별히 주의하세요.</p>
+  </div>
+</section>
+
+<div class="recess"><div class="r-title">쉬는시간 · 14:30–14:40</div><div class="r-desc">잠깐 환기하고 와요</div></div>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">06 · LAB</span><span class="dl"></span></div>
+
+<!-- ══════════════════════ 6교시: 디지털 시민의식 실습 ══════════════════════ -->
+<section class="period theme-civic" id="p6">
+  <div class="period-head">
+    <div class="period-num">06</div>
+    <div>
+      <div class="period-eyebrow">실습(LAB 5) · 14:40–15:30</div>
+      <div class="period-title">디지털 시민의식 교사 ② — 시나리오로 판단력 기르기</div>
+      <div class="period-time">50min · 모둠</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>실제 시나리오에서 디지털 시민의식 교사의 조언을 확인·비교한다</li>
+        <li>또래 간 판단의 다양성을 존중하며 토론한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">준비물</div>
+      <ul>
+        <li>기기(모둠당 1대 이상)</li>
+        <li>시나리오 카드</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">LAB 5</span><span class="lab-title">시나리오에 직접 물어보고 비교하기</span></div>
+    <p>모둠별로 아래 시나리오 중 하나를 골라, 혼디의 디지털 시민의식 교사에게 실제로 조언을 구해보세요. 그리고 그 조언을 우리 모둠의 생각과 비교해보세요.</p>
+    <div class="prompt-card">시나리오 1: "친구가 다른 친구 험담을 캡처해서 나한테 보여줬어. 이걸 다른 애들한테 공유해도 될까?"<br>시나리오 2: "온라인 게임에서 진 팀 친구에게 화가 나서 심한 말을 하고 싶어. 어떻게 하면 좋을까?"<br>시나리오 3: "SNS에서 나랑 닮은 AI가 만든 사진을 봤는데, 진짜인지 아닌지 헷갈려."</div>
+    <div class="steps">
+      <div class="step"><div class="step-num"></div><div class="step-body">모둠에서 시나리오를 하나 고르고, 먼저 <b>우리끼리 어떻게 하면 좋을지</b> 토론해서 정리한다.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">그다음 혼디에게 똑같은 상황을 실제로 물어본다.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">우리 모둠의 판단과 AI의 조언을 비교한다.</div></div>
+    </div>
+    <table class="compare-table">
+      <tr><th>비교 항목</th><th>우리 모둠의 판단(먼저)</th><th>AI의 조언</th></tr>
+      <tr><td>핵심 조언</td><td class="fill"></td><td class="fill"></td></tr>
+      <tr><td>우리가 놓쳤던 부분</td><td colspan="2" class="fill">모둠이 함께 적어보세요</td></tr>
+      <tr><td>동의하지 않는 부분(있다면)</td><td colspan="2" class="fill">모둠이 함께 적어보세요</td></tr>
+    </table>
+  </div>
+
+  <div class="think-box">
+    <div class="tb-label">전체 학급 나누기</div>
+    <p>모둠별로 발표해보세요. AI의 조언에 모두 동의했나요, 아니면 다른 생각이 있었나요? <b>AI의 조언에 동의하지 않을 수도 있다</b>는 것 자체가 중요한 배움입니다 — AI는 참고할 관점을 주는 것이지, 무조건 따라야 하는 명령이 아니에요.</p>
+  </div>
+
+  <div class="safety">
+    <div class="safety-head">🚨 절대 잊지 말 것</div>
+    <p>오늘 다룬 시나리오 같은 일이 <b>실제로 나에게 일어난다면</b>, 혼디와 대화하는 것으로 끝내지 마세요.</p>
+    <div class="safety-callout">사이버불링, 괴롭힘, 위협, 성적으로 불편한 접촉 등은 반드시 부모님·담임선생님·학교 상담선생님에게 알려야 합니다.</div>
+    <p>디지털 시민의식 교사는 여러분을 어른들로부터 고립시키지 않아요. 오히려 <b>믿을 수 있는 어른에게 알리는 것이 왜 중요한지</b>를 항상 함께 알려줘요.</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>실제 사이버불링 피해·가해 정황이 활동 중 드러나면 즉시 활동을 멈추고 개별적으로 확인 후 학교 절차(Wee클래스, 담임 보고 등)를 따르세요. 이 활동은 예방 교육이지 실제 사안 처리 절차가 아닙니다.</p>
+  </div>
+</section>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">07 · LAB</span><span class="dl"></span></div>
+
+<!-- ══════════════════════ 7교시: 비판적 AI 활용 실습 ══════════════════════ -->
+<section class="period theme-lab" id="p7">
+  <div class="period-head">
+    <div class="period-num">07</div>
+    <div>
+      <div class="period-eyebrow">실습(LAB 6~7) · 15:30–16:20</div>
+      <div class="period-title">AI를 비판적으로 읽기 — 팩트체크와 한계 찾기</div>
+      <div class="period-time">50min · 개인+모둠</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>AI 답변을 검증하는 습관을 기른다</li>
+        <li>AI의 한계와 착각(환각) 가능성을 이해한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">핵심 개념어</div>
+      <ul>
+        <li>팩트체크, AI 환각(hallucination), 최신 정보 한계</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="c-label">개념 정리 — AI도 틀릴 수 있다</div>
+    <p>AI는 아주 똑똑해 보이지만, 가끔 <b>틀린 내용을 마치 사실처럼 자신 있게 말하기도 해요</b>(이걸 "환각"이라고 불러요). 특히 최근에 일어난 일이나, 아주 세세한 숫자·날짜는 틀릴 수 있어요. 그래서 중요한 정보는 다른 곳에서도 확인하는 습관이 필요해요.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">LAB 6</span><span class="lab-title">팩트체크 실습</span></div>
+    <p>혼디에게 아래처럼 확인 가능한 사실을 물어보고, 실제로 맞는지 다른 자료(교과서, 검색 등)와 비교해보세요.</p>
+    <div class="prompt-card">"우리나라에서 가장 긴 강 이름과 길이를 알려줘." (또는 교사가 준비한 다른 사실 확인 질문)</div>
+    <div class="worksheet">
+      <div class="ws-row"><span class="ws-label">AI의 답변</span><span class="blank-line"></span></div>
+      <div class="ws-row"><span class="ws-label">다른 자료로 확인한 결과</span><span class="blank-line"></span></div>
+      <div class="ws-row"><span class="ws-label">일치 여부</span><span class="blank-line"></span></div>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">LAB 7</span><span class="lab-title">"모른다"고 말하는지 확인하기</span></div>
+    <p>AI에게 답을 알 수 없거나 확신할 수 없는 질문을 일부러 던져보세요. AI가 "모른다" 또는 "확실하지 않다"고 솔직하게 답하는지, 아니면 그럴듯하게 지어내는지 관찰하세요.</p>
+    <div class="prompt-card">"내일 우리 학교 앞 문구점 사장님이 무슨 색 옷을 입고 계실까?"</div>
+    <div class="worksheet">
+      <div class="ws-row"><span class="ws-label">AI의 반응</span><span class="blank-line"></span></div>
+      <div class="ws-row"><span class="ws-label">솔직하게 "모른다"고 했는가?</span><span class="blank-line"></span></div>
+    </div>
+  </div>
+
+  <div class="think-box">
+    <div class="tb-label">모둠 토론</div>
+    <p>오늘 실습을 종합해서, "AI 답변을 믿을 때와 다시 확인해야 할 때"를 구분하는 우리 모둠만의 기준을 3가지 만들어보세요. (예: 숫자·날짜는 항상 재확인한다, 사람 감정이 걸린 문제는 참고만 한다 등)</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>이 시간은 오늘 프로그램의 <b>비판적 사고 정점</b>입니다. "AI가 완벽하지 않다"는 걸 두려움이 아니라 <b>건강한 사용 습관</b>으로 연결해주세요. LAB 7에서 AI가 그럴듯하게 지어내는 경우를 발견하면, 이것이 왜 위험할 수 있는지(예: 숙제에 틀린 정보를 그대로 쓰는 경우) 짚어주세요.</p>
+  </div>
+</section>
+
+<div class="recess"><div class="r-title">쉬는시간 · 16:20–16:30</div><div class="r-desc">마지막 교시 전 정리할 시간</div></div>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">08 · SYNTHESIS</span><span class="dl"></span></div>
+
+<!-- ══════════════════════ 8교시: 종합 및 발표 ══════════════════════ -->
+<section class="period theme-time" id="p8">
+  <div class="period-head">
+    <div class="period-num">08</div>
+    <div>
+      <div class="period-eyebrow">종합·발표 · 16:30–17:10</div>
+      <div class="period-title">나만의 AI 활용 원칙 세우기</div>
+      <div class="period-time">40min</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>오늘의 실습 데이터를 근거로 활용 원칙을 세운다</li>
+        <li>모둠 결과를 학급 전체와 공유한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">준비물</div>
+      <ul>
+        <li>오늘 작성한 모든 기록지</li>
+        <li>포트폴리오 정리지</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">SYNTHESIS</span><span class="lab-title">오늘의 데이터 되돌아보기</span></div>
+    <p>오늘 작성한 LAB 1~7 기록지를 다시 펼쳐보세요. 그리고 아래 질문에 답하며 오늘 하루를 정리해보세요.</p>
+    <div class="worksheet">
+      <div class="ws-row"><span class="ws-label">가장 흥미로웠던 실습</span><span class="blank-line"></span></div>
+      <div class="ws-row"><span class="ws-label">가장 놀랐던 관찰</span><span class="blank-line"></span></div>
+      <div class="ws-row"><span class="ws-label">나만의 AI 교사를<br>앞으로 이렇게 쓰겠다</span><span class="blank-block"></span></div>
+      <div class="ws-row"><span class="ws-label">디지털 공간에서<br>이렇게 행동하겠다</span><span class="blank-block"></span></div>
+    </div>
+  </div>
+
+  <h3 class="block-title">🎤 모둠 발표(모둠당 2분)</h3>
+  <p class="body-p">각 모둠은 오늘 진행한 실습 중 하나를 골라 결과를 발표하세요. 4교시에서 만든 "좋은 질문 3원칙"이나 7교시의 "AI 신뢰 기준 3가지" 중 하나를 활용해도 좋습니다.</p>
+
+  <div class="portfolio">
+    <h2>📁 나의 혼디 활용 포트폴리오</h2>
+    <div class="p-sub">오늘 실습 기록을 모아 개인 파일로 보관하세요</div>
+    <div class="worksheet">
+      <div class="ws-row"><span class="ws-label">이름</span><span class="blank-line" style="max-width:180px"></span></div>
+      <div class="ws-row"><span class="ws-label">날짜</span><span class="blank-line" style="max-width:180px"></span></div>
+      <div class="ws-row"><span class="ws-label">완료한 LAB 수</span><span class="blank-line" style="max-width:100px"></span> / 7</div>
+      <div class="ws-row"><span class="ws-label">나의 다짐 한 줄</span><span class="blank-line"></span></div>
+    </div>
+  </div>
+
+  <div class="teacher-note">
+    <p>포트폴리오는 개인 파일이나 학급 게시판에 전시할 수 있습니다. 시간이 허락하면 "좋은 질문 3원칙"과 "AI 신뢰 기준"을 학급 전체가 모아 하나의 공동 규칙표로 만들어 교실에 게시하는 것을 권장합니다 — 이후 다른 수업에서 AI를 활용할 때도 참고 기준이 됩니다.</p>
+  </div>
+</section>
+
+<div class="footer-note">HONDI WORKSHOP · 중학생 하루 심화 프로그램 · 교사 지도 필수</div>
+
+</div>
+
+</body>
+</html>
