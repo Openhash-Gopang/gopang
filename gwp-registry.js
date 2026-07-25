@@ -202,7 +202,11 @@ const GWP_REGISTRY = [
     url: 'https://insurance.hondi.net/webapp.html',
     sp_key: 'SP-16_kinsurance',  // v2.2 — SP-14에서 재배정됨 (K-Cleaner 번호충돌 해소)
     status: 'active', priority: 6, threshold: 0.70,
-    description: '개인화 보험료 산정. 청구·심사 자동화.',
+    // 2026-07-26 정정: insurance/webapp.html 실제 배포본 대조 결과,
+    // 공적 보험(건강·산재·고용보험·국민연금) 청구·수급 절차 안내만
+    // 하며 지급 여부 결정 권한이 없음을 프롬프트에 명시하고 있다.
+    // 민간 보험사 상품도 미취급(각 민간 보험사는 자체 AI 운영).
+    description: '공적 보험(건강·산재·고용보험·국민연금) 청구·수급 절차 안내. 지급 결정 권한 없음 — 민간 보험 상품은 미취급.',
     triggers: [
       '보험','보장','청구','보험료','실손','자동차보험',
       '보험금','생명보험','화재보험','보험 가입','보험 해지',
