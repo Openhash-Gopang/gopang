@@ -2212,6 +2212,315 @@ async function _writeInstanceEnrichmentDraft(env, guidForHashing, fields) {
   if (!res.ok) throw new Error(`instance_enrichment_drafts 저장 실패 HTTP ${res.status}: ${await res.text().catch(() => '')}`);
 }
 
+// ═══════════════════════════════════════════════════════════
+// DAWN 안건 공중 게시판 (2026-07-26 신설, 주피터님 지시)
+//
+// 배경: democracy 저장소 desktop.html의 "안건 제안"이 지금까지 제안자 본인
+// PDV에만 기록되고 다른 사용자에게 전혀 보이지 않았는데, UI는 "게재됐다"고
+// 안내해 실제 상태와 달랐다. 이 섹션은 실제 공유 게시판·동의 집계·정식
+// 회부·투표·가결/부결까지의 최소 골격을 구현한다.
+//
+// 스코프 축소 고지(pb_migrations/1786900002 주석과 동일):
+// - AI 배심원 심의(SP-01~08 전체 파이프라인)는 이번 범위 밖. 동의 임계치
+//   달성 시 곧바로 투표 단계로 넘어간다(심사위원단 단계 생략).
+// - 투표권 가중치(GDC/코드공헌/K-Law 준법 등 AI 산정)도 이번 범위 밖.
+//   1인 1가중치(=1)로 고정한다.
+// - 투표 기간은 어디에도 명시된 값이 없어 7일을 임의로 설정했다
+//   (DAWN_VOTE_WINDOW_MS). 주피터님 확인·조정 필요.
+// ═══════════════════════════════════════════════════════════
+
+const DAWN_ENDORSEMENT_THRESHOLD_DEFAULT = 1000;
+const DAWN_VOTE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7일 — 임의 설정치, 조정 가능
+
+async function _dawnHashGuid(env, guid) {
+  if (!guid) return null;
+  const salt = await _sha256Hex(
+    `${env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1'}:dawn-democracy-salt`
+  );
+  return _sha256Hex(`${guid}:${salt}`);
+}
+
+async function _l1CreateDawnProposal(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/dawn_proposals/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) throw new Error(`dawn_proposals 생성 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  return res.json();
+}
+
+async function _l1ListDawnProposals(env, { status, perPage } = {}) {
+  const token = await _l1AdminToken(env);
+  const params = new URLSearchParams({ sort: '-created_at', perPage: String(perPage || 50) });
+  if (status) params.set('filter', `status='${status}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/dawn_proposals/records?${params}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`dawn_proposals 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items || [];
+}
+
+async function _l1GetDawnProposal(env, id) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/dawn_proposals/records/${id}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function _l1UpdateDawnProposal(env, id, patch) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/dawn_proposals/records/${id}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error(`dawn_proposals 갱신 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  return res.json();
+}
+
+async function _l1FindDawnEndorsement(env, proposalId, voterHash) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`proposal_id='${proposalId}' && voter_guid_hash='${voterHash}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/dawn_endorsements/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`dawn_endorsements 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+async function _l1CreateDawnEndorsement(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/dawn_endorsements/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) throw new Error(`dawn_endorsements 생성 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  return res.json();
+}
+
+async function _l1FindDawnVote(env, proposalId, voterHash) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`proposal_id='${proposalId}' && voter_guid_hash='${voterHash}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/dawn_votes/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`dawn_votes 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+async function _l1CreateDawnVote(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/dawn_votes/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) throw new Error(`dawn_votes 생성 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+  return res.json();
+}
+
+// 투표 마감 시각이 지났는데 아직 status가 'voting'인 안건을 읽을 때
+// 그 자리에서 가결/부결로 확정한다(LAZY-INSTANCE-ENRICHMENT와 동일하게
+// 별도 크론 없이 읽기 시점에 지연 계산). 동률이면 부결로 처리한다.
+async function _dawnMaybeCloseVoting(env, proposal) {
+  if (proposal.status !== 'voting') return proposal;
+  if (!proposal.vote_closes_at) return proposal;
+  if (new Date(proposal.vote_closes_at).getTime() > Date.now()) return proposal;
+
+  const decided = proposal.vote_for_weight > proposal.vote_against_weight ? 'passed' : 'rejected';
+  try {
+    return await _l1UpdateDawnProposal(env, proposal.id, {
+      status: decided,
+      decided_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.error('[dawn] 투표 마감 처리 실패:', e.message);
+    return proposal;
+  }
+}
+
+// POST /democracy/proposal  body: {guid, title, category?, background?, summary?}
+async function handleDemocracyProposalSubmit(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  const title = String(payload.title || '').trim();
+  if (!title) return new Response(JSON.stringify({ error: 'title required' }), { status: 400, headers: corsHeaders });
+  if (title.length > 200) return new Response(JSON.stringify({ error: 'title too long (max 200)' }), { status: 400, headers: corsHeaders });
+
+  const authorHash = await _dawnHashGuid(env, payload.guid);
+  const record = {
+    title,
+    category: String(payload.category || '').slice(0, 100),
+    background: String(payload.background || '').slice(0, 5000),
+    summary: String(payload.summary || '').slice(0, 1000),
+    author_guid_hash: authorHash,
+    status: 'pending_endorsement',
+    endorsement_weight_total: 0,
+    endorsement_threshold: DAWN_ENDORSEMENT_THRESHOLD_DEFAULT,
+    vote_for_weight: 0,
+    vote_against_weight: 0,
+    created_at: new Date().toISOString(),
+  };
+
+  let rec;
+  try {
+    rec = await _l1CreateDawnProposal(env, record);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+  return new Response(JSON.stringify({ status: 'posted', proposal: rec }), { headers: corsHeaders });
+}
+
+// GET /democracy/proposals?status=pending_endorsement|voting|passed|rejected
+async function handleDemocracyProposalList(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const status = url.searchParams.get('status') || null;
+  let items;
+  try {
+    items = await _l1ListDawnProposals(env, { status });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+  const resolved = await Promise.all(items.map((p) => _dawnMaybeCloseVoting(env, p)));
+  return new Response(JSON.stringify({ proposals: resolved }), { headers: corsHeaders });
+}
+
+// GET /democracy/proposal/:id
+async function handleDemocracyProposalGet(env, corsHeaders, id) {
+  let proposal;
+  try {
+    proposal = await _l1GetDawnProposal(env, id);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+  if (!proposal) return new Response(JSON.stringify({ error: 'NOT_FOUND' }), { status: 404, headers: corsHeaders });
+  proposal = await _dawnMaybeCloseVoting(env, proposal);
+  return new Response(JSON.stringify({ proposal }), { headers: corsHeaders });
+}
+
+// POST /democracy/endorse  body: {guid, proposal_id}
+async function handleDemocracyEndorse(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  const proposalId = String(payload.proposal_id || '');
+  if (!proposalId) return new Response(JSON.stringify({ error: 'proposal_id required' }), { status: 400, headers: corsHeaders });
+  const voterHash = await _dawnHashGuid(env, payload.guid);
+  if (!voterHash) return new Response(JSON.stringify({ error: 'guid required' }), { status: 400, headers: corsHeaders });
+
+  let proposal;
+  try {
+    proposal = await _l1GetDawnProposal(env, proposalId);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+  if (!proposal) return new Response(JSON.stringify({ error: 'NOT_FOUND' }), { status: 404, headers: corsHeaders });
+  if (proposal.status !== 'pending_endorsement') {
+    return new Response(JSON.stringify({ error: 'ALREADY_ADVANCED', status: proposal.status }), { status: 409, headers: corsHeaders });
+  }
+
+  const existing = await _l1FindDawnEndorsement(env, proposalId, voterHash).catch(() => null);
+  if (existing) {
+    return new Response(JSON.stringify({ status: 'already_endorsed', proposal }), { headers: corsHeaders });
+  }
+
+  const weight = 1; // 2026-07-26: AI 가중 투표권은 이번 범위 밖 — 1인 1가중치 고정
+  try {
+    await _l1CreateDawnEndorsement(env, {
+      proposal_id: proposalId,
+      voter_guid_hash: voterHash,
+      weight,
+      created_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+
+  const newTotal = (proposal.endorsement_weight_total || 0) + weight;
+  const threshold = proposal.endorsement_threshold || DAWN_ENDORSEMENT_THRESHOLD_DEFAULT;
+  const patch = { endorsement_weight_total: newTotal };
+  let advanced = false;
+  if (newTotal >= threshold) {
+    patch.status = 'voting';
+    patch.vote_opened_at = new Date().toISOString();
+    patch.vote_closes_at = new Date(Date.now() + DAWN_VOTE_WINDOW_MS).toISOString();
+    advanced = true;
+  }
+
+  let updated;
+  try {
+    updated = await _l1UpdateDawnProposal(env, proposalId, patch);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+
+  return new Response(JSON.stringify({ status: advanced ? 'advanced_to_voting' : 'endorsed', proposal: updated }), { headers: corsHeaders });
+}
+
+// POST /democracy/vote  body: {guid, proposal_id, side: 'for'|'against'}
+async function handleDemocracyVote(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  const proposalId = String(payload.proposal_id || '');
+  const side = payload.side;
+  if (!proposalId || !['for', 'against'].includes(side)) {
+    return new Response(JSON.stringify({ error: "proposal_id, side('for'|'against') required" }), { status: 400, headers: corsHeaders });
+  }
+  const voterHash = await _dawnHashGuid(env, payload.guid);
+  if (!voterHash) return new Response(JSON.stringify({ error: 'guid required' }), { status: 400, headers: corsHeaders });
+
+  let proposal;
+  try {
+    proposal = await _l1GetDawnProposal(env, proposalId);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+  if (!proposal) return new Response(JSON.stringify({ error: 'NOT_FOUND' }), { status: 404, headers: corsHeaders });
+
+  proposal = await _dawnMaybeCloseVoting(env, proposal);
+  if (proposal.status !== 'voting') {
+    return new Response(JSON.stringify({ error: 'NOT_OPEN_FOR_VOTING', status: proposal.status }), { status: 409, headers: corsHeaders });
+  }
+
+  const existing = await _l1FindDawnVote(env, proposalId, voterHash).catch(() => null);
+  if (existing) {
+    return new Response(JSON.stringify({ status: 'already_voted', proposal }), { headers: corsHeaders });
+  }
+
+  const weight = 1; // 2026-07-26: 동의와 동일하게 이번 범위에서는 1 고정
+  try {
+    await _l1CreateDawnVote(env, {
+      proposal_id: proposalId,
+      voter_guid_hash: voterHash,
+      side,
+      weight,
+      created_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+
+  const patch = side === 'for'
+    ? { vote_for_weight: (proposal.vote_for_weight || 0) + weight }
+    : { vote_against_weight: (proposal.vote_against_weight || 0) + weight };
+
+  let updated;
+  try {
+    updated = await _l1UpdateDawnProposal(env, proposalId, patch);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+
+  return new Response(JSON.stringify({ status: 'voted', proposal: updated }), { headers: corsHeaders });
+}
+
 // GET /stats/agency-report — AGENCY-AC-COMMON §6이 요구한 주기별 보고서.
 async function handleStatsAgencyReport(request, env, corsHeaders) {
   const url = new URL(request.url);
@@ -6012,6 +6321,18 @@ export default {
       return handleSPIndustryTransformGenerate(request, env, corsHeaders, ctx);
     if (pathname === '/sp-industry-transform/review' && request.method === 'POST')
       return handleSPIndustryTransformReview(request, env, corsHeaders, ctx);
+
+    // ── DAWN 안건 공중 게시판 (2026-07-26 신설) ─────────────────────
+    if (pathname === '/democracy/proposal' && request.method === 'POST')
+      return handleDemocracyProposalSubmit(request, env, corsHeaders);
+    if (pathname === '/democracy/proposals' && request.method === 'GET')
+      return handleDemocracyProposalList(request, env, corsHeaders);
+    if (pathname.match(/^\/democracy\/proposal\/[^/]+$/) && request.method === 'GET')
+      return handleDemocracyProposalGet(env, corsHeaders, pathname.split('/')[3]);
+    if (pathname === '/democracy/endorse' && request.method === 'POST')
+      return handleDemocracyEndorse(request, env, corsHeaders);
+    if (pathname === '/democracy/vote' && request.method === 'POST')
+      return handleDemocracyVote(request, env, corsHeaders);
 
     // ── gwp_registry (2026-07-11 신설) ──────────────────────────────
     if (pathname === '/gwp-registry/lookup' && request.method === 'GET')
