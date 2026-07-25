@@ -276,20 +276,26 @@ export const EXPERT_REGISTRY = {
   'clinical-psychologist': {
     label: '임상심리사', icon: '🧑‍⚕️', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_clinical-psychologist', needsMedicalSafety: true, // 2026-07-04: 위기개입(M5) 상속 위해 true로 수정
-    // 2026-07-25 신설(주피터 지시) — 인접쌍(임상심리사↔전문상담교사↔정신건강전문요원) — '심리검사'는 임상심리사 고유 업무
-    triggers: ['임상심리사', '심리검사'],
+    // 2026-07-25 신설(주피터 지시) — 인접쌍(임상심리사↔전문상담교사↔정신건강전문요원) — '심리검사'는 임상심리사 고유 업무.
+    // '심리상담사'(통칭, 정식 자격명 아님)는 세 페르소나 모두에 동일하게 추가한다(2026-07-25 재검토) —
+    // 어느 한쪽에만 넣으면 그쪽이 부당하게 우선권을 갖게 되고, 원래 이 통칭은 셋 중 무엇을 뜻하는지
+    // 불분명해서 AGENT-COMMON의 기존 원칙("인접 쌍이 안 갈리면 확신도 게이트가 '아니오' — 되묻는다")이
+    // 작동해야 하는 사례다. 세 곳 다 넣으면 셋 다 후보로 뜨면서 그 되묻기가 자연히 발동한다.
+    triggers: ['임상심리사', '심리검사', '심리상담사'],
   },
   'school-counselor': {
     label: '전문상담교사', icon: '🛋️', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_school-counselor', needsMedicalSafety: true, // 2026-07-04: 상동
-    // 2026-07-25 신설(주피터 지시) — 인접쌍 구분 — '학교' 맥락. 99건 사고실험 I범주('학교폭력 상담') 커버
-    triggers: ['전문상담교사', '학교 상담', '학교폭력 상담'],
+    // 2026-07-25 신설(주피터 지시) — 인접쌍 구분 — '학교' 맥락. 99건 사고실험 I범주('학교폭력 상담') 커버.
+    // '심리상담사'는 clinical-psychologist와 동일 이유로 추가(위 주석 참고).
+    triggers: ['전문상담교사', '학교 상담', '학교폭력 상담', '심리상담사'],
   },
   'mental-health-professional': {
     label: '정신건강전문요원', icon: '💬', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_mental-health-professional', needsMedicalSafety: true, // 2026-07-04: 상동
-    // 2026-07-25 신설(주피터 지시) — 인접쌍(정신건강전문요원↔사회복지사) 구분 키워드 그대로 — '정신건강 재활'
-    triggers: ['정신건강전문요원', '정신건강 재활'],
+    // 2026-07-25 신설(주피터 지시) — 인접쌍(정신건강전문요원↔사회복지사) 구분 키워드 그대로 — '정신건강 재활'.
+    // '심리상담사'는 clinical-psychologist와 동일 이유로 추가(위 주석 참고).
+    triggers: ['정신건강전문요원', '정신건강 재활', '심리상담사'],
   },
   // 2026-07-06 신설(SP-EDU-04) — 상담직 3개와 마찬가지로 위기개입 프로토콜(M5)
   // 상속 위해 needsMedicalSafety:true. category는 EDU 유지(복지 상담이 의료
