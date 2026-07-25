@@ -76,3 +76,19 @@ enabled = true
 
 [observability.traces]
 enabled = true
+
+# 2026-07-26 신설 — K-Traffic/K-Logistics 실매칭 백엔드 Phase 1, 실시간
+# 알림용 Durable Objects. SQLite 백엔드로 생성(new_sqlite_classes) —
+# 무료 플랜에서도 사용 가능(Cloudflare 공식 문서 2026-07-07 갱신 기준
+# 확인. 개발 완료 시점에 유료 전환 예정 — 피터님 확정 2026-07-26).
+[[durable_objects.bindings]]
+name = "MATCH_DEMAND_CHANNEL"
+class_name = "MatchDemandChannel"
+
+[[durable_objects.bindings]]
+name = "MATCH_REGION_CHANNEL"
+class_name = "MatchRegionChannel"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["MatchDemandChannel", "MatchRegionChannel"]
