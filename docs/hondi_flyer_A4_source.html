@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 595px; height: 842px;
+    font-family: 'Noto Sans CJK KR', 'Noto Sans KR', sans-serif;
+    color: #3C4A63;
+    background: #ffffff;
+    position: relative;
+  }
+  .navy { color: #0B2545; }
+  .header {
+    padding: 20px 32px 14px 32px;
+    border-bottom: 1px solid #0B2545;
+  }
+  .header .brand {
+    font-size: 19px; font-weight: 700; color: #0B2545;
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  }
+  .header .brand .sub { font-size: 10px; font-weight: 400; color: #0B2545; }
+  .header .brand .price { margin-left: auto; font-size: 9.5px; font-weight: 700; color: #0B2545; }
+  .header .tagline { font-size: 9.5px; color: #0B2545; margin-top: 6px; }
+
+  .intro {
+    padding: 12px 32px 0 32px;
+    font-size: 9px; line-height: 1.55; color: #3C4A63; text-align: justify;
+  }
+
+  .device-row {
+    margin: 14px 32px 10px 32px;
+    padding: 8px 0;
+    border-top: 1px solid #C7D4E6;
+    border-bottom: 1px solid #C7D4E6;
+    display: flex; font-size: 9px; color: #205295; font-weight: 700;
+  }
+  .device-row .item { flex: 1; padding: 0 6px; }
+  .device-row .item + .item { border-left: 1px solid #C7D4E6; }
+  .device-row .item span.label { color: #205295; }
+
+  .section-title {
+    margin: 8px 32px 10px 32px;
+    font-size: 12.5px; font-weight: 700; color: #0B2545;
+  }
+
+  .items { margin: 0 32px; }
+  .item-block { padding: 8px 0 10px 0; border-top: 1px solid #EEF1F6; }
+  .item-block:first-child { border-top: none; }
+  .item-head { font-size: 11.5px; font-weight: 700; color: #0B2545; display: flex; gap: 5px; align-items: baseline; }
+  .item-head .glyph { color: #205295; font-weight: 700; width: 16px; display: inline-block; }
+  .item-body { font-size: 9px; line-height: 1.55; color: #3C4A63; margin-top: 4px; text-align: justify; }
+  .item-link { font-size: 8.5px; color: #205295; margin-top: 3px; }
+
+  .cta {
+    margin: 14px 32px 0 32px;
+    padding: 12px 14px;
+    background: #F4F7FB;
+    border: 1px solid #C7D4E6;
+    border-radius: 4px;
+  }
+  .cta h3 { font-size: 11px; color: #0B2545; margin-bottom: 6px; }
+  .cta p { font-size: 8.7px; line-height: 1.55; color: #3C4A63; text-align: justify; }
+
+  .invest-note {
+    margin: 8px 32px 0 32px;
+    padding: 8px 10px;
+    font-size: 8.3px; line-height: 1.55; color: #3C4A63;
+    background: #FBF8EF; border: 1px solid #E9DFC3; border-radius: 4px;
+  }
+
+  .disclaimers { margin: 8px 32px 0 32px; font-size: 7.8px; line-height: 1.6; color: #6b7280; }
+
+  .footer-line {
+    position: absolute; bottom: 40px; left: 32px; right: 32px;
+    border-top: 1px solid #E4EAF2;
+  }
+  .footer-url {
+    position: absolute; bottom: 14px; right: 32px;
+    font-size: 9px; color: #0B2545; font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="brand">
+      혼디 <span class="sub">Beta v1.0 (기능 시험판)</span>
+      <span class="price">월 990원에 모든 서비스 이용</span>
+    </div>
+    <div class="tagline">'혼디'는 제주 토속어로 "다함께"라는 뜻입니다.</div>
+  </div>
+
+  <div class="intro">
+    혼디는 입법·사법·행정·교육·의료·금융·교통·시장 등 우리 사회 전 영역을 AI 기반으로 재구성하는 세계 최초의 시도이며, 제주도에서 출발합니다.
+    연간 수조 원의 정부 연구 지원금을 단 10원도 받지 않고, 한국 개발자 50여 명이 자비를 투자해 만든 오픈소스 AI 생태계이며, 목표는 OECD 최상위권인
+    한국인의 노동 시간을 절반 이하로 줄이는 것입니다. 누군가의 일자리를 뺏는 것이 아니라, 단 한 명의 예외도 없이 우리 사회 구성원 모두의 노동 시간을
+    다함께 줄입니다. 2026년 8월 현재 베타 테스트 버전이며, 완전한 상용 버전은 10월 출시 예정입니다. 오픈소스이므로 모든 코드를 투명하게 공개합니다.
+  </div>
+
+  <div class="device-row">
+    <div class="item"><span class="label">스마트폰</span> — 혼디를 이용하는 수단입니다.</div>
+    <div class="item"><span class="label">PC</span> — 혼디의 사용법과 기술적 상세입니다.</div>
+    <div class="item">https://hondi.net</div>
+  </div>
+
+  <div class="section-title">혼디는 카카오톡같은 채팅 앱처럼 보이지만, 근본이 다릅니다</div>
+
+  <div class="items">
+
+    <div class="item-block">
+      <div class="item-head"><span class="glyph">法</span> 사법 AI · K-Law</div>
+      <div class="item-body">
+        1심~3심, 수년과 수백~수천만 원이 드는 대법원 판결문의 예상을 5분 안에 작성하고, 왜 그런 판결이 나올 수밖에 없는지 어린이도
+        이해할 만큼 쉽게 설명합니다.<br>
+        대법원이 선별한 가장 어려운 판례 300건을 기준으로, K-Law가 대법원과 같은 결론에 도달한 비율은 73%입니다.
+        같은 사건에서 실제 1심·2심 법원의 대법원 일치율은 45~47%에 그쳤습니다.
+      </div>
+      <div class="item-link">klaw.hondi.kr</div>
+    </div>
+
+    <div class="item-block">
+      <div class="item-head"><span class="glyph">政</span> 행정 AI</div>
+      <div class="item-body">
+        중앙·지방 관공서를 직접 방문하지 않아도 원하는 행정 업무를 처리하도록 돕습니다. 반복적·일상적 업무를 AI로 대체하므로
+        시민과 공무원 모두에게 이익입니다.
+      </div>
+    </div>
+
+    <div class="item-block">
+      <div class="item-head"><span class="glyph">立</span> 입법 AI</div>
+      <div class="item-body">
+        시민 개개인의 의사를 정책에 반영할 합리적 경로를 손바닥 위 스마트폰에 제공합니다.
+      </div>
+    </div>
+
+    <div class="item-block">
+      <div class="item-head"><span class="glyph">敎</span> 교육 AI</div>
+      <div class="item-body">
+        유치원부터 박사 과정까지, 개인마다 노벨상 수상자급 지적 역량을 갖춘 1:1 맞춤형 교사를 제공합니다. 세상의 모든 지식을
+        갖춘 교사입니다.
+      </div>
+    </div>
+
+    <div class="item-block">
+      <div class="item-head"><span class="glyph">醫</span> 의료 AI</div>
+      <div class="item-body">
+        증상과 신체 특성을 분석해 정확한 진단에 이르는 전 과정을 인간 의사와 함께하며, 환자 스스로도 증상과 처치 과정, 기대
+        효과를 상세히 이해하게 됩니다.
+      </div>
+    </div>
+
+    <div class="item-block">
+      <div class="item-head"><span class="glyph">金</span> 금융 AI</div>
+      <div class="item-body">
+        디지털 화폐 안에 은행·보험·증권·거래소·감독 기능을 통합할 방안을 제시합니다. 무인 은행·보험·증권사의 씨앗을
+        직접 확인해 보세요.
+      </div>
+    </div>
+
+    <div class="item-block">
+      <div class="item-head"><span class="glyph">運</span> 교통·물류 AI</div>
+      <div class="item-body">
+        개인·기업별로 흩어져 운용되는 버스·택시·자가용·화물차를 사회가 안전하게 공유할 방안을 제시합니다. 카풀 시스템을
+        모든 교통 수단에 적용합니다.
+      </div>
+    </div>
+
+    <div class="item-block">
+      <div class="item-head"><span class="glyph">市</span> 시장 AI</div>
+      <div class="item-body">
+        모든 상품·서비스의 공정한 가격을 알려주고, 나에게 정말 필요한지까지 판단해 구매를 돕습니다.
+      </div>
+    </div>
+
+  </div>
+
+  <div class="cta">
+    <h3>우리와 함께 하십시오</h3>
+    <p>
+      지금 혼디를 무료로 이용해 보십시오. 누구나 이용할 수 있습니다. 그 성능에 놀라셨다면, 지속적인 이용을 위해 GDC를 충전해
+      주십시오. 하루 1시간씩 이용 시 비용은 약 월 990원입니다. 단, K-Law 대법원 판결 시뮬레이션처럼 고난도 추론이 필요한
+      고도의 서비스는 별도 요금제입니다.
+    </p>
+  </div>
+
+  <div class="invest-note">
+    1만원 이상 GDC 충전 이용자에게는 관련 법령이 정한 정식 절차(소액공모·크라우드펀딩 등)로 별도 진행되는 AI City Inc.(혼디
+    개발사) 투자 참여에 우선 안내를 받으실 자격이 주어집니다.
+  </div>
+
+  <div class="disclaimers">
+    ※ 충전은 혼디 서비스 이용을 위한 것이며, 그 자체로 주식 취득을 확정·보장하지 않습니다. 실제 투자 참여 여부와 조건은
+    별도 절차 및 관련 법령에 따라 결정됩니다.<br>
+    ※ 혼디는 현재 기능 시험(베타) 버전이며, 그 성능·정확도·결과물이 실제 환경에서 동일하게 재현됨을 보장하지 않습니다.
+    법률·의료·금융 등 전문 영역의 안내는 참고용이며, 최종 판단과 책임은 이용자 본인 및 관련 전문가에게 있습니다.
+  </div>
+
+  <div class="footer-line"></div>
+  <div class="footer-url">hondi.net</div>
+
+</body>
+</html>
