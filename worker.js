@@ -2133,6 +2133,81 @@ async function _writeMetaTableRecord(env, sessionAgency, fields) {
   if (!res.ok) throw new Error(`meta_table_records 저장 실패 HTTP ${res.status}: ${await res.text().catch(() => '')}`);
 }
 
+// ── INSTANCE_ENRICH 태그 파싱/기록 — LAZY-INSTANCE-ENRICHMENT-DESIGN_v1.0.md
+// §3-1/§3-2 구현 (2026-07-24 신설, 주피터 지시로 승인·구현: "혼디는
+// 안내가 아니라 실행이 주된 목표"). _parseMetaTableTag와 동일한 괄호
+// 깊이 인식 방식을 재사용한다 — 새 파서를 발명하지 않는다.
+// 태그 형식: [INSTANCE_ENRICH: layer=city, province=busan,
+//   instance_id=haeundae, field=상하수도_capability_문구, value=...,
+//   source=user_reported|web_search|inference, confidence=low|medium|high,
+//   note=...]
+function _parseInstanceEnrichTag(raw) {
+  try {
+    const fields = {};
+    const parts = [];
+    let depth = 0, buf = '';
+    for (const ch of raw) {
+      if (ch === '[') depth++;
+      if (ch === ']') depth--;
+      if (ch === ',' && depth === 0) { parts.push(buf); buf = ''; }
+      else buf += ch;
+    }
+    if (buf.trim()) parts.push(buf);
+
+    for (const part of parts) {
+      const eq = part.indexOf('=');
+      if (eq === -1) continue;
+      const key = part.slice(0, eq).trim();
+      let val = part.slice(eq + 1).trim();
+      if (val.startsWith('{') && val.endsWith('}')) val = val.slice(1, -1).trim();
+      fields[key] = val.replace(/^["']|["']$/g, '');
+    }
+    // layer/province/instance_id/field/value/source/confidence 전부 필수 —
+    // 설계 문서 §3-1 필드 표 그대로. 하나라도 없으면 부분 레코드를 그냥
+    // 버리는 대신 null을 반환해 호출부가 경고 로그를 남기게 한다(다른
+    // 두 태그 파서와 동일한 fail-safe 관행).
+    if (!fields.layer || !fields.province || !fields.instance_id || !fields.field ||
+        !fields.value || !fields.source || !fields.confidence) return null;
+    if (!['do', 'city', 'citydept', 'emd', 'national'].includes(fields.layer)) return null;
+    if (!['user_reported', 'web_search', 'inference'].includes(fields.source)) return null;
+    if (!['low', 'medium', 'high'].includes(fields.confidence)) return null;
+    return fields;
+  } catch (e) { return null; }
+}
+
+async function _writeInstanceEnrichmentDraft(env, guidForHashing, fields) {
+  const token = await _l1AdminToken(env);
+  // owner_pdv._writeOwnerPdvRecord와 동일한 해싱 패턴 재사용(U5 개인정보
+  // 최소화) — LLM이 태그에 쓴 who류 텍스트가 아니라, 서버가 이미 검증한
+  // 실제 guid를 도메인 분리 salt로 해싱한다. 원문 guid는 이 함수 밖으로
+  // 나가지 않고 로그에도 남기지 않는다.
+  let guidHash = null;
+  if (guidForHashing) {
+    const salt = await _sha256Hex(
+      `${env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1'}:instance-enrich-salt:${fields.layer}`
+    );
+    guidHash = await _sha256Hex(`${guidForHashing}:${salt}`);
+  }
+  const res = await fetch(`${L1_DEFAULT}/api/collections/instance_enrichment_drafts/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      layer: fields.layer,
+      province: fields.province,
+      instance_id: fields.instance_id,
+      field: fields.field,
+      value: fields.value,
+      source: fields.source,
+      confidence: fields.confidence,
+      note: fields.note || null,
+      submitted_by_guid_hash: guidHash,
+      submitted_at: new Date().toISOString(),
+      status: 'draft',
+    }),
+  });
+  if (!res.ok) throw new Error(`instance_enrichment_drafts 저장 실패 HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+}
+
 // GET /stats/agency-report — AGENCY-AC-COMMON §6이 요구한 주기별 보고서.
 async function handleStatsAgencyReport(request, env, corsHeaders) {
   const url = new URL(request.url);
@@ -5780,7 +5855,7 @@ async function _sweepBridgeOutbox(env) {
 
 // 2026-07-18 신설 — 테스트 목적 named export. 런타임 동작에는 영향 없음
 // (default export의 fetch 핸들러는 그대로 pathname 매칭으로 호출).
-export { handleGdcDepositClose, handleGdcDaoProposalCreate, handleGdcDaoVote, handleGdcDaoProposalsList, handleFeeRate, handleInsClaimCreate, handleInsClaimsList, handleVerifyAdmin, _natAgencyExtractName };
+export { handleGdcDepositClose, handleGdcDaoProposalCreate, handleGdcDaoVote, handleGdcDaoProposalsList, handleFeeRate, handleInsClaimCreate, handleInsClaimsList, handleVerifyAdmin, _natAgencyExtractName, _parseInstanceEnrichTag };
 
 export default {
   // ── Cron 트리거 (10분마다 머클 앵커링 + 브릿지 아웃박스 스윕) ────────
@@ -11824,6 +11899,40 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
         console.warn('[MetaTable] 태그 파싱 실패 — 형식이 예상과 다름:', mtMatch[1].slice(0, 200));
       }
       data.choices[0].message.content = mtContent.replace(/\[META_TABLE_UPDATE:[\s\S]*?\]/, '').trim();
+    }
+  }
+
+  // ── INSTANCE_ENRICH 서버측 처리 (2026-07-24 신설) ──────────────────
+  // LAZY-INSTANCE-ENRICHMENT-DESIGN_v1.0.md §3-3 구현 — 주피터 지시로
+  // 승인·구현: "혼디는 안내가 아니라 실행이 주된 목표"라는 철학을
+  // 인스턴스 데이터 자체에도 반영한다. AGY_VAULT_STORE/META_TABLE_UPDATE와
+  // 같은 자리, 같은 이유로 canDelegate 여부와 무관하게 모든 세션에
+  // 적용한다(얼리리턴 없음 — 위 AGY_VAULT_STORE 주석의 알려진 한계와
+  // 동일한 구조적 제약을 그대로 인정하고, "위임 없는 절대다수 케이스"만
+  // 우선 커버한다).
+  //
+  // 이 블록은 UNIVERSAL-common U0-3(모든 SP 공통 지시)에 의해 자동으로
+  // 모든 이미 인스턴스화된 도청·시청·국가기관 SP에 적용된다 — 개별 SP
+  // 파일을 하나씩 고칠 필요가 없다(U0-1에서 AGY_VAULT_STORE가 이미
+  // 증명한 방식 재사용).
+  //
+  // 쓰기 전용 초안이며 읽기 경로는 바뀌지 않는다 — 검증 없는 정보가
+  // 즉시 다른 사용자에게 노출되는 걸 원천 차단한다(설계 문서 §5·§6).
+  {
+    const ieContent = data?.choices?.[0]?.message?.content;
+    const ieMatch = typeof ieContent === 'string'
+      ? ieContent.match(/\[INSTANCE_ENRICH:([\s\S]*?)\]/)
+      : null;
+    if (ieMatch) {
+      const ieFields = _parseInstanceEnrichTag(ieMatch[1]);
+      if (ieFields) {
+        const writeTask = _writeInstanceEnrichmentDraft(env, guid, ieFields).catch(e =>
+          console.warn('[InstanceEnrich] 기록 실패(응답 흐름은 계속 진행):', e.message));
+        if (ctx?.waitUntil) ctx.waitUntil(writeTask); else writeTask.catch(() => {});
+      } else {
+        console.warn('[InstanceEnrich] 태그 파싱 실패 — 형식이 예상과 다름:', ieMatch[1].slice(0, 200));
+      }
+      data.choices[0].message.content = ieContent.replace(/\[INSTANCE_ENRICH:[\s\S]*?\]/, '').trim();
     }
   }
 
