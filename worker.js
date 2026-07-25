@@ -171,6 +171,19 @@ function _adminActionSecret(env) {
   return env.ADMIN_ACTION_SECRET || null;
 }
 
+// 2026-07-25: GOPANG_MASTER_KEY 하드코딩 폴백('gopang-webauthn-secret-v1')
+// 제거를 위한 공용 헬퍼. 이 문자열이 공개 저장소 소스에 그대로 노출돼
+// 있었기 때문에, 시크릿 미설정 환경에서는 세션 토큰·동의 토큰·WebAuthn
+// 챌린지·가명화 salt(instance-enrich/owner-pdv/dawn-democracy) 전부가
+// 공개된 값으로 서명/해싱되는 상태였다. 이제는 시크릿이 없으면 조용히
+// 넘어가지 않고 명시적으로 실패한다(fail-closed) — 호출부가 이미
+// try/catch로 감싸는 곳은 그대로 false/null로 이어지고, 감싸지 않는 곳
+// (서명 발급 계열)은 그대로 던져 500으로 이어진다.
+function _requireMasterKey(env) {
+  if (!env.GOPANG_MASTER_KEY) throw new Error('GOPANG_MASTER_KEY secret 미설정');
+  return env.GOPANG_MASTER_KEY;
+}
+
 // 입금자명(보내는 분 표시)에 사용자가 직접 포함시킬 짧은 매칭 코드.
 // 은행 앱마다 "보내는 분 표시" 커스텀 입력 길이 제한이 다르므로
 // (짧게는 10자 안팎) HD+6자리 숫자로 짧게 유지한다 — 완벽한 자동 대사가
@@ -2188,7 +2201,7 @@ async function _writeInstanceEnrichmentDraft(env, guidForHashing, fields) {
   let guidHash = null;
   if (guidForHashing) {
     const salt = await _sha256Hex(
-      `${env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1'}:instance-enrich-salt:${fields.layer}`
+      `${_requireMasterKey(env)}:instance-enrich-salt:${fields.layer}`
     );
     guidHash = await _sha256Hex(`${guidForHashing}:${salt}`);
   }
@@ -2235,7 +2248,7 @@ const DAWN_VOTE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7일 — 임의 설정�
 async function _dawnHashGuid(env, guid) {
   if (!guid) return null;
   const salt = await _sha256Hex(
-    `${env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1'}:dawn-democracy-salt`
+    `${_requireMasterKey(env)}:dawn-democracy-salt`
   );
   return _sha256Hex(`${guid}:${salt}`);
 }
@@ -9406,7 +9419,7 @@ async function _writeOwnerPdvRecord(env, r) {
   let whoHash = null;
   if (guidForHashing) {
     const agencySalt = await _sha256Hex(
-      `${env.GOPANG_MASTER_KEY || 'gopang-webauthn-secret-v1'}:owner-pdv-salt:${ownerAgency}`
+      `${_requireMasterKey(env)}:owner-pdv-salt:${ownerAgency}`
     );
     whoHash = await _sha256Hex(`${guidForHashing}:${agencySalt}`);
   }
@@ -9857,7 +9870,7 @@ async function _verifyConsentToken(env,consentToken,requestId,ipv6){
     return true;
   }catch(e){return _verifyConsentHmac(env,consentToken,requestId,ipv6);}
 }
-async function _verifyConsentHmac(env,consentToken,requestId,ipv6){try{const masterKey=env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1';const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(masterKey),{name:'HMAC',hash:'SHA-256'},false,['verify']);const data=new TextEncoder().encode(`${requestId}.${ipv6}`);const sigBytes=Uint8Array.from(atob(consentToken.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));return crypto.subtle.verify('HMAC',key,sigBytes,data);}catch{return false;}}
+async function _verifyConsentHmac(env,consentToken,requestId,ipv6){try{const masterKey=_requireMasterKey(env);const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(masterKey),{name:'HMAC',hash:'SHA-256'},false,['verify']);const data=new TextEncoder().encode(`${requestId}.${ipv6}`);const sigBytes=Uint8Array.from(atob(consentToken.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));return crypto.subtle.verify('HMAC',key,sigBytes,data);}catch{return false;}}
 
 // ── 동의 토큰 발급 — _verifyConsentHmac의 역함수 (2026-07-02 신설) ──────
 // "동의 승인 페이지 미구현" 문제의 핵심: _verifyConsentHmac(검증)는 있었지만
@@ -9865,7 +9878,7 @@ async function _verifyConsentHmac(env,consentToken,requestId,ipv6){try{const mas
 // 없었다. _verifyConsentHmac의 정확한 역과정(같은 HMAC 키·같은 base64url
 // 변환)을 따라야 두 함수가 서로 맞물린다.
 async function _signConsentHmac(env,requestId,ipv6){
-  const masterKey=env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1';
+  const masterKey=_requireMasterKey(env);
   const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(masterKey),{name:'HMAC',hash:'SHA-256'},false,['sign']);
   const data=new TextEncoder().encode(`${requestId}.${ipv6}`);
   const sigBuf=await crypto.subtle.sign('HMAC',key,data);
@@ -10264,7 +10277,7 @@ async function buildToken(env,guid,level,svc){
   const now=Math.floor(Date.now()/1000);
   const payload={ipv6:guid,level,svc,iat:now,exp:now+3600};
   const b64p=btoa(JSON.stringify(payload)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(_requireMasterKey(env)),{name:'HMAC',hash:'SHA-256'},false,['sign']);
   const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(b64p));
   const b64s=btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
   return `${b64p}.${b64s}`;
@@ -10273,7 +10286,7 @@ async function parseToken(env,token){
   try{
     const [b64p,b64s]=String(token).split('.');
     if(!b64p||!b64s)return null;
-    const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['verify']);
+    const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(_requireMasterKey(env)),{name:'HMAC',hash:'SHA-256'},false,['verify']);
     const sigBytes=Uint8Array.from(atob(b64s.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
     const sigOk=await crypto.subtle.verify('HMAC',key,sigBytes,new TextEncoder().encode(b64p));
     if(!sigOk)return null;
@@ -10343,8 +10356,8 @@ async function handleRefresh(request,env,corsHeaders){const cookieHeader=request
 // (2026-07-15 삭제 — sbFetch. handleSvcRegister(7차 배치)와
 //  ai-chat-handler.js(8차 배치) 둘 다 L1로 이관되면서 유일하게 남았던
 //  호출자가 사라졌다. Supabase 전용 헬퍼라 정리 대상.)
-async function handleWAChallenge(request,env,corsHeaders){const challenge=crypto.getRandomValues(new Uint8Array(32));const chalB64=btoa(String.fromCharCode(...challenge)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');const exp=Math.floor(Date.now()/1000)+300;const sigData=`${chalB64}.${exp}`;const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['sign']);const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(sigData));const sigHex=Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');return new Response(JSON.stringify({challenge:chalB64,exp,sig:sigHex}),{status:200,headers:corsHeaders});}
-async function _verifyChallengeToken(env,chalB64,exp,sig){if(exp<Math.floor(Date.now()/1000))return false;const sigData=`${chalB64}.${exp}`;const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GOPANG_MASTER_KEY||'gopang-webauthn-secret-v1'),{name:'HMAC',hash:'SHA-256'},false,['verify']);const sigBytes=Uint8Array.from(sig.match(/.{2}/g).map(h=>parseInt(h,16)));return crypto.subtle.verify('HMAC',key,sigBytes,new TextEncoder().encode(sigData));}
+async function handleWAChallenge(request,env,corsHeaders){const challenge=crypto.getRandomValues(new Uint8Array(32));const chalB64=btoa(String.fromCharCode(...challenge)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');const exp=Math.floor(Date.now()/1000)+300;const sigData=`${chalB64}.${exp}`;const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(_requireMasterKey(env)),{name:'HMAC',hash:'SHA-256'},false,['sign']);const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(sigData));const sigHex=Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');return new Response(JSON.stringify({challenge:chalB64,exp,sig:sigHex}),{status:200,headers:corsHeaders});}
+async function _verifyChallengeToken(env,chalB64,exp,sig){if(exp<Math.floor(Date.now()/1000))return false;const sigData=`${chalB64}.${exp}`;try{const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(_requireMasterKey(env)),{name:'HMAC',hash:'SHA-256'},false,['verify']);const sigBytes=Uint8Array.from(sig.match(/.{2}/g).map(h=>parseInt(h,16)));return crypto.subtle.verify('HMAC',key,sigBytes,new TextEncoder().encode(sigData));}catch{return false;}}
 // (2026-07-14 삭제 — handleWARegister/handleWAVerify. 라우팅 자체가
 //  제거됐고(위 참고), 이 대화에서 확인한 바 저장소 전체에서
 //  /auth/webauthn/register·/verify를 fetch로 실제 호출하는 클라이언트
