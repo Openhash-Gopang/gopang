@@ -37,10 +37,24 @@ ROOT = Path(__file__).parent.parent
 
 def registry_ids_with_url() -> set[str]:
     text = (ROOT / 'gwp-registry.js').read_text(encoding='utf-8')
-    # 각 엔트리: id: '...' ... url: null 또는 url: '...'
-    entries = re.findall(
-        r"id:\s*'([a-z0-9-]+)'.*?url:\s*(null|'[^']*')", text, re.S
-    )
+    # ★ 2026-07-24 수정(2차) — 엔트리 경계를 '},\s*\{'로 나누려 했으나,
+    # 엔트리 사이에 여러 줄 주석(예: kestate와 다음 엔트리 사이의 2026-07-12
+    # 신설 설명 블록)이 끼어 있으면 \s*가 그 주석 텍스트를 건너뛰지 못해
+    # 분할이 실패하고, 다시 다음 엔트리의 url까지 같이 묶여버렸다(kestate가
+    # url 없는 switch 타입인데도 있는 것처럼 오탐). 각 'id: ...' 시작
+    # 위치 자체를 경계로 나눈다 — 주석·공백과 무관하게 항상 정확하다.
+    # ★ 2026-07-24 수정(3차) — id 매칭 문자클래스가 [a-z0-9-]+라 밑줄(_)을
+    # 놓쳤다. kcommerce_seller처럼 id에 밑줄이 들어간 엔트리가 있으면 그
+    # 엔트리 자체가 경계로 인식되지 않아, 그 앞 엔트리(kestate)의 슬라이스가
+    # kcommerce_seller까지 통째로 삼켜 그 url을 잘못 주웠다. 밑줄을 포함한다.
+    id_positions = [m.start() for m in re.finditer(r"id:\s*'[a-z0-9_-]+'", text)]
+    entries = []
+    for i, pos in enumerate(id_positions):
+        end = id_positions[i + 1] if i + 1 < len(id_positions) else len(text)
+        block = text[pos:end]
+        id_m = re.match(r"id:\s*'([a-z0-9_-]+)'", block)
+        url_m = re.search(r"url:\s*(null|'[^']*')", block)
+        entries.append((id_m.group(1), url_m.group(1) if url_m else 'null'))
     return {id_ for id_, url in entries if url != 'null'}
 
 
@@ -63,7 +77,7 @@ def agent_common_table_ids() -> set[str]:
         if not line or '|' not in line:
             continue
         first_col = line.split('|')[0].strip()
-        if re.match(r'^[a-z0-9-]+$', first_col):
+        if re.match(r'^[a-z0-9_-]+$', first_col):
             ids.add(first_col)
     return ids
 
