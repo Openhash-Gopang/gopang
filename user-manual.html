@@ -322,6 +322,39 @@ html,body{height:100%;background:#fff;color:#111;
 
   <div class="m-category">신원·보안</div>
 
+  <div class="m-category">AI 응답·GDC 문제해결</div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>
+      <span class="m-title">AI가 대답을 안 할 때</span>
+    </div>
+    <div class="m-body">
+      아래 순서로 확인해보세요.
+      <div class="eg">
+        <b>① API 키가 등록됐는지</b> — 상단의 AI 버튼이 비활성(회색) 상태라면 API 키가 아직 등록되지 않은 것입니다. AI 버튼을 눌러 키를 등록하세요(등록 방법은 "시작하기" 가이드 참고).<br><br>
+        <b>② API 키가 올바른지</b> — 키를 입력했는데도 응답이 없다면, 발급받은 키를 복사하는 과정에서 앞뒤 공백이 함께 복사됐거나 일부만 복사됐을 수 있습니다. 설정에서 키를 지우고 다시 발급받아 복사해보세요.<br><br>
+        <b>③ 인터넷 연결 상태</b> — 와이파이·데이터가 불안정하면 응답이 늦거나 안 올 수 있습니다. 다른 앱(웹 브라우저 등)이 정상 작동하는지 먼저 확인하세요.<br><br>
+        <b>④ 그래도 안 되면</b> — 페이지를 새로고침한 뒤 다시 시도해보세요. 계속 안 되면 우측 패널의 "제안 현황"으로 알려주시면 확인해드립니다.
+      </div>
+    </div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-head">
+      <span class="m-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+      <span class="m-title">GDC 잔액이 떨어졌을 때</span>
+    </div>
+    <div class="m-body">
+      GDC 잔액이 얼마 남지 않으면 알림이 옵니다. 그 알림을 누르면 충전 화면으로 바로 연결됩니다.
+      <div class="eg">
+        <b>충전 방법</b> — 충전 화면에서 계좌이체로 입금하면, 확인되는 대로 GDC가 채워집니다.<br><br>
+        <b>잔액을 알림 없이 직접 확인하려면</b> — 설정(바퀴모양 아이콘) → 프로필에서 현재 잔액을 확인할 수 있습니다.<br><br>
+        <b>대화 중에 잔액이 떨어지면</b> — 그 시점까지의 대화는 정상 처리되며, 잔액이 부족하다는 안내와 함께 충전 화면으로 연결하는 버튼이 표시됩니다.
+      </div>
+    </div>
+  </div>
+
   <div class="m-section">
     <div class="m-section-head">
       <span class="m-icon"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/><path d="M9.5 12.5l2 2 3.5-4"/></svg></span>
@@ -350,24 +383,17 @@ html,body{height:100%;background:#fff;color:#111;
     </div>
   </div>
 
-  <div class="m-section">
+  <div class="m-section" style="border:2px solid #c0392b;border-radius:14px;">
     <div class="m-section-head">
-      <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg></span>
-      <span class="m-title">백업 키 — 분실 시 유일한 복구 수단</span>
+      <span class="m-icon" style="color:#c0392b"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg></span>
+      <span class="m-title" style="color:#c0392b">⚠️ 백업 키 — 분실 시 유일한 복구 수단</span>
     </div>
-    <div class="m-body">위에서 말한 개인키는 이 기기에만 있고, 혼디 서버 어디에도 사본이 없습니다. 그러므로 <b>기기를 분실하거나 초기화하면, 백업 키를 미리 저장해두지 않은 이상 같은 계정을 되찾을 방법이 없습니다.</b> 전화번호를 다시 입력해도 소용없습니다 — 그건 이름표일 뿐, 도장이 아니기 때문입니다.
+    <div class="m-body"><b style="color:#c0392b">이 키를 잃어버리면 그 계정은 개발팀을 포함해 아무도 되찾아드릴 수 없습니다.</b> 위에서 말한 개인키는 이 기기에만 있고, 혼디 서버 어디에도 사본이 없습니다. 그러므로 <b>기기를 분실하거나 초기화하면, 백업 키를 미리 저장해두지 않은 이상 같은 계정을 되찾을 방법이 없습니다.</b> 전화번호를 다시 입력해도 소용없습니다 — 그건 이름표일 뿐, 도장이 아니기 때문입니다.
       <div class="eg">가입 직후 백업 키를 한 번 보여드리며 저장을 요청합니다. 이후에도 설정 → 백업 키에서 언제든 다시 꺼내보고, 새 기기에 입력해 계정을 옮길 수 있습니다.</div>
       이 키를 아는 사람은 누구나 그 계정이 될 수 있으므로, 캡처하거나 다른 사람과 공유하지 말고 본인만 아는 안전한 곳(비밀번호 관리자, 본인 이메일 등)에 보관하십시오.
     </div>
   </div>
 
-  <div class="m-section">
-    <div class="m-section-head">
-      <span class="m-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 7v5"/><path d="M12 12l-5 5"/><path d="M12 12l5 5"/></svg></span>
-      <span class="m-title">IPv6 주소 — 웹과의 통합</span>
-    </div>
-    <div class="m-body">모든 사용자는 고유한 <b>IPv6</b> 주소를 갖습니다. 이 주소는 향후 웹과 혼디의 통합을 위한 것입니다.</div>
-  </div>
 
   <div class="m-category">PDV & OpenHash</div>
   <div class="m-section">

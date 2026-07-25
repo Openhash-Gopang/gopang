@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: 일반 사용자용 용어집 — hondi_user_manual.html·
+  user-guide.html·user-manual.html(루트)에 흩어져 있는 용어를 한곳에
+  모음. 새로운 설명을 만들지 않고 기존 문서의 비유·설명을 그대로 재사용.
+  전체 문서 지도(개발자용): docs/MANUAL_INDEX.md
+  (2026-07-25, MANUAL_SEPARATION_PLAN_v1.0 §4-2에 따라 신설)
+-->
+
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>용어집 — 혼디</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#fff;color:#111;
+  font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+  -webkit-font-smoothing:antialiased;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+:root{
+  --green:#16a34a;--green-lt:#dcfce7;--green-dk:#15803d;
+  --border:#e5e7eb;--txt2:#6b7280;--txt3:#9ca3af;
+  --chip-bg:#f9fafb;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+
+.manual-header{
+  position:sticky;top:0;background:#fff;z-index:1;
+  padding:calc(var(--safe-t) + 14px) 20px 12px;
+  border-bottom:1px solid var(--border);
+}
+.manual-title{font-size:17px;font-weight:700;letter-spacing:-0.3px}
+.manual-subtitle{font-size:11px;color:var(--txt3);margin-top:2px}
+.back-link{display:inline-block;margin-top:10px;font-size:12px;color:var(--green-dk);text-decoration:none}
+
+.manual-body{padding:6px 20px 40px;max-width:640px;margin:0 auto}
+.m-section{padding:18px 0;border-bottom:1px solid var(--border)}
+.m-section:last-child{border-bottom:none}
+.m-category{
+  font-size:11px;font-weight:700;color:var(--green-dk);
+  text-transform:uppercase;letter-spacing:0.6px;
+  padding:18px 0 6px;
+}
+.m-category:first-child{padding-top:2px}
+.m-title{font-size:14.5px;font-weight:700;color:#111;margin-bottom:6px}
+.m-body{font-size:13px;color:#374151;line-height:1.75}
+.m-body b{color:#111;font-weight:700}
+.m-body .eg{
+  margin-top:8px;padding:10px 12px;background:var(--chip-bg);border-radius:10px;
+  font-size:12.5px;color:var(--txt2);line-height:1.7;
+}
+.see-also{margin-top:6px;font-size:11.5px;color:var(--txt3)}
+.see-also a{color:var(--green-dk);text-decoration:none}
+
+.manual-footer{padding:8px 20px calc(var(--safe-b) + 24px);font-size:11px;color:var(--txt3);text-align:center}
+</style>
+</head>
+<body>
+
+<div class="manual-header">
+  <div class="manual-title">용어집</div>
+  <div class="manual-subtitle">혼디에서 쓰이는 낯선 단어를 한곳에 모았습니다</div>
+  <a class="back-link" href="./hondi_user_manual.html">← 사용자 매뉴얼로 돌아가기</a>
+</div>
+
+<div class="manual-body">
+
+  <div class="m-category">가장 먼저 알아두면 좋은 것</div>
+
+  <div class="m-section">
+    <div class="m-title">PDV (Private Data Vault)</div>
+    <div class="m-body">나와 나눈 모든 대화·기록이 저장되는 곳. 서버가 아니라 <b>내 기기(폰·PC)</b>에 저장됩니다. 서버는 내용을 보관하지 않고, OpenHash 기술로 "위변조되지 않았다"는 사실만 증명합니다. 내 데이터는 나 이외에는 누구도 열람할 수 없습니다.
+      <div class="eg">이 문서들에서 "혼디가 ~을 기억한다"고 하는 건 전부 내 PDV 안에서 일어나는 일입니다.</div>
+    </div>
+    <div class="see-also">자세히 → <a href="./hondi_user_manual.html">사용자 매뉴얼 §00-1</a></div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-title">AC (Agent Common)</div>
+    <div class="m-body">나만의 AI 비서. 가입 시점에는 모두 같은 비서로 시작하지만, PDV에 쌓이는 나의 습관·일상·업무 지시를 학습하며 수개월에 걸쳐 개인화됩니다. 시간이 지날수록 문자 그대로 "나만의" 비서가 됩니다. "그림자 AI 비서"라고도 부릅니다.</div>
+    <div class="see-also">자세히 → <a href="./hondi_user_manual.html">사용자 매뉴얼 §00-1</a></div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-title">GDC (Global Digital Currency)</div>
+    <div class="m-body">혼디 안에서 AI와 대화하거나 물건을 살 때 쓰는 화폐. 가입하면 100원 상당이 자동으로 지갑에 들어오고, 쓰는 만큼 줄어들며, 잔액이 얼마 안 남으면 알림이 옵니다. 충전은 계좌이체로 합니다.</div>
+    <div class="see-also">자세히 → <a href="./hondi_user_manual.html">사용자 매뉴얼 §00-2</a></div>
+  </div>
+
+  <div class="m-category">계정·보안</div>
+
+  <div class="m-section">
+    <div class="m-title">GUID</div>
+    <div class="m-body">전화번호로 만들어지는, 내 계정의 <b>이름표</b>. 이름표이기 때문에 다른 사람이 이 번호를 알아도 그것만으로는 로그인할 수 없습니다 — 로그인하려면 아래 "개인키"라는 진짜 도장이 필요합니다.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-title">개인키(로그인 키)</div>
+    <div class="m-body">가입할 때 내 기기 안에서만 만들어지는 암호키. GUID(이름표)가 진짜 내 것임을 증명하는 <b>도장</b>입니다. 서버로 전송되지 않고, 혼디도 이 키의 사본을 갖고 있지 않습니다.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-title">⚠️ 백업 키</div>
+    <div class="m-body"><b>가장 중요한 용어입니다.</b> 개인키는 이 기기에만 있어서, 기기를 분실·초기화하면 백업 키를 미리 저장해두지 않은 이상 <b>그 계정은 개발팀을 포함해 아무도 되찾아드릴 수 없습니다.</b> 가입 직후 한 번 보여드리며 저장을 요청하고, 이후에도 설정 → 백업 키에서 다시 꺼내볼 수 있습니다. 캡처하거나 남과 공유하지 마세요.</div>
+    <div class="see-also">저장 방법 → <a href="./user-guide.html">시작하기 가이드 3단계</a></div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-title">API 키</div>
+    <div class="m-body">백업 키와는 다른 것입니다. Claude·Gemini·DeepSeek 같은 AI 모델 제공사가 발급하는 열쇠로, 이걸 등록해야 그 AI를 혼디 안에서 쓸 수 있습니다. <b>자동차의 시동 열쇠</b>와 같습니다 — 발급하는 순간 딱 한 번만 보여주므로 그 자리에서 바로 저장해둬야 합니다.</div>
+  </div>
+
+  <div class="m-category">AI가 작동하는 방식</div>
+
+  <div class="m-section">
+    <div class="m-title">LLM</div>
+    <div class="m-body">ChatGPT·Claude·Gemini·DeepSeek처럼 널리 알려진 AI 모델을 부르는 말. 혼디는 이 LLM들을 이용해 나만의 AI 비서를 만듭니다. <b>자동차 제조사</b>에 비유하면, 제조사(LLM)가 달라도 내가 정한 목적지(시스템 프롬프트)로 똑같이 데려다줍니다.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-title">System Prompt(시스템 프롬프트)</div>
+    <div class="m-body">내 AI 비서에게 주는 행동 지침서. "항상 반말로 대화해줘"처럼 나만의 규칙을 적어두면 비서가 그대로 따릅니다. <b>자동차의 내비게이션</b>과 같습니다 — 차(LLM)가 달라도 내비게이션이 같으면 같은 길로 갑니다.</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-title">OpenHash</div>
+    <div class="m-body">내 기록이 위변조되지 않았음을 증명하는 기술. 데이터를 서버가 아니라 내 기기에 보관하면서도, 한 번 기록된 것은 절대 바꿀 수 없게 만듭니다. <b>직녀가 씨줄·날줄을 교차해 천을 짜는 것</b>과 같습니다 — 한 군데를 건드리면 전체 무늬가 틀어져서 위변조가 바로 드러납니다.</div>
+    <div class="see-also">자세히 → <a href="./user-guide.html">시작하기 가이드 §08</a></div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-title">혼디 색상 코드</div>
+    <div class="m-body">"혼디" 글자의 마지막 점(ㅣ) 안에 색깔 칸이 쌓여 있는 나만의 코드. QR코드처럼 카메라로 비추면 바로 그 사람·가게·기관의 프로필로 연결됩니다. 간판·명함에 인쇄해두면 별도 단말기 없이 손님이 카메라로 비추기만 하면 됩니다.</div>
+  </div>
+
+  <div class="m-category">K-서비스(전문 분야 AI)</div>
+
+  <div class="m-section">
+    <div class="m-body">
+      법원·세무서·병원·시청 같은 기관 각각의 역할을 대신하는 AI들입니다. 내 AI 비서가 필요할 때 알아서 연결해줍니다.
+      <div class="eg">
+        <b>K-Law</b>(AI 법원) — 소송 전 예상 결과를 미리 알려줌<br>
+        <b>K-Tax</b>(AI 세무서) — 세금 신고 자동화<br>
+        <b>K-Health</b>(AI 병원) — 건강 상담·진료 예약<br>
+        <b>K-Market</b>(AI 시장, 혼디장) — 물건 주문·결제<br>
+        <b>K-School</b>(AI 학교) — 교육 과정<br>
+        <b>K-Traffic</b>(AI 교통) — 교통 정보<br>
+        <b>K-Gov</b>(정부기관 AC) — 도청·시청·읍면동·국가기관 민원
+      </div>
+    </div>
+    <div class="see-also">전체 목록 → <a href="./user-guide.html">시작하기 가이드 §05</a></div>
+  </div>
+
+</div>
+
+<div class="manual-footer">혼디 · 이 목록에 없는 단어가 나오면 그 단어가 처음 등장한 매뉴얼 항목을 참고하세요.</div>
+
+</body>
+</html>
