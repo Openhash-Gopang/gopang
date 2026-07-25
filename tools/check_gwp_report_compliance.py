@@ -45,6 +45,17 @@ ENTRY_PATTERN = re.compile(
     re.S,
 )
 
+# 2026-07-25 버그 수정: 위 ENTRY_PATTERN을 파일 전체에 findall하면, url이
+# 'https://X.hondi.net/Y' 패턴이 아닌 항목(상대경로 등, 예: profile-assistant)을
+# 만났을 때 non-greedy .*?가 그 항목을 건너뛰고 훨씬 뒤에 나오는 무관한
+# 항목의 url과 잘못 짝지어버린다(실제 발견: profile-assistant가 kqna의
+# url과 오짝지어져 kqna는 검사되지 않고 profile-assistant는 거짓 NONCOMPLIANT
+# 판정을 받음). 이를 막기 위해 먼저 레지스트리를 "{ id: ... }" 객체 단위로
+# 쪼갠 뒤, 그 블록 안에서만 url을 찾는다 — 블록 경계를 넘어가는 오짝지음이
+# 원천적으로 불가능해진다.
+ENTRY_START = re.compile(r"\{\s*\n?\s*id:\s*'([^']+)'")
+URL_IN_BLOCK = re.compile(r"url:\s*'(?:https://([a-z0-9-]+)\.hondi\.net/([a-zA-Z0-9_.-]+)|([^']*))'")
+
 
 def fetch(url, timeout=10):
     req = urllib.request.Request(url, headers={"User-Agent": "gwp-compliance-check"})
@@ -59,14 +70,28 @@ def get_registry_entries():
         print(f"[ERROR] gwp-registry.js 원격 조회 실패: {e}")
         sys.exit(2)
 
+    starts = list(ENTRY_START.finditer(src))
     entries = []
-    for m in ENTRY_PATTERN.finditer(src):
-        svc_id, subdomain, page = m.groups()
+    no_url_entries = []  # url이 https://X.hondi.net/Y 패턴이 아닌 항목(상대경로, null 등)
+    for i, sm in enumerate(starts):
+        svc_id = sm.group(1)
         if svc_id in SKIP_IDS:
             continue
+        block_start = sm.end()
+        block_end = starts[i + 1].start() if i + 1 < len(starts) else len(src)
+        block = src[block_start:block_end]
+
+        um = URL_IN_BLOCK.search(block)
+        if not um or not um.group(1):
+            # url이 없거나(null) https://X.hondi.net 패턴이 아님(상대경로 등)
+            # — 이 스크립트의 raw.githubusercontent.com 방식으로는 검사 불가.
+            no_url_entries.append((svc_id, um.group(3) if um else None))
+            continue
+
+        subdomain, page = um.group(1), um.group(2)
         repo = REPO_OVERRIDES.get(subdomain, subdomain)
         entries.append((svc_id, repo, page))
-    return entries
+    return entries, no_url_entries
 
 
 def classify(html):
@@ -78,12 +103,13 @@ def classify(html):
 
 
 def main():
-    entries = get_registry_entries()
+    entries, no_url_entries = get_registry_entries()
     if not entries:
         print("[ERROR] gwp-registry.js에서 서비스 항목을 하나도 파싱하지 못함 — 정규식 확인 필요")
         sys.exit(2)
 
-    print(f"검사 대상: {len(entries)}개 서비스\n")
+    print(f"검사 대상: {len(entries)}개 서비스"
+          f"{f' (+ {len(no_url_entries)}개는 상대경로/URL없음 — 별도 표시)' if no_url_entries else ''}\n")
 
     results = {"COMPLIANT_SHARED": [], "COMPLIANT_LEGACY": [], "NONCOMPLIANT": [], "FETCH_ERROR": []}
 
@@ -109,6 +135,11 @@ def main():
         print(f"  ❌ {svc_id:14s} ({repo}) — GWP_DONE 보고 없음, AI 비서가 결과를 못 받음")
     for svc_id, repo, err in results["FETCH_ERROR"]:
         print(f"  ⚠️  {svc_id:14s} ({repo}) — 조회 실패({err}), 판정 불가")
+
+    if no_url_entries:
+        print()
+        for svc_id, raw_url in no_url_entries:
+            print(f"  ℹ️  {svc_id:14s} — url이 상대경로/없음({raw_url!r}) — 이 스크립트로 원격 검사 불가, 수동 확인 필요")
 
     n_fail = len(results["NONCOMPLIANT"])
     n_warn = len(results["COMPLIANT_LEGACY"])
