@@ -37,6 +37,33 @@
 
 const DEFAULT_PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
 
+// ── keepalive-safe fetch (2026-07-26 신설) ──────────────────────────────
+// 배경: reportGwpSessionEnd()/recordOwnerPDV()는 beforeunload/pagehide/
+// visibilitychange 등 "탭이 곧 사라지는" 시점에 호출되는 경우가 실사용에서
+// 드물지 않다(예: market/webapp.html의 비구매 상담 세션 종료 보고 —
+// 2026-07-26). keepalive 없는 일반 fetch는 문서가 파괴되는 순간 브라우저가
+// 요청을 중단시킬 수 있어, 이 시점의 보고가 조용히 유실될 위험이 있다.
+// fetch의 keepalive 옵션은 sendBeacon과 동일하게 페이지 소멸 이후에도
+// 요청 전송을 보장하지만, 대신 body 크기를 64KiB로 제한한다(스펙 규정) —
+// 그 한도를 넘기면 브라우저가 요청 자체를 거부(reject)한다. 대화가 긴
+// 세션의 transcript는 이 한도를 쉽게 넘을 수 있으므로, 안전 마진을 둔
+// 크기 이하일 때만 keepalive를 켠다. 한도를 넘으면 기존과 동일하게
+// keepalive 없이 보낸다 — 즉 이 변경은 순수 추가(additive)이며, 큰
+// payload에 대해서는 지금까지의 동작을 그대로 유지해 기존 대비 나빠지는
+// 경우가 없다.
+const KEEPALIVE_BODY_LIMIT = 60000; // bytes — 64KiB 스펙 한도에 여유를 둠
+function _fetchKeepaliveSafe(url, opts) {
+  const bodyStr = typeof opts?.body === 'string' ? opts.body : '';
+  let size = 0;
+  try {
+    size = new Blob([bodyStr]).size;
+  } catch (e) {
+    size = bodyStr.length; // Blob 불가 환경 폴백(대략치) — 과소평가 가능성 있어도 안전 쪽으로 keepalive 생략됨
+  }
+  const canKeepalive = size > 0 && size <= KEEPALIVE_BODY_LIMIT;
+  return fetch(url, canKeepalive ? { ...opts, keepalive: true } : opts);
+}
+
 /**
  * @param {Object} opts
  * @param {string} opts.agencyId       - 서비스 식별자 (예: 'klaw', 'kschool')
@@ -94,7 +121,7 @@ export async function reportGwpSessionEnd({
 
   // (a) 서브시스템 자기 PDV — 대화 원문 시간순 저장
   try {
-    await fetch(proxyBase + '/pdv/report', {
+    await _fetchKeepaliveSafe(proxyBase + '/pdv/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -248,7 +275,7 @@ export async function recordOwnerPDV({
   };
 
   try {
-    const res = await fetch(proxyBase + '/owner-pdv/report', {
+    const res = await _fetchKeepaliveSafe(proxyBase + '/owner-pdv/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ record }),
