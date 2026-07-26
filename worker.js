@@ -6571,7 +6571,14 @@ async function handleMatchOfferSubmit(request, env, corsHeaders) {
   if (vehicle.owner_guid_hash !== driverHash)
     return _err(403, 'NOT_VEHICLE_OWNER', '본인 차량으로만 응답할 수 있습니다', corsHeaders);
 
-  const distanceKm = _haversineKm(demand.from_lat, demand.from_lng, vehicle.current_lat, vehicle.current_lng);
+  // 2026-07-26 수정 — 실사용 테스트 중 발견: 기사가 위치를 한 번도
+  // 보고하지 않은 채(current_lat/current_lng 없음) offer를 내면
+  // _haversineKm이 undefined 좌표로 계산해 "13,314km" 같은 무의미한 값을
+  // 냈다. 위치 유효성을 먼저 확인해 없으면 null로 정직하게 표시한다.
+  const hasVehiclePos = typeof vehicle.current_lat === 'number' && typeof vehicle.current_lng === 'number';
+  const distanceKm = hasVehiclePos
+    ? _haversineKm(demand.from_lat, demand.from_lng, vehicle.current_lat, vehicle.current_lng)
+    : null;
   const now = Date.now();
   let rec;
   try {
