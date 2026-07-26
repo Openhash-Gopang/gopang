@@ -273,6 +273,21 @@ export const EXPERT_REGISTRY = {
     // 아니다(99건 사고실험에서 확인된 진짜 공백, 트리거로 못 메움)
     triggers: ['정교사', '학교 선생님', '담임'],
   },
+  // ── TODO(보류, 2026-07-26 논의) ─────────────────────────────
+  // K-Professor(가칭) 정식 등록 여부 — 아직 미결정, 페르소나 정리 시점에
+  // 재검토할 것. 배경: 기존 school 저장소(K-School 브랜드)의 desktop.html이
+  // 사실은 "유치원부터 대학원까지 전 과목을 가르치는 나만의 전담 AI 교수"라는
+  // 1:1 개인 교습 컨셉이었다 — 이건 60개 페르소나 전부가 따르는 "실제 자격증
+  // 보유 전문직의 자문·실행 대행" 원칙(위 teacher 항목처럼 '과외 선생님'을
+  // 의도적으로 제외한 것과 동일 원칙) 밖에 있는 개념이다. 두 방향이 논의됨:
+  //   (1) 기존 원칙에 맞춰 특정 학문분야 자문·지도 역할로 스코프를 좁혀
+  //       SP_professor로 이 registry에 정식 등록 — 사용자가 선택한 방향
+  //   (2) 기존 원칙 밖의 별도 카테고리로 독립(등록 안 함, 별도 시스템프롬프트·
+  //       별도 사이트)
+  // 지금은 K-School(공공 교육정책 데이터 시스템, health.hondi.net의
+  // K-Health와 동일 원리)의 재설계에 먼저 집중하기로 하고 이 결정은 보류함.
+  // 관련 문서: school 저장소 desktop.html(과거 K-School 브랜드로 있던 페이지),
+  // insurance/docs/PDV_SANDBOX_EXECUTION_DESIGN_v1_0.md(같은 원리를 보험에 적용한 선례).
   'clinical-psychologist': {
     label: '임상심리사', icon: '🧑‍⚕️', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_clinical-psychologist', needsMedicalSafety: true, // 2026-07-04: 위기개입(M5) 상속 위해 true로 수정
