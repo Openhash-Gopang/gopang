@@ -6579,6 +6579,11 @@ async function handleMatchOfferSubmit(request, env, corsHeaders) {
       demand_id: demandId,
       vehicle_id: vehicleId,
       driver_guid_hash: driverHash,
+      // 2026-07-26 추가 — 매칭 성사 시 승객이 GDC 송금(wallet.sendGdc)할
+      // 대상을 지정하려면 원본 guid가 필요하다(해시로는 송금 불가).
+      // pending 상태 목록 조회 응답 경로에서는 이 필드를 쓰지 않으므로
+      // 실질적으로는 accept 시점에만 노출된다.
+      driver_guid: payload.guid,
       status: 'pending',
       distance_km: Number.isFinite(distanceKm) ? distanceKm : null,
       created_at: new Date(now).toISOString(),
