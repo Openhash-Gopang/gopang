@@ -6411,12 +6411,13 @@ async function _matchBroadcast(env, binding, channelKey, eventObj) {
 // ═══════════════════════════════════════════════════════════
 
 // POST /match/vehicle/register  body: {guid, vehicle_type, capacity}
+const MATCH_VEHICLE_TYPES = ['passenger', 'taxi', 'bus', 'cargo']; // 2026-07-26: 버스·택시 추가(피터님 결정 — 별도 배차 인프라 없이 기존 매칭 파이프라인 재사용)
 async function handleMatchVehicleRegister(request, env, corsHeaders) {
   let payload;
   try { payload = await request.json(); } catch { return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders); }
   const vehicleType = payload.vehicle_type;
-  if (vehicleType !== 'passenger' && vehicleType !== 'cargo')
-    return _err(400, 'INVALID_VEHICLE_TYPE', "vehicle_type은 'passenger' 또는 'cargo'여야 합니다", corsHeaders);
+  if (!MATCH_VEHICLE_TYPES.includes(vehicleType))
+    return _err(400, 'INVALID_VEHICLE_TYPE', `vehicle_type은 ${MATCH_VEHICLE_TYPES.join('/')} 중 하나여야 합니다`, corsHeaders);
   const capacity = Number(payload.capacity);
   if (!(capacity > 0)) return _err(400, 'INVALID_CAPACITY', 'capacity는 양수여야 합니다', corsHeaders);
 
@@ -6607,6 +6608,7 @@ async function handleMatchOfferSubmit(request, env, corsHeaders) {
     offer_id: rec.id,
     demand_id: demandId,
     distance_km: rec.distance_km,
+    vehicle_type: vehicle.vehicle_type, // 2026-07-26 추가 — 버스/택시/화물 구분 표시용
   });
 
   return new Response(JSON.stringify({ status: 'offered', offer: rec }), { headers: corsHeaders });
