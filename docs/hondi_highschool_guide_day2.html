@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: 고등학생(만 16~17세) 대상, 인간 교사 지도 하에
+  진행하는 2일 과정 중 2일차(8시간) — "SP(System Prompt) 작성 요령".
+  docs/hondi_sp_ecosystem_guidelines_v1_2.md(거버넌스 지침)와
+  docs/SP_authoring_standard_L1L2L3_v1_0.md(L1/L2/L3 작성 표준)를
+  교육용으로 눈높이를 낮춰 재구성. 실제 등록 가능한 SP를 만드는 것이
+  아니라 "구조를 흉내내며 이해하는" 입문 단계.
+  1일차는 hondi_highschool_guide_day1.html(진로설계 워크숍) — 이 문서와 세트.
+  2026-07-26 신설.
+  전체 문서 지도(개발자용): docs/MANUAL_INDEX.md
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>혼디 진로설계 워크숍 — 고등학생 2일차 · SP 작성 요령</title>
+<style>
+:root{
+  --paper:#F7F6F2; --paper-deep:#EDEBE2; --panel:#FFFFFF;
+  --ink:#201F1C; --ink-soft:#5C574C; --ink-faint:#938C7A;
+
+  --ai-600:#3946B0; --ai-500:#4C5FD5; --ai-100:#E4E7FA; --ai-50:#F1F2FC;
+  --civic-600:#B93E58; --civic-500:#E85D75; --civic-100:#FAE1E6; --civic-50:#FCEEF1;
+  --lab-600:#0E7A72; --lab-500:#149488; --lab-100:#D9F0EC; --lab-50:#ECF8F6;
+  --time-600:#B87420; --time-500:#E8A33D; --time-100:#FAE7C6; --time-50:#FCF3E1;
+  --safe-600:#9E332E; --safe-500:#C24444; --safe-100:#F5D8D6;
+
+  --line:#DFDACB; --line-strong:#C9C2AC;
+  --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  --radius-lg:22px; --radius-md:14px; --radius-sm:9px;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:'Pretendard',-apple-system,'Helvetica Neue',sans-serif;
+  -webkit-font-smoothing:antialiased;line-height:1.78;font-size:16px;
+  padding-bottom:80px;
+}
+
+.cover{padding:60px 24px 50px;background:var(--paper);border-bottom:1px solid var(--line)}
+.cover-inner{max-width:760px;margin:0 auto}
+.cover .kicker{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--ai-600);letter-spacing:1px}
+.cover h1{font-size:clamp(30px,6vw,44px);font-weight:900;letter-spacing:-1px;margin:14px 0 14px;line-height:1.2}
+.cover h1 .accent{color:var(--ai-600)}
+.cover p.lede{max-width:600px;font-size:16.5px;color:var(--ink-soft)}
+.cover .stat-row{display:flex;flex-wrap:wrap;gap:0;margin-top:28px;border-top:1px solid var(--line)}
+.stat-cell{flex:1;min-width:140px;padding:14px 18px 0;border-right:1px solid var(--line)}
+.stat-cell:last-child{border-right:none}
+.stat-cell .s-num{font-size:22px;font-weight:900;color:var(--ink)}
+.stat-cell .s-label{font-size:12px;color:var(--ink-faint);margin-top:2px;font-weight:600}
+
+.daynav{max-width:760px;margin:22px auto 0;padding:0 24px}
+.daynav .dn-track{display:flex;gap:8px}
+.dn-item{flex:1;padding:10px 14px;border-radius:10px;border:1.5px solid var(--line);font-size:13px;font-weight:800;text-align:center;color:var(--ink-faint)}
+.dn-item.active{border-color:var(--ai-600);color:var(--ai-600);background:var(--ai-50)}
+
+.timetable-nav{position:sticky;top:0;z-index:20;background:rgba(247,246,242,.95);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:9px 0}
+.timetable-track{display:flex;gap:5px;overflow-x:auto;padding:3px 16px;scrollbar-width:none}
+.timetable-track::-webkit-scrollbar{display:none}
+.tt-item{flex-shrink:0;display:flex;flex-direction:column;gap:1px;padding:6px 12px;border-radius:9px;text-decoration:none;min-width:70px}
+.tt-item .tt-time{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink-faint)}
+.tt-item .tt-label{font-size:12px;font-weight:800;color:var(--ink-soft);white-space:nowrap}
+.tt-item.theme-ai{background:var(--ai-50)}.tt-item.theme-ai .tt-label{color:var(--ai-600)}
+.tt-item.theme-civic{background:var(--civic-50)}.tt-item.theme-civic .tt-label{color:var(--civic-600)}
+.tt-item.theme-lab{background:var(--lab-50)}.tt-item.theme-lab .tt-label{color:var(--lab-600)}
+.tt-item.theme-time{background:var(--time-50)}.tt-item.theme-time .tt-label{color:var(--time-600)}
+.tt-item.theme-break{opacity:.5}.tt-item.theme-break .tt-label{color:var(--ink-faint);font-weight:600}
+
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+
+.period{padding-top:54px;scroll-margin-top:66px}
+.period-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:24px;border-bottom:2px solid var(--ink);padding-bottom:16px}
+.period-num{font-family:var(--mono);font-size:34px;font-weight:800;line-height:1;flex-shrink:0;color:var(--line-strong)}
+.period-eyebrow{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.5px}
+.theme-ai .period-eyebrow{color:var(--ai-600)}
+.theme-civic .period-eyebrow{color:var(--civic-600)}
+.theme-lab .period-eyebrow{color:var(--lab-600)}
+.theme-time .period-eyebrow{color:var(--time-600)}
+.period-title{font-size:24px;font-weight:900;letter-spacing:-.4px;margin-top:4px}
+.period-time{font-size:13px;color:var(--ink-soft);margin-top:4px;font-family:var(--mono)}
+
+.meta-bar{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);margin-bottom:26px;border:1px solid var(--line)}
+@media (max-width:480px){.meta-bar{grid-template-columns:1fr}}
+.meta-box{background:var(--panel);padding:14px 16px}
+.meta-box .meta-label{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--ink-faint);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px}
+.meta-box ul{list-style:none}
+.meta-box li{font-size:13.5px;color:var(--ink);padding:2px 0;display:flex;gap:6px}
+.meta-box li::before{content:"—";color:var(--ink-faint)}
+
+h3.block-title{font-size:18px;font-weight:800;margin:28px 0 12px;display:flex;align-items:center;gap:8px}
+h4.mini-title{font-size:15px;font-weight:800;margin:16px 0 8px}
+p.body-p{font-size:15.5px;color:var(--ink);margin-bottom:12px}
+p.body-p b{font-weight:800}
+
+.concept{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);padding:20px 22px;margin:18px 0}
+.concept .c-label{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px}
+.concept p{font-size:15px;color:var(--ink-soft)}
+.concept p+p{margin-top:9px}
+.concept b{color:var(--ink)}
+
+.lab{border-radius:var(--radius-lg);padding:24px;margin:22px 0;border:1.5px solid var(--lab-100);background:var(--lab-50)}
+.lab-head{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.lab-tag{font-family:var(--mono);font-size:11px;font-weight:800;color:#fff;background:var(--lab-600);padding:3px 9px;border-radius:5px;letter-spacing:.5px}
+.lab-title{font-weight:900;font-size:16.5px;color:var(--lab-600)}
+.lab p{font-size:15px;color:var(--ink)}
+.lab p+p{margin-top:8px}
+.lab ol,.lab ul{margin:10px 0 0 20px;font-size:14.8px}
+.lab li{padding:3px 0}
+
+.steps{counter-reset:step;margin-top:14px}
+.step{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--lab-100)}
+.step:first-child{border-top:none}
+.step-num{counter-increment:step;flex-shrink:0;width:24px;height:24px;border-radius:7px;background:var(--lab-600);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:800}
+.step-num::before{content:counter(step)}
+.step-body{font-size:14.8px;color:var(--ink)}
+.step-body b{font-weight:800}
+
+.compare-table{width:100%;border-collapse:collapse;margin-top:14px;background:var(--panel);border-radius:var(--radius-sm);overflow:hidden}
+.compare-table th{background:var(--lab-600);color:#fff;font-size:12px;font-weight:700;padding:9px 10px;text-align:left;font-family:var(--mono)}
+.compare-table td{padding:11px 10px;font-size:14px;border-bottom:1px solid var(--line);vertical-align:top}
+.compare-table tr:last-child td{border-bottom:none}
+.compare-table .fill{color:var(--ink-faint);font-style:italic}
+
+.prompt-card{background:var(--ink);color:#F2EFE4;border-radius:var(--radius-sm);padding:14px 16px;margin:12px 0;font-family:var(--mono);font-size:13.5px;position:relative;white-space:pre-wrap}
+.prompt-card::before{content:"PROMPT";position:absolute;top:-9px;left:14px;background:var(--lab-600);color:#fff;font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:5px;letter-spacing:.5px}
+
+.worksheet{background:var(--panel);border:1.5px dashed var(--line-strong);border-radius:var(--radius-sm);padding:16px 18px;margin-top:12px}
+.worksheet .ws-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px dotted var(--line);font-size:14px}
+.worksheet .ws-row:last-child{border-bottom:none}
+.ws-label{flex-shrink:0;font-weight:700;color:var(--ink-soft);min-width:96px;font-size:13px}
+.blank-line{border-bottom:1.3px solid var(--line-strong);flex:1;min-height:19px}
+.blank-block{border:1.3px solid var(--line-strong);border-radius:6px;flex:1;min-height:52px;margin-top:4px}
+
+.dilemma{background:var(--civic-50);border:1.5px solid var(--civic-100);border-radius:var(--radius-lg);padding:22px;margin:20px 0}
+.dilemma-head{font-weight:900;font-size:16px;color:var(--civic-600);margin-bottom:10px}
+.dilemma p{font-size:15px;color:var(--ink)}
+.dilemma p+p{margin-top:8px}
+
+.think-box{background:var(--panel);border-left:4px solid var(--time-500);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:14px 16px;margin:16px 0}
+.think-box .tb-label{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--time-600);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px}
+.think-box p{font-size:14.5px;color:var(--ink)}
+
+.teacher-note{background:#231F1A;color:#EAE4D6;border-radius:var(--radius-md);padding:19px 21px;margin:22px 0}
+.teacher-note::before{content:"교사 안내";display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.6px;color:#B7AD91;margin-bottom:8px}
+.teacher-note p{font-size:13.8px;color:#D6CEB9;line-height:1.75}
+.teacher-note p+p{margin-top:8px}
+.teacher-note b{color:#fff}
+
+.numbered{list-style:none;margin-top:12px}
+.numbered li{display:flex;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:14.8px}
+.numbered li:first-child{border-top:none}
+.n-badge{flex-shrink:0;width:24px;height:24px;border-radius:6px;background:var(--paper-deep);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11.5px;font-weight:800;color:var(--ink-soft)}
+
+/* 계층 다이어그램(L1/L2/L3) */
+.layer-stack{margin:18px 0;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--line)}
+.layer{padding:16px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+.layer:last-child{border-bottom:none}
+.layer .layer-tag{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.5px}
+.layer.l1{background:var(--ai-50)}.layer.l1 .layer-tag{color:var(--ai-600)}
+.layer.l2{background:var(--lab-50)}.layer.l2 .layer-tag{color:var(--lab-600)}
+.layer.l3{background:var(--civic-50)}.layer.l3 .layer-tag{color:var(--civic-600)}
+.layer .layer-title{font-size:15.5px;font-weight:900;margin-top:3px}
+.layer .layer-desc{font-size:13.5px;color:var(--ink-soft);margin-top:4px}
+
+/* 체크리스트(Tier 0 게이트) */
+.checklist{margin-top:14px}
+.check-item{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);font-size:14.5px}
+.check-item:first-child{border-top:none}
+.check-box{flex-shrink:0;width:20px;height:20px;border:2px solid var(--line-strong);border-radius:5px;margin-top:1px}
+
+.divider{display:flex;align-items:center;gap:14px;margin:48px 0 0;color:var(--ink-faint)}
+.divider .dl{flex:1;height:1px;background:var(--line)}
+.divider .dtxt{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:1px;white-space:nowrap}
+
+.recess{margin:40px 0;padding:18px;border-radius:var(--radius-md);background:repeating-linear-gradient(135deg,var(--paper-deep),var(--paper-deep) 9px,var(--paper) 9px,var(--paper) 18px);text-align:center;border:1px solid var(--line)}
+.recess .r-title{font-family:var(--mono);font-weight:700;font-size:14px}
+.recess .r-desc{font-size:13px;color:var(--ink-soft);margin-top:3px}
+
+.portfolio{margin-top:26px;border:2px solid var(--ink);border-radius:var(--radius-lg);padding:28px;background:var(--panel)}
+.portfolio h2{font-size:19px;font-weight:900}
+.portfolio .p-sub{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);margin-top:4px;margin-bottom:16px}
+
+.footer-note{text-align:center;margin-top:44px;padding:22px;color:var(--ink-faint);font-size:12px;font-family:var(--mono)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════ 표지 ══════════════════════ -->
+<div class="cover"><div class="cover-inner">
+  <div class="kicker">HONDI WORKSHOP · GRADE 10-11 · DAY 2 OF 2</div>
+  <h1>혼디 진로설계 워크숍 —<br><span class="accent">AI는 어떻게 "설계"되는가</span></h1>
+  <p class="lede">2일 과정의 둘째 날입니다. 어제는 AI를 잘 쓰는 법을 배웠다면, 오늘은 AI 페르소나(SP, System Prompt)가 실제로 어떤 구조로 만들어지고 검증·등록되는지 배웁니다. 직접 미니 SP 초안을 써보고, 짝과 서로 검토해보는 실습까지 포함합니다.</p>
+  <div class="stat-row">
+    <div class="stat-cell"><div class="s-num">8h</div><div class="s-label">오늘 수업 시간</div></div>
+    <div class="stat-cell"><div class="s-num">3</div><div class="s-label">직접 실습(랩)</div></div>
+    <div class="stat-cell"><div class="s-num">L1</div><div class="s-label">오늘의 핵심 계층</div></div>
+    <div class="stat-cell"><div class="s-num">1:1</div><div class="s-label">기기 필요(권장)</div></div>
+  </div>
+</div></div>
+
+<div class="daynav"><div class="dn-track">
+  <div class="dn-item">← 1일차 · 진로설계 워크숍</div>
+  <div class="dn-item active">2일차 · SP 작성 요령</div>
+</div></div>
+
+<!-- ══════════════════════ 시간표 내비게이션 ══════════════════════ -->
+<div class="timetable-nav"><div class="timetable-track">
+  <a class="tt-item theme-time" href="#p0"><span class="tt-time">09:00</span><span class="tt-label">오리엔테이션</span></a>
+  <a class="tt-item theme-ai" href="#p1"><span class="tt-time">09:10</span><span class="tt-label">1교시</span></a>
+  <a class="tt-item theme-ai" href="#p2"><span class="tt-time">10:00</span><span class="tt-label">2교시</span></a>
+  <a class="tt-item theme-break"><span class="tt-time">10:50</span><span class="tt-label">쉬는시간</span></a>
+  <a class="tt-item theme-lab" href="#p3"><span class="tt-time">11:00</span><span class="tt-label">3교시</span></a>
+  <a class="tt-item theme-lab" href="#p4"><span class="tt-time">11:50</span><span class="tt-label">4교시·랩</span></a>
+  <a class="tt-item theme-break"><span class="tt-time">12:40</span><span class="tt-label">점심시간</span></a>
+  <a class="tt-item theme-civic" href="#p5"><span class="tt-time">13:40</span><span class="tt-label">5교시</span></a>
+  <a class="tt-item theme-break"><span class="tt-time">14:30</span><span class="tt-label">쉬는시간</span></a>
+  <a class="tt-item theme-civic" href="#p6"><span class="tt-time">14:40</span><span class="tt-label">6교시·랩</span></a>
+  <a class="tt-item theme-lab" href="#p7"><span class="tt-time">15:30</span><span class="tt-label">7교시</span></a>
+  <a class="tt-item theme-break"><span class="tt-time">16:20</span><span class="tt-label">쉬는시간</span></a>
+  <a class="tt-item theme-time" href="#p8"><span class="tt-time">16:30</span><span class="tt-label">8교시</span></a>
+</div></div>
+
+<div class="wrap">
+
+<!-- ══════════════════════ 오리엔테이션 ══════════════════════ -->
+<section class="period theme-time" id="p0">
+  <div class="period-head">
+    <div class="period-num">00</div>
+    <div>
+      <div class="period-eyebrow">ORIENTATION · 09:00–09:10</div>
+      <div class="period-title">SP란 무엇인가 — "아이폰의 앱"에 비유해서 이해하기</div>
+      <div class="period-time">10min · 전체 학급</div>
+    </div>
+  </div>
+
+  <p class="body-p">지금까지 여러분은 혼디의 여러 전문가 페르소나(학교상담사, 청소년상담사 등)와 대화해봤어요. 그 전문가들은 각자 <b>SP(System Prompt)</b>라는 설계도로 만들어져 있어요. 오늘은 그 설계도가 실제로 어떤 구조인지, 어떻게 검증되고 등록되는지 배웁니다.</p>
+
+  <div class="concept">
+    <div class="c-label">비유로 이해하기</div>
+    <p>아이폰(하드웨어) 위에 여러 앱이 설치되듯, <b>LLM(AI 모델)이라는 하나의 "런타임" 위에 여러 SP가 즉시 전환</b>되며 실행돼요. 앱스토어에 앱을 등록하려면 심사를 거치듯, SP도 혼디장(Hondi Market)에 등록되기 전 검증 절차를 거쳐요.</p>
+    <p>다만 결정적 차이가 있어요 — 앱은 설치·독립 실행되지만, SP는 <b>같은 AI 위에서 그냥 전환</b>돼요. 그래서 진입장벽은 훨씬 낮지만, 한 SP의 결함이 다른 SP·AI 전체의 신뢰까지 흔들 수 있어요. 그래서 오늘 배울 <b>공통 안전장치</b>가 특히 중요해요.</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>오늘은 실제 혼디 생태계 문서(SP 생태계 운용 지침, L1/L2/L3 작성 표준)를 교육용으로 눈높이를 낮춘 내용입니다. 목표는 <b>실제 등록 가능한 SP를 완성하는 것이 아니라, "AI 페르소나가 왜 신뢰할 수 있는 구조로 설계되는지"를 이해</b>하는 것입니다. 실습 소재는 학교생활과 관련된 친숙한 것(동아리 추천, 급식 리뷰 등)으로 한정해주세요.</p>
+  </div>
+</section>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">01 · THEORY</span></div>
+
+<!-- ══════════════════════ 1교시 ══════════════════════ -->
+<section class="period theme-ai" id="p1">
+  <div class="period-head">
+    <div class="period-num">01</div>
+    <div>
+      <div class="period-eyebrow">이론 · 09:10–10:00</div>
+      <div class="period-title">SP의 역할과 위치 — 모든 SP가 상속하는 공통 안전장치</div>
+      <div class="period-time">50min</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>SP가 LLM 위에서 어떻게 실행되는지 설명한다</li>
+        <li>공통 안전장치가 왜 필요한지 이해한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">핵심 개념어</div>
+      <ul>
+        <li>SP, 공통 커널, 안전장치, 위험등급</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="block-title">🧩 모든 SP가 공유하는 것</h3>
+  <p class="body-p">혼디에는 법률·세무·의료 등 다양한 분야의 SP가 수십 개 있어요. 이들은 전부 <b>공통 커널</b>이라는, 모든 SP가 반드시 지켜야 하는 안전 규칙 묶음을 상속해요 — 마치 모든 아이폰 앱이 iOS의 공통 규칙(권한 요청, 개인정보 보호 등)을 따르는 것처럼요.</p>
+
+  <div class="concept">
+    <div class="c-label">개념 정리 — 공통 커널이 다루는 것</div>
+    <p>거짓 정보를 사실처럼 말하지 않기, 확신할 수 없을 땐 솔직히 밝히기, 위험한 요청은 거절하기 같은 <b>기본 안전 규칙</b>이 모든 SP에 공통으로 적용돼요. 의료·법률처럼 실수가 크게 위험한 분야는 추가 안전 모듈이 더 얹혀요.</p>
+  </div>
+
+  <h3 class="block-title">🚦 위험등급에 따라 다른 기준</h3>
+  <p class="body-p">모든 SP에 똑같이 엄격한 기준을 요구하지 않아요. 분야마다 실수했을 때의 위험이 다르기 때문이에요.</p>
+  <ul class="numbered">
+    <li><span class="n-badge">고</span><span><b>고위험</b>(의료·법률·금융·세무) — 가장 엄격한 검증이 필수예요.</span></li>
+    <li><span class="n-badge">중</span><span><b>중위험</b>(건축·기술·교육) — 중간 수준의 검증을 거쳐요.</span></li>
+    <li><span class="n-badge">저</span><span><b>저위험</b>(사서·학예사·기상예보사 등) — 상대적으로 빠르게 출시되고, 사후 모니터링 중심이에요.</span></li>
+  </ul>
+
+  <div class="think-box">
+    <div class="tb-label">생각 나누기</div>
+    <p>오늘 오후에 만들 나만의 미니 SP는 어떤 위험등급에 속할까요? 왜 그렇게 생각하나요?</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>학생들이 만들 미니 SP(4교시)는 전부 저위험 소재로 한정되므로, 이 개념은 "왜 우리 실습은 간단한데 K-Law 같은 건 복잡할까"를 이해시키는 데 활용해주세요.</p>
+  </div>
+</section>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">02 · THEORY</span></div>
+
+<!-- ══════════════════════ 2교시 ══════════════════════ -->
+<section class="period theme-ai" id="p2">
+  <div class="period-head">
+    <div class="period-num">02</div>
+    <div>
+      <div class="period-eyebrow">이론 · 10:00–10:50</div>
+      <div class="period-title">SP의 3계층 구조 — L1·L2·L3가 왜 분리돼야 하는가</div>
+      <div class="period-time">50min</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>L1·L2·L3 각 계층의 역할을 구분한다</li>
+        <li>세 계층이 왜 별도 문서여야 하는지 설명한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">핵심 개념어</div>
+      <ul>
+        <li>판단 SP, 출력형식 SP, 평가기준 SP</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="block-title">🏗️ 하나의 SP가 아니라 세 계층</h3>
+  <p class="body-p">실제 K-Law(가상 판결 시뮬레이션)를 뜯어보면, SP가 1개가 아니라 <b>3개 계층</b>이 함께 작동하고 있어요. 이 구조는 혼디 생태계의 모든 SP가 따르는 표준이에요.</p>
+
+  <div class="layer-stack">
+    <div class="layer l1">
+      <div class="layer-tag">L1 · 판단(추론) SP</div>
+      <div class="layer-title">"어떻게 생각할지"를 정한다</div>
+      <div class="layer-desc">도메인 추론을 실제로 수행하는 본체. 예: K-Law가 법리를 분석하는 방식.</div>
+    </div>
+    <div class="layer l2">
+      <div class="layer-tag">L2 · 출력형식 SP</div>
+      <div class="layer-title">"그 생각을 어떤 형태로 반드시 출력할지"를 정한다</div>
+      <div class="layer-desc">L1과 완전히 별도 문서. 강제 서식, 완료 태그 등을 규정.</div>
+    </div>
+    <div class="layer l3">
+      <div class="layer-tag">L3 · 평가기준 SP</div>
+      <div class="layer-title">"그 작동이 잘 됐는지 누가, 어떻게 채점할지"를 정한다</div>
+      <div class="layer-desc">L1 산출물을 실제 정답(있는 경우)과 대조해 채점하는 메타 기준.</div>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="c-label">개념 정리 — 왜 하나로 합치지 않을까</div>
+    <p>만약 "어떻게 생각할지"와 "어떻게 출력할지"가 한 문서에 뒤섞이면, 출력 형식만 바꾸고 싶어도 판단 로직까지 건드리게 될 위험이 있어요. <b>분리하면 각 계층을 독립적으로 개선</b>할 수 있어요 — 마치 건물의 설계도(구조)와 인테리어(마감)를 따로 관리하는 것과 비슷해요.</p>
+    <p>혼디 생태계의 SP 48개 중 이 3계층을 모두 갖춘, 즉 <b>"검증된 SP"</b>는 아직 K-Law 1개뿐이에요(2026년 6월 기준). 나머지는 L1만 있는 "구조적으로 완성됐지만 미검증" 상태예요.</p>
+  </div>
+
+  <div class="think-box">
+    <div class="tb-label">생각 나누기</div>
+    <p>L1만 있고 L2·L3가 없는 SP는 왜 아직 "완성"이라고 부를 수 없을까요?</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>이 시간은 3~4교시(L1 작성 실습)의 이론적 기반입니다. 오늘 실습은 시간 관계상 <b>L1 위주로 진행</b>하고, L2·L3는 6교시에 개념 수준으로만 다룹니다.</p>
+  </div>
+</section>
+
+<div class="recess"><div class="r-title">쉬는시간 · 10:50–11:00</div><div class="r-desc">잠깐 쉬고 실습 준비를 해요</div></div>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">03 · THEORY+LAB</span></div>
+
+<!-- ══════════════════════ 3교시 ══════════════════════ -->
+<section class="period theme-lab" id="p3">
+  <div class="period-head">
+    <div class="period-num">03</div>
+    <div>
+      <div class="period-eyebrow">이론+실습 · 11:00–11:50</div>
+      <div class="period-title">L1 작성 요령 — 공리체계·강제규칙·STEP 파이프라인 맛보기</div>
+      <div class="period-time">50min</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>공리체계·강제규칙·STEP 개념을 이해한다</li>
+        <li>간단한 소재로 이 구조를 직접 적용해본다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">핵심 개념어</div>
+      <ul>
+        <li>공리(원칙), 강제규칙, STEP 파이프라인</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="block-title">📐 L1의 3가지 재료</h3>
+  <ul class="numbered">
+    <li><span class="n-badge">①</span><span><b>공리체계</b> — SP가 절대 어기지 않는 기초 원칙들. 예: "급식 리뷰 SP"라면 "맛없다고 무조건 나쁘게만 말하지 않는다, 영양적 이유도 함께 설명한다" 같은 원칙.</span></li>
+    <li><span class="n-badge">②</span><span><b>강제규칙</b> — 특정 상황에서 반드시 지켜야 하는 규칙. "발동조건 / 위반효과 / 근거"를 명확히 밝혀요.</span></li>
+    <li><span class="n-badge">③</span><span><b>STEP 파이프라인</b> — AI가 답을 만들 때 거치는 단계별 절차. 실제 K-Law는 4단계(STEP 0~C)를 거쳐요. 우리는 오늘 더 간단한 3단계로 연습해요.</span></li>
+  </ul>
+
+  <div class="concept">
+    <div class="c-label">개념 정리 — 우리가 쓸 간이 STEP</div>
+    <p><b>STEP 1(파악)</b>: 질문의 핵심이 뭔지 정리한다 → <b>STEP 2(적용)</b>: 공리·강제규칙을 적용해 판단한다 → <b>STEP 3(정리)</b>: 결론과 이유를 명확히 밝힌다. 실제 K-Law의 4단계보다 단순화한 버전이에요.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">예시</span><span class="lab-title">"동아리 추천 SP"로 살펴보기</span></div>
+    <p>아래는 이 구조를 적용한 간단한 예시예요.</p>
+    <div class="prompt-card">공리: "학생의 흥미와 시간 여유를 모두 고려한다. 인기만으로 추천하지 않는다."
+강제규칙: "학생이 이미 참여 중인 활동이 있다면 시간 충돌 여부를 반드시 먼저 확인한다."
+STEP 1: 학생의 관심사·시간 여유 파악
+STEP 2: 공리·강제규칙 적용해 후보 압축
+STEP 3: 추천 동아리 1~2개와 이유 제시</div>
+  </div>
+
+  <div class="teacher-note">
+    <p>다음 교시(4교시) 실습에서 학생들이 이 구조를 직접 적용합니다. 이 시간엔 예시를 충분히 짚어주고, "공리"와 "강제규칙"의 차이(공리=항상 지키는 큰 원칙, 강제규칙=특정 상황에서만 발동하는 구체적 규칙)를 명확히 구분해주세요.</p>
+  </div>
+</section>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">04 · LAB</span></div>
+
+<!-- ══════════════════════ 4교시 ══════════════════════ -->
+<section class="period theme-lab" id="p4">
+  <div class="period-head">
+    <div class="period-num">04</div>
+    <div>
+      <div class="period-eyebrow">실습(LAB 1) · 11:50–12:40</div>
+      <div class="period-title">나만의 미니 SP 초안 써보기 (L1)</div>
+      <div class="period-time">50min · 개인 또는 2인 1조</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>공리·강제규칙·STEP 구조로 미니 SP 초안을 작성한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">준비물</div>
+      <ul>
+        <li>SP 작성 워크시트</li>
+        <li>(선택) 기기 — 완성 후 실제로 대화해보기용</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">LAB 1</span><span class="lab-title">미니 SP 초안 작성</span></div>
+    <p>아래 소재 중 하나를 골라(또는 직접 정해) 나만의 미니 SP를 만들어보세요. 반드시 학교생활과 관련된 <b>친숙하고 안전한 소재</b>로 한정합니다.</p>
+    <ul>
+      <li>동아리 활동 추천 SP</li>
+      <li>급식 메뉴 리뷰 SP</li>
+      <li>독서 추천 SP</li>
+      <li>시험 기간 공부 계획 도우미 SP</li>
+    </ul>
+    <div class="steps">
+      <div class="step"><div class="step-num"></div><div class="step-body">소재를 정하고, <b>공리 1~2개</b>를 정한다(이 SP가 항상 지킬 원칙).</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body"><b>강제규칙 1개</b>를 정한다(특정 상황에서 반드시 지킬 규칙 — 발동조건/위반효과 포함).</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body"><b>STEP 1~3</b>을 각각 한 줄로 정의한다.</div></div>
+    </div>
+    <div class="worksheet">
+      <div class="ws-row"><span class="ws-label">SP 이름</span><span class="blank-line"></span></div>
+      <div class="ws-row"><span class="ws-label">공리</span><span class="blank-block"></span></div>
+      <div class="ws-row"><span class="ws-label">강제규칙</span><span class="blank-block"></span></div>
+      <div class="ws-row"><span class="ws-label">STEP 1</span><span class="blank-line"></span></div>
+      <div class="ws-row"><span class="ws-label">STEP 2</span><span class="blank-line"></span></div>
+      <div class="ws-row"><span class="ws-label">STEP 3</span><span class="blank-line"></span></div>
+    </div>
+  </div>
+
+  <div class="think-box">
+    <div class="tb-label">짝과 나누기</div>
+    <p>짝에게 내 미니 SP의 공리와 강제규칙을 설명해보세요. 짝이 "이런 상황은 어떻게 처리해?"라고 예외 상황을 물어보면 답해보세요 — 이게 바로 SP 검증의 첫걸음이에요.</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>완벽한 SP를 만드는 게 목표가 아닙니다. <b>구조(공리→강제규칙→STEP)를 직접 손으로 짜보는 경험</b>이 핵심입니다. 시간이 부족하면 공리·강제규칙 각 1개, STEP 3개로 최소한만 완성해도 충분합니다.</p>
+  </div>
+</section>
+
+<div class="recess"><div class="r-title">점심시간 · 12:40–13:40</div><div class="r-desc">맛있게 먹고 오후를 준비해요</div></div>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">05 · THEORY</span></div>
+
+<!-- ══════════════════════ 5교시 ══════════════════════ -->
+<section class="period theme-civic" id="p5">
+  <div class="period-head">
+    <div class="period-num">05</div>
+    <div>
+      <div class="period-eyebrow">이론 · 13:40–14:30</div>
+      <div class="period-title">L2/L3 작성 요령 — "어떻게 출력할지"와 "어떻게 채점할지"는 별개다</div>
+      <div class="period-time">50min</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>L2(출력형식)와 L3(평가기준)의 역할을 구분한다</li>
+        <li>동료심사가 왜 평가 방법의 하나인지 이해한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">핵심 개념어</div>
+      <ul>
+        <li>강제 서식, 완료 태그, 정답지 평가, 동료심사</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="block-title">📋 L2 — 출력의 형태를 강제한다</h3>
+  <p class="body-p">L1이 "어떻게 생각할지"라면, L2는 <b>"그 생각을 항상 같은 형태로 출력하도록 강제"</b>해요. 예를 들어 결론을 어떤 순서로, 어떤 항목을 반드시 포함해서 말할지를 정해요. 이게 있어야 SP가 그때그때 다른 형식으로 답하지 않아요.</p>
+
+  <h3 class="block-title">🎯 L3 — 잘 됐는지 채점한다</h3>
+  <p class="body-p">L3는 두 가지 방식으로 평가돼요.</p>
+  <ul class="numbered">
+    <li><span class="n-badge">가</span><span><b>정답지 기반 평가</b> — 세무·법률처럼 실제 정답(판례, 결정문 등)이 있는 분야는 그것과 대조해 점수를 매겨요.</span></li>
+    <li><span class="n-badge">나</span><span><b>동료심사</b> — 사서·학예사처럼 정답지가 없는 분야는 같은 분야 전문가 2인 이상이 서로 검토해요. 오늘 4교시 짝 활동이 이 방식의 축소판이에요.</span></li>
+  </ul>
+
+  <div class="concept">
+    <div class="c-label">개념 정리 — 두 평가경로는 동등하다</div>
+    <p>정답지가 없다고 해서 검증이 불가능한 건 아니에요. 동료심사도 "AI가 혼자 할 수 없는 일(사람 전문가의 상호 판단)"이기 때문에, 정답지 평가와 <b>동등한 자격</b>으로 인정돼요. 이 원칙이 없으면 정답지가 원천적으로 없는 분야는 영원히 검증될 수 없다는 모순이 생겨요.</p>
+  </div>
+
+  <div class="think-box">
+    <div class="tb-label">생각 나누기</div>
+    <p>내 미니 SP(급식 리뷰, 동아리 추천 등)는 정답지 평가와 동료심사 중 어느 쪽이 더 어울릴까요? 왜 그럴까요?</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>이 시간은 6교시 동료심사 실습의 이론적 배경입니다. "정답이 없는 분야도 나름의 방식으로 검증될 수 있다"는 메시지를 분명히 짚어주세요 — 이는 진로 탐색과도 연결됩니다(정답이 정해지지 않은 분야에서도 나름의 기준으로 스스로를 검증할 수 있다는 태도).</p>
+  </div>
+</section>
+
+<div class="recess"><div class="r-title">쉬는시간 · 14:30–14:40</div><div class="r-desc">잠깐 환기하고 와요</div></div>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">06 · LAB</span></div>
+
+<!-- ══════════════════════ 6교시 ══════════════════════ -->
+<section class="period theme-civic" id="p6">
+  <div class="period-head">
+    <div class="period-num">06</div>
+    <div>
+      <div class="period-eyebrow">실습(LAB 2) · 14:40–15:30</div>
+      <div class="period-title">내 미니 SP에 출력형식(L2) 붙이기 + 짝과 서로 검토(동료심사 체험)</div>
+      <div class="period-time">50min · 2인 1조</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>미니 SP에 간단한 출력형식(L2)을 정의한다</li>
+        <li>짝의 SP를 동료심사 방식으로 검토한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">준비물</div>
+      <ul>
+        <li>4교시에 작성한 미니 SP 워크시트</li>
+        <li>동료심사 체크지</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">LAB 2</span><span class="lab-title">출력형식(L2) 정의하기</span></div>
+    <p>4교시에 만든 미니 SP가 <b>항상 어떤 형태로 답할지</b> 정해보세요. 예: "① 추천 항목 → ② 이유 → ③ 대안 1개" 순서로 항상 출력.</p>
+    <div class="worksheet">
+      <div class="ws-row"><span class="ws-label">출력 순서</span><span class="blank-block"></span></div>
+      <div class="ws-row"><span class="ws-label">반드시 포함할 항목</span><span class="blank-block"></span></div>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">동료심사</span><span class="lab-title">짝의 SP 검토하기</span></div>
+    <p>짝과 워크시트를 교환하세요. 아래 체크리스트로 서로의 SP를 검토하고 피드백을 남기세요.</p>
+    <div class="checklist">
+      <div class="check-item"><span class="check-box"></span><span>공리가 명확한가? (모호하지 않고 구체적인가)</span></div>
+      <div class="check-item"><span class="check-box"></span><span>강제규칙에 발동조건이 있는가?</span></div>
+      <div class="check-item"><span class="check-box"></span><span>STEP 1~3이 논리적으로 이어지는가?</span></div>
+      <div class="check-item"><span class="check-box"></span><span>출력형식이 매번 같은 형태를 유지할 수 있는가?</span></div>
+      <div class="check-item"><span class="check-box"></span><span>예외 상황(짝이 물어봤던 질문)에 답할 수 있는가?</span></div>
+    </div>
+  </div>
+
+  <div class="think-box">
+    <div class="tb-label">생각 나누기</div>
+    <p>짝의 피드백을 받고 나서 내 SP를 고치고 싶은 부분이 생겼나요? 실제 SP 생태계에서도 이런 "동료심사 → 수정" 과정을 거쳐야 검증된 SP로 인정받아요.</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>이 활동은 §3.3(실질평가)의 동료심사를 축소 체험하는 것입니다. 시간이 허락하면 2~3쌍을 선정해 학급 전체 앞에서 체크리스트 결과를 공유시켜, "같은 SP도 검토자에 따라 다른 지적이 나올 수 있다"는 점을 짚어주면 좋습니다.</p>
+  </div>
+</section>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">07 · THEORY+LAB</span></div>
+
+<!-- ══════════════════════ 7교시 ══════════════════════ -->
+<section class="period theme-lab" id="p7">
+  <div class="period-head">
+    <div class="period-num">07</div>
+    <div>
+      <div class="period-eyebrow">이론+실습 · 15:30–16:20</div>
+      <div class="period-title">등록 절차 체험 — Tier 0 자동게이트 체크리스트로 내 SP 자가진단</div>
+      <div class="period-time">50min · 개인</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>SP 등록 파이프라인(Tier 0→provisional→certified)을 이해한다</li>
+        <li>내 SP를 자가진단 체크리스트로 점검한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">핵심 개념어</div>
+      <ul>
+        <li>Tier 0 자동게이트, provisional(검증중), certified(인증)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="block-title">🚪 등록은 한 번에 되지 않는다</h3>
+  <div class="concept">
+    <div class="c-label">개념 정리 — 3단계 파이프라인</div>
+    <p><b>① Tier 0(자동 구조게이트)</b>: 제출 즉시 자동으로 구조를 검사해요(STEP 태그가 있는지, 강제규칙에 발동조건이 있는지 등). <b>② Tier 1-provisional</b>: Tier 0을 통과하면 "검증중" 배지로 실제 노출되며 사용 데이터가 쌓여요. <b>③ Tier 1-certified</b>: 충분한 사용 데이터와 좋은 평가(L3)가 쌓이면 정식 인증돼요. 인증돼야만 이용료를 부과할 자격이 생겨요 — <b>AI가 혼자 못하는 일에만 보상</b>한다는 원칙이에요.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">자가진단</span><span class="lab-title">내 SP, Tier 0을 통과할까?</span></div>
+    <p>내 미니 SP를 아래 체크리스트로 스스로 점검해보세요.</p>
+    <div class="checklist">
+      <div class="check-item"><span class="check-box"></span><span>STEP 1~3이 모두 정의돼 있는가?</span></div>
+      <div class="check-item"><span class="check-box"></span><span>공리가 최소 1개 이상 있는가?</span></div>
+      <div class="check-item"><span class="check-box"></span><span>강제규칙에 발동조건·위반효과가 명시돼 있는가?</span></div>
+      <div class="check-item"><span class="check-box"></span><span>출력형식(L2)이 정의돼 있는가?</span></div>
+      <div class="check-item"><span class="check-box"></span><span>"정보가 부족하면 솔직히 밝힌다"는 규칙이 포함돼 있는가?</span></div>
+    </div>
+  </div>
+
+  <div class="think-box">
+    <div class="tb-label">생각 나누기</div>
+    <p>체크리스트를 다 통과했나요? 통과 못 한 항목이 있다면, 왜 그 항목이 중요한지 생각해보세요.</p>
+  </div>
+
+  <div class="teacher-note">
+    <p>이 자가진단은 실제 Tier 0 게이트를 단순화한 것입니다. 학생들이 "완벽한 통과"에 집착하지 않도록, 통과하지 못한 항목을 찾아내는 것 자체가 <b>배움의 목적</b>이라는 점을 강조해주세요.</p>
+  </div>
+</section>
+
+<div class="divider"><span class="dl"></span><span class="dtxt">08 · SYNTHESIS</span></div>
+
+<!-- ══════════════════════ 8교시 ══════════════════════ -->
+<section class="period theme-time" id="p8">
+  <div class="period-head">
+    <div class="period-num">08</div>
+    <div>
+      <div class="period-eyebrow">종합·발표 · 16:30–17:10</div>
+      <div class="period-title">내가 만든 SP 발표하고 서로 질문하기</div>
+      <div class="period-time">40min</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-box">
+      <div class="meta-label">학습 목표</div>
+      <ul>
+        <li>내 SP를 구조에 맞춰 발표한다</li>
+        <li>2일간의 배움을 통합해 정리한다</li>
+      </ul>
+    </div>
+    <div class="meta-box">
+      <div class="meta-label">준비물</div>
+      <ul>
+        <li>1~2일차 전체 기록지·워크시트</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head"><span class="lab-tag">SYNTHESIS</span><span class="lab-title">2일간 되돌아보기</span></div>
+    <div class="worksheet">
+      <div class="ws-row"><span class="ws-label">내 SP 이름</span><span class="blank-line"></span></div>
+      <div class="ws-row"><span class="ws-label">가장 어려웠던 부분</span><span class="blank-block"></span></div>
+      <div class="ws-row"><span class="ws-label">1일차(진로설계)와<br>오늘(SP 작성)의 연결점</span><span class="blank-block"></span></div>
+    </div>
+  </div>
+
+  <h3 class="block-title">🎤 발표(1인 또는 짝당 2분)</h3>
+  <p class="body-p">내 SP의 공리·강제규칙·STEP·출력형식을 순서대로 소개하고, 짝이 남긴 동료심사 피드백 중 하나를 공유하세요. 청중은 발표가 끝나면 예외 상황을 하나씩 질문해보세요.</p>
+
+  <div class="portfolio">
+    <h2>📁 나의 혼디 활용 포트폴리오 — 2일차 완료</h2>
+    <div class="p-sub">1일차 포트폴리오와 함께 보관하세요</div>
+    <div class="worksheet">
+      <div class="ws-row"><span class="ws-label">이름</span><span class="blank-line" style="max-width:180px"></span></div>
+      <div class="ws-row"><span class="ws-label">날짜</span><span class="blank-line" style="max-width:180px"></span></div>
+      <div class="ws-row"><span class="ws-label">완료한 LAB 수</span><span class="blank-line" style="max-width:100px"></span> / 2</div>
+      <div class="ws-row"><span class="ws-label">2일 과정 전체 다짐 한 줄</span><span class="blank-line"></span></div>
+    </div>
+  </div>
+
+  <div class="teacher-note">
+    <p>2일 과정 전체를 마무리하며, 1일차(AI를 잘 쓰는 법)와 2일차(AI가 어떻게 만들어지는지)가 어떻게 이어지는지 짚어주세요 — "AI를 잘 쓰는 사람"과 "AI를 이해하고 설계할 수 있는 사람"은 다른 능력이며, 오늘 두 능력의 기초를 모두 경험했다는 점을 강조해주시면 좋습니다.</p>
+  </div>
+</section>
+
+<div class="footer-note">HONDI WORKSHOP · 고등학생 2일 과정 · 2일차 · 교사 지도 필수</div>
+
+</div>
+
+</body>
+</html>
