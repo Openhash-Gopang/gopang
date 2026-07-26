@@ -6690,6 +6690,14 @@ async function handleMatchOfferReject(request, env, corsHeaders, offerId) {
 // POST /match/trip/:id/complete  body: {guid, gdc?: {tx_hash, sender_sig, sender_public_key, from_guid, to_guid, amount, memo?}}
 // 완료 처리 + GDC 정산(handleGdcTransfer 재사용, purpose='transfer' 고정 —
 // §8 확정 정책: 일반 카풀 기사에게 verified_seller 인증 요구 안 함).
+// 2026-07-26 수정 — 애초 설계(§9-2)는 이 엔드포인트가 payload.gdc를 받아
+// handleGdcTransfer를 대신 호출하는 방식이었는데, 클라이언트 연동
+// 단계(§9-3)에서 확인해보니 gopang-wallet.js에 이미 완성된
+// wallet.sendGdc()(서명·고액 재인증·잔액 로컬갱신 전부 처리)가 있어서
+// 그걸 그대로 쓰는 게 낫다고 판단했다. 그래서 이 엔드포인트는 결제를
+// 대신 실행하지 않고, 클라이언트가 wallet.sendGdc()로 이미 완료한
+// 거래의 tx_hash를 받아 "이 사용자가 실제로 이 거래를 지불했는지"만
+// 원장(blocks)에서 검증한 뒤 trip을 완료 처리한다.
 async function handleMatchTripComplete(request, env, corsHeaders, ctx, tripId) {
   let payload;
   try { payload = await request.json(); } catch { return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders); }
@@ -6704,17 +6712,21 @@ async function handleMatchTripComplete(request, env, corsHeaders, ctx, tripId) {
   if (trip.status !== 'in_progress')
     return _err(409, 'TRIP_NOT_IN_PROGRESS', `이미 처리된 trip입니다(status=${trip.status})`, corsHeaders);
 
-  let gdcResult = null;
-  if (payload.gdc) {
-    const gdcBody = { ...payload.gdc, purpose: 'transfer' };
-    const gdcRequest = new Request(request.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(gdcBody),
+  // GDC 정산은 선택 사항으로 둔다(예: 버스처럼 이미 정액이거나 결제
+  // 방식이 다른 경우 대비) — gdc_tx_hash가 오면 검증하고, 안 오면 결제
+  // 없이 완료 처리(무임 매칭 자체를 막지는 않음).
+  let verifiedTxHash = null;
+  if (payload.gdc_tx_hash) {
+    if (!payload.guid) return _err(400, 'MISSING_FIELD', 'gdc_tx_hash 검증에는 guid 필수', corsHeaders);
+    const filter = encodeURIComponent(`tx_hash='${payload.gdc_tx_hash}' && buyer_guid='${payload.guid}'`);
+    const blockRes = await fetch(`${L1_DEFAULT}/api/collections/blocks/records?filter=${filter}&perPage=1`, {
+      headers: { 'Authorization': `Bearer ${token}` },
     });
-    const gdcRes = await handleGdcTransfer(gdcRequest, env, corsHeaders, ctx);
-    if (!gdcRes.ok) return gdcRes; // GDC 실패 시 trip 완료 처리도 중단
-    gdcResult = await gdcRes.json();
+    if (!blockRes.ok) return _err(502, 'L1_UNREACHABLE', '거래 검증 실패', corsHeaders);
+    const blockData = await blockRes.json().catch(() => ({ items: [] }));
+    if (!blockData.items?.[0])
+      return _err(400, 'GDC_TX_NOT_FOUND', '해당 guid로 결제된 tx_hash를 원장에서 찾을 수 없습니다', corsHeaders);
+    verifiedTxHash = payload.gdc_tx_hash;
   }
 
   let updatedTrip;
@@ -6722,7 +6734,7 @@ async function handleMatchTripComplete(request, env, corsHeaders, ctx, tripId) {
     updatedTrip = await _l1UpdateMatchTrip(env, tripId, {
       status: 'completed',
       completed_at: new Date().toISOString(),
-      ...(gdcResult?.tx_hash ? { gdc_tx_hash: gdcResult.tx_hash } : {}),
+      ...(verifiedTxHash ? { gdc_tx_hash: verifiedTxHash } : {}),
     });
   } catch (e) {
     return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders);
@@ -6767,6 +6779,85 @@ async function handleMatchWsRegion(request, env, cell) {
 //   수요 게시 이벤트를 실시간으로 받는다(셀 경계 인접 한계는 위 주석
 //   참고).
 // ═══════════════════════════════════════════════════════════
+
+// GET /match/geocode?address=...  — 주소 문자열 → 위경도 (기존
+// _geocodeAddressForward 재사용, 새 API 키·로직 없음).
+async function handleMatchGeocode(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const address = url.searchParams.get('address');
+  if (!address) return _err(400, 'MISSING_FIELD', 'address 필수', corsHeaders);
+  const coords = await _geocodeAddressForward(env, address);
+  if (!coords) return _err(404, 'GEOCODE_NOT_FOUND', '주소를 좌표로 변환하지 못했습니다', corsHeaders);
+  return new Response(JSON.stringify(coords), { headers: corsHeaders });
+}
+
+// GET /match/history?guid=&role=passenger|driver&limit=
+// 2026-07-26 신설 — desktop.html "이용 기록"/"운행 통계" 패널이 하드코딩된
+// 가짜 과거 이력을 보여주던 것을 실제 match_trips 기반으로 교체하기 위해
+// 추가. PDV의 /pdv/query(타사 동의 기반 프로토콜)는 "내가 내 기록 보기"엔
+// 안 맞는 도구라 판단(2026-07-26 조사) — match_ 계열 다른 엔드포인트와
+// 동일하게 guid 해시 대조만으로 조회한다(서명 인증 없음, 기존 /match/*
+// 보안 수준과 동일하게 맞춤).
+async function handleMatchHistory(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  const role = url.searchParams.get('role') || 'passenger';
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (role !== 'passenger' && role !== 'driver')
+    return _err(400, 'INVALID_ROLE', "role은 'passenger' 또는 'driver'여야 합니다", corsHeaders);
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '20', 10) || 20, 1), 50);
+
+  const hash = await _matchHashGuid(env, guid);
+  const token = await _l1AdminToken(env).catch(() => null);
+  if (!token) return _err(502, 'L1_UNREACHABLE', 'L1 인증 실패', corsHeaders);
+  const headers = { 'Authorization': `Bearer ${token}` };
+
+  try {
+    const results = [];
+    if (role === 'passenger') {
+      const filter = encodeURIComponent(`requester_guid_hash='${hash}'`);
+      const res = await fetch(`${L1_DEFAULT}/api/collections/match_demands/records?filter=${filter}&sort=-created_at&perPage=${limit}`, { headers });
+      const data = await res.json().catch(() => ({ items: [] }));
+      for (const demand of (data.items || [])) {
+        const tFilter = encodeURIComponent(`demand_id='${demand.id}'`);
+        const tRes = await fetch(`${L1_DEFAULT}/api/collections/match_trips/records?filter=${tFilter}&perPage=1`, { headers });
+        const tData = await tRes.json().catch(() => ({ items: [] }));
+        const trip = tData.items?.[0] || null;
+        results.push({
+          demand_id: demand.id, demand_type: demand.demand_type,
+          from_label: demand.from_label, to_label: demand.to_label,
+          demand_status: demand.status, created_at: demand.created_at,
+          trip_status: trip?.status || null, gdc_tx_hash: trip?.gdc_tx_hash || null,
+          completed_at: trip?.completed_at || null,
+        });
+      }
+    } else {
+      const filter = encodeURIComponent(`driver_guid_hash='${hash}' && status='accepted'`);
+      const res = await fetch(`${L1_DEFAULT}/api/collections/match_offers/records?filter=${filter}&sort=-created_at&perPage=${limit}`, { headers });
+      const data = await res.json().catch(() => ({ items: [] }));
+      for (const offer of (data.items || [])) {
+        const tFilter = encodeURIComponent(`offer_id='${offer.id}'`);
+        const tRes = await fetch(`${L1_DEFAULT}/api/collections/match_trips/records?filter=${tFilter}&perPage=1`, { headers });
+        const tData = await tRes.json().catch(() => ({ items: [] }));
+        const trip = tData.items?.[0] || null;
+        let demandLabel = null;
+        if (trip) {
+          const dRes = await fetch(`${L1_DEFAULT}/api/collections/match_demands/records/${trip.demand_id}`, { headers });
+          if (dRes.ok) { const d = await dRes.json(); demandLabel = { from_label: d.from_label, to_label: d.to_label }; }
+        }
+        results.push({
+          offer_id: offer.id, distance_km: offer.distance_km, created_at: offer.created_at,
+          trip_status: trip?.status || null, gdc_tx_hash: trip?.gdc_tx_hash || null,
+          completed_at: trip?.completed_at || null,
+          from_label: demandLabel?.from_label || null, to_label: demandLabel?.to_label || null,
+        });
+      }
+    }
+    return new Response(JSON.stringify({ role, history: results }), { headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', e.message, corsHeaders);
+  }
+}
 
 class _MatchChannelBase {
   constructor(ctx, env) {
@@ -6998,6 +7089,10 @@ export default {
       return handleMatchWsDemand(request, env, pathname.split('/')[4]);
     if (pathname.match(/^\/match\/ws\/region\/[^/]+$/))
       return handleMatchWsRegion(request, env, pathname.split('/')[4]);
+    if (pathname === '/match/geocode' && request.method === 'GET')
+      return handleMatchGeocode(request, env, corsHeaders);
+    if (pathname === '/match/history' && request.method === 'GET')
+      return handleMatchHistory(request, env, corsHeaders);
 
     // ── gwp_registry (2026-07-11 신설) ──────────────────────────────
     if (pathname === '/gwp-registry/lookup' && request.method === 'GET')
