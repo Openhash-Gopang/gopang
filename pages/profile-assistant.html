@@ -96,6 +96,7 @@ import { _loadSpByKey } from '/src/gopang/ai/manifest-loader.js';
 import { handleProfileSubmit } from '/src/gopang/ui/welcome.js';
 import { escHtml, appendBubble, appendTyping, wireBackButton, wireInputBar,
          wireMic, wireAttachAndCamera } from '/src/gopang/ui/chat-shell.js';
+import { reportGwpSessionEnd } from 'https://hondi.net/src/gopang/gwp/gwp-report-client.js';
 
 const RELAY_ENDPOINT = 'https://hondi-proxy.tensor-city.workers.dev';
 const _qs    = new URLSearchParams(location.search);
@@ -114,6 +115,16 @@ const _attach = wireAttachAndCamera({ inputBar: _inputBar });
 function _loadUser() { try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { return null; } }
 const _tutDone = () => { try { return localStorage.getItem('hondi_tutorial_done') === '1'; } catch { return false; } };
 const _tutStep = () => { try { return parseInt(localStorage.getItem('hondi_tutorial_step') || '0', 10); } catch { return 0; } };
+
+// GWP 세션 종료 보고(2026-07-26 수정)용 — reportGwpSessionEnd()가 요구하는
+// sessionStartedAt/guid를 이 탭 진입 시점에 한 번만 확정해둔다.
+const _paSessionStartedAt = new Date().toISOString();
+function _paGuid() {
+  try {
+    const reg = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
+    return reg.ipv6 || reg.guid || 'anonymous';
+  } catch { return 'anonymous'; }
+}
 
 // _buildProfileContext — call-ai.js의 동명 함수를 그대로 이식(순수 함수,
 // localStorage만 읽으므로 call-ai.js 전체를 이 독립 탭에 끌어들이지 않고
@@ -386,19 +397,30 @@ async function _handleReplyTags(fullReply) {
       localStorage.removeItem('hondi_profile_skipped');
       localStorage.removeItem('hondi_profile_partial');
     } catch {}
-    // 2026-07-13 신설 — 이 페이지 상단 주석은 애초에 "K-Law·market과 동일한
-    // GWP_DONE 보고 패턴"이라고 설명하고 있었지만, 실제로는 한 번도
-    // window.opener.postMessage(GWP_DONE)을 호출하지 않고 있었다(발견된
-    // gap — _closeTabSoon()이 그냥 탭만 닫음). 그래서 원래 창(AC)이 완료
-    // 사실도, 요약도 전혀 받지 못했다. 이제 실제로 보고한다.
+    // 2026-07-13 신설, 2026-07-26 수정 — 이 페이지 상단 주석은 애초에
+    // "K-Law·market과 동일한 GWP_DONE 보고 패턴"이라고 설명하고 있었지만,
+    // 실제로는 한 번도 window.opener.postMessage(GWP_DONE)을 호출하지
+    // 않고 있었다(2026-07-13에 발견된 gap — _closeTabSoon()이 그냥
+    // 탭만 닫음). 그때 손으로 postMessage를 짜 넣어 채팅 버블 표시는
+    // 고쳤지만, 공유모듈(reportGwpSessionEnd)을 안 써서 reporter_svc를
+    // 직접 채운 탓에 gopang 허브가 "이 서비스가 자기 PDV를 알아서
+    // 기록했겠지"라고 판단해 자체 기록을 건너뛰는데, 정작 이 페이지는
+    // 자기 PDV(/pdv/report)를 한 번도 쓴 적이 없어 완료된 세션이 PDV에
+    // 전혀 남지 않는 두 번째 gap이 있었다(2026-07-26 발견). 이제 다른
+    // GWP 서비스 18곳과 동일하게 공유모듈로 위임한다 — 자기 PDV 기록
+    // (a)과 owner_pdv consultation 기록(c)을 함께 받는다.
     if (savedProfile && window.opener && !window.opener.closed) {
       try {
-        window.opener.postMessage({
-          type:         'GWP_DONE',
-          summary:      _buildProfileSummaryText(savedProfile),
-          session_id:   crypto.randomUUID(),
-          reporter_svc: 'profile-assistant',
-        }, RETURN);
+        await reportGwpSessionEnd({
+          agencyId:         'profile-assistant',
+          guid:              _paGuid(),
+          messages,
+          resultText:        fullReply,
+          summaryLine:       _buildProfileSummaryText(savedProfile),
+          gwpMode:           true,
+          gwpOrigin:         RETURN,
+          sessionStartedAt:  _paSessionStartedAt,
+        });
       } catch (e) {
         console.warn('[PA] GWP_DONE 보고 실패(무시, 프로필 저장 자체는 정상 처리됨):', e.message);
       }
