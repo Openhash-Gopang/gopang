@@ -6981,6 +6981,7 @@ export default {
     // ── SP 자기 갱신 제안 (2026-07-17 신설 — K-Intent v1.3/K-Compose
     // v1.7/K-Deliver v1.3/K-Report v1.1 RULE-03) ──
     if (pathname === '/sp-updates/propose')      return handleSpUpdatePropose(request, env, corsHeaders);
+    if (pathname === '/sp-updates/draft-patch')  return handleSpUpdatesDraftPatch(request, env, corsHeaders);
     if (pathname === '/user-feedback/submit')    return handleUserFeedbackSubmit(request, env, corsHeaders);
     if (pathname === '/embed-text')              return handleEmbedText(request, env, corsHeaders);
 
@@ -10424,6 +10425,105 @@ async function handleProjectStateQuery(request,env,corsHeaders){
 // 우선순위를 높인다 — 차단은 아니다(차단은 SP 프롬프트 단에서 이미
 // 함), 검토자가 더 주의 깊게 보게 하는 신호일 뿐이다.
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// 2026-07-27 신설 — 사용자 피드백 클러스터 → 실제 패치 초안 (docs/
+// user_feedback_mechanism_proposal_v1.md의 다음 단계). tools/
+// triage_feedback.py가 지금까지는 클러스터만 만들고 proposed_patch에
+// "(사람 검토 필요 — 자동 생성된 초안이라 구체적 문안 없음)" 플레이스홀더만
+// 넣고 있었다(2026-07-17 원 설계에서 의도적으로 비워둔 부분 — 실사로
+// 확인). 오늘 하루 종일 한 일(버그 발견→코드 추적→실제 패치 설계→사람
+// 승인 요청)을 배치 파이프라인 안에 넣어 그 빈틈을 메운다.
+// _generateIndustryTransformSP(위, 4485행)와 동일한 패턴 재사용 —
+// REPO_RAW에서 대상 SP 원문을 실시간으로 받아온 뒤 Claude에 초안을
+// 맡긴다. 새 LLM 호출 체계를 또 만들지 않는다.
+async function _draftFeedbackPatch(env, { sp_id, quotes, category, context_sps }) {
+  const REPO_RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main';
+  const manifestRes = await fetch(`${REPO_RAW}/prompts/sp-catalog.json`, { cache: 'no-cache' });
+  const manifest = await manifestRes.json();
+  const fname = manifest[sp_id];
+  let currentSpText = '(원문을 찾지 못함 — sp-catalog.json에 이 sp_id로 등록된 파일이 없습니다. 파일명 추정이 아니라 사실 그대로 보고하십시오)';
+  if (fname) {
+    try {
+      const spRes = await fetch(`${REPO_RAW}/prompts/${fname}`, { cache: 'no-cache' });
+      if (spRes.ok) currentSpText = await spRes.text();
+    } catch (e) {
+      currentSpText = `(원문 fetch 실패: ${e.message})`;
+    }
+  }
+
+  // ★ 절대 원칙 — 이 함수의 산출물은 "초안 제안"일 뿐이다. sp_update_
+  // proposals는 항상 status=pending_review로만 쌓이고, 사람(주피터님)이
+  // 검토·승인해야 실제 SP 파일의 다음 버전이 된다(RULE-03·기존 설계와
+  // 동일 불변식). 이 시스템 프롬프트 자체가 그 사실을 최우선으로
+  // 명시한다 — 확정 문안을 쓰는 것처럼 보이는 어조를 피하게 한다.
+  const systemPrompt = `당신은 오픈소스 프로젝트 "혼디"의 유지보수를 돕는 검토 보조입니다.
+사용자 여러 명이 비슷한 취지로 남긴 피드백 클러스터를 보고, 관련 SP(시스템
+프롬프트) 원문을 참고해 **사람 개발자가 검토할 구체적인 패치 초안**을
+작성하는 것이 당신의 유일한 임무입니다.
+
+절대 원칙:
+- 당신이 쓰는 건 "제안"이지 확정 반영이 아닙니다. 실제로 반영될지는
+  전적으로 사람(프로젝트 관리자)이 결정합니다 — 이 사실을 스스로도
+  잊지 말고, 확정적인 어조("이렇게 고쳤습니다")가 아니라 제안하는
+  어조("이렇게 고치는 걸 제안합니다")로 씁니다.
+- 아동 안전, 규제 산업(Tier3), 금융 서명·검증, 개인정보 접근 통제와
+  관련된 섹션은 절대 완화 방향으로 건드리지 않습니다 — 그런 섹션이
+  관련돼 보이면 초안 작성을 거부하고 "이 부분은 특별 검토가 필요합니다"
+  라고만 답하십시오.
+- 인용된 피드백 중 진짜 근거가 되는 것만 인용하고, 없는 내용을
+  지어내지 않습니다. 피드백이 모호하거나 SP 수정으로 이어질 만큼
+  구체적이지 않으면, 억지로 패치를 만들지 말고 "이 피드백만으론 구체적
+  패치를 제안하기 어렵습니다 — 추가 확인이 필요합니다"라고 정직하게
+  답하십시오.
+- 출력 형식: (1) 무엇이 문제인지 한 문단, (2) 제안하는 변경 방향(코드
+  diff가 아니라 SP 문서에 추가/수정할 문구 초안), (3) 이 제안의 확신도
+  (high/medium/low)와 그 이유, (4) 특별 검토가 필요한지 여부.`;
+
+  const userMsg = `대상 SP: ${sp_id}
+카테고리: ${category}
+관련 SP 목록(클러스터 내 등장): ${(context_sps || []).join(', ')}
+
+사용자 피드백 인용(최대 3건):
+${(quotes || []).map((q, i) => `${i + 1}. "${q}"`).join('\n')}
+
+── 현재 ${sp_id} 원문 ──
+${String(currentSpText).slice(0, 12000)}
+${currentSpText.length > 12000 ? '\n...(이하 생략, 12000자 초과)' : ''}
+
+위 피드백을 바탕으로 패치 초안을 작성해 주세요.`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514', max_tokens: 2000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMsg }],
+    }),
+  });
+  if (!res.ok) throw new Error(`Claude API 호출 실패 (HTTP ${res.status})`);
+  const data = await res.json();
+  return data.content?.find(c => c.type === 'text')?.text || '';
+}
+
+// POST /sp-updates/draft-patch  body: {sp_id, quotes:[...], category, context_sps:[...]}
+// tools/triage_feedback.py 전용 — 클러스터를 sp_update_proposals로
+// 브릿지하기 전에 이 엔드포인트로 실제 초안을 받아온다. 이 엔드포인트
+// 자체는 아무것도 저장하지 않는다(순수 생성 — 저장은 여전히 기존
+// /sp-updates/propose가 담당, 관심사 분리).
+async function handleSpUpdatesDraftPatch(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body?.sp_id || !Array.isArray(body?.quotes) || !body.quotes.length) {
+    return _err(400, 'SCHEMA_ERROR', 'sp_id, quotes(배열, 1건 이상) 필수', corsHeaders);
+  }
+  try {
+    const draft = await _draftFeedbackPatch(env, body);
+    return new Response(JSON.stringify({ ok: true, draft }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'DRAFT_FAILED', e.message, corsHeaders);
+  }
+}
+
 async function handleSpUpdatePropose(request,env,corsHeaders){
   if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});
   const body=await request.json().catch(()=>null);
@@ -10463,6 +10563,31 @@ async function handleSpUpdatePropose(request,env,corsHeaders){
     const err = await res.text().catch(()=>res.status);
     return _err(503,'SP_UPDATE_PROPOSE_FAILED',String(err),corsHeaders);
   }
+  const savedRec = await res.json().catch(() => null);
+
+  // 2026-07-27 신설 — 사용자 피드백 기반이고 실제 초안(플레이스홀더 아님)이
+  // 있으면 escalation을 남긴다. 지금까지는 사람이 pending_review를 주기적
+  //으로 직접 훑어봐야만 알 수 있었다(_sp-industry-transform/generate가
+  // 이미 쓰는 알림 패턴을 그대로 재사용 — 관심사가 같으므로 새 채널을
+  // 또 만들지 않는다). RULE-03 자기반성 제안은 대상에서 뺀다 — 그건
+  // 이미 다른 주기(SP 리팩터 검토)로 확인되는 것이라 알림까지 더하면
+  // 오히려 알림 피로만 늘어난다.
+  const isPlaceholder = /^\(사람 검토 필요/.test(payload.proposed_patch || '');
+  if (payload.source === 'user_feedback' && !isPlaceholder && savedRec?.id) {
+    try {
+      await _l1CreateEscalation(env, {
+        to: '@owner',
+        reason: 'sp_draft_request',
+        ref_collection: 'sp_update_proposals',
+        ref_id: savedRec.id,
+        summary: `[사용자피드백→SP 패치초안·검토대기] ${payload.sp_id} — ${payload.issue.slice(0, 80)}`,
+        read: false,
+      });
+    } catch (e) {
+      console.warn('[sp-updates/propose] escalation 생성 실패(무시, 제안 저장 자체는 정상):', e.message);
+    }
+  }
+
   return new Response(JSON.stringify({ok:true, sp_id: body.sp_id, status:'pending_review'}),{status:200,headers:corsHeaders});
 }
 

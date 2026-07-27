@@ -445,7 +445,7 @@ function _stripInternalTags(s) {
     .replace(/\[TEMPLATE_LOOKUP:[^\]]*\]/g, '')
     .replace(/\[INDUSTRY_TEMPLATE_LOOKUP:[^\]]*\]/g, '')
     .replace(/\[TEMPLATE_CANDIDATE:[^\]]*\]/g, '')
-    .replace(/\[FEATURE_SUGGESTION:[^\]]*\]/g, '')
+    .replace(/\[USER_FEEDBACK:[^\]]*\]/g, '')
     .trim();
 }
 
@@ -609,29 +609,38 @@ async function _handleReplyTags(fullReply) {
       console.warn('[PA] TEMPLATE_CANDIDATE 큐잉 실패(무시):', e.message);
     }
   }
-  // FEATURE_SUGGESTION — §DIGITAL-BRIDGE(profile-assistant SP v2.16)가
-  // "실재하지 않는 디지털 전환 아이디어"를 발견했을 때 사람이 검토할 수
-  // 있게 로컬 큐에 남긴다(TEMPLATE_CANDIDATE와 동일한 큐잉 패턴 —
-  // 전체 사용자 통계가 필요한 결정은 이 탭의 일이 아니다).
-  const featureSuggestionMatch = fullReply.match(/\[FEATURE_SUGGESTION:\s*([^\]]*)\]/);
-  if (featureSuggestionMatch) {
+  // USER_FEEDBACK — §DIGITAL-BRIDGE(profile-assistant SP v2.20)가
+  // "실재하지 않는 디지털 전환 아이디어"를 발견했을 때 서버에 남긴다.
+  // 2026-07-27 정정 — 이전엔 [FEATURE_SUGGESTION] + localStorage 큐로
+  // 만들었었는데, 그건 각 사용자 브라우저에만 갇혀 아무도(주피터님도)
+  // 못 보는 상태였다. call-ai.js(AC)에는 이미 훨씬 잘 설계된 같은 목적의
+  // 파이프라인이 있었다 — [USER_FEEDBACK] 태그 → user-feedback/submit →
+  // user_feedback 컬렉션(서버) → tools/triage_feedback.py가 주기적으로
+  // 취합해 sp_update_proposals(사람 검토 대기열)로 브릿지. 다만 그 핸들러가
+  // call-ai.js에만 있고 이 탭(PA가 실제로 실행되는 곳)엔 없었다 — 이번
+  // 세션 내내 반복된 것과 같은 "새 탭 분리 때 누락" 패턴이라 여기도
+  // 배선한다. [FEATURE_SUGGESTION]은 이제 SP가 내지 않으므로(v2.20)
+  // 로컬 큐잉 코드 자체를 제거한다.
+  const userFeedbackMatch = fullReply.match(/\[USER_FEEDBACK:\s*([^\]]*)\]/);
+  if (userFeedbackMatch) {
     try {
-      const raw = featureSuggestionMatch[1];
-      const params = {};
-      for (const part of raw.split(',')) {
-        const eq = part.indexOf('=');
-        if (eq === -1) continue;
-        const k = part.slice(0, eq).trim();
-        let v = part.slice(eq + 1).trim();
-        if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1); // context="...", idea="..." 따옴표 제거
-        params[k] = v;
-      }
-      const queue = JSON.parse(localStorage.getItem('hondi_feature_suggestions') || '[]');
-      queue.push({ ...params, guid: _paGuid(), queued_at: new Date().toISOString() });
-      localStorage.setItem('hondi_feature_suggestions', JSON.stringify(queue));
-      console.info('[PA] 새 기능 제안 큐잉:', params);
+      const raw = userFeedbackMatch[1];
+      const pick = (key) => {
+        const m = raw.match(new RegExp(key + '=("[^"]*"|[^,\\]]*)'));
+        return m ? m[1].replace(/^"|"$/g, '') : null;
+      };
+      await fetch(`${RELAY_ENDPOINT}/user-feedback/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          raw_text: pick('raw') || '',
+          context_sp: pick('context_sp') || 'profile-assistant',
+          context_summary: pick('context_summary') || '',
+          category: pick('category') || 'question',
+        }),
+      });
     } catch (e) {
-      console.warn('[PA] FEATURE_SUGGESTION 큐잉 실패(무시):', e.message);
+      console.warn('[PA] USER_FEEDBACK 제출 실패(무시):', e.message);
     }
   }
   // PROFILE_SUBMIT — 실제 서버 등록(welcome.js 그대로 재사용)

@@ -11,8 +11,14 @@ user_feedback 컬렉션에 쌓인 status=new 항목을 훑어서:
   2. 코사인 유사도로 단순 클러스터링(같은 요청을 한 사람이 여럿인지 파악)
   3. 사람이 읽을 요약 리포트 생성(클러스터별 대표 인용 + 빈도)
   4. 클러스터가 명확히 특정 SP 하나로 귀결되면 sp_update_proposals에
-     source=user_feedback로 "초안"만 올린다 — RULE-03과 동일하게
+     source=user_feedback로 "초안"을 올린다 — RULE-03과 동일하게
      ★ 자동 승인 없음 ★. 애매하면 올리지 않고 리포트에만 남긴다.
+     (2026-07-27 갱신 — 이 "초안"이 이전엔 플레이스홀더 텍스트뿐이었으나,
+     이제 worker.js의 /sp-updates/draft-patch(내부에서 Claude가 실제 SP
+     원문을 참고해 구체적 패치 초안을 작성)를 호출해 실질적인 내용을
+     담는다. 여전히 사람 승인 없이는 아무것도 반영되지 않는다 — 이번
+     변경은 "검토하기 더 쉬운 초안을 주는 것"이지 "검토를 생략하는 것"이
+     아니다.)
 
 이 스크립트는 절대 SP 파일을 직접 수정하지 않는다. 절대 sp_update_
 proposals의 상태를 approved로 바꾸지 않는다 — 사람(주피터님)만 한다.
@@ -139,6 +145,27 @@ def _cluster(items, vectors, threshold):
     return clusters
 
 
+def _draft_patch(context_sp, quotes, category, context_sps):
+    """2026-07-27 신설 — 지금까지는 여기서 플레이스홀더 텍스트만 넣고
+    실제 초안 작성은 전적으로 사람 몫이었다(2026-07-17 원 설계에서
+    의도적으로 비워둔 부분). worker.js의 /sp-updates/draft-patch(내부에서
+    Claude를 호출해 실제 SP 원문을 참고한 구체적 초안을 작성)를 불러
+    그 빈틈을 메운다. 실패해도(네트워크 오류 등) 예전처럼 플레이스홀더로
+    조용히 폴백한다 — 초안 생성 실패가 클러스터링·리포트 생성 자체를
+    막으면 안 된다.
+    """
+    try:
+        res = _http_json(f'{WORKER_URL}/sp-updates/draft-patch', method='POST', body={
+            'sp_id': context_sp, 'quotes': quotes, 'category': category, 'context_sps': context_sps,
+        })
+        draft = res.get('draft', '').strip()
+        if draft:
+            return draft, 'medium'  # 실제 분석이 담긴 초안이라 low보다는 medium이 정직함 — 그래도 사람 검토는 항상 필수
+    except Exception as e:
+        print(f'패치 초안 생성 실패(플레이스홀더로 폴백): {e}', file=sys.stderr)
+    return '(사람 검토 필요 — 자동 생성된 초안이라 구체적 문안 없음, 위 인용을 참고해 판단)', 'low'
+
+
 def main():
     dry_run = '--dry-run' in sys.argv
     threshold = DEFAULT_CLUSTER_THRESHOLD
@@ -196,14 +223,15 @@ def main():
                 and len(context_sps) == 1
                 and top_category in ('bug', 'feature_request')):
             if not dry_run:
+                proposed_patch, confidence = _draft_patch(context_sps[0], quotes, top_category, context_sps)
                 try:
                     _http_json(f'{WORKER_URL}/sp-updates/propose', method='POST', body={
                         'sp_id': context_sps[0],
                         'current_version': '',
                         'trigger': 'user_correction',
                         'issue': f'사용자 {len(members)}명이 비슷한 취지로 언급: ' + ' / '.join(quotes[:2]),
-                        'proposed_patch': '(사람 검토 필요 — 자동 생성된 초안이라 구체적 문안 없음, 위 인용을 참고해 판단)',
-                        'confidence': 'low',  # 자동 클러스터링 기반이라 항상 low로 시작 — 사람이 격상 판단
+                        'proposed_patch': proposed_patch,
+                        'confidence': confidence,
                         'protected_sections_touched': False,
                         'source': 'user_feedback',
                         'user_feedback_ids': [it.get('id') for it in member_items if it.get('id')],
