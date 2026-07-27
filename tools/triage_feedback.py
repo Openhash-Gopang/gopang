@@ -14,7 +14,7 @@ user_feedback 컬렉션에 쌓인 status=new 항목을 훑어서:
      source=user_feedback로 "초안"을 올린다 — RULE-03과 동일하게
      ★ 자동 승인 없음 ★. 애매하면 올리지 않고 리포트에만 남긴다.
      (2026-07-27 갱신 — 이 "초안"이 이전엔 플레이스홀더 텍스트뿐이었으나,
-     이제 worker.js의 /sp-updates/draft-patch(내부에서 Claude가 실제 SP
+     이제 worker.js의 /sp-updates/draft-patch(내부에서 DeepSeek V4 Flash가 실제 SP
      원문을 참고해 구체적 패치 초안을 작성)를 호출해 실질적인 내용을
      담는다. 여전히 사람 승인 없이는 아무것도 반영되지 않는다 — 이번
      변경은 "검토하기 더 쉬운 초안을 주는 것"이지 "검토를 생략하는 것"이
@@ -149,7 +149,7 @@ def _draft_patch(context_sp, quotes, category, context_sps):
     """2026-07-27 신설 — 지금까지는 여기서 플레이스홀더 텍스트만 넣고
     실제 초안 작성은 전적으로 사람 몫이었다(2026-07-17 원 설계에서
     의도적으로 비워둔 부분). worker.js의 /sp-updates/draft-patch(내부에서
-    Claude를 호출해 실제 SP 원문을 참고한 구체적 초안을 작성)를 불러
+    DeepSeek V4 Flash를 호출해 실제 SP 원문을 참고한 구체적 초안을 작성)를 불러
     그 빈틈을 메운다. 실패해도(네트워크 오류 등) 예전처럼 플레이스홀더로
     조용히 폴백한다 — 초안 생성 실패가 클러스터링·리포트 생성 자체를
     막으면 안 된다.

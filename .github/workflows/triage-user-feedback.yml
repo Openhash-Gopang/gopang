@@ -28,7 +28,7 @@ jobs:
 
       # ── docs/user_feedback_mechanism_proposal_v1.md §4. status=new인
       # user_feedback을 임베딩·클러스터링하고, 표본이 충분한(3건↑) 클러스터는
-      # /sp-updates/draft-patch(Claude가 실제 SP 원문 참고해 초안 작성)를
+      # /sp-updates/draft-patch(DeepSeek V4 Flash가 실제 SP 원문 참고해 초안 작성)를
       # 거쳐 sp_update_proposals에 pending_review로 올린다. 이 워크플로우
       # 자체는 SP 파일을 직접 건드리지 않고, 승인도 하지 않는다 — 사람
       # (주피터님)이 검토해야 다음 SP 버전에 반영된다.

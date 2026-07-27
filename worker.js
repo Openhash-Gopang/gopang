@@ -10434,7 +10434,7 @@ async function handleProjectStateQuery(request,env,corsHeaders){
 // 확인). 오늘 하루 종일 한 일(버그 발견→코드 추적→실제 패치 설계→사람
 // 승인 요청)을 배치 파이프라인 안에 넣어 그 빈틈을 메운다.
 // _generateIndustryTransformSP(위, 4485행)와 동일한 패턴 재사용 —
-// REPO_RAW에서 대상 SP 원문을 실시간으로 받아온 뒤 Claude에 초안을
+// REPO_RAW에서 대상 SP 원문을 실시간으로 받아온 뒤 DeepSeek V4 Flash에 초안을
 // 맡긴다. 새 LLM 호출 체계를 또 만들지 않는다.
 async function _draftFeedbackPatch(env, { sp_id, quotes, category, context_sps }) {
   const REPO_RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main';
@@ -10492,18 +10492,28 @@ ${currentSpText.length > 12000 ? '\n...(이하 생략, 12000자 초과)' : ''}
 
 위 피드백을 바탕으로 패치 초안을 작성해 주세요.`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch(DEEPSEEK_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}` },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514', max_tokens: 2000,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMsg }],
+      // 2026-07-27 수정 — 주피터님 지시: 이 배치용 초안 작성에도 앱 전반의
+      // 비용 최적화 기본값(deepseek-v4-flash, HONDI_TIER_MODELS['hondi-flash']
+      // 참조)을 그대로 쓴다. _generateIndustryTransformSP(실시간 SP 생성)는
+      // Claude를 직접 호출하지만, 그건 사용자가 그 자리에서 기다리는 동기
+      // 경로이고 이건 주 1회 배치라 성격이 다르다 — 굳이 별도로 Anthropic
+      // API 키·비용을 쓸 이유가 없다.
+      model: 'deepseek-v4-flash',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMsg },
+      ],
+      max_tokens: 2000,
+      stream: false,
     }),
   });
-  if (!res.ok) throw new Error(`Claude API 호출 실패 (HTTP ${res.status})`);
+  if (!res.ok) throw new Error(`DeepSeek API 호출 실패 (HTTP ${res.status})`);
   const data = await res.json();
-  return data.content?.find(c => c.type === 'text')?.text || '';
+  return data.choices?.[0]?.message?.content || '';
 }
 
 // POST /sp-updates/draft-patch  body: {sp_id, quotes:[...], category, context_sps:[...]}
