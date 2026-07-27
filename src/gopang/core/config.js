@@ -296,6 +296,15 @@ const _SP_BASE_CFG = '/prompts/';
 const _PROXY_URL = 'https://hondi-proxy.tensor-city.workers.dev';
 let _paSPLoaded = false;
 
+// ※ 2026-07-27 확인 — 이 함수는 앱 부팅 시(gopang-app.js) 호출되지 않는다.
+//   메인 채팅/AI 패널의 system은 항상 call-ai.js가 부팅 즉시 AGENT-COMMON을
+//   로드해 고정한다(call-ai.js 3444행 부근 "PA 자동 로드 분기 제거" 참조) —
+//   함수명만 보면 "온보딩 진입점"처럼 보이지만 실제 호출부는 welcome.js의
+//   handleProfileSubmit() 성공 직후 단 한 곳뿐이다. 그 시점엔 profileDone·
+//   handle이 이미 참이므로 아래 351행 폴백(manifest['profile-assistant'])은
+//   "신규 가입자용 온보딩 SP 로드"가 아니라 "본인 system_prompt fetch 두
+//   번(본인/레거시 그림자)이 전부 실패했을 때의 네트워크 안전망"으로만
+//   동작한다 — 실제로 도달할 일이 거의 없지만 완전히 죽은 코드는 아니다.
 export async function loadPersonalAssistantSP() {
   if (_paSPLoaded) return CFG.system;
 

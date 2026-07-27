@@ -579,20 +579,26 @@ export const _stripInternalTags = (text) => _stripBracketTag(
  * 넘겨받는다 — 기본값 ''은 하위 호환용(다른 호출부가 안 넘겨도 에러 안 남).
  */
 export async function _handleProfileTags(fullReply, bubble, sendFn = callAI, userText = '') {
-  // ── CALL_PROFILE_ASSISTANT — AC가 프로필 작성/수정으로 바톤 전달 (v2.0 신설, §0-E) ──
-  // AGENT-COMMON의 출력에서만 나오는 태그이지만, 이 함수는 모든 응답 뒤에
-  // 공통으로 호출되므로 여기서 함께 감지한다(어느 SP가 활성 상태든 상관없이
-  // 동일한 디스패처를 거치는 기존 구조와 일관성 유지).
+  // ── CALL_PROFILE_ASSISTANT — 폐기된 legacy 태그, 방어적 무력화만 수행
+  //    (v2.0 신설, §0-E → 2026-07-11 [GWP: profile-assistant] 새 탭 방식으로
+  //    완전히 대체됨 — gwp-registry.js·AGENT-COMMON_v3_45 §0-1 1042행 참조).
+  //
+  // 예전엔 이 태그가 오면 _switchToProfileAssistantSP()로 "같은 창의
+  // system을 그대로 바꿔치기"했는데, 이 방식이 바로 "튜토리얼 대본이 AC
+  // 자신의 응답과 섞여 실제 사용자 지시를 가로채는" 사고를 냈던 원인이라
+  // 새 탭 방식으로 이관된 것이었다. 그런데 이관 이후에도 이 처리 블록
+  // 자체는 지워지지 않고 남아있어, 캐시된 구버전 SP나 모델의 옛 태그명
+  // 재현(할루시네이션) 등으로 이 태그가 다시 출력되면 이미 고쳤던 그
+  // 버그가 그대로 재발할 위험이 있었다(2026-07-27 사고실험에서 실제로
+  // webapp.html의 재방문자 튜토리얼 재개 트리거가 이 옛 태그명을 AC에게
+  // 직접 지시하고 있던 것도 함께 발견돼 그쪽은 [GWP: profile-assistant]로
+  // 정정함). 현재 시점엔 이 태그를 실제로 출력하는 곳이 없어야 정상이므로,
+  // 혹시라도 관측되면 원인 파악용 경고만 남기고 절대 같은 창 전환을
+  // 실행하지 않는다 — 정상 흐름은 그대로 이어간다(return false).
   if (fullReply.includes('[CALL_PROFILE_ASSISTANT]')) {
-    console.log('[Profile] CALL_PROFILE_ASSISTANT 감지 — profile-assistant로 전환');
-    if (bubble) {
-      const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
-      if (_usb) _usb(bubble, _stripInternalTags(fullReply));
-    }
-    history.length = 0;
-    await _switchToProfileAssistantSP();
-    await _triggerProfileAssistantHandoff(sendFn);
-    return true;
+    console.warn('[Profile] ⚠️ 폐기된 [CALL_PROFILE_ASSISTANT] 태그 감지 — ' +
+      '무시함(같은 창 전환 실행 안 함). [GWP: profile-assistant]를 썼어야 ' +
+      '합니다 — SP 캐시나 호출부에 옛 태그명이 남아있는지 확인하세요.');
   }
 
   // ── PROFILE_INTERRUPT_HANDOFF — profile-assistant가 무관한 요청을 받아
@@ -1503,6 +1509,13 @@ async function _switchToAssistantSP() {
  * [CALL_PROFILE_ASSISTANT]를 출력한 직후 호출됩니다. _switchToAssistantSP()의
  * 반대 방향 — 구조는 동일(system_base/system 교체 + localStorage 저장),
  * 대상만 다르다.
+ *
+ * ※ 2026-07-27 — 현재 미사용(unused). [CALL_PROFILE_ASSISTANT]가
+ *   2026-07-11에 [GWP: profile-assistant] 새 탭 방식으로 대체되며 이
+ *   함수를 부르던 유일한 호출부(_handleProfileTags)도 방어적 경고만
+ *   남기도록 바뀌었다. 삭제하지 않고 남겨둔 이유: 같은 창 전환이라는
+ *   메커니즘 자체는(대상 SP만 다를 뿐) 여전히 유효한 패턴이라 나중에
+ *   다른 용도로 재사용될 수 있고, 히스토리 추적용으로도 남겨둔다.
  */
 async function _switchToProfileAssistantSP() {
   try {
@@ -1527,6 +1540,12 @@ async function _switchToProfileAssistantSP() {
  * PHASE 0부터 이어가도록 한다(2026-07-08 신설). _triggerSeamlessHandoff와
  * 대칭 구조(반대 방향) — AC는 이미 프로필 작성 취지를 설명하고 동의를
  * 받은 뒤이므로, profile-assistant는 재인사하지 않고 바로 시작해야 한다.
+ *
+ * ※ 2026-07-27 — 현재 미사용(unused). 위 _switchToProfileAssistantSP()와
+ *   동일한 사유로 호출부가 제거됐다 — 참고: 같은 역할(재인사 없이 곧장
+ *   시작)은 이제 pages/profile-assistant.html의 startGreeting()이
+ *   [INTERNAL: ...] 신호로 직접 수행한다(새 탭 방식이라 여기서 sendFn을
+ *   대신 호출해줄 필요가 없어짐).
  */
 async function _triggerProfileAssistantHandoff(sendFn = callAI) {
   try {
