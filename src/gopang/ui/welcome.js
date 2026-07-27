@@ -67,6 +67,25 @@ export async function handleProfileSubmit(aiResponseText) {
     }
   }
 
+  // industry_fields.schema_id 정규화 (2026-07-27 버그 수정) — profile-assistant SP는
+  // PROFILE_SUBMIT 최상위에 schema_id(KSIC)를 실어 보내는데, worker.js
+  // handleProfilePost()는 industry_fields.schema_id만 검증·저장한다(최상위
+  // schema_id는 구조분해 목록에도 없어 조용히 버려짐). 게다가 STEP3B(예약
+  // 수락 여부)가 person을 제외한 모든 entity_type에 무조건 실행되며
+  // industry_fields.reservation_config를 항상 채우므로, industry_fields가
+  // non-null인데 그 안에 schema_id가 없어 서버가 400 INVALID_SCHEMA_ID로
+  // 저장 자체를 거부하는 상태였다(entity_type≠person 전수 재현 — 100건
+  // 사고실험 결과 §0 참조). _forwardProductsToMarket()의 /biz/catalog/sync
+  // 요청에는 이미 있던 것과 동일한 정규화를 여기 /profile 요청에도 추가한다.
+  if (profile.entity_type !== 'person' && profile.schema_id != null) {
+    const sid = String(profile.schema_id);
+    if (/^\d{2}$/.test(sid)) {
+      profile.industry_fields = { ...(profile.industry_fields || {}), schema_id: sid };
+    } else {
+      console.warn('[Profile] schema_id 형식 불일치, industry_fields 병합 생략:', sid);
+    }
+  }
+
   const PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
 
   try {
