@@ -2859,26 +2859,66 @@ const _COMPLEXITY_PATTERNS = [
 const COMPLEXITY_PRO_THRESHOLD = 3; // 이 점수 이상이면 이번 턴만 Pro
 
 function _estimateQueryComplexity(userText, messages) {
-  if (typeof userText !== 'string' || !userText.trim()) return 0;
-  const text = userText.trim();
+  const text = typeof userText === 'string' ? userText.trim() : '';
   let score = 0;
 
-  // 1) 길이 — 길수록 여러 조건·맥락이 얽혀 있을 가능성이 높다
-  if (text.length > 400) score += 2;
-  else if (text.length > 180) score += 1;
+  if (text) {
+    // 1) 길이 — 길수록 여러 조건·맥락이 얽혀 있을 가능성이 높다
+    if (text.length > 400) score += 2;
+    else if (text.length > 180) score += 1;
 
-  // 2) 한 메시지에 여러 요청이 겹쳐 있는지(물음표 반복, 목록형 나열)
-  const qMarks = (text.match(/\?/g) || []).length;
-  if (qMarks >= 2) score += 1;
-  if (/\n\s*[-*\d]/.test(text)) score += 1;
+    // 2) 한 메시지에 여러 요청이 겹쳐 있는지(물음표 반복, 목록형 나열)
+    const qMarks = (text.match(/\?/g) || []).length;
+    if (qMarks >= 2) score += 1;
+    if (/\n\s*[-*\d]/.test(text)) score += 1;
 
-  // 3) 키워드 신호 — 패턴당 1점
-  for (const re of _COMPLEXITY_PATTERNS) {
-    if (re.test(text)) score += 1;
+    // 3) 키워드 신호 — 패턴당 1점
+    for (const re of _COMPLEXITY_PATTERNS) {
+      if (re.test(text)) score += 1;
+    }
   }
+  // ★ 2026-07-27 수정 — 이전엔 userText가 비어있으면(예: 내부 트리거
+  // 메시지가 예외적으로 빈 문자열인 경우) 함수가 여기서 0을 즉시
+  // 반환해 아래 4)·5)의 맥락 신호를 아예 평가하지 않았다. text가
+  // 비어도 messages 기반 신호는 계속 평가하도록 조기 반환을 없앴다.
 
   // 4) 같은 주제로 대화가 이미 길게 이어지는 중이면(복잡한 작업 진행 중일 가능성)
   if (Array.isArray(messages) && messages.length >= 10) score += 1;
+
+  // 5) 맥락/기억 부담 신호 (2026-07-27 신설 — AGENT-COMMON v3.46과 짝)
+  //    배경: AC_lifelong_assistant_100case_audit_2026-07-27.md에서
+  //    "이전 대화를 자연스럽게 잇기", "여러 정체성 정보를 한 번에
+  //    자연스럽게 반영하기", "프로필 유도(§0-1-P[6])와 주기적 PDV
+  //    검토(§0-1-P[7])가 겹칠 때 중복 없이 조율하기" 같은 사회적·
+  //    맥락적 판단이 필요한 턴이 다수 발견됐는데, 위 1~4)는 전부
+  //    기술적 복잡도(코드·수치·비교·다단계·긴 대화)만 감지해서 이런
+  //    턴은 매번 hondi-flash로 처리되고 있었다. messages의 마지막
+  //    user 메시지(=_buildEnhancedUserContent가 만든 동적 컨텍스트,
+  //    userText와 달리 [ctx] 마커들이 실제로 여기 실린다)를 훑어
+  //    이런 신호가 있는지 본다.
+  if (Array.isArray(messages) && messages.length) {
+    const lastContent = messages[messages.length - 1]?.content;
+    const ctxText = typeof lastContent === 'string' ? lastContent : '';
+    if (ctxText) {
+      const hasPdvNote     = ctxText.includes('[PDV 최근 기록');   // _buildPDVNote() 마커 — 과거 기록을 이번 응답에 자연스럽게 이어붙여야 함
+      const hasReviewDue   = ctxText.includes('[PDV_REVIEW_DUE');  // §0-1-P[7] 주기 검토 판단이 필요한 턴
+      const hasProfileFlag = ctxText.includes('프로필:미완성');     // §0-1-P[6] 대상
+
+      // 정체성 컨텍스트(직업/소속/업무상태/배정업무)가 한 턴에 2개
+      // 이상 겹치면, 그중 무엇을 이번 응답에 자연스럽게 반영할지
+      // 스스로 골라야 해서 판단 부담이 커진다.
+      const identityCount = ['직업:', '소속:', '업무상태:', '배정된업무(']
+        .filter(marker => ctxText.includes(marker)).length;
+
+      if (hasPdvNote) score += 1;
+      if (identityCount >= 2) score += 1;
+      if (hasReviewDue) score += 1;
+      // §0-1-P[10](신설)이 요구하는 가장 까다로운 조율 — [6]/[7]이
+      // 같은 턴에 겹치는 경우. 이 조합만으로도 임계값에 도달하도록
+      // 가중치를 높게 둔다(hasReviewDue의 +1과 합쳐 총 +3).
+      if (hasReviewDue && hasProfileFlag) score += 2;
+    }
+  }
 
   return score;
 }
