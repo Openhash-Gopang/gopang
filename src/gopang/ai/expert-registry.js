@@ -291,15 +291,15 @@ export const EXPERT_REGISTRY = {
     // 정교사, 생활지도 관점)와는 범위가 다르다.
     triggers: ['1:1 교습', '개인 교사', '맞춤 교육', 'AI 교수', '과외'],
   },
-  // ── civil 정식 등록 (2026-07-26 결정) ───────────────────────
-  // K-Doctor 구조를 그대로 참고 — 시민과 직접 대화하고 서류를 직접
-  // 수취·평가하지만, 최종 행정처분은 항상 담당 공무원에게 있다(행정
-  // 절차법 등 — 의료법 제27조에 대응하는 법적 근거). K-Public
-  // (SP-10_kpublic, 라이브)이 1차 상담·서류검증·내부접수를 이미
-  // 담당하므로, civil은 그 이후 단계(심사 의견 형성·공무원 제출)를
-  // 맡는다 — K-Health/K-Doctor의 역할 분담과 동일 구조.
-  // ⚠️ 실제 정부기관 전자제출은 아직 미구현(API 통로 개통 전) —
-  // prompts/SP_civil_v1_0.md §5 정직 고지 참고.
+  // ── civil 정식 등록 (2026-07-26 결정, 2026-07-26 v2.0 재조정) ─────
+  // v2.0: 실제 존재하는 제주 도정 트리(gov-router.js,
+  // HUMAN-AUTHORITY-GATE-SCHEMA G1~G19)를 확인 후, K-Civil을 그
+  // 체계와 경쟁하는 별도 시스템이 아니라 G18 STAFF_REVIEW_GATE
+  // 태그의 summary(예비 의견) 필드를 채우는 역할로 재정의했다.
+  // "공무원에게 제출"의 실체는 현재 handler_type=DEPARTMENT_CONTACT
+  // (연락처 안내)이며, HONDI_STAFF_USER(인앱 검토)는 아직 비활성이다.
+  // ⚠️ 실제 정부기관 전자제출은 아직 미구현 — prompts/SP_civil_v2_0.md
+  // §5 정직 고지 참고.
   civil: {
     label: '민원 심사(K-Civil)', icon: '🏛️', category: 'GOV', ownerAgency: 'kpublic',
     key: 'SP_civil', needsMedicalSafety: false,
