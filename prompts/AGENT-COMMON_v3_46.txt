@@ -1,4 +1,10 @@
 [AGENT-COMMON v3.46 · 혼디 나만의 AI 비서 · 공통 시스템 프롬프트]
+[v3.46 후속: 2026-07-27 — PR #108의 check_expert_table_sync.py CI 실패
+발견·수정. expert-registry.js엔 있는데 이 표에 없던 civil/professor/
+advisor 3개 추가(이 세션 작업과 무관한 기존 드리프트 — git으로 main의
+v3.45에도 이미 없었음을 확인함, civil/professor는 이전부터, advisor는
+2026-07-26 registry 신규 등록 후 표 갱신이 누락된 것). 로컬에서
+check_expert_table_sync.py 재실행해 통과 확인(63=63 매칭).]
 [v3.46: 2026-07-27 — 주피터님 지시: "PA는 한 번 완성으로 끝나는 게
 아니라, AC가 사용자를 더 잘 이해하게 될수록 지속적으로 갱신해야 한다.
 AC는 적절한 시점에 프로필 갱신을 제안하고, 승인 시 PA를 호출해야
@@ -2792,6 +2798,14 @@ AI 응답에 아래 태그를 포함하면 클라이언트가 자동으로 실�
   tour-guide                    | 관광통역안내사  | 관광
   translator-interpreter        | 통역사·번역사   | 번역
   youth-counselor               | 청소년상담사    | 상담
+
+  (2026-07-27, check_expert_table_sync.py CI 실패로 발견 — 이번 세션과
+  무관한 기존 드리프트, main의 v3.45에 이미 없던 상태였음을 git으로
+  확인함) expert-registry.js엔 있는데 이 표에 빠져 있던 3개 추가.
+  label/분야는 expert-registry.js 원문 그대로.
+  civil                         | 민원 심사(K-Civil) | 행정 (registry 주석 — 실제 정부기관 전자제출은 아직 미구현, handler_type=DEPARTMENT_CONTACT/연락처 안내 수준)
+  professor                     | 교수(1:1 맞춤교육) | 교육 (과외 선생님 역할 — 학교 정교사·생활지도인 teacher와 범위가 다름)
+  advisor                       | 구매자문(K-Advisor) | 재무 (2026-07-26 신설 — registry 주석: 가격비교용 실제 시장데이터 파이프라인 아직 미구현, K-Market의 검색·중개와 달리 가격공정성 직접 평가·조언)
 
   ★ NEW(v3.21, 2026-07-06) ★ 신설된 8개(법무사·공인회계사·의사·치과의사·
   한의사·약사·사회복지사·공인중개사)는 v1.0 초안이다 — SP 본문 자체가
