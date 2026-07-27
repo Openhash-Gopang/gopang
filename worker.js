@@ -7432,6 +7432,12 @@ export default {
     if (pathname === '/admin/users/bulk-delete' && request.method === 'POST')
       return handleAdminBulkDelete(request, env, corsHeaders);
 
+    // GET /admin/users/search?q=... — 관리자용 사용자 목록·검색 (2026-07-27 신설)
+    // gdc/dashboard.html "사용자 관리" 패널 전용. handle·guid 부분일치 검색 +
+    // 각 결과에 GDC 잔액을 함께 반환한다(수동 충전 기능의 선행 작업).
+    if (pathname === '/admin/users/search' && request.method === 'GET')
+      return handleAdminUserSearch(request, env, corsHeaders);
+
     // ── 디폴트 LLM 키 관리 ──────────────────────────────────────
     // POST /admin/default-key  — 관리자가 KV에 저장 (HMAC 인증)
     // GET  /default-key        — 앱이 체험기간 확인 후 키 수신
@@ -13929,6 +13935,80 @@ async function _deleteAllUserData(env, guid, l1Record) {
 // 본인 서명(Ed25519) 검증 없음 — Authorization: Bearer 관리자 토큰(_requireAdmin)으로만 인증.
 // 1회 호출당 최대 100개 — 그 이상은 여러 번에 나눠 호출할 것.
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// GET /admin/users/search?q=<검색어>&limit=<기본20,최대50> — 관리자용
+// 사용자 목록·검색 (2026-07-27 신설)
+//
+// gdc/dashboard.html "사용자 관리" 패널 전용. q가 없으면 최근 가입순
+// 목록을 반환하고(전체 목록 훑어보기 용도), q가 있으면 handle 또는
+// guid 부분일치로 필터링한다. _l1FindProfileByHandle과 같은 L1
+// profiles 컬렉션·관리자 토큰 패턴을 재사용한다 — 새 인증 경로를
+// 만들지 않는다.
+//
+// 각 결과에 getBalanceGdcForStatus로 실제 GDC 잔액을 조회해 함께
+// 반환한다 — 다음 단계(관리자 수동 충전 버튼)가 이 응답을 그대로
+// 재사용할 수 있게 하기 위함이다. 잔액 조회는 결과 건별로 병렬
+// 수행하되, limit을 50으로 상한해 한 번의 요청이 L1에 과도한 부하를
+// 주지 않게 한다.
+// ═══════════════════════════════════════════════════════════
+async function handleAdminUserSearch(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
+
+  const url = new URL(request.url);
+  const q = (url.searchParams.get('q') || '').trim();
+  let limit = parseInt(url.searchParams.get('limit') || '20', 10);
+  if (!Number.isFinite(limit) || limit <= 0) limit = 20;
+  if (limit > 50) limit = 50; // 상한 — 잔액조회 병렬 호출 부하 방지
+
+  let items = [];
+  try {
+    const token = await _l1AdminToken(env);
+    let filter = '';
+    if (q) {
+      // handle 또는 guid 부분일치 — PocketBase 필터 문법(~는 contains)
+      const esc = q.replace(/'/g, "\\'");
+      filter = `?filter=${encodeURIComponent(`handle~'${esc}'||guid~'${esc}'`)}`;
+    }
+    const sep = filter ? '&' : '?';
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/profiles/records${filter}${sep}sort=-created&perPage=${limit}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    if (!res.ok) return _err(502, 'L1_ERROR', `L1 조회 실패 (HTTP ${res.status})`, corsHeaders);
+    const data = await res.json().catch(() => ({ items: [] }));
+    items = data.items || [];
+  } catch (e) {
+    return _err(502, 'L1_ERROR', 'L1 조회 실패: ' + e.message, corsHeaders);
+  }
+
+  // 잔액은 개별 조회이므로 결과 건별 실패가 전체를 막지 않게 Promise.allSettled 사용
+  const withBalance = await Promise.allSettled(
+    items.map(async (p) => {
+      const guid = p.guid || p.id;
+      const balanceGdc = await getBalanceGdcForStatus(guid);
+      return {
+        guid,
+        handle: p.handle || null,
+        created: p.created || null,
+        balance_gdc: balanceGdc,
+        balance_krw: balanceGdc != null ? Math.round(balanceGdc * EXCHANGE_RATE_KRW_PER_GDC) : null,
+        balance_error: balanceGdc === null,
+      };
+    })
+  );
+
+  const results = withBalance.map((r, i) =>
+    r.status === 'fulfilled' ? r.value : {
+      guid: items[i]?.guid || items[i]?.id, handle: items[i]?.handle || null,
+      created: items[i]?.created || null, balance_gdc: null, balance_krw: null, balance_error: true,
+    }
+  );
+
+  return new Response(JSON.stringify({ ok: true, query: q, count: results.length, users: results }),
+    { status: 200, headers: corsHeaders });
+}
+
 async function handleAdminBulkDelete(request, env, corsHeaders) {
   const admin = await _requireAdmin(request, env);
   if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
