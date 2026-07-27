@@ -1748,7 +1748,7 @@ routerAdd("POST", "/api/mint", (c) => {
   //  커서 소액 차감의 정밀도가 떨어졌다 — 100:1로 낮춰 GDC 단위를
   //  세분화한다. 이 상수를 바꾸면 worker.js의 동일 이름 상수 3곳도
   //  반드시 함께 바꿀 것 — 파일 내 다른 곳의 주석 참고.)
-  const EXCHANGE_RATE_KRW_PER_GDC = 100; // KRW 100 = GDC 1
+  const EXCHANGE_RATE_KRW_PER_GDC = 1; // KRW 1 = GDC 1 (2026-07-27: 100→1 정정, 테스트 기간 한정 — 주피터 지시. worker.js 2곳도 함께 변경 필수)
 
   try {
     console.log("[MINT] 진입");
@@ -2025,7 +2025,7 @@ routerAdd("POST", "/api/mint", (c) => {
 // 적용했다(파일 위쪽 해당 주석 참고) — AI 차감 블록은 P2P 정산 체인과
 // 완전히 무관한 별도 계열이어야 한다.
 routerAdd("POST", "/api/ai-charge", (c) => {
-  const EXCHANGE_RATE_KRW_PER_GDC = 100; // /api/mint와 동일 환율(정본은 그쪽 — 콜백마다 재선언 필요, Goja 제약 상단 주석 참고). 2026-07-23: 1000→100 정정
+  const EXCHANGE_RATE_KRW_PER_GDC = 1; // /api/mint와 동일 환율(정본은 그쪽 — 콜백마다 재선언 필요, Goja 제약 상단 주석 참고). 2026-07-27: 100→1 정정(테스트 기간 한정)
 
   try {
     console.log("[AI-CHARGE] 진입");

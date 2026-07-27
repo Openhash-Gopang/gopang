@@ -1007,7 +1007,7 @@ async function _recordFreeSpend(env, guid, usageKRW) {
 //  이 값을 바꿀 땐 반드시 main.pb.js의 EXCHANGE_RATE_KRW_PER_GDC도
 //  함께 바꿀 것. gwp-registry.js에 가격 갱신 배치를 넣을 때(SP-GDC-
 //  BILLING-v1.0 TODO 4-3) 이 상수도 그 배치가 갱신하도록 편입 검토.)
-const EXCHANGE_RATE_KRW_PER_GDC = 100; // 2026-07-23: 1000 → 100 정정 (main.pb.js와 함께 변경)
+const EXCHANGE_RATE_KRW_PER_GDC = 1; // 2026-07-27: 100 → 1 정정(테스트 기간 한정, 주피터 지시) — main.pb.js 2곳 + worker.js 아래 1곳 함께 변경 필수
 
 // 무료 한도 소진 후, 이번 요청을 통과시켜도 되는지 사전 확인하기 위해
 // L1의 실제 GDC 잔액을 조회한다(SP-GDC-BILLING-v2_0 STEP 0 게이트웨이
@@ -1114,8 +1114,8 @@ async function _settleAiUsage(env, guid, bill, meta = {}) {
 // (2026-07-23 신설)
 //
 // 가입 직후(핵심 지갑키 등록 시점, handleRegisterKey 신규 등록 분기) 1회,
-// 100원 상당(=1 GDC, EXCHANGE_RATE_KRW_PER_GDC=100 기준) GDC를 실제
-// 지갑 잔액으로 지급한다. 기존 "가입자당 100원 무료 한도"(KV
+// 100원 상당(=100 GDC, 2026-07-27부터 EXCHANGE_RATE_KRW_PER_GDC=1 기준 —
+// 테스트 기간 한정 1:1 환율) GDC를 실제 지갑 잔액으로 지급한다. 기존 "가입자당 100원 무료 한도"(KV
 // hondi:free_spend, FREE_QUOTA_KRW_LIMIT)는 실지갑 잔액과 무관한 별도
 // 가상 카운터로 손대지 않는다 — 이번 신설분은 그 위에 실제 GDC 잔액을
 // 하나 더 얹는 것이라, 두 예산이 순서대로(가상 100원 → 실지갑 0.1GDC)
@@ -1127,7 +1127,7 @@ async function _settleAiUsage(env, guid, bill, meta = {}) {
 // 추적을 위해 별도 mint 엔드포인트를 새로 만들지 않음) — memo로
 // "signup_bonus"를 남겨 일반 유상 충전과 블록 단위에서 구분 가능하게 한다.
 // ═══════════════════════════════════════════════════════════
-const SIGNUP_BONUS_KRW = 100; // 100원 상당 = 1 GDC (100:1 환율 기준, 2026-07-23 정정)
+const SIGNUP_BONUS_KRW = 100; // 100원 상당 = 100 GDC (1:1 환율 기준, 2026-07-27부터 테스트 기간 한정)
 
 // 멱등성: KV hondi:signup_bonus_granted:{guid} 플래그로 평생 1회만 지급.
 // mint 자체가 실패하면 플래그를 세우지 않아 다음 로그인/재등록 시 자동 재시도된다.
@@ -1231,7 +1231,7 @@ async function handleSignupBonusRetry(request, env, corsHeaders) {
 // 기록해 두고 — 이후 사용자가 충전해서 문턱값 위로 회복되면 플래그를
 // 지워 다음에 다시 낮아질 때 재알림이 가능하게 한다.
 // ═══════════════════════════════════════════════════════════
-const GDC_LOW_BALANCE_THRESHOLD_KRW = 20; // 잔액이 20원 상당(=0.2 GDC, 100:1 환율 기준) 이하로 내려가면 알림
+const GDC_LOW_BALANCE_THRESHOLD_KRW = 20; // 잔액이 20원 상당(=20 GDC, 1:1 환율 기준, 2026-07-27부터) 이하로 내려가면 알림
 const GDC_LOW_BALANCE_THRESHOLD_GDC = GDC_LOW_BALANCE_THRESHOLD_KRW / EXCHANGE_RATE_KRW_PER_GDC;
 
 async function _checkLowBalanceAndNotify(env, guid, balanceGdc) {
@@ -7438,6 +7438,18 @@ export default {
     if (pathname === '/admin/users/search' && request.method === 'GET')
       return handleAdminUserSearch(request, env, corsHeaders);
 
+    // GET /admin/users/history?guid=... — 특정 사용자의 입금(deposit)·
+    // 사용량 차감(ai_usage_charge) 이력 (2026-07-27 신설)
+    if (pathname === '/admin/users/history' && request.method === 'GET')
+      return handleAdminUserHistory(request, env, corsHeaders);
+
+    // POST /admin/users/manual-charge — 관리자가 입금 확인 후 특정 사용자에게
+    // 수동으로 GDC를 충전 (2026-07-27 신설). 기존 charge.html의 매칭코드
+    // 요청·확정 흐름과 별개로, 관리자가 사용자 검색 결과에서 바로 임의
+    // 금액을 충전할 수 있게 하는 경로 — /api/mint를 그대로 재사용한다.
+    if (pathname === '/admin/users/manual-charge' && request.method === 'POST')
+      return handleAdminManualCharge(request, env, corsHeaders);
+
     // ── 디폴트 LLM 키 관리 ──────────────────────────────────────
     // POST /admin/default-key  — 관리자가 KV에 저장 (HMAC 인증)
     // GET  /default-key        — 앱이 체험기간 확인 후 키 수신
@@ -7939,7 +7951,7 @@ async function _lookupSellerVerification(env, guid) {
 // (KRW 재전환) 기능이 생기면 그 소각분을 여기서 반드시 차감해야 한다 —
 // 지금 이 함수는 그 경우를 대비한 자리만 남겨둔다(REDEEMED_TOTAL=0 고정).
 async function handleLedgerIssuanceSummary(request, env, corsHeaders) {
-  const EXCHANGE_RATE_KRW_PER_GDC = 100; // pb_hooks와 동일 환율(정본은 그쪽). 2026-07-23: 1000→100 정정
+  const EXCHANGE_RATE_KRW_PER_GDC = 1; // pb_hooks와 동일 환율(정본은 그쪽). 2026-07-27: 100→1 정정(테스트 기간 한정)
   const EXEMPTION_THRESHOLD_BALANCE_GDC = 30_000_000;   // 30억원 / 100원 (2026-07-23: 환율 변경으로 재계산 — KRW 법정 기준액 자체는 불변)
   const EXEMPTION_THRESHOLD_ANNUAL_GDC  = 500_000_000;  // 500억원 / 100원 (2026-07-23: 환율 변경으로 재계산 — KRW 법정 기준액 자체는 불변)
 
@@ -13951,6 +13963,115 @@ async function _deleteAllUserData(env, guid, l1Record) {
 // 수행하되, limit을 50으로 상한해 한 번의 요청이 L1에 과도한 부하를
 // 주지 않게 한다.
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// GET /admin/users/history?guid=<guid>&limit=<기본30,최대100> — 특정
+// 사용자의 입금(deposit)·사용량 차감(ai_usage_charge) 이력 (2026-07-27 신설)
+//
+// L1 "blocks" 컬렉션의 block_type 필드로 구분한다:
+//   - deposit(발행/충전): 실제 수령자 guid는 buyer_guid가 아니라
+//     seller_guid에 들어간다(buyer_guid는 "gdc-mint"로 고정 — main.pb.js
+//     handleMint 참고). outputs[0]에 amount(GDC)·krw_amount·mint_method.
+//   - ai_usage_charge(사용량 차감): buyer_guid가 실사용자다. outputs[0]에
+//     amount(GDC)·krw_amount·model·cost_krw·memo.
+// 두 타입 다 최신순으로 합쳐서 반환한다 — "입금/충전 history를
+// 일목요연하게" 보여달라는 요구사항 그대로.
+// ═══════════════════════════════════════════════════════════
+async function handleAdminUserHistory(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
+
+  const url = new URL(request.url);
+  const guid = url.searchParams.get('guid');
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  let limit = parseInt(url.searchParams.get('limit') || '30', 10);
+  if (!Number.isFinite(limit) || limit <= 0) limit = 30;
+  if (limit > 100) limit = 100;
+
+  let items = [];
+  try {
+    const token = await _l1AdminToken(env);
+    const esc = guid.replace(/'/g, "\\'");
+    const filter = `(seller_guid='${esc}'&&block_type='deposit')||(buyer_guid='${esc}'&&block_type='ai_usage_charge')`;
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/blocks/records?filter=${encodeURIComponent(filter)}&sort=-created&perPage=${limit}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    if (!res.ok) return _err(502, 'L1_ERROR', `L1 조회 실패 (HTTP ${res.status})`, corsHeaders);
+    const data = await res.json().catch(() => ({ items: [] }));
+    items = data.items || [];
+  } catch (e) {
+    return _err(502, 'L1_ERROR', 'L1 조회 실패: ' + e.message, corsHeaders);
+  }
+
+  const history = items.map(rec => {
+    let out = {};
+    try { out = (JSON.parse(rec.outputs || '[]'))[0] || {}; } catch (e) { /* 파싱 실패 시 빈 값으로 */ }
+    const isDeposit = rec.block_type === 'deposit';
+    return {
+      type: isDeposit ? 'deposit' : 'ai_usage_charge',
+      tx_hash: rec.tx_hash,
+      created: rec.created,
+      amount_gdc: out.amount ?? null,
+      krw_amount: out.krw_amount ?? null,
+      mint_method: isDeposit ? (out.mint_method || null) : null,
+      model: !isDeposit ? (out.model || null) : null,
+      cost_krw: !isDeposit ? (out.cost_krw ?? null) : null,
+      memo: out.memo || null,
+    };
+  });
+
+  return new Response(JSON.stringify({ ok: true, guid, count: history.length, history }),
+    { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// POST /admin/users/manual-charge — 관리자 수동 충전 (2026-07-27 신설)
+// body: { guid, krw_amount, memo? }
+//
+// 배경: 은행 입금 알림(사람이 직접 확인)을 받은 관리자가, 매칭코드
+// 기반 사전 신청(charge.html) 없이도 사용자 검색 결과에서 바로 임의
+// 금액을 충전할 수 있게 하는 경로다. /api/mint를 그대로 재사용해
+// 감사 추적(발행 원장)을 기존 발행 경로와 동일하게 남긴다 — 별도
+// mint 로직을 새로 만들지 않는다.
+// ═══════════════════════════════════════════════════════════
+async function handleAdminManualCharge(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
+
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { guid, krw_amount, memo } = body;
+  if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  const krwAmount = Number(krw_amount);
+  if (!(krwAmount > 0)) return _err(400, 'INVALID_AMOUNT', 'krw_amount는 0보다 커야 합니다', corsHeaders);
+
+  try {
+    const mintRes = await fetch(`${L1_DEFAULT}/api/mint`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guid, krw_amount: krwAmount, secret: _mintSecret(env),
+        memo: 'manual_charge:' + (memo || `관리자 수동 충전(${admin?.sub || admin?.role || 'admin'})`),
+      }),
+    });
+    const data = await mintRes.json().catch(() => ({ ok: false, error: 'L1_PARSE_FAILED' }));
+    if (!data.ok) {
+      console.warn(JSON.stringify({ tag: 'MANUAL_CHARGE_FAILED', guid, krwAmount, error: data.error, ts: new Date().toISOString() }));
+      return new Response(JSON.stringify(data), { status: 502, headers: corsHeaders });
+    }
+    // /api/mint는 balance_after를 반환하지 않는다(amount·krw_amount·exchange_rate만) —
+    // 최신 잔액이 필요하면 프론트에서 getBalanceGdcForStatus 경로(예: 검색
+    // 재실행)로 별도 조회한다. 여기서 잘못된 필드를 지어내 반환하지 않는다.
+    console.log(JSON.stringify({
+      tag: 'MANUAL_CHARGE_OK', guid, krwAmount, mintedGdc: data.amount,
+      admin: admin?.sub || admin?.role, ts: new Date().toISOString(),
+    }));
+    return new Response(JSON.stringify(data), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 호출 실패: ' + e.message, corsHeaders);
+  }
+}
+
 async function handleAdminUserSearch(request, env, corsHeaders) {
   const admin = await _requireAdmin(request, env);
   if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
