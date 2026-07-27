@@ -173,6 +173,31 @@ function _paGuid() {
   } catch { return 'anonymous'; }
 }
 
+// ── AC↔PA 실시간 채널 (2026-07-27 신설) ──────────────────────────────
+// 주피터님 지시: "AC는 PA의 진행 상황을 실시간으로 파악하고 있어야
+// 한다." PA는 별도 탭이라(EXPERT처럼 같은 history를 공유하지 않음) 매
+// STEP마다 opener(AC 탭)에 가벼운 상태를 명시적으로 알려야만 AC가 다음
+// 응답에서 그걸 참조할 수 있다. 채팅 버블은 찍지 않는다 — 매 STEP마다
+// AC 쪽에 말풍선이 뜨면 애초에 탭을 분리했던 이유(2026-07-11, 대화
+// 흐름이 안 끊기게)가 무색해진다. engine.js가 조용히 상태만 들고
+// 있다가, 사용자가 AC와 다시 대화할 때 자연스럽게 반영한다.
+const _PA_STEP_LABELS = {
+  1: '기본 정보 확인 중', 2: '핵심 정보 수집 중', 3: 'GDC 결제 여부 확인 중',
+  4: '계좌 이체 지원 확인 중', 5: '예약 기능 확인 중', 6: '공개 여부 확인 중',
+};
+function _reportProgressToAC(step, total) {
+  try {
+    if (!window.opener || window.opener.closed) return;
+    window.opener.postMessage({
+      type: 'GWP_PROGRESS',
+      step, total,
+      label: _PA_STEP_LABELS[step] || '',
+    }, RETURN);
+  } catch (e) {
+    console.warn('[PA] 진행 상황 보고 실패(무시, 프로필 작성 자체는 계속 진행):', e.message);
+  }
+}
+
 // _buildProfileContext — call-ai.js의 동명 함수를 그대로 이식(순수 함수,
 // localStorage만 읽으므로 call-ai.js 전체를 이 독립 탭에 끌어들이지 않고
 // 여기 복제한다 — manifest-loader.js를 별도 파일로 뺀 것과 같은 이유).
@@ -447,9 +472,10 @@ async function _handleReplyTags(fullReply) {
     }
   }
   // 단계 업데이트 [N/6단계]
-  const stepMatch = fullReply.match(/\[(\d+)\/\d+단계\]/);
+  const stepMatch = fullReply.match(/\[(\d+)\/(\d+)단계\]/);
   if (stepMatch && !localStorage.getItem('hondi_profile_done')) {
     try { localStorage.setItem('hondi_profile_step', stepMatch[1]); } catch {}
+    _reportProgressToAC(parseInt(stepMatch[1], 10), parseInt(stepMatch[2], 10));
   }
   // TUTORIAL_ADVANCE — 매 단계 즉시 저장(탭 강제종료에도 보존)
   const tutAdv = fullReply.match(/\[TUTORIAL_ADVANCE:(\d+)\]/);

@@ -18,7 +18,8 @@ import { CFG, _modelSupportsVision, PROVIDER_INFO, getPriorityOrder, MODEL_MIGRA
 import { TOKEN_BUDGET } from '../core/token-policy.js';
 import { IMPORTANCE } from '../../core/constants.js';
 import { aiActive, history, _userLocation,
-         _USER, USER_GUID, _locationPending, _locationReady } from '../core/state.js';
+         _USER, USER_GUID, _locationPending, _locationReady,
+         _gwpLiveProgress, _paHandoffPending, setPaHandoffPending } from '../core/state.js';
 import { appendBubble, showTyping, hideTyping,
          _createStreamBubble, _updateStreamBubble } from '../ui/bubble.js';
 import { _buildLocNote, _buildRoutingFacts } from '../services/location.js';
@@ -2448,6 +2449,35 @@ function _buildJobKscoReviewContext() {
   } catch { return ''; }
 }
 
+// AC↔PA 실시간 채널(2026-07-27 신설) — PA(profile-assistant) 세션이 끝나면
+// engine.js가 setPaHandoffPending()으로 6하원칙 형태 보고를 딱 1번 남긴다.
+// 지금까지는 이 정보가 UI 버블(appendBubble)과 PDV에만 남고 AC의 실제
+// history(다음 턴에 모델이 실제로 보는 대화)엔 전혀 안 들어가서, 사람은
+// 화면에서 완료 요약을 봐도 AC 모델 자신은 그걸 "기억"하지 못했다(EXPERT
+// 핸드오프는 같은 history를 공유해 이 문제 자체가 없었는데, PA는 별도
+// 탭·별도 history라 명시적으로 다시 주입해야만 한다 — 격리 리팩터링
+// (2026-07-11)이 깨뜨린 부수효과를 여기서 복구한다). firstContact/
+// jobKscoReview와 동일한 1회성 소비 패턴 — 한 번 [ctx]에 실리면 즉시
+// 비운다(다음 턴에 같은 보고를 반복하지 않음).
+function _buildPaHandoffContext() {
+  if (!_paHandoffPending) return '';
+  const p = _paHandoffPending;
+  setPaHandoffPending(null); // 1회성 — 이번 턴에 실었으니 즉시 소비
+  const parts6w = [
+    p.what ? `무엇을: ${p.what}` : null,
+    p.why  ? `왜: ${p.why}`     : null,
+    p.how  ? `어떻게: ${p.how}` : null,
+  ].filter(Boolean).join(' / ');
+  return (
+    `[PA_HANDOFF_REPORT: 방금 별도 탭에서 진행되던 프로필 작성이 끝났습니다 ` +
+    `— "${p.summary}"${parts6w ? ` (${parts6w})` : ''}. 사용자가 이미 결과를 ` +
+    `화면에서 봤으므로 다시 요약해서 말해줄 필요는 없습니다 — 그저 이 사실을 ` +
+    `배경지식으로 알고 있다가, 사용자가 이어서 관련 질문을 하거나(예: "내 ` +
+    `프로필 어때 보여?", "그거 하다 말았는데") 자연스러운 기회가 오면 문맥에 ` +
+    `맞게 반영하십시오. 먼저 나서서 언급할 필요는 없습니다.]\n\n`
+  );
+}
+
 export function _buildPdvReviewContext() {
   try {
     // 프로필이 이미 완성된 사용자는 이 트리거 대상이 아니다(§0-1-P[6]의
@@ -2726,6 +2756,18 @@ async function _buildEnhancedUserContent(userContent) {
         .join('; ');
       parts.push(`배정된업무(${assignments.length}건):${asgStr}`);
     }
+    // AC↔PA 실시간 채널(2026-07-27 신설) — PA(profile-assistant)가 다른 탭에서
+    // 진행 중이면 매 턴 이 짧은 신호를 반영한다. 사용자가 PA 탭을 열어둔 채
+    // AC 탭으로 돌아와 다른 말을 걸어도, AC가 "지금 프로필 작성 중"임을
+    // 알고 자연스럽게 반영할 수 있다(§0-1-P[4] "실행 지시 우선" 원칙과
+    // 상충하지 않음 — 이건 그냥 배경지식이고, 대화를 그쪽으로 끌고 가라는
+    // 뜻이 아니다). 태그가 아니라 다른 신호들과 동일하게 key:value 한 줄로만
+    // 얹는다 — AC가 이 정보를 어떻게 쓸지는 §0-1-P의 절제 원칙에 맡긴다.
+    if (_gwpLiveProgress) {
+      const { step, total, label } = _gwpLiveProgress;
+      const stepStr = (step && total) ? `${step}/${total}단계` : '진행중';
+      parts.push(`PA진행:${stepStr}${label ? `(${label})` : ''}`);
+    }
   } catch {}
 
   // 2026-07-15 신설 — UNIVERSAL-job-assist(U1~U6) 주입. system이 아니라
@@ -2776,9 +2818,12 @@ async function _buildEnhancedUserContent(userContent) {
   // job_ksco 재확인(2026-07-14 신설, 구멍 E) — 위와 별개 타이머·대상.
   const jobKscoReviewBlock = _buildJobKscoReviewContext();
 
-  if (!parts.length && !firstContact && !faqBlock && !integrityBlock && !shareBlock && !pdvReviewBlock && !jobKscoReviewBlock) return userContent;
+  // AC↔PA 실시간 채널(2026-07-27 신설) — PA 세션이 막 끝났을 때만 1회.
+  const paHandoffBlock = _buildPaHandoffContext();
 
-  const ctxBlock = integrityBlock + shareBlock + pdvReviewBlock + jobKscoReviewBlock + firstContact + faqBlock + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
+  if (!parts.length && !firstContact && !faqBlock && !integrityBlock && !shareBlock && !pdvReviewBlock && !jobKscoReviewBlock && !paHandoffBlock) return userContent;
+
+  const ctxBlock = integrityBlock + shareBlock + pdvReviewBlock + jobKscoReviewBlock + paHandoffBlock + firstContact + faqBlock + (parts.length ? `[ctx]\n${parts.join('\n')}\n\n` : '');
 
   // multipart(이미지 포함) 메시지 처리
   if (Array.isArray(userContent)) {

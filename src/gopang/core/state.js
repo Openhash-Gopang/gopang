@@ -129,6 +129,25 @@ export function setGwpService(v)  { _gwpService  = v; }
 export function setGwpTab(v)      { _gwpTab      = v; }
 export function setGwpTabTimer(v) { _gwpTabTimer = v; }
 
+// ── AC↔PA 실시간 채널 (2026-07-27 신설) ──────────────────────
+// 주피터님 지시: "AC와 PA는 별개 SP이지만 상호 긴밀히 협조해야 하고,
+// AC는 PA의 진행 상황을 실시간으로 파악하고 있어야 한다." PA는 별도
+// 탭·별도 history라(EXPERT처럼 같은 배열을 공유하지 않음) 이 두 값을
+// 명시적으로 들고 있어야만 AC가 다음 턴에 그걸 참조할 수 있다.
+//   _gwpLiveProgress: PA가 진행 중인 동안의 "현재 상태" 스냅샷(계속 덮어씀).
+//     매 턴 [ctx]에 짧게 반영돼, 사용자가 AC 탭으로 돌아와도 AC가 "지금
+//     프로필 작성 중이시죠"를 알 수 있게 한다. PA 세션이 끝나면(GWP_DONE/
+//     탭 닫힘) null로 되돌아간다.
+//   _paHandoffPending: PA가 끝났을 때 딱 1번, AC의 다음 응답 직전 [ctx]에
+//     실려 들어가는 완료 보고(6하원칙 형태). 소비되면(한 번 [ctx]에
+//     반영되면) 즉시 null로 비운다 — firstContact/jobKscoReview 등
+//     기존 "1회성 트리거형 컨텍스트"와 동일한 소비 패턴.
+export let _gwpLiveProgress  = null;
+export let _paHandoffPending = null;
+
+export function setGwpLiveProgress(v)  { _gwpLiveProgress  = v; }
+export function setPaHandoffPending(v) { _paHandoffPending = v; }
+
 // ── K-Law ────────────────────────────────────────────────
 export let _klawBusy      = false;
 export let _klawLastCheck = 0;
