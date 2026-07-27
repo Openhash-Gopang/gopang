@@ -1129,6 +1129,10 @@ async function _settleAiUsage(env, guid, bill, meta = {}) {
 // ═══════════════════════════════════════════════════════════
 const SIGNUP_BONUS_KRW = 100; // 100원 상당 = 100 GDC (1:1 환율 기준, 2026-07-27부터 테스트 기간 한정)
 
+// 관리자 수동 충전 안전장치(2026-07-27 신설 — 미비점 3 보완)
+const MANUAL_CHARGE_HARD_CAP_KRW = 500000;       // 1회 절대 상한 — 이 이상은 무조건 거부, 나눠서 처리
+const MANUAL_CHARGE_CONFIRM_THRESHOLD_KRW = 100000; // 이 이상은 confirm_large:true 재요청 필요(2단계 확인)
+
 // 멱등성: KV hondi:signup_bonus_granted:{guid} 플래그로 평생 1회만 지급.
 // mint 자체가 실패하면 플래그를 세우지 않아 다음 로그인/재등록 시 자동 재시도된다.
 // (2026-07-23: 관리자 재시도 엔드포인트(handleSignupBonusRetry)가 결과를
@@ -7449,6 +7453,12 @@ export default {
     // 금액을 충전할 수 있게 하는 경로 — /api/mint를 그대로 재사용한다.
     if (pathname === '/admin/users/manual-charge' && request.method === 'POST')
       return handleAdminManualCharge(request, env, corsHeaders);
+
+    // GET /admin/manual-charges/recent?limit=... — 전체 관리자 수동충전
+    // 감사로그 (2026-07-27 신설). 콘솔로그(휘발성)만 있던 걸 조회
+    // 가능한 UI로 보완한다.
+    if (pathname === '/admin/manual-charges/recent' && request.method === 'GET')
+      return handleAdminManualChargesRecent(request, env, corsHeaders);
 
     // ── 디폴트 LLM 키 관리 ──────────────────────────────────────
     // POST /admin/default-key  — 관리자가 KV에 저장 (HMAC 인증)
@@ -13976,6 +13986,62 @@ async function _deleteAllUserData(env, guid, l1Record) {
 // 두 타입 다 최신순으로 합쳐서 반환한다 — "입금/충전 history를
 // 일목요연하게" 보여달라는 요구사항 그대로.
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// GET /admin/manual-charges/recent?limit=<기본30,최대100> — 전체 관리자
+// 수동충전 감사로그 (2026-07-27 신설)
+//
+// L1 blocks에서 block_type='deposit'이면서 memo가 'manual_charge|'로
+// 시작하는 것만 필터링한다. memo 형식(manual_charge|admin=X|note=Y)을
+// 파싱해 담당자·메모를 분리해 반환한다 — 콘솔로그(휘발성)만 있던 걸
+// 비개발자도 조회 가능한 UI로 보완하는 것이 목적이다.
+// ═══════════════════════════════════════════════════════════
+async function handleAdminManualChargesRecent(request, env, corsHeaders) {
+  const admin = await _requireAdmin(request, env);
+  if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
+
+  const url = new URL(request.url);
+  let limit = parseInt(url.searchParams.get('limit') || '30', 10);
+  if (!Number.isFinite(limit) || limit <= 0) limit = 30;
+  if (limit > 100) limit = 100;
+
+  let items = [];
+  try {
+    const token = await _l1AdminToken(env);
+    // PocketBase 필터는 부분일치(~)를 지원 — memo가 'manual_charge|'로
+    // 시작하는지는 contains로 근사한다(정확한 startsWith 연산자가 없어
+    // block_type과 결합해 오탐 가능성을 낮춘다).
+    const filter = encodeURIComponent(`block_type='deposit'&&memo~'manual_charge|'`);
+    const res = await fetch(
+      `${L1_DEFAULT}/api/collections/blocks/records?filter=${filter}&sort=-created&perPage=${limit}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    if (!res.ok) return _err(502, 'L1_ERROR', `L1 조회 실패 (HTTP ${res.status})`, corsHeaders);
+    const data = await res.json().catch(() => ({ items: [] }));
+    items = data.items || [];
+  } catch (e) {
+    return _err(502, 'L1_ERROR', 'L1 조회 실패: ' + e.message, corsHeaders);
+  }
+
+  const logs = items.map(rec => {
+    let out = {};
+    try { out = (JSON.parse(rec.outputs || '[]'))[0] || {}; } catch (e) { /* 무시 */ }
+    const memo = out.memo || '';
+    const adminMatch = memo.match(/admin=([^|]*)/);
+    const noteMatch  = memo.match(/note=(.*)$/);
+    return {
+      created: rec.created,
+      target_guid: out.recipient_guid || null,
+      amount_gdc: out.amount ?? null,
+      krw_amount: out.krw_amount ?? null,
+      admin: adminMatch ? adminMatch[1] : null,
+      note: noteMatch ? noteMatch[1] : null,
+    };
+  });
+
+  return new Response(JSON.stringify({ ok: true, count: logs.length, logs }),
+    { status: 200, headers: corsHeaders });
+}
+
 async function handleAdminUserHistory(request, env, corsHeaders) {
   const admin = await _requireAdmin(request, env);
   if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
@@ -14034,6 +14100,20 @@ async function handleAdminUserHistory(request, env, corsHeaders) {
 // 감사 추적(발행 원장)을 기존 발행 경로와 동일하게 남긴다 — 별도
 // mint 로직을 새로 만들지 않는다.
 // ═══════════════════════════════════════════════════════════
+// 2026-07-27 신설 — guid에 해당하는 profiles 레코드가 실제로 존재하는지
+// 확인한다. _l1FindProfileByHandle과 같은 패턴(guid 필드로 필터링).
+async function _l1FindProfileByGuid(env, guid) {
+  const token = await _l1AdminToken(env);
+  const esc = guid.replace(/'/g, "\\'");
+  const filter = encodeURIComponent(`guid='${esc}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`L1 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
 async function handleAdminManualCharge(request, env, corsHeaders) {
   const admin = await _requireAdmin(request, env);
   if (!admin) return _err(401, 'UNAUTHORIZED', '관리자 인증이 필요합니다', corsHeaders);
@@ -14041,17 +14121,77 @@ async function handleAdminManualCharge(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
 
-  const { guid, krw_amount, memo } = body;
+  const { guid, krw_amount, memo, confirm_large, idempotency_key } = body;
   if (!guid) return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
   const krwAmount = Number(krw_amount);
   if (!(krwAmount > 0)) return _err(400, 'INVALID_AMOUNT', 'krw_amount는 0보다 커야 합니다', corsHeaders);
+
+  // 2026-07-27 신설 — 오탈자 guid에 발행을 시도해 사실상 유실되는 것을
+  // 방지한다. 지금 UI 흐름(검색→클릭→충전)에서는 이미 존재가 확인된
+  // guid만 넘어오지만, API 직접 호출·향후 다른 진입점을 대비한 방어적
+  // 검증이다.
+  try {
+    const profile = await _l1FindProfileByGuid(env, guid);
+    if (!profile) return _err(404, 'GUID_NOT_FOUND', '해당 guid의 사용자를 찾을 수 없습니다', corsHeaders);
+  } catch (e) {
+    return _err(502, 'L1_ERROR', 'guid 확인 실패: ' + e.message, corsHeaders);
+  }
+
+  // 2026-07-27 재사고실험 발견 — 미비점: 이 엔드포인트에 멱등성 보호가
+  // 전혀 없었다. 관리자가 "충전 확정"을 두 번 누르거나(더블클릭·느린
+  // 네트워크에서 재시도), 브라우저가 요청을 재전송하면 같은 입금이
+  // 두 번 발행될 수 있었다 — /api/ai-charge가 이미 tx_hash로 중복을
+  // 막는 것과 같은 보호가 이 경로엔 없었다. 클라이언트가 매 "충전 확정"
+  // 클릭마다 고유 idempotency_key(예: crypto.randomUUID())를 생성해
+  // 함께 보내야 하며, 이 키로 24시간 내 중복 요청을 차단한다.
+  if (!idempotency_key) return _err(400, 'MISSING_FIELD', 'idempotency_key 필수(클라이언트가 매 요청마다 새로 생성)', corsHeaders);
+
+  const kv = env.AI_SETUP_SEALS_KV;
+  const idemKvKey = `hondi:manual_charge_idem:${idempotency_key}`;
+  if (kv) {
+    try {
+      const already = await kv.get(idemKvKey);
+      if (already) {
+        // 이미 처리된 요청 — 새로 발행하지 않고 이전 결과를 그대로 반환해
+        // 클라이언트가 "실패했나?" 오인해 또 누르는 것도 안전하게 흡수한다.
+        return new Response(already, { status: 200, headers: corsHeaders });
+      }
+    } catch (e) {
+      console.warn('[ManualCharge] 멱등성 키 조회 실패(계속 진행, 중복 위험 있음):', e.message);
+    }
+  } else {
+    console.warn('[ManualCharge] AI_SETUP_SEALS_KV 바인딩 없음 — 멱등성 보호 불가로 계속 진행');
+  }
+
+  // 미비점 3 보완(2026-07-27): 오탈자로 인한 대규모 오발행 방지.
+  // 1회당 절대 상한(MANUAL_CHARGE_HARD_CAP_KRW)은 어떤 경우에도 넘을 수
+  // 없고, 그 아래 경고 문턱(MANUAL_CHARGE_CONFIRM_THRESHOLD_KRW) 이상은
+  // 프론트가 confirm_large:true를 명시적으로 다시 보내야만 진행한다
+  // (2단계 확인 — 실수로 큰 금액을 한 번에 누르는 것을 막는다).
+  if (krwAmount > MANUAL_CHARGE_HARD_CAP_KRW) {
+    return _err(400, 'AMOUNT_EXCEEDS_CAP',
+      `1회 충전 한도(${MANUAL_CHARGE_HARD_CAP_KRW.toLocaleString('ko-KR')}원)를 초과했습니다. 나눠서 처리하세요.`,
+      corsHeaders);
+  }
+  if (krwAmount >= MANUAL_CHARGE_CONFIRM_THRESHOLD_KRW && !confirm_large) {
+    return new Response(JSON.stringify({
+      ok: false, error: 'CONFIRMATION_REQUIRED',
+      message: `${krwAmount.toLocaleString('ko-KR')}원은 고액입니다. 금액을 다시 확인한 뒤 confirm_large:true로 재요청하세요.`,
+      requires_confirmation: true,
+    }), { status: 409, headers: corsHeaders });
+  }
 
   try {
     const mintRes = await fetch(`${L1_DEFAULT}/api/mint`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         guid, krw_amount: krwAmount, secret: _mintSecret(env),
-        memo: 'manual_charge:' + (memo || `관리자 수동 충전(${admin?.sub || admin?.role || 'admin'})`),
+        // 2026-07-27 수정 — 이전엔 memo || 기본문구 방식이라, 관리자가
+        // 커스텀 메모를 남기면 담당자 식별자가 기록에서 사라졌다(감사
+        // 추적 결함). 이제 담당자 식별자를 항상 별도로 붙인다 —
+        // GET /admin/manual-charges/recent가 이 형식을 파싱해 담당자별로
+        // 보여준다.
+        memo: `manual_charge|admin=${admin?.sub || admin?.role || 'unknown'}` + (memo ? `|note=${memo}` : ''),
       }),
     });
     const data = await mintRes.json().catch(() => ({ ok: false, error: 'L1_PARSE_FAILED' }));
@@ -14059,14 +14199,28 @@ async function handleAdminManualCharge(request, env, corsHeaders) {
       console.warn(JSON.stringify({ tag: 'MANUAL_CHARGE_FAILED', guid, krwAmount, error: data.error, ts: new Date().toISOString() }));
       return new Response(JSON.stringify(data), { status: 502, headers: corsHeaders });
     }
-    // /api/mint는 balance_after를 반환하지 않는다(amount·krw_amount·exchange_rate만) —
-    // 최신 잔액이 필요하면 프론트에서 getBalanceGdcForStatus 경로(예: 검색
-    // 재실행)로 별도 조회한다. 여기서 잘못된 필드를 지어내 반환하지 않는다.
+
+    // 미비점 2 보완(2026-07-27): /api/mint 응답엔 balance_after가 없어서
+    // 관리자가 충전 후 최신 잔액을 바로 못 봤다 — 여기서 한 번 더 조회해
+    // 채워준다(실패해도 충전 자체는 이미 완료된 것이므로 null로 정직하게 둔다).
+    const balanceAfterGdc = await getBalanceGdcForStatus(guid);
+    const responsePayload = {
+      ...data,
+      balance_after_gdc: balanceAfterGdc,
+      balance_after_krw: balanceAfterGdc != null ? Math.round(balanceAfterGdc * EXCHANGE_RATE_KRW_PER_GDC) : null,
+    };
+
     console.log(JSON.stringify({
-      tag: 'MANUAL_CHARGE_OK', guid, krwAmount, mintedGdc: data.amount,
-      admin: admin?.sub || admin?.role, ts: new Date().toISOString(),
+      tag: 'MANUAL_CHARGE_OK', guid, krwAmount, mintedGdc: data.amount, balanceAfterGdc,
+      admin: admin?.sub || admin?.role, idempotency_key, ts: new Date().toISOString(),
     }));
-    return new Response(JSON.stringify(data), { status: 200, headers: corsHeaders });
+
+    if (kv) {
+      try { await kv.put(idemKvKey, JSON.stringify(responsePayload), { expirationTtl: 86400 }); } // 24시간 보관
+      catch (e) { console.warn('[ManualCharge] 멱등성 키 저장 실패(다음 재시도 시 중복 위험):', e.message); }
+    }
+
+    return new Response(JSON.stringify(responsePayload), { status: 200, headers: corsHeaders });
   } catch (e) {
     return _err(502, 'L1_UNREACHABLE', 'L1 호출 실패: ' + e.message, corsHeaders);
   }
