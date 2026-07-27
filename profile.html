@@ -51,7 +51,15 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f9fafb;color:
 .profile-hero{background:#fff;padding:0 20px 16px;margin-top:-44px;position:relative}
 .profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent-teal),#3569d7);
   display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;
-  color:#fff;flex-shrink:0;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+  color:#fff;flex-shrink:0;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.1);
+  background-size:cover;background-position:center}
+
+/* ── 사진 갤러리 (2026-07-27 신설) — 간판·메뉴판·사업자등록증 등
+   §IMAGE-SCAN으로 첨부한 사진을 실제로 보여주는 그리드. 클릭하면
+   원본 크기로 새 탭에서 열린다(별도 라이트박스 없이 가장 단순한 방식). */
+.photo-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 20px}
+.photo-gallery img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;
+  cursor:pointer;background:var(--bg-subtle,#f3f4f6)}
 
 /* ── 신뢰도 온도 배지 — 우측 상단, 당근마켓 매너온도 스타일 차용 (2026-07-13) ── */
 .hero-top-row{display:flex;justify-content:space-between;align-items:flex-start}
@@ -404,6 +412,12 @@ watchHondiSkin({
   <div class="card hidden" id="card-hours">
     <div class="card-title">영업시간</div>
     <table class="hours-table" id="hours-table"></table>
+  </div>
+
+  <!-- 사진 (§IMAGE-SCAN·카메라로 첨부한 사진 갤러리, 2026-07-27 신설) -->
+  <div class="card hidden" id="card-photos">
+    <div class="card-title">사진</div>
+    <div class="photo-gallery" id="photo-gallery"></div>
   </div>
 
   <!-- 판매 상품 (사업자) -->
@@ -812,9 +826,15 @@ function render(p) {
   document.getElementById('p-handle').textContent  = p.handle || '';
   document.getElementById('p-type-sub').textContent = TYPE_KO[p.entity_type] || '';
 
-  // 아바타: 이름 첫 글자
+  // 아바타: avatar_url이 있으면 실제 사진, 없으면 이름 첫 글자(기존 동작)
   const av = document.getElementById('p-avatar');
-  av.textContent = (p.name || '?')[0];
+  if (pub.avatar_url) {
+    av.textContent = '';
+    av.style.backgroundImage = `url("${pub.avatar_url}")`;
+  } else {
+    av.style.backgroundImage = '';
+    av.textContent = (p.name || '?')[0];
+  }
 
   // 뱃지 (유형은 위에서 서브텍스트로 표시 — 뱃지에는 결제 등 특수 표시만)
   const badges = document.getElementById('p-badges');
@@ -918,6 +938,16 @@ function render(p) {
       </tr>`;
     }).join('');
     document.getElementById('card-hours').classList.remove('hidden');
+  }
+
+  // ── 사진 갤러리 (2026-07-27 신설) ──
+  const photoUrls = Array.isArray(pub.photo_urls) ? pub.photo_urls : [];
+  if (photoUrls.length) {
+    const gallery = document.getElementById('photo-gallery');
+    gallery.innerHTML = photoUrls.map(url =>
+      `<img src="${url}" alt="${p.name || ''}" loading="lazy" onclick="window.open('${url}','_blank')">`
+    ).join('');
+    document.getElementById('card-photos').classList.remove('hidden');
   }
 
   // ── 판매 상품 ──

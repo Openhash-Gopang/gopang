@@ -7365,6 +7365,16 @@ export default {
     if (pathname === '/profile/verify-owner' && request.method === 'GET')
       return handleProfileVerifyOwner(request, env, corsHeaders);
 
+    // 2026-07-27 신설 — 프로필 사진 업로드/서빙. /profile/claim과 동일한
+    // 이유로 generic startsWith('/profile')보다 먼저 체크해야 한다.
+    if (pathname === '/profile/photo-upload' && request.method === 'POST')
+      return handleProfilePhotoUpload(request, env, corsHeaders);
+    // 퍼블릭 서빙 — R2를 커스텀 도메인으로 따로 공개하지 않고 이 워커가
+    // 유일한 진입점 역할을 한다(위 wrangler.toml 주석 참조). 인증 불필요
+    // (공개 프로필의 사진이므로 GET은 누구나 볼 수 있어야 한다).
+    if (pathname.startsWith('/media/profile-photo/') && request.method === 'GET')
+      return handleMediaGet(request, env, corsHeaders);
+
     // 2026-07-12 — SP-18_ksearch STEP3 선행조건 (c): claim(정식 전환) 절차.
     // /profile POST보다 먼저 체크해야 한다 — startsWith('/profile')이
     // '/profile/claim'도 매칭해버리므로, 더 구체적인 경로를 먼저 분기.
@@ -15464,6 +15474,114 @@ async function handleProfileClaim(request, env, corsHeaders) {
   return new Response(JSON.stringify({ ok: true, guid, claim_status: 'claimed', claim_method: claimMethod, agent: agentResult }), { status: 200, headers: corsHeaders });
 }
 
+// ═══════════════════════════════════════════════════════════
+// 프로필 사진 업로드/서빙 (2026-07-27 신설)
+// ═══════════════════════════════════════════════════════════
+// 배경: profile-assistant의 §IMAGE-SCAN이 사진(간판·메뉴판·사업자등록증·
+// 명함)을 AI가 "읽어서" 텍스트 필드만 채우고, 사진 자체는 저장할 곳이
+// 없어(R2 등 바인딩 부재) 대화가 끝나면 사라지고 있었다 — "프로필이
+// 미니 웹사이트로 기능해야 한다"는 요구사항에 비춰보면 사진이 실제로
+// 남아 보여야 한다. 이 두 엔드포인트가 그 저장·서빙을 담당한다.
+//
+// 인증 방식은 handleProfilePost와 동일한 Ed25519 서명(guid:pubkey:ts)
+// 이다 — 시스템 전체가 서명 체계를 하나만 공유한다는 기존 원칙을 그대로
+// 따른다. 다만 이 시점엔 아직 profiles 레코드 자체가 없을 수 있으므로
+// (§IMAGE-SCAN은 PROFILE_SUBMIT 이전, 대화 도중에도 사진을 받는다) TOFU
+// pubkey 고정은 여기서 하지 않는다 — "이 guid의 사진 폴더에 쓸 수 있다"는
+// 서명 검증만 하고, 실제 프로필과의 소유권 고정은 최종 handleProfilePost
+// 쪽 TOFU 검증이 담당한다(이미 존재하는 방어선을 중복 구현하지 않음).
+
+const PROFILE_PHOTO_MAX_BYTES = 5 * 1024 * 1024; // 5MB — 디코딩된 원본 기준
+const PROFILE_PHOTO_MIME_EXT = {
+  'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+};
+
+function _base64ToBytes(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+// POST /profile/photo-upload
+// body: { guid, pubkey, signature, ts, image_base64, mime_type }
+// → { ok:true, url } — url은 이 워커의 /media/profile-photo/... 경로(퍼블릭 GET)
+async function handleProfilePhotoUpload(request, env, corsHeaders) {
+  if (!env.PROFILE_MEDIA) {
+    // R2 바인딩이 아직 배포에 반영되지 않은 환경(로컬 개발 등) — 사진 없이도
+    // 프로필 작성 자체는 막지 않아야 하므로(§0 U0), 명확한 오류로 실패시켜
+    // 클라이언트가 "사진 저장은 실패했지만 나머지는 정상"으로 처리하게 한다
+    // (client-side try/catch에서 이 실패를 무시하고 계속 진행하도록 설계됨
+    // — welcome.js/profile-assistant.html 쪽 참고).
+    return _err(503, 'PHOTO_STORAGE_UNAVAILABLE', 'R2 바인딩(PROFILE_MEDIA)이 설정되지 않았습니다', corsHeaders);
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { guid, pubkey, signature, ts, image_base64, mime_type } = body;
+  if (!guid)         return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!pubkey)       return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  if (!signature)    return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+  if (!image_base64) return _err(400, 'MISSING_FIELD', 'image_base64 필수', corsHeaders);
+
+  const sigMsg = `${guid}:${pubkey}:${ts || ''}`;
+  const sigOk = await _verifyEd25519Simple(pubkey, signature, sigMsg);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+
+  const ext = PROFILE_PHOTO_MIME_EXT[mime_type];
+  if (!ext) return _err(400, 'INVALID_MIME_TYPE', `지원하지 않는 이미지 형식입니다: ${JSON.stringify(mime_type)} (허용: jpeg/png/webp)`, corsHeaders);
+
+  let bytes;
+  try {
+    bytes = _base64ToBytes(image_base64);
+  } catch (e) {
+    return _err(400, 'INVALID_BASE64', 'image_base64 디코딩 실패: ' + e.message, corsHeaders);
+  }
+  if (bytes.byteLength > PROFILE_PHOTO_MAX_BYTES) {
+    return _err(400, 'FILE_TOO_LARGE', `이미지가 너무 큽니다(${Math.round(bytes.byteLength / 1024)}KB, 최대 ${PROFILE_PHOTO_MAX_BYTES / 1024 / 1024}MB)`, corsHeaders);
+  }
+
+  // guid를 그대로 R2 키에 넣지 않는다(guid=IPv6, 경로에 콜론이 섞이면
+  // URL 파싱이 지저분해진다) — URL-safe하게 인코딩.
+  const safeGuid = encodeURIComponent(guid);
+  const key = `${safeGuid}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+  try {
+    await env.PROFILE_MEDIA.put(key, bytes, {
+      httpMetadata: { contentType: mime_type, cacheControl: 'public, max-age=31536000, immutable' },
+    });
+  } catch (e) {
+    return _err(502, 'R2_WRITE_FAILED', 'R2 저장 실패: ' + e.message, corsHeaders);
+  }
+
+  const url = `https://hondi-proxy.tensor-city.workers.dev/media/profile-photo/${key}`;
+  return new Response(JSON.stringify({ ok: true, url, key }), { status: 200, headers: corsHeaders });
+}
+
+// GET /media/profile-photo/{guid}/{filename}
+async function handleMediaGet(request, env, corsHeaders) {
+  if (!env.PROFILE_MEDIA) return _err(503, 'PHOTO_STORAGE_UNAVAILABLE', 'R2 바인딩이 설정되지 않았습니다', corsHeaders);
+
+  const url = new URL(request.url);
+  const key = url.pathname.replace(/^\/media\/profile-photo\//, '');
+  // 경로 순회 방지(../ 등) — R2 key에 그런 문자가 있을 이유가 없다.
+  if (!key || key.includes('..')) return _err(400, 'INVALID_KEY', '잘못된 경로입니다', corsHeaders);
+
+  let obj;
+  try {
+    obj = await env.PROFILE_MEDIA.get(key);
+  } catch (e) {
+    return _err(502, 'R2_READ_FAILED', 'R2 조회 실패: ' + e.message, corsHeaders);
+  }
+  if (!obj) return _err(404, 'NOT_FOUND', '사진을 찾을 수 없습니다', corsHeaders);
+
+  const headers = new Headers(corsHeaders);
+  headers.set('Content-Type', obj.httpMetadata?.contentType || 'application/octet-stream');
+  headers.set('Cache-Control', obj.httpMetadata?.cacheControl || 'public, max-age=31536000, immutable');
+  return new Response(obj.body, { status: 200, headers });
+}
+
 async function handleProfilePost(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
@@ -15540,6 +15658,20 @@ async function handleProfilePost(request, env, corsHeaders) {
     // 명시적으로 보내면 그 값을 쓰되, 안 보내면 아래에서 industry_fields.schema_id
     // (KSIC)로부터 자동 파생한다 — 손으로 두 번 입력하게 하지 않는다.
     occupation = null,
+    // 2026-07-27 신설 — PA(profile-assistant) §IMAGE-SCAN·PROFILE_SUBMIT
+    // 스키마가 데이터 출처(pa_dialogue|pdv_shadow|website|physical_scan)를
+    // data_sources에 담아 보내도록 설계돼 있었으나, 이 함수 destructure
+    // 목록에 없어 저장 경로 자체가 없었다(PA 전용 사고실험으로 발견 —
+    // §0 참조. schema_id/occupation과 동일한 유형의 결함).
+    data_sources = {},
+    // 2026-07-27 신설 — 프로필 사진(§IMAGE-SCAN으로 첨부된 사진을
+    // /profile/photo-upload로 실제 저장한 뒤 돌려받은 URL). avatar_url은
+    // 세션 중 처음 첨부된 사진(보통 간판·명함), photo_urls는 그 세션에서
+    // 첨부된 모든 사진의 갤러리 — welcome.js/profile-assistant.html이
+    // 업로드 완료 후 클라이언트에서 채워 넣는다(PA 프롬프트가 URL을 직접
+    // 다루지 않는다 — schema_id 정규화와 동일한 패턴).
+    avatar_url = null,
+    photo_urls = null,
   } = body;
 
   if (!entity_type) return _err(400, 'MISSING_FIELD', 'entity_type 필수', corsHeaders);
@@ -15574,7 +15706,18 @@ async function handleProfilePost(request, env, corsHeaders) {
   // 2026-06-22: industry_fields.schema_id 검증 — AI(SP)가 지침을 어기고 "{ksic}" 같은
   // 미치환 리터럴이나 정의되지 않은 코드를 보내도 그대로 저장되지 않게 막는다.
   // null/undefined(=미해당)는 항상 허용 — GENERIC 경로의 정상 동작.
-  if (body.industry_fields != null) {
+  // 2026-07-27 수정 — 위 주석의 "null/undefined는 항상 허용"이 실제로는
+  // 지켜지지 않고 있었다(PA 전용 사고실험 재검증으로 발견). 게이트가
+  // `industry_fields`의 존재 여부만 봤는데, STEP3B(예약 수락)가 person을
+  // 제외한 모든 entity_type에 무조건 실행되며 schema_id와 무관하게
+  // industry_fields.reservation_config를 항상 채우므로, "업종을 특정할 수
+  // 없어 P1-INFER 원칙대로 schema_id 없이 넘어간" 정상적인 경우조차
+  // industry_fields가 non-null이라는 이유만으로 매번 400 처리되고 있었다
+  // (schema_id 자체를 industry_fields로 정규화하는 클라이언트 수정
+  // 만으로는 이 경우가 해결되지 않는다 — 애초에 schema_id가 없기 때문).
+  // 게이트를 schema_id 키 자체의 존재 여부로 좁혀 주석이 원래 의도한
+  // 동작과 일치시킨다 — "{ksic}" 같은 미치환 리터럴 차단 목적은 그대로 유지.
+  if (body.industry_fields && body.industry_fields.schema_id != null) {
     const sid = body.industry_fields.schema_id;
     if (!sid || !VALID_INDUSTRY_SCHEMA_IDS.has(String(sid))) {
       return _err(400, 'INVALID_SCHEMA_ID',
@@ -15655,6 +15798,35 @@ async function handleProfilePost(request, env, corsHeaders) {
       ? field_visibility[f]
       : DEFAULT_PUBLIC_FIELDS.has(f);
   }
+
+  // 2026-07-27 신설 — data_sources 형식 정리(PA §IMAGE-SCAN 근거).
+  // "pa_dialogue|pdv_shadow|website|physical_scan" 화이트리스트 밖 값이나
+  // 형식이 이상한 항목은 저장 자체를 막지 않고 그 항목만 조용히 제거한다
+  // (§0 U0 "실패보다 진행" 원칙 — schema_id처럼 안전·검색에 직결되는
+  // 필드가 아니라 감사·품질 분석용 메타데이터일 뿐이므로, 여기서 400을
+  // 내면 오히려 이 필드 하나 때문에 프로필 저장 전체가 막히는 버그#1과
+  // 같은 실수를 반복하게 된다).
+  const VALID_DATA_SOURCES = new Set(['pa_dialogue', 'pdv_shadow', 'website', 'physical_scan']);
+  const resolvedDataSources = {};
+  if (data_sources && typeof data_sources === 'object' && !Array.isArray(data_sources)) {
+    for (const [field, src] of Object.entries(data_sources)) {
+      if (typeof field === 'string' && VALID_DATA_SOURCES.has(src)) {
+        resolvedDataSources[field] = src;
+      }
+    }
+  }
+
+  // 2026-07-27 신설 — avatar_url/photo_urls는 반드시 이 워커 자신의
+  // /media/profile-photo/ 경로여야 한다(임의의 외부 URL을 공개 프로필
+  // <img src>에 그대로 노출하면 안 됨 — 다른 사이트 콘텐츠 도용·추적
+  // 픽셀·피싱 이미지 등에 악용될 수 있다). 형식이 안 맞으면 저장 실패로
+  // 막지 않고 그 항목만 조용히 제거한다(§0 U0 원칙 — data_sources와 동일).
+  const MEDIA_URL_PREFIX = 'https://hondi-proxy.tensor-city.workers.dev/media/profile-photo/';
+  const _isValidMediaUrl = (u) => typeof u === 'string' && u.startsWith(MEDIA_URL_PREFIX);
+  const resolvedAvatarUrl = _isValidMediaUrl(avatar_url) ? avatar_url : null;
+  const resolvedPhotoUrls = Array.isArray(photo_urls)
+    ? photo_urls.filter(_isValidMediaUrl).slice(0, 20) // 갤러리 상한 20장
+    : null;
 
   // 2026-07-13 신설 — job_ksco 형식 검증(AC-AUTHOR_v1_0.md §3-1/§6).
   // 서버는 코드 형식과 허용 필드만 검증한다 — 1,999개 KSCO 코드→명칭
@@ -15822,6 +15994,18 @@ async function handleProfilePost(request, env, corsHeaders) {
     // 2026-06-22: 업종/유형별 확장 슬롯(profile_pdv_schema_plan_v1.md Phase 1).
     // 'industry_fields' in body로 "필드 자체를 안 보냄(보존)"과 "null을 명시적으로 보냄(비움)"을 구분.
     industry_fields: ('industry_fields' in body) ? body.industry_fields : ((prevExtra.public || {}).industry_fields ?? null),
+    // 2026-07-27 신설 — data_sources(PA §IMAGE-SCAN 데이터 출처 4종) 저장.
+    // 'data_sources' in body로 "안 보냄(기존값 보존)"과 "빈 객체를 명시적으로
+    // 보냄(비움)"을 구분 — products_structured/industry_fields와 동일 관례.
+    // 필드 단위 병합(merge)이 아니라 이번 제출값으로 통째 교체한다 — PA가
+    // 매 제출마다 자신이 알고 있는 전체 출처 맵을 다시 구성해 보내는 것을
+    // 전제로 하므로(스냅샷), 이전 값과 섞으면 이미 지워진 필드의 출처
+    // 표기가 유령처럼 남을 수 있다.
+    data_sources: ('data_sources' in body) ? resolvedDataSources : ((prevExtra.public || {}).data_sources ?? {}),
+    // 2026-07-27 신설 — 'in body'로 "안 보냄(보존)"과 "명시적 null/빈
+    // 배열로 비움"을 구분(다른 필드들과 동일 관례).
+    avatar_url: ('avatar_url' in body) ? resolvedAvatarUrl : ((prevExtra.public || {}).avatar_url ?? null),
+    photo_urls: ('photo_urls' in body) ? (resolvedPhotoUrls ?? []) : ((prevExtra.public || {}).photo_urls ?? []),
   };
   const newExtra = { ...prevExtra, public: newExtraPublic };
 

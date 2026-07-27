@@ -30,7 +30,7 @@ export async function _showWelcomeMessage() {
 // ── PROFILE_SUBMIT 파서 ───────────────────────────────────
 // call-ai.js의 응답에서 PROFILE_SUBMIT {...} 블록을 감지하여
 // Worker에 POST하고 IndexedDB PDV를 초기화
-export async function handleProfileSubmit(aiResponseText) {
+export async function handleProfileSubmit(aiResponseText, extraFields = {}) {
   const match = aiResponseText.match(/PROFILE_SUBMIT\s*(\{[\s\S]*?\})\s*(?:$|\n)/);
   if (!match) return false;
 
@@ -67,7 +67,37 @@ export async function handleProfileSubmit(aiResponseText) {
     }
   }
 
+  // industry_fields.schema_id 정규화 (2026-07-27 버그 수정) — profile-assistant SP는
+  // PROFILE_SUBMIT 최상위에 schema_id(KSIC)를 실어 보내는데, worker.js
+  // handleProfilePost()는 industry_fields.schema_id만 검증·저장한다(최상위
+  // schema_id는 구조분해 목록에도 없어 조용히 버려짐). 게다가 STEP3B(예약
+  // 수락 여부)가 person을 제외한 모든 entity_type에 무조건 실행되며
+  // industry_fields.reservation_config를 항상 채우므로, industry_fields가
+  // non-null인데 그 안에 schema_id가 없어 서버가 400 INVALID_SCHEMA_ID로
+  // 저장 자체를 거부하는 상태였다(entity_type≠person 전수 재현 — 100건
+  // 사고실험 결과 §0 참조). _forwardProductsToMarket()의 /biz/catalog/sync
+  // 요청에는 이미 있던 것과 동일한 정규화를 여기 /profile 요청에도 추가한다.
+  if (profile.entity_type !== 'person' && profile.schema_id != null) {
+    const sid = String(profile.schema_id);
+    if (/^\d{2}$/.test(sid)) {
+      profile.industry_fields = { ...(profile.industry_fields || {}), schema_id: sid };
+    } else {
+      console.warn('[Profile] schema_id 형식 불일치, industry_fields 병합 생략:', sid);
+    }
+  }
+
   const PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
+
+  // 프로필 사진(avatar_url/photo_urls) 병합 (2026-07-27 신설) — PA는
+  // PROFILE_SUBMIT 스키마에 이 필드를 애초에 정의하지 않는다(사진 URL은
+  // /profile/photo-upload 응답값이라 LLM이 알 수 없는 값 — schema_id
+  // 정규화와 동일한 이유로 클라이언트가 대신 채워 넣는다). 호출자가 값을
+  // 안 넘겼으면(extraFields 미사용 호출부) 이 블록은 아무 영향 없음 —
+  // profile에 이미 없는 필드를 새로 추가하지 않는다.
+  if (extraFields.avatar_url) profile.avatar_url = extraFields.avatar_url;
+  if (Array.isArray(extraFields.photo_urls) && extraFields.photo_urls.length) {
+    profile.photo_urls = extraFields.photo_urls;
+  }
 
   try {
     // ── Ed25519 서명 (2026-07-07 버그 수정) ──
