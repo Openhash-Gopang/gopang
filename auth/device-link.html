@@ -26,6 +26,11 @@
     font-size: 15px; margin-bottom: 16px; font-family: inherit;
   }
   input:focus { outline: none; border-color: #0057A8; }
+  select {
+    width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 15px; margin-bottom: 16px; font-family: inherit; background: #fff;
+  }
+  select:focus { outline: none; border-color: #0057A8; }
   button {
     width: 100%; padding: 13px; border: none; border-radius: 10px;
     font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
@@ -56,9 +61,27 @@
     같은 폰이라도 Chrome·Safari 등 브라우저가 다르면 별개로 인식됩니다.)
   </p>
 
-  <!-- STEP 1: 전화번호 입력 -->
+  <!-- STEP 1: 전화번호 입력
+       (2026-07-27 개편 — 기존엔 자유 텍스트 입력 한 줄에 자체
+       normalizePhoneToE164()로 "+82"+숫자만 이어붙였는데, 앞자리
+       "010"/지역번호를 빠뜨려도 검증 없이 그대로 서버로 보내 존재하는
+       계정을 못 찾는 사고실험 결함이 나왔다. 회원가입 화면
+       (src/gopang/core/auth.js initAuthWithPhone)이 이미 갖고 있던
+       "휴대폰/유선 선택 + 지역번호 선택 + 뒷자리 숫자"라는 검증된 구조를
+       그대로 재사용해 유선전화까지 안전하게 지원한다. -->
   <div class="step active" id="step-phone">
-    <label for="phone">스마트폰에 등록된 전화번호</label>
+    <label for="phone-type">전화 종류</label>
+    <select id="phone-type">
+      <option value="mobile">휴대폰</option>
+      <option value="landline">유선전화(지역번호)</option>
+    </select>
+
+    <div id="area-code-row" style="display:none">
+      <label for="area-code">지역번호</label>
+      <select id="area-code"></select>
+    </div>
+
+    <label for="phone" id="phone-label">스마트폰에 등록된 전화번호</label>
     <input id="phone" type="tel" placeholder="010-1234-5678" autocomplete="tel">
     <button id="btn-request">스마트폰으로 요청 보내기</button>
   </div>
@@ -81,7 +104,9 @@
   <div id="status"></div>
 </div>
 
-<script>
+<script type="module">
+import { _buildKrE164, KR_AREA_CODES, krNeededDigitsFor } from '../src/gopang/core/auth.js';
+
 (() => {
   const WORKER = 'https://hondi-proxy.tensor-city.workers.dev';
   const RETURN_URL = new URLSearchParams(location.search).get('return') || '/webapp.html';
@@ -122,29 +147,101 @@
     statusEl.className = kind || '';
   }
 
-  function normalizePhoneToE164(v) {
-    const digits = v.replace(/[^0-9]/g, '');
-    if (!digits) return null;
-    // ★ 2026-07-20 수정 — 버그였다. auth.js의 buildE164()/COUNTRIES.KR을
-    // 확인해보니 이 시스템의 실제 관례는 "+82" 뒤에 "010"을 그대로 붙이는
-    // 것이다(예: 010-9662-7170 → "+8201096627170") — 표준 E.164처럼
-    // 앞자리 0을 제거하는 게 아니다. 0을 제거하던 이전 코드가
-    // "+821096627170"(이 시스템 기준으로는 틀린 형식)을 만들어
-    // /auth/device-link/init이 400으로 거부하고 있었다.
-    return '+82' + digits;
+  const phoneTypeEl = $('phone-type');
+  const areaCodeRow = $('area-code-row');
+  const areaCodeEl  = $('area-code');
+  const phoneLabel  = $('phone-label');
+
+  KR_AREA_CODES.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.code;
+    opt.textContent = `${a.name} (0${a.code})`;
+    areaCodeEl.appendChild(opt);
+  });
+
+  function _currentPhoneType() { return phoneTypeEl.value === 'landline' ? 'landline' : 'mobile'; }
+  function _currentAreaCode()  { return _currentPhoneType() === 'landline' ? areaCodeEl.value : null; }
+
+  function _updatePhoneUI() {
+    const isLandline = _currentPhoneType() === 'landline';
+    areaCodeRow.style.display = isLandline ? 'block' : 'none';
+    const needed = krNeededDigitsFor(_currentPhoneType(), _currentAreaCode());
+    if (isLandline) {
+      phoneLabel.textContent = '전화번호(지역번호 제외 뒷자리)';
+      $('phone').placeholder = `가입자번호 ${needed}자리`;
+    } else {
+      phoneLabel.textContent = '스마트폰에 등록된 전화번호';
+      $('phone').placeholder = '010-1234-5678';
+    }
+  }
+  phoneTypeEl.addEventListener('change', _updatePhoneUI);
+  areaCodeEl.addEventListener('change', _updatePhoneUI);
+  _updatePhoneUI();
+
+  // ── 전화번호 입력값 → e164 ─────────────────────────────
+  // ★ 2026-07-27 교체 — 기존 normalizePhoneToE164()는 형식 검증 없이
+  // "+82"+숫자만 이어붙여서, 휴대폰 앞자리 "010"을 빠뜨린 입력도 그대로
+  // 서버에 보내(서버가 재정규화하며 "82096627170" 같은 엉뚱한 값을
+  // 만들어) 존재하는 계정을 "등록된 계정 없음"으로 오판하게 했다
+  // (사고실험에서 발견). 이제 회원가입 화면과 동일한 auth.js의
+  // _buildKrE164/krNeededDigitsFor를 그대로 재사용한다 — 입력값에서
+  // 필요한 자릿수만큼 뒤에서부터 잘라 쓰므로, 사용자가 "010"/지역번호를
+  // 포함해서 입력했든 빼고 입력했든 결과가 항상 같고, 자릿수가 안 맞으면
+  // (server 재정규화가 만들어내는 엉뚱한 값 대신) 여기서 명확히 실패
+  // 처리한다. 유선전화(지역번호)도 이 경로로 함께 지원된다.
+  function buildE164FromInput() {
+    const phoneType = _currentPhoneType();
+    const areaCode  = _currentAreaCode();
+    if (phoneType === 'landline' && !areaCode) return null; // 지역번호 미선택
+    const rawDigits = $('phone').value.replace(/[^0-9]/g, '');
+    const needed = krNeededDigitsFor(phoneType, areaCode);
+    // 사용자가 "010"/지역번호까지 포함해서 입력했을 수도 있으니, 필요한
+    // 자릿수만큼 뒤에서부터 취한다 — 포함 여부와 무관하게 항상 같은
+    // 결과가 나온다. 자릿수가 부족하면(needed보다 짧으면) 그대로 두어
+    // 아래 length 비교에서 명확히 실패하게 한다.
+    const localDigits = rawDigits.length > needed ? rawDigits.slice(-needed) : rawDigits;
+    if (localDigits.length !== needed) return null;
+    return _buildKrE164(phoneType, areaCode, localDigits);
   }
 
-  // ── STEP 1: 요청 보내기 ─────────────────────────────
-  function e164ToKrDisplay(e164) {
-    // "+8201012345678" → "01012345678"(이미 앞자리 0 포함, 11자리) →
-    // "010-1234-5678". 위 정규화 수정과 짝을 이루는 수정 — 여기서도
-    // "0"을 추가로 더 붙이면 12자리가 돼 형식이 깨졌었다.
+  // e164 문자열 → { type, areaCode, local, display } 파싱. 표시(display)와
+  // select 상태 복원(_applyE164ToPhoneUI) 양쪽에서 공유해 로직이 갈라지지
+  // 않게 한다.
+  function _parseE164Kr(e164) {
     const digits = e164.replace(/^\+82/, '');
-    if (digits.length !== 11) return e164; // 예상 밖 형식이면 그대로 반환(정규화 단계에서 재검증됨)
-    return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
+    if (digits.length === 11 && digits.startsWith('010')) {
+      return { type: 'mobile', areaCode: null,
+        display: `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}` };
+    }
+    for (const a of KR_AREA_CODES) {
+      const prefix = '0' + a.code;
+      if (digits.startsWith(prefix)) {
+        return { type: 'landline', areaCode: a.code,
+          display: `${prefix}-${digits.slice(prefix.length)}` };
+      }
+    }
+    return null; // 알 수 없는 형식
+  }
+
+  function e164ToKrDisplay(e164) {
+    const parsed = _parseE164Kr(e164);
+    return parsed ? parsed.display : e164; // 예상 밖 형식이면 그대로 반환(정규화 단계에서 재검증됨)
+  }
+
+  // PREFILLED_PHONE/캐시된 e164를 복원할 때, 입력창 텍스트뿐 아니라
+  // 휴대폰/유선·지역번호 select 상태까지 함께 맞춘다(2026-07-27 신설) —
+  // 이게 안 맞으면 그대로 제출 시 buildE164FromInput()이 잘못된 자릿수
+  // 기준으로 뒷자리를 잘라내 엉뚱한 번호가 만들어진다.
+  function _applyE164ToPhoneUI(e164) {
+    const parsed = _parseE164Kr(e164);
+    if (!parsed) { $('phone').value = e164; return; }
+    phoneTypeEl.value = parsed.type;
+    if (parsed.type === 'landline') areaCodeEl.value = parsed.areaCode;
+    _updatePhoneUI();
+    $('phone').value = parsed.display;
   }
   if (PREFILLED_PHONE) {
-    $('phone').value = e164ToKrDisplay(PREFILLED_PHONE);
+    _applyE164ToPhoneUI(PREFILLED_PHONE);
     setStatus('본인 계정 확인 — 번호가 자동으로 채워졌습니다.');
   } else if (PURPOSE === 'sign_request') {
     // 공용 PC 세션에서 이미 한 번 승인받은 번호가 있으면 재사용 —
@@ -154,17 +251,26 @@
     // "이 번호로 보낼지" 타이핑뿐이다.
     const cached = sessionStorage.getItem(CACHED_E164_KEY);
     if (cached) {
-      $('phone').value = e164ToKrDisplay(cached);
+      _applyE164ToPhoneUI(cached);
       setStatus('이전에 사용한 번호로 자동 채워졌습니다. 바로 요청을 보낼 수 있습니다.');
     }
   }
 
   $('btn-request').addEventListener('click', async () => {
     // 기기 불일치 화면(auth.js)에서 넘어온 경우도 위에서 이미 표준
-    // "010-1234-5678" 형식으로 채워뒀으므로, 아래는 항상 같은 경로
-    // (normalizePhoneToE164)로 처리한다 — 별도 분기 불필요.
-    const e164 = normalizePhoneToE164($('phone').value);
-    if (!e164) { setStatus('전화번호를 입력해 주세요.', 'error'); return; }
+    // "010-1234-5678"/"지역번호+뒷자리" 형식으로 채워뒀으므로, 아래는
+    // 항상 같은 경로(buildE164FromInput)로 처리한다 — 별도 분기 불필요.
+    const e164 = buildE164FromInput();
+    if (!e164) {
+      const needed = krNeededDigitsFor(_currentPhoneType(), _currentAreaCode());
+      setStatus(
+        _currentPhoneType() === 'landline' && !_currentAreaCode()
+          ? '지역번호를 선택해 주세요.'
+          : `전화번호 뒷자리 ${needed}자리를 정확히 입력해 주세요.`,
+        'error'
+      );
+      return;
+    }
     e164Used = e164;
 
     $('btn-request').disabled = true;

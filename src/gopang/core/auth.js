@@ -275,7 +275,14 @@ export async function ensureWalletSetup() {
 // ── 한국 유선 지역번호 목록 (서울만 1자리, 나머지 전부 2자리) ──────
 // hondi-digit-code.js의 VALID_AREA_CODES와 반드시 동일한 코드 값을
 // 유지해야 한다(숫자 코드 인코딩/디코딩과 짝이 맞아야 하므로).
-const KR_AREA_CODES = [
+// 2026-07-27 — export 추가: auth/device-link.html이 자체적으로 전화번호
+// 정규화를 다시 구현하다가(normalizePhoneToE164) 휴대폰 앞자리 "010"
+// 누락을 검증 없이 그냥 이어붙이는 버그를 냈다(사고실험에서 발견 —
+// 존재하는 계정인데 "번호로 등록된 계정 없음" 오류가 남). 근본 원인은
+// 이 목록과 아래 _buildKrE164/krNeededDigitsFor 같은 검증된 로직이
+// 이 파일에만 있고 재사용이 안 됐던 것 — 이제 export해서 그쪽에서
+// 그대로 가져다 쓴다.
+export const KR_AREA_CODES = [
   { code: '2',  name: '서울' },
   { code: '31', name: '경기' },
   { code: '32', name: '인천' },
@@ -517,6 +524,15 @@ export function _buildKrE164(phoneType, areaCode, digits) {
 export function _buildKrHandle(phoneType, areaCode, digits) {
   if (phoneType === 'mobile') return buildHandle(digits, 'KR');
   return `@0${areaCode}-${digits}`;
+}
+
+// 휴대폰/지역번호 선택 시 필요한 가입자번호 자릿수(서울만 8자리, 그 외
+// 지역은 7자리, 휴대폰은 8자리) — 순수 함수로 분리해 외부(예:
+// auth/device-link.html)에서도 재사용할 수 있게 했다(2026-07-27,
+// _buildKrE164와 짝을 이루는 export — 위 changelog 참고).
+export function krNeededDigitsFor(phoneType, areaCode) {
+  if (phoneType === 'mobile') return 8;
+  return areaCode === '2' ? 8 : 7;
 }
 
 // ── SHA-256 헬퍼 ─────────────────────────────────────────
@@ -1230,12 +1246,10 @@ function _showPhonePopup(resolve) {
   const krListEl      = document.getElementById('_kr-areatype-list');
   const krSearchEl    = document.getElementById('_kr-areatype-search');
 
-  // 휴대폰 또는 지역번호 선택 시 필요한 가입자번호 자릿수
-  // (서울만 8자리, 그 외 지역은 7자리, 휴대폰은 8자리 — 이전 대화에서
-  // 정한 혼디 숫자 코드 인코딩 규칙과 반드시 일치해야 한다)
+  // 휴대폰 또는 지역번호 선택 시 필요한 가입자번호 자릿수 — 실제 계산은
+  // 모듈 최상위 krNeededDigitsFor(순수 함수, 위 export 참고)에 위임한다.
   function _krNeededDigits() {
-    if (phoneType === 'mobile') return 8;
-    return areaCode === '2' ? 8 : 7;
+    return krNeededDigitsFor(phoneType, areaCode);
   }
 
   function _renderKrAreaList(query = '') {
