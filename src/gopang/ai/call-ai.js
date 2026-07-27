@@ -3508,50 +3508,39 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
       }
       userContent = userText;
     } else {
-      // 비전 지원 모델 — base64 변환 후 multipart content
-      // DeepSeek API: image_url 형식 미지원 → base64를 텍스트로 포함
-      // OpenAI 호환 모델(gpt-4o 등): image_url 형식 사용
+      // 비전 지원 모델 — base64 변환 후 multipart content(image_url 형식).
+      // 2026-07-27 수정 — 이전엔 "DeepSeek API는 image_url 미지원"이라는
+      // 전제로 DeepSeek 계열에는 base64 앞 100자만 텍스트로 잘라 보내는
+      // 별도 분기가 있었는데, 이건 애초에 어떤 모델도 읽을 수 없는
+      // 문자열이라 사실상 이미지를 통째로 무시하는 것과 같았다(비전을
+      // "지원한다"고 판단해 이 분기까지 왔는데 실제로는 이미지가 전혀
+      // 전달되지 않음). 게다가 CFG.model 기본값 자체가 'deepseek-v4-flash'
+      // (자체 API 키가 없는 사실상 모든 사용자의 기본 경로)라, 이 분기가
+      // 가장 흔한 경로였을 것으로 보인다. profile-assistant.html의 실제
+      // 사진 판독(§IMAGE-SCAN)은 처음부터 provider 구분 없이 image_url을
+      // 그대로 써왔고 정상 동작해왔다(worker.js의 callDeepSeek이 메시지를
+      // 그대로 벤더 API에 패스스루하므로, 이 워커를 거치는 이상 형식은
+      // provider와 무관하게 동일해야 한다 — config.js 자체가 "모든
+      // provider가 OpenAI 호환 형식 지원"을 전제로 설계돼 있음). 그 검증된
+      // 방식으로 통일한다 — provider별 분기 자체를 없앤다.
       try {
         const dataUrl  = await _fileToBase64(imageFile);
         const mimeType = imageFile.type;
         const base64   = dataUrl.split(',')[1];
 
-        const isOpenAI = CFG.endpoint.includes('openai.com') ||
-                         CFG.endpoint.includes('azure') ||
-                         CFG.model.startsWith('gpt-');
-        const isDeepSeek = CFG.endpoint.includes('deepseek') ||
-                           CFG.endpoint.includes('workers.dev');
-
         userContent = [];
         if (userText) {
           userContent.push({ type: 'text', text: userText });
         }
-
-        if (isOpenAI) {
-          // OpenAI 형식: image_url
-          userContent.push({
-            type: 'image_url',
-            image_url: { url: `data:${mimeType};base64,${base64}` },
-          });
-          // 텍스트 없이 이미지만 전송 시 — 의도 자율 파악 지시
-          if (!userText) {
-            userContent.push({
-              type: 'text',
-              text: '[텍스트 없이 이미지만 전송됨]\n사용자의 의도를 이미지에서 직접 파악하여 처리하라.\n환경 오염·쓰레기 현장이면 K-Cleaner v1.2 신고·견적을 자동 실행하고,\n그 외 이미지는 내용에 맞는 적절한 도움을 제공하라.\n불명확할 때만 한 가지 확인 질문을 한다.',
-            });
-          }
-        } else {
-          // DeepSeek 형식: base64를 텍스트로 포함
-          // DeepSeek API는 image_url 미지원 → base64 데이터를 직접 전달
-          userContent = [];
-          if (userText) userContent.push({ type: 'text', text: userText });
-          // 텍스트 없이 이미지만 전송 시 — 의도 자율 파악 지시
-          const imgIntentNote = userText
-            ? ''
-            : '\n[텍스트 없이 이미지만 전송됨] 사용자 의도를 이미지에서 직접 파악하여 처리하라. 환경 오염·쓰레기 현장이면 K-Cleaner v1.2 신고·견적 자동 실행. 그 외는 내용에 맞는 도움 제공. 불명확할 때만 한 가지 확인 질문.';
+        userContent.push({
+          type: 'image_url',
+          image_url: { url: `data:${mimeType};base64,${base64}` },
+        });
+        // 텍스트 없이 이미지만 전송 시 — 의도 자율 파악 지시
+        if (!userText) {
           userContent.push({
             type: 'text',
-            text: `[이미지 첨부됨 — base64 데이터: data:${mimeType};base64,${base64.slice(0,100)}... (${Math.round(base64.length*0.75/1024)}KB)]\n이 이미지를 분석해 주세요.${imgIntentNote}`,
+            text: '[텍스트 없이 이미지만 전송됨]\n사용자의 의도를 이미지에서 직접 파악하여 처리하라.\n환경 오염·쓰레기 현장이면 K-Cleaner v1.2 신고·견적을 자동 실행하고,\n그 외 이미지는 내용에 맞는 적절한 도움을 제공하라.\n불명확할 때만 한 가지 확인 질문을 한다.',
           });
         }
       } catch (e) {
