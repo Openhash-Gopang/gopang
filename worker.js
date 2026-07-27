@@ -15717,6 +15717,9 @@ async function handleProfilePost(request, env, corsHeaders) {
   // 만으로는 이 경우가 해결되지 않는다 — 애초에 schema_id가 없기 때문).
   // 게이트를 schema_id 키 자체의 존재 여부로 좁혀 주석이 원래 의도한
   // 동작과 일치시킨다 — "{ksic}" 같은 미치환 리터럴 차단 목적은 그대로 유지.
+  // 2026-07-27 신설 — 아래 Tier3 강제와 갱신 모드 유실 방지 로직이
+  // 서로의 판단을 침범하지 않게 하는 마커.
+  let _tier3Forced = false;
   if (body.industry_fields && body.industry_fields.schema_id != null) {
     const sid = body.industry_fields.schema_id;
     if (!sid || !VALID_INDUSTRY_SCHEMA_IDS.has(String(sid))) {
@@ -15734,6 +15737,7 @@ async function handleProfilePost(request, env, corsHeaders) {
     // 안 되므로), 검토 전까지 검색·공개 노출만 차단한다.
     if (TIER3_REGULATED_SCHEMA_IDS.has(String(sid))) {
       is_public = false; // 클라이언트가 뭘 보냈든 강제 — 검토 전 노출 차단
+      _tier3Forced = true;
       body.industry_fields = { ...body.industry_fields, status: 'under_review' };
       console.info('[Profile] Tier3 규제산업 감지 — is_public 강제 false, status=under_review:', sid);
     }
@@ -15760,6 +15764,7 @@ async function handleProfilePost(request, env, corsHeaders) {
         handle: l1Existing.handle,
         extra: l1Existing.extra || {},
         pubkey_ed25519: l1Existing.pubkey_ed25519,
+        is_public: l1Existing.is_public, // 2026-07-27 신설 — 갱신 모드 유실 방지(아래 참조)
         _l1id: l1Existing.id,
       };
     }
@@ -15786,6 +15791,27 @@ async function handleProfilePost(request, env, corsHeaders) {
 
   // extra.public 병합 (기존 extra 보존, public 섹션만 갱신)
   const prevExtra = existing?.extra || {};
+
+  // 2026-07-27 신설 — §PROFILE-UPDATE-MODE(profile-assistant v2.18) 유실
+  // 방지의 서버측 안전망. PA(LLM)가 [CONTEXT]의 _existing_* 값을 매번
+  // 정확히 옮겨 담는다는 프롬프트 지시에만 의존하면, 대화 압박 등으로
+  // 한 번이라도 놓치면 조용히 기본값으로 덮어써진다 — 특히 is_public
+  // (공개→비공개로 조용히 뒤집힘)과 payout_account(막 추가된 금융
+  // 정보라 놓치기 쉬움)는 사람이 바로 알아채기 어려운 유형의 실수라
+  // 서버에서도 한 번 더 막는다(client-side 프롬프트 지시 + server-side
+  // 방어의 이중 안전망 — 다른 필드 전부를 이렇게 바꾸는 전면 리팩터는
+  // 이번엔 하지 않는다, blast radius 최소화). Tier3 강제(is_public
+  // false)는 이 로직보다 우선이므로 _tier3Forced로 구분한다.
+  if (!('is_public' in body) && !_tier3Forced && existing && typeof existing.is_public === 'boolean') {
+    is_public = existing.is_public;
+  }
+  const _prevFinance = prevExtra.public?.finance || {};
+  const resolvedFinance = {
+    gdc_accepted:   ('gdc_accepted'   in body) ? gdc_accepted   : (_prevFinance.gdc_accepted   ?? false),
+    currencies:     ('currencies'     in body) ? currencies     : (_prevFinance.currencies     ?? ['KRW']),
+    price_range:    ('price_range'    in body) ? price_range    : (_prevFinance.price_range    ?? ''),
+    payout_account: ('payout_account' in body) ? payout_account : (_prevFinance.payout_account ?? null),
+  };
 
   // 2026-07-13 신설 — 필드별 공개/비공개 기본값. 명시 안 된 필드는
   // products만 기본 공개(디폴트 발견성), 나머지는 기본 비공개(안전
@@ -15985,7 +16011,7 @@ async function handleProfilePost(request, env, corsHeaders) {
     activity: { timezone: 'Asia/Seoul', hours, holidays },
     contact:  { phone_display: phone, phone_visible: !!phone_visible, website, sns_public, languages_spoken },
     location: { region, address_short: address, directions, parking },
-    finance:  { gdc_accepted, currencies, price_range, payout_account },
+    finance:  resolvedFinance,
     // 2026-07-13 신설 — products_structured를 profile 레코드 자신에도
     // 저장(위 destructure 주석 참조). 'products_structured' in body로
     // "안 보냄(보존)"과 "빈 배열을 명시적으로 보냄(비움)"을 구분한다.
