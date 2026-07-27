@@ -15915,6 +15915,23 @@ async function handleProfilePost(request, env, corsHeaders) {
     return _err(403, 'PUBKEY_MISMATCH', '공개키가 이 계정에 등록된 키와 일치하지 않습니다', corsHeaders);
   }
 
+  // 2026-07-27 복원 — 2026-07-20 커밋 6728a592("Jejudo→gov-tree 경로
+  // 리네이밍")에 이 80줄짜리 방어가 실수로 함께 삭제돼 있었다(무관한
+  // 커밋에 휩쓸림 — git log -S로 확인. 원래는 /profile/visibility라는
+  // 전용 엔드포인트에 있었는데, 그 엔드포인트 자체가 지금은 없다 —
+  // is_public 변경이 이제 이 일반 /profile POST를 거치므로 여기로 옮겨
+  // 복원한다). existing이 null(진짜 신규가입, TOFU가 정상 처리)과
+  // existing은 있는데 pubkey_ed25519만 비어있는 경우(관리자가 사전등록한
+  // "미청구" 사업자 리스팅)를 반드시 구분해야 한다 — 후자만 막는다.
+  // 안 그러면 이 guid를 아는 누구나(핸들·QR 등으로 노출되는 공개 정보)
+  // 자기 키로 서명해 "최초 서명자가 곧 소유자"처럼 is_public을 바꿔버릴
+  // 수 있다(원래 발견 경위 그대로 — 사고실험).
+  if (existing && !existing.pubkey_ed25519 && 'is_public' in body) {
+    return _err(403, 'PROFILE_NOT_CLAIMED',
+      '아직 소유권이 확정되지 않은 프로필입니다 — 먼저 /profile/claim으로 소유권을 확인해 주세요',
+      corsHeaders);
+  }
+
   // handle 자동 생성 (미지정 + 신규일 때)
   let finalHandle = handle || existing?.handle || null;
   if (!finalHandle) {

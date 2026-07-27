@@ -66,7 +66,7 @@
 | POST | `/profile/claim` | `handleProfileClaim` | 2026-07-12 — SP-18_ksearch STEP3 선행조건 (c): claim(정식 전환) 절차. profile POST보다 먼저 체크 |
 | POST | `/profile/photo-upload` | `handleProfilePhotoUpload` | 2026-07-27 신설 — §IMAGE-SCAN으로 첨부된 사진(간판·메뉴판·사업자등록증 등)을 Cloudflare R2(`env.PROFILE_MEDIA`)에 저장. Ed25519 서명 인증, 5MB/jpeg·png·webp 제한 |
 | GET | `/media/profile-photo/*` | `handleMediaGet` | 2026-07-27 신설 — 위에서 저장한 사진의 퍼블릭 서빙(인증 불필요). `/profile/*`는 아니지만 위 엔드포인트와 짝이라 여기 함께 기재 |
-| ~~POST~~ | ~~`/profile/visibility`~~ | ~~`handleProfileVisibility`~~ | **2026-07-27 확인 — 이 엔드포인트는 더 이상 존재하지 않습니다**(worker.js에 `handleProfileVisibility` 자체가 없음, 언제 제거됐는지는 이번 조사 범위 밖). `is_public` 단일 필드 변경은 이제 `profile.html`의 `_buildProfilePostBodyFromCurrent()`(현재 프로필 전체를 복원해 필요한 부분만 override 후 재제출)를 거쳐 일반 `/profile` POST로 처리되고, `handleProfilePost` 쪽에 body에 `is_public` 키가 없으면 기존 값을 보존하는 안전망이 있어(2026-07-27 신설, §PROFILE-UPDATE-MODE 참고) 전용 PATCH 엔드포인트 없이도 부분 수정이 안전합니다. §3.3의 상세 설명도 이에 맞춰 갱신했습니다 — 아래 참고. |
+| ~~POST~~ | ~~`/profile/visibility`~~ | ~~`handleProfileVisibility`~~ | **엔드포인트 자체는 없음**(2026-07-20 커밋 6728a592가 무관한 목적으로 실수로 삭제 — git 히스토리로 확인). `is_public` 변경은 이제 일반 `/profile` POST로 처리되며, 그 안에 있던 `PROFILE_NOT_CLAIMED` 보호는 2026-07-27 `handleProfilePost`에 복원함. 상세는 §3.3 참고. |
 
 ### P2P 디렉토리(GDUDA) (`/p2p/*`)
 
@@ -445,7 +445,7 @@ WebAuthn용 챌린지 발급. `GOPANG_MASTER_KEY`로 HMAC-SHA256 서명, 5분 �
 - **요청**: `{ guid, phone?, ed25519_pubkey?, signature?, ts? }`
 - **서명**: `delete-profile:${guid}:${ts}` — 등록된 키가 없으면 생략 허용
 - **2차 확인**: `phone`이 저장값과 다르면 `PHONE_MISMATCH`로 거부(오조작 방지용 보조 장치)
-- ⚠️ **발견된 이슈**: L1 DELETE 요청에 `Authorization: 'Admin ' + token`을 씁니다 — 이 파일의 다른 모든 admin 토큰 사용처(`_l1UpsertProfile`, `handleProfileVisibility` 등)는 `'Bearer ' + token`을 씁니다. 왜 여기만 다른지 확인이 안 됐습니다 — PocketBase가 실제로 `Admin` 스킴도 받아주는지, 아니면 이 두 엔드포인트가 지금 조용히 실패(404 아닌 401 등)하고 있는지는 **실제 삭제 테스트로 검증 필요**(계정 삭제라 함부로 테스트 못 해서 이번 조사에선 확인 못 함).
+- ⚠️ **발견된 이슈**: L1 DELETE 요청에 `Authorization: 'Admin ' + token`을 씁니다 — 이 파일의 다른 모든 admin 토큰 사용처(`_l1UpsertProfile` 등)는 `'Bearer ' + token`을 씁니다(참고: 예전엔 `handleProfileVisibility`도 이 예시 중 하나였으나, 2026-07-20 커밋 6728a592가 실수로 삭제 — §3.3 참고). 왜 여기만 다른지 확인이 안 됐습니다 — PocketBase가 실제로 `Admin` 스킴도 받아주는지, 아니면 이 두 엔드포인트가 지금 조용히 실패(404 아닌 401 등)하고 있는지는 **실제 삭제 테스트로 검증 필요**(계정 삭제라 함부로 테스트 못 해서 이번 조사에선 확인 못 함).
 
 #### `POST /account/full-reset` (10425줄, `handleAccountFullReset`)
 "완전 초기화" — L1 + KV(봉투)의 해당 guid 관련 데이터 전부 삭제 + 클라이언트도 로컬 데이터(PDV·지갑) 초기화 유도.
@@ -481,18 +481,21 @@ WebAuthn용 챌린지 발급. `GOPANG_MASTER_KEY`로 HMAC-SHA256 서명, 5분 �
 
 ### 3.3-부록 — 부분 수정(patch) 표준 패턴: `/profile/visibility`는 더 이상 없습니다
 
-**2026-07-27 확인 — `handleProfileVisibility`는 코드베이스에 더 이상 존재하지
-않습니다**(worker.js 전체 grep 0건, `/profile/visibility` 라우트 자체도
-없음 — 제거 시점은 이번 조사 범위 밖이라 특정 못 함, 이 문서가 낡은 채
-방치돼 있었던 것으로 보임). **⚠ 함께 확인할 것**: 이 엔드포인트가 갖고
-있던 `PROFILE_NOT_CLAIMED`(미청구 프로필의 `is_public` 변경 차단) 보호도
-코드 전체에서 함께 사라졌습니다(`PROFILE_NOT_CLAIMED` grep 0건).
-`handleProfilePost`의 TOFU 체크는 `pubkey_ed25519`가 비어있으면(미청구)
-그 자체를 건너뛰므로(TOFU 원칙 — "첫 서명자가 소유권을 갖는다"와는 일치),
-지금은 미청구 프로필도 일반 `/profile` POST로 `is_public`을 포함해 자유
-롭게 쓸 수 있는 상태입니다. 의도된 정리인지 실수로 빠진 보안장치인지는
-이번 조사만으로 판단 못 합니다 — 미청구 프로필 남용이 우려되면 별도
-확인 필요.
+**2026-07-27 확인·복원** — `handleProfileVisibility`라는 이름의 전용
+엔드포인트는 더 이상 없습니다. `git log -S`로 추적한 결과, 2026-07-20
+커밋 `6728a592`("Jejudo→gov-tree 경로 리네이밍")가 무관한 목적의
+커밋임에도 이 함수 80줄과 라우트 등록을 실수로 함께 삭제한 것으로
+확인됐습니다(해당 커밋의 worker.js diff가 6줄 추가/85줄 삭제인데, 6줄만
+경로 리네이밍과 관련 있고 나머지 삭제분은 전혀 무관한 위치였음). 그
+안에 있던 `PROFILE_NOT_CLAIMED`(관리자가 사전등록한 미청구 사업자
+리스팅의 `is_public`을 아무나 바꿀 수 없게 막는 보호)도 같이 사라졌던
+것을 이번 문서 갱신 작업 중 발견해 **`handleProfilePost`에 복원**했습니다
+(별도 엔드포인트로 되살리지 않고, `is_public` 변경이 이제 일반 `/profile`
+POST를 거치는 현재 구조에 맞춰 그 안에 재구현). "진짜 신규가입"(기존
+레코드 자체가 없음)과 "관리자 사전등록 미청구 리스팅"(레코드는 있지만
+`pubkey_ed25519`가 비어있음)을 구분해, 후자에서 `is_public`을 건드리려는
+시도만 `403 PROFILE_NOT_CLAIMED`로 막습니다 — 신규가입 TOFU 흐름은
+영향받지 않습니다(5가지 케이스 직접 시뮬레이션으로 검증 완료).
 
 대신 부분 수정은 클라이언트 쪽 패턴으로 처리됩니다:
 
