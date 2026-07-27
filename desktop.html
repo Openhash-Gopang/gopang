@@ -3054,15 +3054,15 @@ window.openHondiZoom = async function() {
 
   // 이미지 완전히 준비된 후 팝업 표시
   try {
-    let shortId = '5zvxrthQVkz';
+    let shortId = '0000000000';
     try {
       const { getState } = await import('/src/gopang/core/state.js');
       const st = getState();
-      if (st && st.profile && st.profile.hondi_code_id) shortId = st.profile.hondi_code_id;
+      if (st && st.profile && st.profile.digit_code_id) shortId = st.profile.digit_code_id;
     } catch(e) {}
 
-    const { generateHondiCodeCanvas } = await import('/src/gopang/ai/hondi-code.js');
-    const offscreen = await generateHondiCodeCanvas(shortId, 'v1', { markers: true });
+    const { generateDigitCodeCanvas } = await import('/src/gopang/ai/hondi-digit-code.js');
+    const offscreen = await generateDigitCodeCanvas(shortId);
 
     // 화면 크기에 맞게 스케일
     const maxW = Math.min(window.innerWidth * 0.90, window.innerHeight * 0.80 * (680/542), 900);

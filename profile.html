@@ -762,14 +762,13 @@ async function renderBasicOrError() {
     document.getElementById('bp-card-location').classList.remove('hidden');
   }
 
-  // ── 혼디 색상 코드 — 캐시 우선, 없으면 guid로 즉시 재생성 ──
+  // ── 혼디 숫자 코드 — 캐시 우선, 없으면 digit_code_id로 즉시 재생성 ──
+  // (구 색상 코드는 2026-07-27 잠정 중단)
   try {
-    let codeImg = localStorage.getItem('hondi_code_image_v1');
-    if (!codeImg && stored.ipv6) {
-      const { guidToShortId, generateHondiCodeDataURL } = await import('./src/gopang/ai/hondi-code.js');
-      const version = stored.hondi_code_version || 'v1';
-      const shortId = guidToShortId(stored.ipv6, version);
-      codeImg = await generateHondiCodeDataURL(shortId, version);
+    let codeImg = localStorage.getItem('hondi_digit_code_image_v1');
+    if (!codeImg && stored.digit_code_id) {
+      const { generateDigitCodeDataURL } = await import('./src/gopang/ai/hondi-digit-code.js');
+      codeImg = await generateDigitCodeDataURL(stored.digit_code_id);
     }
     if (codeImg) {
       const img = document.getElementById('bp-code-img');
@@ -1384,14 +1383,13 @@ function toggleSaveProfile() {
   try { localStorage.setItem(_SAVED_PROFILES_KEY, JSON.stringify(saved)); } catch {}
 }
 
-// ── 혼디 색상 코드 보기 (이 프로필의 guid 기준) ──────────
+// ── 혼디 숫자 코드 보기 (이 프로필의 digit_code_id 기준) ──────
+// (구 색상 코드는 2026-07-27 잠정 중단)
 async function openMyHondiCode() {
-  if (!_profile?.guid) { alert('코드를 생성할 수 없습니다.'); return; }
+  if (!_profile?.digit_code_id) { alert('코드를 생성할 수 없습니다.'); return; }
   try {
-    const { guidToShortId, generateHondiCodeDataURL } = await import('./src/gopang/ai/hondi-code.js');
-    const version = _profile.hondi_code_version || 'v1';
-    const shortId = guidToShortId(_profile.guid, version);
-    const dataURL = await generateHondiCodeDataURL(shortId, version);
+    const { generateDigitCodeDataURL } = await import('./src/gopang/ai/hondi-digit-code.js');
+    const dataURL = await generateDigitCodeDataURL(_profile.digit_code_id);
     _showHondiCodeModal(dataURL);
   } catch (e) {
     console.warn('[Profile] 혼디 코드 생성 실패:', e.message);
