@@ -1,6 +1,11 @@
 # hondi-proxy Worker(`worker.js`) API 레퍼런스 v1.0
 
-> **작성일**: 2026-07-19 · **대상 파일**: `worker.js`(gopang 저장소, 14,300줄+) · **엔드포인트 수**: 145개
+> **작성일**: 2026-07-19 · **2026-07-27 갱신**(§3.3 `/profile/*`·`/sp-updates/*`
+> 부분만 — 그날 세션이 실제로 만진 곳) · **대상 파일**: `worker.js`(gopang
+> 저장소, **18,449줄**, 2026-07-27 실측 — 작성 당시 "14,300줄+"에서 29%
+> 증가) · **엔드포인트 수**: 원 작성 시점 145개, 2026-07-27 `pathname ===`/
+> `pathname.startsWith(` 매칭 기준 재실측 시 약 190개(느슨한 카운트 —
+> 정확한 재집계는 원 작성 방법론 그대로 다음 라운드에서)
 > **메타 매뉴얼**: 이 문서가 다루는 범위와 다른 매뉴얼과의 관계는 [`docs/MANUAL_INDEX.md`](./MANUAL_INDEX.md) 참고
 
 이 문서는 `worker.js`에 등록된 라우트 145개 전체의 인벤토리(§2)와, 그중 보안·재무·최근 변경 등으로 중요도가 높은 약 30개 엔드포인트의 상세 스펙(§3)으로 구성됩니다. **145개 전부를 필드 단위까지 문서화하지는 않았습니다** — 이 정도 규모의 API를 한 번에 전수 조사하면 오히려 검증 부실로 이어질 위험이 커서, 상세 문서화는 "자주 바뀌는 곳·보안 민감한 곳·오늘 세션에서 실제로 만졌던 곳"부터 시작했습니다. §2 요약표만 있는 나머지 엔드포인트는 핸들러 함수명과 줄번호가 있으니 코드에서 직접 확인하시고, 필요하면 이 문서에 이어서 채워주세요.
@@ -59,7 +64,9 @@
 |---|---|---|---|
 | GET | `/profile/verify-owner` | `handleProfileVerifyOwner` | 서명 체계 — 전체 시스템이 서명 체계를 하나만 공유한다는 원칙. 2026-07-01: SP를 돌려주던 /profile/my-sp를 대체 — 이 |
 | POST | `/profile/claim` | `handleProfileClaim` | 2026-07-12 — SP-18_ksearch STEP3 선행조건 (c): claim(정식 전환) 절차. profile POST보다 먼저 체크 |
-| POST | `/profile/visibility` | `handleProfileVisibility` | 2026-07-19 — is_public 전용 소형 PATCH. 위와 동일한 이유로 startsWith('/profile')보다 먼저 분기해야  |
+| POST | `/profile/photo-upload` | `handleProfilePhotoUpload` | 2026-07-27 신설 — §IMAGE-SCAN으로 첨부된 사진(간판·메뉴판·사업자등록증 등)을 Cloudflare R2(`env.PROFILE_MEDIA`)에 저장. Ed25519 서명 인증, 5MB/jpeg·png·webp 제한 |
+| GET | `/media/profile-photo/*` | `handleMediaGet` | 2026-07-27 신설 — 위에서 저장한 사진의 퍼블릭 서빙(인증 불필요). `/profile/*`는 아니지만 위 엔드포인트와 짝이라 여기 함께 기재 |
+| ~~POST~~ | ~~`/profile/visibility`~~ | ~~`handleProfileVisibility`~~ | **2026-07-27 확인 — 이 엔드포인트는 더 이상 존재하지 않습니다**(worker.js에 `handleProfileVisibility` 자체가 없음, 언제 제거됐는지는 이번 조사 범위 밖). `is_public` 단일 필드 변경은 이제 `profile.html`의 `_buildProfilePostBodyFromCurrent()`(현재 프로필 전체를 복원해 필요한 부분만 override 후 재제출)를 거쳐 일반 `/profile` POST로 처리되고, `handleProfilePost` 쪽에 body에 `is_public` 키가 없으면 기존 값을 보존하는 안전망이 있어(2026-07-27 신설, §PROFILE-UPDATE-MODE 참고) 전용 PATCH 엔드포인트 없이도 부분 수정이 안전합니다. §3.3의 상세 설명도 이에 맞춰 갱신했습니다 — 아래 참고. |
 
 ### P2P 디렉토리(GDUDA) (`/p2p/*`)
 
@@ -228,7 +235,8 @@
 
 | Method | Path | Handler | 설명(코드 주석 기반) |
 |---|---|---|---|
-| (코드확인필요) | `/sp-updates/propose` | `handleSpUpdatePropose` | ── SP 자기 갱신 제안 (2026-07-17 신설 — K-Intent v1.3/K-Compose v1.7/K-Deliver v1.3/K-Re |
+| POST | `/sp-updates/propose` | `handleSpUpdatePropose` | ── SP 자기 갱신 제안 (2026-07-17 신설 — K-Intent v1.3/K-Compose v1.7/K-Deliver v1.3/K-Report v1.1). `sp_update_proposals`에 `status=pending_review`로만 저장, 절대 자동 승인 없음. `source=user_feedback`(사용자 피드백 기반)일 때 `proposed_patch`가 플레이스홀더가 아니면 `_l1CreateEscalation`로 `@owner` 알림도 신설(2026-07-27) |
+| POST | `/sp-updates/draft-patch` | `handleSpUpdatesDraftPatch` | 2026-07-27 신설 — `tools/triage_feedback.py` 전용. 사용자 피드백 클러스터(quotes)+대상 SP 원문을 DeepSeek V4 Flash에 넘겨 실제 패치 초안을 생성(저장은 안 함, 순수 생성만 — 저장은 위 `/sp-updates/propose`가 담당) |
 
 ### GWP 프로토콜 (`/gwp/*`)
 
@@ -450,21 +458,57 @@ WebAuthn용 챌린지 발급. `GOPANG_MASTER_KEY`로 HMAC-SHA256 서명, 5분 �
 
 ### 3.3 프로필
 
-#### `GET /profile` · `POST /profile` (11173/11712줄, `handleProfileGet`/`handleProfilePost`)
-프로필 조회/생성·수정의 정식 경로. **`POST`는 `entity_type`/`name`/`pubkey`/`signature` 필수의 전체 upsert**입니다 — 일부 필드만 보내면 나머지가 기본값(`''`/`null`)으로 덮어써질 수 있으니 부분 수정 목적으로는 쓰면 안 됩니다(바로 이 문제 때문에 §3.3의 `/profile/visibility`가 신설됨).
+#### `GET /profile` · `POST /profile` (15046/15720줄, `handleProfileGet`/`handleProfilePost`) — **2026-07-27 줄번호·필드 갱신**
+프로필 조회/생성·수정의 정식 경로. **`POST`는 `entity_type`/`name`/`pubkey`/`signature` 필수의 전체 upsert**입니다 — 다만 2026-07-27부터 `is_public`과 `finance`(`gdc_accepted`/`currencies`/`price_range`/`payout_account`)는 body에 해당 키가 없으면 기존 저장값을 그대로 보존하는 안전망이 생겼습니다(`job_ksco`/`affiliation`/`work_domain`/`industry_fields`/`products_structured`/`data_sources`/`avatar_url`/`photo_urls`는 이미 이전부터 같은 방식으로 보호되고 있었음) — 그 외 필드(`name`/`address`/`phone`/`website`/`description`/`tags`/`hours`/`holidays`/`entity_subtype`/`field_visibility` 등)는 여전히 body에 없으면 기본값으로 덮어써지므로 부분 수정 시 주의가 필요합니다. 자세한 배경은 [`PROFILE_ASSISTANT_MANUAL_v1_0.md` §6](./PROFILE_ASSISTANT_MANUAL_v1_0.md#6-profile-update-mode--완성된-프로필의-지속-갱신) 참고.
 - 서명: `${guid}:${pubkey}:${ts}` (단, `_isFreshTs` 재전송-방지 체크는 **안 함** — 다른 서명 엔드포인트와 다른 점)
-- `GET` 응답 필드: `guid, current_ipv6, handle, entity_type, native_lang, is_public, pubkey_ed25519, name, address, lat, lng, phone, website, casts_for, extra, updated_at, created_at` — `extra`는 `description`/`tags`/`hours` 등 다수 필드가 중첩된(flatten 안 된) 구조라, `POST` 바디를 만들 때 이 GET 응답을 그대로 재사용할 수 없습니다(직접 스키마 확인 필요).
+- `GET` 응답 필드: `guid, current_ipv6, handle, entity_type, native_lang, is_public, pubkey_ed25519, name, address, lat, lng, phone, website, casts_for, extra, updated_at, created_at` — `extra.public`엔 2026-07-27 신설 필드(`avatar_url`, `photo_urls`, `data_sources`)도 추가됨. `description`/`tags`/`hours` 등 다수 필드가 중첩된(flatten 안 된) 구조라, `POST` 바디를 만들 때 이 GET 응답을 그대로 재사용할 수 없습니다 — 클라이언트에선 `profile.html`의 `_buildProfilePostBodyFromCurrent()`가 이 변환을 담당합니다(부분 수정 시 표준 패턴 — 아래 참고).
 
-#### `POST /profile/claim` (11596줄, `handleProfileClaim`)
-관리자가 사전 등록한 "미청구(unclaimed)" 사업자 리스팅의 정식 소유권 확정. 서명 방식이 다름: `claim:${guid}:${pubkey}:${ts}` (앞에 `claim:` 접두어 — `/profile/visibility` 등과 혼동 주의). 전화인증 경로(`phone_verify_token`)도 대안으로 지원.
+#### `POST /profile/claim` (15518줄, `handleProfileClaim`)
+관리자가 사전 등록한 "미청구(unclaimed)" 사업자 리스팅의 정식 소유권 확정. 서명 방식이 다름: `claim:${guid}:${pubkey}:${ts}` (앞에 `claim:` 접두어 — 다른 서명 엔드포인트와 혼동 주의). 전화인증 경로(`phone_verify_token`)도 대안으로 지원.
 
-#### `POST /profile/visibility` (12118줄, `handleProfileVisibility`) — **2026-07-19 신설**
-`is_public` 단일 필드 전용 PATCH. `/profile` POST의 "전체 upsert라 다른 필드가 날아갈 위험" 문제를 피하려고 새로 만듦.
-- **요청**: `{ guid, pubkey, signature, ts, is_public: boolean }`
-- **서명**: `${guid}:${pubkey}:${ts}`, `_isFreshTs` 300초 창 적용
-- **TOFU + 미청구 차단**: `pubkey_ed25519`가 비어있으면(claim 전) `403 PROFILE_NOT_CLAIMED`로 거부 — 오늘 발견된 "최초 서명자가 소유자 행세" 구멍을 막기 위한 보강(§1.3 참고)
-- L1 PATCH는 `_l1AdminToken`(Bearer) 사용 — §3.2에서 지적한 `'Admin '` 이슈 없음(이 엔드포인트는 정상)
-- 클라이언트 참고 구현: `users` 저장소 `webapp.html`의 `togglePublic()`
+#### `POST /profile/photo-upload` (15644줄, `handleProfilePhotoUpload`) — **2026-07-27 신설**
+§IMAGE-SCAN으로 첨부된 사진(간판·메뉴판·사업자등록증·이용약관 등)을 실제로 저장. 판독(텍스트 추출)과 완전히 독립적 — 하나가 실패해도 다른 하나엔 영향 없음.
+- **요청**: `{ guid, pubkey, signature, ts, image_base64, mime_type }`
+- **서명**: `${guid}:${pubkey}:${ts}` (다른 `/profile` 서명과 동일 체계 재사용)
+- **제약**: jpeg/png/webp만, 디코딩된 원본 기준 5MB 상한
+- **저장소**: Cloudflare R2(`env.PROFILE_MEDIA` 바인딩) — 배포 전 `wrangler r2 bucket create hondi-profile-media` 1회 필요. 바인딩이 없으면 `503 PHOTO_STORAGE_UNAVAILABLE`(프로필 작성 자체는 계속 진행 가능하도록 설계)
+- 응답: `{ ok: true, url, key }` — `url`은 아래 `/media/profile-photo/*`로 서빙됨
+
+#### `GET /media/profile-photo/{guid}/{filename}` (15698줄, `handleMediaGet`) — **2026-07-27 신설**
+위에서 저장한 사진의 퍼블릭 서빙. **인증 불필요**(공개 프로필의 사진이라 누구나 볼 수 있어야 함). R2를 별도 커스텀 도메인으로 공개하지 않고 이 워커 자신이 유일한 진입점.
+
+---
+
+### 3.3-부록 — 부분 수정(patch) 표준 패턴: `/profile/visibility`는 더 이상 없습니다
+
+**2026-07-27 확인 — `handleProfileVisibility`는 코드베이스에 더 이상 존재하지
+않습니다**(worker.js 전체 grep 0건, `/profile/visibility` 라우트 자체도
+없음 — 제거 시점은 이번 조사 범위 밖이라 특정 못 함, 이 문서가 낡은 채
+방치돼 있었던 것으로 보임). **⚠ 함께 확인할 것**: 이 엔드포인트가 갖고
+있던 `PROFILE_NOT_CLAIMED`(미청구 프로필의 `is_public` 변경 차단) 보호도
+코드 전체에서 함께 사라졌습니다(`PROFILE_NOT_CLAIMED` grep 0건).
+`handleProfilePost`의 TOFU 체크는 `pubkey_ed25519`가 비어있으면(미청구)
+그 자체를 건너뛰므로(TOFU 원칙 — "첫 서명자가 소유권을 갖는다"와는 일치),
+지금은 미청구 프로필도 일반 `/profile` POST로 `is_public`을 포함해 자유
+롭게 쓸 수 있는 상태입니다. 의도된 정리인지 실수로 빠진 보안장치인지는
+이번 조사만으로 판단 못 합니다 — 미청구 프로필 남용이 우려되면 별도
+확인 필요.
+
+대신 부분 수정은 클라이언트 쪽 패턴으로 처리됩니다:
+
+```js
+// profile.html
+function _buildProfilePostBodyFromCurrent(overrides = {}) {
+  // 현재 로드된 _profile(GET /profile 응답)을 POST 바디 형태로 복원한 뒤
+  // overrides로 필요한 부분만 덮어써서 전체를 다시 POST /profile로 제출
+}
+```
+
+`is_public` 토글·계좌 정보 등록·예약 설정 변경 모두 이 헬퍼로 "현재
+전체 상태 복원 → 원하는 필드만 override → 전체 재제출"합니다. 위
+`handleProfilePost`의 2026-07-27 보존 안전망(§3.3 서두 참고)과 합쳐지면,
+클라이언트가 실수로 일부 필드를 빠뜨려도(이 헬퍼를 안 거치고 직접
+POST하는 경우 등) `is_public`/`finance`만큼은 서버에서도 보호됩니다.
 
 ---
 
