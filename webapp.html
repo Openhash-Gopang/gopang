@@ -3054,12 +3054,21 @@ window.closePDV = closePDV;
           // 미완료)이면 call-ai.js의 _buildFirstContactContext()가 붙이는
           // [FIRST_CONTACT] 블록이 인사를 전담하고, 그 인사의 마지막
           // 질문("준비되셨나요?")에 사용자가 답하면 AC 자신의 지침(§0-1)에
-          // 따라 [CALL_PROFILE_ASSISTANT]로 넘어가 PA가 튜토리얼을
+          // 따라 [GWP: profile-assistant]로 넘어가 PA가 튜토리얼을
           // 시작한다 — 그래서 이 경우엔 트리거를 중립적으로만 보낸다.
           // 반면 이미 인사는 마쳤는데 튜토리얼을 중간에 그만둔 재방문자
           // (firstGreeted=true, tutDone=false)에게는 AC가 재인사 후
           // "이어서 하시겠어요?"라고 자연스럽게 물어보고 동의 시 같은
           // 방식으로 넘기도록 별도로 알려준다.
+          // ★ 2026-07-27 수정 — 사고실험 발견: 바로 아래 재방문자 분기가
+          // 여전히 옛 태그 [CALL_PROFILE_ASSISTANT]를 AC에게 직접
+          // 지시하고 있었다. AC의 실제 §0-1 지침(AGENT-COMMON_v3_45
+          // 1042행)은 2026-07-11부로 [GWP: profile-assistant](새 탭
+          // 방식)만 출력하도록 이미 바뀌었는데, 이 내부 트리거만 옛
+          // 태그명으로 지시를 내리고 있어 AC가 문구를 그대로 따르면
+          // call-ai.js의 구식 같은 창 전환 경로로 빠질 위험이 있었다
+          // (해당 경로는 이번에 방어적 경고만 남기고 무력화함 — 아래
+          // _handleProfileTags 참조). [GWP: profile-assistant]로 정정.
           const _tutDone = (() => { try { return localStorage.getItem('hondi_tutorial_done') === '1'; } catch { return false; } })();
           const _firstGreetedFlag = (() => { try { return localStorage.getItem('hondi_first_greeted') === '1'; } catch { return false; } })();
           const _greetMsg = _tutDone
@@ -3068,7 +3077,7 @@ window.closePDV = closePDV;
                 ? '[INTERNAL: 패널이 열렸습니다. 이전에 시작한 앱 사용법 ' +
                   '튜토리얼이 아직 끝나지 않았습니다. 자연스럽게 인사한 뒤, ' +
                   '이어서 진행하시겠는지 여쭤보고, 동의하면 ' +
-                  '[CALL_PROFILE_ASSISTANT]로 넘기세요(§0-1 참조). 거절하면 ' +
+                  '[GWP: profile-assistant]로 넘기세요(§0-1 참조). 거절하면 ' +
                   '평소처럼 대화를 이어가세요.]'
                 : '[INTERNAL: 패널이 열렸습니다. 먼저 인사해 주세요.]');
           try { await _callPanelAI(_greetMsg, aiBubble); }
