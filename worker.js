@@ -15540,6 +15540,12 @@ async function handleProfilePost(request, env, corsHeaders) {
     // 명시적으로 보내면 그 값을 쓰되, 안 보내면 아래에서 industry_fields.schema_id
     // (KSIC)로부터 자동 파생한다 — 손으로 두 번 입력하게 하지 않는다.
     occupation = null,
+    // 2026-07-27 신설 — PA(profile-assistant) §IMAGE-SCAN·PROFILE_SUBMIT
+    // 스키마가 데이터 출처(pa_dialogue|pdv_shadow|website|physical_scan)를
+    // data_sources에 담아 보내도록 설계돼 있었으나, 이 함수 destructure
+    // 목록에 없어 저장 경로 자체가 없었다(PA 전용 사고실험으로 발견 —
+    // §0 참조. schema_id/occupation과 동일한 유형의 결함).
+    data_sources = {},
   } = body;
 
   if (!entity_type) return _err(400, 'MISSING_FIELD', 'entity_type 필수', corsHeaders);
@@ -15654,6 +15660,23 @@ async function handleProfilePost(request, env, corsHeaders) {
     resolvedFieldVisibility[f] = (typeof field_visibility[f] === 'boolean')
       ? field_visibility[f]
       : DEFAULT_PUBLIC_FIELDS.has(f);
+  }
+
+  // 2026-07-27 신설 — data_sources 형식 정리(PA §IMAGE-SCAN 근거).
+  // "pa_dialogue|pdv_shadow|website|physical_scan" 화이트리스트 밖 값이나
+  // 형식이 이상한 항목은 저장 자체를 막지 않고 그 항목만 조용히 제거한다
+  // (§0 U0 "실패보다 진행" 원칙 — schema_id처럼 안전·검색에 직결되는
+  // 필드가 아니라 감사·품질 분석용 메타데이터일 뿐이므로, 여기서 400을
+  // 내면 오히려 이 필드 하나 때문에 프로필 저장 전체가 막히는 버그#1과
+  // 같은 실수를 반복하게 된다).
+  const VALID_DATA_SOURCES = new Set(['pa_dialogue', 'pdv_shadow', 'website', 'physical_scan']);
+  const resolvedDataSources = {};
+  if (data_sources && typeof data_sources === 'object' && !Array.isArray(data_sources)) {
+    for (const [field, src] of Object.entries(data_sources)) {
+      if (typeof field === 'string' && VALID_DATA_SOURCES.has(src)) {
+        resolvedDataSources[field] = src;
+      }
+    }
   }
 
   // 2026-07-13 신설 — job_ksco 형식 검증(AC-AUTHOR_v1_0.md §3-1/§6).
@@ -15822,6 +15845,14 @@ async function handleProfilePost(request, env, corsHeaders) {
     // 2026-06-22: 업종/유형별 확장 슬롯(profile_pdv_schema_plan_v1.md Phase 1).
     // 'industry_fields' in body로 "필드 자체를 안 보냄(보존)"과 "null을 명시적으로 보냄(비움)"을 구분.
     industry_fields: ('industry_fields' in body) ? body.industry_fields : ((prevExtra.public || {}).industry_fields ?? null),
+    // 2026-07-27 신설 — data_sources(PA §IMAGE-SCAN 데이터 출처 4종) 저장.
+    // 'data_sources' in body로 "안 보냄(기존값 보존)"과 "빈 객체를 명시적으로
+    // 보냄(비움)"을 구분 — products_structured/industry_fields와 동일 관례.
+    // 필드 단위 병합(merge)이 아니라 이번 제출값으로 통째 교체한다 — PA가
+    // 매 제출마다 자신이 알고 있는 전체 출처 맵을 다시 구성해 보내는 것을
+    // 전제로 하므로(스냅샷), 이전 값과 섞으면 이미 지워진 필드의 출처
+    // 표기가 유령처럼 남을 수 있다.
+    data_sources: ('data_sources' in body) ? resolvedDataSources : ((prevExtra.public || {}).data_sources ?? {}),
   };
   const newExtra = { ...prevExtra, public: newExtraPublic };
 
