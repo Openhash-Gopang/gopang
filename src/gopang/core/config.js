@@ -360,8 +360,33 @@ export async function loadPersonalAssistantSP() {
     if (!fname) throw new Error('manifest 에 profile-assistant 키 없음');
     const res = await fetch(_SP_BASE_CFG + fname, { cache: 'no-cache' });
     if (res.ok) {
-      const sp = await res.text();
+      let sp = await res.text();
       if (sp && sp.length > 200) {
+        // 2026-07-27 신설 — HONDI-CAPABILITIES-COMMON(§DIGITAL-BRIDGE가
+        // 참조하는 "혼디가 지금 실제로 할 수 있는 것" 단일 소스) 합성.
+        // PA SP 안에 이 목록을 프로즈로 직접 박아두면, call-ai.js와
+        // profile-assistant.html이 TEMPLATE_LOOKUP 태그를 놓고 따로
+        // 갈라졌던 것과 같은 방식으로 이 문서도 SP 사본마다 조용히
+        // 낡을 수 있다 — 단일 파일을 매 세션 fresh fetch해 앞에 붙이는
+        // 것으로 그 위험을 없앤다(합성 실패해도 PA SP 자체 로드는
+        // 막지 않는다 — 이 문서는 보강 정보이지 필수 골격이 아니다).
+        try {
+          const capFname = manifest['HONDI-CAPABILITIES-COMMON'];
+          if (capFname) {
+            const capRes = await fetch(_SP_BASE_CFG + capFname, { cache: 'no-cache' });
+            if (capRes.ok) {
+              const capText = await capRes.text();
+              if (capText && capText.length > 100) {
+                sp = capText + '\n\n---\n\n' + sp;
+                console.info('[SP] HONDI-CAPABILITIES-COMMON 합성 완료:', capFname, capText.length, 'chars');
+              }
+            } else {
+              console.warn('[SP] HONDI-CAPABILITIES-COMMON fetch 실패(무시, PA SP는 정상 로드):', capRes.status);
+            }
+          }
+        } catch (e) {
+          console.warn('[SP] HONDI-CAPABILITIES-COMMON 합성 오류(무시, PA SP는 정상 로드):', e.message);
+        }
         CFG.system = sp;
         CFG.system_base = sp;
         // ※ 이전엔 여기서 미선언 변수 latestFile을 참조해 ReferenceError가 났음
