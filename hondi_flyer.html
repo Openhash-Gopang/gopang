@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: 혼디(Hondi) 공식 소개 팜플렛의 HTML판(광고 전단 버전).
+  2026-07-26 v2 전면 재설계(사용자 지시) — 이전 버전은 K-서비스 지도·60개
+  페르소나 전체 목록·공공기관 상세·철학 2단 설명 등 매뉴얼급 정보를 팜플렛에
+  욱여넣고 있었다. 팜플렛은 광고 전단이지 매뉴얼이 아니므로, 핵심 후킹
+  문구 + 최소한의 신뢰 근거 + hondi.net으로의 강한 CTA(URL+QR)만 남기고
+  나머지 상세는 전부 hondi.net으로 유도하도록 재설계했다. 흑백 인쇄,
+  A4 양면 각 1장 유지, 폰트 크기는 광고 전단답게 크고 여유 있게.
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>혼디(Hondi) — 소개 전단</title>
+<style>
+:root{
+  --ink:#1A1A1A; --ink-soft:#595959; --ink-faint:#8C8C8C;
+  --line:#CCCCCC;
+  --serif:'Noto Serif KR',ui-serif,Georgia,serif;
+  --sans:'Pretendard',-apple-system,'Malgun Gothic',sans-serif;
+  --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+@page{size:A4;margin:10mm}
+body{
+  background:#fff;font-family:var(--sans);color:var(--ink);line-height:1.5;
+  -webkit-font-smoothing:antialiased;padding:16px 10px;
+}
+.sheet{max-width:210mm;margin:0 auto;background:#fff;border:1px solid var(--line);}
+@media print{ body{padding:0} .sheet{max-width:none;border:none;min-height:277mm}
+  .back-sheet{page-break-before:always;break-before:page} }
+@media screen{ .back-sheet{margin-top:24px} }
+
+/* 헤더 */
+.top{padding:28px 34px 20px;border-bottom:3px solid var(--ink);display:flex;justify-content:space-between;align-items:flex-start}
+.tagline-strip{padding:12px 34px;border-bottom:1px solid var(--line);font-size:13px;font-weight:700;color:var(--ink-soft)}
+.wordmark{font-family:var(--serif);font-weight:900;font-size:27px;letter-spacing:-.3px;line-height:1.3}
+.badge{font-family:var(--mono);font-size:12px;font-weight:700;border:1px solid var(--ink);padding:5px 11px;border-radius:5px;white-space:nowrap}
+
+/* 히어로 후킹 문구 */
+.hook{padding:30px 34px 22px;border-bottom:1px solid var(--line)}
+.hook .line1{font-family:var(--serif);font-size:17px;font-weight:700;line-height:1.5}
+.hook .line2{font-family:var(--serif);font-size:17px;font-weight:900;line-height:1.5;margin-top:2px}
+.hook .line2 u{text-decoration:underline;text-underline-offset:3px}
+.hook .sub{margin-top:12px;font-size:14px;color:var(--ink-soft)}
+
+/* 정체성 한 줄 */
+.identity{padding:20px 34px;border-bottom:1px solid var(--line)}
+.identity p{font-size:14.5px;color:var(--ink-soft)}
+.identity b{color:var(--ink);font-weight:700}
+
+/* 8대 영역 — 아이콘+이름만, 설명 없음 */
+.domains{padding:22px 34px;border-bottom:1px solid var(--line)}
+.domains .d-title{font-family:var(--serif);font-weight:900;font-size:16px;margin-bottom:14px}
+.d-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 10px}
+.d-item{text-align:center}
+.d-item .g{font-family:var(--serif);font-size:24px;font-weight:900;display:block}
+.d-item .t{font-size:11.5px;font-weight:700;margin-top:4px}
+
+/* CTA — hondi.net + QR */
+.cta-block{padding:34px 34px;margin-top:26px;border-top:3px solid var(--ink)}
+.cta-text{flex:1}
+.cta-text .ct{font-family:var(--serif);font-size:19px;font-weight:900}
+.cta-text .cd{margin-top:6px;font-size:13px;color:var(--ink-soft)}
+.cta-text .curl{margin-top:12px;font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:-.3px}
+
+.legal-strip{padding:12px 34px;border-top:1px solid var(--line);font-size:14px;color:var(--ink-faint)}
+
+/* 뒷면 전용 */
+.trust-title{padding:42px 34px 10px;font-family:var(--serif);font-weight:900;font-size:34px}
+.trust-sub{padding:0 34px 32px;font-size:16px;color:var(--ink-soft)}
+.trust-list{padding:0 34px}
+.trust-item{display:flex;gap:18px;align-items:baseline;padding:20px 0;border-top:1px solid var(--line)}
+.trust-item:first-child{border-top:none}
+.trust-item .tn{font-family:var(--serif);font-size:30px;font-weight:900;flex-shrink:0;width:64px}
+.trust-item .tt{flex:1}
+.trust-item .tt .h{font-weight:800;font-size:16px}
+.trust-item .tt .d{font-size:12.5px;color:var(--ink-soft);margin-top:4px}
+
+.klaw-block{margin:0 34px 34px;border:2px solid var(--ink);border-radius:8px;padding:28px 30px;position:relative}
+.klaw-block .kb-tag{font-family:var(--mono);font-weight:700;font-size:12.5px;letter-spacing:.2px;color:var(--ink-soft);margin-bottom:12px}
+.klaw-block p{font-family:var(--serif);font-size:17px;font-weight:700;line-height:1.6}
+.klaw-block .kb-foot{margin-top:12px;font-size:14px;font-weight:700;color:var(--ink-soft)}
+.klaw-block .kb-link{margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ 앞면 ══════════════════ -->
+<div class="sheet">
+
+  <header class="top">
+    <span class="wordmark">혼디(Hondi) 앱 기능 시험판 베타 v1.0</span>
+  </header>
+
+  <div class="tagline-strip">카톡의 기능은 그대로 가지면서도, 카톡과 완전히 차별화된 차세대 메시징 앱입니다.</div>
+
+  <section class="hook">
+    <div class="line1">카톡은 얼핏 무료처럼 보이지만, 그 대가는 나의 막대한 사적 데이터입니다.</div>
+    <div class="line2">혼디는 유료지만(기본 <u>월 990원</u>), 내 프라이빗 데이터를 나 자신만 저장합니다.</div>
+    <p class="sub">한국 사회 전 영역을 AI로 재구성하며, 세계 최초로 우리 땅 제주도에서 출발합니다.</p>
+  </section>
+
+  <section class="identity">
+    <p>'혼디'는 제주 토속어로 <b>"함께"</b>라는 뜻으로, <b>오픈소스 AI 생태계</b>입니다(개발자 대표 도영민). 카톡은 볼 수 없는 코드를, 혼디는 모두 투명하게 공개하므로 누구나 그 성능과 기능을 보고 배우며, 검증하고, 개선할 수 있습니다.</p>
+  </section>
+
+  <section class="domains">
+    <div class="d-title">카톡은 대화만 하지만, 혼디는 한국 사회의 전 영역(대표 8개)을 AI와 데이터 보안 기술로 재창조합니다</div>
+    <div class="d-grid">
+      <div class="d-item"><span class="g">法</span><span class="t">사법 AI</span></div>
+      <div class="d-item"><span class="g">政</span><span class="t">행정 AI</span></div>
+      <div class="d-item"><span class="g">立</span><span class="t">입법 AI</span></div>
+      <div class="d-item"><span class="g">敎</span><span class="t">교육 AI</span></div>
+      <div class="d-item"><span class="g">醫</span><span class="t">의료 AI</span></div>
+      <div class="d-item"><span class="g">金</span><span class="t">금융 AI</span></div>
+      <div class="d-item"><span class="g">運</span><span class="t">교통·물류 AI</span></div>
+      <div class="d-item"><span class="g">市</span><span class="t">시장 AI</span></div>
+    </div>
+  </section>
+
+  <div class="cta-block">
+    <div class="cta-text">
+      <div class="ct">전체 기능·요금·참여 방법은 hondi.net에서</div>
+      <div class="cd">이 전단에는 핵심만 담았습니다. 자세한 내용은 웹사이트를 확인하세요.</div>
+      <div class="cd" style="margin-top:4px">📱 전화번호만으로 가입 · 가입 즉시 소정의 GDC 무료 지급</div>
+      <div class="curl">https://hondi.net</div>
+      <div class="cd" style="margin-top:8px">📱 스마트폰으로 접속하면 실사용 화면, 💻 PC로 접속하면 기능 설명 화면입니다</div>
+    </div>
+  </div>
+
+  <div class="legal-strip">※ 혼디는 현재 기능 시험(베타) 버전이며, 성능·정확도·결과물이 실제 환경에서 동일하게 재현됨을 보장하지 않습니다.</div>
+
+</div>
+
+<!-- ══════════════════ 뒷면 ══════════════════ -->
+<div class="sheet back-sheet">
+
+  <h2 class="trust-title">왜 믿을 수 있나요</h2>
+  <p class="trust-sub">자세한 근거와 전체 서비스 목록은 hondi.net에 모두 공개돼 있습니다.</p>
+
+  <div class="trust-list">
+    <div class="trust-item">
+      <span class="tn">60</span>
+      <div class="tt"><div class="h">전문가 AI 60개가 실제 업무를 보조합니다</div>
+      <div class="d">의사·변호사·세무사·건축사 등 각 분야 전문가의 의사 결정을 돕는 AI</div></div>
+    </div>
+    <div class="trust-item">
+      <span class="tn">全</span>
+      <div class="tt"><div class="h">전국 도청·시청·읍면동사무소부터 국세청·경찰청 등 중앙정부기관까지 업무를 보조(현재)하며, 향후 대행까지 지원할 예정입니다</div>
+      <div class="d">제주는 가장 상세한 구현이 완료된 시범 지역입니다</div></div>
+    </div>
+    <div class="trust-item">
+      <span class="tn">私</span>
+      <div class="tt"><div class="h">카톡이 통째로 먹통됐던 2022년, 기억하시나요</div>
+      <div class="d">데이터센터 화재 하나로 국민 메신저가 멈췄습니다. 혼디는 한 곳이 멈춰도 전체가 멈추지 않도록 설계됐고, 원본 데이터는 항상 여러분의 기기에만 저장됩니다</div></div>
+    </div>
+  </div>
+
+  <div class="klaw-block">
+    <div class="kb-tag">法 K-LAW — 혼디 안의 60개 전문 AI 중 하나</div>
+    <p>소송을 시작하기도 전에, 수년 뒤 대법원 판결문을 미리 읽어볼 수 있다면 어떨까요. 그것도 단돈 몇 천 원에 정교하게 작성된 판결문을,<br>지금 혼디를 사용해 보십시오.</p>
+    <div class="kb-foot">사법 AI가 이 정도라면, 나머지 59개는 어떨까요? 카톡에선 상상할 수 없는 일입니다.</div>
+    <div class="kb-link">klaw.hondi.kr</div>
+  </div>
+
+  <div class="cta-block">
+    <div class="cta-text">
+      <div class="ct">지금 바로 시작하기</div>
+      <div class="cd">가입부터 무료 체험까지, 필요한 모든 안내가 hondi.net에 있습니다.</div>
+      <div class="curl">https://hondi.net</div>
+    </div>
+  </div>
+
+  <div class="legal-strip">※ 법률·의료·금융 등 전문 영역의 안내는 참고용이며, 최종 판단과 책임은 이용자 본인 및 관련 전문가에게 있습니다.</div>
+
+</div>
+
+</body>
+</html>
+
+
