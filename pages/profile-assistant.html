@@ -109,7 +109,54 @@ wireMic('chat-input', 'mic-btn', _inputBar);
 // GWP 탭 2곳과 레이아웃을 통일하며 새로 추가). 이미지는 doSend()에서
 // vision 메시지(content: [{type:'text'},{type:'image_url'}])로
 // callPaAI()에 그대로 실어 보낸다 — 아래 messages.push 부분 참고.
-const _attach = wireAttachAndCamera({ inputBar: _inputBar });
+const _attach = wireAttachAndCamera({ inputBar: _inputBar, onFileSelected: _onPhotoAttached });
+
+// ── 프로필 사진 저장 (2026-07-27 신설) ──────────────────────────────
+// §IMAGE-SCAN은 사진을 "읽어서" 텍스트만 채우고 사진 자체는 남기지
+// 않았다(R2 등 바이너리 저장소 부재) — "프로필이 미니 웹사이트로
+// 기능해야 한다"는 요구사항에 맞춰, 첨부되는 즉시(백그라운드로) 실제
+// 사진을 서버에 올려 URL을 받아두고, PROFILE_SUBMIT 시점에 함께
+// 제출한다. 업로드는 AI의 사진 판독(doSend의 vision 메시지)과
+// 완전히 독립된 별도 요청이다 — 하나가 실패해도 다른 하나에 영향
+// 없음(사진 저장이 실패해도 AI는 여전히 사진을 읽고 텍스트를 채울 수
+// 있다).
+let _sessionAvatarUrl = null;
+const _sessionPhotoUrls = [];
+
+async function _fileToBase64Raw(file) {
+  const dataUrl = await _attach.fileToDataUrl(file);
+  return { base64: dataUrl.split(',')[1], mimeType: file.type };
+}
+
+async function _onPhotoAttached(file) {
+  if (!file || !file.type?.startsWith('image/')) return; // 이 페이지는 accept="image/*"라 사실상 항상 참
+  const wallet = window.gopangWallet;
+  if (!wallet?.signPayload || !wallet.publicKeyB64u) {
+    console.warn('[PA] 사진 업로드 보류 — 지갑 준비 전(사진 판독 자체는 그대로 진행됨)');
+    return;
+  }
+  try {
+    const { base64, mimeType } = await _fileToBase64Raw(file);
+    const guid = _paGuid();
+    const pubkey = wallet.publicKeyB64u;
+    const ts = String(Math.floor(Date.now() / 1000));
+    const signature = await wallet.signPayload(`${guid}:${pubkey}:${ts}`);
+    const res = await fetch(`${RELAY_ENDPOINT}/profile/photo-upload`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guid, pubkey, signature, ts, image_base64: base64, mime_type: mimeType }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!data.ok || !data.url) {
+      console.warn('[PA] 사진 업로드 실패(무시, 판독은 계속 진행):', data.detail || data.error || res.status);
+      return;
+    }
+    _sessionPhotoUrls.push(data.url);
+    if (!_sessionAvatarUrl) _sessionAvatarUrl = data.url; // 이 세션 첫 사진(보통 간판·명함)을 아바타 후보로
+  } catch (e) {
+    console.warn('[PA] 사진 업로드 오류(무시, 판독은 계속 진행):', e.message);
+  }
+}
 
 // ── 상태 판독(진입 시 1회) ──────────────────────────────────
 function _loadUser() { try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { return null; } }
@@ -389,7 +436,12 @@ async function _handleReplyTags(fullReply) {
   // PROFILE_SUBMIT — 실제 서버 등록(welcome.js 그대로 재사용)
   if (fullReply.includes('PROFILE_SUBMIT')) {
     let savedProfile = null;
-    try { savedProfile = await handleProfileSubmit(fullReply); }
+    try {
+      savedProfile = await handleProfileSubmit(fullReply, {
+        avatar_url: _sessionAvatarUrl,
+        photo_urls: _sessionPhotoUrls,
+      });
+    }
     catch (e) { console.warn('[PA] handleProfileSubmit 실패:', e.message); }
     try {
       localStorage.setItem('hondi_profile_done', '1');
