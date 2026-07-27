@@ -4191,8 +4191,8 @@ window.closePDV = closePDV;
 </style>
 
 <script type="module">
-import { startScanner, stopScanner, lookupProfile, analyzePhoto }
-  from './src/gopang/ai/hondi-scanner.js';
+import { startScanner, stopScanner, lookupDigitProfile, analyzePhoto }
+  from './src/gopang/ai/hondi-digit-scanner.js';
 
 let _profileUrl = null;
 
@@ -4208,25 +4208,20 @@ function _startScan() {
 
   startScanner(video, canvas, overlay,
     /* 인식 성공 */
-    async (shortId, version) => {
+    async (shortId) => {
       _scannerActive = false;  // 스캐너 완전 종료 — 재인식 없음
       _setStatus('프로필 조회 중...');
       try {
-        // ── 로컬 프로필 라우팅 테이블 ──
-        const LOCAL_PROFILES = {
-          '5zvxrthQVkz': { name: '혼디', handle: 'hondi', url: '/profiles/5zvxrthQVkz.html' },
-        };
-        let p;
-        if (LOCAL_PROFILES[shortId]) {
-          p = LOCAL_PROFILES[shortId];
-        } else {
-          p = await lookupProfile(shortId, version);
-        }
+        // 2026-07-27: 숫자 코드 전환 — "혼디" 공식 계정의 digit_code_id가
+        // 아직 확정되지 않아 로컬 단축 경로(구 LOCAL_PROFILES)는 제거했다.
+        // 확정되면 여기에 { '해당10자리': {name,handle,url} } 형태로 다시
+        // 추가하면 된다. 그 전까지는 항상 L1 서버 조회를 거친다.
+        const p = await lookupDigitProfile(shortId);
         _profileUrl = p.url;
         document.getElementById('hs-result-name').textContent    = p.name || p.handle;
         document.getElementById('hs-result-handle').textContent  = '@' + p.handle;
         document.getElementById('hs-result-version').textContent =
-          '혼디 코드 ' + version + ' · ID ' + shortId;
+          '혼디 숫자 코드 · ID ' + shortId;
         document.getElementById('hs-result').style.display = 'flex';
         // 1.2초 후 자동 이동
         setTimeout(() => { if (_profileUrl) window.location.href = _profileUrl; }, 1200);
@@ -4300,17 +4295,14 @@ window.hsTakePhoto = function () {
 
   _setStatus('사진 분석 중...');
   analyzePhoto(imgData,
-    async (shortId, version) => {
+    async (shortId) => {
       try {
-        const LOCAL_PROFILES = {
-          '5zvxrthQVkz': { name: '혼디', handle: 'hondi', url: '/profiles/5zvxrthQVkz.html' },
-        };
-        const p = LOCAL_PROFILES[shortId] || await lookupProfile(shortId, version);
+        const p = await lookupDigitProfile(shortId);
         _profileUrl = p.url;
         document.getElementById('hs-result-name').textContent    = p.name || p.handle;
         document.getElementById('hs-result-handle').textContent  = '@' + p.handle;
         document.getElementById('hs-result-version').textContent =
-          '혼디 코드 ' + version + ' · ID ' + shortId;
+          '혼디 숫자 코드 · ID ' + shortId;
         document.getElementById('hs-result').style.display = 'flex';
       } catch (e) {
         _setStatus('❌ 코드를 못 찾았어요');
