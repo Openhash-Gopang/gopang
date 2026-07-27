@@ -305,6 +305,18 @@ export const EXPERT_REGISTRY = {
     key: 'SP_civil', needsMedicalSafety: false,
     triggers: ['민원 심사', '행정 심사', '요건 검토', 'K-Civil'],
   },
+  // ── advisor 정식 등록 (2026-07-26 결정) ─────────────────────
+  // K-Professor와 같은 구조(법령상 최종승인 강제 없음 — PROFESSIONAL-
+  // common_v2_0.md Q2 기준) — 구매자와 직접 대화하며 가격공정성·구매
+  // 필요성을 평가해 직접 조언한다. K-Market(SP-KMARKET, 라이브 —
+  // 검색·비교·중개만 담당)이 안 하는 평가 기능을 새로 맡는다.
+  // ⚠️ 가격비교용 실제 시장데이터 파이프라인 미구현 — prompts/
+  // SP_advisor_v1_0.md §5 정직 고지 참고.
+  advisor: {
+    label: '구매자문(K-Advisor)', icon: '🔍', category: 'FIN', ownerAgency: 'kmarket',
+    key: 'SP_advisor', needsMedicalSafety: false,
+    triggers: ['가격 적정성', '이거 사도 될까', '가격 비교 평가', 'K-Advisor'],
+  },
   'clinical-psychologist': {
     label: '임상심리사', icon: '🧑‍⚕️', category: 'EDU', ownerAgency: 'kedu',
     key: 'SP_clinical-psychologist', needsMedicalSafety: true, // 2026-07-04: 위기개입(M5) 상속 위해 true로 수정
