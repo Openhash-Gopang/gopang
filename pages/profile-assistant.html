@@ -102,6 +102,24 @@ const RELAY_ENDPOINT = 'https://hondi-proxy.tensor-city.workers.dev';
 const _qs    = new URLSearchParams(location.search);
 const RETURN = _qs.get('return') || 'https://hondi.net';
 
+// 2026-07-27 신설 — AC가 _gwpLaunch()로 넘기는 ctx 파라미터를 지금까지
+// 이 파일이 전혀 읽지 않고 있었다(다른 GWP 서비스는 이미 쓰는 일반
+// 메커니즘인데 PA만 빠져 있었음 — "AC→PA 서술적 맥락 없음" 사고실험
+// 결과와 같은 계보의 결함). 프로필 갱신 제안(§0-1-P 계열, AC 쪽에서
+// 발동) 등 "지금 이걸 알려주려고 PA를 불렀다"는 문맥을 여기서 받는다.
+function _decodeCtxParam() {
+  const raw = _qs.get('ctx');
+  if (!raw) return '';
+  try {
+    if (_qs.get('ctx_enc') === 'b64') return decodeURIComponent(escape(atob(raw)));
+    return decodeURIComponent(raw);
+  } catch (e) {
+    console.warn('[PA] ctx 파라미터 디코딩 실패(무시):', e.message);
+    return '';
+  }
+}
+const _acHandoffHint = _decodeCtxParam();
+
 wireBackButton({ onBack: () => { window.close(); location.href = RETURN; } });
 const _inputBar = wireInputBar();
 wireMic('chat-input', 'mic-btn', _inputBar);
@@ -201,24 +219,82 @@ function _reportProgressToAC(step, total) {
 // _buildProfileContext — call-ai.js의 동명 함수를 그대로 이식(순수 함수,
 // localStorage만 읽으므로 call-ai.js 전체를 이 독립 탭에 끌어들이지 않고
 // 여기 복제한다 — manifest-loader.js를 별도 파일로 뺀 것과 같은 이유).
-function _buildProfileContext() {
+// 2026-07-27 신설 — 이미 완성된 프로필을 "갱신"하러 재진입한 경우를 위한
+// 조회. 기존엔 hondi_profile_partial(localStorage)만 봤는데, 이 캐시는
+// PROFILE_SUBMIT 성공 시 지워진다(§4 STEP-FINAL) — 즉 완성된 프로필을
+// 다시 열면 PA가 아무것도 모르는 채로 처음부터 다시 물어보게 돼 있었다
+// (AC가 "프로필 갱신"을 제안해 재호출하는 이번 기능의 전제 자체가
+// 성립 안 함). profile.html의 뷰어 서명 패턴(view:guid:pubkey:ts)을
+// 그대로 재사용해 본인 인증된 전체 데이터를 받아온다.
+async function _fetchExistingProfileForUpdate() {
+  try {
+    const reg = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
+    const handle = (reg.handle || '').replace(/^@/, '');
+    if (!handle) return null;
+    const wallet = window.gopangWallet;
+    if (!wallet?.signPayload) return null;
+    const pubkey = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+    const guid = reg.ipv6 || reg.guid || '';
+    if (!pubkey || !guid) return null;
+    const ts = Date.now().toString();
+    const sigMsg = `view:${guid}:${pubkey}:${ts}`;
+    const sig = await wallet.signPayload(sigMsg);
+    const qs = `viewer_guid=${encodeURIComponent(guid)}&viewer_pubkey=${encodeURIComponent(pubkey)}` +
+               `&viewer_sig=${encodeURIComponent(sig)}&viewer_ts=${encodeURIComponent(ts)}`;
+    const res = await fetch(`${RELAY_ENDPOINT}/profile/@${encodeURIComponent(handle)}?${qs}`);
+    const data = await res.json().catch(() => null);
+    return (data?.ok && data.profile) ? data.profile : null;
+  } catch (e) {
+    console.warn('[PA] 기존 프로필 조회 실패(무시, 새로 작성하는 것처럼 진행):', e.message);
+    return null;
+  }
+}
+
+async function _buildProfileContext() {
   let reg = {};
   try { reg = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}'); } catch {}
   let partial = {};
   try { partial = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}'); } catch {}
-  const ctx = Object.assign({}, {
-    guid: reg.ipv6 || reg.guid || '', handle: reg.handle || '',
-    nickname: reg.nickname || '', region: reg.region || '', e164: reg.e164 || '',
-  }, partial);
-  const step = parseInt(localStorage.getItem('hondi_profile_step') || '0', 10);
-  const firstGreeted  = localStorage.getItem('hondi_first_greeted')  === '1';
-  const namePending   = localStorage.getItem('hondi_name_pending')   === '1';
-  const assistantName = localStorage.getItem('hondi_assistant_name') || '';
   let doneFlag = false, skippedFlag = false;
   try {
     doneFlag    = localStorage.getItem('hondi_profile_done')    === '1';
     skippedFlag = localStorage.getItem('hondi_profile_skipped') === '1';
   } catch {}
+
+  // 2026-07-27 신설 — "이미 완성된 프로필을 갱신하러 재진입" 케이스.
+  // hondi_profile_partial은 PROFILE_SUBMIT 성공 시 지워지므로(§4
+  // STEP-FINAL), 완성된 프로필을 다시 열면 지금까지는 partial이 텅 비어
+  // PA가 아무것도 모르는 채 처음부터 다시 물어보고 있었다 — 이러면 AC가
+  // 제안하는 "프로필 갱신"이 실제로는 "프로필 재작성"이 돼버린다.
+  let existingPublic = {}, existingTop = {};
+  if (doneFlag) {
+    const existing = await _fetchExistingProfileForUpdate();
+    if (existing) {
+      existingTop = existing;
+      existingPublic = existing.extra?.public || {};
+    }
+  }
+
+  const ctx = Object.assign({}, {
+    guid: reg.ipv6 || reg.guid || '', handle: reg.handle || '',
+    nickname: reg.nickname || '', region: reg.region || '', e164: reg.e164 || '',
+  }, {
+    // existingTop/existingPublic이 있으면(=완성된 프로필 갱신) 그게
+    // 우선이고, 없으면(=신규/재개 온보딩) 기존처럼 partial을 쓴다.
+    name:            existingTop.name ?? partial.name,
+    address:         existingTop.address ?? partial.address,
+    phone:           existingTop.phone ?? partial.phone,
+    entity_type:     existingTop.entity_type ?? partial.entity_type,
+    entity_subtype:  existingPublic.identity?.entity_subtype ?? partial.entity_subtype,
+    schema_id:       existingPublic.industry_fields?.schema_id ?? partial.schema_id,
+    products:        existingPublic.products ?? partial.products,
+    description:     existingPublic.identity?.description ?? partial.description,
+  }, partial); // partial이 이번 세션 중 새로 갱신한 값이 있으면 최종적으로 그걸 우선
+
+  const step = parseInt(localStorage.getItem('hondi_profile_step') || '0', 10);
+  const firstGreeted  = localStorage.getItem('hondi_first_greeted')  === '1';
+  const namePending   = localStorage.getItem('hondi_name_pending')   === '1';
+  const assistantName = localStorage.getItem('hondi_assistant_name') || '';
   const lines = ['[CONTEXT: PROFILE_ONBOARDING]'];
   lines.push(`step: ${step}`, `done: ${doneFlag}`, `skipped: ${skippedFlag}`,
              `first_greeted: ${firstGreeted}`, `name_pending: ${namePending}`);
@@ -236,8 +312,30 @@ function _buildProfileContext() {
   if (ctx.schema_id)      lines.push(`schema_id: ${ctx.schema_id}`);
   if (ctx.products)       lines.push(`products: ${JSON.stringify(ctx.products)}`);
   if (ctx.description)    lines.push(`description: ${ctx.description}`);
+  // 2026-07-27 신설 — 완성된 프로필을 갱신 모드로 여는 경우, 나머지
+  // 세부 필드(재확인 불필요한 것들)도 실어서 PA가 STEP을 건너뛰며
+  // 자연스럽게 통째로 다시 알 수 있게 한다. §PROFILE-UPDATE-MODE가
+  // PROFILE_SUBMIT 재구성 시 이 값들을 그대로 옮겨 담아야 유실이 없다.
+  if (doneFlag && Object.keys(existingPublic).length) {
+    if (existingPublic.finance)  lines.push(`_existing_finance: ${JSON.stringify(existingPublic.finance)}`);
+    if (existingPublic.industry_fields) lines.push(`_existing_industry_fields: ${JSON.stringify(existingPublic.industry_fields)}`);
+    if (existingPublic.field_visibility) lines.push(`_existing_field_visibility: ${JSON.stringify(existingPublic.field_visibility)}`);
+    if (existingPublic.avatar_url) lines.push(`_existing_avatar_url: ${existingPublic.avatar_url}`);
+    if (Array.isArray(existingPublic.photo_urls) && existingPublic.photo_urls.length) lines.push(`_existing_photo_urls: ${JSON.stringify(existingPublic.photo_urls)}`);
+    lines.push(`_existing_is_public: ${!!existingTop.is_public}`);
+  }
   lines.push('[/CONTEXT]');
-  return lines.join('\n');
+
+  // AC↔PA 채널(2026-07-27 신설) — AC가 프로필 갱신을 제안해 사용자가
+  // 승인하고 PA를 호출한 경우, _gwpLaunch의 ctx 파라미터로 "왜 지금
+  // PA가 열렸는지"가 함께 온다. 이걸 별도 블록으로 분리해서, PA SP의
+  // [§PROFILE-UPDATE-MODE]가 이 블록의 유무로 갱신 모드 진입 여부를
+  // 판단하게 한다.
+  const hintBlock = _acHandoffHint
+    ? `\n\n[CONTEXT: PROFILE_UPDATE_HINT]\n${_acHandoffHint}\n[/CONTEXT]`
+    : '';
+
+  return lines.join('\n') + hintBlock;
 }
 
 // ── SP 로드 ──────────────────────────────────────────────
@@ -635,7 +733,7 @@ async function sendTurn(text, imageDataUrl) {
 
 // ── 진입 트리거 — 튜토리얼 미완료면 PHASE -1부터, 완료면 PHASE 0부터 ──
 async function startGreeting() {
-  const ctxBlock = _buildProfileContext();
+  const ctxBlock = await _buildProfileContext();
   if (!_tutDone()) {
     document.getElementById('tb-sub').textContent = '앱 사용법 안내 중…';
     await sendTurn(
