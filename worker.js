@@ -550,7 +550,19 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
   // "성공했다"고 확신할 수 있을 때만 pushSent:true를 내려주고, PC는
   // 이 값과 무관하게 "문자로 받기" 링크를 항상 노출하되(§3 원칙),
   // pushSent:false면 그 즉시 강조해서 보여준다.
+  //
+  // ★ 2026-07-28 근본 수정 — 기존엔 "등록된 기기 중 아무거나 하나라도
+  // 성공하면" pushSent:true였다. 그런데 이 계정으로 예전에 PC 자신이
+  // (테스트 등으로) 구독자로 남아있으면, 정작 폰은 못 받았는데도 PC
+  // 자신이 받은 걸로 pushSent:true가 뜨는 사고가 실제로 재현됐다 —
+  // "PC로만 알림이 오고 폰으로는 안 온다"는 증상의 근본 원인. 이제
+  // deviceType(mobile/desktop/unknown)별로 결과를 나눠서, pushSentToMobile
+  // 을 별도로 계산해 응답에 포함한다. 동시에 410(Gone) 응답을 받은 죽은
+  // 구독은 이 자리에서 바로 pruning해 다음 요청부터 헛되이 재시도하지
+  // 않게 한다.
   let pushSent = false;
+  let pushSentToMobile = false;
+  let hasMobileDevice = false;
   try {
     if (env.VAPID_PRIVATE_KEY && env.VAPID_PUBLIC_KEY && env.VAPID_SUBJECT) {
       const fresh = await _l1FindProfileByGuid(env, profile.guid).catch(() => null);
@@ -561,6 +573,7 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
       // 오히려 "예전 PC가 자신을 덮어써서 폰에 알림이 안 오는" 사고를
       // 구조적으로 막는다(폰의 구독이 살아있는 한 반드시 같이 발송됨).
       const devices = _parseDeviceSubscriptions(fresh?.push_subscription);
+      hasMobileDevice = devices.some(d => d.deviceType === 'mobile');
       if (devices.length) {
         const payload = JSON.stringify({
           title: purpose === 'sign_request' ? '서명 요청' : '새 기기에서 로그인 요청',
@@ -574,7 +587,31 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
         const results = await Promise.allSettled(
           devices.map(d => _sendWebPush(env, d.subscription, payload))
         );
-        pushSent = results.some(r => r.status === 'fulfilled' && r.value === true);
+
+        const deadDeviceIds = [];
+        results.forEach((r, i) => {
+          const d = devices[i];
+          const succeeded = r.status === 'fulfilled' && r.value?.ok === true;
+          if (succeeded) {
+            pushSent = true;
+            if (d.deviceType === 'mobile') pushSentToMobile = true;
+          }
+          if (r.status === 'fulfilled' && r.value?.status === 410) {
+            deadDeviceIds.push(d.deviceId);
+          }
+        });
+
+        if (deadDeviceIds.length) {
+          try {
+            const pruned = devices.filter(d => !deadDeviceIds.includes(d.deviceId));
+            await _l1PatchProfile(env, fresh.id, {
+              push_subscription: _serializeDeviceSubscriptions(pruned),
+            });
+            console.info('[DeviceLink] 죽은 구독 정리:', deadDeviceIds);
+          } catch (pruneErr) {
+            console.warn('[DeviceLink] 죽은 구독 정리 실패(치명적 아님):', pruneErr.message);
+          }
+        }
       }
     }
   } catch (e) {
@@ -582,7 +619,8 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
   }
 
   return new Response(JSON.stringify({
-    ok: true, sessionId, expires_in: DEVICE_LINK_TTL_SECONDS, pushSent,
+    ok: true, sessionId, expires_in: DEVICE_LINK_TTL_SECONDS,
+    pushSent, pushSentToMobile, hasMobileDevice,
   }), { status: 200, headers: corsHeaders });
 }
 
@@ -17804,9 +17842,11 @@ function _serializeDeviceSubscriptions(list) {
 
 // 같은 deviceId면 교체, 없으면 추가. 계정당 보관 기기 수 한도를 넘으면
 // (updatedAt 기준) 오래된 것부터 제거.
-function _upsertDeviceSubscription(list, deviceId, subscription, sound) {
+// deviceType: 'mobile' | 'desktop' | 'unknown' (2026-07-28 신설 — device-link가
+// "누군가 하나라도 받았다"가 아니라 "폰이 실제로 받았다"를 구분하는 데 씀).
+function _upsertDeviceSubscription(list, deviceId, subscription, sound, deviceType) {
   const next = list.filter(e => e.deviceId !== deviceId);
-  next.push({ deviceId, subscription, sound: sound || null, updatedAt: Date.now() });
+  next.push({ deviceId, subscription, sound: sound || null, deviceType: deviceType || 'unknown', updatedAt: Date.now() });
   next.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   return next.slice(0, PUSH_MAX_DEVICES_PER_ACCOUNT);
 }
@@ -17850,7 +17890,7 @@ async function handlePushBroadcast(request, env, corsHeaders) {
     const devices = _parseDeviceSubscriptions(row.push_subscription);
     for (const d of devices) {
       try {
-        const ok = await _sendWebPush(env, d.subscription, payload);
+        const { ok } = await _sendWebPush(env, d.subscription, payload);
         if (ok) sent++; else failed++;
       } catch (e) {
         failed++;
@@ -17894,7 +17934,8 @@ async function handlePushSubscribe(request, env, corsHeaders) {
   }
 
   // 구독 등록/갱신: 이 deviceId 항목만 교체, 다른 기기 항목은 그대로 보존
-  const next = _upsertDeviceSubscription(current, deviceId, body.subscription, body.sound || 'ping');
+  const deviceType = body.deviceType === 'mobile' ? 'mobile' : body.deviceType === 'desktop' ? 'desktop' : 'unknown';
+  const next = _upsertDeviceSubscription(current, deviceId, body.subscription, body.sound || 'ping', deviceType);
   try {
     await _l1PatchProfile(env, record.id, {
       push_subscription: _serializeDeviceSubscriptions(next),
@@ -17943,7 +17984,7 @@ async function handlePushSend(request, env, corsHeaders) {
     try {
       const sub = JSON.parse(row.subscription);
       const result = await _sendWebPush(env, sub, payload);
-      if (result) sent++;
+      if (result.ok) sent++;
     } catch(e) {
       console.warn('[Push] 전송 실패:', e.message);
     }
@@ -18023,12 +18064,18 @@ async function _encryptWebPushPayload(payloadStr, p256dhB64u, authB64u) {
   return _concatBytes(header, ciphertext);
 }
 
+// 2026-07-28 변경 — 반환값을 boolean에서 { ok, status }로 확장한다.
+// 기존엔 성공/실패만 알 수 있었는데, 410(Gone — 구독 영구 소멸)을
+// 다른 실패와 구분 못 해서 죽은 구독이 push_subscription 배열에
+// 계속 남아 매번 조용히 실패하기만 했다(§PUSH_SUBSCRIPTION_HIJACK_
+// 2026_07_21.md §4 후속). 호출부가 status===410을 보고 그 자리에서
+// pruning할 수 있게 한다.
 async function _sendWebPush(env, subscription, payload) {
   const p256dh = subscription.keys?.p256dh;
   const auth   = subscription.keys?.auth;
   if (!p256dh || !auth) {
     console.warn('[Push] 구독에 p256dh/auth 없음 — 암호화 불가, 발송 건너뜀');
-    return false;
+    return { ok: false, status: 0 };
   }
 
   const body = await _encryptWebPushPayload(payload, p256dh, auth);
@@ -18051,7 +18098,7 @@ async function _sendWebPush(env, subscription, payload) {
   } else {
     console.warn('[Push] 발송 실패:', res.status, await res.text().catch(() => ''));
   }
-  return ok;
+  return { ok, status: res.status };
 }
 
 // VAPID JWT 생성

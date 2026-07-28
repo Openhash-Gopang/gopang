@@ -115,10 +115,16 @@ async function _requestPushSubscriptionImpl(guid) {
     }
 
     const sound = localStorage.getItem('gopang_push_sound') || 'ping';
+    // 2026-07-28 신설 — deviceType을 같이 보낸다. device-link 흐름에서
+    // "누군가 하나라도 받았다"가 아니라 "실제로 폰이 받았다"를 서버가
+    // 구분할 수 있어야 하는데, 지금까지는 이 정보 자체가 없어서 PC
+    // 자신의 구독이 성공으로 잡혀도 폰이 못 받은 걸 알 방법이 없었다.
+    const deviceType = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '')
+      ? 'mobile' : 'desktop';
     await fetch(`${WORKER_URL}/push/subscribe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ guid, subscription: sub.toJSON(), sound, deviceId: getOrCreateDeviceId() }),
+      body: JSON.stringify({ guid, subscription: sub.toJSON(), sound, deviceId: getOrCreateDeviceId(), deviceType }),
     });
 
     return { ok: true };

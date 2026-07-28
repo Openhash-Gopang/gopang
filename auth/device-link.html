@@ -318,10 +318,18 @@ import { _buildKrE164, KR_AREA_CODES, krNeededDigitsFor, _restoreFromBackupKey }
       sessionId = data.sessionId;
       stepPhone.classList.remove('active');
       stepCode.classList.add('active');
-      setStatus('스마트폰 알림을 확인해 주세요.');
+      // 2026-07-28 — pushSent(누군가 하나라도 받음) 대신 pushSentToMobile
+      // (폰이 실제로 받음)을 기준으로 안내한다. "PC 자신이 예전 구독으로
+      // 남아있어서 pushSent:true인데 정작 폰은 못 받는" 사고를 이 화면
+      // 에서 더 이상 "성공"으로 오인하지 않는다.
+      if (data.hasMobileDevice === false) {
+        setStatus('이 계정에 등록된 스마트폰이 없습니다. 아래 "문자로 받기"를 이용해 주세요.', 'error');
+      } else {
+        setStatus('스마트폰 알림을 확인해 주세요.');
+      }
       startCountdown(data.expires_in || 90);
       startPolling();
-      setupSmsFallback(data.pushSent);
+      setupSmsFallback(data.pushSentToMobile, data.hasMobileDevice);
     } catch (e) {
       setStatus(e.message || '요청에 실패했습니다.', 'error');
       $('btn-request').disabled = false;
@@ -346,18 +354,19 @@ import { _buildKrE164, KR_AREA_CODES, krNeededDigitsFor, _restoreFromBackupKey }
   });
 
   // ── SMS 폴백(2안) ───────────────────────────────────
-  // 사고실험 ③: 웹푸시 발송 자체가 실패했다고 서버가 확실히 판단한
-  // 경우(pushSent:false — 구독 없음/만료 등)는 기다려봐야 소용없으니
-  // 즉시 강조해서 보여준다.
-  // 사고실험 ⑥: 반대로 푸시가 정상 발송된 경우엔, 알림이 보통 1~2초
-  // 안에 도착하므로 사용자가 성급하게 눌러 불필요한 SMS 비용이
-  // 나가지 않도록 8초간은 흐리게 뒀다가 그 뒤에 강조한다.
+  // 2026-07-28 — 기준을 pushSent(누군가 하나라도 받음)에서
+  // pushSentToMobile(폰이 실제로 받음)로 좁혔다. hasMobileDevice가
+  // false면(등록된 폰 자체가 없음) 기다려도 의미가 없으니 지연 없이
+  // 즉시 강조한다.
+  // 사고실험 ⑥: 폰이 정상 발송된 경우엔, 알림이 보통 1~2초 안에
+  // 도착하므로 사용자가 성급하게 눌러 불필요한 SMS 비용이 나가지
+  // 않도록 8초간은 흐리게 뒀다가 그 뒤에 강조한다.
   let smsFallbackTimer = null;
-  function setupSmsFallback(pushSent) {
+  function setupSmsFallback(pushSentToMobile, hasMobileDevice) {
     const btn = $('btn-sms-fallback');
     btn.style.opacity = '0.5';
     btn.disabled = false;
-    if (pushSent === false) {
+    if (pushSentToMobile === false || hasMobileDevice === false) {
       btn.style.opacity = '1';
     } else {
       smsFallbackTimer = setTimeout(() => { btn.style.opacity = '1'; }, 8000);
