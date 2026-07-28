@@ -108,3 +108,19 @@ class_name = "MatchRegionChannel"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["MatchDemandChannel", "MatchRegionChannel"]
+
+# 2026-07-28 신설 — device-link 세션 강한 일관성 저장소. 기존
+# env.QR_SESSIONS_KV(Workers KV)는 최종적 일관성이라 쓰기 후 최대
+# 60초까지 다른 엣지에서 옛 값이 보일 수 있어, 폰이 승인한 직후에도
+# PC의 poll이 최대 1분 가까이 "아직 안 옴"으로 남아있던 근본 원인이었다
+# (실사로 확인). sessionId 하나당 DO 인스턴스 하나(idFromName)라 항상
+# 같은 물리적 위치에서 읽고 써서 전파 지연 자체가 없다. 기존 v1
+# 마이그레이션은 이미 적용된 것이므로 건드리지 않고 별도 태그(v2)로
+# 추가한다 — Cloudflare는 마이그레이션을 순차 누적 적용한다.
+[[durable_objects.bindings]]
+name = "DEVICE_LINK_SESSIONS"
+class_name = "DeviceLinkSessionDO"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["DeviceLinkSessionDO"]
