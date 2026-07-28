@@ -400,6 +400,22 @@ const DEVICE_LINK_SMS_MAX_RESEND = 2;          // 세션당 SMS 재발송 최대
 const DEVICE_LINK_SMS_RATE_LIMIT_PER_HOUR = 3; // 전화번호당 시간당 최대 발송
 const DEVICE_LINK_SMS_RATE_WINDOW_SECONDS = 3600;
 
+// ── 2026-07-28 신설 — 웹푸시 발송(handleDeviceLinkInit) 남용 방지 ──────
+// 지금까지 이 엔드포인트엔 SMS 폴백과 달리 제한이 전혀 없었다. PC 쪽
+// "이 기기를 스마트폰으로 승인하기" 확인 클릭이 사실상 유일한 마찰이었는데,
+// 그 확인 화면 자체를 UX상 없애기로 하면서(사용자 지시 — 불필요한 반복
+// 절차 제거) 이 엔드포인트가 유일한 방어선이 됐다. 2단계로 막는다:
+//   ① 피해자(e164) 기준 — 같은 번호로 반복 괴롭힘 방지
+//   ② 발신 IP 기준 — 번호를 순차로 훑는 스크립트형 열거(enumeration) 방지
+//      (①만으로는 번호당 한도 안에서 서로 다른 번호 수천 개를 시도하는
+//      공격을 못 막는다 — 실제 MFA push-bombing 공격과 동일한 패턴)
+// 비밀번호·CAPTCHA 없이 순수 서버 카운터로만 막는다(SMS rate limit과
+// 동일한 QR_SESSIONS_KV TTL 카운터 패턴 재사용).
+const DEVICE_LINK_PUSH_RATE_LIMIT_PER_HOUR = 5;  // 전화번호(피해자)당
+const DEVICE_LINK_PUSH_RATE_WINDOW_SECONDS = 3600;
+const DEVICE_LINK_IP_RATE_LIMIT_PER_HOUR   = 10; // 발신 IP당
+const DEVICE_LINK_IP_RATE_WINDOW_SECONDS   = 3600;
+
 function _generateDeviceLinkCode() {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
@@ -479,6 +495,31 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
     }
   }
   if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+
+  // ── 남용 방지 2단계 (2026-07-28 신설, 상세 사유는 상수 선언부 주석 참고) ──
+  // L1 조회 전에 먼저 막아 남용 시도가 불필요한 서버 부하로 이어지지
+  // 않게 한다.
+  const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+
+  const pushRlKey  = `devlink_push_rl:${e164}`;
+  const pushRlRaw  = await env.QR_SESSIONS_KV.get(pushRlKey);
+  const pushRlCount = pushRlRaw ? parseInt(pushRlRaw, 10) || 0 : 0;
+  if (pushRlCount >= DEVICE_LINK_PUSH_RATE_LIMIT_PER_HOUR) {
+    return _err(429, 'PHONE_RATE_LIMITED', '이 번호로 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요', corsHeaders);
+  }
+
+  const ipRlKey  = `devlink_push_rl_ip:${ip}`;
+  const ipRlRaw  = await env.QR_SESSIONS_KV.get(ipRlKey);
+  const ipRlCount = ipRlRaw ? parseInt(ipRlRaw, 10) || 0 : 0;
+  if (ipRlCount >= DEVICE_LINK_IP_RATE_LIMIT_PER_HOUR) {
+    return _err(429, 'IP_RATE_LIMITED', '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요', corsHeaders);
+  }
+
+  // 카운터는 조회 성공 여부와 무관하게 먼저 증분한다 — "이 번호가 실제
+  // 가입돼 있는지" 자체도 반복 조회 대상이 되면 안 되는 정보이므로,
+  // PHONE_NOT_REGISTERED로 끝나는 시도도 그대로 카운트에 반영한다.
+  await env.QR_SESSIONS_KV.put(pushRlKey, String(pushRlCount + 1), { expirationTtl: DEVICE_LINK_PUSH_RATE_WINDOW_SECONDS });
+  await env.QR_SESSIONS_KV.put(ipRlKey, String(ipRlCount + 1), { expirationTtl: DEVICE_LINK_IP_RATE_WINDOW_SECONDS });
 
   let profile;
   try {

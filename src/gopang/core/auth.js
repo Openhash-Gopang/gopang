@@ -1415,7 +1415,15 @@ function _showPhonePopup(resolve) {
   phoneInput.addEventListener('blur',  () => phoneField.style.borderColor = '#e5e7eb');
   phoneInput.addEventListener('input', () => {
     const need = selectedCountry === 'KR' ? _krNeededDigits() : COUNTRIES[selectedCountry].digits;
-    phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, need);
+    // 2026-07-28 수정 — "010"/지역번호를 포함해서 입력(또는 자동완성)해도
+    // 항상 뒤에서부터 필요한 자릿수를 취한다. 기존 slice(0, need)는 앞
+    // 8자리를 잘라 "01096627170" → "01096627"처럼 엉뚱한 번호가 됐다.
+    // device-link.html의 buildE164FromInput()이 2026-07-27에 이미 이
+    // 방식(뒤에서부터 slice)으로 고쳐졌으나 이 파일(회원가입 본화면)에는
+    // 반영되지 않고 남아 있었다.
+    let rawDigits = phoneInput.value.replace(/\D/g, '');
+    if (rawDigits.length > need) rawDigits = rawDigits.slice(-need);
+    phoneInput.value = rawDigits;
     phoneErr.style.display = 'none';
     _updateHandlePreview();
   });
