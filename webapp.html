@@ -92,6 +92,14 @@ function _settingsLogoutOrLogin() { gopangLogout(); }
 // 또는 이 기기에서 새로 시작(gopangLogout — 로컬 초기화 후 재가입) 중
 // 하나를 사용자가 직접 고르게 한다.
 function _showWalletLockedBanner() {
+  // 2026-07-28 수정: 이 스크립트가 <head>에 있어 gopang-wallet.js가
+  // 로드 중 즉시(동기) 복호화 실패를 감지해 이벤트를 던지면 아직
+  // document.body가 생성되기 전이라 appendChild가 null에서 터졌다.
+  // body가 없으면 DOMContentLoaded까지 미뤘다가 다시 시도한다.
+  if (!document.body) {
+    document.addEventListener('DOMContentLoaded', _showWalletLockedBanner, { once: true });
+    return;
+  }
   if (document.getElementById('_wallet-locked-banner')) return; // 중복 방지
   const bar = document.createElement('div');
   bar.id = '_wallet-locked-banner';
