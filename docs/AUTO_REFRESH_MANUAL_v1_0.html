@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: SP 자동 갱신 파이프라인 3종(tier 재계산·refresh 큐잉,
+  미등록 태그 반복 집계, 사용자 피드백 클러스터링→SP 패치 초안) — 스케줄·
+  기술 흐름·사람 승인 게이트·운영(수동 실행·장애 이력)을 다룹니다.
+  관련 문서: MANUAL_INDEX.md 에서 전체 문서 지도 확인
+  (desktop.html 좌측 사이드바 "🛠 개발자 문서" 섹션에서 링크됨)
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>자동 갱신 매뉴얼 — SP Refresh · Feedback Triage · Gopang</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+:root {
+  --brand:     #3ecf8e;
+  --brand-dk:  #1a9e6a;
+  --brand-lt:  #d1fae5;
+  --brand-bg:  #f0fdf8;
+  --amber:     #f59e0b;
+  --amber-lt:  #fef3c7;
+  --amber-bg:  #fffbeb;
+  --red:       #ef4444;
+  --red-lt:    #fecaca;
+  --red-bg:    #fef2f2;
+  --blue:      #3b82f6;
+  --blue-bg:   #eff6ff;
+  --bg:        #f8f9fa;
+  --surface:   #ffffff;
+  --surface2:  #f1f3f5;
+  --border:    #e5e7eb;
+  --text:      #0f172a;
+  --text2:     #1e293b;
+  --text3:     #374151;
+  --text4:     #6b7280;
+  --mono:      'SFMono-Regular', Consolas, monospace;
+  --radius:    8px;
+  --radius-lg: 14px;
+  --shadow:    0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+/* ── 헤더 ── */
+.guide-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.guide-header-inner {
+  max-width: 980px; margin: 0 auto;
+  padding: 16px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.guide-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 17px; font-weight: 800; color: var(--text);
+  text-decoration: none; letter-spacing: -0.4px;
+}
+.guide-logo-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--brand); flex-shrink: 0;
+}
+.guide-header-sub {
+  font-size: 12px; color: var(--text4); font-weight: 400;
+}
+.guide-back {
+  font-size: 13px; color: var(--text3); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.guide-back:hover { color: var(--brand-dk); }
+
+/* ── 목차 사이드 ── */
+.guide-layout {
+  max-width: 1180px; margin: 0 auto;
+  padding: 40px 24px 100px;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 48px;
+  align-items: start;
+}
+@media (max-width: 820px) {
+  .guide-layout { grid-template-columns: 1fr; }
+  .guide-toc { display: none; }
+}
+.guide-toc { position: sticky; top: 80px; }
+.guide-toc-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text4);
+  margin-bottom: 12px;
+}
+.guide-toc a {
+  display: block;
+  font-size: 13px; color: var(--text3);
+  text-decoration: none;
+  padding: 5px 0 5px 12px;
+  border-left: 2px solid var(--border);
+  line-height: 1.4;
+  transition: color .15s, border-color .15s;
+}
+.guide-toc a:hover, .guide-toc a.active {
+  color: var(--brand-dk);
+  border-left-color: var(--brand);
+  font-weight: 600;
+}
+
+/* ── 본문 ── */
+.guide-content { min-width: 0; }
+
+.gs {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 28px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.gs-head {
+  padding: 26px 32px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; gap: 16px;
+}
+.gs-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: var(--brand-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 21px; flex-shrink: 0;
+}
+.gs-head-text { flex: 1; }
+.gs-num {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--brand-dk);
+  margin-bottom: 4px;
+}
+.gs-title {
+  font-size: 19px; font-weight: 800;
+  color: var(--text); letter-spacing: -0.4px; line-height: 1.3;
+}
+.gs-subtitle { font-size: 13px; color: var(--text4); margin-top: 4px; }
+
+.gs-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: .2px;
+  padding: 3px 9px; border-radius: 99px;
+  font-family: var(--mono);
+}
+.badge-cron { background: var(--blue-bg); color: #1d4ed8; }
+.badge-auto { background: var(--brand-bg); color: var(--brand-dk); border: 1px solid var(--brand-lt); }
+.badge-human { background: var(--amber-bg); color: #92400e; border: 1px solid var(--amber-lt); }
+
+.gs-body { padding: 22px 32px 28px; }
+.gs-body p { font-size: 14.5px; color: var(--text2); line-height: 1.85; margin-bottom: 14px; }
+.gs-body p:last-child { margin-bottom: 0; }
+.gs-body strong { color: var(--text); font-weight: 700; }
+.gs-body h4 {
+  font-size: 14px; font-weight: 800; color: var(--text);
+  margin: 22px 0 10px; letter-spacing: -0.2px;
+}
+.gs-body h4:first-child { margin-top: 0; }
+.gs-body ul, .gs-body ol { margin: 4px 0 14px 20px; }
+.gs-body li { font-size: 14px; color: var(--text2); line-height: 1.8; margin-bottom: 4px; }
+.gs-body code {
+  font-family: var(--mono); font-size: 12.5px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 6px; color: #b91c1c;
+}
+
+/* 하이라이트 / 체크포인트 */
+.gs-highlight {
+  background: var(--brand-bg);
+  border-left: 3px solid var(--brand);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 14px 18px; margin: 16px 0;
+  font-size: 14px; color: var(--text2); line-height: 1.8;
+}
+.gs-checkpoint {
+  background: var(--amber-bg);
+  border-left: 3px solid var(--amber);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 12px 18px; margin: 14px 0;
+  font-size: 13.5px; color: var(--text2); line-height: 1.8;
+}
+.gs-checkpoint strong { color: #92400e; }
+.gs-incident {
+  background: var(--red-bg);
+  border-left: 3px solid var(--red);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 12px 18px; margin: 14px 0;
+  font-size: 13.5px; color: var(--text2); line-height: 1.8;
+}
+.gs-incident strong { color: #991b1b; }
+
+/* 표 */
+.gs-table-wrap { margin: 16px 0; overflow-x: auto; }
+.gs-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.gs-table th, .gs-table td {
+  border: 1px solid var(--border); padding: 10px 14px;
+  text-align: left; line-height: 1.6;
+}
+.gs-table th { background: var(--surface2); font-weight: 700; color: var(--text); font-size: 12.5px; }
+.gs-table td { color: var(--text3); }
+.gs-table td strong, .gs-table td code { color: var(--text); }
+.gs-table td code { font-family: var(--mono); font-size: 12px; background: var(--surface2); padding: 1px 5px; border-radius: 4px; }
+
+/* 흐름 다이어그램 */
+.gs-flow {
+  font-family: var(--mono);
+  font-size: 12.5px; color: var(--text3);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px; margin: 16px 0;
+  line-height: 2; white-space: pre-wrap;
+}
+.gs-flow .step { color: var(--brand-dk); font-weight: 700; }
+.gs-flow .gate { color: #92400e; font-weight: 700; }
+
+/* 코드 블록 */
+.gs-code {
+  font-family: var(--mono);
+  font-size: 12.5px; color: #e2e8f0;
+  background: #0f172a;
+  border-radius: var(--radius);
+  padding: 16px 18px; margin: 14px 0;
+  line-height: 1.7; overflow-x: auto;
+  white-space: pre;
+}
+.gs-code .c { color: #64748b; } /* comment */
+.gs-code .s { color: #86efac; } /* string / value */
+
+/* 히어로 */
+.guide-hero {
+  background: linear-gradient(135deg, var(--brand-bg) 0%, #fff 60%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 38px 32px;
+  margin-bottom: 28px;
+  box-shadow: var(--shadow);
+}
+.guide-hero-eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--brand-dk);
+  margin-bottom: 10px;
+}
+.guide-hero-title {
+  font-size: 27px; font-weight: 900;
+  color: var(--text); letter-spacing: -0.7px;
+  line-height: 1.35; margin-bottom: 14px;
+}
+.guide-hero-title em { font-style: normal; color: var(--brand-dk); }
+.guide-hero-desc { font-size: 14.5px; color: var(--text3); line-height: 1.85; }
+.guide-hero-meta {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border);
+  font-size: 12.5px; color: var(--text4);
+}
+.guide-hero-meta strong { color: var(--text3); font-weight: 700; }
+
+.reveal { opacity: 0; transform: translateY(14px); transition: opacity .4s ease, transform .4s ease; }
+.reveal.in { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ── 헤더 ── -->
+<header class="guide-header">
+  <div class="guide-header-inner">
+    <a class="guide-logo" href="../desktop.html">
+      <span class="guide-logo-dot"></span>
+      혼디 · Gopang
+      <span class="guide-header-sub">개발자 문서</span>
+    </a>
+    <a class="guide-back" href="../desktop.html">← 데스크톱으로 돌아가기</a>
+  </div>
+</header>
+
+<div class="guide-layout">
+
+  <!-- ── 목차 ── -->
+  <nav class="guide-toc">
+    <div class="guide-toc-title">목차</div>
+    <a href="#overview">개요 — 왜 필요한가</a>
+    <a href="#principle">공통 원칙</a>
+    <a href="#comp1">① SP Refresh Scheduler</a>
+    <a href="#comp2">② 미등록 태그 집계</a>
+    <a href="#comp3">③ 사용자 피드백 취합</a>
+    <a href="#gate">사람 승인 게이트</a>
+    <a href="#ops">운영 — 수동 실행·점검</a>
+    <a href="#incidents">장애 이력</a>
+    <a href="#related">관련 문서</a>
+  </nav>
+
+  <!-- ── 본문 ── -->
+  <main class="guide-content">
+
+    <div class="guide-hero reveal">
+      <div class="guide-hero-eyebrow">AUTO_REFRESH_MANUAL v1.0</div>
+      <h1 class="guide-hero-title">SP<em>가</em> 스스로 낡지 않게 만드는<br>세 개의 자동 갱신 파이프라인</h1>
+      <p class="guide-hero-desc">
+        혼디의 SP(Service Persona)는 시간이 지나면 수치·법령·연락처가 바뀌어 낡는다.
+        사람이 수백 개의 SP를 매번 순회하며 낡은 곳을 찾는 건 비현실적이라,
+        <strong>“무엇을 갱신해야 하는지 찾아서 큐에 올리는 일”</strong>만 자동화했다.
+        실제 문안 작성과 반영 승인은 이 문서 전체에서 예외 없이 사람(주피터님) 몫이다.
+      </p>
+      <div class="guide-hero-meta">
+        <span><strong>대상 저장소</strong> Openhash-Gopang/gopang</span>
+        <span><strong>실행 위치</strong> GitHub Actions (저장소 밖 스케줄러 대체)</span>
+        <span><strong>최종 갱신</strong> 2026-07-28</span>
+      </div>
+    </div>
+
+    <!-- ── 개요 ── -->
+    <section class="gs reveal" id="overview">
+      <div class="gs-head">
+        <div class="gs-icon">🔄</div>
+        <div class="gs-head-text">
+          <div class="gs-num">Overview</div>
+          <div class="gs-title">개요 — 왜 “자동 갱신”이 필요한가</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <code>worker.js</code>(hondi-proxy)는 무상태(stateless) HTTP 핸들러만 제공하고,
+          저장소 안에는 크론(cron)이 존재하지 않는다는 원칙을 따른다. 하지만 SP는
+          가만히 둬도 낡는다 — 방문 시간, 수수료, 담당 부서 연락처 같은 정보는
+          시간이 지나면 실제와 어긋난다. 이 어긋남을 사람이 매번 발견해서 고치는
+          구조로는 SP 개수가 늘어날수록(현재 전국 16개 광역시도 + 시군구 + 국가기관 +
+          K-서비스 전체) 감당이 안 된다.
+        </p>
+        <p>
+          그래서 GitHub Actions의 <code>schedule</code> 트리거를 “저장소 밖 스케줄러”로
+          삼아 세 개의 자동 갱신 파이프라인을 돌린다. 셋 다 <strong>“갱신이 필요한
+          대상을 찾아서 사람이 검토할 큐에 올리는 것”</strong>까지만 하고, 실제 SP
+          파일 수정·반영은 절대 자동으로 하지 않는다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead>
+              <tr><th>파이프라인</th><th>워크플로 파일</th><th>주기</th><th>찾아내는 것</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>① SP Refresh Scheduler</strong></td>
+                <td><code>sp-refresh-scheduler.yml</code></td>
+                <td>매일 09:00 KST</td>
+                <td>갱신 주기(tier)가 도래한 SP</td>
+              </tr>
+              <tr>
+                <td><strong>② 미등록 태그 집계</strong></td>
+                <td><code>sp-refresh-scheduler.yml</code>(동일 워크플로 2번째 스텝)</td>
+                <td>매일 09:00 KST</td>
+                <td>여러 사용자가 반복해서 걸리는 미등록 전문가·서비스 태그</td>
+              </tr>
+              <tr>
+                <td><strong>③ 사용자 피드백 취합</strong></td>
+                <td><code>triage-user-feedback.yml</code></td>
+                <td>매주 월 07:00 KST</td>
+                <td>여러 사용자가 비슷하게 지적한 SP 오류·개선 요청</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 공통 원칙 ── -->
+    <section class="gs reveal" id="principle">
+      <div class="gs-head">
+        <div class="gs-icon">⚖️</div>
+        <div class="gs-head-text">
+          <div class="gs-num">Core Principle</div>
+          <div class="gs-title">공통 원칙 — 자동은 “발견”까지, 반영은 사람이</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>세 파이프라인 모두 동일한 경계선을 지킨다.</p>
+        <ul>
+          <li><strong>자동으로 하는 것</strong>: 조회 · 계산 · 클러스터링 · 큐잉 · (③에 한해) 패치 초안 작성</li>
+          <li><strong>자동으로 하지 않는 것</strong>: SP 파일 직접 수정, <code>sp_update_proposals</code> 상태를
+            <code>approved</code>로 변경, 반영 배포</li>
+        </ul>
+        <div class="gs-highlight">
+          <strong>허위는 절대 안됩니다</strong>라는 혼디 전체 원칙과 맞닿아 있다 — 근거 부족한
+          상태에서 자동으로 “이게 맞다”고 SP를 고쳐버리면 그 오류가 실제 민원 응대에
+          그대로 흘러간다. 그래서 표본이 부족하거나(③의 최소 클러스터 크기 3건),
+          귀속이 모호하면(② 반복 3건 미만, ③ 대상 SP가 둘 이상) 아예 큐에 올리지
+          않고 리포트에만 남긴다 — “과신 방지”가 설계 전체를 관통한다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ① SP Refresh Scheduler ── -->
+    <section class="gs reveal" id="comp1">
+      <div class="gs-head">
+        <div class="gs-icon">🗓️</div>
+        <div class="gs-head-text">
+          <div class="gs-num">Component 01</div>
+          <div class="gs-title">SP Refresh Scheduler — tier 재계산 + 갱신 큐잉</div>
+          <div class="gs-badges">
+            <span class="badge badge-cron">cron: 0 0 * * * (매일 09:00 KST)</span>
+            <span class="badge badge-auto">자동: tier 계산·큐잉</span>
+            <span class="badge badge-human">사람: 실제 조사·수정</span>
+          </div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <h4>실행 파일</h4>
+        <ul>
+          <li>워크플로: <code>.github/workflows/sp-refresh-scheduler.yml</code></li>
+          <li>스크립트: <code>tools/sp_refresh_scheduler.py</code></li>
+        </ul>
+
+        <h4>tier 배정 기준</h4>
+        <p>
+          <code>gwp_registry</code>의 <code>call_count_30d</code>(최근 30일 호출 횟수)를
+          절대 임계값과 비교해 갱신 주기를 재배정한다 (실시간 퍼센타일이 아니라
+          <code>docs/SP-AUTHOR-AUTOMATION_v1_0.md</code> §2-2의 고정 수치를 그대로 쓴다 —
+          항목 수가 적을 때 퍼센타일은 쉽게 왜곡되기 때문).
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>tier</th><th>기준(call_count_30d)</th><th>재검토 주기</th><th>예시</th></tr></thead>
+            <tbody>
+              <tr><td><code>weekly</code></td><td>200회 이상</td><td>7일</td><td>K-Health·K-Market·kgov/jeju 등 고빈도 서비스</td></tr>
+              <tr><td><code>monthly</code></td><td>20~199회</td><td>30일</td><td>대부분의 K-서비스·행정시/읍면동 SP</td></tr>
+              <tr><td><code>quarterly</code></td><td>20회 미만</td><td>90일</td><td>저빈도·특수 절차 SP</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          호출 이력이 아예 없거나 0인 신규 SP는 <strong>과소추정을 막기 위해</strong>
+          기본값 <code>monthly</code>로 둔다 — “안 써서 낮은 등급”으로 오판하지 않는다.
+        </p>
+
+        <h4>실행 흐름</h4>
+        <div class="gs-flow"><span class="step">1단계 tier 재계산</span>
+  GET  /gwp-registry/search?limit=1000        active 항목 전체 조회
+  →   call_count_30d 기준으로 tier 산출(위 표)
+  POST /sp-author/refresh-schedule             { sp_id, tier, call_count_30d } 반영
+
+<span class="step">2단계 갱신 큐잉</span>
+  GET  /sp-author/refresh-due                  주기 도래 항목 조회
+  POST /sp-author/queue                         { request_type: "update",
+                                                   signal_source: "refresh_schedule",
+                                                   priority: "low" }  <span class="gate">← 큐에만 올림, 자동 수정 없음</span></div>
+        <p>
+          큐잉 우선순위는 항상 <code>low</code>다 — 실사용자가 직접 신호를 보낸
+          경우(②·③)보다 후순위로 둔다는 것이 <code>SP-AUTHOR-AUTOMATION_v1_0.md</code>의
+          설계 원칙이다.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── ② 미등록 태그 집계 ── -->
+    <section class="gs reveal" id="comp2">
+      <div class="gs-head">
+        <div class="gs-icon">🏷️</div>
+        <div class="gs-head-text">
+          <div class="gs-num">Component 02</div>
+          <div class="gs-title">미등록 태그 반복 집계 — 신규 SP 수요 발굴</div>
+          <div class="gs-badges">
+            <span class="badge badge-cron">cron: sp-refresh-scheduler.yml에 통합 실행</span>
+            <span class="badge badge-auto">자동: 그룹화·우선순위 승격</span>
+            <span class="badge badge-human">사람: 신규 SP 실제 작성</span>
+          </div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <h4>실행 파일</h4>
+        <p><code>tools/aggregate_unresolved_tags.py</code> — tier 재계산과 관심사가 달라
+          (하나는 기존 SP 갱신 주기, 하나는 신규 미등록 수요 발굴) 별도 스크립트로
+          유지하되, 실행 주기(매일 1회)는 공유해 별도 워크플로를 새로 만들지 않았다.</p>
+
+        <h4>문제의식</h4>
+        <p>
+          <code>expert-session.js</code>의 <code>_reportUnresolvedTag</code>가
+          EXPERT/GWP 태그 해석 실패(예: “연금회계사”처럼 아직 등록 안 된 전문가
+          분류)마다 큐에 기록한다. 한 사람이 한 번 걸리면 그 한 건만 남지만,
+          여러 사람이 같은 미등록 항목에 반복해서 걸리면 그건 “진짜 수요”라는
+          신호다 — 다만 개별 레코드로만 쌓이면 그 신호가 묻힌다.
+        </p>
+
+        <h4>실행 흐름</h4>
+        <div class="gs-flow">GET /sp-author/queue?status=queued
+  → signal_source ∈ {expert_tag_resolution, gwp_tag_resolution} 만 필터
+  → 최근 7일 이내 생성분만 대상
+  → institution(raw_id, 원본 태그 문자열) 기준 그룹화
+
+그룹 크기 ≥ 3건이면:
+  <span class="step">1. 대표 레코드(최초 발생) 1건만 남기고 나머지 status=duplicate 병합</span>
+  <span class="step">2. 대표 레코드 priority → high</span>
+  <span class="step">3. POST /sp-author/escalate  (reason: sp_draft_request, to: @owner)</span> <span class="gate">← 알림만, 자동 작성 없음</span></div>
+        <p>기본 임계값은 <strong>7일 · 3건</strong>이며, <code>--days</code>/<code>--threshold</code>
+          옵션으로 조정할 수 있다.</p>
+      </div>
+    </section>
+
+    <!-- ── ③ 사용자 피드백 취합 ── -->
+    <section class="gs reveal" id="comp3">
+      <div class="gs-head">
+        <div class="gs-icon">💬</div>
+        <div class="gs-head-text">
+          <div class="gs-num">Component 03</div>
+          <div class="gs-title">사용자 피드백 취합 — 클러스터링 + 패치 초안</div>
+          <div class="gs-badges">
+            <span class="badge badge-cron">cron: 0 22 * * 1 (매주 월 07:00 KST)</span>
+            <span class="badge badge-auto">자동: 임베딩·클러스터링·초안 작성</span>
+            <span class="badge badge-human">사람: 검토·승인만</span>
+          </div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <h4>실행 파일</h4>
+        <ul>
+          <li>워크플로: <code>.github/workflows/triage-user-feedback.yml</code></li>
+          <li>스크립트: <code>tools/triage_feedback.py</code></li>
+          <li>출력 리포트: <code>data/feedback_triage_report.json</code> (사람이 읽는 요약, git 커밋 대상)</li>
+        </ul>
+        <p>
+          세 파이프라인 중 유일하게 <strong>실제 문안 초안</strong>까지 자동으로
+          만든다. 그래도 승인은 여전히 사람만 한다 — 이번 변경은 “검토하기 더
+          쉬운 초안을 주는 것”이지 “검토를 생략하는 것”이 아니다.
+        </p>
+
+        <h4>실행 흐름</h4>
+        <div class="gs-flow">1. GET user_feedback (status='new')             신규 피드백 전체 조회
+2. POST /embed-text                              bge-m3 임베딩(기존 benefit-semantic-search 인프라 재사용)
+3. 코사인 유사도 탐욕적 클러스터링                    threshold=0.82(잠정값, 실측 전)
+4. 클러스터별 대표 인용 최대 3개 + 최빈 category 산출
+
+<span class="gate">브릿지 조건(전부 충족해야 다음 단계로) ──────────────</span>
+   · 클러스터 크기 ≥ 3건   (표본 부족 → 과신 방지)
+   · context_sp 단일        (대상 SP가 모호하지 않음)
+   · category ∈ {bug, feature_request}   (칭찬·단순 질문은 제외)
+
+5. POST /sp-updates/draft-patch                  DeepSeek V4 Flash가 실제 SP 원문을 참고해 구체적 초안 작성
+6. POST /sp-updates/propose                       sp_update_proposals에 status=pending_review로 저장</div>
+        <p>
+          초안 작성(5단계)이 네트워크 오류 등으로 실패해도 조용히 플레이스홀더
+          문구로 폴백한다(<code>confidence: low</code>) — 초안 생성 실패가
+          클러스터링·리포트 생성 자체를 막으면 안 되기 때문이다. 초안이 실제로
+          만들어지면 <code>confidence: medium</code>으로 표시하지만, 이 값도
+          어디까지나 참고용이고 사람 검토를 대신하지 않는다.
+        </p>
+        <div class="gs-checkpoint">
+          <strong>실전 검증 전 주의</strong> — <code>user_feedback</code> 컬렉션 스키마는
+          <code>worker.js</code>의 <code>handleUserFeedbackSubmit()</code> payload를 기준으로
+          추정했고, 클러스터링 임계값(0.82)도 실측 데이터 없이 잡은 잠정값이다.
+          실제 피드백이 쌓이면 재조정이 필요할 가능성이 높아, 매 실행마다
+          리포트에 클러스터 크기 분포를 남겨 조정 근거로 삼는다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 사람 승인 게이트 ── -->
+    <section class="gs reveal" id="gate">
+      <div class="gs-head">
+        <div class="gs-icon">🚦</div>
+        <div class="gs-head-text">
+          <div class="gs-num">Human Review Gate</div>
+          <div class="gs-title">사람 승인 게이트 — 세 파이프라인의 공통 종착점</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          세 파이프라인이 만들어낸 신호는 결국 두 곳 중 하나로 모인다 —
+          <code>sp-author/queue</code>(조사·수정 대기열)와
+          <code>sp_update_proposals</code>(구체적 패치 초안 대기열). 어느 쪽이든
+          <strong>자동으로 <code>approved</code>가 되는 경로는 존재하지 않는다</strong>
+          (RULE-03과 동일 원칙).
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>큐</th><th>자동이 넣는 상태</th><th>다음 단계</th><th>실제 반영</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code>sp-author/queue</code></td>
+                <td><code>queued</code> (priority: low/high)</td>
+                <td>사람이 조사·SP 원문 수정</td>
+                <td>사람이 커밋·PR</td>
+              </tr>
+              <tr>
+                <td><code>sp_update_proposals</code></td>
+                <td><code>pending_review</code></td>
+                <td>사람이 초안 검토(수정/기각/승인)</td>
+                <td>사람이 <code>approved</code>로 전환해야 다음 SP 버전에 반영</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="gs-highlight">
+          <strong>혼디는 안내가 아니라 실행이 주된 목적</strong>이라는 철학과, 이 게이트가
+          충돌하는 것처럼 보일 수 있지만 그렇지 않다 — “실행”은 사용자를 향한
+          서비스 응답에 적용되는 원칙이고, SP 자체를 고치는 일(플랫폼의 지식
+          원본을 바꾸는 일)은 항상 사람 승인을 거친다. 여기서 자동화가 대신하는
+          건 “무엇을 고쳐야 하는지 찾아내는 사람의 반복 노동”이지, “고칠지 말지
+          판단하는 권한”이 아니다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 운영 ── -->
+    <section class="gs reveal" id="ops">
+      <div class="gs-head">
+        <div class="gs-icon">🛠️</div>
+        <div class="gs-head-text">
+          <div class="gs-num">Operations</div>
+          <div class="gs-title">운영 — 수동 실행 · 결과 확인 · 필요 환경변수</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <h4>수동 트리거 (GitHub CLI)</h4>
+        <p>정기 스케줄을 기다리지 않고 즉시 실행하거나, 실제 반영 없이 결과만 미리
+          보고 싶을 때 <code>--dry-run</code>(또는 워크플로 입력 <code>dry_run=true</code>)을 쓴다.</p>
+        <div class="gs-code">gh workflow run "Triage user feedback (cluster + draft patch proposals)" -f dry_run=true
+gh workflow run "SP refresh scheduler (Phase 4)" -f dry_run=true</div>
+
+        <h4>실행 상태 확인</h4>
+        <div class="gs-code">gh run list --workflow="triage-user-feedback.yml" --limit 1
+gh run list --workflow="sp-refresh-scheduler.yml" --limit 1
+
+<span class="c"># 실패 시 로그 확인</span>
+gh run view &lt;RUN_ID&gt; --log-failed</div>
+        <p>STATUS 칸에 <code>✓</code>가 뜨면 정상 종료다. <code>*</code>는 진행 중, <code>X</code>는
+          실패이니 <code>--log-failed</code>로 원인을 확인한다.</p>
+
+        <h4>필요 시크릿·환경변수</h4>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>변수</th><th>사용처</th><th>비고</th></tr></thead>
+            <tbody>
+              <tr><td><code>POCKETBASE_URL</code></td><td>③ 사용자 피드백 취합</td><td>GitHub Secrets</td></tr>
+              <tr><td><code>POCKETBASE_ADMIN_EMAIL</code></td><td>③ 사용자 피드백 취합</td><td>GitHub Secrets</td></tr>
+              <tr><td><code>POCKETBASE_ADMIN_PASSWORD</code></td><td>③ 사용자 피드백 취합</td><td>GitHub Secrets</td></tr>
+              <tr><td><code>HONDI_WORKER_URL</code></td><td>③ 사용자 피드백 취합</td><td>워크플로에 하드코딩(공개 URL)</td></tr>
+              <tr><td><code>HONDI_PROXY_URL</code></td><td>① · ② (기본값 존재)</td><td>공개 엔드포인트라 시크릿 불필요</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>①·②는 <code>worker.js</code>의 <code>/sp-author/*</code>·<code>/gwp-registry/*</code>가
+          인증 없는 내부 API라 별도 시크릿이 없다 — 실서비스 확장 시 인증 도입
+          여지는 있으나 현재 범위 밖이다. ③만 L1 PocketBase 관리자 인증이 필요하다.</p>
+
+        <h4>결과물 확인 위치</h4>
+        <ul>
+          <li><code>data/feedback_triage_report.json</code> — ③의 클러스터별 요약(신규
+            피드백이 없으면 파일 자체가 생성되지 않고 정상 종료된다, 아래 장애
+            이력 참조)</li>
+          <li>PocketBase Admin UI의 <code>sp_author_queue</code> / <code>sp_update_proposals</code>
+            컬렉션 — ①·②·③ 모두의 최종 검토 대기열</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── 장애 이력 ── -->
+    <section class="gs reveal" id="incidents">
+      <div class="gs-head">
+        <div class="gs-icon">⚠️</div>
+        <div class="gs-head-text">
+          <div class="gs-num">Incident Log</div>
+          <div class="gs-title">장애 이력 — 실사로 발견·수정된 문제</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <div class="gs-incident">
+          <strong>2026-07-28 — “Commit triage report” 스텝이 리포트 파일 부재를
+          처리하지 못함.</strong><br>
+          <code>triage_feedback.py</code>는 처리할 신규 피드백이 없으면(초기 단계처럼
+          데이터가 아직 안 쌓인 경우 포함) <code>data/feedback_triage_report.json</code>
+          자체를 만들지 않고 조용히 종료하도록 설계돼 있다(정상 동작). 하지만
+          워크플로의 커밋 스텝은 그 파일이 무조건 있다고 가정하고
+          <code>git add</code>를 시도해 <code>fatal: pathspec ... did not match any files</code>로
+          실패했다. <code>triage-user-feedback.yml</code>의 커밋 스텝을
+          <code>if [ -f data/feedback_triage_report.json ]; then ... else</code>로
+          감싸 파일 존재 여부를 먼저 확인하도록 수정했다 — 스크립트 쪽 버그가
+          아니라 워크플로 쪽 가정 오류였다.
+        </div>
+        <p>
+          이 사례는 “정상적으로 아무 일도 안 하는 경우”를 워크플로가 실패로
+          오인하지 않도록, 조건부 스텝을 항상 명시적으로 짜야 한다는 일반
+          교훈으로 남는다 — 특히 초기 단계라 데이터가 적어 “처리할 것 없음”이
+          자주 발생하는 파이프라인일수록 그렇다.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── 관련 문서 ── -->
+    <section class="gs reveal" id="related">
+      <div class="gs-head">
+        <div class="gs-icon">📚</div>
+        <div class="gs-head-text">
+          <div class="gs-num">Related Docs</div>
+          <div class="gs-title">관련 문서</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <ul>
+          <li><code>docs/SP-AUTHOR-AUTOMATION_v1_0.md</code> — tier 임계값·큐 스키마·
+            search_miss_pattern 등 이 매뉴얼이 인용하는 원 설계 문서</li>
+          <li><code>docs/user_feedback_mechanism_proposal_v1.md</code> — 사용자 피드백
+            수집·취합 메커니즘 §4 원 제안서</li>
+          <li><code>docs/GWP-REGISTRY-SCALING_v1_0.md</code> — “저장소 안에는 크론이
+            없다” 원칙의 근거</li>
+          <li><code>docs/MANUAL_INDEX.md</code> — 전체 문서 지도</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const revealEls = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  revealEls.forEach(el => io.observe(el));
+
+  const tocLinks = document.querySelectorAll('.guide-toc a');
+  const sections = Array.from(tocLinks).map(a => document.querySelector(a.getAttribute('href')));
+  const setActive = () => {
+    let idx = 0;
+    const y = window.scrollY + 120;
+    sections.forEach((sec, i) => { if (sec && sec.offsetTop <= y) idx = i; });
+    tocLinks.forEach((a, i) => a.classList.toggle('active', i === idx));
+  };
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+</script>
+</body>
+</html>
