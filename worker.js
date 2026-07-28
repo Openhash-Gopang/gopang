@@ -10599,6 +10599,11 @@ async function _draftFeedbackPatch(env, { sp_id, quotes, category, context_sps }
   // 검토·승인해야 실제 SP 파일의 다음 버전이 된다(RULE-03·기존 설계와
   // 동일 불변식). 이 시스템 프롬프트 자체가 그 사실을 최우선으로
   // 명시한다 — 확정 문안을 쓰는 것처럼 보이는 어조를 피하게 한다.
+  // ALLOW-EMBEDDED-SP: 제품 SP(K-Law/K-Tax 등 prompts/ 정본)가 아니라,
+  // 사용자 피드백 클러스터를 SP 패치 초안으로 요약하는 내부 유지보수
+  // 도구(triage_feedback.py 파이프라인) 전용 메타 프롬프트 — 성격이
+  // 달라 prompts/ 디렉터리로 옮기지 않음(2026-07-28, check_no_embedded_sp
+  // 실사로 발견).
   const systemPrompt = `당신은 오픈소스 프로젝트 "혼디"의 유지보수를 돕는 검토 보조입니다.
 사용자 여러 명이 비슷한 취지로 남긴 피드백 클러스터를 보고, 관련 SP(시스템
 프롬프트) 원문을 참고해 **사람 개발자가 검토할 구체적인 패치 초안**을
