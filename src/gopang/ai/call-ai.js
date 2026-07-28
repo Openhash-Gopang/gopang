@@ -52,7 +52,13 @@ export let history_ref = history;  // 외부 참조용
 // import하지 않는 독립 모듈이라 순환 참조 없이 바로 가져다 쓸 수 있다.
 import { _loadSpByKey } from './manifest-loader.js';
 
-// AGENT-COMMON (그림자 AI) — 세션당 1회 캐시
+// AC-PRO-CORE(신규 기본 프롬프트) — 세션당 1회 캐시
+// v1.5(2026-07-28) — Pro/Flash 재설계: 기본으로 로드하는 프롬프트를
+// AGENT-COMMON(2500줄+ 판단보조 SCAFFOLDING 포함, 구 hondi-flash용)에서
+// AC-PRO-CORE(CORE+CATALOG+SAFETY만 남긴 신규, hondi-pro용)로 교체한다.
+// 함수 이름은 이 파일 밖에서도 여러 곳(webapp.html _callPanelAI 등)이
+// import해서 쓰고 있어, 이름을 그대로 두고 내부 로드 대상만 바꾼다 —
+// 이름과 실제 로드 내용이 어긋난다는 걸 알아둘 것(리네이밍은 별도 작업).
 let _agentCommonCache = null;
 // v1.3 — export: AI 패널(webapp.html _callPanelAI)도 같은 manifest 기반 로더를
 // 쓰도록 공개.
@@ -60,14 +66,27 @@ let _agentCommonCache = null;
 // 이걸 "폴백으로 대체해도 되는 신호"로 쓰면 안 된다 — webapp.html에 있던
 // 내장 _PA_SYSTEM_PROMPT 폴백(안전장치 전혀 없는 742자 축약판)을 완전히
 // 제거하면서, 호출자는 빈 문자열을 받으면 명확한 오류를 보여주고 중단해야
-// 한다. AGENT-COMMON은 유일한 정본이며, 그 대체물은 존재하지 않는다.
+// 한다. AC-PRO-CORE는 유일한 정본이며, 그 대체물은 존재하지 않는다.
 export async function _loadAgentCommonSP() {
   if (_agentCommonCache) return _agentCommonCache;
   try {
-    _agentCommonCache = await _loadSpByKey('AGENT-COMMON', 'AGENT-COMMON');
+    _agentCommonCache = await _loadSpByKey('AC-PRO-CORE', 'AC-PRO-CORE');
     return _agentCommonCache;
   } catch (e) {
-    console.error('[SP] AGENT-COMMON 로드 실패:', e.message);
+    console.error('[SP] AC-PRO-CORE 로드 실패:', e.message);
+    return '';
+  }
+}
+
+// AC-FLASH-EXECUTOR(신규) — hondi-flash에게 위임할 때만 로드, 세션당 1회 캐시
+let _flashExecutorCache = null;
+export async function _loadFlashExecutorSP() {
+  if (_flashExecutorCache) return _flashExecutorCache;
+  try {
+    _flashExecutorCache = await _loadSpByKey('AC-FLASH-EXECUTOR', 'AC-FLASH-EXECUTOR');
+    return _flashExecutorCache;
+  } catch (e) {
+    console.error('[SP] AC-FLASH-EXECUTOR 로드 실패:', e.message);
     return '';
   }
 }
@@ -3235,10 +3254,18 @@ function _buildCallCandidates(userText, messages) {
   // 또는 나중에 붙을 혼디 자체 추론 서버)로 매핑한다.
   // v3.2: 사용자가 직접 고르던 Flash/Pro 수동 선택을 제거하고, 이번 턴
   // 질문의 복잡도를 보고 _resolveHondiTier()가 자동으로 고른다.
+  // v4.0(2026-07-28, Pro/Flash 재설계): 주피터님 지시 — "AC는 처음부터
+  // deepseek v4 pro를 디폴트로 호출". _resolveHondiTier()의 복잡도 점수
+  // 산정은 "판단력이 약한 flash를 언제 pro로 승격할지"를 결정하던
+  // 로직이었는데, 이제 기본 판단 주체 자체가 pro라 이 질문 자체가
+  // 사라진다. hondi-pro를 고정값으로 쓴다. _resolveHondiTier/
+  // _estimateQueryComplexity 함수는 삭제하지 않고 남겨둔다 — pro가
+  // §DELEGATE로 flash에 위임할지 판단하는 보조 신호로 재활용할 여지가
+  // 있다(현재는 pro 스스로 판단, 이 점수를 참조하지 않음).
   candidates.push({
     provider: 'deepseek-default',
     baseUrl:  CFG.endpoint.replace(/\/+$/, ''),
-    model:    _resolveHondiTier(userText, messages),
+    model:    'hondi-pro',
     apiKey:   null,
     isProxy:  true,
   });
@@ -3370,7 +3397,144 @@ export async function _callLLM(messages, options = {}) {
   return fullReply || '';
 }
 
-// ── §9 실행 태그 공용 디스패처 (Phase 0, 2026-07-01 신설) ──────
+// ── hondi-flash 위임 처리 (2026-07-28 신설, Pro/Flash 재설계) ──────
+// [DELEGATE_TO_FLASH: task=..., context=...] 태그를 hondi-pro가 냈을 때,
+// AC-FLASH-EXECUTOR 프롬프트로 hondi-flash를 별도 호출(비스트리밍, 단발)해
+// task를 실행시키고 그 결과를 최종 응답으로 채택한다. report-utils.js의
+// summarizeHandoffContext6W()와 동일한 패턴(직접 fetch, 실패 시 안전 폴백)을
+// 따른다 — 다만 그쪽은 요약을 JSON으로 받아 원래 흐름에 주입하는 "보조
+// 호출"이고, 이건 flash의 응답을 사용자에게 보여줄 "최종 응답"으로 쓰는
+// 점이 다르다.
+async function _delegateToFlash(task, context) {
+  const sysPrompt = await _loadFlashExecutorSP();
+  if (!sysPrompt) {
+    // 안전 폴백 — executor 프롬프트를 못 불러오면 위임 자체를 포기하고
+    // pro에게 직접 처리하라고 되돌린다(§ESCALATE와 동일 형식으로 통일).
+    return { ok: false, escalate: true, reason: 'executor_load_failed', text: '' };
+  }
+  try {
+    // ★ 2026-07-28 수정 — guid 누락 버그. worker.js의 callDeepSeek()는
+    // body.guid가 있어야 무료 한도·GDC 잔액 체크(_settleAiUsage 등)를
+    // 태운다(guid 없으면 이 체크 자체가 스킵된다) — 위임 호출도 실사용량이
+    // 발생하는 이상 똑같이 과금·한도 대상이어야 한다. 메인 스트리밍 호출과
+    // 동일한 표현식(_USER?.ipv6 || USER_GUID || null)을 그대로 쓴다.
+    // 엔드포인트도 메인 호출과 동일하게 /deepseek로 맞춘다(/chat/completions와
+    // 같은 핸들러로 가긴 하지만, "혼디 제공 기본 키" 경로라는 의도를
+    // 코드에서도 드러내기 위해 통일).
+    const res = await fetch(CFG.endpoint.replace(/\/+$/, '') + '/deepseek', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:       'hondi-flash',
+        max_tokens:  800,
+        temperature: 0.3,
+        stream:      false,
+        guid:        _USER?.ipv6 || USER_GUID || null,
+        messages: [
+          { role: 'system', content: sysPrompt },
+          { role: 'user',   content: `task: ${task}\ncontext: ${context || '(없음)'}` },
+        ],
+      }),
+    });
+    if (res.status === 402) {
+      // 무료 한도 소진 + GDC 잔액 부족 — pro에게 되돌려봤자 pro의 다음
+      // 호출도 같은 guid로 같은 벽에 부딪힌다. 에스컬레이션 재시도를
+      // 소모하지 않고 즉시 이용자에게 정직한 안내로 종료한다.
+      let msg = '무료 한도를 모두 사용했고 GDC 잔액도 부족합니다. GDC를 충전한 뒤 다시 이용해 주세요.';
+      try { const errData = await res.json(); if (errData?.message) msg = errData.message; } catch {}
+      return { ok: false, escalate: false, insufficientBalance: true, text: msg };
+    }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content || '';
+
+    // flash가 §ESCAPE로 되돌린 경우 감지
+    const escMatch = text.match(/\[ESCALATE_TO_PRO:\s*reason=([^,\]]+)(?:,\s*(?:signal|note)=([^\]]+))?\]/);
+    if (escMatch) {
+      return { ok: false, escalate: true, reason: escMatch[1].trim(), detail: (escMatch[2] || '').trim(), text: '' };
+    }
+    if (!text.trim()) {
+      return { ok: false, escalate: true, reason: 'empty_response', text: '' };
+    }
+    return { ok: true, escalate: false, text };
+  } catch (e) {
+    console.warn('[Delegate] hondi-flash 위임 실패(무시 — pro로 되돌림):', e.message);
+    return { ok: false, escalate: true, reason: 'fetch_error', detail: e.message, text: '' };
+  }
+}
+
+// sendFn(=callAI)로 되돌릴 때 쓸 재시도 상한 — 위임↔에스컬레이션이 서로를
+// 계속 부르는 무한루프를 막는다. 세션 전역이 아니라 이 모듈 스코프 카운터로,
+// 탭 새로고침 시 자연히 리셋된다(영구 저장 불필요 — 한 세션의 이상 상태
+// 방지가 목적).
+let _delegateRetryCount = 0;
+const _DELEGATE_RETRY_MAX = 2;
+
+export async function _handleDelegateToFlashTag(fullReply, bubble, sendFn = callAI, userText = '') {
+  const tagMatch = fullReply.match(/\[DELEGATE_TO_FLASH:([\s\S]*?)\]/);
+  if (!tagMatch) return false;
+  const body = tagMatch[1];
+  const get = (field) => {
+    const m = body.match(new RegExp(`${field}=([^,\\]]+)`));
+    return m ? m[1].trim() : '';
+  };
+  const task    = get('task');
+  const context = get('context');
+  if (!task) return false; // task 없이 태그만 형식만 맞으면 위임 대상이 아니라고 본다
+
+  const cleanedReply = fullReply.replace(/\[DELEGATE_TO_FLASH:[\s\S]*?\]/, '').trim();
+  if (bubble && cleanedReply) _updateStreamBubble(bubble, cleanedReply);
+
+  const result = await _delegateToFlash(task, context);
+
+  if (result.insufficientBalance) {
+    // pro로 되돌려도 같은 guid가 같은 벽에 부딪힐 뿐이다 — 재시도 카운터를
+    // 소모하지 않고 바로 이용자에게 정직하게 안내하고 끝낸다.
+    if (bubble) _updateStreamBubble(bubble, result.text);
+    history.push({ role: 'assistant', content: result.text });
+    return true;
+  }
+
+  if (!result.ok) {
+    _delegateRetryCount += 1;
+    if (_delegateRetryCount > _DELEGATE_RETRY_MAX) {
+      // 반복 위임 실패 — pro에게 계속 되돌리지 않고 여기서 끊는다.
+      console.warn('[Delegate] 위임 재시도 한도 초과 — pro 자체 처리로 강제 종료');
+      if (bubble) _updateStreamBubble(bubble, cleanedReply ||
+        '요청을 처리하는 중 문제가 발생했습니다. 다시 한번 말씀해 주시겠어요?');
+      _delegateRetryCount = 0;
+      return true;
+    }
+    // flash가 판단이 필요하다고 되돌렸거나 호출 자체가 실패 — pro에게
+    // "위임이 안 됐으니 네가 직접 마무리하라"고 명시적으로 알리고 재호출.
+    const escalateNote =
+      `[FLASH_ESCALATED: reason=${result.reason}${result.detail ? ', detail=' + result.detail : ''}] ` +
+      `방금 hondi-flash에 위임한 작업(task: ${task})이 처리되지 못하고 되돌아왔습니다. ` +
+      `이번엔 위임하지 말고 직접 마무리해 주세요.`;
+    history.push({ role: 'user', content: escalateNote });
+    await sendFn(escalateNote);
+    return true;
+  }
+
+  _delegateRetryCount = 0;
+  // 필드 테스트 단계에서 실제 위임 빈도를 실측하기 위한 로그(Cache 로그와
+  // 동일한 관례). SIGNUP_BONUS_KRW 조정 여부를 추측이 아니라 실측으로
+  // 결정하려면 이 비율이 필요하다 — worker.js 재설계 시점 계산은
+  // "위임 0%~100%"의 두 극단만 계산했었다(정상상태 턴당 0.96~1.52원).
+  console.log('[Delegate] hondi-flash 위임 성공 — task 길이:', task.length);
+  const finalText = cleanedReply ? `${cleanedReply}\n\n${result.text}` : result.text;
+  if (bubble) _updateStreamBubble(bubble, finalText);
+  // 참고: 다른 태그 핸들러들은 관례적으로 history에 fullReply(태그가 든
+  // 원문)를 그대로 남기지만, 여기선 finalText(사용자가 실제로 본 내용 —
+  // pro의 서두 + flash의 실행 결과)를 남긴다. 다음 턴에 pro가 "자신이
+  // 방금 뭐라고 답했는지" 참조할 때, 태그 뒤에 flash가 채운 실제 내용이
+  // 빠진 반쪽짜리 fullReply보다 실제 대화 맥락과 일치하는 finalText가
+  // 더 정확하다고 판단했다.
+  history.push({ role: 'assistant', content: finalText });
+  return true;
+}
+
+
 // fullReply를 한 번만 스캔해 §9에 정의된 실행 태그를 찾아 처리한다.
 // 태그 하나의 처리 실패가 나머지 태그 처리를 막지 않도록 각각 독립적인
 // try/catch로 감싼다. 새 태그를 추가할 때는 이 함수 안에 블록 하나만
@@ -3914,6 +4078,14 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
       const _unclaimedHandled = await _handleCreateUnclaimedProfileTag(fullReply, bubble, callAI, userText);
       if (_unclaimedHandled) return;
     }
+
+    // ── hondi-flash 위임 태그 처리 (2026-07-28 신설, Pro/Flash 재설계) ──
+    // 웹검색 태그와 같은 성격(외부 호출 후 응답 완결) — 다른 라우팅
+    // 태그([GWP:]/[EXPERT:] 등)보다 먼저 확인한다. pro가 위임을 냈다는
+    // 건 이미 라우팅 판단까지 끝났다는 뜻이라, 뒤이어 _parseAgentTags가
+    // 같은 fullReply를 또 라우팅 태그로 오인해 처리할 이유가 없다.
+    const _delegateHandled = await _handleDelegateToFlashTag(fullReply, bubble, callAI, userText);
+    if (_delegateHandled) return;
 
     // ── 웹검색 태그 처리 (2026-07-11 신설, §0-B 경로1 실행부) ──
     // K-Search든 AC 자신(§0-B)이든 낼 수 있어 system 게이트를 안 건다 —
