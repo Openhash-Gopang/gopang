@@ -411,9 +411,13 @@ const DEVICE_LINK_SMS_RATE_WINDOW_SECONDS = 3600;
 //      공격을 못 막는다 — 실제 MFA push-bombing 공격과 동일한 패턴)
 // 비밀번호·CAPTCHA 없이 순수 서버 카운터로만 막는다(SMS rate limit과
 // 동일한 QR_SESSIONS_KV TTL 카운터 패턴 재사용).
-const DEVICE_LINK_PUSH_RATE_LIMIT_PER_HOUR = 5;  // 전화번호(피해자)당
+// 2026-07-28 조정 — 개발 중 반복 테스트가 자기 자신의 rate limit에
+// 계속 걸려 진행이 막히는 문제가 실사로 확인됨(같은 번호로 반복
+// device-link 테스트 → 5회/시간 소진). 개발 단계 동안 넉넉하게 상향.
+// 실사용자 트래픽이 늘면 다시 낮추는 걸 검토할 것.
+const DEVICE_LINK_PUSH_RATE_LIMIT_PER_HOUR = 20; // 전화번호(피해자)당
 const DEVICE_LINK_PUSH_RATE_WINDOW_SECONDS = 3600;
-const DEVICE_LINK_IP_RATE_LIMIT_PER_HOUR   = 10; // 발신 IP당
+const DEVICE_LINK_IP_RATE_LIMIT_PER_HOUR   = 40; // 발신 IP당
 const DEVICE_LINK_IP_RATE_WINDOW_SECONDS   = 3600;
 
 function _generateDeviceLinkCode() {
@@ -18081,6 +18085,15 @@ async function _sendWebPush(env, subscription, payload) {
   const body = await _encryptWebPushPayload(payload, p256dh, auth);
   const vapidHeaders = await _buildVapidHeaders(env, subscription.endpoint);
 
+  // 2026-07-28 근본 수정 — TTL을 60초→3600초(1시간)로 상향. Web Push는
+  // 배달을 보장하지 않는 프로토콜이고, TTL이 지나면 FCM이 재시도 없이
+  // 그냥 폐기한다. 60초는 안드로이드 Doze 모드·약한 신호·백그라운드
+  // 프로세스 억제 등 흔한 상황에서 폰이 그 창 안에 못 들어오면 그대로
+  // 영구 소실되는 구조였다("한 번 시도해서 실패"의 근본 원인 — 재시도
+  // 횟수를 아무리 늘려도 이 좁은 창 자체는 안 넓어짐, 사용자 지시로
+  // 발견). device-link 세션 TTL(최대 300초, SMS 재발송 시)보다 넉넉하게
+  // 잡아 세션이 살아있는 동안은 배달 실패가 거의 없게 한다. 세션 자체
+  // 만료 후 늦게 도착해도 클라이언트가 만료 처리하므로 부작용 없다.
   const res = await fetch(subscription.endpoint, {
     method:  'POST',
     headers: {
@@ -18088,7 +18101,7 @@ async function _sendWebPush(env, subscription, payload) {
       'Content-Type':     'application/octet-stream',
       'Content-Encoding': 'aes128gcm',
       'Content-Length':   body.length.toString(),
-      'TTL': '60',
+      'TTL': '3600',
     },
     body,
   });
