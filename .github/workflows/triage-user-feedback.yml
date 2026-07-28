@@ -52,6 +52,15 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/feedback_triage_report.json
-          git diff --staged --quiet || git commit -m "ci: 사용자 피드백 취합 리포트 갱신 [skip ci]"
-          git push
+          # 2026-07-28 수정 — triage_feedback.py는 처리할 신규 피드백이 없으면
+          # (지금처럼 데이터가 아직 안 쌓인 초기 상태 포함) data/feedback_triage_report.json
+          # 자체를 만들지 않고 조용히 종료한다(정상 설계 — main() 189행 조기 return).
+          # 이 스텝이 그 파일이 무조건 있다고 가정하고 git add를 시도해 실패하고
+          # 있었다(실사로 발견) — 파일 존재 여부를 먼저 확인한다.
+          if [ -f data/feedback_triage_report.json ]; then
+            git add data/feedback_triage_report.json
+            git diff --staged --quiet || git commit -m "ci: 사용자 피드백 취합 리포트 갱신 [skip ci]"
+            git push
+          else
+            echo "리포트 파일 없음(처리할 신규 피드백 없음) — 커밋할 것 없이 정상 종료"
+          fi
