@@ -1,0 +1,50 @@
+name: Check HONDI-CAPABILITIES-COMMON registry against real code
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prompts/HONDI-CAPABILITIES-COMMON_v1_0.md'
+      - 'tools/check_capabilities_registry.py'
+      - 'worker.js'
+      - 'profile.html'
+      - 'pages/profile-assistant.html'
+      - 'src/gopang/**'
+      - 'prompts/profile-assistant/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'prompts/HONDI-CAPABILITIES-COMMON_v1_0.md'
+      - 'tools/check_capabilities_registry.py'
+      - 'worker.js'
+      - 'profile.html'
+      - 'pages/profile-assistant.html'
+      - 'src/gopang/**'
+      - 'prompts/profile-assistant/**'
+  schedule:
+    # 등록된 항목과 무관한 리팩터링(파일 이동·함수명 변경 등)으로도 조용히
+    # 드리프트가 생길 수 있으므로, 위 paths와 무관하게 매일 1회 별도로도
+    # 돈다 — tools/check_wallet_sync.py의 스케줄 검사와 동일한 철학.
+    - cron: '30 21 * * *'  # 매일 06:30 KST
+  workflow_dispatch:
+
+jobs:
+  check-capabilities-registry:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ── HONDI-CAPABILITIES-COMMON은 "혼디가 지금 실제로 할 수 있는 것"의
+      # 단일 소스이고, PA(profile-assistant)를 비롯한 SP들이 이 문서를
+      # 그대로 신뢰해 사용자에게 "이 기능은 됩니다"라고 말한다. 문서의
+      # 주장과 실제 코드가 어긋나면 SP가 없는 기능을 있다고 말하게 되므로,
+      # 매 push·PR·매일 스케줄마다 직접 대조한다.
+      - name: Run capabilities registry check
+        run: python3 tools/check_capabilities_registry.py

@@ -3,6 +3,7 @@
  */
 import { _gwpActive, _gwpService, _gwpTab, _gwpTabTimer,
          setGwpActive, setGwpService, setGwpTab, setGwpTabTimer,
+         setGwpLiveProgress, setPaHandoffPending,
          _USER, PROXY, _userLocation } from '../core/state.js';
 import { appendBubble } from '../ui/bubble.js';
 import { _recordPDV } from '../pdv/record.js';
@@ -71,6 +72,7 @@ export function _gwpLaunch(service, context, _preTab = null, facts = null) {
   setGwpService(service);
   _gwpReported   = false;   // 새 세션 — 보고 수신 여부 초기화
   _gwpMessageLog = [];       // 새 세션 — 대화 로그 초기화
+  setGwpLiveProgress(null); // AC↔PA 채널 — 이전 세션의 진행 상태 잔재 제거
 
   const svcName = service?.name || 'K-서비스';
   const svcIcon = service?.icon || '🤖';
@@ -142,6 +144,7 @@ function _gwpOnTabClose() {
   clearInterval(_gwpTabTimer);
   setGwpTabTimer(null);
   setGwpTab(null);
+  setGwpLiveProgress(null); // AC↔PA 채널 — 세션 종료, 더 이상 "진행 중"이 아님
 
   const svc      = _gwpService;
   const reported = _gwpReported;
@@ -193,6 +196,30 @@ async function _gwpFallbackReport(svc) {
       ? `${svcName} 이용 중 탭이 보고 없이 종료됨(중계된 대화 ${log.length}건 — 요약 실패)`
       : `${svcName} 탭이 보고 없이 종료되어 상세 대화 내용을 확인할 수 없습니다.`);
 
+  // AC↔PA 채널(2026-07-27 신설) — profile-assistant는 GWP_MESSAGE를 보내지
+  // 않아(§0-1-P 원칙상 대화 자체를 중계하지 않음) hasLog가 항상 false다.
+  // 대신 매 STEP마다 localStorage에 진행 상태를 즉시 써두므로(§재개 원칙),
+  // 탭이 비정상 종료됐어도 "어디까지 진행됐는지"는 남아있다 — 이걸 읽어
+  // 완전한 무보고보다 나은 핸드오프 정보를 AC에 남긴다.
+  if (svc?.id === 'profile-assistant') {
+    try {
+      const step = localStorage.getItem('hondi_profile_step');
+      const partial = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}');
+      const done = localStorage.getItem('hondi_profile_done') === '1';
+      if (!done && (step || Object.keys(partial).length)) {
+        const fields = Object.keys(partial).slice(0, 6).join(', ');
+        setPaHandoffPending({
+          summary: `프로필 작성 탭이 완료 보고 없이 닫힘(${step ? step + '/6단계 진행' : '진행 정보 없음'})`,
+          who: null, when: new Date().toISOString(), where: '혼디 프로필 작성',
+          what: `미완료 — 지금까지 확보된 정보: ${fields || '없음'}`,
+          how: 'gwp_tab_closed_no_report', why: null,
+        });
+      }
+    } catch (e) {
+      console.warn('[GWP] PA 폴백 핸드오프 구성 실패(무시):', e.message);
+    }
+  }
+
   await _recordPDVAndBumpRegistry({
     type:      'agent_report_fallback',
     serviceId: svc?.id   || null,
@@ -221,6 +248,7 @@ export function _gwpClose(showReturn = true) {
   if (!_gwpActive) return;
   clearInterval(_gwpTabTimer);
   setGwpTabTimer(null);
+  setGwpLiveProgress(null); // AC↔PA 채널 — 세션 종료
 
   if (_gwpTab && !_gwpTab.closed) {
     _gwpTab.close();
@@ -465,6 +493,21 @@ window.addEventListener('message', (e) => {
       _handleDocAcquireRequest(msg, e.source, e.origin);
       break;
     }
+    case 'GWP_PROGRESS': {
+      // AC↔PA 실시간 채널(2026-07-27 신설) — PA가 단계를 넘어갈 때마다
+      // 보내는 가벼운 상태 스냅샷. 채팅 버블은 찍지 않는다(매 STEP마다
+      // 새 말풍선이 뜨면 2026-07-11에 탭을 분리했던 이유 자체가 무색해짐
+      // — 대화 흐름을 안 끊는 게 그 리팩터링의 목적이었다). 대신
+      // call-ai.js가 매 턴 [ctx]를 짤 때 이 스냅샷을 짧게 반영해서,
+      // 사용자가 AC 탭으로 돌아와도 AC가 "지금 프로필 작성 중"임을 안다.
+      setGwpLiveProgress({
+        step:  msg.step  ?? null,
+        total: msg.total ?? null,
+        label: msg.label || '',
+        updated_at: Date.now(),
+      });
+      break;
+    }
     case 'GWP_MESSAGE': {
       // 서비스에서 고팡 채팅창에 메시지 추가
       appendBubble(msg.role === 'user' ? 'user' : 'ai', msg.html || msg.text || '', !!msg.html);
@@ -478,8 +521,32 @@ window.addEventListener('message', (e) => {
     case 'GWP_DONE': {
       // 작업 완료 — sessionId 확정 → redeemClaim → PDV 기록/소급 → 탭 자동 닫기
       _gwpReported = true;  // 정식 보고 수신 — _gwpOnTabClose의 폴백을 막는다
+      setGwpLiveProgress(null); // AC↔PA 채널 — 더 이상 "진행 중"이 아님
       window._lastGwpDone = msg;  // T08 디버그
       if (msg.summary) appendBubble('ai', msg.summary, false);
+
+      // AC↔PA 채널(2026-07-27 신설) — 지금까지 msg.pdvData(6하원칙 구조)는
+      // PDV에만 기록되고 AC의 실제 history(다음 턴에 모델이 실제로 보는
+      // 대화)엔 전혀 안 남았다(사고실험으로 발견 — appendBubble은 순수
+      // DOM 렌더링이라 모델 자신은 못 읽음). profile-assistant는 이미
+      // who/when/where/what/how/why를 구조화된 실데이터로 보내주므로
+      // (summarizeTranscript6W 같은 별도 LLM 요약 호출 불필요 — 아래
+      // _gwpFallbackReport의 "탭이 보고 없이 닫힌" 경우와 달리 이건 이미
+      // 정식 보고라 원본이 신뢰할 수 있는 구조화 데이터다), 이걸 그대로
+      // 1회성 핸드오프 보고로 남겨 call-ai.js가 다음 턴 [ctx]에 반영하게
+      // 한다. profile-assistant 세션에 한정한다(다른 GWP 서비스까지
+      // 일괄 적용하면 무관한 서비스 이용까지 매번 AC 컨텍스트에 끼어들어
+      // 토큰비용이 늘 수 있다 — PA는 "메인 비서가 이어받아야 할 정체성
+      // 정보"라는 특수성이 있어 예외로 둔다).
+      if (msg.reporter_svc === 'profile-assistant' && msg.pdvData) {
+        const p = msg.pdvData;
+        setPaHandoffPending({
+          summary: msg.summary || p.what || '프로필 작성 완료',
+          who: p.who || null, when: p.when || null,
+          where: p.where || null, what: p.what || msg.summary || null,
+          how: p.how || 'gwp', why: p.why || null,
+        });
+      }
 
       // sessionId: reporter_svc 무관하게 항상 확정 (PDV 연동 키)
       const sessionId   = msg.session_id || msg.pdvData?.session_id || crypto.randomUUID();

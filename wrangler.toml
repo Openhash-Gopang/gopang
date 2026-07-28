@@ -51,6 +51,22 @@ environment = "production"  # wrangler.json에서 이관(2026-07-16)
 [ai]
 binding = "AI"
 
+# 2026-07-27 신설 — 프로필 사진(간판·메뉴판·사업자등록증·명함 등 §IMAGE-SCAN
+# 첨부 사진, 아바타)을 실제로 저장하기 위한 R2 바인딩. 기존엔 이 워커에
+# 파일 바이너리 저장소가 전혀 없어(worker.js:12390/12828 주석 참고) 사진이
+# AI 판독(텍스트 추출) 용도로만 쓰이고 실제 이미지 자체는 어디에도 남지
+# 않았다 — 그 구조적 한계를 없애기 위한 바인딩.
+#
+# ★ 배포 전 필수 — 아래 bucket_name의 R2 버킷을 먼저 만들어야 한다
+# (로컬에선 실행 못 함, 배포 권한 있는 쪽에서 1회 실행):
+#   wrangler r2 bucket create hondi-profile-media
+# (퍼블릭 서빙은 R2의 커스텀 도메인 대신 이 워커 자체가 GET /media/*로
+# 프록시하는 방식을 쓴다 — handleMediaGet 참조. 그래서 R2 버킷을 별도로
+# "Public" 설정할 필요가 없다 — 워커가 유일한 진입점이다.)
+[[r2_buckets]]
+binding = "PROFILE_MEDIA"
+bucket_name = "hondi-profile-media"
+
 # ★ 배포 전 필수 — 아래 index_name의 Vectorize 인덱스를 먼저 만들어야
 # 한다(로컬에선 실행 못 함, 배포 권한 있는 쪽에서 1회 실행):
 #   wrangler vectorize create hondi-benefit-catalog --dimensions=1024 --metric=cosine

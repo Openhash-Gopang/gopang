@@ -20,6 +20,7 @@
 | 지방행정 AI(도청·시청·읍면동·국가기관)가 원형→인스턴스를 어떻게 조립하는지 | `docs/GOV_REGIONAL_AC_MANUAL_v1_0.md` |
 | GDC가 가입 후 어떻게 충전·차감되고, 잔액이 낮으면 어떻게 알림이 오는지 | `docs/GDC_CHARGE_MANUAL_v1_0.md` |
 | K-Law·K-School 같은 개별 K-서비스는 요금을 어떻게 매기는지 | `docs/K_SERVICE_MONETIZATION_v1_0.md` |
+| profile-assistant(PA)가 프로필 작성·갱신을 어떻게 처리하는지(사진저장·결제수단·AC-PA 채널) | `docs/PROFILE_ASSISTANT_MANUAL_v1_0.md` |
 | Supabase→L1 이관이 지금 어디까지 됐는지 | `docs/supabase_to_l1_migration_plan.md` |
 | webapp.html의 설계 이력·SP 구조 | `docs/webapp_manual_v4.md` |
 | 새 개발자가 코드베이스를 처음 파악할 때 | `docs/manual/01-system-map.md`부터 순서대로 |
@@ -36,6 +37,7 @@
 | 문서 | 분야 | 최종수정 | 상태 |
 |---|---|---|---|
 | `docs/hondi_user_manual.html` | 혼디 활용·한계 시나리오, PDV/AC 개념 설명, 혼디 생태계 한눈에 보기(+GDC 3문장 요약) | 2026-07-23 | 🟢 최신 — desktop.html 좌측 사이드바에 링크됨 |
+| `docs/hondi_opensource_cost.html` | 오픈소스 개념(일반 대중용), 비용 유발 요인, 종량제(GDC)·정액제(K-서비스) 분담 방식, 카카오톡 비교표, 팀 소개, 자체 LLM 서버 구축 계획 | 2026-07-27 | 🟢 신설 — desktop.html 좌측 사이드바 "💰 오픈소스와 비용" 섹션(이용 안내와 별도)에 링크됨 |
 | `docs/user-guide.html` | 비개발자용 시작하기(가입→AI 활성화) | 2026-07-02 | 🟢 유효 — desktop.html "시작하기" 버튼에 링크됨 |
 | `user-manual.html`(루트) | 모바일 웹앱 UI 조작법(스와이프 메뉴 등) | 2026-07-02 | 🟢 유효 — webapp.html iframe + sw.js 오프라인 캐시로 링크됨 |
 | `docs/혼디_완전매뉴얼_v1.0.docx` | 혼디 비전·철학 개요(제1장~) | 2026-06-28 | 🟢 유효 |
@@ -61,6 +63,7 @@
 | `docs/GOV_REGIONAL_AC_MANUAL_v1_0.md` | 지방행정 AI 원형/인스턴스 아키텍처(도청·시군구청·읍면동·국가기관), gov_do/gov_national 개명, 시군구·국가기관 리졸버 정확도 우선+SSE+cityHint, **[v1.1] 100건 사고실험 발견 버그 8건, 파이프라인 완결성(담당자 승인 게이트·요청자 PDV 기록) 배선** | 2026-07-25(v1.1) | 🟢 갱신됨 |
 | `docs/GDC_CHARGE_MANUAL_v1_0.md` | 가입 축하 충전(0.1GDC)·사용량 차감·저잔액 알림(SP-GDC-CHARGE-v1_0), `charge.html` 신설, B안(무료한도 0원) 채택, PC/잠긴 지갑 안내 버그 수정 | 2026-07-23 | 🟢 신설 — 실사·배포 완료 |
 | `docs/K_SERVICE_MONETIZATION_v1_0.md` | K-Law(소송가액 구간별 건당 요금)·K-School(교육단계별 정액) 개별 유료화 가격정책, 인프라 펀드 조달 연계 | 2026-07-23 | 🟡 신설 — 형사사건 적용범위·법률 자문·대학원 요금 보정 등 TODO 있음 |
+| `docs/PROFILE_ASSISTANT_MANUAL_v1_0.md` | profile-assistant(PA) 아키텍처(별도 탭·SP 로드) · 사진저장(R2) · 결제수단(GDC/계좌이체) · §DIGITAL-BRIDGE · HONDI-CAPABILITIES-COMMON · §PROFILE-UPDATE-MODE · AC-PA 실시간 채널 | 2026-07-27 | 🟢 신설 — `pa_update_roadmap_v1.md`/`pa_dialogue_simulation_10cases_v1.md`/`pa_identity_template_thought_experiment_v1.md`/`user_profile_authoring_guidelines_v1_0.md`/`PROFILE_REGISTER_HANDOVER_v2.md` 대체(전부 낡았거나 산발적 메모, `docs/archive/` 이동 검토 대상) |
 | `docs/POCKETBASE-STRUCTURE-GUIDE_v1_0.md` + `_v1_1_addendum` | L1~L5 서버 구조, Rule NULL/빈문자열 함정 등 실전 팁 | 2026-07-16 / 07-19 | 🟢 유효 — `L1_POCKETBASE_MANUAL`과 상호보완(겹치는 부분 있음, 통합은 후속 검토) |
 | `docs/gopang-report-manual.md` | 하위 시스템 PDV 보고서(6하원칙) 스키마·전송 API | 2026년 5월(v1.0) | 🟢 유효 — **README.md에서 직접 링크됨** |
 | `docs/webapp_manual_v4.md` | `webapp.html` 설계 명세(SP-00 v10.0, v4.0) | 2026-06-09 | 🟢 유효(v4.0 — v3.1의 상위호환) |

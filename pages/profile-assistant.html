@@ -102,6 +102,24 @@ const RELAY_ENDPOINT = 'https://hondi-proxy.tensor-city.workers.dev';
 const _qs    = new URLSearchParams(location.search);
 const RETURN = _qs.get('return') || 'https://hondi.net';
 
+// 2026-07-27 신설 — AC가 _gwpLaunch()로 넘기는 ctx 파라미터를 지금까지
+// 이 파일이 전혀 읽지 않고 있었다(다른 GWP 서비스는 이미 쓰는 일반
+// 메커니즘인데 PA만 빠져 있었음 — "AC→PA 서술적 맥락 없음" 사고실험
+// 결과와 같은 계보의 결함). 프로필 갱신 제안(§0-1-P 계열, AC 쪽에서
+// 발동) 등 "지금 이걸 알려주려고 PA를 불렀다"는 문맥을 여기서 받는다.
+function _decodeCtxParam() {
+  const raw = _qs.get('ctx');
+  if (!raw) return '';
+  try {
+    if (_qs.get('ctx_enc') === 'b64') return decodeURIComponent(escape(atob(raw)));
+    return decodeURIComponent(raw);
+  } catch (e) {
+    console.warn('[PA] ctx 파라미터 디코딩 실패(무시):', e.message);
+    return '';
+  }
+}
+const _acHandoffHint = _decodeCtxParam();
+
 wireBackButton({ onBack: () => { window.close(); location.href = RETURN; } });
 const _inputBar = wireInputBar();
 wireMic('chat-input', 'mic-btn', _inputBar);
@@ -109,7 +127,54 @@ wireMic('chat-input', 'mic-btn', _inputBar);
 // GWP 탭 2곳과 레이아웃을 통일하며 새로 추가). 이미지는 doSend()에서
 // vision 메시지(content: [{type:'text'},{type:'image_url'}])로
 // callPaAI()에 그대로 실어 보낸다 — 아래 messages.push 부분 참고.
-const _attach = wireAttachAndCamera({ inputBar: _inputBar });
+const _attach = wireAttachAndCamera({ inputBar: _inputBar, onFileSelected: _onPhotoAttached });
+
+// ── 프로필 사진 저장 (2026-07-27 신설) ──────────────────────────────
+// §IMAGE-SCAN은 사진을 "읽어서" 텍스트만 채우고 사진 자체는 남기지
+// 않았다(R2 등 바이너리 저장소 부재) — "프로필이 미니 웹사이트로
+// 기능해야 한다"는 요구사항에 맞춰, 첨부되는 즉시(백그라운드로) 실제
+// 사진을 서버에 올려 URL을 받아두고, PROFILE_SUBMIT 시점에 함께
+// 제출한다. 업로드는 AI의 사진 판독(doSend의 vision 메시지)과
+// 완전히 독립된 별도 요청이다 — 하나가 실패해도 다른 하나에 영향
+// 없음(사진 저장이 실패해도 AI는 여전히 사진을 읽고 텍스트를 채울 수
+// 있다).
+let _sessionAvatarUrl = null;
+const _sessionPhotoUrls = [];
+
+async function _fileToBase64Raw(file) {
+  const dataUrl = await _attach.fileToDataUrl(file);
+  return { base64: dataUrl.split(',')[1], mimeType: file.type };
+}
+
+async function _onPhotoAttached(file) {
+  if (!file || !file.type?.startsWith('image/')) return; // 이 페이지는 accept="image/*"라 사실상 항상 참
+  const wallet = window.gopangWallet;
+  if (!wallet?.signPayload || !wallet.publicKeyB64u) {
+    console.warn('[PA] 사진 업로드 보류 — 지갑 준비 전(사진 판독 자체는 그대로 진행됨)');
+    return;
+  }
+  try {
+    const { base64, mimeType } = await _fileToBase64Raw(file);
+    const guid = _paGuid();
+    const pubkey = wallet.publicKeyB64u;
+    const ts = String(Math.floor(Date.now() / 1000));
+    const signature = await wallet.signPayload(`${guid}:${pubkey}:${ts}`);
+    const res = await fetch(`${RELAY_ENDPOINT}/profile/photo-upload`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guid, pubkey, signature, ts, image_base64: base64, mime_type: mimeType }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!data.ok || !data.url) {
+      console.warn('[PA] 사진 업로드 실패(무시, 판독은 계속 진행):', data.detail || data.error || res.status);
+      return;
+    }
+    _sessionPhotoUrls.push(data.url);
+    if (!_sessionAvatarUrl) _sessionAvatarUrl = data.url; // 이 세션 첫 사진(보통 간판·명함)을 아바타 후보로
+  } catch (e) {
+    console.warn('[PA] 사진 업로드 오류(무시, 판독은 계속 진행):', e.message);
+  }
+}
 
 // ── 상태 판독(진입 시 1회) ──────────────────────────────────
 function _loadUser() { try { return JSON.parse(localStorage.getItem('gopang_user_v4') || 'null'); } catch { return null; } }
@@ -126,27 +191,110 @@ function _paGuid() {
   } catch { return 'anonymous'; }
 }
 
+// ── AC↔PA 실시간 채널 (2026-07-27 신설) ──────────────────────────────
+// 주피터님 지시: "AC는 PA의 진행 상황을 실시간으로 파악하고 있어야
+// 한다." PA는 별도 탭이라(EXPERT처럼 같은 history를 공유하지 않음) 매
+// STEP마다 opener(AC 탭)에 가벼운 상태를 명시적으로 알려야만 AC가 다음
+// 응답에서 그걸 참조할 수 있다. 채팅 버블은 찍지 않는다 — 매 STEP마다
+// AC 쪽에 말풍선이 뜨면 애초에 탭을 분리했던 이유(2026-07-11, 대화
+// 흐름이 안 끊기게)가 무색해진다. engine.js가 조용히 상태만 들고
+// 있다가, 사용자가 AC와 다시 대화할 때 자연스럽게 반영한다.
+const _PA_STEP_LABELS = {
+  1: '기본 정보 확인 중', 2: '핵심 정보 수집 중', 3: 'GDC 결제 여부 확인 중',
+  4: '계좌 이체 지원 확인 중', 5: '예약 기능 확인 중', 6: '공개 여부 확인 중',
+};
+function _reportProgressToAC(step, total) {
+  try {
+    if (!window.opener || window.opener.closed) return;
+    window.opener.postMessage({
+      type: 'GWP_PROGRESS',
+      step, total,
+      label: _PA_STEP_LABELS[step] || '',
+    }, RETURN);
+  } catch (e) {
+    console.warn('[PA] 진행 상황 보고 실패(무시, 프로필 작성 자체는 계속 진행):', e.message);
+  }
+}
+
 // _buildProfileContext — call-ai.js의 동명 함수를 그대로 이식(순수 함수,
 // localStorage만 읽으므로 call-ai.js 전체를 이 독립 탭에 끌어들이지 않고
 // 여기 복제한다 — manifest-loader.js를 별도 파일로 뺀 것과 같은 이유).
-function _buildProfileContext() {
+// 2026-07-27 신설 — 이미 완성된 프로필을 "갱신"하러 재진입한 경우를 위한
+// 조회. 기존엔 hondi_profile_partial(localStorage)만 봤는데, 이 캐시는
+// PROFILE_SUBMIT 성공 시 지워진다(§4 STEP-FINAL) — 즉 완성된 프로필을
+// 다시 열면 PA가 아무것도 모르는 채로 처음부터 다시 물어보게 돼 있었다
+// (AC가 "프로필 갱신"을 제안해 재호출하는 이번 기능의 전제 자체가
+// 성립 안 함). profile.html의 뷰어 서명 패턴(view:guid:pubkey:ts)을
+// 그대로 재사용해 본인 인증된 전체 데이터를 받아온다.
+async function _fetchExistingProfileForUpdate() {
+  try {
+    const reg = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}');
+    const handle = (reg.handle || '').replace(/^@/, '');
+    if (!handle) return null;
+    const wallet = window.gopangWallet;
+    if (!wallet?.signPayload) return null;
+    const pubkey = wallet.publicKeyB64u || wallet.publicKeyB64 || '';
+    const guid = reg.ipv6 || reg.guid || '';
+    if (!pubkey || !guid) return null;
+    const ts = Date.now().toString();
+    const sigMsg = `view:${guid}:${pubkey}:${ts}`;
+    const sig = await wallet.signPayload(sigMsg);
+    const qs = `viewer_guid=${encodeURIComponent(guid)}&viewer_pubkey=${encodeURIComponent(pubkey)}` +
+               `&viewer_sig=${encodeURIComponent(sig)}&viewer_ts=${encodeURIComponent(ts)}`;
+    const res = await fetch(`${RELAY_ENDPOINT}/profile/@${encodeURIComponent(handle)}?${qs}`);
+    const data = await res.json().catch(() => null);
+    return (data?.ok && data.profile) ? data.profile : null;
+  } catch (e) {
+    console.warn('[PA] 기존 프로필 조회 실패(무시, 새로 작성하는 것처럼 진행):', e.message);
+    return null;
+  }
+}
+
+async function _buildProfileContext() {
   let reg = {};
   try { reg = JSON.parse(localStorage.getItem('gopang_user_v4') || '{}'); } catch {}
   let partial = {};
   try { partial = JSON.parse(localStorage.getItem('hondi_profile_partial') || '{}'); } catch {}
-  const ctx = Object.assign({}, {
-    guid: reg.ipv6 || reg.guid || '', handle: reg.handle || '',
-    nickname: reg.nickname || '', region: reg.region || '', e164: reg.e164 || '',
-  }, partial);
-  const step = parseInt(localStorage.getItem('hondi_profile_step') || '0', 10);
-  const firstGreeted  = localStorage.getItem('hondi_first_greeted')  === '1';
-  const namePending   = localStorage.getItem('hondi_name_pending')   === '1';
-  const assistantName = localStorage.getItem('hondi_assistant_name') || '';
   let doneFlag = false, skippedFlag = false;
   try {
     doneFlag    = localStorage.getItem('hondi_profile_done')    === '1';
     skippedFlag = localStorage.getItem('hondi_profile_skipped') === '1';
   } catch {}
+
+  // 2026-07-27 신설 — "이미 완성된 프로필을 갱신하러 재진입" 케이스.
+  // hondi_profile_partial은 PROFILE_SUBMIT 성공 시 지워지므로(§4
+  // STEP-FINAL), 완성된 프로필을 다시 열면 지금까지는 partial이 텅 비어
+  // PA가 아무것도 모르는 채 처음부터 다시 물어보고 있었다 — 이러면 AC가
+  // 제안하는 "프로필 갱신"이 실제로는 "프로필 재작성"이 돼버린다.
+  let existingPublic = {}, existingTop = {};
+  if (doneFlag) {
+    const existing = await _fetchExistingProfileForUpdate();
+    if (existing) {
+      existingTop = existing;
+      existingPublic = existing.extra?.public || {};
+    }
+  }
+
+  const ctx = Object.assign({}, {
+    guid: reg.ipv6 || reg.guid || '', handle: reg.handle || '',
+    nickname: reg.nickname || '', region: reg.region || '', e164: reg.e164 || '',
+  }, {
+    // existingTop/existingPublic이 있으면(=완성된 프로필 갱신) 그게
+    // 우선이고, 없으면(=신규/재개 온보딩) 기존처럼 partial을 쓴다.
+    name:            existingTop.name ?? partial.name,
+    address:         existingTop.address ?? partial.address,
+    phone:           existingTop.phone ?? partial.phone,
+    entity_type:     existingTop.entity_type ?? partial.entity_type,
+    entity_subtype:  existingPublic.identity?.entity_subtype ?? partial.entity_subtype,
+    schema_id:       existingPublic.industry_fields?.schema_id ?? partial.schema_id,
+    products:        existingPublic.products ?? partial.products,
+    description:     existingPublic.identity?.description ?? partial.description,
+  }, partial); // partial이 이번 세션 중 새로 갱신한 값이 있으면 최종적으로 그걸 우선
+
+  const step = parseInt(localStorage.getItem('hondi_profile_step') || '0', 10);
+  const firstGreeted  = localStorage.getItem('hondi_first_greeted')  === '1';
+  const namePending   = localStorage.getItem('hondi_name_pending')   === '1';
+  const assistantName = localStorage.getItem('hondi_assistant_name') || '';
   const lines = ['[CONTEXT: PROFILE_ONBOARDING]'];
   lines.push(`step: ${step}`, `done: ${doneFlag}`, `skipped: ${skippedFlag}`,
              `first_greeted: ${firstGreeted}`, `name_pending: ${namePending}`);
@@ -164,8 +312,30 @@ function _buildProfileContext() {
   if (ctx.schema_id)      lines.push(`schema_id: ${ctx.schema_id}`);
   if (ctx.products)       lines.push(`products: ${JSON.stringify(ctx.products)}`);
   if (ctx.description)    lines.push(`description: ${ctx.description}`);
+  // 2026-07-27 신설 — 완성된 프로필을 갱신 모드로 여는 경우, 나머지
+  // 세부 필드(재확인 불필요한 것들)도 실어서 PA가 STEP을 건너뛰며
+  // 자연스럽게 통째로 다시 알 수 있게 한다. §PROFILE-UPDATE-MODE가
+  // PROFILE_SUBMIT 재구성 시 이 값들을 그대로 옮겨 담아야 유실이 없다.
+  if (doneFlag && Object.keys(existingPublic).length) {
+    if (existingPublic.finance)  lines.push(`_existing_finance: ${JSON.stringify(existingPublic.finance)}`);
+    if (existingPublic.industry_fields) lines.push(`_existing_industry_fields: ${JSON.stringify(existingPublic.industry_fields)}`);
+    if (existingPublic.field_visibility) lines.push(`_existing_field_visibility: ${JSON.stringify(existingPublic.field_visibility)}`);
+    if (existingPublic.avatar_url) lines.push(`_existing_avatar_url: ${existingPublic.avatar_url}`);
+    if (Array.isArray(existingPublic.photo_urls) && existingPublic.photo_urls.length) lines.push(`_existing_photo_urls: ${JSON.stringify(existingPublic.photo_urls)}`);
+    lines.push(`_existing_is_public: ${!!existingTop.is_public}`);
+  }
   lines.push('[/CONTEXT]');
-  return lines.join('\n');
+
+  // AC↔PA 채널(2026-07-27 신설) — AC가 프로필 갱신을 제안해 사용자가
+  // 승인하고 PA를 호출한 경우, _gwpLaunch의 ctx 파라미터로 "왜 지금
+  // PA가 열렸는지"가 함께 온다. 이걸 별도 블록으로 분리해서, PA SP의
+  // [§PROFILE-UPDATE-MODE]가 이 블록의 유무로 갱신 모드 진입 여부를
+  // 판단하게 한다.
+  const hintBlock = _acHandoffHint
+    ? `\n\n[CONTEXT: PROFILE_UPDATE_HINT]\n${_acHandoffHint}\n[/CONTEXT]`
+    : '';
+
+  return lines.join('\n') + hintBlock;
 }
 
 // ── SP 로드 ──────────────────────────────────────────────
@@ -268,6 +438,14 @@ function _stripInternalTags(s) {
     .replace(/\[PARTIAL_SAVE\][\s\S]*?\}/g, '')
     .replace(/\[\d+\/\d+단계\]/g, '')
     .replace(/\[PROFILE_INTERRUPT_HANDOFF\]/g, '')
+    // 2026-07-27 신설 — 아래 4개가 지금까지 빠져 있어(PA 전용 사고실험으로
+    // 발견) 해당 태그가 나올 때마다 원문이 그대로 채팅 버블에 노출되고
+    // 있었다(특히 TEMPLATE_LOOKUP은 사업자 가입 세션 대부분에서 STEP1
+    // 직후 매번 발생 — 가장 흔하고 눈에 띄는 증상이었을 것).
+    .replace(/\[TEMPLATE_LOOKUP:[^\]]*\]/g, '')
+    .replace(/\[INDUSTRY_TEMPLATE_LOOKUP:[^\]]*\]/g, '')
+    .replace(/\[TEMPLATE_CANDIDATE:[^\]]*\]/g, '')
+    .replace(/\[USER_FEEDBACK:[^\]]*\]/g, '')
     .trim();
 }
 
@@ -307,54 +485,77 @@ function _closeTabSoon(delayMs = 900) {
 // industry_fields 키만 추출한다 — 개별 업체명·연락처는 절대 넘기지
 // 않고 "필드 구조"만 참조로 넘긴다. /search는 handleSearch가
 // schema_id alias를 KSIC_LABELS로 자동 해석해준다(worker.js 2026-07-13).
-async function _lookupIndustryTemplate(schemaId) {
+// [TEMPLATE_LOOKUP] — 정체성/업종 템플릿 참조 조회 (2026-07-27 버그 수정)
+// 이 파일은 2026-07-17 태그 개편(구 [INDUSTRY_TEMPLATE_LOOKUP: schema_id=NN]
+// → 신 [TEMPLATE_LOOKUP: schema_id=.., job_ksco_code=.., work_domain=..])
+// 이후 한 번도 갱신되지 않아, SP가 실제로 내는 새 태그를 이 탭에서는
+// 전혀 인식하지 못하고 있었다(call-ai.js에만 대응 코드가 있었음 — PA는
+// 2026-07-11부터 별도 탭에서 독립 실행되므로 call-ai.js 쪽 수정은 이
+// 탭에 아무 영향이 없었다). _stripInternalTags에도 이 태그가 없어
+// 사업자 가입 세션 거의 전부(STEP1에서 schema_id·job_ksco가 확정되는
+// 순간)에서 "[TEMPLATE_LOOKUP: ...]" 원문이 그대로 채팅 버블에 노출되고
+// 대화가 멈추는 상태였다(PA 전용 사고실험으로 발견). worker.js의
+// /template-lookup(handleTemplateLookup, 2026-07-17 신설 — schema_id·
+// job_ksco_code/work_domain 두 축을 독립 조회)을 call-ai.js와 동일한
+// 방식으로 호출하도록 여기서도 새로 배선한다.
+async function _lookupTemplateAxis(body) {
   try {
-    const res = await fetch(`${RELAY_ENDPOINT}/search`, {
+    const res = await fetch(`${RELAY_ENDPOINT}/template-lookup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ schema_id: schemaId, lim: 8 }),
+      body: JSON.stringify(body),
     });
-    const data = await res.json().catch(() => ({}));
-    const items = Array.isArray(data.results) ? data.results
-      : (Array.isArray(data.items) ? data.items : []);
-    if (!items.length) return '';
-
-    const fieldCounts = {};
-    for (const it of items) {
-      const fields = it.extra?.public?.industry_fields || {};
-      for (const k of Object.keys(fields)) {
-        if (k === 'schema_id' || k === 'status') continue;
-        fieldCounts[k] = (fieldCounts[k] || 0) + 1;
-      }
-    }
-    const majorityThreshold = Math.max(2, Math.ceil(items.length / 2));
-    // 2026-07-13 신설 — 상위 4개로 상한. 상한이 없으면 피어 데이터가
-    // 풍부한 업종일수록 STEP2 추가 질문이 한없이 길어질 위험이 있다는
-    // 사고실험 결과 반영(불필요한 질문 남발 방지). 빈도 높은 순으로
-    // 정렬 후 자른다 — 가장 흔한 패턴부터 우선.
-    const MAX_TEMPLATE_FIELDS = 4;
-    const majorityFields = Object.entries(fieldCounts)
-      .filter(([, c]) => c >= majorityThreshold)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, MAX_TEMPLATE_FIELDS)
-      .map(([k]) => k);
-    if (!majorityFields.length) return '';
-    return `동종업계 ${items.length}건 중 다수가 보유한 필드: ${majorityFields.join(', ')}`;
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => ({ refs: [] }));
+    return data.refs || [];
   } catch (e) {
-    console.warn('[PA] 업종 템플릿 조회 실패(무시):', e.message);
-    return '';
+    console.warn('[PA] template-lookup 요청 실패(무시 — 빈 참조로 진행):', e.message);
+    return [];
   }
 }
 
 async function _handleReplyTags(fullReply) {
-  // 업종 템플릿 조회 [INDUSTRY_TEMPLATE_LOOKUP: schema_id=NN]
-  const templateMatch = fullReply.match(/\[INDUSTRY_TEMPLATE_LOOKUP:\s*schema_id=(\d+)\]/);
-  if (templateMatch) {
-    const summary = await _lookupIndustryTemplate(templateMatch[1]);
-    const ctx = summary
-      ? `[CONTEXT: INDUSTRY_TEMPLATE]\n${summary}\n[/CONTEXT]`
-      : `[CONTEXT: INDUSTRY_TEMPLATE]\n(참조할 동종업계 사례 없음 — 본인 업종 지식으로 진행)\n[/CONTEXT]`;
-    await sendTurn(ctx);
+  // 업종/개인 템플릿 조회 — 새 태그([TEMPLATE_LOOKUP: schema_id=.., job_ksco_code=..,
+  // work_domain=..])와 과도기 구 태그([INDUSTRY_TEMPLATE_LOOKUP: schema_id=..])를
+  // 모두 인식한다(call-ai.js와 동일 관례).
+  const templateLookupMatch =
+    fullReply.match(/\[TEMPLATE_LOOKUP:\s*([^\]]*)\]/) ||
+    fullReply.match(/\[INDUSTRY_TEMPLATE_LOOKUP:\s*([^\]]*)\]/);
+  if (templateLookupMatch) {
+    const raw = templateLookupMatch[1];
+    const params = {};
+    for (const part of raw.split(',')) {
+      const eq = part.indexOf('=');
+      if (eq === -1) continue;
+      const k = part.slice(0, eq).trim();
+      const v = part.slice(eq + 1).trim();
+      if (k) params[k] = v;
+    }
+    const workDomainStatuses = params.work_domain
+      ? params.work_domain.split('+').map(s => s.trim()).filter(Boolean)
+      : undefined;
+
+    const lookups = [];
+    if (params.schema_id) {
+      lookups.push({ label: 'INDUSTRY_TEMPLATE', body: { entity_type: 'business', schema_id: params.schema_id } });
+    }
+    if (params.job_ksco_code || workDomainStatuses) {
+      lookups.push({
+        label: 'PERSON_TEMPLATE',
+        body: { entity_type: 'person', job_ksco_code: params.job_ksco_code || undefined, work_domain_statuses: workDomainStatuses },
+      });
+    }
+
+    const contextBlocks = [];
+    for (const { label, body } of lookups) {
+      const refs = await _lookupTemplateAxis(body);
+      contextBlocks.push(
+        refs.length
+          ? `[CONTEXT: ${label}]\n${JSON.stringify(refs)}\n[/CONTEXT]`
+          : `[CONTEXT: ${label}]\n(참조 사례 없음 — 최초 사례)\n[/CONTEXT]`
+      );
+    }
+    await sendTurn(contextBlocks.join('\n'));
     return;
   }
   // 진행 중 필드 저장 [PARTIAL_SAVE]
@@ -369,9 +570,10 @@ async function _handleReplyTags(fullReply) {
     }
   }
   // 단계 업데이트 [N/6단계]
-  const stepMatch = fullReply.match(/\[(\d+)\/\d+단계\]/);
+  const stepMatch = fullReply.match(/\[(\d+)\/(\d+)단계\]/);
   if (stepMatch && !localStorage.getItem('hondi_profile_done')) {
     try { localStorage.setItem('hondi_profile_step', stepMatch[1]); } catch {}
+    _reportProgressToAC(parseInt(stepMatch[1], 10), parseInt(stepMatch[2], 10));
   }
   // TUTORIAL_ADVANCE — 매 단계 즉시 저장(탭 강제종료에도 보존)
   const tutAdv = fullReply.match(/\[TUTORIAL_ADVANCE:(\d+)\]/);
@@ -386,10 +588,70 @@ async function _handleReplyTags(fullReply) {
       }
     } catch {}
   }
+  // TEMPLATE_CANDIDATE — 최초 사례 템플릿 후보 큐잉 (2026-07-27 버그 수정)
+  // call-ai.js에는 이 처리가 있었지만 이 탭(실제 PA가 실행되는 곳)에는
+  // 없었다 — §TEMPLATE-LISTING이 PROFILE_SUBMIT과 함께 내는 태그인데
+  // 여기서 한 번도 큐잉된 적이 없었다(PA 전용 사고실험으로 발견).
+  const templateCandidateMatch = fullReply.match(/\[TEMPLATE_CANDIDATE:\s*([^\]]*)\]/);
+  if (templateCandidateMatch) {
+    try {
+      const raw = templateCandidateMatch[1];
+      const params = {};
+      for (const part of raw.split(',')) {
+        const eq = part.indexOf('=');
+        if (eq === -1) continue;
+        params[part.slice(0, eq).trim()] = part.slice(eq + 1).trim();
+      }
+      const queue = JSON.parse(localStorage.getItem('hondi_template_candidates') || '[]');
+      queue.push({ ...params, queued_at: new Date().toISOString() });
+      localStorage.setItem('hondi_template_candidates', JSON.stringify(queue));
+    } catch (e) {
+      console.warn('[PA] TEMPLATE_CANDIDATE 큐잉 실패(무시):', e.message);
+    }
+  }
+  // USER_FEEDBACK — §DIGITAL-BRIDGE(profile-assistant SP v2.20)가
+  // "실재하지 않는 디지털 전환 아이디어"를 발견했을 때 서버에 남긴다.
+  // 2026-07-27 정정 — 이전엔 [FEATURE_SUGGESTION] + localStorage 큐로
+  // 만들었었는데, 그건 각 사용자 브라우저에만 갇혀 아무도(주피터님도)
+  // 못 보는 상태였다. call-ai.js(AC)에는 이미 훨씬 잘 설계된 같은 목적의
+  // 파이프라인이 있었다 — [USER_FEEDBACK] 태그 → user-feedback/submit →
+  // user_feedback 컬렉션(서버) → tools/triage_feedback.py가 주기적으로
+  // 취합해 sp_update_proposals(사람 검토 대기열)로 브릿지. 다만 그 핸들러가
+  // call-ai.js에만 있고 이 탭(PA가 실제로 실행되는 곳)엔 없었다 — 이번
+  // 세션 내내 반복된 것과 같은 "새 탭 분리 때 누락" 패턴이라 여기도
+  // 배선한다. [FEATURE_SUGGESTION]은 이제 SP가 내지 않으므로(v2.20)
+  // 로컬 큐잉 코드 자체를 제거한다.
+  const userFeedbackMatch = fullReply.match(/\[USER_FEEDBACK:\s*([^\]]*)\]/);
+  if (userFeedbackMatch) {
+    try {
+      const raw = userFeedbackMatch[1];
+      const pick = (key) => {
+        const m = raw.match(new RegExp(key + '=("[^"]*"|[^,\\]]*)'));
+        return m ? m[1].replace(/^"|"$/g, '') : null;
+      };
+      await fetch(`${RELAY_ENDPOINT}/user-feedback/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          raw_text: pick('raw') || '',
+          context_sp: pick('context_sp') || 'profile-assistant',
+          context_summary: pick('context_summary') || '',
+          category: pick('category') || 'question',
+        }),
+      });
+    } catch (e) {
+      console.warn('[PA] USER_FEEDBACK 제출 실패(무시):', e.message);
+    }
+  }
   // PROFILE_SUBMIT — 실제 서버 등록(welcome.js 그대로 재사용)
   if (fullReply.includes('PROFILE_SUBMIT')) {
     let savedProfile = null;
-    try { savedProfile = await handleProfileSubmit(fullReply); }
+    try {
+      savedProfile = await handleProfileSubmit(fullReply, {
+        avatar_url: _sessionAvatarUrl,
+        photo_urls: _sessionPhotoUrls,
+      });
+    }
     catch (e) { console.warn('[PA] handleProfileSubmit 실패:', e.message); }
     try {
       localStorage.setItem('hondi_profile_done', '1');
@@ -480,7 +742,7 @@ async function sendTurn(text, imageDataUrl) {
 
 // ── 진입 트리거 — 튜토리얼 미완료면 PHASE -1부터, 완료면 PHASE 0부터 ──
 async function startGreeting() {
-  const ctxBlock = _buildProfileContext();
+  const ctxBlock = await _buildProfileContext();
   if (!_tutDone()) {
     document.getElementById('tb-sub').textContent = '앱 사용법 안내 중…';
     await sendTurn(

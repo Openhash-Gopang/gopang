@@ -17,6 +17,7 @@
 
 | 날짜 | 문서 | 요약 |
 |---|---|---|
+| 2026-07-27 | [`WORKLOG_MANUAL_2026_07_27.md`](./WORKLOG_MANUAL_2026_07_27.md) | 프로필 사진저장·§IMAGE-SCAN 확장·계좌이체 원칙·§DIGITAL-BRIDGE·§PROFILE-UPDATE-MODE·AC-PA 실시간 채널·OSS 피드백 파이프라인 완성. 신규 매뉴얼 [`PROFILE_ASSISTANT_MANUAL_v1_0.md`](./PROFILE_ASSISTANT_MANUAL_v1_0.md) 신설 |
 | 2026-07-25 | [`DOCUMENTATION_SWEEP_2026_07_25.md`](./DOCUMENTATION_SWEEP_2026_07_25.md) | 문서 생태계 점검(일반 사용자·개발자 커버리지) — MANUAL_INDEX 최종수정 갱신, 버그 로그 BUG-012~021 소급 반영, 시스템맵에 저장소 토폴로지(jeju 별도 저장소) 신설 |
 | 2026-07-23 | [`PUSH_SUBSCRIPTION_MULTIDEVICE_2026_07_23.md`](./PUSH_SUBSCRIPTION_MULTIDEVICE_2026_07_23.md) | device-link 알림 PC 오발송 근본 수정 — push_subscription을 기기별 배열로 변경(§PUSH_SUBSCRIPTION_HIJACK_2026_07_21.md §4 후속) |
 | 2026-07-23 | [`GDC_CHARGE_MANUAL_v1_0.md`](./GDC_CHARGE_MANUAL_v1_0.md) | 가입 축하 충전(0.1GDC)·사용량 차감·저잔액 알림 신설, `charge.html` 신설, B안(무료한도 0원) 채택 |

@@ -2313,6 +2313,10 @@ routerAdd("POST", "/api/ai-charge", (c) => {
 // 클라이언트(gopang-wallet.js)의 로컬 IndexedDB가 새 기기·스토리지
 // 초기화 등으로 서버 원장과 어긋나는 경우, 이 엔드포인트로 복구한다.
 routerAdd("GET", "/api/balance", (c) => {
+  // /api/mint, /api/ai-charge와 동일 환율(정본은 그쪽 — 콜백마다 재선언 필요, Goja 제약).
+  // 2026-07-28 신설: worker.js가 이 값을 자신의 로컬 상수와 대조해 정합성을
+  // 감시할 수 있도록 응답에 포함시킨다(아래 exchange_rate 필드).
+  const EXCHANGE_RATE_KRW_PER_GDC = 1;
   try {
     const guid = $apis.requestInfo(c).query.guid;
     console.log("[BALANCE] 진입, guid:", guid);
@@ -2361,6 +2365,7 @@ routerAdd("GET", "/api/balance", (c) => {
       balance,
       latest_block_hash: latestBlockHash,
       height,
+      exchange_rate: EXCHANGE_RATE_KRW_PER_GDC,
     });
   } catch (e) {
     return c.json(500, { ok: false, error: "BALANCE_QUERY_FAILED", detail: e.message });
