@@ -4412,6 +4412,13 @@ async function handleSPAuthorQueue(request, env, corsHeaders) {
     return new Response(JSON.stringify({ status: 'merged_into_existing', record: dup }), { headers: corsHeaders });
   }
 
+  // ★ 2026-07-28 신설 — risk_tier: AC-PRO-CORE §DRAFT_REQUEST가 판정해 보내는
+  // 위험도. 'low'만 명시적으로 왔을 때만 "사후 보고"로 취급하고, 그 외(값이
+  // 없거나 'high'거나 예상 밖 값이거나)는 전부 기존처럼 사람 사전 검토가
+  // 필요한 걸로 안전하게 처리한다 — 알 수 없는 입력을 관대한 쪽으로
+  // 기본값 처리하지 않는다(화이트리스트 방식).
+  const riskTier = payload.risk_tier === 'low' ? 'low' : 'high';
+
   const record = {
     request_type: payload.request_type,
     signal_source: payload.signal_source,
@@ -4421,6 +4428,7 @@ async function handleSPAuthorQueue(request, env, corsHeaders) {
     target_sp_id: payload.target_sp_id || '',
     source_conversation: (payload.source_conversation || '').slice(0, 4000),
     priority: payload.priority || 'normal',
+    risk_tier: riskTier,
     status: 'queued',
   };
 
@@ -4433,13 +4441,20 @@ async function handleSPAuthorQueue(request, env, corsHeaders) {
 
   // 큐잉과 동시에 최소 ESCALATE 알림도 함께 남긴다 — 별도로 [ESCALATE]
   // 태그가 안 나가도(호출부가 깜빡해도) 최소 신호는 보장한다.
+  // risk_tier='low'는 "승인 대기 중"이 아니라 "이미 사용자에게 직접
+  // 답변했고, 전담 SP가 있으면 좋겠다는 낮은 우선순위 참고 알림"이라는
+  // 걸 요약 문구 자체에 명시한다 — 사람이 알림 목록만 보고도 어느 게
+  // 긴급 검토 대상인지 헷갈리지 않게.
+  const summaryPrefix = riskTier === 'low'
+    ? '[참고/사후보고 — 이미 이용자에게 직접 답변함]'
+    : '[검토 필요 — 배포 전 검토 권장]';
   try {
     await _l1CreateEscalation(env, {
       to: '@owner',
       reason: 'sp_draft_request',
       ref_collection: 'sp_draft_requests',
       ref_id: rec.id,
-      summary: `[${record.priority}] ${record.request_type}: ${record.institution || record.target_sp_id || '(미상)'} — ${record.task}`.slice(0, 2000),
+      summary: `${summaryPrefix} [${record.priority}] ${record.request_type}: ${record.institution || record.target_sp_id || '(미상)'} — ${record.task}`.slice(0, 2000),
       read: false,
     });
   } catch (e) {
