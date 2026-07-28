@@ -1072,6 +1072,53 @@ async function _l1GetBalanceKRW(guid) {
   return Number(data.balance || 0) * EXCHANGE_RATE_KRW_PER_GDC;
 }
 
+// (2026-07-28 신설 — 주피터 지시: K-Law·기업(Business)·정부기관(342개)
+//  릴레이도 GDC 지갑 연동. 지금까지 callDeepSeek(일반 채팅) 안에 인라인
+//  으로만 있던 STEP-0 게이트를 공유 함수로 추출한다 — 그대로 복붙해서
+//  4곳에 흩뿌리면 환율 상수 4중 복제와 똑같은 "한 곳만 놓치면 조용히
+//  어긋나는" 위험을 반복하게 되므로, 단일 함수로 통일해 callDeepSeek도
+//  이 함수를 쓰도록 같이 리팩터했다(아래 callDeepSeek 수정 참고).
+//  반환값: null이면 통과, Response 객체면 그 응답으로 즉시 차단해야 한다
+//  (호출부에서 `if (blocked) return blocked;` 패턴으로 사용).
+async function _gdcFreeQuotaGate(env, guid, corsHeaders, meta) {
+  if (!guid || !FREE_QUOTA_ENFORCEMENT_ENABLED) return null;
+  const kv = env.AI_SETUP_SEALS_KV;
+  if (!kv) return null;
+  const spendKey = `hondi:free_spend:${guid}`;
+  const spent = parseFloat(await kv.get(spendKey) || '0');
+  if (spent < FREE_QUOTA_KRW_LIMIT) return null; // 아직 무료 한도 안 씀 — 통과
+
+  // 무료 한도 소진 — STEP 0 2단계: GDC 잔액 확인. 일반 대화 1턴의 실제
+  // 원가는 대략 1~3원 수준(SP-GDC-BILLING-v1.0 STEP 2-3 계산 예시 참고)
+  // 이므로, 최소 예약금 3원을 문턱값으로 둔다 — v1.0의 정밀 reserve_μT
+  // 홀드 대신 채택한 단순화(파일 상단 _l1GetBalanceKRW 주석 참고). K-Law
+  // 등 요청 크기가 큰 티어가 이 게이트를 타게 되면 이 단순화를 재검토
+  // 해야 한다(문턱값 3원이 실제 원가보다 낮아질 수 있음).
+  const AI_CHARGE_MIN_RESERVE_KRW = 3;
+  const balanceKRW = await _l1GetBalanceKRW(guid);
+  if (balanceKRW === null) {
+    // L1 잔액 조회 자체가 실패한 경우: 과금 상태를 확인할 수 없는 채로
+    // 통과시키면 무제한 무료로 새는 것과 같으므로, 안전하게 차단한다
+    // (무료 한도 소진 전 정상 이용에는 영향 없음 — 이 분기는 애초에
+    // 무료 한도를 다 쓴 뒤에만 탄다).
+    console.warn(JSON.stringify({ tag: 'GDC_BALANCE_CHECK_FAILED', guid, ts: new Date().toISOString(), ...meta }));
+    return new Response(JSON.stringify({
+      error: 'GDC_BALANCE_CHECK_FAILED',
+      message: '잔액 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+    }), { status: 502, headers: corsHeaders });
+  }
+  if (balanceKRW < AI_CHARGE_MIN_RESERVE_KRW) {
+    console.warn(JSON.stringify({ tag: 'GDC_INSUFFICIENT_BALANCE', guid, spent, balanceKRW, ts: new Date().toISOString(), ...meta }));
+    return new Response(JSON.stringify({
+      error: 'GDC_INSUFFICIENT_BALANCE',
+      message: `무료 한도(${FREE_QUOTA_KRW_LIMIT}원)를 모두 사용했고 GDC 잔액도 부족합니다. GDC를 충전한 뒤 다시 이용해 주세요.`,
+      spent_krw: Math.round(spent),
+      balance_krw: Math.round(balanceKRW),
+    }), { status: 402, headers: corsHeaders });
+  }
+  return null; // 잔액 충분 — 통과. 실제 차감은 이번 요청의 실사용량이 확정된 뒤 일어난다.
+}
+
 // 요청 하나가 처리된 뒤, 실사용량(billedKRW)만큼 GDC 잔액에서 실제로
 // 차감한다(SP-GDC-BILLING-v2_0 STEP 3, L1 /api/ai-charge 호출).
 // /api/mint와 동일하게 서버 공유 비밀(secret)로만 인증한다 — 매 턴마다
@@ -11480,46 +11527,11 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   //  (L1 /api/ai-charge — SP-GDC-BILLING-v2_0 STEP 0/3) 즉시 차단하지
   //  않고, 실제 GDC 잔액을 확인해 최소 예약금 이상이면 통과시킨다. 잔액도
   //  부족하면 그때 비로소 차단한다 — "무료로 새는 것"도 "무제한 통과"도
-  //  아니라, 정확히 "낸 만큼만 쓸 수 있다"가 최종 상태다.)
-  if (guid && FREE_QUOTA_ENFORCEMENT_ENABLED) {
-    const kv = env.AI_SETUP_SEALS_KV;
-    if (kv) {
-      const spendKey = `hondi:free_spend:${guid}`;
-      const spent = parseFloat(await kv.get(spendKey) || '0');
-      if (spent >= FREE_QUOTA_KRW_LIMIT) {
-        // 무료 한도 소진 — STEP 0 2단계: GDC 잔액 확인. 일반 대화 1턴의
-        // 실제 원가는 대략 1~3원 수준(SP-GDC-BILLING-v1.0 STEP 2-3 계산
-        // 예시 참고)이므로, 최소 예약금 3원을 문턱값으로 둔다 — v1.0의
-        // 정밀 reserve_μT 홀드 대신 채택한 단순화(파일 상단 _l1GetBalanceKRW
-        // 주석 참고).
-        const AI_CHARGE_MIN_RESERVE_KRW = 3;
-        const balanceKRW = await _l1GetBalanceKRW(guid);
-        if (balanceKRW === null) {
-          // L1 잔액 조회 자체가 실패한 경우: 과금 상태를 확인할 수 없는
-          // 채로 통과시키면 무제한 무료로 새는 것과 같으므로, 안전하게
-          // 차단한다(무료 한도 소진 전 정상 이용에는 영향 없음 — 이 분기는
-          // 애초에 100원을 다 쓴 뒤에만 탄다).
-          console.warn(JSON.stringify({ tag: 'GDC_BALANCE_CHECK_FAILED', guid, ts: new Date().toISOString(), ...meta }));
-          return new Response(JSON.stringify({
-            error: 'GDC_BALANCE_CHECK_FAILED',
-            message: '잔액 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.',
-          }), { status: 502, headers: corsHeaders });
-        }
-        if (balanceKRW < AI_CHARGE_MIN_RESERVE_KRW) {
-          console.warn(JSON.stringify({ tag: 'GDC_INSUFFICIENT_BALANCE', guid, spent, balanceKRW, ts: new Date().toISOString(), ...meta }));
-          return new Response(JSON.stringify({
-            error: 'GDC_INSUFFICIENT_BALANCE',
-            message: `무료 한도(${FREE_QUOTA_KRW_LIMIT}원)를 모두 사용했고 GDC 잔액도 부족합니다. GDC를 충전한 뒤 다시 이용해 주세요.`,
-            spent_krw: Math.round(spent),
-            balance_krw: Math.round(balanceKRW),
-          }), { status: 402, headers: corsHeaders });
-        }
-        // 잔액 충분 — 통과. 실제 차감은 이번 요청의 실사용량이 확정된
-        // 뒤(_recordAiUsage → _settleAiUsage → /api/ai-charge)에 일어난다.
-      }
-    }
-  }
-
+  //  아니라, 정확히 "낸 만큼만 쓸 수 있다"가 최종 상태다.
+  //  2026-07-28: 이 게이트를 K-Law/기업/정부기관 릴레이와 공유하기 위해
+  //  _gdcFreeQuotaGate로 추출했다 — 로직 자체는 그대로, 호출부만 정리.)
+  const _gateBlocked = await _gdcFreeQuotaGate(env, guid, corsHeaders, meta);
+  if (_gateBlocked) return _gateBlocked;
 
   // ── 백엔드 선택: 혼디 자체 서버(준비되면) > OpenRouter > 공식 DeepSeek API ──
   const _useSelfHost = _selfHostReady(env);
@@ -11751,6 +11763,13 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
     return _err(429, 'KLAW_STEP_LIMIT_EXCEEDED', `오늘 판결 시뮬레이션 생성 한도(${KLAW_USER_DAILY_STEP_LIMIT}회)를 모두 사용했습니다. 내일 다시 이용해 주세요.`, corsHeaders);
   }
 
+  // (2026-07-28 신설 — 주피터 지시: K-Law도 GDC 지갑 연동) 위 일일 KRW
+  // 캡(KLAW_USER_DAILY_KRW_LIMIT 등)은 그대로 유지하되(폭주 방지 1차
+  // 방어선), 그와 별개로 무료 한도 소진 후에는 GDC 잔액도 확인한다 —
+  // callDeepSeek과 동일한 게이트를 공유(_gdcFreeQuotaGate).
+  const _gateBlocked = await _gdcFreeQuotaGate(env, guid, corsHeaders, meta);
+  if (_gateBlocked) return _gateBlocked;
+
   const isStream = !!stream;
   const payload = { model: backendModel, messages: messagesWithIntegrity, stream: isStream };
   if (max_tokens != null) payload.max_tokens = max_tokens;
@@ -11779,13 +11798,24 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
 
   const priceTier = tierKey === 'klaw-pro' ? 'hondi-pro' : 'hondi-flash'; // _deepseekUsageToKRW는 hondi-* 가격표를 조회하므로 매핑
   const recordStep = async () => { if (step_cycle) await _klawSpendAdd(env, stepKey, 1); };
+  // (2026-07-28 신설 — GDC 연동) recordStep(판결 시뮬레이션 횟수 카운트)에
+  // 더해, 실사용량만큼 GDC 잔액에서도 차감한다. 두 부수효과를 하나의
+  // onAfterRecord 콜백에 묶는다 — _recordAiUsage는 콜백 하나만 받는다.
+  const settleKlaw = (usage) => bill => Promise.all([
+    recordStep(),
+    _settleAiUsage(env, guid, bill, {
+      serviceId: 'klaw', model: backendModel,
+      hitTokens: usage?.prompt_cache_hit_tokens, missTokens: usage?.prompt_cache_miss_tokens,
+      outTokens: usage?.completion_tokens,
+    }),
+  ]);
 
   if (isStream) {
     const [forClient, forUsage] = res.body.tee();
     const usageTask = _parseUsageFromStream(forUsage).then(usage => _recordAiUsage(env, ctx, {
       guid, serviceId: 'klaw', tier: tierKey, priceTier, model: backendModel, usage,
       logTag: 'KLAW_RELAY_COST', extraLogFields: { elapsedMs: Date.now() - t0, ...meta },
-      spendKeys: [userKey, globalKey], onAfterRecord: recordStep,
+      spendKeys: [userKey, globalKey], onAfterRecord: settleKlaw(usage),
     }));
     if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
     return new Response(forClient, { status:200, headers:{ ...corsHeaders, 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache', 'X-Accel-Buffering':'no' } });
@@ -11796,7 +11826,7 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
     _recordAiUsage(env, ctx, {
       guid, serviceId: 'klaw', tier: tierKey, priceTier, model: backendModel, usage: data.usage,
       logTag: 'KLAW_RELAY_COST', extraLogFields: { elapsedMs: Date.now() - t0, ...meta },
-      spendKeys: [userKey, globalKey], onAfterRecord: recordStep,
+      spendKeys: [userKey, globalKey], onAfterRecord: settleKlaw(data.usage),
     });
   }
   return new Response(JSON.stringify(data), { headers: corsHeaders });
@@ -12080,6 +12110,14 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
     return _err(429, 'BIZ_USER_QUOTA_EXCEEDED', '오늘 사용 가능한 한도를 모두 사용했습니다. 내일 다시 이용해 주세요.', corsHeaders);
   }
 
+  // (2026-07-28 신설 — 주피터 지시: 기업(Business) 릴레이도 GDC 지갑
+  // 연동) 위 일일 KRW 캡(사업체 단위, bizKey 기준)은 그대로 유지하고,
+  // GDC 게이트는 반드시 개인 지갑 소유자인 guid 기준으로 확인한다 —
+  // bizKey는 business_id가 없으면 guid로 대체될 뿐인 "사업체 식별자"라
+  // GDC 잔액과는 무관하다.
+  const _gateBlocked = await _gdcFreeQuotaGate(env, guid, corsHeaders, meta);
+  if (_gateBlocked) return _gateBlocked;
+
   const [universalIntegrity, universalCommon, kBusiness, businessKr] = await Promise.all([
     _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchKBusiness(), _fetchBusinessKr(),
   ]);
@@ -12109,13 +12147,20 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
   }
 
   const priceTier = tierKey === 'biz-pro' ? 'hondi-pro' : 'hondi-flash';
+  // (2026-07-28 신설 — GDC 연동) 실사용량만큼 GDC 잔액에서 차감. guid
+  // 기준(bizKey 아님 — 위 게이트 주석과 동일한 이유).
+  const settleBiz = (usage) => bill => _settleAiUsage(env, guid, bill, {
+    serviceId: `biz:${bizKey}`, model: backendModel,
+    hitTokens: usage?.prompt_cache_hit_tokens, missTokens: usage?.prompt_cache_miss_tokens,
+    outTokens: usage?.completion_tokens,
+  });
 
   if (isStream) {
     const [forClient, forUsage] = res.body.tee();
     const usageTask = _parseUsageFromStream(forUsage).then(usage => _recordAiUsage(env, ctx, {
       guid, serviceId: `biz:${bizKey}`, tier: tierKey, priceTier, model: backendModel, usage,
       logTag: 'BUSINESS_RELAY_COST', extraLogFields: { business_id: bizKey, ...meta },
-      spendKeys: [userKey, globalKey],
+      spendKeys: [userKey, globalKey], onAfterRecord: settleBiz(usage),
     }));
     if (ctx?.waitUntil) ctx.waitUntil(usageTask); else usageTask.catch(() => {});
     return new Response(forClient, { status:200, headers:{ ...corsHeaders, 'Content-Type':'text/event-stream', 'Cache-Control':'no-cache', 'X-Accel-Buffering':'no' } });
@@ -12126,7 +12171,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
     _recordAiUsage(env, ctx, {
       guid, serviceId: `biz:${bizKey}`, tier: tierKey, priceTier, model: backendModel, usage: data.usage,
       logTag: 'BUSINESS_RELAY_COST', extraLogFields: { business_id: bizKey, ...meta },
-      spendKeys: [userKey, globalKey],
+      spendKeys: [userKey, globalKey], onAfterRecord: settleBiz(data.usage),
     });
   }
 
@@ -13086,6 +13131,14 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
     return _err(429, 'GOV_USER_QUOTA_EXCEEDED', '오늘 사용 가능한 한도를 모두 사용했습니다. 내일 다시 이용해 주세요.', corsHeaders);
   }
 
+  // (2026-07-28 신설 — 주피터 지시: 정부기관(342개) 릴레이도 GDC 지갑
+  // 연동) 위 일일 KRW 캡(기관별, agency 기준)은 그대로 유지하고, 그와
+  // 별개로 무료 한도 소진 후에는 요청자 개인 GDC 잔액도 확인한다 —
+  // 342개 기관 전부가 이 handleGovRelay 하나를 공유하므로(위 billGovCall
+  // 주석과 동일 원칙), 여기 한 줄만 추가하면 전 기관에 동시 적용된다.
+  const _gateBlocked = await _gdcFreeQuotaGate(env, guid, corsHeaders, meta);
+  if (_gateBlocked) return _gateBlocked;
+
   const usesProfessionalIdentity = PROFESSIONAL_IDENTITY_AGENCIES.has(agency);
   const noIdentityLayer = NO_IDENTITY_LAYER_AGENCIES.has(agency);
   const [universalIntegrity, universalCommonRaw, identityDocRaw] = await Promise.all([
@@ -13133,12 +13186,21 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   // via는 감사(audit) 로그용 호출 경로 표시일 뿐 과금 로직에는 영향 없음(같은 guid·agency 한도로 합산).
   // 342개 국가기관 전부가 이 handleGovRelay 하나를 agency 파라미터로 공유하므로,
   // 이 클로저 하나만 고치면 전 기관에 동시 적용된다(기관별 반복 연결 불필요).
+  // (2026-07-28 신설 — GDC 연동) onAfterRecord로 _settleAiUsage를 붙여
+  // 실사용량만큼 GDC 잔액에서도 차감한다 — 위임 체인 중 호출되는 모든
+  // 단계(_callDelegationTarget 포함)가 이 헬퍼 하나를 거치므로, 여기
+  // 한 곳만 고치면 위임 여부와 무관하게 동일하게 적용된다.
   const billGovCall = (usage, via) => {
     if (!usage) return;
     _recordAiUsage(env, ctx, {
       guid, serviceId: `gov:${agency}`, tier: tierKey, priceTier, model: backendModel, usage,
       logTag: 'GOV_RELAY_COST', extraLogFields: { agency, via, ...meta },
       spendKeys: [userKey, globalKey],
+      onAfterRecord: bill => _settleAiUsage(env, guid, bill, {
+        serviceId: `gov:${agency}`, model: backendModel,
+        hitTokens: usage?.prompt_cache_hit_tokens, missTokens: usage?.prompt_cache_miss_tokens,
+        outTokens: usage?.completion_tokens,
+      }),
     });
   };
 
