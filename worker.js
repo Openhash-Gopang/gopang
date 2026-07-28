@@ -499,21 +499,33 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
     }
   }
   if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+  if (!env.DEVICE_LINK_SESSIONS) return _err(500, 'DO_NOT_BOUND', 'device-link 세션 저장소가 설정되지 않았습니다', corsHeaders);
 
-  // ── 남용 방지 2단계 (2026-07-28 신설, 상세 사유는 상수 선언부 주석 참고) ──
-  // L1 조회 전에 먼저 막아 남용 시도가 불필요한 서버 부하로 이어지지
-  // 않게 한다.
+  // ── 남용 방지 2단계 + L1 조회 병렬화 (2026-07-28 성능 수정) ──────────
+  // 원래는 rate limit KV 조회 2번 → (조건부 반환) → L1 프로필 조회를
+  // 전부 순차로 실행했다. 그런데 이 셋은 서로 값을 필요로 하지 않는
+  // 독립적인 작업이라, 굳이 하나씩 기다릴 이유가 없었다(사용자 지시로
+  // 실사 — "시작하기"부터 대기 화면 뜨기까지 10초 지연의 상당 부분이
+  // 이 직렬 체인이었다). 셋을 동시에 시작하고 한 번에 기다린다 — 드물게
+  // rate limit에 걸리는 경우엔 이미 시작된 L1 조회 비용을 그냥 버리는
+  // 셈이지만, 그건 예외 케이스이고 정상 경로(대다수)가 더 중요하다.
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+  const pushRlKey = `devlink_push_rl:${e164}`;
+  const ipRlKey   = `devlink_push_rl_ip:${ip}`;
 
-  const pushRlKey  = `devlink_push_rl:${e164}`;
-  const pushRlRaw  = await env.QR_SESSIONS_KV.get(pushRlKey);
+  const [pushRlRaw, ipRlRaw, profileResult] = await Promise.all([
+    env.QR_SESSIONS_KV.get(pushRlKey),
+    env.QR_SESSIONS_KV.get(ipRlKey),
+    _l1FindProfileByE164(env, e164).then(
+      p => ({ ok: true, profile: p }),
+      e => ({ ok: false, error: e })
+    ),
+  ]);
+
   const pushRlCount = pushRlRaw ? parseInt(pushRlRaw, 10) || 0 : 0;
   if (pushRlCount >= DEVICE_LINK_PUSH_RATE_LIMIT_PER_HOUR) {
     return _err(429, 'PHONE_RATE_LIMITED', '이 번호로 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요', corsHeaders);
   }
-
-  const ipRlKey  = `devlink_push_rl_ip:${ip}`;
-  const ipRlRaw  = await env.QR_SESSIONS_KV.get(ipRlKey);
   const ipRlCount = ipRlRaw ? parseInt(ipRlRaw, 10) || 0 : 0;
   if (ipRlCount >= DEVICE_LINK_IP_RATE_LIMIT_PER_HOUR) {
     return _err(429, 'IP_RATE_LIMITED', '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요', corsHeaders);
@@ -522,15 +534,15 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
   // 카운터는 조회 성공 여부와 무관하게 먼저 증분한다 — "이 번호가 실제
   // 가입돼 있는지" 자체도 반복 조회 대상이 되면 안 되는 정보이므로,
   // PHONE_NOT_REGISTERED로 끝나는 시도도 그대로 카운트에 반영한다.
-  await env.QR_SESSIONS_KV.put(pushRlKey, String(pushRlCount + 1), { expirationTtl: DEVICE_LINK_PUSH_RATE_WINDOW_SECONDS });
-  await env.QR_SESSIONS_KV.put(ipRlKey, String(ipRlCount + 1), { expirationTtl: DEVICE_LINK_IP_RATE_WINDOW_SECONDS });
+  await Promise.all([
+    env.QR_SESSIONS_KV.put(pushRlKey, String(pushRlCount + 1), { expirationTtl: DEVICE_LINK_PUSH_RATE_WINDOW_SECONDS }),
+    env.QR_SESSIONS_KV.put(ipRlKey, String(ipRlCount + 1), { expirationTtl: DEVICE_LINK_IP_RATE_WINDOW_SECONDS }),
+  ]);
 
-  let profile;
-  try {
-    profile = await _l1FindProfileByE164(env, e164);
-  } catch (e) {
-    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + e.message, corsHeaders);
+  if (!profileResult.ok) {
+    return _err(502, 'L1_UNREACHABLE', 'L1 연결 실패: ' + profileResult.error.message, corsHeaders);
   }
+  const profile = profileResult.profile;
   if (!profile) return _err(404, 'PHONE_NOT_REGISTERED', '이 번호로 등록된 계정이 없습니다', corsHeaders);
 
   const sessionId = crypto.randomUUID();
@@ -542,7 +554,7 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
     pcLabel: pcLabel || '알 수 없는 기기',
     code, attempts: 0, state: 'pending', smsResendCount: 0,
   };
-  await env.QR_SESSIONS_KV.put(`devlink:${sessionId}`, JSON.stringify(record), { expirationTtl: DEVICE_LINK_TTL_SECONDS });
+  await _dlPut(env, sessionId, record, DEVICE_LINK_TTL_SECONDS);
 
   // 웹푸시로 폰을 깨운다(SMS 아님 — 비용 없음). 코드 자체는 푸시 payload에
   // 담지 않는다 — 알림을 열어 앱(자기 guid)으로 조회해야만 코드가 보이게
@@ -569,14 +581,14 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
   let hasMobileDevice = false;
   try {
     if (env.VAPID_PRIVATE_KEY && env.VAPID_PUBLIC_KEY && env.VAPID_SUBJECT) {
-      const fresh = await _l1FindProfileByGuid(env, profile.guid).catch(() => null);
-      // 2026-07-23 — 단일 push_subscription을 그대로 신뢰하지 않고, 이
-      // 계정에 등록된 "모든" 기기로 보낸다(§PUSH_SUBSCRIPTION_HIJACK
-      // _2026_07_21.md §4 근본 해결책). 실제 승인은 지갑 키를 가진
-      // 기기에서만 가능하므로, 다른 기기에도 알림이 뜨는 건 무해하다 —
-      // 오히려 "예전 PC가 자신을 덮어써서 폰에 알림이 안 오는" 사고를
-      // 구조적으로 막는다(폰의 구독이 살아있는 한 반드시 같이 발송됨).
-      const devices = _parseDeviceSubscriptions(fresh?.push_subscription);
+      // 2026-07-28 성능 수정 — 예전엔 여기서 "fresh" 데이터를 명목으로
+      // _l1FindProfileByGuid()를 또 호출해 L1(자체 VM)로의 왕복 요청이
+      // 하나 더 늘었다. profile은 몇 줄 위 _l1FindProfileByE164()가
+      // 이미 필드 제한 없이 통째로 가져온 것이라(push_subscription 포함)
+      // 그 사이 몇 밀리초 차이를 위해 요청을 하나 더 쓸 이유가 없었다
+      // — "가입 후 시작하기까지 10~15초" 지연의 상당 부분이 이 중복
+      // 왕복이었다(사용자 지시로 실사·발견). profile을 그대로 재사용한다.
+      const devices = _parseDeviceSubscriptions(profile?.push_subscription);
       hasMobileDevice = devices.some(d => d.deviceType === 'mobile');
       if (devices.length) {
         const payload = JSON.stringify({
@@ -584,7 +596,7 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
           body:  purpose === 'sign_request'
             ? `${record.pcLabel}에서 서명을 요청했습니다. 확인하려면 누르세요.`
             : `${record.pcLabel}에서 로그인을 시도했습니다. 확인하려면 누르세요.`,
-          sound: devices[0].sound || fresh.push_sound || 'ping',
+          sound: devices[0].sound || profile.push_sound || 'ping',
           url:   `/auth/device-link-approve.html?sessionId=${encodeURIComponent(sessionId)}`,
           tag:   `gopang-device-link-${sessionId}`,
         });
@@ -608,7 +620,7 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
         if (deadDeviceIds.length) {
           try {
             const pruned = devices.filter(d => !deadDeviceIds.includes(d.deviceId));
-            await _l1PatchProfile(env, fresh.id, {
+            await _l1PatchProfile(env, profile.id, {
               push_subscription: _serializeDeviceSubscriptions(pruned),
             });
             console.info('[DeviceLink] 죽은 구독 정리:', deadDeviceIds);
@@ -643,11 +655,10 @@ async function handleDeviceLinkResendSms(request, env, corsHeaders) {
   const { sessionId } = body;
   if (!sessionId) return _err(400, 'MISSING_FIELD', 'sessionId 필수', corsHeaders);
   if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+  if (!env.DEVICE_LINK_SESSIONS) return _err(500, 'DO_NOT_BOUND', 'device-link 세션 저장소가 설정되지 않았습니다', corsHeaders);
 
-  const key = `devlink:${sessionId}`;
-  const raw = await env.QR_SESSIONS_KV.get(key);
-  if (!raw) return _err(404, 'SESSION_EXPIRED', '세션이 만료됐거나 존재하지 않습니다', corsHeaders);
-  const record = JSON.parse(raw);
+  const record = await _dlGet(env, sessionId);
+  if (!record) return _err(404, 'SESSION_EXPIRED', '세션이 만료됐거나 존재하지 않습니다', corsHeaders);
 
   if (record.state !== 'pending') {
     return _err(409, 'ALREADY_PROGRESSED', '이미 진행된 세션입니다', corsHeaders);
@@ -675,7 +686,7 @@ async function handleDeviceLinkResendSms(request, env, corsHeaders) {
   }
 
   record.smsResendCount = (record.smsResendCount || 0) + 1;
-  await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: DEVICE_LINK_SMS_TTL_SECONDS });
+  await _dlPut(env, sessionId, record, DEVICE_LINK_SMS_TTL_SECONDS);
   await env.QR_SESSIONS_KV.put(rlKey, String(rlCount + 1), { expirationTtl: DEVICE_LINK_SMS_RATE_WINDOW_SECONDS });
 
   return new Response(JSON.stringify({ ok: true, expires_in: DEVICE_LINK_SMS_TTL_SECONDS }), { status: 200, headers: corsHeaders });
@@ -688,11 +699,10 @@ async function handleDeviceLinkSession(request, env, corsHeaders) {
   const sessionId = url.searchParams.get('sessionId');
   const guid = url.searchParams.get('guid');
   if (!sessionId || !guid) return _err(400, 'MISSING_FIELD', 'sessionId, guid 필수', corsHeaders);
-  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+  if (!env.DEVICE_LINK_SESSIONS) return _err(500, 'DO_NOT_BOUND', 'device-link 세션 저장소가 설정되지 않았습니다', corsHeaders);
 
-  const raw = await env.QR_SESSIONS_KV.get(`devlink:${sessionId}`);
-  if (!raw) return _err(404, 'SESSION_EXPIRED', '세션이 만료됐거나 존재하지 않습니다', corsHeaders);
-  const record = JSON.parse(raw);
+  const record = await _dlGet(env, sessionId);
+  if (!record) return _err(404, 'SESSION_EXPIRED', '세션이 만료됐거나 존재하지 않습니다', corsHeaders);
   if (record.guid !== guid) return _err(403, 'GUID_MISMATCH', '이 세션의 소유자가 아닙니다', corsHeaders);
 
   return new Response(JSON.stringify({
@@ -710,25 +720,23 @@ async function handleDeviceLinkVerify(request, env, corsHeaders) {
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
   const { sessionId, code } = body;
   if (!sessionId || !code) return _err(400, 'MISSING_FIELD', 'sessionId, code 필수', corsHeaders);
-  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+  if (!env.DEVICE_LINK_SESSIONS) return _err(500, 'DO_NOT_BOUND', 'device-link 세션 저장소가 설정되지 않았습니다', corsHeaders);
 
-  const key = `devlink:${sessionId}`;
-  const raw = await env.QR_SESSIONS_KV.get(key);
-  if (!raw) return _err(404, 'SESSION_EXPIRED', '세션이 만료됐거나 존재하지 않습니다', corsHeaders);
-  const record = JSON.parse(raw);
+  const record = await _dlGet(env, sessionId);
+  if (!record) return _err(404, 'SESSION_EXPIRED', '세션이 만료됐거나 존재하지 않습니다', corsHeaders);
 
   if (record.attempts >= DEVICE_LINK_MAX_ATTEMPTS) {
-    await env.QR_SESSIONS_KV.delete(key);
+    await _dlDelete(env, sessionId);
     return _err(429, 'TOO_MANY_ATTEMPTS', '시도 횟수를 초과했습니다. 처음부터 다시 시도해 주세요', corsHeaders);
   }
   if (String(code).trim() !== record.code) {
     record.attempts += 1;
-    await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: _deviceLinkTtl(record) });
+    await _dlPut(env, sessionId, record, _deviceLinkTtl(record));
     return _err(400, 'CODE_MISMATCH', `코드가 일치하지 않습니다(남은 시도 ${DEVICE_LINK_MAX_ATTEMPTS - record.attempts}회)`, corsHeaders);
   }
 
   record.state = 'approved';
-  await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: _deviceLinkTtl(record) });
+  await _dlPut(env, sessionId, record, _deviceLinkTtl(record));
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
 }
 
@@ -741,12 +749,10 @@ async function handleDeviceLinkDeliver(request, env, corsHeaders) {
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
   const { sessionId, guid, sealed, signature, publicKeyB64u } = body;
   if (!sessionId || !guid) return _err(400, 'MISSING_FIELD', 'sessionId, guid 필수', corsHeaders);
-  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+  if (!env.DEVICE_LINK_SESSIONS) return _err(500, 'DO_NOT_BOUND', 'device-link 세션 저장소가 설정되지 않았습니다', corsHeaders);
 
-  const key = `devlink:${sessionId}`;
-  const raw = await env.QR_SESSIONS_KV.get(key);
-  if (!raw) return _err(404, 'SESSION_EXPIRED', '세션이 만료됐거나 존재하지 않습니다', corsHeaders);
-  const record = JSON.parse(raw);
+  const record = await _dlGet(env, sessionId);
+  if (!record) return _err(404, 'SESSION_EXPIRED', '세션이 만료됐거나 존재하지 않습니다', corsHeaders);
   if (record.guid !== guid) return _err(403, 'GUID_MISMATCH', '이 세션의 소유자가 아닙니다', corsHeaders);
   if (record.state !== 'approved') return _err(409, 'NOT_APPROVED', 'PC가 아직 코드를 확인하지 않았습니다', corsHeaders);
 
@@ -765,15 +771,11 @@ async function handleDeviceLinkDeliver(request, env, corsHeaders) {
   record.state = 'delivered';
   // PC가 가져갈 시간만 짧게 더 준다 — 폰이 봉투를 보낸 뒤에도 무기한
   // 남아있으면 안 되므로(암호화된 봉투라도 최소한으로만 존재).
-  // ★ 2026-07-22 버그 수정 — 실사로 확인된 근본 원인: Cloudflare Workers
-  // KV는 expirationTtl 60초 미만을 아예 거부한다("Invalid expiration_ttl
-  // of 30. Expiration TTL must be at least 60."). 30초로 넣는 순간 KV
-  // PUT 자체가 400으로 예외를 던졌고, 그 처리되지 않은 예외가 deliver
-  // 핸들러 전체를 깨뜨려 클라이언트에서는 "Failed to fetch"(네트워크
-  // 레벨 실패처럼 보이는 응답 없는 실패)로 나타났다 — 재시도를 아무리
-  // 해도 매번 100% 확정적으로 실패할 수밖에 없었던 이유. 60초(KV 최소값)
-  // 로 수정.
-  await env.QR_SESSIONS_KV.put(key, JSON.stringify(record), { expirationTtl: 60 });
+  // 2026-07-28 — 세션 저장소를 KV에서 Durable Object로 옮기면서
+  // (근본 원인: KV 최종적 일관성으로 인한 최대 60초 전파 지연) 이
+  // 60초 TTL 자체는 KV 최소값 제약과 무관해졌지만, "PC가 가져갈 시간만
+  // 짧게 더 준다"는 원래 의도는 그대로 유지한다.
+  await _dlPut(env, sessionId, record, 60);
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
 }
 
@@ -784,15 +786,13 @@ async function handleDeviceLinkPoll(request, env, corsHeaders) {
   const url = new URL(request.url);
   const sessionId = url.searchParams.get('sessionId');
   if (!sessionId) return _err(400, 'MISSING_FIELD', 'sessionId 필수', corsHeaders);
-  if (!env.QR_SESSIONS_KV) return _err(500, 'KV_NOT_BOUND', '세션 저장소가 설정되지 않았습니다', corsHeaders);
+  if (!env.DEVICE_LINK_SESSIONS) return _err(500, 'DO_NOT_BOUND', 'device-link 세션 저장소가 설정되지 않았습니다', corsHeaders);
 
-  const key = `devlink:${sessionId}`;
-  const raw = await env.QR_SESSIONS_KV.get(key);
-  if (!raw) return new Response(JSON.stringify({ ok: true, state: 'expired' }), { status: 200, headers: corsHeaders });
-  const record = JSON.parse(raw);
+  const record = await _dlGet(env, sessionId);
+  if (!record) return new Response(JSON.stringify({ ok: true, state: 'expired' }), { status: 200, headers: corsHeaders });
 
   if (record.state === 'delivered') {
-    await env.QR_SESSIONS_KV.delete(key);
+    await _dlDelete(env, sessionId);
     const purpose = record.purpose || 'key_transfer';
     const payload = { ok: true, state: 'delivered', purpose };
     if (purpose === 'sign_request') {
@@ -7089,6 +7089,76 @@ class _MatchChannelBase {
 
 export class MatchDemandChannel extends _MatchChannelBase {}
 export class MatchRegionChannel extends _MatchChannelBase {}
+
+// ── DeviceLinkSessionDO — device-link 세션 전용 강한 일관성 저장소 ──────
+// 2026-07-28 신설 — 근본 원인 실사로 발견: KV(env.QR_SESSIONS_KV)는
+// "최종적 일관성"이라, 한 엣지에서 쓴 값이 다른 엣지에 전파되는 데
+// 최대 60초가 걸릴 수 있다(Cloudflare 공식 문서 명시). 폰이 deliver한
+// 직후 PC가 poll해도 최대 1분 가까이 "아직 안 옴"으로 보이던 지연의
+// 정체가 이것이었다. sessionId 하나당 Durable Object 인스턴스 하나
+// (idFromName)라 항상 같은 물리적 위치에서 읽고 쓰므로 전파 지연
+// 자체가 없다 — 쓰자마자 어디서 poll하든 즉시 보인다.
+//
+// KV의 expirationTtl과 동일한 효과를 Durable Object Alarm으로 낸다:
+// PUT마다 그 시점 기준 ttlSeconds 뒤로 알람을 재설정하고, 알람이
+// 울리면 저장된 내용을 전부 지운다(= KV 레코드가 사라져 다음 GET이
+// 404가 되는 것과 동일한 최종 상태).
+export class DeviceLinkSessionDO {
+  constructor(ctx, env) {
+    this.ctx = ctx;
+    this.env = env;
+  }
+
+  async fetch(request) {
+    const method = request.method;
+    if (method === 'PUT') {
+      const body = await request.json().catch(() => null);
+      if (!body || !body.record) return new Response('bad request', { status: 400 });
+      await this.ctx.storage.put('record', body.record);
+      const ttlSeconds = body.ttlSeconds || 90;
+      await this.ctx.storage.setAlarm(Date.now() + ttlSeconds * 1000);
+      return new Response('ok');
+    }
+    if (method === 'GET') {
+      const record = await this.ctx.storage.get('record');
+      if (!record) return new Response('not_found', { status: 404 });
+      return new Response(JSON.stringify(record), { status: 200 });
+    }
+    if (method === 'DELETE') {
+      await this.ctx.storage.deleteAll();
+      await this.ctx.storage.deleteAlarm();
+      return new Response('ok');
+    }
+    return new Response('method not allowed', { status: 405 });
+  }
+
+  async alarm() {
+    await this.ctx.storage.deleteAll();
+  }
+}
+
+// ── KV 인터페이스를 흉내내는 얇은 헬퍼 — 5개 device-link 핸들러가
+// env.QR_SESSIONS_KV.get/put/delete(`devlink:${sessionId}`) 대신 이걸
+// 쓰도록 최소 변경으로 교체한다(호출부 로직 자체는 그대로 유지).
+function _dlStub(env, sessionId) {
+  const id = env.DEVICE_LINK_SESSIONS.idFromName(sessionId);
+  return env.DEVICE_LINK_SESSIONS.get(id);
+}
+async function _dlGet(env, sessionId) {
+  const res = await _dlStub(env, sessionId).fetch('https://devlink-session/', { method: 'GET' });
+  if (res.status === 404) return null;
+  return res.json();
+}
+async function _dlPut(env, sessionId, record, ttlSeconds) {
+  await _dlStub(env, sessionId).fetch('https://devlink-session/', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ record, ttlSeconds }),
+  });
+}
+async function _dlDelete(env, sessionId) {
+  await _dlStub(env, sessionId).fetch('https://devlink-session/', { method: 'DELETE' });
+}
 
 
 export default {
@@ -18094,17 +18164,35 @@ async function _sendWebPush(env, subscription, payload) {
   // 발견). device-link 세션 TTL(최대 300초, SMS 재발송 시)보다 넉넉하게
   // 잡아 세션이 살아있는 동안은 배달 실패가 거의 없게 한다. 세션 자체
   // 만료 후 늦게 도착해도 클라이언트가 만료 처리하므로 부작용 없다.
-  const res = await fetch(subscription.endpoint, {
-    method:  'POST',
-    headers: {
-      ...vapidHeaders,
-      'Content-Type':     'application/octet-stream',
-      'Content-Encoding': 'aes128gcm',
-      'Content-Length':   body.length.toString(),
-      'TTL': '3600',
-    },
-    body,
-  });
+  // 2026-07-28 성능 수정 — 이 fetch에 타임아웃이 없었다. 여러 기기에
+  // 병렬로 보내긴 하지만(Promise.allSettled), 전체 완료는 가장 느린
+  // 하나에 발이 묶인다 — 죽었거나 응답이 느린 구독(예: 오래된 legacy
+  // 항목) 하나가 몇 초씩 붙잡고 있으면 그만큼 "시작하기"부터 대기
+  // 화면이 뜨기까지 전체가 늦어진다(사용자 지시로 실사·발견, 10~15초
+  // 지연의 또 다른 축). 5초로 끊어서 이후 요청들이 더 이상 기다리지
+  // 않게 한다 — 정상 구독은 통상 1초 안에 응답하므로 부작용 없다.
+  const _ac = new AbortController();
+  const _timeoutId = setTimeout(() => _ac.abort(), 5000);
+  let res;
+  try {
+    res = await fetch(subscription.endpoint, {
+      method:  'POST',
+      headers: {
+        ...vapidHeaders,
+        'Content-Type':     'application/octet-stream',
+        'Content-Encoding': 'aes128gcm',
+        'Content-Length':   body.length.toString(),
+        'TTL': '3600',
+      },
+      body,
+      signal: _ac.signal,
+    });
+  } catch (e) {
+    clearTimeout(_timeoutId);
+    console.warn('[Push] 발송 실패(타임아웃/네트워크):', e.message, subscription.endpoint?.slice(0, 60));
+    return { ok: false, status: 0 };
+  }
+  clearTimeout(_timeoutId);
   const ok = res.ok || res.status === 201;
   if (ok) {
     console.info('[Push] 발송 성공:', res.status, subscription.endpoint?.slice(0, 60));
