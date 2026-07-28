@@ -64,7 +64,7 @@ PR·매일 스케줄로 이 줄들을 실제 코드와 대조한다(gopang-walle
 설명: 모든 가입자가 자동으로 갖는 gopang wallet으로 실시간 결제를
 받는다.
 검증-서버: worker.js::gdc_accepted
-검증-클라이언트: prompts/profile-assistant/profile-assistant-v2_20.txt::gdc_accepted
+검증-클라이언트: prompts/profile-assistant/profile-assistant-v2_21.txt::gdc_accepted
 확인일: 2026-07-27
 
 ### 계좌 이체 결제
