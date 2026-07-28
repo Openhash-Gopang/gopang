@@ -580,20 +580,26 @@ export const _stripInternalTags = (text) => _stripBracketTag(
  * 넘겨받는다 — 기본값 ''은 하위 호환용(다른 호출부가 안 넘겨도 에러 안 남).
  */
 export async function _handleProfileTags(fullReply, bubble, sendFn = callAI, userText = '') {
-  // ── CALL_PROFILE_ASSISTANT — AC가 프로필 작성/수정으로 바톤 전달 (v2.0 신설, §0-E) ──
-  // AGENT-COMMON의 출력에서만 나오는 태그이지만, 이 함수는 모든 응답 뒤에
-  // 공통으로 호출되므로 여기서 함께 감지한다(어느 SP가 활성 상태든 상관없이
-  // 동일한 디스패처를 거치는 기존 구조와 일관성 유지).
+  // ── CALL_PROFILE_ASSISTANT — 폐기된 legacy 태그, 방어적 무력화만 수행
+  //    (v2.0 신설, §0-E → 2026-07-11 [GWP: profile-assistant] 새 탭 방식으로
+  //    완전히 대체됨 — gwp-registry.js·AGENT-COMMON_v3_45 §0-1 1042행 참조).
+  //
+  // 예전엔 이 태그가 오면 _switchToProfileAssistantSP()로 "같은 창의
+  // system을 그대로 바꿔치기"했는데, 이 방식이 바로 "튜토리얼 대본이 AC
+  // 자신의 응답과 섞여 실제 사용자 지시를 가로채는" 사고를 냈던 원인이라
+  // 새 탭 방식으로 이관된 것이었다. 그런데 이관 이후에도 이 처리 블록
+  // 자체는 지워지지 않고 남아있어, 캐시된 구버전 SP나 모델의 옛 태그명
+  // 재현(할루시네이션) 등으로 이 태그가 다시 출력되면 이미 고쳤던 그
+  // 버그가 그대로 재발할 위험이 있었다(2026-07-27 사고실험에서 실제로
+  // webapp.html의 재방문자 튜토리얼 재개 트리거가 이 옛 태그명을 AC에게
+  // 직접 지시하고 있던 것도 함께 발견돼 그쪽은 [GWP: profile-assistant]로
+  // 정정함). 현재 시점엔 이 태그를 실제로 출력하는 곳이 없어야 정상이므로,
+  // 혹시라도 관측되면 원인 파악용 경고만 남기고 절대 같은 창 전환을
+  // 실행하지 않는다 — 정상 흐름은 그대로 이어간다(return false).
   if (fullReply.includes('[CALL_PROFILE_ASSISTANT]')) {
-    console.log('[Profile] CALL_PROFILE_ASSISTANT 감지 — profile-assistant로 전환');
-    if (bubble) {
-      const { _updateStreamBubble: _usb } = await import('../ui/bubble.js').catch(() => ({}));
-      if (_usb) _usb(bubble, _stripInternalTags(fullReply));
-    }
-    history.length = 0;
-    await _switchToProfileAssistantSP();
-    await _triggerProfileAssistantHandoff(sendFn);
-    return true;
+    console.warn('[Profile] ⚠️ 폐기된 [CALL_PROFILE_ASSISTANT] 태그 감지 — ' +
+      '무시함(같은 창 전환 실행 안 함). [GWP: profile-assistant]를 썼어야 ' +
+      '합니다 — SP 캐시나 호출부에 옛 태그명이 남아있는지 확인하세요.');
   }
 
   // ── PROFILE_INTERRUPT_HANDOFF — profile-assistant가 무관한 요청을 받아
@@ -1504,6 +1510,13 @@ async function _switchToAssistantSP() {
  * [CALL_PROFILE_ASSISTANT]를 출력한 직후 호출됩니다. _switchToAssistantSP()의
  * 반대 방향 — 구조는 동일(system_base/system 교체 + localStorage 저장),
  * 대상만 다르다.
+ *
+ * ※ 2026-07-27 — 현재 미사용(unused). [CALL_PROFILE_ASSISTANT]가
+ *   2026-07-11에 [GWP: profile-assistant] 새 탭 방식으로 대체되며 이
+ *   함수를 부르던 유일한 호출부(_handleProfileTags)도 방어적 경고만
+ *   남기도록 바뀌었다. 삭제하지 않고 남겨둔 이유: 같은 창 전환이라는
+ *   메커니즘 자체는(대상 SP만 다를 뿐) 여전히 유효한 패턴이라 나중에
+ *   다른 용도로 재사용될 수 있고, 히스토리 추적용으로도 남겨둔다.
  */
 async function _switchToProfileAssistantSP() {
   try {
@@ -1528,6 +1541,12 @@ async function _switchToProfileAssistantSP() {
  * PHASE 0부터 이어가도록 한다(2026-07-08 신설). _triggerSeamlessHandoff와
  * 대칭 구조(반대 방향) — AC는 이미 프로필 작성 취지를 설명하고 동의를
  * 받은 뒤이므로, profile-assistant는 재인사하지 않고 바로 시작해야 한다.
+ *
+ * ※ 2026-07-27 — 현재 미사용(unused). 위 _switchToProfileAssistantSP()와
+ *   동일한 사유로 호출부가 제거됐다 — 참고: 같은 역할(재인사 없이 곧장
+ *   시작)은 이제 pages/profile-assistant.html의 startGreeting()이
+ *   [INTERNAL: ...] 신호로 직접 수행한다(새 탭 방식이라 여기서 sendFn을
+ *   대신 호출해줄 필요가 없어짐).
  */
 async function _triggerProfileAssistantHandoff(sendFn = callAI) {
   try {
@@ -2904,26 +2923,66 @@ const _COMPLEXITY_PATTERNS = [
 const COMPLEXITY_PRO_THRESHOLD = 3; // 이 점수 이상이면 이번 턴만 Pro
 
 function _estimateQueryComplexity(userText, messages) {
-  if (typeof userText !== 'string' || !userText.trim()) return 0;
-  const text = userText.trim();
+  const text = typeof userText === 'string' ? userText.trim() : '';
   let score = 0;
 
-  // 1) 길이 — 길수록 여러 조건·맥락이 얽혀 있을 가능성이 높다
-  if (text.length > 400) score += 2;
-  else if (text.length > 180) score += 1;
+  if (text) {
+    // 1) 길이 — 길수록 여러 조건·맥락이 얽혀 있을 가능성이 높다
+    if (text.length > 400) score += 2;
+    else if (text.length > 180) score += 1;
 
-  // 2) 한 메시지에 여러 요청이 겹쳐 있는지(물음표 반복, 목록형 나열)
-  const qMarks = (text.match(/\?/g) || []).length;
-  if (qMarks >= 2) score += 1;
-  if (/\n\s*[-*\d]/.test(text)) score += 1;
+    // 2) 한 메시지에 여러 요청이 겹쳐 있는지(물음표 반복, 목록형 나열)
+    const qMarks = (text.match(/\?/g) || []).length;
+    if (qMarks >= 2) score += 1;
+    if (/\n\s*[-*\d]/.test(text)) score += 1;
 
-  // 3) 키워드 신호 — 패턴당 1점
-  for (const re of _COMPLEXITY_PATTERNS) {
-    if (re.test(text)) score += 1;
+    // 3) 키워드 신호 — 패턴당 1점
+    for (const re of _COMPLEXITY_PATTERNS) {
+      if (re.test(text)) score += 1;
+    }
   }
+  // ★ 2026-07-27 수정 — 이전엔 userText가 비어있으면(예: 내부 트리거
+  // 메시지가 예외적으로 빈 문자열인 경우) 함수가 여기서 0을 즉시
+  // 반환해 아래 4)·5)의 맥락 신호를 아예 평가하지 않았다. text가
+  // 비어도 messages 기반 신호는 계속 평가하도록 조기 반환을 없앴다.
 
   // 4) 같은 주제로 대화가 이미 길게 이어지는 중이면(복잡한 작업 진행 중일 가능성)
   if (Array.isArray(messages) && messages.length >= 10) score += 1;
+
+  // 5) 맥락/기억 부담 신호 (2026-07-27 신설 — AGENT-COMMON v3.46과 짝)
+  //    배경: AC_lifelong_assistant_100case_audit_2026-07-27.md에서
+  //    "이전 대화를 자연스럽게 잇기", "여러 정체성 정보를 한 번에
+  //    자연스럽게 반영하기", "프로필 유도(§0-1-P[6])와 주기적 PDV
+  //    검토(§0-1-P[7])가 겹칠 때 중복 없이 조율하기" 같은 사회적·
+  //    맥락적 판단이 필요한 턴이 다수 발견됐는데, 위 1~4)는 전부
+  //    기술적 복잡도(코드·수치·비교·다단계·긴 대화)만 감지해서 이런
+  //    턴은 매번 hondi-flash로 처리되고 있었다. messages의 마지막
+  //    user 메시지(=_buildEnhancedUserContent가 만든 동적 컨텍스트,
+  //    userText와 달리 [ctx] 마커들이 실제로 여기 실린다)를 훑어
+  //    이런 신호가 있는지 본다.
+  if (Array.isArray(messages) && messages.length) {
+    const lastContent = messages[messages.length - 1]?.content;
+    const ctxText = typeof lastContent === 'string' ? lastContent : '';
+    if (ctxText) {
+      const hasPdvNote     = ctxText.includes('[PDV 최근 기록');   // _buildPDVNote() 마커 — 과거 기록을 이번 응답에 자연스럽게 이어붙여야 함
+      const hasReviewDue   = ctxText.includes('[PDV_REVIEW_DUE');  // §0-1-P[7] 주기 검토 판단이 필요한 턴
+      const hasProfileFlag = ctxText.includes('프로필:미완성');     // §0-1-P[6] 대상
+
+      // 정체성 컨텍스트(직업/소속/업무상태/배정업무)가 한 턴에 2개
+      // 이상 겹치면, 그중 무엇을 이번 응답에 자연스럽게 반영할지
+      // 스스로 골라야 해서 판단 부담이 커진다.
+      const identityCount = ['직업:', '소속:', '업무상태:', '배정된업무(']
+        .filter(marker => ctxText.includes(marker)).length;
+
+      if (hasPdvNote) score += 1;
+      if (identityCount >= 2) score += 1;
+      if (hasReviewDue) score += 1;
+      // §0-1-P[10](신설)이 요구하는 가장 까다로운 조율 — [6]/[7]이
+      // 같은 턴에 겹치는 경우. 이 조합만으로도 임계값에 도달하도록
+      // 가중치를 높게 둔다(hasReviewDue의 +1과 합쳐 총 +3).
+      if (hasReviewDue && hasProfileFlag) score += 2;
+    }
+  }
 
   return score;
 }

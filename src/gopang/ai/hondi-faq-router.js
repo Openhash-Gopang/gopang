@@ -68,7 +68,7 @@ export const HONDI_FAQ_REGISTRY = [
   },
   {
     id: 'hondi-code', label: '혼디코드', file: 'hondi-code.txt',
-    triggers: ['혼디코드', '색상 코드', '컬러 코드', 'QR', '내 코드'],
+    triggers: ['혼디코드', '숫자 코드', '숫자코드', '색상 코드', '컬러 코드', 'QR', '내 코드'],
   },
   {
     id: 'gwp-vs-expert', label: '기관 AI vs 전문가 AI', file: 'gwp-vs-expert.txt',

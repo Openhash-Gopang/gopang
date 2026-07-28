@@ -39,6 +39,26 @@ const SEG_BOXES = {
 };
 const SEG_ON_RATIO = 0.35;
 
+// ── 라이브 스캔 상수/상태 (색상 코드 스캐너 hondi-scanner.js와 동일 패턴) ──
+const SCAN_FPS       = 15;
+const SCAN_MS        = Math.round(1000 / SCAN_FPS);
+const LOCK_FRAMES    = 3;
+// avgMargin: 셀마다 1위·2위 후보 세그먼트 매칭 점수 차이의 평균. 실제
+// 숫자 코드가 잘 보일 때는 이 값이 크고(뚜렷한 판별), 코드가 없는 화면을
+// 비출 때(벽·바닥 등)는 findAxisBlobs가 우연히 얼룩을 잡아도 판별이
+// 애매해 값이 낮다 — 이 값으로 "코드 없음" 프레임을 걸러낸다.
+const MIN_AVG_MARGIN = 3;
+
+let _stream        = null;
+let _rafId         = null;
+let _lastTime      = 0;
+let _lockCount     = 0;
+let _lastId        = null;
+let _locked        = false;
+let _onResult      = null;
+let _onStatus      = null;
+let _overlayCanvas = null;
+
 // ── 기본 유틸 ──────────────────────────────────────────────────
 function otsuThreshold(grayArray) {
   const hist = new Array(256).fill(0);
@@ -142,7 +162,105 @@ function matchDigit(bits) {
   return scores;
 }
 
-// ── 공개 API ──────────────────────────────────────────────────
+// ── 공개 API — 라이브 카메라 스캔 ────────────────────────────
+// 색상 코드 스캐너(hondi-scanner.js)의 startScanner/stopScanner와 동일한
+// 시그니처·동작 방식(rAF 루프 + 연속 프레임 잠금)이되, 버전 개념이 없어
+// onResult는 (digitString, result) 두 인자만 넘긴다.
+export async function startScanner(video, canvas, overlayCanvas, onResult, onStatus) {
+  _onResult = onResult; _onStatus = onStatus; _overlayCanvas = overlayCanvas;
+  _lockCount = 0; _lastId = null; _locked = false;
+  try {
+    _stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720} },
+      audio: false,
+    });
+    video.srcObject = _stream;
+    await video.play();
+    _status('혼디 숫자 코드를 화면에 맞춰주세요.');
+    _scheduleFrame(video, canvas);
+  } catch (e) {
+    const msg =
+      e.name === 'NotAllowedError'  ? '카메라 권한이 거부됐습니다. 설정에서 허용해 주세요.' :
+      e.name === 'NotFoundError'    ? '카메라를 찾을 수 없습니다.' :
+      e.name === 'NotReadableError' ? '카메라가 다른 앱에서 사용 중입니다.' :
+                                       `카메라 오류: ${e.message}`;
+    _status(msg); throw e;
+  }
+}
+
+export function stopScanner() {
+  if (_rafId)  { cancelAnimationFrame(_rafId); _rafId = null; }
+  if (_stream) { _stream.getTracks().forEach(t => t.stop()); _stream = null; }
+}
+
+function _scheduleFrame(video, canvas) {
+  _rafId = requestAnimationFrame(ts => {
+    if (_locked) return;
+    if (ts - _lastTime >= SCAN_MS) { _lastTime = ts; _processFrame(video, canvas); }
+    _scheduleFrame(video, canvas);
+  });
+}
+
+function _processFrame(video, canvas) {
+  if (video.readyState < 2) return;
+  const W = video.videoWidth, H = video.videoHeight;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(video, 0, 0);
+  const result = _analyze(canvas, ctx);
+  _drawOverlay(result, W, H);
+
+  if (!result || result.avgMargin < MIN_AVG_MARGIN) { _lockCount = 0; _lastId = null; return; }
+
+  const idStr = result.digits.join('');
+  if (idStr === _lastId) _lockCount++; else { _lockCount = 1; _lastId = idStr; }
+  _status(`인식 중... ${Math.round(_lockCount / LOCK_FRAMES * 100)}%`);
+
+  if (_lockCount >= LOCK_FRAMES) {
+    _locked = true;
+    stopScanner();
+    if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
+    _playBeep();
+    _onResult?.(idStr, result);
+  }
+}
+
+// ── 오버레이 — 인식된 숫자열 잉크 범위와 칸 경계를 그린다 ────────
+function _drawOverlay(result, W, H) {
+  if (!_overlayCanvas) return;
+  _overlayCanvas.width = W; _overlayCanvas.height = H;
+  const oc = _overlayCanvas.getContext('2d');
+  oc.clearRect(0, 0, W, H);
+  if (!result) return;
+
+  const { inkAbs } = result;
+  oc.strokeStyle = 'rgba(255,220,0,0.9)';
+  oc.lineWidth = 2;
+  oc.strokeRect(inkAbs.x1, inkAbs.y1, inkAbs.x2 - inkAbs.x1, inkAbs.y2 - inkAbs.y1);
+
+  oc.strokeStyle = 'rgba(255,255,255,0.5)';
+  oc.lineWidth = 1;
+  const cellW = (inkAbs.x2 - inkAbs.x1) / DIGIT_COUNT;
+  for (let c = 1; c < DIGIT_COUNT; c++) {
+    const x = inkAbs.x1 + cellW * c;
+    oc.beginPath(); oc.moveTo(x, inkAbs.y1); oc.lineTo(x, inkAbs.y2); oc.stroke();
+  }
+}
+
+function _status(msg) { _onStatus?.(msg); }
+
+function _playBeep() {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ac.createOscillator(), gain = ac.createGain();
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.frequency.value = 1320;
+    gain.gain.setValueAtTime(0.18, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.12);
+    osc.start(); osc.stop(ac.currentTime + 0.12);
+  } catch {}
+}
+
 // 색상 코드 스캐너(hondi-scanner.js)의 analyzePhoto와 동일한 시그니처.
 export function analyzePhoto(imageData, onResult, onStatus) {
   const c = document.createElement('canvas');

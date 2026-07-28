@@ -9,8 +9,8 @@ import { setUser, _USER, USER_GUID, L1_URL, L1_PDV_URL, L1_ANCHOR_URL, PROXY } f
 const PROXY_URL = PROXY;
 import { appendBubble } from '../ui/bubble.js';
 import { requestPushSubscription } from '../services/push.js';
-import { guidToShortId, generateHondiCodeDataURL } from '../ai/hondi-code.js';
-import { phoneToDigits } from '../ai/hondi-digit-code.js';
+import { guidToShortId } from '../ai/hondi-code.js';
+import { phoneToDigits, generateDigitCodeDataURL } from '../ai/hondi-digit-code.js';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ⚠️  DEV MODE — 정식 운영 전환: false로 복원 (2026-06-27)
@@ -275,7 +275,14 @@ export async function ensureWalletSetup() {
 // ── 한국 유선 지역번호 목록 (서울만 1자리, 나머지 전부 2자리) ──────
 // hondi-digit-code.js의 VALID_AREA_CODES와 반드시 동일한 코드 값을
 // 유지해야 한다(숫자 코드 인코딩/디코딩과 짝이 맞아야 하므로).
-const KR_AREA_CODES = [
+// 2026-07-27 — export 추가: auth/device-link.html이 자체적으로 전화번호
+// 정규화를 다시 구현하다가(normalizePhoneToE164) 휴대폰 앞자리 "010"
+// 누락을 검증 없이 그냥 이어붙이는 버그를 냈다(사고실험에서 발견 —
+// 존재하는 계정인데 "번호로 등록된 계정 없음" 오류가 남). 근본 원인은
+// 이 목록과 아래 _buildKrE164/krNeededDigitsFor 같은 검증된 로직이
+// 이 파일에만 있고 재사용이 안 됐던 것 — 이제 export해서 그쪽에서
+// 그대로 가져다 쓴다.
+export const KR_AREA_CODES = [
   { code: '2',  name: '서울' },
   { code: '31', name: '경기' },
   { code: '32', name: '인천' },
@@ -517,6 +524,15 @@ export function _buildKrE164(phoneType, areaCode, digits) {
 export function _buildKrHandle(phoneType, areaCode, digits) {
   if (phoneType === 'mobile') return buildHandle(digits, 'KR');
   return `@0${areaCode}-${digits}`;
+}
+
+// 휴대폰/지역번호 선택 시 필요한 가입자번호 자릿수(서울만 8자리, 그 외
+// 지역은 7자리, 휴대폰은 8자리) — 순수 함수로 분리해 외부(예:
+// auth/device-link.html)에서도 재사용할 수 있게 했다(2026-07-27,
+// _buildKrE164와 짝을 이루는 export — 위 changelog 참고).
+export function krNeededDigitsFor(phoneType, areaCode) {
+  if (phoneType === 'mobile') return 8;
+  return areaCode === '2' ? 8 : 7;
 }
 
 // ── SHA-256 헬퍼 ─────────────────────────────────────────
@@ -1230,12 +1246,10 @@ function _showPhonePopup(resolve) {
   const krListEl      = document.getElementById('_kr-areatype-list');
   const krSearchEl    = document.getElementById('_kr-areatype-search');
 
-  // 휴대폰 또는 지역번호 선택 시 필요한 가입자번호 자릿수
-  // (서울만 8자리, 그 외 지역은 7자리, 휴대폰은 8자리 — 이전 대화에서
-  // 정한 혼디 숫자 코드 인코딩 규칙과 반드시 일치해야 한다)
+  // 휴대폰 또는 지역번호 선택 시 필요한 가입자번호 자릿수 — 실제 계산은
+  // 모듈 최상위 krNeededDigitsFor(순수 함수, 위 export 참고)에 위임한다.
   function _krNeededDigits() {
-    if (phoneType === 'mobile') return 8;
-    return areaCode === '2' ? 8 : 7;
+    return krNeededDigitsFor(phoneType, areaCode);
   }
 
   function _renderKrAreaList(query = '') {
@@ -1612,22 +1626,24 @@ function _showPhonePopup(resolve) {
     const nickname_hash = await _sha256('phone:' + e164);
     const region = '';
 
+    // (구) 혼디 색상 코드 — 2026-07-27 잠정 중단, 숫자 코드로 전환.
+    // hondi_code_id(GUID 기반 short_id)는 하위 호환을 위해 계속 계산·
+    // 저장하지만, 색상 이미지는 더 이상 생성하지 않는다.
     const hondiCodeVersion = 'v1';
-    let hondiShortId = null, hondiCodeImage = null;
+    let hondiShortId = null;
     try {
-      hondiShortId  = guidToShortId(ipv6, hondiCodeVersion);
-      hondiCodeImage = await generateHondiCodeDataURL(hondiShortId, hondiCodeVersion);
-      console.info('[가입][색상코드] 생성 완료 | short_id:', hondiShortId.toString(), '| version:', hondiCodeVersion);
+      hondiShortId = guidToShortId(ipv6, hondiCodeVersion);
     } catch (e) {
-      console.warn('[가입][색상코드] 생성 실패 (가입은 계속 진행):', e.message);
+      console.warn('[가입][GUID short_id] 생성 실패 (가입은 계속 진행):', e.message);
     }
 
     // ── 숫자 코드(digit_code_id) 생성 — 한국(휴대폰/지역번호)만 해당 ──
     // phoneToDigits()가 휴대폰/지역번호를 10자리로 인코딩한다(이전 대화에서
     // 정한 규칙: 휴대폰="00"+8자리, 서울="0"+"2"+8자리, 그 외 지역=
-    // "0"+지역번호(2자리)+7자리). 색상 코드와 마찬가지로 실패해도 가입
-    // 자체는 계속 진행한다.
-    let digitCodeId = null;
+    // "0"+지역번호(2자리)+7자리). 실패해도 가입 자체는 계속 진행한다.
+    // 2026-07-27부터 이 값이 혼디 코드 시각 렌더링(hondi-digit-code.js)의
+    // 유일한 입력이 된다 — 색상 코드(GUID 기반)는 잠정 중단.
+    let digitCodeId = null, hondiDigitCodeImage = null;
     if (selectedCountry === 'KR' && digits) {
       try {
         const digitsArr = phoneType === 'mobile'
@@ -1635,6 +1651,7 @@ function _showPhonePopup(resolve) {
           : phoneToDigits({ type: 'landline', areaCode, subscriberNumber: digits });
         digitCodeId = digitsArr.join('');
         console.info('[가입][숫자코드] 생성 완료:', digitCodeId);
+        hondiDigitCodeImage = await generateDigitCodeDataURL(digitCodeId);
       } catch (e) {
         console.warn('[가입][숫자코드] 생성 실패 (가입은 계속 진행):', e.message);
       }
@@ -1689,8 +1706,8 @@ function _showPhonePopup(resolve) {
     }
     console.info('[Auth] 신규 등록:', handle, nickname);
 
-    if (hondiCodeImage) {
-      try { localStorage.setItem('hondi_code_image_v1', hondiCodeImage); } catch {}
+    if (hondiDigitCodeImage) {
+      try { localStorage.setItem('hondi_digit_code_image_v1', hondiDigitCodeImage); } catch {}
     }
 
     // BUG-FIX: 여기 있던 2차 POST(_L1_PROFILES_P2P)는 "global_profiles"라는
