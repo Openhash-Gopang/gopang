@@ -2497,6 +2497,31 @@ body {
         <div id="subdomain-list-status" style="font-size:12px;color:#6b7280;margin-top:8px;min-height:20px"></div>
       </div>
 
+      <!-- ⑥ 자동 갱신 현황 (2026-07-28 신설) — AUTO_REFRESH_MANUAL_v1_0.html의
+           세 파이프라인(SP tier 재계산·미등록 태그 집계·사용자 피드백 취합)
+           실행 현황을 한눈에 본다. 조회만 하는 패널이라 워크플로 트리거
+           버튼은 없다 — 수동 실행은 매뉴얼의 gh workflow run 절차를 따른다. -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:14px;font-weight:700;color:#111">🔄 자동 갱신 현황</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <a href="./docs/AUTO_REFRESH_MANUAL_v1_0.html" target="_blank"
+               style="font-size:12px;color:#2563eb;text-decoration:none">매뉴얼 ↗</a>
+            <button onclick="_loadAutoRefreshStatus()" id="auto-refresh-reload-btn"
+                    style="padding:5px 12px;background:#374151;color:#fff;border:none;border-radius:8px;
+                           font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">새로고침</button>
+          </div>
+        </div>
+        <div id="auto-refresh-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px">
+          <div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:16px;color:#9ca3af;font-size:13px">
+            <div style="width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:#9ca3af;
+                        border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
+            불러오는 중…
+          </div>
+        </div>
+        <div id="auto-refresh-status-note" style="font-size:11px;color:#9ca3af;margin-top:10px;line-height:1.6"></div>
+      </div>
+
       <!-- ⑦ 사용자 일괄 삭제 -->
       <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:20px;margin-bottom:20px">
         <div style="font-size:14px;font-weight:700;color:#991b1b;margin-bottom:10px">🗑 사용자 일괄 삭제</div>
@@ -2707,6 +2732,7 @@ function _showAdminBody() {
   _loadStats();
   _loadCFCredentials();
   _renderSubdomainList();
+  _loadAutoRefreshStatus();
 }
 
 // ── 통계 ─────────────────────────────────────────────────────
@@ -2729,6 +2755,168 @@ async function _loadStats() {
     ['stat-total','stat-trial','stat-expired','stat-paid'].forEach(id=>{ document.getElementById(id).textContent='?'; });
     console.warn('[stats]', e.message);
   }
+}
+
+// ── 자동 갱신 현황 (2026-07-28 신설) ────────────────────────────
+// docs/AUTO_REFRESH_MANUAL_v1_0.html이 설명하는 세 파이프라인의 실행
+// 현황을 세 곳에서 읽어와 카드로 보여준다:
+//   1) GitHub Actions REST API — 워크플로 최근 실행 성공/실패·시각
+//      (공개 저장소라 인증 없이 조회 가능, 단 시간당 60회 rate limit)
+//   2) worker.js /sp-author/queue, /sp-author/escalations — 인증 없는
+//      공개 엔드포인트(§AUTO_REFRESH_MANUAL §운영 참조)
+//   3) data/feedback_triage_report.json — 저장소에 커밋된 최근 리포트
+//      (신규 피드백이 없었던 주는 파일 자체가 없을 수 있다 — 정상)
+// 이 패널은 조회 전용이다 — 워크플로를 여기서 실행하지 않는다(수동
+// 실행은 매뉴얼의 gh workflow run 절차를 따른다).
+const GH_REPO = 'Openhash-Gopang/gopang';
+const AR_WORKFLOWS = {
+  refresh:  'sp-refresh-scheduler.yml',
+  feedback: 'triage-user-feedback.yml',
+};
+
+function _relTimeKo(iso) {
+  if (!iso) return '기록 없음';
+  const diffSec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diffSec < 0) return '방금';
+  if (diffSec < 60) return '방금 전';
+  if (diffSec < 3600) return Math.floor(diffSec / 60) + '분 전';
+  if (diffSec < 86400) return Math.floor(diffSec / 3600) + '시간 전';
+  return Math.floor(diffSec / 86400) + '일 전';
+}
+
+// 두 워크플로 모두 요일/시각이 고정된 단순 스케줄이라, 범용 cron
+// 파서 대신 각각 전용 계산만 둔다(과설계 방지 — 스케줄이 바뀌면
+// 이 두 함수만 같이 고치면 된다).
+function _nextDailyUTC(hourUTC) {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hourUTC, 0, 0));
+  if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+  return next;
+}
+function _nextWeeklyUTC(weekdayUTC, hourUTC) {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hourUTC, 0, 0));
+  let delta = (weekdayUTC - next.getUTCDay() + 7) % 7;
+  if (delta === 0 && next <= now) delta = 7;
+  next.setUTCDate(next.getUTCDate() + delta);
+  return next;
+}
+function _fmtKST(date) {
+  return date.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' KST';
+}
+
+async function _fetchLatestRun(workflowFile) {
+  const url = `https://api.github.com/repos/${GH_REPO}/actions/workflows/${workflowFile}/runs?per_page=1`;
+  const res = await fetch(url, { headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(8000) });
+  if (!res.ok) throw new Error('GitHub Actions API ' + res.status);
+  const data = await res.json();
+  const run = (data.workflow_runs || [])[0];
+  if (!run) return null;
+  return { status: run.status, conclusion: run.conclusion, updated_at: run.updated_at, html_url: run.html_url, event: run.event };
+}
+
+function _runStatusDot(run) {
+  if (!run) return { color: '#9ca3af', label: '실행 이력 없음' };
+  if (run.status === 'in_progress' || run.status === 'queued') return { color: '#2563eb', label: '실행 중' };
+  if (run.conclusion === 'success') return { color: '#16a34a', label: '성공' };
+  if (run.conclusion === 'failure') return { color: '#dc2626', label: '실패' };
+  return { color: '#9ca3af', label: run.conclusion || run.status || '알 수 없음' };
+}
+
+function _arCardShell(title, badge, bodyHtml, linkUrl) {
+  return `
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:700;color:#111">${title}</div>
+        <span style="font-size:10px;font-family:monospace;color:#6b7280;background:#f3f4f6;
+                     border:1px solid #e5e7eb;border-radius:99px;padding:2px 7px">${badge}</span>
+      </div>
+      ${bodyHtml}
+      ${linkUrl ? `<a href="${linkUrl}" target="_blank" style="display:inline-block;margin-top:8px;font-size:11px;color:#2563eb;text-decoration:none">Actions에서 보기 ↗</a>` : ''}
+    </div>`;
+}
+
+async function _loadAutoRefreshStatus() {
+  const wrap = document.getElementById('auto-refresh-cards');
+  const note = document.getElementById('auto-refresh-status-note');
+  const btn  = document.getElementById('auto-refresh-reload-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '불러오는 중…'; }
+
+  const [refreshRun, feedbackRun, queueRes, escRes, reportRes] = await Promise.allSettled([
+    _fetchLatestRun(AR_WORKFLOWS.refresh),
+    _fetchLatestRun(AR_WORKFLOWS.feedback),
+    fetch(`${WORKER_URL}/sp-author/queue?status=queued`, { signal: AbortSignal.timeout(8000) }).then(r => r.json()),
+    fetch(`${WORKER_URL}/sp-author/escalations?unread=true`, { signal: AbortSignal.timeout(8000) }).then(r => r.json()),
+    fetch('./data/feedback_triage_report.json', { signal: AbortSignal.timeout(8000) }).then(r => { if (!r.ok) throw new Error('no report'); return r.json(); }),
+  ]);
+
+  const queueItems = queueRes.status === 'fulfilled' ? (queueRes.value.items || []) : [];
+  const refreshQueued = queueItems.filter(it => it.signal_source === 'refresh_schedule').length;
+  const tagQueued = queueItems.filter(it => ['expert_tag_resolution', 'gwp_tag_resolution'].includes(it.signal_source)).length;
+  const escUnread = escRes.status === 'fulfilled' ? (escRes.value.items || []).length : null;
+
+  // ① SP Refresh Scheduler
+  const run1 = refreshRun.status === 'fulfilled' ? refreshRun.value : null;
+  const dot1 = _runStatusDot(run1);
+  const card1 = _arCardShell(
+    '① SP Refresh Scheduler',
+    '매일 09:00 KST',
+    `
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;margin-bottom:4px">
+        <span style="width:7px;height:7px;border-radius:50%;background:${dot1.color};flex-shrink:0"></span>
+        마지막 실행: ${run1 ? _relTimeKo(run1.updated_at) + ' · ' + dot1.label : '조회 실패'}
+      </div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:4px">다음 예정: ${_fmtKST(_nextDailyUTC(0))}</div>
+      <div style="font-size:12px;color:#6b7280">갱신 대기 SP: <strong style="color:#111">${queueRes.status === 'fulfilled' ? refreshQueued + '건' : '조회 실패'}</strong></div>
+    `,
+    run1 ? run1.html_url : `https://github.com/${GH_REPO}/actions/workflows/${AR_WORKFLOWS.refresh}`
+  );
+
+  // ② 미등록 태그 반복 집계 (동일 워크플로 2번째 스텝)
+  const card2 = _arCardShell(
+    '② 미등록 태그 집계',
+    '①과 동일 워크플로',
+    `
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;margin-bottom:4px">
+        <span style="width:7px;height:7px;border-radius:50%;background:${dot1.color};flex-shrink:0"></span>
+        마지막 실행: ${run1 ? _relTimeKo(run1.updated_at) + ' · ' + dot1.label : '조회 실패'}
+      </div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:4px">큐 대기(미등록 태그 신호): <strong style="color:#111">${queueRes.status === 'fulfilled' ? tagQueued + '건' : '조회 실패'}</strong></div>
+      <div style="font-size:12px;color:#6b7280">읽지 않은 승격 알림: <strong style="color:#111">${escUnread === null ? '조회 실패' : escUnread + '건'}</strong></div>
+    `,
+    run1 ? run1.html_url : `https://github.com/${GH_REPO}/actions/workflows/${AR_WORKFLOWS.refresh}`
+  );
+
+  // ③ 사용자 피드백 취합
+  const run3 = feedbackRun.status === 'fulfilled' ? feedbackRun.value : null;
+  const dot3 = _runStatusDot(run3);
+  let reportLine = '최근 리포트 없음(신규 피드백 없었음)';
+  if (reportRes.status === 'fulfilled') {
+    const r = reportRes.value;
+    reportLine = `${_relTimeKo(r.generated_at)} · 피드백 ${r.total_feedback_processed}건 · 클러스터 ${r.cluster_count}개 · 검토 대기 전달 ${r.bridged_to_review_queue}건`;
+  }
+  const card3 = _arCardShell(
+    '③ 사용자 피드백 취합',
+    '매주 월 07:00 KST',
+    `
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;margin-bottom:4px">
+        <span style="width:7px;height:7px;border-radius:50%;background:${dot3.color};flex-shrink:0"></span>
+        마지막 실행: ${run3 ? _relTimeKo(run3.updated_at) + ' · ' + dot3.label : '조회 실패'}
+      </div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:4px">다음 예정: ${_fmtKST(_nextWeeklyUTC(1, 22))}</div>
+      <div style="font-size:12px;color:#6b7280">${reportLine}</div>
+    `,
+    run3 ? run3.html_url : `https://github.com/${GH_REPO}/actions/workflows/${AR_WORKFLOWS.feedback}`
+  );
+
+  wrap.innerHTML = card1 + card2 + card3;
+
+  const failed = [refreshRun, feedbackRun, queueRes, escRes].filter(r => r.status === 'rejected').length;
+  note.textContent = failed > 0
+    ? `일부 항목을 불러오지 못했습니다(${failed}건) — 새로고침을 다시 시도하거나 GitHub Actions/워커 상태를 직접 확인하세요.`
+    : '조회 전용 패널입니다 — 워크플로 수동 실행은 매뉴얼의 gh workflow run 절차를 따르세요.';
+
+  if (btn) { btn.disabled = false; btn.textContent = '새로고침'; }
 }
 
 // ── 체험 기간 ─────────────────────────────────────────────────
