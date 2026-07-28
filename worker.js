@@ -1029,29 +1029,47 @@ const EXCHANGE_RATE_KRW_PER_GDC = 1; // 2026-07-27: 100 → 1 정정(테스트 �
 // 트레이드오프다. 요청 크기가 커지는 티어(예: max_tokens가 큰 K-Law)가
 // 이 무료 한도 게이트를 타게 되면 이 단순화를 재검토해야 한다).
 async function _l1GetBalanceKRW(guid) {
-  try {
-    const res = await fetch(`${L1_DEFAULT}/api/balance?guid=${encodeURIComponent(guid)}`);
-    const data = await res.json().catch(() => null);
-    if (!data || !data.ok) return null;
-    // (2026-07-28 신설: 환율 상수가 worker.js·main.pb.js에 4곳 중복 선언돼
-    //  있어(위 EXCHANGE_RATE_KRW_PER_GDC 선언부 주석 참고) 한 곳만 놓치고
-    //  바꾸면 게이트 판정과 실제 차감이 조용히 어긋날 수 있다 — L1이 실제로
-    //  쓰는 값을 매 조회마다 대조해, 어긋나면 즉시 크게 경보한다. 이 경보
-    //  자체는 요청을 막지 않는다(오탐으로 서비스 전체를 세우지 않기 위함) —
-    //  다만 이 로그가 찍히면 즉시 4곳을 재확인해야 한다.)
-    if (typeof data.exchange_rate === 'number' && data.exchange_rate !== EXCHANGE_RATE_KRW_PER_GDC) {
-      console.error(JSON.stringify({
-        tag: 'GDC_EXCHANGE_RATE_MISMATCH', guid,
-        workerRate: EXCHANGE_RATE_KRW_PER_GDC, l1Rate: data.exchange_rate,
-        message: '환율 상수가 worker.js와 L1(main.pb.js) 사이에서 어긋났습니다 — 즉시 4곳(worker.js 2곳, main.pb.js 2곳)을 재확인하세요',
-        ts: new Date().toISOString(),
-      }));
+  // (2026-07-28 신설 — 사고실험으로 발견된 결함 대응) FREE_QUOTA_KRW_LIMIT가
+  // 0이라 이 함수는 이제 사실상 "매 채팅 턴마다" 호출된다. 즉 L1(Oracle
+  // Cloud VM)의 순간적인 네트워크 지연·블립 하나가 잔액과 무관하게 즉시
+  // 전체 채팅을 502로 막아버리는 단일 장애점(SPOF)이 됐다. 완전한 해결
+  // (예: 최근 확인된 정상 잔액을 짧게 캐싱해 L1 장애 시에도 잠깐은 통과시키는
+  // 방식)은 정책 결정이 필요해 오늘 범위에서 보류하고, 우선 트랜지언트
+  // 블립만이라도 흡수하도록 짧은 재시도 1회를 추가한다 — L1이 정말로
+  // 죽어있으면(지속 장애) 재시도 후에도 그대로 차단되는 게 맞다(안전한
+  // 방향의 실패).
+  const attempt = async () => {
+    try {
+      const res = await fetch(`${L1_DEFAULT}/api/balance?guid=${encodeURIComponent(guid)}`);
+      const data = await res.json().catch(() => null);
+      if (!data || !data.ok) return null;
+      return data;
+    } catch (e) {
+      console.warn('[AiCharge] 잔액 조회 실패:', e.message);
+      return null;
     }
-    return Number(data.balance || 0) * EXCHANGE_RATE_KRW_PER_GDC;
-  } catch (e) {
-    console.warn('[AiCharge] 잔액 조회 실패:', e.message);
-    return null;
+  };
+  let data = await attempt();
+  if (!data) {
+    await new Promise(r => setTimeout(r, 250));
+    data = await attempt();
   }
+  if (!data) return null;
+  // (2026-07-28 신설: 환율 상수가 worker.js·main.pb.js에 4곳 중복 선언돼
+  //  있어(위 EXCHANGE_RATE_KRW_PER_GDC 선언부 주석 참고) 한 곳만 놓치고
+  //  바꾸면 게이트 판정과 실제 차감이 조용히 어긋날 수 있다 — L1이 실제로
+  //  쓰는 값을 매 조회마다 대조해, 어긋나면 즉시 크게 경보한다. 이 경보
+  //  자체는 요청을 막지 않는다(오탐으로 서비스 전체를 세우지 않기 위함) —
+  //  다만 이 로그가 찍히면 즉시 4곳을 재확인해야 한다.)
+  if (typeof data.exchange_rate === 'number' && data.exchange_rate !== EXCHANGE_RATE_KRW_PER_GDC) {
+    console.error(JSON.stringify({
+      tag: 'GDC_EXCHANGE_RATE_MISMATCH', guid,
+      workerRate: EXCHANGE_RATE_KRW_PER_GDC, l1Rate: data.exchange_rate,
+      message: '환율 상수가 worker.js와 L1(main.pb.js) 사이에서 어긋났습니다 — 즉시 4곳(worker.js 2곳, main.pb.js 2곳)을 재확인하세요',
+      ts: new Date().toISOString(),
+    }));
+  }
+  return Number(data.balance || 0) * EXCHANGE_RATE_KRW_PER_GDC;
 }
 
 // 요청 하나가 처리된 뒤, 실사용량(billedKRW)만큼 GDC 잔액에서 실제로
@@ -9454,6 +9472,17 @@ async function handleRegisterKey(request, env, corsHeaders) {
           '이 guid는 이미 다른 공개키로 등록돼 있습니다 — 기기 교체는 백업 키 복구 절차를 사용하세요', corsHeaders);
       }
       console.info('[RegisterKey] 이미 동일 키로 등록됨(멱등):', guid.slice(0, 20));
+      // (2026-07-28 신설 — 사고실험으로 발견된 결함 수정) 최초 등록 시 mint가
+      // 실패했으면(네트워크 블립 등) gdc_keys 레코드는 이미 만들어져 있어
+      // 다음 로그인/재등록은 전부 이 멱등 분기만 타게 되고, 아래 else 블록의
+      // _grantSignupBonus가 다시는 호출되지 않았다 — _grantSignupBonus
+      // 자신의 주석은 "다음 로그인 시 자동 재시도"라고 했지만 실제로는
+      // 그 경로 자체가 없었다(죽은 약속). STEP-0 게이트가 켜진 지금은 이
+      // 사용자가 잔액 0원으로 영구 차단되는 실제 장애로 이어진다.
+      // _grantSignupBonus는 KV 플래그로 자체 멱등이라(이미 지급됐으면
+      // 즉시 already_granted 반환, L1 왕복 1회 외 추가 비용 없음) 여기서
+      // 매 로그인마다 불러도 안전하다 — 이게 진짜 "자동 재시도"를 만든다.
+      await _grantSignupBonus(env, guid);
     } else {
       await fetch(`${homeBase}/api/collections/gdc_keys/records`, {
         method: 'POST',
