@@ -600,8 +600,16 @@ async function handleDeviceLinkInit(request, env, corsHeaders) {
           url:   `/auth/device-link-approve.html?sessionId=${encodeURIComponent(sessionId)}`,
           tag:   `gopang-device-link-${sessionId}`,
         });
+        // 2026-07-28 근본 수정 — Urgency 헤더가 아예 없어서 FCM 기본값
+        // (normal)으로 처리되고 있었다. device-link 승인 요청은 "지금
+        // 당장 사용자 응답이 필요한" 전형적인 상황이라 RFC 8030 기준
+        // 'high'가 맞는 값이다 — FCM이 이런 메시지는 배칭·지연 없이
+        // 즉시 깨우기를 시도한다(사용자 지시로 실사 — 폰 도착까지
+        // 20~30초 걸리던 지연의 일부가 이 기본 우선순위 때문이었을
+        // 가능성이 큼). 배포 알림 등 다른 발송 경로는 urgency 인자를
+        // 안 넘기므로 기존 기본값(normal)을 그대로 유지한다.
         const results = await Promise.allSettled(
-          devices.map(d => _sendWebPush(env, d.subscription, payload))
+          devices.map(d => _sendWebPush(env, d.subscription, payload, 'high'))
         );
 
         const deadDeviceIds = [];
@@ -18144,7 +18152,7 @@ async function _encryptWebPushPayload(payloadStr, p256dhB64u, authB64u) {
 // 계속 남아 매번 조용히 실패하기만 했다(§PUSH_SUBSCRIPTION_HIJACK_
 // 2026_07_21.md §4 후속). 호출부가 status===410을 보고 그 자리에서
 // pruning할 수 있게 한다.
-async function _sendWebPush(env, subscription, payload) {
+async function _sendWebPush(env, subscription, payload, urgency = 'normal') {
   const p256dh = subscription.keys?.p256dh;
   const auth   = subscription.keys?.auth;
   if (!p256dh || !auth) {
@@ -18183,6 +18191,7 @@ async function _sendWebPush(env, subscription, payload) {
         'Content-Encoding': 'aes128gcm',
         'Content-Length':   body.length.toString(),
         'TTL': '3600',
+        'Urgency': urgency,
       },
       body,
       signal: _ac.signal,
