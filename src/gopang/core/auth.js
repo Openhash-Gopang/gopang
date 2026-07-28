@@ -557,11 +557,22 @@ async function _e164ToIPv6(e164) {
 function _waitForWallet(timeoutMs = 15000) {
   return new Promise((resolve) => {
     if (window.gopangWallet) { resolve(window.gopangWallet); return; }
+    // 2026-07-28 수정 — PC/미확인 기기(gopangWalletNeedsSetup)나 지갑
+    // 복호화 영구 실패(gopangWalletLocked) 상태는 gopang-wallet.js의
+    // 부트 IIFE가 이미 "window.gopangWallet은 영구히 null"이라고 확정한
+    // 것인데, 이 폴링 루프는 그 사실을 몰라 15초 타임아웃을 매번 꽉
+    // 채우고서야 포기했다 — "시작하기" 클릭 후 대기 화면이 뜨기까지
+    // 10~13초씩 걸리던 지연의 정체(사용자 지시로 실사·발견). 두 플래그
+    // 중 하나라도 이미 서 있으면 그 자리에서 즉시 포기한다.
+    if (window.gopangWalletNeedsSetup || window.gopangWalletLocked) { resolve(null); return; }
     const start = Date.now();
     const t = setInterval(() => {
       if (window.gopangWallet) {
         clearInterval(t);
         resolve(window.gopangWallet);
+      } else if (window.gopangWalletNeedsSetup || window.gopangWalletLocked) {
+        clearInterval(t);
+        resolve(null);
       } else if (Date.now() - start > timeoutMs) {
         clearInterval(t);
         resolve(null);
@@ -836,6 +847,7 @@ function _showDeviceMismatchNotice(found, resolve) {
     render(`
       <div style="width:24px;height:24px;border:2.5px solid #e5e7eb;border-top-color:#0057A8;border-radius:50%;animation:_dlSpin 0.8s linear infinite;margin:20px auto"></div>
       <p style="font-size:14px;color:#374151;margin-bottom:6px">스마트폰 알림을 열어 <strong>"본인이 맞습니다"</strong>를 눌러주세요</p>
+      <p style="font-size:12px;color:#9ca3af;margin-bottom:10px">알림이 도착하기까지 보통 몇 초에서 20초 정도 걸릴 수 있어요. 잠시만 기다려 주세요.</p>
       <div id="_dl-timer" style="font-size:12px;color:#9ca3af;margin-bottom:14px"></div>
       <button id="_dl-sms" style="width:100%;padding:11px;border:none;border-radius:10px;background:#f3f4f6;color:#374151;cursor:pointer;font-size:12.5px;opacity:0.5;margin-bottom:8px;font-family:inherit">알림이 안 왔나요? 문자로 받기</button>
       <button id="_dl-backup" style="width:100%;padding:11px;border:1px solid #e5e7eb;border-radius:10px;background:none;color:#374151;cursor:pointer;font-size:12.5px;margin-bottom:8px;font-family:inherit">백업 키를 직접 갖고 있어요(수동 입력)</button>
@@ -880,7 +892,10 @@ function _showDeviceMismatchNotice(found, resolve) {
     if (pushSentToMobile === false || hasMobileDevice === false) {
       btn.style.opacity = '1';
     } else {
-      smsFallbackTimer = setTimeout(() => { if (btn) btn.style.opacity = '1'; }, 8000);
+      // 대기 화면에 "보통 20초 정도 걸릴 수 있다"고 안내했으니(2026-07-28
+      // 신설), 그보다 먼저 버튼이 밝아지면 안내와 앞뒤가 안 맞는다 —
+      // 같은 기준(20초)으로 맞춘다.
+      smsFallbackTimer = setTimeout(() => { if (btn) btn.style.opacity = '1'; }, 20000);
     }
   }
 
