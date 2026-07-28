@@ -99,13 +99,16 @@
     <p style="text-align:center;font-size:11px;color:#9ca3af;margin-top:6px">
       문자는 휴대폰이 통신사 신호를 받을 수 있어야 옵니다(Wi-Fi만으로는 문자 수신 불가).
     </p>
+    <button id="btn-backup-key" class="secondary" style="opacity:0.6;font-size:12px;padding:9px;margin-top:10px">
+      백업 키를 직접 갖고 있어요(수동 입력)
+    </button>
   </div>
 
   <div id="status"></div>
 </div>
 
 <script type="module">
-import { _buildKrE164, KR_AREA_CODES, krNeededDigitsFor } from '../src/gopang/core/auth.js';
+import { _buildKrE164, KR_AREA_CODES, krNeededDigitsFor, _restoreFromBackupKey } from '../src/gopang/core/auth.js';
 
 (() => {
   const WORKER = 'https://hondi-proxy.tensor-city.workers.dev';
@@ -325,6 +328,22 @@ import { _buildKrE164, KR_AREA_CODES, krNeededDigitsFor } from '../src/gopang/co
     }
   }
   $('btn-request').addEventListener('click', _sendRequest);
+
+  // ── 백업 키로 직접 복구(auth.js의 옛 3버튼 확인 화면에 있던 옵션을
+  // 이 대기 화면의 보조 링크로 이전, 2026-07-28) ──────────────────
+  // guid 없이 호출하므로 서버 pubkey 검증은 건너뛰지만(로컬 지갑 교체만),
+  // RETURN_URL로 돌아간 뒤 그 페이지의 통상적인 세션 검증 단계에서
+  // PUBKEY_MISMATCH 등은 그대로 걸러진다.
+  $('btn-backup-key').addEventListener('click', async () => {
+    const key = prompt('백업 키(개인키, Base64URL)를 입력하세요:');
+    if (!key) return;
+    const result = await _restoreFromBackupKey(key.trim());
+    if (!result.ok) {
+      alert('복구 실패: ' + (result.detail || result.reason || '알 수 없는 오류'));
+      return;
+    }
+    location.href = RETURN_URL;
+  });
 
   // ── SMS 폴백(2안) ───────────────────────────────────
   // 사고실험 ③: 웹푸시 발송 자체가 실패했다고 서버가 확실히 판단한

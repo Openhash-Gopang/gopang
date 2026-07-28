@@ -764,135 +764,25 @@ export async function _restoreFromBackupKey(privKeyB64u, guid = null, svc = 'gop
 
 // ── 기기 불일치 안내 + 백업 키 복구 폼 ───────────────────
 // found: L1에서 찾은 기존 계정 레코드, resolve: initAuth류의 원래 resolve 콜백
+//
+// 2026-07-28 개편(사용자 지시) — 예전엔 여기서 "스마트폰으로 이 기기
+// 승인하기 / 백업 키로 복구 / 닫기" 3버튼 확인 화면을 띄우고 클릭을
+// 기다렸다. 그런데 이 함수가 호출된 시점 자체가 이미 "이 번호로 가입된
+// 계정은 있는데 이 기기엔 암호키가 없다"는 확정 판정이라, 그 위에 또
+// 확인을 구하는 건 실질적 보안 효과 없이(PC 쪽 클릭은 신원을 증명하지
+// 않음 — 실제 승인은 폰에서 일어난다) 화면만 하나 더 늘리는 것이었다.
+// 이제 곧장 device-link.html로 이동해 요청을 자동 전송한다(그 화면
+// 자체도 PREFILLED_PHONE이 있으면 클릭 없이 바로 보낸다 — engine.js와
+// 동일 원칙). 대신:
+//   - 실질적 남용 방지는 서버(handleDeviceLinkInit의 e164/IP rate limit)로 이동
+//   - "백업 키로 복구" 옵션은 사라지지 않고, device-link.html의 대기
+//     화면(SMS 폴백 옆)에 보조 링크로 그대로 남아 있다
 function _showDeviceMismatchNotice(found, resolve) {
-  document.getElementById('_device-mismatch-overlay')?.remove();
-  const overlay = document.createElement('div');
-  overlay.id = '_device-mismatch-overlay';
-  overlay.style.cssText = [
-    'position:fixed;inset:0;z-index:10003',
-    'background:rgba(0,0,0,0.5)',
-    'display:flex;align-items:center;justify-content:center',
-    'padding:24px;box-sizing:border-box',
-  ].join(';');
-
-  const _renderNotice = () => {
-    overlay.innerHTML = `
-      <div style="background:#fff;border-radius:20px;padding:28px 22px;
-                  width:100%;max-width:360px;box-sizing:border-box;text-align:center">
-        <p style="font-weight:700;font-size:16px;margin:0 0 10px;color:#111827">
-          이 기기는 등록된 기기가 아닙니다
-        </p>
-        <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 20px">
-          입력하신 번호(또는 닉네임)로 가입된 계정이 이미 있지만, 이 계정의 암호키(GDC Wallet)는 이 기기에 없습니다.<br><br>
-          본인 계정이라면 스마트폰으로 이 기기를 승인해 등록할 수 있습니다. 본인 계정이 아니라면 다른 번호로 가입해 주세요.
-        </p>
-        <button id="_dm_devicelink"
-          style="width:100%;padding:13px;border:none;border-radius:10px;
-                 background:#0057A8;color:#fff;cursor:pointer;margin-bottom:8px;
-                 font-size:14px;font-weight:700;font-family:inherit">
-          스마트폰으로 이 기기 승인하기
-        </button>
-        <button id="_dm_restore"
-          style="width:100%;padding:13px;border:1px solid #d1d5db;border-radius:10px;
-                 background:none;color:#374151;cursor:pointer;margin-bottom:8px;
-                 font-size:13px;font-family:inherit">
-          백업 키를 직접 갖고 있어요(수동 입력)
-        </button>
-        <button id="_dm_close"
-          style="width:100%;padding:13px;border:1px solid #e5e7eb;border-radius:10px;
-                 background:none;color:#6b7280;cursor:pointer;
-                 font-size:14px;font-family:inherit">
-          닫기
-        </button>
-      </div>`;
-    // 2026-07-20 신설: 스마트폰 인증번호 발송 단계에서 이미 e164가 확정돼
-    // 있으므로(found.e164 — 이 화면 자체가 그 번호로 기존 계정을 찾은
-    // 결과다), device-link.html에 다시 입력하지 않도록 쿼리로 넘긴다.
-    // return에는 현재 페이지(가입을 이어서 마칠 위치)를 넘겨 완료 후
-    // 자연스럽게 돌아오게 한다.
-    overlay.querySelector('#_dm_devicelink').onclick = () => {
-      const params = new URLSearchParams({
-        phone: found.e164 || '',
-        return: location.pathname + location.search,
-      });
-      location.href = `/auth/device-link.html?${params.toString()}`;
-    };
-    overlay.querySelector('#_dm_restore').onclick = _renderRestoreForm;
-    overlay.querySelector('#_dm_close').onclick = () => { overlay.remove(); resolve?.(null); };
-  };
-
-  const _renderRestoreForm = () => {
-    overlay.innerHTML = `
-      <div style="background:#fff;border-radius:20px;padding:28px 22px;
-                  width:100%;max-width:360px;box-sizing:border-box">
-        <p style="font-weight:700;font-size:16px;margin:0 0 10px;color:#111827;text-align:center">
-          백업 키 입력
-        </p>
-        <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 16px;text-align:center">
-          가입 시 또는 설정 → 백업 키에서 내보낸<br>키 문자열을 붙여넣어 주세요.
-        </p>
-        <textarea id="_dm_key_input" rows="3" placeholder="백업 키 붙여넣기"
-          style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:12px;
-                 font-size:13px;font-family:monospace;resize:none;box-sizing:border-box;
-                 margin-bottom:8px" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
-        <div id="_dm_err" style="display:none;font-size:12px;color:#dc2626;margin-bottom:8px"></div>
-        <button id="_dm_submit"
-          style="width:100%;padding:13px;border:none;border-radius:10px;
-                 background:#16a34a;color:#fff;cursor:pointer;margin-bottom:8px;
-                 font-size:14px;font-weight:700;font-family:inherit">
-          복구
-        </button>
-        <button id="_dm_back"
-          style="width:100%;padding:13px;border:1px solid #e5e7eb;border-radius:10px;
-                 background:none;color:#6b7280;cursor:pointer;
-                 font-size:14px;font-family:inherit">
-          뒤로
-        </button>
-      </div>`;
-    const input  = overlay.querySelector('#_dm_key_input');
-    const errEl  = overlay.querySelector('#_dm_err');
-    const subBtn = overlay.querySelector('#_dm_submit');
-    input.focus();
-
-    overlay.querySelector('#_dm_back').onclick = _renderNotice;
-    subBtn.onclick = async () => {
-      const val = input.value.trim();
-      if (!val) { errEl.textContent = '백업 키를 입력해 주세요.'; errEl.style.display = 'block'; return; }
-      subBtn.disabled = true; subBtn.textContent = '확인 중…'; errEl.style.display = 'none';
-
-      const result = await _restoreFromBackupKey(val, found.guid, 'gopang');
-      if (!result.ok) {
-        const msg = result.reason === 'PUBKEY_MISMATCH'
-          ? '이 백업 키는 이 계정의 키가 아닙니다.'
-          : result.reason === 'invalid_key'
-            ? '키 형식이 올바르지 않습니다.'
-            : '복구에 실패했습니다' + (result.detail ? ` (${result.detail}).` : ` (${result.reason}).`);
-        errEl.textContent = msg;
-        errEl.style.display = 'block';
-        subBtn.disabled = false; subBtn.textContent = '복구';
-        return;
-      }
-
-      // 복구 + 서버 검증 통과 → 로그인 완료
-      const user = {
-        ipv6: found.guid, handle: found.handle,
-        e164: found.e164 || '',
-        country_code: found.country_code || DEFAULT_COUNTRY,
-        nickname: found.nickname || '',
-        region: found.region || '',
-        name: found.handle, isGuest: false, isTemp: false,
-        registeredAt: found.created,
-      };
-      localStorage.setItem(STORE_KEY, JSON.stringify(user));
-      setUser(user);
-      console.info('[Auth] 백업 키 복구 완료:', found.handle);
-      overlay.remove();
-      resolve?.(user);
-    };
-  };
-
-  document.body.appendChild(overlay);
-  _renderNotice();
+  const params = new URLSearchParams({
+    phone: found.e164 || '',
+    return: location.pathname + location.search,
+  });
+  location.href = `/auth/device-link.html?${params.toString()}`;
 }
 
 // ── 저장소 읽기 ──────────────────────────────────────────
