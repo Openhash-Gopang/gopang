@@ -3041,17 +3041,13 @@ async function _l1QueryUsageLog(env, guid, days) {
   return items;
 }
 
-// 가입자 GUID로 profiles 레코드 조회
-async function _l1FindProfileByGuid(env, guid) {
-  const token = await _l1AdminToken(env);
-  const filter = encodeURIComponent(`guid='${guid}'`);
-  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(`L1 조회 실패 (HTTP ${res.status})`);
-  const data = await res.json().catch(() => ({ items: [] }));
-  return data.items?.[0] || null;
-}
+// (2026-07-28 신설 — 사고실험으로 발견된 결함 수정: 이 함수가 이 자리와
+//  아래쪽 handleAdminManualCharge 근처, 두 곳에 중복 선언돼 있었다.
+//  sloppy-mode에서는 나중 선언이 이겨서 실제로는 아래쪽의 guid 작은
+//  따옴표 이스케이프 버전이 적용되고 있었지만(더 안전한 버전이라
+//  다행이었다), ES 모듈로 엄격 파싱하면 SyntaxError가 나는 잠재적
+//  빌드 위험이었다 — 여기 있던 이스케이프 없는 버전은 삭제하고,
+//  아래쪽 이스케이프 버전 하나로 통일한다.)
 
 // L1 profiles 컬렉션에서 handle로 레코드 조회 — 관리자 일괄삭제에서 @handle 입력을 guid로 환산할 때 사용
 async function _l1FindProfileByHandle(env, handle) {
