@@ -7007,6 +7007,7 @@ export default {
     // ── SP 자기 갱신 제안 (2026-07-17 신설 — K-Intent v1.3/K-Compose
     // v1.7/K-Deliver v1.3/K-Report v1.1 RULE-03) ──
     if (pathname === '/sp-updates/propose')      return handleSpUpdatePropose(request, env, corsHeaders);
+    if (pathname === '/sp-updates/draft-patch')  return handleSpUpdatesDraftPatch(request, env, corsHeaders);
     if (pathname === '/user-feedback/submit')    return handleUserFeedbackSubmit(request, env, corsHeaders);
     if (pathname === '/embed-text')              return handleEmbedText(request, env, corsHeaders);
 
@@ -7390,6 +7391,16 @@ export default {
     // 핸드셰이크마다 실시간으로 묻는다. AGENT-COMMON §4 참조)
     if (pathname === '/profile/verify-owner' && request.method === 'GET')
       return handleProfileVerifyOwner(request, env, corsHeaders);
+
+    // 2026-07-27 신설 — 프로필 사진 업로드/서빙. /profile/claim과 동일한
+    // 이유로 generic startsWith('/profile')보다 먼저 체크해야 한다.
+    if (pathname === '/profile/photo-upload' && request.method === 'POST')
+      return handleProfilePhotoUpload(request, env, corsHeaders);
+    // 퍼블릭 서빙 — R2를 커스텀 도메인으로 따로 공개하지 않고 이 워커가
+    // 유일한 진입점 역할을 한다(위 wrangler.toml 주석 참조). 인증 불필요
+    // (공개 프로필의 사진이므로 GET은 누구나 볼 수 있어야 한다).
+    if (pathname.startsWith('/media/profile-photo/') && request.method === 'GET')
+      return handleMediaGet(request, env, corsHeaders);
 
     // 2026-07-12 — SP-18_ksearch STEP3 선행조건 (c): claim(정식 전환) 절차.
     // /profile POST보다 먼저 체크해야 한다 — startsWith('/profile')이
@@ -10445,6 +10456,115 @@ async function handleProjectStateQuery(request,env,corsHeaders){
 // 우선순위를 높인다 — 차단은 아니다(차단은 SP 프롬프트 단에서 이미
 // 함), 검토자가 더 주의 깊게 보게 하는 신호일 뿐이다.
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// 2026-07-27 신설 — 사용자 피드백 클러스터 → 실제 패치 초안 (docs/
+// user_feedback_mechanism_proposal_v1.md의 다음 단계). tools/
+// triage_feedback.py가 지금까지는 클러스터만 만들고 proposed_patch에
+// "(사람 검토 필요 — 자동 생성된 초안이라 구체적 문안 없음)" 플레이스홀더만
+// 넣고 있었다(2026-07-17 원 설계에서 의도적으로 비워둔 부분 — 실사로
+// 확인). 오늘 하루 종일 한 일(버그 발견→코드 추적→실제 패치 설계→사람
+// 승인 요청)을 배치 파이프라인 안에 넣어 그 빈틈을 메운다.
+// _generateIndustryTransformSP(위, 4485행)와 동일한 패턴 재사용 —
+// REPO_RAW에서 대상 SP 원문을 실시간으로 받아온 뒤 DeepSeek V4 Flash에 초안을
+// 맡긴다. 새 LLM 호출 체계를 또 만들지 않는다.
+async function _draftFeedbackPatch(env, { sp_id, quotes, category, context_sps }) {
+  const REPO_RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main';
+  const manifestRes = await fetch(`${REPO_RAW}/prompts/sp-catalog.json`, { cache: 'no-cache' });
+  const manifest = await manifestRes.json();
+  const fname = manifest[sp_id];
+  let currentSpText = '(원문을 찾지 못함 — sp-catalog.json에 이 sp_id로 등록된 파일이 없습니다. 파일명 추정이 아니라 사실 그대로 보고하십시오)';
+  if (fname) {
+    try {
+      const spRes = await fetch(`${REPO_RAW}/prompts/${fname}`, { cache: 'no-cache' });
+      if (spRes.ok) currentSpText = await spRes.text();
+    } catch (e) {
+      currentSpText = `(원문 fetch 실패: ${e.message})`;
+    }
+  }
+
+  // ★ 절대 원칙 — 이 함수의 산출물은 "초안 제안"일 뿐이다. sp_update_
+  // proposals는 항상 status=pending_review로만 쌓이고, 사람(주피터님)이
+  // 검토·승인해야 실제 SP 파일의 다음 버전이 된다(RULE-03·기존 설계와
+  // 동일 불변식). 이 시스템 프롬프트 자체가 그 사실을 최우선으로
+  // 명시한다 — 확정 문안을 쓰는 것처럼 보이는 어조를 피하게 한다.
+  const systemPrompt = `당신은 오픈소스 프로젝트 "혼디"의 유지보수를 돕는 검토 보조입니다.
+사용자 여러 명이 비슷한 취지로 남긴 피드백 클러스터를 보고, 관련 SP(시스템
+프롬프트) 원문을 참고해 **사람 개발자가 검토할 구체적인 패치 초안**을
+작성하는 것이 당신의 유일한 임무입니다.
+
+절대 원칙:
+- 당신이 쓰는 건 "제안"이지 확정 반영이 아닙니다. 실제로 반영될지는
+  전적으로 사람(프로젝트 관리자)이 결정합니다 — 이 사실을 스스로도
+  잊지 말고, 확정적인 어조("이렇게 고쳤습니다")가 아니라 제안하는
+  어조("이렇게 고치는 걸 제안합니다")로 씁니다.
+- 아동 안전, 규제 산업(Tier3), 금융 서명·검증, 개인정보 접근 통제와
+  관련된 섹션은 절대 완화 방향으로 건드리지 않습니다 — 그런 섹션이
+  관련돼 보이면 초안 작성을 거부하고 "이 부분은 특별 검토가 필요합니다"
+  라고만 답하십시오.
+- 인용된 피드백 중 진짜 근거가 되는 것만 인용하고, 없는 내용을
+  지어내지 않습니다. 피드백이 모호하거나 SP 수정으로 이어질 만큼
+  구체적이지 않으면, 억지로 패치를 만들지 말고 "이 피드백만으론 구체적
+  패치를 제안하기 어렵습니다 — 추가 확인이 필요합니다"라고 정직하게
+  답하십시오.
+- 출력 형식: (1) 무엇이 문제인지 한 문단, (2) 제안하는 변경 방향(코드
+  diff가 아니라 SP 문서에 추가/수정할 문구 초안), (3) 이 제안의 확신도
+  (high/medium/low)와 그 이유, (4) 특별 검토가 필요한지 여부.`;
+
+  const userMsg = `대상 SP: ${sp_id}
+카테고리: ${category}
+관련 SP 목록(클러스터 내 등장): ${(context_sps || []).join(', ')}
+
+사용자 피드백 인용(최대 3건):
+${(quotes || []).map((q, i) => `${i + 1}. "${q}"`).join('\n')}
+
+── 현재 ${sp_id} 원문 ──
+${String(currentSpText).slice(0, 12000)}
+${currentSpText.length > 12000 ? '\n...(이하 생략, 12000자 초과)' : ''}
+
+위 피드백을 바탕으로 패치 초안을 작성해 주세요.`;
+
+  const res = await fetch(DEEPSEEK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}` },
+    body: JSON.stringify({
+      // 2026-07-27 수정 — 주피터님 지시: 이 배치용 초안 작성에도 앱 전반의
+      // 비용 최적화 기본값(deepseek-v4-flash, HONDI_TIER_MODELS['hondi-flash']
+      // 참조)을 그대로 쓴다. _generateIndustryTransformSP(실시간 SP 생성)는
+      // Claude를 직접 호출하지만, 그건 사용자가 그 자리에서 기다리는 동기
+      // 경로이고 이건 주 1회 배치라 성격이 다르다 — 굳이 별도로 Anthropic
+      // API 키·비용을 쓸 이유가 없다.
+      model: 'deepseek-v4-flash',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMsg },
+      ],
+      max_tokens: 2000,
+      stream: false,
+    }),
+  });
+  if (!res.ok) throw new Error(`DeepSeek API 호출 실패 (HTTP ${res.status})`);
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// POST /sp-updates/draft-patch  body: {sp_id, quotes:[...], category, context_sps:[...]}
+// tools/triage_feedback.py 전용 — 클러스터를 sp_update_proposals로
+// 브릿지하기 전에 이 엔드포인트로 실제 초안을 받아온다. 이 엔드포인트
+// 자체는 아무것도 저장하지 않는다(순수 생성 — 저장은 여전히 기존
+// /sp-updates/propose가 담당, 관심사 분리).
+async function handleSpUpdatesDraftPatch(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body?.sp_id || !Array.isArray(body?.quotes) || !body.quotes.length) {
+    return _err(400, 'SCHEMA_ERROR', 'sp_id, quotes(배열, 1건 이상) 필수', corsHeaders);
+  }
+  try {
+    const draft = await _draftFeedbackPatch(env, body);
+    return new Response(JSON.stringify({ ok: true, draft }), { status: 200, headers: corsHeaders });
+  } catch (e) {
+    return _err(502, 'DRAFT_FAILED', e.message, corsHeaders);
+  }
+}
+
 async function handleSpUpdatePropose(request,env,corsHeaders){
   if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});
   const body=await request.json().catch(()=>null);
@@ -10484,6 +10604,31 @@ async function handleSpUpdatePropose(request,env,corsHeaders){
     const err = await res.text().catch(()=>res.status);
     return _err(503,'SP_UPDATE_PROPOSE_FAILED',String(err),corsHeaders);
   }
+  const savedRec = await res.json().catch(() => null);
+
+  // 2026-07-27 신설 — 사용자 피드백 기반이고 실제 초안(플레이스홀더 아님)이
+  // 있으면 escalation을 남긴다. 지금까지는 사람이 pending_review를 주기적
+  //으로 직접 훑어봐야만 알 수 있었다(_sp-industry-transform/generate가
+  // 이미 쓰는 알림 패턴을 그대로 재사용 — 관심사가 같으므로 새 채널을
+  // 또 만들지 않는다). RULE-03 자기반성 제안은 대상에서 뺀다 — 그건
+  // 이미 다른 주기(SP 리팩터 검토)로 확인되는 것이라 알림까지 더하면
+  // 오히려 알림 피로만 늘어난다.
+  const isPlaceholder = /^\(사람 검토 필요/.test(payload.proposed_patch || '');
+  if (payload.source === 'user_feedback' && !isPlaceholder && savedRec?.id) {
+    try {
+      await _l1CreateEscalation(env, {
+        to: '@owner',
+        reason: 'sp_draft_request',
+        ref_collection: 'sp_update_proposals',
+        ref_id: savedRec.id,
+        summary: `[사용자피드백→SP 패치초안·검토대기] ${payload.sp_id} — ${payload.issue.slice(0, 80)}`,
+        read: false,
+      });
+    } catch (e) {
+      console.warn('[sp-updates/propose] escalation 생성 실패(무시, 제안 저장 자체는 정상):', e.message);
+    }
+  }
+
   return new Response(JSON.stringify({ok:true, sp_id: body.sp_id, status:'pending_review'}),{status:200,headers:corsHeaders});
 }
 
@@ -15495,6 +15640,114 @@ async function handleProfileClaim(request, env, corsHeaders) {
   return new Response(JSON.stringify({ ok: true, guid, claim_status: 'claimed', claim_method: claimMethod, agent: agentResult }), { status: 200, headers: corsHeaders });
 }
 
+// ═══════════════════════════════════════════════════════════
+// 프로필 사진 업로드/서빙 (2026-07-27 신설)
+// ═══════════════════════════════════════════════════════════
+// 배경: profile-assistant의 §IMAGE-SCAN이 사진(간판·메뉴판·사업자등록증·
+// 명함)을 AI가 "읽어서" 텍스트 필드만 채우고, 사진 자체는 저장할 곳이
+// 없어(R2 등 바인딩 부재) 대화가 끝나면 사라지고 있었다 — "프로필이
+// 미니 웹사이트로 기능해야 한다"는 요구사항에 비춰보면 사진이 실제로
+// 남아 보여야 한다. 이 두 엔드포인트가 그 저장·서빙을 담당한다.
+//
+// 인증 방식은 handleProfilePost와 동일한 Ed25519 서명(guid:pubkey:ts)
+// 이다 — 시스템 전체가 서명 체계를 하나만 공유한다는 기존 원칙을 그대로
+// 따른다. 다만 이 시점엔 아직 profiles 레코드 자체가 없을 수 있으므로
+// (§IMAGE-SCAN은 PROFILE_SUBMIT 이전, 대화 도중에도 사진을 받는다) TOFU
+// pubkey 고정은 여기서 하지 않는다 — "이 guid의 사진 폴더에 쓸 수 있다"는
+// 서명 검증만 하고, 실제 프로필과의 소유권 고정은 최종 handleProfilePost
+// 쪽 TOFU 검증이 담당한다(이미 존재하는 방어선을 중복 구현하지 않음).
+
+const PROFILE_PHOTO_MAX_BYTES = 5 * 1024 * 1024; // 5MB — 디코딩된 원본 기준
+const PROFILE_PHOTO_MIME_EXT = {
+  'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+};
+
+function _base64ToBytes(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+// POST /profile/photo-upload
+// body: { guid, pubkey, signature, ts, image_base64, mime_type }
+// → { ok:true, url } — url은 이 워커의 /media/profile-photo/... 경로(퍼블릭 GET)
+async function handleProfilePhotoUpload(request, env, corsHeaders) {
+  if (!env.PROFILE_MEDIA) {
+    // R2 바인딩이 아직 배포에 반영되지 않은 환경(로컬 개발 등) — 사진 없이도
+    // 프로필 작성 자체는 막지 않아야 하므로(§0 U0), 명확한 오류로 실패시켜
+    // 클라이언트가 "사진 저장은 실패했지만 나머지는 정상"으로 처리하게 한다
+    // (client-side try/catch에서 이 실패를 무시하고 계속 진행하도록 설계됨
+    // — welcome.js/profile-assistant.html 쪽 참고).
+    return _err(503, 'PHOTO_STORAGE_UNAVAILABLE', 'R2 바인딩(PROFILE_MEDIA)이 설정되지 않았습니다', corsHeaders);
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
+
+  const { guid, pubkey, signature, ts, image_base64, mime_type } = body;
+  if (!guid)         return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
+  if (!pubkey)       return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
+  if (!signature)    return _err(400, 'MISSING_FIELD', 'signature 필수', corsHeaders);
+  if (!image_base64) return _err(400, 'MISSING_FIELD', 'image_base64 필수', corsHeaders);
+
+  const sigMsg = `${guid}:${pubkey}:${ts || ''}`;
+  const sigOk = await _verifyEd25519Simple(pubkey, signature, sigMsg);
+  if (!sigOk) return _err(401, 'INVALID_SIGNATURE', '서명 검증 실패', corsHeaders);
+
+  const ext = PROFILE_PHOTO_MIME_EXT[mime_type];
+  if (!ext) return _err(400, 'INVALID_MIME_TYPE', `지원하지 않는 이미지 형식입니다: ${JSON.stringify(mime_type)} (허용: jpeg/png/webp)`, corsHeaders);
+
+  let bytes;
+  try {
+    bytes = _base64ToBytes(image_base64);
+  } catch (e) {
+    return _err(400, 'INVALID_BASE64', 'image_base64 디코딩 실패: ' + e.message, corsHeaders);
+  }
+  if (bytes.byteLength > PROFILE_PHOTO_MAX_BYTES) {
+    return _err(400, 'FILE_TOO_LARGE', `이미지가 너무 큽니다(${Math.round(bytes.byteLength / 1024)}KB, 최대 ${PROFILE_PHOTO_MAX_BYTES / 1024 / 1024}MB)`, corsHeaders);
+  }
+
+  // guid를 그대로 R2 키에 넣지 않는다(guid=IPv6, 경로에 콜론이 섞이면
+  // URL 파싱이 지저분해진다) — URL-safe하게 인코딩.
+  const safeGuid = encodeURIComponent(guid);
+  const key = `${safeGuid}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+  try {
+    await env.PROFILE_MEDIA.put(key, bytes, {
+      httpMetadata: { contentType: mime_type, cacheControl: 'public, max-age=31536000, immutable' },
+    });
+  } catch (e) {
+    return _err(502, 'R2_WRITE_FAILED', 'R2 저장 실패: ' + e.message, corsHeaders);
+  }
+
+  const url = `https://hondi-proxy.tensor-city.workers.dev/media/profile-photo/${key}`;
+  return new Response(JSON.stringify({ ok: true, url, key }), { status: 200, headers: corsHeaders });
+}
+
+// GET /media/profile-photo/{guid}/{filename}
+async function handleMediaGet(request, env, corsHeaders) {
+  if (!env.PROFILE_MEDIA) return _err(503, 'PHOTO_STORAGE_UNAVAILABLE', 'R2 바인딩이 설정되지 않았습니다', corsHeaders);
+
+  const url = new URL(request.url);
+  const key = url.pathname.replace(/^\/media\/profile-photo\//, '');
+  // 경로 순회 방지(../ 등) — R2 key에 그런 문자가 있을 이유가 없다.
+  if (!key || key.includes('..')) return _err(400, 'INVALID_KEY', '잘못된 경로입니다', corsHeaders);
+
+  let obj;
+  try {
+    obj = await env.PROFILE_MEDIA.get(key);
+  } catch (e) {
+    return _err(502, 'R2_READ_FAILED', 'R2 조회 실패: ' + e.message, corsHeaders);
+  }
+  if (!obj) return _err(404, 'NOT_FOUND', '사진을 찾을 수 없습니다', corsHeaders);
+
+  const headers = new Headers(corsHeaders);
+  headers.set('Content-Type', obj.httpMetadata?.contentType || 'application/octet-stream');
+  headers.set('Cache-Control', obj.httpMetadata?.cacheControl || 'public, max-age=31536000, immutable');
+  return new Response(obj.body, { status: 200, headers });
+}
+
 async function handleProfilePost(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
@@ -15571,6 +15824,20 @@ async function handleProfilePost(request, env, corsHeaders) {
     // 명시적으로 보내면 그 값을 쓰되, 안 보내면 아래에서 industry_fields.schema_id
     // (KSIC)로부터 자동 파생한다 — 손으로 두 번 입력하게 하지 않는다.
     occupation = null,
+    // 2026-07-27 신설 — PA(profile-assistant) §IMAGE-SCAN·PROFILE_SUBMIT
+    // 스키마가 데이터 출처(pa_dialogue|pdv_shadow|website|physical_scan)를
+    // data_sources에 담아 보내도록 설계돼 있었으나, 이 함수 destructure
+    // 목록에 없어 저장 경로 자체가 없었다(PA 전용 사고실험으로 발견 —
+    // §0 참조. schema_id/occupation과 동일한 유형의 결함).
+    data_sources = {},
+    // 2026-07-27 신설 — 프로필 사진(§IMAGE-SCAN으로 첨부된 사진을
+    // /profile/photo-upload로 실제 저장한 뒤 돌려받은 URL). avatar_url은
+    // 세션 중 처음 첨부된 사진(보통 간판·명함), photo_urls는 그 세션에서
+    // 첨부된 모든 사진의 갤러리 — welcome.js/profile-assistant.html이
+    // 업로드 완료 후 클라이언트에서 채워 넣는다(PA 프롬프트가 URL을 직접
+    // 다루지 않는다 — schema_id 정규화와 동일한 패턴).
+    avatar_url = null,
+    photo_urls = null,
   } = body;
 
   if (!entity_type) return _err(400, 'MISSING_FIELD', 'entity_type 필수', corsHeaders);
@@ -15605,7 +15872,21 @@ async function handleProfilePost(request, env, corsHeaders) {
   // 2026-06-22: industry_fields.schema_id 검증 — AI(SP)가 지침을 어기고 "{ksic}" 같은
   // 미치환 리터럴이나 정의되지 않은 코드를 보내도 그대로 저장되지 않게 막는다.
   // null/undefined(=미해당)는 항상 허용 — GENERIC 경로의 정상 동작.
-  if (body.industry_fields != null) {
+  // 2026-07-27 수정 — 위 주석의 "null/undefined는 항상 허용"이 실제로는
+  // 지켜지지 않고 있었다(PA 전용 사고실험 재검증으로 발견). 게이트가
+  // `industry_fields`의 존재 여부만 봤는데, STEP3B(예약 수락)가 person을
+  // 제외한 모든 entity_type에 무조건 실행되며 schema_id와 무관하게
+  // industry_fields.reservation_config를 항상 채우므로, "업종을 특정할 수
+  // 없어 P1-INFER 원칙대로 schema_id 없이 넘어간" 정상적인 경우조차
+  // industry_fields가 non-null이라는 이유만으로 매번 400 처리되고 있었다
+  // (schema_id 자체를 industry_fields로 정규화하는 클라이언트 수정
+  // 만으로는 이 경우가 해결되지 않는다 — 애초에 schema_id가 없기 때문).
+  // 게이트를 schema_id 키 자체의 존재 여부로 좁혀 주석이 원래 의도한
+  // 동작과 일치시킨다 — "{ksic}" 같은 미치환 리터럴 차단 목적은 그대로 유지.
+  // 2026-07-27 신설 — 아래 Tier3 강제와 갱신 모드 유실 방지 로직이
+  // 서로의 판단을 침범하지 않게 하는 마커.
+  let _tier3Forced = false;
+  if (body.industry_fields && body.industry_fields.schema_id != null) {
     const sid = body.industry_fields.schema_id;
     if (!sid || !VALID_INDUSTRY_SCHEMA_IDS.has(String(sid))) {
       return _err(400, 'INVALID_SCHEMA_ID',
@@ -15622,6 +15903,7 @@ async function handleProfilePost(request, env, corsHeaders) {
     // 안 되므로), 검토 전까지 검색·공개 노출만 차단한다.
     if (TIER3_REGULATED_SCHEMA_IDS.has(String(sid))) {
       is_public = false; // 클라이언트가 뭘 보냈든 강제 — 검토 전 노출 차단
+      _tier3Forced = true;
       body.industry_fields = { ...body.industry_fields, status: 'under_review' };
       console.info('[Profile] Tier3 규제산업 감지 — is_public 강제 false, status=under_review:', sid);
     }
@@ -15648,6 +15930,7 @@ async function handleProfilePost(request, env, corsHeaders) {
         handle: l1Existing.handle,
         extra: l1Existing.extra || {},
         pubkey_ed25519: l1Existing.pubkey_ed25519,
+        is_public: l1Existing.is_public, // 2026-07-27 신설 — 갱신 모드 유실 방지(아래 참조)
         _l1id: l1Existing.id,
       };
     }
@@ -15663,6 +15946,23 @@ async function handleProfilePost(request, env, corsHeaders) {
     return _err(403, 'PUBKEY_MISMATCH', '공개키가 이 계정에 등록된 키와 일치하지 않습니다', corsHeaders);
   }
 
+  // 2026-07-27 복원 — 2026-07-20 커밋 6728a592("Jejudo→gov-tree 경로
+  // 리네이밍")에 이 80줄짜리 방어가 실수로 함께 삭제돼 있었다(무관한
+  // 커밋에 휩쓸림 — git log -S로 확인. 원래는 /profile/visibility라는
+  // 전용 엔드포인트에 있었는데, 그 엔드포인트 자체가 지금은 없다 —
+  // is_public 변경이 이제 이 일반 /profile POST를 거치므로 여기로 옮겨
+  // 복원한다). existing이 null(진짜 신규가입, TOFU가 정상 처리)과
+  // existing은 있는데 pubkey_ed25519만 비어있는 경우(관리자가 사전등록한
+  // "미청구" 사업자 리스팅)를 반드시 구분해야 한다 — 후자만 막는다.
+  // 안 그러면 이 guid를 아는 누구나(핸들·QR 등으로 노출되는 공개 정보)
+  // 자기 키로 서명해 "최초 서명자가 곧 소유자"처럼 is_public을 바꿔버릴
+  // 수 있다(원래 발견 경위 그대로 — 사고실험).
+  if (existing && !existing.pubkey_ed25519 && 'is_public' in body) {
+    return _err(403, 'PROFILE_NOT_CLAIMED',
+      '아직 소유권이 확정되지 않은 프로필입니다 — 먼저 /profile/claim으로 소유권을 확인해 주세요',
+      corsHeaders);
+  }
+
   // handle 자동 생성 (미지정 + 신규일 때)
   let finalHandle = handle || existing?.handle || null;
   if (!finalHandle) {
@@ -15675,6 +15975,27 @@ async function handleProfilePost(request, env, corsHeaders) {
   // extra.public 병합 (기존 extra 보존, public 섹션만 갱신)
   const prevExtra = existing?.extra || {};
 
+  // 2026-07-27 신설 — §PROFILE-UPDATE-MODE(profile-assistant v2.18) 유실
+  // 방지의 서버측 안전망. PA(LLM)가 [CONTEXT]의 _existing_* 값을 매번
+  // 정확히 옮겨 담는다는 프롬프트 지시에만 의존하면, 대화 압박 등으로
+  // 한 번이라도 놓치면 조용히 기본값으로 덮어써진다 — 특히 is_public
+  // (공개→비공개로 조용히 뒤집힘)과 payout_account(막 추가된 금융
+  // 정보라 놓치기 쉬움)는 사람이 바로 알아채기 어려운 유형의 실수라
+  // 서버에서도 한 번 더 막는다(client-side 프롬프트 지시 + server-side
+  // 방어의 이중 안전망 — 다른 필드 전부를 이렇게 바꾸는 전면 리팩터는
+  // 이번엔 하지 않는다, blast radius 최소화). Tier3 강제(is_public
+  // false)는 이 로직보다 우선이므로 _tier3Forced로 구분한다.
+  if (!('is_public' in body) && !_tier3Forced && existing && typeof existing.is_public === 'boolean') {
+    is_public = existing.is_public;
+  }
+  const _prevFinance = prevExtra.public?.finance || {};
+  const resolvedFinance = {
+    gdc_accepted:   ('gdc_accepted'   in body) ? gdc_accepted   : (_prevFinance.gdc_accepted   ?? false),
+    currencies:     ('currencies'     in body) ? currencies     : (_prevFinance.currencies     ?? ['KRW']),
+    price_range:    ('price_range'    in body) ? price_range    : (_prevFinance.price_range    ?? ''),
+    payout_account: ('payout_account' in body) ? payout_account : (_prevFinance.payout_account ?? null),
+  };
+
   // 2026-07-13 신설 — 필드별 공개/비공개 기본값. 명시 안 된 필드는
   // products만 기본 공개(디폴트 발견성), 나머지는 기본 비공개(안전
   // 우선 — is_public 기본값을 false로 바꾼 것과 동일한 원칙).
@@ -15686,6 +16007,35 @@ async function handleProfilePost(request, env, corsHeaders) {
       ? field_visibility[f]
       : DEFAULT_PUBLIC_FIELDS.has(f);
   }
+
+  // 2026-07-27 신설 — data_sources 형식 정리(PA §IMAGE-SCAN 근거).
+  // "pa_dialogue|pdv_shadow|website|physical_scan" 화이트리스트 밖 값이나
+  // 형식이 이상한 항목은 저장 자체를 막지 않고 그 항목만 조용히 제거한다
+  // (§0 U0 "실패보다 진행" 원칙 — schema_id처럼 안전·검색에 직결되는
+  // 필드가 아니라 감사·품질 분석용 메타데이터일 뿐이므로, 여기서 400을
+  // 내면 오히려 이 필드 하나 때문에 프로필 저장 전체가 막히는 버그#1과
+  // 같은 실수를 반복하게 된다).
+  const VALID_DATA_SOURCES = new Set(['pa_dialogue', 'pdv_shadow', 'website', 'physical_scan']);
+  const resolvedDataSources = {};
+  if (data_sources && typeof data_sources === 'object' && !Array.isArray(data_sources)) {
+    for (const [field, src] of Object.entries(data_sources)) {
+      if (typeof field === 'string' && VALID_DATA_SOURCES.has(src)) {
+        resolvedDataSources[field] = src;
+      }
+    }
+  }
+
+  // 2026-07-27 신설 — avatar_url/photo_urls는 반드시 이 워커 자신의
+  // /media/profile-photo/ 경로여야 한다(임의의 외부 URL을 공개 프로필
+  // <img src>에 그대로 노출하면 안 됨 — 다른 사이트 콘텐츠 도용·추적
+  // 픽셀·피싱 이미지 등에 악용될 수 있다). 형식이 안 맞으면 저장 실패로
+  // 막지 않고 그 항목만 조용히 제거한다(§0 U0 원칙 — data_sources와 동일).
+  const MEDIA_URL_PREFIX = 'https://hondi-proxy.tensor-city.workers.dev/media/profile-photo/';
+  const _isValidMediaUrl = (u) => typeof u === 'string' && u.startsWith(MEDIA_URL_PREFIX);
+  const resolvedAvatarUrl = _isValidMediaUrl(avatar_url) ? avatar_url : null;
+  const resolvedPhotoUrls = Array.isArray(photo_urls)
+    ? photo_urls.filter(_isValidMediaUrl).slice(0, 20) // 갤러리 상한 20장
+    : null;
 
   // 2026-07-13 신설 — job_ksco 형식 검증(AC-AUTHOR_v1_0.md §3-1/§6).
   // 서버는 코드 형식과 허용 필드만 검증한다 — 1,999개 KSCO 코드→명칭
@@ -15844,7 +16194,7 @@ async function handleProfilePost(request, env, corsHeaders) {
     activity: { timezone: 'Asia/Seoul', hours, holidays },
     contact:  { phone_display: phone, phone_visible: !!phone_visible, website, sns_public, languages_spoken },
     location: { region, address_short: address, directions, parking },
-    finance:  { gdc_accepted, currencies, price_range, payout_account },
+    finance:  resolvedFinance,
     // 2026-07-13 신설 — products_structured를 profile 레코드 자신에도
     // 저장(위 destructure 주석 참조). 'products_structured' in body로
     // "안 보냄(보존)"과 "빈 배열을 명시적으로 보냄(비움)"을 구분한다.
@@ -15853,6 +16203,18 @@ async function handleProfilePost(request, env, corsHeaders) {
     // 2026-06-22: 업종/유형별 확장 슬롯(profile_pdv_schema_plan_v1.md Phase 1).
     // 'industry_fields' in body로 "필드 자체를 안 보냄(보존)"과 "null을 명시적으로 보냄(비움)"을 구분.
     industry_fields: ('industry_fields' in body) ? body.industry_fields : ((prevExtra.public || {}).industry_fields ?? null),
+    // 2026-07-27 신설 — data_sources(PA §IMAGE-SCAN 데이터 출처 4종) 저장.
+    // 'data_sources' in body로 "안 보냄(기존값 보존)"과 "빈 객체를 명시적으로
+    // 보냄(비움)"을 구분 — products_structured/industry_fields와 동일 관례.
+    // 필드 단위 병합(merge)이 아니라 이번 제출값으로 통째 교체한다 — PA가
+    // 매 제출마다 자신이 알고 있는 전체 출처 맵을 다시 구성해 보내는 것을
+    // 전제로 하므로(스냅샷), 이전 값과 섞으면 이미 지워진 필드의 출처
+    // 표기가 유령처럼 남을 수 있다.
+    data_sources: ('data_sources' in body) ? resolvedDataSources : ((prevExtra.public || {}).data_sources ?? {}),
+    // 2026-07-27 신설 — 'in body'로 "안 보냄(보존)"과 "명시적 null/빈
+    // 배열로 비움"을 구분(다른 필드들과 동일 관례).
+    avatar_url: ('avatar_url' in body) ? resolvedAvatarUrl : ((prevExtra.public || {}).avatar_url ?? null),
+    photo_urls: ('photo_urls' in body) ? (resolvedPhotoUrls ?? []) : ((prevExtra.public || {}).photo_urls ?? []),
   };
   const newExtra = { ...prevExtra, public: newExtraPublic };
 
