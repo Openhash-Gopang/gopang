@@ -895,14 +895,19 @@ export async function initAuthWithPhone(digits, countryKey = 'KR', phoneType = '
         if (!session.ok) {
           console.warn('[Auth] 세션 검증 실패(통합팝업):', session.reason);
           if (session.reason === 'wallet_not_ready') {
-            // BUG FIX: 이 함수(initAuthWithPhone) 스코프에는 errEl/btn DOM 요소가
-            // 존재하지 않는다(호출부가 자체 UI를 그리는 별도 팝업이라 여기선 참조할
-            // 방법이 없음) — 참조 시 ReferenceError로 즉시 죽어 재시도 안내조차
-            // 못 보여주고 조용히 멈추는 문제가 있었다. resolve(null)로 호출부에
-            // 알려 호출부가 자체적으로 재시도/안내를 하도록 한다.
-            console.warn('[Auth] 보안 키 준비 중 — 잠시 후 다시 시도 필요');
-            resolve(null);
-            return;
+            // 2026-07-28 수정 — 아래 _loginExisting의 동일 수정과 같은 이유:
+            // gopangWalletLocked(영구 잠김)이면 재시도 안내로 멈추지 않고
+            // 기기 불일치 처리로 흘려보낸다.
+            if (!window.gopangWalletLocked) {
+              // BUG FIX: 이 함수(initAuthWithPhone) 스코프에는 errEl/btn DOM 요소가
+              // 존재하지 않는다(호출부가 자체 UI를 그리는 별도 팝업이라 여기선 참조할
+              // 방법이 없음) — 참조 시 ReferenceError로 즉시 죽어 재시도 안내조차
+              // 못 보여주고 조용히 멈추는 문제가 있었다. resolve(null)로 호출부에
+              // 알려 호출부가 자체적으로 재시도/안내를 하도록 한다.
+              console.warn('[Auth] 보안 키 준비 중 — 잠시 후 다시 시도 필요');
+              resolve(null);
+              return;
+            }
           }
           // DEV_MODE: DeviceMismatch 무시하고 강제 로그인
           if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
@@ -1808,9 +1813,19 @@ function _showPhonePopup(resolve) {
       btn.style.opacity = '1';
       btn.style.pointerEvents = '';
       if (session.reason === 'wallet_not_ready') {
-        phoneErr.textContent = '보안 키 준비 중입니다. 잠시 후 다시 시도해 주세요.';
-        phoneErr.style.display = 'block';
-        return;
+        // 2026-07-28 수정 — wallet_not_ready를 항상 "잠시 후 재시도"로
+        // 안내하면 안 된다. gopangWalletLocked(복호화 영구 실패,
+        // gopang-wallet.js 로드 시점에 세워짐 — webapp.html의 지갑 잠금
+        // 배너와 동일 신호)가 true인 경우는 재시도해도 절대 풀리지 않는
+        // 영구 상태다. 이 경우를 그냥 통과시키면 사용자가 "다시
+        // 시도해 주세요"만 반복해서 보고 device-link 복구 경로로 영영
+        //못 빠져나가는 사고가 실제로 재현됐다 — 기기 불일치와 동일하게
+        // 처리한다(아래로 흘러보냄).
+        if (!window.gopangWalletLocked) {
+          phoneErr.textContent = '보안 키 준비 중입니다. 잠시 후 다시 시도해 주세요.';
+          phoneErr.style.display = 'block';
+          return;
+        }
       }
       if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
         console.info('[DEV] _showPhonePopup DeviceMismatch 우회:', found.handle);
