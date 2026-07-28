@@ -292,7 +292,7 @@ export function buildReport({ svc, type, period, ipv6, role = 'user',
       },
 
       where: {
-        svc_url:  `https://${svc}.gopang.net`,
+        svc_url:  `https://${svc}.hondi.net`, // 2026-07-28: gopang.net 브랜드 폐기, hondi.net으로 통일
         svc_id:   svc,
       },
 

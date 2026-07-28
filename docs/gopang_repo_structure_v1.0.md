@@ -235,7 +235,7 @@ OpenHash/
 ```
 1. 인증: import { gopangAuth } from 'https://hondi.net/auth/gopang-sso.js'
 2. PDV:  import { buildReport, sendReportOnce } from '...gopang-report.js'
-3. 배포: {name}.gopang.net → Cloudflare Pages or GitHub Pages
+3. 배포: {name}.hondi.net → Cloudflare Pages or GitHub Pages
 ```
 
 ---

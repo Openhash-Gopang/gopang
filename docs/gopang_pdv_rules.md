@@ -157,7 +157,7 @@ async function sendToPDV(report) {
             period_end:   report.period?.end,
           },
           where: /* 반드시 객체 */ {
-            svc_url: 'https://{서비스}.gopang.net',
+            svc_url: 'https://{서비스}.hondi.net',
           },
           what: {
             summary:  report.pdv_6w.what,   // 요약문만
@@ -349,7 +349,7 @@ POST https://gopang-proxy.tensor-city.workers.dev/pdv/report
 **Headers:**
 ```
 Content-Type: application/json
-Origin: https://{서비스}.gopang.net   (브라우저가 자동 설정, 수동 금지)
+Origin: https://{서비스}.hondi.net   (브라우저가 자동 설정, 수동 금지)
 ```
 
 **Body 전체 구조:**
@@ -633,7 +633,7 @@ fetch('https://gopang-proxy.../pdv/report', { ... })
    - 500 → Worker 내부 오류 (CORS 헤더 없이 반환)
 
 2. Worker Edit code의 HTTP 탭에서 직접 테스트
-   - Header: Origin: https://{서비스}.gopang.net 추가
+   - Header: Origin: https://{서비스}.hondi.net 추가
    - Body: 테스트 payload 전송
    - 200이 나와야 정상
 
@@ -663,7 +663,7 @@ const REGISTERED_SERVICES = {
 | 필드 | 값 | 설명 |
 |------|-----|------|
 | `level` | 3 | Level 3: 공식 파트너 (PDV 가능) |
-| `domain` | `서비스.gopang.net` | origin 매칭에 사용 |
+| `domain` | `서비스.hondi.net` | origin 매칭에 사용 |
 | `minAuth` | `L0` / `L1` | 최소 인증 레벨 |
 | `pdv` | `true` | PDV 전송 권한 여부 |
 

@@ -85,7 +85,7 @@ wrangler.toml           KV/DO 바인딩, 크론 트리거
    생성된 id를 `wrangler.toml`의 `REPLACE_ME`에 채워 넣습니다.
 
 2. **L1 PocketBase에 훅·컬렉션 배포**
-   - `pb_hooks/fs_ledger.pb.js`, `pb_hooks/reviews.pb.js`를 각 L1 노드(예: `l1-hanlim.gopang.net`)의
+   - `pb_hooks/fs_ledger.pb.js`, `pb_hooks/reviews.pb.js`를 각 L1 노드(예: `l1-hanlim.hondi.net`)의
      `pb_hooks/` 디렉토리에 배치 (기존 `main.pb.js`와 나란히)
    - PocketBase 관리자 UI → **Import collections**로 `migrations/collections.json` 일괄 등록
    - 이미 존재하는 `profiles`, `search_index` 컬렉션에 다음 필드가 있는지 확인(없으면 수동 추가):
@@ -121,7 +121,7 @@ wrangler.toml           KV/DO 바인딩, 크론 트리거
 5. **L1 레지스트리 초기값 등록** (파일럿 노드 1개)
    ```
    wrangler kv key put --binding=L1_REGISTRY_KV "KR-JEJU-JEJU-HANLIM" '{
-     "base_url": "https://l1-hanlim.gopang.net",
+     "base_url": "https://l1-hanlim.hondi.net",
      "region_name": "제주특별자치도 제주시 한림읍",
      "status": "active",
      "node_type": "regional",
