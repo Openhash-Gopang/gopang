@@ -896,9 +896,10 @@ export async function initAuthWithPhone(digits, countryKey = 'KR', phoneType = '
           console.warn('[Auth] 세션 검증 실패(통합팝업):', session.reason);
           if (session.reason === 'wallet_not_ready') {
             // 2026-07-28 수정 — 아래 _loginExisting의 동일 수정과 같은 이유:
-            // gopangWalletLocked(영구 잠김)이면 재시도 안내로 멈추지 않고
-            // 기기 불일치 처리로 흘려보낸다.
-            if (!window.gopangWalletLocked) {
+            // gopangWalletLocked 또는 gopangWalletNeedsSetup(둘 다 영구
+            // 상태)이면 재시도 안내로 멈추지 않고 기기 불일치 처리로
+            // 흘려보낸다.
+            if (!window.gopangWalletLocked && !window.gopangWalletNeedsSetup) {
               // BUG FIX: 이 함수(initAuthWithPhone) 스코프에는 errEl/btn DOM 요소가
               // 존재하지 않는다(호출부가 자체 UI를 그리는 별도 팝업이라 여기선 참조할
               // 방법이 없음) — 참조 시 ReferenceError로 즉시 죽어 재시도 안내조차
@@ -1814,14 +1815,14 @@ function _showPhonePopup(resolve) {
       btn.style.pointerEvents = '';
       if (session.reason === 'wallet_not_ready') {
         // 2026-07-28 수정 — wallet_not_ready를 항상 "잠시 후 재시도"로
-        // 안내하면 안 된다. gopangWalletLocked(복호화 영구 실패,
-        // gopang-wallet.js 로드 시점에 세워짐 — webapp.html의 지갑 잠금
-        // 배너와 동일 신호)가 true인 경우는 재시도해도 절대 풀리지 않는
-        // 영구 상태다. 이 경우를 그냥 통과시키면 사용자가 "다시
-        // 시도해 주세요"만 반복해서 보고 device-link 복구 경로로 영영
-        //못 빠져나가는 사고가 실제로 재현됐다 — 기기 불일치와 동일하게
-        // 처리한다(아래로 흘러보냄).
-        if (!window.gopangWalletLocked) {
+        // 안내하면 안 된다. 이게 영구 상태인 경우가 두 가지 있다:
+        //   ① gopangWalletLocked — 기존 지갑 복호화 영구 실패
+        //   ② gopangWalletNeedsSetup — PC/미확인 기기라 애초에 지갑을
+        //      자동 생성 안 한 상태(오늘 Brave 재현 케이스 — ①만 걸러서
+        //      이 경우가 빠졌던 게 재발 원인)
+        // 둘 다 재시도해도 절대 안 풀리므로, 기기 불일치와 동일하게
+        // 아래로 흘려보낸다.
+        if (!window.gopangWalletLocked && !window.gopangWalletNeedsSetup) {
           phoneErr.textContent = '보안 키 준비 중입니다. 잠시 후 다시 시도해 주세요.';
           phoneErr.style.display = 'block';
           return;
