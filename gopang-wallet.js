@@ -35,6 +35,9 @@
   // 검증하는 방식이라 PRF가 애초에 필요 없다 — 완전히 독립된 credential
   // 로 분리해, PRF 미지원 기기에서도 재인증만큼은 등록되게 한다.
   const LS_STEPUP_CRED = 'gopang_wallet_stepup_cred_id';
+  // 2026-07-28 신설 — _deviceEntropy()가 navigator.userAgent 대신 쓰는
+  // 영구 랜덤 비밀값의 저장 키. 자세한 사유는 _deviceEntropy() 주석 참고.
+  const LS_DEVICE_SECRET = 'gopang_wallet_device_secret_v2';
   const WEBAUTHN_RP_ID   = 'hondi.net';  // 전체 hondi.net 서브도메인에서 credential 공유
   // PRF는 결정론적 — 동일 salt + 동일 authenticator = 항상 동일 32바이트.
   // 서버에 아무것도 저장할 필요 없음.
@@ -1087,6 +1090,31 @@
      * @param {string} [passphrase='']
      * @returns {GopangWallet|null}  — 지갑 없으면 null
      */
+    // 신규 entropy(_deviceEntropy, 고정 비밀값)로 먼저 시도하고, 실패하면
+    // — PRF 미등록 상태(=원래도 device-entropy 경로였을 조건)에서만 —
+    // 구버전(UA 기반) entropy로 재시도한다. 그걸로 열리면 지갑이 예전
+    // 방식으로 암호화된 채 남아있던 것이 확인된 것이므로, 그 자리에서
+    // 새 entropy로 조용히 재암호화해 이후로는 UA 변동과 무관하게 열리도록
+    // 만든다(enrollWebAuthn()의 재암호화 패턴과 동일 원칙).
+    static async _decryptWithMigration(db, idbKeyName, record, passphrase) {
+      const encBuf = b64uToBuf(record.encPrivKey).buffer;
+      try {
+        return await decryptPrivKey(encBuf, passphrase || await GopangWallet._webauthnEntropy());
+      } catch (e) {
+        const usingDeviceEntropy = !passphrase && !localStorage.getItem(LS_WEBAUTHN_CRED);
+        if (!usingDeviceEntropy) throw e;
+        const privRaw = await decryptPrivKey(encBuf, await GopangWallet._legacyDeviceEntropy()); // 실패 시 그대로 throw
+        try {
+          const reEnc = await encryptPrivKey(privRaw, await GopangWallet._deviceEntropy());
+          await idbPut(db, idbKeyName, { ...record, encPrivKey: bufToB64u(reEnc) });
+          console.info('[GopangWallet] 구버전(UA 기반) 암호화 감지 — 고정 비밀값 방식으로 자동 이전 완료:', idbKeyName);
+        } catch (migrateErr) {
+          console.warn('[GopangWallet] 마이그레이션 재암호화 실패(다음 세션에 재시도됨):', migrateErr.message);
+        }
+        return privRaw;
+      }
+    }
+
     static async load(passphrase = '') {
       const db     = await openDB();
       const record = await idbGet(db, IDB_KEY_ID).catch(() => null);
@@ -1102,11 +1130,7 @@
       // 구분 가능한 에러를 던진다 — 호출부가 "새로 만들어도 되는 상황"과
       // "복구가 필요한 상황"을 반드시 구별하도록 강제한다.
       try {
-        const encBuf = b64uToBuf(record.encPrivKey).buffer;
-        const privRaw = await decryptPrivKey(
-          encBuf,
-          passphrase || await GopangWallet._webauthnEntropy()
-        );
+        const privRaw = await GopangWallet._decryptWithMigration(db, IDB_KEY_ID, record, passphrase);
 
         // JWK 형식으로 복원
         // v6.0: extractable을 true로 — exportPrivateKey()(백업 키 내보내기)가
@@ -1131,11 +1155,7 @@
         let x25519PrivKey = null, x25519PubKey = null, x25519PubKeyB64u = null;
         const xRecord = await idbGet(db, IDB_X25519_ID).catch(() => null);
         if (xRecord) {
-          const xEncBuf = b64uToBuf(xRecord.encPrivKey).buffer;
-          const xPrivRaw = await decryptPrivKey(
-            xEncBuf,
-            passphrase || await GopangWallet._webauthnEntropy()
-          );
+          const xPrivRaw = await GopangWallet._decryptWithMigration(db, IDB_X25519_ID, xRecord, passphrase);
           const xPrivJwk = {
             kty: 'OKP', crv: 'X25519',
             x  : xRecord.publicKeyB64u,
@@ -1325,10 +1345,35 @@
     }
 
     /* ── 내부: 기기 고유 entropy (passphrase 미사용 시 대체) ── */
+    // 2026-07-28 근본 수정 — navigator.userAgent는 "동일 기기·동일
+    // 브라우저"에서도 결정론적이지 않다: Chrome DevTools 기기 에뮬레이션이
+    // Responsive↔기기 프리셋 사이를 오가면 UA 문자열 자체가 바뀌고,
+    // 실사용 환경에서도 브라우저 자동 업데이트(버전 번호 변경)나 최근
+    // Chrome의 User-Agent Reduction 정책으로 UA가 언제든 달라질 수
+    // 있다. 그 결과 "지갑을 스스로 만든 직후, 같은 세션 안에서도 못 여는"
+    // 사고가 실사로 재현됐다 — 다른 기기가 아니라 이 함수 자체의 결함.
+    // UA 대신, 최초 1회 랜덤 발급해 localStorage에 영구 저장하는 고정
+    // 비밀값을 쓴다. push.js의 getOrCreateDeviceId()와 동일 패턴.
+    static async _deviceSecret() {
+      let secret = localStorage.getItem(LS_DEVICE_SECRET);
+      if (!secret) {
+        secret = bufToHex(crypto.getRandomValues(new Uint8Array(32)).buffer);
+        localStorage.setItem(LS_DEVICE_SECRET, secret);
+      }
+      return secret;
+    }
+
     static async _deviceEntropy() {
-      // UserAgent + 고정 salt → SHA-256 → hex
-      // 동일 기기+브라우저면 동일값, 완벽한 보안이 아님
-      // 프로덕션에서는 사용자 passphrase 권장
+      const secret = await GopangWallet._deviceSecret();
+      const buf = await sha256(secret + 'gopang-wallet-v1-entropy');
+      return bufToHex(buf);
+    }
+
+    // 구버전(UA 기반) entropy — 위 수정 이전에 이미 이 방식으로 암호화된
+    // 지갑을 열기 위한 마이그레이션 전용 경로. load()에서만 폴백으로
+    // 쓰이고, 새로 만드는 지갑은 전부 _deviceEntropy()(고정 비밀값)를
+    // 쓴다 — 이 함수로 새로 암호화하지 않는다.
+    static async _legacyDeviceEntropy() {
       const raw = navigator.userAgent + 'gopang-wallet-v1-entropy';
       const buf = await sha256(raw);
       return bufToHex(buf);
