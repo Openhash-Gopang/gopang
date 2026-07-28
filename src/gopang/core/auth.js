@@ -762,28 +762,309 @@ export async function _restoreFromBackupKey(privKeyB64u, guid = null, svc = 'gop
   return { ok: true };
 }
 
-// ── 기기 불일치 안내 + 백업 키 복구 폼 ───────────────────
+// ── 기기 불일치 안내 → 인라인(오버레이) 기기 승인 ────────────────
 // found: L1에서 찾은 기존 계정 레코드, resolve: initAuth류의 원래 resolve 콜백
 //
-// 2026-07-28 개편(사용자 지시) — 예전엔 여기서 "스마트폰으로 이 기기
-// 승인하기 / 백업 키로 복구 / 닫기" 3버튼 확인 화면을 띄우고 클릭을
-// 기다렸다. 그런데 이 함수가 호출된 시점 자체가 이미 "이 번호로 가입된
-// 계정은 있는데 이 기기엔 암호키가 없다"는 확정 판정이라, 그 위에 또
-// 확인을 구하는 건 실질적 보안 효과 없이(PC 쪽 클릭은 신원을 증명하지
-// 않음 — 실제 승인은 폰에서 일어난다) 화면만 하나 더 늘리는 것이었다.
-// 이제 곧장 device-link.html로 이동해 요청을 자동 전송한다(그 화면
-// 자체도 PREFILLED_PHONE이 있으면 클릭 없이 바로 보낸다 — engine.js와
-// 동일 원칙). 대신:
-//   - 실질적 남용 방지는 서버(handleDeviceLinkInit의 e164/IP rate limit)로 이동
-//   - "백업 키로 복구" 옵션은 사라지지 않고, device-link.html의 대기
-//     화면(SMS 폴백 옆)에 보조 링크로 그대로 남아 있다
+// 2026-07-28 개편(사용자 지시, 재개편) — 예전엔 여기서 device-link.html로
+// 페이지 전체를 이동(location.href)했다. 이동 자체가 HTML/CSS/JS를
+// 처음부터 다시 받아 파싱·실행하는 비용이라, "시작하기"부터 대기 화면이
+// 뜨기까지 지연의 상당 부분이 여기 있었다(백엔드 쪽 왕복 최적화만으로는
+// 안 줄어드는 부분). 이제 페이지를 아예 떠나지 않고, 이 오버레이 안에서
+// 요청 전송→폴링→복호화→로그인 완료까지 전부 처리한다.
+// device-link.html과 동일한 서버 엔드포인트(init/poll)를 그대로 쓰되,
+// 클라이언트 로직만 이쪽으로 옮겨왔다 — 폰이 하는 일(승인·서명·전달)은
+// 전혀 안 바뀐다. sign_request(공용 PC 서명 요청)는 여전히 별도
+// 팝업(device-link.html)을 쓴다 — 그건 원래도 페이지 이동 문제가 없고
+// (전용 팝업), opener에 postMessage로 결과를 돌려주는 구조가 그대로
+// 적합하다.
 function _showDeviceMismatchNotice(found, resolve) {
-  const params = new URLSearchParams({
-    phone: found.e164 || '',
-    return: location.pathname + location.search,
-  });
-  location.href = `/auth/device-link.html?${params.toString()}`;
+  document.getElementById('_dl-inline-overlay')?.remove();
+  if (!document.getElementById('_dl-inline-style')) {
+    const style = document.createElement('style');
+    style.id = '_dl-inline-style';
+    style.textContent = '@keyframes _dlSpin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(style);
+  }
+
+  const overlay = document.createElement('div');
+  overlay.id = '_dl-inline-overlay';
+  overlay.style.cssText = [
+    'position:fixed;inset:0;z-index:10003',
+    'background:rgba(0,0,0,0.5)',
+    'display:flex;align-items:center;justify-content:center',
+    'padding:24px;box-sizing:border-box',
+  ].join(';');
+  document.body.appendChild(overlay);
+
+  let sessionId = null;
+  let pcKeyPair = null;
+  let pollTimer = null;
+  let countdownTimer = null;
+  let smsFallbackTimer = null;
+
+  const $$ = (id) => overlay.querySelector(id);
+  const render = (html) => {
+    overlay.innerHTML = `<div style="background:#fff;border-radius:20px;padding:28px 22px;width:100%;max-width:360px;box-sizing:border-box;text-align:center">${html}</div>`;
+  };
+  const setStatus = (msg, isError) => {
+    const el = $$('#_dl-status');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.style.color = isError ? '#dc2626' : '#6b7280';
+  };
+
+  function _onVisibilityChange() {
+    if (!document.hidden && pollTimer) _pollOnce();
+  }
+  function stopAll() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = null;
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = null;
+    if (smsFallbackTimer) clearTimeout(smsFallbackTimer);
+    smsFallbackTimer = null;
+    document.removeEventListener('visibilitychange', _onVisibilityChange);
+  }
+  function closeOverlay(result) {
+    stopAll();
+    pcKeyPair = null;
+    overlay.remove();
+    resolve?.(result ?? null);
+  }
+
+  function renderWaiting() {
+    render(`
+      <div style="width:24px;height:24px;border:2.5px solid #e5e7eb;border-top-color:#0057A8;border-radius:50%;animation:_dlSpin 0.8s linear infinite;margin:20px auto"></div>
+      <p style="font-size:14px;color:#374151;margin-bottom:6px">스마트폰 알림을 열어 <strong>"본인이 맞습니다"</strong>를 눌러주세요</p>
+      <div id="_dl-timer" style="font-size:12px;color:#9ca3af;margin-bottom:14px"></div>
+      <button id="_dl-sms" style="width:100%;padding:11px;border:none;border-radius:10px;background:#f3f4f6;color:#374151;cursor:pointer;font-size:12.5px;opacity:0.5;margin-bottom:8px;font-family:inherit">알림이 안 왔나요? 문자로 받기</button>
+      <button id="_dl-backup" style="width:100%;padding:11px;border:1px solid #e5e7eb;border-radius:10px;background:none;color:#374151;cursor:pointer;font-size:12.5px;margin-bottom:8px;font-family:inherit">백업 키를 직접 갖고 있어요(수동 입력)</button>
+      <button id="_dl-close" style="width:100%;padding:11px;border:none;background:none;color:#9ca3af;cursor:pointer;font-size:12.5px;font-family:inherit">나중에</button>
+      <div id="_dl-status" style="font-size:12px;margin-top:10px;min-height:16px"></div>
+    `);
+    $$('#_dl-sms').onclick = _resendSms;
+    $$('#_dl-backup').onclick = _showBackupForm;
+    $$('#_dl-close').onclick = () => closeOverlay(null);
+  }
+
+  function _startCountdown(seconds) {
+    // 문자 재전송·백업 폼에서 뒤로가기 등으로 재호출될 수 있다. 여기서
+    // 먼저 정리하지 않으면, 이전 tick()이 나중에 실행되면서 그 사이
+    // 재할당된 countdownTimer(=새 인터벌)를 실수로 clearInterval해
+    // 버리는 클로저 공유 변수 버그가 생긴다(실사로 발견 — 매 호출부마다
+    // 개별적으로 정리하지 않아도 되도록 여기 한 곳에서만 방어한다).
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    let remain = seconds;
+    const el = () => $$('#_dl-timer');
+    const tick = () => {
+      const timerEl = el();
+      if (!timerEl) { clearInterval(countdownTimer); return; }
+      if (remain <= 0) {
+        clearInterval(countdownTimer); countdownTimer = null;
+        stopAll();
+        _showExpiredGuidance();
+        return;
+      }
+      timerEl.textContent = `${remain}초 후 만료`;
+      remain -= 1;
+    };
+    tick();
+    countdownTimer = setInterval(tick, 1000);
+  }
+
+  function _setupSmsFallback(pushSentToMobile, hasMobileDevice) {
+    const btn = $$('#_dl-sms');
+    if (!btn) return;
+    btn.style.opacity = '0.5';
+    btn.disabled = false;
+    if (pushSentToMobile === false || hasMobileDevice === false) {
+      btn.style.opacity = '1';
+    } else {
+      smsFallbackTimer = setTimeout(() => { if (btn) btn.style.opacity = '1'; }, 8000);
+    }
+  }
+
+  async function _resendSms() {
+    const btn = $$('#_dl-sms');
+    if (!sessionId || !btn || btn.disabled) return;
+    btn.disabled = true;
+    setStatus('문자를 보내는 중...');
+    try {
+      const res = await fetch(`${PROXY_URL}/auth/device-link/resend-sms`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.detail || data.error || '문자 발송에 실패했습니다.');
+      setStatus('문자를 보냈습니다. 잠시만 기다려 주세요.');
+      _startCountdown(data.expires_in || 90);
+    } catch (e) {
+      setStatus(e.message || '문자 발송에 실패했습니다.', true);
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function _showBackupForm() {
+    render(`
+      <p style="font-weight:700;font-size:16px;margin:0 0 10px;color:#111827">백업 키 입력</p>
+      <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 16px">가입 시 또는 설정 → 백업 키에서 내보낸<br>키 문자열을 붙여넣어 주세요.</p>
+      <textarea id="_dl-key-input" rows="3" placeholder="백업 키 붙여넣기"
+        style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:12px;font-size:13px;font-family:monospace;resize:none;box-sizing:border-box;margin-bottom:8px" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+      <div id="_dl-key-err" style="display:none;font-size:12px;color:#dc2626;margin-bottom:8px"></div>
+      <button id="_dl-key-submit" style="width:100%;padding:13px;border:none;border-radius:10px;background:#16a34a;color:#fff;cursor:pointer;margin-bottom:8px;font-size:14px;font-weight:700;font-family:inherit">복구</button>
+      <button id="_dl-key-back" style="width:100%;padding:13px;border:1px solid #e5e7eb;border-radius:10px;background:none;color:#6b7280;cursor:pointer;font-size:14px;font-family:inherit">뒤로</button>
+    `);
+    const input = $$('#_dl-key-input');
+    const errEl = $$('#_dl-key-err');
+    const subBtn = $$('#_dl-key-submit');
+    input.focus();
+    $$('#_dl-key-back').onclick = () => { renderWaiting(); if (sessionId) _startCountdown(90); };
+    subBtn.onclick = async () => {
+      const val = input.value.trim();
+      if (!val) { errEl.textContent = '백업 키를 입력해 주세요.'; errEl.style.display = 'block'; return; }
+      subBtn.disabled = true; subBtn.textContent = '확인 중…'; errEl.style.display = 'none';
+      const result = await _restoreFromBackupKey(val, found.guid, 'gopang');
+      if (!result.ok) {
+        const msg = result.reason === 'PUBKEY_MISMATCH'
+          ? '이 백업 키는 이 계정의 키가 아닙니다.'
+          : result.reason === 'invalid_key'
+            ? '키 형식이 올바르지 않습니다.'
+            : '복구에 실패했습니다' + (result.detail ? ` (${result.detail}).` : ` (${result.reason}).`);
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+        subBtn.disabled = false; subBtn.textContent = '복구';
+        return;
+      }
+      const user = {
+        ipv6: found.guid, handle: found.handle,
+        e164: found.e164 || '',
+        country_code: found.country_code || DEFAULT_COUNTRY,
+        nickname: found.nickname || '',
+        region: found.region || '',
+        name: found.handle, isGuest: false, isTemp: false,
+        registeredAt: found.created,
+      };
+      localStorage.setItem(STORE_KEY, JSON.stringify(user));
+      setUser(user);
+      console.info('[Auth] 백업 키 복구 완료:', found.handle);
+      closeOverlay(user);
+    };
+  }
+
+  function _showExpiredGuidance() {
+    render(`
+      <p style="font-size:13px;color:#dc2626;line-height:1.6;margin-bottom:16px;text-align:left">
+        응답이 없어 만료됐습니다. 이 방식은 개인키를 가진 다른 기기가
+        실제로 존재해야만 작동합니다 — 그 기기가 확실히 있다면 다시
+        시도해 주세요. 만약 이 계정을 쓰던 기기가 이것뿐이었고 데이터를
+        지운 적이 있다면, 가입 시 저장해둔 백업 키(4단어 시드)가 있으면
+        복구하고, 없다면 이 계정은 되살릴 수 없으니 새로 가입해 주세요.
+      </p>
+      <button id="_dl-retry" style="width:100%;padding:13px;border:none;border-radius:10px;background:#0057A8;color:#fff;cursor:pointer;margin-bottom:8px;font-size:14px;font-weight:700;font-family:inherit">다시 시도</button>
+      <button id="_dl-backup2" style="width:100%;padding:13px;border:1px solid #e5e7eb;border-radius:10px;background:none;color:#374151;cursor:pointer;margin-bottom:8px;font-size:13px;font-family:inherit">백업 키를 직접 갖고 있어요</button>
+      <button id="_dl-close2" style="width:100%;padding:13px;border:none;background:none;color:#9ca3af;cursor:pointer;font-size:13px;font-family:inherit">닫기</button>
+    `);
+    $$('#_dl-retry').onclick = () => _startRequest();
+    $$('#_dl-backup2').onclick = _showBackupForm;
+    $$('#_dl-close2').onclick = () => closeOverlay(null);
+  }
+
+  async function _pollOnce() {
+    try {
+      const res = await fetch(`${PROXY_URL}/auth/device-link/poll?sessionId=${encodeURIComponent(sessionId)}`);
+      const data = await res.json();
+      if (!data.ok) return;
+      if (data.state === 'expired') {
+        stopAll();
+        _showExpiredGuidance();
+        return;
+      }
+      if (data.state === 'delivered' && data.sealed) {
+        stopAll();
+        await _finishImport(data.sealed);
+      }
+    } catch { /* 일시적 네트워크 오류는 무시하고 다음 polling에서 재시도 */ }
+  }
+
+  async function _finishImport(sealed) {
+    render(`<p style="font-size:14px;color:#374151">가져오는 중...</p>`);
+    try {
+      const plaintext = await GopangWallet.openSealedWithKey(pcKeyPair.privateKey, sealed);
+      const { privKeyB64u, userRecord, onboardingFlags } = JSON.parse(plaintext);
+      if (!privKeyB64u) throw new Error('전달받은 데이터 형식이 올바르지 않습니다.');
+
+      await GopangWallet.restoreFromPrivateKey(privKeyB64u);
+
+      let user;
+      if (userRecord && userRecord.ipv6) {
+        localStorage.setItem(STORE_KEY, JSON.stringify(userRecord));
+        user = userRecord;
+      } else {
+        console.warn('[DeviceLink] 폰의 gopang_user_v4가 비어있어 계정 식별 정보를 옮기지 못했습니다.');
+        user = {
+          ipv6: found.guid, handle: found.handle, e164: found.e164 || '',
+          country_code: found.country_code || DEFAULT_COUNTRY, nickname: found.nickname || '',
+          region: found.region || '', name: found.handle, isGuest: false, isTemp: false,
+          registeredAt: found.created,
+        };
+        localStorage.setItem(STORE_KEY, JSON.stringify(user));
+      }
+
+      if (onboardingFlags) {
+        if (onboardingFlags.firstGreeted) localStorage.setItem('hondi_first_greeted', '1');
+        if (onboardingFlags.tutorialDone) localStorage.setItem('hondi_tutorial_done', '1');
+        if (onboardingFlags.tutorialStep) localStorage.setItem('hondi_tutorial_step', onboardingFlags.tutorialStep);
+      }
+
+      setUser(user);
+      console.info('[DeviceLink] 인라인 가져오기 완료:', user.handle);
+      closeOverlay(user);
+    } catch (e) {
+      render(`<p style="font-size:13px;color:#dc2626;margin-bottom:16px">지갑 가져오기에 실패했습니다: ${e.message}</p>`);
+      setTimeout(() => _showExpiredGuidance(), 1200);
+    }
+  }
+
+  async function _startRequest() {
+    renderWaiting();
+    setStatus('스마트폰에 요청을 보내는 중...');
+    try {
+      pcKeyPair = await GopangWallet.generateX25519KeyPair();
+      const pcLabel = (() => {
+        const ua = navigator.userAgent;
+        const browser = /Chrome/.test(ua) ? 'Chrome' : /Firefox/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : '브라우저';
+        const os = /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : '';
+        return `${browser} · ${os}`.trim();
+      })();
+
+      const res = await fetch(`${PROXY_URL}/auth/device-link/init`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          e164: found.e164, pcLabel, purpose: 'key_transfer',
+          pcPubKeyB64u: pcKeyPair.publicKeyB64u,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.detail || data.error || '요청 실패');
+
+      sessionId = data.sessionId;
+      if (data.hasMobileDevice === false) {
+        setStatus('이 계정에 등록된 스마트폰이 없습니다. 아래 "문자로 받기"를 이용해 주세요.', true);
+      } else {
+        setStatus('');
+      }
+      _startCountdown(data.expires_in || 90);
+      pollTimer = setInterval(_pollOnce, 2000);
+      document.addEventListener('visibilitychange', _onVisibilityChange);
+      _setupSmsFallback(data.pushSentToMobile, data.hasMobileDevice);
+    } catch (e) {
+      setStatus(e.message || '요청에 실패했습니다.', true);
+    }
+  }
+
+  _startRequest();
 }
+
 
 // ── 저장소 읽기 ──────────────────────────────────────────
 function _loadStored() {
