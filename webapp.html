@@ -3604,7 +3604,7 @@ window.closePDV = closePDV;
     // 1~2턴짜리 컨텍스트로만 끼워 넣는다(SP 본문에 영구히 남지 않음).
     const {
       _loadAgentCommonSP, _handleProfileTags, _stripInternalTags, _buildFirstContactContext,
-      _resolveHondiTier, _parseAgentTags,
+      _resolveHondiTier, _parseAgentTags, _handleWebSearchTag, _handleDelegateToFlashTag,
     } = await import('./src/gopang/ai/call-ai.js');
     // BUG-FIX(2026-07-02): _callPanelAI(AI 패널 — 실제로 쓰이는 주 경로)가
     // 지금까지 _parseAgentTags를 호출한 적이 없었다. 메인 채팅 전용
@@ -3727,12 +3727,15 @@ window.closePDV = closePDV;
 
     // 최종 안전망 — 혼디 제공 DeepSeek 기본 키(call-ai.js와 동일 원칙).
     // model은 실제 벤더 모델명이 아니라 "hondi-flash"/"hondi-pro" 논리 티어
-    // 이름이며, worker.js가 실제 백엔드로 매핑한다. 사용자가 직접 고르지 않고,
-    // 이번 턴 질문의 복잡도를 보고 call-ai.js가 자동으로 판단한다(§ 자동 승격).
+    // 이름이며, worker.js가 실제 백엔드로 매핑한다.
+    // ★ 2026-07-28 수정 — Pro/Flash 재설계: call-ai.js의 _buildCallCandidates()는
+    // hondi-pro로 고정했는데, 이 패널은 완전히 별도의 후보 구성 로직이라
+    // 그 수정이 반영이 안 되고 있었다(_resolveHondiTier로 매 턴 flash/pro가
+    // 갈리던 구식 동작 그대로). 같은 이유로 여기도 고정한다.
     candidates.push({
       provider: 'deepseek-default',
       baseUrl: endpoint.replace(/\/+$/, ''),
-      model: _resolveHondiTier(userText, _panelHistory),
+      model: 'hondi-pro',
       key: null,
     });
 
@@ -3873,6 +3876,28 @@ window.closePDV = closePDV;
           // 않았을 경우(예: callAI 쪽 변경)를 대비한 안전망 — 비어있으면 무해한 중복.
           _panelHistory.length = 0;
           return;
+        }
+
+        // ── hondi-flash 위임·웹검색 태그 실행 (2026-07-28 신설) ──────
+        // 이 패널이 _parseAgentTags만 부르고 있어서 [WEB_SEARCH:]·
+        // [DELEGATE_TO_FLASH:] 태그가 실행 안 되고 화면에 그대로 노출되던
+        // 문제(2026-07-28 실사로 발견)를 고친다. 아래 두 핸들러만 예외적으로
+        // bubbleEl을 그대로 넘긴다(다른 핸들러는 null) — 이 둘은 검색
+        // 결과·위임 결과로 화면 내용 자체를 교체해야 의미가 있기 때문이다.
+        // 패널 자신의 마지막 bubbleEl.innerHTML 대입(위)이 이미 끝난 뒤에
+        // 실행되므로 서로 덮어쓰지 않는다.
+        let _delegateOrSearchHandled = false;
+        try {
+          _delegateOrSearchHandled = await _handleDelegateToFlashTag(full, bubbleEl, _callPanelAI, userText);
+        } catch (e) {
+          console.warn('[Panel] _handleDelegateToFlashTag 처리 실패(무시):', e.message);
+        }
+        if (!_delegateOrSearchHandled) {
+          try {
+            await _handleWebSearchTag(full, bubbleEl, _callPanelAI, userText);
+          } catch (e) {
+            console.warn('[Panel] _handleWebSearchTag 처리 실패(무시):', e.message);
+          }
         }
 
         // ── GWP/SEARCH/OPEN_PROFILE/P2P_INVITE 태그 실행 (2026-07-02 신설) ──
