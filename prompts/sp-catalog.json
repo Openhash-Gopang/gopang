@@ -191,5 +191,10 @@
   "SP-03_kpolice": "SP-03_kpolice_v3_0.txt",
   "SP-04_khealth": "SP-04_khealth_v3_0.txt",
   "SP-02_k119": "SP-02_k119_v3_0.txt",
-  "SP-06_ktraffic": "SP-06_ktraffic_v3_0.txt"
+  "SP-06_ktraffic": "SP-06_ktraffic_v3_0.txt",
+  "GOV-COMMON-OVERLAY-TEMPLATE": "gov-tree/00-common/overlays/GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md",
+  "GOV-TREE-PROTOCOL": "gov-tree/00-common/GOV-TREE-PROTOCOL_v1.0.md",
+  "SP-PROVINCE-TEMPLATE": "gov-tree/01-do/templates/SP-PROVINCE-TEMPLATE_v1.1.md",
+  "NATIONAL-SP-CORE": "gov-tree/09-national/NATIONAL-SP-CORE_v1.2.md",
+  "NATIONAL-SP-OVERLAY-TEMPLATE": "gov-tree/09-national/overlays/NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md"
 }

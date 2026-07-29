@@ -55,6 +55,37 @@ async function _fetchText(path) {
   return r.text();
 }
 
+// ── 매니페스트 경유 fetch (2026-07-29 신설) ────────────────────────
+// 이 파일은 지금까지 GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md·GOV-TREE-
+// PROTOCOL_v1.0.md·SP-PROVINCE-TEMPLATE_v1.1.md·NATIONAL-SP-CORE_v1.2.md·
+// NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md를 _fetchText()로 버전을 직접
+// 박아 호출했다 — worker.js의 _loadGovCommonChain()이 같은 문서를
+// 서버측에서 동일한 방식으로 하드코딩하고 있던 것과 정확히 같은
+// "버전 박제" 버그(worker.js 쪽은 2026-07-29에 이미 정정). 지금은
+// 우연히 최신본과 값이 같아 문제가 없을 뿐, 다음에 이 문서들이
+// 올라가면 이 파일만 조용히 구버전을 계속 쓰게 된다. sp-catalog.json에
+// 등록된 최신 파일명을 매니페스트 경유로 조회해 그 파일명으로 fetch한다.
+let _manifestCache = null;
+let _manifestCacheAt = 0;
+const _MANIFEST_TTL_MS = 10 * 60 * 1000;
+async function _fetchManifest() {
+  const now = Date.now();
+  if (_manifestCache && (now - _manifestCacheAt) < _MANIFEST_TTL_MS) return _manifestCache;
+  const r = await fetch(_RAW_ROOT + 'sp-catalog.json?t=' + Math.floor(now / 3600000));
+  if (!r.ok) throw new Error(`sp-catalog.json fetch 실패: HTTP ${r.status}`);
+  _manifestCache = await r.json();
+  _manifestCacheAt = now;
+  return _manifestCache;
+}
+async function _fetchByManifestKey(key) {
+  const manifest = await _fetchManifest();
+  const fname = manifest[key];
+  if (!fname) throw new Error(`매니페스트에 ${key} 키 없음`);
+  const r = await fetch(_RAW_ROOT + fname + '?t=' + Math.floor(Date.now() / 3600000));
+  if (!r.ok) throw new Error(`${key} fetch 실패: HTTP ${r.status} (${fname})`);
+  return r.text();
+}
+
 // ── 시군구명 → 도코드 역매핑 (지연 로드, 세션당 1회) ────────────────
 // sigungu-national-list.json(2026-07-20 신설)을 재사용 — 226개+시군구
 // 명칭·소속 목록.
@@ -245,7 +276,7 @@ async function _loadExpertCommonSp() {
 
 let _jejuTreeProtocol = null;
 async function _loadJejuTreeProtocol() {
-  if (!_jejuTreeProtocol) _jejuTreeProtocol = await _fetchText('00-common/GOV-TREE-PROTOCOL_v1.0.md');
+  if (!_jejuTreeProtocol) _jejuTreeProtocol = await _fetchByManifestKey('GOV-TREE-PROTOCOL');
   return _jejuTreeProtocol;
 }
 
@@ -289,7 +320,7 @@ async function _loadGovCommon() {
     _loadKgovSp(),
     _loadExpertCommonSp(),
     _fetchText('08-schema/HUMAN-AUTHORITY-GATE-SCHEMA_v1_4.md'),
-    _fetchText('00-common/overlays/GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md'),
+    _fetchByManifestKey('GOV-COMMON-OVERLAY-TEMPLATE'),
     _loadGovCommonOverlayMasterData(),
     _loadJejuTreeProtocol(),
   ]);
@@ -350,7 +381,7 @@ async function _loadDoSp() {
   let result;
   try {
     const [template, records] = await Promise.all([
-      _fetchText('01-do/templates/SP-PROVINCE-TEMPLATE_v1.1.md'),
+      _fetchByManifestKey('SP-PROVINCE-TEMPLATE'),
       _loadProvinceMasterData(),
     ]);
     const rec = records.find(r => r.도코드 === provinceCode);
@@ -405,8 +436,8 @@ async function _loadNationalSp() {
   const provinceCode = _resolveProvinceCode();
   if (_nationalSpCacheByProvince.has(provinceCode)) return _nationalSpCacheByProvince.get(provinceCode);
   const [core, overlayTemplate, overlayRecords, natRecords] = await Promise.all([
-    _fetchText('09-national/NATIONAL-SP-CORE_v1.2.md'),
-    _fetchText('09-national/overlays/NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md'),
+    _fetchByManifestKey('NATIONAL-SP-CORE'),
+    _fetchByManifestKey('NATIONAL-SP-OVERLAY-TEMPLATE'),
     _loadNatOverlayMasterData(),
     _loadNatMasterData(),
   ]);

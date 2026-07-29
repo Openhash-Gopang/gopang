@@ -12606,18 +12606,19 @@ async function _loadGovCommonChain(doCode) {
 
   const [kgov, overlayTemplate, overlayDataRaw, treeProtocol] = await Promise.all([
     _fetchDelegationPrompt('public'), // kgov == SP-10_kpublic, 'public' 항목과 동일 소스 재사용
-    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/00-common/overlays/GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md', { cache: 'no-cache' }).then(r => {
-      if (!r.ok) throw new Error(`GOV-COMMON-OVERLAY-TEMPLATE fetch 실패: HTTP ${r.status}`);
-      return r.text();
-    }),
+    // ★ 2026-07-29 정정 — 이전엔 GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md·
+    // GOV-TREE-PROTOCOL_v1.0.md를 URL에 버전을 직접 박아 fetch했다.
+    // 지금은 우연히 최신본과 같은 값이라 문제가 없었을 뿐, 다음에 이
+    // 문서들이 올라가면 조용히 구버전을 계속 쓰게 되는 구조였다 —
+    // SP-10_kpublic이 겪었던 "버전 박제"와 같은 클래스의 버그를 코드
+    // 레벨에서도 막는다. sp-catalog.json에 신규 등록해 매니페스트
+    // 경유로 항상 최신본을 가져온다.
+    _fetchByManifestKeyFromGithub('GOV-COMMON-OVERLAY-TEMPLATE'),
     fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/00-common/overlays/gov-common-overlay-master-data.json', { cache: 'no-cache' }).then(r => {
       if (!r.ok) throw new Error(`gov-common-overlay-master-data.json fetch 실패: HTTP ${r.status}`);
       return r.json();
     }),
-    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/00-common/GOV-TREE-PROTOCOL_v1.0.md', { cache: 'no-cache' }).then(r => {
-      if (!r.ok) throw new Error(`JEJU-TREE-PROTOCOL fetch 실패: HTTP ${r.status}`);
-      return r.text();
-    }),
+    _fetchByManifestKeyFromGithub('GOV-TREE-PROTOCOL'),
   ]);
 
   const rec = (overlayDataRaw.도목록 || []).find(r => r['도코드'] === doCode);
@@ -12644,13 +12645,13 @@ async function _loadGovCommonChain(doCode) {
 // 원격 ES 모듈을 안전하게 동적 import할 방법이 없어 불가피 — 클라이언트
 // 쪽이 바뀌면 이 두 함수도 같이 봐야 함을 주석으로 남긴다).
 async function _renderDoSpDynamic(provinceCode) {
-  const [templateRes, masterRes] = await Promise.all([
-    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/01-do/templates/SP-PROVINCE-TEMPLATE_v1.1.md', { cache: 'no-cache' }),
+  // ★ 2026-07-29 정정 — SP-PROVINCE-TEMPLATE_v1.1.md URL 버전 하드코딩을
+  // 매니페스트 경유로 전환(위 _loadGovCommonChain과 동일 이유).
+  const [template, masterRes] = await Promise.all([
+    _fetchByManifestKeyFromGithub('SP-PROVINCE-TEMPLATE'),
     fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/01-do/templates/province-master-data.json', { cache: 'no-cache' }),
   ]);
-  if (!templateRes.ok) throw new Error(`SP-PROVINCE-TEMPLATE fetch 실패: HTTP ${templateRes.status}`);
   if (!masterRes.ok) throw new Error(`province-master-data.json fetch 실패: HTTP ${masterRes.status}`);
-  const template = await templateRes.text();
   const records = (await masterRes.json())['도목록'] || [];
   const rec = records.find(r => r['도코드'] === provinceCode);
   if (!rec) return null; // 실사 안 된 도 — 호출부가 null을 보고 정직한 정보없음으로 대체
@@ -12682,18 +12683,17 @@ function _renderNatCatalogSectionServer(records, provinceCode) {
 }
 
 async function _renderNationalSpDynamic(provinceCode) {
-  const [coreRes, overlayTemplateRes, overlayMasterRes, natMasterRes] = await Promise.all([
-    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/09-national/NATIONAL-SP-CORE_v1.2.md', { cache: 'no-cache' }),
-    fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/09-national/overlays/NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md', { cache: 'no-cache' }),
+  // ★ 2026-07-29 정정 — NATIONAL-SP-CORE_v1.2.md·NATIONAL-SP-OVERLAY-
+  // TEMPLATE_v1.0.md URL 버전 하드코딩을 매니페스트 경유로 전환(위
+  // _loadGovCommonChain과 동일 이유).
+  const [core, overlayTemplate, overlayMasterRes, natMasterRes] = await Promise.all([
+    _fetchByManifestKeyFromGithub('NATIONAL-SP-CORE'),
+    _fetchByManifestKeyFromGithub('NATIONAL-SP-OVERLAY-TEMPLATE'),
     fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/09-national/overlays/national-sp-overlay-master-data.json', { cache: 'no-cache' }),
     fetch(GITHUB_RAW_BASE + '/prompts/gov-tree/09-national/agencies/templates/national-agency-master-data.json', { cache: 'no-cache' }),
   ]);
-  if (!coreRes.ok) throw new Error(`NATIONAL-SP-CORE fetch 실패: HTTP ${coreRes.status}`);
-  if (!overlayTemplateRes.ok) throw new Error(`NATIONAL-SP-OVERLAY-TEMPLATE fetch 실패: HTTP ${overlayTemplateRes.status}`);
   if (!overlayMasterRes.ok) throw new Error(`national-sp-overlay-master-data.json fetch 실패: HTTP ${overlayMasterRes.status}`);
   if (!natMasterRes.ok) throw new Error(`national-agency-master-data.json fetch 실패: HTTP ${natMasterRes.status}`);
-  const core = await coreRes.text();
-  const overlayTemplate = await overlayTemplateRes.text();
   const overlayRecords = (await overlayMasterRes.json())['도목록'] || [];
   const natRecords = (await natMasterRes.json())['기관목록'] || [];
 

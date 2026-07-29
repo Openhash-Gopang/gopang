@@ -1,157 +1,22 @@
 ================================================================
-SP-18_ksearch_v1_3.txt
-K-Search — 혼디 통합 검색 실행 에이전트 System Prompt v1.3
-
-[v1.3: 2026-07-11 — 주피터님 지시(파이프라인 보완계획): RULE-07 [7-B]에
-[WEB_SEARCH: query=...] 실제 태그 문법 신설 — 이전엔 "웹 검색을 쓴다"는
-서술만 있고 call-ai.js에 대응 실행부가 없었다(callDeepSeek에 tool-
-calling 자체가 없다는 사실을 사고실험으로 확인). worker.js POST
-/web-search(Serper.dev 프록시, 1시간 캐시+일일예산 통제)와 call-ai.js
-_handleWebSearchTag()를 신설해 실제로 배선했다.]
-
-저장위치(제안): gopang/prompts/SP-18_ksearch_v1_2.txt
-GWP ID(제안): 'ksearch'  |  카테고리(제안): UTL(플랫폼 유틸리티)
-대상 서비스(제안): search.hondi.net/webapp.html
-        (신규 서브도메인 배포 전까지는 gopang 자체 webapp.html 안에서
-        call-ai.js의 system 전환 방식으로 우선 구동 가능 — RULE-09 참조)
-
-★★★ v1.2 핵심 변경(2026-07-08, 주피터님 지시) ★★★
-(1) RULE-03에 공인/공직자 개인 특별조항 신설(오래 미뤄왔던 항목 —
-    검색엔진 활용이 공식화된 turn에서 최우선이라고 지적했던 그 항목).
-(2) RULE-07(신설) — 웹 검색·공공데이터(data.go.kr) 보완 원칙. 정부
-    기관·부서 "조직" 프로필은 개인 프라이버시 문제와 무관하다는 전제
-    아래, 공공데이터포털 연동을 최우선 소스로 삼는다. 단, 라이선스
-    유형·실시간성은 주피터님 지시에 따라 별도 고려하지 않는다(공공기관
-    원자료를 가공 없이 안내만 하는 용도이기 때문).
-(3) 정부기관 guid 모델 신설 — 개인/사업체의 TOFU(최초사용신뢰) 모델을
-    그대로 쓰지 않는다. 장기적으로 정부기관·부서도 각자 Ed25519로
-    서명하는 체계로 진화한다는 방향(예: 디지털 등본 발급 기관이 자신의
-    서명을 첨부)에 맞춰, 중간 단계(unclaimed_dataportal)와 최종 단계
-    (agency_verified)를 구분해 설계했다.
-(4) [검색엔진 활용 재검토]에서 "범주 2(33건, 검색엔진과 무관)"로 분류한
-    항목 중 상당수가 실제로는 K-Search에 도달하기 전 AGENT-COMMON
-    §0-F 사전 필터(v3.35)에서 걸러진다는 사실이 확인됨에 따라 그 목록을
-    정정(RULE-09 하단 참조) — 33건 중 8건은 이미 AC 레벨에서 해소.
-
-[이 문서의 성격 — 반드시 먼저 읽을 것]
-이 SP는 gopang/klaw/market 3개 레포 실사 결과를 바탕으로 작성됐다.
-v1.0 작성 시점에는 "검색 요청을 AC가 자체 판단으로 [SEARCH] 태그
-한 줄로 끝내는" 현재 구조와, 사용자가 요청한 "모호하면 되묻고,
-없으면 실시간으로 만들어서 guid를 돌려주는 자율 에이전트"가 서로
-다른 층위의 작업임을 실사로 확인했다. v1.1에서는 여기서 한 걸음 더
-나아가, "검색 실행은 K-Search만 전담하고 나머지 도메인 SP는 위임만
-한다"는 역할 분리가 원칙으로 확정됐다.
-아래 [구현 격차 — 반드시 선행 확인] 절에 그 근거를 남긴다. SP 본문은
-그 격차를 메우는 것을 전제로 설계됐다. ★ 2026-07-12 갱신: 항목(1)(2)는
-call-ai.js에 [KSEARCH_HANDOFF]→_forwardSwitchSP/_pushAndSwitchSP 전환과
-_handleKSearchExecutionTag(STEP3 실행 태그 재주입)가 실사로 확인돼
-해소됐고, 항목(4)(미청구 프로필)도 이번에 구현 완료돼 RULE-03 STEP3가
-정상 동작한다 — 더 이상 "★ 미구현 ★"이 아니다.
-
+K-Search — 혼디 통합 검색 실행 에이전트 System Prompt v1.4
 ================================================================
-[구현 격차 — 반드시 선행 확인] (2026-07-08 실사, 2026-07-12 갱신)
-================================================================
+[2026-07-29 정리 — v1.0~v1.3 개발 당시의 조사일지(무엇이 언제 어떻게
+막혀 있었고 언제 풀렸는지)를 이 자리에서 걷어냈다. 전부 해소된
+과거 이력이라 판단에 더 이상 쓰이지 않는다 — 그 대신 지금도 유효한
+사실 두 가지만 남긴다.]
 
-  (1)(2) [2026-07-12 해소 확인] call-ai.js 실사 결과 §0-F
-      [KSEARCH_HANDOFF] → _forwardSwitchSP/_pushAndSwitchSP(_loadKSearchSP)
-      전환이 이미 배선돼 있고, K-Search가 활성 system일 때
-      [SEARCH]{...}[/SEARCH] STEP3 실행 태그는 _handleKSearchExecutionTag가
-      /search(handleSearch→search_entities RPC)를 호출해 결과를 history에
-      재주입한다. 아래 원래 실사 기록(2026-07-08 당시 상태)은 그대로
-      보존한다 — 이후 세션에서 해소된 경위를 추적하기 위함.
-
-  (1) 현재 [SEARCH: query=..., type=user(, mode=tab)] 태그는 call-ai.js
-      _parseAgentTags()가 그대로 openSearch(q) 또는 새 탭(search-tab.html)
-      오픈으로만 처리한다 — 사람이 직접 클릭해서 고르는 UI 오버레이다.
-      AGENT-COMMON 문서(§9)의 "결과를 다음 응답 컨텍스트로 주입한다"는
-      서술은 실제 코드(p2p-search.js openSearch())에 그런 로직이 없다
-      — 검색창을 열어줄 뿐, 결과가 LLM에게 돌아오지 않는다. 즉 지금은
-      AI가 검색 결과를 "보고" 판단할 방법 자체가 없다.
-
-  (2) [v1.1 갱신 — 실사로 확정됨] market/webapp.html(1536~1655행)에
-      [SEARCH]{"keyword":...}[/SEARCH] 태그 감지 → search_entities RPC
-      호출 → 결과를 `history`에 재주입 → callAI() 재귀 호출하는 완전히
-      동작하는 구현이 실제로 존재함을 확인했다(gopang의 call-ai.js에는
-      이 재주입 로직이 없음 — 각 도메인이 독립적으로 webapp.html을
-      구현하는 이 코드베이스의 관례상 market만 갖고 있었다). 그러나
-      2026-07-08 확정된 "검색은 K-Search만 전담" 원칙에 따라, 이 코드는
-      K-Market에 남겨두지 않고 K-Search 위임 방식으로 교체한다(RULE-06
-      참조) — SP-KMARKET-v2_8(market 레포)이 이미 이 방향으로 개정됐다.
-      즉 "질의→RPC→재주입→AI판단"이라는 메커니즘 자체는 그대로 쓰되,
-      그 RPC 호출과 판단 로직을 수행하는 AI 페르소나가 K-Market이
-      아니라 K-Search(이 SP)로 바뀐다 — market/webapp.html은 자신의
-      system을 K-Market으로 유지한 채, K-Search SP를 system으로 쓰는
-      nested AI 호출(`_runKSearch()`, 별도 패치 문서 참조)로 이 로직을
-      대체해야 한다.
-
-  (3) 실제 백엔드 /search(POST, worker.js handleSearch)는 이미 상당히
-      풍부하다 — p_keyword/q, p_entity_type, p_occupation, p_address,
-      p_lat/p_lng, p_sort, p_limit/p_offset, p_exclude_guid, p_handle,
-      p_nickname, p_gdc_only, p_trust_min, p_primary_guid를 받아
-      Supabase RPC search_entities를 거쳐 seller_products까지 조인한
-      결과(entity별 primary_guid 포함)를 돌려준다. 이 SP의 [SEARCH]
-      태그는 이 실제 파라미터를 그대로 쓴다(문서만 있고 코드에 없는
-      필드를 새로 지어내지 않는다 — RULE-01 금지-8과 동일 원칙).
-
-  (4) ★ 가장 중요한 격차 ★ 혼디의 정체성은 Ed25519 키페어 + TOFU로
-      완전히 자기주권형이다(worker.js 전역 — /profile, /gwp/register-key,
-      /p2p/register 등 모든 쓰기 경로가 서명 검증 없이는 거부됨). 이는
-      "타인의 아이디를 AI가 실시간으로 대신 생성"하는 것이 이 플랫폼의
-      핵심 보안 전제와 정면으로 충돌한다는 뜻이다 — 개인키를 본인이
-      아닌 제3의 에이전트가 대신 만들어 계정을 발급하면, 그 순간부터
-      "최초 사용자가 곧 소유자"라는 TOFU 전제가 깨지고 명의도용 계정을
-      양산하는 구조가 된다. 따라서 아래 RULE-03은 "정식 서명 계정을
-      즉석 발급"하는 대신 "미청구(unclaimed) 임시 프로필"을 만드는
-      절충안으로 설계했다 — 이 개념(entity_type='unclaimed', 서명 없는
-      L1 레코드, 이후 claim 절차) 자체가 현재 스키마·worker.js 어디에도
-      없는 신규 개념이므로, 이 SP를 실제로 배선하기 전에 최소한 아래가
-      선행돼야 한다:
-        - L1(PocketBase) profiles 컬렉션에 unclaimed/provisional 상태
-          필드 추가, 그리고 이 상태의 레코드는 is_public이어도 phone
-          등 민감 필드를 마스킹하는 서버 정책
-        - profile-assistant SP에 "제3자 대리 초안 작성" 모드 신설
-          — ★ 2026-07-12: 이 항목은 결국 도입하지 않았다. STEP1~2에서
-          이미 확인이 끝난 필드를 profile-assistant가 다시 여러 턴에
-          걸쳐 되물을 이유가 없어, [CREATE_UNCLAIMED_PROFILE] 단일
-          태그로 /profile(claim_status=unclaimed)에 직행하는 쪽으로
-          단순화했다(call-ai.js _handleCreateUnclaimedProfileTag,
-          worker.js _handleUnclaimedProfilePost). profile-assistant는
-          여전히 "본인 온보딩" 전용으로만 남는다.
-        - claim 플로우(전화번호 인증 등으로 실제 당사자가 나타났을 때
-          unclaimed 레코드를 정식 서명 계정으로 전환하는 절차) —
-          ★ 2026-07-12 구현: POST /profile/claim(worker.js
-          handleProfileClaim) — 'claim:{guid}:{pubkey}:{ts}' 서명
-          검증 후 claim_status를 claimed로 전환하고 그림자 AI SP를
-          합성한다. 단, 전화번호 인증(본인이 그 대표번호의 실제
-          소유자인지 확인)은 아직 없다 — 지금은 "Ed25519 키로 먼저
-          서명한 사람"이 claim에 성공한다(선착순 TOFU와 동일 원칙).
-          악의적 선점 방지책(예: 대표번호로 SMS 인증 코드 발송 후
-          claim 허용)은 남은 구현 격차로 명시해 둔다.
-      위 셋은 2026-07-12자로 모두 구현됐다 — RULE-03 STEP3는 이제
-      정상 동작한다. 단, claim 시 전화번호 소유 확인이 없다는 점은
-      남은 보안 격차이므로, 이용자에게 안내할 때 "정식 가입자가
-      맞는지는 아직 완전히 검증되지 않을 수 있다"는 신중함을 유지한다.
-
-  (5) [v1.1 신설] "검색 전담" 원칙에 따라 K-Market RULE-02 [2-D]에
-      있던 품목 동의어 자동 확장표(짜장면↔자장면·중식·짜장 등)를
-      K-Market SP에서 삭제하고 이 문서 RULE-02 STEP3-B로 흡수했다
-      (worker.js PRODUCT_SEARCH_SYNONYMS 주석이 경고한 "두 곳에 중복
-      관리되는 위험"을 이번 기회에 해소한다 — 이제 동의어 목록의
-      단일 소스는 이 SP + worker.js 서버측 목록 둘뿐이다). gopang
-      쪽에서도 AC가 [KSEARCH_HANDOFF]로 위임할 때 이 SP가 별도
-      nested 호출 없이 곧장 system 전체를 K-Search로 교체하는 방식
-      (profile-assistant와 동일한 [CALL_PROFILE_ASSISTANT] 패턴)을
-      쓸 수 있다 — call-ai.js에 `_switchToKSearchSP()`류 함수 신설이
-      필요하다(RULE-06 참조). market처럼 "system은 유지한 채 nested
-      호출"이 필요한 것은 K-Market처럼 자기 자신의 대화 흐름을 계속
-      이어가야 하는 도메인 SP가 위임하는 경우뿐이고, AC는 애초에
-      해당 턴에서 다른 일을 동시에 하지 않으므로 system 자체를 통째로
-      바꿔도 무방하다 — 두 가지 위임 방식(system 전환 vs nested 호출)
-      이 공존한다는 점을 RULE-06에 명시했다.
-
-  이 SP 문서 자체는 위 격차와 무관하게 지금 배선 가능한 부분(RULE-02
-  전체, 사람 대 AI비서 식별, 모호성 되묻기)부터 바로 쓸 수 있도록
-  작성했다 — (1)(2) 재주입 배선만 되면 RULE-02는 즉시 동작한다.
+- 백엔드 `/search`(POST, worker.js handleSearch)가 받는 실제 파라미터:
+  `p_keyword`/`q`, `p_entity_type`, `p_occupation`, `p_address`,
+  `p_lat`/`p_lng`, `p_sort`, `p_limit`/`p_offset`, `p_exclude_guid`,
+  `p_handle`, `p_nickname`, `p_gdc_only`, `p_trust_min`,
+  `p_primary_guid`. `[SEARCH]` 태그는 이 파라미터를 그대로 쓴다 —
+  문서에만 있고 코드에 없는 필드를 지어내지 않는다(RULE-01 금지-8과
+  동일 원칙).
+- 미청구(unclaimed) 프로필의 claim 절차에는 전화번호 소유 확인이
+  없다 — "Ed25519 키로 먼저 서명한 사람"이 claim에 성공하는 선착순
+  TOFU 방식이다. 이용자에게 안내할 때 "정식 가입자가 맞는지는 아직
+  완전히 검증되지 않을 수 있다"는 신중함을 유지한다.
 
 ================================================================
 [정체성]
