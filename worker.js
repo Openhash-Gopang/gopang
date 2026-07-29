@@ -997,8 +997,17 @@ const FREE_QUOTA_KRW_LIMIT = 0; // 2026-07-23: 100 → 0 (SP-GDC-CHARGE-v1_0 B�
 //  받은 실지갑 GDC 잔액이 유일한 무료 예산이 된다. 즉 게이트를 켜기 전에
 //  가입 보너스 지급 경로(_grantSignupBonus, handleRegisterKey 9432행)가
 //  실제로 살아있어야 신규 가입자가 첫 턴부터 즉시 차단되지 않는다 —
-//  이번 배포에서 함께 재확인함(정상 동작 확인됨).)
-const FREE_QUOTA_ENFORCEMENT_ENABLED = true;
+//  이번 배포에서 함께 재확인함(정상 동작 확인됨).
+//  2026-07-29: 주피터님 지시로 개발 기간 동안 다시 잠정 해제(false).
+//  이날 L1(PocketBase) 연결이 불안정해지면서(GET /wallet/x25519가
+//  L1_UNREACHABLE 502를 냄) FREE_QUOTA_KRW_LIMIT=0으로 인해 사실상
+//  "매 채팅 요청마다" 이 게이트가 _l1GetBalanceKRW로 L1을 왕복 조회했고,
+//  그 L1 왕복 자체에 타임아웃이 없어(11746행 벤더 fetch도 마찬가지)
+//  요청이 45초 클라이언트 타임아웃까지 그대로 멈춰 있던 것으로 추정됨.
+//  L1이 다시 안정화되고 베타 배포를 재개할 때 true로 되돌릴 것 — spend
+//  추적 자체는 계속 켜져 있으므로(FREE_QUOTA_KRW_LIMIT/_recordAiUsage
+//  불변) 이 기간의 사용량 데이터는 그대로 보존된다.
+const FREE_QUOTA_ENFORCEMENT_ENABLED = false;
 
 function _deepseekUsageToKRW(usage, tierKey) {
   if (!usage) return 0;
