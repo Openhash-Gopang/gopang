@@ -1,0 +1,14 @@
+# SP 트리 구조 자체를 바꾸는 파일은 항상 사람 승인을 거치도록 강제한다
+# (2026-07-29). 이 파일이 실제로 작동하려면 저장소 Settings → Branches →
+# main → "Require review from Code Owners"를 켜야 한다 — CODEOWNERS
+# 파일을 두는 것만으로는 자동 강제되지 않는다.
+#
+# 여기 지정된 파일들은 SP-TREE-REGISTRY의 edges 블록을 우회할 수 있는
+# 지점이다 — 레지스트리 자신, 그걸 강제하는 CI 스크립트, 그 CI가 도는
+# 워크플로. 이 넷 중 하나라도 리뷰 없이 바뀌면 나머지 강제 장치가 전부
+# 무력화된다.
+prompts/SP-TREE-REGISTRY_v1_0.md   @nounweb
+tools/check_no_hardcoded_sp_refs.py       @nounweb
+tools/check_no_undeclared_inheritance.py  @nounweb
+.github/workflows/check-no-hardcoded-sp-refs.yml @nounweb
+.github/CODEOWNERS  @nounweb

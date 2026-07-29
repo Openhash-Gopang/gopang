@@ -97,9 +97,64 @@ K-Doctor — 독립. K-Health를 상속하지 않는다(제도 대변과 개인 
 - **SP_social-worker** → SP_real-estate-agent를 서술 방식 참고 사례로 언급
 - **profile-assistant** → HONDI-CAPABILITIES-COMMON을 참조
 
+## F. 기계 판독용 엣지 목록 (CI·SP-TREE-GUARDIAN 공통 파싱 대상)
+
+A~E는 사람이 읽는 설명이고, 아래 블록은 `tools/check_no_undeclared_inheritance.py`와
+`SP-TREE-GUARDIAN`이 똑같이 파싱하는 단일 데이터다 — **새 상속 관계가 필요하면
+반드시 여기에 줄을 추가해야 하고(그래야 CI가 통과한다), 그 외의 방식으로
+"관습적으로" 새 부모-자식 관계를 선언할 수 없다.**
+
+형식: `CHILD_PATTERN -> PARENT_NAME` 한 줄에 하나. `CHILD_PATTERN`은 정확한
+이름이거나 `*` 글롭(예: `AGENT-SUPPLIER-*`)을 쓸 수 있다. `#`으로 시작하는 줄은
+주석. `ALIAS: 짧은이름 = 정식이름` 줄로 코드/문서에서 흔히 쓰는 별칭을 등록한다
+(예: `kgov`는 `SP-10_kpublic`을 가리키는 관용 별칭).
+
+```edges
+# 별칭
+ALIAS: kgov = SP-10_kpublic
+
+# 공식 패밀리 (tools/check_sp_inheritance.py가 이미 상세 검증)
+AGENT-SUPPLIER-* -> AGENT-SUPPLIER-COMMON
+SP-INDUSTRY-TRANSFORM-* -> SP-INDUSTRY-TRANSFORM-COMMON
+
+# UNIVERSAL-INTEGRITY 직속 (SP-NN_xxx 전국 서비스 계열, "# 상위 상속" 헤더로 선언)
+SP-02_k119 -> UNIVERSAL-INTEGRITY
+SP-03_kpolice -> UNIVERSAL-INTEGRITY
+SP-04_khealth -> UNIVERSAL-INTEGRITY
+SP-06_ktraffic -> UNIVERSAL-INTEGRITY
+SP-10_kpublic -> UNIVERSAL-INTEGRITY
+SP-12_kdemocracy -> UNIVERSAL-INTEGRITY
+SP-13_klogistics -> UNIVERSAL-INTEGRITY
+SP-16_kinsurance -> UNIVERSAL-INTEGRITY
+
+# 공통 레이어 체인 (B 섹션 산문 설명과 동일 관계)
+PROFESSIONAL-common -> UNIVERSAL-common
+K-Public_common -> PROFESSIONAL-common
+UNIVERSAL-common -> UNIVERSAL-INTEGRITY
+SP-PROVINCE-TEMPLATE -> kgov
+SP-INDUSTRY-TRANSFORM-COMMON -> HUMAN-AUTHORITY-GATE-SCHEMA
+SP-INDUSTRY-TRANSFORM-COMMON -> GOV-TIER-IO-SCHEMA
+SP-10_kpublic -> HUMAN-AUTHORITY-GATE-SCHEMA
+SP-10_kpublic -> PDV-TRANSFER-PROTOCOL
+GOV-TIER-IO-SCHEMA -> DOCUMENT-TYPE-REGISTRY
+GOV-TIER-IO-SCHEMA -> DATA_REQUIREMENT-SCHEMA
+```
+
+**적용 범위 — 2026-07-29 기준 알려진 한계**: 이 edges 블록과
+`check_no_undeclared_inheritance.py`는 현재 `sp-catalog.json`에 등록된
+최상위 SP(위 목록)에 대해서만 **strict**(위반 시 CI 실패)로 동작한다.
+`prompts/gov-tree/` 아래 도청·시청·부서·읍면동 SP는 `# 상위 상속` 헤더
+선언이 893건 존재하지만 `sp-catalog.json`에 개별 등록되지 않고, 표기
+형식도 파일마다 제각각(중간에 폐기 경고·조건부 표시·플레이스홀더가
+섞여 있음)이라 지금 상태로 strict 적용하면 오탐이 정상 작업을 막는다
+— 그래서 gov-tree는 **informational**(위반을 출력하되 CI는 통과)로
+남겨둔다. gov-tree 헤더 형식을 먼저 정규화하는 게 strict 전환의
+선행 조건이다(AGENT-SUPPLIER 레거시와 동일한 처리 원칙,
+`check_sp_inheritance.py` 참조).
+
 ## 변경 이력
 
-- v1.0 (2026-07-29): 신설. 2026-07-29 감사에서 발견된 16개 파일·33건의
+- v1.0 (2026-07-29, 같은 날 F 섹션 추가): 신설. 2026-07-29 감사에서 발견된 16개 파일·33건의
   하드코딩된 SP 상호 참조를 실제로 수정하면서 드러난 관계를 기반으로
   A~E 섹션을 채웠다. A, B 섹션은 기존 문서(check_sp_inheritance.py
   FAMILIES, SP_hierarchy_inheritance_v1_0.md)의 내용을 그대로 반영했고,

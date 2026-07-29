@@ -1,4 +1,4 @@
-name: Check no hardcoded SP refs
+name: Check SP-TREE-REGISTRY compliance (no hardcoded refs, no undeclared edges)
 
 on:
   push:
@@ -17,6 +17,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # check_no_undeclared_inheritance.py가 origin/main과 diff를 떠야
+          # 하므로 전체 히스토리가 필요하다(얕은 체크아웃이면 base ref가 없음).
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -29,3 +33,10 @@ jobs:
       # 것을 발견해 고쳤다 — 같은 드리프트가 재발하면 병합 전에 잡는다.
       - name: Run hardcoded-SP-refs check
         run: python3 tools/check_no_hardcoded_sp_refs.py
+
+      # ── 개별 SP가 SP-TREE-REGISTRY를 거치지 않고 자체적으로 새 상위/하위
+      # 관계를 선언하는 것을 막는다(2026-07-29 요청). 이번 PR/커밋에서 새로
+      # 추가·변경된 "# 상위 상속" 선언만 검사한다 — 기존 gov-tree 893건은
+      # 소급 검증하지 않는다(SP-TREE-REGISTRY_v1_0.md §F "적용 범위" 참조).
+      - name: Run undeclared-inheritance check
+        run: python3 tools/check_no_undeclared_inheritance.py --base origin/main
