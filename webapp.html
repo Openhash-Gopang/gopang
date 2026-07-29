@@ -3625,6 +3625,7 @@ window.closePDV = closePDV;
     const {
       _loadAgentCommonSP, _handleProfileTags, _stripInternalTags, _buildFirstContactContext,
       _resolveHondiTier, _parseAgentTags, _handleWebSearchTag, _handleDelegateToFlashTag,
+      _handleSPAuthorTags,
     } = await import('./src/gopang/ai/call-ai.js');
     // BUG-FIX(2026-07-02): _callPanelAI(AI 패널 — 실제로 쓰이는 주 경로)가
     // 지금까지 _parseAgentTags를 호출한 적이 없었다. 메인 채팅 전용
@@ -3938,6 +3939,20 @@ window.closePDV = closePDV;
           } catch (e) {
             console.warn('[Panel] _handleWebSearchTag 처리 실패(무시):', e.message);
           }
+        }
+
+        // ── SP-Author 자동화 태그 실행 (2026-07-29, 실사로 발견) ──────
+        // 이 패널이 여태 [GWP_REGISTRY_SEARCH:]·[GOV_SP_DRAFT_REQUEST:]·
+        // [SP_DRAFT_REQUEST:]·[ESCALATE] 태그를 아예 처리하지 않고 있었다
+        // — call-ai.js의 메인 채팅 경로(_handleSPAuthorTags)만 호출됐고,
+        // 패널은 독립 fetch 경로(_callPanelAI)라 그 호출 자체가 없었다.
+        // 위 _handleWebSearchTag·_handleDelegateToFlashTag와 동일한
+        // 패턴(_panelSendFn 래퍼로 bubbleEl 문제 회피)을 그대로 따른다.
+        let _spAuthorHandled = false;
+        try {
+          _spAuthorHandled = await _handleSPAuthorTags(full, bubbleEl, _panelSendFn, userText);
+        } catch (e) {
+          console.warn('[Panel] _handleSPAuthorTags 처리 실패(무시):', e.message);
         }
 
         // ── GWP/SEARCH/OPEN_PROFILE/P2P_INVITE 태그 실행 (2026-07-02 신설) ──

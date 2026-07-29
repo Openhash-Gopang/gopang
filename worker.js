@@ -3536,8 +3536,8 @@ async function _l1PatchAtomRow(env, recordId, patch) {
 // ── 오케스트레이션 HTTP 핸들러 (2026-07-08 신설) ────────────────────
 // status:active인 항목만 실제 라우팅에 안전하게 쓸 수 있다고 간주한다
 // — draft/pending_review는 조회는 되지만 호출자(K-Compose)가 이용자에게
-// "아직 검토 중"이라고 고지해야 한다(AGENT-COMMON §3-0 SP_DRAFT_REQUEST와
-// 동일한 승인 원칙, 여기서도 그대로 적용).
+// "아직 검토 중"이라고 고지해야 한다(AC-PRO-CORE §DRAFT_REQUEST/AC-SHADOW-
+// CORE §GAP의 SP_DRAFT_REQUEST와 동일한 승인 원칙, 여기서도 그대로 적용).
 
 // ★ 2026-07-11 추가 — SP-Author 자동화(신호 큐잉 + ESCALATE 최소구현).
 // 지금까지 [SP_DRAFT_REQUEST]/[GOV_SP_DRAFT_REQUEST]/[ESCALATE] 태그가
@@ -4540,7 +4540,7 @@ async function handleSPAuthorQueueStatus(request, env, corsHeaders, recordId) {
 }
 
 // POST /sp-author/escalate  body: {to?, reason, ref_collection?, ref_id?, summary}
-// AGENT-COMMON [ESCALATE: to=..., ...] 태그가 이걸 호출한다(최소 구현 —
+// AC-PRO-CORE·AC-SHADOW-CORE의 [ESCALATE: to=..., ...] 태그가 이걸 호출한다(최소 구현 —
 // 실제 알림 채널(이메일/슬랙 등) 연동은 이 함수를 확장하면 된다).
 async function handleSPAuthorEscalate(request, env, corsHeaders) {
   let payload;
@@ -7320,7 +7320,7 @@ export default {
     // ── 국가데이터처(KOSIS) 통계 리졸버 (2026-07-16 배선) ──
     if (pathname === '/api/stats/resolve') return handleGovDataResolve(request, url, env, corsHeaders);
     // ── 오케스트레이션 레지스트리 (2026-07-08 신설, 2026-07-09 확장 —
-    //    AGENT-COMMON §0-H v3.40 / K-Compose SP-20이 참조. PROCEDURE_MAP·
+    //    AC-PRO-CORE §ORCHESTRATION / K-Compose SP-20이 참조. PROCEDURE_MAP·
     //    ORG_PROFILE·ATOM_ROW를 실제 L1 PocketBase 컬렉션에 저장한다.
     //    컬렉션 자체는 pb_migrations/1783500001~003로 생성됨(더 이상
     //    관리자 패널 수동 생성 불필요) ──
@@ -7661,7 +7661,7 @@ export default {
     // 서명 체계 — 전체 시스템이 서명 체계를 하나만 공유한다는 원칙.
     // 2026-07-01: SP를 돌려주던 /profile/my-sp를 대체 — 이제 system_prompt는
     // 단 하나뿐이라 "내려줄 internal SP"가 없고, "본인이 맞는지"만 매
-    // 핸드셰이크마다 실시간으로 묻는다. AGENT-COMMON §4 참조)
+    // 핸드셰이크마다 실시간으로 묻는다. AC-SHADOW-CORE §HANDSHAKE 참조)
     if (pathname === '/profile/verify-owner' && request.method === 'GET')
       return handleProfileVerifyOwner(request, env, corsHeaders);
 
@@ -15529,7 +15529,7 @@ async function _deriveAgentGuid(principalGuid) {
 }
 
 // ── Phase 2: 그림자 SP 합성 ──────────────────────────────────────────
-// AGENT-COMMON + AGENT-SUPPLIER-{ksic} + 본인 industry_fields 지식을 합성해
+// AC-SHADOW-CORE + AGENT-SUPPLIER-{ksic} + 본인 industry_fields 지식을 합성해
 // 그림자의 system_prompt를 만든다.
 // 설계 원칙:
 //   - 합성 실패 시 null 반환(그림자 생성을 막지 않는다)
@@ -15548,33 +15548,37 @@ async function _compileAgentSP(env, principalProfile) {
     `[실시간 공개 범위 판단 — 모든 사업체·기관형 그림자 AI 공통]\n` +
     `이 system_prompt는 단 하나뿐이며, 운영자용/고객용으로 미리 나뉘어\n` +
     `있지 않습니다. 상대가 본인(운영자)인지는 대화 시작 시 핸드셰이크\n` +
-    `(AGENT-COMMON §4)에서 GET /profile/verify-owner 서명 검증 결과로\n` +
-    `실시간 판단합니다.\n` +
+    `(AC-SHADOW-CORE §HANDSHAKE)에서 GET /profile/verify-owner 서명 검증\n` +
+    `결과로 실시간 판단합니다.\n` +
     `  - 검증 통과(verified=true) → 원가·마진·거래처 단가 등 내부\n` +
     `    데이터 질문에도 정직하게 답합니다.\n` +
     `  - 검증 미통과/미시도(verified=false 또는 핸드셰이크 생략) →\n` +
     `    외부 고객·제3자로 간주해 영업기밀을 제공하지 않습니다\n` +
     `    (AGENT-SUPPLIER-COMMON §0 고객 보호 원칙 우선).`;
 
-  // 1) AGENT-COMMON 로드 — sp-catalog.json['AGENT-COMMON'] 키로 파일명 결정
-  //    (2026-07-09: prompts/manifest.json → prompts/sp-catalog.json 개명, W-16)
-  //    CI 빌드 시 자동 갱신 — AGENT-COMMON-LATEST.txt 포인터 파일 방식 제거
+  // 1) AC-SHADOW-CORE 로드 — sp-catalog.json['AC-SHADOW-CORE'] 키로 파일명
+  //    결정 (2026-07-29: AGENT-COMMON_v3_50.txt에서 분리 — 그 파일은 개인
+  //    AC(나만의 AI 비서, AC-PRO-CORE가 이미 대체) 전용 SCAFFOLDING까지
+  //    포함하고 있었고, 그림자 AI(이 함수)는 그중 §0/§0-G/§4/§4-1/§5/§7
+  //    (정체성·응급게이트·핸드셰이크·PDV 공개경계·K-Market 핸드오프·출력
+  //    규칙)만 실제로 썼다 — AC-SHADOW-CORE_v1_0.txt가 그 부분만 남긴
+  //    신규 정본이다. AGENT-COMMON_v3_50.txt는 이 전환 후 삭제됐다.
   let commonSP = '';
   try {
     const manifestRes = await fetch(`${REPO_RAW}/prompts/sp-catalog.json`, { ...headers, cache: 'no-cache' });
     if (!manifestRes.ok) throw new Error('manifest fetch 실패: ' + manifestRes.status);
     const manifest = await manifestRes.json();
-    const commonFile = manifest['AGENT-COMMON'];
-    if (!commonFile) throw new Error('manifest 에 AGENT-COMMON 키 없음');
+    const commonFile = manifest['AC-SHADOW-CORE'];
+    if (!commonFile) throw new Error('manifest 에 AC-SHADOW-CORE 키 없음');
     // ALLOW-EMBEDDED-SP: 이 줄 자체는 로그/fetch 코드일 뿐 SP 사본이 아님 —
     // 정적 분석기(tools/check_no_embedded_sp.py)가 파일 반대편의 무관한
     // 백틱과 잘못 짝지어 큰 가짜 리터럴로 오탐하는 경우(2026-07-05 확인).
     const commonRes = await fetch(`${REPO_RAW}/prompts/${commonFile}`, { headers });
-    if (!commonRes.ok) throw new Error('AGENT-COMMON 로드 실패: ' + commonRes.status);
+    if (!commonRes.ok) throw new Error('AC-SHADOW-CORE 로드 실패: ' + commonRes.status);
     commonSP = await commonRes.text();
-    console.info('[Worker] AGENT-COMMON 로드 완료:', commonFile);
+    console.info('[Worker] AC-SHADOW-CORE 로드 완료:', commonFile);
   } catch (e) {
-    console.warn('[Worker] AGENT-COMMON 로드 오류, 빈 문자열로 계속:', e.message);
+    console.warn('[Worker] AC-SHADOW-CORE 로드 오류, 빈 문자열로 계속:', e.message);
   }
 
   // 2) AGENT-SUPPLIER-COMMON 로드 (업종 SP 공통 모듈 — Type B 정체성·
@@ -15688,11 +15692,11 @@ ${JSON.stringify(iFields, null, 2)}
 \`\`\``
     : '';
 
-  // 5) 합성 — 청중 안내문 → AGENT-COMMON → AGENT-SUPPLIER-COMMON → AGENT-SUPPLIER-{ksic} → industry_fields
+  // 5) 합성 — 청중 안내문 → AC-SHADOW-CORE → AGENT-SUPPLIER-COMMON → AGENT-SUPPLIER-{ksic} → industry_fields
   // 5) 합성 — 실시간 공개범위 안내문(업종 SP가 있을 때만, 즉 사업체·기관
-  //    한정) → AGENT-COMMON → AGENT-SUPPLIER-COMMON → AGENT-SUPPLIER-{ksic}
+  //    한정) → AC-SHADOW-CORE → AGENT-SUPPLIER-COMMON → AGENT-SUPPLIER-{ksic}
   //    → SP-INDUSTRY-TRANSFORM-{ksic}(automation_opt_in 있을 때만) →
-  //    industry_fields. 개인은 안내문 없이 AGENT-COMMON만(영업기밀 같은
+  //    industry_fields. 개인은 안내문 없이 AC-SHADOW-CORE만(영업기밀 같은
   //    공개범위 구분 자체가 해당 없음).
   const universalIntegrity = await _fetchUniversalIntegrity();
   const parts = [universalIntegrity, ksic ? realtimeDisclosurePreamble : '', commonSP, supplierCommonSP, supplierSP, industryTransformSP, iFieldsBlock].filter(Boolean);
@@ -15715,7 +15719,7 @@ ${JSON.stringify(iFields, null, 2)}
  * "나만의 AI비서 = 그림자"이며, 별도 행·별도 guid·별도 키쌍을 만들지
  * 않는다 — 본인 user_profiles 행에 단일 system_prompt를 직접 기록한다.
  * 운영자/고객 공개범위 구분은 사전 컴파일(internal/public 두 변형)이
- * 아니라, 대화 시작 시 [핸드셰이크 절차](AGENT-COMMON §4)에서
+ * 아니라, 대화 시작 시 [핸드셰이크 절차](AC-SHADOW-CORE §HANDSHAKE)에서
  * GET /profile/verify-owner로 실시간 판단한다(_compileAgentSP의
  * realtimeDisclosurePreamble 참조).
  * 이전엔 _createAgentForPrincipal(기관 전용 별도 그림자 행+키쌍 생성)과

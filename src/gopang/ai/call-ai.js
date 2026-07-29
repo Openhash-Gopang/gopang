@@ -1976,6 +1976,13 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
     // 실제로 등록됐는지 알 길이 없었다. Claude가 도구 호출 진행상황을
     // 보여주듯, 여기서도 사실관계(등록 성공/실패)는 모델의 서술 품질에
     // 기대지 않고 별도의 눈에 보이는 상태 말풍선으로 직접 보장한다.
+    // ★ 2026-07-29 null-safe화 — appendBubble()은 #message-list가 없는
+    // 컨텍스트(예: webapp.html의 AI 패널, #ai-panel-messages 사용)에서는
+    // 조용히 undefined를 반환한다(bubble.js §설계). 여기서 그 반환값을
+    // 바로 .textContent에 대입하면 TypeError로 함수 전체가 죽어, 뒤이은
+    // sendFn() 호출(사용자에게 결과를 알려주는 부분)까지 함께 유실된다 —
+    // 진행 말풍선은 "있으면 갱신, 없으면 생략"으로 처리하고, 큐잉 자체
+    // (네트워크 호출)는 DOM과 무관하게 항상 끝까지 실행되도록 분리한다.
     const _progBubble = appendBubble('ai', '⏳ SP 초안 작성 요청을 서버에 등록하는 중…');
     let resultText, _queueOk = false, _queueId = '';
     try {
@@ -1998,9 +2005,11 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
     } catch (e) {
       resultText = `{"error":"${e.message}"}`;
     }
-    _progBubble.textContent = _queueOk
-      ? `✅ SP 초안 작성 요청이 등록됐습니다${_queueId ? ` (요청 ID: ${_queueId})` : ''} — 검토·승인 후 이용하실 수 있어요.`
-      : `⚠️ SP 초안 작성 요청 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.`;
+    if (_progBubble) {
+      _progBubble.textContent = _queueOk
+        ? `✅ SP 초안 작성 요청이 등록됐습니다${_queueId ? ` (요청 ID: ${_queueId})` : ''} — 검토·승인 후 이용하실 수 있어요.`
+        : `⚠️ SP 초안 작성 요청 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.`;
+    }
     await sendFn(`[GOV_SP_DRAFT_REQUEST 결과] ${resultText}`);
     return true;
   }
@@ -2019,6 +2028,9 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
     history.push({ role: 'assistant', content: fullReply });
     // ★ 2026-07-11 추가 — 위 GOV_SP_DRAFT_REQUEST와 동일한 이유로 진행
     // 상태를 모델 서술에만 맡기지 않고 별도 말풍선으로 직접 보장한다.
+    // ★ 2026-07-29 null-safe화 — 위 GOV_SP_DRAFT_REQUEST 분기와 동일한
+    // 이유(appendBubble()이 #message-list 없는 컨텍스트에서 undefined
+    // 반환)로 방어한다.
     const _progBubble = appendBubble('ai', '⏳ SP 초안 작성 요청을 서버에 등록하는 중…');
     let resultText, _queueOk = false, _queueId = '';
     try {
@@ -2030,6 +2042,15 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
           institution: get('suggested_slug') || get('domain'),
           task: get('request') || get('domain'),
           source_conversation: userText,
+          // ★ 2026-07-29 수정 — AC-PRO-CORE §DRAFT_REQUEST(2026-07-28
+          // 신설)가 이미 태그에 risk_tier={low|high}를 실어 보내고
+          // 있었는데, 여기서 파싱만 하고 서버로 전달하지 않아 worker.js의
+          // risk_tier 화이트리스트 판정(risk_tier==='low'일 때만 '사후
+          // 보고'로 취급, 그 외 전부 안전하게 'high')이 항상 기본값
+          // 'high'로만 떨어지던 버그. get('risk_tier')를 그대로 전달한다
+          // — 화이트리스트 검증은 worker.js가 이미 하고 있으므로 여기선
+          // 그대로 넘기기만 하면 된다.
+          risk_tier: get('risk_tier'),
           priority: 'normal',
         }),
       });
@@ -2040,9 +2061,11 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
     } catch (e) {
       resultText = `{"error":"${e.message}"}`;
     }
-    _progBubble.textContent = _queueOk
-      ? `✅ SP 초안 작성 요청이 등록됐습니다${_queueId ? ` (요청 ID: ${_queueId})` : ''} — 검토·승인 후 이용하실 수 있어요.`
-      : `⚠️ SP 초안 작성 요청 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.`;
+    if (_progBubble) {
+      _progBubble.textContent = _queueOk
+        ? `✅ SP 초안 작성 요청이 등록됐습니다${_queueId ? ` (요청 ID: ${_queueId})` : ''} — 검토·승인 후 이용하실 수 있어요.`
+        : `⚠️ SP 초안 작성 요청 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.`;
+    }
     await sendFn(`[SP_DRAFT_REQUEST 결과] ${resultText}`);
     return true;
   }
@@ -3721,18 +3744,18 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
 
   // ── 전문가 AI(페르소나) 세션 처리 ────────────────────────
   // 명시적 종료 발화("끝났어" 등) 감지 시 endExpertSession()이 즉시 실행되어
-  // CFG.system을 그림자 AI(AGENT-COMMON)로 복원한다 — 이 경우 아래 SP 결정
-  // 로직을 정상적으로 통과시켜 그림자 AI가 이번 발화에 바로 응답하게 한다.
+  // CFG.system을 개인 AC(AC-PRO-CORE)로 복원한다 — 이 경우 아래 SP 결정
+  // 로직을 정상적으로 통과시켜 AC가 이번 발화에 바로 응답하게 한다.
   await maybeHandleExpertTurn(userText);
 
   if (isExpertActive()) {
-    // 전문가 세션이 이번 턴에도 유지됨 — AGENT-COMMON 결정 로직을 건너뛰고
+    // 전문가 세션이 이번 턴에도 유지됨 — AC-PRO-CORE 결정 로직을 건너뛰고
     // 페르소나 System Prompt를 그대로 유지한다(history는 공유 — 맥락 보존,
-    // PA→AGENT-COMMON 전환과 달리 여기서는 history를 비우지 않는다).
+    // PA→AC-PRO-CORE 전환과 달리 여기서는 history를 비우지 않는다).
     applyExpertSystemIfActive();
   } else {
 
-  // AGENT-COMMON 최초 1회 로드 (이후 캐시) — manifest["AGENT-COMMON"] 키로 버전 결정
+  // AC-PRO-CORE 최초 1회 로드 (이후 캐시) — manifest["AC-PRO-CORE"] 키로 버전 결정
   if (!CFG.system_base) {
     CFG.system_base = await _loadAgentCommonSP();
   }
