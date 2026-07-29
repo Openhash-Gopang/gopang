@@ -1,0 +1,32 @@
+name: SP-TREE-GUARDIAN weekly audit
+
+# sp-refresh-scheduler.yml과 동일 원칙 — 저장소 안에는 크론이 없으므로
+# 이 워크플로가 "저장소 밖 스케줄러" 역할을 대신한다. 트리 구조는
+# 매일 바뀔 만큼 빠르지 않으므로(refresh scheduler의 "매일"과 달리)
+# 주 1회로 충분하다.
+
+on:
+  schedule:
+    # 매주 월요일 00:00 UTC(KST 09:00)
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  guardian-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ── SP-TREE-GUARDIAN 감사 트리거 (2026-07-29 신설) ──────────────
+      # 이 스텝은 트리거만 한다 — 실제 diff 수집·LLM 감사·findings 저장은
+      # worker.js(_runSpTreeGuardianAudit)가 수행하고, 결과는 사람이
+      # 검토하는 sp_tree_audit_findings 큐에만 쌓인다(자동 반영 없음).
+      - name: Trigger SP-TREE-GUARDIAN audit
+        run: python3 tools/sp_tree_guardian_trigger.py

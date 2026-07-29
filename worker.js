@@ -3641,6 +3641,227 @@ async function _l1ListEscalations(env, unreadOnly) {
   return data.items || [];
 }
 
+// ── SP-TREE-GUARDIAN (2026-07-29 신설) ──────────────────────────────
+// _l1CreateEscalation/_l1ListEscalations와 동일한 패턴 — 컬렉션 이름만
+// sp_tree_audit_findings(감사 결과)·sp_tree_guardian_runs(마지막 감사
+// 시점 추적, base sha 기준점)로 다르다.
+
+async function _l1CreateSpTreeAuditFinding(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_tree_audit_findings/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`sp_tree_audit_findings 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+async function _l1ListSpTreeAuditFindings(env, statusFilter) {
+  const token = await _l1AdminToken(env);
+  const filter = statusFilter ? encodeURIComponent(`status='${statusFilter.replace(/'/g, "\\'")}'`) : '';
+  const url = `${L1_DEFAULT}/api/collections/sp_tree_audit_findings/records?perPage=100&sort=-created` +
+    (filter ? `&filter=${filter}` : '');
+  const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`sp_tree_audit_findings 목록 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items || [];
+}
+
+// 가장 최근 감사 실행 기록(=지난번에 base로 삼았던 head_sha)을 가져온다.
+// 없으면(최초 실행) null — 호출부가 lookback(7일)으로 대체한다.
+async function _l1GetLatestSpTreeGuardianRun(env) {
+  const token = await _l1AdminToken(env);
+  const url = `${L1_DEFAULT}/api/collections/sp_tree_guardian_runs/records?perPage=1&sort=-created`;
+  const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`sp_tree_guardian_runs 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return (data.items && data.items[0]) || null;
+}
+
+async function _l1CreateSpTreeGuardianRun(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_tree_guardian_runs/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`sp_tree_guardian_runs 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+// ── SP-TREE-GUARDIAN 감사 실행 (2026-07-29 신설) ────────────────────
+// tools/sp_tree_guardian_trigger.py가 주 1회 이 로직을 트리거한다
+// (sp_refresh_scheduler.py와 동일한 "저장소 안에는 크론이 없다" 원칙).
+//
+// _generateIndustryTransformSP(위)와 동일하게, 시스템 프롬프트는 여기
+// 하드코딩하지 않고 prompts/SP-TREE-GUARDIAN_v1_0.md를 매번 manifest
+// 경유로 fetch한다 — check_no_embedded_sp.py가 막으려는 상황과 다르다.
+//
+// ★ 절대 원칙(SP-TREE-GUARDIAN §0과 동일) — 이 함수는 findings를
+// sp_tree_audit_findings에 status='pending_review'로 쌓기만 한다.
+// SP-TREE-REGISTRY나 어떤 SP 파일도 이 함수가 직접 수정하지 않는다.
+async function _runSpTreeGuardianAudit(env, ctx) {
+  const REPO_RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main';
+  const repoBase = `${GITHUB_API}/repos/${GITHUB_OWNER}/${GITHUB_REPO_NAME}`;
+  const ghHeaders = _ghHeaders(env);
+
+  const headRes = await fetch(`${repoBase}/commits/${GITHUB_DEFAULT_BRANCH}`, { headers: ghHeaders });
+  if (!headRes.ok) throw new Error(`main HEAD 조회 실패 (HTTP ${headRes.status})`);
+  const headSha = (await headRes.json()).sha;
+
+  const lastRun = await _l1GetLatestSpTreeGuardianRun(env).catch(() => null);
+  let baseSha = lastRun?.head_sha;
+  if (!baseSha) {
+    // 최초 실행 — 지난 7일간 prompts/ 변경 커밋 중 가장 오래된 것의
+    // 부모를 base로 삼는다. 그마저 없으면(7일간 무변경) 감사할 게 없다.
+    const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+    const commitsRes = await fetch(
+      `${repoBase}/commits?sha=${GITHUB_DEFAULT_BRANCH}&path=prompts&since=${since}&per_page=100`,
+      { headers: ghHeaders },
+    );
+    if (!commitsRes.ok) throw new Error(`커밋 목록 조회 실패 (HTTP ${commitsRes.status})`);
+    const commits = await commitsRes.json();
+    if (!commits.length) {
+      return { status: 'no_changes', head_sha: headSha, note: '최근 7일간 prompts/ 변경 없음' };
+    }
+    const oldest = commits[commits.length - 1];
+    baseSha = oldest.parents?.[0]?.sha || oldest.sha;
+  }
+
+  if (baseSha === headSha) {
+    return { status: 'no_changes', head_sha: headSha, note: '지난 감사 이후 변경 없음' };
+  }
+
+  const cmpRes = await fetch(`${repoBase}/compare/${baseSha}...${headSha}`, { headers: ghHeaders });
+  if (!cmpRes.ok) throw new Error(`compare 조회 실패 (HTTP ${cmpRes.status})`);
+  const cmp = await cmpRes.json();
+  const promptFiles = (cmp.files || []).filter(f => f.filename.startsWith('prompts/') && f.patch);
+  if (!promptFiles.length) {
+    await _l1CreateSpTreeGuardianRun(env, { head_sha: headSha, base_sha: baseSha, findings_count: 0 }).catch(() => {});
+    return { status: 'no_prompt_changes', head_sha: headSha };
+  }
+  const diffText = promptFiles.map(f => `diff --git a/${f.filename} b/${f.filename}\n${f.patch}`).join('\n\n')
+    .slice(0, 60000); // 컨텍스트 예산 방어 — 극단적으로 큰 주간 diff 대비
+
+  const manifestRes = await fetch(`${REPO_RAW}/prompts/sp-catalog.json`, { cache: 'no-cache' });
+  const manifest = await manifestRes.json();
+  const guardianFile = manifest['SP-TREE-GUARDIAN'];
+  const registryFile = manifest['SP-TREE-REGISTRY'];
+  if (!guardianFile || !registryFile) throw new Error('manifest에 SP-TREE-GUARDIAN 또는 SP-TREE-REGISTRY 키 없음');
+
+  const [guardianSP, registryText] = await Promise.all([
+    fetch(`${REPO_RAW}/prompts/${guardianFile}`, { cache: 'no-cache' }).then(r => r.text()),
+    fetch(`${REPO_RAW}/prompts/${registryFile}`, { cache: 'no-cache' }).then(r => r.text()),
+  ]);
+
+  const userMsg = `── SP-TREE-REGISTRY 전문 (§F edges 블록 포함) ──
+${registryText}
+
+── 이번 감사 대상 diff (base ${baseSha.slice(0, 7)} → head ${headSha.slice(0, 7)}) ──
+${diffText}
+
+위 diff를 SP-TREE-GUARDIAN §2 기준으로 감사해 주세요. §3 형식(문제 설명·
+제안 방향·확신도·특별검토 필요 여부)을 그대로 따르는 JSON 배열로만
+답하십시오: [{"file":"...", "issue":"...", "proposed_change":"...",
+"confidence":"high|medium|low", "needs_special_review":true|false}, ...].
+문제가 없으면 빈 배열 []만 출력하십시오. JSON 외의 텍스트를 앞뒤에
+붙이지 마십시오.`;
+
+  const res = await fetch(DEEPSEEK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}` },
+    body: JSON.stringify({
+      // 주 1회 배치 감사 — _draftFeedbackPatch와 동일한 비용 판단으로
+      // hondi-flash 등급(deepseek-v4-flash)을 쓴다.
+      model: 'deepseek-v4-flash',
+      messages: [
+        { role: 'system', content: guardianSP },
+        { role: 'user', content: userMsg },
+      ],
+      max_tokens: 3000,
+      stream: false,
+    }),
+  });
+  if (!res.ok) throw new Error(`DeepSeek API 호출 실패 (HTTP ${res.status})`);
+  const data = await res.json();
+  const raw = data.choices?.[0]?.message?.content || '[]';
+
+  let findings;
+  try {
+    const jsonMatch = raw.match(/\[[\s\S]*\]/);
+    findings = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+    if (!Array.isArray(findings)) findings = [];
+  } catch (e) {
+    // 파싱 실패 — findings를 지어내지 않는다. 원문을 그대로 한 건짜리
+    // low-confidence finding으로 남겨 사람이 직접 판단하게 한다.
+    findings = [{
+      file: '(파싱 실패)', issue: '모델 출력이 JSON 배열이 아니었습니다 — 원문을 그대로 보존합니다.',
+      proposed_change: raw.slice(0, 2000), confidence: 'low', needs_special_review: true,
+    }];
+  }
+
+  const runRecord = await _l1CreateSpTreeGuardianRun(env, {
+    head_sha: headSha, base_sha: baseSha, findings_count: findings.length,
+  });
+
+  for (const f of findings) {
+    await _l1CreateSpTreeAuditFinding(env, {
+      run_id: runRecord.id,
+      file: f.file || '',
+      issue: f.issue || '',
+      proposed_change: f.proposed_change || '',
+      confidence: ['high', 'medium', 'low'].includes(f.confidence) ? f.confidence : 'low',
+      needs_special_review: !!f.needs_special_review,
+      status: 'pending_review',
+    }).catch(e => console.error('[sp-tree-guardian] finding 저장 실패:', e.message));
+  }
+
+  if (findings.length) {
+    await _l1CreateEscalation(env, {
+      to: '@owner',
+      reason: 'sp_tree_guardian_finding',
+      ref_collection: 'sp_tree_audit_findings',
+      ref_id: runRecord.id,
+      summary: `[SP-TREE-GUARDIAN] 주간 감사에서 ${findings.length}건 발견 ` +
+        `(특별검토 ${findings.filter(f => f.needs_special_review).length}건 포함) — ` +
+        `SP-TREE-REGISTRY §F edges 블록 갱신 검토 필요 여부 확인 요망.`.slice(0, 2000),
+      read: false,
+    }).catch(e => console.error('[sp-tree-guardian] escalation 생성 실패:', e.message));
+  }
+
+  return { status: 'ok', head_sha: headSha, base_sha: baseSha, findings_count: findings.length };
+}
+
+// POST /sp-tree-guardian/audit — 감사 1회 실행 (cron 트리거 전용, 인증 없는
+// 내부 API — 기존 /sp-author/queue 등과 동일한 신뢰 모델)
+async function handleSPTreeGuardianAudit(request, env, corsHeaders, ctx) {
+  try {
+    const result = await _runSpTreeGuardianAudit(env, ctx);
+    return new Response(JSON.stringify(result), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
+// GET /sp-tree-guardian/findings?status=pending_review
+async function handleSPTreeGuardianFindings(request, env, corsHeaders) {
+  const { searchParams } = new URL(request.url);
+  const status = searchParams.get('status') || '';
+  try {
+    const items = await _l1ListSpTreeAuditFindings(env, status);
+    return new Response(JSON.stringify({ items }), { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+}
+
 async function _l1FindRefreshSchedule(env, spId) {
   const token = await _l1AdminToken(env);
   const filter = encodeURIComponent(`sp_id='${spId.replace(/'/g, "\\'")}'`);
@@ -7367,6 +7588,12 @@ export default {
       return handleSPAuthorRefreshDue(request, env, corsHeaders);
     if (pathname === '/sp-author/refresh-schedule' && request.method === 'POST')
       return handleSPAuthorRefreshScheduleUpsert(request, env, corsHeaders);
+
+    // ── SP-TREE-GUARDIAN (2026-07-29 신설) ──────────────────────────
+    if (pathname === '/sp-tree-guardian/audit' && request.method === 'POST')
+      return handleSPTreeGuardianAudit(request, env, corsHeaders, ctx);
+    if (pathname === '/sp-tree-guardian/findings' && request.method === 'GET')
+      return handleSPTreeGuardianFindings(request, env, corsHeaders);
 
     // ── SP-INDUSTRY-TRANSFORM 실시간 생성 (2026-07-23 신설) ────────
     if (pathname === '/sp-industry-transform/generate' && request.method === 'POST')
