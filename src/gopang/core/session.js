@@ -79,6 +79,35 @@ async function _saveSessionOnce() {
     // 세션 원문 직렬화
     const sessionRaw = JSON.stringify(sessionData);
 
+    // ② contentHash = SHA-256(sessionRaw)
+    // ★ 2026-07-28 순서 변경 — 원래는 vault 저장(현재의 ①) 뒤에 계산되던
+    // 걸 앞으로 옮겼다. vault.js의 _validateRecord()가 모든 레코드에
+    // senderPubKeyB64·signature를 필수로 요구하는데(원래 P2P 서명 메시지
+    // 스키마), 이 세션 로그 저장은 그 두 필드를 안 채워서 매번
+    // "[Vault] 필수 필드 누락: senderPubKeyB64"로 실패하고 있었다(무시되는
+    // catch라 조용히 실패). 서명 자체는 바로 아래(구 ③단계)에서 이미
+    // 계산하고 있었으니, 그 계산만 앞으로 옮기고 실제로 vault 레코드에
+    // 채워 넣는다.
+    const buf         = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sessionRaw));
+    const sessionHash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+
+    // ③ Ed25519 서명 — gopangWallet.sign()이 없으면 guid로 fallback
+    let userSig = USER_GUID || 'anon';
+    try {
+      if (window.gopangWallet?.sign) {
+        userSig = await window.gopangWallet.sign(sessionHash);
+      }
+    } catch (e) {
+      console.warn('[Session] Ed25519 서명 실패, guid로 대체:', e.message);
+    }
+    // gopang-wallet.js의 GopangWallet 인스턴스가 노출하는 공개키 필드명은
+    // publicKeyB64u(Base64URL) — vault.js가 요구하는 레코드 필드명
+    // senderPubKeyB64와는 이름이 다르지만 같은 값이다. 지갑이 아직 준비
+    // 안 됐으면(초기 로드 중 등) USER_GUID로 최소한의 발신자 식별은 남긴다
+    // — vault의 필수 필드 검증만 통과시키는 게 목적이지, 이 폴백 자체가
+    // 암호학적 서명을 대체한다고 주장하지 않는다(§HONESTY와 동일 원칙).
+    const senderPubKeyB64 = window.gopangWallet?.publicKeyB64u || USER_GUID || 'anon';
+
     // ① 원본 저장 — 이 기기의 로컬 vault(IndexedDB)에 남길지, 공용 PC
     //    세션이라 폰으로 릴레이만 하고 이 PC엔 아무것도 안 남길지 분기.
     //    (2026-07-23 신설, 5단계 — B안: 폰이 오프라인이면 유실 감수)
@@ -94,26 +123,14 @@ async function _saveSessionOnce() {
       await storeMessage({
         msgId:     sessionId,
         senderId:  USER_GUID || 'anon',
+        senderPubKeyB64,
+        signature: userSig,
         role:      'session',
         content:   sessionRaw,
         timestamp: now,
         riskLevel: 'S0',
         sessionId,
       }).catch(e => console.warn('[Session] vault 저장 실패 (무시):', e.message));
-    }
-
-    // ② contentHash = SHA-256(sessionRaw)
-    const buf         = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sessionRaw));
-    const sessionHash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-
-    // ③ Ed25519 서명 — gopangWallet.sign()이 없으면 guid로 fallback
-    let userSig = USER_GUID || 'anon';
-    try {
-      if (window.gopangWallet?.sign) {
-        userSig = await window.gopangWallet.sign(sessionHash);
-      }
-    } catch (e) {
-      console.warn('[Session] Ed25519 서명 실패, guid로 대체:', e.message);
     }
 
     // ④ anchor(contentHash, [userSig], sessionId)
