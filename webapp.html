@@ -3906,15 +3906,35 @@ window.closePDV = closePDV;
         // 결과·위임 결과로 화면 내용 자체를 교체해야 의미가 있기 때문이다.
         // 패널 자신의 마지막 bubbleEl.innerHTML 대입(위)이 이미 끝난 뒤에
         // 실행되므로 서로 덮어쓰지 않는다.
+        //
+        // ★ BUG-FIX(2026-07-28, 실사로 발견): _handleWebSearchTag·
+        // _handleDelegateToFlashTag는 검색·위임 결과를 받은 뒤 내부에서
+        // sendFn(text) — 인자 1개만 받고 말풍선은 스스로 새로 만드는
+        // callAI()와 같은 시그니처 — 를 기대한다. 그런데 _callPanelAI(
+        // userText, bubbleEl, ...)는 말풍선을 스스로 안 만들고 두 번째
+        // 인자로 반드시 받아야 해서, sendFn 자리에 _callPanelAI를 그대로
+        // 넘기면 bubbleEl이 undefined인 채로 재귀 호출돼 "Cannot set
+        // properties of undefined (setting 'textContent')"로 죽었다.
+        // _handleProfileTags 콜백(위)이 이미 쓰던 것과 동일한 패턴 —
+        // 말풍선을 새로 만들어 쥐여주는 래퍼로 감싼다.
+        const _panelSendFn = async (text) => {
+          const newBubble = _appendPanelMsg('ai', '…');
+          newBubble.classList.add('streaming');
+          try {
+            await _callPanelAI(text, newBubble);
+          } finally {
+            newBubble.classList.remove('streaming');
+          }
+        };
         let _delegateOrSearchHandled = false;
         try {
-          _delegateOrSearchHandled = await _handleDelegateToFlashTag(full, bubbleEl, _callPanelAI, userText);
+          _delegateOrSearchHandled = await _handleDelegateToFlashTag(full, bubbleEl, _panelSendFn, userText);
         } catch (e) {
           console.warn('[Panel] _handleDelegateToFlashTag 처리 실패(무시):', e.message);
         }
         if (!_delegateOrSearchHandled) {
           try {
-            await _handleWebSearchTag(full, bubbleEl, _callPanelAI, userText);
+            await _handleWebSearchTag(full, bubbleEl, _panelSendFn, userText);
           } catch (e) {
             console.warn('[Panel] _handleWebSearchTag 처리 실패(무시):', e.message);
           }
