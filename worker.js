@@ -12781,6 +12781,58 @@ async function _fetchDelegationPrompt(regKey, provinceCode) {
   return text;
 }
 
+// ★ 2026-07-29 신설 — 실사로 확인된 공백. SP_DELEGATION_REGISTRY는 지금까지
+// "kgov가 다른 agency(gov_do/gov_national)에게 위임할 때만" 쓰였는데, 정작
+// agency 자기 자신(예: 'public')의 정본 대화에는 이 레지스트리가 가리키는
+// 자기 자신의 SP(SP-10_kpublic 등)가 한 번도 실리지 않고 있었다 —
+// _fetchKPublicCommon()/_fetchProfessionalCommon()(범용 공통부)만 실리고,
+// 그 위에 클라이언트가 보낸 얕은 agencyPrompt만 얹혔다. 그 결과 SP-10_
+// kpublic.txt(GOV_ROUTE·§REQUIRED-DOCUMENTS·GOV_TASK_SUBMIT_REQUEST·
+// STEP0~D 등 정교한 설계)가 실제 K-Public 대화에는 한 번도 도달하지
+// 못하는 고아 문서가 돼 있었다(실사로 발견 — PDV_REQUEST/GOV_ROUTE가
+// 전혀 안 나가는 게 콘솔 로그로 확인됨).
+//
+// SP-10_kpublic.txt 자신의 §준수 문서 절이 "HUMAN-AUTHORITY-GATE-SCHEMA는
+// 이 문서 바로 뒤에 자동 삽입돼야 한다"고 명시하는데, 그 문서(및 PDV-
+// TRANSFER-PROTOCOL)는 파일은 존재해도 sp-catalog.json에 등록된 적이
+// 없어 지금까지 worker.js 어디서도 fetch되지 않았다 — 같이 등록한다
+// (sp-catalog.json 'HUMAN-AUTHORITY-GATE-SCHEMA'/'PDV-TRANSFER-PROTOCOL'
+// 키, 2026-07-29 신설). GOV_TASK_SUBMIT_REQUEST의 접수·승인 권한이 실제로
+// 어디까지인지(G3/G18 게이트)를 이 문서가 정의하므로, SP-10_kpublic만
+// 싣고 이 게이트 문서를 안 실으면 "승인 없이도 접수됐다고 말해도 되는 것
+// 처럼" 오판할 위험이 있다 — 반드시 함께 싣는다.
+let _agencyOwnSpCache = new Map(); // agency -> { text, at }
+const _AGENCY_OWN_SP_TTL_MS = 10 * 60 * 1000;
+
+async function _fetchOwnSpAndGates(agency) {
+  const entry = SP_DELEGATION_REGISTRY[agency];
+  if (!entry || entry.dynamicRegional) return ''; // gov_do/gov_national은 이미 자기 트리를 agencyPrompt로 직접 받음 — 대상 아님
+
+  const cached = _agencyOwnSpCache.get(agency);
+  const now = Date.now();
+  if (cached && (now - cached.at) < _AGENCY_OWN_SP_TTL_MS) return cached.text;
+
+  try {
+    const [ownSp, gateSchema, pdvTransfer] = await Promise.all([
+      _fetchDelegationPrompt(agency),
+      _fetchByManifestKeyFromGithub('HUMAN-AUTHORITY-GATE-SCHEMA').catch(e => {
+        console.warn('[GovRelay] HUMAN-AUTHORITY-GATE-SCHEMA 로드 실패(무시):', e.message);
+        return '';
+      }),
+      _fetchByManifestKeyFromGithub('PDV-TRANSFER-PROTOCOL').catch(e => {
+        console.warn('[GovRelay] PDV-TRANSFER-PROTOCOL 로드 실패(무시):', e.message);
+        return '';
+      }),
+    ]);
+    const text = [ownSp, gateSchema, pdvTransfer].filter(Boolean).join('\n\n---\n\n');
+    _agencyOwnSpCache.set(agency, { text, at: now });
+    return text;
+  } catch (e) {
+    console.warn(`[GovRelay] ${agency} 자신의 SP 로드 실패(무시, K-Public_common만으로 계속):`, e.message);
+    return '';
+  }
+}
+
 // LLM 응답이 순수 JSON 위임 요청(U9-2 형식)인지 검사한다. 아니면 null —
 // 일반 자연어 답변은 '{'로 시작하지 않으므로 대부분 JSON.parse 비용 없이 걸러진다.
 function _parseSpCallRequest(content) {
@@ -13354,17 +13406,24 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
 
   const usesProfessionalIdentity = PROFESSIONAL_IDENTITY_AGENCIES.has(agency);
   const noIdentityLayer = NO_IDENTITY_LAYER_AGENCIES.has(agency);
-  const [universalIntegrity, universalCommonRaw, identityDocRaw] = await Promise.all([
+  const [universalIntegrity, universalCommonRaw, identityDocRaw, ownSpAndGates] = await Promise.all([
     _fetchUniversalIntegrity(),
     _fetchUniversalCommon(),
     noIdentityLayer ? Promise.resolve('') : (usesProfessionalIdentity ? _fetchProfessionalCommon() : _fetchKPublicCommon()),
+    // ★ 2026-07-29 신설 — agency 자신의 정본 SP(예: public→SP-10_kpublic)
+    // + HUMAN-AUTHORITY-GATE-SCHEMA + PDV-TRANSFER-PROTOCOL. 위
+    // identityDocRaw(K-Public_common/PROFESSIONAL-common)는 여러 agency가
+    // 공유하는 범용 껍데기일 뿐, agency마다 실제로 다른 판단 로직(예:
+    // SP-10_kpublic의 GOV_ROUTE·§REQUIRED-DOCUMENTS·STEP0~D)은 여기서
+    // 따로 실어야 한다 — _fetchOwnSpAndGates 정의부 주석 참조.
+    _fetchOwnSpAndGates(agency),
   ]);
   const pdvScope = GOV_AGENCY_PDV_SCOPE[agency];
   // PDV_HISTORY_REQUEST(U8) scope 자리표시자는 이제 UNIVERSAL-common에 있다.
   const universalCommon = pdvScope
     ? universalCommonRaw.replace(_PDV_SCOPE_PLACEHOLDER_RE, pdvScope)
     : universalCommonRaw;
-  const systemParts = [universalIntegrity, universalCommon, identityDocRaw, agencyPrompt || ''].filter(Boolean);
+  const systemParts = [universalIntegrity, universalCommon, identityDocRaw, ownSpAndGates, agencyPrompt || ''].filter(Boolean);
   const systemContent = systemParts.length
     ? systemParts.join('\n\n---\n\n')
     : (agencyPrompt || ''); // 공통 규칙 로드 실패해도 기관 고유 규칙만으로 서비스 지속

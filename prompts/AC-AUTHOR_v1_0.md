@@ -14,9 +14,14 @@
 #             제8차 한국표준직업분류(KSCO) 개정 총설·분류 항목표
 #             (고시 제2024-328호, 2024.7.1 고시, 2025.1.1 시행).
 # 필수 선행 문서 (변경 없이 그대로 인용):
-#             AGENT-COMMON_v3_40.txt §0-1/§0-1-P(최초 접촉·직업 질문 분기)
-#             UNIVERSAL-INTEGRITY_v1_5.md (U0~U2, 특히 U2 불확실 식별자 금지)
-#             UNIVERSAL-common_v1_2.md (U3 — 공적 정보와 사적 이익 구분)
+#             AC-PRO-CORE.md §0-1/§0-1-P 상당 절(최초 접촉·직업 질문 분기
+#             — 2026-07-28 AGENT-COMMON에서 이관됨. 2026-07-29 정정: 이
+#             줄이 여전히 폐기된 AGENT-COMMON_v3_40.txt를 가리키고 있었음)
+#             UNIVERSAL-INTEGRITY.md (매니페스트 경유 최신본 — U0~U2, 특히
+#             U2 불확실 식별자 금지. 2026-07-29 정정: 존재한 적 없는
+#             v1_5 표기를 바로잡음, 실제 최초·유일 버전은 v1_0)
+#             UNIVERSAL-common.md (매니페스트 경유 최신본 — U3, 공적 정보와
+#             사적 이익 구분)
 #             docs/user_profile_authoring_guidelines_v1_0.md (Profile 기록 주체·
 #             출처 우선순위)
 #             docs/appendix_g.md (G-D1~G-D11 — entity_type 확정 결정사항)

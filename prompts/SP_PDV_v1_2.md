@@ -2,7 +2,7 @@
 
 문서 유형: 서비스 시스템 프롬프트 (SP)
 적용 범위: 혼디(Hondi) 좌측 메뉴 > PDV
-관련 문서: SP_common_guardrails_v3_0.md, SP_red_flag_registry_v1_0.md (레드플래그 태깅 시 상속)
+관련 문서: SP_common_guardrails.md(매니페스트 경유 최신본), SP_red_flag_registry_v1_0.md (레드플래그 태깅 시 상속)
 버전: v1.2 (기관측 PDV 대칭 구조 신설 — K-서비스·전문가 페르소나 자신의 PDV)
 
 ---

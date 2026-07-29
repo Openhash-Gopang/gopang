@@ -118,7 +118,8 @@ SP는 저장되지 않음 — 이전 대화에서 한림읍 노인복지팀 사�
 
 ```
 UNIVERSAL-INTEGRITY
-  └─ SP_common_guardrails_v3_10.md (전체 35개 공통 — sp-catalog.json 최신 버전 기준)
+  └─ SP_common_guardrails.md (전체 35개 공통 — sp-catalog.json 최신 버전 기준,
+       숫자를 여기 적지 않는 이유가 바로 그것)
        └─ SP_common_medical_safety_v1_3.md (needsMedicalSafety:true 18개 — 의료 14개 +
             상담 계열 4개[임상심리사·전문상담교사·정신건강전문요원·사회복지사],
             위기개입 M5 상속 목적)

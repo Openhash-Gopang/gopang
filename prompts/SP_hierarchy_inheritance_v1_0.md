@@ -61,7 +61,10 @@ DeepSeek 캐싱은 메시지 배열의 **맨 앞부터 일치하는 접두사(pr
 
 ## H3. 상속 원본은 단일 진실 공급원(SSOT)으로 관리하고, 자식은 참조만 한다
 
-`K-Public 공통 규칙`은 `prompts/K-Public_common_v1_1.md` 같은 단일
+`K-Public 공통 규칙`은 `prompts/K-Public_common.md`(파일명에 항상 버전
+번호가 붙지만, 이 문서 자신도 한 번 그 번호를 박제해뒀다가 실제 최신본
+(v1_3)과 어긋난 적이 있다 — 2026-07-29 정정. 그래서 여기서는 일부러
+번호를 적지 않는다) 같은 단일
 파일로만 존재한다. 각 자식 SP의 빌드/런타임 코드는 이 파일을 **그대로
 가져와 조립**하며(fetch 또는 번들), 손으로 복사해 자기 SP 파일 안에
 붙여넣지 않는다. 손 복사는 반드시 시간이 지나면서 미세하게 갈라지고
@@ -104,7 +107,8 @@ DeepSeek 캐싱은 메시지 배열의 **맨 앞부터 일치하는 접두사(pr
 
 ```
 prompts/
-  K-Public_common_v1_1.md          ← 최상위 공통 규칙 (모든 국가기관 AI)
+  K-Public_common_vX_Y.md           ← 최상위 공통 규칙 (모든 국가기관 AI —
+                                       실제 파일명·버전은 sp-catalog.json에서 확인)
   K-Public_행정부_common_v1_0.md    ← 행정부 공통 (필요 시)
   K-Public_사법부_common_v1_0.md    ← 사법부 공통 (필요 시)
   K-Public_입법부_common_v1_0.md    ← 입법부 공통 (필요 시)

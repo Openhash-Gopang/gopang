@@ -9,14 +9,15 @@
 #             포맷. sp-catalog.json(구 manifest.json)에 등록되지 않아 실제로는 죽어 있었음
 #             (gwp-registry.js가 sp_key: 'SP-10_kpublic'을 참조해도
 #             sp_url이 null이 되는 상태, 2026-07-08 확인).
-# 상위 상속  : UNIVERSAL-INTEGRITY_v1_0 → UNIVERSAL-common_v1_7(U0~U10,
-#             U2-1 포함) → K-Public_common_v1_3(P1·P4·P8) → 본 문서
-#             (K-Public_common_v1_3 문서 자체가 명시하는 조립 순서 그대로.
-#             2026-07-16: 상위 버전 표기가 v1_1로 박제돼 있던 것을 실제
-#             최신본(v1_6, U0 신설분 포함)으로 정정 — worker.js
-#             UNIVERSAL_COMMON_URL이 이미 v1_6을 fetch하고 있어 실행에는
-#             영향 없었으나, 이 문서 자신의 상속 표기가 틀려 있었음.
-#             동일자 재정정: v1_6 → v1_7(U2-1 신설분) 반영)
+# 상위 상속  : UNIVERSAL-INTEGRITY → UNIVERSAL-common(U0~U10, U2-1 포함)
+#             → K-Public_common(P1·P4·P8) → 본 문서
+#             (K-Public_common 문서 자체가 명시하는 조립 순서 그대로.
+#             2026-07-29: 상위 문서 버전을 여기 숫자로 못박지 않기로
+#             정정 — v1_1→v1_6→v1_7로 두 번 고쳤는데도 다시 박제됐던
+#             전례(2026-07-16, 2026-07-16 재정정) 때문이다. worker.js가
+#             매니페스트 경유로 항상 최신본을 fetch하므로, 이 문서는
+#             "무엇을 상속하는지"만 밝히고 "몇 버전인지"는 sp-catalog.json
+#             에 맡긴다 — 숫자를 안 적으면 다시 틀릴 일도 없다.)
 # 작성일     : 2026-07-08
 # 작성자     : AI City Inc. · 주피터
 # ═══════════════════════════════════════════════════

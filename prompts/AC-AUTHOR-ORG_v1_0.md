@@ -25,12 +25,14 @@
 #             0~E)으로 절차화한 문서. SP-AUTHOR_v1_14.md와 동일한
 #             PHASE 구조·반려사유 정형화 방식을 그대로 계승한다.
 # 필수 선행 문서 (변경 없이 그대로 인용):
-#             AGENCY-AC-COMMON_v1.3.md (공리 0·공리 1, 특히 0-4 — 기관
-#             AC와 개인 AC의 경계)
-#             SP-AUTHOR_v1_14.md (짝 문서, PHASE 구조·§SELF-EVOLUTION 공유)
-#             GOV-TIER-IO-SCHEMA_v1_1.md (A/B/C 계층 입출력 뼈대)
-#             UNIVERSAL-common_v1_4.md (U10-5 agency_id 네임스페이스 표)
-#             HUMAN-AUTHORITY-GATE-SCHEMA (G1~G17, 최종 결정은 사람)
+#             AGENCY-AC-COMMON.md (최신본 — prompts/ 디렉토리에서 가장
+#             높은 버전 번호를 직접 확인할 것. 공리 0·공리 1, 특히 0-4 —
+#             기관 AC와 개인 AC의 경계. 2026-07-29 정정: v1.3을 박제
+#             참조하고 있었으나 이후 v1.4까지 나왔음)
+#             SP-AUTHOR.md (짝 문서, 최신본 — PHASE 구조·§SELF-EVOLUTION 공유)
+#             GOV-TIER-IO-SCHEMA.md (매니페스트 경유 최신본 — A/B/C 계층 입출력 뼈대)
+#             UNIVERSAL-common.md (매니페스트 경유 최신본 — U10-5 agency_id 네임스페이스 표)
+#             HUMAN-AUTHORITY-GATE-SCHEMA (매니페스트 경유 최신본 — G1~G17, 최종 결정은 사람)
 # 작성일     : 2026-07-13
 # 작성자     : AI City Inc. · 주피터 (Claude 초안, 재작성)
 # ═══════════════════════════════════════════════════

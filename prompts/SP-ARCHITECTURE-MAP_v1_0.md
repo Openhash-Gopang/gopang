@@ -43,8 +43,8 @@ UNIVERSAL-INTEGRITY_v1_0.md  (U0~U7 — 안내로 끝내지 않기, 확신도 �
 │   ├─ GDC (gdc 저장소, desktop.html만 — webapp.html은 AI채팅 없음) ✅
 │   └─ K-Cleaner (fiil.kr) ❓ 저장소 위치 미발견, 미배선
 │
-├─ [전문직 페르소나 트랙] SP_common_guardrails_v3_10.md  (C1~C42: 적극적보조 판단/실행 분리)
-│   ├─ (의료 계열) SP_common_medical_safety_v1_1.md + SP_red_flag_registry_v1_0.md 추가 상속
+├─ [전문직 페르소나 트랙] SP_common_guardrails.md(매니페스트 경유 최신본)  (C1~C42: 적극적보조 판단/실행 분리)
+│   ├─ (의료 계열) SP_common_medical_safety.md(매니페스트 경유 최신본) + SP_red_flag_registry_v1_0.md 추가 상속
 │   └─ 27개 페르소나 (SP_lawyer, SP_nurse, ... SP_tax-accountant 등)
 │      expert-session.js가 UNIVERSAL-INTEGRITY → 공통가드레일 → (의료시
 │      안전모듈) → 페르소나 순으로 매 세션 fetch+prepend ✅ 코드 확인됨
@@ -71,7 +71,7 @@ UNIVERSAL-INTEGRITY_v1_0.md  (U0~U7 — 안내로 끝내지 않기, 확신도 �
 | K-Law | 자체(K-Public_common 미상속) | `worker.js` `handleKlawRelay` | ⚠️ 의도적 예외, UNIVERSAL-INTEGRITY만 주입 |
 | 미편입 K-서비스 4개 | (없음, UNIVERSAL-INTEGRITY만) | 각 저장소 클라이언트 JS | ✅ (2026-07-04 신규 배선) |
 | K-Cleaner | ❓ | ❓ | ❓ 저장소 미발견 |
-| 전문직 27개 | SP_common_guardrails_v3_10 | `expert-session.js` `_composeExpertPrompt` | ✅ 코드 확인 |
+| 전문직 27개 | SP_common_guardrails(매니페스트 경유 최신본) | `expert-session.js` `_composeExpertPrompt` | ✅ 코드 확인 |
 | 개인/사업자 | AGENT-COMMON_v3_44 | `worker.js` `_compileAgentSP` | ✅ 코드 확인 |
 
 ## 3. 알려진 공백 (다음 작업 후보)
