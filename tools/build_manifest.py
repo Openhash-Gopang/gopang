@@ -7,6 +7,8 @@ CI(GitHub Actions)가 push 마다 실행 — 개발자는 SP 파일만 추가하
 
 ■ manifest 키 규칙
   · "AGENT-COMMON"          → prompts/AGENT-COMMON_*.txt 중 최신
+  · "AC-PRO-CORE"           → prompts/AC-PRO-CORE_*.txt 중 최신 (2026-07-29 추가)
+  · "AC-FLASH-EXECUTOR"     → prompts/AC-FLASH-EXECUTOR_*.txt 중 최신 (2026-07-29 추가)
   · "SP-00-ROUTER"          → prompts/SP-00-ROUTER-v*.txt 중 최신
   · "profile-assistant"     → prompts/profile-assistant/profile-assistant-v*.txt 중 최신
                                (2026-07-08: personal-assistant에서 개명·분리 — 프로필
@@ -25,6 +27,20 @@ CI(GitHub Actions)가 push 마다 실행 — 개발자는 SP 파일만 추가하
 ■ *-LATEST.txt 포인터 파일
   스캔 대상에서 제외 (manifest 로 완전 대체).
   기존 파일은 삭제하지 않아도 무방하나 JS 에서는 참조하지 않는다.
+
+■ 잔여 파일 자기검증 (2026-07-29 신설 — 재발 방지 근본 수정)
+  이 스크립트는 지금까지 "새 명명 패턴의 프롬프트 파일을 추가했는데
+  스캔 블록을 깜빡함 → manifest에서 조용히 누락 → 며칠 뒤 런타임에서야
+  발견"이 최소 5번 반복됐다(UNIVERSAL-common, PROFESSIONAL-common,
+  K-Public_common/k-business/business-kr, SP-INDUSTRY-TRANSFORM-COMMON,
+  그리고 AC-PRO-CORE/AC-FLASH-EXECUTOR). 매번 사후 발견 후 "다음엔
+  안 그래야지"로 넘어갔지만 사람이 매번 기억하긴 어렵다는 게 근본
+  문제였다. 그래서 이 스크립트가 스스로 "내가 아는 패턴 목록"을
+  들고 있다가, prompts/ 최상위(하위 폴더 제외)의 .md/.txt 파일 중
+  그 어떤 패턴에도 안 걸리는 게 있으면 — 카탈로그 등록 대상이 아닌
+  설계도·감사록류(ALLOWLIST_PREFIXES)가 아닌 한 — 스크립트 자체를
+  비정상 종료(exit 1)시킨다. CI가 그 자리에서 빨갛게 죽으므로,
+  "새 파일 추가 + 스캔 블록 깜빡"이 병합 전에 반드시 드러난다.
 """
 import json
 import re
@@ -50,54 +66,58 @@ def best(files: list[str]) -> str:
 # ── 파일 스캔 ──────────────────────────────────────────────────────────
 manifest: dict[str, str] = {}
 
-# 1) AGENT-COMMON — prompts/AGENT-COMMON_vX_Y.txt
-agent_common_files = [
-    f.name for f in PROMPTS.iterdir()
-    if re.match(r'^AGENT-COMMON_v', f.name) and f.name.endswith('.txt')
-]
-if agent_common_files:
-    manifest['AGENT-COMMON'] = best(agent_common_files)
+# 이 스크립트가 인식하는 모든 명명 패턴의 정규식을 여기 모은다. 아래 각
+# 스캔 블록은 반드시 이 리스트에 자기 패턴을 등록해야 한다 — 맨 끝의
+# 자기검증 블록이 이 목록에 없는 패턴의 파일을 "아무도 모르는 파일"로
+# 간주해 스크립트를 실패시킨다.
+RECOGNIZED_PATTERNS: list[str] = []
 
-# 1-b) AGENT-SUPPLIER-COMMON — prompts/AGENT-SUPPLIER-COMMON_vX.Y.txt
+def _scan_single(pattern: str, ext: str, key: str) -> None:
+    """단일 키(그룹 없음) 패턴 — 매칭되는 파일 중 최신 하나를 manifest[key]에."""
+    RECOGNIZED_PATTERNS.append(pattern)
+    files = [
+        f.name for f in PROMPTS.iterdir()
+        if re.match(pattern, f.name) and f.name.endswith(ext)
+    ]
+    if files:
+        manifest[key] = best(files)
+
+# 1) AGENT-COMMON — prompts/AGENT-COMMON_vX_Y.txt
+_scan_single(r'^AGENT-COMMON_v', '.txt', 'AGENT-COMMON')
+
+# 1-a) AC-PRO-CORE — prompts/AC-PRO-CORE_vX_Y.txt (2026-07-29 신설)
+#      2026-07-28 "Pro/Flash 아키텍처 재설계"(commit c2831361)에서 새로
+#      만든 기본 프롬프트인데, 이 파일을 스캔하는 블록이 없어 바로 다음
+#      CI 재생성(902aa4f1)에서 manifest 키가 통째로 빠졌다 — 아래 §잔여
+#      파일 검사가 원래 이 시점에 잡아야 했을 정확한 사례. AGENT-COMMON과
+#      동일한 명명 규칙(단일 키, vX_Y, .txt)이라 스캔 패턴도 동일 형태.
+_scan_single(r'^AC-PRO-CORE_v', '.txt', 'AC-PRO-CORE')
+
+# 1-b) AC-FLASH-EXECUTOR — prompts/AC-FLASH-EXECUTOR_vX_Y.txt (2026-07-29 신설)
+#      AC-PRO-CORE와 같은 재설계에서 함께 도입된 짝. 같은 원인으로 함께
+#      누락돼 있었다.
+_scan_single(r'^AC-FLASH-EXECUTOR_v', '.txt', 'AC-FLASH-EXECUTOR')
+
+# 1-c) AGENT-SUPPLIER-COMMON — prompts/AGENT-SUPPLIER-COMMON_vX.Y.txt
 #      2026-06-30: 누락돼 있던 키. AGENT-SUPPLIER-NN 정규식은 '_' 뒤에
 #      숫자가 와야 매칭되므로(AGENT-SUPPLIER-(\d+)_) "COMMON"은 거기서
 #      잡히지 않는다 — 별도 스캔 필요.
-agent_supplier_common_files = [
-    f.name for f in PROMPTS.iterdir()
-    if re.match(r'^AGENT-SUPPLIER-COMMON_v', f.name) and f.name.endswith('.txt')
-]
-if agent_supplier_common_files:
-    manifest['AGENT-SUPPLIER-COMMON'] = best(agent_supplier_common_files)
+_scan_single(r'^AGENT-SUPPLIER-COMMON_v', '.txt', 'AGENT-SUPPLIER-COMMON')
 
 # 2) SP-00-ROUTER — prompts/SP-00-ROUTER-vX_Y.txt
-router_files = [
-    f.name for f in PROMPTS.iterdir()
-    if re.match(r'^SP-00-ROUTER-v', f.name) and f.name.endswith('.txt')
-]
-if router_files:
-    manifest['SP-00-ROUTER'] = best(router_files)
+_scan_single(r'^SP-00-ROUTER-v', '.txt', 'SP-00-ROUTER')
 
 # 2-b) HONDI_VISITOR_SP — prompts/hondi_visitor_sp_vX_Y.txt
 #      2026-07-08 신설: 기존엔 이 SP가 manifest 체계 밖에 있어서 desktop.html
 #      에 전문이 직접 박혀 있었다(check_no_embedded_sp.py 사각지대). 다른
 #      SP들과 동일하게 manifest 기반 fetch로 전환하며 스캔 대상에 추가.
-visitor_files = [
-    f.name for f in PROMPTS.iterdir()
-    if re.match(r'^hondi_visitor_sp_v', f.name) and f.name.endswith('.txt')
-]
-if visitor_files:
-    manifest['HONDI_VISITOR_SP'] = best(visitor_files)
+_scan_single(r'^hondi_visitor_sp_v', '.txt', 'HONDI_VISITOR_SP')
 
 # 2-c) UNIVERSAL-INTEGRITY — prompts/UNIVERSAL-INTEGRITY_vX_Y.md
 #      2026-07-09 신설: expert-registry.js가 하드코딩된 URL로 이 파일을
 #      직접 fetch()하던 것을 manifest 체계로 통합(SP_lawyer가 v3.2에
 #      몇 주간 고정돼 있던 것과 동일한 종류의 staleness 위험 방지).
-universal_integrity_files = [
-    f.name for f in PROMPTS.iterdir()
-    if re.match(r'^UNIVERSAL-INTEGRITY_v', f.name) and f.name.endswith('.md')
-]
-if universal_integrity_files:
-    manifest['UNIVERSAL-INTEGRITY'] = best(universal_integrity_files)
+_scan_single(r'^UNIVERSAL-INTEGRITY_v', '.md', 'UNIVERSAL-INTEGRITY')
 
 # 2-c-1) UNIVERSAL-common — prompts/UNIVERSAL-common_vX_Y.md
 #      2026-07-19 신설(사용자 지시로 발견된 결함 수정): expert-session.js의
@@ -109,24 +129,14 @@ if universal_integrity_files:
 #      으로 키를 추가해도 다음 push 때 이 스크립트가 재생성하며 조용히
 #      지워버렸다(실제로 1회 발생 — commit f111f85). UNIVERSAL-INTEGRITY와
 #      동일한 스캔 패턴을 그대로 적용해 재발을 원천 차단한다.
-universal_common_files = [
-    f.name for f in PROMPTS.iterdir()
-    if re.match(r'^UNIVERSAL-common_v', f.name) and f.name.endswith('.md')
-]
-if universal_common_files:
-    manifest['UNIVERSAL-common'] = best(universal_common_files)
+_scan_single(r'^UNIVERSAL-common_v', '.md', 'UNIVERSAL-common')
 
 # 2-c-1-b) PROFESSIONAL-common — prompts/PROFESSIONAL-common_vX_Y.md
 #      2026-07-19 신설(위 UNIVERSAL-common과 동일 사유) — 전문가 보조 모듈
 #      (EXPERT 페르소나) 전용 정체성 계층("특정 전문가를 사칭하지 않는다",
 #      "최종 판단은 감독 전문가 전속" 등). 마찬가지로 SP_ 접두사가 아니라
 #      스캔 대상에서 누락돼 있었다.
-professional_common_files = [
-    f.name for f in PROMPTS.iterdir()
-    if re.match(r'^PROFESSIONAL-common_v', f.name) and f.name.endswith('.md')
-]
-if professional_common_files:
-    manifest['PROFESSIONAL-common'] = best(professional_common_files)
+_scan_single(r'^PROFESSIONAL-common_v', '.md', 'PROFESSIONAL-common')
 
 # 2-c-1-c) K-Public_common / k-business / business-kr
 #      2026-07-20 신설(사용자 지시로 발견된 결함 수정 — UNIVERSAL-common과
@@ -138,26 +148,9 @@ if professional_common_files:
 #      동일 원인), 다음 push 때 수동 추가한 키가 조용히 다시 지워지는
 #      회귀가 실제로 발생했다(2026-07-20 실사로 확인). UNIVERSAL-common·
 #      PROFESSIONAL-common과 동일한 스캔 패턴을 추가해 재발을 원천 차단한다.
-k_public_common_files = [
-    f.name for f in PROMPTS.iterdir()
-    if re.match(r'^K-Public_common_v', f.name) and f.name.endswith('.md')
-]
-if k_public_common_files:
-    manifest['K-Public_common'] = best(k_public_common_files)
-
-k_business_files = [
-    f.name for f in PROMPTS.iterdir()
-    if re.match(r'^k-business_v', f.name) and f.name.endswith('.md')
-]
-if k_business_files:
-    manifest['k-business'] = best(k_business_files)
-
-business_kr_files = [
-    f.name for f in PROMPTS.iterdir()
-    if re.match(r'^business-kr_v', f.name) and f.name.endswith('.md')
-]
-if business_kr_files:
-    manifest['business-kr'] = best(business_kr_files)
+_scan_single(r'^K-Public_common_v', '.md', 'K-Public_common')
+_scan_single(r'^k-business_v', '.md', 'k-business')
+_scan_single(r'^business-kr_v', '.md', 'business-kr')
 
 # 2-c-2) UNIVERSAL-job-assist — prompts/UNIVERSAL-job-assist_vX_Y.md
 #      2026-07-15 신설: call-ai.js가 처음엔 UNIVERSAL_COMMON_URL 하드코딩
@@ -166,12 +159,7 @@ if business_kr_files:
 #      항목이 정확히 이 문제를 막으려고 만들어진 선례라는 걸 확인하고
 #      대신 이 매니페스트 규칙을 추가했다 — call-ai.js는
 #      _loadSpByKey('UNIVERSAL-job-assist', ...)로 읽는다.
-universal_job_assist_files = [
-    f.name for f in PROMPTS.iterdir()
-    if re.match(r'^UNIVERSAL-job-assist_v', f.name) and f.name.endswith('.md')
-]
-if universal_job_assist_files:
-    manifest['UNIVERSAL-job-assist'] = best(universal_job_assist_files)
+_scan_single(r'^UNIVERSAL-job-assist_v', '.md', 'UNIVERSAL-job-assist')
 
 # 2-c-3) TASK-DELEGATION-GUIDE — prompts/TASK-DELEGATION-GUIDE_vX_Y.md
 #      2026-07-17 신설(주피터님 지시): "혼디는 안내가 아니라 업무 대행이
@@ -179,12 +167,17 @@ if universal_job_assist_files:
 #      INTEGRITY와 동일한 패턴으로 추가. UNIVERSAL-INTEGRITY 바로 다음에
 #      결합된다(manifest-loader.js _loadSpByKey 참조) — 판단이 애매할 때
 #      참조할 구체적 서비스별 대행 방법 목록(등본 발급 등)을 담는다.
-task_delegation_guide_files = [
-    f.name for f in PROMPTS.iterdir()
-    if re.match(r'^TASK-DELEGATION-GUIDE_v', f.name) and f.name.endswith('.md')
-]
-if task_delegation_guide_files:
-    manifest['TASK-DELEGATION-GUIDE'] = best(task_delegation_guide_files)
+_scan_single(r'^TASK-DELEGATION-GUIDE_v', '.md', 'TASK-DELEGATION-GUIDE')
+
+# 2-c-4) HONDI-CAPABILITIES-COMMON — prompts/HONDI-CAPABILITIES-COMMON_vX_Y.md
+#      2026-07-27 신설(config.js loadPersonalAssistantSP()가 manifest 조회
+#      로 사용 — §DIGITAL-BRIDGE). 이 스캔 블록이 처음부터 없어서
+#      sp-catalog.json에 한 번도 등재된 적이 없었다 — try/catch로 조용히
+#      무시되도록 짜여 있어(§ "fetch 실패(무시, PA SP는 정상 로드)") 화면이
+#      죽지는 않았지만, profile-assistant가 이 문서 없이 계속 동작하고
+#      있었던 것으로 보인다. 2026-07-29 잔여 파일 자기검증 블록을 도입한
+#      직후 바로 이 파일이 걸려 발견됨 — 이 블록이 잡아야 할 정확한 사례.
+_scan_single(r'^HONDI-CAPABILITIES-COMMON_v', '.md', 'HONDI-CAPABILITIES-COMMON')
 
 # 2-d) SP_{slug} 계열(.md) — EXPERT 페르소나(SP_lawyer 등) + 공통 가드레일
 #      (SP_common_guardrails·SP_common_medical_safety) — prompts/SP_{slug}_v{ver}.md
@@ -196,12 +189,14 @@ if task_delegation_guide_files:
 #      공유하지 않는다 — slug 자체에 밑줄이 들어갈 수 있어(예:
 #      SP_common_guardrails) 비탐욕(non-greedy) 매칭으로 마지막
 #      "_v숫자[_숫자...]" 조각만 버전으로 떼어낸다.
+_SP_UNDERSCORE_PAT = r'^(SP_.+?)_v[\d_]+\.md$'
+RECOGNIZED_PATTERNS.append(_SP_UNDERSCORE_PAT)
 sp_underscore_groups: dict[str, list[str]] = defaultdict(list)
 for f in PROMPTS.iterdir():
     name = f.name
     if not name.endswith('.md') or 'LATEST' in name:
         continue
-    m = re.match(r'^(SP_.+?)_v[\d_]+\.md$', name)
+    m = re.match(_SP_UNDERSCORE_PAT, name)
     if m:
         sp_underscore_groups[m.group(1)].append(name)
 
@@ -210,6 +205,9 @@ for key in sorted(sp_underscore_groups):
 
 # 3) profile-assistant — prompts/profile-assistant/profile-assistant-vX.Y.txt
 #    (2026-07-08: personal-assistant → profile-assistant 개명·분리)
+#    하위 디렉터리 전용이라 잔여 파일 검사(prompts/ 최상위만 봄) 대상이
+#    아니지만, 일관성을 위해 패턴은 그대로 등록해둔다.
+RECOGNIZED_PATTERNS.append(r'^profile-assistant/profile-assistant-v')
 pa_dir = PROMPTS / 'profile-assistant'
 if pa_dir.is_dir():
     pa_files = [
@@ -221,12 +219,14 @@ if pa_dir.is_dir():
         manifest['profile-assistant'] = 'profile-assistant/' + best(pa_files)
 
 # 4) SP-NN 계열 — prompts/SP-NN_slug_vX.Y.txt
+_SP_NN_PAT = r'^(SP-[\d]+-?(?:IMG)?)_(.+?)(?:_v[\d.]+)?\.txt$'
+RECOGNIZED_PATTERNS.append(_SP_NN_PAT)
 sp_groups: dict[str, list[str]] = defaultdict(list)
 for f in PROMPTS.iterdir():
     name = f.name
     if not name.endswith('.txt') or 'LATEST' in name:
         continue
-    m = re.match(r'^(SP-[\d]+-?(?:IMG)?)_(.+?)(?:_v[\d.]+)?\.txt$', name)
+    m = re.match(_SP_NN_PAT, name)
     if m:
         key = f"{m.group(1)}_{m.group(2)}"
         sp_groups[key].append(name)
@@ -235,12 +235,14 @@ for key in sorted(sp_groups):
     manifest[key] = best(sp_groups[key])
 
 # 5) AGENT-SUPPLIER-NN 계열
+_AGENT_SUPPLIER_PAT = r'^(AGENT-SUPPLIER-(\d+))_'
+RECOGNIZED_PATTERNS.append(_AGENT_SUPPLIER_PAT)
 supplier_groups: dict[str, list[str]] = defaultdict(list)
 for f in PROMPTS.iterdir():
     name = f.name
     if not name.endswith('.txt') or 'LATEST' in name:
         continue
-    m = re.match(r'^(AGENT-SUPPLIER-(\d+))_', name)
+    m = re.match(_AGENT_SUPPLIER_PAT, name)
     if m:
         supplier_groups[m.group(2)].append(name)
 
@@ -255,26 +257,59 @@ for code in sorted(supplier_groups):
 #    하므로) 조용히 지워지는 회귀가 실제로 2회 발생했다(PR #63·#64 모두
 #    같은 원인으로 무력화됨, 2026-07-23 실사로 확인). AGENT-SUPPLIER-COMMON과
 #    동일한 스캔 패턴을 추가해 재발을 원천 차단한다.
-sp_industry_transform_common_files = [
-    f.name for f in PROMPTS.iterdir()
-    if re.match(r'^SP-INDUSTRY-TRANSFORM-COMMON_v', f.name) and f.name.endswith('.md')
-]
-if sp_industry_transform_common_files:
-    manifest['SP-INDUSTRY-TRANSFORM-COMMON'] = best(sp_industry_transform_common_files)
+_scan_single(r'^SP-INDUSTRY-TRANSFORM-COMMON_v', '.md', 'SP-INDUSTRY-TRANSFORM-COMMON')
 
 # 6-b) SP-INDUSTRY-TRANSFORM-NN 계열 — prompts/SP-INDUSTRY-TRANSFORM-NN_slug_vX.Y.txt
 #      AGENT-SUPPLIER-NN과 동일한 스캔 패턴(코드만 다름).
+_INDUSTRY_TRANSFORM_PAT = r'^(SP-INDUSTRY-TRANSFORM-(\d+))_'
+RECOGNIZED_PATTERNS.append(_INDUSTRY_TRANSFORM_PAT)
 industry_transform_groups: dict[str, list[str]] = defaultdict(list)
 for f in PROMPTS.iterdir():
     name = f.name
     if not name.endswith('.txt') or 'LATEST' in name:
         continue
-    m = re.match(r'^(SP-INDUSTRY-TRANSFORM-(\d+))_', name)
+    m = re.match(_INDUSTRY_TRANSFORM_PAT, name)
     if m:
         industry_transform_groups[m.group(2)].append(name)
 
 for code in sorted(industry_transform_groups):
     manifest[f'SP-INDUSTRY-TRANSFORM-{code}'] = best(industry_transform_groups[code])
+
+# ── 잔여 파일 자기검증 (2026-07-29 신설) ────────────────────────────────
+# prompts/ 최상위(하위 폴더 제외)의 .md/.txt 파일 중 위 어떤 패턴에도
+# 안 걸리는 게 있으면, 카탈로그 대상이 원래 아닌 문서(설계도·감사록 등,
+# ALLOWLIST_PREFIXES)가 아닌 한 스크립트를 실패시킨다. archive_old_prompts.py
+# 가 이 스크립트보다 먼저 돌아 계열당 최신 KEEP_LATEST(5)개만 prompts/에
+# 남기므로, 여기 걸리는 파일은 "버전이 오래돼서"가 아니라 "패턴 자체를
+# 모른다"는 뜻 — 그래서 정확히 우리가 원하는 신호만 남는다.
+ALLOWLIST_PREFIXES = (
+    'SP-ARCHITECTURE-MAP', 'SP-AUTHOR', 'SP-CATALOG_v1_0', 'EXPERT-INDEX',
+    'AC-EVOLUTION', 'GOV-TIER-IO-SCHEMA', 'GOV_TASK', 'PDV-TRANSFER-PROTOCOL',
+    'AGENCY-AC-COMMON', 'AC-AUTHOR', 'AGENCY-COMMON-TEMPLATE',
+    'DEPRECATED_', 'GLOBAL-LOCAL-COMPLIANCE', 'ROUTER-PRIORITY',
+    'K-Case', 'jeju-gov-sp-hierarchy', 'README',
+)
+
+unrecognized = []
+for f in sorted(PROMPTS.iterdir()):
+    if not f.is_file() or f.suffix not in ('.md', '.txt'):
+        continue
+    name = f.name
+    if 'LATEST' in name:
+        continue
+    if name.startswith(ALLOWLIST_PREFIXES):
+        continue
+    if any(re.match(pat, name) for pat in RECOGNIZED_PATTERNS):
+        continue
+    unrecognized.append(name)
+
+if unrecognized:
+    print('✗ build_manifest.py: 아무 스캔 패턴에도 안 걸리는 파일 발견 — '
+          '새 명명 규칙이면 이 스크립트에 스캔 블록을, 카탈로그 대상이 '
+          '아닌 문서면 ALLOWLIST_PREFIXES에 추가하세요:', file=sys.stderr)
+    for name in unrecognized:
+        print('  -', name, file=sys.stderr)
+    sys.exit(1)
 
 # ── 출력 ──────────────────────────────────────────────────────────────
 for key, fname in manifest.items():
