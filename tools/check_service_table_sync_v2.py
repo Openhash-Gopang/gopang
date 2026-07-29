@@ -26,6 +26,10 @@ tools/check_service_table_sync_v2.py
      오탐이 없다).
 
 사용법: python3 tools/check_service_table_sync_v2.py
+
+2026-07-29 추가 수정 — AGENT-COMMON 폐기 이후 표가 AC-PRO-CORE로 옮겨간
+것을 반영(manifest 키 변경), ksearch가 KSEARCH_HANDOFF 태그로만 존재해
+대소문자 구분 매칭 탓에 오탐하던 문제를 대소문자 무시 매칭으로 수정.
 """
 import json
 import re
@@ -50,9 +54,15 @@ def registry_entries() -> list[dict]:
 
 def agent_common_text() -> str:
     manifest = json.loads((ROOT / 'prompts' / 'sp-catalog.json').read_text(encoding='utf-8'))
-    fname = manifest.get('AGENT-COMMON')
+    # ★ 2026-07-29 수정 — AGENT-COMMON은 AC-SHADOW-CORE/AC-PRO-CORE 신설과
+    # 함께 폐기됐다(카탈로그에서 키 자체가 빠짐, df848af 이전부터 이미 그
+    # 상태였음). §CATALOG/§CATALOG-EXPERT 표가 실제로 옮겨간 AC-PRO-CORE를
+    # 본다. 이 스크립트는 표 구조를 파싱하지 않고 "텍스트 어디든 등장하는가"
+    # 만 보므로, 이후 AC-PRO-CORE가 다시 개정되어도 표 형식 자체가 바뀌는 것과
+    # 무관하게 계속 동작한다.
+    fname = manifest.get('AC-PRO-CORE')
     if not fname:
-        print("✗ sp-catalog.json에 AGENT-COMMON 키가 없음")
+        print("✗ sp-catalog.json에 AC-PRO-CORE 키가 없음")
         sys.exit(1)
     return (ROOT / 'prompts' / fname).read_text(encoding='utf-8')
 
@@ -68,9 +78,13 @@ def main() -> int:
     missing = []
     for e in routable:
         sid = e['id']
-        # id 자체가 파일 어디든(표든, §0-E 같은 특례 섹션이든, CALL_ 형태든)
+        # id 자체가 파일 어디든(표든, §0-E 같은 특례 섹션이든, CALL_ 형태든,
+        # ksearch처럼 KSEARCH_HANDOFF라는 대문자 전용 태그로만 존재하든)
         # 최소 1회 등장하면 "AI가 존재를 안다"고 인정한다.
-        if not re.search(re.escape(sid), text):
+        # ★ 2026-07-29 — 대소문자 무시로 수정. ksearch가 실제로는
+        # [KSEARCH_HANDOFF: ...] 태그로 정상 라우팅되고 있었는데, 대소문자
+        # 구분 매칭 때문에 "누락"으로 오탐하고 있었다(실사로 확인).
+        if not re.search(re.escape(sid), text, re.IGNORECASE):
             missing.append(sid)
 
     if missing:
@@ -80,7 +94,7 @@ def main() -> int:
         print("  → 이 서비스들은 AI비서가 존재 자체를 모르므로 라우팅될 수 없다.")
         return 1
 
-    print(f"✓ 서비스 동기화 확인 ({len(routable)}개 전부 AGENT-COMMON 어딘가에 등장함, vm 기반 안전추출)")
+    print(f"✓ 서비스 동기화 확인 ({len(routable)}개 전부 AC-PRO-CORE 어딘가에 등장함, vm 기반 안전추출)")
     return 0
 
 

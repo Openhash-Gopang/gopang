@@ -2,6 +2,14 @@
 """
 tools/check_service_table_sync.py
 -----------------------------------
+⚠ 2026-07-29 — 이 파일은 더 이상 CI에서 쓰이지 않습니다(check-service-
+table-sync.yml이 check_service_table_sync_v2.py를 대신 호출하도록
+전환됨). AGENT-COMMON 폐기 이후 표 구조가 AC-PRO-CORE로 이전되며 정규식
+기반 표 파싱이 깨졌고(sp-catalog.json에 AGENT-COMMON 키가 없어 매번
+실패), v2가 이미 이 파일의 알려진 버그 2가지를 고친 개선판이라 v1을
+다시 고치는 대신 v2로 전환하는 쪽을 택했습니다. 과거 설계 참고용으로만
+남겨둡니다 — 실행하지 마세요.
+
 gwp-registry.js(실제 라우팅 대상 서비스 — "무엇이 존재하는가")와
 AGENT-COMMON §9의 [GWP: id] 표(AI비서가 "무엇이 존재한다고 배우는가")는
 서로 다른 파일에 손으로 따로 관리되어 왔다. 2026-07-05~06 사고실험에서

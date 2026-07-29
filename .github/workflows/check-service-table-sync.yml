@@ -6,7 +6,8 @@ on:
     paths:
       - 'gwp-registry.js'
       - 'prompts/**'
-      - 'tools/check_service_table_sync.py'
+      - 'tools/check_service_table_sync_v2.py'
+      - 'tools/extract_gwp_registry.mjs'
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -24,8 +25,11 @@ jobs:
         with:
           python-version: '3.12'
 
-      # ── gwp-registry.js(실제 라우팅 대상)와 AGENT-COMMON §9 표(AI가 배우는
-      # 목록)가 서로 다른 파일에 손으로 따로 관리되다 보니 어긋났었다
-      # (2026-07-05~06: kbusiness 누락). 이 검사가 재발을 병합 전에 잡는다.
-      - name: Run service table sync check
-        run: python3 tools/check_service_table_sync.py
+      # ── gwp-registry.js(실제 라우팅 대상)와 §CATALOG 표(AI가 배우는 목록,
+      # AGENT-COMMON 폐기 이후 AC-PRO-CORE로 이전)가 서로 다른 파일에 손으로
+      # 따로 관리되다 보니 어긋났었다(2026-07-05~06: kbusiness 누락). v1은
+      # 표 구조를 정규식으로 파싱해 AC-PRO-CORE 리라이트 때 형식이 바뀌며
+      # 다시 깨졌다(2026-07-29 발견) — v2(텍스트 어디든 등장하는지만 확인,
+      # 표 형식 변경에 강함)로 전환한다. v1 파일은 참고용으로 남겨둔다.
+      - name: Run service table sync check (v2)
+        run: python3 tools/check_service_table_sync_v2.py

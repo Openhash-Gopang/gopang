@@ -2,6 +2,14 @@
 """
 tools/check_expert_table_sync.py
 -----------------------------------
+⚠ 2026-07-29 — 이 파일은 더 이상 CI에서 쓰이지 않습니다(check-expert-
+table-sync.yml이 check_expert_table_sync_v2.py를 대신 호출하도록
+전환됨). AGENT-COMMON 폐기 이후 §9 EXPERT 표가 AC-PRO-CORE로 이전되며
+"personaId는 반드시..." 도입부 문구와 표 경계 마커(★)가 전부 바뀌어
+이 파일의 정규식 파싱이 깨졌습니다(sp-catalog.json에 AGENT-COMMON
+키가 없어 매번 실패). 과거 설계 참고용으로만 남겨둡니다 — 실행하지
+마세요.
+
 expert-registry.js(실제 라우팅 대상 — "무엇이 존재하는가")와 AGENT-COMMON
 §9의 [EXPERT: personaId] 표(AI비서가 "무엇이 존재한다고 배우는가")가
 어긋나지 않는지 검증한다. check_service_table_sync.py(GWP 기관 서비스용)와
