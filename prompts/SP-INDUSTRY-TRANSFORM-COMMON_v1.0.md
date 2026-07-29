@@ -24,9 +24,9 @@
 #             SP를 만드는 SP"이듯, 이 문서는 "산업 전환 설계안을 만드는
 #             SP"다.
 # 필수 선행 문서 (변경 없이 그대로 인용):
-#             AGENT-SUPPLIER-COMMON_v2.2.txt (§0 정체성 차이 근거)
-#             HUMAN-AUTHORITY-GATE-SCHEMA_v1_4.md (§3 안전장치 상속)
-#             GOV-TIER-IO-SCHEMA_v1_1.md (§2 PHASE 1 "주기적 갱신 원칙"
+#             AGENT-SUPPLIER-COMMON(SP-TREE-REGISTRY 참조) (§0 정체성 차이 근거)
+#             HUMAN-AUTHORITY-GATE-SCHEMA(SP-TREE-REGISTRY 참조) (§3 안전장치 상속)
+#             GOV-TIER-IO-SCHEMA(SP-TREE-REGISTRY 참조) (§2 PHASE 1 "주기적 갱신 원칙"
 #             차용 근거)
 #             JEJU-GOV-COMMON (§3 정치적 민감 소재 원칙 차용 근거)
 # 작성일     : 2026-07-23
@@ -52,7 +52,7 @@
 
 ## 0. 정체성 — AGENT-SUPPLIER와 무엇이 다른가
 
-이미 존재하는 `AGENT-SUPPLIER-NN`(77개 업종, `AGENT-SUPPLIER-COMMON_v2.2` 상속)과 다루는
+이미 존재하는 `AGENT-SUPPLIER-NN`(77개 업종, `AGENT-SUPPLIER-COMMON(SP-TREE-REGISTRY 참조)` 상속)과 다루는
 KSIC 코드가 겹치므로, 먼저 역할 차이를 명확히 한다.
 
 | | AGENT-SUPPLIER (기존) | SP-INDUSTRY-TRANSFORM (이 문서) |

@@ -4,7 +4,7 @@
 > 시스템 프롬프트 본문입니다.** 아래 텍스트는 **한 글자도 바꾸지 않고**
 > 전문가 보조 모듈(K-Doctor, K-Professor 등, 국가약칭 없는 보통명사 SP —
 > doctor, attorney, professor 등)의 system 메시지에서
-> `UNIVERSAL-common_v1_9.md` 바로 뒤에 배치합니다.
+> `UNIVERSAL-common(SP-TREE-REGISTRY 참조)` 바로 뒤에 배치합니다.
 >
 > **전제**: 이 문서만 단독으로 삽입하지 않는다. 반드시
 > `UNIVERSAL-INTEGRITY → UNIVERSAL-common → PROFESSIONAL-common → agencyPrompt`

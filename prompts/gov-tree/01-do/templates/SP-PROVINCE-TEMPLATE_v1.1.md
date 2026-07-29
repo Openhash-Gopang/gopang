@@ -4,7 +4,7 @@
 # 문서명    : 광역자치단체(도·특별시·광역시) — System Prompt 템플릿
 # 문서 코드  : SP-PROVINCE-TEMPLATE
 # 버전      : v1.1 (2026-07-09, GOV_COMMON 삽입 문제 정정 — 아래 "v1.0의
-#             착오 정정" 참조. v1.0은 GOV-TIER-IO-SCHEMA_v1_0 Tier A를
+#             착오 정정" 참조. v1.0은 GOV-TIER-IO-SCHEMA(SP-TREE-REGISTRY 참조) Tier A를
 #             SP-CITY-TEMPLATE_v1.0과 동일한 렌더링 구조로 템플릿화)
 # 상위 상속  : kgov(SP-10_kpublic, 전국 공통) → <PROVINCE>-GOV-COMMON-
 #             OVERLAY(00-common/overlays/, 도별 사실) → JEJU-TREE-
@@ -49,7 +49,7 @@
 # 별개 — 프로즈는 LLM 컨텍스트용, `거버넌스구조`는 라우터 코드가 분기
 # 조건으로 참조하는 값이다(예: 계층모델==='SINGLE_TIER'면 B 계층
 # 스킵, 하위단위_기본유형==='B-2_ADMINISTRATIVE_CITY'면 자치사무 없음
-# 문구 자동 삽입). 상세는 GOV-TIER-IO-SCHEMA_v1_1.md 오버레이 B-2 참조.
+# 문구 자동 삽입). 상세는 GOV-TIER-IO-SCHEMA(SP-TREE-REGISTRY 참조) 오버레이 B-2 참조.
 #
 # 자리표시자 목록: 도이름, 도코드, 통치구조_문구, 이원화_문구,
 #                 인접기관_문구, 광역출력_문구, 위임사무_문구,
@@ -83,7 +83,7 @@ kgov → <PROVINCE>-GOV-COMMON-OVERLAY → JEJU-TREE-PROTOCOL → [본 SP: {도�
 ## §2. 입력·출력 스키마 (GOV-TIER-IO-SCHEMA Tier A 상속)
 
 INPUT_SCHEMA/OUTPUT_SCHEMA/AUTHORITY_SPLIT은
-`prompts/Jejudo/08-schema/GOV-TIER-IO-SCHEMA_v1_0.md` §A(PROVINCE)의
+`prompts/Jejudo/08-schema/GOV-TIER-IO-SCHEMA(SP-TREE-REGISTRY 참조)` §A(PROVINCE)의
 정의를 그대로 상속한다 — 광역자치단체의 산출물은 "주민에게 직접"보다
 **"기초자치단체에게, 또는 기초자치단체 여럿에 걸쳐"** 나가는 경우가
 많다(지방자치법 제14조 사무배분기준①~⑤).

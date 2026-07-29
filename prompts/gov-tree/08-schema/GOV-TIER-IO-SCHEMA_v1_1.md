@@ -11,11 +11,11 @@
 # 근거      : SP-AUTHOR_v1_10 PHASE B-0("이 기관이 무슨 일을 하는가보다
 #             먼저, 무엇을 받아서 무엇을 내주는가부터 확정한다")를 개별
 #             기관 단위가 아니라 지방정부 "계층" 단위로 한 번만 정의해
-#             두는 문서. DOCUMENT-TYPE-REGISTRY_v1_6의 doc_type/pdv_field
+#             두는 문서. DOCUMENT-TYPE-REGISTRY(SP-TREE-REGISTRY 참조)의 doc_type/pdv_field
 #             이원 표기를 그대로 따른다.
 # 필수 선행 문서 (변경 없이 그대로 인용):
-#             DOCUMENT-TYPE-REGISTRY_v1_6.md (doc_type 어휘·명명규칙)
-#             DATA_REQUIREMENT-SCHEMA_v1_2.md
+#             DOCUMENT-TYPE-REGISTRY(SP-TREE-REGISTRY 참조) (doc_type 어휘·명명규칙)
+#             DATA_REQUIREMENT-SCHEMA(SP-TREE-REGISTRY 참조)
 #             지방자치법 제13조(사무 범위)·제14조(사무배분기준) — 본문 중
 #             인용된 조문은 2026-07-09 기준 국가법령정보센터 확인
 # 위치      : SP-AUTHOR PHASE B-0 직전에 참조. 개별 기관(도청 하나, 시청

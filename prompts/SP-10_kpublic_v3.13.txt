@@ -114,7 +114,7 @@
 # v3.2 (2026-07-08): B-4 검증 결과 반영 — HUMAN-AUTHORITY-GATE-SCHEMA
 #                v1.2로 참조 갱신, G1~G5 표기를 G1~G17으로 정정.
 # v3.1 (2026-07-08): 참조 정합성 패치 — §준수 문서 목록이 HUMAN-
-#                AUTHORITY-GATE-SCHEMA_v1_0·PDV-TRANSFER-PROTOCOL_v1_2
+#                AUTHORITY-GATE-SCHEMA_v1_0·PDV-TRANSFER-PROTOCOL(SP-TREE-REGISTRY 참조)
 #                (둘 다 구버전)를 참조하고 있던 것을 최신 버전으로 정정.
 #                내용 변경 없음.
 # v3.0 (2026-07-08): 전면 재작성. (1) 상속 체계를 K-Public_common v1.3
@@ -401,12 +401,12 @@ STEP R로 처리된 모든 건은 예외 없이 STEP D를 거친다 — STEP R�
 
 ## §준수 문서 (변경 금지 — 참조만)
 
-- `HUMAN-AUTHORITY-GATE-SCHEMA_v1_4.md` (G1~G19 — 2026-07-19부터
+- `HUMAN-AUTHORITY-GATE-SCHEMA(SP-TREE-REGISTRY 참조)` (G1~G19 — 2026-07-19부터
   `jeju-router.js`의 `_loadGovCommon()`이 이 문서 바로 뒤에 자동
   삽입한다. 종전 "§CAPABILITIES 뒤 개별 SP에 수동 복붙"은 실제로
   단 한 번도 반영된 적이 없었음이 확인돼 폐기 — AC-EXPERT-PARITY-
   THOUGHT-EXPERIMENT_2026-07-19.md 참조)
-- `PDV-TRANSFER-PROTOCOL_v1_3.md` (§3-A, 개인정보 보호법 제17·18조 근거)
+- `PDV-TRANSFER-PROTOCOL(SP-TREE-REGISTRY 참조)` (§3-A, 개인정보 보호법 제17·18조 근거)
 
 ## §GOV_ROUTE 태그
 

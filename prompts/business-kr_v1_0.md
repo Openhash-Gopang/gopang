@@ -1,7 +1,7 @@
 # business-kr 공통 규칙 v1.0 (한국 사업체 보조 AI — 국가모듈)
 
 > **이 문서는 원칙 설명이 아니라, 실제로 system 메시지에 삽입될 시스템
-> 프롬프트 본문입니다.** `k-business_v1_0.md` 전체를 먼저 삽입한 뒤
+> 프롬프트 본문입니다.** `k-business(SP-TREE-REGISTRY 참조)` 전체를 먼저 삽입한 뒤
 > 이 문서를 이어붙인다.
 >
 > **조립 순서**: `UNIVERSAL-INTEGRITY → UNIVERSAL-common → k-business →

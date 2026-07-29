@@ -27,7 +27,7 @@
 > 정체성(P1)만 `K-Public_common`(국가기관용)과 `PROFESSIONAL-common`
 > (전문가 보조용)으로 나눈다.
 >
-> **`UNIVERSAL-INTEGRITY_v1_0.md`와는 다른 문서다.** UNIVERSAL-INTEGRITY는
+> **`UNIVERSAL-INTEGRITY(SP-TREE-REGISTRY 참조)`와는 다른 문서다.** UNIVERSAL-INTEGRITY는
 > 확신도 이원화·불확실 식별자 생성 차단 등 "어떻게 판단하는가"를 다루고,
 > 이 문서(`UNIVERSAL-common`)는 "정체성과 무관하게 어떻게 행동하는가"
 > (권한의 한계, 정확성, 응급 우선순위, 개인정보, 업무 파이프라인 등)를

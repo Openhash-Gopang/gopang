@@ -1,0 +1,31 @@
+name: Check no hardcoded SP refs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prompts/**'
+      - 'tools/check_no_hardcoded_sp_refs.py'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check-hardcoded-sp-refs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ── SP는 SP-TREE-REGISTRY를 통해서만 다른 SP를 참조해야 한다 — 이름+버전을
+      # 직접 적어 넣으면(예: SP_lawyer_v4_2) 참조 대상이 개정돼도 조용히 구버전을
+      # 계속 가리킨다. 2026-07-29 감사에서 16개 파일·33건이 이렇게 방치돼 있던
+      # 것을 발견해 고쳤다 — 같은 드리프트가 재발하면 병합 전에 잡는다.
+      - name: Run hardcoded-SP-refs check
+        run: python3 tools/check_no_hardcoded_sp_refs.py

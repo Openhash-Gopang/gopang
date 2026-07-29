@@ -1139,7 +1139,7 @@ v2.18 (2026-07-27) — 주피터님 지시: "PA는 한 번 완성으로 끝나�
   세션에서 진행합니다"로 범위가 정해져 있어 이번엔 PA 쪽 수용 태세만
   갖췄다 — 설계는 아래 "AC 쪽 설계(참고용)"에 정리해뒀다.
 v2.17 (2026-07-27) — 질문 "PA가 혼디 시스템 전반을 정확히 이해하려면
-  어떤 방법이 필요한가"에 대한 답으로, HONDI-CAPABILITIES-COMMON_v1_0.md
+  어떤 방법이 필요한가"에 대한 답으로, HONDI-CAPABILITIES-COMMON(SP-TREE-REGISTRY 참조)
   신설(혼디가 실제로 할 수 있는 것의 단일 소스) — §DIGITAL-BRIDGE의
   "[실재하는 도구]" 목록을 이 SP 본문에서 빼고 그 문서를 참조하도록
   변경. config.js의 loadPersonalAssistantSP()가 매 세션 이 문서를 함께
