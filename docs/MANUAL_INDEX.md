@@ -20,6 +20,7 @@
 | 지방행정 AI(도청·시청·읍면동·국가기관)가 원형→인스턴스를 어떻게 조립하는지 | `docs/GOV_REGIONAL_AC_MANUAL_v1_0.md` |
 | GDC가 가입 후 어떻게 충전·차감되고, 잔액이 낮으면 어떻게 알림이 오는지 | `docs/GDC_CHARGE_MANUAL_v1_0.md` |
 | K-Law·K-School 같은 개별 K-서비스는 요금을 어떻게 매기는지 | `docs/K_SERVICE_MONETIZATION_v1_0.md` |
+| SP들끼리 어떻게 상속·참조하고, 버전 박제·임의 계층 형성을 뭐가 막는지 | `docs/SP_TREE_GOVERNANCE_MANUAL_v1_0.md` |
 | profile-assistant(PA)가 프로필 작성·갱신을 어떻게 처리하는지(사진저장·결제수단·AC-PA 채널) | `docs/PROFILE_ASSISTANT_MANUAL_v1_0.md` |
 | Supabase→L1 이관이 지금 어디까지 됐는지 | `docs/supabase_to_l1_migration_plan.md` |
 | webapp.html의 설계 이력·SP 구조 | `docs/webapp_manual_v4.md` |
@@ -68,6 +69,7 @@
 | `docs/HONDI_300_SCENARIO_RETRACE_v3_50_v1_0.md` | v3.49 패치 대상 시나리오 18건 재추적 결과(개선 기대 11·불변 7) + §ROUTER-CONFIDENCE 4번째 질문(§0-H 강제 교차점검) 신설로 `AGENT-COMMON_v3_50.txt` 반영 근거 | 2026-07-28 | 🟢 신설 |
 | `docs/HONDI_PHONE_FIELD_TEST_CHECKLIST_v1_0.md` | 폰 실사용 대화형 시나리오 33건 체크리스트(성공/부분/실패 표시) — 이번 세션 신규기능(Pro/Flash·risk_tier·§INFO) 최우선 검증 + 18개 K서비스 스모크 + 코드로 확인된 알려진 위험지점 재현. `HONDI_MASTER_TEST_PLAN_v1_0.md`(코드/유닛 테스트 지도)와 역할 구분 — 이건 라이브 E2E 전용 | 2026-07-28 | 🟢 신설 |
 | `docs/K_SERVICE_MONETIZATION_v1_0.md` | K-Law(소송가액 구간별 건당 요금)·K-School(교육단계별 정액) 개별 유료화 가격정책, 인프라 펀드 조달 연계 | 2026-07-23 | 🟡 신설 — 형사사건 적용범위·법률 자문·대학원 요금 보정 등 TODO 있음 |
+| `docs/SP_TREE_GOVERNANCE_MANUAL_v1_0.md` | SP-TREE-REGISTRY(§F edges 블록, SSOT)·CI 가드 2종(하드코딩 참조·미등록 상속 선언)·CODEOWNERS/Ruleset·SP-TREE-GUARDIAN(주간 메타 SP 감사, findings-only) 구조 전체 | 2026-07-29 | 🟢 신설 — desktop.html 좌측 사이드바 "개발자 문서" 섹션에 링크됨 |
 | `docs/PROFILE_ASSISTANT_MANUAL_v1_0.md` | profile-assistant(PA) 아키텍처(별도 탭·SP 로드) · 사진저장(R2) · 결제수단(GDC/계좌이체) · §DIGITAL-BRIDGE · HONDI-CAPABILITIES-COMMON · §PROFILE-UPDATE-MODE · AC-PA 실시간 채널 | 2026-07-27 | 🟢 신설 — `pa_update_roadmap_v1.md`/`pa_dialogue_simulation_10cases_v1.md`/`pa_identity_template_thought_experiment_v1.md`/`user_profile_authoring_guidelines_v1_0.md`/`PROFILE_REGISTER_HANDOVER_v2.md` 대체(전부 낡았거나 산발적 메모, `docs/archive/` 이동 검토 대상) |
 | `docs/POCKETBASE-STRUCTURE-GUIDE_v1_0.md` + `_v1_1_addendum` | L1~L5 서버 구조, Rule NULL/빈문자열 함정 등 실전 팁 | 2026-07-16 / 07-19 | 🟢 유효 — `L1_POCKETBASE_MANUAL`과 상호보완(겹치는 부분 있음, 통합은 후속 검토) |
 | `docs/gopang-report-manual.md` | 하위 시스템 PDV 보고서(6하원칙) 스키마·전송 API | 2026년 5월(v1.0) | 🟢 유효 — **README.md에서 직접 링크됨** |
