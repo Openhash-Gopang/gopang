@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 # ops/deploy-pb-migrations.sh
 #
+# ⚠ 2026-07-29 확인 — 이 파일은 더 이상 서버에서 쓰이지 않습니다. 실제로는
+# 2026-07-16 재설계(SSH_ORIGINAL_COMMAND 기반, tarball 전체 동기화 아님)
+# 버전이 /opt/gopang/ops/apply-pb-migrations.sh로 서버에만 존재하고 있었고,
+# 저장소에는 한 번도 커밋되지 않았습니다(PR #114 배포 실패를 조사하다가
+# diff로 발견). 최신 버전은 ops/apply-pb-migrations.sh를 보세요.
+#
+# 이 파일은 과거 설계를 참고용으로만 남겨둡니다 — 실행하지 마세요.
+#
+#
 # L1(hanlim) PocketBase에 pb_migrations/*.js 를 반영하는 표준 절차.
 #
 # ★ 2026-07-16 확인된 실제 인프라 사실 (추측 아님, SSH로 직접 확인):
