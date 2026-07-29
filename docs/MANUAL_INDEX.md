@@ -57,7 +57,7 @@
 ### 🔌 API·인프라 레퍼런스
 | 문서 | 분야 | 최종수정 | 상태 |
 |---|---|---|---|
-| `docs/API_REFERENCE_worker_v1_0.md` | `worker.js` 145개 엔드포인트 레퍼런스(요약 전체 + 상세 30개) | 2026-07-19 | 🟢 신설 — 나머지 ~115개 상세화는 후속 작업 필요 |
+| `docs/API_REFERENCE_worker_v1_0.md` | `worker.js` 145개 엔드포인트 레퍼런스(요약 전체 + 상세 30개) | 2026-07-19 | 🟡 나머지 ~115개 상세화 필요 + 2026-07-29: AGENT-COMMON 참조 부분(§3.3 `/orchestration/procedure-map` 등) 폐기됨, 재검증 필요 |
 | `docs/L1_POCKETBASE_MANUAL_v1_0.md` | L1 PocketBase 아키텍처·44개 컬렉션·`pb_hooks`·배포 절차 | 2026-07-19 | 🟢 신설 — Admin UI로 스키마 직접 검증은 아직 안 됨 |
 | `docs/DEVICE_LINK_MANUAL_v1_0.md` | 기기 간 지갑 이전(PC 로그인)·웹푸시·고액거래 재인증(WebAuthn)·실사로 발견한 함정 11가지 | 2026-07-20 | 🟢 신설 — 실사 완료(실제 기기 테스트로 end-to-end 검증됨) |
 | `docs/OWNER_PDV_GOVERNANCE_MANUAL_v1_0.md` | K-서비스·전문가 페르소나 거버넌스, 기관측 PDV(owner_pdv) 스키마·가명화 해시·C45/C39-5·SSOT 마이그레이션 현황 | 2026-07-20 | 🟢 신설 — 설계·구현 완료, 배포·실사용 테스트는 미완료(§11 체크리스트 참조) |
@@ -70,7 +70,7 @@
 | `docs/HONDI_PHONE_FIELD_TEST_CHECKLIST_v1_0.md` | 폰 실사용 대화형 시나리오 33건 체크리스트(성공/부분/실패 표시) — 이번 세션 신규기능(Pro/Flash·risk_tier·§INFO) 최우선 검증 + 18개 K서비스 스모크 + 코드로 확인된 알려진 위험지점 재현. `HONDI_MASTER_TEST_PLAN_v1_0.md`(코드/유닛 테스트 지도)와 역할 구분 — 이건 라이브 E2E 전용 | 2026-07-28 | 🟢 신설 |
 | `docs/K_SERVICE_MONETIZATION_v1_0.md` | K-Law(소송가액 구간별 건당 요금)·K-School(교육단계별 정액) 개별 유료화 가격정책, 인프라 펀드 조달 연계 | 2026-07-23 | 🟡 신설 — 형사사건 적용범위·법률 자문·대학원 요금 보정 등 TODO 있음 |
 | `docs/SP_TREE_GOVERNANCE_MANUAL_v1_0.md` | SP-TREE-REGISTRY(§F edges 블록, SSOT)·CI 가드 2종(하드코딩 참조·미등록 상속 선언)·CODEOWNERS/Ruleset·SP-TREE-GUARDIAN(주간 메타 SP 감사, findings-only) 구조 전체 | 2026-07-29 | 🟢 신설 — desktop.html 좌측 사이드바 "개발자 문서" 섹션에 링크됨 |
-| `docs/PROFILE_ASSISTANT_MANUAL_v1_0.md` | profile-assistant(PA) 아키텍처(별도 탭·SP 로드) · 사진저장(R2) · 결제수단(GDC/계좌이체) · §DIGITAL-BRIDGE · HONDI-CAPABILITIES-COMMON · §PROFILE-UPDATE-MODE · AC-PA 실시간 채널 | 2026-07-27 | 🟢 신설 — `pa_update_roadmap_v1.md`/`pa_dialogue_simulation_10cases_v1.md`/`pa_identity_template_thought_experiment_v1.md`/`user_profile_authoring_guidelines_v1_0.md`/`PROFILE_REGISTER_HANDOVER_v2.md` 대체(전부 낡았거나 산발적 메모, `docs/archive/` 이동 검토 대상) |
+| `docs/PROFILE_ASSISTANT_MANUAL_v1_0.md` | profile-assistant(PA) 아키텍처(별도 탭·SP 로드) · 사진저장(R2) · 결제수단(GDC/계좌이체) · §DIGITAL-BRIDGE · HONDI-CAPABILITIES-COMMON · §PROFILE-UPDATE-MODE · AC-PA 실시간 채널 | 2026-07-27 | 🟡 `pa_update_roadmap_v1.md`/`pa_dialogue_simulation_10cases_v1.md`/`pa_identity_template_thought_experiment_v1.md`/`user_profile_authoring_guidelines_v1_0.md`/`PROFILE_REGISTER_HANDOVER_v2.md` 대체(전부 낡았거나 산발적 메모, `docs/archive/` 이동 검토 대상) + 2026-07-29: AGENT-COMMON 참조 부분 폐기됨, 재검증 필요 |
 | `docs/POCKETBASE-STRUCTURE-GUIDE_v1_0.md` + `_v1_1_addendum` | L1~L5 서버 구조, Rule NULL/빈문자열 함정 등 실전 팁 | 2026-07-16 / 07-19 | 🟢 유효 — `L1_POCKETBASE_MANUAL`과 상호보완(겹치는 부분 있음, 통합은 후속 검토) |
 | `docs/gopang-report-manual.md` | 하위 시스템 PDV 보고서(6하원칙) 스키마·전송 API | 2026년 5월(v1.0) | 🟢 유효 — **README.md에서 직접 링크됨** |
 | `docs/webapp_manual_v4.md` | `webapp.html` 설계 명세(SP-00 v10.0, v4.0) | 2026-06-09 | 🟢 유효(v4.0 — v3.1의 상위호환) |

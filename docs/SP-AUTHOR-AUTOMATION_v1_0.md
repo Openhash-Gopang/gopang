@@ -2,6 +2,14 @@
 ## SP-Author 자동화 — 다중 촉발 경로 + 정기 갱신 방법론
 
 작성일: 2026-07-11 | 작성자: 주피터 지시, Claude 작성
+
+> **⚠ 2026-07-29 정정**: 본문의 "AGENT-COMMON §3-0 ③"은 `AGENT-COMMON`
+> 폐기(`AC-SHADOW-CORE`/`AC-PRO-CORE`/`AC-FLASH-EXECUTOR`로 교체) 이후
+> 어느 파일·섹션으로 이어졌는지 재검증되지 않았습니다. `/sp-author/*`
+> 엔드포인트·PocketBase 컬렉션 구조 자체는 오늘(2026-07-29) `SP-TREE-GUARDIAN`이
+> 동일 패턴을 그대로 재사용해 여전히 유효함을 확인했습니다 —
+> [`docs/SP_TREE_GOVERNANCE_MANUAL_v1_0.md`](./SP_TREE_GOVERNANCE_MANUAL_v1_0.md) §6 참조.
+
 전제: `/sp-author/queue`·`/sp-author/escalate`·`/sp-author/refresh-*` 엔드포인트(worker.js,
 2026-07-11 신설)와 `sp_draft_requests`·`escalations`·`sp_refresh_schedule` 컬렉션(L1
 PocketBase)이 이미 존재한다고 전제한다. 이 문서는 그 큐를 **무엇이 채우는가**(촉발 경로)와

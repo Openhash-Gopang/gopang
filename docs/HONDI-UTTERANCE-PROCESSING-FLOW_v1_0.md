@@ -2,6 +2,10 @@
 
 > 근거: `src/gopang/ai/call-ai.js`(callAI → _callAIInner), `src/gopang/ai/manifest-loader.js`
 > 작성: 2026-07-13 (레포 직접 분석 기반)
+> **⚠ 2026-07-29 정정**: 아래 다이어그램의 `AGENT-COMMON` 분기는 이후
+> `AC-SHADOW-CORE`/`AC-PRO-CORE`(+ `AC-FLASH-EXECUTOR`로의 위임)로
+> 교체됐습니다 — 흐름도 자체를 다시 그리지 않았으니, 이 문서의 노드
+> 이름을 최신 구조와 그대로 매칭하지 마세요.
 
 ```mermaid
 flowchart TD

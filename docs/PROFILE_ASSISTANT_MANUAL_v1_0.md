@@ -11,6 +11,11 @@
 > **일회성 작업 기록**: 오늘 하루 전체 작업 경과는
 > [`docs/WORKLOG_MANUAL_2026_07_27.md`](./WORKLOG_MANUAL_2026_07_27.md) 참고
 > (이 문서는 "지금 어떻게 동작하는가"만 다룹니다 — 시간순 기록이 아닙니다).
+> **⚠ 2026-07-29 정정**: 아래 본문의 `AGENT-COMMON`(AC — 메인 비서)은
+> 이후 `AC-SHADOW-CORE`/`AC-PRO-CORE`/`AC-FLASH-EXECUTOR`로 교체됐습니다.
+> `prompts/AGENT-COMMON_v3_48.txt` 같은 구체적 파일 경로 언급은 더 이상
+> 유효하지 않습니다 — 현재 AC-PA 연동이 어느 파일 기준인지는 재검증
+> 필요.
 
 이 문서는 profile-assistant(PA — 혼디 프로필 작성·갱신 담당 AI)와 AGENT-COMMON
 (AC — 메인 비서)의 협업 구조를 2026-07-27 기준으로 다룹니다. `docs/manual/`
