@@ -12,6 +12,14 @@ import { _patchL1LedgerUserHash, _patchPdvChainHeight,
 import { summarizeTranscript6W } from '../ai/report-utils.js';
 import { _handleGwpSignRequest } from './sign.js';
 import { GWP_ALLOWED_ORIGINS } from './allowed-origins.js';
+// ★ 2026-07-31 신설 — "AC가 다른 SP를 호출할 때 위치·주소 전달을 코드로
+// 강제하라"(주피터 지시)는 요구를 호출부 하나하나가 아니라 이 함수
+// 자신에게 건다. 지금까지는 호출부(call-ai.js)가 _buildRoutingFacts()를
+// 직접 불러 4번째 인자로 넘겨야 했는데, 그 호출을 빠뜨리면(새 호출부
+// 추가 시 등) 위치가 조용히 누락될 수 있는 구조였다. 이제 이 함수
+// 스스로 계산해서 baseline으로 깔고, 호출부가 넘긴 값은 그 위에
+// 덮어쓰는 방식으로 바꾼다 — 호출부가 깜빡해도 항상 실린다.
+import { _buildRoutingFacts } from '../services/location.js';
 // 2026-07-30 신설 — SSO 경로1(gwp_token) 발급용. auth/gopang-sso.js가
 // 이미 export하고 있던 issueToken()을 여기서 처음으로 실제 호출한다
 // (지금까지 이 저장소 어디에서도 import된 적이 없었다 — 경로1이 항상
@@ -129,9 +137,16 @@ export async function _gwpLaunch(service, context, _preTab = null, facts = null)
   // facts: 메인 비서가 이미 확보한 부가 정보(현재는 currentLocation만) —
   // ctx와 동일한 이유로 base64 인코딩. null/빈 객체면 아예 파라미터를
   // 생략해 URL을 불필요하게 늘리지 않는다.
-  if (facts && Object.keys(facts).length) {
+  // ★ 2026-07-31 — 호출부가 넘긴 facts를 그대로 신뢰하지 않는다.
+  // _buildRoutingFacts()로 자체 계산한 값을 먼저 baseline으로 깔고,
+  // 호출부 값은 그 위에 덮어쓴다(호출부가 더 구체적인 값을 안다면
+  // 우선하되, 아예 안 넘겼거나 실수로 null을 넘겨도 baseline이 남는다).
+  let effectiveFacts = {};
+  try { effectiveFacts = { ...(_buildRoutingFacts() || {}), ...(facts || {}) }; }
+  catch (e) { console.warn('[GWP] _buildRoutingFacts 자동 계산 실패(무시):', e.message); effectiveFacts = facts || {}; }
+  if (effectiveFacts && Object.keys(effectiveFacts).length) {
     try {
-      const safeFacts = btoa(unescape(encodeURIComponent(JSON.stringify(facts))));
+      const safeFacts = btoa(unescape(encodeURIComponent(JSON.stringify(effectiveFacts))));
       svcUrl.searchParams.set('facts',     safeFacts);
       svcUrl.searchParams.set('facts_enc', 'b64');
     } catch (e) {
