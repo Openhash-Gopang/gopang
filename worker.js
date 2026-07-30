@@ -13049,25 +13049,31 @@ async function _fetchOwnSpAndGates(agency) {
   const now = Date.now();
   if (cached && (now - cached.at) < _AGENCY_OWN_SP_TTL_MS) return cached.text;
 
-  try {
-    const [ownSp, gateSchema, pdvTransfer] = await Promise.all([
-      _fetchDelegationPrompt(agency),
-      _fetchByManifestKeyFromGithub('HUMAN-AUTHORITY-GATE-SCHEMA').catch(e => {
-        console.warn('[GovRelay] HUMAN-AUTHORITY-GATE-SCHEMA 로드 실패(무시):', e.message);
-        return '';
-      }),
-      _fetchByManifestKeyFromGithub('PDV-TRANSFER-PROTOCOL').catch(e => {
-        console.warn('[GovRelay] PDV-TRANSFER-PROTOCOL 로드 실패(무시):', e.message);
-        return '';
-      }),
-    ]);
-    const text = [ownSp, gateSchema, pdvTransfer].filter(Boolean).join('\n\n---\n\n');
-    _agencyOwnSpCache.set(agency, { text, at: now });
-    return text;
-  } catch (e) {
-    console.warn(`[GovRelay] ${agency} 자신의 SP 로드 실패(무시, K-Public_common만으로 계속):`, e.message);
-    return '';
-  }
+  // 2026-07-30 수정 — 이 세 fetch는 각각 독립적으로 실패할 수 있어야
+  // 한다. 이전엔 _fetchDelegationPrompt(agency)(SP-10_kpublic 등 agency
+  // 자신의 정본 SP)만 자기 .catch()가 없어서, 이게 한 번이라도 실패하면
+  // (GitHub raw fetch 순간 오류·레이트리밋 등) Promise.all 전체가
+  // reject되어 게이트 문서 2개까지 전부 빈 문자열로 날아가고 대화는
+  // 아무 티 없이 계속되던 문제가 있었다(실사로 확인 — §공문서 발급
+  // 안내가 통째로 안 나가는 증상의 유력 원인). 셋 다 개별 .catch()로
+  // 격리한다.
+  const [ownSp, gateSchema, pdvTransfer] = await Promise.all([
+    _fetchDelegationPrompt(agency).catch(e => {
+      console.warn(`[GovRelay] ${agency} 정본 SP(${SP_DELEGATION_REGISTRY[agency]?.key || '?'}) 로드 실패(무시):`, e.message);
+      return '';
+    }),
+    _fetchByManifestKeyFromGithub('HUMAN-AUTHORITY-GATE-SCHEMA').catch(e => {
+      console.warn('[GovRelay] HUMAN-AUTHORITY-GATE-SCHEMA 로드 실패(무시):', e.message);
+      return '';
+    }),
+    _fetchByManifestKeyFromGithub('PDV-TRANSFER-PROTOCOL').catch(e => {
+      console.warn('[GovRelay] PDV-TRANSFER-PROTOCOL 로드 실패(무시):', e.message);
+      return '';
+    }),
+  ]);
+  const text = [ownSp, gateSchema, pdvTransfer].filter(Boolean).join('\n\n---\n\n');
+  _agencyOwnSpCache.set(agency, { text, at: now });
+  return text;
 }
 
 // LLM 응답이 순수 JSON 위임 요청(U9-2 형식)인지 검사한다. 아니면 null —
