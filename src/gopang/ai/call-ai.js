@@ -4010,9 +4010,15 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
     console.log(`[AI] 응답 시작 — status:${res.status}, streaming...`);
 
     // ── SSE 스트림 수신 + 실시간 렌더링 ─────────────────────
-    hideTyping();
-
+    // ★ 2026-07-30 버그 수정 — 기존엔 여기서 hideTyping()을 바로
+    // 호출했는데, 이건 "HTTP 헤더가 도착했다"는 뜻이지 "LLM이 실제로
+    // 텍스트를 생성하기 시작했다"는 뜻이 아니다. 그 사이(라우팅 판단
+    // 등으로 첫 토큰까지 지연될 때) 타이핑 인디케이터도 없고 텍스트도
+    // 없는 빈 화면이 수 초간 노출돼 "멈춘 것처럼" 보이는 원인이었다
+    // (실사용 중 발견). hideTyping()은 실제 첫 델타를 받는 시점으로
+    // 옮기고, 그 전까지는 타이핑 인디케이터를 계속 띄워둔다.
     const bubble = _createStreamBubble();
+    let   _typingHidden = false;
     const reader  = res.body.getReader();
     const decoder = new TextDecoder();
     let   fullReply = '';
@@ -4041,6 +4047,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
             }
             const delta = chunk.choices?.[0]?.delta?.content ?? '';
             if (delta) {
+              if (!_typingHidden) { hideTyping(); _typingHidden = true; }
               fullReply += delta;
               // CLN 신고가 아닐 때만 실시간 렌더링
               if (bubble) _updateStreamBubble(bubble, fullReply);
@@ -4067,6 +4074,9 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
       throw streamErr;
     } finally {
       idle.cancel();
+      // ★ 안전장치 — 델타를 한 번도 못 받고 스트림이 끝나거나(빈 응답)
+      // 에러로 종료된 경우, 타이핑 인디케이터가 영원히 안 사라지는 걸 방지.
+      if (!_typingHidden) { hideTyping(); _typingHidden = true; }
     }
 
     if (!fullReply) fullReply = '(응답 없음)';
