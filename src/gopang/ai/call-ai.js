@@ -2683,6 +2683,21 @@ async function _loadOwnJobContext() {
         work_domain: identity.work_domain || null, // 2026-07-14 신설(구멍 D)
       };
     }
+    // ★ 2026-07-30 신설 — 이 조회는 이미 인증된 본인 프로필 전체를 받아온다
+    // (data.profile). 그런데 정작 profile.address/name/phone은 지금까지
+    // 캐시하지 않고 있었다 — SP(U7-2/U7-3)는 계속 "PDV_REQUEST로 스스로
+    // 확인하라"고 지시했지만, 메인 앱에는 그 태그를 처리하는 코드 자체가
+    // 없었다(K-서비스 서브탭에만 pdv-history-client.js가 연결돼 있었음).
+    // "SP 문구로 지시" 대신, 이미 하고 있던 이 인증 조회의 응답에서
+    // 값만 더 꺼내 코드가 직접 채워 넣는다 — 위치·날짜와 동일한 원칙.
+    if (data?.profile) {
+      window.__hondiOwnProfileCache = {
+        ...(window.__hondiOwnProfileCache || {}),
+        address: data.profile.address || null,
+        name: data.profile.name || null,
+        phone: data.profile.phone || null,
+      };
+    }
 
     // 2026-07-14 신설 — 나에게 배정된 STAFF_TASK_QUEUE 작업 확인
     // (AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_v2_0.md 구멍 C). 검증된
@@ -2743,6 +2758,20 @@ async function _buildEnhancedUserContent(userContent) {
 
   const locNote = _buildLocNote();
   if (locNote) parts.push(locNote.trim());
+
+  // ★ 2026-07-30 신설 — window.__hondiOwnProfileCache에 address/name/phone이
+  // 있으면(위 _loadOwnJobContext가 채움) 매 턴 자동으로 알려준다. "PDV_REQUEST
+  // 태그를 써서 스스로 확인하라"는 SP 지시는 메인 앱에 그 태그를 처리하는
+  // 코드가 없어 작동할 수 없었다(실사용 중 반복 확인된 문제) — 태그·왕복
+  // 없이 이미 있는 값을 코드가 직접 매 턴 알려주는 방식으로 대체한다.
+  const cachedProfile = window.__hondiOwnProfileCache;
+  if (cachedProfile?.address || cachedProfile?.name || cachedProfile?.phone) {
+    const known = [];
+    if (cachedProfile.address) known.push(`주소:${cachedProfile.address}`);
+    if (cachedProfile.name)    known.push(`이름:${cachedProfile.name}`);
+    if (cachedProfile.phone)   known.push(`전화:${cachedProfile.phone}`);
+    parts.push(`[이미 확보된 본인 프로필 — 다시 묻지 말 것] ${known.join(', ')}`);
+  }
 
   // PDV 요약 — 2026-07-14 수정: 이전엔 여기서 localStorage 로그를 직접
   // 읽어 domain(일상/업무) 구분 없이 그대로 넣고 있었다 — §PDV-SPLIT
