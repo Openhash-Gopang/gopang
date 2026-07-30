@@ -8067,6 +8067,8 @@ export default {
     if (pathname === '/stats/self')                return handleStatsSelf(bodyText, env, corsHeaders);
     if (pathname === '/gov/dept-task/my-assignments') return handleMyAssignments(bodyText, env, corsHeaders);
     if (pathname === '/gov/task/schema/draft')    return handleGovTaskSchemaDraft(bodyText, env, corsHeaders);
+    if (pathname === '/gov/task/schema/lookup')   return handleGovTaskSchemaLookup(bodyText, env, corsHeaders);
+    if (pathname === '/gov/task/registry/match')  return handleGovTaskRegistryMatch(bodyText, env, corsHeaders);
     if (pathname === '/admin/gov-task-drafts/review') return handleGovTaskDraftReview(request, bodyText, env, corsHeaders);
     if (pathname === '/business/relay')           return handleBusinessRelay(bodyText, env, corsHeaders, _meta, ctx);
     if (pathname.startsWith('/gemini/'))         return callOpenAIFromGeminiBody(bodyText, env, corsHeaders, _meta);
@@ -13170,6 +13172,20 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'protection_plan', name: '개인위치정보 보호조치 이행계획서',    required: true,  acquisition: 'user_authored' },
       { id: 'insurance_proof', name: '손해배상책임 이행보증보험 가입증서', required: false, acquisition: 'external_insurer' },
     ],
+    // ★ 2026-07-30 신설 — 신청서 자동생성(docx) 파이프라인용 구조화 입력
+    // 필드. <<<STATE>>>(type/applicant/purpose/region/urgency/extra) 6종
+    // 만으로는 실제 서식을 채울 수 없어(사고실험으로 확인) 별도로 정의한다.
+    // webapp.html이 ready:true 이후 이 목록에 없는 값만 추가로 물어본다.
+    applicant_fields: [
+      { id: 'companyName',    label: '법인/상호명',        required: true },
+      { id: 'bizRegNo',       label: '사업자등록번호',      required: true },
+      { id: 'ceoName',        label: '대표자명',            required: true },
+      { id: 'companyAddress', label: '법인 주소',           required: true },
+      { id: 'privacyOfficer', label: '개인정보보호책임자',   required: true },
+      { id: 'serviceName',    label: '서비스명',            required: true },
+      { id: 'serviceSummary', label: '서비스 내용 요약',    required: true },
+      { id: 'dataRetentionPeriod', label: '위치정보 보유기간', required: true },
+    ],
   },
   // ★ 2026-07-12 추가 — 두 번째 검증 사례(법원, 개인파산·면책 신청).
   // 근거: 채무자 회생 및 파산에 관한 법률 §302, 채무자회생법 규칙 §72
@@ -13194,6 +13210,15 @@ const REQUIRED_DOCUMENTS_REGISTRY = {
       { id: 'income_proof',      name: '소득 관련 소명자료(급여명세서 등)', required: true,  acquisition: 'user_authored' },
     ],
     note: '법원이 사건별로 추가 소명자료를 요구할 수 있음(개인파산 및 면책신청사건의 처리에 관한 예규 §1의2③) — 접수 후에도 보완 요청 가능성을 반드시 안내할 것.',
+    // ★ 2026-07-30 신설 — kcc 항목과 동일한 이유(위 주석 참조).
+    applicant_fields: [
+      { id: 'applicantName',    label: '신청인 성명',      required: true },
+      { id: 'residentAddress',  label: '주소',             required: true },
+      { id: 'jobStatus',        label: '직업/소득 상태',   required: true },
+      { id: 'totalDebtAmount',  label: '총 채무액(대략)',  required: true },
+      { id: 'creditorCount',    label: '채권자 수',        required: true },
+      { id: 'debtCause',        label: '채무 발생 경위 요약', required: true },
+    ],
   },
 };
 
@@ -13262,6 +13287,14 @@ async function _resolveResolutionTier(env, orgId) {
 //     prompt_admins/ADMIN_MASTER_KEY 인증(_requireAdmin, 8102줄)을
 //     그대로 재사용한다 — 새 인증 체계를 만들지 않는다.
 // ═══════════════════════════════════════════════════════════
+
+// ★ 2026-07-30 버그 수정 — _resolveDocSchema가 이 함수를 호출하는데
+// 정의 자체가 어디에도 없었다(실제 실행해 ReferenceError로 확인).
+// REQUIRED_DOCUMENTS_REGISTRY의 키 형식(`${agency}:${taskKey}`)에 맞춰
+// curated 레지스트리에서 직접 조회한다.
+function _findDocSchema(agency, taskKey) {
+  return REQUIRED_DOCUMENTS_REGISTRY[`${agency}:${taskKey}`] || null;
+}
 
 async function _fetchDraftSchema(env, agency, taskKey, requesterGuid) {
   // 1) 이미 승인된(active) draft가 있으면 누구에게나 반환
@@ -13333,6 +13366,74 @@ async function handleGovTaskSchemaDraft(bodyText, env, corsHeaders) {
     draft_id: draftRes.id,
     warning: '방금 웹검색으로 조사해 임시로 준비한 서류 목록입니다. 실제 요건과 다를 수 있으니 최종 제출 전 관할 기관 공식 안내로 다시 확인해 주세요. 사람 검토가 끝나기 전까지는 다른 사용자에게 이 목록이 공유되지 않습니다.',
     schema: JSON.parse(schemaJson),
+  }), { status: 200, headers: corsHeaders });
+}
+
+// POST /gov/task/schema/lookup — (2026-07-30 신설) agency:task_key로 등록된
+// 스키마(문서 목록 + applicant_fields)를 그대로 반환한다. REQUIRED_DOCUMENTS_
+// REGISTRY를 클라이언트(webapp.html)에 중복 보관하지 않기 위한 단일 정본
+// 조회 창구 — _resolveDocSchema(curated 우선, 승인된 draft 다음)를 그대로
+// 재사용한다. body: { guid, agency, task_key }
+async function handleGovTaskSchemaLookup(bodyText, env, corsHeaders) {
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
+  if (!body) return _err(400, 'INVALID_JSON', '', corsHeaders);
+  const { guid, agency, task_key } = body;
+  if (!guid || !agency || !task_key) return _err(400, 'MISSING_FIELD', 'guid/agency/task_key 필수', corsHeaders);
+
+  const resolved = await _resolveDocSchema(env, agency, task_key, guid);
+  if (!resolved) {
+    return new Response(JSON.stringify({ ok: true, found: false }), { status: 200, headers: corsHeaders });
+  }
+  return new Response(JSON.stringify({
+    ok: true, found: true, verified: resolved.verified, source: resolved.source, schema: resolved.schema,
+  }), { status: 200, headers: corsHeaders });
+}
+
+// POST /gov/task/registry/match — (2026-07-30 신설) 대화 요약(case_summary)을
+// REQUIRED_DOCUMENTS_REGISTRY의 등록된 키 중 하나로 분류한다. ★ 설계 원칙:
+// 이 호출은 "자유 생성"이 아니라 "닫힌 선택지 중 하나 고르기"다 — LLM 응답을
+// 그대로 신뢰하지 않고, 실제 레지스트리 키 목록에 있는 값인지 반드시
+// 서버가 검증한다(없는 키를 냈거나 파싱 실패하면 무조건 matched:false로
+// 강제한다). SP 문구 품질에 결과가 좌우되던 기존 실패 패턴(K_GOV_METHODOLOGY
+// vs SP-10_kpublic)을 반복하지 않기 위한 최소 방어. body: { case_summary }
+async function handleGovTaskRegistryMatch(bodyText, env, corsHeaders) {
+  let body = null;
+  try { body = JSON.parse(bodyText); } catch {}
+  if (!body?.case_summary) return _err(400, 'MISSING_FIELD', 'case_summary 필수', corsHeaders);
+
+  const keys = Object.keys(REQUIRED_DOCUMENTS_REGISTRY);
+  if (!keys.length) return new Response(JSON.stringify({ ok: true, matched: false }), { status: 200, headers: corsHeaders });
+
+  const catalog = keys.map(k => `- ${k} : ${REQUIRED_DOCUMENTS_REGISTRY[k].task_name} (${REQUIRED_DOCUMENTS_REGISTRY[k].agency_name})`).join('\n');
+  const sys = `다음은 등록된 민원 업무 목록이다. 사용자 민원 요약을 읽고, 정확히 일치하는 항목이` +
+    ` 있으면 그 키만 한 줄로 출력하라(다른 텍스트 절대 금지). 명확히 일치하는 항목이 없으면` +
+    ` NONE 한 단어만 출력하라. 애매하면 반드시 NONE을 선택하라 — 억지로 끼워맞추지 마라.\n\n${catalog}`;
+
+  let raw = '';
+  try {
+    const res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify({
+        model: GOV_TIER_MODELS['gov-flash'].backendModel, max_tokens: 40, temperature: 0, stream: false,
+        messages: [{ role: 'system', content: sys }, { role: 'user', content: body.case_summary.slice(0, 1000) }],
+      }),
+    });
+    const data = await res.json();
+    raw = (data?.choices?.[0]?.message?.content || '').trim();
+  } catch (e) {
+    console.warn('[GovTaskRegistryMatch] 분류 호출 실패:', e.message);
+    return new Response(JSON.stringify({ ok: true, matched: false }), { status: 200, headers: corsHeaders });
+  }
+
+  const matchedKey = keys.find(k => k === raw); // ★ 정확 일치만 인정 — 유사 문자열 추론 없음
+  if (!matchedKey) {
+    return new Response(JSON.stringify({ ok: true, matched: false, raw }), { status: 200, headers: corsHeaders });
+  }
+  const entry = REQUIRED_DOCUMENTS_REGISTRY[matchedKey];
+  return new Response(JSON.stringify({
+    ok: true, matched: true, agency: entry.agency, task_key: matchedKey.split(':').slice(1).join(':'),
   }), { status: 200, headers: corsHeaders });
 }
 
