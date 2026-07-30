@@ -144,11 +144,20 @@ export function _buildLocNote() {
 // 추가되더라도 위 민감도 원칙(비 민감 정보만)은 그대로 유지해야 한다.
 //
 // @returns {object|null} — 실을 정보가 전혀 없으면 null
+// ★ 2026-07-31 수정 — 지금까지 이 함수는 _userLocation(GPS·프로필주소를
+// location.js가 조합한 상태) 하나만 봤다. 그런데 call-ai.js의
+// _loadOwnJobContext()가 이미 인증된 GET /profile 조회로
+// window.__hondiOwnProfileCache.address를 별도로 채우고 있었는데(PDV
+// 주소 자동제공 기능, 2026-07-30 신설), 이 함수는 그 값을 전혀 보지
+// 않고 있었다 — 두 경로가 서로 몰랐던 것. GPS가 거부됐거나 느려도
+// 이미 인증된 프로필 조회가 먼저 끝나 있으면 그걸로 대체할 수 있도록
+// 폴백을 추가한다(주피터 지시 — PDV·Profile 양쪽 다 확인 가능해야 함).
 export function _buildRoutingFacts() {
   const loc = _userLocation;
-  const currentLocation = loc
-    ? (loc.address || (loc.lat != null ? loc.lat.toFixed(5) + ',' + loc.lng.toFixed(5) : null))
-    : null;
+  const currentLocation =
+    (loc && (loc.address || (loc.lat != null ? loc.lat.toFixed(5) + ',' + loc.lng.toFixed(5) : null))) ||
+    (typeof window !== 'undefined' ? window.__hondiOwnProfileCache?.address : null) ||
+    null;
 
   if (!currentLocation) return null;
 
