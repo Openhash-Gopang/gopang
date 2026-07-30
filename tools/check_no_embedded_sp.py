@@ -54,6 +54,20 @@ TEMPLATE_LITERAL = re.compile(r'`((?:[^`\\]|\\.)*)`', re.DOTALL)
 def find_violations(path: Path) -> list[str]:
     text = path.read_text(encoding='utf-8', errors='ignore')
     lines = text.split('\n')
+
+    # ★ 2026-07-30 개선 — 순수 `//` 주석 줄 안의 백틱(예: 코드 예시를
+    # 설명하는 주석 `` `${x}:${y}` ``)까지 실제 템플릿 리터럴 구분자로
+    # 세다 보니, 파일 전체의 백틱 홀짝이 깨져서 코드 반대편의 무관한
+    # 텍스트끼리 거대한 "가짜 리터럴"로 잘못 짝지어지는 문제가 실사용
+    # 중 발견됐다(worker.js에서 실제로 발생·재현 확인, 2026-07-30).
+    # 코드 백틱과의 줄 번호 정합성은 유지해야 하므로, 순수 주석 줄(트림
+    # 했을 때 //로 시작하는 줄)의 문자만 같은 길이의 공백으로 지워서
+    # 매칭용 텍스트를 만든다 — 실제 코드의 백틱 위치·줄 번호는 그대로다.
+    masked_lines = [
+        (' ' * len(l)) if l.strip().startswith('//') else l
+        for l in lines
+    ]
+    text = '\n'.join(masked_lines)
     violations = []
 
     for m in TEMPLATE_LITERAL.finditer(text):
