@@ -13427,7 +13427,20 @@ async function handleGovTaskRegistryMatch(bodyText, env, corsHeaders) {
     return new Response(JSON.stringify({ ok: true, matched: false }), { status: 200, headers: corsHeaders });
   }
 
-  const matchedKey = keys.find(k => k === raw); // ★ 정확 일치만 인정 — 유사 문자열 추론 없음
+  // ★ 2026-07-30 강화 — gov-flash처럼 빠른/작은 모델은 "키만 출력하라"는
+  // 지시를 어기고 코드펜스나 부연설명을 덧붙이는 경우가 실사용에서
+  // 관찰됐다(예: "kcc:location_service_registration" 대신 백틱으로 감싸거나
+  // 앞에 "정답: "을 붙이는 식). 정확 일치(===)만으로는 이런 경우 전부
+  // matched:false로 떨어져 실제로는 등록돼 있는데도 항상 폴백하게 된다.
+  // 그렇다고 유사도 추론으로 느슨하게 판단하지는 않는다 — 텍스트에서
+  // "실제 레지스트리 키와 글자 그대로 완전히 일치하는 토큰"만 정규식으로
+  // 뽑아 쓴다. 즉 관대해진 건 "형식"이지 "판단 기준"이 아니다.
+  const rawFirstLine = raw.split('\n')[0].replace(/^[`"'\s]+|[`"'\s.,]+$/g, '');
+  let matchedKey = keys.find(k => k === raw) || keys.find(k => k === rawFirstLine);
+  if (!matchedKey) {
+    const tokenMatch = raw.match(/[a-z0-9_]+:[a-z0-9_]+/i);
+    if (tokenMatch) matchedKey = keys.find(k => k === tokenMatch[0]);
+  }
   if (!matchedKey) {
     return new Response(JSON.stringify({ ok: true, matched: false, raw }), { status: 200, headers: corsHeaders });
   }
