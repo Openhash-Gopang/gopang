@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: gopang 저장소에 흩어진 모든 매뉴얼·가이드·설계문서가
+  각각 어떤 분야를 다루는지, 누구를 위한 것인지, 지금도 유효한지를 한눈에
+  보여주는 메타 매뉴얼입니다. 새 문서를 어디에 써야 할지 헷갈리거나, 원하는
+  정보가 어느 문서에 있는지 찾기 어려울 때 이 문서부터 확인하세요.
+  v2.0(2026-07-29): MANUAL_INDEX.md → .html 전환 + SP Tree 구조 시각 자료
+  3종 신설(AUTO_REFRESH_MANUAL_v1_0.html과 동일한 그레이스케일·mermaid
+  스타일로 통일). 원본 .md의 표·문구는 그대로 옮기고 서식만 바꿈.
+  이 문서 자체의 관리 원칙: 새 매뉴얼을 추가하거나 기존 매뉴얼을 폐기할
+  때마다 이 표를 함께 갱신합니다.
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>문서 인덱스 — Gopang 개발자 문서 전체 지도</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── 그레이스케일 우선 팔레트 — 강조색은 링크·활성 상태 한 곳에만
+   (AUTO_REFRESH_MANUAL_v1_0.html과 동일 토큰, 상태 배지만 최소한의 색 사용) ── */
+:root {
+  --ink:      #111111;
+  --ink-2:    #3a3a3a;
+  --ink-3:    #6b6b6b;
+  --ink-4:    #9a9a9a;
+  --line:     #e2e2e2;
+  --line-2:   #cfcfcf;
+  --bg:       #ffffff;
+  --bg-2:     #fafafa;
+  --bg-3:     #f2f2f2;
+  --accent:   #34495e;
+  --accent-lt:#eef1f4;
+  --ok:       #1a7f52;    --ok-bg:    #eefaf3;   --ok-line: #bfe4d1;
+  --warn:     #9a6b00;    --warn-bg:  #fff9ec;   --warn-line: #edd9a3;
+  --unk:      #6b6b6b;    --unk-bg:   #f2f2f2;   --unk-line: #d9d9d9;
+  --mono:     'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --radius:   4px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Pretendard', -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+/* ── 헤더 ── */
+.doc-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.doc-header-inner {
+  max-width: 1040px; margin: 0 auto;
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.doc-logo {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  text-decoration: none; letter-spacing: -0.2px;
+}
+.doc-logo svg { color: var(--ink-3); }
+.doc-header-sub {
+  font-size: 12px; color: var(--ink-4); font-weight: 400;
+  padding-left: 9px; border-left: 1px solid var(--line-2); margin-left: 2px;
+}
+.doc-back {
+  font-size: 12px; color: var(--ink-3); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.doc-back:hover { color: var(--ink); }
+.doc-back svg { flex-shrink: 0; }
+
+/* ── 레이아웃 ── */
+.doc-layout {
+  max-width: 1200px; margin: 0 auto;
+  padding: 40px 24px 100px;
+  display: grid;
+  grid-template-columns: 216px 1fr;
+  gap: 44px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .doc-layout { grid-template-columns: 1fr; }
+  .doc-toc { display: none; }
+}
+.doc-toc { position: sticky; top: 72px; }
+.doc-toc-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 10px;
+}
+.doc-toc a {
+  display: block;
+  font-size: 12px; color: var(--ink-3);
+  text-decoration: none;
+  padding: 5px 0 5px 11px;
+  border-left: 2px solid var(--line);
+  line-height: 1.4;
+  transition: color .12s, border-color .12s;
+}
+.doc-toc a:hover, .doc-toc a.active {
+  color: var(--ink);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+.doc-content { min-width: 0; }
+
+/* ── 섹션 ── */
+.gs {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.gs-head {
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: flex-start; gap: 14px;
+}
+.gs-icon {
+  width: 34px; height: 34px; border-radius: var(--radius);
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--ink-2);
+}
+.gs-icon svg { width: 18px; height: 18px; }
+.gs-head-text { flex: 1; }
+.gs-num {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 500; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 3px;
+}
+.gs-title {
+  font-size: 17px; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.2px; line-height: 1.35;
+}
+.gs-subtitle { font-size: 12px; color: var(--ink-4); margin-top: 4px; }
+
+.gs-body { padding: 20px 28px 26px; }
+.gs-body p { font-size: 14px; color: var(--ink-2); line-height: 1.85; margin-bottom: 13px; }
+.gs-body p:last-child { margin-bottom: 0; }
+.gs-body strong { color: var(--ink); font-weight: 700; }
+.gs-body h4 {
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  margin: 22px 0 10px; letter-spacing: -0.1px;
+  display: flex; align-items: center; gap: 7px;
+}
+.gs-body h4:first-child { margin-top: 0; }
+.gs-body ul, .gs-body ol { margin: 4px 0 14px 20px; }
+.gs-body li { font-size: 14px; color: var(--ink-2); line-height: 1.8; margin-bottom: 4px; }
+.gs-body code {
+  font-family: var(--mono); font-size: 12px;
+  background: var(--bg-3); border: 1px solid var(--line);
+  border-radius: 4px; padding: 1px 6px; color: var(--ink-2);
+}
+
+.callout {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 13px 17px; margin: 15px 0;
+  font-size: 14px; color: var(--ink-2); line-height: 1.8;
+  background: var(--bg-2);
+}
+.callout-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--ink);
+  margin-bottom: 6px;
+}
+.callout-label svg { width: 13px; height: 13px; }
+.callout.warn { border-left-style: dashed; }
+.callout strong { color: var(--ink); }
+
+/* 표 */
+.gs-table-wrap { margin: 15px 0; overflow-x: auto; }
+.gs-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.gs-table th, .gs-table td {
+  border: 1px solid var(--line); padding: 9px 13px;
+  text-align: left; line-height: 1.65; vertical-align: top;
+}
+.gs-table th { background: var(--bg-2); font-weight: 700; color: var(--ink); font-size: 12px; white-space: nowrap; }
+.gs-table td { color: var(--ink-2); }
+.gs-table td strong, .gs-table td code { color: var(--ink); }
+.gs-table td code { font-family: var(--mono); font-size: 12px; background: var(--bg-3); padding: 1px 5px; border-radius: 4px; }
+.gs-table col.col-doc { width: 240px; }
+.gs-table col.col-date { width: 96px; }
+.gs-table col.col-status { width: 260px; }
+
+/* 상태 배지 — 🟢/🟡/⚪를 대체하는 절제된 색 배지 */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 600; letter-spacing: .1px;
+  padding: 2px 8px; border-radius: 99px;
+  font-family: var(--mono);
+  white-space: nowrap; margin-bottom: 4px;
+}
+.pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.pill-ok    { color: var(--ok);   background: var(--ok-bg);   border: 1px solid var(--ok-line); }
+.pill-ok::before    { background: var(--ok); }
+.pill-warn  { color: var(--warn); background: var(--warn-bg); border: 1px solid var(--warn-line); }
+.pill-warn::before  { background: var(--warn); }
+.pill-unk   { color: var(--unk);  background: var(--unk-bg);  border: 1px solid var(--unk-line); }
+.pill-unk::before   { background: var(--unk); }
+.status-note { display: block; font-size: 12.5px; color: var(--ink-3); line-height: 1.6; margin-top: 2px; }
+
+/* 빠른 안내 표 전용 — 2열, 좀 더 넓게 */
+.lookup-table td:first-child { color: var(--ink-2); width: 55%; }
+.lookup-table td:last-child code { white-space: nowrap; }
+
+/* mermaid 도식 래퍼 */
+.diagram {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  padding: 18px 14px 10px;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+.diagram-caption {
+  font-size: 12px; color: var(--ink-4); text-align: center;
+  padding: 8px 4px 2px; font-family: var(--mono);
+}
+
+/* 히어로 */
+.doc-hero {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  margin-bottom: 24px;
+}
+.doc-hero-eyebrow {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 500; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 12px;
+}
+.doc-hero-title {
+  font-size: 26px; font-weight: 800;
+  color: var(--ink); letter-spacing: -0.5px;
+  line-height: 1.4; margin-bottom: 13px;
+}
+.doc-hero-title em { font-style: normal; border-bottom: 2px solid var(--ink); }
+.doc-hero-desc { font-size: 14px; color: var(--ink-2); line-height: 1.85; max-width: 74ch; }
+.doc-hero-meta {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line);
+  font-size: 12px; color: var(--ink-4); font-family: var(--mono);
+}
+.doc-hero-meta strong { color: var(--ink-2); font-weight: 600; }
+
+.reveal { opacity: 0; transform: translateY(10px); transition: opacity .35s ease, transform .35s ease; }
+.reveal.in { opacity: 1; transform: translateY(0); }
+
+.gs-cat-title {
+  font-size: 15px; font-weight: 700; color: var(--ink);
+  margin: 26px 0 10px; padding-top: 6px;
+  display: flex; align-items: center; gap: 8px;
+}
+.gs-cat-title:first-child { margin-top: 0; }
+.gs-cat-note {
+  font-size: 12.5px; color: var(--ink-3); line-height: 1.7;
+  background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 10px 13px; margin: 6px 0 14px;
+}
+</style>
+</head>
+<body>
+
+<!-- ── 헤더 ── -->
+<header class="doc-header">
+  <div class="doc-header-inner">
+    <a class="doc-logo" href="../desktop.html">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      혼디 · Gopang
+      <span class="doc-header-sub">문서 인덱스</span>
+    </a>
+    <a class="doc-back" href="../desktop.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      데스크톱으로 돌아가기
+    </a>
+  </div>
+</header>
+
+<div class="doc-layout">
+
+  <!-- ── 목차 ── -->
+  <nav class="doc-toc">
+    <div class="doc-toc-title">목차</div>
+    <a href="#lookup">빠른 안내</a>
+    <a href="#sptree">SP Tree 구조</a>
+    <a href="#users">일반 사용자</a>
+    <a href="#onboarding">개발자 온보딩</a>
+    <a href="#api">API·인프라</a>
+    <a href="#worklog">작업 이력</a>
+    <a href="#archive">아카이브</a>
+    <a href="#rules">작성 규칙</a>
+  </nav>
+
+  <main class="doc-content">
+
+    <!-- ── 히어로 ── -->
+    <div class="doc-hero reveal">
+      <div class="doc-hero-eyebrow">Meta Manual · v2.0</div>
+      <div class="doc-hero-title">혼디(Hondi) 문서 인덱스 — <em>흩어진 문서를 한 곳에서</em></div>
+      <p class="doc-hero-desc">
+        <code>gopang</code> 저장소에 흩어진 모든 매뉴얼·가이드·설계문서가 각각
+        <strong>어떤 분야를 다루는지, 누구를 위한 것인지, 지금도 유효한지</strong>를
+        한눈에 보여줍니다. 새 문서를 어디에 써야 할지 헷갈리거나, 원하는 정보가
+        어느 문서에 있는지 찾기 어려울 때 이 문서부터 확인하세요.
+      </p>
+      <div class="doc-hero-meta">
+        <span><strong>원본</strong> docs/MANUAL_INDEX.md v1.0 (2026-07-19)</span>
+        <span><strong>이 문서 자체의 관리 원칙</strong> 새 매뉴얼을 추가하거나 기존 매뉴얼을 폐기할 때마다 이 표를 함께 갱신 — 낡으면 전체 문서 체계가 다시 "뭐가 뭔지 모르는" 상태로 돌아갑니다</span>
+      </div>
+    </div>
+
+    <!-- ── 빠른 안내 ── -->
+    <section class="gs reveal" id="lookup">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Quick Lookup</div>
+          <div class="gs-title">어떻게 찾을지 모를 때 — 용도별 빠른 안내</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <div class="gs-table-wrap">
+          <table class="gs-table lookup-table">
+            <thead><tr><th>내가 궁금한 것</th><th>볼 문서</th></tr></thead>
+            <tbody>
+              <tr><td>혼디가 뭔지, 어떤 철학인지 (일반 소개)</td><td><code>docs/혼디_완전매뉴얼_v1.0.docx</code></td></tr>
+              <tr><td>앱을 어떻게 쓰는지 (일반 사용자, PC)</td><td><code>docs/hondi_user_manual.html</code>(활용·한계) + <code>docs/user-guide.html</code>(시작하기)</td></tr>
+              <tr><td>앱을 어떻게 쓰는지 (모바일 웹앱 내장)</td><td><code>user-manual.html</code>(루트)</td></tr>
+              <tr><td>worker.js의 특정 API가 뭘 하는지</td><td><code>docs/API_REFERENCE_worker_v1_0.md</code></td></tr>
+              <tr><td>L1 PocketBase 컬렉션·배포·훅이 어떻게 동작하는지</td><td><code>docs/L1_POCKETBASE_MANUAL_v1_0.md</code></td></tr>
+              <tr><td>PC에서 스마트폰과 같은 지갑으로 로그인하는 법(기기 간 지갑 이전)</td><td><code>docs/DEVICE_LINK_MANUAL_v1_0.md</code></td></tr>
+              <tr><td>K-서비스가 소유 전문가 페르소나·상담 이력을 어떻게 기록·총괄하는지(owner_pdv)</td><td><code>docs/OWNER_PDV_GOVERNANCE_MANUAL_v1_0.md</code></td></tr>
+              <tr><td>지방행정 AI(도청·시청·읍면동·국가기관)가 원형→인스턴스를 어떻게 조립하는지</td><td><code>docs/GOV_REGIONAL_AC_MANUAL_v1_0.md</code></td></tr>
+              <tr><td>GDC가 가입 후 어떻게 충전·차감되고, 잔액이 낮으면 어떻게 알림이 오는지</td><td><code>docs/GDC_CHARGE_MANUAL_v1_0.md</code></td></tr>
+              <tr><td>K-Law·K-School 같은 개별 K-서비스는 요금을 어떻게 매기는지</td><td><code>docs/K_SERVICE_MONETIZATION_v1_0.md</code></td></tr>
+              <tr><td><strong>SP들끼리 어떻게 상속·참조하고, 버전 박제·임의 계층 형성을 뭐가 막는지</strong></td><td><code>docs/SP_TREE_GOVERNANCE_MANUAL_v1_0.md</code> · <a href="#sptree">아래 시각 자료 ↓</a></td></tr>
+              <tr><td>profile-assistant(PA)가 프로필 작성·갱신을 어떻게 처리하는지(사진저장·결제수단·AC-PA 채널)</td><td><code>docs/PROFILE_ASSISTANT_MANUAL_v1_0.md</code></td></tr>
+              <tr><td>Supabase→L1 이관이 지금 어디까지 됐는지</td><td><code>docs/supabase_to_l1_migration_plan.md</code></td></tr>
+              <tr><td>webapp.html의 설계 이력·SP 구조</td><td><code>docs/webapp_manual_v4.md</code></td></tr>
+              <tr><td>새 개발자가 코드베이스를 처음 파악할 때</td><td><code>docs/manual/01-system-map.md</code>부터 순서대로</td></tr>
+              <tr><td>콘솔 에러가 났을 때</td><td><code>docs/manual/04-debug-guide.md</code></td></tr>
+              <tr><td>새 플러그인(K-Law 분류기 등) 추가법</td><td><code>docs/plugin-guide.md</code></td></tr>
+              <tr><td>하위 시스템이 PDV 보고서를 어떻게 보내는지</td><td><code>docs/gopang-report-manual.md</code></td></tr>
+              <tr><td>최근 세션에서 무슨 작업이 있었는지(일회성 작업기록)</td><td><code>docs/WORKLOG_INDEX.md</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SP Tree 구조 시각 자료 (신설) ── -->
+    <section class="gs reveal" id="sptree">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="2"/><circle cx="6" cy="14" r="2"/><circle cx="18" cy="14" r="2"/><circle cx="6" cy="21" r="1.5"/><circle cx="18" cy="21" r="1.5"/><path d="M12 6v3M12 9l-6 5M12 9l6 5M6 16v3M18 16v3"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">신설 · 2026-07-29</div>
+          <div class="gs-title">SP Tree 구조 한눈에 보기</div>
+          <div class="gs-subtitle">자세한 설명은 <code>docs/SP_TREE_GOVERNANCE_MANUAL_v1_0.md</code> 참고 — 여기서는 구조만 시각화합니다</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          198개 넘는 SP가 실제로 어떻게 상속·참조하는지는
+          <code>prompts/SP-TREE-REGISTRY_v1_0.md</code> §F의 <code>edges</code> 블록
+          하나가 정본입니다. 아래 그림은 그 블록을 그대로 시각화한 것 — 사람이
+          임의로 그린 개념도가 아니라, CI가 실제로 파싱해서 강제하는 데이터와
+          <strong>정확히 같은 내용</strong>입니다.
+        </p>
+
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+          ① 실제 상속·참조 관계 (SP-TREE-REGISTRY §F 그대로)
+        </h4>
+        <div class="diagram">
+          <pre class="mermaid">
+flowchart TD
+    UI["UNIVERSAL-INTEGRITY\n(전체 최상위)"]
+    UC["UNIVERSAL-common"]
+    PC["PROFESSIONAL-common"]
+    KPC["K-Public_common"]
+    UI --> UC --> PC --> KPC
+
+    UI --> S02["SP-02_k119"]
+    UI --> S03["SP-03_kpolice"]
+    UI --> S04["SP-04_khealth"]
+    UI --> S06["SP-06_ktraffic"]
+    UI --> S10["SP-10_kpublic\n(별칭: kgov)"]
+    UI --> S12["SP-12_kdemocracy"]
+    UI --> S13["SP-13_klogistics"]
+    UI --> S16["SP-16_kinsurance"]
+
+    S10 --> HAG["HUMAN-AUTHORITY\n-GATE-SCHEMA"]
+    S10 --> PDV["PDV-TRANSFER\n-PROTOCOL"]
+    SPT["SP-PROVINCE-TEMPLATE\n(gov-tree 계열)"] -.->|kgov 별칭 경유| S10
+
+    SITC["SP-INDUSTRY-TRANSFORM\n-COMMON"] --> HAG
+    SITC --> GTIO["GOV-TIER-IO-SCHEMA"]
+    GTIO --> DTR["DOCUMENT-TYPE\n-REGISTRY"]
+    GTIO --> DRS["DATA_REQUIREMENT\n-SCHEMA"]
+    SITC -.->|글롭 56개| SITN["SP-INDUSTRY-TRANSFORM\n-01 ~ 56"]
+
+    ASC["AGENT-SUPPLIER-COMMON"] -.->|글롭 77개| ASN["AGENT-SUPPLIER\n-01 ~ 99"]
+          </pre>
+          <div class="diagram-caption">그림 1 — 실선은 명시적 상속·참조, 점선은 글롭(*) 패밀리 관계. gov-tree 893건은 informational 범위라 이 그림엔 SP-PROVINCE-TEMPLATE 한 대표 노드만 표시</div>
+        </div>
+
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          ② 2계층 거버넌스 — 기계 강제(CI) vs 의미론적 감사(메타 SP)
+        </h4>
+        <div class="diagram">
+          <pre class="mermaid">
+flowchart TD
+    A["새/변경 SP 작성"] --> B["PR 생성"]
+    B --> C{"CI 가드\n(결정론적, 매 PR)"}
+    C -->|"버전 박제 또는\n미등록 상속 선언"| D["병합 차단"]
+    C -->|통과| E["main 병합\n(CODEOWNERS·Ruleset 리뷰)"]
+    E --> F["SP-TREE-GUARDIAN\n(확률적, 주 1회)"]
+    F --> G[("sp_tree_audit_findings\nstatus = pending_review")]
+    G --> H["사람 검토"]
+    H -.->|승인한 것만| I["SP-TREE-REGISTRY\n§F edges 갱신 PR"]
+          </pre>
+          <div class="diagram-caption">그림 2 — CI(왼쪽 경로)만 병합을 막을 권한이 있다. SP-TREE-GUARDIAN은 오탐 위험 때문에 findings만 쌓고 절대 자동 반영하지 않는다</div>
+        </div>
+
+        <h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          ③ SP-TREE-GUARDIAN 주간 감사 실행 경로
+        </h4>
+        <div class="diagram">
+          <pre class="mermaid">
+flowchart LR
+    A["cron\n매주 월 09:00 KST"] --> B["sp_tree_guardian\n_trigger.py"]
+    B --> C["POST /sp-tree\n-guardian/audit"]
+    C --> D["GitHub compare API\nprompts/** diff만"]
+    D --> E["SP-TREE-GUARDIAN\n프롬프트 (manifest fetch)"]
+    E --> F["deepseek-v4-flash\n감사"]
+    F --> G[("sp_tree_guardian_runs\nsp_tree_audit_findings")]
+    G --> H["escalations 큐 알림"]
+          </pre>
+          <div class="diagram-caption">그림 3 — 트리거 스크립트도 worker.js도 findings를 만드는 것 이상은 하지 않는다(SP 파일 직접 수정 없음)</div>
+        </div>
+
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th></th><th>계층 A — CI 가드</th><th>계층 B — SP-TREE-GUARDIAN</th></tr></thead>
+            <tbody>
+              <tr><td><strong>판정 방식</strong></td><td>결정론적(정규식·그래프)</td><td>LLM 판단(확률적)</td></tr>
+              <tr><td><strong>실행 시점</strong></td><td>매 push/PR</td><td>주 1회 배치</td></tr>
+              <tr><td><strong>병합 차단</strong></td><td>가능</td><td><strong>불가능</strong> — findings만 쌓고 사람이 검토</td></tr>
+              <tr><td><strong>강제 파일</strong></td><td><code>check_no_hardcoded_sp_refs.py</code><br><code>check_no_undeclared_inheritance.py</code></td><td><code>SP-TREE-GUARDIAN_v1_0.md</code>(§0 절대 원칙: 제안만, 반영 금지)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            알려진 한계
+          </div>
+          <code>prompts/gov-tree/</code> 아래 893건의 <code>#&nbsp;상위&nbsp;상속</code> 선언은
+          표기 형식이 제각각이라 지금은 <strong>informational</strong>(경고만, CI 통과)
+          범위입니다. 헤더 형식을 정규화하는 게 strict 전환의 선행 조건입니다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 일반 사용자 대상 ── -->
+    <section class="gs reveal" id="users">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Section 01</div>
+          <div class="gs-title">🧑‍💻 일반 사용자 대상</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <colgroup><col class="col-doc"><col><col class="col-date"><col class="col-status"></colgroup>
+            <thead><tr><th>문서</th><th>분야</th><th>최종수정</th><th>상태</th></tr></thead>
+            <tbody>
+              <tr><td><code>docs/hondi_user_manual.html</code></td><td>혼디 활용·한계 시나리오, PDV/AC 개념 설명, 혼디 생태계 한눈에 보기(+GDC 3문장 요약)</td><td>2026-07-23</td><td><span class="pill pill-ok">최신</span><span class="status-note">desktop.html 좌측 사이드바에 링크됨</span></td></tr>
+              <tr><td><code>docs/hondi_opensource_cost.html</code></td><td>오픈소스 개념(일반 대중용), 비용 유발 요인, 종량제(GDC)·정액제(K-서비스) 분담 방식, 카카오톡 비교표, 팀 소개, 자체 LLM 서버 구축 계획</td><td>2026-07-27</td><td><span class="pill pill-ok">신설</span><span class="status-note">desktop.html "💰 오픈소스와 비용" 섹션에 링크됨</span></td></tr>
+              <tr><td><code>docs/user-guide.html</code></td><td>비개발자용 시작하기(가입→AI 활성화)</td><td>2026-07-02</td><td><span class="pill pill-ok">유효</span><span class="status-note">desktop.html "시작하기" 버튼에 링크됨</span></td></tr>
+              <tr><td><code>user-manual.html</code>(루트)</td><td>모바일 웹앱 UI 조작법(스와이프 메뉴 등)</td><td>2026-07-02</td><td><span class="pill pill-ok">유효</span><span class="status-note">webapp.html iframe + sw.js 오프라인 캐시로 링크됨</span></td></tr>
+              <tr><td><code>docs/혼디_완전매뉴얼_v1.0.docx</code></td><td>혼디 비전·철학 개요(제1장~)</td><td>2026-06-28</td><td><span class="pill pill-ok">유효</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 개발자 온보딩 ── -->
+    <section class="gs reveal" id="onboarding">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Section 02</div>
+          <div class="gs-title">🛠️ 개발자 온보딩</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <colgroup><col class="col-doc"><col><col class="col-date"><col class="col-status"></colgroup>
+            <thead><tr><th>문서</th><th>분야</th><th>최종수정</th><th>상태</th></tr></thead>
+            <tbody>
+              <tr><td><code>docs/manual/README.md</code></td><td>개발자 매뉴얼 6부작 인덱스</td><td>2026-05-22</td><td><span class="pill pill-warn">정정 필요</span><span class="status-note">저장소명 gopang_v2(구명) 정정 필요</span></td></tr>
+              <tr><td><code>docs/manual/01-system-map.md</code></td><td>시스템 구조 맵, Export 이름 일람, [2026-07-25] §0 저장소 토폴로지(jeju 별도 저장소 존재) 신설</td><td>2026-07-25</td><td><span class="pill pill-warn">부분 낡음</span><span class="status-note">§0은 신설, 나머지 트리 내용은 여전히 부분적으로 낡음(자체 명시)</span></td></tr>
+              <tr><td><code>docs/manual/02-module-roles.md</code></td><td>모듈별 역할</td><td>2026-05-22</td><td><span class="pill pill-ok">유효</span></td></tr>
+              <tr><td><code>docs/manual/03-event-flow.md</code></td><td>이벤트 흐름</td><td>2026-07-02</td><td><span class="pill pill-ok">유효</span></td></tr>
+              <tr><td><code>docs/manual/04-debug-guide.md</code></td><td>오류 진단(콘솔 메시지별)</td><td>2026-07-02</td><td><span class="pill pill-ok">유효</span></td></tr>
+              <tr><td><code>docs/manual/05-bug-log.md</code></td><td>버그 이력(BUG-001~021)</td><td>2026-07-25</td><td><span class="pill pill-ok">갱신됨</span><span class="status-note">BUG-012~021(지방행정AC) 소급 반영. 이후 세션 버그는 계속 추가 필요(상시 과제)</span></td></tr>
+              <tr><td><code>docs/plugin-guide.md</code></td><td>새 플러그인(K-Law 분류기 등) 추가 절차</td><td>2026-05-22</td><td><span class="pill pill-ok">유효</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── API·인프라 레퍼런스 ── -->
+    <section class="gs reveal" id="api">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3v4M8 3v4M2 11h20"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Section 03</div>
+          <div class="gs-title">🔌 API·인프라 레퍼런스</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <colgroup><col class="col-doc"><col><col class="col-date"><col class="col-status"></colgroup>
+            <thead><tr><th>문서</th><th>분야</th><th>최종수정</th><th>상태</th></tr></thead>
+            <tbody>
+              <tr><td><code>docs/API_REFERENCE_worker_v1_0.md</code></td><td><code>worker.js</code> 145개 엔드포인트 레퍼런스(요약 전체 + 상세 30개)</td><td>2026-07-19</td><td><span class="pill pill-warn">부분 낡음</span><span class="status-note">나머지 ~115개 상세화 필요 + 2026-07-29: AGENT-COMMON 참조 부분(§3.3 <code>/orchestration/procedure-map</code> 등) 폐기됨, 재검증 필요</span></td></tr>
+              <tr><td><code>docs/L1_POCKETBASE_MANUAL_v1_0.md</code></td><td>L1 PocketBase 아키텍처·44개 컬렉션·<code>pb_hooks</code>·배포 절차</td><td>2026-07-19</td><td><span class="pill pill-ok">신설</span><span class="status-note">Admin UI로 스키마 직접 검증은 아직 안 됨</span></td></tr>
+              <tr><td><code>docs/DEVICE_LINK_MANUAL_v1_0.md</code></td><td>기기 간 지갑 이전(PC 로그인)·웹푸시·고액거래 재인증(WebAuthn)·실사로 발견한 함정 11가지</td><td>2026-07-20</td><td><span class="pill pill-ok">신설</span><span class="status-note">실사 완료(실제 기기 테스트로 end-to-end 검증됨)</span></td></tr>
+              <tr><td><code>docs/OWNER_PDV_GOVERNANCE_MANUAL_v1_0.md</code></td><td>K-서비스·전문가 페르소나 거버넌스, 기관측 PDV(owner_pdv) 스키마·가명화 해시·C45/C39-5·SSOT 마이그레이션 현황</td><td>2026-07-20</td><td><span class="pill pill-ok">신설</span><span class="status-note">설계·구현 완료, 배포·실사용 테스트는 미완료(§11 체크리스트 참조)</span></td></tr>
+              <tr><td><code>docs/GOV_REGIONAL_AC_MANUAL_v1_0.md</code></td><td>지방행정 AI 원형/인스턴스 아키텍처(도청·시군구청·읍면동·국가기관), gov_do/gov_national 개명, 시군구·국가기관 리졸버 정확도 우선+SSE+cityHint, [v1.1] 100건 사고실험 발견 버그 8건, 파이프라인 완결성 배선</td><td>2026-07-25(v1.1)</td><td><span class="pill pill-ok">갱신됨</span></td></tr>
+              <tr><td><code>docs/GDC_CHARGE_MANUAL_v1_0.md</code></td><td>가입 축하 충전(0.1GDC)·사용량 차감·저잔액 알림(SP-GDC-CHARGE-v1_0), charge.html 신설, B안(무료한도 0원) 채택, PC/잠긴 지갑 안내 버그 수정</td><td>2026-07-23</td><td><span class="pill pill-ok">신설</span><span class="status-note">실사·배포 완료</span></td></tr>
+              <tr><td><code>docs/AUTO_REFRESH_MANUAL_v1_0.html</code></td><td>SP 자동 갱신 파이프라인 3종(SP Refresh Scheduler tier 재계산·미등록 태그 반복 집계·사용자 피드백 클러스터링→패치 초안) 스케줄·기술 흐름·사람 승인 게이트·운영·장애 이력</td><td>2026-07-28</td><td><span class="pill pill-ok">신설</span><span class="status-note">desktop.html "개발자 문서" 섹션에 링크됨</span></td></tr>
+              <tr><td><code>docs/HONDI_300_SCENARIO_GAP_ANALYSIS_v1_0.md</code></td><td>300건 사고실험 매칭 실패 99건(33%)의 원인 9개 범주(A~I)·해법, 2026-07-28 기준 코드 대조 해결 현황</td><td>2026-07-28</td><td><span class="pill pill-warn">일부 재검토</span><span class="status-note">"triggers 필드는 실라우팅에 관여하지 않는다"는 사실 확인 이후 일부 "미해결"·"시급" 판정 재검토 대상. HONDI_300_SCENARIO_SOLUTIONS_v1_0.md 참조</span></td></tr>
+              <tr><td><code>docs/HONDI_300_SCENARIO_SOLUTIONS_v1_0.md</code></td><td>300건 시나리오(정치~직장인 22개 분야)·점수화에서 발견된 문제의 해법 6개 트랙 + AGENT-COMMON_v3_49.txt 실제 패치 3건 반영 근거</td><td>2026-07-28</td><td><span class="pill pill-ok">신설</span></td></tr>
+              <tr><td><code>docs/HONDI_300_SCENARIO_RETRACE_v3_50_v1_0.md</code></td><td>v3.49 패치 대상 시나리오 18건 재추적 결과(개선 기대 11·불변 7) + §ROUTER-CONFIDENCE 4번째 질문 신설로 AGENT-COMMON_v3_50.txt 반영 근거</td><td>2026-07-28</td><td><span class="pill pill-ok">신설</span></td></tr>
+              <tr><td><code>docs/HONDI_PHONE_FIELD_TEST_CHECKLIST_v1_0.md</code></td><td>폰 실사용 대화형 시나리오 33건 체크리스트 — Pro/Flash·risk_tier·§INFO 최우선 검증 + 18개 K서비스 스모크. HONDI_MASTER_TEST_PLAN과 역할 구분(이건 라이브 E2E 전용)</td><td>2026-07-28</td><td><span class="pill pill-ok">신설</span></td></tr>
+              <tr><td><code>docs/K_SERVICE_MONETIZATION_v1_0.md</code></td><td>K-Law(소송가액 구간별 건당 요금)·K-School(교육단계별 정액) 개별 유료화 가격정책, 인프라 펀드 조달 연계</td><td>2026-07-23</td><td><span class="pill pill-warn">TODO 있음</span><span class="status-note">형사사건 적용범위·법률 자문·대학원 요금 보정 등</span></td></tr>
+              <tr><td><code>docs/SP_TREE_GOVERNANCE_MANUAL_v1_0.md</code></td><td>SP-TREE-REGISTRY(§F edges 블록, SSOT)·CI 가드 2종(하드코딩 참조·미등록 상속 선언)·CODEOWNERS/Ruleset·SP-TREE-GUARDIAN(주간 메타 SP 감사, findings-only) 구조 전체</td><td>2026-07-29</td><td><span class="pill pill-ok">신설</span><span class="status-note">desktop.html "개발자 문서" 섹션에 링크됨 · <a href="#sptree">시각 자료는 이 문서 §SP Tree 구조 참조</a></span></td></tr>
+              <tr><td><code>docs/PROFILE_ASSISTANT_MANUAL_v1_0.md</code></td><td>profile-assistant(PA) 아키텍처(별도 탭·SP 로드)·사진저장(R2)·결제수단(GDC/계좌이체)·§DIGITAL-BRIDGE·HONDI-CAPABILITIES-COMMON·§PROFILE-UPDATE-MODE·AC-PA 실시간 채널</td><td>2026-07-27</td><td><span class="pill pill-warn">부분 낡음</span><span class="status-note">여러 낡은 메모 문서 대체(docs/archive/ 이동 검토 대상) + 2026-07-29: AGENT-COMMON 참조 부분 폐기됨, 재검증 필요</span></td></tr>
+              <tr><td><code>docs/POCKETBASE-STRUCTURE-GUIDE_v1_0.md</code> + <code>_v1_1_addendum</code></td><td>L1~L5 서버 구조, Rule NULL/빈문자열 함정 등 실전 팁</td><td>2026-07-16 / 07-19</td><td><span class="pill pill-ok">유효</span><span class="status-note">L1_POCKETBASE_MANUAL과 상호보완(겹치는 부분 있음, 통합은 후속 검토)</span></td></tr>
+              <tr><td><code>docs/gopang-report-manual.md</code></td><td>하위 시스템 PDV 보고서(6하원칙) 스키마·전송 API</td><td>2026년 5월(v1.0)</td><td><span class="pill pill-ok">유효</span><span class="status-note">README.md에서 직접 링크됨</span></td></tr>
+              <tr><td><code>docs/webapp_manual_v4.md</code></td><td><code>webapp.html</code> 설계 명세(SP-00 v10.0, v4.0)</td><td>2026-06-09</td><td><span class="pill pill-ok">유효</span><span class="status-note">v4.0 — v3.1의 상위호환</span></td></tr>
+              <tr><td><code>docs/supabase_to_l1_migration_plan.md</code></td><td>Supabase→L1 이관 현황 트래커</td><td>2026-06-30(07-19 갱신)</td><td><span class="pill pill-warn">진행중</span><span class="status-note">2026-07-19 진행분 반영됨, 나머지 테이블 계속 갱신 필요</span></td></tr>
+              <tr><td><code>docs/SUBSYSTEM_REGISTRY_GUIDE.md</code></td><td>하위 시스템 등록 가이드</td><td>미확인</td><td><span class="pill pill-unk">범위 밖</span><span class="status-note">이번 조사 범위 밖</span></td></tr>
+              <tr><td><code>docs/gopang-id-auth-guide.md</code></td><td>인증 SSO 구조</td><td>미확인</td><td><span class="pill pill-unk">범위 밖</span></td></tr>
+              <tr><td><code>docs/openhash-l1-l5-provisioning-guide.md</code></td><td>L1~L5 프로비저닝</td><td>미확인</td><td><span class="pill pill-unk">범위 밖</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 작업 이력 ── -->
+    <section class="gs reveal" id="worklog">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Section 04</div>
+          <div class="gs-title">📝 작업 이력 (일회성 작업 기록 — 매뉴얼 아님)</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+            2026-07-23 신설 배경
+          </div>
+          <code>desktop.html</code> 사이드바에 날짜 찍힌 작업 기록이 개별 항목으로
+          하나씩 쌓이면 세션이 늘수록 사이드바가 무한정 길어지는 문제가 있어서
+          (<code>GDC_CHARGE_MANUAL_v1_0.md</code> 작업 중 정리), 개별 사이드바 링크는
+          없애고 아래 인덱스 하나로 모았습니다. 새 작업 기록은 이 인덱스 표에만
+          추가하면 됩니다 — <code>desktop.html</code>을 매번 고칠 필요 없음.
+        </div>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <colgroup><col class="col-doc"><col><col class="col-status"></colgroup>
+            <thead><tr><th>문서</th><th>분야</th><th>상태</th></tr></thead>
+            <tbody>
+              <tr><td><code>docs/WORKLOG_INDEX.md</code></td><td>모든 일회성 작업 기록의 목록(최신순)</td><td><span class="pill pill-ok">신설</span><span class="status-note">사이드바 "작업 이력 (전체)" 링크가 이 문서 하나만 가리킴</span></td></tr>
+              <tr><td><code>docs/MARKET_PROXY_INTEGRATION_LOG_2026_07_21.md</code></td><td>market-proxy 원장통합 작업기록</td><td><span class="pill pill-ok">유효</span><span class="status-note">WORKLOG_INDEX.md에서 링크됨(사이드바 개별 링크는 제거)</span></td></tr>
+              <tr><td><code>docs/WORKLOG_MANUAL_2026_07_22.md</code></td><td>device-link 안정화·GWP 채팅 UI 공용화·지갑 CDN 개편 작업기록</td><td><span class="pill pill-ok">유효</span><span class="status-note">WORKLOG_INDEX.md에서 링크됨(사이드바 개별 링크는 제거)</span></td></tr>
+              <tr><td><code>docs/GDC_GIT_EXPOSURE_INCIDENT_2026_07_23.md</code></td><td>gdc 저장소 wrangler 배포 시 .git 폴더 전체 공개 노출 사고·수정</td><td><span class="pill pill-ok">신설</span><span class="status-note">사이드바 "⚠ 주의" 섹션에도 별도 링크됨(사고 성격상 이중 노출)</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 아카이브 ── -->
+    <section class="gs reveal" id="archive">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Section 05</div>
+          <div class="gs-title">📦 아카이브 (<code>docs/archive/</code>) — 폐기, 이력 보존용</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <thead><tr><th>문서</th><th>폐기 사유</th></tr></thead>
+            <tbody>
+              <tr><td><code>gopang_db_manual_v2.md</code> / <code>gopang_db_manual_v2_0.html</code></td><td>Supabase DB 매뉴얼(테이블 43개) — 인프라 자체가 더 이상 존재하지 않음. L1_POCKETBASE_MANUAL_v1_0.md가 후신</td></tr>
+              <tr><td><code>Gopang_Developer_Manual_v2.0.docx</code></td><td>표지에 Supabase 프로젝트 URL 하드코딩, 아키텍처 설명 자체가 낡음</td></tr>
+              <tr><td><code>GOPANG_MANUAL.md</code>(v5.1)</td><td>Supabase 9회 언급, 저장소명 gopang_v2(구명) — "핵심 원칙" 절만 혼디_완전매뉴얼에 이미 반영돼 재활용 완료</td></tr>
+              <tr><td><code>webapp_manual.md</code>(v3.1)</td><td>webapp_manual_v4.md가 자기 변경이력에 "이전 버전"이라 명시 — 완전 삭제(archive 아님, 진짜 구버전)</td></tr>
+              <tr><td><code>AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_v1_0.md</code></td><td>2026-07-29: v2_0이 최신</td></tr>
+              <tr><td><code>AGENT-COMMON_v3_36_patch_0H.md</code> / <code>v3_37~39_addendum_0H.md</code></td><td>2026-07-29: v3_40_0H_replacement.md가 자체적으로 "이들을 대체한다"고 명시. 단 AGENT-COMMON 자체도 이후 완전 폐기됨</td></tr>
+              <tr><td><code>DEPT-TASK-PROTOCOL_v1_0.md</code></td><td>2026-07-29: v1_1이 최신</td></tr>
+              <tr><td><code>decentralization_plan_v1.md</code> / <code>v2.md</code></td><td>2026-07-29: v3가 최신(docs/에 남아있음)</td></tr>
+              <tr><td><code>gopang_jeju_design_v1_1.html</code></td><td>2026-07-29: v1.3.md가 최신(형식도 다름)</td></tr>
+              <tr><td><code>hondi_sp_ecosystem_guidelines_v1_1.md</code></td><td>2026-07-29: v1_2가 최신</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 작성 규칙 ── -->
+    <section class="gs reveal" id="rules">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Ground Rules</div>
+          <div class="gs-title">문서 작성 시 지켜야 할 최소 규칙 (2026-07-19부터 적용 제안)</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <ol>
+          <li>
+            <strong>모든 새 매뉴얼 파일 맨 위에 이 배너를 넣습니다</strong>(형식은 파일 타입에 맞게 조정):
+            <div class="gs-code">&gt; 이 문서가 다루는 범위: [한 줄 요약]
+&gt; 관련 문서: [MANUAL_INDEX.html](경로) 에서 전체 문서 지도 확인</div>
+          </li>
+          <li><strong>버전이 올라가면 구버전은 "폐기" 표시만 하고, 삭제는 이 인덱스에서 archive로 옮긴 뒤에만</strong> 합니다.</li>
+          <li><strong>Supabase/gopang_v2처럼 아키텍처가 바뀌는 큰 변경이 있으면, 이 인덱스의 "최종수정" 컬럼을 갱신하는 걸 그 변경 작업의 완료 조건에 포함</strong>합니다(코드는 바뀌었는데 문서가 안 바뀐 상태가 반복되지 않도록).</li>
+          <li><strong>날짜 찍힌 일회성 작업 기록(worklog)은 desktop.html 사이드바에 개별 항목으로 추가하지 않습니다</strong>(2026-07-23 확정 — 세션마다 쌓여 사이드바가 무한정 길어지는 문제가 실제로 발생했음). 대신 <code>docs/WORKLOG_INDEX.md</code> 표에 한 줄만 추가하세요. 지금도 유효한 절차·개념 설명이 필요해지면, 그때 정식 매뉴얼로 승격하는 걸 고려하세요.</li>
+        </ol>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  var DIAGRAM_FONT_PX = 13;
+  var DIAGRAM_FONT_FAMILY = "'SFMono-Regular', Consolas, monospace";
+
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'neutral',
+    themeVariables: {
+      fontFamily: DIAGRAM_FONT_FAMILY,
+      fontSize: DIAGRAM_FONT_PX + 'px',
+      primaryColor: '#fafafa',
+      primaryBorderColor: '#cfcfcf',
+      primaryTextColor: '#111111',
+      lineColor: '#9a9a9a',
+      secondaryColor: '#f2f2f2',
+      tertiaryColor: '#ffffff',
+      nodeTextColor: '#111111',
+      actorFontSize: DIAGRAM_FONT_PX + 'px',
+      actorFontFamily: DIAGRAM_FONT_FAMILY,
+      messageFontSize: DIAGRAM_FONT_PX + 'px',
+      messageFontFamily: DIAGRAM_FONT_FAMILY,
+      noteFontSize: DIAGRAM_FONT_PX + 'px',
+      noteFontFamily: DIAGRAM_FONT_FAMILY,
+      sequenceNumberFontSize: DIAGRAM_FONT_PX + 'px',
+      labelFontSize: DIAGRAM_FONT_PX + 'px'
+    },
+    flowchart: { curve: 'basis' },
+    sequence: { actorFontSize: DIAGRAM_FONT_PX, messageFontSize: DIAGRAM_FONT_PX, noteFontSize: DIAGRAM_FONT_PX },
+    securityLevel: 'strict'
+  });
+
+  function unifyDiagramFontSizes() {
+    document.querySelectorAll('.diagram svg text, .diagram svg tspan, .diagram svg .nodeLabel, .diagram svg .edgeLabel, .diagram svg foreignObject div, .diagram svg foreignObject span')
+      .forEach(function (el) {
+        el.style.setProperty('font-size', DIAGRAM_FONT_PX + 'px', 'important');
+        el.style.setProperty('font-family', DIAGRAM_FONT_FAMILY, 'important');
+      });
+  }
+
+  mermaid.run({ querySelector: '.mermaid' }).then(unifyDiagramFontSizes).catch(function (err) {
+    console.error('mermaid render 실패', err);
+  });
+
+  var revealEls = document.querySelectorAll('.reveal');
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.06 });
+  revealEls.forEach(function (el) { io.observe(el); });
+
+  var tocLinks = document.querySelectorAll('.doc-toc a');
+  var sections = Array.prototype.map.call(tocLinks, function (a) {
+    return document.querySelector(a.getAttribute('href'));
+  });
+  function setActive() {
+    var idx = 0;
+    var y = window.scrollY + 110;
+    sections.forEach(function (sec, i) { if (sec && sec.offsetTop <= y) idx = i; });
+    tocLinks.forEach(function (a, i) { a.classList.toggle('active', i === idx); });
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+</script>
+</body>
+</html>
