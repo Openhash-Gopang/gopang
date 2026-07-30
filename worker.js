@@ -12182,7 +12182,7 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
-  const { guid, tier, messages, max_tokens, stream, step_cycle } = body || {};
+  const { guid, tier, messages, max_tokens, stream, step_cycle, currentLocation } = body || {};
   if (!guid || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/messages 필수', corsHeaders);
 
   // UNIVERSAL-INTEGRITY·UNIVERSAL-common 서버측 강제 주입(2026-07-04 신설,
@@ -12195,9 +12195,14 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
     _fetchUniversalIntegrity(), _fetchUniversalCommon(),
   ]);
   const universalInjected = [universalIntegrity, universalCommon].filter(Boolean).join('\n\n---\n\n');
-  const messagesWithIntegrity = universalInjected
+  let messagesWithIntegrity = universalInjected
     ? [{ role: 'system', content: universalInjected }, ...messages]
     : messages;
+  // ★ 2026-07-30 신설 — handleGovRelay와 동일한 위치정보·날짜 강제 주입을
+  // K-Law에도 적용. 판례·법령 검색은 관할(법원 소재지 등)과 기산일
+  // 계산(오늘 날짜) 둘 다에 영향을 받을 수 있어 K-Law에도 실익이 있다.
+  messagesWithIntegrity = _insertSystemNote(messagesWithIntegrity, _buildLocationNote(currentLocation));
+  messagesWithIntegrity = _insertSystemNote(messagesWithIntegrity, _buildDateNote());
 
   const tierKey = KLAW_TIER_MODELS[tier] ? tier : 'klaw-flash';
   const backendModel = KLAW_TIER_MODELS[tierKey].backendModel;
@@ -12531,7 +12536,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
-  const { guid, business_id, agencyPrompt, messages, max_tokens, stream, tier } = body || {};
+  const { guid, business_id, agencyPrompt, messages, max_tokens, stream, tier, currentLocation } = body || {};
   if (!guid || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/messages 필수', corsHeaders);
 
   // 클라이언트가 보낸 messages 중 system 역할은 전부 제거 — 서버가 직접
@@ -12579,7 +12584,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
   const [universalIntegrity, universalCommon, kBusiness, businessKr] = await Promise.all([
     _fetchUniversalIntegrity(), _fetchUniversalCommon(), _fetchKBusiness(), _fetchBusinessKr(),
   ]);
-  const systemParts = [universalIntegrity, universalCommon, kBusiness, businessKr, agencyPrompt || ''].filter(Boolean);
+  const systemParts = [universalIntegrity, universalCommon, kBusiness, businessKr, agencyPrompt || '', _buildLocationNote(currentLocation), _buildDateNote()].filter(Boolean);
   const systemContent = systemParts.length
     ? systemParts.join('\n\n---\n\n')
     : (agencyPrompt || '');
@@ -13128,6 +13133,7 @@ async function _callDelegationTarget(env, regKey, query, backendModel, provinceC
   systemContent += '\n\n---\n\n[내부 안내] 이 요청은 다른 SP로부터 위임받은 서브 질의입니다. ' +
     '당신은 이 요청에 대해 다시 다른 SP로 위임할 수 없습니다(U9-3) — 아는 선에서 직접 답하십시오.';
   systemContent += _buildLocationNote(currentLocation);
+  systemContent += _buildDateNote();
 
   let res;
   try {
@@ -13724,6 +13730,35 @@ async function handleGovTaskBatchStatus(bodyText, env, corsHeaders) {
 // 반대로 이용한다)에 결정론적으로 붙인다. handleGovRelay/_callDelegation
 // Target 양쪽에서 재사용 — K-Public 하나가 아니라 이 두 함수를 거치는
 // 342개 기관 전부에 동일하게 적용된다.
+// ★ 2026-07-30 신설 — 날짜 강제 주입. 클라이언트 데이터 없이 서버가
+// 항상 정확히 아는 사실이므로 무조건 주입한다(법정기한 계산 등 정확성이
+// 중요한 SP에서 LLM이 날짜를 잘못 아는 위험 제거).
+function _buildDateNote() {
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 고정(한국 서비스 전용)
+  const dateStr = kst.toISOString().slice(0, 10); // YYYY-MM-DD
+  const days = ['일','월','화','수','목','금','토'];
+  const dayName = days[kst.getUTCDay()];
+  const timeStr = kst.toISOString().slice(11, 16); // HH:MM
+  return `\n\n---\n\n[시스템 — 오늘 날짜]\n오늘은 ${dateStr}(${dayName}요일), 한국 표준시(KST) 기준 현재 시각 약 ${timeStr}입니다. ` +
+    `기한·경과일수·나이 등 날짜 계산이 필요하면 반드시 이 날짜를 기준으로 계산하십시오 — ` +
+    `학습 데이터 마감 시점이나 다른 날짜를 "오늘"로 가정하지 마십시오.`;
+}
+
+// handleGovRelay처럼 systemContent를 문자열 하나로 합치는 구조가 아니라,
+// K-Law·사업자 릴레이처럼 클라이언트가 messages 배열 자체를 조립해 보내는
+// 구조에서 쓰는 버전. 선행 system 메시지들(서버 주입분 + 클라이언트 SP)
+// 바로 뒤 — 즉 대화 턴이 시작되기 직전, system 메시지들 중 가장 마지막
+// 위치 — 에 새 system 메시지를 끼워 넣는다(같은 "나중 위치가 이긴다"
+// 원칙 적용).
+function _insertSystemNote(messages, noteText) {
+  if (!noteText) return messages;
+  const clean = noteText.replace(/^\n\n---\n\n/, '');
+  let i = 0;
+  while (i < messages.length && messages[i]?.role === 'system') i++;
+  return [...messages.slice(0, i), { role: 'system', content: clean }, ...messages.slice(i)];
+}
+
 function _buildLocationNote(currentLocation) {
   if (!currentLocation || typeof currentLocation !== 'string') return '';
   const safe = currentLocation.slice(0, 200); // 방어적 길이 제한
@@ -13821,7 +13856,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   const universalCommon = pdvScope
     ? universalCommonRaw.replace(_PDV_SCOPE_PLACEHOLDER_RE, pdvScope)
     : universalCommonRaw;
-  const systemParts = [universalIntegrity, universalCommon, identityDocRaw, ownSpAndGates, agencyPrompt || '', _buildLocationNote(currentLocation)].filter(Boolean);
+  const systemParts = [universalIntegrity, universalCommon, identityDocRaw, ownSpAndGates, agencyPrompt || '', _buildLocationNote(currentLocation), _buildDateNote()].filter(Boolean);
   const systemContent = systemParts.length
     ? systemParts.join('\n\n---\n\n')
     : (agencyPrompt || ''); // 공통 규칙 로드 실패해도 기관 고유 규칙만으로 서비스 지속
