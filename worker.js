@@ -1657,6 +1657,16 @@ const LAYER_REPOS = {
   L5: 'Openhash-Gopang/openhash-L5-global',
 };
 
+// ── 디버그 로그 게이트 (2026-07-30 신설) ──────────────────────────
+// wrangler tail 과다 출력 대응 1단계 — 매 요청마다 무조건 찍히던
+// AI_PROXY_CALL류 추적 로그를 env.LOG_LEVEL==='debug'일 때만 내도록
+// 게이트한다. 기본값(시크릿 미설정)은 조용함 — 운영 중 필요할 때만
+// `wrangler secret put LOG_LEVEL`(값: debug)로 켠다. console.warn/
+// error는 이 게이트 대상이 아니다(실제 이상 신호는 항상 보여야 함).
+function _dlog(env, ...args) {
+  if (env?.LOG_LEVEL === 'debug') console.log(...args);
+}
+
 // 2026-06-22: industry_fields.schema_id 화이트리스트 — ksic_schema_tier_classification_v1.md Tier1.
 // profile_pdv_schema_plan_v1.md Phase 6에서 Tier2/3가 추가될 때마다 이 목록도 같이 늘린다.
 // 클라이언트(또는 모델 출력)가 "{ksic}" 같은 미치환 리터럴이나 미정의 코드를 보내는 걸 막는 최소 방어선.
@@ -11904,7 +11914,7 @@ async function _geocodeAddressForward(env, address) {
 }
 async function handleKakaoAppKey(request,env,corsHeaders){const appkey=env.KAKAO_JS_KEY||env.KAKAO_REST_KEY;if(!appkey)return _err(500,'CONFIG_ERROR','Kakao key not configured',corsHeaders);return new Response(JSON.stringify({appkey}),{status:200,headers:{...corsHeaders,'Cache-Control':'public, max-age=300'}});}
 async function handleAIChat(bodyText,env,corsHeaders,meta=null){let body;try{body=JSON.parse(bodyText);}catch{return _err(400,'INVALID_JSON','Invalid JSON',corsHeaders);}const{provider='deepseek',model,system,messages,max_tokens=2000}=body;const builtMessages=[...(system?[{role:'system',content:system}]:[]),...(messages||[])];
-console.log(JSON.stringify({tag:'AI_PROXY_CALL',fn:'handleAIChat',ts:new Date().toISOString(),provider,model,...meta}));
+_dlog(env, JSON.stringify({tag:'AI_PROXY_CALL',fn:'handleAIChat',ts:new Date().toISOString(),provider,model,...meta}));
 try{if(provider!=='anthropic'){
   const _orKey=env.OPENROUTER_API_KEY||env.DEEPSEEK_API_KEY;
   const _orUrl=env.OPENROUTER_API_KEY?OR_URL:DEEPSEEK_URL;
@@ -11915,7 +11925,7 @@ try{if(provider!=='anthropic'){
   if(!content)throw new Error('AI 응답 없음: '+JSON.stringify(data));
   return new Response(JSON.stringify({content,provider:env.OPENROUTER_API_KEY?'openrouter':'deepseek',model:_orMdl}),{status:200,headers:corsHeaders});}else{const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY||env.OpenAI,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:model||'claude-sonnet-4-20250514',max_tokens,...(system?{system}:{}),messages:messages||[]})});const data=await res.json();const content=data.content?.find(c=>c.type==='text')?.text;return new Response(JSON.stringify({content,provider:'anthropic'}),{status:200,headers:corsHeaders});}}catch(e){return _err(502,'AI_ERROR',e.message,corsHeaders);}}
 async function callOpenAIFromGeminiBody(bodyText,env,corsHeaders,meta=null){const apiKey=env.OpenAI;if(!apiKey)return _err(500,'CONFIG_ERROR','OpenAI key not configured',corsHeaders);let geminiBody;try{geminiBody=JSON.parse(bodyText);}catch{return _err(400,'INVALID_JSON','Invalid JSON body',corsHeaders);}const systemPrompt=geminiBody.system_instruction?.parts?.[0]?.text||'';const parts=geminiBody.contents?.[0]?.parts||[];const textPart=parts.find(p=>p.text)?.text||'';const imagePart=parts.find(p=>p.inline_data);const maxTokens=geminiBody.generationConfig?.maxOutputTokens||1500;const messages=[];if(systemPrompt)messages.push({role:'system',content:systemPrompt});if(imagePart?.inline_data){messages.push({role:'user',content:[{type:'image_url',image_url:{url:`data:${imagePart.inline_data.mime_type};base64,${imagePart.inline_data.data}`}},{type:'text',text:textPart||'이미지를 분석하여 JSON으로만 출력하라.'}]});}else{messages.push({role:'user',content:textPart});}
-console.log(JSON.stringify({tag:'AI_PROXY_CALL',fn:'callOpenAIFromGeminiBody',ts:new Date().toISOString(),...meta}));
+_dlog(env, JSON.stringify({tag:'AI_PROXY_CALL',fn:'callOpenAIFromGeminiBody',ts:new Date().toISOString(),...meta}));
 try{const res=await fetch(OPENAI_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},body:JSON.stringify({model:OPENAI_MODEL,messages,max_tokens:maxTokens,temperature:geminiBody.generationConfig?.temperature??0.1})});const data=await res.json();if(!res.ok)throw new Error(data.error?.message||`HTTP ${res.status}`);const text=data.choices?.[0]?.message?.content||'{}';return new Response(JSON.stringify({candidates:[{content:{parts:[{text}],role:'model'},finishReason:'STOP'}],_provider:'openai',_model:OPENAI_MODEL}),{headers:corsHeaders});}catch(e){const fbBody=JSON.stringify({model:DEEPSEEK_MODEL,messages,max_tokens:maxTokens,temperature:0.1,stream:false});return callDeepSeek(fbBody,env,corsHeaders,e.message,meta);}}
 async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null,ctx=null){try{
   let parsedBody = null; try { parsedBody = JSON.parse(bodyText); } catch {}
@@ -11953,7 +11963,7 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
         outboundBody.system = injected + '\n\n---\n\n' + outboundBody.system;
       }
     }
-    console.log(JSON.stringify({ tag: 'DEEPSEEK_UNIVERSAL_INJECTED', service_id: parsedBody.service_id, ts: new Date().toISOString(), ...meta }));
+    _dlog(env, JSON.stringify({ tag: 'DEEPSEEK_UNIVERSAL_INJECTED', service_id: parsedBody.service_id, ts: new Date().toISOString(), ...meta }));
   } else if (outboundBody) {
     delete outboundBody.service_id; // 강제대상 아니어도 벤더 API로 그대로 넘기지 않음
   }
@@ -11978,7 +11988,7 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   const _useOR = !_useSelfHost && !!env.OPENROUTER_API_KEY;
   const _url = _useSelfHost ? env.HONDI_SELFHOST_URL : (_useOR ? OR_URL : DEEPSEEK_URL);
   const _key = _useSelfHost ? env.HONDI_SELFHOST_API_KEY : (_useOR ? env.OPENROUTER_API_KEY : env.DEEPSEEK_API_KEY);
-  console.log(JSON.stringify({tag:'AI_PROXY_CALL',fn:'callDeepSeek',ts:new Date().toISOString(),target:_useSelfHost?'hondi-selfhost':(_useOR?'openrouter':'deepseek'),tier:tierKey,model:backendModel,guid,fallbackFrom,...meta}));
+  _dlog(env, JSON.stringify({tag:'AI_PROXY_CALL',fn:'callDeepSeek',ts:new Date().toISOString(),target:_useSelfHost?'hondi-selfhost':(_useOR?'openrouter':'deepseek'),tier:tierKey,model:backendModel,guid,fallbackFrom,...meta}));
   const res=await fetch(_url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${_key}`,...(_useOR?{'HTTP-Referer':'https://hondi.net','X-Title':'Hondi'}:{})},body:outboundBodyText});
   if(!res.ok){const errText=await res.text();let errMsg;try{errMsg=JSON.parse(errText)?.error?.message;}catch{}return new Response(JSON.stringify({error:errMsg||`HTTP ${res.status}`}),{status:res.status,headers:corsHeaders});}
 
@@ -12082,7 +12092,7 @@ async function handleLLMRelay(bodyText, env, corsHeaders, meta = null) {
     ]);
     const injected = [universalIntegrity, universalCommon].filter(Boolean).join('\n\n---\n\n');
     if (injected) relayMessages = [{ role: 'system', content: injected }, ...messages];
-    console.log(JSON.stringify({ tag: 'LLM_RELAY_UNIVERSAL_INJECTED', service_id, ts: new Date().toISOString(), ...meta }));
+    _dlog(env, JSON.stringify({ tag: 'LLM_RELAY_UNIVERSAL_INJECTED', service_id, ts: new Date().toISOString(), ...meta }));
   }
 
   let targetHost;
@@ -12102,7 +12112,7 @@ async function handleLLMRelay(bodyText, env, corsHeaders, meta = null) {
   if (max_tokens  != null) payload.max_tokens  = max_tokens;
   if (temperature != null) payload.temperature = temperature;
 
-  console.log(JSON.stringify({ tag: 'LLM_RELAY_CALL', provider: provider || targetHost, model, stream: isStream, ts: new Date().toISOString(), ...meta }));
+  _dlog(env, JSON.stringify({ tag: 'LLM_RELAY_CALL', provider: provider || targetHost, model, stream: isStream, ts: new Date().toISOString(), ...meta }));
 
   try {
     const res = await fetch(targetUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
@@ -12214,7 +12224,7 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   const payload = { model: backendModel, messages: messagesWithIntegrity, stream: isStream };
   if (max_tokens != null) payload.max_tokens = max_tokens;
 
-  console.log(JSON.stringify({ tag:'KLAW_RELAY_CALL', guid, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
+  _dlog(env, JSON.stringify({ tag:'KLAW_RELAY_CALL', guid, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
 
   const t0 = Date.now(); // 과금에는 쓰지 않음 — 로그 진단(지연 모니터링) 용도로만 유지
   let res;
@@ -12570,7 +12580,7 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
   const payload = { model: backendModel, messages: [{ role: 'system', content: systemContent }, ...dialogOnly], stream: isStream };
   if (max_tokens != null) payload.max_tokens = max_tokens;
 
-  console.log(JSON.stringify({ tag: 'BUSINESS_RELAY_CALL', guid, business_id: bizKey, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
+  _dlog(env, JSON.stringify({ tag: 'BUSINESS_RELAY_CALL', guid, business_id: bizKey, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
 
   let res;
   try {
@@ -13663,7 +13673,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   const payload = { model: backendModel, messages: [{ role: 'system', content: systemContent }, ...dialogOnly], stream: isStream };
   if (max_tokens != null) payload.max_tokens = max_tokens;
 
-  console.log(JSON.stringify({ tag: 'GOV_RELAY_CALL', guid, agency, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
+  _dlog(env, JSON.stringify({ tag: 'GOV_RELAY_CALL', guid, agency, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
 
   let res;
   try {
