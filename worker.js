@@ -13098,7 +13098,7 @@ function _parseSpCallRequest(content) {
 // 규칙을 어기고 또 sp_call JSON을 내놓더라도 절대 따르지 않는다 — 그 결과의
 // sp_call 여부 자체를 확인하지 않고 raw content 그대로 반환한다. 이것이
 // "재위임 금지"의 실제 강제 지점이다(U9-3은 프롬프트 차원의 심층 방어).
-async function _callDelegationTarget(env, regKey, query, backendModel, provinceCode) {
+async function _callDelegationTarget(env, regKey, query, backendModel, provinceCode, currentLocation) {
   const entry = SP_DELEGATION_REGISTRY[regKey];
   if (!entry) return { ok: false, reason: 'TARGET_NOT_REGISTERED' };
 
@@ -13121,6 +13121,7 @@ async function _callDelegationTarget(env, regKey, query, backendModel, provinceC
   }
   systemContent += '\n\n---\n\n[내부 안내] 이 요청은 다른 SP로부터 위임받은 서브 질의입니다. ' +
     '당신은 이 요청에 대해 다시 다른 SP로 위임할 수 없습니다(U9-3) — 아는 선에서 직접 답하십시오.';
+  systemContent += _buildLocationNote(currentLocation);
 
   let res;
   try {
@@ -13709,11 +13710,29 @@ async function handleGovTaskBatchStatus(bodyText, env, corsHeaders) {
 //    반드시 명확히 알려야 한다(아래 방송통신위원회 역할수행 참조).
 // ═══════════════════════════════════════════════════════════
 
+// ★ 2026-07-30 신설 — "SP 문구로 위치를 묻지 말라고 지시"는 LLM이 안
+// 따를 수 있어 이행을 강제하지 못한다(실사용 중 K-Public에서 확인된
+// 문제 — U7-2/U7-3이 있는데도 무시됨). 대신 클라이언트가 이미 확보한
+// 위치값을 서버가 시스템 프롬프트 맨 뒤(=가장 강하게 작용하는 위치 —
+// K_GOV_METHODOLOGY가 SP-10_kpublic보다 항상 이겼던 것과 같은 원리를
+// 반대로 이용한다)에 결정론적으로 붙인다. handleGovRelay/_callDelegation
+// Target 양쪽에서 재사용 — K-Public 하나가 아니라 이 두 함수를 거치는
+// 342개 기관 전부에 동일하게 적용된다.
+function _buildLocationNote(currentLocation) {
+  if (!currentLocation || typeof currentLocation !== 'string') return '';
+  const safe = currentLocation.slice(0, 200); // 방어적 길이 제한
+  return `\n\n---\n\n[시스템 — 사용자 위치 이미 확보됨]\n` +
+    `사용자의 현재 위치/지역: ${safe}\n` +
+    `이 값은 이미 확보되어 있습니다. 관할·지역이 필요한 판단에 이 값을 사용하고, ` +
+    `사용자에게 위치·거주지·주소를 다시 묻지 마십시오. 사용자가 이후 발화에서 ` +
+    `명시적으로 다른 지역의 민원이라고 밝히면 그 발화를 우선하십시오.`;
+}
+
 async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = null) {
   let body;
   try { body = JSON.parse(bodyText); } catch { return _err(400, 'INVALID_JSON', '', corsHeaders); }
 
-  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier, provinceCode } = body || {};
+  const { guid, agency, agencyPrompt, messages, max_tokens, stream, tier, provinceCode, currentLocation } = body || {};
   if (!guid || !agency || !Array.isArray(messages)) return _err(400, 'MISSING_FIELD', 'guid/agency/messages 필수', corsHeaders);
   if (!GOV_AGENCIES.has(agency)) return _err(400, 'UNKNOWN_AGENCY', `등록되지 않은 기관: ${agency}`, corsHeaders);
   // provinceCode는 선택 필드(2026-07-21 신설) — gov_do/gov_national 위임
@@ -13780,7 +13799,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   const universalCommon = pdvScope
     ? universalCommonRaw.replace(_PDV_SCOPE_PLACEHOLDER_RE, pdvScope)
     : universalCommonRaw;
-  const systemParts = [universalIntegrity, universalCommon, identityDocRaw, ownSpAndGates, agencyPrompt || ''].filter(Boolean);
+  const systemParts = [universalIntegrity, universalCommon, identityDocRaw, ownSpAndGates, agencyPrompt || '', _buildLocationNote(currentLocation)].filter(Boolean);
   const systemContent = systemParts.length
     ? systemParts.join('\n\n---\n\n')
     : (agencyPrompt || ''); // 공통 규칙 로드 실패해도 기관 고유 규칙만으로 서비스 지속
@@ -14100,7 +14119,7 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
       }
 
       // ── 위임 승인 — 대상 SP 서브 호출(2번째 LLM 호출) ──────────────
-      const sub = await _callDelegationTarget(env, target, call.query, backendModel, provinceCode);
+      const sub = await _callDelegationTarget(env, target, call.query, backendModel, provinceCode, currentLocation);
       billGovCall(sub.usage, `${agency}→${target}`);
 
       if (!sub.ok) {
