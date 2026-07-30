@@ -12,6 +12,23 @@ import { _patchL1LedgerUserHash, _patchPdvChainHeight,
 import { summarizeTranscript6W } from '../ai/report-utils.js';
 import { _handleGwpSignRequest } from './sign.js';
 import { GWP_ALLOWED_ORIGINS } from './allowed-origins.js';
+// 2026-07-30 신설 — SSO 경로1(gwp_token) 발급용. auth/gopang-sso.js가
+// 이미 export하고 있던 issueToken()을 여기서 처음으로 실제 호출한다
+// (지금까지 이 저장소 어디에서도 import된 적이 없었다 — 경로1이 항상
+// 스킵되고 매번 opener postMessage 왕복에만 의존하던 근본원인).
+import { issueToken } from '../../../auth/gopang-sso.js';
+
+// gopang-sso.js의 _detectServiceId()와 동일한 규칙 — 대상 서비스
+// hostname으로부터 svc id를 뽑는다(발급 토큰의 svc 필드가 수신 측
+// 검증과 정확히 일치해야 하므로, 로직을 새로 짜지 않고 그대로 미러링).
+function _detectSvcIdForUrl(urlStr) {
+  try {
+    const host = new URL(urlStr).hostname;
+    if (host === 'hondi.net' || host === 'www.hondi.net') return 'gopang';
+    const sub = host.replace(/\.hondi\.net$/, '');
+    return sub !== host ? sub : 'unknown';
+  } catch { return 'unknown'; }
+}
 
 // ★ 2026-07-11 Phase 0 신설(파이프라인 사고실험 미비점4) — PDV 기록과
 // 함께 gwp_registry.call_count_30d를 증분한다. 정기 갱신 방법론
@@ -55,7 +72,7 @@ let _gwpMessageLog  = [];     // GWP_MESSAGE로 중계된 대화만 누적(전�
 // @param {object|null} facts — services/location.js의 _buildRoutingFacts()
 //   결과. 민감 정보(PDV 이력 등)를 담지 않는다는 전제로 URL에 실린다 —
 //   호출부에서 이 계약을 위반하는 값을 넣지 않도록 주의.
-export function _gwpLaunch(service, context, _preTab = null, facts = null) {
+export async function _gwpLaunch(service, context, _preTab = null, facts = null) {
   // 기존 탭이 열려있으면 닫고 새 ctx로 재시작
   if (_gwpTab && !_gwpTab.closed) {
     _gwpTab.close();
@@ -82,12 +99,32 @@ export function _gwpLaunch(service, context, _preTab = null, facts = null) {
     ? btoa(unescape(encodeURIComponent(context)))
     : '';
 
+  // 탭 핸들 확보(동기, 첫 await 이전) — 팝업 차단 우회 타이밍은 기존과 동일.
+  // async 함수 본문은 첫 await 전까지 동기 실행되므로, 여기서 handle을
+  // 먼저 잡아두고 URL은 나중에 채워도 팝업 차단에 영향 없다.
+  let _tabHandle = (_preTab && !_preTab.closed) ? _preTab : window.open('about:blank', '_blank');
+  setGwpTab(_tabHandle);
+
   const svcUrl = new URL(service.url);
   svcUrl.searchParams.set('gwp',      '1');
   svcUrl.searchParams.set('token',    _USER?.ipv6 || _USER?.guid || '');
   svcUrl.searchParams.set('origin',   location.origin);
   svcUrl.searchParams.set('ctx',      safeCtx);
   svcUrl.searchParams.set('ctx_enc',  'b64');  // 수신 측에 인코딩 방식 명시
+
+  // gwp_token 발급 (2026-07-30 신설 — SSO 경로1 활성화)
+  // 실패해도 치명적이지 않음 — 기존처럼 경로2B'(opener)로 자연스럽게
+  // 폴백된다. 여기서 막히면 안 되므로 try/catch로 감싼다.
+  try {
+    if (_USER) {
+      const svcId = _detectSvcIdForUrl(service.url);
+      const { payload, sig } = await issueToken(_USER, svcId);
+      const gwpToken = btoa(unescape(encodeURIComponent(JSON.stringify({ payload, sig }))));
+      svcUrl.searchParams.set('gwp_token', gwpToken);
+    }
+  } catch (e) {
+    console.warn('[GWP] gwp_token 발급 실패 (opener 인증 경로로 자동 폴백됨):', e.message);
+  }
 
   // facts: 메인 비서가 이미 확보한 부가 정보(현재는 currentLocation만) —
   // ctx와 동일한 이유로 base64 인코딩. null/빈 객체면 아예 파라미터를
@@ -102,14 +139,9 @@ export function _gwpLaunch(service, context, _preTab = null, facts = null) {
     }
   }
 
-  // 새 탭으로 열기
-  // 모바일 팝업 차단 우회: 사용자 탭 직후 예약한 빈 탭(_preTab)이 있으면
-  // window.open() 대신 그 탭의 URL을 교체 (비동기 맥락에서도 차단 없음)
-  if (_preTab && !_preTab.closed) {
-    _preTab.location.href = svcUrl.toString();
-    setGwpTab(_preTab);
-  } else {
-    setGwpTab(window.open(svcUrl.toString(), '_blank'));
+  // 이미 확보해둔 탭 핸들에 완성된 URL 반영
+  if (_tabHandle && !_tabHandle.closed) {
+    _tabHandle.location.href = svcUrl.toString();
   }
 
   if (!_gwpTab) {
