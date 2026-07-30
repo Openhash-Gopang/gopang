@@ -13782,6 +13782,12 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
 
   const usesProfessionalIdentity = PROFESSIONAL_IDENTITY_AGENCIES.has(agency);
   const noIdentityLayer = NO_IDENTITY_LAYER_AGENCIES.has(agency);
+  // ★ 2026-07-30 신설 — "요청 준비(SP 조립) 과정이 느린 게 아닌가"라는
+  // 가설을 실측하기 위한 진단 로그. 캐시가 있지만 let _xxxCache 변수는
+  // Worker 인스턴스(isolate) 범위라 콜드스타트마다 초기화된다 — 이
+  // 로그로 실제 캐시 hit/miss와 소요시간을 눈으로 확인한다(추측 금지
+  // 원칙 — 지금까지 이 세션에서 반복 확인한 방법론과 동일).
+  const _spAssemblyStart = Date.now();
   const [universalIntegrity, universalCommonRaw, identityDocRaw, ownSpAndGates] = await Promise.all([
     _fetchUniversalIntegrity(),
     _fetchUniversalCommon(),
@@ -13794,6 +13800,16 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
     // 따로 실어야 한다 — _fetchOwnSpAndGates 정의부 주석 참조.
     _fetchOwnSpAndGates(agency),
   ]);
+  _dlog(env, JSON.stringify({
+    tag: 'SP_ASSEMBLY_TIMING', agency,
+    elapsedMs: Date.now() - _spAssemblyStart,
+    cacheState: {
+      universalIntegrity: !!_universalIntegrityCache,
+      universalCommon: !!_universalCommonCache,
+      kPublicCommon: !!_kPublicCommonCache,
+    },
+    ts: new Date().toISOString(), ...meta,
+  }));
   const pdvScope = GOV_AGENCY_PDV_SCOPE[agency];
   // PDV_HISTORY_REQUEST(U8) scope 자리표시자는 이제 UNIVERSAL-common에 있다.
   const universalCommon = pdvScope
