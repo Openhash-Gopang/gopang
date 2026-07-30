@@ -3,6 +3,13 @@
  */
 import { _SUPABASE_URL, _SUPABASE_KEY, USER_GUID, _USER, _userLocation } from '../core/state.js';
 import { CFG } from '../core/config.js';
+// ★ 2026-07-30 버그 수정 — 아래 221행 부근에서 _klawReview를 호출하는데
+// import가 없어 실행 시 "Uncaught ReferenceError: _klawReview is not
+// defined"로 매번 터졌다(실제 wrangler tail·브라우저 콘솔로 확인).
+// klaw.js가 이 파일의 _recordPDV를 다시 참조하는 순환 참조이지만,
+// 양쪽 다 즉시실행이 아니라 setTimeout/함수 본문 내부의 지연 호출이라
+// ESM의 라이브 바인딩 특성상 안전하다.
+import { _klawReview } from '../services/klaw.js';
 // (2026-07-19: _recordPDV()는 /pdv/report 경유로 이관 완료. 아래
 //  _patchL1LedgerUserHash/_patchPdvChainHeight는 대응하는 worker.js
 //  엔드포인트가 아직 없어 Supabase 직접 접근이 남아있다 — §미해결 블로커.)
