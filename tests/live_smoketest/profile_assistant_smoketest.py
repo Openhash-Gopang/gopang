@@ -43,7 +43,12 @@ RETRY_BASE_SLEEP = 3
 PARTIAL_SAVE_RE = re.compile(r"\[PARTIAL_SAVE\]\s*(\{.*?\})(?=\n|\[|$)", re.DOTALL)
 TEMPLATE_LOOKUP_RE = re.compile(r"\[TEMPLATE_LOOKUP:\s*([^\]]*)\]")
 PROFILE_SUBMIT_RE = re.compile(r"\[?PROFILE_SUBMIT\]?\s*(\{.*)", re.DOTALL)
-SOFT_COMPLETION_RE = re.compile(r"프로필\s*완성|🎉")  # ①완료메시지는 냈는데 ②머신태그가 없는 경우 감지용
+# (2026-0X-XX 재수정) 문구 매칭(프로필 완성/🎉)이 "프로필이 완성됐어요"
+# 같은 자연스러운 조사 삽입도 못 잡던 결함(10건 파일럿에서 실측 확인) —
+# 완료 메시지의 정확한 문구를 쫓는 대신, SP 자신의 확인요청 문구(§PROFILE_
+# CARD의 "...맞으면 '확인'을 눌러주세요")를 구조적으로 추적하는 방식으로
+# 전환한다.
+CONFIRMATION_REQUEST_RE = re.compile(r"눌러주세요|확인해\s*주세요|맞으면")
 TERMINAL_TAGS = ["PROFILE_SUBMIT", "[PROFILE_SKIP]", "[PROFILE_INTERRUPT_HANDOFF]"]
 FIELD_ADD_RE = re.compile(r"\[FIELD_ADD:")
 FIELD_REMOVE_RE = re.compile(r"\[FIELD_REMOVE:")
@@ -136,6 +141,7 @@ def run_scenario(api_key, pa_system, scenario):
     submit_json = None
     field_add_seen = False
     field_remove_seen = False
+    awaiting_confirmation = False  # 직전 PA 턴이 §PROFILE_CARD 확인요청이었는지
     total_usage = {"prompt_tokens": 0, "completion_tokens": 0}
 
     user_turn_text = scenario['opening_line']
@@ -167,13 +173,16 @@ def run_scenario(api_key, pa_system, scenario):
                 pass
 
         # 종료 태그 판정
-        # (2026-0X-XX 신설) ①완료 메시지는 냈는데 ②PROFILE_SUBMIT 머신 태그가
-        # 전혀 없는 경우 — 무한정 잡담 루프로 흘러가지 않도록 여기서 끊고,
-        # "태그 누락"이라는 정확한 사유로 기록한다(파일럿 5건에서 5건 중 4건이
-        # 이 패턴이었음 — MAX_TURNS 도달로 오분류되던 것을 바로잡는다).
-        if SOFT_COMPLETION_RE.search(pa_reply) and 'PROFILE_SUBMIT' not in pa_reply.upper():
+        # (2026-0X-XX 재수정) 직전 PA 턴이 확인요청("...맞으면 확인을
+        # 눌러주세요")이었고, 이번 턴에 PROFILE_SUBMIT이 없으면 — 완료
+        # 메시지의 정확한 문구가 무엇이든("프로필이 완성됐어요" 등 자유
+        # 변형 포함) 이 턴을 완료 턴으로 간주하고 "태그 누락"으로 종료한다.
+        # 문구를 쫓는 대신 SP의 확인요청 구조 자체를 신호로 쓰므로
+        # 표현이 어떻게 바뀌어도 안정적으로 잡는다.
+        if awaiting_confirmation and 'PROFILE_SUBMIT' not in pa_reply.upper():
             terminal = 'SOFT_COMPLETION_NO_TAG'
             break
+        awaiting_confirmation = bool(CONFIRMATION_REQUEST_RE.search(pa_reply))
         if 'PROFILE_SUBMIT' in pa_reply:
             terminal = 'PROFILE_SUBMIT'
             sm = PROFILE_SUBMIT_RE.search(pa_reply)
