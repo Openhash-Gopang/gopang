@@ -34,7 +34,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
-MODEL = "deepseek-chat"
+MODEL = "deepseek-v4-flash"  # 2026-0X-XX 교정 — worker.js HONDI_TIER_MODELS['hondi-flash'].backendModel과 동일한 실제 프로덕션 모델(구값 'deepseek-chat'은 폐기 예정 레거시 별칭)
 MAX_TURNS = 14  # STEP1~STEP-FINAL이 정상이면 이 안에 끝나야 함(무한루프 방지)
 MAX_WORKERS = 4  # 시나리오당 최대 2*MAX_TURNS 호출이 걸릴 수 있어 AC-PRO-CORE보다 낮춤
 MAX_RETRIES = 4
