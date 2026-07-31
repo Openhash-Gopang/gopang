@@ -42,7 +42,8 @@ RETRY_BASE_SLEEP = 3
 
 PARTIAL_SAVE_RE = re.compile(r"\[PARTIAL_SAVE\]\s*(\{.*?\})(?=\n|\[|$)", re.DOTALL)
 TEMPLATE_LOOKUP_RE = re.compile(r"\[TEMPLATE_LOOKUP:\s*([^\]]*)\]")
-PROFILE_SUBMIT_RE = re.compile(r"PROFILE_SUBMIT\s*(\{.*)", re.DOTALL)
+PROFILE_SUBMIT_RE = re.compile(r"\[?PROFILE_SUBMIT\]?\s*(\{.*)", re.DOTALL)
+SOFT_COMPLETION_RE = re.compile(r"프로필\s*완성|🎉")  # ①완료메시지는 냈는데 ②머신태그가 없는 경우 감지용
 TERMINAL_TAGS = ["PROFILE_SUBMIT", "[PROFILE_SKIP]", "[PROFILE_INTERRUPT_HANDOFF]"]
 FIELD_ADD_RE = re.compile(r"\[FIELD_ADD:")
 FIELD_REMOVE_RE = re.compile(r"\[FIELD_REMOVE:")
@@ -82,10 +83,12 @@ AI 비서(상대방)가 프로필 작성을 도와주는 대화 상대이고, �
 
 규칙: 한국어로, 실제 사람처럼 짧고 자연스럽게 답하세요. AI 비서 역할을 절대 하지 말고, 오직 사용자 역할만 하세요.
 AI가 프로필 작성을 마쳤다고 확인을 요청하면 "네, 맞아요" 등으로 승인하세요.
+AI가 "🎉 프로필 완성됐어요"처럼 완료를 알리면, "네, 감사합니다!" 한 마디로만 짧게 답하고
+더 이상 새로운 화제나 인사를 만들지 마세요 — 대화를 길게 끌지 않습니다.
 """
 
 
-def _call_deepseek(api_key, messages, max_tokens=700):
+def _call_deepseek(api_key, messages, max_tokens=1600):
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {"model": MODEL, "temperature": 0.3, "max_tokens": max_tokens, "messages": messages}
     last_err = None
@@ -139,13 +142,18 @@ def run_scenario(api_key, pa_system, scenario):
 
     for turn in range(MAX_TURNS):
         pa_messages.append({"role": "user", "content": user_turn_text})
-        pa_reply, usage, err = _call_deepseek(api_key, pa_messages)
+        pa_reply, usage, err = _call_deepseek(api_key, pa_messages, max_tokens=1600)
         if err:
             return _error_result(scenario, transcript, f"PA 호출 실패(turn {turn}): {err}")
         for k in total_usage:
             total_usage[k] += usage.get(k, 0)
         pa_messages.append({"role": "assistant", "content": pa_reply})
-        transcript.append({"role": "user(persona)", "content": user_turn_text})
+        # (2026-0X-XX 수정) user_turn_text는 오프닝 또는 이전 루프 끝에서 이미
+        # "user(persona-next)"로 기록됐으므로 여기서 다시 안 찍는다 — 최초
+        # 진입(turn==0)일 때만 오프닝 발화를 여기서 기록한다(그 전엔 기록된 적
+        # 없으므로).
+        if turn == 0:
+            transcript.append({"role": "user(persona)", "content": user_turn_text})
         transcript.append({"role": "assistant(PA)", "content": pa_reply})
 
         if FIELD_ADD_RE.search(pa_reply):
@@ -159,6 +167,13 @@ def run_scenario(api_key, pa_system, scenario):
                 pass
 
         # 종료 태그 판정
+        # (2026-0X-XX 신설) ①완료 메시지는 냈는데 ②PROFILE_SUBMIT 머신 태그가
+        # 전혀 없는 경우 — 무한정 잡담 루프로 흘러가지 않도록 여기서 끊고,
+        # "태그 누락"이라는 정확한 사유로 기록한다(파일럿 5건에서 5건 중 4건이
+        # 이 패턴이었음 — MAX_TURNS 도달로 오분류되던 것을 바로잡는다).
+        if SOFT_COMPLETION_RE.search(pa_reply) and 'PROFILE_SUBMIT' not in pa_reply.upper():
+            terminal = 'SOFT_COMPLETION_NO_TAG'
+            break
         if 'PROFILE_SUBMIT' in pa_reply:
             terminal = 'PROFILE_SUBMIT'
             sm = PROFILE_SUBMIT_RE.search(pa_reply)
@@ -186,6 +201,7 @@ def run_scenario(api_key, pa_system, scenario):
         mocked_ctx = _mock_template_lookup_context(pa_reply)
         if mocked_ctx:
             user_turn_text = mocked_ctx
+            transcript.append({"role": "user(mocked-template-context)", "content": user_turn_text})
             continue
 
         # 페르소나 다음 응답 생성
@@ -201,10 +217,11 @@ def run_scenario(api_key, pa_system, scenario):
 
     verdict, notes = _grade(scenario, terminal, submit_json, partial_saves, field_add_seen, field_remove_seen, transcript)
 
+    pa_turn_count = sum(1 for t in transcript if t["role"] == "assistant(PA)")
     return {
         "no": scenario["no"], "entity_type_expected": scenario["entity_type_expected"],
         "edge_case_tags": scenario["edge_case_tags"], "terminal": terminal,
-        "turns_used": len(transcript) // 2, "submit_entity_type": (submit_json or {}).get('entity_type'),
+        "turns_used": pa_turn_count, "submit_entity_type": (submit_json or {}).get('entity_type'),
         "verdict": verdict, "notes": notes, "usage": total_usage,
         "transcript": transcript, "submit_json": submit_json,
     }
@@ -223,6 +240,13 @@ def _grade(scenario, terminal, submit_json, partial_saves, field_add_seen, field
     notes = []
     if terminal is None:
         return "LIVE-FAIL", [f"MAX_TURNS({MAX_TURNS}) 안에 종료 태그 없음 — 무한 루프 또는 STEP 정체 의심"]
+
+    if terminal == 'SOFT_COMPLETION_NO_TAG':
+        return "LIVE-NEEDS-REVIEW", [
+            "완료 메시지(①)는 나왔으나 PROFILE_SUBMIT 머신 태그(②)가 응답에 없음 — "
+            "SP는 두 개를 같은 응답에 함께 내라고 명시하는데 모델이 ②를 누락했을 가능성. "
+            "여러 건 반복되면 모델별 SP 준수도 문제로 보고 필요."
+        ]
 
     if terminal == 'PROFILE_INTERRUPT_HANDOFF':
         if any(t in scenario['edge_case_tags'] for t in ('SAFETY_GATE', 'INTERRUPT_A')):
