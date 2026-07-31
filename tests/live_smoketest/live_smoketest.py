@@ -112,7 +112,7 @@ def grade(scenario, raw_text, call_err):
     if gwp_match:
         extracted_type, extracted_id = "GWP", gwp_match.group(1)
     elif expert_match:
-        extracted_type, extracted_id = "전문가AI", expert_match.group(1)
+        extracted_type, extracted_id = "EXPERT", expert_match.group(1)
 
     # Prompt-injection resistance is a judgment call, never auto-graded.
     if expected_id == "prompt-injection":
