@@ -12102,6 +12102,14 @@ async function callDeepSeek(bodyText,env,corsHeaders,fallbackFrom=null,meta=null
   // guid가 실려 있으면(=call-ai.js의 deepseek-default 경로) 1,000원 누적 한도 체크.
   let outboundBody = parsedBody ? { ...parsedBody, model: backendModel } : null;
   if (outboundBody) delete outboundBody.guid; // 벤더 API는 guid 필드를 모름
+  // 2026-0X-XX 신설 — deepseek-v4-flash/-pro를 model로 직접 호출하면 thinking이
+  // 기본값 enabled(공식 문서 확인)라, 이 파라미터 없이는 "혼디 Flash"=비사고라는
+  // 원 설계 의도(위 HONDI_TIER_MODELS 윗쪽 주석 참조)와 달리 매 호출이 조용히
+  // 사고 모드로 돌고 있었을 가능성이 높다(응답 지연·과금 토큰 모두 몇 배 증가).
+  // pro 티어(구 별칭 deepseek-reasoner)는 원래도 사고 모드가 의도였으므로 유지.
+  if (outboundBody && outboundBody.thinking === undefined) {
+    outboundBody.thinking = { type: backendModel === 'deepseek-v4-flash' ? 'disabled' : 'enabled' };
+  }
 
   // UNIVERSAL 레이어 서버 강제 주입 (2026-07-05, handleLLMRelay와 동일 목록/원칙).
   // 이 경로(callDeepSeek)는 gdc처럼 messages 배열이 아니라 별도 system
@@ -12384,6 +12392,10 @@ async function handleKlawRelay(bodyText, env, corsHeaders, meta = null, ctx = nu
   const isStream = !!stream;
   const payload = { model: backendModel, messages: messagesWithIntegrity, stream: isStream };
   if (max_tokens != null) payload.max_tokens = max_tokens;
+  // 2026-0X-XX — thinking 기본값 명시(deepseek-client.js 동일 원칙 참조)
+  if (payload.thinking === undefined) {
+    payload.thinking = { type: backendModel === 'deepseek-v4-flash' ? 'disabled' : 'enabled' };
+  }
 
   _dlog(env, JSON.stringify({ tag:'KLAW_RELAY_CALL', guid, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
 
@@ -12740,6 +12752,10 @@ async function handleBusinessRelay(bodyText, env, corsHeaders, meta = null, ctx 
   const isStream = !!stream;
   const payload = { model: backendModel, messages: [{ role: 'system', content: systemContent }, ...dialogOnly], stream: isStream };
   if (max_tokens != null) payload.max_tokens = max_tokens;
+  // 2026-0X-XX — thinking 기본값 명시(deepseek-client.js 동일 원칙 참조)
+  if (payload.thinking === undefined) {
+    payload.thinking = { type: backendModel === 'deepseek-v4-flash' ? 'disabled' : 'enabled' };
+  }
 
   _dlog(env, JSON.stringify({ tag: 'BUSINESS_RELAY_CALL', guid, business_id: bizKey, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
 
@@ -14016,6 +14032,10 @@ async function handleGovRelay(bodyText, env, corsHeaders, meta = null, ctx = nul
   const isStream = !!stream && !canDelegate;
   const payload = { model: backendModel, messages: [{ role: 'system', content: systemContent }, ...dialogOnly], stream: isStream };
   if (max_tokens != null) payload.max_tokens = max_tokens;
+  // 2026-0X-XX — thinking 기본값 명시(deepseek-client.js 동일 원칙 참조)
+  if (payload.thinking === undefined) {
+    payload.thinking = { type: backendModel === 'deepseek-v4-flash' ? 'disabled' : 'enabled' };
+  }
 
   _dlog(env, JSON.stringify({ tag: 'GOV_RELAY_CALL', guid, agency, tier: tierKey, stream: isStream, userSpent, globalSpent, ts: new Date().toISOString(), ...meta }));
 
