@@ -19,9 +19,34 @@ AT-A-TIME]이 "과반수 패턴"을 판단할 근거가 부족할 때 참고할 
 수 없다 — 그래서 이 작업은 SP 안이 아니라 여기, 주기적 배치로 분리돼
 있다(tools/build_manifest.py, tools/check_stale_refs.py와 같은 자리).
 
+■ KSIC 계층 증류 (2026-0X-XX 신설)
+  주피터님 관찰: "대분류·중분류·소분류·세분류는 SP-Tree와 같은 상속
+  구조를 이룬다. 소분류로부터 중분류를 증류하고, 중분류에서 대분류
+  템플릿을 증류하는 메커니즘이 필요하다." worker.js의
+  _l1FindTemplateReferenceProfiles(라이브 조회, 세션 중 실시간으로
+  TEMPLATE_MIN_SAMPLE 미만이면 부모 코드로 즉시 올라감)와 짝을 이루는
+  배치판이다 — 라이브 쪽은 "이번 세션에 필요한 만큼만 그때그때 조회",
+  이 스크립트는 "전체 트리를 미리 다 계산해 사람이 리뷰할 수 있게
+  남겨둠"이라는 역할 차이가 있다(RENEWALING 문단이 이미 명시한
+  "한 세션은 전체 통계를 볼 수 없다"는 원칙과 동일선상).
+
+  ksic:{code} 키에 한해, 자기 코드에 직접 태깅된 프로필만 보는
+  "own"(기존 필드명 그대로 최상위에 유지, 하위호환)과, 자기 코드 +
+  모든 하위 코드(재귀적으로 이미 증류된 풀)를 합친 "distilled" 두
+  통계를 함께 낸다. distilled 풀은 세분류→소분류→중분류→대분류 순으로
+  레벨별로 처리해야 자식이 이미 증류된 뒤에 부모를 계산할 수 있다
+  (레벨 5부터 역순으로 순회). job_ksco:/workdomain: 키는 KSIC 계층
+  개념이 없으므로 이번 확장 대상이 아니다 — 기존 방식 그대로.
+
+  계층 정의는 data/classification/ksic-parent-map.json 하나만 신뢰한다
+  (tools/build_ksic_parent_map.py가 ksic-flat.csv에서 생성, worker.js도
+  동일 파일을 씀 — 계층 정의를 이 스크립트 안에 따로 만들면 두 사본이
+  갈라지는 문제를 반복하게 된다).
+
 ■ 실행 방식
   이 저장소의 다른 배치 도구와 마찬가지로 GitHub Actions cron 또는
-  서버 크론으로 주기 실행하는 것을 전제로 작성했다. 필요한 환경변수:
+  서버 크론으로 주기 실행하는 것을 전제로 작성했다(주피터님 지시 —
+  월 1회 또는 분기 1회). 필요한 환경변수:
 
     POCKETBASE_URL            (예: https://l1.hondi.net)
     POCKETBASE_ADMIN_EMAIL
@@ -50,6 +75,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 OUT = ROOT / 'data' / 'identity_template_stats.json'
+KSIC_PARENT_MAP_PATH = ROOT / 'data' / 'classification' / 'ksic-parent-map.json'
 
 POCKETBASE_URL = os.environ.get('POCKETBASE_URL', '').rstrip('/')
 ADMIN_EMAIL = os.environ.get('POCKETBASE_ADMIN_EMAIL', '')
@@ -61,6 +87,17 @@ ADMIN_PASSWORD = os.environ.get('POCKETBASE_ADMIN_PASSWORD', '')
 BUSINESS_PREFIX = 'ksic:'
 PERSON_JOB_PREFIX = 'ksco:'
 PERSON_DOMAIN_PREFIX = 'workdomain:'
+
+# 2026-07-17 신설 — 최소 표본 크기 임계값(주피터님 지시로 Claude가 의견
+# 제시 후 반영). 100인 사고실험(§4)에서 n=1일 때 "과반수(50% 초과)" 기준이
+# 우연히 채워진 필드까지 자동으로 "권장"으로 승격시키는 과신 문제를 실측으로
+# 확인했다 — 그 해결. worker.js의 TEMPLATE_MIN_SAMPLE(라이브 조회 상향
+# 임계값)과 동일한 3을 쓴다 — 배치·라이브 두 메커니즘이 "표본이 몇 건이면
+# 믿을 만한가"라는 같은 질문에 서로 다른 답을 하면 혼란스러우므로 숫자를
+# 맞춘다(의미는 다르다 — 라이브는 "언제 상위로 올라갈지", 배치는 "언제
+# confidence를 승격할지").
+MIN_SAMPLE_PROVISIONAL = 3
+MIN_SAMPLE_STABLE = 5
 
 
 def _http_json(url, method='GET', headers=None, body=None):
@@ -185,8 +222,9 @@ def _present_fields(pub):
     return present
 
 
-def compute_stats(profiles):
-    grouped = defaultdict(list)  # key -> [set(present_fields), ...]
+def _group_by_identity(profiles):
+    """key(ksic:.../ksco:.../workdomain:...) -> [present_field_set, ...]"""
+    grouped = defaultdict(list)
     for p in profiles:
         keys, pub = _identity_keys(p)
         if not keys:
@@ -194,57 +232,93 @@ def compute_stats(profiles):
         present = _present_fields(pub)
         for k in keys:
             grouped[k].append(present)
+    return grouped
 
-    # 2026-07-17 신설 — 최소 표본 크기 임계값(주피터님 지시로 Claude가
-    # 의견 제시 후 반영). 100인 사고실험(§4)에서 n=1일 때 "과반수(50%
-    # 초과)" 기준이 우연히 채워진 필드까지 자동으로 "권장"으로 승격시키는
-    # 과신 문제를 실측으로 확인했다 — 그 해결.
-    #
-    # 기준(3단계, 조정 가능):
-    #   n < MIN_SAMPLE_PROVISIONAL(3)  → confidence='insufficient',
-    #     recommended_fields는 비운다. 표본 1~2건으로는 "패턴"이라 부를
-    #     근거 자체가 없다(우연과 구분 불가) — PA의 [§TEMPLATE-REFERENCE]는
-    #     이 경우를 참조 없는 최초 사례와 동일하게 취급하면 된다.
-    #   MIN_SAMPLE_PROVISIONAL <= n < MIN_SAMPLE_STABLE(5) → confidence=
-    #     'provisional' — 보여주되 "아직 확정 아님" 표시를 달아 PA가 과반수
-    #     이상치 하나에 끌려가지 않도록 참고용임을 분명히 한다.
-    #   n >= MIN_SAMPLE_STABLE → confidence='stable' — 정상적으로 신뢰.
-    #
-    # 왜 3과 5인가: n=3 미만은 "과반수"라는 개념 자체가 통계적으로 거의
-    # 무의미하다(n=2면 1건만 있어도 50%로 동률이라 판정 자체가 애매하고,
-    # n=1은 100% 자동 승격되는 게 이번에 발견한 결함이다). n=3부터는 적어도
-    # "2/3 이상 동의"라는 최소한의 다수결 의미가 생긴다. 5는 절대적인 통계
-    # 기준이라기보다, 이 서비스가 아직 초기 단계라 표본이 빨리 쌓이지
-    # 않는 코드가 대부분일 것으로 보여 임계값을 너무 높게 잡으면 대부분의
-    # 코드가 영영 "확정" 단계에 도달 못 하는 역효과가 있다고 판단해 낮게
-    # 잡은 것 — 실제 가입 속도를 보고 이 숫자(3, 5)는 조정하는 게 맞다.
-    MIN_SAMPLE_PROVISIONAL = 3
-    MIN_SAMPLE_STABLE = 5
 
-    stats = {}
+def _stats_for_pool(pool):
+    n = len(pool)
+    field_counts = defaultdict(int)
+    for s in pool:
+        for f in s:
+            field_counts[f] += 1
+    if n < MIN_SAMPLE_PROVISIONAL:
+        confidence = 'insufficient'
+        recommended = []
+    else:
+        confidence = 'provisional' if n < MIN_SAMPLE_STABLE else 'stable'
+        # 과반수(50% 초과) 등장 필드만 "권장" — SP의 [§TEMPLATE-
+        # REFERENCE] "과반수 패턴만 참고" 원칙과 동일 기준.
+        recommended = sorted([f for f, c in field_counts.items() if c > n / 2])
+    return {
+        'sample_size': n,
+        'confidence': confidence,
+        'recommended_fields': recommended,
+        'field_frequency': {f: round(c / n, 3) for f, c in sorted(field_counts.items())},
+    }
+
+
+def compute_stats(grouped):
+    """기존 동작 그대로 — key별 완전일치(own-level) 통계만."""
+    return {key: _stats_for_pool(samples) for key, samples in grouped.items()}
+
+
+def _load_ksic_parent_map():
+    """단일 소스 — worker.js가 §TEMPLATE-REFERENCE 계층 조회에 쓰는 것과
+    동일한 data/classification/ksic-parent-map.json을 그대로 읽는다.
+    별도 계층 정의를 여기 다시 만들지 않는다(사본 두 개 갈라짐 방지 —
+    HONDI-CAPABILITIES-COMMON 신설 전 겪었던 문제와 동일 계보)."""
+    if not KSIC_PARENT_MAP_PATH.exists():
+        return {}, {}
+    data = json.loads(KSIC_PARENT_MAP_PATH.read_text(encoding='utf-8'))
+    return data.get('parent', {}) or {}, data.get('level', {}) or {}
+
+
+def distill_ksic_hierarchy(grouped, parent_map, level_map):
+    """세분류(5)→소분류(4)→중분류(3)... 실제로는 KSIC 레벨 정의가
+    5(세세분류)~1(대분류)이므로 5부터 1까지 역순으로 처리한다. 각
+    상위 코드의 증류 풀은 자기 코드에 직접 태깅된 프로필 + 모든 직계
+    자식의 "이미 증류된" 풀을 그대로 물려받는다 — 재귀적으로 조상
+    코드일수록 더 넓은 하위 트리 전체를 포함하게 된다. 이렇게 하면
+    "소분류로부터 중분류를 증류하고, 중분류에서 대분류를 증류"하는
+    단계적 상속이 성립한다.
+
+    반환값: {code: {'level': N, 'own': {...} | None, 'distilled': {...}}}
+    (own은 자기 코드에 직접 태깅된 프로필이 1건도 없으면 None — 없는
+    데이터를 0건으로 지어내지 않는다, U2 원칙과 동일)
+    """
+    ksic_own = {}
     for key, samples in grouped.items():
-        n = len(samples)
-        field_counts = defaultdict(int)
-        for s in samples:
-            for f in s:
-                field_counts[f] += 1
+        if key.startswith(BUSINESS_PREFIX):
+            ksic_own[key[len(BUSINESS_PREFIX):]] = samples
 
-        if n < MIN_SAMPLE_PROVISIONAL:
-            confidence = 'insufficient'
-            recommended = []
-        else:
-            confidence = 'provisional' if n < MIN_SAMPLE_STABLE else 'stable'
-            # 과반수(50% 초과) 등장 필드만 "권장" — SP의 [§TEMPLATE-
-            # REFERENCE] "과반수 패턴만 참고" 원칙과 동일 기준.
-            recommended = sorted([f for f, c in field_counts.items() if c > n / 2])
+    children = defaultdict(list)
+    for code, parent in parent_map.items():
+        if parent:
+            children[parent].append(code)
 
-        stats[key] = {
-            'sample_size': n,
-            'confidence': confidence,
-            'recommended_fields': recommended,
-            'field_frequency': {f: round(c / n, 3) for f, c in sorted(field_counts.items())},
+    codes_by_level = defaultdict(list)
+    for code in set(parent_map.keys()) | set(ksic_own.keys()):
+        lvl = level_map.get(code)
+        if lvl:
+            codes_by_level[lvl].append(code)
+
+    aggregated_pool = {}  # code -> [present_field_set, ...]
+    for lvl in sorted(codes_by_level.keys(), reverse=True):  # 5,4,3,2,1
+        for code in codes_by_level[lvl]:
+            pool = list(ksic_own.get(code, []))
+            for child in children.get(code, []):
+                pool.extend(aggregated_pool.get(child, []))
+            if pool:
+                aggregated_pool[code] = pool
+
+    result = {}
+    for code, pool in aggregated_pool.items():
+        result[code] = {
+            'level': level_map.get(code),
+            'own': _stats_for_pool(ksic_own[code]) if code in ksic_own else None,
+            'distilled': _stats_for_pool(pool),
         }
-    return stats
+    return result
 
 
 def main():
@@ -257,7 +331,39 @@ def main():
     profiles = _fetch_all_public_profiles(token)
     print(f'공개 프로필 {len(profiles)}건 조회 완료')
 
-    stats = compute_stats(profiles)
+    grouped = _group_by_identity(profiles)
+    stats = compute_stats(grouped)  # 기존 동작(job_ksco/workdomain 포함 전체 키의 own-level)
+
+    parent_map, level_map = _load_ksic_parent_map()
+    if not parent_map:
+        print('[경고] data/classification/ksic-parent-map.json 없음 — KSIC 계층 증류 스킵, 기존 완전일치 통계만 생성합니다.', file=sys.stderr)
+        ksic_distilled = {}
+    else:
+        ksic_distilled = distill_ksic_hierarchy(grouped, parent_map, level_map)
+        print(f'KSIC 계층 증류 완료 — {len(ksic_distilled)}개 코드(own 데이터가 없어도 하위에서 증류된 코드 포함)')
+
+    # ksic: 키 결과를 own(기존 필드명 그대로, 하위호환) + level + distilled로
+    # 재구성한다. job_ksco:/workdomain: 키는 기존 그대로 손대지 않는다.
+    final_identities = {}
+    for key, own_stat in stats.items():
+        if key.startswith(BUSINESS_PREFIX):
+            code = key[len(BUSINESS_PREFIX):]
+            entry = dict(own_stat)  # sample_size/confidence/recommended_fields/field_frequency 그대로 유지(하위호환)
+            entry['level'] = level_map.get(code)
+            if code in ksic_distilled:
+                entry['distilled'] = ksic_distilled[code]['distilled']
+            final_identities[key] = entry
+        else:
+            final_identities[key] = own_stat
+
+    # own 데이터가 전혀 없지만(직접 태깅된 프로필 0건) 하위 코드에서 증류된
+    # 조상 코드(대분류·중분류가 흔함 — 이 코드로 직접 가입하는 경우는
+    # 드물다)도 새 엔트리로 추가한다. 이게 이번 확장의 핵심이다 — 예전
+    # 스크립트는 own 데이터가 있는 코드만 stats에 등장했다.
+    for code, info in ksic_distilled.items():
+        key = f'{BUSINESS_PREFIX}{code}'
+        if key not in final_identities:
+            final_identities[key] = {'level': info['level'], 'distilled': info['distilled']}
 
     prev = {}
     if OUT.exists():
@@ -267,18 +373,22 @@ def main():
             prev = {}
 
     # 변경 리포트 — 새로 생긴 조합, 권장 필드가 바뀐 조합만 출력(사람이
-    # 리뷰할 diff 노이즈를 줄인다).
-    for key, cur in sorted(stats.items()):
+    # 리뷰할 diff 노이즈를 줄인다). own/distilled 각각 비교.
+    for key, cur in sorted(final_identities.items()):
         old = prev.get(key)
+        cur_own = cur.get('recommended_fields')  # None이면 own 데이터 없음(ksic 조상 코드 등)
+        cur_distilled = (cur.get('distilled') or {}).get('recommended_fields')
+        old_own = old.get('recommended_fields') if old else None
+        old_distilled = (old.get('distilled') or {}).get('recommended_fields') if old else None
         if old is None:
-            print(f'[신규] {key} (표본 {cur["sample_size"]}건, {cur["confidence"]}) → {cur["recommended_fields"]}')
-        elif set(old.get('recommended_fields', [])) != set(cur['recommended_fields']) or old.get('confidence') != cur['confidence']:
-            print(f'[변경] {key}: {old.get("recommended_fields")}({old.get("confidence","?")}) → {cur["recommended_fields"]}({cur["confidence"]}) (표본 {cur["sample_size"]}건)')
+            print(f'[신규] {key} own={cur_own} distilled={cur_distilled}')
+        elif set(old_own or []) != set(cur_own or []) or set(old_distilled or []) != set(cur_distilled or []):
+            print(f'[변경] {key}: own {old_own}→{cur_own} / distilled {old_distilled}→{cur_distilled}')
 
     output = {
         'generated_at': datetime.now(timezone.utc).isoformat(),
         'total_public_profiles_scanned': len(profiles),
-        'identities': stats,
+        'identities': final_identities,
     }
 
     if dry_run:
@@ -288,7 +398,7 @@ def main():
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding='utf-8')
-    print(f'✓ {OUT} 갱신 완료 ({len(stats)}개 조합)')
+    print(f'✓ {OUT} 갱신 완료 ({len(final_identities)}개 조합, KSIC 계층 증류 {len(ksic_distilled)}개 포함)')
 
 
 if __name__ == '__main__':
