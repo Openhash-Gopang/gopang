@@ -3613,8 +3613,27 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
     // 노출됐다 — 사용자가 실제로 겪은 증상과 정확히 일치. 콜론 뒤 공백을
     // 선택적으로 허용하도록 \s*를 추가한다.
     const gwpMatch = fullReply.match(/\[GWP:\s*([\w-]+)\]/);
-    if (gwpMatch) {
-      const svcId  = gwpMatch[1];
+    let svcId = gwpMatch ? gwpMatch[1] : null;
+
+    // ★ 2026-07-31 신설 — 태그 누락 폴백. 2026-07-31 DeepSeek 라이브
+    // 스모크 테스트에서, 모델이 "K-Insurance를 호출하겠습니다."처럼 의도는
+    // 명확히 문장으로 밝히면서 정작 [GWP:id] 태그 자체는 빠뜨리는 사례가
+    // 반복 관찰됐다(4/300건). 태그가 없을 때만, 활성 GWP 서비스의 표시명
+    // (name)이 호출 의도 동사와 함께 응답에 유일하게 하나만 등장하면 그걸로
+    // 라우팅을 구제한다. 후보가 0개나 2개 이상(모호)이면 아무것도 안 하고
+    // 기존 동작(직접 응답으로 처리)을 그대로 유지한다 — 오탐보다 누락이 낫다.
+    if (!svcId && typeof window !== 'undefined' && Array.isArray(window.GWP_REGISTRY) &&
+        /호출|연결해|시작하겠습니다/.test(fullReply)) {
+      const candidates = window.GWP_REGISTRY.filter(
+        e => e.status === 'active' && e.name && fullReply.includes(e.name)
+      );
+      if (candidates.length === 1) {
+        svcId = candidates[0].id;
+        console.info('[GWP] 태그 누락 폴백 — 표시명 매칭으로 라우팅 복구:', svcId);
+      }
+    }
+
+    if (svcId) {
       const svcDef = (typeof getService === 'function') ? getService(svcId) : null;
       // ★ 2026-07-12 신설 — status 가드. 지금까지 getService()가 status를
       // 전혀 체크하지 않아, pending_review(승인 전 초안, 예: kbank/

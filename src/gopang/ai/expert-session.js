@@ -185,8 +185,21 @@ export async function handleExpertTag(fullReply, userText, _preTab) {
   // 공백을 허용하지 않아 실제 출력과 어긋나 있었다 — GWP와 동일한 원인,
   // 동일한 수정(\s* 추가).
   const m = fullReply?.match(/\[EXPERT:\s*([@\w-]+)\]/);
-  if (!m) return false;
-  const raw = m[1];
+  let raw = m ? m[1] : null;
+
+  // ★ 2026-07-31 신설 — 태그 누락 폴백(GWP측과 동일한 원리·동일한 발견 근거).
+  // 태그가 없을 때만, EXPERT_REGISTRY 표시명(label)이 호출 의도 동사와
+  // 함께 유일하게 하나만 등장하면 그걸로 라우팅을 구제한다.
+  if (!raw && fullReply && /호출|연결해|시작하겠습니다/.test(fullReply)) {
+    const candidates = Object.entries(EXPERT_REGISTRY).filter(
+      ([, def]) => def && def.label && fullReply.includes(def.label)
+    );
+    if (candidates.length === 1) {
+      raw = candidates[0][0];
+      console.info('[Expert] 태그 누락 폴백 — 표시명 매칭으로 라우팅 복구:', raw);
+    }
+  }
+  if (!raw) return false;
 
   // @handle 직접 지목은 아직 미구현(별도 기능) — 조용히 무시하고 진행하지 않는다.
   if (raw.startsWith('@')) {
