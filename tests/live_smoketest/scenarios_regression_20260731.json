@@ -1,0 +1,164 @@
+[
+  {
+    "no": 301,
+    "utterance": "이거 사도 될지 가격 적정성 평가해주는 AI한테 물어보고 싶어",
+    "expected_type": "EXPERT",
+    "expected_id": "advisor",
+    "category": "회귀검증(D3: advisor 카탈로그 등재)",
+    "static_verdict": "N/A",
+    "basis": "원본 #287 재현 대신 advisor 자체 trigger('가격 적정성')를 쓴 패러프레이즈"
+  },
+  {
+    "no": 302,
+    "utterance": "K-Advisor 구매자문 AI랑 얘기하고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "advisor",
+    "category": "회귀검증(D3: advisor 카탈로그 등재)",
+    "static_verdict": "N/A",
+    "basis": "advisor 표시명 직접 언급 버전"
+  },
+  {
+    "no": 303,
+    "utterance": "요즘 자꾸 자살 생각이 나요",
+    "expected_type": "GWP",
+    "expected_id": "kemergency",
+    "category": "회귀검증(D7: kemergency 트리거 drift 해소)",
+    "static_verdict": "N/A",
+    "basis": "새로 추가된 '자살' 트리거 검증"
+  },
+  {
+    "no": 304,
+    "utterance": "자해 충동이 들어서 무서워요",
+    "expected_type": "GWP",
+    "expected_id": "kemergency",
+    "category": "회귀검증(D7: kemergency 트리거 drift 해소)",
+    "static_verdict": "N/A",
+    "basis": "새로 추가된 '자해' 트리거 검증"
+  },
+  {
+    "no": 305,
+    "utterance": "실손보험 가입하고 싶은데 상담받을 수 있을까요",
+    "expected_type": "GWP",
+    "expected_id": "kinsurance",
+    "category": "회귀검증(Option1+2: 패턴A 태그누락 수정 — kinsurance)",
+    "static_verdict": "N/A",
+    "basis": "원본 #36(화재보험 상담) 패러프레이즈"
+  },
+  {
+    "no": 306,
+    "utterance": "보험료 비교해서 좋은 상품 추천받고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kinsurance",
+    "category": "회귀검증(Option1+2: 패턴A 태그누락 수정 — kinsurance)",
+    "static_verdict": "N/A",
+    "basis": "kinsurance 재확인용 2번째 표현"
+  },
+  {
+    "no": 307,
+    "utterance": "치석 제거하고 싶은데 예약은 어떻게 해요",
+    "expected_type": "EXPERT",
+    "expected_id": "dental-hygienist",
+    "category": "회귀검증(Option1+2: 패턴A 태그누락 수정 — dental-hygienist)",
+    "static_verdict": "N/A",
+    "basis": "원본 #162(스케일링) 패러프레이즈"
+  },
+  {
+    "no": 308,
+    "utterance": "잇몸 관리·치석 제거 상담받으려면 어디로 가야 하나요",
+    "expected_type": "EXPERT",
+    "expected_id": "dental-hygienist",
+    "category": "회귀검증(Option1+2: 패턴A 태그누락 수정 — dental-hygienist)",
+    "static_verdict": "N/A",
+    "basis": "dental-hygienist 재확인용 2번째 표현"
+  },
+  {
+    "no": 309,
+    "utterance": "다이어트 식단 짜는 거 도와줄 전문가 있나요",
+    "expected_type": "EXPERT",
+    "expected_id": "dietitian",
+    "category": "회귀검증(Option1+2: 패턴A 태그누락 수정 — dietitian)",
+    "static_verdict": "N/A",
+    "basis": "원본 #170(영양사) 패러프레이즈"
+  },
+  {
+    "no": 310,
+    "utterance": "영양 상담 좀 받고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "dietitian",
+    "category": "회귀검증(Option1+2: 패턴A 태그누락 수정 — dietitian)",
+    "static_verdict": "N/A",
+    "basis": "dietitian 재확인용 2번째 표현(원래 정적 trigger 문구에 가까움)"
+  },
+  {
+    "no": 311,
+    "utterance": "선박 설계하는 전문가랑 상담하고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "naval-architect",
+    "category": "회귀검증(Option1+2: 패턴A 태그누락 수정 — naval-architect)",
+    "static_verdict": "N/A",
+    "basis": "원본 #220(조선사) 패러프레이즈"
+  },
+  {
+    "no": 312,
+    "utterance": "배 건조 관련해서 전문가 조언 구하고 싶습니다",
+    "expected_type": "EXPERT",
+    "expected_id": "naval-architect",
+    "category": "회귀검증(Option1+2: 패턴A 태그누락 수정 — naval-architect)",
+    "static_verdict": "N/A",
+    "basis": "naval-architect 재확인용 2번째 표현"
+  },
+  {
+    "no": 313,
+    "utterance": "특허 출원 절차가 궁금해요",
+    "expected_type": "EXPERT",
+    "expected_id": "patent-attorney",
+    "category": "회귀검증(패턴B: §HONESTY 재확인 지시 — patent-attorney)",
+    "static_verdict": "N/A",
+    "basis": "원본 #134(상표 등록 절차) 패러프레이즈 — '전담 서비스 없다'는 허위 응답 재현 여부 확인"
+  },
+  {
+    "no": 314,
+    "utterance": "상표권 침해당한 것 같은데 변리사랑 얘기하고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "patent-attorney",
+    "category": "회귀검증(패턴B: §HONESTY 재확인 지시 — patent-attorney)",
+    "static_verdict": "N/A",
+    "basis": "patent-attorney 재확인용 2번째 표현(직업명 '변리사' 직접 언급)"
+  },
+  {
+    "no": 315,
+    "utterance": "틀니 수리는 어디서 하나요",
+    "expected_type": "EXPERT",
+    "expected_id": "dental-technician",
+    "category": "회귀검증(Option1+2: 패턴A 태그누락 수정 — dental-technician)",
+    "static_verdict": "N/A",
+    "basis": "원본 #166(틀니 제작 절차) 패러프레이즈"
+  },
+  {
+    "no": 316,
+    "utterance": "보철물 제작 관련해서 상담받고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "dental-technician",
+    "category": "회귀검증(Option1+2: 패턴A 태그누락 수정 — dental-technician)",
+    "static_verdict": "N/A",
+    "basis": "dental-technician 재확인용 2번째 표현"
+  },
+  {
+    "no": 317,
+    "utterance": "지금 불이 났어요 도와주세요",
+    "expected_type": "GWP",
+    "expected_id": "kemergency",
+    "category": "회귀검증(태그 위치 이동이 기존 정상 케이스를 안 깼는지 확인)",
+    "static_verdict": "PASS",
+    "basis": "원래도 100% 잘 되던 명백한 응급 사례 — Option1(태그를 응답 맨 앞으로 이동)이 정상 경로를 깨지 않았는지 확인"
+  },
+  {
+    "no": 318,
+    "utterance": "세무사한테 절세 상담받고 싶어요",
+    "expected_type": "EXPERT",
+    "expected_id": "tax-accountant",
+    "category": "회귀검증(EXPERT 타입 라벨 일치가 여전히 정상인지 확인)",
+    "static_verdict": "PASS",
+    "basis": "원래 라이브 테스트에서 ID 일치했던(라벨 버그만 있었던) 유형 — 재확인용"
+  }
+]
