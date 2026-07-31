@@ -7553,6 +7553,7 @@ export default {
     if (pathname === '/sp-updates/propose')      return handleSpUpdatePropose(request, env, corsHeaders);
     if (pathname === '/sp-updates/draft-patch')  return handleSpUpdatesDraftPatch(request, env, corsHeaders);
     if (pathname === '/user-feedback/submit')    return handleUserFeedbackSubmit(request, env, corsHeaders);
+    if (pathname === '/profile/field-event')     return handleProfileFieldEvent(request, env, corsHeaders);
     if (pathname === '/embed-text')              return handleEmbedText(request, env, corsHeaders);
 
     // ── PDV 조회 동의 승인 페이지 (consent.html 전용, 2026-07-02 신설) ──
@@ -11234,6 +11235,46 @@ async function handleSpUpdatePropose(request,env,corsHeaders){
 // 배치)가 임베딩 클러스터링 후 명확한 것만 /sp-updates/propose로
 // source=user_feedback 브릿지한다.
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// (2026-0X-XX 신설) PA가 대화 중 사용자의 자발적 "이 항목은 필요 없어요"/
+// "이런 것도 추가해 주세요"를 구조화 이벤트로 남긴다. industry_fields
+// 존재-빈도 통계(renew_identity_templates.py)만으로는 "한 번도 안
+// 물어봄"과 "명시적으로 거절함"을 구분할 수 없어 신설 — user_feedback과
+// 동일한 자리(사용자 발화 원문 보존 → 주기 배치가 취합)이지만 자유
+// 텍스트가 아니라 구조화된 필드 키 단위라는 점이 다르다.
+// ═══════════════════════════════════════════════════════════
+async function handleProfileFieldEvent(request, env, corsHeaders) {
+  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  const body = await request.json().catch(() => null);
+  if (!body?.field_key) return _err(400, 'SCHEMA_ERROR', 'field_key 필드 필수', corsHeaders);
+  if (!['add', 'remove'].includes(body.action)) return _err(400, 'SCHEMA_ERROR', "action은 'add' 또는 'remove'만 허용", corsHeaders);
+
+  const payload = {
+    guid: body.guid || null, // 익명 제출 허용(user_feedback과 동일 원칙)
+    entity_type: body.entity_type ? String(body.entity_type).slice(0, 50) : null,
+    // category_key는 renew_identity_templates.py의 기존 키 체계(ksic:.../ksco:.../
+    // workdomain:...)를 그대로 재사용한다 — 별도 체계를 새로 만들면 향후 그
+    // 스크립트가 이 컬렉션을 함께 읽을 때 또 사본이 갈라지는 문제가 생긴다.
+    category_key: body.category_key ? String(body.category_key).slice(0, 100) : null,
+    field_key: String(body.field_key).slice(0, 200),
+    field_label: body.field_label ? String(body.field_label).slice(0, 200) : null,
+    action: body.action,
+    context_sp: body.context_sp || 'profile-assistant',
+  };
+
+  const res = await fetch(`${L1_DEFAULT}/api/collections/profile_field_events/records`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => res.status);
+    return _err(503, 'PROFILE_FIELD_EVENT_SUBMIT_FAILED', String(err), corsHeaders);
+  }
+  const saved = await res.json().catch(() => ({}));
+  return new Response(JSON.stringify({ ok: true, id: saved.id || null }), { status: 200, headers: corsHeaders });
+}
+
 async function handleUserFeedbackSubmit(request, env, corsHeaders) {
   if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
   const body = await request.json().catch(() => null);
