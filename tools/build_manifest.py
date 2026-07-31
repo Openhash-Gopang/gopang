@@ -9,6 +9,9 @@ CI(GitHub Actions)가 push 마다 실행 — 개발자는 SP 파일만 추가하
   · "AGENT-COMMON"          → prompts/AGENT-COMMON_*.txt 중 최신
   · "AC-PRO-CORE"           → prompts/AC-PRO-CORE_*.txt 중 최신 (2026-07-29 추가)
   · "AC-FLASH-EXECUTOR"     → prompts/AC-FLASH-EXECUTOR_*.txt 중 최신 (2026-07-29 추가)
+  · "AC-SHADOW-CORE"        → prompts/AC-SHADOW-CORE_*.txt 중 최신 (2026-0X-XX 추가)
+  · "SP-TREE-REGISTRY"      → prompts/SP-TREE-REGISTRY_*.md 중 최신 (2026-0X-XX 추가)
+  · "SP-TREE-GUARDIAN"      → prompts/SP-TREE-GUARDIAN_*.md 중 최신 (2026-0X-XX 추가)
   · "SP-00-ROUTER"          → prompts/SP-00-ROUTER-v*.txt 중 최신
   · "profile-assistant"     → prompts/profile-assistant/profile-assistant-v*.txt 중 최신
                                (2026-07-08: personal-assistant에서 개명·분리 — 프로필
@@ -98,6 +101,13 @@ _scan_single(r'^AC-PRO-CORE_v', '.txt', 'AC-PRO-CORE')
 #      누락돼 있었다.
 _scan_single(r'^AC-FLASH-EXECUTOR_v', '.txt', 'AC-FLASH-EXECUTOR')
 
+# 1-b-1) AC-SHADOW-CORE — prompts/AC-SHADOW-CORE_vX_Y.txt (2026-0X-XX 신설)
+#      worker.js가 manifest['AC-SHADOW-CORE']로 실제 런타임에 읽고 있고
+#      sp-catalog.json에도 수동으로 키가 이미 있었는데, 이 스캔 블록이
+#      없어 이 자기검증이 push마다 계속 실패하고 있었다(AC-PRO-CORE/
+#      AC-FLASH-EXECUTOR와 동일한 계보의 누락 — 2026-0X-XX 발견).
+_scan_single(r'^AC-SHADOW-CORE_v', '.txt', 'AC-SHADOW-CORE')
+
 # 1-c) AGENT-SUPPLIER-COMMON — prompts/AGENT-SUPPLIER-COMMON_vX.Y.txt
 #      2026-06-30: 누락돼 있던 키. AGENT-SUPPLIER-NN 정규식은 '_' 뒤에
 #      숫자가 와야 매칭되므로(AGENT-SUPPLIER-(\d+)_) "COMMON"은 거기서
@@ -118,6 +128,15 @@ _scan_single(r'^hondi_visitor_sp_v', '.txt', 'HONDI_VISITOR_SP')
 #      직접 fetch()하던 것을 manifest 체계로 통합(SP_lawyer가 v3.2에
 #      몇 주간 고정돼 있던 것과 동일한 종류의 staleness 위험 방지).
 _scan_single(r'^UNIVERSAL-INTEGRITY_v', '.md', 'UNIVERSAL-INTEGRITY')
+
+# 2-c-0) SP-TREE-REGISTRY / SP-TREE-GUARDIAN — prompts/SP-TREE-*_vX_Y.md
+#      (2026-0X-XX 신설) worker.js(_runSpTreeGuardianAudit)가 두 키 모두
+#      manifest에서 조회해 실제 런타임(주간 감사 트리거)에 읽는다.
+#      sp-catalog.json엔 이미 수동으로 키가 있었지만 스캔 블록이 없어
+#      build_manifest.py 자기검증이 push마다 계속 실패하고 있었다 —
+#      UNIVERSAL-common이 처음 겪었던 것과 동일한 누락 패턴.
+_scan_single(r'^SP-TREE-REGISTRY_v', '.md', 'SP-TREE-REGISTRY')
+_scan_single(r'^SP-TREE-GUARDIAN_v', '.md', 'SP-TREE-GUARDIAN')
 
 # 2-c-1) UNIVERSAL-common — prompts/UNIVERSAL-common_vX_Y.md
 #      2026-07-19 신설(사용자 지시로 발견된 결함 수정): expert-session.js의
@@ -218,8 +237,59 @@ if pa_dir.is_dir():
         # 값은 하위 디렉터리 포함 경로로 저장
         manifest['profile-assistant'] = 'profile-assistant/' + best(pa_files)
 
-# 4) SP-NN 계열 — prompts/SP-NN_slug_vX.Y.txt
-_SP_NN_PAT = r'^(SP-[\d]+-?(?:IMG)?)_(.+?)(?:_v[\d.]+)?\.txt$'
+# 3-a) gov-tree/08-schema/{NAME}[_vX_Y].md — worker.js가
+#      _fetchByManifestKeyFromGithub()로 실제 런타임에 조회하는 스키마
+#      문서들(HUMAN-AUTHORITY-GATE-SCHEMA, PDV-TRANSFER-PROTOCOL 등).
+#      2026-0X-XX 발견 — 하위 폴더라 최상위 잔여 파일 자기검증 대상이
+#      아니어서(prompts/ 최상위만 스캔) 지금까지 아무 스캔 블록도 없이
+#      sp-catalog.json에 수동으로만 키가 있었다 — 이 스크립트가 전체
+#      재생성될 때마다 7개 키가 통째로 조용히 삭제될 뻔한 상태였다(로컬
+#      재현으로 발견). profile-assistant와 동일하게 하위 폴더 전용 스캔을
+#      추가한다. 값은 'gov-tree/08-schema/파일명' 형태로 저장한다.
+RECOGNIZED_PATTERNS.append(r'^gov-tree/08-schema/')
+schema_dir = PROMPTS / 'gov-tree' / '08-schema'
+if schema_dir.is_dir():
+    schema_groups: dict[str, list[str]] = defaultdict(list)
+    for f in schema_dir.iterdir():
+        if not f.name.endswith('.md'):
+            continue
+        m = re.match(r'^(.+?)(?:_v[\d_]+)?\.md$', f.name)
+        if m:
+            schema_groups[m.group(1)].append(f.name)
+    for key in sorted(schema_groups):
+        manifest[key] = 'gov-tree/08-schema/' + best(schema_groups[key])
+
+# 3-b) gov-tree 여러 하위 폴더에 흩어진 단일 키 문서들 — gov-router.js/
+#      worker.js가 _fetchByManifestKey(FromGithub)로 실제 조회한다
+#      (2026-0X-XX 발견 — 08-schema와 동일한 계보의 누락, 이 5개는 폴더가
+#      제각각이라 범용 헬퍼로 처리). 지금까지 sp-catalog.json에 수동으로만
+#      있었고 스캔 블록이 없어 전체 재생성 때마다 조용히 삭제될 뻔했다.
+def _scan_single_subdir(subdir: str, pattern: str, ext: str, key: str) -> None:
+    """단일 키 패턴을 prompts/{subdir}/ 안에서만 스캔 — 값은 '{subdir}/파일명'으로 저장."""
+    RECOGNIZED_PATTERNS.append(f'^{re.escape(subdir)}/{pattern}')
+    d = PROMPTS / subdir
+    if not d.is_dir():
+        return
+    files = [f.name for f in d.iterdir() if re.match(pattern, f.name) and f.name.endswith(ext)]
+    if files:
+        manifest[key] = subdir + '/' + best(files)
+
+_scan_single_subdir('gov-tree/00-common', r'^GOV-TREE-PROTOCOL_v', '.md', 'GOV-TREE-PROTOCOL')
+_scan_single_subdir('gov-tree/00-common/overlays', r'^GOV-COMMON-OVERLAY-TEMPLATE_v', '.md', 'GOV-COMMON-OVERLAY-TEMPLATE')
+_scan_single_subdir('gov-tree/01-do/templates', r'^SP-PROVINCE-TEMPLATE_v', '.md', 'SP-PROVINCE-TEMPLATE')
+_scan_single_subdir('gov-tree/09-national', r'^NATIONAL-SP-CORE_v', '.md', 'NATIONAL-SP-CORE')
+_scan_single_subdir('gov-tree/09-national/overlays', r'^NATIONAL-SP-OVERLAY-TEMPLATE_v', '.md', 'NATIONAL-SP-OVERLAY-TEMPLATE')
+
+# 4) SP-NN 계열 — prompts/SP-NN_slug_vX.Y.txt (또는 vX_Y.txt)
+#    2026-0X-XX 수정 — 버전 구분자로 점(.)만 허용했더니(_v[\d.]+) K119·
+#    kpolice·khealth·ktraffic·kdemocracy·klogistics·kinsurance 7개 파일은
+#    밑줄 구분 버전(_v3_0)을 써서 이 옵션 그룹이 매치를 못 하고, 그 결과
+#    "_v3_0"까지 통째로 슬러그(group 2)에 흡수돼 manifest 키가
+#    "SP-02_k119_v3_0"처럼 버전까지 낀 이름으로 오염되고 있었다(parse_version
+#    자체는 점·밑줄 모두 허용해 최신판 선택은 정상이었지만, 키 이름 오염은
+#    별개 문제 — 로컬 재현으로 발견). 밑줄도 허용해 슬러그와 버전이 항상
+#    정확히 분리되도록 한다.
+_SP_NN_PAT = r'^(SP-[\d]+-?(?:IMG)?)_(.+?)(?:_v[\d._]+)?\.txt$'
 RECOGNIZED_PATTERNS.append(_SP_NN_PAT)
 sp_groups: dict[str, list[str]] = defaultdict(list)
 for f in PROMPTS.iterdir():
