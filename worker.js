@@ -1687,6 +1687,36 @@ const VALID_INDUSTRY_SCHEMA_IDS = new Set([
 // 87(사회복지서비스)은 문서 자체가 "Tier 2→3 상향 검토 권고"로 남겨뒀으나,
 // 안전한 쪽(포함)으로 처리한다 — 문서가 확정하지 못한 채 남겨둔 항목을
 // 서버가 임의로 관대하게 해석하지 않는다.
+// ── KSIC 부모맵 임베드 (§TEMPLATE-REFERENCE 계층 조회용) ──
+// tools/build_ksic_parent_map.py가 data/classification/ksic-flat.csv에서
+// 생성한다 — 이 파일을 직접 손으로 고치지 않는다(tools/check_ksic_parent_map_
+// freshness.py가 CI에서 실측 대조).
+import KSIC_PARENT_MAP_DATA from './data/classification/ksic-parent-map.json';
+
+// 대분류(level1)까지 다 뒤져도 없으면 그게 진짜 "최초 사례"다. 몇 건이면
+// 상위 레벨로 올라갈지는 대화 판단이 아니라 순수 계산이므로 SP에 맡기지
+// 않고 여기 상수로 고정한다(confirm_mode 기본값 결정 원칙과 동일한 자리).
+const TEMPLATE_MIN_SAMPLE = 3;
+
+function _ksicParentCode(code) {
+  return KSIC_PARENT_MAP_DATA.parent?.[code] ?? null;
+}
+function _ksicLevelOf(code) {
+  return KSIC_PARENT_MAP_DATA.level?.[code] ?? null;
+}
+
+// 세분류(4~5)가 아닌 상위 레벨 참조는 구체값이 특정적이라(예: 세세한
+// 가격), PA가 볼 수 있는 데이터 자체에서 제거한다 — "소수 이상치에 안
+// 끌려간다"는 원칙을 PA의 판단력이 아니라 데이터 자체로 강제하는 지점.
+function _stripToStructureOnly(ref) {
+  const { products, description, ...structural } = ref;
+  return {
+    ...structural,
+    has_products: Array.isArray(products) ? products.length > 0 : undefined,
+    has_description: !!description,
+  };
+}
+
 const TIER3_REGULATED_SCHEMA_IDS = new Set([
   '12', // 담배 제조업 — 담배사업법
   '19', // 코크스·석유정제 — 위험물·환경 규제
@@ -10470,26 +10500,17 @@ async function handleSearch(request, env, corsHeaders) {
 // 데이터로만 쓰고, 템플릿 "내용"은 그 코드로 이미 등록된 실사용자
 // 프로필에서 매번 동적으로 조합한다 — 직종/업종별 정적 템플릿 파일을
 // 새로 만들지 않는다는 기존 결정과 배치되지 않는다.
-async function _l1FindTemplateReferenceProfiles(env, { entity_type, schema_id, job_ksco_code, work_domain_statuses, exclude_guid }, limit = 8) {
+async function _l1ExactSchemaLookup(env, { entity_type, schema_id, job_ksco_code, work_domain_statuses, exclude_guid }, limit) {
   const token = await _l1AdminToken(env);
   const headers = { 'Authorization': `Bearer ${token}` };
 
   const filterParts = ['is_public = true'];
   if (entity_type) filterParts.push(`entity_type = ${JSON.stringify(entity_type)}`);
-  if (schema_id) {
-    // 사업자 — KSIC 코드는 industry_fields.schema_id에 JSON으로 저장돼
-    // 있어 PocketBase 텍스트 필터로 부분일치 조회(코드 값 자체가
-    // 문자열이라 정확도는 충분 — 오탐 시 아래에서 한 번 더 정확 비교).
-    filterParts.push(`extra ~ ${JSON.stringify(`"schema_id":"${schema_id}"`)}`);
-  }
-  if (job_ksco_code) {
-    filterParts.push(`extra ~ ${JSON.stringify(`"code":"${job_ksco_code}"`)}`);
-  }
+  if (schema_id) filterParts.push(`extra ~ ${JSON.stringify(`"schema_id":"${schema_id}"`)}`);
+  if (job_ksco_code) filterParts.push(`extra ~ ${JSON.stringify(`"code":"${job_ksco_code}"`)}`);
   if (exclude_guid) filterParts.push(`guid != ${JSON.stringify(exclude_guid)}`);
   const filter = filterParts.join(' && ');
 
-  // work_domain.statuses는 배열이라 텍스트 부분일치로 걸러낼 수 없으므로
-  // 넉넉히 가져온 뒤 Worker에서 정확히 필터링한다(최대 60건 스캔 후 8건 샘플).
   const res = await fetch(
     `${L1_DEFAULT}/api/collections/profiles/records?filter=${encodeURIComponent(filter)}&perPage=60&sort=-updated`,
     { headers }
@@ -10499,7 +10520,6 @@ async function _l1FindTemplateReferenceProfiles(env, { entity_type, schema_id, j
 
   let items = data.items || [];
   if (job_ksco_code) {
-    // 텍스트 부분일치로 넉넉히 받은 뒤 정확한 코드 일치만 남긴다.
     items = items.filter(p => (p.extra?.public?.identity?.job_ksco?.code) === job_ksco_code);
   }
   if (schema_id) {
@@ -10513,9 +10533,7 @@ async function _l1FindTemplateReferenceProfiles(env, { entity_type, schema_id, j
     });
   }
 
-  // 필드별 공개/비공개(field_visibility)를 이미 만족하는 값만 노출 —
-  // _l1SearchEntities와 동일 원칙, 프로필 원본을 그대로 흘려보내지 않는다.
-  const refs = items.slice(0, limit).map(p => {
+  return items.slice(0, limit).map(p => {
     const pub = p.extra?.public || {};
     const fv = pub.field_visibility || {};
     return {
@@ -10529,7 +10547,42 @@ async function _l1FindTemplateReferenceProfiles(env, { entity_type, schema_id, j
         || (pub.identity?.work_domain?.status ? [pub.identity.work_domain.status] : null),
     };
   });
-  return refs;
+}
+
+// ── §TEMPLATE-REFERENCE 계층 조회 (KSIC 세분류→소분류→중분류→대분류) ──
+// job_ksco_code/work_domain_statuses 축은 계층 개념이 없으므로 기존
+// 완전일치를 그대로 쓴다. schema_id가 있으면 부모맵을 타고 올라가며
+// TEMPLATE_MIN_SAMPLE 이상 모이거나 대분류(부모 없음)에 닿으면 멈춘다.
+async function _l1FindTemplateReferenceProfiles(env, { entity_type, schema_id, job_ksco_code, work_domain_statuses, exclude_guid }, limit = 8) {
+  if (!schema_id) {
+    const refs = await _l1ExactSchemaLookup(env, { entity_type, job_ksco_code, work_domain_statuses, exclude_guid }, limit);
+    return { refs, levels_used: [] };
+  }
+
+  const collected = [];
+  const levelsUsed = [];
+  let code = schema_id;
+
+  while (code && collected.length < TEMPLATE_MIN_SAMPLE) {
+    let refs;
+    try {
+      refs = await _l1ExactSchemaLookup(env, { entity_type, schema_id: code, exclude_guid }, limit - collected.length);
+    } catch (e) {
+      console.warn('[TEMPLATE_LOOKUP] 레벨 조회 실패(계속 진행):', code, e.message);
+      refs = [];
+    }
+    const level = _ksicLevelOf(code);
+    const isOwnLevel = collected.length === 0 && code === schema_id;
+    const shaped = refs.map(r => (isOwnLevel && level >= 4) ? r : _stripToStructureOnly(r));
+
+    if (shaped.length) {
+      levelsUsed.push({ code, level, count: shaped.length });
+      collected.push(...shaped);
+    }
+    code = _ksicParentCode(code);
+  }
+
+  return { refs: collected.slice(0, limit), levels_used: levelsUsed };
 }
 
 async function handleTemplateLookup(request, env, corsHeaders) {
@@ -10541,14 +10594,14 @@ async function handleTemplateLookup(request, env, corsHeaders) {
     return _err(400, 'MISSING_FIELD', 'schema_id, job_ksco_code, work_domain_statuses 중 최소 1개 필수', corsHeaders);
   }
 
-  let refs;
+  let result;
   try {
-    refs = await _l1FindTemplateReferenceProfiles(env, { entity_type, schema_id, job_ksco_code, work_domain_statuses, exclude_guid }, 8);
+    result = await _l1FindTemplateReferenceProfiles(env, { entity_type, schema_id, job_ksco_code, work_domain_statuses, exclude_guid }, 8);
   } catch (e) {
     return _err(502, 'L1_TEMPLATE_LOOKUP_FAILED', 'L1 템플릿 조회 실패: ' + e.message, corsHeaders);
   }
 
-  return new Response(JSON.stringify({ refs, count: refs.length }), { status: 200, headers: corsHeaders });
+  return new Response(JSON.stringify({ refs: result.refs, count: result.refs.length, levels_used: result.levels_used }), { status: 200, headers: corsHeaders });
 }
 
 

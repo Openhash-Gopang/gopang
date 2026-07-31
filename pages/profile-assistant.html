@@ -506,12 +506,12 @@ async function _lookupTemplateAxis(body) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!res.ok) return [];
-    const data = await res.json().catch(() => ({ refs: [] }));
-    return data.refs || [];
+    if (!res.ok) return { refs: [], levels_used: [] };
+    const data = await res.json().catch(() => ({ refs: [], levels_used: [] }));
+    return { refs: data.refs || [], levels_used: data.levels_used || [] };
   } catch (e) {
     console.warn('[PA] template-lookup 요청 실패(무시 — 빈 참조로 진행):', e.message);
-    return [];
+    return { refs: [], levels_used: [] };
   }
 }
 
@@ -549,12 +549,15 @@ async function _handleReplyTags(fullReply) {
 
     const contextBlocks = [];
     for (const { label, body } of lookups) {
-      const refs = await _lookupTemplateAxis(body);
-      contextBlocks.push(
-        refs.length
-          ? `[CONTEXT: ${label}]\n${JSON.stringify(refs)}\n[/CONTEXT]`
-          : `[CONTEXT: ${label}]\n(참조 사례 없음 — 최초 사례)\n[/CONTEXT]`
-      );
+      const { refs, levels_used } = await _lookupTemplateAxis(body);
+      // 대분류까지 다 올라가도 refs가 0건일 때만 "진짜 최초 사례"다.
+      if (!refs.length) {
+        contextBlocks.push(`[CONTEXT: ${label}]\n(참조 사례 없음 — 최초 사례)\n[/CONTEXT]`);
+        continue;
+      }
+      const ownLevelOnly = levels_used.length === 1 && levels_used[0].code === (body.schema_id ?? params.schema_id);
+      const levelNote = ownLevelOnly ? '' : `\n(참고: 이 조합의 표본이 적어 상위 업종 분류 범위까지 넓혀 참고했습니다 — 구체값이 아니라 항목 존재 패턴만 반영하세요)`;
+      contextBlocks.push(`[CONTEXT: ${label}]\n${JSON.stringify(refs)}${levelNote}\n[/CONTEXT]`);
     }
     await sendTurn(contextBlocks.join('\n'));
     return;
