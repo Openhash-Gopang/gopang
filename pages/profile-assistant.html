@@ -594,25 +594,33 @@ async function _handleReplyTags(fullReply) {
       }
     } catch {}
   }
-  // TEMPLATE_CANDIDATE — 최초 사례 템플릿 후보 큐잉 (2026-07-27 버그 수정)
-  // call-ai.js에는 이 처리가 있었지만 이 탭(실제 PA가 실행되는 곳)에는
-  // 없었다 — §TEMPLATE-LISTING이 PROFILE_SUBMIT과 함께 내는 태그인데
-  // 여기서 한 번도 큐잉된 적이 없었다(PA 전용 사고실험으로 발견).
-  const templateCandidateMatch = fullReply.match(/\[TEMPLATE_CANDIDATE:\s*([^\]]*)\]/);
-  if (templateCandidateMatch) {
+  // TEMPLATE_CANDIDATE — 최초 사례 템플릿 후보를 서버로 제출
+  // (2026-0X-XX 정정 — 이전엔 localStorage(hondi_template_candidates)에만
+  // 큐잉되고 서버로 전송된 적이 없었다, USER_FEEDBACK이 예전에 겪은 것과
+  // 같은 결함을 PA 전용 사고실험으로 재발견. 태그 자체도 §TEMPLATE-LISTING
+  // v2.24부터 축별 파라미터(schema_id=/job_ksco_code=/work_domain=)로
+  // 바뀌었으므로 파싱도 함께 갱신 — 한 응답에 두 축이 동시에 최초
+  // 사례였으면 태그가 두 번 올 수 있어 matchAll로 전부 처리한다.
+  const templateCandidateMatches = [...fullReply.matchAll(/\[TEMPLATE_CANDIDATE:\s*([^\]]*)\]/g)];
+  for (const [, raw] of templateCandidateMatches) {
     try {
-      const raw = templateCandidateMatch[1];
-      const params = {};
-      for (const part of raw.split(',')) {
-        const eq = part.indexOf('=');
-        if (eq === -1) continue;
-        params[part.slice(0, eq).trim()] = part.slice(eq + 1).trim();
-      }
-      const queue = JSON.parse(localStorage.getItem('hondi_template_candidates') || '[]');
-      queue.push({ ...params, queued_at: new Date().toISOString() });
-      localStorage.setItem('hondi_template_candidates', JSON.stringify(queue));
+      const pick = (key) => {
+        const m = raw.match(new RegExp(key + '=("[^"]*"|[^,\\]]*)'));
+        return m ? m[1].replace(/^"|"$/g, '').trim() : null;
+      };
+      await fetch(`${RELAY_ENDPOINT}/template-candidate/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schema_id: pick('schema_id') || undefined,
+          job_ksco_code: pick('job_ksco_code') || undefined,
+          work_domain: pick('work_domain') || undefined,
+          fields: pick('fields') || '',
+          context_sp: 'profile-assistant',
+        }),
+      });
     } catch (e) {
-      console.warn('[PA] TEMPLATE_CANDIDATE 큐잉 실패(무시):', e.message);
+      console.warn('[PA] TEMPLATE_CANDIDATE 제출 실패(무시):', e.message);
     }
   }
   // USER_FEEDBACK — §DIGITAL-BRIDGE(profile-assistant SP v2.20)가
