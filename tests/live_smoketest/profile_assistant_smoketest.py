@@ -43,12 +43,14 @@ RETRY_BASE_SLEEP = 3
 PARTIAL_SAVE_RE = re.compile(r"\[PARTIAL_SAVE\]\s*(\{.*?\})(?=\n|\[|$)", re.DOTALL)
 TEMPLATE_LOOKUP_RE = re.compile(r"\[TEMPLATE_LOOKUP:\s*([^\]]*)\]")
 PROFILE_SUBMIT_RE = re.compile(r"\[?PROFILE_SUBMIT\]?\s*(\{.*)", re.DOTALL)
-# (2026-0X-XX 재수정) 문구 매칭(프로필 완성/🎉)이 "프로필이 완성됐어요"
-# 같은 자연스러운 조사 삽입도 못 잡던 결함(10건 파일럿에서 실측 확인) —
-# 완료 메시지의 정확한 문구를 쫓는 대신, SP 자신의 확인요청 문구(§PROFILE_
-# CARD의 "...맞으면 '확인'을 눌러주세요")를 구조적으로 추적하는 방식으로
-# 전환한다.
-CONFIRMATION_REQUEST_RE = re.compile(r"눌러주세요|확인해\s*주세요|맞으면")
+# (2026-0X-XX 3차 수정) 확인요청 "문장"을 쫓는 접근 자체가 한계였다 —
+# "맞으면"→"맞으시면"(존댓말), "눌러주세요"→"말씀해 주세요"(동사 변형)
+# 등 자연어 패러프레이즈가 끝없이 이어졌다(10건 파일럿 3회 반복 실측).
+# 대신 §PROFILE_CARD가 리터럴로 못박은 선행 이모지(모델이 잘 안 바꾸는
+# 부분 — 10건 전부 카드 자체는 정확했음)를 신호로 쓴다. 같은 대화에서
+# 이 카드 패턴이 2번째로 나오면(1번째=STEP-FINAL 확인요청, 2번째=완료
+# 메시지) 완료 턴으로 간주한다.
+CARD_LINE_RE = re.compile(r"^[ \t]*(🏪|👤|🏛|🤝|💻|🚗|🤖)\s", re.MULTILINE)
 TERMINAL_TAGS = ["PROFILE_SUBMIT", "[PROFILE_SKIP]", "[PROFILE_INTERRUPT_HANDOFF]"]
 FIELD_ADD_RE = re.compile(r"\[FIELD_ADD:")
 FIELD_REMOVE_RE = re.compile(r"\[FIELD_REMOVE:")
@@ -141,7 +143,7 @@ def run_scenario(api_key, pa_system, scenario):
     submit_json = None
     field_add_seen = False
     field_remove_seen = False
-    awaiting_confirmation = False  # 직전 PA 턴이 §PROFILE_CARD 확인요청이었는지
+    card_seen_count = 0  # §PROFILE_CARD 선행 이모지가 몇 번째 응답에 나왔는지
     total_usage = {"prompt_tokens": 0, "completion_tokens": 0}
 
     user_turn_text = scenario['opening_line']
@@ -173,16 +175,17 @@ def run_scenario(api_key, pa_system, scenario):
                 pass
 
         # 종료 태그 판정
-        # (2026-0X-XX 재수정) 직전 PA 턴이 확인요청("...맞으면 확인을
-        # 눌러주세요")이었고, 이번 턴에 PROFILE_SUBMIT이 없으면 — 완료
-        # 메시지의 정확한 문구가 무엇이든("프로필이 완성됐어요" 등 자유
-        # 변형 포함) 이 턴을 완료 턴으로 간주하고 "태그 누락"으로 종료한다.
-        # 문구를 쫓는 대신 SP의 확인요청 구조 자체를 신호로 쓰므로
-        # 표현이 어떻게 바뀌어도 안정적으로 잡는다.
-        if awaiting_confirmation and 'PROFILE_SUBMIT' not in pa_reply.upper():
-            terminal = 'SOFT_COMPLETION_NO_TAG'
-            break
-        awaiting_confirmation = bool(CONFIRMATION_REQUEST_RE.search(pa_reply))
+        # (2026-0X-XX 3차 수정) §PROFILE_CARD 선행 이모지가 2번째로 등장한
+        # 응답인데 PROFILE_SUBMIT이 없으면 완료 턴으로 간주한다(1번째=
+        # STEP-FINAL 확인요청 카드, 2번째=완료 메시지 카드 — SP §4
+        # STEP-FINAL 스펙 순서 그대로). 확인요청 "문장"이 아니라 카드
+        # "구조"를 세므로 존댓말·동사 변형 등 자연어 패러프레이즈에
+        # 영향받지 않는다.
+        if 'PROFILE_SUBMIT' not in pa_reply.upper() and len(CARD_LINE_RE.findall(pa_reply)) >= 1:
+            card_seen_count += 1
+            if card_seen_count >= 2:
+                terminal = 'SOFT_COMPLETION_NO_TAG'
+                break
         if 'PROFILE_SUBMIT' in pa_reply:
             terminal = 'PROFILE_SUBMIT'
             sm = PROFILE_SUBMIT_RE.search(pa_reply)
