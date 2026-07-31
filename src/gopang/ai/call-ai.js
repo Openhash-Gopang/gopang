@@ -3090,10 +3090,13 @@ export function _resolveHondiTier(userText, messages) {
 //   score = w1·f_category + w2·f_disposition + w3·f_delegation
 //   w1=0.5, w2=0.3, w3=0.2
 //   응급 신호(kemergency 트리거)는 다른 모든 계산을 생략하고 즉시 100점
-//   (Openhash-Gopang/jeju 저장소의 jeju-router.js가 EMERGENCY_RE 정규식으로
+//   (gopang 저장소 자신의 src/gopang/gov/gov-router.js가 EMERGENCY_RE 정규식으로
 //   구현한 _isEmergency() 하드 게이트와 같은 원칙 — 응급은 예외 없이
-//   최고 등급. ★ 2026-07-11 확인: 이 파일의 kemergency triggers 배열과
-//   jeju-router.js의 EMERGENCY_RE는 서로 다른 파일에 독립적으로 존재하는
+//   최고 등급. ★ 2026-07-21 리팩터링으로 이 함수는 별도 jeju 저장소에서
+//   gopang 자신의 gov-router.js로 이전됐다(jeju-router.js는 현재 gov-router.js를
+//   그대로 재수출하는 얇은 wrapper — export * from '.../gov-router.js').
+//   ★ 2026-07-11 확인(2026-07-31 위치만 정정): 이 파일의 kemergency triggers 배열과
+//   gov-router.js의 EMERGENCY_RE는 서로 다른 파일에 독립적으로 존재하는
 //   별개 키워드 세트다 — 겹치지만 동일하지 않음(예: EMERGENCY_RE에는
 //   '자살'·'납치'·'스토킹'·'침입'이 있는데 triggers 배열엔 없음). 하나만
 //   갱신되면 다른 하나가 낡는 drift 위험이 실재한다 — 통합 검토 필요.)
@@ -3139,11 +3142,13 @@ const _GOV_DELEGATION_AGENCIES = new Set(['public', 'jeju_do', 'jeju_national'])
 export function _estimateGovImportance(userText, gwpEntry = null) {
   const text = typeof userText === 'string' ? userText : '';
 
-  // 응급은 예외 없이 최우선 — jeju 저장소 jeju-router.js의 _isEmergency()
-  // 정규식 하드 게이트와 동일 원칙(★ 2026-07-11: 그 함수는 실재하며
-  // gopang 모노레포가 아니라 별도 jeju 저장소에 있다 — 이전 주석이 "죽은
-  // 참조"라 오해할 수 있게 적혀 있었으나 실제로는 존재하는 함수다).
-  // kemergency의 triggers 배열을 재사용하지만, jeju-router.js의
+  // 응급은 예외 없이 최우선 — gopang 자신의 src/gopang/gov/gov-router.js의
+  // _isEmergency() 정규식 하드 게이트와 동일 원칙(★ 2026-07-21 리팩터링으로
+  // 이 함수가 별도 jeju 저장소에서 gopang 자신의 gov-router.js로 이전됨 —
+  // jeju-router.js는 현재 gov-router.js를 그대로 재수출하는 얇은 wrapper다.
+  // 2026-07-11 주석은 당시 위치 기준이었을 뿐 오해가 아니었으나, 2026-07-31
+  // 기준으로는 이 파일 경로가 최신이다).
+  // kemergency의 triggers 배열을 재사용하지만, gov-router.js의
   // EMERGENCY_RE와 키워드가 완전히 같지는 않다(drift 있음 — 위 주석 참고).
   if (typeof getService === 'function') {
     const emg = getService('kemergency');
