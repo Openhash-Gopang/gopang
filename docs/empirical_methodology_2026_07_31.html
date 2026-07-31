@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>혼디 라우팅 실증 실험 방법론 및 결과 (2026-07-31)</title>
+<style>
+  :root {
+    --text: #1a1a1a;
+    --muted: #555555;
+    --line: #cccccc;
+    --bg-soft: #f7f7f7;
+    --bg: #ffffff;
+    --ok: #1a7f37;
+    --ok-bg: #e6f7ec;
+    --warn: #9a6700;
+    --warn-bg: #fff8e1;
+    --bad: #c0392b;
+    --bad-bg: #fdecea;
+    --scope: #555555;
+    --scope-bg: #eeeeee;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Noto Sans KR", "Segoe UI", -apple-system, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+    line-height: 1.65;
+    font-size: 15px;
+  }
+  h1, h2, h3, h4 {
+    font-weight: 700;
+    line-height: 1.35;
+    margin-top: 2.2em;
+    margin-bottom: 0.6em;
+  }
+  h1 {
+    font-size: 26px;
+    border-bottom: 2px solid var(--text);
+    padding-bottom: 16px;
+    margin-top: 0;
+  }
+  h2 {
+    font-size: 20px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+    margin-top: 2.6em;
+  }
+  h3 { font-size: 16px; margin-top: 1.8em; }
+  h4 { font-size: 14.5px; }
+
+  .meta { font-size: 13.5px; color: var(--muted); margin: 4px 0; }
+  .meta strong { color: var(--text); }
+
+  hr { border: none; border-top: 1px solid var(--line); margin: 2.5em 0; }
+
+  .toc {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 20px 28px;
+    margin: 24px 0;
+  }
+  .toc h2 { margin-top: 0; border-bottom: none; font-size: 16px; }
+  .toc ol { margin: 0; padding-left: 1.4em; columns: 2; column-gap: 32px; }
+  .toc li { margin-bottom: 6px; font-size: 14px; }
+  .toc a { color: var(--text); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1.2em 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; }
+  td code, th code { font-size: 12.5px; }
+
+  pre {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    font-size: 12.5px;
+    line-height: 1.55;
+    font-family: "SF Mono", "Consolas", "Courier New", monospace;
+    margin: 1.2em 0;
+  }
+  code {
+    font-family: "SF Mono", "Consolas", "Courier New", monospace;
+    background: var(--bg-soft);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.92em;
+  }
+  pre code { background: none; padding: 0; }
+
+  .section-label {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 8px;
+    margin-bottom: 4px;
+    letter-spacing: 0.03em;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 1px 7px;
+    letter-spacing: 0.02em;
+  }
+  .badge-ok    { color: var(--ok);    background: var(--ok-bg); }
+  .badge-warn  { color: var(--warn);  background: var(--warn-bg); }
+  .badge-bad   { color: var(--bad);   background: var(--bad-bg); }
+  .badge-scope { color: var(--scope); background: var(--scope-bg); }
+
+  .callout {
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--text);
+    background: var(--bg-soft);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin: 1.2em 0;
+    font-size: 14px;
+  }
+  .callout.warn { border-left-color: var(--warn); }
+  .callout.bad  { border-left-color: var(--bad); }
+
+  ul, ol { padding-left: 1.6em; }
+  li { margin-bottom: 4px; }
+
+  .footer {
+    margin-top: 4em;
+    padding-top: 1.5em;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.8;
+  }
+  .back-to-top { font-size: 12.5px; }
+  .back-to-top a {
+    color: var(--muted);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 2px 10px;
+  }
+  .back-to-top a:hover { color: var(--text); }
+
+  @media print {
+    body { padding: 0 12px; }
+    .back-to-top { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<h1 id="top">혼디 라우팅 실증 실험 방법론 및 결과</h1>
+<p class="meta"><strong>작성일</strong>: 2026-07-31</p>
+<p class="meta"><strong>작성자</strong>: AI City Inc. 팀 주피터 (Claude 협업 세션)</p>
+<p class="meta"><strong>대상</strong>: AC-PRO-CORE 라우팅 시스템(<code>prompts/AC-PRO-CORE_v1_0.txt</code>) 및 관련 코드(<code>gwp-registry.js</code>, <code>expert-registry.js</code>, <code>call-ai.js</code>, <code>expert-session.js</code>, <code>worker.js</code>)</p>
+<p class="meta"><strong>범위</strong>: 정적 구조 검증(300건) → 규칙기반 심화분석(44건 재검토) → DeepSeek 라이브 API 검증(300건) → 결함 7건 수정(PR #134~#139) → 회귀 검증(18건)</p>
+
+<hr>
+
+<div class="toc">
+<h2>목차</h2>
+<ol>
+  <li><a href="#sec1">실험 개요</a></li>
+  <li><a href="#sec2">1단계 — 정적 구조 스모크 테스트 (300건)</a></li>
+  <li><a href="#sec3">2단계 — 규칙기반 심화분석</a></li>
+  <li><a href="#sec4">3단계 — DeepSeek 라이브 API 테스트 (300건)</a></li>
+  <li><a href="#sec5">4단계 — 결함 수정 (PR #134~#139)</a></li>
+  <li><a href="#sec6">5단계 — 회귀 검증 (18건)</a></li>
+  <li><a href="#sec7">방법론적 한계와 교훈</a></li>
+  <li><a href="#sec8">다음 단계 — Function Calling 전환 계획</a></li>
+  <li><a href="#sec9">부록 — 전체 PR·산출물 목록</a></li>
+</ol>
+</div>
+
+<hr>
+
+<h2 id="sec1">1. 실험 개요</h2>
+
+<p>
+혼디의 AI 라우팅(§CATALOG·§CATALOG-EXPERT 기반 <code>[GWP:id]</code>/<code>[EXPERT:id]</code> 태그 라우팅)이
+실제로 설계대로 동작하는지를 4단계에 걸쳐 실증적으로 검증했다. 정적 코드 검토만으로는 "모델이 실제로 어떻게
+반응하는지"를 알 수 없다는 한계를 인지하고, 이번 세션에서 처음으로 <strong>실제 LLM API(DeepSeek)를 호출하는
+라이브 행위 테스트</strong>를 GitHub Actions 기반으로 구축해 수행했다.
+</p>
+
+<table>
+  <tr><th>단계</th><th>방법</th><th>대상</th><th>산출물</th></tr>
+  <tr><td>1</td><td>정적 구조 검증(코드 검색)</td><td>300개 가상 시나리오</td><td>구조적 결함 5건</td></tr>
+  <tr><td>2</td><td>문서화된 규칙 대조 재검토</td><td>1단계 WARN 44건</td><td>7건 재분류, 신규 문서 결함 2건</td></tr>
+  <tr><td>3</td><td>DeepSeek API 실호출(GitHub Actions)</td><td>동일 300개 시나리오</td><td>PASS 55 · CLARIFY 207 · FAIL 17 · OUT-OF-SCOPE 20 · NEEDS-REVIEW 1</td></tr>
+  <tr><td>4</td><td>결함 수정</td><td>1~3단계에서 발견된 결함 전체</td><td>PR #134~#139 (6건 머지)</td></tr>
+  <tr><td>5</td><td>회귀 검증(라이브 재실행)</td><td>수정 대상만 패러프레이즈한 18개 신규 시나리오</td><td>실질 12 PASS / 6 FAIL</td></tr>
+</table>
+
+<div class="callout">
+<strong>핵심 원칙(§HONESTY 준수)</strong>: 이 실험의 모든 단계에서 "확인 못 한 것은 확인 못 했다"고 명시했다.
+1단계는 구조 검증이지 행위 관찰이 아니며, 3단계 이전까지는 실제 모델 응답을 단 한 번도 관찰하지 않았다는 점을
+보고서 전체에서 반복적으로 밝혔다.
+</div>
+
+<hr>
+
+<h2 id="sec2">2. 1단계 — 정적 구조 스모크 테스트 (300건)</h2>
+
+<h3>방법론</h3>
+<p>
+실제 LLM을 호출하는 대신, 각 시나리오가 라우팅돼야 할 서비스/페르소나에 대해 코드베이스 상에서
+(1) 카탈로그 등록 여부 (2) 목적지 파일·핸들러 실존 여부 (3) 백엔드 PDV 등록 정합성(SVC_ALIAS)
+(4) AI 시스템 프롬프트 문서화 여부, 4가지를 코드 검색으로 정적 검증했다. 의미적 경계 판단(예: 두 서비스
+중 어느 쪽이 맞는지)이나 실제 응답 품질은 이 방식으로 검증할 수 없어 WARN으로 분류했다.
+</p>
+
+<h3>시나리오 구성</h3>
+<p>
+gwp-registry.js·expert-registry.js에 실제 등록된 trigger 키워드를 근거로 GWP 모듈 27개(108건) +
+전문가 AI 페르소나 63개(150건) + 플랫폼 기능·경계·부정 테스트(42건) = 300건.
+</p>
+
+<h3>결과</h3>
+<table>
+  <tr><th>구분</th><th>건수</th><th>비율</th></tr>
+  <tr><td><span class="badge badge-ok">PASS</span></td><td>240</td><td>80.0%</td></tr>
+  <tr><td><span class="badge badge-warn">WARN</span></td><td>44</td><td>14.7%</td></tr>
+  <tr><td><span class="badge badge-bad">FAIL</span></td><td>16</td><td>5.3%</td></tr>
+</table>
+
+<h3>발견된 구조적 결함 5건</h3>
+<table>
+  <tr><th>#</th><th>대상</th><th>결함</th></tr>
+  <tr><td>1</td><td>kbank / ktelecom / kestate</td><td>태그 처리 핸들러가 코드 전체에 없음(완전히 죽은 경로) — 이후 확인 결과 프롬프트 레벨에서 이미 안전하게 안내되고 있어 <span class="badge badge-scope">현상유지 결정</span></td></tr>
+  <tr><td>2</td><td>kcommerce_seller / kregionalgov / kbusiness / profile-assistant / kqna / kusers</td><td>PDV 백엔드 등록 매핑(SVC_ALIAS) 누락</td></tr>
+  <tr><td>3</td><td>advisor 페르소나</td><td>구현은 있으나 AI가 참조하는 §CATALOG-EXPERT 표에 미기재(죽은 코드)</td></tr>
+  <tr><td>4</td><td>civil 페르소나</td><td><code>ownerAgency: 'kpublic'</code> — 존재하지 않는 id(정확한 id는 <code>kgov</code>)</td></tr>
+  <tr><td>5</td><td>advisor 페르소나</td><td><code>ownerAgency: 'kmarket'</code> — 존재하지 않는 id(정확한 id는 <code>kcommerce</code>)</td></tr>
+</table>
+
+<hr>
+
+<h2 id="sec3">3. 2단계 — 규칙기반 심화분석</h2>
+
+<p>
+1단계의 WARN 44건을 AC-PRO-CORE 시스템 프롬프트에 실제로 명문화된 판단 규칙(§CORE 되묻기 규칙, 트리거
+우선순위 설계, 카탈로그 예시문 등)에 대조해 재검토했다. <strong>이 단계도 여전히 문서화된 규칙 대조이지
+실제 모델 응답 관찰이 아니라는 점을 명시</strong>했다 — 이 시점까지 이 샌드박스에 Anthropic API 키가 없어
+라이브 호출이 불가능했다.
+</p>
+
+<h3>결과</h3>
+<p>7건이 PASS로 재확정됐고(예: "정보 없으면 되묻는다", "제주시청처럼 관청명 언급 시 kregionalgov"), 심화
+조사 과정에서 문서·유지보수 결함 2건이 새로 발견됐다.</p>
+
+<table>
+  <tr><th>#</th><th>결함</th></tr>
+  <tr><td>6</td><td>call-ai.js 주석이 "응급 하드 게이트가 jeju 저장소에 있다"고 기술 — 2026-07-21 리팩터링 후 실제로는 gopang 자신의 <code>gov-router.js</code>로 이전됨(기능은 정상, 주석만 틀림)</td></tr>
+  <tr><td>7</td><td>kemergency 트리거 목록엔 "자살"·"자해"가 없는데 gov-router.js의 <code>EMERGENCY_RE</code>엔 있음 — 트리거 drift</td></tr>
+</table>
+
+<p>최종 재분류: <span class="badge badge-ok">PASS 247</span> / <span class="badge badge-warn">WARN 37</span> / <span class="badge badge-bad">FAIL 16</span>. 남은 WARN 중 진짜 라이브 검증이 필요한 항목은 3건(프롬프트 인젝션 저항력·다국어 처리 품질·복합의도 분기)으로 좁혀졌다.</p>
+
+<hr>
+
+<h2 id="sec4">4. 3단계 — DeepSeek 라이브 API 테스트 (300건)</h2>
+
+<h3>인프라 설계</h3>
+<p>
+이 세션이 진행된 샌드박스는 <code>api.deepseek.com</code>으로의 네트워크 egress가 차단돼 있어(<code>host_not_allowed</code>),
+직접 API를 호출할 수 없었다. 대신 <strong>GitHub Actions</strong>를 실행 환경으로 사용하는 하네스를
+설계했다:
+</p>
+<ul>
+  <li><code>tests/live_smoketest/live_smoketest.py</code> — 300개 시나리오를 실제 <code>prompts/AC-PRO-CORE_v1_0.txt</code>(§CATALOG/§CATALOG-EXPERT 포함)를 시스템 프롬프트로 그대로 사용해 <code>deepseek-chat</code>에 1턴씩 전송, 응답에서 <code>[GWP:id]</code>/<code>[EXPERT:id]</code> 태그를 추출해 기대값과 대조</li>
+  <li><code>.github/workflows/live-smoketest.yml</code> — <code>workflow_dispatch</code> 수동 트리거, 결과를 보호되지 않은 <code>results/live-smoketest</code> 브랜치에 자동 커밋(main은 브랜치 보호로 직접 push 불가)</li>
+  <li>DeepSeek API 키는 GitHub Actions repository secret으로 별도 등록(Cloudflare Worker 시크릿과는 무관한 저장소)</li>
+</ul>
+
+<h3>채점 로직의 진화</h3>
+<p>
+최초 채점 로직은 태그 유무만으로 단순 PASS/FAIL을 매겼으나, 5건 시험 실행에서 §CORE의 "넘겨짚지 않고
+먼저 되묻는다" 지침에 따른 정상적인 되묻기 응답이 대량으로 FAIL 오판정되는 것을 발견했다. 이를 반영해
+<span class="badge badge-warn">CLARIFY</span>(정당한 되묻기 가능성, 1턴 테스트의 한계)를 별도 판정으로
+분리했다.
+</p>
+
+<h3>결과 (원본 하네스 기준, 이후 라벨 버그 수정 전)</h3>
+<table>
+  <tr><th>판정</th><th>건수</th><th>비율</th><th>의미</th></tr>
+  <tr><td><span class="badge badge-ok">PASS</span></td><td>55</td><td>18.3%</td><td>1턴 만에 기대한 태그로 정확히 라우팅</td></tr>
+  <tr><td><span class="badge badge-warn">CLARIFY</span></td><td>207</td><td>69.0%</td><td>태그 없이 되물음 — 1턴 테스트 한계로 확정 불가</td></tr>
+  <tr><td><span class="badge badge-bad">FAIL</span></td><td>17</td><td>5.7%</td><td>진짜 라우팅 불일치 또는 무응답</td></tr>
+  <tr><td><span class="badge badge-scope">OUT-OF-SCOPE</span></td><td>20</td><td>6.7%</td><td>PLATFORM 카테고리(기기연결·GDC지갑 등) — AC-PRO-CORE가 소유하지 않는 기능이라 이 하네스로 검증 불가</td></tr>
+  <tr><td>NEEDS-REVIEW</td><td>1</td><td>0.3%</td><td>프롬프트 인젝션 시도 — 자동 채점 안 함, 사람이 원문 직접 판단 필요</td></tr>
+</table>
+
+<h3>핵심 발견</h3>
+<ol>
+  <li><strong>정적 분석 결과가 라이브에서 재확인됨</strong> — #287 "구매자문 어드바이저 AI 연결해줘"가 advisor로 안 가고 kcommerce로 오라우팅. 결함 #3(advisor 카탈로그 미기재)이 실제 모델 행동으로도 그대로 나타났다.</li>
+  <li><strong>"정상경로" 가정 자체의 오류</strong> — "카탈로그 트리거 기반 = 즉시 명확"이라고 가정했던 시나리오 상당수가 실은 진짜 중의적이었다(예: "필라테스 강도"의 '강도'가 운동강도/범죄 중의성).</li>
+  <li><strong>태그 누락 패턴(패턴A)</strong> — 모델이 "OOO를 호출하겠습니다"처럼 의도는 명확히 밝히면서 실제 <code>[GWP:id]</code> 태그 자체를 빠뜨리는 사례 4건 발견(예: "K-Insurance를 호출하겠습니다."로 끝나고 태그 없음).</li>
+  <li><strong>§HONESTY 위반 패턴(패턴B)</strong> — #134 "상표 등록 절차 알려줘"에서 모델이 patent-attorney(변리사)가 §CATALOG-EXPERT 표에 있음에도 "전담 서비스가 현재 없다"고 답함.</li>
+  <li><strong>하네스 자체 버그 2건 발견</strong> — (a) EXPERT 태그 추출 시 라벨을 <code>전문가AI</code>(한글)로 지정했는데 시나리오 기대값은 <code>EXPERT</code>(영문)라 ID가 정확히 일치해도 라벨 불일치로 가짜 FAIL 27건 발생. (b) PLATFORM 카테고리 22건이 애초에 AC-PRO-CORE가 소유하지 않는 기능이라 검증 방법론 자체가 틀렸음.</li>
+</ol>
+
+<hr>
+
+<h2 id="sec5">5. 4단계 — 결함 수정 (PR #134~#139)</h2>
+
+<table>
+  <tr><th>PR</th><th>내용</th><th>대상 결함</th></tr>
+  <tr><td>#134</td><td>civil/advisor ownerAgency 오타 수정(kpublic→kgov, kmarket→kcommerce)</td><td>결함 4, 5</td></tr>
+  <tr><td>#135</td><td>advisor 페르소나를 §CATALOG-EXPERT 표에 등재</td><td>결함 3</td></tr>
+  <tr><td>#136</td><td>kemergency 트리거에 '자살'·'자해' 추가 + call-ai.js 주석 정정</td><td>결함 6, 7</td></tr>
+  <tr><td>#137</td><td>PDV SVC_ALIAS 6종 누락 추가 + kqna를 REGISTERED_SERVICES에 신규 등록(level:3, minAuth:L0)</td><td>결함 2</td></tr>
+  <tr><td>#138</td><td>태그 누락 패턴A/B 완화 — ① 태그를 응답 맨 앞으로 이동(구조적 방지) ② call-ai.js/expert-session.js에 표시명 기반 서버 폴백 라우팅 추가 ③ §HONESTY 재확인 지시 추가</td><td>3단계 발견 패턴A, B</td></tr>
+  <tr><td>#139</td><td>라이브 테스트 하네스 EXPERT 라벨 버그 수정(전문가AI → EXPERT)</td><td>하네스 자체 결함</td></tr>
+</table>
+
+<div class="callout">
+<strong>결함 1(kbank/ktelecom/kestate)은 코드 수정 없이 종결</strong>했다 — 확인 결과 시스템 프롬프트가 이미
+2026-07-28부터 이 3개 서비스를 "미구현"으로 명시하고, 태그를 내지 않도록 지시하며, "준비 중"이라는 정직한
+안내로 폴백하도록 설계돼 있었다. 최초 정적 분석(코드에 핸들러 없음)은 정확했지만, 그 사이 문서 레벨에서
+이미 완화된 상태였다.
+</div>
+
+<h3>PR-4(worker.js) 특이사항 — 스코프 확장</h3>
+<p>
+결함 2를 고치던 중 kqna(qna.hondi.net)가 SVC_ALIAS뿐 아니라 <code>REGISTERED_SERVICES</code> 자체에도
+전혀 등록돼 있지 않다는 걸 발견했다. 이건 단순 별칭 추가가 아니라 신뢰 레벨(minAuth)을 새로 정해야 하는
+보안 설정 결정이라, 임의로 값을 넣지 않고 사람에게 확인받은 뒤(L0, public과 동일 수준) 진행했다.
+</p>
+
+<hr>
+
+<h2 id="sec6">6. 5단계 — 회귀 검증 (18건)</h2>
+
+<h3>설계 원칙</h3>
+<p>
+원래 실패했던 발화를 그대로 재사용하지 않고, <strong>같은 의도를 다른 표현으로 새로 작성</strong>했다 —
+그래야 "우연히 같은 캐시·패턴에 걸려 통과"가 아니라 진짜 일반화됐는지 확인할 수 있다. PDV 저장 값이나
+백엔드 신뢰등급처럼 LLM 발화로 관찰 불가능한 수정(D1·D2·D5·D6)은 검증 대상에서 제외했다.
+</p>
+
+<table>
+  <tr><th>그룹</th><th>검증 대상</th><th>건수</th></tr>
+  <tr><td>A</td><td>advisor 카탈로그 등재(#135)</td><td>2</td></tr>
+  <tr><td>B</td><td>kemergency 자살/자해 트리거(#136)</td><td>2</td></tr>
+  <tr><td>C</td><td>태그 누락 수정 — kinsurance·dental-hygienist·dietitian·naval-architect(#138)</td><td>8</td></tr>
+  <tr><td>D</td><td>§HONESTY 재확인 — patent-attorney·dental-technician(#138)</td><td>4</td></tr>
+  <tr><td>E</td><td>회귀 확인(태그 위치 이동이 기존 정상 케이스를 안 깼는지)</td><td>2</td></tr>
+</table>
+
+<h3>결과 — 원시 수치와 실제 수치의 괴리</h3>
+<p>
+워크플로우가 즉시 보고한 원시 결과는 <span class="badge badge-bad">FAIL 15</span> / <span class="badge badge-ok">PASS 3</span>였다.
+그러나 이건 PR #139(하네스 라벨 버그 수정)가 <strong>이 회귀 테스트 실행 시점엔 아직 반영되기 전</strong>
+이라 다시 같은 라벨 버그에 걸린 것으로 드러났다. 원문 응답을 직접 열어 라벨을 보정해 재채점한 결과는
+다음과 같다.
+</p>
+
+<table>
+  <tr><th>그룹</th><th>실제 결과</th><th>해석</th></tr>
+  <tr><td>A. advisor</td><td>1/2</td><td>#302 PASS, #301은 여전히 kcommerce로 경쟁에서 밀림</td></tr>
+  <tr><td>B. kemergency 자살/자해</td><td>1/2</td><td>'자살' 트리거는 작동, '자해' 표현은 mental-health-professional로 대체 라우팅</td></tr>
+  <tr><td>C. kinsurance</td><td>1/2</td><td>명시적 "상담" 문구 없는 표현은 여전히 무응답</td></tr>
+  <tr><td>C. dental-hygienist</td><td>0/2</td><td>태그 자체는 이제 나옴(원래 버그 해소) — 다만 dentist로 인접 혼동. <strong>다른 종류의 문제로 성격이 바뀜</strong></td></tr>
+  <tr><td>C. dietitian</td><td><strong>2/2</strong></td><td>완전 해결</td></tr>
+  <tr><td>C. naval-architect</td><td><strong>2/2</strong></td><td>완전 해결</td></tr>
+  <tr><td>D. patent-attorney</td><td><strong>2/2</strong></td><td>완전 해결 — 허위 "서비스 없음" 응답 재현 안 됨</td></tr>
+  <tr><td>D. dental-technician</td><td>1/2</td><td>일부 표현은 여전히 무응답</td></tr>
+  <tr><td>E. 회귀 확인</td><td><strong>2/2</strong></td><td>기존 정상 케이스(명백한 응급, tax-accountant) 안 깨짐</td></tr>
+</table>
+
+<p><strong>합계: 12 PASS / 6 FAIL</strong> (라벨 보정 후) — dietitian·naval-architect·patent-attorney 완전 해결,
+dental-hygienist는 원래 버그(태그 누락)가 사라지고 더 가벼운 문제(인접 페르소나 혼동)로 성격이 바뀜, 회귀 없음.</p>
+
+<hr>
+
+<h2 id="sec7">7. 방법론적 한계와 교훈</h2>
+<ul>
+  <li><strong>1턴 테스트의 근본적 한계</strong>: §CORE의 되묻기 설계상, 모호한 발화의 상당수는 애초에 1턴만으로 최종 라우팅까지 도달하지 않는다. CLARIFY 207건 중 실제로 2턴째 정확히 라우팅되는지는 이번 실험으로 확인하지 못했다.</li>
+  <li><strong>DeepSeek 비결정성</strong>: temperature=0으로 고정해도 동일 발화가 실행마다 다른 응답을 낸 사례가 실측됐다(예: "살려줘에 대해 상담받고 싶어요"가 실행마다 kemergency/mental-health-professional로 갈림). 단일 샘플로 결론 내리지 않도록 주의가 필요하다.</li>
+  <li><strong>테스트 하네스 자체도 결함의 원천</strong>: 이번 실험에서 발견한 결함 중 2건(EXPERT 라벨 불일치, PLATFORM 범위 오분류)은 대상 시스템이 아니라 테스트 코드 자체의 버그였다. 정적 분석뿐 아니라 검증 도구 자체도 검증 대상이라는 교훈.</li>
+  <li><strong>범위 밖 항목 혼입 위험</strong>: PLATFORM 카테고리처럼 애초에 검증 대상 시스템(AC-PRO-CORE)이 소유하지 않는 기능을 같은 하네스로 테스트하면 방법론 자체가 틀어진다.</li>
+</ul>
+
+<hr>
+
+<h2 id="sec8">8. 다음 단계 — Function Calling 전환 계획</h2>
+<p>
+패턴A(태그 누락)의 임시 완화(#138)를 넘어서는 근본 해결책으로, 텍스트 안에 문자열 태그를 "기억해서 써주길
+바라는" 현재 구조를 LLM API의 네이티브 tool-calling으로 전환하는 프로젝트 계획을 별도 문서로 작성했다.
+6개 프로바이더(openrouter/anthropic/gemini/deepseek/openai/xai) 중 실질적으로 스키마는 Anthropic 방식과
+OpenAI 호환 방식 두 갈래뿐이며, DeepSeek가 production 기본값(<code>deepseek-default</code>)이라는 것도 이
+과정에서 확인했다. 섀도우 모드 → 컷오버 → 정리의 3단계 마이그레이션으로 설계했다. 상세 내용은 별도
+계획 문서(<code>option3_function_calling_migration_plan.md</code>) 참고.
+</p>
+
+<hr>
+
+<h2 id="sec9">9. 부록 — 전체 PR·산출물 목록</h2>
+<table>
+  <tr><th>항목</th><th>내용</th></tr>
+  <tr><td>PR #134</td><td>civil/advisor ownerAgency 오타 수정</td></tr>
+  <tr><td>PR #135</td><td>advisor를 §CATALOG-EXPERT에 등재</td></tr>
+  <tr><td>PR #136</td><td>kemergency 트리거 drift 해소 + call-ai.js 주석 정정</td></tr>
+  <tr><td>PR #137</td><td>PDV SVC_ALIAS 6종 추가 + kqna REGISTERED_SERVICES 신규 등록</td></tr>
+  <tr><td>PR #138</td><td>태그 누락 패턴A/B 완화(태그 위치 이동 + 서버 폴백 + §HONESTY 재확인)</td></tr>
+  <tr><td>PR #139</td><td>라이브 테스트 하네스 EXPERT 라벨 버그 수정</td></tr>
+  <tr><td>테스트 인프라</td><td><code>tests/live_smoketest/live_smoketest.py</code>, <code>.github/workflows/live-smoketest.yml</code></td></tr>
+  <tr><td>회귀 시나리오</td><td><code>tests/live_smoketest/scenarios_regression_20260731.json</code>(18건)</td></tr>
+  <tr><td>정적 검증 보고서</td><td><code>hondi_smoketest_report_v2.xlsx</code>, <code>hondi_smoketest_report_v3.xlsx</code>(라이브 테스트 시트 포함)</td></tr>
+  <tr><td>다음 단계 계획</td><td><code>option3_function_calling_migration_plan.md</code></td></tr>
+</table>
+
+<div class="footer">
+  <p>혼디 라우팅 실증 실험 방법론 및 결과</p>
+  <p>AI City Inc. 팀 주피터 | 2026-07-31</p>
+  <p>정적 시나리오 300건 · 라이브 API 시나리오 300건 · 회귀 시나리오 18건 · PR 6건 머지</p>
+  <p class="back-to-top"><a href="#top">맨 위로</a></p>
+</div>
+
+</body>
+</html>
