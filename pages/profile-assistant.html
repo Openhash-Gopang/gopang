@@ -352,6 +352,14 @@ let systemPrompt = null, messages = [];
 // 를 "완료 신호"로 쓴다.
 const _CARD_LINE_RE = /^[ \t]*(🏪|👤|🏛|🤝|💻|🚗|🤖)\s/m;
 let _profileSubmitRetryCount = 0;
+// 2026-0X-XX 수정 — 재시도 트리거를 매번 _CARD_LINE_RE 재검출에만 의존시켰더니
+// (원 구현) 재요청 프롬프트가 "카드를 다시 만들지 말고 태그만 내라"고 지시한
+// 대로 모델이 정직하게 따르면 카드 라인이 없는 응답이 돌아오고, 그러면 2회차부터
+// 트리거 자체가 안 걸려 조용히 방치되는 동일 유형의 결함이 재발했다(순수 로직
+// 시뮬레이션으로 발견). 카드 재검출이 아니라 "재시도 진행 중" 상태 자체를
+// 플래그로 들고 있다가, 재요청 직후엔 카드 유무와 무관하게 다음 응답을 계속
+// 재시도 판정 대상으로 삼는다. 성공(PROFILE_SUBMIT 도달) 또는 재시도 소진 시에만 해제.
+let _awaitingSubmitRetry = false;
 const _PROFILE_SUBMIT_MAX_RETRIES = 2;
 async function ensureSystemPrompt() {
   if (systemPrompt) return systemPrompt;
@@ -699,6 +707,7 @@ async function _handleReplyTags(fullReply) {
   // PROFILE_SUBMIT — 실제 서버 등록(welcome.js 그대로 재사용)
   if (fullReply.includes('PROFILE_SUBMIT')) {
     _profileSubmitRetryCount = 0; // 정상 도달 — 재시도 카운터 리셋
+    _awaitingSubmitRetry = false; // 정상 도달 — 재시도 대기 상태 해제
     let savedProfile = null;
     try {
       savedProfile = await handleProfileSubmit(fullReply, {
@@ -769,9 +778,16 @@ async function _handleReplyTags(fullReply) {
   // 끝났다(탭이 열린 채 방치, 서버 미저장 — 사용자는 "완성됐다"고
   // 믿지만 실제로는 유실). done 상태가 아직 아닐 때만 발동한다(이미
   // 완료된 세션의 잡담 등에는 적용 안 함).
-  if (!localStorage.getItem('hondi_profile_done') && _CARD_LINE_RE.test(fullReply)) {
+  // 2026-0X-XX 수정 — 원래 조건은 _CARD_LINE_RE.test(fullReply) 단독이었다.
+  // 재요청(아래 sendTurn)이 "카드를 다시 만들지 말라"고 지시하므로, 모델이
+  // 그 지시를 따른 정상적인 재시도 응답에는 카드 라인이 없다 — 그 경우
+  // _CARD_LINE_RE만으로는 2회차부터 트리거가 아예 안 걸려 똑같이 조용히
+  // 방치되는 결함이 재발했다. _awaitingSubmitRetry로 "재시도 대기 중" 상태를
+  // 함께 봐서, 카드 유무와 무관하게 재시도 실패를 계속 감지한다.
+  if (!localStorage.getItem('hondi_profile_done') && (_CARD_LINE_RE.test(fullReply) || _awaitingSubmitRetry)) {
     if (_profileSubmitRetryCount < _PROFILE_SUBMIT_MAX_RETRIES) {
       _profileSubmitRetryCount++;
+      _awaitingSubmitRetry = true;
       console.warn(`[PA] PROFILE_SUBMIT 태그 누락 감지 — 내부 재요청 ${_profileSubmitRetryCount}/${_PROFILE_SUBMIT_MAX_RETRIES}`);
       await sendTurn(
         `[INTERNAL: PROFILE_SUBMIT 태그 누락 감지 — 사용자에게 보이지 않는 내부 ` +
@@ -786,6 +802,7 @@ async function _handleReplyTags(fullReply) {
     console.error('[PA] PROFILE_SUBMIT 재시도 소진 — 사용자에게 실패 안내');
     appendBubble('ai', '죄송해요, 방금 내용을 저장하는 중에 문제가 있었어요. 다시 확인해 주시겠어요? "확인"이라고 한 번 더 말씀해 주시면 다시 시도할게요.');
     _profileSubmitRetryCount = 0;
+    _awaitingSubmitRetry = false;
     return;
   }
 }
