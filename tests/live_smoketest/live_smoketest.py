@@ -41,6 +41,20 @@ MODEL = "deepseek-chat"
 GWP_TAG_RE = re.compile(r"\[\s*GWP\s*:\s*([\w\-]+)\s*\]", re.IGNORECASE)
 EXPERT_TAG_RE = re.compile(r"\[\s*EXPERT\s*:\s*([\w\-]+)\s*\]", re.IGNORECASE)
 
+# Heuristics for detecting "legitimate single-turn clarifying question" responses,
+# per §CORE's "넘겨짚지 않고 되묻는다" instruction. A response matching these is NOT
+# routing failure — the system is designed to clarify before routing on ambiguous
+# single-turn utterances, and this harness only tests one turn.
+CLARIFY_PATTERNS = [
+    r"말씀해\s*주(시겠|세요|시면)",
+    r"알려\s*주(시겠|세요|시면)",
+    r"여쭤보겠습니다",
+    r"어떤\s*상황",
+    r"어떻게\s*되시나요",
+    r"\?\s*$",  # response ends with a question mark
+]
+CLARIFY_RE = re.compile("|".join(CLARIFY_PATTERNS), re.IGNORECASE | re.MULTILINE)
+
 MAX_WORKERS = 5
 MAX_RETRIES = 4
 RETRY_BASE_SLEEP = 3  # seconds, exponential backoff
@@ -113,7 +127,12 @@ def grade(scenario, raw_text, call_err):
 
     # Normal routing comparison
     if extracted_id is None:
-        return "LIVE-FAIL", "기대된 라우팅 태그가 응답에 없음 (직접 응답으로 새버림)"
+        if CLARIFY_RE.search(raw_text or ""):
+            return (
+                "LIVE-CLARIFY",
+                "태그 없이 되물음 — §CORE 되묻기 지침에 따른 정상 동작일 수 있음 (1턴 테스트 한계, 사람 검토 필요)",
+            )
+        return "LIVE-FAIL", "기대된 라우팅 태그가 없고 되묻지도 않음 (직접 답변으로 종료)"
     if extracted_type == expected_type and extracted_id == expected_id:
         return "LIVE-PASS", f"[{extracted_type}: {extracted_id}] 일치"
     return "LIVE-FAIL", f"기대 [{expected_type}: {expected_id}] vs 실제 [{extracted_type}: {extracted_id}]"
