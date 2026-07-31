@@ -43,6 +43,20 @@ export function resolveDeepseekModel(model) {
   return MODEL_ALIAS[model] || model || 'deepseek-v4-flash';
 }
 
+// 2026-0X-XX 신설 — DeepSeek 공식 문서 확인 결과 deepseek-v4-flash/-pro를
+// model 파라미터로 직접 호출하면 thinking(사고) 모드가 기본값 enabled,
+// effort는 기본 high다("The thinking toggle defaults to enabled" — 공식
+// Thinking Mode 가이드). 레거시 별칭 시절 "혼디 Flash"="deepseek-chat"은
+// 명시적으로 비사고 모드였는데(위 파일 헤더 원 설계 의도), 별칭을 정식
+// ID로 바꾸면서 이 파라미터를 명시하지 않아 그동안 조용히 사고 모드로
+// 돌고 있었을 가능성이 높다(응답당 2~5배 느려지고 출력 토큰도 그만큼
+// 늘어남 — reasoning_content가 과금 대상 output에 포함됨). resolvedModel이
+// deepseek-v4-flash면 명시적으로 비활성화, deepseek-v4-pro는 원래도
+// 사고 모드가 의도(구 별칭 deepseek-reasoner)였으므로 그대로 활성 유지.
+function _defaultThinkingFor(resolvedModel) {
+  return { type: resolvedModel === 'deepseek-v4-flash' ? 'disabled' : 'enabled' };
+}
+
 /**
  * 단일화된 DeepSeek 호출 헬퍼 (non-streaming).
  * @param {object} p
@@ -57,12 +71,13 @@ export function resolveDeepseekModel(model) {
  * @returns {Promise<object>} DeepSeek API 원본 JSON 응답
  */
 export async function deepseekChat({
-  env, apiKey, model, messages, max_tokens = 512, temperature, timeoutMs = 15000,
+  env, apiKey, model, messages, max_tokens = 512, temperature, timeoutMs = 15000, thinking,
 }) {
   const key = apiKey || env?.DEEPSEEK_API_KEY;
   if (!key) throw new Error('DEEPSEEK_API_KEY_MISSING');
   if (!Array.isArray(messages) || !messages.length) throw new Error('DEEPSEEK_MESSAGES_REQUIRED');
 
+  const resolvedModel = resolveDeepseekModel(model);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -70,9 +85,10 @@ export async function deepseekChat({
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({
-        model: resolveDeepseekModel(model),
+        model: resolvedModel,
         max_tokens,
         ...(temperature != null ? { temperature } : {}),
+        thinking: thinking || _defaultThinkingFor(resolvedModel),
         messages,
       }),
       signal: controller.signal,

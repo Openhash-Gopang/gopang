@@ -97,7 +97,16 @@ AI가 "🎉 프로필 완성됐어요"처럼 완료를 알리면, "네, 감사�
 
 def _call_deepseek(api_key, messages, max_tokens=1600):
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    payload = {"model": MODEL, "temperature": 0.3, "max_tokens": max_tokens, "messages": messages}
+    # 2026-0X-XX 신설 — deepseek-v4-flash를 model로 직접 호출하면 DeepSeek
+    # 공식 문서상 thinking이 기본값 enabled(effort high)다. 레거시 별칭
+    # deepseek-chat 시절엔 명시적으로 비사고 모드였는데, 정식 ID로 교정하며
+    # 이 파라미터를 안 넣어 매 호출이 사고 모드로 도는 바람에 같은 30건이
+    # 215초→16분대로 늘어나는 걸 실측(전체 코드베이스 공통 결함 — worker.js
+    # 4개 지점 + 공유 deepseek-client.js에도 동일 패치 적용됨). PA/K-Law/Biz/
+    # Gov 전부 "Flash 티어=비사고"가 설계 의도이므로 하네스도 프로덕션과
+    # 동일하게 명시적으로 비활성화한다.
+    payload = {"model": MODEL, "temperature": 0.3, "max_tokens": max_tokens, "messages": messages,
+               "thinking": {"type": "disabled"}}
     last_err = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
