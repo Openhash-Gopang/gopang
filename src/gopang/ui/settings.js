@@ -1381,3 +1381,84 @@ export function _downloadHondiCode() {
   a.download = 'hondi-code.png';
   a.click();
 }
+
+// ── 다른 기기 QR 연결 모달 (2026-07-31 신설) ────────────────────
+// "폰이나 PC에서 자신의 계정을 간단히 호출할 방안"(주피터 요청) — 이미
+// 로그인돼 있는 기기(예: PC)에서 QR을 띄우면, 새 기기(예: 폰) 카메라로
+// 스캔하는 것만으로 auth/device-link.html이 열리고 곧바로 승인 요청이
+// 전송된다. auth/device-link.html은 ?phone= 쿼리가 있으면(PREFILLED_PHONE)
+// 전화번호 입력 화면을 건너뛰고 즉시 요청을 보내도록 이미 구현돼 있으므로
+// (2026-07-28 변경분 참고), 여기서는 그 URL을 QR로 인코딩해 보여주기만
+// 하면 된다 — 백엔드 변경도, 기존 SMS 인증 경로 우회도 전혀 없다.
+// ★ 2026-07-19 QR "로그인"(auth/qr-scan.html) 자체는 주피터 지시로
+// 폐기됐다(SMS 인증만이 유일한 본인 확인 경로) — 이건 다른 것이다. 이
+// QR은 인증을 대신하지 않는다. 여전히 실제 승인은 이미 로그인된 기기에서
+// 생체인증으로 이뤄지고, 이 QR은 그 승인 요청 화면을 "직접 타이핑하지
+// 않고" 열어주는 바로가기일 뿐이다.
+function _currentUserForQR() {
+  if (_USER?.e164) return _USER;
+  try {
+    const s = JSON.parse(
+      localStorage.getItem('gopang_user_v4') ||
+      sessionStorage.getItem('gopang_user_v4') || 'null'
+    );
+    return s;
+  } catch { return null; }
+}
+
+export function openDeviceLinkQR() {
+  const modal   = document.getElementById('device-link-qr-modal');
+  const imgEl   = document.getElementById('device-link-qr-img');
+  const errEl   = document.getElementById('device-link-qr-error');
+  const linkBox = document.getElementById('device-link-qr-linkbox');
+  if (!modal) return;
+
+  const user = _currentUserForQR();
+  if (!user?.e164) {
+    // 전화번호 인증 전(게스트 등)에는 연결할 계정 자체가 없다.
+    if (imgEl)   imgEl.style.display = 'none';
+    if (linkBox) linkBox.style.display = 'none';
+    if (errEl)   errEl.style.display = 'block';
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    return;
+  }
+
+  const targetUrl = 'https://hondi.net/auth/device-link.html'
+    + '?phone=' + encodeURIComponent(user.e164)
+    + '&return=' + encodeURIComponent('/webapp.html');
+  const qrImgUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='
+    + encodeURIComponent(targetUrl);
+
+  if (imgEl) { imgEl.src = qrImgUrl; imgEl.style.display = 'block'; }
+  if (errEl) errEl.style.display = 'none';
+  if (linkBox) {
+    linkBox.style.display = 'flex';
+    linkBox.dataset.link = targetUrl;
+  }
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+export function closeDeviceLinkQR() {
+  const modal = document.getElementById('device-link-qr-modal');
+  if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+export async function _copyDeviceLinkQRUrl() {
+  const linkBox = document.getElementById('device-link-qr-linkbox');
+  const url = linkBox?.dataset?.link;
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    const btn = document.getElementById('device-link-qr-copy-btn');
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = '복사됨';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    }
+  } catch {
+    prompt('아래 링크를 복사하세요:', url);
+  }
+}

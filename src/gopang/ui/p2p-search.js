@@ -191,14 +191,39 @@ async function _doSearch(q, country, region, resultsEl) {
     }
 
     // 본인 제외
-    const myHandle = _USER?.handle;
-    const users    = data.users.filter(u => u.handle !== myHandle);
+    const myHandle  = _USER?.handle;
+    const wasSelfOnly = myHandle && data.users.length > 0
+      && data.users.every(u => u.handle === myHandle);
+    const users = data.users.filter(u => u.handle !== myHandle);
 
     if (!users.length) {
-      resultsEl.innerHTML = `
-        <div style="text-align:center;padding:24px;color:#9ca3af;font-size:13px">
-          검색 결과가 없습니다.
-        </div>`;
+      // 2026-07-31 신설 — 유일한 매치가 본인 계정이었던 경우, 그냥 조용히
+      // "결과 없음"만 보여주면 마치 검색이 고장난 것처럼 보인다(실사로
+      // 확인된 혼란 사례: PC에 이미 로그인된 계정을 폰에서 검색해 "호출"
+      // 하려던 시도). 이 검색·연결 기능은 애초에 "나 아닌 다른 사람"을
+      // 찾는 용도이고, 자신의 다른 기기에 같은 계정을 여는 방법은 따로
+      // (device-link) 있음을 여기서 바로 안내한다.
+      if (wasSelfOnly) {
+        resultsEl.innerHTML = `
+          <div style="text-align:center;padding:20px 16px;color:#6b7280;font-size:13px;line-height:1.6">
+            검색하신 상대는 본인 계정입니다 — 자기 자신에게는 연결 요청을 보낼 수 없습니다.<br>
+            같은 계정을 다른 기기(폰·PC)에서도 쓰고 싶으신 거라면, 검색이 아니라
+            <b>기기 연결</b> 기능을 이용해주세요.
+          </div>
+          <div style="padding:0 16px 16px">
+            <button onclick="if (window.openDeviceLinkQR) { window.openDeviceLinkQR(); }
+                             else { location.href = '/auth/device-link.html?return=' + encodeURIComponent('/webapp.html'); }"
+              style="width:100%;padding:11px;border-radius:10px;background:#1A73E8;color:#fff;
+                     border:none;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit">
+              다른 기기 연결
+            </button>
+          </div>`;
+      } else {
+        resultsEl.innerHTML = `
+          <div style="text-align:center;padding:24px;color:#9ca3af;font-size:13px">
+            검색 결과가 없습니다.
+          </div>`;
+      }
       return;
     }
 
