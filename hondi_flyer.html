@@ -30,8 +30,8 @@ body{
 }
 .sheet{max-width:210mm;margin:0 auto;background:#fff;border:1px solid var(--line);}
 @media print{ body{padding:0} .sheet{max-width:none;border:none;min-height:277mm}
-  .back-sheet{page-break-before:always;break-before:page} }
-@media screen{ .back-sheet{margin-top:24px} }
+  .back-sheet,.appendix-sheet{page-break-before:always;break-before:page} }
+@media screen{ .back-sheet,.appendix-sheet{margin-top:24px} }
 
 .page-tag{display:inline-block;margin:14px 34px 0;background:var(--ink);color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.4px;padding:4px 12px;border-radius:4px}
 
@@ -95,6 +95,20 @@ body{
 .klaw-block p{font-family:var(--serif);font-size:16px;font-weight:700;line-height:1.5}
 .klaw-block .kb-foot{margin-top:8px;font-size:16px;font-weight:700;color:var(--ink-soft)}
 .klaw-block .kb-link{margin-top:5px;font-family:var(--mono);font-size:13px;color:var(--ink-soft)}
+
+/* 별첨 — 기관·산업 커버리지 */
+.gov-intro{padding:0 34px 20px;font-size:15px;color:var(--ink-soft);line-height:1.55}
+.gov-cat{padding:20px 34px;border-bottom:1px solid var(--line)}
+.gov-cat:last-of-type{border-bottom:none}
+.gov-cat .cat-title{font-family:var(--serif);font-weight:900;font-size:18px}
+.gov-cat .cat-desc{margin-top:5px;font-size:14.5px;color:var(--ink-soft);line-height:1.5}
+.gov-cat .cat-example{margin-top:9px;font-size:13px;color:var(--ink-faint);font-family:var(--mono);line-height:1.6}
+.sub-block{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+.sub-block:first-of-type{margin-top:16px}
+.sub-block .sub-title{font-weight:800;font-size:15px;color:var(--ink)}
+.sub-block .sub-desc{margin-top:3px;font-size:13.5px;color:var(--ink-soft)}
+.sub-block .sub-list{margin-top:6px;font-size:14px;line-height:1.65;color:var(--ink)}
+.gov-footnote{margin-top:10px;font-size:12px;color:var(--ink-faint);line-height:1.55}
 </style>
 </head>
 <body>
@@ -102,7 +116,7 @@ body{
 <!-- ══════════════════ 앞면 ══════════════════ -->
 <div class="sheet">
 
-  <div class="page-tag">앞면 · 1 / 2</div>
+  <div class="page-tag">앞면 · 1 / 3</div>
 
   <header class="top">
     <span class="wordmark">쓸수록 똑똑해지는 나만의 AI 비서, 혼디</span>
@@ -186,7 +200,7 @@ body{
 <!-- ══════════════════ 뒷면 ══════════════════ -->
 <div class="sheet back-sheet">
 
-  <div class="page-tag">뒷면 · 2 / 2</div>
+  <div class="page-tag">뒷면 · 2 / 3</div>
 
   <h2 class="trust-title">혼디의 압도적 기능 — 2030년 완성 목표, 2026년 8월 1일부터 각 분야 별 필드 테스트 시작</h2>
 
@@ -260,6 +274,194 @@ body{
   <div class="legal-strip">※ 법률·의료·금융 등 전문 영역의 안내는 참고용이며, 최종 판단과 책임은 이용자 본인 및 관련 전문가에게 있습니다.</div>
 
   <div style="text-align:center;font-weight:900;font-size:18.67px;padding:10px 34px 20px">개발팀: 도 영민, 김 혜영 외· tensor.city@gmail.com, 제주시 한림읍</div>
+
+</div>
+
+<!-- ══════════════════ 별첨: 기관·산업 커버리지 ══════════════════ -->
+<div class="sheet appendix-sheet">
+
+  <div class="page-tag">별첨 · 3 / 3</div>
+
+  <h2 class="trust-title" style="white-space:normal">HONDI · K-GOV COVERAGE — 혼디가 연동하는 기관·산업 목록</h2>
+  <div class="gov-intro">중앙정부, 지방정부, 의료, 교육, 금융, 교통/물류, 시장, 산업 순으로 정리합니다. 2030년 완성을 목표로, 각 기관의 AI 모델 필드 테스트를 시작합니다. 지금 hondi.net에 접속하여, 무엇이든 지시해 보세요.</div>
+
+  <div class="gov-cat">
+    <div class="cat-title">중앙정부 — 입법·사법·행정</div>
+    <div class="cat-desc">대한민국 헌법상 국가기관은 입법부·사법부·행정부 3부로 나뉩니다. 행정부는 정부조직법에 따라 부·처·청(중앙행정기관)과, 대통령·국무총리 직속 기관으로 구성됩니다.</div>
+    <div class="cat-example">예시 지시 · "국세청에 종합소득세 신고 도와줘" · "여권 재발급 절차 알려줘" · "예비군 훈련 일정 확인해줘"</div>
+
+    <div class="sub-block">
+      <div class="sub-title">입법부 · 국회</div>
+      <div class="sub-desc">법률 제정, 예산 심의, 국정감사를 담당하는 헌법기관</div>
+      <div class="sub-list">국회 본회의·상임위원회, 국회사무처, 국회도서관, 국회예산정책처, 국회입법조사처</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">사법부 · 법원 · 헌법재판소</div>
+      <div class="sub-desc">재판을 통한 분쟁 해결과 위헌 심사를 담당하는 헌법기관</div>
+      <div class="sub-list">대법원, 법원행정처, 고등법원, 지방법원, 가정법원, 행정법원, 특허법원, 회생법원, 헌법재판소</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">행정부 · 대통령·국무총리 직속기관</div>
+      <div class="sub-desc">중앙행정기관(부·처·청)은 아니지만 국정 운영의 핵심 축을 이루는 헌법·법률기관</div>
+      <div class="sub-list"><b>대통령 소속</b> — 대통령비서실, 국가안보실, 대통령경호처, 감사원, 국가정보원, 방송통신위원회, 국가교육위원회, 국가인권위원회</div>
+      <div class="sub-list"><b>국무총리 소속</b> — 국무조정실, 국무총리비서실, 고위공직자범죄수사처, 공정거래위원회, 금융위원회, 국민권익위원회, 개인정보보호위원회, 원자력안전위원회</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">행정부 19부 — 행정각부</div>
+      <div class="sub-desc">정부조직법상 중앙행정기관. 각 부 장관이 소관 정책을 총괄</div>
+      <div class="sub-list">기획재정부, 교육부, 과학기술정보통신부, 외교부, 통일부, 법무부, 국방부, 행정안전부, 국가보훈부, 문화체육관광부, 농림축산식품부, 산업통상자원부, 보건복지부, 환경부, 고용노동부, 여성가족부, 국토교통부, 해양수산부, 중소벤처기업부</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">행정부 3처 · 20청 · 6위원회</div>
+      <div class="sub-desc">부(部) 산하 또는 독립된 전문·집행 중앙행정기관</div>
+      <div class="sub-list"><b>처(3)</b> — 인사혁신처, 법제처, 식품의약품안전처</div>
+      <div class="sub-list"><b>청(20)</b> — 국세청, 관세청, 조달청, 통계청, 우주항공청, 재외동포청, 검찰청, 병무청, 방위사업청, 경찰청, 소방청, 국가유산청, 농촌진흥청, 산림청, 특허청, 질병관리청, 기상청, 행정중심복합도시건설청, 새만금개발청, 해양경찰청</div>
+      <div class="sub-list"><b>위원회(6)</b> — 방송통신위원회, 공정거래위원회, 금융위원회, 국민권익위원회, 개인정보보호위원회, 원자력안전위원회</div>
+    </div>
+
+    <div class="gov-footnote">※ 위 목록은 e-나라지표 기준(2024년 12월)이며, 정부 조직은 개편에 따라 수시로 변경됩니다. 최신 조직 현황은 정부24 또는 각 기관 공식 사이트에서 확인하십시오. 방송통신위원회·공정거래위원회·금융위원회는 소속 체계상 대통령/국무총리 직속과 중복 표기될 수 있습니다.</div>
+  </div>
+
+  <div class="gov-cat">
+    <div class="cat-title">지방정부 — 광역·기초·읍면동</div>
+    <div class="cat-desc">지방자치법상 지방자치단체는 광역자치단체와 기초자치단체로 나뉘며, 그 아래 읍·면·동 행정복지센터가 주민과 가장 가까운 접점입니다. (2026년 7월 광주광역시·전라남도 통합 등 최근 개편 반영)</div>
+    <div class="cat-example">예시 지시 · "우리 동 주민센터에 등본 발급 신청해줘" · "재산세 납부 기한 확인해줘" · "종량제 봉투 파는 곳 알려줘"</div>
+
+    <div class="sub-block">
+      <div class="sub-title">광역자치단체 (16)</div>
+      <div class="sub-desc">특별시·통합특별시·광역시·특별자치시·도·특별자치도 — 도청·시청 소재</div>
+      <div class="sub-list">서울특별시, 전남광주통합특별시, 부산광역시, 대구광역시, 인천광역시, 대전광역시, 울산광역시, 세종특별자치시, 경기도, 충청북도, 충청남도, 경상북도, 경상남도, 강원특별자치도, 전북특별자치도, 제주특별자치도</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">기초자치단체 (227)</div>
+      <div class="sub-desc">시(75)·군(82)·자치구(70) — 시청·군청·구청 소재. 226~227개 사이에서 통합·개편이 진행 중이라 숫자는 유동적입니다</div>
+      <div class="sub-list">대표 예시 — 수원시, 고양시, 화성시, 청주시, 천안시, 포항시, 김해시, 제주시, 서귀포시, 강남구 등 자치구 70, 양평군 등 자치군 82</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">최일선 읍·면·동</div>
+      <div class="sub-desc">시·군·구 산하 최일선 행정 접점 — 주민등록, 인감, 각종 증명서 발급 창구</div>
+      <div class="sub-list">읍사무소, 면사무소, 동 행정복지센터(주민센터)</div>
+    </div>
+
+    <div class="gov-footnote">※ 2026년 7월 1일 광주광역시·전라남도 통합(전남광주통합특별시 출범), 인천 중구·동구 개편 등 최근 행정구역 개편이 반영돼 있습니다. 정확한 최신 현황은 행정안전부 또는 정부24에서 확인하십시오.</div>
+  </div>
+
+  <div class="gov-cat">
+    <div class="cat-title">의료 — 감독기관·의료기관·직역단체</div>
+    <div class="cat-desc">보건복지부를 중심으로 한 감독·심사 기관, 의료기관 유형, 직역별 협회로 구성됩니다.</div>
+    <div class="cat-example">예시 지시 · "가까운 이비인후과 예약하고 증상 전달해줘" · "건강검진 결과 쉽게 설명해줘" · "복용 중인 약 상호작용 확인해줘"</div>
+
+    <div class="sub-block">
+      <div class="sub-title">감독·심사·공공기관</div>
+      <div class="sub-list">보건복지부, 질병관리청, 국민건강보험공단, 건강보험심사평가원, 식품의약품안전처, 국립중앙의료원, 국립암센터, 대한적십자사</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">의료기관 유형</div>
+      <div class="sub-list">상급종합병원, 종합병원, 병원, 의원, 치과의원, 한의원, 약국, 보건소, 응급의료센터</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">직역별 협회</div>
+      <div class="sub-list">대한의사협회, 대한치과의사협회, 대한한의사협회, 대한간호협회, 대한약사회, 대한병원협회</div>
+    </div>
+  </div>
+
+  <div class="gov-cat">
+    <div class="cat-title">교육 — 행정·학교급·평생교육</div>
+    <div class="cat-desc">교육부와 17개 시·도교육청을 중심으로 유아·초중등·고등교육 전 단계를 다룹니다.</div>
+    <div class="cat-example">예시 지시 · "우리 아이 수학 진도에 맞는 문제 만들어줘" · "학자금 대출 조건 알려줘" · "방과후 프로그램 신청해줘"</div>
+
+    <div class="sub-block">
+      <div class="sub-title">교육행정기관</div>
+      <div class="sub-list">교육부, 국가교육위원회, 시·도교육청(17), 교육지원청, 한국교육과정평가원, 한국교육개발원, 한국장학재단</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">유아·초중등·고등교육</div>
+      <div class="sub-list">유치원·어린이집, 초등학교, 중학교, 고등학교, 특수학교, 전문대학, 일반대학, 대학원</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">평생·직업교육</div>
+      <div class="sub-list">평생교육원, 직업훈련기관, 사설 학원</div>
+    </div>
+  </div>
+
+  <div class="gov-cat">
+    <div class="cat-title">금융 — 감독·업권·시장</div>
+    <div class="cat-desc">금융위원회·금융감독원의 감독 체계 아래, 은행·증권·보험 등 업권과 거래소 시장으로 구성됩니다.</div>
+    <div class="cat-example">예시 지시 · "이번 달 카드값 분석하고 저축 계획 짜줘" · "적금 금리 비교해줘" · "연말정산 환급액 미리 계산해줘"</div>
+
+    <div class="sub-block">
+      <div class="sub-title">감독·중앙기관</div>
+      <div class="sub-list">금융위원회, 금융감독원, 한국은행, 예금보험공사, 신용보증기금</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">업권별 분류</div>
+      <div class="sub-list">은행, 증권사, 보험사, 카드사, 저축은행, 캐피탈, 농협·수협·신협·새마을금고, 핀테크</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">자본시장</div>
+      <div class="sub-list">한국거래소, 코스피, 코스닥, 코넥스</div>
+    </div>
+  </div>
+
+  <div class="gov-cat">
+    <div class="cat-title">교통 / 물류 — 육상·항공·해운</div>
+    <div class="cat-desc">국토교통부·해양수산부 산하 공공기관을 중심으로 대중교통, 화물·물류, 항만·공항이 연결됩니다.</div>
+    <div class="cat-example">예시 지시 · "내일 아침 KTX 예매하고 환승 동선 알려줘" · "이삿짐 업체 견적 비교해줘" · "국제택배 통관 절차 알려줘"</div>
+
+    <div class="sub-block">
+      <div class="sub-title">공공기관</div>
+      <div class="sub-list">국토교통부, 해양수산부, 한국교통안전공단, 한국도로공사, 국가철도공단, 한국철도공사(코레일), 한국공항공사, 인천국제공항공사, 해양경찰청</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">대중교통·화물</div>
+      <div class="sub-list">시내버스·시외버스, 지하철·도시철도, KTX·SRT, 항공, 해운·연안여객, 택배·화물운송, 항만(부산항·인천항 등)</div>
+    </div>
+  </div>
+
+  <div class="gov-cat">
+    <div class="cat-title">시장 — 유통·상권</div>
+    <div class="cat-desc">공정거래위원회의 시장 질서 관리와, 소상공인·유통업태별 상권 정보를 포괄합니다.</div>
+    <div class="cat-example">예시 지시 · "우리 가게 근처 상권 분석해줘" · "경쟁업체 리뷰 요약해줘" · "온라인몰 입점 절차 알려줘"</div>
+
+    <div class="sub-block">
+      <div class="sub-title">공공기관</div>
+      <div class="sub-list">공정거래위원회, 소상공인시장진흥공단, 중소벤처기업부, 한국소비자원</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">유통업태</div>
+      <div class="sub-list">대형마트, 백화점, 편의점, 전통시장, 온라인쇼핑몰, 프랜차이즈</div>
+    </div>
+  </div>
+
+  <div class="gov-cat">
+    <div class="cat-title">산업 — 제조·에너지·첨단</div>
+    <div class="cat-desc">산업통상자원부·중소벤처기업부 산하 공공기관과, 주요 업종별 분류로 구성됩니다.</div>
+    <div class="cat-example">예시 지시 · "특허 출원 초안 작성해줘" · "수출 인증 절차 확인해줘" · "정부 R&amp;D 지원사업 찾아줘"</div>
+
+    <div class="sub-block">
+      <div class="sub-title">공공기관</div>
+      <div class="sub-list">산업통상자원부, 한국산업기술진흥원, 대한무역투자진흥공사(KOTRA), 한국전력공사, 중소벤처기업부, 특허청</div>
+    </div>
+
+    <div class="sub-block">
+      <div class="sub-title">주요 업종</div>
+      <div class="sub-list">제조업, 반도체·IT, 자동차, 조선, 화학, 에너지, 바이오, 콘텐츠</div>
+    </div>
+  </div>
 
 </div>
 
