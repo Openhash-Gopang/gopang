@@ -698,7 +698,7 @@ let _aiHistory  = [];   // AI 채팅 대화 이력 (프록시 AI용)
 let _aiSystem   = '';   // 사업체 AI 비서 system prompt
 
 const DAYS_KO = {mon:'월',tue:'화',wed:'수',thu:'목',fri:'금',sat:'토',sun:'일'};
-const TYPE_KO = {person:'개인',business:'사업자',institution:'공공기관',org:'협회/단체',platform:'플랫폼'};
+const TYPE_KO = {person:'개인',business:'사업자',institution:'공공기관',org:'협회/단체',platform:'플랫폼',thing:'사물',concept:'개념'};
 
 // ── 로드 ─────────────────────────────────────────────────
 // inline 모드 (settings 패널 내 iframe): 최상단 스크롤 제거
@@ -1001,7 +1001,7 @@ function render(p) {
 
   // ── 업종 정보 (industry_fields 범용 렌더러) ──
   const iFields = pub.industry_fields;
-  if (iFields && p.entity_type === 'business') {
+  if (iFields && ['business', 'thing', 'concept'].includes(p.entity_type)) {
     const SKIP_KEYS = new Set(['schema_id','schema_version','envelope_version','notice_text','min_age']);
     const LABEL_MAP = {
       address:'주소', hours:'영업시간', delivery:'배달', biz_reg_no:'사업자번호',
@@ -1017,6 +1017,8 @@ function render(p) {
       fish_type:'어종', farming_method:'양식 방법', crop_type:'작물',
       farming_type:'영농 유형', certification:'인증', genre:'장르',
       format:'형식', tools:'사용 도구', dev_type:'개발 유형',
+      relations:'관계', role_description:'역할', status_line:'현재 상태',
+      verification:'인증 정보',
     };
     function _fmtVal(v) {
       if (v === null || v === undefined) return null;
@@ -2295,7 +2297,9 @@ function injectSEO(p, ident, tags) {
     '@context': 'https://schema.org',
     '@type':    p.entity_type === 'person' ? 'Person' :
                 p.entity_type === 'business' ? 'LocalBusiness' :
-                p.entity_type === 'institution' ? 'GovernmentOrganization' : 'Organization',
+                p.entity_type === 'institution' ? 'GovernmentOrganization' :
+                p.entity_type === 'thing' ? 'Product' :
+                p.entity_type === 'concept' ? 'SoftwareApplication' : 'Organization',
     name:       p.name,
     url,
     description: ident.description || p.description || '',
