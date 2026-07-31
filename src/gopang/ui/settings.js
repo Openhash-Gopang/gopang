@@ -6,6 +6,8 @@ import { _isRegistered, _isGDCUser, ensureX25519Synced } from '../core/auth.js';
 import { _USER } from '../core/state.js';
 import { appendBubble } from './bubble.js';
 import { SKIN_COLOR_KEY, watchHondiSkin, setHondiSkin } from '../../../assets/hondi-skin.js';
+import { phoneToDigits, digitsToId, generateDigitCodeDataURL, VALID_AREA_CODES }
+  from '../ai/hondi-digit-code.js';
 
 // ── 스킨 색상 (webapp.html 본문 + 좌/우 슬라이드 메뉴 공통) ─────
 // 팔레트 정의는 /assets/hondi-skin.js 한 곳에만 있다(과거에는 이
@@ -1382,20 +1384,50 @@ export function _downloadHondiCode() {
   a.click();
 }
 
-// ── 다른 기기 QR 연결 모달 (2026-07-31 신설) ────────────────────
+// ── e164 → {type, areaCode, subscriberNumber} 파싱 ────────────
+// auth/device-link.html의 _parseE164Kr()와 동일한 규칙(로컬 클로저라
+// 재사용 불가 — 여기서 동일 로직을 유지). 세 갈래(휴대폰/서울 유선/그 외
+// 유선)를 VALID_AREA_CODES 기준으로 구분한다.
+function _parseE164Kr(e164) {
+  if (!e164) return null;
+  const digits = e164.replace(/^\+82/, '');
+  if (digits.length === 11 && digits.startsWith('010')) {
+    return { type: 'mobile', areaCode: null, subscriberNumber: digits.slice(3) };
+  }
+  for (const code of VALID_AREA_CODES) {
+    const prefix = '0' + code;
+    if (digits.startsWith(prefix)) {
+      return { type: 'landline', areaCode: code, subscriberNumber: digits.slice(prefix.length) };
+    }
+  }
+  return null;
+}
+
+// ── 다른 기기 연결 모달 (2026-07-31 신설, 같은 날 QR→혼디 숫자 코드로 교체) ──
 // "폰이나 PC에서 자신의 계정을 간단히 호출할 방안"(주피터 요청) — 이미
-// 로그인돼 있는 기기(예: PC)에서 QR을 띄우면, 새 기기(예: 폰) 카메라로
-// 스캔하는 것만으로 auth/device-link.html이 열리고 곧바로 승인 요청이
-// 전송된다. auth/device-link.html은 ?phone= 쿼리가 있으면(PREFILLED_PHONE)
-// 전화번호 입력 화면을 건너뛰고 즉시 요청을 보내도록 이미 구현돼 있으므로
-// (2026-07-28 변경분 참고), 여기서는 그 URL을 QR로 인코딩해 보여주기만
-// 하면 된다 — 백엔드 변경도, 기존 SMS 인증 경로 우회도 전혀 없다.
+// 로그인돼 있는 기기(예: PC)에서 코드를 띄우면, 새 기기(예: 폰)가 혼디
+// 앱 자체의 카메라 스캐너(auth/link-scan.html)로 그 코드를 찍는 것만으로
+// auth/device-link.html이 전화번호 입력 없이 곧바로 승인 요청을 전송한다.
+// auth/device-link.html은 ?phone= 쿼리가 있으면(PREFILLED_PHONE) 전화번호
+// 입력 화면을 건너뛰고 즉시 요청을 보내도록 이미 구현돼 있다(2026-07-28
+// 변경분 참고) — 여기서는 그 전화번호를 혼디 숫자 코드로 인코딩해
+// 보여주기만 하면 된다.
+//
+// ★ 2026-07-31 교체 — 원래는 외부 api.qrserver.com으로 일반 QR을
+// 생성했으나, 저장소 안에 이미 "혼디 숫자 코드"(hondi-digit-code.js)라는
+// 자체 시각코드 체계가 있고, 그 인코더가 phoneToDigits()라는 전화번호
+// 전용 인코딩까지 이미 갖추고 있었다(docs/pages/scenarios.html의 "QR
+// Code vs. 혼디 코드" 비교표에도 "전화번호를 직접 인코딩 — 등록된
+// 전화번호와 정확히 일치해야 하며, 위조 방지는 L1 서버의 실시간 대조로
+// 이뤄짐"이라고 이미 설계돼 있던 용도). 외부 서비스 호출 없이(전화번호
+// 유래 코드를 제3자 QR API로 보내지 않아도 되고) 100% 클라이언트에서
+// 캔버스로 그려지며, 브랜드 자산(로고)도 재사용된다.
 // ★ 2026-07-19 QR "로그인"(auth/qr-scan.html) 자체는 주피터 지시로
 // 폐기됐다(SMS 인증만이 유일한 본인 확인 경로) — 이건 다른 것이다. 이
-// QR은 인증을 대신하지 않는다. 여전히 실제 승인은 이미 로그인된 기기에서
-// 생체인증으로 이뤄지고, 이 QR은 그 승인 요청 화면을 "직접 타이핑하지
-// 않고" 열어주는 바로가기일 뿐이다.
-function _currentUserForQR() {
+// 코드는 인증을 대신하지 않는다. 여전히 실제 승인은 이미 로그인된
+// 기기에서 생체인증으로 이뤄지고, 이 코드는 전화번호를 직접 타이핑하지
+// 않고 그 승인 요청 화면을 열어주는 바로가기일 뿐이다.
+function _currentUserForCode() {
   if (_USER?.e164) return _USER;
   try {
     const s = JSON.parse(
@@ -1406,16 +1438,17 @@ function _currentUserForQR() {
   } catch { return null; }
 }
 
-export function openDeviceLinkQR() {
+export async function openDeviceLinkQR() {
   const modal   = document.getElementById('device-link-qr-modal');
   const imgEl   = document.getElementById('device-link-qr-img');
   const errEl   = document.getElementById('device-link-qr-error');
   const linkBox = document.getElementById('device-link-qr-linkbox');
   if (!modal) return;
 
-  const user = _currentUserForQR();
-  if (!user?.e164) {
-    // 전화번호 인증 전(게스트 등)에는 연결할 계정 자체가 없다.
+  const user = _currentUserForCode();
+  const parsed = _parseE164Kr(user?.e164);
+  if (!parsed) {
+    // 전화번호 인증 전(게스트 등)이거나 파싱 불가한 형식 — 연결할 계정 자체가 없다.
     if (imgEl)   imgEl.style.display = 'none';
     if (linkBox) linkBox.style.display = 'none';
     if (errEl)   errEl.style.display = 'block';
@@ -1427,18 +1460,27 @@ export function openDeviceLinkQR() {
   const targetUrl = 'https://hondi.net/auth/device-link.html'
     + '?phone=' + encodeURIComponent(user.e164)
     + '&return=' + encodeURIComponent('/webapp.html');
-  const qrImgUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='
-    + encodeURIComponent(targetUrl);
 
-  if (imgEl) { imgEl.src = qrImgUrl; imgEl.style.display = 'block'; }
-  if (errEl) errEl.style.display = 'none';
   if (linkBox) {
     linkBox.style.display = 'flex';
     linkBox.dataset.link = targetUrl;
   }
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+
+  try {
+    const digits  = phoneToDigits(parsed);
+    const shortId = digitsToId(digits);
+    const dataUrl = await generateDigitCodeDataURL(shortId);
+    if (imgEl) { imgEl.src = dataUrl; imgEl.style.display = 'block'; }
+    if (errEl) errEl.style.display = 'none';
+  } catch (e) {
+    console.error('[DeviceLinkCode] 생성 실패:', e);
+    if (imgEl) imgEl.style.display = 'none';
+    if (errEl) { errEl.textContent = '코드 생성 중 오류가 발생했습니다: ' + e.message; errEl.style.display = 'block'; }
+  }
 }
+
 
 export function closeDeviceLinkQR() {
   const modal = document.getElementById('device-link-qr-modal');
