@@ -1,0 +1,45 @@
+name: Check ksic-parent-map.json freshness against ksic-flat.csv
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/classification/ksic-flat.csv'
+      - 'data/classification/ksic-parent-map.json'
+      - 'tools/build_ksic_parent_map.py'
+      - 'tools/check_ksic_parent_map_freshness.py'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'data/classification/ksic-flat.csv'
+      - 'data/classification/ksic-parent-map.json'
+      - 'tools/build_ksic_parent_map.py'
+      - 'tools/check_ksic_parent_map_freshness.py'
+  schedule:
+    # ksic-flat.csv만 고치고 ksic-parent-map.json 재생성을 깜빡하는
+    # 실수는 위 paths 트리거만으로는 못 잡을 수 있다(예: csv가 다른
+    # 브랜치 병합으로 간접적으로 바뀌는 경우) — check_wallet_sync.py·
+    # check_capabilities_registry.py와 동일한 철학으로 매일 1회 별도로도 돈다.
+    - cron: '40 21 * * *'  # 매일 06:40 KST
+  workflow_dispatch:
+
+jobs:
+  check-ksic-parent-map-freshness:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ── §TEMPLATE-REFERENCE의 계층 조회(worker.js _l1FindTemplateReferenceProfiles)가
+      # 이 JSON을 세분류→소분류→중분류→대분류 부모맵으로 그대로 신뢰한다.
+      # ksic-flat.csv만 고치고 재생성(build_ksic_parent_map.py)을 깜빡하면
+      # 조회가 실제 KSIC 계층과 다른 잘못된 상위 코드로 올라가게 되므로,
+      # 매 push·PR·매일 스케줄마다 직접 재대조한다.
+      - name: Run ksic-parent-map freshness check
+        run: python3 tools/check_ksic_parent_map_freshness.py
