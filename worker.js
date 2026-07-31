@@ -7554,6 +7554,7 @@ export default {
     if (pathname === '/sp-updates/draft-patch')  return handleSpUpdatesDraftPatch(request, env, corsHeaders);
     if (pathname === '/user-feedback/submit')    return handleUserFeedbackSubmit(request, env, corsHeaders);
     if (pathname === '/profile/field-event')     return handleProfileFieldEvent(request, env, corsHeaders);
+    if (pathname === '/template-candidate/submit') return handleTemplateCandidateSubmit(request, env, corsHeaders);
     if (pathname === '/embed-text')              return handleEmbedText(request, env, corsHeaders);
 
     // ── PDV 조회 동의 승인 페이지 (consent.html 전용, 2026-07-02 신설) ──
@@ -11270,6 +11271,49 @@ async function handleProfileFieldEvent(request, env, corsHeaders) {
   if (!res.ok) {
     const err = await res.text().catch(() => res.status);
     return _err(503, 'PROFILE_FIELD_EVENT_SUBMIT_FAILED', String(err), corsHeaders);
+  }
+  const saved = await res.json().catch(() => ({}));
+  return new Response(JSON.stringify({ ok: true, id: saved.id || null }), { status: 200, headers: corsHeaders });
+}
+
+// ═══════════════════════════════════════════════════════════
+// (2026-0X-XX 신설) [TEMPLATE_CANDIDATE] 태그가 지금까지 localStorage
+// (hondi_template_candidates)에만 큐잉되고 서버로 전송된 적이 없었다
+// (PA 전용 사고실험으로 발견 — USER_FEEDBACK이 예전에 겪은 것과 같은
+// 결함). §RENEWALING(tools/renew_identity_templates.py)이 사람이
+// 리뷰할 최초 사례 후보를 여기서 읽을 수 있도록 실제 서버 컬렉션에
+// 남긴다. schema_id/job_ksco_code/work_domain 중 정확히 하나만 와야
+// 하고(§TEMPLATE-LISTING이 축마다 별도 태그를 낸다), 여기서 category_key로
+// 정규화한다 — renew_identity_templates.py의 기존 접두사 체계(ksic:/
+// ksco:/workdomain:)와 동일하게 맞춰 향후 그 스크립트가 이 컬렉션까지
+// 함께 읽을 때 사본이 갈라지지 않게 한다.
+// ═══════════════════════════════════════════════════════════
+async function handleTemplateCandidateSubmit(request, env, corsHeaders) {
+  if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  const body = await request.json().catch(() => null);
+  if (!body?.fields) return _err(400, 'SCHEMA_ERROR', 'fields 필드 필수', corsHeaders);
+
+  let categoryKey = null;
+  if (body.schema_id) categoryKey = `ksic:${body.schema_id}`;
+  else if (body.job_ksco_code) categoryKey = `ksco:${body.job_ksco_code}`;
+  else if (body.work_domain) categoryKey = `workdomain:${body.work_domain}`;
+  if (!categoryKey) return _err(400, 'SCHEMA_ERROR', 'schema_id, job_ksco_code, work_domain 중 정확히 1개 필수', corsHeaders);
+
+  const payload = {
+    guid: body.guid || null,
+    category_key: categoryKey.slice(0, 100),
+    fields: String(body.fields).slice(0, 1000),
+    context_sp: body.context_sp || 'profile-assistant',
+  };
+
+  const res = await fetch(`${L1_DEFAULT}/api/collections/template_candidates/records`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => res.status);
+    return _err(503, 'TEMPLATE_CANDIDATE_SUBMIT_FAILED', String(err), corsHeaders);
   }
   const saved = await res.json().catch(() => ({}));
   return new Response(JSON.stringify({ ok: true, id: saved.id || null }), { status: 200, headers: corsHeaders });
