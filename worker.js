@@ -2027,6 +2027,16 @@ const SVC_ALIAS = {
   'kinsurance':'insurance','ktax':'tax','kcommerce':'market',
   'ktransport':'traffic','klogistics':'logistics','fiil-kcleaner':'fiil',
   'kgov':'public','kdemocracy':'democracy',
+  // ── 2026-07-31 스모크 테스트에서 발견된 누락 6종 추가 — 서비스 자체는
+  // 정상 동작했으나 이 별칭이 없어 _getSvcRegistration()이 REGISTERED_SERVICES를
+  // 못 찾고 *.gopang.net 폴백(level:1)으로 떨어져 PDV 신뢰 등급이 의도보다
+  // 낮게 처리되고 있었다. 매핑 근거는 각 서비스의 실제 url(gwp-registry.js):
+  'kcommerce_seller':'market',  // url market.hondi.net/desktop.html#seller — kcommerce와 동일 도메인
+  'kbusiness':'market',         // url market.hondi.net/kmarket_admin_dashboard.html
+  'kregionalgov':'gopang',      // 2026-07-22 hondi.net 자체로 이전(전용 서브도메인 폐지)
+  'profile-assistant':'gopang', // url이 /pages/... 상대경로 — hondi.net 내부
+  'kusers':'users',             // url users.hondi.net — REGISTERED_SERVICES엔 이미 있었으나 별칭만 없었음
+  'kqna':'qna',                 // url qna.hondi.net — REGISTERED_SERVICES 자체가 없어 위에서 신규 등록(level:3, minAuth:'L0')
   // ── 백업 별칭(2026-07-03) — GOV_AGENCIES/AGENCY_ID를 REGISTERED_SERVICES
   // 키와 통일했지만, 혹시 남은 캐시된 클라이언트나 실수로 하이픈형을 보내는
   // 경우에도 /pdv/report가 조용히 실패하지 않도록 하는 안전망. GOV_AGENCIES
@@ -11858,7 +11868,7 @@ async function _verifyChallengeToken(env,chalB64,exp,sig){if(exp<Math.floor(Date
 //  s.webauthn?.credentialId 값을 "여러 인증 신호 중 하나"로 읽기만
 //  할 뿐, 그 값을 채워 넣을 호출부 자체가 없어 항상 undefined였다.
 //  Supabase webauthn_credentials 의존이라 정리 대상.)
-const REGISTERED_SERVICES={'gopang':{level:3,domain:'hondi.net',minAuth:'L0',pdv:true},'klaw':{level:3,domain:'klaw.hondi.net',minAuth:'L0',pdv:true},'market':{level:3,domain:'market.hondi.net',minAuth:'L0',pdv:true},'school':{level:3,domain:'school.hondi.net',minAuth:'L0',pdv:true},'security':{level:3,domain:'security.hondi.net',minAuth:'L1',pdv:true},'health':{level:3,domain:'health.hondi.net',minAuth:'L1',pdv:true},'tax':{level:3,domain:'tax.hondi.net',minAuth:'L0',pdv:true},'gdc':{level:3,domain:'gdc.hondi.net',minAuth:'L1',pdv:true},'public':{level:3,domain:'public.hondi.net',minAuth:'L0',pdv:true},'democracy':{level:3,domain:'democracy.hondi.net',minAuth:'L1',pdv:true},'911':{level:3,domain:'911.hondi.net',minAuth:'L0',pdv:true},'police':{level:3,domain:'police.hondi.net',minAuth:'L1',pdv:true},'insurance':{level:3,domain:'insurance.hondi.net',minAuth:'L1',pdv:true},'stock':{level:3,domain:'stock.hondi.net',minAuth:'L1',pdv:true},'traffic':{level:3,domain:'traffic.hondi.net',minAuth:'L0',pdv:true},'logistics':{level:3,domain:'logistics.hondi.net',minAuth:'L0',pdv:true},'fiil':{level:2,domain:'fiil.kr',minAuth:'L0',pdv:true},'klaw-ext':{level:2,domain:'klaw.openhash.kr',minAuth:'L0',pdv:false},'users':{level:3,domain:'users.hondi.net',minAuth:'L0',pdv:false}};
+const REGISTERED_SERVICES={'gopang':{level:3,domain:'hondi.net',minAuth:'L0',pdv:true},'klaw':{level:3,domain:'klaw.hondi.net',minAuth:'L0',pdv:true},'market':{level:3,domain:'market.hondi.net',minAuth:'L0',pdv:true},'school':{level:3,domain:'school.hondi.net',minAuth:'L0',pdv:true},'security':{level:3,domain:'security.hondi.net',minAuth:'L1',pdv:true},'health':{level:3,domain:'health.hondi.net',minAuth:'L1',pdv:true},'tax':{level:3,domain:'tax.hondi.net',minAuth:'L0',pdv:true},'gdc':{level:3,domain:'gdc.hondi.net',minAuth:'L1',pdv:true},'public':{level:3,domain:'public.hondi.net',minAuth:'L0',pdv:true},'democracy':{level:3,domain:'democracy.hondi.net',minAuth:'L1',pdv:true},'911':{level:3,domain:'911.hondi.net',minAuth:'L0',pdv:true},'police':{level:3,domain:'police.hondi.net',minAuth:'L1',pdv:true},'insurance':{level:3,domain:'insurance.hondi.net',minAuth:'L1',pdv:true},'stock':{level:3,domain:'stock.hondi.net',minAuth:'L1',pdv:true},'traffic':{level:3,domain:'traffic.hondi.net',minAuth:'L0',pdv:true},'logistics':{level:3,domain:'logistics.hondi.net',minAuth:'L0',pdv:true},'fiil':{level:2,domain:'fiil.kr',minAuth:'L0',pdv:true},'klaw-ext':{level:2,domain:'klaw.openhash.kr',minAuth:'L0',pdv:false},'users':{level:3,domain:'users.hondi.net',minAuth:'L0',pdv:false},'qna':{level:3,domain:'qna.hondi.net',minAuth:'L0',pdv:true}};
 function _getSvcRegistration(origin,svcId){const resolvedId=_resolveSvcId(svcId);const svc=REGISTERED_SERVICES[resolvedId];if(svc&&origin.includes(svc.domain))return{...svc,svcId:resolvedId,originalId:svcId};if(/^https:\/\/[a-z0-9-]+\.gopang\.net$/.test(origin))return{level:1,domain:origin,minAuth:'L0',pdv:false,svcId:resolvedId,originalId:svcId};return null;}
 async function handleSvcRegister(request,env,corsHeaders){
   if(request.method!=='POST')return new Response('Method Not Allowed',{status:405});
