@@ -1,0 +1,6457 @@
+[
+  {
+    "no": 1,
+    "entity_type_expected": "business",
+    "opening_line": "금능반점인데, 한림읍에서 도매 및 상품 중개업 해요.",
+    "persona_facts": {
+      "code": "46",
+      "code_label": "도매 및 상품 중개업",
+      "tier": "Tier1",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "도매 및 상품 중개업(46) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 2,
+    "entity_type_expected": "business",
+    "opening_line": "저 애월읍에서 도매 및 상품 중개업 하나 차렸어요, 한림수산이라고 해요.",
+    "persona_facts": {
+      "code": "46",
+      "code_label": "도매 및 상품 중개업",
+      "tier": "Tier1",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "도매 및 상품 중개업(46) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 3,
+    "entity_type_expected": "business",
+    "opening_line": "제주감귤농원 사장입니다. 조천읍에서 도매 및 상품 중개업 하고 있어요.",
+    "persona_facts": {
+      "code": "46",
+      "code_label": "도매 및 상품 중개업",
+      "tier": "Tier1",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "도매 및 상품 중개업(46) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 4,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 노형카페이고, 도매 및 상품 중개업 업종이에요. 구좌읍에 있어요.",
+    "persona_facts": {
+      "code": "46",
+      "code_label": "도매 및 상품 중개업",
+      "tier": "Tier1",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "도매 및 상품 중개업(46) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 5,
+    "entity_type_expected": "business",
+    "opening_line": "서귀포게스트하우스인데, 성산읍에서 도매 및 상품 중개업 해요.",
+    "persona_facts": {
+      "code": "46",
+      "code_label": "도매 및 상품 중개업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "도매 및 상품 중개업(46) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 6,
+    "entity_type_expected": "business",
+    "opening_line": "저 표선면에서 도매 및 상품 중개업 하나 차렸어요, 삼도이발소이라고 해요.",
+    "persona_facts": {
+      "code": "46",
+      "code_label": "도매 및 상품 중개업",
+      "tier": "Tier1",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "도매 및 상품 중개업(46) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 7,
+    "entity_type_expected": "business",
+    "opening_line": "연동꽃집 사장입니다. 남원읍에서 농업 하고 있어요.",
+    "persona_facts": {
+      "code": "01",
+      "code_label": "농업",
+      "tier": "Tier1",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "농업(01) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 8,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 아라동정비소이고, 농업 업종이에요. 안덕면에 있어요.",
+    "persona_facts": {
+      "code": "01",
+      "code_label": "농업",
+      "tier": "Tier1",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "농업(01) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 9,
+    "entity_type_expected": "business",
+    "opening_line": "도두동빨래방인데, 대정읍에서 농업 해요.",
+    "persona_facts": {
+      "code": "01",
+      "code_label": "농업",
+      "tier": "Tier1",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_EXISTING_PILOT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "농업(01) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_EXISTING_PILOT 조합 정상 처리"
+  },
+  {
+    "no": 10,
+    "entity_type_expected": "business",
+    "opening_line": "저 한경면에서 농업 하나 차렸어요, 대정읍정미소이라고 해요.",
+    "persona_facts": {
+      "code": "01",
+      "code_label": "농업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_EXISTING_PILOT",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "농업(01) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_EXISTING_PILOT 조합 정상 처리"
+  },
+  {
+    "no": 11,
+    "entity_type_expected": "business",
+    "opening_line": "성산다이빙샵 사장입니다. 이도동에서 농업 하고 있어요.",
+    "persona_facts": {
+      "code": "01",
+      "code_label": "농업",
+      "tier": "Tier1",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "농업(01) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 12,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 표선펜션이고, 농업 업종이에요. 노형동에 있어요.",
+    "persona_facts": {
+      "code": "01",
+      "code_label": "농업",
+      "tier": "Tier1",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "농업(01) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 13,
+    "entity_type_expected": "business",
+    "opening_line": "한경풍력농장인데, 연동에서 어업 해요.",
+    "persona_facts": {
+      "code": "03",
+      "code_label": "어업",
+      "tier": "Tier1",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "어업(03) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 14,
+    "entity_type_expected": "business",
+    "opening_line": "저 삼도동에서 어업 하나 차렸어요, 안덕돌하르방공방이라고 해요.",
+    "persona_facts": {
+      "code": "03",
+      "code_label": "어업",
+      "tier": "Tier1",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "어업(03) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 15,
+    "entity_type_expected": "business",
+    "opening_line": "조천전복양식장 사장입니다. 화북동에서 어업 하고 있어요.",
+    "persona_facts": {
+      "code": "03",
+      "code_label": "어업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "어업(03) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 16,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 구좌당근밭이고, 어업 업종이에요. 삼양동에 있어요.",
+    "persona_facts": {
+      "code": "03",
+      "code_label": "어업",
+      "tier": "Tier1",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "어업(03) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 17,
+    "entity_type_expected": "business",
+    "opening_line": "화북철물점인데, 아라동에서 어업 해요.",
+    "persona_facts": {
+      "code": "03",
+      "code_label": "어업",
+      "tier": "Tier1",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "어업(03) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 18,
+    "entity_type_expected": "business",
+    "opening_line": "저 오라동에서 어업 하나 차렸어요, 삼양흑돼지식당이라고 해요.",
+    "persona_facts": {
+      "code": "03",
+      "code_label": "어업",
+      "tier": "Tier1",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "어업(03) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 19,
+    "entity_type_expected": "business",
+    "opening_line": "이도동약국옆분식 사장입니다. 도두동에서 소매업; 자동차 제외 하고 있어요.",
+    "persona_facts": {
+      "code": "47",
+      "code_label": "소매업; 자동차 제외",
+      "tier": "Tier1",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "소매업; 자동차 제외(47) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 20,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 남원귤창고이고, 소매업; 자동차 제외 업종이에요. 서귀동에 있어요.",
+    "persona_facts": {
+      "code": "47",
+      "code_label": "소매업; 자동차 제외",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "소매업; 자동차 제외(47) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 21,
+    "entity_type_expected": "business",
+    "opening_line": "금능반점인데, 한림읍에서 소매업; 자동차 제외 해요.",
+    "persona_facts": {
+      "code": "47",
+      "code_label": "소매업; 자동차 제외",
+      "tier": "Tier1",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "소매업; 자동차 제외(47) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 22,
+    "entity_type_expected": "business",
+    "opening_line": "저 애월읍에서 소매업; 자동차 제외 하나 차렸어요, 한림수산이라고 해요.",
+    "persona_facts": {
+      "code": "47",
+      "code_label": "소매업; 자동차 제외",
+      "tier": "Tier1",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "소매업; 자동차 제외(47) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 23,
+    "entity_type_expected": "business",
+    "opening_line": "제주감귤농원 사장입니다. 조천읍에서 소매업; 자동차 제외 하고 있어요.",
+    "persona_facts": {
+      "code": "47",
+      "code_label": "소매업; 자동차 제외",
+      "tier": "Tier1",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "소매업; 자동차 제외(47) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 24,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 노형카페이고, 소매업; 자동차 제외 업종이에요. 구좌읍에 있어요.",
+    "persona_facts": {
+      "code": "47",
+      "code_label": "소매업; 자동차 제외",
+      "tier": "Tier1",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "소매업; 자동차 제외(47) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 25,
+    "entity_type_expected": "business",
+    "opening_line": "서귀포게스트하우스인데, 성산읍에서 육상 운송 및 파이프라인 운송업 해요.",
+    "persona_facts": {
+      "code": "49",
+      "code_label": "육상 운송 및 파이프라인 운송업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "육상 운송 및 파이프라인 운송업(49) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 26,
+    "entity_type_expected": "business",
+    "opening_line": "저 표선면에서 육상 운송 및 파이프라인 운송업 하나 차렸어요, 삼도이발소이라고 해요.",
+    "persona_facts": {
+      "code": "49",
+      "code_label": "육상 운송 및 파이프라인 운송업",
+      "tier": "Tier1",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "육상 운송 및 파이프라인 운송업(49) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 27,
+    "entity_type_expected": "business",
+    "opening_line": "연동꽃집 사장입니다. 남원읍에서 육상 운송 및 파이프라인 운송업 하고 있어요.",
+    "persona_facts": {
+      "code": "49",
+      "code_label": "육상 운송 및 파이프라인 운송업",
+      "tier": "Tier1",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "육상 운송 및 파이프라인 운송업(49) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 28,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 아라동정비소이고, 육상 운송 및 파이프라인 운송업 업종이에요. 안덕면에 있어요.",
+    "persona_facts": {
+      "code": "49",
+      "code_label": "육상 운송 및 파이프라인 운송업",
+      "tier": "Tier1",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "육상 운송 및 파이프라인 운송업(49) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 29,
+    "entity_type_expected": "business",
+    "opening_line": "도두동빨래방인데, 대정읍에서 육상 운송 및 파이프라인 운송업 해요.",
+    "persona_facts": {
+      "code": "49",
+      "code_label": "육상 운송 및 파이프라인 운송업",
+      "tier": "Tier1",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "육상 운송 및 파이프라인 운송업(49) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 30,
+    "entity_type_expected": "business",
+    "opening_line": "저 한경면에서 육상 운송 및 파이프라인 운송업 하나 차렸어요, 대정읍정미소이라고 해요.",
+    "persona_facts": {
+      "code": "49",
+      "code_label": "육상 운송 및 파이프라인 운송업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "육상 운송 및 파이프라인 운송업(49) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 31,
+    "entity_type_expected": "business",
+    "opening_line": "성산다이빙샵 사장입니다. 이도동에서 수상 운송업 하고 있어요.",
+    "persona_facts": {
+      "code": "50",
+      "code_label": "수상 운송업",
+      "tier": "Tier1",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "수상 운송업(50) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 32,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 표선펜션이고, 수상 운송업 업종이에요. 노형동에 있어요.",
+    "persona_facts": {
+      "code": "50",
+      "code_label": "수상 운송업",
+      "tier": "Tier1",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "수상 운송업(50) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 33,
+    "entity_type_expected": "business",
+    "opening_line": "한경풍력농장인데, 연동에서 수상 운송업 해요.",
+    "persona_facts": {
+      "code": "50",
+      "code_label": "수상 운송업",
+      "tier": "Tier1",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "수상 운송업(50) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 34,
+    "entity_type_expected": "business",
+    "opening_line": "저 삼도동에서 수상 운송업 하나 차렸어요, 안덕돌하르방공방이라고 해요.",
+    "persona_facts": {
+      "code": "50",
+      "code_label": "수상 운송업",
+      "tier": "Tier1",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "수상 운송업(50) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 35,
+    "entity_type_expected": "business",
+    "opening_line": "조천전복양식장 사장입니다. 화북동에서 수상 운송업 하고 있어요.",
+    "persona_facts": {
+      "code": "50",
+      "code_label": "수상 운송업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "수상 운송업(50) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 36,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 구좌당근밭이고, 수상 운송업 업종이에요. 삼양동에 있어요.",
+    "persona_facts": {
+      "code": "50",
+      "code_label": "수상 운송업",
+      "tier": "Tier1",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "수상 운송업(50) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 37,
+    "entity_type_expected": "business",
+    "opening_line": "화북철물점인데, 아라동에서 항공 운송업 해요.",
+    "persona_facts": {
+      "code": "51",
+      "code_label": "항공 운송업",
+      "tier": "Tier1",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "항공 운송업(51) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 38,
+    "entity_type_expected": "business",
+    "opening_line": "저 오라동에서 항공 운송업 하나 차렸어요, 삼양흑돼지식당이라고 해요.",
+    "persona_facts": {
+      "code": "51",
+      "code_label": "항공 운송업",
+      "tier": "Tier1",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "항공 운송업(51) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 39,
+    "entity_type_expected": "business",
+    "opening_line": "이도동약국옆분식 사장입니다. 도두동에서 항공 운송업 하고 있어요.",
+    "persona_facts": {
+      "code": "51",
+      "code_label": "항공 운송업",
+      "tier": "Tier1",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "항공 운송업(51) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 40,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 남원귤창고이고, 항공 운송업 업종이에요. 서귀동에 있어요.",
+    "persona_facts": {
+      "code": "51",
+      "code_label": "항공 운송업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "항공 운송업(51) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 41,
+    "entity_type_expected": "business",
+    "opening_line": "금능반점인데, 한림읍에서 항공 운송업 해요.",
+    "persona_facts": {
+      "code": "51",
+      "code_label": "항공 운송업",
+      "tier": "Tier1",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "항공 운송업(51) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 42,
+    "entity_type_expected": "business",
+    "opening_line": "저 애월읍에서 항공 운송업 하나 차렸어요, 한림수산이라고 해요.",
+    "persona_facts": {
+      "code": "51",
+      "code_label": "항공 운송업",
+      "tier": "Tier1",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "항공 운송업(51) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 43,
+    "entity_type_expected": "business",
+    "opening_line": "제주감귤농원 사장입니다. 조천읍에서 숙박업 하고 있어요.",
+    "persona_facts": {
+      "code": "55",
+      "code_label": "숙박업",
+      "tier": "Tier1",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "숙박업(55) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 44,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 노형카페이고, 숙박업 업종이에요. 구좌읍에 있어요.",
+    "persona_facts": {
+      "code": "55",
+      "code_label": "숙박업",
+      "tier": "Tier1",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "숙박업(55) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 45,
+    "entity_type_expected": "business",
+    "opening_line": "서귀포게스트하우스인데, 성산읍에서 숙박업 해요.",
+    "persona_facts": {
+      "code": "55",
+      "code_label": "숙박업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "숙박업(55) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 46,
+    "entity_type_expected": "business",
+    "opening_line": "저 표선면에서 숙박업 하나 차렸어요, 삼도이발소이라고 해요.",
+    "persona_facts": {
+      "code": "55",
+      "code_label": "숙박업",
+      "tier": "Tier1",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "숙박업(55) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 47,
+    "entity_type_expected": "business",
+    "opening_line": "연동꽃집 사장입니다. 남원읍에서 숙박업 하고 있어요.",
+    "persona_facts": {
+      "code": "55",
+      "code_label": "숙박업",
+      "tier": "Tier1",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "숙박업(55) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 48,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 아라동정비소이고, 숙박업 업종이에요. 안덕면에 있어요.",
+    "persona_facts": {
+      "code": "55",
+      "code_label": "숙박업",
+      "tier": "Tier1",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "숙박업(55) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 49,
+    "entity_type_expected": "business",
+    "opening_line": "도두동빨래방인데, 대정읍에서 음식점 및 주점업 해요.",
+    "persona_facts": {
+      "code": "56",
+      "code_label": "음식점 및 주점업",
+      "tier": "Tier1",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "음식점 및 주점업(56) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 50,
+    "entity_type_expected": "business",
+    "opening_line": "저 한경면에서 음식점 및 주점업 하나 차렸어요, 대정읍정미소이라고 해요.",
+    "persona_facts": {
+      "code": "56",
+      "code_label": "음식점 및 주점업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "음식점 및 주점업(56) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 51,
+    "entity_type_expected": "business",
+    "opening_line": "성산다이빙샵 사장입니다. 이도동에서 음식점 및 주점업 하고 있어요.",
+    "persona_facts": {
+      "code": "56",
+      "code_label": "음식점 및 주점업",
+      "tier": "Tier1",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_EXISTING_PILOT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "음식점 및 주점업(56) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_EXISTING_PILOT 조합 정상 처리"
+  },
+  {
+    "no": 52,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 표선펜션이고, 음식점 및 주점업 업종이에요. 노형동에 있어요.",
+    "persona_facts": {
+      "code": "56",
+      "code_label": "음식점 및 주점업",
+      "tier": "Tier1",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_EXISTING_PILOT",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "음식점 및 주점업(56) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_EXISTING_PILOT 조합 정상 처리"
+  },
+  {
+    "no": 53,
+    "entity_type_expected": "business",
+    "opening_line": "한경풍력농장인데, 연동에서 음식점 및 주점업 해요.",
+    "persona_facts": {
+      "code": "56",
+      "code_label": "음식점 및 주점업",
+      "tier": "Tier1",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "음식점 및 주점업(56) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 54,
+    "entity_type_expected": "business",
+    "opening_line": "저 삼도동에서 음식점 및 주점업 하나 차렸어요, 안덕돌하르방공방이라고 해요.",
+    "persona_facts": {
+      "code": "56",
+      "code_label": "음식점 및 주점업",
+      "tier": "Tier1",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "음식점 및 주점업(56) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 55,
+    "entity_type_expected": "business",
+    "opening_line": "조천전복양식장 사장입니다. 화북동에서 컴퓨터 프로그래밍, 시스템 통합 및 관리업 하고 있어요.",
+    "persona_facts": {
+      "code": "62",
+      "code_label": "컴퓨터 프로그래밍, 시스템 통합 및 관리업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "컴퓨터 프로그래밍, 시스템 통합 및 관리업(62) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 56,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 구좌당근밭이고, 컴퓨터 프로그래밍, 시스템 통합 및 관리업 업종이에요. 삼양동에 있어요.",
+    "persona_facts": {
+      "code": "62",
+      "code_label": "컴퓨터 프로그래밍, 시스템 통합 및 관리업",
+      "tier": "Tier1",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "컴퓨터 프로그래밍, 시스템 통합 및 관리업(62) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 57,
+    "entity_type_expected": "business",
+    "opening_line": "화북철물점인데, 아라동에서 컴퓨터 프로그래밍, 시스템 통합 및 관리업 해요.",
+    "persona_facts": {
+      "code": "62",
+      "code_label": "컴퓨터 프로그래밍, 시스템 통합 및 관리업",
+      "tier": "Tier1",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "컴퓨터 프로그래밍, 시스템 통합 및 관리업(62) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 58,
+    "entity_type_expected": "business",
+    "opening_line": "저 오라동에서 컴퓨터 프로그래밍, 시스템 통합 및 관리업 하나 차렸어요, 삼양흑돼지식당이라고 해요.",
+    "persona_facts": {
+      "code": "62",
+      "code_label": "컴퓨터 프로그래밍, 시스템 통합 및 관리업",
+      "tier": "Tier1",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "컴퓨터 프로그래밍, 시스템 통합 및 관리업(62) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 59,
+    "entity_type_expected": "business",
+    "opening_line": "이도동약국옆분식 사장입니다. 도두동에서 컴퓨터 프로그래밍, 시스템 통합 및 관리업 하고 있어요.",
+    "persona_facts": {
+      "code": "62",
+      "code_label": "컴퓨터 프로그래밍, 시스템 통합 및 관리업",
+      "tier": "Tier1",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "컴퓨터 프로그래밍, 시스템 통합 및 관리업(62) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 60,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 남원귤창고이고, 컴퓨터 프로그래밍, 시스템 통합 및 관리업 업종이에요. 서귀동에 있어요.",
+    "persona_facts": {
+      "code": "62",
+      "code_label": "컴퓨터 프로그래밍, 시스템 통합 및 관리업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "컴퓨터 프로그래밍, 시스템 통합 및 관리업(62) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 61,
+    "entity_type_expected": "business",
+    "opening_line": "금능반점인데, 한림읍에서 정보서비스업 해요.",
+    "persona_facts": {
+      "code": "63",
+      "code_label": "정보서비스업",
+      "tier": "Tier1",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "정보서비스업(63) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 62,
+    "entity_type_expected": "business",
+    "opening_line": "저 애월읍에서 정보서비스업 하나 차렸어요, 한림수산이라고 해요.",
+    "persona_facts": {
+      "code": "63",
+      "code_label": "정보서비스업",
+      "tier": "Tier1",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "정보서비스업(63) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 63,
+    "entity_type_expected": "business",
+    "opening_line": "제주감귤농원 사장입니다. 조천읍에서 정보서비스업 하고 있어요.",
+    "persona_facts": {
+      "code": "63",
+      "code_label": "정보서비스업",
+      "tier": "Tier1",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "정보서비스업(63) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 64,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 노형카페이고, 정보서비스업 업종이에요. 구좌읍에 있어요.",
+    "persona_facts": {
+      "code": "63",
+      "code_label": "정보서비스업",
+      "tier": "Tier1",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "정보서비스업(63) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 65,
+    "entity_type_expected": "business",
+    "opening_line": "서귀포게스트하우스인데, 성산읍에서 정보서비스업 해요.",
+    "persona_facts": {
+      "code": "63",
+      "code_label": "정보서비스업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "정보서비스업(63) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 66,
+    "entity_type_expected": "business",
+    "opening_line": "저 표선면에서 정보서비스업 하나 차렸어요, 삼도이발소이라고 해요.",
+    "persona_facts": {
+      "code": "63",
+      "code_label": "정보서비스업",
+      "tier": "Tier1",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "정보서비스업(63) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 67,
+    "entity_type_expected": "business",
+    "opening_line": "연동꽃집 사장입니다. 남원읍에서 임대업; 부동산 제외 하고 있어요.",
+    "persona_facts": {
+      "code": "76",
+      "code_label": "임대업; 부동산 제외",
+      "tier": "Tier1",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "임대업; 부동산 제외(76) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 68,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 아라동정비소이고, 임대업; 부동산 제외 업종이에요. 안덕면에 있어요.",
+    "persona_facts": {
+      "code": "76",
+      "code_label": "임대업; 부동산 제외",
+      "tier": "Tier1",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "임대업; 부동산 제외(76) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 69,
+    "entity_type_expected": "business",
+    "opening_line": "도두동빨래방인데, 대정읍에서 임대업; 부동산 제외 해요.",
+    "persona_facts": {
+      "code": "76",
+      "code_label": "임대업; 부동산 제외",
+      "tier": "Tier1",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "임대업; 부동산 제외(76) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 70,
+    "entity_type_expected": "business",
+    "opening_line": "저 한경면에서 임대업; 부동산 제외 하나 차렸어요, 대정읍정미소이라고 해요.",
+    "persona_facts": {
+      "code": "76",
+      "code_label": "임대업; 부동산 제외",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "임대업; 부동산 제외(76) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 71,
+    "entity_type_expected": "business",
+    "opening_line": "성산다이빙샵 사장입니다. 이도동에서 임대업; 부동산 제외 하고 있어요.",
+    "persona_facts": {
+      "code": "76",
+      "code_label": "임대업; 부동산 제외",
+      "tier": "Tier1",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "임대업; 부동산 제외(76) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 72,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 표선펜션이고, 임대업; 부동산 제외 업종이에요. 노형동에 있어요.",
+    "persona_facts": {
+      "code": "76",
+      "code_label": "임대업; 부동산 제외",
+      "tier": "Tier1",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "임대업; 부동산 제외(76) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 73,
+    "entity_type_expected": "business",
+    "opening_line": "한경풍력농장인데, 연동에서 창작, 예술 및 여가관련 서비스업 해요.",
+    "persona_facts": {
+      "code": "90",
+      "code_label": "창작, 예술 및 여가관련 서비스업",
+      "tier": "Tier1",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "창작, 예술 및 여가관련 서비스업(90) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 74,
+    "entity_type_expected": "business",
+    "opening_line": "저 삼도동에서 창작, 예술 및 여가관련 서비스업 하나 차렸어요, 안덕돌하르방공방이라고 해요.",
+    "persona_facts": {
+      "code": "90",
+      "code_label": "창작, 예술 및 여가관련 서비스업",
+      "tier": "Tier1",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "창작, 예술 및 여가관련 서비스업(90) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 75,
+    "entity_type_expected": "business",
+    "opening_line": "조천전복양식장 사장입니다. 화북동에서 창작, 예술 및 여가관련 서비스업 하고 있어요.",
+    "persona_facts": {
+      "code": "90",
+      "code_label": "창작, 예술 및 여가관련 서비스업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "창작, 예술 및 여가관련 서비스업(90) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 76,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 구좌당근밭이고, 창작, 예술 및 여가관련 서비스업 업종이에요. 삼양동에 있어요.",
+    "persona_facts": {
+      "code": "90",
+      "code_label": "창작, 예술 및 여가관련 서비스업",
+      "tier": "Tier1",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "창작, 예술 및 여가관련 서비스업(90) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 77,
+    "entity_type_expected": "business",
+    "opening_line": "화북철물점인데, 아라동에서 창작, 예술 및 여가관련 서비스업 해요.",
+    "persona_facts": {
+      "code": "90",
+      "code_label": "창작, 예술 및 여가관련 서비스업",
+      "tier": "Tier1",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "창작, 예술 및 여가관련 서비스업(90) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 78,
+    "entity_type_expected": "business",
+    "opening_line": "저 오라동에서 창작, 예술 및 여가관련 서비스업 하나 차렸어요, 삼양흑돼지식당이라고 해요.",
+    "persona_facts": {
+      "code": "90",
+      "code_label": "창작, 예술 및 여가관련 서비스업",
+      "tier": "Tier1",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "창작, 예술 및 여가관련 서비스업(90) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 79,
+    "entity_type_expected": "business",
+    "opening_line": "이도동약국옆분식 사장입니다. 도두동에서 스포츠 및 오락관련 서비스업 하고 있어요.",
+    "persona_facts": {
+      "code": "91",
+      "code_label": "스포츠 및 오락관련 서비스업",
+      "tier": "Tier1",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "스포츠 및 오락관련 서비스업(91) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 80,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 남원귤창고이고, 스포츠 및 오락관련 서비스업 업종이에요. 서귀동에 있어요.",
+    "persona_facts": {
+      "code": "91",
+      "code_label": "스포츠 및 오락관련 서비스업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "스포츠 및 오락관련 서비스업(91) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 81,
+    "entity_type_expected": "business",
+    "opening_line": "금능반점인데, 한림읍에서 스포츠 및 오락관련 서비스업 해요.",
+    "persona_facts": {
+      "code": "91",
+      "code_label": "스포츠 및 오락관련 서비스업",
+      "tier": "Tier1",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "스포츠 및 오락관련 서비스업(91) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 82,
+    "entity_type_expected": "business",
+    "opening_line": "저 애월읍에서 스포츠 및 오락관련 서비스업 하나 차렸어요, 한림수산이라고 해요.",
+    "persona_facts": {
+      "code": "91",
+      "code_label": "스포츠 및 오락관련 서비스업",
+      "tier": "Tier1",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "스포츠 및 오락관련 서비스업(91) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 83,
+    "entity_type_expected": "business",
+    "opening_line": "제주감귤농원 사장입니다. 조천읍에서 스포츠 및 오락관련 서비스업 하고 있어요.",
+    "persona_facts": {
+      "code": "91",
+      "code_label": "스포츠 및 오락관련 서비스업",
+      "tier": "Tier1",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "스포츠 및 오락관련 서비스업(91) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 84,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 노형카페이고, 스포츠 및 오락관련 서비스업 업종이에요. 구좌읍에 있어요.",
+    "persona_facts": {
+      "code": "91",
+      "code_label": "스포츠 및 오락관련 서비스업",
+      "tier": "Tier1",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "스포츠 및 오락관련 서비스업(91) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 85,
+    "entity_type_expected": "business",
+    "opening_line": "서귀포게스트하우스인데, 성산읍에서 기타 개인 서비스업 해요.",
+    "persona_facts": {
+      "code": "96",
+      "code_label": "기타 개인 서비스업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "GDC_Y_ACCT_N",
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "기타 개인 서비스업(96) — HIER_OWN/GDC_Y_ACCT_N/RESV_Y 조합 정상 처리"
+  },
+  {
+    "no": 86,
+    "entity_type_expected": "business",
+    "opening_line": "저 표선면에서 기타 개인 서비스업 하나 차렸어요, 삼도이발소이라고 해요.",
+    "persona_facts": {
+      "code": "96",
+      "code_label": "기타 개인 서비스업",
+      "tier": "Tier1",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_N_ACCT_Y",
+      "RESV_N",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC는 필요 없고, 계좌이체(은행·계좌번호·예금주명을 임의로 정해 알려줌)만 등록하고 싶다고 답하세요.",
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "기타 개인 서비스업(96) — HIER_CLIMB/GDC_N_ACCT_Y/RESV_N 조합 정상 처리"
+  },
+  {
+    "no": 87,
+    "entity_type_expected": "business",
+    "opening_line": "연동꽃집 사장입니다. 남원읍에서 기타 개인 서비스업 하고 있어요.",
+    "persona_facts": {
+      "code": "96",
+      "code_label": "기타 개인 서비스업",
+      "tier": "Tier1",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "IMAGE_MENU",
+      "GDC_Y_ACCT_Y",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "기타 개인 서비스업(96) — IMAGE_MENU/GDC_Y_ACCT_Y/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 88,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 아라동정비소이고, 기타 개인 서비스업 업종이에요. 안덕면에 있어요.",
+    "persona_facts": {
+      "code": "96",
+      "code_label": "기타 개인 서비스업",
+      "tier": "Tier1",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "IMAGE_SIGNAGE",
+      "GDC_N_ACCT_N",
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "기타 개인 서비스업(96) — IMAGE_SIGNAGE/GDC_N_ACCT_N/AUTO_REALTIME_GEN 조합 정상 처리"
+  },
+  {
+    "no": 89,
+    "entity_type_expected": "business",
+    "opening_line": "도두동빨래방인데, 대정읍에서 기타 개인 서비스업 해요.",
+    "persona_facts": {
+      "code": "96",
+      "code_label": "기타 개인 서비스업",
+      "tier": "Tier1",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "FIELD_ADD",
+      "MULTIVALUE_ONETURN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "기타 개인 서비스업(96) — DIGITAL_BRIDGE_EXIST/FIELD_ADD/MULTIVALUE_ONETURN 조합 정상 처리"
+  },
+  {
+    "no": 90,
+    "entity_type_expected": "business",
+    "opening_line": "저 한경면에서 기타 개인 서비스업 하나 차렸어요, 대정읍정미소이라고 해요.",
+    "persona_facts": {
+      "code": "96",
+      "code_label": "기타 개인 서비스업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "FIELD_REMOVE",
+      "VISIBILITY_REQUEST",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "\"전화번호는 다른 사람들한테 안 보이게 해주세요\" 처럼 특정 항목의 비공개를 명시적으로 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "기타 개인 서비스업(96) — DIGITAL_BRIDGE_MISSING/FIELD_REMOVE/VISIBILITY_REQUEST 조합 정상 처리"
+  },
+  {
+    "no": 91,
+    "entity_type_expected": "business",
+    "opening_line": "성산다이빙샵 사장입니다. 이도동에서 담배 제조업 하고 있어요.",
+    "persona_facts": {
+      "code": "12",
+      "code_label": "담배 제조업",
+      "tier": "Tier3",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 92,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 표선펜션이고, 담배 제조업 업종이에요. 노형동에 있어요.",
+    "persona_facts": {
+      "code": "12",
+      "code_label": "담배 제조업",
+      "tier": "Tier3",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 93,
+    "entity_type_expected": "business",
+    "opening_line": "한경풍력농장인데, 연동에서 코크스, 연탄 및 석유정제품 제조업 해요.",
+    "persona_facts": {
+      "code": "19",
+      "code_label": "코크스, 연탄 및 석유정제품 제조업",
+      "tier": "Tier3",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 94,
+    "entity_type_expected": "business",
+    "opening_line": "저 삼도동에서 코크스, 연탄 및 석유정제품 제조업 하나 차렸어요, 안덕돌하르방공방이라고 해요.",
+    "persona_facts": {
+      "code": "19",
+      "code_label": "코크스, 연탄 및 석유정제품 제조업",
+      "tier": "Tier3",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 95,
+    "entity_type_expected": "business",
+    "opening_line": "조천전복양식장 사장입니다. 화북동에서 의료용 물질 및 의약품 제조업 하고 있어요.",
+    "persona_facts": {
+      "code": "21",
+      "code_label": "의료용 물질 및 의약품 제조업",
+      "tier": "Tier3",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 96,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 구좌당근밭이고, 의료용 물질 및 의약품 제조업 업종이에요. 삼양동에 있어요.",
+    "persona_facts": {
+      "code": "21",
+      "code_label": "의료용 물질 및 의약품 제조업",
+      "tier": "Tier3",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 97,
+    "entity_type_expected": "business",
+    "opening_line": "화북철물점인데, 아라동에서 의료, 정밀, 광학 기기 및 시계 제조업 해요.",
+    "persona_facts": {
+      "code": "27",
+      "code_label": "의료, 정밀, 광학 기기 및 시계 제조업",
+      "tier": "Tier3",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 98,
+    "entity_type_expected": "business",
+    "opening_line": "저 오라동에서 의료, 정밀, 광학 기기 및 시계 제조업 하나 차렸어요, 삼양흑돼지식당이라고 해요.",
+    "persona_facts": {
+      "code": "27",
+      "code_label": "의료, 정밀, 광학 기기 및 시계 제조업",
+      "tier": "Tier3",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 99,
+    "entity_type_expected": "business",
+    "opening_line": "이도동약국옆분식 사장입니다. 도두동에서 금융업 하고 있어요.",
+    "persona_facts": {
+      "code": "64",
+      "code_label": "금융업",
+      "tier": "Tier3",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 100,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 남원귤창고이고, 금융업 업종이에요. 서귀동에 있어요.",
+    "persona_facts": {
+      "code": "64",
+      "code_label": "금융업",
+      "tier": "Tier3",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 101,
+    "entity_type_expected": "business",
+    "opening_line": "금능반점인데, 한림읍에서 보험 및 연금업 해요.",
+    "persona_facts": {
+      "code": "65",
+      "code_label": "보험 및 연금업",
+      "tier": "Tier3",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 102,
+    "entity_type_expected": "business",
+    "opening_line": "저 애월읍에서 보험 및 연금업 하나 차렸어요, 한림수산이라고 해요.",
+    "persona_facts": {
+      "code": "65",
+      "code_label": "보험 및 연금업",
+      "tier": "Tier3",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 103,
+    "entity_type_expected": "business",
+    "opening_line": "제주감귤농원 사장입니다. 조천읍에서 금융 및 보험관련 서비스업 하고 있어요.",
+    "persona_facts": {
+      "code": "66",
+      "code_label": "금융 및 보험관련 서비스업",
+      "tier": "Tier3",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 104,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 노형카페이고, 금융 및 보험관련 서비스업 업종이에요. 구좌읍에 있어요.",
+    "persona_facts": {
+      "code": "66",
+      "code_label": "금융 및 보험관련 서비스업",
+      "tier": "Tier3",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 105,
+    "entity_type_expected": "business",
+    "opening_line": "서귀포게스트하우스인데, 성산읍에서 전문 서비스업 해요.",
+    "persona_facts": {
+      "code": "71",
+      "code_label": "전문 서비스업",
+      "tier": "Tier3",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 106,
+    "entity_type_expected": "business",
+    "opening_line": "저 표선면에서 전문 서비스업 하나 차렸어요, 삼도이발소이라고 해요.",
+    "persona_facts": {
+      "code": "71",
+      "code_label": "전문 서비스업",
+      "tier": "Tier3",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 107,
+    "entity_type_expected": "business",
+    "opening_line": "연동꽃집 사장입니다. 남원읍에서 교육 서비스업 하고 있어요.",
+    "persona_facts": {
+      "code": "85",
+      "code_label": "교육 서비스업",
+      "tier": "Tier3",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 108,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 아라동정비소이고, 교육 서비스업 업종이에요. 안덕면에 있어요.",
+    "persona_facts": {
+      "code": "85",
+      "code_label": "교육 서비스업",
+      "tier": "Tier3",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 109,
+    "entity_type_expected": "business",
+    "opening_line": "도두동빨래방인데, 대정읍에서 보건업 해요.",
+    "persona_facts": {
+      "code": "86",
+      "code_label": "보건업",
+      "tier": "Tier3",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 110,
+    "entity_type_expected": "business",
+    "opening_line": "저 한경면에서 보건업 하나 차렸어요, 대정읍정미소이라고 해요.",
+    "persona_facts": {
+      "code": "86",
+      "code_label": "보건업",
+      "tier": "Tier3",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 111,
+    "entity_type_expected": "business",
+    "opening_line": "성산다이빙샵 사장입니다. 이도동에서 사회복지 서비스업 하고 있어요.",
+    "persona_facts": {
+      "code": "87",
+      "code_label": "사회복지 서비스업",
+      "tier": "Tier3",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 112,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 표선펜션이고, 사회복지 서비스업 업종이에요. 노형동에 있어요.",
+    "persona_facts": {
+      "code": "87",
+      "code_label": "사회복지 서비스업",
+      "tier": "Tier3",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 113,
+    "entity_type_expected": "business",
+    "opening_line": "한경풍력농장인데, 연동에서 임업 해요.",
+    "persona_facts": {
+      "code": "02",
+      "code_label": "임업",
+      "tier": "Tier2",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 114,
+    "entity_type_expected": "business",
+    "opening_line": "저 삼도동에서 임업 하나 차렸어요, 안덕돌하르방공방이라고 해요.",
+    "persona_facts": {
+      "code": "02",
+      "code_label": "임업",
+      "tier": "Tier2",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 115,
+    "entity_type_expected": "business",
+    "opening_line": "조천전복양식장 사장입니다. 화북동에서 폐기물 수집, 운반, 처리 및 원료 재생업 하고 있어요.",
+    "persona_facts": {
+      "code": "38",
+      "code_label": "폐기물 수집, 운반, 처리 및 원료 재생업",
+      "tier": "Tier2",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 116,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 구좌당근밭이고, 폐기물 수집, 운반, 처리 및 원료 재생업 업종이에요. 삼양동에 있어요.",
+    "persona_facts": {
+      "code": "38",
+      "code_label": "폐기물 수집, 운반, 처리 및 원료 재생업",
+      "tier": "Tier2",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 117,
+    "entity_type_expected": "business",
+    "opening_line": "화북철물점인데, 아라동에서 종합 건설업 해요.",
+    "persona_facts": {
+      "code": "41",
+      "code_label": "종합 건설업",
+      "tier": "Tier2",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 118,
+    "entity_type_expected": "business",
+    "opening_line": "저 오라동에서 종합 건설업 하나 차렸어요, 삼양흑돼지식당이라고 해요.",
+    "persona_facts": {
+      "code": "41",
+      "code_label": "종합 건설업",
+      "tier": "Tier2",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 119,
+    "entity_type_expected": "business",
+    "opening_line": "이도동약국옆분식 사장입니다. 도두동에서 자동차 및 부품 판매업 하고 있어요.",
+    "persona_facts": {
+      "code": "45",
+      "code_label": "자동차 및 부품 판매업",
+      "tier": "Tier2",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 120,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 남원귤창고이고, 자동차 및 부품 판매업 업종이에요. 서귀동에 있어요.",
+    "persona_facts": {
+      "code": "45",
+      "code_label": "자동차 및 부품 판매업",
+      "tier": "Tier2",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 121,
+    "entity_type_expected": "business",
+    "opening_line": "금능반점인데, 한림읍에서 창고 및 운송관련 서비스업 해요.",
+    "persona_facts": {
+      "code": "52",
+      "code_label": "창고 및 운송관련 서비스업",
+      "tier": "Tier2",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 122,
+    "entity_type_expected": "business",
+    "opening_line": "저 애월읍에서 창고 및 운송관련 서비스업 하나 차렸어요, 한림수산이라고 해요.",
+    "persona_facts": {
+      "code": "52",
+      "code_label": "창고 및 운송관련 서비스업",
+      "tier": "Tier2",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 123,
+    "entity_type_expected": "business",
+    "opening_line": "제주감귤농원 사장입니다. 조천읍에서 부동산업 하고 있어요.",
+    "persona_facts": {
+      "code": "68",
+      "code_label": "부동산업",
+      "tier": "Tier2",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 124,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 노형카페이고, 부동산업 업종이에요. 구좌읍에 있어요.",
+    "persona_facts": {
+      "code": "68",
+      "code_label": "부동산업",
+      "tier": "Tier2",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 125,
+    "entity_type_expected": "business",
+    "opening_line": "서귀포게스트하우스인데, 성산읍에서 연구개발업 해요.",
+    "persona_facts": {
+      "code": "70",
+      "code_label": "연구개발업",
+      "tier": "Tier2",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 126,
+    "entity_type_expected": "business",
+    "opening_line": "저 표선면에서 연구개발업 하나 차렸어요, 삼도이발소이라고 해요.",
+    "persona_facts": {
+      "code": "70",
+      "code_label": "연구개발업",
+      "tier": "Tier2",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 127,
+    "entity_type_expected": "business",
+    "opening_line": "연동꽃집 사장입니다. 남원읍에서 건축 기술, 엔지니어링 및 기타 과학기술 서비스업 하고 있어요.",
+    "persona_facts": {
+      "code": "72",
+      "code_label": "건축 기술, 엔지니어링 및 기타 과학기술 서비스업",
+      "tier": "Tier2",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 128,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 아라동정비소이고, 건축 기술, 엔지니어링 및 기타 과학기술 서비스업 업종이에요. 안덕면에 있어요.",
+    "persona_facts": {
+      "code": "72",
+      "code_label": "건축 기술, 엔지니어링 및 기타 과학기술 서비스업",
+      "tier": "Tier2",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 129,
+    "entity_type_expected": "business",
+    "opening_line": "도두동빨래방인데, 대정읍에서 협회 및 단체 해요.",
+    "persona_facts": {
+      "code": "94",
+      "code_label": "협회 및 단체",
+      "tier": "Tier2",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 130,
+    "entity_type_expected": "business",
+    "opening_line": "저 한경면에서 협회 및 단체 하나 차렸어요, 대정읍정미소이라고 해요.",
+    "persona_facts": {
+      "code": "94",
+      "code_label": "협회 및 단체",
+      "tier": "Tier2",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 131,
+    "entity_type_expected": "business",
+    "opening_line": "성산다이빙샵 사장입니다. 이도동에서 개인 및 소비용품 수리업 하고 있어요.",
+    "persona_facts": {
+      "code": "95",
+      "code_label": "개인 및 소비용품 수리업",
+      "tier": "Tier2",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 132,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 표선펜션이고, 개인 및 소비용품 수리업 업종이에요. 노형동에 있어요.",
+    "persona_facts": {
+      "code": "95",
+      "code_label": "개인 및 소비용품 수리업",
+      "tier": "Tier2",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 133,
+    "entity_type_expected": "business",
+    "opening_line": "한경풍력농장인데, 연동에서 음식점 및 주점업 (대략적으로만 말함) 해요.",
+    "persona_facts": {
+      "code": "56",
+      "code_label": "음식점 및 주점업",
+      "tier": "Tier1",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "schema_id 자릿수 추정 정확도 — 음식점 및 주점업 (대략적으로만 말함)"
+  },
+  {
+    "no": 134,
+    "entity_type_expected": "business",
+    "opening_line": "저 삼도동에서 음식점업 (조금 더 구체적) 하나 차렸어요, 안덕돌하르방공방이라고 해요.",
+    "persona_facts": {
+      "code": "561",
+      "code_label": "음식점업",
+      "tier": "Tier1",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "schema_id 자릿수 추정 정확도 — 음식점업 (조금 더 구체적)"
+  },
+  {
+    "no": 135,
+    "entity_type_expected": "business",
+    "opening_line": "조천전복양식장 사장입니다. 화북동에서 한식 음식점업 하고 있어요.",
+    "persona_facts": {
+      "code": "5611",
+      "code_label": "한식 음식점업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "schema_id 자릿수 추정 정확도 — 한식 음식점업"
+  },
+  {
+    "no": 136,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 구좌당근밭이고, 한식 일반 음식점업 (아주 구체적) 업종이에요. 삼양동에 있어요.",
+    "persona_facts": {
+      "code": "56111",
+      "code_label": "한식 일반 음식점업",
+      "tier": "Tier1",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "schema_id 자릿수 추정 정확도 — 한식 일반 음식점업 (아주 구체적)"
+  },
+  {
+    "no": 137,
+    "entity_type_expected": "business",
+    "opening_line": "화북철물점인데, 아라동에서 외국식 음식점업 해요.",
+    "persona_facts": {
+      "code": "5612",
+      "code_label": "외국식 음식점업",
+      "tier": "Tier1",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "schema_id 자릿수 추정 정확도 — 외국식 음식점업"
+  },
+  {
+    "no": 138,
+    "entity_type_expected": "business",
+    "opening_line": "저 오라동에서 일식 음식점업 하나 차렸어요, 삼양흑돼지식당이라고 해요.",
+    "persona_facts": {
+      "code": "56122",
+      "code_label": "일식 음식점업",
+      "tier": "Tier1",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "DUAL_AXIS"
+    ],
+    "persona_directives": [
+      "AI가 물으면 사업 운영 사실과 본인이 직접 그 직무를 수행한다는 사실을 둘 다 자연스럽게 이야기하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "schema_id 자릿수 추정 정확도 — 일식 음식점업"
+  },
+  {
+    "no": 139,
+    "entity_type_expected": "business",
+    "opening_line": "이도동약국옆분식 사장입니다. 도두동에서 스포츠 및 오락 관련 서비스업 (대략적으로만 말함) 하고 있어요.",
+    "persona_facts": {
+      "code": "91",
+      "code_label": "스포츠 및 오락관련 서비스업",
+      "tier": "Tier1",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "schema_id 자릿수 추정 정확도 — 스포츠 및 오락 관련 서비스업 (대략적으로만 말함)"
+  },
+  {
+    "no": 140,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 남원귤창고이고, 산 관련 레저스포츠업 (아주 구체적) 업종이에요. 서귀동에 있어요.",
+    "persona_facts": {
+      "code": "91121",
+      "code_label": "골프장 운영업",
+      "tier": "Tier1",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "schema_id 자릿수 추정 정확도 — 산 관련 레저스포츠업 (아주 구체적)"
+  },
+  {
+    "no": 141,
+    "entity_type_expected": "person",
+    "opening_line": "저는 한림읍 사는 20대 여성이고, 전문 의사 일 해요.",
+    "persona_facts": {
+      "code": "2411",
+      "code_label": "전문 의사",
+      "tier": "n/a",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "전문 의사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 142,
+    "entity_type_expected": "person",
+    "opening_line": "애월읍에 살아요. 직업은 전문 의사이에요.",
+    "persona_facts": {
+      "code": "2411",
+      "code_label": "전문 의사",
+      "tier": "n/a",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "전문 의사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 143,
+    "entity_type_expected": "person",
+    "opening_line": "저는 조천읍 사는 40대 여성이고, 일반 의사 일 해요.",
+    "persona_facts": {
+      "code": "2412",
+      "code_label": "일반 의사",
+      "tier": "n/a",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "일반 의사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 144,
+    "entity_type_expected": "person",
+    "opening_line": "구좌읍에 살아요. 직업은 일반 의사이에요.",
+    "persona_facts": {
+      "code": "2412",
+      "code_label": "일반 의사",
+      "tier": "n/a",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "일반 의사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 145,
+    "entity_type_expected": "person",
+    "opening_line": "저는 성산읍 사는 60대 이상 여성이고, 한의사 일 해요.",
+    "persona_facts": {
+      "code": "2413",
+      "code_label": "한의사",
+      "tier": "n/a",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "한의사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 146,
+    "entity_type_expected": "person",
+    "opening_line": "표선면에 살아요. 직업은 한의사이에요.",
+    "persona_facts": {
+      "code": "2413",
+      "code_label": "한의사",
+      "tier": "n/a",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "한의사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 147,
+    "entity_type_expected": "person",
+    "opening_line": "저는 남원읍 사는 30대 여성이고, 치과의사 일 해요.",
+    "persona_facts": {
+      "code": "2414",
+      "code_label": "치과의사",
+      "tier": "n/a",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "치과의사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 148,
+    "entity_type_expected": "person",
+    "opening_line": "안덕면에 살아요. 직업은 치과의사이에요.",
+    "persona_facts": {
+      "code": "2414",
+      "code_label": "치과의사",
+      "tier": "n/a",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "치과의사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 149,
+    "entity_type_expected": "person",
+    "opening_line": "저는 대정읍 사는 50대 여성이고, 수의사 일 해요.",
+    "persona_facts": {
+      "code": "242",
+      "code_label": "수의사",
+      "tier": "n/a",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "수의사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 150,
+    "entity_type_expected": "person",
+    "opening_line": "한경면에 살아요. 직업은 수의사이에요.",
+    "persona_facts": {
+      "code": "242",
+      "code_label": "수의사",
+      "tier": "n/a",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "수의사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 151,
+    "entity_type_expected": "person",
+    "opening_line": "저는 이도동 사는 20대 여성이고, 약사 일 해요.",
+    "persona_facts": {
+      "code": "2431",
+      "code_label": "약사",
+      "tier": "n/a",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "약사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 152,
+    "entity_type_expected": "person",
+    "opening_line": "노형동에 살아요. 직업은 약사이에요.",
+    "persona_facts": {
+      "code": "2431",
+      "code_label": "약사",
+      "tier": "n/a",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "약사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 153,
+    "entity_type_expected": "person",
+    "opening_line": "저는 연동 사는 40대 여성이고, 한약사 일 해요.",
+    "persona_facts": {
+      "code": "2432",
+      "code_label": "한약사",
+      "tier": "n/a",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "한약사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 154,
+    "entity_type_expected": "person",
+    "opening_line": "삼도동에 살아요. 직업은 한약사이에요.",
+    "persona_facts": {
+      "code": "2432",
+      "code_label": "한약사",
+      "tier": "n/a",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "한약사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 155,
+    "entity_type_expected": "person",
+    "opening_line": "저는 화북동 사는 60대 이상 여성이고, 판사 및 검사 일 해요.",
+    "persona_facts": {
+      "code": "2711",
+      "code_label": "판사 및 검사",
+      "tier": "n/a",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "판사 및 검사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 156,
+    "entity_type_expected": "person",
+    "opening_line": "삼양동에 살아요. 직업은 판사 및 검사이에요.",
+    "persona_facts": {
+      "code": "2711",
+      "code_label": "판사 및 검사",
+      "tier": "n/a",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "판사 및 검사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 157,
+    "entity_type_expected": "person",
+    "opening_line": "저 30대 여성인데, 학생이면서 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "student+self_employed",
+      "code_label": "student+self_employed",
+      "tier": "n/a",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요)."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['student', 'self_employed'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 158,
+    "entity_type_expected": "person",
+    "opening_line": "저 40대 남성인데, 전업주부인데 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "homemaker+self_employed",
+      "code_label": "homemaker+self_employed",
+      "tier": "n/a",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요)."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['homemaker', 'self_employed'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 159,
+    "entity_type_expected": "person",
+    "opening_line": "저 50대 여성인데, 은퇴했는데 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "retired+self_employed",
+      "code_label": "retired+self_employed",
+      "tier": "n/a",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요)."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['retired', 'self_employed'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 160,
+    "entity_type_expected": "person",
+    "opening_line": "저 60대 이상 남성인데, 회사 다니면서 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "employed_private+self_employed",
+      "code_label": "employed_private+self_employed",
+      "tier": "n/a",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요)."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['employed_private', 'self_employed'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 161,
+    "entity_type_expected": "person",
+    "opening_line": "저 20대 여성인데, 학생이면서 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "student+unemployed",
+      "code_label": "student+unemployed",
+      "tier": "n/a",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요)."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['student', 'unemployed'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 162,
+    "entity_type_expected": "person",
+    "opening_line": "저 30대 남성인데, 전업주부인데 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "homemaker+unemployed",
+      "code_label": "homemaker+unemployed",
+      "tier": "n/a",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요)."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['homemaker', 'unemployed'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 163,
+    "entity_type_expected": "person",
+    "opening_line": "저 40대 여성인데, 은퇴했는데 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "retired+employed_private",
+      "code_label": "retired+employed_private",
+      "tier": "n/a",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요)."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['retired', 'employed_private'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 164,
+    "entity_type_expected": "person",
+    "opening_line": "저 50대 남성인데, 애매한 상태인데 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "other+self_employed",
+      "code_label": "other+self_employed",
+      "tier": "n/a",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요)."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['other', 'self_employed'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 165,
+    "entity_type_expected": "person",
+    "opening_line": "저 60대 이상 여성인데, 학생이면서 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "student+employed_public",
+      "code_label": "student+employed_public",
+      "tier": "n/a",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요)."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['student', 'employed_public'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 166,
+    "entity_type_expected": "person",
+    "opening_line": "저 20대 남성인데, 요즘 구직 중인데 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "unemployed+self_employed",
+      "code_label": "unemployed+self_employed",
+      "tier": "n/a",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요)."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['unemployed', 'self_employed'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 167,
+    "entity_type_expected": "person",
+    "opening_line": "저 30대 여성인데, 공무원인데 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "employed_public+self_employed",
+      "code_label": "employed_public+self_employed",
+      "tier": "n/a",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요)."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['employed_public', 'self_employed'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 168,
+    "entity_type_expected": "person",
+    "opening_line": "저 40대 남성인데, 은퇴했는데 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "retired+other",
+      "code_label": "retired+other",
+      "tier": "n/a",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요)."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['retired', 'other'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 169,
+    "entity_type_expected": "person",
+    "opening_line": "저는 대정읍 사는 50대 여성이고, 기업 대표 및 기업 고위 임원 일 해요.",
+    "persona_facts": {
+      "code": "1120",
+      "code_label": "기업 대표 및 기업 고위 임원",
+      "tier": "n/a",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "기업 대표 및 기업 고위 임원 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 170,
+    "entity_type_expected": "person",
+    "opening_line": "한경면에 살아요. 직업은 생명과학 시험원이에요.",
+    "persona_facts": {
+      "code": "2131",
+      "code_label": "생명과학 시험원",
+      "tier": "n/a",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "생명과학 시험원 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 171,
+    "entity_type_expected": "person",
+    "opening_line": "20대 여성입니다. 컴퓨터 하드웨어 기술자 및 연구원 하고 있고 이도동에 거주해요.",
+    "persona_facts": {
+      "code": "2211",
+      "code_label": "컴퓨터 하드웨어 기술자 및 연구원",
+      "tier": "n/a",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "컴퓨터 하드웨어 기술자 및 연구원 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 172,
+    "entity_type_expected": "person",
+    "opening_line": "저는 노형동 사는 30대 남성이고, 2635 일 해요.",
+    "persona_facts": {
+      "code": "2635",
+      "code_label": "2635",
+      "tier": "n/a",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "2635 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 173,
+    "entity_type_expected": "person",
+    "opening_line": "연동에 살아요. 직업은 초등학교 교사이에요.",
+    "persona_facts": {
+      "code": "2622",
+      "code_label": "초등학교 교사",
+      "tier": "n/a",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "초등학교 교사 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 174,
+    "entity_type_expected": "person",
+    "opening_line": "50대 남성입니다. 경영 기획 사무원 하고 있고 삼도동에 거주해요.",
+    "persona_facts": {
+      "code": "3111",
+      "code_label": "경영 기획 사무원",
+      "tier": "n/a",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "경영 기획 사무원 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 175,
+    "entity_type_expected": "person",
+    "opening_line": "저는 화북동 사는 60대 이상 여성이고, 자재관리 사무원 일 해요.",
+    "persona_facts": {
+      "code": "3211",
+      "code_label": "자재관리 사무원",
+      "tier": "n/a",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "자재관리 사무원 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 176,
+    "entity_type_expected": "person",
+    "opening_line": "삼양동에 살아요. 직업은 경찰관 및 수사관이에요.",
+    "persona_facts": {
+      "code": "4111",
+      "code_label": "경찰관 및 수사관",
+      "tier": "n/a",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "경찰관 및 수사관 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 177,
+    "entity_type_expected": "person",
+    "opening_line": "30대 여성입니다. 소규모 상점 경영 및 일선 관리 종사원 하고 있고 아라동에 거주해요.",
+    "persona_facts": {
+      "code": "5211",
+      "code_label": "소규모 상점 경영 및 일선 관리 종사원",
+      "tier": "n/a",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "소규모 상점 경영 및 일선 관리 종사원 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 178,
+    "entity_type_expected": "person",
+    "opening_line": "저는 오라동 사는 40대 남성이고, 온라인 쇼핑 판매원 일 해요.",
+    "persona_facts": {
+      "code": "5312",
+      "code_label": "온라인 쇼핑 판매원",
+      "tier": "n/a",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "온라인 쇼핑 판매원 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 179,
+    "entity_type_expected": "person",
+    "opening_line": "도두동에 살아요. 직업은 곡식작물 재배원이에요.",
+    "persona_facts": {
+      "code": "6111",
+      "code_label": "곡식작물 재배원",
+      "tier": "n/a",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "곡식작물 재배원 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 180,
+    "entity_type_expected": "person",
+    "opening_line": "60대 이상 남성입니다. 7111 하고 있고 서귀동에 거주해요.",
+    "persona_facts": {
+      "code": "7111",
+      "code_label": "7111",
+      "tier": "n/a",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "7111 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 181,
+    "entity_type_expected": "person",
+    "opening_line": "저는 한림읍 사는 20대 여성이고, 제분 및 도정 관련 기계 조작원 일 해요.",
+    "persona_facts": {
+      "code": "8111",
+      "code_label": "제분 및 도정 관련 기계 조작원",
+      "tier": "n/a",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "제분 및 도정 관련 기계 조작원 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 182,
+    "entity_type_expected": "person",
+    "opening_line": "애월읍에 살아요. 직업은 9111이에요.",
+    "persona_facts": {
+      "code": "9111",
+      "code_label": "9111",
+      "tier": "n/a",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "9111 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 183,
+    "entity_type_expected": "person",
+    "opening_line": "40대 여성입니다. 1310 하고 있고 조천읍에 거주해요.",
+    "persona_facts": {
+      "code": "1310",
+      "code_label": "1310",
+      "tier": "n/a",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "1310 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 184,
+    "entity_type_expected": "person",
+    "opening_line": "저는 구좌읍 사는 50대 남성이고, 2521 일 해요.",
+    "persona_facts": {
+      "code": "2521",
+      "code_label": "2521",
+      "tier": "n/a",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "2521 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 185,
+    "entity_type_expected": "person",
+    "opening_line": "성산읍에 살아요. 직업은 2652이에요.",
+    "persona_facts": {
+      "code": "2652",
+      "code_label": "2652",
+      "tier": "n/a",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "2652 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 186,
+    "entity_type_expected": "person",
+    "opening_line": "20대 남성입니다. 3325 하고 있고 표선면에 거주해요.",
+    "persona_facts": {
+      "code": "3325",
+      "code_label": "3325",
+      "tier": "n/a",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "3325 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 187,
+    "entity_type_expected": "person",
+    "opening_line": "저는 남원읍 사는 30대 여성이고, 5232 일 해요.",
+    "persona_facts": {
+      "code": "5232",
+      "code_label": "5232",
+      "tier": "n/a",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "HIER_FIRSTCASE",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "5232 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 188,
+    "entity_type_expected": "person",
+    "opening_line": "안덕면에 살아요. 직업은 2732이에요.",
+    "persona_facts": {
+      "code": "2732",
+      "code_label": "2732",
+      "tier": "n/a",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "HIER_OWN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "2732 — job_ksco 코드 매핑 정확도(ksco_2024_v8.json 조회)"
+  },
+  {
+    "no": 189,
+    "entity_type_expected": "person",
+    "opening_line": "금능반점 카페 사장인데, 저도 직접 바리스타로 일해요. 대정읍에 있어요.",
+    "persona_facts": {
+      "code": "2622(바리스타)+56221",
+      "code_label": "바리스타+카페",
+      "tier": "n/a",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "DUAL_AXIS",
+      "HIER_OWN"
+    ],
+    "persona_directives": [
+      "AI가 물으면 사업 운영 사실과 본인이 직접 그 직무를 수행한다는 사실을 둘 다 자연스럽게 이야기하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "INDUSTRY_TEMPLATE·PERSON_TEMPLATE 두 블록이 한 턴에 함께 옴 — 독립 해석"
+  },
+  {
+    "no": 190,
+    "entity_type_expected": "person",
+    "opening_line": "한림수산 카페 사장인데, 저도 직접 바리스타로 일해요. 한경면에 있어요.",
+    "persona_facts": {
+      "code": "2622(바리스타)+56221",
+      "code_label": "바리스타+카페",
+      "tier": "n/a",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "DUAL_AXIS",
+      "HIER_OWN"
+    ],
+    "persona_directives": [
+      "AI가 물으면 사업 운영 사실과 본인이 직접 그 직무를 수행한다는 사실을 둘 다 자연스럽게 이야기하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "INDUSTRY_TEMPLATE·PERSON_TEMPLATE 두 블록이 한 턴에 함께 옴 — 독립 해석"
+  },
+  {
+    "no": 191,
+    "entity_type_expected": "person",
+    "opening_line": "제주감귤농원 카페 사장인데, 저도 직접 바리스타로 일해요. 이도동에 있어요.",
+    "persona_facts": {
+      "code": "2622(바리스타)+56221",
+      "code_label": "바리스타+카페",
+      "tier": "n/a",
+      "age_gender": "20대/여성"
+    },
+    "edge_case_tags": [
+      "DUAL_AXIS",
+      "HIER_OWN"
+    ],
+    "persona_directives": [
+      "AI가 물으면 사업 운영 사실과 본인이 직접 그 직무를 수행한다는 사실을 둘 다 자연스럽게 이야기하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "INDUSTRY_TEMPLATE·PERSON_TEMPLATE 두 블록이 한 턴에 함께 옴 — 독립 해석"
+  },
+  {
+    "no": 192,
+    "entity_type_expected": "person",
+    "opening_line": "노형카페 카페 사장인데, 저도 직접 바리스타로 일해요. 노형동에 있어요.",
+    "persona_facts": {
+      "code": "2622(바리스타)+56221",
+      "code_label": "바리스타+카페",
+      "tier": "n/a",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "DUAL_AXIS",
+      "HIER_OWN"
+    ],
+    "persona_directives": [
+      "AI가 물으면 사업 운영 사실과 본인이 직접 그 직무를 수행한다는 사실을 둘 다 자연스럽게 이야기하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "INDUSTRY_TEMPLATE·PERSON_TEMPLATE 두 블록이 한 턴에 함께 옴 — 독립 해석"
+  },
+  {
+    "no": 193,
+    "entity_type_expected": "person",
+    "opening_line": "40대 여성이고 연동 살아요. 그냥 개인 프로필만 만들래요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "SAFETY_GATE",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "대화가 몇 턴 진행된 뒤, 자연스러운 타이밍에 \"저기 잠깐만요, 지금 옆에서 불이 났어요!\" 처럼 1인칭 현재진행형 응급 상황을 실제처럼 끼워 넣으세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "개인 최소 프로필 — 순수 person 경로 정상 동작 확인"
+  },
+  {
+    "no": 194,
+    "entity_type_expected": "person",
+    "opening_line": "50대 남성이고 삼도동 살아요. 그냥 개인 프로필만 만들래요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": "50대/남성"
+    },
+    "edge_case_tags": [
+      "INTERRUPT_B",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"이거 다 하는데 얼마나 걸려요?\" 같은 가벼운 메타 질문을 한 번 던지세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "개인 최소 프로필 — 순수 person 경로 정상 동작 확인"
+  },
+  {
+    "no": 195,
+    "entity_type_expected": "person",
+    "opening_line": "60대 이상 여성이고 화북동 살아요. 그냥 개인 프로필만 만들래요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "INTERRUPT_A",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"이거 말고 국세청 AI 좀 불러줄 수 있어요?\" 처럼 프로필 작성과 전혀 무관한 요청을 한 번 던지세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "개인 최소 프로필 — 순수 person 경로 정상 동작 확인"
+  },
+  {
+    "no": 196,
+    "entity_type_expected": "person",
+    "opening_line": "20대 남성이고 삼양동 살아요. 그냥 개인 프로필만 만들래요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": "20대/남성"
+    },
+    "edge_case_tags": [
+      "SKIP_RESUME",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "한두 번 답변한 뒤 \"나중에 할게요, 지금은 바빠서요\"라고 중단 의사를 밝히세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "개인 최소 프로필 — 순수 person 경로 정상 동작 확인"
+  },
+  {
+    "no": 197,
+    "entity_type_expected": "person",
+    "opening_line": "30대 여성이고 아라동 살아요. 그냥 개인 프로필만 만들래요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "AVATAR_NONE",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "사진 첨부는 요청받아도 \"나중에 올릴게요\"라고 답하고 실제로 첨부하지 마세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "개인 최소 프로필 — 순수 person 경로 정상 동작 확인"
+  },
+  {
+    "no": 198,
+    "entity_type_expected": "person",
+    "opening_line": "40대 남성이고 오라동 살아요. 그냥 개인 프로필만 만들래요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": "40대/남성"
+    },
+    "edge_case_tags": [
+      "AVATAR_NONE",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "사진 첨부는 요청받아도 \"나중에 올릴게요\"라고 답하고 실제로 첨부하지 마세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "개인 최소 프로필 — 순수 person 경로 정상 동작 확인"
+  },
+  {
+    "no": 199,
+    "entity_type_expected": "person",
+    "opening_line": "50대 여성이고 도두동 살아요. 그냥 개인 프로필만 만들래요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": "50대/여성"
+    },
+    "edge_case_tags": [
+      "AVATAR_NONE",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "사진 첨부는 요청받아도 \"나중에 올릴게요\"라고 답하고 실제로 첨부하지 마세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "개인 최소 프로필 — 순수 person 경로 정상 동작 확인"
+  },
+  {
+    "no": 200,
+    "entity_type_expected": "person",
+    "opening_line": "60대 이상 남성이고 서귀동 살아요. 그냥 개인 프로필만 만들래요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "AVATAR_NONE",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "사진 첨부는 요청받아도 \"나중에 올릴게요\"라고 답하고 실제로 첨부하지 마세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "개인 최소 프로필 — 순수 person 경로 정상 동작 확인"
+  },
+  {
+    "no": 201,
+    "entity_type_expected": "institution",
+    "opening_line": "한림읍사무소인데요, 프로필 등록하려고요. 한림읍에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "IMAGE_BIZREG",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "한림읍사무소 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 202,
+    "entity_type_expected": "institution",
+    "opening_line": "제주보건소 서귀포지소인데요, 프로필 등록하려고요. 애월읍에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "IMAGE_NOTICE",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주보건소 서귀포지소 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 203,
+    "entity_type_expected": "institution",
+    "opening_line": "조천읍 주민센터인데요, 프로필 등록하려고요. 조천읍에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "UPDATE_MODE_HINT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "조천읍 주민센터 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 204,
+    "entity_type_expected": "institution",
+    "opening_line": "성산일출봉 관리사무소인데요, 프로필 등록하려고요. 구좌읍에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "UPDATE_MODE_DIRECT",
+      "SAFETY_GATE",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "대화가 몇 턴 진행된 뒤, 자연스러운 타이밍에 \"저기 잠깐만요, 지금 옆에서 불이 났어요!\" 처럼 1인칭 현재진행형 응급 상황을 실제처럼 끼워 넣으세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "성산일출봉 관리사무소 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 205,
+    "entity_type_expected": "institution",
+    "opening_line": "제주특별자치도 문화재단인데요, 프로필 등록하려고요. 성산읍에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "IMAGE_BIZREG",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주특별자치도 문화재단 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 206,
+    "entity_type_expected": "institution",
+    "opening_line": "서귀포시청 관광과인데요, 프로필 등록하려고요. 표선면에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "IMAGE_NOTICE",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "서귀포시청 관광과 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 207,
+    "entity_type_expected": "institution",
+    "opening_line": "구좌읍 농업기술센터인데요, 프로필 등록하려고요. 남원읍에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "UPDATE_MODE_HINT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "구좌읍 농업기술센터 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 208,
+    "entity_type_expected": "institution",
+    "opening_line": "안덕면 복지관인데요, 프로필 등록하려고요. 안덕면에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "UPDATE_MODE_DIRECT",
+      "INTERRUPT_A",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"이거 말고 국세청 AI 좀 불러줄 수 있어요?\" 처럼 프로필 작성과 전혀 무관한 요청을 한 번 던지세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "안덕면 복지관 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 209,
+    "entity_type_expected": "institution",
+    "opening_line": "표선면 도서관인데요, 프로필 등록하려고요. 대정읍에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "IMAGE_BIZREG",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "표선면 도서관 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 210,
+    "entity_type_expected": "institution",
+    "opening_line": "대정읍 보건지소인데요, 프로필 등록하려고요. 한경면에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "IMAGE_NOTICE",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "대정읍 보건지소 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 211,
+    "entity_type_expected": "institution",
+    "opening_line": "한경면 어린이집인데요, 프로필 등록하려고요. 이도동에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "UPDATE_MODE_HINT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "한경면 어린이집 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 212,
+    "entity_type_expected": "institution",
+    "opening_line": "남원읍 소방파출소인데요, 프로필 등록하려고요. 노형동에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "UPDATE_MODE_DIRECT",
+      "INTERRUPT_B",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"이거 다 하는데 얼마나 걸려요?\" 같은 가벼운 메타 질문을 한 번 던지세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "남원읍 소방파출소 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 213,
+    "entity_type_expected": "institution",
+    "opening_line": "이도동 주민자치센터인데요, 프로필 등록하려고요. 연동에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "IMAGE_BIZREG",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "이도동 주민자치센터 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 214,
+    "entity_type_expected": "institution",
+    "opening_line": "노형동 청소년문화의집인데요, 프로필 등록하려고요. 삼도동에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "IMAGE_NOTICE",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "노형동 청소년문화의집 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 215,
+    "entity_type_expected": "institution",
+    "opening_line": "연동 여성회관인데요, 프로필 등록하려고요. 화북동에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "UPDATE_MODE_HINT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "연동 여성회관 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 216,
+    "entity_type_expected": "institution",
+    "opening_line": "삼도동 보건진료소인데요, 프로필 등록하려고요. 삼양동에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "UPDATE_MODE_DIRECT",
+      "SKIP_RESUME",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "한두 번 답변한 뒤 \"나중에 할게요, 지금은 바빠서요\"라고 중단 의사를 밝히세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "삼도동 보건진료소 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 217,
+    "entity_type_expected": "institution",
+    "opening_line": "화북동 체육센터인데요, 프로필 등록하려고요. 아라동에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "IMAGE_BIZREG",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "화북동 체육센터 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 218,
+    "entity_type_expected": "institution",
+    "opening_line": "삼양동 노인복지관인데요, 프로필 등록하려고요. 오라동에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "IMAGE_NOTICE",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "삼양동 노인복지관 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 219,
+    "entity_type_expected": "institution",
+    "opening_line": "아라동 어울림센터인데요, 프로필 등록하려고요. 도두동에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "UPDATE_MODE_HINT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "아라동 어울림센터 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 220,
+    "entity_type_expected": "institution",
+    "opening_line": "도두동 해양경찰파출소인데요, 프로필 등록하려고요. 서귀동에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "UPDATE_MODE_DIRECT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "도두동 해양경찰파출소 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 221,
+    "entity_type_expected": "org",
+    "opening_line": "저희 제주감귤생산자협회 대표인데, 회원이 30명 정도 돼요. 한림읍 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "FIELD_ADD",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주감귤생산자협회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 222,
+    "entity_type_expected": "org",
+    "opening_line": "저희 한림수협 청년어업인회 대표인데, 회원이 37명 정도 돼요. 애월읍 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "FIELD_REMOVE",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "한림수협 청년어업인회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 223,
+    "entity_type_expected": "org",
+    "opening_line": "저희 서귀포관광협의회 대표인데, 회원이 44명 정도 돼요. 조천읍 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "서귀포관광협의회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 224,
+    "entity_type_expected": "org",
+    "opening_line": "저희 제주공방연합회 대표인데, 회원이 51명 정도 돼요. 구좌읍 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주공방연합회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 225,
+    "entity_type_expected": "org",
+    "opening_line": "저희 전복양식조합 대표인데, 회원이 58명 정도 돼요. 성산읍 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "MULTIVALUE_ONETURN",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "전복양식조합 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 226,
+    "entity_type_expected": "org",
+    "opening_line": "저희 제주올레길보존회 대표인데, 회원이 65명 정도 돼요. 표선면 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "FIELD_ADD",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주올레길보존회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 227,
+    "entity_type_expected": "org",
+    "opening_line": "저희 흑돼지사육농가협회 대표인데, 회원이 72명 정도 돼요. 남원읍 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "FIELD_REMOVE",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "흑돼지사육농가협회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 228,
+    "entity_type_expected": "org",
+    "opening_line": "저희 제주해녀문화보존회 대표인데, 회원이 79명 정도 돼요. 안덕면 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주해녀문화보존회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 229,
+    "entity_type_expected": "org",
+    "opening_line": "저희 스타트업제주 커뮤니티 대표인데, 회원이 86명 정도 돼요. 대정읍 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "스타트업제주 커뮤니티 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 230,
+    "entity_type_expected": "org",
+    "opening_line": "저희 제주청년창업가모임 대표인데, 회원이 93명 정도 돼요. 한경면 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "MULTIVALUE_ONETURN",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주청년창업가모임 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 231,
+    "entity_type_expected": "org",
+    "opening_line": "저희 반려동물보호연합 대표인데, 회원이 100명 정도 돼요. 이도동 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "FIELD_ADD",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "반려동물보호연합 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 232,
+    "entity_type_expected": "org",
+    "opening_line": "저희 제주자전거동호회 대표인데, 회원이 107명 정도 돼요. 노형동 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "FIELD_REMOVE",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주자전거동호회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 233,
+    "entity_type_expected": "org",
+    "opening_line": "저희 조천읍 부녀회 대표인데, 회원이 114명 정도 돼요. 연동 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "조천읍 부녀회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 234,
+    "entity_type_expected": "org",
+    "opening_line": "저희 성산일출봉 지킴이단 대표인데, 회원이 121명 정도 돼요. 삼도동 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "성산일출봉 지킴이단 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 235,
+    "entity_type_expected": "org",
+    "opening_line": "저희 제주장애인복지협회 대표인데, 회원이 128명 정도 돼요. 화북동 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "MULTIVALUE_ONETURN",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주장애인복지협회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 236,
+    "entity_type_expected": "org",
+    "opening_line": "저희 서귀포다문화가족협회 대표인데, 회원이 135명 정도 돼요. 삼양동 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "FIELD_ADD",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "서귀포다문화가족협회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 237,
+    "entity_type_expected": "org",
+    "opening_line": "저희 한경풍력발전협동조합 대표인데, 회원이 142명 정도 돼요. 아라동 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "FIELD_REMOVE",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"그 항목은 이제 필요 없어요, 빼주세요\" 처럼 명시적으로 삭제를 요청하세요.",
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "한경풍력발전협동조합 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 238,
+    "entity_type_expected": "org",
+    "opening_line": "저희 제주전통주제조협회 대표인데, 회원이 149명 정도 돼요. 오라동 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_EXIST",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "\"저희는 예약을 전화로만 받고 있어요\" 처럼 아날로그 방식을 자연스럽게 언급하세요.",
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주전통주제조협회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 239,
+    "entity_type_expected": "org",
+    "opening_line": "저희 안덕면 마을기업협의회 대표인데, 회원이 156명 정도 돼요. 도두동 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "DIGITAL_BRIDGE_MISSING",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "\"손님이 화면에서 직접 서명하게 만들고 싶어요\" 처럼 구체적이고 아직 없을 법한 신규 기능을 요청해보세요.",
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "안덕면 마을기업협의회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 240,
+    "entity_type_expected": "org",
+    "opening_line": "저희 대정읍 청년회 대표인데, 회원이 163명 정도 돼요. 서귀동 기반이에요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "MULTIVALUE_ONETURN",
+      "GDC_Y_ACCT_Y"
+    ],
+    "persona_directives": [
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "GDC 결제도 받고 싶고, 계좌이체(원하는 은행·계좌번호·예금주명을 임의로 정해 알려줌)도 등록하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "대정읍 청년회 — 회원 수 필드, 협회·단체 결제수단 조합"
+  },
+  {
+    "no": 241,
+    "entity_type_expected": "platform",
+    "opening_line": "제주농산물직거래플랫폼이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주농산물직거래플랫폼 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 242,
+    "entity_type_expected": "platform",
+    "opening_line": "한림수산물예약중개이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_N",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "한림수산물예약중개 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 243,
+    "entity_type_expected": "platform",
+    "opening_line": "제주관광체험큐레이션이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주관광체험큐레이션 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 244,
+    "entity_type_expected": "platform",
+    "opening_line": "서귀포게스트하우스매칭이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "서귀포게스트하우스매칭 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 245,
+    "entity_type_expected": "platform",
+    "opening_line": "제주중고거래마켓이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_N",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주중고거래마켓 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 246,
+    "entity_type_expected": "platform",
+    "opening_line": "섬여행렌터카중개이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "섬여행렌터카중개 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 247,
+    "entity_type_expected": "platform",
+    "opening_line": "제주반려동물돌봄매칭이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주반려동물돌봄매칭 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 248,
+    "entity_type_expected": "platform",
+    "opening_line": "흑돼지직송배송앱이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_N",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "흑돼지직송배송앱 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 249,
+    "entity_type_expected": "platform",
+    "opening_line": "제주공방클래스예약이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주공방클래스예약 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 250,
+    "entity_type_expected": "platform",
+    "opening_line": "해녀물질체험예약이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "해녀물질체험예약 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 251,
+    "entity_type_expected": "platform",
+    "opening_line": "전복양식직송몰이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_N",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "전복양식직송몰 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 252,
+    "entity_type_expected": "platform",
+    "opening_line": "제주올레투어가이드매칭이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주올레투어가이드매칭 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 253,
+    "entity_type_expected": "platform",
+    "opening_line": "스쿠터공유플랫폼이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "스쿠터공유플랫폼 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 254,
+    "entity_type_expected": "platform",
+    "opening_line": "제주농촌체험숙박이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_N",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주농촌체험숙박 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 255,
+    "entity_type_expected": "platform",
+    "opening_line": "로컬푸드정기배송이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "로컬푸드정기배송 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 256,
+    "entity_type_expected": "platform",
+    "opening_line": "제주장애인이동지원매칭이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주장애인이동지원매칭 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 257,
+    "entity_type_expected": "platform",
+    "opening_line": "청년창업공간대여이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_N",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "청년창업공간대여 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 258,
+    "entity_type_expected": "platform",
+    "opening_line": "전통주정기구독이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "AUTO_REALTIME_GEN",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "전통주정기구독 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 259,
+    "entity_type_expected": "platform",
+    "opening_line": "해양레저예약통합이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_Y",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 켜고 싶다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "해양레저예약통합 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 260,
+    "entity_type_expected": "platform",
+    "opening_line": "제주다국어통역매칭이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_N",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "제주다국어통역매칭 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 261,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 제주공항-서귀포 자율주행 셔틀 3호차예요. 제주모빌리티(주) 소유·운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "IMAGE_BIZREG",
+      "GDC_Y_ACCT_N",
+      "RESV_Y"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 262,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 한림항 무인 물류 로봇 A1예요. 한림수협 물류팀 운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 263,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 노형동 무인 커피 키오스크예요. ㈜혼디카페 운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_N_ACCT_N",
+      "RESV_Y"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 264,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 배달 로봇 도도-7예요. 도두동 개인 자영업자 소유. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 265,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 연동 공유 전동스쿠터 플릿 관리기예요. 제주모빌리티(주) 소유·운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "IMAGE_BIZREG",
+      "GDC_N_ACCT_N",
+      "RESV_Y"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 266,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 삼양해변 순찰 드론예요. 삼양동 자율방범대 운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 267,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 아라동 무인 세탁 키오스크예요. 개인사업자 소유. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_Y_ACCT_N",
+      "RESV_Y"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 268,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 성산일출봉 관광 안내 로봇예요. 성산읍청 협력 운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 269,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 제주공항-서귀포 자율주행 셔틀 3호차예요. 제주모빌리티(주) 소유·운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "IMAGE_BIZREG",
+      "GDC_N_ACCT_N",
+      "RESV_Y"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 270,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 한림항 무인 물류 로봇 A1예요. 한림수협 물류팀 운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 271,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 노형동 무인 커피 키오스크예요. ㈜혼디카페 운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_N_ACCT_N",
+      "RESV_Y"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 272,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 배달 로봇 도도-7예요. 도두동 개인 자영업자 소유. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 273,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 연동 공유 전동스쿠터 플릿 관리기예요. 제주모빌리티(주) 소유·운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "IMAGE_BIZREG",
+      "GDC_Y_ACCT_N",
+      "RESV_Y"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 274,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 삼양해변 순찰 드론예요. 삼양동 자율방범대 운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 275,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 아라동 무인 세탁 키오스크예요. 개인사업자 소유. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_N_ACCT_N",
+      "RESV_Y"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 276,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 성산일출봉 관광 안내 로봇예요. 성산읍청 협력 운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_Y_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 277,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 제주공항-서귀포 자율주행 셔틀 3호차예요. 제주모빌리티(주) 소유·운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "IMAGE_BIZREG",
+      "GDC_N_ACCT_N",
+      "RESV_Y"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 278,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 한림항 무인 물류 로봇 A1예요. 한림수협 물류팀 운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 279,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 노형동 무인 커피 키오스크예요. ㈜혼디카페 운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_Y_ACCT_N",
+      "RESV_Y"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 280,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 배달 로봇 도도-7예요. 도두동 개인 자영업자 소유. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 281,
+    "entity_type_expected": "concept",
+    "opening_line": "K-Law 판결 시뮬레이션 SP 프로필 만들려고요. Openhash-Gopang klaw 저장소, 주피터 관리.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "FIELD_ADD",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 282,
+    "entity_type_expected": "concept",
+    "opening_line": "K-Health 상담 페르소나 프로필 만들려고요. health 저장소, AI City Inc. 관리.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 283,
+    "entity_type_expected": "concept",
+    "opening_line": "SP-INDUSTRY-TRANSFORM-56 음식점업 설계 SP 프로필 만들려고요. gopang 허브 저장소, 내부 설계용.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 284,
+    "entity_type_expected": "concept",
+    "opening_line": "K-Doctor 임상 보조 SP 프로필 만들려고요. health 저장소, 면허 의료진 전용.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 285,
+    "entity_type_expected": "concept",
+    "opening_line": "gopang wallet 정산 에이전트 프로필 만들려고요. gopang 허브 worker.js 내장.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 286,
+    "entity_type_expected": "concept",
+    "opening_line": "Market Agent 중개 SP 프로필 만들려고요. market 저장소.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "FIELD_ADD",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 287,
+    "entity_type_expected": "concept",
+    "opening_line": "AC-SHADOW-CORE 개인비서 코어 프로필 만들려고요. gopang 허브 src/gopang/ai.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 288,
+    "entity_type_expected": "concept",
+    "opening_line": "K-Insurance 약관 안내 SP 프로필 만들려고요. insurance 저장소.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 289,
+    "entity_type_expected": "concept",
+    "opening_line": "K-Law 판결 시뮬레이션 SP 프로필 만들려고요. Openhash-Gopang klaw 저장소, 주피터 관리.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 290,
+    "entity_type_expected": "concept",
+    "opening_line": "K-Health 상담 페르소나 프로필 만들려고요. health 저장소, AI City Inc. 관리.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 291,
+    "entity_type_expected": "concept",
+    "opening_line": "SP-INDUSTRY-TRANSFORM-56 음식점업 설계 SP 프로필 만들려고요. gopang 허브 저장소, 내부 설계용.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "FIELD_ADD",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 292,
+    "entity_type_expected": "concept",
+    "opening_line": "K-Doctor 임상 보조 SP 프로필 만들려고요. health 저장소, 면허 의료진 전용.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 293,
+    "entity_type_expected": "concept",
+    "opening_line": "gopang wallet 정산 에이전트 프로필 만들려고요. gopang 허브 worker.js 내장.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 294,
+    "entity_type_expected": "concept",
+    "opening_line": "Market Agent 중개 SP 프로필 만들려고요. market 저장소.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 295,
+    "entity_type_expected": "concept",
+    "opening_line": "AC-SHADOW-CORE 개인비서 코어 프로필 만들려고요. gopang 허브 src/gopang/ai.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 296,
+    "entity_type_expected": "concept",
+    "opening_line": "K-Insurance 약관 안내 SP 프로필 만들려고요. insurance 저장소.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "FIELD_ADD",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "대화 중간에 \"주차 가능 여부도 넣어주세요\" 처럼 목록에 없던 항목을 자발적으로 추가 요청하세요.",
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 297,
+    "entity_type_expected": "concept",
+    "opening_line": "K-Law 판결 시뮬레이션 SP 프로필 만들려고요. Openhash-Gopang klaw 저장소, 주피터 관리.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 298,
+    "entity_type_expected": "concept",
+    "opening_line": "K-Health 상담 페르소나 프로필 만들려고요. health 저장소, AI City Inc. 관리.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 299,
+    "entity_type_expected": "concept",
+    "opening_line": "SP-INDUSTRY-TRANSFORM-56 음식점업 설계 SP 프로필 만들려고요. gopang 허브 저장소, 내부 설계용.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  },
+  {
+    "no": 300,
+    "entity_type_expected": "concept",
+    "opening_line": "K-Doctor 임상 보조 SP 프로필 만들려고요. health 저장소, 면허 의료진 전용.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_CONCEPT",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=concept 판단, GDC/예약/자동화 STEP 전부 스킵 확인"
+  }
+]

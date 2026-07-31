@@ -1,0 +1,55 @@
+name: Live Smoketest — profile-assistant (DeepSeek, 300 scenarios)
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Debug: only run first N scenarios (blank = all 300)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  run-live-smoketest-profile-assistant:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: Run profile-assistant live smoketest
+        working-directory: tests/live_smoketest
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          ARGS="--scenarios profile_assistant_scenarios.json --repo-root ../.. --out ../../results/profile-assistant --resume"
+          if [ -n "${{ github.event.inputs.limit }}" ]; then
+            ARGS="$ARGS --limit ${{ github.event.inputs.limit }}"
+          fi
+          python3 profile_assistant_smoketest.py $ARGS
+
+      - name: Commit results to results branch
+        run: |
+          git config user.name "hondi-live-smoketest-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -B results/live-smoketest-profile-assistant
+          git add -f results/profile-assistant/
+          git diff --cached --quiet || git commit -m "chore: profile-assistant live smoketest results ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push --force origin HEAD:results/live-smoketest-profile-assistant
+
+      - name: Upload artifact (backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoketest-profile-assistant-results
+          path: results/profile-assistant/
