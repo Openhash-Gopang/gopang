@@ -35,6 +35,10 @@ import requests
 
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 MODEL = "deepseek-v4-flash"  # 2026-0X-XX 교정 — worker.js HONDI_TIER_MODELS['hondi-flash'].backendModel과 동일한 실제 프로덕션 모델(구값 'deepseek-chat'은 폐기 예정 레거시 별칭)
+# 2026-0X-XX 신설 — §ESCALATE-TO-PRO(SP v2.28) 시험 적용. flash가 판단
+# 곤란 신호를 내면 하네스도 프로덕션 클라이언트와 동일하게 이 모델로
+# 같은 메시지를 재호출한다.
+MODEL_PRO = "deepseek-v4-pro"
 MAX_TURNS = 14  # STEP1~STEP-FINAL이 정상이면 이 안에 끝나야 함(무한루프 방지)
 MAX_WORKERS = 4  # 시나리오당 최대 2*MAX_TURNS 호출이 걸릴 수 있어 AC-PRO-CORE보다 낮춤
 MAX_RETRIES = 4
@@ -54,6 +58,8 @@ CARD_LINE_RE = re.compile(r"^[ \t]*(🏪|👤|🏛|🤝|💻|🚗|🤖)\s", re.M
 TERMINAL_TAGS = ["PROFILE_SUBMIT", "[PROFILE_SKIP]", "[PROFILE_INTERRUPT_HANDOFF]"]
 FIELD_ADD_RE = re.compile(r"\[FIELD_ADD:")
 FIELD_REMOVE_RE = re.compile(r"\[FIELD_REMOVE:")
+# 2026-0X-XX 신설 — §ESCALATE-TO-PRO(SP v2.28) 감지용
+ESCALATE_RE = re.compile(r"\[ESCALATE_TO_PRO:([^\]]*)\]")
 
 
 def _load_composited_sp(repo_root):
@@ -95,7 +101,7 @@ AI가 "🎉 프로필 완성됐어요"처럼 완료를 알리면, "네, 감사�
 """
 
 
-def _call_deepseek(api_key, messages, max_tokens=1600):
+def _call_deepseek(api_key, messages, max_tokens=1600, model=None):
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     # 2026-0X-XX 신설 — deepseek-v4-flash를 model로 직접 호출하면 DeepSeek
     # 공식 문서상 thinking이 기본값 enabled(effort high)다. 레거시 별칭
@@ -104,9 +110,12 @@ def _call_deepseek(api_key, messages, max_tokens=1600):
     # 215초→16분대로 늘어나는 걸 실측(전체 코드베이스 공통 결함 — worker.js
     # 4개 지점 + 공유 deepseek-client.js에도 동일 패치 적용됨). PA/K-Law/Biz/
     # Gov 전부 "Flash 티어=비사고"가 설계 의도이므로 하네스도 프로덕션과
-    # 동일하게 명시적으로 비활성화한다.
-    payload = {"model": MODEL, "temperature": 0.3, "max_tokens": max_tokens, "messages": messages,
-               "thinking": {"type": "disabled"}}
+    # 동일하게 명시적으로 비활성화한다. model이 명시적으로 넘어오면(예:
+    # §ESCALATE-TO-PRO 승격 재호출) 그 모델을 쓰고, Flash가 아니면(=Pro)
+    # 원래 의도대로 사고 모드를 켜둔다.
+    use_model = model or MODEL
+    payload = {"model": use_model, "temperature": 0.3, "max_tokens": max_tokens, "messages": messages,
+               "thinking": {"type": "disabled" if use_model == MODEL else "enabled"}}
     last_err = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
@@ -153,6 +162,7 @@ def run_scenario(api_key, pa_system, scenario):
     field_add_seen = False
     field_remove_seen = False
     card_seen_count = 0  # §PROFILE_CARD 선행 이모지가 몇 번째 응답에 나왔는지
+    escalations = []  # 2026-0X-XX 신설 — §ESCALATE-TO-PRO(v2.28) 승격 이력: {turn, reason}
     total_usage = {"prompt_tokens": 0, "completion_tokens": 0}
 
     user_turn_text = scenario['opening_line']
@@ -164,6 +174,22 @@ def run_scenario(api_key, pa_system, scenario):
             return _error_result(scenario, transcript, f"PA 호출 실패(turn {turn}): {err}")
         for k in total_usage:
             total_usage[k] += usage.get(k, 0)
+
+        # (2026-0X-XX 신설) §ESCALATE-TO-PRO(v2.28 시험 적용) 감지 — flash가
+        # 판단 곤란 신호만 냈으면(SP 지시상 이 턴엔 사용자용 문구가 전혀
+        # 없어야 함) 그 응답은 대화 기록에 남기지 않고, 같은 pa_messages로
+        # hondi-pro(deepseek-v4-pro)를 재호출해 이번 턴의 진짜 응답을 받는다
+        # — 프로덕션 클라이언트(profile-assistant.html)와 동일한 로직.
+        esc_match = ESCALATE_RE.search(pa_reply)
+        if esc_match:
+            escalations.append({"turn": turn, "reason": esc_match.group(1).strip()})
+            pa_reply, pro_usage, pro_err = _call_deepseek(
+                api_key, pa_messages, max_tokens=1600, model=MODEL_PRO)
+            if pro_err:
+                return _error_result(scenario, transcript, f"PA 승격 호출 실패(turn {turn}): {pro_err}")
+            for k in total_usage:
+                total_usage[k] += pro_usage.get(k, 0)
+
         pa_messages.append({"role": "assistant", "content": pa_reply})
         # (2026-0X-XX 수정) user_turn_text는 오프닝 또는 이전 루프 끝에서 이미
         # "user(persona-next)"로 기록됐으므로 여기서 다시 안 찍는다 — 최초
@@ -244,6 +270,7 @@ def run_scenario(api_key, pa_system, scenario):
         "edge_case_tags": scenario["edge_case_tags"], "terminal": terminal,
         "turns_used": pa_turn_count, "submit_entity_type": (submit_json or {}).get('entity_type'),
         "verdict": verdict, "notes": notes, "usage": total_usage,
+        "escalation_count": len(escalations), "escalations": escalations,
         "transcript": transcript, "submit_json": submit_json,
     }
 
@@ -253,6 +280,7 @@ def _error_result(scenario, transcript, err):
         "no": scenario["no"], "entity_type_expected": scenario["entity_type_expected"],
         "edge_case_tags": scenario["edge_case_tags"], "terminal": None, "turns_used": len(transcript) // 2,
         "submit_entity_type": None, "verdict": "LIVE-ERROR", "notes": err, "usage": {},
+        "escalation_count": 0, "escalations": [],
         "transcript": transcript, "submit_json": None,
     }
 
@@ -366,7 +394,17 @@ def main():
 
     from collections import Counter
     counts = Counter(r["verdict"] for r in final)
-    summary = {"total": len(final), "counts": dict(counts), "runtime_seconds": round(time.time() - start)}
+    # 2026-0X-XX 신설 — §ESCALATE-TO-PRO(v2.28 시험 적용) 빈도를 요약에도
+    # 바로 보이게 한다(로그를 뒤져 JSONL을 안 열어봐도 되도록).
+    total_escalations = sum(r.get("escalation_count", 0) for r in final)
+    scenarios_with_escalation = sum(1 for r in final if r.get("escalation_count", 0) > 0)
+    summary = {
+        "total": len(final), "counts": dict(counts), "runtime_seconds": round(time.time() - start),
+        "escalate_to_pro": {
+            "total_escalations": total_escalations,
+            "scenarios_with_escalation": scenarios_with_escalation,
+        },
+    }
     json.dump(summary, open(os.path.join(args.out, "live_summary.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 

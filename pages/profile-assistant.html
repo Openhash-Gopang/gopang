@@ -361,6 +361,14 @@ let _profileSubmitRetryCount = 0;
 // 재시도 판정 대상으로 삼는다. 성공(PROFILE_SUBMIT 도달) 또는 재시도 소진 시에만 해제.
 let _awaitingSubmitRetry = false;
 const _PROFILE_SUBMIT_MAX_RETRIES = 2;
+
+// ── hondi-pro 승격 구조 (v2.28 §ESCALATE-TO-PRO 시험 적용, 2026-0X-XX 신설) ──
+// hondi-flash가 판단 곤란 상황(업종 복합판단·모순값·금전필드·공개범위)을
+// 만나면 사용자용 문구 없이 이 태그만 내도록 SP에서 지시한다. 클라이언트는
+// 이 신호만 보고 hondi-pro로 같은 메시지를 재호출해 실제 응답을 만든다 —
+// AC 레이어의 AC-PRO-CORE(Pro 기본+Flash 위임)와 반대 방향의 실험이라
+// PA에만 한정해 시험 적용한다.
+const _ESCALATE_RE = /\[ESCALATE_TO_PRO:[^\]]*\]/;
 async function ensureSystemPrompt() {
   if (systemPrompt) return systemPrompt;
   systemPrompt = await _loadSpByKey('profile-assistant', 'Profile-Assistant')
@@ -371,7 +379,7 @@ async function ensureSystemPrompt() {
 
 // ── AI 호출 (expert-chat.html과 동일한 후보 폴백 패턴) ──────
 function _loadCfg() { try { return JSON.parse(localStorage.getItem('gopang_cfg') || '{}'); } catch { return {}; } }
-function _buildCandidates() {
+function _buildCandidates(tierOverride) {
   const cfg = _loadCfg();
   const candidates = [];
   if (Array.isArray(cfg.providers)) {
@@ -383,7 +391,10 @@ function _buildCandidates() {
   if (!candidates.length && cfg.apiKey && cfg.endpoint && !cfg.endpoint.includes('workers.dev')) {
     candidates.push({ provider: 'legacy', baseUrl: cfg.endpoint.replace(/\/+$/,''), model: cfg.model || 'gpt-4o-mini', apiKey: cfg.apiKey });
   }
-  candidates.push({ provider: 'deepseek-default', baseUrl: RELAY_ENDPOINT, model: 'hondi-flash', apiKey: null });
+  // tierOverride(예: 'hondi-pro')가 오면 커스텀 provider 후보에는 영향을
+  // 주지 않고(그쪽은 사용자가 직접 등록한 모델이라 임의로 못 바꿈), 혼디
+  // 기본 제공 키 경로에만 적용한다 — §ESCALATE-TO-PRO 승격용.
+  candidates.push({ provider: 'deepseek-default', baseUrl: RELAY_ENDPOINT, model: tierOverride || 'hondi-flash', apiKey: null });
   return candidates;
 }
 async function _pumpSSE(response, onJson) {
@@ -412,8 +423,8 @@ async function _pumpSSE(response, onJson) {
     }
   }
 }
-async function callPaAI(msgs, onChunk) {
-  const candidates = _buildCandidates();
+async function callPaAI(msgs, onChunk, tierOverride) {
+  const candidates = _buildCandidates(tierOverride);
   const user = _loadUser();
   let lastErr = null;
   for (const c of candidates) {
@@ -469,6 +480,10 @@ function _stripInternalTags(s) {
     .replace(/\[USER_FEEDBACK:[^\]]*\]/g, '')
     .replace(/\[FIELD_ADD:[^\]]*\]/g, '')
     .replace(/\[FIELD_REMOVE:[^\]]*\]/g, '')
+    // 2026-0X-XX 신설(v2.28 §ESCALATE-TO-PRO 시험 적용) — hondi-pro 승격
+    // 신호. sendTurn()이 이 태그를 감지해 hondi-pro로 재호출하므로,
+    // 혹시 그 재호출 이후 응답에까지 잔여 문자열이 남아도 화면엔 안 보여야 한다.
+    .replace(/\[ESCALATE_TO_PRO:[^\]]*\]/g, '')
     .trim();
 }
 
@@ -811,6 +826,7 @@ async function sendTurn(text, imageDataUrl) {
   const typing = appendTyping();
   const aiBubble = appendBubble('ai', '');
   aiBubble.style.display = 'none';
+  let activeTyping = typing; // §ESCALATE-TO-PRO 재호출 시 교체됨 — catch에서도 정리해야 하므로 try 바깥 선언
   try {
     await ensureSystemPrompt();
     messages.push(imageDataUrl ? {
@@ -821,16 +837,30 @@ async function sendTurn(text, imageDataUrl) {
       ],
     } : { role: 'user', content: text });
     let shown = false;
-    const full = await callPaAI(messages, (delta, fullText) => {
-      if (!shown) { typing.remove(); aiBubble.style.display = ''; shown = true; }
+    const onChunk = (delta, fullText) => {
+      if (!shown) { activeTyping.remove(); aiBubble.style.display = ''; shown = true; }
       aiBubble.innerHTML = escHtml(_stripInternalTags(fullText)).replace(/\n/g, '<br>');
       document.getElementById('chat-thread').scrollTop = 1e9;
-    });
+    };
+    let full = await callPaAI(messages, onChunk);
+    // §ESCALATE-TO-PRO(v2.28 시험 적용) — flash가 판단 곤란 신호만 냈으면
+    // (SP 지시상 이 턴엔 사용자용 문구가 전혀 없어야 함) 그 신호는 대화
+    // 기록에 남기지 않고, 같은 messages로 hondi-pro를 재호출해 이번 턴의
+    // 진짜 응답을 받는다. 재귀 승격은 없다(pro 응답은 그대로 최종으로 채택).
+    if (_ESCALATE_RE.test(full)) {
+      const reasonMatch = full.match(_ESCALATE_RE);
+      console.warn('[PA] hondi-pro 승격 신호 감지 — 재호출:', reasonMatch ? reasonMatch[0] : full);
+      shown = false;
+      aiBubble.style.display = 'none';
+      aiBubble.innerHTML = '';
+      activeTyping = appendTyping();
+      full = await callPaAI(messages, onChunk, 'hondi-pro');
+    }
     messages.push({ role: 'assistant', content: full });
     aiBubble.innerHTML = escHtml(_stripInternalTags(full)).replace(/\n/g, '<br>');
     await _handleReplyTags(full);
   } catch (e) {
-    typing.remove();
+    activeTyping.remove();
     aiBubble.remove();
     appendBubble('ai', `⚠️ 응답 중 오류가 발생했습니다: ${escHtml(e.message)}. 잠시 후 다시 시도해 주세요.`);
   }
