@@ -301,7 +301,7 @@ export const EXPERT_REGISTRY = {
   // ⚠️ 실제 정부기관 전자제출은 아직 미구현 — prompts/SP_civil_v2_0.md
   // §5 정직 고지 참고.
   civil: {
-    label: '민원 심사(K-Civil)', icon: '🏛️', category: 'GOV', ownerAgency: 'kpublic',
+    label: '민원 심사(K-Civil)', icon: '🏛️', category: 'GOV', ownerAgency: 'kgov',
     key: 'SP_civil', needsMedicalSafety: false,
     triggers: ['민원 심사', '행정 심사', '요건 검토', 'K-Civil'],
   },
@@ -313,7 +313,7 @@ export const EXPERT_REGISTRY = {
   // ⚠️ 가격비교용 실제 시장데이터 파이프라인 미구현 — prompts/
   // SP_advisor_v1_0.md §5 정직 고지 참고.
   advisor: {
-    label: '구매자문(K-Advisor)', icon: '🔍', category: 'FIN', ownerAgency: 'kmarket',
+    label: '구매자문(K-Advisor)', icon: '🔍', category: 'FIN', ownerAgency: 'kcommerce',
     key: 'SP_advisor', needsMedicalSafety: false,
     triggers: ['가격 적정성', '이거 사도 될까', '가격 비교 평가', 'K-Advisor'],
   },
