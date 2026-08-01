@@ -4148,7 +4148,7 @@
     "persona_directives": [
       "AI가 물으면 사업 운영 사실과 본인이 직접 그 직무를 수행한다는 사실을 둘 다 자연스럽게 이야기하세요."
     ],
-    "skip_payment_steps_expected": true,
+    "skip_payment_steps_expected": false,
     "verify_points": "INDUSTRY_TEMPLATE·PERSON_TEMPLATE 두 블록이 한 턴에 함께 옴 — 독립 해석"
   },
   {
@@ -4168,7 +4168,7 @@
     "persona_directives": [
       "AI가 물으면 사업 운영 사실과 본인이 직접 그 직무를 수행한다는 사실을 둘 다 자연스럽게 이야기하세요."
     ],
-    "skip_payment_steps_expected": true,
+    "skip_payment_steps_expected": false,
     "verify_points": "INDUSTRY_TEMPLATE·PERSON_TEMPLATE 두 블록이 한 턴에 함께 옴 — 독립 해석"
   },
   {
@@ -4188,7 +4188,7 @@
     "persona_directives": [
       "AI가 물으면 사업 운영 사실과 본인이 직접 그 직무를 수행한다는 사실을 둘 다 자연스럽게 이야기하세요."
     ],
-    "skip_payment_steps_expected": true,
+    "skip_payment_steps_expected": false,
     "verify_points": "INDUSTRY_TEMPLATE·PERSON_TEMPLATE 두 블록이 한 턴에 함께 옴 — 독립 해석"
   },
   {
@@ -4208,7 +4208,7 @@
     "persona_directives": [
       "AI가 물으면 사업 운영 사실과 본인이 직접 그 직무를 수행한다는 사실을 둘 다 자연스럽게 이야기하세요."
     ],
-    "skip_payment_steps_expected": true,
+    "skip_payment_steps_expected": false,
     "verify_points": "INDUSTRY_TEMPLATE·PERSON_TEMPLATE 두 블록이 한 턴에 함께 옴 — 독립 해석"
   },
   {
