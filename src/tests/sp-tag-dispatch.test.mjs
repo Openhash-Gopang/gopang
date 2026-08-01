@@ -86,12 +86,46 @@ describe('SD — [GWP:] 태그 디스패치 (_parseAgentTags)', () => {
     assert.equal(_launched, null, 'pending 서비스가 launch됨 — status 가드 회귀');
   });
 
-  test('SD-05: type==="switch" 서비스 → [GWP:] 태그로는 launch 안 됨 (구식 문법 오발동 방지)', () => {
-    const svc = getService('kbank');
+  test('SD-05: type==="switch" 서비스 → [GWP:] 태그로는 (새 탭) launch 안 됨 (구식 문법 오발동 방지)', () => {
+    // 2026-08-01: kbank는 GDC 흡수로 레지스트리에서 철회됨(gwp-registry.js
+    // 236행 주석 참고) — getService('kbank')가 undefined가 돼 이 테스트의
+    // 전제(.type === 'switch')가 깨져 있었다. 여전히 switch 타입인
+    // ktelecom으로 교체(kestate도 동일 계열, 둘 중 아무거나 무방).
+    const svc = getService('ktelecom');
     assert.equal(svc?.type, 'switch');
     resetLaunch();
-    _parseAgentTags('[GWP: kbank]', null, '적금 상품 알려줘', null);
-    assert.equal(_launched, null, 'switch형 서비스가 [GWP:] 태그로 launch됨 — 안전장치 회귀');
+    _parseAgentTags('[GWP: ktelecom]', null, '휴대폰 요금제 알려줘', null);
+    assert.equal(_launched, null, 'switch형 서비스가 [GWP:] 태그로 _gwpLaunch(새 탭)됨 — 안전장치 회귀');
+  });
+
+  test('SD-05b: type==="switch" + 구식 [GWP:] 태그 → 자동복구 경로 진입(무한 침묵 대신 콘솔 신호) (2026-08-01 신설)', () => {
+    // 2026-08-01: 라이브 재검증(no=1, 2회 재현)에서 §TAGS 표에 예외를
+    // 명시해도 모델이 계속 구식 [GWP: id] 문법을 내는 것을 확인 —
+    // 프롬프트로는 못 고쳐 코드 레벨 자동복구(_forwardSwitchSP+callAI
+    // fire-and-forget)로 교체했다. 이 하네스는 DOM/fetch가 최소 스텁이라
+    // 그 내부 callAI 재귀 호출의 최종 결과(실제로 K-Telecom SP가 로드돼
+    // 응답이 오는지)까지는 검증 못 한다(파일 상단 "[한계]" 참고 — 이것도
+    // 같은 종류의 한계) — 여기서는 (1) 여전히 _gwpLaunch(새 탭)로는 안
+    // 새고 (2) 예전처럼 그냥 경고만 남기고 조용히 끝나는 게 아니라
+    // 자동복구 분기를 실제로 탔다는 것만 관찰 가능한 신호(console.info)
+    // 로 확인한다. 실제 SP 전환·연속 응답 여부는 실배포 환경에서 검증할 것.
+    const svc = getService('kestate');
+    assert.equal(svc?.type, 'switch');
+    resetLaunch();
+    const infoCalls = [];
+    const origInfo = console.info;
+    console.info = (...args) => infoCalls.push(args.join(' '));
+    try {
+      assert.doesNotThrow(() =>
+        _parseAgentTags('[GWP: kestate]', null, '전세 계약 검토해줘', null));
+    } finally {
+      console.info = origInfo;
+    }
+    assert.equal(_launched, null, '자동복구 경로에서도 _gwpLaunch(새 탭)는 여전히 호출되면 안 됨');
+    assert.ok(
+      infoCalls.some(line => line.includes('자동복구') && line.includes('kestate')),
+      `자동복구 분기 진입 로그를 못 찾음 — 예전 경고-only 경로로 회귀했을 수 있음. 관찰된 로그: ${JSON.stringify(infoCalls)}`
+    );
   });
 
   test('SD-06: 태그 없음 → launch 안 됨', () => {
