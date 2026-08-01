@@ -38,7 +38,15 @@ MODEL = "deepseek-v4-flash"  # 2026-0X-XX 교정 — worker.js HONDI_TIER_MODELS
 # 2026-0X-XX 신설 — §ESCALATE-TO-PRO(SP v2.28) 시험 적용. flash가 판단
 # 곤란 신호를 내면 하네스도 프로덕션 클라이언트와 동일하게 이 모델로
 # 같은 메시지를 재호출한다.
+# 2026-0X-XX 신설 — hondi-pro(deepseek-v4-pro)는 thinking 모드가 의도적으로
+# 켜져 있어(§ESCALATE-TO-PRO/코드강제 승격 둘 다 model=MODEL_PRO로 호출),
+# 최종 답을 내기 전에 추론에 토큰을 먼저 쓴다. flash와 동일한 max_tokens=
+# 1600을 그대로 쓰면 추론이 예산을 다 먹어버려 최종 응답이 완전히 빈
+# 문자열로 끊기는 사례를 실측으로 확인(68건 재테스트 중 최소 3건 —
+# 승격은 정확히 발동했는데 Pro 응답 자체가 비어 대화가 엉뚱하게 흘러간
+# 경우). Pro 호출에는 여유 있는 예산을 별도로 준다.
 MODEL_PRO = "deepseek-v4-pro"
+PRO_MAX_TOKENS = 6000
 MAX_TURNS = 14  # STEP1~STEP-FINAL이 정상이면 이 안에 끝나야 함(무한루프 방지)
 MAX_WORKERS = 4  # 시나리오당 최대 2*MAX_TURNS 호출이 걸릴 수 있어 AC-PRO-CORE보다 낮춤
 MAX_RETRIES = 4
@@ -250,7 +258,7 @@ def run_scenario(api_key, pa_system, scenario):
         if _code_forced:
             escalations.append({"turn": turn, "reason": f"[CODE-FORCED] {_code_forced_reason}"})
             pa_reply, usage, err = _call_deepseek(
-                api_key, pa_messages, max_tokens=1600, model=MODEL_PRO)
+                api_key, pa_messages, max_tokens=PRO_MAX_TOKENS, model=MODEL_PRO)
         else:
             pa_reply, usage, err = _call_deepseek(api_key, pa_messages, max_tokens=1600)
         if err:
@@ -268,7 +276,7 @@ def run_scenario(api_key, pa_system, scenario):
         if esc_match:
             escalations.append({"turn": turn, "reason": esc_match.group(1).strip()})
             pa_reply, pro_usage, pro_err = _call_deepseek(
-                api_key, pa_messages, max_tokens=1600, model=MODEL_PRO)
+                api_key, pa_messages, max_tokens=PRO_MAX_TOKENS, model=MODEL_PRO)
             if pro_err:
                 return _error_result(scenario, transcript, f"PA 승격 호출 실패(turn {turn}): {pro_err}")
             for k in total_usage:
