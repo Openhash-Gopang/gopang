@@ -98,7 +98,7 @@ describe('SD — [GWP:] 태그 디스패치 (_parseAgentTags)', () => {
     assert.equal(_launched, null, 'switch형 서비스가 [GWP:] 태그로 _gwpLaunch(새 탭)됨 — 안전장치 회귀');
   });
 
-  test('SD-05b: type==="switch" + 구식 [GWP:] 태그 → 자동복구 경로 진입(무한 침묵 대신 콘솔 신호) (2026-08-01 신설)', () => {
+  test('SD-05b: type==="switch" + 구식 [GWP:] 태그 → 자동복구 경로 진입(무한 침묵 대신 콘솔 신호) (2026-08-01 신설)', async () => {
     // 2026-08-01: 라이브 재검증(no=1, 2회 재현)에서 §TAGS 표에 예외를
     // 명시해도 모델이 계속 구식 [GWP: id] 문법을 내는 것을 확인 —
     // 프롬프트로는 못 고쳐 코드 레벨 자동복구(_forwardSwitchSP+callAI
@@ -109,6 +109,14 @@ describe('SD — [GWP:] 태그 디스패치 (_parseAgentTags)', () => {
     // 새고 (2) 예전처럼 그냥 경고만 남기고 조용히 끝나는 게 아니라
     // 자동복구 분기를 실제로 탔다는 것만 관찰 가능한 신호(console.info)
     // 로 확인한다. 실제 SP 전환·연속 응답 여부는 실배포 환경에서 검증할 것.
+    //
+    // ★ 2026-08-01 추가 — 바로 앞 SD-05가 같은 자동복구 분기를 이미
+    // 한 번 태웠고(_gwpSwitchRecoveryInFlight를 동기적으로 true로 만듦),
+    // 그 안의 fire-and-forget IIFE는 이 테스트 프레임 이후 어느 시점에나
+    // .finally()로 리셋된다 — 타이밍에 따라 SD-05b가 "재진입"으로
+    // 오판되는 걸(라이브에서 실제로 발견한 루프 방지 가드) 막기 위해
+    // SD-05의 잔여 async 작업이 정리될 시간을 준다.
+    await new Promise(resolve => setTimeout(resolve, 250));
     const svc = getService('kestate');
     assert.equal(svc?.type, 'switch');
     resetLaunch();
@@ -127,6 +135,47 @@ describe('SD — [GWP:] 태그 디스패치 (_parseAgentTags)', () => {
       `자동복구 분기 진입 로그를 못 찾음 — 예전 경고-only 경로로 회귀했을 수 있음. 관찰된 로그: ${JSON.stringify(infoCalls)}`
     );
   });
+
+  test('SD-05c: switch형 자동복구 재진입 방지 — 연달아 2번 트리거해도 두 번째는 건너뜀 (2026-08-01, 라이브에서 발견한 루프 회귀 방지)', async () => {
+    // 라이브 재검증에서 실제로 재현된 버그: K-Telecom으로 자동복구 전환한
+    // 뒤 보내는 INTERNAL 연속 메시지에 K-Telecom 자신이 "K-Telecom을
+    // 호출하겠습니다"처럼 표시명+호출 동사를 섞어 답하면, 기존 "태그
+    // 누락 폴백"이 그 응답에 또 반응해 자동복구가 자기 자신을 재귀
+    // 호출했다(콘솔에서 정확히 2회 쌍으로 재현, Uncaught SyntaxError
+    // 동반 확인). 여기서는 같은 svcId를 동기적으로 연달아 두 번 태워,
+    // 두 번째는 "재진입 감지" 경고로 조용히 무시되고(자동복구 info 로그가
+    // 안 남) _gwpLaunch(새 탭)도 여전히 안 되는지만 확인한다 — 첫 번째
+    // 호출의 fire-and-forget 내부(_forwardSwitchSP/callAI)가 실제로
+    // 완료되는지는 이 하네스로 검증 못 한다(SD-05b와 같은 한계).
+    await new Promise(resolve => setTimeout(resolve, 100));
+    resetLaunch();
+    const infoCalls = [];
+    const warnCalls = [];
+    const origInfo = console.info;
+    const origWarn = console.warn;
+    console.info = (...args) => infoCalls.push(args.join(' '));
+    console.warn = (...args) => warnCalls.push(args.join(' '));
+    try {
+      _parseAgentTags('[GWP: ktelecom]', null, '휴대폰 요금제 알려줘', null);
+      _parseAgentTags('[GWP: ktelecom]', null, '휴대폰 요금제 알려줘', null);
+    } finally {
+      console.info = origInfo;
+      console.warn = origWarn;
+    }
+    assert.equal(_launched, null, '재진입 방지 경로에서도 _gwpLaunch(새 탭)는 여전히 호출되면 안 됨');
+    assert.equal(
+      infoCalls.filter(l => l.includes('자동복구') && l.includes('전환합니다')).length,
+      1,
+      `자동복구 진입 로그가 정확히 1번이어야 함(2번째는 재진입 차단) — 관찰: ${JSON.stringify(infoCalls)}`
+    );
+    assert.ok(
+      warnCalls.some(l => l.includes('재진입 감지')),
+      `재진입 감지 경고를 못 찾음 — 루프 방지 가드 회귀 의심. 관찰: ${JSON.stringify(warnCalls)}`
+    );
+    // 다음 테스트를 위해 in-flight 플래그가 정리될 시간을 준다.
+    await new Promise(resolve => setTimeout(resolve, 400));
+  });
+
 
   test('SD-06: 태그 없음 → launch 안 됨', () => {
     resetLaunch();

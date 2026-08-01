@@ -263,6 +263,16 @@ const SWITCH_SP_LOADERS = {
   kestate: _loadKEstateSP,
 };
 
+// ★ 2026-08-01 신설 — 자동복구 재진입 가드. 라이브 검증(_updateStreamBubble
+// 자동복구, 아래 _parseAgentTags 참고) 중 실사로 발견: switch 타입 SP로
+// 전환된 뒤 보내는 INTERNAL 연속 메시지에 K-Telecom 자신이 "K-Telecom을
+// 호출하겠습니다"처럼 본인 표시명 + 호출 동사를 섞어 답하면, 2026-07-31
+// 신설된 "태그 누락 폴백"(같은 파일, 표시명 매칭으로 라우팅 복구)이 그
+// 자기 응답에 또 반응해 자동복구가 자기 자신을 재호출하는 루프가 생겼다
+// (콘솔에서 정확히 2회씩 쌍으로 재현 확인, Uncaught SyntaxError 동반).
+// 이 플래그가 true인 동안엔 switch 타입 자동복구를 다시 트리거하지 않는다.
+let _gwpSwitchRecoveryInFlight = false;
+
 // ── SP 전환 스택 (2026-07-08 신설) ───────────────────────────────
 // 기존 _switchToAssistantSP()/_switchToProfileAssistantSP()는 CFG.system을
 // 그냥 덮어쓰기만 했다 — "이전 SP로 돌아간다"는 개념 자체가 없는 단순
@@ -3682,11 +3692,18 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
         // 버튼/스트리밍 상태가 꼬이지 않는지 반드시 확인할 것.
         const label = { ktelecom: 'K-Telecom', kestate: 'K-Estate', kbank: 'K-Bank' }[svcId];
         const loader = SWITCH_SP_LOADERS[svcId];
-        if (loader) {
+        if (_gwpSwitchRecoveryInFlight) {
+          // 재진입 — 지금 막 자동복구로 전환한 SP 자신의 응답이 다시
+          // 이 분기를 태우려는 것(위 가드 신설 사유 주석 참고). 조용히
+          // 무시하고 탭만 정리한다 — 여기서 또 전환/재호출하면 루프.
+          console.warn(`[GWP] '${svcId}' 자동복구 재진입 감지 — 이미 복구 진행 중이라 건너뜀(루프 방지).`);
+          if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
+        } else if (loader) {
           console.info(`[GWP] '${svcId}'는 시스템전환형(type:switch) — 구식 [GWP:] 태그를 감지해 ${label}로 자동복구 전환합니다.`);
           const cleanedReply = fullReply.replace(/\[GWP:\s*[\w-]+\]\s*/, '').trim();
           if (bubble) _updateStreamBubble(bubble, cleanedReply);
           if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
+          _gwpSwitchRecoveryInFlight = true;
           (async () => {
             await _forwardSwitchSP(loader, label);
             history.length = 0;
@@ -3696,7 +3713,9 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
               `그대로 이어받아 상담을 시작하세요: "${userText}"]`,
               null, _preTab
             );
-          })().catch(e => console.warn(`[GWP] ${label} 자동복구 전환 실패(무시):`, e.message));
+          })()
+            .catch(e => console.warn(`[GWP] ${label} 자동복구 전환 실패(무시):`, e.message))
+            .finally(() => { _gwpSwitchRecoveryInFlight = false; });
         } else {
           // SWITCH_SP_LOADERS에 없는 미지의 switch 서비스 — 로더가 없으니
           // 복구 불가, 예전 동작(경고만)으로 폴백.
