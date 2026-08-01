@@ -15,3 +15,5 @@ tools/batch_output/
 tools/batch_last_id.txt
 sync_*.py
 migrate_*.py
+
+tests/live_smoketest/pa_live_results_debug.json
