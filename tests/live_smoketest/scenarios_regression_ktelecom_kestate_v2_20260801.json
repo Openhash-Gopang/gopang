@@ -1,0 +1,46 @@
+[
+  {
+    "no": 1,
+    "utterance": "이사 가는 집에 인터넷 새로 깔아야 하는데 어떻게 신청해요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "회귀(ktelecom/kestate 오판 정정 재검증 — 원본 batch2 기대값 복원)",
+    "static_verdict": "N/A",
+    "basis": "gwp-registry.js triggers 배열 근거, 원문 트리거 미사용 패러프레이즈",
+    "source_batch2_no": 49
+  },
+  {
+    "no": 2,
+    "utterance": "휴대폰을 잃어버린 것 같은데 어디다 신고해야 해요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "회귀(ktelecom/kestate 오판 정정 재검증 — 원본 batch2 기대값 복원)",
+    "static_verdict": "N/A",
+    "basis": "gwp-registry.js triggers 배열 근거, 원문 트리거 미사용 패러프레이즈",
+    "source_batch2_no": 50
+  },
+  {
+    "no": 3,
+    "utterance": "갑자기 정전이 됐는데 우리 동네만 그런 건지 확인하고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "ktelecom",
+    "expected_name": "K-Telecom",
+    "category": "회귀(ktelecom/kestate 오판 정정 재검증 — 원본 batch2 기대값 복원)",
+    "static_verdict": "N/A",
+    "basis": "gwp-registry.js triggers 배열 근거, 원문 트리거 미사용 패러프레이즈",
+    "source_batch2_no": 284
+  },
+  {
+    "no": 4,
+    "utterance": "보증금을 못 돌려받고 있는데 이거 절차상 어떻게 진행해야 하는지 알고 싶어요",
+    "expected_type": "GWP",
+    "expected_id": "kestate",
+    "expected_name": "K-Estate",
+    "category": "회귀(ktelecom/kestate 오판 정정 재검증 — 원본 batch2 기대값 복원)",
+    "static_verdict": "N/A",
+    "basis": "gwp-registry.js triggers 배열 근거, 원문 트리거 미사용 패러프레이즈",
+    "source_batch2_no": 281
+  }
+]
