@@ -4,9 +4,20 @@ on:
   workflow_dispatch:
     inputs:
       limit:
-        description: "Debug: only run first N scenarios (blank = all 300)"
+        description: "Debug: only run first N scenarios (blank = all)"
         required: false
         default: ""
+      # 2026-0X-XX 신설 — 300건 실측에서 실패/검토필요로 나온 68건만 골라
+      # 별도 파일(profile_assistant_scenarios_retest_68fail.json)로 빠르게
+      # 재검증할 수 있게 선택지 추가. 기본값은 기존과 동일(전체 세트).
+      scenarios_file:
+        description: "시나리오 파일 선택"
+        required: false
+        type: choice
+        default: "profile_assistant_scenarios.json"
+        options:
+          - "profile_assistant_scenarios.json"
+          - "profile_assistant_scenarios_retest_68fail.json"
 
 permissions:
   contents: write
@@ -33,7 +44,7 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
-          ARGS="--scenarios profile_assistant_scenarios.json --repo-root ../.. --out ../../results/profile-assistant --resume"
+          ARGS="--scenarios ${{ github.event.inputs.scenarios_file }} --repo-root ../.. --out ../../results/profile-assistant --resume"
           if [ -n "${{ github.event.inputs.limit }}" ]; then
             ARGS="$ARGS --limit ${{ github.event.inputs.limit }}"
           fi
