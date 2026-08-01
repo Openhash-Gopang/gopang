@@ -258,18 +258,33 @@ const GWP_REGISTRY = [
   // prompts/SP-23_ktelecom_v1_0.md, prompts/SP-24_kestate_v1_0.md
   // 참조(RULE-09도 이 재설계에 맞춰 갱신됨).
   //
-  // ⚠ 2026-08-01 발견(미해결 — kbank와 같은 계열 의심) — 아래 두
-  // 엔트리는 status:'active'인데, AC-PRO-CORE_v1_0.txt는 이 둘을
-  // "미구현, 요청이 오면 태그를 내지 말라"고 명시하고 있고, call-ai.js
-  // 전수 확인 결과 [CALL_KTELECOM:...]/[CALL_KESTATE:...] 핸들러도
-  // 실제로 없다(kbank 때와 동일한 패턴). 이 registry의 status가
-  // kbank처럼 낙관적으로 앞서 나간 상태일 가능성이 높다 — 다음
-  // 세션에서 kbank와 같은 방식으로 재검토 필요(그대로 둔다, 이번
-  // 패치 범위 밖).
+  // ⚠ 2026-08-01 — 같은 날 오판과 정정이 함께 있었다. 한때 "이 둘도
+  // kbank처럼 핸들러가 없는 게 아닌가" 의심해서 status를 잠깐
+  // pending_review로 내렸었는데, 몇 시간 뒤 그 의심 자체가 틀렸음을
+  // 확인했다 — call-ai.js를 리터럴 문자열 "CALL_KTELECOM"으로
+  // grep해서 안 나온 것뿐이었고, 실제 코드는
+  // `/\[CALL_(KBANK|KTELECOM|KESTATE):.../` 정규식 alternation으로
+  // 세 태그를 한 번에 처리하고 있었다(SWITCH_SP_LOADERS 매핑,
+  // _loadKTelecomSP/_loadKEstateSP 로더까지 2026-07-12에 이미 완성).
+  // status는 'active'가 맞다 — AC-PRO-CORE_v1_0.txt의 §CATALOG 표에도
+  // 정식으로 등재했다(예전엔 "미구현" 경고 블록에 따로 빼놨었는데,
+  // 그 블록 자체가 같은 검색 실수로 만들어진 오정보였다).
   {
     id: 'ktelecom', name: 'K-Telecom', category: 'UTL',
     type: 'switch',
     sp_key: 'SP-23_ktelecom',
+    // 2026-08-01 — 같은 날 두 번 정정. 먼저 status를 'active'→
+    // 'pending_review'로 내렸다가("[CALL_KTELECOM:...] 핸들러가
+    // call-ai.js에 없다"는 판단 근거로), 몇 시간 뒤 그 판단 자체가
+    // 틀렸음을 발견해 도로 'active'로 되돌렸다. 원인: call-ai.js를
+    // 리터럴 문자열 "CALL_KTELECOM"으로 grep했는데, 실제 코드는
+    // `/\[CALL_(KBANK|KTELECOM|KESTATE):.../` 처럼 정규식 alternation
+    // 하나로 세 태그를 함께 처리하고 있어서(_handleOrchestrationTags,
+    // SWITCH_SP_LOADERS 매핑, _loadKTelecomSP 로더까지 전부 2026-07-12에
+    // 이미 완성돼 있었음) 리터럴 검색으로는 안 잡혔다. AC-PRO-CORE_v1_0.txt
+    // 에 있던 "2026-07-28 코드 전수 확인 결과 핸들러 없음"이라는 서술도
+    // 같은 방식의 검색 실수로 만들어진, 애초부터 틀린 서술이었다 —
+    // 그것도 함께 정정했다(§CATALOG 참고). status는 'active'가 맞다.
     status: 'active', priority: 6, threshold: 0.70,
     description: '통신 서비스 안내(요금제·인터넷·유심·로밍·결합상품·분실신고) — 단말기 자체 구매는 kcommerce 소관. 최종 실행(개통 등)은 본인이 통신사 앱에서.',
     triggers: [
@@ -281,6 +296,8 @@ const GWP_REGISTRY = [
     id: 'kestate', name: 'K-Estate', category: 'ECO',
     type: 'switch',
     sp_key: 'SP-24_kestate',
+    // 2026-08-01 정정 — ktelecom과 동일 사유(위 주석 참고). [CALL_KESTATE:
+    // ...] 핸들러도 실제로 존재한다 — status는 'active'가 맞다.
     status: 'active', priority: 6, threshold: 0.70,
     description: '부동산 매물 탐색·등록·중개연결·임대차 계약관리 — 계약서 법률검토(klaw)·세금(ktax)·전입신고 등 행정(kgov)·자동이체 설정(kgdc)은 각 소관 서비스로. 최종 계약 체결은 본인·공인중개사·법무사 몫.',
     triggers: [
