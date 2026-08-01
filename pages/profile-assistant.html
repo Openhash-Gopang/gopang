@@ -378,6 +378,34 @@ const _ESCALATE_RE = /\[ESCALATE_TO_PRO:[^\]]*\]/;
 // 표현하면 놓칠 수 있고, 드물게 과잉 트리거될 수 있다.
 const _FIELD_ADD_REQUEST_RE = /(넣어\s*주세요|넣어\s*줘|추가해\s*주세요|추가해\s*줘|포함해\s*주세요|포함해\s*줘|적어\s*주세요|적어\s*줘|표시해\s*주세요|같이\s*넣어)/;
 const _FIELD_REMOVE_REQUEST_RE = /(빼\s*주세요|빼\s*줘|삭제해\s*주세요|삭제해\s*줘|제외해\s*주세요|제외해\s*줘|없애\s*주세요|없애\s*줘|지워\s*주세요|지워\s*줘)/;
+
+// ── entity_type 애매함 코드 강제 승격 (2026-0X-XX 신설) ──
+// entity_type 판단 오류가 300건 실측 최대 원인이었는데, §ESCALATE-TO-PRO는
+// 모델이 "이건 애매하다"고 스스로 자각해야 발동하는 구조라 신호가 약하면
+// 안 걸린다(사고실험으로 확인). 사고실험에서 신뢰도 높다고 판단된 3개
+// 패턴(a·b·c)은 모델의 자각에 기대지 않고, 코드가 사용자 발화만 보고
+// 무조건 hondi-pro로 승격시킨다(tests/live_smoketest/
+// profile_assistant_smoketest.py와 동일 패턴 공유 — 실측 후 함께 다듬는다).
+const _PRIMARY_STATUS_RE = /(학생|은퇴|전업주부|구직|무직|취준)/;
+const _SECONDARY_WORK_RE = /(프리랜서|겸업|아르바이트|알바|부업|사이드잡)/;
+const _PROFESSION_TITLE_RE = /(한의사|한약사|약사|의사|치과의사|수의사|변호사|회계사|세무사|법무사|노무사|미용사|디자이너|상담사|트레이너|강사|통역사|번역가|건축사|감정평가사)/;
+const _EMPLOYMENT_MARKER_RE = /(회사|직장|근무|다니|소속|병원에서|약국에서)/;
+const _BUSINESS_MARKER_RE = /(가게|차렸|운영|장사|개업|사업|원장|대표|매장|점포)/;
+const _THING_INDICATOR_RE = /(무인|자율주행|로봇|키오스크|셔틀|AI\s*페르소나|AI\s*에이전트)/;
+const _OWNER_INDICATOR_RE = /(운영|소유|주식회사|\(주\)|㈜)/;
+
+function _detectEntityTypeAmbiguity(text) {
+  if (_PRIMARY_STATUS_RE.test(text) && _SECONDARY_WORK_RE.test(text)) {
+    return '1차신분+겸업(work_domain 애매)';
+  }
+  if (_PROFESSION_TITLE_RE.test(text) && !_EMPLOYMENT_MARKER_RE.test(text) && !_BUSINESS_MARKER_RE.test(text)) {
+    return '직업단독언급(고용/자영업 애매)';
+  }
+  if (_THING_INDICATOR_RE.test(text) && _OWNER_INDICATOR_RE.test(text)) {
+    return '사물+소유주체명시(thing/business 애매)';
+  }
+  return null;
+}
 async function ensureSystemPrompt() {
   if (systemPrompt) return systemPrompt;
   systemPrompt = await _loadSpByKey('profile-assistant', 'Profile-Assistant')
@@ -888,12 +916,23 @@ async function sendTurn(text, imageDataUrl) {
       aiBubble.innerHTML = escHtml(_stripInternalTags(fullText)).replace(/\n/g, '<br>');
       document.getElementById('chat-thread').scrollTop = 1e9;
     };
-    let full = await callPaAI(messages, onChunk);
+    // (2026-0X-XX 신설) entity_type 애매함 코드 강제 승격 — 위 (a)/(b)/(c)
+    // 패턴에 해당하면 모델의 자각(§ESCALATE-TO-PRO 태그)을 기다리지 않고
+    // 곧바로 hondi-pro로 부른다. 아래 esc_match 기반(모델 자기신고) 승격은
+    // 이 경로로 이미 승격했으면 건너뛴다.
+    const _forcedReason = text ? _detectEntityTypeAmbiguity(text) : null;
+    let full;
+    if (_forcedReason) {
+      console.warn('[PA] entity_type 애매함 코드 강제 승격 — 사유:', _forcedReason);
+      full = await callPaAI(messages, onChunk, 'hondi-pro');
+    } else {
+      full = await callPaAI(messages, onChunk);
+    }
     // §ESCALATE-TO-PRO(v2.28 시험 적용) — flash가 판단 곤란 신호만 냈으면
     // (SP 지시상 이 턴엔 사용자용 문구가 전혀 없어야 함) 그 신호는 대화
     // 기록에 남기지 않고, 같은 messages로 hondi-pro를 재호출해 이번 턴의
     // 진짜 응답을 받는다. 재귀 승격은 없다(pro 응답은 그대로 최종으로 채택).
-    if (_ESCALATE_RE.test(full)) {
+    if (!_forcedReason && _ESCALATE_RE.test(full)) {
       const reasonMatch = full.match(_ESCALATE_RE);
       console.warn('[PA] hondi-pro 승격 신호 감지 — 재호출:', reasonMatch ? reasonMatch[0] : full);
       shown = false;
