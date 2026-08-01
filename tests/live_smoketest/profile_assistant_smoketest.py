@@ -237,6 +237,13 @@ def run_scenario(api_key, pa_system, scenario):
     field_add_seen = False
     field_remove_seen = False
     card_seen_count = 0  # §PROFILE_CARD 선행 이모지가 몇 번째 응답에 나왔는지
+    # 2026-0X-XX 신설 — §PROFILE_CARD 형식을 안 쓴 채(카드 이모지 라인 없이)
+    # 완료를 선언하거나("등록해 드릴게요! ...로 정리해서 등록하겠습니다")
+    # 그냥 인사만 주고받으며 멈춘 경우, card_seen_count 신호가 아예 안 잡혀
+    # MAX_TURNS까지 같은 응답이 반복되는 걸 실측으로 확인(#92/#257) — 직전
+    # PA 응답과 완전히 동일한 응답이 다시 나오면(카드 형식 준수 여부와
+    # 무관하게) "멈춰서 반복 중"으로 보고 동일한 재시도 경로를 태운다.
+    previous_pa_reply = None
     escalations = []  # 2026-0X-XX 신설 — §ESCALATE-TO-PRO(v2.28) 승격 이력: {turn, reason}
     # 2026-0X-XX 신설 — 재시도 안전장치 시도 횟수(성공 여부와 무관하게 카운트,
     # 실측 기반으로 나중에 패턴을 다듬을 수 있도록 전부 기록)
@@ -360,36 +367,51 @@ def run_scenario(api_key, pa_system, scenario):
         # 실패로 잡던 문제, 2026-08-01 30건 실측에서 확인).
         if 'PROFILE_SUBMIT' not in pa_reply.upper() and len(CARD_LINE_RE.findall(pa_reply)) >= 1:
             card_seen_count += 1
-            if card_seen_count >= 2:
-                retried_ok = False
-                while profile_submit_retries < MAX_PROFILE_SUBMIT_RETRIES:
-                    profile_submit_retries += 1
-                    pa_messages.append({"role": "user", "content": (
-                        "[INTERNAL: PROFILE_SUBMIT 태그 누락 감지 — 사용자에게 "
-                        "보이지 않는 내부 신호입니다. 방금 응답에서 완료 카드는 "
-                        "정확히 보여주셨지만 PROFILE_SUBMIT { ... } 태그가 빠져서 "
-                        "서버에 아직 저장되지 않았습니다. 사용자에게 보일 새 "
-                        "안내 문구나 인사말을 만들지 말고, 방금 보여드린 카드와 "
-                        "완전히 같은 내용으로 PROFILE_SUBMIT { ... } 태그만 "
-                        "그대로 다시 출력해 주세요.]"
-                    )})
-                    retry_reply, retry_usage, retry_err = _call_deepseek(api_key, pa_messages, max_tokens=1600)
-                    if retry_err:
-                        return _error_result(scenario, transcript, f"PROFILE_SUBMIT 재시도 실패(turn {turn}): {retry_err}")
-                    for k in total_usage:
-                        total_usage[k] += retry_usage.get(k, 0)
-                    pa_messages.append({"role": "assistant", "content": retry_reply})
-                    transcript.append({"role": "assistant(PA-retry-profile_submit)", "content": retry_reply})
-                    if 'PROFILE_SUBMIT' in retry_reply:
-                        pa_reply = retry_reply  # 이후 파싱 로직이 이 값을 그대로 씀
-                        retried_ok = True
-                        break
-                    # 재시도 응답에도 카드가 없을 수 있다(지시를 따라 태그만
-                    # 내려다 실패한 경우) — 그래도 계속 재시도한다(카드
-                    # 재검출 여부와 무관하게 profile_submit_retries 한도까지).
-                if not retried_ok:
-                    terminal = 'SOFT_COMPLETION_NO_TAG'
+
+        # (2026-0X-XX 신설) §PROFILE_CARD 형식을 안 쓴 채(카드 이모지 라인
+        # 없이) 완료를 선언하거나 인사만 반복하며 멈추는 경우, 위 card_seen_
+        # count 신호가 아예 안 잡혀 MAX_TURNS까지 같은 응답이 그대로 반복되는
+        # 걸 실측 확인(#92: "등록해 드릴게요!..." 완전 동일 반복 / #257: "네,
+        # 감사합니다!" 인사 루프). 카드 형식 준수 여부와 무관하게, 직전 PA
+        # 응답과 이번 응답이 완전히 동일하면 그 자체를 "멈춰서 반복 중"이라는
+        # 확실한 신호로 보고 동일한 재시도 경로를 태운다.
+        _stuck_repeat = (
+            'PROFILE_SUBMIT' not in pa_reply.upper()
+            and previous_pa_reply is not None
+            and pa_reply == previous_pa_reply
+        )
+
+        if 'PROFILE_SUBMIT' not in pa_reply.upper() and (card_seen_count >= 2 or _stuck_repeat):
+            retried_ok = False
+            while profile_submit_retries < MAX_PROFILE_SUBMIT_RETRIES:
+                profile_submit_retries += 1
+                pa_messages.append({"role": "user", "content": (
+                    "[INTERNAL: PROFILE_SUBMIT 태그 누락 감지 — 사용자에게 "
+                    "보이지 않는 내부 신호입니다. 방금 응답에서 완료 카드는 "
+                    "정확히 보여주셨지만 PROFILE_SUBMIT { ... } 태그가 빠져서 "
+                    "서버에 아직 저장되지 않았습니다. 사용자에게 보일 새 "
+                    "안내 문구나 인사말을 만들지 말고, 방금 보여드린 카드와 "
+                    "완전히 같은 내용으로 PROFILE_SUBMIT { ... } 태그만 "
+                    "그대로 다시 출력해 주세요.]"
+                )})
+                retry_reply, retry_usage, retry_err = _call_deepseek(api_key, pa_messages, max_tokens=1600)
+                if retry_err:
+                    return _error_result(scenario, transcript, f"PROFILE_SUBMIT 재시도 실패(turn {turn}): {retry_err}")
+                for k in total_usage:
+                    total_usage[k] += retry_usage.get(k, 0)
+                pa_messages.append({"role": "assistant", "content": retry_reply})
+                transcript.append({"role": "assistant(PA-retry-profile_submit)", "content": retry_reply})
+                if 'PROFILE_SUBMIT' in retry_reply:
+                    pa_reply = retry_reply  # 이후 파싱 로직이 이 값을 그대로 씀
+                    retried_ok = True
                     break
+                # 재시도 응답에도 카드가 없을 수 있다(지시를 따라 태그만
+                # 내려다 실패한 경우) — 그래도 계속 재시도한다(카드
+                # 재검출 여부와 무관하게 profile_submit_retries 한도까지).
+            if not retried_ok:
+                terminal = 'SOFT_COMPLETION_NO_TAG'
+                break
+        previous_pa_reply = pa_reply  # 다음 턴 반복 감지용 — 이번 턴 최종 확정값으로 갱신
         if 'PROFILE_SUBMIT' in pa_reply:
             terminal = 'PROFILE_SUBMIT'
             sm = PROFILE_SUBMIT_RE.search(pa_reply)
