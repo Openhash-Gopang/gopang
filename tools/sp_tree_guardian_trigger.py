@@ -36,6 +36,8 @@ def main():
     url = f"{args.base_url.rstrip('/')}/sp-tree-guardian/audit"
     req = urllib.request.Request(url, data=b"{}", method="POST")
     req.add_header("Content-Type", "application/json")
+    # 2026-0X-XX 신설 — sp_refresh_scheduler.py와 동일 사유
+    req.add_header("User-Agent", "Hondi-SP-Tree-Guardian-Trigger/1.0 (+github-actions)")
     try:
         with urllib.request.urlopen(req, timeout=60) as res:
             body = json.loads(res.read().decode("utf-8"))
