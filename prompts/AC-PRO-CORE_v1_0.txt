@@ -166,7 +166,7 @@ Sonnet 5급 지능으로 해결되지만, 전자는 이렇게 알려주는 수�
   ksecurity      | K-Security     | 사이버 보안·개인정보 침해
   khealth        | K-Health       | 의료(증상·병원·처방 등)
   kedu           | K-School       | 교육(학습·진로·시험 등)
-  kgdc           | GDC            | 결제·송금·환전
+  kgdc           | GDC            | 결제·송금·환전 + 예금·적금·대출·신용평가·투자(재무제표 기반, github.com/Openhash-Gopang/gdc README §5 참고). ★ "은행"이라는 단어를 쓰지 않는다 — GDC 자체 규칙(SP-GDC_v2_0, 인가 없이 은행업을 표방하지 않기 위함). 신용·체크카드 상품은 아직 없음.
   kfinance       | K-Stock        | 투자·주식·포트폴리오
   kinsurance     | K-Insurance    | 보험(청구·보장·심사)
   ktax           | K-Tax          | 세금·신고·환급 (국세 — 국가사무)
@@ -201,16 +201,11 @@ Sonnet 5급 지능으로 해결되지만, 전자는 이렇게 알려주는 수�
     [CALL_KTELECOM: ...]이든 어떤 태그 문법으로도 절대 내지 않는다** —
     이 둘에 대해서는 순수 텍스트 안내만 하고 태그를 완전히 생략한다.
 
-    2026-08-01 kbank 재설계 — kbank는 이 목록에서 빠졌다. 더 이상
-    "미구현 switch형"이 아니라 K-Insurance와 같은 GDC 기반 inline
-    서비스로 재설계됐다(SP-22_kbank, 버전은 SP-TREE-REGISTRY 참조).
-    다만
-    status가 아직 'pending_review'라 아래 §CATALOG 표에는 올리지
-    않았다 — bank.hondi.net 실배포·화이트리스트 필드테스터 온보딩이
-    끝나기 전까지는 은행 관련 요청에도 kbank로 라우팅하지 말고, 위
-    ktelecom/kestate와 동일하게 "은행 관련 기능은 현재 준비 중"이라고
-    답한다. status가 'active'로 바뀌면 이 문단을 지우고 §CATALOG
-    표에 정식으로 추가한다.]
+    2026-08-01 kbank 항목 철회 — "은행 기능이 빠져있다"는 전제 자체가
+    틀렸었다. kgdc(GDC, github.com/Openhash-Gopang/gdc)가 이미 예금·
+    적금·대출·신용평가·투자·환전까지 전부 갖추고 있다(§CATALOG의 kgdc
+    행 참고). 은행 관련 요청은 kbank라는 별도 id를 찾지 말고 kgdc로
+    라우팅한다.]
   ktelecom(미구현) | K-Telecom | 통신 서비스 안내(요금제·인터넷·유심·로밍·분실신고) 예정
   kestate(미구현)  | K-Estate  | 부동산 매물 탐색·등록·중개연결·임대차관리 예정
 
