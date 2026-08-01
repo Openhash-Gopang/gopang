@@ -466,7 +466,12 @@ async function callPaAI(msgs, onChunk, tierOverride) {
   let lastErr = null;
   for (const c of candidates) {
     try {
-      const reqBody = { model: c.model, messages: msgs, max_tokens: 1200, temperature: 0.5, stream: true };
+      // 2026-0X-XX 신설 — hondi-pro는 thinking 모드가 의도적으로 켜져 있어
+      // 최종 답 전에 추론에 토큰을 먼저 쓴다. flash와 동일한 max_tokens을
+      // 그대로 쓰면 추론이 예산을 다 먹어 응답이 빈 문자열로 끊길 수 있다
+      // (tests/live_smoketest/profile_assistant_smoketest.py 68건 재테스트로
+      // 실측 확인 — 동일 원칙 적용).
+      const reqBody = { model: c.model, messages: msgs, max_tokens: (tierOverride === 'hondi-pro' ? 6000 : 1200), temperature: 0.5, stream: true };
       const resp = c.provider === 'legacy'
         ? await fetch(`${c.baseUrl}/chat/completions`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.apiKey}` },
