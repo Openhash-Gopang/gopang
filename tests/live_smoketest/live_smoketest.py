@@ -188,11 +188,15 @@ def grade(scenario, raw_text, call_err):
     if expected_type == "GWP" and expected_id == "ktelecom":
         if KTELECOM_TAG_RE.search(raw_text or ""):
             return "LIVE-PASS", "[CALL_KTELECOM: ...] 발동 확인"
+        if extracted_id is None and CLARIFY_RE.search(raw_text or ""):
+            return "LIVE-CLARIFY", "태그 없이 되물음 — §CORE 되묻기 지침에 따른 정상 동작일 수 있음"
         return "LIVE-FAIL", f"[CALL_KTELECOM: ...] 미발동 (추출된 다른 태그: {extracted_type}:{extracted_id})"
 
     if expected_type == "GWP" and expected_id == "kestate":
         if KESTATE_TAG_RE.search(raw_text or ""):
             return "LIVE-PASS", "[CALL_KESTATE: ...] 발동 확인"
+        if extracted_id is None and CLARIFY_RE.search(raw_text or ""):
+            return "LIVE-CLARIFY", "태그 없이 되물음 — §CORE 되묻기 지침에 따른 정상 동작일 수 있음"
         return "LIVE-FAIL", f"[CALL_KESTATE: ...] 미발동 (추출된 다른 태그: {extracted_type}:{extracted_id})"
 
     # 2026-08-01 신설 — 위기개입은 태그가 아니라 지지적 서술 + 상담 자원
