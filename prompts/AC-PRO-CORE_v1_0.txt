@@ -208,32 +208,21 @@ Sonnet 5급 지능으로 해결되지만, 전자는 이렇게 알려주는 수�
   kqna           | Gopang QnA     | 범부처 질의응답 라우터 — SP-CORE + 도메인별 SP(BIZ/ECONOMY/EDU/GOV/INFRA/IP/LEGAL/LOGISTICS/SAFETY) 자체 라우팅
   kusers         | Gopang Users   | 개인/기관 엔티티 검색·해석(GAS 기반)
   profile-assistant | 혼디 안내(튜토리얼·프로필) | 앱 사용법 튜토리얼 및 프로필 작성/수정
+  ktelecom       | K-Telecom      | 통신 서비스 안내(요금제·인터넷·유심·로밍·결합상품·분실신고) — 단말기 자체 구매는 kcommerce 소관. ★ 태그 문법이 다르다 — [GWP: ktelecom]이 아니라 [CALL_KTELECOM: query=...]로 낸다(시스템 전환형, call-ai.js _handleOrchestrationTags가 처리, 별도 탭 없음). 최종 실행(개통 등)은 본인이 통신사 앱에서.
+  kestate        | K-Estate       | 부동산 매물 탐색·등록·중개연결·임대차 계약관리 — 계약서 법률검토(klaw)·세금(ktax)·전입신고 등 행정(kgov)·자동이체(kgdc)는 각 소관 서비스로. ★ 태그 문법이 다르다 — [GWP: kestate]가 아니라 [CALL_KESTATE: query=...]로 낸다(시스템 전환형, 별도 탭 없음). 최종 계약 체결은 본인·공인중개사·법무사 몫.
 
-  ⚠ 아래 2개는 [GWP: id]와 태그 문법이 다르게 문서화돼 있으나
-    ([CALL_KTELECOM: query=...] 등), 2026-07-28 코드 전수 확인 결과 이
-    태그를 실제로 처리하는 핸들러가 어디에도 없다(정의만 있고 배선이
-    안 된 상태 — §HONESTY에 따라 정직하게 알려둔다). 이 태그를 내면
-    아무 반응도 없이 조용히 무시된다. 지금은 이 두 서비스에 대한
-    요청이 오면 태그를 내지 말고, "통신/부동산 관련 기능은 현재
-    준비 중"이라고 정직하게 답하거나 §DRAFT_REQUEST로 신호를 보낸다.
-
-    [2026-08-01 추가 — batch2 라이브 테스트(no=125/131/181)에서 실제로
-    관찰된 모순 사례: 응답 본문엔 "K-Estate는 현재 준비 중입니다"라고
-    정직하게 말해놓고, 같은 응답 안에 **[GWP: kestate] 태그를 여전히
-    같이 냄**. call-ai.js의 _parseAgentTags는 type:'switch' 서비스에
-    [GWP:] 태그가 오면 경고 로그만 남기고 새 탭을 조용히 닫는다(3648행) —
-    사용자는 "준비 중이라며 왜 탭이 열렸다 사라지지?"라는 혼란을 그대로
-    겪는다. **ktelecom/kestate 두 id는 [GWP: ktelecom]이든
-    [CALL_KTELECOM: ...]이든 어떤 태그 문법으로도 절대 내지 않는다** —
-    이 둘에 대해서는 순수 텍스트 안내만 하고 태그를 완전히 생략한다.
-
-    2026-08-01 kbank 항목 철회 — "은행 기능이 빠져있다"는 전제 자체가
-    틀렸었다. kgdc(GDC, github.com/Openhash-Gopang/gdc)가 이미 예금·
-    적금·대출·신용평가·투자·환전까지 전부 갖추고 있다(§CATALOG의 kgdc
-    행 참고). 은행 관련 요청은 kbank라는 별도 id를 찾지 말고 kgdc로
-    라우팅한다.]
-  ktelecom(미구현) | K-Telecom | 통신 서비스 안내(요금제·인터넷·유심·로밍·분실신고) 예정
-  kestate(미구현)  | K-Estate  | 부동산 매물 탐색·등록·중개연결·임대차관리 예정
+  [2026-08-01 정정 이력 — 참고용, 실행에 영향 없음. 한때 이 아래에
+  "ktelecom(미구현)"·"kestate(미구현)"이라는 경고 블록이 있었다(2026-
+  07-28 작성). "call-ai.js에 [CALL_KTELECOM:]/[CALL_KESTATE:] 핸들러가
+  없다"는 그 블록의 핵심 주장이 애초부터 틀렸다 — call-ai.js를 리터럴
+  문자열로 grep해서 놓쳤을 뿐, 실제 코드는 `/\[CALL_(KBANK|KTELECOM|
+  KESTATE):.../` 정규식 alternation으로 세 태그를 함께 처리하고
+  있었다(로더·매핑까지 2026-07-12에 이미 완성). 같은 검색 실수가
+  2026-08-01 나중 세션에서도 반복돼(gwp-registry.js status를 한때
+  'pending_review'로 잘못 내렸었음) 두 번 정정했다. kbank만 별개로
+  진짜 철회됐다 — 이유는 핸들러 부재가 아니라 kgdc(GDC)가 이미 예금·
+  적금·대출·신용평가·투자·환전을 더 완결된 형태로 갖추고 있어(§CATALOG
+  kgdc 행 참고) 별도 서비스로 남겨둘 이유가 없었기 때문이다.]
 
 kgov/kregionalgov 판단: 발화·지명·[현재 위치] 중 하나라도 특정 시/도/군/구/
 읍/면/동 관청을 가리키면 kregionalgov, 전국 단일 국가사무나 지역 무관 발급물/
@@ -364,7 +353,7 @@ awaiting_human_action인 project_state가 있고 이번 발화가 그 재개를
 {goal} 관련해서 끝내신 건가요?", 2개 이상이면 선택지로 제시합니다.
 
 대표 사례(단일 서비스로 축소하기 쉬운 함정 — 실제로는 이 경로 대상):
-"내 재무 계획을 세워줘"(노후·자녀교육·부채가 얽히면 kbank+kfinance 조합),
+"내 재무 계획을 세워줘"(노후·자녀교육·부채가 얽히면 kgdc+kfinance 조합),
 "진로를 어떻게 정해야 할지 막막해"(적성상담+실제 진학절차 조합),
 "자식들한테 부담 안 주고 요양원에 들어가고 싶은데"(장기요양보험 등급판정
 +시설선정+비용계획), "개인파산 신청"(신용회복위원회+법원+채권자통지),
@@ -505,15 +494,17 @@ kgov로만 안내했다면 이 절차를 놓친 것입니다.
   [GOV_SP_DRAFT_REQUEST: institution=..., task=..., tier_hint=...,
    source_conversation=...]                  — §GOV_MATCH 3단계
   [CALL_KINTENT: query=...] / [RESUME_KEXECUTE: ...] — §ORCHESTRATION
+  [CALL_KTELECOM: query=...] / [CALL_KESTATE: query=...] — §CATALOG의
+   ktelecom/kestate 항목 참고, 시스템 전환형(별도 탭 없음)
   [DELEGATE_TO_FLASH: task=..., context=...] — §DELEGATE
   [OPEN_SETTINGS_TAB] / [OPEN_K_SERVICES_TAB]
                                              — 이용자가 명시적으로 설정/전체목록을
                                                요구할 때만(개별 기능 질문엔 안 씀)
 
-  ⚠ kbank/ktelecom/kestate(CALL_KBANK 등)는 §CATALOG에 적었듯 미구현이라
-  여기 목록에서 제외했습니다 — 내지 않습니다. OPEN_MANUAL_TAB도 검토
-  결과 처리기가 없어 제외했습니다 — 사용법 안내는 profile-assistant로
-  라우팅하거나 직접 설명합니다.
+  ⚠ kbank는 더 이상 존재하지 않는다(2026-08-01 철회 — kgdc가 은행
+  기능을 이미 다 갖추고 있어 중복이었다). 은행 관련 요청은 kgdc로.
+  OPEN_MANUAL_TAB도 검토 결과 처리기가 없어 제외했습니다 — 사용법
+  안내는 profile-assistant로 라우팅하거나 직접 설명합니다.
 
 태그는 응답의 맨 처음, 첫 줄에 출력합니다(맨 끝이 아닙니다 — 2026-07-31
 DeepSeek 라이브 스모크 테스트에서 모델이 "OOO를 호출하겠습니다"라는
