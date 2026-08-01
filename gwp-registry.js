@@ -176,10 +176,25 @@ const GWP_REGISTRY = [
     url: 'https://gdc.hondi.net/webapp.html',
     sp_key: 'SP-08_gdc',
     status: 'active', priority: 5, threshold: 0.75,
-    description: '무위험 자산 담보 디지털 화폐.',
+    // 2026-08-01 정정 — GDC는 결제·송금만 하는 게 아니라 예금·적금·대출·
+    // 신용평가·투자·환전(FIAT POOL)까지 이미 전부 갖춘 통합 금융 서비스다
+    // (github.com/Openhash-Gopang/gdc README §5, js/gdc-bank.js,
+    // prompts/SP-GDC_kbank_v1.0.txt — 전에 별도로 'kbank' GWP를 새로
+    // 만들려 했던 시도는 이미 있는 걸 몰라서 중복 설계한 것이었다, 2026-08-01
+    // 주피터님 지적으로 정정). description·triggers에 은행 관련 어휘를
+    // 못 넣어놨던 게 batch2 라이브 테스트에서 "카드값 나눠 갚기" 같은
+    // 요청이 kgdc로 안 가고 딴 데로 새던 실제 원인이었다.
+    // ★ "은행"이라는 단어는 쓰지 않는다 — gdc 저장소 SP-GDC_v2_0.txt
+    // 자체 규칙("은행"이라는 표현 사용 금지 — GDC는 금융 서비스 플랫폼).
+    // 인가 없이 은행업을 표방하지 않기 위한 의도적 제약이므로 이 GWP
+    // 레지스트리·description에서도 동일하게 지킨다.
+    description: '결제·송금·환전 + 예금·적금·대출·신용평가·투자(재무제표 기반) — 국적통화 FIAT POOL 연동, 무위험 자산 담보 디지털 화폐. (신용·체크카드 상품은 아직 없음 — GDC_ROADMAP.md 기준 미제공)',
     triggers: [
       'GDC','결제','송금','이체','잔고',
       '고팡 화폐','디지털 화폐','GDC 충전','글로벌 결제',
+      '예금','적금','저금','대출','빌리다','융자','이자','금리',
+      '신용평가','신용등급','대출 한도','상환','환전','해외 송금',
+      '투자','펀드','국민성장펀드','ETF',
     ],
   },
 
@@ -215,48 +230,42 @@ const GWP_REGISTRY = [
   },
 
   // ── 2026-07-12 신설 → 재설계(같은 날) — 250건 사고실험에서 발견된
-  // 커버리지 갭 해소(SP-Author 프로세스 대행, 주피터님 지시). 은행상품
-  // (예적금·대출·카드·펀드상담)과 통신(요금제·인터넷·유심)을 다루는
-  // SP가 21개 목록 어디에도 없었다 — K-Stock(kfinance)은 투자·주식만,
-  // GDC(kgdc)는 결제·송금만 담당.
-  // ★ 재설계 경위 — 처음엔 K-Health/K-Traffic처럼 "새 저장소+새 도메인+
-  // /gov/relay" 패턴(type:'inline', url 있음)으로 만들고 status를
-  // pending_review로 뒀었다. 그런데 "모든 SP가 별도 저장소가 필요한
-  // 것은 아니다"(주피터님 지적)를 재검토한 결과, K-Bank/Telecom/Estate는
-  // 세 SP 모두 "최종 실행(계좌이체·개통·계약)은 본인 몫, AI는 정보
-  // 수집·안내까지만" 이라고 스스로 설계돼 있어 — 이건 K-Search/
-  // K-Intent/K-Compose/K-Deliver가 이미 쓰는 시스템 전환형(별도 탭·
-  // 도메인 없이 _forwardSwitchSP로 같은 세션 안에서 시스템 프롬프트만
-  // 바꾸는 방식, call-ai.js)과 정확히 같은 성격이다. 저장소 배포를
-  // 기다릴 필요 없이 gopang 저장소 안의 SP 파일만으로 즉시 active로
-  // 켤 수 있다. type:'switch'는 이 셋을 위해 신설한 값 — _parseAgentTags
-  // (call-ai.js)가 이 타입을 보면 _gwpLaunch(새 탭) 대신
-  // _forwardSwitchSP(시스템 전환)로 분기한다. SP 초안은
-  // prompts/SP-22_kbank_v1_0.md, SP-23_ktelecom_v1_0.md,
-  // SP-24_kestate_v1_0.md 참조(RULE-09도 이 재설계에 맞춰 갱신됨).
-  {
-    id: 'kbank', name: 'K-Bank', category: 'ECO',
-    // 2026-08-01 재설계 — SP-22_kbank_v2_0.txt 참조. type:'switch'(안내
-    // 전용, 자체 데이터 없음)에서 K-Insurance와 동일한 'inline'으로
-    // 전환했다. 근거: [CALL_KBANK:...] 핸들러가 call-ai.js에 실제로
-    // 배선된 적이 없었다는 게 batch2 라이브 테스트(no=47)와 코드 전수
-    // 확인으로 확인됨 — "switch로 이미 작동한다"던 v1.0 메타데이터가
-    // 틀렸었다. 이제 예적금·대출·카드·자동이체·청약을 GDC(₮)로 실제
-    // 실행하는 서비스로 재정의했으므로 kinsurance처럼 자체 도메인이
-    // 필요하다. bank.hondi.net 저장소·webapp.html이 아직 없으므로
-    // status는 실배포 전까지 'pending_review' 유지 — 화이트리스트
-    // 필드테스터(금융권 종사자)에게만 노출한다(AGENT-COMMON §3-0 ③).
-    type: 'inline',
-    url: 'https://bank.hondi.net/webapp.html',  // ★ 미배포 — pending_review 해제 조건
-    sp_key: 'SP-22_kbank',
-    status: 'pending_review', priority: 6, threshold: 0.70,
-    description: 'GDC 기반 은행업무(예적금·대출·카드·자동이체·청약·환전 상담) 시뮬레이션 — 은행업 인가 전 필드테스트. 증권 매매체결은 kfinance 소관. 실제 KRW 집행·정식 계약은 인가 후 파트너 은행에서.',
-    triggers: [
-      '적금','예금','대출','신용카드','체크카드','자동이체',
-      '청약통장','환전','인증서','한도','상환','펀드 상담',
-      '계좌 개설','계좌 조회','이자','만기',
-    ],
-  },
+  // 커버리지 갭 해소(SP-Author 프로세스 대행, 주피터님 지시). 통신
+  // (요금제·인터넷·유심)을 다루는 SP가 21개 목록 어디에도 없었다.
+  //
+  // ★ 2026-08-01 kbank 항목 철회 — 애초에 "은행 기능이 빠져있다"는
+  // 전제 자체가 틀렸다. github.com/Openhash-Gopang/gdc를 확인한 결과
+  // kgdc(GDC)가 이미 예금·적금·대출·신용평가·투자·환전까지 은행 기능을
+  // 전부 갖추고 있었다(README §5, js/gdc-bank.js,
+  // prompts/SP-GDC_kbank_v1.0.txt). 그 사실을 모른 채 별도의 'kbank'
+  // GWP를 새로 설계했던 것(v1.0 → v2.0 두 차례)은 전부 철회하고
+  // prompts/archive/로 옮겼다 — kgdc description·triggers를 은행
+  // 어휘로 보강하는 쪽으로 대체(위 kgdc 엔트리 참고).
+  //
+  // ★ 재설계 경위(ktelecom/kestate에 여전히 적용) — 처음엔 K-Health/
+  // K-Traffic처럼 "새 저장소+새 도메인+/gov/relay" 패턴(type:'inline',
+  // url 있음)으로 만들고 status를 pending_review로 뒀었다. 그런데
+  // "모든 SP가 별도 저장소가 필요한 것은 아니다"(주피터님 지적)를
+  // 재검토한 결과, K-Telecom/Estate 두 SP 모두 "최종 실행(개통·계약)은
+  // 본인 몫, AI는 정보 수집·안내까지만" 이라고 스스로 설계돼 있어 —
+  // 이건 K-Search/K-Intent/K-Compose/K-Deliver가 이미 쓰는 시스템
+  // 전환형(별도 탭·도메인 없이 _forwardSwitchSP로 같은 세션 안에서
+  // 시스템 프롬프트만 바꾸는 방식, call-ai.js)과 정확히 같은 성격이다.
+  // 저장소 배포를 기다릴 필요 없이 gopang 저장소 안의 SP 파일만으로
+  // 즉시 active로 켤 수 있다. type:'switch'는 이 둘을 위해 신설한
+  // 값 — _parseAgentTags(call-ai.js)가 이 타입을 보면 _gwpLaunch
+  // (새 탭) 대신 _forwardSwitchSP(시스템 전환)로 분기한다. SP 초안은
+  // prompts/SP-23_ktelecom_v1_0.md, prompts/SP-24_kestate_v1_0.md
+  // 참조(RULE-09도 이 재설계에 맞춰 갱신됨).
+  //
+  // ⚠ 2026-08-01 발견(미해결 — kbank와 같은 계열 의심) — 아래 두
+  // 엔트리는 status:'active'인데, AC-PRO-CORE_v1_0.txt는 이 둘을
+  // "미구현, 요청이 오면 태그를 내지 말라"고 명시하고 있고, call-ai.js
+  // 전수 확인 결과 [CALL_KTELECOM:...]/[CALL_KESTATE:...] 핸들러도
+  // 실제로 없다(kbank 때와 동일한 패턴). 이 registry의 status가
+  // kbank처럼 낙관적으로 앞서 나간 상태일 가능성이 높다 — 다음
+  // 세션에서 kbank와 같은 방식으로 재검토 필요(그대로 둔다, 이번
+  // 패치 범위 밖).
   {
     id: 'ktelecom', name: 'K-Telecom', category: 'UTL',
     type: 'switch',
@@ -273,7 +282,7 @@ const GWP_REGISTRY = [
     type: 'switch',
     sp_key: 'SP-24_kestate',
     status: 'active', priority: 6, threshold: 0.70,
-    description: '부동산 매물 탐색·등록·중개연결·임대차 계약관리 — 계약서 법률검토(klaw)·세금(ktax)·전입신고 등 행정(kgov)·자동이체 설정(kbank)은 각 소관 서비스로. 최종 계약 체결은 본인·공인중개사·법무사 몫.',
+    description: '부동산 매물 탐색·등록·중개연결·임대차 계약관리 — 계약서 법률검토(klaw)·세금(ktax)·전입신고 등 행정(kgov)·자동이체 설정(kgdc)은 각 소관 서비스로. 최종 계약 체결은 본인·공인중개사·법무사 몫.',
     triggers: [
       '전세','월세','매매 매물','부동산','공인중개사','임대차',
       '계약 갱신','재건축','조합원','매물 등록','이사 갈 집',
