@@ -124,16 +124,51 @@ _OWNER_INDICATOR_RE = re.compile(r"(운영|소유|주식회사|\(주\)|㈜)")
 
 
 def _detect_entity_type_ambiguity(text: str):
-    """(a)/(b)/(c) 중 하나라도 매칭되면 (True, 사유) 반환, 아니면 (False, None)."""
+    """(a)/(b)/(c) 중 하나라도 매칭되면 (패턴키, 사유) 반환, 아니면 (None, None).
+    패턴키('a'/'b'/'c')는 _CODE_FORCED_DIRECTIVES 조회 및 (c) 전용 사후
+    강제 오버라이드(#267/#279 실측 대응)에 쓰인다."""
     if _PRIMARY_STATUS_RE.search(text) and _SECONDARY_WORK_RE.search(text):
-        return True, "1차신분+겸업(work_domain 애매)"
+        return "a", "1차신분+겸업(work_domain 애매)"
     if (_PROFESSION_TITLE_RE.search(text)
             and not _EMPLOYMENT_MARKER_RE.search(text)
             and not _BUSINESS_MARKER_RE.search(text)):
-        return True, "직업단독언급(고용/자영업 애매)"
+        return "b", "직업단독언급(고용/자영업 애매)"
     if _THING_INDICATOR_RE.search(text) and _OWNER_INDICATOR_RE.search(text):
-        return True, "사물+소유주체명시(thing/business 애매)"
-    return False, None
+        return "c", "사물+소유주체명시(thing/business 애매)"
+    return None, None
+
+
+# 2026-0X-XX 신설 — "다시 생각해봐"(단순 승격)가 아니라 "코드가 이미 내린
+# 판단을 실행해라"로 바꾼다. #145/#157/#159/#163 실측에서 확인했듯 Pro도
+# 처음엔 맞게 판단하고 대화가 진행되며 사용자가 실제로 사업 정보를 스스로
+# 제공하면 그때는 재검토해도 된다고 명시 — 무조건 고정시키는 게 아니라
+# "지금 이 시점에서 지레짐작하지 말라"는 지시다. (c)는 사용자가 정보를
+# 추가로 줘도 판단이 바뀔 이유가 없으므로(사물은 계속 사물) 재검토 여지를
+# 언급하지 않는다 — 대신 아래 (c) 전용 사후 강제 오버라이드로 한 번 더
+# 못박는다(#267/#279에서 Pro조차 즉시 오판 — 승격만으론 불충분했음).
+_CODE_FORCED_DIRECTIVES = {
+    "a": (
+        "[INTERNAL: 시스템 판단 — 이번 발화는 학생/은퇴/전업주부/구직중 등 "
+        "1차 신분에 부차적인 겸업이 붙은 패턴입니다. entity_type은 person으로 "
+        "유지하고, 겸업 사실은 work_domain.statuses 배열에만 반영하세요. "
+        "사용자가 이후 대화에서 실제로 상호명·영업시간 등 구체적인 사업 운영 "
+        "정보를 스스로 제공하면 그때는 그 정보를 반영해 판단을 재검토해도 "
+        "됩니다 — 지금 이 시점에서 지레짐작으로 business로 넘기지 마세요.]"
+    ),
+    "b": (
+        "[INTERNAL: 시스템 판단 — 이번 발화는 직업/자격만 단독으로 언급된 "
+        "패턴입니다. entity_type은 person으로 유지하고, job_ksco에 직업 정보를 "
+        "반영하세요. 사용자가 이후 대화에서 실제로 상호명·영업시간 등 사업 "
+        "운영 정보를 스스로 제공하면 그때 반영해 재검토해도 됩니다.]"
+    ),
+    "c": (
+        "[INTERNAL: 시스템 판단 — 이번 발화는 사물(무인기기 등)의 프로필 "
+        "요청이며 소유주체가 별도로 언급됐습니다. entity_type은 반드시 thing "
+        "으로 설정하세요. 메뉴·가격·결제 정보를 다루더라도 그 사물 자체가 "
+        "사업자가 되는 게 아닙니다 — 소유주체는 이 프로필의 등록 대상이 "
+        "아닙니다.]"
+    ),
+}
 
 
 
@@ -245,6 +280,15 @@ def run_scenario(api_key, pa_system, scenario):
     # 무관하게) "멈춰서 반복 중"으로 보고 동일한 재시도 경로를 태운다.
     previous_pa_reply = None
     escalations = []  # 2026-0X-XX 신설 — §ESCALATE-TO-PRO(v2.28) 승격 이력: {turn, reason}
+    # 2026-0X-XX 신설 — (c)패턴(사물+소유주체명시) 세션 발동 여부. #267/#279
+    # 실측에서 Pro로 승격해도 Pro조차 즉시 "무인으로 운영되는 사업체"라고
+    # 오판하는 걸 확인 — 지시문 주입만으론 불충분할 위험에 대비해, 최종
+    # PROFILE_SUBMIT의 entity_type을 코드가 사후에 강제 덮어쓰는 안전망을
+    # 추가한다(아래 submit_json 파싱부 참조). person/business 계열((a)/(b))은
+    # 대화가 진행되며 사용자가 실제로 사업 정보를 줄 수 있어 사후 강제는
+    # 하지 않는다 — (c)만 적용.
+    saw_pattern_c = False
+    entity_type_override_applied = False
     # 2026-0X-XX 신설 — 재시도 안전장치 시도 횟수(성공 여부와 무관하게 카운트,
     # 실측 기반으로 나중에 패턴을 다듬을 수 있도록 전부 기록)
     profile_submit_retries = 0
@@ -261,9 +305,20 @@ def run_scenario(api_key, pa_system, scenario):
         # 패턴에 해당하면 모델의 자각(§ESCALATE-TO-PRO 태그)을 기다리지 않고
         # 코드가 곧바로 hondi-pro로 부른다. 아래 esc_match 기반(모델 자기신고)
         # 승격과 공존 — 이 경로로 이미 승격했으면 그쪽 체크는 건너뛴다.
+        # (2026-0X-XX 2차 수정) "다시 생각해봐"(단순 승격)만으론 부족했다
+        # (#145/#157/#159/#163 실측 — Pro도 처음엔 맞게 판단) — 코드가 이미
+        # 확신하는 결론을 [INTERNAL] 지시문으로 이번 턴 사용자 메시지에
+        # 이어붙여 "판단을 대신 실행하게" 만든다(별도 user 메시지로 추가하지
+        # 않고 마지막 메시지에 이어붙임 — 연속된 동일 역할 메시지로 인한
+        # API 포맷 이슈 회피).
         _code_forced, _code_forced_reason = _detect_entity_type_ambiguity(user_turn_text)
         if _code_forced:
             escalations.append({"turn": turn, "reason": f"[CODE-FORCED] {_code_forced_reason}"})
+            if _code_forced == "c":
+                saw_pattern_c = True
+            pa_messages[-1]["content"] = (
+                pa_messages[-1]["content"] + "\n\n" + _CODE_FORCED_DIRECTIVES[_code_forced]
+            )
             pa_reply, usage, err = _call_deepseek(
                 api_key, pa_messages, max_tokens=PRO_MAX_TOKENS, model=MODEL_PRO)
         else:
@@ -429,6 +484,19 @@ def run_scenario(api_key, pa_system, scenario):
                         submit_json = json.loads(raw[:end])
                     except (json.JSONDecodeError, ValueError):
                         submit_json = None
+                    # (2026-0X-XX 신설) (c)패턴 사후 강제 오버라이드 — #267/#279
+                    # 실측에서 Pro로 승격 + 지시문 주입까지 해도 여전히 틀릴
+                    # 위험을 배제할 수 없어(사물이 실제로 상거래를 다루는
+                    # 경우 모델이 "이건 사업체다"로 되돌아가려는 경향이 강함),
+                    # 이 세션에서 (c)패턴이 한 번이라도 발동했으면 코드가
+                    # entity_type을 무조건 thing으로 덮어쓰고 결제 필드도
+                    # 함께 정리한다(worker.js의 thing/concept 강제 차단과
+                    # 동일 원칙 — patch M 참조).
+                    if saw_pattern_c and submit_json is not None and submit_json.get('entity_type') != 'thing':
+                        submit_json['entity_type'] = 'thing'
+                        submit_json['gdc_accepted'] = False
+                        submit_json['payout_account'] = None
+                        entity_type_override_applied = True
             break
         if '[PROFILE_SKIP]' in pa_reply:
             terminal = 'PROFILE_SKIP'; break
@@ -464,6 +532,7 @@ def run_scenario(api_key, pa_system, scenario):
         "escalation_count": len(escalations), "escalations": escalations,
         "profile_submit_retries": profile_submit_retries,
         "field_add_retries": field_add_retries, "field_remove_retries": field_remove_retries,
+        "entity_type_override_applied": entity_type_override_applied,
         "transcript": transcript, "submit_json": submit_json,
     }
 
@@ -475,6 +544,7 @@ def _error_result(scenario, transcript, err):
         "submit_entity_type": None, "verdict": "LIVE-ERROR", "notes": err, "usage": {},
         "escalation_count": 0, "escalations": [],
         "profile_submit_retries": 0, "field_add_retries": 0, "field_remove_retries": 0,
+        "entity_type_override_applied": False,
         "transcript": transcript, "submit_json": None,
     }
 

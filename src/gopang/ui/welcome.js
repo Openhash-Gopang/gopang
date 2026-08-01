@@ -40,6 +40,25 @@ export async function handleProfileSubmit(aiResponseText, extraFields = {}) {
     return false;
   }
 
+  // 2026-0X-XX 신설 — 호출부(profile-assistant.html의 §ESCALATE-TO-PRO
+  // (c)패턴)가 "이 프로필은 반드시 이 entity_type이어야 한다"고 이미
+  // 확신하는 경우, LLM이 뭐라고 냈든 코드가 사후에 강제한다. 프롬프트
+  // 지시문 주입까지 해도 모델이 여전히 틀릴 위험을 배제할 수 없어서
+  // (사물이 실제로 상거래를 다루면 모델이 "이건 사업체다"로 되돌아가려는
+  // 경향이 강함 — 라이브 스모크테스트 실측), 최종 저장 직전 이 지점에서
+  // 한 번 더 못박는다. job_ksco 검증(아래)보다 먼저 실행해야 entity_type
+  // 변경이 job_ksco 제거 판단에도 정확히 반영된다.
+  if (extraFields.forceEntityType && profile.entity_type !== extraFields.forceEntityType) {
+    console.warn('[Profile] entity_type 강제 오버라이드:', profile.entity_type, '->', extraFields.forceEntityType);
+    profile.entity_type = extraFields.forceEntityType;
+    if (extraFields.forceEntityType === 'thing' || extraFields.forceEntityType === 'concept') {
+      // thing/concept은 결제를 직접 받는 주체가 아니다(worker.js
+      // handleProfilePost의 동일 원칙 서버 강제와 이중 안전망 — patch M).
+      profile.gdc_accepted = false;
+      delete profile.payout_account;
+    }
+  }
+
   // 2026-07-13 신설(AC-AUTHOR_v1_0.md §3-1) — job_ksco는 entity_type이
   // person일 때만 의미가 있고, LLM이 제안한 code/label을 실제 KSCO
   // 데이터(data/ksco_2024_v8.json)로 한 번 더 대조한다 — U2(불확실
