@@ -10,6 +10,11 @@ on:
       # 2026-0X-XX 신설 — 300건 실측에서 실패/검토필요로 나온 68건만 골라
       # 별도 파일(profile_assistant_scenarios_retest_68fail.json)로 빠르게
       # 재검증할 수 있게 선택지 추가. 기본값은 기존과 동일(전체 세트).
+      # 2026-0X-XX 2차 신설 — patch Q(18건 전수분석 종합수정)/patch R(지시문
+      # 주입+(c)패턴 사후 강제 오버라이드) 검증에 필요한 최소 9건만 추린
+      # 세트 추가. 68건 전체를 매번 돌릴 필요 없이 이 9건만으로 두 패치의
+      # 핵심 주장(#267/#279 결정적 보장, #92/#257 반복감지, #130/#217
+      # 시나리오 수정, person→business 3건 표본)을 빠르게 확인할 수 있다.
       scenarios_file:
         description: "시나리오 파일 선택"
         required: false
@@ -18,6 +23,7 @@ on:
         options:
           - "profile_assistant_scenarios.json"
           - "profile_assistant_scenarios_retest_68fail.json"
+          - "profile_assistant_scenarios_patch_qr_verify.json"
 
 permissions:
   contents: write

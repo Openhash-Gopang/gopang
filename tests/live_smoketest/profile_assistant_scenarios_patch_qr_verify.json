@@ -1,0 +1,192 @@
+[
+  {
+    "no": 92,
+    "entity_type_expected": "business",
+    "opening_line": "가게 이름은 표선펜션이고, 담배 제조업 업종이에요. 노형동에 있어요.",
+    "persona_facts": {
+      "code": "12",
+      "code_label": "담배 제조업",
+      "tier": "Tier3",
+      "age_gender": "30대/남성"
+    },
+    "edge_case_tags": [
+      "AUTO_TIER3_SKIP",
+      "GDC_N_ACCT_N"
+    ],
+    "persona_directives": [
+      "GDC도 계좌이체도 필요 없고 현금 결제만 받는다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "STEP3C 조용히 스킵(안내 문구 없음), TIER3_REGULATED_SCHEMA_IDS와 일치 확인"
+  },
+  {
+    "no": 130,
+    "entity_type_expected": "business",
+    "opening_line": "저 한경면에서 협회 및 단체 하나 차렸어요, 대정읍정미소이라고 해요.",
+    "persona_facts": {
+      "code": "94",
+      "code_label": "협회 및 단체",
+      "tier": "Tier2",
+      "age_gender": "60대 이상/남성"
+    },
+    "edge_case_tags": [
+      "HIER_CLIMB",
+      "AUTO_REALTIME_GEN"
+    ],
+    "persona_directives": [
+      "자연스럽게 대화를 이어가며 AI가 묻는 것에 사실에 맞게 답하세요. 목록형으로 여러 정보를 한꺼번에 나열하지 말고, AI가 하나씩 물으면 하나씩만 답하세요.",
+      "이건 정식으로 사업자등록을 한 협회 및 단체(업종코드 94) 사업체입니다 — AI가 물어보면 자원봉사 모임이 아니라 정식 사업으로 운영 중임을 분명히 하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "Tier2 업종 — 참조 희소 구간, 최초사례/상향조회 분기 검증"
+  },
+  {
+    "no": 145,
+    "entity_type_expected": "person",
+    "opening_line": "저는 성산읍 사는 60대 이상 여성이고, 한의사 일 해요.",
+    "persona_facts": {
+      "code": "2413",
+      "code_label": "한의사",
+      "tier": "n/a",
+      "age_gender": "60대 이상/여성"
+    },
+    "edge_case_tags": [
+      "JOB_TIER3",
+      "PUBLIC_FALSE"
+    ],
+    "persona_directives": [
+      "프로필은 비공개로 하고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "한의사 — 서버가 visibility=private 강제, PA가 다투지 않고 한 문장 설명"
+  },
+  {
+    "no": 157,
+    "entity_type_expected": "person",
+    "opening_line": "저 30대 여성인데, 학생이면서 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "student+self_employed",
+      "code_label": "student+self_employed",
+      "tier": "n/a",
+      "age_gender": "30대/여성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "AI가 상호명·영업시간·주소·결제수단 등 정식 사업체 운영에 관한 정보를 물어보면, 그건 정식 사업이 아니라 개인적으로 소소하게 하는 겸업/부업 수준이라고 분명히 밝히세요 — 상호명을 새로 짓거나 영업시간을 만들어 답하지 마세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['student', 'self_employed'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 163,
+    "entity_type_expected": "person",
+    "opening_line": "저 40대 여성인데, 은퇴했는데 가끔 프리랜서 일도 병행해요.",
+    "persona_facts": {
+      "code": "retired+employed_private",
+      "code_label": "retired+employed_private",
+      "tier": "n/a",
+      "age_gender": "40대/여성"
+    },
+    "edge_case_tags": [
+      "WORKDOMAIN_MULTI",
+      "MULTIVALUE_ONETURN"
+    ],
+    "persona_directives": [
+      "오프닝에서 언급한 두 가지 상태(예: 학생이면서 자영업)를 자연스럽게 다시 한번 확인해주는 톤으로 답하세요.",
+      "첫 답변에서 상호명·주소·주요 상품을 한꺼번에 다 말하세요(개별 질문을 기다리지 마세요).",
+      "AI가 상호명·영업시간·주소·결제수단 등 정식 사업체 운영에 관한 정보를 물어보면, 그건 정식 사업이 아니라 개인적으로 소소하게 하는 겸업/부업 수준이라고 분명히 밝히세요 — 상호명을 새로 짓거나 영업시간을 만들어 답하지 마세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "work_domain.statuses 배열에 ['retired', 'employed_private'] 모두 반영, active 판단 정확성"
+  },
+  {
+    "no": 217,
+    "entity_type_expected": "institution",
+    "opening_line": "화북동 시립체육센터인데요, 프로필 등록하려고요. 아라동에 있어요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "IMAGE_BIZREG",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "화북동 체육센터 — 기관 유형 필수항목(설명·주소·연락처) 순서 검증"
+  },
+  {
+    "no": 257,
+    "entity_type_expected": "platform",
+    "opening_line": "청년창업공간대여이라는 서비스 운영 중인데, 플랫폼 프로필 만들게요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "RESV_N",
+      "PUBLIC_TRUE"
+    ],
+    "persona_directives": [
+      "예약 기능은 필요 없다고 답하세요.",
+      "프로필을 공개해도 된다고 답하세요."
+    ],
+    "skip_payment_steps_expected": false,
+    "verify_points": "청년창업공간대여 — platform_type 필드, 예약 STEP3B 처리"
+  },
+  {
+    "no": 267,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 아라동 무인 세탁 키오스크예요. 개인사업자 소유. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_Y_ACCT_N",
+      "RESV_Y"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  },
+  {
+    "no": 279,
+    "entity_type_expected": "thing",
+    "opening_line": "이건 노형동 무인 커피 키오스크예요. ㈜혼디카페 운영. 프로필 만들어주세요.",
+    "persona_facts": {
+      "code": null,
+      "code_label": null,
+      "tier": "n/a",
+      "age_gender": ""
+    },
+    "edge_case_tags": [
+      "ENTITY_THING",
+      "GDC_Y_ACCT_N",
+      "RESV_Y"
+    ],
+    "persona_directives": [
+      "GDC 결제는 받고 싶지만 계좌이체는 필요 없다고 답하세요.",
+      "예약 기능은 켜고 싶다고 답하세요."
+    ],
+    "skip_payment_steps_expected": true,
+    "verify_points": "entity_type=thing 판단, relations/role_description/status_line이 industry_fields로 저장 확인, 결제 STEP 스킵 확인"
+  }
+]
