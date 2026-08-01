@@ -47,6 +47,18 @@ export const TOKEN_BUDGET = {
   // 메인 채팅이든 AI 패널이든 "같은 종류의 응답"이면 같은 예산을 쓴다.
   CHAT_REPLY:     800,
 
+  // 2026-0X-XX 신설 — hondi-pro(deepseek-v4-pro) 전용 예산. #180(profile-
+  // assistant.html)과 동일 클래스 결함을 call-ai.js에서도 실측 확인(팀원
+  // 제보 — K-Telecom switch형 GWP 전환 대화에서 hondi-pro 페일오버 턴이
+  // 45초 idle 타임아웃, reasoning_tokens만 280+ 소모하고 content는 거의
+  // 못 채움). hondi-pro는 thinking 모드가 원래 의도대로 켜져 있어(patch F
+  // 참조 — Flash만 명시적으로 비활성화, Pro는 그대로 유지) 최종 답 전에
+  // 추론에 토큰을 먼저 쓴다. v4.0(2026-07-28) 재설계로 AC가 hondi-pro를
+  // 기본 호출로 쓰게 되면서, 이 문제가 "가끔 승격될 때"가 아니라 사실상
+  // "매 턴"(사용자가 직접 키를 등록하지 않은 대다수 무료 사용자 기준)
+  // 발생할 수 있는 상태였다.
+  CHAT_REPLY_PRO: 4000,
+
   // GWP inline Agent 호출 응답(같은 세션 내 전문 SP 주입 후 응답)
   AGENT_INLINE:  1200,
 
@@ -65,6 +77,17 @@ export function getTokenBudget(key) {
     return TOKEN_BUDGET.CHAT_REPLY;
   }
   return v;
+}
+
+/**
+ * resolveChatBudget(modelName) — 2026-0X-XX 신설.
+ * 호출부가 candidate의 model 문자열만 보고 "이번 시도가 hondi-pro인지"를
+ * 판단해 CHAT_REPLY_PRO/CHAT_REPLY 중 알맞은 예산을 고른다. 호출부에
+ * 삼항연산자를 반복해서 흩뿌리는 대신 이 파일 한 곳에서만 판단 기준을
+ * 갖는다(원칙 1과 동일한 이유 — "hondi-pro"라는 문자열도 여기서만 비교).
+ */
+export function resolveChatBudget(modelName) {
+  return modelName === 'hondi-pro' ? TOKEN_BUDGET.CHAT_REPLY_PRO : TOKEN_BUDGET.CHAT_REPLY;
 }
 
 // ── 모델 정책 ──────────────────────────────────────────────────────────
