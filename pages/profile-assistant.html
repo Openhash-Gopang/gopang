@@ -878,7 +878,16 @@ async function _handleReplyTags(fullReply) {
   // _CARD_LINE_RE만으로는 2회차부터 트리거가 아예 안 걸려 똑같이 조용히
   // 방치되는 결함이 재발했다. _awaitingSubmitRetry로 "재시도 대기 중" 상태를
   // 함께 봐서, 카드 유무와 무관하게 재시도 실패를 계속 감지한다.
-  if (!localStorage.getItem('hondi_profile_done') && (_CARD_LINE_RE.test(fullReply) || _awaitingSubmitRetry)) {
+  // 2026-0X-XX 신설 — §PROFILE_CARD 형식을 안 쓴 채(카드 이모지 라인 없이)
+  // 완료를 선언하거나 인사만 반복하며 멈추는 경우, 위 _CARD_LINE_RE 신호가
+  // 아예 안 잡혀 계속 같은 응답이 반복되는 걸 실측 확인(하네스 68건
+  // 재테스트 #92/#257과 동일 패턴). 카드 형식 준수 여부와 무관하게, 직전
+  // PA 응답과 이번 응답이 완전히 동일하면 그 자체를 "멈춰서 반복 중"이라는
+  // 신호로 보고 동일한 재시도 경로를 태운다.
+  const _assistantMsgs = messages.filter((m) => m.role === 'assistant');
+  const _previousPaReply = _assistantMsgs.length >= 2 ? _assistantMsgs[_assistantMsgs.length - 2].content : null;
+  const _stuckRepeat = !fullReply.includes('PROFILE_SUBMIT') && _previousPaReply !== null && fullReply === _previousPaReply;
+  if (!localStorage.getItem('hondi_profile_done') && (_CARD_LINE_RE.test(fullReply) || _awaitingSubmitRetry || _stuckRepeat)) {
     if (_profileSubmitRetryCount < _PROFILE_SUBMIT_MAX_RETRIES) {
       _profileSubmitRetryCount++;
       _awaitingSubmitRetry = true;
