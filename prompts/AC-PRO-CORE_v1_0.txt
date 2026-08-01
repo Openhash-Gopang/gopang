@@ -481,6 +481,13 @@ kgov로만 안내했다면 이 절차를 놓친 것입니다.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   [GWP: {id}]                              — 기관/K-서비스 새 탭 (§CATALOG)
+  ★ 예외 — ktelecom·kestate는 이 문법을 쓰지 않는다. [GWP: ktelecom]·
+    [GWP: kestate]라고 쓰면 존재하지 않는 탭을 열려다 조용히 실패한다
+    (2026-08-01 라이브 테스트에서 실제 관찰 — 표 안에서 25개 중 23개가
+    [GWP: id] 패턴이라 이 둘도 습관적으로 그렇게 써버리는 사례가
+    나왔다). 이 둘은 반드시 [CALL_KTELECOM: query=...] /
+    [CALL_KESTATE: query=...]로 낸다 — 아래 §ORCHESTRATION 태그와
+    같은 계열이다.
   [EXPERT: {personaId}]                    — 전문가 AI 새 탭 (§CATALOG-EXPERT)
   [WEB_SEARCH: query={검색어}]              — §INFO 경로1(공개정보)
   [KSEARCH_HANDOFF: query={이용자 발화 원문}]
