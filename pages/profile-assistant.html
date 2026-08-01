@@ -369,6 +369,15 @@ const _PROFILE_SUBMIT_MAX_RETRIES = 2;
 // AC 레이어의 AC-PRO-CORE(Pro 기본+Flash 위임)와 반대 방향의 실험이라
 // PA에만 한정해 시험 적용한다.
 const _ESCALATE_RE = /\[ESCALATE_TO_PRO:[^\]]*\]/;
+
+// ── FIELD_ADD/FIELD_REMOVE 안전장치 (2026-0X-XX 신설) ──
+// PROFILE_SUBMIT과 달리 "카드가 몇 번째로 나왔는가" 같은 깔끔한 구조
+// 신호가 없어, 사용자 발화의 추가/삭제 요청 어투를 키워드로 잡는
+// 휴리스틱이다(tests/live_smoketest/profile_assistant_smoketest.py와
+// 동일 패턴 공유 — 실측 후 함께 다듬는다). 완벽하지 않다: 다르게
+// 표현하면 놓칠 수 있고, 드물게 과잉 트리거될 수 있다.
+const _FIELD_ADD_REQUEST_RE = /(넣어\s*주세요|넣어\s*줘|추가해\s*주세요|추가해\s*줘|포함해\s*주세요|포함해\s*줘|적어\s*주세요|적어\s*줘|표시해\s*주세요|같이\s*넣어)/;
+const _FIELD_REMOVE_REQUEST_RE = /(빼\s*주세요|빼\s*줘|삭제해\s*주세요|삭제해\s*줘|제외해\s*주세요|제외해\s*줘|없애\s*주세요|없애\s*줘|지워\s*주세요|지워\s*줘)/;
 async function ensureSystemPrompt() {
   if (systemPrompt) return systemPrompt;
   systemPrompt = await _loadSpByKey('profile-assistant', 'Profile-Assistant')
@@ -696,7 +705,44 @@ async function _handleReplyTags(fullReply) {
   // 요청한 사건을 구조화 로그로 남긴다(§TEMPLATE-REFERENCE 커스텀 필드
   // 단락 참조). USER_FEEDBACK과 동일한 "실패해도 무시하고 진행" 패턴 —
   // 이 로그가 실패해도 프로필 작성 자체를 막지 않는다.
-  const fieldEventMatches = [...fullReply.matchAll(/\[(FIELD_ADD|FIELD_REMOVE):\s*([^\]]*)\]/g)];
+  // (2026-0X-XX 신설) 재시도 안전장치 — 이번 응답 직전 사용자 발화가
+  // 추가/삭제 요청 어투인데 해당 태그가 이번 응답에 없으면, 화면에 보일
+  // 문구는 그대로 두고 태그만 다시 내달라고 1회 내부 재요청한다
+  // (PROFILE_SUBMIT 안전장치와 동일 원칙 — §4). 재시도로 받은 태그는
+  // effectiveReply에만 이어붙여 아래 매칭 루프가 잡도록 한다(화면
+  // 표시용 fullReply/aiBubble은 건드리지 않음).
+  let effectiveReply = fullReply;
+  const _lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+  const _lastUserText = _lastUserMsg
+    ? (typeof _lastUserMsg.content === 'string'
+        ? _lastUserMsg.content
+        : (_lastUserMsg.content.find((c) => c.type === 'text')?.text || ''))
+    : '';
+  if (_FIELD_ADD_REQUEST_RE.test(_lastUserText) && !/\[FIELD_ADD:/.test(fullReply)) {
+    console.warn('[PA] FIELD_ADD 요청 감지, 태그 누락 — 내부 재요청');
+    messages.push({ role: 'user', content:
+      '[INTERNAL: 방금 요청하신 필드 추가가 화면 카드에는 반영됐지만 ' +
+      '[FIELD_ADD: ...] 내부 태그가 빠졌습니다. 사용자에게 보일 새 문구는 ' +
+      '만들지 말고, 방금 응답과 동일한 내용으로 ' +
+      '[FIELD_ADD: key=..., label=..., entity_type=..., category=...] ' +
+      '태그만 다시 출력해 주세요.]' });
+    const retryReply = await callPaAI(messages, () => {});
+    messages.push({ role: 'assistant', content: retryReply });
+    if (/\[FIELD_ADD:/.test(retryReply)) effectiveReply += '\n' + retryReply;
+  }
+  if (_FIELD_REMOVE_REQUEST_RE.test(_lastUserText) && !/\[FIELD_REMOVE:/.test(fullReply)) {
+    console.warn('[PA] FIELD_REMOVE 요청 감지, 태그 누락 — 내부 재요청');
+    messages.push({ role: 'user', content:
+      '[INTERNAL: 방금 요청하신 필드 삭제가 화면 카드에는 반영됐지만 ' +
+      '[FIELD_REMOVE: ...] 내부 태그가 빠졌습니다. 사용자에게 보일 새 문구는 ' +
+      '만들지 말고, 방금 응답과 동일한 내용으로 ' +
+      '[FIELD_REMOVE: key=..., entity_type=..., category=...] ' +
+      '태그만 다시 출력해 주세요.]' });
+    const retryReply = await callPaAI(messages, () => {});
+    messages.push({ role: 'assistant', content: retryReply });
+    if (/\[FIELD_REMOVE:/.test(retryReply)) effectiveReply += '\n' + retryReply;
+  }
+  const fieldEventMatches = [...effectiveReply.matchAll(/\[(FIELD_ADD|FIELD_REMOVE):\s*([^\]]*)\]/g)];
   for (const [, tagName, raw] of fieldEventMatches) {
     try {
       const pick = (key) => {
