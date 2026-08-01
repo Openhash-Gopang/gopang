@@ -16815,7 +16815,14 @@ async function handleProfilePost(request, env, corsHeaders) {
   // 본인 행에 직접 SP를 기록) 이제 'agent' entity_type은 어떤 경로로도
   // 만들어지지 않는다. 그래도 화이트리스트엔 영구히 넣지 않는다 — 클라이언트가
   // entity_type:'agent'를 직접 보내 사칭 행을 만들 길을 원천 차단하기 위함.
-  if (!['person','consumer','individual','org','institution','business','platform'].includes(entity_type)) {
+  // 2026-0X-XX 수정 — 'thing'/'concept' 추가. v2.25(entity_type에 thing·
+  // concept 신설) 당시 "새 최상위 PROFILE_SUBMIT 필드를 만들지 않아 worker.js는
+  // 변경이 전혀 필요 없다"고 판단한 근거가 schema_id 검증 게이트 우회였는데,
+  // 그보다 먼저 실행되는 이 entity_type 화이트리스트 체크는 고려하지 못했다
+  // — 즉 thing/concept으로 분류된 프로필은 여기서 먼저 400으로 막혀 도입
+  // 이래 한 번도 실제로 저장되지 못했을 가능성이 높다(PA 라이브 스모크테스트
+  // 300건 실사고에서 발견).
+  if (!['person','consumer','individual','org','institution','business','platform','thing','concept'].includes(entity_type)) {
     return _err(400, 'INVALID_FIELD', 'entity_type 값이 올바르지 않습니다', corsHeaders);
   }
 
