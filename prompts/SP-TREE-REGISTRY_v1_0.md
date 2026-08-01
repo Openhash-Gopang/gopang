@@ -126,6 +126,7 @@ SP-10_kpublic -> UNIVERSAL-INTEGRITY
 SP-12_kdemocracy -> UNIVERSAL-INTEGRITY
 SP-13_klogistics -> UNIVERSAL-INTEGRITY
 SP-16_kinsurance -> UNIVERSAL-INTEGRITY
+SP-22_kbank -> UNIVERSAL-INTEGRITY
 
 # 공통 레이어 체인 (B 섹션 산문 설명과 동일 관계)
 PROFESSIONAL-common -> UNIVERSAL-common

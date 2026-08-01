@@ -236,13 +236,25 @@ const GWP_REGISTRY = [
   // SP-24_kestate_v1_0.md 참조(RULE-09도 이 재설계에 맞춰 갱신됨).
   {
     id: 'kbank', name: 'K-Bank', category: 'ECO',
-    type: 'switch',  // 시스템 전환형 — 새 탭 없음, url 불필요
+    // 2026-08-01 재설계 — SP-22_kbank_v2_0.txt 참조. type:'switch'(안내
+    // 전용, 자체 데이터 없음)에서 K-Insurance와 동일한 'inline'으로
+    // 전환했다. 근거: [CALL_KBANK:...] 핸들러가 call-ai.js에 실제로
+    // 배선된 적이 없었다는 게 batch2 라이브 테스트(no=47)와 코드 전수
+    // 확인으로 확인됨 — "switch로 이미 작동한다"던 v1.0 메타데이터가
+    // 틀렸었다. 이제 예적금·대출·카드·자동이체·청약을 GDC(₮)로 실제
+    // 실행하는 서비스로 재정의했으므로 kinsurance처럼 자체 도메인이
+    // 필요하다. bank.hondi.net 저장소·webapp.html이 아직 없으므로
+    // status는 실배포 전까지 'pending_review' 유지 — 화이트리스트
+    // 필드테스터(금융권 종사자)에게만 노출한다(AGENT-COMMON §3-0 ③).
+    type: 'inline',
+    url: 'https://bank.hondi.net/webapp.html',  // ★ 미배포 — pending_review 해제 조건
     sp_key: 'SP-22_kbank',
-    status: 'active', priority: 6, threshold: 0.70,
-    description: '은행상품 안내(예적금·대출·신용카드·자동이체·청약) — 증권 매매체결은 kfinance 소관. 최종 실행(계좌이체 등)은 본인이 은행 앱에서.',
+    status: 'pending_review', priority: 6, threshold: 0.70,
+    description: 'GDC 기반 은행업무(예적금·대출·카드·자동이체·청약·환전 상담) 시뮬레이션 — 은행업 인가 전 필드테스트. 증권 매매체결은 kfinance 소관. 실제 KRW 집행·정식 계약은 인가 후 파트너 은행에서.',
     triggers: [
       '적금','예금','대출','신용카드','체크카드','자동이체',
       '청약통장','환전','인증서','한도','상환','펀드 상담',
+      '계좌 개설','계좌 조회','이자','만기',
     ],
   },
   {
