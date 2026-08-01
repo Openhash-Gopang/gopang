@@ -3646,15 +3646,63 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
         console.warn(`[GWP] 서비스 '${svcId}'는 status='${svcDef.status}'라 아직 서빙 대상이 아님 — 라우팅 차단`);
         if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
       } else if (svcDef && svcDef.type === 'switch') {
-        // ★ 2026-07-12 신설 — K-Bank/K-Telecom/K-Estate처럼 url 없는
-        // 시스템전환형 서비스가 구식 [GWP: id] 문법으로 잘못 불렸을 때의
-        // 안전장치. 이 함수(_parseAgentTags)는 동기라 _forwardSwitchSP를
-        // 직접 못 부른다 — 정상 경로는 [CALL_KBANK: query=...] 등 전용
-        // 태그(_handleOrchestrationTags가 처리)를 쓰는 것이므로, 여기서는
-        // url 없는 서비스로 _gwpLaunch가 깨지는 것만 막고 경고 로그만
-        // 남긴다(AGENT-COMMON SP 문구 오류 진단용).
-        console.warn(`[GWP] '${svcId}'는 시스템전환형(type:switch) 서비스라 [GWP:] 태그로는 못 엽니다 — [CALL_${svcId.toUpperCase()}: query=...] 태그를 써야 합니다.`);
-        if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
+        // ★ 2026-07-12 신설 → 2026-08-01 자동복구로 교체 — K-Telecom/
+        // K-Estate처럼 url 없는 시스템전환형 서비스가 구식 [GWP: id]
+        // 문법으로 잘못 불렸을 때의 안전장치. 정상 경로는
+        // [CALL_KTELECOM: query=...] 등 전용 태그(_handleOrchestrationTags
+        // 가 처리)이지만, 2026-08-01 라이브 재검증(no=1, 2회 재현·완전
+        // 동일 오출력)에서 확인했듯 AGENT-COMMON이 §TAGS 표에 예외를
+        // 명시해도 습관적으로 구식 [GWP: id] 문법을 낸다 — 25개 라우팅
+        // 판단 중 23개가 이 패턴이라 프롬프트 경고만으로는 못 이긴다.
+        //
+        // 예전엔 여기서 경고 로그만 남기고 탭을 닫아, 라우팅 판단
+        // 자체(어느 서비스로 갈지)는 맞았는데도 사용자에게는 그냥
+        // AC가 직접 응답한 것처럼 보이며 조용히 끊겼다. SWITCH_SP_LOADERS
+        // 에 이미 존재하는 로더를 재사용해 _forwardSwitchSP로 직접
+        // 복구한다.
+        //
+        // 동기 함수 제약 — 이 함수(_parseAgentTags)는 동기라
+        // _forwardSwitchSP(async)의 완료를 기다릴 수 없다. 다만 "기다릴
+        // 필요"는 애초에 없다: 호출부(callAI 4192행)도 이 결과를
+        // await하지 않고, 아래 EXPERT 분기(handleExpertTag, 4198행)가
+        // 이미 같은 fire-and-forget 패턴(.catch로 에러만 흡수)을 쓰고
+        // 있다 — 그 패턴을 그대로 재사용한다. callAI/history는 이 파일
+        // 모듈 스코프에 이미 있어(callAI는 함수 선언이라 호이스팅됨,
+        // history는 20행에서 import) 별도 인자 전달 없이 참조 가능하다.
+        //
+        // ⚠ 미검증 잔여 리스크(실제 브라우저에서 확인 필요) — 이 IIFE 안의
+        // await callAI(...)는 지금 이 _parseAgentTags를 호출한 "바깥"
+        // callAI()가 아직 finally에서 _currentAbort/전송버튼 상태를
+        // 정리하기 전에 시작될 수도, 그 이후에 시작될 수도 있다(await
+        // _forwardSwitchSP 지연에 따라 달라짐). 최악의 경우 두 callAI
+        // 실행이 짧게 겹치며 _currentAbort를 서로 덮어써 "정지" 버튼이
+        // 잘못된 스트림을 가리킬 수 있다 — 데이터 손상은 아니고 UX
+        // 엣지케이스이지만, 라이브(실제 배포 환경 또는 Claude Code)에서
+        // "[GWP: ktelecom]" 같은 구문법 오출력을 실제로 유도해 정지
+        // 버튼/스트리밍 상태가 꼬이지 않는지 반드시 확인할 것.
+        const label = { ktelecom: 'K-Telecom', kestate: 'K-Estate', kbank: 'K-Bank' }[svcId];
+        const loader = SWITCH_SP_LOADERS[svcId];
+        if (loader) {
+          console.info(`[GWP] '${svcId}'는 시스템전환형(type:switch) — 구식 [GWP:] 태그를 감지해 ${label}로 자동복구 전환합니다.`);
+          const cleanedReply = fullReply.replace(/\[GWP:\s*[\w-]+\]\s*/, '').trim();
+          if (bubble) _updateStreamBubble(bubble, cleanedReply);
+          if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
+          (async () => {
+            await _forwardSwitchSP(loader, label);
+            history.length = 0;
+            await callAI(
+              `[INTERNAL: AC→${label} 자동복구 전환 — 사용자에게 보이지 않는 내부 신호입니다. ` +
+              `모델이 구식 [GWP: ${svcId}] 문법을 냈지만 라우팅 판단(${label}) 자체는 유효하므로 ` +
+              `그대로 이어받아 상담을 시작하세요: "${userText}"]`,
+              null, _preTab
+            );
+          })().catch(e => console.warn(`[GWP] ${label} 자동복구 전환 실패(무시):`, e.message));
+        } else {
+          // SWITCH_SP_LOADERS에 없는 미지의 switch 서비스 — 로더가 없으니
+          // 복구 불가, 예전 동작(경고만)으로 폴백.
+          console.warn(`[GWP] '${svcId}'는 type:switch인데 SWITCH_SP_LOADERS에 로더가 없어 자동복구 불가.`);
+          if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
+        }
       } else if (svcDef) {
         console.info('[GWP] LLM 판단 → 새 탭:', svcId);
         const cleanedReply = fullReply.replace(/\[GWP:\s*[\w-]+\]\s*/, '').trim();

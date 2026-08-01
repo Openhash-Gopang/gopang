@@ -82,6 +82,52 @@ FIELD_REMOVE_REQUEST_RE = re.compile(
     r"제외해\s*줘|없애\s*주세요|없애\s*줘|지워\s*주세요|지워\s*줘)"
 )
 
+# 2026-0X-XX 신설 — entity_type 판단 오류(300건 실측 대분류 1위 원인)에
+# 대한 §ESCALATE-TO-PRO 발동이 거의 안 되는 문제를 발견(모델이 "이건
+# 애매하다"고 스스로 자각해야 발동하는 구조라 신호가 약하면 안 걸림).
+# 사고실험으로 신뢰도 높다고 판단된 3개 패턴(a·b·c)은 모델의 자각에
+# 기대지 않고, 코드가 사용자 발화만 보고 무조건 hondi-pro로 승격시킨다
+# (FIELD_ADD/REMOVE 안전장치와 동일 원칙 — 키워드 기반이라 완벽하지
+# 않음, 실측 후 다듬을 수 있게 escalations에 [CODE-FORCED] 태그로 기록).
+#
+# (a) 1차 신분(학생/은퇴/전업주부/구직중)에 겸업이 딸려 나오는 경우 —
+#     "가끔 프리랜서 일도 병행해요" 류.
+_PRIMARY_STATUS_RE = re.compile(r"(학생|은퇴|전업주부|구직|무직|취준)")
+_SECONDARY_WORK_RE = re.compile(r"(프리랜서|겸업|아르바이트|알바|부업|사이드잡)")
+
+# (b) 직업/자격만 단독으로 언급됐는데 고용 상태인지 자영업인지 발화만으론
+#     안 갈리는 경우 — "한의사 일 해요" 류. 흔히 자영업 개원이 잦은 전문직
+#     명단 + "회사/직장/근무" 등 고용 신호나 "가게/차렸/개업/원장/대표" 등
+#     사업 신호가 둘 다 없을 때만 트리거(둘 중 하나라도 있으면 이미 판단
+#     가능하므로 승격 불필요).
+_PROFESSION_TITLE_RE = re.compile(
+    r"(한의사|한약사|약사|의사|치과의사|수의사|변호사|회계사|세무사|법무사|"
+    r"노무사|미용사|디자이너|상담사|트레이너|강사|통역사|번역가|건축사|"
+    r"감정평가사)"
+)
+_EMPLOYMENT_MARKER_RE = re.compile(r"(회사|직장|근무|다니|소속|병원에서|약국에서)")
+_BUSINESS_MARKER_RE = re.compile(r"(가게|차렸|운영|장사|개업|사업|원장|대표|매장|점포)")
+
+# (c) 사물/개념(무인기기·자율주행차·AI 등)의 프로필인지, 그걸 소유·운영하는
+#     사업자 자신의 프로필인지 애매한 경우 — "무인 키오스크...㈜혼디카페
+#     운영" 류(소유주체가 명시돼 있어 신호가 강함).
+_THING_INDICATOR_RE = re.compile(r"(무인|자율주행|로봇|키오스크|셔틀|AI\s*페르소나|AI\s*에이전트)")
+_OWNER_INDICATOR_RE = re.compile(r"(운영|소유|주식회사|\(주\)|㈜)")
+
+
+def _detect_entity_type_ambiguity(text: str):
+    """(a)/(b)/(c) 중 하나라도 매칭되면 (True, 사유) 반환, 아니면 (False, None)."""
+    if _PRIMARY_STATUS_RE.search(text) and _SECONDARY_WORK_RE.search(text):
+        return True, "1차신분+겸업(work_domain 애매)"
+    if (_PROFESSION_TITLE_RE.search(text)
+            and not _EMPLOYMENT_MARKER_RE.search(text)
+            and not _BUSINESS_MARKER_RE.search(text)):
+        return True, "직업단독언급(고용/자영업 애매)"
+    if _THING_INDICATOR_RE.search(text) and _OWNER_INDICATOR_RE.search(text):
+        return True, "사물+소유주체명시(thing/business 애매)"
+    return False, None
+
+
 
 def _load_composited_sp(repo_root):
     """manifest-loader.js의 _loadSpByKey('profile-assistant', ...)와 동일한
@@ -195,7 +241,18 @@ def run_scenario(api_key, pa_system, scenario):
 
     for turn in range(MAX_TURNS):
         pa_messages.append({"role": "user", "content": user_turn_text})
-        pa_reply, usage, err = _call_deepseek(api_key, pa_messages, max_tokens=1600)
+
+        # (2026-0X-XX 신설) entity_type 애매함 코드 강제 승격 — 위 (a)/(b)/(c)
+        # 패턴에 해당하면 모델의 자각(§ESCALATE-TO-PRO 태그)을 기다리지 않고
+        # 코드가 곧바로 hondi-pro로 부른다. 아래 esc_match 기반(모델 자기신고)
+        # 승격과 공존 — 이 경로로 이미 승격했으면 그쪽 체크는 건너뛴다.
+        _code_forced, _code_forced_reason = _detect_entity_type_ambiguity(user_turn_text)
+        if _code_forced:
+            escalations.append({"turn": turn, "reason": f"[CODE-FORCED] {_code_forced_reason}"})
+            pa_reply, usage, err = _call_deepseek(
+                api_key, pa_messages, max_tokens=1600, model=MODEL_PRO)
+        else:
+            pa_reply, usage, err = _call_deepseek(api_key, pa_messages, max_tokens=1600)
         if err:
             return _error_result(scenario, transcript, f"PA 호출 실패(turn {turn}): {err}")
         for k in total_usage:
@@ -206,7 +263,8 @@ def run_scenario(api_key, pa_system, scenario):
         # 없어야 함) 그 응답은 대화 기록에 남기지 않고, 같은 pa_messages로
         # hondi-pro(deepseek-v4-pro)를 재호출해 이번 턴의 진짜 응답을 받는다
         # — 프로덕션 클라이언트(profile-assistant.html)와 동일한 로직.
-        esc_match = ESCALATE_RE.search(pa_reply)
+        # 위 코드 강제 승격이 이미 발동한 턴이면 건너뛴다(이미 pro 응답).
+        esc_match = None if _code_forced else ESCALATE_RE.search(pa_reply)
         if esc_match:
             escalations.append({"turn": turn, "reason": esc_match.group(1).strip()})
             pa_reply, pro_usage, pro_err = _call_deepseek(
