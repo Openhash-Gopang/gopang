@@ -270,7 +270,20 @@ const GWP_REGISTRY = [
     id: 'ktelecom', name: 'K-Telecom', category: 'UTL',
     type: 'switch',
     sp_key: 'SP-23_ktelecom',
-    status: 'active', priority: 6, threshold: 0.70,
+    // 2026-08-01 정정 — status를 'active'에서 'pending_review'로 내림.
+    // SP-23_ktelecom_v1.0.txt RULE-09가 "call-ai.js에 배선 완료"라고
+    // 적어놨지만 실제로는 [CALL_KTELECOM:...] 핸들러가 call-ai.js
+    // 어디에도 없다(kbank 때와 동일한 SP-Author 대행 작성 시점의 오기록,
+    // 2026-08-01 코드 전수 확인). AC-PRO-CORE_v1_0.txt는 이미 이 사실을
+    // 알고 "미구현, 태그 내지 말라"고 지시하고 있었으니 그 자체는 안전
+    //했지만, status:'active'가 call-ai.js _parseAgentTags의 "태그 누락
+    // 폴백"(3628행 — 활성 서비스 표시명이 응답 텍스트에 등장하면 자동
+    // 라우팅 복구)에도 걸릴 수 있어 실질적 위험이 있었다. AC가 "K-Telecom
+    // 기능은 준비 중"이라고 말하면서 우연히 폴백 트리거 문구까지 같이
+    // 쓰면 존재하지 않는 서비스로 전환을 시도하게 된다 — status를
+    // 내려서 이 경로 자체를 차단한다. 실제 [CALL_KTELECOM] 핸들러를
+    // call-ai.js에 배선하고 검증하기 전까지는 'active'로 되돌리지 않는다.
+    status: 'pending_review', priority: 6, threshold: 0.70,
     description: '통신 서비스 안내(요금제·인터넷·유심·로밍·결합상품·분실신고) — 단말기 자체 구매는 kcommerce 소관. 최종 실행(개통 등)은 본인이 통신사 앱에서.',
     triggers: [
       '요금제','인터넷 설치','유심','로밍','결합상품','통신사',
@@ -281,7 +294,11 @@ const GWP_REGISTRY = [
     id: 'kestate', name: 'K-Estate', category: 'ECO',
     type: 'switch',
     sp_key: 'SP-24_kestate',
-    status: 'active', priority: 6, threshold: 0.70,
+    // 2026-08-01 정정 — ktelecom과 동일 사유. status를 'pending_review'로
+    // 내림(SP-24_kestate_v1.0.txt RULE-09의 "배선 완료" 서술이 부정확 —
+    // [CALL_KESTATE:...] 핸들러 call-ai.js에 없음, 2026-08-01 코드
+    // 전수 확인). 위 ktelecom 항목의 상세 사유 주석 참고.
+    status: 'pending_review', priority: 6, threshold: 0.70,
     description: '부동산 매물 탐색·등록·중개연결·임대차 계약관리 — 계약서 법률검토(klaw)·세금(ktax)·전입신고 등 행정(kgov)·자동이체 설정(kgdc)은 각 소관 서비스로. 최종 계약 체결은 본인·공인중개사·법무사 몫.',
     triggers: [
       '전세','월세','매매 매물','부동산','공인중개사','임대차',
