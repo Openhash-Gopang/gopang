@@ -15,7 +15,7 @@
  *      / [PROFILE_INTERRUPT_HANDOFF] 감지 → 무관한 요청을 AC에게 즉시 반환
  */
 import { CFG, _modelSupportsVision, PROVIDER_INFO, getPriorityOrder, MODEL_MIGRATION } from '../core/config.js';
-import { TOKEN_BUDGET } from '../core/token-policy.js';
+import { TOKEN_BUDGET, resolveChatBudget } from '../core/token-policy.js';
 import { IMPORTANCE } from '../../core/constants.js';
 import { aiActive, history, _userLocation,
          _USER, USER_GUID, _locationPending, _locationReady,
@@ -3369,7 +3369,7 @@ function _buildCallCandidates(userText, messages) {
  * @returns {Promise<string>} 모델 응답 전체 텍스트
  */
 export async function _callLLM(messages, options = {}) {
-  const { max_tokens = TOKEN_BUDGET.CHAT_REPLY, temperature = 0.6, bubble = null } = options;
+  const { max_tokens: _explicitMaxTokens, temperature = 0.6, bubble = null } = options;
   const _lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
   const _lastUserText = typeof _lastUserMsg?.content === 'string' ? _lastUserMsg.content : '';
   const candidates = _buildCallCandidates(_lastUserText, messages);
@@ -3380,6 +3380,13 @@ export async function _callLLM(messages, options = {}) {
     // BUG-FIX(2026-07-01): 이 함수는 stopGeneration()과 무관한 별도 호출
     // 경로(핸드오프·전문가 세션 등)라 사용자 수동 중지 신호가 없다 — 순수
     // 유휴 타임아웃만 건다(45초 무진행 시 다음 후보로 페일오버).
+    // 2026-0X-XX 수정 — 호출자가 max_tokens을 명시하지 않았으면(대부분의
+    // 실제 호출), candidate가 hondi-pro인지 보고 그때그때 예산을 고른다
+    // (resolveChatBudget). #180과 동일 클래스 결함 — hondi-pro는 thinking
+    // 모드가 켜져 있어 CHAT_REPLY(800)로는 추론만 하다 끝나 45초 idle
+    // 타임아웃에 걸리는 걸 실측(팀원 제보). 명시적으로 max_tokens을 넘긴
+    // 호출자의 의도는 그대로 존중한다.
+    const max_tokens = _explicitMaxTokens ?? resolveChatBudget(c.model);
     idle = _makeIdleAbort(_LLM_IDLE_TIMEOUT_MS, null);
     try {
       const reqBody = { model: c.model, messages, max_tokens, temperature, stream: true };
@@ -4024,10 +4031,15 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
       // 후자는 기존처럼 다음 후보로 페일오버되게 한다.
       idle = _makeIdleAbort(_LLM_IDLE_TIMEOUT_MS, _currentAbort?.signal);
       try {
+        // 2026-0X-XX 수정 — #180과 동일 클래스 결함(팀원 제보: K-Telecom
+        // switch형 GWP 전환 대화에서 hondi-pro 페일오버 턴이 45초 idle
+        // 타임아웃, reasoning_tokens만 280+ 소모). hondi-pro는 thinking이
+        // 켜져 있어 CHAT_REPLY(800)로는 추론만 하다 끝난다 — candidate가
+        // hondi-pro인지 보고 예산을 그때그때 고른다.
         const reqBody = {
           model: c.model,
           messages,
-          max_tokens:  TOKEN_BUDGET.CHAT_REPLY,
+          max_tokens:  resolveChatBudget(c.model),
           temperature: 0.6,
           stream:      true,
         };
