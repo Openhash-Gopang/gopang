@@ -4133,7 +4133,7 @@
   },
   {
     "no": 189,
-    "entity_type_expected": "person",
+    "entity_type_expected": "business",
     "opening_line": "금능반점 카페 사장인데, 저도 직접 바리스타로 일해요. 대정읍에 있어요.",
     "persona_facts": {
       "code": "2622(바리스타)+56221",
@@ -4153,7 +4153,7 @@
   },
   {
     "no": 190,
-    "entity_type_expected": "person",
+    "entity_type_expected": "business",
     "opening_line": "한림수산 카페 사장인데, 저도 직접 바리스타로 일해요. 한경면에 있어요.",
     "persona_facts": {
       "code": "2622(바리스타)+56221",
@@ -4173,7 +4173,7 @@
   },
   {
     "no": 191,
-    "entity_type_expected": "person",
+    "entity_type_expected": "business",
     "opening_line": "제주감귤농원 카페 사장인데, 저도 직접 바리스타로 일해요. 이도동에 있어요.",
     "persona_facts": {
       "code": "2622(바리스타)+56221",
@@ -4193,7 +4193,7 @@
   },
   {
     "no": 192,
-    "entity_type_expected": "person",
+    "entity_type_expected": "business",
     "opening_line": "노형카페 카페 사장인데, 저도 직접 바리스타로 일해요. 노형동에 있어요.",
     "persona_facts": {
       "code": "2622(바리스타)+56221",

@@ -16970,6 +16970,17 @@ async function handleProfilePost(request, env, corsHeaders) {
     price_range:    ('price_range'    in body) ? price_range    : (_prevFinance.price_range    ?? ''),
     payout_account: ('payout_account' in body) ? payout_account : (_prevFinance.payout_account ?? null),
   };
+  // 2026-0X-XX 신설 — thing(사물)/concept(개념)은 결제를 직접 받는 주체가
+  // 아니다(소유·운영 주체가 대신 받음 — SP §P1-INFER 원문 근거). PA
+  // 프롬프트가 STEP3~3C를 person과 동일하게 건너뛰도록 지시하지만, 이건
+  // 지시일 뿐 강제가 아니라서 한 번이라도 안 지켜지면(라이브 스모크테스트
+  // 300건 중 실측 1건 확인) gdc_accepted/payout_account가 그대로 저장될
+  // 수 있다 — is_public/payout_account에 이미 적용 중인 것과 동일한
+  // server-side 이중 안전망 원칙을 여기도 적용한다.
+  if (entity_type === 'thing' || entity_type === 'concept') {
+    resolvedFinance.gdc_accepted = false;
+    resolvedFinance.payout_account = null;
+  }
 
   // 2026-07-13 신설 — 필드별 공개/비공개 기본값. 명시 안 된 필드는
   // products만 기본 공개(디폴트 발견성), 나머지는 기본 비공개(안전
