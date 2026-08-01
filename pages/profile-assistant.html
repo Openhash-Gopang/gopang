@@ -396,16 +396,32 @@ const _OWNER_INDICATOR_RE = /(운영|소유|주식회사|\(주\)|㈜)/;
 
 function _detectEntityTypeAmbiguity(text) {
   if (_PRIMARY_STATUS_RE.test(text) && _SECONDARY_WORK_RE.test(text)) {
-    return '1차신분+겸업(work_domain 애매)';
+    return { key: 'a', reason: '1차신분+겸업(work_domain 애매)' };
   }
   if (_PROFESSION_TITLE_RE.test(text) && !_EMPLOYMENT_MARKER_RE.test(text) && !_BUSINESS_MARKER_RE.test(text)) {
-    return '직업단독언급(고용/자영업 애매)';
+    return { key: 'b', reason: '직업단독언급(고용/자영업 애매)' };
   }
   if (_THING_INDICATOR_RE.test(text) && _OWNER_INDICATOR_RE.test(text)) {
-    return '사물+소유주체명시(thing/business 애매)';
+    return { key: 'c', reason: '사물+소유주체명시(thing/business 애매)' };
   }
   return null;
 }
+
+// 2026-0X-XX 신설 — "다시 생각해봐"(단순 승격)가 아니라 "코드가 이미 내린
+// 판단을 실행해라"로 바꾼다(tests/live_smoketest/profile_assistant_smoketest.py
+// 와 동일 지시문 공유 — 실측에서 Pro도 처음엔 맞게 판단하고 대화가 진행되며
+// 사용자가 실제로 사업 정보를 주면 재검토해도 된다고 명시). (c)는 재검토
+// 여지를 언급하지 않고, 대신 아래 PROFILE_SUBMIT 처리부에서 사후 강제
+// 오버라이드로 한 번 더 못박는다(#267/#279 실측 — 승격만으론 불충분했음).
+const _CODE_FORCED_DIRECTIVES = {
+  a: '[INTERNAL: 시스템 판단 — 이번 발화는 학생/은퇴/전업주부/구직중 등 1차 신분에 부차적인 겸업이 붙은 패턴입니다. entity_type은 person으로 유지하고, 겸업 사실은 work_domain.statuses 배열에만 반영하세요. 사용자가 이후 대화에서 실제로 상호명·영업시간 등 구체적인 사업 운영 정보를 스스로 제공하면 그때는 그 정보를 반영해 판단을 재검토해도 됩니다 — 지금 이 시점에서 지레짐작으로 business로 넘기지 마세요.]',
+  b: '[INTERNAL: 시스템 판단 — 이번 발화는 직업/자격만 단독으로 언급된 패턴입니다. entity_type은 person으로 유지하고, job_ksco에 직업 정보를 반영하세요. 사용자가 이후 대화에서 실제로 상호명·영업시간 등 사업 운영 정보를 스스로 제공하면 그때 반영해 재검토해도 됩니다.]',
+  c: '[INTERNAL: 시스템 판단 — 이번 발화는 사물(무인기기 등)의 프로필 요청이며 소유주체가 별도로 언급됐습니다. entity_type은 반드시 thing으로 설정하세요. 메뉴·가격·결제 정보를 다루더라도 그 사물 자체가 사업자가 되는 게 아닙니다 — 소유주체는 이 프로필의 등록 대상이 아닙니다.]',
+};
+// (c)패턴이 이번 세션에서 한 번이라도 발동했는지 — PROFILE_SUBMIT 처리부의
+// 사후 강제 오버라이드 조건으로 쓴다. 세션(페이지) 스코프 상태.
+let _sawPatternC = false;
+
 async function ensureSystemPrompt() {
   if (systemPrompt) return systemPrompt;
   systemPrompt = await _loadSpByKey('profile-assistant', 'Profile-Assistant')
@@ -807,6 +823,12 @@ async function _handleReplyTags(fullReply) {
       savedProfile = await handleProfileSubmit(fullReply, {
         avatar_url: _sessionAvatarUrl,
         photo_urls: _sessionPhotoUrls,
+        // (2026-0X-XX 신설) (c)패턴(사물+소유주체명시)이 이번 세션에서 한
+        // 번이라도 발동했으면 entity_type을 thing으로 강제한다 — 지시문
+        // 주입까지 해도 Pro가 여전히 틀릴 위험을 배제할 수 없어서(#267/#279
+        // 실측 — Pro조차 즉시 "무인으로 운영되는 사업체"로 오판) 최종
+        // 저장 직전 코드가 한 번 더 못박는다.
+        forceEntityType: _sawPatternC ? 'thing' : null,
       });
     }
     catch (e) { console.warn('[PA] handleProfileSubmit 실패:', e.message); }
@@ -934,10 +956,23 @@ async function sendTurn(text, imageDataUrl) {
     // 패턴에 해당하면 모델의 자각(§ESCALATE-TO-PRO 태그)을 기다리지 않고
     // 곧바로 hondi-pro로 부른다. 아래 esc_match 기반(모델 자기신고) 승격은
     // 이 경로로 이미 승격했으면 건너뛴다.
-    const _forcedReason = text ? _detectEntityTypeAmbiguity(text) : null;
+    // (2026-0X-XX 2차 수정) "다시 생각해봐"만으론 부족했다(#145/#157/#159/
+    // #163 실측 — Pro도 처음엔 맞게 판단) — 코드가 이미 확신하는 결론을
+    // [INTERNAL] 지시문으로 방금 push한 사용자 메시지에 이어붙인다.
+    const _forced = text ? _detectEntityTypeAmbiguity(text) : null;
     let full;
-    if (_forcedReason) {
-      console.warn('[PA] entity_type 애매함 코드 강제 승격 — 사유:', _forcedReason);
+    if (_forced) {
+      console.warn('[PA] entity_type 애매함 코드 강제 승격 — 사유:', _forced.reason);
+      if (_forced.key === 'c') _sawPatternC = true;
+      const _lastMsg = messages[messages.length - 1];
+      const _directive = _CODE_FORCED_DIRECTIVES[_forced.key];
+      if (typeof _lastMsg.content === 'string') {
+        _lastMsg.content += '\n\n' + _directive;
+      } else if (Array.isArray(_lastMsg.content)) {
+        const _textPart = _lastMsg.content.find((c) => c.type === 'text');
+        if (_textPart) _textPart.text += '\n\n' + _directive;
+        else _lastMsg.content.push({ type: 'text', text: _directive });
+      }
       full = await callPaAI(messages, onChunk, 'hondi-pro');
     } else {
       full = await callPaAI(messages, onChunk);
@@ -946,7 +981,7 @@ async function sendTurn(text, imageDataUrl) {
     // (SP 지시상 이 턴엔 사용자용 문구가 전혀 없어야 함) 그 신호는 대화
     // 기록에 남기지 않고, 같은 messages로 hondi-pro를 재호출해 이번 턴의
     // 진짜 응답을 받는다. 재귀 승격은 없다(pro 응답은 그대로 최종으로 채택).
-    if (!_forcedReason && _ESCALATE_RE.test(full)) {
+    if (!_forced && _ESCALATE_RE.test(full)) {
       const reasonMatch = full.match(_ESCALATE_RE);
       console.warn('[PA] hondi-pro 승격 신호 감지 — 재호출:', reasonMatch ? reasonMatch[0] : full);
       shown = false;
