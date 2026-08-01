@@ -61,6 +61,27 @@ FIELD_REMOVE_RE = re.compile(r"\[FIELD_REMOVE:")
 # 2026-0X-XX 신설 — §ESCALATE-TO-PRO(SP v2.28) 감지용
 ESCALATE_RE = re.compile(r"\[ESCALATE_TO_PRO:([^\]]*)\]")
 
+# 2026-0X-XX 신설 — PROFILE_SUBMIT 재시도(클라이언트 patch C+D와 동일 원칙,
+# 다만 하네스는 이미 card_seen_count로 "1번째=확인요청 카드/2번째=완료
+# 카드"를 정확히 구분하고 있으므로 그 판정을 그대로 재시도 트리거로
+# 쓴다 — 클라이언트의 단순 카드감지보다 오탐 위험이 낮다).
+MAX_PROFILE_SUBMIT_RETRIES = 2
+
+# 2026-0X-XX 신설 — FIELD_ADD/FIELD_REMOVE 클라이언트 안전장치와 짝을
+# 맞추는 하네스 측 감지. PROFILE_SUBMIT과 달리 "카드가 몇 번째로
+# 나왔는가" 같은 깔끔한 구조 신호가 없어, 사용자 발화의 추가/삭제 요청
+# 어투를 키워드로 잡는 휴리스틱이다 — 완벽하지 않다(다르게 표현하면
+# 놓칠 수 있고, 드물게 과잉 트리거될 수 있음). escalation과 마찬가지로
+# 발생 빈도를 결과에 기록해 두므로, 실측 후 패턴을 더 다듬을 수 있다.
+FIELD_ADD_REQUEST_RE = re.compile(
+    r"(넣어\s*주세요|넣어\s*줘|추가해\s*주세요|추가해\s*줘|포함해\s*주세요|"
+    r"포함해\s*줘|적어\s*주세요|적어\s*줘|표시해\s*주세요|같이\s*넣어)"
+)
+FIELD_REMOVE_REQUEST_RE = re.compile(
+    r"(빼\s*주세요|빼\s*줘|삭제해\s*주세요|삭제해\s*줘|제외해\s*주세요|"
+    r"제외해\s*줘|없애\s*주세요|없애\s*줘|지워\s*주세요|지워\s*줘)"
+)
+
 
 def _load_composited_sp(repo_root):
     """manifest-loader.js의 _loadSpByKey('profile-assistant', ...)와 동일한
@@ -163,6 +184,11 @@ def run_scenario(api_key, pa_system, scenario):
     field_remove_seen = False
     card_seen_count = 0  # §PROFILE_CARD 선행 이모지가 몇 번째 응답에 나왔는지
     escalations = []  # 2026-0X-XX 신설 — §ESCALATE-TO-PRO(v2.28) 승격 이력: {turn, reason}
+    # 2026-0X-XX 신설 — 재시도 안전장치 시도 횟수(성공 여부와 무관하게 카운트,
+    # 실측 기반으로 나중에 패턴을 다듬을 수 있도록 전부 기록)
+    profile_submit_retries = 0
+    field_add_retries = 0
+    field_remove_retries = 0
     total_usage = {"prompt_tokens": 0, "completion_tokens": 0}
 
     user_turn_text = scenario['opening_line']
@@ -203,6 +229,50 @@ def run_scenario(api_key, pa_system, scenario):
             field_add_seen = True
         if FIELD_REMOVE_RE.search(pa_reply):
             field_remove_seen = True
+
+        # (2026-0X-XX 신설) FIELD_ADD/FIELD_REMOVE 안전장치 — 이번 턴 사용자
+        # 발화가 추가/삭제 요청 어투인데 해당 태그가 안 나왔으면, 화면 문구는
+        # 그대로 두고 태그만 다시 내달라고 1회 내부 재요청한다(PROFILE_SUBMIT
+        # 재시도와 동일 원칙, §4 참조). 키워드 기반 휴리스틱이라 완벽하지
+        # 않음 — 시도 횟수를 결과에 기록해 실측 후 다듬을 수 있게 한다.
+        if FIELD_ADD_REQUEST_RE.search(user_turn_text) and not FIELD_ADD_RE.search(pa_reply):
+            field_add_retries += 1
+            pa_messages.append({"role": "user", "content": (
+                "[INTERNAL: 방금 요청하신 필드 추가가 화면 카드에는 반영됐지만 "
+                "[FIELD_ADD: ...] 내부 태그가 빠졌습니다. 사용자에게 보일 새 "
+                "문구는 만들지 말고, 방금 응답과 동일한 내용으로 "
+                "[FIELD_ADD: key=..., label=..., entity_type=..., category=...] "
+                "태그만 다시 출력해 주세요.]"
+            )})
+            retry_reply, retry_usage, retry_err = _call_deepseek(api_key, pa_messages, max_tokens=400)
+            if retry_err:
+                return _error_result(scenario, transcript, f"FIELD_ADD 재시도 실패(turn {turn}): {retry_err}")
+            for k in total_usage:
+                total_usage[k] += retry_usage.get(k, 0)
+            pa_messages.append({"role": "assistant", "content": retry_reply})
+            transcript.append({"role": "assistant(PA-retry-field_add)", "content": retry_reply})
+            if FIELD_ADD_RE.search(retry_reply):
+                field_add_seen = True
+
+        if FIELD_REMOVE_REQUEST_RE.search(user_turn_text) and not FIELD_REMOVE_RE.search(pa_reply):
+            field_remove_retries += 1
+            pa_messages.append({"role": "user", "content": (
+                "[INTERNAL: 방금 요청하신 필드 삭제가 화면 카드에는 반영됐지만 "
+                "[FIELD_REMOVE: ...] 내부 태그가 빠졌습니다. 사용자에게 보일 새 "
+                "문구는 만들지 말고, 방금 응답과 동일한 내용으로 "
+                "[FIELD_REMOVE: key=..., entity_type=..., category=...] "
+                "태그만 다시 출력해 주세요.]"
+            )})
+            retry_reply, retry_usage, retry_err = _call_deepseek(api_key, pa_messages, max_tokens=400)
+            if retry_err:
+                return _error_result(scenario, transcript, f"FIELD_REMOVE 재시도 실패(turn {turn}): {retry_err}")
+            for k in total_usage:
+                total_usage[k] += retry_usage.get(k, 0)
+            pa_messages.append({"role": "assistant", "content": retry_reply})
+            transcript.append({"role": "assistant(PA-retry-field_remove)", "content": retry_reply})
+            if FIELD_REMOVE_RE.search(retry_reply):
+                field_remove_seen = True
+
         for m in PARTIAL_SAVE_RE.finditer(pa_reply):
             try:
                 partial_saves.update(json.loads(m.group(1)))
@@ -216,11 +286,44 @@ def run_scenario(api_key, pa_system, scenario):
         # STEP-FINAL 스펙 순서 그대로). 확인요청 "문장"이 아니라 카드
         # "구조"를 세므로 존댓말·동사 변형 등 자연어 패러프레이즈에
         # 영향받지 않는다.
+        # (2026-0X-XX 4차 수정) 여기서 곧바로 SOFT_COMPLETION_NO_TAG로
+        # 포기하지 않고, 프로덕션 클라이언트(profile-assistant.html)의
+        # 재시도 안전장치(patch C+D)와 동일하게 최대 MAX_PROFILE_SUBMIT_RETRIES
+        # 회 내부 재요청한다 — 이게 없으면 이 하네스 수치가 실제 사용자
+        # 경험보다 훨씬 나빠 보인다(재시도로 구제되는 케이스를 전부
+        # 실패로 잡던 문제, 2026-08-01 30건 실측에서 확인).
         if 'PROFILE_SUBMIT' not in pa_reply.upper() and len(CARD_LINE_RE.findall(pa_reply)) >= 1:
             card_seen_count += 1
             if card_seen_count >= 2:
-                terminal = 'SOFT_COMPLETION_NO_TAG'
-                break
+                retried_ok = False
+                while profile_submit_retries < MAX_PROFILE_SUBMIT_RETRIES:
+                    profile_submit_retries += 1
+                    pa_messages.append({"role": "user", "content": (
+                        "[INTERNAL: PROFILE_SUBMIT 태그 누락 감지 — 사용자에게 "
+                        "보이지 않는 내부 신호입니다. 방금 응답에서 완료 카드는 "
+                        "정확히 보여주셨지만 PROFILE_SUBMIT { ... } 태그가 빠져서 "
+                        "서버에 아직 저장되지 않았습니다. 사용자에게 보일 새 "
+                        "안내 문구나 인사말을 만들지 말고, 방금 보여드린 카드와 "
+                        "완전히 같은 내용으로 PROFILE_SUBMIT { ... } 태그만 "
+                        "그대로 다시 출력해 주세요.]"
+                    )})
+                    retry_reply, retry_usage, retry_err = _call_deepseek(api_key, pa_messages, max_tokens=1600)
+                    if retry_err:
+                        return _error_result(scenario, transcript, f"PROFILE_SUBMIT 재시도 실패(turn {turn}): {retry_err}")
+                    for k in total_usage:
+                        total_usage[k] += retry_usage.get(k, 0)
+                    pa_messages.append({"role": "assistant", "content": retry_reply})
+                    transcript.append({"role": "assistant(PA-retry-profile_submit)", "content": retry_reply})
+                    if 'PROFILE_SUBMIT' in retry_reply:
+                        pa_reply = retry_reply  # 이후 파싱 로직이 이 값을 그대로 씀
+                        retried_ok = True
+                        break
+                    # 재시도 응답에도 카드가 없을 수 있다(지시를 따라 태그만
+                    # 내려다 실패한 경우) — 그래도 계속 재시도한다(카드
+                    # 재검출 여부와 무관하게 profile_submit_retries 한도까지).
+                if not retried_ok:
+                    terminal = 'SOFT_COMPLETION_NO_TAG'
+                    break
         if 'PROFILE_SUBMIT' in pa_reply:
             terminal = 'PROFILE_SUBMIT'
             sm = PROFILE_SUBMIT_RE.search(pa_reply)
@@ -271,6 +374,8 @@ def run_scenario(api_key, pa_system, scenario):
         "turns_used": pa_turn_count, "submit_entity_type": (submit_json or {}).get('entity_type'),
         "verdict": verdict, "notes": notes, "usage": total_usage,
         "escalation_count": len(escalations), "escalations": escalations,
+        "profile_submit_retries": profile_submit_retries,
+        "field_add_retries": field_add_retries, "field_remove_retries": field_remove_retries,
         "transcript": transcript, "submit_json": submit_json,
     }
 
@@ -281,6 +386,7 @@ def _error_result(scenario, transcript, err):
         "edge_case_tags": scenario["edge_case_tags"], "terminal": None, "turns_used": len(transcript) // 2,
         "submit_entity_type": None, "verdict": "LIVE-ERROR", "notes": err, "usage": {},
         "escalation_count": 0, "escalations": [],
+        "profile_submit_retries": 0, "field_add_retries": 0, "field_remove_retries": 0,
         "transcript": transcript, "submit_json": None,
     }
 
@@ -398,11 +504,28 @@ def main():
     # 바로 보이게 한다(로그를 뒤져 JSONL을 안 열어봐도 되도록).
     total_escalations = sum(r.get("escalation_count", 0) for r in final)
     scenarios_with_escalation = sum(1 for r in final if r.get("escalation_count", 0) > 0)
+    # 2026-0X-XX 신설 — 재시도 안전장치(PROFILE_SUBMIT/FIELD_ADD/FIELD_REMOVE)
+    # 발동 빈도 요약. verdict가 여전히 LIVE-PASS인 케이스 중 재시도가 있었던
+    # 건수 = "안전장치가 실제로 구제한 건수"에 가까운 근사치(정확한 인과는
+    # 아니지만 규모 파악용으로 충분).
+    total_profile_submit_retries = sum(r.get("profile_submit_retries", 0) for r in final)
+    total_field_add_retries = sum(r.get("field_add_retries", 0) for r in final)
+    total_field_remove_retries = sum(r.get("field_remove_retries", 0) for r in final)
+    scenarios_with_any_retry = sum(
+        1 for r in final
+        if r.get("profile_submit_retries", 0) or r.get("field_add_retries", 0) or r.get("field_remove_retries", 0)
+    )
     summary = {
         "total": len(final), "counts": dict(counts), "runtime_seconds": round(time.time() - start),
         "escalate_to_pro": {
             "total_escalations": total_escalations,
             "scenarios_with_escalation": scenarios_with_escalation,
+        },
+        "retry_safety_nets": {
+            "total_profile_submit_retries": total_profile_submit_retries,
+            "total_field_add_retries": total_field_add_retries,
+            "total_field_remove_retries": total_field_remove_retries,
+            "scenarios_with_any_retry": scenarios_with_any_retry,
         },
     }
     json.dump(summary, open(os.path.join(args.out, "live_summary.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
