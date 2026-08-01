@@ -51,6 +51,10 @@ def _request(base_url, method, path, body=None, timeout=20):
     data = json.dumps(body).encode("utf-8") if body is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Content-Type", "application/json")
+    # 2026-0X-XX 신설 — sp_refresh_scheduler.py와 동일 사유(urllib 기본
+    # User-Agent가 Cloudflare 봇 방어에 걸릴 가능성 — 같은 워크플로에서
+    # 나란히 실행되는 스크립트라 함께 맞춘다).
+    req.add_header("User-Agent", "Hondi-Unresolved-Tag-Aggregator/1.0 (+github-actions)")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as res:
             return res.status, json.loads(res.read().decode("utf-8"))

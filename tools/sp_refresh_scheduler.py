@@ -49,6 +49,15 @@ def _request(base_url, method, path, body=None, timeout=20):
     data = json.dumps(body).encode("utf-8") if body is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Content-Type", "application/json")
+    # 2026-0X-XX 신설 — urllib 기본 User-Agent("Python-urllib/3.x")가
+    # Cloudflare 봇 방어(Bot Fight Mode 등)에 걸려 403이 나는 사례가
+    # 흔하다(라이브 실행에서 gwp-registry/search·refresh-due 둘 다 403
+    # 실측). worker.js 애플리케이션 코드 쪽엔 이 요청을 막는 로직이
+    # 없는 것을 확인했으므로(전역 CORS 게이트는 Origin 헤더 없는 요청을
+    # 명시적으로 통과시킴), 식별 가능한 User-Agent로 바꿔보는 저비용
+    # 완화책 — Cloudflare 대시보드 설정(WAF·Bot Fight Mode)까지 직접
+    # 못 고치는 경우 이것만으로는 해결이 안 될 수 있다.
+    req.add_header("User-Agent", "Hondi-SP-Refresh-Scheduler/1.0 (+github-actions)")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as res:
             return res.status, json.loads(res.read().decode("utf-8"))
