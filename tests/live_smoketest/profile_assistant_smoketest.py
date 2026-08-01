@@ -54,7 +54,42 @@ RETRY_BASE_SLEEP = 3
 
 PARTIAL_SAVE_RE = re.compile(r"\[PARTIAL_SAVE\]\s*(\{.*?\})(?=\n|\[|$)", re.DOTALL)
 TEMPLATE_LOOKUP_RE = re.compile(r"\[TEMPLATE_LOOKUP:\s*([^\]]*)\]")
-PROFILE_SUBMIT_RE = re.compile(r"\[?PROFILE_SUBMIT\]?\s*(\{.*)", re.DOTALL)
+# 2026-0X-XX 수정 — 원래 단일 re.search(첫 매치)였는데, PROFILE_SUBMIT 재시도
+# 안전장치의 [INTERNAL: ... PROFILE_SUBMIT { ... } 태그가 빠져서...] 지시문
+# 자체를 모델이 그대로 에코(반복 출력)하는 경우가 실측 확인됐다(#92) — 그
+# 안내문 안의 예시 "PROFILE_SUBMIT { ... }"가 먼저 매칭돼 진짜 JSON(그
+# 뒤에 옴)을 놓치고 잘못된 3글자짜리 텍스트를 파싱하려다 실패했다.
+# finditer로 모든 occurrence의 시작 위치를 찾아 _extract_last_valid_
+# profile_submit()이 뒤에서부터(진짜 최종 응답에 가까운 순서로) 유효하게
+# 파싱되는 첫 케이스를 채택한다.
+PROFILE_SUBMIT_ALL_RE = re.compile(r"\[?PROFILE_SUBMIT\]?\s*(?=\{)")
+
+
+def _extract_last_valid_profile_submit(text: str):
+    """PROFILE_SUBMIT 뒤 '{' 시작 위치를 전부 찾아 마지막 것부터 역순으로
+    중괄호 균형 매칭 + JSON 파싱을 시도, 처음으로 성공하는 결과를 반환.
+    전부 실패하면 None."""
+    starts = [m.end() for m in PROFILE_SUBMIT_ALL_RE.finditer(text)]
+    for start in reversed(starts):
+        raw = text[start:]
+        depth, end = 0, None
+        for i, ch in enumerate(raw):
+            if ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    end = i + 1
+                    break
+        if end is None:
+            continue
+        try:
+            return json.loads(raw[:end])
+        except (json.JSONDecodeError, ValueError):
+            continue
+    return None
+
+
 # (2026-0X-XX 3차 수정) 확인요청 "문장"을 쫓는 접근 자체가 한계였다 —
 # "맞으면"→"맞으시면"(존댓말), "눌러주세요"→"말씀해 주세요"(동사 변형)
 # 등 자연어 패러프레이즈가 끝없이 이어졌다(10건 파일럿 3회 반복 실측).
@@ -469,34 +504,21 @@ def run_scenario(api_key, pa_system, scenario):
         previous_pa_reply = pa_reply  # 다음 턴 반복 감지용 — 이번 턴 최종 확정값으로 갱신
         if 'PROFILE_SUBMIT' in pa_reply:
             terminal = 'PROFILE_SUBMIT'
-            sm = PROFILE_SUBMIT_RE.search(pa_reply)
-            if sm:
-                raw = sm.group(1)
-                depth, end = 0, None
-                for i, ch in enumerate(raw):
-                    if ch == '{': depth += 1
-                    elif ch == '}':
-                        depth -= 1
-                        if depth == 0:
-                            end = i + 1; break
-                if end:
-                    try:
-                        submit_json = json.loads(raw[:end])
-                    except (json.JSONDecodeError, ValueError):
-                        submit_json = None
-                    # (2026-0X-XX 신설) (c)패턴 사후 강제 오버라이드 — #267/#279
-                    # 실측에서 Pro로 승격 + 지시문 주입까지 해도 여전히 틀릴
-                    # 위험을 배제할 수 없어(사물이 실제로 상거래를 다루는
-                    # 경우 모델이 "이건 사업체다"로 되돌아가려는 경향이 강함),
-                    # 이 세션에서 (c)패턴이 한 번이라도 발동했으면 코드가
-                    # entity_type을 무조건 thing으로 덮어쓰고 결제 필드도
-                    # 함께 정리한다(worker.js의 thing/concept 강제 차단과
-                    # 동일 원칙 — patch M 참조).
-                    if saw_pattern_c and submit_json is not None and submit_json.get('entity_type') != 'thing':
-                        submit_json['entity_type'] = 'thing'
-                        submit_json['gdc_accepted'] = False
-                        submit_json['payout_account'] = None
-                        entity_type_override_applied = True
+            submit_json = _extract_last_valid_profile_submit(pa_reply)
+            if submit_json is not None:
+                # (2026-0X-XX 신설) (c)패턴 사후 강제 오버라이드 — #267/#279
+                # 실측에서 Pro로 승격 + 지시문 주입까지 해도 여전히 틀릴
+                # 위험을 배제할 수 없어(사물이 실제로 상거래를 다루는
+                # 경우 모델이 "이건 사업체다"로 되돌아가려는 경향이 강함),
+                # 이 세션에서 (c)패턴이 한 번이라도 발동했으면 코드가
+                # entity_type을 무조건 thing으로 덮어쓰고 결제 필드도
+                # 함께 정리한다(worker.js의 thing/concept 강제 차단과
+                # 동일 원칙 — patch M 참조).
+                if saw_pattern_c and submit_json.get('entity_type') != 'thing':
+                    submit_json['entity_type'] = 'thing'
+                    submit_json['gdc_accepted'] = False
+                    submit_json['payout_account'] = None
+                    entity_type_override_applied = True
             break
         if '[PROFILE_SKIP]' in pa_reply:
             terminal = 'PROFILE_SKIP'; break

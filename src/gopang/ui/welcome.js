@@ -31,12 +31,42 @@ export async function _showWelcomeMessage() {
 // call-ai.js의 응답에서 PROFILE_SUBMIT {...} 블록을 감지하여
 // Worker에 POST하고 IndexedDB PDV를 초기화
 export async function handleProfileSubmit(aiResponseText, extraFields = {}) {
-  const match = aiResponseText.match(/PROFILE_SUBMIT\s*(\{[\s\S]*?\})\s*(?:$|\n)/);
-  if (!match) return false;
-
-  let profile;
-  try { profile = JSON.parse(match[1]); } catch (e) {
-    console.warn('[Profile] PROFILE_SUBMIT JSON 파싱 실패:', e.message);
+  // 2026-0X-XX 수정 — 원래 단일 정규식(첫 매치, non-greedy)이었는데,
+  // PROFILE_SUBMIT 재시도 안전장치의 [INTERNAL: ... PROFILE_SUBMIT { ... }
+  // 태그가 빠져서...] 지시문 자체를 모델이 그대로 에코(반복 출력)하는
+  // 경우가 실측 확인됐다(하네스 #92 재현) — 그 안내문 안의 예시
+  // "PROFILE_SUBMIT { ... }"가 먼저 걸려 진짜 JSON(그 뒤에 옴)까지 통째로
+  // 삼켜버리고 파싱에 실패했다. "PROFILE_SUBMIT" 뒤 '{' 시작 위치를 전부
+  // 찾아 마지막 것부터 역순으로 중괄호 균형 매칭 + JSON.parse를 시도,
+  // 처음으로 성공하는 결과를 채택한다(진짜 최종 응답이 항상 안내문보다
+  // 뒤에 오므로).
+  const _starts = [];
+  const _re = /PROFILE_SUBMIT\s*(?=\{)/g;
+  let _m;
+  while ((_m = _re.exec(aiResponseText)) !== null) {
+    _starts.push(_m.index + _m[0].length);
+  }
+  let profile = null;
+  for (let si = _starts.length - 1; si >= 0; si--) {
+    const raw = aiResponseText.slice(_starts[si]);
+    let depth = 0, end = null;
+    for (let i = 0; i < raw.length; i++) {
+      if (raw[i] === '{') depth++;
+      else if (raw[i] === '}') {
+        depth--;
+        if (depth === 0) { end = i + 1; break; }
+      }
+    }
+    if (end === null) continue;
+    try {
+      profile = JSON.parse(raw.slice(0, end));
+      break;
+    } catch (e) {
+      continue; // 이 후보는 실패 — 더 앞쪽(더 이른) 후보로 계속 시도
+    }
+  }
+  if (!profile) {
+    console.warn('[Profile] PROFILE_SUBMIT JSON 파싱 실패: 유효한 JSON 후보를 찾지 못함');
     return false;
   }
 
