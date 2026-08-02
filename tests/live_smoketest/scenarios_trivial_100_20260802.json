@@ -1,0 +1,1002 @@
+[
+  {
+    "no": 1,
+    "utterance": "오늘 무슨 요일이야?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "날짜는 시스템 컨텍스트로 알 수 있음, 실시간 검색 불필요"
+  },
+  {
+    "no": 2,
+    "utterance": "오늘 날씨가 어때?",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "날씨는 tool-web-search 명시 도메인"
+  },
+  {
+    "no": 3,
+    "utterance": "뭐 재밌는 일 없어?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "순수 잡담"
+  },
+  {
+    "no": 4,
+    "utterance": "지금 몇 시야?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "시스템 시각으로 답변 가능"
+  },
+  {
+    "no": 5,
+    "utterance": "오늘 며칠이야?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "날짜 정보"
+  },
+  {
+    "no": 6,
+    "utterance": "요즘 재밌는 얘기 없어?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "순수 잡담"
+  },
+  {
+    "no": 7,
+    "utterance": "넌 잠도 안 자?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개성 잡담"
+  },
+  {
+    "no": 8,
+    "utterance": "오늘 기분이 어때?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 9,
+    "utterance": "넌 나이가 몇 살이야?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개"
+  },
+  {
+    "no": 10,
+    "utterance": "오늘 운세 어때?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "운세 전담 GWP 없음, 잡담성 응대"
+  },
+  {
+    "no": 11,
+    "utterance": "지금 바깥 온도가 몇 도야?",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "실시간 기온"
+  },
+  {
+    "no": 12,
+    "utterance": "오늘 미세먼지 어때?",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "실시간 대기질 정보"
+  },
+  {
+    "no": 13,
+    "utterance": "넌 진짜 사람이야?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개"
+  },
+  {
+    "no": 14,
+    "utterance": "오늘 무슨 날이야?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "날짜/기념일 정보"
+  },
+  {
+    "no": 15,
+    "utterance": "넌 밥 먹었어?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 16,
+    "utterance": "지금 환율이 얼마야?",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "환율은 명시 trigger"
+  },
+  {
+    "no": 17,
+    "utterance": "오늘 로또 번호 뭐야?",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "실시간 추첨 결과"
+  },
+  {
+    "no": 18,
+    "utterance": "넌 어디 살아?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개"
+  },
+  {
+    "no": 19,
+    "utterance": "오늘 주식 시장 어때?",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "주가 명시 trigger"
+  },
+  {
+    "no": 20,
+    "utterance": "넌 꿈도 꿔?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 21,
+    "utterance": "오늘따라 왜 이렇게 조용해?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 22,
+    "utterance": "넌 취미가 뭐야?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개"
+  },
+  {
+    "no": 23,
+    "utterance": "지금 밖에 비 와?",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "실시간 날씨"
+  },
+  {
+    "no": 24,
+    "utterance": "오늘 뉴스에 뭐 있었어?",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "뉴스 명시 trigger"
+  },
+  {
+    "no": 25,
+    "utterance": "넌 무슨 색을 제일 좋아해?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 26,
+    "utterance": "오늘 재수가 없는 것 같아",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담(감상 토로)"
+  },
+  {
+    "no": 27,
+    "utterance": "넌 화날 때도 있어?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개"
+  },
+  {
+    "no": 28,
+    "utterance": "오늘 왜 이렇게 피곤하지",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담(감상)"
+  },
+  {
+    "no": 29,
+    "utterance": "지금 이 앱 몇 명이나 쓰고 있어?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "실사용자 통계는 AC가 실시간 조회할 GWP 대상이 아님"
+  },
+  {
+    "no": 30,
+    "utterance": "오늘 별자리 운세 궁금해",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "운세 GWP 없음"
+  },
+  {
+    "no": 31,
+    "utterance": "넌 밥값 내본 적 있어?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 32,
+    "utterance": "오늘 최저 기온이 몇 도야",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "실시간 기온"
+  },
+  {
+    "no": 33,
+    "utterance": "넌 무슨 음악 좋아해?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개"
+  },
+  {
+    "no": 34,
+    "utterance": "지금 여기 몇 시간째 얘기하는 거지",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 35,
+    "utterance": "오늘 하늘 색깔이 예쁘대",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담(감상 전달)"
+  },
+  {
+    "no": 36,
+    "utterance": "넌 외로울 때 없어?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개"
+  },
+  {
+    "no": 37,
+    "utterance": "오늘 세계는 무슨 일이 있었어",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "뉴스성 실시간 정보"
+  },
+  {
+    "no": 38,
+    "utterance": "넌 몇 개 언어 할 줄 알아?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개"
+  },
+  {
+    "no": 39,
+    "utterance": "오늘 습도가 얼마나 돼",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "실시간 날씨 정보"
+  },
+  {
+    "no": 40,
+    "utterance": "넌 화면 속에서만 사는 거야?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개"
+  },
+  {
+    "no": 41,
+    "utterance": "오늘 유행하는 노래 뭐야",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "최신 트렌드 실시간 정보"
+  },
+  {
+    "no": 42,
+    "utterance": "넌 실수도 해?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개"
+  },
+  {
+    "no": 43,
+    "utterance": "오늘 하루도 무사히 끝났네",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 44,
+    "utterance": "넌 나 좋아해?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 45,
+    "utterance": "오늘 미세먼지 나쁨이래?",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "실시간 대기질"
+  },
+  {
+    "no": 46,
+    "utterance": "넌 이름 어떻게 지어진 거야?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개"
+  },
+  {
+    "no": 47,
+    "utterance": "지금 제주도 기온이 몇 도야",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "실시간 기온"
+  },
+  {
+    "no": 48,
+    "utterance": "넌 쉬는 날도 있어?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개"
+  },
+  {
+    "no": 49,
+    "utterance": "오늘 왠지 좋은 일이 생길 것 같아",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 50,
+    "utterance": "넌 몇 살까지 살 수 있어?",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "AC 자기소개"
+  },
+  {
+    "no": 51,
+    "utterance": "뭐 재밌는 거 하나 알려줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "심심풀이 요청"
+  },
+  {
+    "no": 52,
+    "utterance": "노래 하나 추천해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "가벼운 추천"
+  },
+  {
+    "no": 53,
+    "utterance": "심심한데 얘기 좀 해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담 요청"
+  },
+  {
+    "no": 54,
+    "utterance": "농담 하나 해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 55,
+    "utterance": "위로해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "정서적 지지, GWP 불필요"
+  },
+  {
+    "no": 56,
+    "utterance": "칭찬 좀 해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 57,
+    "utterance": "오늘 할 일 하나만 추천해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "가벼운 추천"
+  },
+  {
+    "no": 58,
+    "utterance": "게임 하나 추천해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "가벼운 추천"
+  },
+  {
+    "no": 59,
+    "utterance": "그냥 아무 말이나 해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 60,
+    "utterance": "나 좀 웃겨줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 61,
+    "utterance": "책 한 권 추천해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "가벼운 추천"
+  },
+  {
+    "no": 62,
+    "utterance": "영화 하나 추천해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "가벼운 추천"
+  },
+  {
+    "no": 63,
+    "utterance": "오늘 뭐 하고 놀지 알려줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담성 추천"
+  },
+  {
+    "no": 64,
+    "utterance": "나한테 응원 한마디 해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "정서적 지지"
+  },
+  {
+    "no": 65,
+    "utterance": "심심풀이로 퀴즈 하나 내줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 66,
+    "utterance": "재밌는 이야기 하나 들려줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 67,
+    "utterance": "배고픈데 뭐 먹을지 추천해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "가벼운 추천(주문 액션 아님)"
+  },
+  {
+    "no": 68,
+    "utterance": "오늘 저녁 메뉴 하나만 골라줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "가벼운 추천"
+  },
+  {
+    "no": 69,
+    "utterance": "심심한데 끝말잇기 하자",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "놀이 요청"
+  },
+  {
+    "no": 70,
+    "utterance": "노래 가사 하나 알려줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담(저작권상 재생산은 별도 이슈)"
+  },
+  {
+    "no": 71,
+    "utterance": "나 좀 놀아줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 72,
+    "utterance": "재밌는 상식 하나 알려줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "가벼운 지식 공유"
+  },
+  {
+    "no": 73,
+    "utterance": "오늘 날씨에 맞는 옷 추천해줘",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "실시간 날씨 필요"
+  },
+  {
+    "no": 74,
+    "utterance": "지금 기온에 맞는 옷차림 알려줘",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "실시간 기온 필요"
+  },
+  {
+    "no": 75,
+    "utterance": "심심한데 스무고개 하자",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "놀이 요청"
+  },
+  {
+    "no": 76,
+    "utterance": "오늘의 명언 하나 알려줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "가벼운 콘텐츠"
+  },
+  {
+    "no": 77,
+    "utterance": "재밌는 짤 하나 보여줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담(이미지 생성/전송 능력과 별개로 텍스트 응대)"
+  },
+  {
+    "no": 78,
+    "utterance": "나 기분 좋아지게 뭐라고 말해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "정서적 지지"
+  },
+  {
+    "no": 79,
+    "utterance": "오늘 운동 뭐 할지 추천해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "가벼운 추천"
+  },
+  {
+    "no": 80,
+    "utterance": "오늘 뭐 입을지 골라줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "날씨 조건 명시 안 됨 — 일반 추천"
+  },
+  {
+    "no": 81,
+    "utterance": "최근 유행하는 밈 하나 알려줘",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "최신 트렌드 실시간 정보"
+  },
+  {
+    "no": 82,
+    "utterance": "요즘 인기있는 노래 틀어줘",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "최신 인기 실시간 정보"
+  },
+  {
+    "no": 83,
+    "utterance": "아무 노래나 하나 불러줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 84,
+    "utterance": "심심한데 넌센스 퀴즈 내줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "놀이 요청"
+  },
+  {
+    "no": 85,
+    "utterance": "오늘의 운세 하나 봐줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "운세 GWP 없음"
+  },
+  {
+    "no": 86,
+    "utterance": "오늘 점심 뭐 먹을지 골라줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "가벼운 추천"
+  },
+  {
+    "no": 87,
+    "utterance": "재밌는 별명 하나 지어줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 88,
+    "utterance": "나한테 좋은 얘기 하나 해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "정서적 지지"
+  },
+  {
+    "no": 89,
+    "utterance": "최근 개봉한 영화 뭐 있는지 알려줘",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "실시간 개봉 정보"
+  },
+  {
+    "no": 90,
+    "utterance": "지금 날씨에 어울리는 노래 추천해줘",
+    "expected_type": "TOOL",
+    "expected_id": "web-search-tag",
+    "expected_name": "웹 검색",
+    "category": "실시간성 정보(TOOL: web-search) — 과라우팅 방지 대조군",
+    "static_verdict": "N/A",
+    "basis": "실시간 날씨 연동"
+  },
+  {
+    "no": 91,
+    "utterance": "심심한데 초성퀴즈 내줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "놀이 요청"
+  },
+  {
+    "no": 92,
+    "utterance": "오늘 커피 한잔 하고 싶은데 추천해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "가벼운 추천(주문 액션 아님)"
+  },
+  {
+    "no": 93,
+    "utterance": "나 심심한데 말동무 좀 해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 94,
+    "utterance": "오늘 하루 마무리 인사 해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 95,
+    "utterance": "재밌는 넌센스 문제 하나 줘봐",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "놀이 요청"
+  },
+  {
+    "no": 96,
+    "utterance": "지금 이 순간 기분 좋아지는 말 해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "정서적 지지"
+  },
+  {
+    "no": 97,
+    "utterance": "심심한데 아무 얘기나 시작해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담"
+  },
+  {
+    "no": 98,
+    "utterance": "오늘의 급식 메뉴 같은 거 하나 추천해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "가벼운 추천"
+  },
+  {
+    "no": 99,
+    "utterance": "나 대신 결정 하나만 내려줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "잡담성 요청"
+  },
+  {
+    "no": 100,
+    "utterance": "오늘 하루도 고생했다고 말해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "direct-response",
+    "expected_name": "라우팅 불필요(하찮은 잡담/심심풀이)",
+    "category": "과라우팅 방지 시험(하찮은 질문·요청 100건) — 정적 저자 판단",
+    "static_verdict": "N/A",
+    "basis": "정서적 지지"
+  }
+]
