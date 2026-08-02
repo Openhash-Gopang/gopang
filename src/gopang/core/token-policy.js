@@ -59,6 +59,17 @@ export const TOKEN_BUDGET = {
   // 발생할 수 있는 상태였다.
   CHAT_REPLY_PRO: 4000,
 
+  // 2026-0X-XX 신설 — profile-assistant.html 전용 예산. 이전엔 이 파일이
+  // 자기만의 인라인 삼항연산자(1200/6000)를 따로 갖고 있어서 CHAT_REPLY
+  // 계열과 판단 기준이 두 곳으로 쪼개져 있었다(#186 리뷰에서 지적됨).
+  // "판단 기준은 한 곳"이라는 이 파일의 원칙 1은 지키되, profile-assistant
+  // 는 멀티필드 STATE 추적 + 구조화 출력이라 메인 채팅보다 원래 더 무거운
+  // 예산이 필요했던 것(#180에서 실측 튜닝된 값)이라 CHAT_REPLY와 값 자체를
+  // 억지로 통일하지는 않는다 — 대신 resolveChatBudget()의 purpose 인자로
+  // "판단은 한 곳, 값은 용도별"을 함께 만족시킨다.
+  PROFILE_REPLY:     1200,
+  PROFILE_REPLY_PRO: 6000,
+
   // GWP inline Agent 호출 응답(같은 세션 내 전문 SP 주입 후 응답)
   AGENT_INLINE:  1200,
 
@@ -80,14 +91,24 @@ export function getTokenBudget(key) {
 }
 
 /**
- * resolveChatBudget(modelName) — 2026-0X-XX 신설.
+ * resolveChatBudget(modelName, purpose = 'chat') — 2026-0X-XX 신설,
+ * 2026-0X-XX purpose 인자 추가(#186 리뷰).
  * 호출부가 candidate의 model 문자열만 보고 "이번 시도가 hondi-pro인지"를
- * 판단해 CHAT_REPLY_PRO/CHAT_REPLY 중 알맞은 예산을 고른다. 호출부에
- * 삼항연산자를 반복해서 흩뿌리는 대신 이 파일 한 곳에서만 판단 기준을
- * 갖는다(원칙 1과 동일한 이유 — "hondi-pro"라는 문자열도 여기서만 비교).
+ * 판단해 알맞은 예산을 고른다. 호출부에 삼항연산자를 반복해서 흩뿌리는
+ * 대신 이 파일 한 곳에서만 판단 기준(hondi-pro 문자열 비교)을 갖는다
+ * (원칙 1과 동일한 이유). purpose로 "메인 채팅"과 "profile-assistant"를
+ * 구분하는 건 — 둘 다 hondi-pro 여부는 같은 기준으로 판단하지만, 값 자체는
+ * 용도별로 다를 수 있기 때문이다(profile-assistant는 멀티필드 STATE 추적
+ * 이라 메인 채팅보다 원래 더 무거움, #180에서 실측 튜닝). 새 purpose가
+ * 필요하면 여기에 분기를 추가한다 — 호출부가 자기만의 삼항연산자를 새로
+ * 만들지 않는다.
  */
-export function resolveChatBudget(modelName) {
-  return modelName === 'hondi-pro' ? TOKEN_BUDGET.CHAT_REPLY_PRO : TOKEN_BUDGET.CHAT_REPLY;
+export function resolveChatBudget(modelName, purpose = 'chat') {
+  const isPro = modelName === 'hondi-pro';
+  if (purpose === 'profile') {
+    return isPro ? TOKEN_BUDGET.PROFILE_REPLY_PRO : TOKEN_BUDGET.PROFILE_REPLY;
+  }
+  return isPro ? TOKEN_BUDGET.CHAT_REPLY_PRO : TOKEN_BUDGET.CHAT_REPLY;
 }
 
 // ── 모델 정책 ──────────────────────────────────────────────────────────

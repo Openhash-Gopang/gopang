@@ -98,6 +98,10 @@ import { handleProfileSubmit } from '/src/gopang/ui/welcome.js';
 import { escHtml, appendBubble, appendTyping, wireBackButton, wireInputBar,
          wireMic, wireAttachAndCamera } from '/src/gopang/ui/chat-shell.js';
 import { reportGwpSessionEnd } from 'https://hondi.net/src/gopang/gwp/gwp-report-client.js';
+// 2026-0X-XX 신설(#186 리뷰) — max_tokens 판단 기준을 token-policy.js
+// 한 곳으로 모은다. 이 파일이 예전에 갖고 있던 인라인 삼항연산자
+// (tierOverride === 'hondi-pro' ? 6000 : 1200)를 대체한다.
+import { resolveChatBudget } from '/src/gopang/core/token-policy.js';
 
 const RELAY_ENDPOINT = 'https://hondi-proxy.tensor-city.workers.dev';
 const _qs    = new URLSearchParams(location.search);
@@ -487,7 +491,15 @@ async function callPaAI(msgs, onChunk, tierOverride) {
       // 그대로 쓰면 추론이 예산을 다 먹어 응답이 빈 문자열로 끊길 수 있다
       // (tests/live_smoketest/profile_assistant_smoketest.py 68건 재테스트로
       // 실측 확인 — 동일 원칙 적용).
-      const reqBody = { model: c.model, messages: msgs, max_tokens: (tierOverride === 'hondi-pro' ? 6000 : 1200), temperature: 0.5, stream: true };
+      // 2026-0X-XX 수정(#186 리뷰) — 자체 삼항연산자를 resolveChatBudget로
+      // 교체. 동작 차이 1건 주의: 예전엔 tierOverride(이 호출 전체의 승격
+      // 의도)만 보고 모든 후보(레거시/커스텀 provider 포함)에 6000을 줬지만,
+      // 이제는 candidate별 c.model을 본다 — 그래서 tierOverride==='hondi-pro'
+      // 여도 사용자가 등록한 커스텀 모델(예: gpt-4o-mini) 후보는 PROFILE_REPLY
+      // (1200)를 받는다. 커스텀 모델은 hondi-pro의 thinking 예산 문제와
+      // 무관하므로 이쪽이 더 정확한 판단이다 — deepseek-default 후보(실제
+      // model이 'hondi-pro'로 채워지는 그 후보, 450행 참고)만 6000을 받는다.
+      const reqBody = { model: c.model, messages: msgs, max_tokens: resolveChatBudget(c.model, 'profile'), temperature: 0.5, stream: true };
       const resp = c.provider === 'legacy'
         ? await fetch(`${c.baseUrl}/chat/completions`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.apiKey}` },
