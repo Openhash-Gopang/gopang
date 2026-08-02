@@ -47,7 +47,8 @@ const _RAW_ROOT = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main
 // 하드코딩 매칭 ②애매(동점)할 때만 LLM이 §3 COMPOSE를 읽는 효과를
 // 내되, 실제로는 agent-common 재fetch가 아니라 이미 갖고 있는
 // division/team 데이터를 후보로 준다 ③"애매함"은 최고점 동점으로 정의.
-import { CITY_DIVISION_TABLE, DO_DEPT_DIVISION_TABLE } from './division-tables.js';
+import { CITY_DIVISION_TABLE, DO_DEPT_DIVISION_TABLE,
+  DO_AGENCY_TABLE, ORG_TABLE, DO_AGENCY_DIVISION_TABLE, ORG_DIVISION_TABLE } from './division-tables.js';
 
 // ── 고정 접두사(GOV-COMMON) + 배타적 L1 노드(DO-SP/NATIONAL-SP) 캐시 ──
 // ★ 2026-07-20 수정 — 이전엔 도 하나만 담는 단일 변수였다. 발화마다
@@ -1922,6 +1923,43 @@ async function _resolveDoDeptDivision(text, divMatch, classifyFn) {
   return _classifyDivisionFallback(text, tied, classifyFn);
 }
 
+// ── 03-do-agency(직속기관)/07-org(출자출연기관) 라우팅 (2026-08-02 신설) ──
+// 지금까지 이 두 계층은 top-level SP는 있는데 진입 경로 자체가 없었다
+// (city/do-dept와 달리 라우팅 테이블 부재). city/do-dept와 동일한
+// "기관 매칭 → 과/팀 매칭(동점만 LLM)" 2단 구조를 그대로 적용한다.
+// 우선순위: 도청 실국(L2) 매칭이 실패한 뒤, 국가기관/카탈로그보다는
+// 먼저 시도한다 — "농업기술원"처럼 직속기관명이 실국 키워드보다 훨씬
+// 구체적인 신호이기 때문(일반명사 위주인 L2 키워드에 밀려 오분류될
+// 위험을 줄인다).
+function _matchDoAgency(text) {
+  return _scoreMatchTies(text, DO_AGENCY_TABLE).best;
+}
+function _matchOrg(text) {
+  return _scoreMatchTies(text, ORG_TABLE).best;
+}
+async function _fetchAgencyText(match) {
+  return _fetchText(match.file);
+}
+async function _fetchOrgText(match) {
+  return _fetchText(match.file);
+}
+async function _resolveDoAgencyDivision(text, agyMatch, classifyFn) {
+  if (!agyMatch) return null;
+  const table = DO_AGENCY_DIVISION_TABLE.filter(e => e.institution === agyMatch.code);
+  const { best, topScore, tied } = _scoreMatchTies(text, table);
+  if (topScore === 0) return null;
+  if (tied.length === 1) return best;
+  return _classifyDivisionFallback(text, tied, classifyFn);
+}
+async function _resolveOrgDivision(text, orgMatch, classifyFn) {
+  if (!orgMatch) return null;
+  const table = ORG_DIVISION_TABLE.filter(e => e.institution === orgMatch.code);
+  const { best, topScore, tied } = _scoreMatchTies(text, table);
+  if (topScore === 0) return null;
+  if (tied.length === 1) return best;
+  return _classifyDivisionFallback(text, tied, classifyFn);
+}
+
 // ── EMD 데이터 로드 (한림 + 나머지 42개 병합) ───────────────────
 // 2026-07-19 Phase 1 — L2/CITY/NATIONAL과 동일하게 도별 경로 레지스트리로
 // 감쌌다. 지금은 jeju 값만 있고, 캐시 키도 provinceCode로 분리해뒀다 —
@@ -3051,6 +3089,44 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         await _appendExpertIfMatched();
         return { systemPrompt: parts.join('\n\n---\n\n'), trace };
       }
+    }
+  }
+
+  // 2.6) 직속기관(03-do-agency)/출자출연기관(07-org) 매칭 (2026-08-02 신설,
+  // 위치 수정: 최초엔 3)L2 매칭 뒤에 뒀다가, 스모크테스트에서 "농업기술원"이
+  // L2의 일반명사 키워드 '농업'(SP-DO-AGRI)에 먼저 채여 기관 매칭까지
+  // 못 가는 걸 발견해 여기(L2보다 먼저)로 옮겼다 — 기관명은 L2의 일반
+  // 도메인 키워드보다 항상 더 구체적인 신호이므로 우선순위가 높아야 한다.
+  // 지금까지 이 두 계층은 top-level SP는 있어도 진입 경로가 없어
+  // 죽어있었다. 현재 DO_AGENCY_TABLE/ORG_TABLE은 제주만 실사돼 있어
+  // province 가드를 건다(다른 도로 일반화되면 city/do-dept처럼
+  // PROVINCE_TABLES로 감싸야 한다 — 지금은 범위 밖).
+  if (_resolveProvinceCode() === 'jeju') {
+    const agyMatch = _matchDoAgency(text);
+    if (agyMatch) {
+      const agencyText = await _fetchAgencyText(agyMatch);
+      parts.push(agencyText);
+      trace.push(agyMatch.code);
+      const agyDivisionMatch = await _resolveDoAgencyDivision(text, agyMatch, classifyFn);
+      if (agyDivisionMatch) {
+        parts.push(await _fetchText(agyDivisionMatch.file));
+        trace.push(`${agyDivisionMatch.code}(과 특정)`);
+      }
+      await _appendExpertIfMatched();
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    }
+    const orgMatch = _matchOrg(text);
+    if (orgMatch) {
+      const orgText = await _fetchOrgText(orgMatch);
+      parts.push(orgText);
+      trace.push(orgMatch.code);
+      const orgDivisionMatch = await _resolveOrgDivision(text, orgMatch, classifyFn);
+      if (orgDivisionMatch) {
+        parts.push(await _fetchText(orgDivisionMatch.file));
+        trace.push(`${orgDivisionMatch.code}(팀 특정)`);
+      }
+      await _appendExpertIfMatched();
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
   }
 
