@@ -325,13 +325,30 @@ async function _loadGovCommon() {
   // "§CAPABILITIES 뒤" — 와 동등한 효과: 정체성/능력 정의 직후).
   const provinceCode = _resolveProvinceCode();
   if (_govCommonByProvince.has(provinceCode)) return _govCommonByProvince.get(provinceCode);
-  const [kgov, expertCommonSp, gateSchema, overlayTemplate, overlayRecords, treeProtocol] = await Promise.all([
+  const [kgov, expertCommonSp, gateSchema, overlayTemplate, overlayRecords, treeProtocol, agencyAcCommon] = await Promise.all([
     _loadKgovSp(),
     _loadExpertCommonSp(),
     _fetchText('08-schema/HUMAN-AUTHORITY-GATE-SCHEMA_v1_4.md'),
     _fetchByManifestKey('GOV-COMMON-OVERLAY-TEMPLATE'),
     _loadGovCommonOverlayMasterData(),
     _loadJejuTreeProtocol(),
+    // ★ 2026-08-02 신설 — AGENCY-AC-COMMON(§3 NOTICE/§4 REPORT/§5
+    // PDV_RECORDING/§6 META_TABLING 태그 프로토콜). 자신의 문서 헤더에
+    // "상위 상속: ...JEJU-TREE-PROTOCOL → AGENCY-AC-COMMON → JEJU-DO-SP"
+    // 라고 이미 정확히 이 위치를 문서화해뒀는데, 실제로 여기 삽입된 적이
+    // 없었다 — gov-tree의 개별 기관 agent-common 파일 55개(SP-XXX-
+    // AGENT-COMMON)가 이 문서를 대신 인용하며 태그 지시를 반복해서
+    // 갖고 있었지만, 그 파일들 자체가 시민 대화 세션에서 로드되는 경로가
+    // 없어(SP-Tree 배선 감사로 발견) handleGovRelay(worker.js)가 실제로
+    // 처리하는 AGY_VAULT_STORE/META_TABLE_UPDATE 태그가 제주 기관에서는
+    // 한 번도 발행되지 않고 있었다. 55개를 개별 로드하는 대신, 모든
+    // 기관 디스패치가 공통으로 거치는 이 함수 한 곳에 정본을 fetch해
+    // 넣는 것으로 도청·실국·직속기관·출자기관·시청·읍면동 전부에 동시
+    // 적용한다(agent-common 개별 파일들의 §1 정체성·§2-3 COMPOSE는
+    // 이미 상위 기관 SP 자체 및 이번 세션의 division/team 라우팅이
+    // 각각 대체하고 있어 중복 삽입하지 않는다 — 이 문서만 필요).
+    fetch(_RAW_ROOT + 'AGENCY-AC-COMMON_v1.4.md?t=' + Math.floor(Date.now() / 3600000))
+      .then(r => { if (!r.ok) throw new Error(`AGENCY-AC-COMMON fetch 실패: HTTP ${r.status}`); return r.text(); }),
   ]);
   const rec = overlayRecords.find(r => r.도코드 === provinceCode);
   let overlay;
@@ -351,7 +368,8 @@ async function _loadGovCommon() {
     '이를 동일하게 상위 SP로 상속한다 — 어느 클래스의 인스턴스든 전문가 AI 페르소나와 동등한 ' +
     '방식, 동일한 태도로 사용자 요청에 응해야 한다.';
   const result = kgov + '\n\n---\n\n' + expertParityNotice + '\n\n' + expertCommonSp +
-    '\n\n---\n\n' + gateSchema + '\n\n---\n\n' + overlay + '\n\n---\n\n' + treeProtocol;
+    '\n\n---\n\n' + gateSchema + '\n\n---\n\n' + overlay + '\n\n---\n\n' + treeProtocol +
+    '\n\n---\n\n' + agencyAcCommon;
   _govCommonByProvince.set(provinceCode, result);
   return result;
 }
