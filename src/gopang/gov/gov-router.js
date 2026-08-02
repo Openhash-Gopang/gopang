@@ -538,6 +538,21 @@ const JEJU_L2_TABLE = [
   { code: 'SP-DO-OCEAN',    file: '02-do-dept/SP-DO-OCEAN_v1.1.md',
     domain: 'ocean', 도코드: 'jeju',
     kw: ['해양수산국', '어업면허', '마을어장', '수산업', '양식업', '어업', '수산'] },
+  // ★ 2026-08-02 신설 — SP-DO-COMM/GENDER/GENERAL/SPOKES 4개는 JEJU-DO-SP
+  // §3-1이 2026-07-10에 "상시 조직인데 라우팅 누락"이라고 이미 자체
+  // 발견·기록해뒀으나, 그 이후 실제 이 테이블 반영이 빠져 있었다(1차
+  // SP-Tree 감사로 발견). domain/도코드 필드가 없으므로 원형 템플릿
+  // 렌더링 경로 대신 entry.file을 직접 fetch하는 static 경로를 탄다
+  // (do-dept 13개 템플릿 이전 이전에 쓰던 방식과 동일 — 이 4개는 아직
+  // 템플릿 데이터가 없으므로 그대로 static file 방식 유지).
+  { code: 'SP-DO-COMM',     file: '02-do-dept/SP-DO-COMM_v1.0.md',
+    kw: ['소통청렴담당관', '대민소통', '청렴', '감사'] },
+  { code: 'SP-DO-GENDER',   file: '02-do-dept/SP-DO-GENDER_v1.0.md',
+    kw: ['성평등여성정책관', '성평등', '성평등정책', '성평등 정책'] },
+  { code: 'SP-DO-GENERAL',  file: '02-do-dept/SP-DO-GENERAL_v1.0.md',
+    kw: ['총무과', '일반서무', '문서관리', '인사지원'] },
+  { code: 'SP-DO-SPOKES',   file: '02-do-dept/SP-DO-SPOKES_v1.0.md',
+    kw: ['대변인', '도정 홍보', '도정홍보', '언론대응', '보도자료'] },
 ];
 
 const JEJU_CITY_TABLE = [
@@ -981,88 +996,94 @@ const ULSAN_CITY_DEPT_TABLE = ULSAN_GU.flatMap(([시코드]) => _makeGenericCity
 // 지방세(도청)와 국세(세무서) 혼동 방지를 위해 '세금' 같은 범용어는 넣지
 // 않고, 국가기관임이 분명한 고유명사만 트리거로 쓴다.
 const JEJU_NATIONAL_TABLE = [
-  { code: 'SP-NAT-TAX',          file: '09-national/agencies/SP-NAT-TAX_v1.2.md',
+  // ★ 2026-08-02(2차 감사) — 이 표의 file: 필드를 전부 제거했다.
+  // 저장소에 실존한 적이 없는 경로였다(항상 실패하는 fetch를 시도했다
+  // 잡는 죽은 코드 — _fetchNatText가 이제 entry.file 부재를 정상
+  // 케이스로 취급해 바로 정직한 정보없음 문구로 간다). 1차 경로는
+  // national-agency-master-data.json의 template 필드 기반 렌더링이며,
+  // 이 표는 domain/도코드 라우팅 키워드 원본으로만 쓰인다.
+  { code: 'SP-NAT-TAX',
     domain: 'tax', 도코드: 'jeju',
     kw: ['세무서', '국세', '종합소득세', '부가가치세', '법인세', '홈택스'] },
-  { code: 'SP-NAT-COURT',        file: '09-national/agencies/SP-NAT-COURT_v1.1.md',
+  { code: 'SP-NAT-COURT',
     domain: 'court', 도코드: 'jeju',
     kw: ['지방법원', '등기소', '나의사건검색', '전자소송', '등기부등본'] },
-  { code: 'SP-NAT-NPS',          file: '09-national/agencies/SP-NAT-NPS_v1.2.md',
+  { code: 'SP-NAT-NPS',
     domain: 'nps', 도코드: 'jeju',
     kw: ['국민연금'] },
-  { code: 'SP-NAT-NHIS',         file: '09-national/agencies/SP-NAT-NHIS_v1.2.md',
+  { code: 'SP-NAT-NHIS',
     domain: 'nhis', 도코드: 'jeju',
     kw: ['건강보험공단', '건강보험료', '건강검진'] },
-  { code: 'SP-NAT-IMMIGRATION',  file: '09-national/agencies/SP-NAT-IMMIGRATION_v1.2.md',
+  { code: 'SP-NAT-IMMIGRATION',
     domain: 'immigration', 도코드: 'jeju',
     kw: ['출입국', '외국인청', '체류자격', '비자', '귀화', '하이코리아'] },
-  { code: 'SP-NAT-POST',         file: '09-national/agencies/SP-NAT-POST_v1.1.md',
+  { code: 'SP-NAT-POST',
     domain: 'post', 도코드: 'jeju',
     kw: ['우체국', '우정청', '등기우편', '우편'] },
-  { code: 'SP-NAT-POLICE',       file: '09-national/agencies/SP-NAT-POLICE_v1.1.md',
+  { code: 'SP-NAT-POLICE',
     domain: 'police', 도코드: 'jeju',
     kw: ['지방경찰청', '국가경찰', '112', '고소장', '수사'] },
-  { code: 'SP-NAT-LABOR',        file: '09-national/agencies/SP-NAT-LABOR_v1.1.md',
+  { code: 'SP-NAT-LABOR',
     domain: 'labor', 도코드: 'jeju',
     kw: ['근로복지공단', '산재보험', '산업재해'] },
-  { code: 'SP-NAT-PROSECUTION',  file: '09-national/agencies/SP-NAT-PROSECUTION_v1.1.md',
+  { code: 'SP-NAT-PROSECUTION',
     domain: 'prosecution', 도코드: 'jeju',
     kw: ['검찰청', '고소장', '고발', '공소', '검사실'] },
-  { code: 'SP-NAT-COASTGUARD',   file: '09-national/agencies/SP-NAT-COASTGUARD_v1.1.md',
+  { code: 'SP-NAT-COASTGUARD',
     domain: 'coastguard', 도코드: 'jeju',
     kw: ['해양경찰', '122', '해양사고', '해양레저 안전'] },
-  { code: 'SP-NAT-WEATHER',      file: '09-national/agencies/SP-NAT-WEATHER_v1.1.md',
+  { code: 'SP-NAT-WEATHER',
     domain: 'weather', 도코드: 'jeju',
     kw: ['기상청', '기상특보', '태풍정보', '태풍 정보', '실시간 기상'] },
-  { code: 'SP-NAT-PPS',          file: '09-national/agencies/SP-NAT-PPS_v1.1.md',
+  { code: 'SP-NAT-PPS',
     domain: 'pps', 도코드: 'jeju',
     kw: ['조달청', '나라장터'] },
-  { code: 'SP-NAT-MMA',          file: '09-national/agencies/SP-NAT-MMA_v1.1.md',
+  { code: 'SP-NAT-MMA',
     domain: 'mma', 도코드: 'jeju',
     kw: ['병무청', '징병검사', '입영'] },
-  { code: 'SP-NAT-VETERANS',     file: '09-national/agencies/SP-NAT-VETERANS_v1.1.md',
+  { code: 'SP-NAT-VETERANS',
     domain: 'veterans', 도코드: 'jeju',
     kw: ['보훈청', '국가유공자', '보훈급여'] },
-  { code: 'SP-NAT-LABORREL',     file: '09-national/agencies/SP-NAT-LABORREL_v1.1.md',
+  { code: 'SP-NAT-LABORREL',
     domain: 'laborrel', 도코드: 'jeju',
     kw: ['노동위원회', '부당해고'] },
-  { code: 'SP-NAT-PROBATION',    file: '09-national/agencies/SP-NAT-PROBATION_v1.1.md',
+  { code: 'SP-NAT-PROBATION',
     domain: 'probation', 도코드: 'jeju',
     kw: ['보호관찰', '준법지원센터', '사회봉사명령'] },
-  { code: 'SP-NAT-ANIMALQUARANTINE', file: '09-national/agencies/SP-NAT-ANIMALQUARANTINE_v1.1.md',
+  { code: 'SP-NAT-ANIMALQUARANTINE',
     domain: 'animalquarantine', 도코드: 'jeju',
     kw: ['동물검역', '가축검역', '반려동물 검역', '반려동물 동반', '축산물 반입'] },
-  { code: 'SP-NAT-HUMANQUARANTINE',  file: '09-national/agencies/SP-NAT-HUMANQUARANTINE_v1.1.md',
+  { code: 'SP-NAT-HUMANQUARANTINE',
     domain: 'humanquarantine', 도코드: 'jeju',
     kw: ['검역소', '해외감염병', '해외 출국 예방접종', '검역감염병'] },
-  { code: 'SP-NAT-AGROQUALITY',  file: '09-national/agencies/SP-NAT-AGROQUALITY_v1.1.md',
+  { code: 'SP-NAT-AGROQUALITY',
     domain: 'agroquality', 도코드: 'jeju',
     kw: ['농산물품질관리원', '원산지표시', '친환경인증', '친환경 인증', 'GAP 인증'] },
-  { code: 'SP-NAT-FISHQUALITY',  file: '09-national/agencies/SP-NAT-FISHQUALITY_v1.1.md',
+  { code: 'SP-NAT-FISHQUALITY',
     domain: 'fishquality', 도코드: 'jeju',
     kw: ['수산물품질관리원', '수산물 원산지', '수산물 검사'] },
-  { code: 'SP-NAT-FOODIMPORT',   file: '09-national/agencies/SP-NAT-FOODIMPORT_v1.1.md',
+  { code: 'SP-NAT-FOODIMPORT',
     domain: 'foodimport', 도코드: 'jeju',
     kw: ['수입식품검사', '수입식품 통관'] },
-  { code: 'SP-NAT-DATA',         file: '09-national/agencies/SP-NAT-DATA_v1.1.md',
+  { code: 'SP-NAT-DATA',
     domain: 'data', 도코드: 'jeju',
     kw: ['공공데이터청', '공공데이터포털'] },
-  { code: 'SP-NAT-RADIO',        file: '09-national/agencies/SP-NAT-RADIO_v1.1.md',
+  { code: 'SP-NAT-RADIO',
     domain: 'radio', 도코드: 'jeju',
     kw: ['전파관리소', '무선국'] },
-  { code: 'SP-NAT-ENV',          file: '09-national/agencies/SP-NAT-ENV_v1.1.md',
+  { code: 'SP-NAT-ENV',
     domain: 'env', 도코드: 'jeju',
     kw: ['영산강유역환경청', '환경영향평가'] },
-  { code: 'SP-NAT-LABORIMPROVE', file: '09-national/agencies/SP-NAT-LABORIMPROVE_v1.1.md',
+  { code: 'SP-NAT-LABORIMPROVE',
     domain: 'laborimprove', 도코드: 'jeju',
     kw: ['임금체불', '근로개선지도'] },
-  { code: 'SP-NAT-INTERNET',     file: '09-national/agencies/SP-NAT-INTERNET_v1.1.md',
+  { code: 'SP-NAT-INTERNET',
     domain: 'internet', 도코드: 'jeju',
     kw: ['스마트쉼센터', '인터넷과의존', '스마트폰과의존'] },
-  { code: 'SP-NAT-AIRPORT',      file: '09-national/agencies/SP-NAT-AIRPORT_v1.1.md',
+  { code: 'SP-NAT-AIRPORT',
     domain: 'airport', 도코드: 'jeju',
     kw: ['공항공사', '제주국제공항 운영', '항공편', '제주공항', '비행기 출발', '비행기 도착', '공항 주차장', '공항 이용', '공항 분실물'] },
-  { code: 'SP-NAT-PORT',         file: '09-national/agencies/SP-NAT-PORT_v1.1.md',
+  { code: 'SP-NAT-PORT',
     domain: 'port', 도코드: 'jeju',
     kw: ['해양수산청', '선박등록', '해상교통관제'] },
   // ★ 2026-07-24 신설(100건 사고실험에서 발견) — 아래 6개는 템플릿
@@ -1074,22 +1095,22 @@ const JEJU_NATIONAL_TABLE = [
   // 이미 다른 도의 지연조회(SP-NATIONAL-LAZY)가 쓰는
   // _NAT_AGENCY_DOMAIN_KEYWORDS의 customs/bok/stat과 동일하게 맞춰
   // 일관성을 유지했다(원형-인스턴스 키워드 불일치 방지).
-  { code: 'SP-NAT-CUSTOMS',      file: '09-national/agencies/SP-NAT-CUSTOMS_v1.0.md',
+  { code: 'SP-NAT-CUSTOMS',
     domain: 'customs', 도코드: 'jeju',
     kw: ['세관', '관세', '통관'] },
-  { code: 'SP-NAT-BOK',          file: '09-national/agencies/SP-NAT-BOK_v1.1.md',
+  { code: 'SP-NAT-BOK',
     domain: 'bok', 도코드: 'jeju',
     kw: ['한국은행'] },
-  { code: 'SP-NAT-STAT',         file: '09-national/agencies/SP-NAT-STAT_v1.0.md',
+  { code: 'SP-NAT-STAT',
     domain: 'stat', 도코드: 'jeju',
     kw: ['통계청'] },
-  { code: 'SP-NAT-FORESTRESEARCH', file: '09-national/agencies/SP-NAT-FORESTRESEARCH_v1.0.md',
+  { code: 'SP-NAT-FORESTRESEARCH',
     domain: 'forestresearch', 도코드: 'jeju',
     kw: ['산림과학원', '임업연구'] },
-  { code: 'SP-NAT-FORESTSEED',   file: '09-national/agencies/SP-NAT-FORESTSEED_v1.0.md',
+  { code: 'SP-NAT-FORESTSEED',
     domain: 'forestseed', 도코드: 'jeju',
     kw: ['산림품종관리센터', '산림용 종자', '종자검사'] },
-  { code: 'SP-NAT-FORESTCOOP',   file: '09-national/agencies/SP-NAT-FORESTCOOP_v1.0.md',
+  { code: 'SP-NAT-FORESTCOOP',
     domain: 'forestcoop', 도코드: 'jeju',
     kw: ['산림조합'] },
 ];
@@ -1762,6 +1783,12 @@ const ROUTE_DESCRIPTIONS = {
   'SP-DO-TOURISM': '관광교류국',
   'SP-DO-AGRI': '농축산식품국',
   'SP-DO-OCEAN': '해양수산국',
+  // 2026-08-02 신설 — L2 키워드 매칭에만 있고 여기 없으면 LLM 분류
+  // 폴백이 절대 이 코드를 고르지 못한다.
+  'SP-DO-COMM': '소통청렴담당관 [대민소통, 청렴·감사]',
+  'SP-DO-GENDER': '성평등여성정책관 [성평등·여성정책 — 복지가족국의 가족·아동·보육과는 별도]',
+  'SP-DO-GENERAL': '총무과 [일반서무·문서관리·인사지원 실무 — 기획조정실 인사정책과는 별도]',
+  'SP-DO-SPOKES': '대변인 [공보·언론대응·도정 홍보]',
   'SP-DO-HEALTH': '보건 담당 [2026-07-20 신설 — 제주는 SP-DO-SAFETY에 통합, 별도 분리된 도만 이 코드 사용]',
   'SP-DO-FAMILY': '여성가족 담당 [2026-07-20 신설 — 제주는 SP-DO-WELFARE에 통합, 별도 분리된 도만 이 코드 사용]',
   'SP-DO-SPORTS': '체육 담당 [2026-07-20 신설 — 제주는 SP-DO-CULTURE에 통합, 별도 분리된 도만 이 코드 사용]',
@@ -1933,6 +1960,96 @@ async function _resolveDoDeptDivision(text, divMatch, classifyFn) {
   if (topScore === 0) return null;
   if (tied.length === 1) return best;
   return _classifyDivisionFallback(text, tied, classifyFn);
+}
+
+// ── 읍면동 팀(05-emd) 2단계 매칭 + LLM 폴백 (2026-08-02 신설) ──────────
+// city/do-dept division과 동일한 사각지대이자 동일한 해법. team-master-
+// data.json에 43개 읍면동 × 팀 184개 인스턴스가 이미 있고 5종 팀 원형
+// 템플릿(SP-TEAM-{GENERAL|CIVIL|WELFARE|OUTREACH|INDUSTRY}-TEMPLATE_v2.1.md)
+// 도 다 작성돼 있었지만, gov-router.js 어디에도 이걸 로드하는 코드가
+// 없었다. 읍면동 확정 이후 그 안의 팀 중 더 구체적으로 일치하는 게
+// 있으면 위 division 패턴과 동일하게(키워드 우선, 동점만 LLM) 판단한다.
+let _teamMasterData = null;
+async function _loadTeamMasterData() {
+  if (_teamMasterData) return _teamMasterData;
+  const raw = await _fetchText('05-emd/templates/team-master-data.json');
+  _teamMasterData = JSON.parse(raw).팀목록;
+  return _teamMasterData;
+}
+
+function _matchEmdTeam(text, teamRecords, emdCode) {
+  const table = teamRecords
+    .filter(r => r.emd_code === emdCode)
+    .map(r => ({ code: r.team_code, name: r.팀이름, desc: r.입력_문구 || r.팀이름, kw: [r.팀이름], _rec: r }));
+  return _scoreMatchTies(text, table);
+}
+
+// candidates: _scoreMatchTies().tied — division과 동일하게 이미 갖고
+// 있는 팀 데이터(입력_문구)를 그대로 후보 설명으로 재사용한다.
+async function _classifyTeamFallback(text, candidates, classifyFn) {
+  if (!classifyFn || !candidates || candidates.length === 0) return null;
+  const candidatesText = candidates.map(c => `${c.code}: ${c.name} — ${c.desc}`).join('\n');
+  try {
+    const code = await classifyFn(text, candidatesText);
+    if (!code || code === 'NONE') return null;
+    return candidates.find(c => c.code === code) || null;
+  } catch (e) {
+    console.warn('[gov-router] 팀 LLM 분류 폴백 실패:', e.message);
+    return null;
+  }
+}
+
+// 읍면동 매칭 이후 호출하는 단일 진입점 — division 계층의
+// _resolveCityDivision/_resolveDoDeptDivision과 동일한 인터페이스.
+async function _resolveEmdTeam(text, emdRec, classifyFn) {
+  if (!emdRec) return null;
+  try {
+    const teamRecords = await _loadTeamMasterData();
+    const { best, topScore, tied } = _matchEmdTeam(text, teamRecords, emdRec.emd_code);
+    if (topScore === 0) return null; // 세부 팀 매칭 없음 — 애매함이 아니라 그냥 미특정
+    let picked = tied.length === 1 ? best : await _classifyTeamFallback(text, tied, classifyFn);
+    if (!picked) return null;
+    return picked._rec;
+  } catch (e) {
+    console.warn(`[gov-router] 읍면동 팀 매칭 실패(emd_code=${emdRec.emd_code}): ${e.message} — 읍면동 응답만 사용`);
+    return null;
+  }
+}
+
+function _renderTeamTemplate(template, teamRec, emdRec) {
+  return template
+    .replaceAll('{읍면동명}', emdRec.읍면동명 || teamRec.읍면동이름 || '')
+    .replaceAll('{읍면동구분}', emdRec.읍면동구분 || '')
+    .replaceAll('{행정시명}', emdRec.행정시명 || teamRec.시이름 || '')
+    .replaceAll('{emd_short_code}', emdRec.emd_short_code || teamRec.emd_short_code || '')
+    .replaceAll('{주력산업}', emdRec.주력산업 || '')
+    .replaceAll('{콜센터명}', teamRec.콜센터명 || '제주콜센터')
+    .replaceAll('{콜센터번호}', teamRec.콜센터번호 || 'TBD — 재검증 필요')
+    .replaceAll('{콜센터운영시간}', teamRec.콜센터운영시간 || emdRec.운영시간 || '평일 09:00~18:00')
+    // 구 SP-TEAM-TEMPLATE_v1.0(팀 단독 범용 템플릿)만 쓰는 필드 —
+    // v2.1 5종 원형은 안 쓰지만 폴백 상황을 대비해 같이 치환해둔다.
+    .replaceAll('{팀이름}', teamRec.팀이름 || '')
+    .replaceAll('{입력_문구}', teamRec.입력_문구 || '')
+    .replaceAll('{출력_문구}', teamRec.출력_문구 || '')
+    .replaceAll('{읍면동이름}', emdRec.읍면동명 || teamRec.읍면동이름 || '')
+    .replaceAll('{GOV_COMMON}', 'JEJU-GOV-COMMON')
+    .replaceAll('{DO_ROOT_SP}', 'SP-DO-000')
+    .replaceAll('{CITY_ROOT_SP}', '')
+    .replaceAll('{EMD_ROOT_SP}', `SP-EMD-${emdRec.읍면동명 || ''}`);
+}
+
+async function _fetchEmdTeamText(teamRec, emdRec) {
+  try {
+    const templateFile = teamRec.template || 'SP-TEAM-TEMPLATE_v1.0.md';
+    const template = await _fetchText(`05-emd/templates/${templateFile}`);
+    return {
+      text: _renderTeamTemplate(template, teamRec, emdRec),
+      code: `SP-TEAM-${emdRec.읍면동명}-${teamRec.팀이름}`,
+    };
+  } catch (e) {
+    console.warn(`[gov-router] 팀 템플릿 로드 실패(${teamRec.template}): ${e.message} — 읍면동 응답만 사용`);
+    return null;
+  }
 }
 
 // ── 03-do-agency(직속기관)/07-org(출자출연기관) 라우팅 (2026-08-02 신설) ──
@@ -2638,12 +2755,20 @@ function _renderNatTemplate(template, rec) {
 // entry: JEJU_NATIONAL_TABLE(또는 도별 국가기관 테이블) 항목. domain+도코드가 있으면 템플릿을 렌더링해
 // 반환하고, 없으면 기존처럼 static file을 그대로 반환(_fetchDeptText와
 // 동일한 폴백 철학).
+const _NAT_NO_INFO_FALLBACK = (code) =>
+  `[정보 없음] ${code} 관련 상세 안내를 아직 준비하지 못했습니다. ` +
+  `정부24(gov.kr) 또는 국번없이 110(정부민원안내)으로 확인해 주세요.`;
+
 async function _fetchNatText(entry) {
-  if (!entry.domain || !entry.도코드) return { text: await _fetchText(entry.file), permitCodes: [] };
+  if (!entry.domain || !entry.도코드) {
+    if (!entry.file) return { text: _NAT_NO_INFO_FALLBACK(entry.code), permitCodes: [] };
+    return { text: await _fetchText(entry.file), permitCodes: [] };
+  }
   const records = await _loadNatMasterData();
   const rec = records.find(r => r.domain === entry.domain && r.도코드 === entry.도코드);
   if (!rec || !rec.template) {
-    console.warn(`[Jeju] 국가기관 데이터 레코드/템플릿 없음(domain=${entry.domain}, 도코드=${entry.도코드}) — static file로 폴백`);
+    console.warn(`[Jeju] 국가기관 데이터 레코드/템플릿 없음(domain=${entry.domain}, 도코드=${entry.도코드})`);
+    if (!entry.file) return { text: _NAT_NO_INFO_FALLBACK(entry.code), permitCodes: [] };
     return _appendPermitProtocolIfNeeded(await _fetchText(entry.file), rec);
   }
   // ★ 2026-07-21 수정(버그4) — rec.template 필드값은 있는데 그 파일이
@@ -2652,18 +2777,24 @@ async function _fetchNatText(entry) {
   // 에서 세무서·병무청 둘 다 실제로 재현). 템플릿 fetch를 try/catch로
   // 감싸 static file → 그것도 실패하면 정직한 정보없음으로 단계적
   // 폴백한다.
+  // ★ 2026-08-02(2차 감사) — entry.file 폴백 단계 자체를 정리했다.
+  // JEJU_NATIONAL_TABLE의 34개 entry.file 전부가 저장소에 실존하지
+  // 않는 경로였다(09-national/agencies/ 아래엔 templates/ 서브디렉터리만
+  // 있고 평평한 static 파일은 애초에 만들어진 적이 없다). 항상 실패하는
+  // fetch를 시도했다가 잡는 죽은 코드였으므로, entry.file이 없을 때는
+  // 그 단계를 건너뛰고 바로 정직한 정보없음으로 간다.
   try {
     const template = await _fetchText(`09-national/agencies/templates/${rec.template}`);
     return _appendPermitProtocolIfNeeded(_renderNatTemplate(template, rec), rec);
   } catch (e) {
-    console.warn(`[gov-router] 국가기관 템플릿 파일 없음(${rec.template}): ${e.message} — static file로 폴백`);
+    console.warn(`[gov-router] 국가기관 템플릿 파일 없음(${rec.template}): ${e.message}`);
+    if (!entry.file) return { text: _NAT_NO_INFO_FALLBACK(entry.code), permitCodes: [] };
     try {
       return _appendPermitProtocolIfNeeded(await _fetchText(entry.file), rec);
     } catch (e2) {
       console.warn(`[gov-router] static 폴백도 실패(${entry.file}): ${e2.message} — 정직한 정보없음으로 대체`);
       return {
-        text: `[정보 없음] ${entry.code} 관련 상세 안내를 아직 준비하지 못했습니다. ` +
-          `정부24(gov.kr) 또는 국번없이 110(정부민원안내)으로 확인해 주세요.`,
+        text: _NAT_NO_INFO_FALLBACK(entry.code),
         permitCodes: [],
       };
     }
@@ -2856,6 +2987,9 @@ const SP_CODE_TO_PDV_SCOPE = {
   'SP-DO-CLIMATE': 'kclimate', 'SP-DO-HOUSING': 'khousing', 'SP-DO-TRANSPORT': 'ktransport',
   'SP-DO-CULTURE': 'kculture', 'SP-DO-TOURISM': 'ktourism', 'SP-DO-AGRI': 'kagri',
   'SP-DO-OCEAN': 'kocean',
+  // 2026-08-02 신설 — 나머지 도 부서 13개와 동일 원칙.
+  'SP-DO-COMM': 'kcomm', 'SP-DO-GENDER': 'kgender',
+  'SP-DO-GENERAL': 'kgeneral', 'SP-DO-SPOKES': 'kspokes',
 };
 const _PDV_HISTORY_SCOPE_PLACEHOLDER_RE = /\{이 턴에 로드된 SP의 PDV scope\}/g;
 
@@ -3088,6 +3222,17 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.2.md');
         parts.push(_renderEmdTemplate(emdTemplate, emdMatch));
         trace.push(`SP-EMD-${emdMatch.읍면동명}`);
+        // ★ 2026-08-02 신설 — 팀 단위 세부 매칭(division과 동일 원칙,
+        // 동점일 때만 LLM). 읍면동 확정 후 그 안의 팀 중 더 구체적으로
+        // 일치하는 게 있으면 이어붙인다(교체 아님).
+        const teamMatch = await _resolveEmdTeam(text, emdMatch, classifyFn);
+        if (teamMatch) {
+          const teamResult = await _fetchEmdTeamText(teamMatch, emdMatch);
+          if (teamResult) {
+            parts.push(teamResult.text);
+            trace.push(teamResult.code);
+          }
+        }
       }
       await _appendExpertIfMatched();
 

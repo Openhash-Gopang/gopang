@@ -59,6 +59,11 @@ const DEPT_TASK_TAXONOMY = {
     'do-dept:welfare', 'do-dept:plan', 'do-dept:safety', 'do-dept:jachi',
     'do-dept:econ', 'do-dept:innov', 'do-dept:climate', 'do-dept:housing',
     'do-dept:transport', 'do-dept:culture', 'do-dept:tourism', 'do-dept:agri', 'do-dept:ocean',
+    // 2026-08-02 추가 — SP-DO-COMM/GENDER/GENERAL/SPOKES 4개(라우팅 누락
+    // 부서). gov-router.js JEJU_L2_TABLE/ROUTE_DESCRIPTIONS/
+    // SP_CODE_TO_PDV_SCOPE 갱신과 동일 취지 — 여기만 빠지면 다른 부서가
+    // 이 4개에 업무지시(DEPT_TASK_REQUEST)를 보낼 수 없는 부분 배선이 남는다.
+    'do-dept:comm', 'do-dept:gender', 'do-dept:general', 'do-dept:spokes',
     // do-agency 11개 (prompts/gov-tree/03-do-agency/*.md 실사)
     'do-agency:FIRE', 'do-agency:POLICE', 'do-agency:WATER', 'do-agency:AGRITECH',
     'do-agency:BOHWAN', 'do-agency:CHUKSAN', 'do-agency:LIBRARY', 'do-agency:ARTMUSEUM',
@@ -80,7 +85,10 @@ const DEPT_TASK_TAXONOMY = {
   org: new Set([
     // 07-org 27개 (prompts/gov-tree/07-org/*.md 실사)
     'org:JTO', 'org:JFAC', 'org:JPASS', 'org:IPF', 'org:JTP', 'org:JCPA', 'org:SGPMED',
-    'org:ICCJEJU', 'org:MAEUL', 'org:JDC', 'org:JCGF', 'org:JEJUMED', 'org:JEDA',
+    // 2026-08-02 — 'org:JDC' 제거. SP-ORG-JDC 파일은 JEJU-DO-SP v1.4
+    // changelog(2026-07-13)에 따라 이미 삭제됨(국토교통부 산하 국가공기업,
+    // 도청 출자기관 아님). 이 taxonomy 항목만 정리가 누락돼 있었음.
+    'org:ICCJEJU', 'org:MAEUL', 'org:JCGF', 'org:JEJUMED', 'org:JEDA',
     'org:JPSPO', 'org:URBANREGEN', 'org:JEA', 'org:JSPO', 'org:JILES', 'org:JTA',
     'org:JERI', 'org:JCCEI', 'org:JEJU43', 'org:JWFRI', 'org:CHILDMEAL', 'org:JPDC',
     'org:TRANSWEAK', 'org:CHILDCARE',

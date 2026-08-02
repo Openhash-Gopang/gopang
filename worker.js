@@ -3691,6 +3691,148 @@ async function _l1ListEscalations(env, unreadOnly) {
   return data.items || [];
 }
 
+// ── gov-tree 실시간 SP 생성 저장소 (2026-08-02 신설) ─────────────────
+// sp_industry_transform_realtime과 동일한 패턴 — risk_tier=low인
+// GOV_SP_DRAFT_REQUEST만 이 컬렉션으로 들어온다(high는 여전히
+// sp_draft_requests 사전승인 큐로만 감 — 주피터님 2026-08-02 지시,
+// "생명·재산 직결 기관은 사전 승인 유지"를 기존 risk_tier (a)(b) 기준
+// 그대로 재사용해 구현).
+function _normalizeInstitutionKey(institution) {
+  return String(institution || '').trim().toLowerCase().replace(/\s+/g, '');
+}
+
+async function _l1FindGovDraftRealtime(env, institutionKey) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`institution_key='${institutionKey.replace(/'/g, "\\'")}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_gov_draft_realtime/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`sp_gov_draft_realtime 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+async function _l1CreateGovDraftRealtime(env, record) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_gov_draft_realtime/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`sp_gov_draft_realtime 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+async function _l1UpdateGovDraftRealtime(env, id, patch) {
+  const token = await _l1AdminToken(env);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_gov_draft_realtime/records/${id}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`sp_gov_draft_realtime 갱신 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+// 자동 형식 검증 — SP-AUTHOR PHASE D의 "4대 표준 섹션"(§LEGAL-BASIS,
+// §CAPABILITIES, §INPUT_SCHEMA/§OUTPUT_SCHEMA, §DATA_REQUIREMENT) 커버리지를
+// 기계적으로 확인하는 최소 게이트. 내용의 사실적 정확성까지는 못 잡는다 —
+// 그건 사후 사람 검토와, 응답에 자연스럽게 녹인 재확인 문구(아래 생성
+// 프롬프트 참조)의 몫으로 남긴다(주피터님께 명시적으로 설명드린 트레이드오프,
+// _validateIndustryTransformSP와 동일한 원칙).
+function _validateGovDraftSP(content) {
+  const missing = [];
+  for (const section of ['§LEGAL-BASIS', '§CAPABILITIES', 'INPUT_SCHEMA', 'OUTPUT_SCHEMA']) {
+    if (!content.includes(section)) missing.push(section);
+  }
+  if (content.length < 500) missing.push('본문이 너무 짧음(500자 미만)');
+  return { valid: missing.length === 0, missing };
+}
+
+// AC-PRO-CORE §DRAFT_REQUEST의 risk_tier=low 판정을 받은 기관·부서에
+// 대해, SP-AUTHOR 절차를 약식(동기 1회 호출)으로 실행해 즉시 SP 문서를
+// 생성한다. _generateIndustryTransformSP와 동일한 구조(웹검색 왕복 루프,
+// 최대 5회) — 다만 상속하는 상위 문서가 SP-INDUSTRY-TRANSFORM-COMMON이
+// 아니라 "이 기관이 속한 계층의 원형 템플릿"이라는 점이 다르다. 원형
+// 템플릿이 아직 없는 계층(예: 이번 감사에서 확인된 do-agency·org)은
+// 원형 없이 SP-AUTHOR 절차 설명만으로 처음부터 작성한다 — 품질이 다소
+// 낮을 수 있음을 인지하고 사람 검토에서 우선순위를 높게 둔다(아래
+// validation_notes에 tier_hint 없음을 명시).
+async function _generateGovDraftSP(env, institution, task, tierHint, ctx) {
+  const REPO_RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main';
+  // SP-AUTHOR 최신본을 정본으로 매번 fetch(하드코딩 사본 금지 원칙 유지).
+  const authorRes = await fetch(`${REPO_RAW}/prompts/SP-AUTHOR_v1_15.md`, { cache: 'no-cache' });
+  if (!authorRes.ok) throw new Error(`SP-AUTHOR 정본 fetch 실패 (HTTP ${authorRes.status})`);
+  const authorSP = await authorRes.text();
+
+  const systemPrompt = `${authorSP}
+
+---
+
+당신은 지금 위 SP-AUTHOR 절차(PHASE 0~E)를 약식으로, 대화 없이 단독 실행해
+"${institution}"의 SP 문서를 실시간으로 작성해야 합니다. 이용자 용건: "${task}"
+(추정 계층: ${tierHint || '미상 — 스스로 판단'}).
+
+이건 risk_tier=low로 이미 판정된 요청입니다 — 담당 기관·절차가 이미 공개돼
+명확하고, 생명·신체·재산에 직접 영향을 주지 않는 사안입니다. 그렇다고 사실을
+지어내도 된다는 뜻은 아닙니다(U2 원칙 그대로 유지) — 확인 안 된 세부사항
+(정확한 연락처·접수 기한 등)은 "TBD — 재검증 필요"로 명시하고, 필요하면
+검색을 씁니다: [WEB_SEARCH: query=검색어] 태그를 응답 끝에 내면 다음 턴에
+결과가 주어집니다.
+
+문서 본문 어딘가(§CAPABILITIES 근처가 적절)에, 이 안내가 아직 사람의 최종
+확인 전이라는 사실을 관료적이지 않고 자연스러운 문장으로 반드시 포함하십시오
+— 예시 톤: "이 안내는 아직 최종 확인 전이니, 정확한 절차는 [해당 기관
+대표번호 또는 정부24(gov.kr)]에서 한 번 더 확인해 주세요." 시민에게 "AI가
+검토 없이 생성했다"는 티는 내지 않되, 재확인을 자연스럽게 유도하는 것이
+목적입니다(주피터님 2026-08-02 지시).
+
+최종 응답에는 [WEB_SEARCH] 태그 없이 완성된 SP 전문만 출력하십시오
+(§LEGAL-BASIS·§CAPABILITIES·§INPUT_SCHEMA·§OUTPUT_SCHEMA 포함 필수).`;
+
+  let messages = [{ role: 'user', content: `"${institution}" SP를 작성해주세요.` }];
+  let finalText = '';
+
+  for (let round = 0; round < 5; round++) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4000, system: systemPrompt, messages }),
+    });
+    if (!res.ok) throw new Error(`Claude API 호출 실패 (HTTP ${res.status})`);
+    const data = await res.json();
+    const text = data.content?.find(c => c.type === 'text')?.text || '';
+
+    const searchMatch = text.match(/\[WEB_SEARCH:\s*query=([^\]]+)\]\s*$/);
+    if (searchMatch && round < 4) {
+      const query = searchMatch[1].trim();
+      let searchResult;
+      try {
+        const swRes = await handleWebSearch(new Request('https://internal/web-search', {
+          method: 'POST', body: JSON.stringify({ query }),
+        }), env, {}, ctx);
+        searchResult = await swRes.json();
+      } catch (e) {
+        searchResult = { error: e.message };
+      }
+      messages.push({ role: 'assistant', content: text });
+      messages.push({ role: 'user', content: `[검색 결과]\n${JSON.stringify(searchResult).slice(0, 3000)}` });
+      continue;
+    }
+
+    finalText = text.replace(/\[WEB_SEARCH:[^\]]*\]\s*$/, '').trim();
+    break;
+  }
+
+  return finalText;
+}
+
 // ── SP-TREE-GUARDIAN (2026-07-29 신설) ──────────────────────────────
 // _l1CreateEscalation/_l1ListEscalations와 동일한 패턴 — 컬렉션 이름만
 // sp_tree_audit_findings(감사 결과)·sp_tree_guardian_runs(마지막 감사
@@ -4678,7 +4820,7 @@ async function _l1SearchGwpRegistry(env, { q, category, tier, jurisdiction, limi
 // POST /sp-author/queue
 // body: {request_type, signal_source, institution?, task?, tier_hint?,
 //        target_sp_id?, source_conversation?, priority?}
-async function handleSPAuthorQueue(request, env, corsHeaders) {
+async function handleSPAuthorQueue(request, env, corsHeaders, ctx) {
   let payload;
   try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
   if (!payload.request_type || !payload.signal_source) {
@@ -4740,6 +4882,59 @@ async function handleSPAuthorQueue(request, env, corsHeaders) {
   } catch (e) {
     // 알림 실패가 큐잉 자체를 실패시키지 않는다 — 큐 레코드는 이미 저장됨.
     console.error('[sp-author] escalation 생성 실패(큐잉은 성공):', e.message);
+  }
+
+  // ★ 2026-08-02 신설 — risk_tier=low + institution이 있는(=GOV_SP_DRAFT_
+  // REQUEST 기원, 택배추적 같은 일반 SP_DRAFT_REQUEST와 구분) 경우에만
+  // 실시간 SP 생성을 트리거한다. 화이트리스트 방식 — risk_tier=high는
+  // 여기 절대 들어오지 않는다(기존 사전승인 큐잉만 유지, 주피터님
+  // 2026-08-02 지시: "생명·재산 직결 기관은 사전 승인 유지"). 시민의
+  // 현재 응답은 이미 AC가 즉답했으므로(§DRAFT_REQUEST 원칙), 이 생성은
+  // "다음 시민부터는 더 나은 답을 받게" 하기 위한 것 — 응답을 막지
+  // 않고 ctx.waitUntil로 백그라운드 처리한다.
+  if (riskTier === 'low' && record.institution) {
+    const institutionKey = _normalizeInstitutionKey(record.institution);
+    ctx?.waitUntil?.((async () => {
+      try {
+        const existing = await _l1FindGovDraftRealtime(env, institutionKey).catch(() => null);
+        if (existing) return; // 이미 생성돼 있음(다른 시민이 먼저 트리거) — 중복 생성 방지.
+
+        const content = await _generateGovDraftSP(env, record.institution, record.task, record.tier_hint, ctx);
+        const validation = _validateGovDraftSP(content);
+        const draftRecord = {
+          institution: record.institution,
+          task: record.task,
+          tier_hint: record.tier_hint,
+          institution_key: institutionKey,
+          risk_tier: 'low',
+          status: validation.valid ? 'active_pending_review' : 'generation_failed',
+          generated_content: content,
+          validation_notes: validation.valid ? '' : `필수 섹션 누락: ${validation.missing.join(', ')}`,
+          generated_at: new Date().toISOString(),
+          source_conversation: record.source_conversation,
+        };
+        const draftRec = await _l1CreateGovDraftRealtime(env, draftRecord);
+
+        if (validation.valid) {
+          await _l1CreateEscalation(env, {
+            to: '@owner',
+            reason: 'sp_draft_request',
+            ref_collection: 'sp_gov_draft_realtime',
+            ref_id: draftRec.id,
+            summary: `[실시간생성·활성화됨·검토대기] ${record.institution} — ${record.task}`.slice(0, 2000),
+            read: false,
+          }).catch((e) => console.error('[sp-author] gov-draft escalation 생성 실패:', e.message));
+        }
+      } catch (e) {
+        console.error('[sp-author] gov-tree 실시간 생성 실패:', e.message);
+        await _l1CreateGovDraftRealtime(env, {
+          institution: record.institution, task: record.task, tier_hint: record.tier_hint,
+          institution_key: institutionKey, risk_tier: 'low', status: 'generation_failed',
+          validation_notes: `생성 실패: ${e.message}`, generated_at: new Date().toISOString(),
+          source_conversation: record.source_conversation,
+        }).catch(() => {});
+      }
+    })());
   }
 
   return new Response(JSON.stringify({ status: 'queued', record: rec }), { headers: corsHeaders });
@@ -5180,6 +5375,32 @@ async function handleSPIndustryTransformReview(request, env, corsHeaders, ctx) {
 }
 
 
+// POST /sp-author/gov-draft/review  body: {id, decision: 'approved'|'rejected', reviewer_note?}
+// 승인: status만 approved로 바꾼다(정식 gov-tree 파일 승격은 여전히 사람이
+// 기존 절차로 진행 — 이 엔드포인트는 "검토 완료" 표시만 한다).
+// 반려: status를 rejected로 바꾼다 — 위 resolver들이 status='active_
+// pending_review'만 서빙하므로, rejected가 되는 즉시 자동으로 서빙 중단된다
+// (industry-transform의 automation_opt_in 강제 해제 같은 별도 정리 불필요
+// — gov-tree 쪽엔 그런 구독 메커니즘이 없다).
+async function handleSPGovDraftReview(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  const { id, decision, reviewer_note } = payload;
+  if (!id || !['approved', 'rejected'].includes(decision)) {
+    return new Response(JSON.stringify({ error: 'id, decision(approved|rejected) required' }), { status: 400, headers: corsHeaders });
+  }
+  let updated;
+  try {
+    updated = await _l1UpdateGovDraftRealtime(env, id, {
+      status: decision, reviewed_at: new Date().toISOString(), reviewer_note: reviewer_note || '',
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
+  }
+  return new Response(JSON.stringify({ status: 'ok', record: updated }), { headers: corsHeaders });
+}
+
+
 // ── 웹검색(Serper.dev) 예산 카운터 (2026-07-11 신설) ──────────────────
 // 캐시 미스로 실제 API를 호출할 때만 증분한다(캐시 히트는 무료이므로
 // 카운트 안 함). WEB_SEARCH_DAILY_CAP(env, 기본 500)을 넘으면 그날은
@@ -5437,6 +5658,39 @@ async function handleSigunguDeptResolve(request, url, env, corsHeaders, ctx) {
   };
 
   const cacheKey = `gov-data:sigungu-dept:${cityGuess}:${domain}`;
+
+  // ★ 2026-08-02 신설 — 이 (시군구, 도메인) 조합에 대해 실시간 생성된
+  // SP가 이미 있으면(risk_tier=low 자동 생성, 사람 검토 대기 중이라도
+  // 이미 서빙 가능 — active_pending_review) 그걸 우선 반환한다. KV
+  // 캐시(기관명 한 줄)보다 훨씬 풍부한 정보이므로 KV보다 먼저 확인.
+  // institution 필드는 AC가 자유 텍스트로 적어 넣은 값이라 완전 일치를
+  // 보장 못 하므로 LIKE(포함) 매칭 — 오탐 가능성이 있는 대신, 최소한
+  // "생성된 게 있는데 못 찾아서 또 새로 생성/검색"하는 낭비를 줄인다.
+  if (env.L1_ADMIN_EMAIL && env.L1_ADMIN_PASSWORD) {
+    try {
+      const domainLabel = SIGUNGU_DOMAIN_LABEL_KO[domain] || domain;
+      const token = await _l1AdminToken(env);
+      const filter = encodeURIComponent(
+        `status='active_pending_review' && institution~'${cityGuess.replace(/'/g, "\\'")}' && institution~'${domainLabel.replace(/'/g, "\\'")}'`
+      );
+      const draftRes = await fetch(
+        `${L1_DEFAULT}/api/collections/sp_gov_draft_realtime/records?filter=${filter}&perPage=1`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      if (draftRes.ok) {
+        const draftData = await draftRes.json().catch(() => ({ items: [] }));
+        const draft = draftData.items?.[0];
+        if (draft?.generated_content) {
+          return new Response(JSON.stringify({
+            text: draft.generated_content, verified: false, source: 'realtime_generated',
+          }), { headers: corsHeaders });
+        }
+      }
+    } catch (e) {
+      console.warn('[sigungu-dept-resolve] sp_gov_draft_realtime 조회 실패(무시, 기존 경로로 계속):', e.message);
+    }
+  }
+
   if (env.GOV_DATA_KV) {
     try {
       const cached = await env.GOV_DATA_KV.get(cacheKey, 'json');
@@ -5748,6 +6002,34 @@ async function handleNationalAgencyResolve(request, url, env, corsHeaders, ctx) 
   // cityHint를 캐시 키에 반영 — 안 하면 홍천군 결과가 다른 시/군
   // 사용자에게도 그대로 캐시로 나가는 사고가 난다.
   const cacheKey = `gov-data:nat-agency:${provinceCode}:${domain}${cityHint ? ':' + cityHint : ''}`;
+
+  // ★ 2026-08-02 신설 — sigungu-dept-resolve와 동일한 원칙(위 주석 참조).
+  if (env.L1_ADMIN_EMAIL && env.L1_ADMIN_PASSWORD) {
+    try {
+      const agencyLabel = NAT_AGENCY_LABEL_KO[domain] || domain;
+      const token = await _l1AdminToken(env);
+      const locClause = cityHint ? `institution~'${cityHint.replace(/'/g, "\\'")}'` : `institution~'${provinceName.replace(/'/g, "\\'")}'`;
+      const filter = encodeURIComponent(
+        `status='active_pending_review' && ${locClause} && institution~'${agencyLabel.replace(/'/g, "\\'")}'`
+      );
+      const draftRes = await fetch(
+        `${L1_DEFAULT}/api/collections/sp_gov_draft_realtime/records?filter=${filter}&perPage=1`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      if (draftRes.ok) {
+        const draftData = await draftRes.json().catch(() => ({ items: [] }));
+        const draft = draftData.items?.[0];
+        if (draft?.generated_content) {
+          return new Response(JSON.stringify({
+            text: draft.generated_content, verified: false, source: 'realtime_generated',
+          }), { headers: corsHeaders });
+        }
+      }
+    } catch (e) {
+      console.warn('[national-agency-resolve] sp_gov_draft_realtime 조회 실패(무시, 기존 경로로 계속):', e.message);
+    }
+  }
+
   if (env.GOV_DATA_KV) {
     try {
       const cached = await env.GOV_DATA_KV.get(cacheKey, 'json');
@@ -7627,7 +7909,9 @@ export default {
 
     // ── SP-Author 자동화 (2026-07-11 신설) ─────────────────────────
     if (pathname === '/sp-author/queue' && request.method === 'POST')
-      return handleSPAuthorQueue(request, env, corsHeaders);
+      return handleSPAuthorQueue(request, env, corsHeaders, ctx);
+    if (pathname === '/sp-author/gov-draft/review' && request.method === 'POST')
+      return handleSPGovDraftReview(request, env, corsHeaders);
     if (pathname === '/sp-author/queue' && request.method === 'GET')
       return handleSPAuthorQueueList(request, env, corsHeaders);
     if (pathname.match(/^\/sp-author\/queue\/[^/]+\/status$/) && request.method === 'POST')
