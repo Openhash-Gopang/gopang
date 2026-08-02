@@ -1931,11 +1931,34 @@ async function _resolveDoDeptDivision(text, divMatch, classifyFn) {
 // 먼저 시도한다 — "농업기술원"처럼 직속기관명이 실국 키워드보다 훨씬
 // 구체적인 신호이기 때문(일반명사 위주인 L2 키워드에 밀려 오분류될
 // 위험을 줄인다).
-function _matchDoAgency(text) {
-  return _scoreMatchTies(text, DO_AGENCY_TABLE).best;
-}
-function _matchOrg(text) {
-  return _scoreMatchTies(text, ORG_TABLE).best;
+//
+// ── 위치 기반 동점 해소 (2026-08-02, 주피터 지적으로 추가) ─────────
+// 최초 구현은 스모크테스트를 전부 "농업기술원 기술보급과" 식으로
+// 기관명을 직접 부르는 발화로만 짰다 — 실제 시민은 기관명을 특정하지
+// 않고 "의료원 진료 예약하고 싶어요"처럼 말할 가능성이 높고, 혼디는
+// 그럴 때 PDV 위치/발화 지명으로 관할 기관(제주의료원 vs 서귀포의료원
+// 같은 시별 이원화 기관)을 특정할 수 있어야 한다는 지적을 받았다.
+// _resolveInstitutionMatch가 그 경로다: 동점이면서 두 후보가 서로
+// 다른 시코드를 갖고 있으면(=지리적으로 이원화된 기관), city/do-dept가
+// 이미 쓰는 _matchCity(text, pdvLocationHint)로 먼저 결정론적으로
+// 좁힌다(LLM 호출도, 비용도 없음) — 그래도 못 좁히면(위치 정보 자체가
+// 없거나 시코드가 없는 순수 내용적 동점) 그때만 LLM로 넘긴다.
+async function _resolveInstitutionMatch(text, table, pdvLocationHint, classifyFn) {
+  const { best, topScore, tied } = _scoreMatchTies(text, table);
+  if (topScore === 0) return null;
+  if (tied.length === 1) return best;
+  // 진짜 동점 — 시코드가 있는 지리적 이원화 기관쌍이면 위치로 먼저 시도.
+  if (tied.every(e => e.시코드)) {
+    const cityMatch = _matchCity(text, pdvLocationHint);
+    if (cityMatch) {
+      const locMatch = tied.find(e => e.시코드 === cityMatch.시코드);
+      if (locMatch) return locMatch;
+    }
+  }
+  // 위치로도 못 좁혔으면(위치 정보 없음/시코드 없는 순수 내용 동점) LLM 폴백.
+  // _classifyDivisionFallback은 {code,name,desc} 형태만 있으면 되므로
+  // institution 후보에도 그대로 재사용 가능.
+  return _classifyDivisionFallback(text, tied, classifyFn);
 }
 async function _fetchAgencyText(match) {
   return _fetchText(match.file);
@@ -2969,6 +2992,49 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     }
   }
 
+  // 0.6) 직속기관(03-do-agency)/출자출연기관(07-org) 매칭 (2026-08-02 신설)
+  // — 지금까지 이 두 계층은 top-level SP는 있어도 진입 경로가 없어 죽어있었다.
+  // 위치 이력: 처음엔 3)L2 매칭 뒤 → "농업기술원"이 L2의 일반명사 '농업'에
+  // 먼저 채이는 문제로 L2보다 앞(구 2.6단계)으로 이동 → 그런데 그 자리도
+  // 1)읍면동(EMD) 매칭보다 뒤였다. PDV 힌트에 우연히 특정 동 이름이
+  // 찍혀있으면("서귀포시 동홍동") EMD 매칭이 먼저 확정돼버려 "의료원
+  // 진료 예약"처럼 기관 매칭이 됐어야 할 발화가 동홍동 행정복지센터로
+  // 잘못 가는 걸 스모크테스트로 발견(주피터 지적 — 기관명 없이 PDV
+  // 위치만으로도 올바른 기관을 찾아야 한다) — 결국 도청 트리 진입
+  // 직후, 다른 어떤 지리적 매칭보다도 먼저로 확정했다. 기관명/업무
+  // 키워드는 읍면동 행정구역과 무관한 신호이기 때문이다.
+  // DO_AGENCY_TABLE/ORG_TABLE은 제주만 실사돼 있어 province 가드를
+  // 건다(다른 도로 일반화되면 city/do-dept처럼 PROVINCE_TABLES로
+  // 감싸야 한다 — 지금은 범위 밖).
+  if (_resolveProvinceCode() === 'jeju') {
+    const agyMatch = await _resolveInstitutionMatch(text, DO_AGENCY_TABLE, pdvLocationHint, classifyFn);
+    if (agyMatch) {
+      const agencyText = await _fetchAgencyText(agyMatch);
+      parts.push(agencyText);
+      trace.push(agyMatch.code);
+      const agyDivisionMatch = await _resolveDoAgencyDivision(text, agyMatch, classifyFn);
+      if (agyDivisionMatch) {
+        parts.push(await _fetchText(agyDivisionMatch.file));
+        trace.push(`${agyDivisionMatch.code}(과 특정)`);
+      }
+      await _appendExpertIfMatched();
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    }
+    const orgMatch = await _resolveInstitutionMatch(text, ORG_TABLE, pdvLocationHint, classifyFn);
+    if (orgMatch) {
+      const orgText = await _fetchOrgText(orgMatch);
+      parts.push(orgText);
+      trace.push(orgMatch.code);
+      const orgDivisionMatch = await _resolveOrgDivision(text, orgMatch, classifyFn);
+      if (orgDivisionMatch) {
+        parts.push(await _fetchText(orgDivisionMatch.file));
+        trace.push(`${orgDivisionMatch.code}(팀 특정)`);
+      }
+      await _appendExpertIfMatched();
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    }
+  }
+
   // 1) 읍면동/리 이름이 직접 언급되면 규칙 B/C/F: 행정시 → 읍면동 체인
   const emdRecords = await _loadEmdRecords();
   let emdMatch = _matchEmd(text, emdRecords)
@@ -3089,44 +3155,6 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         await _appendExpertIfMatched();
         return { systemPrompt: parts.join('\n\n---\n\n'), trace };
       }
-    }
-  }
-
-  // 2.6) 직속기관(03-do-agency)/출자출연기관(07-org) 매칭 (2026-08-02 신설,
-  // 위치 수정: 최초엔 3)L2 매칭 뒤에 뒀다가, 스모크테스트에서 "농업기술원"이
-  // L2의 일반명사 키워드 '농업'(SP-DO-AGRI)에 먼저 채여 기관 매칭까지
-  // 못 가는 걸 발견해 여기(L2보다 먼저)로 옮겼다 — 기관명은 L2의 일반
-  // 도메인 키워드보다 항상 더 구체적인 신호이므로 우선순위가 높아야 한다.
-  // 지금까지 이 두 계층은 top-level SP는 있어도 진입 경로가 없어
-  // 죽어있었다. 현재 DO_AGENCY_TABLE/ORG_TABLE은 제주만 실사돼 있어
-  // province 가드를 건다(다른 도로 일반화되면 city/do-dept처럼
-  // PROVINCE_TABLES로 감싸야 한다 — 지금은 범위 밖).
-  if (_resolveProvinceCode() === 'jeju') {
-    const agyMatch = _matchDoAgency(text);
-    if (agyMatch) {
-      const agencyText = await _fetchAgencyText(agyMatch);
-      parts.push(agencyText);
-      trace.push(agyMatch.code);
-      const agyDivisionMatch = await _resolveDoAgencyDivision(text, agyMatch, classifyFn);
-      if (agyDivisionMatch) {
-        parts.push(await _fetchText(agyDivisionMatch.file));
-        trace.push(`${agyDivisionMatch.code}(과 특정)`);
-      }
-      await _appendExpertIfMatched();
-      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
-    }
-    const orgMatch = _matchOrg(text);
-    if (orgMatch) {
-      const orgText = await _fetchOrgText(orgMatch);
-      parts.push(orgText);
-      trace.push(orgMatch.code);
-      const orgDivisionMatch = await _resolveOrgDivision(text, orgMatch, classifyFn);
-      if (orgDivisionMatch) {
-        parts.push(await _fetchText(orgDivisionMatch.file));
-        trace.push(`${orgDivisionMatch.code}(팀 특정)`);
-      }
-      await _appendExpertIfMatched();
-      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
   }
 
