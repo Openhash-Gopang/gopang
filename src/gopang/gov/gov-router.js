@@ -1852,6 +1852,7 @@ const ROUTE_DESCRIPTIONS = {
   'SP-CITY-SEOGWIPO': '서귀포시청',
   'SP-SIGUNGU-LAZY': '시군구(기초자치단체) 관할 업무 — 텍스트에 정적 테이블에 없는 특정 시/군/구 이름이 언급되고 그 지자체 소관 업무(복지·안전·민원·환경 등) 문의로 보이는 경우 [2026-07-20 신설 — 지연 초기화]',
   'SP-NATIONAL-LAZY': '국가기관 지사(세무서·법원·검찰청·경찰청·건강보험공단 등 19개 핵심 기관) 관할 업무 — 정적 국가기관 테이블이 비어 있는 도(제주 외)에서 국가기관성 키워드가 언급된 경우 [2026-07-20 신설 — 지연 초기화]',
+  'SP-POLICY-LAZY': '중앙부처·청·위원회 본청(법무부·교육부·감사원·공정거래위원회 등 70개, 도별 지사가 없는 전국 단일 정책기관) 관할 업무 — 개별 신청·민원이 아니라 부처 본청 차원의 정책·제도·인허가·신고 업무로 보이는 경우 [2026-08-02 신설 — 지연 초기화]',
 };
 
 function _findTableEntry(code) {
@@ -1901,6 +1902,10 @@ function _buildCandidatesText() {
   // 시군구(기초자치단체) 지연조회는 GENERAL 도에서만 의미가 있다
   // (SPECIAL_AUTONOMOUS인 제주는 기초자치단체 자체가 없음).
   if (registryEntry?.govType === 'GENERAL') codes.add('SP-SIGUNGU-LAZY');
+
+  // 중앙부처 정책기관(policy-bodies)은 도별 지사가 없는 전국 단일 SP라
+  // SP-NATIONAL-LAZY와 달리 도 구분 없이 항상 후보에 얹는다(제주 포함).
+  codes.add('SP-POLICY-LAZY');
 
   return [...codes]
     .filter(code => ROUTE_DESCRIPTIONS[code])
@@ -2532,6 +2537,186 @@ function _guessNatAgencyDomainFromText(text) {
   return null;
 }
 
+// ── 중앙부처 정책기관(policy-bodies) 지연 초기화 (2026-08-02 신설) ──
+// 09-national/agencies/templates/(위 19~34개 국가기관 '지사'형 도메인)와
+// 별개 계층이다 — policy-bodies는 도별 지사가 없는 전국 단일 부처·청·
+// 위원회 70개(법무부·교육부·감사원 등)로, province 파라미터 없이 정적
+// SP 파일 하나만 그대로 fetch하면 된다(서버 왕복 불필요). 키워드는
+// 위 _NAT_AGENCY_DOMAIN_KEYWORDS와 겹치는 집행기관성 용어(예: '입영',
+// '세무서')를 의도적으로 피했다 — 이미 그쪽이 먼저 매칭되므로 그쪽이
+// 지사(집행) 계층을, 이쪽은 본청·정책 계층을 맡는 역할 분담이다.
+const _POLICY_BODY_DOMAIN_KEYWORDS = {
+  MOJ: ['법무부', '출입국 체류기간', '체류기간 연장', '출입국관리', '인권옹호'],
+  FSC: ['금융위원회', '온라인투자연계금융업', 'P2P 대출업 등록', '금융기관 인가'],
+  FTC: ['공정거래위원회', '불공정거래행위', '납품단가 후려치기', '부당 공동행위 신고'],
+  MOEL: ['고용노동부', '임금체불 진정', '근로기준법 위반 신고'],
+  MOHW: ['보건복지부', '기초생활수급자 신청', '기초생활보장'],
+  NTS: ['국세청', '종합소득세 신고', '부가가치세 신고', '홈택스 신고'],
+  KCS: ['관세청', '관세 신고', '수입물품 통관 신고'],
+  ACRC: ['국민권익위원회', '국민신문고', '부패신고'],
+  BAI: ['감사원', '공익감사청구서'],
+  CIO: ['고위공직자범죄수사처', '공수처', '고위공직자 비리 제보', '고위공직자 비리'],
+  CONSTCOURT: ['헌법재판소', '헌법소원', '위헌법률심판'],
+  NHRCK: ['국가인권위원회', '인권위 진정', '차별 진정', '차별을 당'],
+  PIPC: ['개인정보보호위원회', '개인정보 유출 신고', '개인정보 유출', '개인정보'],
+  KASA: ['우주항공청', '우주기술 연구개발 지원사업', '우주기술'],
+  ASSEMBLY: ['국민동의청원'],
+  SUPREMECOURT: ['대법원', '판결문 등본 발급'],
+  NIS: ['국가정보원', '국정원', '산업기술 유출 제보', '기술 유출', '산업기술'],
+  NEC: ['중앙선거관리위원회', '선거관리위원회', '정당 후원회 등록'],
+  NSSC: ['원자력안전위원회', '방사선 발생장치 사용 허가'],
+  NABO: ['국회예산정책처', '예산 소요 추계'],
+  NARS: ['국회입법조사처', '입법조사 회답'],
+  MOE: ['교육부', '해외 학점 인정 신청', '학점인정'],
+  MOFA: ['외교부', '여권 재발급', '여권 발급 신청', '여권'],
+  UNIKOREA: ['통일부', '북한이탈주민 정착지원'],
+  MND: ['국방부', '예비군 훈련 연기'],
+  MOIS: ['행정안전부', '재난안전특별교부세'],
+  MAFRA: ['농림축산식품부', '축사 신축 정책자금'],
+  MCST: ['문화체육관광부', '문화예술 지원사업 신청'],
+  MPVA: ['국가보훈부', '국가유공자 등록 신청'],
+  MSIT: ['과학기술정보통신부', '정보통신 R&D 지원사업'],
+  MSS: ['중소벤처기업부', '소상공인 정책자금'],
+  KDCA: ['질병관리청', '감염병 의심 신고', '감염병'],
+  KFS: ['산림청', '소나무재선충병'],
+  KHS: ['국가유산청', '출토 유물 신고', '매장문화재 발견 신고', '유물 발견'],
+  MFDS: ['식품의약품안전처', '수입식품 안전성 검사', '수입식품'],
+  KMA: ['기상청', '기상특보 오보'],
+  RDA: ['농촌진흥청', '병해충 진단'],
+  POLICE: ['경찰청', '차량 도난 신고'],
+  MMA: ['병무청 본청'],
+  MOCEE: ['기후에너지환경부', '대기오염물질'],
+  BMTC: ['방송미디어통신위원회', '방송 심의 신고', '홈쇼핑 광고 신고'],
+  MOLELEG: ['법제처', '조례안 법제 심사'],
+  MPM: ['인사혁신처', '공무원 경력경쟁채용시험'],
+  NFA: ['소방청 본청', '소방시설 완공 점검'],
+  PSS: ['대통령경호처', '경호구역 촬영 협조', '경호구역'],
+  MOF: ['해양수산부', '어업허가 갱신'],
+  MOLIT: ['국토교통부', '재건축 정비사업 인허가'],
+  MOTIE: ['산업통상부', '원산지증명서 발급'],
+  MOGEF: ['성평등가족부', '직장 내 성희롱 신고', '성희롱'],
+  DAPA: ['방위사업청', '방위산업체 지정 신청', '방위산업체'],
+  KCG: ['해양경찰청', '해양 구조 요청', '선박 침수 신고'],
+  OKA: ['재외동포청', '재외동포체류자격 등록'],
+  PPS: ['조달청', '나라장터'],
+  PRESOFFICE: ['대통령비서실', '국민제안'],
+  PROSECUTION: ['검찰청', '고소장 접수'],
+  NSC: ['국가안보실', '안보 정책 건의서'],
+  OPC: ['국무조정실', '규제개선 건의'],
+  COTI: ['법원공무원교육원', '법원공무원 실무 교육과정', '법원공무원'],
+  JPRI: ['사법정책연구원', '재판제도 연구용역', '재판제도'],
+  JRTI: ['사법연수원', '사법연수생'],
+  NAACC: ['행정중심복합도시건설청', '세종시 아파트 특별공급'],
+  NAFI: ['국회미래연구원', '미래 정책 연구 자문'],
+  NANET: ['국회도서관', '학위논문 원문 복사'],
+  NAS: ['국회사무처', '국정감사 자료 제출 요청'],
+  NCA: ['법원행정처', '법원 시설물 촬영 협조'],
+  NDA: ['국가데이터처', '공공데이터 개방 신청'],
+  SDIA: ['새만금개발청', '새만금산업단지 입주'],
+  KIPO: ['지식재산처', '특허 출원'],
+  MOFE: ['재정경제부', '세제 개편'],
+  OBS: ['기획예산처', '공공기관 예산 편성 의견'],
+};
+
+const _POLICY_BODY_NAME_KO = {
+  MOJ: '법무부',
+  FSC: '금융위원회',
+  FTC: '공정거래위원회',
+  MOEL: '고용노동부',
+  MOHW: '보건복지부',
+  NTS: '국세청',
+  KCS: '관세청',
+  ACRC: '국민권익위원회',
+  BAI: '감사원',
+  CIO: '고위공직자범죄수사처',
+  CONSTCOURT: '헌법재판소',
+  NHRCK: '국가인권위원회',
+  PIPC: '개인정보보호위원회',
+  KASA: '우주항공청',
+  ASSEMBLY: '국회',
+  SUPREMECOURT: '법원(대법원)',
+  NIS: '국가정보원',
+  NEC: '중앙선거관리위원회',
+  NSSC: '원자력안전위원회',
+  NABO: '국회예산정책처',
+  NARS: '국회입법조사처',
+  MOE: '교육부',
+  MOFA: '외교부',
+  UNIKOREA: '통일부',
+  MND: '국방부',
+  MOIS: '행정안전부',
+  MAFRA: '농림축산식품부',
+  MCST: '문화체육관광부',
+  MPVA: '국가보훈부',
+  MSIT: '과학기술정보통신부',
+  MSS: '중소벤처기업부',
+  KDCA: '질병관리청',
+  KFS: '산림청',
+  KHS: '국가유산청',
+  MFDS: '식품의약품안전처',
+  KMA: '기상청',
+  RDA: '농촌진흥청',
+  POLICE: '경찰청',
+  MMA: '병무청',
+  MOCEE: '기후에너지환경부',
+  BMTC: '방송미디어통신위원회',
+  MOLELEG: '법제처',
+  MPM: '인사혁신처',
+  NFA: '소방청',
+  PSS: '대통령경호처',
+  MOF: '해양수산부',
+  MOLIT: '국토교통부',
+  MOTIE: '산업통상부',
+  MOGEF: '성평등가족부',
+  DAPA: '방위사업청',
+  KCG: '해양경찰청',
+  OKA: '재외동포청',
+  PPS: '조달청',
+  PRESOFFICE: '대통령비서실',
+  PROSECUTION: '검찰청',
+  NSC: '국가안보실',
+  OPC: '국무조정실',
+  COTI: '법원공무원교육원',
+  JPRI: '사법정책연구원',
+  JRTI: '사법연수원',
+  NAACC: '행정중심복합도시건설청',
+  NAFI: '국회미래연구원',
+  NANET: '국회도서관',
+  NAS: '국회사무처',
+  NCA: '법원행정처',
+  NDA: '국가데이터처',
+  SDIA: '새만금개발청',
+  KIPO: '지식재산처',
+  MOFE: '재정경제부',
+  OBS: '기획예산처',
+};
+
+function _guessPolicyBodyFromText(text) {
+  for (const [code, kws] of Object.entries(_POLICY_BODY_DOMAIN_KEYWORDS)) {
+    if (kws.some(k => text.includes(k))) return code;
+  }
+  return null;
+}
+
+const _policyBodySpCache = new Map();
+async function resolvePolicyBodyLazy(code, onProgress) {
+  if (_policyBodySpCache.has(code)) {
+    return { text: _policyBodySpCache.get(code), source: 'cache' };
+  }
+  try {
+    onProgress?.({ stage: 'policy-body-fetch', code });
+    const text = await _fetchText(`09-national/policy-bodies/SP-NAT-POLICY-${code}_v1.1.md`);
+    _policyBodySpCache.set(code, text);
+    return { text, source: 'fetched' };
+  } catch (e) {
+    console.warn('[gov-router] resolvePolicyBodyLazy 실패, 기본 문구로 대체:', e?.message);
+    const label = _POLICY_BODY_NAME_KO[code] || code;
+    return {
+      text: `${label} 관련 문의는 정부24(gov.kr) 또는 국번없이 110(정부민원안내)으로 확인해 주세요.`,
+      source: 'error_fallback',
+    };
+  }
+}
 // ── govType 기반 세정 라우팅 가드 (2026-07-21 신설) ──────────────
 // 주피터 지시: "도청 등의 원형 클래스를 먼저 구현하고... 클래스와
 // 인스턴스 관계를 명확히 규정하십시오." — PROVINCE_REGISTRY의 govType
@@ -3069,6 +3254,33 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     };
   }
 
+  // -0.8) 중앙부처 정책기관(policy-bodies) 매칭 (2026-08-02 신설) — 도
+  // 판별 게이트(바로 아래 -0.5)보다 반드시 먼저 와야 한다. policy-bodies
+  // 70개는 도별 지사가 없는 전국 단일 SP라(§0 "이 기관은 제주도지사
+  // 지휘·감독을 받지 않으며 전국 단일 기관이다") 위치를 몰라도 응답할 수
+  // 있는데, 이 체크가 도 판별 게이트 뒤에 있으면 위치 미기재 발화가 전부
+  // "지역 미판별"로 조기 반환돼 정책기관 SP까지 절대 못 온다(1차 배선
+  // 시도에서 실측 확인됨 — MOJ 등 위치 무관 발화가 전부 도 판별 실패로
+  // 튕겨나갔음). 기관명·정책성 키워드 매칭은 애매함이 낮아 LLM 폴백 없이
+  // classifyFn 유무와 무관하게 즉시 판단한다(도청/시군구 라우팅과 달리
+  // 동음이의 충돌 위험이 낮음).
+  const policyBodyGuess = _guessPolicyBodyFromText(text);
+  // 우선순위 가드 — 경찰청·검찰청·병무청 등은 policy-bodies(본청)와
+  // 09-national/agencies(지사형 집행기관) 양쪽에 다 존재한다. 두 키워드
+  // 사전이 동시에 매칭되면(예: '검찰청'은 이 사전에도, 0.5)단계 집행기관
+  // 사전에도 있음) 실행형 민원("고소장 접수해줘")은 관할 지사가 처리하는
+  // 게 맞으므로 집행기관 쪽이 우선한다 — 이 가드가 없으면 -0.8)이 0.5)
+  // 보다 먼저 실행돼 지사 라우팅을 가로챈다.
+  if (policyBodyGuess && !_guessNatAgencyDomainFromText(text)) {
+    const nationalSp = await _loadNationalSp();
+    parts.push(nationalSp);
+    trace.push('JEJU-NATIONAL-SP');
+    const resolved = await resolvePolicyBodyLazy(policyBodyGuess, onProgress);
+    parts.push(resolved.text);
+    trace.push(`SP-POLICY-LAZY(${policyBodyGuess}/${resolved.source})`);
+    return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+  }
+
   // -0.5) 도 판별 실패(발화·PDV 위치 힌트 둘 다 실패) — 2026-07-21 신설.
   // 정확한 관할(도청/시군구/읍면동/국가기관 지역사무소 어느 계층이든)은
   // 지역 없이는 특정할 수 없다는 원칙(JEJU-GOV-COMMON §10 데이터 연동
@@ -3426,6 +3638,22 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     }
     // AI는 국가기관 문제라고 봤는데 정규식이 도메인을 못 뽑으면 — 억지로
     // 추측하지 않고 6)의 공통 레이어 응답으로 흘려보낸다.
+  } else if (classified === 'SP-POLICY-LAZY') {
+    // AI가 "이건 중앙부처 본청 정책 문제"라고 직접 판단한 경우 — 위
+    // SP-NATIONAL-LAZY 분기와 동일한 철학, province 파라미터가 없다는
+    // 점만 다르다(정책기관은 전국 단일 SP).
+    const policyBodyGuess = _guessPolicyBodyFromText(text);
+    if (policyBodyGuess) {
+      const nationalOnlyParts = [govCommon];
+      const nationalSp = await _loadNationalSp();
+      nationalOnlyParts.push(nationalSp);
+      const resolved = await resolvePolicyBodyLazy(policyBodyGuess, onProgress);
+      nationalOnlyParts.push(resolved.text);
+      return {
+        systemPrompt: nationalOnlyParts.join('\n\n---\n\n'),
+        trace: ['JEJU-GOV-COMMON', 'JEJU-NATIONAL-SP', `SP-POLICY-LAZY(${policyBodyGuess}/${resolved.source})`, '(LLM 분류 폴백)'],
+      };
+    }
   } else if (classified === 'SP-SIGUNGU-LAZY') {
     // AI가 "이건 시군구 문제"라고 직접 판단한 경우 — 결정권은 AI에게
     // 있고, 여기서는 그 판단을 실행에 옮기기 위해 이름·도메인만 정규식
