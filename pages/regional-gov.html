@@ -80,6 +80,48 @@ import { mountChatInput, THEME_LINE_GREEN } from '/src/gopang/ui/chat-input.js';
 
 const PROXY = 'https://hondi-proxy.tensor-city.workers.dev';
 
+// ── 실국/시청/기관/과·팀 LLM 분류 폴백 (2026-08-02 신설) ───────────────
+// gov-router.js의 _classifyFallback/_classifyDivisionFallback이 기대하는
+// 계약: async (text, candidatesText) => 'CODE' | 'NONE' | null.
+// v1.2(§0 국가기관 지연초기화 도입 시점)에 이 폴백 메커니즘 자체는
+// 만들어졌지만, 실제 호출부(이 파일)에서 지금까지 쭉 classifyFn 자리에
+// null을 넘겨왔다 — 즉 동점/미분류 발화에서 LLM이 대신 판단해주는
+// 경로가 배선만 되고 한 번도 실제로 켜진 적이 없었다(2026-08-02
+// division 2단계 라우팅 추가하며 재검토 중 발견). 여기서 처음 켠다.
+// 저지연/저비용이 중요하므로 gov-flash 등급, JSON 강제 없이 코드 한
+// 줄만 요구 — 실패해도 null 반환(호출부가 이미 "확정 못하면 안전하게
+// 상위 계층으로 폴백"하도록 설계돼 있어 이 함수는 절대 throw하지 않는다).
+async function _govClassifyFn(text, candidatesText) {
+  try {
+    const r = await fetch(`${PROXY}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'deepseek-v4-flash', max_tokens: 20, temperature: 0,
+        messages: [
+          { role: 'system', content:
+            '아래는 제주 지방행정 라우팅 코드 후보 목록이다. 사용자 발화를 읽고 ' +
+            '가장 알맞은 코드 하나만 답하라. 확신이 없거나 해당하는 코드가 없으면 ' +
+            'NONE이라고만 답하라. 다른 설명·문장부호 없이 코드 또는 NONE만 출력한다.\n\n' +
+            candidatesText },
+          { role: 'user', content: text },
+        ],
+      }),
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    const raw = (d.choices?.[0]?.message?.content || '').trim();
+    // 코드 형식(SP-XXX-YYY 등)만 추출 — 모델이 마침표/따옴표를 덧붙이는
+    // 경우가 있어 그대로 비교하면 놓친다.
+    const m = raw.match(/[A-Z0-9][A-Z0-9-]*/);
+    return m ? m[0] : (raw === 'NONE' ? 'NONE' : null);
+  } catch (e) {
+    console.warn('[RegionalGov] LLM 분류 폴백 실패(무시 — 상위 계층으로 폴백):', e.message);
+    return null;
+  }
+}
+
+
 // ── GWP 파라미터 파싱 — 다른 GWP 페이지들과 동일 규약 ──────────────
 const _qs     = new URLSearchParams(location.search);
 let   GWP_CTX = '';
@@ -265,7 +307,7 @@ let _urlFactsLocation = null;
 async function _callAI(latestUserText, typingEl) {
   let sp = '이 지역 정부기관 안내를 도와드립니다.', trace = [], agency = 'gov_do', provinceCode = null;
   try {
-    const r = await assembleGovSystemPrompt(latestUserText, _urlFactsLocation, null, (msg) => {
+    const r = await assembleGovSystemPrompt(latestUserText, _urlFactsLocation, _govClassifyFn, (msg) => {
       if (typingEl) typingEl.querySelector('span').textContent = msg;
     });
     sp = r.systemPrompt;
