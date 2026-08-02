@@ -48,7 +48,7 @@ const _RAW_ROOT = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main
 // 내되, 실제로는 agent-common 재fetch가 아니라 이미 갖고 있는
 // division/team 데이터를 후보로 준다 ③"애매함"은 최고점 동점으로 정의.
 import { CITY_DIVISION_TABLE, DO_DEPT_DIVISION_TABLE,
-  DO_AGENCY_TABLE, ORG_TABLE, DO_AGENCY_DIVISION_TABLE, ORG_DIVISION_TABLE } from './division-tables.js';
+  JEJU_AGENCY_TABLE, JEJU_ORG_TABLE, JEJU_AGENCY_DIVISION_TABLE, JEJU_ORG_DIVISION_TABLE } from './division-tables.js';
 
 // ── 고정 접두사(GOV-COMMON) + 배타적 L1 노드(DO-SP/NATIONAL-SP) 캐시 ──
 // ★ 2026-07-20 수정 — 이전엔 도 하나만 담는 단일 변수였다. 발화마다
@@ -1623,7 +1623,15 @@ function _makePoliceEntry(도코드) {
 }
 
 const PROVINCE_TABLES = {
-  jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE, citydept: JEJU_CITY_DEPT_TABLE },
+  jeju: { l2: JEJU_L2_TABLE, city: JEJU_CITY_TABLE, national: JEJU_NATIONAL_TABLE, citydept: JEJU_CITY_DEPT_TABLE,
+    // 2026-08-02 추가 — 직속기관(03-do-agency)/출자출연기관(07-org)은
+    // 지금까지 _resolveProvinceCode() === 'jeju' 문자열 비교로 가드를
+    // 걸었었다(임시방편). l2/city/national과 동일하게 PROVINCE_TABLES에
+    // 편입해 다른 도 확장 시 이 도만 값을 채우면 되도록 정리한다 —
+    // 다른 도는 아래에서 agency/org 필드 자체를 안 적어도 accessor의
+    // `|| []` 폴백으로 안전하게 빈 배열이 된다(l2/national과 동일 패턴).
+    agency: JEJU_AGENCY_TABLE, org: JEJU_ORG_TABLE,
+    agencyDivision: JEJU_AGENCY_DIVISION_TABLE, orgDivision: JEJU_ORG_DIVISION_TABLE },
   // 2026-07-24 — 1단계 확대: 부산 16개 자치구·군 + 서울 25개 자치구
   // 메타데이터 등록 완료(계획서 v1.1 §5). L2는 v1.0부터 이미 실사 완료 상태.
   busan: { l2: BUSAN_L2_TABLE, city: BUSAN_CITY_TABLE, national: [_makePoliceEntry('busan')], citydept: BUSAN_CITY_DEPT_TABLE },
@@ -1661,6 +1669,10 @@ function _l2Table() { return PROVINCE_TABLES[_resolveProvinceCode()]?.l2 || []; 
 function _cityTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.city || []; }
 function _nationalTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.national || []; }
 function _cityDeptTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.citydept || []; }
+function _agencyTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.agency || []; }
+function _orgTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.org || []; }
+function _agencyDivisionTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.agencyDivision || []; }
+function _orgDivisionTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.orgDivision || []; }
 
 function _matchNational(text) {
   return _scoreMatch(text, _nationalTable());
@@ -1968,7 +1980,7 @@ async function _fetchOrgText(match) {
 }
 async function _resolveDoAgencyDivision(text, agyMatch, classifyFn) {
   if (!agyMatch) return null;
-  const table = DO_AGENCY_DIVISION_TABLE.filter(e => e.institution === agyMatch.code);
+  const table = _agencyDivisionTable().filter(e => e.institution === agyMatch.code);
   const { best, topScore, tied } = _scoreMatchTies(text, table);
   if (topScore === 0) return null;
   if (tied.length === 1) return best;
@@ -1976,7 +1988,7 @@ async function _resolveDoAgencyDivision(text, agyMatch, classifyFn) {
 }
 async function _resolveOrgDivision(text, orgMatch, classifyFn) {
   if (!orgMatch) return null;
-  const table = ORG_DIVISION_TABLE.filter(e => e.institution === orgMatch.code);
+  const table = _orgDivisionTable().filter(e => e.institution === orgMatch.code);
   const { best, topScore, tied } = _scoreMatchTies(text, table);
   if (topScore === 0) return null;
   if (tied.length === 1) return best;
@@ -3003,11 +3015,14 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // 위치만으로도 올바른 기관을 찾아야 한다) — 결국 도청 트리 진입
   // 직후, 다른 어떤 지리적 매칭보다도 먼저로 확정했다. 기관명/업무
   // 키워드는 읍면동 행정구역과 무관한 신호이기 때문이다.
-  // DO_AGENCY_TABLE/ORG_TABLE은 제주만 실사돼 있어 province 가드를
-  // 건다(다른 도로 일반화되면 city/do-dept처럼 PROVINCE_TABLES로
-  // 감싸야 한다 — 지금은 범위 밖).
-  if (_resolveProvinceCode() === 'jeju') {
-    const agyMatch = await _resolveInstitutionMatch(text, DO_AGENCY_TABLE, pdvLocationHint, classifyFn);
+  // ★ 2026-08-02(2차) — 처음엔 이 자리에 `_resolveProvinceCode() ===
+  // 'jeju'` 문자열 비교 가드가 있었다(임시방편). l2/city/national과
+  // 동일하게 PROVINCE_TABLES에 편입해(_agencyTable()/_orgTable() 등
+  // accessor 신설) 다른 도로 확장 시 이 자리를 다시 안 고쳐도 되게
+  // 정리했다 — 실사 안 된 도는 accessor가 자동으로 빈 배열을 반환해
+  // 아래 매칭이 전부 조용히 스킵된다(l2/national과 동일한 안전망).
+  {
+    const agyMatch = await _resolveInstitutionMatch(text, _agencyTable(), pdvLocationHint, classifyFn);
     if (agyMatch) {
       const agencyText = await _fetchAgencyText(agyMatch);
       parts.push(agencyText);
@@ -3020,7 +3035,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       await _appendExpertIfMatched();
       return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
-    const orgMatch = await _resolveInstitutionMatch(text, ORG_TABLE, pdvLocationHint, classifyFn);
+    const orgMatch = await _resolveInstitutionMatch(text, _orgTable(), pdvLocationHint, classifyFn);
     if (orgMatch) {
       const orgText = await _fetchOrgText(orgMatch);
       parts.push(orgText);
