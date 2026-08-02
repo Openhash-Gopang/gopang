@@ -41,6 +41,14 @@
 const _RAW = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/gov-tree/';
 const _RAW_ROOT = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main/prompts/';
 
+// ── 과/팀(division) 단위 키워드 테이블 (2026-08-02 재구현) ────────────
+// 국(局)/부서까지는 특정됐는데 그 산하 몇 개 과/팀 중 어디인지 애매한
+// 경우를 위한 2단계 라우팅. 주피터 지시(합의된 설계): ①1차는 키워드
+// 하드코딩 매칭 ②애매(동점)할 때만 LLM이 §3 COMPOSE를 읽는 효과를
+// 내되, 실제로는 agent-common 재fetch가 아니라 이미 갖고 있는
+// division/team 데이터를 후보로 준다 ③"애매함"은 최고점 동점으로 정의.
+import { CITY_DIVISION_TABLE, DO_DEPT_DIVISION_TABLE } from './division-tables.js';
+
 // ── 고정 접두사(GOV-COMMON) + 배타적 L1 노드(DO-SP/NATIONAL-SP) 캐시 ──
 // ★ 2026-07-20 수정 — 이전엔 도 하나만 담는 단일 변수였다. 발화마다
 // 도가 바뀌는 지금 구조(백지화 이후)에서는 두 번째 도 질문에 첫 번째
@@ -1855,6 +1863,65 @@ async function _classifyFallback(text, classifyFn) {
   }
 }
 
+// ── 과/팀(division) 2단계 매칭 + LLM 폴백 (2026-08-02 재구현) ──────────
+// 국/부서(예: climate)까지 이미 확정된 상태에서, 그 산하 과/팀 중
+// 어디인지 키워드로 우선 판단한다. topScore===0(매칭 자체 없음)이면
+// "세부 과 없음"이지 애매함이 아니므로 null(국 단위 응답으로 충분).
+// tied.length>=2(동점)일 때만 진짜 애매함으로 보고 호출부가 LLM 폴백
+// 여부를 결정한다.
+function _matchCityDivision(text, 국코드, 시코드) {
+  const table = CITY_DIVISION_TABLE.filter(e => e.국코드 === 국코드 && e.시코드 === 시코드);
+  return _scoreMatchTies(text, table);
+}
+
+function _matchDoDeptDivision(text, domain) {
+  const table = DO_DEPT_DIVISION_TABLE.filter(e => e.domain === domain);
+  return _scoreMatchTies(text, table);
+}
+
+// candidates: _scoreMatchTies().tied — 이미 동점으로 좁혀진 후보만 준다
+// (agent-common 전체를 다시 fetch하지 않고, 이미 갖고 있는 division
+// 데이터의 desc를 그대로 후보 설명으로 재사용).
+function _buildDivisionCandidatesText(candidates) {
+  return candidates.map(c => `${c.code}: ${c.name} — ${c.desc}`).join('\n');
+}
+
+// classifyFn 시그니처는 _classifyFallback과 동일: async (text, candidatesText) => code|'NONE'|null.
+// 반환값은 candidates 중 하나의 code, 또는 확정 못 하면 null(호출부가 국/부서
+// 단위 응답으로 안전하게 폴백해야 함 — 잘못된 과를 단정하지 않는다).
+async function _classifyDivisionFallback(text, candidates, classifyFn) {
+  if (!classifyFn || !candidates || candidates.length === 0) return null;
+  const candidatesText = _buildDivisionCandidatesText(candidates);
+  try {
+    const code = await classifyFn(text, candidatesText);
+    if (!code || code === 'NONE') return null;
+    return candidates.find(c => c.code === code) || null;
+  } catch (e) {
+    console.warn('[gov-router] division LLM 분류 폴백 실패:', e.message);
+    return null;
+  }
+}
+
+// 시청 국(局) 매칭 이후 호출하는 단일 진입점 — cityDeptMatch(국코드/시코드)와
+// 원문을 받아 과/팀까지 특정을 시도한다. 반환값은 division 테이블 항목
+// 또는 null(세부 과 없음/애매하고 LLM도 확정 못함 — 국 단위로 충분).
+async function _resolveCityDivision(text, cityDeptMatch, classifyFn) {
+  if (!cityDeptMatch) return null;
+  const { best, topScore, tied } = _matchCityDivision(text, cityDeptMatch.국코드, cityDeptMatch.시코드);
+  if (topScore === 0) return null; // 세부 과 매칭 없음 — 애매함이 아니라 그냥 미특정
+  if (tied.length === 1) return best; // 단독 최고점 — 키워드 매칭으로 충분히 확정
+  return _classifyDivisionFallback(text, tied, classifyFn); // 동점 — LLM 폴백
+}
+
+// 도청 실국(L2) 매칭 이후 호출하는 동일 패턴의 진입점 (domain 기준).
+async function _resolveDoDeptDivision(text, divMatch, classifyFn) {
+  if (!divMatch) return null;
+  const { best, topScore, tied } = _matchDoDeptDivision(text, divMatch.domain);
+  if (topScore === 0) return null;
+  if (tied.length === 1) return best;
+  return _classifyDivisionFallback(text, tied, classifyFn);
+}
+
 // ── EMD 데이터 로드 (한림 + 나머지 42개 병합) ───────────────────
 // 2026-07-19 Phase 1 — L2/CITY/NATIONAL과 동일하게 도별 경로 레지스트리로
 // 감쌌다. 지금은 jeju 값만 있고, 캐시 키도 provinceCode로 분리해뒀다 —
@@ -2272,13 +2339,25 @@ function _isMunicipalTaxOnlyMatch(text, entry) {
   return matchedKw.every(k => _MUNICIPAL_TAX_KEYWORDS.includes(k));
 }
 
-function _scoreMatch(text, table) {
-  let best = null, bestScore = 0;
+// ── 동점 감지 확장판 (2026-08-02) ────────────────────────────────
+// 기존 _scoreMatch는 최고점 1개만 돌려줘서 "1등과 2등이 접전이었는지"
+// 정보가 없었다. _scoreMatchTies가 그 정보(topScore, 동점 후보 전체)를
+// 추가로 반환하고, _scoreMatch는 이제 이 함수의 얇은 래퍼로 남아 기존
+// 호출부(도청 L2·시청 국 단위 등) 전부 하위호환된다 — 동작 변화 없음.
+function _scoreMatchTies(text, table) {
+  let bestScore = 0;
+  let tied = [];
   for (const entry of table) {
     const score = entry.kw.filter(k => text.includes(k)).length;
-    if (score > bestScore) { best = entry; bestScore = score; }
+    if (score === 0) continue;
+    if (score > bestScore) { bestScore = score; tied = [entry]; }
+    else if (score === bestScore) { tied.push(entry); }
   }
-  return best;
+  return { best: tied[0] || null, topScore: bestScore, tied };
+}
+
+function _scoreMatch(text, table) {
+  return _scoreMatchTies(text, table).best;
 }
 
 // ── SP-EMD-TEMPLATE 렌더링 (변수 치환) ──────────────────────────
@@ -2878,6 +2957,11 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           trace.push(`SP-CITYDEPT-${cityCode.시코드}-${cityDeptMatch.국코드}`,
             '(규칙 F 일반화 — 시청 국 소관 사무라 읍면동 생략)');
           if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
+          const divisionMatch = await _resolveCityDivision(text, cityDeptMatch, classifyFn);
+          if (divisionMatch) {
+            parts.push(await _fetchText(divisionMatch.file));
+            trace.push(`${divisionMatch.code}(과/팀 특정)`);
+          }
         }
       } else if (cityCode.code === 'SP-CITY-SEOGWIPO' && isWaterQuery) {
         trace.push('(규칙 F: 서귀포 상하수도는 읍면동 생략)');
@@ -2924,6 +3008,11 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         parts.push(cityDeptText);
         trace.push(`SP-CITYDEPT-${cityOnly.시코드}-${cityDeptMatch.국코드}`);
         if (cityDeptPermitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${cityDeptPermitCodes.join(',')})`);
+        const divisionMatch = await _resolveCityDivision(text, cityDeptMatch, classifyFn);
+        if (divisionMatch) {
+          parts.push(await _fetchText(divisionMatch.file));
+          trace.push(`${divisionMatch.code}(과/팀 특정)`);
+        }
       }
       await _appendExpertIfMatched();
       return { systemPrompt: parts.join('\n\n---\n\n'), trace };
@@ -2991,6 +3080,11 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       parts.push(divText.text);
       trace.push(divMatch.code);
       if (divText.permitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${divText.permitCodes.join(',')})`);
+      const doDeptDivisionMatch = await _resolveDoDeptDivision(text, divMatch, classifyFn);
+      if (doDeptDivisionMatch) {
+        parts.push(await _fetchText(doDeptDivisionMatch.file));
+        trace.push(`${doDeptDivisionMatch.code}(과 특정)`);
+      }
       await _appendExpertIfMatched();
       return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
