@@ -3771,6 +3771,11 @@ async function _generateGovDraftSP(env, institution, task, tierHint, ctx) {
   if (!authorRes.ok) throw new Error(`SP-AUTHOR 정본 fetch 실패 (HTTP ${authorRes.status})`);
   const authorSP = await authorRes.text();
 
+  // ALLOW-EMBEDDED-SP: SP 사본이 아니라, fetch()로 받아온 SP-AUTHOR
+  // 정본(authorSP, 위 REPO_RAW에서 매번 실시간 조회) 뒤에 "이걸 상속해
+  // 새 SP를 실시간 작성하라"는 지시문만 덧붙인 템플릿 리터럴이다 —
+  // handleSPIndustryTransformGenerate의 동일 패턴(_generateIndustryTransformSP,
+  // 같은 파일 내 ALLOW-EMBEDDED-SP 주석 참조)과 동일한 이유로 예외.
   const systemPrompt = `${authorSP}
 
 ---
