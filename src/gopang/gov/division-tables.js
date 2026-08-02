@@ -305,7 +305,7 @@ export const DO_DEPT_DIVISION_TABLE = [
 // 같은 종류 기관이 시별로 이원화된 경우, 기관명 없이 "의료원"처럼 공통
 // 키워드로만 동점이 나면 이 필드로 시코드(PDV 위치/발화 지명)와 대조해
 // LLM 호출 없이 결정론적으로 좁힌다 — _resolveInstitutionTie 참조.
-export const DO_AGENCY_TABLE = [
+export const JEJU_AGENCY_TABLE = [
   { code: "SP-AGY-AGRITECH", name: "농업기술원", desc: "당신은 제주특별자치도청 **농업기술원**을 대표하는 AI 레이어다. 주요 소관: 농업경영체 대상 재배기술 지도, 신품종 시험·보급, 영농기술 교육",
     kw: ["농업경영체 대상 재배기술 지도", "농업기술원", "신품종 시험", "영농기술 교육"], file: "03-do-agency/SP-AGY-AGRITECH_v1.0.md" },
   { code: "SP-AGY-ARTMUSEUM", name: "제주특별자치도립미술관", desc: "당신은 제주특별자치도청 **제주특별자치도립미술관**를 대표하는 AI 레이어다. 주요 소관: 도민 미술문화의식 향상, 소장품 전시, 제주비엔날레 등 국제교류전 개최",
@@ -328,7 +328,7 @@ export const DO_AGENCY_TABLE = [
     kw: ["급수 정책", "급수 중단", "누수 민원의 정책", "상수도 요금", "상하수도본부", "시설 총괄 주체", "하수도 시설"], file: "03-do-agency/SP-AGY-WATER_v1.1.md" },
 ];
 
-export const ORG_TABLE = [
+export const JEJU_ORG_TABLE = [
   { code: "SP-ORG-CHILDCARE", name: "제주특별자치도 아이돌봄광역지원센터", desc: "당신은 **제주특별자치도 아이돌봄광역지원센터**를 대표하는 AI 레이어다. 주요 소관: 12세 이하 아동 대상 방문 아이돌봄서비스 연계, 아이돌보미 모집·교육",
     kw: ["아이돌보미 모집", "제주특별자치도 아이돌봄광역지원센터"], file: "07-org/SP-ORG-CHILDCARE_v1.0.md" },
   { code: "SP-ORG-CHILDMEAL", name: "제주 어린이급식관리지원센터(1~4, 원형)", desc: "당신은 **제주 어린이급식관리지원센터(1~4, 원형)**를 대표하는 AI 레이어다. 주요 소관: 어린이 급식소(어린이집·유치원 등) 위생·영양 관리 지원, 급식소 등록 관리(식품위생법 근거 국가사업)",
@@ -384,8 +384,8 @@ export const ORG_TABLE = [
 ];
 
 // ── 03-do-agency / 07-org 산하 과·팀(division) 테이블 (2026-08-02 추가) ──
-// institution(상위 기관 SP 코드)로 DO_AGENCY_TABLE/ORG_TABLE과 연결된다.
-export const DO_AGENCY_DIVISION_TABLE = [
+// institution(상위 기관 SP 코드)로 JEJU_AGENCY_TABLE/JEJU_ORG_TABLE과 연결된다.
+export const JEJU_AGENCY_DIVISION_TABLE = [
   { code: "SP-AGYDIV-AGRITECH-ADMIN", institution: "SP-AGY-AGRITECH",
     name: "농업기술원 행정운영과", desc: "당신은 **농업기술원 행정운영과**를 대표하는 AI 레이어다.",
     kw: ["행정운영", "행정운영과"], file: "03-do-agency/divisions/SP-AGYDIV-AGRITECH-ADMIN_v1.0.md" },
@@ -469,7 +469,7 @@ export const DO_AGENCY_DIVISION_TABLE = [
     kw: ["상수도", "상수도과"], file: "03-do-agency/divisions/SP-AGYDIV-WATER-WATERSUPPLY_v1.0.md" },
 ];
 
-export const ORG_DIVISION_TABLE = [
+export const JEJU_ORG_DIVISION_TABLE = [
   { code: "SP-ORGDIV-CHILDCARE-SUPPORT", institution: "SP-ORG-CHILDCARE",
     name: "제주특별자치도 아이돌봄광역지원센터 돌봄지원팀", desc: "당신은 **제주특별자치도 아이돌봄광역지원센터 돌봄지원팀**을 대표하는 AI 레이어다.",
     kw: ["돌봄지원", "돌봄지원팀"], file: "07-org/divisions/SP-ORGDIV-CHILDCARE-SUPPORT_v1.0.md" },
