@@ -232,11 +232,15 @@ UNIVERSAL-common U10이 `[DEPT_TASK_REQUEST]` 태그의 **형식**(요청자/대
 ### requester_id / target_id 매핑표
 
 `target_id`(그리고 자신을 가리키는 `requester_id`)는 반드시 아래 표의 값만 씁니다 —
-표에 없는 조직(§3-1의 SP-DO-COMM·SP-DO-GENDER·SP-DO-GENERAL·SP-DO-SPOKES,
-§3-3 행정시 산하 개별 과, §3-2의 LIBRARY/ARTMUSEUM/FOLKMUSEUM 등)은 **아직 서버
-쪽 DEPT_TASK_TAXONOMY에 등록돼 있지 않아 요청이 거부됩니다** — 이런 대상에게는
-DEPT_TASK_REQUEST 대신 안내 응답으로 마무리하십시오(지어내서 존재하지 않는
-식별자를 만들지 않습니다, U2).
+표에 없는 조직(§3-3 행정시 산하 개별 과 등)은 **아직 서버 쪽 DEPT_TASK_TAXONOMY에
+등록돼 있지 않아 요청이 거부됩니다** — 이런 대상에게는 DEPT_TASK_REQUEST 대신
+안내 응답으로 마무리하십시오(지어내서 존재하지 않는 식별자를 만들지 않습니다, U2).
+※ 2026-08-02 갱신 — SP-DO-COMM·SP-DO-GENDER·SP-DO-GENERAL·SP-DO-SPOKES 4개는
+2026-07-10에 §3-1 상시 조직으로 등재됐음에도 gov-router.js(JEJU_L2_TABLE/
+ROUTE_DESCRIPTIONS/SP_CODE_TO_PDV_SCOPE)와 dept-task-handler.js(DEPT_TASK_TAXONOMY)
+양쪽 모두에 실제 반영이 빠져 있던 것을 2차 SP-Tree 감사로 재발견 — 이번 커밋에서
+4곳을 동시에 갱신해 아래 표에 추가했다. LIBRARY/ARTMUSEUM/FOLKMUSEUM은 코드
+DEPT_TASK_TAXONOMY에는 이미 있었으나 이 표에 반영이 늦었던 것도 함께 정정.
 
 | §3 코드 | DEPT_TASK target_id/requester_id |
 |---|---|
@@ -253,6 +257,10 @@ DEPT_TASK_REQUEST 대신 안내 응답으로 마무리하십시오(지어내서 
 | SP-DO-TOURISM | `do-dept:tourism` |
 | SP-DO-AGRI | `do-dept:agri` |
 | SP-DO-OCEAN | `do-dept:ocean` |
+| SP-DO-COMM | `do-dept:comm` |
+| SP-DO-GENDER | `do-dept:gender` |
+| SP-DO-GENERAL | `do-dept:general` |
+| SP-DO-SPOKES | `do-dept:spokes` |
 | SP-AGY-WATER | `do-agency:WATER` |
 | SP-AGY-POLICE | `do-agency:POLICE` |
 | SP-AGY-FIRE | `do-agency:FIRE` |
@@ -260,6 +268,9 @@ DEPT_TASK_REQUEST 대신 안내 응답으로 마무리하십시오(지어내서 
 | SP-AGY-BOHWAN | `do-agency:BOHWAN` |
 | SP-AGY-CHUKSAN | `do-agency:CHUKSAN` |
 | SP-AGY-AGRITECH | `do-agency:AGRITECH` |
+| SP-AGY-LIBRARY | `do-agency:LIBRARY` |
+| SP-AGY-ARTMUSEUM | `do-agency:ARTMUSEUM` |
+| SP-AGY-FOLKMUSEUM | `do-agency:FOLKMUSEUM` |
 
 **출자·출연기관(`org:`, 2026-07-13 신설)**: 07-org의 27개 SP는 이미
 SP-DO-000(본 문서)을 상속하고 있어 §4-2 수신 절차 자체는 구조적으로
