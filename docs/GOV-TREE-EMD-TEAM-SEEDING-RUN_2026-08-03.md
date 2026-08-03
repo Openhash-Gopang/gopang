@@ -1,0 +1,474 @@
+# GOV-TREE-EMD-TEAM-SEEDING-RUN_2026-08-03.md
+
+성공 227건 / 실패 0건 (이번 실행 대상 227건)
+
+## 성공
+- emd:애월읍 → unclaimed_44c3e991-1a85-4d34-b9d0-48b0a2409c19
+- emd:조천읍 → unclaimed_93a9bfde-f3c3-476a-9c9f-78bff43a6dc1
+- emd:구좌읍 → unclaimed_fa1aca7b-1c1a-48ee-bd68-b2b9ffb435db
+- emd:한경면 → unclaimed_a5a0698d-5bc3-42b4-a752-7b796278e2c9
+- emd:추자면 → unclaimed_486acd91-18b9-4ba0-9d8a-1a001b979844
+- emd:우도면 → unclaimed_f0f163e8-829a-442a-bd2c-d17a596a93b5
+- emd:대정읍 → unclaimed_cd8e48ec-b466-4c93-bd90-eb110212c71c
+- emd:남원읍 → unclaimed_cb36dc64-dc0a-4eab-bf17-c6505bbe2e78
+- emd:성산읍 → unclaimed_047e1a9f-ce28-47fd-a62d-a19423b6232f
+- emd:안덕면 → unclaimed_42f9c30b-1c2e-4371-8665-dd8c581eb0c8
+- emd:표선면 → unclaimed_b604f099-1ecc-4be8-96ae-a15ebab6e594
+- emd:일도1동 → unclaimed_2b80cb71-feb4-4e48-a484-1390c3164445
+- emd:일도2동 → unclaimed_0476ad58-addc-4711-9d5d-51e2c014914f
+- emd:이도1동 → unclaimed_a86e3f16-ca0e-411d-960c-4b6642bb2629
+- emd:이도2동 → unclaimed_f0959006-2788-415b-86f2-261f9a934547
+- emd:삼도1동 → unclaimed_1ad87e78-b0e3-47af-9adb-d2aba090ac99
+- emd:삼도2동 → unclaimed_4cb0fdc0-a57a-4d30-8bbf-5d99a719acc2
+- emd:용담1동 → unclaimed_c0636b60-9d60-498c-98cc-7044445f6e55
+- emd:용담2동 → unclaimed_0b52b51a-7b22-4d37-a962-9cbe6951b0dc
+- emd:건입동 → unclaimed_e33010f6-5a72-4f5b-91e6-c7e6c67ba477
+- emd:화북동 → unclaimed_7cf125b2-97c3-4227-adc6-6ce5decd9f58
+- emd:삼양동 → unclaimed_621512f2-06de-421a-b139-bb10a9433d7b
+- emd:봉개동 → unclaimed_bf711518-5b88-4f18-9cc4-e7d95a51219d
+- emd:아라동 → unclaimed_14f97df5-9bf9-41b5-a4fb-a33474be88c5
+- emd:오라동 → unclaimed_e810b6cb-6a3d-438f-a771-743ebdb9125e
+- emd:연동 → unclaimed_01592fc8-08f9-4e76-b354-bca177c50c82
+- emd:노형동 → unclaimed_8b7be8a9-152d-4566-aae3-c4d7d0b25697
+- emd:외도동 → unclaimed_6011fb15-572b-4e9b-97e6-88db881e1828
+- emd:이호동 → unclaimed_b4748312-d3ca-410c-b1e7-2bf4cd6c4625
+- emd:도두동 → unclaimed_d4c8345f-5611-4b7d-b864-3ec2c39b34d0
+- emd:송산동 → unclaimed_fc85dbc2-a073-4d09-96d0-4abf89a58fc3
+- emd:정방동 → unclaimed_464bdfde-7234-4ebc-8671-29865cf2e0f4
+- emd:중앙동 → unclaimed_81255b71-cec0-4ca7-b507-65bb85fdadb6
+- emd:천지동 → unclaimed_b0d685e9-3cd2-4b65-9b5c-4bb36373ce8d
+- emd:효돈동 → unclaimed_cd69dd73-c261-4e83-9020-416b23c55020
+- emd:영천동 → unclaimed_282abfa1-1eb1-4513-99de-4aafe3633ae1
+- emd:동홍동 → unclaimed_5328b877-7caf-4eb3-9d29-08dbb4afe5cc
+- emd:서홍동 → unclaimed_39054d5c-227c-474b-bf6c-77e643819553
+- emd:대륜동 → unclaimed_d2fcc252-fb69-45ab-8694-a745ad95222b
+- emd:대천동 → unclaimed_8746ddc1-3239-47a9-ba4a-5725cd927ab4
+- emd:중문동 → unclaimed_bf2efb96-85a4-4793-b17f-6cf35b132203
+- emd:예래동 → unclaimed_0a95d7bc-1283-456b-94c5-b6f466fc5261
+- emd:한림읍 → unclaimed_0aa960b7-36bd-4c99-9370-f6c9bf9f8561
+- team:애월읍-총무팀 → unclaimed_f6185391-89be-4864-a975-e9607426cd64
+- team:애월읍-민원팀 → unclaimed_b9d50f7a-2287-488c-be12-2c4f2f179c43
+- team:애월읍-산업팀 → unclaimed_342ec679-5c68-49ba-bcb0-e90fd5988d66
+- team:애월읍-주민복지팀 → unclaimed_97f62732-0178-4f31-aa8e-b517286a4e51
+- team:애월읍-찾아가는복지팀 → unclaimed_511f6731-e9d0-4830-aa4b-e0194d81152e
+- team:조천읍-총무팀 → unclaimed_c08694d3-0e07-4aab-94ab-5a917a70c162
+- team:조천읍-민원팀 → unclaimed_f71a16d5-0098-406d-b304-b2e099986a53
+- team:조천읍-산업팀 → unclaimed_7690c79e-7143-48c8-9dc5-f5e13df6fc05
+- team:조천읍-주민복지팀 → unclaimed_ea333fb3-56fd-428d-9e7c-b1869c8aec59
+- team:조천읍-찾아가는복지팀 → unclaimed_6cef9b37-0750-480d-9b45-678a5c3bfe84
+- team:구좌읍-총무팀 → unclaimed_4887579d-fb80-4482-8ef8-2c848e0a682d
+- team:구좌읍-민원팀 → unclaimed_42789fc2-8358-4c47-ae4a-bee0e8c6b671
+- team:구좌읍-산업팀 → unclaimed_fecffd1d-6a29-4a04-99b4-ab3e42132a4f
+- team:구좌읍-주민복지팀 → unclaimed_2d724185-4da5-4c91-90d4-b3f8106b199d
+- team:구좌읍-찾아가는복지팀 → unclaimed_1839e119-f5d1-4ff8-a8e6-da35854ab3b9
+- team:한경면-총무팀 → unclaimed_dd28a79b-686c-4e0a-a8b7-3182d65c2cb7
+- team:한경면-민원팀 → unclaimed_a03542e9-eb69-48a0-a722-718e9f689bc1
+- team:한경면-산업팀 → unclaimed_e7cc2f9f-be80-4ac4-9e8f-7add51c66684
+- team:한경면-주민복지팀 → unclaimed_21e46f2e-36f7-4c88-b127-fae247d2c7c9
+- team:한경면-찾아가는복지팀 → unclaimed_65be123d-6ce8-4b31-9436-b653618c2358
+- team:추자면-총무팀 → unclaimed_13ebd391-f049-4770-8c20-3f109c3f5f25
+- team:추자면-민원팀 → unclaimed_c2da2a2f-d367-40ee-9a2c-9ca7c8325ef6
+- team:추자면-산업팀 → unclaimed_e4475572-7518-48c3-8f34-39dc90959eb6
+- team:추자면-주민복지팀 → unclaimed_4f153ccf-1623-42c1-a88f-8b2948ce33d2
+- team:추자면-찾아가는복지팀 → unclaimed_04c78264-ea88-4b86-88f0-6c90ffe831f0
+- team:우도면-총무팀 → unclaimed_8c4a3660-bc9b-4616-930b-c185dc6e1fd1
+- team:우도면-민원팀 → unclaimed_effebcf5-11cb-4dfd-86d7-c7b4965764a9
+- team:우도면-산업팀 → unclaimed_4415b99a-b0fb-4206-afac-23e34b3fe059
+- team:우도면-주민복지팀 → unclaimed_7e8cb3e7-97b3-4e42-ab02-ee866975d2e9
+- team:우도면-찾아가는복지팀 → unclaimed_d4f88223-d867-4d80-a12a-f0ca0eeee68c
+- team:대정읍-총무팀 → unclaimed_184fff7e-5094-47ad-b4fa-0d2b0b3081e2
+- team:대정읍-민원팀 → unclaimed_caf5f507-5847-416d-86bd-a0b760f02e8b
+- team:대정읍-산업팀 → unclaimed_7b869b3b-aa19-47da-b7f8-1de532cb8df9
+- team:대정읍-주민복지팀 → unclaimed_c7f04533-3009-45cf-a0f2-9917c6b62fb1
+- team:대정읍-찾아가는복지팀 → unclaimed_bd9f3989-653c-4528-9527-db4c3deb9460
+- team:남원읍-총무팀 → unclaimed_558d78a9-e1df-4c24-9375-f330f09cc7a3
+- team:남원읍-민원팀 → unclaimed_50c762d0-395f-4e06-aa28-03a29786f48e
+- team:남원읍-산업팀 → unclaimed_7434b591-6304-4846-94e7-fd8e2c3d891a
+- team:남원읍-주민복지팀 → unclaimed_8f900c5d-f506-43fe-bb70-878511d5bb16
+- team:남원읍-찾아가는복지팀 → unclaimed_6d3892e1-19d0-4000-b508-c728fea05d6d
+- team:성산읍-총무팀 → unclaimed_d392f96b-7ad1-4119-955c-2ffedf907341
+- team:성산읍-민원팀 → unclaimed_1af9bdb0-fee6-4905-b5ad-bc25898b8afe
+- team:성산읍-산업팀 → unclaimed_0dfb8e0e-e445-4b13-a0cd-ddf6b98460e9
+- team:성산읍-주민복지팀 → unclaimed_882398c0-cc0a-4e37-baf9-d601447c9156
+- team:성산읍-찾아가는복지팀 → unclaimed_8f223f9a-99d4-421c-96a6-528fea666462
+- team:안덕면-총무팀 → unclaimed_372180cc-3dee-4af4-ab3b-13f853e55161
+- team:안덕면-민원팀 → unclaimed_13751ef4-f1d1-47d9-b87a-0ff149b22bc3
+- team:안덕면-산업팀 → unclaimed_384c10d5-67f5-46bc-9744-64e3a718b625
+- team:안덕면-주민복지팀 → unclaimed_5308e27d-f350-4ffd-9cd8-bbba4a81f34d
+- team:안덕면-찾아가는복지팀 → unclaimed_dfecc7e0-e390-400e-b863-36c75516714c
+- team:표선면-총무팀 → unclaimed_98eb045d-87f7-4a05-ac1a-f230700a526c
+- team:표선면-민원팀 → unclaimed_90011bc1-45c7-4626-aa73-eed182823561
+- team:표선면-산업팀 → unclaimed_46d0628f-0b3d-4000-9d81-a04d0945a2fc
+- team:표선면-주민복지팀 → unclaimed_e2a38b81-2a07-4906-bbf4-2442fab77e73
+- team:표선면-찾아가는복지팀 → unclaimed_614a679f-44d1-4678-8c05-1d79e519c965
+- team:일도1동-총무팀 → unclaimed_cffd9f19-63fc-4d30-828f-367664f84f40
+- team:일도1동-민원팀 → unclaimed_2e3f2057-e21d-4509-8a72-3947ece8cbe8
+- team:일도1동-주민복지팀 → unclaimed_6063d84e-c513-42ad-8b4c-be20e2b56e3a
+- team:일도1동-찾아가는복지팀 → unclaimed_97b14c00-32c2-4b27-829d-caab0224ef87
+- team:일도2동-총무팀 → unclaimed_f6cb70ff-ef2e-454a-8751-9c4053c24c89
+- team:일도2동-민원팀 → unclaimed_045f7c66-6288-46cb-b6ea-a5580f0864ef
+- team:일도2동-주민복지팀 → unclaimed_67b13291-112b-4e26-b6c7-53cdb1dd7848
+- team:일도2동-찾아가는복지팀 → unclaimed_b2ba83e3-a709-492a-81d1-d9b6e326f8cd
+- team:이도1동-총무팀 → unclaimed_bfc92bf0-ab99-4785-ac8b-fc31201923a4
+- team:이도1동-민원팀 → unclaimed_a6119474-03ab-46cd-86bf-18546544355d
+- team:이도1동-주민복지팀 → unclaimed_2031ca44-a42e-4ea1-af9a-0554f65e28d9
+- team:이도1동-찾아가는복지팀 → unclaimed_cf16dfc0-9c0b-4842-a031-eec2cc8f1d6a
+- team:이도2동-총무팀 → unclaimed_9468009e-c69d-4aa2-a6bc-deeab69f8929
+- team:이도2동-민원팀 → unclaimed_68b156aa-d34e-450e-a914-c7db0f2cd152
+- team:이도2동-주민복지팀 → unclaimed_1223390e-8088-4a7f-bcb4-e2bfa21f7ca4
+- team:이도2동-찾아가는복지팀 → unclaimed_7522a8e2-2019-4a01-ac50-6935d1ef8e37
+- team:삼도1동-총무팀 → unclaimed_5c1c9248-60d1-48f3-9c9b-62ae257d98e7
+- team:삼도1동-민원팀 → unclaimed_aa87b443-e262-4f56-bd68-7cdace7c5135
+- team:삼도1동-주민복지팀 → unclaimed_96c1d9a0-019c-45a2-ba25-b961609e5585
+- team:삼도1동-찾아가는복지팀 → unclaimed_51b02ef5-c5f1-4062-af63-c414ab8b6651
+- team:삼도2동-총무팀 → unclaimed_4f918f79-117f-4b8d-b5b4-21576fd00c78
+- team:삼도2동-민원팀 → unclaimed_17bb278b-1bef-491a-afa4-97c4a5ac04fe
+- team:삼도2동-주민복지팀 → unclaimed_d3c41381-351a-4073-8438-4d6582acb220
+- team:삼도2동-찾아가는복지팀 → unclaimed_06b8398f-a16e-48b3-91dd-659f0a3b83ad
+- team:용담1동-총무팀 → unclaimed_75909f5a-2d0e-4b5d-98f0-a74ccd6e0391
+- team:용담1동-민원팀 → unclaimed_f534aa6c-7c52-45ab-8cb3-27b8d92c4e81
+- team:용담1동-주민복지팀 → unclaimed_ce3ef885-0a7a-47be-85a3-7c374e5164f7
+- team:용담1동-찾아가는복지팀 → unclaimed_bf016883-f72a-4bdb-905e-d9e41c209309
+- team:용담2동-총무팀 → unclaimed_f2884fb2-ab36-4074-b95e-7a1915af91f8
+- team:용담2동-민원팀 → unclaimed_e6740e85-b40d-4d6b-bd9b-2df06fa100e9
+- team:용담2동-주민복지팀 → unclaimed_f863809e-887d-4bc0-a554-706a7b0ee2d1
+- team:용담2동-찾아가는복지팀 → unclaimed_bb481311-5cdd-486c-a468-0575854f8aa7
+- team:건입동-총무팀 → unclaimed_38b6c96e-1a5b-4198-86b0-0ea8c6cf4d86
+- team:건입동-민원팀 → unclaimed_d8ce20cf-590f-4282-acbb-852ed88993a8
+- team:건입동-주민복지팀 → unclaimed_03443d06-cb1e-48ec-9615-870d680f323e
+- team:건입동-찾아가는복지팀 → unclaimed_eac4477c-1f23-4e27-b4c0-9d8c4e35c12f
+- team:화북동-총무팀 → unclaimed_7e24f0af-0a31-42c0-8436-c9afc8f6d795
+- team:화북동-민원팀 → unclaimed_07541870-4b8e-4298-bb04-a1ee6355af30
+- team:화북동-주민복지팀 → unclaimed_26b389dc-7987-49ea-b1e9-b4d136525145
+- team:화북동-찾아가는복지팀 → unclaimed_2ebf700d-bfa0-40ff-b829-ef0200bc47f3
+- team:삼양동-총무팀 → unclaimed_fe9fe7ac-b20f-449d-afa3-4ca2ddffb977
+- team:삼양동-민원팀 → unclaimed_8e28fbeb-1fc3-4961-8236-dba3354de99c
+- team:삼양동-주민복지팀 → unclaimed_b27e93c2-4d0a-435b-ac75-634d0235de45
+- team:삼양동-찾아가는복지팀 → unclaimed_9acf2c5a-e6fa-4dc1-b453-93985a174bbf
+- team:봉개동-총무팀 → unclaimed_5496ddf4-e1a7-4f32-989f-3d26bb6d144c
+- team:봉개동-민원팀 → unclaimed_68bdca62-a7e7-41ee-82e6-a7dcfa9337f4
+- team:봉개동-주민복지팀 → unclaimed_bcda1eb9-bc02-4a2f-a94e-96a298af286f
+- team:봉개동-찾아가는복지팀 → unclaimed_958d9b5a-a714-42eb-8c6c-5332263adc44
+- team:아라동-총무팀 → unclaimed_ce24276d-41ff-4c1f-b8a6-55af457bcce0
+- team:아라동-민원팀 → unclaimed_1f8a0393-491c-4f3a-8d1f-e77fb58c3b8b
+- team:아라동-주민복지팀 → unclaimed_b0717fa1-50fa-44d3-9dba-096322d1f28f
+- team:아라동-찾아가는복지팀 → unclaimed_fa03a007-86a0-434a-9dcd-c6b433ad80d5
+- team:오라동-총무팀 → unclaimed_9010f9e5-b36e-4ebb-a019-a35813d495d1
+- team:오라동-민원팀 → unclaimed_7204b4ae-7a3d-4a7c-a3ab-4c7dff6651d1
+- team:오라동-주민복지팀 → unclaimed_ae6ae3b6-97d0-4d3a-a929-1f3c7b8e6725
+- team:오라동-찾아가는복지팀 → unclaimed_6b7630cf-cff2-44a0-b2d7-bdea5e94aa22
+- team:연동-총무팀 → unclaimed_6294725f-462b-40fb-b24c-0720f859ad07
+- team:연동-민원팀 → unclaimed_3f9ab5d3-1b38-4a96-bd53-12034a54077a
+- team:연동-주민복지팀 → unclaimed_f3dcc0ea-e593-4edc-8e9a-c8fe3175c828
+- team:연동-찾아가는복지팀 → unclaimed_d4d6ab94-75af-4a83-9318-f432a9d0a837
+- team:노형동-총무팀 → unclaimed_8685b918-43cf-4816-8d1d-be4ccd0dfe5a
+- team:노형동-민원팀 → unclaimed_f27f3a33-ebd4-45bd-aa0c-a80943836e6b
+- team:노형동-주민복지팀 → unclaimed_6a9b0703-3d09-407e-8f5f-283482becb4e
+- team:노형동-찾아가는복지팀 → unclaimed_1113d256-fba2-4a26-b88c-98b3192b35ef
+- team:외도동-총무팀 → unclaimed_c97c059d-2881-4b0c-b719-22bceee73b4b
+- team:외도동-민원팀 → unclaimed_b5494b87-090c-4239-9d50-74680ff30916
+- team:외도동-주민복지팀 → unclaimed_2898b01b-0998-471d-bbb5-de0c206fe5bc
+- team:외도동-찾아가는복지팀 → unclaimed_d3afad90-97ec-4767-a0a3-e6f7bd26717b
+- team:이호동-총무팀 → unclaimed_00ec1f87-0381-4919-8590-ac62738c1503
+- team:이호동-민원팀 → unclaimed_bdfb194f-ab72-4be5-a488-780571ca8d5c
+- team:이호동-주민복지팀 → unclaimed_9b183192-eedd-4362-b9b2-d8d2f41eef7f
+- team:이호동-찾아가는복지팀 → unclaimed_87951e0f-c2a7-46f2-a1cd-0734dc4b9b18
+- team:도두동-총무팀 → unclaimed_314a47e6-4183-4980-90c9-9b74f6de1b40
+- team:도두동-민원팀 → unclaimed_a4d5c220-3ded-40c9-9eb7-d3043ed1a0e6
+- team:도두동-주민복지팀 → unclaimed_21551df3-8340-46a2-9741-1870a1e4e1b0
+- team:도두동-찾아가는복지팀 → unclaimed_66eab8d3-1592-419f-94d2-ed285f49df22
+- team:송산동-총무팀 → unclaimed_6ea305c0-a9b6-4ee1-b30c-b341aae8613b
+- team:송산동-민원팀 → unclaimed_02eb3748-05f3-425f-8925-f9b043c27a5a
+- team:송산동-주민복지팀 → unclaimed_39c3cec5-d471-49d9-b32d-2ff093da2414
+- team:송산동-찾아가는복지팀 → unclaimed_8118d0c0-a5cb-45fe-8043-00ca10fa6d85
+- team:정방동-총무팀 → unclaimed_be37d60b-8989-4bfd-8a64-2849541807fe
+- team:정방동-민원팀 → unclaimed_502dad08-3d36-4f4e-bf07-0df136073e6e
+- team:정방동-주민복지팀 → unclaimed_cd642fad-ed30-4436-801f-d7ffea504010
+- team:정방동-찾아가는복지팀 → unclaimed_dee52af4-3e36-4f92-a904-897b65f3bd77
+- team:중앙동-총무팀 → unclaimed_7369326d-0b92-48f5-9ad0-1829a5de708b
+- team:중앙동-민원팀 → unclaimed_7bc2b795-8e20-49d4-b25e-b2f4f1d2afd7
+- team:중앙동-주민복지팀 → unclaimed_6dc423a8-ef04-4036-8bc1-c0987ed75fe2
+- team:중앙동-찾아가는복지팀 → unclaimed_a95cb4c9-d237-4443-ad91-99056399dc33
+- team:천지동-총무팀 → unclaimed_61aceb8d-66d8-48b4-a7d6-f00c31f1a702
+- team:천지동-민원팀 → unclaimed_d9b0762b-ea66-4ac9-bd93-b5155acb799c
+- team:천지동-주민복지팀 → unclaimed_0ffec95a-6cee-4bc6-aba0-a5a719669385
+- team:천지동-찾아가는복지팀 → unclaimed_bfb23b8a-4474-4dd6-bcca-33e4ad64541c
+- team:효돈동-총무팀 → unclaimed_0666d035-9889-41ad-9751-e89de2690cd0
+- team:효돈동-민원팀 → unclaimed_b55237c6-7c07-4d31-85a2-0d13562e9915
+- team:효돈동-주민복지팀 → unclaimed_5aa88878-0863-4b0f-ba89-7924617c38c8
+- team:효돈동-찾아가는복지팀 → unclaimed_8c861df5-b6b3-4d41-a9ae-e6a228868145
+- team:영천동-총무팀 → unclaimed_045364bf-4700-40fe-a57c-b36c340600e0
+- team:영천동-민원팀 → unclaimed_9d7e6007-f36f-4d55-bc8f-96c174683613
+- team:영천동-주민복지팀 → unclaimed_b19d7f18-5616-4e3c-850a-1d2aa23dba89
+- team:영천동-찾아가는복지팀 → unclaimed_9480629a-d891-4981-bf99-eddd37822815
+- team:동홍동-총무팀 → unclaimed_ee5b55a5-3de0-4bf6-80b3-e004de437500
+- team:동홍동-민원팀 → unclaimed_8593f357-adb4-4de0-a6a7-444cfc44e5c4
+- team:동홍동-주민복지팀 → unclaimed_06ccd2b0-6573-4c70-9b2d-d39267b95cea
+- team:동홍동-찾아가는복지팀 → unclaimed_619b7808-a16b-4288-9564-82a773283270
+- team:서홍동-총무팀 → unclaimed_087672f0-2b47-4c2e-8de1-c303b8504c1f
+- team:서홍동-민원팀 → unclaimed_dc7c6aa5-520c-48c8-965a-95f9722e038a
+- team:서홍동-주민복지팀 → unclaimed_c9438518-2b98-49d5-8747-dbeb96ba9bd8
+- team:서홍동-찾아가는복지팀 → unclaimed_40816637-f530-4ff1-9240-0e65679c2845
+- team:대륜동-총무팀 → unclaimed_9d6d192f-db39-43ea-bd7c-fe9a0154f83f
+- team:대륜동-민원팀 → unclaimed_83498e81-f047-4797-9d5a-a4666b6aaf81
+- team:대륜동-주민복지팀 → unclaimed_7f8b07e1-29a6-4952-b180-8de03b6a1867
+- team:대륜동-찾아가는복지팀 → unclaimed_fca0ed94-22db-42d2-802b-9225b24626b3
+- team:대천동-총무팀 → unclaimed_8503a675-d582-40ba-8d1d-2cb770b59c6e
+- team:대천동-민원팀 → unclaimed_e20c89e9-7971-4fdb-be9c-2f6b95c221cc
+- team:대천동-주민복지팀 → unclaimed_baea03ee-7c89-4a88-8d1d-aafe5f5c7c43
+- team:대천동-찾아가는복지팀 → unclaimed_a1954fc6-0566-4636-8b86-97b7d0d8a23e
+- team:중문동-총무팀 → unclaimed_019e06dc-e079-446a-8558-1020db135962
+- team:중문동-민원팀 → unclaimed_e7ddaa60-8f70-47cb-a694-91db37768909
+- team:중문동-주민복지팀 → unclaimed_b778a102-59f4-44a8-90de-ec9a33ad5481
+- team:중문동-찾아가는복지팀 → unclaimed_2d410f55-75fd-450d-8492-79673fa86ddf
+- team:예래동-총무팀 → unclaimed_d0a79234-3975-4da9-b93b-244567fed15c
+- team:예래동-민원팀 → unclaimed_8746a022-6436-4a4c-9510-04b47661d380
+- team:예래동-주민복지팀 → unclaimed_287be515-7e5c-4c9a-8889-87e67dfdb4fa
+- team:예래동-찾아가는복지팀 → unclaimed_afc17263-edd1-4215-bed5-0de428415705
+- team:한림읍-총무팀 → unclaimed_8a21dc7c-decd-4624-9d22-611ccf4585b2
+- team:한림읍-민원팀 → unclaimed_acf97785-47bb-4e96-bdc6-63864af2181f
+- team:한림읍-산업팀 → unclaimed_5c4bbed5-bb64-4fc1-b860-bd10e70b725c
+- team:한림읍-주민복지팀 → unclaimed_a86d7ad8-762e-4a92-be59-fd4929bd9c87
+- team:한림읍-찾아가는복지팀 → unclaimed_5b0e67d0-fdaf-42de-ba7c-3409ef0cd887
+
+## 실패
+
+
+---
+
+## 재실행 2026-08-03T16:04:57
+
+성공 0건 / 스킵(기존 등록) 227건 / 실패 0건 (전체 대상 227건, force=False)
+
+## 성공
+
+## 스킵(이미 등록돼 있어 건너뜀 — 중복 방지)
+- emd:애월읍: check_failed: The read operation timed out
+- emd:조천읍: check_failed: The read operation timed out
+- emd:구좌읍: check_failed: The read operation timed out
+- emd:한경면: check_failed: The read operation timed out
+- emd:추자면 → 기존 unclaimed_486acd91-18b9-4ba0-9d8a-1a001b979844
+- emd:우도면 → 기존 unclaimed_f0f163e8-829a-442a-bd2c-d17a596a93b5
+- emd:대정읍 → 기존 unclaimed_cd8e48ec-b466-4c93-bd90-eb110212c71c
+- emd:남원읍 → 기존 unclaimed_cb36dc64-dc0a-4eab-bf17-c6505bbe2e78
+- emd:성산읍 → 기존 unclaimed_047e1a9f-ce28-47fd-a62d-a19423b6232f
+- emd:안덕면 → 기존 unclaimed_42f9c30b-1c2e-4371-8665-dd8c581eb0c8
+- emd:표선면 → 기존 unclaimed_b604f099-1ecc-4be8-96ae-a15ebab6e594
+- emd:일도1동 → 기존 unclaimed_2b80cb71-feb4-4e48-a484-1390c3164445
+- emd:일도2동 → 기존 unclaimed_0476ad58-addc-4711-9d5d-51e2c014914f
+- emd:이도1동 → 기존 unclaimed_a86e3f16-ca0e-411d-960c-4b6642bb2629
+- emd:이도2동 → 기존 unclaimed_f0959006-2788-415b-86f2-261f9a934547
+- emd:삼도1동 → 기존 unclaimed_1ad87e78-b0e3-47af-9adb-d2aba090ac99
+- emd:삼도2동 → 기존 unclaimed_4cb0fdc0-a57a-4d30-8bbf-5d99a719acc2
+- emd:용담1동 → 기존 unclaimed_c0636b60-9d60-498c-98cc-7044445f6e55
+- emd:용담2동 → 기존 unclaimed_0b52b51a-7b22-4d37-a962-9cbe6951b0dc
+- emd:건입동 → 기존 unclaimed_e33010f6-5a72-4f5b-91e6-c7e6c67ba477
+- emd:화북동 → 기존 unclaimed_7cf125b2-97c3-4227-adc6-6ce5decd9f58
+- emd:삼양동 → 기존 unclaimed_621512f2-06de-421a-b139-bb10a9433d7b
+- emd:봉개동 → 기존 unclaimed_bf711518-5b88-4f18-9cc4-e7d95a51219d
+- emd:아라동 → 기존 unclaimed_14f97df5-9bf9-41b5-a4fb-a33474be88c5
+- emd:오라동 → 기존 unclaimed_e810b6cb-6a3d-438f-a771-743ebdb9125e
+- emd:연동 → 기존 unclaimed_01592fc8-08f9-4e76-b354-bca177c50c82
+- emd:노형동 → 기존 unclaimed_8b7be8a9-152d-4566-aae3-c4d7d0b25697
+- emd:외도동 → 기존 unclaimed_6011fb15-572b-4e9b-97e6-88db881e1828
+- emd:이호동 → 기존 unclaimed_b4748312-d3ca-410c-b1e7-2bf4cd6c4625
+- emd:도두동 → 기존 unclaimed_d4c8345f-5611-4b7d-b864-3ec2c39b34d0
+- emd:송산동 → 기존 unclaimed_fc85dbc2-a073-4d09-96d0-4abf89a58fc3
+- emd:정방동 → 기존 unclaimed_464bdfde-7234-4ebc-8671-29865cf2e0f4
+- emd:중앙동 → 기존 unclaimed_81255b71-cec0-4ca7-b507-65bb85fdadb6
+- emd:천지동 → 기존 unclaimed_b0d685e9-3cd2-4b65-9b5c-4bb36373ce8d
+- emd:효돈동 → 기존 unclaimed_cd69dd73-c261-4e83-9020-416b23c55020
+- emd:영천동 → 기존 unclaimed_282abfa1-1eb1-4513-99de-4aafe3633ae1
+- emd:동홍동 → 기존 unclaimed_5328b877-7caf-4eb3-9d29-08dbb4afe5cc
+- emd:서홍동 → 기존 unclaimed_39054d5c-227c-474b-bf6c-77e643819553
+- emd:대륜동 → 기존 unclaimed_d2fcc252-fb69-45ab-8694-a745ad95222b
+- emd:대천동 → 기존 unclaimed_8746ddc1-3239-47a9-ba4a-5725cd927ab4
+- emd:중문동 → 기존 unclaimed_bf2efb96-85a4-4793-b17f-6cf35b132203
+- emd:예래동 → 기존 unclaimed_0a95d7bc-1283-456b-94c5-b6f466fc5261
+- emd:한림읍 → 기존 unclaimed_0aa960b7-36bd-4c99-9370-f6c9bf9f8561
+- team:애월읍-총무팀 → 기존 unclaimed_f6185391-89be-4864-a975-e9607426cd64
+- team:애월읍-민원팀 → 기존 unclaimed_b9d50f7a-2287-488c-be12-2c4f2f179c43
+- team:애월읍-산업팀 → 기존 unclaimed_342ec679-5c68-49ba-bcb0-e90fd5988d66
+- team:애월읍-주민복지팀 → 기존 unclaimed_97f62732-0178-4f31-aa8e-b517286a4e51
+- team:애월읍-찾아가는복지팀 → 기존 unclaimed_511f6731-e9d0-4830-aa4b-e0194d81152e
+- team:조천읍-총무팀 → 기존 unclaimed_c08694d3-0e07-4aab-94ab-5a917a70c162
+- team:조천읍-민원팀 → 기존 unclaimed_f71a16d5-0098-406d-b304-b2e099986a53
+- team:조천읍-산업팀 → 기존 unclaimed_7690c79e-7143-48c8-9dc5-f5e13df6fc05
+- team:조천읍-주민복지팀 → 기존 unclaimed_ea333fb3-56fd-428d-9e7c-b1869c8aec59
+- team:조천읍-찾아가는복지팀 → 기존 unclaimed_6cef9b37-0750-480d-9b45-678a5c3bfe84
+- team:구좌읍-총무팀 → 기존 unclaimed_4887579d-fb80-4482-8ef8-2c848e0a682d
+- team:구좌읍-민원팀 → 기존 unclaimed_42789fc2-8358-4c47-ae4a-bee0e8c6b671
+- team:구좌읍-산업팀 → 기존 unclaimed_fecffd1d-6a29-4a04-99b4-ab3e42132a4f
+- team:구좌읍-주민복지팀 → 기존 unclaimed_2d724185-4da5-4c91-90d4-b3f8106b199d
+- team:구좌읍-찾아가는복지팀 → 기존 unclaimed_1839e119-f5d1-4ff8-a8e6-da35854ab3b9
+- team:한경면-총무팀 → 기존 unclaimed_dd28a79b-686c-4e0a-a8b7-3182d65c2cb7
+- team:한경면-민원팀 → 기존 unclaimed_a03542e9-eb69-48a0-a722-718e9f689bc1
+- team:한경면-산업팀 → 기존 unclaimed_e7cc2f9f-be80-4ac4-9e8f-7add51c66684
+- team:한경면-주민복지팀 → 기존 unclaimed_21e46f2e-36f7-4c88-b127-fae247d2c7c9
+- team:한경면-찾아가는복지팀 → 기존 unclaimed_65be123d-6ce8-4b31-9436-b653618c2358
+- team:추자면-총무팀 → 기존 unclaimed_13ebd391-f049-4770-8c20-3f109c3f5f25
+- team:추자면-민원팀 → 기존 unclaimed_c2da2a2f-d367-40ee-9a2c-9ca7c8325ef6
+- team:추자면-산업팀 → 기존 unclaimed_e4475572-7518-48c3-8f34-39dc90959eb6
+- team:추자면-주민복지팀 → 기존 unclaimed_4f153ccf-1623-42c1-a88f-8b2948ce33d2
+- team:추자면-찾아가는복지팀 → 기존 unclaimed_04c78264-ea88-4b86-88f0-6c90ffe831f0
+- team:우도면-총무팀 → 기존 unclaimed_8c4a3660-bc9b-4616-930b-c185dc6e1fd1
+- team:우도면-민원팀 → 기존 unclaimed_effebcf5-11cb-4dfd-86d7-c7b4965764a9
+- team:우도면-산업팀 → 기존 unclaimed_4415b99a-b0fb-4206-afac-23e34b3fe059
+- team:우도면-주민복지팀 → 기존 unclaimed_7e8cb3e7-97b3-4e42-ab02-ee866975d2e9
+- team:우도면-찾아가는복지팀 → 기존 unclaimed_d4f88223-d867-4d80-a12a-f0ca0eeee68c
+- team:대정읍-총무팀 → 기존 unclaimed_184fff7e-5094-47ad-b4fa-0d2b0b3081e2
+- team:대정읍-민원팀 → 기존 unclaimed_caf5f507-5847-416d-86bd-a0b760f02e8b
+- team:대정읍-산업팀 → 기존 unclaimed_7b869b3b-aa19-47da-b7f8-1de532cb8df9
+- team:대정읍-주민복지팀 → 기존 unclaimed_c7f04533-3009-45cf-a0f2-9917c6b62fb1
+- team:대정읍-찾아가는복지팀 → 기존 unclaimed_bd9f3989-653c-4528-9527-db4c3deb9460
+- team:남원읍-총무팀 → 기존 unclaimed_558d78a9-e1df-4c24-9375-f330f09cc7a3
+- team:남원읍-민원팀 → 기존 unclaimed_50c762d0-395f-4e06-aa28-03a29786f48e
+- team:남원읍-산업팀 → 기존 unclaimed_7434b591-6304-4846-94e7-fd8e2c3d891a
+- team:남원읍-주민복지팀 → 기존 unclaimed_8f900c5d-f506-43fe-bb70-878511d5bb16
+- team:남원읍-찾아가는복지팀 → 기존 unclaimed_6d3892e1-19d0-4000-b508-c728fea05d6d
+- team:성산읍-총무팀 → 기존 unclaimed_d392f96b-7ad1-4119-955c-2ffedf907341
+- team:성산읍-민원팀 → 기존 unclaimed_1af9bdb0-fee6-4905-b5ad-bc25898b8afe
+- team:성산읍-산업팀 → 기존 unclaimed_0dfb8e0e-e445-4b13-a0cd-ddf6b98460e9
+- team:성산읍-주민복지팀 → 기존 unclaimed_882398c0-cc0a-4e37-baf9-d601447c9156
+- team:성산읍-찾아가는복지팀: check_failed: The read operation timed out
+- team:안덕면-총무팀 → 기존 unclaimed_372180cc-3dee-4af4-ab3b-13f853e55161
+- team:안덕면-민원팀 → 기존 unclaimed_13751ef4-f1d1-47d9-b87a-0ff149b22bc3
+- team:안덕면-산업팀 → 기존 unclaimed_384c10d5-67f5-46bc-9744-64e3a718b625
+- team:안덕면-주민복지팀 → 기존 unclaimed_5308e27d-f350-4ffd-9cd8-bbba4a81f34d
+- team:안덕면-찾아가는복지팀 → 기존 unclaimed_dfecc7e0-e390-400e-b863-36c75516714c
+- team:표선면-총무팀 → 기존 unclaimed_98eb045d-87f7-4a05-ac1a-f230700a526c
+- team:표선면-민원팀 → 기존 unclaimed_90011bc1-45c7-4626-aa73-eed182823561
+- team:표선면-산업팀 → 기존 unclaimed_46d0628f-0b3d-4000-9d81-a04d0945a2fc
+- team:표선면-주민복지팀 → 기존 unclaimed_e2a38b81-2a07-4906-bbf4-2442fab77e73
+- team:표선면-찾아가는복지팀 → 기존 unclaimed_614a679f-44d1-4678-8c05-1d79e519c965
+- team:일도1동-총무팀 → 기존 unclaimed_cffd9f19-63fc-4d30-828f-367664f84f40
+- team:일도1동-민원팀 → 기존 unclaimed_2e3f2057-e21d-4509-8a72-3947ece8cbe8
+- team:일도1동-주민복지팀 → 기존 unclaimed_6063d84e-c513-42ad-8b4c-be20e2b56e3a
+- team:일도1동-찾아가는복지팀 → 기존 unclaimed_97b14c00-32c2-4b27-829d-caab0224ef87
+- team:일도2동-총무팀 → 기존 unclaimed_f6cb70ff-ef2e-454a-8751-9c4053c24c89
+- team:일도2동-민원팀 → 기존 unclaimed_045f7c66-6288-46cb-b6ea-a5580f0864ef
+- team:일도2동-주민복지팀 → 기존 unclaimed_67b13291-112b-4e26-b6c7-53cdb1dd7848
+- team:일도2동-찾아가는복지팀 → 기존 unclaimed_b2ba83e3-a709-492a-81d1-d9b6e326f8cd
+- team:이도1동-총무팀 → 기존 unclaimed_bfc92bf0-ab99-4785-ac8b-fc31201923a4
+- team:이도1동-민원팀 → 기존 unclaimed_a6119474-03ab-46cd-86bf-18546544355d
+- team:이도1동-주민복지팀 → 기존 unclaimed_2031ca44-a42e-4ea1-af9a-0554f65e28d9
+- team:이도1동-찾아가는복지팀 → 기존 unclaimed_cf16dfc0-9c0b-4842-a031-eec2cc8f1d6a
+- team:이도2동-총무팀 → 기존 unclaimed_9468009e-c69d-4aa2-a6bc-deeab69f8929
+- team:이도2동-민원팀 → 기존 unclaimed_68b156aa-d34e-450e-a914-c7db0f2cd152
+- team:이도2동-주민복지팀 → 기존 unclaimed_1223390e-8088-4a7f-bcb4-e2bfa21f7ca4
+- team:이도2동-찾아가는복지팀 → 기존 unclaimed_7522a8e2-2019-4a01-ac50-6935d1ef8e37
+- team:삼도1동-총무팀 → 기존 unclaimed_5c1c9248-60d1-48f3-9c9b-62ae257d98e7
+- team:삼도1동-민원팀 → 기존 unclaimed_aa87b443-e262-4f56-bd68-7cdace7c5135
+- team:삼도1동-주민복지팀 → 기존 unclaimed_96c1d9a0-019c-45a2-ba25-b961609e5585
+- team:삼도1동-찾아가는복지팀 → 기존 unclaimed_51b02ef5-c5f1-4062-af63-c414ab8b6651
+- team:삼도2동-총무팀 → 기존 unclaimed_4f918f79-117f-4b8d-b5b4-21576fd00c78
+- team:삼도2동-민원팀 → 기존 unclaimed_17bb278b-1bef-491a-afa4-97c4a5ac04fe
+- team:삼도2동-주민복지팀 → 기존 unclaimed_d3c41381-351a-4073-8438-4d6582acb220
+- team:삼도2동-찾아가는복지팀 → 기존 unclaimed_06b8398f-a16e-48b3-91dd-659f0a3b83ad
+- team:용담1동-총무팀 → 기존 unclaimed_75909f5a-2d0e-4b5d-98f0-a74ccd6e0391
+- team:용담1동-민원팀 → 기존 unclaimed_f534aa6c-7c52-45ab-8cb3-27b8d92c4e81
+- team:용담1동-주민복지팀 → 기존 unclaimed_ce3ef885-0a7a-47be-85a3-7c374e5164f7
+- team:용담1동-찾아가는복지팀 → 기존 unclaimed_bf016883-f72a-4bdb-905e-d9e41c209309
+- team:용담2동-총무팀 → 기존 unclaimed_f2884fb2-ab36-4074-b95e-7a1915af91f8
+- team:용담2동-민원팀 → 기존 unclaimed_e6740e85-b40d-4d6b-bd9b-2df06fa100e9
+- team:용담2동-주민복지팀 → 기존 unclaimed_f863809e-887d-4bc0-a554-706a7b0ee2d1
+- team:용담2동-찾아가는복지팀 → 기존 unclaimed_bb481311-5cdd-486c-a468-0575854f8aa7
+- team:건입동-총무팀 → 기존 unclaimed_38b6c96e-1a5b-4198-86b0-0ea8c6cf4d86
+- team:건입동-민원팀 → 기존 unclaimed_d8ce20cf-590f-4282-acbb-852ed88993a8
+- team:건입동-주민복지팀 → 기존 unclaimed_03443d06-cb1e-48ec-9615-870d680f323e
+- team:건입동-찾아가는복지팀 → 기존 unclaimed_eac4477c-1f23-4e27-b4c0-9d8c4e35c12f
+- team:화북동-총무팀 → 기존 unclaimed_7e24f0af-0a31-42c0-8436-c9afc8f6d795
+- team:화북동-민원팀 → 기존 unclaimed_07541870-4b8e-4298-bb04-a1ee6355af30
+- team:화북동-주민복지팀 → 기존 unclaimed_26b389dc-7987-49ea-b1e9-b4d136525145
+- team:화북동-찾아가는복지팀 → 기존 unclaimed_2ebf700d-bfa0-40ff-b829-ef0200bc47f3
+- team:삼양동-총무팀 → 기존 unclaimed_fe9fe7ac-b20f-449d-afa3-4ca2ddffb977
+- team:삼양동-민원팀 → 기존 unclaimed_8e28fbeb-1fc3-4961-8236-dba3354de99c
+- team:삼양동-주민복지팀 → 기존 unclaimed_b27e93c2-4d0a-435b-ac75-634d0235de45
+- team:삼양동-찾아가는복지팀 → 기존 unclaimed_9acf2c5a-e6fa-4dc1-b453-93985a174bbf
+- team:봉개동-총무팀 → 기존 unclaimed_5496ddf4-e1a7-4f32-989f-3d26bb6d144c
+- team:봉개동-민원팀 → 기존 unclaimed_68bdca62-a7e7-41ee-82e6-a7dcfa9337f4
+- team:봉개동-주민복지팀 → 기존 unclaimed_bcda1eb9-bc02-4a2f-a94e-96a298af286f
+- team:봉개동-찾아가는복지팀 → 기존 unclaimed_958d9b5a-a714-42eb-8c6c-5332263adc44
+- team:아라동-총무팀 → 기존 unclaimed_ce24276d-41ff-4c1f-b8a6-55af457bcce0
+- team:아라동-민원팀 → 기존 unclaimed_1f8a0393-491c-4f3a-8d1f-e77fb58c3b8b
+- team:아라동-주민복지팀 → 기존 unclaimed_b0717fa1-50fa-44d3-9dba-096322d1f28f
+- team:아라동-찾아가는복지팀 → 기존 unclaimed_fa03a007-86a0-434a-9dcd-c6b433ad80d5
+- team:오라동-총무팀 → 기존 unclaimed_9010f9e5-b36e-4ebb-a019-a35813d495d1
+- team:오라동-민원팀 → 기존 unclaimed_7204b4ae-7a3d-4a7c-a3ab-4c7dff6651d1
+- team:오라동-주민복지팀 → 기존 unclaimed_ae6ae3b6-97d0-4d3a-a929-1f3c7b8e6725
+- team:오라동-찾아가는복지팀 → 기존 unclaimed_6b7630cf-cff2-44a0-b2d7-bdea5e94aa22
+- team:연동-총무팀 → 기존 unclaimed_6294725f-462b-40fb-b24c-0720f859ad07
+- team:연동-민원팀 → 기존 unclaimed_3f9ab5d3-1b38-4a96-bd53-12034a54077a
+- team:연동-주민복지팀 → 기존 unclaimed_f3dcc0ea-e593-4edc-8e9a-c8fe3175c828
+- team:연동-찾아가는복지팀 → 기존 unclaimed_d4d6ab94-75af-4a83-9318-f432a9d0a837
+- team:노형동-총무팀 → 기존 unclaimed_8685b918-43cf-4816-8d1d-be4ccd0dfe5a
+- team:노형동-민원팀 → 기존 unclaimed_f27f3a33-ebd4-45bd-aa0c-a80943836e6b
+- team:노형동-주민복지팀 → 기존 unclaimed_6a9b0703-3d09-407e-8f5f-283482becb4e
+- team:노형동-찾아가는복지팀 → 기존 unclaimed_1113d256-fba2-4a26-b88c-98b3192b35ef
+- team:외도동-총무팀 → 기존 unclaimed_c97c059d-2881-4b0c-b719-22bceee73b4b
+- team:외도동-민원팀 → 기존 unclaimed_b5494b87-090c-4239-9d50-74680ff30916
+- team:외도동-주민복지팀 → 기존 unclaimed_2898b01b-0998-471d-bbb5-de0c206fe5bc
+- team:외도동-찾아가는복지팀 → 기존 unclaimed_d3afad90-97ec-4767-a0a3-e6f7bd26717b
+- team:이호동-총무팀 → 기존 unclaimed_00ec1f87-0381-4919-8590-ac62738c1503
+- team:이호동-민원팀 → 기존 unclaimed_bdfb194f-ab72-4be5-a488-780571ca8d5c
+- team:이호동-주민복지팀 → 기존 unclaimed_9b183192-eedd-4362-b9b2-d8d2f41eef7f
+- team:이호동-찾아가는복지팀 → 기존 unclaimed_87951e0f-c2a7-46f2-a1cd-0734dc4b9b18
+- team:도두동-총무팀 → 기존 unclaimed_314a47e6-4183-4980-90c9-9b74f6de1b40
+- team:도두동-민원팀 → 기존 unclaimed_a4d5c220-3ded-40c9-9eb7-d3043ed1a0e6
+- team:도두동-주민복지팀 → 기존 unclaimed_21551df3-8340-46a2-9741-1870a1e4e1b0
+- team:도두동-찾아가는복지팀 → 기존 unclaimed_66eab8d3-1592-419f-94d2-ed285f49df22
+- team:송산동-총무팀 → 기존 unclaimed_6ea305c0-a9b6-4ee1-b30c-b341aae8613b
+- team:송산동-민원팀: check_failed: The read operation timed out
+- team:송산동-주민복지팀 → 기존 unclaimed_39c3cec5-d471-49d9-b32d-2ff093da2414
+- team:송산동-찾아가는복지팀 → 기존 unclaimed_8118d0c0-a5cb-45fe-8043-00ca10fa6d85
+- team:정방동-총무팀 → 기존 unclaimed_be37d60b-8989-4bfd-8a64-2849541807fe
+- team:정방동-민원팀 → 기존 unclaimed_502dad08-3d36-4f4e-bf07-0df136073e6e
+- team:정방동-주민복지팀 → 기존 unclaimed_cd642fad-ed30-4436-801f-d7ffea504010
+- team:정방동-찾아가는복지팀 → 기존 unclaimed_dee52af4-3e36-4f92-a904-897b65f3bd77
+- team:중앙동-총무팀 → 기존 unclaimed_7369326d-0b92-48f5-9ad0-1829a5de708b
+- team:중앙동-민원팀 → 기존 unclaimed_7bc2b795-8e20-49d4-b25e-b2f4f1d2afd7
+- team:중앙동-주민복지팀 → 기존 unclaimed_6dc423a8-ef04-4036-8bc1-c0987ed75fe2
+- team:중앙동-찾아가는복지팀 → 기존 unclaimed_a95cb4c9-d237-4443-ad91-99056399dc33
+- team:천지동-총무팀 → 기존 unclaimed_61aceb8d-66d8-48b4-a7d6-f00c31f1a702
+- team:천지동-민원팀 → 기존 unclaimed_d9b0762b-ea66-4ac9-bd93-b5155acb799c
+- team:천지동-주민복지팀 → 기존 unclaimed_0ffec95a-6cee-4bc6-aba0-a5a719669385
+- team:천지동-찾아가는복지팀 → 기존 unclaimed_bfb23b8a-4474-4dd6-bcca-33e4ad64541c
+- team:효돈동-총무팀 → 기존 unclaimed_0666d035-9889-41ad-9751-e89de2690cd0
+- team:효돈동-민원팀 → 기존 unclaimed_b55237c6-7c07-4d31-85a2-0d13562e9915
+- team:효돈동-주민복지팀 → 기존 unclaimed_5aa88878-0863-4b0f-ba89-7924617c38c8
+- team:효돈동-찾아가는복지팀 → 기존 unclaimed_8c861df5-b6b3-4d41-a9ae-e6a228868145
+- team:영천동-총무팀 → 기존 unclaimed_045364bf-4700-40fe-a57c-b36c340600e0
+- team:영천동-민원팀 → 기존 unclaimed_9d7e6007-f36f-4d55-bc8f-96c174683613
+- team:영천동-주민복지팀 → 기존 unclaimed_b19d7f18-5616-4e3c-850a-1d2aa23dba89
+- team:영천동-찾아가는복지팀 → 기존 unclaimed_9480629a-d891-4981-bf99-eddd37822815
+- team:동홍동-총무팀 → 기존 unclaimed_ee5b55a5-3de0-4bf6-80b3-e004de437500
+- team:동홍동-민원팀 → 기존 unclaimed_8593f357-adb4-4de0-a6a7-444cfc44e5c4
+- team:동홍동-주민복지팀 → 기존 unclaimed_06ccd2b0-6573-4c70-9b2d-d39267b95cea
+- team:동홍동-찾아가는복지팀 → 기존 unclaimed_619b7808-a16b-4288-9564-82a773283270
+- team:서홍동-총무팀 → 기존 unclaimed_087672f0-2b47-4c2e-8de1-c303b8504c1f
+- team:서홍동-민원팀 → 기존 unclaimed_dc7c6aa5-520c-48c8-965a-95f9722e038a
+- team:서홍동-주민복지팀 → 기존 unclaimed_c9438518-2b98-49d5-8747-dbeb96ba9bd8
+- team:서홍동-찾아가는복지팀 → 기존 unclaimed_40816637-f530-4ff1-9240-0e65679c2845
+- team:대륜동-총무팀 → 기존 unclaimed_9d6d192f-db39-43ea-bd7c-fe9a0154f83f
+- team:대륜동-민원팀 → 기존 unclaimed_83498e81-f047-4797-9d5a-a4666b6aaf81
+- team:대륜동-주민복지팀 → 기존 unclaimed_7f8b07e1-29a6-4952-b180-8de03b6a1867
+- team:대륜동-찾아가는복지팀 → 기존 unclaimed_fca0ed94-22db-42d2-802b-9225b24626b3
+- team:대천동-총무팀 → 기존 unclaimed_8503a675-d582-40ba-8d1d-2cb770b59c6e
+- team:대천동-민원팀 → 기존 unclaimed_e20c89e9-7971-4fdb-be9c-2f6b95c221cc
+- team:대천동-주민복지팀 → 기존 unclaimed_baea03ee-7c89-4a88-8d1d-aafe5f5c7c43
+- team:대천동-찾아가는복지팀 → 기존 unclaimed_a1954fc6-0566-4636-8b86-97b7d0d8a23e
+- team:중문동-총무팀 → 기존 unclaimed_019e06dc-e079-446a-8558-1020db135962
+- team:중문동-민원팀 → 기존 unclaimed_e7ddaa60-8f70-47cb-a694-91db37768909
+- team:중문동-주민복지팀 → 기존 unclaimed_b778a102-59f4-44a8-90de-ec9a33ad5481
+- team:중문동-찾아가는복지팀 → 기존 unclaimed_2d410f55-75fd-450d-8492-79673fa86ddf
+- team:예래동-총무팀 → 기존 unclaimed_d0a79234-3975-4da9-b93b-244567fed15c
+- team:예래동-민원팀 → 기존 unclaimed_8746a022-6436-4a4c-9510-04b47661d380
+- team:예래동-주민복지팀 → 기존 unclaimed_287be515-7e5c-4c9a-8889-87e67dfdb4fa
+- team:예래동-찾아가는복지팀 → 기존 unclaimed_afc17263-edd1-4215-bed5-0de428415705
+- team:한림읍-총무팀 → 기존 unclaimed_8a21dc7c-decd-4624-9d22-611ccf4585b2
+- team:한림읍-민원팀 → 기존 unclaimed_acf97785-47bb-4e96-bdc6-63864af2181f
+- team:한림읍-산업팀 → 기존 unclaimed_5c4bbed5-bb64-4fc1-b860-bd10e70b725c
+- team:한림읍-주민복지팀 → 기존 unclaimed_a86d7ad8-762e-4a92-be59-fd4929bd9c87
+- team:한림읍-찾아가는복지팀 → 기존 unclaimed_5b0e67d0-fdaf-42de-ba7c-3409ef0cd887
+
+## 실패

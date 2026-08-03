@@ -1,0 +1,200 @@
+# GWP-EXPERT-REGISTRY-SEEDING-RUN_2026-08-03.md
+
+성공 90건 / 실패 0건
+
+## 성공
+- gwp:kemergency → unclaimed_ff20824a-67a9-49e4-9e68-608b8b793ba6
+- gwp:klaw → unclaimed_fbd24b48-2f6a-4268-b8c2-1e796969aaf9
+- gwp:kpolice → unclaimed_d4ef24ef-63e4-457b-9bc5-7c8085b110db
+- gwp:ksecurity → unclaimed_a3774996-8841-42ff-84de-e94e841f19c6
+- gwp:khealth → unclaimed_505af04b-9e2f-47b9-97d0-ea8289764fee
+- gwp:kedu → unclaimed_136bc3eb-6489-4b91-8186-62d24b3454c1
+- gwp:kgdc → unclaimed_6695a307-59a0-4bc2-8889-a6fabb197066
+- gwp:kfinance → unclaimed_c7c3aee5-9bc1-422c-8a6c-d05675a57b9b
+- gwp:kinsurance → unclaimed_82d00fc3-6a34-4608-824e-6620ddd0fe96
+- gwp:ktelecom → unclaimed_f16e5097-2cad-40b5-8c37-eef27d75629c
+- gwp:kestate → unclaimed_f3b0cb2f-0d29-4a3d-a69b-cd306ae7f6d2
+- gwp:kcommerce_seller → unclaimed_2982c38e-ddf5-44d1-9223-a41e7c23efa4
+- gwp:ktax → unclaimed_379b98cb-bad9-4bc2-ac07-f129953899b0
+- gwp:kcommerce → unclaimed_05bc126e-64b2-430f-8f02-276d3e2d2ba4
+- gwp:ktransport → unclaimed_99e2123a-4663-4093-af2e-ffff99a8ec2f
+- gwp:klogistics → unclaimed_58b7eba8-3ba4-452d-bae2-765a36d9e334
+- gwp:kregionalgov → unclaimed_05c17f60-1071-4fb9-b126-197ada4daaa1
+- gwp:kgov → unclaimed_f691395d-0685-4efe-824a-7402816e632b
+- gwp:kdemocracy → unclaimed_469d12e8-7571-404d-ae95-f772023b1f01
+- gwp:kbusiness → unclaimed_68e71860-5387-48ab-8047-5480362abc61
+- gwp:profile-assistant → unclaimed_576aaa55-587d-4d65-8a56-426c070515b9
+- gwp:fiil-kcleaner → unclaimed_6b7bac13-e51c-4bf0-a08d-aaab04f20629
+- gwp:ksearch → unclaimed_2f41e392-e825-4c71-a1d0-a1a6a676fcf7
+- gwp:tool-web-search → unclaimed_d1752847-5333-44ba-87b7-f919a127cfa2
+- gwp:tool-calculator → unclaimed_ed6be93c-f53a-4248-815d-9b4648cfe28b
+- gwp:kqna → unclaimed_420a4d1a-0312-4c8b-8803-15ddfe1a4503
+- gwp:kusers → unclaimed_cf76b18c-0384-472c-99ce-091e54a081a9
+- expert:lawyer → unclaimed_efdd51c3-fdf5-4770-b537-79c8c3e12f2b
+- expert:judicial-scrivener → unclaimed_411ce313-0e1d-4fef-b8c0-8ddf175dcfaa
+- expert:tax-accountant → unclaimed_b1778bb4-0ffc-4352-afd8-6b38c034effc
+- expert:accountant → unclaimed_69d82490-1740-4b05-b68a-167aa4565a15
+- expert:financial-planner → unclaimed_e88a4b0b-0246-48e8-be75-3a3c56be7a31
+- expert:appraiser → unclaimed_cf114ebd-a7ae-4c9b-abe8-33e8d557712b
+- expert:loss-adjuster → unclaimed_4e52c6be-cc46-4943-8a4c-9552b1212697
+- expert:labor-attorney → unclaimed_a0979c4f-bdb9-4774-8137-79b427fd17b1
+- expert:patent-attorney → unclaimed_98f8db10-3d8c-42d3-bd2a-4517485ab698
+- expert:customs-broker → unclaimed_a0275b00-e75d-45c2-8662-ad4227abdbec
+- expert:physician → unclaimed_b626ae18-6c43-49b4-ae33-f7945dc3f5bf
+- expert:dentist → unclaimed_ebe0d297-de20-4f6e-a48c-f91d42522188
+- expert:traditional-medicine-doctor → unclaimed_3ca08f1c-e567-4ae8-96e2-f1a1845569a4
+- expert:pharmacist → unclaimed_b4a51142-5864-4862-a734-55720b027f11
+- expert:veterinarian → unclaimed_9e556dfe-b6bb-42f4-86fe-33da8a726cf5
+- expert:nurse → unclaimed_8cd6074c-6ee6-48ae-a2fa-aa2b12ba87f8
+- expert:physical-therapist → unclaimed_7c0522fe-f60b-4dfb-ad92-c995df5f3a44
+- expert:medical-lab-technologist → unclaimed_9220da77-0013-4e60-8b43-b583b9449dcb
+- expert:radiologic-technologist → unclaimed_7f82b475-4979-41cf-9b6e-5598c5493342
+- expert:dental-hygienist → unclaimed_3f84d538-f27b-46d1-9abc-97b972bb02ce
+- expert:occupational-therapist → unclaimed_f912cc42-8779-4526-a928-a9701ad61763
+- expert:dental-technician → unclaimed_626b9b21-c8e3-42e4-b020-8217f890de2a
+- expert:advanced-practice-nurse → unclaimed_87585b75-0d6a-41a9-afd1-7c6bcb936c9f
+- expert:dietitian → unclaimed_0d76bee7-8f46-43eb-a1d6-b4ad34cce881
+- expert:paramedic → unclaimed_0da308ad-6e08-4eea-92a3-cea96be8139a
+- expert:midwife → unclaimed_323b975c-6fe8-47b6-8edf-9686f90ed080
+- expert:speech-language-pathologist → unclaimed_3d463d4c-ccc6-4c84-850d-bb9bee810d89
+- expert:optician → unclaimed_de83bdce-8c24-4d43-8b89-75c138a5c142
+- expert:sanitarian → unclaimed_9b20e0ba-a135-4f6c-8531-20c7d1ae0323
+- expert:health-educator → unclaimed_74a0b3ea-8a81-4740-8ac9-3d41ee3ea791
+- expert:teacher → unclaimed_24d3f894-d7bb-49fc-b53f-87b581e943b8
+- expert:professor → unclaimed_9943a2f7-c3ae-41d6-a8f2-6ec4dccd1351
+- expert:civil → unclaimed_bd9cc1aa-1fc7-4d58-91a8-e402ee8f40e1
+- expert:advisor → unclaimed_cd4ea5e6-df13-4147-b838-a1474690096c
+- expert:clinical-psychologist → unclaimed_a3fcd67c-5cb7-40a2-9ac7-d950aa4365a7
+- expert:school-counselor → unclaimed_efc0e78c-0854-4c75-b6b0-b9dc92e43c82
+- expert:mental-health-professional → unclaimed_679c9cf2-40ed-4346-8f0f-d72dea755642
+- expert:social-worker → unclaimed_f93fdd0d-de53-450c-b801-17db68012932
+- expert:curator → unclaimed_b46a59c5-3e58-4a5c-9c92-2679a48164c8
+- expert:librarian → unclaimed_56aa2b7f-2471-47fb-ab6e-2dceb4a84fb1
+- expert:youth-counselor → unclaimed_9f68ec2f-1a00-4f6b-8b85-c45d86cc8250
+- expert:childcare-teacher → unclaimed_a47c9f59-d374-4681-9600-ea70a503d591
+- expert:lifelong-educator → unclaimed_ffcb7f9a-c671-476e-947b-1621112ef4d9
+- expert:architect → unclaimed_04450d92-d88d-4983-aae2-42d0abd46ac0
+- expert:professional-engineer → unclaimed_7ea9f20b-f528-4564-a266-3d6588f67448
+- expert:marine-pilot → unclaimed_61c5c812-808a-4b38-8c87-e9696d1d2419
+- expert:naval-architect → unclaimed_9284b1aa-1c6f-48c8-a452-069bdebcb729
+- expert:navigation-officer → unclaimed_927ef016-53dc-49c7-8e37-0f98e9a6e90f
+- expert:marine-engineer → unclaimed_99780e68-d04d-4b83-baf2-8126a0c9e2bd
+- expert:industrial-safety-consultant → unclaimed_439faa85-4423-454e-939d-561f7199e373
+- expert:weather-forecaster → unclaimed_9e0733ba-cbd1-448f-9db0-4b33713d44f7
+- expert:fire-safety-manager → unclaimed_c3c6f58c-17dc-4f9d-a99d-9e8458c22352
+- expert:landscape-engineer → unclaimed_e4161fdd-5cff-4214-b1e1-f7d5f953f454
+- expert:surveying-engineer → unclaimed_62c18137-5231-4cb4-b76a-45e41d6e99fc
+- expert:electrical-safety-engineer → unclaimed_a6cd2c19-032b-4581-85ee-6aa3bcdc295e
+- expert:gas-safety-engineer → unclaimed_3d0ddc58-b61e-4ec1-9def-7490bf383559
+- expert:real-estate-agent → unclaimed_c1867811-e1aa-4bc8-93c6-9194d3213d5a
+- expert:security-engineer → unclaimed_65293989-eeec-40b5-b018-f25ea5cc8ead
+- expert:translator-interpreter → unclaimed_ef34734a-f7bc-4021-8690-cd0c17533255
+- expert:tour-guide → unclaimed_243b593e-c8d3-4d2b-88fd-c766028254f0
+- expert:sports-instructor → unclaimed_d32ba5a8-e952-4ebd-8671-f723fbd56fe8
+- expert:hairdresser → unclaimed_851f861e-43de-4dab-9eba-4b65137af830
+- expert:chef → unclaimed_ba8eada0-71f6-4d9b-8b0d-ecc55f7676eb
+
+## 실패
+
+
+---
+
+## 재실행 2026-08-03T16:07:18
+
+성공 0건 / 스킵(기존 등록) 90건 / 실패 0건
+
+## 성공
+
+## 스킵(이미 등록돼 있어 건너뜀 — 중복 방지)
+- gwp:kemergency → 기존 unclaimed_ff20824a-67a9-49e4-9e68-608b8b793ba6
+- gwp:klaw → 기존 unclaimed_fbd24b48-2f6a-4268-b8c2-1e796969aaf9
+- gwp:kpolice → 기존 unclaimed_d4ef24ef-63e4-457b-9bc5-7c8085b110db
+- gwp:ksecurity → 기존 unclaimed_a3774996-8841-42ff-84de-e94e841f19c6
+- gwp:khealth → 기존 unclaimed_505af04b-9e2f-47b9-97d0-ea8289764fee
+- gwp:kedu → 기존 unclaimed_136bc3eb-6489-4b91-8186-62d24b3454c1
+- gwp:kgdc → 기존 unclaimed_6695a307-59a0-4bc2-8889-a6fabb197066
+- gwp:kfinance → 기존 unclaimed_c7c3aee5-9bc1-422c-8a6c-d05675a57b9b
+- gwp:kinsurance → 기존 unclaimed_82d00fc3-6a34-4608-824e-6620ddd0fe96
+- gwp:ktelecom → 기존 unclaimed_f16e5097-2cad-40b5-8c37-eef27d75629c
+- gwp:kestate → 기존 unclaimed_f3b0cb2f-0d29-4a3d-a69b-cd306ae7f6d2
+- gwp:kcommerce_seller → 기존 unclaimed_2982c38e-ddf5-44d1-9223-a41e7c23efa4
+- gwp:ktax → 기존 unclaimed_379b98cb-bad9-4bc2-ac07-f129953899b0
+- gwp:kcommerce → 기존 unclaimed_05bc126e-64b2-430f-8f02-276d3e2d2ba4
+- gwp:ktransport → 기존 unclaimed_99e2123a-4663-4093-af2e-ffff99a8ec2f
+- gwp:klogistics → 기존 unclaimed_58b7eba8-3ba4-452d-bae2-765a36d9e334
+- gwp:kregionalgov → 기존 unclaimed_05c17f60-1071-4fb9-b126-197ada4daaa1
+- gwp:kgov → 기존 unclaimed_f691395d-0685-4efe-824a-7402816e632b
+- gwp:kdemocracy → 기존 unclaimed_469d12e8-7571-404d-ae95-f772023b1f01
+- gwp:kbusiness → 기존 unclaimed_68e71860-5387-48ab-8047-5480362abc61
+- gwp:profile-assistant → 기존 unclaimed_576aaa55-587d-4d65-8a56-426c070515b9
+- gwp:fiil-kcleaner → 기존 unclaimed_6b7bac13-e51c-4bf0-a08d-aaab04f20629
+- gwp:ksearch → 기존 unclaimed_2f41e392-e825-4c71-a1d0-a1a6a676fcf7
+- gwp:tool-web-search → 기존 unclaimed_d1752847-5333-44ba-87b7-f919a127cfa2
+- gwp:tool-calculator → 기존 unclaimed_ed6be93c-f53a-4248-815d-9b4648cfe28b
+- gwp:kqna → 기존 unclaimed_420a4d1a-0312-4c8b-8803-15ddfe1a4503
+- gwp:kusers → 기존 unclaimed_cf76b18c-0384-472c-99ce-091e54a081a9
+- expert:lawyer → 기존 unclaimed_efdd51c3-fdf5-4770-b537-79c8c3e12f2b
+- expert:judicial-scrivener → 기존 unclaimed_411ce313-0e1d-4fef-b8c0-8ddf175dcfaa
+- expert:tax-accountant → 기존 unclaimed_b1778bb4-0ffc-4352-afd8-6b38c034effc
+- expert:accountant → 기존 unclaimed_69d82490-1740-4b05-b68a-167aa4565a15
+- expert:financial-planner → 기존 unclaimed_e88a4b0b-0246-48e8-be75-3a3c56be7a31
+- expert:appraiser → 기존 unclaimed_cf114ebd-a7ae-4c9b-abe8-33e8d557712b
+- expert:loss-adjuster → 기존 unclaimed_4e52c6be-cc46-4943-8a4c-9552b1212697
+- expert:labor-attorney → 기존 unclaimed_a0979c4f-bdb9-4774-8137-79b427fd17b1
+- expert:patent-attorney → 기존 unclaimed_98f8db10-3d8c-42d3-bd2a-4517485ab698
+- expert:customs-broker → 기존 unclaimed_a0275b00-e75d-45c2-8662-ad4227abdbec
+- expert:physician → 기존 unclaimed_b626ae18-6c43-49b4-ae33-f7945dc3f5bf
+- expert:dentist → 기존 unclaimed_ebe0d297-de20-4f6e-a48c-f91d42522188
+- expert:traditional-medicine-doctor → 기존 unclaimed_3ca08f1c-e567-4ae8-96e2-f1a1845569a4
+- expert:pharmacist → 기존 unclaimed_b4a51142-5864-4862-a734-55720b027f11
+- expert:veterinarian → 기존 unclaimed_9e556dfe-b6bb-42f4-86fe-33da8a726cf5
+- expert:nurse → 기존 unclaimed_8cd6074c-6ee6-48ae-a2fa-aa2b12ba87f8
+- expert:physical-therapist → 기존 unclaimed_7c0522fe-f60b-4dfb-ad92-c995df5f3a44
+- expert:medical-lab-technologist → 기존 unclaimed_9220da77-0013-4e60-8b43-b583b9449dcb
+- expert:radiologic-technologist → 기존 unclaimed_7f82b475-4979-41cf-9b6e-5598c5493342
+- expert:dental-hygienist → 기존 unclaimed_3f84d538-f27b-46d1-9abc-97b972bb02ce
+- expert:occupational-therapist → 기존 unclaimed_f912cc42-8779-4526-a928-a9701ad61763
+- expert:dental-technician → 기존 unclaimed_626b9b21-c8e3-42e4-b020-8217f890de2a
+- expert:advanced-practice-nurse → 기존 unclaimed_87585b75-0d6a-41a9-afd1-7c6bcb936c9f
+- expert:dietitian → 기존 unclaimed_0d76bee7-8f46-43eb-a1d6-b4ad34cce881
+- expert:paramedic → 기존 unclaimed_0da308ad-6e08-4eea-92a3-cea96be8139a
+- expert:midwife → 기존 unclaimed_323b975c-6fe8-47b6-8edf-9686f90ed080
+- expert:speech-language-pathologist → 기존 unclaimed_3d463d4c-ccc6-4c84-850d-bb9bee810d89
+- expert:optician → 기존 unclaimed_de83bdce-8c24-4d43-8b89-75c138a5c142
+- expert:sanitarian → 기존 unclaimed_9b20e0ba-a135-4f6c-8531-20c7d1ae0323
+- expert:health-educator → 기존 unclaimed_74a0b3ea-8a81-4740-8ac9-3d41ee3ea791
+- expert:teacher → 기존 unclaimed_24d3f894-d7bb-49fc-b53f-87b581e943b8
+- expert:professor → 기존 unclaimed_9943a2f7-c3ae-41d6-a8f2-6ec4dccd1351
+- expert:civil → 기존 unclaimed_bd9cc1aa-1fc7-4d58-91a8-e402ee8f40e1
+- expert:advisor → 기존 unclaimed_cd4ea5e6-df13-4147-b838-a1474690096c
+- expert:clinical-psychologist → 기존 unclaimed_a3fcd67c-5cb7-40a2-9ac7-d950aa4365a7
+- expert:school-counselor → 기존 unclaimed_efc0e78c-0854-4c75-b6b0-b9dc92e43c82
+- expert:mental-health-professional → 기존 unclaimed_679c9cf2-40ed-4346-8f0f-d72dea755642
+- expert:social-worker → 기존 unclaimed_f93fdd0d-de53-450c-b801-17db68012932
+- expert:curator → 기존 unclaimed_b46a59c5-3e58-4a5c-9c92-2679a48164c8
+- expert:librarian → 기존 unclaimed_56aa2b7f-2471-47fb-ab6e-2dceb4a84fb1
+- expert:youth-counselor → 기존 unclaimed_9f68ec2f-1a00-4f6b-8b85-c45d86cc8250
+- expert:childcare-teacher → 기존 unclaimed_a47c9f59-d374-4681-9600-ea70a503d591
+- expert:lifelong-educator → 기존 unclaimed_ffcb7f9a-c671-476e-947b-1621112ef4d9
+- expert:architect → 기존 unclaimed_04450d92-d88d-4983-aae2-42d0abd46ac0
+- expert:professional-engineer → 기존 unclaimed_7ea9f20b-f528-4564-a266-3d6588f67448
+- expert:marine-pilot → 기존 unclaimed_61c5c812-808a-4b38-8c87-e9696d1d2419
+- expert:naval-architect → 기존 unclaimed_9284b1aa-1c6f-48c8-a452-069bdebcb729
+- expert:navigation-officer → 기존 unclaimed_927ef016-53dc-49c7-8e37-0f98e9a6e90f
+- expert:marine-engineer → 기존 unclaimed_99780e68-d04d-4b83-baf2-8126a0c9e2bd
+- expert:industrial-safety-consultant → 기존 unclaimed_439faa85-4423-454e-939d-561f7199e373
+- expert:weather-forecaster → 기존 unclaimed_9e0733ba-cbd1-448f-9db0-4b33713d44f7
+- expert:fire-safety-manager → 기존 unclaimed_c3c6f58c-17dc-4f9d-a99d-9e8458c22352
+- expert:landscape-engineer → 기존 unclaimed_e4161fdd-5cff-4214-b1e1-f7d5f953f454
+- expert:surveying-engineer → 기존 unclaimed_62c18137-5231-4cb4-b76a-45e41d6e99fc
+- expert:electrical-safety-engineer → 기존 unclaimed_a6cd2c19-032b-4581-85ee-6aa3bcdc295e
+- expert:gas-safety-engineer → 기존 unclaimed_3d0ddc58-b61e-4ec1-9def-7490bf383559
+- expert:real-estate-agent → 기존 unclaimed_c1867811-e1aa-4bc8-93c6-9194d3213d5a
+- expert:security-engineer → 기존 unclaimed_65293989-eeec-40b5-b018-f25ea5cc8ead
+- expert:translator-interpreter → 기존 unclaimed_ef34734a-f7bc-4021-8690-cd0c17533255
+- expert:tour-guide → 기존 unclaimed_243b593e-c8d3-4d2b-88fd-c766028254f0
+- expert:sports-instructor → 기존 unclaimed_d32ba5a8-e952-4ebd-8671-f723fbd56fe8
+- expert:hairdresser → 기존 unclaimed_851f861e-43de-4dab-9eba-4b65137af830
+- expert:chef → 기존 unclaimed_ba8eada0-71f6-4d9b-8b0d-ecc55f7676eb
+
+## 실패
