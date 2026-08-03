@@ -4716,6 +4716,7 @@ async function handleEntitySemanticSearch(request, env, corsHeaders) {
         phone: p.extra?.core?.phone ?? null,
         website: p.extra?.core?.website ?? null,
         extra: p.extra,
+        entityType: p.entity_type,
       });
       candidates.push({
         guid: p.guid, name: p.name, handle: p.handle, entity_type: p.entity_type,
@@ -10840,13 +10841,24 @@ function _haversineKm(lat1, lng1, lat2, lng2) {
 // _l1SearchEntities 안에 인라인으로만 있었는데, handleProfileGet(직접
 // 조회)에도 똑같이 적용해야 해서 모듈 스코프로 끌어올렸다 — 두 곳에서
 // 필터링 기준이 어긋나는(하나는 고치고 하나는 깜빡하는) 사고를 막는다.
-function _isFieldVisible(fv, field) {
+function _isFieldVisible(fv, field, entityType) {
   const DEFAULT_PUBLIC_FIELDS = new Set(['products']);
+  // [2026-08-04 신설 — §3-2 정책 결정. institution(기관)은 존재 목적
+  // 자체가 "찾아지는 것"이라 description을 기본 공개로 둔다. person
+  // (개인)은 기존 그대로 기본 비공개 유지(사생활 보호가 맞는 기본값
+  // — 이 변경은 person에는 영향 없음). 오늘 §3-2 파일럿에서 이 기본값
+  // 때문에 entity-semantic-search 임베딩이 늘 이름만으로 이뤄지던
+  // 문제가 실사로 확인됐다(search_text 우회로 인덱싱 자체는 이미
+  // 해결했지만, description을 직접 노출하는 다른 공개 조회 경로들도
+  // 있으므로 근본 정책을 여기서 고친다). org·business·thing·concept은
+  // 아직 이 기본값 확장 대상에 안 넣었다 — 필요하면 후속 결정.
+  const INSTITUTION_DEFAULT_PUBLIC_FIELDS = new Set(['description']);
   if (fv && typeof fv[field] === 'boolean') return fv[field];
+  if (entityType === 'institution' && INSTITUTION_DEFAULT_PUBLIC_FIELDS.has(field)) return true;
   return DEFAULT_PUBLIC_FIELDS.has(field);
 }
 
-function _filterProfileByVisibility({ address, phone, website, extra }) {
+function _filterProfileByVisibility({ address, phone, website, extra, entityType }) {
   const fv = extra?.public?.field_visibility || {};
   const identity = extra?.public?.identity || {};
   // 2026-07-14 신설 — 구멍 G 해결(AC_SELF_EVOLUTION_THOUGHT_EXPERIMENT_
@@ -10899,7 +10911,7 @@ function _filterProfileByVisibility({ address, phone, website, extra }) {
       contact: _isFieldVisible(fv, 'phone') ? extra.public.contact
         : { ...extra.public.contact, phone_display: undefined },
       identity: {
-        ...(_isFieldVisible(fv, 'description') ? identity : { ...identity, description: undefined }),
+        ...(_isFieldVisible(fv, 'description', entityType) ? identity : { ...identity, description: undefined }),
         job_ksco: jobKscoVisible ? identity.job_ksco : undefined,
         affiliation: affiliationVisible ? identity.affiliation : undefined,
         work_domain: workDomainVisible ? identity.work_domain : undefined,
@@ -11036,6 +11048,7 @@ async function _l1SearchEntities(env, { q, etype, occupation, address, lat, lng,
       phone: p.extra?.core?.phone ?? null,
       website: p.extra?.core?.website ?? null,
       extra: p.extra,
+      entityType: p.entity_type,
     });
     return {
       guid: p.guid, name: p.name, handle: p.handle, entity_type: p.entity_type,
@@ -16725,6 +16738,7 @@ async function handleProfileGet(request, env, corsHeaders) {
           phone: core.phone ?? null,
           website: core.website ?? null,
           extra: l1Record.extra || {},
+          entityType: l1Record.entity_type,
         });
 
     const profile = {
