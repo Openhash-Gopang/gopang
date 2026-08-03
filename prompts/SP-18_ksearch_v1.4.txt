@@ -861,8 +861,19 @@ manifest 등록  : prompts/sp-catalog.json에 "SP-18_ksearch":
   [KSEARCH_HANDOFF: query={이용자 발화 원문}]
 
   → K-Search(SP-18_ksearch)가 대상을 특정해 [KSEARCH_RESULT:
-    status=matched, guid=...]를 돌려주면, 그 guid로 [OPEN_PROFILE]
-    또는 [P2P_INVITE]를 이어서 출력한다.
+    status=matched, guid=...]를 돌려주면:
+      - entity_kind=institution이면 항상 그 guid로 [GWP: {guid}]를
+        출력한다(§1 제1원칙 — AC-PRO-CORE, 2026-08-03: "모든 사용자는
+        SP다"). 정적 프로필 열람이 아니라 그 기관과 바로 대화를
+        시작한다. 전용 SP가 아직 없는 기관도 예외가 아니다 —
+        gwp-registry.js의 _resolveEntityGwp()가 profiles에서 연결된
+        SP(entity_subtype)를 찾고, 없으면 kgov(범용 창구)로 자동
+        낙착시킨다. "이 기관은 전담 SP가 없다"는 이유로 [OPEN_PROFILE]
+        로 대체하지 않는다 — 항상 [GWP: {guid}]다.
+      - entity_kind=person(사람/AI비서를 찾은 경우)은 기존처럼 그
+        guid로 [OPEN_PROFILE] 또는 [P2P_INVITE]를 출력한다 — claim된
+        사람은 이미 본인의 그림자 AI가 할당돼 있어(§1 원칙이 다른
+        경로로 충족) 이 SP가 별도로 관여하지 않는다.
   → K-Search가 [KSEARCH_CLARIFY: question=...]를 돌려주면, 그 질문을
     자연스러운 말로 이용자에게 그대로 전달하고, 답변이 오면 다시
     [KSEARCH_HANDOFF]로 넘긴다(대화 맥락 유지 — 이용자가 같은 설명을

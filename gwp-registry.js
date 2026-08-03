@@ -737,6 +737,86 @@ function getService(id) {
       || GWP_REGISTRY.find(s => s.id === SVC_ID_ALIAS[id])
       || null;
 }
+
+// ── 엔티티 기반 launch 폴백 (2026-08-03 신설, §ENTITY-LAUNCH) ──────
+// ★ §1 제1원칙(AC-PRO-CORE, 2026-08-03) 코드 강제 ★ "모든 사용자는
+// SP다 — 개인도 기관도 사물도 개념도, 호출한다는 것은 그 guid에
+// 할당된 SP를 호출한다는 것이다." 이 함수가 그 원칙을 코드로 강제하는
+// 지점이다: institution/org 엔티티는 이 함수에서 절대 null을 반환하지
+// 않는다 — 전용 SP(entity_subtype)가 없으면 kgov(추상 클래스, 전용
+// 인스턴스 없는 모든 사무를 받는 범용 창구)로 낙착시킨다. "전담 SP가
+// 없다"는 이유로 호출이 실패하는 경우를 코드 차원에서 없앤다.
+//
+// K-Search(SP-18)가 profiles 컬렉션에서 institution/org 엔티티를 찾아
+// 그 guid로 [GWP: {guid}]가 호출되는 경우 — 이 guid는 위 core 21개
+// 배열엔 없다(getService()는 못 찾음). 이 함수 하나가 178개 gov-tree
+// 기관(및 앞으로 추가될 institution/org 엔티티) 전부를 공통으로
+// 처리한다 — 기관마다 이 파일에 개별 항목을 추가하지 않는다.
+//
+// entity_subtype 계약: profiles.extra.public.identity.entity_subtype에
+// "{tier}:{code}"(예: "policy:ASSEMBLY") 형식의 코드가 seeding
+// 스크립트(tools/seed_gov_tree_registry.py)로 미리 채워져 있으면 그
+// 전용 SP로, 없으면 kgov로 연결한다.
+//
+// 비동기 함수다 — getService()(동기)와 별도로, 호출부(call-ai.js
+// _parseAgentTags)가 getService() 실패 시에만 fire-and-forget으로
+// 추가 시도한다.
+async function _resolveEntityGwp(guid) {
+  if (!guid) return null;
+  try {
+    const base = (typeof CFG !== 'undefined' && CFG?.endpoint) ? CFG.endpoint.replace(/\/+$/, '') : '';
+    const res = await fetch(`${base}/profile?guid=${encodeURIComponent(guid)}`);
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    const profile = data?.profile;
+    if (!profile) return null;
+
+    // ★ institution/org만 이 함수가 직접 처리한다. person은 claim된
+    // 계정이면 이미 _mergeAgentSP()로 본인의 그림자 AI가 할당돼 있어
+    // (§1 원칙이 이미 다른 경로로 충족됨) 이 함수의 대상이 아니다 —
+    // person을 여기서 잘못 다루면 사칭 경로가 열린다(SP-18 RULE-01
+    // 금지-4와 동일한 우려). business/platform/thing/concept은 아직
+    // 기본 SP가 정의돼 있지 않다 — §1 원칙상 이것도 결국 기본값을
+    // 가져야 하지만, 지금 kgov로 임시 낙착시키면 "행정기관이 아닌데
+    // 행정 안내로 연결됨"이라는 새로운 오답이 생긴다. 없는 매핑을
+    // 지어내지 않고 정직하게 null(호출부가 기존처럼 처리) — 후속
+    // 과제로 남긴다.
+    if (!['institution', 'org'].includes(profile.entity_type)) return null;
+
+    const identity = profile.extra?.public?.identity || {};
+    const govCode = identity.entity_subtype || null;
+    const displayName = identity.display_name || profile.name || '기관';
+
+    if (govCode) {
+      return {
+        id: guid,
+        name: displayName,
+        category: 'GOV',
+        type: 'tab',
+        // regional-gov.html은 이미 있는 페이지 — gov_code 쿼리
+        // 파라미터로 assembleGovSystemPrompt의 directCode 경로
+        // (2026-08-03 신설)를 바로 태운다.
+        url: `https://hondi.net/pages/regional-gov.html?gov_code=${encodeURIComponent(govCode)}`,
+        status: 'active',
+      };
+    }
+
+    // ★ §1 원칙 강제 지점 — 전용 SP(entity_subtype)가 없다고 여기서
+    // null을 반환하면 "전담 SP가 없어 호출 실패"가 되어 원칙 위반이다.
+    // kgov(core 레지스트리의 추상 클래스, 이미 존재)로 낙착시킨다 —
+    // 그 기관 이름을 ctx에 실어 보내는 건 호출부(_parseAgentTags)가
+    // 이미 하고 있으므로(cleanedReply/gwpCtx), kgov 진입 후 텍스트
+    // 매칭이 최대한 좁혀준다.
+    const kgovDef = getService('kgov');
+    if (kgovDef) {
+      return { ...kgovDef, id: guid, name: displayName };
+    }
+    return null; // kgov 코어 항목 자체가 없다면(설정 오류) 정직하게 null.
+  } catch (e) {
+    console.warn('[Registry] 엔티티 기반 서비스 해석 실패(무시):', e.message);
+    return null;
+  }
+}
 function getByCategory(cat) {
   return GWP_REGISTRY.filter(s => s.category === cat);
 }
@@ -748,6 +828,7 @@ function getByCategory(cat) {
 // ── 전역 노출 ──────────────────────────────────────────────────
 window.GWP_REGISTRY    = GWP_REGISTRY;
 window.getService      = getService;
+window._resolveEntityGwp = _resolveEntityGwp;
 window.getByCategory   = getByCategory;
 window.loadPendingAgents = loadPendingAgents;
 window.resolveSpUrls     = resolveSpUrls;
