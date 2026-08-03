@@ -4682,11 +4682,20 @@ async function handleEntitySemanticSearch(request, env, corsHeaders) {
   const candidates = [];
   for (const m of matches) {
     try {
-      const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records/${encodeURIComponent(m.id)}`, {
+      // [2026-08-04 버그 수정 — m.id는 handleEntityEmbedIndex가 Vectorize
+      // record id로 넣은 profiles.guid 값이지, PocketBase 레코드 고유 id가
+      // 아니다. GET /records/{id}는 PocketBase 내부 id 전용이라 매번 404가
+      // 나서 후보가 전부 사라지고 있었다(29건 파일럿 전량 NO-MATCH로 실사
+      // 발견 — Vectorize 원본 응답엔 정답이 실제로 들어있었는데 이 단계에서
+      // 조용히 버려지고 있었음). _l1SearchEntities·handleBenefitSemanticSearch
+      // 와 동일하게 filter=guid='...' 검색으로 교체.]
+      const filter = encodeURIComponent(`guid = '${m.id.replace(/'/g, "\\'")}'`);
+      const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!res.ok) continue; // 인덱스엔 있는데 profiles에서 삭제된 경우 — 건너뛴다(죽은 참조 방치 금지, 조용히 무시만 함)
-      const p = await res.json().catch(() => null);
+      const data = await res.json().catch(() => ({ items: [] }));
+      const p = data.items?.[0];
       if (!p) continue;
       const filtered = _filterProfileByVisibility({
         address: p.address,
