@@ -1,0 +1,32 @@
+[
+  {
+    "no": 11,
+    "utterance": "전입신고 하고 상수도 명의 옮기고 도시가스 사용자 변경까지 순서대로 다 처리해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "k-intent",
+    "expected_name": "다기관 오케스트레이션(K-Intent)",
+    "category": "K-Intent 재검증(2026-08-03) — 구체적 행위 나열형, batch2 통과 사례(no=192)와 동일 구조·다른 도메인",
+    "static_verdict": "N/A",
+    "basis": "batch2 통과 사례(전입신고+인터넷설치+자동이체)와 동일하게 행위 3개를 이미 나열한 형태 — 도메인만 이사 관련 다른 조합으로 교체"
+  },
+  {
+    "no": 12,
+    "utterance": "이번 주에 이사하는데 이사 갈 집 관련 행정·생활 절차 좀 한번에 알아서 처리해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "k-intent",
+    "expected_name": "다기관 오케스트레이션(K-Intent)",
+    "category": "K-Intent 재검증(2026-08-03) — 추상적 목표형, no=11과 동일 실질 목표의 대조군",
+    "static_verdict": "N/A",
+    "basis": "no=11과 실질적으로 같은 목표(이사 관련 행정 처리)를 상위 개념으로만 표현 — 구체적 행위 나열 여부만 다른 A/B 비교"
+  },
+  {
+    "no": 13,
+    "utterance": "먼저 거주지 구청에 출산장려금 신청하고, 그다음 회사 통해서 고용센터에 육아휴직급여 신청까지 이어서 처리해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "k-intent",
+    "expected_name": "다기관 오케스트레이션(K-Intent)",
+    "category": "K-Intent 재검증(2026-08-03) — 이전 시도(no=10, 추상적 표현) 실패건의 구체적 재표현",
+    "static_verdict": "N/A",
+    "basis": "1차 시도(2026-08-03, no=10)에서 [GWP: kgov] 후 AC가 직접 서술한 실패 사례를 담당기관·순서까지 명시한 구체적 문장으로 재작성"
+  }
+]
