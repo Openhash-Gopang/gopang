@@ -1489,8 +1489,28 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     return true;
   }
 
-  const handoffBackMatch = fullReply.match(/\[ORCHESTRATION_HANDOFF_BACK:\s*reason=(\w+)\]/);
+  // ★ 2026-08-03 신설 — 코드 강제 화이트리스트. 프롬프트 경고문으로
+  // reason 값을 지어내지 말라고 두 차례(2026-08-03) 타일렀는데도 실사
+  // 재검증에서 매번 새로운 값을 지어냈다(reason=multi-step_bereavement_
+  // process 등, 하이픈 포함이라 기존 \w+ 정규식에 아예 안 걸리기까지
+  // 했다 — 아래 정규식도 [\w-]+로 함께 넓힘). 자연어 설득의 한계가
+  // 명확해, 실제 SP 5개(K-Intent/K-Compose/K-Deliver/K-Execute/
+  // K-Report) 전체에서 선언한 값만 화이트리스트로 못박는다 — 목록
+  // 밖이면 누가 냈든(AC든 하위 SP든) 무조건 무시하고 폴백한다.
+  const VALID_ORCHESTRATION_HANDOFF_BACK_REASONS = new Set([
+    'emergency',            // 전 SP 공통
+    'project_paused',       // K-Deliver(SP-21) — 위에서 별도 처리됨
+    'unclear_after_2_tries',// K-Intent(SP-19) 전용
+    'circular_reference',   // K-Compose(SP-20) 전용
+    'goal_not_composable',  // K-Compose(SP-20) 전용
+  ]);
+
+  const handoffBackMatch = fullReply.match(/\[ORCHESTRATION_HANDOFF_BACK:\s*reason=([\w-]+)\]/);
   if (handoffBackMatch) {
+    if (!VALID_ORCHESTRATION_HANDOFF_BACK_REASONS.has(handoffBackMatch[1])) {
+      console.warn(`[Orchestration] 화이트리스트에 없는 reason 값(${handoffBackMatch[1]}) — 지어낸 값으로 간주, 무시하고 다른 태그 처리로 폴백`);
+      return false;
+    }
     // ★ 2026-08-03 긴급 수정 — 실사(K-Intent 트리거 검증 시나리오 10건,
     // live smoketest)로 확인된 오용 패턴: 이 태그는 K-Compose/K-Search가
     // 진행 중인 오케스트레이션을 AC로 되돌릴 때만 의미가 있는데, AC
@@ -1502,11 +1522,11 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     // 응답에 함께 있었을 수 있는 [GWP:] 태그도(위 함수가 true를
     // 반환하면 _parseAgentTags가 아예 실행되지 않으므로) 통째로
     // 유실된다(실사례: 반려견 등록 시나리오에서 [GWP: khealth]가
-    // 이렇게 유실됨). AC-PRO-CORE 본체가 활성 상태일 때(§0. 정체성
-    // 마커, 4305행과 동일 판별법)는 이 태그를 무시하고 false를 반환해
-    // 아래 _parseAgentTags가 같은 fullReply에서 실제 라우팅 태그를
-    // 대신 찾을 기회를 준다 — §ORCHESTRATION 트리거 조건 자체의 보강은
-    // 별도 작업(2026-08-03 세션 논의 참조).
+    // 이렇게 유실됨). 위 화이트리스트 검증을 통과한(=값 자체는 진짜
+    // 5개 중 하나인) 경우에도, AC-PRO-CORE 본체가 활성 상태(§0. 정체성
+    // 마커, 4305행과 동일 판별법)라면 여전히 문맥상 오용이다 — "값은
+    // 유효하지만 지금 이 화자가 낼 상황이 아님"을 이 두 번째 가드가
+    // 잡는다.
     if (CFG.system?.includes('§0. 정체성')) {
       console.warn(`[Orchestration] AC 최상위에서 ORCHESTRATION_HANDOFF_BACK(reason=${handoffBackMatch[1]}) 오용 감지 — 무시하고 다른 태그 처리로 폴백`);
       return false;
