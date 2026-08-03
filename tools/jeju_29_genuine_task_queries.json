@@ -1,0 +1,176 @@
+[
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-jachi",
+    "name": "제주시 자치행정국",
+    "query": "지방세 신고하려고 하는데 어디로 가야 하나요"
+  },
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-safety",
+    "name": "제주시 안전교통국",
+    "query": "차량 등록하려면 어디로 가야 하나요"
+  },
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-welfare",
+    "name": "제주시 복지위생국",
+    "query": "위생업소 등록 신청하고 싶어요"
+  },
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-econ",
+    "name": "제주시 경제일자리국",
+    "query": "구직 등록하려면 어디로 문의해야 하나요"
+  },
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-culture",
+    "name": "제주시 문화관광체육국",
+    "query": "공연장 대관 신청하고 싶어요"
+  },
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-climate",
+    "name": "제주시 청정환경국",
+    "query": "폐기물 무단투기 신고하고 싶어요"
+  },
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-housing",
+    "name": "제주시 도시건설국",
+    "query": "건축 인허가 신청하려면 어디로 가야 하나요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-AGRI",
+    "name": "농축산식품국",
+    "query": "감귤 유통 지원 신청하려면 어디로 문의해야 하나요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-AIRPORTSUP",
+    "name": "공항확충지원단",
+    "query": "제2공항 사업 진행 상황이 궁금해요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-AUTONOMY",
+    "name": "특별자치제도추진단",
+    "query": "제주 특별자치 제도가 어떻게 바뀌는지 알고 싶어요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-BALANCE",
+    "name": "도시균형추진단",
+    "query": "원도심하고 읍면 지역 격차 해소 사업이 뭐가 있나요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-CLIMATE",
+    "name": "기후환경국",
+    "query": "수자원이랑 산림녹지 정책 관련해서 물어보고 싶어요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-COMM",
+    "name": "소통청렴담당관",
+    "query": "공무원 비리 제보하고 싶은데 어디로 하나요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-CULTURE",
+    "name": "문화체육교육국",
+    "query": "평생학습 프로그램 안내받고 싶어요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-ECON",
+    "name": "경제활력국",
+    "query": "창업 지원금 신청은 어디서 하나요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-GANGJEONG",
+    "name": "강정공동체사업추진단",
+    "query": "강정마을 상생 사업 신청하고 싶어요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-GENDER",
+    "name": "성평등여성정책관",
+    "query": "성평등 관련 정책에 대해 문의하고 싶어요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-GENERAL",
+    "name": "총무과",
+    "query": "인사 관련 요청할 게 있어요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-HOUSING",
+    "name": "건설주택국",
+    "query": "도에서 발주한 공사 관련해서 문의드려요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-INNOV",
+    "name": "혁신산업국",
+    "query": "우주모빌리티 산업 지원 신청하고 싶어요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-JACHI",
+    "name": "특별자치행정국",
+    "query": "4·3 희생자 유족 관련 신청하려고 해요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-LIAISON",
+    "name": "중앙협력본부",
+    "query": "국회 협력 사업 관련해서 문의하고 싶어요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-OCEAN",
+    "name": "해양수산국",
+    "query": "해녀문화 보전 사업이 궁금해요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-PLAN",
+    "name": "기획조정실",
+    "query": "청년정책 관련 신청하고 싶은 게 있어요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-SAFETY",
+    "name": "도민안전건강실(안전건강실)",
+    "query": "공중위생 정책 관련 문의드려요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-SPOKES",
+    "name": "대변인",
+    "query": "도정 홍보자료 받고 싶어요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-TOURISM",
+    "name": "관광교류국",
+    "query": "국제교류 사업 관련해서 문의드려요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-TRANSPORT",
+    "name": "교통항공국",
+    "query": "대중교통 준공영제 관련해서 궁금한 게 있어요"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-WELFARE",
+    "name": "복지가족국(구 보건복지여성국)",
+    "query": "노인 복지 정책 관련 문의드려요"
+  }
+]

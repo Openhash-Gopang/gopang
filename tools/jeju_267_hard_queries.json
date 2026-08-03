@@ -1,0 +1,1871 @@
+[
+  {
+    "tier": "emd",
+    "entity_subtype": "emd:한림읍",
+    "official_name": "한림읍사무소",
+    "query": "한림읍",
+    "name": "한림읍사무소"
+  },
+  {
+    "tier": "city-top",
+    "entity_subtype": "city:SP-CITY-JEJU",
+    "official_name": "제주시청",
+    "query": "시청",
+    "name": "제주시청"
+  },
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-jachi",
+    "official_name": "제주시 자치행정국",
+    "query": "자치행정국",
+    "name": "제주시 자치행정국"
+  },
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-safety",
+    "official_name": "제주시 안전교통국",
+    "query": "안전교통국",
+    "name": "제주시 안전교통국"
+  },
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-welfare",
+    "official_name": "제주시 복지위생국",
+    "query": "복지위생국",
+    "name": "제주시 복지위생국"
+  },
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-econ",
+    "official_name": "제주시 경제일자리국",
+    "query": "경제일자리국",
+    "name": "제주시 경제일자리국"
+  },
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-culture",
+    "official_name": "제주시 문화관광체육국",
+    "query": "문화관광체육국",
+    "name": "제주시 문화관광체육국"
+  },
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-climate",
+    "official_name": "제주시 청정환경국",
+    "query": "청정환경국",
+    "name": "제주시 청정환경국"
+  },
+  {
+    "tier": "city-dept",
+    "entity_subtype": "city-dept:jejusi-housing",
+    "official_name": "제주시 도시건설국",
+    "query": "도시건설국",
+    "name": "제주시 도시건설국"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-CLIMATE-ENVGUIDE",
+    "official_name": "제주시청 청정환경국 환경지도과",
+    "query": "환경지도과",
+    "name": "제주시청 청정환경국 환경지도과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-CLIMATE-ENVMGMT",
+    "official_name": "제주시청 청정환경국 환경관리과",
+    "query": "환경관리과",
+    "name": "제주시청 청정환경국 환경관리과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-CLIMATE-FACILITY",
+    "official_name": "제주시청 청정환경국 환경시설관리소",
+    "query": "환경시설관리소",
+    "name": "제주시청 청정환경국 환경시설관리소"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-CLIMATE-JEOLMUL",
+    "official_name": "제주시청 청정환경국 절물생태관리소",
+    "query": "절물생태관리소",
+    "name": "제주시청 청정환경국 절물생태관리소"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-CLIMATE-LIVINGENV",
+    "official_name": "제주시청 청정환경국 생활환경과",
+    "query": "생활환경과",
+    "name": "제주시청 청정환경국 생활환경과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-CLIMATE-PARKS",
+    "official_name": "제주시청 청정환경국 공원녹지과",
+    "query": "공원녹지과",
+    "name": "제주시청 청정환경국 공원녹지과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-CULTURE-ARTCENTER",
+    "official_name": "제주시청 문화관광체육국 제주아트센터",
+    "query": "제주아트센터",
+    "name": "제주시청 문화관광체육국 제주아트센터"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-CULTURE-ART",
+    "official_name": "제주시청 문화관광체육국 문화예술과",
+    "query": "문화예술과",
+    "name": "제주시청 문화관광체육국 문화예술과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-CULTURE-SPORTS",
+    "official_name": "제주시청 문화관광체육국 체육진흥과",
+    "query": "체육진흥과",
+    "name": "제주시청 문화관광체육국 체육진흥과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-CULTURE-TAMNALIB",
+    "official_name": "제주시청 문화관광체육국 탐라도서관",
+    "query": "탐라도서관",
+    "name": "제주시청 문화관광체육국 탐라도서관"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-CULTURE-TOURISM",
+    "official_name": "제주시청 문화관광체육국 관광진흥과",
+    "query": "관광진흥과",
+    "name": "제주시청 문화관광체육국 관광진흥과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-CULTURE-UDANGLIB",
+    "official_name": "제주시청 문화관광체육국 우당도서관",
+    "query": "우당도서관",
+    "name": "제주시청 문화관광체육국 우당도서관"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-ECON-INFOSUPPORT",
+    "official_name": "제주시청 경제일자리국 정보화지원과",
+    "query": "정보화지원과",
+    "name": "제주시청 경제일자리국 정보화지원과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-ECON-JOBENERGY",
+    "official_name": "제주시청 경제일자리국 일자리에너지과",
+    "query": "일자리에너지과",
+    "name": "제주시청 경제일자리국 일자리에너지과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-ECON-SMB",
+    "official_name": "제주시청 경제일자리국 경제소상공인과",
+    "query": "경제소상공인과",
+    "name": "제주시청 경제일자리국 경제소상공인과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-ECON-VILLAGE",
+    "official_name": "제주시청 경제일자리국 마을활력과",
+    "query": "마을활력과",
+    "name": "제주시청 경제일자리국 마을활력과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-JACHI-BASICGOVPREP",
+    "official_name": "제주시청 자치행정국 기초자치단체 설치준비지원단",
+    "query": "설치준비지원단",
+    "name": "제주시청 자치행정국 기초자치단체 설치준비지원단"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-JACHI-BUDGET",
+    "official_name": "제주시청 자치행정국 기획예산과",
+    "query": "기획예산과",
+    "name": "제주시청 자치행정국 기획예산과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-JACHI-GENERAL",
+    "official_name": "제주시청 자치행정국 총무과",
+    "query": "총무과",
+    "name": "제주시청 자치행정국 총무과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-JACHI-PROPERTYTAX",
+    "official_name": "제주시청 자치행정국 재산세과",
+    "query": "재산세과",
+    "name": "제주시청 자치행정국 재산세과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-JACHI-SELFGOV",
+    "official_name": "제주시청 자치행정국 자치행정과",
+    "query": "자치행정과",
+    "name": "제주시청 자치행정국 자치행정과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-JACHI-TAX",
+    "official_name": "제주시청 자치행정국 세무과",
+    "query": "세무과",
+    "name": "제주시청 자치행정국 세무과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-SAFETY-GENERAL",
+    "official_name": "제주시청 안전교통국 안전총괄과",
+    "query": "안전총괄과",
+    "name": "제주시청 안전교통국 안전총괄과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-SAFETY-TRAFFIC",
+    "official_name": "제주시청 안전교통국 교통행정과",
+    "query": "교통행정과",
+    "name": "제주시청 안전교통국 교통행정과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-SAFETY-VEHICLE",
+    "official_name": "제주시청 안전교통국 차량관리과",
+    "query": "차량관리과",
+    "name": "제주시청 안전교통국 차량관리과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-WELFARE-BASICLIVELIHOOD",
+    "official_name": "제주시청 복지위생국 기초생활보장과",
+    "query": "기초생활보장과",
+    "name": "제주시청 복지위생국 기초생활보장과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-WELFARE-DISABLED",
+    "official_name": "제주시청 복지위생국 장애인복지과",
+    "query": "장애인복지과",
+    "name": "제주시청 복지위생국 장애인복지과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-WELFARE-ELDERLY",
+    "official_name": "제주시청 복지위생국 노인복지과",
+    "query": "노인복지과",
+    "name": "제주시청 복지위생국 노인복지과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-WELFARE-HYGIENE",
+    "official_name": "제주시청 복지위생국 위생관리과",
+    "query": "위생관리과",
+    "name": "제주시청 복지위생국 위생관리과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-WELFARE-RESIDENT",
+    "official_name": "제주시청 복지위생국 주민복지과",
+    "query": "주민복지과",
+    "name": "제주시청 복지위생국 주민복지과"
+  },
+  {
+    "tier": "city-div",
+    "entity_subtype": "city:SP-CITYDIV-JEJUSI-WELFARE-WOMENFAMILY",
+    "official_name": "제주시청 복지위생국 여성가족과",
+    "query": "여성가족과",
+    "name": "제주시청 복지위생국 여성가족과"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-AGRI",
+    "official_name": "농축산식품국",
+    "query": "농축산식품국",
+    "name": "농축산식품국"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-AIRPORTSUP",
+    "official_name": "공항확충지원단",
+    "query": "공항확충지원단",
+    "name": "공항확충지원단"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-AUTONOMY",
+    "official_name": "특별자치제도추진단",
+    "query": "특별자치제도추진단",
+    "name": "특별자치제도추진단"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-BALANCE",
+    "official_name": "도시균형추진단",
+    "query": "도시균형추진단",
+    "name": "도시균형추진단"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-CLIMATE",
+    "official_name": "기후환경국",
+    "query": "기후환경국",
+    "name": "기후환경국"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-COMM",
+    "official_name": "소통청렴담당관",
+    "query": "소통청렴담당관",
+    "name": "소통청렴담당관"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-CULTURE",
+    "official_name": "문화체육교육국",
+    "query": "문화체육교육국",
+    "name": "문화체육교육국"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-ECON",
+    "official_name": "경제활력국",
+    "query": "경제활력국",
+    "name": "경제활력국"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-GANGJEONG",
+    "official_name": "강정공동체사업추진단",
+    "query": "강정공동체사업추진단",
+    "name": "강정공동체사업추진단"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-GENDER",
+    "official_name": "성평등여성정책관",
+    "query": "성평등여성정책관",
+    "name": "성평등여성정책관"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-GENERAL",
+    "official_name": "총무과",
+    "query": "총무과",
+    "name": "총무과"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-HOUSING",
+    "official_name": "건설주택국",
+    "query": "건설주택국",
+    "name": "건설주택국"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-INNOV",
+    "official_name": "혁신산업국",
+    "query": "혁신산업국",
+    "name": "혁신산업국"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-JACHI",
+    "official_name": "특별자치행정국",
+    "query": "특별자치행정국",
+    "name": "특별자치행정국"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-LIAISON",
+    "official_name": "중앙협력본부",
+    "query": "중앙협력본부",
+    "name": "중앙협력본부"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-OCEAN",
+    "official_name": "해양수산국",
+    "query": "해양수산국",
+    "name": "해양수산국"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-PLAN",
+    "official_name": "기획조정실",
+    "query": "기획조정실",
+    "name": "기획조정실"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-SAFETY",
+    "official_name": "도민안전건강실(안전건강실)",
+    "query": "도민안전건강실",
+    "name": "도민안전건강실(안전건강실)"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-SPOKES",
+    "official_name": "대변인",
+    "query": "대변인",
+    "name": "대변인"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-TOURISM",
+    "official_name": "관광교류국",
+    "query": "관광교류국",
+    "name": "관광교류국"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-TRANSPORT",
+    "official_name": "교통항공국",
+    "query": "교통항공국",
+    "name": "교통항공국"
+  },
+  {
+    "tier": "do-dept",
+    "entity_subtype": "do-dept:SP-DO-WELFARE",
+    "official_name": "복지가족국(구 보건복지여성국)",
+    "query": "복지가족국",
+    "name": "복지가족국(구 보건복지여성국)"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-INNOV-DIGITAL",
+    "official_name": "혁신산업국 디지털혁신과",
+    "query": "디지털혁신과",
+    "name": "혁신산업국 디지털혁신과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-INNOV-ENERGYINDUSTRY",
+    "official_name": "혁신산업국 에너지산업과",
+    "query": "에너지산업과",
+    "name": "혁신산업국 에너지산업과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-INNOV-FUTUREGROWTH",
+    "official_name": "혁신산업국 미래성장과",
+    "query": "미래성장과",
+    "name": "혁신산업국 미래성장과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-INNOV-SPACEMOBILITY",
+    "official_name": "혁신산업국 우주모빌리티과",
+    "query": "우주모빌리티과",
+    "name": "혁신산업국 우주모빌리티과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-JACHI-43SUPPORT",
+    "official_name": "특별자치행정국 4·3지원과",
+    "query": "4·3지원과",
+    "name": "특별자치행정국 4·3지원과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-JACHI-ACCOUNTING",
+    "official_name": "특별자치행정국 회계재산관리과",
+    "query": "회계재산관리과",
+    "name": "특별자치행정국 회계재산관리과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-JACHI-GENERAL",
+    "official_name": "특별자치행정국 총무과",
+    "query": "총무과",
+    "name": "특별자치행정국 총무과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-JACHI-SELFGOV",
+    "official_name": "특별자치행정국 자치행정과",
+    "query": "자치행정과",
+    "name": "특별자치행정국 자치행정과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-PLAN-BUDGET",
+    "official_name": "기획조정실 예산담당관",
+    "query": "예산담당관",
+    "name": "기획조정실 예산담당관"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-PLAN-LEGAL",
+    "official_name": "기획조정실 특별자치법무담당관",
+    "query": "특별자치법무담당관",
+    "name": "기획조정실 특별자치법무담당관"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-PLAN-POLICY",
+    "official_name": "기획조정실 정책기획관",
+    "query": "정책기획관",
+    "name": "기획조정실 정책기획관"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-PLAN-POPULATION",
+    "official_name": "기획조정실 인구정책담당관",
+    "query": "인구정책담당관",
+    "name": "기획조정실 인구정책담당관"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-PLAN-TAXADMIN",
+    "official_name": "기획조정실 세정담당관",
+    "query": "세정담당관",
+    "name": "기획조정실 세정담당관"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-PLAN-YOUTH",
+    "official_name": "기획조정실 청년정책담당관",
+    "query": "청년정책담당관",
+    "name": "기획조정실 청년정책담당관"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-SAFETY-HEALTHHYGIENE",
+    "official_name": "도민안전건강실 건강위생과",
+    "query": "건강위생과",
+    "name": "도민안전건강실 건강위생과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-SAFETY-HEALTHPOLICY",
+    "official_name": "도민안전건강실 보건정책과",
+    "query": "보건정책과",
+    "name": "도민안전건강실 보건정책과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-SAFETY-NATURALDISASTER",
+    "official_name": "도민안전건강실 자연재난과",
+    "query": "자연재난과",
+    "name": "도민안전건강실 자연재난과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-SAFETY-POLICY",
+    "official_name": "도민안전건강실 안전정책과",
+    "query": "안전정책과",
+    "name": "도민안전건강실 안전정책과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-SAFETY-SOCIALDISASTER",
+    "official_name": "도민안전건강실 사회재난과",
+    "query": "사회재난과",
+    "name": "도민안전건강실 사회재난과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-WELFARE-CHILDCARE",
+    "official_name": "복지가족국 아동보육청소년과",
+    "query": "아동보육청소년과",
+    "name": "복지가족국 아동보육청소년과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-WELFARE-DISABLED",
+    "official_name": "복지가족국 장애인복지과",
+    "query": "장애인복지과",
+    "name": "복지가족국 장애인복지과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-WELFARE-ELDERLY",
+    "official_name": "복지가족국 노인복지과",
+    "query": "노인복지과",
+    "name": "복지가족국 노인복지과"
+  },
+  {
+    "tier": "do-dept-div",
+    "entity_subtype": "do-dept:SP-DIV-WELFARE-POLICY",
+    "official_name": "복지가족국 복지정책과",
+    "query": "복지정책과",
+    "name": "복지가족국 복지정책과"
+  },
+  {
+    "tier": "do-agency",
+    "entity_subtype": "do-agency:SP-AGY-AGRITECH",
+    "official_name": "농업기술원",
+    "query": "농업기술원",
+    "name": "농업기술원"
+  },
+  {
+    "tier": "do-agency",
+    "entity_subtype": "do-agency:SP-AGY-ARTMUSEUM",
+    "official_name": "제주특별자치도립미술관",
+    "query": "립미술관",
+    "name": "제주특별자치도립미술관"
+  },
+  {
+    "tier": "do-agency",
+    "entity_subtype": "do-agency:SP-AGY-BOHWAN",
+    "official_name": "보건환경연구원",
+    "query": "보건환경연구원",
+    "name": "보건환경연구원"
+  },
+  {
+    "tier": "do-agency",
+    "entity_subtype": "do-agency:SP-AGY-CHUKSAN",
+    "official_name": "축산생명연구원",
+    "query": "축산생명연구원",
+    "name": "축산생명연구원"
+  },
+  {
+    "tier": "do-agency",
+    "entity_subtype": "do-agency:SP-AGY-FIRE",
+    "official_name": "소방안전본부",
+    "query": "소방안전본부",
+    "name": "소방안전본부"
+  },
+  {
+    "tier": "do-agency",
+    "entity_subtype": "do-agency:SP-AGY-FOLKMUSEUM",
+    "official_name": "제주특별자치도민속자연사박물관",
+    "query": "민속자연사박물관",
+    "name": "제주특별자치도민속자연사박물관"
+  },
+  {
+    "tier": "do-agency",
+    "entity_subtype": "do-agency:SP-AGY-HERITAGE",
+    "official_name": "세계유산본부",
+    "query": "세계유산본부",
+    "name": "세계유산본부"
+  },
+  {
+    "tier": "do-agency",
+    "entity_subtype": "do-agency:SP-AGY-LIBRARY",
+    "official_name": "제주특별자치도 공공도서관(원형)",
+    "query": "공공도서관",
+    "name": "제주특별자치도 공공도서관(원형)"
+  },
+  {
+    "tier": "do-agency",
+    "entity_subtype": "do-agency:SP-AGY-POLICE",
+    "official_name": "자치경찰단",
+    "query": "자치경찰단",
+    "name": "자치경찰단"
+  },
+  {
+    "tier": "do-agency",
+    "entity_subtype": "do-agency:SP-AGY-WATER",
+    "official_name": "상하수도본부",
+    "query": "상하수도본부",
+    "name": "상하수도본부"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-AGRITECH-ADMIN",
+    "official_name": "농업기술원 행정운영과",
+    "query": "행정운영과",
+    "name": "농업기술원 행정운영과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-AGRITECH-EXTENSION",
+    "official_name": "농업기술원 기술보급과",
+    "query": "기술보급과",
+    "name": "농업기술원 기술보급과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-AGRITECH-RESEARCH",
+    "official_name": "농업기술원 연구개발과",
+    "query": "연구개발과",
+    "name": "농업기술원 연구개발과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-ARTMUSEUM-JHYUN",
+    "official_name": "제주도립미술관 제주현대미술관",
+    "query": "제주현대미술관",
+    "name": "제주도립미술관 제주현대미술관"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-ARTMUSEUM-KIMTSCHANGYEUL",
+    "official_name": "제주도립미술관 김창열미술관",
+    "query": "김창열미술관",
+    "name": "제주도립미술관 김창열미술관"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-ARTMUSEUM-MAIN",
+    "official_name": "제주도립미술관 본관",
+    "query": "본관",
+    "name": "제주도립미술관 본관"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-BOHWAN-ENVIRONMENT",
+    "official_name": "보건환경연구원 환경연구과",
+    "query": "환경연구과",
+    "name": "보건환경연구원 환경연구과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-BOHWAN-HEALTH",
+    "official_name": "보건환경연구원 보건연구과",
+    "query": "보건연구과",
+    "name": "보건환경연구원 보건연구과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-CHUKSAN-RESEARCH",
+    "official_name": "축산생명연구원 축산연구과",
+    "query": "축산연구과",
+    "name": "축산생명연구원 축산연구과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-FIRE-ADMIN",
+    "official_name": "소방안전본부 소방행정과",
+    "query": "소방행정과",
+    "name": "소방안전본부 소방행정과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-FIRE-PREVENTION",
+    "official_name": "소방안전본부 예방안전과",
+    "query": "예방안전과",
+    "name": "소방안전본부 예방안전과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-FIRE-RESPONSE",
+    "official_name": "소방안전본부 현장대응과",
+    "query": "현장대응과",
+    "name": "소방안전본부 현장대응과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-FOLKMUSEUM-ADMIN",
+    "official_name": "제주특별자치도민속자연사박물관 관리실",
+    "query": "관리실",
+    "name": "제주특별자치도민속자연사박물관 관리실"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-FOLKMUSEUM-ARCHAEOFOLK",
+    "official_name": "제주특별자치도민속자연사박물관 고고민속과",
+    "query": "고고민속과",
+    "name": "제주특별자치도민속자연사박물관 고고민속과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-FOLKMUSEUM-MARINE",
+    "official_name": "제주특별자치도민속자연사박물관 해양생물과",
+    "query": "해양생물과",
+    "name": "제주특별자치도민속자연사박물관 해양생물과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-FOLKMUSEUM-MINERALBOTANY",
+    "official_name": "제주특별자치도민속자연사박물관 광식물과",
+    "query": "광식물과",
+    "name": "제주특별자치도민속자연사박물관 광식물과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-FOLKMUSEUM-ZOOLOGY",
+    "official_name": "제주특별자치도민속자연사박물관 동물과",
+    "query": "동물과",
+    "name": "제주특별자치도민속자연사박물관 동물과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-HERITAGE-HALLASAN",
+    "official_name": "세계유산본부 한라산연구과",
+    "query": "한라산연구과",
+    "name": "세계유산본부 한라산연구과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-HERITAGE-MANAGEMENT",
+    "official_name": "세계유산본부 유산관리과",
+    "query": "유산관리과",
+    "name": "세계유산본부 유산관리과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-LIBRARY-INFOSERVICE",
+    "official_name": "제주특별자치도한라도서관 정보서비스팀(추정)",
+    "query": "정보서비스팀",
+    "name": "제주특별자치도한라도서관 정보서비스팀(추정)"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-LIBRARY-POLICY",
+    "official_name": "제주특별자치도한라도서관 정책협력팀(추정)",
+    "query": "정책협력팀",
+    "name": "제주특별자치도한라도서관 정책협력팀(추정)"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-POLICE-SAFETY",
+    "official_name": "자치경찰단 생활안전과",
+    "query": "생활안전과",
+    "name": "자치경찰단 생활안전과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-POLICE-TRAFFIC",
+    "official_name": "자치경찰단 교통과",
+    "query": "교통과",
+    "name": "자치경찰단 교통과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-POLICE-WOMENYOUTH",
+    "official_name": "자치경찰단 여성청소년과",
+    "query": "여성청소년과",
+    "name": "자치경찰단 여성청소년과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-WATER-ADMIN",
+    "official_name": "상하수도본부 경영지원과",
+    "query": "경영지원과",
+    "name": "상하수도본부 경영지원과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-WATER-SEWAGE",
+    "official_name": "상하수도본부 하수도과",
+    "query": "하수도과",
+    "name": "상하수도본부 하수도과"
+  },
+  {
+    "tier": "do-agency-div",
+    "entity_subtype": "do-agency:SP-AGYDIV-WATER-WATERSUPPLY",
+    "official_name": "상하수도본부 상수도과",
+    "query": "상수도과",
+    "name": "상하수도본부 상수도과"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:agroquality",
+    "official_name": "국립농산물품질관리원 제주지원",
+    "query": "국립농산물품질관리원 제주지원",
+    "name": "국립농산물품질관리원 제주지원"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:airport",
+    "official_name": "한국공항공사 제주공항",
+    "query": "한국공항공사 제주공항",
+    "name": "한국공항공사 제주공항"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:animalquarantine",
+    "official_name": "농림축산검역본부 제주지역본부",
+    "query": "농림축산검역본부 제주지역본부",
+    "name": "농림축산검역본부 제주지역본부"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:coastguard",
+    "official_name": "제주해양경찰서",
+    "query": "해양경찰서",
+    "name": "제주해양경찰서"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:court",
+    "official_name": "제주지방법원",
+    "query": "지방법원",
+    "name": "제주지방법원"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:data",
+    "official_name": "호남지방데이터청 제주사무소",
+    "query": "호남지방데이터청 제주사무소",
+    "name": "호남지방데이터청 제주사무소"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:env",
+    "official_name": "영산강유역환경청 제주주재사무실",
+    "query": "영산강유역환경청 제주주재사무실",
+    "name": "영산강유역환경청 제주주재사무실"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:fishquality",
+    "official_name": "국립수산물품질관리원 제주지원",
+    "query": "국립수산물품질관리원 제주지원",
+    "name": "국립수산물품질관리원 제주지원"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:foodimport",
+    "official_name": "광주지방식품의약품안전청 제주수입식품검사소",
+    "query": "광주지방식품의약품안전청 제주수입식품검사소",
+    "name": "광주지방식품의약품안전청 제주수입식품검사소"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:humanquarantine",
+    "official_name": "국립제주검역소",
+    "query": "국립제주검역소",
+    "name": "국립제주검역소"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:immigration",
+    "official_name": "제주출입국·외국인청",
+    "query": "출입국·외국인청",
+    "name": "제주출입국·외국인청"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:internet",
+    "official_name": "한국지능정보사회진흥원 제주스마트쉼센터",
+    "query": "한국지능정보사회진흥원 제주스마트쉼센터",
+    "name": "한국지능정보사회진흥원 제주스마트쉼센터"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:labor",
+    "official_name": "근로복지공단 제주지사",
+    "query": "근로복지공단 제주지사",
+    "name": "근로복지공단 제주지사"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:laborimprove",
+    "official_name": "광주지방고용노동청 제주근로개선지도센터",
+    "query": "광주지방고용노동청 제주근로개선지도센터",
+    "name": "광주지방고용노동청 제주근로개선지도센터"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:laborrel",
+    "official_name": "제주지방노동위원회",
+    "query": "지방노동위원회",
+    "name": "제주지방노동위원회"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:mma",
+    "official_name": "제주지방병무청",
+    "query": "지방병무청",
+    "name": "제주지방병무청"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:nhis",
+    "official_name": "국민건강보험공단 제주지사",
+    "query": "국민건강보험공단 제주지사",
+    "name": "국민건강보험공단 제주지사"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:nps",
+    "official_name": "국민연금공단 제주지역본부",
+    "query": "국민연금공단 제주지역본부",
+    "name": "국민연금공단 제주지역본부"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:police",
+    "official_name": "제주지방경찰청",
+    "query": "지방경찰청",
+    "name": "제주지방경찰청"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:port",
+    "official_name": "제주지방해양수산청",
+    "query": "지방해양수산청",
+    "name": "제주지방해양수산청"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:post",
+    "official_name": "제주지방우정청",
+    "query": "지방우정청",
+    "name": "제주지방우정청"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:pps",
+    "official_name": "제주지방조달청",
+    "query": "지방조달청",
+    "name": "제주지방조달청"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:probation",
+    "official_name": "제주준법지원센터",
+    "query": "준법지원센터",
+    "name": "제주준법지원센터"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:prosecution",
+    "official_name": "제주지방검찰청",
+    "query": "지방검찰청",
+    "name": "제주지방검찰청"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:radio",
+    "official_name": "제주전파관리소",
+    "query": "전파관리소",
+    "name": "제주전파관리소"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:tax",
+    "official_name": "제주세무서",
+    "query": "세무서",
+    "name": "제주세무서"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:veterans",
+    "official_name": "제주보훈청",
+    "query": "보훈청",
+    "name": "제주보훈청"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:weather",
+    "official_name": "제주지방기상청",
+    "query": "지방기상청",
+    "name": "제주지방기상청"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:bok",
+    "official_name": "한국은행 제주본부",
+    "query": "한국은행 제주본부",
+    "name": "한국은행 제주본부"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:stat",
+    "official_name": "통계청 제주사무소",
+    "query": "통계청 제주사무소",
+    "name": "통계청 제주사무소"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:customs",
+    "official_name": "제주세관",
+    "query": "세관",
+    "name": "제주세관"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:forestresearch",
+    "official_name": "난대·아열대산림연구소",
+    "query": "난대·아열대산림연구소",
+    "name": "난대·아열대산림연구소"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:forestseed",
+    "official_name": "국립산림품종관리센터 제주지소",
+    "query": "국립산림품종관리센터 제주지소",
+    "name": "국립산림품종관리센터 제주지소"
+  },
+  {
+    "tier": "nat-agency",
+    "entity_subtype": "nat-agency:forestcoop",
+    "official_name": "산림조합중앙회 제주지역본부",
+    "query": "산림조합중앙회 제주지역본부",
+    "name": "산림조합중앙회 제주지역본부"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-CHILDCARE",
+    "official_name": "제주특별자치도 아이돌봄광역지원센터",
+    "query": "아이돌봄광역지원센터",
+    "name": "제주특별자치도 아이돌봄광역지원센터"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-CHILDMEAL",
+    "official_name": "제주 어린이급식관리지원센터(1~4, 원형)",
+    "query": "어린이급식관리지원센터",
+    "name": "제주 어린이급식관리지원센터(1~4, 원형)"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-ICCJEJU",
+    "official_name": "제주국제컨벤션센터(ICC JEJU)",
+    "query": "국제컨벤션센터",
+    "name": "제주국제컨벤션센터(ICC JEJU)"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-IPF",
+    "official_name": "국제평화재단",
+    "query": "국제평화재단",
+    "name": "국제평화재단"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JCCEI",
+    "official_name": "제주창조경제혁신센터",
+    "query": "창조경제혁신센터",
+    "name": "제주창조경제혁신센터"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JCGF",
+    "official_name": "제주신용보증재단",
+    "query": "신용보증재단",
+    "name": "제주신용보증재단"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JCPA",
+    "official_name": "제주영상문화산업진흥원",
+    "query": "영상문화산업진흥원",
+    "name": "제주영상문화산업진흥원"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JEA",
+    "official_name": "제주에너지공사(JEA)",
+    "query": "에너지공사",
+    "name": "제주에너지공사(JEA)"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JEDA",
+    "official_name": "제주경제통상진흥원(JBA)",
+    "query": "경제통상진흥원",
+    "name": "제주경제통상진흥원(JBA)"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JEJU43",
+    "official_name": "제주4·3평화재단",
+    "query": "4·3평화재단",
+    "name": "제주4·3평화재단"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JEJUMED",
+    "official_name": "제주의료원",
+    "query": "의료원",
+    "name": "제주의료원"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JERI",
+    "official_name": "제주연구원(JRI)",
+    "query": "연구원",
+    "name": "제주연구원(JRI)"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JFAC",
+    "official_name": "제주문화예술재단",
+    "query": "문화예술재단",
+    "name": "제주문화예술재단"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JILES",
+    "official_name": "제주평생교육장학진흥원",
+    "query": "평생교육장학진흥원",
+    "name": "제주평생교육장학진흥원"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JPASS",
+    "official_name": "제주특별자치도사회서비스원",
+    "query": "사회서비스원",
+    "name": "제주특별자치도사회서비스원"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JPDC",
+    "official_name": "제주특별자치도개발공사(JPDC)",
+    "query": "개발공사",
+    "name": "제주특별자치도개발공사(JPDC)"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JPSPO",
+    "official_name": "제주특별자치도장애인체육회",
+    "query": "장애인체육회",
+    "name": "제주특별자치도장애인체육회"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JSPO",
+    "official_name": "제주특별자치도체육회",
+    "query": "체육회",
+    "name": "제주특별자치도체육회"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JTA",
+    "official_name": "제주특별자치도관광협회",
+    "query": "관광협회",
+    "name": "제주특별자치도관광협회"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JTO",
+    "official_name": "제주관광공사(JTO)",
+    "query": "관광공사",
+    "name": "제주관광공사(JTO)"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JTP",
+    "official_name": "제주테크노파크(JTP)",
+    "query": "테크노파크",
+    "name": "제주테크노파크(JTP)"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-JWFRI",
+    "official_name": "제주여성가족연구원",
+    "query": "여성가족연구원",
+    "name": "제주여성가족연구원"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-MAEUL",
+    "official_name": "제주마을만들기종합지원센터",
+    "query": "마을만들기종합지원센터",
+    "name": "제주마을만들기종합지원센터"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-SGPMED",
+    "official_name": "서귀포의료원",
+    "query": "서귀포의료원",
+    "name": "서귀포의료원"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-TRANSWEAK",
+    "official_name": "제주특별자치도 교통약자이동지원센터",
+    "query": "교통약자이동지원센터",
+    "name": "제주특별자치도 교통약자이동지원센터"
+  },
+  {
+    "tier": "org",
+    "entity_subtype": "org:SP-ORG-URBANREGEN",
+    "official_name": "제주특별자치도 도시재생지원센터",
+    "query": "도시재생지원센터",
+    "name": "제주특별자치도 도시재생지원센터"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-CHILDCARE-SUPPORT",
+    "official_name": "제주특별자치도 아이돌봄광역지원센터 돌봄지원팀",
+    "query": "돌봄지원팀",
+    "name": "제주특별자치도 아이돌봄광역지원센터 돌봄지원팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-CHILDMEAL-ADMIN",
+    "official_name": "어린이급식관리지원센터 기획운영팀",
+    "query": "기획운영팀",
+    "name": "어린이급식관리지원센터 기획운영팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-CHILDMEAL-HYGIENE",
+    "official_name": "어린이급식관리지원센터 위생팀",
+    "query": "위생팀",
+    "name": "어린이급식관리지원센터 위생팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-CHILDMEAL-NUTRITION",
+    "official_name": "어린이급식관리지원센터 영양팀",
+    "query": "영양팀",
+    "name": "어린이급식관리지원센터 영양팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-ICCJEJU-MARKETING",
+    "official_name": "제주국제컨벤션센터 마케팅팀",
+    "query": "마케팅팀",
+    "name": "제주국제컨벤션센터 마케팅팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-ICCJEJU-MGMT",
+    "official_name": "제주국제컨벤션센터 경영지원팀",
+    "query": "경영지원팀",
+    "name": "제주국제컨벤션센터 경영지원팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-ICCJEJU-OPS",
+    "official_name": "제주국제컨벤션센터 운영팀",
+    "query": "운영팀",
+    "name": "제주국제컨벤션센터 운영팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-ICCJEJU-VENUE",
+    "official_name": "제주국제컨벤션센터 시설운영팀",
+    "query": "시설운영팀",
+    "name": "제주국제컨벤션센터 시설운영팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-IPF-PEACE",
+    "official_name": "국제평화재단 국제교류팀",
+    "query": "국제교류팀",
+    "name": "국제평화재단 국제교류팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JCCEI-SUPPORT",
+    "official_name": "제주창조경제혁신센터 창업지원팀",
+    "query": "창업지원팀",
+    "name": "제주창조경제혁신센터 창업지원팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JCGF-ADMIN",
+    "official_name": "제주신용보증재단 경영지원부",
+    "query": "경영지원부",
+    "name": "제주신용보증재단 경영지원부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JCGF-RISK",
+    "official_name": "제주신용보증재단 리스크관리부",
+    "query": "리스크관리부",
+    "name": "제주신용보증재단 리스크관리부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JCGF-UNDERWRITING",
+    "official_name": "제주신용보증재단 보증심사부",
+    "query": "보증심사부",
+    "name": "제주신용보증재단 보증심사부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JCPA-BASE",
+    "official_name": "제주콘텐츠진흥원 콘텐츠기반팀",
+    "query": "콘텐츠기반팀",
+    "name": "제주콘텐츠진흥원 콘텐츠기반팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JCPA-CONTENTS",
+    "official_name": "제주콘텐츠진흥원 콘텐츠산업팀",
+    "query": "콘텐츠산업팀",
+    "name": "제주콘텐츠진흥원 콘텐츠산업팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JCPA-FOSTER",
+    "official_name": "제주콘텐츠진흥원 콘텐츠육성팀",
+    "query": "콘텐츠육성팀",
+    "name": "제주콘텐츠진흥원 콘텐츠육성팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JCPA-SPREAD",
+    "official_name": "제주콘텐츠진흥원 콘텐츠확산팀",
+    "query": "콘텐츠확산팀",
+    "name": "제주콘텐츠진흥원 콘텐츠확산팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JCPA-TALENT",
+    "official_name": "제주콘텐츠진흥원 콘텐츠인재팀",
+    "query": "콘텐츠인재팀",
+    "name": "제주콘텐츠진흥원 콘텐츠인재팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEA-EVINFRA",
+    "official_name": "제주에너지공사 전기차인프라운영팀",
+    "query": "전기차인프라운영팀",
+    "name": "제주에너지공사 전기차인프라운영팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEA-FACILITY",
+    "official_name": "제주에너지공사 시설팀",
+    "query": "시설팀",
+    "name": "제주에너지공사 시설팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEA-HYDROGEN",
+    "official_name": "제주에너지공사 청정수소사업단",
+    "query": "청정수소사업단",
+    "name": "제주에너지공사 청정수소사업단"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEA-PLANNING",
+    "official_name": "제주에너지공사 경영기획본부",
+    "query": "경영기획본부",
+    "name": "제주에너지공사 경영기획본부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEA-RENEWABLE",
+    "official_name": "제주에너지공사 신재생에너지사업본부",
+    "query": "신재생에너지사업본부",
+    "name": "제주에너지공사 신재생에너지사업본부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEA-WINDOPS",
+    "official_name": "제주에너지공사 풍력사업운영본부",
+    "query": "풍력사업운영본부",
+    "name": "제주에너지공사 풍력사업운영본부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEDA-BUSINESS",
+    "official_name": "제주경제통상진흥원 사업지원팀",
+    "query": "사업지원팀",
+    "name": "제주경제통상진흥원 사업지원팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEDA-EXPORT",
+    "official_name": "제주특별자치도경제통상진흥원 수출판로지원팀",
+    "query": "수출판로지원팀",
+    "name": "제주특별자치도경제통상진흥원 수출판로지원팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEDA-FINANCE",
+    "official_name": "제주특별자치도경제통상진흥원 자금지원팀",
+    "query": "자금지원팀",
+    "name": "제주특별자치도경제통상진흥원 자금지원팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEDA-MGMT",
+    "official_name": "제주특별자치도경제통상진흥원 경영혁신본부",
+    "query": "경영혁신본부",
+    "name": "제주특별자치도경제통상진흥원 경영혁신본부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEDA-PLANNING",
+    "official_name": "제주경제통상진흥원 경영기획팀",
+    "query": "경영기획팀",
+    "name": "제주경제통상진흥원 경영기획팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEDA-STARTUP",
+    "official_name": "제주특별자치도경제통상진흥원 창업지원팀",
+    "query": "창업지원팀",
+    "name": "제주특별자치도경제통상진흥원 창업지원팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEJU43-ADMIN",
+    "official_name": "제주4·3평화재단 사무처",
+    "query": "사무처",
+    "name": "제주4·3평화재단 사무처"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEJU43-PEACE",
+    "official_name": "제주4·3평화재단 평화사업팀",
+    "query": "평화사업팀",
+    "name": "제주4·3평화재단 평화사업팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEJU43-RESEARCH",
+    "official_name": "제주4·3평화재단 조사연구실",
+    "query": "조사연구실",
+    "name": "제주4·3평화재단 조사연구실"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEJUMED-ADMIN",
+    "official_name": "제주의료원 행정지원부",
+    "query": "행정지원부",
+    "name": "제주의료원 행정지원부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEJUMED-CLINICAL",
+    "official_name": "제주의료원 진료부",
+    "query": "진료부",
+    "name": "제주의료원 진료부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JEJUMED-NURSING",
+    "official_name": "제주의료원 간호부",
+    "query": "간호부",
+    "name": "제주의료원 간호부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JERI-CITIZEN",
+    "official_name": "제주연구원 도민행복연구실",
+    "query": "도민행복연구실",
+    "name": "제주연구원 도민행복연구실"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JERI-DISASTER",
+    "official_name": "제주연구원 제주재난안전연구센터",
+    "query": "제주재난안전연구센터",
+    "name": "제주연구원 제주재난안전연구센터"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JERI-FUTURE",
+    "official_name": "제주연구원 미래대응전략실",
+    "query": "미래대응전략실",
+    "name": "제주연구원 미래대응전략실"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JERI-GROWTH",
+    "official_name": "제주연구원 지속성장연구실",
+    "query": "지속성장연구실",
+    "name": "제주연구원 지속성장연구실"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JERI-MGMT",
+    "official_name": "제주연구원 경영지원실",
+    "query": "경영지원실",
+    "name": "제주연구원 경영지원실"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JERI-PLANNING",
+    "official_name": "제주연구원 기획경영부",
+    "query": "기획경영부",
+    "name": "제주연구원 기획경영부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JERI-RESEARCH",
+    "official_name": "제주연구원 연구부",
+    "query": "연구부",
+    "name": "제주연구원 연구부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JFAC-MGMT",
+    "official_name": "제주문화예술재단 경영지원팀",
+    "query": "경영지원팀",
+    "name": "제주문화예술재단 경영지원팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JFAC-PROGRAM",
+    "official_name": "제주문화예술재단 문화사업팀",
+    "query": "문화사업팀",
+    "name": "제주문화예술재단 문화사업팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JFAC-SUPPORT",
+    "official_name": "제주문화예술재단 문화지원팀",
+    "query": "문화지원팀",
+    "name": "제주문화예술재단 문화지원팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JILES-EDU",
+    "official_name": "제주평생교육장학진흥원 평생교육팀",
+    "query": "평생교육팀",
+    "name": "제주평생교육장학진흥원 평생교육팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JILES-LIFELONG",
+    "official_name": "제주평생교육장학진흥원 평생교육팀",
+    "query": "평생교육팀",
+    "name": "제주평생교육장학진흥원 평생교육팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JILES-MGMT",
+    "official_name": "제주평생교육장학진흥원 경영지원팀",
+    "query": "경영지원팀",
+    "name": "제주평생교육장학진흥원 경영지원팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JILES-SCHOLARSHIP",
+    "official_name": "제주평생교육장학진흥원 장학팀",
+    "query": "장학팀",
+    "name": "제주평생교육장학진흥원 장학팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JPASS-ADMIN",
+    "official_name": "제주특별자치도 사회서비스원 경영지원부",
+    "query": "경영지원부",
+    "name": "제주특별자치도 사회서비스원 경영지원부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JPASS-SERVICESUPPORT",
+    "official_name": "제주특별자치도 사회서비스원 서비스지원부",
+    "query": "서비스지원부",
+    "name": "제주특별자치도 사회서비스원 서비스지원부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JPDC-BUSINESS",
+    "official_name": "제주특별자치도개발공사 사업본부",
+    "query": "사업본부",
+    "name": "제주특별자치도개발공사 사업본부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JPDC-PLANNING",
+    "official_name": "제주특별자치도개발공사 경영기획본부",
+    "query": "경영기획본부",
+    "name": "제주특별자치도개발공사 경영기획본부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JPDC-PRODUCTION",
+    "official_name": "제주특별자치도개발공사 생산팀",
+    "query": "생산팀",
+    "name": "제주특별자치도개발공사 생산팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JPDC-QUALITY",
+    "official_name": "제주특별자치도개발공사 품질관리팀",
+    "query": "품질관리팀",
+    "name": "제주특별자치도개발공사 품질관리팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JPDC-SALES",
+    "official_name": "제주특별자치도개발공사 영업팀",
+    "query": "영업팀",
+    "name": "제주특별자치도개발공사 영업팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JPDC-WATERRESEARCH",
+    "official_name": "제주특별자치도개발공사 수자원연구팀",
+    "query": "수자원연구팀",
+    "name": "제주특별자치도개발공사 수자원연구팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JPSPO-ADMIN",
+    "official_name": "제주특별자치도장애인체육회 경영지원부",
+    "query": "경영지원부",
+    "name": "제주특별자치도장애인체육회 경영지원부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JPSPO-ELITESPORT",
+    "official_name": "제주특별자치도장애인체육회 전문체육부",
+    "query": "전문체육부",
+    "name": "제주특별자치도장애인체육회 전문체육부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JPSPO-LIFESPORT",
+    "official_name": "제주특별자치도장애인체육회 생활체육부",
+    "query": "생활체육부",
+    "name": "제주특별자치도장애인체육회 생활체육부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JPSPO-PLANNING",
+    "official_name": "제주특별자치도장애인체육회 기획조정부",
+    "query": "기획조정부",
+    "name": "제주특별자치도장애인체육회 기획조정부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JSPO-ADMIN",
+    "official_name": "제주특별자치도체육회 경영지원부",
+    "query": "경영지원부",
+    "name": "제주특별자치도체육회 경영지원부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JSPO-ELITESPORT",
+    "official_name": "제주특별자치도체육회 전문체육부",
+    "query": "전문체육부",
+    "name": "제주특별자치도체육회 전문체육부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JSPO-LIFESPORT",
+    "official_name": "제주특별자치도체육회 생활체육부",
+    "query": "생활체육부",
+    "name": "제주특별자치도체육회 생활체육부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JSPO-PLANNING",
+    "official_name": "제주특별자치도체육회 기획조정부",
+    "query": "기획조정부",
+    "name": "제주특별자치도체육회 기획조정부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JTA-MEMBERSUPPORT",
+    "official_name": "제주관광협회 회원지원팀",
+    "query": "회원지원팀",
+    "name": "제주관광협회 회원지원팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JTO-AUDIT",
+    "official_name": "제주관광공사 감사팀",
+    "query": "감사팀",
+    "name": "제주관광공사 감사팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JTO-INDUSTRY",
+    "official_name": "제주관광공사 관광산업실",
+    "query": "관광산업실",
+    "name": "제주관광공사 관광산업실"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JTO-MARKETING",
+    "official_name": "제주관광공사 마케팅사업본부",
+    "query": "마케팅사업본부",
+    "name": "제주관광공사 마케팅사업본부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JTO-PLANNING",
+    "official_name": "제주관광공사 경영기획본부",
+    "query": "경영기획본부",
+    "name": "제주관광공사 경영기획본부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JTO-PROFIT",
+    "official_name": "제주관광공사 수익사업실",
+    "query": "수익사업실",
+    "name": "제주관광공사 수익사업실"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JTP-ADMIN",
+    "official_name": "제주테크노파크 경영지원실",
+    "query": "경영지원실",
+    "name": "제주테크노파크 경영지원실"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JTP-CORPSUPPORT",
+    "official_name": "제주테크노파크 기업지원단",
+    "query": "기업지원단",
+    "name": "제주테크노파크 기업지원단"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JTP-POLICY",
+    "official_name": "제주테크노파크 정책기획단",
+    "query": "정책기획단",
+    "name": "제주테크노파크 정책기획단"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JWFRI-MGMT",
+    "official_name": "제주여성가족연구원 경영지원팀",
+    "query": "경영지원팀",
+    "name": "제주여성가족연구원 경영지원팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JWFRI-PLANNING",
+    "official_name": "제주여성가족연구원 기획운영팀",
+    "query": "기획운영팀",
+    "name": "제주여성가족연구원 기획운영팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JWFRI-POLICY",
+    "official_name": "제주여성가족연구원 여성가족정책연구실",
+    "query": "여성가족정책연구실",
+    "name": "제주여성가족연구원 여성가족정책연구실"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-JWFRI-RESEARCH",
+    "official_name": "제주여성가족연구원 연구팀",
+    "query": "연구팀",
+    "name": "제주여성가족연구원 연구팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-MAEUL-SUPPORT",
+    "official_name": "마을만들기종합지원센터 마을지원팀",
+    "query": "마을지원팀",
+    "name": "마을만들기종합지원센터 마을지원팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-SGPMED-ADMIN",
+    "official_name": "서귀포의료원 행정지원부",
+    "query": "행정지원부",
+    "name": "서귀포의료원 행정지원부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-SGPMED-CLINICAL",
+    "official_name": "서귀포의료원 진료부",
+    "query": "진료부",
+    "name": "서귀포의료원 진료부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-SGPMED-NURSING",
+    "official_name": "서귀포의료원 간호부",
+    "query": "간호부",
+    "name": "서귀포의료원 간호부"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-TRANSWEAK-DISPATCH",
+    "official_name": "교통약자이동지원센터 배차운영팀",
+    "query": "배차운영팀",
+    "name": "교통약자이동지원센터 배차운영팀"
+  },
+  {
+    "tier": "org-div",
+    "entity_subtype": "org:SP-ORGDIV-URBANREGEN-SUPPORT",
+    "official_name": "도시재생지원센터 재생지원팀",
+    "query": "재생지원팀",
+    "name": "도시재생지원센터 재생지원팀"
+  }
+]
