@@ -33,7 +33,7 @@ sp-catalog.json은 "이름 → 최신 파일명", 이 문서는 "이름 → 이�
 
 ## A. 공식 상속 패밀리 (tools/check_sp_inheritance.py가 기계적으로 검증)
 
-이 두 패밀리는 이미 별도 CI(check-sp-inheritance.yml)가 상속 선언·필수
+이 세 패밀리는 이미 별도 CI(check-sp-inheritance.yml)가 상속 선언·필수
 섹션·복붙 여부까지 검사하고 있다. 아래는 그 요약이다.
 
 - **AGENT-SUPPLIER-COMMON** ← AGENT-SUPPLIER-01 ~ 99 (KSIC 업종별 페르소나,
@@ -43,19 +43,54 @@ sp-catalog.json은 "이름 → 최신 파일명", 이 문서는 "이름 → 이�
   - SP-INDUSTRY-TRANSFORM-COMMON 자신은 TRANSFORM-COMMON 계열 원칙을
     따르며, AGENT-SUPPLIER-COMMON과는 "§0 정체성 차이" 근거로 별도
     계열임을 명시한다(업종 대변 vs 산업전환 상담이라는 목적 차이).
+- **SP-10_kpublic(kgov)** ← policy-bodies 70개(`SP-NAT-POLICY-*`,
+  `prompts/gov-tree/09-national/policy-bodies/`) — POLICY-BODIES 패밀리로
+  2026-08-03 신설 등록(informational — 최초 등록이라 위반 이력 검증 진행
+  중). 다른 두 패밀리와 달리 "common" 파일이 자식과 같은 디렉터리에 있지
+  않다 — kgov는 policy-bodies 외에도 광역시도청·시군구청 등 훨씬 많은
+  기관이 함께 상속하는 전국 공통 원본이기 때문. 상속 선언(헤더의
+  "# 상위 상속" 문구)·필수 섹션(§LEGAL-BASIS·§1·§CAPABILITIES·§5) 검증만
+  수행하며 복붙 여부도 함께 검사한다.
+  - **본청(policy-bodies) vs 지사(agencies/templates) 공존 관계** — 국세청
+    (NTS/TAX)·관세청(KCS/CUSTOMS)·경찰청(POLICE)·병무청(MMA)·해양경찰청
+    (KCG/COASTGUARD)·조달청(PPS)·검찰청(PROSECUTION) 7개 기관은 두 계층에
+    동시에 존재한다 — policy-bodies의 `SP-NAT-POLICY-{CODE}`(전국 단일
+    본청 창구)와 `agencies/templates/SP-NAT-{NAME}-TEMPLATE`(도별 지사
+    싱글턴 인스턴스)는 부모-자식 관계가 아니라 **둘 다 kgov를 직접
+    상속하는 형제 관계**이며, 어느 쪽이 응답할지는 발화 성격으로
+    갈린다(정책·제도 문의 → policy-bodies, 접수·처리 등 실행형 민원 →
+    지사) — `gov-router.js`의 `-0.8)` 단계 우선순위 가드(정책기관과
+    집행기관 사전이 동시 매칭될 때 지사 라우팅이 우선)에 이미 구현돼
+    있으나, 이 문서에는 2026-08-03 이전까지 문서화가 빠져 있었다.
 
 ## B. K-Public 정부기관 계열 (SP_hierarchy_inheritance 문서의 H1~H8 원칙 적용 대상)
 
 ```
 K-Public (국가/공공기관 AI 공통 규칙 원본 — 상속의 최상위)
  ├─ 행정부: K-Province · K-City · K-County · K-Tax · K-Health ·
- │          police · 911 · K-Insurance(공적 영역만)
- ├─ 사법부: 대법원 대변 AI · 헌법재판소 대변 AI
- └─ 입법부: democracy(국회 + 지방의회)
+ │          police · 911 · K-Insurance(공적 영역만) ·
+ │          policy-bodies 70개(중앙정부 부처·청·위원회 본청, 대통령 직속
+ │          기관 포함 — SP-NAT-POLICY-*, POLICY-BODIES 패밀리)
+ ├─ 사법부: 대법원 대변 AI(SP-NAT-POLICY-SUPREMECOURT) ·
+ │          헌법재판소 대변 AI(SP-NAT-POLICY-CONSTCOURT)
+ └─ 입법부: 국회 대변 AI(SP-NAT-POLICY-ASSEMBLY)
+            [지방의회 대변 AI는 아직 미작성 — 필요 시 이 자리에 추가]
 
 K-Doctor — 독립. K-Health를 상속하지 않는다(제도 대변과 개인 면허
            전문가 모사는 서로 다른 계열이라는 원칙, SP_hierarchy_inheritance 참조).
 ```
+
+> **2026-08-03 정정** — 이전 버전은 입법부 항목을 "democracy(국회 +
+> 지방의회)"로 표기했으나 이는 부정확했다. `SP-12_kdemocracy`는 국회를
+> 대변하는 기관 페르소나가 **아니다** — 고팡(Gopang) 생태계 자체의
+> 내부 거버넌스(DAWN, 직접민주주의 절차) 도구이며, 문서 자신의
+> §0-IDENTITY에서 "대한민국 국가기관을 대표하지 않습니다"라고 명시적으로
+> 오버라이드하고, 실제 국민동의청원 등 진짜 국가기관 청원은 kgov 소관이라고
+> 스스로 밝히고 있다(민원 채널을 혼동하지 않도록 주의). 실제 국회
+> 기관 페르소나는 policy-bodies 70개 중 하나인 `SP-NAT-POLICY-ASSEMBLY`이며,
+> 사법부 두 기관과 동일하게 kgov를 직접 상속한다 — 위 다이어그램이 이제
+> 그 실제 구조를 반영한다. `SP-12_kdemocracy`는 이 트리에 속하지 않는
+> 별도 계열이므로 여기서 제외했다.
 
 - **K-Public_common** ← 각 기관 SP(SP-10_kpublic 등)가 상속
 - **PROFESSIONAL-common** ← K-Public_common이 상속(직역 전문성 공통 규칙)
@@ -116,6 +151,7 @@ ALIAS: kgov = SP-10_kpublic
 # 공식 패밀리 (tools/check_sp_inheritance.py가 이미 상세 검증)
 AGENT-SUPPLIER-* -> AGENT-SUPPLIER-COMMON
 SP-INDUSTRY-TRANSFORM-* -> SP-INDUSTRY-TRANSFORM-COMMON
+SP-NAT-POLICY-* -> kgov
 
 # UNIVERSAL-INTEGRITY 직속 (SP-NN_xxx 전국 서비스 계열, "# 상위 상속" 헤더로 선언)
 SP-02_k119 -> UNIVERSAL-INTEGRITY

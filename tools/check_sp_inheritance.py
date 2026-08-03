@@ -68,6 +68,25 @@ FAMILIES = {
         ],
         "strict": True,
     },
+    # 2026-08-03 신설 — 중앙정부 policy-bodies(70개, 부처·청·위원회 본청).
+    # 다른 두 패밀리와 달리 "common" 파일이 같은 디렉터리에 있지 않다 —
+    # 상위 SP(kgov=SP-10_kpublic)는 prompts/ 루트의 전국 공통 K-Public
+    # 서비스 SP 자체이며, policy-bodies 70개 외에도 수많은 다른 기관들이
+    # 함께 상속한다(check_family()가 요구하는 "1:N 전용 common"이 아니라
+    # "1:N-중-일부" 관계). 그래도 상속 선언·필수 섹션 검증 자체는 유효하게
+    # 적용 가능하므로 등록한다. strict=False로 시작 — 이번 세션(2026-08-03)
+    # 최초 등록이라 과거 위반 이력 없음을 아직 충분히 검증하지 못했다(70개
+    # 전량 재검토는 WORK-ORDER-policy-bodies-hierarchy-content-review 진행
+    # 중). 위반 없음이 몇 배치 이상 확인되면 strict=True로 전환 검토.
+    "POLICY-BODIES": {
+        "common_glob": "SP-10_kpublic_v*.txt",
+        "child_glob": "gov-tree/09-national/policy-bodies/SP-NAT-POLICY-*.md",
+        "inherit_pattern": re.compile(r"상위\s*상속\s*[:：].*kgov\s*\(SP-10_kpublic\)"),
+        "required_sections": [
+            "## §LEGAL-BASIS", "## §1", "## §CAPABILITIES", "## §5",
+        ],
+        "strict": False,
+    },
 }
 
 INHERIT_PHRASE_MAX_LINE = 15
