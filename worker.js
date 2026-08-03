@@ -10777,6 +10777,14 @@ async function _l1SearchEntities(env, { q, etype, occupation, address, lat, lng,
     if (qLower) {
       rank = 0;
       if ((p.name || '').toLowerCase().includes(qLower) || (p.handle || '').toLowerCase().includes(qLower)) rank += 3;
+      // ★ 2026-08-03 신설 — 정확 일치 가산점. 이름 포함 여부만 이진
+      // 판정하면 조직 본체(정확 일치)와 그 하위 팀(부분 포함, 조직명을
+      // 이름에 포함)이 동점이 되어 최근 수정 순으로 순위가 갈리는
+      // 버그가 있었다(제주 267개 기관 매칭 테스트에서 발견). 정확
+      // 일치엔 추가 가산점을 줘서 "조직명만 말하면 조직 본체가
+      // 이긴다"를 보장한다. 부분 검색(하위 팀 이름 검색)은 이 보너스가
+      // 안 붙으므로 기존 동작 그대로 유지된다.
+      if ((p.name || '').toLowerCase() === qLower) rank += 2;
       if ((p.occupation || '').toLowerCase().includes(qLower)) rank += 2;
       if ((p.address || '').toLowerCase().includes(qLower) || (p.search_text || '').toLowerCase().includes(qLower)) rank += 1;
       if (rank === 0) rank = 0.5; // 단어별 매칭은 됐지만 원문 전체는 안 겹치는 경우(AND 필터를 통과했으므로 최소 점수는 준다)
