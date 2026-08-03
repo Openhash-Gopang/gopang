@@ -1491,6 +1491,26 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
 
   const handoffBackMatch = fullReply.match(/\[ORCHESTRATION_HANDOFF_BACK:\s*reason=(\w+)\]/);
   if (handoffBackMatch) {
+    // ★ 2026-08-03 긴급 수정 — 실사(K-Intent 트리거 검증 시나리오 10건,
+    // live smoketest)로 확인된 오용 패턴: 이 태그는 K-Compose/K-Search가
+    // 진행 중인 오케스트레이션을 AC로 되돌릴 때만 의미가 있는데, AC
+    // 자신(최상위, 애초에 되돌아갈 곳이 없음)이 이 태그를 대신 내는
+    // 사례가 10건 중 3건 관찰됐다(요양원 문의에 reason=emergency를
+    // 내는 등 — CALL_KINTENT를 냈어야 할 자리에 잘못 냄). 가드 없이
+    // 그대로 처리하면 history가 지워지고 같은 userText가 AC에게 그대로
+    // 재전송돼(아래) 같은 오태그가 반복될 위험(루프)이 있고, 같은
+    // 응답에 함께 있었을 수 있는 [GWP:] 태그도(위 함수가 true를
+    // 반환하면 _parseAgentTags가 아예 실행되지 않으므로) 통째로
+    // 유실된다(실사례: 반려견 등록 시나리오에서 [GWP: khealth]가
+    // 이렇게 유실됨). AC-PRO-CORE 본체가 활성 상태일 때(§0. 정체성
+    // 마커, 4305행과 동일 판별법)는 이 태그를 무시하고 false를 반환해
+    // 아래 _parseAgentTags가 같은 fullReply에서 실제 라우팅 태그를
+    // 대신 찾을 기회를 준다 — §ORCHESTRATION 트리거 조건 자체의 보강은
+    // 별도 작업(2026-08-03 세션 논의 참조).
+    if (CFG.system?.includes('§0. 정체성')) {
+      console.warn(`[Orchestration] AC 최상위에서 ORCHESTRATION_HANDOFF_BACK(reason=${handoffBackMatch[1]}) 오용 감지 — 무시하고 다른 태그 처리로 폴백`);
+      return false;
+    }
     console.log(`[Orchestration] ORCHESTRATION_HANDOFF_BACK(reason=${handoffBackMatch[1]}) 감지 — AC로 즉시 반환`);
     await _updateBubble(_stripInternalTags(fullReply));
     history.length = 0;
