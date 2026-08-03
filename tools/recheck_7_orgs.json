@@ -1,0 +1,44 @@
+[
+  {
+    "entity_subtype": "org:SP-ORG-CHILDCARE",
+    "name": "제주특별자치도 아이돌봄광역지원센터",
+    "query": "제주특별자치도 아이돌봄광역지원센터",
+    "tier": "org-recheck"
+  },
+  {
+    "entity_subtype": "org:SP-ORG-IPF",
+    "name": "국제평화재단",
+    "query": "국제평화재단",
+    "tier": "org-recheck"
+  },
+  {
+    "entity_subtype": "org:SP-ORG-JCCEI",
+    "name": "제주창조경제혁신센터",
+    "query": "제주창조경제혁신센터",
+    "tier": "org-recheck"
+  },
+  {
+    "entity_subtype": "org:SP-ORG-JEJU43",
+    "name": "제주4·3평화재단",
+    "query": "제주4·3평화재단",
+    "tier": "org-recheck"
+  },
+  {
+    "entity_subtype": "org:SP-ORG-JFAC",
+    "name": "제주문화예술재단",
+    "query": "제주문화예술재단",
+    "tier": "org-recheck"
+  },
+  {
+    "entity_subtype": "org:SP-ORG-JILES",
+    "name": "제주평생교육장학진흥원",
+    "query": "제주평생교육장학진흥원",
+    "tier": "org-recheck"
+  },
+  {
+    "entity_subtype": "org:SP-ORG-JWFRI",
+    "name": "제주여성가족연구원",
+    "query": "제주여성가족연구원",
+    "tier": "org-recheck"
+  }
+]
