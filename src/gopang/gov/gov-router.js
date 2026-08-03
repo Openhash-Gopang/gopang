@@ -3292,6 +3292,25 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         if (divText.permitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${divText.permitCodes.join(',')})`);
         return { systemPrompt: parts.join('\n\n---\n\n'), trace };
       }
+      // ★ 2026-08-03 신설 — 과(division) 단위 코드 폴백. 시딩 스크립트가
+      // 기관·division을 같은 tier 접두어(do-dept:)로 등록했으므로,
+      // 상위 실·국 코드로 못 찾으면 DO_DEPT_DIVISION_TABLE에서 찾는다
+      // (domain 필드로 상위 실·국을 역참조해 체인을 완성).
+      const divEntry = DO_DEPT_DIVISION_TABLE.find(e => e.code === code);
+      if (divEntry) {
+        const parentEntry = _l2Table().find(e => e.domain === divEntry.domain);
+        if (parentEntry) {
+          const doSp = await _loadDoSp();
+          parts.push(doSp);
+          trace.push('SP-DO-000');
+          const parentText = await _fetchDeptText(parentEntry);
+          parts.push(parentText.text);
+          trace.push(parentEntry.code);
+          parts.push(await _fetchText(divEntry.file));
+          trace.push(`${divEntry.code}(directCode)`);
+          return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+        }
+      }
       // 코드가 테이블에 없으면(예: 한시기구처럼 L2 테이블 자체에 없는
       // 코드) 실패로 취급하지 않고 조용히 아래 텍스트 추측 경로로 폴백.
     }
@@ -3307,6 +3326,22 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         trace.push(`${entry.code}(directCode)`);
         return { systemPrompt: parts.join('\n\n---\n\n'), trace };
       }
+      // ★ 2026-08-03 신설 — 과(division) 단위 코드 폴백(do-dept와 동일 원칙).
+      const divEntry = JEJU_AGENCY_DIVISION_TABLE.find(e => e.code === code);
+      if (divEntry) {
+        const parentEntry = _agencyTable().find(e => e.code === divEntry.institution);
+        if (parentEntry) {
+          const doSp = await _loadDoSp();
+          parts.push(doSp);
+          trace.push('SP-DO-000');
+          const agencyText = await _fetchAgencyText(parentEntry);
+          parts.push(agencyText);
+          trace.push(parentEntry.code);
+          parts.push(await _fetchText(divEntry.file));
+          trace.push(`${divEntry.code}(directCode)`);
+          return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+        }
+      }
     }
     if (tier === 'org' && code) {
       _currentResolvedProvinceCode = 'jeju';
@@ -3319,6 +3354,58 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         parts.push(orgText);
         trace.push(`${entry.code}(directCode)`);
         return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+      }
+      // ★ 2026-08-03 신설 — 팀(division) 단위 코드 폴백(do-dept와 동일 원칙).
+      const divEntry = JEJU_ORG_DIVISION_TABLE.find(e => e.code === code);
+      if (divEntry) {
+        const parentEntry = _orgTable().find(e => e.code === divEntry.institution);
+        if (parentEntry) {
+          const doSp = await _loadDoSp();
+          parts.push(doSp);
+          trace.push('SP-DO-000');
+          const orgText = await _fetchOrgText(parentEntry);
+          parts.push(orgText);
+          trace.push(parentEntry.code);
+          parts.push(await _fetchText(divEntry.file));
+          trace.push(`${divEntry.code}(directCode)`);
+          return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+        }
+      }
+    }
+    // ★ 2026-08-03 신설 — tier='city'. 다른 세션의 seed_gov_tree_remaining_
+    // registry.py가 시청(SP-CITY-*)과 시청 division(SP-CITYDIV-*)을 이
+    // 접두어로 등록했다 — 내가 만든 'city-dept:{시코드}-{국코드}' 규약
+    // (seed_gov_tree_citydept_natagency.py)과는 별개의 코드 체계다. 둘 다
+    // 실제 profiles에 등록돼 있으므로 gov-router.js도 둘 다 처리해야 한다.
+    if (tier === 'city' && code) {
+      _currentResolvedProvinceCode = 'jeju';
+      const cityEntry = _cityTable().find(e => e.code === code);
+      if (cityEntry) {
+        const cityText = await _fetchCityText(cityEntry);
+        parts.push(cityText);
+        trace.push(`${cityEntry.code}(directCode)`);
+        return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+      }
+      const divEntry = CITY_DIVISION_TABLE.find(e => e.code === code);
+      if (divEntry) {
+        const parentCityEntry = _cityTable().find(e => e.시코드 === divEntry.시코드);
+        const deptEntry = _cityDeptTable().find(e => e.시코드 === divEntry.시코드 && e.국코드 === divEntry.국코드);
+        if (parentCityEntry) {
+          const cityText = await _fetchCityText(parentCityEntry);
+          parts.push(cityText);
+          trace.push(parentCityEntry.code);
+          if (deptEntry) {
+            const { text: cityDeptText, permitCodes } = await _fetchCityDeptText(deptEntry);
+            if (cityDeptText) {
+              parts.push(cityDeptText);
+              trace.push(`SP-CITYDEPT-${divEntry.시코드}-${divEntry.국코드}`);
+              if (permitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${permitCodes.join(',')})`);
+            }
+          }
+          parts.push(await _fetchText(divEntry.file));
+          trace.push(`${divEntry.code}(directCode)`);
+          return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+        }
       }
     }
     if (tier === 'city-dept' && code) {
