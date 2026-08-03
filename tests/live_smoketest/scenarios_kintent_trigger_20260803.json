@@ -1,0 +1,102 @@
+[
+  {
+    "no": 1,
+    "utterance": "부모님 요양원 모시려는데 등급판정부터 시설 고르고 비용까지 한번에 알아봐줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "k-intent",
+    "expected_name": "다기관 오케스트레이션(K-Intent)",
+    "category": "K-Intent 트리거 검증(2026-08-03)",
+    "static_verdict": "N/A",
+    "basis": "AC-PRO-CORE §ORCHESTRATION 예시(장기요양보험 등급판정+시설선정+비용계획)의 패러프레이즈"
+  },
+  {
+    "no": 2,
+    "utterance": "빚이 너무 많아서 회생이든 파산이든 정리하고 싶은데 처음부터 끝까지 도와줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "k-intent",
+    "expected_name": "다기관 오케스트레이션(K-Intent)",
+    "category": "K-Intent 트리거 검증(2026-08-03)",
+    "static_verdict": "N/A",
+    "basis": "AC-PRO-CORE §ORCHESTRATION 예시(신용회복위원회+법원+채권자통지)의 패러프레이즈"
+  },
+  {
+    "no": 3,
+    "utterance": "아버지 돌아가셔서 장례 치르고 사망신고에 상속까지 정리해야 하는데 순서를 몰라서 막막해",
+    "expected_type": "PLATFORM",
+    "expected_id": "k-intent",
+    "expected_name": "다기관 오케스트레이션(K-Intent)",
+    "category": "K-Intent 트리거 검증(2026-08-03)",
+    "static_verdict": "N/A",
+    "basis": "AC-PRO-CORE §ORCHESTRATION 예시(장례식장+구청 사망신고+가정법원 상속)의 패러프레이즈"
+  },
+  {
+    "no": 4,
+    "utterance": "다음 달에 결혼하는데 혼인신고랑 주소 옮기는 거, 배우자 건강보험 등록까지 한꺼번에 처리해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "k-intent",
+    "expected_name": "다기관 오케스트레이션(K-Intent)",
+    "category": "K-Intent 트리거 검증(2026-08-03)",
+    "static_verdict": "N/A",
+    "basis": "결혼 준비 복합 목표(혼인신고+전입+배우자 피부양자 등록) — 3개 기관 조합, 신규 작성"
+  },
+  {
+    "no": 5,
+    "utterance": "사업자 등록하고 4대보험 가입에 세무서 신고까지 창업 초기에 필요한 거 순서대로 다 해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "k-intent",
+    "expected_name": "다기관 오케스트레이션(K-Intent)",
+    "category": "K-Intent 트리거 검증(2026-08-03)",
+    "static_verdict": "N/A",
+    "basis": "창업 준비 복합 목표(사업자등록+4대보험+세무신고), 신규 작성"
+  },
+  {
+    "no": 6,
+    "utterance": "이혼 절차 진행하면서 주소 이전이랑 자녀 건강보험 피부양자 변경까지 같이 처리하고 싶어",
+    "expected_type": "PLATFORM",
+    "expected_id": "k-intent",
+    "expected_name": "다기관 오케스트레이션(K-Intent)",
+    "category": "K-Intent 트리거 검증(2026-08-03)",
+    "static_verdict": "N/A",
+    "basis": "이혼+주소이전+피부양자 변경 복합 목표, 신규 작성 — klaw(이혼 법적 판단)와 경계 모호성 의도적 포함"
+  },
+  {
+    "no": 7,
+    "utterance": "강아지 새로 데려왔는데 등록하고 예방접종 예약에 펫보험 가입까지 한번에 진행해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "k-intent",
+    "expected_name": "다기관 오케스트레이션(K-Intent)",
+    "category": "K-Intent 트리거 검증(2026-08-03)",
+    "static_verdict": "N/A",
+    "basis": "K-Compose 사고실험 #85(반려견 등록+예방접종+보험) 패러프레이즈"
+  },
+  {
+    "no": 8,
+    "utterance": "부모님 돌아가시고 남긴 재산이 뭐가 있는지부터 조회해서 상속세 신고하고 명의까지 옮기는 거 도와줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "k-intent",
+    "expected_name": "다기관 오케스트레이션(K-Intent)",
+    "category": "K-Intent 트리거 검증(2026-08-03)",
+    "static_verdict": "N/A",
+    "basis": "K-Compose 사고실험 #86(상속재산 조회+상속세 신고+명의이전) 패러프레이즈"
+  },
+  {
+    "no": 9,
+    "utterance": "폐업하려는데 폐업신고랑 부가세 확정신고까지 같이 정리해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "k-intent",
+    "expected_name": "다기관 오케스트레이션(K-Intent)",
+    "category": "K-Intent 트리거 검증(2026-08-03)",
+    "static_verdict": "N/A",
+    "basis": "K-Compose 사고실험 #82(폐업신고+부가세 확정신고) 패러프레이즈"
+  },
+  {
+    "no": 10,
+    "utterance": "곧 출산하는데 출산장려금 신청이랑 육아휴직급여 신청까지 순서대로 진행해줘",
+    "expected_type": "PLATFORM",
+    "expected_id": "k-intent",
+    "expected_name": "다기관 오케스트레이션(K-Intent)",
+    "category": "K-Intent 트리거 검증(2026-08-03)",
+    "static_verdict": "N/A",
+    "basis": "K-Compose 사고실험 #83(출산장려금+육아휴직급여) 패러프레이즈"
+  }
+]
