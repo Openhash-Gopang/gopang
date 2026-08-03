@@ -771,20 +771,40 @@ async function _resolveEntityGwp(guid) {
     const profile = data?.profile;
     if (!profile) return null;
 
-    // ★ institution/org만 이 함수가 직접 처리한다. person은 claim된
-    // 계정이면 이미 _mergeAgentSP()로 본인의 그림자 AI가 할당돼 있어
-    // (§1 원칙이 이미 다른 경로로 충족됨) 이 함수의 대상이 아니다 —
-    // person을 여기서 잘못 다루면 사칭 경로가 열린다(SP-18 RULE-01
-    // 금지-4와 동일한 우려). business/platform/thing/concept은 아직
-    // 기본 SP가 정의돼 있지 않다 — §1 원칙상 이것도 결국 기본값을
-    // 가져야 하지만, 지금 kgov로 임시 낙착시키면 "행정기관이 아닌데
-    // 행정 안내로 연결됨"이라는 새로운 오답이 생긴다. 없는 매핑을
-    // 지어내지 않고 정직하게 null(호출부가 기존처럼 처리) — 후속
-    // 과제로 남긴다.
-    if (!['institution', 'org'].includes(profile.entity_type)) return null;
+    // ★ institution/org/platform만 이 함수가 직접 처리한다. person은
+    // claim된 계정이면 이미 _mergeAgentSP()로 본인의 그림자 AI가
+    // 할당돼 있어(§1 원칙이 이미 다른 경로로 충족됨) 이 함수의 대상이
+    // 아니다 — person을 여기서 잘못 다루면 사칭 경로가 열린다(SP-18
+    // RULE-01 금지-4와 동일한 우려). platform 중 'gwp:' 접두사는 core
+    // 레지스트리로 pass-through(아래), 'expert:' 접두사는 검색은 되지만
+    // launch 연결은 후속 과제(아래 참조). business/thing/concept은
+    // 아직 기본 SP가 정의돼 있지 않다 — 없는 매핑을 지어내지 않고
+    // 정직하게 null(호출부가 기존처럼 처리) — 후속 과제로 남긴다.
+    if (!['institution', 'org', 'platform'].includes(profile.entity_type)) return null;
 
     const identity = profile.extra?.public?.identity || {};
-    const govCode = identity.entity_subtype || null;
+    const subtype = identity.entity_subtype || null;
+
+    // ★ 2026-08-03 신설 — entity_type='platform' + entity_subtype='gwp:{id}'는
+    // 핵심 GWP 서비스를 "안전장치"로 profiles에도 등록해 K-Search가
+    // 찾을 수 있게 한 것(주피터 지시). 이미 core 레지스트리에 실제
+    // 정의가 있으므로 그걸 그대로 반환한다 — 여기서 새로 svcDef를
+    // 만들지 않는다(중복 정의 방지, 단일 소스 유지).
+    if (profile.entity_type === 'platform' && subtype?.startsWith('gwp:')) {
+      const coreId = subtype.slice('gwp:'.length);
+      return getService(coreId);
+    }
+    // ★ entity_subtype='expert:{personaId}'(EXPERT 페르소나, 안전장치로
+    // 등록됨)는 의도적으로 여기서 처리하지 않는다 — EXPERT는 새 탭
+    // launch(_gwpLaunch)가 아니라 같은 탭 안에서 시스템 프롬프트를
+    // 교체하는 완전히 다른 메커니즘(expert-session.js)을 쓴다. 이
+    // 함수의 반환값(svcDef)은 _gwpLaunch 전용 형식이라 여기서 억지로
+    // 만들면 잘못된 launch를 유발한다. K-Search로 검색은 되지만
+    // (§1 원칙의 "등록" 요건은 충족), [GWP: guid] 발사 연결은 후속
+    // 과제로 남긴다 — 지금은 정직하게 null.
+    if (profile.entity_type === 'platform') return null;
+
+    const govCode = subtype;
     const displayName = identity.display_name || profile.name || '기관';
 
     if (govCode) {
