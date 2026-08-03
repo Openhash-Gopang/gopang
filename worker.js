@@ -10758,6 +10758,20 @@ async function _l1SearchEntities(env, { q, etype, occupation, address, lat, lng,
   // 2026-07-13 신설 — field_visibility 서버측 필터링(공용 헬퍼 재사용,
   // _filterProfileByVisibility/_isFieldVisible 정의부 참조). 지금까지
   // 서버가 원본 전체를 그대로 내려주고 있었다(실사로 발견).
+  // 2026-08-03 신설 — gov-tree 시딩 스크립트 4종(seed_gov_tree_registry.py
+  // 등)이 원본 SP에 역할 서술이 없을 때 description을 공통으로
+  // "{name} — 역할 서술 보강 필요(...)" 형태로 채워 넣는다(build_payload
+  // fallback, 4개 스크립트 전부 동일 마커 문구 사용 확인). 지금까지는 이
+  // 필드가 서버 쪽 검색 우선순위에 전혀 반영되지 않아서(HANDOFF_20260803.md
+  // 액션 아이템 #3), 콘텐츠 공백인 정책기관 24건이 완결된 기관과 동일한
+  // 우선순위로 노출되고 있었다. 별도 스키마 필드·백필 마이그레이션 없이
+  // — 이미 저장돼 있는 description 문구만으로 — 완결도를 판별해 순위에서
+  // 내리고, 호출자(K-Compose 등)가 이용자에게 "정보 보강 중" 안내를 붙일
+  // 수 있도록 needs_review 플래그도 함께 내려준다. 제외(exclude)는 하지
+  // 않는다 — 검색은 여전히 돼야 하고(§1 원칙), 다만 완결된 기관보다는
+  // 후순위로 밀린다.
+  const NEEDS_REVIEW_MARKER = '역할 서술 보강 필요';
+
   const scored = (data.items || []).map(p => {
     let rank = 1.0;
     if (qLower) {
@@ -10767,6 +10781,8 @@ async function _l1SearchEntities(env, { q, etype, occupation, address, lat, lng,
       if ((p.address || '').toLowerCase().includes(qLower) || (p.search_text || '').toLowerCase().includes(qLower)) rank += 1;
       if (rank === 0) rank = 0.5; // 단어별 매칭은 됐지만 원문 전체는 안 겹치는 경우(AND 필터를 통과했으므로 최소 점수는 준다)
     }
+    const needsReview = typeof p.description === 'string' && p.description.includes(NEEDS_REVIEW_MARKER);
+    if (needsReview) rank *= 0.5; // 완결된 기관보다 후순위로(제외는 아님)
     const distance_km = _haversineKm(lat, lng, p.lat, p.lng);
     const filtered = _filterProfileByVisibility({
       address: p.address,
@@ -10779,7 +10795,7 @@ async function _l1SearchEntities(env, { q, etype, occupation, address, lat, lng,
       address: filtered.address, phone: filtered.phone, website: filtered.website,
       extra: filtered.extra,
       primary_guid: p.guid, occupation: p.occupation,
-      rank, distance_km,
+      rank, distance_km, needs_review: needsReview,
     };
   });
 
