@@ -6849,6 +6849,23 @@ async function _l1UpsertProfile(env, { guid, handle, entityType, nativeLang, isP
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   const mergedExtra = { ...(extra || {}), core: { ...(extra?.core || {}), ...(core || {}) } };
 
+  // ★ 2026-08-03 긴급 수정 — pb_migrations/1784000001_updated_profiles.js가
+  // name/address/lat/lng/occupation/search_text를 톱레벨 검색 컬럼으로
+  // 추가하면서 커밋 메시지에 "_l1UpsertProfile()이 이제 이 필드들도
+  // 함께 채운다"고 명시했지만, 실제 코드는 extra.core(중첩 JSON)에만
+  // 써왔다 — _l1SearchEntities()의 필터는 톱레벨 컬럼을 조회하므로,
+  // 그 컬럼이 신설된 2026-07-12부터 지금까지 사실상 모든 프로필이
+  // 검색 불가 상태였다(실사로 발견 — 오늘 시딩한 70개뿐 아니라 기존
+  // 전체 프로필도 동일). 호출부(전체)를 하나하나 고치지 않고 이
+  // 함수 하나로 전부 해결한다 — 모든 프로필 생성·갱신이 이 함수를
+  // 거치기 때문이다.
+  const c = mergedExtra.core || {};
+  const identity = mergedExtra.public?.identity || {};
+  const searchTextParts = [
+    c.name, handle, identity.description, c.occupation,
+    ...(Array.isArray(identity.tags) ? identity.tags : []),
+  ].filter(Boolean);
+
   const body = {
     guid,
     handle,
@@ -6857,10 +6874,15 @@ async function _l1UpsertProfile(env, { guid, handle, entityType, nativeLang, isP
     is_public: isPublic !== false,
     pubkey_ed25519: pubkey || undefined,
     extra: mergedExtra,
-    // 2026-07-12 신설 — SP-18 STEP3(unclaimed). 안 보내면(undefined) 기존
-    // 값을 건드리지 않는다(PATCH 시 필드 생략은 PocketBase가 무변경으로
-    // 처리) — 일반 가입 경로가 이 파라미터를 안 넘겨도 기존 claimed
-    // 레코드가 실수로 초기화되지 않는다.
+    // 아래 6개 — 신설 톱레벨 검색 컬럼. c.xxx가 없으면 undefined로
+    // 보내 PATCH 시 기존 값을 안 건드린다(위 claim_status와 동일한
+    // "생략=무변경" 원칙, PocketBase가 undefined 키는 무시).
+    name: c.name || undefined,
+    address: c.address || undefined,
+    lat: (typeof c.lat === 'number') ? c.lat : undefined,
+    lng: (typeof c.lng === 'number') ? c.lng : undefined,
+    occupation: c.occupation || undefined,
+    search_text: searchTextParts.length ? searchTextParts.join(' ') : undefined,
     ...(claimStatus ? { claim_status: claimStatus } : {}),
   };
 
