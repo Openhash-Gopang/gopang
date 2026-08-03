@@ -794,14 +794,25 @@ async function _resolveEntityGwp(guid) {
       const coreId = subtype.slice('gwp:'.length);
       return getService(coreId);
     }
-    // ★ entity_subtype='expert:{personaId}'(EXPERT 페르소나, 안전장치로
-    // 등록됨)는 의도적으로 여기서 처리하지 않는다 — EXPERT는 새 탭
-    // launch(_gwpLaunch)가 아니라 같은 탭 안에서 시스템 프롬프트를
-    // 교체하는 완전히 다른 메커니즘(expert-session.js)을 쓴다. 이
-    // 함수의 반환값(svcDef)은 _gwpLaunch 전용 형식이라 여기서 억지로
-    // 만들면 잘못된 launch를 유발한다. K-Search로 검색은 되지만
-    // (§1 원칙의 "등록" 요건은 충족), [GWP: guid] 발사 연결은 후속
-    // 과제로 남긴다 — 지금은 정직하게 null.
+    // ★ 2026-08-03 수정 — 이전 주석("EXPERT는 같은 탭 시스템 프롬프트
+    // 교체 방식")은 사실과 다른 낡은 정보였다. expert-session.js를 직접
+    // 확인한 결과, 2026-07-03부터 handleExpertTag()가 이미 GWP 기관과
+    // 완전히 동일하게 _gwpLaunch()로 새 탭(pages/expert-chat.html)을
+    // 연다(persona 쿼리 파라미터로 SP를 갈아끼워 서빙) — startExpertSession
+    // (구 같은-탭 방식)은 2026-07-03 이후 call-ai.js 어디서도 호출되지
+    // 않는 미사용 레거시임을 확인했다. 그래서 institution/org와 동일한
+    // svcDef를 그대로 만들어 반환한다 — 별도 분기가 필요 없었다.
+    if (profile.entity_type === 'platform' && subtype?.startsWith('expert:')) {
+      const personaId = subtype.slice('expert:'.length);
+      return {
+        id: guid,
+        name: identity.display_name || profile.name || '전문가',
+        category: 'EXPERT',
+        type: 'tab',
+        url: `https://hondi.net/pages/expert-chat.html?persona=${encodeURIComponent(personaId)}`,
+        status: 'active',
+      };
+    }
     if (profile.entity_type === 'platform') return null;
 
     const govCode = subtype;
