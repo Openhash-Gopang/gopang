@@ -29,6 +29,9 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _gov_seed_common import find_existing_guid  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GWP_FILE = REPO_ROOT / "gwp-registry.js"
 EXPERT_FILE = REPO_ROOT / "src" / "gopang" / "ai" / "expert-registry.js"
@@ -164,6 +167,9 @@ def main():
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--worker-base", default=os.environ.get(
         "WORKER_BASE", "https://hondi-proxy.tensor-city.workers.dev"))
+    ap.add_argument("--force", action="store_true",
+                     help="이미 등록된 항목도 확인 없이 강제로 새로 POST(위험 — "
+                          "중복 생성됨). 기본은 꺼짐.")
     args = ap.parse_args()
 
     gwp_records = collect_gwp_records()
@@ -178,8 +184,22 @@ def main():
             print(json.dumps(build_expert_payload(r), ensure_ascii=False, indent=2))
         return
 
-    results = {"success": [], "failed": []}
+    results = {"success": [], "failed": [], "skipped_existing": []}
     for rec in gwp_records:
+        gov_code = f"gwp:{rec['gwp_id']}"
+        if not args.force:
+            try:
+                existing = find_existing_guid(
+                    args.worker_base, rec["name"], gov_code, rec["gwp_id"], entity_type="platform")
+            except Exception as e:
+                print(f"  [SKIP-UNCERTAIN] {gov_code} — 기존 등록 여부 확인 실패({e}), 건너뜀.",
+                      file=sys.stderr)
+                results["skipped_existing"].append({"id": gov_code, "reason": f"check_failed: {e}"})
+                continue
+            if existing:
+                print(f"  [SKIP-EXISTS] {gov_code} — 이미 등록됨 → {existing}")
+                results["skipped_existing"].append({"id": gov_code, "guid": existing})
+                continue
         payload = build_gwp_payload(rec)
         try:
             body = post_profile(args.worker_base, payload)
@@ -191,6 +211,20 @@ def main():
             print(f"  [FAIL] gwp:{rec['gwp_id']} — {detail}", file=sys.stderr)
 
     for rec in expert_records:
+        gov_code = f"expert:{rec['persona_id']}"
+        if not args.force:
+            try:
+                existing = find_existing_guid(
+                    args.worker_base, rec["label"], gov_code, rec["persona_id"], entity_type="platform")
+            except Exception as e:
+                print(f"  [SKIP-UNCERTAIN] {gov_code} — 기존 등록 여부 확인 실패({e}), 건너뜀.",
+                      file=sys.stderr)
+                results["skipped_existing"].append({"id": gov_code, "reason": f"check_failed: {e}"})
+                continue
+            if existing:
+                print(f"  [SKIP-EXISTS] {gov_code} — 이미 등록됨 → {existing}")
+                results["skipped_existing"].append({"id": gov_code, "guid": existing})
+                continue
         payload = build_expert_payload(rec)
         try:
             body = post_profile(args.worker_base, payload)
@@ -202,11 +236,23 @@ def main():
             print(f"  [FAIL] expert:{rec['persona_id']} — {detail}", file=sys.stderr)
 
     RUN_LOG.parent.mkdir(parents=True, exist_ok=True)
-    with open(RUN_LOG, "w", encoding="utf-8") as f:
-        f.write("# GWP-EXPERT-REGISTRY-SEEDING-RUN_2026-08-03.md\n\n")
-        f.write(f"성공 {len(results['success'])}건 / 실패 {len(results['failed'])}건\n\n## 성공\n")
+    import datetime
+    is_rerun = RUN_LOG.exists()
+    with open(RUN_LOG, "a" if is_rerun else "w", encoding="utf-8") as f:
+        if is_rerun:
+            f.write(f"\n\n---\n\n## 재실행 {datetime.datetime.now().isoformat(timespec='seconds')}\n\n")
+        else:
+            f.write("# GWP-EXPERT-REGISTRY-SEEDING-RUN_2026-08-03.md\n\n")
+        f.write(f"성공 {len(results['success'])}건 / 스킵(기존 등록) "
+                f"{len(results['skipped_existing'])}건 / 실패 {len(results['failed'])}건\n\n## 성공\n")
         for r in results["success"]:
             f.write(f"- {r['id']} → {r['guid']}\n")
+        f.write("\n## 스킵(이미 등록돼 있어 건너뜀 — 중복 방지)\n")
+        for r in results["skipped_existing"]:
+            if "guid" in r:
+                f.write(f"- {r['id']} → 기존 {r['guid']}\n")
+            else:
+                f.write(f"- {r['id']}: {r['reason']}\n")
         f.write("\n## 실패\n")
         for r in results["failed"]:
             f.write(f"- {r['id']}: {r['error']}\n")

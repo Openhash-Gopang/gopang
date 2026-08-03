@@ -26,14 +26,19 @@ _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 
 
-def search_institutions(worker_base, query, timeout=15):
+def search_institutions(worker_base, query, entity_type="institution", timeout=15):
     """POST /search — 읽기 전용. 네트워크/서버 오류는 그대로 예외로 전파한다
     (호출자가 '확인 불가'와 '없음'을 구분해서 처리하도록 — 확인 불가를
     '없음'으로 잘못 해석하면 이번 ACRC 사고의 원인과 똑같은 함정에 빠진다).
+
+    entity_type 기본값은 'institution'(gov-tree 계열)이지만, GWP/EXPERT
+    처럼 entity_type='platform'인 계열도 있어 파라미터화했다(2026-08-03 —
+    seed_gwp_expert_registry.py 연동 시 발견: 하드코딩돼 있었다면 platform
+    엔티티는 전부 '없음'으로 오판돼 매번 새로 생성됐을 것).
     """
     req = urllib.request.Request(
         f"{worker_base.rstrip('/')}/search",
-        data=json.dumps({"q": query, "etype": "institution", "lim": 20}).encode("utf-8"),
+        data=json.dumps({"q": query, "etype": entity_type, "lim": 20}).encode("utf-8"),
         headers={"Content-Type": "application/json", "User-Agent": _UA},
         method="POST",
     )
@@ -52,15 +57,18 @@ def extract_identity(entity):
     return public.get("identity") or {}
 
 
-def find_existing_guid(worker_base, name, gov_code, code, timeout=15):
-    """gov_code(entity_subtype)로 이미 등록된 institution이 있으면 그 guid를
+def find_existing_guid(worker_base, name, gov_code, code, entity_type="institution", timeout=15):
+    """gov_code(entity_subtype)로 이미 등록된 엔티티가 있으면 그 guid를
     반환한다. 확실히 없으면 None. 확인 자체가 실패하면(타임아웃 등)
     예외를 그대로 올린다 — 호출자가 "모르면 스킵하지 말고 사람에게 물어라"
     원칙을 지키도록 강제한다.
+
+    entity_type 기본값 'institution'은 gov-tree 계열 3개 스크립트용.
+    GWP/EXPERT(entity_type='platform')처럼 다른 계열은 호출 시 명시할 것.
     """
-    results = search_institutions(worker_base, name, timeout=timeout)
+    results = search_institutions(worker_base, name, entity_type=entity_type, timeout=timeout)
     for e in results:
-        if e.get("entity_type") != "institution":
+        if e.get("entity_type") != entity_type:
             continue
         ident = extract_identity(e)
         subtype = ident.get("entity_subtype")
