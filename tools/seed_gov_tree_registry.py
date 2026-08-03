@@ -50,6 +50,9 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _gov_seed_common import find_existing_guid  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 POLICY_DIR = REPO_ROOT / "prompts" / "gov-tree" / "09-national" / "policy-bodies"
 RUN_LOG = REPO_ROOT / "docs" / "GOV-TREE-REGISTRY-SEEDING-RUN_2026-08-03.md"
@@ -144,6 +147,14 @@ def main():
     # 말 것.
     ap.add_argument("--only", default="", metavar="CODE1,CODE2,...",
                      help="쉼표구분 code 목록만 재시도(중복 생성 방지). 예: --only ACRC")
+    # ★ 2026-08-03 신설 — ACRC 중복 등록 사고(--only 재실행이 "이미 있는지"
+    # 확인 없이 새로 POST해버린 사건) 이후, 기본값을 "확인 후 스킵"으로
+    # 바꾼다. 정말로 강제 재등록이 필요한(예: 기존 게 잘못 등록됐다고
+    # 확신하는) 예외적 상황에서만 --force로 이 안전장치를 끈다.
+    ap.add_argument("--force", action="store_true",
+                     help="이미 등록된 code도 확인 없이 강제로 새로 POST(위험 — "
+                          "중복 생성됨). 기본은 꺼짐: POST 전에 항상 기존 등록 "
+                          "여부를 먼저 확인하고, 있으면 건너뛴다.")
     args = ap.parse_args()
 
     records = collect_records()
@@ -167,8 +178,25 @@ def main():
         print(f"... 총 {len(to_send)}건 전송 예정(미리보기 5건만 출력)")
         return
 
-    results = {"success": [], "failed": []}
+    results = {"success": [], "failed": [], "skipped_existing": []}
     for rec in to_send:
+        if not args.force:
+            try:
+                existing_guid = find_existing_guid(
+                    args.worker_base, rec["name"], rec["gov_code"], rec["code"])
+            except Exception as e:
+                # ★ 확인 자체가 실패하면(타임아웃 등) "없다"로 넘겨짚지 않고
+                # 이 건을 건너뛴다 — ACRC 사고가 정확히 "확인 실패를 없음으로
+                # 오판"해서 벌어졌다. 실패는 사람이 --only로 재확인하게 한다.
+                print(f"  [SKIP-UNCERTAIN] {rec['code']} — 기존 등록 여부 확인 실패"
+                      f"({e}), 안전을 위해 이번엔 건너뜀. 확인되면 --force나 "
+                      f"재실행으로 처리하세요.", file=sys.stderr)
+                results["skipped_existing"].append({"code": rec["code"], "reason": f"check_failed: {e}"})
+                continue
+            if existing_guid:
+                print(f"  [SKIP-EXISTS] {rec['code']} — 이미 등록됨 → {existing_guid}")
+                results["skipped_existing"].append({"code": rec["code"], "guid": existing_guid})
+                continue
         payload = build_payload(rec)
         req = urllib.request.Request(
             f"{args.worker_base.rstrip('/')}/profile",
@@ -210,11 +238,18 @@ def main():
                     f"{' (--only=' + args.only + ')' if args.only else ''}\n\n")
         else:
             f.write("# GOV-TREE-REGISTRY-SEEDING-RUN_2026-08-03.md\n\n")
-        f.write(f"성공 {len(results['success'])}건 / 실패 {len(results['failed'])}건 "
-                f"(전체 대상 {len(to_send)}건, only_active={args.only_active})\n\n")
+        f.write(f"성공 {len(results['success'])}건 / 스킵(기존 등록) "
+                f"{len(results['skipped_existing'])}건 / 실패 {len(results['failed'])}건 "
+                f"(전체 대상 {len(to_send)}건, only_active={args.only_active}, force={args.force})\n\n")
         f.write("## 성공\n")
         for r in results["success"]:
             f.write(f"- {r['code']} → {r['guid']}\n")
+        f.write("\n## 스킵(이미 등록돼 있어 건너뜀 — 중복 방지)\n")
+        for r in results["skipped_existing"]:
+            if "guid" in r:
+                f.write(f"- {r['code']} → 기존 {r['guid']}\n")
+            else:
+                f.write(f"- {r['code']}: {r['reason']}\n")
         f.write("\n## 실패\n")
         for r in results["failed"]:
             f.write(f"- {r['code']}: {r['error']}\n")

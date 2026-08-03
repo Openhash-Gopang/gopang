@@ -48,6 +48,9 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _gov_seed_common import find_existing_guid  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RUN_LOG = REPO_ROOT / "docs" / "GOV-TREE-REMAINING-REGISTRY-SEEDING-RUN_2026-08-03.md"
 
@@ -151,6 +154,9 @@ def main():
     ap.add_argument("--only-tier", default=None,
                      help="쉼표구분 tier 접두사만 처리(예: do-dept,city) — 배치를 나눠 돌릴 때 사용")
     ap.add_argument("--only", default=None, help="쉼표구분 code만 처리(재시도용)")
+    ap.add_argument("--force", action="store_true",
+                     help="이미 등록된 code도 확인 없이 강제로 새로 POST(위험 — "
+                          "중복 생성됨). 기본은 꺼짐.")
     args = ap.parse_args()
 
     records = collect_records()
@@ -175,8 +181,22 @@ def main():
             print(json.dumps(build_payload(r), ensure_ascii=False, indent=2))
         return
 
-    results = {"success": [], "failed": []}
+    results = {"success": [], "failed": [], "skipped_existing": []}
     for i, rec in enumerate(records):
+        if not args.force:
+            try:
+                existing_guid = find_existing_guid(
+                    args.worker_base, rec["name"], rec["gov_code"], rec["code"])
+            except Exception as e:
+                print(f"  [SKIP-UNCERTAIN {i+1}/{len(records)}] {rec['gov_code']} — "
+                      f"기존 등록 여부 확인 실패({e}), 안전을 위해 건너뜀.", file=sys.stderr)
+                results["skipped_existing"].append({"id": rec["gov_code"], "reason": f"check_failed: {e}"})
+                continue
+            if existing_guid:
+                print(f"  [SKIP-EXISTS {i+1}/{len(records)}] {rec['gov_code']} — "
+                      f"이미 등록됨 → {existing_guid}")
+                results["skipped_existing"].append({"id": rec["gov_code"], "guid": existing_guid})
+                continue
         payload = build_payload(rec)
         try:
             body = post_profile(args.worker_base, payload)
@@ -188,11 +208,25 @@ def main():
             print(f"  [FAIL {i+1}/{len(records)}] {rec['gov_code']} — {detail}", file=sys.stderr)
 
     RUN_LOG.parent.mkdir(parents=True, exist_ok=True)
-    with open(RUN_LOG, "w", encoding="utf-8") as f:
-        f.write("# GOV-TREE-REMAINING-REGISTRY-SEEDING-RUN_2026-08-03.md\n\n")
-        f.write(f"성공 {len(results['success'])}건 / 실패 {len(results['failed'])}건\n\n## 성공\n")
+    # ★ 2026-08-03 수정 — 다른 두 시딩 스크립트와 동일하게 append로 변경
+    # (기존엔 "w"로 재실행 시 이전 성공 기록이 사라졌다).
+    import datetime
+    is_rerun = RUN_LOG.exists()
+    with open(RUN_LOG, "a" if is_rerun else "w", encoding="utf-8") as f:
+        if is_rerun:
+            f.write(f"\n\n---\n\n## 재실행 {datetime.datetime.now().isoformat(timespec='seconds')}\n\n")
+        else:
+            f.write("# GOV-TREE-REMAINING-REGISTRY-SEEDING-RUN_2026-08-03.md\n\n")
+        f.write(f"성공 {len(results['success'])}건 / 스킵(기존 등록) "
+                f"{len(results['skipped_existing'])}건 / 실패 {len(results['failed'])}건\n\n## 성공\n")
         for r in results["success"]:
             f.write(f"- {r['id']} → {r['guid']}\n")
+        f.write("\n## 스킵(이미 등록돼 있어 건너뜀 — 중복 방지)\n")
+        for r in results["skipped_existing"]:
+            if "guid" in r:
+                f.write(f"- {r['id']} → 기존 {r['guid']}\n")
+            else:
+                f.write(f"- {r['id']}: {r['reason']}\n")
         f.write("\n## 실패\n")
         for r in results["failed"]:
             f.write(f"- {r['id']}: {r['error']}\n")
