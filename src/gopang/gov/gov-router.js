@@ -3257,8 +3257,15 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
   // -0.9) directCode 직접 지정 — K-Search 엔티티 매칭으로 기관이 이미
   // 확정된 경우(§ENTITY-LAUNCH, 2026-08-03 신설). 응급 감지 다음,
   // 텍스트 추측(-0.8 이하) 전부보다 먼저 온다 — 이미 정확한 답을
-  // 아는데 다시 추측할 이유가 없다. 지금은 tier='policy'만 처리하고
-  // 그 외 티어는 아래로 폴백(주석 참조, assembleGovSystemPrompt 상단).
+  // 아는데 다시 추측할 이유가 없다.
+  // ★ 2026-08-03(2차) — policy 다음으로 나머지 5개 tier(do-dept/do-agency/
+  // org/city-dept/nat-agency) 연결. 이 5개는 policy와 달리 도(道) 범위
+  // 테이블이라 _l2Table()/_agencyTable()/_orgTable()/_cityDeptTable()가
+  // _resolveProvinceCode()에 의존한다 — directCode 자체가 "이미 제주
+  // 기관으로 확정됐다"는 신호이므로, 텍스트/PDV 기반 도 추측 결과와
+  // 무관하게 _currentResolvedProvinceCode를 'jeju'로 강제한다(텍스트에
+  // 지역 단서가 전혀 없어 추측이 null이 되는 경우에도 directCode가
+  // 있으면 안전하게 해석되도록).
   if (directCode) {
     const sep = String(directCode).indexOf(':');
     const tier = sep >= 0 ? directCode.slice(0, sep) : directCode;
@@ -3272,8 +3279,84 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       trace.push(`SP-POLICY-LAZY(${code}/${resolved.source}, directCode)`);
       return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
-    // 다른 티어는 아직 미연결 — 조용히 무시하고 아래 기존 경로(텍스트
-    // 추측)로 폴백한다. 실패로 취급하지 않는다(회귀 없음).
+    if (tier === 'do-dept' && code) {
+      _currentResolvedProvinceCode = 'jeju';
+      const entry = _l2Table().find(e => e.code === code);
+      if (entry) {
+        const doSp = await _loadDoSp();
+        parts.push(doSp);
+        trace.push('SP-DO-000');
+        const divText = await _fetchDeptText(entry);
+        parts.push(divText.text);
+        trace.push(`${entry.code}(directCode)`);
+        if (divText.permitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${divText.permitCodes.join(',')})`);
+        return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+      }
+      // 코드가 테이블에 없으면(예: 한시기구처럼 L2 테이블 자체에 없는
+      // 코드) 실패로 취급하지 않고 조용히 아래 텍스트 추측 경로로 폴백.
+    }
+    if (tier === 'do-agency' && code) {
+      _currentResolvedProvinceCode = 'jeju';
+      const entry = _agencyTable().find(e => e.code === code);
+      if (entry) {
+        const doSp = await _loadDoSp();
+        parts.push(doSp);
+        trace.push('SP-DO-000');
+        const agencyText = await _fetchAgencyText(entry);
+        parts.push(agencyText);
+        trace.push(`${entry.code}(directCode)`);
+        return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+      }
+    }
+    if (tier === 'org' && code) {
+      _currentResolvedProvinceCode = 'jeju';
+      const entry = _orgTable().find(e => e.code === code);
+      if (entry) {
+        const doSp = await _loadDoSp();
+        parts.push(doSp);
+        trace.push('SP-DO-000');
+        const orgText = await _fetchOrgText(entry);
+        parts.push(orgText);
+        trace.push(`${entry.code}(directCode)`);
+        return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+      }
+    }
+    if (tier === 'city-dept' && code) {
+      _currentResolvedProvinceCode = 'jeju';
+      // code 형식: "{시코드}-{국코드}" (예: jejusi-jachi) — seed_gov_tree_
+      // citydept_natagency.py의 entity_subtype 규약과 동일. 시코드 자체에
+      // 하이픈이 없으므로 첫 '-'만 분리하면 된다.
+      const dashIdx = code.indexOf('-');
+      const cityCodeStr = dashIdx >= 0 ? code.slice(0, dashIdx) : '';
+      const deptCodeStr = dashIdx >= 0 ? code.slice(dashIdx + 1) : '';
+      const cityEntry = _cityTable().find(e => e.시코드 === cityCodeStr);
+      const deptEntry = _cityDeptTable().find(e => e.시코드 === cityCodeStr && e.국코드 === deptCodeStr);
+      if (cityEntry && deptEntry) {
+        const cityText = await _fetchCityText(cityEntry);
+        parts.push(cityText);
+        trace.push(cityEntry.code);
+        const { text: cityDeptText, permitCodes } = await _fetchCityDeptText(deptEntry);
+        if (cityDeptText) {
+          parts.push(cityDeptText);
+          trace.push(`SP-CITYDEPT-${cityCodeStr}-${deptCodeStr}(directCode)`);
+          if (permitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${permitCodes.join(',')})`);
+          return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+        }
+      }
+    }
+    if (tier === 'nat-agency' && code) {
+      _currentResolvedProvinceCode = 'jeju';
+      const nationalSp = await _loadNationalSp();
+      parts.push(nationalSp);
+      trace.push('JEJU-NATIONAL-SP');
+      const resolved = await resolveNationalAgencyLazy('jeju', '제주특별자치도', code, onProgress, null);
+      parts.push(resolved.text);
+      trace.push(`SP-NATIONAL-LAZY(${code}/${resolved.source}, directCode)`);
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    }
+    // 여기까지 걸리는 게 없으면(테이블에서 code를 못 찾음, 또는 아직
+    // 모르는 tier) 실패로 취급하지 않고 조용히 아래 텍스트 추측 경로로
+    // 폴백한다(회귀 없음, 기존 policy-only 시절과 동일한 안전 원칙).
   }
 
   // -0.8) 중앙부처 정책기관(policy-bodies) 매칭 (2026-08-02 신설) — 도
