@@ -571,6 +571,18 @@ const JEJU_L2_TABLE = [
     kw: ['총무과', '일반서무', '문서관리', '인사지원'] },
   { code: 'SP-DO-SPOKES',   file: '02-do-dept/SP-DO-SPOKES_v1.0.md',
     kw: ['대변인', '도정 홍보', '도정홍보', '언론대응', '보도자료'] },
+  // ★ 2026-08-03 신설 — 전수 감사로 발견된 나머지 5개 누락(한시조직/
+  // 특수조직, static file 방식은 위 COMM/GENDER/GENERAL/SPOKES와 동일).
+  { code: 'SP-DO-AIRPORTSUP', file: '02-do-dept/SP-DO-AIRPORTSUP_v1.0.md',
+    kw: ['공항확충지원단', '제2공항', '공항확충', '공항 확충 사업'] },
+  { code: 'SP-DO-AUTONOMY',   file: '02-do-dept/SP-DO-AUTONOMY_v1.0.md',
+    kw: ['특별자치제도추진단', '특별자치제도', '분권 제도', '특례 확대'] },
+  { code: 'SP-DO-BALANCE',    file: '02-do-dept/SP-DO-BALANCE_v1.0.md',
+    kw: ['도시균형추진단', '지역균형발전', '원도심', '읍면 격차'] },
+  { code: 'SP-DO-GANGJEONG',  file: '02-do-dept/SP-DO-GANGJEONG_v1.0.md',
+    kw: ['강정공동체사업추진단', '강정마을', '강정 공동체'] },
+  { code: 'SP-DO-LIAISON',    file: '02-do-dept/SP-DO-LIAISON_v1.0.md',
+    kw: ['중앙협력본부', '국비 확보', '중앙정부 협력', '국비확보'] },
 ];
 
 const JEJU_CITY_TABLE = [
