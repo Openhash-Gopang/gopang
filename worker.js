@@ -17009,6 +17009,23 @@ async function handleProfilePost(request, env, corsHeaders) {
   const body = await request.json().catch(() => null);
   if (!body) return _err(400, 'INVALID_JSON', 'JSON body 필수', corsHeaders);
 
+  // ★ 2026-08-03 긴급 수정 — claim_status:'unclaimed' 요청을 여기서
+  // _handleUnclaimedProfilePost로 위임한다. 이 분기가 지금까지 아예
+  // 없었다 — _handleUnclaimedProfilePost는 2026-07-12에 SP-18
+  // RULE-03 STEP3용으로 작성됐고 call-ai.js의
+  // _handleCreateUnclaimedProfileTag가 실제로 이 URL(POST /profile)에
+  // claim_status:'unclaimed'를 실어 보내고 있었지만(코드 확인,
+  // 1907행), 이 함수는 그 필드를 전혀 보지 않고 곧장 아래
+  // guid/pubkey/signature 필수 체크로 떨어져 항상 400
+  // MISSING_FIELD(guid 필수)로 실패했다 — "문서엔 연결돼 있다고
+  // 적혀있지만 실제 코드는 그렇지 않았던" 이 저장소의 반복 패턴
+  // (HONDI-CAPABILITIES-COMMON 배선 누락과 동일 유형)과 같은 사례.
+  // 서명이 없는 게 정상인 경로이므로 아래 서명 검증보다 반드시 먼저
+  // 분기해야 한다.
+  if (body.claim_status === 'unclaimed') {
+    return _handleUnclaimedProfilePost(body, env, corsHeaders);
+  }
+
   const { guid, pubkey, signature } = body;
   if (!guid)      return _err(400, 'MISSING_FIELD', 'guid 필수', corsHeaders);
   if (!pubkey)    return _err(400, 'MISSING_FIELD', 'pubkey 필수', corsHeaders);
