@@ -68,16 +68,28 @@ TIERS = [
 CODE_RE = re.compile(r"^#\s*문서\s*코드\s*:\s*(\S+)", re.M)
 NAME_RE = re.compile(r"^#\s*문서명\s*:\s*(.+?)\s*—\s*System Prompt", re.M)
 DUTY_RE = re.compile(r"^-\s*주요\s*소관\s*:\s*(.+)$", re.M)
+# ★ 2026-08-03 신설(주피터 지시로 27건 "코드/이름 추출 실패" 원인 조사 중
+# 발견) — 07-org/divisions 산하 27개 파일(2026-07-13 전후 작성분)이
+# "# 문서 코드  : {CODE}" 라벨 자체가 없는 구버전 헤더 스키마를 쓴다
+# (대신 "# SP-ORGDIV-XXX"처럼 코드가 라벨 없이 첫 줄에 그대로 있음).
+# 콘텐츠 자체는 멀쩡하고 NAME_RE는 이미 이 파일들에도 매치되므로, CODE_RE가
+# 실패했을 때만 파일명에서 코드를 뽑는 폴백을 추가한다 — 파일명이
+# "{CODE}_v{version}.md" 형식이라 100% 신뢰 가능하다.
+FILENAME_CODE_RE = re.compile(r"^(SP-[A-Za-z0-9-]+?)_v[\d.]+\.md$")
 
 MIN_DUTY_LEN = 15  # '주요 소관:' 필드는 정책기관 '관장사무'보다 원래 짧게
                     # 쓰는 관례라 임계값을 낮춘다(실사 샘플 기준).
 
 
-def _extract(md_text):
+def _extract(md_text, filename=None):
     codem = CODE_RE.search(md_text)
     namem = NAME_RE.search(md_text)
     dutym = DUTY_RE.search(md_text)
     code = codem.group(1).strip() if codem else None
+    if not code and filename:
+        fm = FILENAME_CODE_RE.match(filename)
+        if fm:
+            code = fm.group(1)
     name = namem.group(1).strip() if namem else None
     duty = dutym.group(1).strip() if dutym else ""
     return code, name, duty
@@ -95,7 +107,7 @@ def collect_records():
         files = [f for f in files if "templates" not in f.parts and "PROTOTYPE" not in f.name]
         for f in files:
             text = f.read_text(encoding="utf-8", errors="replace")
-            code, name, duty = _extract(text)
+            code, name, duty = _extract(text, filename=f.name)
             if not code or not name:
                 print(f"  [건너뜀] 코드/이름 추출 실패: {f}", file=sys.stderr)
                 continue
