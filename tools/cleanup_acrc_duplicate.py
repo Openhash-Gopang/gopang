@@ -27,6 +27,7 @@ import argparse
 import getpass
 import json
 import sys
+import time
 import urllib.request
 import urllib.error
 
@@ -39,7 +40,7 @@ _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 
 
-def _post(worker_base, path, payload, token=None, timeout=15):
+def _post(worker_base, path, payload, token=None, timeout=30):
     headers = {"Content-Type": "application/json", "User-Agent": _UA}
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -51,6 +52,29 @@ def _post(worker_base, path, payload, token=None, timeout=15):
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
+
+
+def _post_with_retry(worker_base, path, payload, token=None, retries=2):
+    """★ 2026-08-03 추가 — 실사용에서 /admin/login이 15초 타임아웃으로
+    실패하는 게 확인됨(콜드스타트로 추정 — verify_gov_tree_registry_
+    seeding.py의 ACRC/BAI 타임아웃과 같은 패턴). 기본 타임아웃을 30초로
+    늘리고, 그래도 실패하면 점증 대기 후 재시도한다."""
+    last_err = None
+    for attempt in range(retries + 1):
+        try:
+            return _post(worker_base, path, payload, token=token, timeout=30)
+        except urllib.error.HTTPError:
+            # 401/403 등 서버가 명확히 응답한 오류는 콜드스타트/네트워크
+            # 문제가 아니므로 재시도해도 의미 없다 — 즉시 호출부로 전파.
+            raise
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            last_err = e
+            if attempt < retries:
+                wait = 3 * (attempt + 1)
+                print(f"  (타임아웃/네트워크 오류 — {wait}초 후 재시도 "
+                      f"{attempt + 1}/{retries}: {e})", file=sys.stderr)
+                time.sleep(wait)
+    raise last_err
 
 
 def main():
@@ -73,9 +97,9 @@ def main():
     email = args.email or input("\nadmin 이메일: ").strip()
     password = getpass.getpass("admin 비밀번호: ")
 
-    print("\n[1/2] admin 로그인 중...")
+    print("\n[1/2] admin 로그인 중... (콜드스타트일 경우 최대 1분 정도 걸릴 수 있습니다)")
     try:
-        login_res = _post(args.worker_base, "/admin/login", {"email": email, "password": password})
+        login_res = _post_with_retry(args.worker_base, "/admin/login", {"email": email, "password": password})
     except urllib.error.HTTPError as e:
         print(f"로그인 실패: HTTP {e.code} — {e.read().decode('utf-8', errors='replace')}", file=sys.stderr)
         sys.exit(1)
@@ -87,7 +111,7 @@ def main():
 
     print(f"\n[2/2] 중복 프로필 삭제 중... ({DELETE_GUID})")
     try:
-        del_res = _post(
+        del_res = _post_with_retry(
             args.worker_base, "/admin/users/bulk-delete",
             {"identifiers": [DELETE_GUID]}, token=token,
         )
