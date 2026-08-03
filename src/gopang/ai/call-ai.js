@@ -3745,8 +3745,35 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
         const gwpCtx = cleanedReply ? `${cleanedReply}\n\n[사용자 요청] ${userText}` : userText;
         _gwpLaunch(svcDef, gwpCtx, _preTab, _buildRoutingFacts());
       } else {
-        console.warn('[GWP] 알 수 없는 서비스 ID:', svcId);
-        if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) { _preTab.close(); }
+        // ★ 2026-08-03 신설 — entity 기반 launch 폴백(§ENTITY-LAUNCH).
+        // core 21개 배열에 없는 id는 K-Search가 profiles에서 찾은
+        // institution/org 엔티티의 guid일 수 있다. 178개 gov-tree
+        // 기관을 이 배열에 개별 등록하는 대신, gwp-registry.js의
+        // 단일 함수(_resolveEntityGwp)가 여기서 한 번에 처리한다.
+        // getService()는 동기라 여기서만 비동기로 재시도한다(기존
+        // switch 자동복구와 동일한 fire-and-forget 패턴 재사용).
+        const _preTabForEntity = _preTab;
+        (async () => {
+          const entitySvc = (typeof _resolveEntityGwp === 'function')
+            ? await _resolveEntityGwp(svcId) : null;
+          if (entitySvc) {
+            console.info('[GWP] 엔티티 기반 서비스로 해석됨 →', svcId, entitySvc.url);
+            const cleanedReply2 = fullReply.replace(/\[GWP:\s*[\w-]+\]\s*/, '').trim();
+            if (bubble) _updateStreamBubble(bubble, cleanedReply2);
+            const gwpCtx2 = cleanedReply2 ? `${cleanedReply2}\n\n[사용자 요청] ${userText}` : userText;
+            _gwpLaunch(entitySvc, gwpCtx2, _preTabForEntity, _buildRoutingFacts());
+          } else {
+            console.warn('[GWP] 알 수 없는 서비스 ID(엔티티 조회도 실패):', svcId);
+            if (_preTabForEntity && typeof _preTabForEntity.close === 'function' && !_preTabForEntity.closed) {
+              _preTabForEntity.close();
+            }
+          }
+        })().catch((e) => {
+          console.warn('[GWP] 엔티티 기반 launch 폴백 실패(무시):', e.message);
+          if (_preTabForEntity && typeof _preTabForEntity.close === 'function' && !_preTabForEntity.closed) {
+            _preTabForEntity.close();
+          }
+        });
       }
     } else {
       if (_preTab && typeof _preTab.close === 'function' && !_preTab.closed) {

@@ -3215,7 +3215,7 @@ function _resolvePdvScopeFromTrace(trace) {
 // 아래의 얇은 래퍼가 담당한다 — §13b PDV_HISTORY_REQUEST 자리표시자 치환을
 // 반환 지점이 8곳 넘게 흩어진 이 함수 내부를 전부 건드리지 않고 한 곳에서
 // 처리하기 위함(호출부 입장에서 동작은 완전히 동일, 순수 후처리 wrapper).
-async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, classifyFn = null, onProgress = null) {
+async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, classifyFn = null, onProgress = null, directCode = null) {
   // 2026-07-05: UNIVERSAL-INTEGRITY를 여기서 fetch/삽입하던 걸 제거했다.
   // jeju-router.js는 이제 /ai/chat이 아니라 /gov/relay를 호출하고,
   // handleGovRelay()가 UNIVERSAL-INTEGRITY + UNIVERSAL-common(U9 포함)을
@@ -3252,6 +3252,28 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       systemPrompt: parts.join('\n\n---\n\n'),
       trace: ['JEJU-GOV-COMMON', 'SP-EXP-EMERGENCY', '(응급 감지 — 최우선 즉시 처리)'],
     };
+  }
+
+  // -0.9) directCode 직접 지정 — K-Search 엔티티 매칭으로 기관이 이미
+  // 확정된 경우(§ENTITY-LAUNCH, 2026-08-03 신설). 응급 감지 다음,
+  // 텍스트 추측(-0.8 이하) 전부보다 먼저 온다 — 이미 정확한 답을
+  // 아는데 다시 추측할 이유가 없다. 지금은 tier='policy'만 처리하고
+  // 그 외 티어는 아래로 폴백(주석 참조, assembleGovSystemPrompt 상단).
+  if (directCode) {
+    const sep = String(directCode).indexOf(':');
+    const tier = sep >= 0 ? directCode.slice(0, sep) : directCode;
+    const code = sep >= 0 ? directCode.slice(sep + 1) : '';
+    if (tier === 'policy' && code) {
+      const nationalSp = await _loadNationalSp();
+      parts.push(nationalSp);
+      trace.push('JEJU-NATIONAL-SP');
+      const resolved = await resolvePolicyBodyLazy(code, onProgress);
+      parts.push(resolved.text);
+      trace.push(`SP-POLICY-LAZY(${code}/${resolved.source}, directCode)`);
+      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+    }
+    // 다른 티어는 아직 미연결 — 조용히 무시하고 아래 기존 경로(텍스트
+    // 추측)로 폴백한다. 실패로 취급하지 않는다(회귀 없음).
   }
 
   // -0.8) 중앙부처 정책기관(policy-bodies) 매칭 (2026-08-02 신설) — 도
@@ -3851,8 +3873,18 @@ export function resolveHandlerCodeFromTrace(trace) {
 }
 window.resolveHandlerCodeFromTrace = resolveHandlerCodeFromTrace;
 
-export async function assembleGovSystemPrompt(userText, pdvLocationHint = null, classifyFn = null, onProgress = null) {
-  const result = await _assembleGovSystemPromptRaw(userText, pdvLocationHint, classifyFn, onProgress);
+// ★ 2026-08-03 신설 — directCode: K-Search(SP-18)가 profiles 엔티티로
+// 기관을 이미 정확히 특정한 경우(§ENTITY-LAUNCH), 아래 텍스트 추측
+// 단계(-0.8 정책기관 키워드 매칭, 도 판별 등)를 전부 건너뛰고 해당
+// 계층의 lazy resolver를 직접 호출한다. 형식: "{tier}:{code}" —
+// 지금은 tier='policy'만 연결됨(정책기관 70개, resolvePolicyBodyLazy가
+// 이미 code 단일 인자를 받는 구조라 가장 안전하게 먼저 연결). 나머지
+// 5개 티어(do-dept/city-dept/do-agency/org/nat-agency)는 각 lazy
+// resolver가 province/city 등 추가 인자를 요구해 매핑이 더 필요하므로
+// 후속 패치로 넘긴다 — 지금 단계에서 그 티어들의 directCode는 조용히
+// 무시되고 기존 텍스트 추측 경로로 정상 폴백된다(회귀 없음).
+export async function assembleGovSystemPrompt(userText, pdvLocationHint = null, classifyFn = null, onProgress = null, directCode = null) {
+  const result = await _assembleGovSystemPromptRaw(userText, pdvLocationHint, classifyFn, onProgress, directCode);
   if (!_PDV_HISTORY_SCOPE_PLACEHOLDER_RE.test(result.systemPrompt)) return result;
   const scope = _resolvePdvScopeFromTrace(result.trace);
   return {
