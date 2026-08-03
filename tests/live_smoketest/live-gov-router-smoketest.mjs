@@ -99,6 +99,34 @@ const SCENARIOS = [
   ['회귀 — 응급', '제주에서 불났어요 도와주세요', false, 'contains:SP-EXP-EMERGENCY'],
 ];
 
+// ── 5) 제1원칙 — 발화에 지역 언급이 전혀 없고 PDV 위치 힌트로만 관할을
+// 특정해야 하는 케이스(2026-08-03 추가, 주피터 지적 — 위 9개 시나리오는
+// 전부 발화 자체에 지역명이 있어서 이 경로가 한 번도 안 걸렸다).
+// SCENARIOS와 형식이 달라(pdvLocationHint 별도 필드) 별도 배열로 분리.
+const PDV_SCENARIOS = [
+  // [label, text, pdvLocationHint, useLLM, expectation]
+  ['PDV만으로 시청 국 특정 — 서귀포 건축(#38 회귀)',
+    '건축허가 신청하고 싶어요', '서귀포시', false,
+    'contains:SP-CITYDEPT-seogwipo-housing'],
+  ['PDV만으로 시청 과까지 특정 — 제주시 환경',
+    '환경오염 단속 신고하고 싶어요', '제주시 노형동', true,
+    'contains:SP-CITYDIV-JEJUSI-CLIMATE-ENVGUIDE'],
+  ['PDV만으로 읍면동 특정 — 애월읍 민원',
+    '행정복지센터에 인감증명 발급받으러 가려고요', '제주시 애월읍', false,
+    'contains:SP-EMD-애월읍'],
+  ['PDV 있어도 발화가 도 단위 사무면 도청으로 — 청년정책',
+    '청년정책 상담하고 싶어요', '제주시 노형동', true,
+    'review'],  // ★ 2026-08-03 오프라인 검증 중 발견: 기대는 SP-DO-PLAN인데
+                 // 실제로는 SP-EMD-노형동(읍면동)으로 감 — PDV 힌트에 동
+                 // 이름이 있으면 _matchEmd()가 발화 내용과 무관하게 무조건
+                 // 읍면동을 확정시키는 버그로 보임(규칙 F는 city-dept
+                 // 키워드 일치 시에만 발동, do-dept 소관 사무는 예외 처리
+                 // 안 됨). REVIEW로 표시해 raw trace로 계속 추적.
+  ['발화·PDV 둘 다 지역 정보 없음 — 미판별로 정직하게 실패해야 함',
+    '민원 상담하고 싶어요', null, false,
+    'contains:(지역 미판별'],
+];
+
 let pass = 0, fail = 0, review = 0;
 
 for (const [label, text, useLLM, expectation] of SCENARIOS) {
@@ -126,5 +154,31 @@ for (const [label, text, useLLM, expectation] of SCENARIOS) {
   ok ? pass++ : fail++;
 }
 
-console.log(`\n${'='.repeat(50)}\n결과: PASS ${pass} / FAIL ${fail} / REVIEW ${review} (총 ${SCENARIOS.length})`);
+// ── §1 제1원칙 시나리오 실행 — pdvLocationHint를 실제로 넘긴다 ──
+for (const [label, text, pdvHint, useLLM, expectation] of PDV_SCENARIOS) {
+  process.stdout.write(`\n=== [제1원칙] ${label} ===\n입력: "${text}" / pdvLocationHint: ${pdvHint === null ? '(없음)' : `"${pdvHint}"`}\n`);
+  let result;
+  try {
+    result = await mod.assembleGovSystemPrompt(text, pdvHint, useLLM ? _govClassifyFn : null, null);
+  } catch (e) {
+    console.log(`ERROR: ${e.message}`);
+    fail++;
+    continue;
+  }
+  const traceStr = JSON.stringify(result.trace);
+  console.log('trace:', traceStr);
+
+  if (expectation === 'review') {
+    console.log('→ REVIEW (LLM 자유응답 — 위 trace가 타당한지 직접 확인)');
+    review++;
+    continue;
+  }
+  const [kind, code] = expectation.split(':');
+  const found = traceStr.includes(code);
+  const ok = kind === 'contains' ? found : !found;
+  console.log(ok ? '→ PASS' : `→ FAIL (기대: ${expectation})`);
+  ok ? pass++ : fail++;
+}
+
+console.log(`\n${'='.repeat(50)}\n결과: PASS ${pass} / FAIL ${fail} / REVIEW ${review} (총 ${SCENARIOS.length + PDV_SCENARIOS.length})`);
 process.exit(fail > 0 ? 1 : 0);

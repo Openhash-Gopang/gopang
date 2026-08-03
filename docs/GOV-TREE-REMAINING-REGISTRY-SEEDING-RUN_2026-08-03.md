@@ -63,3 +63,283 @@
 - org:SP-ORG-URBANREGEN → unclaimed_094d74a3-ff32-486c-9018-fea188cd444e
 
 ## 실패
+
+
+---
+
+## 재실행 2026-08-03T14:57:33
+
+성공 28건 / 스킵(기존 등록) 239건 / 실패 0건
+
+## 성공
+- org:SP-ORGDIV-CHILDCARE-SUPPORT → unclaimed_7a79ecd1-cf9b-4c6f-ad9c-baddcbd1e057
+- org:SP-ORGDIV-CHILDMEAL-ADMIN → unclaimed_08a62b3d-ff36-4b1e-a7aa-a804296f86d9
+- org:SP-ORGDIV-CHILDMEAL-HYGIENE → unclaimed_2d7bd30c-8b23-44e1-8735-4b168dfc8211
+- org:SP-ORGDIV-CHILDMEAL-NUTRITION → unclaimed_1ceb25a4-5e27-4f1c-98e5-fc01e70b70d2
+- org:SP-ORGDIV-ICCJEJU-VENUE → unclaimed_d546ebb9-5e3d-4ec4-a010-1a5a50e79fd3
+- org:SP-ORGDIV-IPF-PEACE → unclaimed_66e748fe-2d2a-4366-aa0b-615233bdc4fa
+- org:SP-ORGDIV-JCCEI-SUPPORT → unclaimed_d74c2dfd-9186-4334-a65d-2b9008ffd061
+- org:SP-ORGDIV-JCPA-CONTENTS → unclaimed_d9606978-9cc2-4085-b1a8-41bd69249fbe
+- org:SP-ORGDIV-JEA-PLANNING → unclaimed_e29d3a74-e5ed-4bd1-a522-4d537167ad40
+- org:SP-ORGDIV-JEA-RENEWABLE → unclaimed_a9c5ef05-6380-465a-bfd8-2629852bf17f
+- org:SP-ORGDIV-JEDA-BUSINESS → unclaimed_bd0f1ea4-3ffd-41b9-bea8-b7305198aaa4
+- org:SP-ORGDIV-JEDA-PLANNING → unclaimed_dcb077d1-c9e7-4b31-89f6-8ead99bc622e
+- org:SP-ORGDIV-JEJU43-PEACE → unclaimed_4c535804-e3b8-448c-acfe-b5c92d4639d0
+- org:SP-ORGDIV-JERI-PLANNING → unclaimed_e6338b9b-c095-497b-92bd-f04d8058933c
+- org:SP-ORGDIV-JERI-RESEARCH → unclaimed_3ee3f1d4-03b7-4fb8-b15e-4e8c66ca17a4
+- org:SP-ORGDIV-JFAC-SUPPORT → unclaimed_67558244-c2e8-49ca-8d94-660df47f0285
+- org:SP-ORGDIV-JILES-LIFELONG → unclaimed_7ba267d3-49ff-4337-8421-2923c139dadf
+- org:SP-ORGDIV-JILES-SCHOLARSHIP → unclaimed_d68825a4-e83b-43ce-8886-2da49fa07ae8
+- org:SP-ORGDIV-JPDC-BUSINESS → unclaimed_da5fba5a-db76-43a1-98f5-c7d2a7d1ec2a
+- org:SP-ORGDIV-JPDC-PLANNING → unclaimed_c3e6f226-ec72-4643-b538-f0fcfbb78304
+- org:SP-ORGDIV-JTA-MEMBERSUPPORT → unclaimed_7d75c7cd-c07d-4bea-bc5b-cd6f991b917a
+- org:SP-ORGDIV-JTO-MARKETING → unclaimed_6f7a61d4-a552-409f-8533-8e25e53fcda1
+- org:SP-ORGDIV-JTO-PLANNING → unclaimed_0f8bcdfc-78fe-45b7-9880-80b2f5cb3e53
+- org:SP-ORGDIV-JWFRI-PLANNING → unclaimed_319a84ec-953d-4fdf-bf3f-ff1938c069f8
+- org:SP-ORGDIV-JWFRI-RESEARCH → unclaimed_d1fd546e-03eb-45c6-8c7e-70533d9438eb
+- org:SP-ORGDIV-MAEUL-SUPPORT → unclaimed_ce8b109b-00eb-475d-9fa2-40ea49a85e83
+- org:SP-ORGDIV-TRANSWEAK-DISPATCH → unclaimed_5e354494-0cec-46dc-a967-e9b56576197b
+- org:SP-ORGDIV-URBANREGEN-SUPPORT → unclaimed_721b39bc-3d1b-4372-ba36-f990de4634af
+
+## 스킵(이미 등록돼 있어 건너뜀 — 중복 방지)
+- do-dept:SP-DIV-INNOV-DIGITAL → 기존 unclaimed_0b0cfce7-773b-41bf-80fb-faab61d2ffd6
+- do-dept:SP-DIV-INNOV-ENERGYINDUSTRY → 기존 unclaimed_01318fac-b0dd-46e4-a736-86a89a175a1b
+- do-dept:SP-DIV-INNOV-FUTUREGROWTH → 기존 unclaimed_0f068fa0-c36c-4173-ba09-89653c4a196d
+- do-dept:SP-DIV-INNOV-SPACEMOBILITY → 기존 unclaimed_23e47f65-ba01-4792-b9fb-4a75e935e5f1
+- do-dept:SP-DIV-JACHI-43SUPPORT → 기존 unclaimed_2fb480f6-1590-4403-8447-71ca0f3ef7e8
+- do-dept:SP-DIV-JACHI-ACCOUNTING → 기존 unclaimed_e632ef9c-c59c-49e1-86bf-0859634355cf
+- do-dept:SP-DIV-JACHI-GENERAL → 기존 unclaimed_007c11c8-16c4-4046-9d8c-fd02dffbf1f6
+- do-dept:SP-DIV-JACHI-SELFGOV → 기존 unclaimed_4fd472d8-8516-4ea0-bcca-f5be1fdc178b
+- do-dept:SP-DIV-PLAN-BUDGET → 기존 unclaimed_c7dac012-9361-4e33-aacc-f38977f5ccea
+- do-dept:SP-DIV-PLAN-LEGAL → 기존 unclaimed_7103bbe3-51ba-4c65-a127-591ca5266382
+- do-dept:SP-DIV-PLAN-POLICY → 기존 unclaimed_534d5b2e-9cf1-45c0-bf5c-a1b563b4717f
+- do-dept:SP-DIV-PLAN-POPULATION → 기존 unclaimed_16332df3-1849-48b9-9a9a-da8c6338183a
+- do-dept:SP-DIV-PLAN-TAXADMIN → 기존 unclaimed_ae2522df-2eaa-47fb-947b-f39595799424
+- do-dept:SP-DIV-PLAN-YOUTH → 기존 unclaimed_cfb85c08-d2aa-4a17-b0d9-ac025cac845a
+- do-dept:SP-DIV-SAFETY-HEALTHHYGIENE → 기존 unclaimed_b201a1df-af4c-4226-9939-1ef02f896e2b
+- do-dept:SP-DIV-SAFETY-HEALTHPOLICY → 기존 unclaimed_134fe424-1639-4063-933e-0999785ad7a2
+- do-dept:SP-DIV-SAFETY-NATURALDISASTER → 기존 unclaimed_ec6b84b5-55b1-4f01-9632-9fcf12e73b3f
+- do-dept:SP-DIV-SAFETY-POLICY → 기존 unclaimed_98192eb4-4721-437c-9b32-f82d802d3979
+- do-dept:SP-DIV-SAFETY-SOCIALDISASTER → 기존 unclaimed_3de4f848-5af6-4e18-9891-2f1551c29f09
+- do-dept:SP-DIV-WELFARE-CHILDCARE → 기존 unclaimed_bf0fecef-872f-4f6b-8f80-b7a2e70ac47b
+- do-dept:SP-DIV-WELFARE-DISABLED → 기존 unclaimed_ad811b7b-c955-47ba-a5e0-ee0c62a3dc1f
+- do-dept:SP-DIV-WELFARE-ELDERLY → 기존 unclaimed_ec28048d-b942-420b-b363-5f9a31e1e23f
+- do-dept:SP-DIV-WELFARE-POLICY → 기존 unclaimed_9a451103-1748-474a-953c-0e6ef434e737
+- do-dept:SP-DO-AGRI → 기존 unclaimed_af2a9943-3e0c-43b1-9524-996279db1aea
+- do-dept:SP-DO-AIRPORTSUP → 기존 unclaimed_d2db0ac8-0003-468e-b149-c36f4d6de232
+- do-dept:SP-DO-AUTONOMY → 기존 unclaimed_4f43ae8d-4563-49d6-9365-5cd9f0de09b1
+- do-dept:SP-DO-BALANCE → 기존 unclaimed_39adbddc-cdf0-4b2e-bfed-004aa0e8992e
+- do-dept:SP-DO-CLIMATE → 기존 unclaimed_5bf36aa6-8085-4ddd-9be8-b774c81b96ff
+- do-dept:SP-DO-COMM → 기존 unclaimed_b5296c27-22ce-42da-942f-0e4066d43e2d
+- do-dept:SP-DO-CULTURE → 기존 unclaimed_60c7700c-41e4-49c9-b759-8a0d0f457292
+- do-dept:SP-DO-ECON → 기존 unclaimed_a8348089-ae91-474d-8716-dd6ea66bc939
+- do-dept:SP-DO-GANGJEONG → 기존 unclaimed_feb39f75-7d4c-4cb7-a556-2054b3fd3777
+- do-dept:SP-DO-GENDER → 기존 unclaimed_66f73252-53f5-494e-baad-4f6c96acee57
+- do-dept:SP-DO-GENERAL → 기존 unclaimed_4c62a310-7503-4c25-ae13-01a8a1d0aadc
+- do-dept:SP-DO-HOUSING → 기존 unclaimed_edd4126d-b3ae-44f5-a319-6ace340e92b7
+- do-dept:SP-DO-INNOV → 기존 unclaimed_96071254-059c-43ab-82fc-2aa91f73cff7
+- do-dept:SP-DO-JACHI → 기존 unclaimed_82bf2e1b-75d5-413e-9835-8fa5286c7767
+- do-dept:SP-DO-LIAISON → 기존 unclaimed_496d6935-5f98-42bf-91c1-45bdf9f6918b
+- do-dept:SP-DO-OCEAN → 기존 unclaimed_d4004582-cf2c-4679-bd6b-6140d7cbee48
+- do-dept:SP-DO-PLAN → 기존 unclaimed_0937fb35-eca8-4df1-bd6e-4d9defee678b
+- do-dept:SP-DO-SAFETY → 기존 unclaimed_1192b383-3f26-4c7f-95d6-ad585ea739d7
+- do-dept:SP-DO-SPOKES → 기존 unclaimed_4de01214-7614-4155-b829-1e7f24eafd5c
+- do-dept:SP-DO-TOURISM → 기존 unclaimed_1cdc4925-449b-401f-92dd-6365a61023e2
+- do-dept:SP-DO-TRANSPORT → 기존 unclaimed_ead54a6c-6451-42e1-901c-636812ef471a
+- do-dept:SP-DO-WELFARE → 기존 unclaimed_c7a08ad9-4572-4f0f-a253-0626eec91e26
+- do-agency:SP-AGYDIV-AGRITECH-ADMIN → 기존 unclaimed_37a6c2ca-50aa-4cf8-8809-105727850ff0
+- do-agency:SP-AGYDIV-AGRITECH-EXTENSION → 기존 unclaimed_4c9c24aa-8f6f-4028-b04b-f7d9c4983551
+- do-agency:SP-AGYDIV-AGRITECH-RESEARCH → 기존 unclaimed_4186b698-a652-4705-9ce5-e8d0e9b855d9
+- do-agency:SP-AGYDIV-ARTMUSEUM-JHYUN → 기존 unclaimed_56281c62-ccd0-4225-8fb1-59d940a9f7bc
+- do-agency:SP-AGYDIV-ARTMUSEUM-KIMTSCHANGYEUL → 기존 unclaimed_47575c9f-1f7b-4c19-8bac-17c3bf366d47
+- do-agency:SP-AGYDIV-ARTMUSEUM-MAIN → 기존 unclaimed_93d88287-9c86-497d-8c59-cf0dfb7bfb29
+- do-agency:SP-AGYDIV-BOHWAN-ENVIRONMENT → 기존 unclaimed_2fff493d-26f1-438a-b130-1def1dad38c0
+- do-agency:SP-AGYDIV-BOHWAN-HEALTH → 기존 unclaimed_cda1104c-1770-4c5f-addf-6de4aefb687a
+- do-agency:SP-AGYDIV-CHUKSAN-RESEARCH → 기존 unclaimed_447f0646-8640-4cfb-827c-135c24d6e0b2
+- do-agency:SP-AGYDIV-FIRE-ADMIN → 기존 unclaimed_a5ab3ded-48f9-4bfb-9944-716206fe28ac
+- do-agency:SP-AGYDIV-FIRE-PREVENTION → 기존 unclaimed_25f9e2df-2aee-4253-a4c0-90600a23fd33
+- do-agency:SP-AGYDIV-FIRE-RESPONSE → 기존 unclaimed_33d62188-bab7-45b2-9d4b-b60ada6271b1
+- do-agency:SP-AGYDIV-FOLKMUSEUM-ADMIN → 기존 unclaimed_f7d291ce-4ee4-4c5e-9884-d8131053f49e
+- do-agency:SP-AGYDIV-FOLKMUSEUM-ARCHAEOFOLK → 기존 unclaimed_ce00f2cd-68c9-4fdc-b9eb-658720a70559
+- do-agency:SP-AGYDIV-FOLKMUSEUM-MARINE → 기존 unclaimed_ba07a9c2-fb09-4734-abb6-563eefbde76b
+- do-agency:SP-AGYDIV-FOLKMUSEUM-MINERALBOTANY → 기존 unclaimed_ad710446-5a22-4b6d-a85d-152790b45e66
+- do-agency:SP-AGYDIV-FOLKMUSEUM-ZOOLOGY → 기존 unclaimed_219df49b-d798-49d9-bd97-7a3541f2c36e
+- do-agency:SP-AGYDIV-HERITAGE-HALLASAN → 기존 unclaimed_ce98b90f-79b5-4562-bf87-f0f632a21101
+- do-agency:SP-AGYDIV-HERITAGE-MANAGEMENT → 기존 unclaimed_70105caa-e997-489d-aed5-fe4672827dc6
+- do-agency:SP-AGYDIV-LIBRARY-INFOSERVICE → 기존 unclaimed_fc226c47-d677-44ef-9b6c-f711004aa49b
+- do-agency:SP-AGYDIV-LIBRARY-POLICY → 기존 unclaimed_a4f386d9-e448-437f-8f33-b3db1234bd5b
+- do-agency:SP-AGYDIV-POLICE-SAFETY → 기존 unclaimed_2c430230-a427-4f99-9a57-0496516232d6
+- do-agency:SP-AGYDIV-POLICE-TRAFFIC → 기존 unclaimed_ac6f4602-bfdd-44a6-bf8e-adf5e9a730c5
+- do-agency:SP-AGYDIV-POLICE-WOMENYOUTH → 기존 unclaimed_b73d37ea-35d4-4b30-97f6-98e7861fdee7
+- do-agency:SP-AGYDIV-TEMPLATE → 기존 unclaimed_4926814d-44b9-42a7-a78d-42e7b5d59071
+- do-agency:SP-AGYDIV-WATER-ADMIN → 기존 unclaimed_f4a7fa83-ff58-4aeb-ad12-339b844fca01
+- do-agency:SP-AGYDIV-WATER-SEWAGE → 기존 unclaimed_038e14b2-b783-45f0-b100-2e10238ca16d
+- do-agency:SP-AGYDIV-WATER-WATERSUPPLY → 기존 unclaimed_719f3faa-0c49-4632-aba7-b087d36359f7
+- do-agency:SP-AGY-AGRITECH → 기존 unclaimed_5edcff16-0f45-4989-b7bd-e02dbc47b143
+- do-agency:SP-AGY-ARTMUSEUM → 기존 unclaimed_185feae5-304d-4918-9f09-39a40dd13eed
+- do-agency:SP-AGY-BOHWAN → 기존 unclaimed_0c132ac5-33a1-41b0-9fa7-cc3ed6386e6b
+- do-agency:SP-AGY-CHUKSAN → 기존 unclaimed_e97e1b8c-d6ea-4d8a-ac7c-eb0e953f41d9
+- do-agency:SP-AGY-FIRE → 기존 unclaimed_dd9b37df-e2cc-4bb3-ab7d-dfc379f691d9
+- do-agency:SP-AGY-FOLKMUSEUM → 기존 unclaimed_37ae32a0-b2b8-4e43-b940-2d98855d591f
+- do-agency:SP-AGY-HERITAGE → 기존 unclaimed_a4783266-dc0c-488a-9747-91168573fc14
+- do-agency:SP-AGY-LIBRARY → 기존 unclaimed_b9f8dd40-1ea5-49fd-913e-4cae3774058a
+- do-agency:SP-AGY-POLICE → 기존 unclaimed_7d58465d-df9e-4a14-a123-80079f38e612
+- do-agency:SP-AGY-WATER → 기존 unclaimed_f9bea040-6fa9-4085-8586-c2c3c247dca6
+- city:SP-CITYDIV-JEJUSI-CLIMATE-ENVGUIDE → 기존 unclaimed_8d2038f4-0edd-498c-aa7f-1e4570d74956
+- city:SP-CITYDIV-JEJUSI-CLIMATE-ENVMGMT → 기존 unclaimed_a42748f4-5505-464f-ae02-17cb6f20c7b0
+- city:SP-CITYDIV-JEJUSI-CLIMATE-FACILITY → 기존 unclaimed_03c1770d-1b0f-4da5-b9b0-79fde22660e3
+- city:SP-CITYDIV-JEJUSI-CLIMATE-JEOLMUL → 기존 unclaimed_b97b46ef-4ff0-4616-8bf5-064f1481ee87
+- city:SP-CITYDIV-JEJUSI-CLIMATE-LIVINGENV → 기존 unclaimed_cb179256-2845-4972-89c3-ba80d6df3210
+- city:SP-CITYDIV-JEJUSI-CLIMATE-PARKS → 기존 unclaimed_8ee804f3-14df-47f4-8c8f-5a7a747883fc
+- city:SP-CITYDIV-JEJUSI-CULTURE-ART → 기존 unclaimed_77daa4f5-b2cb-4ca5-a48c-1405e00e565c
+- city:SP-CITYDIV-JEJUSI-CULTURE-ARTCENTER → 기존 unclaimed_8f1bf5c1-6cd9-4d7c-84cd-f75686b46969
+- city:SP-CITYDIV-JEJUSI-CULTURE-SPORTS → 기존 unclaimed_6e95c6ce-2d2c-4a17-a43c-5a5c998df777
+- city:SP-CITYDIV-JEJUSI-CULTURE-TAMNALIB → 기존 unclaimed_c2a8b445-646d-4d76-8de8-0c0330bc4785
+- city:SP-CITYDIV-JEJUSI-CULTURE-TOURISM → 기존 unclaimed_2f188736-ebc0-4214-9b8c-edb553fc5cdf
+- city:SP-CITYDIV-JEJUSI-CULTURE-UDANGLIB → 기존 unclaimed_d37710fa-a421-4d42-9ed7-25f4178c2318
+- city:SP-CITYDIV-JEJUSI-ECON-INFOSUPPORT → 기존 unclaimed_7bd4e7ee-b727-4492-a844-c86c5ff65561
+- city:SP-CITYDIV-JEJUSI-ECON-JOBENERGY → 기존 unclaimed_5a911888-3162-4a1d-8c12-c99fbef4df3d
+- city:SP-CITYDIV-JEJUSI-ECON-SMB → 기존 unclaimed_db3369cf-9aca-4d43-b79c-4fa31045d6f7
+- city:SP-CITYDIV-JEJUSI-ECON-VILLAGE → 기존 unclaimed_c6a87a69-004e-48ea-b2ff-370ff75e92e2
+- city:SP-CITYDIV-JEJUSI-JACHI-BASICGOVPREP → 기존 unclaimed_a0773149-5296-4980-b555-6ef83e6f6765
+- city:SP-CITYDIV-JEJUSI-JACHI-BUDGET → 기존 unclaimed_32542b91-eb50-49e1-998c-770bd5e7a4dd
+- city:SP-CITYDIV-JEJUSI-JACHI-GENERAL → 기존 unclaimed_ae426503-d6e9-47cd-a799-3c65c9d7259c
+- city:SP-CITYDIV-JEJUSI-JACHI-PROPERTYTAX → 기존 unclaimed_584e2cd3-64c8-46a8-8ce3-ab1ee1f07174
+- city:SP-CITYDIV-JEJUSI-JACHI-SELFGOV → 기존 unclaimed_2a38f813-c3b0-4dbe-bb4c-bb4235bcc312
+- city:SP-CITYDIV-JEJUSI-JACHI-TAX → 기존 unclaimed_2a5da4e3-011d-4099-997a-d7f70204b98a
+- city:SP-CITYDIV-JEJUSI-SAFETY-GENERAL → 기존 unclaimed_a8e963f7-ac05-4e29-a662-de20a0061712
+- city:SP-CITYDIV-JEJUSI-SAFETY-TRAFFIC → 기존 unclaimed_ebe3fbff-66f4-477a-ad8e-ecb41376a486
+- city:SP-CITYDIV-JEJUSI-SAFETY-VEHICLE → 기존 unclaimed_4234a3df-83f3-43f7-bed0-bea9932598a0
+- city:SP-CITYDIV-JEJUSI-WELFARE-BASICLIVELIHOOD → 기존 unclaimed_b7160ce4-6a21-4f74-b53c-22da5163de42
+- city:SP-CITYDIV-JEJUSI-WELFARE-DISABLED → 기존 unclaimed_3895323d-a67f-48fc-8913-6aac46c25d5c
+- city:SP-CITYDIV-JEJUSI-WELFARE-ELDERLY → 기존 unclaimed_64621906-5a47-488d-bcb4-e609e68cc10e
+- city:SP-CITYDIV-JEJUSI-WELFARE-HYGIENE → 기존 unclaimed_a96b3002-2fe0-469c-a6cf-7303d2e00249
+- city:SP-CITYDIV-JEJUSI-WELFARE-RESIDENT → 기존 unclaimed_202e9144-acb9-4fb8-8b00-0176d90ffe19
+- city:SP-CITYDIV-JEJUSI-WELFARE-WOMENFAMILY → 기존 unclaimed_fb809294-83e4-4485-8201-6ce2cb5bfae9
+- city:SP-CITYDIV-SEOGWIPO-AGRIECONOMY-CITRUS → 기존 unclaimed_ffcafdd4-eed3-4fee-8413-304cf7eaee88
+- city:SP-CITYDIV-SEOGWIPO-AGRIECONOMY-DIGITAL → 기존 unclaimed_6049ae6c-dac0-433f-8fa2-bcf7ad4206ff
+- city:SP-CITYDIV-SEOGWIPO-AGRIECONOMY-ECOFARM → 기존 unclaimed_6a112a5d-431b-43ab-afa2-fc14fc355a2f
+- city:SP-CITYDIV-SEOGWIPO-AGRIECONOMY-FISHERY → 기존 unclaimed_eeaaf261-d1f4-4a4a-bafa-20deb72e7f57
+- city:SP-CITYDIV-SEOGWIPO-AGRIECONOMY-JOBS → 기존 unclaimed_0379c0a5-c636-4db4-96d0-0a1b6c0071b2
+- city:SP-CITYDIV-SEOGWIPO-AGRIECONOMY-LIVESTOCK → 기존 unclaimed_73de6d21-44d7-4c2e-9772-c93f6ecc717a
+- city:SP-CITYDIV-SEOGWIPO-CLIMATE-ENVMGMT → 기존 unclaimed_ce10187b-9109-402a-9715-718af086e296
+- city:SP-CITYDIV-SEOGWIPO-CLIMATE-FORESTRECREATION → 기존 unclaimed_f38dad92-ec1e-4193-ba44-77d27b4503fe
+- city:SP-CITYDIV-SEOGWIPO-CLIMATE-LIVINGENV → 기존 unclaimed_2d52734a-ca52-430a-8cc0-e8b9af6d904d
+- city:SP-CITYDIV-SEOGWIPO-CLIMATE-PARKS → 기존 unclaimed_c1e4bbe8-d62c-48d3-b099-c0a5aee95827
+- city:SP-CITYDIV-SEOGWIPO-CONSTRUCTION-BUILDING → 기존 unclaimed_81a81252-93d8-43cf-9cb9-19d246b0a9e7
+- city:SP-CITYDIV-SEOGWIPO-CONSTRUCTION-CITY → 기존 unclaimed_d0fed0c5-b622-4601-b33d-6fb2448dd214
+- city:SP-CITYDIV-SEOGWIPO-CONSTRUCTION-CONSTRUCT → 기존 unclaimed_965bd86e-bd87-4b22-b81d-674f9b38fd6b
+- city:SP-CITYDIV-SEOGWIPO-CONSTRUCTION-GENERAL → 기존 unclaimed_2591206e-94a4-41f6-9f6a-85b48cd0d542
+- city:SP-CITYDIV-SEOGWIPO-CONSTRUCTION-TRAFFIC → 기존 unclaimed_d4c8138a-fad2-4946-90ce-d12f1e53d927
+- city:SP-CITYDIV-SEOGWIPO-CONSTRUCTION-WATER → 기존 unclaimed_d8e4db37-8057-472f-9173-a894f175acee
+- city:SP-CITYDIV-SEOGWIPO-CULTURE-ART → 기존 unclaimed_87c823f8-72b4-4665-98d8-e973ff234c09
+- city:SP-CITYDIV-SEOGWIPO-CULTURE-ARTMUSEUM → 기존 unclaimed_f4ceda78-dd82-4878-b5f0-6ce491934514
+- city:SP-CITYDIV-SEOGWIPO-CULTURE-ARTSHALL → 기존 unclaimed_c4042319-c2e8-4c5e-82e5-0468b4ec57cb
+- city:SP-CITYDIV-SEOGWIPO-CULTURE-LIBRARYMGMT → 기존 unclaimed_0b798ab1-0275-48d2-88a5-e327c4fe0766
+- city:SP-CITYDIV-SEOGWIPO-CULTURE-SPORTS → 기존 unclaimed_64213f55-09b7-4332-b30a-91108b343ac5
+- city:SP-CITYDIV-SEOGWIPO-CULTURE-TOURISM → 기존 unclaimed_7b71d5f1-6bcf-41e8-9610-d9bc87050651
+- city:SP-CITYDIV-SEOGWIPO-CULTURE-TOURISMFACILITY → 기존 unclaimed_98b27d5c-7c94-40ff-9cab-4f6669a1fcf9
+- city:SP-CITYDIV-SEOGWIPO-HEALTH-ADMIN → 기존 unclaimed_a5a4241c-fbfc-4872-8c11-d13b4dfc333a
+- city:SP-CITYDIV-SEOGWIPO-HEALTH-EASTCENTER → 기존 unclaimed_4ec71fa8-8408-4443-9768-4e7cca85b3ad
+- city:SP-CITYDIV-SEOGWIPO-HEALTH-PROMOTION → 기존 unclaimed_688ace47-3c89-4c1e-aa45-266ff5e7f549
+- city:SP-CITYDIV-SEOGWIPO-HEALTH-WESTCENTER → 기존 unclaimed_9c87eb33-e783-48b0-89dc-805580bf8ddc
+- city:SP-CITYDIV-SEOGWIPO-JACHI-BASICGOVPREP → 기존 unclaimed_a6771b14-25ce-45b6-bf26-401d6e648aed
+- city:SP-CITYDIV-SEOGWIPO-JACHI-BUDGET → 기존 unclaimed_706da105-f4b2-420f-9fab-769e93836beb
+- city:SP-CITYDIV-SEOGWIPO-JACHI-GENERAL → 기존 unclaimed_60cdcb90-9e0e-48bd-9e38-b92b61b88e74
+- city:SP-CITYDIV-SEOGWIPO-JACHI-LIFELONGED → 기존 unclaimed_43cd9b82-dee4-4a26-9aba-5f638c38e869
+- city:SP-CITYDIV-SEOGWIPO-JACHI-SELFGOV → 기존 unclaimed_d229c00a-b5a4-4596-b86f-68dc6b034021
+- city:SP-CITYDIV-SEOGWIPO-JACHI-TAX → 기존 unclaimed_a16b0a2f-a324-4888-a3db-ed9ac1f19e13
+- city:SP-CITYDIV-SEOGWIPO-JACHI-VILLAGE → 기존 unclaimed_abcc38f9-0771-41f0-9d97-89dddde8b453
+- city:SP-CITYDIV-SEOGWIPO-WELFARE-DISABLED → 기존 unclaimed_0284a238-28de-4c99-81b3-f5187b4c1fd7
+- city:SP-CITYDIV-SEOGWIPO-WELFARE-ELDERLY → 기존 unclaimed_cca85ac2-244b-4bc1-84ac-1fac71d73a55
+- city:SP-CITYDIV-SEOGWIPO-WELFARE-HYGIENE → 기존 unclaimed_f33db82b-6411-433f-8006-c3e021c4adec
+- city:SP-CITYDIV-SEOGWIPO-WELFARE-RESIDENT → 기존 unclaimed_5d977e92-3bba-4c13-83a2-0d7933a93b78
+- city:SP-CITYDIV-SEOGWIPO-WELFARE-WOMENFAMILY → 기존 unclaimed_e261ab1c-f63b-4484-aaed-7759eff24519
+- city:SP-CITY-JEJU → 기존 unclaimed_f2a9b1be-9a1c-48a5-9bc2-1d42160cc5fe
+- city:SP-CITY-SEOGWIPO → 기존 unclaimed_48d65b25-ae98-4650-9920-020cb692da56
+- org:SP-ORGDIV-ICCJEJU-MARKETING → 기존 unclaimed_73dd99d5-91bf-47aa-9583-740a33913a36
+- org:SP-ORGDIV-ICCJEJU-MGMT → 기존 unclaimed_151afb50-8330-48cc-adb3-f747cc3e359e
+- org:SP-ORGDIV-ICCJEJU-OPS → 기존 unclaimed_58a78b18-3797-45e7-abda-8ba045d5ca2c
+- org:SP-ORGDIV-JCGF-ADMIN → 기존 unclaimed_5ff29096-3903-48be-a579-893efddcb5f5
+- org:SP-ORGDIV-JCGF-RISK → 기존 unclaimed_7949fe49-0f89-403b-8a14-5e0bb70466e2
+- org:SP-ORGDIV-JCGF-UNDERWRITING → 기존 unclaimed_86b1c83d-b18e-48a4-a587-869599d5be7f
+- org:SP-ORGDIV-JCPA-BASE → 기존 unclaimed_a7d91987-cc21-470a-8964-26a78c1dc941
+- org:SP-ORGDIV-JCPA-FOSTER → 기존 unclaimed_8a5d2ecd-e90c-4993-a3d5-76e732d3eeec
+- org:SP-ORGDIV-JCPA-SPREAD → 기존 unclaimed_174febd6-9a9d-4b62-b810-758603d955f9
+- org:SP-ORGDIV-JCPA-TALENT → 기존 unclaimed_a88fd5ec-1c57-48d3-a845-59fd7684797d
+- org:SP-ORGDIV-JEA-EVINFRA → 기존 unclaimed_1107ea79-6135-4198-b2a6-8f878a909803
+- org:SP-ORGDIV-JEA-FACILITY → 기존 unclaimed_7cabdd5b-c55a-4a1c-a5ae-13547ceb3127
+- org:SP-ORGDIV-JEA-HYDROGEN → 기존 unclaimed_7627869c-4dd0-492f-841d-6ef465e8cfc0
+- org:SP-ORGDIV-JEA-WINDOPS → 기존 unclaimed_f964eba9-16b0-49d6-91f1-01ae83805de5
+- org:SP-ORGDIV-JEDA-EXPORT → 기존 unclaimed_0b7cb042-97e3-4338-a0bb-c6497ddf1d88
+- org:SP-ORGDIV-JEDA-FINANCE → 기존 unclaimed_24872eca-5361-48ff-8777-0700f22da444
+- org:SP-ORGDIV-JEDA-MGMT → 기존 unclaimed_cb22ce76-8530-4226-94bc-f1144e08894d
+- org:SP-ORGDIV-JEDA-STARTUP → 기존 unclaimed_d2ef5eaf-90e2-4bc9-a2f8-f44eeccd80c3
+- org:SP-ORGDIV-JEJU43-ADMIN → 기존 unclaimed_f74879ab-ed26-4519-8485-bcd7ad3a240e
+- org:SP-ORGDIV-JEJU43-RESEARCH → 기존 unclaimed_05772d7d-07be-4185-996b-4f6c53075030
+- org:SP-ORGDIV-JEJUMED-ADMIN → 기존 unclaimed_4fdb2a44-87a3-4ff1-8149-a874756799db
+- org:SP-ORGDIV-JEJUMED-CLINICAL → 기존 unclaimed_674c783b-634c-4b9c-86b7-62d308c7dd47
+- org:SP-ORGDIV-JEJUMED-NURSING → 기존 unclaimed_081663fa-1ffd-4426-87f5-30edaffbde22
+- org:SP-ORGDIV-JERI-CITIZEN → 기존 unclaimed_ed63e1e4-1c66-4749-8304-75f355e86a00
+- org:SP-ORGDIV-JERI-DISASTER → 기존 unclaimed_9ff0f165-d72b-42b9-8f6b-e74348f7abe3
+- org:SP-ORGDIV-JERI-FUTURE → 기존 unclaimed_dbc74f60-a2fc-4b09-9447-95b43ed539aa
+- org:SP-ORGDIV-JERI-GROWTH → 기존 unclaimed_63cdbec9-ce90-4406-ad7b-ef6f5aa1db0a
+- org:SP-ORGDIV-JERI-MGMT → 기존 unclaimed_c420f7a4-0392-4e2d-abf7-d573c9d3da95
+- org:SP-ORGDIV-JFAC-MGMT → 기존 unclaimed_53266955-e1dc-4af7-9c87-44779df83d31
+- org:SP-ORGDIV-JFAC-PROGRAM → 기존 unclaimed_3c98cb47-80cf-46a8-b99e-667a07af2e3e
+- org:SP-ORGDIV-JILES-EDU → 기존 unclaimed_f9aa7b9b-65f5-4554-aeba-81bf97018ecf
+- org:SP-ORGDIV-JILES-MGMT → 기존 unclaimed_f642d976-0e96-4546-8372-b2c542435390
+- org:SP-ORGDIV-JPASS-ADMIN → 기존 unclaimed_4264ff1e-6623-4e62-ad4c-70b3e4da68f9
+- org:SP-ORGDIV-JPASS-SERVICESUPPORT → 기존 unclaimed_820e3e02-d74a-447a-adbe-abf19b195503
+- org:SP-ORGDIV-JPDC-PRODUCTION → 기존 unclaimed_a2a24e0a-10a5-444c-89e1-77321e62c765
+- org:SP-ORGDIV-JPDC-QUALITY → 기존 unclaimed_a32736eb-dfed-440f-bc17-36e077f7c96a
+- org:SP-ORGDIV-JPDC-SALES → 기존 unclaimed_66f7b7f6-d637-4b99-a2a0-0619346b9705
+- org:SP-ORGDIV-JPDC-WATERRESEARCH → 기존 unclaimed_eaa4afe0-e77f-4383-9f79-8709d5517621
+- org:SP-ORGDIV-JPSPO-ADMIN → 기존 unclaimed_519abf66-cedf-4d33-9d01-78e8ab481b7c
+- org:SP-ORGDIV-JPSPO-ELITESPORT → 기존 unclaimed_5f4279fe-2716-4b96-b53f-8195dc14bc2a
+- org:SP-ORGDIV-JPSPO-LIFESPORT → 기존 unclaimed_7d006a91-cd68-47c9-96eb-e5ca69c0853c
+- org:SP-ORGDIV-JPSPO-PLANNING → 기존 unclaimed_a8274768-303e-4ed0-bd1d-b29eee0a2705
+- org:SP-ORGDIV-JSPO-ADMIN → 기존 unclaimed_446d9cad-d030-438d-a563-f0308c07e5e3
+- org:SP-ORGDIV-JSPO-ELITESPORT → 기존 unclaimed_0a6639b0-add9-428f-9d19-b048a5d859da
+- org:SP-ORGDIV-JSPO-LIFESPORT → 기존 unclaimed_f99331fa-b684-4e16-aa99-4190c0d439f4
+- org:SP-ORGDIV-JSPO-PLANNING → 기존 unclaimed_9ed0100c-87a7-4f2b-bf9c-8713500dbaec
+- org:SP-ORGDIV-JTO-AUDIT → 기존 unclaimed_41c531f0-6252-4318-9471-729cced8a61f
+- org:SP-ORGDIV-JTO-INDUSTRY → 기존 unclaimed_ba8d03e5-d720-484e-994b-fdf13eebf2b4
+- org:SP-ORGDIV-JTO-PROFIT → 기존 unclaimed_200ce5e1-51ae-4996-8e60-7d5fd2f39d93
+- org:SP-ORGDIV-JTP-ADMIN → 기존 unclaimed_325b5735-eed3-45cb-b12a-f74e6a117487
+- org:SP-ORGDIV-JTP-CORPSUPPORT → 기존 unclaimed_da832ac0-afc7-4587-b8cc-fb49f34be9f3
+- org:SP-ORGDIV-JTP-POLICY → 기존 unclaimed_342d712c-37a7-4417-a1dc-eded0806bdbd
+- org:SP-ORGDIV-JWFRI-MGMT → 기존 unclaimed_320842e7-dad5-497a-99bc-073cd2063ddf
+- org:SP-ORGDIV-JWFRI-POLICY → 기존 unclaimed_7957d6bf-7dec-46d8-93f3-a9be5712c4f3
+- org:SP-ORGDIV-SGPMED-ADMIN → 기존 unclaimed_3855c2d9-00f0-4639-bdef-9eec7b53e35d
+- org:SP-ORGDIV-SGPMED-CLINICAL → 기존 unclaimed_33abf906-2eea-47ed-9a32-29f2b70a9920
+- org:SP-ORGDIV-SGPMED-NURSING → 기존 unclaimed_e717d6bd-97b2-47f6-a333-7fac54899d8c
+- org:SP-ORGDIV-TEMPLATE → 기존 unclaimed_aec44e31-283a-4210-a0a2-694a4bcb2104
+- org:SP-ORG-CHILDCARE → 기존 unclaimed_77e7d28d-d38f-420b-899c-6646d059e28e
+- org:SP-ORG-CHILDMEAL → 기존 unclaimed_9a3f8d9a-a77b-4616-ab0e-7979aaf41165
+- org:SP-ORG-ICCJEJU → 기존 unclaimed_bc9f09f6-2051-41bf-b1b9-3f1186a9273f
+- org:SP-ORG-IPF → 기존 unclaimed_1e4cd67a-d1c4-4bff-93fd-5677c0d597b1
+- org:SP-ORG-JCCEI → 기존 unclaimed_24ab22f7-037f-4da0-8165-0438b5886906
+- org:SP-ORG-JCGF → 기존 unclaimed_9ee28c71-6d02-4678-b2a8-c39ccdaa6f81
+- org:SP-ORG-JCPA → 기존 unclaimed_3c9cd1c1-fd06-4085-8b29-8c39983696d9
+- org:SP-ORG-JEA → 기존 unclaimed_5dc6d646-8bb6-47af-9c2d-224daf7c02b0
+- org:SP-ORG-JEDA → 기존 unclaimed_5d6360df-5903-4563-bff8-3b8b0457b1c1
+- org:SP-ORG-JEJU43 → 기존 unclaimed_637f53b0-ad17-44e5-bda2-afbcbee60c6b
+- org:SP-ORG-JEJUMED → 기존 unclaimed_2323290d-769c-4c60-b673-dd98fca48cad
+- org:SP-ORG-JERI → 기존 unclaimed_8464dbe2-7ec3-4164-89d3-ae54e6c6d401
+- org:SP-ORG-JFAC → 기존 unclaimed_55aeadef-416a-496c-8efe-3c1480088bf0
+- org:SP-ORG-JILES → 기존 unclaimed_860800fd-2492-4dc2-98d1-5e20232662cc
+- org:SP-ORG-JPASS → 기존 unclaimed_fa243714-98a8-4aa1-8454-53c53e02c7c8
+- org:SP-ORG-JPDC → 기존 unclaimed_fee1d2d6-c421-478e-a90d-30bfb5e55cb1
+- org:SP-ORG-JPSPO → 기존 unclaimed_c9011716-b0b2-41cf-86c7-fecd3847902d
+- org:SP-ORG-JSPO → 기존 unclaimed_fbcbc2b6-1aad-4e77-a54e-5a6f904896cf
+- org:SP-ORG-JTA → 기존 unclaimed_d9af480e-1128-4718-ba2c-1a8faca6712a
+- org:SP-ORG-JTO → 기존 unclaimed_433b8e90-482e-4fa0-a4ad-26cc1a5fa6e0
+- org:SP-ORG-JTP → 기존 unclaimed_81628d72-b8bd-4faa-baa9-2432d1ca294b
+- org:SP-ORG-JWFRI → 기존 unclaimed_6e125c06-b5f8-48d7-9598-034c757ad47d
+- org:SP-ORG-MAEUL → 기존 unclaimed_e3bc416c-23be-4ebe-ad65-f3477ddff4be
+- org:SP-ORG-SGPMED → 기존 unclaimed_943f8791-6cf0-44cc-bf4c-6817ff5aa9f3
+- org:SP-ORG-TRANSWEAK → 기존 unclaimed_e8ed5aa4-136c-41cc-9a29-c56cb5371ee4
+- org:SP-ORG-URBANREGEN → 기존 unclaimed_094d74a3-ff32-486c-9018-fea188cd444e
+
+## 실패
