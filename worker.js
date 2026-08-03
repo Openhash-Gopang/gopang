@@ -4538,6 +4538,182 @@ async function handleBenefitSemanticSearch(request, env, corsHeaders) {
   }), { headers: corsHeaders });
 }
 
+// ════════════════════════════════════════════════════════════════
+// 2026-08-04 신설 — 기관·부서·개인 엔티티 의미검색(HANDOFF_2026-08-03_PM.md
+// §3-2, K-Search 근본 결함 해법). 배경: _l1SearchEntities(§10730 부근,
+// LIKE 기반)의 후보 필터가 단어 단위 AND라 자연어 문장(조사·어미 포함)이
+// 들어오면 구조적으로 0% 매칭이 난다(제주 267개 기관 자연어 쿼리 29건
+// 100% 실패로 실사 확인). handleBenefitSemanticSearch/handleBenefitEmbedIndex
+// (바로 위, bge-m3+Vectorize)와 동일한 패턴을 그대로 이식한다 — 처음부터
+// 설계할 필요 없음, _embedText()도 그대로 재사용.
+//
+// benefit용과 별도 Vectorize 인덱스를 쓴다(env.VECTORIZE_ENTITIES,
+// wrangler.toml — 도메인·차원 혼재 방지, 배포 전 인덱스 사전 생성 필요:
+//   wrangler vectorize create hondi-entity-registry --dimensions=1024 --metric=cosine
+// ).
+//
+// ★ 정직한 한계 ★ benefit 쪽과 동일 — bge-m3가 한국 행정 도메인 전문
+// 용어(기관명은 고유명사·전문용어 밀도가 더 높음)에서 실제로 얼마나
+// 잘 되는지 이 세션에서 검증 못 했다. 배포 전 소규모 파일럿(29개
+// do-dept/city-dept 자연어 쿼리, tools/jeju_29_genuine_task_queries.json)
+// 으로 먼저 확인할 것 — HANDOFF §3-2 설계항목 7 참조. 기존 LIKE 기반
+// _l1SearchEntities·POST /search(handleSearch)는 삭제하지 않고 비상
+// 폴백으로 코드에 그대로 남긴다.
+//
+// 호출부 전환(call-ai.js [SEARCH]{...}[/SEARCH] 실행 태그가 지금은
+// POST /search를 호출한다 — GET /entity-semantic-search로 교체하는 건
+// SP-18(K-Search) 프로토콜 문구도 함께 손봐야 하는 별도 작업이라 이번
+// 세션엔 포함하지 않았다. HANDOFF §3-2 설계항목 6, 다음 세션 과제로 남김.
+// ════════════════════════════════════════════════════════════════
+
+// POST /orchestration/entity-embed-index
+// body: { records: [{ guid, name, description, tags, entity_type, entity_subtype }] }
+// 임베딩 원문 = name + description(identity.description, search_text 구성
+// 요소와 동일 계열) + tags 조합 — 호출부(인덱싱 스크립트/자동 훅)가 무엇을
+// 넣을지 결정하고, 이 함수는 그대로 임베딩해 upsert만 한다(benefit 버전과
+// 동일 책임 분리).
+async function handleEntityEmbedIndex(request, env, corsHeaders) {
+  if (!env.AI) return new Response(JSON.stringify({ error: 'AI 바인딩 없음 — wrangler.toml [ai] 확인' }), { status: 500, headers: corsHeaders });
+  if (!env.VECTORIZE_ENTITIES) return new Response(JSON.stringify({ error: 'VECTORIZE_ENTITIES 바인딩 없음 — wrangler.toml [[vectorize]] 확인, 인덱스 사전 생성 필요' }), { status: 500, headers: corsHeaders });
+
+  let body;
+  try { body = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  const records = body.records;
+  if (!Array.isArray(records) || records.length === 0) {
+    return new Response(JSON.stringify({ error: 'records(배열) 필요' }), { status: 400, headers: corsHeaders });
+  }
+  if (records.length > 100) {
+    // Workers AI 배치 한도 보호 — benefit 쪽과 동일 원칙. 전국 gov-tree
+    // 백필(설계항목 5)은 호출부가 100건 단위로 쪼개서 여러 번 호출한다.
+    return new Response(JSON.stringify({ error: '한 번에 최대 100건 — 호출부에서 배치 분할 필요' }), { status: 400, headers: corsHeaders });
+  }
+  for (const r of records) {
+    if (!r.guid || !r.name) {
+      return new Response(JSON.stringify({ error: '각 record는 guid·name 필수' }), { status: 400, headers: corsHeaders });
+    }
+  }
+
+  const buildText = (r) => {
+    const tagsText = Array.isArray(r.tags) ? r.tags.join(' ') : (r.tags || '');
+    return [r.name, r.description || '', tagsText].filter(Boolean).join(' — ');
+  };
+
+  let vectors;
+  try {
+    vectors = await _embedText(env, records.map(buildText));
+  } catch (e) {
+    return new Response(JSON.stringify({ error: `임베딩 생성 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
+  }
+
+  // guid를 Vectorize record id로 쓴다 — profiles의 기본키와 그대로
+  // 일치시켜, 검색 결과에서 바로 프로필 전체 레코드를 조회할 수 있게 한다.
+  const upsertPayload = records.map((r, i) => ({
+    id: r.guid,
+    values: vectors[i],
+    metadata: {
+      entity_type: r.entity_type || null,
+      entity_subtype: r.entity_subtype || null,
+      name: r.name, // 디버그·로그용, 검색 자체는 벡터로 함
+    },
+  }));
+
+  try {
+    await env.VECTORIZE_ENTITIES.upsert(upsertPayload);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: `Vectorize upsert 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
+  }
+
+  return new Response(JSON.stringify({ status: 'indexed', count: upsertPayload.length }), { headers: corsHeaders });
+}
+
+// GET /entity-semantic-search?query=...&etype=...&entity_subtype=...&limit=20
+// query는 자연어 문장 그대로(키워드 쪼개기 금지 — benefit 쪽 설계 원칙
+// 그대로 계승, STEP0-DISCOVER v1.9와 동일 정신). etype/entity_subtype은
+// 의미검색이 필요 없는 부분이라 Vectorize filter로 정확일치 유지한다.
+async function handleEntitySemanticSearch(request, env, corsHeaders) {
+  if (!env.AI) return new Response(JSON.stringify({ error: 'AI 바인딩 없음' }), { status: 500, headers: corsHeaders });
+  if (!env.VECTORIZE_ENTITIES) return new Response(JSON.stringify({ error: 'VECTORIZE_ENTITIES 바인딩 없음' }), { status: 500, headers: corsHeaders });
+
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get('query');
+  const etype = searchParams.get('etype');
+  const entitySubtype = searchParams.get('entity_subtype');
+  let limit = parseInt(searchParams.get('limit') || '20', 10);
+  if (!Number.isFinite(limit) || limit <= 0) limit = 20;
+  limit = Math.min(limit, 50);
+
+  if (!query || query.trim().length === 0) {
+    return new Response(JSON.stringify({ error: 'query 필요(자연어 문장 그대로 — 키워드로 쪼개서 보내지 않는다)' }), { status: 400, headers: corsHeaders });
+  }
+
+  let vectors;
+  try {
+    vectors = await _embedText(env, [query]);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: `쿼리 임베딩 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
+  }
+
+  const filter = {};
+  if (etype) filter.entity_type = etype;
+  if (entitySubtype) filter.entity_subtype = entitySubtype;
+
+  let matches;
+  try {
+    const result = await env.VECTORIZE_ENTITIES.query(vectors[0], {
+      topK: limit,
+      filter: Object.keys(filter).length ? filter : undefined,
+      returnMetadata: 'all',
+    });
+    matches = result.matches || [];
+  } catch (e) {
+    return new Response(JSON.stringify({ error: `Vectorize 조회 실패: ${e.message}` }), { status: 502, headers: corsHeaders });
+  }
+
+  if (matches.length === 0) {
+    return new Response(JSON.stringify({ status: 'not_found', count: 0, candidates: [] }), { headers: corsHeaders });
+  }
+
+  // Vectorize 메타데이터는 name·entity_type 정도만 갖고 있다(크기 제한 —
+  // benefit 쪽과 동일 이유) — 매칭된 guid로 profiles에서 전체 레코드를
+  // 조회한다(topK개만이라 가볍다). _l1SearchEntities와 동일하게
+  // field_visibility 필터링을 거친다 — 검색 경로가 달라졌다고 해서
+  // 비공개 필드 노출 규칙이 느슨해지면 안 된다.
+  const token = await _l1AdminToken(env);
+  const candidates = [];
+  for (const m of matches) {
+    try {
+      const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records/${encodeURIComponent(m.id)}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) continue; // 인덱스엔 있는데 profiles에서 삭제된 경우 — 건너뛴다(죽은 참조 방치 금지, 조용히 무시만 함)
+      const p = await res.json().catch(() => null);
+      if (!p) continue;
+      const filtered = _filterProfileByVisibility({
+        address: p.address,
+        phone: p.extra?.core?.phone ?? null,
+        website: p.extra?.core?.website ?? null,
+        extra: p.extra,
+      });
+      candidates.push({
+        guid: p.guid, name: p.name, handle: p.handle, entity_type: p.entity_type,
+        occupation: p.occupation, address: filtered.address, phone: filtered.phone,
+        website: filtered.website, extra: filtered.extra,
+        score: m.score, // ★ LIKE 시절 rank 대신 유사도 점수 — 호출부(K-Compose/
+        // K-Execute)가 이 점수로 확신도를 판단한다(임계값은 benefit 쪽과
+        // 동일하게 실사용 데이터로 재검증 전까지 잠정치).
+      });
+    } catch (e) {
+      continue; // 개별 레코드 조회 실패는 그 후보만 건너뛴다 — 전체를 죽이지 않는다.
+    }
+  }
+
+  return new Response(JSON.stringify({
+    status: candidates.length ? 'matched_list' : 'not_found',
+    count: candidates.length,
+    candidates,
+  }), { headers: corsHeaders });
+}
+
 async function handleProcedureMapDraft(request, env, corsHeaders) {
   let payload;
   try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
@@ -7994,6 +8170,14 @@ export default {
       return handleBenefitSemanticSearch(request, env, corsHeaders);
     if (pathname === '/orchestration/benefit-embed-index' && request.method === 'POST')
       return handleBenefitEmbedIndex(request, env, corsHeaders);
+    // 2026-08-04 신설 — 기관·부서·개인 엔티티 의미검색(HANDOFF_2026-08-03_PM.md
+    // §3-2). benefit-semantic-search와 같은 패턴, 별도 Vectorize 인덱스
+    // (VECTORIZE_ENTITIES). 기존 POST /search(handleSearch, LIKE 기반)는
+    // 비상 폴백으로 그대로 둔다 — 호출부(call-ai.js) 전환은 별도 작업.
+    if (pathname === '/entity-semantic-search' && request.method === 'GET')
+      return handleEntitySemanticSearch(request, env, corsHeaders);
+    if (pathname === '/orchestration/entity-embed-index' && request.method === 'POST')
+      return handleEntityEmbedIndex(request, env, corsHeaders);
     if (pathname === '/orchestration/procedure-map/draft' && request.method === 'POST')
       return handleProcedureMapDraft(request, env, corsHeaders);
     if (pathname === '/orchestration/procedure-map/update' && request.method === 'POST')
