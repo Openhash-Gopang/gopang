@@ -1443,7 +1443,9 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
     await _forwardSwitchSP(_loadAgentCommonSP, 'AGENT-COMMON');
     const payload = kSearchResultMatch ? kSearchResultMatch[1].trim()
       : `reason=${kSearchHandoffBackMatch[1]}`;
-    await sendFn(`[INTERNAL: K-Search 결과 수신 — §0-F에 따라 처리하세요: ${payload}]`);
+    await sendFn(`[INTERNAL: K-Search 결과 수신 — §TAGS의 [KSEARCH_HANDOFF] 항목에 ` +
+      `정리된 결과 처리 지침(institution/person/matched_list/not_found/insufficient별 ` +
+      `분기)에 따라 처리하세요: ${payload}]`);
     return true;
   }
   // [KSEARCH_CLARIFY]/[KSEARCH_CANDIDATES]는 여기서 가로채지 않는다 —
