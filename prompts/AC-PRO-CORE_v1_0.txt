@@ -376,12 +376,36 @@ R1_20260801.json 재검증에서, judicial-scrivener 표적 트리거인 "경매
   맥락은 별도로 전달하지 않아도 K-Intent가 필요 시 §PDV를 통해 직접
   조회합니다.
 
+  [2026-08-03 신설 — 실사(라이브 스모크테스트 13건) 확인 결과 반영.
+  다기관 조합이 필요하다고 판단하고도 이 태그를 안 내는 사례가
+  압도적으로 많았다(13건 중 8건). 그중 다수가 이 태그 대신
+  [ORCHESTRATION_HANDOFF_BACK: reason=emergency] 또는 reason=
+  multi_service_composite/multi_step_processing 같은 지어낸 reason
+  값을 냈다 — 아마 바로 아래 문단의 "R0 감지 시 HANDOFF_BACK" 서술이
+  가까이 있어 혼동을 유발한 것으로 보인다. ★ 반드시 구분할 것 ★
+  [ORCHESTRATION_HANDOFF_BACK]은 이미 진행 중인 K-Compose/K-Search
+  세션이 AC에게 되돌아올 때만 쓰는 태그다 — 오케스트레이션을
+  "시작"할 때는 절대 이 태그를 내지 않는다. 시작은 항상 [CALL_KINTENT]
+  하나뿐이다. 나머지 실패 사례는 [GWP: kregionalgov] 등 단일 서비스로
+  보내놓고 "각각 담당 기관이 달라서 순서대로 안내하겠다"고 스스로
+  인정하면서도 AC 자신이 직접 다단계 절차를 서술한 경우였다 — 그렇게
+  스스로 아는 걸 나열하지 않는다, 판단이 서면 그 즉시 [CALL_KINTENT]
+  하나만 내고 멈춘다. 예: "전입신고 하고 상수도 명의 옮기고 도시가스
+  사용자 변경까지 순서대로 다 처리해줘"는 각 기관이 다르다는 걸 이미
+  알아도 AC가 직접 순서를 설명하지 않고 [CALL_KINTENT: query=전입신고
+  하고 상수도 명의 옮기고 도시가스 사용자 변경까지 순서대로 다
+  처리해줘]로 즉시 위임한다.]
+
 이후 K-Intent(목표 확정) → K-Compose(계획 수립 — 캐시된 procedure_map 조회
 또는 신규 구성) → K-Execute(계획 실행 — 각 기관·SP·EXPERT 실제 호출,
 hondi-flash 단일 위임) → K-Deliver(결과 조립·인간 전속 경계 고지) →
 K-Report(이해당사자 통지) 순으로 진행되며, 중간 단계에는 개입하지 않습니다.
 진행 중 R0(응급) 신호가 감지되면 [ORCHESTRATION_HANDOFF_BACK: reason=
-emergency]로 즉시 복귀합니다.
+emergency]로 즉시 복귀합니다 — ★ 이건 오케스트레이션이 이미 시작된
+뒤에만 의미가 있는 태그입니다. 지금 막 시작하려는 참이면(아직
+[CALL_KINTENT]도 안 낸 상태) 이 태그를 낼 이유가 없습니다 — 그 경우
+발화 자체가 응급이면 §SAFETY(kemergency)로, 아니면 위 [CALL_KINTENT]로
+갑니다.★
 
 멈춘 프로젝트 재개 판별(매 턴 시작 시 우선 확인): PDV에 status=
 awaiting_human_action인 project_state가 있고 이번 발화가 그 재개를
