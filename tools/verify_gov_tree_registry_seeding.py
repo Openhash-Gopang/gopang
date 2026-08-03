@@ -61,6 +61,23 @@ def _search(worker_base, query, timeout=15):
         return json.loads(resp.read().decode("utf-8"))
 
 
+def _identity(entity):
+    """검색 결과 entity에서 extra.public.identity를 안전하게 꺼낸다.
+
+    ★ 2026-08-03 정정 — 최초 버전은 entity.get('entity_subtype')/
+    entity.get('tags')로 톱레벨에서 찾았으나, worker.js의
+    _l1SearchEntities()/_filterProfileByVisibility()를 직접 읽어보니
+    실제 응답 구조는 entity.extra.public.identity.entity_subtype /
+    .tags다(1차 실행에서 전부 MISSING으로 나온 원인 — 필드 경로 자체가
+    틀렸었다). identity 객체는 description 필드만 field_visibility에
+    따라 선택적으로 지워지고, entity_subtype/tags/display_name은
+    그대로 남는다(_filterProfileByVisibility 확인).
+    """
+    extra = entity.get("extra") or {}
+    public = extra.get("public") or {}
+    return public.get("identity") or {}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--worker-base", default="https://hondi-proxy.tensor-city.workers.dev",
@@ -79,28 +96,52 @@ def main():
 
     print(f"검증 대상 {len(records)}건 — worker_base={args.worker_base}\n")
 
-    found, missing, errored = [], [], []
+    found, name_match, missing, errored = [], [], [], []
     for i, rec in enumerate(records):
         try:
-            results = _search(args.worker_base, rec["name"])
-            match = next(
-                (e for e in results
-                 if e.get("entity_type") == "institution"
-                 and (e.get("entity_subtype") == rec["gov_code"]
-                      or rec["gov_code"] in (e.get("tags") or [])
-                      or rec["code"] in (e.get("tags") or []))),
-                None,
-            )
+            try:
+                results = _search(args.worker_base, rec["name"])
+            except (urllib.error.URLError, TimeoutError) as e:
+                # ★ 2026-08-03 추가 — 실사용에서 앞쪽 2~3건이 타임아웃(콜드
+                # 스타트로 추정)되는 게 확인돼 1회 재시도를 넣는다.
+                print(f"  [RETRY] {rec['code']} — 1차 실패({e}), 재시도 중...", file=sys.stderr)
+                time.sleep(2.0)
+                results = _search(args.worker_base, rec["name"], timeout=25)
+            match = None
+            for e in results:
+                if e.get("entity_type") != "institution":
+                    continue
+                ident = _identity(e)
+                subtype = ident.get("entity_subtype")
+                etags = ident.get("tags") or []
+                if subtype == rec["gov_code"] or rec["gov_code"] in etags or rec["code"] in etags:
+                    match = e
+                    break
             if match:
                 found.append({"code": rec["code"], "name": rec["name"],
                                "guid": match.get("primary_guid") or match.get("guid")})
                 print(f"  [FOUND] {rec['code']} ({rec['name']}) → "
                       f"{match.get('primary_guid') or match.get('guid')}")
             else:
-                missing.append({"code": rec["code"], "name": rec["name"],
-                                 "result_count": len(results)})
-                print(f"  [MISSING] {rec['code']} ({rec['name']}) — "
-                      f"검색결과 {len(results)}건 중 매칭 없음")
+                # entity_subtype 매칭은 실패했지만, 이름이 정확히 일치하는
+                # institution이 있으면 "이름은 있는데 subtype 태그가 없다"는
+                # 별도 상태로 구분해 보고한다(완전 MISSING과 헷갈리지 않도록).
+                name_only = next(
+                    (e for e in results
+                     if e.get("entity_type") == "institution" and e.get("name") == rec["name"]),
+                    None,
+                )
+                if name_only:
+                    name_match.append({"code": rec["code"], "name": rec["name"],
+                                        "guid": name_only.get("primary_guid") or name_only.get("guid")})
+                    print(f"  [NAME-ONLY] {rec['code']} ({rec['name']}) → "
+                          f"이름은 일치하나 entity_subtype 태그 불일치/누락 "
+                          f"({name_only.get('primary_guid') or name_only.get('guid')})")
+                else:
+                    missing.append({"code": rec["code"], "name": rec["name"],
+                                     "result_count": len(results)})
+                    print(f"  [MISSING] {rec['code']} ({rec['name']}) — "
+                          f"검색결과 {len(results)}건 중 매칭 없음")
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", errors="replace")
             errored.append({"code": rec["code"], "error": f"HTTP {e.code}: {body[:200]}"})
@@ -111,8 +152,8 @@ def main():
         if i < len(records) - 1:
             time.sleep(args.sleep)
 
-    print(f"\n합계 — found={len(found)} / missing={len(missing)} / error={len(errored)} "
-          f"(대상 {len(records)}건)")
+    print(f"\n합계 — found={len(found)} / name_only(태그 불일치)={len(name_match)} / "
+          f"missing={len(missing)} / error={len(errored)} (대상 {len(records)}건)")
 
     VERIFY_LOG.parent.mkdir(parents=True, exist_ok=True)
     import datetime
@@ -120,15 +161,19 @@ def main():
         f.write("# GOV-TREE-REGISTRY-SEEDING-VERIFY_2026-08-03.md\n\n")
         f.write(f"실행 시각: {datetime.datetime.now().isoformat(timespec='seconds')}\n")
         f.write(f"worker_base: {args.worker_base}\n\n")
-        f.write(f"found={len(found)} / missing={len(missing)} / error={len(errored)} "
-                f"(대상 {len(records)}건)\n\n")
-        f.write("## FOUND(정상 등록 확인됨)\n")
+        f.write(f"found={len(found)} / name_only={len(name_match)} / "
+                f"missing={len(missing)} / error={len(errored)} (대상 {len(records)}건)\n\n")
+        f.write("## FOUND(entity_subtype 태그까지 정상 등록 확인됨)\n")
         for r in found:
             f.write(f"- {r['code']} ({r['name']}) → {r['guid']}\n")
-        f.write("\n## MISSING(검색해도 안 나옴 — 재시딩 필요 가능성)\n")
+        f.write("\n## NAME-ONLY(이름은 검색되나 entity_subtype 태그 불일치/누락 — "
+                 "[GWP:] 자동 연결 안 될 가능성)\n")
+        for r in name_match:
+            f.write(f"- {r['code']} ({r['name']}) → {r['guid']}\n")
+        f.write("\n## MISSING(검색해도 이름조차 안 나옴 — 재시딩 필요 가능성)\n")
         for r in missing:
             f.write(f"- {r['code']} ({r['name']}) — 검색결과 {r['result_count']}건 중 매칭 없음\n")
-        f.write("\n## ERROR(네트워크/서버 오류로 확인 불가)\n")
+        f.write("\n## ERROR(네트워크/서버 오류로 확인 불가 — 재시도 필요)\n")
         for r in errored:
             f.write(f"- {r['code']}: {r['error']}\n")
     print(f"\n로그 기록: {VERIFY_LOG}")
@@ -139,6 +184,10 @@ def main():
         print(f"\n[안내] MISSING {len(missing)}건은 다음으로 재시딩할 수 있습니다:")
         codes = ",".join(r["code"] for r in missing)
         print(f"  python3 tools/seed_gov_tree_registry.py --apply --only {codes}")
+    if errored:
+        print(f"\n[안내] ERROR {len(errored)}건은 타임아웃/일시 오류일 수 있으니 재실행 권장:")
+        codes = ",".join(r["code"] for r in errored)
+        print(f"  python3 tools/verify_gov_tree_registry_seeding.py --only {codes}")
 
 
 if __name__ == "__main__":
