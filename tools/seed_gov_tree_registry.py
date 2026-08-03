@@ -136,6 +136,14 @@ def main():
     ap.add_argument("--worker-base", default=os.environ.get("WORKER_BASE", "https://hondi-proxy.tensor-city.workers.dev"))
     ap.add_argument("--only-active", action="store_true",
                      help="status=pending_review(역할서술 공백 31개 추정) 건은 건너뛰기")
+    # ★ 2026-08-03 추가 — 이 스크립트는 멱등성이 없다(기존 레코드 조회
+    # 없이 매번 새 unclaimed 프로필을 POST한다). --apply 전체 재실행은
+    # 이미 성공한 건들을 전부 중복 생성시킨다. 부분 실패(예: 네트워크
+    # 타임아웃 1건) 재시도를 안전하게 하려면 반드시 이 필터로 실패한
+    # code만 좁혀서 재실행할 것 — 절대로 --only 없이 전체를 다시 돌리지
+    # 말 것.
+    ap.add_argument("--only", default="", metavar="CODE1,CODE2,...",
+                     help="쉼표구분 code 목록만 재시도(중복 생성 방지). 예: --only ACRC")
     args = ap.parse_args()
 
     records = collect_records()
@@ -146,6 +154,12 @@ def main():
           f"pending_review(역할서술 공백 추정) {len(pending)}건")
 
     to_send = active if args.only_active else records
+    if args.only:
+        wanted = {c.strip().upper() for c in args.only.split(",") if c.strip()}
+        to_send = [r for r in to_send if r["code"] in wanted]
+        missing = wanted - {r["code"] for r in to_send}
+        if missing:
+            print(f"[경고] --only에 지정했지만 목록에 없는 code: {sorted(missing)}", file=sys.stderr)
     if not args.apply:
         print("\n[DRY-RUN] --apply 없이 실행됨 — 실제 등록 없음. 아래는 전송될 내용 미리보기:")
         for r in to_send[:5]:
@@ -185,8 +199,17 @@ def main():
             print(f"  [FAIL] {rec['code']} — {e}", file=sys.stderr)
 
     RUN_LOG.parent.mkdir(parents=True, exist_ok=True)
-    with open(RUN_LOG, "w", encoding="utf-8") as f:
-        f.write("# GOV-TREE-REGISTRY-SEEDING-RUN_2026-08-03.md\n\n")
+    # ★ 2026-08-03 수정 — 기존엔 "w"(덮어쓰기)라, --only로 실패건만
+    # 재시도하면 앞선 69건 성공 기록이 통째로 사라졌다. 로그가 이미
+    # 있으면 이어붙인다(런마다 구분선+타임스탬프로 분리).
+    import datetime
+    is_rerun = RUN_LOG.exists()
+    with open(RUN_LOG, "a" if is_rerun else "w", encoding="utf-8") as f:
+        if is_rerun:
+            f.write(f"\n\n---\n\n## 재실행 {datetime.datetime.now().isoformat(timespec='seconds')}"
+                    f"{' (--only=' + args.only + ')' if args.only else ''}\n\n")
+        else:
+            f.write("# GOV-TREE-REGISTRY-SEEDING-RUN_2026-08-03.md\n\n")
         f.write(f"성공 {len(results['success'])}건 / 실패 {len(results['failed'])}건 "
                 f"(전체 대상 {len(to_send)}건, only_active={args.only_active})\n\n")
         f.write("## 성공\n")
