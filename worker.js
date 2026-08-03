@@ -4568,10 +4568,24 @@ async function handleBenefitSemanticSearch(request, env, corsHeaders) {
 
 // POST /orchestration/entity-embed-index
 // body: { records: [{ guid, name, description, tags, entity_type, entity_subtype }] }
-// 임베딩 원문 = name + description(identity.description, search_text 구성
-// 요소와 동일 계열) + tags 조합 — 호출부(인덱싱 스크립트/자동 훅)가 무엇을
-// 넣을지 결정하고, 이 함수는 그대로 임베딩해 upsert만 한다(benefit 버전과
-// 동일 책임 분리).
+// 임베딩 원문 = name + description + tags 조합 — 호출부(인덱싱 스크립트/
+// 자동 훅)가 무엇을 넣을지 결정하고, 이 함수는 그대로 임베딩해 upsert만
+// 한다(benefit 버전과 동일 책임 분리).
+// [2026-08-04 정정 — 원래 여기 "description=identity.description"이라고
+// 적혀 있었는데, 실사 파일럿(jeju 29건)으로 그게 틀렸다는 게 드러났다:
+// identity.description은 field_visibility.description이 명시적 true가
+// 아니면 _filterProfileByVisibility가 항상 지운다(개인정보 보호 기본값
+// — 기관에는 안 맞지만 별도 정책 결정 필요, 아직 미해결). 공개 검색
+// 경로로는 사실상 항상 빈 문자열이 들어갔고, 이름만으로 임베딩되다
+// 보니 "소통청렴담당관"·"기획조정실"·"대변인"처럼 이름 자체가 범용적인
+// 기관이 모든 쿼리에서 상위권을 휩쓰는 현상이 실제로 확인됐다(WRONG-
+// MATCH 4/29). description 자리에 **search_text**(_l1UpsertProfile이
+// 이미 계산해 저장하는 name+handle+description+occupation+tags 조합,
+// 필터링을 안 거침)를 넣었더니 TOP1 정확도 37.9%→75.9%, WRONG-MATCH
+// 4건→0건으로 개선 확인. 이 파라미터 이름은 여전히 "description"이지만
+// (엔드포인트 계약을 안 바꾸려고), 실제로는 search_text 내용을 넣을 것
+// — 아래 _l1UpsertProfile의 자동 인덱싱 훅도 이 교훈을 반영해 처음부터
+// search_text를 쓴다.]
 async function handleEntityEmbedIndex(request, env, corsHeaders) {
   if (!env.AI) return new Response(JSON.stringify({ error: 'AI 바인딩 없음 — wrangler.toml [ai] 확인' }), { status: 500, headers: corsHeaders });
   if (!env.VECTORIZE_ENTITIES) return new Response(JSON.stringify({ error: 'VECTORIZE_ENTITIES 바인딩 없음 — wrangler.toml [[vectorize]] 확인, 인덱스 사전 생성 필요' }), { status: 500, headers: corsHeaders });
@@ -7149,18 +7163,50 @@ async function _l1UpsertProfile(env, { guid, handle, entityType, nativeLang, isP
   };
 
   const existing = await _l1FindProfileByGuid(env, guid).catch(() => null);
+  let saved;
   if (existing?.id) {
     const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records/${existing.id}`, {
       method: 'PATCH', headers, body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error(`L1 profiles PATCH 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
-    return res.json();
+    saved = await res.json();
+  } else {
+    const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records`, {
+      method: 'POST', headers, body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`L1 profiles POST 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
+    saved = await res.json();
   }
-  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records`, {
-    method: 'POST', headers, body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`L1 profiles POST 실패 (HTTP ${res.status}): ${await res.text().catch(() => '')}`);
-  return res.json();
+
+  // [2026-08-04 신설 — §3-2 설계항목4, HANDOFF_2026-08-03_PM.md. 신규
+  // 프로필 생성 시 자동 인덱싱이 없으면 향후 생성되는 모든 프로필이
+  // 검색 안 되는 상태로 방치된다는 게 오늘 반복 발견된 패턴("마스터
+  // 데이터가 실제 파일보다 뒤처진다")과 똑같은 구조적 함정이라 반드시
+  // 자동화하기로 함. 원래 설계는 "임베딩 원문 = name+description+tags"
+  // 였는데, 오늘 파일럿 검증으로 description은 field_visibility 기본
+  // 비공개라 공개 경로로는 항상 비어있다는 게 드러났다 — 바로 위에서
+  // 이미 계산해둔 search_text(name+handle+description+occupation+tags
+  // 조합, 필터링 안 거침)를 그대로 재사용한다. 실패해도 프로필 저장
+  // 자체는 막지 않는다(그레이스풀 디그레이드 — Workers AI/Vectorize
+  // 장애가 프로필 생성 기능 전체를 막으면 안 된다).]
+  if (env.AI && env.VECTORIZE_ENTITIES && body.search_text) {
+    try {
+      const vectors = await _embedText(env, [body.search_text]);
+      await env.VECTORIZE_ENTITIES.upsert([{
+        id: guid,
+        values: vectors[0],
+        metadata: {
+          entity_type: entityType || null,
+          entity_subtype: identity.entity_subtype || null,
+          name: c.name || null,
+        },
+      }]);
+    } catch (e) {
+      console.warn('[EntitySemanticSearch] 자동 인덱싱 실패(프로필 저장은 정상 완료):', e.message);
+    }
+  }
+
+  return saved;
 }
 
 // L1 profiles 중 push_subscription이 설정된 전체 레코드 조회 (배포 브로드캐스트용, 페이지네이션)
