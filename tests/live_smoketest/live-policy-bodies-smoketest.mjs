@@ -13,34 +13,22 @@
  * LLM 폴백이 필요 없으므로(코드 주석 "classifyFn 유무와 무관하게 즉시
  * 판단") 전부 useLLM=false.
  *
- * ⚠️ 실행 전 반드시 읽을 것 — 이 파일을 작성하며 발견한 구조적 버그:
+ * ── 2026-08-03 발견·수정한 구조적 버그 (참고용 이력) ──
  *
  * 70개 중 7개(NTS·KCS·POLICE·MMA·KCG·PPS·PROSECUTION)는 policy-bodies
  * (본청)와 09-national/agencies(지사형 집행기관) 양쪽에 동시에 존재하고,
  * gov-router.js의 우선순위 가드가 "두 사전이 동시 매칭되면 지사가
- * 우선"하도록 설계돼 있다(§3410 주석 — 실행형 민원은 관할 지사가 처리
- * 하는 게 맞다는 의도적 설계).
+ * 우선"하도록 설계돼 있다(실행형 민원은 관할 지사가 처리하는 게 맞다는
+ * 의도적 설계).
  *
- * 문제는 이 중 5개(NTS/KCS/MMA/PPS/PROSECUTION)는 _POLICY_BODY_DOMAIN_
- * KEYWORDS에 등록된 키워드 **전부**가 _NAT_AGENCY_DOMAIN_KEYWORDS와
- * 부분 문자열로 겹친다는 것 — 즉 설계 의도(가끔 겹칠 때만 지사 우선)와
- * 달리, 이 5개는 "정책기관 키워드를 쓰면 무조건 지사로 새버린다"는
- * 뜻이라 텍스트 매칭으로는 정책기관(본청) SP에 영원히 도달할 수 없다.
- * (POLICE·KCG는 키워드 일부만 겹치고 일부는 안전해서 부분적으로는
- * 작동한다.)
- *
- *   NTS 예: '종합소득세 신고'(정책기관 키워드)는 '소득세'를 부분
- *           포함 → tax 지사 키워드에도 걸림 → 지사가 항상 우선
- *   KCS 예: '수입물품 통관 신고' → '통관' 포함 → customs 지사 키워드 → 지사 우선
- *   MMA 예: '병무청 본청' → '병무청' 포함 → mma 지사 키워드 → 지사 우선
- *   PPS 예: '조달청'/'나라장터' → 지사 사전과 완전히 동일한 키워드
- *   PROSECUTION 예: '검찰청'/'고소장 접수' → '검찰청'·'고소장' 모두 지사 키워드
- *
- * 이 5개는 아래 시나리오에서 expectation을 'review'로 표시하고 이유를
- * 주석으로 남겼다 — FAIL로 뜨는 게 이 스크립트나 시나리오의 오류가
- * 아니라 이미 알려진(그리고 아직 안 고쳐진) 라우팅 설계상 도달 불가
- * 상태라는 뜻이다. POLICE·KCG는 지사와 안 겹치는 안전한 키워드로
- * 대체해서 정상 PASS를 기대하도록 작성했다.
+ * 이 시나리오 파일을 처음 작성할 때는 이 중 5개(NTS/KCS/MMA/PPS/
+ * PROSECUTION)의 _POLICY_BODY_DOMAIN_KEYWORDS 키워드 전부가
+ * _NAT_AGENCY_DOMAIN_KEYWORDS와 부분 문자열로 겹쳐서, 텍스트 매칭으로는
+ * 본청 SP에 영원히 도달할 수 없는 상태였다(혼디 제1원칙 — K-Search로
+ * 기관을 정확히 특정해 호출 — 위반). gov-router.js에 지사와 겹치지 않는
+ * 진짜 정책·본청 수준 키워드를 5개 코드 각각에 추가해 해결했다 —
+ * 아래 시나리오들은 그 새 키워드를 사용하며 정상 PASS를 기대한다.
+ * POLICE·KCG는 원래부터 키워드 일부가 안전했어서 그것만 사용했다.
  *
  * 실행 (실제 네트워크가 열려있는 환경에서, 리포 루트 기준):
  *   node tests/live_smoketest/live-policy-bodies-smoketest.mjs
@@ -60,11 +48,10 @@ const SCENARIOS = [
   ['고용노동부', '회사에서 월급을 안 줘서 임금체불 진정을 넣고 싶습니다', false, 'contains:SP-POLICY-LAZY(MOEL'],
   ['보건복지부', '기초생활수급자 신청은 어떻게 하나요', false, 'contains:SP-POLICY-LAZY(MOHW'],
 
-  // ★ NTS — 정책기관 키워드 4개 전부 tax 지사 키워드와 겹침(위 설명 참조).
-  // 이 발화는 항상 지사(SP-NAT-TAX)로 갈 것으로 예상 — review로 표시.
-  ['국세청(알려진 이슈)', '홈택스로 종합소득세 신고하는 방법 알려주세요', false, 'review'],
-  // ★ KCS — 마찬가지, customs 지사와 전부 겹침.
-  ['관세청(알려진 이슈)', '해외직구 물품 수입물품 통관 신고는 어떻게 하나요', false, 'review'],
+  // ★ NTS/KCS — 2026-08-03 수정으로 지사와 안 겹치는 새 정책 키워드
+  // 추가됨(gov-router.js 참조) → 이제 정상 PASS 기대.
+  ['국세청', '세법 해석 사전답변 신청 절차가 궁금합니다', false, 'contains:SP-POLICY-LAZY(NTS'],
+  ['관세청', '품목분류 사전심사 신청은 어떻게 하나요', false, 'contains:SP-POLICY-LAZY(KCS'],
 
   ['국민권익위원회', '공무원 비리를 국민신문고에 신고하고 싶어요', false, 'contains:SP-POLICY-LAZY(ACRC'],
   ['감사원', '공익감사청구서를 접수하고 싶습니다', false, 'contains:SP-POLICY-LAZY(BAI'],
@@ -101,9 +88,8 @@ const SCENARIOS = [
   // 정책기관 키워드('차량 도난 신고')만 사용 → 정상 PASS 기대.
   ['경찰청', '제 차가 도난당해서 차량 도난 신고하려고 합니다', false, 'contains:SP-POLICY-LAZY(POLICE'],
 
-  // ★ MMA — '병무청 본청' 자체가 '병무청'을 부분 포함해 mma 지사 키워드와
-  // 겹침 → 항상 지사로 감. review.
-  ['병무청(알려진 이슈)', '병무청 본청에 병역 관련 정책 문의를 드리고 싶습니다', false, 'review'],
+  // ★ MMA — 2026-08-03 수정으로 새 정책 키워드 추가됨 → 정상 PASS 기대.
+  ['병무청', '병무행정 제도 개선 건의를 하고 싶습니다', false, 'contains:SP-POLICY-LAZY(MMA'],
 
   ['기후에너지환경부', '공장에서 대기오염물질 배출 관련 문의드립니다', false, 'contains:SP-POLICY-LAZY(MOCEE'],
   ['방송미디어통신위원회', '홈쇼핑 광고 신고하고 싶어요', false, 'contains:SP-POLICY-LAZY(BMTC'],
@@ -123,15 +109,13 @@ const SCENARIOS = [
 
   ['재외동포청', '재외동포체류자격 등록하려고 합니다', false, 'contains:SP-POLICY-LAZY(OKA'],
 
-  // ★ PPS — 정책기관 키워드('조달청','나라장터') 둘 다 지사 사전과 완전히
-  // 동일 → 항상 지사로 감. review.
-  ['조달청(알려진 이슈)', '나라장터에 입찰 등록하려고 하는데요', false, 'review'],
+  // ★ PPS — 2026-08-03 수정으로 새 정책 키워드 추가됨 → 정상 PASS 기대.
+  ['조달청', '공공조달 정책 개선 건의를 하고 싶습니다', false, 'contains:SP-POLICY-LAZY(PPS'],
 
   ['대통령비서실', '국민제안 올리고 싶은데 어떻게 하나요', false, 'contains:SP-POLICY-LAZY(PRESOFFICE'],
 
-  // ★ PROSECUTION — '검찰청'·'고소장 접수' 둘 다 지사(prosecution/police)
-  // 키워드와 겹침 → 항상 지사로 감. review.
-  ['검찰청(알려진 이슈)', '고소장 접수하려고 합니다', false, 'review'],
+  // ★ PROSECUTION — 2026-08-03 수정으로 새 정책 키워드 추가됨 → 정상 PASS 기대.
+  ['검찰청', '범죄피해자 보호정책 건의를 하고 싶습니다', false, 'contains:SP-POLICY-LAZY(PROSECUTION'],
 
   ['국가안보실', '안보 정책 건의서를 제출하고 싶습니다', false, 'contains:SP-POLICY-LAZY(NSC'],
   ['국무조정실', '규제개선 건의를 하고 싶어요', false, 'contains:SP-POLICY-LAZY(OPC'],
@@ -179,6 +163,6 @@ for (const [label, text, useLLM, expectation] of SCENARIOS) {
 
 console.log(`\n${'='.repeat(50)}`);
 console.log(`결과: PASS ${pass} / FAIL ${fail} / REVIEW ${review} (총 ${SCENARIOS.length})`);
-console.log(`(REVIEW ${review}건은 §NTS/KCS/MMA/PPS/PROSECUTION 키워드 충돌로 인한 ` +
-            `알려진 라우팅 미도달 상태 — 이 스크립트의 결함이 아님, 파일 상단 설명 참조)`);
+console.log(`(70개 전부 정상 PASS를 기대함 — NTS/KCS/MMA/PPS/PROSECUTION 키워드 충돌은 ` +
+            `2026-08-03에 수정 완료. REVIEW/FAIL이 나오면 회귀이니 확인 필요)`);
 process.exit(fail > 0 ? 1 : 0);
