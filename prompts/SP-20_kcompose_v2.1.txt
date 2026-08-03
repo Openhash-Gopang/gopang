@@ -368,7 +368,10 @@ STEP P — 프로젝트형 실행계획 수립 (v2.0 재설계, mode=project 전
       해당하지 않는다 — 그 금지는 개인 감시성 벌크조회를 막기 위한
       것이고, 여기는 공개된 기관·사업자 등록 정보 조회다. 결과에
       개별 담당자 연락처 등 사생활 정보가 섞이면 그 부분만 최소필요
-      원칙 적용.
+      원칙 적용. [2026-08-04 명확화 — 이것도 STEP 1-B와 같은 이유로
+      RULE-09의 "실행 단계 이관" 원칙의 예외다: fan_out_targets를
+      모르면 P-3의 execution_plan 자체를 쓸 수 없으므로, 이건 계획을
+      세우기 위한 전제조건 확인이지 실행이 아니다.]
     - **목록을 모르고, 대상이 개인(입주민·조합원·직원 등)인 경우**:
       K-Search에 위임하지 않는다 — 이용자에게 직접 명단을 요청한다.
 
@@ -442,7 +445,13 @@ STEP 1-B — 최초 조사 (캐시 미스일 때만)
   일반 지식으로 1차 절차 지도를 구성한다. 관련 기관의 정확한 명칭·
   연락처·온라인 창구 존재 여부는 스스로 단정하지 않고 [KSEARCH_
   HANDOFF: query=...]로 K-Search에 위임해 확인한다(K-Search RULE-06
-  프로토콜 그대로 재사용). 확인이 끝나면 등재한다:
+  프로토콜 그대로 재사용). [2026-08-04 명확화 — 이 호출은 STEP 4
+  이후 실행 단계에서 K-Execute가 내는 KSEARCH_HANDOFF(이번 건의 guid
+  해소)와 목적이 다르다: 여기서는 PROCEDURE_MAP_DRAFT에 등재할 사실을
+  확인하는 것으로, 이번 이용자뿐 아니라 이후 같은 목표로 들어오는
+  모든 이용자가 재사용할 캐시를 만드는 작업이다(RULE-01 금지-1 —
+  실재 확인 없이 캐시에 등재하지 않는다). K-Execute로 미루지 않고
+  K-Compose가 직접 확인하는 게 맞다.] 확인이 끝나면 등재한다:
 
   [PROCEDURE_MAP_DRAFT: goal=..., domain=..., status=pending_review,
    steps=[...], eligibility_gate=[...], free_alternative={...},
@@ -643,10 +652,21 @@ catalog.json이 가리키는) 버전으로 계속 동작한다.
     SUBTASK_RESULT: ...] 응답 받음
   [HANDOFF_TO_KEXECUTE: goal=..., plan={steps[]}, eligibility_gate=...]
     → K-Execute로 system 전환(v1.5 신설, 2026-07-16 — 5단계 확장).
+    [2026-08-04 정정 — 아래 "K-Compose가 직접 내지 않는다"는 절대
+    명제가 STEP 1-B·STEP P-2와 모순된다는 게 발견돼 범위를 좁혔다.
+    파일버전은 그대로 v2.1로 둔다(문구 정정이며 태그 규격·데이터
+    스키마 변경이 아니라 sp-catalog.json 재등록·GWP 카탈로그 갱신이
+    필요 없다고 판단).]
     ★ KSEARCH_HANDOFF·GOV_SP_DRAFT_REQUEST·GWP_REGISTRY_SEARCH·
-    CALL_GOVSYS(실행용)는 이제 K-Compose가 직접 내지 않는다 — 전부
-    K-Execute(SP-22) RULE-02로 이관됐다. K-Compose는 "무엇을 할지"만
-    확정하고 실제 기관 해소·매칭·호출은 하지 않는다.
+    CALL_GOVSYS(실행용)는 **이 HANDOFF_TO_KEXECUTE 이후, 즉 실행
+    단계**에는 K-Compose가 직접 내지 않는다 — 전부 K-Execute(SP-22)
+    RULE-02로 이관됐다. K-Compose는 여기서부터는 "무엇을 할지"만
+    확정하고 실제 기관 해소·매칭·호출은 하지 않는다. ★ 예외 — STEP
+    1-B·STEP P-2에서 K-Compose가 직접 내는 [KSEARCH_HANDOFF]는 이
+    범위 밖이다: 그건 "이번 건을 실행하기 위한 guid 해소"가 아니라
+    "캐시(PROCEDURE_MAP)·계획(execution_plan)에 넣기 전 사실이
+    실재하는지 확인"하는 계획 단계 작업이라 성격이 다르다 — 재사용
+    가능한 지식 확인이지 이번 실행 인스턴스의 매칭이 아니다.
   [HANDOFF_TO_KEXECUTE: goal=..., mode=project, project_brief=...,
    execution_plan=..., fan_out_targets=[...](있으면),
    human_authority_gate_needed=Y|N] →
