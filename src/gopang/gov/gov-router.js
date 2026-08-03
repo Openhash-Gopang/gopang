@@ -3344,6 +3344,54 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         }
       }
     }
+    if (tier === 'emd' && code) {
+      // code 형식: "{읍면동명}" (예: 애월읍) — seed_gov_tree_emd_team.py의
+      // entity_subtype 규약과 동일.
+      _currentResolvedProvinceCode = 'jeju';
+      const emdRecords = await _loadEmdRecords();
+      const emdEntry = emdRecords.find(r => r.읍면동명 === code);
+      if (emdEntry) {
+        const cityEntry = _findCityByName(emdEntry.행정시명);
+        if (cityEntry) {
+          const cityText = await _fetchCityText(cityEntry);
+          parts.push(cityText);
+          trace.push(cityEntry.code);
+          const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.2.md');
+          parts.push(_renderEmdTemplate(emdTemplate, emdEntry));
+          trace.push(`SP-EMD-${emdEntry.읍면동명}(directCode)`);
+          return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+        }
+      }
+    }
+    if (tier === 'team' && code) {
+      // code 형식: "{읍면동명}-{팀이름}" (예: 애월읍-총무팀). 읍면동명·팀이름
+      // 둘 다 하이픈을 포함하지 않으므로 첫 '-'로만 분리하면 된다.
+      _currentResolvedProvinceCode = 'jeju';
+      const dashIdx2 = code.indexOf('-');
+      const emdNameStr = dashIdx2 >= 0 ? code.slice(0, dashIdx2) : '';
+      const teamNameStr = dashIdx2 >= 0 ? code.slice(dashIdx2 + 1) : '';
+      const emdRecords = await _loadEmdRecords();
+      const emdEntry = emdRecords.find(r => r.읍면동명 === emdNameStr);
+      const teamRecords = emdEntry ? await _loadTeamMasterData() : [];
+      const teamEntry = teamRecords.find(r => r.emd_code === emdEntry?.emd_code && r.팀이름 === teamNameStr);
+      if (emdEntry && teamEntry) {
+        const cityEntry = _findCityByName(emdEntry.행정시명);
+        if (cityEntry) {
+          const cityText = await _fetchCityText(cityEntry);
+          parts.push(cityText);
+          trace.push(cityEntry.code);
+          const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.2.md');
+          parts.push(_renderEmdTemplate(emdTemplate, emdEntry));
+          trace.push(`SP-EMD-${emdEntry.읍면동명}`);
+          const teamResult = await _fetchEmdTeamText(teamEntry, emdEntry);
+          if (teamResult) {
+            parts.push(teamResult.text);
+            trace.push(`${teamResult.code}(directCode)`);
+          }
+          return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+        }
+      }
+    }
     if (tier === 'nat-agency' && code) {
       _currentResolvedProvinceCode = 'jeju';
       const nationalSp = await _loadNationalSp();
