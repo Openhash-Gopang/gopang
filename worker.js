@@ -4920,6 +4920,37 @@ async function handleSPAuthorQueue(request, env, corsHeaders, ctx) {
         };
         const draftRec = await _l1CreateGovDraftRealtime(env, draftRecord);
 
+        // ★ 2026-08-03 신설 — 주피터 지시: 새 SP 작성 시 사용자(profiles)
+        // 등록을 코드로 강제. 이 경로는 valid면 즉시 active_pending_review로
+        // 다음 시민부터 실제로 서빙되므로(승인 큐 경로와 달리 사람 승인을
+        // 기다리지 않음), 그만큼 K-Search 검색도 즉시 가능해야 한다 —
+        // 사람 검토가 남았다는 사실은 description에 정직하게 남긴다.
+        if (validation.valid) {
+          try {
+            const profRes = await _handleUnclaimedProfilePost({
+              entity_type: 'institution',
+              name: record.institution,
+              description: `${record.institution} — ${record.task}(SP-Author 실시간 생성, 사람 검토 대기 중)`,
+              tags: ['sp-author', 'realtime', 'pending_human_review'],
+              occupation: '정부기관/공공기관',
+              entity_subtype: `sp-author-realtime:${institutionKey}`,
+              claim_source: 'sp_author_realtime',
+              claim_status: 'unclaimed',
+            }, env, corsHeaders);
+            if (!profRes.ok) throw new Error(await profRes.text().catch(() => 'unknown'));
+          } catch (e) {
+            console.error('[profiles] gov-draft 실시간 생성 건 프로필 등록 실패:', e.message);
+            // 여기서도 조용히 묻히지 않게 별도 escalation — 위 승인 큐 경로와
+            // 동일 원칙.
+            await _l1CreateEscalation(env, {
+              to: '@owner', reason: 'sp_author_profile_registration_failed',
+              ref_collection: 'sp_gov_draft_realtime', ref_id: draftRec.id,
+              summary: `[등록 실패] ${record.institution} 실시간 생성은 됐으나 profiles 등록 실패 — 수동 확인 필요: ${e.message}`.slice(0, 2000),
+              read: false,
+            }).catch((e2) => console.error('[escalation] profiles 등록 실패 알림도 실패:', e2.message));
+          }
+        }
+
         if (validation.valid) {
           await _l1CreateEscalation(env, {
             to: '@owner',
@@ -4978,8 +5009,8 @@ async function handleSPAuthorQueueStatus(request, env, corsHeaders, recordId) {
     // 있으면 그대로, 없으면(신규 기관) institution을 slug화해 만든다 —
     // 이미 있으면 register 자체가 멱등(갱신)이라 중복 문제 없다.
     let registration = null;
+    const gwpId = rec.target_sp_id || rec.institution || `draft-${recordId}`;
     if (payload.status === 'approved') {
-      const gwpId = rec.target_sp_id || rec.institution || `draft-${recordId}`;
       const registerBody = {
         gwp_id: gwpId,
         name: rec.institution || gwpId,
@@ -5004,7 +5035,53 @@ async function handleSPAuthorQueueStatus(request, env, corsHeaders, recordId) {
       }
     }
 
-    return new Response(JSON.stringify({ status: 'updated', record: rec, gwp_registry: registration }), { headers: corsHeaders });
+    // ★ 2026-08-03 신설 — 주피터 지시: "새 SP를 작성하면 반드시 해당
+    // SP를 사용자 등록하도록 코드로 강제하라." 위 gwp_registry 등록은
+    // §GOV_MATCH의 GWP_REGISTRY_SEARCH 대상일 뿐, K-Search가 실제로
+    // 찾는 profiles 컬렉션과는 다른 테이블이다(2026-08-03 세션에서
+    // 처음 확인된 구조 — 이번 기회에 SP-Author 승인 경로도 함께
+    // 채운다). 오늘까지는 이 등록을 세션마다 별도 스크립트로 수동
+    // 실행해야 했다(gov-tree 765건) — SP-Author가 앞으로 만들 SP는
+    // 이 블록이 항상 자동으로 등록해 그 반복을 없앤다. gwp_registry
+    // 등록과 마찬가지로 실패해도 승인 자체는 막지 않는다(사후 보완
+    // 가능하다는 사실만 응답에 남김) — 다만 실패 시 반드시 escalation
+    // 알림을 남겨 "등록 누락"이 조용히 묻히지 않게 한다(아래 catch).
+    let profileRegistration = null;
+    if (payload.status === 'approved') {
+      const profileBody = {
+        entity_type: 'institution',
+        name: rec.institution || gwpId,
+        description: rec.task
+          ? `${rec.institution || gwpId} — ${rec.task}`
+          : `${rec.institution || gwpId} — SP-Author 자동 저작`,
+        tags: ['sp-author', rec.tier_hint || ''].filter(Boolean),
+        occupation: '정부기관/공공기관',
+        entity_subtype: `sp-author:${gwpId}`,
+        claim_source: 'sp_author_approved',
+        claim_status: 'unclaimed',
+      };
+      try {
+        const profRes = await _handleUnclaimedProfilePost(profileBody, env, corsHeaders);
+        profileRegistration = await profRes.json().catch(() => ({ error: 'parse_failed' }));
+        if (!profRes.ok) throw new Error(JSON.stringify(profileRegistration));
+      } catch (e) {
+        console.error('[profiles] SP-Author 승인 건 프로필 등록 실패:', e.message);
+        profileRegistration = { error: e.message };
+        // 조용히 묻히지 않도록 별도 escalation — gwp_registry 실패는
+        // 위에서 로그만 남기지만, "검색 자체가 안 된다"는 더 근본적인
+        // 결함이라 사람이 반드시 보게 한다.
+        await _l1CreateEscalation(env, {
+          to: '@owner',
+          reason: 'sp_author_profile_registration_failed',
+          ref_collection: 'sp_draft_requests',
+          ref_id: recordId,
+          summary: `[등록 실패] ${rec.institution || gwpId} 승인은 됐으나 profiles 등록 실패 — 수동 확인 필요: ${e.message}`.slice(0, 2000),
+          read: false,
+        }).catch((e2) => console.error('[escalation] profiles 등록 실패 알림도 실패:', e2.message));
+      }
+    }
+
+    return new Response(JSON.stringify({ status: 'updated', record: rec, gwp_registry: registration, profile: profileRegistration }), { headers: corsHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 502, headers: corsHeaders });
   }
