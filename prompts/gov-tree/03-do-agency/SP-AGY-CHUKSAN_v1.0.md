@@ -33,7 +33,7 @@
 ## §0. 상속 및 삽입 위치
 
 ```
-JEJU-GOV-COMMON → SP-DO-000 → [본 SP: 축산생명연구원(직속기관)] → (SP-EXP-*)?
+kgov(SP-10_kpublic)+UNIVERSAL-common → SP-DO-000 → [본 SP: 축산생명연구원(직속기관)] → (SP-EXP-*)?
 ```
 
 상위 JEJU-GOV-COMMON §4(관할 검증 원칙)와 JEJU-DO-SP §4(체인 조립 규칙 D)를 그대로 따른다. **축산 정책(농축산식품국 SP-DO-AGRI)과 실제 방역·연구 실무(이 연구원)는 다르다.**

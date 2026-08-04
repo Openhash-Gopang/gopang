@@ -4,7 +4,7 @@
 # 문서명    : 제주시청 — System Prompt
 # 문서 코드  : SP-CITY-JEJU
 # 버전      : v1.1
-# 상위 상속  : JEJU-GOV-COMMON > SP-DO-000
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common > SP-DO-000
 # 하위 SP   : SP-EMD-{제주시 26개 읍면동} (SP-EMD-TEMPLATE 렌더링)
 # 작성일     : 2026-07-03
 # 작성자     : AI City Inc. · 주피터
@@ -31,7 +31,7 @@
 ## §0. 상속 및 삽입 위치
 
 ```
-JEJU-GOV-COMMON → SP-DO-000 → [본 SP: 제주시청] → (SP-EMD-{읍면동})?
+kgov(SP-10_kpublic)+UNIVERSAL-common → SP-DO-000 → [본 SP: 제주시청] → (SP-EMD-{읍면동})?
 ```
 
 ## §1. 정체성

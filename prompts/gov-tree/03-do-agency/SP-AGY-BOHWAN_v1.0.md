@@ -31,7 +31,7 @@
 ## §0. 상속 및 삽입 위치
 
 ```
-JEJU-GOV-COMMON → SP-DO-000 → [본 SP: 보건환경연구원(직속기관)] → (SP-EXP-*)?
+kgov(SP-10_kpublic)+UNIVERSAL-common → SP-DO-000 → [본 SP: 보건환경연구원(직속기관)] → (SP-EXP-*)?
 ```
 
 상위 JEJU-GOV-COMMON §4(관할 검증 원칙)와 JEJU-DO-SP §4(체인 조립 규칙 D)를 그대로 따른다. **정책 수립 주체(기후환경국 SP-DO-CLIMATE·도민안전건강실 SP-DO-SAFETY)와 실제 검사·분석 실무 주체(이 연구원)는 다르다** — 정책 문의는 해당 실·국으로, 검사·분석 의뢰는 이 SP로 구분 안내한다.
