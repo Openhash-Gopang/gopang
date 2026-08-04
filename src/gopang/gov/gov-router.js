@@ -1725,6 +1725,48 @@ function _orgTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.org || []
 function _agencyDivisionTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.agencyDivision || []; }
 function _orgDivisionTable() { return PROVINCE_TABLES[_resolveProvinceCode()]?.orgDivision || []; }
 
+// ── directCode(K-Search 엔티티 매칭 확정 경로) 전용 — 도 무관 코드 탐색 ──
+// ★ 2026-08-04 신설 — 버그 수정. directCode 처리부(§ -0.9)가 지금까지
+// tier마다 `_currentResolvedProvinceCode = 'jeju'`를 무조건 하드코딩해서,
+// K-Search가 제주 밖 기관을 정확히 찾아 directCode(예:
+// 'city-dept:haeundae-jachi')를 반환해도 JEJU_CITY_DEPT_TABLE에서만
+// 찾다가 못 찾고 조용히 텍스트-추측 폴백으로 떨어지는 구조적 결함이
+// 있었다(주피터 2026-08-04 지시로 발견 — "AC는 지방 정부 영역이면
+// 관할 행정기관을 호출한다"는 원칙 자체는 맞는데, directCode 1차 경로가
+// 제주 밖에서 구조적으로 죽어있었다).
+//
+// gwp-registry.js가 넘기는 directCode(=프로필의 entity_subtype)는 도
+// 정보를 안 담고 있으므로(예: 'AGRITECH', 'jejusi-jachi' — 도 접두어
+// 없음), 프로필 스키마·기존 267건 entity_subtype 값을 재시딩하지 않고
+// 고치는 가장 안전한 방법은 "코드가 어느 도 테이블에 실제로 있는지"를
+// PROVINCE_TABLES 전체에서 찾아 그 도로 확정하는 것이다 — 코드 유일성은
+// 이미 각 시딩 스크립트가 도별로 고유하게 부여한다고 전제한다(부여
+// 규칙 자체가 깨지면 이 함수가 아니라 시딩 규칙을 고쳐야 한다).
+//
+// tableKey: PROVINCE_TABLES의 하위 키('l2'|'city'|'citydept'|'agency'|
+// 'org'|'agencyDivision'|'orgDivision'). predicate: (entry) => boolean.
+// 반환: { provinceCode, entry } | null. 여러 도에서 동시에 매칭되면(코드
+// 유일성 가정이 깨진 경우) 첫 매칭을 쓰고 콘솔에 경고를 남긴다 — 조용히
+// 삼키지 않는다.
+function _findEntryAcrossProvinces(tableKey, predicate) {
+  const matches = [];
+  for (const [provinceCode, tables] of Object.entries(PROVINCE_TABLES)) {
+    const table = tables[tableKey] || [];
+    const entry = table.find(predicate);
+    if (entry) matches.push({ provinceCode, entry });
+  }
+  if (matches.length === 0) return null;
+  if (matches.length > 1) {
+    console.warn(
+      `[gov-router] directCode 코드 충돌 — tableKey=${tableKey}가 ` +
+      `${matches.length}개 도(${matches.map(m => m.provinceCode).join(', ')})에서 ` +
+      `동시에 매칭됨. 첫 번째(${matches[0].provinceCode})를 사용하지만, ` +
+      `시딩 스크립트의 코드 유일성 부여 규칙을 점검할 것.`
+    );
+  }
+  return matches[0];
+}
+
 function _matchNational(text) {
   return _scoreMatch(text, _nationalTable());
 }
@@ -3333,15 +3375,17 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       return { systemPrompt: parts.join('\n\n---\n\n'), trace };
     }
     if (tier === 'do-dept' && code) {
-      _currentResolvedProvinceCode = 'jeju';
-      const entry = _l2Table().find(e => e.code === code);
-      if (entry) {
+      // ★ 2026-08-04 수정 — 도 하드코딩 제거(위 _findEntryAcrossProvinces
+      // 주석 참조). 코드가 실제로 속한 도를 찾아서 그 도로 확정한다.
+      const found = _findEntryAcrossProvinces('l2', e => e.code === code);
+      if (found) {
+        _currentResolvedProvinceCode = found.provinceCode;
         const doSp = await _loadDoSp();
         parts.push(doSp);
         trace.push('SP-DO-000');
-        const divText = await _fetchDeptText(entry);
+        const divText = await _fetchDeptText(found.entry);
         parts.push(divText.text);
-        trace.push(`${entry.code}(directCode)`);
+        trace.push(`${found.entry.code}(directCode)`);
         if (divText.permitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${divText.permitCodes.join(',')})`);
         return { systemPrompt: parts.join('\n\n---\n\n'), trace };
       }
@@ -3349,6 +3393,12 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       // 기관·division을 같은 tier 접두어(do-dept:)로 등록했으므로,
       // 상위 실·국 코드로 못 찾으면 DO_DEPT_DIVISION_TABLE에서 찾는다
       // (domain 필드로 상위 실·국을 역참조해 체인을 완성).
+      // ★ 2026-08-04 — DO_DEPT_DIVISION_TABLE 자체는 아직 제주 전용
+      // 단일 테이블이다(도별로 나뉘어 있지 않음) — 다른 도의 division이
+      // 생기면 이 테이블도 PROVINCE_TABLES 패턴으로 옮겨야 한다. 지금은
+      // 기존 동작을 그대로 보존한다(제주 division만 존재하는 현재
+      // 상태에서는 안전).
+      _currentResolvedProvinceCode = 'jeju';
       const divEntry = DO_DEPT_DIVISION_TABLE.find(e => e.code === code);
       if (divEntry) {
         const parentEntry = _l2Table().find(e => e.domain === divEntry.domain);
@@ -3368,18 +3418,22 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       // 코드) 실패로 취급하지 않고 조용히 아래 텍스트 추측 경로로 폴백.
     }
     if (tier === 'do-agency' && code) {
-      _currentResolvedProvinceCode = 'jeju';
-      const entry = _agencyTable().find(e => e.code === code);
-      if (entry) {
+      // ★ 2026-08-04 수정 — 도 하드코딩 제거.
+      const found = _findEntryAcrossProvinces('agency', e => e.code === code);
+      if (found) {
+        _currentResolvedProvinceCode = found.provinceCode;
         const doSp = await _loadDoSp();
         parts.push(doSp);
         trace.push('SP-DO-000');
-        const agencyText = await _fetchAgencyText(entry);
+        const agencyText = await _fetchAgencyText(found.entry);
         parts.push(agencyText);
-        trace.push(`${entry.code}(directCode)`);
+        trace.push(`${found.entry.code}(directCode)`);
         return { systemPrompt: parts.join('\n\n---\n\n'), trace };
       }
       // ★ 2026-08-03 신설 — 과(division) 단위 코드 폴백(do-dept와 동일 원칙).
+      // ★ 2026-08-04 — JEJU_AGENCY_DIVISION_TABLE도 아직 제주 전용
+      // 단일 테이블이다(위 do-dept division과 동일한 이유로 보존).
+      _currentResolvedProvinceCode = 'jeju';
       const divEntry = JEJU_AGENCY_DIVISION_TABLE.find(e => e.code === code);
       if (divEntry) {
         const parentEntry = _agencyTable().find(e => e.code === divEntry.institution);
@@ -3397,18 +3451,22 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       }
     }
     if (tier === 'org' && code) {
-      _currentResolvedProvinceCode = 'jeju';
-      const entry = _orgTable().find(e => e.code === code);
-      if (entry) {
+      // ★ 2026-08-04 수정 — 도 하드코딩 제거.
+      const found = _findEntryAcrossProvinces('org', e => e.code === code);
+      if (found) {
+        _currentResolvedProvinceCode = found.provinceCode;
         const doSp = await _loadDoSp();
         parts.push(doSp);
         trace.push('SP-DO-000');
-        const orgText = await _fetchOrgText(entry);
+        const orgText = await _fetchOrgText(found.entry);
         parts.push(orgText);
-        trace.push(`${entry.code}(directCode)`);
+        trace.push(`${found.entry.code}(directCode)`);
         return { systemPrompt: parts.join('\n\n---\n\n'), trace };
       }
       // ★ 2026-08-03 신설 — 팀(division) 단위 코드 폴백(do-dept와 동일 원칙).
+      // ★ 2026-08-04 — JEJU_ORG_DIVISION_TABLE도 아직 제주 전용 단일
+      // 테이블이다(위와 동일한 이유로 보존).
+      _currentResolvedProvinceCode = 'jeju';
       const divEntry = JEJU_ORG_DIVISION_TABLE.find(e => e.code === code);
       if (divEntry) {
         const parentEntry = _orgTable().find(e => e.code === divEntry.institution);
@@ -3431,14 +3489,18 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     // (seed_gov_tree_citydept_natagency.py)과는 별개의 코드 체계다. 둘 다
     // 실제 profiles에 등록돼 있으므로 gov-router.js도 둘 다 처리해야 한다.
     if (tier === 'city' && code) {
-      _currentResolvedProvinceCode = 'jeju';
-      const cityEntry = _cityTable().find(e => e.code === code);
-      if (cityEntry) {
-        const cityText = await _fetchCityText(cityEntry);
+      // ★ 2026-08-04 수정 — 도 하드코딩 제거.
+      const foundCity = _findEntryAcrossProvinces('city', e => e.code === code);
+      if (foundCity) {
+        _currentResolvedProvinceCode = foundCity.provinceCode;
+        const cityText = await _fetchCityText(foundCity.entry);
         parts.push(cityText);
-        trace.push(`${cityEntry.code}(directCode)`);
+        trace.push(`${foundCity.entry.code}(directCode)`);
         return { systemPrompt: parts.join('\n\n---\n\n'), trace };
       }
+      // ★ 2026-08-04 — CITY_DIVISION_TABLE도 아직 제주 전용 단일
+      // 테이블이다(위 do-dept division과 동일한 이유로 보존).
+      _currentResolvedProvinceCode = 'jeju';
       const divEntry = CITY_DIVISION_TABLE.find(e => e.code === code);
       if (divEntry) {
         const parentCityEntry = _cityTable().find(e => e.시코드 === divEntry.시코드);
@@ -3462,31 +3524,44 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       }
     }
     if (tier === 'city-dept' && code) {
-      _currentResolvedProvinceCode = 'jeju';
       // code 형식: "{시코드}-{국코드}" (예: jejusi-jachi) — seed_gov_tree_
       // citydept_natagency.py의 entity_subtype 규약과 동일. 시코드 자체에
       // 하이픈이 없으므로 첫 '-'만 분리하면 된다.
       const dashIdx = code.indexOf('-');
       const cityCodeStr = dashIdx >= 0 ? code.slice(0, dashIdx) : '';
       const deptCodeStr = dashIdx >= 0 ? code.slice(dashIdx + 1) : '';
-      const cityEntry = _cityTable().find(e => e.시코드 === cityCodeStr);
-      const deptEntry = _cityDeptTable().find(e => e.시코드 === cityCodeStr && e.국코드 === deptCodeStr);
-      if (cityEntry && deptEntry) {
-        const cityText = await _fetchCityText(cityEntry);
-        parts.push(cityText);
-        trace.push(cityEntry.code);
-        const { text: cityDeptText, permitCodes } = await _fetchCityDeptText(deptEntry);
-        if (cityDeptText) {
-          parts.push(cityDeptText);
-          trace.push(`SP-CITYDEPT-${cityCodeStr}-${deptCodeStr}(directCode)`);
-          if (permitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${permitCodes.join(',')})`);
-          return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+      // ★ 2026-08-04 수정 — 도 하드코딩 제거. 시코드로 먼저 도를 확정한
+      // 뒤(시-국은 같은 도 소속이 구조적으로 보장됨), 이미 province-aware한
+      // _cityDeptTable() 접근자를 그대로 재사용한다.
+      const foundCity = _findEntryAcrossProvinces('city', e => e.시코드 === cityCodeStr);
+      if (foundCity) {
+        _currentResolvedProvinceCode = foundCity.provinceCode;
+        const deptEntry = _cityDeptTable().find(e => e.시코드 === cityCodeStr && e.국코드 === deptCodeStr);
+        if (deptEntry) {
+          const cityText = await _fetchCityText(foundCity.entry);
+          parts.push(cityText);
+          trace.push(foundCity.entry.code);
+          const { text: cityDeptText, permitCodes } = await _fetchCityDeptText(deptEntry);
+          if (cityDeptText) {
+            parts.push(cityDeptText);
+            trace.push(`SP-CITYDEPT-${cityCodeStr}-${deptCodeStr}(directCode)`);
+            if (permitCodes.length) trace.push(`PERMIT-CRITERIA-PROTOCOL(${permitCodes.join(',')})`);
+            return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+          }
         }
       }
     }
     if (tier === 'emd' && code) {
       // code 형식: "{읍면동명}" (예: 애월읍) — seed_gov_tree_emd_team.py의
       // entity_subtype 규약과 동일.
+      // ★ 2026-08-04 — 다른 tier와 달리 이 hardcoding은 아직 못 고친다.
+      // emd-master-data.json 자체가 도코드 필드 없이 제주 42건만 있는
+      // Jeju-only 스키마다(GOV_TREE_ABSTRACTION_LAYER_STATUS_v1_0.md §2
+      // 확인). 스키마에 도코드 필드를 추가하고 emd-master-data.json을
+      // 도별로 분리(또는 필드 추가)하기 전까지는 _findEntryAcrossProvinces
+      // 패턴을 적용할 데이터 자체가 없다 — 이건 별도 후속 작업(스키마
+      // 마이그레이션)이 선행돼야 한다. 지금은 제주만 존재하므로 정확도
+      // 손실 없이 하드코딩을 그대로 둔다.
       _currentResolvedProvinceCode = 'jeju';
       const emdRecords = await _loadEmdRecords();
       const emdEntry = emdRecords.find(r => r.읍면동명 === code);
@@ -3506,6 +3581,9 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     if (tier === 'team' && code) {
       // code 형식: "{읍면동명}-{팀이름}" (예: 애월읍-총무팀). 읍면동명·팀이름
       // 둘 다 하이픈을 포함하지 않으므로 첫 '-'로만 분리하면 된다.
+      // ★ 2026-08-04 — 위 'emd' tier와 동일한 이유(emd-master-data.json이
+      // Jeju-only 스키마)로 하드코딩을 유지한다. emd 스키마 마이그레이션과
+      // 함께 고칠 것.
       _currentResolvedProvinceCode = 'jeju';
       const dashIdx2 = code.indexOf('-');
       const emdNameStr = dashIdx2 >= 0 ? code.slice(0, dashIdx2) : '';
@@ -3533,14 +3611,31 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       }
     }
     if (tier === 'nat-agency' && code) {
-      _currentResolvedProvinceCode = 'jeju';
-      const nationalSp = await _loadNationalSp();
-      parts.push(nationalSp);
-      trace.push('JEJU-NATIONAL-SP');
-      const resolved = await resolveNationalAgencyLazy('jeju', '제주특별자치도', code, onProgress, null);
-      parts.push(resolved.text);
-      trace.push(`SP-NATIONAL-LAZY(${code}/${resolved.source}, directCode)`);
-      return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+      // ★ 2026-08-04 수정 — 이 tier는 다른 tier와 달리 code(예: 'police')
+      // 자체가 도별로 고유하지 않다(_makePoliceEntry가 모든 도에 같은
+      // domain 값을 반복 생성) — 그래서 _findEntryAcrossProvinces로는
+      // 도를 특정할 수 없다. 이 지사형 기관 tier는 애초에 "어느 도의
+      // 지사냐"를 code가 아니라 사용자 위치로 판단해야 하는 성격이라
+      // (아래 3700·3990행 부근의 동일 함수 호출부가 이미 그렇게 함),
+      // 하드코딩 대신 이 파일 전역의 위치 기반 판별 결과를 그대로 쓴다.
+      // 위치가 아직 판별 안 된 경우(_resolveProvinceCode()가 null)는
+      // 아래 -0.5 게이트로 자연히 넘어가도록 폴백한다(여기서 강제하지
+      // 않음 — 이 if 블록 진입 자체가 이미 -0.9 directCode 단계라 게이트
+      // 이전이므로, null이면 resolveNationalAgencyLazy가 처리하게 둔다).
+      const resolvedProvince = _resolveProvinceCode();
+      if (resolvedProvince) {
+        _currentResolvedProvinceCode = resolvedProvince;
+        const nationalSp = await _loadNationalSp();
+        parts.push(nationalSp);
+        trace.push('JEJU-NATIONAL-SP');
+        const resolved = await resolveNationalAgencyLazy(
+          resolvedProvince, _provinceCodeToName(resolvedProvince), code, onProgress, null);
+        parts.push(resolved.text);
+        trace.push(`SP-NATIONAL-LAZY(${code}/${resolved.source}, directCode)`);
+        return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+      }
+      // 위치 미판별 — 조용히 폴백하지 않고 아래 -0.5 게이트가 정직하게
+      // "지역을 알려달라"고 안내하도록 이 if 블록을 그냥 빠져나간다.
     }
     // 여기까지 걸리는 게 없으면(테이블에서 code를 못 찾음, 또는 아직
     // 모르는 tier) 실패로 취급하지 않고 조용히 아래 텍스트 추측 경로로

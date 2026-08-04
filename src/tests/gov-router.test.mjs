@@ -55,7 +55,19 @@ const PROVINCE_MASTER = { 도목록: [
 
 globalThis.fetch = async (url) => {
   const u = String(url);
-  if (u.includes('sp-catalog.json')) return { ok: true, json: async () => ({ 'SP-10_kpublic': 'SP-10_kpublic_v2.2.txt', 'SP_common_guardrails': 'SP-COMMON-02_v1.0.md' }) };
+  // ★ 2026-08-04 — _fetchByManifestKey(2026-07-29 신설)가 요구하는 키가
+  // 늘어났는데 이 목이 안 따라가서 모든 테스트가 크래시하고 있었다(이번
+  // 세션에서 directcode-province-resolution.test.mjs 작성 중 발견 —
+  // 이 파일 자체의 회귀는 아니고 별도 선재 결함). 누락됐던 4개 키 추가.
+  if (u.includes('sp-catalog.json')) return { ok: true, json: async () => ({
+    'SP-10_kpublic': 'SP-10_kpublic_v2.2.txt',
+    'SP_common_guardrails': 'SP-COMMON-02_v1.0.md',
+    'GOV-COMMON-OVERLAY-TEMPLATE': 'GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md',
+    'GOV-TREE-PROTOCOL': 'GOV-TREE-PROTOCOL_v1.0.md',
+    'SP-PROVINCE-TEMPLATE': 'SP-PROVINCE-TEMPLATE_v1.1.md',
+    'NATIONAL-SP-CORE': 'NATIONAL-SP-CORE_v1.2.md',
+    'NATIONAL-SP-OVERLAY-TEMPLATE': 'NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md',
+  }) };
   if (u.endsWith('.json') || u.includes('.json?')) {
     if (u.includes('emd-master-data.json')) return { ok: true, text: async () => JSON.stringify(EMD_MASTER) };
     if (u.includes('hallim-data.json')) return { ok: true, text: async () => JSON.stringify(HALLIM_DATA) };
