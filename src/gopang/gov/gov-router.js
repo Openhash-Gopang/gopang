@@ -2424,6 +2424,84 @@ function _findCityByName(cityName) {
 }
 
 
+// ── gov-tree(04-city-dept·05-emd) 인스턴스 지연 저작 — 클라이언트측
+// 안전한 fetch (2026-08-05, GOV_TREE_LAZY_INSTANCING_DESIGN_v1_0.md 구현) ──
+// resolveSigunguDept()와 동일한 설계 원칙(§8-1 결정: AC 태그 경유 대신
+// gov-router.js가 worker.js를 직접 fetch — LLM이 태그를 정확히 내는 데
+// 의존하는 추가 실패 지점을 만들지 않는다). 비밀키 없음, 실패해도 예외를
+// 던지지 않고 null/조용한 무시로 대체 — 이 기능이 죽어도 기존 라우팅에
+// 영향 없다(§5-2 "PocketBase 우선, 실패 시 기존 JSON 경로로 폴백" 원칙).
+
+// STUB/MISSING 판정(§3) — city-dept는 국이름·산하과목록 유무, emd는
+// 청사주소·대표전화·TBD 표기 유무로 기계적으로 판별한다. 사람이 눈으로
+// "이건 스텁이다"를 판단하던 걸(이번 세션 내내 `_비고`에 수기로 남기던
+// 방식) 코드로 명문화 — SP-Author 자동 트리거의 전제조건이라 사람 판단에
+// 맡길 수 없다.
+function _classifyCityDeptInstance(rec) {
+  if (!rec) return 'MISSING';
+  if (!rec.국이름) return 'STUB';
+  if (!rec.산하과목록) return 'STUB';
+  return 'REAL';
+}
+function _classifyEmdInstance(rec) {
+  if (!rec) return 'MISSING';
+  if (!rec.청사주소 || !rec.대표전화) return 'STUB';
+  // ★ 무인발급기위치는 부가정보다 — 이것만 TBD라고 REAL 레코드 전체를
+  // STUB으로 낮추면 이번 세션에 실사한 43개 동 전부가(전부
+  // 무인발급기위치=TBD 상태) 불필요하게 재저작 대상이 된다. 핵심 필드
+  // (청사주소)에 TBD가 남아있을 때만 STUB으로 낮춘다.
+  if (rec.청사주소.includes('TBD')) return 'STUB';
+  return 'REAL';
+}
+
+// PocketBase(L1)에 이미 실시간 저작된 인스턴스가 있는지 조회한다(§5-1
+// 조회 엔드포인트, worker.js handleGovTreeInstanceLookup). 있으면
+// {generated_content, status}를 반환, 없거나 실패하면 null — 호출부는
+// null이면 기존 JSON 경로로 그대로 넘어가면 된다(하위호환 100%).
+async function _fetchGovTreeInstancePocketBase(govTreeKey) {
+  try {
+    const { tier, 도코드, 시코드, 국코드, 읍면동명 } = govTreeKey;
+    const params = new URLSearchParams({ tier, 도코드: 도코드 || '', 시코드: 시코드 || '' });
+    if (국코드) params.set('국코드', 국코드);
+    if (읍면동명) params.set('읍면동명', 읍면동명);
+    const res = await fetch(`${SIGUNGU_RESOLVE_ORIGIN}/gov-tree-instance/lookup?${params.toString()}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.found || !data?.generated_content) return null;
+    return data;
+  } catch (e) {
+    console.warn('[gov-router] _fetchGovTreeInstancePocketBase 실패(무시, JSON 경로로 계속):', e?.message);
+    return null;
+  }
+}
+
+// STUB/MISSING을 만났을 때 백그라운드로 큐잉 신호를 쏜다(§4-1). 응답을
+// 절대 기다리게 하지 않는다 — await하지 않고 fire-and-forget, 실패해도
+// 콘솔 경고만 남긴다. 지금 이 사용자에게는 이미 STUB 내용으로 즉답이
+// 나갔거나 나갈 예정이므로(§DRAFT_REQUEST risk_tier=low 원칙), 이 신호는
+// "다음 사용자부터는 더 나은 답을 받게" 하기 위한 것뿐이다.
+function _reportGovTreeInstanceMiss(govTreeKey, taskText) {
+  try {
+    const { tier, 도코드, 시코드, 국코드, 읍면동명 } = govTreeKey;
+    const institution = [도코드, 시코드, 국코드 || 읍면동명].filter(Boolean).join(' ');
+    fetch(`${SIGUNGU_RESOLVE_ORIGIN}/sp-author/queue`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        request_type: 'gov_tree_instance',
+        signal_source: 'gov_tree_instance_miss',
+        institution,
+        task: (taskText || '').slice(0, 500),
+        tier_hint: tier,
+        risk_tier: 'low',
+        gov_tree_key: govTreeKey,
+      }),
+    }).catch((e) => console.warn('[gov-router] _reportGovTreeInstanceMiss 전송 실패(무시):', e?.message));
+  } catch (e) {
+    console.warn('[gov-router] _reportGovTreeInstanceMiss 준비 실패(무시):', e?.message);
+  }
+}
+
 // ── 시군구 지연 초기화 — 클라이언트측(브라우저) 안전한 fetch (2026-07-20) ──
 // ⚠️ 비밀키 없음 — worker.js(hondi-proxy)의 /gov/sigungu-dept-resolve를
 // 호출할 뿐이다. 실패해도(네트워크 오류·CORS 등) 예외를 던지지 않고 안전한
@@ -3293,9 +3371,27 @@ async function _resolveCityRootSPCode(시코드) {
   return `SP-CITY-${String(시코드 || '').toUpperCase()}`;
 }
 
-async function _fetchCityDeptText(match) {
+async function _fetchCityDeptText(match, taskText = '') {
+  // ★ 2026-08-05 신설 — §5-2 데이터소스 우선순위: PocketBase 정본을 먼저
+  // 확인하고(§4-1에서 저작된 실시간 인스턴스가 있으면 그걸 그대로 쓴다),
+  // 없으면 기존 JSON 경로로 폴백한다. 이 조회는 네트워크 실패에도 안전
+  // (null 반환)하므로 아래 기존 로직에 영향을 주지 않는다.
+  const govTreeKey = {
+    tier: 'city-dept', 도코드: _resolveProvinceCode(), 시코드: match.시코드, 국코드: match.국코드,
+  };
+  const pbHit = await _fetchGovTreeInstancePocketBase(govTreeKey);
+  if (pbHit) {
+    return { text: pbHit.generated_content, permitCodes: [] };
+  }
+
   const records = await _loadCityDeptMasterData();
   const rec = records.find(r => r.시코드 === match.시코드 && r.국코드 === match.국코드);
+  const classification = _classifyCityDeptInstance(rec);
+  if (classification !== 'REAL') {
+    // 지금 이 사용자에게는 아래 기존 로직대로(스텁이면 스텁 내용을, 완전
+    // 누락이면 null을) 그대로 응답하고, 백그라운드로만 미스 신호를 쏜다.
+    _reportGovTreeInstanceMiss(govTreeKey, taskText);
+  }
   if (!rec) {
     console.warn(`[gov-router] 시청 국 데이터 레코드 없음(시코드=${match.시코드}, 국코드=${match.국코드}) — 스킵`);
     return { text: null, permitCodes: [] };
@@ -3593,7 +3689,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           parts.push(cityText);
           trace.push(parentCityEntry.code);
           if (deptEntry) {
-            const { text: cityDeptText, permitCodes } = await _fetchCityDeptText(deptEntry);
+            const { text: cityDeptText, permitCodes } = await _fetchCityDeptText(deptEntry, text);
             if (cityDeptText) {
               parts.push(cityDeptText);
               trace.push(`SP-CITYDEPT-${divEntry.시코드}-${divEntry.국코드}`);
@@ -3624,7 +3720,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           const cityText = await _fetchCityText(foundCity.entry);
           parts.push(cityText);
           trace.push(foundCity.entry.code);
-          const { text: cityDeptText, permitCodes } = await _fetchCityDeptText(deptEntry);
+          const { text: cityDeptText, permitCodes } = await _fetchCityDeptText(deptEntry, text);
           if (cityDeptText) {
             parts.push(cityDeptText);
             trace.push(`SP-CITYDEPT-${cityCodeStr}-${deptCodeStr}(directCode)`);
@@ -3647,6 +3743,16 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       // _findEmdEntryAcrossProvinces로 도 하드코딩을 제거한다 — 새 도가
       // EMD_PATHS에 등록되기만 하면 이 코드는 다시 손대지 않아도 된다.
       const foundEmd = await _findEmdEntryAcrossProvinces(r => r.읍면동명 === code);
+      // ★ 2026-08-05 신설 — §5-2 PocketBase 우선 조회. JSON에서 이미
+      // 찾았어도(foundEmd) PocketBase에 더 나은(실시간 저작된) 버전이
+      // 있으면 그걸 우선한다 — 없으면 null이 와서 기존 로직 그대로 진행.
+      // cityEntry를 먼저 구해 city 레벨 컨텍스트는 항상 포함시킨다
+      // (PocketBase generated_content는 emd 레벨 조각일 뿐 city 레벨을
+      // 포함하지 않는다 — _generateGovTreeInstanceSP 참조).
+      const emdGovTreeKey = { tier: 'emd', 도코드: foundEmd?.provinceCode || '', 읍면동명: code };
+      const emdPbHit = await _fetchGovTreeInstancePocketBase(emdGovTreeKey);
+      const emdClassification = _classifyEmdInstance(foundEmd?.entry);
+      if (emdClassification !== 'REAL') _reportGovTreeInstanceMiss(emdGovTreeKey, text);
       if (foundEmd) {
         _currentResolvedProvinceCode = foundEmd.provinceCode;
         const emdEntry = foundEmd.entry;
@@ -3657,11 +3763,23 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           const cityText = await _fetchCityText(cityEntry);
           parts.push(cityText);
           trace.push(cityEntry.code);
+          if (emdPbHit) {
+            parts.push(emdPbHit.generated_content);
+            trace.push(`SP-EMD-${code}(directCode·PocketBase)`);
+            return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+          }
           const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.3.md');
           parts.push(_renderEmdTemplate(emdTemplate, emdEntry));
           trace.push(`SP-EMD-${emdEntry.읍면동명}(directCode)`);
           return { systemPrompt: parts.join('\n\n---\n\n'), trace };
         }
+      } else if (emdPbHit) {
+        // ★ 2026-08-05 — JSON에는 전혀 없지만(foundEmd null) PocketBase에는
+        // 있는 드문 경우(완전 신규 도가 PocketBase에만 저작된 상태) —
+        // city 레벨 컨텍스트 없이 emd 레벨 내용만이라도 최선으로 응답한다.
+        parts.push(emdPbHit.generated_content);
+        trace.push(`SP-EMD-${code}(directCode·PocketBase·city 컨텍스트 없음)`);
+        return { systemPrompt: parts.join('\n\n---\n\n'), trace };
       }
     }
     if (tier === 'team' && code) {
@@ -3908,7 +4026,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       // — 읍면동은 건축허가를 처리하지 않으므로 이게 실제로 맞는 관할이다.
       const cityDeptMatch = _matchCityDept(text, cityCode.시코드);
       if (cityDeptMatch) {
-        const { text: cityDeptText, permitCodes: cityDeptPermitCodes } = await _fetchCityDeptText(cityDeptMatch);
+        const { text: cityDeptText, permitCodes: cityDeptPermitCodes } = await _fetchCityDeptText(cityDeptMatch, text);
         if (cityDeptText) {
           parts.push(cityDeptText);
           trace.push(`SP-CITYDEPT-${cityCode.시코드}-${cityDeptMatch.국코드}`,
@@ -3923,6 +4041,16 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       } else if (cityCode.code === 'SP-CITY-SEOGWIPO' && isWaterQuery) {
         trace.push('(규칙 F: 서귀포 상하수도는 읍면동 생략)');
       } else {
+        // ★ 2026-08-05 신설 — §5-2 PocketBase 우선 조회 + STUB/MISSING
+        // 미스 신호(§4-1). 여기 도달했다는 건 이 발화가 실제로 읍면동
+        // 사무라는 뜻이므로(규칙 F 우회 안 됨), 이 지점에서만 확인한다.
+        const emdNlGovTreeKey = { tier: 'emd', 도코드: _resolveProvinceCode(), 읍면동명: emdMatch.읍면동명 };
+        const emdNlPbHit = await _fetchGovTreeInstancePocketBase(emdNlGovTreeKey);
+        if (_classifyEmdInstance(emdMatch) !== 'REAL') _reportGovTreeInstanceMiss(emdNlGovTreeKey, text);
+        if (emdNlPbHit) {
+          parts.push(emdNlPbHit.generated_content);
+          trace.push(`SP-EMD-${emdMatch.읍면동명}(PocketBase)`);
+        } else {
         const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.3.md');
         parts.push(_renderEmdTemplate(emdTemplate, emdMatch));
         trace.push(`SP-EMD-${emdMatch.읍면동명}`);
@@ -3936,6 +4064,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
             parts.push(teamResult.text);
             trace.push(teamResult.code);
           }
+        }
         }
       }
       await _appendExpertIfMatched();
@@ -3971,7 +4100,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     if (cityDeptMatch) {
       parts.push(cityText);
       trace.push(cityOnly.code);
-      const { text: cityDeptText, permitCodes: cityDeptPermitCodes } = await _fetchCityDeptText(cityDeptMatch);
+      const { text: cityDeptText, permitCodes: cityDeptPermitCodes } = await _fetchCityDeptText(cityDeptMatch, text);
       if (cityDeptText) {
         parts.push(cityDeptText);
         trace.push(`SP-CITYDEPT-${cityOnly.시코드}-${cityDeptMatch.국코드}`);

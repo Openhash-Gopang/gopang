@@ -1,0 +1,111 @@
+{
+  "_문서_설명": "PocketBase(L1) 컬렉션 sp_gov_tree_instance_realtime 스키마 정의. GOV_TREE_LAZY_INSTANCING_DESIGN_v1_0.md §5-1 근거. sp_gov_draft_realtime(named institution 실시간 저작)의 자매 컬렉션 — 자유텍스트 institution 매칭 대신 구조화 키(tier/도코드/시코드/국코드/읍면동명)를 1급 필드로 둔다. PocketBase 관리자 UI의 'Import collections'로 이 파일을 그대로 가져올 수 있는 형태(schema 배열 규격)로 작성했다. 실제 이관은 tools/seed_gov_tree_pocketbase.py 참조.",
+  "name": "sp_gov_tree_instance_realtime",
+  "type": "base",
+  "system": false,
+  "schema": [
+    {
+      "name": "tier",
+      "type": "select",
+      "required": true,
+      "options": { "values": ["city-dept", "emd"], "maxSelect": 1 }
+    },
+    {
+      "name": "도코드",
+      "type": "text",
+      "required": true,
+      "options": { "max": 40 },
+      "_설명": "예: busan, jeju, seoul — PROVINCE_REGISTRY의 키와 동일 어휘"
+    },
+    {
+      "name": "시코드",
+      "type": "text",
+      "required": false,
+      "options": { "max": 40 },
+      "_설명": "tier=city-dept 전용. 예: busan_dongnae. tier=emd면 비워둠(읍면동명으로 식별)"
+    },
+    {
+      "name": "국코드",
+      "type": "text",
+      "required": false,
+      "options": { "max": 40 },
+      "_설명": "tier=city-dept 전용. 예: jachi, econ, welfare — _makeGenericCityDeptEntries 어휘와 동일"
+    },
+    {
+      "name": "읍면동명",
+      "type": "text",
+      "required": false,
+      "options": { "max": 40 },
+      "_설명": "tier=emd 전용. 예: 우1동, 장전1동"
+    },
+    {
+      "name": "instance_key",
+      "type": "text",
+      "required": true,
+      "options": { "max": 200 },
+      "_설명": "worker.js _govTreeInstanceKey()가 자동 생성 — '{tier}:{도코드}:{시코드}:{국코드 또는 읍면동명}' 형식, 완전일치 조회용 인덱스 대상. 저장 시 반드시 이 형식을 지킬 것(수기 입력 금지, 헬퍼 함수 경유)."
+    },
+    {
+      "name": "institution",
+      "type": "text",
+      "required": false,
+      "options": { "max": 200 },
+      "_설명": "사람이 읽는 표시용(\"부산 동구 총무국\") — 검색·매칭에는 쓰지 않음, instance_key가 정본"
+    },
+    {
+      "name": "task",
+      "type": "text",
+      "required": false,
+      "options": { "max": 500 }
+    },
+    {
+      "name": "risk_tier",
+      "type": "select",
+      "required": true,
+      "options": { "values": ["low", "high"], "maxSelect": 1 },
+      "_설명": "설계상 gov-tree 인스턴스는 거의 항상 low(§4-1, §8-2 결정 — safety 도메인도 예외 없음). high는 이 컬렉션에 들어올 일이 없어야 정상 — 들어오면 §4-1 위반이니 점검할 것"
+    },
+    {
+      "name": "status",
+      "type": "select",
+      "required": true,
+      "options": {
+        "values": ["active_pending_review", "generation_failed", "rate_limited"],
+        "maxSelect": 1
+      }
+    },
+    {
+      "name": "generated_content",
+      "type": "text",
+      "required": false,
+      "options": { "max": 20000 }
+    },
+    {
+      "name": "validation_notes",
+      "type": "text",
+      "required": false,
+      "options": { "max": 2000 }
+    },
+    {
+      "name": "generated_at",
+      "type": "date",
+      "required": true
+    },
+    {
+      "name": "source_conversation",
+      "type": "text",
+      "required": false,
+      "options": { "max": 4000 }
+    }
+  ],
+  "indexes": [
+    "CREATE UNIQUE INDEX idx_sp_gov_tree_instance_realtime_key ON sp_gov_tree_instance_realtime (instance_key)",
+    "CREATE INDEX idx_sp_gov_tree_instance_realtime_tier ON sp_gov_tree_instance_realtime (tier)"
+  ],
+  "listRule": null,
+  "viewRule": null,
+  "createRule": null,
+  "updateRule": null,
+  "deleteRule": null,
+  "_규칙_설명": "list/view/create/update/delete 규칙을 전부 null(관리자 전용)로 둔다 — 이 컬렉션은 worker.js가 관리자 토큰(_l1AdminToken)으로만 접근하고, 클라이언트(gov-router.js)는 GET /gov-tree-instance/lookup 같은 worker.js 프록시 경유로만 읽는다(비밀키를 클라이언트로 넘기지 않는 sigungu-dept-resolve와 동일한 신뢰 경계, GOV_TREE_LAZY_INSTANCING_DESIGN_v1_0.md §8-1 결정 참조)."
+}

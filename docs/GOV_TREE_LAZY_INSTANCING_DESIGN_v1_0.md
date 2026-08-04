@@ -292,12 +292,19 @@ function _validateGovTreeInstanceSP(tier, content) {
 이번 세션까지 커밋한 `city-dept-master-data.json`·`emd-master-data-busan.json`은
 **정본이 아니라 파일럿 검증용 미러**로 격하합니다. 구체적으로:
 
-1. **부트스트랩 시드**: 지금 이 저장소의 43개 동 + jachi 16개 레코드를
-   1회성 시딩 스크립트(`tools/seed_gov_tree_pocketbase.py`, 신설 제안)로
-   PocketBase `sp_gov_tree_instance_realtime`에 `status='active'`(사람
-   검토 완료 취급 — 이미 이번 세션에서 신뢰도 표기와 함께 사람이 검토한
-   내용이므로)로 이관합니다. 이후 gov-router.js의 2단계 판정에서 이
-   레코드들은 즉시 REAL로 인식됩니다.
+1. **부트스트랩 시드**: 지금 이 저장소의 43개 동 + jachi 16개 레코드 중
+   §3 판정기로 REAL인 것만(43개 동 전부 + jachi 11개 — 나머지 5개 구는
+   국이름만 확인되고 산하과목록이 없어 STUB으로 남아있음, 정상 동작:
+   그 5곳은 오히려 다음 사용자 발화 때 §4-1 미스 신호가 나가 자동으로
+   재저작 대상이 되는 게 의도된 흐름) 1회성 시딩 스크립트
+   (`tools/seed_gov_tree_pocketbase.mjs`, 구현 완료 — §10 참조)로
+   PocketBase `sp_gov_tree_instance_realtime`에 `status='active_pending_review'`
+   (사람 검토 완료 취급 — 이미 이번 세션에서 신뢰도 표기와 함께 사람이
+   검토한 내용이므로)로 이관합니다. 이후 gov-router.js의 2단계 판정에서
+   이 레코드들은 즉시 REAL로 인식됩니다. 범위는 부산(도코드=busan)으로
+   한정했습니다 — 제주 등 다른 도에 이미 있던 REAL 레코드(이번 세션
+   이전부터 완성돼 있던 것)는 이번 부트스트랩 범위 밖이며, 필요하면
+   별도 세션에서 명시적으로 다시 결정합니다.
 2. **gov-router.js의 데이터 소스 우선순위 변경**(§6 참조): 지금은
    `_fetchText()`가 GitHub raw의 JSON만 봅니다. 이걸 "PocketBase 먼저
    조회 → 없으면 JSON 미러(초기 이행기 동안 하위호환용) → 그래도 없으면
@@ -320,7 +327,7 @@ function _validateGovTreeInstanceSP(tier, content) {
 | `src/gopang/ai/call-ai.js` | 필요 시 gov-router.js가 미스 신호를 직접 worker.js에 못 쏘는 실행 맥락(순수 클라이언트)이라면, 기존 `GOV_SP_DRAFT_REQUEST` 태그 파싱·큐잉 로직(2020~2041행)을 재사용해 gov-tree 미스도 같은 경로로 흘려보냄 — AC가 태그를 낼 필요 없이 gov-router.js가 직접 `fetch(/sp-author/queue)` 하는 게 더 간단할 수 있음(§8 미결사항 1) | 수정 검토 |
 | `prompts/gov-tree/08-schema/JURISDICTION-RESOLVER-SCHEMA_v1_2.md` | 제주 전용 표현(§1의 "제주도 조례로 도가 직접 수행" 등)을 다도(多道) 일반 표현으로 갱신, `jeju-router.js` 참조를 `gov-router.js`로 정정(이미 2026-08-04/05에 이름이 바뀌었으나 이 문서는 미갱신 상태였음) | 수정(누락 발견) |
 | `docs/SP-AUTHOR-AUTOMATION_v1_0.md` | §1에 `1-9. gov_tree_instance_miss` 항목 추가(§4-1 그대로) | 수정 |
-| `tools/seed_gov_tree_pocketbase.py` | 43개 동 + jachi 16개를 PocketBase로 1회 이관하는 시딩 스크립트 | 신설 |
+| `tools/seed_gov_tree_pocketbase.mjs` | 43개 동 + jachi 16개를 PocketBase로 1회 이관하는 시딩 스크립트 | 신설 |
 | `prompts/AC-PRO-CORE_v1_0.txt` | **변경 불필요** — §1 원칙("전용 SP 없다고 호출 불가 아님, kgov가 기본값")과 §GOV_MATCH가 이미 "AC는 세부 계층을 몰라도 된다"는 설계를 보장하고 있음. gov-tree 04/05 계층의 미스 처리는 kgov 내부(gov-router.js)의 책임이지 AC 판단 루프의 책임이 아님 — 이게 애초에 이 계층 분리 설계의 의도. | **무변경** |
 
 **AC-PRO-CORE를 안 고치는 이유를 명확히**: 주피터님 지시문의 "AC 등에 이
@@ -355,20 +362,112 @@ Phase 4: 다른 도(경남·경기·서울 등 이미 city 테이블은 있으�
 
 ---
 
-## 8. 미결 사항 — 사용자 확인 필요
+## 8. 미결 사항 — 결정됨(2026-08-05, 주피터 확인)
 
-1. **미스 신호를 누가 쏘는가**: gov-router.js는 브라우저(클라이언트)에서
-   실행되는 코드입니다(`_fetchText`가 GitHub raw를 직접 fetch) —
-   `/sp-author/queue`를 클라이언트가 직접 호출해도 되는지(비밀키 노출
-   없음, POST 바디만 있으면 되므로 가능해 보임), 아니면 기존 A 부품처럼
-   AC가 태그를 내고 call-ai.js가 서버 프록시 경유로 쏘는 경로를 그대로
-   따라야 하는지 — 후자면 AC-PRO-CORE에 최소한 "kgov 내부에서 미스가
-   나면 이 태그를 대신 내라"는 위임 규칙이 필요할 수 있어 §6의
-   "AC-PRO-CORE 무변경" 결론이 바뀔 수 있습니다.
-2. **risk_tier=high 예외**: §4-1에서 city-dept/emd는 거의 항상 low라고
-   했으나, safety(재난안전) 도메인처럼 오안내가 실제 위험으로 이어질 수
-   있는 도메인은 예외로 둘지 — 두면 그 도메인만 사전승인 큐(기존
-   `sp_draft_requests`)로 보내야 합니다.
-3. **JSON 미러 갱신 주체**: PocketBase에 새로 쌓이는 레코드를 이 저장소
-   JSON에 주기적으로 되반영(export)할지, 아니면 파일럿 기간에는
-   손대지 않고 43+16만 스냅샷으로 남길지.
+1. **미스 신호를 누가 쏘는가 → gov-router.js가 직접 쏜다.** 근거: 이미 존재하는
+   `resolveSigunguDept()`가 정확히 같은 종류의 문제(정적 데이터 미스 → 지연
+   조회)를 AC 태그 경유 없이 `worker.js`의 `/gov/sigungu-dept-resolve`를
+   직접 fetch하는 방식으로 풀어놨다 — 동일 패턴을 따른다. AC 태그 경유
+   방식은 LLM이 태그를 정확히 내는 데 의존하는 추가 실패 지점을 만든다
+   (실사례: deepseek-v4-flash가 PROFILE_SUBMIT 태그를 약 70% 확률로
+   누락한 전례, `docs/GOV-TREE-EMD-TEAM-SEEDING-RUN_2026-08-03.md` 등에
+   기록). STUB/MISSING 판정은 이미 §3의 결정론적 코드로 끝나 있으므로,
+   LLM 태그 발화에 다시 의존할 이유가 없다. **§6의 "AC-PRO-CORE 무변경"
+   결론이 이걸로 확정된다.**
+2. **safety 도메인 risk_tier=high 예외 → 두지 않는다.** city-dept/emd
+   계층은 "어느 부서가 담당하는가"라는 라우팅 정보만 만든다. 진짜 응급은
+   `§CORE`가 이 흐름 전체를 우회해 `EMERGENCY_RE` 정규식으로 즉시
+   kemergency로 간다(gov-router.js `_isEmergency()`) — gov-tree 미스
+   처리 로직은 애초에 진짜 응급 경로에 관여하지 않는다. 재난안전 담당
+   부서 연락처를 한 번 잘못 안내해도 최악의 경우가 "헛걸음"이지 생명·
+   신체 직결 손해가 아니므로, §DRAFT_REQUEST의 (a)(b) 기준을 그대로
+   적용하면 여전히 low다. 도메인 이름만으로 예외를 만들지 않는다 — 실전
+   테스트(Phase 2)에서 실제 반례가 나오면 그때 재검토한다.
+3. **JSON 미러 갱신 → 자동 동기화 안 함, 파일럿 종료 시 폐기.**
+   PocketBase→JSON 역방향 export를 만들면 그 자체가 새 실패 지점(동시
+   편집 충돌·스케줄러 관리)이 된다. 파일럿 검증은 git diff를 보는 게
+   아니라 실제 kgov 탭으로 확인하는 것이 맞다. 43+16개 레코드는 지금
+   상태로 스냅샷 동결하고, Phase 3 검증이 끝나면 이 저장소에서 완전히
+   제거한다(§7 갱신) — "당분간 유지"로 오래 끌면 다시 정본처럼 취급되기
+   시작할 위험이 있다.
+
+## 9. 문서 재검토로 발견한 보강 사항(2026-08-05)
+
+### 9-1. 검증 게이트가 너무 약함 — §4-3에 출처 표기 요건 추가
+
+기존 `_validateGovTreeInstanceSP()`(§4-3)는 "국이름/청사주소 같은 키워드가
+본문에 있는가"만 본다 — LLM이 그럴듯하지만 근거 없는 산하과 이름을
+지어내도 이 검증은 통과한다. 이번 세션에 43개 동·16개 구·군을 손으로
+채우며 지킨 규율(나무위키/공식 홈페이지 구분 표기, 확신 없으면 TBD 명시)을
+few-shot으로 "보여주기"만 해서는 LLM이 매번 지킨다는 보장이 없다.
+검증 게이트에 아래 조건을 추가한다:
+
+```js
+function _validateGovTreeInstanceSP(tier, content) {
+  const required = tier === 'emd'
+    ? ['청사주소', '대표전화', '관할구역']
+    : ['국이름'];
+  const missing = required.filter(k => !content.includes(k));
+
+  // ★ 2026-08-05 추가 — 출처 유형 표기 요건. 이번 세션 43개 동+16개
+  // 구·군 전부 "나무위키 확인"·"공식 홈페이지 확인"·"TBD — 재검증 필요"
+  // 중 하나를 명시했다(신뢰도 등급). 이 표기가 전혀 없으면 사실적
+  // 정확성을 스스로 점검한 흔적이 없다는 뜻이므로 통과시키지 않는다 —
+  // U2(사실 정확성) 원칙: "그럴듯하지만 미검증"과 "검증됨"을 구분하지
+  // 못하는 결과물은 검증됨과 동급으로 취급하면 안 된다.
+  const hasSourceAttribution =
+    /나무위키|공식\s*홈페이지|\.go\.kr|TBD\s*[—-]\s*재검증/i.test(content);
+  if (!hasSourceAttribution) missing.push('출처 유형 표기(나무위키/공식 홈페이지/TBD 중 하나)');
+
+  return { valid: missing.length === 0, missing };
+}
+```
+
+### 9-2. 비용 상한이 설계에 없음 — §7에 가드레일 추가
+
+전국 규모(읍면동 3,556 + 시군구 226×10여 도메인)로 켜면, 실사용자 트래픽이
+몰리는 시간대에 짧은 시간 안에 수백 건의 "5회 왕복 LLM+웹검색 저작"이
+동시에 트리거될 수 있다 — Claude API·Serper 비용이 예측 밖으로 튈 위험.
+Phase 3(부산 전체 확대) 진입 전에 최소 가드레일을 둔다:
+
+```js
+// worker.js — gov-tree instance 실시간 생성 전용 rate limit.
+// KV(GOV_DATA_KV, 이미 존재하는 바인딩 재사용)에 시간당 카운터를 둔다 —
+// sigungu-dept-resolve의 30일 캐시와 동일한 인프라, 새 바인딩 불필요.
+const GOV_TREE_INSTANCE_HOURLY_CAP = 20; // 초기값 — 관찰하며 조정
+async function _checkGovTreeInstanceRateLimit(env) {
+  if (!env.GOV_DATA_KV) return { allowed: true }; // KV 없으면(로컬 개발 등) 제한 안 함
+  const hourKey = `gov-tree-instance-rate:${new Date().toISOString().slice(0, 13)}`; // YYYY-MM-DDTHH
+  const current = Number(await env.GOV_DATA_KV.get(hourKey)) || 0;
+  if (current >= GOV_TREE_INSTANCE_HOURLY_CAP) return { allowed: false, current };
+  await env.GOV_DATA_KV.put(hourKey, String(current + 1), { expirationTtl: 3600 });
+  return { allowed: true, current: current + 1 };
+}
+```
+
+상한 초과 시 실시간 생성을 건너뛰고(사용자 응답은 이미 STUB 즉답으로
+끝났으므로 지장 없음) `status='rate_limited'`로 큐에만 남겨 다음 시간대
+또는 사람이 수동으로 처리하게 한다 — 요청 자체를 버리지 않는다.
+
+---
+
+## 10. 구현 상태(2026-08-05 갱신)
+
+§7 Phase 1~2에 해당하는 코드가 이번 세션에 구현되어 patch로 전달됨.
+구현 범위와 파일별 대응은 아래와 같다 — 상세는 각 파일의 코드 주석 참조.
+
+| 항목 | 상태 | 파일 |
+|---|---|---|
+| §3 판정기(REAL/STUB/MISSING) | ✅ 구현+테스트 | `gov-router.js` `_classifyCityDeptInstance`/`_classifyEmdInstance` |
+| §4-1 미스 신호 발신(gov-router.js 직접 fetch, §8-1 결정 반영) | ✅ 구현 | `gov-router.js` `_reportGovTreeInstanceMiss()` |
+| §4-2 실시간 저작 함수 | ✅ 구현(미검증 — 실 PocketBase/Claude API 없이는 통합 테스트 불가) | `worker.js` `_generateGovTreeInstanceSP()` |
+| §4-3 검증 게이트(§9-1 출처표기 요건 포함) | ✅ 구현+단위테스트 | `worker.js` `_validateGovTreeInstanceSP()` |
+| §5-1 PocketBase 컬렉션 | ✅ 스키마 정의 + 헬퍼 함수 | `worker.js` `_l1*GovTreeInstanceRealtime()`, `docs/schema/sp_gov_tree_instance_realtime.schema.json` |
+| §5-1 조회 엔드포인트(gov-router.js가 읽을 read-only 경로) | ✅ 구현 | `worker.js` `handleGovTreeInstanceLookup` — `GET /gov-tree-instance/lookup` |
+| §5-1 큐잉 엔드포인트 확장 | ✅ 구현 | `worker.js` `handleSPAuthorQueue`의 `request_type==='gov_tree_instance'` 분기 |
+| §9-2 비용 상한 | ✅ 구현 | `worker.js` `_checkGovTreeInstanceRateLimit()` |
+| §5-2 gov-router.js 데이터소스 우선순위(PocketBase 우선) | ✅ 구현 | `gov-router.js` `_fetchCityDeptText`/`_loadEmdRecordsForProvince` 앞단에 PocketBase 조회 삽입 |
+| §5-2 시딩 스크립트 | ✅ 구현+dry-run 검증(부산 city-dept 11건+emd 43건=54건 수집·렌더링 확인) | `tools/seed_gov_tree_pocketbase.mjs` — `_generateGovDraftSP` 재구현 대신 `assembleGovSystemPrompt()` 자체를 재사용해 실제 렌더링 결과와 100% 동일한 텍스트를 얻음 |
+| §5-2 시딩 수신 엔드포인트 | ✅ 구현 | `worker.js` `handleGovTreeInstanceSeed` — `POST /gov-tree-instance/seed`, LLM 생성 없이 직접 삽입, 멱등(기존 있으면 스킵) |
+| 실 PocketBase/Claude API 대상 통합 테스트 | ❌ 미실행 | 이 세션의 네트워크 접근 범위(GitHub·패키지 레지스트리만 허용)로는 실제 L1 PocketBase·Cloudflare Workers·Anthropic API에 접근 불가 — 배포 후 실환경에서 사람이 확인 필요 |
+

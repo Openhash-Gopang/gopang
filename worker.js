@@ -3838,7 +3838,300 @@ async function _generateGovDraftSP(env, institution, task, tierHint, ctx) {
   return finalText;
 }
 
-// ── SP-TREE-GUARDIAN (2026-07-29 신설) ──────────────────────────────
+// ── gov-tree(04-city-dept·05-emd) 인스턴스 실시간 저작 저장소
+// (2026-08-05 신설, GOV_TREE_LAZY_INSTANCING_DESIGN_v1_0.md §5-1) ──────
+// sp_gov_draft_realtime(named institution용)의 자매 컬렉션. 자유텍스트
+// institution 매칭 대신 구조화 키(도코드/시코드/국코드/읍면동명)로
+// 완전일치 조회한다 — "부산 동구 jachi" 같은 구조화 대상에는 LIKE
+// 매칭보다 정확하고 오탐이 없다.
+function _govTreeInstanceKey(govTreeKey) {
+  const { tier, 도코드, 시코드, 국코드, 읍면동명 } = govTreeKey;
+  return [tier, 도코드 || '', 시코드 || '', 국코드 || 읍면동명 || ''].join(':');
+}
+
+async function _l1FindGovTreeInstanceRealtime(env, govTreeKey) {
+  const token = await _l1AdminToken(env);
+  const key = _govTreeInstanceKey(govTreeKey).replace(/'/g, "\\'");
+  const filter = encodeURIComponent(`instance_key='${key}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_gov_tree_instance_realtime/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`sp_gov_tree_instance_realtime 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+// 도코드가 없는 조회(directCode 'emd' tier에서 JSON에 아예 없어 도를
+// 특정 못한 경우)를 위한 폭넓은 조회 — 읍면동명만으로 전체 도 순회.
+// 결과가 여러 도에서 동시에 나오면(동명이인 읍면동) 첫 건만 쓰고 경고만
+// 남긴다 — _findEmdEntryAcrossProvinces와 동일한 "코드 충돌 시 첫 매칭"
+// 원칙.
+async function _l1FindGovTreeInstanceRealtimeByName(env, tier, 읍면동명또는국코드) {
+  const token = await _l1AdminToken(env);
+  const field = tier === 'emd' ? '읍면동명' : '국코드';
+  const filter = encodeURIComponent(`tier='${tier}' && ${field}='${String(읍면동명또는국코드).replace(/'/g, "\\'")}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_gov_tree_instance_realtime/records?filter=${filter}&perPage=5`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`sp_gov_tree_instance_realtime 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  if ((data.items || []).length > 1) {
+    console.warn(`[gov-tree-instance] 동명 충돌(${tier}/${읍면동명또는국코드}) — ${data.items.length}건, 첫 건 사용`);
+  }
+  return data.items?.[0] || null;
+}
+
+async function _l1CreateGovTreeInstanceRealtime(env, record) {
+  const token = await _l1AdminToken(env);
+  const body = { ...record, instance_key: _govTreeInstanceKey(record) };
+  const res = await fetch(`${L1_DEFAULT}/api/collections/sp_gov_tree_instance_realtime/records`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`sp_gov_tree_instance_realtime 생성 실패 (HTTP ${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+// §4-3 검증 게이트. tier별 필수 요소 + (★ 2026-08-05, 재검토로 발견한
+// 보강사항 §9-1) 출처 유형 표기 요건. 이번 세션에 43개 동·16개 구·군을
+// 손으로 채우며 지킨 규율(나무위키/공식 홈페이지 구분, 확신 없으면 TBD
+// 명시)을 few-shot으로 "보여주기"만 해서는 LLM이 매번 지킨다는 보장이
+// 없다 — 이 표기가 전혀 없으면 사실적 정확성을 스스로 점검한 흔적이
+// 없다는 뜻이므로 통과시키지 않는다(U2 원칙: "그럴듯하지만 미검증"과
+// "검증됨"을 구분 못 하는 결과물은 검증됨과 동급으로 취급하면 안 됨).
+function _validateGovTreeInstanceSP(tier, content) {
+  const missing = [];
+  const required = tier === 'emd' ? ['청사주소', '대표전화', '관할구역'] : ['국이름'];
+  for (const k of required) if (!content.includes(k)) missing.push(k);
+  if (content.length < 300) missing.push('본문이 너무 짧음(300자 미만)');
+  const hasSourceAttribution = /나무위키|공식\s*홈페이지|\.go\.kr|TBD\s*[—-]\s*재검증/i.test(content);
+  if (!hasSourceAttribution) missing.push('출처 유형 표기(나무위키/공식 홈페이지/TBD 중 하나)');
+  return { valid: missing.length === 0, missing };
+}
+
+// §4-2 저작 함수. named institution용 _generateGovDraftSP의 자매 함수 —
+// 핵심 차이는 "원형 템플릿을 이미 안다"는 점: SP-AUTHOR PHASE B(템플릿
+// 조회)를 생략하고 바로 그 계층의 확정 템플릿으로 시작한다. 같은 도의
+// 이미 REAL 판정된 이웃 레코드를 few-shot으로 함께 주입해, 이번 세션에
+// 실제로 지킨 조사 규율(나무위키 우선 → 공식 홈페이지 교차검증 → 신뢰도
+// 낮으면 TBD 명시)을 재현하게 한다 — 새 판단 기준을 발명하는 게 아니라
+// 사람이 43개 동에 대해 실제로 했던 절차를 그대로 시켜보는 것.
+const REPO_RAW_GOV_TREE = 'https://raw.githubusercontent.com/Openhash-Gopang/gopang/main';
+
+async function _fetchSiblingRealRecordsForFewShot(env, tier, 도코드, 시코드, 국코드) {
+  // 실패해도(레포 fetch 문제 등) few-shot 없이 생성을 계속 진행 — 이건
+  // 품질 보조 수단이지 필수 전제조건이 아니다.
+  try {
+    if (tier === 'city-dept') {
+      const res = await fetch(`${REPO_RAW_GOV_TREE}/prompts/gov-tree/04-city/templates/city-dept-master-data.json`);
+      if (!res.ok) return '';
+      const data = await res.json();
+      const siblings = (data.국목록 || [])
+        .filter(r => r.국코드 === 국코드 && r.국이름 && r.산하과목록 && !r.시코드?.includes(시코드))
+        .slice(0, 2);
+      return siblings.map(s => JSON.stringify(s, null, 2)).join('\n\n');
+    }
+    if (tier === 'emd') {
+      const provinceFileMap = { busan: 'emd-master-data-busan.json', jeju: 'emd-master-data.json' };
+      const file = provinceFileMap[도코드] || 'emd-master-data-busan.json';
+      const res = await fetch(`${REPO_RAW_GOV_TREE}/prompts/gov-tree/05-emd/${file}`);
+      if (!res.ok) return '';
+      const data = await res.json();
+      const siblings = (data.읍면동목록 || []).filter(r => r.청사주소 && !r.청사주소.includes('TBD')).slice(0, 2);
+      return siblings.map(s => JSON.stringify(s, null, 2)).join('\n\n');
+    }
+    return '';
+  } catch (e) {
+    console.warn('[gov-tree-instance] few-shot 이웃 레코드 조회 실패(무시, 없이 진행):', e.message);
+    return '';
+  }
+}
+
+async function _generateGovTreeInstanceSP(env, govTreeKey, task, ctx) {
+  const { tier, 도코드, 시코드, 국코드, 읍면동명 } = govTreeKey;
+  const templateFile = tier === 'emd'
+    ? '05-emd/SP-EMD-TEMPLATE_v1.3.md'
+    : `04-city/templates/SP-CITYDEPT-${(국코드 || 'jachi').toUpperCase()}-TEMPLATE_v1.0.md`;
+
+  const [templateRes, siblingRecords] = await Promise.all([
+    fetch(`${REPO_RAW_GOV_TREE}/prompts/gov-tree/${templateFile}`),
+    _fetchSiblingRealRecordsForFewShot(env, tier, 도코드, 시코드, 국코드),
+  ]);
+  // 국코드별 전용 템플릿이 없을 수 있다(예: 아직 신설 안 된 도메인) —
+  // 그 경우 범용 city-dept 템플릿으로 폴백.
+  let template;
+  if (templateRes.ok) {
+    template = await templateRes.text();
+  } else if (tier !== 'emd') {
+    const fallbackRes = await fetch(`${REPO_RAW_GOV_TREE}/prompts/gov-tree/04-city/templates/SP-CITYDEPT-TEMPLATE_v1.0.md`);
+    if (!fallbackRes.ok) throw new Error(`템플릿 fetch 실패 (전용·범용 둘 다): HTTP ${fallbackRes.status}`);
+    template = await fallbackRes.text();
+  } else {
+    throw new Error(`SP-EMD-TEMPLATE fetch 실패 (HTTP ${templateRes.status})`);
+  }
+
+  const targetLabel = tier === 'emd' ? `${도코드}/${읍면동명}` : `${시코드}/${국코드}`;
+  const systemPrompt = `당신은 SP-AUTHOR 절차를 이 gov-tree 인스턴스 하나에 대해
+약식 실행합니다. 계층: ${tier}, 대상: ${targetLabel}. 이용자 용건: "${task}".
+
+아래 원형 템플릿의 변수를 실제 조사로 채우십시오. 계층별 필수 요소:
+${tier === 'emd' ? '청사주소, 대표전화, 관할구역' : '국이름(가능하면 산하과목록도)'}.
+
+--- 원형 템플릿 ---
+${template}
+--- 원형 템플릿 끝 ---
+
+${siblingRecords ? `--- 참고: 같은 도(province)에서 이미 신뢰도 높게 실사된 이웃 사례 ---
+${siblingRecords}
+--- 이 사례들의 출처 신뢰도 표기 관행을 그대로 따르십시오. ---
+
+` : ''}본문 어딘가에 반드시 출처 유형을 명시하십시오 — "나무위키 'OO' 문서
+확인", "OO 공식 홈페이지(...go.kr) 확인", 또는 확인 안 된 세부사항은
+"TBD — 재검증 필요" 중 하나입니다(사실을 지어내지 않는다는 U2 원칙 —
+이 표기가 없으면 자동 검증에서 반려됩니다). 검색이 필요하면 응답 끝에
+[WEB_SEARCH: query=검색어]를 내십시오.
+
+최종 응답에는 [WEB_SEARCH] 태그 없이 완성된 내용만 출력하십시오.`;
+
+  let messages = [{ role: 'user', content: `${targetLabel} 인스턴스를 작성해주세요.` }];
+  let finalText = '';
+  for (let round = 0; round < 5; round++) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 3000, system: systemPrompt, messages }),
+    });
+    if (!res.ok) throw new Error(`Claude API 호출 실패 (HTTP ${res.status})`);
+    const data = await res.json();
+    const text = data.content?.find(c => c.type === 'text')?.text || '';
+    const searchMatch = text.match(/\[WEB_SEARCH:\s*query=([^\]]+)\]\s*$/);
+    if (searchMatch && round < 4) {
+      const query = searchMatch[1].trim();
+      let searchResult;
+      try {
+        const swRes = await handleWebSearch(new Request('https://internal/web-search', {
+          method: 'POST', body: JSON.stringify({ query }),
+        }), env, {}, ctx);
+        searchResult = await swRes.json();
+      } catch (e) {
+        searchResult = { error: e.message };
+      }
+      messages.push({ role: 'assistant', content: text });
+      messages.push({ role: 'user', content: `[검색 결과]\n${JSON.stringify(searchResult).slice(0, 3000)}` });
+      continue;
+    }
+    finalText = text.replace(/\[WEB_SEARCH:[^\]]*\]\s*$/, '').trim();
+    break;
+  }
+  return finalText;
+}
+
+// §9-2 비용 상한. KV(GOV_DATA_KV, 기존 바인딩 재사용)에 시간당 카운터를
+// 둔다 — 전국 규모로 켰을 때 트래픽 몰리는 시간대에 수백 건의 "5회 왕복
+// LLM+웹검색 저작"이 동시에 트리거되어 비용이 예측 밖으로 튀는 걸 막는
+// 최소 가드레일. 초기값은 관찰하며 조정.
+const GOV_TREE_INSTANCE_HOURLY_CAP = 20;
+async function _checkGovTreeInstanceRateLimit(env) {
+  if (!env.GOV_DATA_KV) return { allowed: true }; // KV 없으면(로컬 개발 등) 제한 안 함
+  const hourKey = `gov-tree-instance-rate:${new Date().toISOString().slice(0, 13)}`;
+  const current = Number(await env.GOV_DATA_KV.get(hourKey)) || 0;
+  if (current >= GOV_TREE_INSTANCE_HOURLY_CAP) return { allowed: false, current };
+  await env.GOV_DATA_KV.put(hourKey, String(current + 1), { expirationTtl: 3600 });
+  return { allowed: true, current: current + 1 };
+}
+
+// GET /gov-tree-instance/lookup?tier=&도코드=&시코드=&국코드=|읍면동명=
+// gov-router.js(_fetchGovTreeInstancePocketBase)가 읽는 read-only 조회
+// 엔드포인트(§5-1). 비밀키는 서버(이 함수)에서만 쓰고 클라이언트로
+// 절대 넘기지 않는다 — sigungu-dept-resolve와 동일한 신뢰 경계.
+async function handleGovTreeInstanceLookup(request, url, env, corsHeaders) {
+  const tier = url.searchParams.get('tier') || '';
+  const 도코드 = url.searchParams.get('도코드') || '';
+  const 시코드 = url.searchParams.get('시코드') || '';
+  const 국코드 = url.searchParams.get('국코드') || '';
+  const 읍면동명 = url.searchParams.get('읍면동명') || '';
+  if (!tier || (tier !== 'emd' && tier !== 'city-dept')) {
+    return new Response(JSON.stringify({ found: false, error: 'tier(emd|city-dept) 필수' }), { status: 400, headers: corsHeaders });
+  }
+  if (!env.L1_ADMIN_EMAIL || !env.L1_ADMIN_PASSWORD) {
+    return new Response(JSON.stringify({ found: false }), { headers: corsHeaders }); // PocketBase 미설정 — 조용히 미스 처리
+  }
+  try {
+    let rec;
+    if (도코드) {
+      rec = await _l1FindGovTreeInstanceRealtime(env, { tier, 도코드, 시코드, 국코드, 읍면동명 });
+    } else {
+      // directCode 'emd' tier가 JSON에서 도를 못 찾은 경우(§4-2) — 도
+      // 없이 이름만으로 넓게 조회.
+      rec = await _l1FindGovTreeInstanceRealtimeByName(env, tier, 국코드 || 읍면동명);
+    }
+    if (!rec || !rec.generated_content) return new Response(JSON.stringify({ found: false }), { headers: corsHeaders });
+    return new Response(JSON.stringify({
+      found: true, generated_content: rec.generated_content, status: rec.status,
+    }), { headers: corsHeaders });
+  } catch (e) {
+    console.warn('[gov-tree-instance] lookup 실패(무시, 미스로 처리):', e.message);
+    return new Response(JSON.stringify({ found: false }), { headers: corsHeaders });
+  }
+}
+
+// POST /gov-tree-instance/seed
+// body: {records: [{tier, 도코드, 시코드?, 국코드?, 읍면동명?, generated_content, institution?}, ...]}
+// ★ 2026-08-05 신설 — 부트스트랩 시딩 전용(§5-2, tools/seed_gov_tree_pocketbase.py
+// 가 호출). LLM 생성을 트리거하지 않고 이미 사람이 검토·작성한 내용(이번
+// 세션의 43개 동 + jachi 16개)을 status='active'로 직접 삽입한다 —
+// /sp-author/queue의 gov_tree_instance 분기(실시간 생성용)와는 목적이
+// 다르다. 신뢰 모델은 /sp-author/queue와 동일(내부 API, 별도 비밀키 없음
+// — worker.js 4040행 근방 주석 참조). 레코드별로 이미 있으면 건너뛴다
+// (멱등 — _gov_seed_common.py가 문서화한 "재시딩 중복 생성" 사고를
+// 반복하지 않기 위해 dedup을 스크립트가 아니라 이 엔드포인트에도 넣음).
+async function handleGovTreeInstanceSeed(request, env, corsHeaders) {
+  let payload;
+  try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
+  const records = Array.isArray(payload.records) ? payload.records : [];
+  if (records.length === 0) {
+    return new Response(JSON.stringify({ error: 'records(array) required, non-empty' }), { status: 400, headers: corsHeaders });
+  }
+  if (!env.L1_ADMIN_EMAIL || !env.L1_ADMIN_PASSWORD) {
+    return new Response(JSON.stringify({ error: 'pocketbase_not_configured' }), { status: 503, headers: corsHeaders });
+  }
+  const results = { created: [], skipped_existing: [], failed: [] };
+  for (const r of records) {
+    if (!r.tier || (r.tier !== 'emd' && r.tier !== 'city-dept') || !r.도코드 || !r.generated_content) {
+      results.failed.push({ record: r, error: 'tier(emd|city-dept)/도코드/generated_content 필수' });
+      continue;
+    }
+    try {
+      const existing = await _l1FindGovTreeInstanceRealtime(env, r).catch(() => null);
+      if (existing) {
+        results.skipped_existing.push(_govTreeInstanceKey(r));
+        continue;
+      }
+      const rec = await _l1CreateGovTreeInstanceRealtime(env, {
+        tier: r.tier, 도코드: r.도코드, 시코드: r.시코드 || '', 국코드: r.국코드 || '', 읍면동명: r.읍면동명 || '',
+        institution: r.institution || '', task: r.task || '', risk_tier: 'low',
+        status: 'active_pending_review', // ★ 시딩분도 사람 검토 흔적(review 딱지)은 유지 —
+                                          // "이번 세션에 사람이 직접 조사했다"는 사실이 곧
+                                          // 검토이지만, 컬렉션 status 값 자체는 실시간 생성분과
+                                          // 동일 어휘를 써서 별도 상태값을 늘리지 않는다.
+        generated_content: r.generated_content,
+        validation_notes: r.validation_notes || '부트스트랩 시딩(43개 동+jachi 16개, 이번 세션 실사 완료분)',
+        generated_at: new Date().toISOString(),
+      });
+      results.created.push({ key: _govTreeInstanceKey(r), id: rec.id });
+    } catch (e) {
+      results.failed.push({ record: _govTreeInstanceKey(r), error: e.message });
+    }
+  }
+  return new Response(JSON.stringify(results), { headers: corsHeaders });
+}
+
+
+
 // _l1CreateEscalation/_l1ListEscalations와 동일한 패턴 — 컬렉션 이름만
 // sp_tree_audit_findings(감사 결과)·sp_tree_guardian_runs(마지막 감사
 // 시점 추적, base sha 기준점)로 다르다.
@@ -5030,6 +5323,102 @@ async function handleSPAuthorQueue(request, env, corsHeaders, ctx) {
   try { payload = await request.json(); } catch { return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400, headers: corsHeaders }); }
   if (!payload.request_type || !payload.signal_source) {
     return new Response(JSON.stringify({ error: 'request_type, signal_source required' }), { status: 400, headers: corsHeaders });
+  }
+
+  // ★ 2026-08-05 신설 — request_type='gov_tree_instance' 전용 분기
+  // (GOV_TREE_LAZY_INSTANCING_DESIGN_v1_0.md §4-1). 아래 named-institution
+  // 경로(institution/task 자유텍스트 dedup)와는 별도 흐름 — gov_tree_key
+  // 구조화 키로 정확히 중복 판정하고, risk_tier=low만 오므로(gov-router.js
+  // 발신 측에서 이미 §DRAFT_REQUEST 기준 적용) 바로 실시간 생성으로
+  // 간다. 사전승인 큐(high)로 갈 일이 없어 아래 sp_draft_requests 큐잉
+  // 로직 전체를 우회한다.
+  if (payload.request_type === 'gov_tree_instance') {
+    const govTreeKey = payload.gov_tree_key;
+    if (!govTreeKey || !govTreeKey.tier) {
+      return new Response(JSON.stringify({ error: 'gov_tree_key.tier required' }), { status: 400, headers: corsHeaders });
+    }
+    if (!env.L1_ADMIN_EMAIL || !env.L1_ADMIN_PASSWORD) {
+      // PocketBase 미설정(로컬 개발 등) — 큐잉 자체를 조용히 스킵. 이미
+      // 사용자에게는 STUB 즉답이 나갔으므로 실패해도 지장 없다.
+      return new Response(JSON.stringify({ status: 'skipped', reason: 'pocketbase_not_configured' }), { headers: corsHeaders });
+    }
+    const dupTree = await _l1FindGovTreeInstanceRealtime(env, govTreeKey).catch(() => null);
+    if (dupTree) {
+      return new Response(JSON.stringify({ status: 'already_exists', record: dupTree }), { headers: corsHeaders });
+    }
+    ctx?.waitUntil?.((async () => {
+      try {
+        const rateCheck = await _checkGovTreeInstanceRateLimit(env);
+        if (!rateCheck.allowed) {
+          await _l1CreateGovTreeInstanceRealtime(env, {
+            tier: govTreeKey.tier, 도코드: govTreeKey.도코드 || '', 시코드: govTreeKey.시코드 || '',
+            국코드: govTreeKey.국코드 || '', 읍면동명: govTreeKey.읍면동명 || '',
+            institution: payload.institution || '', task: payload.task || '',
+            risk_tier: 'low', status: 'rate_limited',
+            validation_notes: `시간당 상한(${GOV_TREE_INSTANCE_HOURLY_CAP}건) 도달 — 다음 시간대 또는 수동 처리 대기`,
+            generated_at: new Date().toISOString(),
+          });
+          return;
+        }
+        const content = await _generateGovTreeInstanceSP(env, govTreeKey, payload.task || '', ctx);
+        const validation = _validateGovTreeInstanceSP(govTreeKey.tier, content);
+        const draftRecord = {
+          tier: govTreeKey.tier, 도코드: govTreeKey.도코드 || '', 시코드: govTreeKey.시코드 || '',
+          국코드: govTreeKey.국코드 || '', 읍면동명: govTreeKey.읍면동명 || '',
+          institution: payload.institution || '', task: payload.task || '',
+          risk_tier: 'low',
+          status: validation.valid ? 'active_pending_review' : 'generation_failed',
+          generated_content: content,
+          validation_notes: validation.valid ? '' : `필수 요소 누락: ${validation.missing.join(', ')}`,
+          generated_at: new Date().toISOString(),
+          source_conversation: (payload.source_conversation || '').slice(0, 4000),
+        };
+        const draftRec = await _l1CreateGovTreeInstanceRealtime(env, draftRecord);
+
+        if (validation.valid) {
+          // §1 원칙 강제 — 새 SP 작성 시 사용자(profiles) 등록도 함께.
+          // 기존 named-institution 경로(_handleUnclaimedProfilePost)와
+          // 동일 패턴 재사용, entity_subtype만 gov-tree 전용으로.
+          try {
+            const profRes = await _handleUnclaimedProfilePost({
+              entity_type: 'institution',
+              name: payload.institution || `${govTreeKey.시코드 || govTreeKey.도코드} ${govTreeKey.국코드 || govTreeKey.읍면동명}`,
+              description: `${payload.institution} — ${payload.task}(gov-tree SP-Author 실시간 생성, 사람 검토 대기 중)`,
+              tags: ['sp-author', 'gov-tree', 'realtime', 'pending_human_review'],
+              occupation: '지방자치단체',
+              entity_subtype: `gov-tree-instance:${govTreeKey.tier}:${_govTreeInstanceKey(govTreeKey)}`,
+              claim_source: 'sp_author_gov_tree_realtime',
+              claim_status: 'unclaimed',
+            }, env, corsHeaders);
+            if (!profRes.ok) throw new Error(await profRes.text().catch(() => 'unknown'));
+          } catch (e) {
+            console.error('[profiles] gov-tree-instance 프로필 등록 실패:', e.message);
+            await _l1CreateEscalation(env, {
+              to: '@owner', reason: 'sp_author_profile_registration_failed',
+              ref_collection: 'sp_gov_tree_instance_realtime', ref_id: draftRec.id,
+              summary: `[등록 실패] ${payload.institution} 실시간 생성은 됐으나 profiles 등록 실패 — 수동 확인 필요: ${e.message}`.slice(0, 2000),
+              read: false,
+            }).catch((e2) => console.error('[escalation] profiles 등록 실패 알림도 실패:', e2.message));
+          }
+          await _l1CreateEscalation(env, {
+            to: '@owner', reason: 'sp_draft_request',
+            ref_collection: 'sp_gov_tree_instance_realtime', ref_id: draftRec.id,
+            summary: `[gov-tree 실시간생성·활성화됨·검토대기] ${payload.institution} — ${payload.task}`.slice(0, 2000),
+            read: false,
+          }).catch((e) => console.error('[sp-author] gov-tree-instance escalation 생성 실패:', e.message));
+        }
+      } catch (e) {
+        console.error('[sp-author] gov-tree-instance 실시간 생성 실패:', e.message);
+        await _l1CreateGovTreeInstanceRealtime(env, {
+          tier: govTreeKey.tier, 도코드: govTreeKey.도코드 || '', 시코드: govTreeKey.시코드 || '',
+          국코드: govTreeKey.국코드 || '', 읍면동명: govTreeKey.읍면동명 || '',
+          institution: payload.institution || '', task: payload.task || '',
+          risk_tier: 'low', status: 'generation_failed',
+          validation_notes: `생성 실패: ${e.message}`, generated_at: new Date().toISOString(),
+        }).catch(() => {});
+      }
+    })());
+    return new Response(JSON.stringify({ status: 'queued_realtime' }), { headers: corsHeaders });
   }
 
   // 중복 신호 병합 — request_type=update면 target_sp_id로, 그 외에는
@@ -8254,6 +8643,14 @@ export default {
     // ── SP-Author 자동화 (2026-07-11 신설) ─────────────────────────
     if (pathname === '/sp-author/queue' && request.method === 'POST')
       return handleSPAuthorQueue(request, env, corsHeaders, ctx);
+    // ── gov-tree(04-city-dept·05-emd) 인스턴스 지연 저작 (2026-08-05
+    // 신설, GOV_TREE_LAZY_INSTANCING_DESIGN_v1_0.md §5-1) — 큐잉은 위
+    // /sp-author/queue(request_type='gov_tree_instance')를 그대로 쓰고,
+    // 이건 gov-router.js가 읽는 read-only 조회 경로.
+    if (pathname === '/gov-tree-instance/lookup' && request.method === 'GET')
+      return handleGovTreeInstanceLookup(request, url, env, corsHeaders);
+    if (pathname === '/gov-tree-instance/seed' && request.method === 'POST')
+      return handleGovTreeInstanceSeed(request, env, corsHeaders);
     if (pathname === '/sp-author/gov-draft/review' && request.method === 'POST')
       return handleSPGovDraftReview(request, env, corsHeaders);
     if (pathname === '/sp-author/queue' && request.method === 'GET')
