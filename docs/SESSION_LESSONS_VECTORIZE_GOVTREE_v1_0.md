@@ -210,7 +210,69 @@ gov-tree SP의 `§LEGAL-BASIS`를 작성할 때, 기관이 "도청 내부 조직
 
 ---
 
+## ⑦ gov-tree 전용 SP가 있는 기관은 K-Search/PocketBase 프로필 대상이 아니다
+
+2026-08-04 부산 파일럿(부산교통공사) 세션에서 실제로 밟은 함정 — SP-18
+K-Search 본문을 먼저 읽지 않고 코드 추적만으로 짐작한 대가.
+
+### 무슨 일이 있었나
+
+부산교통공사(`SP-ORG-BUSANTRANSIT`, 전용 gov-tree SP 이미 존재)를
+"K-Search가 찾을 수 있는지" 검증한다며 PocketBase에 별도 프로필을
+등록하고, `POST /profile`의 403·타임아웃을 재시도 로직까지 만들어가며
+고치고, `entity-semantic-search`·`POST /search` 양쪽으로 색인 여부를
+검증했다. 전부 불필요했다 — `gov-router.js`의
+`_resolveInstitutionMatch(text, _orgTable(), ...)`(directCode/K-Search와
+완전히 독립된 순수 발화-텍스트 매칭 경로)가 `BUSAN_ORG_TABLE`의 `kw`
+배열만으로 이미 정상 작동하고 있었다.
+
+### 진짜 근거는 SP-18(K-Search 본문)에 이미 있었다
+
+`prompts/SP-18_ksearch_v1.4.txt` **RULE-07 [7-D]**:
+
+> "대상이 개인이 아니라 정부기관·부서(조직 단위)면... **이미 해당
+> 부서를 다루는 전용 SP가 있으면**(예: 제주 행정은 SP-DO-*/SP-EMD-*
+> 계층이 이미 자체 DATA_REQUIREMENT-SCHEMA로 data.go.kr을 연동하는
+> 중) **K-Search가 별도로 그 조직의 프로필을 다시 만들지 않는다** —
+> 검색 위임이 오면 '해당 기관은 이미 전용 창구가 있다'고 안내하고
+> `[KSEARCH_HANDOFF_BACK: reason=institution-govtask]`로 되돌린다."
+
+즉 gov-tree(도청·시청·직속기관·출자출연기관 등)에 이미 인스턴스화된
+기관은 **PocketBase profiles/K-Search의 관할이 아니다** — 이건
+버그가 아니라 SP-18이 명시적으로 규정한 경계다. 라우팅은
+`gov-router.js`의 정적 테이블(키워드 매칭 또는 `directCode`)이
+전담하고, K-Search는 "전용 SP가 없는" 기관·조직에 한해서만
+`RULE-07`(웹검색·data.go.kr 보완, `status=external_info_only`,
+**정식 profile로 등록하지 않음**)로 개입한다.
+
+### 세 갈래를 혼동하지 말 것
+
+| 대상 | 올바른 경로 |
+|---|---|
+| gov-tree 전용 SP가 있는 기관(도청·시청·직속기관·출자출연기관 인스턴스) | `gov-router.js` 정적 테이블(`kw` 텍스트 매칭 또는 `directCode`) — K-Search 관여 안 함 |
+| gov-tree 전용 SP가 아직 없는 기관·조직 | K-Search RULE-07 — `unclaimed_dataportal`류 조회, `status=external_info_only`만 반환, **정식 profile로 등록 안 함** |
+| 사람·일반 사업체(개인, 식당 등) | 사용자 DB(PocketBase) 등록 + K-Search 검색 — 혼디 대원칙 그대로 |
+
+### 일반화된 교훈
+
+1. **코드를 추적해서 아키텍처를 짐작하기 전에, 그 시스템의 1차 정의
+   문서(이 경우 SP 자신의 System Prompt 본문)를 먼저 읽어라.**
+   `gov-router.js`만 읽고 "directCode 경로가 진짜 메커니즘"이라고
+   판단했는데, SP-18 RULE-07을 먼저 읽었으면 애초에 그 경로를 검증
+   대상으로 삼지 않았을 것이다.
+2. gov-tree처럼 "이미 자기 완결적인 라우팅 체계를 가진 도메인"에
+   K-Search/PocketBase 등록 패턴을 습관적으로 적용하지 마라 — 대원칙
+   ("모든 개체는 DB에 등록하고 K-Search로 찾는다")은 gov-tree에는
+   RULE-07 7-D로 명시적 예외가 걸려 있다.
+3. 새 gov-tree 인스턴스(신규 도·기관)를 만들 때 검증 순서: (1) 정적
+   테이블(`kw` 키워드)에 등록됐는지 → 발화 텍스트 매칭 테스트로 확인
+   (네트워크 불필요, `node src/tests/*.test.mjs`로 충분). (2) 그걸로
+   끝이다 — PocketBase 등록은 **하지 않는다.**
+
+---
+
 ## 다음에 비슷한 작업을 할 때 — 체크리스트
+
 
 **Vectorize/의미검색 인프라를 건드릴 때**
 - [ ] 필터링할 메타데이터 필드는 벡터 upsert 전에 인덱스부터 만들었는가
@@ -233,6 +295,13 @@ gov-tree SP의 `§LEGAL-BASIS`를 작성할 때, 기관이 "도청 내부 조직
       뭔지 먼저 확정했는가(이름만으로 단정 금지)
 - [ ] 확인 안 된 법령 인용은 `legal_basis_last_verified`를 비워두고
       정직하게 미검증으로 표시했는가
+
+**새 gov-tree 인스턴스(신규 도·기관)를 검증할 때**
+- [ ] 발화 텍스트 매칭(`kw` 키워드)이 되는지부터 확인했는가(§⑦ —
+      네트워크 불필요, `node src/tests/*.test.mjs`로 충분)
+- [ ] PocketBase 프로필 등록·K-Search 색인을 "당연히 필요한 단계"로
+      가정하지 않았는가 — gov-tree 전용 SP가 있는 기관은 SP-18
+      RULE-07 7-D에 따라 K-Search/PocketBase 대상이 **아니다**(§⑦)
 
 ---
 

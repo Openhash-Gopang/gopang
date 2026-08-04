@@ -294,6 +294,7 @@ body {
     <a href="#sp-vs-runtime">④ SP 파일의 §0는 장식이다</a>
     <a href="#abstraction-map">⑤ 추상 템플릿화 진행 지도</a>
     <a href="#legal-basis">⑥ 근거법 3계열과 제주 특유 구조</a>
+    <a href="#ksearch-boundary">⑦ K-Search 관할 경계</a>
     <a href="#checklist">다음에 비슷한 작업할 때 체크리스트</a>
     <a href="#related">관련 문서</a>
   </nav>
@@ -644,6 +645,81 @@ kgov(SP-10_kpublic) + expertParityNotice + expertCommonSp
       </div>
     </section>
 
+    <!-- ── ⑦ K-Search 관할 경계 ── -->
+    <section class="gs reveal" id="ksearch-boundary">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">07 · K-Search boundary</div>
+          <div class="gs-title">gov-tree 전용 SP가 있는 기관은 K-Search/PocketBase 프로필 대상이 아니다</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          2026-08-04 부산 파일럿(부산교통공사) 세션에서 실제로 밟은 함정 —
+          SP-18 K-Search 본문을 먼저 읽지 않고 코드 추적만으로 짐작한 대가.
+        </p>
+        <p>
+          부산교통공사(<code>SP-ORG-BUSANTRANSIT</code>, 전용 gov-tree SP
+          이미 존재)를 "K-Search가 찾을 수 있는지" 검증한다며 PocketBase에
+          별도 프로필을 등록하고, <code>POST /profile</code>의 403·타임아웃을
+          재시도 로직까지 만들어가며 고치고, <code>entity-semantic-search</code>·
+          <code>POST /search</code> 양쪽으로 색인 여부를 검증했다. 전부
+          불필요했다 — <code>gov-router.js</code>의
+          <code>_resolveInstitutionMatch(text, _orgTable(), ...)</code>
+          (directCode/K-Search와 완전히 독립된 순수 발화-텍스트 매칭 경로)가
+          <code>BUSAN_ORG_TABLE</code>의 <code>kw</code> 배열만으로 이미
+          정상 작동하고 있었다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            SP-18(K-Search 본문) RULE-07 [7-D]
+          </div>
+          "대상이 개인이 아니라 정부기관·부서(조직 단위)면...
+          <strong>이미 해당 부서를 다루는 전용 SP가 있으면</strong>(예: 제주
+          행정은 SP-DO-*/SP-EMD-* 계층이 이미 자체 DATA_REQUIREMENT-SCHEMA로
+          data.go.kr을 연동하는 중) <strong>K-Search가 별도로 그 조직의
+          프로필을 다시 만들지 않는다</strong> — 검색 위임이 오면 '해당
+          기관은 이미 전용 창구가 있다'고 안내하고
+          <code>[KSEARCH_HANDOFF_BACK: reason=institution-govtask]</code>로
+          되돌린다."
+        </div>
+        <p>
+          즉 gov-tree(도청·시청·직속기관·출자출연기관 등)에 이미 인스턴스화된
+          기관은 <strong>PocketBase profiles/K-Search의 관할이 아니다</strong>
+          — 이건 버그가 아니라 SP-18이 명시적으로 규정한 경계다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <tr><th>대상</th><th>올바른 경로</th></tr>
+            <tr><td>gov-tree 전용 SP가 있는 기관(도청·시청·직속기관·출자출연기관 인스턴스)</td><td><code>gov-router.js</code> 정적 테이블(<code>kw</code> 텍스트 매칭 또는 <code>directCode</code>) — K-Search 관여 안 함</td></tr>
+            <tr><td>gov-tree 전용 SP가 아직 없는 기관·조직</td><td>K-Search RULE-07 — <code>unclaimed_dataportal</code>류 조회, <code>status=external_info_only</code>만 반환, 정식 profile로 등록 안 함</td></tr>
+            <tr><td>사람·일반 사업체(개인, 식당 등)</td><td>사용자 DB(PocketBase) 등록 + K-Search 검색 — 혼디 대원칙 그대로</td></tr>
+          </table>
+        </div>
+        <h4>일반화된 교훈</h4>
+        <ul>
+          <li><strong>코드를 추적해서 아키텍처를 짐작하기 전에, 그 시스템의
+              1차 정의 문서(이 경우 SP 자신의 System Prompt 본문)를 먼저
+              읽어라.</strong> <code>gov-router.js</code>만 읽고 "directCode
+              경로가 진짜 메커니즘"이라고 판단했는데, SP-18 RULE-07을 먼저
+              읽었으면 애초에 그 경로를 검증 대상으로 삼지 않았을 것이다.</li>
+          <li>gov-tree처럼 "이미 자기 완결적인 라우팅 체계를 가진 도메인"에
+              K-Search/PocketBase 등록 패턴을 습관적으로 적용하지 마라 —
+              대원칙("모든 개체는 DB에 등록하고 K-Search로 찾는다")은
+              gov-tree에는 RULE-07 7-D로 명시적 예외가 걸려 있다.</li>
+          <li>새 gov-tree 인스턴스(신규 도·기관)를 만들 때 검증 순서: (1)
+              정적 테이블(<code>kw</code> 키워드)에 등록됐는지 → 발화 텍스트
+              매칭 테스트로 확인(네트워크 불필요,
+              <code>node src/tests/*.test.mjs</code>로 충분). (2) 그걸로
+              끝이다 — PocketBase 등록은 하지 않는다.</li>
+        </ul>
+      </div>
+    </section>
+
     <!-- ── 체크리스트 ── -->
     <section class="gs reveal" id="checklist">
       <div class="gs-head">
@@ -673,6 +749,11 @@ kgov(SP-10_kpublic) + expertParityNotice + expertCommonSp
           <li>SP 파일에 적힌 "상위 상속" 문구를 실제 동작이라고 단정하지 말고, 조립을 실제로 담당하는 코드(<code>gov-router.js</code> 등)를 확인했는가</li>
           <li>§LEGAL-BASIS를 쓸 때 기관이 도청 내부조직/재단/지방공기업 중 뭔지 먼저 확정했는가(이름만으로 단정 금지)</li>
           <li>확인 안 된 법령 인용은 <code>legal_basis_last_verified</code>를 비워두고 정직하게 미검증으로 표시했는가</li>
+        </ul>
+        <h4>새 gov-tree 인스턴스(신규 도·기관)를 검증할 때</h4>
+        <ul>
+          <li>발화 텍스트 매칭(<code>kw</code> 키워드)이 되는지부터 확인했는가(§07 — 네트워크 불필요, <code>node src/tests/*.test.mjs</code>로 충분)</li>
+          <li>PocketBase 프로필 등록·K-Search 색인을 "당연히 필요한 단계"로 가정하지 않았는가 — gov-tree 전용 SP가 있는 기관은 SP-18 RULE-07 7-D에 따라 K-Search/PocketBase 대상이 <strong>아니다</strong>(§07)</li>
         </ul>
       </div>
     </section>
