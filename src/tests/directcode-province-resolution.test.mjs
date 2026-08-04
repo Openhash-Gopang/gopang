@@ -152,5 +152,37 @@ if (fail > 0) process.exit(1);
   check('[핵심] 별칭("휴메트로")으로도 매칭', hit, r.trace.join(' | '));
 }
 
+// ── 케이스 9: ★ 2026-08-04 신설 — kw 리터럴 매칭이 완전히 실패하는
+// 자연어 패러프레이즈(paraphrase)도 LLM 분류 폴백으로 구제되는가.
+// "지하철 타다가 물건 놓고 내렸는데 어디다 물어봐요"는 BUSAN_ORG_TABLE의
+// kw(부산교통공사/부산 지하철/휴메트로/도시철도 N호선) 중 어느 것도
+// 리터럴로 포함하지 않는다 — 수정 전에는 _resolveInstitutionMatch가
+// topScore===0에서 즉시 null을 반환해 이 케이스는 완전히 새는 사각지대
+// 였다(docs/GOVTREE_NATIONWIDE_EXPANSION_LESSONS_v1_0.md 참조). classifyFn을
+// 목으로 주입해 이 구제 경로가 실제로 호출·동작하는지 검증한다.
+{
+  const mockClassifyFn = async (text, candidatesText) => {
+    // 실제 LLM이라면 desc("지하철 건설·운영")를 보고 골랐을 상황을 재현.
+    if (candidatesText.includes('SP-ORG-BUSANTRANSIT') && text.includes('지하철')) {
+      return 'SP-ORG-BUSANTRANSIT';
+    }
+    return 'NONE';
+  };
+  const r = await assembleGovSystemPrompt(
+    '지하철 타다가 물건 놓고 내렸는데 어디다 물어봐요', '부산광역시', mockClassifyFn
+  );
+  const hit = r.trace.some(t => t.includes('SP-ORG-BUSANTRANSIT'));
+  check('[신규 구제] kw 미포함 패러프레이즈도 classifyFn 폴백으로 매칭', hit, r.trace.join(' | '));
+}
+{
+  // 대조군 — classifyFn 없이(주입 안 됨) 같은 문장을 물으면 여전히
+  // 못 찾아야 정상(회귀 확인용, 이 구제 경로가 classifyFn 의존적임을 검증).
+  const r = await assembleGovSystemPrompt(
+    '지하철 타다가 물건 놓고 내렸는데 어디다 물어봐요', '부산광역시'
+  );
+  const missed = !r.trace.some(t => t.includes('SP-ORG-BUSANTRANSIT'));
+  check('[대조군] classifyFn 미주입 시엔 예상대로 여전히 못 찾음', missed, r.trace.join(' | '));
+}
+
 console.log(`\n최종 총 ${pass}건 중 ${pass}건 통과, ${fail}건 실패`);
 if (fail > 0) process.exit(1);
