@@ -132,3 +132,25 @@ function check(name, cond, detail) {
 
 console.log(`\n총 ${pass + fail}건 중 ${pass}건 통과, ${fail}건 실패`);
 if (fail > 0) process.exit(1);
+
+// ── 케이스 7·8: ★ 진짜 핵심 검증(2026-08-04 세션 후반 재확인) —
+// directCode/PocketBase 없이 순수 발화 텍스트만으로 매칭되는가.
+// _resolveInstitutionMatch(text, _orgTable(), ...)가 실제 1차 매칭
+// 경로이고, directCode는 K-Search가 이미 특정 프로필을 확정한 경우의
+// 지름길일 뿐이다 — gov-tree 전용 SP가 있는 기관은 SP-18 RULE-07
+// 7-D에 따라 애초에 PocketBase/K-Search 대상이 아니므로
+// (docs/SESSION_LESSONS_VECTORIZE_GOVTREE_v1_0.md §⑦ 참조), 이 경로가
+// 작동해야 진짜 완주다.
+{
+  const r = await assembleGovSystemPrompt('부산교통공사 민원은 어디로 문의하나요', '부산광역시');
+  const hit = r.trace.some(t => t.includes('SP-ORG-BUSANTRANSIT'));
+  check('[핵심] 순수 발화 텍스트만으로(directCode 없이) 부산교통공사 매칭', hit, r.trace.join(' | '));
+}
+{
+  const r = await assembleGovSystemPrompt('휴메트로 분실물센터 전화번호 알려줘', '부산광역시');
+  const hit = r.trace.some(t => t.includes('SP-ORG-BUSANTRANSIT'));
+  check('[핵심] 별칭("휴메트로")으로도 매칭', hit, r.trace.join(' | '));
+}
+
+console.log(`\n최종 총 ${pass}건 중 ${pass}건 통과, ${fail}건 실패`);
+if (fail > 0) process.exit(1);
