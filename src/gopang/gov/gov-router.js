@@ -2278,7 +2278,9 @@ async function _loadEmdNameToProvinceIndex() {
         // 전입신고"처럼 리 이름만 언급하고 상위 읍 이름·"제주" 언급이
         // 전혀 없으면 도 판별 자체가 실패해 "지역 미판별"로 조기
         // 반환되는 버그였다 — _matchEmd에 도달하기도 전에 걸러짐.
-        for (const ri of rec.관할리목록 || []) {
+        // ★ 2026-08-05 — _matchEmd와 동일하게 관할구역목록(v1.3 신규
+        // 필드) 우선, 관할리목록(구 필드)은 폴백으로 유지.
+        for (const ri of rec.관할구역목록 || rec.관할리목록 || []) {
           const riName = ri.split('(')[0].trim();
           if (riName && !index[riName]) index[riName] = provinceCode;
         }
@@ -2292,8 +2294,15 @@ async function _loadEmdNameToProvinceIndex() {
 }
 
 const _emdRecordsByProvince = {};
-async function _loadEmdRecords() {
-  const provinceCode = _resolveProvinceCode();
+// ★ 2026-08-05 리팩터 — provinceCode를 인자로 받는 버전을 별도로 뽑아냈다.
+// 기존 _loadEmdRecords()는 "이미 도가 확정된 상황"(자연어 흐름, 팀/도메인
+// 매칭 등)에서만 맞는 함수였다 — directCode 자체만으로는 아직 도를 모르는
+// 경우(§ 'emd'/'team' tier 핸들러) 이 함수 하나로는 도를 특정할 수 없어서
+// 'jeju' 하드코딩이 남아있었다. l2/city/agency/org가 이미 쓰는
+// _findEntryAcrossProvinces 패턴과 동일한 목적으로 _findEmdEntryAcrossProvinces를
+// 새로 추가했다(EMD 데이터는 PROVINCE_TABLES가 아니라 비동기 JSON 로더라서
+// 그 함수를 그대로 재사용할 수 없어 별도로 구현).
+async function _loadEmdRecordsForProvince(provinceCode) {
   if (_emdRecordsByProvince[provinceCode]) return _emdRecordsByProvince[provinceCode];
   const paths = EMD_PATHS[provinceCode];
   if (!paths) { _emdRecordsByProvince[provinceCode] = []; return []; }
@@ -2307,14 +2316,44 @@ async function _loadEmdRecords() {
   return _emdRecordsByProvince[provinceCode];
 }
 
+async function _loadEmdRecords() {
+  return _loadEmdRecordsForProvince(_resolveProvinceCode());
+}
+
+// EMD_PATHS에 등록된 모든 도를 순회하며 predicate에 맞는 레코드를 찾는다.
+// _findEntryAcrossProvinces와 동일한 반환 형태({ provinceCode, entry } | null)
+// 및 동일한 "코드 충돌 시 첫 매칭 + 경고" 원칙을 따른다.
+async function _findEmdEntryAcrossProvinces(predicate) {
+  const matches = [];
+  for (const provinceCode of Object.keys(EMD_PATHS)) {
+    const records = await _loadEmdRecordsForProvince(provinceCode);
+    const entry = records.find(predicate);
+    if (entry) matches.push({ provinceCode, entry });
+  }
+  if (matches.length === 0) return null;
+  if (matches.length > 1) {
+    console.warn(
+      `[gov-router] EMD directCode 코드 충돌 — ${matches.length}개 도(` +
+      `${matches.map(m => m.provinceCode).join(', ')})에서 동시에 매칭됨. ` +
+      `첫 번째(${matches[0].provinceCode})를 사용하지만, 시딩 스크립트의 ` +
+      `코드 유일성 부여 규칙을 점검할 것.`
+    );
+  }
+  return matches[0];
+}
+
 // ── 텍스트에서 읍면동 매칭 ──────────────────────────────────────
-// 1) 읍면동명 직접 언급, 2) 관할리목록에 있는 리(里) 이름 언급 순으로 확인.
+// 1) 읍면동명 직접 언급, 2) 관할구역목록(구 관할리목록)에 있는 리·법정동
+// 이름 언급 순으로 확인. ★ 2026-08-05 — v1.3 스키마의 관할구역목록을
+// 우선 사용하고 구 스키마 관할리목록은 폴백으로만 남긴다(둘 다 있으면
+// 동일 내용이므로 무관, 신규 도 레코드가 관할리목록 없이 관할구역목록만
+// 가질 수 있어 폴백이 없으면 리/동 이름 매칭이 조용히 안 됨).
 function _matchEmd(text, records) {
   for (const rec of records) {
     if (text.includes(rec.읍면동명)) return rec;
   }
   for (const rec of records) {
-    for (const ri of rec.관할리목록 || []) {
+    for (const ri of rec.관할구역목록 || rec.관할리목록 || []) {
       const riName = ri.split('(')[0].trim(); // "한림리(한림1리·...)" → "한림리"
       if (riName && text.includes(riName)) return rec;
     }
@@ -3573,19 +3612,22 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     if (tier === 'emd' && code) {
       // code 형식: "{읍면동명}" (예: 애월읍) — seed_gov_tree_emd_team.py의
       // entity_subtype 규약과 동일.
-      // ★ 2026-08-04 — 다른 tier와 달리 이 hardcoding은 아직 못 고친다.
-      // emd-master-data.json 자체가 도코드 필드 없이 제주 42건만 있는
-      // Jeju-only 스키마다(GOV_TREE_ABSTRACTION_LAYER_STATUS_v1_0.md §2
-      // 확인). 스키마에 도코드 필드를 추가하고 emd-master-data.json을
-      // 도별로 분리(또는 필드 추가)하기 전까지는 _findEntryAcrossProvinces
-      // 패턴을 적용할 데이터 자체가 없다 — 이건 별도 후속 작업(스키마
-      // 마이그레이션)이 선행돼야 한다. 지금은 제주만 존재하므로 정확도
-      // 손실 없이 하드코딩을 그대로 둔다.
-      _currentResolvedProvinceCode = 'jeju';
-      const emdRecords = await _loadEmdRecords();
-      const emdEntry = emdRecords.find(r => r.읍면동명 === code);
-      if (emdEntry) {
-        const cityEntry = _findCityByName(emdEntry.행정시명);
+      // ★ 2026-08-05 — 2026-08-04에 emd-master-data.json 스키마(도코드·
+      // 상위기관명·상위기관구분 등)와 SP-EMD-TEMPLATE(v1.3) 자체는 이미
+      // 전국 일반화됐으나, 이 directCode 해석부는 여전히 'jeju' 하드코딩과
+      // {행정시명} 전용 조회만 남아있었다(GOV_TREE_ABSTRACTION_LAYER_STATUS_v1_0.md
+      // §2 갱신 필요 — "05-emd: 스키마부터"라는 구 서술은 이제 사실과
+      // 다름, 실제 공백은 이 라우팅 코드였다). l2/city/agency/org와 동일한
+      // 패턴(_findEntryAcrossProvinces)의 EMD 전용 버전인
+      // _findEmdEntryAcrossProvinces로 도 하드코딩을 제거한다 — 새 도가
+      // EMD_PATHS에 등록되기만 하면 이 코드는 다시 손대지 않아도 된다.
+      const foundEmd = await _findEmdEntryAcrossProvinces(r => r.읍면동명 === code);
+      if (foundEmd) {
+        _currentResolvedProvinceCode = foundEmd.provinceCode;
+        const emdEntry = foundEmd.entry;
+        // v1.3 신규 필드(상위기관명) 우선, 구 스키마(행정시명)는 폴백 —
+        // _renderEmdTemplate과 동일한 하위호환 원칙.
+        const cityEntry = _findCityByName(emdEntry.상위기관명 || emdEntry.행정시명);
         if (cityEntry) {
           const cityText = await _fetchCityText(cityEntry);
           parts.push(cityText);
@@ -3600,19 +3642,17 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     if (tier === 'team' && code) {
       // code 형식: "{읍면동명}-{팀이름}" (예: 애월읍-총무팀). 읍면동명·팀이름
       // 둘 다 하이픈을 포함하지 않으므로 첫 '-'로만 분리하면 된다.
-      // ★ 2026-08-04 — 위 'emd' tier와 동일한 이유(emd-master-data.json이
-      // Jeju-only 스키마)로 하드코딩을 유지한다. emd 스키마 마이그레이션과
-      // 함께 고칠 것.
-      _currentResolvedProvinceCode = 'jeju';
+      // ★ 2026-08-05 — 위 'emd' tier와 동일하게 도 하드코딩 제거.
       const dashIdx2 = code.indexOf('-');
       const emdNameStr = dashIdx2 >= 0 ? code.slice(0, dashIdx2) : '';
       const teamNameStr = dashIdx2 >= 0 ? code.slice(dashIdx2 + 1) : '';
-      const emdRecords = await _loadEmdRecords();
-      const emdEntry = emdRecords.find(r => r.읍면동명 === emdNameStr);
+      const foundEmdForTeam = await _findEmdEntryAcrossProvinces(r => r.읍면동명 === emdNameStr);
+      const emdEntry = foundEmdForTeam?.entry || null;
+      if (emdEntry) _currentResolvedProvinceCode = foundEmdForTeam.provinceCode;
       const teamRecords = emdEntry ? await _loadTeamMasterData() : [];
       const teamEntry = teamRecords.find(r => r.emd_code === emdEntry?.emd_code && r.팀이름 === teamNameStr);
       if (emdEntry && teamEntry) {
-        const cityEntry = _findCityByName(emdEntry.행정시명);
+        const cityEntry = _findCityByName(emdEntry.상위기관명 || emdEntry.행정시명);
         if (cityEntry) {
           const cityText = await _fetchCityText(cityEntry);
           parts.push(cityText);
@@ -3827,7 +3867,9 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
     || (pdvLocationHint ? _matchEmd(pdvLocationHint, emdRecords) : null);
 
   if (emdMatch) {
-    const cityCode = _findCityByName(emdMatch.행정시명);
+    // ★ 2026-08-05 — v1.3 신규 필드(상위기관명) 우선, 구 스키마(행정시명)는
+    // 폴백(directCode 'emd'/'team' tier와 동일한 하위호환 원칙).
+    const cityCode = _findCityByName(emdMatch.상위기관명 || emdMatch.행정시명);
     if (cityCode) {
       const cityText = await _fetchCityText(cityCode);
       parts.push(cityText);
