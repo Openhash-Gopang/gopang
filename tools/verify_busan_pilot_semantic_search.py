@@ -66,10 +66,19 @@ def main():
         if err:
             print(f"❌ \"{q}\" → 조회 실패: {err}")
             continue
-        rows = data if isinstance(data, list) else data.get("results", data.get("items", []))
+        rows = (data or {}).get("candidates", [])
         hit_rank = None
         for i, r in enumerate(rows or []):
-            if isinstance(r, dict) and r.get("entity_subtype") == EXPECTED_SUBTYPE:
+            if not isinstance(r, dict):
+                continue
+            # ★ 2026-08-04 정정 — worker.js의 handleEntitySemanticSearch 응답을
+            # 다시 확인하니 {status,count,candidates} 형태이고, 각 candidate는
+            # entity_subtype을 최상위가 아니라 extra.public.identity.entity_subtype
+            # 에 담고 있었다(newExtra 구조와 동일). 최상위 r.get("entity_subtype")만
+            # 보던 최초 버전은 항상 빈 판정만 냈다 — 응답 파싱 버그였다(실제
+            # 색인 여부와 무관).
+            subtype = (r.get("extra") or {}).get("public", {}).get("identity", {}).get("entity_subtype")
+            if subtype == EXPECTED_SUBTYPE:
                 hit_rank = i + 1
                 break
         if hit_rank:
@@ -77,7 +86,9 @@ def main():
             print(f"✅ \"{q}\" → {hit_rank}위로 매칭됨 (총 {len(rows)}건 중)")
         else:
             names = [r.get("name") for r in (rows or []) if isinstance(r, dict)][:5]
-            print(f"❌ \"{q}\" → 매칭 안 됨. 상위 결과: {names}")
+            status = (data or {}).get("status")
+            count = (data or {}).get("count")
+            print(f"❌ \"{q}\" → 매칭 안 됨 (API status={status}, count={count}). 상위 결과: {names}")
 
     print(f"\n총 {len(QUERIES)}건 중 {ok_count}건 매칭됨")
     if ok_count == 0:
