@@ -113,6 +113,29 @@ alias·구분주석을 보강해야 할 신호다 — 어느 쪽이든 사람이
 `search_miss_pattern`도 이미 이 기능을 전제하고 있었지만 실제로는 없었다). 2026-07-14
 `handleSPAuthorQueueStatus`를 확장해 `priority` 단독 patch를 허용했다.
 
+### 1-9. `gov_tree_instance_miss` — gov-tree 계층 인스턴스 공백 (2026-08-05 신설)
+**문제의식**: 04-city-dept(시·군·구 부서)·05-emd(읍·면·동)는 §GOV_MATCH가 다루는
+"이름으로 특정된 기관"과 성격이 다르다 — 위치(도코드·시코드·국코드 또는 읍면동명)로
+식별되는 구조화된 계층이고, 이미 `city-dept-master-data.json`/`emd-master-data*.json`에
+스텁(제네릭 안내만 있고 실명·주소가 없는 레코드) 또는 완전 누락 상태로 존재한다.
+부산 해운대·강서·금정 43개 동 + jachi 16개 구·군을 세션마다 수작업(웹서치 →
+JSON 커밋)으로 채우는 방식은 전국 단위(읍면동 하부행정기관 3,556개소, 시군구
+226개 × 도메인 10여 개)로는 지속 불가능하다는 지적(주피터 2026-08-05 지시)에
+따라, 기존 named-institution 실시간 SP-Author(§1-2와 동일 인프라, `sp_gov_draft_realtime`
+자매 컬렉션 `sp_gov_tree_instance_realtime` 신설)를 gov-tree 04/05 계층 전용으로
+재사용한다.
+
+**설계**: `gov-router.js`가 city-dept/emd 조회 중 §3 판정기(REAL/STUB/MISSING,
+상세는 `docs/GOV_TREE_LAZY_INSTANCING_DESIGN_v1_0.md` §3)로 STUB 또는 MISSING을
+만나면, 지금 이 사용자에게는 §DRAFT_REQUEST risk_tier=low 원칙대로 즉답한 뒤,
+`request_type='gov_tree_instance'`, `signal_source='gov_tree_instance_miss'`,
+구조화 키(`gov_tree_key: {도코드,시코드,국코드 또는 읍면동명,tier}`)를 실어
+`/sp-author/queue`에 큐잉한다. 저작은 `_generateGovTreeInstanceSP()`(신설,
+`_generateGovDraftSP`의 자매 함수 — 계층별 확정 원형 템플릿과 같은 도의 이미
+검증된 이웃 레코드를 few-shot으로 주입해 PHASE B 조사 단계를 생략)가 담당한다.
+자세한 설계·구현 순서는 `docs/GOV_TREE_LAZY_INSTANCING_DESIGN_v1_0.md` 참조 —
+이 문서는 그 설계의 §1(신호 소스 목록) 갱신분만 반영한다.
+
 ---
 
 ## 2부. 정기 갱신 방법론 (Refresh Methodology)
@@ -184,8 +207,9 @@ SP는 한 번 작성되면 멈춰 있지만, 세상은 안 멈춘다 — 기준�
 
 ## 3부. 요약 — 무엇이 새로 생겼나
 
-- 신호 소스 8종(`realtime_ac`/`kcompose_match_fail`/`search_miss_pattern`/`gov_data_monitor`/
-  `user_feedback`/`admin_manual`/`refresh_schedule`/`unresolved_tag_signal`)이 전부 같은
+- 신호 소스 9종(`realtime_ac`/`kcompose_match_fail`/`search_miss_pattern`/`gov_data_monitor`/
+  `user_feedback`/`admin_manual`/`refresh_schedule`/`unresolved_tag_signal`/
+  `gov_tree_instance_miss`)이 전부 같은
   큐(`sp_draft_requests`)로
   모인다 — 어디서 왔든 처리 방식(사람의 검토·승인)은 동일하다.
 - 큐잉과 동시에 최소 ESCALATE 알림(`escalations` 컬렉션)이 자동으로 남는다.
