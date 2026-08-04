@@ -69,6 +69,7 @@ gov/gov-router.js
 | `gov-common-overlay-master-data.json`(도별 오버레이: 콜센터명·번호 등) | **17개 중 4개만**(제주·경기·서울·전남광주) |
 | do-dept/do-agency/city/emd/org 실제 SP 파일 | **제주만 완결**, 나머지는 도메인 템플릿 단계(3단계 원칙의 2단계) |
 | entity-semantic-search 색인 | 제주 267건 스코프 파일럿만 |
+| **[2026-08-04 정정]** 시군구 라우팅 키워드 골격(도메인 분류까지) | **전국 17개 도 전부 이미 존재**(`gen_nationwide_phase3.py`, 2026-07-24 생성 — `_makeMetroCityTable`/`_makeGenericCityDeptEntries`로 전국 시군구·10개 도메인 키워드 매칭까지는 됨). 단 전부 `file: null` — 실제 부서명·연락처·근거법 SP 파일은 제주 외엔 없음. 즉 "라우팅 골격은 전국 완료, 콘텐츠만 제주만 완료"가 더 정확한 현황이다. |
 
 ## 2. 전국 확대 시 반드시 처리해야 할 항목
 
