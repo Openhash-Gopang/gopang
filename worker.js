@@ -3849,6 +3849,86 @@ function _govTreeInstanceKey(govTreeKey) {
   return [tier, 도코드 || '', 시코드 || '', 국코드 || 읍면동명 || ''].join(':');
 }
 
+// ★ 2026-08-05 신설(주피터 지시 — "모든 SP는 독립적인 사용자, Profile을
+// 작성하고 K-Search가 찾을 수 있게 해야 한다" 지적 반영) — gov_code는
+// sp_gov_tree_instance_realtime의 PocketBase 조회용 instance_key와는
+// 다른, profiles.extra.public.identity.entity_subtype에 저장할 값이다.
+// **반드시 gov-router.js의 directCode 파서가 이해하는 형식과 정확히
+// 일치해야 한다** — 이 값이 곧 gwp-registry.js가 K-Search 결과를 클릭했을
+// 때 여는 `regional-gov.html?gov_code=...` URL의 gov_code이자
+// assembleGovSystemPrompt()의 directCode이기 때문이다(gov-router.js
+// "code 형식" 주석 및 tools/seed_gov_tree_citydept_natagency.py·
+// seed_gov_tree_emd_team.py가 이미 확립한 계약과 동일 — 이전 세션들이
+// jejusi/seogwipo·제주 43개 읍면동에만 시딩했던 바로 그 계약).
+// _govTreeInstanceKey()(4개 필드를 ':'로 join)와 절대 혼동하지 말 것 —
+// 그건 PocketBase 내부 dedup 키일 뿐 라우팅에는 쓰이지 않는다.
+function _govTreeGovCode(govTreeKey) {
+  const { tier, 시코드, 국코드, 읍면동명 } = govTreeKey;
+  if (tier === 'city-dept') return `city-dept:${시코드}-${국코드}`;
+  if (tier === 'emd') return `emd:${읍면동명}`;
+  throw new Error(`_govTreeGovCode: 알 수 없는 tier(${tier})`);
+}
+
+// profiles 컬렉션에서 entity_subtype 완전일치로 기존 등록 여부를 확인한다
+// — _handleUnclaimedProfilePost()는 dedup을 전혀 하지 않고 매번 새
+// guid로 프로필을 만들기 때문에(§17493행 근방 확인 — 항상
+// 'unclaimed_'+crypto.randomUUID()), 호출 전에 반드시 이 확인을 거쳐야
+// 한다. 확인 자체가 실패하면(네트워크 오류 등) null을 반환하지 않고
+// 예외를 그대로 던진다 — "확인 불가"를 "없음"으로 잘못 해석해 중복
+// 생성하는 사고(_gov_seed_common.py가 문서화한 ACRC 중복 등록 사고와
+// 동일한 함정)를 피하기 위함. PocketBase 필터 문법은 JSON 필드 하위
+// 경로 완전일치(`extra.public.identity.entity_subtype = '...'`)를
+// 그대로 지원한다는 전제 — 이 세션은 실제 PocketBase에 접근할 수 없어
+// 이 전제를 라이브로 검증하지 못했다(설계 문서 §10 "검증 못 한 것"과
+// 동일한 한계, 배포 후 사람이 직접 확인 필요).
+async function _l1FindProfileByEntitySubtype(env, entitySubtype) {
+  const token = await _l1AdminToken(env);
+  const filter = encodeURIComponent(`extra.public.identity.entity_subtype = '${entitySubtype.replace(/'/g, "\\'")}'`);
+  const res = await fetch(`${L1_DEFAULT}/api/collections/profiles/records?filter=${filter}&perPage=1`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`profiles entity_subtype 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json().catch(() => ({ items: [] }));
+  return data.items?.[0] || null;
+}
+
+// gov-tree(city-dept/emd) 인스턴스 하나를 K-Search에서 찾을 수 있도록
+// profiles에 등록한다(§1 원칙: "모든 사용자는 SP다" — institution도
+// 예외 없이 guid+entity_subtype이 있어야 [GWP:{guid}]로 호출 가능).
+// dedup-safe — 이미 있으면 새로 만들지 않고 기존 guid를 그대로 반환한다.
+// tools/seed_gov_tree_citydept_natagency.py·seed_gov_tree_emd_team.py가
+// 이미 확립한 payload 계약(entity_type/occupation/tags/entity_subtype/
+// claim_source/claim_status)을 그대로 따른다 — 실시간 생성분·부트스트랩
+// 시딩분 모두 이 함수 하나로 통일(전에는 실시간 생성 경로에만 별도로
+// 잘못된 형식으로 등록하고 있었고, 부트스트랩 시딩 경로는 아예 등록이
+// 없었다 — 두 결함 모두 이 함수 신설로 해소).
+async function _registerGovTreeProfile(env, govTreeKey, { name, description, tags = [] }) {
+  const govCode = _govTreeGovCode(govTreeKey);
+  const existing = await _l1FindProfileByEntitySubtype(env, govCode).catch((e) => {
+    console.warn(`[gov-tree-instance] profile dedup 확인 실패(${govCode}) — 안전하게 등록 스킵:`, e.message);
+    return 'CHECK_FAILED';
+  });
+  if (existing === 'CHECK_FAILED') return { status: 'skipped_dedup_check_failed' };
+  if (existing) return { status: 'already_registered', guid: existing.guid };
+
+  const profRes = await _handleUnclaimedProfilePost({
+    entity_type: 'institution',
+    name,
+    description,
+    tags: ['gov-tree', govTreeKey.tier, govCode.split(':')[1], ...tags],
+    occupation: '정부기관',
+    entity_subtype: govCode,
+    claim_source: 'gov_tree_seed_v4', // v3(Python 스크립트)를 잇는 계보 — 실시간+시딩 통합 버전
+    claim_status: 'unclaimed',
+  }, env, {}); // corsHeaders 불필요(내부 직접 호출, HTTP 응답 아님)
+  if (!profRes.ok) {
+    const errText = await profRes.text().catch(() => 'unknown');
+    throw new Error(`profiles 등록 실패: ${errText}`);
+  }
+  const body = await profRes.json();
+  return { status: 'registered', guid: body.guid };
+}
+
 async function _l1FindGovTreeInstanceRealtime(env, govTreeKey) {
   const token = await _l1AdminToken(env);
   const key = _govTreeInstanceKey(govTreeKey).replace(/'/g, "\\'");
@@ -4099,32 +4179,64 @@ async function handleGovTreeInstanceSeed(request, env, corsHeaders) {
   if (!env.L1_ADMIN_EMAIL || !env.L1_ADMIN_PASSWORD) {
     return new Response(JSON.stringify({ error: 'pocketbase_not_configured' }), { status: 503, headers: corsHeaders });
   }
-  const results = { created: [], skipped_existing: [], failed: [] };
+  const results = { created: [], skipped_existing: [], failed: [], profiles_registered: [], profiles_failed: [] };
   for (const r of records) {
     if (!r.tier || (r.tier !== 'emd' && r.tier !== 'city-dept') || !r.도코드 || !r.generated_content) {
       results.failed.push({ record: r, error: 'tier(emd|city-dept)/도코드/generated_content 필수' });
+      continue;
+    }
+    if (r.tier === 'city-dept' && (!r.시코드 || !r.국코드)) {
+      results.failed.push({ record: r, error: 'tier=city-dept면 시코드/국코드 필수(entity_subtype 조립에 필요)' });
+      continue;
+    }
+    if (r.tier === 'emd' && !r.읍면동명) {
+      results.failed.push({ record: r, error: 'tier=emd면 읍면동명 필수(entity_subtype 조립에 필요)' });
       continue;
     }
     try {
       const existing = await _l1FindGovTreeInstanceRealtime(env, r).catch(() => null);
       if (existing) {
         results.skipped_existing.push(_govTreeInstanceKey(r));
-        continue;
+      } else {
+        const rec = await _l1CreateGovTreeInstanceRealtime(env, {
+          tier: r.tier, 도코드: r.도코드, 시코드: r.시코드 || '', 국코드: r.국코드 || '', 읍면동명: r.읍면동명 || '',
+          institution: r.institution || '', task: r.task || '', risk_tier: 'low',
+          status: 'active_pending_review', // ★ 시딩분도 사람 검토 흔적(review 딱지)은 유지 —
+                                            // "이번 세션에 사람이 직접 조사했다"는 사실이 곧
+                                            // 검토이지만, 컬렉션 status 값 자체는 실시간 생성분과
+                                            // 동일 어휘를 써서 별도 상태값을 늘리지 않는다.
+          generated_content: r.generated_content,
+          validation_notes: r.validation_notes || '부트스트랩 시딩(43개 동+jachi 11개 REAL, 이번 세션 실사 완료분)',
+          generated_at: new Date().toISOString(),
+        });
+        results.created.push({ key: _govTreeInstanceKey(r), id: rec.id });
       }
-      const rec = await _l1CreateGovTreeInstanceRealtime(env, {
-        tier: r.tier, 도코드: r.도코드, 시코드: r.시코드 || '', 국코드: r.국코드 || '', 읍면동명: r.읍면동명 || '',
-        institution: r.institution || '', task: r.task || '', risk_tier: 'low',
-        status: 'active_pending_review', // ★ 시딩분도 사람 검토 흔적(review 딱지)은 유지 —
-                                          // "이번 세션에 사람이 직접 조사했다"는 사실이 곧
-                                          // 검토이지만, 컬렉션 status 값 자체는 실시간 생성분과
-                                          // 동일 어휘를 써서 별도 상태값을 늘리지 않는다.
-        generated_content: r.generated_content,
-        validation_notes: r.validation_notes || '부트스트랩 시딩(43개 동+jachi 16개, 이번 세션 실사 완료분)',
-        generated_at: new Date().toISOString(),
-      });
-      results.created.push({ key: _govTreeInstanceKey(r), id: rec.id });
     } catch (e) {
       results.failed.push({ record: _govTreeInstanceKey(r), error: e.message });
+      continue; // sp_gov_tree_instance_realtime 저장 자체가 실패하면 profiles 등록도 건너뜀
+    }
+
+    // ★ 2026-08-05 신설(주피터 지시 — §1 원칙 미충족 발견·수정) — 이
+    // 부트스트랩 경로는 지금까지 sp_gov_tree_instance_realtime에만
+    // 저장하고 profiles 등록이 전혀 없었다. tools/seed_gov_tree_
+    // citydept_natagency.py·seed_gov_tree_emd_team.py가 확립한 계약을
+    // 그대로 재사용해(_registerGovTreeProfile), 이 세션이 실사한 부산
+    // 43개 동 + jachi 11개도 K-Search로 찾을 수 있게 한다 —
+    // sp_gov_tree_instance_realtime 저장(위)이 이미 있었거나 새로
+    // 생겼거나 상관없이(멱등) 시도한다.
+    try {
+      const profResult = await _registerGovTreeProfile(env, r, {
+        name: r.institution || `${r.시코드 || r.도코드} ${r.국코드 || r.읍면동명}`,
+        description: `${r.institution || ''} — ${r.task || ''}(부트스트랩 시딩, 사람 실사 완료)`.trim(),
+        tags: ['bootstrap-seed'],
+      });
+      if (profResult.status === 'registered' || profResult.status === 'already_registered') {
+        results.profiles_registered.push({ key: _govTreeInstanceKey(r), ...profResult });
+      } else {
+        results.profiles_failed.push({ key: _govTreeInstanceKey(r), reason: profResult.status });
+      }
+    } catch (e) {
+      results.profiles_failed.push({ key: _govTreeInstanceKey(r), error: e.message });
     }
   }
   return new Response(JSON.stringify(results), { headers: corsHeaders });
@@ -5377,20 +5489,22 @@ async function handleSPAuthorQueue(request, env, corsHeaders, ctx) {
 
         if (validation.valid) {
           // §1 원칙 강제 — 새 SP 작성 시 사용자(profiles) 등록도 함께.
-          // 기존 named-institution 경로(_handleUnclaimedProfilePost)와
-          // 동일 패턴 재사용, entity_subtype만 gov-tree 전용으로.
+          // ★ 2026-08-05 수정 — 신설된 _registerGovTreeProfile()로 교체.
+          // 이전 코드는 entity_subtype을 gov-router.js의 directCode 파서가
+          // 이해하지 못하는 형식(gov-tree-instance:{tier}:{instance_key})
+          // 으로 등록해서, K-Search로 찾아도 클릭 시 라우팅이 안 되는
+          // 상태였다(§1 원칙 미충족 발견·수정, 주피터 지시). 또한 dedup
+          // 확인 없이 매번 새 guid를 만들어 재실행 시 중복 프로필이
+          // 쌓이는 문제도 있었다 — _registerGovTreeProfile이 둘 다 해소.
           try {
-            const profRes = await _handleUnclaimedProfilePost({
-              entity_type: 'institution',
+            const profResult = await _registerGovTreeProfile(env, govTreeKey, {
               name: payload.institution || `${govTreeKey.시코드 || govTreeKey.도코드} ${govTreeKey.국코드 || govTreeKey.읍면동명}`,
               description: `${payload.institution} — ${payload.task}(gov-tree SP-Author 실시간 생성, 사람 검토 대기 중)`,
-              tags: ['sp-author', 'gov-tree', 'realtime', 'pending_human_review'],
-              occupation: '지방자치단체',
-              entity_subtype: `gov-tree-instance:${govTreeKey.tier}:${_govTreeInstanceKey(govTreeKey)}`,
-              claim_source: 'sp_author_gov_tree_realtime',
-              claim_status: 'unclaimed',
-            }, env, corsHeaders);
-            if (!profRes.ok) throw new Error(await profRes.text().catch(() => 'unknown'));
+              tags: ['realtime', 'pending_human_review'],
+            });
+            if (profResult.status === 'skipped_dedup_check_failed') {
+              throw new Error('dedup 확인 실패로 등록 스킵 — 재시도 필요');
+            }
           } catch (e) {
             console.error('[profiles] gov-tree-instance 프로필 등록 실패:', e.message);
             await _l1CreateEscalation(env, {

@@ -297,7 +297,7 @@ function _validateGovTreeInstanceSP(tier, content) {
    국이름만 확인되고 산하과목록이 없어 STUB으로 남아있음, 정상 동작:
    그 5곳은 오히려 다음 사용자 발화 때 §4-1 미스 신호가 나가 자동으로
    재저작 대상이 되는 게 의도된 흐름) 1회성 시딩 스크립트
-   (`tools/seed_gov_tree_pocketbase.mjs`, 구현 완료 — §10 참조)로
+   (`tools/seed_gov_tree_pocketbase.mjs`, 구현 완료 — §12 참조)로
    PocketBase `sp_gov_tree_instance_realtime`에 `status='active_pending_review'`
    (사람 검토 완료 취급 — 이미 이번 세션에서 신뢰도 표기와 함께 사람이
    검토한 내용이므로)로 이관합니다. 이후 gov-router.js의 2단계 판정에서
@@ -451,7 +451,83 @@ async function _checkGovTreeInstanceRateLimit(env) {
 
 ---
 
-## 10. 구현 상태(2026-08-05 갱신)
+## 11. §1 원칙(모든 SP는 독립적 사용자) 미충족 발견·수정(2026-08-05, 주피터 지적)
+
+### 11-1. 무엇이 빠져있었는가
+
+AC-PRO-CORE §1 원칙: "혼디 안의 모든 개체(entity) — 사람, 기관, 부서,
+사물, 개념 — 는 profiles에 정체성을 등록한 하나의 guid이며, 그 guid에는
+반드시 SP가 할당돼 있습니다." Phase 1~2 구현 직후 주피터님이 지적하기
+전까지, 이 원칙이 gov-tree 04/05 계층에 대해 **부분적으로만** 지켜지고
+있었다는 걸 놓치고 있었다. 코드 감사 결과:
+
+1. **기존에 이미 확립된 계약이 있었다**: `tools/seed_gov_tree_
+   citydept_natagency.py`·`seed_gov_tree_emd_team.py`(2026-08-03)가
+   `entity_subtype = "{tier}:{code}"`(예: `city-dept:jejusi-jachi`,
+   `emd:애월읍`) 계약으로 이미 profiles 등록을 하고 있었다 — 이 값이
+   gov-router.js의 directCode 파서가 이해하는 형식과 정확히 일치해야
+   K-Search 검색 결과를 클릭했을 때(`gwp-registry.js`가 여는
+   `regional-gov.html?gov_code=...`) 실제로 라우팅된다.
+2. **그런데 이 시딩은 제주(jejusi/seogwipo, 43개 읍면동)에만 적용돼
+   있었다** — 부산 등 이후 세션들이 만든 city-dept/emd 레코드는
+   애초에 이 시딩 대상이 아니었다. 즉 이번 세션 전체(jachi 16개·EMD
+   43개)뿐 아니라, 그 이전 부산 파일럿 세션들의 산출물 전부가 K-Search로
+   검색되지 않는 상태였다 — 라우팅(정적 키워드 매칭)은 정상 작동해도,
+   "이 기관 자체가 혼디의 독립적 사용자로 존재한다"는 §1 원칙은
+   충족되지 않고 있었다.
+3. **Phase 1~2 구현에서 만든 실시간 생성 경로도 잘못돼 있었다**:
+   `entity_subtype`을 `gov-tree-instance:{tier}:{instance_key}` 형식
+   (PocketBase 내부 dedup 키 `_govTreeInstanceKey()`와 혼동)으로 등록해,
+   기존 계약과 형식이 달라 gov-router.js가 이해할 수 없었다 — K-Search로
+   찾아도 클릭 시 라우팅이 깨지는 상태였을 것이다.
+4. **부트스트랩 시딩 경로(`handleGovTreeInstanceSeed`)는 profiles 등록
+   자체가 아예 없었다** — `sp_gov_tree_instance_realtime`에만 저장하고
+   끝났다.
+5. **`_handleUnclaimedProfilePost()`는 dedup을 전혀 하지 않는다** —
+   매번 새 `guid`(`'unclaimed_'+crypto.randomUUID()`)로 프로필을 만든다.
+   Python 시딩 스크립트들은 호출 전 `_gov_seed_common.py`의
+   `find_existing_guid()`로 직접 확인하는 방식으로 이 문제를 피해왔는데,
+   이번 Phase 1~2의 두 worker.js 경로(실시간 생성·시딩)는 이 확인 없이
+   설계돼 재실행 시 중복 프로필이 쌓일 위험이 있었다(`_gov_seed_common.py`
+   자체가 문서화한 2026-08-03 ACRC 중복 등록 사고와 동일한 함정).
+
+### 11-2. 수정 내용
+
+- `_govTreeGovCode(govTreeKey)`(신설) — 기존 계약과 정확히 일치하는
+  `{tier}:{code}` 형식을 조립하는 단일 함수. `_govTreeInstanceKey()`
+  (PocketBase dedup용, 4필드 `:` join)와 명확히 분리 — 두 값을 혼동하지
+  않도록 각 함수 주석에 상호 참조 명시.
+- `_l1FindProfileByEntitySubtype(env, entitySubtype)`(신설) — PocketBase
+  JSON 하위 경로 완전일치 필터(`extra.public.identity.entity_subtype = '...'`)
+  로 기존 등록 여부 확인. ⚠ 이 세션은 실제 PocketBase에 접근할 수 없어
+  이 필터 문법이 실제로 동작하는지 라이브 검증하지 못했다 — 배포 후
+  가장 먼저 확인해야 할 항목(§12 참조).
+- `_registerGovTreeProfile(env, govTreeKey, {name, description, tags})`
+  (신설) — 위 두 함수를 조합한 dedup-safe 등록 함수. 이미 있으면
+  `already_registered`로 스킵, 확인 자체가 실패하면(네트워크 오류 등)
+  "없음"으로 잘못 해석해 중복 생성하지 않고 `skipped_dedup_check_failed`
+  로 안전하게 후퇴. 실시간 생성 경로·부트스트랩 시딩 경로 양쪽이 이
+  함수 하나를 공유(전에는 실시간 경로만 잘못된 형식으로 자체 구현,
+  시딩 경로는 아예 없었음 — 이제 단일 함수로 통일해 앞으로 형식이
+  다시 어긋날 여지를 구조적으로 줄임).
+- `handleGovTreeInstanceSeed`가 `sp_gov_tree_instance_realtime` 저장과
+  함께(멱등 — 이미 있으면 스킵) `_registerGovTreeProfile`도 호출하도록
+  수정 — 응답 payload에 `profiles_registered`/`profiles_failed` 필드
+  추가.
+
+### 11-3. 여전히 남은 것 — 명시적으로 범위 밖
+
+- **제주 43개 읍면동·jejusi/seogwipo city-dept의 기존 profiles 등록은
+  그대로 유지**(이미 2026-08-03에 올바른 형식으로 등록돼 있음 —
+  재등록·마이그레이션 불필요, `_registerGovTreeProfile`의 dedup 확인이
+  이들을 건드리지 않고 그대로 지나감).
+- **금정구 16개 EMD·나머지 도의 미래 확장분**은 이번 세션 부트스트랩
+  범위(부산만) 밖이므로 이번 시딩에 포함되지 않는다 — 다음 세션에서
+  §7 Phase 3로 자연스럽게 실시간 생성 경로를 통해 등록될 것(§4-1).
+- 세션 자체 한계로 `_l1FindProfileByEntitySubtype`의 PocketBase 필터
+  문법 라이브 검증 못 함 — §12 구현 상태 추적표에 반영.
+
+## 12. 구현 상태(2026-08-05 갱신)
 
 §7 Phase 1~2에 해당하는 코드가 이번 세션에 구현되어 patch로 전달됨.
 구현 범위와 파일별 대응은 아래와 같다 — 상세는 각 파일의 코드 주석 참조.
@@ -469,5 +545,6 @@ async function _checkGovTreeInstanceRateLimit(env) {
 | §5-2 gov-router.js 데이터소스 우선순위(PocketBase 우선) | ✅ 구현 | `gov-router.js` `_fetchCityDeptText`/`_loadEmdRecordsForProvince` 앞단에 PocketBase 조회 삽입 |
 | §5-2 시딩 스크립트 | ✅ 구현+dry-run 검증(부산 city-dept 11건+emd 43건=54건 수집·렌더링 확인) | `tools/seed_gov_tree_pocketbase.mjs` — `_generateGovDraftSP` 재구현 대신 `assembleGovSystemPrompt()` 자체를 재사용해 실제 렌더링 결과와 100% 동일한 텍스트를 얻음 |
 | §5-2 시딩 수신 엔드포인트 | ✅ 구현 | `worker.js` `handleGovTreeInstanceSeed` — `POST /gov-tree-instance/seed`, LLM 생성 없이 직접 삽입, 멱등(기존 있으면 스킵) |
+| §11 profiles 등록(§1 원칙, K-Search 검색 가능성) | ✅ 구현(미검증 — PocketBase JSON 필터 문법 라이브 확인 못 함) | `worker.js` `_govTreeGovCode()`·`_l1FindProfileByEntitySubtype()`·`_registerGovTreeProfile()` — 실시간 생성·부트스트랩 시딩 양쪽 경로 모두 배선, 기존 `seed_gov_tree_citydept_natagency.py`/`seed_gov_tree_emd_team.py` 계약(`entity_subtype="{tier}:{code}"`)과 통일 |
 | 실 PocketBase/Claude API 대상 통합 테스트 | ❌ 미실행 | 이 세션의 네트워크 접근 범위(GitHub·패키지 레지스트리만 허용)로는 실제 L1 PocketBase·Cloudflare Workers·Anthropic API에 접근 불가 — 배포 후 실환경에서 사람이 확인 필요 |
 
