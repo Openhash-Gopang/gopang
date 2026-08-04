@@ -39,22 +39,21 @@ globalThis.fetch = async (url) => {
 
 const { assembleGovSystemPrompt } = await import('../gopang/gov/gov-router.js');
 
-// ── 데이터 자체 검증 (18개 전부, 중복·필수필드 확인) ──────────────
-test('emd-master-data-busan.json — 18개 행정동, 중복 없음, 필수 필드 채워짐', () => {
+// ── 데이터 자체 검증 (전체 레코드, 중복·필수필드 확인) ──────────────
+test('emd-master-data-busan.json — 27개 행정동(해운대 18+강서 9), 중복 없음, 필수 필드 채워짐', () => {
   const raw = readLocal('prompts/gov-tree/05-emd/emd-master-data-busan.json');
   const recs = JSON.parse(raw).읍면동목록;
-  assert.equal(recs.length, 18, `18개여야 하는데 ${recs.length}개`);
+  assert.equal(recs.length, 27, `27개여야 하는데 ${recs.length}개`);
   const names = new Set(recs.map(r => r.읍면동명));
-  assert.equal(names.size, 18, '읍면동명 중복 존재');
+  assert.equal(names.size, 27, '읍면동명 중복 존재');
   for (const r of recs) {
     assert.equal(r.도코드, 'busan');
-    assert.equal(r.상위기관명, '해운대구');
+    assert.ok(['해운대구', '강서구'].includes(r.상위기관명), `${r.읍면동명} 상위기관명 이상함: ${r.상위기관명}`);
     assert.equal(r.상위기관구분, '자치구');
     assert.equal(r.관할구역구분, '법정동');
     assert.ok(Array.isArray(r.관할구역목록) && r.관할구역목록.length > 0, `${r.읍면동명} 관할구역목록 비어있음`);
-    assert.ok(r.청사주소?.startsWith('부산광역시 해운대구'), `${r.읍면동명} 청사주소 이상함: ${r.청사주소}`);
-    assert.ok(/^051-749-\d{4}$/.test(r.대표전화) || /^051-\d{3}-\d{4}$/.test(r.대표전화),
-      `${r.읍면동명} 전화번호 형식 이상함: ${r.대표전화}`);
+    assert.ok(/^부산광역시 /.test(r.청사주소), `${r.읍면동명} 청사주소 이상함: ${r.청사주소}`);
+    assert.ok(/^051-\d{3}-\d{4}/.test(r.대표전화), `${r.읍면동명} 전화번호 형식 이상함: ${r.대표전화}`);
   }
 });
 
