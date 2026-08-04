@@ -1,0 +1,117 @@
+// directcode-province-resolution.test.mjs — 2026-08-04 신설
+//
+// 배경: gov-router.js의 directCode(K-Search 엔티티 매칭 확정 경로, §-0.9)
+// 처리부가 tier마다 `_currentResolvedProvinceCode = 'jeju'`를 무조건
+// 하드코딩하고 있었다(주피터 지시로 발견). K-Search가 제주 밖 기관을
+// 정확히 찾아 directCode를 반환해도, 이 하드코딩 때문에 JEJU_* 테이블에서만
+// 찾다가 못 찾고 조용히 폴백으로 떨어지는 구조적 결함 — 이 테스트는 그
+// 수정(_findEntryAcrossProvinces 신설)이 실제로 동작하는지 검증한다.
+//
+// 실행: node src/tests/directcode-province-resolution.test.mjs
+
+globalThis.window = globalThis;
+globalThis.window.HONDI_PROVINCE_CODE = undefined; // 오버라이드 없이 순수 directCode 경로만 검증
+
+function fakeText(name) { return `[목 텍스트: ${name}]`; }
+
+// city-master-data.json을 일부러 빈 배열로 둔다 — Busan Haeundae는
+// PROVINCE_TABLES 안에서 file:null(자동생성 엔트리)이므로, city-master-data
+// 매칭 실패 시 정직하게 file(=null)→플레이스홀더 텍스트로 폴백하는 경로까지
+// 함께 검증된다(이 테스트의 관심사는 "어느 도로 확정되는가"이지 렌더링
+// 콘텐츠 내용이 아니다).
+// ★ 2026-08-04 — 이 목은 기존 gov-router.test.mjs의 sp-catalog.json 목을
+// 그대로 베꼈다가, _fetchByManifestKey(2026-07-29 신설)가 요구하는 키가
+// 늘어난 걸 반영 안 해서 이 테스트도 처음엔 깨졌다(기존 gov-router.test.mjs
+// 도 같은 이유로 현재 브랜치에서 이미 깨져 있음을 확인 — 이 테스트 파일과
+// 무관한 별도의 선재 결함, 이번 세션 범위 밖). 여기서는 이 테스트가 실제로
+// 거치는 _loadGovCommon()이 요구하는 키를 전부 채워 우회한다.
+globalThis.fetch = async (url) => {
+  const u = String(url);
+  if (u.includes('sp-catalog.json')) {
+    return { ok: true, json: async () => ({
+      'SP-10_kpublic': 'SP-10_kpublic_v2.2.txt',
+      'SP_common_guardrails': 'SP-COMMON-02_v1.0.md',
+      'GOV-COMMON-OVERLAY-TEMPLATE': 'GOV-COMMON-OVERLAY-TEMPLATE_v1.1.md',
+      'GOV-TREE-PROTOCOL': 'GOV-TREE-PROTOCOL_v1.0.md',
+      'SP-PROVINCE-TEMPLATE': 'SP-PROVINCE-TEMPLATE_v1.1.md',
+      'NATIONAL-SP-CORE': 'NATIONAL-SP-CORE_v1.2.md',
+      'NATIONAL-SP-OVERLAY-TEMPLATE': 'NATIONAL-SP-OVERLAY-TEMPLATE_v1.0.md',
+    }) };
+  }
+  if (u.endsWith('.json') || u.includes('.json?')) {
+    if (u.includes('gov-common-overlay-master-data.json')) {
+      return { ok: true, text: async () => JSON.stringify({ 도목록: [
+        { 도코드: 'jeju', 도이름: '제주특별자치도', 콜센터명: '제주콜센터', 콜센터번호: '064-120' },
+        { 도코드: 'busan', 도이름: '부산광역시', 콜센터명: '부산콜센터', 콜센터번호: '051-120' },
+      ] }) };
+    }
+    if (u.includes('national-sp-overlay-master-data.json')) {
+      return { ok: true, text: async () => JSON.stringify({ 도목록: [{ 도코드: 'jeju', 도이름: '제주특별자치도' }] }) };
+    }
+    if (u.includes('city-master-data.json')) return { ok: true, text: async () => JSON.stringify({ 시목록: [] }) };
+    if (u.includes('city-dept-master-data.json')) return { ok: true, text: async () => JSON.stringify({ 국목록: [] }) };
+    if (u.includes('do-dept-master-data.json')) return { ok: true, text: async () => JSON.stringify({ 부서목록: [] }) };
+    if (u.includes('emd-master-data.json')) return { ok: true, text: async () => JSON.stringify({ 읍면동목록: [] }) };
+    if (u.includes('province-master-data.json')) return { ok: true, text: async () => JSON.stringify({ 도목록: [] }) };
+    if (u.includes('sigungu-national-list.json')) return { ok: true, text: async () => JSON.stringify({ 시군구목록: [] }) };
+    // 나머지는 정직하게 빈 객체(있는 그대로 폴백 경로를 타게 둠).
+    return { ok: true, text: async () => '{}' };
+  }
+  return { ok: true, text: async () => fakeText(u.split('/').pop()) };
+};
+
+const { assembleGovSystemPrompt } = await import('../gopang/gov/gov-router.js');
+
+let pass = 0, fail = 0;
+function check(name, cond, detail) {
+  if (cond) { pass++; console.log(`✅ ${name}`); }
+  else { fail++; console.log(`❌ ${name}${detail ? ' — ' + detail : ''}`); }
+}
+
+// ── 케이스 1: 회귀 방지 — 기존 제주 do-agency 코드가 여전히 정상 동작하는지 ──
+{
+  const r = await assembleGovSystemPrompt('', null, null, null, 'do-agency:SP-AGY-AGRITECH');
+  const hit = r.trace.some(t => t.includes('SP-AGY-AGRITECH(directCode)'));
+  check('[회귀] 제주 do-agency 기존 코드(SP-AGY-AGRITECH) 정상 라우팅', hit, r.trace.join(' | '));
+}
+
+// ── 케이스 2: 신규 — 부산 city 코드가 이제 부산으로 확정되는지 ──
+// (수정 전이었다면 _currentResolvedProvinceCode가 'jeju'로 강제되어
+//  JEJU_CITY_TABLE에서 못 찾고 이 trace 항목 자체가 안 나왔어야 한다.)
+{
+  const r = await assembleGovSystemPrompt('', null, null, null, 'city:SP-CITY-BUSAN_HAEUNDAE');
+  const hit = r.trace.some(t => t.includes('SP-CITY-BUSAN_HAEUNDAE(directCode)'));
+  check('[신규] 부산 해운대구 city directCode가 실제로 라우팅됨(더 이상 제주로 잘못 강제되지 않음)', hit, r.trace.join(' | '));
+}
+
+// ── 케이스 3: 코드 자체가 어느 도에도 없을 때 — 조용히 폴백하되 크래시 없어야 함 ──
+{
+  let threw = false;
+  let r = null;
+  try {
+    r = await assembleGovSystemPrompt('', null, null, null, 'do-agency:NONEXISTENT-CODE-XYZ');
+  } catch (e) {
+    threw = true;
+    console.error(e);
+  }
+  check('[안전망] 존재하지 않는 directCode도 크래시 없이 폴백', !threw && r != null);
+}
+
+// ── 케이스 4: 부산 do-agency는 아직 PROVINCE_TABLES.busan에 agency 필드
+// 자체가 없다(HANDOFF 확인 사실) — 이 경우도 크래시 없이 정직하게
+// "코드 없음" 폴백으로 떨어져야 한다(agency 필드 없는 도는 accessor의
+// `|| []` 폴백으로 빈 배열이 되므로 _findEntryAcrossProvinces가 그냥
+// 못 찾을 뿐, 에러가 나면 안 된다).
+{
+  let threw = false;
+  try {
+    await assembleGovSystemPrompt('', null, null, null, 'do-agency:BUSAN-TRANSIT-CORP-임시코드');
+  } catch (e) {
+    threw = true;
+    console.error(e);
+  }
+  check('[안전망] 아직 데이터 없는 도의 do-agency 코드도 크래시 없이 폴백', !threw);
+}
+
+console.log(`\n총 ${pass + fail}건 중 ${pass}건 통과, ${fail}건 실패`);
+if (fail > 0) process.exit(1);
