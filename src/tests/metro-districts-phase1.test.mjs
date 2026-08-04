@@ -34,10 +34,10 @@ globalThis.fetch = async (url) => {
 const { assembleGovSystemPrompt } = await import('../gopang/gov/gov-router.js');
 
 const CASES = [
-  { name: '해운대구 — 실사 반영된 실명(안전도시국) 노출 확인',
+  { name: '해운대구 — 실사 반영된 실명(도시건설국) 노출 확인',
     text: '해운대구 건축허가 신청하고 싶어요',
     expectTrace: ['SP-CITY-BUSAN_HAEUNDAE', 'SP-CITYDEPT-busan_haeundae-housing'],
-    expectBodyIncludes: ['안전도시국'] },
+    expectBodyIncludes: ['도시건설국'] },
   { name: '해운대구 — 문화관광경제국(겸임 도메인) 확인',
     text: '해운대구 소상공인 지원 상담하고 싶어요',
     expectTrace: ['SP-CITYDEPT-busan_haeundae-econ'],
@@ -70,3 +70,24 @@ for (const c of CASES) {
     }
   });
 }
+
+// ── 2026-08-05 신설: (시코드,국코드) 중복 레코드 방지 회귀 테스트 ──
+// _fetchCityDeptText()는 records.find(r => r.시코드===... && r.국코드===...)로
+// city-dept-master-data.json을 조회한다. Array.find()는 첫 매치만 반환하므로,
+// 같은 (시코드,국코드) 쌍의 레코드가 두 개 이상 있으면 파일 앞쪽(대개 실사 전
+// 범용 스텁)이 뒤쪽(실사 반영본)을 조용히 가린다 — 해운대구 jachi/econ/
+// welfare/housing 4건이 실제로 이 버그에 걸려 있었다(도시건설국이 안전도시국에
+// 가려짐 등). 실사 데이터를 추가할 때는 반드시 스텁을 그 자리에서 갱신하고,
+// 새 레코드를 파일 끝에 append하지 말 것.
+test('city-dept-master-data.json — (시코드,국코드) 중복 레코드 없음', () => {
+  const raw = readLocal('prompts/gov-tree/04-city/templates/city-dept-master-data.json');
+  const recs = JSON.parse(raw).국목록;
+  const seen = new Map();
+  const dups = [];
+  for (const r of recs) {
+    const key = `${r.시코드}|${r.국코드}`;
+    if (seen.has(key)) dups.push(key);
+    seen.set(key, true);
+  }
+  assert.deepEqual(dups, [], `중복 (시코드,국코드) 레코드 발견: ${dups.join(', ')}`);
+});
