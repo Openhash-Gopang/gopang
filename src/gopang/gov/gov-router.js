@@ -1213,6 +1213,22 @@ const BUSAN_L2_TABLE = [
     kw: ['해운항만', '수산정책', '수산진흥', '어업', '수산업', '양식업'] },
 ];
 
+// ── 부산 출자출연기관(org) — 파일럿 1호 (2026-08-04) ──────────────────
+// ★ 2026-08-04 신설 — directCode 도(道) 하드코딩 버그 수정(같은 세션)의
+// 실사용 검증을 위한 최소 파일럿. PROVINCE_TABLES.busan에 이제까지
+// org 필드 자체가 없어서(§ jeju 키에만 있었음), 설령 K-Search가 부산
+// 기관 프로필을 정확히 찾아 directCode를 반환해도 이 배열이 없으면
+// _findEntryAcrossProvinces가 여전히 못 찾는다 — 코드 수정과 실제
+// 콘텐츠(SP 파일+이 테이블 엔트리) 양쪽이 다 있어야 완주한다.
+// 부산교통공사(BTC) 1건만 우선 등록 — SP-ORG-BUSANTRANSIT_v1.0.md
+// 참조(지방공기업법 제49조 근거, 2026-08-04 웹서치 확인).
+const BUSAN_ORG_TABLE = [
+  { code: 'SP-ORG-BUSANTRANSIT', name: '부산교통공사(BTC)',
+    desc: '당신은 **부산교통공사(BTC)**를 대표하는 AI 레이어다. 주요 소관: 부산 도시철도 1~4호선 건설·운영, 도시교통 발전·시민복리 증진 관련 부대사업',
+    kw: ['부산교통공사', '부산 도시철도', '부산 지하철', '휴메트로', '도시철도 1호선', '도시철도 2호선', '도시철도 3호선', '도시철도 4호선'],
+    file: '07-org/SP-ORG-BUSANTRANSIT_v1.0.md' },
+];
+
 
 // ── 서울 L2 라우팅 테이블 (2026-07-20 최초 실사) ─────────────────
 // 원형 도메인 16개 중 서울이 보유한 14개(agri/ocean 없음 — 도심형 광역시라
@@ -1685,7 +1701,10 @@ const PROVINCE_TABLES = {
     agencyDivision: JEJU_AGENCY_DIVISION_TABLE, orgDivision: JEJU_ORG_DIVISION_TABLE },
   // 2026-07-24 — 1단계 확대: 부산 16개 자치구·군 + 서울 25개 자치구
   // 메타데이터 등록 완료(계획서 v1.1 §5). L2는 v1.0부터 이미 실사 완료 상태.
-  busan: { l2: BUSAN_L2_TABLE, city: BUSAN_CITY_TABLE, national: [_makePoliceEntry('busan')], citydept: BUSAN_CITY_DEPT_TABLE },
+  busan: { l2: BUSAN_L2_TABLE, city: BUSAN_CITY_TABLE, national: [_makePoliceEntry('busan')], citydept: BUSAN_CITY_DEPT_TABLE,
+    // 2026-08-04 신설 — 부산 파일럿 org tier 1호(부산교통공사). 위
+    // BUSAN_ORG_TABLE 정의부 주석 참조.
+    org: BUSAN_ORG_TABLE },
   seoul: { l2: SEOUL_L2_TABLE, city: SEOUL_CITY_TABLE, national: [_makePoliceEntry('seoul')], citydept: SEOUL_CITY_DEPT_TABLE },
   // 2026-07-24 — 3단계: 나머지 12개 도 시/군/구 183개 전수 메타데이터
   // 등록 완료(계획서 v1.1 §5). L2가 이미 있던 8개 도는 city/citydept만

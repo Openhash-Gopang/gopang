@@ -57,6 +57,9 @@ globalThis.fetch = async (url) => {
     // 나머지는 정직하게 빈 객체(있는 그대로 폴백 경로를 타게 둠).
     return { ok: true, text: async () => '{}' };
   }
+  if (u.includes('SP-ORG-BUSANTRANSIT_v1.0.md')) {
+    return { ok: true, text: async () => '당신은 **부산교통공사(BTC)**를 대표하는 AI 레이어다. 지방공기업(지방공사), 부산광역시청과 별도 법인격.' };
+  }
   return { ok: true, text: async () => fakeText(u.split('/').pop()) };
 };
 
@@ -111,6 +114,20 @@ function check(name, cond, detail) {
     console.error(e);
   }
   check('[안전망] 아직 데이터 없는 도의 do-agency 코드도 크래시 없이 폴백', !threw);
+}
+
+// ── 케이스 5: 부산 파일럿 1호(부산교통공사) — org tier 실제 콘텐츠까지
+// 끝까지 완주하는지 확인. BUSAN_ORG_TABLE + PROVINCE_TABLES.busan.org
+// 배선(2026-08-04 신설)이 directCode 수정과 함께 실제로 맞물리는지
+// 검증하는 이 세션의 핵심 종단 테스트다.
+{
+  const r = await assembleGovSystemPrompt('', null, null, null, 'org:SP-ORG-BUSANTRANSIT');
+  const hit = r.trace.some(t => t.includes('SP-ORG-BUSANTRANSIT(directCode)'));
+  const isBusan = r.systemPrompt.includes('부산교통공사') || r.trace.join(' ').includes('busan');
+  check('[파일럿] 부산교통공사 org directCode 종단 라우팅 완주', hit, r.trace.join(' | '));
+  check('[파일럿] 부산교통공사 SP 콘텐츠가 실제로 삽입됨(목 텍스트 아님)',
+    r.systemPrompt.includes('부산교통공사') && r.systemPrompt.includes('지방공기업'),
+    r.systemPrompt.slice(0, 200));
 }
 
 console.log(`\n총 ${pass + fail}건 중 ${pass}건 통과, ${fail}건 실패`);
