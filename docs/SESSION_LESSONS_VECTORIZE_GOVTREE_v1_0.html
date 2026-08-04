@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: 2026-08-04 세션(§3-1 AC↔K-Intent 통합, §3-2
+  K-Search 의미검색 전환, gov-tree SP 품질감사)에서 실제로 밟은 함정과
+  확인된 사실 — Cloudflare Vectorize 메타데이터 인덱스·guid vs PocketBase
+  내부 id 혼동 버그·field_visibility 기본값 함정·SP §0 텍스트와 실제 런타임
+  조립(gov-router.js)의 괴리·전국 추상화 진행 지도·기관 유형별 근거법
+  3계열을 다룹니다. 개별 기능 사용법이 아니라 "다음에 비슷한 작업을 할 때
+  반복하지 말아야 할 시행착오" 모음입니다.
+  관련 문서: MANUAL_INDEX.html 에서 전체 문서 지도 확인
+  (desktop.html 좌측 사이드바 "🛠 개발자 문서" 섹션에서 링크됨)
+  v1.0(2026-08-04): 신설
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vectorize 의미검색·SP 아키텍처 실전 교훈 매뉴얼 — Gopang</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── 그레이스케일 우선 팔레트 — 강조색은 링크·활성 상태 한 곳에만 ── */
+:root {
+  --ink:      #111111;
+  --ink-2:    #3a3a3a;
+  --ink-3:    #6b6b6b;
+  --ink-4:    #9a9a9a;
+  --line:     #e2e2e2;
+  --line-2:   #cfcfcf;
+  --bg:       #ffffff;
+  --bg-2:     #fafafa;
+  --bg-3:     #f2f2f2;
+  --accent:   #34495e;   /* 슬레이트 — 링크·활성 탭·다이어그램 강조선 전용 */
+  --accent-lt:#eef1f4;
+  --mono:     'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --radius:   4px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Pretendard', -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+/* ── 헤더 ── */
+.doc-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.doc-header-inner {
+  max-width: 1040px; margin: 0 auto;
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.doc-logo {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  text-decoration: none; letter-spacing: -0.2px;
+}
+.doc-logo svg { color: var(--ink-3); }
+.doc-header-sub {
+  font-size: 12px; color: var(--ink-4); font-weight: 400;
+  padding-left: 9px; border-left: 1px solid var(--line-2); margin-left: 2px;
+}
+.doc-back {
+  font-size: 12px; color: var(--ink-3); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.doc-back:hover { color: var(--ink); }
+.doc-back svg { flex-shrink: 0; }
+
+/* ── 레이아웃 ── */
+.doc-layout {
+  max-width: 1200px; margin: 0 auto;
+  padding: 40px 24px 100px;
+  display: grid;
+  grid-template-columns: 216px 1fr;
+  gap: 44px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .doc-layout { grid-template-columns: 1fr; }
+  .doc-toc { display: none; }
+}
+.doc-toc { position: sticky; top: 72px; }
+.doc-toc-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 10px;
+}
+.doc-toc a {
+  display: block;
+  font-size: 12px; color: var(--ink-3);
+  text-decoration: none;
+  padding: 5px 0 5px 11px;
+  border-left: 2px solid var(--line);
+  line-height: 1.4;
+  transition: color .12s, border-color .12s;
+}
+.doc-toc a:hover, .doc-toc a.active {
+  color: var(--ink);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+.doc-content { min-width: 0; }
+
+/* ── 섹션 ── */
+.gs {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.gs-head {
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: flex-start; gap: 14px;
+}
+.gs-icon {
+  width: 34px; height: 34px; border-radius: var(--radius);
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--ink-2);
+}
+.gs-icon svg { width: 18px; height: 18px; }
+.gs-head-text { flex: 1; }
+.gs-num {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 500; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 3px;
+}
+.gs-title {
+  font-size: 17px; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.2px; line-height: 1.35;
+}
+.gs-subtitle { font-size: 12px; color: var(--ink-4); margin-top: 4px; }
+
+.gs-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 500; letter-spacing: .1px;
+  padding: 3px 8px; border-radius: 99px;
+  font-family: var(--mono);
+  border: 1px solid var(--line-2); color: var(--ink-2); background: var(--bg-2);
+}
+.badge svg { width: 11px; height: 11px; flex-shrink: 0; }
+.badge-gate { border-style: dashed; color: var(--ink-3); }
+
+.gs-body { padding: 20px 28px 26px; }
+.gs-body p { font-size: 14px; color: var(--ink-2); line-height: 1.85; margin-bottom: 13px; }
+.gs-body p:last-child { margin-bottom: 0; }
+.gs-body strong { color: var(--ink); font-weight: 700; }
+.gs-body h4 {
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  margin: 22px 0 10px; letter-spacing: -0.1px;
+  display: flex; align-items: center; gap: 7px;
+}
+.gs-body h4 svg { width: 15px; height: 15px; color: var(--ink-3); flex-shrink: 0; }
+.gs-body h4:first-child { margin-top: 0; }
+.gs-body ul, .gs-body ol { margin: 4px 0 14px 20px; }
+.gs-body li { font-size: 14px; color: var(--ink-2); line-height: 1.8; margin-bottom: 4px; }
+.gs-body code {
+  font-family: var(--mono); font-size: 12px;
+  background: var(--bg-3); border: 1px solid var(--line);
+  border-radius: 4px; padding: 1px 6px; color: var(--ink-2);
+}
+
+/* 하이라이트 / 체크포인트 / 인시던트 — 색 대신 좌측 굵기·라벨로 구분 */
+.callout {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 13px 17px; margin: 15px 0;
+  font-size: 14px; color: var(--ink-2); line-height: 1.8;
+  background: var(--bg-2);
+}
+.callout-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--ink);
+  margin-bottom: 6px;
+}
+.callout-label svg { width: 13px; height: 13px; }
+.callout.warn { border-left-style: dashed; }
+.callout strong { color: var(--ink); }
+
+/* 표 */
+.gs-table-wrap { margin: 15px 0; overflow-x: auto; }
+.gs-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.gs-table th, .gs-table td {
+  border: 1px solid var(--line); padding: 9px 13px;
+  text-align: left; line-height: 1.6;
+}
+.gs-table th { background: var(--bg-2); font-weight: 700; color: var(--ink); font-size: 12px; }
+.gs-table td { color: var(--ink-2); }
+.gs-table td strong, .gs-table td code { color: var(--ink); }
+.gs-table td code { font-family: var(--mono); font-size: 12px; background: var(--bg-3); padding: 1px 5px; border-radius: 4px; }
+
+/* mermaid 도식 래퍼 */
+.diagram {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  padding: 18px 14px 10px;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+.diagram-caption {
+  font-size: 12px; color: var(--ink-4); text-align: center;
+  padding: 8px 4px 2px; font-family: var(--mono);
+}
+
+/* 코드 블록 */
+.gs-code {
+  font-family: var(--mono);
+  font-size: 12px; color: var(--ink);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 15px 17px; margin: 14px 0;
+  line-height: 1.7; overflow-x: auto;
+  white-space: pre;
+}
+.gs-code .c { color: var(--ink-4); } /* comment */
+
+/* 히어로 */
+.doc-hero {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  margin-bottom: 24px;
+}
+.doc-hero-eyebrow {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 500; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 12px;
+}
+.doc-hero-title {
+  font-size: 26px; font-weight: 800;
+  color: var(--ink); letter-spacing: -0.5px;
+  line-height: 1.4; margin-bottom: 13px;
+}
+.doc-hero-title em { font-style: normal; border-bottom: 2px solid var(--ink); }
+.doc-hero-desc { font-size: 14px; color: var(--ink-2); line-height: 1.85; max-width: 74ch; }
+.doc-hero-meta {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line);
+  font-size: 12px; color: var(--ink-4); font-family: var(--mono);
+}
+.doc-hero-meta strong { color: var(--ink-2); font-weight: 600; }
+
+.reveal { opacity: 0; transform: translateY(10px); transition: opacity .35s ease, transform .35s ease; }
+.reveal.in { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ── 헤더 ── -->
+<header class="doc-header">
+  <div class="doc-header-inner">
+    <a class="doc-logo" href="../desktop.html">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      혼디 · Gopang
+      <span class="doc-header-sub">개발자 문서</span>
+    </a>
+    <a class="doc-back" href="../desktop.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      데스크톱으로 돌아가기
+    </a>
+  </div>
+</header>
+
+<div class="doc-layout">
+
+  <!-- ── 목차 ── -->
+  <nav class="doc-toc">
+    <div class="doc-toc-title">목차</div>
+    <a href="#overview">개요 — 이 문서가 왜 있는가</a>
+    <a href="#vectorize-lessons">① Vectorize 실전 교훈 3가지</a>
+    <a href="#guid-bug">② guid ≠ PocketBase 레코드 id</a>
+    <a href="#visibility-trap">③ field_visibility 기본값 함정</a>
+    <a href="#sp-vs-runtime">④ SP 파일의 §0는 장식이다</a>
+    <a href="#abstraction-map">⑤ 추상 템플릿화 진행 지도</a>
+    <a href="#legal-basis">⑥ 근거법 3계열과 제주 특유 구조</a>
+    <a href="#checklist">다음에 비슷한 작업할 때 체크리스트</a>
+    <a href="#related">관련 문서</a>
+  </nav>
+
+  <!-- ── 본문 ── -->
+  <main class="doc-content">
+
+    <div class="doc-hero reveal">
+      <div class="doc-hero-eyebrow">SITE MANUAL — 2026-08-04 세션 발견 정리</div>
+      <h1 class="doc-hero-title">눈으로 <em>확인하기 전까지</em> 아무것도 확정하지 마라</h1>
+      <p class="doc-hero-desc">
+        2026-08-04 세션은 "K-Search가 자연어를 처리 못 한다"는 버그 하나로 시작해
+        Vectorize 인프라·field_visibility 정책·gov-tree SP 아키텍처까지 훑는
+        긴 디버깅이 됐다. 그 과정에서 몇 번이나 <strong>"고쳤다"·"확인됐다"고
+        생각한 게 다음 단계에서 틀린 것으로 드러났다</strong> — 메타데이터
+        인덱스 문제인 줄 알았다가 eventual consistency 문제인 줄 알았다가
+        결국 진짜 원인은 guid 조회 버그였고, "267건 전부 낡은 체인을 쓴다"고
+        경보를 울렸다가 실제로는 런타임에 전혀 영향 없는 문서 노후화였다.
+        이 문서는 그 반복된 오판들과 최종적으로 확인된 사실을 정리한
+        것이다 — 다음에 비슷한 작업을 할 때 같은 시행착오를 반복하지
+        않기 위함이다.
+      </p>
+      <div class="doc-hero-meta">
+        <span><strong>대상 저장소</strong> Openhash-Gopang/gopang</span>
+        <span><strong>관련 PR</strong> #213·#215~#219</span>
+        <span><strong>작성</strong> 2026-08-04</span>
+      </div>
+    </div>
+
+    <!-- ── 개요 ── -->
+    <section class="gs reveal" id="overview">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Overview</div>
+          <div class="gs-title">이 문서가 왜 있는가</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          이 문서는 <strong>개별 기능의 사용법 매뉴얼이 아니다.</strong>
+          Cloudflare Vectorize를 새로 붙이거나, PocketBase profiles의 필드
+          공개 정책을 건드리거나, gov-tree SP를 새로 만들거나 감사할 때
+          <strong>또 밟게 될 게 뻔한 함정들</strong>을 모아뒀다. 전부 이번
+          세션에서 실제로 밟은 함정이고, 원인을 확인하는 데 각각 여러 번의
+          왕복(배포→테스트→로그확인)이 필요했다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            이 문서를 읽어야 하는 상황
+          </div>
+          새 Vectorize 인덱스를 붙일 때 / 어떤 API가 "결과 0건"인데 원인을
+          못 찾을 때 / profiles의 어떤 필드가 왜 안 보이는지 이해가 안 될 때 /
+          gov-tree SP 파일을 새로 만들거나 감사할 때 / SP 파일에 적힌
+          상속 체인 설명을 실제 동작이라고 믿기 전에.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ① Vectorize 교훈 ── -->
+    <section class="gs reveal" id="vectorize-lessons">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6 8v8M18 8v8M8 6h8M8 18h8"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">01 · Infra</div>
+          <div class="gs-title">Cloudflare Vectorize 실전 교훈 3가지</div>
+          <div class="gs-subtitle">entity-semantic-search 구축(§3-2) 중 전부 실사로 확인</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <h4>1. 메타데이터 필터링은 벡터를 넣기 <em>전에</em> 인덱스를 만들어야 한다</h4>
+        <p>
+          <code>filter: { entity_type: 'institution' }</code> 같은 조건으로
+          쿼리하려면, 그 필드에 대한 메타데이터 인덱스를 먼저 만들어야 한다.
+          안 만들고 필터를 걸면 <strong>에러 없이 조용히 0건</strong>이 나온다.
+          이미 upsert된 벡터는 나중에 인덱스를 만들어도 소급 적용 안 되니
+          재업서트가 필요하다.
+        </p>
+        <div class="gs-code">wrangler vectorize create-metadata-index &lt;index&gt; --property-name=entity_type --type=string</div>
+
+        <h4>2. "결과 0건"이 반드시 인덱싱 실패를 뜻하지 않는다</h4>
+        <p>
+          <code>wrangler vectorize info</code>로 <code>vectorCount</code>가
+          정상으로 나와도 실제 쿼리가 0건일 수 있다 — 원인이 하나가 아니다
+          (메타데이터 필터 미설정 / eventual consistency 지연 / <a href="#guid-bug">쿼리
+          이후 단계의 별도 버그</a>). 원인을 좁히려면 <strong>filter를 완전히
+          뺀 raw 쿼리</strong>부터 먼저 시도해서 임베딩·인덱스 자체가
+          문제인지, 필터 단계가 문제인지부터 나눠야 한다.
+        </p>
+
+        <h4>3. 진짜 원인은 로그로만 보인다 — 짐작으로 좁히지 마라</h4>
+        <p>
+          이번 세션에서 메타데이터 인덱스 문제(A안)로 추정했다가, 확인해보니
+          B안(eventual consistency)이었고, 그것도 아니었고, 결국
+          <code>wrangler tail</code>로 Vectorize 원본 응답을 직접 찍어보고
+          나서야 진짜 원인(②번 섹션)을 찾았다. <strong>추정 두 개가 연달아
+          틀렸다</strong> — 셋째 시도부터는 바로 로그부터 봤어야 했다.
+        </p>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            디버깅 우선순위
+          </div>
+          "0건이 나온다" 류 버그는 원인 후보가 3개 이상일 때가 많다. 후보를
+          하나씩 추정해서 순차 검증하는 대신, <code>console.log</code> 몇
+          줄 넣고 <code>wrangler tail</code>로 실제 값을 한 번에 보는 쪽이
+          결과적으로 더 빠르다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ② guid 버그 ── -->
+    <section class="gs reveal" id="guid-bug">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">02 · Bug pattern</div>
+          <div class="gs-title">guid ≠ PocketBase 레코드 고유 id</div>
+          <div class="gs-subtitle">29건 파일럿 전량 NO-MATCH의 진짜 원인(PR #217)</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          profiles 컬렉션은 <strong>두 개의 서로 다른 식별자</strong>를
+          갖는다 — PocketBase가 자동 생성하는 내부 <code>id</code>(15자
+          랜덤 문자열)와, 우리 도메인이 쓰는 커스텀 필드 <code>guid</code>
+          (예: <code>unclaimed_xxxx-xxxx...</code>). 이 둘은 값이 다르다.
+        </p>
+        <p>
+          <code>GET /api/collections/profiles/records/{'{'}id{'}'}</code>는
+          <strong>PocketBase 내부 id 전용</strong>이다. Vectorize에는
+          record id로 <code>guid</code>를 넣어뒀는데, 매칭된 결과를 다시
+          프로필로 조회할 때 이 GET-by-id를 쓰면 <strong>매번 404</strong>가
+          난다 — 그리고 그 실패를 <code>continue</code>로 조용히 삼키면
+          후보가 전부 사라지고 "결과 없음"으로 보인다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <tr><th>틀린 방법</th><th>맞는 방법</th></tr>
+            <tr>
+              <td><code>GET /records/{'{'}guid{'}'}</code>(id 전용 엔드포인트에 guid를 넣음)</td>
+              <td><code>GET /records?filter=guid='...'&perPage=1</code></td>
+            </tr>
+          </table>
+        </div>
+        <p>
+          <code>_l1SearchEntities</code>·<code>handleBenefitSemanticSearch</code>
+          는 처음부터 filter 검색을 썼다 — 이번에 새로 짠 코드만 지름길로
+          가려다 이 함정에 빠졌다. <strong>PocketBase 레코드를 우리 도메인의
+          커스텀 식별자로 조회할 땐 무조건 filter 검색을 쓸 것,
+          GET-by-id는 절대 쓰지 말 것.</strong>
+        </p>
+      </div>
+    </section>
+
+    <!-- ── ③ field_visibility 함정 ── -->
+    <section class="gs reveal" id="visibility-trap">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">03 · Policy trap</div>
+          <div class="gs-title">field_visibility 기본값 함정 — description은 항상 비어있었다</div>
+          <div class="gs-subtitle">개인정보 보호 기본값이 기관에도 그대로 적용되던 문제</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          <code>_filterProfileByVisibility</code>는
+          <code>field_visibility.description</code>이 명시적으로
+          <code>true</code>가 아니면 <code>description</code>을 항상
+          지운다. gov-tree 시딩 스크립트는 이 플래그를 안 채웠으므로,
+          <strong>공개 API(<code>/search</code>, <code>/profile</code>,
+          <code>/entity-semantic-search</code>) 어디를 거치든
+          description은 항상 빈 값</strong>이었다.
+        </p>
+        <p>
+          이걸 모르고 description을 임베딩 원문으로 쓰면, 실제로는 이름만
+          임베딩하는 셈이 된다 — 그 결과 "소통청렴담당관"·"기획조정실"·
+          "대변인"처럼 <strong>이름 자체가 범용적인 기관이 모든 자연어
+          쿼리의 상위권을 휩쓰는 현상</strong>이 실제로 관측됐다(TOP1 정확도
+          37.9%, WRONG-MATCH 13.8%).
+        </p>
+        <p>
+          해결책 두 가지를 같이 적용했다:
+        </p>
+        <ul>
+          <li><strong>즉시 우회</strong>: <code>search_text</code> 필드를 쓴다 — LIKE 검색용으로 이미 name+description+occupation+tags를 조합해둔 필드라, 필터링을 안 거치고 항상 채워져 있다. TOP1 정확도가 75.9%로 뛰었다.</li>
+          <li><strong>근본 수정</strong>: <code>institution</code> entity_type은 description 기본값을 공개로 바꿨다(PR #219) — 기관은 "찾아지는 게 존재 목적"이라 개인정보 보호 기본값이 안 맞았다.</li>
+        </ul>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            일반화된 교훈
+          </div>
+          profiles 스키마에 새 필드를 추가할 때, "기본값이 어느 entity_type에
+          맞는 기본값인가"를 반드시 따져야 한다. person 기준으로 정한 기본값을
+          institution·business·thing·concept에 무비판적으로 적용하면 이런
+          문제가 또 생긴다. <code>org</code>·<code>business</code>도 같은
+          논리가 적용될 수 있으나 이번엔 institution만 확정 지시받아 범위에
+          안 넣었다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ④ SP §0는 장식 ── -->
+    <section class="gs reveal" id="sp-vs-runtime">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">04 · Architecture</div>
+          <div class="gs-title">SP 파일에 적힌 §0(상속 체인)는 문서일 뿐, 실제 조립은 코드가 한다</div>
+          <div class="gs-subtitle">267건 전부 낡은 체인을 "말하고" 있었지만 실제 동작엔 영향 없었다</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          gov-tree SP 파일 267건을 전수 스캔했더니, 전부 §0 섹션에
+          <code>JEJU-GOV-COMMON → SP-DO-000 → ...</code>라는 <strong>2026-07-10에
+          이미 폐기 선언된 옛 체인</strong>을 그대로 적고 있었다. 처음엔 이걸
+          심각한 회귀로 보고했는데, 확인해보니 틀렸다.
+        </p>
+        <p>
+          <code>src/gopang/gov/gov-router.js</code>의 <code>_loadGovCommon()</code>이
+          실제 런타임 체인을 <strong>코드 레벨에서 독립적으로 조립</strong>한다
+          — 개별 SP 파일의 §0 텍스트를 전혀 읽지 않는다.
+        </p>
+        <div class="gs-code">// 실제 조립 결과 (gov-router.js _loadGovCommon)
+kgov(SP-10_kpublic) + expertParityNotice + expertCommonSp
+  + HUMAN-AUTHORITY-GATE-SCHEMA + overlay(도별 렌더링)
+  + JEJU-TREE-PROTOCOL + AGENCY-AC-COMMON</div>
+        <p>
+          즉 <strong>§0 텍스트 불일치는 순수 문서 노후화</strong>이지 기능
+          버그가 아니다. 다만 이 SP 파일을 읽는 사람(개발자, 그리고 다음
+          세션의 AI)을 계속 오도하므로 고쳐야 할 문제인 건 맞다 — 우선순위만
+          낮을 뿐이다.
+        </p>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            일반화된 교훈
+          </div>
+          SP 파일 안의 "상위 상속" 같은 메타데이터 문구를 실제 동작으로
+          단정하지 마라. <strong>파일에 적힌 것과 코드가 실제로 하는 것은
+          다를 수 있다</strong> — 특히 이 저장소처럼 "SP 자동 렌더링·조립"
+          로직이 별도로 존재하는 구조에서는, 조립을 실제로 담당하는 코드
+          (이 경우 <code>gov-router.js</code>)를 먼저 읽고 나서 SP 파일의
+          문서화 문구를 판단 근거로 삼아야 한다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ⑤ 추상화 진행 지도 ── -->
+    <section class="gs reveal" id="abstraction-map">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 0 1 3 16.382V5.618a1 1 0 0 1 1.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0 0 21 18.382V7.618a1 1 0 0 0-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">05 · Map</div>
+          <div class="gs-title">"제주 모형 → 추상 템플릿 → 지역별 인스턴스" 진행 지도</div>
+          <div class="gs-subtitle">혼디 3단계 원칙(2026-08-04 재확인) 기준 계층별 현황</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          혼디의 전국 확장 원칙은 ①제주 SP 완결 → ②제주 모형에서 추상
+          템플릿 도출 → ③각 지역 구체 인스턴스 생성이다. 계층마다 진행
+          상태가 다르므로, <strong>"2단계 작업"을 시작하기 전에 반드시
+          이 표부터 확인할 것</strong> — 이미 돼 있는 걸 또 만드는 낭비를
+          막는다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <tr><th>계층</th><th>추상 템플릿 상태</th><th>실제 파일</th></tr>
+            <tr><td>도청 자체(01-do)</td><td>✅ 완료</td><td><code>province-master-data.json</code> + <code>SP-PROVINCE-TEMPLATE</code></td></tr>
+            <tr><td>과·팀(division)</td><td>✅ 완료</td><td><code>SP-DIV-TEMPLATE</code> + <code>division-master-data.json</code></td></tr>
+            <tr><td>읍면동(emd)</td><td>✅ 완료</td><td><code>SP-EMD-TEMPLATE</code></td></tr>
+            <tr><td>국(do-dept) 상위 22건</td><td>⚠️ 부분 완료</td><td>도메인 템플릿 16개(<code>SP-DEPT-*-TEMPLATE</code>, §LEGAL-BASIS 포함)</td></tr>
+            <tr><td>직속기관(do-agency) 상위 10건</td><td>❌ 착수 중</td><td>division 템플릿만 있었음 — 2026-08-04부터 도메인 템플릿 신설 시작(<code>SP-AGY-RESEARCH-TEMPLATE</code> 등)</td></tr>
+            <tr><td>출자출연기관(org) 상위 26건</td><td>❌ 착수 중</td><td>위와 동일 — <code>SP-ORG-WELFARE-TEMPLATE</code>·<code>SP-ORG-PUBENT-TEMPLATE</code> 등</td></tr>
+          </table>
+        </div>
+        <p>
+          58건(do-dept+do-agency+org 상위)의 실제 섹션 구조를 스캔해보니
+          <strong>고유 패턴이 4개뿐</strong>이었다(사실상 §LEGAL-BASIS
+          유무 차이 하나로 수렴) — 겉보기와 달리 이미 상당히 균질하다는
+          뜻이라, 도메인별 그룹화(예: 연구기관형·재단형·지방공기업형)로
+          몇 개의 템플릿만 있으면 전부 커버된다.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── ⑥ 근거법 3계열 ── -->
+    <section class="gs reveal" id="legal-basis">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">06 · Legal basis</div>
+          <div class="gs-title">기관 유형별 근거법이 다르다 — 셋을 섞으면 안 된다</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          gov-tree SP의 <code>§LEGAL-BASIS</code>를 작성할 때, 기관이
+          "도청 내부 조직인가, 별도 법인인가, 지방공기업인가"에 따라
+          근거법 자체가 다르다. 이걸 섞으면 실제로 존재하지 않는 법적
+          관계를 사용자에게 안내하게 된다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <tr><th>기관 유형</th><th>1차 근거법</th><th>대표 예</th></tr>
+            <tr><td>도청 내부 조직(실·국, 직속기관/사업소)</td><td>지방자치법 제125조 + 행정기구 정원기준 규정 + 도 조례</td><td>do-dept 전체, do-agency 전체</td></tr>
+            <tr><td>출자출연기관(재단법인)</td><td>지방자치단체 출자·출연 기관의 운영에 관한 법률(지방출자출연법)</td><td>사회서비스원·문화예술재단 등</td></tr>
+            <tr><td>지방공기업(지방공사)</td><td>지방공기업법(제49조·제53조 등, 지방출자출연법보다 우선)</td><td>제주개발공사(JPDC)·제주에너지공사(JEA)·제주관광공사(JTO)</td></tr>
+          </table>
+        </div>
+        <p>
+          <strong>이름만으로 분류를 단정하지 말 것</strong> — "OO공사"라는
+          이름이 자동으로 지방공기업을 뜻하지 않는다. JEA·JTO는 웹서치로
+          공식 사이트·국가법령정보센터를 확인해서야 지방공기업법 적용을
+          확정할 수 있었다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            제주 고유 패턴 — 전국 템플릿화 시 주의
+          </div>
+          제주 소속 지방공사는 지방공기업법 일반 절차 이전에
+          <strong>「제주특별자치도 설치 및 국제자유도시 조성을 위한
+          특별법」의 개별 조항</strong>이 먼저 설립 근거를 마련한다
+          (JTO=동법 제173조, JEA=동법 제221조의5). 이건 제주만의 요소라,
+          다른 도에 같은 유형 템플릿을 적용할 땐 이 조항을 자리표시자로
+          분리해서 그 도 고유의 근거(있다면)로 교체해야 한다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 체크리스트 ── -->
+    <section class="gs reveal" id="checklist">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Checklist</div>
+          <div class="gs-title">다음에 비슷한 작업을 할 때</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <h4>Vectorize/의미검색 인프라를 건드릴 때</h4>
+        <ul>
+          <li>필터링할 메타데이터 필드는 벡터 upsert 전에 인덱스부터 만들었는가</li>
+          <li>매칭된 벡터 id로 원본 레코드를 다시 조회할 때 filter 검색을 쓰고 있는가(GET-by-id 아님)</li>
+          <li>"결과 0건"이 나오면 필터 없는 raw 쿼리부터 먼저 시도했는가</li>
+        </ul>
+        <h4>profiles 필드를 새로 추가하거나 노출 정책을 바꿀 때</h4>
+        <ul>
+          <li>그 필드의 기본 공개 여부가 person 기준으로 정해진 건 아닌지, institution 등 다른 entity_type에도 그대로 맞는지 확인했는가</li>
+          <li>실제로 공개 API를 거쳐서 값이 나오는지(코드만 보고 짐작하지 말고) 직접 조회해봤는가</li>
+        </ul>
+        <h4>gov-tree SP를 새로 만들거나 감사할 때</h4>
+        <ul>
+          <li>§5의 진행 지도부터 확인 — 이미 템플릿화된 계층을 또 만들려는 건 아닌지</li>
+          <li>SP 파일에 적힌 "상위 상속" 문구를 실제 동작이라고 단정하지 말고, 조립을 실제로 담당하는 코드(<code>gov-router.js</code> 등)를 확인했는가</li>
+          <li>§LEGAL-BASIS를 쓸 때 기관이 도청 내부조직/재단/지방공기업 중 뭔지 먼저 확정했는가(이름만으로 단정 금지)</li>
+          <li>확인 안 된 법령 인용은 <code>legal_basis_last_verified</code>를 비워두고 정직하게 미검증으로 표시했는가</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── 관련 문서 ── -->
+    <section class="gs reveal" id="related">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6.5l4 4L7 21H3v-4z"/><path d="M17.5 2.5a2.121 2.121 0 0 1 3 3l-1.5 1.5-3-3z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Related</div>
+          <div class="gs-title">관련 문서</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <ul>
+          <li><a href="./GOV_REGIONAL_AC_MANUAL_v1_0.md" target="_blank">전국 지방행정 AC(도청·시청·읍면동·국가기관) 매뉴얼</a> — gov-tree 라우팅 아키텍처 전반</li>
+          <li><a href="./MANUAL_INDEX.html" target="_blank">개발 문서 전체 지도</a></li>
+          <li>저장소 내 <code>HANDOFF_2026-08-04.md</code> — 이 세션의 작업 로그·다음 세션 인계사항(원본 대화 복기 자료)</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  var revealEls = document.querySelectorAll('.reveal');
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.06 });
+  revealEls.forEach(function (el) { io.observe(el); });
+
+  var tocLinks = document.querySelectorAll('.doc-toc a');
+  var sections = Array.prototype.map.call(tocLinks, function (a) {
+    return document.querySelector(a.getAttribute('href'));
+  });
+  function setActive() {
+    var idx = 0;
+    var y = window.scrollY + 110;
+    sections.forEach(function (sec, i) { if (sec && sec.offsetTop <= y) idx = i; });
+    tocLinks.forEach(function (a, i) { a.classList.toggle('active', i === idx); });
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+</script>
+</body>
+</html>
