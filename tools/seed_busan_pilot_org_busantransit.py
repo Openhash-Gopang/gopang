@@ -26,6 +26,14 @@ import sys
 import urllib.request
 import urllib.error
 
+# ★ 2026-08-04 추가 — 첫 --apply 시도가 기존 등록 확인 단계에서 HTTP 403으로
+# 막혔다. urllib 기본 User-Agent("Python-urllib/3.x")가 원인으로 추정된다 —
+# verify_jeju_267_search_match.py 등 기존 스크립트들은 전부 브라우저 UA로
+# 위장해서 우회하고 있었는데 이 스크립트만 빠뜨렸다. 확인 단계뿐 아니라
+# 실제 등록 POST도 같은 이유로 막힐 수 있어 양쪽 다 이 헤더를 붙인다.
+_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+       "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+
 RECORD = {
     "entity_type": "institution",
     "name": "부산교통공사",
@@ -51,7 +59,7 @@ def _existing_check(worker_base, entity_subtype):
         req = urllib.request.Request(
             f"{worker_base.rstrip('/')}/search",
             data=json.dumps({"etype": "institution", "q": "부산교통공사", "lim": 20}).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "User-Agent": _UA},
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=15) as resp:
@@ -85,7 +93,7 @@ def main():
     req = urllib.request.Request(
         f"{args.worker_base.rstrip('/')}/profile",
         data=json.dumps(RECORD).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", "User-Agent": _UA},
         method="POST",
     )
     try:
