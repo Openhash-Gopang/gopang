@@ -707,7 +707,19 @@ const GYEONGNAM_CITY_TABLE = [
 function _makeGenericCityDeptEntries(시코드) {
   return [
     { 국코드: 'plan', 시코드, kw: ['기획예산', '중장기계획', '인구정책'] },
-    { 국코드: 'jachi', 시코드, kw: ['지방세', '재산세과', '세무과', '자치행정', '주민등록', '인감증명', '취득세'] },
+    // ★ 2026-08-05 — '주민등록'·'인감증명'을 제거했다(부산 해운대구 EMD
+    // 실사 중 발견, 이전 세션에서도 동일하게 발견했으나 커밋되지 않고
+    // 유실됐던 수정 — 이번엔 이 nationwide 공용 함수 자체를 고쳐 부산뿐
+    // 아니라 이 함수를 쓰는 모든 도에 일괄 적용한다). 주민등록등초본·
+    // 인감증명 발급은 SP-EMD-TEMPLATE §3의 완결 처리 업무(읍면동 민원팀
+    // 소관)다 — 이 두 단어가 시청/구청 국(局) 단위 jachi 키워드에 있으면
+    // §CAPABILITIES 규칙 F(시청 국 소관 사무는 읍면동 생략)가 잘못
+    // 발동해 "우1동 인감증명 발급받고 싶어요" 같은 발화가 정작 처리
+    // 주체인 읍면동이 아니라 구청 자치행정국으로 잘못 넘어간다.
+    // JEJU_CITY_DEPT_TABLE의 jachi 항목들은 애초에 이 두 단어를 넣지
+    // 않고 있었다(자치행정국·총무과·세무과 등 국 단위 고유 업무만) —
+    // 이 nationwide 함수도 그 원칙에 맞춘다.
+    { 국코드: 'jachi', 시코드, kw: ['지방세', '재산세과', '세무과', '자치행정', '취득세'] },
     { 국코드: 'safety', 시코드, kw: ['재난안전', '안전총괄', '주정차 단속'] },
     { 국코드: 'welfare', 시코드, kw: ['기초생활수급', '기초연금', '장애인복지', '주민복지과', '어린이집', '보육'] },
     { 국코드: 'econ', 시코드, kw: ['소상공인', '지역경제', '전통시장', '일자리과'] },
@@ -2215,6 +2227,10 @@ async function _resolveOrgDivision(text, orgMatch, classifyFn) {
 // EMD_PATHS에 키만 추가하면 된다.
 const EMD_PATHS = {
   jeju: { master: '05-emd/emd-master-data.json', extra: ['05-emd/hallim/hallim-data.json'] },
+  // 2026-08-05 신설 — 부산 파일럿 첫 EMD 데이터(해운대구 18개 행정동).
+  // 위 리팩터(_loadEmdRecordsForProvince/_findEmdEntryAcrossProvinces) 덕에
+  // 이 키를 추가하는 것만으로 directCode·자연어 매칭 양쪽 다 자동 인식된다.
+  busan: { master: '05-emd/emd-master-data-busan.json' },
 };
 
 // ── 도 클래스/인스턴스 레지스트리 (2026-07-21 신설) ──────────────
@@ -2306,13 +2322,22 @@ async function _loadEmdRecordsForProvince(provinceCode) {
   if (_emdRecordsByProvince[provinceCode]) return _emdRecordsByProvince[provinceCode];
   const paths = EMD_PATHS[provinceCode];
   if (!paths) { _emdRecordsByProvince[provinceCode] = []; return []; }
-  const [masterRaw, ...extraRaws] = await Promise.all([
-    _fetchText(paths.master),
-    ...(paths.extra || []).map(p => _fetchText(p)),
-  ]);
-  const master = JSON.parse(masterRaw);
-  const extras = extraRaws.map(r => JSON.parse(r));
-  _emdRecordsByProvince[provinceCode] = [...master.읍면동목록, ...extras];
+  // ★ 2026-08-05 — _findEmdEntryAcrossProvinces가 이제 EMD_PATHS에 등록된
+  // 모든 도를 순회하므로, 한 도의 마스터데이터 파일이 fetch 실패·JSON
+  // 손상 등으로 문제가 생겨도 다른 도·다른 tier 라우팅까지 함께 죽으면
+  // 안 된다 — _loadEmdNameToProvinceIndex()와 동일한 try/catch 방어 원칙.
+  try {
+    const [masterRaw, ...extraRaws] = await Promise.all([
+      _fetchText(paths.master),
+      ...(paths.extra || []).map(p => _fetchText(p)),
+    ]);
+    const master = JSON.parse(masterRaw);
+    const extras = extraRaws.map(r => JSON.parse(r));
+    _emdRecordsByProvince[provinceCode] = [...(master.읍면동목록 || []), ...extras];
+  } catch (e) {
+    console.warn(`[gov-router] EMD 마스터데이터 로드 실패(${provinceCode}): ${e.message}`);
+    _emdRecordsByProvince[provinceCode] = [];
+  }
   return _emdRecordsByProvince[provinceCode];
 }
 
