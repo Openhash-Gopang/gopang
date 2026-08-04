@@ -2788,6 +2788,13 @@ function _scoreMatch(text, table) {
 }
 
 // ── SP-EMD-TEMPLATE 렌더링 (변수 치환) ──────────────────────────
+// ★ 2026-08-04(v1.3 대응) — 부산 파일럿 중 이 템플릿이 제주 행정시
+// 이원구조(제주시/서귀포시)에 구조적으로 결합돼 있던 걸 발견해 템플릿을
+// 전국 일반화했다. 신규 변수(상위기관명·상위기관구분·관할구역구분·
+// 관할구역목록·상수도소관기관·통합콜센터명·통합콜센터번호)를 추가하되,
+// 구 필드(행정시명·관할리목록)도 rec에 남아있는 한 폴백으로 계속 지원한다
+// — emd-master-data.json 43건은 2026-08-04에 신규 필드까지 이미 소급
+// 반영됐지만, 향후 다른 도 레코드가 구 스키마로 들어올 가능성을 대비.
 function _renderEmdTemplate(template, rec) {
   const teamRows = (rec.팀구성 || [])
     .map(t => `| ${t.팀} | ${t.업무} |`).join('\n');
@@ -2795,15 +2802,27 @@ function _renderEmdTemplate(template, rec) {
     .filter(x => x)
     .map(x => `| ${x.업무영역} | ${x.실질처리주체} | ${x.연결SP || '-'} |`).join('\n');
 
+  const 상위기관명 = rec.상위기관명 || rec.행정시명 || 'TBD — 재검증 필요';
+  const 상위기관구분 = rec.상위기관구분 || (rec.행정시명 ? '행정시' : 'TBD — 재검증 필요');
+  const 관할구역구분 = rec.관할구역구분 || (['읍', '면'].includes(rec.읍면동구분) ? '법정리' : '법정동');
+  const 관할구역목록 = (rec.관할구역목록 || rec.관할리목록 || []);
+
   return template
     .replaceAll('{읍면동명}', rec.읍면동명)
-    .replaceAll('{행정시명}', rec.행정시명)
+    .replaceAll('{상위기관명}', 상위기관명)
+    .replaceAll('{상위기관구분}', 상위기관구분)
+    .replaceAll('{행정시명}', 상위기관명) // 구 버전 템플릿(v1.2 이하) 호환용
     .replaceAll('{읍면동구분}', rec.읍면동구분)
+    .replaceAll('{관할구역구분}', 관할구역구분)
     .replaceAll('{청사주소}', rec.청사주소 || 'TBD — 재검증 필요')
     .replaceAll('{대표전화}', rec.대표전화 || 'TBD — 재검증 필요')
     .replaceAll('{운영시간}', rec.운영시간 || '평일 09:00~18:00 (점심 12:00~13:00), 무인민원발급기 24시간')
-    .replaceAll('{관할리목록}', (rec.관할리목록 || []).join(', '))
+    .replaceAll('{관할구역목록}', 관할구역목록.join(', '))
+    .replaceAll('{관할리목록}', 관할구역목록.join(', ')) // 구 버전 템플릿 호환용
     .replaceAll('{주력산업}', rec.주력산업 || '')
+    .replaceAll('{상수도소관기관}', rec.상수도소관기관 || 'TBD — 재검증 필요')
+    .replaceAll('{통합콜센터명}', rec.통합콜센터명 || 'TBD — 재검증 필요')
+    .replaceAll('{통합콜센터번호}', rec.통합콜센터번호 || 'TBD — 재검증 필요')
     .replaceAll('{무인발급기위치}', rec.무인발급기위치 || 'TBD — 재검증 필요')
     .replaceAll('{특이사항}', rec.특이사항 || '')
     + (teamRows ? `\n\n### 렌더링된 팀 구성\n| 팀 | 업무 |\n|---|---|\n${teamRows}` : '')
@@ -3477,7 +3496,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           const cityText = await _fetchCityText(cityEntry);
           parts.push(cityText);
           trace.push(cityEntry.code);
-          const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.2.md');
+          const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.3.md');
           parts.push(_renderEmdTemplate(emdTemplate, emdEntry));
           trace.push(`SP-EMD-${emdEntry.읍면동명}(directCode)`);
           return { systemPrompt: parts.join('\n\n---\n\n'), trace };
@@ -3501,7 +3520,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
           const cityText = await _fetchCityText(cityEntry);
           parts.push(cityText);
           trace.push(cityEntry.code);
-          const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.2.md');
+          const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.3.md');
           parts.push(_renderEmdTemplate(emdTemplate, emdEntry));
           trace.push(`SP-EMD-${emdEntry.읍면동명}`);
           const teamResult = await _fetchEmdTeamText(teamEntry, emdEntry);
@@ -3723,7 +3742,7 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
       } else if (cityCode.code === 'SP-CITY-SEOGWIPO' && isWaterQuery) {
         trace.push('(규칙 F: 서귀포 상하수도는 읍면동 생략)');
       } else {
-        const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.2.md');
+        const emdTemplate = await _fetchText('05-emd/SP-EMD-TEMPLATE_v1.3.md');
         parts.push(_renderEmdTemplate(emdTemplate, emdMatch));
         trace.push(`SP-EMD-${emdMatch.읍면동명}`);
         // ★ 2026-08-02 신설 — 팀 단위 세부 매칭(division과 동일 원칙,
