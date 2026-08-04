@@ -20,10 +20,18 @@
 # ─────────────────────────────────────────────────
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 근거 법령: 지방자치법 제125조(행정기구와 공무원, 03-do-agency 공통) + 농촌진흥법(지방농촌진흥기관 관련 조항), 농업·농촌 및 식품산업 기본법
+- 기관 구분: 행정 (광역자치단체 직속기관·사업소, 별도 법인 아님)
+- legal_basis_last_verified: (미검증)
+- 상세: 클래스 템플릿 `SP-AGY-RESEARCH-TEMPLATE_v1.0.md` §LEGAL-BASIS 참조
+
 ## §0. 상속 및 삽입 위치
 
 ```
-JEJU-GOV-COMMON → SP-DO-000 → [본 SP: 농업기술원(직속기관)] → (SP-EXP-*)?
+kgov(SP-10_kpublic)+UNIVERSAL-common → SP-DO-000 → [본 SP: 농업기술원(직속기관)] → (SP-EXP-*)?
 ```
 
 상위 JEJU-GOV-COMMON §4(관할 검증 원칙)와 JEJU-DO-SP §4(체인 조립 규칙 D)를 그대로 따른다. **농업 정책(농축산식품국 SP-DO-AGRI)과 실제 기술지도 실무(이 기관)는 다르다.**

@@ -4,7 +4,7 @@
 # 문서명    : 상하수도 업무영역 전문 SP — System Prompt
 # 문서 코드  : SP-EXP-WATER
 # 버전      : v1.1
-# 상위 상속  : JEJU-GOV-COMMON > SP-DO-000 > SP-CITY-* > SP-EMD-{읍면동}
+# 상위 상속  : kgov(SP-10_kpublic)+UNIVERSAL-common > SP-DO-000 > SP-CITY-* > SP-EMD-{읍면동}
 #             (제주시 관할지역 기준. 서귀포시는 JEJU-DO-SP §5 규칙 F에 따라
 #             읍면동을 생략하고 SP-CITY-SEOGWIPO에서 바로 이 SP로 연결된다)
 # 하위 SP   : 없음 (L4 최종 노드)
