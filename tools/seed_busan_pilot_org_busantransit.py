@@ -90,20 +90,52 @@ def main():
             print("이미 등록된 것으로 보입니다(또는 확인 실패) — 중단합니다. 강제 등록하려면 --force를 추가하세요.")
             sys.exit(1)
 
-    req = urllib.request.Request(
-        f"{args.worker_base.rstrip('/')}/profile",
-        data=json.dumps(RECORD).encode("utf-8"),
-        headers={"Content-Type": "application/json", "User-Agent": _UA},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            body = resp.read().decode("utf-8")
-            print(f"\n등록 완료 (HTTP {resp.status}):")
-            print(body)
-    except urllib.error.HTTPError as e:
-        print(f"\n등록 실패 (HTTP {e.code}): {e.read().decode('utf-8', errors='replace')}", file=sys.stderr)
-        sys.exit(1)
+    # ★ 2026-08-04 추가 — 첫 시도가 TimeoutError(HTTPError 아님)로 크래시.
+    # verify_jeju_267_search_match.py 주석에 이미 기록돼 있던 서버 특성
+    # ("15초 timeout + SKIP-UNCERTAIN 잦음")을 이 스크립트가 반영 안
+    # 했던 게 원인 — 같은 재시도(exponential backoff) 패턴을 가져온다.
+    # 등록(POST /profile)은 검색(GET류 /search)과 달리 "재시도하면 중복
+    # 생성"이 될 수 있으므로, 재시도 사이에 매번 먼저 이미 등록됐는지
+    # 확인해서 중복을 막는다(ACRC 중복 사고 재발 방지 원칙과 동일).
+    max_retries = 4
+    backoff_base = 3.0
+    last_err = None
+    for attempt in range(max_retries + 1):
+        req = urllib.request.Request(
+            f"{args.worker_base.rstrip('/')}/profile",
+            data=json.dumps(RECORD).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": _UA},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                body = resp.read().decode("utf-8")
+                print(f"\n등록 완료 (HTTP {resp.status}):")
+                print(body)
+                return
+        except urllib.error.HTTPError as e:
+            print(f"\n등록 실패 (HTTP {e.code}): {e.read().decode('utf-8', errors='replace')}", file=sys.stderr)
+            sys.exit(1)  # HTTP 오류 응답은 명확한 거부 — 재시도해도 안 바뀜
+        except Exception as e:
+            last_err = e
+            print(f"  [시도 {attempt + 1}/{max_retries + 1}] 네트워크 오류({type(e).__name__}: {e}) — ", end="", file=sys.stderr)
+            if attempt < max_retries:
+                wait = backoff_base * (2 ** attempt)
+                print(f"{wait:.0f}초 뒤 재시도. 먼저 실제로 등록됐는지 확인합니다.", file=sys.stderr)
+                import time
+                time.sleep(wait)
+                # 타임아웃이 서버측에서 실제로는 처리 완료 후 응답만 못
+                # 받은 경우일 수 있다 — 재시도 전 반드시 먼저 확인한다.
+                if _existing_check(args.worker_base, RECORD["entity_subtype"]):
+                    print("  → 확인해보니 이미 등록되어 있습니다(직전 시도가 서버에서는 성공했던 것으로 보임). 중복 방지를 위해 재시도를 중단합니다.")
+                    return
+            else:
+                print("재시도 소진.", file=sys.stderr)
+
+    print(f"\n등록 실패 — {max_retries + 1}회 모두 네트워크 오류: {last_err}", file=sys.stderr)
+    print("서버에 실제로는 등록됐을 가능성이 있으니, 다시 실행하기 전에 "
+          "먼저 --force 없이 실행해 기존 등록 확인부터 하는 걸 권장합니다.", file=sys.stderr)
+    sys.exit(1)
 
 
 if __name__ == "__main__":
