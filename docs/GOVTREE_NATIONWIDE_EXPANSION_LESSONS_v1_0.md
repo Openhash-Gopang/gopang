@@ -219,6 +219,46 @@ gov-tree 전용 SP가 있는 기관이었다는 점에서 "K-Search 취약점"�
   밖의 대상에 한해서만** 진행하면 된다 — gov-tree 기관까지 이 설계에 끌어들이면
   안 된다.
 
+### 2-5. [2026-08-04 추가 검증·수정] 경로 A의 완전 매칭 실패 구제 경로 신설
+
+§2-4까지는 "kw 배열만 잘 큐레이션하면 된다"고 정리했는데, 실측으로 확인하니
+**그것만으로는 부족했다.** "지하철 타다가 물건 놓고 내렸는데 어디다
+물어봐요"(부산교통공사를 가리키는 완전한 패러프레이즈, kw 리터럴 불포함)로
+코드를 추적한 결과:
+
+- `_resolveInstitutionMatch`는 `topScore === 0`(kw 매칭 전부 실패)이면
+  **그 자리에서 즉시 `null`을 반환**했다.
+- 이 함수 안의 LLM 폴백(`_classifyDivisionFallback`)은 "동점 후보 중
+  고르기" 전용이라, 완전 매칭 실패(score=0)는 애초에 그 분기에 도달하지도
+  못했다.
+- do-dept/city/national용 별도 LLM 폴백(`_classifyFallback`)은 org/agency
+  매칭 실패 뒤에도 실행될 수 있었지만, 그 후보 목록(`ROUTE_DESCRIPTIONS`)에
+  **SP-ORG-*/SP-AGY-* 코드가 단 하나도 등록돼 있지 않아** 애초에 정답을
+  고를 방법이 없었다.
+
+**즉 org/agency 계층(do-agency 10개 + org 26개, 향후 타 도 추가분 포함)
+전체가 "kw 목록에 없는 표현이면 완전히 새는" 사각지대였다.**
+
+**수정**: `_resolveInstitutionMatch`의 `topScore === 0` 분기에서, 즉시
+포기하는 대신 `table`(agency/org 테이블 전체, 이미 각 항목에 `desc` 필드가
+있음) 전체를 후보로 `_classifyDivisionFallback`을 한 번 더 시도하도록
+고쳤다. `_buildDivisionCandidatesText`가 요구하는 필드(`code`/`name`/`desc`)를
+agency/org 테이블이 이미 갖추고 있어 **새 헬퍼 없이 기존 함수를 그대로
+재사용**할 수 있었다.
+
+**검증**: `directcode-province-resolution.test.mjs`에 목(mock) `classifyFn`을
+주입한 케이스와, `classifyFn` 미주입 대조군 케이스를 추가해 (1) 구제 경로가
+실제로 정답을 찾고 (2) `classifyFn`이 없을 땐 여전히 못 찾는(=이 경로가
+`classifyFn` 유무에 진짜로 의존한다는) 것까지 확인했다. 10/10 통과.
+
+> **일반화된 교훈**: "실측으로 확인해보자"는 접근이 맞았을 뿐 아니라,
+> 실측 결과가 "우려가 맞았다"로 나온 경우 새 방비책을 미루지 말고 바로
+> 만들어야 한다 — 이번 경우 다행히 기존 함수(`_classifyDivisionFallback`)를
+> 재사용할 수 있어 수정 자체는 크지 않았다. 새 코드를 늘리기 전에, 이미
+> 있는 폴백 메커니즘이 재사용 가능한지부터 확인하는 습관이 여기서도
+> 유효했다.
+
+
 ---
 
 ## 3. 다음에 비슷한 작업을 할 때 — 체크리스트

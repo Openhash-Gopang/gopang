@@ -2182,7 +2182,20 @@ async function _fetchEmdTeamText(teamRec, emdRec) {
 // 없거나 시코드가 없는 순수 내용적 동점) 그때만 LLM로 넘긴다.
 async function _resolveInstitutionMatch(text, table, pdvLocationHint, classifyFn) {
   const { best, topScore, tied } = _scoreMatchTies(text, table);
-  if (topScore === 0) return null;
+  if (topScore === 0) {
+    // ★ 2026-08-04 신설 — kw 리터럴 매칭이 전부 실패해도 조용히 포기하지
+    // 않는다. "지하철 타다가 물건 놓고 내렸는데 어디다 물어봐요"처럼 kw
+    // 목록에 없는 자연어 표현은 이전엔 여기서 바로 null을 반환해 완전히
+    // 새는 사각지대였다 — do-dept/city/national용 LLM 폴백(_classifyFallback)은
+    // ROUTE_DESCRIPTIONS에 SP-ORG-*/SP-AGY-* 코드가 아예 없어 org/agency
+    // 계층을 커버 못 했고, 이 함수 자체의 LLM 폴백(_classifyDivisionFallback)은
+    // "동점 후보 중 고르기" 전용이라 완전 매칭 실패는 구제하지 않았다
+    // (docs/GOVTREE_NATIONWIDE_EXPANSION_LESSONS_v1_0.md 참조).
+    // table 전체(desc 포함)를 후보로 LLM 분류를 한 번 더 시도한다 —
+    // _classifyDivisionFallback은 candidates가 {code,name,desc}만 있으면
+    // 되므로 agency/org table을 그대로 재사용할 수 있다.
+    return _classifyDivisionFallback(text, table, classifyFn);
+  }
   if (tied.length === 1) return best;
   // 진짜 동점 — 시코드가 있는 지리적 이원화 기관쌍이면 위치로 먼저 시도.
   if (tied.every(e => e.시코드)) {

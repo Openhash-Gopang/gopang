@@ -520,6 +520,33 @@ body {
           3분기, RULE-01 점수 기반 재정의 등)는 gov-tree 밖의 대상에 한해서만
           진행한다 — gov-tree 기관까지 끌어들이면 안 된다.</li>
         </ul>
+
+        <h4>[2026-08-04 추가 검증·수정] 경로 A의 완전 매칭 실패 구제 경로 신설</h4>
+        <p>
+          위 함의까지는 "kw 배열만 잘 큐레이션하면 된다"고 정리했는데, 실측으로
+          확인하니 부족했다. "지하철 타다가 물건 놓고 내렸는데 어디다
+          물어봐요"(kw 리터럴 불포함 패러프레이즈)로 코드를 추적한 결과:
+          <code>_resolveInstitutionMatch</code>는 <code>topScore === 0</code>이면
+          즉시 <code>null</code>을 반환했고, 함수 내부 LLM 폴백은 "동점 후보 중
+          고르기" 전용이라 완전 매칭 실패는 구제하지 않았다. do-dept용 별도
+          LLM 폴백도 후보 목록에 SP-ORG-*/SP-AGY-* 코드가 아예 없어 무력했다.
+          <strong>즉 org/agency 계층 전체가 kw 목록에 없는 표현이면 완전히
+          새는 사각지대였다.</strong>
+        </p>
+        <p>
+          <strong>수정</strong>: <code>topScore === 0</code> 분기에서 즉시
+          포기하는 대신, table 전체(이미 desc 필드 보유)를 후보로
+          <code>_classifyDivisionFallback</code>을 재사용해 한 번 더 시도하도록
+          고쳤다 — 새 헬퍼 없이 기존 함수 재사용으로 해결됐다.
+          <strong>검증</strong>: 목(mock) classifyFn 주입 케이스와 미주입
+          대조군 케이스를 테스트에 추가해 10/10 통과 확인.
+        </p>
+        <blockquote>
+          <strong>일반화된 교훈</strong>: 실측 결과가 "우려가 맞았다"로
+          나오면 새 방비책을 미루지 말고 바로 만들어야 한다 — 다만 새 코드를
+          늘리기 전에, 이미 있는 폴백 메커니즘이 재사용 가능한지부터 확인하는
+          습관이 여기서도 유효했다.
+        </blockquote>
       </div>
     </section>
 
