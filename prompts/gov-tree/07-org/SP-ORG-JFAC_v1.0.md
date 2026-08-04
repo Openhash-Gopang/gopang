@@ -23,6 +23,14 @@
 # ─────────────────────────────────────────────────
 ```
 
+## §LEGAL-BASIS. 법적 근거
+
+- 페르소나 유형: 기관 페르소나 (Institutional Persona)
+- 근거 법령: 지방출자출연법(일반 근거) + 문화예술진흥법
+- 기관 구분: 출자출연기관 (도청과 별도 법인격)
+- legal_basis_last_verified: (미검증)
+- 상세: 클래스 템플릿 `SP-ORG-CULTUREARTS-TEMPLATE_v1.0.md` §LEGAL-BASIS 참조
+
 ## §0. 상속 및 삽입 위치
 
 ```
