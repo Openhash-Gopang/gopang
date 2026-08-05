@@ -25,7 +25,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -68,7 +68,7 @@ globalThis.fetch = async (url) => {
   return { ok: true, text: async () => content, json: async () => JSON.parse(content) };
 };
 
-const { assembleGovSystemPrompt } = await import(path.join(SRC_ROOT, 'gopang/gov/gov-router.js'));
+const { assembleGovSystemPrompt } = await import(pathToFileURL(path.join(SRC_ROOT, 'gopang/gov/gov-router.js')));
 
 // ── 3분류 판정기 재구현(gov-router.js와 동일 규칙) — REAL만 시딩 대상.
 // STUB/MISSING을 잘못 시딩하면 §4-1 미스 신호가 영구히 안 나가게 된다.
