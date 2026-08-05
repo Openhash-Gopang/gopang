@@ -3658,7 +3658,19 @@ window.closePDV = closePDV;
     _panelHistory.push(...head, ...trimmed);
   }
 
-  async function _callPanelAI(userText, bubbleEl, attached, _preTab) {
+  // [2026-08-06 수정 — 지연 버그] 5번째 인자 modelTier 신설. call-ai.js의
+  // _handleOrchestrationTags/_handleSPAuthorTags는 재주입 홉마다
+  // sendFn(text, null, null, resolveOrchestrationModel(tagType))로 티어를
+  // 넘긴다(hondi-flash/hondi-pro, 커밋 7639c79b). 그런데 이 함수는 그
+  // 4번째 자리(모델 티어)를 받을 매개변수 자체가 없었고, 아래 candidates
+  // 구성도 'hondi-pro'로 하드코딩돼 있어 — 패널을 거치는 모든 오케스트레이션
+  // 재주입 홉(GWP_REGISTRY_SEARCH 결과, GOV_SP_DRAFT_REQUEST 결과 등, 원래
+  // hondi-flash로 가야 할 "단순 재주입" 홉 포함)이 전부 hondi-pro(thinking
+  // 켜짐, 방금 4000토큰으로 늘어난 예산)를 순차적으로 타면서 홉 하나당
+  // 20~30초씩 걸렸다(§HANDOFF_2026-08-06 라이브 재검증, Network 탭
+  // deepseek fetch 33.90s/22.16s 실측). resolveOrchestrationModel 자체는
+  // 이미 정확했다 — 그 결과를 패널까지 전달할 배선이 없었을 뿐이다.
+  async function _callPanelAI(userText, bubbleEl, attached, _preTab, modelTier) {
     _panelUserAborted = false; // 새 요청 시작 — 이전 취소 플래그 초기화
     const { PROVIDER_INFO, getPriorityOrder } = await import('./src/gopang/core/config.js');
     // free-model-pool.js 삭제(2026-07-01) — OR 24h쿨다운·분당예산 관리 대신
@@ -3809,10 +3821,14 @@ window.closePDV = closePDV;
     // hondi-pro로 고정했는데, 이 패널은 완전히 별도의 후보 구성 로직이라
     // 그 수정이 반영이 안 되고 있었다(_resolveHondiTier로 매 턴 flash/pro가
     // 갈리던 구식 동작 그대로). 같은 이유로 여기도 고정한다.
+    // [2026-08-06 수정 — 지연 버그] 'hondi-pro' 고정 → modelTier가 넘어오면
+    // (오케스트레이션 재주입 홉의 resolveOrchestrationModel 결과) 그 값을
+    // 쓰고, 없으면(사용자 원발화 등 진짜 판단 턴) 기존과 동일하게 hondi-pro
+    // 기본값을 유지한다 — 위 _callPanelAI 헤더 주석 참고.
     candidates.push({
       provider: 'deepseek-default',
       baseUrl: endpoint.replace(/\/+$/, ''),
-      model: 'hondi-pro',
+      model: modelTier || 'hondi-pro',
       key: null,
     });
 
@@ -3974,11 +3990,19 @@ window.closePDV = closePDV;
         // properties of undefined (setting 'textContent')"로 죽었다.
         // _handleProfileTags 콜백(위)이 이미 쓰던 것과 동일한 패턴 —
         // 말풍선을 새로 만들어 쥐여주는 래퍼로 감싼다.
-        const _panelSendFn = async (text) => {
+        // [2026-08-06 수정 — 지연 버그] sendFn 자리에 (userText, imageFile,
+        // _preTab, modelTier) 4개 인자를 기대하고 넘겨주는 호출부
+        // (_handleSPAuthorTags 등)가 있는데, 이 래퍼는 text 1개만 받고
+        // 나머지(특히 4번째 modelTier)를 조용히 버리고 있었다 — 그 결과
+        // resolveOrchestrationModel('...RESULT')가 골라준 hondi-flash가
+        // 이 래퍼를 거치는 순간 유실되고 _callPanelAI가 항상 기본값
+        // hondi-pro로 재주입 홉을 실행했다. 이제 4번째 인자를 그대로
+        // 받아 _callPanelAI의 새 modelTier 자리로 전달한다.
+        const _panelSendFn = async (text, _imageFile, _preTabArg, modelTierArg) => {
           const newBubble = _appendPanelMsg('ai', '…');
           newBubble.classList.add('streaming');
           try {
-            await _callPanelAI(text, newBubble);
+            await _callPanelAI(text, newBubble, null, null, modelTierArg);
           } finally {
             newBubble.classList.remove('streaming');
           }
