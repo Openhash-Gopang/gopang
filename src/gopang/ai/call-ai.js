@@ -15,7 +15,7 @@
  *      / [PROFILE_INTERRUPT_HANDOFF] 감지 → 무관한 요청을 AC에게 즉시 반환
  */
 import { CFG, _modelSupportsVision, PROVIDER_INFO, getPriorityOrder, MODEL_MIGRATION } from '../core/config.js';
-import { TOKEN_BUDGET, resolveChatBudget } from '../core/token-policy.js';
+import { TOKEN_BUDGET, resolveChatBudget, resolveOrchestrationModel } from '../core/token-policy.js';
 import { IMPORTANCE } from '../../core/constants.js';
 import { aiActive, history, _userLocation,
          _USER, USER_GUID, _locationPending, _locationReady,
@@ -1025,7 +1025,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       } catch (e) {
         resultText = `{"error":"${e.message}"}`;
       }
-      await sendFn(`[PROCEDURE_MAP_UPDATE 결과] ${resultText}`);
+      await sendFn(`[PROCEDURE_MAP_UPDATE 결과] ${resultText}`, null, null, resolveOrchestrationModel('PROCEDURE_MAP_UPDATE_RESULT'));
       return true;
     }
 
@@ -1041,7 +1041,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       } catch (e) {
         resultText = `{"error":"${e.message}"}`;
       }
-      await sendFn(`[PROCEDURE_MAP_LOOKUP 결과] ${resultText}\n\n위 결과를 이어받아 RULE-02를 계속 진행하세요.`);
+      await sendFn(`[PROCEDURE_MAP_LOOKUP 결과] ${resultText}\n\n위 결과를 이어받아 RULE-02를 계속 진행하세요.`, null, null, resolveOrchestrationModel('PROCEDURE_MAP_LOOKUP_RESULT'));
       return true;
     }
 
@@ -1070,7 +1070,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       } catch (e) {
         resultText = `{"error":"${e.message}"}`;
       }
-      await sendFn(`[BENEFIT_SEMANTIC_SEARCH 결과] ${resultText}\n\n위 후보 목록을 이어받아 RULE-02 STEP 0-C를 계속 진행하세요.`);
+      await sendFn(`[BENEFIT_SEMANTIC_SEARCH 결과] ${resultText}\n\n위 후보 목록을 이어받아 RULE-02 STEP 0-C를 계속 진행하세요.`, null, null, resolveOrchestrationModel('BENEFIT_SEMANTIC_SEARCH_RESULT'));
       return true;
     }
 
@@ -1099,7 +1099,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       } catch (e) {
         resultText = `{"error":"${e.message}"}`;
       }
-      await sendFn(`[BENEFIT_CANDIDATE_SEARCH 결과] ${resultText}\n\n위 후보 목록을 이어받아 RULE-02 STEP 0-C를 계속 진행하세요.`);
+      await sendFn(`[BENEFIT_CANDIDATE_SEARCH 결과] ${resultText}\n\n위 후보 목록을 이어받아 RULE-02 STEP 0-C를 계속 진행하세요.`, null, null, resolveOrchestrationModel('BENEFIT_CANDIDATE_SEARCH_RESULT'));
       return true;
     }
 
@@ -1129,7 +1129,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
           resultText = `{"error":"${e.message}"}`;
         }
       }
-      await sendFn(`[PROCEDURE_MAP_DRAFT 결과] ${resultText}`);
+      await sendFn(`[PROCEDURE_MAP_DRAFT 결과] ${resultText}`, null, null, resolveOrchestrationModel('PROCEDURE_MAP_DRAFT_RESULT'));
       return true;
     }
 
@@ -1154,7 +1154,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       } catch (e) {
         resultText = `{"error":"${e.message}"}`;
       }
-      await sendFn(`[CALL_GOVSYS 결과] ${resultText}\n\n결과가 requires_user_action이면 그 사유를 이용자에게 자연스럽게 전달하세요.`);
+      await sendFn(`[CALL_GOVSYS 결과] ${resultText}\n\n결과가 requires_user_action이면 그 사유를 이용자에게 자연스럽게 전달하세요.`, null, null, resolveOrchestrationModel('CALL_GOVSYS_RESULT'));
       return true;
     }
 
@@ -1182,7 +1182,7 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
       } catch (e) {
         resultText = `{"error":"${e.message}"}`;
       }
-      await sendFn(`[CALL_GOVTREE 결과] ${resultText}\n\nstatus가 gov_tree_ref_stale이면 org_profiles와 gov-tree가 어긋난 것이므로 이 기관은 미연결로 취급하고 대체 경로(K-Search 등)를 시도하세요. status=ok면 institution_response를 그 기관이 실제로 답한 내용으로 취급해 다음 단계로 진행하세요.`);
+      await sendFn(`[CALL_GOVTREE 결과] ${resultText}\n\nstatus가 gov_tree_ref_stale이면 org_profiles와 gov-tree가 어긋난 것이므로 이 기관은 미연결로 취급하고 대체 경로(K-Search 등)를 시도하세요. status=ok면 institution_response를 그 기관이 실제로 답한 내용으로 취급해 다음 단계로 진행하세요.`, null, null, resolveOrchestrationModel('CALL_GOVTREE_RESULT'));
       return true;
     }
   }
@@ -2032,7 +2032,7 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
     } catch (e) {
       resultText = `{"error":"${e.message}"}`;
     }
-    await sendFn(`[GWP_REGISTRY_SEARCH 결과] ${resultText}\n\n결과가 있으면 그 gwp_id로 STEP 4를 이어가고(match_score 재평가), 없으면 매칭 실패 처리로 진행하세요.`);
+    await sendFn(`[GWP_REGISTRY_SEARCH 결과] ${resultText}\n\n결과가 있으면 그 gwp_id로 STEP 4를 이어가고(match_score 재평가), 없으면 매칭 실패 처리로 진행하세요.`, null, null, resolveOrchestrationModel('GWP_REGISTRY_SEARCH_RESULT'));
     return true;
   }
 
@@ -2091,7 +2091,7 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
         ? `✅ SP 초안 작성 요청이 등록됐습니다${_queueId ? ` (요청 ID: ${_queueId})` : ''} — 검토·승인 후 이용하실 수 있어요.`
         : `⚠️ SP 초안 작성 요청 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.`;
     }
-    await sendFn(`[GOV_SP_DRAFT_REQUEST 결과] ${resultText}`);
+    await sendFn(`[GOV_SP_DRAFT_REQUEST 결과] ${resultText}`, null, null, resolveOrchestrationModel('GOV_SP_DRAFT_REQUEST_RESULT'));
     return true;
   }
 
@@ -2147,7 +2147,7 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
         ? `✅ SP 초안 작성 요청이 등록됐습니다${_queueId ? ` (요청 ID: ${_queueId})` : ''} — 검토·승인 후 이용하실 수 있어요.`
         : `⚠️ SP 초안 작성 요청 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.`;
     }
-    await sendFn(`[SP_DRAFT_REQUEST 결과] ${resultText}`);
+    await sendFn(`[SP_DRAFT_REQUEST 결과] ${resultText}`, null, null, resolveOrchestrationModel('SP_DRAFT_REQUEST_RESULT'));
     return true;
   }
 
@@ -2219,7 +2219,7 @@ export async function _handleSPAuthorTags(fullReply, bubble, sendFn = callAI, us
     } catch (e) {
       resultText = `{"error":"${e.message}"}`;
     }
-    await sendFn(`[ESCALATE 결과] ${resultText}`);
+    await sendFn(`[ESCALATE 결과] ${resultText}`, null, null, resolveOrchestrationModel('ESCALATE_RESULT'));
     return true;
   }
 
@@ -3026,11 +3026,11 @@ function _setSendBtnGenerating(active) {
 
 // callAI는 얇은 래퍼 — 실제 로직(_callAIInner)이 어떤 경로로 끝나든(정상 종료/
 // 에러/중지) try/finally가 버튼 상태와 AbortController를 항상 정리한다.
-export async function callAI(userText, imageFile = null, _preTab = null) {
+export async function callAI(userText, imageFile = null, _preTab = null, modelTier = null) {
   _currentAbort = new AbortController();
   _setSendBtnGenerating(true);
   try {
-    await _callAIInner(userText, imageFile, _preTab);
+    await _callAIInner(userText, imageFile, _preTab, modelTier);
   } finally {
     _setSendBtnGenerating(false);
     _currentAbort = null;
@@ -3339,7 +3339,7 @@ async function _sha256Hex(text) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function _buildCallCandidates(userText, messages) {
+function _buildCallCandidates(userText, messages, modelTier = null) {
   const candidates = [];
 
   // 1) 사용자가 등록한 provider 키들 (ai-setup-mobile.html에서 등록)
@@ -3396,14 +3396,23 @@ function _buildCallCandidates(userText, messages) {
   // deepseek v4 pro를 디폴트로 호출". _resolveHondiTier()의 복잡도 점수
   // 산정은 "판단력이 약한 flash를 언제 pro로 승격할지"를 결정하던
   // 로직이었는데, 이제 기본 판단 주체 자체가 pro라 이 질문 자체가
-  // 사라진다. hondi-pro를 고정값으로 쓴다. _resolveHondiTier/
+  // 사라진다. hondi-pro를 기본값으로 쓴다. _resolveHondiTier/
   // _estimateQueryComplexity 함수는 삭제하지 않고 남겨둔다 — pro가
   // §DELEGATE로 flash에 위임할지 판단하는 보조 신호로 재활용할 여지가
   // 있다(현재는 pro 스스로 판단, 이 점수를 참조하지 않음).
+  //
+  // v4.1(2026-08-05, HANDOFF_2026-08-05_live-smoketest-latency-and-empty-
+  // content.md §4-2): modelTier 인자 신설 — _handleOrchestrationTags의
+  // "단순 분기·재주입 소비" 홉이 매번 hondi-pro(thinking 켜짐)를 그대로
+  // 물려받아 오케스트레이션 체인 전체가 순차·전부 무거운 호출이 되던
+  // 문제를 해소한다. 최초 AC 호출(모드 인자 없음)은 여전히 hondi-pro
+  // 기본값 그대로 — v4.0 결정을 뒤집는 게 아니라, 그 이후 재주입 턴에만
+  // 선택적으로 더 가벼운 티어를 쓸 길을 연다(판단 기준은
+  // token-policy.js의 resolveOrchestrationModel() 한 곳).
   candidates.push({
     provider: 'deepseek-default',
     baseUrl:  CFG.endpoint.replace(/\/+$/, ''),
-    model:    'hondi-pro',
+    model:    modelTier || 'hondi-pro',
     apiKey:   null,
     isProxy:  true,
   });
@@ -3939,7 +3948,7 @@ export function _parseAgentTags(fullReply, bubble, userText, _preTab) {
 }
 
 
-async function _callAIInner(userText, imageFile = null, _preTab = null) {
+async function _callAIInner(userText, imageFile = null, _preTab = null, modelTier = null) {
   showTyping();
 
   // urgent=true → kemergency면 경고 표시 후 계속 처리
@@ -4110,7 +4119,7 @@ async function _callAIInner(userText, imageFile = null, _preTab = null) {
   // 혼디 제공 DeepSeek 기본 키(hondi-flash/hondi-pro)로 폴백한다 —
   // 그래서 candidates는 절대 0개가 되지 않는다. 티어는 이번 턴 원본
   // userText(가공 전)의 복잡도를 보고 자동으로 정해진다.
-  const candidates = _buildCallCandidates(typeof userText === 'string' ? userText : '', messages);
+  const candidates = _buildCallCandidates(typeof userText === 'string' ? userText : '', messages, modelTier);
   const activeModel = CFG.model;
   console.log(`[AI] 호출 후보 ${candidates.length}개 준비 — 1번부터 순차 시도`);
 

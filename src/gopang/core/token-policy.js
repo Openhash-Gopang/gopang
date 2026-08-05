@@ -117,3 +117,44 @@ export function resolveChatBudget(modelName, purpose = 'chat') {
 // 쓴다 — 그래야 사용자가 고가 모델(Claude/GPT 등)을 메인으로 설정해도,
 // 백그라운드 보조 작업이 매번 그 비싼 모델을 따라 호출하지 않는다.
 export const FAST_MODEL = 'deepseek-v4-flash';
+
+/**
+ * resolveOrchestrationModel(tagType) — 2026-08-05 신설
+ * (HANDOFF_2026-08-05_live-smoketest-latency-and-empty-content.md §4-2)
+ *
+ * 배경: _handleOrchestrationTags(call-ai.js)의 모든 sendFn(=callAI) 재호출이
+ * 지금까지 모델 override 없이 CFG.model(hondi-pro 고정, v4.0 설계)을 그대로
+ * 물려받아, 오케스트레이션 체인의 모든 홉(AC 판단→K-Intent→K-Compose→
+ * K-Execute→K-Deliver, 그리고 그 사이 재주입 턴)이 전부 hondi-pro(thinking
+ * 켜짐)로, 그것도 순차 실행돼 5분+ 지연이 실측됐다.
+ *
+ * 원칙(이 파일 원칙 2·3과 동일): "단순 분기·재주입 소비" — worker.js/API
+ * 조회 결과를 받아 그대로 다음 STEP으로 이어받는 턴 — 는 사용자가 직접
+ * 평가하는 최종 판단이 아니므로 hondi-flash. "진짜 판단"(신규 계획 수립,
+ * 최종 답 합성, SP 간 위임 전환처럼 상대 SP가 처음부터 새로 사고해야 하는
+ * 턴)만 hondi-pro를 유지한다. 판단 기준은 이 함수 하나에서만 갖는다 —
+ * 호출부(_handleOrchestrationTags)에 삼항연산자를 흩뿌리지 않는다.
+ *
+ * tagType은 _handleOrchestrationTags 안에서 sendFn(...)을 호출하기 직전의
+ * 문맥(어떤 결과를 재주입하는지)을 그대로 넘긴다. 모르는 tagType은 안전
+ * 쪽으로 기울어 hondi-pro를 반환한다(보수적 기본값 — #180류 결함은
+ * "너무 싼 모델을 씀"이 아니라 "예산 부족"이 원인이었으므로, 분류를
+ * 잘못했을 때의 비용은 "느림"이지 "틀림"이 아니다).
+ */
+const _ORCHESTRATION_FLASH_TAGS = new Set([
+  'PROCEDURE_MAP_LOOKUP_RESULT',
+  'PROCEDURE_MAP_UPDATE_RESULT',
+  'PROCEDURE_MAP_DRAFT_RESULT',
+  'BENEFIT_SEMANTIC_SEARCH_RESULT',
+  'BENEFIT_CANDIDATE_SEARCH_RESULT',
+  'CALL_GOVSYS_RESULT',
+  'CALL_GOVTREE_RESULT',
+  'GWP_REGISTRY_SEARCH_RESULT',
+  'GOV_SP_DRAFT_REQUEST_RESULT',
+  'SP_DRAFT_REQUEST_RESULT',
+  'ESCALATE_RESULT',
+]);
+
+export function resolveOrchestrationModel(tagType) {
+  return _ORCHESTRATION_FLASH_TAGS.has(tagType) ? 'hondi-flash' : 'hondi-pro';
+}
