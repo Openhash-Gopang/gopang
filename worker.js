@@ -3929,6 +3929,19 @@ async function _registerGovTreeProfile(env, govTreeKey, { name, description, tag
   return { status: 'registered', guid: body.guid };
 }
 
+// ★ 2026-08-05 신설 — PocketBase 실제 컬럼명은 영어(ASCII)로 통일한다.
+// 이 저장소의 다른 모든 PocketBase 컬렉션(sp_gov_draft_realtime 등,
+// pb_migrations/*.js 전수 확인 결과 한글 필드명 사용 사례 0건)이 전부
+// 영어 필드명이라 이것만 예외로 두면 관리자 UI·다른 컬렉션과 일관성이
+// 깨진다. 반면 gov-router.js↔worker.js 사이의 govTreeKey 객체·JSON
+// 마스터데이터 파일들은 한글 키가 이미 자리잡은 관례라 그건 그대로 두고,
+// PocketBase에 실제로 쓰거나 필터를 만드는 이 3개 함수 안에서만 여기서
+// 번역한다 — 호출부(handleSPAuthorQueue 등)는 여전히 한글 키 그대로
+// govTreeKey를 넘기면 된다.
+function _govTreeKeyToPbFields({ tier, 도코드, 시코드, 국코드, 읍면동명 }) {
+  return { tier, province_code: 도코드 || '', city_code: 시코드 || '', dept_code: 국코드 || '', emd_name: 읍면동명 || '' };
+}
+
 async function _l1FindGovTreeInstanceRealtime(env, govTreeKey) {
   const token = await _l1AdminToken(env);
   const key = _govTreeInstanceKey(govTreeKey).replace(/'/g, "\\'");
@@ -3948,7 +3961,7 @@ async function _l1FindGovTreeInstanceRealtime(env, govTreeKey) {
 // 원칙.
 async function _l1FindGovTreeInstanceRealtimeByName(env, tier, 읍면동명또는국코드) {
   const token = await _l1AdminToken(env);
-  const field = tier === 'emd' ? '읍면동명' : '국코드';
+  const field = tier === 'emd' ? 'emd_name' : 'dept_code'; // PocketBase 실제 컬럼명(영어)
   const filter = encodeURIComponent(`tier='${tier}' && ${field}='${String(읍면동명또는국코드).replace(/'/g, "\\'")}'`);
   const res = await fetch(`${L1_DEFAULT}/api/collections/sp_gov_tree_instance_realtime/records?filter=${filter}&perPage=5`, {
     headers: { 'Authorization': `Bearer ${token}` },
@@ -3963,7 +3976,13 @@ async function _l1FindGovTreeInstanceRealtimeByName(env, tier, 읍면동명또�
 
 async function _l1CreateGovTreeInstanceRealtime(env, record) {
   const token = await _l1AdminToken(env);
-  const body = { ...record, instance_key: _govTreeInstanceKey(record) };
+  // record는 여전히 한글 키(도코드/시코드/국코드/읍면동명)로 들어온다 —
+  // 여기서만 PocketBase 실제 컬럼명(영어)으로 변환. 나머지 필드
+  // (institution/task/risk_tier/status/generated_content/
+  // validation_notes/generated_at/source_conversation)는 이미 영어라
+  // 그대로 통과.
+  const { 도코드, 시코드, 국코드, 읍면동명, ...rest } = record;
+  const body = { ...rest, ..._govTreeKeyToPbFields(record), instance_key: _govTreeInstanceKey(record) };
   const res = await fetch(`${L1_DEFAULT}/api/collections/sp_gov_tree_instance_realtime/records`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },

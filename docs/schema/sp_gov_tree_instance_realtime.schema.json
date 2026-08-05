@@ -1,5 +1,5 @@
 {
-  "_문서_설명": "PocketBase(L1) 컬렉션 sp_gov_tree_instance_realtime 스키마 정의. GOV_TREE_LAZY_INSTANCING_DESIGN_v1_0.md §5-1 근거. sp_gov_draft_realtime(named institution 실시간 저작)의 자매 컬렉션 — 자유텍스트 institution 매칭 대신 구조화 키(tier/도코드/시코드/국코드/읍면동명)를 1급 필드로 둔다. PocketBase 관리자 UI의 'Import collections'로 이 파일을 그대로 가져올 수 있는 형태(schema 배열 규격)로 작성했다. 실제 이관은 tools/seed_gov_tree_pocketbase.py 참조.",
+  "_문서_설명": "PocketBase(L1) 컬렉션 sp_gov_tree_instance_realtime 스키마 참고 문서. GOV_TREE_LAZY_INSTANCING_DESIGN_v1_0.md §5-1/§11 근거. sp_gov_draft_realtime(named institution 실시간 저작)의 자매 컬렉션 — 자유텍스트 institution 매칭 대신 구조화 키(tier/province_code/city_code/dept_code/emd_name)를 1급 필드로 둔다. ★ 실제 배포에 쓰는 정본은 이 파일이 아니라 pb_migrations/의 마이그레이션 파일이다(PocketBase 0.22 migrate JS 형식, sp_gov_draft_realtime 생성 마이그레이션과 동일한 문법) — 이 JSON은 필드 목록을 한눈에 보기 위한 참고용 사본일 뿐이니 둘이 어긋나면 마이그레이션 파일을 기준으로 삼을 것. ★ 2026-08-05 필드명 전면 수정 — 최초 초안은 필드명 자체를 한글(도코드/시코드/국코드/읍면동명)로 썼는데, 이 저장소의 다른 모든 PocketBase 컬렉션(pb_migrations/*.js 전수 확인 결과 한글 필드명 사용 사례 0건)이 전부 영어 필드명이라 어긋나 있었다 — province_code/city_code/dept_code/emd_name으로 정정. gov-router.js↔worker.js 사이를 오가는 JS 객체(govTreeKey)와 JSON 마스터데이터 파일들은 한글 키 그대로 유지(그쪽은 이미 확립된 관례) — worker.js의 _govTreeKeyToPbFields()가 PocketBase 저장 시점에만 번역한다.",
   "name": "sp_gov_tree_instance_realtime",
   "type": "base",
   "system": false,
@@ -11,32 +11,32 @@
       "options": { "values": ["city-dept", "emd"], "maxSelect": 1 }
     },
     {
-      "name": "도코드",
+      "name": "province_code",
       "type": "text",
       "required": true,
       "options": { "max": 40 },
-      "_설명": "예: busan, jeju, seoul — PROVINCE_REGISTRY의 키와 동일 어휘"
+      "_설명": "예: busan, jeju, seoul — PROVINCE_REGISTRY의 키와 동일 어휘. govTreeKey.도코드에서 옴."
     },
     {
-      "name": "시코드",
+      "name": "city_code",
       "type": "text",
       "required": false,
       "options": { "max": 40 },
-      "_설명": "tier=city-dept 전용. 예: busan_dongnae. tier=emd면 비워둠(읍면동명으로 식별)"
+      "_설명": "tier=city-dept 전용. 예: busan_dongnae. tier=emd면 비워둠(emd_name으로 식별). govTreeKey.시코드에서 옴."
     },
     {
-      "name": "국코드",
+      "name": "dept_code",
       "type": "text",
       "required": false,
       "options": { "max": 40 },
-      "_설명": "tier=city-dept 전용. 예: jachi, econ, welfare — _makeGenericCityDeptEntries 어휘와 동일"
+      "_설명": "tier=city-dept 전용. 예: jachi, econ, welfare — _makeGenericCityDeptEntries 어휘와 동일. govTreeKey.국코드에서 옴."
     },
     {
-      "name": "읍면동명",
+      "name": "emd_name",
       "type": "text",
       "required": false,
       "options": { "max": 40 },
-      "_설명": "tier=emd 전용. 예: 우1동, 장전1동"
+      "_설명": "tier=emd 전용. 예: 우1동, 장전1동. govTreeKey.읍면동명에서 옴(값 자체는 한글 유지 — 지명이므로)."
     },
     {
       "name": "instance_key",
@@ -62,17 +62,18 @@
       "name": "risk_tier",
       "type": "select",
       "required": true,
-      "options": { "values": ["low", "high"], "maxSelect": 1 },
-      "_설명": "설계상 gov-tree 인스턴스는 거의 항상 low(§4-1, §8-2 결정 — safety 도메인도 예외 없음). high는 이 컬렉션에 들어올 일이 없어야 정상 — 들어오면 §4-1 위반이니 점검할 것"
+      "options": { "values": ["low"], "maxSelect": 1 },
+      "_설명": "sp_gov_draft_realtime과 동일 원칙 — 화이트리스트. high는 이 컬렉션에 들어올 일이 없다(§4-1, §8-2 결정 — safety 도메인도 예외 없음). 들어오면 §4-1 위반이니 점검할 것."
     },
     {
       "name": "status",
       "type": "select",
       "required": true,
       "options": {
-        "values": ["active_pending_review", "generation_failed", "rate_limited"],
+        "values": ["generating", "active_pending_review", "generation_failed", "rate_limited", "approved", "rejected"],
         "maxSelect": 1
-      }
+      },
+      "_설명": "sp_gov_draft_realtime의 생명주기(generating→active_pending_review/generation_failed→approved/rejected)에 rate_limited(§9-2 비용 상한 도달)만 추가."
     },
     {
       "name": "generated_content",
