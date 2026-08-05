@@ -3688,7 +3688,18 @@ window.closePDV = closePDV;
     // 토큰 정책 — 패널도 메인 채팅과 "같은 종류의 응답"이므로 같은 예산을 쓴다.
     // 이전엔 패널만 1500을 따로 썼는데(메인 채팅 800), 의도된 차이인지 알 수
     // 없는 우연한 불일치였다 — 공통 정책으로 통일.
-    const { TOKEN_BUDGET } = await import('./src/gopang/core/token-policy.js');
+    // [2026-08-06 수정 — 사전 존재 버그] 위 "통일" 당시엔 pro/flash 티어
+    // 구분이 아직 없어 TOKEN_BUDGET.CHAT_REPLY(800) 고정이 맞았다. 그런데
+    // 2026-07-28 Pro/Flash 재설계로 이 패널의 후보 모델이 hondi-pro로
+    // 고정됐고(§아래 candidates.push 주석 참조), hondi-pro는 thinking
+    // 모드가 켜져 reasoning이 800 예산을 통째로 먹어 content가 빈 채로
+    // finish_reason:"length"가 나는 사고(§HANDOFF_2026-08-05_live-
+    // smoketest-latency-and-empty-content.md §2-2와 동일 클래스, 실사
+    // 재현 확인됨)가 났다. call-ai.js(_callAIInner)는 이미
+    // resolveChatBudget(model)로 hondi-pro면 CHAT_REPLY_PRO(4000)를
+    // 쓰도록 고쳐져 있었는데, 이 파일은 별도 구현이라 그 수정이 반영되지
+    // 않고 있었다 — resolveChatBudget을 여기도 동일하게 적용한다.
+    const { resolveChatBudget } = await import('./src/gopang/core/token-policy.js');
     const { MODEL_MIGRATION } = await import('./src/gopang/core/config.js');
 
     // CFG에서 현재 설정 읽기
@@ -3837,7 +3848,7 @@ window.closePDV = closePDV;
               signal: _abortCtl.signal,
               body: JSON.stringify({
                 model: c.model, messages: _panelHistory, stream: true,
-                max_tokens: TOKEN_BUDGET.CHAT_REPLY,
+                max_tokens: resolveChatBudget(c.model),
                 guid: (JSON.parse(localStorage.getItem('gopang_user_v4') || sessionStorage.getItem('gopang_user_v4') || '{}')?.ipv6) || null,
               }),
             })
@@ -3848,7 +3859,7 @@ window.closePDV = closePDV;
               body: JSON.stringify({
                 provider: c.provider, baseUrl: c.baseUrl, apiKey: c.key,
                 model: c.model, messages: _panelHistory, stream: true,
-                max_tokens: TOKEN_BUDGET.CHAT_REPLY,
+                max_tokens: resolveChatBudget(c.model),
               }),
             });
         _resetIdle(); // 연결 응답을 받았으니 다음 구간(스트리밍) 타이머로 리셋
