@@ -301,20 +301,12 @@ export const EXPERT_REGISTRY = {
     // 정교사, 생활지도 관점)와는 범위가 다르다.
     triggers: ['1:1 교습', '개인 교사', '맞춤 교육', 'AI 교수', '과외'],
   },
-  // ── civil 정식 등록 (2026-07-26 결정, 2026-07-26 v2.0 재조정) ─────
-  // v2.0: 실제 존재하는 제주 도정 트리(gov-router.js,
-  // HUMAN-AUTHORITY-GATE-SCHEMA G1~G19)를 확인 후, K-Civil을 그
-  // 체계와 경쟁하는 별도 시스템이 아니라 G18 STAFF_REVIEW_GATE
-  // 태그의 summary(예비 의견) 필드를 채우는 역할로 재정의했다.
-  // "공무원에게 제출"의 실체는 현재 handler_type=DEPARTMENT_CONTACT
-  // (연락처 안내)이며, HONDI_STAFF_USER(인앱 검토)는 아직 비활성이다.
-  // ⚠️ 실제 정부기관 전자제출은 아직 미구현 — prompts/SP_civil_v2_0.md
-  // §5 정직 고지 참고.
-  civil: {
-    label: '민원 심사(K-Civil)', icon: '🏛️', category: 'GOV', ownerAgency: 'kgov',
-    key: 'SP_civil', needsMedicalSafety: false,
-    triggers: ['민원 심사', '행정 심사', '요건 검토', 'K-Civil'],
-  },
+  // ── civil(K-Civil) 폐기 (2026-08-05) ──────────────────────────
+  // G18(STAFF_REVIEW_GATE) 스키마 원안이 이미 "summary는 기관 SP가
+  // 채운다"고 정해뒀던 것과 SP_civil의 별도 EXPERT 페르소나 구조가
+  // 어긋난다는 것을 재확인 — SP-10_kpublic(kgov) STEP D 상세(v3.14,
+  // "예비 의견 형성")로 흡수하고 이 엔트리는 제거했다. 상세 경위는
+  // prompts/DEPRECATED_SP_civil.txt 참조.
   // ── advisor 정식 등록 (2026-07-26 결정) ─────────────────────
   // K-Professor와 같은 구조(법령상 최종승인 강제 없음 — PROFESSIONAL-
   // common_v2_0.md Q2 기준) — 구매자와 직접 대화하며 가격공정성·구매
