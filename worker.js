@@ -15,6 +15,12 @@ import { handleAiChat, handleEscalate } from './src/worker/ai-chat-handler.js';
 import { handleOrderQueue } from './src/worker/order-queue-handler.js';
 import { handleDeliveryRequest } from './src/worker/delivery-handler.js';
 import { handleDeptTaskCreate, handleDeptTaskUpdate, createDeptTaskCore, DEPT_TASK_TAXONOMY, _authoritativeCheck, _verifyAccessCert } from './src/worker/dept-task-handler.js';
+// 2026-08-05: org_profiles(K-Compose 오케스트레이션 레지스트리)와 gov-tree
+// (지방행정 SP 콘텐츠)를 잇는 CALL_GOVTREE 배선(§ handleGovTreeStepExecute)에
+// 필요 — gov-router.js는 window 전역에도 붙지만 `export async function`으로도
+// 선언돼 있어 이 파일처럼 순수 ES 모듈 import로도 그대로 쓸 수 있다(둘 다
+// fetch()만 쓰고 브라우저 전용 API에 의존하지 않아 Workers 런타임에서도 동작).
+import { assembleGovSystemPrompt } from './src/gopang/gov/gov-router.js';
 // 2026-07-14: 레거시 별칭 안전망 — HONDI_TIER_MODELS에 없는 model이
 // 클라이언트에서 그대로 들어와도(레거시 호출 등) 여기서 한 번 더 정규화한다.
 import { resolveDeepseekModel } from './src/gopang/core/deepseek-client.js';
@@ -5231,7 +5237,79 @@ async function handleOrgProfileLookup(request, env, corsHeaders) {
   return new Response(JSON.stringify({ status: rec.status === 'active' ? 'hit' : 'hit_pending_review', org: rec }), { headers: corsHeaders });
 }
 
-// POST /orchestration/org-profile/draft  (body: {org_id, org_name, branch, ...})
+// ── CALL_GOVTREE — org_profiles(resolution_strategy=gov_tree_delegate)와
+// gov-tree(kregionalgov가 서빙하는 지방행정 SP)를 잇는 실행 경로
+// (2026-08-05 신설) ──────────────────────────────────────────────────
+// 배경: K-Compose/K-Execute의 기존 실행 경로(CALL_GOVSYS→execute-atom)는
+// automation_sp(정부24 API 등 순수 API 자동화)만 상정한 설계라, "이 기관과
+// 자연어로 대화해서 용건을 처리"해야 하는 gov-tree 지방행정 SP를 다루지
+// 못한다 — gov-tree 기관은 atom_rows에 등록된 API가 아니라 그 자체가
+// 완결된 대화형 SP(예: SP-CITY-BUSAN_HAEUNDAE)이기 때문이다.
+// org_profiles 조정 작업(1786500002_reconciled_org_profiles_with_govtree.js)
+// 으로 resolution_strategy=gov_tree_delegate·gov_tree_ref(gov-router.js
+// directCode와 동일한 "{tier}:{code}" 형식)가 이미 붙어 있는 org를
+// 대상으로 한다.
+//
+// 동작: gov_tree_ref를 gov-router.js의 assembleGovSystemPrompt()에
+// directCode로 그대로 넘겨 그 기관의 실제 SP 텍스트를 얻은 뒤, 그 SP를
+// system prompt로 삼아 K-Execute가 넘긴 task 하나를 처리한다(그 기관의
+// 담당자가 실제로 응대하듯). 결과는 K-Execute가 이어받아 계획의 다음
+// step으로 넘어간다.
+async function handleGovTreeStepExecute(request, env, corsHeaders) {
+  const body = await request.json().catch(() => ({}));
+  const { gov_tree_ref, task } = body;
+  if (!gov_tree_ref || !task) {
+    return new Response(JSON.stringify({ error: 'gov_tree_ref, task 모두 필요' }), { status: 400, headers: corsHeaders });
+  }
+
+  let govTreeResult;
+  try {
+    govTreeResult = await assembleGovSystemPrompt(task, null, null, null, gov_tree_ref);
+  } catch (e) {
+    return new Response(JSON.stringify({
+      status: 'gov_tree_resolve_failed',
+      error: e.message,
+      gov_tree_ref,
+    }), { headers: corsHeaders });
+  }
+  // trace에 실제 기관 코드가 없으면(directCode가 못 찾고 조용히 일반
+  // 안내로 폴백한 경우) — gov-tree 쪽 데이터가 있는 줄 알았는데 실제로는
+  // 없거나 어긋난 상태. 정직하게 실패로 보고한다(가짜 기관 응답을
+  // 만들어내지 않음 — U2 원칙).
+  const resolvedInGovTree = govTreeResult.trace.some((t) => t.includes('directCode'));
+  if (!resolvedInGovTree) {
+    return new Response(JSON.stringify({
+      status: 'gov_tree_ref_stale',
+      error: `gov_tree_ref(${gov_tree_ref})가 gov-tree에서 더 이상 확인되지 않음 — org_profiles 재조정 필요`,
+      trace: govTreeResult.trace,
+    }), { headers: corsHeaders });
+  }
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      system: govTreeResult.systemPrompt,
+      messages: [{ role: 'user', content: task }],
+    }),
+  });
+  if (!res.ok) {
+    return new Response(JSON.stringify({ status: 'claude_call_failed', error: `HTTP ${res.status}` }), { headers: corsHeaders });
+  }
+  const data = await res.json();
+  const institutionResponse = data.content?.find((c) => c.type === 'text')?.text || '';
+
+  return new Response(JSON.stringify({
+    status: 'ok',
+    gov_tree_ref,
+    institution_response: institutionResponse,
+    trace: govTreeResult.trace,
+  }), { headers: corsHeaders });
+}
+
+
 // handleProcedureMapDraft와 동일 원칙 — 생성 시점에 절대 active로 두지
 // 않는다. 중복 org_id는 409로 거부(procedure_maps와 동일하게 update
 // 경로를 따로 두지 않은 이유: org_profiles는 필드 대부분이 정적 사실
@@ -8762,6 +8840,8 @@ export default {
       return handleProcedureMapUpdate(request, env, corsHeaders);
     if (pathname === '/orchestration/org-profile' && request.method === 'GET')
       return handleOrgProfileLookup(request, env, corsHeaders);
+    if (pathname === '/orchestration/execute-govtree-step' && request.method === 'POST')
+      return handleGovTreeStepExecute(request, env, corsHeaders);
     if (pathname === '/orchestration/org-profile/draft' && request.method === 'POST')
       return handleOrgProfileDraft(request, env, corsHeaders);
     if (pathname === '/orchestration/org-profile/update' && request.method === 'POST')

@@ -581,6 +581,7 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[PROCEDURE_MAP_LOOKUP:[^\]]*\]/g, '')
   .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6, v1.9부터 레거시 폴백)
   .replace(/\[BENEFIT_SEMANTIC_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.9, 임베딩 재설계)
+  .replace(/\[CALL_GOVTREE:[^\]]*\]/g, '')  // 2026-08-05 신설 — gov-tree 지방행정 SP 실행 태그(§ handleGovTreeStepExecute)
   // 2026-07-09 정정 — DRAFT/UPDATE·KSEARCH_CANDIDATES는 steps=[...] 같은
   // 중첩 배열을 값으로 가져 위 _stripBracketTag()가 이미 먼저 처리했다
   // (이 체인에 들어오기 전에 적용됨) — 여기서 다시 정규식으로 지우지
@@ -1154,6 +1155,34 @@ export async function _handleOrchestrationTags(fullReply, bubble, sendFn = callA
         resultText = `{"error":"${e.message}"}`;
       }
       await sendFn(`[CALL_GOVSYS 결과] ${resultText}\n\n결과가 requires_user_action이면 그 사유를 이용자에게 자연스럽게 전달하세요.`);
+      return true;
+    }
+
+    // ── CALL_GOVTREE(2026-08-05 신설) — org_profiles.resolution_strategy=
+    // gov_tree_delegate인 지방행정 기관 실행. CALL_GOVSYS(순수 API 자동화,
+    // atom_id 기반)와 달리 gov-tree SP와 자연어로 한 턴 대화해서 결과를
+    // 얻는다 — task 필드는 콤마를 포함할 수 있어(자연어 문장) 반드시
+    // 따옴표로 감싸게 하고 정규식은 따옴표 안쪽만 통째로 뽑는다
+    // (BENEFIT_SEMANTIC_SEARCH의 query= 파싱과 동일한 이유).
+    const govtreeMatch = fullReply.match(
+      /\[CALL_GOVTREE:\s*gov_tree_ref=([\w:-]+),\s*task="([^"]*)"(?:,\s*caller=([\w-]+))?\]/
+    );
+    if (govtreeMatch) {
+      console.log('[Orchestration] CALL_GOVTREE 감지 — /orchestration/execute-govtree-step 호출');
+      await _updateBubble(_stripInternalTags(fullReply));
+      history.push({ role: 'assistant', content: fullReply });
+      const [, govTreeRef, task] = govtreeMatch;
+      let resultText;
+      try {
+        const res = await fetch(`${base}/orchestration/execute-govtree-step`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gov_tree_ref: govTreeRef, task: task.trim() }),
+        });
+        resultText = JSON.stringify(await res.json().catch(() => ({ status: res.status })));
+      } catch (e) {
+        resultText = `{"error":"${e.message}"}`;
+      }
+      await sendFn(`[CALL_GOVTREE 결과] ${resultText}\n\nstatus가 gov_tree_ref_stale이면 org_profiles와 gov-tree가 어긋난 것이므로 이 기관은 미연결로 취급하고 대체 경로(K-Search 등)를 시도하세요. status=ok면 institution_response를 그 기관이 실제로 답한 내용으로 취급해 다음 단계로 진행하세요.`);
       return true;
     }
   }
