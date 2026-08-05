@@ -291,10 +291,46 @@ let _gwpSwitchRecoveryInFlight = false;
 //     그 자리로 복귀한다.
 if (typeof CFG !== 'undefined' && !CFG.systemStack) CFG.systemStack = [];
 
+// [2026-08-06 신설 — 실시간 진행 보고] SP 전환 시 사용자에게 즉시 알린다.
+// 배경: 기존엔 _updateBubble(_stripInternalTags(fullReply))로 직전 SP의
+// 응답을 보여준 뒤, 다음 SP 재주입 응답(_watchdogSendFn(...))이 완료될
+// 때까지 화면에 아무 변화가 없었다 — 그 사이(hondi-pro reasoning 포함,
+// 실측 20~30초대)는 사용자가 막연히 기다리는 구간이었다(§2026-08-06
+// 대화에서 지적). SP 전환은 여기(_forwardSwitchSP/_pushAndSwitchSP)
+// 한 곳에서만 일어나므로, 여기서 새 말풍선 하나를 즉시 appendBubble로
+// 붙이면 — 다음 LLM 호출을 기다릴 필요 없이 — 사용자가 "지금 무슨 단계로
+// 넘어가는지"를 실시간으로 볼 수 있다. 이 파일의 SP-Author 큐잉 진행
+// 말풍선(⏳, 2135행)과 동일한 패턴 재사용.
+const _STAGE_LABELS = {
+  'K-Intent':    '요청 파악',
+  'K-Compose':   '절차 구성',
+  'K-Execute':   '실행',
+  'K-Deliver':   '결과 정리',
+  'K-Report':    '통지·신고 처리',
+  'K-Search':    '조회',
+  'K-Bank':      '금융 상담',
+  'K-Telecom':   '통신 상담',
+  'K-Estate':    '부동산 상담',
+  'AGENT-COMMON': 'AI 비서',
+};
+function _friendlyStageLabel(label) {
+  if (_STAGE_LABELS[label]) return _STAGE_LABELS[label];
+  if (typeof label === 'string' && label.startsWith('EXPERT:')) return '전문가 상담';
+  return label; // 매핑 없는 라벨은 원문 그대로(안전한 폴백)
+}
+function _announceStageTransition(label) {
+  try {
+    appendBubble('ai', `🔄 ${_friendlyStageLabel(label)} 단계로 이동 중…`);
+  } catch (e) {
+    console.warn('[Orchestration] 진행 알림 말풍선 실패(무시):', e.message);
+  }
+}
+
 async function _forwardSwitchSP(loaderFn, label) {
   try {
     const sp = await loaderFn();
     if (!sp) throw new Error(`${label} SP 로드 결과 비어있음`);
+    _announceStageTransition(label);
     CFG.system_base = sp;
     CFG.system = sp;
     try {
@@ -315,6 +351,7 @@ async function _pushAndSwitchSP(loaderFn, label) {
     CFG.systemStack.push({ system: CFG.system, system_base: CFG.system_base });
     const sp = await loaderFn();
     if (!sp) throw new Error(`${label} SP 로드 결과 비어있음`);
+    _announceStageTransition(label);
     CFG.system_base = sp;
     CFG.system = sp;
     console.log(`[Orchestration] ${label}(으)로 위임(nested) 전환 완료 — 스택 깊이 ${CFG.systemStack.length}`);
@@ -331,6 +368,10 @@ async function _popSP() {
     await _switchToAssistantSP();
     return;
   }
+  // 복귀 대상의 정확한 라벨은 스택 프레임에 저장돼 있지 않아(system 문자열
+  // 원문만 있음) 위 _friendlyStageLabel 매핑을 못 쓴다 — 범용 문구로 안내.
+  try { appendBubble('ai', '🔄 이전 단계로 복귀하는 중…'); }
+  catch (e) { console.warn('[Orchestration] 복귀 알림 말풍선 실패(무시):', e.message); }
   CFG.system = frame.system;
   CFG.system_base = frame.system_base;
   try {
