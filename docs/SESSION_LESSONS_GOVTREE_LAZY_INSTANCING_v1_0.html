@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<!--
+  이 문서가 다루는 범위: 2026-08-05 세션(부산 gov-tree jachi 16/16·EMD
+  43개 동 수작업 실사 → "SP는 전부 독립적 사용자" 원칙 미비점 발견 →
+  지연 인스턴스화(SP-Author 실시간 저작) 설계·구현 → PocketBase 마이그
+  레이션 배포 → 부트스트랩 시딩 실전 디버깅)에서 실제로 밟은 함정과
+  확인된 사실을 다룹니다. 개별 기능 사용법이 아니라 "다음에 비슷한
+  작업을 할 때 반복하지 말아야 할 시행착오" 모음입니다.
+  관련 문서: MANUAL_INDEX.html 에서 전체 문서 지도 확인
+  (desktop.html 좌측 사이드바 "🛠 개발자 문서" 섹션에서 링크됨)
+  v1.0(2026-08-05): 신설
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>gov-tree 지연 인스턴스화·PocketBase 배포 실전 교훈 매뉴얼 — Gopang</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+/* ── 그레이스케일 우선 팔레트 — 강조색은 링크·활성 상태 한 곳에만 ── */
+:root {
+  --ink:      #111111;
+  --ink-2:    #3a3a3a;
+  --ink-3:    #6b6b6b;
+  --ink-4:    #9a9a9a;
+  --line:     #e2e2e2;
+  --line-2:   #cfcfcf;
+  --bg:       #ffffff;
+  --bg-2:     #fafafa;
+  --bg-3:     #f2f2f2;
+  --accent:   #34495e;   /* 슬레이트 — 링크·활성 탭·다이어그램 강조선 전용 */
+  --accent-lt:#eef1f4;
+  --mono:     'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --radius:   4px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Pretendard', -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+/* ── 헤더 ── */
+.doc-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.doc-header-inner {
+  max-width: 1040px; margin: 0 auto;
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.doc-logo {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  text-decoration: none; letter-spacing: -0.2px;
+}
+.doc-logo svg { color: var(--ink-3); }
+.doc-header-sub {
+  font-size: 12px; color: var(--ink-4); font-weight: 400;
+  padding-left: 9px; border-left: 1px solid var(--line-2); margin-left: 2px;
+}
+.doc-back {
+  font-size: 12px; color: var(--ink-3); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.doc-back:hover { color: var(--ink); }
+.doc-back svg { flex-shrink: 0; }
+
+/* ── 레이아웃 ── */
+.doc-layout {
+  max-width: 1200px; margin: 0 auto;
+  padding: 40px 24px 100px;
+  display: grid;
+  grid-template-columns: 216px 1fr;
+  gap: 44px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .doc-layout { grid-template-columns: 1fr; }
+  .doc-toc { display: none; }
+}
+.doc-toc { position: sticky; top: 72px; }
+.doc-toc-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 10px;
+}
+.doc-toc a {
+  display: block;
+  font-size: 12px; color: var(--ink-3);
+  text-decoration: none;
+  padding: 5px 0 5px 11px;
+  border-left: 2px solid var(--line);
+  line-height: 1.4;
+  transition: color .12s, border-color .12s;
+}
+.doc-toc a:hover, .doc-toc a.active {
+  color: var(--ink);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+.doc-content { min-width: 0; }
+
+/* ── 섹션 ── */
+.gs {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.gs-head {
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: flex-start; gap: 14px;
+}
+.gs-icon {
+  width: 34px; height: 34px; border-radius: var(--radius);
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--ink-2);
+}
+.gs-icon svg { width: 18px; height: 18px; }
+.gs-head-text { flex: 1; }
+.gs-num {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 500; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 3px;
+}
+.gs-title {
+  font-size: 17px; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.2px; line-height: 1.35;
+}
+.gs-subtitle { font-size: 12px; color: var(--ink-4); margin-top: 4px; }
+
+.gs-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 500; letter-spacing: .1px;
+  padding: 3px 8px; border-radius: 99px;
+  font-family: var(--mono);
+  border: 1px solid var(--line-2); color: var(--ink-2); background: var(--bg-2);
+}
+.badge svg { width: 11px; height: 11px; flex-shrink: 0; }
+.badge-gate { border-style: dashed; color: var(--ink-3); }
+
+.gs-body { padding: 20px 28px 26px; }
+.gs-body p { font-size: 14px; color: var(--ink-2); line-height: 1.85; margin-bottom: 13px; }
+.gs-body p:last-child { margin-bottom: 0; }
+.gs-body strong { color: var(--ink); font-weight: 700; }
+.gs-body h4 {
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  margin: 22px 0 10px; letter-spacing: -0.1px;
+  display: flex; align-items: center; gap: 7px;
+}
+.gs-body h4 svg { width: 15px; height: 15px; color: var(--ink-3); flex-shrink: 0; }
+.gs-body h4:first-child { margin-top: 0; }
+.gs-body ul, .gs-body ol { margin: 4px 0 14px 20px; }
+.gs-body li { font-size: 14px; color: var(--ink-2); line-height: 1.8; margin-bottom: 4px; }
+.gs-body code {
+  font-family: var(--mono); font-size: 12px;
+  background: var(--bg-3); border: 1px solid var(--line);
+  border-radius: 4px; padding: 1px 6px; color: var(--ink-2);
+}
+
+/* 하이라이트 / 체크포인트 / 인시던트 — 색 대신 좌측 굵기·라벨로 구분 */
+.callout {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 13px 17px; margin: 15px 0;
+  font-size: 14px; color: var(--ink-2); line-height: 1.8;
+  background: var(--bg-2);
+}
+.callout-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--ink);
+  margin-bottom: 6px;
+}
+.callout-label svg { width: 13px; height: 13px; }
+.callout.warn { border-left-style: dashed; }
+.callout strong { color: var(--ink); }
+
+/* 표 */
+.gs-table-wrap { margin: 15px 0; overflow-x: auto; }
+.gs-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.gs-table th, .gs-table td {
+  border: 1px solid var(--line); padding: 9px 13px;
+  text-align: left; line-height: 1.6;
+}
+.gs-table th { background: var(--bg-2); font-weight: 700; color: var(--ink); font-size: 12px; }
+.gs-table td { color: var(--ink-2); }
+.gs-table td strong, .gs-table td code { color: var(--ink); }
+.gs-table td code { font-family: var(--mono); font-size: 12px; background: var(--bg-3); padding: 1px 5px; border-radius: 4px; }
+
+/* 코드 블록 */
+.gs-code {
+  font-family: var(--mono);
+  font-size: 12px; color: var(--ink);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 15px 17px; margin: 14px 0;
+  line-height: 1.7; overflow-x: auto;
+  white-space: pre;
+}
+.gs-code .c { color: var(--ink-4); } /* comment */
+
+/* 히어로 */
+.doc-hero {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  margin-bottom: 24px;
+}
+.doc-hero-eyebrow {
+  font-family: var(--mono);
+  font-size: 12px; font-weight: 500; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 12px;
+}
+.doc-hero-title {
+  font-size: 26px; font-weight: 800;
+  color: var(--ink); letter-spacing: -0.5px;
+  line-height: 1.4; margin-bottom: 13px;
+}
+.doc-hero-title em { font-style: normal; border-bottom: 2px solid var(--ink); }
+.doc-hero-desc { font-size: 14px; color: var(--ink-2); line-height: 1.85; max-width: 74ch; }
+.doc-hero-meta {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line);
+  font-size: 12px; color: var(--ink-4); font-family: var(--mono);
+}
+.doc-hero-meta strong { color: var(--ink-2); font-weight: 600; }
+
+.reveal { opacity: 0; transform: translateY(10px); transition: opacity .35s ease, transform .35s ease; }
+.reveal.in { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ── 헤더 ── -->
+<header class="doc-header">
+  <div class="doc-header-inner">
+    <a class="doc-logo" href="../desktop.html">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      혼디 · Gopang
+      <span class="doc-header-sub">개발자 문서</span>
+    </a>
+    <a class="doc-back" href="../desktop.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      데스크톱으로 돌아가기
+    </a>
+  </div>
+</header>
+
+<div class="doc-layout">
+
+  <!-- ── 목차 ── -->
+  <nav class="doc-toc">
+    <div class="doc-toc-title">목차</div>
+    <a href="#overview">개요 — 이 문서가 왜 있는가</a>
+    <a href="#goal">오늘 세션의 목표와 흐름</a>
+    <a href="#lesson-convention">① 새 스키마를 만들기 전에 기존 관례부터 뒤져라</a>
+    <a href="#lesson-principle">② "이미 되는 것 같다"와 "실제로 되는 것"은 다르다</a>
+    <a href="#lesson-git">③ git am이 "이미 있다"고 하면 진짜로 이미 있는지부터 확인</a>
+    <a href="#lesson-windows">④ Windows 환경 특유의 함정 3가지</a>
+    <a href="#lesson-mock">⑤ 최악의 버그 — mock이 실전송까지 삼킨 사건</a>
+    <a href="#lesson-cloudflare">⑥ Cloudflare Workers 하위요청 한도</a>
+    <a href="#lesson-deploy">⑦ 이 저장소의 실제 배포 파이프라인 지도</a>
+    <a href="#checklist">다음에 비슷한 작업할 때 체크리스트</a>
+    <a href="#related">관련 문서</a>
+  </nav>
+
+  <!-- ── 본문 ── -->
+  <main class="doc-content">
+
+    <div class="doc-hero reveal">
+      <div class="doc-hero-eyebrow">SITE MANUAL — 2026-08-05 세션 발견 정리</div>
+      <h1 class="doc-hero-title">"성공했다"는 출력을 <em>의심하는 습관</em>이 없으면 아무것도 안 보낸 채 완료 로그만 쌓인다</h1>
+      <p class="doc-hero-desc">
+        오늘 세션은 부산 gov-tree(jachi·읍면동) 데이터를 손으로 채우는 데서
+        시작해, 그 방식이 전국 규모로는 지속 불가능하다는 지적을 받고
+        "사용자 발화가 호출하는 시점에 즉석 저작"하는 아키텍처로 전환·구현·
+        배포까지 갔다. 그 과정에서 여러 번 <strong>"에러 없이 완료됐다"는
+        출력이 실제로는 아무것도 안 한 것으로 드러났다</strong> — 필드명이
+        기존 관례와 달라서 저장은 됐지만 검색·라우팅은 안 되는 상태였고,
+        git am이 반복해서 "이미 있다"고 했고, 결정적으로는 시딩 스크립트가
+        진짜 서버가 아니라 자기 자신이 만든 모의(mock) 함수에 요청을 보내고
+        있었다(0ms 만에 "생성 0/스킵 0/실패 0"을 반복 출력). 이 문서는 그
+        발견 과정과 최종적으로 확인된 사실을 정리한 것이다 — 다음에 비슷한
+        작업을 할 때 같은 시행착오를 반복하지 않기 위함이다.
+      </p>
+      <div class="doc-hero-meta">
+        <span><strong>대상 저장소</strong> Openhash-Gopang/gopang</span>
+        <span><strong>관련 PR</strong> #224·#225(중복)</span>
+        <span><strong>작성</strong> 2026-08-05</span>
+      </div>
+    </div>
+
+    <!-- ── 개요 ── -->
+    <section class="gs reveal" id="overview">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Overview</div>
+          <div class="gs-title">이 문서가 왜 있는가</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          이 문서는 <strong>gov-tree 지연 인스턴스화 기능 자체의 사용법
+          매뉴얼이 아니다</strong>(그건 <code>GOV_TREE_LAZY_INSTANCING_DESIGN_v1_0.md</code>
+          가 다룬다). 새 PocketBase 컬렉션을 만들거나, 클라이언트↔워커
+          사이에 새 엔드포인트를 붙이거나, 로컬 검증 스크립트로 실서버에
+          데이터를 넣거나, Windows 환경에서 Node 스크립트를 돌릴 때
+          <strong>또 밟게 될 게 뻔한 함정들</strong>을 모아뒀다. 전부 오늘
+          세션에서 실제로 밟은 함정이고, 원인을 확인하는 데 각각 여러 번의
+          왕복(패치 전달→적용→진단→재수정)이 필요했다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            이 문서를 읽어야 하는 상황
+          </div>
+          새 PocketBase 컬렉션·필드를 설계할 때 / "저장은 됐는데 검색이
+          안 된다"는 버그를 마주쳤을 때 / git am이 "이미 있다"는 에러를
+          낼 때 / Windows에서 Node 스크립트가 리눅스에서는 멀쩡했는데
+          이상하게 실패할 때 / 로컬 테스트용으로 <code>fetch</code> 같은
+          전역 함수를 모킹해야 할 때 / 배치로 여러 건을 한 요청에 묶어
+          외부 API를 호출할 때.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 오늘 세션의 목표와 흐름 ── -->
+    <section class="gs reveal" id="goal">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Goal</div>
+          <div class="gs-title">오늘 세션의 목표와 흐름</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <ol>
+          <li><strong>수작업 데이터 실사</strong> — 부산 16개 구·군의
+              jachi(자치행정) 도메인과 해운대·강서·금정 3개 구의 읍면동
+              43개를 나무위키·공식 홈페이지 교차검증으로 채움.</li>
+          <li><strong>한계 인식</strong> — 전국 226개 시군구 × 10여 도메인,
+              읍면동 3,556개소를 세션마다 손으로 채우는 건 지속 불가능하다는
+              지적. "사용자 발화가 그 기관을 호출하는 시점에 즉석 저작"하는
+              아키텍처로 전환하기로 결정.</li>
+          <li><strong>설계</strong> — 기존 코드를 감사해보니 비슷한 인프라
+              (named-institution 실시간 SP-Author, 시군구 부서 지연
+              초기화)가 이미 부분적으로 있었음을 확인, 그걸 gov-tree 04/05
+              계층 전용으로 재사용하는 설계
+              (<code>GOV_TREE_LAZY_INSTANCING_DESIGN_v1_0.md</code>) 확정.</li>
+          <li><strong>구현</strong> — 판정기(REAL/STUB/MISSING)·PocketBase
+              우선 조회·미스 신호 발신을 gov-router.js에, 실시간 저작·검증
+              게이트·비용 상한·조회/시딩 엔드포인트를 worker.js에 구현.</li>
+          <li><strong>§1 원칙 미비점 발견</strong> — "모든 SP는 독립적
+              사용자다, Profile을 등록해 K-Search가 찾을 수 있어야 한다"는
+              지적을 받고 감사한 결과, 실시간 생성 경로의 엔티티 식별자
+              형식이 기존 관례와 달라 검색은 돼도 라우팅이 깨지는 상태였고,
+              부트스트랩 시딩 경로는 프로필 등록 자체가 없었음을 발견·수정.</li>
+          <li><strong>배포·실전 디버깅</strong> — PocketBase 마이그레이션
+              작성·적용, Cloudflare Workers 자동배포 확인, 부트스트랩
+              시딩 스크립트를 실제로 돌리며 이 문서에 정리된 여러 버그를
+              실시간으로 발견·수정.</li>
+        </ol>
+        <p>
+          아래 ①~⑦은 4~6단계에서 실제로 겪은 함정을 시간 순서대로 정리한
+          것이다.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── ① 기존 관례 확인 ── -->
+    <section class="gs reveal" id="lesson-convention">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">01 · Convention</div>
+          <div class="gs-title">새 스키마를 만들기 전에 기존 관례부터 뒤져라</div>
+          <div class="gs-subtitle">PocketBase 필드명을 한글로 설계했다가 재작업</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          새 PocketBase 컬렉션(<code>sp_gov_tree_instance_realtime</code>)의
+          필드명을 <code>도코드</code>·<code>시코드</code>·<code>국코드</code>·
+          <code>읍면동명</code>처럼 애플리케이션 코드(<code>gov-router.js</code>
+          ↔<code>worker.js</code> 사이의 <code>govTreeKey</code> 객체)와 똑같이
+          한글로 설계했다. 코드 자체는 잘 동작했겠지만, <code>pb_migrations/*.js</code>
+          145개 파일을 전수 확인해보니 <strong>이 저장소의 다른 모든
+          PocketBase 컬렉션은 예외 없이 영어(ASCII) 필드명</strong>을 쓰고
+          있었다 — 관리자 UI에서 다른 컬렉션과 나란히 보일 때만 이상해
+          보이는 게 아니라, <strong>K-Search 엔티티 식별자
+          (<code>entity_subtype</code>)</strong>도 관례가 이미
+          <code>"{tier}:{code}"</code>(예: <code>city-dept:jejusi-jachi</code>,
+          <code>emd:애월읍</code>) 형식으로 확립돼 있었는데 처음엔 이걸
+          놓치고 완전히 다른 형식(<code>gov-tree-instance:{tier}:{instance_key}</code>)
+          으로 설계했다 — 검색은 되지만 클릭 시 라우팅이 깨지는 상태였을
+          것이다.
+        </p>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            일반화된 교훈
+          </div>
+          새 컬렉션·새 엔티티 식별자 형식을 설계하기 전에, <strong>같은
+          목적을 이미 하고 있는 자매 컬렉션(named-institution용
+          <code>sp_gov_draft_realtime</code>, 기존 시딩 스크립트
+          <code>seed_gov_tree_citydept_natagency.py</code>/
+          <code>seed_gov_tree_emd_team.py</code>)이 있는지 먼저 찾아라.</strong>
+          설계 문서를 아무리 꼼꼼히 써도, 실제 저장소에 이미 있는 관례를
+          확인하지 않으면 "말이 되는 새 설계"를 만들어서 기존 것과
+          어긋나게 된다. 애플리케이션 레벨 키(한글)와 저장소 레벨 필드명
+          (영어)이 다를 수 있다는 것 자체는 문제가 아니다 — 그 경계에서
+          번역 계층 하나만 두면 된다(<code>_govTreeKeyToPbFields()</code>).
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ② §1 원칙 미비점 ── -->
+    <section class="gs reveal" id="lesson-principle">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">02 · Architecture principle</div>
+          <div class="gs-title">"라우팅이 된다"와 "이 개체가 혼디의 사용자로 존재한다"는 다르다</div>
+          <div class="gs-subtitle">정적 키워드 매칭은 잘 됐지만 K-Search 등록이 통째로 빠져 있었음</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          부산 43개 동·jachi 16개 구·군은 정적 JSON 파일과
+          <code>gov-router.js</code>의 키워드 매칭만으로도 "우1동 등본
+          발급" 같은 발화에 정상적으로 응답했다. 그래서 <strong>라우팅이
+          되니까 이 작업이 끝났다고 판단하기 쉬웠다</strong> — 하지만
+          "혼디의 모든 개체는 profiles에 등록된 독립적 사용자(SP)여야
+          한다"는 대원칙(§1)은 완전히 별개의 요구사항이었다. 감사해보니
+          기존 profiles 시딩은 <strong>제주에만</strong> 적용돼 있었고,
+          그 이후의 모든 부산 파일럿 산출물(이번 세션 포함)이 애초에
+          K-Search 대상이 아니었다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            일반화된 교훈
+          </div>
+          "발화 하나에 잘 응답한다"는 확인만으로 새 도메인/계층 작업이
+          끝났다고 판단하지 마라. gov-tree처럼 <strong>정적 라우팅과
+          동적 검색(K-Search/profiles)이 서로 다른 코드 경로</strong>인
+          시스템에서는, 라우팅 테스트를 통과해도 검색·등록 쪽이 통째로
+          빠져 있을 수 있다. 새 엔티티 계층을 만들 때는 "이 계층이 이미
+          profiles에 등록되는 기존 시딩 스크립트의 대상인가"를 먼저
+          확인해야 한다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ③ git am 혼란 ── -->
+    <section class="gs reveal" id="lesson-git">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">03 · Git workflow</div>
+          <div class="gs-title">git am이 "이미 있다"고 하면 진짜로 이미 있는지부터 확인</div>
+          <div class="gs-subtitle">여러 차례 반복된 "patch does not apply" / "already exists in index"</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          이 세션은 Claude가 별도 샌드박스에서 패치를 만들어 전달하고,
+          사람이 <code>git am</code>으로 적용하는 방식으로 진행됐다. 이
+          과정에서 같은 패턴의 혼란이 여러 번 반복됐다 — <code>git am</code>
+          이 <code>"patch failed"</code>·<code>"already exists in index"</code>
+          를 동시에 내는 경우가 있었는데, 원인은 <strong>Claude의 샌드박스
+          커밋과 사용자가 이미 적용한 커밋이 내용은 완전히 같은데 커밋
+          해시만 다른 경우</strong>였다(같은 diff를 다른 시점에 커밋하면
+          해시가 달라진다). 실패를 보고 "다시 시도"만 반복하면 안 되고,
+          <code>git log origin/main --oneline</code>과
+          <code>git diff origin/main &lt;로컬브랜치&gt;</code>로 <strong>내용
+          자체가 이미 일치하는지</strong>부터 확인해야 했다.
+        </p>
+        <p>
+          또 한 번은 <code>git checkout -b</code>가 "브랜치가 이미
+          있다"는 이유로 실패했는데 이걸 무시하고 넘어가서, 의도와 다르게
+          <code>main</code> 브랜치에서 <code>git am</code>을 시도하다 충돌이
+          났다. 이후 <code>git push origin &lt;그 브랜치명&gt;</code>을
+          실행하니 로컬에 이미 존재하던(내용을 알 수 없는) 그 브랜치가
+          그대로 푸시되어 새 PR이 생겼고, 확인해보니 실제로는 이전
+          시도에서 이미 성공적으로 병합된 내용과 똑같아서 그 PR은 그냥
+          중복이었다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <tr><th>증상</th><th>실제 원인</th><th>확인 방법</th></tr>
+            <tr>
+              <td><code>am</code>: patch does not apply<br><code>am</code>: already exists in index</td>
+              <td>내용은 이미 origin에 있음(해시만 다름)</td>
+              <td><code>git diff origin/main &lt;브랜치&gt; -- &lt;파일&gt;</code>로 diff 없음(빈 결과) 확인</td>
+            </tr>
+            <tr>
+              <td><code>checkout -b</code> 실패 후 무시하고 진행</td>
+              <td>의도와 다른 브랜치(main)에서 작업 중</td>
+              <td><code>git status</code>·<code>git branch</code>로 현재 브랜치 재확인 후 진행</td>
+            </tr>
+            <tr>
+              <td>새 PR을 만들었는데 "No commits between" 에러</td>
+              <td>그 브랜치가 이미 main과 내용이 동일(과거에 병합됨)</td>
+              <td><code>git diff origin/main origin/&lt;브랜치&gt;</code>가 빈 결과인지 확인 → 중복이면 그냥 close</td>
+            </tr>
+          </table>
+        </div>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            일반화된 교훈
+          </div>
+          패치 적용이 이상하게 실패하면, "다시 만들어서 다시 보내기" 전에
+          <strong>먼저 origin과 diff 없음(=이미 반영됨)인지 확인</strong>하는
+          습관을 들여라. worker.js처럼 브랜치 보호가 걸린 파일은 직접
+          push가 막혀 있으므로(브랜치→PR→auto-merge 필요), 실패 메시지가
+          "권한 문제"인지 "내용이 이미 같아서"인지부터 구분해야 헛수고를
+          피할 수 있다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ④ Windows 함정 ── -->
+    <section class="gs reveal" id="lesson-windows">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">04 · Platform gotcha</div>
+          <div class="gs-title">Windows 환경 특유의 함정 3가지</div>
+          <div class="gs-subtitle">이 세션의 로컬 검증은 전부 리눅스 샌드박스에서만 했던 게 원인</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <h4>1. 동적 import()에 Windows 절대경로를 그대로 넘기면 안 된다</h4>
+        <p>
+          <code>path.join(SRC_ROOT, 'gov-router.js')</code>의 결과가
+          Windows에서는 <code>C:\Users\...\gov-router.js</code>(드라이브
+          문자+역슬래시) 형태인데, 이 문자열을 <code>import()</code>에 직접
+          넘기면 Node의 ESM 로더가 <code>c:</code>를 알 수 없는 프로토콜
+          스킴으로 해석해 <code>ERR_UNSUPPORTED_ESM_URL_SCHEME</code>로
+          거부한다. 리눅스에서는 경로가 <code>/</code>로 시작해 우연히
+          문제가 안 됐을 뿐, 애초에 이식성 있는 코드가 아니었다.
+        </p>
+        <div class="gs-code"><span class="c">// 틀림 — Windows에서 터짐</span>
+await import(path.join(SRC_ROOT, 'gov-router.js'));
+
+<span class="c">// 맞음 — file:// URL로 변환</span>
+import { pathToFileURL } from 'node:url';
+await import(pathToFileURL(path.join(SRC_ROOT, 'gov-router.js')));</div>
+
+        <h4>2. PowerShell <code>Out-File -Encoding</code>은 버전마다 지원값이 다르다</h4>
+        <p>
+          <code>utf8NoBOM</code>이 최신 PowerShell(7+)에는 있지만, 이
+          세션에서 쓴 PowerShell 버전의 <code>ValidateSet</code>에는
+          없어서(<code>unicode</code>,<code>utf8</code>,<code>ascii</code>
+          등만 허용) 파라미터 검증 단계에서 바로 실패했다. <code>utf8</code>
+          로 바꾸면 BOM이 붙지만 Node는 BOM 붙은 UTF-8 파일도 문제없이
+          읽는다 — 굳이 <code>utf8NoBOM</code>을 고집할 이유가 없었다.
+        </p>
+
+        <h4>3. <code>Invoke-WebRequest</code>는 한글을 깨뜨릴 수 있다 — 진단할 땐 네이티브 <code>fetch</code>를 써라</h4>
+        <p>
+          PowerShell의 <code>ConvertTo-Json</code> → <code>Invoke-WebRequest</code>
+          조합으로 API를 테스트했더니, 서버가 받은 페이로드의 한글 필드명·
+          값이 전부 <code>?</code>로 깨져 있었다(콘솔·요청 인코딩이
+          UTF-8이 아니었던 것으로 추정). 이게 실제 버그와 뒤섞여서 원인
+          파악을 어렵게 했다 — <strong>실제 운영 코드(Node 스크립트)가
+          쓰는 것과 똑같은 방식(네이티브 <code>fetch</code>)으로 진단
+          스크립트를 짜는 게, 다른 도구(PowerShell HTTP 클라이언트)로
+          진단해서 새로운 변수를 추가하는 것보다 훨씬 빠르고 정확했다.</strong>
+        </p>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            일반화된 교훈
+          </div>
+          이 프로젝트의 개발·테스트는 리눅스 샌드박스에서, 실사용은
+          Windows PowerShell에서 이뤄진다. <strong>"내 환경에서 됐다"는
+          이식성을 보장하지 않는다</strong> — 특히 파일 경로·인코딩
+          관련 코드는 Windows에서 최종 확인 전까지 완료로 치지 마라.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ⑤ 최악의 버그 ── -->
+    <section class="gs reveal" id="lesson-mock">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9l6 6M15 9l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">05 · Bug pattern (critical)</div>
+          <div class="gs-title">mock으로 덮어쓴 전역 함수를 "복원"한다고 착각한 코드가 실전송까지 삼켰다</div>
+          <div class="gs-subtitle">--apply를 여러 번 실행해도 항상 "생성 0/스킵 0/실패 0" — 에러 없이 조용히 아무 일도 안 일어남</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          부트스트랩 시딩 스크립트는 <code>assembleGovSystemPrompt()</code>를
+          그대로 재사용해 로컬 JSON/템플릿 파일로부터 실제 렌더링 결과를
+          얻는다. 이를 위해 <code>globalThis.fetch</code>를 <strong>로컬
+          파일을 읽는 모의(mock) 함수</strong>로 덮어썼다(테스트 파일들과
+          동일한 패턴). 문제는, 그 뒤 실제 PocketBase로 데이터를 전송하는
+          단계(<code>main()</code>의 <code>/gov-tree-instance/seed</code>
+          POST)에서도 <strong>같은 <code>fetch</code> 식별자를 그대로
+          호출</strong>했다는 것 — "원래 네이티브 <code>fetch</code>로
+          복원한다"는 코드(<code>globalThis.fetch = fetch;</code>)가
+          있었지만, 이 시점에는 <code>fetch</code>라는 식별자 자체가 이미
+          <code>globalThis.fetch</code>(=모의 함수)를 가리키고 있었다 —
+          즉 <strong>모의 함수를 자기 자신에게 재대입하는 무의미한 코드</strong>
+          였다. 원본 네이티브 <code>fetch</code>에 대한 참조를 애초에
+          별도 변수로 저장해두지 않았던 게 근본 원인.
+        </p>
+        <div class="gs-code"><span class="c">// 틀림 — "복원"이 실제로는 아무 효과 없음</span>
+globalThis.fetch = async (url) => { /* 로컬 파일 읽기 mock */ };
+<span class="c">// ... 나중에 ...</span>
+globalThis.fetch = fetch; <span class="c">// fetch는 이미 mock을 가리킴 — 자기 자신 재대입</span>
+const res = await fetch(WORKER_URL, {...}); <span class="c">// 여전히 mock 호출!</span>
+
+<span class="c">// 맞음 — 원본을 별도 이름으로 먼저 저장</span>
+const _nativeFetch = globalThis.fetch;
+globalThis.fetch = async (url) => { /* 로컬 파일 읽기 mock */ };
+<span class="c">// ... 나중에 ...</span>
+const res = await _nativeFetch(WORKER_URL, {...}); <span class="c">// 진짜 네트워크 요청</span></div>
+        <p>
+          모의 함수는 알 수 없는 URL에 대해
+          <code>{ ok: true, json: async () =&gt; ({}) }</code>를 돌려주도록
+          짜여 있었다 — 그래서 실전송 호출도 <code>res.ok === true</code>로
+          "성공"한 것처럼 보이면서 빈 객체만 받아, 결과 집계 로직
+          (<code>data.created || []</code> 등)이 전부 빈 배열로 계산됐다.
+          <strong>에러 로그가 전혀 안 남고, HTTP 상태 코드 확인 분기도
+          정상 통과하며, 스크립트는 끝까지 완주해서 "완료" 메시지를
+          출력했다</strong> — 겉보기엔 정상 실행이었다.
+        </p>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            어떻게 잡았는가
+          </div>
+          "생성/스킵/실패가 전부 0"이라는 출력 자체가 이상하다고 판단해,
+          <strong>모킹 없는 별도 진단 스크립트</strong>로 단일 레코드를
+          네이티브 <code>fetch</code>로 직접 보내봤다 — 그건 정상 작동했다
+          (200 OK, 실제 생성됨). 그 다음 실제 배치 스크립트에 <strong>걸린
+          시간(ms)을 찍는 코드</strong>를 추가해보니 "0ms"가 나왔다 — 진짜
+          네트워크 요청이라면 있을 수 없는 값이라 여기서 mock 재사용을
+          확신했다.
+        </div>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            일반화된 교훈
+          </div>
+          전역 함수(<code>fetch</code>·<code>console.log</code> 등)를
+          로컬 테스트/수집 목적으로 모킹해야 한다면, <strong>원본을 반드시
+          별도 이름의 변수에 먼저 저장</strong>하고, 실제 외부 효과가
+          필요한 지점에서는 그 변수를 명시적으로 써라 — "나중에 복원"은
+          같은 전역 이름에 재대입하는 방식으로는 작동하지 않는다(자기
+          자신을 가리키는 참조를 다시 대입할 뿐이다). 그리고 <strong>"에러
+          없이 완료됐다"는 로그를 무조건 신뢰하지 말고</strong>, 숫자가
+          전부 0이거나 실행 시간이 비정상적으로 짧다면 그 자체를 이상
+          신호로 취급해라 — mock이 조용히 성공을 가장하는 경우 이런
+          신호가 유일한 단서일 때가 많다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ⑥ Cloudflare 하위요청 한도 ── -->
+    <section class="gs reveal" id="lesson-cloudflare">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">06 · Platform limit</div>
+          <div class="gs-title">Cloudflare Workers "하위요청 수" 한도는 애플리케이션 레벨 rate limit과 별개다</div>
+          <div class="gs-subtitle">배치 10건 중 뒷부분에서만 "Too many subrequests" 실패가 재현됨</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          mock 버그(⑤)를 고친 뒤 실제로 전송이 되자, 이번엔 54건 중 6건이
+          <code>"Too many subrequests by single Worker invocation"</code>
+          으로 실패했다. 원인은 레코드 1건을 처리하는 데 PocketBase 왕복이
+          최대 4번(인스턴스 조회+생성, 프로필 조회+등록) 필요한데, 배치
+          10건을 한 HTTP 요청에 묶어 보내면 <strong>한 Worker 실행
+          안에서</strong> 최대 40개의 하위요청이 발생한다는 것 — Cloudflare
+          플랫폼 자체가 요청 1건당 걸어둔 하위요청 수 상한에 배치 뒷부분
+          (8~9번째 레코드 근방)에서 걸렸다.
+        </p>
+        <div class="callout">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            일반화된 교훈
+          </div>
+          이 프로젝트는 이미 <strong>"시간당 몇 번 실시간 생성을
+          트리거하는가"</strong>(<code>_checkGovTreeInstanceRateLimit</code>,
+          KV 카운터)라는 자체 비용 상한을 설계해뒀었다 — 그런데 이건
+          <strong>"한 HTTP 요청 안에서 하위요청을 몇 개까지 낼 수
+          있는가"</strong>라는 완전히 다른 제약이었다. 하나를 설계했다고
+          다른 하나도 저절로 해결되는 게 아니다. 여러 건을 한 요청에
+          배치로 묶어 외부 API(특히 서버리스 플랫폼)를 호출할 때는, 레코드
+          1건당 발생하는 하위 네트워크 호출 수 × 배치 크기가 그 플랫폼의
+          요청당 상한을 넘지 않는지 미리 계산해야 한다. 실패한 레코드는
+          재실행 시 멱등(이미 있으면 건너뜀)하게 설계해뒀던 덕분에 배치
+          크기만 줄여서 재시도하는 것으로 안전하게 복구됐다 — <strong>배치
+          처리 스크립트는 부분 실패를 전제로 멱등하게 설계하라.</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ⑦ 배포 파이프라인 지도 ── -->
+    <section class="gs reveal" id="lesson-deploy">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">07 · Deployment map</div>
+          <div class="gs-title">이 저장소의 실제 배포 파이프라인 지도</div>
+          <div class="gs-subtitle">PocketBase 스키마도 git push로 배포된다 — GUI Import는 최후 수단</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <p>
+          이번 세션에서 처음으로 PocketBase 컬렉션을 새로 만들 일이
+          생겼는데, PocketBase 관리자 UI의 "Import collections"로 바로
+          만들 수도 있었지만, 이 저장소는 이미 <strong>git 기반 마이그레이션
+          파이프라인</strong>을 갖추고 있었다. GUI로 임시로 만들었다면
+          다른 서버(l1-hanlim 외 다른 L1 노드들)와 스키마가 어긋나고,
+          변경 이력도 안 남았을 것이다.
+        </p>
+        <div class="gs-table-wrap">
+          <table class="gs-table">
+            <tr><th>구성 요소</th><th>역할</th></tr>
+            <tr><td><code>pb_migrations/*.js</code></td><td>PocketBase 0.22 <code>migrate((db)=&gt;{...},(db)=&gt;{...})</code> 문법. 컬렉션 생성은 <code>new Collection({...}); Dao(db).saveCollection(collection);</code> 형태 — <code>sp_gov_draft_realtime</code> 생성 마이그레이션이 정확한 참고 예시.</td></tr>
+            <tr><td><code>ops/apply-pb-migrations.sh</code></td><td>GitHub Actions가 SSH forced-command로 트리거. <code>SSH_ORIGINAL_COMMAND</code>로 넘어온 파일명만 GitHub raw에서 개별 다운로드·검증 후 <code>migrate up</code> 실행 → 서비스 재시작 → 헬스체크.</td></tr>
+            <tr><td><code>.github/workflows/deploy-worker.yml</code></td><td><code>worker.js</code>·<code>wrangler.toml</code>이 <code>main</code>에 push되면 <code>wrangler-action</code>으로 Cloudflare Workers에 자동 배포. <code>gh run list --workflow=deploy-worker.yml</code>로 배포 성공 여부 확인 가능.</td></tr>
+          </table>
+        </div>
+        <p>
+          실제 서버에서 SSH로 상태를 볼 때도 함정이 하나 있었다 —
+          PocketBase 데이터 디렉토리 구조를 <code>--dir=pb/hanlim</code>이면
+          그 안에 <code>pb_data/data.db</code>가 있을 거라 가정했는데,
+          실제로는 <code>pb/hanlim/</code> 바로 밑에 <code>data.db</code>가
+          있고 <code>pb_data</code>라는 폴더는 별도로(비어있는 채로)
+          존재했다. <code>sqlite3</code>로 잘못된 경로를 계속 조회하면서
+          "테이블이 없다"고 오판할 뻔했다 — <code>ls -la</code>로 실제
+          파일이 어디 있는지 먼저 확인하지 않고 관례적인 경로를 가정한 게
+          원인이었다.
+        </p>
+        <div class="callout warn">
+          <div class="callout-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            일반화된 교훈
+          </div>
+          새로운 종류의 인프라 변경(오늘은 "PocketBase 컬렉션 생성")을
+          처음 할 때는, GUI로 바로 하기 전에 <strong>이 저장소가 이미
+          그걸 위한 파이프라인을 갖추고 있는지부터 확인</strong>해라
+          (<code>pb_migrations/</code>, <code>.github/workflows/</code>).
+          그리고 원격 서버를 SSH로 조사할 때 파일 경로를 관례로 가정하지
+          말고 <code>ls -la</code>·<code>find</code>로 실제 위치를 먼저
+          확인해라 — "여기 있을 것"이라는 가정이 틀리면 그 다음 모든
+          진단이 헛수고가 된다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 체크리스트 ── -->
+    <section class="gs reveal" id="checklist">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Checklist</div>
+          <div class="gs-title">다음에 비슷한 작업을 할 때</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <h4>새 PocketBase 컬렉션·엔티티 식별자를 설계할 때</h4>
+        <ul>
+          <li><code>pb_migrations/*.js</code>에서 비슷한 목적의 자매 컬렉션을 먼저 찾아 필드명 관례(영어 ASCII)를 확인했는가</li>
+          <li>K-Search 엔티티 식별자(<code>entity_subtype</code>)가 기존 시딩 스크립트가 이미 쓰고 있는 형식과 정확히 일치하는가(다르면 검색은 돼도 라우팅이 깨짐)</li>
+          <li>GUI로 바로 만들기 전에 이 저장소의 git 기반 마이그레이션 파이프라인(<code>pb_migrations/</code>+<code>apply-pb-migrations.sh</code>)부터 확인했는가</li>
+        </ul>
+        <h4>새 엔티티 계층/도메인 작업이 "끝났다"고 판단하기 전에</h4>
+        <ul>
+          <li>발화 하나에 정상 응답한다는 것만으로 끝났다고 판단하지 않았는가 — 정적 라우팅과 K-Search/profiles 등록은 별개 경로일 수 있다</li>
+          <li>이 계층이 이미 profiles에 등록되는 기존 시딩 스크립트의 대상 범위에 포함되는지 확인했는가</li>
+        </ul>
+        <h4>패치 적용이 실패하거나 이상하게 동작할 때</h4>
+        <ul>
+          <li><code>git am</code> 실패 시 재시도 전에 <code>git diff origin/main &lt;브랜치&gt;</code>로 이미 반영됐는지부터 확인했는가</li>
+          <li>지금 어느 브랜치에 있는지(<code>git status</code>) 명령 실행 전에 재확인했는가</li>
+          <li>PR을 만들었는데 "no commits" 에러가 나면 그 브랜치가 이미 main과 동일한지 확인했는가(중복이면 그냥 close)</li>
+        </ul>
+        <h4>Windows 실사용 환경에서 Node 스크립트를 돌릴 때</h4>
+        <ul>
+          <li>동적 <code>import()</code>에 절대경로를 넘길 때 <code>pathToFileURL()</code>로 감쌌는가</li>
+          <li>PowerShell로 파일을 만들 때 <code>Out-File -Encoding</code> 값이 그 PowerShell 버전에서 지원되는지 확인했는가(안전하게는 <code>utf8</code>)</li>
+          <li>API 진단은 <code>Invoke-WebRequest</code>가 아니라 실제 운영 코드와 동일한 방식(네이티브 <code>fetch</code>)으로 했는가</li>
+        </ul>
+        <h4>로컬 테스트용으로 전역 함수(<code>fetch</code> 등)를 모킹할 때</h4>
+        <ul>
+          <li>원본을 덮어쓰기 전에 별도 변수에 저장해뒀는가(<code>const _native = globalThis.fetch;</code>)</li>
+          <li>실제 외부 효과가 필요한 지점에서 그 저장해둔 원본 변수를 명시적으로 쓰고 있는가(같은 전역 이름 재대입은 복원이 아니다)</li>
+          <li>"완료됐다"는 출력의 숫자가 전부 0이거나 실행 시간이 비정상적으로 짧으면, 성공이 아니라 이상 신호로 의심했는가</li>
+        </ul>
+        <h4>여러 건을 배치로 묶어 외부 API(특히 서버리스 플랫폼)를 호출할 때</h4>
+        <ul>
+          <li>레코드 1건당 발생하는 하위 네트워크 호출 수 × 배치 크기가 그 플랫폼의 요청당 하위요청 상한을 넘지 않는지 계산했는가</li>
+          <li>배치 처리 스크립트가 부분 실패를 전제로 멱등하게 설계됐는가(재실행 시 이미 성공한 건 건너뛰는가)</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── 관련 문서 ── -->
+    <section class="gs reveal" id="related">
+      <div class="gs-head">
+        <div class="gs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6.5l4 4L7 21H3v-4z"/><path d="M17.5 2.5a2.121 2.121 0 0 1 3 3l-1.5 1.5-3-3z"/></svg>
+        </div>
+        <div class="gs-head-text">
+          <div class="gs-num">Related</div>
+          <div class="gs-title">관련 문서</div>
+        </div>
+      </div>
+      <div class="gs-body">
+        <ul>
+          <li><a href="./GOV_REGIONAL_AC_MANUAL_v1_0.md" target="_blank">전국 지방행정 AC(도청·시청·읍면동·국가기관) 매뉴얼</a> — gov-tree 라우팅 아키텍처 전반</li>
+          <li><a href="./SESSION_LESSONS_VECTORIZE_GOVTREE_v1_0.html" target="_blank">Vectorize·gov-tree 실전 교훈 매뉴얼</a> — 2026-08-04 세션(Vectorize 의미검색, SP 아키텍처)</li>
+          <li><a href="./MANUAL_INDEX.html" target="_blank">개발 문서 전체 지도</a></li>
+          <li>저장소 내 <code>docs/GOV_TREE_LAZY_INSTANCING_DESIGN_v1_0.md</code> — 이 세션에서 설계·구현한 지연 인스턴스화 아키텍처 전체 설계서</li>
+          <li>저장소 내 <code>docs/schema/sp_gov_tree_instance_realtime.schema.json</code> — 참고용 스키마 사본(정본은 <code>pb_migrations/1786900017_created_sp_gov_tree_instance_realtime.js</code>)</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  var revealEls = document.querySelectorAll('.reveal');
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.06 });
+  revealEls.forEach(function (el) { io.observe(el); });
+
+  var tocLinks = document.querySelectorAll('.doc-toc a');
+  var sections = Array.prototype.map.call(tocLinks, function (a) {
+    return document.querySelector(a.getAttribute('href'));
+  });
+  function setActive() {
+    var idx = 0;
+    var y = window.scrollY + 110;
+    sections.forEach(function (sec, i) { if (sec && sec.offsetTop <= y) idx = i; });
+    tocLinks.forEach(function (a, i) { a.classList.toggle('active', i === idx); });
+  }
+  window.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+</script>
+</body>
+</html>
