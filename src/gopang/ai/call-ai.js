@@ -582,6 +582,20 @@ export const _stripInternalTags = (text) => _stripBracketTag(
   .replace(/\[BENEFIT_CANDIDATE_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.6, v1.9부터 레거시 폴백)
   .replace(/\[BENEFIT_SEMANTIC_SEARCH:[^\]]*\]/g, '')  // 2026-07-16 신설(SP-20 v1.9, 임베딩 재설계)
   .replace(/\[CALL_GOVTREE:[^\]]*\]/g, '')  // 2026-08-05 신설 — gov-tree 지방행정 SP 실행 태그(§ handleGovTreeStepExecute)
+  // [2026-08-06 수정 — 실사로 발견] _handleSPAuthorTags(2001행)가 처리하는
+  // 4개 태그가 이 스트립 목록에서 통째로 빠져 있었다. _handleSPAuthorTags
+  // 자체는 정상 동작하지만, 그보다 먼저 화면에 찍히는 원문 버블
+  // (_stripInternalTags(full)을 그대로 innerHTML에 대입하는 지점, webapp.html
+  // _callPanelAI 3928행 등)에는 이 정규식이 적용되므로, 여기 없으면 원시
+  // 대괄호 태그가 그대로 노출된다 — 실사(2026-08-06, "안심상속" 시나리오)로
+  // [GWP_REGISTRY_SEARCH: ...], [GOV_SP_DRAFT_REQUEST: ...] 원문 노출 확인.
+  // 값에 중첩 대괄호가 없는 flat key=value 본문이라 다른 태그들과 동일하게
+  // [^\]]* 정규식으로 안전하게 처리 가능(DRAFT/UPDATE류처럼 중첩 배열을
+  // 값으로 갖지 않음 — _stripBracketTag가 필요 없다).
+  .replace(/\[GWP_REGISTRY_SEARCH:[^\]]*\]/g, '')
+  .replace(/\[GOV_SP_DRAFT_REQUEST:[^\]]*\]/g, '')
+  .replace(/\[SP_DRAFT_REQUEST:[^\]]*\]/g, '')
+  .replace(/\[ESCALATE:[^\]]*\]/g, '')
   // 2026-07-09 정정 — DRAFT/UPDATE·KSEARCH_CANDIDATES는 steps=[...] 같은
   // 중첩 배열을 값으로 가져 위 _stripBracketTag()가 이미 먼저 처리했다
   // (이 체인에 들어오기 전에 적용됨) — 여기서 다시 정규식으로 지우지
