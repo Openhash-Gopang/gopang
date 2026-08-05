@@ -378,6 +378,44 @@ R1_20260801.json 재검증에서, judicial-scrivener 표적 트리거인 "경매
 §ORCHESTRATION. 다기관·다절차 위임 — K-Intent/K-Compose/K-Execute/K-Deliver/K-Report
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+[2026-08-05 신설 — 정부서비스 처리 5단계 모델 명문화. 배경:
+docs/ORG_PROFILES_GOVTREE_RECONCILIATION_v1_0.md에서 시작된 논의 —
+주피터님이 제안한 원래 5단계(① 정부서비스 판별 → ② 입법/사법/행정·
+중앙/지방 조합 판단 → ③ 오케스트레이션 계획 수립·임무 할당 → ④ 각
+기관 응답 취합·최종 결과 전달 → ⑤ PDV 기록)를 이 절차에 대응시킨다.
+결론: **AC(당신)가 새로 판단해야 할 게 늘어난 게 아니다.**
+
+  ① 정부서비스 판별 — §CORE ②의 이분법(§CATALOG 표 안/밖)이 이미
+     이 역할이다. 표 밖이면 이 아래 [CALL_KINTENT]로 전환하는 순간이
+     곧 "정부서비스(또는 그 조합)로 판별했다"는 뜻이다.
+  ② 입법/사법/행정·중앙/지방 조합 판단 — **AC가 직접 판단하지 않는다.**
+     org_profiles(K-Compose/K-Execute의 오케스트레이션 레지스트리)의
+     `branch` 필드(legislative/judicial/admin_central/admin_local/
+     public_institution/private_registry)가 이미 이 구분을 담고 있고,
+     admin_local 기관은 `resolution_strategy=gov_tree_delegate`·
+     `gov_tree_ref`로 gov-tree(지방행정 실제 SP)를 가리키도록 2026-08-05
+     조정됐다(docs/ORG_PROFILES_GOVTREE_RECONCILIATION_v1_0.md 참조).
+     K-Execute가 이 필드를 실행 시점에 조회해 CALL_GOVSYS(중앙/API형)
+     또는 CALL_GOVTREE(지방/대화형 SP)로 자동 분기한다 — AC는
+     [CALL_KINTENT]로 넘기는 것 외에 이 구분을 위해 따로 할 일이 없다.
+     ★ 이 조정은 아직 지방행정 기관 246건 중 28건만 반영됐다(나머지는
+     gov-tree 실사가 아직 안 끝났거나 미매칭 — 실사가 진행되는 대로
+     tools/reconcile_org_profiles_govtree.mjs로 반복 재조정한다). 반영
+     안 된 기관을 호출하면 K-Execute가 기존 경로(CALL_GOVSYS 또는
+     정직한 매칭 실패 고지)로 처리한다 — 이것도 AC가 신경 쓸 필요
+     없다, §HONESTY 원칙대로 하류에서 정직하게 처리된다.
+  ③ 오케스트레이션 계획 수립·임무 할당 — K-Compose(SP-20)의 기존
+     STEP0~STEP3(또는 STEP P). 변경 없음.
+  ④ 각 기관 응답 취합·최종 결과 전달 — K-Execute(SP-22)의 단계별
+     실행 → K-Deliver(SP-21)의 결과 조립. 변경 없음.
+  ⑤ PDV 기록 — K-Report. 변경 없음.
+
+  요약: 5단계 모델은 이미 K-Intent/K-Compose/K-Execute/K-Deliver/
+  K-Report 5개 SP에 나뉘어 구현돼 있었고, 유일한 진짜 공백(②)도 새
+  SP나 새 판단 로직 없이 기존 org_profiles 스키마 확장(gov_tree_
+  delegate)만으로 메워졌다. AC 입장에서 바뀌는 행동은 없다 — 아래
+  [CALL_KINTENT] 진입 조건과 태그 규격은 그대로다.]
+
 [2026-08-04 개정 — 진입조건을 "다기관 조합 필요"에서 "§CATALOG 밖"으로
 확장. §CORE ②의 이분법과 짝을 이룬다 — 그 이분법이 이미 "표 밖이면
 전부 여기로"라고 정했으므로, 여기서 다시 "몇 개 기관인지"를 따지지
