@@ -54,6 +54,19 @@ function readLocal(u) {
   try { return fs.readFileSync(p, 'utf-8'); } catch { return null; }
 }
 
+// ★ 2026-08-05 버그 수정(주피터님 실사용 중 발견) — 아래서 로컬 파일
+// 읽기용으로 globalThis.fetch를 모의(mock) 함수로 덮어쓰는데, 이후 실제
+// PocketBase 전송 단계(main()의 /gov-tree-instance/seed POST)에서 "원래
+// fetch로 복원"하는 코드가 없어서, 실전송도 이 모의 함수를 그대로 타고
+// 있었다 — 매번 ok:true + 빈 객체 {}를 돌려주는 목이라 "생성 0/스킵
+// 0/실패 0"만 반복 출력되고 실제로는 서버에 아무 요청도 안 나가고
+// 있었다(--apply를 여러 번 실행해도 항상 0/0/0, 걸린 시간도 사실상
+// 0ms — 원본 네이티브 fetch 참조를 애초에 저장해두지 않아서
+// "globalThis.fetch = fetch"가 그냥 자기 자신을 재대입하는 무의미한
+// 코드였다). 원본을 먼저 저장해두고, 실전송 시점에만 명시적으로 그걸
+// 쓴다.
+const _nativeFetch = globalThis.fetch;
+
 globalThis.window = globalThis;
 globalThis.fetch = async (url) => {
   const u = String(url);
@@ -170,7 +183,7 @@ async function main() {
   for (let i = 0; i < allRecords.length; i += BATCH_SIZE) {
     const batch = allRecords.slice(i, i + BATCH_SIZE);
     console.log(`\n배치 ${i / BATCH_SIZE + 1} 전송 중... (${batch.length}건)`);
-    const res = await fetch(`${WORKER_BASE}/gov-tree-instance/seed`, {
+    const res = await _nativeFetch(`${WORKER_BASE}/gov-tree-instance/seed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ records: batch }),
