@@ -181,3 +181,32 @@ gov-tree 확장 대상 후보로 쓸지, 다른 방침으로 갈지 주피터님
 - `pb_migrations/1786400001_seeded_benefit_catalog_orgs_full.js` — 재조정
   스크립트 회귀 테스트의 실데이터 fixture로 활용(org_profiles 시딩
   1/12, 376건)
+
+---
+
+## 6. 2026-08-05 추가 세션 — §3-2·§4-5 결정 사항 기록
+
+### 6-1. `d542a10d`(HANDOFF_2026-08-04_gov-tree-busan-cityDept.md) 머지 여부 — 머지 안 함
+`docs/govtree-lessons-manual-v2` 브랜치의 마지막 커밋(`d542a10d`, 다른
+세션/작성자 Do Young Min)이 main에 없는 상태가 계속 지적돼왔는데, 내용을
+직접 확인한 결과 **머지하지 않기로 결정**. 이유: 그 문서의 §4(다음 작업
+지시)가 "부산 16개 구·군 중 해운대구 제외 15개 city-dept 미착수"라고
+적었는데, 실제로는 이미 그 시점 이후 진행된 작업(`75af899` 등)으로
+15/16개 구·군의 jachi 도메인이 채워져 있었다(기장군만 의도적 TBD 예외).
+main에 이미 있는 `docs/GOV_TREE_ABSTRACTION_LAYER_STATUS_v1_0.md`가 이
+정확한 최신 상태를 담고 있으므로, 낡은 스냅샷을 머지해 혼동을 더하기보다
+그대로 브랜치에만 남겨두는 쪽을 택함. 브랜치 자체를 삭제할지는 원 작성자
+또는 주피터 판단 필요(이번 세션은 손대지 않음).
+
+### 6-2. 34건(미매칭) 처리 방침 — 결정·구현 완료
+`docs/ORG_PROFILES_GOVTREE_RECONCILIATION_v1_0.md` §7-3에 상세 기록.
+요약: 34건 = 강원도 관련 18건(gov-tree 확장 대상으로 유지) + 교육청 16건
+(gov-tree 대상에서 제외, 별도 트랙 필요 — 방법은 미결정).
+`tools/reconcile_org_profiles_govtree.mjs`가 이 두 카테고리를
+`unmatched`/`unmatched_out_of_scope`로 분리 반환하도록 수정, 회귀
+테스트 1건 추가.
+
+### 6-3. 다음 세션 남은 것
+- 교육청 16건의 실제 서비스 방법(§7-3 마지막 문단) — 미결정
+- 강원도 18건의 gov-tree 실사 자체(도청·시군 조직도 확보) — 미착수
+- `docs/govtree-lessons-manual-v2` 브랜치 정리 여부 — 미결정

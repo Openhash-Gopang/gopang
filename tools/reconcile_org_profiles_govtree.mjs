@@ -97,10 +97,33 @@ export function loadGovTreeIndex(root = ROOT) {
 }
 
 // orgProfilesRecords: [{org_id, org_name, branch}, ...]
+// 2026-08-05 추가 — 34건 미매칭 처리 방침(주피터 확인) 반영.
+// "미매칭"을 실사해보니 무작위가 아니라 두 카테고리였다:
+//   (a) 강원특별자치도 도청 + 산하 시·군 12곳 — 다른 16개 도와 마찬가지로
+//       province/city 계층으로 매칭될 "정상 후보"인데 gov-tree 실사가 아직
+//       거기까지 안 갔을 뿐. → 여전히 unmatched(gov-tree 확장 대상)로 분류.
+//   (b) 광역 교육청 15곳 전부 — 시·도·구·군과 관할·조직 구조가 근본적으로
+//       달라(학교급별·교육지원청 체계) gov-tree의 province/city 계층 개념
+//       자체가 안 맞는다. 억지로 gov_tree_delegate로 편입하려 하지 말고,
+//       org_profiles 쪽에서 별도 트랙으로 처리하는 게 맞다는 게 주피터
+//       결정 — 그래서 이 스크립트가 "gov-tree 확장 후보"와 섞어 보고하지
+//       않도록 별도 버킷(unmatched_out_of_scope)으로 분리한다.
+// 판별은 org_name이 "교육청"으로 끝나는지로 기계적으로 한다(모든 시행
+// 관측 사례가 이 패턴이었음 — 예: "서울특별시교육청", "경상남도교육청").
+function isEducationOffice(orgName) {
+  return typeof orgName === 'string' && orgName.trim().endsWith('교육청');
+}
+
 export function reconcile(orgProfilesRecords, root = ROOT) {
   const { cityIndex, provinceIndex } = loadGovTreeIndex(root);
 
-  const result = { real_matched: [], stub_matched: [], unmatched: [], skipped_non_admin_local: [] };
+  const result = {
+    real_matched: [],
+    stub_matched: [],
+    unmatched: [],
+    unmatched_out_of_scope: [],
+    skipped_non_admin_local: [],
+  };
   const seenOrgId = new Set();
 
   for (const rec of orgProfilesRecords) {
@@ -117,7 +140,15 @@ export function reconcile(orgProfilesRecords, root = ROOT) {
     const hit = cityHit || provinceHit;
 
     if (!hit) {
-      result.unmatched.push({ org_id: rec.org_id, org_name: rec.org_name });
+      const entry = { org_id: rec.org_id, org_name: rec.org_name };
+      if (isEducationOffice(rec.org_name)) {
+        result.unmatched_out_of_scope.push({
+          ...entry,
+          reason: 'education_office_structurally_different — gov-tree province/city 계층 대상 아님(2026-08-05 방침 결정)',
+        });
+      } else {
+        result.unmatched.push(entry);
+      }
       continue;
     }
     const entry = { org_id: rec.org_id, org_name: rec.org_name, gov_tree_ref: hit.govTreeRef, matched_label: hit.label };
@@ -186,7 +217,7 @@ ${entriesLiteral}
 }
 
 function printReport(result) {
-  console.log(`매칭 결과 — REAL(반영 대상) ${result.real_matched.length}건 / STUB(보류) ${result.stub_matched.length}건 / 미매칭 ${result.unmatched.length}건`);
+  console.log(`매칭 결과 — REAL(반영 대상) ${result.real_matched.length}건 / STUB(보류) ${result.stub_matched.length}건 / 미매칭-확장후보 ${result.unmatched.length}건 / 미매칭-대상아님 ${result.unmatched_out_of_scope.length}건`);
   if (result.real_matched.length) {
     console.log('\n[REAL — gov_tree_ref 반영 대상]');
     for (const e of result.real_matched) console.log(`  ${e.org_id}  ${e.org_name}  →  ${e.gov_tree_ref}`);
@@ -195,7 +226,10 @@ function printReport(result) {
     console.log(`\n[STUB — gov-tree 쪽도 아직 스텁이라 보류] ${result.stub_matched.length}건 (--verbose로 목록 확인)`);
   }
   if (result.unmatched.length) {
-    console.log(`\n[미매칭 — gov-tree 확장 후보] ${result.unmatched.length}건 (--verbose로 목록 확인)`);
+    console.log(`\n[미매칭 — gov-tree 확장 후보(예: 강원도)] ${result.unmatched.length}건 (--verbose로 목록 확인)`);
+  }
+  if (result.unmatched_out_of_scope.length) {
+    console.log(`\n[미매칭 — gov-tree 대상 아님(교육청 등, 2026-08-05 방침)] ${result.unmatched_out_of_scope.length}건 (--verbose로 목록 확인)`);
   }
 }
 
@@ -229,8 +263,12 @@ Export, 또는 관리자 API 조회 결과). 각 레코드는 최소 org_id·org
       for (const e of result.stub_matched) console.log(`  ${e.org_id}  ${e.org_name}  →  ${e.gov_tree_ref}(스텁)`);
     }
     if (result.unmatched.length) {
-      console.log('\n[미매칭 상세]');
+      console.log('\n[미매칭-확장후보 상세]');
       for (const e of result.unmatched) console.log(`  ${e.org_id}  ${e.org_name}`);
+    }
+    if (result.unmatched_out_of_scope.length) {
+      console.log('\n[미매칭-대상아님 상세]');
+      for (const e of result.unmatched_out_of_scope) console.log(`  ${e.org_id}  ${e.org_name}  (${e.reason})`);
     }
   }
 
