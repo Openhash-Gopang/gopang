@@ -91,3 +91,26 @@ test('city-dept-master-data.json — (시코드,국코드) 중복 레코드 없�
   }
   assert.deepEqual(dups, [], `중복 (시코드,국코드) 레코드 발견: ${dups.join(', ')}`);
 });
+
+// ── 2026-08-05 신설: directCode tier='province' 신규 진입점 ──
+// org_profiles(K-Compose 레지스트리) 재조정 중 발견 — do-dept/do-agency/
+// org/city/city-dept/emd는 전부 도(道) 하드코딩 제거된 directCode 진입점이
+// 있었는데, 그 상위 계층인 도청 자체(province)만 빠져 있었다. gov_tree_ref로
+// 도청급 기관(예: "경기도")을 연결하려면 이 tier가 필요해서 신설.
+test('directCode tier=province — 도코드로 도청 SP(SP-DO-000) 라우팅', async () => {
+  const r = await assembleGovSystemPrompt('아무 발화나', null, null, null, 'province:gyeonggi');
+  assert.ok(r.trace.some(t => t.includes('SP-DO-000') && t.includes('gyeonggi')),
+    `trace에 SP-DO-000(gyeonggi) 없음 — 실제: ${r.trace.join(' > ')}`);
+});
+
+test('directCode tier=province — 제주도 코드도 동일하게 동작(회귀 확인)', async () => {
+  const r = await assembleGovSystemPrompt('아무 발화나', null, null, null, 'province:jeju');
+  assert.ok(r.trace.some(t => t.includes('SP-DO-000') && t.includes('jeju')),
+    `trace에 SP-DO-000(jeju) 없음 — 실제: ${r.trace.join(' > ')}`);
+});
+
+test('directCode tier=province — 실사 안 된 도코드는 크래시 없이 안전 폴백', async () => {
+  const r = await assembleGovSystemPrompt('아무 발화나', null, null, null, 'province:nonexistent_province_code');
+  assert.ok(!r.trace.some(t => t.includes('SP-DO-000') && t.includes('nonexistent')),
+    `없는 도코드인데 SP-DO-000으로 확정돼버림 — 실제: ${r.trace.join(' > ')}`);
+});

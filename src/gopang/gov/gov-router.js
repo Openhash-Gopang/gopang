@@ -3743,6 +3743,26 @@ async function _assembleGovSystemPromptRaw(userText, pdvLocationHint = null, cla
         }
       }
     }
+    // ★ 2026-08-05 신설 — tier='province'(도청 자체). 지금까지 directCode
+    // 해석부에 도청 단독 진입점이 없었다 — do-dept/do-agency/org/city/
+    // city-dept/emd는 전부 있었는데 그 상위인 도청 자체만 빠져 있었다.
+    // org_profiles(K-Compose 레지스트리) 재조정 과정에서 발견: 도청급
+    // 기관(예: "경기도")을 gov_tree_ref로 연결하려 해도 받아줄 tier가
+    // 없었다. code 형식은 도코드 그대로(예: "gyeonggi") — province-
+    // master-data.json의 도코드 필드와 1:1 대응.
+    if (tier === 'province' && code) {
+      const records = await _loadProvinceMasterData();
+      const rec = records.find(r => r.도코드 === code);
+      if (rec) {
+        _currentResolvedProvinceCode = code;
+        const doSp = await _loadDoSp();
+        parts.push(doSp);
+        trace.push(`SP-DO-000(${code}, directCode)`);
+        return { systemPrompt: parts.join('\n\n---\n\n'), trace };
+      }
+      // 레코드가 없으면(실사 안 된 도) 실패로 취급하지 않고 아래 일반
+      // 텍스트 추측 경로로 조용히 폴백 — do-dept 등 다른 tier와 동일 원칙.
+    }
     if (tier === 'emd' && code) {
       // code 형식: "{읍면동명}" (예: 애월읍) — seed_gov_tree_emd_team.py의
       // entity_subtype 규약과 동일.
