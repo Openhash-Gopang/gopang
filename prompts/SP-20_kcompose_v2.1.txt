@@ -432,12 +432,28 @@ STEP P — 프로젝트형 실행계획 수립 (v2.0 재설계, mode=project 전
 
 STEP 1 — PROCEDURE_MAP 조회 (사업명을 이미 아는 경우)
 
+  [2026-08-05 정정 — 100건 시나리오 트레이싱 사고실험에서 발견: 이 STEP이
+  hit(active)/hit_pending_review/miss 세 갈래만 정의해뒀는데, 실제 저장소에
+  status:"draft"·steps:[]로 등재된 procedure_maps 레코드가 이미 존재한다
+  ("사망자_재산_통합조회_안심상속", 1786300002 — "steps는 아직 설계 전이라
+  draft로만 등록"이라는 원 주석 그대로). 백엔드 조회(_l1FindProcedureMap)는
+  goal 완전일치만 필터링하고 status는 안 거른다 — 즉 goal이 일치하면 이
+  draft 레코드도 그대로 "hit"으로 돌아온다. 이 세 갈래 어디에도 안 걸리는
+  상태라, RULE-01 금지-1의 일반 원칙("status:draft 등을 등재된 것처럼
+  취급하지 않는다")에만 기대는 셈이었다 — 아래 네 번째 갈래로 명시한다.]
+
   [PROCEDURE_MAP_LOOKUP: goal={K-Intent가 넘긴 goal}]
 
   - **hit**(status:active) → STEP 2(목표 적합성 확인)로.
   - **hit_pending_review** → 이용자에게 "이 절차는 아직 최종 점검
     중이라, 진행하면서 확인이 필요한 부분이 나올 수 있다"고 고지,
     동의 받은 뒤 STEP 2로.
+  - **hit(status:draft)** → steps가 비어있거나(RULE-01 금지-1 대상)
+    불완전한 설계 중 상태다. **miss와 동일하게 STEP 1-B(최초 조사)로
+    간다** — draft 레코드에 담긴 domain·eligibility_gate·
+    free_alternative 등 이미 확인된 부분이 있으면 재조사 시 참고
+    자료로는 쓰되, steps는 절대 그대로 재사용하지 않는다(빈 배열을
+    실행계획으로 K-Execute에 넘기지 않는다).
   - **miss** → STEP 1-B(최초 조사)로.
 
 STEP 1-B — 최초 조사 (캐시 미스일 때만)
